@@ -2,8 +2,8 @@
 
 ## Repo
 - D1 Visibility: public (free Actions minutes).
-- D2 Licence: GPL-3.0 (EE is GPL-2.0-or-later compatible reuse allowed with provenance tracking).
-- D3 Repo creation: owner creates migueltorrescosta/<slug>, invites shannonbymiguel.
+- D2 Licence: GPL-3.0. EmptyEpsilon is GPL-2.0-only (no "or later" grant), so its code can't be reused; ideas only (see D62).
+- D3 Repo creation: the owner creates the repo and invites the bot account.
 - D4 Name: Full Theta, repo migueltorrescosta/full-theta.
 
 ## Tech
@@ -132,3 +132,7 @@
 - D90 Normal preset: mission mark icon on; contract flags on reticle and Science verify chips by voice.
 - D91 Eliminated crews with no friendly ship: lobby + live scoreboard.
 - D92 Custom toggles: threat budget follows the chosen difficulty; shown as '<Preset> (custom)'.
+
+## Issue structure (round 20)
+- D93 The 80-item task breakdown is aggregated into 13 GitHub issues, each resulting in one PR (owner issues have none); fewer, larger issues with extensive verification criteria.
+- D94 Browser and touch stations move from M4 to M2 (full crew).
