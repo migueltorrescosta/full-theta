@@ -13,6 +13,9 @@ extends RefCounted
 ## it with the stored token (SessionTokenFile.host_secret), not in the pid file.
 ## A dedicated server has none.
 ##
+## The host picks the session language before launch; it reaches the child as
+## `--language` (FT-AUD-013).
+##
 ## Bound to 127.0.0.1 for now: other machines can join once the host picks a
 ## LAN address (T047 and E13 pass it as `--bind`).
 
@@ -42,7 +45,11 @@ var adopted: bool = false
 ## The command-line arguments that start the server child. `project_path` is
 ## the project folder when running from the editor binary, or "" in an export.
 static func server_args(
-	ws_port: int, pid_file_path: String, idle_exit_min: float, project_path: String
+	ws_port: int,
+	pid_file_path: String,
+	idle_exit_min: float,
+	project_path: String,
+	language: String = ServerMain.LANGUAGES[0]
 ) -> PackedStringArray:
 	var args: PackedStringArray = ["--headless"]
 	if project_path != "":
@@ -62,6 +69,8 @@ static func server_args(
 				"--idle-exit-min",
 				str(idle_exit_min),
 				"--host-secret-env",
+				"--language",
+				language,
 			]
 		)
 	)
@@ -87,7 +96,8 @@ static func project_path() -> String:
 func spawn(
 	ws_port: int,
 	pid_file_path: String = ServerPidFile.PATH,
-	idle_exit_min: float = DEFAULT_IDLE_EXIT_MIN
+	idle_exit_min: float = DEFAULT_IDLE_EXIT_MIN,
+	language: String = ServerMain.LANGUAGES[0]
 ) -> Error:
 	if is_running():
 		return ERR_ALREADY_IN_USE
@@ -98,7 +108,11 @@ func spawn(
 	var args: PackedStringArray = engine_args.duplicate()
 	args.append_array(
 		server_args(
-			ws_port, ProjectSettings.globalize_path(pid_file_path), idle_exit_min, project_path()
+			ws_port,
+			ProjectSettings.globalize_path(pid_file_path),
+			idle_exit_min,
+			project_path(),
+			language
 		)
 	)
 	args.append_array(extra_server_args)

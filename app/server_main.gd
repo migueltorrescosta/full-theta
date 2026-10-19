@@ -24,6 +24,8 @@ extends RefCounted
 ##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
 ##   --no-beacon          don't broadcast on the LAN (tests).
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
+##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
+##                        before launch and Welcome carries it (FT-AUD-013, D41).
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 ## Headless frame pacing (S3 "Server loop"): Godot otherwise sleeps 6.9 ms a frame in
@@ -33,6 +35,8 @@ const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
 ## PROVISIONAL: the beacon's default server name.
 const DEFAULT_NAME: String = "Full Theta server"
+## Session languages (FT-AUD-012); the first is the default.
+const LANGUAGES: PackedStringArray = ["en", "pt_PT", "it"]
 
 var port: int = DEFAULT_PORT
 var bind_address: String = ""
@@ -47,6 +51,7 @@ var http_root: String = ""
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
+var language: String = LANGUAGES[0]
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -112,6 +117,11 @@ func _set_flag(flag: String, value: String) -> bool:
 			http_root = value
 		"--name":
 			server_name = value
+		"--language":
+			if not LANGUAGES.has(value):
+				push_error("--language must be one of %s" % ", ".join(LANGUAGES))
+				return false
+			language = value
 		_:
 			push_error("unknown argument %s" % flag)
 			return false
@@ -135,6 +145,7 @@ func make_server() -> NetServer:
 		server.free()
 		return null
 	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
+	server.session.language = language
 	if http_root != "":
 		err = server.start_http(http_root)
 		if err != OK:

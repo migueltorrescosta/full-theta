@@ -34,6 +34,8 @@ func test_server_args_from_the_editor_binary() -> void:
 				"--idle-exit-min",
 				"10.0",
 				"--host-secret-env",
+				"--language",
+				"en",
 			]
 		)
 	)

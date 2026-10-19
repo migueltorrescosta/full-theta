@@ -71,6 +71,7 @@ const SCHEMAS: Dictionary = {
 		"ship": TYPE_INT,
 		"entry": TYPE_STRING,
 		"dev_all": TYPE_BOOL,
+		"lang": TYPE_STRING,
 	},
 	Type.HELLO_REJECTED: {"v": TYPE_INT, "reason": TYPE_STRING},
 	Type.CATALOGUE: {"ships": TYPE_ARRAY, "entries": TYPE_ARRAY, "load_tags": TYPE_ARRAY},

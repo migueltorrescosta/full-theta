@@ -127,3 +127,43 @@ func test_makes_beacon_and_optional_http() -> void:
 	assert_object(server2.beacon).is_null()
 	server2.transport.stop()
 	server2.free()
+
+
+# FT: FT-AUD-013
+# The host picks the session language before launch: --language takes en, pt_PT or it
+# (en by default), refuses anything else, and HostLauncher passes it to the child.
+func test_language_flag() -> void:
+	var cli: ServerMain = ServerMain.new()
+	assert_bool(cli.parse_args(["--bind", "127.0.0.1"])).is_true()
+	assert_str(cli.language).is_equal("en")
+	for lang: String in ["en", "pt_PT", "it"]:
+		var ok: ServerMain = ServerMain.new()
+		assert_bool(ok.parse_args(["--bind", "127.0.0.1", "--language", lang])).is_true()
+		assert_str(ok.language).is_equal(lang)
+	for bad: String in ["pt", "EN", "de", ""]:
+		assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--language", bad])).is_false()
+	assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--language"])).is_false()
+	var args: PackedStringArray = HostLauncher.server_args(5000, "/u/p.json", 3, "", "pt_PT")
+	assert_str(args[args.find("--language") + 1]).is_equal("pt_PT")
+
+
+# FT: FT-AUD-013
+# Welcome carries the --language value to every client (L3: a real client over loopback).
+func test_welcome_carries_the_language() -> void:
+	var cli: ServerMain = ServerMain.new()
+	var args: PackedStringArray = ["--bind", "127.0.0.1", "--port", "0", "--no-beacon"]
+	args.append_array(["--language", "it"])
+	assert_bool(cli.parse_args(args)).is_true()
+	var server: NetServer = cli.make_server()
+	add_child(server)
+	var c: NetClient = NetClient.new()
+	assert_int(c.connect_to("ws://127.0.0.1:%d" % server.port())).is_equal(OK)
+	var end: int = Time.get_ticks_msec() + 4000
+	while not c.is_welcomed() and Time.get_ticks_msec() < end:
+		c.poll()
+		await get_tree().process_frame
+	assert_bool(c.is_welcomed()).is_true()
+	assert_str(c.welcome["lang"]).is_equal("it")
+	c.drop()
+	server.queue_free()
+	await get_tree().process_frame
