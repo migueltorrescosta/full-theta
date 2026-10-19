@@ -76,6 +76,21 @@ func test_token_file_round_trip() -> void:
 	assert_object(SessionTokenFile.load_from(TOKEN_FILE)).is_null()
 
 
+# FT: FT-NET-001
+# D127: the token file holds the host secret, so only its user can read it (0600),
+# also when it replaces a file another program left world-readable.
+func test_token_file_is_private_to_the_user() -> void:
+	if not OS.get_name() in ["Linux", "macOS", "FreeBSD"]:
+		return
+	_write(TOKEN_FILE, "{}")
+	FileAccess.set_unix_permissions(TOKEN_FILE, 0x1A4)  # 0644
+	assert_int(SessionTokenFile.make("t", "10.0.0.2", 1, "5ec7").save(TOKEN_FILE)).is_equal(OK)
+	assert_int(FileAccess.get_unix_permissions(TOKEN_FILE)).is_equal(0x180)  # 0600
+	assert_str(SessionTokenFile.load_from(TOKEN_FILE).host_secret).is_equal("5ec7")
+	SessionTokenFile.remove(TOKEN_FILE)
+	assert_object(SessionTokenFile.load_from(TOKEN_FILE)).is_null()
+
+
 func test_malformed_token_files_read_as_none() -> void:
 	_write(TOKEN_FILE, "{")
 	assert_object(SessionTokenFile.load_from(TOKEN_FILE)).is_null()

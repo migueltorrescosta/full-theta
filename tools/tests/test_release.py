@@ -184,7 +184,7 @@ def test_pack_reader_rejects_truncated_and_lying_packs():
 def test_assets_must_match_the_expected_set_and_sums(tmp_path):
     import inspect_packages
 
-    insp = inspect_packages.Inspector("v1.0.0", "c0ffee", allow_stub=False)
+    insp = inspect_packages.Inspector("v1.0.0", "c0ffee")
     names = package.asset_names("v1.0.0")
     expected = [names[k] for k in ("linux", "windows", "macos", "source")]
     for n in expected:
@@ -194,7 +194,7 @@ def test_assets_must_match_the_expected_set_and_sums(tmp_path):
     text = "\n".join(insp.errors)
     assert "SHA256SUMS lacks" in text and "missing or not the pinned archive" in text
 
-    insp = inspect_packages.Inspector("v1.0.0", "c0ffee", allow_stub=False)
+    insp = inspect_packages.Inspector("v1.0.0", "c0ffee")
     (tmp_path / "stray.tar.gz").write_bytes(b"x")
     (tmp_path / "SHA256SUMS").write_text("not a line\n")
     insp.assets(tmp_path)

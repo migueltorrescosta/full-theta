@@ -1,0 +1,10 @@
+{
+  "_comment": "UI string table (FT-DAT-011, D40): every key has text in each launch language; tools/check_dialogue.py gates it. Clients load it with I18n for the session language (FT-AUD-013).",
+  "strings": {
+    "language.en": {"en": "English", "pt_PT": "Inglês", "it": "Inglese"},
+    "language.pt_PT": {"en": "Portuguese (Portugal)", "pt_PT": "Português (Portugal)", "it": "Portoghese (Portogallo)"},
+    "language.it": {"en": "Italian", "pt_PT": "Italiano", "it": "Italiano"},
+    "subtitle.computer": {"en": "Ship computer", "pt_PT": "Computador de bordo", "it": "Computer di bordo"},
+    "subtitle.npc": {"en": "Radio", "pt_PT": "Rádio", "it": "Radio"}
+  }
+}

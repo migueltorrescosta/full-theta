@@ -20,12 +20,15 @@ func after_test() -> void:
 
 
 func _server(
-	chunk_size: int = NetChunker.DEFAULT_CHUNK_SIZE, host_secret: String = ""
+	chunk_size: int = NetChunker.DEFAULT_CHUNK_SIZE, host_secret: String = "", launch: bool = true
 ) -> NetServer:
 	var s: NetServer = NetServer.new()
 	s.transport.chunk_size = chunk_size
 	var m1: M1Encounter = M1Encounter.new(5, "test", TestDefs.corvette(), TestDefs.raider_enemy())
 	assert_int(s.start(m1, 0, "127.0.0.1", true, host_secret)).is_equal(OK)
+	# These tests exercise the transport, not the lobby: start the run directly.
+	if launch:
+		s.session.launch(PLAYER)
 	add_child(s)
 	_servers.append(s)
 	return s
@@ -37,6 +40,21 @@ func _client(server: NetServer, name: String) -> NetClient:
 	assert_int(c.connect_to("ws://127.0.0.1:%d" % server.port())).is_equal(OK)
 	_clients.append(c)
 	return c
+
+
+## A client whose WebSocket opens but that never sends Hello.
+func _silent(server: NetServer) -> NetClient:
+	var c: NetClient = _client(server, "silent")
+	c._hello_sent = true
+	return c
+
+
+func _is_open(c: NetClient) -> bool:
+	return c._peer.get_ready_state() == WebSocketPeer.STATE_OPEN
+
+
+func _is_closed(c: NetClient) -> bool:
+	return c._peer.get_ready_state() == WebSocketPeer.STATE_CLOSED
 
 
 ## Polls every client each frame until cond holds or the timeout passes.
@@ -79,7 +97,7 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_int(c.welcome["v"]).is_equal(NetProtocol.PROTOCOL_VERSION)
 	assert_str(c.token).has_length(32)
 	assert_float(c.welcome["period"]).is_equal(server.world.kin.period)
-	assert_int((c.catalogue["entries"] as Array).size()).is_equal(6 + 15 + 2 + 1)
+	assert_int((c.catalogue["entries"] as Array).size()).is_equal(6 + 3 + 2 + 1)
 	assert_int((c.catalogue["ships"] as Array).size()).is_equal(1)
 	var picked: Array[Dictionary] = _events_of(c.take_events(), NetProtocol.EVENT_PICKED)
 	assert_str(picked[0]["payload"]["reason"]).is_equal("")
@@ -267,9 +285,8 @@ func test_oversize_snapshot_and_voice_in_chunks_behind_snapshots() -> void:
 		pcm[i] = (i * 7) & 0xFF
 	var arrived_before: int = c.arrivals.size()
 	var session: int = c.welcome["session"]
-	server.transport.post_voice(
-		session, NetProtocol.encode(NetProtocol.Type.VOICE, {"clip": 7, "rate": 22050, "pcm": pcm})
-	)
+	var voice: Dictionary = {"clip": 7, "rate": 22050, "pcm": pcm, "part": 0, "last": true}
+	server.transport.post_voice(session, NetProtocol.encode(NetProtocol.Type.VOICE, voice))
 	server.transport.set_view(session, StationViews.key(PLAYER, "viewer"))
 	assert_bool(await _until(func() -> bool: return c.stats["voice"] == 1)).is_true()
 	assert_bool(c.voice_clips[0]["pcm"] == pcm).is_true()
@@ -324,6 +341,7 @@ func test_resume_by_token_and_host_secret() -> void:
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] >= 1)).is_true()
 	var session: NetSession = server.session.by_id[c.session_id]
 	assert_bool(session.is_host).is_true()
+	assert_bool(c.welcome["host"]).is_true()
 	c.set_pips(SubsystemDef.Kind.ENGINES, 99)
 	assert_bool(await _until(func() -> bool: return c.inbox.last_seq >= 2)).is_true()
 	var token: String = c.token
@@ -345,3 +363,185 @@ func test_resume_by_token_and_host_secret() -> void:
 	guest.host_secret = "wrong"
 	assert_bool(await _until(guest.is_welcomed)).is_true()
 	assert_bool(server.session.by_id[guest.session_id].is_host).is_false()
+
+
+# FT: FT-NET-037
+# A client that can't apply a snapshot (its view lost its place, as after a corrupt
+# section) acks -1 and gets exactly one full snapshot, then deltas again.
+func test_unappliable_snapshot_gets_one_full_snapshot() -> void:
+	var server: NetServer = _server()
+	var c: NetClient = await _joined(server, "c", "helm")
+	await _wait(300)
+	var fulls: int = c.stats["fulls"]
+	c.view.seq -= 3
+	assert_bool(await _until(func() -> bool: return c.stats["fulls"] > fulls)).is_true()
+	var deltas: int = c.stats["snapshots"]
+	await _wait(500)
+	assert_int(c.stats["fulls"]).is_equal(fulls + 1)
+	assert_int(c.stats["snapshots"]).is_greater(deltas + 5)
+	assert_bool(c.view.need_full).is_false()
+	assert_int(c.view.rejected).is_greater_equal(1)
+	assert_int(_conn_of(server.transport.stats(), c.session_id)["stalls"]).is_equal(0)
+
+
+# FT: FT-NET-004
+# A client may send only control-stream messages of at most 64 KiB: a longer message is
+# dropped as malformed and the connection lives on; chunks of another stream are
+# malformed too, and MAX_ERRORS of them close the connection (code 4003).
+func test_client_streams_and_message_size_are_limited() -> void:
+	var server: NetServer = _server()
+	var c: NetClient = _silent(server)
+	assert_bool(await _until(_is_open.bind(c))).is_true()
+	var big: PackedByteArray = NetProtocol.encode(
+		NetProtocol.Type.BYE, {"reason": "x".repeat(70_000)}
+	)
+	for chunk: PackedByteArray in NetChunker.split(NetChunker.STREAM_CONTROL, 1, big):
+		c._peer.send(chunk)
+		c._peer.poll()
+	var errors: Callable = func() -> int:
+		var conns: Dictionary = server.transport.stats().get("conns", {})
+		return conns.values()[0]["errors"] if conns.size() == 1 else -1
+	assert_bool(await _until(func() -> bool: return errors.call() == 1)).is_true()
+	c._hello_sent = false
+	assert_bool(await _until(c.is_welcomed)).is_true()
+	var voice: PackedByteArray = (
+		NetChunker.split(NetChunker.STREAM_VOICE, 2, PackedByteArray([1]))[0]
+	)
+	for i: int in NetTransport.MAX_ERRORS - 2:
+		c._peer.send(voice)
+	await _wait(200)
+	assert_bool(_is_open(c)).is_true()
+	c._peer.send(voice)
+	assert_bool(await _until(_is_closed.bind(c))).is_true()
+	assert_int(c._peer.get_close_code()).is_equal(NetTransport.CLOSE_PROTOCOL)
+
+
+# FT: FT-NET-004, FT-NET-014
+# At most MAX_SESSIONLESS connections may wait without a session: the next one waits
+# in the listen backlog. Each is closed HELLO_TIMEOUT_US after it opened unless it said
+# Hello, which lets the waiting one in; a client with a session stays.
+func test_connections_without_hello_are_capped_and_timed_out() -> void:
+	var server: NetServer = _server()
+	var player: NetClient = _client(server, "player")
+	assert_bool(await _until(player.is_welcomed)).is_true()
+	var silent: Array[NetClient] = []
+	for i: int in NetTransport.MAX_SESSIONLESS:
+		silent.append(_silent(server))
+	assert_bool(await _until(func() -> bool: return silent.all(_is_open))).is_true()
+	var opened_ms: int = Time.get_ticks_msec()
+	var late: NetClient = _client(server, "late")
+	await _wait(1000)
+	assert_bool(_is_open(late)).is_false()
+	assert_int((server.transport.stats()["conns"] as Dictionary).size()).is_equal(1 + silent.size())
+	assert_bool(await _until(func() -> bool: return silent.all(_is_closed), 10_000)).is_true()
+	var waited_ms: int = Time.get_ticks_msec() - opened_ms
+	assert_int(waited_ms).is_greater(NetTransport.HELLO_TIMEOUT_US / 1000 - 200)
+	assert_bool(await _until(late.is_welcomed)).is_true()
+	assert_bool(player.is_welcomed() and _is_open(player)).is_true()
+
+
+# FT: FT-NET-006
+# Lobby, claim and pause requests take tokens from the session's rate limit like
+# commands: a client spamming picks past its burst has them dropped (counted as
+# rate_limited); its long name is cut to 32 bytes.
+func test_lobby_requests_are_rate_limited() -> void:
+	var server: NetServer = _server()
+	var spam: NetClient = _client(server, "x".repeat(1000))
+	assert_bool(await _until(spam.is_welcomed)).is_true()
+	assert_str(server.session.by_id[spam.session_id].name).is_equal("x".repeat(32))
+	for i: int in 300:
+		spam.pick(PLAYER, "captain")
+		spam.release_pick()
+	var limited: Callable = func() -> int:
+		return server.session.rejections.get(CommandGate.RATE_LIMITED, 0)
+	assert_bool(await _until(func() -> bool: return limited.call() > 300)).is_true()
+	await _wait(200)
+	assert_int(limited.call()).is_less(600 - int(ServerSession.DEFAULT_BURST) + 100)
+
+
+# FT: FT-NET-037
+# A client without a view key gets no snapshots, so no stall policy: when more than
+# QUEUED_LIMIT piles up for it, the server closes it at once (code 4004); its session
+# waits for a rejoin.
+func test_queue_overflow_closes_a_client_without_a_view() -> void:
+	var server: NetServer = _server()
+	var c: NetClient = _client(server, "lobby")
+	assert_bool(await _until(c.is_welcomed)).is_true()
+	c.paused = true
+	var session: NetSession = server.session.by_id[c.session_id]
+	var blob: PackedByteArray = PackedByteArray()
+	blob.resize(64 * 1024)
+	for i: int in 6:
+		server.session.notify(session, "test_blob", {"blob": blob})
+	var code: Callable = func() -> int:
+		return _conn_of(server.transport.stats(), session.id).get("close_code", 0)
+	(
+		assert_bool(
+			await _until(func() -> bool: return code.call() == NetTransport.CLOSE_QUEUE_FULL)
+		)
+		. is_true()
+	)
+	assert_bool(await _until(func() -> bool: return not session.connected(), 10_000)).is_true()
+	assert_bool(server.session.by_id.has(session.id)).is_true()
+
+
+# FT: FT-NET-037
+# A send that fails (here the client reset the connection, D106) marks the client
+# stalled and closes the connection at once (code 4002); the client then resumes with
+# its token. The net thread's steps are driven by hand so the reset lands between two
+# pumps.
+func test_failed_send_closes_the_connection() -> void:
+	var t: NetTransport = NetTransport.new()
+	assert_int(t._tcp.listen(0, "127.0.0.1")).is_equal(OK)
+	var c: NetClient = NetClient.new()
+	c._hello_sent = true
+	c.connect_to("ws://127.0.0.1:%d" % t.port())
+	var open: Callable = func() -> bool:
+		t._accept()
+		t._poll()
+		c.poll()
+		return (
+			t._conns.size() == 1
+			and _is_open(c)
+			and (t._conns.values()[0] as NetTransport.Conn).peer.get_ready_state() == 1
+		)
+	var end: int = Time.get_ticks_msec() + TIMEOUT_MS
+	while not open.call() and Time.get_ticks_msec() < end:
+		await get_tree().process_frame
+	assert_bool(open.call()).is_true()
+	var conn: NetTransport.Conn = t._conns.values()[0]
+	var data: PackedByteArray = PackedByteArray()
+	data.resize(1000)
+	conn.queue.push(NetChunker.STREAM_CONTROL, data)
+	t._pump()
+	OS.delay_msec(100)
+	# Closing a socket with unread data resets the connection (RST).
+	c._peer.close(-1)
+	OS.delay_msec(100)
+	conn.queue.push(NetChunker.STREAM_CONTROL, data)
+	t._pump()
+	assert_bool(conn.closing).is_true()
+	assert_int(conn.close_code).is_equal(NetTransport.CLOSE_SEND_FAILED)
+	assert_int(conn.resync.stall_count).is_equal(1)
+	var inbound: Array = t._poll()
+	assert_int(inbound.size()).is_equal(1)
+	assert_int(inbound[0][1]["t"]).is_equal(NetTransport.CLOSED)
+	t._tcp.stop()
+
+
+# FT: FT-NET-034, FT-NET-040
+# Before Start the sim doesn't step: the server sends no snapshots while nobody holds a
+# pick, and once someone does, 30 Hz of snapshots of the unchanged world.
+func test_idle_server_snapshots_only_with_a_pick() -> void:
+	var server: NetServer = _server(NetChunker.DEFAULT_CHUNK_SIZE, "", false)
+	var c: NetClient = _client(server, "c")
+	assert_bool(await _until(c.is_welcomed)).is_true()
+	await _wait(300)
+	assert_int(server.transport.stats()["snapshots"]).is_equal(0)
+	c.pick(PLAYER, "helm")
+	assert_bool(await _until(func() -> bool: return c.stats["fulls"] >= 1)).is_true()
+	var n0: int = c.stats["snapshots"]
+	await _wait(1000)
+	assert_int(c.stats["snapshots"] - n0).is_between(15, 34)
+	assert_int(c.view.tick).is_equal(server.world.tick)
+	assert_int(c.view.rejected).is_equal(0)

@@ -5,8 +5,9 @@
 Each client launch writes OUT_DIR/<name>.<launch>.jsonl (tools/l4/l4_client.gd). Fails if
 a final launch did not end with every step passed, if a launch that was not the last of
 its name ended on its own (only a SIGKILL may cut one short), if any client applied a
-bad snapshot, or if two clients disagree on their ship's KIN at the same tick
-(convergence after a rejoin, FT-NET-027). Prints one line per launch, with the time from
+bad snapshot, if two clients disagree on their ship's KIN at the same tick
+(convergence after a rejoin, FT-NET-027), or if no tick was seen by two clients (so
+nothing was compared). Prints one line per launch, with the time from
 the SIGKILL to the relaunched client's Welcome (run.sh's events.txt).
 """
 
@@ -86,6 +87,8 @@ def check(out: Path) -> list[str]:
                 problems.append(f"KIN differs at tick {tick}: {by}")
                 break
     print(f"convergence: {common} ticks seen by more than one client")
+    if common == 0:
+        problems.append("convergence: no tick seen by more than one client, nothing compared")
     return problems
 
 

@@ -5,9 +5,12 @@ extends RefCounted
 ## saves it after a successful join and removes it when the player leaves.
 ## A host client also keeps the host secret its launcher gave the server
 ## (D127), so a relaunched host rejoins its orphan as the host. Kept here, in
-## the user's own data, not in the pid file.
+## the user's own data, not in the pid file, readable by the user only (0600 where
+## the platform has Unix permissions).
 
 const PATH: String = "user://session_token.json"
+## rw------- (0600).
+const OWNER_ONLY: int = FileAccess.UNIX_READ_OWNER | FileAccess.UNIX_WRITE_OWNER
 
 var token: String = ""
 var host: String = ""
@@ -27,8 +30,17 @@ static func make(
 	return t
 
 
+## Writes the file, restricting it to the user before the secret goes in.
 func save(path: String = PATH) -> Error:
 	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return FileAccess.get_open_error()
+	file.close()
+	if OS.get_name() in ["Linux", "macOS", "FreeBSD"]:
+		var err: Error = FileAccess.set_unix_permissions(path, OWNER_ONLY)
+		if err != OK:
+			return err
+	file = FileAccess.open(path, FileAccess.WRITE)
 	if file == null:
 		return FileAccess.get_open_error()
 	var d: Dictionary = {"token": token, "host": host, "port": port, "host_secret": host_secret}

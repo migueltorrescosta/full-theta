@@ -1,26 +1,32 @@
-# c1: Tactical (Helm + Weapons). Lines marked "A:" follow names T043-T045 still define.
+# c1: Tactical (Helm + Weapons), first on it, so it holds every Tactical item.
 connect
-expect_welcome resumed=false ship=-1
-expect_catalogue ships.size=1 entries.id~=p2 entries.id~=p10 entries.id~=p15
-pick ship=0 entry=p2
+expect_welcome resumed=false ship=-1 host=false
+expect_catalogue ships.size=1 entries.id~=tactical entries.id~=systems entries.id~=ops
+pick ship=0 entry=tactical
+# Alone on a station: holds its items (FT-NET-044); the name is in the snapshot.
+expect_view ownership.claims.mount:0.1=c1 ownership.claims.flight.1=c1
+signal name=c1_tactical
 barrier name=picked n=3
 # Coverage (FT-NET-019, FT-NET-021): Tactical, Tactical, Systems leave Relay and Comms.
-expect_event type=lobby payload.ship=0 payload.uncovered~=relay payload.uncovered~=comms payload.uncovered!~helm keep=true  # A: lobby state event
+expect_event type=lobby payload.ship=0 payload.uncovered~=relay payload.uncovered~=comms payload.uncovered!~helm payload.ready=false keep=true
 ready
-expect_event type=request_rejected payload.request=7  # A: Ready refused before coverage
-# Claims (FT-NET-022, FT-NET-023): c1 claims mount 0 of the station it shares with c2.
-claim item=mount:0  # A: item id
-expect_event type=claim payload.item=mount:0 payload.holder=c1  # A: claim event fields
+expect_event type=request_rejected payload.request=7 payload.reason=coverage
+barrier name=rejected n=3
+# Claims (FT-NET-022 to FT-NET-024): c1 releases mount 0 and c2 claims it.
+release_claim item=mount:0
+expect_event type=claim payload.item=mount:0 payload.name=""
+barrier name=released n=3
+barrier name=c2_claimed n=3
+expect_event type=claim payload.item=mount:0 payload.name=c2
+expect_view ownership.claims.mount:0.1=c2
 command id=aim kind=aim_mount mount_index=0 aim_x=100.0 aim_y=0.0 aim_z=0.0
-expect_accepted id=aim
-expect_view blocks.mounts.mounts.0.aim_set=true
-barrier name=claimed n=3
+expect_rejected id=aim reason=claimed
 barrier name=checked n=3
-# c2 moved to Ops: covered; Ready is accepted and the run starts.
+# c2 moved to Ops: covered; Ready starts the run (the sim steps from Start).
 barrier name=covered n=3
-expect_event type=lobby payload.ship=0 payload.uncovered.size=0 keep=true  # A
+expect_event type=lobby payload.ship=0 payload.uncovered.size=0 payload.ready=true keep=true
 ready
-expect_event type=started  # A: run start event
+expect_event type=started payload.ship=0
 expect_tick_moving
 barrier name=started n=3
 # Reconnect after a crash (FT-NET-025, FT-NET-026): set decoupled mode, then die.

@@ -3,6 +3,8 @@ extends GdUnitTestSuite
 ## from the S3 spike's tests. Servers listen on a free port (port 0), so
 ## parallel loopback tests don't clash.
 
+const MAX_PROBE: int = 8190
+
 var _dir: String = ""
 ## Stopped in after_test, so a failed assertion doesn't leave the port bound.
 var _server: StaticServer
@@ -104,6 +106,8 @@ func test_mime_types() -> void:
 	assert_str(StaticServer.mime_for("index.js")).starts_with("text/javascript")
 	assert_str(StaticServer.mime_for("index.html")).starts_with("text/html")
 	assert_str(StaticServer.mime_for("keepawake.webm")).is_equal("video/webm")
+	# No mp4 (trimmed with byte ranges; #9 re-adds both if Safari needs them).
+	assert_str(StaticServer.mime_for("keepawake.mp4")).is_equal("application/octet-stream")
 	assert_str(StaticServer.mime_for("index.pck")).is_equal("application/octet-stream")
 
 
@@ -117,18 +121,8 @@ func test_accepts_gzip() -> void:
 	assert_bool(StaticServer.accepts_gzip("")).is_false()
 
 
-func test_parse_range() -> void:
-	assert_object(StaticServer.parse_range("bytes=0-99", 1000)).is_equal(Vector2i(0, 99))
-	assert_object(StaticServer.parse_range("bytes=900-", 1000)).is_equal(Vector2i(900, 999))
-	assert_object(StaticServer.parse_range("bytes=-100", 1000)).is_equal(Vector2i(900, 999))
-	assert_object(StaticServer.parse_range("bytes=0-5000", 1000)).is_equal(Vector2i(0, 999))
-	assert_object(StaticServer.parse_range("bytes=1000-", 1000)).is_equal(Vector2i(-1, -1))
-	assert_object(StaticServer.parse_range("bytes=0-1,5-6", 1000)).is_equal(Vector2i(-1, -1))
-	assert_object(StaticServer.parse_range("", 1000)).is_equal(Vector2i(-1, -1))
-
-
 # FT: FT-NET-030
-func test_serves_gzip_etag_and_ranges_over_loopback() -> void:
+func test_serves_gzip_etag_and_304_without_ranges_over_loopback() -> void:
 	_server = StaticServer.new(_dir, 16384)
 	var server: StaticServer = _server
 	assert_int(server.listen(0, "127.0.0.1")).is_equal(OK)
@@ -147,12 +141,13 @@ func test_serves_gzip_etag_and_ranges_over_loopback() -> void:
 		server, "GET /big.wasm HTTP/1.1\r\nHost: t\r\nIf-None-Match: %s\r\n\r\n" % etag
 	)
 	assert_int(again["status"]).is_equal(304)
+	# A Range header is ignored: the whole file, no Accept-Ranges.
 	var part: Dictionary = _fetch(
 		server, "GET /big.wasm HTTP/1.1\r\nHost: t\r\nRange: bytes=10-19\r\n\r\n"
 	)
-	assert_int(part["status"]).is_equal(206)
-	assert_str(part["headers"]["content-range"]).is_equal("bytes 10-19/300000")
-	assert_int((part["body"] as PackedByteArray)[0]).is_equal(10)
+	assert_int(part["status"]).is_equal(200)
+	assert_int((part["body"] as PackedByteArray).size()).is_equal(300_000)
+	assert_bool(part["headers"].has("accept-ranges")).is_false()
 	var missing: Dictionary = _fetch(server, "GET /nope.js HTTP/1.1\r\nHost: t\r\n\r\n")
 	assert_int(missing["status"]).is_equal(404)
 	var post: Dictionary = _fetch(server, "POST / HTTP/1.1\r\nHost: t\r\n\r\n")
@@ -261,3 +256,67 @@ func test_poll_stops_when_the_budget_is_spent() -> void:
 	assert_int(_server.requests).is_equal(1)
 	assert_int(_server.bytes_out).is_greater(0)
 	tcp.disconnect_from_host()
+
+
+# FT: FT-NET-039
+# The head search resumes where the last poll stopped and finds the blank line
+# across reads, wherever it falls.
+func test_header_end_resumes_from_the_scanned_offset() -> void:
+	var req: PackedByteArray = "GET / HTTP/1.1\r\nHost: t\r\n\r\nNEXT".to_utf8_buffer()
+	var end: int = StaticServer._header_end(req)
+	assert_int(end).is_equal(req.size() - 8)
+	for cut: int in range(1, req.size()):
+		var first: PackedByteArray = req.slice(0, cut)
+		var found: int = StaticServer._header_end(first)
+		if found >= 0:
+			assert_int(found).is_equal(end)
+			continue
+		assert_int(StaticServer._header_end(req, maxi(0, cut - 3))).is_equal(end)
+	var lf: PackedByteArray = PackedByteArray()
+	lf.resize(MAX_PROBE)
+	lf.fill(10)
+	assert_int(StaticServer._header_end(lf)).is_equal(-1)
+
+
+# FT: FT-NET-039
+# A peer that sends 8 KiB without ending its head (letters, then line feeds, the slow
+# case of a byte loop) keeps each poll within the 400 us budget: the search is native
+# and each byte is searched once. Timed as the median poll, and a whole 8 KiB search
+# as the mean of 20, so a preempted poll on a loaded machine doesn't fail it.
+func test_headerless_8k_peer_stays_within_the_budget() -> void:
+	for fill: int in [65, 10]:
+		_server = StaticServer.new(_dir)
+		assert_int(_server.listen(0, "127.0.0.1")).is_equal(OK)
+		var tcp: StreamPeerTCP = StreamPeerTCP.new()
+		tcp.connect_to_host("127.0.0.1", _server.local_port())
+		var junk: PackedByteArray = PackedByteArray()
+		junk.resize(1024)
+		junk.fill(fill)
+		var times: Array[int] = []
+		var deadline: int = Time.get_ticks_msec() + 3000
+		var chunks: int = 0
+		while Time.get_ticks_msec() < deadline and chunks < 8:
+			tcp.poll()
+			if tcp.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+				tcp.put_data(junk)
+				chunks += 1
+			OS.delay_usec(2000)
+			var t0: int = Time.get_ticks_usec()
+			_server.poll(StaticServer.DEFAULT_BUDGET_US)
+			times.append(Time.get_ticks_usec() - t0)
+		assert_int(chunks).is_equal(8)
+		# The whole 8 KiB at once, one more search.
+		var whole: PackedByteArray = PackedByteArray()
+		whole.resize(MAX_PROBE)
+		whole.fill(fill)
+		var t1: int = Time.get_ticks_usec()
+		for i: int in 20:
+			StaticServer._header_end(whole)
+		var per_search: int = (Time.get_ticks_usec() - t1) / 20
+		times.sort()
+		assert_int(times[times.size() / 2]).is_less(StaticServer.DEFAULT_BUDGET_US)
+		assert_int(per_search).is_less(StaticServer.DEFAULT_BUDGET_US)
+		assert_int(_server.open_connections()).is_equal(1)
+		assert_int(_server.requests).is_equal(0)
+		tcp.disconnect_from_host()
+		_server.stop()

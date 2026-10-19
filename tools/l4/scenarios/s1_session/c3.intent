@@ -1,20 +1,23 @@
 # c3: Systems (Engineering + Science); killed past the grace.
 connect
 expect_welcome resumed=false
-pick ship=0 entry=p10
+pick ship=0 entry=systems
 barrier name=picked n=3
-barrier name=claimed n=3
+barrier name=rejected n=3
+barrier name=released n=3
+barrier name=c2_claimed n=3
 barrier name=checked n=3
 barrier name=covered n=3
-ready
-expect_event type=started  # A
+expect_event type=started payload.ship=0
 barrier name=started n=3
 mark
 await name=c1_back timeout=60
 expect_no_event type=pause for=0.1
 expect_flowing max_gap_ms=1000
+# A ship-wide control: last writer wins and is named (FT-NET-044).
 command id=pips kind=set_pips subsystem_kind=0 pips=2
 expect_accepted id=pips
+expect_view ownership.writers.pips:0.1=c3
 barrier name=rejoined n=3
 signal name=c3_kill
 await name=never timeout=60

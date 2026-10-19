@@ -63,7 +63,7 @@ func test_running_server_is_listed_and_joinable_by_host_and_address() -> void:
 	assert_str(host.name).is_equal("Bridge Party")
 	assert_str(host.address).is_equal("127.0.0.1")
 	assert_int(host.ws_port).is_equal(_server.port())
-	assert_int(host.http_port).is_equal(_server.port() - 1)
+	assert_int(host.http_port).is_equal(0)  # no HTTP server: nothing to advertise
 	assert_int(host.cap).is_equal(64)
 	assert_int(host.players).is_equal(0)
 	assert_bool(host.compatible).is_true()
@@ -72,7 +72,7 @@ func test_running_server_is_listed_and_joinable_by_host_and_address() -> void:
 	var by_host: NetClient = _join(host.url())
 	assert_bool(await _until(by_host.is_welcomed)).is_true()
 	# Join by a typed address.
-	var typed: JoinAddress = JoinAddress.parse("127.0.0.1:%d" % _server.port())
+	var typed: LanBrowser.Address = LanBrowser.parse_address("127.0.0.1:%d" % _server.port())
 	assert_bool(typed.ok).is_true()
 	var by_ip: NetClient = _join(typed.url)
 	assert_bool(await _until(by_ip.is_welcomed)).is_true()

@@ -2,8 +2,8 @@ class_name NetSession
 extends RefCounted
 ## One player's session on the server (main thread): identity, token, connection,
 ## catalogue pick and rate limit. It outlives its connection: a client that presents
-## the token gets it back (FT-NET-025, FT-NET-026). ServerSession owns these; lobby
-## (T043), claims (T044) and grace/pause (T045) add their state here.
+## the token gets it back (FT-NET-025, FT-NET-026), with its pick and claims while its
+## grace period runs (FT-NET-033), and after that with whatever is still free.
 
 var id: int = 0
 var token: String = ""
@@ -19,8 +19,13 @@ var ship: int = -1
 var entry: String = ""
 ## Difficulty-toggle set of the view key (D14, D69); one set for M1.
 var toggles: String = StationViews.DEFAULT_TOGGLES
-var ready: bool = false
-## Presented the server's --host-secret in Hello (D127): the host client.
+## The grace period ended: pick and claims were released; last_* remember them for a
+## rejoin (FT-NET-026).
+var lapsed: bool = false
+var last_ship: int = -1
+var last_entry: String = ""
+var last_claims: Array[String] = []
+## Presented the server's host secret in Hello (D127): the host client.
 var is_host: bool = false
 ## Command rate limit (FT-NET-006).
 var bucket: NetTokenBucket

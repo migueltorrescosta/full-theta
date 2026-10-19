@@ -112,6 +112,31 @@ func test_idle_exit_waits_for_no_connections() -> void:
 	life.queue_free()
 
 
+# FT: FT-NET-003
+# A socket that never says Hello holds no session, so it doesn't keep the server up:
+# the idle exit counts connections bound to a session only.
+func test_idle_exit_ignores_sessionless_connections() -> void:
+	var server: NetServer = _server()
+	var life: ServerLifecycle = ServerLifecycle.new(server, _pid_file, 0.01)
+	var exits: Array[int] = []
+	life.on_idle_exit = func() -> void: exits.append(Time.get_ticks_msec())
+	add_child(life)
+	var ws: WebSocketPeer = WebSocketPeer.new()
+	assert_int(ws.connect_to_url("ws://127.0.0.1:%d" % server.port())).is_equal(OK)
+	var open: Callable = func() -> bool:
+		ws.poll()
+		return ws.get_ready_state() == WebSocketPeer.STATE_OPEN and server.connections() == 1
+	assert_bool(await _until(open)).is_true()
+	assert_int(server.bound_connections()).is_equal(0)
+	var exited: Callable = func() -> bool:
+		ws.poll()
+		return not exits.is_empty()
+	assert_bool(await _until(exited)).is_true()
+	assert_int(ws.get_ready_state()).is_equal(WebSocketPeer.STATE_OPEN)
+	ws.close()
+	life.queue_free()
+
+
 # FT: FT-NET-030
 # --http-root serves the web export over plain HTTP on the bind address at the
 # WebSocket port - 1 (D108), polled by the server loop.

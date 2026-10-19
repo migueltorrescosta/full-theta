@@ -1,7 +1,7 @@
 """Inspect release packages before they are published (FT-ARC-022, FT-LIC-008).
 
     uv run --project tools python tools/release/inspect_packages.py \
-        --version V --commit SHA DIR [--allow-stub-prerender]
+        --version V --commit SHA DIR
 
 DIR is build.sh's output: the assets, plus exports/ (the Godot exports the
 packages were made from). For each package the inspection checks:
@@ -109,10 +109,9 @@ def tree(folder: Path) -> set[str]:
 
 
 class Inspector:
-    def __init__(self, version: str, commit: str, allow_stub: bool):
+    def __init__(self, version: str, commit: str):
         self.version = version
         self.commit = commit
-        self.allow_stub = allow_stub
         self.errors: list[str] = []
         self.voices = package.release_voices()
         self.languages = package.release_languages()
@@ -176,9 +175,6 @@ class Inspector:
                 self.check(False, where, f"no {index}")
                 continue
             clips = self.json(where, p.read(index), index)
-            if clips.get("stub"):
-                self.check(self.allow_stub, where, f"{index} is a stub")
-                continue
             listed = clips.get("clips")
             if not isinstance(listed, list) or not listed:
                 self.check(False, where, f"{index} lists no clips")
@@ -338,10 +334,9 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--version", required=True)
     ap.add_argument("--commit", required=True)
-    ap.add_argument("--allow-stub-prerender", action="store_true")
     ap.add_argument("out", type=Path)
     a = ap.parse_args(argv)
-    errors = Inspector(a.version, a.commit, a.allow_stub_prerender).run(a.out)
+    errors = Inspector(a.version, a.commit).run(a.out)
     for e in errors:
         print(f"inspect: {e}", file=sys.stderr)
     print(f"inspect: {'FAIL' if errors else 'pass'}, {len(errors)} problems")

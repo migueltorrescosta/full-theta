@@ -39,7 +39,7 @@ The game finds its bundled files next to its executable (`ReleaseBundle`, `Bundl
 `tools/release/build.sh VERSION OUT_DIR` does every step; the workflow and `gate.sh l6` both call it. VERSION must look like `v1.2.3` or `v1.2.3-rc.1`. The script refuses an OUT_DIR that holds anything other than an earlier build's output, and writes `.gdignore` there, so Godot never imports or exports build files.
 
 1. Writes `build_info.json` (version, commit). It is gitignored, and every export packs it, so the desktop build and the web page both print `build: VERSION COMMIT` at start (`ReleaseBundle.build_line()`).
-2. Prerenders every release language (`tools/release/prerender.sh`, D154): the client clips into `audio/prerendered/<lang>/` (every pack, web included) and the host's stitching fragments into `audio/prerendered_host/<lang>/` (desktop packs only). It renders with the `prerender` voices of `tools/tts/voices.json`, which don't ship. The packs carry the clips through the export include filter, together with the dialogue and string data the game reads (`content/dialogue/*.json`, `content/i18n/strings.json`, `content/voices.json`), and the inspection checks both in every pack (D150–D152). Until the voice strand adds `tools/tts/prerender_release.py`, the step writes stub indexes. The inspection rejects them unless `--allow-stub-prerender` is given, so a tag can't ship without clips.
+2. Prerenders every release language (`tools/release/prerender.sh`, D154): the client clips into `audio/prerendered/<lang>/` (every pack, web included) and the host's stitching fragments into `audio/prerendered_host/<lang>/` (desktop packs only). It runs `tools/tts/prerender_release.py` (`audio/README.md`) with the `prerender` voices of `tools/tts/voices.json`, which don't ship, and the runtime (`release`) voices for the host pack. The packs carry the clips through the export include filter, together with the dialogue and string data the game reads (`content/dialogue/*.json`, `content/i18n/strings.json`, `content/voices.json`), and the inspection checks both in every pack (D150–D152). A language with no clips fails the inspection.
 3. Exports the `Linux`, `Windows`, `macOS` and `Web` presets.
 4. Finishes the web export for plain `http://` (`tools/release/web_patch.py`, D108).
 5. Packages everything (`tools/release/package.py`). It fetches the pinned Piper archives, licence files and sources (`tools/release/fetch.py`, `tools/release/piper.json`) and the release voices (`tools/tts/fetch_voices.py`), all checked by SHA-256.
@@ -71,9 +71,9 @@ act push -W .github/workflows/release.yml --eventpath /tmp/tag-event.json \
   --container-options "-v $HOME/.cache/full-theta:/root/.cache/full-theta:ro"
 ```
 
-A clone keeps the run's `build_info.json` and prerender folders out of your working tree. The read-only cache mount reuses fugaku's fetched engine, templates, Piper and voices (drop it where the cache is empty). Under act, the inspection accepts stub prerendered clips. act doesn't apply the `tags` filter, so it can't show that branch pushes skip the workflow; GitHub runs a workflow whose `push` trigger lists only `tags` for tag pushes alone.
+A clone keeps the run's `build_info.json` and prerender folders out of your working tree. The read-only cache mount reuses fugaku's fetched engine, templates, Piper and voices (drop it where the cache is empty). act doesn't apply the `tags` filter, so it can't show that branch pushes skip the workflow; GitHub runs a workflow whose `push` trigger lists only `tags` for tag pushes alone.
 
-Or run the same build directly: `tools/release/build.sh v0.0.0-dryrun build/dryrun --allow-stub-prerender`.
+Or run the same build directly: `tools/release/build.sh v0.0.0-dryrun build/dryrun`.
 
 ## Changing what ships
 

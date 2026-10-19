@@ -129,6 +129,16 @@ func test_message_over_the_size_cap_is_rejected() -> void:
 	assert_int(r.pending_messages()).is_equal(0)
 
 
+# The server lowers the cap for client messages (NetTransport.MAX_CLIENT_MESSAGE).
+func test_lowered_size_cap() -> void:
+	var r: NetChunker = NetChunker.new()
+	r.max_message_size = 100
+	assert_bool(r.feed(_chunk(0, 1, 0, 1, 100)).is_empty()).is_false()
+	assert_bool(r.feed(_chunk(0, 2, 0, 2, 60)).is_empty()).is_true()
+	assert_bool(r.feed(_chunk(0, 2, 1, 2, 60)).is_empty()).is_true()
+	assert_int(r.errors).is_equal(1)
+
+
 func test_snapshot_chunks_go_before_earlier_voice() -> void:
 	var q: NetSendQueue = NetSendQueue.new(16384, 1)
 	q.push(NetChunker.STREAM_VOICE, _bytes(132440, 7))

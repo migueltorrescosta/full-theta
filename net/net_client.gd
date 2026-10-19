@@ -10,8 +10,9 @@ extends RefCounted
 ## Lifecycle states.
 enum State { IDLE, CONNECTING, WELCOMED, REJECTED, CLOSED }
 
-## Acks at most this often (us), and at once after a full snapshot (S9: every 200 ms is
-## enough for the 15-snapshot stall limit and saves packets).
+## Acks at most this often (us), and at once after a full snapshot or a snapshot it
+## couldn't apply (S9: every 200 ms is enough for the 15-snapshot stall limit and saves
+## packets).
 const ACK_INTERVAL_US: int = 200_000
 
 var name: String = "client"
@@ -31,9 +32,9 @@ var inbox: NetEventInbox = NetEventInbox.new()
 var paused: bool = false
 ## Inbound buffer size; web clients raise it to 1 MiB (D108).
 var inbound_buffer_size: int = 65535
-## Counters: snapshots applied, fulls, failed applies, events, voice clips, chunk errors.
+## Counters: snapshots applied, fulls, failed applies, events, voice clips.
 var stats: Dictionary = {"snapshots": 0, "fulls": 0, "bad_snapshots": 0, "events": 0, "voice": 0}
-## Received voice clips (NetProtocol VOICE fields) and their arrival order by stream.
+## Received voice clips (NetProtocol.Type.VOICE fields).
 var voice_clips: Array[Dictionary] = []
 ## Stream of every completed inbound message, in arrival order (tests).
 var arrivals: PackedByteArray = PackedByteArray()
@@ -49,6 +50,8 @@ var _next_seq: int = 1
 var _acked: Vector2i = Vector2i(-1, -1)
 var _last_ack_us: int = 0
 var _force_ack: bool = false
+## Sent Ack snap -1 for the current need_full (once: a second would cost another full).
+var _full_asked: bool = false
 var _hello_sent: bool = false
 
 
@@ -162,7 +165,7 @@ func takeover(ship: int, entry: String) -> void:
 	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "entry": entry})
 
 
-## Sends a crew command; returns its seq (CommandRejected events name it).
+## Sends a crew command; returns its seq (`command_rejected` events name it).
 func command(cmd: Dictionary) -> int:
 	var seq: int = _next_seq
 	_next_seq += 1
@@ -216,6 +219,7 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 				_force_ack = true
 		else:
 			stats["bad_snapshots"] += 1
+			_force_ack = not _full_asked
 		return
 	var msg: Dictionary = NetProtocol.decode(data)
 	match type:
@@ -230,6 +234,7 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 			if not msg["resumed"] or inbox.last_seq < msg["ev_from"]:
 				inbox = NetEventInbox.new(msg["ev_from"])
 			_acked = Vector2i(-1, -1)
+			_full_asked = false
 		NetProtocol.Type.HELLO_REJECTED:
 			reject_reason = msg.get("reason", "")
 			state = State.REJECTED
@@ -245,13 +250,21 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 			stats["voice"] += 1
 
 
+## Acks the newest snapshot applied (0 before the first) and event delivered; a view
+## that needs a full snapshot sends snap -1 once, then 0 until the full one arrives.
 func _maybe_ack() -> void:
 	if state != State.WELCOMED:
 		return
-	var now: Vector2i = Vector2i(view.seq, inbox.last_seq)
+	var snap: int = maxi(view.seq, 0)
+	if view.need_full:
+		snap = 0 if _full_asked else -1
+	else:
+		_full_asked = false
+	var now: Vector2i = Vector2i(snap, inbox.last_seq)
 	var due: bool = Time.get_ticks_usec() - _last_ack_us >= ACK_INTERVAL_US
 	if now != _acked and (due or _force_ack):
 		_queue.push(NetChunker.STREAM_CONTROL, NetProtocol.ack(now.x, now.y))
 		_acked = now
+		_full_asked = _full_asked or snap < 0
 		_last_ack_us = Time.get_ticks_usec()
 		_force_ack = false

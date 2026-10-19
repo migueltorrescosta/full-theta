@@ -20,30 +20,34 @@ var contacts: Dictionary = {}
 var near: Dictionary = {}
 ## id -> [pos, vel, tick].
 var projectiles: Dictionary = {}
+## OWNERSHIP of this view: {"claims": {item: [session, name]}, "writers": {control:
+## [session, name]}}.
+var ownership: Dictionary = {}
 ## Sections present in the last full snapshot.
 var kinds: Array[int] = []
 ## Deltas that couldn't be applied (no base, a gap, a corrupt record).
 var rejected: int = 0
+## A snapshot couldn't be applied: deltas are refused until the next full snapshot,
+## which NetClient asks for (Ack snap -1).
+var need_full: bool = false
 
 
 func _init(period_units: int = 0) -> void:
 	p_units = period_units
 
 
-## Applies one snapshot message; false if it couldn't be applied (the client then
-## needs a full snapshot; the server sends one after a stall).
+## Applies one snapshot message; false if it couldn't be applied: the view then needs
+## a full snapshot (need_full) and refuses deltas until one arrives.
 func apply(data: PackedByteArray) -> bool:
 	if data.size() < SnapshotBuilder.HEADER_BYTES or data[0] != NetProtocol.Type.SNAPSHOT:
-		rejected += 1
-		return false
+		return _reject()
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.data_array = data
 	buf.seek(1)
 	var is_full: bool = buf.get_u8() & SnapshotBuilder.FLAG_FULL != 0
 	var new_seq: int = buf.get_u32()
-	if not is_full and (seq < 0 or new_seq != seq + 1):
-		rejected += 1
-		return false
+	if not is_full and (need_full or seq < 0 or new_seq != seq + 1):
+		return _reject()
 	var new_tick: int = buf.get_u32()
 	var n: int = buf.get_u8()
 	if is_full:
@@ -52,22 +56,36 @@ func apply(data: PackedByteArray) -> bool:
 		contacts = {}
 		near = {}
 		projectiles = {}
+		ownership = {}
 		kinds = []
 		full_count += 1
 	for i: int in range(n):
 		var kind: int = buf.get_u8()
-		var size: int = buf.get_u16()
+		var size: int = SnapshotBuilder.get_length(buf)
 		var start: int = buf.get_position()
+		if start + size > data.size():
+			return _reject()
 		if not _apply_section(kind, buf, data.slice(start, start + size), is_full, new_tick):
-			rejected += 1
-			seq = -1
-			return false
+			return _reject()
 		if is_full:
 			kinds.append(kind)
 		buf.seek(start + size)
 	seq = new_seq
 	tick = new_tick
+	need_full = false
 	return true
+
+
+## Name of the player holding a claim item of this view's stations ("" if free).
+func claimer(item: String) -> String:
+	var claims: Dictionary = ownership.get("claims", {})
+	return claims[item][1] if claims.has(item) else ""
+
+
+## Name of the last writer of a ship-wide control of this view's stations ("" if none).
+func last_writer(control: String) -> String:
+	var writers: Dictionary = ownership.get("writers", {})
+	return writers[control][1] if writers.has(control) else ""
 
 
 ## Own ship position (m, site-local, wrapped), or ZERO before the first snapshot.
@@ -90,6 +108,12 @@ func callsign(id: int) -> String:
 	return info[id][1] if info.has(id) else ""
 
 
+func _reject() -> bool:
+	rejected += 1
+	need_full = true
+	return false
+
+
 func _apply_section(
 	kind: int, buf: StreamPeerBuffer, part: PackedByteArray, is_full: bool, at: int
 ) -> bool:
@@ -102,6 +126,9 @@ func _apply_section(
 			NearSection.apply(near, buf, is_full, at)
 		StationViews.Section.PROJECTILES:
 			ProjectilesSection.apply(projectiles, buf, is_full, at)
+		StationViews.Section.OWNERSHIP:
+			ownership = OwnershipSection.read(part)
+			return not ownership.is_empty()
 		_:
 			if not StationViews.BLOCKS.has(kind):
 				return false

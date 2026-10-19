@@ -4,34 +4,37 @@ extends RefCounted
 ## builds the NetServer node that app/main.gd adds to the tree.
 ##
 ## godot --headless --path . -- --server --bind ADDR [flags]
-##   --port N             WebSocket port [47801]; the HTTP port (web stations) will be
+##   --port N             WebSocket port [47801]; the HTTP port (web stations) is
 ##                        N - 1 (D108). 0 picks a free port (tests, smoke runs).
 ##   --bind ADDR          address to listen on, required: the chosen LAN address, not
 ##                        every interface (S3); 127.0.0.1 for a local host.
 ##   --dev-all-stations   offer the dev entry holding every station (FT-NET-029, D72).
 ##   --seed N             world seed [1].
-##   --host-secret HEX    the host client presents it in Hello (D127); none by default.
-##                        Tests only: other local users can read a command line.
 ##   --host-secret-env    read the host secret from the FT_HOST_SECRET environment
-##                        variable instead (what HostLauncher passes; D127).
+##                        variable (what HostLauncher passes; D127); the host client
+##                        presents it in Hello. None by default.
 ##   --grace-s S          reconnect grace (s) [10] (FT-NET-033; T045 owns the rules).
-##   --idle-exit-min M    exit after M minutes without connections, wall clock
-##                        (FT-NET-003); 0 never [0].
+##   --idle-exit-min M    exit after M minutes without connected players (connections
+##                        with a session), wall clock (FT-NET-003); 0 never [0].
 ##   --pid-file PATH      write the pid file there while running (FT-NET-003).
 ##   --http-root DIR      serve this web export (an absolute path) over HTTP at
 ##                        port - 1 (FT-NET-030, D108); off without it.
 ##   --name NAME          server name in the LAN beacon ["Full Theta server"].
 ##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
-##   --no-beacon          don't broadcast on the LAN (tests).
+##   --no-beacon          don't broadcast on the LAN. A server bound to a loopback
+##                        address never does: no other machine could join it.
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
+##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
+##                        before launch and Welcome carries it (FT-AUD-013, D41).
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
+const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
 ## Headless frame pacing (S3 "Server loop"): Godot otherwise sleeps 6.9 ms a frame in
 ## headless mode, capping it near 145 frames/s; 2 ms keeps the 60 Hz tick within about
-## 2 ms of due without spinning. PROVISIONAL.
+## 2 ms of due without spinning. Provisional: see docs/protocol.md, Rates and limits.
 const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
-## PROVISIONAL: the beacon's default server name.
+## The beacon's default server name (provisional: see docs/protocol.md, Rates and limits).
 const DEFAULT_NAME: String = "Full Theta server"
 
 var port: int = DEFAULT_PORT
@@ -39,7 +42,7 @@ var bind_address: String = ""
 var dev_all_stations: bool = false
 var seed_value: int = 1
 var host_secret: String = ""
-var grace_s: float = 10.0
+var grace_s: float = DEFAULT_GRACE_S
 var idle_exit_min: float = 0.0
 var pid_file: String = ""
 var run_for: float = 0.0
@@ -47,6 +50,7 @@ var http_root: String = ""
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
+var language: String = I18n.LANGUAGES[0]
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -104,8 +108,6 @@ func _set_flag(flag: String, value: String) -> bool:
 			set(flag.trim_prefix("--").replace("-", "_"), value.to_float())
 		"--bind":
 			bind_address = value
-		"--host-secret":
-			host_secret = value
 		"--pid-file":
 			pid_file = value
 		"--http-root":
@@ -116,6 +118,11 @@ func _set_flag(flag: String, value: String) -> bool:
 			http_root = value
 		"--name":
 			server_name = value
+		"--language":
+			if not I18n.LANGUAGES.has(value):
+				push_error("--language must be one of %s" % ", ".join(I18n.LANGUAGES))
+				return false
+			language = value
 		_:
 			push_error("unknown argument %s" % flag)
 			return false
@@ -139,6 +146,7 @@ func make_server() -> NetServer:
 		server.free()
 		return null
 	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
+	server.session.language = language
 	if http_root != "":
 		err = server.start_http(http_root)
 		if err != OK:
@@ -151,14 +159,25 @@ func make_server() -> NetServer:
 			server.transport.stop()
 			server.free()
 			return null
-	if beacon:
+	if beacon and not is_loopback(bind_address):
 		server.start_beacon(server_name, discovery_port)
 	return server
+
+
+## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick.
+## Silent until the lobby's Start calls start_session(session.language, closed set).
+func make_voice(server: NetServer) -> VoiceService:
+	return VoiceSetup.make_service(server.transport, func() -> int: return server.world.tick)
 
 
 ## The pid file and idle-exit node that runs next to `server` (FT-NET-003).
 func make_lifecycle(server: NetServer) -> ServerLifecycle:
 	return ServerLifecycle.new(server, pid_file, idle_exit_min)
+
+
+## True for an address only this machine reaches (127.0.0.0/8, ::1, localhost).
+static func is_loopback(address: String) -> bool:
+	return address.begins_with("127.") or address in ["::1", "localhost"]
 
 
 ## Engine settings for a headless server process (not for in-process tests).

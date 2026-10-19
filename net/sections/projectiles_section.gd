@@ -8,7 +8,7 @@ extends SnapshotSection
 ##
 ## ProjectileTable rows have no stable id, so the section names each projectile by its
 ## shooter and expiry tick (tick + ttl, constant over its flight), plus its order among
-## rows with the same pair, and maps that to a u16 net id.
+## rows with the same pair, packed in one int (_key), and maps that to a u16 net id.
 ##
 ## Delta: u16 n records (u16 id, 3 x s32 position, 3 x s16 velocity in 1/8 m/s); u16
 ## g, g gone ids. Full: the records each with a u16 age.
@@ -42,7 +42,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	var seen: Dictionary = {}
 	var ordinal: Dictionary = {}
 	for k: int in proj.size():
-		var pair: String = "%d|%d" % [proj.ship_ids[k], _tick + proj.ttl[k]]
+		var pair: int = _key(proj.ship_ids[k], _tick + proj.ttl[k], 0)
 		var nth: int = ordinal.get(pair, 0)
 		ordinal[pair] = nth + 1
 		if proj.site[k] != kin.site[owner]:
@@ -50,7 +50,7 @@ func update(world: SimWorld) -> PackedByteArray:
 		var rel: Vector3 = proj.relative_start(k, kin, owner, 0.0)
 		if rel.length_squared() > r2:
 			continue
-		var key: String = "%s|%d" % [pair, nth]
+		var key: int = pair + nth
 		var id: int = _ids.get(key, -1)
 		if id >= 0:
 			seen[id] = key
@@ -68,7 +68,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	for id: int in model.keys():
 		if not seen.has(id):
 			gone.append(id)
-	for key: String in _ids.keys():
+	for key: int in _ids.keys():
 		if not seen.has(_ids[key]):
 			_ids.erase(key)
 	ContactsSection.put_gone(buf, gone, model)
@@ -101,6 +101,11 @@ static func apply(into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: 
 		into[id] = [p, v, at]
 	if not is_full:
 		ContactsSection.get_gone(buf, into)
+
+
+## Shooter (15 bits), expiry tick (32 bits) and order among same pairs (16 bits).
+static func _key(shooter: int, expiry: int, nth: int) -> int:
+	return shooter << 48 | (expiry & 0xFFFFFFFF) << 16 | nth
 
 
 func _new_id() -> int:

@@ -54,8 +54,8 @@ static func decide(file: ServerPidFile, alive: bool, identity: Identity, has_tok
 		return Action.LEAVE
 	if file.session_active:
 		return Action.OFFER_REJOIN if has_token else Action.OFFER_TERMINATE
-	# Provisional: without a way to verify the process, ask rather than risk
-	# killing whatever reused the pid.
+	# Without a way to verify the process, ask rather than risk killing whatever
+	# reused the pid (provisional: see docs/protocol.md, Rates and limits).
 	return Action.TERMINATE if identity == Identity.OURS else Action.OFFER_TERMINATE
 
 
@@ -96,7 +96,7 @@ static func process_alive(pid: int) -> bool:
 
 
 ## The process's arguments, or [] where they can't be read (only Linux reads
-## them, from /proc; elsewhere the identity stays UNVERIFIED, provisional).
+## them, from /proc; elsewhere the identity stays UNVERIFIED; see decide()).
 static func read_cmdline(pid: int) -> PackedStringArray:
 	if OS.get_name() != "Linux":
 		return []
@@ -117,15 +117,19 @@ static func inspect(
 	if check.info == null:
 		return check
 	check.token = SessionTokenFile.load_from(token_path)
-	var has_token: bool = check.token != null and check.token.port == check.info.port
 	var alive: bool = process_alive(check.info.pid)
 	var identity: Identity = Identity.NOT_SERVER
 	if alive:
 		identity = identify(
 			read_cmdline(check.info.pid), check.info.executable, OS.get_executable_path()
 		)
-	check.action = decide(check.info, alive, identity, has_token)
+	check.action = decide(check.info, alive, identity, check.has_token())
 	return check
+
+
+## True if the stored token names this server (its port).
+func has_token() -> bool:
+	return token != null and info != null and token.port == info.port
 
 
 ## Does what needs no player: clears a stale pid file or terminates an idle
@@ -142,11 +146,23 @@ func apply_automatic() -> bool:
 	return false
 
 
-## Kills the orphan and removes its pid file. Also what the player's
-## "terminate" choice calls.
+## Kills the orphan if it is still our server, and removes its pid file. Also what
+## the player's "terminate" choice calls.
 func terminate() -> void:
 	if info == null:
 		return
-	if process_alive(info.pid):
-		OS.kill(info.pid)
+	kill_if_ours(info.pid, info.executable)
 	ServerPidFile.remove(pid_file)
+
+
+## Kills `pid` only if it still runs our server from `executable` (pid reuse):
+## identifies it again right before the kill. Where the command line can't be read
+## (UNVERIFIED: not Linux) it kills, since the player was asked first
+## (OFFER_TERMINATE, or a rejoined orphan). Returns true if it sent the kill.
+static func kill_if_ours(pid: int, executable: String) -> bool:
+	if not process_alive(pid):
+		return false
+	var identity: Identity = identify(read_cmdline(pid), executable, OS.get_executable_path())
+	if identity == Identity.OURS or (identity == Identity.UNVERIFIED and OS.get_name() != "Linux"):
+		return OS.kill(pid) == OK
+	return false

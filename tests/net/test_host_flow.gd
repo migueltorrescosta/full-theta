@@ -2,7 +2,8 @@ extends GdUnitTestSuite
 ## L3/L4-style (T046): the Host flow and the orphan rejoin with a real server child
 ## process (this executable, headless, on loopback). Each test spawns its own child on a
 ## free port (--port 0) with its own pid, token and log files, and kills it afterwards.
-## The children run without the LAN beacon. Linux only for the orphan tests (/proc).
+## The children bind 127.0.0.1 (HostSession.Options.bind) and run without the LAN
+## beacon. Linux only for the orphan tests (/proc).
 
 const PLAYER: int = M1Encounter.PLAYER_SHIP
 ## A cold child start on 2 loaded cores can take several seconds.
@@ -46,9 +47,12 @@ func _host_session(idle_exit_min: float = 1.0) -> HostSession:
 	h.token_file = _token_file
 	h.launcher.pid_file = _pid_file
 	h.launcher.engine_args = ["--log-file", _log_file]
-	h.launcher.extra_server_args = ["--no-beacon"]
+	var options: HostSession.Options = HostSession.Options.new("127.0.0.1")
+	options.port = 0
+	options.idle_exit_min = idle_exit_min
+	options.beacon = false
 	_hosts.append(h)
-	assert_int(h.host(0, idle_exit_min)).is_equal(OK)
+	assert_int(h.host(options)).is_equal(OK)
 	_pids.append(h.launcher.pid)
 	return h
 
@@ -68,6 +72,13 @@ func _until(cond: Callable, timeout_ms: int = TIMEOUT_MS) -> bool:
 
 func _log() -> String:
 	return FileAccess.get_file_as_string(_log_file) if FileAccess.file_exists(_log_file) else ""
+
+
+## True once `pid` has exited and been reaped. A kill is asynchronous, and a killed
+## child of this process stays in /proc as a zombie until is_process_running()
+## reaps it, so a check straight after stop() can still see it.
+func _gone(pid: int) -> bool:
+	return not OS.is_process_running(pid) and not OrphanCheck.process_alive(pid)
 
 
 func _joined(h: HostSession) -> bool:
@@ -97,6 +108,7 @@ func test_host_spawns_a_headless_child_and_stop_kills_it() -> void:
 	var marked: Callable = func() -> bool:
 		return _log().contains("server: host is session %d" % h.client.session_id)
 	assert_bool(await _until(marked)).is_true()
+	assert_bool(h.client.welcome["host"]).is_true()
 	var stored: SessionTokenFile = SessionTokenFile.load_from(_token_file)
 	assert_str(stored.token).is_equal(h.client.token)
 	assert_int(stored.port).is_equal(info.port)
@@ -109,7 +121,7 @@ func test_host_spawns_a_headless_child_and_stop_kills_it() -> void:
 	h.stop()
 	assert_bool(FileAccess.file_exists(_pid_file)).is_false()
 	assert_bool(FileAccess.file_exists(_token_file)).is_false()
-	assert_bool(OrphanCheck.process_alive(pid)).is_false()
+	assert_bool(await _until(_gone.bind(pid))).is_true()
 
 
 # FT: FT-NET-003
@@ -124,7 +136,7 @@ func test_child_exits_after_idle_minutes_and_removes_its_pid_file() -> void:
 	var gone: Callable = func() -> bool: return not OS.is_process_running(pid)
 	assert_bool(await _until(gone)).is_true()
 	assert_bool(FileAccess.file_exists(_pid_file)).is_false()
-	assert_str(_log()).contains("server: no connections for")
+	assert_str(_log()).contains("server: no connected players for")
 
 
 # FT: FT-NET-003
@@ -141,7 +153,7 @@ func test_relaunched_host_rejoins_its_orphan_on_the_same_pick() -> void:
 	var picked: Callable = func() -> bool: return h.client.stats["fulls"] >= 1
 	assert_bool(await _until(picked)).is_true()
 	var other: NetClient = NetClient.new()
-	other.connect_to(JoinAddress.ws_url("127.0.0.1", h.launcher.port))
+	other.connect_to(LanBrowser.ws_url("127.0.0.1", h.launcher.port))
 	_clients.append(other)
 	assert_bool(await _until(other.is_welcomed)).is_true()
 	var session_id: int = h.client.session_id
@@ -168,13 +180,14 @@ func test_relaunched_host_rejoins_its_orphan_on_the_same_pick() -> void:
 	assert_int(again.client.session_id).is_equal(session_id)
 	assert_int(again.client.welcome["ship"]).is_equal(PLAYER)
 	assert_str(again.client.welcome["entry"]).is_equal("helm")
-	var host_again: Callable = func() -> bool:
-		return _log().count("server: host is session %d" % session_id) >= 2
-	assert_bool(await _until(host_again)).is_true()
+	# Host again by the stored secret (D127), from Welcome. Not from the child's "host
+	# is session" log line: when the drop and the rejoin land in one server frame,
+	# the host never reads as gone and the line isn't printed twice.
+	assert_bool(again.client.welcome["host"]).is_true()
 	assert_bool(other.is_welcomed()).is_true()
 	assert_bool(OrphanCheck.process_alive(pid)).is_true()
 	again.stop()
-	assert_bool(OrphanCheck.process_alive(pid)).is_false()
+	assert_bool(await _until(_gone.bind(pid))).is_true()
 	assert_bool(FileAccess.file_exists(_pid_file)).is_false()
 
 
@@ -197,7 +210,7 @@ func test_orphan_is_terminated_only_without_a_session_or_by_choice() -> void:
 	_hosts.erase(idle)
 	assert_object(HostSession.check_orphan(never, _pid_file, _token_file)).is_null()
 	assert_array(asked).is_empty()
-	assert_bool(OrphanCheck.process_alive(pid)).is_false()
+	assert_bool(await _until(_gone.bind(pid))).is_true()
 	assert_bool(FileAccess.file_exists(_pid_file)).is_false()
 	# With a session: LEAVE keeps it, TERMINATE kills it.
 	var h: HostSession = _host_session()
@@ -216,7 +229,7 @@ func test_orphan_is_terminated_only_without_a_session_or_by_choice() -> void:
 	var terminate: Callable = func(_c: OrphanCheck) -> HostSession.Answer:
 		return HostSession.Answer.TERMINATE
 	assert_object(HostSession.check_orphan(terminate, _pid_file, _token_file)).is_null()
-	assert_bool(OrphanCheck.process_alive(pid)).is_false()
+	assert_bool(await _until(_gone.bind(pid))).is_true()
 	assert_bool(FileAccess.file_exists(_pid_file)).is_false()
 	assert_bool(FileAccess.file_exists(_token_file)).is_false()
 	h.client.drop()

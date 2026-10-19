@@ -5,8 +5,9 @@ extends SnapshotSection
 ## section; records come from the faction's OrientModel: a contact is sent when it
 ## enters the range or the shared model refreshes it.
 ##
-## Delta: u16 n records (u16 id, u32 quaternion, 3 x s8 angular velocity); u16 g, g
-## ids that left the range. Full: the records each with a u16 age.
+## Delta: u16 n records (u16 id, u32 quaternion, 3 x s8 angular velocity, u16 age in
+## ticks: a contact entering the range gets the shared model's record, which may be
+## older than the snapshot); u16 g, g ids that left the range. Full: the records.
 
 const DEFAULT_RANGE_M: float = 2000.0
 
@@ -44,8 +45,7 @@ func update_members(world: SimWorld, now_in: Dictionary) -> PackedByteArray:
 		if members.has(id) and not orient.refreshed.has(id):
 			continue
 		members[id] = true
-		var entry: Array = orient.model[id]
-		_put_rec(buf, id, entry[0], entry[1])
+		_put_rec(buf, id, orient.model[id])
 		n += 1
 	var gone: PackedInt32Array = PackedInt32Array()
 	for id: int in members.keys():
@@ -63,9 +63,7 @@ func full() -> PackedByteArray:
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.put_u16(members.size())
 	for id: int in members:
-		var entry: Array = orient.model[id]
-		_put_rec(buf, id, entry[0], entry[1])
-		buf.put_u16(_tick - int(entry[2]))
+		_put_rec(buf, id, orient.model[id])
 	return buf.data_array
 
 
@@ -84,13 +82,14 @@ static func apply(into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: 
 		var id: int = buf.get_u16()
 		var bits: int = buf.get_u32()
 		var w: Vector3i = NetCodec.get3_8(buf)
-		var at: int = tick - buf.get_u16() if is_full else tick
-		into[id] = [bits, w, at]
+		into[id] = [bits, w, tick - buf.get_u16()]
 	if not is_full:
 		ContactsSection.get_gone(buf, into)
 
 
-static func _put_rec(buf: StreamPeerBuffer, id: int, bits: int, w: Vector3i) -> void:
+## One record from the model entry [bits, angular velocity, tick].
+func _put_rec(buf: StreamPeerBuffer, id: int, entry: Array) -> void:
 	buf.put_u16(id)
-	buf.put_u32(bits)
-	NetCodec.put3_8(buf, w)
+	buf.put_u32(entry[0])
+	NetCodec.put3_8(buf, entry[1])
+	buf.put_u16(_tick - int(entry[2]))

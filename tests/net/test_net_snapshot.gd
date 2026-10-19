@@ -7,6 +7,18 @@ const ENEMY: int = M1Encounter.ENEMY_SHIP
 const PLAYER: int = M1Encounter.PLAYER_SHIP
 
 
+## A section of any size (the oversize test).
+class BigSection:
+	extends SnapshotSection
+	var bytes: PackedByteArray
+
+	func update(_world: SimWorld) -> PackedByteArray:
+		return bytes
+
+	func full() -> PackedByteArray:
+		return bytes
+
+
 func _world(world_seed: int = 3) -> SimWorld:
 	return M1Encounter.new(world_seed, "test", TestDefs.corvette(), TestDefs.raider_enemy()).build()
 
@@ -33,7 +45,7 @@ func test_views_track_server_model() -> void:
 	var keys: Array = [
 		StationViews.key(PLAYER, "helm"),
 		StationViews.key(PLAYER, "engineering"),
-		StationViews.key(PLAYER, "p2"),
+		StationViews.key(PLAYER, "tactical"),
 		StationViews.key(PLAYER, "viewer"),
 	]
 	var p_units: int = NetCodec.period_units(world.kin.period)
@@ -116,7 +128,7 @@ func test_message_shared_per_view_key() -> void:
 # Joint views see the union of their stations' sections; Captain and Viewer hold no
 # crew commands; the dev entry holds every station.
 func test_station_views_map_entries() -> void:
-	var tactical: Array[int] = StationViews.sections_of("p2")
+	var tactical: Array[int] = StationViews.sections_of("tactical")
 	for kind: int in StationViews.sections_of("helm") + StationViews.sections_of("weapons"):
 		assert_bool(tactical.has(kind)).is_true()
 	assert_bool(StationViews.sections_of("science").has(StationViews.Section.HELM)).is_false()
@@ -126,7 +138,7 @@ func test_station_views_map_entries() -> void:
 	assert_str(StationViews.station_of_command(&"reset_ship")).is_equal("")
 	assert_bool(StationViews.is_entry(StationViews.ALL)).is_false()
 	assert_bool(StationViews.is_entry(StationViews.ALL, true)).is_true()
-	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 15 + 2)
+	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 3 + 2)
 
 
 # FT: FT-NET-040
@@ -172,6 +184,7 @@ func test_contacts_wrap_across_the_seam() -> void:
 	var key: String = StationViews.key(PLAYER, "relay")
 	var st: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
 	var crossed: bool = false
+	var records: int = 0
 	for snap: int in range(1, 91):
 		_step2(world)
 		world.kin.vel[ENEMY] = Vector3(120.0, 0.0, 0.0)
@@ -179,6 +192,9 @@ func test_contacts_wrap_across_the_seam() -> void:
 		b.build(copy, snap, [key])
 		var bytes: PackedByteArray = b.message(key, snap == 1)
 		assert_bool(st.apply(bytes)).is_true()
+		var contacts: ContactsSection = b.section(StationViews.Section.CONTACTS, 1)
+		if contacts.model[ENEMY][2] == copy.tick:
+			records += 1
 		var truth: PackedFloat64Array = copy.kin.point_at(ENEMY, Vector3.ZERO)
 		if truth[0] < 0.0:
 			crossed = true
@@ -187,7 +203,63 @@ func test_contacts_wrap_across_the_seam() -> void:
 		var d: Vector3 = Vector3(truth[0], truth[1], truth[2]) - got
 		d.x = wrapf(d.x, -half, half)
 		assert_float(d.length()).is_less(0.5 * sqrt(3.0) + 0.1)
-	var contacts: ContactsSection = b.section(StationViews.Section.CONTACTS, 1)
 	assert_bool(crossed).is_true()
 	# 90 snapshots, refreshed at most every few: the seam itself forced no extra record.
-	assert_int(contacts.records_sent).is_less(20)
+	assert_int(records).is_less(20)
+
+
+# FT: FT-NET-008
+# A contact entering a ship's NEAR range gets the faction model's record, which may be
+# older than the snapshot: the delta carries its age, so the client's model matches the
+# server's tick for tick.
+func test_near_member_added_later_carries_its_age() -> void:
+	var world: SimWorld = _world()
+	var orient: OrientModel = OrientModel.new()
+	var near: NearSection = NearSection.new(PLAYER, orient)
+	var client: Dictionary = {}
+	_step2(world)
+	var recorded_at: int = world.tick
+	orient.update(world, {ENEMY: true})
+	NearSection.apply(client, _buf(near.update_members(world, {})), false, world.tick)
+	for i: int in 10:
+		_step2(world)
+	# The shared model isn't refreshed (another ship of the faction keeps it): ENEMY joins
+	# this ship's set with the record from 20 ticks ago.
+	NearSection.apply(client, _buf(near.update_members(world, {ENEMY: true})), false, world.tick)
+	assert_dict(client).is_equal(near.client_model())
+	assert_int(client[ENEMY][2]).is_equal(recorded_at)
+	var full: Dictionary = {}
+	NearSection.apply(full, _buf(near.full()), true, world.tick)
+	assert_dict(full).is_equal(client)
+
+
+func _buf(bytes: PackedByteArray) -> StreamPeerBuffer:
+	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
+	buf.data_array = bytes
+	return buf
+
+
+# FT: FT-NET-008
+# A section of 0xFFFF bytes or more is sent with the long length, never dropped: the
+# client reads it and every section after it, full or delta.
+func test_oversize_section_is_sent_with_a_long_length() -> void:
+	var world: SimWorld = _world()
+	var b: SnapshotBuilder = SnapshotBuilder.new()
+	var key: String = StationViews.key(PLAYER, "helm")
+	_step2(world)
+	b.build(SimCopy.of(world), 1, [key])
+	var kin: PackedByteArray = b.section(StationViews.Section.KIN, PLAYER).full()
+	var big: BigSection = BigSection.new(StationViews.Section.KIN, PLAYER)
+	big.bytes = kin.duplicate()
+	big.bytes.resize(70_000)
+	b._sections[SnapshotBuilder._skey(StationViews.Section.KIN, PLAYER)] = big
+	var st: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
+	var full: PackedByteArray = b.message(key, true)
+	assert_int(full.size()).is_greater(70_000)
+	assert_bool(st.apply(full)).is_true()
+	assert_array(st.kinds).is_equal(StationViews.sections_of("helm"))
+	assert_dict(st.kin).is_equal(KinSection.read(_buf(kin)))
+	_step2(world)
+	b.build(SimCopy.of(world), 2, [key])
+	assert_bool(st.apply(b.message(key, false))).is_true()
+	assert_int(st.rejected).is_equal(0)

@@ -35,7 +35,7 @@ func test_loopback_beacon_is_listed_with_its_fields() -> void:
 	assert_int(_browser.start(0, "127.0.0.1")).is_equal(OK)
 	var port: int = _browser.local_port()
 	assert_int(port).is_greater(0)
-	_beacon = LanBeacon.new(PROTO, "Bridge of Theta", 47821)
+	_beacon = LanBeacon.new(PROTO, "Bridge of Theta", 47821, 47820)
 	_beacon.players = 5
 	_beacon.player_cap = 64
 	_beacon.session_running = true
@@ -78,6 +78,10 @@ func test_encode_decode_round_trip_and_name_truncation() -> void:
 	b.players = 300  # clamped to a byte
 	var d: Dictionary = LanBeacon.decode(b.encode())
 	assert_int(d["protocol"]).is_equal(123456)
+	# Little-endian, like the game protocol: 47801 = 0xBAB9, 123456 = 0x0001E240.
+	var raw: PackedByteArray = b.encode()
+	assert_array(Array(raw.slice(5, 13))).is_equal([0x40, 0xE2, 0x01, 0, 0xB9, 0xBA, 0xB8, 0xBA])
+	assert_int(LanBeacon.new(1, "x", 47801).encode().decode_u16(11)).is_equal(0)
 	assert_int(d["ws_port"]).is_equal(47801)
 	assert_int(d["http_port"]).is_equal(47800)
 	assert_int(d["players"]).is_equal(255)

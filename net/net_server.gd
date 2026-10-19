@@ -34,6 +34,10 @@ var http_us_max: int = 0
 var beacon: LanBeacon
 
 var _next_snapshot_tick: int = 0
+## While the sim doesn't step (lobby, pause), when the next snapshot goes out (us), and
+## whether the net thread already holds the idle world's state.
+var _next_idle_post_us: int = 0
+var _idle_state_posted: bool = false
 var _started_us: int = 0
 
 
@@ -73,14 +77,16 @@ func start_http(root: String) -> Error:
 	return err
 
 
-## Broadcasts this server on the LAN once a second (FT-NET-012). `destinations` are the
-## addresses the datagram goes to (tests use loopback). Call after start().
+## Broadcasts this server on the LAN once a second (FT-NET-012), with HTTP port 0
+## when start_http() wasn't called (or failed). `destinations` are the addresses the
+## datagram goes to (tests use loopback). Call after start(), and after start_http().
+## ServerMain calls it only when bound to a non-loopback address.
 func start_beacon(
 	server_name: String,
 	discovery_port: int = LanBeacon.DISCOVERY_PORT,
 	destinations: PackedStringArray = [LanBeacon.BROADCAST_ADDRESS]
 ) -> Error:
-	var http_port: int = http.local_port() if http != null else port() - 1
+	var http_port: int = http.local_port() if http != null else 0
 	beacon = LanBeacon.new(NetProtocol.PROTOCOL_VERSION, server_name, port(), http_port)
 	beacon.player_cap = session.max_sessions
 	var err: Error = beacon.start(discovery_port, destinations)
@@ -89,10 +95,16 @@ func start_beacon(
 	return err
 
 
-## Open WebSocket connections, including ones that haven't said Hello yet (the idle
-## exit counts these; FT-NET-003). Lags the net thread by up to 20 ms.
+## Open WebSocket connections, including ones that haven't said Hello yet. Lags the
+## net thread by up to 20 ms.
 func connections() -> int:
-	return (transport.stats().get("conns", {}) as Dictionary).size()
+	return transport.open_connections()
+
+
+## Connections bound to a session: what keeps the idle exit away (FT-NET-003), so a
+## socket that never says Hello doesn't keep the server up. Lags by up to 20 ms.
+func bound_connections() -> int:
+	return transport.bound_connections()
 
 
 ## Sessions with a connected client.
@@ -105,8 +117,10 @@ func players() -> int:
 
 
 ## True while any session exists, connected or within its reconnect grace: a lobby
-## with players or a run, which a relaunched host may rejoin (TECH-8). PROVISIONAL:
-## T043 may narrow it to a started run.
+## with players or a run. One meaning for both uses: the pid file's session_active (a
+## relaunched host offers to rejoin, or asks before terminating, rather than killing
+## a server others are on; TECH-8) and the beacon's flag. A started run is not the
+## test: a lobby with players must not be killed without asking either.
 func session_active() -> bool:
 	return not session.by_id.is_empty()
 
@@ -124,14 +138,31 @@ func _process(delta: float) -> void:
 		return
 	var now_us: int = Time.get_ticks_usec()
 	session.process(now_us)
-	var t0: int = Time.get_ticks_usec()
-	var ticks: int = world.advance(delta)
-	if ticks > 0:
-		tick_us_max = maxi(tick_us_max, (Time.get_ticks_usec() - t0) / ticks)
-		session.after_ticks(world.drain_events())
-		if world.tick >= _next_snapshot_tick:
-			transport.post_state(SimCopy.capture(world))
-			_next_snapshot_tick = world.tick + SNAPSHOT_TICKS
+	# The sim steps only after a Start and outside a pause (FT-NET-034); snapshots keep
+	# flowing at 30 Hz of wall clock meanwhile, so joining and rejoining clients get theirs.
+	# The world doesn't change then: it is captured once and re-encoded from that copy,
+	# and only while someone holds a pick (nobody else gets snapshots).
+	if not session.sim_running():
+		if (
+			now_us >= _next_idle_post_us
+			and session.by_id.values().any(func(s: NetSession) -> bool: return s.has_pick())
+		):
+			if _idle_state_posted:
+				transport.repost_state()
+			else:
+				transport.post_state(SimCopy.capture(world))
+				_idle_state_posted = true
+			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / 60
+	else:
+		_idle_state_posted = false
+		var t0: int = Time.get_ticks_usec()
+		var ticks: int = world.advance(delta)
+		if ticks > 0:
+			tick_us_max = maxi(tick_us_max, (Time.get_ticks_usec() - t0) / ticks)
+			session.after_ticks(world.drain_events())
+			if world.tick >= _next_snapshot_tick:
+				transport.post_state(SimCopy.capture(world))
+				_next_snapshot_tick = world.tick + SNAPSHOT_TICKS
 	_poll_lan_services()
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)

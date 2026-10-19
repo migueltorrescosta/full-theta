@@ -32,23 +32,24 @@ godot=$(tools/get-godot.sh) || exit 1
 
 l0() { tools/l0.sh; }
 
-# L1: gdUnit4 over tests/, JUnit XML in build/reports/report_1/results.xml.
-l1() {
+# gdUnit4 over a test directory ($1), JUnit XML in build/reports/report_1/results.xml;
+# the rest of the arguments prefix the command (a CPU pin). --remote-debug to a closed
+# port keeps a script error from opening the interactive debugger (as in
+# addons/gdUnit4/runtest.sh).
+gdunit() {
+  local dir=$1
+  shift
   rm -rf build/reports
-  # --remote-debug to a closed port keeps a script error from opening the
-  # interactive debugger (as in addons/gdUnit4/runtest.sh).
-  "$godot" --headless --path . -s -d --remote-debug tcp://127.0.0.1:0 \
+  "$@" "$godot" --headless --path . -s -d --remote-debug tcp://127.0.0.1:0 \
     res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-    --add res://tests --report-directory build/reports --ignoreHeadlessMode
+    --add "$dir" --report-directory build/reports --ignoreHeadlessMode
 }
 
+# L1: every test.
+l1() { gdunit res://tests; }
+
 # L3: server and clients over loopback WebSocket in one process (tests/net), on 2 cores.
-l3() {
-  rm -rf build/reports
-  taskset -c 0,1 "$godot" --headless --path . -s -d --remote-debug tcp://127.0.0.1:0 \
-    res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-    --add res://tests/net --report-directory build/reports --ignoreHeadlessMode
-}
+l3() { gdunit res://tests/net taskset -c 0,1; }
 
 # L4: a server and 3 headless client processes on 2 cores, driven by intent files;
 # logs in build/l4/<run>/ (tools/l4/run.sh).

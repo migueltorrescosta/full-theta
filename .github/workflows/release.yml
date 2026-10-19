@@ -41,11 +41,8 @@ jobs:
             sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends llvm
           }
       - name: Build and inspect packages (FT-ARC-022, FT-LIC-008)
-        # build.sh ends with tools/release/inspect_packages.py. Only a local dry
-        # run under act accepts stub prerendered clips.
-        run: >-
-          tools/release/build.sh "$GITHUB_REF_NAME" build/release
-          ${{ env.ACT && '--allow-stub-prerender' || '' }}
+        # build.sh ends with tools/release/inspect_packages.py.
+        run: tools/release/build.sh "$GITHUB_REF_NAME" build/release
       - name: Release notes
         run: >-
           uv run --quiet --project tools python tools/release/notes.py

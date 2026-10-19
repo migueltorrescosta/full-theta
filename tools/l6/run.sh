@@ -20,7 +20,7 @@ version=v0.0.0-l6
 line="Contact bearing three four two. Shields holding."
 export WINEPREFIX=${WINEPREFIX:-$HOME/.cache/full-theta/l6-wineprefix} WINEDEBUG=-all
 
-tools/release/build.sh "$version" "$out" --allow-dirty --allow-stub-prerender || exit 1
+tools/release/build.sh "$version" "$out" --allow-dirty || exit 1
 commit=$(git rev-parse HEAD)
 [[ -z $(git status --porcelain) ]] || commit="$commit-dirty"
 expected="build: $version $commit"

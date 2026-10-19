@@ -3,9 +3,9 @@ extends RefCounted
 ## Validates a client's Command{seq, cmd} before it reaches the sim (FT-NET-006): the
 ## sender has a pick, is within its rate limit, names a crew command kind whose station
 ## its pick covers (station holding), for its own ship, with known fields of the right
-## types and finite values; then the claims hook (T044). Game rules are the sim's: a
-## command the sim rejects on apply becomes CommandRejected{reason: sim_rejected}
-## (ServerSession.after_ticks). Every rejection is a CommandRejected event to the
+## types and finite values; then the claims hook (ServerSession.claim_rule). Game rules
+## are the sim's: a command the sim rejects on apply becomes CommandRejected{reason:
+## sim_rejected} (ServerSession.after_ticks). Every rejection is a CommandRejected event to the
 ## sender only (FT-NET-007).
 
 const NO_PICK: String = "no_pick"
@@ -18,13 +18,20 @@ const BAD_FIELD: String = "bad_field"
 const BAD_VALUE: String = "bad_value"
 const SIM_REJECTED: String = "sim_rejected"
 const SHIP_DESTROYED: String = "ship_destroyed"
+## Another player holds the item the command acts on (FT-NET-023).
+const CLAIMED: String = "claimed"
+## A mid-run catalogue change that would make the ship fail coverage (FT-NET-043);
+## sent with seq -1 (the Pick or Release had none).
+const BREAKS_COVERAGE: String = "breaks_coverage"
+## The sender's ship was abandoned (FT-NET-041).
+const SHIP_ABANDONED: String = "ship_abandoned"
 
 ## Fields the server sets, never the client (ship_id may be sent, if it is the sender's).
 const SERVER_FIELDS: Array[String] = ["kind", "ship_id", "tick", "accepted"]
 
 
 ## Returns [SimCommand, ""] for a valid command (ship and source set), or [null,
-## reason]. claims is the T044 hook: Callable(session, command) -> reason or "".
+## reason]. claims is Callable(session, command) -> reason or "" (ServerSession).
 static func check(
 	session: NetSession, cmd: Dictionary, now_us: int, claims: Callable = Callable()
 ) -> Array:

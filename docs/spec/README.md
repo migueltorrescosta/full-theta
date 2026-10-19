@@ -168,9 +168,27 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 82. Turret roll, main-screen stabilisation and the comfort toggle use the ship's deck plane or the target; a per-client cosmetic reference plane is allowed but never spoken or used by rules. FT-WPN-009, FT-MSC-001, FT-STN-017. (D124)
 83. One site period P per world, an exact multiple of 500 m and at least 4 times the longest sensor range, recorded in the command log setup and the state hash; weapon ranges under P/2 by content review. §4.1, FT-SIM-035. (D125)
 
-### Pending changelog (strand-e15)
+### v0.5 update for D126–D128 (#6)
 
-- Release packages ship the standalone rhasspy/piper 2023.11.14-2 with eSpeak NG 1.52.0.1 and the release voices from one list; macOS assembles Piper from rhasspy/piper and piper-phonemize. FT-ARC-022, FT-LIC-008. (D140, D141)
-- Exported builds print their build line, and `--tts-smoke` synthesises one line with the bundled Piper, for L6. FT-TST-019. (D142)
-- The release workflow runs on version tags only and drafts the release; L6 runs on fugaku before the tag; macOS stays unsigned until #13. §12.1, FT-ARC-017, FT-GEN-012. (D143)
-- Release voice configs drop multi-codepoint phonemes for the bundled Piper, recorded as a change; L6 checks every bundled voice loads. FT-LIC-005, FT-TST-019. (D144)
+84. Load tags per station and joint view are fixed in data: Helm, Weapons and Tactical intense; Engineering, Science and Systems busy; Relay, Comms, Ops and Captain light; Viewer untagged. FT-STN-015. (D126)
+85. The host is the client presenting the secret its Host button gave the child server; a dedicated server has no host. FT-NET-041. (D127)
+86. A paused ship is abandoned by a majority vote of its remaining connected crew, or by the host alone; votes clear when the pause ends. FT-NET-041. (D128)
+
+### v0.5 update for D129–D130 (#6)
+
+87. Any crew player of a covered ship presses Start, and the sim steps from the first Start. §3.3, FT-NET-019. (D129)
+88. A player alone on a station keeps every claim when a second player joins; the newcomer claims what is released. §3.4, FT-NET-044. (D130)
+
+### v0.5 update for D150–D154 (#10, E10)
+
+89. Voice parts: VOICE carries `part` and `last`; in protocol version 3. FT-AUD-019, FT-NET-038. (D150)
+90. The host picks the session language before launch (`--language`); Welcome carries it. FT-AUD-013. (D151)
+91. Clients play unslotted authored lines from their own export; the host stitches slotted lines from segments, the closed set and compositional number fragments, and streams only stitched and synthesised clips. §9.1, FT-AUD-002, 018, FT-ARC-019. (D152, D154)
+92. The ship-computer filter is a client audio-bus effect chain; dev and release use different Piper builds behind one adapter; pt_PT is subtitles only in releases until #16. §9.1, FT-AUD-004, 014, 019. (D153)
+
+### v0.5 update for D140–D144 (#12, E15)
+
+93. Release packages ship the standalone rhasspy/piper 2023.11.14-2 with eSpeak NG 1.52.0.1 and the release voices from one list; macOS assembles Piper from rhasspy/piper and piper-phonemize. FT-ARC-022, FT-LIC-008. (D140, D141)
+94. Exported builds print their build line, and `--tts-smoke` synthesises one line with each bundled voice, for L6. FT-TST-019. (D142)
+95. The release workflow runs on version tags only, builds with a read-only token and drafts the release from a separate job; L6 runs on fugaku before the tag; macOS stays unsigned until #13. §12.1, FT-ARC-017, FT-GEN-012. (D143)
+96. Release voice configs drop multi-codepoint phonemes for the bundled Piper, recorded as a change; L6 checks every bundled voice loads. FT-LIC-005, FT-TST-019. (D144)

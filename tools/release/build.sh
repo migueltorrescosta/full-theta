@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the release packages for one commit (FT-ARC-022, FT-GEN-012, FT-LIC-008):
-#   tools/release/build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]
+#   tools/release/build.sh VERSION OUT_DIR [--allow-dirty]
 # 1. writes build_info.json (version, commit), which every export carries;
 # 2. prerenders each release language's clips (prerender.sh);
 # 3. exports Linux, Windows, macOS and Web (export_presets.cfg) into OUT_DIR/exports;
@@ -11,20 +11,18 @@
 # The release workflow (.github/workflows/release.yml) and `gate.sh l6` run it;
 # docs/release.md describes the artefacts. VERSION is a tag name such as v1.2.3
 # or v1.2.3-rc.1. OUT_DIR must be new, empty or an earlier build's output.
-# --allow-dirty builds an uncommitted tree (the commit gets a -dirty suffix);
-# --allow-stub-prerender accepts stub clips (l6 and act dry runs, never a tag).
+# --allow-dirty builds an uncommitted tree (the commit gets a -dirty suffix).
 set -euo pipefail
-usage="usage: build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]"
+usage="usage: build.sh VERSION OUT_DIR [--allow-dirty]"
 version=${1:?$usage}
 out=$(realpath -m -- "${2:?$usage}")
 shift 2
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
-allow_dirty=0 inspect_args=()
+allow_dirty=0
 for arg in "$@"; do
   case $arg in
     --allow-dirty) allow_dirty=1 ;;
-    --allow-stub-prerender) inspect_args+=(--allow-stub-prerender) ;;
     *) echo "build.sh: unknown argument $arg" >&2; exit 2 ;;
   esac
 done
@@ -79,5 +77,4 @@ py tools/release/package.py --version "$version" --commit "$commit" \
   --exports "$out/exports" --out "$out" --repo "${GITHUB_REPOSITORY:-migueltorrescosta/full-theta}"
 
 echo "build: inspect"
-py tools/release/inspect_packages.py --version "$version" --commit "$commit" \
-  "${inspect_args[@]}" "$out"
+py tools/release/inspect_packages.py --version "$version" --commit "$commit" "$out"

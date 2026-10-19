@@ -10,28 +10,15 @@
 # Each folder has index.json, {"language": "en", "clips": [file, ...]}, which
 # inspect_packages.py checks against each pack.
 #   tools/release/prerender.sh LANG...
-# Until tools/tts/prerender_release.py is on this branch, this writes stub
-# indexes ("stub": true) that inspect_packages.py rejects unless
-# --allow-stub-prerender (l6 and dry runs), so a tagged release fails.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
 out=audio/prerendered
 rm -rf "$out" audio/prerendered_host
 mkdir -p "$out"
-if [[ -f tools/tts/prerender_release.py ]]; then
-  # The prerender voices ("prerender" in voices.json, not shipped) render the
-  # client clips; the runtime voices ("release") render the host pack.
-  mapfile -t voices < <(python3 -c 'import json; d = json.load(open("tools/tts/voices.json"))
+# The prerender voices ("prerender" in voices.json, not shipped) render the
+# client clips; the runtime voices ("release") render the host pack.
+mapfile -t voices < <(python3 -c 'import json; d = json.load(open("tools/tts/voices.json"))
 print("\n".join(dict.fromkeys(d["prerender"] + d["release"])))')
-  uv run --quiet --project tools/tts python tools/tts/fetch_voices.py "${voices[@]}" >/dev/null
-  uv run --quiet --project tools/tts python tools/tts/prerender_release.py --out "$out" "$@"
-  exit
-fi
-echo "prerender: no tools/tts/prerender_release.py yet; writing stub indexes" >&2
-for lang in "$@"; do
-  for dir in "$out" audio/prerendered_host; do
-    mkdir -p "$dir/$lang"
-    printf '{"language": "%s", "clips": [], "stub": true}\n' "$lang" >"$dir/$lang/index.json"
-  done
-done
+uv run --quiet --project tools/tts python tools/tts/fetch_voices.py "${voices[@]}" >/dev/null
+uv run --quiet --project tools/tts python tools/tts/prerender_release.py --out "$out" "$@"

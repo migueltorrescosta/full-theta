@@ -63,6 +63,6 @@ The S5 playtest build, the S7 samples, the S8 screenshots (v1 and v2), the S3 we
 | S4 | `S4Chunker`, `S4SendQueue`, `S4Resync`, `S4EventInbox`, `S4Sessions` | T045 (#6) |
 | S9 | `S9Codec` (fixed point, integer dead reckoning, smallest-three quaternions), per-key message cache; encode and send on a worker thread from a state copy (D111) | T040–T042 (#6) |
 | S3 | `S3StaticServer` (budgeted poll, gzip, ETag), `S3KeepAwake`, the shell and audio guard | #6, #12 |
-| S7b | Persistent Piper wrapper (`tools/tts/`), closed-set cache at Start | E10 |
+| S7b | Persistent Piper wrapper (`tools/tts/`), closed-set cache at Start | E10 (#10, done: net/voice/, app/voice_setup.gd) |
 | S2 | `gate.sh l5` is already the real L5 tier | — |
 | S8 | The approved ship generator, moved to `presentation/procedural_ship.gd` (`ProceduralShip`); v1 deleted | #7, E14 |
