@@ -2,7 +2,7 @@
 
 ## 4.1 Flight
 
-Ships fly full 6DOF Newtonian motion: thrust, inertia, momentum and rotation, with ship-specific thruster limits (v0.3 §5, D24). Flight assist is on by default and works by issuing real thruster commands within the ship's limits; decoupled mode turns it off (D24). All-stop and hold-to-approach are assist modes, so they also use real thrust and propellant (D97); Helm's all-stop and approach controls are in §5.1. Thrust consumes propellant; coasting does not (D34). The jump drive moves the ship within the scenario's single global 3D map, between encounter sites, and consumes propellant (D29, D34, D77). Positions are site-local, with each local coordinate a 64-bit float, so precision holds anywhere on the map: the largest local coordinate is 200 km (D98, D104, plan review TECH-1). Units are SI.
+Ships fly full 6DOF Newtonian motion: thrust, inertia, momentum and rotation, with ship-specific thruster limits (v0.3 §5, D24). Flight assist is on by default and works by issuing real thruster commands within the ship's limits; decoupled mode turns it off (D24). Collisions give a linear impulse with restitution 0.2 and turn the kinetic energy lost into damage, half to each ship; the proximity warning looks 5 s ahead within 500 m (D119). All-stop and hold-to-approach are assist modes, so they also use real thrust and propellant (D97); Helm's all-stop and approach controls are in §5.1. Thrust consumes propellant; coasting does not (D34). The jump drive moves the ship within the scenario's single global 3D map, between encounter sites, and consumes propellant (D29, D34, D77). Positions are site-local, with each local coordinate a 64-bit float, so precision holds anywhere on the map: the largest local coordinate is 200 km (D98, D104, plan review TECH-1). Units are SI.
 
 ## 4.2 Weapons
 
@@ -10,11 +10,11 @@ Each mount has a position, orientation, firing arc and range on the hull (v0.3 �
 
 ## 4.3 Shields
 
-Shields have one focus direction on the sphere around the ship. Engineering sets total shield power and focus tightness; Helm sets the direction (D16, D48).
+Shields have one focus direction on the sphere around the ship. Engineering sets total shield power and focus tightness; Helm sets the direction (D16, D48). Tightness runs from an even spread, the spawn setting, to a tight lobe; shields absorb every hit, collisions included (D118).
 
 ## 4.4 Damage and repair
 
-A hit damages the subsystem nearest the impact point (D26). Each subsystem (for example engines, thrusters, weapons, shields, sensors, reactor) takes independent damage with direct consequences (v0.3 §5). Some damage arrives as faults of unknown cause (pair P10). Engineering dispatches repair crews on the cutaway; repairs consume spare parts (D27). Overcharge builds heat; heat past a threshold creates faults (P1, P6). Science reveals weak points and damage-type resistances (D28).
+A hit damages the subsystem nearest the impact point: the energy past the shields is split between that subsystem (a per-ship share in data) and the hull (D26, D116). Each subsystem (for example engines, thrusters, weapons, shields, sensors, reactor) takes independent damage with direct consequences (v0.3 §5). Some damage arrives as faults of unknown cause (pair P10). Engineering dispatches numbered repair crews on the cutaway; each job takes its spare parts at dispatch, and with too few parts it is refused (D27, D115). Overcharge builds heat; heat past a threshold creates faults (P1, P6). Thrust and torque limits in data are the nominal-power envelope; overcharge and a one-press boost (above the reactor cap for a data duration, limited by heat) reach up to 1.5 times them (D117). Science reveals weak points and damage-type resistances (D28).
 
 ## 4.5 Enemy AI
 

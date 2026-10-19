@@ -4,14 +4,14 @@ Principle: players talk about things, not angles. Every contact and point of int
 
 ## 6.1 Callout layers (D45, alternative A)
 
-1. **Callsigns.** Each contact gets a name on detection, coloured by known allegiance: `H1` hostile, `U2` unknown, `F3` friendly, `N4` neutral; player ships by ship name. The number never changes: `U2` identified as hostile becomes `H2`.
-2. **Clock, height, range (ship frame, spoken).** `12` bow, `3` starboard, `6` stern, `9` port in the deck plane. Height: `level` (within ±15°), `high`/`low` (15°–60°), `overhead`/`under` (over 60°, said without a clock). Range: `close` (< 1 km), `mid` (1–10 km), `far` (> 10 km). Chips read like the callout: `H2 · 4 high · 2.3 km ▲closing`.
+1. **Callsigns.** Each contact gets a name on detection, coloured by known allegiance: `H1` hostile, `U2` unknown, `F3` friendly, `N4` neutral; player ships by ship name. The number never changes: `U2` identified as hostile becomes `H2`. In M1 a faction identifies a contact once one of its ships has it within that ship's identify range (D112).
+2. **Clock, height, range (ship frame, spoken).** `12` bow, `3` starboard, `6` stern, `9` port in the deck plane. Height: `level` (within ±15°), `high`/`low` (15°–60°), `overhead`/`under` (over 60°, said without a clock). Range: `close` (< 1 km), `mid` (1–10 km), `far` (> 10 km). Chips read like the callout: `H2 · 4 high · mid ▲closing` (D114).
 3. **Marks (world-anchored).** Up to 8 per ship, named Alpha to Hotel, free or attached to a contact; drawn as a diamond with a stem everywhere (D44).
 4. **Sites.** Each site has a shared name from the scenario (`Kestrel Yard`), selectable like marks and outside the 8-mark cap (D98).
 
 Frame rule (D97): clock and the words level/high/low/overhead/under are always ship frame, on every station, including Relay and the Captain. World height is said only as `up N` / `down N` after a grid square, N in grid layers.
 
-Precise layer, on hover or long-press only: bearing 000–359 clockwise from the bow and mark −90…+90 in the ship frame; grid squares on world-frame maps (`grid D4, up 2`), with square and layer size set by the scenario.
+Precise layer, on hover or long-press only: bearing 000–359 clockwise from the bow and mark −90…+90 in the ship frame; grid squares on world-frame maps (`grid D4, up 2`), with square and layer size set by the scenario: letters along world +X, numbers from 1 along +Z from a scenario corner, layers rounded to the nearest whole layer and omitted at layer 0 (D113).
 
 | Callout | Listener's action |
 |---|---|
