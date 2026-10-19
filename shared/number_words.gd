@@ -2,7 +2,7 @@ class_name NumberWords
 extends RefCounted
 ## Composes a whole number from the prerendered fragments of content/dialogue/numbers.json
 ## (D101, FT-AUD-018): each language has its 0-99 words whole, plus hundreds, thousands and
-## connectors, so about 110-140 fragments (about 2 MB) replace S7b's 1,000 whole numbers.
+## connectors, so about 105-140 fragments (about 2 MB) replace S7b's 1,000 whole numbers.
 ## Returns fragment keys (numbers.json keys, without the "num:" prefix). Values are
 ## clamped to +-999,999. `feminine` picks pt_PT "uma"/"duas"/"duzentas" and it "una" for
 ## a feminine counted noun (the slot's `feminine` list in the dialogue JSON).
@@ -76,14 +76,15 @@ static func _pt(n: int, fem: bool) -> PackedStringArray:
 	return outk
 
 
-## Italian: "trecento quarantadue", "mille", "duemila", feminine "una".
+## Italian: "trecento quarantadue", "mille", "duemila"; feminine only for 1 ("una"):
+## compounds keep "uno"/"un" forms (ventuno, centouno), so the feminine isn't passed on.
 static func _it(n: int, fem: bool) -> PackedStringArray:
 	if n < 100:
 		return PackedStringArray(["f1" if fem and n == 1 else str(n)])
 	if n < 1000:
 		var out: PackedStringArray = PackedStringArray(["c%d" % (n / 100)])
 		if n % 100 > 0:
-			out.append_array(_it(n % 100, fem))
+			out.append_array(_it(n % 100, false))
 		return out
 	var t: int = n / 1000
 	var outk: PackedStringArray = PackedStringArray(["mille"])
@@ -91,5 +92,5 @@ static func _it(n: int, fem: bool) -> PackedStringArray:
 		outk = _it(t, false)
 		outk.append("mila")
 	if n % 1000 > 0:
-		outk.append_array(_it(n % 1000, fem))
+		outk.append_array(_it(n % 1000, false))
 	return outk

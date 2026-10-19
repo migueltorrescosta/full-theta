@@ -70,6 +70,10 @@ func test_italian() -> void:
 	assert_array(_keys(1, "it", true)).is_equal(["f1"])
 	assert_array(_keys(1, "it")).is_equal(["1"])
 	assert_array(_keys(2, "it", true)).is_equal(["2"])
+	# Compounds keep the masculine form, like ventuno: centouno, milleuno.
+	assert_array(_keys(21, "it", true)).is_equal(["21"])
+	assert_array(_keys(101, "it", true)).is_equal(["c1", "1"])
+	assert_array(_keys(1001, "it", true)).is_equal(["mille", "1"])
 
 
 # FT: FT-AUD-018
