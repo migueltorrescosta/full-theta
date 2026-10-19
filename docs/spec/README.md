@@ -2,7 +2,7 @@
 
 Repo: migueltorrescosta/full-theta (GPL-3.0). Engine: Godot 4.7.2, typed GDScript. Date: 2026-10-19.
 
-v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D123, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
+v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D124, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
 
 ## How to use this spec
 
@@ -48,7 +48,7 @@ v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D12
 | Mark | One of up to 8 named world-anchored points per ship (Alpha–Hotel), free or attached to a contact. |
 | Ping | A rate-limited 3 s pulse plus chime on every screen of the ship, pointing at an item. |
 | Disc radar | Elite-style radar: deck-plane disc with elevation stems, range ring at the selected contact, optional side strip. |
-| Ship frame / world frame | Radar orientation relative to the ship (crew stations) or to the scenario map's ecliptic (Relay, Captain maps). Helm's Level aligns them. |
+| Ship frame | Orientation relative to the ship: deck plane, bow at 12. Every radar and callout uses it; Relay, Captain maps and the tactical view may centre it on a selected mark, site or contact. Space has no world-fixed up (D124). |
 | Request chip | A player-initiated typed request shown on another station; a shortcut toggle, off in the Hard preset. |
 | Data shortcut | A share button or data link that puts one station's data on another station's screen; each is a toggle set before start, preset by difficulty (D84). |
 | Pair (P1–P15) | One of the 15 pairs of functional stations and its cooperative mechanic. |
@@ -57,7 +57,7 @@ v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D12
 | Run | One 20–40 minute playthrough of about 5 encounters; nothing persists after it. |
 | Encounter | A self-contained situation (enemy wave, rescue, derelict, negotiation...) the director places or activates at a site, with its own triggers and outcome (D77). |
 | Scenario map | The single global open 3D map of a scenario; no per-encounter maps (D77). |
-| Site | A named place on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). Positions are site-local, and site names are a callout layer outside the 8 marks (D98). |
+| Site | A named place on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). Positions are site-local, each site a cube that wraps on all three axes with period P, and site names are a callout layer outside the 8 marks (D98, D124). |
 | Slot module | An upgrade fitted to a ship slot, with a trade-off; bought while docked via Comms (D86). |
 | Faction | Owner of knowledge, callsigns and reputation; all state is keyed by ship and faction. Allied ships share one faction; marks stay per ship (D82). |
 | EE | EmptyEpsilon, the reference game (GPL-2.0-only; ideas only). |
@@ -158,3 +158,11 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 75. Pair gain is the share of the solo value saved; P1's `pair_min_gain` is 0.2. §7.4, FT-PAIR-015. (D121)
 76. The command log records every crew command with its result. FT-ARC-008. (D122)
 77. Hit energy a subsystem can't absorb passes to the next-nearest live subsystem, then the hull. §4.4, FT-SIM-020. (D123)
+
+### v0.5 update for D124 (#5)
+
+78. Each site wraps on all three axes with period P from scenario data (default 200 km, at least 4 times the longest sensing or radar range); offsets wrap after each step and differences use the minimum image, replacing the 200 km bound. §4.1, FT-SIM-035. (D124)
+79. Level becomes Align: roll the selected item into the pitch plane above the bow, a second press faces it. §5.1, FT-HLM-007, 017, FT-NET-045, R5. (D124)
+80. No privileged up: grid squares and altitude layers are retired; points are said relative to a mark or site; radars use the ship frame, optionally centred on a selected reference. §6.1, §6.2, FT-SPA-006, 010, 026. (D124)
+81. Relay's map is a freely rotatable 3D map of the wrapping cube; marks are placed on the view plane with depth on Shift+drag. §5.5, §7.4 P4, FT-RLY-001, 002. (D124)
+82. Turret roll, main-screen stabilisation and the comfort toggle use the ship's deck plane or the target; a per-client cosmetic reference plane is allowed but never spoken or used by rules. FT-WPN-009, FT-MSC-001, FT-STN-017. (D124)

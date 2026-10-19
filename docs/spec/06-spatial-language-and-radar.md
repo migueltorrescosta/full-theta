@@ -9,9 +9,9 @@ Principle: players talk about things, not angles. Every contact and point of int
 3. **Marks (world-anchored).** Up to 8 per ship, named Alpha to Hotel, free or attached to a contact; drawn as a diamond with a stem everywhere (D44).
 4. **Sites.** Each site has a shared name from the scenario (`Kestrel Yard`), selectable like marks and outside the 8-mark cap (D98).
 
-Frame rule (D97): clock and the words level/high/low/overhead/under are always ship frame, on every station, including Relay and the Captain. World height is said only as `up N` / `down N` after a grid square, N in grid layers.
+Frame rule (D97, D124): clock and the words level/high/low/overhead/under are always ship frame, on every station, including Relay and the Captain. Space has no privileged up: no word or rule uses a world-fixed direction. A point away from the own ship is said relative to a mark or site, with the speaker's ship-frame clock, height and range (`Bravo, 12 high, 3 km`).
 
-Precise layer, on hover or long-press only: bearing 000–359 clockwise from the bow and mark −90…+90 in the ship frame; grid squares on world-frame maps (`grid D4, up 2`), with square and layer size set by the scenario: letters along world +X, numbers from 1 along +Z from a scenario corner, layers rounded to the nearest whole layer and omitted at layer 0 (D113).
+Precise layer, on hover or long-press only: bearing 000–359 clockwise from the bow and mark −90…+90 in the ship frame. There are no grid squares or altitude layers (D124 retires D113).
 
 | Callout | Listener's action |
 |---|---|
@@ -19,6 +19,7 @@ Precise layer, on hover or long-press only: bearing 000–359 clockwise from the
 | "Shields 4 high" | Tap the 4-high sector on the shield ring |
 | "Bring us to Bravo" | Select Bravo, hold approach (§5.1) |
 | "Helm, all stop" | All-stop (§5.1) |
+| "Helm, align on Bravo" | Select Bravo, press Align (§5.1) |
 | "Jump to Kestrel Yard" | Select Kestrel Yard, JUMP |
 | "Look here" | Ping: middle-click or long-press |
 
@@ -27,15 +28,15 @@ Callout grammar (plan review NAV, used by the callout card):
 ```
 <who>, <verb> <object> [<qualifier>]
 who:     Helm | Weapons | Shields | Science | Relay | Engineering | All
-verb:    face | approach | stop | jump to | track | shields to | scan | mark | level
+verb:    face | approach | stop | jump to | track | shields to | scan | mark | align
 object:  callsign (H2) | mark (Bravo) | site (Kestrel Yard) | clock-height (4 high)
-qual.:   range (2 km) | grid (D4 up 2) | "on my ping"
+qual.:   range (2 km) | relative (Bravo, 12 high, 3 km) | "on my ping"
 Prefer names over directions; directions only for unnamed space.
 ```
 
 ## 6.2 Radar (D42, D43)
 
-Elite-style disc: the disc is the deck plane, clock numbers on the rim; each blip has a stem to the disc (solid blip, stem up = above; hollow, stem down = below); a range ring passes through the selected contact's stem foot; an optional side strip (B) shows elevation. Crew stations (Helm, Weapons, Science) use the ship frame; Relay, Captain map views and the tactical main-screen view use the world frame on the scenario map's ecliptic (D77). Helm's Level aligns the two. Range zooms in fixed steps (2, 10, 50 km); contacts beyond the scale are arrows clamped to the rim. The selected contact's stem is drawn on top.
+Elite-style disc: the disc is the deck plane, clock numbers on the rim; each blip has a stem to the disc (solid blip, stem up = above; hollow, stem down = below); a range ring passes through the selected contact's stem foot; an optional side strip (B) shows elevation. Every disc uses the ship frame. Relay, Captain map views and the tactical main-screen view may centre it on a selected mark, site or contact, keeping the ship's axes so clock and height words still match; no radar uses a world-fixed up (D124). Range zooms in fixed steps (2, 10, 50 km); contacts beyond the scale are arrows clamped to the rim. The selected contact's stem is drawn on top.
 
 ```
         .-----------  12  -----------.
@@ -60,11 +61,11 @@ Allied ships share one faction, so they share callsigns and contact knowledge, b
 - **FT-SPA-003** Contact chips shall show callsign, clock position, height word and range band (close < 1 km, mid 1–10 km, far > 10 km); above ±60° elevation they shall drop the clock and show only overhead or under. (D45, plan review NAV-7)
 - **FT-SPA-004** Clock position shall be measured in the ship's deck plane, with height words at ±15° and ±60° boundaries. (D45)
 - **FT-SPA-005** Bearing/mark values shall appear only on hover or long-press. (D45)
-- **FT-SPA-006** World-frame maps shall show grid squares and altitude in grid layers, with square and layer size set per scenario in data and shown on the map legend. (D45, D97, plan review NAV-1)
+- **FT-SPA-006** Maps shall show no grid squares, altitude layers or world-fixed up; a point away from the own ship shall be read relative to a mark or site in ship-frame clock, height and range. (D45, D124, plan review NAV-1)
 - **FT-SPA-007** The disc radar shall draw elevation stems, solid blips above and hollow blips below the disc. (D43)
 - **FT-SPA-008** The disc radar shall draw a range ring through the selected contact's stem foot. (D43)
 - **FT-SPA-009** The disc radar shall offer an optional elevation side strip toggled by B. (D43)
-- **FT-SPA-010** Helm, Weapons and Science radars shall use the ship frame; Relay, Captain and the tactical main-screen view shall use the world frame. (D42)
+- **FT-SPA-010** Every radar shall use the ship frame; Relay, Captain and the tactical main-screen view may centre it on a selected mark, site or contact with the ship's axes; no radar shall use a world-fixed up. (D42, D124)
 - **FT-SPA-011** Orbiting the disc shall be possible on Science and Relay; Helm and Weapons insets shall use a fixed camera angle. (station-ui §1.5)
 - **FT-SPA-012** Each ship shall have at most 8 named marks, Alpha to Hotel; site names, scan positions and hazard zones shall not count toward them. (D44, D98, plan review COOP-6)
 - **FT-SPA-013** Any crew station and the Captain shall place marks; only Relay shall rename or delete marks placed by others; the Captain shall fill only empty slots and never move or delete a mark. (D44, plan review STN-5)
@@ -80,7 +81,7 @@ Allied ships share one faction, so they share callsigns and contact knowledge, b
 - **FT-SPA-023** Allied ships shall use the same callsign for a contact. (D45, D82)
 - **FT-SPA-024** The disc radar shall zoom in fixed range steps (2, 10, 50 km) and draw contacts beyond the scale as arrows clamped to the rim. (plan review NAV-7)
 - **FT-SPA-025** The disc radar shall draw the selected contact's stem on top of all others. (plan review NAV-7)
-- **FT-SPA-026** Clock positions and the words level, high, low, overhead and under shall be ship frame on every station; `up N` / `down N` shall be world frame, used only after a grid square, in grid-layer units. (D97, plan review NAV-1)
+- **FT-SPA-026** Clock positions and the words level, high, low, overhead and under shall be ship frame on every station; no callout or rule shall use a world-fixed direction, and a point away from the own ship shall be said relative to a mark or site (`Bravo, 12 high, 3 km`). (D97, D124, plan review NAV-1)
 - **FT-SPA-027** Each site shall have a shared name from scenario data, used by every station of every ship as a callout layer. (D98, plan review NAV-4)
 - **FT-SPA-028** Scan positions and hazard zones shall be MARK items outside the 8 named marks and shall remain at every difficulty, including Hard. (plan review COOP-6)
 - **FT-SPA-029** "Marks" in FT-PAIR-008 and the difficulty presets shall mean every MARK item (§7.1) except routes and approach lanes. (D84, plan review COOP-6)

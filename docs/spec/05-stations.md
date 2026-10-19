@@ -40,7 +40,7 @@ Always-live set (works whatever panel has focus, §5.9): alert (Alt+A; hold View
 - **FT-STN-014** Every hold input shall be switchable to a toggle in the bindings. (plan review UX-8)
 - **FT-STN-015** The lobby catalogue shall show a load tag (light, busy or intense) for each station and joint view, read from its data definition (StationDef). (D99)
 - **FT-STN-016** On first launch the lobby preset shall default to Easy, persisted per host; the toggles shall sit behind "Customise", each with a one-line description naming both stations. (plan review UX-9, D84)
-- **FT-STN-017** Each client shall have a comfort toggle (horizon-locked roll, reduced field of view) for the Helm cockpit, the turret camera and the main screen. (plan review NAV-6, NAV-9)
+- **FT-STN-017** Each client shall have a comfort toggle (roll locked to the ship's deck plane, the selected target or the player's optional cosmetic reference plane; reduced field of view) for the Helm cockpit, the turret camera and the main screen; the cosmetic plane shall never be spoken or used by rules. (plan review NAV-6, NAV-9, D124)
 
 ## 5.1 Helm (H-A cockpit, C toggles chase camera; D46)
 
@@ -53,14 +53,14 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 |            (  prograde  )                     shield  |
 |               '     '                         ( ring )|
 |  compass (o)  sel: Kestrel Yard (site)  T/Y   4H sel  |
-| THR [#####   ] ASSIST on      .--12--.  F face  L level|
+| THR [#####   ] ASSIST on      .--12--.  F face  L align|
 | ROT [###     ] [STOP] [APPR] 9 H1* H2 3  [DOCK][JUMP]  |
 +---------------------------------------'--6---'---------+
 ```
 
-- KB/M: WASD translate, R/V up/down, mouse pitch/yaw, Q/E roll, Space all-stop, hold X approach, Tab decoupled, hold F face, L level, C chase camera, H dock, J jump, numpad 1–6 shield faces, click shield-ring sector, G shield track selected, B boost request; T/Y select (§5.0).
-- Controller: left stick pitch/yaw (hold LB: left/right rolls), right stick strafe, triggers forward/back, hold L3 face, hold B approach, View+B all-stop, d-pad shield faces fore/aft/port/starboard, LB + d-pad up/down dorsal/ventral; hold View + right stick for a radial with dock, jump, ping, chase camera, Level, decoupled and shield track; A, RB and hold RB select (§5.0), View+Y boost request.
-- Touch (assist on only): left virtual stick attitude, right stick translate, throttle slider, ALL-STOP, hold APPROACH, FACE / LEVEL / SHIELD-TRACK / DOCK / JUMP buttons, tap shield-ring sectors.
+- KB/M: WASD translate, R/V up/down, mouse pitch/yaw, Q/E roll, Space all-stop, hold X approach, Tab decoupled, hold F face, L align, C chase camera, H dock, J jump, numpad 1–6 shield faces, click shield-ring sector, G shield track selected, B boost request; T/Y select (§5.0).
+- Controller: left stick pitch/yaw (hold LB: left/right rolls), right stick strafe, triggers forward/back, hold L3 face, hold B approach, View+B all-stop, d-pad shield faces fore/aft/port/starboard, LB + d-pad up/down dorsal/ventral; hold View + right stick for a radial with dock, jump, ping, chase camera, Align, decoupled and shield track; A, RB and hold RB select (§5.0), View+Y boost request.
+- Touch (assist on only): left virtual stick attitude, right stick translate, throttle slider, ALL-STOP, hold APPROACH, FACE / ALIGN / SHIELD-TRACK / DOCK / JUMP buttons, tap shield-ring sectors.
 
 - **FT-HLM-001** Helm shall default to a cockpit forward view with HUD, target compass, disc radar and shield ring. (D46)
 - **FT-HLM-002** Helm shall toggle a chase camera with C (controller: the Helm radial) without changing the HUD. (D46, D95)
@@ -68,7 +68,7 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 - **FT-HLM-004** The cockpit shall show off-screen arrows for the selected target and pinged items. (station-ui §1.6)
 - **FT-HLM-005** Holding F shall rotate the ship to face the selected target at the ship's real turn rate, through flight assist. (D47)
 - **FT-HLM-006** Face assist shall work for contacts and marks, and in decoupled mode. (D47)
-- **FT-HLM-007** Level shall roll the ship so its up is as close to ecliptic up as the heading allows; a second press shall also pitch onto the ecliptic. (D42, D77, D97)
+- **FT-HLM-007** Align shall roll the ship about its bow axis until the selected item lies in the ship's pitch plane above the bow (12 o'clock); a second press shall also face it; with nothing selected Align shall do nothing. (D97, D124)
 - **FT-HLM-008** Helm shall snap shield focus to six faces (fore, aft, port, starboard, dorsal, ventral) with one input each. (D48)
 - **FT-HLM-009** Tapping a clock sector with height on the shield ring shall set shield focus to that direction. (D48)
 - **FT-HLM-010** A shield-track toggle shall keep shield focus on the selected callsign as both ships move. (D48)
@@ -78,7 +78,7 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 - **FT-HLM-014** All-stop shall bring the ship's velocity and rotation to zero through real thrust, from one input on every device. (D97, plan review NAV-2)
 - **FT-HLM-015** While hold-to-approach is held, flight assist shall face the selected item, fly to a data-defined stand-off and match its velocity, on every device. (D97, plan review NAV-2)
 - **FT-HLM-016** JUMP shall jump to the selected site or mark once Helm faces it; sites shall be selectable on Helm like marks (§6). (D98, plan review NAV-4)
-- **FT-HLM-017** Every Helm action, including cycle target, select pinged, Level, decoupled, all-stop and approach, shall have a controller binding. (FT-STN-005, plan review NAV-5)
+- **FT-HLM-017** Every Helm action, including cycle target, select pinged, Align, decoupled, all-stop and approach, shall have a controller binding. (FT-STN-005, plan review NAV-5, D124)
 
 ## 5.2 Weapons (W-B turret camera; D49)
 
@@ -108,7 +108,7 @@ Full-screen view from one claimed mount with lead reticle, arc edge and radar in
 - **FT-WPN-006** Weapons shall select ammunition type per mount where the mount allows several. (v0.3 §5)
 - **FT-WPN-007** On Easy, shared weak points and ammunition effectiveness shall appear in the turret view. (D69, P7)
 - **FT-WPN-008** Weapons shall fire guided ordnance at a mark attached to a tracked contact. (P8)
-- **FT-WPN-009** A mount shall hold its aim point in world space while the ship rotates, slewing at its traverse rate, and the turret camera's roll shall follow the aim direction's horizon. (plan review NAV-6)
+- **FT-WPN-009** A mount shall hold its aim point in world space while the ship rotates, slewing at its traverse rate, and the turret camera shall roll with the ship's deck plane, keeping the ship's up at the top of the view. (plan review NAV-6, D124)
 
 ## 5.3 Engineering (E-A cutaway + pips; D50)
 
@@ -200,29 +200,29 @@ Hack minigame (Hack-A node route, D59): find a path from entry to the chosen sub
 - **FT-SCI-015** A class the crew has fully scanned in this run shall start later scans pre-aligned on two axes. (plan review UX-4)
 - **FT-SCI-016** Match quality above the lock threshold shall raise the confidence of the scan result. (plan review UX-4, P3)
 
-## 5.5 Relay (world map; D52)
+## 5.5 Relay (world map; D52, D124)
 
-Centre: freely rotatable world-frame 3D map on the ecliptic with grid squares, altitude stems, probe coverage bubbles, routes, hazards and all marks. Left: probes (stock, launch) and contacts by faction. Bottom: log and the inbox of marks sent by allied ships, each waiting for Accept or Decline (D82). With no Captain seated, Relay alone switches the main-screen view (D88). No NPC text.
+Centre: the world map, a freely rotatable 3D map of the site's wrapping cube, centred on the ship or a selected mark, site or contact, with probe coverage bubbles, routes, hazards and all marks; it has no grid squares, altitude layers or world-fixed up (D124). Left: probes (stock, launch) and contacts by faction. Bottom: log and the inbox of marks sent by allied ships, each waiting for Accept or Decline (D82). With no Captain seated, Relay alone switches the main-screen view (D88). No NPC text.
 
 ```
 +-[RELAY]-----------------------------------------------+
-|PROBES 3/5   | A    B    C    D    E    F   (ecliptic) |
-|[LAUNCH]     |1      <>Alpha       probe( )            |
-|CONTACTS     |2            H2*                         |
-|H2 hostile   |3   ship->  - - - - route - -> <>Bravo   |
-|N4 trade     |4  hazard~~~~          <>Charlie up2     |
-|MARKS A B C  | drag: place  Shift+drag: height  [ROUTE]|
+|PROBES 3/5   |              (centred on ship)          |
+|[LAUNCH]     |       <>Alpha       probe( )            |
+|CONTACTS     |             H2*                         |
+|H2 hostile   |    ship->  - - - - route - -> <>Bravo   |
+|N4 trade     |   hazard~~~~          <>Charlie         |
+|MARKS A B C  | drag: place  Shift+drag: depth   [ROUTE]|
 |log: H2 changed course   lane x N7 [L flag]            |
 |INBOX: Delta from Kestrel [ACCEPT] [DECLINE] [SEND >]  |
 +-------------------------------------------------------+
 ```
 
-- KB/M: drag on the map to place a probe or mark, Shift+drag height, right-drag rotate, scroll zoom, G route to selected, L flag lanes crossing friendlies, Del delete mark, N rename mark, X send selected mark to an allied ship, B fabricate-probe request, Alt+1–5 main-screen view (no Captain seated); Enter/Backspace accept/decline the oldest received mark (§5.0).
-- Controller: left stick cursor plus a radial menu on hold B (probe, mark, route, flag lanes, send mark, main-screen view), triggers raise/lower height, right stick rotate; X/Y accept/decline received mark (§5.0).
-- Touch: drag to place, second finger slides height, pinch zoom, two-finger rotate, SEND on a selected mark, ACCEPT/DECLINE in the inbox, main-screen view buttons.
+- KB/M: drag on the map to place a probe or mark, Shift+drag depth, right-drag rotate, scroll zoom, G route to selected, L flag lanes crossing friendlies, Del delete mark, N rename mark, X send selected mark to an allied ship, B fabricate-probe request, Alt+1–5 main-screen view (no Captain seated); Enter/Backspace accept/decline the oldest received mark (§5.0).
+- Controller: left stick cursor plus a radial menu on hold B (probe, mark, route, flag lanes, send mark, main-screen view), triggers move the cursor nearer/farther, right stick rotate; X/Y accept/decline received mark (§5.0).
+- Touch: drag to place, second finger slides depth, pinch zoom, two-finger rotate, SEND on a selected mark, ACCEPT/DECLINE in the inbox, main-screen view buttons.
 
-- **FT-RLY-001** Relay shall show a freely rotatable world-frame 3D map with grid squares, altitude stems, probe coverage, routes, hazards and marks. (D52, D42)
-- **FT-RLY-002** Relay shall place marks by dragging on the ecliptic and set height with Shift+drag. (D52)
+- **FT-RLY-001** Relay shall show a freely rotatable 3D map of the site's wrapping cube, centred on the ship or a selected mark, site or contact, with probe coverage, routes, hazards and marks, and no grid squares, altitude layers or world-fixed up. (D52, D124)
+- **FT-RLY-002** Relay shall place marks by dragging on the view plane through the map's centre and set depth along the view direction with Shift+drag. (D52, D124)
 - **FT-RLY-003** Relay shall rename, attach to a contact, move and delete any mark of its ship. (D44)
 - **FT-RLY-004** Relay shall launch probes to a chosen point from a finite stock. (D56)
 - **FT-RLY-005** Relay shall draw routes; on Easy a route appears as a ribbon on Helm's HUD. (D52, D69)
@@ -313,7 +313,7 @@ Forward (or chase) view, wide disc radar along the bottom, and a callsign rail w
 +---------------------------------------------------------+
 ```
 
-- **FT-MSC-001** The main screen shall default to the forward view with a wide disc radar and a callsign rail showing clock and range; the forward camera shall be horizon-stabilised and switch to chase while the ship is decoupled or rolls faster than a data-defined rate. (D60, plan review NAV-9)
+- **FT-MSC-001** The main screen shall default to the forward view with a wide disc radar and a callsign rail showing clock and range; the forward camera shall be stabilised on the ship's deck plane or the selected target (or a per-client cosmetic reference plane, never spoken or used by rules) and switch to chase while the ship is decoupled or rolls faster than a data-defined rate. (D60, plan review NAV-9, D124)
 - **FT-MSC-002** The main screen shall offer forward, chase, tactical, target and status views. (D60)
 - **FT-MSC-003** The main screen shall draw pings and marks. (D60, D61)
 - **FT-MSC-004** Any number of viewers shall display the main screen read-only, within the 64-connection cap. (D10, D22)
