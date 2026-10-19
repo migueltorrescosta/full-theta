@@ -51,11 +51,7 @@ static func absorb_fraction(world: SimWorld, ship_id: int, from_local: Vector3) 
 
 ## Shield power (dimensionless): shield pips over nominal times shield effectiveness.
 static func power(world: SimWorld, ship_id: int) -> float:
-	var k: int = SubsystemDef.Kind.SHIELDS
-	return (
-		PowerSystem.power_ratio(world, ship_id, k)
-		* PowerSystem.kind_effectiveness(world, ship_id, k)
-	)
+	return PowerSystem.kind_power(world, ship_id, SubsystemDef.Kind.SHIELDS)
 
 
 ## Coverage lobe (dimensionless) at cos_angle from the focus for a tightness k:

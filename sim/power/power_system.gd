@@ -12,23 +12,81 @@ const FAULT_REARM: float = 0.8
 
 static func step(world: SimWorld) -> void:
 	var t: PowerTable = world.power
+	var kin: Kinematics = world.kin
+	var d: DamageTable = world.damage
+	# Effective pips per subsystem of the ship being stepped (reused buffer).
+	var eff_pips: PackedInt32Array = PackedInt32Array()
+	# Read-only here (hoisted: member access on another object is slow).
+	var alive: PackedByteArray = kin.alive
+	var pips: PackedInt32Array = d.pips
+	var defs: Array[ShipDef] = world.defs
 	for s: int in t.size():
-		if not world.kin.is_alive(s):
+		if alive[s] != 1:
 			continue
-		var def: ShipDef = world.defs[s]
-		for i: int in def.subsystems.size():
-			_step_heat(world, s, i)
+		var def: ShipDef = defs[s]
+		var subs: Array[SubsystemDef] = def.subsystems
+		var n: int = subs.size()
+		var first: int = d.subsystem_row(s, 0)
+		var boosting: bool = t.boost_ticks[s] > 0
+		eff_pips.resize(n)
+		for i: int in n:
+			var sd: SubsystemDef = subs[i]
+			var kind: int = sd.kind
+			var boosted: bool = (
+				boosting
+				and (kind == SubsystemDef.Kind.ENGINES or kind == SubsystemDef.Kind.THRUSTERS)
+			)
+			var p: int = def.power.max_pips_per_subsystem if boosted else pips[first + i]
+			eff_pips[i] = p
+			_step_heat_row(world, s, i, sd, first + i, p)
+		# Per kind, in subsystem order (the sums and maxima of power_ratio,
+		# kind_effectiveness and heat_ratio, after this tick's heat and faults).
+		var weapon_pips: int = 0
+		var eng_pips: int = 0
+		var eng_nominal: int = 0
+		var eng_eff: float = 0.0
+		var eng_n: int = 0
+		var eng_heat: float = 0.0
+		var thr_pips: int = 0
+		var thr_nominal: int = 0
+		var thr_eff: float = 0.0
+		var thr_n: int = 0
+		var thr_heat: float = 0.0
+		for i: int in n:
+			var sd: SubsystemDef = subs[i]
+			match sd.kind:
+				SubsystemDef.Kind.WEAPONS:
+					weapon_pips += eff_pips[i]
+				SubsystemDef.Kind.ENGINES:
+					eng_pips += eff_pips[i]
+					eng_nominal += sd.nominal_pips
+					eng_eff += curve_at(sd.effectiveness, d.health[first + i] / sd.health_max)
+					eng_n += 1
+					eng_heat = maxf(eng_heat, d.heat[first + i] / sd.fault_heat_threshold)
+				SubsystemDef.Kind.THRUSTERS:
+					thr_pips += eff_pips[i]
+					thr_nominal += sd.nominal_pips
+					thr_eff += curve_at(sd.effectiveness, d.health[first + i] / sd.health_max)
+					thr_n += 1
+					thr_heat = maxf(thr_heat, d.heat[first + i] / sd.fault_heat_threshold)
 		var charge: float = (
-			def.power.reactor_output
-			* _pips_of(world, s, SubsystemDef.Kind.WEAPONS)
-			/ def.power.reactor_pips
-			* SimWorld.DT
+			def.power.reactor_output * weapon_pips / def.power.reactor_pips * SimWorld.DT
 		)
 		t.weapon_energy[s] = minf(t.weapon_energy[s] + charge, def.power.weapons_capacity)
-		world.kin.thrust_scale[s] = kind_envelope(world, s, SubsystemDef.Kind.ENGINES)
-		world.kin.torque_scale[s] = kind_envelope(world, s, SubsystemDef.Kind.THRUSTERS)
+		kin.thrust_scale[s] = envelope(
+			def.power,
+			_ratio(eng_pips, eng_nominal),
+			eng_eff / eng_n if eng_n > 0 else 1.0,
+			eng_heat
+		)
+		kin.torque_scale[s] = envelope(
+			def.power,
+			_ratio(thr_pips, thr_nominal),
+			thr_eff / thr_n if thr_n > 0 else 1.0,
+			thr_heat
+		)
 		# Last, so a boost of n ticks raises heat and the envelope for exactly n ticks.
-		if t.boost_ticks[s] > 0:
+		if boosting:
 			t.boost_ticks[s] -= 1
 
 
@@ -90,9 +148,7 @@ static func power_ratio(world: SimWorld, ship_id: int, kind: int) -> float:
 	for s: SubsystemDef in world.defs[ship_id].subsystems:
 		if s.kind == kind:
 			nominal += s.nominal_pips
-	if nominal == 0:
-		return 1.0
-	return float(_pips_of(world, ship_id, kind)) / nominal
+	return _ratio(_pips_of(world, ship_id, kind), nominal)
 
 
 ## Mean effectiveness of the ship's subsystems of a kind (0..1; 1 if none, FT-SIM-021).
@@ -100,11 +156,39 @@ static func kind_effectiveness(world: SimWorld, ship_id: int, kind: int) -> floa
 	var total: float = 0.0
 	var n: int = 0
 	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
+	var health: PackedFloat64Array = world.damage.health
+	var first: int = world.damage.subsystem_row(ship_id, 0)
 	for i: int in subs.size():
-		if subs[i].kind == kind:
-			total += DamageSystem.effectiveness_at(world, ship_id, i)
+		var s: SubsystemDef = subs[i]
+		if s.kind == kind:
+			total += curve_at(s.effectiveness, health[first + i] / s.health_max)
 			n += 1
 	return total / n if n > 0 else 1.0
+
+
+## power_ratio() times kind_effectiveness() in one pass (shield power, FT-SIM-019).
+static func kind_power(world: SimWorld, ship_id: int, kind: int) -> float:
+	var def: ShipDef = world.defs[ship_id]
+	var subs: Array[SubsystemDef] = def.subsystems
+	var d: DamageTable = world.damage
+	var first: int = d.subsystem_row(ship_id, 0)
+	var boosting: bool = world.power.boost_ticks[ship_id] > 0
+	var boosted_kind: bool = (
+		kind == SubsystemDef.Kind.ENGINES or kind == SubsystemDef.Kind.THRUSTERS
+	)
+	var pips: int = 0
+	var nominal: int = 0
+	var total: float = 0.0
+	var n: int = 0
+	for i: int in subs.size():
+		var s: SubsystemDef = subs[i]
+		if s.kind != kind:
+			continue
+		pips += def.power.max_pips_per_subsystem if boosting and boosted_kind else d.pips[first + i]
+		nominal += s.nominal_pips
+		total += curve_at(s.effectiveness, d.health[first + i] / s.health_max)
+		n += 1
+	return _ratio(pips, nominal) * (total / n if n > 0 else 1.0)
 
 
 ## Highest heat over threshold among the ship's subsystems of a kind (dimensionless).
@@ -165,28 +249,36 @@ static func subsystem_index(def: ShipDef, kind: int) -> int:
 	return -1
 
 
-## Heat for one tick: dT/dt = heat_per_overcharge_pip * overcharge - heat_dissipation * T,
-## stepped exactly; past fault_heat_threshold a fault damages the subsystem once
-## (FT-SIM-026).
-static func _step_heat(world: SimWorld, s: int, i: int) -> void:
-	var sd: SubsystemDef = world.defs[s].subsystems[i]
-	var over: int = maxi(effective_pips(world, s, i) - sd.nominal_pips, 0)
+## Heat for one tick of subsystem i (definition sd, damage row r) drawing pips now:
+## dT/dt = heat_per_overcharge_pip * overcharge - heat_dissipation * T, stepped exactly;
+## past fault_heat_threshold a fault damages the subsystem once (FT-SIM-026).
+static func _step_heat_row(
+	world: SimWorld, s: int, i: int, sd: SubsystemDef, r: int, pips: int
+) -> void:
+	var over: int = maxi(pips - sd.nominal_pips, 0)
 	var q: float = sd.heat_per_overcharge_pip * over
-	var k: float = sd.heat_dissipation
 	var d: DamageTable = world.damage
-	var r: int = d.subsystem_row(s, i)
 	var h: float = d.heat[r]
-	if k > 0.0:
-		h = q / k + (h - q / k) * exp(-k * SimWorld.DT)
-	else:
-		h += q * SimWorld.DT
-	d.heat[r] = h
-	if h > sd.fault_heat_threshold and d.fault_armed[r] == 1:
+	# No overcharge and no heat stays exactly 0 (both branches below give 0.0).
+	if q != 0.0 or h != 0.0:
+		var k: float = sd.heat_dissipation
+		if k > 0.0:
+			h = q / k + (h - q / k) * exp(-k * SimWorld.DT)
+		else:
+			h += q * SimWorld.DT
+		d.heat[r] = h
+	var threshold: float = sd.fault_heat_threshold
+	if h > threshold and d.fault_armed[r] == 1:
 		d.fault_armed[r] = 0
 		DamageSystem.damage_subsystem(world, s, i, sd.heat_fault_damage)
 		world.emit(&"fault", s, -1, h, Vector3.ZERO, sd.id)
-	elif h < sd.fault_heat_threshold * FAULT_REARM and d.fault_armed[r] == 0:
+	elif h < threshold * FAULT_REARM and d.fault_armed[r] == 0:
 		d.fault_armed[r] = 1
+
+
+## Pips over nominal pips (dimensionless), 1 when the nominal is 0.
+static func _ratio(pips: int, nominal: int) -> float:
+	return 1.0 if nominal == 0 else float(pips) / nominal
 
 
 ## Sum of effective pips over the ship's subsystems of a kind (count).

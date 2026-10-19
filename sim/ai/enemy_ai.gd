@@ -49,33 +49,60 @@ const INPUT_EPS: float = 1e-4
 
 static func step(world: SimWorld) -> void:
 	var ai: AiTable = world.ai
+	var kin: Kinematics = world.kin
+	# Target candidates per faction: knowledge, liveness and relations don't change
+	# while the AI thinks (it only submits commands), so once per faction and tick.
+	var candidates: Dictionary[int, PackedInt32Array] = {}
 	for id: int in ai.size():
-		if ai.is_enabled(id) and world.kin.is_alive(id):
-			_think(world, id)
+		if ai.enabled[id] == 1 and kin.alive[id] == 1:
+			var faction: int = kin.factions[id]
+			if not candidates.has(faction):
+				candidates[faction] = _candidates(world, faction)
+			_think(world, id, candidates[faction])
 
 
 ## Nearest live contact at the ship's site that its faction detects and either has
 ## identified as hostile or not identified yet (unknowns are closed on, never fired at),
 ## or -1. Ties go to the lower id.
 static func pick_target(world: SimWorld, id: int) -> int:
+	return _nearest(world, id, _candidates(world, world.faction_of(id)))
+
+
+## The live contacts the faction detects and doesn't know to be non-hostile, in id
+## order: pick_target's candidates at any site.
+static func _candidates(world: SimWorld, faction: int) -> PackedInt32Array:
 	var kin: Kinematics = world.kin
-	var faction: int = world.faction_of(id)
-	var best: int = -1
-	var best_dist: float = INF
-	for c: int in KnowledgeSystem.contacts(world, faction):
-		if not kin.is_alive(c) or kin.site[id] != kin.site[c]:
+	var knowledge: KnowledgeTable = world.knowledge
+	var out: PackedInt32Array = PackedInt32Array()
+	# _known_not_hostile inlined: identified, and not hostile by relation (per faction).
+	var hostile: Dictionary[int, bool] = {}
+	for c: int in knowledge.detected_ships(faction, kin.factions):
+		if kin.alive[c] != 1:
 			continue
-		if _known_not_hostile(world, faction, c):
-			continue
-		var dist: float = kin.relative(id, c).length()
-		if dist < best_dist:
-			best_dist = dist
-			best = c
-	return best
+		if knowledge.identified[knowledge.row_for(faction, c)] == 1:
+			var f: int = kin.factions[c]
+			if not hostile.has(f):
+				hostile[f] = world.relation(faction, f) == SimWorld.Relation.HOSTILE
+			if not hostile[f]:
+				continue
+		out.append(c)
+	return out
+
+
+## The candidate at the ship's site nearest to it, or -1; ties go to the lower id.
+static func _nearest(world: SimWorld, id: int, candidates: PackedInt32Array) -> int:
+	return world.kin.nearest(id, candidates)
 
 
 ## The mode the ship should be in this tick.
 static func choose_mode(world: SimWorld, id: int, target: int) -> AiTable.Mode:
+	if target < 0:
+		return _choose_mode(world, id, target, Vector3.ZERO)
+	return _choose_mode(world, id, target, world.kin.relative(id, target))
+
+
+## choose_mode with the target's offset rel (m) already known.
+static func _choose_mode(world: SimWorld, id: int, target: int, rel: Vector3) -> AiTable.Mode:
 	var ai: AiTable = world.ai
 	if DamageSystem.hull_fraction(world, id) < ai.retreat_hull_fraction[id]:
 		return AiTable.Mode.RETREAT
@@ -84,13 +111,15 @@ static func choose_mode(world: SimWorld, id: int, target: int) -> AiTable.Mode:
 	var limit: float = ai.engage_range_max[id]
 	if ai.mode[id] == AiTable.Mode.KEEP_RANGE:
 		limit += MODE_HYSTERESIS
-	var dist: float = world.kin.relative(id, target).length()
+	var dist: float = rel.length()
 	return AiTable.Mode.ATTACK if dist > limit else AiTable.Mode.KEEP_RANGE
 
 
-static func _think(world: SimWorld, id: int) -> void:
-	var target: int = pick_target(world, id)
-	var mode: AiTable.Mode = choose_mode(world, id, target)
+static func _think(world: SimWorld, id: int, candidates: PackedInt32Array) -> void:
+	var target: int = _nearest(world, id, candidates)
+	# The target's offset once per tick (the AI changes no positions while it thinks).
+	var rel: Vector3 = world.kin.relative(id, target) if target >= 0 else Vector3.ZERO
+	var mode: AiTable.Mode = _choose_mode(world, id, target, rel)
 	var ai: AiTable = world.ai
 	if mode != ai.mode[id]:
 		ai.mode[id] = mode
@@ -102,14 +131,7 @@ static func _think(world: SimWorld, id: int) -> void:
 		AiTable.Mode.RETREAT:
 			_retreat(world, id, target)
 		_:
-			_engage(world, id, target)
-
-
-static func _known_not_hostile(world: SimWorld, faction: int, contact: int) -> bool:
-	return (
-		KnowledgeSystem.is_identified(world, faction, contact)
-		and world.relation(faction, world.faction_of(contact)) != SimWorld.Relation.HOSTILE
-	)
+			_engage(world, id, target, rel)
 
 
 ## No target: drop the selection and the inputs, and all-stop if moving.
@@ -128,29 +150,34 @@ static func _hold(world: SimWorld, id: int) -> void:
 
 
 ## ATTACK and KEEP_RANGE: face the lead point, hold the middle of the engage band, shoot.
-static func _engage(world: SimWorld, id: int, target: int) -> void:
-	_select_face_point(world, id, target)
+## rel is the target's offset (m, kin.relative).
+static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void:
+	var mounts: Array[MountDef] = world.defs[id].mounts
+	# The first mount's lead point, shared by the face point and its aim.
+	var aim0: Vector3 = Vector3.INF
+	if not mounts.is_empty():
+		aim0 = lead_aim(world, id, 0, target, 1)
+	_select_face_point(world, id, target, aim0)
 	var kin: Kinematics = world.kin
 	var ai: AiTable = world.ai
-	var rel: Vector3 = kin.relative(id, target)
 	var dist: float = rel.length()
 	var los: Vector3 = rel / dist if dist > 0.0 else kin.forward(id)
 	var gap: float = dist - 0.5 * (ai.engage_range_min[id] + ai.engage_range_max[id])
 	# Wanted own velocity along the line of sight: the target's plus a closing speed.
 	var along: float = closing_speed(world, id, gap) + kin.vel[target].dot(los)
 	_helm_input(world, id, true, along * kin.forward(id).dot(los))
-	for m: int in world.defs[id].mounts.size():
-		_aim_and_fire(world, id, m, target, dist)
+	for m: int in mounts.size():
+		_aim_and_fire(
+			world, id, m, target, dist, aim0 if m == 0 else lead_aim(world, id, m, target, 1)
+		)
 
 
-## Selects the first mount's lead aim point as Helm's point target, so the bow faces
-## where the shots must go; else (no mount, no solution) the target ship.
-static func _select_face_point(world: SimWorld, id: int, target: int) -> void:
+## Selects the first mount's lead aim point (aim, Vector3.INF for none) as Helm's point
+## target, so the bow faces where the shots must go; else (no mount, no solution) the
+## target ship.
+static func _select_face_point(world: SimWorld, id: int, target: int, aim: Vector3) -> void:
 	var kin: Kinematics = world.kin
 	var helm: HelmTable = world.helm
-	var aim: Vector3 = Vector3.INF
-	if not world.defs[id].mounts.is_empty():
-		aim = lead_aim(world, id, 0, target, 1)
 	var select: SelectTargetCommand = SelectTargetCommand.new()
 	if aim.is_finite():
 		_set_point(select, kin, id, aim)
@@ -271,10 +298,12 @@ static func lead_aim(world: SimWorld, id: int, m: int, target: int, ticks_ahead:
 	return muzzle + Lead.aim_point(rel, rel_vel, t)
 
 
-## Aims the mount at the lead intercept point and fires when the shot is good.
-static func _aim_and_fire(world: SimWorld, id: int, m: int, target: int, dist: float) -> void:
+## Aims the mount at its lead intercept point aim (lead_aim) and fires when the shot is
+## good.
+static func _aim_and_fire(
+	world: SimWorld, id: int, m: int, target: int, dist: float, aim: Vector3
+) -> void:
 	var kin: Kinematics = world.kin
-	var aim: Vector3 = lead_aim(world, id, m, target, 1)
 	if not aim.is_finite():
 		return
 	# The ship moves two ticks before WeaponSystem reads the point (it applies next tick,
@@ -306,21 +335,25 @@ static func _shot_good(
 	var mounts: MountTable = world.mounts
 	var row: int = mounts.row_for(id, m)
 	var mount: MountDef = world.defs[id].mounts[m]
+	# Cheapest checks first; every one is pure, so the order doesn't change the result.
+	if (
+		row < 0
+		or mounts.fire_requested[row] != 0
+		or mounts.cooldown[row] > 2.0 * SimWorld.DT + WeaponSystem.COOLDOWN_EPS
+		or mounts.ammo[row] == 0
+		or mounts.heat[row] >= mount.weapon.heat_limit
+		or dist > world.ai.engage_range_max[id]
+		or reach > mount.weapon.max_range
+	):
+		return false
 	var faction: int = world.faction_of(id)
 	var local: Vector3 = kin.to_local(id, aim_dir).normalized()
 	return (
-		row >= 0
-		and KnowledgeSystem.is_identified(world, faction, target)
+		KnowledgeSystem.is_identified(world, faction, target)
 		and world.relation(faction, world.faction_of(target)) == SimWorld.Relation.HOSTILE
-		and dist <= world.ai.engage_range_max[id]
-		and reach <= mount.weapon.max_range
 		and kin.forward(id).angle_to(aim_dir) <= world.ai.fire_cone[id]
 		and WeaponSystem.in_arc(mount, local)
 		and mounts.barrel[row].angle_to(local) <= AIM_TOLERANCE
-		and mounts.fire_requested[row] == 0
-		and mounts.cooldown[row] <= 2.0 * SimWorld.DT + WeaponSystem.COOLDOWN_EPS
-		and mounts.ammo[row] != 0
-		and mounts.heat[row] < mount.weapon.heat_limit
 		and DamageSystem.effectiveness(world, id, mount.subsystem_id) > 0.0
 	)
 

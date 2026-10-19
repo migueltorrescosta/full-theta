@@ -1,3 +1,5 @@
+# gdlint: disable=max-public-methods
+# (The position helpers are the only way at the position columns, tools/lint_arch.py.)
 class_name Kinematics
 extends SimTable
 ## Rigid-body state of every ship, one row per ship in id order (packed layout, S6).
@@ -155,15 +157,63 @@ func can_reach(a: int, b: int) -> bool:
 ## Offset of row b from row a (m, float32) by minimum image, computed in 64-bit
 ## (FT-SIM-035). Only meaningful when both are at the same site.
 func relative(a: int, b: int) -> Vector3:
-	return Vector3(
-		_wrap(px[b] - px[a], period), _wrap(py[b] - py[a], period), _wrap(pz[b] - pz[a], period)
-	)
+	# _wrap inlined for in-cube differences, the common case (hot path).
+	var half: float = 0.5 * period
+	var dx: float = px[b] - px[a]
+	var dy: float = py[b] - py[a]
+	var dz: float = pz[b] - pz[a]
+	if not (dx >= -half and dx < half):
+		dx = _wrap(dx, period)
+	if not (dy >= -half and dy < half):
+		dy = _wrap(dy, period)
+	if not (dz >= -half and dz < half):
+		dz = _wrap(dz, period)
+	return Vector3(dx, dy, dz)
+
+
+## The ship among ids at row a's site nearest to it (distance as relative().length(),
+## float32), or -1; the earlier one in ids wins a tie. One loop for target scans.
+func nearest(a: int, ids: PackedInt32Array) -> int:
+	var half: float = 0.5 * period
+	var ax: float = px[a]
+	var ay: float = py[a]
+	var az: float = pz[a]
+	var s: int = site[a]
+	var best: int = -1
+	var best_dist: float = INF
+	for b: int in ids:
+		if site[b] != s:
+			continue
+		var dx: float = px[b] - ax
+		var dy: float = py[b] - ay
+		var dz: float = pz[b] - az
+		if not (dx >= -half and dx < half):
+			dx = _wrap(dx, period)
+		if not (dy >= -half and dy < half):
+			dy = _wrap(dy, period)
+		if not (dz >= -half and dz < half):
+			dz = _wrap(dz, period)
+		var dist: float = Vector3(dx, dy, dz).length()
+		if dist < best_dist:
+			best_dist = dist
+			best = b
+	return best
 
 
 ## Offset of a site-local point from row a (m, float32) by minimum image, computed in
 ## 64-bit; the point need not be wrapped (FT-SIM-035).
 func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:
-	return Vector3(_wrap(x - px[a], period), _wrap(y - py[a], period), _wrap(z - pz[a], period))
+	var half: float = 0.5 * period
+	var dx: float = x - px[a]
+	var dy: float = y - py[a]
+	var dz: float = z - pz[a]
+	if not (dx >= -half and dx < half):
+		dx = _wrap(dx, period)
+	if not (dy >= -half and dy < half):
+		dy = _wrap(dy, period)
+	if not (dz >= -half and dz < half):
+		dz = _wrap(dz, period)
+	return Vector3(dx, dy, dz)
 
 
 func is_alive(row: int) -> bool:
