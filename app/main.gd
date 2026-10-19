@@ -6,6 +6,11 @@ extends Node
 
 func _ready() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
+	# Release checks (FT-TST-019): the build line, and `--tts-smoke` (ReleaseSmoke).
+	print(ReleaseBundle.build_line())
+	if ReleaseSmoke.handles(args):
+		get_tree().quit(ReleaseSmoke.run(args))
+		return
 	if not args.has("--server"):
 		get_tree().quit(0)
 		return

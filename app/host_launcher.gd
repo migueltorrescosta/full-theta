@@ -101,6 +101,10 @@ func spawn(
 			ws_port, ProjectSettings.globalize_path(pid_file_path), idle_exit_min, project_path()
 		)
 	)
+	# A release package's host serves its bundled web export (FT-ARC-022, D108).
+	var web: String = ReleaseBundle.web_root()
+	if web != "":
+		args.append_array(["--http-root", web])
 	args.append_array(extra_server_args)
 	# The child inherits the environment at fork; clear it again at once.
 	OS.set_environment(SECRET_ENV, host_secret)
