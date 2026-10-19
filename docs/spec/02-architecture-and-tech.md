@@ -91,7 +91,7 @@ From tech.md §9, updated for the decisions. Each spike is time-boxed and has a 
 | R8 | Runtime Piper latency on the host | S7b: one persistent Piper process per voice, fed over a pipe off the sim thread, clip streamed to one client, measured per line under combined host load (D85, D101); a standalone Piper runs on Windows | Line audible < 1 s after the event |
 | R9 | Information leaks across stations or factions | L3 tests from the first network PR | Snapshot schema tests pass |
 | R10 | LAN discovery blocked; Wi-Fi airtime | Part of S4 on the owner's network; in #4, snapshot age with 4–8 real devices on the owner's Wi-Fi | Join works by at least one route; p99 snapshot age < 150 ms |
-| R11 | Art without an artist | S8: procedural/CC0 ship via S2, toon in v1, semi-realistic in v2 (D107; owner judges) | Owner approves a style |
+| R11 | Art without an artist | S8: procedural/CC0 ship via S2, toon in v1, semi-realistic in v2 | Owner approves a style (approved: S8 v2 worn with baked AO, D107) |
 | R12 | Licence contamination (EE GPL-2.0-only, proprietary EE packs) | Provenance policy; review check | — |
 | R13 | 15 pair tests brittle | Pair harness built with P1 in milestone 1 | "co-op beats solo" in < 30 lines |
 | R14 | macOS untested | Owner step per release | — |
