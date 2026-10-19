@@ -50,9 +50,14 @@ func spawn(
 ## (FT-SIM-035).
 func advance(k: int, kin: Kinematics, dt: float) -> void:
 	var v: Vector3 = vel[k]
-	px[k] = kin.wrap(px[k] + v.x * dt)
-	py[k] = kin.wrap(py[k] + v.y * dt)
-	pz[k] = kin.wrap(pz[k] + v.z * dt)
+	# kin.wrap only off the cube (it returns in-cube values unchanged).
+	var half: float = 0.5 * kin.period
+	var x: float = px[k] + v.x * dt
+	var y: float = py[k] + v.y * dt
+	var z: float = pz[k] + v.z * dt
+	px[k] = x if x >= -half and x < half else kin.wrap(x)
+	py[k] = y if y >= -half and y < half else kin.wrap(y)
+	pz[k] = z if z >= -half and z < half else kin.wrap(z)
 
 
 ## Projectile k's position relative to ship s, both taken dt (s) before the ship's

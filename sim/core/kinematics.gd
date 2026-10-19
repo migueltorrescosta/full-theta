@@ -157,6 +157,20 @@ func cell_range(row: int, cell: float, pad: float, out: PackedInt32Array) -> voi
 	out[5] = floori((pz[row] + pad) / cell)
 
 
+## Every row's broadphase cell for a cell size (m), unwrapped, as cell_range() with
+## pad 0 gives it: out[3 * row .. 3 * row + 2] = x, y, z (out is resized to 3 rows).
+## One call for a whole grid build.
+func cell_coords(cell: float, out: PackedInt32Array) -> void:
+	var xs: PackedFloat64Array = px
+	var ys: PackedFloat64Array = py
+	var zs: PackedFloat64Array = pz
+	out.resize(3 * xs.size())
+	for row: int in xs.size():
+		out[3 * row] = floori((xs[row] - 0.0) / cell)
+		out[3 * row + 1] = floori((ys[row] - 0.0) / cell)
+		out[3 * row + 2] = floori((zs[row] - 0.0) / cell)
+
+
 ## Whether row a can fly to, track or point at row b: another live ship at its site.
 func can_reach(a: int, b: int) -> bool:
 	return b >= 0 and b < size() and b != a and is_alive(b) and site[a] == site[b]
