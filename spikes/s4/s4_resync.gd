@@ -46,11 +46,7 @@ func force_full() -> void:
 ## Decides what to send for the next snapshot; `queued` is the high-lane bytes
 ## still in our queue.
 func decide(queued: int) -> Action:
-	if (
-		not stalled
-		and last_sent_seq >= 0
-		and (lag() > lag_limit or queued > queued_limit)
-	):
+	if not stalled and last_sent_seq >= 0 and (lag() > lag_limit or queued > queued_limit):
 		_mark_stalled()
 	if stalled:
 		# Drained: the client has acknowledged everything we sent and nothing
