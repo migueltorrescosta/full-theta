@@ -1,4 +1,5 @@
 class_name Director
 extends RefCounted
 
-var world: World
+var api: ScenarioApi
+var ship: ShipDef

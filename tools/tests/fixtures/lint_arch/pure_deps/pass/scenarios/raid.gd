@@ -1,3 +1,4 @@
-extends Director
+extends ScenarioApi
 
-var world: World
+var lead: Lead
+var path: String = "res://sim/api/scenario_api.gd"

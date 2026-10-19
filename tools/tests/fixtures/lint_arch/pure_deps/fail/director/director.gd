@@ -1,4 +1,5 @@
+class_name Director
 extends RefCounted
 
-var helm: Helm
+var world: World
 var path: String = "res://net/session.gd"

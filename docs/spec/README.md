@@ -128,3 +128,7 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 54. Captain status view and read-only chips and cards; a Comms beat per hostile encounter; allied contract flags; world-stable turret aim, a horizon-stabilised main screen and a comfort toggle; radar zoom. FT-CPT-004, 005, FT-MSC-001, 005, 006, FT-MIS-041, 042, FT-WPN-005, 009, FT-STN-017, FT-SPA-003, 024, 025. (E13)
 55. Runtime Piper pre-synthesises the closed set at Start. FT-ARC-019, FT-AUD-003, 015, 018, 019. (D101)
 56. Release packages carry the web export and Piper; baselines record the Mesa version; D90–D94 are written into the spec. FT-ARC-017, 022, FT-TST-019–021, §7.2, FT-MIS-028, 030, FT-PAIR-017, 018. (E14)
+
+### v0.5 update for D103 (#2)
+
+57. Module dependencies follow the API-boundary diagram; the Scenario API lives in `sim/api/`, and the architecture lint enforces FT-DAT-007 from #2. §2.2, FT-ARC-010, FT-DAT-007. (D103)

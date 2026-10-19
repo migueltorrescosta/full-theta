@@ -1,4 +1,4 @@
 class_name World
 extends RefCounted
 
-var session: Session
+var director: Director

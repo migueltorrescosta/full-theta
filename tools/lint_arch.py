@@ -4,7 +4,9 @@
 - Pure modules (sim/, director/, scenarios/, shared/) don't extend Node, touch the
   SceneTree, do I/O or networking, or load resources (FT-ARC-010, FT-ARC-020).
 - Dependencies are checked on identifiers as well as res:// paths: every class_name
-  in the repo resolves to its top-level folder (FT-ARC-010, FT-ARC-011, FT-ARC-021).
+  in the repo resolves to its folder (top level, or sim/api/), and each module may
+  name only the folders in ALLOWED (FT-ARC-010, FT-ARC-011, FT-ARC-016, FT-ARC-021,
+  FT-DAT-007).
 
 A token scan over .gd files with comments and strings stripped; string contents are
 checked only for res:// paths. Prints file:line messages and exits 1 on any finding.
@@ -17,10 +19,21 @@ import sys
 from pathlib import Path
 
 PURE = {"sim", "director", "scenarios", "shared"}
-CORE = {"sim", "director", "scenarios", "shared", "content"}
-# Folders each module may name; None means any folder except those in FORBIDDEN.
-ALLOWED = {"sim": CORE, "director": CORE, "scenarios": CORE, "shared": {"shared"}}
-FORBIDDEN = {"stations": {"sim"}, "input": {"sim"}, "presentation": {"sim"}}
+CLIENTS = {"stations", "input", "presentation", "audio"}
+BASE = {"shared", "content"}
+# Folders each module may name (spec §2.2); modules not listed (app/, tests/, tools/)
+# may name anything. sim/api/ is the Scenario API, the only part of sim/ that
+# director/ and scenarios/ see (FT-ARC-016, FT-DAT-007).
+ALLOWED = {
+    "sim": {"sim", "sim/api"} | BASE,
+    "sim/api": {"sim", "sim/api"} | BASE,
+    "director": {"director", "sim/api"} | BASE,
+    "scenarios": {"scenarios", "sim/api"} | BASE,
+    "shared": {"shared"},
+    "content": BASE,
+    "net": {"net", "sim", "sim/api", "director"} | BASE,
+    **{c: CLIENTS | {"net"} | BASE for c in CLIENTS},
+}
 PURE_BASES = {"RefCounted", "Object", "Resource"}
 BANNED = {
     "scene tree access": {"SceneTree", "get_tree", "get_main_loop", "get_node"},
@@ -63,15 +76,13 @@ def strip(text: str) -> tuple[str, list[tuple[int, str]]]:
 
 
 def module_of(rel: str) -> str:
+    if rel.startswith("sim/api/"):
+        return "sim/api"
     return rel.split("/", 1)[0] if "/" in rel else ""
 
 
 def may_name(module: str, target: str) -> bool:
-    if target == module:
-        return True
-    if module in ALLOWED:
-        return target in ALLOWED[module]
-    return target not in FORBIDDEN.get(module, set())
+    return target == module or target in ALLOWED.get(module, {target})
 
 
 def lint(root: Path) -> list[str]:
@@ -94,9 +105,10 @@ def lint(root: Path) -> list[str]:
             errors.append((rel, bisect.bisect_left(lines, pos) + 1, msg))
 
         for pos, s in strings:
-            for m in re.finditer(r"res://([^/\"']+)/", s):
-                if not may_name(module, m.group(1)):
-                    report(pos, f"{module}/ must not use res://{m.group(1)}/ (spec §2.2)")
+            for m in re.finditer(r"res://([^\"']+/)", s):
+                target = module_of(m.group(1))
+                if not may_name(module, target):
+                    report(pos, f"{module}/ must not use res://{target}/ (spec §2.2)")
         for m in re.finditer(r"[A-Za-z_]\w*", code):
             word, pos = m.group(), m.start()
             j = pos - 1
@@ -106,7 +118,7 @@ def lint(root: Path) -> list[str]:
             target = classes.get(word)
             if target is not None and not dotted and not may_name(module, target):
                 report(pos, f"{module}/ must not use {word} from {target}/ (spec §2.2)")
-            if module not in PURE:
+            if module.split("/")[0] not in PURE:
                 continue
             for what, names in BANNED.items():
                 if word in names:
@@ -114,7 +126,7 @@ def lint(root: Path) -> list[str]:
                     report(pos, f"{word}: no {what} in {module}/ ({ft})")
             if word in LOADERS and not dotted and code[m.end() :].lstrip().startswith("("):
                 report(pos, f"{word}(): no resource loading in {module}/ (FT-ARC-020)")
-        if module in PURE:
+        if module.split("/")[0] in PURE:
             for m in re.finditer(r"\bextends\s+(\w+)", code):
                 base = m.group(1)
                 if base not in PURE_BASES and base not in classes:

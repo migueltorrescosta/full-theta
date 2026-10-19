@@ -1,4 +1,4 @@
-# FT: FT-ARC-010, FT-ARC-011, FT-ARC-020, FT-ARC-021
+# FT: FT-ARC-010, FT-ARC-011, FT-ARC-016, FT-ARC-020, FT-ARC-021, FT-DAT-007
 """Fixture tests for tools/lint_arch.py (T006; FT-ARC-010, FT-ARC-011, FT-ARC-020, FT-ARC-021).
 
 Each pattern has a fixture root under fixtures/lint_arch/<pattern>/ with a `pass`
@@ -22,11 +22,16 @@ FAILS = {
     "load": ["sim/defs.gd:3", "sim/defs.gd:4", "sim/defs.gd:5"],
     # weapons.gd and hud.gd name the sim class World without any res://sim/ path.
     "station_sim": ["input/mapper.gd:3", "presentation/hud.gd:4", "stations/weapons.gd:3"],
+    # sim/api/ is the only part of sim/ that director/ and scenarios/ may name.
     "pure_deps": [
-        "director/director.gd:3",
+        "audio/voice.gd:3",
         "director/director.gd:4",
+        "director/director.gd:5",
         "scenarios/raid.gd:1",
+        "scenarios/raid.gd:3",
+        "scenarios/raid.gd:4",
         "sim/world.gd:4",
+        "stations/helm.gd:4",
     ],
     "shared_deps": ["shared/lead.gd:3", "shared/lead.gd:4", "shared/lead.gd:5"],
 }

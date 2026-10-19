@@ -19,18 +19,35 @@
 ## 2.2 Modules
 
 ```
-content (.tres defs, dialogue JSON) --> sim/ (pure, no SceneTree, no I/O, seeded)
-                                         ^  director/ + scenarios/ (Scenario API only)
-                commands                 |            state views + events
-net/ (protocol, codec, session, per-station view filter, discovery, web static server)
-        ^ commands                        | replicated state + events
-input/ (device -> intent) --> stations/ (helm, weapons, engineering, science,
-                               relay, comms, captain, main_screen) --> presentation/, audio/
+            content/ (defs)        shared/ (pure helpers)
+               ^   every module may name both; shared/ names nothing
+               |
+   sim/  (world, integrator, combat, commands)
+    ^  \_ sim/api/  (Scenario API and its value copies)
+    |          ^              ^
+    |     director/      scenarios/
+    |
+   net/  (server: tick, per-station view filter, codec | client: transport)
+    ^
+   stations/  input/  presentation/  audio/   (clients)
 
-shared/ (pure helpers: spatial callouts, lead intercept, units) <-- any module
+   app/ (entry points) composes everything
 ```
 
-Dependency rules: `sim/`, `director/` and `scenarios/` depend only on themselves, `shared/` and content definitions; `shared/` depends on nothing else; only `net/` crosses the process boundary; stations never touch `sim/` directly, even on the host.
+Dependency rules (D103), enforced by `tools/lint_arch.py` on class names and `res://` paths. An arrow means "may name classes or paths of":
+
+| Module | May name |
+|---|---|
+| `sim/` (including `sim/api/`) | `sim/`, `shared/`, content |
+| `director/` | `director/`, `sim/api/`, `shared/`, content |
+| `scenarios/` | `scenarios/`, `sim/api/`, `shared/`, content |
+| `shared/` | nothing else |
+| content | `shared/` |
+| `net/` | `net/`, `sim/`, `director/`, `shared/`, content |
+| clients (`stations/`, `input/`, `presentation/`, `audio/`) | each other, `net/`, `shared/`, content |
+| `app/`, `tests/`, `tools/` | anything |
+
+So `sim/` never names the director or scenarios, the director and scenarios see the sim only through the Scenario API (FT-ARC-016, FT-DAT-007), only `net/` crosses the process boundary, and stations never touch `sim/` directly, even on the host.
 
 ## 2.3 Requirements
 
@@ -43,7 +60,7 @@ Dependency rules: `sim/`, `director/` and `scenarios/` depend only on themselves
 - **FT-ARC-007** The simulation shall use a custom 6DOF integrator and shall not use Godot physics bodies. (D70)
 - **FT-ARC-008** Every random draw in the simulation shall come from a seeded RNG, so a seed plus a command log, which records each accepted command with the tick it was applied on, in application order, reproduces a run on the same build and platform. (D70, plan review TECH-10)
 - **FT-ARC-009** Simulation iteration order shall be stable (entities ordered by id). (D70)
-- **FT-ARC-010** Code under `sim/` and `director/` shall not extend Node, access the SceneTree or perform I/O, enforced by a lint gate that resolves `class_name` declarations to their folders. (D70, plan review TECH-6)
+- **FT-ARC-010** Code under `sim/` and `director/` shall not extend Node, access the SceneTree or perform I/O, enforced by a lint gate that resolves `class_name` declarations to their folders and checks the §2.2 dependency rules. (D70, D103, plan review TECH-6)
 - **FT-ARC-011** Station code shall reach simulation state only through `net/`, including on the host machine. (D70)
 - **FT-ARC-012** All simulation state shall be keyed by ship id and faction. (D21, D72)
 - **FT-ARC-013** Each faction shall hold its own contact knowledge (detection, scans, tracks). (D21)
