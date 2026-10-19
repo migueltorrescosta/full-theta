@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EnemyDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/enemy_def.gd" id="1_llsng"]
+[ext_resource type="Resource" path="res://tests/content/fixtures/good/weapon.tres" id="2_logl5"]
+
+[resource]
+script = ExtResource("1_llsng")
+id = &"wrong_class"
+display_name = "Raider"
+ship = ExtResource("2_logl5")
+engage_range_min = 800.0
+engage_range_max = 3000.0
+retreat_hull_fraction = 0.25
+fire_cone = 0.05

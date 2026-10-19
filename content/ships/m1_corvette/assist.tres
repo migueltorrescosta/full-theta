@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AssistDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/assist_def.gd" id="1_41tgl"]
+
+[resource]
+script = ExtResource("1_41tgl")
+turn_rate_pitch_yaw = 0.6981317007977318
+turn_rate_roll = 1.5707963267948966
+rate_time_constant = 0.12
+velocity_time_constant = 0.4
+attitude_time_constant = 0.3
+attitude_braking = 0.6
+speed_min = -50.0
+speed_max = 300.0
+speed_ramp = 60.0
+approach_standoff = 500.0
+approach_speed_cap = 300.0
+approach_braking = 0.5
+approach_final_time_constant = 4.0
