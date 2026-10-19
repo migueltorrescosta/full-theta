@@ -60,6 +60,25 @@ func item_at(_screen_pos: Vector2) -> Dictionary:
 	return {}
 
 
+## Where a controller's "under the cursor" points on this panel (its coordinates): the
+## reticle at the centre unless the panel moves a cursor (Relay's map).
+func cursor_pos() -> Vector2:
+	return size / 2.0
+
+
+## True when the panel draws its own radar and wants the whole screen when it is alone
+## (the main screen's wide radar, §5.8): the screen hides its side column.
+func full_screen() -> bool:
+	return false
+
+
+## The ship has 8 marks and the common mark action wants `item` (as item_at returns):
+## a panel that may replace one (Relay, FT-SPA-022) does it and returns true; false
+## shows the "marks full" toast.
+func replace_mark(_item: Dictionary) -> bool:
+	return false
+
+
 ## True when the panel has request chips (B / View+Y sends one, §5.0, §7.4).
 func has_request_chip() -> bool:
 	return false
@@ -88,6 +107,12 @@ func tooltip_intents() -> Array[String]:
 		out = ["select", "ping", "mark"]
 	out.append("overlay")
 	return out
+
+
+## Whether mouse motion steers this panel (the mouse stick behind "MouseX"/"MouseY")
+## while it has focus; Helm says no while the pointer is free.
+func mouse_steers() -> bool:
+	return true
 
 
 ## Whether the disc radar should be orbitable on this panel's screen (FT-SPA-011:

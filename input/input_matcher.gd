@@ -184,6 +184,12 @@ func axis(id: String) -> float:
 	return clampf(best, -1.0, 1.0)
 
 
+## A pad stick's raw position ("LS", "RS"; x right, y down), for radial menus read
+## while a chord suppresses the stick's axes.
+func stick(name: String) -> Vector2:
+	return _stick("p:" + name)
+
+
 ## True while a hold intent is held, or toggled on (FT-STN-014).
 func is_held(id: String) -> bool:
 	return _holding.has(id) or _toggled.has(id)

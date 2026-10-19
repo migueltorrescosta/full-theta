@@ -28,6 +28,15 @@ static func plane_up(
 	return deck
 
 
+## The selected contact's orientation from NEAR, for the "target" lock; null (our deck)
+## for marks, points or a contact without NEAR.
+static func target_rot(ctx: StationContext) -> Variant:
+	var sel: Dictionary = ctx.crew.selection
+	if sel.get("kind", "") != "contact" or not ctx.view.near.has(int(sel["id"])):
+		return null
+	return NetCodec.unpack_quat(int(ctx.view.near[int(sel["id"])][0]))
+
+
 ## The field of view (degrees) for a camera whose normal one is `normal_deg`.
 static func fov_deg(settings: ClientSettings, normal_deg: float) -> float:
 	return normal_deg * REDUCED_FOV if settings.comfort and settings.reduced_fov else normal_deg

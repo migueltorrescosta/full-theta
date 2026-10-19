@@ -49,12 +49,13 @@ func test_pings_pulse_three_seconds_and_copies_are_silent() -> void:
 	var chimes: Array = []
 	crew.pinged.connect(func(p: Dictionary) -> void: chimes.append(p))
 	var p: Dictionary = {"ship": 0, "kind": "contact", "id": 2, "site": 0, "x": 0, "y": 0}
-	p.merge({"z": 0, "by": "Ana", "copy": false})
+	p.merge({"z": 0, "by": "Ana", "copy": ""})
 	crew.handle_event(_ev("ping", p), NOW)
 	assert_float(crew.pulse("contact", 2, NOW)).is_equal(1.0)
 	assert_float(crew.pulse("contact", 2, NOW + 1500)).is_equal_approx(0.5, 0.01)
 	var copy: Dictionary = p.duplicate()
-	copy["copy"] = true
+	# The protocol names the first pinger in `copy`.
+	copy["copy"] = "Ana"
 	copy["by"] = "Bo"
 	crew.handle_event(_ev("ping", copy), NOW + 100)
 	assert_int(chimes.size()).is_equal(1)

@@ -15,6 +15,7 @@ Rendering, cameras and shared widgets; never sim/ (FT-ARC-011). May name station
 - `controls_overlay.gd` (`ControlsOverlay`): the `?` overlay, generated from `Bindings` and `IntentTable` for the screen's stations and device; it follows rebinds (FT-STN-011).
 - `first_run_tooltip.gd` (`FirstRunTooltip`): a station's controls tip, once per client and station (FT-STN-012).
 - `procedural_ship.gd` (`ProceduralShip`): the approved ship art (D107).
+- `comfort_camera.gd` (`ComfortCamera`): the comfort toggle's camera roll (deck, target, reference plane) and field of view (FT-STN-017), for the cockpit, turret and main screen; `target_rot(ctx)` reads the selected ship's NEAR orientation.
 
 ## Using the radar on a station
 

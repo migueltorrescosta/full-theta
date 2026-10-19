@@ -130,9 +130,9 @@ Fixed point (`NetCodec`): positions 1/16 m as int32 site-local offsets, wrapped 
 | Kind | Section | Owner | Content |
 |---|---|---|---|
 | 1 | KIN | ship | Own ship every snapshot: site, position, velocity, orientation, angular velocity (27 B). |
-| 2 | STATUS | ship | Top bar block when it changes: alive, run status, outcome, hull, shields, pips used, propellant. |
-| 3 | HELM | ship | Helm block: decoupled, throttle setpoint, face, approach, all-stop, Align stage, target, shield focus. |
-| 4 | ENGINEERING | ship | Boost, weapon energy, hull, spare parts, shield strength and tightness, per subsystem health, pips, heat, crews, fault armed. |
+| 2 | STATUS | ship | Top bar block when it changes: alive, run status, outcome, hull, shields, pips used, propellant, decoupled (the main screen's auto-chase, FT-MSC-001). |
+| 3 | HELM | ship | Helm block: decoupled, throttle setpoint, face, approach, all-stop, Align stage, target, shield focus, track, tightness and power, thrust and torque scales. |
+| 4 | ENGINEERING | ship | Boost, weapon energy, hull, spare parts, shield strength, tightness and focus, per subsystem health, pips, heat, crews, fault armed. |
 | 5 | MOUNTS | ship | Per mount barrel, cooldown, ammo, heat, aim set. |
 | 6 | CONTACTS | faction | Detected contacts and own ships, dead reckoned (0.5 m), with callsign and identified flag on change. |
 | 7 | NEAR | ship | Orientations of contacts within 2 km, dead reckoned (1°); every record, delta or full, carries its age in ticks (a contact entering the range gets the faction model's record, which may be older). |

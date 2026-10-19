@@ -17,6 +17,9 @@ var matcher: InputMatcher = InputMatcher.new()
 ## Milliseconds; fixtures pin it.
 var clock: Callable = Time.get_ticks_msec
 
+## Contact id -> last seen position (m), for marks attached to a lost contact.
+var _last_seen: Dictionary = {}
+
 
 func now_ms() -> int:
 	return int(clock.call())
@@ -40,9 +43,12 @@ func selection_local() -> Variant:
 
 
 ## A mark's site-local position (m): its contact's position plus the stored offset
-## when attached, else its own position.
+## when attached (the contact's last known position once it is lost,
+## docs/protocol.md), else its own position.
 func mark_position(m: Dictionary) -> Vector3:
 	var contact: int = int(m.get("contact", -1))
-	if contact >= 0 and contact in interp.contact_ids():
-		return interp.contact_position(contact) + (m["pos"] as Vector3)
-	return m["pos"]
+	if contact < 0:
+		return m["pos"]
+	if contact in interp.contact_ids():
+		_last_seen[contact] = interp.contact_position(contact)
+	return _last_seen.get(contact, interp.own_position()) + (m["pos"] as Vector3)

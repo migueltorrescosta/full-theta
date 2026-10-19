@@ -38,6 +38,7 @@ var panel_factory: Callable = StationRegistry.make
 
 var _main: Control
 var _dock: VBoxContainer
+var _side: VBoxContainer
 
 
 ## Builds the screen for the current pick (ctx.crew.entry_def()). Entries without
@@ -93,6 +94,7 @@ func focus(i: int) -> void:
 	ctx.matcher.release_all()
 	ctx.matcher.set_context(stations, focused_station())
 	radar.orbitable = focused_panel().radar_orbitable()
+	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
 	_show_tooltip()
 	_refresh_overlay()
 
@@ -111,6 +113,8 @@ func dispatch(ev: Dictionary) -> bool:
 ## that found an item under the pointer consumes the batch, so the same click doesn't
 ## also fire a panel binding (LMB is select and Weapons fire, provisional).
 func feed(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and not focused_panel().mouse_steers():
+		return
 	var batch: Array[Dictionary] = ctx.matcher.feed(event, ctx.now_ms())
 	_dispatch_batch(batch)
 
@@ -223,9 +227,9 @@ func _live(id: String) -> bool:
 func item_under_cursor(device: String) -> Dictionary:
 	var p: StationPanel = focused_panel()
 	if device == IntentTable.PAD:
-		return p.item_at(p.size / 2.0)
+		return p.item_at(p.cursor_pos())
 	var mouse: Vector2 = get_global_mouse_position()
-	if radar.get_global_rect().has_point(mouse):
+	if radar.is_visible_in_tree() and radar.get_global_rect().has_point(mouse):
 		return radar.item_at(mouse - radar.global_position)
 	for q: StationPanel in panels:
 		if q.is_visible_in_tree() and q.get_global_rect().has_point(mouse):
@@ -262,7 +266,7 @@ func _ping(device: String) -> void:
 
 
 ## Mark at the cursor, or on the selection (FT-SPA-013, FT-SPA-022): refused with a
-## toast when the ship has 8 marks (Relay's replacement is the Relay panel's).
+## toast when the ship has 8 marks, unless the focused panel replaces one (Relay).
 func _mark(device: String) -> void:
 	if ctx.crew.entry == StationViews.VIEWER:
 		return
@@ -272,7 +276,8 @@ func _mark(device: String) -> void:
 	if item.is_empty():
 		return
 	if ctx.crew.marks.size() >= CrewState.MAX_MARKS:
-		_on_toast("toast.marks_full", {})
+		if not focused_panel().replace_mark(item):
+			_on_toast("toast.marks_full", {})
 		return
 	match item["kind"]:
 		"contact":
@@ -325,6 +330,7 @@ func _build() -> void:
 	var side: VBoxContainer = VBoxContainer.new()
 	side.custom_minimum_size = Vector2(SIDE_WIDTH, 0)
 	body.add_child(side)
+	_side = side
 	radar = DiscRadar.new()
 	radar.custom_minimum_size = Vector2(SIDE_WIDTH, RADAR_HEIGHT)
 	side.add_child(radar)

@@ -1,11 +1,13 @@
 class_name StationFixture
 extends RefCounted
 ## A deterministic station context with no server (#7): ship 0 "Kestrel" picked at the
-## given entry, Started; a snapshot view with the own ship at rest at a fixed spot with
-## a fixed orientation, a hostile H2 at 4 high, 2.3 km, an unknown U3 at 11 high, 8 km
-## and an own-faction F4 at 7 level, 600 m; a free mark Bravo at 8 low, 1.2 km; alert
-## Normal; a fixed clock. Sends go to a RecordingClient. Station scene tests and L5
-## shots build on it: `var ctx := StationFixture.context("helm")`.
+## given entry, Started; a snapshot view with the own ship at a fixed spot with a fixed
+## orientation (its KIN velocity says 80 m/s along the bow; the position doesn't move),
+## a hostile H2 at 4 high, 2.3 km, an unknown U3 at 11 high, 8 km and an own-faction F4
+## at 7 level, 600 m; a free mark Bravo at 8 low, 1.2 km; alert Normal; a fixed clock;
+## a HELM block (assist on, H2 targeted and shield-tracked). Sends go to a
+## RecordingClient. Station scene tests and L5 shots build on it:
+## `var ctx := StationFixture.context("helm")`.
 
 const SHIP: int = 0
 const SHIP_NAME: String = "Kestrel"
@@ -194,7 +196,7 @@ static func view() -> NetViewState:
 	v.kin = {
 		"site": 0,
 		"pos": _units(OWN_POS, p_units),
-		"vel": Vector3i.ZERO,
+		"vel": NetCodec.quant_vel(own_rotation() * Vector3(0.0, 0.0, -80.0)),
 		"rot": own_rotation(),
 		"ang": Vector3i.ZERO,
 	}
@@ -205,7 +207,25 @@ static func view() -> NetViewState:
 		"hull": 920.0,
 		"shields": 700.0,
 		"pips_used": 6,
-		"propellant": 0.8,
+		"propellant": 8000.0,
+		"decoupled": false,
+	}
+	# Helm (#7 A): assist on at 80 m/s, H2 selected and shields tracking it.
+	v.blocks[StationViews.Section.HELM] = {
+		"decoupled": false,
+		"throttle_setpoint": 80.0,
+		"face": false,
+		"approach": false,
+		"all_stop": false,
+		"align": 0,
+		"target_kind": 1,
+		"target_ship": H2,
+		"shield_focus": _at(4, 30.0, 1.0).normalized(),
+		"shield_track": H2,
+		"shield_tightness": 2.0,
+		"shield_power": 1.0,
+		"thrust_scale": 1.0,
+		"torque_scale": 0.8,
 	}
 	# The corvette's bow mount at rest, loaded and cool.
 	v.blocks[StationViews.Section.MOUNTS] = {

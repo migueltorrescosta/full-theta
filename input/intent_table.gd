@@ -119,6 +119,8 @@ const INTENTS: Array[Dictionary] = [
 	# Hold View + right stick: dock, jump, ping, chase camera, Align, decoupled, shield
 	# track (the Helm panel reads the stick while it is held).
 	{"id": "helm_radial", "group": "helm", "kind": HOLD, "kbm": [], "pad": ["View+RS"]},
+	# While held, the mouse stops steering and shows the pointer (shield ring, radar).
+	{"id": "helm_pointer", "group": "helm", "kind": HOLD, "kbm": ["Ctrl"], "pad": []},
 	{"id": "shield_fore", "group": "helm", "kind": PRESS, "kbm": ["Kp 1"], "pad": ["Up"]},
 	{"id": "shield_aft", "group": "helm", "kind": PRESS, "kbm": ["Kp 2"], "pad": ["Down"]},
 	{"id": "shield_port", "group": "helm", "kind": PRESS, "kbm": ["Kp 3"], "pad": ["Left"]},
@@ -195,8 +197,12 @@ const INTENTS: Array[Dictionary] = [
 	# the map's own pointer handling.
 	{"id": "route", "group": "relay", "kind": PRESS, "kbm": ["G"], "pad": []},
 	{"id": "flag_lanes", "group": "relay", "kind": PRESS, "kbm": ["L"], "pad": []},
-	{"id": "mark_delete", "group": "relay", "kind": PRESS, "kbm": ["Delete"], "pad": []},
+	{"id": "mark_delete", "group": "relay", "kind": PRESS, "kbm": ["Delete"], "pad": ["Down"]},
 	{"id": "mark_rename", "group": "relay", "kind": PRESS, "kbm": ["N"], "pad": []},
+	# Attach the selected mark to the nearest contact, or free it where it is.
+	{"id": "mark_attach", "group": "relay", "kind": PRESS, "kbm": ["M"], "pad": ["Up"]},
+	# Centre the map on the selection, or back on the ship.
+	{"id": "map_centre", "group": "relay", "kind": PRESS, "kbm": ["C"], "pad": ["Left"]},
 	{"id": "mark_send", "group": "relay", "kind": PRESS, "kbm": ["X"], "pad": []},
 	{"id": "relay_radial", "group": "relay", "kind": HOLD, "kbm": [], "pad": ["long B"]},
 	{"id": "relay_cursor_x", "group": "relay", "kind": AXIS, "kbm": [], "pad": ["LS_X"]},

@@ -40,7 +40,7 @@ Call `feed(event, now_ms)` from the screen's `_unhandled_input` (feed mouse moti
 
 ## Polling axes
 
-Axes emit no events. Read `InputMatcher.axis(id)` each frame: the largest deflection over the active bindings of both devices, -1..1, after dead zones, chord suppression and pitch inversion; 0 when the intent isn't active.
+Axes emit no events. A radial menu held on a chord that suppresses a stick reads the raw stick with `InputMatcher.stick("RS")`. Read `InputMatcher.axis(id)` each frame: the largest deflection over the active bindings of both devices, -1..1, after dead zones, chord suppression and pitch inversion; 0 when the intent isn't active.
 
 ## Adding an intent
 

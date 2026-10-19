@@ -294,9 +294,9 @@ func out_of_arc_text() -> String:
 	)
 	if local.length_squared() < 1e-6 or m.forward.angle_to(local) <= m.arc_half_angle:
 		return ""
-	var turn: Vector3 = Quaternion(m.forward, local.normalized()) * Vector3.FORWARD
+	var swing: Vector3 = Quaternion(m.forward, local.normalized()) * Vector3.FORWARD
 	return tr("weapons.out_of_arc").format(
-		{"target": ctx.view.callsign(id), "dir": _clock_words(turn)}
+		{"target": ctx.view.callsign(id), "dir": _clock_words(swing)}
 	)
 
 

@@ -325,7 +325,8 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 		return
 	_expire(now_ms)
 	var kind: String = str(p.get("kind", "point"))
-	var id: int = int(p.get("id", -1))
+	# A site ping names its site in `site` (docs/protocol.md); pulse() looks it up by id.
+	var id: int = int(p.get("site" if kind == "site" else "id", -1))
 	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
 	var copy: bool = str(p.get("copy", "")) not in ["", "false"]
 	if copy:
