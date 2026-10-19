@@ -170,3 +170,26 @@ func test_parses_load_gate_flags() -> void:
 	assert_bool(server.transport.probe).is_true()
 	server.transport.stop()
 	server.free()
+
+
+# FT: FT-NET-002
+# The load flags need their companions: --load-world without --load-ships and a
+# --probe-* setting without --probe-out are errors, not silently ignored.
+func test_rejects_load_flags_without_their_companions() -> void:
+	var base: PackedStringArray = ["--bind", "127.0.0.1", "--port", "0"]
+	(
+		assert_bool(ServerMain.new().parse_args(base + PackedStringArray(["--load-world", "100"])))
+		. is_false()
+	)
+	(
+		assert_bool(ServerMain.new().parse_args(base + PackedStringArray(["--probe-window", "5"])))
+		. is_false()
+	)
+	(
+		assert_bool(ServerMain.new().parse_args(base + PackedStringArray(["--load-ships", "-1"])))
+		. is_false()
+	)
+	(
+		assert_bool(ServerMain.new().parse_args(base + PackedStringArray(["--load-ships", "6"])))
+		. is_true()
+	)

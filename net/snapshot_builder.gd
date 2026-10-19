@@ -45,6 +45,7 @@ var _ownership: Dictionary = {}
 
 func _init() -> void:
 	take_counts()
+	part_us.resize(StationViews.Section.size() + 1)
 
 
 ## Advances every section the view keys need to the copied world's tick. Keys naming a
@@ -85,8 +86,6 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 	for f: int in unions:
 		_orient_of(f).update(world, unions[f])
 	if time_parts:
-		if part_us.size() < 10:
-			part_us.resize(10)
 		var t1: int = Time.get_ticks_usec()
 		part_us[0] += t1 - t0
 		t0 = t1

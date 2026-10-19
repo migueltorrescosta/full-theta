@@ -11,7 +11,8 @@
 # --report-only prints the numbers without failing on the budgets (the stress run).
 # Env: L4_CPUS [0,1] (server), L4_LOAD_CLIENT_CPUS [4,5,12,13], L4_LOAD_PROCS [8].
 # Host load average, CPU clocks of the server's cores and loopback counters are
-# sampled every second into host.tsv (they matter: docs/spikes/S9.md).
+# sampled every second into host.tsv (they matter: docs/spikes/S9.md); sim_profile.txt
+# holds the sim's cost alone on the same cores just before the run.
 # The import (godot --import) is gate.sh's job; run it first when calling this alone.
 set -uo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
@@ -99,6 +100,15 @@ echo "l4load: out $out, world $world, server cpus $cpus, clients $procs x $per o
 sample_host &
 sampler_pid=$!
 
+# The sim alone on the same cores and world, for comparison with its cost in the server
+# (fewer ticks for the stress world, which takes about 0.2 s a tick).
+pticks=$((world > 20 ? 120 : 1200))
+{
+  echo "\$ taskset -c $cpus godot -s res://tools/l4/sim_profile.gd -- --world $world --ticks $pticks --every $pticks ($(date -Is))"
+  timeout 300 taskset -c "$cpus" "$godot" --headless --path . -s res://tools/l4/sim_profile.gd -- \
+    --world "$world" --ticks "$pticks" --every "$pticks" 2>&1 | grep -v '^Godot Engine\|^$'
+} >"$out/sim_profile.txt"
+
 taskset -c "$cpus" "$godot" --headless --path . -- --server --bind 127.0.0.1 --port 0 \
   --no-beacon --grace-s 10 --load-ships 6 --load-world "$world" \
   --probe-out "$out/probe.json" --probe-warmup "$warmup" --probe-window "$window" \
@@ -122,7 +132,7 @@ done
 end=$((SECONDS + limit))
 until grep -q '^probe: [0-9]* picks' "$out/server.out"; do
   kill -0 "$server_pid" 2>/dev/null || die "server exited before every seat picked"
-  ((SECONDS < end)) || die "not every seat picked within $limit s"
+  ((SECONDS < end)) || die "not every seat picked and every ship started within $limit s"
   sleep 0.5
 done
 # Connection 65 (FT-NET-014): all 64 are in.

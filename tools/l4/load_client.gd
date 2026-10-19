@@ -2,8 +2,9 @@ extends SceneTree
 ## Load-gate client process (#11, FT-GEN-003, FT-NET-040, D160, D161): one Godot process
 ## holding several NetClients, each standing in for a remote device. Seat i of the
 ## 64-seat plan (LoadSeats) picks its ship and entry; each ship's Helm presses Start until
-## its ship has started; once the sim runs, Helm crews steer (helm input every 0.5 s) and
-## Weapons crews fire mount 0 every second, so the command path carries load too. Every
+## a `started` event names that ship (every ship is started, D129); once its own ship has
+## started, a Helm crew steers (helm input every 0.5 s) and a Weapons crew fires mount 0
+## every second, so the command path carries load too. Every
 ## client logs each snapshot's seq and arrival time (NetClient.snapshot_log). When the
 ## server closes the connections (the probe window ended) the process writes its log
 ## and exits 0; 1 if a seat's pick was refused, a snapshot failed to decode or --max-s
@@ -29,10 +30,11 @@ var commands: bool = true
 var full_probe: bool = false
 
 var _clients: Array[NetClient] = []
-## Per client: {seat, ship, entry, picked, started, next_us, rejects}.
+## Per client: {seat, ship, entry, picked, pick_sent, next_us, rejects, welcomed}.
 var _seats: Array[Dictionary] = []
 var _start_us: int = 0
-var _started: bool = false
+## Ships a `started` event named (broadcast to every client): ship -> true.
+var _started_ships: Dictionary = {}
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _done: bool = false
 
@@ -104,7 +106,7 @@ func _drive(c: NetClient, s: Dictionary, k: int, now: int) -> void:
 		return
 	if s["picked"] != "ok" or now < s["next_us"]:
 		return
-	if not _started:
+	if not _started_ships.has(s["ship"]):
 		if LoadSeats.starts(first + k, ships):
 			c.set_ready(true)
 		s["next_us"] = now + READY_EVERY_US
@@ -133,10 +135,10 @@ func _on_event(s: Dictionary, e: Dictionary) -> void:
 		"picked":
 			s["picked"] = "ok" if String(p.get("reason", "")) == "" else String(p["reason"])
 		"started":
-			_started = true
+			_started_ships[int(p.get("ship", -1))] = true
 		"lobby":
 			if bool(p.get("started", false)):
-				_started = true
+				_started_ships[int(p.get("ship", -1))] = true
 		"command_rejected", "request_rejected":
 			var why: String = String(p.get("reason", "?"))
 			s["rejects"][why] = int(s["rejects"].get(why, 0)) + 1

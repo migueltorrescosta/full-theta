@@ -139,7 +139,7 @@ func _process(delta: float) -> void:
 	# flowing at 30 Hz of wall clock meanwhile, so joining and rejoining clients get theirs.
 	if not session.sim_running():
 		if now_us >= _next_idle_post_us:
-			transport.post_state(SimCopy.capture(world), LoadProbe.unix_us())
+			_post_state()
 			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / 60
 	else:
 		ticks = world.advance(delta)
@@ -151,17 +151,30 @@ func _process(delta: float) -> void:
 			session.after_ticks(world.drain_events())
 			t[3] = Time.get_ticks_usec()
 			if world.tick >= _next_snapshot_tick:
-				transport.post_state(SimCopy.capture(world), LoadProbe.unix_us())
+				_post_state()
 				_next_snapshot_tick = world.tick + SNAPSHOT_TICKS
 			t[4] = Time.get_ticks_usec()
 	if probe != null:
 		if ticks > 0:
 			probe.tick_frame(t, ticks, s0, probe.sched())
-		if probe.update(_picks(), not session.launched.is_empty()):
+		# Counting picks and crewable ships is only needed until the window opens.
+		var all_in: bool = (
+			probe.phase == LoadProbe.Phase.WAITING
+			and _picks() >= probe.expect_picks
+			and session.launched.size() >= session.crew_ships().size()
+		)
+		if probe.update(all_in, session.launched.size()):
 			get_tree().quit(0)
 	_poll_lan_services()
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)
+
+
+## Hands the net thread a copy of the state, stamped (unix us) before the capture so
+## the snapshot age counts it (D161).
+func _post_state() -> void:
+	var stamp_us: int = LoadProbe.unix_us()
+	transport.post_state(SimCopy.capture(world), stamp_us)
 
 
 ## After the tick: static HTTP within its budget, then the beacon (at most one datagram

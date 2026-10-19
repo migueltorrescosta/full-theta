@@ -24,7 +24,8 @@ extends RefCounted
 ##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
 ##   --no-beacon          don't broadcast on the LAN (tests).
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
-## Load gate only (#11, D160, D161; tools/l4/load.sh), never for play:
+## Load gate only (#11, D160, D161; tools/l4/load.sh), never for play; refused in a
+## release build unless FT_DEV is set:
 ##   --load-ships N       N crewable ships of one faction plus AI raiders (LoadEncounter)
 ##                        instead of the M1 encounter [0: off].
 ##   --load-world N       total ships with --load-ships, raiders included [12].
@@ -40,6 +41,17 @@ const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 ## 2 ms of due without spinning. PROVISIONAL.
 const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
+## The load gate's flags (dev and test only) and the variable that allows them in a
+## release build.
+const LOAD_FLAGS: Array[String] = [
+	"--load-ships",
+	"--load-world",
+	"--probe-out",
+	"--probe-picks",
+	"--probe-warmup",
+	"--probe-window"
+]
+const DEV_ENV: String = "FT_DEV"
 ## PROVISIONAL: the beacon's default server name.
 const DEFAULT_NAME: String = "Full Theta server"
 
@@ -96,6 +108,29 @@ func parse_args(args: PackedStringArray) -> bool:
 	if discovery_port <= 0 or discovery_port > 65535:
 		push_error("--discovery-port must be 1..65535")
 		return false
+	return _check_load_flags(args)
+
+
+## The load gate's flags (D160, D161) are for dev and test builds only, and each needs
+## its companion: refused in a release build unless FT_DEV is set, and with a clear
+## error instead of being ignored.
+func _check_load_flags(args: PackedStringArray) -> bool:
+	var given: Array[String] = []
+	for flag: String in LOAD_FLAGS:
+		if args.has(flag):
+			given.append(flag)
+	if given.is_empty():
+		return true
+	if not OS.is_debug_build() and OS.get_environment(DEV_ENV) == "":
+		push_error("%s: dev and test only (debug build or %s set)" % [given, DEV_ENV])
+		return false
+	if load_ships < 0 or (args.has("--load-world") and load_ships == 0):
+		push_error("--load-world needs --load-ships N (N >= 1)")
+		return false
+	for flag: String in ["--probe-picks", "--probe-warmup", "--probe-window"]:
+		if args.has(flag) and probe_out == "":
+			push_error("%s needs --probe-out PATH" % flag)
+			return false
 	return true
 
 
@@ -105,20 +140,36 @@ func _set_flag(flag: String, value: String) -> bool:
 			if not value.is_valid_int():
 				push_error("%s needs a whole number" % flag)
 				return false
+			var n: int = value.to_int()
 			match flag:
 				"--port":
-					port = value.to_int()
+					port = n
 				"--seed":
-					seed_value = value.to_int()
+					seed_value = n
 				"--discovery-port":
-					discovery_port = value.to_int()
-				_:
-					set(flag.trim_prefix("--").replace("-", "_"), value.to_int())
+					discovery_port = n
+				"--load-ships":
+					load_ships = n
+				"--load-world":
+					load_world = n
+				"--probe-picks":
+					probe_picks = n
 		"--grace-s", "--idle-exit-min", "--run-for", "--probe-warmup", "--probe-window":
 			if not value.is_valid_float():
 				push_error("%s needs a number" % flag)
 				return false
-			set(flag.trim_prefix("--").replace("-", "_"), value.to_float())
+			var x: float = value.to_float()
+			match flag:
+				"--grace-s":
+					grace_s = x
+				"--idle-exit-min":
+					idle_exit_min = x
+				"--run-for":
+					run_for = x
+				"--probe-warmup":
+					probe_warmup = x
+				"--probe-window":
+					probe_window = x
 		"--bind":
 			bind_address = value
 		"--host-secret":
@@ -146,6 +197,7 @@ func make_server() -> NetServer:
 		push_error("missing M1 definitions (m1_corvette, m1_raider)")
 		return null
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
+	# STAND-IN (#11 lobby): the multi-ship lobby replaces --load-ships and LoadEncounter.
 	if load_ships > 0:
 		encounter = LoadEncounter.new(seed_value, "server", player, enemy, load_ships, load_world)
 	var server: NetServer = NetServer.new()

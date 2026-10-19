@@ -2,7 +2,7 @@ class_name LoadProbe
 extends RefCounted
 ## The load gate's server-side probe (#11, FT-GEN-003, FT-NET-040, D161), set by
 ## `--probe-out` (dev and test only). It waits until `expect_picks` sessions hold a pick
-## and a ship has started, lets `warmup_s` pass, then records every main-thread frame
+## and every crewable ship has started, lets `warmup_s` pass, then records every main-thread frame
 ## that stepped the sim for `window_s` seconds: its wall time split into session.process
 ## (inbound messages), the sim step, after_ticks (rejections and event routing) and the
 ## SimCopy capture, and the thread's on-CPU and run-queue time from
@@ -51,25 +51,34 @@ func sched() -> PackedInt64Array:
 	return PackedInt64Array([parts[0].to_int(), parts[1].to_int()])
 
 
-## Advances the phase once a frame (main thread); true when the window is over and the
-## server should quit.
-func update(picks: int, started: bool) -> bool:
+## Advances the phase once a frame (main thread): all_in is true once every seat holds
+## its pick and every crewable ship has started; launched is the started ships, recorded
+## at the window's start and end. True when the window is over and the server should
+## quit.
+func update(all_in: bool, launched: int) -> bool:
 	var now: int = unix_us()
 	match phase:
 		Phase.WAITING:
-			if picks >= expect_picks and started:
+			if all_in:
 				marks["all_in_unix_us"] = now
 				phase = Phase.WARMUP
-				print("probe: %d picks and a ship started; warmup %.0f s" % [picks, warmup_s])
+				print(
+					(
+						"probe: %d picks and %d ships started; warmup %.0f s"
+						% [expect_picks, launched, warmup_s]
+					)
+				)
 		Phase.WARMUP:
 			if now - int(marks["all_in_unix_us"]) >= int(warmup_s * 1e6):
 				marks["window_start_unix_us"] = now
+				marks["launched_at_start"] = launched
 				_window_end_us = now + int(window_s * 1e6)
 				phase = Phase.WINDOW
 				print("probe: window start")
 		Phase.WINDOW:
 			if now >= _window_end_us:
 				marks["window_end_unix_us"] = now
+				marks["launched_at_end"] = launched
 				phase = Phase.DONE
 				print("probe: window end")
 				return true

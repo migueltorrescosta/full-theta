@@ -49,7 +49,10 @@ const SNAP_FIELDS: Array[String] = [
 	"projectiles_us",
 	"ownership_us",
 ]
-const SECOND_FIELDS: Array[String] = ["unix_us", "loops", "poll_us", "pump_us", "ops_us"]
+## ops_us includes SimCopy.restore; snapshot_us is _snapshot() (build and queue).
+const SECOND_FIELDS: Array[String] = [
+	"unix_us", "loops", "poll_us", "pump_us", "ops_us", "snapshot_us"
+]
 
 
 class Conn:
@@ -106,11 +109,11 @@ var _state_stamp_us: int = 0
 var _restore_us: int = 0
 ## Probe records (net thread; probe_dump() after stop()): one row of SNAP_FIELDS per
 ## snapshot, one row of SECOND_FIELDS and one {conn: [session, view_key, bytes,
-## ws_messages, fulls, deltas, stalls]} per second.
+## ws_messages, fulls, deltas, stalls, skipped]} per second.
 var _probe_snaps: PackedInt64Array = PackedInt64Array()
 var _probe_seconds: PackedInt64Array = PackedInt64Array()
 var _probe_conns: Array[Dictionary] = []
-var _probe_acc: PackedInt64Array = PackedInt64Array([0, 0, 0, 0])
+var _probe_acc: PackedInt64Array = PackedInt64Array([0, 0, 0, 0, 0])
 var _probe_next_us: int = 0
 
 
@@ -237,56 +240,51 @@ func _run() -> void:
 		_mutex.unlock()
 		if not running:
 			return
+		var t0: int = Time.get_ticks_usec()
+		for op: Array in ops:
+			_apply(op)
+		var t1: int = Time.get_ticks_usec() if probe else 0
+		_accept()
+		var inbound: Array = _poll()
+		var t2: int = Time.get_ticks_usec() if probe else 0
+		if _state != null:
+			_snapshot()
+		var t3: int = Time.get_ticks_usec() if probe else 0
+		_pump()
+		_publish(inbound)
 		if probe:
-			_probed_loop(ops)
-		else:
-			for op: Array in ops:
-				_apply(op)
-			_accept()
-			var inbound: Array = _poll()
-			if _state != null:
-				_snapshot()
-			_pump()
-			_publish(inbound)
+			_probe_loop(PackedInt64Array([t0, t1, t2, t3, Time.get_ticks_usec()]))
 		OS.delay_usec(loop_sleep_us)
 
 
-## The same loop body, timed for the load probe.
-func _probed_loop(ops: Array) -> void:
-	var t0: int = Time.get_ticks_usec()
-	for op: Array in ops:
-		_apply(op)
-	var t1: int = Time.get_ticks_usec()
-	_accept()
-	var inbound: Array = _poll()
-	var t2: int = Time.get_ticks_usec()
-	if _state != null:
-		_snapshot()
-	var t3: int = Time.get_ticks_usec()
-	_pump()
-	var t4: int = Time.get_ticks_usec()
-	_publish(inbound)
+## Adds one loop's times (start, after ops, after poll, after the snapshot, after the
+## pump) to the probe's per-second row, and once a second writes the row and every
+## connection's counters.
+func _probe_loop(t: PackedInt64Array) -> void:
 	_probe_acc[0] += 1
-	_probe_acc[1] += t2 - t1
-	_probe_acc[2] += t4 - t3
-	_probe_acc[3] += t1 - t0
-	if t4 >= _probe_next_us:
-		_probe_next_us = t4 + 1_000_000
-		_probe_seconds.append(_unix_us())
-		_probe_seconds.append_array(_probe_acc)
-		_probe_acc.fill(0)
-		var conns: Dictionary = {}
-		for c: Conn in _conns.values():
-			conns[c.id] = [
-				c.session,
-				c.view_key,
-				c.stats["bytes"],
-				c.stats["ws_messages"],
-				c.stats["fulls"],
-				c.stats["deltas"],
-				c.stats["stalls"]
-			]
-		_probe_conns.append(conns)
+	_probe_acc[1] += t[2] - t[1]
+	_probe_acc[2] += t[4] - t[3]
+	_probe_acc[3] += t[1] - t[0]
+	_probe_acc[4] += t[3] - t[2]
+	if t[4] < _probe_next_us:
+		return
+	_probe_next_us = t[4] + 1_000_000
+	_probe_seconds.append(LoadProbe.unix_us())
+	_probe_seconds.append_array(_probe_acc)
+	_probe_acc.fill(0)
+	var conns: Dictionary = {}
+	for c: Conn in _conns.values():
+		conns[c.id] = [
+			c.session,
+			c.view_key,
+			c.stats["bytes"],
+			c.stats["ws_messages"],
+			c.stats["fulls"],
+			c.stats["deltas"],
+			c.stats["stalls"],
+			c.stats["skipped"],
+		]
+	_probe_conns.append(conns)
 
 
 ## The probe's records (call after stop()): {snap_fields, snaps (flat rows),
@@ -299,10 +297,6 @@ func probe_dump() -> Dictionary:
 		"seconds": Array(_probe_seconds),
 		"conns": _probe_conns,
 	}
-
-
-static func _unix_us() -> int:
-	return int(Time.get_unix_time_from_system() * 1_000_000.0)
 
 
 func _apply(op: Array) -> void:
@@ -486,7 +480,7 @@ func _snapshot() -> void:
 			_probe_snaps
 			. append_array(
 				[
-					_unix_us(),
+					LoadProbe.unix_us(),
 					_snap_seq,
 					_state_stamp_us,
 					_restore_us,
@@ -500,7 +494,6 @@ func _snapshot() -> void:
 				]
 			)
 		)
-		_builder.part_us.resize(10)
 		_probe_snaps.append_array(_builder.part_us)
 		_builder.part_us.fill(0)
 
