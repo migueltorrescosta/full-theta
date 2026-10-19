@@ -2,7 +2,7 @@
 
 ## 9.1 Voices
 
-Piper voices speak NPC radio, ship-computer announcements and alerts (D38). Authored lines are prerendered at build time. The session's closed set (ship names, callsigns, NPC names) is synthesised at Start and cached per language; numbers are stitched from prerendered fragments; only free text is synthesised at runtime, which GPL-3.0 allows (D2, D38, D101). The ship computer uses Piper with a robotic/radio filter; there is no second engine (D71). Synthesis runs on the host server in one persistent Piper process off the sim thread; each clip is streamed only to the client that plays it, so browser stations need no local Piper (D85, D101).
+Piper voices speak NPC radio, ship-computer announcements and alerts (D38). Authored lines are prerendered at build time. The session's closed set (ship names, callsigns, NPC names) is synthesised at Start and cached per language; numbers are stitched from prerendered fragments; only free text is synthesised at runtime, which GPL-3.0 allows (D2, D38, D101). The ship computer uses Piper with a robotic/radio filter; there is no second engine (D71). Runtime and closed-set synthesis use medium-quality voices; high-quality voices only for prerendered lines (D105). Synthesis runs on the host server in one persistent Piper process per voice off the sim thread; each clip is streamed only to the client that plays it, so browser stations need no local Piper (D85, D101).
 
 ## 9.2 Routing
 
@@ -40,4 +40,4 @@ Semi-realistic science fiction with readable silhouettes: procedural geometry wi
 - **FT-AUD-016** Art shall use procedural or primitive meshes and CC0 packs with semi-realistic PBR-style materials in the Compatibility renderer; sounds shall be CC0. (D63, D107)
 - **FT-AUD-017** Browser clients shall unlock audio with a user gesture on join. (D8)
 - **FT-AUD-018** The host server shall synthesise the session's closed set (ship names, callsigns, NPC names) at Start and cache it per language; numbers shall use prerendered fragments; runtime synthesis shall be used only for free text. (D85, D101)
-- **FT-AUD-019** Synthesis shall run on the host server in one persistent Piper process off the sim thread, and the host shall stream each dynamic clip only to the client that plays it. (D85, D101, plan review TECH-5)
+- **FT-AUD-019** Synthesis shall run on the host server in one persistent Piper process per voice off the sim thread, and the host shall stream each dynamic clip only to the client that plays it. (D85, D101, plan review TECH-5)

@@ -93,7 +93,7 @@ Conventions (D73–D75):
 | E12 | Epic: PvP scenario types (race, last standing, teams) | M4 | sim, content | E11 | FT-MIS-014, FT-MIS-031–034, FT-PAIR-016, FT-GEN-002 | |
 | E13 | Epic: browser stations over HTTP with touch layouts | M2 (D94) | net, ui, audio, ci | T021, T022, E04 | FT-NET-013, FT-NET-030, FT-STN-005, FT-AUD-017, FT-SCI-013 | |
 | T063 | Multi-ship PvP LAN playtest with tablets (owner step) | M4 | docs | E12, E13 | FT-GEN-001, FT-GEN-003 | Human |
-| E14 | Epic: presentation, toon art, VFX and CC0 sound | M5 | ui, audio, content | T016, E04 | FT-AUD-016, FT-LIC-006, FT-STN-006 | |
+| E14 | Epic: presentation, semi-realistic procedural art (D107), VFX and CC0 sound | M5 | ui, audio, content | T016, E04 | FT-AUD-016, FT-LIC-006, FT-STN-006 | |
 | E15 | Epic: release packaging for Linux, Windows and macOS | M5 | ci, docs | E10, E12, E13, E14 | FT-ARC-017, FT-GEN-012, FT-LIC-004, FT-LIC-005, FT-LIC-008 | |
 | T064 | macOS test machine, signing and notarisation (owner step) | M5 | ci | E15 | FT-ARC-017 | Human |
 | T065 | Windows smoke test and release approval (owner step) | M5 | ci | E15, T064 | FT-GEN-012 | Human |
@@ -675,7 +675,7 @@ Conventions (D73–D75):
 
 ### M5 Polish & release (epics)
 
-#### E14 Epic: presentation, toon art, VFX and CC0 sound
+#### E14 Epic: presentation, semi-realistic procedural art (D107), VFX and CC0 sound
 - **Why:** Approved style (T016) applied across the game.
 - **Verification criteria:**
   - [ ] Licence gate passes with only CC0 art and sound; L5 baselines updated.

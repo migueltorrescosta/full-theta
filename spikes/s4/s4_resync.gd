@@ -6,17 +6,14 @@ extends RefCounted
 ##
 ## Lag is measured end to end: snapshots sent but not yet acknowledged. On
 ## loopback the kernel socket buffers absorb seconds of traffic before
-## WebSocketPeer's own outbound buffer grows, so the outbound buffer alone is a
-## late signal; both are checked, and a failed send also counts.
+## WebSocketPeer's own outbound buffer grows, so the stall triggers are the
+## three in D106: ack lag, a failed send (a full outbound buffer fails the
+## send) and the high-lane queue size.
 
 enum Action { NONE, DELTA, FULL }
 
 ## Unacknowledged snapshots that mark the client as stalled (15 = 500 ms at 30 Hz).
 var lag_limit: int = 15
-## WebSocketPeer outbound buffered bytes that, with high-lane data still queued,
-## mark the client as stalled. A voice burst alone fills the buffer briefly
-## without starving snapshots, so a full buffer by itself does not count.
-var buffered_limit: int = 48 * 1024
 ## High-lane queued bytes that mark the client as stalled.
 var queued_limit: int = 256 * 1024
 
@@ -46,15 +43,13 @@ func force_full() -> void:
 	need_full = true
 
 
-## Decides what to send for snapshot `seq`; `buffered` is the WebSocketPeer
-## outbound amount, `queued` the high-lane bytes still in our queue.
-func decide(buffered: int, queued: int) -> Action:
+## Decides what to send for the next snapshot; `queued` is the high-lane bytes
+## still in our queue.
+func decide(queued: int) -> Action:
 	if (
 		not stalled
 		and last_sent_seq >= 0
-		and (
-			lag() > lag_limit or (buffered > buffered_limit and queued > 0) or queued > queued_limit
-		)
+		and (lag() > lag_limit or queued > queued_limit)
 	):
 		_mark_stalled()
 	if stalled:

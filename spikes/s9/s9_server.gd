@@ -274,7 +274,7 @@ func _snapshot() -> void:
 		if not c.joined:
 			continue
 		var buffered: int = c.peer.get_current_outbound_buffered_amount()
-		var action: S4Resync.Action = c.resync.decide(buffered, c.queue.high_bytes)
+		var action: S4Resync.Action = c.resync.decide(c.queue.high_bytes)
 		if action == S4Resync.Action.NONE:
 			c.skipped += 1
 			continue

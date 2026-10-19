@@ -64,6 +64,14 @@
       "source": "https://github.com/numpy/numpy",
       "licence": "BSD-3-Clause",
       "attribution": "Copyright (c) 2005-present NumPy Developers"
+    },
+    {
+      "name": "playwright-core",
+      "kind": "tool",
+      "version": "1.64.1",
+      "source": "https://github.com/microsoft/playwright",
+      "licence": "Apache-2.0",
+      "attribution": "Copyright (c) Microsoft Corporation; used only by the S3 spike harness (spikes/s3/harness)"
     }
   ]
 }

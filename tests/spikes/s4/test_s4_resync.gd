@@ -9,7 +9,7 @@ const FULL: S4Resync.Action = S4Resync.Action.FULL
 
 
 func _send(r: S4Resync, seq: int) -> S4Resync.Action:
-	var action: S4Resync.Action = r.decide(0, 0)
+	var action: S4Resync.Action = r.decide(0)
 	if action != NONE:
 		r.on_sent(seq, action == FULL)
 	return action
@@ -41,7 +41,7 @@ func test_stalled_reader_gets_no_deltas_then_one_full() -> void:
 	# The client drains its backlog and acks the last snapshot sent.
 	r.on_ack(17)
 	seq += 1
-	assert_int(r.decide(0, 100)).is_equal(NONE)
+	assert_int(r.decide(100)).is_equal(NONE)
 	assert_int(_send(r, seq)).is_equal(FULL)
 	# Deltas follow even before the full snapshot is acknowledged.
 	for i: int in range(10):
@@ -51,15 +51,15 @@ func test_stalled_reader_gets_no_deltas_then_one_full() -> void:
 	assert_bool(r.holds_events()).is_false()
 
 
-func test_send_error_or_buffer_marks_stalled() -> void:
+func test_send_error_or_queue_marks_stalled() -> void:
 	var r: S4Resync = S4Resync.new(15)
 	_send(r, 1)
 	r.on_send_error()
-	assert_int(r.decide(0, 0)).is_equal(NONE)
+	assert_int(r.decide(0)).is_equal(NONE)
 	var s: S4Resync = S4Resync.new(15)
 	_send(s, 1)
-	assert_int(s.decide(s.buffered_limit + 1, 0)).is_equal(DELTA)
-	assert_int(s.decide(s.buffered_limit + 1, 500)).is_equal(NONE)
+	assert_int(s.decide(s.queued_limit)).is_equal(DELTA)
+	assert_int(s.decide(s.queued_limit + 1)).is_equal(NONE)
 
 
 func test_inbox_orders_and_dedups() -> void:

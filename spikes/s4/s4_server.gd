@@ -285,7 +285,7 @@ func _queue_voice(c: Conn) -> void:
 func _send_snapshot(c: Conn) -> void:
 	var stalls_before: int = c.resync.stall_count
 	var buffered: int = c.peer.get_current_outbound_buffered_amount()
-	var action: S4Resync.Action = c.resync.decide(buffered, c.queue.high_bytes)
+	var action: S4Resync.Action = c.resync.decide(c.queue.high_bytes)
 	if c.resync.stall_count != stalls_before:
 		_note(
 			"stall",
