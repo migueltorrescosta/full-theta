@@ -143,6 +143,7 @@ func test_site_local_64_bit_offsets() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var id: int = w.spawn_ship_at(TestDefs.corvette(), 1, 9, 199000.0, -199000.0, 0.25)
 	w.kin.vel[id] = Vector3(0.1, 0.0, 0.0)
+	w.helm.decoupled[id] = 1  # coast: assist would hold the drift at zero (FT-SIM-004)
 	for i: int in 600:
 		w.step()
 	assert_int(w.kin.site[id]).is_equal(9)
