@@ -1,0 +1,6 @@
+{
+  "entries": [
+    {"name": "Tool", "kind": "addon", "path": "addons/tool/", "source": "https://example.org/tool", "licence": "MIT", "attribution": "Tool authors"},
+    {"name": "Art pack", "kind": "art", "path": "assets/art/pack/", "source": "https://example.org/pack", "licence": "CC0-1.0", "attribution": "Pack author"}
+  ]
+}

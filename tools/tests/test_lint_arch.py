@@ -1,0 +1,57 @@
+# FT: FT-ARC-010, FT-ARC-011, FT-ARC-020, FT-ARC-021
+"""Fixture tests for tools/lint_arch.py (T006; FT-ARC-010, FT-ARC-011, FT-ARC-020, FT-ARC-021).
+
+Each pattern has a fixture root under fixtures/lint_arch/<pattern>/ with a `pass`
+tree the lint accepts and a `fail` tree whose findings (file:line) are listed here.
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+TOOLS = Path(__file__).resolve().parents[1]
+FIXTURES = TOOLS / "tests/fixtures/lint_arch"
+
+FAILS = {
+    "extends": ["director/director.gd:3", "sim/world.gd:2"],
+    "scene_tree": ["director/director.gd:4", "director/director.gd:4"],
+    "io": ["shared/units.gd:4"] * 3 + ["shared/units.gd:5", "shared/units.gd:6"],
+    "network": ["scenarios/raid.gd:3"],
+    "load": ["sim/defs.gd:3", "sim/defs.gd:4", "sim/defs.gd:5"],
+    # weapons.gd and hud.gd name the sim class World without any res://sim/ path.
+    "station_sim": ["input/mapper.gd:3", "presentation/hud.gd:4", "stations/weapons.gd:3"],
+    "pure_deps": [
+        "director/director.gd:3",
+        "director/director.gd:4",
+        "scenarios/raid.gd:1",
+        "sim/world.gd:4",
+    ],
+    "shared_deps": ["shared/lead.gd:3", "shared/lead.gd:4", "shared/lead.gd:5"],
+}
+
+
+def run(*args: str) -> subprocess.CompletedProcess[str]:
+    cmd = [sys.executable, str(TOOLS / "lint_arch.py"), *args]
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+def test_every_fixture_pattern_is_listed() -> None:
+    assert sorted(p.name for p in FIXTURES.iterdir()) == sorted(FAILS)
+
+
+@pytest.mark.parametrize("pattern", FAILS)
+def test_pass_fixture_is_clean(pattern: str) -> None:
+    result = run("--root", str(FIXTURES / pattern / "pass"))
+    assert result.returncode == 0, result.stderr
+    assert result.stderr == ""
+
+
+@pytest.mark.parametrize("pattern", FAILS)
+def test_fail_fixture_reports_each_violation(pattern: str) -> None:
+    result = run("--root", str(FIXTURES / pattern / "fail"))
+    assert result.returncode == 1
+    found = [line.split(": ", 1)[0] for line in result.stderr.splitlines()]
+    assert found == FAILS[pattern], result.stderr
+
