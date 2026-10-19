@@ -1,11 +1,14 @@
 class_name NetSessions
 extends RefCounted
-## Session tokens (FT-NET-025, FT-NET-026, FT-NET-033; promoted from S4Sessions). The
-## server issues a token at first join; presenting it while the session is connected
-## (a takeover: the old socket may not have closed yet) or within the grace period
-## after a drop returns the same NetSession. T045 adds the pause and claim rules on top.
+## Session tokens and the reconnect grace (FT-NET-025, FT-NET-026, FT-NET-033;
+## promoted from S4Sessions). The server issues a token at first join; presenting it
+## returns the same NetSession: connected (a takeover: the old socket may not have
+## closed yet), within the grace period after a drop (pick and claims kept), or after
+## it (the session lapsed: ServerSession released its pick and claims and restores
+## what is still free). Tokens live as long as the server (PROVISIONAL).
 ##
-## Times are wall-clock microseconds supplied by the caller, outside sim/.
+## Times are wall-clock microseconds supplied by the caller, outside sim/, so the grace
+## runs while the sim is paused.
 
 const DEFAULT_GRACE_US: int = 10_000_000
 
@@ -26,15 +29,13 @@ func issue(session: NetSession) -> String:
 	return token
 
 
-## The session for a valid token, or null. A connected session never expires, so a
-## restarted client can take it over before its old socket closes.
+## The session for a token, or null. A connected session never lapses, so a restarted
+## client can take it over before its old socket closes. A session whose grace ran out
+## and that expire() hasn't reported yet lapses here first.
 func resume(token: String, now_us: int) -> NetSession:
 	var session: NetSession = _by_token.get(token)
-	if session == null:
-		return null
-	if _expired(session, now_us):
-		_by_token.erase(token)
-		return null
+	if session != null and _expired(session, now_us):
+		session.lapsed = true
 	return session
 
 
@@ -58,16 +59,15 @@ func size() -> int:
 	return _by_token.size()
 
 
-## Removes the sessions whose grace ran out and returns them.
+## Marks the sessions whose grace ran out as lapsed and returns them (each once).
 func expire(now_us: int) -> Array[NetSession]:
 	var gone: Array[NetSession] = []
 	for session: NetSession in _by_token.values():
 		if _expired(session, now_us):
+			session.lapsed = true
 			gone.append(session)
-	for session: NetSession in gone:
-		_by_token.erase(session.token)
 	return gone
 
 
 func _expired(session: NetSession, now_us: int) -> bool:
-	return not session.connected() and now_us - session.dropped_us > grace_us
+	return not session.lapsed and not session.connected() and now_us - session.dropped_us > grace_us

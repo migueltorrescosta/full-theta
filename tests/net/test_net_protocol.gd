@@ -21,6 +21,7 @@ func _samples() -> Dictionary:
 			"ship": -1,
 			"entry": "",
 			"dev_all": false,
+			"host": false,
 		},
 		NetProtocol.Type.HELLO_REJECTED: {"v": 1, "reason": "session_full"},
 		NetProtocol.Type.CATALOGUE:
@@ -29,7 +30,7 @@ func _samples() -> Dictionary:
 			"entries": [{"id": "helm", "name": "Helm", "stations": ["helm"]}],
 			"load_tags": [],
 		},
-		NetProtocol.Type.PICK: {"ship": 0, "entry": "p2"},
+		NetProtocol.Type.PICK: {"ship": 0, "entry": "tactical"},
 		NetProtocol.Type.RELEASE: {},
 		NetProtocol.Type.READY: {"ready": true},
 		NetProtocol.Type.CLAIM: {"item": "mount:0"},

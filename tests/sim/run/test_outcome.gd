@@ -152,3 +152,36 @@ func test_per_ship_elimination_and_no_enemy() -> void:
 	alone.spawn_ship(TestDefs.corvette(), 1, 0)
 	assert_array(SimFixture.of_kind(SimFixture.run(alone, 60), &"outcome")).is_empty()
 	assert_int(OutcomeSystem.encounter_outcome(alone)).is_equal(RunTable.Outcome.NONE)
+
+
+# FT: FT-NET-041, FT-M1-012, FT-ARC-008
+# The server's AbandonShipCommand (D96, D128) takes the corvette out of play: on the
+# tick it applies the ship is ABANDONED and gets a LOSS through the outcome path, which
+# ends the M1 encounter as a loss; it is logged (a replay abandons on the same tick),
+# and a second one is rejected.
+func test_abandon_ends_the_encounter_as_a_loss() -> void:
+	var world: SimWorld = _world(5)
+	for i: int in 30:
+		world.step()
+	var c: AbandonShipCommand = AbandonShipCommand.new()
+	c.ship_id = PLAYER
+	world.submit(c)
+	world.step()
+	var outcomes: Array[SimEvent] = SimFixture.of_kind(world.drain_events(), &"outcome")
+	assert_bool(c.accepted).is_true()
+	assert_int(c.source).is_equal(SimCommand.Source.SERVER)
+	assert_int(world.run.status[PLAYER]).is_equal(RunTable.Status.ABANDONED)
+	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
+	assert_int(outcomes.size()).is_equal(1)
+	assert_str(String(outcomes[0].tag)).is_equal("loss")
+	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.LOSS)
+	var again: AbandonShipCommand = AbandonShipCommand.new()
+	again.ship_id = PLAYER
+	world.submit(again)
+	world.step()
+	assert_bool(again.accepted).is_false()
+	var logged: Array[SimCommand] = (
+		CommandLog.from_text(CommandLog.from_world(world).to_text()).commands()
+	)
+	assert_str(String(logged[0].kind())).is_equal("abandon_ship")
+	assert_int(logged[0].tick).is_equal(30)

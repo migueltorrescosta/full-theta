@@ -33,7 +33,7 @@ func test_views_track_server_model() -> void:
 	var keys: Array = [
 		StationViews.key(PLAYER, "helm"),
 		StationViews.key(PLAYER, "engineering"),
-		StationViews.key(PLAYER, "p2"),
+		StationViews.key(PLAYER, "tactical"),
 		StationViews.key(PLAYER, "viewer"),
 	]
 	var p_units: int = NetCodec.period_units(world.kin.period)
@@ -116,7 +116,7 @@ func test_message_shared_per_view_key() -> void:
 # Joint views see the union of their stations' sections; Captain and Viewer hold no
 # crew commands; the dev entry holds every station.
 func test_station_views_map_entries() -> void:
-	var tactical: Array[int] = StationViews.sections_of("p2")
+	var tactical: Array[int] = StationViews.sections_of("tactical")
 	for kind: int in StationViews.sections_of("helm") + StationViews.sections_of("weapons"):
 		assert_bool(tactical.has(kind)).is_true()
 	assert_bool(StationViews.sections_of("science").has(StationViews.Section.HELM)).is_false()
@@ -126,7 +126,7 @@ func test_station_views_map_entries() -> void:
 	assert_str(StationViews.station_of_command(&"reset_ship")).is_equal("")
 	assert_bool(StationViews.is_entry(StationViews.ALL)).is_false()
 	assert_bool(StationViews.is_entry(StationViews.ALL, true)).is_true()
-	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 15 + 2)
+	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 3 + 2)
 
 
 # FT: FT-NET-040

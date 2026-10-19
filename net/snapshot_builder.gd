@@ -35,6 +35,8 @@ var _orient: Dictionary = {}
 var _deltas: Dictionary = {}
 ## "view_key|full" -> chunks of this snapshot.
 var _cache: Dictionary = {}
+## Ship -> ownership table posted by the main thread (OwnershipSection).
+var _ownership: Dictionary = {}
 
 
 func _init() -> void:
@@ -79,6 +81,8 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 		_orient_of(f).update(world, unions[f])
 	for skey: String in _sections:
 		var section: SnapshotSection = _sections[skey]
+		if section is OwnershipSection:
+			(section as OwnershipSection).data = _ownership.get(section.owner, {})
 		if section is NearSection:
 			_deltas[skey] = (section as NearSection).update_members(world, near_sets[section.owner])
 		else:
@@ -118,6 +122,8 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 		var part: PackedByteArray = (
 			(_sections[skey] as SnapshotSection).full() if is_full else _deltas[skey]
 		)
+		if kind == StationViews.Section.OWNERSHIP and (is_full or not part.is_empty()):
+			part = (_sections[skey] as OwnershipSection).for_entry(k[1])
 		if part.is_empty() and not is_full:
 			continue
 		if part.size() > 0xFFFF:
@@ -130,6 +136,11 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 	var out: PackedByteArray = buf.data_array
 	out[HEADER_BYTES - 1] = n
 	return out
+
+
+## Sets a ship's claims and last writers (net thread, from NetTransport).
+func set_ownership(ship: int, table: Dictionary) -> void:
+	_ownership[ship] = table
 
 
 func take_counts() -> Dictionary:
@@ -162,6 +173,8 @@ func _make(kind: int, owner: int) -> SnapshotSection:
 			return NearSection.new(owner, _orient_of(_world.faction_of(owner)), near_range_m)
 		StationViews.Section.PROJECTILES:
 			return ProjectilesSection.new(owner, proj_range_m)
+		StationViews.Section.OWNERSHIP:
+			return OwnershipSection.new(kind, owner)
 	return BlockSection.new(kind, owner)
 
 

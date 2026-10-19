@@ -146,6 +146,11 @@ func post_state(state: Array) -> void:
 
 
 ## Queues a voice clip (NetProtocol.Type.VOICE message) on a session's low lane.
+## A ship's claims and last writers for the OWNERSHIP section (ServerSession).
+func post_ownership(ship: int, table: Dictionary) -> void:
+	_post(["ownership", ship, table.duplicate(true)])
+
+
 func post_voice(session: int, data: PackedByteArray) -> void:
 	_post(["voice", session, data])
 
@@ -226,6 +231,8 @@ func _apply(op: Array) -> void:
 			for c: Conn in _conns.values():
 				if c.session == op[1] and not c.closing:
 					c.queue.push(NetChunker.STREAM_VOICE, op[2])
+		"ownership":
+			_builder.set_ownership(op[1], op[2])
 		"forget":
 			_outboxes.erase(op[1])
 

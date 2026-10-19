@@ -20,6 +20,9 @@ var contacts: Dictionary = {}
 var near: Dictionary = {}
 ## id -> [pos, vel, tick].
 var projectiles: Dictionary = {}
+## OWNERSHIP of this view: {"claims": {item: [session, name]}, "writers": {control:
+## [session, name]}}.
+var ownership: Dictionary = {}
 ## Sections present in the last full snapshot.
 var kinds: Array[int] = []
 ## Deltas that couldn't be applied (no base, a gap, a corrupt record).
@@ -52,6 +55,7 @@ func apply(data: PackedByteArray) -> bool:
 		contacts = {}
 		near = {}
 		projectiles = {}
+		ownership = {}
 		kinds = []
 		full_count += 1
 	for i: int in range(n):
@@ -68,6 +72,18 @@ func apply(data: PackedByteArray) -> bool:
 	seq = new_seq
 	tick = new_tick
 	return true
+
+
+## Name of the player holding a claim item of this view's stations ("" if free).
+func claimer(item: String) -> String:
+	var claims: Dictionary = ownership.get("claims", {})
+	return claims[item][1] if claims.has(item) else ""
+
+
+## Name of the last writer of a ship-wide control of this view's stations ("" if none).
+func last_writer(control: String) -> String:
+	var writers: Dictionary = ownership.get("writers", {})
+	return writers[control][1] if writers.has(control) else ""
 
 
 ## Own ship position (m, site-local, wrapped), or ZERO before the first snapshot.
@@ -102,6 +118,9 @@ func _apply_section(
 			NearSection.apply(near, buf, is_full, at)
 		StationViews.Section.PROJECTILES:
 			ProjectilesSection.apply(projectiles, buf, is_full, at)
+		StationViews.Section.OWNERSHIP:
+			ownership = OwnershipSection.read(part)
+			return not ownership.is_empty()
 		_:
 			if not StationViews.BLOCKS.has(kind):
 				return false

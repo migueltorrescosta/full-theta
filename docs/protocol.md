@@ -31,23 +31,23 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | Type | Message | Dir | Fields | Lane | When | Task |
 |---|---|---|---|---|---|---|
 | 1 | Hello | C | `v` int, `token` String ("" for a new session), `name` String, `kind` String (desktop, web, bot), `host_secret` String ("" unless host, D127; the launcher hands it to the server child in the `FT_HOST_SECRET` environment variable, never on the command line) | H | First message after the socket opens. | T041 |
-| 2 | Welcome | S | `v`, `token`, `session` int, `resumed` bool, `tick` int, `period` float (site period P in m, D124/D125), `ev_from` int (last event acknowledged), `ship` int, `entry` String (current pick, -1/"" for none), `dev_all` bool | H | Reply to an accepted Hello. | T041 |
+| 2 | Welcome | S | `v`, `token`, `session` int, `resumed` bool, `tick` int, `period` float (site period P in m, D124/D125), `ev_from` int (last event acknowledged), `ship` int, `entry` String (current pick, -1/"" for none; after a lapsed rejoin `ship` set and `entry` "" is that ship's pick screen), `dev_all` bool, `host` bool (accepted as the host, D127) | H | Reply to an accepted Hello. | T041 |
 | 3 | HelloRejected | S | `v`, `reason`: `version_mismatch`, `session_full`, `bad_hello` | H | Reply to a refused Hello; the server then closes (code 4000) once the client has had time to read it. | T041 (T046: full) |
-| 4 | Catalogue | S | `ships` [{id, def, name, faction}] (crewable ships only), `entries` [{id, name, stations}], `load_tags` [] | H | After Welcome; again when it changes. | T042/T043 fill availability and load tags |
-| 5 | Pick | C | `ship` int, `entry` String (`StationViews` id: a station, `p1`…`p15`, `captain`, `viewer`, `all` with `--dev-all-stations`) | H | Lobby or mid-run pick. Answered by a `picked` event. | T041 basic, T043 rules |
-| 6 | Release | C | — | H | Back to the pick screen. | T041 basic, T043 |
-| 7 | Ready | C | `ready` bool | H | Ready/Start control. | T043 |
-| 8 | Claim | C | `item` String | H | Claim a sub-control (FT-NET-022). Answered by a `claim` event; T041 answers `request_rejected` `not_implemented`. | T044 |
-| 9 | ReleaseClaim | C | `item` String | H | Release a claim. | T044 |
+| 4 | Catalogue | S | `ships` [{id, def, name, faction}] (crewable ships only), `entries` [StationDef: {id, name, load_tag, stations, crew, sections, fields, commands, claims, controls}], `load_tags` ["light", "busy", "intense"] | H | After Welcome. | T042 |
+| 5 | Pick | C | `ship` int, `entry` String (a StationDef id: `helm` … `comms`, `tactical`, `systems`, `ops`, `captain`, `viewer`, `all` with `--dev-all-stations`) | H | Lobby or mid-run pick; replaces the current one (one pick per player). Answered by a `picked` event. | T043 |
+| 6 | Release | C | — | H | Back to the ship list (ship −1). Same rules as a pick. | T043 |
+| 7 | Ready | C | `ready` bool | H | Start: `true` from a crew player starts the ship's run if its coverage check passes; `false` is ignored. Refusals: `request_rejected` `not_crew`, `started`, `coverage` (with `uncovered`). | T043 |
+| 8 | Claim | C | `item` String (`flight`, `shield_facing`, `mount:N`, `crew:N`) | H | Claim a sub-control of a station the pick covers (FT-NET-022). Answered by a `claim` event to the ship's clients, or `request_rejected` `bad_item`, `not_your_station`, `claimed`. | T044 |
+| 9 | ReleaseClaim | C | `item` String | H | Release a claim the sender holds; else `request_rejected` `not_claimed`. | T044 |
 | 10 | Command | C | `seq` int (client sequence), `cmd` Dictionary (`kind` plus the command's fields; `ship_id` optional, must be the sender's) | H | Every crew input. | T041 |
 | 11 | Ack | C | `snap` int (newest snapshot applied), `ev` int (newest event delivered) | H | At most every 200 ms, and at once after a full snapshot. Consumed on the net thread. | T041 |
 | 12 | Snapshot | S | packed, below | H | 30 Hz per client with a pick: full on join, pick change or resync, deltas otherwise. | T041, T042 filters |
 | 13 | Event | S | `seq` int (per session, from 1), `tick` int, `type` String, `payload` Dictionary | H | Reliable ordered stream (FT-NET-011), below. | T041 |
-| 14 | Abandon | C | `ship` int | H | The host abandons a paused ship alone (D96, D128). T041 answers `request_rejected` `not_paused`. | T045 |
-| 15 | Takeover | C | `ship` int, `entry` String | H | Take over an uncovered station during a pause (FT-NET-042). | T045 |
+| 14 | Abandon | C | `ship` int | H | The host abandons a paused ship alone (D96, D127). Refusals: `request_rejected` `not_paused`, `not_host`. | T045 |
+| 15 | Takeover | C | `ship` int, `entry` String (a crew entry) | H | During a pause, the Captain or a Viewer of the paused ship takes an uncovered station (FT-NET-042); answered like a pick. Refusals: `not_paused`, `not_allowed` (a crew player: use Pick), `not_implemented` (another ship's player, #11), `bad_pick`. | T045 |
 | 16 | Bye | C | `reason` String | H | Orderly leave; the client then closes. | T041 |
 | 17 | Voice | S | `clip` int, `rate` int (Hz), `pcm` PackedByteArray (16-bit mono) | L | Synthesised lines (S7b). | #8 fills, T041 carries |
-| 18 | AbandonVote | C | `ship` int, `vote` bool (cast or withdraw) | H | Crew of a paused ship vote to abandon it (D128). | T045 |
+| 18 | AbandonVote | C | `ship` int, `vote` bool (cast or withdraw) | H | A remaining connected crew player of a paused ship votes to abandon it (D128). Refusals: `not_paused`, `not_crew`. | T045 |
 
 ### Events
 
@@ -55,16 +55,32 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 
 | Type | Payload | Sent to | Task |
 |---|---|---|---|
-| `command_rejected` | `seq` (the Command's), `reason` | the sender only (FT-NET-007) | T041 |
-| `picked` | `ship`, `entry`, `reason` ("" when accepted) | the sender | T041, T043 |
-| `request_rejected` | `request` (message type), `item` or nothing, `reason` | the sender | T041 placeholder |
-| `claim` | claim changes | the ship's clients | T044 |
-| `pause`, `resume` | ship, uncovered stations | every client (FT-NET-034) | T045 |
-| `abandon_votes` | `ship`, `voters` [names], `needed` | every client (D128) | T045 |
+| `command_rejected` | `seq` (the Command's; −1 for a refused Pick or Release), `reason` | the sender only (FT-NET-007) | T041 |
+| `picked` | `ship`, `entry`, `reason` ("" when accepted; `bad_pick`, `captain_taken`, `breaks_coverage`) | the sender | T041, T043 |
+| `request_rejected` | `request` (message type), `reason`, and the request's `item`, `ship`, `entry` or `uncovered` | the sender | T043–T045 |
+| `lobby` | `ship`, `crew` (crew players), `min_crew` (3, or 1 with the dev flag), `uncovered` [stations], `ready` (coverage passes), `started`, `in_play`, `captain` (name or "") | clients on the ship list and those on ships of the ship's faction, on join and whenever it changes (FT-NET-021) | T043 |
+| `started` | `ship`, `tick` | every client, when a ship's Start is accepted | T043 |
+| `claim` | `ship`, `item`, `session` (holder, −1 free), `name` (holder's name, "" free) | the ship's clients, whenever a holder changes | T044 |
+| `pause` | `ship`, `uncovered` [stations], `crew`, `min_crew` | every client, when a ship pauses or its uncovered list changes, and on join (FT-NET-034) | T045 |
+| `resume` | `tick` | every client, when no ship is paused any more | T045 |
+| `abandon_votes` | `ship`, `voters` [names, sorted], `needed` (more than half of the remaining connected crew) | every client, on each vote, withdrawal or voter drop, and on join during a pause (D128) | T045 |
+| `abandoned` | `ship`, `by` (`vote` or `host`) | every client (FT-NET-041) | T045 |
 
-Command rejection reasons (`CommandGate`): `no_pick`, `rate_limited`, `unknown_kind`, `not_allowed` (server-only command such as `reset_ship`), `not_your_station`, `wrong_ship`, `bad_field`, `bad_value` (non-finite), `sim_rejected` (the sim refused it on apply: game rules), `ship_destroyed` (the sim dropped it); T044 adds claim reasons.
+Command rejection reasons (`CommandGate`): `no_pick`, `rate_limited`, `unknown_kind`, `not_allowed` (server-only command such as `reset_ship`), `not_your_station`, `wrong_ship`, `bad_field`, `bad_value` (non-finite), `claimed` (another player holds the item, FT-NET-023), `ship_abandoned`, `breaks_coverage` (a refused mid-run Pick or Release, seq −1, FT-NET-043), `sim_rejected` (the sim refused it on apply: game rules), `ship_destroyed` (the sim dropped it).
 
-Sim events go to the sessions whose ship belongs to the event's faction (FT-NET-010); events of no ship go to every picked session (PROVISIONAL; T042 filters per station). Each session has its own sequence. The server keeps every event until the client acknowledges it, across stalls and reconnects; nothing is dropped (FT-NET-037). While a client waits for a full snapshot (join, stall) its events are held and sent right before that snapshot. A new connection of a session gets every unacknowledged event again; `NetEventInbox` drops duplicates.
+Sim events go to the sessions holding a pick on a ship of the event's faction (FT-NET-010) whose entry sees the kind: repair events only to entries covering Engineering, `fire_blocked` and `friendly_fire_warning` only to Weapons, `ai_mode` to nobody, every other kind to every entry (`StationViews.EVENT_STATIONS`). Events of no ship go to nobody. Each session has its own sequence. The server keeps every event until the client acknowledges it, across stalls and reconnects; nothing is dropped (FT-NET-037). While a client waits for a full snapshot (join, stall) its events are held and sent right before that snapshot. A new connection of a session gets every unacknowledged event again; `NetEventInbox` drops duplicates.
+
+## Lobby, claims and the pause
+
+**Lobby (T043).** The catalogue (`StationViews`, one `StationDef` each) is the six stations, Tactical (Helm + Weapons), Systems (Engineering + Science), Ops (Relay + Comms), Captain and Viewer, plus `all` with `--dev-all-stations`; the other 12 joint views come with M2 (FT-JNT-004). Each player holds one pick; any number may share a station or joint view; one Captain per ship (CLASH-10; a Captain within grace still holds the seat). The coverage check (`NetCoverage`) passes with at least 3 crew players (1 with the dev flag) and all six stations covered; Captain and Viewer don't count. The sim doesn't step until a ship starts: Ready{true} from any crew player of a ship that passes coverage starts it, and the universe steps from the first Start (PROVISIONAL: with several crewable ships, #11 decides whether every ship must start). Snapshots flow before the start and during a pause at 30 Hz of wall clock.
+
+**Claims (T044).** Claimable items: `flight` (Helm: `helm_input` with face, decoupled, all-stop, Align; dock and jump when they exist), `shield_facing` (Helm: shield focus), `mount:N` (Weapons: aim and fire; ammo type when it exists), `crew:N` (Engineering: dispatch and recall). A claimed item takes commands only from its claimer (`claimed` otherwise); an unclaimed one from anyone at its station. A player alone on a station holds all its free items; when a second player joins, the first keeps them (PROVISIONAL). Claims are released by ReleaseClaim, by a pick change that no longer covers the item's station, and when the claimer's grace ends. Every other control is ship-wide, last writer wins: `pips:K` (set_pips per subsystem kind), `shield` (set_shield), `boost` (Engineering), `target` (Helm's target selection). The OWNERSHIP snapshot section names claimers and last writers to the entries of that station (`NetViewState.claimer(item)`, `last_writer(control)`). Claims and `claim_rule` apply in the lobby too: a command on an item another player holds is refused at once before Start; accepted commands queue and apply on the first tick after Start.
+
+**Grace and pause (T045).** A dropped session keeps its pick and claims (not its abandon vote: only connected crew vote) for `--grace-s` (10 s), timed on the server's wall clock, also while paused. When the grace ends, the session lapses: its pick and claims are released and remembered, and if a started ship still in play (not destroyed, retreated or abandoned) then fails coverage, the whole universe pauses: the sim doesn't step, snapshots keep flowing, and every client gets `pause`. During a pause the paused ship's crew may change picks freely; outside it, a Pick or Release that would make a passing ship in play fail coverage is refused (`breaks_coverage`). The universe resumes (`resume`) once no ship in play fails coverage: a rejoin, a takeover, a pick change, or abandoning the ship. Captain and Viewer never count, so their drops never pause.
+
+**Abandon (D128).** During a pause each connected crew player of the paused ship may vote or withdraw; when the votes exceed half of them (2 of 2), or at once when the host sends Abandon, the ship is abandoned: it leaves play, the pause ends, and a logged server command (`AbandonShipCommand`) makes the sim mark it ABANDONED and give it a LOSS, which ends the M1 encounter. Votes clear when the pause ends. A vote is evaluated only when cast (a voter who drops loses the vote; the others aren't abandoned by someone else's drop, PROVISIONAL). The abandoned ship's crew commands get `ship_abandoned`.
+
+**Rejoin.** A client joining or rejoining during a pause gets the current `lobby`, `pause` and `abandon_votes` events right after Welcome and the Catalogue. A token resumes its session for the server's life. Within the grace everything is as it was. After it, the session gets its ship back and its pick if still allowed (the Captain seat may be taken), else that ship's pick screen (Welcome `ship` set, `entry` ""); its old claims come back where still free.
 
 ## Handshake and sessions
 
@@ -72,7 +88,7 @@ Sim events go to the sessions whose ship belongs to the event's faction (FT-NET-
 2. A Hello with a known token resumes that session (same id, pick and event stream; a connection still holding it is closed with code 4001). Otherwise the server checks the session cap (`ServerSession.admit_rule`, T046) and opens a session with a new 128-bit token.
 3. Welcome then Catalogue. A session with a pick gets a full snapshot next.
 
-Tokens expire `--grace-s` (10 s) after the session's connection drops (`NetSessions`); T045 adds the pause and claim rules.
+A session's grace is `--grace-s` (10 s) after its connection drops (`NetSessions`); its token stays valid after that (see Rejoin above).
 
 ## Snapshots
 
@@ -92,8 +108,9 @@ Fixed point (`NetCodec`): positions 1/16 m as int32 site-local offsets, wrapped 
 | 6 | CONTACTS | faction | Detected contacts and own ships, dead reckoned (0.5 m), with callsign and identified flag on change. |
 | 7 | NEAR | ship | Orientations of contacts within 2 km, dead reckoned (1°). |
 | 8 | PROJECTILES | ship | Projectiles within 3 km, sent once each, extrapolated by clients. |
+| 9 | OWNERSHIP | ship, per entry | `var_to_bytes` of {claims: {item: [session, name]}, writers: {control: [session, name]}}, only the entry's own stations' items; whole on change (rare, so self-describing). |
 
-Which entry sees which section, and the block field sets, are in `net/station_views.gd` (PROVISIONAL until T042).
+Which entry sees which section, and the block field sets, are each entry's `StationDef` (`net/station_views.gd`; also in the Catalogue). A view key's difficulty-toggle set is one of `easy`, `normal`, `hard`; M1's sim has no data shortcut yet, so no field depends on it (`tests/net/test_net_stations_filter.gd` checks the filter at each set).
 
 ## Rates and limits (PROVISIONAL)
 

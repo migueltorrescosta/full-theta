@@ -26,6 +26,8 @@ func _server(
 	s.transport.chunk_size = chunk_size
 	var m1: M1Encounter = M1Encounter.new(5, "test", TestDefs.corvette(), TestDefs.raider_enemy())
 	assert_int(s.start(m1, 0, "127.0.0.1", true, host_secret)).is_equal(OK)
+	# These tests exercise the transport, not the lobby: start the run directly.
+	s.session.launch(PLAYER)
 	add_child(s)
 	_servers.append(s)
 	return s
@@ -79,7 +81,7 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_int(c.welcome["v"]).is_equal(NetProtocol.PROTOCOL_VERSION)
 	assert_str(c.token).has_length(32)
 	assert_float(c.welcome["period"]).is_equal(server.world.kin.period)
-	assert_int((c.catalogue["entries"] as Array).size()).is_equal(6 + 15 + 2 + 1)
+	assert_int((c.catalogue["entries"] as Array).size()).is_equal(6 + 3 + 2 + 1)
 	assert_int((c.catalogue["ships"] as Array).size()).is_equal(1)
 	var picked: Array[Dictionary] = _events_of(c.take_events(), NetProtocol.EVENT_PICKED)
 	assert_str(picked[0]["payload"]["reason"]).is_equal("")
@@ -324,6 +326,7 @@ func test_resume_by_token_and_host_secret() -> void:
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] >= 1)).is_true()
 	var session: NetSession = server.session.by_id[c.session_id]
 	assert_bool(session.is_host).is_true()
+	assert_bool(c.welcome["host"]).is_true()
 	c.set_pips(SubsystemDef.Kind.ENGINES, 99)
 	assert_bool(await _until(func() -> bool: return c.inbox.last_seq >= 2)).is_true()
 	var token: String = c.token

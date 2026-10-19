@@ -34,6 +34,8 @@ var http_us_max: int = 0
 var beacon: LanBeacon
 
 var _next_snapshot_tick: int = 0
+## While the sim doesn't step (lobby, pause), when the next state copy goes out (us).
+var _next_idle_post_us: int = 0
 var _started_us: int = 0
 
 
@@ -124,14 +126,21 @@ func _process(delta: float) -> void:
 		return
 	var now_us: int = Time.get_ticks_usec()
 	session.process(now_us)
-	var t0: int = Time.get_ticks_usec()
-	var ticks: int = world.advance(delta)
-	if ticks > 0:
-		tick_us_max = maxi(tick_us_max, (Time.get_ticks_usec() - t0) / ticks)
-		session.after_ticks(world.drain_events())
-		if world.tick >= _next_snapshot_tick:
+	# The sim steps only after a Start and outside a pause (FT-NET-034); snapshots keep
+	# flowing at 30 Hz of wall clock meanwhile, so joining and rejoining clients get theirs.
+	if not session.sim_running():
+		if now_us >= _next_idle_post_us:
 			transport.post_state(SimCopy.capture(world))
-			_next_snapshot_tick = world.tick + SNAPSHOT_TICKS
+			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / 60
+	else:
+		var t0: int = Time.get_ticks_usec()
+		var ticks: int = world.advance(delta)
+		if ticks > 0:
+			tick_us_max = maxi(tick_us_max, (Time.get_ticks_usec() - t0) / ticks)
+			session.after_ticks(world.drain_events())
+			if world.tick >= _next_snapshot_tick:
+				transport.post_state(SimCopy.capture(world))
+				_next_snapshot_tick = world.tick + SNAPSHOT_TICKS
 	_poll_lan_services()
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)

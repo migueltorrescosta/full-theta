@@ -8,10 +8,10 @@ extends RefCounted
 ##    detects any more has escaped: RETREATED, and &"retreated" (ship_id the ship).
 ##    Retreat means leaving every hostile sensor range (D120).
 ## 3. Each crewed ship (not AI-flown) without an outcome gets one: LOSS when it is
-##    destroyed (per-ship elimination, D30: the other ships carry on); WIN when it is in
-##    play and every ship of a faction hostile to it is destroyed or retreated, with at
-##    least one such ship. &"outcome" is emitted once per ship, keyed to it, with value
-##    the RunTable.Outcome and tag &"win" or &"loss".
+##    destroyed or abandoned (per-ship elimination, D30: the other ships carry on);
+##    WIN when it is in play and every ship of a faction hostile to it is destroyed or
+##    retreated, with at least one such ship. &"outcome" is emitted once per ship,
+##    keyed to it, with value the RunTable.Outcome and tag &"win" or &"loss".
 ## Statuses and outcomes are final for the run; SimWorld.reset_ship (FT-MIS-017)
 ## restores a ship's row to IN_PLAY / NONE like every other table.
 
@@ -29,7 +29,7 @@ static func step(world: SimWorld) -> void:
 	for id: int in world.ship_count():
 		if world.ai.is_enabled(id) or run.outcome[id] != RunTable.Outcome.NONE:
 			continue
-		if run.status[id] == RunTable.Status.DESTROYED:
+		if run.status[id] in [RunTable.Status.DESTROYED, RunTable.Status.ABANDONED]:
 			_set_outcome(world, id, RunTable.Outcome.LOSS)
 		elif run.status[id] == RunTable.Status.IN_PLAY and _enemies_gone(world, id):
 			_set_outcome(world, id, RunTable.Outcome.WIN)

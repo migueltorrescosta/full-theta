@@ -43,11 +43,15 @@ const REJECT_BAD_HELLO: String = "bad_hello"
 ## Event types the server emits besides the sim's own event kinds (SimEvent.kind).
 const EVENT_COMMAND_REJECTED: String = "command_rejected"
 const EVENT_PICKED: String = "picked"
+const EVENT_REQUEST_REJECTED: String = "request_rejected"
+const EVENT_LOBBY: String = "lobby"
+const EVENT_STARTED: String = "started"
 const EVENT_CLAIM: String = "claim"
 const EVENT_PAUSE: String = "pause"
 const EVENT_RESUME: String = "resume"
-## AbandonVotes{ship, voters, needed} to every client during a pause (D128, T045).
+## {ship, voters, needed} to every client during a pause (D128).
 const EVENT_ABANDON_VOTES: String = "abandon_votes"
+const EVENT_ABANDONED: String = "abandoned"
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -71,6 +75,7 @@ const SCHEMAS: Dictionary = {
 		"ship": TYPE_INT,
 		"entry": TYPE_STRING,
 		"dev_all": TYPE_BOOL,
+		"host": TYPE_BOOL,
 	},
 	Type.HELLO_REJECTED: {"v": TYPE_INT, "reason": TYPE_STRING},
 	Type.CATALOGUE: {"ships": TYPE_ARRAY, "entries": TYPE_ARRAY, "load_tags": TYPE_ARRAY},
