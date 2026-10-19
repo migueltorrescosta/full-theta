@@ -329,7 +329,7 @@ Tests: 121, manual: 9, pending: 271.
 | FT-AUD-004 | tests | `tests/audio/test_voice_player.gd` |
 | FT-AUD-005 | pending |  |
 | FT-AUD-006 | pending |  |
-| FT-AUD-007 | tests | `tests/audio/test_voice_bus.gd` |
+| FT-AUD-007 | tests | `tests/audio/test_voice_bus.gd`, `tests/audio/test_voice_player.gd` |
 | FT-AUD-008 | tests | `tests/audio/test_voice_bus.gd` |
 | FT-AUD-009 | pending |  |
 | FT-AUD-010 | tests | `tests/audio/test_subtitle_feed.gd`, `tests/audio/test_voice_player.gd`, `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_service.gd`, `tests/net/voice/test_voice_setup.gd` |

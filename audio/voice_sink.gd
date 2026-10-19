@@ -33,3 +33,10 @@ func stop(_clip: int) -> void:
 ## The line has no more audio: play out what is buffered, then fall silent.
 func finish(_clip: int) -> void:
 	pass
+
+
+## How much of the line was heard since its begin(), in the units of its positions
+## (samples for streamed parts, ms for a local stream); -1 when the sink can't tell, and
+## the bus goes by its clock (FT-AUD-007).
+func played(_clip: int) -> int:
+	return -1
