@@ -13,6 +13,9 @@ extends RefCounted
 ## presents it in its Hello and the server treats that client as the host. Keep
 ## it with the stored token (SessionTokenFile.host_secret), not in the pid file.
 ## A dedicated server has none.
+##
+## The host picks the session language before launch (Options.language); it
+## reaches the child as `--language` (FT-AUD-013).
 
 ## Minutes without connected players before the child exits by itself.
 ## FT-NET-003 leaves N open (provisional: see docs/protocol.md, Rates and limits).
@@ -63,6 +66,8 @@ static func server_args(
 				"--idle-exit-min",
 				str(options.idle_exit_min),
 				"--host-secret-env",
+				"--language",
+				options.language,
 			]
 		)
 	)

@@ -178,3 +178,10 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 
 87. Any crew player of a covered ship presses Start, and the sim steps from the first Start. §3.3, FT-NET-019. (D129)
 88. A player alone on a station keeps every claim when a second player joins; the newcomer claims what is released. §3.4, FT-NET-044. (D130)
+
+### v0.5 update for D150–D154 (#10, E10)
+
+89. Voice parts: VOICE carries `part` and `last`; in protocol version 3. FT-AUD-019, FT-NET-038. (D150)
+90. The host picks the session language before launch (`--language`); Welcome carries it. FT-AUD-013. (D151)
+91. Clients play unslotted authored lines from their own export; the host stitches slotted lines from segments, the closed set and compositional number fragments, and streams only stitched and synthesised clips. §9.1, FT-AUD-002, 018, FT-ARC-019. (D152, D154)
+92. The ship-computer filter is a client audio-bus effect chain; dev and release use different Piper builds behind one adapter; pt_PT is subtitles only in releases until #16. §9.1, FT-AUD-004, 014, 019. (D153)

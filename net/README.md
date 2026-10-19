@@ -25,6 +25,7 @@ Protocol, server session and client transport over WebSocket (FT-NET-004). The w
 | `net_client.gd`, `net_view_state.gd` | Headless client library and the client-side view state. |
 | `lan_beacon.gd`, `lan_browser.gd` | LAN discovery: `LanBeacon` (server side) and `LanBrowser` (the client's host list, and `parse_address()` for a typed address). Wire layout in `docs/protocol.md` ("Discovery"). |
 | `static_server.gd` | `StaticServer`: the static HTTP server for the web export (`docs/protocol.md`, "Static HTTP"). |
+| `voice/` | The host voice service (E10): `VoiceService`, the synth interface `VoiceSynth`, the Piper adapters (`PiperProcessSynth`, the shared process half; `PiperStreamSynth`, `PiperBinarySynth`), `PcmStitch`, `DialogueLines`; contracts in `audio/README.md`. |
 
 ## Threads
 

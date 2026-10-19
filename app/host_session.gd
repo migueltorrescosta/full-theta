@@ -47,6 +47,8 @@ class Options:
 	## Web export folder to serve over HTTP at port - 1 (--http-root, FT-NET-030);
 	## "" for none.
 	var http_root: String = ""
+	## The session language the host picked (--language, FT-AUD-013).
+	var language: String = I18n.LANGUAGES[0]
 
 	func _init(bind_address: String = "") -> void:
 		bind = bind_address

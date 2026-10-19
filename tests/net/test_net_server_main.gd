@@ -129,3 +129,51 @@ func test_makes_beacon_only_off_loopback_and_optional_http() -> void:
 	server.transport.stop()
 	server.beacon.stop()
 	server.free()
+
+
+# FT: FT-AUD-013
+# The host picks the session language before launch: --language takes en, pt_PT or it
+# (en by default), refuses anything else, and HostLauncher passes it to the child.
+func test_language_flag() -> void:
+	var cli: ServerMain = ServerMain.new()
+	assert_bool(cli.parse_args(["--bind", "127.0.0.1"])).is_true()
+	assert_str(cli.language).is_equal("en")
+	for lang: String in ["en", "pt_PT", "it"]:
+		var ok: ServerMain = ServerMain.new()
+		assert_bool(ok.parse_args(["--bind", "127.0.0.1", "--language", lang])).is_true()
+		assert_str(ok.language).is_equal(lang)
+	for bad: String in ["pt", "EN", "de", ""]:
+		assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--language", bad])).is_false()
+	assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--language"])).is_false()
+	var o: HostSession.Options = HostSession.Options.new("127.0.0.1")
+	o.language = "pt_PT"
+	var args: PackedStringArray = HostLauncher.server_args(o, "/u/p.json", "")
+	assert_str(args[args.find("--language") + 1]).is_equal("pt_PT")
+
+
+# FT: FT-AUD-013
+# Welcome carries the --language value to every client (L3: a real client over loopback).
+func test_welcome_carries_the_language() -> void:
+	var cli: ServerMain = ServerMain.new()
+	var args: PackedStringArray = ["--bind", "127.0.0.1", "--port", "0", "--no-beacon"]
+	args.append_array(["--language", "it"])
+	assert_bool(cli.parse_args(args)).is_true()
+	var server: NetServer = cli.make_server()
+	add_child(server)
+	var c: NetClient = NetClient.new()
+	assert_int(c.connect_to("ws://127.0.0.1:%d" % server.port())).is_equal(OK)
+	var end: int = Time.get_ticks_msec() + 4000
+	while not c.is_welcomed() and Time.get_ticks_msec() < end:
+		c.poll()
+		await get_tree().process_frame
+	assert_bool(c.is_welcomed()).is_true()
+	assert_str(c.welcome["lang"]).is_equal("it")
+	# The voice service composed next to it shares its transport (E10).
+	var voice: VoiceService = cli.make_voice(server)
+	assert_object(voice.transport).is_same(server.transport)
+	assert_int(voice.tick_source.call()).is_equal(server.world.tick)
+	assert_str(voice.clip_dir).is_equal(VoiceSetup.CLIP_DIR)
+	voice.free()
+	c.drop()
+	server.queue_free()
+	await get_tree().process_frame

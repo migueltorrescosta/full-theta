@@ -285,9 +285,8 @@ func test_oversize_snapshot_and_voice_in_chunks_behind_snapshots() -> void:
 		pcm[i] = (i * 7) & 0xFF
 	var arrived_before: int = c.arrivals.size()
 	var session: int = c.welcome["session"]
-	server.transport.post_voice(
-		session, NetProtocol.encode(NetProtocol.Type.VOICE, {"clip": 7, "rate": 22050, "pcm": pcm})
-	)
+	var voice: Dictionary = {"clip": 7, "rate": 22050, "pcm": pcm, "part": 0, "last": true}
+	server.transport.post_voice(session, NetProtocol.encode(NetProtocol.Type.VOICE, voice))
 	server.transport.set_view(session, StationViews.key(PLAYER, "viewer"))
 	assert_bool(await _until(func() -> bool: return c.stats["voice"] == 1)).is_true()
 	assert_bool(c.voice_clips[0]["pcm"] == pcm).is_true()

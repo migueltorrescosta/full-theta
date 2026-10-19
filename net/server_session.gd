@@ -35,6 +35,8 @@ var claims: NetClaims = NetClaims.new()
 var dev_all: bool = false
 ## The host secret (D127): a client presenting it in Hello is the host; "" for none.
 var host_secret: String = ""
+## The session's language, chosen by the host (--language), sent in Welcome (FT-AUD-013).
+var language: String = "en"
 ## Most sessions connected at once (FT-NET-014; T046 owns the rule).
 var max_sessions: int = 64
 ## Per-session command rate limit (FT-NET-006; provisional: see
@@ -350,6 +352,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 		"entry": session.entry,
 		"dev_all": dev_all,
 		"host": session.is_host,
+		"lang": language,
 	}
 	transport.bind(conn, session.id, welcome, session.view_key(), not resumed)
 	(

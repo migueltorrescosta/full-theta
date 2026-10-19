@@ -19,6 +19,7 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	add_child(server)
+	add_child(cli.make_voice(server))
 	add_child(cli.make_lifecycle(server))
 	print(
 		(

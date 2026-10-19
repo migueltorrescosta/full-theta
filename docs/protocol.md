@@ -2,7 +2,7 @@
 
 The custom WebSocket protocol between the headless server and every station (FT-NET-004, D70). Code: `net/net_protocol.gd` (message set, control codec), `net/snapshot_builder.gd` and `net/sections/` (snapshot codec), `net/net_chunker.gd` (chunks and bundles). The threads and seams are in `net/README.md`.
 
-Protocol version: `NetProtocol.PROTOCOL_VERSION` = 3. Bump it on any incompatible change. Version 3 added Ack snap −1 (need a full snapshot), long section lengths, the age in every NEAR record, the little-endian LAN beacon and the client limits below.
+Protocol version: `NetProtocol.PROTOCOL_VERSION` = 3. Bump it on any incompatible change. Version 3 added Ack snap −1 (need a full snapshot), long section lengths, the age in every NEAR record, the little-endian LAN beacon, the client limits below and the voice fields (Welcome `lang`, Voice `part` and `last`, the `voice_line` event).
 
 ## Transport
 
@@ -46,7 +46,7 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | Type | Message | Dir | Fields | Lane | When | Task |
 |---|---|---|---|---|---|---|
 | 1 | Hello | C | `v` int, `token` String ("" for a new session), `name` String, `kind` String (desktop, web, bot), `host_secret` String ("" unless host, D127; the launcher hands it to the server child in the `FT_HOST_SECRET` environment variable with `--host-secret-env`, never on the command line) | H | First message after the socket opens. `name` is trimmed and cut to 32 bytes of UTF-8 (`NetProtocol.MAX_NAME_BYTES`); a `kind` other than desktop, web or bot gets `bad_hello`. | T041 |
-| 2 | Welcome | S | `v`, `token`, `session` int, `resumed` bool, `tick` int, `period` float (site period P in m, D124/D125), `ev_from` int (last event acknowledged), `ship` int, `entry` String (current pick, -1/"" for none; after a lapsed rejoin `ship` set and `entry` "" is that ship's pick screen), `dev_all` bool, `host` bool (accepted as the host, D127) | H | Reply to an accepted Hello. | T041 |
+| 2 | Welcome | S | `v`, `token`, `session` int, `resumed` bool, `tick` int, `period` float (site period P in m, D124/D125), `ev_from` int (last event acknowledged), `ship` int, `entry` String (current pick, -1/"" for none; after a lapsed rejoin `ship` set and `entry` "" is that ship's pick screen), `dev_all` bool, `host` bool (accepted as the host, D127), `lang` String (the session language, `en`, `pt_PT` or `it`, from the server's `--language`, FT-AUD-013) | H | Reply to an accepted Hello. | T041 |
 | 3 | HelloRejected | S | `v`, `reason`: `version_mismatch`, `session_full`, `bad_hello` | H | Reply to a refused Hello; the server then closes (code 4000) once the client has had time to read it. | T041 (T046: full) |
 | 4 | Catalogue | S | `ships` [{id, def, name, faction}] (crewable ships only), `entries` [StationDef: {id, name, load_tag, stations, crew, sections, fields, commands, claims, controls}], `load_tags` ["light", "busy", "intense"] | H | After Welcome. | T042 |
 | 5 | Pick | C | `ship` int, `entry` String (a StationDef id: `helm` … `comms`, `tactical`, `systems`, `ops`, `captain`, `viewer`, `all` with `--dev-all-stations`) | H | Lobby or mid-run pick; replaces the current one (one pick per player). Answered by a `picked` event. | T043 |
@@ -61,7 +61,7 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | 14 | Abandon | C | `ship` int | H | The host abandons a paused ship alone (D96, D127). Refusals: `request_rejected` `not_paused`, `not_host`. | T045 |
 | 15 | Takeover | C | `ship` int, `entry` String (a crew entry) | H | During a pause, the Captain or a Viewer of the paused ship takes an uncovered station (FT-NET-042); answered like a pick. Refusals: `not_paused`, `not_allowed` (a crew player: use Pick), `not_implemented` (another ship's player, #11), `bad_pick`. | T045 |
 | 16 | Bye | C | `reason` String | H | Orderly leave; the client then closes. | T041 |
-| 17 | Voice | S | `clip` int, `rate` int (Hz), `pcm` PackedByteArray (16-bit mono) | L | Synthesised lines (S7b). | #8 fills, T041 carries |
+| 17 | Voice | S | `clip` int, `rate` int (Hz), `pcm` PackedByteArray (16-bit mono), `part` int (from 0), `last` bool (ends the clip) | L | Stitched and synthesised lines, one per sentence or stitched clip, after the line's `voice_line` event (`audio/README.md`, S7b). | E10 fills, T041 carries |
 | 18 | AbandonVote | C | `ship` int, `vote` bool (cast or withdraw) | H | A remaining connected crew player of a paused ship votes to abandon it (D128). Refusals: `not_paused`, `not_crew`. | T045 |
 
 ### Events
@@ -80,6 +80,7 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | `resume` | `tick` | every client, when no ship is paused any more | T045 |
 | `abandon_votes` | `ship`, `voters` [names, sorted], `needed` (more than half of the remaining connected crew) | every client, on each vote, withdrawal or voter drop, and on join during a pause (D128) | T045 |
 | `abandoned` | `ship`, `by` (`vote` or `host`) | every client (FT-NET-041) | T045 |
+| `voice_line` | `clip`, `line` (line id, "" for free text), `text` (session language, slots filled), `role`, `priority`, `max_age_ms`, `coalesce`, `resume`, `audio` (false: subtitles only), `local` (true: the client plays its own prerendered clip) | the line's audience only: the NPC's conversation claimer or the stations concerned (FT-AUD-005, FT-AUD-006) | E10 (`audio/README.md`) |
 
 Command rejection reasons (`CommandGate`): `no_pick`, `rate_limited`, `unknown_kind`, `not_allowed` (server-only command such as `reset_ship`), `not_your_station`, `wrong_ship`, `bad_field`, `bad_value` (non-finite), `claimed` (another player holds the item, FT-NET-023), `ship_abandoned`, `breaks_coverage` (a refused mid-run Pick or Release, seq −1, FT-NET-043), `sim_rejected` (the sim refused it on apply: game rules), `ship_destroyed` (the sim dropped it).
 

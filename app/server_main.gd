@@ -24,6 +24,8 @@ extends RefCounted
 ##   --no-beacon          don't broadcast on the LAN. A server bound to a loopback
 ##                        address never does: no other machine could join it.
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
+##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
+##                        before launch and Welcome carries it (FT-AUD-013, D41).
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
@@ -48,6 +50,7 @@ var http_root: String = ""
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
+var language: String = I18n.LANGUAGES[0]
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -111,6 +114,11 @@ func _set_flag(flag: String, value: String) -> bool:
 			http_root = value
 		"--name":
 			server_name = value
+		"--language":
+			if not I18n.LANGUAGES.has(value):
+				push_error("--language must be one of %s" % ", ".join(I18n.LANGUAGES))
+				return false
+			language = value
 		_:
 			push_error("unknown argument %s" % flag)
 			return false
@@ -134,6 +142,7 @@ func make_server() -> NetServer:
 		server.free()
 		return null
 	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
+	server.session.language = language
 	if http_root != "":
 		err = server.start_http(http_root)
 		if err != OK:
@@ -149,6 +158,12 @@ func make_server() -> NetServer:
 	if beacon and not is_loopback(bind_address):
 		server.start_beacon(server_name, discovery_port)
 	return server
+
+
+## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick.
+## Silent until the lobby's Start calls start_session(session.language, closed set).
+func make_voice(server: NetServer) -> VoiceService:
+	return VoiceSetup.make_service(server.transport, func() -> int: return server.world.tick)
 
 
 ## The pid file and idle-exit node that runs next to `server` (FT-NET-003).

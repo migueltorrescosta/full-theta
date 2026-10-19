@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Number fragments per language (D101, FT-AUD-018)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["languages"],
+  "properties": {
+    "_comment": {"type": "string"},
+    "languages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["en", "pt_PT", "it"],
+      "properties": {"en": {"$ref": "#/$defs/lang"}, "pt_PT": {"$ref": "#/$defs/lang"}, "it": {"$ref": "#/$defs/lang"}}
+    }
+  },
+  "$defs": {
+    "lang": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fragments"],
+      "properties": {
+        "fragments": {
+          "type": "object",
+          "minProperties": 100,
+          "propertyNames": {"pattern": "^[a-z0-9]+$"},
+          "additionalProperties": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}
