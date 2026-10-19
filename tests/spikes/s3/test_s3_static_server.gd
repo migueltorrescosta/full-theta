@@ -5,6 +5,8 @@ extends GdUnitTestSuite
 const PORT: int = 47829
 
 var _dir: String = ""
+## Stopped in after_test, so a failed assertion doesn't leave the port bound.
+var _server: S3StaticServer
 
 
 func before_test() -> void:
@@ -20,6 +22,9 @@ func before_test() -> void:
 
 
 func after_test() -> void:
+	if _server != null:
+		_server.stop()
+		_server = null
 	for f: String in DirAccess.get_files_at(_dir):
 		DirAccess.remove_absolute(_dir + "/" + f)
 	DirAccess.remove_absolute(_dir)
@@ -106,6 +111,8 @@ func test_accepts_gzip() -> void:
 	assert_bool(S3StaticServer.accepts_gzip("gzip, deflate, br")).is_true()
 	assert_bool(S3StaticServer.accepts_gzip("br;q=1.0, gzip;q=0.8")).is_true()
 	assert_bool(S3StaticServer.accepts_gzip("gzip;q=0")).is_false()
+	assert_bool(S3StaticServer.accepts_gzip("gzip; q=0.000")).is_false()
+	assert_bool(S3StaticServer.accepts_gzip("gzip;q=0.001")).is_true()
 	assert_bool(S3StaticServer.accepts_gzip("identity")).is_false()
 	assert_bool(S3StaticServer.accepts_gzip("")).is_false()
 
@@ -121,7 +128,8 @@ func test_parse_range() -> void:
 
 
 func test_serves_gzip_etag_and_ranges_over_loopback() -> void:
-	var server: S3StaticServer = S3StaticServer.new(_dir, 16384)
+	_server = S3StaticServer.new(_dir, 16384)
+	var server: S3StaticServer = _server
 	assert_int(server.listen(PORT, "127.0.0.1")).is_equal(OK)
 	var plain: Dictionary = _fetch(server, "GET /big.wasm HTTP/1.1\r\nHost: t\r\n\r\n")
 	assert_int(plain["status"]).is_equal(200)
@@ -148,11 +156,12 @@ func test_serves_gzip_etag_and_ranges_over_loopback() -> void:
 	assert_int(missing["status"]).is_equal(404)
 	var post: Dictionary = _fetch(server, "POST / HTTP/1.1\r\nHost: t\r\n\r\n")
 	assert_int(post["status"]).is_equal(405)
-	server.stop()
+	assert_str(post["headers"]["allow"]).is_equal("GET, HEAD")
 
 
 func test_poll_writes_at_most_one_slice_per_connection() -> void:
-	var server: S3StaticServer = S3StaticServer.new(_dir, 65536)
+	_server = S3StaticServer.new(_dir, 65536)
+	var server: S3StaticServer = _server
 	assert_int(server.listen(PORT, "127.0.0.1")).is_equal(OK)
 	var tcp: StreamPeerTCP = StreamPeerTCP.new()
 	tcp.connect_to_host("127.0.0.1", PORT)
@@ -172,6 +181,42 @@ func test_poll_writes_at_most_one_slice_per_connection() -> void:
 			var n: int = tcp.get_available_bytes()
 			if n > 0:
 				got += (tcp.get_data(n)[1] as PackedByteArray).size()
-	server.stop()
 	assert_int(got).is_greater(300_000)
 	assert_int(most).is_less_equal(65536)
+
+
+func test_head_responses_have_no_body() -> void:
+	_server = S3StaticServer.new(_dir, 16384)
+	assert_int(_server.listen(PORT, "127.0.0.1")).is_equal(OK)
+	# Three requests on one keep-alive connection: a body after either HEAD
+	# response would show up in front of the next status line.
+	var tcp: StreamPeerTCP = StreamPeerTCP.new()
+	tcp.connect_to_host("127.0.0.1", PORT)
+	var request: String = (
+		"HEAD /nope.js HTTP/1.1\r\nHost: t\r\n\r\n"
+		+ "HEAD /index.html HTTP/1.1\r\nHost: t\r\n\r\n"
+		+ "GET /index.html HTTP/1.1\r\nHost: t\r\n\r\n"
+	)
+	var raw: PackedByteArray = PackedByteArray()
+	var sent: bool = false
+	var deadline: int = Time.get_ticks_msec() + 3000
+	while Time.get_ticks_msec() < deadline and not raw.get_string_from_ascii().ends_with("</p>"):
+		_server.poll(400)
+		tcp.poll()
+		if tcp.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+			if not sent:
+				tcp.put_data(request.to_utf8_buffer())
+				sent = true
+			var n: int = tcp.get_available_bytes()
+			if n > 0:
+				raw.append_array(tcp.get_data(n)[1])
+		OS.delay_usec(200)
+	tcp.disconnect_from_host()
+	var blocks: PackedStringArray = raw.get_string_from_ascii().split("\r\n\r\n")
+	assert_int(blocks.size()).is_equal(4)
+	assert_str(blocks[0]).starts_with("HTTP/1.1 404 ")
+	assert_str(blocks[0]).contains("Content-Length: 10")
+	assert_str(blocks[1]).starts_with("HTTP/1.1 200 ")
+	assert_str(blocks[1]).contains("Content-Length: 9")
+	assert_str(blocks[2]).starts_with("HTTP/1.1 200 ")
+	assert_str(blocks[3]).is_equal("<p>hi</p>")

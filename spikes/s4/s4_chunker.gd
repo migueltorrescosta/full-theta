@@ -5,8 +5,10 @@ extends RefCounted
 ##
 ## Chunk header, little endian: stream u8, msg_id u32, index u16, count u16.
 ## Every message carries a header, also single-chunk ones, so the receiver has
-## one code path. A message lives in one send lane, so its chunks arrive in order;
-## chunks of different streams may interleave.
+## one code path. A sender queues all chunks of a message together in one lane,
+## so per stream they arrive contiguously and in order; chunks of different
+## streams may interleave. The receiver therefore holds at most one partial
+## message per stream and drops it when another message starts on that stream.
 
 const HEADER_SIZE: int = 9
 const DEFAULT_CHUNK_SIZE: int = 16384
@@ -14,12 +16,14 @@ const STREAM_CONTROL: int = 0
 const STREAM_SNAPSHOT: int = 1
 const STREAM_VOICE: int = 2
 
+## Largest message accepted, as `WebSocketPeer.encode_buffer_max_size` (8 MiB).
+const MAX_MESSAGE_SIZE: int = 8 * 1024 * 1024
+
+## Malformed or dropped chunks seen so far.
 var errors: int = 0
 
-## Partial messages: key (stream << 32 | msg_id) -> PackedByteArray so far.
+## Partial message per stream: stream -> [msg_id, count, next_index, data so far].
 var _partial: Dictionary = {}
-## Next expected chunk index per key.
-var _next_index: Dictionary = {}
 
 
 static func split(
@@ -56,7 +60,10 @@ static func count_of(chunk: PackedByteArray) -> int:
 
 
 ## Feeds one received packet. Returns {} until a message is complete, then
-## {"stream": int, "msg_id": int, "data": PackedByteArray}.
+## {"stream": int, "msg_id": int, "data": PackedByteArray}. A malformed chunk
+## (short header, count 0, index out of range or out of order, a count that
+## changes mid-message, a message over MAX_MESSAGE_SIZE) counts as an error and
+## drops the stream's partial message.
 func feed(chunk: PackedByteArray) -> Dictionary:
 	if chunk.size() < HEADER_SIZE:
 		errors += 1
@@ -65,28 +72,28 @@ func feed(chunk: PackedByteArray) -> Dictionary:
 	var msg_id: int = msg_id_of(chunk)
 	var index: int = index_of(chunk)
 	var count: int = count_of(chunk)
-	var payload: PackedByteArray = chunk.slice(HEADER_SIZE)
-	if count == 1 and index == 0:
-		return {"stream": stream, "msg_id": msg_id, "data": payload}
-	var key: int = (stream << 32) | msg_id
-	var expected: int = _next_index.get(key, 0)
-	if index != expected:
+	var part: Array = _partial.get(stream, [])
+	_partial.erase(stream)
+	if not part.is_empty() and int(part[0]) != msg_id:
+		# Another message started before this one finished: it never will.
 		errors += 1
-		_partial.erase(key)
-		_next_index.erase(key)
+		part = []
+	var expected: int = 0 if part.is_empty() else int(part[2])
+	if count == 0 or index >= count or index != expected:
+		errors += 1
 		return {}
-	if index == 0:
-		_partial[key] = payload
-	else:
-		var sofar: PackedByteArray = _partial[key]
-		sofar.append_array(payload)
-		_partial[key] = sofar
+	if not part.is_empty() and int(part[1]) != count:
+		errors += 1
+		return {}
+	var data: PackedByteArray = PackedByteArray() if part.is_empty() else part[3]
+	part.clear()
+	data.append_array(chunk.slice(HEADER_SIZE))
+	if data.size() > MAX_MESSAGE_SIZE:
+		errors += 1
+		return {}
 	if index + 1 < count:
-		_next_index[key] = index + 1
+		_partial[stream] = [msg_id, count, index + 1, data]
 		return {}
-	var data: PackedByteArray = _partial[key]
-	_partial.erase(key)
-	_next_index.erase(key)
 	return {"stream": stream, "msg_id": msg_id, "data": data}
 
 

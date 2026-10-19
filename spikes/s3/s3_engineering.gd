@@ -87,6 +87,7 @@ func _process(_delta: float) -> void:
 			"closed":
 				if not _closed_reported:
 					_closed_reported = true
+					S3KeepAwake.stop()
 					_status.text = "disconnected"
 					_say("closed", {"code": m["code"]})
 

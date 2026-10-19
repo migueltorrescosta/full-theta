@@ -317,8 +317,11 @@ func _pump_all() -> void:
 				break
 			var chunk: PackedByteArray = c.queue.next_chunk()
 			if c.peer.send(chunk) != OK:
+				# The chunk is gone from the queue, so the stream is broken: drop
+				# the connection, as S4's server does.
 				if c.resync != null:
 					c.resync.on_send_error()
+				c.peer.close(-1)
 				break
 			c.bytes_out += chunk.size()
 		c.peer.poll()

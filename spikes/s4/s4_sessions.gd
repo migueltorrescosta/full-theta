@@ -31,7 +31,7 @@ func resume(token: String, now_us: int) -> Dictionary:
 	if not _by_token.has(token):
 		return {}
 	var session: Dictionary = _by_token[token]
-	if not session["connected"] and now_us - int(session["dropped_us"]) > grace_us:
+	if _expired(session, now_us):
 		_by_token.erase(token)
 		return {}
 	session["connected"] = true
@@ -60,11 +60,15 @@ func expire(now_us: int) -> Array[String]:
 	var gone: Array[String] = []
 	for token: String in _by_token.keys():
 		var session: Dictionary = _by_token[token]
-		if not session["connected"] and now_us - int(session["dropped_us"]) > grace_us:
+		if _expired(session, now_us):
 			gone.append(token)
 	for token: String in gone:
 		_by_token.erase(token)
 	return gone
+
+
+func _expired(session: Dictionary, now_us: int) -> bool:
+	return not session["connected"] and now_us - int(session["dropped_us"]) > grace_us
 
 
 ## Lowest event seq any live session still needs (for trimming the event log).

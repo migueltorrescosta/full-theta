@@ -377,8 +377,13 @@ func _pump_all() -> void:
 			var chunk: PackedByteArray = c.queue.next_chunk()
 			var err: Error = c.peer.send(chunk)
 			if err != OK:
-				c.resync.on_send_error()
+				# The chunk is gone from the queue, so the stream is broken: drop
+				# the connection and let the client resume with its token, which
+				# brings a full snapshot (D106 counts a failed send as a stall).
+				if c.resync != null:
+					c.resync.on_send_error()
 				_note("send_error", {"client": c.name, "err": error_string(err)})
+				c.peer.close(-1)
 				break
 			c.bytes_out += chunk.size()
 		c.peer.poll()

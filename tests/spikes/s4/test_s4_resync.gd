@@ -98,6 +98,34 @@ func test_token_expires_after_grace() -> void:
 	assert_bool(sessions.resume(token, 11_000_002).is_empty()).is_true()
 
 
+func test_connected_token_is_taken_over() -> void:
+	var sessions: S4Sessions = S4Sessions.new(10_000_000)
+	var seat: Dictionary = {"ship": 1, "station": "engineering"}
+	var token: String = sessions.issue(seat, 3)
+	# A restarted client presents the token before the old socket has closed,
+	# even long after the grace period: a connected session never expires.
+	var back: Dictionary = sessions.resume(token, 60_000_000)
+	assert_dict(back["seat"]).is_equal(seat)
+	assert_bool(back["connected"]).is_true()
+	assert_array(sessions.expire(60_000_000)).is_empty()
+
+
+func test_min_acked_event_covers_sessions_in_grace() -> void:
+	var sessions: S4Sessions = S4Sessions.new(10_000_000)
+	assert_int(sessions.min_acked_event(42)).is_equal(42)
+	var a: String = sessions.issue({"ship": 0}, 10)
+	var b: String = sessions.issue({"ship": 1}, 10)
+	sessions.set_acked_event(a, 30)
+	sessions.set_acked_event(b, 20)
+	sessions.set_acked_event(b, 15)
+	assert_int(sessions.min_acked_event(42)).is_equal(20)
+	# A dropped session in grace still holds the log back until it expires.
+	sessions.drop(b, 1_000_000)
+	assert_int(sessions.min_acked_event(42)).is_equal(20)
+	sessions.expire(11_000_001)
+	assert_int(sessions.min_acked_event(42)).is_equal(30)
+
+
 func test_snapshot_delta_round_trip() -> void:
 	var base: Dictionary = {1: {"pos": Vector3.ZERO, "name": "a"}, 2: {"pos": Vector3.ONE}}
 	var cur: Dictionary = {1: {"pos": Vector3(1, 0, 0), "name": "a"}, 3: {"pos": Vector3.UP}}

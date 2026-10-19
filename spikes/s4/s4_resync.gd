@@ -12,7 +12,8 @@ extends RefCounted
 
 enum Action { NONE, DELTA, FULL }
 
-## Unacknowledged snapshots that mark the client as stalled (15 = 500 ms at 30 Hz).
+## Stalled at more than this many unacknowledged snapshots: more than 15
+## unacknowledged (≈ 533 ms at 30 Hz).
 var lag_limit: int = 15
 ## High-lane queued bytes that mark the client as stalled.
 var queued_limit: int = 256 * 1024
@@ -34,6 +35,10 @@ func on_ack(seq: int) -> void:
 	acked_seq = maxi(acked_seq, seq)
 
 
+## Records a failed send as a stall. The caller must also close the connection:
+## the chunk that failed has left the send queue, so a message (possibly the
+## `last_sent_seq` snapshot, which the drain check waits for) is lost. The
+## client then resumes with its token and gets a full snapshot.
 func on_send_error() -> void:
 	_mark_stalled()
 

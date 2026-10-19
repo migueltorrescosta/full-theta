@@ -50,7 +50,7 @@ var gzip_responses: int = 0
 var not_modified: int = 0
 var errors: int = 0
 var bytes_out: int = 0
-## When true, each response appends "<status> <path> <length>" to `log`.
+## When true, each response appends "<status> <path> <body bytes>" to `log`.
 var keep_log: bool = false
 var log: Array[String] = []
 
@@ -64,7 +64,9 @@ func _init(folder: String, slice_bytes: int = 65536) -> void:
 	slice = slice_bytes
 
 
-func listen(port: int, bind: String = "*") -> Error:
+## Listens on `bind`, the LAN address the host picks; there is no default, so
+## the server never binds to every interface by accident.
+func listen(port: int, bind: String) -> Error:
 	return _tcp.listen(port, bind)
 
 
@@ -117,11 +119,13 @@ func _service(c: Conn, now_us: int) -> bool:
 			return false
 		c.inbuf.append_array(got[1])
 		c.last_us = now_us
+	# Checked while writing too, so a client sending during a long download
+	# can't grow inbuf without bound.
+	if c.inbuf.size() > MAX_REQUEST:
+		return false
 	if not c.writing:
 		var end: int = _header_end(c.inbuf)
 		if end < 0:
-			if c.inbuf.size() > MAX_REQUEST:
-				return false
 			return now_us - c.last_us < IDLE_US
 		var head: String = c.inbuf.slice(0, end).get_string_from_utf8()
 		c.inbuf = c.inbuf.slice(end + 4)
@@ -169,17 +173,18 @@ func _respond(c: Conn, req: Dictionary) -> void:
 	c.writing = true
 	c.target = req.get("path", "?")
 	if req.is_empty():
-		_simple(c, 400, "Bad Request")
+		_simple(c, 400, "Bad Request", true)
 		c.keep_alive = false
 		return
 	var method: String = req["method"]
 	if method != "GET" and method != "HEAD":
-		_simple(c, 405, "Method Not Allowed")
+		_simple(c, 405, "Method Not Allowed", true, ["Allow: GET, HEAD"])
 		return
+	var is_get: bool = method == "GET"
 	var name: String = resolve(req["path"])
 	var path: String = root + "/" + name
 	if name == "" or not FileAccess.file_exists(path):
-		_simple(c, 404, "Not Found")
+		_simple(c, 404, "Not Found", is_get)
 		return
 	var gz: bool = (
 		accepts_gzip(headers.get("accept-encoding", "")) and FileAccess.file_exists(path + ".gz")
@@ -187,7 +192,7 @@ func _respond(c: Conn, req: Dictionary) -> void:
 	var send_path: String = path + ".gz" if gz else path
 	var file: FileAccess = FileAccess.open(send_path, FileAccess.READ)
 	if file == null:
-		_simple(c, 404, "Not Found")
+		_simple(c, 404, "Not Found", is_get)
 		return
 	var size: int = file.get_length()
 	var etag: String = (
@@ -201,7 +206,7 @@ func _respond(c: Conn, req: Dictionary) -> void:
 	]
 	if headers.get("if-none-match", "") == etag:
 		not_modified += 1
-		_head(c, 304, "Not Modified", out)
+		_head(c, 304, "Not Modified", out, 0)
 		return
 	var status: int = 200
 	var reason: String = "OK"
@@ -220,32 +225,38 @@ func _respond(c: Conn, req: Dictionary) -> void:
 			length = span.y - span.x + 1
 			out.append("Content-Range: bytes %d-%d/%d" % [span.x, span.y, size])
 	out.append("Content-Length: %d" % length)
-	_head(c, status, reason, out)
-	if method == "GET" and length > 0:
+	_head(c, status, reason, out, length if is_get else 0)
+	if is_get and length > 0:
 		file.seek(first)
 		c.file = file
 		c.remaining = length
 
 
-func _simple(c: Conn, status: int, reason: String) -> void:
+## An error response. A HEAD response carries the GET headers but no body:
+## a body would be read as the start of the next keep-alive response.
+func _simple(
+	c: Conn, status: int, reason: String, with_body: bool, extra: Array[String] = []
+) -> void:
 	errors += 1
 	var body: PackedByteArray = (reason + "\n").to_utf8_buffer()
-	_head(
-		c,
-		status,
-		reason,
-		["Content-Type: text/plain; charset=utf-8", "Content-Length: %d" % body.size()]
-	)
-	c.pending.append_array(body)
+	var lines: Array[String] = [
+		"Content-Type: text/plain; charset=utf-8", "Content-Length: %d" % body.size()
+	]
+	lines.append_array(extra)
+	_head(c, status, reason, lines, body.size() if with_body else 0)
+	if with_body:
+		c.pending.append_array(body)
 
 
-func _head(c: Conn, status: int, reason: String, lines: Array[String]) -> void:
+## Queues the status line and headers; `body_bytes`, the body this response
+## sends, is only for the log.
+func _head(c: Conn, status: int, reason: String, lines: Array[String], body_bytes: int) -> void:
 	var text: String = "HTTP/1.1 %d %s\r\n" % [status, reason]
 	for line: String in lines:
 		text += line + "\r\n"
 	text += "Connection: %s\r\n\r\n" % ("keep-alive" if c.keep_alive else "close")
 	if keep_log:
-		log.append("%d %s %s" % [status, c.target, lines[-1].trim_prefix("Content-Length: ")])
+		log.append("%d %s %d" % [status, c.target, body_bytes])
 	c.pending = text.to_utf8_buffer()
 	c.remaining = 0
 	c.file = null
@@ -297,7 +308,7 @@ static func accepts_gzip(value: String) -> bool:
 		if parts[0].strip_edges() == "gzip":
 			for p: String in parts.slice(1):
 				var kv: String = p.strip_edges().replace(" ", "")
-				if kv == "q=0" or kv == "q=0.0" or kv == "q=0.00" or kv == "q=0.000":
+				if kv.begins_with("q=") and kv.substr(2).to_float() == 0.0:
 					return false
 			return true
 	return false
