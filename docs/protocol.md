@@ -61,6 +61,7 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | `claim` | claim changes | the ship's clients | T044 |
 | `pause`, `resume` | ship, uncovered stations | every client (FT-NET-034) | T045 |
 | `abandon_votes` | `ship`, `voters` [names], `needed` | every client (D128) | T045 |
+| `voice_line` | `clip`, `line` (line id, "" for free text), `text` (session language, slots filled), `role`, `priority`, `max_age_ms`, `coalesce`, `resume`, `audio` (false: subtitles only), `local` (true: the client plays its own prerendered clip) | the line's audience only: the NPC's conversation claimer or the stations concerned (FT-AUD-005, FT-AUD-006) | E10 (`audio/README.md`) |
 
 Command rejection reasons (`CommandGate`): `no_pick`, `rate_limited`, `unknown_kind`, `not_allowed` (server-only command such as `reset_ship`), `not_your_station`, `wrong_ship`, `bad_field`, `bad_value` (non-finite), `sim_rejected` (the sim refused it on apply: game rules), `ship_destroyed` (the sim dropped it); T044 adds claim reasons.
 

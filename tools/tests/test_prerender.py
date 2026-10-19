@@ -1,4 +1,4 @@
-"""Tests for tools/tts/prerender.py and tools/tts/robotic.py with a fake synthesiser (no Piper)."""
+"""Tests for tools/tts/prerender.py with a fake synthesiser (no Piper)."""
 
 import json
 import re
@@ -12,7 +12,6 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/tts"))
 import prerender  # noqa: E402
-import robotic  # noqa: E402
 
 RATE = 22050
 SILENCE = int(0.05 * RATE)
@@ -163,26 +162,6 @@ def test_refuses_tracked_locations(tmp_path):
     prerender.check_out(ROOT / "audio/prerendered", ROOT)
     prerender.check_out(ROOT / "audio/prerendered_host", ROOT)
     prerender.check_out(tmp_path / "anywhere", ROOT)
-
-
-# FT: FT-AUD-004
-def test_robotic_filter_keeps_intercom_band():
-    rng = np.random.default_rng(1)
-    x = rng.uniform(-0.5, 0.5, RATE).astype(np.float32)  # white noise, 1 s
-    y = robotic.robotic(x, RATE)
-    power = np.abs(np.fft.rfft(y)) ** 2
-    f = np.fft.rfftfreq(len(y), 1 / RATE)
-    band = power[(f >= 300) & (f <= 3400)].sum()
-    assert band / power.sum() > 0.9
-    assert y.dtype == np.float32 and abs(float(np.max(np.abs(y))) - 0.9) < 1e-4
-
-
-# FT: FT-AUD-004
-def test_robotic_int16_round_trip():
-    pcm = (np.sin(np.arange(4410) * 0.2) * 16000).astype(np.int16)
-    assert np.allclose(robotic.from_int16(robotic.to_int16(robotic.from_int16(pcm))), robotic.from_int16(pcm), atol=1e-4)
-    out = robotic.robotic_pcm(pcm, RATE)
-    assert out.dtype == np.dtype("<i2") and out.size == pcm.size
 
 
 # FT: FT-AUD-018

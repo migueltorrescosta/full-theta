@@ -21,6 +21,7 @@ Protocol, server session and client transport over WebSocket (FT-NET-004). The w
 | `command_gate.gd` | Command validation. |
 | `net_server.gd` | The server `Node`: sim loop and composition. |
 | `net_client.gd`, `net_view_state.gd` | Headless client library and the client-side view state. |
+| `voice/` | The host voice service (E10): `VoiceService`, the Piper adapters (`PiperStreamSynth`, `PiperBinarySynth`), `PcmStitch`, `DialogueLines`; contracts in `audio/README.md`. |
 
 ## Threads
 

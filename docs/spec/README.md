@@ -167,3 +167,10 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 81. Relay's map is a freely rotatable 3D map of the wrapping cube; marks are placed on the view plane with depth on Shift+drag. §5.5, §7.4 P4, FT-RLY-001, 002. (D124)
 82. Turret roll, main-screen stabilisation and the comfort toggle use the ship's deck plane or the target; a per-client cosmetic reference plane is allowed but never spoken or used by rules. FT-WPN-009, FT-MSC-001, FT-STN-017. (D124)
 83. One site period P per world, an exact multiple of 500 m and at least 4 times the longest sensor range, recorded in the command log setup and the state hash; weapon ranges under P/2 by content review. §4.1, FT-SIM-035. (D125)
+
+### Pending changelog (strand-e10)
+
+- Voice parts: VOICE carries `part` and `last`; protocol version 2. FT-AUD-019, FT-NET-038. (D150)
+- The host picks the session language before launch (`--language`); Welcome carries it. FT-AUD-013. (D151)
+- Clients play unslotted authored lines from their own export; the host stitches slotted lines from segments, the closed set and compositional number fragments, and streams only stitched and synthesised clips. §9.1, FT-AUD-002, 018, FT-ARC-019. (D152, D154)
+- The ship-computer filter is a client audio-bus effect chain; dev and release use different Piper builds behind one adapter; pt_PT is subtitles only in releases until #16. §9.1, FT-AUD-004, 014, 019. (D153)
