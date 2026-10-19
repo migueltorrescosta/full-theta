@@ -20,9 +20,10 @@ out=audio/prerendered
 rm -rf "$out" audio/prerendered_host
 mkdir -p "$out"
 if [[ -f tools/tts/prerender_release.py ]]; then
-  # The prerender voices ("prerender" in voices.json) render the clips but
-  # don't ship in the packages.
-  mapfile -t voices < <(python3 -c 'import json; print("\n".join(json.load(open("tools/tts/voices.json"))["prerender"]))')
+  # The prerender voices ("prerender" in voices.json, not shipped) render the
+  # client clips; the runtime voices ("release") render the host pack.
+  mapfile -t voices < <(python3 -c 'import json; d = json.load(open("tools/tts/voices.json"))
+print("\n".join(dict.fromkeys(d["prerender"] + d["release"])))')
   uv run --quiet --project tools/tts python tools/tts/fetch_voices.py "${voices[@]}" >/dev/null
   uv run --quiet --project tools/tts python tools/tts/prerender_release.py --out "$out" "$@"
   exit

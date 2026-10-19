@@ -71,7 +71,7 @@ Tests: 105, manual: 8, pending: 288.
 | FT-NET-027 | pending |  |
 | FT-NET-028 | pending |  |
 | FT-NET-029 | pending |  |
-| FT-NET-030 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tests/net/test_net_server_main.gd` |
+| FT-NET-030 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tests/net/test_net_server_main.gd`, `tools/tests/test_release.py` |
 | FT-NET-031 | tests | `tests/net/test_lan_no_internet.gd` |
 | FT-NET-032 | pending |  |
 | FT-NET-033 | pending |  |

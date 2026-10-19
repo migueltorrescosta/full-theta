@@ -27,6 +27,7 @@ def template_zip() -> Path:
     return data / "godot/export_templates" / version / "web_nothreads_release.zip"
 
 
+# FT: FT-NET-030
 def test_patch_guards_the_audio_worklet_call():
     js = "a;" + web_patch.UNGUARDED + ";b"
     out = web_patch.patch_index_js(js)
@@ -36,6 +37,7 @@ def test_patch_guards_the_audio_worklet_call():
             web_patch.patch_index_js(bad)
 
 
+# FT: FT-NET-030
 @pytest.mark.skipif(not template_zip().is_file(), reason="export templates not installed")
 def test_pinned_engine_still_has_the_patched_pattern():
     """Fails when an engine upgrade changes the patched index.js pattern or
@@ -46,6 +48,7 @@ def test_pinned_engine_still_has_the_patched_pattern():
         assert api in js
 
 
+# FT: FT-NET-030
 def test_shell_keeps_the_engine_placeholders_and_drops_only_the_secure_context_check():
     html = (ROOT / "app/web/shell.html").read_text()
     for placeholder in ("$GODOT_CONFIG", "$GODOT_URL", "$GODOT_THREADS_ENABLED", "$GODOT_HEAD_INCLUDE"):
