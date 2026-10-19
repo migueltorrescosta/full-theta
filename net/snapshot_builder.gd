@@ -9,11 +9,14 @@ extends RefCounted
 ## a full snapshot anyway (join, pick change).
 ##
 ## Message: u8 type (NetProtocol.Type.SNAPSHOT), u8 flags (bit 0 full), u32 seq, u32
-## tick, u8 n, then n sections of u8 kind, u16 length, payload. A delta omits the
-## sections with nothing to say (unchanged blocks).
+## tick, u8 n, then n sections of u8 kind, length, payload. The length is a u16, or
+## 0xFFFF then a u32 for a section of 0xFFFF bytes or more, so no section is ever too
+## long to send. A delta omits the sections with nothing to say (unchanged blocks).
 
 const HEADER_BYTES: int = 11
 const FLAG_FULL: int = 1
+## Section length escape: a u32 length follows.
+const LONG_SECTION: int = 0xFFFF
 
 var seq: int = 0
 var tick: int = 0
@@ -37,6 +40,8 @@ var _deltas: Dictionary = {}
 var _cache: Dictionary = {}
 ## Ship -> ownership table posted by the main thread (OwnershipSection).
 var _ownership: Dictionary = {}
+## Faction -> the ship ids it knows (ContactsSection.known), computed once per build.
+var _known: Dictionary = {}
 
 
 func _init() -> void:
@@ -51,6 +56,7 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 	tick = world.tick
 	_deltas.clear()
 	_cache.clear()
+	_known.clear()
 	var needed: Dictionary = {}
 	var near_ships: Dictionary = {}
 	for view_key: String in view_keys:
@@ -74,8 +80,7 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 	for ship: int in near_ships:
 		var f: int = world.faction_of(ship)
 		var section: NearSection = _sections[_skey(StationViews.Section.NEAR, ship)]
-		var known: PackedInt32Array = ContactsSection.known(world, f)
-		near_sets[ship] = section.in_range(world, known)
+		near_sets[ship] = section.in_range(world, _known_of(f))
 		(unions.get_or_add(f, {}) as Dictionary).merge(near_sets[ship])
 	for f: int in unions:
 		_orient_of(f).update(world, unions[f])
@@ -83,6 +88,8 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 		var section: SnapshotSection = _sections[skey]
 		if section is OwnershipSection:
 			(section as OwnershipSection).data = _ownership.get(section.owner, {})
+		elif section is ContactsSection:
+			(section as ContactsSection).ids = _known_of(section.owner)
 		if section is NearSection:
 			_deltas[skey] = (section as NearSection).update_members(world, near_sets[section.owner])
 		else:
@@ -126,11 +133,8 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 			part = (_sections[skey] as OwnershipSection).for_entry(k[1])
 		if part.is_empty() and not is_full:
 			continue
-		if part.size() > 0xFFFF:
-			push_error("snapshot section %s is %d bytes, over the u16 length" % [skey, part.size()])
-			continue
 		buf.put_u8(kind)
-		buf.put_u16(part.size())
+		put_length(buf, part.size())
 		buf.put_data(part)
 		n += 1
 	var out: PackedByteArray = buf.data_array
@@ -152,6 +156,21 @@ func take_counts() -> Dictionary:
 ## The section of a kind and owner, or null (tests).
 func section(kind: int, owner: int) -> SnapshotSection:
 	return _sections.get(_skey(kind, owner))
+
+
+## Writes a section length (u16, or LONG_SECTION then a u32).
+static func put_length(buf: StreamPeerBuffer, size: int) -> void:
+	if size < LONG_SECTION:
+		buf.put_u16(size)
+	else:
+		buf.put_u16(LONG_SECTION)
+		buf.put_u32(size)
+
+
+## Reads a section length written by put_length().
+static func get_length(buf: StreamPeerBuffer) -> int:
+	var size: int = buf.get_u16()
+	return buf.get_u32() if size == LONG_SECTION else size
 
 
 ## [seq, full, tick] of a snapshot message without decoding its sections.
@@ -176,6 +195,12 @@ func _make(kind: int, owner: int) -> SnapshotSection:
 		StationViews.Section.OWNERSHIP:
 			return OwnershipSection.new(kind, owner)
 	return BlockSection.new(kind, owner)
+
+
+func _known_of(faction: int) -> PackedInt32Array:
+	if not _known.has(faction):
+		_known[faction] = ContactsSection.known(_world, faction)
+	return _known[faction]
 
 
 func _orient_of(faction: int) -> OrientModel:

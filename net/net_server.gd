@@ -34,8 +34,10 @@ var http_us_max: int = 0
 var beacon: LanBeacon
 
 var _next_snapshot_tick: int = 0
-## While the sim doesn't step (lobby, pause), when the next state copy goes out (us).
+## While the sim doesn't step (lobby, pause), when the next snapshot goes out (us), and
+## whether the net thread already holds the idle world's state.
 var _next_idle_post_us: int = 0
+var _idle_state_posted: bool = false
 var _started_us: int = 0
 
 
@@ -138,11 +140,21 @@ func _process(delta: float) -> void:
 	session.process(now_us)
 	# The sim steps only after a Start and outside a pause (FT-NET-034); snapshots keep
 	# flowing at 30 Hz of wall clock meanwhile, so joining and rejoining clients get theirs.
+	# The world doesn't change then: it is captured once and re-encoded from that copy,
+	# and only while someone holds a pick (nobody else gets snapshots).
 	if not session.sim_running():
-		if now_us >= _next_idle_post_us:
-			transport.post_state(SimCopy.capture(world))
+		if (
+			now_us >= _next_idle_post_us
+			and session.by_id.values().any(func(s: NetSession) -> bool: return s.has_pick())
+		):
+			if _idle_state_posted:
+				transport.repost_state()
+			else:
+				transport.post_state(SimCopy.capture(world))
+				_idle_state_posted = true
 			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / 60
 	else:
+		_idle_state_posted = false
 		var t0: int = Time.get_ticks_usec()
 		var ticks: int = world.advance(delta)
 		if ticks > 0:

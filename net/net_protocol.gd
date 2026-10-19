@@ -31,9 +31,14 @@ enum Type {
 	ABANDON_VOTE = 18,
 }
 
-const PROTOCOL_VERSION: int = 1
+const PROTOCOL_VERSION: int = 3
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
+
+## Hello.kind values.
+const CLIENT_KINDS: Array[String] = ["desktop", "web", "bot"]
+## Longest Hello.name kept (UTF-8 bytes, after trimming); longer names are cut.
+const MAX_NAME_BYTES: int = 32
 
 ## HelloRejected reasons.
 const REJECT_VERSION: String = "version_mismatch"
@@ -111,6 +116,19 @@ const FROM_CLIENT: Array[int] = [
 	Type.ABANDON_VOTE,
 ]
 
+## Client requests that take a token from the session's rate limit in ServerSession
+## (commands take theirs in CommandGate; Hello, Ack and Bye take none).
+const RATED_REQUESTS: Array[int] = [
+	Type.PICK,
+	Type.RELEASE,
+	Type.READY,
+	Type.CLAIM,
+	Type.RELEASE_CLAIM,
+	Type.ABANDON,
+	Type.TAKEOVER,
+	Type.ABANDON_VOTE,
+]
+
 
 ## Encodes a control message (not a snapshot): the type byte then the fields. The
 ## fields are not checked here; check() is the receiver's job.
@@ -126,7 +144,8 @@ static func type_of(data: PackedByteArray) -> int:
 
 
 ## Decodes a control message into its fields plus "t" (the type), or {} when the bytes
-## are not a known control type holding a Dictionary that passes check().
+## are not a known control type holding a Dictionary that passes check(). A Hello's
+## kind must be one of CLIENT_KINDS; its name is trimmed and cut to MAX_NAME_BYTES.
 static func decode(data: PackedByteArray) -> Dictionary:
 	var type: int = type_of(data)
 	if not SCHEMAS.has(type):
@@ -137,8 +156,24 @@ static func decode(data: PackedByteArray) -> Dictionary:
 	var fields: Dictionary = body
 	if check(type, fields) != "":
 		return {}
+	if type == Type.HELLO:
+		if not CLIENT_KINDS.has(fields["kind"]):
+			return {}
+		var name: String = (fields["name"] as String).strip_edges()
+		fields["name"] = clip_utf8(name, MAX_NAME_BYTES).strip_edges()
 	fields["t"] = type
 	return fields
+
+
+## The longest prefix of `text` that fits in max_bytes of UTF-8, cut between characters.
+static func clip_utf8(text: String, max_bytes: int) -> String:
+	var bytes: PackedByteArray = text.to_utf8_buffer()
+	if bytes.size() <= max_bytes:
+		return text
+	var end: int = max_bytes
+	while end > 0 and (bytes[end] & 0xC0) == 0x80:
+		end -= 1
+	return bytes.slice(0, end).get_string_from_utf8()
 
 
 ## Why the fields don't match the type's schema, or "" if they do.
@@ -167,8 +202,7 @@ static func hello_version(data: PackedByteArray) -> int:
 	return -1
 
 
-## host_secret is "" unless the client is the host that started the server with
-## its secret (D127; FT_HOST_SECRET with --host-secret-env).
+## host_secret is "" unless the client is the host that started the server (D127).
 static func hello(
 	token: String, name: String, kind: String, host_secret: String = ""
 ) -> PackedByteArray:

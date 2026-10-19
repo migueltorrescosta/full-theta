@@ -97,6 +97,10 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 func process(now_us: int) -> void:
 	for item: Array in transport.take_inbound():
 		var msg: Dictionary = item[1]
+		var from: NetSession = by_conn.get(item[0])
+		if from != null and msg["t"] in NetProtocol.RATED_REQUESTS and not from.bucket.take(now_us):
+			rejections[CommandGate.RATE_LIMITED] = rejections.get(CommandGate.RATE_LIMITED, 0) + 1
+			continue
 		var handler: Callable = _handlers.get(msg["t"], Callable())
 		if handler.is_valid():
 			handler.call(item[0], msg, now_us)

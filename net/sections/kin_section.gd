@@ -1,6 +1,6 @@
 class_name KinSection
 extends SnapshotSection
-## Own-ship kinematics (Section.KIN), absolute every snapshot (26 B): site u16, position
+## Own-ship kinematics (Section.KIN), absolute every snapshot (27 B): site u16, position
 ## 3 x s32 (1/16 m, wrapped), velocity 3 x s16, orientation u32 (smallest three),
 ## angular velocity 3 x s8. Camera, radar centre and the frame for NEAR/PROJECTILES.
 

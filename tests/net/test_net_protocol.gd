@@ -101,6 +101,24 @@ func test_hello_carries_the_protocol_version() -> void:
 	assert_str(rejected["reason"]).is_equal(NetProtocol.REJECT_VERSION)
 
 
+# FT: FT-NET-004
+# A Hello's kind must be desktop, web or bot; its name is trimmed and cut to 32 bytes of
+# UTF-8 between characters.
+func test_hello_kind_and_name_are_checked() -> void:
+	for kind: String in NetProtocol.CLIENT_KINDS:
+		assert_dict(NetProtocol.decode(NetProtocol.hello("", "Ana", kind))).is_not_empty()
+	assert_dict(NetProtocol.decode(NetProtocol.hello("", "Ana", "admin"))).is_empty()
+	assert_dict(NetProtocol.decode(NetProtocol.hello("", "Ana", ""))).is_empty()
+	var name_of: Callable = func(name: String) -> String:
+		return NetProtocol.decode(NetProtocol.hello("", name, "bot"))["name"]
+	assert_str(name_of.call("  Ana  ")).is_equal("Ana")
+	assert_str(name_of.call("x".repeat(60000))).is_equal("x".repeat(32))
+	# 31 ASCII bytes and a 2-byte letter: the letter doesn't fit and goes whole.
+	assert_str(name_of.call("a".repeat(31) + "é")).is_equal("a".repeat(31))
+	assert_str(name_of.call("é".repeat(20))).is_equal("é".repeat(16))
+	assert_str(name_of.call("a".repeat(31) + " b")).is_equal("a".repeat(31))
+
+
 # FT: FT-NET-011
 # Reliable ordered events carry their sequence number and the sim tick.
 func test_events_carry_seq_and_tick() -> void:

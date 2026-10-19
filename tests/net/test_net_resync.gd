@@ -19,9 +19,25 @@ func test_join_gets_full_then_deltas() -> void:
 	var r: NetResync = NetResync.new(15)
 	assert_int(_send(r, 1)).is_equal(FULL)
 	assert_int(_send(r, 2)).is_equal(DELTA)
-	assert_int(r.delta_base()).is_equal(1)
 	r.on_ack(2)
-	assert_int(r.delta_base()).is_equal(2)
+	assert_int(r.acked_seq).is_equal(2)
+
+
+# FT: FT-NET-037
+# A client that couldn't apply a snapshot acks -1: the next snapshot is one full one,
+# then deltas again; its acks still count.
+func test_ack_minus_one_gets_one_full_snapshot() -> void:
+	var r: NetResync = NetResync.new(NetResync.LAG_LIMIT)
+	_send(r, 1)
+	_send(r, 2)
+	r.on_ack(-1)
+	assert_int(r.acked_seq).is_equal(-1)
+	assert_bool(r.holds_events()).is_true()
+	assert_int(_send(r, 3)).is_equal(FULL)
+	assert_int(_send(r, 4)).is_equal(DELTA)
+	r.on_ack(3)
+	assert_int(r.acked_seq).is_equal(3)
+	assert_int(r.stall_count).is_equal(0)
 
 
 # FT: FT-NET-037
@@ -47,7 +63,7 @@ func test_stalled_reader_gets_no_deltas_then_one_full() -> void:
 	# Deltas follow even before the full snapshot is acknowledged.
 	for i: int in range(10):
 		assert_int(_send(r, seq + 1 + i)).is_equal(DELTA)
-	assert_int(r.full_count).is_equal(2)
+	assert_int(r.last_full_seq).is_equal(seq)
 	assert_int(r.stall_count).is_equal(1)
 	assert_bool(r.holds_events()).is_false()
 
@@ -60,8 +76,8 @@ func test_send_error_or_queue_marks_stalled() -> void:
 	assert_int(r.decide(0)).is_equal(NONE)
 	var s: NetResync = NetResync.new(15)
 	_send(s, 1)
-	assert_int(s.decide(s.queued_limit)).is_equal(DELTA)
-	assert_int(s.decide(s.queued_limit + 1)).is_equal(NONE)
+	assert_int(s.decide(NetResync.QUEUED_LIMIT)).is_equal(DELTA)
+	assert_int(s.decide(NetResync.QUEUED_LIMIT + 1)).is_equal(NONE)
 
 
 # FT: FT-NET-011

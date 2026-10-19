@@ -1,8 +1,9 @@
 class_name NetEventInbox
 extends RefCounted
 ## Client side of the reliable event stream (FT-NET-011, FT-NET-037): delivers
-## events in sequence order exactly once, whether they come alone or inside a
-## full snapshot. Promoted from S4EventInbox (T041).
+## events in sequence order exactly once, though a new connection gets every
+## unacknowledged event again (NetEventOutbox.restart). Promoted from S4EventInbox
+## (T041).
 
 var last_seq: int = 0
 var duplicates: int = 0

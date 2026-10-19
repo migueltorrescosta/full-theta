@@ -62,10 +62,6 @@ static func pos_of(p: Vector3i) -> Vector3:
 	return Vector3(p) / POS_Q
 
 
-static func vel_of(v: Vector3i) -> Vector3:
-	return Vector3(v) / VEL_Q
-
-
 static func ang_of(w: Vector3i) -> Vector3:
 	return Vector3(w) / ANG_Q
 

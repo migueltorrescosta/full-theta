@@ -21,7 +21,9 @@ var tol_units: int = 8
 var model: Dictionary = {}
 ## id -> [int flags, String callsign].
 var info: Dictionary = {}
-var records_sent: int = 0
+## The ship ids the faction knows at this snapshot (known(); SnapshotBuilder sets them
+## before update(), once per faction).
+var ids: PackedInt32Array = PackedInt32Array()
 var _tick: int = 0
 var _p_units: int = 0
 
@@ -50,7 +52,6 @@ func update(world: SimWorld) -> PackedByteArray:
 	buf.put_u16(0)
 	var n: int = 0
 	var seen: Dictionary = {}
-	var ids: PackedInt32Array = known(world, owner)
 	for id: int in ids:
 		seen[id] = true
 		var at: PackedFloat64Array = kin.point_at(id, Vector3.ZERO)
@@ -90,7 +91,6 @@ func update(world: SimWorld) -> PackedByteArray:
 	put_gone(buf, gone, model)
 	for id: int in gone:
 		info.erase(id)
-	records_sent += n
 	var end: int = buf.get_position()
 	buf.seek(0)
 	buf.put_u16(n)

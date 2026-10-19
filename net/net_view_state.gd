@@ -27,26 +27,27 @@ var ownership: Dictionary = {}
 var kinds: Array[int] = []
 ## Deltas that couldn't be applied (no base, a gap, a corrupt record).
 var rejected: int = 0
+## A snapshot couldn't be applied: deltas are refused until the next full snapshot,
+## which NetClient asks for (Ack snap -1).
+var need_full: bool = false
 
 
 func _init(period_units: int = 0) -> void:
 	p_units = period_units
 
 
-## Applies one snapshot message; false if it couldn't be applied (the client then
-## needs a full snapshot; the server sends one after a stall).
+## Applies one snapshot message; false if it couldn't be applied: the view then needs
+## a full snapshot (need_full) and refuses deltas until one arrives.
 func apply(data: PackedByteArray) -> bool:
 	if data.size() < SnapshotBuilder.HEADER_BYTES or data[0] != NetProtocol.Type.SNAPSHOT:
-		rejected += 1
-		return false
+		return _reject()
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.data_array = data
 	buf.seek(1)
 	var is_full: bool = buf.get_u8() & SnapshotBuilder.FLAG_FULL != 0
 	var new_seq: int = buf.get_u32()
-	if not is_full and (seq < 0 or new_seq != seq + 1):
-		rejected += 1
-		return false
+	if not is_full and (need_full or seq < 0 or new_seq != seq + 1):
+		return _reject()
 	var new_tick: int = buf.get_u32()
 	var n: int = buf.get_u8()
 	if is_full:
@@ -60,17 +61,18 @@ func apply(data: PackedByteArray) -> bool:
 		full_count += 1
 	for i: int in range(n):
 		var kind: int = buf.get_u8()
-		var size: int = buf.get_u16()
+		var size: int = SnapshotBuilder.get_length(buf)
 		var start: int = buf.get_position()
+		if start + size > data.size():
+			return _reject()
 		if not _apply_section(kind, buf, data.slice(start, start + size), is_full, new_tick):
-			rejected += 1
-			seq = -1
-			return false
+			return _reject()
 		if is_full:
 			kinds.append(kind)
 		buf.seek(start + size)
 	seq = new_seq
 	tick = new_tick
+	need_full = false
 	return true
 
 
@@ -104,6 +106,12 @@ func contact_position(id: int) -> Vector3:
 func callsign(id: int) -> String:
 	var info: Dictionary = contacts.get("info", {})
 	return info[id][1] if info.has(id) else ""
+
+
+func _reject() -> bool:
+	rejected += 1
+	need_full = true
+	return false
 
 
 func _apply_section(

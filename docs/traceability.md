@@ -55,7 +55,7 @@ Tests: 138, manual: 11, pending: 252.
 | FT-NET-011 | tests | `tests/net/test_net_protocol.gd`, `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-012 | tests | `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_server.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-013 | tests | `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_parse_address.gd`, `tests/net/test_lan_server.gd` |
-| FT-NET-014 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_net_reconnect_l3.gd` |
+| FT-NET-014 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd` |
 | FT-NET-016 | tests | `tests/net/test_net_lobby_l3.gd` |
 | FT-NET-017 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd` |
@@ -75,7 +75,7 @@ Tests: 138, manual: 11, pending: 252.
 | FT-NET-031 | tests | `tests/net/test_lan_no_internet.gd` |
 | FT-NET-032 | pending |  |
 | FT-NET-033 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_resync.gd` |
-| FT-NET-034 | tests | `tests/net/test_net_pause_l3.gd` |
+| FT-NET-034 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-035 | tests | `tests/net/test_net_pause_l3.gd` |
 | FT-NET-036 | tests | `tests/net/test_net_pause_l3.gd` |
 | FT-NET-037 | tests | `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |

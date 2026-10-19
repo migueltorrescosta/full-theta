@@ -20,6 +20,9 @@ const STREAM_VOICE: int = 2
 ## Largest message accepted, as `WebSocketPeer.encode_buffer_max_size` (8 MiB).
 const MAX_MESSAGE_SIZE: int = 8 * 1024 * 1024
 
+## Largest message this receiver reassembles; the server lowers it for clients
+## (NetTransport.MAX_CLIENT_MESSAGE).
+var max_message_size: int = MAX_MESSAGE_SIZE
 ## Malformed or dropped chunks seen so far.
 var errors: int = 0
 
@@ -96,7 +99,7 @@ func feed_packet(packet: PackedByteArray) -> Array[Dictionary]:
 ## Feeds one chunk. Returns {} until a message is complete, then {"stream", "msg_id",
 ## "data"}. A malformed chunk (short header, a length that disagrees with the chunk,
 ## count 0, index out of range or out of order, a count that changes mid-message, a
-## message over MAX_MESSAGE_SIZE) counts as an error and drops the stream's partial
+## message over max_message_size) counts as an error and drops the stream's partial
 ## message.
 func feed(chunk: PackedByteArray) -> Dictionary:
 	if chunk.size() < HEADER_SIZE or chunk.decode_u16(9) != chunk.size() - HEADER_SIZE:
@@ -122,7 +125,7 @@ func feed(chunk: PackedByteArray) -> Dictionary:
 	var data: PackedByteArray = PackedByteArray() if part.is_empty() else part[3]
 	part.clear()
 	data.append_array(chunk.slice(HEADER_SIZE))
-	if data.size() > MAX_MESSAGE_SIZE:
+	if data.size() > max_message_size:
 		errors += 1
 		return {}
 	if index + 1 < count:
