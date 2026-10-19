@@ -150,26 +150,53 @@ static func _hold(world: SimWorld, id: int) -> void:
 
 
 ## ATTACK and KEEP_RANGE: face the lead point, hold the middle of the engage band, shoot.
-## rel is the target's offset (m, kin.relative).
+## rel is the target's offset (m, kin.relative). Hot path: lead_aim, closing_speed and
+## _aim_and_fire's geometry inlined, with the same arithmetic in the same order.
 static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void:
-	var mounts: Array[MountDef] = world.defs[id].mounts
-	# The first mount's lead point, shared by the face point and its aim.
-	var aim0: Vector3 = Vector3.INF
-	if not mounts.is_empty():
-		aim0 = lead_aim(world, id, 0, target, 1)
-	_select_face_point(world, id, target, aim0)
 	var kin: Kinematics = world.kin
 	var ai: AiTable = world.ai
+	var def: ShipDef = world.defs[id]
+	var mounts: Array[MountDef] = def.mounts
+	var q: Quaternion = kin.rot[id]
+	var own_vel: Vector3 = kin.vel[id]
+	var target_vel: Vector3 = kin.vel[target]
+	var rel_vel: Vector3 = target_vel - own_vel
+	# Each mount's muzzle (site frame, from the centre) and lead point (lead_aim, one
+	# tick ahead), Vector3.INF without a solution.
+	var muzzles: PackedVector3Array = PackedVector3Array()
+	var aims: PackedVector3Array = PackedVector3Array()
+	for mount: MountDef in mounts:
+		var muzzle: Vector3 = q * mount.position
+		var r: Vector3 = rel - muzzle + rel_vel * (1 * SimWorld.DT)
+		var t: float = Lead.intercept_time(r, rel_vel, mount.weapon.projectile_speed)
+		muzzles.append(muzzle)
+		aims.append(Vector3.INF if t < 0.0 else muzzle + (r + rel_vel * t))
+	_select_face_point(world, id, target, Vector3.INF if mounts.is_empty() else aims[0])
 	var dist: float = rel.length()
-	var los: Vector3 = rel / dist if dist > 0.0 else kin.forward(id)
+	var forward: Vector3 = q * Vector3.FORWARD
+	var los: Vector3 = rel / dist if dist > 0.0 else forward
 	var gap: float = dist - 0.5 * (ai.engage_range_min[id] + ai.engage_range_max[id])
 	# Wanted own velocity along the line of sight: the target's plus a closing speed.
-	var along: float = closing_speed(world, id, gap) + kin.vel[target].dot(los)
-	_helm_input(world, id, true, along * kin.forward(id).dot(los))
+	var along: float = closing_speed(world, id, gap) + target_vel.dot(los)
+	_helm_input(world, id, true, along * forward.dot(los))
 	for m: int in mounts.size():
-		_aim_and_fire(
-			world, id, m, target, dist, aim0 if m == 0 else lead_aim(world, id, m, target, 1)
-		)
+		var aim: Vector3 = aims[m]
+		if not aim.is_finite():
+			continue
+		# The ship moves two ticks before WeaponSystem reads the point (it applies next
+		# tick, and the weapons run after the integrator), so the point moves with it.
+		var c: AimMountCommand = AimMountCommand.new()
+		c.mount_index = m
+		var p: PackedFloat64Array = kin.point_at(id, aim + own_vel * (2.0 * SimWorld.DT))
+		c.aim_x = p[0]
+		c.aim_y = p[1]
+		c.aim_z = p[2]
+		_submit(world, id, c)
+		var shot: Vector3 = aim - muzzles[m]
+		if _shot_good(world, id, m, target, dist, shot, shot.length()):
+			var fire: FireCommand = FireCommand.new()
+			fire.mount_index = m
+			_submit(world, id, fire)
 
 
 ## Selects the first mount's lead aim point (aim, Vector3.INF for none) as Helm's point
@@ -296,31 +323,6 @@ static func lead_aim(world: SimWorld, id: int, m: int, target: int, ticks_ahead:
 	if t < 0.0:
 		return Vector3.INF
 	return muzzle + Lead.aim_point(rel, rel_vel, t)
-
-
-## Aims the mount at its lead intercept point aim (lead_aim) and fires when the shot is
-## good.
-static func _aim_and_fire(
-	world: SimWorld, id: int, m: int, target: int, dist: float, aim: Vector3
-) -> void:
-	var kin: Kinematics = world.kin
-	if not aim.is_finite():
-		return
-	# The ship moves two ticks before WeaponSystem reads the point (it applies next tick,
-	# and the weapons run after the integrator), so the point moves with it.
-	var point: Vector3 = aim + kin.vel[id] * (2.0 * SimWorld.DT)
-	var c: AimMountCommand = AimMountCommand.new()
-	c.mount_index = m
-	var p: PackedFloat64Array = kin.point_at(id, point)
-	c.aim_x = p[0]
-	c.aim_y = p[1]
-	c.aim_z = p[2]
-	_submit(world, id, c)
-	var shot: Vector3 = aim - kin.to_world(id, world.defs[id].mounts[m].position)
-	if _shot_good(world, id, m, target, dist, shot, shot.length()):
-		var fire: FireCommand = FireCommand.new()
-		fire.mount_index = m
-		_submit(world, id, fire)
 
 
 ## The fire rule: an identified hostile within engage_range_max and the weapon's

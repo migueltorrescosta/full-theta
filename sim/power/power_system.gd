@@ -14,33 +14,63 @@ static func step(world: SimWorld) -> void:
 	var t: PowerTable = world.power
 	var kin: Kinematics = world.kin
 	var d: DamageTable = world.damage
-	# Effective pips per subsystem of the ship being stepped (reused buffer).
+	# Effective pips and heat of the ship being stepped (reused buffers).
 	var eff_pips: PackedInt32Array = PackedInt32Array()
-	# Read-only here (hoisted: member access on another object is slow).
+	var heats: PackedFloat64Array = PackedFloat64Array()
+	# Columns read through locals (member access on another object is slow). pips are
+	# not written here. heat and fault_armed are: each row is read once, before its own
+	# write, so the values as of the start of the step are the right ones.
 	var alive: PackedByteArray = kin.alive
 	var pips: PackedInt32Array = d.pips
+	var heat0: PackedFloat64Array = d.heat
+	var armed0: PackedByteArray = d.fault_armed
 	var defs: Array[ShipDef] = world.defs
 	for s: int in t.size():
 		if alive[s] != 1:
 			continue
 		var def: ShipDef = defs[s]
+		var pd: PowerDef = def.power
 		var subs: Array[SubsystemDef] = def.subsystems
 		var n: int = subs.size()
 		var first: int = d.subsystem_row(s, 0)
 		var boosting: bool = t.boost_ticks[s] > 0
 		eff_pips.resize(n)
+		heats.resize(n)
 		for i: int in n:
 			var sd: SubsystemDef = subs[i]
 			var kind: int = sd.kind
+			var r: int = first + i
 			var boosted: bool = (
 				boosting
 				and (kind == SubsystemDef.Kind.ENGINES or kind == SubsystemDef.Kind.THRUSTERS)
 			)
-			var p: int = def.power.max_pips_per_subsystem if boosted else pips[first + i]
+			var p: int = pd.max_pips_per_subsystem if boosted else pips[r]
 			eff_pips[i] = p
-			_step_heat_row(world, s, i, sd, first + i, p)
+			# Heat for one tick (FT-SIM-026): dT/dt = heat_per_overcharge_pip * overcharge
+			# - heat_dissipation * T, stepped exactly. No overcharge and no heat stays
+			# exactly 0 (both branches give 0.0), so that case skips the update.
+			var q: float = sd.heat_per_overcharge_pip * maxi(p - sd.nominal_pips, 0)
+			var h: float = heat0[r]
+			if q != 0.0 or h != 0.0:
+				var k: float = sd.heat_dissipation
+				if k > 0.0:
+					h = q / k + (h - q / k) * exp(-k * SimWorld.DT)
+				else:
+					h += q * SimWorld.DT
+				d.heat[r] = h
+			heats[i] = h
+			# Past fault_heat_threshold a fault damages the subsystem once; it re-arms
+			# below FAULT_REARM of the threshold.
+			var threshold: float = sd.fault_heat_threshold
+			if h > threshold and armed0[r] == 1:
+				d.fault_armed[r] = 0
+				DamageSystem.damage_subsystem(world, s, i, sd.heat_fault_damage)
+				world.emit(&"fault", s, -1, h, Vector3.ZERO, sd.id)
+			elif h < threshold * FAULT_REARM and armed0[r] == 0:
+				d.fault_armed[r] = 1
 		# Per kind, in subsystem order (the sums and maxima of power_ratio,
 		# kind_effectiveness and heat_ratio, after this tick's heat and faults).
+		var health: PackedFloat64Array = d.health
 		var weapon_pips: int = 0
 		var eng_pips: int = 0
 		var eng_nominal: int = 0
@@ -60,30 +90,22 @@ static func step(world: SimWorld) -> void:
 				SubsystemDef.Kind.ENGINES:
 					eng_pips += eff_pips[i]
 					eng_nominal += sd.nominal_pips
-					eng_eff += curve_at(sd.effectiveness, d.health[first + i] / sd.health_max)
+					eng_eff += curve_at(sd.effectiveness, health[first + i] / sd.health_max)
 					eng_n += 1
-					eng_heat = maxf(eng_heat, d.heat[first + i] / sd.fault_heat_threshold)
+					eng_heat = maxf(eng_heat, heats[i] / sd.fault_heat_threshold)
 				SubsystemDef.Kind.THRUSTERS:
 					thr_pips += eff_pips[i]
 					thr_nominal += sd.nominal_pips
-					thr_eff += curve_at(sd.effectiveness, d.health[first + i] / sd.health_max)
+					thr_eff += curve_at(sd.effectiveness, health[first + i] / sd.health_max)
 					thr_n += 1
-					thr_heat = maxf(thr_heat, d.heat[first + i] / sd.fault_heat_threshold)
-		var charge: float = (
-			def.power.reactor_output * weapon_pips / def.power.reactor_pips * SimWorld.DT
-		)
-		t.weapon_energy[s] = minf(t.weapon_energy[s] + charge, def.power.weapons_capacity)
+					thr_heat = maxf(thr_heat, heats[i] / sd.fault_heat_threshold)
+		var charge: float = pd.reactor_output * weapon_pips / pd.reactor_pips * SimWorld.DT
+		t.weapon_energy[s] = minf(t.weapon_energy[s] + charge, pd.weapons_capacity)
 		kin.thrust_scale[s] = envelope(
-			def.power,
-			_ratio(eng_pips, eng_nominal),
-			eng_eff / eng_n if eng_n > 0 else 1.0,
-			eng_heat
+			pd, _ratio(eng_pips, eng_nominal), eng_eff / eng_n if eng_n > 0 else 1.0, eng_heat
 		)
 		kin.torque_scale[s] = envelope(
-			def.power,
-			_ratio(thr_pips, thr_nominal),
-			thr_eff / thr_n if thr_n > 0 else 1.0,
-			thr_heat
+			pd, _ratio(thr_pips, thr_nominal), thr_eff / thr_n if thr_n > 0 else 1.0, thr_heat
 		)
 		# Last, so a boost of n ticks raises heat and the envelope for exactly n ticks.
 		if boosting:
@@ -247,33 +269,6 @@ static func subsystem_index(def: ShipDef, kind: int) -> int:
 		if def.subsystems[i].kind == kind:
 			return i
 	return -1
-
-
-## Heat for one tick of subsystem i (definition sd, damage row r) drawing pips now:
-## dT/dt = heat_per_overcharge_pip * overcharge - heat_dissipation * T, stepped exactly;
-## past fault_heat_threshold a fault damages the subsystem once (FT-SIM-026).
-static func _step_heat_row(
-	world: SimWorld, s: int, i: int, sd: SubsystemDef, r: int, pips: int
-) -> void:
-	var over: int = maxi(pips - sd.nominal_pips, 0)
-	var q: float = sd.heat_per_overcharge_pip * over
-	var d: DamageTable = world.damage
-	var h: float = d.heat[r]
-	# No overcharge and no heat stays exactly 0 (both branches below give 0.0).
-	if q != 0.0 or h != 0.0:
-		var k: float = sd.heat_dissipation
-		if k > 0.0:
-			h = q / k + (h - q / k) * exp(-k * SimWorld.DT)
-		else:
-			h += q * SimWorld.DT
-		d.heat[r] = h
-	var threshold: float = sd.fault_heat_threshold
-	if h > threshold and d.fault_armed[r] == 1:
-		d.fault_armed[r] = 0
-		DamageSystem.damage_subsystem(world, s, i, sd.heat_fault_damage)
-		world.emit(&"fault", s, -1, h, Vector3.ZERO, sd.id)
-	elif h < threshold * FAULT_REARM and d.fault_armed[r] == 0:
-		d.fault_armed[r] = 1
 
 
 ## Pips over nominal pips (dimensionless), 1 when the nominal is 0.
