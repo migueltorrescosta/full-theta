@@ -6,7 +6,9 @@ extends RefCounted
 ## Subclasses keep their parameters in plain typed script variables, which to_dict()
 ## and SimCommands.from_dict() round-trip for the command log (FT-ARC-008).
 
-enum Source { CREW, AI }
+## CREW: a station; AI: the enemy AI (regenerated on replay, not logged); SERVER: the
+## run itself, e.g. a per-ship reset (logged like CREW).
+enum Source { CREW, AI, SERVER }
 
 var ship_id: int = -1
 ## Tick the command was applied on; -1 until applied.
@@ -25,6 +27,11 @@ func kind() -> StringName:
 ## Applies the command; returns false to reject it (crew commands are logged either way,
 ## with the result in `accepted`).
 func apply(_world: SimWorld) -> bool:
+	return false
+
+
+## Whether it applies to a destroyed ship; the World drops other commands for one.
+func applies_to_destroyed() -> bool:
 	return false
 
 

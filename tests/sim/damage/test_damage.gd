@@ -131,10 +131,11 @@ func test_unknown_subsystem_is_fully_effective() -> void:
 	assert_float(DamageSystem.effectiveness(w, 0, &"hull")).is_equal(1.0)
 
 
-# FT: FT-SIM-030
+# FT: FT-SIM-030, FT-SIM-020
 # A hull at 0 destroys the ship once (alive 0, one &"destroyed" naming the source); a
 # subsystem at 0 emits &"subsystem_destroyed"; later hits change nothing. 1.2e8 J splits
-# 6e7 to the raider's weapons (2e7) and 6e7 to its hull (5e7).
+# 6e7 to the raider's subsystems and 6e7 to its hull (5e7); the 6e7 destroys weapons,
+# then the next-nearest sensors and shields (2e7 each, D123).
 func test_hull_zero_destroys_ship_with_events() -> void:
 	var w: SimWorld = _world()
 	w.drain_events()
@@ -142,14 +143,14 @@ func test_hull_zero_destroys_ship_with_events() -> void:
 	assert_bool(w.kin.is_alive(1)).is_false()
 	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal(0.0)
 	var events: Array[SimEvent] = w.drain_events()
-	assert_array(_kinds(events)).is_equal(
-		[&"subsystem_damaged", &"subsystem_destroyed", &"destroyed"]
-	)
-	assert_str(String(events[0].tag)).is_equal("weapons")
+	var pair: Array = [&"subsystem_damaged", &"subsystem_destroyed"]
+	assert_array(_kinds(events)).is_equal(pair + pair + pair + [&"destroyed"])
+	var tags: Array = events.slice(0, 6, 2).map(func(e: SimEvent) -> String: return e.tag)
+	assert_array(tags).is_equal(["weapons", "sensors", "shields"])
 	assert_float(events[0].value).is_equal(0.0)
-	assert_int(events[2].ship_id).is_equal(1)
-	assert_int(events[2].faction).is_equal(2)
-	assert_int(events[2].other_id).is_equal(1)
+	assert_int(events[6].ship_id).is_equal(1)
+	assert_int(events[6].faction).is_equal(2)
+	assert_int(events[6].other_id).is_equal(1)
 	DamageSystem.apply_hit(w, _hit(1, Vector3.ZERO, 1e6), 1e6)
 	assert_array(w.drain_events()).is_empty()
 
@@ -173,7 +174,9 @@ func test_subsystem_damaged_event_fields() -> void:
 	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(0.98, 1e-12)
 
 
-# damage_subsystem (heat faults) damages only the named subsystem, not the hull.
+# damage_subsystem (heat faults) damages only the named subsystem, not the hull: its
+# overkill is dropped, not passed on, and a fault on a destroyed subsystem changes
+# nothing (D123 covers hits only).
 func test_damage_subsystem_direct() -> void:
 	var w: SimWorld = _world()
 	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"thrusters"), 5e6)
@@ -182,6 +185,93 @@ func test_damage_subsystem_direct() -> void:
 	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"thrusters"), 1e9)
 	assert_float(_health(w, 0, &"thrusters")).is_equal(0.0)
 	assert_float(DamageSystem.effectiveness(w, 0, &"thrusters")).is_equal(0.0)
+	var before: Array = w.damage.columns()
+	w.drain_events()
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"thrusters"), 1e6)
+	assert_array(w.damage.columns()).is_equal(before)
+	assert_array(w.drain_events()).is_empty()
+	for id: StringName in [&"engines", &"weapons", &"shields", &"sensors", &"reactor"]:
+		assert_float(_health(w, 0, id)).is_equal(2e7)
+
+
+# FT: FT-SIM-020
+# A destroyed nearest subsystem passes its whole share on (D123): with the weapons at 0,
+# a 4e6 J bow hit (shields not involved) takes 2e6 J off the next-nearest subsystem,
+# sensors, and 2e6 J off the hull; nothing else changes and no event names the weapons.
+func test_destroyed_nearest_passes_share_to_next() -> void:
+	var w: SimWorld = _world()
+	_set_health_fraction(w, 0, &"weapons", 0.0)
+	w.drain_events()
+	DamageSystem.apply_hit(w, _hit(0, Vector3(0, 0, -30), 4e6), 4e6)
+	assert_float(_health(w, 0, &"weapons")).is_equal(0.0)
+	assert_float(_health(w, 0, &"sensors")).is_equal_approx(1.8e7, 1e-6)
+	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(0.98, 1e-12)
+	for id: StringName in [&"engines", &"thrusters", &"shields", &"reactor"]:
+		assert_float(_health(w, 0, id)).is_equal(2e7)
+	var events: Array[SimEvent] = w.drain_events()
+	assert_array(_kinds(events)).is_equal([&"subsystem_damaged"])
+	assert_str(String(events[0].tag)).is_equal("sensors")
+
+
+# FT: FT-SIM-020
+# Overkill cascades (D123): with weapons at 1e6 J, sensors at 2e6 J and every other
+# subsystem destroyed, a 4e7 J bow hit's 2e7 J share destroys weapons (1e6), then
+# sensors (2e6), and the 1.7e7 J left goes to the hull with its own 2e7 J: 3.7e7 J.
+func test_overkill_cascades_across_subsystems_then_hull() -> void:
+	var w: SimWorld = _world()
+	for id: StringName in [&"engines", &"thrusters", &"shields", &"reactor"]:
+		_set_health_fraction(w, 0, id, 0.0)
+	_set_health_fraction(w, 0, &"weapons", 0.05)
+	_set_health_fraction(w, 0, &"sensors", 0.1)
+	w.drain_events()
+	DamageSystem.apply_hit(w, _hit(0, Vector3(0, 0, -30), 4e7), 4e7)
+	assert_float(_health(w, 0, &"weapons")).is_equal(0.0)
+	assert_float(_health(w, 0, &"sensors")).is_equal(0.0)
+	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(0.63, 1e-12)
+	assert_bool(w.kin.is_alive(0)).is_true()
+	var events: Array[SimEvent] = w.drain_events()
+	var tags: Array = events.map(func(e: SimEvent) -> String: return "%s %s" % [e.kind, e.tag])
+	(
+		assert_array(tags)
+		. is_equal(
+			[
+				"subsystem_damaged weapons",
+				"subsystem_destroyed weapons",
+				"subsystem_damaged sensors",
+				"subsystem_destroyed sensors",
+			]
+		)
+	)
+
+
+## Total health (J) over every damage row of the ship: hull and subsystems.
+func _total_health(w: SimWorld, ship: int) -> float:
+	var total: float = 0.0
+	for r: int in w.damage.rows_of(ship):
+		total += w.damage.health[r]
+	return total
+
+
+# FT: FT-SIM-020
+# Through HitResolver with the shields up, the damage taken over the hull and every
+# subsystem equals the energy past the shields (D123), here with the weapons and sensors
+# nearly destroyed so the share overflows into shields. Tolerance 1e-6 J: a few 64-bit
+# sums near 2e8 J (ulp about 3e-8 J).
+func test_total_damage_equals_energy_past_shields() -> void:
+	var w: SimWorld = _world()
+	_set_health_fraction(w, 0, &"weapons", 0.01)
+	_set_health_fraction(w, 0, &"sensors", 0.01)
+	var hit: SimHit = _hit(0, Vector3(0, 0, -30), 4e7)
+	hit.from_local = Vector3(0, 0, -1)
+	var through: float = 4e7 * (1.0 - ShieldSystem.absorb_fraction(w, 0, hit.from_local))
+	assert_float(0.5 * through).is_greater(4e5)
+	var before: float = _total_health(w, 0)
+	w.hits.append(hit)
+	HitResolver.resolve(w)
+	assert_float(before - _total_health(w, 0)).is_equal_approx(through, 1e-6)
+	assert_float(_health(w, 0, &"weapons")).is_equal(0.0)
+	assert_float(_health(w, 0, &"sensors")).is_equal(0.0)
+	assert_float(_health(w, 0, &"shields")).is_less(2e7)
 
 
 # Damage is a function of the hit and the state only: worlds with different seeds take

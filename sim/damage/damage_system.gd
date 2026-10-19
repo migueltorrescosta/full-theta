@@ -38,20 +38,26 @@ static func step(world: SimWorld) -> void:
 						world.emit(&"repair_finished", ship, -1, c, s.position, s.id)
 
 
-## Applies the energy that passed the shields, split between the subsystem nearest the
-## impact point (subsystem_damage_share of it) and the hull (the rest); a ship without
-## subsystems puts it all on the hull (FT-SIM-020, owner decision Q5 B).
+## Applies the energy that passed the shields, split between the subsystems
+## (subsystem_damage_share of it) and the hull (the rest); a ship without subsystems puts
+## it all on the hull (FT-SIM-020, D116, owner decision Q5 B). The subsystem share goes
+## to the live subsystem nearest the impact point; what it can't absorb (the part beyond
+## its remaining health) passes to the next-nearest live one, and so on, then to the
+## hull when none is left, so hull and subsystems together take the whole energy (D123).
 static func apply_hit(world: SimWorld, hit: SimHit, energy: float) -> void:
 	var ship: int = hit.target_id
 	if energy <= 0.0 or not world.kin.is_alive(ship):
 		return
 	var def: ShipDef = world.defs[ship]
-	var i: int = nearest_subsystem(def, hit.point_local)
-	var to_hull: float = energy
-	if i >= 0:
-		var to_subsystem: float = energy * def.subsystem_damage_share
-		to_hull -= to_subsystem
-		_damage_row(world, ship, i, to_subsystem, hit.source_id)
+	var left: float = energy * def.subsystem_damage_share if def.subsystems.size() > 0 else 0.0
+	var to_hull: float = energy - left
+	# Each pass either absorbs the rest or destroys a subsystem, so this ends (D123).
+	while left > 0.0:
+		var i: int = _nearest_live(world, ship, hit.point_local)
+		if i < 0:
+			break
+		left = _damage_row(world, ship, i, left, hit.source_id)
+	to_hull += left
 	var t: DamageTable = world.damage
 	var h: int = t.hull_row(ship)
 	t.health[h] = maxf(0.0, t.health[h] - to_hull)
@@ -100,7 +106,9 @@ static func hull_fraction(world: SimWorld, ship_id: int) -> float:
 
 ## Damages the ship's subsystem with that index in ShipDef.subsystems directly (heat
 ## faults, FT-SIM-026). The &"subsystem_damaged" event carries the subsystem id as its
-## tag; the caller reports the cause in its own fault event.
+## tag; the caller reports the cause in its own fault event. A fault damages only the
+## subsystem that overheated: on a destroyed subsystem it changes nothing, and damage
+## beyond its remaining health is dropped, not passed on (D123 covers hits only).
 static func damage_subsystem(world: SimWorld, ship_id: int, i: int, energy: float) -> void:
 	_damage_row(world, ship_id, i, energy, -1)
 
@@ -140,19 +148,41 @@ static func recall(world: SimWorld, ship_id: int, crew: int) -> bool:
 	return true
 
 
+## Damages one subsystem by up to its remaining health; returns the energy it couldn't
+## absorb (all of it once destroyed, D123).
 static func _damage_row(
 	world: SimWorld, ship_id: int, index: int, energy: float, source_id: int
-) -> void:
+) -> float:
 	var t: DamageTable = world.damage
 	var r: int = t.subsystem_row(ship_id, index)
 	if energy <= 0.0 or t.health[r] <= 0.0:
-		return
+		return maxf(0.0, energy)
 	var s: SubsystemDef = world.defs[ship_id].subsystems[index]
+	var overflow: float = maxf(0.0, energy - t.health[r])
 	t.health[r] = maxf(0.0, t.health[r] - energy)
 	var frac: float = t.health[r] / s.health_max
 	world.emit(&"subsystem_damaged", ship_id, source_id, frac, s.position, s.id)
 	if t.health[r] <= 0.0:
 		world.emit(&"subsystem_destroyed", ship_id, source_id, 0.0, s.position, s.id)
+	return overflow
+
+
+## Index of the live subsystem (health above 0) nearest the point (ship frame), or -1
+## when none is live; the lower index wins a tie, as in nearest_subsystem (D123).
+static func _nearest_live(world: SimWorld, ship_id: int, point_local: Vector3) -> int:
+	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
+	var health: PackedFloat64Array = world.damage.health
+	var first: int = world.damage.subsystem_row(ship_id, 0)
+	var best: int = -1
+	var best_d2: float = INF
+	for i: int in subs.size():
+		if health[first + i] <= 0.0:
+			continue
+		var d2: float = subs[i].position.distance_squared_to(point_local)
+		if d2 < best_d2:
+			best = i
+			best_d2 = d2
+	return best
 
 
 ## The definition of the subsystem on a damage table row.

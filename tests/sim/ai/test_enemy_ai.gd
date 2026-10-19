@@ -286,9 +286,95 @@ func test_reset_keeps_ai_and_clears_mode() -> void:
 	assert_bool(world.ai.is_enabled(0)).is_false()
 	assert_bool(world.ai.is_enabled(1)).is_true()
 	assert_int(world.ai.target[1]).is_equal(0)
-	world.reset_ship(1, 0, Vector3(0, 0, -2500))
+	world.reset_ship(1, 0, 0.0, 0.0, -2500.0)
 	assert_bool(world.ai.is_enabled(1)).is_true()
 	assert_float(world.ai.engage_range_max[1]).is_equal(3000.0)
 	assert_float(world.ai.fire_cone[1]).is_equal(0.05)
 	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.HOLD)
 	assert_int(world.ai.target[1]).is_equal(-1)
+
+
+## Corvette id 0 at `threat`, raider id 1 at `raider` (bow along `bow`) in RETREAT
+## (hull at 20 %, below its 25 % threshold) from the first tick; steps `seconds`,
+## asserting every tick that the raider stays within MAX_OFFSET per axis, and returns
+## the raider's offsets after each second.
+func _edge_retreat(
+	threat: Vector3, raider: Vector3, seconds: int, bow: Quaternion = Quaternion.IDENTITY
+) -> Array[Vector3]:
+	var world: SimWorld = SimWorld.new(23)
+	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, 0, threat)
+	world.spawn_enemy(TestDefs.raider_enemy(), RAIDER_FACTION, 0, raider, bow)
+	world.damage.health[world.damage.hull_row(1)] = 0.2 * world.defs[1].hull_max
+	var track: Array[Vector3] = []
+	var worst: float = 0.0
+	for n: int in seconds * HZ:
+		world.step()
+		var k: Kinematics = world.kin
+		worst = maxf(worst, maxf(absf(k.px[1]), maxf(absf(k.py[1]), absf(k.pz[1]))))
+		if (n + 1) % HZ == 0:
+			track.append(Vector3(k.px[1], k.py[1], k.pz[1]))
+	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.RETREAT)
+	assert_float(worst).is_less_equal(Kinematics.MAX_OFFSET)
+	return track
+
+
+# FT: FT-SIM-035, FT-SIM-027
+# A raider 17 km from the +X site edge retreating from a corvette 8 km behind it on -X
+# and 3 km off on +Z, for 150 s (at its 300 m/s it would cross the edge within 70 s):
+# it never leaves the site grid and turns along the edge, still opening the distance:
+# it ends short of the edge limit (MAX_OFFSET - RETREAT_EDGE_MARGIN; measured 196.8 km,
+# closing on it slowly), 15 km or more farther on -Z than it started (measured 33 km),
+# and every 10 s farther from the corvette than before.
+func test_retreat_runs_along_the_site_edge() -> void:
+	var threat: Vector3 = Vector3(175000.0, 0.0, 0.0)
+	var start: Vector3 = Vector3(183000.0, 0.0, -3000.0)
+	var track: Array[Vector3] = _edge_retreat(threat, start, 150)
+	var last: Vector3 = track[-1]
+	var limit: float = Kinematics.MAX_OFFSET - EnemyAi.RETREAT_EDGE_MARGIN
+	assert_float(last.x).is_between(start.x, limit)
+	assert_float(last.z).is_less(start.z - 15000.0)
+	for s: int in range(10, track.size(), 10):
+		var msg: String = "not opening the distance at %d s" % (s + 1)
+		assert_float(track[s].distance_to(threat)).override_failure_message(msg).is_greater(
+			track[s - 10].distance_to(threat)
+		)
+
+
+# FT: FT-SIM-035, FT-SIM-027
+# Retreating straight out of the +X face (the corvette 8 km behind on -X, the raider's
+# bow already on +X so it doesn't drift sideways while turning) leaves no direction
+# along the edge: the raider brakes onto the point RETREAT_EDGE_MARGIN inside MAX_OFFSET
+# and holds there (within 50 m of it, moving less than 2 m in the last second), never
+# leaving the site grid, over 120 s.
+func test_retreat_straight_out_brakes_at_the_edge() -> void:
+	var bow_out: Quaternion = Quaternion(Vector3.UP, -PI / 2.0)
+	var track: Array[Vector3] = _edge_retreat(
+		Vector3(175000.0, 0.0, 0.0), Vector3(183000.0, 0.0, 0.0), 120, bow_out
+	)
+	var limit: float = Kinematics.MAX_OFFSET - EnemyAi.RETREAT_EDGE_MARGIN
+	assert_float(track[-1].x).is_equal_approx(limit, 50.0)
+	assert_float(track[-1].distance_to(track[-2])).is_less(2.0)
+
+
+# FT: FT-SIM-035
+# retreat_offset keeps the point inside the edge limit and puts the rest of the distance
+# along the free axes: in open space it is RETREAT_POINT_DISTANCE along away; 1 km from
+# the +X limit heading out at 45 deg to +Z, it stops at the limit on X and goes on
+# along +Z for the rest; heading straight out it stops at the limit straight ahead.
+func test_retreat_offset_projects_onto_the_edge() -> void:
+	var world: SimWorld = SimWorld.new(1)
+	world.spawn_ship(TestDefs.raider(), RAIDER_FACTION, 0, Vector3.ZERO)
+	var d: float = EnemyAi.RETREAT_POINT_DISTANCE
+	var away: Vector3 = Vector3(1.0, 0.0, 1.0).normalized()
+	assert_vector(EnemyAi.retreat_offset(world.kin, 0, away)).is_equal_approx(
+		away * d, Vector3.ONE * 1e-3
+	)
+	var limit: float = Kinematics.MAX_OFFSET - EnemyAi.RETREAT_EDGE_MARGIN
+	world.kin.place(0, 0, limit - 1000.0, 0.0, 0.0)
+	var along: Vector3 = Vector3(1000.0, 0.0, sqrt(d * d - 1000.0 * 1000.0))
+	assert_vector(EnemyAi.retreat_offset(world.kin, 0, away)).is_equal_approx(
+		along, Vector3.ONE * 1e-2
+	)
+	assert_vector(EnemyAi.retreat_offset(world.kin, 0, Vector3.RIGHT)).is_equal_approx(
+		Vector3(1000.0, 0.0, 0.0), Vector3.ONE * 1e-3
+	)

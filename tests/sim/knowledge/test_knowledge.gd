@@ -202,7 +202,7 @@ func test_reset_ship_keeps_numbers() -> void:
 	w.step()
 	var before: Array = w.knowledge.columns()
 	assert_int(w.knowledge.size()).is_equal(2)
-	w.reset_ship(red, 0, Vector3(4000, 0, 0))
+	w.reset_ship(red, 0, 4000.0)
 	assert_int(w.knowledge.size()).is_equal(2)
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_false()
 	assert_bool(KnowledgeSystem.is_detected(w, RED, blue)).is_true()

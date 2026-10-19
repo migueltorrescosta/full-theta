@@ -2,10 +2,11 @@ class_name CommandLog
 extends RefCounted
 ## A replayable record of a run (FT-ARC-008, FT-TST-009): the seed, the build id, the
 ## setup parameters that rebuild the starting world (for M1: the player ShipDef id and
-## the EnemyDef id) and every crew command with the tick it was applied on and whether
-## it was accepted, in application order. A fresh world built from the same setup, with each command
-## submitted right before the step of its tick, reproduces the run on the same build and
-## platform. Pure: the caller does any file I/O with to_text() and from_text().
+## the EnemyDef id) and every crew or server command (e.g. a ship reset) with the tick
+## it was applied on and whether it was accepted, in application order. A fresh world
+## built from the same setup, with each command submitted right before the step of its
+## tick, reproduces the run on the same build and platform. Pure: the caller does any
+## file I/O with to_text() and from_text().
 ##
 ## Text format, one `key=value # echo` line per item. The value is the Variant in
 ## var_to_bytes() encoding, base64: it holds every float bit for bit (64-bit scalars,
@@ -22,7 +23,7 @@ var build_id: String = ""
 ## Inputs that rebuild the starting world, e.g. {"player": &"m1_corvette",
 ## "enemy": &"m1_raider"}; values must survive var_to_bytes() (no objects).
 var setup: Dictionary = {}
-## Crew commands as SimCommand.to_dict() (each with its "tick" and "accepted"), in
+## Crew and server commands as SimCommand.to_dict() (each with its "tick" and "accepted"), in
 ## application order.
 var entries: Array[Dictionary] = []
 

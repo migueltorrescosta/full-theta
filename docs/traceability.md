@@ -27,7 +27,7 @@ Tests: 79, manual: 9, pending: 313.
 | FT-ARC-005 | pending |  |
 | FT-ARC-006 | tests | `tests/sim/core/test_sim_world.gd` |
 | FT-ARC-007 | tests | `tests/sim/combat/test_no_godot_physics.gd`, `tests/sim/core/test_integrator.gd` |
-| FT-ARC-008 | tests | `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/flight/test_helm_commands.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_golden_replay.gd`, `tests/sim/replay/test_replay_determinism.gd` |
+| FT-ARC-008 | tests | `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/flight/test_helm_commands.gd`, `tests/sim/pvp/test_pvp.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_golden_replay.gd`, `tests/sim/replay/test_replay_determinism.gd` |
 | FT-ARC-009 | tests | `tests/sim/core/test_sim_world.gd` |
 | FT-ARC-010 | tests | `tools/tests/test_lint_arch.py` |
 | FT-ARC-011 | tests | `tools/tests/test_lint_arch.py` |
@@ -121,7 +121,7 @@ Tests: 79, manual: 9, pending: 313.
 | FT-SIM-032 | pending |  |
 | FT-SIM-033 | tests | `tests/content/test_content_defs.gd` |
 | FT-SIM-034 | pending |  |
-| FT-SIM-035 | tests | `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/run/test_precision.gd` |
+| FT-SIM-035 | tests | `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/run/test_precision.gd` |
 | FT-SIM-036 | tests | `tests/sim/flight/test_assist_modes.gd` |
 | FT-SIM-037 | tests | `tests/sim/flight/test_assist_modes.gd` |
 | FT-SIM-038 | tests | `tests/sim/core/test_integrator.gd` |
@@ -385,7 +385,7 @@ Tests: 79, manual: 9, pending: 313.
 | FT-TST-006 | pending |  |
 | FT-TST-007 | tests | `tests/sim/core/test_integrator.gd` |
 | FT-TST-008 | tests | `tests/sim/combat/test_weapons.gd` |
-| FT-TST-009 | tests | `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_golden_replay.gd`, `tests/sim/replay/test_replay_determinism.gd` |
+| FT-TST-009 | tests | `tests/sim/pvp/test_pvp.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_golden_replay.gd`, `tests/sim/replay/test_replay_determinism.gd` |
 | FT-TST-010 | pending |  |
 | FT-TST-011 | pending |  |
 | FT-TST-012 | pending |  |

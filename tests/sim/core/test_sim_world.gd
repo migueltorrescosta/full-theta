@@ -200,7 +200,7 @@ func test_reset_ship_restores_only_that_ship() -> void:
 		k.ship_id = id
 		w.submit(k)
 	var logged: int = w.command_log.size()
-	w.reset_ship(0, 0, Vector3(5, 0, 0))
+	w.reset_ship(0, 0, 5.0)
 	assert_vector(w.kin.vel[0]).is_equal(Vector3.ZERO)
 	assert_float(w.kin.px[0]).is_equal(5.0)
 	assert_float(w.kin.propellant[0]).is_equal(w.defs[0].propellant_capacity)

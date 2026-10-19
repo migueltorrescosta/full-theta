@@ -23,7 +23,9 @@ extends RefCounted
 ##   weapon's range, the intercept is within fire_cone of the bow and the mount's arc,
 ##   and the barrel is on the aim.
 ## - RETREAT: hull below retreat_hull_fraction: face a point straight away from the
-##   threat and run at full throttle; with no threat detected, keep running.
+##   threat and run at full throttle; with no threat detected, keep running on the same
+##   bearing. Near the site edge the point stays inside it: the ship runs along the edge,
+##   or brakes onto the edge when it can't, and never leaves the site grid (FT-SIM-035).
 ## Mode changes emit &"ai_mode": ship_id the AI ship, other_id its target (or -1),
 ## value the AiTable.Mode, tag its name in AiTable.MODE_NAMES.
 
@@ -34,8 +36,18 @@ const AIM_TOLERANCE: float = 0.005
 const MODE_HYSTERESIS: float = 100.0
 ## Distance of the point a retreating ship faces and runs toward (m).
 const RETREAT_POINT_DISTANCE: float = 20000.0
-## The retreat point is renewed once its bearing is this far off "away" (rad).
+## The retreat point is renewed once its bearing is this far off the wanted one (rad)
+## and it is no nearer than half RETREAT_POINT_DISTANCE, or once it is farther than
+## RETREAT_POINT_TOLERANCE (m) from the wanted point (braking onto it at the edge).
 const RETREAT_REAIM: float = 0.1
+const RETREAT_POINT_TOLERANCE: float = 10.0
+## A retreat point stays this far inside Kinematics.MAX_OFFSET on every axis (m): room
+## for the drift while the ship turns along the edge (FT-SIM-035).
+const RETREAT_EDGE_MARGIN: float = 2000.0
+## Smallest share of "away" along the edge (sine of its angle off straight out, about
+## 3 deg) worth running along it; below it the ship brakes onto the edge, so drift of a
+## few metres doesn't pick a direction.
+const RETREAT_SLIDE_MIN: float = 0.05
 ## Throttle input differences below this are not worth a new HelmInputCommand.
 const INPUT_EPS: float = 1e-4
 
@@ -93,8 +105,7 @@ static func _think(world: SimWorld, id: int) -> void:
 		AiTable.Mode.HOLD:
 			_hold(world, id)
 		AiTable.Mode.RETREAT:
-			if target >= 0:
-				_retreat(world, id, target)
+			_retreat(world, id, target)
 		_:
 			_engage(world, id, target)
 
@@ -167,31 +178,91 @@ static func closing_speed(world: SimWorld, id: int, gap: float) -> float:
 	return signf(gap) * AssistSystem.closing_speed(world.kin, id, tuning, absf(gap))
 
 
-## RETREAT: face a point straight away from the threat and run at full throttle.
+## RETREAT: face a point RETREAT_POINT_DISTANCE away from the threat (on along the
+## current retreat point's bearing when no threat is detected; nothing without one) and
+## run at full throttle. Near the site edge the point is
+## kept inside it (retreat_offset), so the ship runs along the edge, and once the point
+## is closer than half that distance the ship brakes onto it on the approach curve and
+## stops there: a retreating ship never leaves the site grid (FT-SIM-035).
 static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 	var kin: Kinematics = world.kin
 	var helm: HelmTable = world.helm
-	var away: Vector3 = -kin.relative(id, threat).normalized()
 	var current: bool = (
 		helm.target_kind[id] == HelmTable.Target.POINT and helm.target_site[id] == kin.site[id]
 	)
+	var to_point: Vector3 = Vector3.ZERO
 	if current:
-		var to_point: Vector3 = kin.relative_to_point(
+		to_point = kin.relative_to_point(
 			id, helm.target_x[id], helm.target_y[id], helm.target_z[id]
 		)
+	# Unit vector to run along; zero holds the current point (reached, threat lost).
+	var away: Vector3 = Vector3.ZERO
+	if threat >= 0:
+		away = -kin.relative(id, threat).normalized()
+	elif not current:
+		return
+	elif to_point.length() > RETREAT_POINT_TOLERANCE:
+		away = to_point.normalized()
+	var wanted: Vector3 = retreat_offset(kin, id, away)
+	if current:
 		current = (
-			to_point.length() > 0.5 * RETREAT_POINT_DISTANCE
-			and to_point.angle_to(away) <= RETREAT_REAIM
+			(
+				to_point.length() > 0.5 * RETREAT_POINT_DISTANCE
+				and to_point.angle_to(wanted) <= RETREAT_REAIM
+			)
+			or to_point.distance_to(wanted) <= RETREAT_POINT_TOLERANCE
 		)
 	if not current:
-		var limit: float = Kinematics.MAX_OFFSET
 		var select: SelectTargetCommand = SelectTargetCommand.new()
 		select.site = kin.site[id]
-		select.x = clampf(kin.px[id] + away.x * RETREAT_POINT_DISTANCE, -limit, limit)
-		select.y = clampf(kin.py[id] + away.y * RETREAT_POINT_DISTANCE, -limit, limit)
-		select.z = clampf(kin.pz[id] + away.z * RETREAT_POINT_DISTANCE, -limit, limit)
+		select.x = kin.px[id] + wanted.x
+		select.y = kin.py[id] + wanted.y
+		select.z = kin.pz[id] + wanted.z
 		_submit(world, id, select)
-	_helm_input_raw(world, id, true, 1.0)
+	var gap: float = wanted.length()
+	if gap >= 0.5 * RETREAT_POINT_DISTANCE:
+		_helm_input_raw(world, id, true, 1.0)
+	else:
+		# On the point, stop facing it: an overshoot of a metre would turn the ship around.
+		var face: bool = gap > RETREAT_POINT_TOLERANCE
+		_helm_input(world, id, face, closing_speed(world, id, gap) if face else 0.0)
+
+
+## Offset (m, site frame) from the ship to the point a retreat runs toward:
+## RETREAT_POINT_DISTANCE along `away` (a unit vector) while that stays within
+## MAX_OFFSET - RETREAT_EDGE_MARGIN of the site on every axis. On an axis where it would
+## cross, the point stops at that limit and the rest of the distance goes along the
+## other axes, in away's direction projected onto them, so a ship at the edge runs
+## along it; with no such direction left (away within RETREAT_SLIDE_MIN of straight out
+## of a face or a corner) the point is on the limit straight ahead and the ship brakes
+## onto it (FT-SIM-035).
+static func retreat_offset(kin: Kinematics, id: int, away: Vector3) -> Vector3:
+	var limit: float = Kinematics.MAX_OFFSET - RETREAT_EDGE_MARGIN
+	var pos: PackedFloat64Array = PackedFloat64Array([kin.px[id], kin.py[id], kin.pz[id]])
+	var blocked: Array[bool] = [false, false, false]
+	var out: Vector3 = away * RETREAT_POINT_DISTANCE
+	# Each pass blocks at least one more axis or ends, so four passes always end.
+	for _pass: int in 4:
+		var crossed: bool = false
+		for a: int in 3:
+			if not blocked[a] and absf(pos[a] + out[a]) > limit:
+				blocked[a] = true
+				crossed = true
+		if not crossed:
+			break
+		var fixed: Vector3 = Vector3.ZERO
+		var free: Vector3 = Vector3.ZERO
+		for a: int in 3:
+			if blocked[a]:
+				var end: float = pos[a] + away[a] * RETREAT_POINT_DISTANCE
+				fixed[a] = clampf(end, -limit, limit) - pos[a]
+			else:
+				free[a] = away[a]
+		out = fixed
+		if free.length() >= RETREAT_SLIDE_MIN:
+			var rest2: float = RETREAT_POINT_DISTANCE ** 2 - fixed.length_squared()
+			out += free.normalized() * sqrt(maxf(0.0, rest2))
+	return out
 
 
 ## Sends the Helm input that faces (or not) and moves the speed setpoint to the wanted

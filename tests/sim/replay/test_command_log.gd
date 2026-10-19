@@ -155,18 +155,21 @@ func test_every_command_round_trips() -> void:
 
 ## A value of the same type unlike the default, or null for an unhandled type.
 func _non_default(v: Variant) -> Variant:
+	var out: Variant = null
 	match typeof(v):
 		TYPE_BOOL:
-			return not v
+			out = not v
 		TYPE_INT:
-			return v + 3
+			out = v + 3
 		TYPE_FLOAT:
-			return 1.0 / 3.0 + v
+			out = 1.0 / 3.0 + v
 		TYPE_STRING_NAME:
-			return StringName(String(v) + "_x")
+			out = StringName(String(v) + "_x")
 		TYPE_VECTOR3:
-			return v + Vector3(0.5, -1.0 / 3.0, 0.25)
-	return null
+			out = v + Vector3(0.5, -1.0 / 3.0, 0.25)
+		TYPE_QUATERNION:
+			out = Quaternion(Vector3(1.0, 2.0, 3.0).normalized(), 1.0 / 3.0) * v
+	return out
 
 
 # FT: FT-ARC-008, FT-TST-009, FT-SIM-030

@@ -53,6 +53,18 @@ static func _facing_red() -> Quaternion:
 	return Quaternion(Vector3.UP, PI)
 
 
+## The server's reset of BLUE to its start (FT-GEN-002), logged for replay (FT-ARC-008).
+static func reset_blue() -> ResetShipCommand:
+	var c: ResetShipCommand = ResetShipCommand.new()
+	c.ship_id = BLUE
+	c.site = SITE
+	c.x = BLUE_OFFSET.x
+	c.y = BLUE_OFFSET.y
+	c.z = BLUE_OFFSET.z
+	c.rotation = _facing_red()
+	return c
+
+
 ## Both crews fire until a corvette leaves play; returns every event.
 func fight(w: SimWorld) -> Array[SimEvent]:
 	var red_crew: ScriptedCrew = ScriptedCrew.new(RED, BLUE)
@@ -193,7 +205,8 @@ func test_callsigns_independent_per_faction() -> void:
 	assert_array(red_after).is_equal(red_before)
 
 
-## Resets BLUE (destroyed) and checks the per-ship run reset (FT-GEN-002). Scope:
+## Resets BLUE (destroyed) by applying the reset command directly, so the state can be
+## checked before any system steps, and checks the per-ship run reset (FT-GEN-002). Scope:
 ## - BLUE's own rows (kinematics, helm, power, shields, mounts, damage, AI, run) equal
 ##   a fresh world's BLUE rows; its projectiles in flight are dropped.
 ## - Other factions' knowledge rows about BLUE keep their callsign number and
@@ -211,7 +224,7 @@ func reset_blue_and_check(w: SimWorld) -> void:
 	var rng_states: Array = w.rng.states()
 	var relations: Array = relations_of(w)
 	var hash_before: String = w.state_hash()
-	w.reset_ship(BLUE, SITE, BLUE_OFFSET, _facing_red())
+	assert_bool(reset_blue().apply(w)).is_true()
 	assert_array(blue_rows(w)).is_equal(blue_rows(build()))
 	assert_int(w.projectiles.rows_of(BLUE).size()).is_equal(0)
 	assert_array(not_blue(w)).is_equal(others)
@@ -285,21 +298,34 @@ func test_destroyed_by_forced_hit_resets_alone() -> void:
 
 
 ## The whole scenario: fight until BLUE is destroyed in combat (outcomes as in
-## check_outcomes, RED damaged), reset BLUE, 300 more ticks of fire. Returns the state
-## hashes after the fight, after the reset and at the end.
-func scenario_hashes(world_seed: int) -> PackedStringArray:
+## check_outcomes, RED damaged), the server resets BLUE (a ResetShipCommand, applied on
+## the next tick), 300 more ticks of fire. Returns the world and every event; the state
+## hashes after the fight and after the reset tick go into hashes.
+func scenario(world_seed: int, hashes: PackedStringArray) -> Array:
 	var w: SimWorld = build(world_seed)
-	check_outcomes(w, fight(w))
+	var events: Array[SimEvent] = fight(w)
+	check_outcomes(w, events)
 	assert_float(w.damage.health[w.damage.hull_row(RED)]).is_less(w.defs[RED].hull_max)
-	var out: PackedStringArray = [w.state_hash()]
-	w.reset_ship(BLUE, SITE, BLUE_OFFSET, _facing_red())
-	out.append(w.state_hash())
+	hashes.append(w.state_hash())
+	w.submit(reset_blue())
 	var red_crew: ScriptedCrew = ScriptedCrew.new(RED, BLUE)
 	var blue_crew: ScriptedCrew = HalfRateCrew.new(BLUE, RED)
 	for i: int in 300:
 		red_crew.act(w)
 		blue_crew.act(w)
 		w.step()
+		events.append_array(w.drain_events())
+		if i == 0:
+			hashes.append(w.state_hash())
+			assert_int(w.run.status[BLUE]).is_equal(RunTable.Status.IN_PLAY)
+	return [w, events]
+
+
+## The scenario's state hashes after the fight, after the reset tick and at the end,
+## and the end tick.
+func scenario_hashes(world_seed: int) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	var w: SimWorld = scenario(world_seed, out)[0]
 	out.append(w.state_hash())
 	out.append(str(w.tick))
 	return out
@@ -312,3 +338,29 @@ func scenario_hashes(world_seed: int) -> PackedStringArray:
 func test_pvp_scenario_deterministic() -> void:
 	var first: PackedStringArray = scenario_hashes(SEED)
 	assert_array(Array(scenario_hashes(SEED))).is_equal(Array(first))
+
+
+# FT: FT-ARC-008, FT-TST-009, FT-TST-013, FT-GEN-002
+# The server's mid-run reset is logged with the crews' commands: the PvP scenario's log,
+# written to text and read back, replays on a fresh world (crews not acting) to the same
+# tick, state hash and event stream, the reset applied on its recorded tick.
+func test_pvp_run_with_reset_replays() -> void:
+	var hashes: PackedStringArray = PackedStringArray()
+	var run: Array = scenario(SEED, hashes)
+	var w: SimWorld = run[0]
+	var events: Array[SimEvent] = run[1]
+	var resets: Array = w.command_log.filter(
+		func(c: SimCommand) -> bool: return c is ResetShipCommand
+	)
+	assert_int(resets.size()).is_equal(1)
+	assert_bool((resets[0] as SimCommand).accepted).is_true()
+	assert_int((resets[0] as SimCommand).source).is_equal(SimCommand.Source.SERVER)
+	var record: CommandLog = CommandLog.from_text(CommandLog.from_world(w).to_text())
+	assert_object(record).is_not_null()
+	var fresh: SimWorld = build()
+	assert_array(Array(record.replay(fresh, w.tick))).is_empty()
+	assert_int(fresh.tick).is_equal(w.tick)
+	assert_str(fresh.state_hash()).is_equal(w.state_hash())
+	var replayed: Array[SimEvent] = fresh.drain_events()
+	assert_int(replayed.size()).is_equal(events.size())
+	assert_bool(LiveRun.event_bytes(replayed) == LiveRun.event_bytes(events)).is_true()
