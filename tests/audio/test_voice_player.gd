@@ -211,3 +211,40 @@ func test_local_line_without_a_file_is_subtitled_only() -> void:
 	vp.handle_event(_event(1, 2, {"local": true, "line": "npc.hail"}))
 	assert_bool(vp.bus.holds(1)).is_false()
 	assert_array(_subs).has_size(1)
+
+
+# FT: FT-AUD-010
+func test_local_lines_reject_ids_and_languages_that_are_not_safe_paths() -> void:
+	var lines: LocalLines = LocalLines.new("en", "res://tests/audio/no_such_dir")
+	for good: String in ["npc.hail", "computer.shields_low", "a.b2.c_3"]:
+		assert_bool(lines.valid(good)).override_failure_message(good).is_true()
+	for bad: String in [
+		"",
+		"hail",
+		"Npc.hail",
+		"1npc.hail",
+		"npc.",
+		"npc..hail",
+		"npc.hail\n",
+		"npc.ha il",
+		"../npc.hail",
+		"npc/../../x.y",
+		"npc.hail/x",
+		"res://npc.hail"
+	]:
+		assert_bool(lines.valid(bad)).override_failure_message(bad).is_false()
+		assert_object(lines.stream(bad)).is_null()
+	for lang: String in ["", "fr", "../en", "en/../it", "EN"]:
+		(
+			assert_bool(LocalLines.new(lang).valid("npc.hail"))
+			. override_failure_message(lang)
+			. is_false()
+		)
+	for lang: String in I18n.LANGUAGES:
+		assert_bool(LocalLines.new(lang).valid("npc.hail")).is_true()
+	# An invalid line id leaves the subtitle only.
+	var vp: VoicePlayer = _player(StubSink.new())
+	vp.local_lines = lines
+	vp.handle_event(_event(1, 2, {"local": true, "line": "../npc.hail"}))
+	assert_bool(vp.bus.holds(1)).is_false()
+	assert_array(_subs).has_size(1)
