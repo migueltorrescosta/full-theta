@@ -178,3 +178,8 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 
 87. Any crew player of a covered ship presses Start, and the sim steps from the first Start. §3.3, FT-NET-019. (D129)
 88. A player alone on a station keeps every claim when a second player joins; the newcomer claims what is released. §3.4, FT-NET-044. (D130)
+
+### Pending changelog (strand-e11)
+
+- The 64-connection load gate (R15 re-verified in #11) runs 6 crewable ships and 6 fighting AI raiders with 36 crew, 6 Captains and 22 viewers; the server is pinned to 2 cores and the clients run on other cores; a 100-ship stress run is reported, not gating. §12.1, FT-GEN-003, FT-TST-011, FT-TST-014. (D160)
+- Load gate measurement: tick per main-thread sim frame (mean and p99), snapshot age from the server's capture stamp to the client's arrival, payload bytes per connection. FT-NET-040, R15. (D161)

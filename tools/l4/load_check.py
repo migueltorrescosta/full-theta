@@ -285,6 +285,16 @@ def check(out: Path, report_only: bool) -> int:
         f"Server payload to all clients (chunk headers and messages, as handed to "
         f"WebSocketPeer): {total_bps:,.0f} B/s = **{payload_mbit:.2f} Mbit/s**.{wire}"
     )
+    # The server sends fewer than 30 snapshots a second when its frames run late; the
+    # budget is checked at the nominal rate too.
+    rate = len(snaps) / span_s if snaps else 0.0
+    nominal_mbit = payload_mbit * 30.0 / rate if rate > 0 else float("nan")
+    say(
+        f"Snapshots went out at {rate:.1f}/s; scaled to the nominal 30/s the payload would be "
+        f"**{nominal_mbit:.2f} Mbit/s** ({total_bps / rate if rate else 0:,.0f} B per snapshot "
+        "to all clients)."
+    )
+    payload_mbit = max(payload_mbit, nominal_mbit) if rate > 0 else payload_mbit
     ok_bw = 0 < payload_mbit <= BANDWIDTH_BUDGET_MBIT and len(all_v) == 64
     say(f"Budget <= {BANDWIDTH_BUDGET_MBIT:.0f} Mbit/s at 64 connections: **{'met' if ok_bw else 'NOT MET'}**.")
     if not ok_bw:

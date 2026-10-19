@@ -21,6 +21,7 @@ Protocol, server session and client transport over WebSocket (FT-NET-004). The w
 | `net_coverage.gd`, `net_claims.gd`, `net_abandon_vote.gd` | The pure rules: coverage check, claims, abandon vote. |
 | `command_gate.gd` | Command validation. |
 | `net_server.gd` | The server `Node`: sim loop and composition. |
+| `load_probe.gd` | The load gate's probe (`--probe-out`, dev and test only, D161): tick-frame timings and the measured window; `NetTransport.probe` records the net thread's side. |
 | `net_client.gd`, `net_view_state.gd` | Headless client library and the client-side view state. |
 
 ## Threads

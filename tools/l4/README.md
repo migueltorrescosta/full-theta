@@ -63,3 +63,25 @@ Matchers are `path<op>value` on a dictionary. A path is dotted keys, array indic
 ## Adding a scenario
 
 Add `scenarios/<name>.sh` and `scenarios/<name>/*.intent`. The script runs inside `run.sh` with: `server [flags]` (dedicated server on a free port, sets `$URL`), `client NAME INTENT [flags]` (launches NAME again each call; logs `NAME.<launch>.jsonl`), `await X [S]`, `signal X`, `kill9 NAME`, `$out` (the scenario's log folder). `run.sh` then waits for every client to exit 0 and runs `check.py`.
+
+## Load gate (`l4load`, #11)
+
+The 64-connection load and bandwidth gate (FT-GEN-003, FT-NET-014, FT-NET-040, FT-TST-011; D160–D162), fugaku only:
+
+```bash
+tools/gate.sh l4load                                  # 60 s window, 6 crew ships + 6 raiders
+tools/l4/load.sh --world 100 --window 20 --report-only   # the 100-ship stress run, not gating
+taskset -c 0,1 godot --headless --path . -s res://tools/l4/sim_profile.gd -- --world 12   # sim alone
+```
+
+| File | Role |
+|---|---|
+| `load.sh` | Starts the server (`--load-ships 6 --load-world N --probe-out`) on `L4_CPUS` (0,1), 8 `load_client.gd` processes of 8 connections on `L4_LOAD_CLIENT_CPUS` (4,5,12,13), and once every seat has picked, a 65th connection. Samples load average, the server cores' `scaling_cur_freq` and loopback counters each second (`host.tsv`). Logs and `summary.md` in `build/l4load/<run>/`. |
+| `load_client.gd` | One process, several `NetClient`s, seats from `LoadSeats`; each ship's Helm presses Start; Helm steers every 0.5 s and Weapons fires every second; every snapshot's seq and arrival time is logged. `--full-probe`: one connection that must get `session_full`. |
+| `load_seats.gd` | The seat plan: 36 crew, 6 Captains, 22 viewers. |
+| `load_check.py` | Reads the server probe and client logs: tick (mean, p99, per-part and schedstat), net-thread costs per snapshot and section, encodes per view key, snapshot age, bytes per client and entry, connection 65. Exits 1 on a missed budget unless `--report-only`. |
+| `sim_profile.gd` | `SimWorld.step`'s phases and the capture on the same world, without sockets. |
+
+Server side: `net/load_probe.gd` (`LoadProbe`: window, frame timings) and `NetTransport.probe` (per-snapshot costs, capture stamps, bytes per connection each second); `NetClient.log_snapshots`.
+
+**Stand-ins the multi-ship lobby (#11, E11) must replace:** `--load-ships`/`--load-world` and `LoadEncounter` (6 crewable ships from a dev flag instead of a scenario offering several ships); `LoadSeats` and the per-ship Start in `load_client.gd` (each ship's Helm presses Start; D129 leaves to #11 how several ships start); the crew faction's relations (one co-op faction, raiders hostile to all). Once the lobby can host 6 ships, point `load.sh` at that scenario and drop the flag; the probe, clients' logging and `load_check.py` stay.

@@ -127,3 +127,46 @@ func test_makes_beacon_and_optional_http() -> void:
 	assert_object(server2.beacon).is_null()
 	server2.transport.stop()
 	server2.free()
+
+
+# FT: FT-NET-002, FT-GEN-003
+# The load gate's dev and test flags (#11, D160, D161): --load-ships builds the 6-ship
+# LoadEncounter instead of M1's, and --probe-* configure the LoadProbe.
+func test_parses_load_gate_flags() -> void:
+	var cli: ServerMain = ServerMain.new()
+	var args: PackedStringArray = [
+		"--bind",
+		"127.0.0.1",
+		"--port",
+		"0",
+		"--no-beacon",
+		"--load-ships",
+		"6",
+		"--load-world",
+		"100",
+		"--probe-out",
+		"/tmp/probe.json",
+		"--probe-picks",
+		"10",
+		"--probe-warmup",
+		"1.5",
+		"--probe-window",
+		"20",
+	]
+	assert_bool(cli.parse_args(args)).is_true()
+	assert_int(cli.load_ships).is_equal(6)
+	assert_int(cli.load_world).is_equal(100)
+	assert_str(cli.probe_out).is_equal("/tmp/probe.json")
+	assert_int(cli.probe_picks).is_equal(10)
+	assert_float(cli.probe_warmup).is_equal(1.5)
+	assert_float(cli.probe_window).is_equal(20.0)
+	var server: NetServer = cli.make_server()
+	assert_object(server).is_not_null()
+	assert_bool(server.encounter is LoadEncounter).is_true()
+	assert_int(server.session.crew_ships().size()).is_equal(6)
+	assert_int(server.world.ship_count()).is_equal(100)
+	assert_object(server.probe).is_not_null()
+	assert_float(server.probe.window_s).is_equal(20.0)
+	assert_bool(server.transport.probe).is_true()
+	server.transport.stop()
+	server.free()
