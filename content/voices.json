@@ -1,0 +1,22 @@
+{
+  "_comment": "Voice per session language and role (FT-AUD-001, FT-AUD-012, D105). PROVISIONAL picks pending the owner's choice in #4: S7b's voices. 'runtime' (medium) speaks the closed set at Start, free text, number fragments and template segments; 'prerender' speaks whole authored lines at build time (high allowed, D105). pt_PT uses tugao for development only until #16 (dev_only: never shipped). Names are tools/tts/voices.json keys.",
+  "languages": {
+    "en": {
+      "computer": {"runtime": "en_GB-cori-medium", "prerender": "en_GB-cori-high"},
+      "npc": {"runtime": "en_US-norman-medium", "prerender": "en_US-norman-medium"}
+    },
+    "pt_PT": {
+      "dev_only": true,
+      "computer": {"runtime": "pt_PT-tugão-medium", "prerender": "pt_PT-tugão-medium"},
+      "npc": {"runtime": "pt_PT-tugão-medium", "prerender": "pt_PT-tugão-medium"}
+    },
+    "it": {
+      "computer": {"runtime": "it_IT-serena-medium", "prerender": "it_IT-serena-high"},
+      "npc": {"runtime": "it_IT-serena-medium", "prerender": "it_IT-serena-high"}
+    }
+  },
+  "roles": {
+    "computer": {"robotic": true, "length_scale": 1.05, "noise_scale": 0.333, "noise_w_scale": 0.333},
+    "npc": {"robotic": false}
+  }
+}
