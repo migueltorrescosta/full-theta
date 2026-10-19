@@ -61,6 +61,9 @@ var _mark_snaps: int = 0
 var _was_welcomed: bool = false
 ## Welcomed and not since dropped or said Bye: a close now fails the run at once.
 var _live: bool = false
+## Set by drop, bye and host_stop until the next connect: the close that follows is
+## expected, even though the client still reads as welcomed until it completes.
+var _leaving: bool = false
 ## Set by host_spawn and orphan_rejoin; it owns and polls _client.
 var _host: HostSession
 var _code: int = -1
@@ -263,7 +266,7 @@ func _observe() -> void:
 		_line({"ev": "catalogue", "catalogue": _client.catalogue})
 		_save_token()
 	_was_welcomed = _client.is_welcomed()
-	if _client.is_welcomed():
+	if _client.is_welcomed() and not _leaving:
 		_live = true
 	elif _live and _client.state != NetClient.State.CONNECTING:
 		_finish(1, "the server closed the connection (state %s)" % _client.state)
@@ -480,6 +483,7 @@ func _do_connect(step: Dictionary) -> Result:
 			_client.token = saved.token
 			_client.host_secret = saved.host_secret
 		_was_welcomed = false
+		_leaving = false
 		_live = false
 		_line({"ev": "note", "msg": "connect %s token=%s" % [url, _client.token != ""]})
 		if _client.connect_to(url) != OK:
@@ -502,6 +506,7 @@ func _do_reconnect(_step: Dictionary) -> Result:
 	if not _st.has("sent"):
 		_st["sent"] = true
 		_was_welcomed = false
+		_leaving = false
 		_live = false
 		_client.resume()
 	if _client.is_welcomed():
@@ -513,12 +518,14 @@ func _do_reconnect(_step: Dictionary) -> Result:
 
 func _do_drop(_step: Dictionary) -> Result:
 	_live = false
+	_leaving = true
 	_client.drop()
 	return Result.DONE
 
 
 func _do_bye(_step: Dictionary) -> Result:
 	_live = false
+	_leaving = true
 	_client.bye("l4")
 	return Result.DONE
 
@@ -836,6 +843,7 @@ func _do_orphan_rejoin(step: Dictionary) -> Result:
 			return _fail("check_orphan returned no session")
 		_adopt_host(host)
 		_was_welcomed = false
+		_leaving = false
 	if _host.state == HostSession.State.FAILED:
 		return _fail("HostSession: %s" % _host.error)
 	if not _host.is_joined():
@@ -853,6 +861,7 @@ func _do_host_stop(_step: Dictionary) -> Result:
 		_st["pid"] = _host.launcher.pid
 		_st["child"] = not _host.launcher.adopted
 		_live = false
+		_leaving = true
 		_host.stop()
 	var pid: int = int(_st["pid"])
 	var alive: bool = OrphanCheck.process_alive(pid)
