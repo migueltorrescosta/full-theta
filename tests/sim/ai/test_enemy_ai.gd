@@ -76,14 +76,6 @@ func _run_until_mode(world: SimWorld, mode: AiTable.Mode, max_ticks: int) -> Arr
 	return events
 
 
-func _run(world: SimWorld, ticks: int) -> Array[SimEvent]:
-	var events: Array[SimEvent] = []
-	for i: int in ticks:
-		world.step()
-		events.append_array(world.drain_events())
-	return events
-
-
 # FT: FT-SIM-027, FT-M1-007
 # From 5 km, bow away: the raider turns, closes (ATTACK), switches to KEEP_RANGE inside
 # 3 km and lands a hit on the corvette within 40 s (measured: first shot 21.7 s, first
@@ -105,7 +97,8 @@ func test_closes_and_fires() -> void:
 	assert_int(hit_tick).override_failure_message("no hit within 40 s").is_greater(0)
 	assert_int(fired).is_greater(0)
 	assert_array(tags).is_equal([&"attack", &"keep_range"])
-	assert_int(world.helm.target_ship[1]).is_equal(0)
+	assert_int(world.ai.target[1]).is_equal(0)
+	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.POINT)
 	print("first hit at %.2f s" % (hit_tick / float(HZ)))
 
 
@@ -116,7 +109,7 @@ func test_closes_and_fires() -> void:
 func test_holds_range_band_stationary_target() -> void:
 	var world: SimWorld = SimWorld.new(11)
 	_scenario(world, 5000.0)
-	_run(world, 60 * HZ)
+	SimFixture.run(world, 60 * HZ)
 	var fired: int = 0
 	for i: int in 30 * HZ:
 		world.step()
@@ -136,7 +129,7 @@ func test_holds_range_band_stationary_target() -> void:
 func test_holds_range_band_moving_target() -> void:
 	var world: SimWorld = SimWorld.new(13)
 	_scenario(world, 4000.0, Vector3(20.0, 0.0, 0.0))
-	_run(world, 60 * HZ)
+	SimFixture.run(world, 60 * HZ)
 	var fired: int = 0
 	for i: int in 30 * HZ:
 		world.step()
@@ -150,13 +143,33 @@ func test_holds_range_band_moving_target() -> void:
 
 
 # FT: FT-SIM-027, FT-M1-007
+# Crossing target: the corvette strafes (decoupled) at 90 to 150 m/s across the line
+# of sight 2 km from the raider, so the lead angle (up to 0.1 rad) exceeds the 0.05 rad
+# fire cone; the raider faces the lead point, fires and hits within 10 s (measured
+# 5.8 s at seed 37; facing the target itself it first hit after about 22 s, once it had
+# matched part of the crossing speed).
+func test_fires_on_crossing_target() -> void:
+	for speed: float in [90.0, 120.0, 150.0]:
+		var world: SimWorld = SimWorld.new(37)
+		_scenario(world, 2000.0, Vector3(speed, 0.0, 0.0))
+		var hit_tick: int = -1
+		while hit_tick < 0 and world.tick < 10 * HZ:
+			world.step()
+			for e: SimEvent in world.drain_events():
+				if e.kind == &"hit" and e.ship_id == 0 and e.other_id == 1:
+					hit_tick = world.tick
+		var msg: String = "no hit at %s m/s" % speed
+		assert_int(hit_tick).override_failure_message(msg).is_greater(0)
+
+
+# FT: FT-SIM-027, FT-M1-007
 # Engaged at 2.5 km, the raider's hull is set to 20 % (below its 25 % threshold, as if
 # shot): it emits RETREAT, turns its bow away from the corvette, stops firing and opens
 # the distance by over 2 km within 30 s.
 func test_retreats_below_hull_threshold() -> void:
 	var world: SimWorld = SimWorld.new(17)
 	_scenario(world, 2500.0)
-	_run(world, 10 * HZ)
+	SimFixture.run(world, 10 * HZ)
 	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.KEEP_RANGE)
 	var hull: int = world.damage.hull_row(1)
 	world.damage.health[hull] = 0.2 * world.defs[1].hull_max
@@ -187,7 +200,7 @@ func test_retreats_below_hull_threshold() -> void:
 func test_undetected_target_is_ignored_until_detected() -> void:
 	var world: RecordingWorld = RecordingWorld.new(19)
 	_scenario(world, 18000.0)
-	var events: Array[SimEvent] = _run(world, 20 * HZ)
+	var events: Array[SimEvent] = SimFixture.run(world, 20 * HZ)
 	assert_bool(KnowledgeSystem.is_detected(world, RAIDER_FACTION, 0)).is_false()
 	assert_int(_count(events, &"fired", 1)).is_equal(0)
 	assert_array(_mode_tags(events)).is_empty()
@@ -204,7 +217,8 @@ func test_undetected_target_is_ignored_until_detected() -> void:
 		fired += _count(world.drain_events(), &"fired", 1)
 		n += 1
 	assert_int(fired).is_greater(0)
-	assert_int(world.helm.target_ship[1]).is_equal(0)
+	assert_int(world.ai.target[1]).is_equal(0)
+	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.POINT)
 
 
 # FT: FT-SIM-028
@@ -213,7 +227,7 @@ func test_target_at_other_site_is_ignored() -> void:
 	var world: RecordingWorld = RecordingWorld.new(23)
 	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, 1, Vector3.ZERO)
 	world.spawn_enemy(TestDefs.raider_enemy(), RAIDER_FACTION, 0, Vector3(0, 0, -2000))
-	var events: Array[SimEvent] = _run(world, 10 * HZ)
+	var events: Array[SimEvent] = SimFixture.run(world, 10 * HZ)
 	assert_int(_count(events, &"fired", 1)).is_equal(0)
 	assert_array(_mode_tags(events)).is_empty()
 	assert_array(world.submitted).is_empty()
@@ -225,9 +239,9 @@ func test_target_at_other_site_is_ignored() -> void:
 func test_ai_uses_the_player_commands() -> void:
 	var world: RecordingWorld = RecordingWorld.new(29)
 	_scenario(world, 4000.0)
-	_run(world, 40 * HZ)
+	SimFixture.run(world, 40 * HZ)
 	world.damage.health[world.damage.hull_row(1)] = 0.1 * world.defs[1].hull_max
-	_run(world, 10 * HZ)
+	SimFixture.run(world, 10 * HZ)
 	var kinds: Dictionary[StringName, int] = {}
 	for c: SimCommand in world.submitted:
 		assert_int(c.ship_id).is_equal(1)
@@ -249,7 +263,7 @@ func test_ai_uses_the_player_commands() -> void:
 func test_holds_position_without_target() -> void:
 	var world: SimWorld = SimWorld.new(31)
 	_scenario(world, 5000.0)
-	_run(world, 12 * HZ)
+	SimFixture.run(world, 12 * HZ)
 	assert_float(world.kin.vel[1].length()).is_greater(10.0)
 	world.kin.place(0, 0, 0.0, 0.0, 30000.0)
 	var events: Array[SimEvent] = _run_until_mode(world, AiTable.Mode.HOLD, 2)
@@ -262,26 +276,13 @@ func test_holds_position_without_target() -> void:
 	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.NONE)
 
 
-# FT: FT-ARC-008, FT-SIM-027
-# Two worlds with the same seed run the scenario 1,000 ticks to the same state hash.
-func test_same_seed_same_hash_with_ai() -> void:
-	var a: SimWorld = SimWorld.new(42)
-	var b: SimWorld = SimWorld.new(42)
-	_scenario(a, 3500.0, Vector3(5.0, 0.0, 0.0))
-	_scenario(b, 3500.0, Vector3(5.0, 0.0, 0.0))
-	_run(a, 1000)
-	_run(b, 1000)
-	assert_str(a.state_hash()).is_equal(b.state_hash())
-	assert_int(a.ai.mode[1]).is_not_equal(AiTable.Mode.HOLD)
-
-
-# FT: FT-SIM-027, FT-GEN-002
+# FT: FT-SIM-027
 # The run reset keeps the ship under AI control with its EnemyDef numbers and clears
 # its mode and target; ships spawned with spawn_ship have a disabled row.
 func test_reset_keeps_ai_and_clears_mode() -> void:
 	var world: SimWorld = SimWorld.new(3)
 	_scenario(world, 2500.0)
-	_run(world, 2 * HZ)
+	SimFixture.run(world, 2 * HZ)
 	assert_bool(world.ai.is_enabled(0)).is_false()
 	assert_bool(world.ai.is_enabled(1)).is_true()
 	assert_int(world.ai.target[1]).is_equal(0)

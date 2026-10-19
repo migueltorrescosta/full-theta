@@ -32,18 +32,6 @@ func _run_to_outcome(world: SimWorld, crew: ScriptedCrew, max_ticks: int) -> Arr
 	return events
 
 
-func _run(world: SimWorld, ticks: int) -> Array[SimEvent]:
-	var events: Array[SimEvent] = []
-	for i: int in ticks:
-		world.step()
-		events.append_array(world.drain_events())
-	return events
-
-
-func _of_kind(events: Array[SimEvent], kind: StringName) -> Array[SimEvent]:
-	return events.filter(func(e: SimEvent) -> bool: return e.kind == kind)
-
-
 ## A hit far beyond any hull, through DamageSystem (no shields), as a test shortcut.
 func _destroy(world: SimWorld, ship: int, source: int) -> void:
 	var hit: SimHit = SimHit.new()
@@ -62,8 +50,8 @@ func _destroy(world: SimWorld, ship: int, source: int) -> void:
 func test_win_when_enemy_destroyed() -> void:
 	var world: SimWorld = _world(5)
 	var events: Array[SimEvent] = _run_to_outcome(world, ScriptedCrew.new(), 120 * HZ)
-	var destroyed: Array[SimEvent] = _of_kind(events, &"destroyed")
-	var outcomes: Array[SimEvent] = _of_kind(events, &"outcome")
+	var destroyed: Array[SimEvent] = SimFixture.of_kind(events, &"destroyed")
+	var outcomes: Array[SimEvent] = SimFixture.of_kind(events, &"outcome")
 	assert_int(destroyed.size()).is_equal(1)
 	assert_int(outcomes.size()).is_equal(1)
 	assert_int(destroyed[0].ship_id).is_equal(ENEMY)
@@ -80,7 +68,7 @@ func test_win_when_enemy_destroyed() -> void:
 	assert_int(run.outcome_tick[PLAYER]).is_equal(outcomes[0].tick)
 	assert_int(run.outcome[ENEMY]).is_equal(RunTable.Outcome.NONE)
 	var before: int = run.columns().hash()
-	assert_array(_of_kind(_run(world, 10 * HZ), &"outcome")).is_empty()
+	assert_array(SimFixture.of_kind(SimFixture.run(world, 10 * HZ), &"outcome")).is_empty()
 	assert_int(run.columns().hash()).is_equal(before)
 	print("win by destruction at tick %d (%.1f s)" % [outcomes[0].tick, outcomes[0].tick / 60.0])
 
@@ -94,8 +82,8 @@ func test_win_when_enemy_retreats() -> void:
 	var world: SimWorld = _world(7)
 	world.damage.health[world.damage.hull_row(ENEMY)] = 0.2 * world.defs[ENEMY].hull_max
 	var events: Array[SimEvent] = _run_to_outcome(world, null, 120 * HZ)
-	var retreated: Array[SimEvent] = _of_kind(events, &"retreated")
-	var outcomes: Array[SimEvent] = _of_kind(events, &"outcome")
+	var retreated: Array[SimEvent] = SimFixture.of_kind(events, &"retreated")
+	var outcomes: Array[SimEvent] = SimFixture.of_kind(events, &"outcome")
 	assert_int(retreated.size()).is_equal(1)
 	assert_int(outcomes.size()).is_equal(1)
 	assert_int(retreated[0].ship_id).is_equal(ENEMY)
@@ -103,8 +91,8 @@ func test_win_when_enemy_retreats() -> void:
 	assert_int(outcomes[0].ship_id).is_equal(PLAYER)
 	assert_str(String(outcomes[0].tag)).is_equal("win")
 	assert_int(outcomes[0].tick).is_equal(retreated[0].tick)
-	assert_array(_of_kind(events, &"destroyed")).is_empty()
-	var lost: Array[SimEvent] = _of_kind(events, &"contact_lost").filter(
+	assert_array(SimFixture.of_kind(events, &"destroyed")).is_empty()
+	var lost: Array[SimEvent] = SimFixture.of_kind(events, &"contact_lost").filter(
 		func(e: SimEvent) -> bool: return e.other_id == ENEMY
 	)
 	assert_int(lost.size()).is_equal(1)
@@ -113,7 +101,7 @@ func test_win_when_enemy_retreats() -> void:
 	assert_int(world.run.status_tick[ENEMY]).is_equal(retreated[0].tick)
 	assert_int(world.ai.mode[ENEMY]).is_equal(AiTable.Mode.RETREAT)
 	assert_float(world.kin.relative(PLAYER, ENEMY).length()).is_greater(20000.0)
-	assert_array(_of_kind(_run(world, 5 * HZ), &"retreated")).is_empty()
+	assert_array(SimFixture.of_kind(SimFixture.run(world, 5 * HZ), &"retreated")).is_empty()
 	print("win by retreat at tick %d (%.1f s)" % [outcomes[0].tick, outcomes[0].tick / 60.0])
 
 
@@ -123,15 +111,15 @@ func test_win_when_enemy_retreats() -> void:
 # outcome, and the loss is emitted once.
 func test_loss_when_own_ship_destroyed() -> void:
 	var world: SimWorld = _world(11)
-	var events: Array[SimEvent] = _run(world, 10 * HZ)
+	var events: Array[SimEvent] = SimFixture.run(world, 10 * HZ)
 	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.NONE)
-	assert_array(_of_kind(events, &"outcome")).is_empty()
+	assert_array(SimFixture.of_kind(events, &"outcome")).is_empty()
 	var tick: int = world.tick
 	_destroy(world, PLAYER, ENEMY)
 	world.step()
 	events = world.drain_events()
-	events.append_array(_run(world, 5 * HZ))
-	var outcomes: Array[SimEvent] = _of_kind(events, &"outcome")
+	events.append_array(SimFixture.run(world, 5 * HZ))
+	var outcomes: Array[SimEvent] = SimFixture.of_kind(events, &"outcome")
 	assert_int(outcomes.size()).is_equal(1)
 	assert_int(outcomes[0].ship_id).is_equal(PLAYER)
 	assert_int(outcomes[0].tick).is_equal(tick)
@@ -154,16 +142,16 @@ func test_per_ship_elimination_and_no_enemy() -> void:
 		TestDefs.corvette(), M1Encounter.PLAYER_FACTION, M1Encounter.SITE, Vector3(500, 0, 0)
 	)
 	_destroy(world, PLAYER, ENEMY)
-	_run(world, 2)
+	SimFixture.run(world, 2)
 	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
 	assert_int(world.run.outcome[wing]).is_equal(RunTable.Outcome.NONE)
 	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.NONE)
 	_destroy(world, ENEMY, wing)
-	_run(world, 1)
+	SimFixture.run(world, 1)
 	assert_int(world.run.outcome[wing]).is_equal(RunTable.Outcome.WIN)
 	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
 	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.WIN)
 	var alone: SimWorld = SimWorld.new(1)
 	alone.spawn_ship(TestDefs.corvette(), 1, 0)
-	assert_array(_of_kind(_run(alone, 60), &"outcome")).is_empty()
+	assert_array(SimFixture.of_kind(SimFixture.run(alone, 60), &"outcome")).is_empty()
 	assert_int(OutcomeSystem.encounter_outcome(alone)).is_equal(RunTable.Outcome.NONE)

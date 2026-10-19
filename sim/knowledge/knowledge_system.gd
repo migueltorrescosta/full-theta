@@ -4,7 +4,7 @@ extends RefCounted
 ## tick before power: a faction detects a contact while any live ship of that faction at
 ## the same site has it within sensor_range scaled by its sensors' effectiveness; it
 ## identifies the contact's allegiance once one is within identify_range, scaled alike
-## (M1 rule, provisional until Science scans, E01), and never forgets it. Callsigns are
+## (D112; Science scans extend it, E01), and never forgets it. Callsigns are
 ## per faction (FT-SPA-002), so allied ships, being one faction, share them (FT-ARC-018).
 ## Enemy AI must read contacts only through this class.
 ##

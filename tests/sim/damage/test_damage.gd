@@ -174,7 +174,6 @@ func test_subsystem_damaged_event_fields() -> void:
 	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(0.98, 1e-12)
 
 
-# FT: FT-SIM-026
 # damage_subsystem (heat faults) damages only the named subsystem, not the hull.
 func test_damage_subsystem_direct() -> void:
 	var w: SimWorld = _world()
@@ -187,7 +186,6 @@ func test_damage_subsystem_direct() -> void:
 	assert_float(DamageSystem.effectiveness(w, 0, &"thrusters")).is_equal(0.0)
 
 
-# FT: FT-SIM-029
 # Damage is a function of the hit and the state only: worlds with different seeds take
 # the same hits to the same table, and equal hits take equal amounts.
 func test_damage_independent_of_seed() -> void:
@@ -201,7 +199,7 @@ func test_damage_independent_of_seed() -> void:
 	assert_float(DamageSystem.hull_fraction(a, 0)).is_equal_approx(0.985, 1e-12)
 
 
-# FT: FT-ARC-012, FT-GEN-002
+# FT: FT-ARC-012
 # The table holds a hull row then one row per subsystem per ship, keyed by ship and
 # faction; reset_ship restores one ship's rows and leaves the other's damage alone.
 func test_rows_and_reset_ship() -> void:

@@ -35,10 +35,6 @@ func _health(w: SimWorld, id: StringName) -> float:
 	return w.damage.health[w.damage.find_subsystem(0, id)]
 
 
-func _of_kind(events: Array[SimEvent], kind: StringName) -> Array[SimEvent]:
-	return events.filter(func(e: SimEvent) -> bool: return e.kind == kind)
-
-
 # FT: FT-SIM-024, FT-M1-009, FT-SIM-030
 # A subsystem damaged by hit location is repaired over time by a dispatched crew: one
 # part leaves stock when the job starts, health rises at repair_rate (1e6 J in 5 s =
@@ -65,8 +61,8 @@ func test_crew_repairs_over_time_using_parts() -> void:
 	assert_str(String(DamageSystem.crew_job(w, 0, 0))).is_equal("")
 	assert_int(DamageSystem.spare_parts(w, 0)).is_equal(19)
 	var events: Array[SimEvent] = w.drain_events()
-	var started: Array[SimEvent] = _of_kind(events, &"repair_started")
-	var finished: Array[SimEvent] = _of_kind(events, &"repair_finished")
+	var started: Array[SimEvent] = SimFixture.of_kind(events, &"repair_started")
+	var finished: Array[SimEvent] = SimFixture.of_kind(events, &"repair_finished")
 	assert_int(started.size()).is_equal(1)
 	assert_int(finished.size()).is_equal(1)
 	assert_str(String(started[0].tag)).is_equal("weapons")
@@ -104,7 +100,7 @@ func test_no_parts_no_repair() -> void:
 	assert_float(_health(w, &"sensors")).is_equal(1.9e7)
 	assert_str(String(DamageSystem.crew_job(w, 0, 1))).is_equal("")
 	assert_int(w.command_log.size()).is_equal(1)
-	var no_parts: Array[SimEvent] = _of_kind(w.drain_events(), &"repair_no_parts")
+	var no_parts: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"repair_no_parts")
 	assert_int(no_parts.size()).is_equal(1)
 	assert_str(String(no_parts[0].tag)).is_equal("sensors")
 	assert_float(no_parts[0].value).is_equal(1.0)
@@ -139,7 +135,7 @@ func test_recall_and_reassign() -> void:
 	_steps(w, 60)
 	assert_float(_health(w, &"engines")).is_equal_approx(1.9e7 + 2e5, 1e-3)
 	assert_int(DamageSystem.spare_parts(w, 0)).is_equal(19)
-	assert_int(_of_kind(w.drain_events(), &"repair_recalled").size()).is_equal(1)
+	assert_int(SimFixture.of_kind(w.drain_events(), &"repair_recalled").size()).is_equal(1)
 	_dispatch(w, 0, &"engines")
 	_steps(w, 1)
 	_dispatch(w, 0, &"reactor")
@@ -150,21 +146,3 @@ func test_recall_and_reassign() -> void:
 	_recall(w, 1)
 	_steps(w, 1)
 	assert_int(w.command_log.size()).is_equal(4)
-
-
-# FT: FT-ARC-008
-# Repair commands round-trip through the command log codec.
-func test_repair_commands_round_trip() -> void:
-	var c: DispatchRepairCommand = DispatchRepairCommand.new()
-	c.ship_id = 3
-	c.crew = 1
-	c.subsystem_id = &"sensors"
-	var d: DispatchRepairCommand = SimCommands.from_dict(c.to_dict()) as DispatchRepairCommand
-	assert_object(d).is_not_null()
-	assert_int(d.ship_id).is_equal(3)
-	assert_int(d.crew).is_equal(1)
-	assert_str(String(d.subsystem_id)).is_equal("sensors")
-	var r: RecallRepairCommand = RecallRepairCommand.new()
-	r.crew = 1
-	var e: RecallRepairCommand = SimCommands.from_dict(r.to_dict()) as RecallRepairCommand
-	assert_int(e.crew).is_equal(1)

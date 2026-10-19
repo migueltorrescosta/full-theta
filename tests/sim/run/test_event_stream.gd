@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## T036: the event stream (FT-SIM-030, FT-SIM-031, FT-SIM-032). A scripted M1
+## T036: the event stream (FT-SIM-030, FT-SIM-031). A scripted M1
 ## encounter: the scripted crew on the corvette (ship 0) fights the raider (ship 1,
 ## with retreat switched off in a test copy of its EnemyDef so the fight ends in a
 ## destruction), and Engineering boosts twice back to back (a heat fault). A crewed
@@ -31,7 +31,7 @@ func _boost(world: SimWorld) -> void:
 	world.submit(b)
 
 
-# FT: FT-SIM-030, FT-SIM-031, FT-SIM-032
+# FT: FT-SIM-030, FT-SIM-031
 # Every event carries the tick of the step that emitted it (world.tick before that
 # step), ticks never go back, and each is keyed to a ship and that ship's faction.
 # Hits, the fault, the low-shield alert, the proximity and friendly-fire warnings, the

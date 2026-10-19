@@ -3,8 +3,6 @@ extends RefCounted
 ## Helpers for the flight tests: a world with M1 corvettes at site 0, and Helm commands
 ## submitted the way a station sends them.
 
-const DT: float = 1.0 / 60.0
-
 
 static func world() -> SimWorld:
 	return SimWorld.new(1, "test")
@@ -89,13 +87,3 @@ static func local_velocity(w: SimWorld, id: int) -> Vector3:
 ## Angle (deg) between the bow and the direction to a site-frame offset.
 static func bow_error_deg(w: SimWorld, id: int, offset: Vector3) -> float:
 	return rad_to_deg(w.kin.forward(id).angle_to(offset))
-
-
-## Propellant (kg) the integrator should charge for this tick's commands: impulse over
-## exhaust velocity, torque counted as force over the lever arm (FT-SIM-007).
-static func expected_propellant(w: SimWorld, id: int) -> float:
-	var f: Vector3 = w.kin.clamp_thrust(id, w.kin.force_cmd[id])
-	var tq: Vector3 = w.kin.clamp_torque(id, w.kin.torque_cmd[id])
-	var effort: float = absf(f.x) + absf(f.y) + absf(f.z)
-	effort += (absf(tq.x) + absf(tq.y) + absf(tq.z)) / w.kin.lever_arm[id]
-	return effort * DT / w.kin.exhaust_velocity[id]

@@ -6,8 +6,7 @@ extends RefCounted
 ##    emitted &"destroyed").
 ## 2. A live AI ship in RETREAT mode that no live ship of a faction hostile to it
 ##    detects any more has escaped: RETREATED, and &"retreated" (ship_id the ship).
-##    Provisional: retreat means leaving every hostile sensor range; FT-MIS-017 and D36
-##    don't define it.
+##    Retreat means leaving every hostile sensor range (D120).
 ## 3. Each crewed ship (not AI-flown) without an outcome gets one: LOSS when it is
 ##    destroyed (per-ship elimination, D30: the other ships carry on); WIN when it is in
 ##    play and every ship of a faction hostile to it is destroyed or retreated, with at

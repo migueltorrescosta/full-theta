@@ -40,7 +40,7 @@ func validate() -> Array[String]:
 	var errors: Array[String] = []
 	DefCheck.id(errors, "id", id)
 	DefCheck.positive(errors, "health_max", health_max)
-	_validate_curve(errors)
+	DefCheck.curve(errors, "effectiveness", effectiveness, 1.0, 1.0)
 	DefCheck.non_negative(errors, "repair_rate", repair_rate)
 	DefCheck.non_negative(errors, "parts_per_repair", parts_per_repair)
 	DefCheck.non_negative(errors, "nominal_pips", nominal_pips)
@@ -49,18 +49,3 @@ func validate() -> Array[String]:
 	DefCheck.positive(errors, "fault_heat_threshold", fault_heat_threshold)
 	DefCheck.non_negative(errors, "heat_fault_damage", heat_fault_damage)
 	return errors
-
-
-func _validate_curve(errors: Array[String]) -> void:
-	var n: int = effectiveness.size()
-	if n < 2:
-		errors.append("effectiveness: needs at least 2 points, got %d" % n)
-		return
-	if effectiveness[0].x != 0.0 or effectiveness[n - 1].x != 1.0:
-		errors.append("effectiveness: x must run from 0 to 1")
-	for i: int in n:
-		var p: Vector2 = effectiveness[i]
-		if i > 0 and not p.x > effectiveness[i - 1].x:
-			errors.append("effectiveness: x must be strictly ascending at point %d" % i)
-		if not (p.y >= 0.0 and p.y <= 1.0):
-			errors.append("effectiveness: y must be in [0, 1] at point %d" % i)

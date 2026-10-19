@@ -11,7 +11,7 @@ extends RefCounted
 const CELL: float = 250.0
 ## Ship-pair broadphase cell (m): pairs up to this far apart are always checked, so
 ## proximity warnings get the full horizon for closing speeds up to about
-## (PAIR_CELL - reach) / WARNING_HORIZON (190 m/s for two corvettes) and at least
+## (PAIR_CELL - reach) / WARNING_HORIZON (90 m/s for two corvettes, D119) and at least
 ## PAIR_CELL of warning distance above that.
 const PAIR_CELL: float = 500.0
 ## Coefficient of restitution of ship-ship contacts (dimensionless): hulls are mostly
@@ -19,8 +19,9 @@ const PAIR_CELL: float = 500.0
 const RESTITUTION: float = 0.2
 ## Ships on course to touch within this time get a &"proximity" warning (s, FT-SIM-010).
 const WARNING_HORIZON: float = 5.0
-## While a pair stays inside the horizon the warning repeats on ticks that are a
-## multiple of this (ticks); the first one fires on the tick the pair enters it.
+## While a pair stays warnable (within PAIR_CELL and on course to touch inside the
+## horizon) the warning repeats on ticks that are a multiple of this (ticks); the first
+## one fires on the tick the pair becomes warnable.
 const WARNING_REPEAT_TICKS: int = 30
 const EMPTY: Array = []
 
@@ -60,7 +61,7 @@ static func _ship_pairs(world: SimWorld) -> void:
 	reach.resize(n)
 	var reach_max: float = 0.0
 	for i: int in n:
-		reach[i] = kin.radius[i] + kin.half_length[i] + kin.vel[i].length() * WARNING_HORIZON
+		reach[i] = kin.bound(i) + kin.vel[i].length() * WARNING_HORIZON
 		if kin.is_alive(i):
 			reach_max = maxf(reach_max, reach[i])
 	for i: int in n:
@@ -92,7 +93,7 @@ static func _pair(world: SimWorld, i: int, j: int) -> void:
 	var kin: Kinematics = world.kin
 	var r: Vector3 = kin.relative(i, j)
 	var v: Vector3 = kin.vel[j] - kin.vel[i]
-	var reach: float = kin.radius[i] + kin.half_length[i] + kin.radius[j] + kin.half_length[j]
+	var reach: float = kin.bound(i) + kin.bound(j)
 	var far: float = reach + v.length() * WARNING_HORIZON
 	if r.length_squared() > far * far:
 		return
@@ -105,12 +106,23 @@ static func _pair(world: SimWorld, i: int, j: int) -> void:
 		_contact(world, i, j, c[0], c[1])
 		return
 	# FT-SIM-010: warn both ships before impact, from bounding spheres (early, never late).
-	var ttc: float = Sweep.time_to_reach(r, v, reach)
-	if ttc < 0.0 or ttc > WARNING_HORIZON:
+	var ttc: float = _warning_time(r, v, reach)
+	if ttc < 0.0:
 		return
-	if ttc > WARNING_HORIZON - SimWorld.DT or world.tick % WARNING_REPEAT_TICKS == 0:
+	# Stateless first warning: the pair was not warnable at the start of the tick.
+	var first: bool = _warning_time(r - v * SimWorld.DT, v, reach) < 0.0
+	if first or world.tick % WARNING_REPEAT_TICKS == 0:
 		world.emit(&"proximity", i, j, ttc)
 		world.emit(&"proximity", j, i, ttc)
+
+
+## Time until bounding spheres reach (s) when the pair is warnable (within PAIR_CELL and
+## inside the horizon), else -1.
+static func _warning_time(r: Vector3, v: Vector3, reach: float) -> float:
+	if r.length_squared() > PAIR_CELL * PAIR_CELL:
+		return -1.0
+	var ttc: float = Sweep.time_to_reach(r, v, reach)
+	return ttc if ttc <= WARNING_HORIZON else -1.0
 
 
 ## Ships i and j touch; ci and cj are the closest points of their segments, relative
@@ -126,6 +138,8 @@ static func _contact(world: SimWorld, i: int, j: int, ci: Vector3, cj: Vector3) 
 	var inv_j: float = 1.0 / kin.mass[j]
 	var share_i: float = inv_i / (inv_i + inv_j)
 	var pen: float = kin.radius[i] + kin.radius[j] - dist
+	# j's centre before the separation: cj is relative to i's centre before it too.
+	var rel_j: Vector3 = kin.relative(i, j)
 	_shift(kin, i, -n * (pen * share_i))
 	_shift(kin, j, n * (pen * (1.0 - share_i)))
 	var vn: float = (kin.vel[j] - kin.vel[i]).dot(n)
@@ -135,7 +149,6 @@ static func _contact(world: SimWorld, i: int, j: int, ci: Vector3, cj: Vector3) 
 	kin.vel[i] -= n * (impulse * inv_i)
 	kin.vel[j] += n * (impulse * inv_j)
 	var lost: float = 0.5 * vn * vn * (1.0 - RESTITUTION * RESTITUTION) / (inv_i + inv_j)
-	var rel_j: Vector3 = kin.relative(i, j)
 	_collision_hit(world, i, j, ci + n * kin.radius[i], n, 0.5 * lost)
 	_collision_hit(world, j, i, cj - rel_j - n * kin.radius[j], -n, 0.5 * lost)
 
@@ -226,7 +239,7 @@ static func _ship_pad(kin: Kinematics) -> float:
 	var moved: float = 0.0
 	for i: int in kin.size():
 		if kin.is_alive(i):
-			bound = maxf(bound, kin.radius[i] + kin.half_length[i])
+			bound = maxf(bound, kin.bound(i))
 			moved = maxf(moved, kin.vel[i].length() * SimWorld.DT)
 	return bound + moved
 
@@ -238,13 +251,21 @@ static func _sweep(
 ) -> float:
 	var vs: Vector3 = kin.vel[s]
 	var dt: float = SimWorld.DT
-	var start: Vector3 = Vector3(
-		x0 - (kin.px[s] - vs.x * dt), y0 - (kin.py[s] - vs.y * dt), z0 - (kin.pz[s] - vs.z * dt)
-	)
+	var start: Vector3 = _start(kin, s, x0, y0, z0)
 	if kin.half_length[s] == 0.0:
 		return Sweep.sphere(start, (pv - vs) * dt, kin.radius[s] + r)
 	var axis: Vector3 = kin.to_world(s, Vector3(0.0, 0.0, kin.half_length[s]))
 	return Sweep.capsule(start, (pv - vs) * dt, axis, kin.radius[s] + r)
+
+
+## A point at the start of the tick (x0, y0, z0) relative to ship s at the start of
+## the tick (m, site frame).
+static func _start(kin: Kinematics, s: int, x0: float, y0: float, z0: float) -> Vector3:
+	var vs: Vector3 = kin.vel[s]
+	var dt: float = SimWorld.DT
+	return Vector3(
+		x0 - (kin.px[s] - vs.x * dt), y0 - (kin.py[s] - vs.y * dt), z0 - (kin.pz[s] - vs.z * dt)
+	)
 
 
 static func _projectile_hit(
@@ -252,19 +273,13 @@ static func _projectile_hit(
 ) -> void:
 	var kin: Kinematics = world.kin
 	var proj: ProjectileTable = world.projectiles
-	var vs: Vector3 = kin.vel[target]
-	var dt: float = SimWorld.DT
-	var rel_vel: Vector3 = proj.vel[k] - vs
-	var start: Vector3 = Vector3(
-		x0 - (kin.px[target] - vs.x * dt),
-		y0 - (kin.py[target] - vs.y * dt),
-		z0 - (kin.pz[target] - vs.z * dt)
-	)
+	var rel_vel: Vector3 = proj.vel[k] - kin.vel[target]
+	var start: Vector3 = _start(kin, target, x0, y0, z0)
 	var hit: SimHit = SimHit.new()
 	hit.target_id = target
 	hit.source_id = proj.ship_ids[k]
 	hit.kind = &"projectile"
-	hit.point_local = kin.to_local(target, start + rel_vel * (dt * t))
+	hit.point_local = kin.to_local(target, start + rel_vel * (SimWorld.DT * t))
 	hit.from_local = kin.to_local(target, -rel_vel).normalized()
 	hit.energy = proj.energy[k]
 	world.hits.append(hit)

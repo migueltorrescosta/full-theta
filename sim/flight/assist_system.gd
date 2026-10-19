@@ -37,19 +37,16 @@ static func step(world: SimWorld) -> void:
 			_command(world, row, tuning)
 
 
-## Whether the ship has a selected target it can fly to: a live ship or a point at its
-## own site (ships at different sites never interact).
+## Whether the ship has a selected target it can fly to: a live ship its faction detects
+## (FT-ARC-013) or a point at its own site (ships at different sites never interact).
 static func has_target(world: SimWorld, row: int) -> bool:
 	var helm: HelmTable = world.helm
 	var kin: Kinematics = world.kin
 	if helm.target_kind[row] == HelmTable.Target.SHIP:
 		var other: int = helm.target_ship[row]
 		return (
-			other >= 0
-			and other < kin.size()
-			and other != row
-			and kin.is_alive(other)
-			and kin.same_site(row, other)
+			kin.can_reach(row, other)
+			and KnowledgeSystem.is_detected(world, world.faction_of(row), other)
 		)
 	if helm.target_kind[row] == HelmTable.Target.POINT:
 		return helm.target_site[row] == kin.site[row]
@@ -250,21 +247,27 @@ static func _level_rate(kin: Kinematics, row: int, stage: int, tuning: AssistDef
 ## (FT-SIM-037): target velocity plus a closing speed along the line of sight, on a
 ## braking curve far out and an exponential settle near the stand-off.
 static func _approach_velocity(world: SimWorld, row: int, tuning: AssistDef) -> Vector3:
-	var kin: Kinematics = world.kin
 	var rel: Vector3 = target_offset(world, row)
 	var target_vel: Vector3 = target_velocity(world, row)
 	var dist: float = rel.length()
 	if dist < 1e-3:
 		return target_vel
 	var gap: float = dist - tuning.approach_standoff
-	var brake: float = kin.thrust_limit_pos(row).z / kin.mass[row] * tuning.approach_braking
 	var speed: float
 	if gap > 0.0:
-		speed = minf(sqrt(2.0 * brake * gap), gap / tuning.approach_final_time_constant)
-		speed = minf(speed, tuning.approach_speed_cap)
+		speed = closing_speed(world.kin, row, tuning, gap)
 	else:
 		speed = maxf(gap / tuning.approach_final_time_constant, -APPROACH_BACKOFF_MAX)
 	return target_vel + rel / dist * speed
+
+
+## Closing speed (m/s) for a gap >= 0 (m) to a stand-off, on the approach curve
+## (FT-SIM-037): a braking curve on the retro thrust share far out, an exponential
+## settle near, capped.
+static func closing_speed(kin: Kinematics, row: int, tuning: AssistDef, gap: float) -> float:
+	var brake: float = kin.thrust_limit_pos(row).z / kin.mass[row] * tuning.approach_braking
+	var speed: float = minf(sqrt(2.0 * brake * gap), gap / tuning.approach_final_time_constant)
+	return minf(speed, tuning.approach_speed_cap)
 
 
 ## Full-deflection force in the current envelope for a body-frame input in [-1, 1].

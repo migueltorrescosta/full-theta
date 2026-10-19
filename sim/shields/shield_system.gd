@@ -66,14 +66,15 @@ static func coverage(k: float, cos_angle: float) -> float:
 
 
 ## Engineering sets shield power (pips, -1 keeps them) and tightness (-1 keeps it);
-## rejects tightness outside the definition's range or pips over the cap, changing
-## nothing (FT-ENG-003).
+## rejects tightness outside the definition's range or not finite, or pips over the
+## cap, changing nothing (FT-ENG-003).
 static func set_power_and_tightness(
 	world: SimWorld, ship_id: int, pips: int, new_tightness: float
 ) -> bool:
 	var def: ShieldDef = world.defs[ship_id].shields
 	var keep: bool = new_tightness < 0.0
-	if not keep and (new_tightness < def.tightness_min or new_tightness > def.tightness_max):
+	var in_range: bool = new_tightness >= def.tightness_min and new_tightness <= def.tightness_max
+	if not keep and not (is_finite(new_tightness) and in_range):
 		return false
 	if pips >= 0 and not PowerSystem.set_pips(world, ship_id, SubsystemDef.Kind.SHIELDS, pips):
 		return false
@@ -83,36 +84,39 @@ static func set_power_and_tightness(
 
 
 ## Helm sets the focus direction (ship frame), or tracks another ship at the same site
-## when target >= 0 (D48, FT-HLM-010). Rejects a zero direction or an invalid target.
+## when target >= 0 (D48, FT-HLM-010). Rejects a zero or non-finite direction, an invalid
+## target and one its faction doesn't detect (FT-ARC-013).
 static func set_focus(world: SimWorld, ship_id: int, direction: Vector3, target: int) -> bool:
 	if target >= 0:
-		var ok: bool = (
-			target < world.ship_count()
-			and target != ship_id
-			and world.kin.is_alive(target)
-			and world.kin.same_site(ship_id, target)
-		)
-		if not ok:
+		if not _can_track(world, ship_id, target):
 			return false
 		world.shields.track_id[ship_id] = target
 		_track(world, ship_id)
 		return true
-	if direction.length() < 1e-6:
+	if not direction.is_finite() or direction.length() < 1e-6:
 		return false
 	world.shields.track_id[ship_id] = -1
 	world.shields.focus[ship_id] = direction.normalized()
 	return true
 
 
-## Points a tracking focus at its target; drops the track once the target is gone.
+## Points a tracking focus at its target; drops the track once the target is gone or
+## no longer detected (FT-ARC-013).
 static func _track(world: SimWorld, s: int) -> void:
 	var target: int = world.shields.track_id[s]
 	if target < 0:
 		return
 	var kin: Kinematics = world.kin
-	if not kin.is_alive(target) or not kin.same_site(s, target):
+	if not _can_track(world, s, target):
 		world.shields.track_id[s] = -1
 		return
 	var local: Vector3 = kin.to_local(s, kin.relative(s, target))
 	if local.length() > 1e-6:
 		world.shields.focus[s] = local.normalized()
+
+
+static func _can_track(world: SimWorld, s: int, target: int) -> bool:
+	return (
+		world.kin.can_reach(s, target)
+		and KnowledgeSystem.is_detected(world, world.faction_of(s), target)
+	)

@@ -96,14 +96,16 @@ func spawn_enemy(
 	return id
 
 
-## Restores one ship's state from its definition and places it again; other ships are
-## untouched (FT-GEN-002: a destroyed ship's run state resets on its own).
+## Restores one ship's state from its definition and places it again, dropping its
+## queued commands; other ships are untouched (FT-GEN-002: a destroyed ship's run state
+## resets on its own).
 func reset_ship(
 	ship_id: int,
 	site: int,
 	offset: Vector3 = Vector3.ZERO,
 	rotation: Quaternion = Quaternion.IDENTITY
 ) -> void:
+	_queue.assign(_queue.filter(func(c: SimCommand) -> bool: return c.ship_id != ship_id))
 	for t: SimTable in tables():
 		t.reset_ship(ship_id, defs[ship_id])
 	kin.place(ship_id, site, offset.x, offset.y, offset.z)
@@ -202,12 +204,14 @@ func drain_events() -> Array[SimEvent]:
 	return out
 
 
-## SHA-256 over every table's columns, the tick, the RNG states and the relations, in a
-## fixed order (FT-ARC-008). Events and the command log are outputs, not state.
+## SHA-256 over every table's columns, the tick, the RNG states, the relations and the
+## queued commands, in a fixed order (FT-ARC-008). Events and the command log are
+## outputs, not state.
 func state_hash() -> String:
 	var ctx: HashingContext = HashingContext.new()
 	ctx.start(HashingContext.HASH_SHA256)
-	ctx.update(var_to_bytes([tick, rng.states(), _relation_list()]))
+	var pending: Array = _queue.map(func(c: SimCommand) -> Array: return [c.to_dict(), c.source])
+	ctx.update(var_to_bytes([tick, rng.states(), _relation_list(), pending]))
 	for t: SimTable in tables():
 		for column: Array in t.columns():
 			ctx.update(var_to_bytes(column))

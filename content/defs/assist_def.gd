@@ -3,9 +3,11 @@ extends Resource
 ## Flight assist tuning (FT-SIM-004, FT-SIM-036, FT-SIM-037), starting from the S5 spike.
 ## Units are SI (FT-SIM-033, FT-DAT-013).
 
-## Turn rate cap in pitch and yaw (rad/s).
+## Turn rate cap in pitch and yaw at the nominal torque envelope (rad/s); it scales with
+## the envelope (D117).
 @export var turn_rate_pitch_yaw: float = 0.0
-## Turn rate cap in roll (rad/s).
+## Turn rate cap in roll at the nominal torque envelope (rad/s); it scales with the
+## envelope (D117).
 @export var turn_rate_roll: float = 0.0
 ## Angular rate hold time constant (s).
 @export var rate_time_constant: float = 0.0

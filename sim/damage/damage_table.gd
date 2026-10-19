@@ -21,13 +21,15 @@ var spare_parts: PackedInt32Array = PackedInt32Array()
 ## Mask of repair crews assigned to a subsystem row (bit c = crew c).
 var crews: PackedInt32Array = PackedInt32Array()
 
-## Derived index, not state: first (hull) row by ship id. Rebuilt when stale.
+## Derived index, not state: first (hull) row by ship id, set at spawn (rows never move).
 var _first: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	var r: int = add_key(ship_id, faction)
-	_index(ship_id, r)
+	while _first.size() <= ship_id:
+		_first.append(-1)
+	_first[ship_id] = r
 	part_ids.append(HULL)
 	health.append(def.hull_max)
 	spare_parts.append(def.spare_parts)
@@ -54,25 +56,13 @@ func columns() -> Array:
 
 ## The ship's hull row, or -1.
 func hull_row(ship_id: int) -> int:
-	if ship_id >= 0 and ship_id < _first.size():
-		var r: int = _first[ship_id]
-		if r >= 0 and r < size() and ship_ids[r] == ship_id:
-			return r
-	var found: int = row_of(ship_id)
-	if found >= 0:
-		_index(ship_id, found)
-	return found
+	return _first[ship_id] if ship_id >= 0 and ship_id < _first.size() else -1
 
 
-## Row of the ship's subsystem with that index in ShipDef.subsystems, or -1.
+## Row of the ship's subsystem with that index in ShipDef.subsystems; the caller passes
+## a valid index.
 func subsystem_row(ship_id: int, index: int) -> int:
-	var h: int = hull_row(ship_id)
-	if h < 0 or index < 0:
-		return -1
-	var r: int = h + 1 + index
-	if r >= size() or ship_ids[r] != ship_id:
-		return -1
-	return r
+	return hull_row(ship_id) + 1 + index
 
 
 ## Row of the ship's subsystem with that id, or -1 (never the hull row).
@@ -86,22 +76,3 @@ func find_subsystem(ship_id: int, subsystem_id: StringName) -> int:
 			return r
 		r += 1
 	return -1
-
-
-## Mask of every crew assigned anywhere on the ship.
-func busy_crews(ship_id: int) -> int:
-	var mask: int = 0
-	var h: int = hull_row(ship_id)
-	if h < 0:
-		return 0
-	var r: int = h + 1
-	while r < size() and ship_ids[r] == ship_id:
-		mask |= crews[r]
-		r += 1
-	return mask
-
-
-func _index(ship_id: int, row: int) -> void:
-	while _first.size() <= ship_id:
-		_first.append(-1)
-	_first[ship_id] = row

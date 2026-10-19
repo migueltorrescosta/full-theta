@@ -18,8 +18,6 @@ static func step(world: SimWorld) -> void:
 		var def: ShipDef = world.defs[s]
 		for i: int in def.subsystems.size():
 			_step_heat(world, s, i)
-		if t.boost_ticks[s] > 0:
-			t.boost_ticks[s] -= 1
 		var charge: float = (
 			def.power.reactor_output
 			* _pips_of(world, s, SubsystemDef.Kind.WEAPONS)
@@ -29,6 +27,9 @@ static func step(world: SimWorld) -> void:
 		t.weapon_energy[s] = minf(t.weapon_energy[s] + charge, def.power.weapons_capacity)
 		world.kin.thrust_scale[s] = kind_envelope(world, s, SubsystemDef.Kind.ENGINES)
 		world.kin.torque_scale[s] = kind_envelope(world, s, SubsystemDef.Kind.THRUSTERS)
+		# Last, so a boost of n ticks raises heat and the envelope for exactly n ticks.
+		if t.boost_ticks[s] > 0:
+			t.boost_ticks[s] -= 1
 
 
 ## Draws energy for a shot or other use (J); false, and nothing drawn, if not enough.
@@ -137,28 +138,20 @@ static func envelope(
 	)
 
 
-## Piecewise-linear curve through ascending points, clamped past the ends.
+## Piecewise-linear curve through ascending points, clamped past the ends; 1 for an
+## empty curve. Also samples subsystem effectiveness curves (FT-SIM-021).
 static func curve_at(curve: PackedVector2Array, x: float) -> float:
 	var n: int = curve.size()
+	if n == 0:
+		return 1.0
 	if x <= curve[0].x:
 		return curve[0].y
 	for i: int in range(1, n):
 		if x <= curve[i].x:
 			var a: Vector2 = curve[i - 1]
 			var b: Vector2 = curve[i]
-			return a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x)
+			return lerpf(a.y, b.y, (x - a.x) / (b.x - a.x))
 	return curve[n - 1].y
-
-
-## Adds heat to a subsystem by id (K), for example a weapon's heat_per_shot.
-static func add_heat(
-	world: SimWorld, ship_id: int, subsystem_id: StringName, kelvin: float
-) -> void:
-	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
-	for i: int in subs.size():
-		if subs[i].id == subsystem_id:
-			world.power.heat[ship_id][i] += kelvin
-			return
 
 
 ## Index of the ship's first subsystem of a kind, or -1.
@@ -186,7 +179,7 @@ static func _step_heat(world: SimWorld, s: int, i: int) -> void:
 	if h > sd.fault_heat_threshold and world.power.fault_armed[s][i] == 1:
 		world.power.fault_armed[s][i] = 0
 		DamageSystem.damage_subsystem(world, s, sd.id, sd.heat_fault_damage, &"heat")
-		world.emit(&"fault", s, i, h, Vector3.ZERO, sd.id)
+		world.emit(&"fault", s, -1, h, Vector3.ZERO, sd.id)
 	elif h < sd.fault_heat_threshold * FAULT_REARM and world.power.fault_armed[s][i] == 0:
 		world.power.fault_armed[s][i] = 1
 

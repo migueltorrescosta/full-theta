@@ -80,7 +80,8 @@ static func turn_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3
 
 ## FT-SIM-016: the first friendly or neutral ship (world.relation not HOSTILE) the
 ## mount's next shot would cross within the weapon's range, with every ship keeping
-## its velocity, or -1. A warning only: friendly fire still happens.
+## its velocity, or -1. Only ships the shooter's faction detects count (FT-ARC-013; its
+## own ships always do). A warning only: friendly fire still happens.
 static func path_crosses(world: SimWorld, ship_id: int, index: int) -> int:
 	var row: int = world.mounts.row_for(ship_id, index)
 	if row < 0:
@@ -99,6 +100,8 @@ static func path_crosses(world: SimWorld, ship_id: int, index: int) -> int:
 		if j == ship_id or not kin.is_alive(j) or not kin.same_site(ship_id, j):
 			continue
 		if world.relation(faction, world.faction_of(j)) == SimWorld.Relation.HOSTILE:
+			continue
+		if not KnowledgeSystem.is_detected(world, faction, j):
 			continue
 		var axis: Vector3 = kin.to_world(j, Vector3(0.0, 0.0, kin.half_length[j]))
 		var t: float = Sweep.capsule(

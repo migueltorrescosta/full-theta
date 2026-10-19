@@ -13,7 +13,9 @@ extends RefCounted
 ##
 ## Behaviour, from the EnemyDef numbers in AiTable:
 ## - HOLD: no hostile or unknown contact detected: all-stop, then nothing.
-## - ATTACK / KEEP_RANGE: face the target and drive the forward speed setpoint toward the
+## - ATTACK / KEEP_RANGE: face the first mount's lead intercept point (selected as a
+##   point each tick, so crossing targets stay inside fire_cone; the target ship when
+##   there is no solution) and drive the forward speed setpoint toward the
 ##   middle of [engage_range_min, engage_range_max] (closing beyond it, backing off
 ##   inside it), on the assist's own approach braking curve; the mode is ATTACK while
 ##   farther than engage_range_max. Each mount aims at the lead intercept point
@@ -119,13 +121,9 @@ static func _hold(world: SimWorld, id: int) -> void:
 		_submit(world, id, AllStopCommand.new())
 
 
-## ATTACK and KEEP_RANGE: face the target, hold the middle of the engage band, shoot.
+## ATTACK and KEEP_RANGE: face the lead point, hold the middle of the engage band, shoot.
 static func _engage(world: SimWorld, id: int, target: int) -> void:
-	var helm: HelmTable = world.helm
-	if helm.target_kind[id] != HelmTable.Target.SHIP or helm.target_ship[id] != target:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.target_ship = target
-		_submit(world, id, select)
+	_select_face_point(world, id, target)
 	var kin: Kinematics = world.kin
 	var ai: AiTable = world.ai
 	var rel: Vector3 = kin.relative(id, target)
@@ -139,16 +137,34 @@ static func _engage(world: SimWorld, id: int, target: int) -> void:
 		_aim_and_fire(world, id, m, target, dist)
 
 
+## Selects the first mount's lead aim point as Helm's point target, so the bow faces
+## where the shots must go; else (no mount, no solution, off the grid) the target ship.
+static func _select_face_point(world: SimWorld, id: int, target: int) -> void:
+	var kin: Kinematics = world.kin
+	var helm: HelmTable = world.helm
+	var aim: Vector3 = Vector3.INF
+	if not world.defs[id].mounts.is_empty():
+		aim = _lead_aim(world, id, 0, target)
+	var select: SelectTargetCommand = SelectTargetCommand.new()
+	if aim.is_finite():
+		select.site = kin.site[id]
+		select.x = kin.px[id] + aim.x
+		select.y = kin.py[id] + aim.y
+		select.z = kin.pz[id] + aim.z
+	if not (aim.is_finite() and Kinematics.in_bounds(select.x, select.y, select.z)):
+		if helm.target_kind[id] == HelmTable.Target.SHIP and helm.target_ship[id] == target:
+			return
+		select = SelectTargetCommand.new()
+		select.target_ship = target
+	_submit(world, id, select)
+
+
 ## Closing speed (m/s, negative backs off) for a distance gap (m) to the hold distance,
 ## on the assist's approach curve (FT-SIM-037 tuning): a braking curve on the retro
 ## thrust share far out, an exponential settle near, capped.
 static func closing_speed(world: SimWorld, id: int, gap: float) -> float:
 	var tuning: AssistDef = world.defs[id].assist
-	var kin: Kinematics = world.kin
-	var brake: float = kin.thrust_limit_pos(id).z / kin.mass[id] * tuning.approach_braking
-	var g: float = absf(gap)
-	var speed: float = minf(sqrt(2.0 * brake * g), g / tuning.approach_final_time_constant)
-	return signf(gap) * minf(speed, tuning.approach_speed_cap)
+	return signf(gap) * AssistSystem.closing_speed(world.kin, id, tuning, absf(gap))
 
 
 ## RETREAT: face a point straight away from the threat and run at full throttle.
@@ -214,9 +230,10 @@ static func _helm_input_raw(world: SimWorld, id: int, face: bool, throttle: floa
 	_submit(world, id, c)
 
 
-## Aims the mount at the lead intercept point, predicted one tick ahead because the
-## command applies next tick, and fires when the shot is good.
-static func _aim_and_fire(world: SimWorld, id: int, m: int, target: int, dist: float) -> void:
+## The mount's lead intercept point relative to the ship's centre (m, site frame),
+## predicted one tick ahead because the command applies next tick, or Vector3.INF when
+## no shot can reach the target. The shot's reach is its distance from the muzzle.
+static func _lead_aim(world: SimWorld, id: int, m: int, target: int) -> Vector3:
 	var kin: Kinematics = world.kin
 	var mount: MountDef = world.defs[id].mounts[m]
 	var muzzle: Vector3 = kin.to_world(id, mount.position)
@@ -224,16 +241,27 @@ static func _aim_and_fire(world: SimWorld, id: int, m: int, target: int, dist: f
 	var rel: Vector3 = kin.relative(id, target) - muzzle + rel_vel * SimWorld.DT
 	var t: float = Lead.intercept_time(rel, rel_vel, mount.weapon.projectile_speed)
 	if t < 0.0:
+		return Vector3.INF
+	return muzzle + Lead.aim_point(rel, rel_vel, t)
+
+
+## Aims the mount at the lead intercept point and fires when the shot is good.
+static func _aim_and_fire(world: SimWorld, id: int, m: int, target: int, dist: float) -> void:
+	var kin: Kinematics = world.kin
+	var aim: Vector3 = _lead_aim(world, id, m, target)
+	if not aim.is_finite():
 		return
-	var aim: Vector3 = muzzle + Lead.aim_point(rel, rel_vel, t)
+	# The ship moves two ticks before WeaponSystem reads the point (it applies next tick,
+	# and the weapons run after the integrator), so the point moves with it.
+	var point: Vector3 = aim + kin.vel[id] * (2.0 * SimWorld.DT)
 	var c: AimMountCommand = AimMountCommand.new()
 	c.mount_index = m
-	c.aim_x = kin.px[id] + aim.x
-	c.aim_y = kin.py[id] + aim.y
-	c.aim_z = kin.pz[id] + aim.z
+	c.aim_x = kin.px[id] + point.x
+	c.aim_y = kin.py[id] + point.y
+	c.aim_z = kin.pz[id] + point.z
 	_submit(world, id, c)
-	var reach: float = t * mount.weapon.projectile_speed
-	if _shot_good(world, id, m, target, dist, aim - muzzle, reach):
+	var shot: Vector3 = aim - kin.to_world(id, world.defs[id].mounts[m].position)
+	if _shot_good(world, id, m, target, dist, shot, shot.length()):
 		var fire: FireCommand = FireCommand.new()
 		fire.mount_index = m
 		_submit(world, id, fire)

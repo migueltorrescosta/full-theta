@@ -26,7 +26,7 @@ func test_all_stop_from_tumble() -> void:
 			w.step()
 			ticks += 1
 		var msg: String = "decoupled %s" % decoupled
-		assert_float(ticks * FlightFixture.DT).override_failure_message(msg).is_less(30.0)
+		assert_float(ticks * SimWorld.DT).override_failure_message(msg).is_less(30.0)
 		assert_float(w.kin.vel[id].length()).override_failure_message(msg).is_less(0.05)
 		assert_float(w.kin.ang_vel[id].length()).override_failure_message(msg).is_less(0.002)
 		assert_float(w.kin.propellant_used[id]).override_failure_message(msg).is_greater(100.0)
@@ -48,7 +48,7 @@ func test_all_stop_ends_on_manual_input() -> void:
 	assert_float(w.kin.torque_cmd[id].y).is_greater(0.0)
 
 
-# FT: FT-SIM-037, FT-HLM-006
+# FT: FT-SIM-037
 # Hold-to-approach to a mark 7.2 km away: assist faces it, flies to the 500 m stand-off
 # (AssistDef data) and stops there. S5 settles in 60 s; at 90 s the state is within
 # 0.05 m of 500 m and 0.01 m/s (the final 4 s time constant has long decayed). Releasing
@@ -134,6 +134,25 @@ func test_face_ignores_other_site() -> void:
 	assert_bool(AssistSystem.has_target(w, id)).is_false()
 	assert_vector(w.kin.ang_vel[id]).is_equal(Vector3.ZERO)
 	assert_float(w.kin.propellant_used[id]).is_equal(0.0)
+
+
+# FT: FT-HLM-005, FT-ARC-013
+# Face follows a selected contact only while the faction detects it: once the raider
+# leaves sensor range the ship has no target and stops turning.
+func test_face_stops_on_lost_contact() -> void:
+	var w: SimWorld = FlightFixture.world()
+	var id: int = FlightFixture.spawn(w)
+	var raider: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(5000.0, 0.0, 0.0))
+	w.step()
+	FlightFixture.select_ship(w, id, raider)
+	FlightFixture.input(w, id, Vector3.ZERO, Vector3.ZERO, true)
+	FlightFixture.run(w, 30)
+	assert_bool(AssistSystem.has_target(w, id)).is_true()
+	assert_float(w.kin.ang_vel[id].y).is_less(-0.01)
+	w.kin.place(raider, 0, 0.0, 0.0, 50000.0)
+	FlightFixture.run(w, 120)
+	assert_bool(AssistSystem.has_target(w, id)).is_false()
+	assert_float(w.kin.ang_vel[id].length()).is_less(1e-3)
 
 
 # FT: FT-HLM-007

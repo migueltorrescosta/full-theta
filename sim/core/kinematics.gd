@@ -83,9 +83,7 @@ func place(row: int, site_id: int, x: float, y: float, z: float) -> void:
 ## FT-SIM-035, FT-M1-020: every offset axis stays within MAX_OFFSET of its site.
 ## A jump (FT-SIM-034, #10) changes the site instead.
 func check_offset(row: int) -> bool:
-	var ok: bool = (
-		absf(px[row]) <= MAX_OFFSET and absf(py[row]) <= MAX_OFFSET and absf(pz[row]) <= MAX_OFFSET
-	)
+	var ok: bool = in_bounds(px[row], py[row], pz[row])
 	if not ok:
 		var msg: String = (
 			"site-local offset past %d m: ship %d at (%f, %f, %f)"
@@ -94,6 +92,23 @@ func check_offset(row: int) -> bool:
 		push_error(msg)
 		assert(false, msg)
 	return ok
+
+
+## Whether a site-local point is on the site grid: finite and within MAX_OFFSET per axis
+## (FT-SIM-035).
+static func in_bounds(x: float, y: float, z: float) -> bool:
+	# The comparisons are false for NaN and infinity.
+	return absf(x) <= MAX_OFFSET and absf(y) <= MAX_OFFSET and absf(z) <= MAX_OFFSET
+
+
+## Whether row a can fly to, track or point at row b: another live ship at its site.
+func can_reach(a: int, b: int) -> bool:
+	return b >= 0 and b < size() and b != a and is_alive(b) and same_site(a, b)
+
+
+## Bounding radius of a ship's capsule (m): radius plus half length.
+func bound(row: int) -> float:
+	return radius[row] + half_length[row]
 
 
 ## Offset of row b from row a (m, float32), computed in 64-bit. Only meaningful when

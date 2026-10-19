@@ -148,7 +148,8 @@ func test_projectile_ignores_shooter_and_expires() -> void:
 # FT: FT-SIM-009, FT-SIM-010
 # Two friendly corvettes closing at 20 m/s collide: momentum is conserved, they
 # separate at RESTITUTION times the closing speed, and each takes half the kinetic
-# energy lost as a collision hit (shields off, so all of it passes).
+# energy lost as a collision hit (shields off, so all of it passes) at the point of its
+# hull facing the other (25 m spheres; the separation doesn't move it).
 func test_friendly_contact_impulse_and_damage() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var def: ShipDef = TestDefs.corvette()
@@ -173,6 +174,10 @@ func test_friendly_contact_impulse_and_damage() -> void:
 	var events: Array[SimEvent] = world.drain_events()
 	var hits_b: Array = _hits(events, b, &"collision")
 	assert_int(hits_b.size()).is_equal(1)
+	for e: SimEvent in events:
+		if e.kind == &"hit":
+			var want: Vector3 = Vector3(0, 0, 25) if e.ship_id == a else Vector3(0, 0, -25)
+			assert_vector(e.vector).is_equal_approx(want, Vector3.ONE * 1e-3)
 	var p1: Vector3 = world.kin.vel[a] * def.mass + world.kin.vel[b] * def.mass
 	assert_vector(p1).is_equal_approx(p0, Vector3.ONE * 1e-2)
 	var sep: float = (world.kin.vel[b] - world.kin.vel[a]).z
@@ -222,6 +227,34 @@ func test_proximity_warning_before_impact() -> void:
 
 
 # FT: FT-SIM-010
+# Corvettes closing at 400 m/s are on course to touch well inside the horizon when they
+# come within PAIR_CELL (500 m): the first warning fires on that tick, whatever its
+# phase in the repeat period, and none before.
+func test_fast_pair_warned_on_entering_search_distance() -> void:
+	for shift: int in 6:
+		var world: SimWorld = SimWorld.new(1)
+		var def: ShipDef = TestDefs.corvette()
+		var start: float = 1000.0 + shift * 5 * 400.0 / 60.0 + 1.0
+		world.spawn_ship(def, 1, 0, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 200))
+		world.spawn_ship(def, 2, 0, Vector3(10, 0, start), Quaternion.IDENTITY, Vector3(0, 0, -200))
+		_coast(world)
+		var warned_before: bool = false
+		var warned_on_entry: bool = false
+		for i: int in 120:
+			world.step()
+			var warned: bool = false
+			for e: SimEvent in world.drain_events():
+				warned = warned or e.kind == &"proximity"
+			if world.kin.relative(0, 1).length() <= CollisionSystem.PAIR_CELL:
+				warned_on_entry = warned
+				break
+			warned_before = warned_before or warned
+		var msg: String = "start %s m" % start
+		assert_bool(warned_before).override_failure_message(msg).is_false()
+		assert_bool(warned_on_entry).override_failure_message(msg).is_true()
+
+
+# FT: FT-SIM-010
 # Ships passing wide of each other get no warning; ships at different sites never
 # warn or collide, even at the same offsets in the same grid cell numbers (site 16
 # and site 0 shared cells in the S6 spike).
@@ -263,7 +296,6 @@ func test_capsule_contact() -> void:
 		assert_int(hits[0][2]).is_equal(b)
 
 
-# FT: FT-GEN-002
 # Resetting a ship drops its projectiles and leaves others'.
 func test_reset_ship_drops_its_projectiles() -> void:
 	var world: SimWorld = SimWorld.new(1)

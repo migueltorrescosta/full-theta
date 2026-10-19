@@ -29,27 +29,10 @@ func validate() -> Array[String]:
 	DefCheck.positive(errors, "reactor_pips", reactor_pips)
 	DefCheck.positive(errors, "max_pips_per_subsystem", max_pips_per_subsystem)
 	DefCheck.positive(errors, "reactor_output", reactor_output)
-	_validate_curve(errors, "envelope_curve", envelope_curve, INF)
+	DefCheck.curve(errors, "envelope_curve", envelope_curve, INF)
 	if not envelope_curve.has(Vector2(1, 1)):
 		errors.append("envelope_curve: must contain the point (1, 1)")
-	_validate_curve(errors, "heat_derate", heat_derate, 1.0)
+	DefCheck.curve(errors, "heat_derate", heat_derate, 1.0)
 	DefCheck.positive(errors, "boost_duration", boost_duration)
 	DefCheck.non_negative(errors, "weapons_capacity", weapons_capacity)
 	return errors
-
-
-static func _validate_curve(
-	errors: Array[String], field: String, curve: PackedVector2Array, y_max: float
-) -> void:
-	var n: int = curve.size()
-	if n < 2:
-		errors.append("%s: needs at least 2 points, got %d" % [field, n])
-		return
-	if curve[0].x != 0.0:
-		errors.append("%s: x must start at 0" % field)
-	for i: int in n:
-		var p: Vector2 = curve[i]
-		if i > 0 and not p.x > curve[i - 1].x:
-			errors.append("%s: x must be strictly ascending at point %d" % [field, i])
-		if not (p.y >= 0.0 and p.y <= y_max):
-			errors.append("%s: y must be in [0, %s] at point %d" % [field, y_max, i])

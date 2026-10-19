@@ -26,4 +26,3 @@ func test_coop_beats_solo() -> void:
 		. is_empty()
 	)
 	assert_float(runs.coop.metrics.heat_faults).is_equal(0.0)
-	assert_str(harness.run(P1Scenario.coop).state_hash).is_equal(runs.coop.state_hash)

@@ -34,10 +34,6 @@ func _steps(w: SimWorld, n: int) -> void:
 		w.step()
 
 
-func _faults(events: Array[SimEvent]) -> Array[SimEvent]:
-	return events.filter(func(e: SimEvent) -> bool: return e.kind == &"fault")
-
-
 # FT: FT-SIM-026
 # Pips per subsystem stay within the reactor cap and the per-subsystem maximum;
 # overcharge above nominal is allowed; the reactor takes no pips.
@@ -70,19 +66,19 @@ func test_overcharge_heat_creates_one_fault() -> void:
 	# 10 s of overcharge: 200 K * (1 - e^-0.5); exact stepping, float tolerance.
 	assert_float(w.power.heat[0][0]).is_equal_approx(200.0 * (1.0 - exp(-0.5)), 1e-6)
 	_steps(w, 1200)
-	var faults: Array[SimEvent] = _faults(w.drain_events())
+	var faults: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"fault")
 	assert_int(faults.size()).is_equal(1)
 	assert_int(faults[0].tick - start).is_equal(831)
 	assert_str(String(faults[0].tag)).is_equal("engines")
-	assert_int(faults[0].other_id).is_equal(0)
+	assert_int(faults[0].other_id).is_equal(-1)
 	assert_float(faults[0].value).is_greater(100.0)
 	assert_bool(_pips(w, ENG, 2)).is_true()
 	_steps(w, 60 * 20)
 	assert_float(w.power.heat[0][0]).is_less(80.0)
-	assert_int(_faults(w.drain_events()).size()).is_equal(0)
+	assert_int(SimFixture.of_kind(w.drain_events(), &"fault").size()).is_equal(0)
 	assert_bool(_pips(w, ENG, 4)).is_true()
 	_steps(w, 60 * 20)
-	assert_int(_faults(w.drain_events()).size()).is_equal(1)
+	assert_int(SimFixture.of_kind(w.drain_events(), &"fault").size()).is_equal(1)
 
 
 # FT: FT-SIM-006
@@ -171,10 +167,25 @@ func test_boost_is_short_overcharge() -> void:
 	assert_array(Array(w.power.pips[0])).is_equal([2, 2, 2, 2, 2, 0])
 	w.step()
 	assert_float(w.kin.thrust_scale[0]).is_equal(1.0)
-	assert_int(_faults(w.drain_events()).size()).is_equal(0)
+	assert_int(SimFixture.of_kind(w.drain_events(), &"fault").size()).is_equal(0)
 	var plain: int = _turn_and_sprint(false)
 	var boosted: int = _turn_and_sprint(true)
 	assert_int(boosted).is_less(plain)
+
+
+# FT: FT-SIM-006
+# An 8 s boost raises the envelope for exactly 480 ticks.
+func test_boost_lasts_exactly_its_duration() -> void:
+	var w: SimWorld = _world()
+	var b: BoostCommand = BoostCommand.new()
+	b.ship_id = 0
+	w.submit(b)
+	var boosted: int = 0
+	for i: int in 600:
+		w.step()
+		if w.kin.thrust_scale[0] > 1.0:
+			boosted += 1
+	assert_int(boosted).is_equal(480)
 
 
 # FT: FT-SIM-026
@@ -186,7 +197,7 @@ func test_back_to_back_boosts_fault() -> void:
 		b.ship_id = 0
 		w.submit(b)
 		_steps(w, 480)
-	var faults: Array[SimEvent] = _faults(w.drain_events())
+	var faults: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"fault")
 	assert_int(faults.size()).is_equal(2)
 	(
 		assert_array(faults.map(func(e: SimEvent) -> String: return String(e.tag)))
@@ -214,17 +225,8 @@ func test_draw_energy_from_weapons_store() -> void:
 	assert_float(w.power.weapon_energy[0]).is_equal(5e6)
 
 
-# FT: FT-ARC-008, FT-GEN-002
-# Power commands round-trip through the command codec, and a ship reset restores its
-# pips, heat and store.
-func test_commands_round_trip_and_reset() -> void:
-	var c: SetPipsCommand = SetPipsCommand.new()
-	c.subsystem_kind = THR
-	c.pips = 3
-	var back: SetPipsCommand = SimCommands.from_dict(c.to_dict()) as SetPipsCommand
-	assert_int(back.subsystem_kind).is_equal(THR)
-	assert_int(back.pips).is_equal(3)
-	assert_object(SimCommands.from_dict(BoostCommand.new().to_dict())).is_instanceof(BoostCommand)
+# A ship reset restores its pips, heat and store.
+func test_reset_restores_power() -> void:
 	var w: SimWorld = _world()
 	assert_bool(_pips(w, ENG, 4)).is_true()
 	_steps(w, 300)

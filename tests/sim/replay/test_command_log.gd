@@ -4,9 +4,10 @@ extends GdUnitTestSuite
 
 const SETUP: Dictionary = {"player": &"m1_corvette", "enemy": &"m1_raider"}
 ## Floats that a decimal round trip tends to lose: -0.0, non-terminating binary
-## fractions, a subnormal, the largest double and full-mantissa values.
+## fractions, a subnormal, the largest double inside the site grid (aim points past
+## Kinematics.MAX_OFFSET are rejected) and full-mantissa values.
 const AWKWARD: Array[float] = [
-	-0.0, 0.1, 1.0 / 3.0, 5e-324, 1.7976931348623157e308, 4.0796475000000005e-12, 123456789.123
+	-0.0, 0.1, 1.0 / 3.0, 5e-324, 199999.99999999997, 4.0796475000000005e-12, 123456.789123
 ]
 
 
@@ -126,3 +127,39 @@ func test_replay_applies_on_recorded_ticks_and_reports_rejections() -> void:
 	)
 	var problems: PackedStringArray = record.replay(other, world.tick)
 	assert_int(problems.size()).is_equal(1)
+
+
+# FT: FT-ARC-008
+# Every registered command class round-trips through to_dict()/from_dict() with each
+# parameter set away from its default (per property type).
+func test_every_command_round_trips() -> void:
+	for kind: StringName in SimCommands.kinds():
+		var c: SimCommand = SimCommands.make(kind)
+		assert_str(String(c.kind())).is_equal(String(kind))
+		for p: Dictionary in c.get_property_list():
+			var name: String = p["name"]
+			if not p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE or name == "source":
+				continue
+			var value: Variant = _non_default(c.get(name))
+			assert_bool(value != null).override_failure_message("%s.%s" % [kind, name]).is_true()
+			c.set(name, value)
+		var back: SimCommand = SimCommands.from_dict(c.to_dict())
+		assert_object(back.get_script()).override_failure_message(kind).is_same(c.get_script())
+		var same: bool = var_to_bytes(back.to_dict()) == var_to_bytes(c.to_dict())
+		assert_bool(same).override_failure_message(kind).is_true()
+
+
+## A value of the same type unlike the default, or null for an unhandled type.
+func _non_default(v: Variant) -> Variant:
+	match typeof(v):
+		TYPE_BOOL:
+			return not v
+		TYPE_INT:
+			return v + 3
+		TYPE_FLOAT:
+			return 1.0 / 3.0 + v
+		TYPE_STRING_NAME:
+			return StringName(String(v) + "_x")
+		TYPE_VECTOR3:
+			return v + Vector3(0.5, -1.0 / 3.0, 0.25)
+	return null

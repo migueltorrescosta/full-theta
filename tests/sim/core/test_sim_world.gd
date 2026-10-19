@@ -169,16 +169,41 @@ func test_offset_past_limit_fails_assertion() -> void:
 
 
 # FT: FT-GEN-002
-# Resetting one ship restores its rows from the definition and leaves the others.
+# Resetting one ship restores its rows from the definition, drops its queued commands
+# and leaves the others.
 func test_reset_ship_restores_only_that_ship() -> void:
 	var w: SimWorld = _world(11)
 	_run(w, 200)
 	var other_vel: Vector3 = w.kin.vel[1]
 	var other_px: float = w.kin.px[1]
 	w.kin.propellant[0] = 1.0
+	for id: int in [0, 1]:
+		var k: KickCommand = KickCommand.new()
+		k.ship_id = id
+		w.submit(k)
+	var logged: int = w.command_log.size()
 	w.reset_ship(0, 0, Vector3(5, 0, 0))
 	assert_vector(w.kin.vel[0]).is_equal(Vector3.ZERO)
 	assert_float(w.kin.px[0]).is_equal(5.0)
 	assert_float(w.kin.propellant[0]).is_equal(w.defs[0].propellant_capacity)
 	assert_vector(w.kin.vel[1]).is_equal(other_vel)
 	assert_float(w.kin.px[1]).is_equal(other_px)
+	w.step()
+	assert_int(w.command_log.size()).is_equal(logged + 1)
+	assert_int(w.command_log[-1].ship_id).is_equal(1)
+
+
+# FT: FT-ARC-008
+# Queued commands are state: a pending command changes the state hash, and the same
+# pending command gives the same hash.
+func test_pending_commands_in_state_hash() -> void:
+	var a: SimWorld = _world(5)
+	var b: SimWorld = _world(5)
+	assert_str(a.state_hash()).is_equal(b.state_hash())
+	for w: SimWorld in [a, b]:
+		var k: KickCommand = KickCommand.new()
+		k.ship_id = 1
+		w.submit(k)
+		if w == a:
+			assert_str(a.state_hash()).is_not_equal(b.state_hash())
+	assert_str(a.state_hash()).is_equal(b.state_hash())

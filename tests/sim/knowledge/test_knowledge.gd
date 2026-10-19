@@ -12,14 +12,6 @@ func _place(w: SimWorld, id: int, x: float, z: float = 0.0) -> void:
 	w.kin.place(id, w.kin.site[id], x, 0.0, z)
 
 
-func _kinds(events: Array[SimEvent], kind: StringName) -> Array[SimEvent]:
-	var out: Array[SimEvent] = []
-	for e: SimEvent in events:
-		if e.kind == kind:
-			out.append(e)
-	return out
-
-
 # FT: FT-ARC-013
 # Each faction holds its own knowledge: at 18 km the corvette (20 km sensors) detects
 # the raider, but the raider (15 km) does not detect the corvette; at 12 km both do.
@@ -90,7 +82,7 @@ func test_damaged_sensors_shrink_range() -> void:
 	assert_float(DamageSystem.effectiveness(w, blue, &"sensors")).is_equal_approx(0.3, 1e-6)
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_false()
-	var lost: Array[SimEvent] = _kinds(w.drain_events(), &"contact_lost")
+	var lost: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"contact_lost")
 	assert_int(lost.size()).is_equal(1)
 	assert_int(lost[0].other_id).is_equal(red)
 	_place(w, red, 5000.0)
@@ -183,7 +175,7 @@ func test_events_keyed_to_observing_faction() -> void:
 	var blue_b: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0, Vector3(-5000, 0, 0))
 	var red: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(-22000, 0, 0))
 	w.step()
-	var found: Array[SimEvent] = _kinds(w.drain_events(), &"contact_detected")
+	var found: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"contact_detected")
 	assert_int(found.size()).is_equal(1)
 	assert_int(found[0].ship_id).is_equal(blue_b)
 	assert_int(found[0].faction).is_equal(BLUE)
@@ -194,7 +186,7 @@ func test_events_keyed_to_observing_faction() -> void:
 	assert_array(w.drain_events()).is_empty()
 	_place(w, red, -40000.0)
 	w.step()
-	var lost: Array[SimEvent] = _kinds(w.drain_events(), &"contact_lost")
+	var lost: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"contact_lost")
 	assert_int(lost.size()).is_equal(1)
 	assert_int(lost[0].faction).is_equal(BLUE)
 	assert_int(lost[0].other_id).is_equal(red)

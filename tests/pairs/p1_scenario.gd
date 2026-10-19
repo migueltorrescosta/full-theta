@@ -83,6 +83,8 @@ static func helm(w: SimWorld) -> void:
 		select.z = POINT.z
 		_submit(w, select)
 		_submit(w, _helm_input(0.0))
+	if w.tick == 1:
+		# The raider is a contact after the first tick's sensor sweep (FT-ARC-013).
 		var focus: SetShieldFocusCommand = SetShieldFocusCommand.new()
 		focus.track_id = RAIDER
 		_submit(w, focus)

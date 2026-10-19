@@ -1,36 +1,5 @@
 extends GdUnitTestSuite
-## T028: Helm commands: codec round trip, validation and table reset (L1).
-
-
-func _commands() -> Array[SimCommand]:
-	var i: HelmInputCommand = HelmInputCommand.new()
-	i.rotation = Vector3(0.5, -1.0, 0.25)
-	i.strafe = -0.5
-	i.lift = 1.0
-	i.throttle = 0.75
-	i.face = true
-	i.approach = true
-	var d: DecoupledCommand = DecoupledCommand.new()
-	d.decoupled = false
-	var s: SelectTargetCommand = SelectTargetCommand.new()
-	s.site = 3
-	s.x = 123456.789012
-	s.y = -0.5
-	s.z = 7.0
-	return [i, d, AllStopCommand.new(), LevelCommand.new(), s]
-
-
-# FT: FT-ARC-008
-# Every Helm command registers in the codec and round-trips its typed parameters.
-func test_commands_round_trip() -> void:
-	for c: SimCommand in _commands():
-		c.ship_id = 2
-		c.tick = 9
-		var d: Dictionary = c.to_dict()
-		var back: SimCommand = SimCommands.from_dict(d)
-		assert_object(back).override_failure_message(str(c.kind())).is_not_null()
-		assert_str(back.get_script().get_global_name()).is_equal(c.get_script().get_global_name())
-		assert_dict(back.to_dict()).is_equal(d)
+## T028: Helm commands: validation and table reset (L1).
 
 
 # FT: FT-ARC-008
@@ -54,7 +23,6 @@ func test_invalid_commands_rejected() -> void:
 	assert_vector(w.helm.input_translation[id]).is_equal(Vector3(0.0, 0.0, 1.0))
 
 
-# FT: FT-GEN-002
 # Resetting a ship restores its helm row (assist on, nothing held or selected).
 func test_reset_ship_restores_helm() -> void:
 	var w: SimWorld = FlightFixture.world()

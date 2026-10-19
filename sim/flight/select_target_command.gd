@@ -29,8 +29,7 @@ func apply(world: SimWorld) -> bool:
 			return false
 		kind_value = HelmTable.Target.SHIP
 	elif site >= 0:
-		var limit: float = Kinematics.MAX_OFFSET
-		if not (absf(x) <= limit and absf(y) <= limit and absf(z) <= limit):
+		if not Kinematics.in_bounds(x, y, z):
 			return false
 		kind_value = HelmTable.Target.POINT
 	var is_point: bool = kind_value == HelmTable.Target.POINT

@@ -76,28 +76,12 @@ static func nearest_subsystem(def: ShipDef, point_local: Vector3) -> int:
 ## Effectiveness of the ship's subsystem, 0..1, from its health and the definition's
 ## curve (FT-SIM-021); 1 when the ship has no such subsystem.
 static func effectiveness(world: SimWorld, ship_id: int, subsystem_id: StringName) -> float:
-	var t: DamageTable = world.damage
-	var r: int = t.find_subsystem(ship_id, subsystem_id)
+	var r: int = world.damage.find_subsystem(ship_id, subsystem_id)
 	if r < 0:
 		return 1.0
-	var s: SubsystemDef = world.defs[ship_id].subsystems[r - t.hull_row(ship_id) - 1]
-	return curve_value(s.effectiveness, t.health[r] / s.health_max)
-
-
-## Piecewise-linear value of a (health fraction, effectiveness) curve at x, clamped to
-## the curve's ends (FT-SIM-021). The curve's x runs from 0 to 1, ascending.
-static func curve_value(curve: PackedVector2Array, x: float) -> float:
-	var n: int = curve.size()
-	if n == 0:
-		return 1.0
-	if x <= curve[0].x:
-		return curve[0].y
-	for k: int in range(1, n):
-		var b: Vector2 = curve[k]
-		if x <= b.x:
-			var a: Vector2 = curve[k - 1]
-			return lerpf(a.y, b.y, (x - a.x) / (b.x - a.x))
-	return curve[n - 1].y
+	return PowerSystem.curve_at(
+		_sub_def(world, ship_id, r).effectiveness, health_fraction(world, ship_id, subsystem_id)
+	)
 
 
 ## Hull left as a share of hull_max, 0..1.
@@ -114,8 +98,7 @@ static func health_fraction(world: SimWorld, ship_id: int, subsystem_id: StringN
 	var r: int = t.find_subsystem(ship_id, subsystem_id)
 	if r < 0:
 		return 1.0
-	var s: SubsystemDef = world.defs[ship_id].subsystems[r - t.hull_row(ship_id) - 1]
-	return t.health[r] / s.health_max
+	return t.health[r] / _sub_def(world, ship_id, r).health_max
 
 
 ## Damages one subsystem directly (heat faults, FT-SIM-026); cause names the source. The
@@ -144,7 +127,7 @@ static func dispatch(world: SimWorld, ship_id: int, crew: int, subsystem_id: Str
 	if crew < 0 or crew >= def.repair_crews or r < 0:
 		return false
 	var h: int = t.hull_row(ship_id)
-	var s: SubsystemDef = def.subsystems[r - h - 1]
+	var s: SubsystemDef = _sub_def(world, ship_id, r)
 	if t.crews[r] & (1 << crew) or t.health[r] >= s.health_max:
 		return false
 	if t.spare_parts[h] < s.parts_per_repair:
@@ -163,7 +146,7 @@ static func recall(world: SimWorld, ship_id: int, crew: int) -> bool:
 	var r: int = _unassign(t, ship_id, crew)
 	if r < 0:
 		return false
-	var s: SubsystemDef = world.defs[ship_id].subsystems[r - t.hull_row(ship_id) - 1]
+	var s: SubsystemDef = _sub_def(world, ship_id, r)
 	world.emit(&"repair_recalled", ship_id, -1, crew, s.position, s.id)
 	return true
 
@@ -187,7 +170,7 @@ static func _damage_row(
 ) -> void:
 	var t: DamageTable = world.damage
 	var r: int = t.subsystem_row(ship_id, index)
-	if r < 0 or energy <= 0.0 or t.health[r] <= 0.0:
+	if energy <= 0.0 or t.health[r] <= 0.0:
 		return
 	var s: SubsystemDef = world.defs[ship_id].subsystems[index]
 	t.health[r] = maxf(0.0, t.health[r] - energy)
@@ -195,6 +178,11 @@ static func _damage_row(
 	world.emit(&"subsystem_damaged", ship_id, source_id, frac, s.position, s.id)
 	if t.health[r] <= 0.0:
 		world.emit(&"subsystem_destroyed", ship_id, source_id, 0.0, s.position, s.id)
+
+
+## The definition of the subsystem on a damage table row.
+static func _sub_def(world: SimWorld, ship_id: int, row: int) -> SubsystemDef:
+	return world.defs[ship_id].subsystems[row - world.damage.hull_row(ship_id) - 1]
 
 
 ## Clears the crew from whichever subsystem it works on; returns that row or -1.

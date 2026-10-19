@@ -47,14 +47,6 @@ func get_def(cls: StringName, id: StringName) -> Resource:
 	return _by_class.get(cls, {}).get(id) as Resource
 
 
-## Ids of every loaded definition of class cls, sorted.
-func ids(cls: StringName) -> Array[StringName]:
-	var out: Array[StringName] = []
-	out.assign(_by_class.get(cls, {}).keys())
-	out.sort()
-	return out
-
-
 func ship(id: StringName) -> ShipDef:
 	return get_def(&"ShipDef", id) as ShipDef
 

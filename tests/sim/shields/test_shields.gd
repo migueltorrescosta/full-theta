@@ -138,10 +138,12 @@ func test_shield_commands() -> void:
 	assert_float(w.shields.tightness[0]).is_equal(3.0)
 	assert_bool(_shield(w, -1, 4.5)).is_false()
 	assert_bool(_shield(w, 5, 1.0)).is_false()
+	assert_bool(_shield(w, -1, NAN)).is_false()
 	assert_float(w.shields.tightness[0]).is_equal(3.0)
 	assert_bool(_focus(w, Vector3(3, 0, 0))).is_true()
 	assert_vector(w.shields.focus[0]).is_equal(Vector3.RIGHT)
-	assert_bool(_focus(w, Vector3.ZERO)).is_false()
+	for bad: Vector3 in [Vector3.ZERO, Vector3(1e-7, 0, 0), Vector3(NAN, 0, 1), Vector3(INF, 0, 0)]:
+		assert_bool(_focus(w, bad)).override_failure_message(str(bad)).is_false()
 	assert_vector(w.shields.focus[0]).is_equal(Vector3.RIGHT)
 	# Regeneration: 5e5 J/s * 4/2 pips over 1 s.
 	w.shields.strength[0] = 0.0
@@ -174,6 +176,24 @@ func test_focus_tracks_ship() -> void:
 	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.RIGHT, Vector3.ONE * 1e-6)
 	assert_bool(_focus(w, Vector3.UP)).is_true()
 	assert_int(w.shields.track_id[0]).is_equal(-1)
+
+
+# FT: FT-SIM-018, FT-ARC-013
+# Helm can track only a ship its faction detects, and the track drops (keeping the last
+# focus) once the contact is lost.
+func test_focus_tracks_only_detected_ships() -> void:
+	var w: SimWorld = _world()
+	var raider: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(50000, 0, 0))
+	assert_bool(_focus(w, Vector3.ZERO, raider)).is_false()
+	w.kin.place(raider, 0, 5000.0, 0.0, 0.0)
+	w.step()
+	assert_bool(_focus(w, Vector3.ZERO, raider)).is_true()
+	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.RIGHT, Vector3.ONE * 1e-6)
+	w.kin.place(raider, 0, 0.0, 0.0, 50000.0)
+	w.step()
+	assert_bool(KnowledgeSystem.is_detected(w, 1, raider)).is_false()
+	assert_int(w.shields.track_id[0]).is_equal(-1)
+	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.RIGHT, Vector3.ONE * 1e-6)
 
 
 # FT: FT-SIM-031

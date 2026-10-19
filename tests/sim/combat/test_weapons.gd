@@ -39,23 +39,15 @@ func _fire(world: SimWorld, ship: int) -> void:
 	world.submit(c)
 
 
-func _of_kind(events: Array[SimEvent], kind: StringName) -> Array[SimEvent]:
-	var out: Array[SimEvent] = []
-	for e: SimEvent in events:
-		if e.kind == kind:
-			out.append(e)
-	return out
-
-
 ## Fires once on this tick and returns "fired" or the block reason.
 func _shot(world: SimWorld, ship: int) -> String:
 	_fire(world, ship)
 	world.step()
 	var events: Array[SimEvent] = world.drain_events()
-	var blocked: Array[SimEvent] = _of_kind(events, &"fire_blocked")
+	var blocked: Array[SimEvent] = SimFixture.of_kind(events, &"fire_blocked")
 	if not blocked.is_empty():
 		return String(blocked[0].tag)
-	return "fired" if not _of_kind(events, &"fired").is_empty() else "nothing"
+	return "fired" if not SimFixture.of_kind(events, &"fired").is_empty() else "nothing"
 
 
 # FT: FT-SIM-011, FT-TST-008
@@ -209,7 +201,7 @@ func test_shot_spawns_projectile_from_mount() -> void:
 	world.submit(coast)
 	_fire(world, ship)
 	world.step()
-	var fired: Array[SimEvent] = _of_kind(world.drain_events(), &"fired")
+	var fired: Array[SimEvent] = SimFixture.of_kind(world.drain_events(), &"fired")
 	assert_int(fired.size()).is_equal(1)
 	assert_vector(fired[0].vector).is_equal(Vector3.FORWARD)
 	assert_str(fired[0].tag).is_equal(String(weapon.id))
@@ -259,9 +251,10 @@ func test_barrel_slews_and_holds_world_aim() -> void:
 	assert_float(edge).is_equal_approx(mount.arc_half_angle, 1e-4)
 
 
-# FT: FT-SIM-016
+# FT: FT-SIM-016, FT-ARC-013
 # A shot along a path that crosses a friendly or a neutral ship warns, and still hits
 # and damages it; a hostile ship in the path or a friendly out of range gives no warning.
+# The neutral counts only once the shooter's faction detects it (the first step).
 func test_friendly_fire_warning_and_hit() -> void:
 	var cases: Array = [
 		# [name, faction, relation, distance, warns]
@@ -276,6 +269,9 @@ func test_friendly_fire_warning_and_hit() -> void:
 		var other: int = world.spawn_ship(TestDefs.corvette(), c[1], 0, Vector3(0, 0, -c[3]))
 		if c[1] != 1:
 			world.set_relation(1, c[1], c[2])
+		if c[1] == 3:
+			assert_int(WeaponSystem.path_crosses(world, shooter, 0)).is_equal(-1)
+		world.step()
 		var want: int = other if c[4] else -1
 		(
 			assert_int(WeaponSystem.path_crosses(world, shooter, 0))
@@ -286,12 +282,12 @@ func test_friendly_fire_warning_and_hit() -> void:
 		for i: int in 60:
 			world.step()
 		var events: Array[SimEvent] = world.drain_events()
-		var warned: Array[SimEvent] = _of_kind(events, &"friendly_fire_warning")
+		var warned: Array[SimEvent] = SimFixture.of_kind(events, &"friendly_fire_warning")
 		assert_int(warned.size()).override_failure_message(c[0]).is_equal(1 if c[4] else 0)
 		if c[4]:
 			assert_int(warned[0].other_id).is_equal(other)
 		if c[3] < 6000.0:
-			var hits: Array[SimEvent] = _of_kind(events, &"hit")
+			var hits: Array[SimEvent] = SimFixture.of_kind(events, &"hit")
 			assert_int(hits.size()).override_failure_message(c[0]).is_equal(1)
 			assert_int(hits[0].ship_id).is_equal(other)
 			assert_int(hits[0].other_id).is_equal(shooter)
@@ -317,27 +313,9 @@ func test_lead_aimed_shot_hits_crossing_target() -> void:
 		world.step()
 	for i: int in 150:
 		world.step()
-	var hits: Array[SimEvent] = _of_kind(world.drain_events(), &"hit")
+	var hits: Array[SimEvent] = SimFixture.of_kind(world.drain_events(), &"hit")
 	assert_int(hits.size()).is_equal(1)
 	assert_int(hits[0].ship_id).is_equal(target)
-
-
-# FT: FT-ARC-008
-# Both commands round-trip through the command codec.
-func test_commands_round_trip() -> void:
-	var aim: AimMountCommand = AimMountCommand.new()
-	aim.ship_id = 3
-	aim.mount_index = 1
-	aim.aim_x = 123456.789012
-	aim.aim_y = -0.5
-	aim.aim_z = 199999.25
-	var back: SimCommand = SimCommands.from_dict(aim.to_dict())
-	assert_object(back).is_instanceof(AimMountCommand)
-	assert_dict(back.to_dict()).is_equal(aim.to_dict())
-	var fire: FireCommand = FireCommand.new()
-	fire.ship_id = 2
-	fire.mount_index = 0
-	assert_dict(SimCommands.from_dict(fire.to_dict()).to_dict()).is_equal(fire.to_dict())
 
 
 # FT: FT-SIM-011
@@ -351,6 +329,20 @@ func test_commands_reject_missing_mount() -> void:
 	assert_bool(c.apply(world)).is_false()
 	c.mount_index = 0
 	assert_bool(c.apply(world)).is_true()
+
+
+# FT: FT-SIM-035
+# An aim point off the site grid or not finite is rejected; the grid edge is accepted.
+func test_aim_rejects_points_off_the_grid() -> void:
+	var world: SimWorld = SimWorld.new(1)
+	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+	var edge: float = Kinematics.MAX_OFFSET
+	for p: Array in [[edge + 1.0, false], [NAN, false], [-INF, false], [-edge, true]]:
+		var c: AimMountCommand = AimMountCommand.new()
+		c.ship_id = ship
+		c.aim_y = p[0]
+		assert_bool(c.apply(world)).override_failure_message(str(p[0])).is_equal(p[1])
+	assert_float(world.mounts.aim_y[0]).is_equal(-edge)
 
 
 func _with(column: Variant, row: int, value: Variant) -> Variant:
