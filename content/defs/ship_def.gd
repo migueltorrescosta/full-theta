@@ -39,8 +39,8 @@ extends Resource
 @export var spare_parts: int = 0
 ## Repair crews Engineering can dispatch (count, FT-SIM-024; at most 31, one bit each).
 @export var repair_crews: int = 0
-## Share of a hit's energy past the shields that the subsystem nearest the impact also
-## takes, on top of the hull taking all of it (dimensionless, 0..1, FT-SIM-020).
+## Share of a hit's energy past the shields that the subsystem nearest the impact takes;
+## the hull takes the rest (dimensionless, 0..1, FT-SIM-020).
 @export var subsystem_damage_share: float = 0.0
 ## Subsystems (at least one; ids unique within the ship).
 @export var subsystems: Array[SubsystemDef] = []

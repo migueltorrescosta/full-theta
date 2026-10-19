@@ -6,6 +6,7 @@
 script = ExtResource("1_xhuf7")
 max_strength = 30000000.0
 regen_rate = 500000.0
-tightness_min = 0.1
-tightness_max = 1.0
+tightness_min = 0.0
+tightness_max = 4.0
+absorption = 1.0
 low_alert_fraction = 0.4

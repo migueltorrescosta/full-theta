@@ -77,6 +77,36 @@ func test_strafe_input_overrides_its_hold_only() -> void:
 	assert_float(FlightFixture.local_velocity(w, id).length()).is_less(0.05)
 
 
+# FT: FT-SIM-006
+# P1: Helm's turn rate follows Engineering's thruster pips. With full yaw input the
+# assist holds the AssistDef cap (40 deg/s) times the torque envelope share: 1 at
+# nominal, 1.5 during a boost (thrusters at 4 pips), so the boosted 90 deg turn takes
+# about (pi/2) / (1.5 cap) instead of (pi/2) / cap. Tolerance 1% on the held rate (the
+# 0.12 s rate hold settles from below); each turn is bounded by a 10 s tick limit.
+func test_turn_rate_cap_follows_torque_envelope() -> void:
+	var ticks: Array[int] = []
+	for boost: bool in [false, true]:
+		var w: SimWorld = FlightFixture.world()
+		var id: int = FlightFixture.spawn(w)
+		if boost:
+			var b: BoostCommand = BoostCommand.new()
+			b.ship_id = id
+			w.submit(b)
+		FlightFixture.input(w, id, Vector3(0, 1, 0))
+		var peak: float = 0.0
+		while Vector3.FORWARD.angle_to(w.kin.forward(id)) < PI / 2 and w.tick < 600:
+			w.step()
+			peak = maxf(peak, w.kin.ang_vel[id].y)
+		var msg: String = "boost %s" % boost
+		assert_int(w.tick).override_failure_message(msg).is_less(600)
+		var scale: float = 1.5 if boost else 1.0
+		assert_float(w.kin.torque_scale[id]).override_failure_message(msg).is_equal(scale)
+		var cap: float = w.defs[id].assist.turn_rate_pitch_yaw * scale
+		assert_float(peak).override_failure_message(msg).is_between(0.99 * cap, cap * 1.001)
+		ticks.append(w.tick)
+	assert_int(ticks[1]).is_less(ticks[0] * 4 / 5)
+
+
 # FT: FT-SIM-004, FT-SIM-006
 # Every mode commands force and torque inside the current envelope (here halved), and
 # each tick's body-frame velocity change stays within limit / mass * dt per axis. The

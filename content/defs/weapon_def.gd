@@ -20,8 +20,12 @@ extends Resource
 @export var ammo_capacity: int = 0
 ## Reactor energy drawn per shot (J).
 @export var energy_per_shot: float = 0.0
-## Temperature rise of the mount's subsystem per shot (K).
+## Temperature rise of the weapon per shot (K, FT-SIM-012).
 @export var heat_per_shot: float = 0.0
+## Cooling rate constant: weapon heat decays as dT/dt = -heat_dissipation * T (1/s).
+@export var heat_dissipation: float = 0.0
+## The weapon won't fire while its heat is at or above this (K, FT-SIM-012).
+@export var heat_limit: float = 0.0
 
 
 func validate() -> Array[String]:
@@ -36,4 +40,6 @@ func validate() -> Array[String]:
 		errors.append("ammo_capacity: must be >= 0 or -1 (unlimited), got %d" % ammo_capacity)
 	DefCheck.non_negative(errors, "energy_per_shot", energy_per_shot)
 	DefCheck.non_negative(errors, "heat_per_shot", heat_per_shot)
+	DefCheck.non_negative(errors, "heat_dissipation", heat_dissipation)
+	DefCheck.positive(errors, "heat_limit", heat_limit)
 	return errors

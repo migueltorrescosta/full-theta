@@ -99,6 +99,14 @@ static func level_error(kin: Kinematics, row: int, stage: int) -> float:
 	return err
 
 
+## Turn-rate caps (rad/s: pitch, yaw, roll): the AssistDef caps times the torque
+## envelope share, so thruster pips and a boost raise Helm's turn rate with its torque
+## (1 at nominal; FT-SIM-006, P1).
+static func turn_rate_caps(kin: Kinematics, row: int, tuning: AssistDef) -> Vector3:
+	var py: float = tuning.turn_rate_pitch_yaw * kin.torque_scale[row]
+	return Vector3(py, py, tuning.turn_rate_roll * kin.torque_scale[row])
+
+
 ## Mode bookkeeping before the command: ends all-stop and Level, ramps the setpoint.
 static func _update_modes(world: SimWorld, row: int, tuning: AssistDef) -> void:
 	var helm: HelmTable = world.helm
@@ -147,9 +155,7 @@ static func _command(world: SimWorld, row: int, tuning: AssistDef) -> void:
 	var approaching: bool = targeted and helm.approach_held[row] == 1
 	var facing: bool = targeted and (helm.face_held[row] == 1 or approaching)
 	var decoupled: bool = helm.is_decoupled(row)
-	var rates: Vector3 = Vector3(
-		tuning.turn_rate_pitch_yaw, tuning.turn_rate_pitch_yaw, tuning.turn_rate_roll
-	)
+	var rates: Vector3 = turn_rate_caps(kin, row, tuning)
 
 	# Rotation: a body-rate setpoint held through torque, or raw torque when decoupled.
 	# All-stop, face and Level are explicit assist actions, so they run decoupled too
@@ -162,7 +168,7 @@ static func _command(world: SimWorld, row: int, tuning: AssistDef) -> void:
 	elif facing:
 		# FT-HLM-005: at the ship's real turn rate; roll stays manual.
 		w_des = _face_rate(kin, row, target_offset(world, row), tuning)
-		w_des.z = rot_in.z * tuning.turn_rate_roll
+		w_des.z = rot_in.z * rates.z
 		rate_hold = true
 	elif helm.level[row] != HelmTable.Level.OFF:
 		w_des = _level_rate(kin, row, helm.level[row], tuning)
@@ -218,7 +224,7 @@ static func _face_rate(kin: Kinematics, row: int, direction: Vector3, tuning: As
 	var limit: Vector3 = kin.torque_limit(row)
 	var inertia: Vector3 = kin.inertia[row]
 	var alpha: float = minf(limit.x / inertia.x, limit.y / inertia.y)
-	return axis * _profile(angle, alpha, tuning.turn_rate_pitch_yaw, tuning)
+	return axis * _profile(angle, alpha, turn_rate_caps(kin, row, tuning).x, tuning)
 
 
 ## Level (FT-HLM-007, D97): roll so the ship's up is as close to ecliptic up as the
@@ -236,7 +242,7 @@ static func _level_rate(kin: Kinematics, row: int, stage: int, tuning: AssistDef
 		w = _face_rate(kin, row, flat, tuning)
 	var roll: float = roll_error(kin, row)
 	var alpha: float = kin.torque_limit(row).z / kin.inertia[row].z
-	w.z = signf(roll) * _profile(absf(roll), alpha, tuning.turn_rate_roll, tuning)
+	w.z = signf(roll) * _profile(absf(roll), alpha, turn_rate_caps(kin, row, tuning).z, tuning)
 	return w
 
 

@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
 ## T033: hit-location damage, effectiveness curves, hull and destruction (L2). Numbers
-## come from the M1 corvette: hull 1e8 J, subsystems 2e7 J each, subsystem share 0.5.
+## come from the M1 corvette: hull 1e8 J, subsystems 2e7 J each, subsystem share 0.5 (a
+## hit's energy past the shields is split: half to the nearest subsystem, half to the hull).
 ## Tolerances: 1e-12 on fractions and 1e-6 J on energies (a few 64-bit additions);
 ## 1e-6 on curve values, whose points are stored as 32-bit floats (Vector2).
 
@@ -63,18 +64,36 @@ func test_nearest_subsystem_table() -> void:
 
 
 # FT: FT-SIM-020, FT-M1-009
-# Through HitResolver: a bow hit damages the hull by the energy past the shields and the
-# weapons subsystem by half of it; the other subsystems and the other ship are untouched.
+# Through HitResolver: the shields take their share first, then the energy that passes is
+# split half to the weapons subsystem (nearest the bow) and half to the hull; the other
+# subsystems and the other ship are untouched. The 4e6 J hit meets full shields at
+# nominal power, so 4e6 x (1 - absorb_fraction) passes.
 func test_hit_damages_hull_and_nearest_subsystem_only() -> void:
 	var w: SimWorld = _world()
-	w.hits.append(_hit(0, Vector3(0, 0, -25), 4e6))
+	var hit: SimHit = _hit(0, Vector3(0, 0, -25), 4e6)
+	hit.from_local = Vector3(0, 0, -1)
+	var through: float = 4e6 * (1.0 - ShieldSystem.absorb_fraction(w, 0, hit.from_local))
+	assert_float(through).is_between(1e5, 3.9e6)
+	w.hits.append(hit)
 	HitResolver.resolve(w)
-	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(0.96, 1e-12)
-	assert_float(_health(w, 0, &"weapons")).is_equal_approx(1.8e7, 1e-6)
+	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(1.0 - 0.5 * through / 1e8, 1e-12)
+	assert_float(_health(w, 0, &"weapons")).is_equal_approx(2e7 - 0.5 * through, 1e-6)
 	for id: StringName in [&"engines", &"thrusters", &"shields", &"sensors", &"reactor"]:
 		assert_float(_health(w, 0, id)).is_equal(2e7)
 	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal(1.0)
 	assert_float(DamageSystem.health_fraction(w, 1, &"weapons")).is_equal(1.0)
+
+
+# FT: FT-SIM-020
+# With the shields down (strength 0) the whole hit passes: a 4e6 J bow hit takes 2e6 J
+# off the weapons subsystem and 2e6 J off the hull (the share splits, it does not add).
+func test_hit_split_between_subsystem_and_hull() -> void:
+	var w: SimWorld = _world()
+	w.shields.strength[0] = 0.0
+	w.hits.append(_hit(0, Vector3(0, 0, -25), 4e6))
+	HitResolver.resolve(w)
+	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(0.98, 1e-12)
+	assert_float(_health(w, 0, &"weapons")).is_equal_approx(1.8e7, 1e-6)
 
 
 # FT: FT-SIM-021
@@ -115,11 +134,12 @@ func test_unknown_subsystem_is_fully_effective() -> void:
 
 # FT: FT-SIM-030
 # A hull at 0 destroys the ship once (alive 0, one &"destroyed" naming the source); a
-# subsystem at 0 emits &"subsystem_destroyed"; later hits change nothing.
+# subsystem at 0 emits &"subsystem_destroyed"; later hits change nothing. 1.2e8 J splits
+# 6e7 to the raider's weapons (2e7) and 6e7 to its hull (5e7).
 func test_hull_zero_destroys_ship_with_events() -> void:
 	var w: SimWorld = _world()
 	w.drain_events()
-	DamageSystem.apply_hit(w, _hit(1, Vector3(0, 0, -30), 6e7), 6e7)
+	DamageSystem.apply_hit(w, _hit(1, Vector3(0, 0, -30), 1.2e8), 1.2e8)
 	assert_bool(w.kin.is_alive(1)).is_false()
 	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal(0.0)
 	var events: Array[SimEvent] = w.drain_events()
@@ -151,7 +171,7 @@ func test_subsystem_damaged_event_fields() -> void:
 	assert_int(e.other_id).is_equal(1)
 	DamageSystem.apply_hit(w, _hit(0, Vector3(0, 0, 25), 4e6), 0.0)
 	assert_array(w.drain_events()).is_empty()
-	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(0.96, 1e-12)
+	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal_approx(0.98, 1e-12)
 
 
 # FT: FT-SIM-026
@@ -178,7 +198,7 @@ func test_damage_independent_of_seed() -> void:
 			DamageSystem.apply_hit(w, _hit(0, Vector3(0, 7, -4), 1e6), 1e6)
 	assert_array(a.damage.columns()).is_equal(b.damage.columns())
 	assert_float(_health(a, 0, &"shields")).is_equal_approx(2e7 - 1.5e6, 1e-6)
-	assert_float(DamageSystem.hull_fraction(a, 0)).is_equal_approx(0.97, 1e-12)
+	assert_float(DamageSystem.hull_fraction(a, 0)).is_equal_approx(0.985, 1e-12)
 
 
 # FT: FT-ARC-012, FT-GEN-002
@@ -199,4 +219,4 @@ func test_rows_and_reset_ship() -> void:
 	assert_float(_health(w, 0, &"weapons")).is_equal(2e7)
 	assert_int(DamageSystem.spare_parts(w, 0)).is_equal(20)
 	assert_str(String(DamageSystem.crew_job(w, 0, 1))).is_equal("")
-	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal_approx(0.92, 1e-12)
+	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal_approx(0.96, 1e-12)

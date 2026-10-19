@@ -75,6 +75,29 @@ func test_sensor_range_from_definition() -> void:
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_true()
 
 
+# FT: FT-ARC-013
+# Sensor range scales with the sensors' effectiveness (real DamageSystem): at 10 km the
+# raider is detected; with the corvette's sensors at a quarter health (effectiveness 0.3
+# on the M1 curve, so 20 km * 0.3 = 6 km) the contact is lost, and at 5 km it is back.
+func test_damaged_sensors_shrink_range() -> void:
+	var w: SimWorld = SimWorld.new(1)
+	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0)
+	var red: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(10000, 0, 0))
+	w.step()
+	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_true()
+	w.drain_events()
+	DamageSystem.damage_subsystem(w, blue, &"sensors", 1.5e7, &"test")
+	assert_float(DamageSystem.effectiveness(w, blue, &"sensors")).is_equal_approx(0.3, 1e-6)
+	w.step()
+	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_false()
+	var lost: Array[SimEvent] = _kinds(w.drain_events(), &"contact_lost")
+	assert_int(lost.size()).is_equal(1)
+	assert_int(lost[0].other_id).is_equal(red)
+	_place(w, red, 5000.0)
+	w.step()
+	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_true()
+
+
 # FT: FT-SPA-001, FT-SPA-002
 # Prefix by known allegiance: U before identification (beyond 8 km), then by relation
 # H, N or F; identification is kept when the contact moves back out. The number stays.

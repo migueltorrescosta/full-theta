@@ -15,3 +15,4 @@ nominal_pips = 2
 heat_per_overcharge_pip = 5.0
 heat_dissipation = 0.05
 fault_heat_threshold = 100.0
+heat_fault_damage = 8000000.0

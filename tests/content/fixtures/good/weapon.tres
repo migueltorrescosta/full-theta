@@ -14,3 +14,5 @@ damage = 2000000.0
 ammo_capacity = 400
 energy_per_shot = 500000.0
 heat_per_shot = 2.0
+heat_dissipation = 0.05
+heat_limit = 40.0

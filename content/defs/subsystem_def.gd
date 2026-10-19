@@ -31,6 +31,9 @@ enum Kind { ENGINES, THRUSTERS, WEAPONS, SHIELDS, SENSORS, REACTOR }
 @export var heat_dissipation: float = 0.0
 ## Heat above which the subsystem faults (K, FT-SIM-026).
 @export var fault_heat_threshold: float = 0.0
+## Damage a heat fault does to the subsystem when heat passes the threshold (J,
+## FT-SIM-026).
+@export var heat_fault_damage: float = 0.0
 
 
 func validate() -> Array[String]:
@@ -44,6 +47,7 @@ func validate() -> Array[String]:
 	DefCheck.non_negative(errors, "heat_per_overcharge_pip", heat_per_overcharge_pip)
 	DefCheck.non_negative(errors, "heat_dissipation", heat_dissipation)
 	DefCheck.positive(errors, "fault_heat_threshold", fault_heat_threshold)
+	DefCheck.non_negative(errors, "heat_fault_damage", heat_fault_damage)
 	return errors
 
 

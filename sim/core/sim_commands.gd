@@ -11,6 +11,12 @@ static var _classes: Dictionary[StringName, GDScript] = {
 	&"helm_select_target": SelectTargetCommand,
 	&"dispatch_repair": DispatchRepairCommand,
 	&"recall_repair": RecallRepairCommand,
+	&"set_pips": SetPipsCommand,
+	&"boost": BoostCommand,
+	&"set_shield": SetShieldCommand,
+	&"set_shield_focus": SetShieldFocusCommand,
+	&"aim_mount": AimMountCommand,
+	&"fire": FireCommand,
 }
 
 

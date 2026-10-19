@@ -1,7 +1,177 @@
 class_name WeaponSystem
 extends RefCounted
-## Mount slew and firing (T032). Stub until its task lands.
+## Mount slew and firing (T032). Each tick, per mount in row order: cooldown and heat
+## fall, the barrel slews toward the aim point at MountDef.traverse_rate (scaled by the
+## mount subsystem's effectiveness) without leaving the arc (FT-WPN-009, FT-SIM-011),
+## and a requested shot fires or is blocked (FT-SIM-012). Shots are projectiles moved
+## and swept by CollisionSystem in the same tick.
+
+## Cooldown below this counts as done (s); absorbs float drift of repeated - DT.
+const COOLDOWN_EPS: float = 1e-9
 
 
-static func step(_world: SimWorld) -> void:
-	pass
+static func step(world: SimWorld) -> void:
+	var mounts: MountTable = world.mounts
+	var dt: float = SimWorld.DT
+	for row: int in mounts.size():
+		var ship: int = mounts.ship_ids[row]
+		if not world.kin.is_alive(ship):
+			mounts.fire_requested[row] = 0
+			continue
+		var def: MountDef = mount_def(world, row)
+		mounts.cooldown[row] = maxf(0.0, mounts.cooldown[row] - dt)
+		mounts.heat[row] *= exp(-def.weapon.heat_dissipation * dt)
+		var eff: float = DamageSystem.effectiveness(world, ship, def.subsystem_id)
+		var target: Vector3 = clamp_to_arc(def, aim_direction(world, row))
+		mounts.barrel[row] = turn_toward(
+			mounts.barrel[row], target, def.traverse_rate * clampf(eff, 0.0, 1.0) * dt
+		)
+		if mounts.fire_requested[row] == 1:
+			mounts.fire_requested[row] = 0
+			_try_fire(world, row, def, eff)
+
+
+## The read-only definition of a mount row.
+static func mount_def(world: SimWorld, row: int) -> MountDef:
+	return world.defs[world.mounts.ship_ids[row]].mounts[world.mounts.mount_index[row]]
+
+
+## Direction from the mount to its aim point in the ship frame (unit); the rest
+## direction (MountDef.forward) while no aim point is set.
+static func aim_direction(world: SimWorld, row: int) -> Vector3:
+	var mounts: MountTable = world.mounts
+	var def: MountDef = mount_def(world, row)
+	if mounts.aim_set[row] == 0:
+		return def.forward
+	var ship: int = mounts.ship_ids[row]
+	var kin: Kinematics = world.kin
+	var to_aim: Vector3 = kin.relative_to_point(
+		ship, mounts.aim_x[row], mounts.aim_y[row], mounts.aim_z[row]
+	)
+	var local: Vector3 = kin.to_local(ship, to_aim) - def.position
+	if local.length_squared() < 1e-12:
+		return mounts.barrel[row]
+	return local.normalized()
+
+
+## FT-SIM-011: a direction (ship frame) is inside the arc when its angle to the rest
+## direction is at most arc_half_angle.
+static func in_arc(def: MountDef, dir: Vector3) -> bool:
+	return def.forward.angle_to(dir) <= def.arc_half_angle
+
+
+## The direction itself when inside the arc, else the nearest direction on its edge.
+static func clamp_to_arc(def: MountDef, dir: Vector3) -> Vector3:
+	if in_arc(def, dir):
+		return dir
+	return turn_toward(def.forward, dir, def.arc_half_angle)
+
+
+## Turns from toward to by at most max_angle (rad); both unit vectors.
+static func turn_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3:
+	var angle: float = from.angle_to(to)
+	if angle <= max_angle:
+		return to
+	var axis: Vector3 = from.cross(to)
+	if axis.length_squared() < 1e-12:
+		axis = from.cross(Vector3.UP if absf(from.y) < 0.9 else Vector3.RIGHT)
+	return from.rotated(axis.normalized(), max_angle).normalized()
+
+
+## FT-SIM-016: the first friendly or neutral ship (world.relation not HOSTILE) the
+## mount's next shot would cross within the weapon's range, with every ship keeping
+## its velocity, or -1. A warning only: friendly fire still happens.
+static func path_crosses(world: SimWorld, ship_id: int, index: int) -> int:
+	var row: int = world.mounts.row_for(ship_id, index)
+	if row < 0:
+		return -1
+	var kin: Kinematics = world.kin
+	var weapon: WeaponDef = mount_def(world, row).weapon
+	var muzzle: Vector3 = kin.to_world(ship_id, mount_def(world, row).position)
+	var pv: Vector3 = (
+		kin.vel[ship_id] + kin.to_world(ship_id, world.mounts.barrel[row]) * weapon.projectile_speed
+	)
+	var flight: float = weapon.max_range / weapon.projectile_speed
+	var faction: int = world.faction_of(ship_id)
+	var best: int = -1
+	var best_t: float = 2.0
+	for j: int in kin.size():
+		if j == ship_id or not kin.is_alive(j) or not kin.same_site(ship_id, j):
+			continue
+		if world.relation(faction, world.faction_of(j)) == SimWorld.Relation.HOSTILE:
+			continue
+		var axis: Vector3 = kin.to_world(j, Vector3(0.0, 0.0, kin.half_length[j]))
+		var t: float = Sweep.capsule(
+			muzzle - kin.relative(ship_id, j),
+			(pv - kin.vel[j]) * flight,
+			axis,
+			kin.radius[j] + weapon.projectile_radius
+		)
+		if t >= 0.0 and t < best_t:
+			best_t = t
+			best = j
+	return best
+
+
+## Why a requested shot can't fire, or &"" if it can (energy is checked last, by
+## drawing it). FT-SIM-011 arc, FT-SIM-012 condition, cooldown, ammunition, heat.
+static func block_reason(world: SimWorld, row: int, eff: float) -> StringName:
+	var mounts: MountTable = world.mounts
+	var def: MountDef = mount_def(world, row)
+	var reason: StringName = &""
+	if eff <= 0.0:
+		reason = &"subsystem"
+	elif not in_arc(def, aim_direction(world, row)):
+		reason = &"arc"
+	elif mounts.cooldown[row] > COOLDOWN_EPS:
+		reason = &"cooldown"
+	elif mounts.ammo[row] == 0:
+		reason = &"ammo"
+	elif mounts.heat[row] >= def.weapon.heat_limit:
+		reason = &"heat"
+	return reason
+
+
+static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float) -> void:
+	var ship: int = world.mounts.ship_ids[row]
+	var index: int = world.mounts.mount_index[row]
+	var reason: StringName = block_reason(world, row, eff)
+	if reason == &"" and not PowerSystem.draw_energy(world, ship, def.weapon.energy_per_shot):
+		reason = &"energy"
+	if reason != &"":
+		world.emit(&"fire_blocked", ship, -1, index, Vector3.ZERO, reason)
+		return
+	var friend: int = path_crosses(world, ship, index)
+	_fire(world, row, def)
+	if friend >= 0:
+		world.emit(&"friendly_fire_warning", ship, friend, index)
+
+
+## Spawns the projectile from the mount's hull position along the barrel, with the
+## ship's velocity plus the muzzle velocity. It is placed where the muzzle was at the
+## start of the tick, so CollisionSystem's full-tick sweep starts at the muzzle.
+static func _fire(world: SimWorld, row: int, def: MountDef) -> void:
+	var mounts: MountTable = world.mounts
+	var kin: Kinematics = world.kin
+	var ship: int = mounts.ship_ids[row]
+	var weapon: WeaponDef = def.weapon
+	if mounts.ammo[row] > 0:
+		mounts.ammo[row] -= 1
+	mounts.cooldown[row] = weapon.cooldown
+	mounts.heat[row] += weapon.heat_per_shot
+	var dir: Vector3 = kin.to_world(ship, mounts.barrel[row])
+	var vs: Vector3 = kin.vel[ship]
+	var back: Vector3 = kin.to_world(ship, def.position) - vs * SimWorld.DT
+	world.projectiles.spawn(
+		ship,
+		world.faction_of(ship),
+		kin.site[ship],
+		kin.px[ship] + back.x,
+		kin.py[ship] + back.y,
+		kin.pz[ship] + back.z,
+		vs + dir * weapon.projectile_speed,
+		weapon.projectile_radius,
+		weapon.damage,
+		ceili(weapon.max_range / weapon.projectile_speed * SimWorld.HZ)
+	)
+	world.emit(&"fired", ship, -1, mounts.mount_index[row], dir, weapon.id)

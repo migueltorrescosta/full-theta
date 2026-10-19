@@ -38,19 +38,23 @@ static func step(world: SimWorld) -> void:
 						world.emit(&"repair_finished", ship, -1, c, s.position, s.id)
 
 
-## Applies the energy that passed the shields: the hull takes all of it and the
-## subsystem nearest the impact point takes subsystem_damage_share of it (FT-SIM-020).
+## Applies the energy that passed the shields, split between the subsystem nearest the
+## impact point (subsystem_damage_share of it) and the hull (the rest); a ship without
+## subsystems puts it all on the hull (FT-SIM-020, owner decision Q5 B).
 static func apply_hit(world: SimWorld, hit: SimHit, energy: float) -> void:
 	var ship: int = hit.target_id
 	if energy <= 0.0 or not world.kin.is_alive(ship):
 		return
 	var def: ShipDef = world.defs[ship]
 	var i: int = nearest_subsystem(def, hit.point_local)
+	var to_hull: float = energy
 	if i >= 0:
-		_damage_row(world, ship, i, energy * def.subsystem_damage_share, hit.source_id)
+		var to_subsystem: float = energy * def.subsystem_damage_share
+		to_hull -= to_subsystem
+		_damage_row(world, ship, i, to_subsystem, hit.source_id)
 	var t: DamageTable = world.damage
 	var h: int = t.hull_row(ship)
-	t.health[h] = maxf(0.0, t.health[h] - energy)
+	t.health[h] = maxf(0.0, t.health[h] - to_hull)
 	if t.health[h] <= 0.0:
 		world.kin.alive[ship] = 0
 		world.emit(&"destroyed", ship, hit.source_id)
