@@ -1,13 +1,12 @@
 class_name ClipLibrary
 extends RefCounted
-## Prerendered voice clips of one session language, read from the prerender output
-## (tools/tts/prerender.py, audio/README.md): per role a blob of 16-bit mono PCM and an
-## index {"rate", "voice", "clips": {key: [first_sample, samples]}}. Built at packaging
-## time from the dialogue JSON and never committed (FT-AUD-002); exports include it, so
-## clients play authored lines and the host stitches number fragments locally (D152).
-## Keys: line:<id>, seg:<id>:<k>, num:<fragment>. Releases ship them in
-## res://audio/prerendered/<lang>/; content/ can't name audio/ (spec §2.2), so the caller
-## (VoicePlayer on clients, the app's voice setup on the host) passes the folder.
+## The host pack of one session language (tools/tts/prerender.py, audio/README.md, D154):
+## per role a blob of 16-bit mono PCM and an index {"rate", "voice", "clips": {key:
+## [first_sample, samples]}}, keys seg:<id>:<k> and num:<fragment>, from which the host
+## stitches slotted lines (D152). Built at packaging time from the dialogue JSON and never
+## committed (FT-AUD-002); desktop exports carry it in res://audio/prerendered_host/<lang>/.
+## content/ can't name audio/ (spec §2.2), so the caller (VoiceSetup) passes the folder.
+## Clients don't use it: they play the client pack's Ogg lines through LocalLines.
 
 var lang: String = ""
 ## role -> {"rate": int, "voice": String, "clips": Dictionary, "pcm": PackedByteArray}

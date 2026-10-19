@@ -15,16 +15,19 @@ A line's text may hold slots, `{name}`, declared in `slots` with a kind: `ship_n
 
 ## Build time: prerender (FT-AUD-002, FT-DAT-005)
 
-`uv run --project tools/tts python tools/tts/prerender.py [LANG...] [--out DIR]` reads only `content/dialogue/*.json` and `content/voices.json`. Output (default `audio/prerendered/`, gitignored, never committed; every desktop and web pack includes it) per language and role, read by `ClipLibrary` (`content/voice/clip_library.gd`):
+`uv run --project tools/tts python tools/tts/prerender.py [LANG...] [--out DIR] [--host-out DIR] [--dev]` reads only `content/dialogue/*.json` and `content/voices.json` and writes two packs per language (D152, D154). Both folders are gitignored; generated audio is never committed. A `dev_only` language (pt_PT until #16) is refused without `--dev`.
 
-- `DIR/<lang>/<role>.pcm`: one blob of 16-bit little-endian mono PCM;
-- `DIR/<lang>/<role>.json`: `{"rate", "voice", "clips": {key: [first_sample, samples]}}`.
+- **Client pack**, `audio/prerendered/<lang>/`, in desktop and web exports: `<line id>.ogg`, Ogg Vorbis (about 53 kbps), one per line without slots (the role's prerender voice). Clients load them with `LocalLines` (`audio/local_lines.gd`).
+- **Host pack**, `audio/prerendered_host/<lang>/`, desktop exports only: per role `<role>.pcm`, one blob of 16-bit little-endian mono PCM, and `<role>.json`, `{"rate", "voice", "clips": {key: [first_sample, samples]}}`. Keys: `seg:<id>:<k>` (the k-th literal piece of a slotted line's text in that language, split at the slots; only pieces holding a letter are rendered) and `num:<key>` (numbers.json fragments, cut at the first 200 ms silence because voices babble after a single word), both in the role's runtime voice, trimmed and peak-normalised. The host loads them with `ClipLibrary` (`content/voice/clip_library.gd`), composed by `VoiceSetup`.
+- Each language folder of both packs gets `index.json`, `{"language", "clips": [files]}`, which the package inspection checks. The release build calls `tools/tts/prerender_release.py --out audio/prerendered LANG...` (packaging's hook).
 
-Keys: `line:<id>` (a line without slots, prerender voice), `seg:<id>:<k>` (the k-th literal piece of a slotted line's text in that language, split at the slots; only pieces holding a letter are rendered; runtime voice, trimmed), `num:<key>` (numbers.json fragments; runtime voice, trimmed, cut at the first 200 ms silence because voices babble after a single word). The release build calls `tools/tts/prerender_release.py --out audio/prerendered LANG...`, which also writes `<lang>/index.json` `{"language", "clips": [files]}` for the package inspection. Clips stay 16-bit PCM, not Ogg, because the host stitches from the same fragments. Computer clips are not filtered here: the robotic filter is an effect chain on the client's `VoiceComputer` bus (FT-AUD-004, D153), so it applies alike to prerendered, stitched and synthesised clips and to either Piper build.
+Computer clips are not filtered here: the robotic filter is an effect chain on the client's `VoiceComputer` bus (FT-AUD-004, D153), so it applies alike to local, stitched and synthesised clips and to either Piper build.
+
+Files read at runtime, which every export must include: `content/dialogue/*.json`, `content/voices.json`, `content/i18n/strings.json`, `audio/prerendered/**` (desktop and web) and `audio/prerendered_host/**` (desktop).
 
 ## Host: synthesis and streaming (`net/voice/`)
 
-Clients play authored lines without slots from their own export (`local` lines); the host stitches slotted lines from segments, cached names and number fragments (`NumberWords`, `shared/number_words.gd`) and synthesises free text, and streams those clips only to the client that plays each (D152). `VoiceService` (a `Node` composed next to `NetServer`):
+Clients play authored lines without slots from their own export (`local` lines); the host stitches slotted lines from segments, cached names and number fragments (`NumberWords`, `shared/number_words.gd`) and synthesises free text, and streams those clips only to the clients in the line's audience (D152). `VoiceService` (a `Node` composed next to `NetServer`):
 
 - one persistent Piper process per voice behind a thin adapter: `tools/tts/piper_stream.py` (piper-tts 1.8.0, development) or the standalone rhasspy/piper 2023.11.14-2 binary (releases), each driven by its own worker thread; the main loop only queues requests and collects finished parts (FT-AUD-019, FT-ARC-019);
 - composed by `VoiceSetup` (`app/voice_setup.gd`): host clips from `res://audio/prerendered_host`, and the synth factory (`BundledPiper`'s binary in exports, found at runtime; the tools/tts venv in development; `FT_PIPER_BIN` forces the binary). Without a voice model, or with a `dev_only` language in a release build, lines are subtitles only;

@@ -11,3 +11,4 @@ Ids verified by a review item, playtest or owner step rather than a test. One li
 - FT-TST-005 https://github.com/migueltorrescosta/full-theta/issues/2 `gate.sh` prints the commit and per-tier results; PR bodies record them (`.github/pull_request_template.md`).
 - FT-GEN-012 https://github.com/migueltorrescosta/full-theta/issues/2 Linux and Windows export through `gate.sh l6`; macOS export recorded in `docs/spikes/S1.md`, packaged in #12.
 - FT-DAT-006 https://github.com/migueltorrescosta/full-theta/issues/2 `scenarios/` is the one scenario folder (`scenarios/README.md`); `tools/lint_arch.py` keeps it pure; the Scenario API comes in #10.
+- FT-AUD-015 https://github.com/migueltorrescosta/full-theta/issues/10 The latency half (p95 under 1 s over 50 free-text lines) is measured by `tools/voice_latency/` (S7b method) and recorded in the PR body; the D110 subtitles-only overflow is unit-tested.
