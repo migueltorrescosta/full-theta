@@ -65,3 +65,4 @@ The S5 playtest build, the S7 samples, the S8 screenshots (v1 and v2), the S3 we
 | S3 | `S3StaticServer` (budgeted poll, gzip, ETag), `S3KeepAwake`, the shell and audio guard | #6, #12 |
 | S7b | Persistent Piper wrapper (`tools/tts/`), closed-set cache at Start | E10 |
 | S2 | `gate.sh l5` is already the real L5 tier | — |
+| S8 | The approved ship generator, moved to `presentation/procedural_ship.gd` (`ProceduralShip`); v1 deleted | #7, E14 |

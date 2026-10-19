@@ -1,4 +1,4 @@
-## S8 v2 view for the L5 harness: the semi-realistic ship at the origin, a camera orbiting
+## Ship view for the L5 harness (S8 v2): the semi-realistic ship at the origin, a camera orbiting
 ## it by yaw and pitch (yaw 0 looks from behind, 90 from starboard), a key, fill and rim
 ## light fixed to the camera, a procedural sky for ambient light and reflections, and
 ## filmic tonemapping.
@@ -52,7 +52,7 @@ func _ready() -> void:
 	_light(camera, Vector3(-10, 60, 0), Color(0.6, 0.7, 0.9), 0.45, false)  # fill
 	_light(camera, Vector3(-20, 160, 0), Color(0.75, 0.95, 0.88), 0.8, false)  # rim
 
-	var ship: S8ShipV2 = S8ShipV2.new()
+	var ship: ProceduralShip = ProceduralShip.new()
 	ship.wear = wear
 	add_child(ship)
 

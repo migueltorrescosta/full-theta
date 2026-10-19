@@ -4,141 +4,111 @@
   "voices": {
     "en_GB-cori-high": {
       "en/en_GB/cori/high/en_GB-cori-high.onnx": {
-        "size": 114219352,
         "sha256": "470b4dd634c98f8a4850d7626ffc3dfc90774628eeef6605a6dd8f88f30a5903"
       },
       "en/en_GB/cori/high/en_GB-cori-high.onnx.json": {
-        "size": 4963,
         "sha256": "9e7fb5b5671612c22f3c81cbe46c1ae87b031a4632bcb509e499dad6f1e2adec"
       },
       "en/en_GB/cori/high/MODEL_CARD": {
-        "size": 468,
         "sha256": "136e7bd168b6c35b4a5df01a0253297e5773b5775ceae0af5160f264aa58208f"
       }
     },
     "en_GB-cori-medium": {
       "en/en_GB/cori/medium/en_GB-cori-medium.onnx": {
-        "size": 63531379,
         "sha256": "1899f98e5fb8310154f3c2973f4b8a929ba7245e722b3d3a85680b833d95f10d"
       },
       "en/en_GB/cori/medium/en_GB-cori-medium.onnx.json": {
-        "size": 4966,
         "sha256": "e262c16d7f192f69d4edd6b4ef8a5915379e67495fcc402f1ab15eeb33da3d36"
       },
       "en/en_GB/cori/medium/MODEL_CARD": {
-        "size": 474,
         "sha256": "38d76dfde845837b184668f8bab1c6426ad740b1af0fcebc349037822739e536"
       }
     },
     "en_US-norman-medium": {
       "en/en_US/norman/medium/en_US-norman-medium.onnx": {
-        "size": 63531379,
         "sha256": "b9739443232a80a59c7d18810dd856899bf16a7964725f5ab81ea49b1351cb71"
       },
       "en/en_US/norman/medium/en_US-norman-medium.onnx.json": {
-        "size": 4968,
         "sha256": "6c2db7f558a4a8deb9fe822583c1c5105f6c4e834dd0f9de8ad17a888ee9fe1d"
       },
       "en/en_US/norman/medium/MODEL_CARD": {
-        "size": 528,
         "sha256": "60eaf4d10009d1bd4a1aa555d337dae00f60421d72fee415b9139a021e7cb5d0"
       }
     },
     "en_US-libritts-high": {
       "en/en_US/libritts/high/en_US-libritts-high.onnx": {
-        "size": 136673811,
         "sha256": "9127a559e11603f10b366d1a20ac7426826081dbc521de4c2420c57728d73f0f"
       },
       "en/en_US/libritts/high/en_US-libritts-high.onnx.json": {
-        "size": 20163,
         "sha256": "2efdc6d7f954588b8180132cbd9b8001933fdd00932c92bc92fd0d2028a9eb3d"
       },
       "en/en_US/libritts/high/MODEL_CARD": {
-        "size": 255,
         "sha256": "c478d826aae8a6332f69509271a56083b9ece014a993e16fc79cb94968106a5f"
       }
     },
     "it_IT-serena-high": {
       "it/it_IT/serena/high/it_IT-serena-high.onnx": {
-        "size": 114204024,
         "sha256": "7462fbdf03727fb4c0c161286ad538fe6436b7e4b1c3059ef52930032475955f"
       },
       "it/it_IT/serena/high/it_IT-serena-high.onnx.json": {
-        "size": 5252,
         "sha256": "60597bac737a20766591fe24d1315df9a3811dc3509e69bc394cdee19eccbae7"
       },
       "it/it_IT/serena/high/MODEL_CARD": {
-        "size": 262,
         "sha256": "5c388e5b6df184359af472b665a4318b8da8948455dcc39eb48de408ad2d693c"
       }
     },
     "it_IT-serena-medium": {
       "it/it_IT/serena/medium/it_IT-serena-medium.onnx": {
-        "size": 63516051,
         "sha256": "fe4e26b2c1236e2a44d2e295cad564d94a0d8b0a9fca1ccdfd70dd4af3116eb5"
       },
       "it/it_IT/serena/medium/it_IT-serena-medium.onnx.json": {
-        "size": 5254,
         "sha256": "14cb4995874138b2792ae07753b5540942124761af9ae6609f9b520f28837881"
       },
       "it/it_IT/serena/medium/MODEL_CARD": {
-        "size": 266,
         "sha256": "1d0dbdc0182d19f6510fd3dcd2893587912a65f8cafe6da57754863f168bbe7e"
       }
     },
     "it_IT-riccardo-x_low": {
       "it/it_IT/riccardo/x_low/it_IT-riccardo-x_low.onnx": {
-        "size": 28130791,
         "sha256": "1368de15f123275a7ef951c9e5e30be0f58a032daa14a0da44037443c1d1d21b"
       },
       "it/it_IT/riccardo/x_low/it_IT-riccardo-x_low.onnx.json": {
-        "size": 4161,
         "sha256": "146ab9c634afe524e9fb7530f2510df7a42fb1db56b52658ca1fb3d98001a62a"
       },
       "it/it_IT/riccardo/x_low/MODEL_CARD": {
-        "size": 260,
         "sha256": "7ce3b2fc4f454c84936887971574e436cc2154049b427a530f70bee050b2fdc6"
       }
     },
     "it_IT-paola-medium": {
       "it/it_IT/paola/medium/it_IT-paola-medium.onnx": {
-        "size": 63511038,
         "sha256": "6fc918b5a0ea6137382833dddfa567bffbe6a5060c02043c87192ee59c04210c"
       },
       "it/it_IT/paola/medium/it_IT-paola-medium.onnx.json": {
-        "size": 7099,
         "sha256": "aea19c0a7fce29fbc359b93f10e7902854401e4c95ae2ea328ae516b15d296cf"
       },
       "it/it_IT/paola/medium/MODEL_CARD": {
-        "size": 303,
         "sha256": "c53fd0070dc93b438edbce06728eb83759ba030fff0cce523209ee4a0a6363c0"
       }
     },
     "pt_PT-tugão-medium": {
       "pt/pt_PT/tugão/medium/pt_PT-tugão-medium.onnx": {
-        "size": 63201294,
         "sha256": "223a7aaca69a155c61897e8ada7c3b13bc306e16c72dbb9c2fed733e2b0927d4"
       },
       "pt/pt_PT/tugão/medium/pt_PT-tugão-medium.onnx.json": {
-        "size": 5026,
         "sha256": "fe0918dfc0f1a89264a6eea4afe8e95d8e9fed3cc6c81b5c2f87fcb2b50c7320"
       },
       "pt/pt_PT/tugão/medium/MODEL_CARD": {
-        "size": 282,
         "sha256": "1d6c23095980c0c58a044f1cb23e26fdc1d27bd95b68db0b5b0c548788b99d50"
       }
     },
     "pt_BR-faber-medium": {
       "pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx": {
-        "size": 63201294,
         "sha256": "858555e3a064209c57088fe6bd70c4c3dc54d03eaa00c45d5ecaf43a33f95aa7"
       },
       "pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json": {
-        "size": 4855,
         "sha256": "7e694de195ae3fc36dd732c445eb04fb49b649854893cb5506b978f0d50a1d6f"
       },
       "pt/pt_BR/faber/medium/MODEL_CARD": {
-        "size": 279,
         "sha256": "01f1a5bcfd0538782726059ae407eae9c2dd1b5b35f7298fd53a68de91afe563"
       }
     }

@@ -46,7 +46,7 @@ CAPTURE_TIMEOUT = 300  # seconds for one Godot run over all shots
 
 
 def read_png(path: Path) -> tuple[int, int, bytes]:
-    """Decode an 8-bit, non-interlaced RGB or RGBA PNG to (width, height, RGB bytes)."""
+    """Decode an 8-bit, non-interlaced RGB PNG to (width, height, RGB bytes)."""
     data = path.read_bytes()
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError(f"{path}: not a PNG")
@@ -59,9 +59,9 @@ def read_png(path: Path) -> tuple[int, int, bytes]:
         elif kind == b"IDAT":
             idat += body
         pos += 12 + length
-    if depth != 8 or colour not in (2, 6) or interlace:
-        raise ValueError(f"{path}: only 8-bit non-interlaced RGB/RGBA PNGs are supported")
-    bpp = 3 if colour == 2 else 4
+    if depth != 8 or colour != 2 or interlace:
+        raise ValueError(f"{path}: only 8-bit non-interlaced RGB PNGs are supported")
+    bpp = 3
     stride = width * bpp
     raw = zlib.decompress(idat)
     out = bytearray(height * stride)
@@ -86,8 +86,6 @@ def read_png(path: Path) -> tuple[int, int, bytes]:
                 line[x] = (line[x] + pred) & 255
         out[y * stride : (y + 1) * stride] = line
         prev = line
-    if bpp == 4:
-        del out[3::4]
     return width, height, bytes(out)
 
 
@@ -232,6 +230,8 @@ def main() -> int:
             shutil.copy(out / f"{name}.png", BASELINES / f"{name}.png")
         shutil.copy(out / "env.json", BASELINES / "env.json")
         print(f"l5: wrote {len(names)} baselines and env.json to {show(BASELINES)}")
+        for stale in sorted(set(p.stem for p in BASELINES.glob("*.png")) - set(names)):
+            print(f"l5: {stale}.png is not in the manifest; delete it if the shot is gone")
     elif not errors and not args.capture_only:
         errors, stats = compare(BASELINES, out, names)
         for name, s in stats.items():

@@ -5,5 +5,4 @@ Throwaway M0 spike code (#3, spec §2.4). One folder per spike (`s2/`, `s4/`, �
 - Excluded from the game exports (`export_presets.cfg`) and outside the §2.2 module rules, so `tools/lint_arch.py` doesn't apply its purity checks here. GDScript here still passes `gdlint`, `gdformat` and typed `--check-only` (`gate.sh l0`).
 - `class_name`s carry the spike prefix (`S6Ship`) so they don't collide in the global class list.
 - Only the parts named in #3 are promoted, by the M1 issues: the S5 integrator (T027), the S4 reconnect, resync and chunking logic (T045, #6), the S3 static server and keep-awake (#6), and possibly the S5 widgets (T050). Use as a model for (the #5 and #6 leads decide): the S5 assist (T028) and callouts (T034), the S6 packed layout and broadphase (T025), and the S9 codec and view keys (T040–T042).
-- The L5 ship shots (`tests/visual/shots.json`) render `spikes/s8/ship_v2_view.tscn`, the approved style (D107); move it out of `spikes/` (or replace the shots) before deleting the spike.
 - Generated audio, builds and screenshots never go in the repo.

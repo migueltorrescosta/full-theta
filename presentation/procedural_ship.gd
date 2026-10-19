@@ -1,10 +1,11 @@
-## S8 v2 procedural ship: a lofted hull, flat slabs for wings and fins, engine nacelles and
-## seeded greebles, shaded with PBR StandardMaterial3D (metallic, roughness, a plating
-## texture and its normal map, all generated in code). Nose points along -Z.
+## Procedural ship (S8 v2, the approved style, D107; FT-AUD-016): a lofted hull, flat
+## slabs for wings and fins, engine nacelles and seeded greebles, shaded with PBR
+## StandardMaterial3D (metallic, roughness, a plating texture and its normal map, all
+## generated in code). Nose points along -Z.
 ## `wear` (0 clean, 1 weathered) is set before the node enters the tree.
 ## The Compatibility renderer has no SSAO, so a fake ambient occlusion is baked into vertex
 ## colours once the parts are built (`_bake_ao`).
-class_name S8ShipV2
+class_name ProceduralShip
 extends Node3D
 
 enum Role { HULL, ACCENT, METAL, DARK, GLASS, GLOW }
