@@ -269,13 +269,20 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("langs", nargs="*", metavar="LANG", help=f"default: all of {', '.join(LANGS)}")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="client pack (Ogg lines)")
+    parser.add_argument(
+        "--dev", action="store_true", help="also allow languages whose voices are dev_only (never shipped)"
+    )
     parser.add_argument("--host-out", type=Path, default=None, help="host pack [OUT/../prerendered_host]")
     parser.add_argument("--jobs", type=int, default=1, help="voices rendered in parallel")
     parser.add_argument("--threads", type=int, default=1, help="onnxruntime threads per voice process")
     args = parser.parse_args(argv)
-    langs = args.langs or list(LANGS)
+    voices = json.loads((ROOT / "content/voices.json").read_text(encoding="utf-8"))["languages"]
+    dev_only = [lang for lang in LANGS if voices[lang].get("dev_only")]
+    langs = args.langs or [lang for lang in LANGS if args.dev or lang not in dev_only]
     if unknown := [lang for lang in langs if lang not in LANGS]:
         parser.error(f"unknown language {', '.join(unknown)}")
+    if not args.dev and (refused := [lang for lang in langs if lang in dev_only]):
+        parser.error(f"{', '.join(refused)}: dev_only voices are never shipped (D105); pass --dev for a development build")
     start = time.perf_counter()
     out = args.out.resolve()
     host_out = args.host_out.resolve() if args.host_out else None

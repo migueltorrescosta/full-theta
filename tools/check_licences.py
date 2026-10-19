@@ -63,8 +63,12 @@ def check_voices(root: Path, entries: list[dict]) -> list[str]:
     path = root / "content/voices.json"
     if not path.exists():
         return []
-    by_voice = {e["voice"]: e for e in entries if e.get("kind") == "voice" and e.get("voice")}
-    errors = []
+    errors, by_voice = [], {}
+    for e in entries:
+        if e.get("kind") == "voice" and e.get("voice"):
+            if e["voice"] in by_voice:
+                errors.append(f"{e['voice']}: listed twice in content/provenance.json")
+            by_voice.setdefault(e["voice"], e)
     for e in by_voice.values():
         if e.get("status") not in VOICE_STATUSES:
             errors.append(f"{e['voice']}: voice status must be one of {VOICE_STATUSES}")

@@ -145,3 +145,14 @@ def test_committed_audio_fails(tmp_path):
     assert check_licences.run(root) == [
         "audio/prerendered/en/npc.pcm: audio must not be committed outside assets/ (FT-AUD-002)"
     ]
+
+
+# FT: FT-AUD-014
+def test_duplicate_voice_entry_fails(tmp_path):
+    root = fixture(tmp_path)
+    with_voices(root, {"a-medium": "accept", "a-high": "accept", "b": "accept", "c": "dev-only"})
+    manifest = root / "content/provenance.json"
+    data = json.loads(manifest.read_text())
+    data["entries"].append(dict(data["entries"][-1], status="accept"))
+    manifest.write_text(json.dumps(data))
+    assert check_licences.run(root) == ["c: listed twice in content/provenance.json"]

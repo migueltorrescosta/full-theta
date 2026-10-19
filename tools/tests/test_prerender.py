@@ -190,3 +190,14 @@ def test_each_pack_lists_its_files_and_lines_decode(tmp_path):
         server = json.loads((host(out) / lang / "index.json").read_text())
         assert server == {"language": lang, "clips": ["computer.json", "computer.pcm", "npc.json", "npc.pcm"]}
     assert not (out / "pt_PT").exists()
+
+
+# FT: FT-AUD-014
+def test_dev_only_languages_are_refused_without_dev(capsys):
+    import prerender_release
+
+    with pytest.raises(SystemExit):
+        prerender_release.main(["pt_PT", "--out", "/tmp/never-written"])
+    assert "dev_only" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        prerender.main(["pt_PT"])
