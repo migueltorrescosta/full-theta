@@ -1,0 +1,101 @@
+class_name S4Resync
+extends RefCounted
+## Per-client snapshot policy: deltas while the client keeps up, nothing while it
+## lags, one full snapshot once its queue has drained (FT-NET-037, TECH-2).
+## Candidate for promotion to T045 (#6).
+##
+## Lag is measured end to end: snapshots sent but not yet acknowledged. On
+## loopback the kernel socket buffers absorb seconds of traffic before
+## WebSocketPeer's own outbound buffer grows, so the outbound buffer alone is a
+## late signal; both are checked, and a failed send also counts.
+
+enum Action { NONE, DELTA, FULL }
+
+## Unacknowledged snapshots that mark the client as stalled (15 = 500 ms at 30 Hz).
+var lag_limit: int = 15
+## WebSocketPeer outbound buffered bytes that, with high-lane data still queued,
+## mark the client as stalled. A voice burst alone fills the buffer briefly
+## without starving snapshots, so a full buffer by itself does not count.
+var buffered_limit: int = 48 * 1024
+## High-lane queued bytes that mark the client as stalled.
+var queued_limit: int = 256 * 1024
+
+var acked_seq: int = -1
+var last_sent_seq: int = -1
+var last_full_seq: int = -1
+var need_full: bool = true
+var stalled: bool = false
+var stall_count: int = 0
+var full_count: int = 0
+
+
+func _init(lag: int = 15) -> void:
+	lag_limit = lag
+
+
+func on_ack(seq: int) -> void:
+	acked_seq = maxi(acked_seq, seq)
+
+
+func on_send_error() -> void:
+	_mark_stalled()
+
+
+## Forces the next decision to be a full snapshot (join, resume, test hook).
+func force_full() -> void:
+	need_full = true
+
+
+## Decides what to send for snapshot `seq`; `buffered` is the WebSocketPeer
+## outbound amount, `queued` the high-lane bytes still in our queue.
+func decide(buffered: int, queued: int) -> Action:
+	if (
+		not stalled
+		and last_sent_seq >= 0
+		and (
+			lag() > lag_limit or (buffered > buffered_limit and queued > 0) or queued > queued_limit
+		)
+	):
+		_mark_stalled()
+	if stalled:
+		# Drained: the client has acknowledged everything we sent and nothing
+		# of the high lane is left in our queue.
+		if acked_seq >= last_sent_seq and queued == 0:
+			return Action.FULL
+		return Action.NONE
+	if need_full:
+		return Action.FULL
+	return Action.DELTA
+
+
+## Snapshots sent and not yet acknowledged. Sequence numbers skipped while
+## stalled don't count: a resync full snapshot restarts the count at one.
+func lag() -> int:
+	return last_sent_seq - maxi(acked_seq, last_full_seq - 1)
+
+
+## Base for a delta: the newest snapshot the client is sure to hold. TCP keeps
+## order, so the last full snapshot counts even before it is acknowledged.
+func delta_base() -> int:
+	return maxi(acked_seq, last_full_seq)
+
+
+func on_sent(seq: int, full: bool) -> void:
+	last_sent_seq = seq
+	if full:
+		last_full_seq = seq
+		need_full = false
+		stalled = false
+		full_count += 1
+
+
+## Events are held while a full snapshot is due; the full snapshot carries them.
+func holds_events() -> bool:
+	return need_full or stalled
+
+
+func _mark_stalled() -> void:
+	if not stalled:
+		stall_count += 1
+	stalled = true
+	need_full = true
