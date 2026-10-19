@@ -14,3 +14,12 @@ func test_runner_works() -> void:
 A `# FT:` line at the top of a file tags the whole file. The same convention applies to the Python tool tests in `tools/tests/`. FT ids elsewhere in comments or names don't count.
 
 `tools/traceability.py` reads these tags and writes `docs/traceability.md`; `gate.sh l0` runs it with `--check`, which fails on a stale map or a tag naming an unknown or removed id. Rerun `uv run --project tools python tools/traceability.py` after changing tags. Ids verified by a playtest or owner step go in `docs/traceability-manual.md` with an issue link.
+
+## Golden replays
+
+`tests/golden/` holds the golden replay of the M1 encounter (FT-TST-009): `m1_encounter.cmdlog` is a `CommandLog` text (`sim/core/command_log.gd`) and `m1_encounter.expected.cfg` the final tick, state hash, platform and readable values it must reach. `tests/sim/replay/test_golden_replay.gd` replays the log and compares; it never writes in a normal run. After an intended sim change, regenerate both files and commit them with that change:
+
+```bash
+FT_UPDATE_GOLDEN=1 /path/to/godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+  --add res://tests/sim/replay/test_golden_replay.gd --ignoreHeadlessMode
+```
