@@ -17,7 +17,10 @@ var pz: PackedFloat64Array = PackedFloat64Array()
 ## Velocity relative to the site (m/s, site frame).
 var vel: PackedVector3Array = PackedVector3Array()
 var rot: Array[Quaternion] = []
-## Body-frame angular velocity (rad/s).
+## World-frame angular momentum (N m s): the integrator's rotational state (FT-ARC-007).
+var ang_mom: PackedVector3Array = PackedVector3Array()
+## Body-frame angular velocity (rad/s), I^-1 R^T L, derived by the integrator each tick
+## for readers. Set it through set_angular_velocity() so ang_mom follows.
 var ang_vel: PackedVector3Array = PackedVector3Array()
 ## This tick's commanded body-frame force (N) and torque (N m), set by assist; the
 ## integrator clamps them to the current envelope.
@@ -52,6 +55,7 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	pz.append(0.0)
 	vel.append(Vector3.ZERO)
 	rot.append(Quaternion.IDENTITY)
+	ang_mom.append(Vector3.ZERO)
 	ang_vel.append(Vector3.ZERO)
 	force_cmd.append(Vector3.ZERO)
 	torque_cmd.append(Vector3.ZERO)
@@ -69,6 +73,13 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	lever_arm.append(def.lever_arm)
 	radius.append(def.radius)
 	half_length.append(def.half_length)
+
+
+## Sets a ship's body-frame angular velocity (rad/s) and the matching world-frame
+## angular momentum at its current rotation; set rot first.
+func set_angular_velocity(row: int, w_body: Vector3) -> void:
+	ang_vel[row] = w_body
+	ang_mom[row] = rot[row] * (inertia[row] * w_body)
 
 
 ## Places a ship at a site-local offset; fails an assertion past MAX_OFFSET.
@@ -174,6 +185,7 @@ func columns() -> Array:
 			["pz", pz],
 			["vel", vel],
 			["rot", rot],
+			["ang_mom", ang_mom],
 			["ang_vel", ang_vel],
 			["force_cmd", force_cmd],
 			["torque_cmd", torque_cmd],

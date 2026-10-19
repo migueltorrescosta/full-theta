@@ -2,9 +2,19 @@ class_name Integrator
 extends RefCounted
 ## 6DOF step with no drag (FT-SIM-001, FT-SIM-003, FT-ARC-007; research/tech §3),
 ## promoted from S5. Position is exact under constant force over a tick:
-## x += v dt + a dt^2 / 2 (FT-SIM-038), in 64-bit per axis (D104). Rotation uses
-## Euler's equations for a diagonal inertia and the exact exponential update, then
-## renormalises the quaternion.
+## x += v dt + a dt^2 / 2 (FT-SIM-038), in 64-bit per axis (D104). Rotation keeps the
+## world-frame angular momentum L as its state: the torque adds R tau dt, and with no
+## torque L is not touched at all. The attitude then follows the free rigid body by the
+## symmetric splitting of its energy into the three principal axes (pitch/2, yaw/2,
+## roll, yaw/2, pitch/2), each an exact rotation since its body-frame momentum component
+## is constant over it. That keeps |L| exactly and the energy within O(dt^2) with no
+## drift (FT-ARC-007), where explicit Euler on Euler's equations gains energy every tick.
+
+## Sub-steps of the splitting: body axis and share of dt.
+const SPLIT_AXES: Array[Vector3] = [
+	Vector3.RIGHT, Vector3.UP, Vector3.BACK, Vector3.UP, Vector3.RIGHT
+]
+const SPLIT_SHARES: Array[float] = [0.5, 0.5, 1.0, 0.5, 0.5]
 
 
 ## Integrates every live ship by dt under its commanded force and torque.
@@ -42,14 +52,18 @@ static func step(kin: Kinematics, row: int, dt: float) -> float:
 	kin.vel[row] = v0 + a * dt
 	kin.check_offset(row)
 
-	# Angular: Euler's equations for a diagonal inertia tensor, body frame.
-	var w: Vector3 = kin.ang_vel[row]
+	# Angular: kick the world-frame momentum, then the free flow by splitting.
+	var q: Quaternion = kin.rot[row]
+	var mom: Vector3 = kin.ang_mom[row] + q * tq * dt
+	kin.ang_mom[row] = mom
 	var inertia: Vector3 = kin.inertia[row]
-	w += (tq - w.cross(w * inertia)) / inertia * dt
-	kin.ang_vel[row] = w
-	var rate: float = w.length()
-	if rate > 1e-9:
-		# Exact rotation about the body-frame axis over dt; tiny float32 rates are
-		# skipped rather than normalised badly.
-		kin.rot[row] = (kin.rot[row] * Quaternion(w / rate, rate * dt)).normalized()
+	for i: int in SPLIT_AXES.size():
+		var axis: Vector3 = SPLIT_AXES[i]
+		var m: Vector3 = q.inverse() * mom
+		var angle: float = m.dot(axis) / inertia.dot(axis) * SPLIT_SHARES[i] * dt
+		if angle != 0.0:
+			q = q * Quaternion(axis, angle)
+	q = q.normalized()
+	kin.rot[row] = q
+	kin.ang_vel[row] = (q.inverse() * mom) / inertia
 	return used

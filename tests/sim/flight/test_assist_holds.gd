@@ -34,7 +34,7 @@ func test_holds_rate_drift_and_speed() -> void:
 		var w: SimWorld = SimWorld.new(1, "test")
 		var id: int = FlightFixture.spawn(w, Vector3.ZERO, c[4], c[1])
 		assert_bool(w.helm.is_decoupled(id)).is_false()
-		w.kin.ang_vel[id] = c[2]
+		w.kin.set_angular_velocity(id, c[2])
 		w.helm.throttle_setpoint[id] = c[3]
 		SimFixture.run(w, 60 * 30)
 		var v: Vector3 = FlightFixture.local_velocity(w, id)
@@ -117,7 +117,7 @@ func test_every_mode_stays_in_envelope() -> void:
 	for mode: String in ["holds", "stick", "decoupled", "all_stop", "face", "approach"]:
 		var w: SimWorld = SimWorld.new(1, "test")
 		var id: int = FlightFixture.spawn(w, Vector3.ZERO, Quaternion.IDENTITY, Vector3.ONE * 300.0)
-		w.kin.ang_vel[id] = Vector3(2.0, 2.0, 2.0)
+		w.kin.set_angular_velocity(id, Vector3(2.0, 2.0, 2.0))
 		w.kin.thrust_scale[id] = 0.5
 		w.kin.torque_scale[id] = 0.5
 		FlightFixture.select_point(w, id, 0, Vector3(-3000.0, 2000.0, 5000.0))
@@ -169,7 +169,7 @@ func test_decoupled_disables_assist() -> void:
 	var id: int = FlightFixture.spawn(
 		w, Vector3.ZERO, Quaternion.IDENTITY, Vector3(30.0, 0.0, -50.0)
 	)
-	w.kin.ang_vel[id] = Vector3(0.0, 0.2, 0.0)
+	w.kin.set_angular_velocity(id, Vector3(0.0, 0.2, 0.0))
 	FlightFixture.decouple(w, id, true)
 	SimFixture.run(w, 120)
 	assert_bool(w.helm.is_decoupled(id)).is_true()

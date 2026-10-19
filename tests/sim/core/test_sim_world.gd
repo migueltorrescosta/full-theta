@@ -17,7 +17,7 @@ class KickCommand:
 			r.randf_range(-1, 1), r.randf_range(-1, 1), r.randf_range(-1, 1)
 		)
 		world.kin.vel[ship_id] += kick * scale
-		world.kin.ang_vel[ship_id] += kick * 0.01
+		world.kin.set_angular_velocity(ship_id, world.kin.ang_vel[ship_id] + kick * 0.01)
 		return true
 
 

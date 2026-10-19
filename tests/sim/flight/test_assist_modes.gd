@@ -14,7 +14,7 @@ func test_all_stop_from_tumble() -> void:
 		var id: int = FlightFixture.spawn(
 			w, Vector3.ZERO, Quaternion.IDENTITY, Vector3(90.0, 25.0, -160.0)
 		)
-		w.kin.ang_vel[id] = Vector3(0.3, -0.2, 0.5)
+		w.kin.set_angular_velocity(id, Vector3(0.3, -0.2, 0.5))
 		w.helm.throttle_setpoint[id] = 180.0
 		FlightFixture.decouple(w, id, decoupled)
 		FlightFixture.all_stop(w, id)
