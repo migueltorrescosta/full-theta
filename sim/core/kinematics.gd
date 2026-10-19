@@ -121,7 +121,15 @@ func translate(row: int, dx: float, dy: float, dz: float) -> void:
 func wrap_point(x: float, y: float, z: float) -> PackedFloat64Array:
 	if not (is_finite(x) and is_finite(y) and is_finite(z)):
 		return PackedFloat64Array()
-	return PackedFloat64Array([_wrap(x, period), _wrap(y, period), _wrap(z, period)])
+	# _wrap inlined for in-cube coordinates, the common case (hot path).
+	var half: float = 0.5 * period
+	if not (x >= -half and x < half):
+		x = _wrap(x, period)
+	if not (y >= -half and y < half):
+		y = _wrap(y, period)
+	if not (z >= -half and z < half):
+		z = _wrap(z, period)
+	return PackedFloat64Array([x, y, z])
 
 
 ## One site-local coordinate (m) wrapped into [-period / 2, period / 2); the caller
@@ -175,18 +183,22 @@ func relative(a: int, b: int) -> Vector3:
 ## float32), or -1; the earlier one in ids wins a tie. One loop for target scans.
 func nearest(a: int, ids: PackedInt32Array) -> int:
 	var half: float = 0.5 * period
-	var ax: float = px[a]
-	var ay: float = py[a]
-	var az: float = pz[a]
-	var s: int = site[a]
+	var xs: PackedFloat64Array = px
+	var ys: PackedFloat64Array = py
+	var zs: PackedFloat64Array = pz
+	var sites: PackedInt32Array = site
+	var ax: float = xs[a]
+	var ay: float = ys[a]
+	var az: float = zs[a]
+	var s: int = sites[a]
 	var best: int = -1
 	var best_dist: float = INF
 	for b: int in ids:
-		if site[b] != s:
+		if sites[b] != s:
 			continue
-		var dx: float = px[b] - ax
-		var dy: float = py[b] - ay
-		var dz: float = pz[b] - az
+		var dx: float = xs[b] - ax
+		var dy: float = ys[b] - ay
+		var dz: float = zs[b] - az
 		if not (dx >= -half and dx < half):
 			dx = _wrap(dx, period)
 		if not (dy >= -half and dy < half):

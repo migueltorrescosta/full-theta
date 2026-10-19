@@ -73,14 +73,20 @@ static func pick_target(world: SimWorld, id: int) -> int:
 static func _candidates(world: SimWorld, faction: int) -> PackedInt32Array:
 	var kin: Kinematics = world.kin
 	var knowledge: KnowledgeTable = world.knowledge
+	var alive: PackedByteArray = kin.alive
+	var factions: PackedInt32Array = kin.factions
+	var contact_ids: PackedInt32Array = knowledge.ship_ids
+	var identified: PackedByteArray = knowledge.identified
 	var out: PackedInt32Array = PackedInt32Array()
-	# _known_not_hostile inlined: identified, and not hostile by relation (per faction).
+	# Skips the contacts known not to be hostile: identified, and not hostile by
+	# relation (looked up once per faction).
 	var hostile: Dictionary[int, bool] = {}
-	for c: int in knowledge.detected_ships(faction, kin.factions):
-		if kin.alive[c] != 1:
+	for r: int in knowledge.detected_rows(faction, factions):
+		var c: int = contact_ids[r]
+		if alive[c] != 1:
 			continue
-		if knowledge.identified[knowledge.row_for(faction, c)] == 1:
-			var f: int = kin.factions[c]
+		if identified[r] == 1:
+			var f: int = factions[c]
 			if not hostile.has(f):
 				hostile[f] = world.relation(faction, f) == SimWorld.Relation.HOSTILE
 			if not hostile[f]:
@@ -293,11 +299,12 @@ static func _helm_input(world: SimWorld, id: int, face: bool, forward_speed: flo
 
 static func _helm_input_raw(world: SimWorld, id: int, face: bool, throttle: float) -> void:
 	var helm: HelmTable = world.helm
+	var latched: Vector3 = helm.input_translation[id]
 	var same: bool = (
 		helm.input_rotation[id] == Vector3.ZERO
-		and helm.input_translation[id].x == 0.0
-		and helm.input_translation[id].y == 0.0
-		and absf(helm.input_translation[id].z - throttle) < INPUT_EPS
+		and latched.x == 0.0
+		and latched.y == 0.0
+		and absf(latched.z - throttle) < INPUT_EPS
 		and helm.face_held[id] == (1 if face else 0)
 		and helm.approach_held[id] == 0
 	)
