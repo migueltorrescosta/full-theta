@@ -18,7 +18,7 @@ English, Portuguese (pt_PT) and Italian at launch; one language per session (D40
 
 ## 9.5 Visual style
 
-Colourful, exaggerated retro science fiction; simple geometry, toon shader, readable silhouettes (v0.3 §8, D63).
+Semi-realistic science fiction with readable silhouettes: procedural geometry with panel detail, PBR-style metallic and roughness materials, a desaturated mint and violet palette, and at most a thin outline (D107, amending the toon look of v0.3 §8 and D63).
 
 ## 9.6 Requirements
 
@@ -37,7 +37,7 @@ Colourful, exaggerated retro science fiction; simple geometry, toon shader, read
 - **FT-AUD-013** A session shall use one language for all text and voice, chosen by the host. (D41)
 - **FT-AUD-014** Every shipped Piper voice shall have a licence compatible with redistribution, recorded in the provenance manifest. (D2, D63)
 - **FT-AUD-015** Runtime synthesis shall make a free-text line audible within 1 s of its event on the target client (proposed target, verified by spike S7b). (D38, D39, D101)
-- **FT-AUD-016** Art shall use procedural or primitive meshes and CC0 packs with a toon shader; sounds shall be CC0. (D63)
+- **FT-AUD-016** Art shall use procedural or primitive meshes and CC0 packs with semi-realistic PBR-style materials in the Compatibility renderer; sounds shall be CC0. (D63, D107)
 - **FT-AUD-017** Browser clients shall unlock audio with a user gesture on join. (D8)
 - **FT-AUD-018** The host server shall synthesise the session's closed set (ship names, callsigns, NPC names) at Start and cache it per language; numbers shall use prerendered fragments; runtime synthesis shall be used only for free text. (D85, D101)
 - **FT-AUD-019** Synthesis shall run on the host server in one persistent Piper process off the sim thread, and the host shall stream each dynamic clip only to the client that plays it. (D85, D101, plan review TECH-5)
