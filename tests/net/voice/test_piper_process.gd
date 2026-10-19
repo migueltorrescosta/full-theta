@@ -100,7 +100,11 @@ func test_crashes_mid_request_and_while_idle() -> void:
 	)
 	assert_str(parts[0]["error"]).contains("ended")
 	# Let the idle process exit before the next request.
-	await await_millis(300)
+	var pid: int = _synth._pid
+	var end: int = Time.get_ticks_msec() + 3000
+	while OS.is_process_running(pid) and Time.get_ticks_msec() < end:
+		OS.delay_msec(10)
+	assert_bool(OS.is_process_running(pid)).is_false()
 	_synth.request(3, "Spoken.")
 	parts = await _collect(1)
 	assert_array(_summary(parts)).is_equal([[3, 0, false, false], [3, 1, true, false]])
