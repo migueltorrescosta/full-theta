@@ -53,10 +53,14 @@ The macOS package is built and inspected, not run. L6 needs `wine`, `node` (it r
 To rehearse a release without publishing, run the workflow under [act](https://github.com/nektos/act) on a throwaway tag (the draft step is skipped under act):
 
 ```bash
-git tag v0.0.0-dryrun && act push --eventpath <(echo '{"ref": "refs/tags/v0.0.0-dryrun"}') \
-  -W .github/workflows/release.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest \
-  --bind --artifact-server-path /tmp/act-artifacts; git tag -d v0.0.0-dryrun
+git clone -q . /tmp/ft-dryrun && cd /tmp/ft-dryrun && git tag v0.0.0-dryrun
+echo '{"ref": "refs/tags/v0.0.0-dryrun"}' >/tmp/tag-event.json
+act push -W .github/workflows/release.yml --eventpath /tmp/tag-event.json \
+  -P ubuntu-latest=catthehacker/ubuntu:act-latest \
+  --container-options "-v $HOME/.cache/full-theta:/root/.cache/full-theta:ro"
 ```
+
+A clone keeps the run's `build_info.json` and prerender folders out of your working tree. The read-only cache mount reuses fugaku's fetched engine, templates, Piper and voices (drop it where the cache is empty). Under act, the inspection accepts stub prerendered clips. act doesn't apply the `tags` filter, so it can't show that branch pushes skip the workflow; GitHub runs a workflow whose `push` trigger lists only `tags` for tag pushes alone.
 
 Or run the same build directly: `tools/release/build.sh v0.0.0-dryrun build/dryrun --allow-stub-prerender`.
 
