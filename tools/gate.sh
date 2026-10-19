@@ -4,7 +4,7 @@
 # ci = the tiers CI runs (l0 l1; l1 runs every test, tests/net included); all = every
 # implemented tier (l0 l1 l4 l5 l6). l3 runs only the in-process network tests (tests/net),
 # pinned to 2 cores like a CI runner. l4 runs a server and 3 client processes on 2 cores
-# (tools/l4/run.sh).
+# (tools/l4/run.sh). l6 builds the release packages and runs them (tools/l6/run.sh).
 # --update-baselines makes l5 regenerate tests/visual/baselines/ instead of diffing.
 # Prints the commit and per-tier results as a block for the PR body.
 set -uo pipefail
@@ -58,16 +58,10 @@ l4() { tools/l4/run.sh; }
 # (tools/l5.py; fugaku only, needs xvfb).
 l5() { uv run --quiet --project tools python tools/l5.py "${l5_args[@]}"; }
 
-# L6: export Linux and Windows (export_presets.cfg), smoke-run Linux headless.
-l6() {
-  tools/get-godot.sh --with-templates >/dev/null || return 1
-  mkdir -p build/linux build/windows
-  "$godot" --headless --path . --export-release Linux || return 1
-  "$godot" --headless --path . --export-release Windows || return 1
-  [[ -s build/windows/full-theta.exe ]] || { echo "l6: no Windows build" >&2; return 1; }
-  timeout 10 build/linux/full-theta.x86_64 --headless -- --server --bind 127.0.0.1 --port 0 \
-    --run-for 2
-}
+# L6: build, inspect and run the release packages: each exported Linux and Windows
+# build synthesises a line with its bundled Piper and serves its bundled web export
+# to headless Chromium (tools/l6/run.sh; fugaku only, needs wine and node).
+l6() { tools/l6/run.sh; }
 
 echo "gate: import"
 "$godot" --headless --path . --import >/dev/null 2>&1 || { echo "gate: import failed" >&2; exit 1; }

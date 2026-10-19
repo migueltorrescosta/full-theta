@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Builds the release packages for one commit (FT-ARC-022, FT-GEN-012, FT-LIC-008):
+#   tools/release/build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]
+#                          [--skip-inspect]
+# 1. writes build_info.json (version, commit), which every export carries;
+# 2. prerenders each release language's clips (prerender.sh);
+# 3. exports Linux, Windows, macOS and Web (export_presets.cfg) into OUT_DIR/exports;
+# 4. patches the web export for http:// pages (web_patch.py, D108);
+# 5. packages the three desktop builds with the web export, Piper, the release
+#    voices and the licence material, plus the source archives (package.py);
+# 6. inspects the result (inspect_packages.py) and fails on any problem.
+# The release workflow (.github/workflows/release.yml) and `gate.sh l6` run it;
+# docs/release.md describes the artefacts. --allow-dirty builds an uncommitted
+# tree (the commit gets a -dirty suffix); --allow-stub-prerender accepts the
+# stub clips until the voice strand's prerender lands (never on a tag);
+# --skip-inspect leaves step 6 to the caller (the workflow runs it as its own step).
+set -euo pipefail
+root=$(cd "$(dirname "$0")/../.." && pwd)
+cd "$root"
+
+version=${1:?usage: build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]}
+out=${2:?usage: build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]}
+shift 2
+allow_dirty=0 inspect=1 inspect_args=()
+for arg in "$@"; do
+  case $arg in
+    --allow-dirty) allow_dirty=1 ;;
+    --allow-stub-prerender) inspect_args+=(--allow-stub-prerender) ;;
+    --skip-inspect) inspect=0 ;;
+    *) echo "build.sh: unknown argument $arg" >&2; exit 2 ;;
+  esac
+done
+
+commit=$(git rev-parse HEAD)
+if [[ -n $(git status --porcelain) ]]; then
+  ((allow_dirty)) || { echo "build.sh: uncommitted changes (use --allow-dirty)" >&2; exit 1; }
+  commit="$commit-dirty"
+fi
+py() { uv run --quiet --project tools python "$@"; }
+
+godot=$(tools/get-godot.sh --with-templates)
+rm -rf "$out"
+mkdir -p "$out"/exports/{linux,windows,macos,web}
+out=$(cd "$out" && pwd)
+trap 'rm -f "$root/build_info.json"' EXIT
+printf '{"commit": "%s", "version": "%s"}\n' "$commit" "$version" >build_info.json
+
+mapfile -t langs < <(py -c 'import sys; sys.path.insert(0, "tools/release")
+import package; print("\n".join(package.release_languages()))')
+echo "build: prerender ${langs[*]}"
+tools/release/prerender.sh "${langs[@]}"
+"$godot" --headless --path . --import >/dev/null 2>&1
+
+export_preset() { # preset, path
+  echo "build: export $1"
+  "$godot" --headless --path . --export-release "$1" "$2" >"$out/exports/$1.log" 2>&1 \
+    || { tail -20 "$out/exports/$1.log" >&2; return 1; }
+  [[ -s $2 ]] || { echo "build: $1 export wrote no $2" >&2; return 1; }
+}
+export_preset Linux "$out/exports/linux/full-theta.x86_64"
+export_preset Windows "$out/exports/windows/full-theta.exe"
+export_preset macOS "$out/exports/macos/full-theta.zip"
+export_preset Web "$out/exports/web/index.html"
+py tools/release/web_patch.py "$out/exports/web"
+
+echo "build: package"
+git archive --format=tar.gz --prefix="full-theta-$version/" \
+  -o "$out/full-theta-$version-source.tar.gz" HEAD
+py tools/release/package.py --version "$version" --commit "$commit" \
+  --exports "$out/exports" --out "$out" --repo "${GITHUB_REPOSITORY:-migueltorrescosta/full-theta}"
+
+((inspect)) || exit 0
+echo "build: inspect"
+py tools/release/inspect_packages.py --version "$version" --commit "$commit" \
+  "${inspect_args[@]}" "$out"

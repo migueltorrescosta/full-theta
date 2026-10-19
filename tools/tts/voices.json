@@ -1,6 +1,16 @@
 {
   "repo": "rhasspy/piper-voices",
   "revision": "c10ece1aade47bb51c153c893d14e5bf8e5b7117",
+  "release": [
+    "en_GB-cori-medium",
+    "en_US-norman-medium",
+    "it_IT-serena-medium"
+  ],
+  "prerender": [
+    "en_GB-cori-high",
+    "en_US-norman-medium",
+    "it_IT-serena-high"
+  ],
   "voices": {
     "en_GB-cori-high": {
       "en/en_GB/cori/high/en_GB-cori-high.onnx": {

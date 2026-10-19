@@ -9,3 +9,7 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks.
 ## L4 multi-process network test
 
 `tools/gate.sh l4` runs `tools/l4/run.sh`: a server and three headless client processes pinned to 2 cores (`taskset -c 0,1`), driven by intent files, with kills and relaunches (FT-TST-011, FT-TST-014). `tools/l4/repeat.sh N` runs it N times and writes `build/l4/repeat-summary.txt`. The scenarios, the intent format and the logs are in `tools/l4/README.md`.
+
+## Release packaging and L6
+
+`tools/release/build.sh VERSION OUT_DIR` builds, packages and inspects the Linux, Windows and macOS release packages (`fetch.py`, `prerender.sh`, `web_patch.py`, `package.py`, `inspect_packages.py`, `notes.py`; pins in `piper.json`). `.github/workflows/release.yml` runs it on version tags. `tools/gate.sh l6` runs it on the working tree and then runs the Linux and Windows packages (`tools/l6/run.sh`). See `docs/release.md`.

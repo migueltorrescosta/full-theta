@@ -1,0 +1,58 @@
+# Release packages, on version tags only (FT-ARC-017, FT-ARC-022, FT-GEN-012,
+# FT-LIC-008). PRs and main keep the single gate job in ci.yml. Builds the
+# Linux, Windows and macOS packages of the tagged commit with
+# tools/release/build.sh, inspects them, and drafts a GitHub release the owner
+# publishes after the smoke tests and macOS signing (#13). gate.sh l6 runs on
+# fugaku before the tag (FT-TST-005). docs/release.md.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/full-theta
+          key: release-${{ hashFiles('tools/godot-version', 'tools/godot.sha512', 'tools/release/piper.json', 'tools/tts/voices.json') }}
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: tools/uv.lock
+      - name: Install llvm-install-name-tool (macOS Piper helper rpath)
+        run: |
+          command -v llvm-install-name-tool || {
+            sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends llvm
+          }
+      - name: Build packages
+        run: tools/release/build.sh "$GITHUB_REF_NAME" build/release --skip-inspect
+      - name: Inspect packages (FT-ARC-022, FT-LIC-008)
+        run: >-
+          uv run --quiet --project tools python tools/release/inspect_packages.py
+          --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" build/release
+      - name: Release notes
+        run: >-
+          uv run --quiet --project tools python tools/release/notes.py
+          --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" build/release
+          > build/release-notes.md
+      - name: Draft the release
+        # act (the local dry run) stops before publishing anything.
+        if: ${{ !env.ACT }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag
+          --title "Full Theta $GITHUB_REF_NAME" --notes-file build/release-notes.md
+          build/release/*.tar.gz build/release/*.zip build/release/SHA256SUMS

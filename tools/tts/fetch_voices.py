@@ -6,7 +6,8 @@ Files come from the rhasspy/piper-voices revision named in voices.json and are
 checked against their SHA-256. The cache is $FT_PIPER_CACHE or
 ~/.cache/full-theta/piper/<voice>/. Voice models and generated audio are never
 committed (FT-AUD-002); each voice's licence is audited in docs/spikes/S7.md
-(FT-LIC-007).
+(FT-LIC-007). voices.json's "release" list names the voices release packages
+ship (D141, tools/release/package.py).
 """
 
 import hashlib

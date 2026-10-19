@@ -1,0 +1,73 @@
+{
+  "comment": "Standalone Piper shipped in release packages (D140, FT-ARC-022). Fetched and SHA-256-checked by tools/release/fetch.py. rhasspy/piper's macOS archives lack their dylibs and are x86_64 only, so macOS takes the dylibs from piper-phonemize (D140, docs/release.md).",
+  "piper": {"name": "Piper", "version": "2023.11.14-2", "licence": "MIT"},
+  "espeak_ng": {
+    "name": "eSpeak NG (rhasspy fork)",
+    "version": "1.52.0.1, rhasspy/espeak-ng commit 0f65aa301e0d6bae5e172cc74197d32a6182200f",
+    "licence": "GPL-3.0-or-later"
+  },
+  "piper_phonemize": {"name": "piper-phonemize", "version": "2023.11.14-4", "licence": "MIT"},
+  "onnxruntime": {"name": "ONNX Runtime", "version": "1.14.1", "licence": "MIT"},
+  "binaries": {
+    "linux": {
+      "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz",
+      "sha256": "a50cb45f355b7af1f6d758c1b360717877ba0a398cc8cbe6d2a7a3a26e225992"
+    },
+    "windows": {
+      "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip",
+      "sha256": "f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea"
+    },
+    "macos": {
+      "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_macos_x64.tar.gz",
+      "sha256": "ced85c0a3df13945b1e623b878a48fdc2854d5c485b4b67f62857cf551deaf8b"
+    },
+    "macos_libs": {
+      "url": "https://github.com/rhasspy/piper-phonemize/releases/download/2023.11.14-4/piper-phonemize_macos_x64.tar.gz",
+      "sha256": "9ec6e300c0d012a663758bc45a097b47ee759761a3b91c7742de042af789d84b"
+    }
+  },
+  "licences": {
+    "piper-LICENSE.md": {
+      "url": "https://raw.githubusercontent.com/rhasspy/piper/2023.11.14-2/LICENSE.md",
+      "sha256": "4cd71dece7037f1d6d93cce7570c57ab75ea9ac566fd4990be2f3ab08d15b47f"
+    },
+    "piper-phonemize-LICENSE.md": {
+      "url": "https://raw.githubusercontent.com/rhasspy/piper-phonemize/fccd4f335aa68ac0b72600822f34d84363daa2bf/LICENSE.md",
+      "sha256": "13746d509d74e55ea2265fbef204bb7cdbf84a8315b0207e988326cb54387028"
+    },
+    "espeak-ng-COPYING": {
+      "url": "https://raw.githubusercontent.com/rhasspy/espeak-ng/0f65aa301e0d6bae5e172cc74197d32a6182200f/COPYING",
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    "onnxruntime-LICENSE": {
+      "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.14.1/LICENSE",
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    "onnxruntime-ThirdPartyNotices.txt": {
+      "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.14.1/ThirdPartyNotices.txt",
+      "sha256": "cc63920441c5681cfb1663caf1de1858349b517fc1bed9ca669a85bc526cd13e"
+    },
+    "godot-LICENSE.txt": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt",
+      "sha256": "b0435e3b3e4e55238f05f4b306f30524a1b2e20147810d436eaa554fa6855c80"
+    },
+    "godot-COPYRIGHT.txt": {
+      "url": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/COPYRIGHT.txt",
+      "sha256": "cb1980c88089573bcacd7221d777c689bb8bbd778799f24c27fca0fe5f774d6d"
+    }
+  },
+  "sources": {
+    "piper-2023.11.14-2.tar.gz": {
+      "url": "https://github.com/rhasspy/piper/archive/refs/tags/2023.11.14-2.tar.gz",
+      "sha256": "8b684e102cfe23af097830db9555a8641f17735725853c531a1daeb34b6ed1a8"
+    },
+    "piper-phonemize-2023.11.14-4.tar.gz": {
+      "url": "https://github.com/rhasspy/piper-phonemize/archive/refs/tags/2023.11.14-4.tar.gz",
+      "sha256": "4713d62b9d639d9e27c9abb6dcc5f98ee36c9b873ae0590644d325837ebf135a"
+    },
+    "espeak-ng-0f65aa301e0d6bae5e172cc74197d32a6182200f.tar.gz": {
+      "url": "https://github.com/rhasspy/espeak-ng/archive/0f65aa301e0d6bae5e172cc74197d32a6182200f.tar.gz",
+      "sha256": "37ebbabb010200be8ec26c61b770e93f964f4503a329d7d74c239a1a40051e43"
+    }
+  }
+}
