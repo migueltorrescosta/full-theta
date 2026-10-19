@@ -6,8 +6,8 @@ Status: planning. Nothing is playable yet.
 
 ## Documentation
 
-- [Specification v0.4](docs/spec/README.md): requirements with stable `FT-…` IDs.
-- [Decision log](docs/decisions.md): every owner decision (D1–D92) that the spec cites.
+- [Specification v0.5](docs/spec/README.md): requirements with stable `FT-…` IDs.
+- [Decision log](docs/decisions.md): every owner decision (D1–D102) that the spec cites; the plan review behind D95–D102 is in [docs/research/plan-review](docs/research/plan-review/README.md).
 - [Task breakdown](docs/plan/task-breakdown.md): the fine-grained implementation DAG behind the GitHub issues.
 - Research: [EmptyEpsilon comparison](docs/research/emptyepsilon.md), [technology](docs/research/tech.md), [station UI](docs/research/station-ui.md), [cooperation pairs and joint views](docs/research/pairs-and-combos.md).
 
