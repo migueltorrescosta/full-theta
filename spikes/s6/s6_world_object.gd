@@ -165,6 +165,8 @@ func _assist(s: Ship, q: Quaternion, p: Vector3, v: Vector3, w: Vector3) -> void
 	s.torque = ((turn - w) * s.inertia / W.ASSIST_TAU).clamp(-s.max_torque, s.max_torque)
 
 
+## Only the site's low 4 bits survive the shift (bits 60-63), so the narrow
+## phases also compare sites.
 func _cell_key(site: int, ix: int, iy: int, iz: int) -> int:
 	var o := W.KEY_OFF
 	return (((site << 20) | (ix + o)) << 20 | (iy + o)) << 20 | (iz + o)
@@ -197,7 +199,7 @@ func _ship_pairs() -> void:
 				for iz in range(floori(lo.z), floori(hi.z) + 1):
 					var cell: Array = _cells.get(_cell_key(a.site, ix, iy, iz), W.EMPTY)
 					for b: Ship in cell:
-						if b.id <= a.id:
+						if b.id <= a.id or b.site != a.site:
 							continue
 						var d2: float = p.distance_squared_to(b.pos)
 						if d2 < touch2:
@@ -230,6 +232,8 @@ func _step_projectiles() -> void:
 				for iz in range(floori(lo.z), floori(hi.z) + 1):
 					var cell: Array = _cells.get(_cell_key(pr.site, ix, iy, iz), W.EMPTY)
 					for s: Ship in cell:
+						if s.site != pr.site:
+							continue
 						var rel0: Vector3 = p0 - s.pos_old
 						var d: Vector3 = (p1 - p0) - (s.pos - s.pos_old)
 						var dd: float = d.length_squared()

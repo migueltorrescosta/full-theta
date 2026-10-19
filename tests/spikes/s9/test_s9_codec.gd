@@ -15,11 +15,11 @@ func test_quaternion_smallest_three_round_trip() -> void:
 		assert_float(absf(back.dot(q))).is_greater(cos(deg_to_rad(0.2) * 0.5))
 
 
-func test_integer_prediction_rounds_symmetrically() -> void:
-	assert_int(S9Codec.round_div(5, 10)).is_equal(1)
-	assert_int(S9Codec.round_div(-5, 10)).is_equal(0)
-	assert_int(S9Codec.round_div(-6, 10)).is_equal(-1)
-	assert_int(S9Codec.floor_div(-1, 240)).is_equal(-1)
+## predict rounds v dt / PRED_DEN half up: +0.5 unit goes to 1, -0.5 to 0.
+func test_integer_prediction_rounds_half_up() -> void:
+	assert_that(S9Codec.PRED_OFF).is_equal(Vector3i(62914800, 62914800, 62914800))
+	var half: Vector3i = S9Codec.predict(Vector3i.ZERO, Vector3i(120, -120, -121), 1)
+	assert_that(half).is_equal(Vector3i(1, 0, -1))
 	var p: Vector3i = S9Codec.predict(Vector3i(0, 0, 0), Vector3i(9600, -9600, 64), 2)
 	# 150 m/s for 2 ticks is 5 m = 80 units; 1 m/s for 2 ticks is 0.53 units.
 	assert_that(p).is_equal(Vector3i(80, -80, 1))

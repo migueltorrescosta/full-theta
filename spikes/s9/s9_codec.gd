@@ -4,19 +4,20 @@ extends RefCounted
 ## (bit-exact on server and client, so deltas can carry residuals), and
 ## smallest-three quaternions. Buffers are little-endian StreamPeerBuffers.
 ##
-## Units: positions 1/16 m in int32 (site-local offsets up to 134 km per
-## axis), velocities 1/64 m/s in int16 (up to 512 m/s), angular velocities
-## 1/100 rad/s in int8, projectile velocities 1/8 m/s in int16.
+## Units: positions 1/16 m in int32 (site-local offsets up to 2^31 / 16 m, about
+## 1.3e8 m, per axis; 200 km is 3.2e6 units), velocities 1/64 m/s in int16 (up to
+## 512 m/s), angular velocities 1/50 rad/s in int8 (up to 2.54 rad/s, above S5's
+## 90°/s roll cap), projectile velocities 1/8 m/s in int16.
 
 const POS_Q: float = 16.0
 const VEL_Q: float = 64.0
-const ANG_Q: float = 100.0
+const ANG_Q: float = 50.0
 const PROJ_VEL_Q: float = 8.0
 const TICK_HZ: int = 60
 ## Velocity units times ticks over this gives position units: VEL_Q * TICK_HZ / POS_Q.
 const PRED_DEN: int = 240
 const PRED_K: Vector3i = Vector3i(131072, 131072, 131072)
-const PRED_OFF: Vector3i = Vector3i(62914800, 62914800, 62914800)
+const PRED_OFF: Vector3i = PRED_K * 2 * PRED_DEN + Vector3i.ONE * PRED_DEN
 const SQRT1_2: float = 0.7071067811865476
 ## Field modes in a kinematic record's flag byte.
 const POS_NONE: int = 0
@@ -44,24 +45,8 @@ static func pos_of(p: Vector3i) -> Vector3:
 	return Vector3(p) / POS_Q
 
 
-static func vel_of(v: Vector3i) -> Vector3:
-	return Vector3(v) / VEL_Q
-
-
 static func ang_of(w: Vector3i) -> Vector3:
 	return Vector3(w) / ANG_Q
-
-
-## Floor division for b > 0 (GDScript's `/` truncates towards zero).
-static func floor_div(a: int, b: int) -> int:
-	var q: int = a / b
-	if a % b != 0 and a < 0:
-		q -= 1
-	return q
-
-
-static func round_div(a: int, b: int) -> int:
-	return floor_div(2 * a + b, 2 * b)
 
 
 ## Dead-reckoned position after `dt` ticks (0 <= dt <= 600), in integer units
@@ -110,14 +95,6 @@ static func unpack_quat(bits: int) -> Quaternion:
 		shift -= 10
 	c[big] = sqrt(maxf(0.0, 1.0 - sum))
 	return Quaternion(c[0], c[1], c[2], c[3]).normalized()
-
-
-## Body-frame angular velocity applied for `dt` ticks (as S6 integrates it).
-static func extrapolate_rot(q: Quaternion, w: Vector3, dt: int) -> Quaternion:
-	var rate: float = w.length()
-	if rate < 1.0e-6 or dt <= 0:
-		return q
-	return q * Quaternion(w / rate, rate * dt / float(TICK_HZ))
 
 
 ## Writes one kinematic record: id u16, flags u8 (pos mode | vel mode << 2),

@@ -2,8 +2,9 @@ class_name S6WorldPacked
 extends RefCounted
 ## S6 spike world, packed layout: one packed array per field, indexed by
 ## entity id (structure of arrays). Positions are site-local float32 offsets
-## (site id plus Vector3), as FT-SIM-035 requires. Iteration is in id order
-## (FT-ARC-009) and every random draw comes from one seeded RNG (FT-ARC-008).
+## (site id plus Vector3); FT-SIM-035 now asks for three 64-bit floats
+## (D104). Iteration is in id order (FT-ARC-009) and every random draw comes
+## from one seeded RNG (FT-ARC-008).
 
 const DT: float = 1.0 / 60.0
 const HALF_DT: float = 0.5 / 60.0
@@ -198,6 +199,8 @@ func _assist(
 	_torque[i] = ((turn - w) * inertia / ASSIST_TAU).clamp(-max_t, max_t)
 
 
+## Only the site's low 4 bits survive the shift (bits 60-63), so the narrow
+## phases also compare sites.
 func _cell_key(site: int, ix: int, iy: int, iz: int) -> int:
 	return (((site << 20) | (ix + KEY_OFF)) << 20 | (iy + KEY_OFF)) << 20 | (iz + KEY_OFF)
 
@@ -233,7 +236,7 @@ func _ship_pairs() -> void:
 				for iz in range(floori(lo.z), floori(hi.z) + 1):
 					var cell: Array = _cells.get(_cell_key(site, ix, iy, iz), EMPTY)
 					for j: int in cell:
-						if j <= i:
+						if j <= i or _site[j] != site:
 							continue
 						var d2: float = p.distance_squared_to(_pos[j])
 						if d2 < touch2:
@@ -269,6 +272,8 @@ func _step_projectiles() -> void:
 				for iz in range(floori(lo.z), floori(hi.z) + 1):
 					var cell: Array = _cells.get(_cell_key(site, ix, iy, iz), EMPTY)
 					for s: int in cell:
+						if _site[s] != site:
+							continue
 						var s0: Vector3 = _pos_old[s]
 						var rel0: Vector3 = p0 - s0
 						var d: Vector3 = (p1 - p0) - (_pos[s] - s0)

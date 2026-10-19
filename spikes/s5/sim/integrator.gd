@@ -1,8 +1,8 @@
 class_name S5Integrator
 extends RefCounted
-## Semi-implicit (symplectic) Euler 6DOF step with no drag (FT-SIM-001, FT-SIM-003,
-## research/tech §3.2). Pure: no Node, SceneTree, I/O or loading, so it can be promoted
-## to T027 as is.
+## 6DOF step with no drag (FT-SIM-001, FT-SIM-003, research/tech §3.2): position is
+## exact under constant force over a tick (FT-SIM-038). Pure: no Node, SceneTree, I/O
+## or loading.
 
 
 ## Advances the body by dt under a local force and body-frame torque, both clamped to
@@ -16,15 +16,17 @@ static func step(body: S5ShipBody, force_local: Vector3, torque: Vector3, dt: fl
 	var used: float = effort * dt / body.exhaust_velocity
 	if used > body.propellant:
 		# Out of propellant: scale the burn to what is left.
-		var k: float = body.propellant / used if used > 0.0 else 0.0
+		var k: float = body.propellant / used
 		f *= k
 		tq *= k
 		used = body.propellant
 	body.propellant -= used
 
-	# Linear: velocity first, then position with the new velocity (symplectic).
-	body.velocity += body.to_world(f) / body.mass * dt
-	body.position += body.velocity * dt
+	# Linear: exact for constant force over the tick, x += v0 dt + a dt^2 / 2.
+	var v0: Vector3 = body.velocity
+	var a: Vector3 = body.to_world(f) / body.mass
+	body.position += v0 * dt + 0.5 * a * dt * dt
+	body.velocity = v0 + a * dt
 
 	# Angular: Euler's equations for a diagonal inertia tensor, body frame.
 	var w: Vector3 = body.angular_velocity

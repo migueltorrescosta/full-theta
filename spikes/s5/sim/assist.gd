@@ -108,8 +108,12 @@ func level_rate(body: S5ShipBody, stage: S5HelmState.Level) -> Vector3:
 	if stage == S5HelmState.Level.ROLL_AND_PITCH:
 		var fwd: Vector3 = body.forward()
 		var flat: Vector3 = Vector3(fwd.x, 0.0, fwd.z)
-		if flat.length_squared() > 1e-6:
-			w = face_rate(body, flat)
+		if flat.length_squared() <= 1e-6:
+			# Bow (nearly) straight up or down: no heading to keep, so pitch about +X
+			# toward the ship's up, which lies (nearly) in the ecliptic.
+			var u: Vector3 = body.up()
+			flat = Vector3(u.x, 0.0, u.z)
+		w = face_rate(body, flat)
 	var roll: float = roll_error(body)
 	var alpha: float = body.max_torque.z / body.inertia.z
 	w.z = signf(roll) * _profile(absf(roll), alpha, max_roll_rate)

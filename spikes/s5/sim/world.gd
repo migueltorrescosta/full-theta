@@ -65,11 +65,12 @@ func step(input: S5HelmInput) -> void:
 		helm.throttle_setpoint = _forward_speed()
 	helm.approaching = input.approach
 
-	_move_target()
 	last_command = assist.command(ship, helm, input, selected_item())
 	propellant_used += S5Integrator.step(ship, last_command.force, last_command.torque, DT)
 	tick += 1
 	time = tick * DT
+	# After the tick, so the target is at the same time as the ship.
+	_move_target()
 
 	if (
 		helm.all_stop

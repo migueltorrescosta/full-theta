@@ -45,6 +45,7 @@ static func clock_height(local: Vector3) -> String:
 	return "%d %s" % [clock(local), h]
 
 
+## FT-SPA-003: close < 1 km, mid 1-10 km, far > 10 km.
 static func range_band(dist: float) -> String:
 	if dist < 1000.0:
 		return "close"
@@ -53,17 +54,20 @@ static func range_band(dist: float) -> String:
 	return "far"
 
 
+## Exact range for markers and the radar, e.g. "650 m", "2.3 km", "140 km". Tests the
+## rounded value, so 999.7 m reads "1.0 km" rather than "1000 m".
 static func range_text(dist: float) -> String:
-	if dist < 1000.0:
+	if roundi(dist) < 1000:
 		return "%d m" % roundi(dist)
-	if dist < 100000.0:
+	if roundi(dist / 100.0) < 1000:
 		return "%.1f km" % (dist / 1000.0)
 	return "%d km" % roundi(dist / 1000.0)
 
 
-## Chip text, e.g. "H2 · 4 high · 2.3 km ▲closing". closing_speed > 0 means closing.
+## Chip text, e.g. "H2 · 4 high · mid ▲closing" (FT-SPA-003: a range band, not a
+## distance). closing_speed > 0 means closing.
 static func chip(callsign: String, local: Vector3, closing_speed: float) -> String:
-	var text: String = "%s · %s · %s" % [callsign, clock_height(local), range_text(local.length())]
+	var text: String = "%s · %s · %s" % [callsign, clock_height(local), range_band(local.length())]
 	if closing_speed > 1.0:
 		text += " ▲closing"
 	elif closing_speed < -1.0:

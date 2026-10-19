@@ -35,11 +35,9 @@ func test_height_words() -> void:
 
 
 func test_chip_text_and_poles() -> void:
-	assert_str(S5Callout.chip("H2", _dir(120.0, 30.0), 50.0)).is_equal(
-		"H2 · 4 high · 2.3 km ▲closing"
-	)
+	assert_str(S5Callout.chip("H2", _dir(120.0, 30.0), 50.0)).is_equal("H2 · 4 high · mid ▲closing")
 	assert_str(S5Callout.chip("H2", _dir(120.0, 70.0), -20.0)).is_equal(
-		"H2 · overhead · 2.3 km ▼opening"
+		"H2 · overhead · mid ▼opening"
 	)
 	assert_str(S5Callout.clock_height(_dir(270.0, -5.0))).is_equal("9 level")
 
@@ -49,7 +47,27 @@ func test_range_bands() -> void:
 	assert_str(S5Callout.range_band(1000.0)).is_equal("mid")
 	assert_str(S5Callout.range_band(10000.0)).is_equal("mid")
 	assert_str(S5Callout.range_band(10001.0)).is_equal("far")
-	assert_str(S5Callout.range_text(650.4)).is_equal("650 m")
+	assert_str(S5Callout.chip("F1", Vector3(0.0, 0.0, -650.0), 0.0)).is_equal(
+		"F1 · 12 level · close"
+	)
+	assert_str(S5Callout.chip("F1", Vector3(0.0, 0.0, -25000.0), 0.0)).is_equal(
+		"F1 · 12 level · far"
+	)
+
+
+# Marker and radar ranges switch unit on the rounded value, never "1000 m" or "100.0 km".
+func test_range_text_units() -> void:
+	var cases: Array[Array] = [
+		[650.4, "650 m"],
+		[999.4, "999 m"],
+		[999.7, "1.0 km"],
+		[2300.0, "2.3 km"],
+		[99940.0, "99.9 km"],
+		[99960.0, "100 km"],
+		[140000.0, "140 km"],
+	]
+	for c: Array in cases:
+		assert_str(S5Callout.range_text(c[0])).override_failure_message(str(c)).is_equal(c[1])
 
 
 # FT-SPA-026: words are ship frame: rolling the ship 180° turns "high" into "low".

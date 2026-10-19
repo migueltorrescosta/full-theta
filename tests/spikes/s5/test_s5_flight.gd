@@ -12,8 +12,8 @@ func _run(world: S5World, input: S5HelmInput, ticks: int) -> void:
 		world.step(input)
 
 
-# FT-SIM-001: constant thrust from rest gives x = a t^2 / 2 (semi-implicit Euler is
-# exact up to one step's worth of v dt).
+# FT-SIM-001, FT-SIM-038: constant thrust from rest gives x = a t^2 / 2; the update
+# x += v dt + a dt^2 / 2 is exact, so only float32 rounding is left.
 func test_constant_thrust_matches_analytic() -> void:
 	var body: S5ShipBody = S5ShipBody.new()
 	var force: Vector3 = Vector3(0.0, 0.0, -5.0e5)
@@ -22,7 +22,7 @@ func test_constant_thrust_matches_analytic() -> void:
 	var a: float = 5.0e5 / body.mass
 	var t: float = 600 * DT
 	var expected: float = 0.5 * a * t * t
-	assert_float(-body.position.z).is_equal_approx(expected, a * t * DT)
+	assert_float(-body.position.z).is_equal_approx(expected, expected * 1e-6)
 	assert_float(-body.velocity.z).is_equal_approx(a * t, 1e-3)
 
 
@@ -56,19 +56,30 @@ func test_assist_holds_rate_drift_and_speed() -> void:
 	assert_float(-v.z).is_equal_approx(150.0, 0.05)
 
 
-# FT-SIM-004: assist acts only through commands inside the thrust envelope.
+# FT-SIM-004: assist acts only through commands inside the thrust envelope, so the
+# ship's velocity changes per tick by at most max thrust / mass * dt on each body axis.
 func test_assist_stays_in_envelope() -> void:
 	var world: S5World = S5World.new()
 	world.ship.velocity = Vector3(300.0, 300.0, 300.0)
 	world.ship.angular_velocity = Vector3(2.0, 2.0, 2.0)
 	var input: S5HelmInput = S5HelmInput.new()
 	input.approach = true
+	var ship: S5ShipBody = world.ship
+	var up_to: Vector3 = ship.max_thrust_pos / ship.mass * DT
+	var down_to: Vector3 = ship.max_thrust_neg / ship.mass * DT
+	var slack: float = 1e-3
 	for i: int in 120:
+		var frame: Quaternion = ship.orientation
+		var v_before: Vector3 = ship.velocity
 		world.step(input)
 		var f: Vector3 = world.last_command.force
-		assert_bool(world.ship.clamp_thrust(f).is_equal_approx(f)).is_true()
+		assert_bool(ship.clamp_thrust(f).is_equal_approx(f)).is_true()
 		var t: Vector3 = world.last_command.torque
-		assert_bool(world.ship.clamp_torque(t).is_equal_approx(t)).is_true()
+		assert_bool(ship.clamp_torque(t).is_equal_approx(t)).is_true()
+		# Thrust acts in the body frame at the start of the tick.
+		var dv: Vector3 = frame.inverse() * (ship.velocity - v_before)
+		for axis: int in 3:
+			assert_float(dv[axis]).is_between(-down_to[axis] - slack, up_to[axis] + slack)
 
 
 # FT-SIM-005: decoupled turns the holds off; toggling back to assist holds again.
@@ -127,6 +138,23 @@ func test_level_rolls_then_pitches() -> void:
 	_run(world, S5HelmInput.new(), 60 * 6)
 	assert_float(rad_to_deg(absf(asin(world.ship.forward().y)))).is_less(0.5)
 	assert_float(world.ship.up().y).is_greater(0.999)
+
+
+# FT-HLM-007: with the bow within 0.06° of straight up there is no heading to keep;
+# Level still pitches down onto the ecliptic and clears.
+func test_level_from_bow_vertical() -> void:
+	for pitch_deg: float in [89.97, 90.0, -90.0]:
+		var world: S5World = S5World.new()
+		world.ship.orientation = Quaternion(Vector3.RIGHT, deg_to_rad(pitch_deg))
+		var press: S5HelmInput = S5HelmInput.new()
+		press.level_pressed = true
+		world.step(press)
+		assert_int(world.helm.level).is_equal(S5HelmState.Level.ROLL_AND_PITCH)
+		_run(world, S5HelmInput.new(), 60 * 10)
+		var msg: String = str(pitch_deg)
+		var pitch: float = rad_to_deg(absf(asin(world.ship.forward().y)))
+		assert_float(pitch).override_failure_message(msg).is_less(0.5)
+		assert_int(world.helm.level).override_failure_message(msg).is_equal(S5HelmState.Level.OFF)
 
 
 # T012 criterion: the scripted autopilot, with assist, intercepts the moving target

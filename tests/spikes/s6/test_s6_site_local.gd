@@ -1,6 +1,8 @@
 extends GdUnitTestSuite
-## Spike checks for S6 (#3). Spike check for FT-SIM-035, FT-ARC-008 and
-## FT-ARC-009 (not traceability tags: the ids stay pending until M1).
+## Spike checks for S6 (#3): D98 site-local isolation (a far site behaves like the
+## origin one), FT-ARC-008 and FT-ARC-009 (not traceability tags: the ids stay pending
+## until M1). D104's slow drift 200 km from a site's centre is not covered here; it
+## belongs to a T025 test with 64-bit offsets.
 
 const FAR := 1.0e8
 
@@ -60,3 +62,31 @@ func test_layouts_agree_and_repeat() -> void:
 	assert_float(b.checksum()).is_equal(a.checksum())
 	assert_float(c.checksum()).is_equal(a.checksum())
 	assert_int(a.total_hits).is_greater(0)
+
+
+## Ships and projectiles at different sites never interact, even when their
+## offsets overlap and the grid key keeps only the site's low 4 bits (site 16
+## shares keys with site 0). Same sites at the same offsets do interact.
+func test_sites_are_isolated() -> void:
+	for layout: int in 2:
+		for site_b: int in [0, 1, 16]:
+			var world: Variant = S6WorldPacked.new(1) if layout == 0 else S6WorldObject.new(1)
+			var zero := Vector3.ZERO
+			var rot := Quaternion.IDENTITY
+			world.add_ship(0, zero, zero, rot, zero, zero)
+			world.add_ship(site_b, Vector3(10.0, 0.0, 0.0), zero, rot, zero, zero)
+			# Passes 20 m from ship 0 and 30 m from ship 1 (hit radius 25.5 m).
+			world.add_projectile(site_b, Vector3(-20.0, 0.0, -100.0), Vector3(0.0, 0.0, 3000.0), 10)
+			var kinds: Array[int] = []
+			for i in 5:
+				world.step()
+				var events: PackedInt32Array = world.events
+				for e in range(1, events.size(), 4):
+					kinds.append(events[e])
+			var msg := "layout %d, site %d: %s" % [layout, site_b, kinds]
+			if site_b == 0:
+				assert_array(kinds).override_failure_message(msg).contains(
+					[S6WorldPacked.EV_CONTACT, S6WorldPacked.EV_HIT]
+				)
+			else:
+				assert_array(kinds).override_failure_message(msg).is_empty()
