@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regenerates app/web/keepawake.webm, the muted looping video that keeps a
-# browser tablet awake over plain http:// (FT-NET-046, D108; net/keep_awake.gd).
+# browser tablet awake over plain http:// (FT-NET-046, D108; app/web/keep_awake.gd, KeepAwake).
 # Run it only to change the video; the release build copies the committed file.
 # Needs an ffmpeg with libvpx-vp9: FFMPEG, else ffmpeg on PATH, else the one
 # Playwright installs in ~/.cache/ms-playwright (it decodes only MJPEG, so

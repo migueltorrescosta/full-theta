@@ -20,4 +20,4 @@ Tests: `tests/net/test_host_*.gd` (`test_host_flow.gd` spawns real server childr
 
 - `release_bundle.gd` (`ReleaseBundle`): the packed build info (`build: VERSION COMMIT`, printed at start) and the bundled web export's folder, which `HostLauncher` passes to the server child as `--http-root` (FT-ARC-022).
 - `release_smoke.gd` (`ReleaseSmoke`): `-- --tts-smoke TEXT --out WAV [--voice NAME]`, the L6 check that the exported build runs its bundled Piper (FT-TST-019).
-- `web/shell.html`: the web export's HTML shell without the secure-context check, and `web/keepawake.webm` (`tools/release/make_keepawake.sh`), both from S3 (D108). `docs/release.md` covers the packages.
+- `web/shell.html`: the web export's HTML shell without the secure-context check, and `web/keepawake.webm` (`tools/release/make_keepawake.sh`) that `web/keep_awake.gd` (KeepAwake, moved here by #6) plays, all from S3 (D108). `docs/release.md` covers the packages.
