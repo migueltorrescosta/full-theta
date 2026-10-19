@@ -1,0 +1,42 @@
+# One job on ready PRs and main: tools/gate.sh ci (L0, L1). FT-TST-004.
+# L4-L6 run on fugaku (FT-TST-005); export templates (1.3 GB) stay out of CI.
+name: ci
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths-ignore:
+      - "docs/research/**"
+      - "docs/plan/**"
+      - "docs/spikes/**"
+      - "docs/decisions.md"
+      - "README.md"
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/research/**"
+      - "docs/plan/**"
+      - "docs/spikes/**"
+      - "docs/decisions.md"
+      - "README.md"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    if: github.event_name == 'push' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/full-theta
+          key: godot-${{ hashFiles('tools/godot-version', 'tools/godot.sha512') }}
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: tools/uv.lock
+      - run: tools/gate.sh ci

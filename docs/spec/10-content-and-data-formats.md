@@ -19,7 +19,7 @@ Scenario metadata (declared, not computed): id, tags, threat cost, duration esti
 - **FT-DAT-004** Every spoken line shall have a stable line id shared by subtitles, translations and TTS. (D65, D38)
 - **FT-DAT-005** The TTS prerenderer shall read dialogue only from the dialogue JSON. (D65)
 - **FT-DAT-006** Scenarios shall be typed GDScript classes in one `scenarios/` folder, extending the Scenario API. (D64, plan review TECH-6)
-- **FT-DAT-007** A lint gate shall fail any scenario that references simulation internals outside the Scenario API. (D64)
+- **FT-DAT-007** A lint gate shall fail any scenario that references simulation internals outside the Scenario API (`sim/api/`, §2.2). (D64, D103)
 - **FT-DAT-008** Each scenario shall declare metadata (id, tags, threat cost, duration estimate, branches) for the director. (D64)
 - **FT-DAT-009** The Scenario API shall expose only visible world actions (spawn at range, offer, message, set flag, end encounter), each a queued sim command, and observable queries that return only ids and value copies. (D64, v0.3 §5, plan review TECH-7)
 - **FT-DAT-010** Random-outcome distributions shall live in data, not code. (D34)

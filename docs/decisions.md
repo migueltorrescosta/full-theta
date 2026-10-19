@@ -146,3 +146,6 @@
 - D100 Onboarding: a controls overlay generated from the input map (M1), per-station first-run tooltips that explain controls (dismissable, off by default after first run), a "Shakedown" training scenario with no director and no elimination that may prompt cooperation (FT-PAIR-012 applies outside training), and a host pause in co-op sessions (M3). (E11)
 - D101 Runtime Piper (refines D85): the session's closed set (ship names, callsigns, NPC names) is synthesised at Start and cached; numbers use prerendered fragments; runtime synthesis only for free text. (TECH-5)
 - D102 The plan review's enhancements E1–E14 are accepted and folded into #1 as spec v0.5.
+
+## Toolchain (#2)
+- D103 Module dependencies follow the API-boundary diagram (spec §2.2): the Scenario API lives in `sim/api/`; `sim/` names only itself, `shared/` and content; the director and scenarios name only `sim/api/`, `shared/` and content; `net/` names `sim/` and `director/` for the server; clients never name `sim/`, `director/` or `scenarios/`; `app/` composes everything. Replaces the group reading of "depend only on themselves".

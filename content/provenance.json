@@ -1,0 +1,37 @@
+{
+  "entries": [
+    {
+      "name": "Godot Engine and export templates",
+      "kind": "engine",
+      "version": "4.7.2-stable",
+      "source": "https://github.com/godotengine/godot/releases/tag/4.7.2-stable",
+      "licence": "MIT",
+      "attribution": "Copyright (c) 2014-present Godot Engine contributors; (c) 2007-2014 Juan Linietsky, Ariel Manzur. Third-party notices in Godot's COPYRIGHT.txt."
+    },
+    {
+      "name": "gdUnit4",
+      "kind": "addon",
+      "version": "6.2.2",
+      "path": "addons/gdUnit4/",
+      "source": "https://github.com/MikeSchulze/gdUnit4",
+      "licence": "MIT",
+      "attribution": "Copyright (c) 2023 Mike Schulze (addons/gdUnit4/LICENSE)"
+    },
+    {
+      "name": "gdtoolkit",
+      "kind": "tool",
+      "version": "4.5.0",
+      "source": "https://github.com/Scony/godot-gdscript-toolkit",
+      "licence": "MIT",
+      "attribution": "Copyright (c) Pawel Lampe and contributors"
+    },
+    {
+      "name": "pytest",
+      "kind": "tool",
+      "version": "9.1.1",
+      "source": "https://github.com/pytest-dev/pytest",
+      "licence": "MIT",
+      "attribution": "Copyright (c) Holger Krekel and others"
+    }
+  ]
+}
