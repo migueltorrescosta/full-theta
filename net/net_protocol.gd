@@ -31,7 +31,7 @@ enum Type {
 	ABANDON_VOTE = 18,
 }
 
-const PROTOCOL_VERSION: int = 1
+const PROTOCOL_VERSION: int = 2
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -71,6 +71,7 @@ const SCHEMAS: Dictionary = {
 		"ship": TYPE_INT,
 		"entry": TYPE_STRING,
 		"dev_all": TYPE_BOOL,
+		"lang": TYPE_STRING,
 	},
 	Type.HELLO_REJECTED: {"v": TYPE_INT, "reason": TYPE_STRING},
 	Type.CATALOGUE: {"ships": TYPE_ARRAY, "entries": TYPE_ARRAY, "load_tags": TYPE_ARRAY},
@@ -86,7 +87,14 @@ const SCHEMAS: Dictionary = {
 	Type.ABANDON: {"ship": TYPE_INT},
 	Type.TAKEOVER: {"ship": TYPE_INT, "entry": TYPE_STRING},
 	Type.BYE: {"reason": TYPE_STRING},
-	Type.VOICE: {"clip": TYPE_INT, "rate": TYPE_INT, "pcm": TYPE_PACKED_BYTE_ARRAY},
+	Type.VOICE:
+	{
+		"clip": TYPE_INT,
+		"rate": TYPE_INT,
+		"pcm": TYPE_PACKED_BYTE_ARRAY,
+		"part": TYPE_INT,
+		"last": TYPE_BOOL,
+	},
 	Type.ABANDON_VOTE: {"ship": TYPE_INT, "vote": TYPE_BOOL},
 }
 
