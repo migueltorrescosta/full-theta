@@ -37,6 +37,7 @@ def read_log(path: Path) -> list[dict]:
 
 def lines_of(server: list[dict], client: list[dict]) -> list[dict]:
     parts: dict[int, list[dict]] = {}
+    events = {e["clip"]: e for e in client if e["ev"] == "line"}
     for v in client:
         if v["ev"] == "voice":
             parts.setdefault(v["clip"], []).append(v)
@@ -44,7 +45,8 @@ def lines_of(server: list[dict], client: list[dict]) -> list[dict]:
     for ln in (e for e in server if e["ev"] == "line"):
         ps = sorted(parts.get(ln["clip"], []), key=lambda p: p["part"])
         audio = [p for p in ps if p["bytes"] > 0]
-        entry = dict(ln, parts=len(audio), audio_ms=sum(p["audio_ms"] for p in ps))
+        event = events.get(ln["clip"], {})
+        entry = dict(ln, parts=len(audio), audio_ms=sum(p["audio_ms"] for p in ps), audio=event.get("audio"))
         if audio:
             start = audio[0]["handoff_us"]
             gap, at = 0.0, start
@@ -91,15 +93,18 @@ def main(out_dir: str) -> int:
         print(row("first part complete at c0", [ln["arrival_ms"] for ln in heard]))
         print(row("whole clip handed off", [ln["whole_ms"] for ln in heard]))
         print(row("playback gap", [ln["gap_ms"] for ln in heard]))
-        missing = [ln["id"] for ln in rows if "audible_ms" not in ln]
+        subtitles = [ln["id"] for ln in rows if ln["audio"] is False]
+        missing = [ln["id"] for ln in rows if "audible_ms" not in ln and ln["audio"] is not False]
         partial = [ln["id"] for ln in heard if not ln["complete"]]
         audio = [ln["audio_ms"] for ln in heard] or [0]
         print(f"\nLines {len(rows)}, audible {len(heard)}; audio per line {min(audio):.0f}–{max(audio):.0f} ms; "
               f"parts per line {min((ln['parts'] for ln in heard), default=0)}–"
               f"{max((ln['parts'] for ln in heard), default=0)}; "
               f"lines with a gap: {sum(1 for ln in heard if ln['gap_ms'] > 0)}.")
+        if subtitles:
+            print(f"\nSubtitles only (audio false; D110 beyond 4 queued free-text lines): {len(subtitles)}, {subtitles}")
         if missing:
-            print(f"\nNo audio: {missing}")
+            print(f"\nNo audio arrived: {missing}")
         if partial:
             print(f"\nNo last part: {partial}")
         print()
@@ -116,9 +121,12 @@ def main(out_dir: str) -> int:
             voices = ", ".join(r for r in ("computer", "npc") if e[r]) or "none"
             print(f"| {e['lang']} | {e['start_ms']} | {e['wall_ms']} | {voices} |")
     print()
+    before: dict = {}
     for e in server:
         if e["ev"] == "lang_done":
-            print(f"- {e['lang']} done ({e['why']}): {e['stats']}")
+            delta = {k: v - before.get(k, 0) for k, v in e["stats"].items()}
+            before = e["stats"]
+            print(f"- {e['lang']} done ({e['why']}): {delta}")
     summary = next((e for e in server if e["ev"] == "summary"), None)
     if summary:
         print(f"\n## Server loop\n\n- S7b sim load step per tick, µs: {summary['sim_us']}")
