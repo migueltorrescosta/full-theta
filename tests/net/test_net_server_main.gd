@@ -164,6 +164,11 @@ func test_welcome_carries_the_language() -> void:
 		await get_tree().process_frame
 	assert_bool(c.is_welcomed()).is_true()
 	assert_str(c.welcome["lang"]).is_equal("it")
+	# The voice service composed next to it shares its transport (E10).
+	var voice: VoiceService = cli.make_voice(server)
+	assert_object(voice.transport).is_same(server.transport)
+	assert_int(voice.tick_source.call()).is_equal(server.world.tick)
+	voice.free()
 	c.drop()
 	server.queue_free()
 	await get_tree().process_frame
