@@ -110,7 +110,11 @@ static func choose_mode(world: SimWorld, id: int, target: int) -> AiTable.Mode:
 ## choose_mode with the target's offset rel (m) already known.
 static func _choose_mode(world: SimWorld, id: int, target: int, rel: Vector3) -> AiTable.Mode:
 	var ai: AiTable = world.ai
-	if DamageSystem.hull_fraction(world, id) < ai.retreat_hull_fraction[id]:
+	# DamageSystem.hull_fraction, inlined.
+	var d: DamageTable = world.damage
+	var h: int = d.hull_row(id)
+	var hull: float = 1.0 if h < 0 else d.health[h] / world.defs[id].hull_max
+	if hull < ai.retreat_hull_fraction[id]:
 		return AiTable.Mode.RETREAT
 	if target < 0:
 		return AiTable.Mode.HOLD
@@ -213,7 +217,12 @@ static func _select_face_point(world: SimWorld, id: int, target: int, aim: Vecto
 	var helm: HelmTable = world.helm
 	var select: SelectTargetCommand = SelectTargetCommand.new()
 	if aim.is_finite():
-		_set_point(select, kin, id, aim)
+		# _set_point, inlined.
+		var p: PackedFloat64Array = kin.point_at(id, aim)
+		select.site = kin.site[id]
+		select.x = p[0]
+		select.y = p[1]
+		select.z = p[2]
 	elif helm.target_kind[id] == HelmTable.Target.SHIP and helm.target_ship[id] == target:
 		return
 	else:
@@ -286,15 +295,31 @@ static func _helm_input(world: SimWorld, id: int, face: bool, forward_speed: flo
 	var tuning: AssistDef = world.defs[id].assist
 	var helm: HelmTable = world.helm
 	var ramp: float = tuning.speed_ramp * SimWorld.DT
-	var latched: float = helm.input_translation[id].z
+	var latched: Vector3 = helm.input_translation[id]
+	var speed_min: float = tuning.speed_min
+	var speed_max: float = tuning.speed_max
 	var next_setpoint: float = clampf(
-		helm.throttle_setpoint[id] + latched * ramp, tuning.speed_min, tuning.speed_max
+		helm.throttle_setpoint[id] + latched.z * ramp, speed_min, speed_max
 	)
-	var wanted: float = clampf(forward_speed, tuning.speed_min, tuning.speed_max)
+	var wanted: float = clampf(forward_speed, speed_min, speed_max)
 	var throttle: float = clampf((wanted - next_setpoint) / ramp, -1.0, 1.0)
 	if absf(throttle) <= AssistSystem.INPUT_DEAD_ZONE:
 		throttle = 0.0
-	_helm_input_raw(world, id, face, throttle)
+	# _helm_input_raw, inlined.
+	var same: bool = (
+		helm.input_rotation[id] == Vector3.ZERO
+		and latched.x == 0.0
+		and latched.y == 0.0
+		and absf(latched.z - throttle) < INPUT_EPS
+		and helm.face_held[id] == (1 if face else 0)
+		and helm.approach_held[id] == 0
+	)
+	if same:
+		return
+	var c: HelmInputCommand = HelmInputCommand.new()
+	c.throttle = throttle
+	c.face = face
+	_submit(world, id, c)
 
 
 static func _helm_input_raw(world: SimWorld, id: int, face: bool, throttle: float) -> void:

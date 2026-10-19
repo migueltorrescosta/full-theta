@@ -17,14 +17,17 @@ extends RefCounted
 ## subsystem is whole, its crews go idle (FT-SIM-024).
 static func step(world: SimWorld) -> void:
 	var t: DamageTable = world.damage
+	var alive: PackedByteArray = world.kin.alive
+	var crews: PackedInt32Array = t.crews
+	var defs: Array[ShipDef] = world.defs
 	for ship: int in world.ship_count():
-		if not world.kin.is_alive(ship):
+		if alive[ship] != 1:
 			continue
-		var subs: Array[SubsystemDef] = world.defs[ship].subsystems
+		var subs: Array[SubsystemDef] = defs[ship].subsystems
 		var h: int = t.hull_row(ship)
 		for i: int in subs.size():
 			var r: int = h + 1 + i
-			var mask: int = t.crews[r]
+			var mask: int = crews[r]
 			if mask == 0:
 				continue
 			var s: SubsystemDef = subs[i]
