@@ -3,7 +3,7 @@ extends HelmSuite
 ## pointer and comfort.
 
 
-# FT: FT-HLM-001, FT-STN-002
+# FT: FT-HLM-001, FT-STN-002, FT-M1-004
 func test_helm_defaults_to_the_cockpit_with_hud_compass_radar_and_ring() -> void:
 	assert_object(_panel).is_not_null()
 	assert_bool(_panel.focused).is_true()

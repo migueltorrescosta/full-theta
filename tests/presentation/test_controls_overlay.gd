@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## ControlsOverlay (FT-STN-011): rows from the live binding table, translated labels.
-# FT: FT-STN-011
+# FT: FT-STN-011, FT-M1-019
 
 
 func before() -> void:

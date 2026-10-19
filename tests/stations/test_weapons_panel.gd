@@ -76,7 +76,7 @@ func _bearing(clock_deg: float, el_deg: float, range_m: float) -> Vector3:
 	return Vector3(sin(b) * cos(e), sin(e), -cos(b) * cos(e)) * range_m
 
 
-# FT: FT-WPN-001, FT-WPN-002, FT-WPN-004, FT-WPN-006, FT-SIM-014
+# FT: FT-WPN-001, FT-WPN-002, FT-WPN-004, FT-WPN-006, FT-SIM-014, FT-M1-004, FT-M1-008
 # The Weapons screen is the turret panel with the screen's disc radar as its inset; the
 # mount list shows state, heat, ammo and claimer; the lead reticle is Lead's aim point;
 # M1's mount has one ammo type, so ammo select only says so.

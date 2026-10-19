@@ -8,7 +8,7 @@ func before() -> void:
 	I18n.apply("en")
 
 
-# FT: FT-STN-012
+# FT: FT-STN-012, FT-M1-019
 func test_shown_once_per_station() -> void:
 	var tip: FirstRunTooltip = auto_free(FirstRunTooltip.new())
 	var settings: ClientSettings = ClientSettings.new("user://test_tooltip.cfg")

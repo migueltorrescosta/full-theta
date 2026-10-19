@@ -81,7 +81,7 @@ func _hit(s: StationScreen, ship: int, pos: Vector3) -> void:
 	s.ctx.crew.handle_event({"type": "hit", "payload": p}, s.ctx.now_ms())
 
 
-# FT: FT-ENG-001
+# FT: FT-ENG-001, FT-M1-004
 func test_cutaway_shows_health_heat_and_recent_hits_and_rotates() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
