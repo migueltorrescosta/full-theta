@@ -18,7 +18,7 @@ A hit damages the subsystem nearest the impact point: the energy past the shield
 
 ## 4.5 Enemy AI
 
-Basic, testable behaviours first: attack, keep range, retreat at low hull. Later: flanking, coordinated attacks, subsystem targeting and adaptation (v0.3 §5). AI acts only on what its faction's sensors know.
+Basic, testable behaviours first: attack, keep range, retreat at low hull. Later: flanking, coordinated attacks, subsystem targeting and adaptation (v0.3 §5). AI acts only on what its faction's sensors know. An enemy has retreated, for the encounter outcome, once it is in retreat and no hostile ship detects it any more (D120).
 
 ## 4.6 Requirements
 
