@@ -14,8 +14,6 @@ extends Node
 ## A subtitle to show: SubtitleFeed.add's entry.
 signal subtitle(entry: Dictionary)
 
-const EVENT_TYPE: String = "voice_line"
-
 var bus: VoiceBus = VoiceBus.new()
 var subtitles: SubtitleFeed = SubtitleFeed.new()
 ## Prerendered files for local lines, for the session language; null: subtitles only.
@@ -49,7 +47,7 @@ func _process(delta: float) -> void:
 
 ## Consumes a voice_line event ({"type", "payload", ...}); false for any other event.
 func handle_event(event: Dictionary) -> bool:
-	if event.get("type", "") != EVENT_TYPE:
+	if event.get("type", "") != VoiceService.EVENT_VOICE_LINE:
 		return false
 	var payload: Dictionary = event.get("payload", {})
 	var now: int = _now()
@@ -70,16 +68,9 @@ func handle_event(event: Dictionary) -> bool:
 	return true
 
 
-## One VOICE message {clip, rate, pcm, part, last}; part and last default to 0 and true.
+## One VOICE message {clip, rate, pcm, part, last}.
 func handle_voice(msg: Dictionary) -> void:
-	bus.add_part(
-		int(msg.get("clip", -1)),
-		int(msg.get("part", 0)),
-		int(msg.get("rate", 0)),
-		msg.get("pcm", PackedByteArray()),
-		bool(msg.get("last", true)),
-		_now()
-	)
+	bus.add_part(msg["clip"], msg["part"], msg["rate"], msg["pcm"], msg["last"], _now())
 
 
 ## Drains the client's received voice parts into the bus.

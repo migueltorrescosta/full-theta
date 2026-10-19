@@ -60,17 +60,13 @@ func _event(clip: int, priority: int, extra: Dictionary = {}) -> Dictionary:
 		"audio": true,
 	}
 	payload.merge(extra, true)
-	return {"seq": clip, "tick": 0, "type": VoicePlayer.EVENT_TYPE, "payload": payload}
+	return {"seq": clip, "tick": 0, "type": VoiceService.EVENT_VOICE_LINE, "payload": payload}
 
 
-func _voice(clip: int, samples: int, part: int = -1, last: bool = true) -> Dictionary:
+func _voice(clip: int, samples: int, part: int = 0, last: bool = true) -> Dictionary:
 	var pcm: PackedByteArray = PackedByteArray()
 	pcm.resize(samples * 2)
-	var msg: Dictionary = {"clip": clip, "rate": RATE, "pcm": pcm}
-	if part >= 0:
-		msg["part"] = part
-		msg["last"] = last
-	return msg
+	return {"clip": clip, "rate": RATE, "pcm": pcm, "part": part, "last": last}
 
 
 func after_test() -> void:
@@ -95,7 +91,7 @@ func test_events_and_voice_reach_the_sink_and_subtitles_fire() -> void:
 	assert_array(sink.calls.slice(0, 3)).is_equal(
 		[["begin", 1, "npc", RATE], ["push", 1, 100, 0], ["push", 1, 100, 0]]
 	)
-	# A VOICE message without part/last is part 0 and the last.
+	# A one-part clip.
 	vp.handle_event(_event(2, 2))
 	vp.handle_voice(_voice(2, 50))
 	_now = 200
