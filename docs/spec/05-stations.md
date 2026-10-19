@@ -38,7 +38,7 @@ Always-live set (works whatever panel has focus, §5.9): alert (Alt+A; hold View
 - **FT-STN-012** Every station shall show first-run tooltips that explain its controls only and never tell a player to talk to another station; they shall be dismissable, shown once per client and station, and re-enabled by a setting. (D100, FT-PAIR-012)
 - **FT-STN-013** Each client shall set a UI scale from 75 % to 150 %, persisted like bindings. (plan review UX-8)
 - **FT-STN-014** Every hold input shall be switchable to a toggle in the bindings. (plan review UX-8)
-- **FT-STN-015** The lobby catalogue shall show a load tag (light, busy or intense) for each station and joint view, read from its data definition (StationDef). (D99)
+- **FT-STN-015** The lobby catalogue shall show a load tag (light, busy or intense) for each station and joint view, read from its data definition (StationDef): Helm and Weapons intense, Engineering and Science busy, Relay and Comms light; Tactical intense, Systems busy, Ops light; Captain light; Viewer untagged. (D99, D126)
 - **FT-STN-016** On first launch the lobby preset shall default to Easy, persisted per host; the toggles shall sit behind "Customise", each with a one-line description naming both stations. (plan review UX-9, D84)
 - **FT-STN-017** Each client shall have a comfort toggle (roll locked to the ship's deck plane, the selected target or the player's optional cosmetic reference plane; reduced field of view) for the Helm cockpit, the turret camera and the main screen; the cosmetic plane shall never be spoken or used by rules. (plan review NAV-6, NAV-9, D124)
 
