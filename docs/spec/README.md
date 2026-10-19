@@ -167,3 +167,9 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 81. Relay's map is a freely rotatable 3D map of the wrapping cube; marks are placed on the view plane with depth on Shift+drag. §5.5, §7.4 P4, FT-RLY-001, 002. (D124)
 82. Turret roll, main-screen stabilisation and the comfort toggle use the ship's deck plane or the target; a per-client cosmetic reference plane is allowed but never spoken or used by rules. FT-WPN-009, FT-MSC-001, FT-STN-017. (D124)
 83. One site period P per world, an exact multiple of 500 m and at least 4 times the longest sensor range, recorded in the command log setup and the state hash; weapon ranges under P/2 by content review. §4.1, FT-SIM-035. (D125)
+
+### v0.5 update for D126–D128 (#6)
+
+84. Load tags per station and joint view are fixed in data: Helm, Weapons and Tactical intense; Engineering, Science and Systems busy; Relay, Comms, Ops and Captain light; Viewer untagged. FT-STN-015. (D126)
+85. The host is the client presenting the secret its Host button gave the child server; a dedicated server has no host. FT-NET-041. (D127)
+86. A paused ship is abandoned by a majority vote of its remaining connected crew, or by the host alone; votes clear when the pause ends. FT-NET-041. (D128)
