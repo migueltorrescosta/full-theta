@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name NetClient
 extends RefCounted
 ## Reusable headless client of the protocol (T041): connect, handshake (with a token to
@@ -185,6 +186,41 @@ func set_pips(subsystem_kind: int, pips: int) -> int:
 	return command({"kind": "set_pips", "subsystem_kind": subsystem_kind, "pips": pips})
 
 
+## Sets the ship's alert level: 0 Normal, 1 Yellow, 2 Red (FT-STN-008).
+func set_alert(level: int) -> void:
+	_send(NetProtocol.Type.ALERT, {"level": level})
+
+
+## Places a mark: slot -1 takes the first free one, name "" the slot's default; contact
+## >= 0 attaches it to that contact, else it is free at pos on site (FT-SPA-012 to
+## FT-SPA-014).
+func place_mark(slot: int, name: String, contact: int, site: int, pos: Vector3) -> void:
+	_mark("place", slot, name, contact, site, pos)
+
+
+## Moves a mark to pos on site, or attaches it to a contact (contact >= 0).
+func move_mark(slot: int, contact: int, site: int, pos: Vector3) -> void:
+	_mark("move", slot, "", contact, site, pos)
+
+
+## Renames a mark ("" restores the slot's default name).
+func rename_mark(slot: int, name: String) -> void:
+	_mark("rename", slot, name, -1, -1, Vector3.ZERO)
+
+
+func delete_mark(slot: int) -> void:
+	_mark("delete", slot, "", -1, -1, Vector3.ZERO)
+
+
+## Pings an item on every screen of the ship (FT-SPA-016): kind "contact" (id), "mark"
+## (id = slot), "site" (site) or "point" (pos on site).
+func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
+	_send(
+		NetProtocol.Type.PING,
+		{"kind": kind, "id": id, "site": site, "x": pos.x, "y": pos.y, "z": pos.z}
+	)
+
+
 ## Sends a raw, already-encoded message (tests: malformed or foreign messages).
 func send_raw(data: PackedByteArray) -> void:
 	_queue.push(NetChunker.STREAM_CONTROL, data)
@@ -196,6 +232,12 @@ func send_raw(data: PackedByteArray) -> void:
 
 func _send(type: NetProtocol.Type, fields: Dictionary) -> void:
 	_queue.push(NetChunker.STREAM_CONTROL, NetProtocol.encode(type, fields))
+
+
+func _mark(op: String, slot: int, name: String, contact: int, site: int, pos: Vector3) -> void:
+	var fields: Dictionary = {"op": op, "slot": slot, "name": name, "contact": contact}
+	fields.merge({"site": site, "x": pos.x, "y": pos.y, "z": pos.z})
+	_send(NetProtocol.Type.MARK, fields)
 
 
 func _flush() -> void:

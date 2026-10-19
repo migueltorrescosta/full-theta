@@ -11,7 +11,13 @@ extends RefCounted
 ## - claims and ship-wide controls (T044, NetClaims, claim_rule, the OWNERSHIP section);
 ## - grace, the universe pause, the abandon vote and takeover (T045, FT-NET-033 to
 ##   FT-NET-036, FT-NET-041, FT-NET-042). NetServer steps the sim only while
-##   sim_running(): after a Start and outside a pause.
+##   sim_running(): after a Start and outside a pause;
+## - each ship's marks, alert level and pings (CrewMarks, CrewPings): crew state outside
+##   the sim, sent as `marks`, `alert` and `ping` events to every pick on that ship only
+##   (FT-SPA-016, FT-SPA-020);
+## - the voice seam: with a VoiceService in `voice` (the app composes it), the first
+##   Start calls start_session() with the closed set, and the ship computer speaks
+##   hull, shield, fault and collision alerts to the stations concerned (FT-AUD-006).
 ## Add a message handler in _handlers. docs/protocol.md describes the behaviour.
 
 const DEFAULT_RATE: float = 90.0
@@ -60,6 +66,10 @@ var paused: Dictionary[int, Array] = {}
 var votes: Dictionary[int, NetAbandonVote] = {}
 ## Ship -> {control: [session id, name]}: last writers of ship-wide controls.
 var writers: Dictionary[int, Dictionary] = {}
+var marks: CrewMarks = CrewMarks.new()
+var pings: CrewPings = CrewPings.new()
+## The seam to the host's voice service (ServerVoice; its `voice` is null without one).
+var voice: ServerVoice
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -78,6 +88,8 @@ var _crew_ships: Array = []
 func _init(net: NetTransport, sim_world: SimWorld) -> void:
 	transport = net
 	world = sim_world
+	marks.period = world.kin.period
+	voice = ServerVoice.new(world)
 	_handlers = {
 		NetProtocol.Type.HELLO: _on_hello,
 		NetProtocol.Type.PICK: _on_pick,
@@ -89,6 +101,9 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.ABANDON: _on_abandon,
 		NetProtocol.Type.ABANDON_VOTE: _on_abandon_vote,
 		NetProtocol.Type.TAKEOVER: _on_takeover,
+		NetProtocol.Type.ALERT: _on_alert,
+		NetProtocol.Type.MARK: _on_mark,
+		NetProtocol.Type.PING: _on_ping,
 		NetProtocol.Type.BYE: _on_bye,
 		NetTransport.CLOSED: _on_closed,
 	}
@@ -145,6 +160,8 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			"tag": String(e.tag),
 		}
 		transport.post_event(event_audience(e), e.tick, String(e.kind), payload)
+		if _crewable(e.ship_id):
+			voice.on_event(e)
 		left_play = left_play or e.kind == &"outcome" or e.kind == &"destroyed"
 	# A sim event may change a ship's run status (lobby_state in_play).
 	_lobby_dirty = _lobby_dirty or not events.is_empty()
@@ -166,6 +183,30 @@ func event_audience(e: SimEvent) -> PackedInt32Array:
 		if world.faction_of(s.ship) == e.faction and StationViews.sees_event(s.entry, e.kind):
 			out.append(s.id)
 	return out
+
+
+## The sessions on a ship whose pick covers any of the stations: a ship-computer line's
+## audience (FT-AUD-006; VoiceService.computer_audience).
+func computer_audience(ship: int, stations: PackedStringArray) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for s: NetSession in by_id.values():
+		if s.ship != ship:
+			continue
+		for station: String in StationViews.stations_of(s.entry):
+			if stations.has(station):
+				out.append(s.id)
+				break
+	return out
+
+
+## A run reset (T058 calls it): the ship's marks cleared and its alert back to Normal,
+## told to its picks.
+func reset_crew_state(ship: int) -> void:
+	marks.reset(ship)
+	pings.reset(ship)
+	voice.reset(ship)
+	_to_ship(ship, NetProtocol.EVENT_MARKS, _marks_payload(ship))
+	_to_ship(ship, NetProtocol.EVENT_ALERT, {"ship": ship, "level": marks.alert(ship), "by": ""})
 
 
 ## Ships a client may pick: those without an AI (M1: the crewed ship). Cached at the
@@ -379,6 +420,8 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	for ship: int in paused:
 		notify(session, NetProtocol.EVENT_PAUSE, _pause_payload(ship))
 		_send_votes(ship, session)
+	if session.has_pick():
+		_send_crew_state(session)
 	_publish()
 
 
@@ -415,6 +458,8 @@ func _answer_pick(s: NetSession, ship: int, entry: String, reason: String) -> vo
 	elif reason == CommandGate.BREAKS_COVERAGE:
 		_reject(s.id, -1, reason)
 	notify(s, NetProtocol.EVENT_PICKED, {"ship": ship, "entry": entry, "reason": reason})
+	if reason == "" and s.has_pick():
+		_send_crew_state(s)
 	_publish()
 
 
@@ -439,6 +484,7 @@ func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 		return
 	launch(s.ship)
 	_broadcast(NetProtocol.EVENT_STARTED, {"ship": s.ship, "tick": world.tick})
+	voice.start(language, crew_ships().map(func(c: Dictionary) -> int: return c["faction"]))
 	_publish()
 
 
@@ -543,6 +589,95 @@ func _on_takeover(conn: int, msg: Dictionary, _now_us: int) -> void:
 		_request_rejected(s, NetProtocol.Type.TAKEOVER, reason, {"ship": ship, "entry": entry})
 		return
 	_answer_pick(s, ship, entry, "")
+
+
+## Alert{level}: any crew pick sets its ship's alert level (FT-STN-008, D89).
+func _on_alert(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var s: NetSession = by_conn.get(conn)
+	if s == null:
+		return
+	var level: int = msg["level"]
+	var why: String = marks.set_alert(s.ship, CrewMarks.role_of(s.entry), level)
+	if why != "":
+		_request_rejected(s, NetProtocol.Type.ALERT, why, {"level": level})
+		return
+	_to_ship(s.ship, NetProtocol.EVENT_ALERT, {"ship": s.ship, "level": level, "by": s.name})
+
+
+## Mark{op, ...}: place, move, rename or delete one of the ship's marks (CrewMarks).
+func _on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var s: NetSession = by_conn.get(conn)
+	if s == null:
+		return
+	var role: CrewMarks.Role = CrewMarks.role_of(s.entry)
+	var slot: int = msg["slot"]
+	var contact: int = msg["contact"]
+	var why: String = ""
+	if not s.has_pick():
+		why = CrewMarks.NOT_CREW
+	elif contact >= world.ship_count():
+		why = CrewMarks.BAD_MARK
+	else:
+		match msg["op"]:
+			"place":
+				why = marks.place(s.ship, role, s.id, s.name, slot, msg["name"], msg)
+			"move":
+				why = marks.move(s.ship, role, s.id, slot, msg)
+			"rename":
+				why = marks.rename(s.ship, role, s.id, slot, msg["name"])
+			"delete":
+				why = marks.delete(s.ship, role, s.id, slot)
+			_:
+				why = CrewMarks.BAD_MARK
+	if why != "":
+		_request_rejected(s, NetProtocol.Type.MARK, why, {"op": msg["op"], "slot": slot})
+		return
+	_to_ship(s.ship, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
+
+
+## Ping{kind, id, site, x, y, z}: any crew pick and the Captain ping an item for every
+## pick on the ship, viewers included (FT-SPA-016, FT-SPA-020), rate-limited per session
+## (FT-SPA-017); a ping on an item another session pinged within 3 s is a copy naming
+## that first pinger (FT-SPA-031).
+func _on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
+	var s: NetSession = by_conn.get(conn)
+	if s == null:
+		return
+	var kind: String = msg["kind"]
+	var payload: Dictionary = {"ship": s.ship, "kind": kind, "id": -1, "site": -1}
+	payload.merge({"x": 0.0, "y": 0.0, "z": 0.0})
+	var why: String = ""
+	if not s.has_pick() or CrewMarks.role_of(s.entry) == CrewMarks.Role.NONE:
+		why = CrewMarks.NOT_CREW
+	elif not pings.take(s.id, now_us):
+		why = CommandGate.RATE_LIMITED
+	else:
+		match kind:
+			"contact":
+				payload["id"] = msg["id"]
+				if msg["id"] < 0 or msg["id"] >= world.ship_count():
+					why = CrewPings.BAD_PING
+			"mark":
+				payload["id"] = msg["id"]
+				if not marks.has_mark(s.ship, msg["id"]):
+					why = CrewPings.BAD_PING
+			"site", "point":
+				payload["site"] = msg["site"]
+				var at: PackedFloat64Array = world.kin.wrap_point(msg["x"], msg["y"], msg["z"])
+				if msg["site"] < 0 or (kind == "point" and at.is_empty()):
+					why = CrewPings.BAD_PING
+				elif kind == "point":
+					payload.merge({"x": at[0], "y": at[1], "z": at[2]}, true)
+			_:
+				why = CrewPings.BAD_PING
+	if why != "":
+		_request_rejected(s, NetProtocol.Type.PING, why, {"kind": kind})
+		return
+	payload["by"] = s.name
+	payload["copy"] = pings.copy_of(
+		s.ship, kind, payload["id"], payload["site"], s.id, s.name, now_us
+	)
+	_to_ship(s.ship, NetProtocol.EVENT_PING, payload)
 
 
 func _on_bye(conn: int, _msg: Dictionary, _now_us: int) -> void:
@@ -738,6 +873,26 @@ func _send_votes(ship: int, to: NetSession = null) -> void:
 		notify(to, NetProtocol.EVENT_ABANDON_VOTES, payload)
 	else:
 		_broadcast(NetProtocol.EVENT_ABANDON_VOTES, payload)
+
+
+## The current alert and marks of the session's ship, after a (re)join or a pick.
+func _send_crew_state(s: NetSession) -> void:
+	notify(s, NetProtocol.EVENT_ALERT, {"ship": s.ship, "level": marks.alert(s.ship), "by": ""})
+	notify(s, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
+
+
+func _marks_payload(ship: int) -> Dictionary:
+	return {"ship": ship, "marks": marks.marks_of(ship)}
+
+
+## A crew-state event to every session with a pick on the ship, and no other ship
+## (FT-SPA-016, FT-SPA-020).
+func _to_ship(ship: int, type: String, payload: Dictionary) -> void:
+	var ids: PackedInt32Array = PackedInt32Array()
+	for s: NetSession in by_id.values():
+		if s.ship == ship and s.has_pick():
+			ids.append(s.id)
+	transport.post_event(ids, world.tick, type, payload)
 
 
 func _broadcast(type: String, payload: Dictionary) -> void:

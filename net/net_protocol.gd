@@ -29,9 +29,12 @@ enum Type {
 	BYE = 16,
 	VOICE = 17,
 	ABANDON_VOTE = 18,
+	ALERT = 19,
+	MARK = 20,
+	PING = 21,
 }
 
-const PROTOCOL_VERSION: int = 3
+const PROTOCOL_VERSION: int = 4
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -57,6 +60,11 @@ const EVENT_RESUME: String = "resume"
 ## {ship, voters, needed} to every client during a pause (D128).
 const EVENT_ABANDON_VOTES: String = "abandon_votes"
 const EVENT_ABANDONED: String = "abandoned"
+## Crew state of a ship (CrewMarks, CrewPings), to every session with a pick on it:
+## {ship, level, by}, {ship, marks}, {ship, kind, id, site, x, y, z, by, copy}.
+const EVENT_ALERT: String = "alert"
+const EVENT_MARKS: String = "marks"
+const EVENT_PING: String = "ping"
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -106,6 +114,27 @@ const SCHEMAS: Dictionary = {
 		"last": TYPE_BOOL,
 	},
 	Type.ABANDON_VOTE: {"ship": TYPE_INT, "vote": TYPE_BOOL},
+	Type.ALERT: {"level": TYPE_INT},
+	Type.MARK:
+	{
+		"op": TYPE_STRING,
+		"slot": TYPE_INT,
+		"name": TYPE_STRING,
+		"contact": TYPE_INT,
+		"site": TYPE_INT,
+		"x": TYPE_FLOAT,
+		"y": TYPE_FLOAT,
+		"z": TYPE_FLOAT,
+	},
+	Type.PING:
+	{
+		"kind": TYPE_STRING,
+		"id": TYPE_INT,
+		"site": TYPE_INT,
+		"x": TYPE_FLOAT,
+		"y": TYPE_FLOAT,
+		"z": TYPE_FLOAT,
+	},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -122,6 +151,9 @@ const FROM_CLIENT: Array[int] = [
 	Type.TAKEOVER,
 	Type.BYE,
 	Type.ABANDON_VOTE,
+	Type.ALERT,
+	Type.MARK,
+	Type.PING,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -135,6 +167,9 @@ const RATED_REQUESTS: Array[int] = [
 	Type.ABANDON,
 	Type.TAKEOVER,
 	Type.ABANDON_VOTE,
+	Type.ALERT,
+	Type.MARK,
+	Type.PING,
 ]
 
 

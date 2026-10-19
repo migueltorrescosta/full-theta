@@ -160,10 +160,17 @@ func make_server() -> NetServer:
 	return server
 
 
-## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick.
-## Silent until the lobby's Start calls start_session(session.language, closed set).
+## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,
+## wired into the session: silent until the first Start calls start_session() with the
+## session language and closed set; ship-computer lines go to the stations concerned
+## (ServerVoice, ServerSession.computer_audience, FT-AUD-006).
 func make_voice(server: NetServer) -> VoiceService:
-	return VoiceSetup.make_service(server.transport, func() -> int: return server.world.tick)
+	var voice: VoiceService = VoiceSetup.make_service(
+		server.transport, func() -> int: return server.world.tick
+	)
+	voice.computer_audience = server.session.computer_audience
+	server.session.voice.voice = voice
+	return voice
 
 
 ## The pid file and idle-exit node that runs next to `server` (FT-NET-003).

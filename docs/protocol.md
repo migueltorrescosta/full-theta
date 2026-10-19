@@ -2,7 +2,7 @@
 
 The custom WebSocket protocol between the headless server and every station (FT-NET-004, D70). Code: `net/net_protocol.gd` (message set, control codec), `net/snapshot_builder.gd` and `net/sections/` (snapshot codec), `net/net_chunker.gd` (chunks and bundles). The threads and seams are in `net/README.md`.
 
-Protocol version: `NetProtocol.PROTOCOL_VERSION` = 3. Bump it on any incompatible change. Version 3 added Ack snap −1 (need a full snapshot), long section lengths, the age in every NEAR record, the little-endian LAN beacon, the client limits below and the voice fields (Welcome `lang`, Voice `part` and `last`, the `voice_line` event).
+Protocol version: `NetProtocol.PROTOCOL_VERSION` = 4. Bump it on any incompatible change. Version 4 added Alert, Mark and Ping (types 19 to 21) and the `alert`, `marks` and `ping` events: a version 3 server would drop them as unknown types. Version 3 added Ack snap −1 (need a full snapshot), long section lengths, the age in every NEAR record, the little-endian LAN beacon, the client limits below and the voice fields (Welcome `lang`, Voice `part` and `last`, the `voice_line` event).
 
 ## Transport
 
@@ -63,6 +63,9 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | 16 | Bye | C | `reason` String | H | Orderly leave; the client then closes. | T041 |
 | 17 | Voice | S | `clip` int, `rate` int (Hz), `pcm` PackedByteArray (16-bit mono), `part` int (from 0), `last` bool (ends the clip) | L | Stitched and synthesised lines, one per sentence or stitched clip, after the line's `voice_line` event (`audio/README.md`, S7b). | E10 fills, T041 carries |
 | 18 | AbandonVote | C | `ship` int, `vote` bool (cast or withdraw) | H | A remaining connected crew player of a paused ship votes to abandon it (D128). Refusals: `not_paused`, `not_crew`. | T045 |
+| 19 | Alert | C | `level` int (0 Normal, 1 Yellow, 2 Red) | H | A crew pick sets its ship's alert level (FT-STN-008, D89). Refusals: `not_crew` (Captain, Viewer, no pick), `bad_level`. | #7 |
+| 20 | Mark | C | `op` String (`place`, `move`, `rename`, `delete`), `slot` int (0–7 Alpha to Hotel; −1 with `place`: the first free one), `name` String ("" with `place` or `rename`: the slot's default; trimmed, cut to 24 bytes), `contact` int (≥ 0 attaches the mark to that contact; −1 free), `site` int, `x`, `y`, `z` float (64-bit site offset, wrapped, D104/D124) | H | Marks of the sender's ship (FT-SPA-012 to FT-SPA-014, FT-SPA-022, FT-RLY-003; rules in `CrewMarks`). Refusals: `not_crew`, `marks_full` (8 used; Relay replaces a slot it names), `slot_taken` (a used slot, not Relay), `not_yours` (another's mark, not Relay), `not_allowed` (the Captain edits nothing), `bad_mark`; with `op` and `slot`. | #7 |
+| 21 | Ping | C | `kind` String (`contact`: `id`; `mark`: `id` = slot; `site`: `site`; `point`: `site` and `x`, `y`, `z`), `id` int, `site` int, `x`, `y`, `z` float | H | Pulse an item on every screen of the ship (FT-SPA-016); crew and Captain. Refusals: `not_crew`, `rate_limited` (FT-SPA-017), `bad_ping`; with `kind`. | #7 |
 
 ### Events
 
@@ -80,6 +83,9 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | `resume` | `tick` | every client, when no ship is paused any more | T045 |
 | `abandon_votes` | `ship`, `voters` [names, sorted], `needed` (more than half of the remaining connected crew) | every client, on each vote, withdrawal or voter drop, and on join during a pause (D128) | T045 |
 | `abandoned` | `ship`, `by` (`vote` or `host`) | every client (FT-NET-041) | T045 |
+| `alert` | `ship`, `level`, `by` (setter's name, "" for the current state or a reset) | every session with a pick on that ship (viewers too), on each change, and to a session right after Welcome (with a pick) and after each accepted pick | #7 |
+| `marks` | `ship`, `marks` [{`slot`, `name`, `contact` (−1 free), `site` (−1 attached), `x`, `y`, `z`, `by` (placer's name)}], the whole list in slot order | as `alert` (FT-SPA-020) | #7 |
+| `ping` | `ship`, `kind`, `id`, `site`, `x`, `y`, `z` (fields the kind doesn't use are −1 or 0), `by`, `copy` (the first pinger's name when another station pinged the item within 3 s, FT-SPA-031; "" otherwise) | every session with a pick on that ship, no other ship (FT-SPA-016, FT-SPA-020) | #7 |
 | `voice_line` | `clip`, `line` (line id, "" for free text), `text` (session language, slots filled), `role`, `priority`, `max_age_ms`, `coalesce`, `resume`, `audio` (false: subtitles only), `local` (true: the client plays its own prerendered clip) | the line's audience only: the NPC's conversation claimer or the stations concerned (FT-AUD-005, FT-AUD-006) | E10 (`audio/README.md`) |
 
 Command rejection reasons (`CommandGate`): `no_pick`, `rate_limited`, `unknown_kind`, `not_allowed` (server-only command such as `reset_ship`), `not_your_station`, `wrong_ship`, `bad_field`, `bad_value` (non-finite), `claimed` (another player holds the item, FT-NET-023), `ship_abandoned`, `breaks_coverage` (a refused mid-run Pick or Release, seq −1, FT-NET-043), `sim_rejected` (the sim refused it on apply: game rules), `ship_destroyed` (the sim dropped it).
@@ -95,6 +101,8 @@ Sim events go to the sessions holding a pick on a ship of the event's faction (F
 **Grace and pause (T045).** A dropped session keeps its pick and claims (not its abandon vote: only connected crew vote) for `--grace-s` (10 s), timed on the server's wall clock, also while paused. When the grace ends, the session lapses: its pick and claims are released and remembered, and if a started ship still in play (not destroyed, retreated or abandoned) then fails coverage, the whole universe pauses (only a grace expiry starts a pause; other changes only update or end one): the sim doesn't step, snapshots keep flowing, and every client gets `pause`. During a pause the paused ship's crew may change picks freely; outside it, a Pick or Release that would make a passing ship in play fail coverage is refused (`breaks_coverage`). The universe resumes (`resume`) once no ship in play fails coverage: a rejoin, a takeover, a pick change, or abandoning the ship. Captain and Viewer never count, so their drops never pause.
 
 **Abandon (D128).** During a pause each connected crew player of the paused ship may vote or withdraw; when the votes exceed half of them (2 of 2), or at once when the host sends Abandon, the ship is abandoned: it leaves play, the pause ends, and a logged server command (`AbandonShipCommand`) makes the sim mark it ABANDONED and give it a LOSS, which ends the M1 encounter. Votes clear when the pause ends; a vote cast in one pause doesn't carry into the next. A vote is evaluated only when cast (a voter who drops loses the vote; the others aren't abandoned by someone else's drop; approved in #6). The abandoned ship's crew commands get `ship_abandoned`.
+
+**Marks, pings and alert level (#7).** Per-ship crew state kept by the server outside the sim (no command log, no state hash): `CrewMarks` (8 marks, alert level) and `CrewPings` (rate limit, copy), handled in `ServerSession._on_alert`, `_on_mark`, `_on_ping`. A mark records the session that placed it: crew stations rename, move or delete only their own, Relay any; the Captain only fills empty slots. A mark attached to a contact stays attached when the contact is lost or destroyed; clients show its last known position. `ServerSession.reset_crew_state(ship)` clears the marks and sets the alert to Normal, with events (the run reset, T058, calls it).
 
 **Rejoin.** A client joining or rejoining during a pause gets the current `lobby`, `pause` and `abandon_votes` events right after Welcome and the Catalogue. A token resumes its session for the server's life (approved in #6). Within the grace everything is as it was. The 64-connection cap applies to every Hello that adds a connection: a new session, a lapsed one, and one resuming within its grace (refused `session_full`; the session keeps its grace). Taking over a still-connected session (a restarted client before its old socket closed) is not refused. A Hello whose token's grace has just run out lapses the session first (pick and claims released), even if it is then refused. After it, the session gets its ship back and its pick if still allowed (the Captain seat may be taken), else that ship's pick screen (Welcome `ship` set, `entry` ""); its old claims come back where still free.
 
@@ -160,7 +168,11 @@ Every provisional value, once. Code comments that call a value provisional point
 | Snapshot rate | every 2 sim ticks (30 Hz); 33 ms of wall clock while the sim doesn't step | `NetServer.SNAPSHOT_TICKS` |
 | Stall | > 15 unacknowledged snapshots, a failed send (the socket write failed; connection closed, code 4002), or > 256 KiB queued on the high lane (D106) | `NetResync.LAG_LIMIT`, `QUEUED_LIMIT` |
 | Queue without a view key | 256 KiB, then close (4004) | `NetResync.QUEUED_LIMIT` |
-| Command rate limit | 90 per second, burst 180, per session, shared by commands and Pick, Release, Ready, Claim, ReleaseClaim, Abandon, Takeover, AbandonVote; a refused command gets `rate_limited`, a refused request is dropped | `ServerSession.DEFAULT_RATE`, `DEFAULT_BURST`, `NetProtocol.RATED_REQUESTS` |
+| Command rate limit | 90 per second, burst 180, per session, shared by commands and Pick, Release, Ready, Claim, ReleaseClaim, Abandon, Takeover, AbandonVote, Alert, Mark, Ping; a refused command gets `rate_limited`, a refused request is dropped | `ServerSession.DEFAULT_RATE`, `DEFAULT_BURST`, `NetProtocol.RATED_REQUESTS` |
+| Ping rate limit | 2 per second, burst 3, per session, on top of the above; refused `rate_limited` (FT-SPA-017) | `CrewPings.RATE`, `BURST` |
+| Ping copy window | 3 s | `CrewPings.COPY_US` |
+| Mark name | 24 bytes of UTF-8 | `CrewMarks.MAX_NAME_BYTES` |
+| Ship-computer alerts | hull critical at 25 % hull, once until above it; stations per line | `ServerVoice.HULL_CRITICAL`, `LINES` |
 | Chunk payload | 16 KiB | `NetChunker.DEFAULT_CHUNK_SIZE` |
 | Message size | 8 MiB; 64 KiB from a client | `NetChunker.MAX_MESSAGE_SIZE`, `NetTransport.MAX_CLIENT_MESSAGE` |
 | Bundle | 48 KiB | `NetTransport.BUNDLE_MAX` |

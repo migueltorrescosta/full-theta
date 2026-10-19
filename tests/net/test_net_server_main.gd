@@ -173,6 +173,9 @@ func test_welcome_carries_the_language() -> void:
 	assert_object(voice.transport).is_same(server.transport)
 	assert_int(voice.tick_source.call()).is_equal(server.world.tick)
 	assert_str(voice.clip_dir).is_equal(VoiceSetup.CLIP_DIR)
+	# Wired into the session: Start and the ship computer's audience (FT-AUD-006).
+	assert_object(server.session.voice.voice).is_same(voice)
+	assert_bool(voice.computer_audience == server.session.computer_audience).is_true()
 	voice.free()
 	c.drop()
 	server.queue_free()
