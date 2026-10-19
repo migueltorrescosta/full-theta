@@ -31,6 +31,8 @@ var radar: DiscRadar
 var toasts: Toasts
 var overlay: ControlsOverlay
 var tooltip: FirstRunTooltip
+var alerts: StationAlerts
+var flash: AlertFlash
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
 var panel_factory: Callable = StationRegistry.make
 
@@ -55,6 +57,9 @@ func setup(context: StationContext) -> void:
 		p.gui_input.connect(_on_panel_input.bind(p))
 		panels.append(p)
 	ctx.crew.toast.connect(_on_toast)
+	alerts = StationAlerts.new()
+	add_child(alerts)
+	alerts.setup(ctx, stations, toasts, flash)
 	ctx.settings.bindings.changed.connect(_refresh_overlay)
 	focus(0)
 
@@ -129,6 +134,7 @@ func _process(delta: float) -> void:
 	)
 	radar.set_items(ContactPicture.build(ctx), ctx.crew.selection)
 	toasts.update(now)
+	flash.update(now)
 
 
 func _dispatch_batch(batch: Array[Dictionary]) -> void:
@@ -331,6 +337,9 @@ func _build() -> void:
 	toasts.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toasts)
+	flash = AlertFlash.new()
+	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(flash)
 	tooltip = FirstRunTooltip.new()
 	tooltip.visible = false
 	tooltip.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)

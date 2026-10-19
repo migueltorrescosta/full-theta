@@ -1,6 +1,6 @@
 # audio/
 
-Voice system (E10, spec §9): what the client plays, and the contracts with the host's synthesis service in `net/voice/`. Alert tones (FT-AUD-009) are #7's and use their own bus.
+Voice system (E10, spec §9): what the client plays, and the contracts with the host's synthesis service in `net/voice/`. Alert tones (FT-AUD-009): `AlertTones` (`alert_tones.gd`), one player per tone on the `Alerts` bus (created at runtime, sent to Master, so voice never blocks it); `played` is the tests' spy. The tones are our own CC0 work, synthesised by `tools/make_alert_tones.py` into `assets/sounds/alerts/`, which app/ hands over (`AlertTones.sounds_dir`, set by `MainMenu`; audio/ may not name assets/); `StationAlerts` (stations/) decides which station hears what.
 
 ## Data
 

@@ -10,6 +10,8 @@ extends Control
 ## app/ may name HostSession.
 
 const LOOPBACK: String = "127.0.0.1"
+## The alert tones (AlertTones.sounds_dir; audio/ may not name assets/, spec §2.2).
+const ALERT_SOUNDS: String = "res://assets/sounds/alerts"
 
 var settings: ClientSettings = ClientSettings.new()
 ## Paths injectable for tests.
@@ -37,6 +39,7 @@ var _orphan_answer: HostSession.Answer = HostSession.Answer.LEAVE
 
 
 func _ready() -> void:
+	AlertTones.sounds_dir = ALERT_SOUNDS
 	settings.load_file()
 	I18n.apply(I18n.LANGUAGES[0])
 	get_tree().root.content_scale_factor = settings.ui_scale

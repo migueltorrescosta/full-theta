@@ -14,6 +14,8 @@ signal changed(what: StringName)
 signal toast(key: String, args: Dictionary)
 ## A new (not copy) ping arrived: the chime seam (FT-SPA-016; the alerts strand plays it).
 signal pinged(ping: Dictionary)
+## An event this model doesn't keep (sim events: hit, fault, ...): StationAlerts' seam.
+signal sim_event(kind: StringName, payload: Dictionary)
 
 ## Marks per ship, named by slot (FT-SPA-012).
 const MARK_NAMES: Array[String] = [
@@ -161,6 +163,7 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 		"request_rejected", "command_rejected":
 			toast.emit("toast." + str(p.get("reason", "rejected")), p)
 		_:
+			sim_event.emit(StringName(str(e.get("type", ""))), p)
 			return false
 	return true
 
@@ -323,7 +326,9 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	_expire(now_ms)
 	var kind: String = str(p.get("kind", "point"))
 	var id: int = int(p.get("id", -1))
-	if bool(p.get("copy", false)):
+	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
+	var copy: bool = str(p.get("copy", "")) not in ["", "false"]
+	if copy:
 		for old: Dictionary in pings:
 			if old["kind"] == kind and old["id"] == id:
 				(old["copies"] as Array).append(str(p.get("by", "")))
@@ -340,7 +345,7 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	}
 	pings.append(ping)
 	changed.emit(&"pings")
-	if not bool(p.get("copy", false)):
+	if not copy:
 		pinged.emit(ping)
 
 
