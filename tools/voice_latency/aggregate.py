@@ -9,18 +9,15 @@ that moment.
 """
 
 import json
+import statistics
 import sys
 from pathlib import Path
 
 
 def pct(values: list[float], p: float) -> float:
-    s = sorted(values)
-    if not s:
-        return float("nan")
-    k = (len(s) - 1) * p
-    lo = int(k)
-    hi = min(lo + 1, len(s) - 1)
-    return s[lo] + (s[hi] - s[lo]) * (k - lo)
+    if len(values) < 2:
+        return values[0] if values else float("nan")
+    return statistics.quantiles(values, n=100, method="inclusive")[round(p * 100) - 1]
 
 
 def row(name: str, values: list[float]) -> str:

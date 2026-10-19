@@ -10,7 +10,7 @@ extends SceneTree
 ## say() with names and numbers, every line to c0's session only.
 ##
 ## godot --headless --path . -s res://tools/voice_latency/vl_server.gd -- --log PATH
-##   [--port 47850] [--langs en,it,pt] [--line-every 1.0] [--lines-at 2.0] [--tail 3.0]
+##   [--port 47850] [--langs en,it,pt_PT] [--line-every 1.0] [--lines-at 2.0] [--tail 3.0]
 ##   [--sim-ships 100] [--sim-proj 500] [--max-lang-s 300]
 ##
 ## Log: one JSON object per line, "ev" one of listening, clients, start_begin,
@@ -292,7 +292,10 @@ func _parse_args(args: PackedStringArray) -> bool:
 			"--log":
 				log_path = value
 			"--langs":
-				langs = value.split(",")
+				langs = PackedStringArray()
+				for lang: String in value.split(","):
+					# Session codes (pt_PT) or S7b's keys (pt).
+					langs.append(LANGS.find_key(lang) if LANGS.find_key(lang) != null else lang)
 			"--line-every":
 				line_every = value.to_float()
 			"--lines-at":

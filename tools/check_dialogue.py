@@ -43,10 +43,6 @@ def _validate(data, schema: dict, rel: str, errors: list[str]) -> bool:
     return not found
 
 
-def _slots_in(text: str) -> list[str]:
-    return SLOT.findall(text)
-
-
 def _check_line(line: dict, rel: str, stem: str, seen: dict, errors: list[str]) -> None:
     lid = line["id"]
     if lid in seen:
@@ -57,9 +53,10 @@ def _check_line(line: dict, rel: str, stem: str, seen: dict, errors: list[str]) 
     declared = set(line.get("slots", {}))
     for lang in LANGS:
         text = line["text"][lang]
-        used = _slots_in(text)
+        used = SLOT.findall(text)
         bad = [s for s in used if not SLOT_NAME.match(s)]
-        if bad or "{" in SLOT.sub("", text) or "}" in SLOT.sub("", text):
+        rest = SLOT.sub("", text)
+        if bad or "{" in rest or "}" in rest:
             errors.append(f"{rel}: {lid}: {lang}: malformed slot in {text!r}")
         if set(used) != declared or len(used) != len(set(used)):
             errors.append(
@@ -67,7 +64,7 @@ def _check_line(line: dict, rel: str, stem: str, seen: dict, errors: list[str]) 
             )
         if not text.strip():
             errors.append(f"{rel}: {lid}: {lang}: blank text")
-    unknown = set(_slots_in(line.get("coalesce", ""))) - declared
+    unknown = set(SLOT.findall(line.get("coalesce", ""))) - declared
     if unknown:
         errors.append(f"{rel}: {lid}: coalesce uses undeclared slots {sorted(unknown)}")
 

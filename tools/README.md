@@ -1,6 +1,6 @@
 # tools/
 
-Scripts for the engine fetch, gates, lints, traceability and provenance checks.
+Scripts for the engine fetch, gates, lints, traceability and provenance checks. The Python tools (`tools/pyproject.toml`, `tools/tts/pyproject.toml`) need Python 3.12 or later (`requires-python`, set by numpy 2.5).
 
 ## L5 screenshots
 
@@ -16,7 +16,7 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks.
 
 ```bash
 uv run --project tools/tts python tools/tts/fetch_voices.py
-uv run --project tools/tts python tools/tts/prerender.py        # writes audio/prerendered_host/
+uv run --project tools/tts python tools/tts/prerender.py --dev  # writes audio/prerendered_host/ (pt_PT's voice is dev_only)
 tools/voice_latency/run.sh /tmp/vl/dev                           # piper_stream.py
 FT_PIPER_BIN=/path/to/piper/piper tools/voice_latency/run.sh /tmp/vl/bin   # release binary
 ```
