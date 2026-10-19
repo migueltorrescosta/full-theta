@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # L0 static checks (FT-TST-001): formatting and lint, architecture lint,
-# definitions, traceability, licences, and the tools' own fixture tests.
+# definitions, traceability, dialogue and translations, licences, and the tools' own fixture tests.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
@@ -23,5 +23,6 @@ echo "l0: definitions"  # FT-DAT-002: every .tres under content/ loads and valid
   || { echo "l0: definitions failed (engine log: .godot/defs.log)" >&2; exit 1; }
 echo "l0: architecture"; run python tools/lint_arch.py
 echo "l0: traceability"; run python tools/traceability.py --check
+echo "l0: dialogue"; run python tools/check_dialogue.py  # FT-DAT-003, FT-DAT-004, FT-DAT-011
 echo "l0: licences"; run python tools/check_licences.py
 echo "l0: tool tests"; run pytest -q tools/tests

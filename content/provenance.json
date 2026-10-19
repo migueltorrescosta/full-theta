@@ -88,6 +88,74 @@
       "source": "https://www.winehq.org",
       "licence": "LGPL-2.1-or-later",
       "attribution": "Copyright (c) Wine contributors (development and testing only)"
+    },
+    {
+      "name": "jsonschema",
+      "kind": "tool",
+      "version": "4.25.1",
+      "source": "https://github.com/python-jsonschema/jsonschema",
+      "licence": "MIT",
+      "attribution": "Copyright (c) 2013 Julian Berman (dialogue gate, tools/check_dialogue.py)"
+    },
+    {
+      "name": "Piper voice en_GB-cori-medium",
+      "kind": "voice",
+      "voice": "en_GB-cori-medium",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_GB/cori/medium",
+      "licence": "MIT (piper-voices model repository); dataset public domain (LibriVox), trained from scratch",
+      "attribution": "Voice: cori (LibriVox, public domain); model by the Piper project. Audited in docs/spikes/S7.md (D105)."
+    },
+    {
+      "name": "Piper voice en_GB-cori-high",
+      "kind": "voice",
+      "voice": "en_GB-cori-high",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_GB/cori/high",
+      "licence": "MIT (piper-voices model repository); dataset public domain (LibriVox), trained from scratch",
+      "attribution": "Voice: cori (LibriVox, public domain); model by the Piper project. Prerender only, not shipped (D105)."
+    },
+    {
+      "name": "Piper voice en_US-norman-medium",
+      "kind": "voice",
+      "voice": "en_US-norman-medium",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/norman/medium",
+      "licence": "MIT (piper-voices model repository); dataset public domain (LibriVox), trained from scratch",
+      "attribution": "Voice: norman (LibriVox, public domain); model by the Piper project. Audited in docs/spikes/S7.md (D105)."
+    },
+    {
+      "name": "Piper voice it_IT-serena-medium",
+      "kind": "voice",
+      "voice": "it_IT-serena-medium",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/it/it_IT/serena/medium",
+      "licence": "MIT (piper-voices model repository); dataset CC-BY-4.0 (synthetic; Tatoeba transcripts CC-BY-2.0-FR), trained from scratch",
+      "attribution": "Voice: serena, dataset by committa (CC BY 4.0), transcripts from Tatoeba (CC BY 2.0 FR); credit required in the shipped credits. Accepted on its card (D105)."
+    },
+    {
+      "name": "Piper voice it_IT-serena-high",
+      "kind": "voice",
+      "voice": "it_IT-serena-high",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/it/it_IT/serena/high",
+      "licence": "MIT (piper-voices model repository); dataset CC-BY-4.0 (synthetic; Tatoeba transcripts CC-BY-2.0-FR), trained from scratch",
+      "attribution": "Voice: serena, dataset by committa (CC BY 4.0), transcripts from Tatoeba (CC BY 2.0 FR). Prerender only, not shipped (D105)."
+    },
+    {
+      "name": "Piper voice pt_PT-tugão-medium",
+      "kind": "voice",
+      "voice": "pt_PT-tugão-medium",
+      "status": "dev-only",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/pt/pt_PT/tugão/medium",
+      "licence": "Unclear: dataset CC0 (OHF voice-datasets) but fine-tuned from lessac (Blizzard 2013, research only)",
+      "attribution": "Voice: tugão (OHF voice-datasets, CC0). Development only, never shipped, until #16 provides a clean pt_PT voice (D105, FT-LIC-007)."
     }
   ]
 }
