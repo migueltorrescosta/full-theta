@@ -261,15 +261,18 @@ func _apply_commands() -> void:
 	var queue: Array[SimCommand] = _queue
 	_queue = []
 	_reset_this_tick.clear()
+	var alive: PackedByteArray = kin.alive
+	var n: int = defs.size()
 	for c: SimCommand in queue:
-		if c.ship_id < 0 or c.ship_id >= defs.size():
+		var id: int = c.ship_id
+		if id < 0 or id >= n:
 			continue
-		if not (kin.is_alive(c.ship_id) or c.applies_to_destroyed()):
+		if not (alive[id] == 1 or c.applies_to_destroyed()):
 			continue
 		c.tick = tick
 		# A ship reset earlier this tick rejects its later commands of the tick (logged
 		# as rejected, so a replay rejects them too).
-		c.accepted = not _reset_this_tick.has(c.ship_id) and c.apply(self)
+		c.accepted = not _reset_this_tick.has(id) and c.apply(self)
 		if c.source != SimCommand.Source.AI:
 			command_log.append(c)
 
