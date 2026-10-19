@@ -167,3 +167,9 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 81. Relay's map is a freely rotatable 3D map of the wrapping cube; marks are placed on the view plane with depth on Shift+drag. §5.5, §7.4 P4, FT-RLY-001, 002. (D124)
 82. Turret roll, main-screen stabilisation and the comfort toggle use the ship's deck plane or the target; a per-client cosmetic reference plane is allowed but never spoken or used by rules. FT-WPN-009, FT-MSC-001, FT-STN-017. (D124)
 83. One site period P per world, an exact multiple of 500 m and at least 4 times the longest sensor range, recorded in the command log setup and the state hash; weapon ranges under P/2 by content review. §4.1, FT-SIM-035. (D125)
+
+### Pending changelog (strand-e15)
+
+- Release packages ship the standalone rhasspy/piper 2023.11.14-2 with eSpeak NG 1.52.0.1 and the release voices from one list; macOS assembles Piper from rhasspy/piper and piper-phonemize. FT-ARC-022, FT-LIC-008. (D140, D141)
+- Exported builds print their build line, and `--tts-smoke` synthesises one line with the bundled Piper, for L6. FT-TST-019. (D142)
+- The release workflow runs on version tags only and drafts the release; L6 runs on fugaku before the tag; macOS stays unsigned until #13. §12.1, FT-ARC-017, FT-GEN-012. (D143)
