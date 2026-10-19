@@ -13,7 +13,9 @@ extends StationPanel
 ## ship turns, the barrel slews to it at the mount's traverse rate (sim), and the camera
 ## looks at it with its roll on the deck plane (ComfortCamera, FT-STN-017). Light aim
 ## assist acts on controller input only (FT-SIM-015, D25). Fire holds send `fire` at the
-## weapon's cooldown. Mount defs come from the ship's ShipDef in content/.
+## weapon's cooldown; docked in Tactical's cockpit, the KB/M fire holds fire every
+## claimed mount at the selected target (FT-JNT-008). Mount defs come from the ship's
+## ShipDef in content/.
 
 ## Vertical field of view (degrees).
 const FOV_DEG: float = 60.0
@@ -99,10 +101,15 @@ func step(delta: float) -> void:
 	var now: int = ctx.now_ms()
 	_turn_aim(delta)
 	_flush_aims(now, false)
-	if _firing:
-		_try_fire(mount, now)
-	if _firing_all:
-		fire_claimed_at(selected_contact(), mount)
+	if not focused and (_firing or _firing_all):
+		# Tactical's cockpit (FT-JNT-008): the KB/M fire buttons fire every claimed mount
+		# at the selected target.
+		fire_claimed_at(selected_contact())
+	else:
+		if _firing:
+			_try_fire(mount, now)
+		if _firing_all:
+			fire_claimed_at(selected_contact(), mount)
 	_update_camera()
 	_layout_targets()
 	_overlay.queue_redraw()

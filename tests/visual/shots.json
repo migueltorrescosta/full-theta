@@ -19,6 +19,14 @@
     {"name": "station_relay", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "relay", "ping": 3}},
     {"name": "station_relay_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "relay", "ui_scale": 1.5}},
     {"name": "station_viewer", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "viewer", "ping": 3}},
-    {"name": "station_viewer_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "viewer", "ui_scale": 1.5}}
+    {"name": "station_viewer_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "viewer", "ui_scale": 1.5}},
+    {"name": "station_tactical", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "tactical", "selected": 3, "claim": "mount:0"}},
+    {"name": "station_tactical_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "tactical", "selected": 3, "claim": "mount:0", "ui_scale": 1.5}},
+    {"name": "station_tactical_turret", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "tactical", "selected": 3, "claim": "mount:0", "focus": 1}},
+    {"name": "station_tactical_turret_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "tactical", "selected": 3, "claim": "mount:0", "focus": 1, "ui_scale": 1.5}},
+    {"name": "station_systems", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "systems"}},
+    {"name": "station_systems_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "systems", "ui_scale": 1.5}},
+    {"name": "station_ops", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "ops", "ping": 3}},
+    {"name": "station_ops_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "ops", "ping": 3, "ui_scale": 1.5}}
   ]
 }

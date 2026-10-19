@@ -4,7 +4,7 @@ Devices to intents (FT-STN-005, D95). May name `stations/`, `presentation/`, `au
 
 ## Files
 
-- `intent_table.gd`: `IntentTable`, the one binding table. Every intent of every station and view, with its group, kind, default KB/M and controller bindings, the devices on which it ignores focus (`live`) and the pitch flag. `IntentTable.target` decides who handles an intent on a screen.
+- `intent_table.gd`: `IntentTable`, the one binding table. Every intent of every station and view, with its group, kind, default KB/M and controller bindings, the devices on which it ignores focus (`live`), the focused stations it still reaches its panel through (`via`) and the pitch flag. `IntentTable.target` decides who handles an intent on a screen.
 - `bindings.gd`: `Bindings`, the player's rebinds and hold-to-toggle choices over the table's defaults (FT-STN-007, FT-STN-014), persisted through `to_dict`/`from_dict`.
 - `input_matcher.gd`: `InputMatcher`, which turns `InputEvent`s into intent events using the live `Bindings` and the screen's context. Pure logic; time is passed in.
 - `mouse_stick.gd`: `MouseStick`, Helm's mouse virtual stick (S5).
@@ -25,7 +25,7 @@ A binding is a string in the `kbm` or `pad` list of an `IntentTable` row (or a `
 
 ## Matcher semantics
 
-`InputMatcher.set_context(stations, focused)` sets the screen. An intent is active for an event from a device when `IntentTable.target` names a handler for it: common and live rows always, the focused station's rows, and other stations' rows that are live on that device (FT-JNT-007). Each emitted event is a Dictionary with `id`, `group`, `target`, `kind`, `pressed`, `value` and `device`.
+`InputMatcher.set_context(stations, focused)` sets the screen. An intent is active for an event from a device when `IntentTable.target` names a handler for it: common and live rows always, the focused station's rows, other stations' rows that are live on that device (FT-JNT-007), and rows that reach their station `via` the focused one (Weapons' KB/M fire buttons in Tactical's cockpit, FT-JNT-008). Each emitted event is a Dictionary with `id`, `group`, `target`, `kind`, `pressed`, `value` and `device`.
 
 - Longest chord wins: when an active binding with modifiers matches ("View+X"), plain bindings on the same button ("X") don't fire. The same holds for axes: while LB is held, "LB+LS_X" suppresses "LS_X", and "View+RS" suppresses the right-stick axes.
 - Identical bindings on two active intents both fire, in table order. The binding-table check exempts one pointer case, LMB select and Weapons fire: the screen consumes select only over a pickable item.
@@ -44,6 +44,6 @@ Axes emit no events. A radial menu held on a chord that suppresses a stick reads
 
 ## Adding an intent
 
-1. A row in `IntentTable.INTENTS` with the station's group, its kind and bindings that avoid the common and always-live keys (FT-STN-009).
+1. A row in `IntentTable.INTENTS` with the station's group, its kind and bindings that avoid the common and always-live keys (FT-STN-009; `tests/input/test_binding_table.gd` checks the whole table).
 2. Its `intent.<id>` key in every language of `content/i18n/strings.json`.
 3. A handler in the panel of its group (`StationPanel.handle_intent`), or an `axis` poll in the panel's frame update.

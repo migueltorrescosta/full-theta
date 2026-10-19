@@ -6,7 +6,7 @@
 ## `ui_scale` (the window's content scale, FT-STN-013; reset on exit), `claim` (a
 ## claim item the player holds, e.g. "mount:0") and `events` (sim events fed to the
 ## crew model 2 s before the shot, after the screen is built; a payload `vector` given
-## as [x, y, z] becomes a Vector3).
+## as [x, y, z] becomes a Vector3), `focus` (the focused panel of a joint view, F1 = 0).
 extends Control
 
 var view: String = "screen"
@@ -19,6 +19,7 @@ var strip: bool = false
 var ui_scale: float = 1.0
 var claim: String = ""
 var events: Array = []
+var focus: int = 0
 
 var _ctx: StationContext
 
@@ -61,6 +62,7 @@ func _ready() -> void:
 			var s: StationScreen = StationScreen.new()
 			s.setup(_ctx)
 			add_child(s)
+			s.focus(focus)
 			s.radar.side_strip = strip
 			if overlay:
 				s.dispatch({"id": "overlay", "target": "screen", "pressed": true})

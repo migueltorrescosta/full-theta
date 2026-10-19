@@ -21,6 +21,9 @@ extends RefCounted
 ##   (§5.0 always-live: Helm translation on KB/M only, face and all-stop on both,
 ##   FT-JNT-007). Rows of group "live" are live on every device.
 ## - `pitch`: true for the pitch axis the "invert pitch" setting flips.
+## - `via`: focused station -> devices on which this station intent still reaches its
+##   own panel when that station has the focus (§5.9, FT-JNT-008: in Tactical's cockpit
+##   the KB/M fire buttons fire the claimed mounts at the selected target).
 ## Translation key: "intent.<id>" (content/i18n/strings.json).
 ##
 ## Adding an intent: one row here, its "intent.<id>" key in every language of
@@ -128,8 +131,22 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "shield_dorsal", "group": "helm", "kind": PRESS, "kbm": ["Kp 5"], "pad": ["LB+Up"]},
 	{"id": "shield_ventral", "group": "helm", "kind": PRESS, "kbm": ["Kp 6"], "pad": ["LB+Down"]},
 	# Weapons (§5.2).
-	{"id": "fire", "group": "weapons", "kind": HOLD, "kbm": ["LMB"], "pad": ["RT"]},
-	{"id": "fire_all", "group": "weapons", "kind": HOLD, "kbm": ["RMB"], "pad": ["LT"]},
+	{
+		"id": "fire",
+		"group": "weapons",
+		"kind": HOLD,
+		"kbm": ["LMB"],
+		"pad": ["RT"],
+		"via": {"helm": [KBM]}
+	},
+	{
+		"id": "fire_all",
+		"group": "weapons",
+		"kind": HOLD,
+		"kbm": ["RMB"],
+		"pad": ["LT"],
+		"via": {"helm": [KBM]}
+	},
 	{"id": "aim_x", "group": "weapons", "kind": AXIS, "kbm": ["MouseX"], "pad": ["RS_X"]},
 	{
 		"id": "aim_y",
@@ -259,9 +276,10 @@ static func is_live(id: String, device: String) -> bool:
 
 
 ## Who handles intent `id` from `device` on a screen holding `stations` with
-## `focused` focused (D95, FT-JNT-001, FT-JNT-007): "screen" for common and
+## `focused` focused (D95, FT-JNT-001, FT-JNT-007, FT-JNT-008): "screen" for common and
 ## station-less live intents, the station id for a station intent that is live on the
-## device (whatever the focus) or belongs to the focused panel, "" when nobody does.
+## device (whatever the focus), reaches it `via` the focused station, or belongs to the
+## focused panel, "" when nobody does.
 static func target(id: String, device: String, focused: String, stations: Array) -> String:
 	var r: Dictionary = row(id)
 	if r.is_empty():
@@ -272,6 +290,8 @@ static func target(id: String, device: String, focused: String, stations: Array)
 	if group not in stations:
 		return ""
 	if group == focused or device in r.get("live", []):
+		return group
+	if device in r.get("via", {}).get(focused, []):
 		return group
 	return ""
 

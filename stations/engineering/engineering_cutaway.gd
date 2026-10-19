@@ -172,8 +172,9 @@ func _draw() -> void:
 	for i: int in order:
 		_draw_subsystem(i)
 	# Labels over every disc, outlined, so a near disc never hides a far one's name.
-	for i: int in order:
-		_draw_label(i)
+	var rects: Dictionary = label_rects()
+	for i: int in rects:
+		_draw_label(i, rects[i])
 	_draw_crews()
 	if cursor.x >= 0:
 		var a: Color = Palette.color("accent")
@@ -230,12 +231,56 @@ func _draw_subsystem(i: int) -> void:
 		draw_arc(c, NODE_R + 8.0, 0.0, TAU, 32, Palette.color("selected"), 2.0)
 
 
-func _draw_label(i: int) -> void:
-	var c: Vector2 = subsystem_pos(i)
+## Where each subsystem's label goes (rects in this control's space): below its disc,
+## else right, left or above, the first spot inside the cutaway that covers no disc,
+## crew token or label already placed, so the labels stay apart when the cutaway is
+## small (150 % UI scale); below when nothing is free.
+func label_rects() -> Dictionary:
 	var font: Font = get_theme_default_font()
-	var fs: int = get_theme_default_font_size() - 3
-	var label: String = "%s %d%%" % [panel.short_name(i), roundi(panel.health_frac(i) * 100)]
-	var at: Vector2 = c + Vector2(-font.get_string_size(label, 0, -1, fs).x / 2.0, NODE_R + 18.0)
+	var fs: int = _label_size()
+	var taken: Array[Rect2] = []
+	for i: int in panel.count():
+		taken.append(_square(subsystem_pos(i), NODE_R + 3.0))
+	for c: int in panel.crew_count():
+		taken.append(_square(token_pos(c), TOKEN_R))
+	var out: Dictionary = {}
+	var gap: float = NODE_R + 4.0
+	for i: int in panel.count():
+		var c: Vector2 = subsystem_pos(i)
+		var sz: Vector2 = font.get_string_size(_label(i), HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var spots: Array[Vector2] = [
+			c + Vector2(-sz.x / 2.0, gap),
+			c + Vector2(gap, -sz.y / 2.0),
+			c + Vector2(-gap - sz.x, -sz.y / 2.0),
+			c + Vector2(-sz.x / 2.0, -gap - sz.y),
+		]
+		out[i] = Rect2(spots[0], sz)
+		for at: Vector2 in spots:
+			var r: Rect2 = Rect2(at, sz)
+			if Rect2(Vector2.ZERO, size).encloses(r) and not taken.any(r.intersects):
+				out[i] = r
+				break
+		taken.append(out[i])
+	return out
+
+
+func _label(i: int) -> String:
+	return "%s %d%%" % [panel.short_name(i), roundi(panel.health_frac(i) * 100)]
+
+
+func _label_size() -> int:
+	return get_theme_default_font_size() - 3
+
+
+static func _square(c: Vector2, r: float) -> Rect2:
+	return Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0)
+
+
+func _draw_label(i: int, rect: Rect2) -> void:
+	var font: Font = get_theme_default_font()
+	var fs: int = _label_size()
+	var label: String = _label(i)
+	var at: Vector2 = rect.position + Vector2(0.0, font.get_ascent(fs))
 	var bg: Color = Palette.color("background")
 	draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, bg)
 	draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.color("text"))

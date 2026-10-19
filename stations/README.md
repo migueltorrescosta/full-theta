@@ -33,7 +33,7 @@ Station UIs; they read snapshots and send intents, never sim/ (FT-ARC-011). The 
 5. Send with `ctx.intents.command({"kind": ...})`, `ctx.intents.claim(item)`, `ctx.intents.place_mark(...)`.
 6. Bindings: add rows to `IntentTable.INTENTS` (`input/intent_table.gd`, your station as group) and an `intent.<id>` key in every language of `content/i18n/strings.json`. The overlay and Settings follow.
 
-The layout is fixed: top bar; the focused panel in the main area on the left; the radar and docked panels in a right column. A joint view is the same screen with two panels; F1/F2, hold View + LB/RB, or a click on a docked panel moves the focus (FT-JNT-001). Always-live intents (`IntentTable.is_live`) reach their station's panel whatever the focus (FT-JNT-007).
+The layout is fixed: top bar; the focused panel in the main area on the left; the radar and docked panels in a right column. A joint view is the same screen with two panels; F1/F2, hold View + LB/RB, or a click on a docked panel moves the focus (FT-JNT-001). Always-live intents (`IntentTable.is_live`) reach their station's panel whatever the focus (FT-JNT-007). In Tactical with Helm focused the cockpit flies and the KB/M fire buttons reach Weapons, which fires every claimed mount at the selected target (`WeaponsPanel.fire_claimed_at`, FT-JNT-008); with Weapons focused the mouse aims and Helm's rotation stays neutral, so flight assist holds the attitude. A joint view's pick receives the union of its stations' data (FT-JNT-005); a request chip to a station on the same screen runs as the direct action (`StationPanel.send_request`; M1 has no request chips). Toasts sit top-right of the screen (§5.0); the top bar stars the focused station.
 
 ## Common actions (§5.0, FT-STN-009)
 

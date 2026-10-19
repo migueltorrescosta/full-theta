@@ -52,7 +52,7 @@ func test_every_entry_has_a_station_def_with_its_load_tag() -> void:
 	assert_object(StationViews.def("p2")).is_null()
 
 
-# FT: FT-ARC-014, FT-NET-018, FT-NET-017
+# FT: FT-ARC-014, FT-NET-018, FT-NET-017, FT-JNT-005
 # A joint view is the union of its two stations: sections, fields, commands, claims and
 # controls; M1 offers Tactical, Systems and Ops and no other combination, plus the dev
 # entry holding all six only with the flag.

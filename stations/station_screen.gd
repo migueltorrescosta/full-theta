@@ -20,6 +20,9 @@ signal menu_requested
 const SIDE_WIDTH: float = 340.0
 const RADAR_HEIGHT: float = 300.0
 const TOP_BAR_HEIGHT: float = 40.0
+## Least height of a docked panel: top bar, radar and one docked panel fit 720p at
+## 150 % UI scale (480 px), so the screen never grows past the window.
+const DOCK_MIN_HEIGHT: float = 120.0
 
 var ctx: StationContext
 ## Station ids of the panels, in order (F1, F2, ...).
@@ -89,7 +92,7 @@ func focus(i: int) -> void:
 		if j == i:
 			p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		else:
-			p.custom_minimum_size = Vector2(0, 150)
+			p.custom_minimum_size = Vector2(0, DOCK_MIN_HEIGHT)
 		p.set_mode(j == i, j != i)
 	ctx.matcher.release_all()
 	ctx.matcher.set_context(stations, focused_station())
@@ -134,7 +137,8 @@ func _process(delta: float) -> void:
 		ctx.view.blocks.get(StationViews.Section.STATUS, {}),
 		ctx.crew.alert,
 		stations,
-		ctx.crew.mission_seconds(ctx.view.tick)
+		ctx.crew.mission_seconds(ctx.view.tick),
+		focused_station()
 	)
 	radar.set_items(ContactPicture.build(ctx), ctx.crew.selection)
 	toasts.update(now)
@@ -339,7 +343,11 @@ func _build() -> void:
 	side.add_child(_dock)
 	toasts = Toasts.new()
 	toasts.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	toasts.position = Vector2(-SIDE_WIDTH - 8, TOP_BAR_HEIGHT + 8)
+	# Top-right of the screen (§5.0), over the radar's empty corner, not the panel.
+	toasts.offset_left = -16.0
+	toasts.offset_right = -16.0
+	toasts.offset_top = TOP_BAR_HEIGHT + 8.0
+	toasts.offset_bottom = TOP_BAR_HEIGHT + 8.0
 	toasts.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toasts)

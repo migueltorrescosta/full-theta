@@ -63,9 +63,15 @@ func _init() -> void:
 
 
 ## Refreshes every field. status: the STATUS block ({} before the first snapshot);
-## stations: functional station ids (translated as "station.<id>").
+## stations: functional station ids (translated as "station.<id>"); in a joint view the
+## focused one is starred (§5.9 wireframes: "ENG*+SCI").
 func show_state(
-	ship_name: String, status: Dictionary, alert: int, stations: Array, mission_s: float
+	ship_name: String,
+	status: Dictionary,
+	alert: int,
+	stations: Array,
+	mission_s: float,
+	focused: String = ""
 ) -> void:
 	_name.text = ship_name
 	_hull.text = tr("topbar.hull") % _num(status, "hull")
@@ -76,9 +82,11 @@ func show_state(
 	chip.add_theme_color_override("font_color", Palette.color(alert_style["role"]))
 	chip.add_theme_color_override("font_hover_color", Palette.color(alert_style["role"]))
 	chip.queue_redraw()
-	_stations.text = " + ".join(
-		stations.map(func(s: Variant) -> String: return tr("station." + str(s)))
-	)
+	var names: PackedStringArray = []
+	for s: Variant in stations:
+		var star: bool = stations.size() > 1 and str(s) == focused
+		names.append(tr("station." + str(s)) + ("*" if star else ""))
+	_stations.text = " + ".join(names)
 	var secs: int = int(mission_s)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
 

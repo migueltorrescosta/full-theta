@@ -84,7 +84,9 @@ func has_request_chip() -> bool:
 	return false
 
 
-## The panel's request-chip handler (B, View+Y).
+## The panel's request-chip handler (B, View+Y). FT-JNT-005: a request to a station on
+## this same screen (ctx.crew.stations()) runs as the direct action instead of a chip
+## (Boost in a Helm+Engineering view overcharges at once). M1 has no request chips yet.
 func send_request() -> void:
 	pass
 
