@@ -98,7 +98,7 @@ func spawn_enemy(
 
 
 ## Restores one ship's state from its definition and places it again, dropping its
-## queued commands; other ships are untouched (FT-GEN-002: a destroyed ship's run state
+## queued commands; other ships are untouched (FT-MIS-017: a destroyed ship's run state
 ## resets on its own).
 func reset_ship(
 	ship_id: int,

@@ -12,7 +12,7 @@ extends RefCounted
 ##    play and every ship of a faction hostile to it is destroyed or retreated, with at
 ##    least one such ship. &"outcome" is emitted once per ship, keyed to it, with value
 ##    the RunTable.Outcome and tag &"win" or &"loss".
-## Statuses and outcomes are final for the run; SimWorld.reset_ship (FT-GEN-002)
+## Statuses and outcomes are final for the run; SimWorld.reset_ship (FT-MIS-017)
 ## restores a ship's row to IN_PLAY / NONE like every other table.
 
 

@@ -1,5 +1,5 @@
 # Full Theta command log (FT-ARC-008)
-format=AgAAAAEAAAA= # 1
+format=AgAAAAIAAAA= # 2
 seed=AgAAAAkAAAA= # 9
 build=BAAAAB0AAABnb2RvdCA0LjcuMi1zdGFibGUgKG9mZmljaWFsKQAAAA== # "godot 4.7.2-stable (official)"
 setup=GwAAAAIAAAAEAAAABgAAAHBsYXllcgAAFQAAAAsAAABtMV9jb3J2ZXR0ZQAEAAAABQAAAGVuZW15AAAAFQAAAAkAAABtMV9yYWlkZXIAAAA= # { "enemy": &"m1_raider", "player": &"m1_corvette" }

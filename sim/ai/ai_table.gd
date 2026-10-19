@@ -53,7 +53,7 @@ func is_enabled(ship_id: int) -> bool:
 	return enabled[ship_id] == 1
 
 
-## The run reset (FT-GEN-002) keeps the ship under AI control with its behaviour
+## The run reset (FT-MIS-017) keeps the ship under AI control with its behaviour
 ## numbers, which came from the EnemyDef rather than the ShipDef, and clears the rest.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	mode[ship_id] = Mode.HOLD

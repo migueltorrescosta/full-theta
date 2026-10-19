@@ -7,7 +7,7 @@ Tests: 82, manual: 9, pending: 310.
 | Id | Status | Verified by |
 |---|---|---|
 | FT-GEN-001 | pending |  |
-| FT-GEN-002 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/pvp/test_pvp.gd` |
+| FT-GEN-002 | tests | `tests/sim/pvp/test_pvp.gd` |
 | FT-GEN-003 | pending |  |
 | FT-GEN-004 | pending |  |
 | FT-GEN-005 | pending |  |
@@ -297,7 +297,7 @@ Tests: 82, manual: 9, pending: 310.
 | FT-MIS-014 | pending |  |
 | FT-MIS-015 | pending |  |
 | FT-MIS-016 | pending |  |
-| FT-MIS-017 | tests | `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
+| FT-MIS-017 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
 | FT-MIS-018 | pending |  |
 | FT-MIS-019 | pending |  |
 | FT-MIS-020 | pending |  |

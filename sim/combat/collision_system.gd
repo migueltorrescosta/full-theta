@@ -20,8 +20,9 @@ const RESTITUTION: float = 0.2
 ## Ships on course to touch within this time get a &"proximity" warning (s, FT-SIM-010).
 const WARNING_HORIZON: float = 5.0
 ## While a pair stays warnable (within PAIR_CELL and on course to touch inside the
-## horizon) the warning repeats on ticks that are a multiple of this (ticks); the first
-## one fires on the tick the pair becomes warnable.
+## horizon) the warning repeats on ticks that are a multiple of this (ticks). The first
+## one fires on the tick motion brings the pair within reach; when a velocity change
+## makes it warnable instead, it can wait up to this many ticks (stateless check).
 const WARNING_REPEAT_TICKS: int = 30
 const EMPTY: Array = []
 

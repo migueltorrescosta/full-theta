@@ -61,7 +61,7 @@ func remove_rows(rows: PackedInt32Array) -> void:
 		ttl.remove_at(r)
 
 
-## A ship's run reset drops its projectiles (FT-GEN-002); add_ship adds none.
+## A ship's run reset drops its projectiles (FT-MIS-017); add_ship adds none.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	remove_rows(rows_of(ship_id))
 

@@ -154,5 +154,5 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 71. Data thrust limits are the nominal envelope; overcharge and a one-press boost reach 1.5 times them. §4.4, FT-SIM-006. (D117)
 72. Shield tightness runs from an even spread (the spawn value) to a tight lobe; shields absorb collisions too. §4.3, FT-SIM-018, FT-SIM-019. (D118)
 73. Collisions: restitution 0.2, energy lost split half to each ship, warning 5 s ahead within 500 m. §4.1, FT-SIM-009, FT-SIM-010. (D119)
-74. An enemy has retreated once in retreat and undetected by every hostile ship. §4.5, §8.3. (D120)
+74. An enemy has retreated once in retreat and undetected by every hostile ship. §4.5, §8.3, FT-M1-012, FT-SIM-027. (D120)
 75. Pair gain is the share of the solo value saved; P1's `pair_min_gain` is 0.2. §7.4, FT-PAIR-015. (D121)

@@ -104,7 +104,7 @@ func test_from_text_rejects_bad_input() -> void:
 	assert_object(CommandLog.from_text(good + "nonsense\n")).is_null()
 	assert_object(CommandLog.from_text(good + "extra=AAAA\n")).is_null()
 	var other_format: String = good.replace(
-		CommandLog._line("format", 1), CommandLog._line("format", 2)
+		CommandLog._line("format", CommandLog.FORMAT), CommandLog._line("format", 1)
 	)
 	assert_object(CommandLog.from_text(other_format)).is_null()
 	var bogus: CommandLog = CommandLog.from_text(good)

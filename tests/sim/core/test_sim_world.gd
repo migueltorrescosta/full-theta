@@ -168,7 +168,7 @@ func test_offset_past_limit_fails_assertion() -> void:
 	)
 
 
-# FT: FT-GEN-002
+# FT: FT-MIS-017
 # Resetting one ship restores its rows from the definition, drops its queued commands
 # and leaves the others.
 func test_reset_ship_restores_only_that_ship() -> void:

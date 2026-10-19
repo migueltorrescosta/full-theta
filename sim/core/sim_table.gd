@@ -48,7 +48,7 @@ func columns() -> Array:
 
 
 ## Restores the ship's rows to their spawn values from the definition (per-ship run
-## reset, FT-GEN-002), leaving other ships' rows alone. Works for tables whose
+## reset, FT-MIS-017), leaving other ships' rows alone. Works for tables whose
 ## add_ship() appends the same rows whatever else is in the table; others override.
 func reset_ship(ship_id: int, def: ShipDef) -> void:
 	var rows: PackedInt32Array = rows_of(ship_id)

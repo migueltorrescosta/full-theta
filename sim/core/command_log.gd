@@ -2,8 +2,8 @@ class_name CommandLog
 extends RefCounted
 ## A replayable record of a run (FT-ARC-008, FT-TST-009): the seed, the build id, the
 ## setup parameters that rebuild the starting world (for M1: the player ShipDef id and
-## the EnemyDef id) and every accepted crew command with the tick it was applied on, in
-## application order. A fresh world built from the same setup, with each command
+## the EnemyDef id) and every crew command with the tick it was applied on and whether
+## it was accepted, in application order. A fresh world built from the same setup, with each command
 ## submitted right before the step of its tick, reproduces the run on the same build and
 ## platform. Pure: the caller does any file I/O with to_text() and from_text().
 ##
@@ -15,15 +15,15 @@ extends RefCounted
 ## ignores it.
 
 const HEADER: String = "# Full Theta command log (FT-ARC-008)"
-const FORMAT: int = 1
+const FORMAT: int = 2
 
 var seed_value: int = 0
 var build_id: String = ""
 ## Inputs that rebuild the starting world, e.g. {"player": &"m1_corvette",
 ## "enemy": &"m1_raider"}; values must survive var_to_bytes() (no objects).
 var setup: Dictionary = {}
-## Accepted commands as SimCommand.to_dict() (each with its "tick"), in application
-## order.
+## Crew commands as SimCommand.to_dict() (each with its "tick" and "accepted"), in
+## application order.
 var entries: Array[Dictionary] = []
 
 
@@ -81,7 +81,7 @@ static func from_text(text: String) -> CommandLog:
 ## Replays this log on a freshly built world, stepping until world.tick == end_tick:
 ## each command is submitted right before the step whose tick equals its recorded tick,
 ## so it applies on that tick (FT-TST-009). Returns the problems found, empty when every
-## command up to end_tick was accepted and stamped with its recorded tick.
+## command up to end_tick was applied on its recorded tick with its recorded acceptance.
 func replay(world: SimWorld, end_tick: int) -> PackedStringArray:
 	var problems: PackedStringArray = PackedStringArray()
 	var cmds: Array[SimCommand] = commands()

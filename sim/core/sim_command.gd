@@ -22,7 +22,8 @@ func kind() -> StringName:
 	return &""
 
 
-## Applies the command; returns false to reject it (rejected commands aren't logged).
+## Applies the command; returns false to reject it (crew commands are logged either way,
+## with the result in `accepted`).
 func apply(_world: SimWorld) -> bool:
 	return false
 

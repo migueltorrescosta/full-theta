@@ -48,7 +48,7 @@ func columns() -> Array:
 	return super() + [["detected", detected], ["identified", identified], ["numbers", numbers]]
 
 
-## Per-ship run reset (FT-GEN-002): the ship's rows as a contact drop to undetected, so
+## Per-ship run reset (FT-MIS-017): the ship's rows as a contact drop to undetected, so
 ## detection starts afresh next tick, but they keep their callsign number and known
 ## allegiance (FT-SPA-001). Its faction's knowledge of others is faction state, kept.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:

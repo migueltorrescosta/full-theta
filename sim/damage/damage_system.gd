@@ -79,9 +79,8 @@ static func effectiveness(world: SimWorld, ship_id: int, subsystem_id: StringNam
 	var r: int = world.damage.find_subsystem(ship_id, subsystem_id)
 	if r < 0:
 		return 1.0
-	return PowerSystem.curve_at(
-		_sub_def(world, ship_id, r).effectiveness, health_fraction(world, ship_id, subsystem_id)
-	)
+	var s: SubsystemDef = _sub_def(world, ship_id, r)
+	return PowerSystem.curve_at(s.effectiveness, world.damage.health[r] / s.health_max)
 
 
 ## Hull left as a share of hull_max, 0..1.
