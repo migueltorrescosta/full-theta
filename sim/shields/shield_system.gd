@@ -12,19 +12,25 @@ extends RefCounted
 ## alert (FT-SIM-031).
 static func step(world: SimWorld) -> void:
 	var t: ShieldTable = world.shields
-	for s: int in t.size():
-		if not world.kin.is_alive(s):
+	var alive: PackedByteArray = world.kin.alive
+	var strength: PackedFloat64Array = t.strength
+	var low_armed: PackedByteArray = t.low_armed
+	var track_id: PackedInt32Array = t.track_id
+	var defs: Array[ShipDef] = world.defs
+	for s: int in strength.size():
+		if alive[s] != 1:
 			continue
-		var def: ShieldDef = world.defs[s].shields
-		_track(world, s)
+		var def: ShieldDef = defs[s].shields
+		if track_id[s] >= 0:
+			_track(world, s)
 		var regen: float = def.regen_rate * power(world, s) * SimWorld.DT
-		t.strength[s] = minf(t.strength[s] + regen, def.max_strength)
-		var fraction: float = t.strength[s] / def.max_strength
-		if fraction <= def.low_alert_fraction and t.low_armed[s] == 1:
-			t.low_armed[s] = 0
+		strength[s] = minf(strength[s] + regen, def.max_strength)
+		var fraction: float = strength[s] / def.max_strength
+		if fraction <= def.low_alert_fraction and low_armed[s] == 1:
+			low_armed[s] = 0
 			world.emit(&"shield_low", s, -1, fraction)
-		elif fraction > def.low_alert_fraction and t.low_armed[s] == 0:
-			t.low_armed[s] = 1
+		elif fraction > def.low_alert_fraction and low_armed[s] == 0:
+			low_armed[s] = 1
 
 
 ## Returns the energy that passes the shields (J); the absorbed part comes off strength.
