@@ -58,7 +58,7 @@ So `sim/` never names the director or scenarios, the director and scenarios see 
 - **FT-ARC-005** Clients shall not simulate gameplay; they shall send commands and render received state and events. (v0.3 §3, D70)
 - **FT-ARC-006** The simulation shall step at a fixed 60 Hz driven by its own accumulator, not by engine physics callbacks. (D70)
 - **FT-ARC-007** The simulation shall use a custom 6DOF integrator and shall not use Godot physics bodies. (D70)
-- **FT-ARC-008** Every random draw in the simulation shall come from a seeded RNG, so a seed plus a command log, which records each accepted command with the tick it was applied on, in application order, reproduces a run on the same build and platform. (D70, plan review TECH-10)
+- **FT-ARC-008** Every random draw in the simulation shall come from a seeded RNG, so a seed plus a command log, which records each crew command, accepted or rejected, with the tick it was applied on and its result, in application order, reproduces a run on the same build and platform. (D70, plan review TECH-10, D122)
 - **FT-ARC-009** Simulation iteration order shall be stable (entities ordered by id). (D70)
 - **FT-ARC-010** Code under `sim/` and `director/` shall not extend Node, access the SceneTree or perform I/O, enforced by a lint gate that resolves `class_name` declarations to their folders and checks the §2.2 dependency rules. (D70, D103, plan review TECH-6)
 - **FT-ARC-011** Station code shall reach simulation state only through `net/`, including on the host machine. (D70)

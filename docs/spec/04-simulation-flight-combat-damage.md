@@ -14,7 +14,7 @@ Shields have one focus direction on the sphere around the ship. Engineering sets
 
 ## 4.4 Damage and repair
 
-A hit damages the subsystem nearest the impact point: the energy past the shields is split between that subsystem (a per-ship share in data) and the hull (D26, D116). Each subsystem (for example engines, thrusters, weapons, shields, sensors, reactor) takes independent damage with direct consequences (v0.3 §5). Some damage arrives as faults of unknown cause (pair P10). Engineering dispatches numbered repair crews on the cutaway; each job takes its spare parts at dispatch, and with too few parts it is refused (D27, D115). Overcharge builds heat; heat past a threshold creates faults (P1, P6). Thrust and torque limits in data are the nominal-power envelope; overcharge and a one-press boost (above the reactor cap for a data duration, limited by heat) reach up to 1.5 times them (D117). Science reveals weak points and damage-type resistances (D28).
+A hit damages the subsystem nearest the impact point: the energy past the shields is split between that subsystem (a per-ship share in data) and the hull (D26, D116); what a subsystem can't absorb, because it is destroyed or the hit exceeds its health, passes to the next-nearest live subsystem and then to the hull (D123). Each subsystem (for example engines, thrusters, weapons, shields, sensors, reactor) takes independent damage with direct consequences (v0.3 §5). Some damage arrives as faults of unknown cause (pair P10). Engineering dispatches numbered repair crews on the cutaway; each job takes its spare parts at dispatch, and with too few parts it is refused (D27, D115). Overcharge builds heat; heat past a threshold creates faults (P1, P6). Thrust and torque limits in data are the nominal-power envelope; overcharge and a one-press boost (above the reactor cap for a data duration, limited by heat) reach up to 1.5 times them (D117). Science reveals weak points and damage-type resistances (D28).
 
 ## 4.5 Enemy AI
 
@@ -41,11 +41,11 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 - **FT-SIM-017** The game shall not use beam or shield frequency matching. (D28)
 - **FT-SIM-018** Shields shall have one focus direction, set by Helm, and a total power and focus tightness, set by Engineering. (D16)
 - **FT-SIM-019** Damage absorbed by shields shall depend on shield power, focus tightness and the angle between the focus direction and the hit. (D16, P1)
-- **FT-SIM-020** A hull hit shall damage the subsystem nearest the impact point. (D26)
+- **FT-SIM-020** A hull hit shall damage the subsystem nearest the impact point and the hull, splitting the energy past the shields by a per-ship share; the share a subsystem can't absorb passes to the next-nearest live subsystem, then to the hull, so the total damage equals the energy past the shields. (D26, D116, D123)
 - **FT-SIM-021** Each subsystem shall have health, and its effectiveness shall drop with damage in a way defined in data. (v0.3 §5)
 - **FT-SIM-022** Weapons shall have damage types, and contacts shall have per-type resistances. (D28)
 - **FT-SIM-023** Contacts shall have weak points that, when hit, damage a named subsystem. (D28, P7)
-- **FT-SIM-024** Engineering shall repair subsystems by dispatching repair crews to them; each repair shall consume spare parts. (D27)
+- **FT-SIM-024** Engineering shall repair subsystems by dispatching repair crews to them; each repair shall take its spare parts when dispatched, and a dispatch without enough parts shall be refused. (D27, D115)
 - **FT-SIM-025** Faults of unknown cause shall repair slowly by default and quickly when the repair names the correct cause. (P10)
 - **FT-SIM-026** Overcharging a subsystem shall build heat, and heat past a data-defined threshold shall create a fault. (P1, P6)
 - **FT-SIM-027** Enemy AI shall support attack, keep range and retreat at low hull in milestone 1. (v0.3 §5, D72)

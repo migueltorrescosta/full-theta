@@ -2,7 +2,7 @@
 
 Repo: migueltorrescosta/full-theta (GPL-3.0). Engine: Godot 4.7.2, typed GDScript. Date: 2026-10-19.
 
-v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D121, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
+v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D123, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
 
 ## How to use this spec
 
@@ -144,7 +144,7 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 64. Free-text voice bursts beyond 4 queued lines show subtitles only. FT-AUD-015, R15. (D110)
 65. Snapshots are encoded and sent off the sim thread (amends D109). FT-NET-040, R15. (D111)
 
-### v0.5 update for D112–D121 (#5)
+### v0.5 update for D112–D123 (#5)
 
 66. A faction identifies a contact within one of its ships' identify range. §6.1, FT-SPA-001. (D112)
 67. Grid squares run A… along +X and 1… along +Z from a scenario corner; layers are rounded and omitted at 0. §6.1, FT-SPA-006. (D113)
@@ -156,3 +156,5 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 73. Collisions: restitution 0.2, energy lost split half to each ship, warning 5 s ahead within 500 m. §4.1, FT-SIM-009, FT-SIM-010. (D119)
 74. An enemy has retreated once in retreat and undetected by every hostile ship. §4.5, §8.3, FT-M1-012, FT-SIM-027. (D120)
 75. Pair gain is the share of the solo value saved; P1's `pair_min_gain` is 0.2. §7.4, FT-PAIR-015. (D121)
+76. The command log records every crew command with its result. FT-ARC-008. (D122)
+77. Hit energy a subsystem can't absorb passes to the next-nearest live subsystem, then the hull. §4.4, FT-SIM-020. (D123)
