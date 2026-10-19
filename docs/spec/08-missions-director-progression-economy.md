@@ -10,7 +10,7 @@ The director picks and parameterises scenario components by pacing and threat bu
 
 ## 8.3 Outcomes
 
-Per-ship elimination: a destroyed ship's crew is out and its run progress resets; other ships carry on (D30). Each scenario defines what an eliminated crew does; by default its players become viewers of a surviving friendly ship's main screen, or return to the lobby with a live scoreboard when none survives (D79, D91). Co-op wins on the final run objective (D30). PvP comes as three distinct scenario types (D78): a race through the same run, won by the first ship to complete the final objective; last ship standing; and two-faction teams, with co-op inside each faction (D82). A crew may flee an encounter at a cost or abandon the run (D36).
+Per-ship elimination: a destroyed ship's crew is out and its run progress resets; other ships carry on (D30). In an encounter, a ship wins once every ship of a hostile faction is destroyed or has retreated; a retreated ship stays in the world (D120). Each scenario defines what an eliminated crew does; by default its players become viewers of a surviving friendly ship's main screen, or return to the lobby with a live scoreboard when none survives (D79, D91). Co-op wins on the final run objective (D30). PvP comes as three distinct scenario types (D78): a race through the same run, won by the first ship to complete the final objective; last ship standing; and two-faction teams, with co-op inside each faction (D82). A crew may flee an encounter at a cost or abandon the run (D36).
 
 ## 8.4 Economy
 

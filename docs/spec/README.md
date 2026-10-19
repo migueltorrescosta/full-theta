@@ -2,7 +2,7 @@
 
 Repo: migueltorrescosta/full-theta (GPL-3.0). Engine: Godot 4.7.2, typed GDScript. Date: 2026-10-19.
 
-v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D111, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
+v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D121, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
 
 ## How to use this spec
 
@@ -44,7 +44,7 @@ v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D11
 | Coverage | The condition that a ship's crew picks include every functional station, with at least 3 crew players. Enables Ready/Start. |
 | Claim | A lock a player takes on a sub-control of a shared station (weapon mount, repair crew, probe, NPC conversation, scan/hack slot, Helm flight, Helm shield facing). |
 | Callsign | Per-faction short name for a contact: allegiance letter (H, U, F, N) plus a number that never changes. |
-| Clock / height / range | Spoken ship-relative direction: clock position in the deck plane, height word, range band (`H2 · 4 high · 2.3 km`). |
+| Clock / height / range | Spoken ship-relative direction: clock position in the deck plane, height word, range band (`H2 · 4 high · mid`; D114). |
 | Mark | One of up to 8 named world-anchored points per ship (Alpha–Hotel), free or attached to a contact. |
 | Ping | A rate-limited 3 s pulse plus chime on every screen of the ship, pointing at an item. |
 | Disc radar | Elite-style radar: deck-plane disc with elevation stems, range ring at the selected contact, optional side strip. |
@@ -143,3 +143,16 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 63. S9's quiet-host tick counts as the pass for R15; #11 re-verifies. R15. (D109)
 64. Free-text voice bursts beyond 4 queued lines show subtitles only. FT-AUD-015, R15. (D110)
 65. Snapshots are encoded and sent off the sim thread (amends D109). FT-NET-040, R15. (D111)
+
+### v0.5 update for D112–D121 (#5)
+
+66. A faction identifies a contact within one of its ships' identify range. §6.1, FT-SPA-001. (D112)
+67. Grid squares run A… along +X and 1… along +Z from a scenario corner; layers are rounded and omitted at 0. §6.1, FT-SPA-006. (D113)
+68. Chips show the range band, not the exact range. §6.1, FT-SPA-003. (D114)
+69. A repair job takes its parts at dispatch and is refused without enough parts; crews are numbered. §4.4, FT-SIM-024. (D115)
+70. Energy past the shields is split between the nearest subsystem (a per-ship share) and the hull. §4.4, FT-SIM-020. (D116)
+71. Data thrust limits are the nominal envelope; overcharge and a one-press boost reach 1.5 times them. §4.4, FT-SIM-006. (D117)
+72. Shield tightness runs from an even spread (the spawn value) to a tight lobe; shields absorb collisions too. §4.3, FT-SIM-018, FT-SIM-019. (D118)
+73. Collisions: restitution 0.2, energy lost split half to each ship, warning 5 s ahead within 500 m. §4.1, FT-SIM-009, FT-SIM-010. (D119)
+74. An enemy has retreated once in retreat and undetected by every hostile ship. §4.5, §8.3. (D120)
+75. Pair gain is the share of the solo value saved; P1's `pair_min_gain` is 0.2. §7.4, FT-PAIR-015. (D121)
