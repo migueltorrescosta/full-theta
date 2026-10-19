@@ -24,6 +24,15 @@ extends RefCounted
 ##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
 ##   --no-beacon          don't broadcast on the LAN (tests).
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
+## Load gate only (#11, D160, D161; tools/l4/load.sh), never for play:
+##   --load-ships N       N crewable ships of one faction plus AI raiders (LoadEncounter)
+##                        instead of the M1 encounter [0: off].
+##   --load-world N       total ships with --load-ships, raiders included [12].
+##   --probe-out PATH     record the tick and net-thread costs (LoadProbe) and write
+##                        them to PATH; the server quits when the window ends.
+##   --probe-picks N      the window waits for N sessions with a pick [64].
+##   --probe-warmup S     seconds between all picks plus a Start and the window [3].
+##   --probe-window S     length of the measured window [60].
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 ## Headless frame pacing (S3 "Server loop"): Godot otherwise sleeps 6.9 ms a frame in
@@ -47,6 +56,12 @@ var http_root: String = ""
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
+var load_ships: int = 0
+var load_world: int = 12
+var probe_out: String = ""
+var probe_picks: int = 64
+var probe_warmup: float = 3.0
+var probe_window: float = 60.0
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -86,7 +101,7 @@ func parse_args(args: PackedStringArray) -> bool:
 
 func _set_flag(flag: String, value: String) -> bool:
 	match flag:
-		"--port", "--seed", "--discovery-port":
+		"--port", "--seed", "--discovery-port", "--load-ships", "--load-world", "--probe-picks":
 			if not value.is_valid_int():
 				push_error("%s needs a whole number" % flag)
 				return false
@@ -95,9 +110,11 @@ func _set_flag(flag: String, value: String) -> bool:
 					port = value.to_int()
 				"--seed":
 					seed_value = value.to_int()
-				_:
+				"--discovery-port":
 					discovery_port = value.to_int()
-		"--grace-s", "--idle-exit-min", "--run-for":
+				_:
+					set(flag.trim_prefix("--").replace("-", "_"), value.to_int())
+		"--grace-s", "--idle-exit-min", "--run-for", "--probe-warmup", "--probe-window":
 			if not value.is_valid_float():
 				push_error("%s needs a number" % flag)
 				return false
@@ -110,6 +127,8 @@ func _set_flag(flag: String, value: String) -> bool:
 			pid_file = value
 		"--http-root":
 			http_root = value
+		"--probe-out":
+			probe_out = value
 		"--name":
 			server_name = value
 		_:
@@ -127,8 +146,15 @@ func make_server() -> NetServer:
 		push_error("missing M1 definitions (m1_corvette, m1_raider)")
 		return null
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
+	if load_ships > 0:
+		encounter = LoadEncounter.new(seed_value, "server", player, enemy, load_ships, load_world)
 	var server: NetServer = NetServer.new()
 	server.run_for = run_for
+	if probe_out != "":
+		server.probe = LoadProbe.new(probe_out)
+		server.probe.expect_picks = probe_picks
+		server.probe.warmup_s = probe_warmup
+		server.probe.window_s = probe_window
 	var err: Error = server.start(encounter, port, bind_address, dev_all_stations, host_secret)
 	if err != OK:
 		push_error("server failed to start on %s:%d: %s" % [bind_address, port, error_string(err)])

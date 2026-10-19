@@ -32,6 +32,8 @@ var http: StaticServer
 var http_us_max: int = 0
 ## LAN discovery beacon, or null when off (start_beacon).
 var beacon: LanBeacon
+## The load gate's probe (`--probe-out`, D161), or null; set before start().
+var probe: LoadProbe
 
 var _next_snapshot_tick: int = 0
 ## While the sim doesn't step (lobby, pause), when the next state copy goes out (us).
@@ -53,6 +55,7 @@ func start(
 	session = ServerSession.new(transport, world)
 	session.dev_all = dev_all
 	session.host_secret = host_secret
+	transport.probe = probe != null
 	var err: Error = transport.start(port, address)
 	if err != OK:
 		return err
@@ -124,23 +127,38 @@ func host_session() -> int:
 func _process(delta: float) -> void:
 	if session == null:
 		return
+	var s0: PackedInt64Array = probe.sched() if probe != null else PackedInt64Array()
 	var now_us: int = Time.get_ticks_usec()
+	# Stamps for the probe: start, after process, after the sim, after after_ticks,
+	# after the capture.
+	var t: PackedInt64Array = PackedInt64Array([now_us, 0, 0, 0, 0])
 	session.process(now_us)
+	t[1] = Time.get_ticks_usec()
+	var ticks: int = 0
 	# The sim steps only after a Start and outside a pause (FT-NET-034); snapshots keep
 	# flowing at 30 Hz of wall clock meanwhile, so joining and rejoining clients get theirs.
 	if not session.sim_running():
 		if now_us >= _next_idle_post_us:
-			transport.post_state(SimCopy.capture(world))
+			transport.post_state(SimCopy.capture(world), LoadProbe.unix_us())
 			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / 60
 	else:
-		var t0: int = Time.get_ticks_usec()
-		var ticks: int = world.advance(delta)
+		ticks = world.advance(delta)
+		t[2] = Time.get_ticks_usec()
+		t[3] = t[2]
+		t[4] = t[2]
 		if ticks > 0:
-			tick_us_max = maxi(tick_us_max, (Time.get_ticks_usec() - t0) / ticks)
+			tick_us_max = maxi(tick_us_max, (t[2] - t[1]) / ticks)
 			session.after_ticks(world.drain_events())
+			t[3] = Time.get_ticks_usec()
 			if world.tick >= _next_snapshot_tick:
-				transport.post_state(SimCopy.capture(world))
+				transport.post_state(SimCopy.capture(world), LoadProbe.unix_us())
 				_next_snapshot_tick = world.tick + SNAPSHOT_TICKS
+			t[4] = Time.get_ticks_usec()
+	if probe != null:
+		if ticks > 0:
+			probe.tick_frame(t, ticks, s0, probe.sched())
+		if probe.update(_picks(), not session.launched.is_empty()):
+			get_tree().quit(0)
 	_poll_lan_services()
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)
@@ -159,8 +177,26 @@ func _poll_lan_services() -> void:
 		beacon.poll(Time.get_ticks_usec())
 
 
+## Sessions holding a pick (the probe waits for all of them).
+func _picks() -> int:
+	var n: int = 0
+	for s: NetSession in session.by_id.values():
+		if s.has_pick():
+			n += 1
+	return n
+
+
 func _exit_tree() -> void:
 	transport.stop()
+	if probe != null:
+		var sessions: Dictionary = {}
+		for s: NetSession in session.by_id.values():
+			sessions[s.id] = {"name": s.name, "ship": s.ship, "entry": s.entry}
+		probe.write(
+			transport.probe_dump(),
+			sessions,
+			{"ships": world.ship_count(), "tick": world.tick, "tick_us_max": tick_us_max}
+		)
 	if http != null:
 		http.stop()
 	if beacon != null:

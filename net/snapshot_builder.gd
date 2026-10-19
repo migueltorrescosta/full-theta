@@ -25,6 +25,10 @@ var proj_range_m: float = ProjectilesSection.DEFAULT_RANGE_M
 ## Counters since the last take_counts(): snapshot builds, section updates, view-key
 ## messages assembled (delta and full).
 var counts: Dictionary = {}
+## When true, build() adds its time per part to part_us (the load probe, D161): index 0
+## the near sets and orientation models, then one per StationViews.Section kind (1..9).
+var time_parts: bool = false
+var part_us: PackedInt64Array = PackedInt64Array()
 
 var _world: SimWorld
 ## "kind:owner" -> SnapshotSection.
@@ -71,6 +75,7 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 	# Near sets first: one orientation model per faction serves all its ships.
 	var near_sets: Dictionary = {}
 	var unions: Dictionary = {}
+	var t0: int = Time.get_ticks_usec() if time_parts else 0
 	for ship: int in near_ships:
 		var f: int = world.faction_of(ship)
 		var section: NearSection = _sections[_skey(StationViews.Section.NEAR, ship)]
@@ -79,6 +84,12 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 		(unions.get_or_add(f, {}) as Dictionary).merge(near_sets[ship])
 	for f: int in unions:
 		_orient_of(f).update(world, unions[f])
+	if time_parts:
+		if part_us.size() < 10:
+			part_us.resize(10)
+		var t1: int = Time.get_ticks_usec()
+		part_us[0] += t1 - t0
+		t0 = t1
 	for skey: String in _sections:
 		var section: SnapshotSection = _sections[skey]
 		if section is OwnershipSection:
@@ -87,6 +98,10 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 			_deltas[skey] = (section as NearSection).update_members(world, near_sets[section.owner])
 		else:
 			_deltas[skey] = section.update(world)
+		if time_parts:
+			var t1: int = Time.get_ticks_usec()
+			part_us[section.kind] += t1 - t0
+			t0 = t1
 	counts["builds"] += 1
 	counts["section_updates"] += _sections.size()
 

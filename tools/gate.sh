@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Local gate (FT-TST-002, FT-TST-005): imports the project, then runs tiers.
-#   tools/gate.sh [l0|l1|l2|l3|l4|l5|l6|ci|all]... [--update-baselines]   (default: ci)
+#   tools/gate.sh [l0|l1|l2|l3|l4|l4load|l5|l6|ci|all]... [--update-baselines]   (default: ci)
 # ci = the tiers CI runs (l0 l1; l1 runs every test, tests/net included); all = every
-# implemented tier (l0 l1 l4 l5 l6). l3 runs only the in-process network tests (tests/net),
-# pinned to 2 cores like a CI runner. l4 runs a server and 3 client processes on 2 cores
-# (tools/l4/run.sh).
+# implemented tier (l0 l1 l4 l4load l5 l6). l3 runs only the in-process network tests
+# (tests/net), pinned to 2 cores like a CI runner. l4 runs a server and 3 client processes
+# on 2 cores (tools/l4/run.sh). l4load is the 64-connection load gate, fugaku only: the
+# server on 2 cores, 64 clients on other cores (tools/l4/load.sh, about 2-3 minutes).
 # --update-baselines makes l5 regenerate tests/visual/baselines/ instead of diffing.
 # Prints the commit and per-tier results as a block for the PR body.
 set -uo pipefail
@@ -15,9 +16,9 @@ tiers=()
 l5_args=()
 for arg in "$@"; do
   case $arg in
-    l0 | l1 | l3 | l4 | l5 | l6) tiers+=("$arg") ;;
+    l0 | l1 | l3 | l4 | l4load | l5 | l6) tiers+=("$arg") ;;
     ci) tiers+=(l0 l1) ;;
-    all) tiers+=(l0 l1 l4 l5 l6) ;;
+    all) tiers+=(l0 l1 l4 l4load l5 l6) ;;
     --update-baselines) l5_args+=(--update-baselines) ;;
     l2) echo "gate: tier $arg is not implemented yet" >&2; exit 2 ;;
     *) echo "gate: unknown tier $arg (use l0..l6, ci or all)" >&2; exit 2 ;;
@@ -53,6 +54,10 @@ l3() {
 # L4: a server and 3 headless client processes on 2 cores, driven by intent files;
 # logs in build/l4/<run>/ (tools/l4/run.sh).
 l4() { tools/l4/run.sh; }
+
+# L4 load gate (#11): 6 ships, 64 connections, connection 65 refused; budgets checked by
+# tools/l4/load_check.py; logs and summary.md in build/l4load/<run>/.
+l4load() { tools/l4/load.sh; }
 
 # L5: screenshots under Xvfb with llvmpipe, diffed against tests/visual/baselines/
 # (tools/l5.py; fugaku only, needs xvfb).
