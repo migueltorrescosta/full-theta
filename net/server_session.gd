@@ -33,7 +33,7 @@ var world: SimWorld
 var sessions: NetSessions = NetSessions.new()
 var claims: NetClaims = NetClaims.new()
 var dev_all: bool = false
-## --host-secret (D127): a client presenting it in Hello is the host; "" for none.
+## The host secret (D127): a client presenting it in Hello is the host; "" for none.
 var host_secret: String = ""
 ## Most sessions connected at once (FT-NET-014; T046 owns the rule).
 var max_sessions: int = 64

@@ -25,7 +25,7 @@ var lapsed: bool = false
 var last_ship: int = -1
 var last_entry: String = ""
 var last_claims: Array[String] = []
-## Presented the server's --host-secret in Hello (D127): the host client.
+## Presented the server's host secret in Hello (D127): the host client.
 var is_host: bool = false
 ## Command rate limit (FT-NET-006).
 var bucket: NetTokenBucket

@@ -6,9 +6,10 @@ extends RefCounted
 ##
 ## GET and HEAD only, files from one flat folder. Prefers `<file>.gz` with
 ## `Content-Encoding: gzip` when the request accepts gzip. Sends an ETag with
-## `Cache-Control: no-cache`, so a reload revalidates and gets 304. Serves a
-## single byte range on uncompressed files (Safari fetches video by range).
-## Keeps connections alive. `poll()` does bounded work: it stops once
+## `Cache-Control: no-cache`, so a reload revalidates and gets 304. No byte
+## ranges (#9 re-adds them, and video/mp4, if Safari's keep-awake video needs
+## them). Keeps
+## connections alive. `poll()` does bounded work: it stops once
 ## `budget_us` has passed, and each connection writes at most `slice` bytes
 ## per call, read from the file as it goes, so a 30 MB download never blocks
 ## the caller's loop.
@@ -28,7 +29,6 @@ const MIME: Dictionary = {
 	"ico": "image/x-icon",
 	"json": "application/json",
 	"webm": "video/webm",
-	"mp4": "video/mp4",
 	"txt": "text/plain; charset=utf-8",
 }
 
@@ -37,6 +37,9 @@ class Conn:
 	extends RefCounted
 	var tcp: StreamPeerTCP
 	var inbuf: PackedByteArray = PackedByteArray()
+	## Bytes of inbuf already searched for the end of the head, so each poll scans
+	## only what arrived since (FT-NET-039: an 8 KiB peer can't cost 8 KiB a frame).
+	var scanned: int = 0
 	var pending: PackedByteArray = PackedByteArray()
 	var file: FileAccess
 	var remaining: int = 0
@@ -136,11 +139,13 @@ func _service(c: Conn, now_us: int) -> bool:
 	if c.inbuf.size() > MAX_REQUEST:
 		return false
 	if not c.writing:
-		var end: int = _header_end(c.inbuf)
+		var end: int = _header_end(c.inbuf, c.scanned)
 		if end < 0:
+			c.scanned = maxi(0, c.inbuf.size() - 3)
 			return now_us - c.last_us < IDLE_US
 		var head: String = c.inbuf.slice(0, end).get_string_from_utf8()
 		c.inbuf = c.inbuf.slice(end + 4)
+		c.scanned = 0
 		_respond(c, parse_request(head))
 	if c.writing:
 		c.last_us = now_us
@@ -220,28 +225,14 @@ func _respond(c: Conn, req: Dictionary) -> void:
 		not_modified += 1
 		_head(c, 304, "Not Modified", out, 0)
 		return
-	var status: int = 200
-	var reason: String = "OK"
-	var first: int = 0
-	var length: int = size
 	if gz:
 		gzip_responses += 1
 		out.append("Content-Encoding: gzip")
-	else:
-		out.append("Accept-Ranges: bytes")
-		var span: Vector2i = parse_range(headers.get("range", ""), size)
-		if span.x >= 0:
-			status = 206
-			reason = "Partial Content"
-			first = span.x
-			length = span.y - span.x + 1
-			out.append("Content-Range: bytes %d-%d/%d" % [span.x, span.y, size])
-	out.append("Content-Length: %d" % length)
-	_head(c, status, reason, out, length if is_get else 0)
-	if is_get and length > 0:
-		file.seek(first)
+	out.append("Content-Length: %d" % size)
+	_head(c, 200, "OK", out, size if is_get else 0)
+	if is_get and size > 0:
 		c.file = file
-		c.remaining = length
+		c.remaining = size
 
 
 ## An error response. A HEAD response carries the GET headers but no body:
@@ -274,11 +265,14 @@ func _head(c: Conn, status: int, reason: String, lines: Array[String], body_byte
 	c.file = null
 
 
-static func _header_end(buf: PackedByteArray) -> int:
-	for i: int in range(maxi(0, buf.size() - 3)):
-		if buf[i] == 13 and buf[i + 1] == 10 and buf[i + 2] == 13 and buf[i + 3] == 10:
-			return i
-	return -1
+## Index of the blank line ending a request head ("\r\n\r\n") at or after `from`,
+## or -1. A native search: about 50 us for 8 KiB on fugaku, whatever the bytes (a
+## GDScript byte loop took 2.4 ms on 8 KiB of line feeds). A NUL byte ends one
+## search early; the head is then found in a later poll, or the connection closes on
+## MAX_REQUEST or IDLE_US.
+static func _header_end(buf: PackedByteArray, from: int = 0) -> int:
+	var at: int = buf.slice(from).get_string_from_ascii().find("\r\n\r\n")
+	return from + at if at >= 0 else -1
 
 
 ## Parses a request head (without the blank line). Returns {} if malformed,
@@ -324,28 +318,3 @@ static func accepts_gzip(value: String) -> bool:
 					return false
 			return true
 	return false
-
-
-## Parses a single "bytes=a-b", "bytes=a-" or "bytes=-n" range against `size`.
-## Returns (first, last) inclusive, or (-1, -1) to send the whole file.
-static func parse_range(value: String, size: int) -> Vector2i:
-	if not value.begins_with("bytes=") or value.contains(",") or size == 0:
-		return Vector2i(-1, -1)
-	var spec: String = value.substr(6).strip_edges()
-	var dash: int = spec.find("-")
-	if dash < 0:
-		return Vector2i(-1, -1)
-	var a: String = spec.left(dash)
-	var b: String = spec.substr(dash + 1)
-	if a == "":
-		if not b.is_valid_int() or int(b) <= 0:
-			return Vector2i(-1, -1)
-		return Vector2i(maxi(0, size - int(b)), size - 1)
-	if not a.is_valid_int() or int(a) >= size:
-		return Vector2i(-1, -1)
-	var last: int = size - 1
-	if b != "":
-		if not b.is_valid_int() or int(b) < int(a):
-			return Vector2i(-1, -1)
-		last = mini(int(b), size - 1)
-	return Vector2i(int(a), last)

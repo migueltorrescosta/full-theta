@@ -13,6 +13,10 @@ extends RefCounted
 ## the page is a secure context. Browsers release a wake lock and pause the
 ## video when the page is hidden, so both are taken again when it becomes
 ## visible, until `stop()`.
+##
+## Lives with the web build (app/web/), which the packaging strand owns. The
+## server's StaticServer serves keepawake.webm as video/webm without byte ranges;
+## #9 re-adds ranges (and mp4) if Safari needs them for it.
 
 const START_JS: String = """
 (function () {

@@ -451,3 +451,23 @@ func _publish(inbound: Array) -> void:
 	_stats["outboxes"] = outboxes
 	_stats["snapshot_seq"] = _snap_seq
 	_mutex.unlock()
+
+
+## Open WebSocket connections, Hello or not, as of the last stats() publish (lags the
+## net thread by up to STATS_INTERVAL_US). Reads under the mutex without copying.
+func open_connections() -> int:
+	_mutex.lock()
+	var n: int = (_stats.get("conns", {}) as Dictionary).size()
+	_mutex.unlock()
+	return n
+
+
+## Open connections bound to a session (past Hello), as of the last stats() publish.
+func bound_connections() -> int:
+	var n: int = 0
+	_mutex.lock()
+	for s: Dictionary in (_stats.get("conns", {}) as Dictionary).values():
+		if s["session"] >= 0:
+			n += 1
+	_mutex.unlock()
+	return n

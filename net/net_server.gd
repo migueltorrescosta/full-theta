@@ -75,14 +75,16 @@ func start_http(root: String) -> Error:
 	return err
 
 
-## Broadcasts this server on the LAN once a second (FT-NET-012). `destinations` are the
-## addresses the datagram goes to (tests use loopback). Call after start().
+## Broadcasts this server on the LAN once a second (FT-NET-012), with HTTP port 0
+## when start_http() wasn't called (or failed). `destinations` are the addresses the
+## datagram goes to (tests use loopback). Call after start(), and after start_http().
+## ServerMain calls it only when bound to a non-loopback address.
 func start_beacon(
 	server_name: String,
 	discovery_port: int = LanBeacon.DISCOVERY_PORT,
 	destinations: PackedStringArray = [LanBeacon.BROADCAST_ADDRESS]
 ) -> Error:
-	var http_port: int = http.local_port() if http != null else port() - 1
+	var http_port: int = http.local_port() if http != null else 0
 	beacon = LanBeacon.new(NetProtocol.PROTOCOL_VERSION, server_name, port(), http_port)
 	beacon.player_cap = session.max_sessions
 	var err: Error = beacon.start(discovery_port, destinations)
@@ -91,10 +93,16 @@ func start_beacon(
 	return err
 
 
-## Open WebSocket connections, including ones that haven't said Hello yet (the idle
-## exit counts these; FT-NET-003). Lags the net thread by up to 20 ms.
+## Open WebSocket connections, including ones that haven't said Hello yet. Lags the
+## net thread by up to 20 ms.
 func connections() -> int:
-	return (transport.stats().get("conns", {}) as Dictionary).size()
+	return transport.open_connections()
+
+
+## Connections bound to a session: what keeps the idle exit away (FT-NET-003), so a
+## socket that never says Hello doesn't keep the server up. Lags by up to 20 ms.
+func bound_connections() -> int:
+	return transport.bound_connections()
 
 
 ## Sessions with a connected client.
@@ -107,8 +115,10 @@ func players() -> int:
 
 
 ## True while any session exists, connected or within its reconnect grace: a lobby
-## with players or a run, which a relaunched host may rejoin (TECH-8). PROVISIONAL:
-## T043 may narrow it to a started run.
+## with players or a run. One meaning for both uses: the pid file's session_active (a
+## relaunched host offers to rejoin, or asks before terminating, rather than killing
+## a server others are on; TECH-8) and the beacon's flag. A started run is not the
+## test: a lobby with players must not be killed without asking either.
 func session_active() -> bool:
 	return not session.by_id.is_empty()
 

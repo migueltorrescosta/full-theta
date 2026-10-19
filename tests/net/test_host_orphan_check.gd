@@ -168,3 +168,33 @@ func test_an_orphan_with_a_session_offers_rejoin_with_the_stored_token() -> void
 	while OrphanCheck.process_alive(pid) and Time.get_ticks_msec() < until:
 		OS.delay_msec(5)
 	assert_bool(OrphanCheck.process_alive(pid)).is_false()
+
+
+# FT: FT-NET-003
+# Pid reuse between the check and the player's answer: terminate() identifies the
+# process again right before the kill, so an unrelated program that took the pid
+# lives; only our server is killed.
+func test_terminate_kills_only_our_server() -> void:
+	if OS.get_name() != "Linux":
+		return
+	var server: int = _fake_server()
+	var info: ServerPidFile = _record(true)
+	info.pid = server
+	info.save(PID_FILE)
+	var check: OrphanCheck = OrphanCheck.inspect(PID_FILE, TOKEN_FILE)
+	assert_int(check.action).is_equal(OrphanCheck.Action.OFFER_TERMINATE)
+	var other: int = OS.create_process("sleep", ["30"])
+	_children.append(other)
+	check.info.pid = other  # the server exited and the pid went to `sleep`
+	check.terminate()
+	OS.delay_msec(200)
+	assert_bool(OrphanCheck.process_alive(other)).is_true()
+	assert_bool(FileAccess.file_exists(PID_FILE)).is_false()
+	assert_bool(OrphanCheck.kill_if_ours(other, OS.get_executable_path())).is_false()
+	assert_bool(OrphanCheck.kill_if_ours(server, "/another/install/full-theta")).is_false()
+	assert_bool(OrphanCheck.process_alive(server)).is_true()
+	assert_bool(OrphanCheck.kill_if_ours(server, OS.get_executable_path())).is_true()
+	var until: int = Time.get_ticks_msec() + 2000
+	while OrphanCheck.process_alive(server) and Time.get_ticks_msec() < until:
+		OS.delay_msec(5)
+	assert_bool(OrphanCheck.process_alive(server)).is_false()

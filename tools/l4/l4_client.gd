@@ -801,18 +801,19 @@ func _do_host_spawn(step: Dictionary) -> Result:
 	if _host == null:
 		_adopt_host(HostSession.new(client_name))
 		_host.launcher.pid_file = str(_arg(step, "pid_file", _path_file("server.pid.json")))
-		var flags: PackedStringArray = ["--no-beacon"]
+		var options: HostSession.Options = HostSession.Options.new("127.0.0.1")
+		options.port = int(_arg(step, "port", 0))
+		options.beacon = false
 		if _arg(step, "grace") != null:
-			flags.append_array(["--grace-s", str(_arg(step, "grace"))])
-		_host.launcher.extra_server_args = flags
-		if _host.host(int(_arg(step, "port", 0))) != OK:
+			options.grace_s = str(_arg(step, "grace")).to_float()
+		if _host.host(options) != OK:
 			return _fail("HostSession.host: %s" % _host.error)
 		_line({"ev": "note", "msg": "spawned server pid %d" % _host.launcher.pid})
 	if _host.state == HostSession.State.FAILED:
 		return _fail("HostSession: %s" % _host.error)
 	if not _host.is_joined():
 		return _wait("host session %s" % HostSession.State.keys()[_host.state])
-	url = "ws://%s:%d" % [HostSession.ADDRESS, _host.launcher.port]
+	url = "ws://%s:%d" % [_host.join_address(), _host.launcher.port]
 	if _arg(step, "publish") != null:
 		var f: FileAccess = FileAccess.open(
 			_path_file("sig.%s" % _arg(step, "publish")), FileAccess.WRITE
@@ -848,7 +849,7 @@ func _do_orphan_rejoin(step: Dictionary) -> Result:
 		return _fail("HostSession: %s" % _host.error)
 	if not _host.is_joined():
 		return _wait("host session %s" % HostSession.State.keys()[_host.state])
-	url = "ws://%s:%d" % [HostSession.ADDRESS, _host.launcher.port]
+	url = "ws://%s:%d" % [_host.join_address(), _host.launcher.port]
 	return Result.DONE
 
 

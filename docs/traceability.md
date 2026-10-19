@@ -42,7 +42,7 @@ Tests: 138, manual: 11, pending: 252.
 | FT-ARC-020 | tests | `tests/sim/run/test_run_reset.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-022 | pending |  |
-| FT-NET-001 | tests | `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_net_server_main.gd` |
+| FT-NET-001 | tests | `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-002 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-003 | tests | `tests/net/test_host_flow.gd`, `tests/net/test_host_idle_exit_timer.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_orphan_check.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-004 | tests | `tests/net/test_net_codec.gd`, `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
@@ -54,7 +54,7 @@ Tests: 138, manual: 11, pending: 252.
 | FT-NET-010 | tests | `tests/net/test_net_stations_filter.gd` |
 | FT-NET-011 | tests | `tests/net/test_net_protocol.gd`, `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-012 | tests | `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_server.gd`, `tests/net/test_net_server_main.gd` |
-| FT-NET-013 | tests | `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_join_address.gd`, `tests/net/test_lan_server.gd` |
+| FT-NET-013 | tests | `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_parse_address.gd`, `tests/net/test_lan_server.gd` |
 | FT-NET-014 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_net_reconnect_l3.gd` |
 | FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd` |
 | FT-NET-016 | tests | `tests/net/test_net_lobby_l3.gd` |
@@ -71,7 +71,7 @@ Tests: 138, manual: 11, pending: 252.
 | FT-NET-027 | tests | `tests/net/test_net_reconnect_l3.gd` |
 | FT-NET-028 | pending |  |
 | FT-NET-029 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd` |
-| FT-NET-030 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tests/net/test_net_server_main.gd` |
+| FT-NET-030 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd` |
 | FT-NET-031 | tests | `tests/net/test_lan_no_internet.gd` |
 | FT-NET-032 | pending |  |
 | FT-NET-033 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_resync.gd` |

@@ -1,11 +1,11 @@
 extends GdUnitTestSuite
-## T047: manual IP join (FT-NET-013). JoinAddress.parse turns typed input into a
+## T047: manual IP join (FT-NET-013). LanBrowser.parse_address turns typed input into a
 ## ws:// URL with the default WebSocket port, or a reason.
 
 
 # FT: FT-NET-013
 func test_accepted_addresses() -> void:
-	var d: int = JoinAddress.DEFAULT_WS_PORT
+	var d: int = NetProtocol.DEFAULT_WS_PORT
 	var cases: Array[Array] = [
 		["192.168.1.20", "ws://192.168.1.20:%d" % d],
 		["  10.0.0.7  ", "ws://10.0.0.7:%d" % d],
@@ -23,14 +23,14 @@ func test_accepted_addresses() -> void:
 		["host:65535", "ws://host:65535"],
 	]
 	for c: Array in cases:
-		var r: JoinAddress = JoinAddress.parse(c[0])
+		var r: LanBrowser.Address = LanBrowser.parse_address(c[0])
 		assert_bool(r.ok).override_failure_message("%s: %s" % [c[0], r.error]).is_true()
 		assert_str(r.url).override_failure_message(c[0]).is_equal(c[1])
 
 
 # FT: FT-NET-013
 func test_default_port_parameter() -> void:
-	assert_str(JoinAddress.parse("10.1.2.3", 1234).url).is_equal("ws://10.1.2.3:1234")
+	assert_str(LanBrowser.parse_address("10.1.2.3", 1234).url).is_equal("ws://10.1.2.3:1234")
 
 
 # FT: FT-NET-013
@@ -64,7 +64,7 @@ func test_rejected_addresses_have_a_reason() -> void:
 		"x".repeat(64),
 	]
 	for s: String in bad:
-		var r: JoinAddress = JoinAddress.parse(s)
+		var r: LanBrowser.Address = LanBrowser.parse_address(s)
 		assert_bool(r.ok).override_failure_message("accepted %s" % s).is_false()
 		assert_str(r.error).override_failure_message("no reason for %s" % s).is_not_empty()
 		assert_str(r.url).is_empty()

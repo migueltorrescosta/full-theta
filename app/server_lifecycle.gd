@@ -3,7 +3,8 @@ extends Node
 ## The server process's housekeeping around NetServer (FT-NET-003, TECH-8): it writes
 ## the pid file once the server listens, rewrites its session_active flag when a
 ## session starts or ends, removes it on a clean exit, and quits after --idle-exit-min
-## minutes without connections (wall clock, IdleExitTimer). It also logs when the host
+## minutes without connected players, that is connections with a session (wall
+## clock, IdleExitTimer; NetServer.bound_connections()). It also logs when the host
 ## client (D127) joins or leaves. app/main.gd adds it next to the NetServer; it runs
 ## after the server in the frame (process_priority 1).
 
@@ -45,8 +46,8 @@ func _process(_delta: float) -> void:
 	if host != _host:
 		_host = host
 		print("server: host %s" % ("left" if host < 0 else "is session %d" % host))
-	if idle.update(server.connections(), Time.get_unix_time_from_system()):
-		print("server: no connections for %.2f min, exiting" % (idle.limit_s / 60.0))
+	if idle.update(server.bound_connections(), Time.get_unix_time_from_system()):
+		print("server: no connected players for %.2f min, exiting" % (idle.limit_s / 60.0))
 		idle = IdleExitTimer.new(0.0)
 		on_idle_exit.call()
 

@@ -168,7 +168,7 @@ static func hello_version(data: PackedByteArray) -> int:
 
 
 ## host_secret is "" unless the client is the host that started the server with
-## --host-secret (D127).
+## its secret (D127; FT_HOST_SECRET with --host-secret-env).
 static func hello(
 	token: String, name: String, kind: String, host_secret: String = ""
 ) -> PackedByteArray:
