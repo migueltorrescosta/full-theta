@@ -26,6 +26,16 @@ extends RefCounted
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
 ##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
 ##                        before launch and Welcome carries it (FT-AUD-013, D41).
+## Load gate only (#11, D160, D161; tools/l4/load.sh), never for play; refused in a
+## release build unless FT_DEV is set:
+##   --load-ships N       N crewable ships of one faction plus AI raiders (LoadEncounter)
+##                        instead of the M1 encounter [0: off].
+##   --load-world N       total ships with --load-ships, raiders included [12].
+##   --probe-out PATH     record the tick and net-thread costs (LoadProbe) and write
+##                        them to PATH; the server quits when the window ends.
+##   --probe-picks N      the window waits for N sessions with a pick [64].
+##   --probe-warmup S     seconds between all picks plus a Start and the window [3].
+##   --probe-window S     length of the measured window [60].
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
@@ -34,6 +44,17 @@ const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
 ## 2 ms of due without spinning. Provisional: see docs/protocol.md, Rates and limits.
 const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
+## The load gate's flags (dev and test only) and the variable that allows them in a
+## release build.
+const LOAD_FLAGS: Array[String] = [
+	"--load-ships",
+	"--load-world",
+	"--probe-out",
+	"--probe-picks",
+	"--probe-warmup",
+	"--probe-window"
+]
+const DEV_ENV: String = "FT_DEV"
 ## The beacon's default server name (provisional: see docs/protocol.md, Rates and limits).
 const DEFAULT_NAME: String = "Full Theta server"
 
@@ -51,6 +72,12 @@ var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
 var language: String = I18n.LANGUAGES[0]
+var load_ships: int = 0
+var load_world: int = 12
+var probe_out: String = ""
+var probe_picks: int = 64
+var probe_warmup: float = 3.0
+var probe_window: float = 60.0
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -85,27 +112,68 @@ func parse_args(args: PackedStringArray) -> bool:
 	if discovery_port <= 0 or discovery_port > 65535:
 		push_error("--discovery-port must be 1..65535")
 		return false
+	return _check_load_flags(args)
+
+
+## The load gate's flags (D160, D161) are for dev and test builds only, and each needs
+## its companion: refused in a release build unless FT_DEV is set, and with a clear
+## error instead of being ignored.
+func _check_load_flags(args: PackedStringArray) -> bool:
+	var given: Array[String] = []
+	for flag: String in LOAD_FLAGS:
+		if args.has(flag):
+			given.append(flag)
+	if given.is_empty():
+		return true
+	if not OS.is_debug_build() and OS.get_environment(DEV_ENV) == "":
+		push_error("%s: dev and test only (debug build or %s set)" % [given, DEV_ENV])
+		return false
+	if load_ships < 0 or (args.has("--load-world") and load_ships == 0):
+		push_error("--load-world needs --load-ships N (N >= 1)")
+		return false
+	for flag: String in ["--probe-picks", "--probe-warmup", "--probe-window"]:
+		if args.has(flag) and probe_out == "":
+			push_error("%s needs --probe-out PATH" % flag)
+			return false
 	return true
 
 
 func _set_flag(flag: String, value: String) -> bool:
 	match flag:
-		"--port", "--seed", "--discovery-port":
+		"--port", "--seed", "--discovery-port", "--load-ships", "--load-world", "--probe-picks":
 			if not value.is_valid_int():
 				push_error("%s needs a whole number" % flag)
 				return false
+			var n: int = value.to_int()
 			match flag:
 				"--port":
-					port = value.to_int()
+					port = n
 				"--seed":
-					seed_value = value.to_int()
-				_:
-					discovery_port = value.to_int()
-		"--grace-s", "--idle-exit-min", "--run-for":
+					seed_value = n
+				"--discovery-port":
+					discovery_port = n
+				"--load-ships":
+					load_ships = n
+				"--load-world":
+					load_world = n
+				"--probe-picks":
+					probe_picks = n
+		"--grace-s", "--idle-exit-min", "--run-for", "--probe-warmup", "--probe-window":
 			if not value.is_valid_float():
 				push_error("%s needs a number" % flag)
 				return false
-			set(flag.trim_prefix("--").replace("-", "_"), value.to_float())
+			var x: float = value.to_float()
+			match flag:
+				"--grace-s":
+					grace_s = x
+				"--idle-exit-min":
+					idle_exit_min = x
+				"--run-for":
+					run_for = x
+				"--probe-warmup":
+					probe_warmup = x
+				"--probe-window":
+					probe_window = x
 		"--bind":
 			bind_address = value
 		"--pid-file":
@@ -116,6 +184,8 @@ func _set_flag(flag: String, value: String) -> bool:
 				push_error("--http-root needs an absolute path")
 				return false
 			http_root = value
+		"--probe-out":
+			probe_out = value
 		"--name":
 			server_name = value
 		"--language":
@@ -138,8 +208,16 @@ func make_server() -> NetServer:
 		push_error("missing M1 definitions (m1_corvette, m1_raider)")
 		return null
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
+	# STAND-IN (#11 lobby): the multi-ship lobby replaces --load-ships and LoadEncounter.
+	if load_ships > 0:
+		encounter = LoadEncounter.new(seed_value, "server", player, enemy, load_ships, load_world)
 	var server: NetServer = NetServer.new()
 	server.run_for = run_for
+	if probe_out != "":
+		server.probe = LoadProbe.new(probe_out)
+		server.probe.expect_picks = probe_picks
+		server.probe.warmup_s = probe_warmup
+		server.probe.window_s = probe_window
 	var err: Error = server.start(encounter, port, bind_address, dev_all_stations, host_secret)
 	if err != OK:
 		push_error("server failed to start on %s:%d: %s" % [bind_address, port, error_string(err)])

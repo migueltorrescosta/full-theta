@@ -192,3 +192,8 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 94. Exported builds print their build line, and `--tts-smoke` synthesises one line with each bundled voice, for L6. FT-TST-019. (D142)
 95. The release workflow runs on version tags only, builds with a read-only token and drafts the release from a separate job; L6 runs on fugaku before the tag; macOS stays unsigned until #13. §12.1, FT-ARC-017, FT-GEN-012. (D143)
 96. Release voice configs drop multi-codepoint phonemes for the bundled Piper, recorded as a change; L6 checks every bundled voice loads. FT-LIC-005, FT-TST-019. (D144)
+
+### v0.5 update for D160–D161 (#11, E11)
+
+97. The 64-connection load gate (R15 re-verified in #11) runs 6 crewable ships and 6 fighting AI raiders with 36 crew, 6 Captains and 22 viewers; the server is pinned to 2 cores and the clients run on other cores; a 100-ship stress run is reported, not gating. §12.1, FT-GEN-003, FT-TST-011, FT-TST-014. (D160)
+98. Load gate measurement: tick per main-thread sim frame (mean and p99), snapshot age from the server's capture stamp to the client's arrival, payload bytes per connection. FT-NET-040, R15. (D161)

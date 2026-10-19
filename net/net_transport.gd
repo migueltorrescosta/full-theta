@@ -37,6 +37,34 @@ const HELLO_TIMEOUT_US: int = 5_000_000
 ## Most connections without a session at once; more wait in the listen backlog (the
 ## clients' TCP retries) until one gets a session or closes.
 const MAX_SESSIONLESS: int = 16
+## Load probe row layouts (probe_dump()).
+const SNAP_FIELDS: Array[String] = [
+	"unix_us",
+	"seq",
+	"stamp_us",
+	"restore_us",
+	"build_us",
+	"send_us",
+	"keys",
+	"sends",
+	"delta_messages",
+	"full_messages",
+	"section_updates",
+	"near_sets_us",
+	"kin_us",
+	"status_us",
+	"helm_us",
+	"engineering_us",
+	"mounts_us",
+	"contacts_us",
+	"near_us",
+	"projectiles_us",
+	"ownership_us",
+]
+## ops_us includes SimCopy.restore; snapshot_us is _snapshot() (build and queue).
+const SECOND_FIELDS: Array[String] = [
+	"unix_us", "loops", "poll_us", "pump_us", "ops_us", "snapshot_us"
+]
 
 
 class Conn:
@@ -67,6 +95,10 @@ var chunk_size: int = NetChunker.DEFAULT_CHUNK_SIZE
 var voice_per_pump: int = 1
 ## Net thread idle sleep per loop (us).
 var loop_sleep_us: int = 1000
+## Load-gate probe (#11, D161): when set before start(), the net thread records every
+## snapshot's costs and the capture stamp it was built from, and once a second its loop
+## costs and every connection's byte counters; read them with probe_dump() after stop().
+var probe: bool = false
 
 var _tcp: TCPServer = TCPServer.new()
 var _thread: Thread
@@ -90,6 +122,17 @@ var _published_us: int = 0
 var _totals: Dictionary = {
 	"snapshots": 0, "sends": 0, "delta_messages": 0, "full_messages": 0, "errors": 0
 }
+## Unix time (us) the main thread captured the state now in _state (post_state).
+var _state_stamp_us: int = 0
+var _restore_us: int = 0
+## Probe records (net thread; probe_dump() after stop()): one row of SNAP_FIELDS per
+## snapshot, one row of SECOND_FIELDS and one {conn: [session, view_key, bytes,
+## ws_messages, fulls, deltas, stalls, skipped]} per second.
+var _probe_snaps: PackedInt64Array = PackedInt64Array()
+var _probe_seconds: PackedInt64Array = PackedInt64Array()
+var _probe_conns: Array[Dictionary] = []
+var _probe_acc: PackedInt64Array = PackedInt64Array([0, 0, 0, 0, 0])
+var _probe_next_us: int = 0
 
 
 ## Listens on bind_address:port (port 0 picks a free one) and starts the net thread.
@@ -98,6 +141,7 @@ func start(port: int, bind_address: String) -> Error:
 	if err != OK:
 		return err
 	_builder.chunk_size = chunk_size
+	_builder.time_parts = probe
 	_running = true
 	_thread = Thread.new()
 	_thread.start(_run)
@@ -159,8 +203,9 @@ func post_event(sessions: PackedInt32Array, tick: int, type: String, payload: Di
 
 ## Hands over the state for the next snapshot (SimCopy.capture, restored on the net
 ## thread); a newer one replaces an older one the net thread hasn't encoded yet.
-func post_state(state: Array) -> void:
-	_post(["state", state])
+## stamp_us is the unix time of the capture (the load probe's snapshot age).
+func post_state(state: Array, stamp_us: int = 0) -> void:
+	_post(["state", state, stamp_us])
 
 
 ## Encodes the next snapshot from the last state posted again (the sim hasn't stepped
@@ -214,15 +259,63 @@ func _run() -> void:
 		_mutex.unlock()
 		if not running:
 			return
+		var t0: int = Time.get_ticks_usec() if probe else 0
 		for op: Array in ops:
 			_apply(op)
+		var t1: int = Time.get_ticks_usec() if probe else 0
 		_accept()
 		var inbound: Array = _poll()
+		var t2: int = Time.get_ticks_usec() if probe else 0
 		if _state != null:
 			_snapshot()
+		var t3: int = Time.get_ticks_usec() if probe else 0
 		_pump()
 		_publish(inbound)
+		if probe:
+			_probe_loop(PackedInt64Array([t0, t1, t2, t3, Time.get_ticks_usec()]))
 		OS.delay_usec(loop_sleep_us)
+
+
+## Adds one loop's times (start, after ops, after poll, after the snapshot, after the
+## pump) to the probe's per-second row, and once a second writes the row and every
+## connection's counters.
+func _probe_loop(t: PackedInt64Array) -> void:
+	_probe_acc[0] += 1
+	_probe_acc[1] += t[2] - t[1]
+	_probe_acc[2] += t[4] - t[3]
+	_probe_acc[3] += t[1] - t[0]
+	_probe_acc[4] += t[3] - t[2]
+	if t[4] < _probe_next_us:
+		return
+	_probe_next_us = t[4] + 1_000_000
+	_probe_seconds.append(LoadProbe.unix_us())
+	_probe_seconds.append_array(_probe_acc)
+	_probe_acc.fill(0)
+	var conns: Dictionary = {}
+	for c: Conn in _conns.values():
+		conns[c.id] = [
+			c.session,
+			c.view_key,
+			c.stats["bytes"],
+			c.stats["ws_messages"],
+			c.stats["fulls"],
+			c.stats["deltas"],
+			c.resync.stall_count,
+			c.stats["skipped"],
+		]
+	_probe_conns.append(conns)
+
+
+## The probe's records (call after stop()): {snap_fields, snaps (flat rows),
+## second_fields, seconds (flat rows), conns (one per second)}.
+func probe_dump() -> Dictionary:
+	return {
+		"snap_fields": SNAP_FIELDS,
+		"snaps": Array(_probe_snaps),
+		"second_fields": SECOND_FIELDS,
+		"seconds": Array(_probe_seconds),
+		"conns": _probe_conns,
+	}
 
 
 func _apply(op: Array) -> void:
@@ -245,8 +338,13 @@ func _apply(op: Array) -> void:
 		"event":
 			_event(op[1], op[2], op[3], op[4])
 		"state":
+			# A repost (op[1] null) re-encodes the last state: same capture stamp, no restore.
+			_restore_us = 0
 			if op[1] != null:
+				var t0: int = Time.get_ticks_usec()
 				_last_state = SimCopy.restore(op[1])
+				_state_stamp_us = op[2]
+				_restore_us = Time.get_ticks_usec() - t0
 			_state = _last_state
 		"voice":
 			var c: Conn = _by_session.get(op[1])
@@ -401,7 +499,10 @@ func _snapshot() -> void:
 	if keys.is_empty():
 		return
 	_snap_seq += 1
+	var t0: int = Time.get_ticks_usec()
 	_builder.build(world, _snap_seq, keys.keys())
+	var t1: int = Time.get_ticks_usec()
+	var sends: int = 0
 	for c: Conn in _conns.values():
 		if c.session < 0 or c.view_key == "" or c.closing:
 			continue
@@ -417,10 +518,32 @@ func _snapshot() -> void:
 		c.queue.push_chunks(_builder.chunks(c.view_key, is_full))
 		c.stats["fulls" if is_full else "deltas"] += 1
 		_totals["sends"] += 1
+		sends += 1
 	_totals["snapshots"] += 1
 	var counts: Dictionary = _builder.take_counts()
 	_totals["delta_messages"] += counts["delta_messages"]
 	_totals["full_messages"] += counts["full_messages"]
+	if probe:
+		(
+			_probe_snaps
+			. append_array(
+				[
+					LoadProbe.unix_us(),
+					_snap_seq,
+					_state_stamp_us,
+					_restore_us,
+					t1 - t0,
+					Time.get_ticks_usec() - t1,
+					keys.size(),
+					sends,
+					counts["delta_messages"],
+					counts["full_messages"],
+					counts["section_updates"],
+				]
+			)
+		)
+		_probe_snaps.append_array(_builder.part_us)
+		_builder.part_us.fill(0)
 
 
 func _pump() -> void:

@@ -41,6 +41,10 @@ var arrivals: PackedByteArray = PackedByteArray()
 ## Test hook: keep each snapshot's bytes by seq in raw_snapshots.
 var keep_raw: bool = false
 var raw_snapshots: Dictionary = {}
+## Load-gate hook (D161): when true, each applied snapshot appends its seq and the unix
+## time it arrived, before decoding (us), to snapshot_log.
+var log_snapshots: bool = false
+var snapshot_log: PackedInt64Array = PackedInt64Array()
 
 var _peer: WebSocketPeer
 var _chunker: NetChunker = NetChunker.new()
@@ -212,8 +216,12 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 	if type == NetProtocol.Type.SNAPSHOT:
 		if keep_raw:
 			raw_snapshots[SnapshotBuilder.peek(data)[0]] = data
+		var got_us: int = LoadProbe.unix_us() if log_snapshots else 0
 		if view.apply(data):
 			stats["snapshots"] += 1
+			if log_snapshots:
+				snapshot_log.append(view.seq)
+				snapshot_log.append(got_us)
 			if SnapshotBuilder.peek(data)[1]:
 				stats["fulls"] += 1
 				_force_ack = true

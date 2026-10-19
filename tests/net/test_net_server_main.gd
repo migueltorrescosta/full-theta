@@ -178,3 +178,69 @@ func test_welcome_carries_the_language() -> void:
 	c.drop()
 	server.queue_free()
 	await get_tree().process_frame
+
+
+# FT: FT-NET-002, FT-GEN-003
+# The load gate's dev and test flags (#11, D160, D161): --load-ships builds the 6-ship
+# LoadEncounter instead of M1's, and --probe-* configure the LoadProbe.
+func test_parses_load_gate_flags() -> void:
+	var cli: ServerMain = ServerMain.new()
+	var args: PackedStringArray = [
+		"--bind",
+		"127.0.0.1",
+		"--port",
+		"0",
+		"--no-beacon",
+		"--load-ships",
+		"6",
+		"--load-world",
+		"100",
+		"--probe-out",
+		"/tmp/probe.json",
+		"--probe-picks",
+		"10",
+		"--probe-warmup",
+		"1.5",
+		"--probe-window",
+		"20",
+	]
+	assert_bool(cli.parse_args(args)).is_true()
+	assert_int(cli.load_ships).is_equal(6)
+	assert_int(cli.load_world).is_equal(100)
+	assert_str(cli.probe_out).is_equal("/tmp/probe.json")
+	assert_int(cli.probe_picks).is_equal(10)
+	assert_float(cli.probe_warmup).is_equal(1.5)
+	assert_float(cli.probe_window).is_equal(20.0)
+	var server: NetServer = cli.make_server()
+	assert_object(server).is_not_null()
+	assert_bool(server.encounter is LoadEncounter).is_true()
+	assert_int(server.session.crew_ships().size()).is_equal(6)
+	assert_int(server.world.ship_count()).is_equal(100)
+	assert_object(server.probe).is_not_null()
+	assert_float(server.probe.window_s).is_equal(20.0)
+	assert_bool(server.transport.probe).is_true()
+	server.transport.stop()
+	server.free()
+
+
+# FT: FT-NET-002
+# The load flags need their companions: --load-world without --load-ships and a
+# --probe-* setting without --probe-out are errors, not silently ignored.
+func test_rejects_load_flags_without_their_companions() -> void:
+	var base: PackedStringArray = ["--bind", "127.0.0.1", "--port", "0"]
+	(
+		assert_bool(ServerMain.new().parse_args(base + PackedStringArray(["--load-world", "100"])))
+		. is_false()
+	)
+	(
+		assert_bool(ServerMain.new().parse_args(base + PackedStringArray(["--probe-window", "5"])))
+		. is_false()
+	)
+	(
+		assert_bool(ServerMain.new().parse_args(base + PackedStringArray(["--load-ships", "-1"])))
+		. is_false()
+	)
+	(
+		assert_bool(ServerMain.new().parse_args(base + PackedStringArray(["--load-ships", "6"])))
+		. is_true()
+	)

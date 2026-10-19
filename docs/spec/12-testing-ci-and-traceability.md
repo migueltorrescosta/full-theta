@@ -8,7 +8,7 @@
 | L1 unit | Physics, arcs, damage, power, voice-bus queue, protocol codec, loaders | Local, CI |
 | L2 simulation | Scripted encounters, mission transitions, run reset, the 15 pair tests, golden replays, 2-ship PvP | Local, CI |
 | L3 network in-process | Server and clients over loopback WebSocket: join, coverage, claims, filtering, reconnect | Local, CI |
-| L4 network multi-process | Server plus headless clients, pinned to 2 cores | fugaku |
+| L4 network multi-process | Server plus headless clients, pinned to 2 cores; the 64-connection load gate pins the server to 2 cores and runs its 64 clients on other cores (D160) | fugaku |
 | L5 visual | Screenshots under Xvfb with llvmpipe, tolerant diffs, baselines tagged with the Mesa version | fugaku |
 | L6 export | Linux, Windows, macOS exports and smoke run, including the bundled web export and Piper | fugaku, tags |
 
