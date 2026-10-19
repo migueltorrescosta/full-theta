@@ -12,5 +12,9 @@ static func from_dict(d: Dictionary) -> SimCommand:
 
 static func make(kind: StringName) -> SimCommand:
 	match kind:
+		&"dispatch_repair":
+			return DispatchRepairCommand.new()
+		&"recall_repair":
+			return RecallRepairCommand.new()
 		_:
 			return null

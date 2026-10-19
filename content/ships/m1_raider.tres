@@ -32,6 +32,7 @@ spare_parts = 5
 sensor_range = 15000.0
 identify_range = 6000.0
 repair_crews = 1
+subsystem_damage_share = 0.5
 subsystems = Array[ExtResource("7_nnjya")]([ExtResource("8_so0ye"), ExtResource("9_uxp02"), ExtResource("10_f6ry1"), ExtResource("11_jbjwq"), ExtResource("12_3e58g"), ExtResource("13_c3o2i")])
 mounts = Array[ExtResource("2_xhyu7")]([ExtResource("3_wa30x")])
 assist = ExtResource("1_gdcbd")

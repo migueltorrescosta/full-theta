@@ -37,8 +37,11 @@ extends Resource
 @export var hull_max: float = 0.0
 ## Spare parts carried for repairs (count, FT-SIM-024).
 @export var spare_parts: int = 0
-## Repair crews Engineering can dispatch (count, FT-SIM-024).
+## Repair crews Engineering can dispatch (count, FT-SIM-024; at most 31, one bit each).
 @export var repair_crews: int = 0
+## Share of a hit's energy past the shields that the subsystem nearest the impact also
+## takes, on top of the hull taking all of it (dimensionless, 0..1, FT-SIM-020).
+@export var subsystem_damage_share: float = 0.0
 ## Subsystems (at least one; ids unique within the ship).
 @export var subsystems: Array[SubsystemDef] = []
 ## Weapon mounts (may be empty; ids unique within the ship).
@@ -72,7 +75,8 @@ func validate() -> Array[String]:
 	DefCheck.non_negative(errors, "half_length", half_length)
 	DefCheck.positive(errors, "hull_max", hull_max)
 	DefCheck.non_negative(errors, "spare_parts", spare_parts)
-	DefCheck.non_negative(errors, "repair_crews", repair_crews)
+	DefCheck.in_range(errors, "repair_crews", repair_crews, 0, 31)
+	DefCheck.in_range(errors, "subsystem_damage_share", subsystem_damage_share, 0.0, 1.0)
 	DefCheck.positive(errors, "sensor_range", sensor_range)
 	DefCheck.in_range(errors, "identify_range", identify_range, 0.0, maxf(sensor_range, 0.0))
 	DefCheck.required(errors, "assist", assist)
@@ -95,6 +99,8 @@ func _validate_subsystems(errors: Array[String]) -> Dictionary[StringName, bool]
 			continue
 		if ids.has(s.id):
 			errors.append("subsystems[%d].id: duplicate id %s" % [i, s.id])
+		if s.id == &"hull":
+			errors.append("subsystems[%d].id: hull is reserved for the hull" % i)
 		ids[s.id] = true
 	return ids
 
