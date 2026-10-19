@@ -22,6 +22,8 @@ $GODOT_HEAD_INCLUDE
 // S3 web shell (FT-NET-030). Godot's default shell refuses to start outside a
 // secure context, and a plain http:// LAN page isn't one. A no-threads build
 // needs no SharedArrayBuffer, so this shell ignores that one check.
+// Upstream: https://github.com/godotengine/godot/issues/124636; on an engine
+// upgrade, check it and use the default shell once fixed.
 const GODOT_CONFIG = $GODOT_CONFIG;
 const engine = new Engine(GODOT_CONFIG);
 const status = document.getElementById('status');

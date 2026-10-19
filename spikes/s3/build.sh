@@ -20,6 +20,8 @@ mkdir -p "$out"
 # http:// LAN page the engine stops at start-up with "Cannot read properties
 # of undefined (reading 'addModule')". Guard that one call; the panel plays
 # audio as a stream, mixed by the ScriptProcessorNode fallback.
+# Upstream: https://github.com/godotengine/godot/issues/124637; on an engine
+# upgrade, check it and drop this patch once fixed.
 unguarded='GodotAudio.audioPositionWorkletPromise=ctx.audioWorklet.addModule(path)'
 guarded='GodotAudio.audioPositionWorkletPromise=ctx.audioWorklet?ctx.audioWorklet.addModule(path):new Promise(function(){})'
 grep -qF "$unguarded" "$out/index.js" || { echo "build.sh: audio init pattern not found" >&2; exit 1; }
