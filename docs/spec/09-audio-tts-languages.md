@@ -2,7 +2,7 @@
 
 ## 9.1 Voices
 
-Piper voices speak NPC radio, ship-computer announcements and alerts (D38). Authored lines are prerendered at build time; dynamic lines (names, numbers, free text) are synthesised at runtime, which GPL-3.0 allows (D2, D38). The ship computer uses Piper with a robotic/radio filter; there is no second engine (D71). Runtime synthesis runs on the host server; each clip is streamed only to the client that plays it, so browser stations need no local Piper (D85).
+Piper voices speak NPC radio, ship-computer announcements and alerts (D38). Authored lines are prerendered at build time. The session's closed set (ship names, callsigns, NPC names) is synthesised at Start and cached per language; numbers are stitched from prerendered fragments; only free text is synthesised at runtime, which GPL-3.0 allows (D2, D38, D101). The ship computer uses Piper with a robotic/radio filter; there is no second engine (D71). Synthesis runs on the host server in one persistent Piper process off the sim thread; each clip is streamed only to the client that plays it, so browser stations need no local Piper (D85, D101).
 
 ## 9.2 Routing
 
@@ -24,7 +24,7 @@ Colourful, exaggerated retro science fiction; simple geometry, toon shader, read
 
 - **FT-AUD-001** NPC radio, ship-computer announcements and alerts shall use offline Piper voices. (D38)
 - **FT-AUD-002** Authored lines shall be prerendered at build time per language; generated audio shall not be committed. (D38)
-- **FT-AUD-003** Dynamic lines shall be synthesised at runtime with Piper. (D38)
+- **FT-AUD-003** Dynamic lines (names, numbers, free text) shall be voiced with Piper as in FT-AUD-018 and FT-AUD-019. (D38, D101)
 - **FT-AUD-004** The ship computer shall use a Piper voice with a robotic/radio filter. (D71)
 - **FT-AUD-005** An NPC line shall play only on the client holding that NPC's conversation claim. (D39)
 - **FT-AUD-006** A ship-computer line shall play only on clients holding the stations it concerns. (D39)
@@ -36,7 +36,8 @@ Colourful, exaggerated retro science fiction; simple geometry, toon shader, read
 - **FT-AUD-012** The game shall launch with English, Portuguese (pt_PT) and Italian. (D40)
 - **FT-AUD-013** A session shall use one language for all text and voice, chosen by the host. (D41)
 - **FT-AUD-014** Every shipped Piper voice shall have a licence compatible with redistribution, recorded in the provenance manifest. (D2, D63)
-- **FT-AUD-015** Runtime synthesis shall make a dynamic line audible within 1 s of its event on the target client (proposed target, verified by spike S7b). (D38, D39)
+- **FT-AUD-015** Runtime synthesis shall make a free-text line audible within 1 s of its event on the target client (proposed target, verified by spike S7b). (D38, D39, D101)
 - **FT-AUD-016** Art shall use procedural or primitive meshes and CC0 packs with a toon shader; sounds shall be CC0. (D63)
 - **FT-AUD-017** Browser clients shall unlock audio with a user gesture on join. (D8)
-- **FT-AUD-018** Runtime synthesis shall run on the host server, which shall stream each dynamic clip only to the client that plays it. (D85)
+- **FT-AUD-018** The host server shall synthesise the session's closed set (ship names, callsigns, NPC names) at Start and cache it per language; numbers shall use prerendered fragments; runtime synthesis shall be used only for free text. (D85, D101)
+- **FT-AUD-019** Synthesis shall run on the host server in one persistent Piper process off the sim thread, and the host shall stream each dynamic clip only to the client that plays it. (D85, D101, plan review TECH-5)

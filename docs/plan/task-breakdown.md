@@ -2,6 +2,8 @@
 
 Plan of GitHub issues for the whole game (FT-TST-018), built from spec v0.4 and decisions D1–D92. Repo: migueltorrescosta/full-theta. Date: 2026-10-19.
 
+This breakdown predates spec v0.5. The plan review (D95–D102, `../research/plan-review/README.md`) changed the 13 GitHub issues that aggregate it (D93), and the issue bodies are the current source of truth.
+
 Conventions (D73–D75):
 
 - Every row below becomes one issue and at most one PR. IDs are planning ids; the issue body carries `Depends on: #N` and native "blocked by" links, and epics hold their tasks as sub-issues.
@@ -89,7 +91,7 @@ Conventions (D73–D75):
 | T062 | Death-risk tuning playtests (owner step) | M3 | docs | E07, E09, E10 | FT-MIS-009, FT-GEN-011 | Human |
 | E11 | Epic: multi-ship sessions, allied factions, elimination | M4 | sim, net, ui | E07, T023 | FT-GEN-001, FT-GEN-003, FT-ARC-018, FT-MIS-011–013, FT-MIS-023, FT-MIS-030, FT-SPA-023, FT-TST-011 | |
 | E12 | Epic: PvP scenario types (race, last standing, teams) | M4 | sim, content | E11 | FT-MIS-014, FT-MIS-031–034, FT-PAIR-016, FT-GEN-002 | |
-| E13 | Epic: browser stations over HTTP with touch layouts | M4 | net, ui, audio, ci | T021, T022, E04 | FT-NET-013, FT-NET-030, FT-STN-005, FT-AUD-017, FT-SCI-013 | |
+| E13 | Epic: browser stations over HTTP with touch layouts | M2 (D94) | net, ui, audio, ci | T021, T022, E04 | FT-NET-013, FT-NET-030, FT-STN-005, FT-AUD-017, FT-SCI-013 | |
 | T063 | Multi-ship PvP LAN playtest with tablets (owner step) | M4 | docs | E12, E13 | FT-GEN-001, FT-GEN-003 | Human |
 | E14 | Epic: presentation, toon art, VFX and CC0 sound | M5 | ui, audio, content | T016, E04 | FT-AUD-016, FT-LIC-006, FT-STN-006 | |
 | E15 | Epic: release packaging for Linux, Windows and macOS | M5 | ci, docs | E10, E12, E13, E14 | FT-ARC-017, FT-GEN-012, FT-LIC-004, FT-LIC-005, FT-LIC-008 | |
@@ -657,7 +659,7 @@ Conventions (D73–D75):
 - **Instructions:** Spec §8, D78.
 - **Tasks:** race; last ship standing; two-faction teams; PvP lobby options.
 
-#### E13 Epic: browser stations over HTTP with touch layouts
+#### E13 Epic: browser stations over HTTP with touch layouts (moved to M2 by D94; delivered by #9)
 - **Why:** D8: tablets as stations after the first playable.
 - **Verification criteria:**
   - [ ] Server serves the web export; join by URL and QR; Playwright test joins and plays one station.

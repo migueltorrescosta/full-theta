@@ -1,8 +1,8 @@
-# Full Theta specification v0.4
+# Full Theta specification v0.5
 
 Repo: migueltorrescosta/full-theta (GPL-3.0). Engine: Godot 4.7.2, typed GDScript. Date: 2026-10-19.
 
-v0.4 amends spec v0.3 with the owner decisions D1–D89 (`decisions.md`; later decisions supersede earlier ones). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
+v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D102, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
 
 ## How to use this spec
 
@@ -17,20 +17,20 @@ v0.4 amends spec v0.3 with the owner decisions D1–D89 (`decisions.md`; later d
 | File | Content | Ids | Count |
 |---|---|---|---|
 | [01-objective-and-scope](01-objective-and-scope.md) | Multi-ship co-op and PvP, crew sizes, 64 connections, scope | FT-GEN | 14 |
-| [02-architecture-and-tech](02-architecture-and-tech.md) | Stack, modules, dependency rules, risks and spikes | FT-ARC | 19 |
-| [03-networking-and-sessions](03-networking-and-sessions.md) | Hosting, protocol, lobby, 15 joint views, coverage check, claims, reconnect, disconnect pause | FT-NET | 36 |
-| [04-simulation-flight-combat-damage](04-simulation-flight-combat-damage.md) | 6DOF flight, weapons, shields, damage, repair, AI | FT-SIM | 33 (+1 removed) |
-| [05-stations](05-stations.md) | Common UI and alert level, Helm, Weapons, Engineering, Science (scan, hack), Relay (mark sending), Comms (card board), Captain, main screen, joint views | FT-STN, HLM, WPN, ENG, SCI, RLY, COM, CPT, MSC, JNT | 79 |
-| [06-spatial-language-and-radar](06-spatial-language-and-radar.md) | Callsigns, clock/height/range, marks, pings, sent marks, disc radar, frames | FT-SPA | 22 (+1 removed) |
-| [07-cooperation-pairs](07-cooperation-pairs.md) | Shared systems, shortcut toggles and presets, 15 pairs with variants and tests | FT-PAIR | 19 (+1 removed) |
-| [08-missions-director-progression-economy](08-missions-director-progression-economy.md) | Global map, sites and encounters, director, outcomes, PvP types, retreat, economy, slot modules | FT-MIS | 34 (+2 removed) |
-| [09-audio-tts-languages](09-audio-tts-languages.md) | Piper, routing, voice bus, languages, visual style | FT-AUD | 18 |
+| [02-architecture-and-tech](02-architecture-and-tech.md) | Stack, modules, dependency rules, risks and spikes | FT-ARC | 22 |
+| [03-networking-and-sessions](03-networking-and-sessions.md) | Hosting, protocol, lobby, 15 joint views, coverage check, claims, reconnect, disconnect pause | FT-NET | 46 |
+| [04-simulation-flight-combat-damage](04-simulation-flight-combat-damage.md) | 6DOF flight, weapons, shields, damage, repair, AI | FT-SIM | 37 (+1 removed) |
+| [05-stations](05-stations.md) | Common UI and alert level, Helm, Weapons, Engineering, Science (scan, hack), Relay (mark sending), Comms (card board), Captain, main screen, joint views | FT-STN, HLM, WPN, ENG, SCI, RLY, COM, CPT, MSC, JNT | 106 |
+| [06-spatial-language-and-radar](06-spatial-language-and-radar.md) | Callsigns, clock/height/range, marks, pings, sent marks, disc radar, frames | FT-SPA | 30 (+1 removed) |
+| [07-cooperation-pairs](07-cooperation-pairs.md) | Shared systems, shortcut toggles and presets, 15 pairs with variants and tests | FT-PAIR | 22 (+1 removed) |
+| [08-missions-director-progression-economy](08-missions-director-progression-economy.md) | Global map, sites and encounters, director, outcomes, PvP types, retreat, economy, slot modules | FT-MIS | 40 (+2 removed) |
+| [09-audio-tts-languages](09-audio-tts-languages.md) | Piper, routing, voice bus, languages, visual style | FT-AUD | 19 |
 | [10-content-and-data-formats](10-content-and-data-formats.md) | `.tres` definitions, dialogue JSON, GDScript scenarios | FT-DAT | 14 |
-| [11-milestone-1](11-milestone-1.md) | First playable scope | FT-M1 | 16 |
-| [12-testing-ci-and-traceability](12-testing-ci-and-traceability.md) | Test layers, CI, traceability | FT-TST | 18 |
+| [11-milestone-1](11-milestone-1.md) | First playable scope | FT-M1 | 21 |
+| [12-testing-ci-and-traceability](12-testing-ci-and-traceability.md) | Test layers, CI, traceability | FT-TST | 22 |
 | [13-licensing-and-provenance](13-licensing-and-provenance.md) | GPL-3.0, EE ideas only, reproduced/redesigned/omitted | FT-LIC | 8 |
-| [14-open-questions](14-open-questions.md) | Q1–Q13 answered (D76–D89); new Q14–Q16, multiple choice with a recommendation | — | 0 |
-| **Total** | | | **330 (+5 removed)** |
+| [14-open-questions](14-open-questions.md) | None open: Q1–Q16 answered (D76–D92); plan review answered by D95–D102 | — | 0 |
+| **Total** | | | **401 (+5 removed)** |
 
 ## Glossary
 
@@ -40,7 +40,7 @@ v0.4 amends spec v0.3 with the owner decisions D1–D89 (`decisions.md`; later d
 | Captain | Optional, information-only seat that directs the main screen and places pings and marks. Never counts for coverage. |
 | Viewer | A read-only main-screen connection. Counts toward the 64-connection cap. |
 | Catalogue | The lobby list a player picks from: single stations, joint views, Captain, Viewer. |
-| Joint view | A layout combining two functional stations on one screen, keeping every control of each (for example Tactical = Helm + Weapons); one per pair, 15 in all (D76). |
+| Joint view | A layout combining two functional stations on one screen, every control reachable, one panel focused at a time (for example Tactical = Helm + Weapons); one per pair, 15 in all (D76, D95). |
 | Coverage | The condition that a ship's crew picks include every functional station, with at least 3 crew players. Enables Ready/Start. |
 | Claim | A lock a player takes on a sub-control of a shared station (weapon mount, repair crew, probe, NPC conversation, scan/hack slot, Helm flight, Helm shield facing). |
 | Callsign | Per-faction short name for a contact: allegiance letter (H, U, F, N) plus a number that never changes. |
@@ -57,7 +57,7 @@ v0.4 amends spec v0.3 with the owner decisions D1–D89 (`decisions.md`; later d
 | Run | One 20–40 minute playthrough of about 5 encounters; nothing persists after it. |
 | Encounter | A self-contained situation (enemy wave, rescue, derelict, negotiation...) the director places or activates at a site, with its own triggers and outcome (D77). |
 | Scenario map | The single global open 3D map of a scenario; no per-encounter maps (D77). |
-| Site | A place on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). |
+| Site | A named place on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). Positions are site-local, and site names are a callout layer outside the 8 marks (D98). |
 | Slot module | An upgrade fitted to a ship slot, with a trade-off; bought while docked via Comms (D86). |
 | Faction | Owner of knowledge, callsigns and reputation; all state is keyed by ship and faction. Allied ships share one faction; marks stay per ship (D82). |
 | EE | EmptyEpsilon, the reference game (GPL-2.0-only; ideas only). |
@@ -108,3 +108,23 @@ v0.4 amends spec v0.3 with the owner decisions D1–D89 (`decisions.md`; later d
 39. Alert level: any crew station sets it. FT-STN-008. (D89, Q11)
 40. Comms: card board with conversation overlay replaces the provisional layout. FT-COM-008. (D87, Q12)
 41. Upgrades: slot modules with trade-offs, bought while docked via Comms. FT-COM-009, FT-MIS-035, 036, FT-DAT-014. (D86, Q13)
+
+## Changes from v0.4 (v0.5, plan review)
+
+The plan review (`../research/plan-review/README.md`) found 60 issues, merged into enhancements E1–E14; the owner answered its questions with D95–D102. Ids added, changed and removed are listed per file in `../research/plan-review/spec-changes.md`; counts above are current.
+
+42. Joint views are modal; one common-actions table and an always-live set; station bindings are the same in every view; controller Helm can select, Level, decouple and all-stop. FT-STN-009, FT-JNT-001, 002, 005–008, FT-HLM-017. (D95, E1)
+43. The pause has an exit: coverage counts ships in play; abandon a ship; cross-ship takeover; conditional claim restore; keep-awake tablets; the host rejoins its orphaned server. FT-NET-003, 026, 033–035, 041–043, 046. (D96, E2)
+44. Flight assist holds rotation, drift and speed; all-stop and hold-to-approach; height words are ship frame, "up N" is world frame; Level rolls first. FT-SIM-004, 036, 037, FT-HLM-007, 014, 015, FT-SPA-026. (D97, E3)
+45. Site-local positions, named sites, jump to the selected site or mark. FT-SIM-034, 035, FT-HLM-016, FT-SPA-027, FT-MIS-026. (D98, E4)
+46. Spikes test flight aids, callouts, backpressure, bandwidth, Piper load and far-from-origin precision; the integrator is exact for constant thrust; commands are logged with their tick. §2.4, FT-NET-037–040, FT-SIM-038, FT-ARC-008, FT-TST-009. (E5)
+47. `shared/` and `scenarios/` folders, class_name-aware lint, read-only definitions, a Scenario API of ids and copies. FT-ARC-010, 016, 020, 021, FT-DAT-006, 009. (E6)
+48. Milestone 1 builds marks, pings and Relay's read-out, load tags, the controls overlay and tooltips; the playtest rotates seats. FT-M1-003, 006, 017–021, FT-STN-015. (D99, E7)
+49. Joint views take the union of their stations' data and say which pair they make solo. FT-JNT-005, 006. (E8)
+50. One ownership rule for shared stations; mark overflow; the Captain fills empty mark slots; one Captain per ship; module fitting; pair verbs in station lists. FT-NET-016, 022, 044, 045, FT-STN-010, FT-SPA-012, 013, 022, FT-ENG-008, FT-WPN-008, FT-RLY-011, FT-MIS-036. (E9)
+51. Hard keeps pairs playable: scan positions and hazards outside the cap, marks on subsystems, seven request chips in data, same-room speech, a silent "copy". FT-SPA-014, 028, 029, 031, FT-PAIR-008, 021. (E10)
+52. Onboarding and accessibility: controls overlay, first-run tooltips, Shakedown training, co-op host pause, UI scale, hold-to-toggle, letter and shape encoding, Easy lobby default, scaling minigames. FT-STN-006, 011–014, 016, FT-SCI-012, 014–016, FT-MIS-039, 040, FT-PAIR-012. (D100, E11)
+53. Cooperation is verified: a minimum gain per pair, per-pair event counts, three named plays with end-to-end tests, a hack-window floor, P12 tested by its reverse flow, bot batches for death risk, an Easy target for first crews. FT-PAIR-010, 013, 015, 019, 022, 023, FT-MIS-009, 010, 037, 038, FT-TST-022. (E12)
+54. Captain status view and read-only chips and cards; a Comms beat per hostile encounter; allied contract flags; world-stable turret aim, a horizon-stabilised main screen and a comfort toggle; radar zoom. FT-CPT-004, 005, FT-MSC-001, 005, 006, FT-MIS-041, 042, FT-WPN-005, 009, FT-STN-017, FT-SPA-003, 024, 025. (E13)
+55. Runtime Piper pre-synthesises the closed set at Start. FT-ARC-019, FT-AUD-003, 015, 018, 019. (D101)
+56. Release packages carry the web export and Piper; baselines record the Mesa version; D90–D94 are written into the spec. FT-ARC-017, 022, FT-TST-019–021, §7.2, FT-MIS-028, 030, FT-PAIR-017, 018. (E14)

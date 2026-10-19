@@ -2,7 +2,7 @@
 
 ## 4.1 Flight
 
-Ships fly full 6DOF Newtonian motion: thrust, inertia, momentum and rotation, with ship-specific thruster limits (v0.3 §5, D24). Flight assist is on by default and works by issuing real thruster commands within the ship's limits; decoupled mode turns it off (D24). Thrust consumes propellant; coasting does not (D34). The jump drive moves the ship within the scenario's single global 3D map, between encounter sites, and consumes propellant (D29, D34, D77). Units are SI.
+Ships fly full 6DOF Newtonian motion: thrust, inertia, momentum and rotation, with ship-specific thruster limits (v0.3 §5, D24). Flight assist is on by default and works by issuing real thruster commands within the ship's limits; decoupled mode turns it off (D24). All-stop and hold-to-approach are assist modes, so they also use real thrust and propellant (D97); Helm's all-stop and approach controls are in §5.1. Thrust consumes propellant; coasting does not (D34). The jump drive moves the ship within the scenario's single global 3D map, between encounter sites, and consumes propellant (D29, D34, D77). Positions are site-local, so float32 precision holds anywhere on the map: the largest local coordinate is 200 km (D98, plan review TECH-1). Units are SI.
 
 ## 4.2 Weapons
 
@@ -25,7 +25,7 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 - **FT-SIM-001** Ships shall move with 6DOF Newtonian dynamics: forces and torques change linear and angular momentum, with no drag. (v0.3 §5, D24)
 - **FT-SIM-002** Each ship definition shall set maximum thrust per local axis, maximum torque per axis, mass and a diagonal inertia tensor. (v0.3 §5)
 - **FT-SIM-003** A ship with zero input and assist off shall keep its linear and angular velocity. (D24)
-- **FT-SIM-004** Flight assist shall be on by default and shall act only through thruster commands within the ship's current thrust envelope. (D24, v0.3 §5)
+- **FT-SIM-004** Flight assist shall be on by default, shall act only through thruster commands within the ship's current thrust envelope, and shall hold zero angular rate without rotation input, zero lateral and vertical velocity without strafe input, and forward speed at the throttle setpoint (throttle sets speed, not force). (D24, D97, v0.3 §5, plan review NAV-2)
 - **FT-SIM-005** Helm shall toggle decoupled mode, which disables assist. (D24)
 - **FT-SIM-006** The current thrust envelope shall depend on Engineering's power to engines and thrusters, their health and heat. (P1, D50)
 - **FT-SIM-007** Thrust, including assist and face-assist thrust, shall consume propellant in proportion to impulse; coasting shall consume none. (D34)
@@ -55,4 +55,8 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 - **FT-SIM-031** Engineering shall receive an alert when shields fall to 40 %. (v0.3 §5)
 - **FT-SIM-032** Stations shall receive a visual warning when the ship is hit or a subsystem they depend on fails. (v0.3 §5)
 - **FT-SIM-033** All simulation units shall be SI and documented in the content definitions. (v0.3 §3)
-- **FT-SIM-034** The jump drive shall move the ship within the scenario's single global 3D map and shall consume propellant per jump. (D29, D34, D77)
+- **FT-SIM-034** The jump drive shall move the ship within the scenario's single global 3D map to the selected site or mark, after a data-defined spool time, arriving at a data-defined stand-off from it, and shall consume propellant per jump. (D29, D34, D77, D98, plan review NAV-4)
+- **FT-SIM-035** Positions shall be stored as a site id plus a local float32 offset of at most 200 km per axis, and a jump shall change the ship's site. (D98, plan review TECH-1)
+- **FT-SIM-036** All-stop shall bring the ship's velocity relative to its site to zero through assist thrust. (D97, plan review NAV-2)
+- **FT-SIM-037** While hold-to-approach is held, assist shall face the selected contact, mark or site, fly to a stand-off distance (data, default 500 m) and match its velocity; releasing it shall return control. (D47, D97, plan review NAV-2)
+- **FT-SIM-038** The integrator shall update position as $x \mathrel{+}= v\,\Delta t + \tfrac12 a\,\Delta t^2$, so it is exact for constant thrust. (FT-ARC-007, plan review TECH-10)

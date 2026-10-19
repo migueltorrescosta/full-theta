@@ -1,5 +1,7 @@
 # Full Theta: the 15 pairs and the curated combos
 
+> Historical. Superseded by spec 05 and 07 and by D66–D102: P12 is verbal only (D68, no status report), there are no 1–2-player crews or 3-station views (D66, D76), and joint views are modal (D95). Read the spec, not this file, for current rules.
+
 Scope: the six functional stations of D50–D57: Helm (H, movement), Weapons (W, damage), Engineering (E, systems), Science (S, information gathering, scan and hack), Relay (R, tactical view of the universe) and Comms (C, story of the universe). The Captain is optional, information only (D15, D23, D54) and sits outside the pairs; the Captain can still place marks and pings (D44). This file supersedes the pair list in emptyepsilon.md §3, which predates the Relay/Comms split and the Captain change. Callouts, radar and marks follow station-ui.md §1 (D42–D45). Multi-ship play (D11, D21): every system below is keyed by ship and faction, so in PvP each crew cooperates inside its own ship and competes through the same systems.
 
 ## 0. Shared simulation systems

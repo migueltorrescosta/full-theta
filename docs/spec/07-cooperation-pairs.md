@@ -13,31 +13,33 @@ Six functional stations make 15 pairs; each has a cooperative mechanic built on 
 | STORY | Story state | conversations, contracts, missions, opportunities, clearances, reputation per faction | C, director |
 | CUE | Requests and cues | request chips, acknowledgements, audio cues, debrief log | any station |
 
-## 7.2 Difficulty and data shortcuts (D14, D33, D68, D69, D84)
+## 7.2 Difficulty and data shortcuts (D14, D33, D68, D69, D84, D90, D92)
 
-Each cross-station data shortcut is an individual toggle, set in the lobby before start for the whole session (D81, D84). Easy, Normal and Hard are presets of these toggles; players may change single toggles afterwards. Engineering ↔ Comms is always verbal and has no toggle (D68).
+Each cross-station data shortcut is an individual toggle, set in the lobby before start for the whole session (D81, D84). Easy, Normal and Hard are presets of these toggles; players may change single toggles afterwards, and the lobby then shows '<Preset> (custom)' (D92). Engineering ↔ Comms is always verbal and has no toggle (D68).
 
 | Toggle | Pairs | Easy | Normal | Hard |
 |---|---|---|---|---|
-| Summaries of other stations' data | all | exact | banded | absent |
-| Request chips (boost, power, bring to bear) | P1, P2, P6 | on | on | off |
+| Summaries of other stations' data | all except Engineering → Comms | exact | banded | absent |
+| Request chips (per-station list, §7.4) | P1, P2, P3, P6, P9, P10, P11 | on | on | off |
 | Routes (ribbon on Helm) | P4 | on | on | off |
 | Approach lanes and countdowns on Helm | P5 | on | on | off |
 | Hazard countdowns on Engineering | P11 | on | on | off |
 | Weak points and ammo ratings on Weapons | P7 | on | voice | off |
 | Track feeds and quality bar on Weapons | P8 | on | voice | off |
 | Diagnosed causes pre-filled on Engineering | P10 | on | voice | off |
-| Contract flags on the Weapons reticle | P9 | on | Q14 | off |
-| Science icons and verify chip on dialogue options | P14 | on | Q14 | off |
-| Mission mark icon | P15 | on | Q14 | off |
+| Contract flags on the Weapons reticle | P9 | on | voice | off |
+| Science icons and verify chip on dialogue options | P14 | on | voice | off |
+| Mission mark icon | P15 | on | on | off |
 | Marks and pings | all | on | on | on |
 | Engineering ↔ Comms | P12 | verbal | verbal | verbal |
 
-"voice" means the toggle is off and the data travels by speech. The Normal value of the three Q14 toggles is open (§14).
+"voice" means the toggle is off and the data travels by speech. "Verbal" and "voice" mean same-room speech; the game has no voice chat, so remote players need external voice. Crews speak in the callout grammar of §6.1, summarised on a one-page callout card (`docs/callout-card.md`, written in M2, #9).
 
 Game rules (a probe enabling a remote scan, a scan fact unlocking a dialogue option, an intent change renaming a callsign) apply at every difficulty; D69 governs only how data reaches another station's screen.
 
 ## 7.3 Pair table
+
+A joint view holding both stations of a pair makes that pair's requests direct actions for its one player (FT-JNT-005, §5).
 
 | # | Pair | Mechanic | Systems | Shortcut (toggle on) | Toggle off (verbal) |
 |---|---|---|---|---|---|
@@ -73,7 +75,7 @@ Game rules (a probe enabling a remote scan, a scan fact unlocking a dialogue opt
 
 **P6 Weapons + Engineering.** Beams draw power and heat per mount; reload scales with pips; guns and shields share the reactor. Alone: nominal cycle times. Info: Weapons sees mount heat and ammo; Engineering sees budget and shield drain. Feedback: boosted mounts pulse; overheated mounts hiss and grey. Failure: slower fire, locked mounts, thin shields. Test: damage with weapon pips 3 > 1; overheat locks for the specified cooldown; zero Engineering input gives non-zero damage.
 
-**P7 Weapons + Science.** Scans reveal weak points and resistances; a hack opens a window on a subsystem. Alone: nearest-subsystem hits with any ammo. Info: Science sees layout and resistances with confidence; Weapons sees only what is shared (Easy) or told. Feedback: brackets (Easy), crit sound, hack-window timer. Failure: longer fights. Test: shots on the weak point damage the named subsystem; time-to-disable with knowledge < without; correct ammo > resisted ammo.
+**P7 Weapons + Science.** Scans reveal weak points and resistances; a hack opens a window on a subsystem. Alone: nearest-subsystem hits with any ammo. Info: Science sees layout and resistances with confidence; Weapons sees only what is shared (Easy) or told. Feedback: brackets (Easy), crit sound, hack-window timer; the window length is a data value of at least 8 s, so a spoken relay fits (FT-PAIR-023). Failure: longer fights. Test: shots on the weak point damage the named subsystem; time-to-disable with knowledge < without; correct ammo > resisted ammo.
 
 **P8 Weapons + Relay.** Probes keep tracks beyond own sensors; guided ordnance can fire at a Relay mark attached to a tracked contact; Relay flags lanes crossing friendlies (D37). Alone: engagement within own sensor range. Info: Relay sees the whole picture; Weapons a ship-centred view. Feedback: track-quality bar (Easy); red lane overlay and tone before a friendly-fire shot. Failure: shorter range, friendly fire, wasted ordnance. Test: target at 1.5× own sensor range is engageable only with an attached mark; hit probability rises with track quality; friendly-lane warning fires before the shot.
 
@@ -83,13 +85,23 @@ Game rules (a probe enabling a remote scan, a scan fact unlocking a dialogue opt
 
 **P11 Engineering + Relay.** Probes measure hazard fronts and forecast arrival; Engineering pre-hardens; Engineering fabricates probes from spare parts. Alone: react on impact; finite probes. Info: Relay sees where and when; Engineering sees what breaks and parts left. Feedback: countdown chip (Easy); hardened systems rimmed blue; fabrication bar. Failure: hazard damage, probe shortage. Test: damage with hardening on forecast < without; fabrication consumes the specified parts and adds one probe.
 
-**P12 Engineering + Comms (verbal only, D68).** Comms sees what can be bought and sold (repairs, parts, ammo, propellant) and contract requirements; Engineering knows exact condition and describes it by voice; Comms decides alone (D57). No status snapshot or share button at any difficulty. Alone: Comms buys and accepts on its own banded view of condition. Info: Engineering has exact COND; Comms has prices, deadlines and terms. Feedback: none beyond each station's own view. Failure: overspending, infeasible contracts and reputation loss, never a hard block. Test: an offer requiring tractor power 2 while the tractor is damaged can be accepted; failing it reduces reputation within range; no Engineering data field appears in Comms' snapshot beyond its banded summary.
+**P12 Engineering + Comms (verbal only, D68).** Comms sees what can be bought and sold (repairs, parts, ammo, propellant) and contract requirements; Engineering knows exact condition and describes it by voice; Comms decides alone (D57). Between different players there is no status snapshot or share button at any difficulty; a Quartermaster player sees both by design (D76). What Comms buys lands in COND: parts in Engineering's spares, a dock repair clears its fault. Alone: Comms buys and accepts on its fixed view of condition, the hull band only, the same at every difficulty. Info: Engineering has exact COND; Comms has prices, deadlines and terms. Feedback: none beyond each station's own view. Failure: overspending, infeasible contracts and reputation loss, never a hard block. Test (exempt from co-op beats solo, FT-PAIR-015): parts Comms buys appear in Engineering's spares and a dock repair Comms buys clears an Engineering fault; an offer requiring tractor power 2 while the tractor is damaged can be accepted; failing it reduces reputation within range; no Engineering data field beyond the hull band appears in a separate Comms player's snapshot.
 
 **P13 Science + Relay.** Science scans and hacks contacts inside a probe's bubble as if in own range, with noise from probe distance; nebulae and planets block the ship but not a probe inside them (D56). Alone: own range only. Info: Relay sees coverage volumes; Science sees signal quality. Feedback: coverage volumes; "probe link" icon. Failure: wait for range or ask Helm (P3). Test: contact outside range in a nebula is scannable only with a probe; hack trace is slower with coverage.
 
 **P14 Science + Comms.** Scan facts (transponder, manifest, hidden weapons) unlock dialogue options; conversations create verify objectives. Alone: base options. Info: Science knows physical truth; Comms knows claims. Feedback: Science icon on options and verify chip (Easy). Failure: lies go undetected, bad deals. Test: "call the bluff" exists only after a cargo scan; choosing it yields the scripted outcome distribution.
 
 **P15 Relay + Comms.** Missions arrive with vague places; Relay resolves them to marks and routes; probe discoveries open Comms opportunities. Alone: Comms reads and accepts; Relay maps. Info: Comms knows what and why; Relay knows where. Feedback: mission mark icon (Easy); "new contact to hail" chime on Comms. Failure: lost time, lapsed timed missions, missed opportunities. Test: time to objective with a Relay mark < search; a probe discovery creates a Comms opportunity.
+
+**Request chips.** Each station's chips are a list in data, under the request-chips toggle: boost (H→E), power (W→E), bring mount N to bear (W→H), sensor power (S→E), to scan mark (S→H), fabricate probe (R→E) and hold fire on <callsign> (C→W). All share the CUE expiry and stay player-initiated (FT-PAIR-012, FT-PAIR-013).
+
+**Plays.** Three named chains of pairs; each has an end-to-end test (headless, scripted, seeded) that the full chain beats any chain with one link removed (FT-PAIR-022).
+
+| Play | Chain | Pairs | Metric |
+|---|---|---|---|
+| Over-horizon strike | Relay probes a contact beyond sensor range; Science scans it through the probe; Weapons fires guided at Relay's mark on the weak point | R→S→W (P13, P7, P8) | time to disable |
+| Hack alpha | Science hacks a subsystem; Helm brings mounts to bear and Engineering powers weapons inside the window; Weapons fires | S→H+E+W (P7, P2, P6) | damage inside the hack window |
+| Bluff call | Comms hears a claim; Science scans the cargo; Comms calls the bluff; Weapons acts on the new intent | C→S→C→W (P14, P9) | reputation and reward |
 
 ## 7.5 Requirements
 
@@ -100,16 +112,19 @@ Game rules (a probe enabling a remote scan, a scan fact unlocking a dialogue opt
 - **FT-PAIR-005** Information asymmetry shall be enforced by the server's per-station snapshot filter. (v0.3 §6, D14)
 - ~~**FT-PAIR-006**~~ Removed (D84): superseded by FT-PAIR-019.
 - **FT-PAIR-007** On Easy, share buttons and data links shall deliver weak points to Weapons, routes to Helm and probe tracks to Weapons. (D69)
-- **FT-PAIR-008** On Hard, no cross-station data shall reach another station's screen except marks and pings. (D69)
+- **FT-PAIR-008** On Hard, no cross-station data shall reach another station's screen except marks and pings, that is MARK items other than routes and approach lanes (FT-SPA-029). (D69)
 - **FT-PAIR-009** Request chips shall be disabled on Hard. (D69)
-- **FT-PAIR-010** Engineering and Comms shall share no data link, status snapshot or share button at any difficulty. (D68)
+- **FT-PAIR-010** Between different players holding Engineering and Comms there shall be no data link, status snapshot or share button at any difficulty; Comms' only view of condition shall be the hull band, the same at every difficulty; a Quartermaster player sees both by design. (D68, D76, plan review CLASH-3, CLASH-4)
 - **FT-PAIR-011** Comms shall have the final say on purchases, sales and contracts. (D57, D68)
-- **FT-PAIR-012** Request chips shall be player-initiated only; the game shall never generate "talk to X" prompts. (v0.3 §6)
-- **FT-PAIR-013** An unanswered request chip shall expire silently and appear in the debrief. (v0.3 §6, D35)
+- **FT-PAIR-012** Outside training scenarios, request chips shall be player-initiated only and the game shall never generate "talk to X" prompts. (v0.3 §6, D100)
+- **FT-PAIR-013** An unanswered request chip shall expire silently and appear in the debrief; the debrief shall count, per pair, the cooperative events that occurred (chip sent and answered, shortcut shared, mark placed by one station and used by another, probe-enabled scan, scan-unlocked option). (v0.3 §6, D35, plan review COOP-4)
 - **FT-PAIR-014** Game rules that depend on another station's work (probe-enabled scans, dialogue unlocks, intent tags) shall apply at every difficulty. (D69)
-- **FT-PAIR-015** Each pair shall have an automated test asserting the co-op variant beats the solo variant on its metric and the solo variant completes. (v0.3 §11)
+- **FT-PAIR-015** Each pair except P12 shall have an automated test asserting the co-op variant beats the solo variant on its metric by at least `pair_min_gain`, a per-pair balance value starting at 25 %, and the solo variant completes; P12's test shall instead assert that parts and repairs Comms buys reach Engineering's COND. (v0.3 §11, plan review COOP-2, COOP-3)
 - **FT-PAIR-016** In PvP each ship's pair mechanics shall use only its own faction's knowledge and its own marks. (D21)
-- **FT-PAIR-017** Each cross-station data shortcut in §7.2 shall be an individual toggle, set in the lobby before start, applying to every ship of the session and locked once the run starts. (D81, D84)
-- **FT-PAIR-018** The Easy, Normal and Hard presets shall set the toggles to the values in §7.2. (D84)
-- **FT-PAIR-019** Summaries of other stations' data shall be exact, banded or absent per their toggle: exact on Easy, banded on Normal, absent on Hard. (D14, D84)
+- **FT-PAIR-017** Each cross-station data shortcut in §7.2 shall be an individual toggle, set in the lobby before start, applying to every ship of the session and locked once the run starts; a preset with changed toggles shall show as '<Preset> (custom)'. (D81, D84, D92)
+- **FT-PAIR-018** The Easy, Normal and Hard presets shall set the toggles to the values in §7.2. (D84, D90)
+- **FT-PAIR-019** Summaries of other stations' data, except Engineering's data on Comms (FT-PAIR-010), shall be exact, banded or absent per their toggle: exact on Easy, banded on Normal, absent on Hard. (D14, D68, D84, plan review CLASH-3)
 - **FT-PAIR-020** Where a requirement grants or withholds a data shortcut by difficulty (for example FT-WPN-007, FT-ENG-006, FT-RLY-005, FT-PAIR-007 to FT-PAIR-009, FT-NET-009), the difficulty names the preset value; at run time the shortcut's toggle decides. (D84)
+- **FT-PAIR-021** Request chips shall be a data-defined list per station, including those in §7.4 Request chips. (plan review COOP-7)
+- **FT-PAIR-022** Each play in §7.4 shall have an automated end-to-end test asserting the full chain beats any chain with one link removed. (plan review COOP-5)
+- **FT-PAIR-023** The hack window shall be a data value of at least 8 s. (plan review COOP-5)
