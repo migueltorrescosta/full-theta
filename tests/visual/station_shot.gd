@@ -3,7 +3,8 @@
 ## of `entry`), "lobby", or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
 ## `overlay`, `tooltip` (the first-run tip), `strip` (the radar's side strip) and
-## `ui_scale` (the window's content scale, FT-STN-013; reset on exit).
+## `ui_scale` (the window's content scale, FT-STN-013; reset on exit) and `claim` (a
+## claim item the player holds, e.g. "mount:0").
 extends Control
 
 var view: String = "screen"
@@ -14,6 +15,7 @@ var overlay: bool = false
 var tooltip: bool = false
 var strip: bool = false
 var ui_scale: float = 1.0
+var claim: String = ""
 
 var _ctx: StationContext
 
@@ -26,6 +28,8 @@ func _ready() -> void:
 	if not tooltip:
 		for s: String in StationViews.CREW + ["viewer", "captain"]:
 			_ctx.settings.mark_tooltip_seen(s)
+	if claim != "":
+		_ctx.crew.claims[claim] = {"session": StationFixture.SESSION, "name": "Ana"}
 	if selected >= 0:
 		_ctx.crew.select("contact", selected)
 	if ping >= 0:

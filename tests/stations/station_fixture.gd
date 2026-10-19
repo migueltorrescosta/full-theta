@@ -179,13 +179,13 @@ static func catalogue(dev_all: bool = false) -> Dictionary:
 	for id: String in ids:
 		entries.append(StationViews.def(id).to_dict())
 	return {
-		"ships": [{"id": SHIP, "def": "m1_frigate", "name": SHIP_NAME, "faction": 0}],
+		"ships": [{"id": SHIP, "def": "m1_corvette", "name": SHIP_NAME, "faction": 0}],
 		"entries": entries,
 		"load_tags": StationViews.LOAD_TAGS,
 	}
 
 
-## The snapshot view: own ship, STATUS block, contacts H2, U3, F4.
+## The snapshot view: own ship, STATUS and MOUNTS blocks, contacts H2, U3, F4.
 static func view() -> NetViewState:
 	var p_units: int = NetCodec.period_units(PERIOD_M)
 	var v: NetViewState = NetViewState.new(p_units)
@@ -206,6 +206,11 @@ static func view() -> NetViewState:
 		"shields": 700.0,
 		"pips_used": 6,
 		"propellant": 0.8,
+	}
+	# The corvette's bow mount at rest, loaded and cool.
+	v.blocks[StationViews.Section.MOUNTS] = {
+		"mounts":
+		[{"barrel": Vector3.FORWARD, "cooldown": 0.0, "ammo": 380, "heat": 6.0, "aim_set": false}]
 	}
 	var model: Dictionary = {}
 	var info: Dictionary = {}
