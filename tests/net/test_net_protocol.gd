@@ -40,7 +40,14 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.ABANDON: {"ship": 0},
 		NetProtocol.Type.TAKEOVER: {"ship": 0, "entry": "helm"},
 		NetProtocol.Type.BYE: {"reason": "quit"},
-		NetProtocol.Type.VOICE: {"clip": 2, "rate": 22050, "pcm": PackedByteArray([1, 2, 3])},
+		NetProtocol.Type.VOICE:
+		{
+			"clip": 2,
+			"rate": 22050,
+			"pcm": PackedByteArray([1, 2, 3]),
+			"part": 0,
+			"last": true,
+		},
 		NetProtocol.Type.ABANDON_VOTE: {"ship": 0, "vote": true},
 	}
 

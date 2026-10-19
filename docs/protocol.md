@@ -2,7 +2,7 @@
 
 The custom WebSocket protocol between the headless server and every station (FT-NET-004, D70). Code: `net/net_protocol.gd` (message set, control codec), `net/snapshot_builder.gd` and `net/sections/` (snapshot codec), `net/net_chunker.gd` (chunks and bundles). The threads and seams are in `net/README.md`.
 
-Protocol version: `NetProtocol.PROTOCOL_VERSION` = 1. Bump it on any incompatible change.
+Protocol version: `NetProtocol.PROTOCOL_VERSION` = 2. Bump it on any incompatible change.
 
 ## Transport
 
@@ -46,7 +46,7 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | 14 | Abandon | C | `ship` int | H | The host abandons a paused ship alone (D96, D128). T041 answers `request_rejected` `not_paused`. | T045 |
 | 15 | Takeover | C | `ship` int, `entry` String | H | Take over an uncovered station during a pause (FT-NET-042). | T045 |
 | 16 | Bye | C | `reason` String | H | Orderly leave; the client then closes. | T041 |
-| 17 | Voice | S | `clip` int, `rate` int (Hz), `pcm` PackedByteArray (16-bit mono) | L | Synthesised lines (S7b). | #8 fills, T041 carries |
+| 17 | Voice | S | `clip` int, `rate` int (Hz), `pcm` PackedByteArray (16-bit mono), `part` int (from 0), `last` bool (ends the clip) | L | Stitched and synthesised lines, one per sentence or stitched clip, after the line's `voice_line` event (`audio/README.md`, S7b). | E10 fills, T041 carries |
 | 18 | AbandonVote | C | `ship` int, `vote` bool (cast or withdraw) | H | Crew of a paused ship vote to abandon it (D128). | T045 |
 
 ### Events
