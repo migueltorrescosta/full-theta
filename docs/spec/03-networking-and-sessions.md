@@ -87,7 +87,7 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-034** If the coverage check of a ship still in play fails when a grace period ends, the server shall pause the simulation of the whole universe, every ship included, and show every client which ship and stations are uncovered. (D83, D96)
 - **FT-NET-035** During a pause, a rejoining player or any player of that ship changing catalogue entry shall be able to restore coverage; the simulation shall resume once the coverage check of every ship still in play passes. (D83, D96)
 - **FT-NET-036** A Captain or Viewer disconnect shall never pause the simulation. (D19, D23, D83)
-- **FT-NET-037** When a send to a client fails or its queue passes a threshold, the server shall stop sending it deltas and send a full snapshot once the queue drains; events shall never be dropped. (plan review TECH-2)
+- **FT-NET-037** When a send to a client fails, its high-priority queue passes 256 KiB or more than 15 snapshots (500 ms) go unacknowledged, the server shall stop sending it deltas and send a full snapshot once the queue drains; events shall never be dropped. (plan review TECH-2, D106)
 - **FT-NET-038** Messages above a size limit, such as voice clips and full snapshots, shall be sent in chunks, with voice chunks at lower priority than snapshots. (plan review TECH-2)
 - **FT-NET-039** The static HTTP server shall never delay a simulation tick by more than 1 ms. (plan review TECH-3)
 - **FT-NET-040** The server shall encode each snapshot once per distinct view key (ship, catalogue entry, difficulty toggles) and send it to every client sharing that key. (plan review TECH-9)

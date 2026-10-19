@@ -133,6 +133,8 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 
 57. Module dependencies follow the API-boundary diagram; the Scenario API lives in `sim/api/`, and the architecture lint enforces FT-DAT-007 from #2. §2.2, FT-ARC-010, FT-DAT-007. (D103)
 
-### v0.5 update for D104 (#3)
+### v0.5 update for D104–D106 (#3)
 
 58. Site-local offsets are three 64-bit floats, measured by spike S6. §4.1, FT-SIM-035. (D104)
+59. Voices fine-tuned from lessac or ryan are unclear; medium voices for runtime; a clean pt_PT voice is trained. FT-LIC-007. (D105)
+60. The stall trigger for a client is fixed at 15 unacknowledged snapshots, a failed send or 256 KiB queued. FT-NET-037. (D106)

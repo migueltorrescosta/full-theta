@@ -54,5 +54,5 @@ Updated from emptyepsilon.md §6 for decisions D1–D89.
 - **FT-LIC-004** `docs/provenance.md` shall keep the reproduced/redesigned/omitted record in §13.2 current. (v0.3 §10)
 - **FT-LIC-005** A provenance manifest shall list every third-party asset, voice model and dependency with source, licence and attribution. (D63)
 - **FT-LIC-006** Only CC0 art and sound packs shall be shipped unless a later decision allows otherwise. (D63)
-- **FT-LIC-007** Every Piper voice shall be audited from its model card, and non-commercial or unclear voices shall not ship. (D38)
+- **FT-LIC-007** Every Piper voice shall be audited from its model card, and non-commercial or unclear voices shall not ship; a voice fine-tuned from a non-commercial or research-only checkpoint (lessac, ryan) counts as unclear. (D38, D105)
 - **FT-LIC-008** Release packages shall include the GPL-3.0 text and a source offer or source link. (D2)
