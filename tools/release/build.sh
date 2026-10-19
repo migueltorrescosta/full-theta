@@ -56,7 +56,12 @@ mapfile -t langs < <(py -c 'import sys; sys.path.insert(0, "tools/release")
 import package; print("\n".join(package.release_languages()))')
 echo "build: prerender ${langs[*]}"
 tools/release/prerender.sh "${langs[@]}"
-"$godot" --headless --path . --import >/dev/null 2>&1
+# Importing the fresh clips crashed Godot 4.7.2 once on fugaku (a segfault that
+# didn't recur), so one retry; a second failure stops the build.
+"$godot" --headless --path . --import >"$out/exports/import.log" 2>&1 || {
+  echo "build: import failed ($?), retrying once" >&2
+  "$godot" --headless --path . --import >"$out/exports/import.log" 2>&1
+}
 
 export_preset() { # preset, path
   echo "build: export $1"
