@@ -57,13 +57,10 @@ static func step(world: SimWorld) -> void:
 			var by: int = -1
 			var ident: bool = false
 			if live:
-				var observers: PackedInt32Array = sensing[fi]
-				var dists: PackedFloat64Array = kin.distances_to(observers, contact)
-				for k: int in observers.size():
-					var o: int = observers[k]
+				for o: int in sensing[fi]:
 					if site[o] != contact_site:
 						continue
-					var dist: float = dists[k]
+					var dist: float = kin.relative(o, contact).length()
 					if dist > sense[o]:
 						continue
 					if by < 0:
