@@ -1,0 +1,7 @@
+{
+  "size": [1280, 720],
+  "shots": [
+    {"name": "s8_v2_front_720p", "scene": "res://spikes/s8/ship_v2_view.tscn", "set": {"yaw_degrees": 140, "pitch_degrees": 25}},
+    {"name": "s8_v2_worn_front_720p", "scene": "res://spikes/s8/ship_v2_view.tscn", "set": {"yaw_degrees": 140, "pitch_degrees": 25, "wear": 1.0}}
+  ]
+}
