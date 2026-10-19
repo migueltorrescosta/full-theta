@@ -1,11 +1,11 @@
-# h: the host client. Spawns the server child, joins as host, picks Tactical.
-host_spawn port=$PORT pid_file=$RUN/server.pid.json publish=url timeout=30  # B2: host entry
-connect
-expect_welcome resumed=false
-pick ship=0 entry=p2
+# h: the host client (HostSession): spawns the server child and joins as host on Tactical.
+host_spawn pid_file=$RUN/server.pid.json grace=$GRACE publish=url timeout=40
+expect_welcome resumed=false host=true
+pick ship=0 entry=tactical
 barrier name=picked n=3
+expect_event type=lobby payload.ship=0 payload.ready=true keep=true
 ready
-expect_event type=started  # A: run start event
+expect_event type=started payload.ship=0
 expect_tick_moving
 barrier name=started n=3
 command id=go kind=helm_input throttle=1.0 rotation=Vector3(0, 0.2, 0)

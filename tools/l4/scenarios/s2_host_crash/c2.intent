@@ -1,10 +1,9 @@
-# c2: crew on the hosted server (entry p10); keeps playing while the host crashes.
+# c2: crew on the hosted server (systems); keeps playing while the host crashes.
 connect
-expect_welcome resumed=false
-pick ship=0 entry=p10
+expect_welcome resumed=false host=false
+pick ship=0 entry=systems
 barrier name=picked n=3
-ready
-expect_event type=started  # A: run start event
+expect_event type=started payload.ship=0
 barrier name=started n=3
 mark
 await name=h_back timeout=60
@@ -14,3 +13,4 @@ expect_no_event type=pause for=0.1
 expect_tick_moving
 barrier name=done n=3
 bye
+barrier name=left n=3

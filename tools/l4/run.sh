@@ -40,8 +40,11 @@ alive() { # pid: running and not a zombie
   [[ -n $st && $st != Z ]]
 }
 
-# why LOG: the reason a client gave on its last log line.
-why() { tail -n 1 "$1" 2>/dev/null | grep -o '"why":"[^"]*"' | cut -c8- | tr -d '"'; }
+# why LOG: the reason a client gave on its last log line (or its first engine error).
+why() {
+  [[ -s $1 ]] || { grep -m1 -E 'ERROR|error' "$out/clients.err"; return; }
+  tail -n 1 "$1" | grep -o '"why":"[^"]*"' | cut -c8- | tr -d '"'
+}
 
 # Fails the scenario as soon as a client exits non-zero or the server dies.
 check() {
@@ -58,7 +61,7 @@ check() {
 # server [flags]: the dedicated server on a free port; sets URL.
 server() {
   taskset -c "$cpus" "$godot" --headless --path . -- --server --bind 127.0.0.1 --port 0 \
-    --grace-s "$grace" --run-for $((limit + 30)) "$@" >"$out/server.out" 2>&1 &
+    --grace-s "$grace" --no-beacon --run-for $((limit + 30)) "$@" >"$out/server.out" 2>&1 &
   server_pid=$!
   local end=$((SECONDS + 30)) line
   until line=$(grep -m1 -o 'listening on [0-9.]*:[0-9]*' "$out/server.out"); do

@@ -20,8 +20,8 @@ Environment: `L4_CPUS` (`0,1`), `L4_GRACE` (server `--grace-s`, 8: a relaunched 
 
 ## Scenarios
 
-- `s1_session`: a dedicated server; c1 and c2 pick Tactical, c3 Systems. Ready is refused while Relay and Comms are uncovered; c1 claims mount 0, c2's command on it is rejected and c2 sees c1's name; c2 moves to Ops, Ready passes and the run starts. c1 is SIGKILLed and relaunched with its token file within the grace: same ship, pick, settings and claim, no pause, the other clients' snapshots never stop, and KIN converges. c3 is SIGKILLed: no pause during the grace, then every client gets a pause naming Engineering and Science while snapshots keep flowing at a frozen tick; c3 relaunches with an expired token, picks Systems again and the universe resumes.
-- `s2_host_crash` (TECH-8): the host client spawns the server as its child (`HostLauncher`, host secret, pid file in the run folder) and plays Tactical with c2 (Systems) and c3 (Ops). It is SIGKILLed mid-run and relaunched: `OrphanCheck` offers to rejoin, it rejoins on the same ship and pick with its stored token, and c2 and c3 never miss a snapshot. At the end the host stops its server.
+- `s1_session`: a dedicated server. c1 picks Tactical first and holds its items (its name is in the snapshot's ownership), c2 joins Tactical, c3 picks Systems. Ready is refused (`coverage`) while Relay and Comms are uncovered. c2's command on mount 0 is rejected (`claimed`) and c2 sees c1's name; c1 releases mount 0, c2 claims it, and now c1's command is rejected. c2 moves to Ops, the lobby reports nothing uncovered, Ready starts the run and the tick moves. c1 is SIGKILLed and relaunched with its token file within the grace: same ship, pick, decoupled setting and flight claim, no pause, the other clients' snapshots never stop, and KIN converges. c3 writes pips (last writer named), then is SIGKILLed: no pause during the grace, then every client gets a pause naming Engineering and Science while snapshots keep flowing at a frozen tick; c3 relaunches, its session gets ship and pick back and the universe resumes.
+- `s2_host_crash` (TECH-8): the host client hosts through `HostSession` (a server child with the secret in its environment, pid file in the run folder; Welcome `host` true) and plays Tactical with c2 (Systems) and c3 (Ops). It is SIGKILLed mid-run and relaunched: `OrphanCheck` says `offer_rejoin`, `HostSession.check_orphan` rejoins on the same ship and pick as the host, and c2 and c3 never miss a snapshot or see a pause. At the end the host stops its server (`HostSession.stop`).
 
 ## Client runner
 
@@ -30,7 +30,7 @@ godot --headless --path . -s res://tools/l4/l4_client.gd -- --url ws://HOST:PORT
   --intent FILE --log FILE.jsonl [--token-file FILE] [--run-dir DIR] [--max-s 120] [--set K=V]
 ```
 
-It polls the client every frame and runs one step at a time; a waiting step fails after its `timeout` (15 s by default), a rejection or closed connection at once. Exit codes: 0 every step passed, 1 a step failed (or `--max-s` passed), 2 a bad command line or intent file. The token file is a `SessionTokenFile` (token, host, port, host secret), written on every Welcome and read by `connect`.
+It polls the client every frame and runs one step at a time; a waiting step fails after its `timeout` (15 s by default), a rejection or closed connection at once. Exit codes: 0 every step passed, 1 a step failed (or `--max-s` passed), 2 a bad command line or intent file. The token file is a `SessionTokenFile` (token, host, port, host secret), written on every Welcome (by `HostSession` in host mode) and read by `connect`.
 
 The log has one JSON object per line, each with `ms` since the start and `ev`: `start` (with `unix_ms`), `step` (`n`, `line`, `ok`, `ms_taken`, `why`), `welcome`, `catalogue`, `event` (`type`, `seq`, `tick`, `payload`), `snap` (one per frame that applied snapshots: `tick`, `k` a hash of the KIN section, `gap_ms`), `note`, and `end` (`ok`, `why`, `stats`, `max_gap_ms`).
 
@@ -52,13 +52,13 @@ Matchers are `path<op>value` on a dictionary. A path is dotted keys, array indic
 | `expect_event type=T [keep=true]` + matchers on `{seq, tick, type, payload}` | Waits for a matching event after the cursor and moves the cursor past it. |
 | `expect_no_event type=T for=S` + matchers | No matching event after the cursor for S seconds. |
 | `expect_flowing [max_gap_ms=1000] [min_snapshots=1]` | Snapshots came since `mark`, none more than `max_gap_ms` apart. |
-| `expect_tick_still for=S`, `expect_tick_moving [ticks=30]` | Snapshots arrive but the tick stands still (a pause); the tick advances. |
+| `expect_tick_still for=S`, `expect_tick_moving [ticks=30]` | Snapshots arrive but the tick doesn't pass the view's or the last matched event's tick (run it after `expect_event type=pause`: the pause carries the tick the sim stopped at and may overtake that tick's snapshot); the tick advances. |
 | `mark` | Moves the event cursor to now and restarts the gap watch. |
 | `wait s=S`, `note msg=`, `exit` | Polls for S seconds; a log line; stop here as passed. |
 | `signal name=X`, `await name=X`, `barrier name=X n=N` | Through files in the run folder: create `sig.X`; wait for it (from `run.sh` or another client); arrive at X and wait for N clients. |
-| `host_spawn port= pid_file= [publish=X]` | Host mode: spawn the server child with `HostLauncher`, wait for its pid file, present the host secret on `connect`; `publish` writes the URL to `sig.X`. |
-| `orphan_rejoin pid_file= [expect=offer_rejoin]` | A relaunched host's start: `OrphanCheck.inspect` must say `expect`; the next `connect` goes to the orphan's port. |
-| `host_stop pid_file=` | Stop the server (own child, or the orphan from its pid file) and wait until it is gone. |
+| `host_spawn pid_file= [port=0] [grace=S] [publish=X]` | `HostSession.host()`: spawn the server child (with `--no-beacon` and the grace), wait until it joined as the host; `publish` writes the URL to `sig.X`. |
+| `orphan_rejoin pid_file= [expect=offer_rejoin]` | A relaunched host's start: `OrphanCheck.inspect` must say `expect`; then `HostSession.check_orphan` answers REJOIN and waits until rejoined. |
+| `host_stop` | `HostSession.stop()` (Bye, kill the server, remove pid and token files); waits until the process is gone. |
 
 ## Adding a scenario
 

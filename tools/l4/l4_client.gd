@@ -50,6 +50,8 @@ var _dirty: bool = false
 ## Every delivered event, in order; expect_event searches from _cursor.
 var _events: Array[Dictionary] = []
 var _cursor: int = 0
+## Tick of the event expect_event matched last.
+var _matched_tick: int = 0
 ## Command ids (from `command id=...`) -> seq.
 var _seqs: Dictionary = {}
 var _last_snaps: int = 0
@@ -59,7 +61,8 @@ var _mark_snaps: int = 0
 var _was_welcomed: bool = false
 ## Welcomed and not since dropped or said Bye: a close now fails the run at once.
 var _live: bool = false
-var _launcher: HostLauncher
+## Set by host_spawn and orphan_rejoin; it owns and polls _client.
+var _host: HostSession
 var _code: int = -1
 
 
@@ -84,7 +87,10 @@ func _initialize() -> void:
 func _process(_delta: float) -> bool:
 	if _code >= 0:
 		return true
-	_client.poll()
+	if _host != null:
+		_host.poll()
+	else:
+		_client.poll()
 	_observe()
 	if _code < 0:
 		_run_steps()
@@ -452,7 +458,7 @@ func _path_file(name: String) -> String:
 
 
 func _save_token() -> void:
-	if token_path == "":
+	if token_path == "" or _host != null:  # HostSession stores its own
 		return
 	var host: String = url.trim_prefix("ws://").get_slice(":", 0)
 	var port: int = url.get_slice(":", 2).to_int()
@@ -633,6 +639,7 @@ func _do_expect_event(step: Dictionary) -> Result:
 		return _wait("no matching %s event" % _arg(step, "type", ""))
 	if not _arg(step, "keep", false):
 		_cursor = k + 1
+	_matched_tick = int(_events[k]["tick"])
 	return Result.DONE
 
 
@@ -681,13 +688,16 @@ func _do_expect_flowing(step: Dictionary) -> Result:
 	return Result.DONE
 
 
-## expect_tick_still for=S: snapshots keep coming but the sim tick does not move for S
-## seconds (a paused universe, FT-NET-034).
+## expect_tick_still for=S: snapshots keep coming but the sim tick does not pass the
+## view's tick or the last matched event's tick for S seconds (a paused universe,
+## FT-NET-034; run it after expect_event type=pause).
 func _do_expect_tick_still(step: Dictionary) -> Result:
 	if not _st.has("tick"):
-		_st["tick"] = _client.view.tick
+		# The pause event carries the tick the sim stopped at, and it may overtake the
+		# snapshot of that tick (events and snapshots are queued separately).
+		_st["tick"] = maxi(_client.view.tick, _matched_tick)
 		_st["n0"] = _client.stats["snapshots"]
-	if _client.view.tick != int(_st["tick"]):
+	if _client.view.tick > int(_st["tick"]):
 		return _fail("tick moved from %d to %d" % [_st["tick"], _client.view.tick])
 	if _elapsed_s() < _num(step, "for", 1.0):
 		return Result.WAIT
@@ -766,28 +776,36 @@ func _do_exit(_step: Dictionary) -> Result:
 	return Result.DONE
 
 
-# --- Steps: the host client (FT-NET-001, FT-NET-003, TECH-8). ---
-# PROVISIONAL until B2's host entry lands: these use HostLauncher and OrphanCheck
-# directly; switch them to the app's host path when it exists.
+# --- Steps: the host client (FT-NET-001, FT-NET-003, TECH-8), through HostSession. ---
 
 
-## host_spawn port=P pid_file=PATH [publish=NAME]: spawns this executable as a
-## headless server child with a fresh host secret, waits until it wrote its pid file,
-## then the next connect presents the secret. publish writes sig.NAME = the server URL.
+## The HostSession takes over the client: it polls it and connects it itself.
+func _adopt_host(host: HostSession) -> void:
+	_host = host
+	_client = host.client
+	_host.token_file = token_path
+
+
+## host_spawn pid_file=PATH [port=0] [grace=S] [publish=NAME]: HostSession.host():
+## spawns this executable as a headless server child (secret through the environment),
+## waits for its pid file, joins as the host and stores the token and secret.
+## publish writes the server URL to sig.NAME for run.sh.
 func _do_host_spawn(step: Dictionary) -> Result:
-	if _launcher == null:
-		_launcher = HostLauncher.new()
-		var pid_file: String = str(_arg(step, "pid_file", _path_file("server.pid.json")))
-		if _launcher.spawn(int(_arg(step, "port", 0)), pid_file) != OK:
-			return _fail("HostLauncher.spawn failed")
-		_client.host_secret = _launcher.host_secret
-		_line({"ev": "note", "msg": "spawned server pid %d" % _launcher.pid})
-	if not _launcher.is_running():
-		return _fail("server child exited")
-	if not _launcher.is_ready():
-		return _wait("server child wrote no pid file (ServerPidFile) yet")
-	var info: ServerPidFile = ServerPidFile.load_from(_launcher.pid_file)
-	url = "ws://%s:%d" % [HostLauncher.BIND, info.port]
+	if _host == null:
+		_adopt_host(HostSession.new(client_name))
+		_host.launcher.pid_file = str(_arg(step, "pid_file", _path_file("server.pid.json")))
+		var flags: PackedStringArray = ["--no-beacon"]
+		if _arg(step, "grace") != null:
+			flags.append_array(["--grace-s", str(_arg(step, "grace"))])
+		_host.launcher.extra_server_args = flags
+		if _host.host(int(_arg(step, "port", 0))) != OK:
+			return _fail("HostSession.host: %s" % _host.error)
+		_line({"ev": "note", "msg": "spawned server pid %d" % _host.launcher.pid})
+	if _host.state == HostSession.State.FAILED:
+		return _fail("HostSession: %s" % _host.error)
+	if not _host.is_joined():
+		return _wait("host session %s" % HostSession.State.keys()[_host.state])
+	url = "ws://%s:%d" % [HostSession.ADDRESS, _host.launcher.port]
 	if _arg(step, "publish") != null:
 		var f: FileAccess = FileAccess.open(
 			_path_file("sig.%s" % _arg(step, "publish")), FileAccess.WRITE
@@ -797,38 +815,49 @@ func _do_host_spawn(step: Dictionary) -> Result:
 	return Result.DONE
 
 
-## orphan_rejoin pid_file=PATH [expect=offer_rejoin]: what a relaunched host does on
-## start (OrphanCheck): finds the orphaned server and its stored token; the next
-## connect rejoins it with that token and host secret.
+## orphan_rejoin pid_file=PATH [expect=offer_rejoin]: a relaunched host's start:
+## OrphanCheck must say `expect`; then HostSession.check_orphan answers REJOIN and
+## rejoins with the stored token and host secret. Waits until joined.
 func _do_orphan_rejoin(step: Dictionary) -> Result:
 	var pid_file: String = str(_arg(step, "pid_file", _path_file("server.pid.json")))
-	var check: OrphanCheck = OrphanCheck.inspect(pid_file, token_path)
-	var action: String = OrphanCheck.Action.keys()[check.action].to_lower()
-	var want: String = str(_arg(step, "expect", "offer_rejoin"))
-	if action != want:
-		return _wait("OrphanCheck says %s, want %s" % [action, want])
-	if check.info != null:
-		url = "ws://%s:%d" % [check.info.bind, check.info.port]
-	_line({"ev": "note", "msg": "orphan check: %s, url %s" % [action, url]})
+	if _host == null:
+		var check: OrphanCheck = OrphanCheck.inspect(pid_file, token_path)
+		var action: String = OrphanCheck.Action.keys()[check.action].to_lower()
+		var want: String = str(_arg(step, "expect", "offer_rejoin"))
+		if action != want:
+			return _wait("OrphanCheck says %s, want %s" % [action, want])
+		_line({"ev": "note", "msg": "orphan check: %s" % action})
+		if want != "offer_rejoin":
+			return Result.DONE
+		var rejoin: Callable = func(_c: OrphanCheck) -> HostSession.Answer:
+			return HostSession.Answer.REJOIN
+		var host: HostSession = HostSession.check_orphan(rejoin, pid_file, token_path)
+		if host == null:
+			return _fail("check_orphan returned no session")
+		_adopt_host(host)
+		_was_welcomed = false
+	if _host.state == HostSession.State.FAILED:
+		return _fail("HostSession: %s" % _host.error)
+	if not _host.is_joined():
+		return _wait("host session %s" % HostSession.State.keys()[_host.state])
+	url = "ws://%s:%d" % [HostSession.ADDRESS, _host.launcher.port]
 	return Result.DONE
 
 
-## host_stop pid_file=PATH: the host leaves: kill the server (own child, or the orphan
-## from its pid file) and wait until it is gone.
-func _do_host_stop(step: Dictionary) -> Result:
-	var pid_file: String = str(_arg(step, "pid_file", _path_file("server.pid.json")))
+## host_stop: the host leaves: HostSession.stop() says Bye and kills the server (its
+## child or the adopted orphan); waits until the process is gone.
+func _do_host_stop(_step: Dictionary) -> Result:
+	if _host == null:
+		return _fail("no host session")
 	if not _st.has("pid"):
-		var info: ServerPidFile = ServerPidFile.load_from(pid_file)
-		_st["pid"] = info.pid if info != null else -1
-		if _launcher != null:
-			_st["pid"] = _launcher.pid
-			_launcher.stop()
-		else:
-			var check: OrphanCheck = OrphanCheck.inspect(pid_file, token_path)
-			check.terminate()
-	var alive: bool = OrphanCheck.process_alive(int(_st["pid"]))
-	if _launcher != null:
-		alive = OS.is_process_running(int(_st["pid"]))  # our child: reaped, not a zombie
+		_st["pid"] = _host.launcher.pid
+		_st["child"] = not _host.launcher.adopted
+		_live = false
+		_host.stop()
+	var pid: int = int(_st["pid"])
+	var alive: bool = OrphanCheck.process_alive(pid)
+	if alive and _st["child"]:
+		alive = OS.is_process_running(pid)  # our own child: reaped, not a zombie
 	if alive:
-		return _wait("server pid %d still running" % _st["pid"])
+		return _wait("server pid %d still running" % pid)
 	return Result.DONE
