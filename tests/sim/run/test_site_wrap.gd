@@ -237,3 +237,21 @@ func test_site_period_validation() -> void:
 		1, "test", TestDefs.corvette(), TestDefs.raider_enemy(), 50000.0
 	)
 	assert_str(short.validate()[0]).contains("sensor range")
+
+
+# FT: FT-SIM-035
+# The period is also at most SimWorld.MAX_CELLS_PER_AXIS of either broadphase cell, so
+# the collision grid's cell keys can't overflow: 2^20 cells of 250 m pass, one 500 m
+# step more fails on the 250 m cell, and 1e12 m fails on both.
+func test_site_period_upper_bound() -> void:
+	var limit: float = SimWorld.MAX_CELLS_PER_AXIS * CollisionSystem.CELL
+	var cases: Array[Array] = [[limit, 0], [limit + 500.0, 1], [1.0e12, 2]]
+	for c: Array in cases:
+		var enc: M1Encounter = M1Encounter.new(
+			1, "test", TestDefs.corvette(), TestDefs.raider_enemy(), c[0]
+		)
+		var errors: Array[String] = enc.validate()
+		var msg: String = "%s: %s" % [c[0], errors]
+		assert_int(errors.size()).override_failure_message(msg).is_equal(c[1])
+		for e: String in errors:
+			assert_str(e).contains("cells of")
