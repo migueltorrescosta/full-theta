@@ -49,6 +49,9 @@ class Options:
 	var http_root: String = ""
 	## The session language the host picked (--language, FT-AUD-013).
 	var language: String = I18n.LANGUAGES[0]
+	## Offer the dev entry holding every station (--dev-all-stations, FT-NET-029,
+	## FT-M1-015).
+	var dev_all: bool = false
 
 	func _init(bind_address: String = "") -> void:
 		bind = bind_address

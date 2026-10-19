@@ -18,6 +18,8 @@ Usage (tools/gate.sh l5 [--update-baselines] runs the first two):
   l5.py --update-baselines    regenerate tests/visual/baselines/
   l5.py --capture-only DIR    render into DIR, compare nothing
   --shots FILE                another shot manifest (default tests/visual/shots.json)
+
+Each shot renders at the manifest's "size" [w, h] unless it gives its own "size".
 """
 
 import argparse
@@ -165,10 +167,18 @@ def blank(rgb: bytes) -> bool:
     return rgb == rgb[:3] * (len(rgb) // 3)
 
 
+def shot_size(manifest: dict, shot: dict) -> list[int]:
+    """A shot's [width, height]: its own "size", else the manifest's."""
+    return shot.get("size", manifest["size"])
+
+
 def capture(shots_file: Path, out: Path) -> list[str]:
     """Render every shot into out/ under Xvfb with llvmpipe; return errors."""
     manifest = json.loads(shots_file.read_text())
-    width, height = manifest["size"]
+    sizes = {s["name"]: tuple(shot_size(manifest, s)) for s in manifest["shots"]}
+    # The X screen and window start at the largest size; the capture sizes each shot.
+    width = max((w for w, _ in sizes.values()), default=manifest["size"][0])
+    height = max((h for _, h in sizes.values()), default=manifest["size"][1])
     if not shutil.which("xvfb-run"):
         return ["xvfb-run not found; install the xvfb package"]
     out.mkdir(parents=True, exist_ok=True)
@@ -201,8 +211,9 @@ def capture(shots_file: Path, out: Path) -> list[str]:
         errors.append(f"renderer is {renderer!r}, not llvmpipe")
     for shot in manifest["shots"]:
         w, h, rgb = read_png(out / f"{shot['name']}.png")
-        if (w, h) != (width, height):
-            errors.append(f"{shot['name']}: rendered {w}x{h}, expected {width}x{height}")
+        want_w, want_h = sizes[shot["name"]]
+        if (w, h) != (want_w, want_h):
+            errors.append(f"{shot['name']}: rendered {w}x{h}, expected {want_w}x{want_h}")
         elif blank(rgb):
             errors.append(f"{shot['name']}: blank image")
     return errors

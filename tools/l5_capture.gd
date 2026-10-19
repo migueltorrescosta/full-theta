@@ -1,7 +1,8 @@
 ## L5 screenshot capture (FT-TST-003), run by tools/l5.py under Xvfb with llvmpipe:
 ##   godot --path . --rendering-driver opengl3 --resolution WxH -s res://tools/l5_capture.gd \
 ##     -- --shots <shots.json> --out <dir>
-## Renders each shot's scene in the root window, waits a few frames, saves <name>.png
+## Renders each shot's scene in the root window at the shot's "size" (else the manifest's),
+## waits a few frames, saves <name>.png
 ## and writes env.json (renderer, GL version, engine) and timings.json to <dir>.
 extends SceneTree
 
@@ -30,7 +31,8 @@ func _run() -> void:
 		var shot: Dictionary = item
 		var name: String = shot["name"]
 		var start: int = Time.get_ticks_msec()
-		var image: Image = await _capture(shot)
+		var size: Array = shot.get("size", manifest.get("size", []))
+		var image: Image = await _capture(shot, size)
 		if image == null:
 			_fail("cannot load scene for shot %s" % name)
 			return
@@ -49,10 +51,14 @@ func _run() -> void:
 
 
 ## Instances the shot's scene, applies its "set" properties, renders and returns the frame.
-func _capture(shot: Dictionary) -> Image:
+func _capture(shot: Dictionary, size: Array) -> Image:
 	var scene: PackedScene = load(shot["scene"])
 	if scene == null:
 		return null
+	if size.size() == 2:
+		var want: Vector2i = Vector2i(int(size[0]), int(size[1]))
+		DisplayServer.window_set_size(want)
+		root.size = want
 	var node: Node = scene.instantiate()
 	var props: Dictionary = shot.get("set", {})
 	for key: Variant in props:

@@ -1,0 +1,96 @@
+class_name StationPanel
+extends Control
+## Base of every station panel (FT-JNT-001). A StationScreen holds one panel for a
+## single station, two for a joint view (six for the dev entry); one is focused at a
+## time and only it receives its station's intents, apart from the intents live on the
+## device (IntentTable.target). The focused panel shows its main view (cockpit, turret,
+## cutaway, map) in the screen's main area; the others show their compact docked view.
+##
+## Subclass it in stations/<station>/, register the script in StationRegistry, and
+## override the virtuals below. Read state through `ctx` (StationContext): ctx.view and
+## ctx.interp for the snapshot, ctx.crew for selection, marks, pings, claims; send with
+## ctx.intents. Never name sim/ (FT-ARC-011).
+
+## The station this panel serves (IntentTable group).
+var station: String = ""
+var ctx: StationContext = null
+var focused: bool = false
+var docked: bool = false
+
+
+## Called once by the screen before the panel enters the tree.
+func setup(context: StationContext, station_id: String) -> void:
+	ctx = context
+	station = station_id
+	_setup()
+
+
+## Focus and dock state; the screen calls it on every focus change.
+func set_mode(is_focused: bool, is_docked: bool) -> void:
+	focused = is_focused
+	docked = is_docked
+	_mode_changed()
+	queue_redraw()
+
+
+# --- Virtuals. ---
+
+
+## Build children here (ctx and station are set).
+func _setup() -> void:
+	pass
+
+
+## Focus or dock state changed: switch between the main and the compact view.
+func _mode_changed() -> void:
+	pass
+
+
+## A station intent event (InputMatcher's dictionary) routed to this panel; return true
+## when handled. Axis intents are polled instead: ctx.matcher.axis(id).
+func handle_intent(_event: Dictionary) -> bool:
+	return false
+
+
+## The item under the cursor or reticle for select / ping / mark (§5.0: in cockpit and
+## turret views "under the cursor" means under the reticle): {"kind", "id"} or
+## {"kind": "point", "site", "pos"}; {} for nothing. `screen_pos` is in this panel's
+## coordinates.
+func item_at(_screen_pos: Vector2) -> Dictionary:
+	return {}
+
+
+## True when the panel has request chips (B / View+Y sends one, §5.0, §7.4).
+func has_request_chip() -> bool:
+	return false
+
+
+## The panel's request-chip handler (B, View+Y).
+func send_request() -> void:
+	pass
+
+
+## The claim item the common claim action (K, View+X) takes or releases on this panel
+## (e.g. "flight", "mount:2"); "" when it has none.
+func claim_item() -> String:
+	return ""
+
+
+## Intent ids the first-run tooltip explains, most important first (FT-STN-012).
+## Default: the station's first three press or hold intents (the common select, ping
+## and mark for a station without any), then the controls overlay.
+func tooltip_intents() -> Array[String]:
+	var out: Array[String] = []
+	for id: String in IntentTable.ids_of(station):
+		if IntentTable.row(id)["kind"] != IntentTable.AXIS and out.size() < 3:
+			out.append(id)
+	if out.is_empty():
+		out = ["select", "ping", "mark"]
+	out.append("overlay")
+	return out
+
+
+## Whether the disc radar should be orbitable on this panel's screen (FT-SPA-011:
+## Science and Relay yes, Helm and Weapons insets fixed).
+func radar_orbitable() -> bool:
+	return station in ["science", "relay"]

@@ -52,6 +52,7 @@ func test_server_args_from_the_editor_binary() -> void:
 	assert_str(args[args.find("--port") + 1]).is_equal("5000")
 	assert_str(args[args.find("--http-root") + 1]).is_equal("/srv/web")
 	assert_bool(args.has("--no-beacon")).is_true()
+	assert_bool(args.has("--dev-all-stations")).is_false()
 	# What the child parses back.
 	var cli: ServerMain = ServerMain.new()
 	OS.set_environment(HostLauncher.SECRET_ENV, "c0ffee")
@@ -75,6 +76,20 @@ func test_server_args_in_an_export_have_no_path() -> void:
 	assert_str(args[args.find("--bind") + 1]).is_equal("127.0.0.1")
 	assert_bool(args.has("--http-root")).is_false()
 	assert_bool(args.has("--no-beacon")).is_false()
+
+
+# FT: FT-NET-029, FT-M1-015
+# The Host screen's dev checkbox (one client holds every station) reaches the child.
+func test_dev_all_stations_option_maps_to_the_server_flag() -> void:
+	var o: HostSession.Options = HostSession.Options.new("127.0.0.1")
+	o.dev_all = true
+	var args: PackedStringArray = HostLauncher.server_args(o, "/u/p.json", "")
+	assert_bool(args.has("--dev-all-stations")).is_true()
+	var cli: ServerMain = ServerMain.new()
+	OS.set_environment(HostLauncher.SECRET_ENV, "c0ffee")
+	assert_bool(cli.parse_args(args.slice(args.find("--") + 1))).is_true()
+	OS.unset_environment(HostLauncher.SECRET_ENV)
+	assert_bool(cli.dev_all_stations).is_true()
 
 
 # FT: FT-NET-001

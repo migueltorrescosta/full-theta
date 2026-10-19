@@ -4,6 +4,11 @@
     {"name": "s2_scene", "scene": "res://tests/visual/s2_scene.tscn"},
     {"name": "s8_front", "scene": "res://tests/visual/ship_view.tscn", "set": {"yaw_degrees": 140, "pitch_degrees": 25, "wear": 1.0}},
     {"name": "s8_side", "scene": "res://tests/visual/ship_view.tscn", "set": {"yaw_degrees": 90, "pitch_degrees": 12, "wear": 1.0}},
-    {"name": "s8_rear", "scene": "res://tests/visual/ship_view.tscn", "set": {"yaw_degrees": -35, "pitch_degrees": 35, "wear": 1.0}}
+    {"name": "s8_rear", "scene": "res://tests/visual/ship_view.tscn", "set": {"yaw_degrees": -35, "pitch_degrees": 35, "wear": 1.0}},
+    {"name": "station_lobby", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"view": "lobby", "entry": "systems"}},
+    {"name": "station_science", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "science", "ping": 3, "tooltip": true}},
+    {"name": "station_overlay", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "comms", "overlay": true}},
+    {"name": "station_radar", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"view": "radar", "strip": true, "ping": 3}},
+    {"name": "station_comms_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "comms", "ui_scale": 1.5}}
   ]
 }
