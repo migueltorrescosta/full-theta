@@ -132,3 +132,7 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 ### v0.5 update for D103 (#2)
 
 57. Module dependencies follow the API-boundary diagram; the Scenario API lives in `sim/api/`, and the architecture lint enforces FT-DAT-007 from #2. §2.2, FT-ARC-010, FT-DAT-007. (D103)
+
+### v0.5 update for D104 (#3)
+
+58. Site-local offsets are three 64-bit floats, measured by spike S6. §4.1, FT-SIM-035. (D104)

@@ -2,7 +2,7 @@
 
 ## 4.1 Flight
 
-Ships fly full 6DOF Newtonian motion: thrust, inertia, momentum and rotation, with ship-specific thruster limits (v0.3 §5, D24). Flight assist is on by default and works by issuing real thruster commands within the ship's limits; decoupled mode turns it off (D24). All-stop and hold-to-approach are assist modes, so they also use real thrust and propellant (D97); Helm's all-stop and approach controls are in §5.1. Thrust consumes propellant; coasting does not (D34). The jump drive moves the ship within the scenario's single global 3D map, between encounter sites, and consumes propellant (D29, D34, D77). Positions are site-local, so float32 precision holds anywhere on the map: the largest local coordinate is 200 km (D98, plan review TECH-1). Units are SI.
+Ships fly full 6DOF Newtonian motion: thrust, inertia, momentum and rotation, with ship-specific thruster limits (v0.3 §5, D24). Flight assist is on by default and works by issuing real thruster commands within the ship's limits; decoupled mode turns it off (D24). All-stop and hold-to-approach are assist modes, so they also use real thrust and propellant (D97); Helm's all-stop and approach controls are in §5.1. Thrust consumes propellant; coasting does not (D34). The jump drive moves the ship within the scenario's single global 3D map, between encounter sites, and consumes propellant (D29, D34, D77). Positions are site-local, with each local coordinate a 64-bit float, so precision holds anywhere on the map: the largest local coordinate is 200 km (D98, D104, plan review TECH-1). Units are SI.
 
 ## 4.2 Weapons
 
@@ -56,7 +56,7 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 - **FT-SIM-032** Stations shall receive a visual warning when the ship is hit or a subsystem they depend on fails. (v0.3 §5)
 - **FT-SIM-033** All simulation units shall be SI and documented in the content definitions. (v0.3 §3)
 - **FT-SIM-034** The jump drive shall move the ship within the scenario's single global 3D map to the selected site or mark, after a data-defined spool time, arriving at a data-defined stand-off from it, and shall consume propellant per jump. (D29, D34, D77, D98, plan review NAV-4)
-- **FT-SIM-035** Positions shall be stored as a site id plus a local float32 offset of at most 200 km per axis, and a jump shall change the ship's site. (D98, plan review TECH-1)
+- **FT-SIM-035** Positions shall be stored as a site id plus a local offset of three 64-bit floats of at most 200 km per axis (velocities and relative vectors may stay float32 `Vector3`), and a jump shall change the ship's site. (D98, D104, plan review TECH-1)
 - **FT-SIM-036** All-stop shall bring the ship's velocity relative to its site to zero through assist thrust. (D97, plan review NAV-2)
 - **FT-SIM-037** While hold-to-approach is held, assist shall face the selected contact, mark or site, fly to a stand-off distance (data, default 500 m) and match its velocity; releasing it shall return control. (D47, D97, plan review NAV-2)
 - **FT-SIM-038** The integrator shall update position as $x \mathrel{+}= v\,\Delta t + \tfrac12 a\,\Delta t^2$, so it is exact for constant thrust. (FT-ARC-007, plan review TECH-10)

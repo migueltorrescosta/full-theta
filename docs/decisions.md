@@ -149,3 +149,6 @@
 
 ## Toolchain (#2)
 - D103 Module dependencies follow the API-boundary diagram (spec §2.2): the Scenario API lives in `sim/api/`; `sim/` names only itself, `shared/` and content; the director and scenarios name only `sim/api/`, `shared/` and content; `net/` names `sim/` and `director/` for the server; clients never name `sim/`, `director/` or `scenarios/`; `app/` composes everything. Replaces the group reading of "depend only on themselves".
+
+## M0 spikes (#3, approved in #4)
+- D104 Site-local offsets are three 64-bit floats, not a float32 `Vector3`: S6 showed float32 spacing at 200 km (1/64 m) freezes drift under about 0.47 m/s. Velocities and relative vectors stay float32 `Vector3`. Amends FT-SIM-035's wording, not D98. The S6 tick budget (< 4 ms) applies to mean and p99, not every tick.
