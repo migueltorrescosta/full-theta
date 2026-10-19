@@ -63,7 +63,7 @@ func _process(delta: float) -> void:
 		tick_us_max = maxi(tick_us_max, (Time.get_ticks_usec() - t0) / ticks)
 		session.after_ticks(world.drain_events())
 		if world.tick >= _next_snapshot_tick:
-			transport.post_state(SimCopy.of(world))
+			transport.post_state(SimCopy.capture(world))
 			_next_snapshot_tick = world.tick + SNAPSHOT_TICKS
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)

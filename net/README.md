@@ -26,7 +26,7 @@ Protocol, server session and client transport over WebSocket (FT-NET-004). The w
 
 The server has two threads (FT-NET-040, D111).
 
-**Main thread** (`NetServer._process`): `ServerSession.process()` handles the inbound messages, `SimWorld.advance()` steps the sim at 60 Hz from its own accumulator, `ServerSession.after_ticks()` turns sim rejections into `CommandRejected` and routes the tick's events, and every second tick `NetTransport.post_state(SimCopy.of(world))` hands over a copy. That copy is the only snapshot work on the sim thread: it duplicates the table columns (packed arrays copy on write).
+**Main thread** (`NetServer._process`): `ServerSession.process()` handles the inbound messages, `SimWorld.advance()` steps the sim at 60 Hz from its own accumulator, `ServerSession.after_ticks()` turns sim rejections into `CommandRejected` and routes the tick's events, and every second tick `NetTransport.post_state(SimCopy.capture(world))` hands over the state. The capture is the only snapshot work on the sim thread: it duplicates each table variable (packed arrays copy on write), and the net thread rebuilds a detached `SimWorld` from it with `SimCopy.restore` (about 0.2 ms capture for M1 on fugaku, 0.6 ms at 100 ships).
 
 **Net thread** (`NetTransport._run`, a loop with a 1 ms sleep) owns every socket: accept, poll, read, unbundle, decode, acks, the per-connection send queues and `NetResync`, the per-session `NetEventOutbox`, the `SnapshotBuilder`, and the pump. It never touches the live world.
 

@@ -81,7 +81,7 @@ Tests: 98, manual: 9, pending: 294.
 | FT-NET-037 | tests | `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-038 | tests | `tests/net/test_net_chunking.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-039 | tests | `tests/net/test_host_static_server.gd` |
-| FT-NET-040 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_snapshot.gd` |
+| FT-NET-040 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_sim_copy.gd`, `tests/net/test_net_snapshot.gd` |
 | FT-NET-041 | pending |  |
 | FT-NET-042 | pending |  |
 | FT-NET-043 | pending |  |

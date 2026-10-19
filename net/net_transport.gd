@@ -139,10 +139,10 @@ func post_event(sessions: PackedInt32Array, tick: int, type: String, payload: Di
 	_post(["event", sessions, tick, type, payload])
 
 
-## Hands over a state copy (SimCopy) for the next snapshot; a newer one replaces an
-## older one the net thread hasn't encoded yet.
-func post_state(copy: SimWorld) -> void:
-	_post(["state", copy])
+## Hands over the state for the next snapshot (SimCopy.capture, restored on the net
+## thread); a newer one replaces an older one the net thread hasn't encoded yet.
+func post_state(state: Array) -> void:
+	_post(["state", state])
 
 
 ## Queues a voice clip (NetProtocol.Type.VOICE message) on a session's low lane.
@@ -221,7 +221,7 @@ func _apply(op: Array) -> void:
 		"event":
 			_event(op[1], op[2], op[3], op[4])
 		"state":
-			_state = op[1]
+			_state = SimCopy.restore(op[1])
 		"voice":
 			for c: Conn in _conns.values():
 				if c.session == op[1] and not c.closing:
