@@ -11,10 +11,18 @@ extends RefCounted
 ##   --dev-all-stations   offer the dev entry holding every station (FT-NET-029, D72).
 ##   --seed N             world seed [1].
 ##   --host-secret HEX    the host client presents it in Hello (D127); none by default.
+##                        Tests only: other local users can read a command line.
+##   --host-secret-env    read the host secret from the FT_HOST_SECRET environment
+##                        variable instead (what HostLauncher passes; D127).
 ##   --grace-s S          reconnect grace (s) [10] (FT-NET-033; T045 owns the rules).
-##   --idle-exit-min M    reserved for T045/T047: exit after M minutes without
-##                        connections (FT-NET-003); parsed, not acted on yet.
-##   --pid-file PATH      reserved for the host's orphan check (FT-NET-003); parsed only.
+##   --idle-exit-min M    exit after M minutes without connections, wall clock
+##                        (FT-NET-003); 0 never [0].
+##   --pid-file PATH      write the pid file there while running (FT-NET-003).
+##   --http-root DIR      serve this web export over HTTP at port - 1 (FT-NET-030,
+##                        D108); off without it.
+##   --name NAME          server name in the LAN beacon ["Full Theta server"].
+##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
+##   --no-beacon          don't broadcast on the LAN (tests).
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
@@ -23,6 +31,8 @@ const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 ## 2 ms of due without spinning. PROVISIONAL.
 const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
+## PROVISIONAL: the beacon's default server name.
+const DEFAULT_NAME: String = "Full Theta server"
 
 var port: int = DEFAULT_PORT
 var bind_address: String = ""
@@ -33,6 +43,10 @@ var grace_s: float = 10.0
 var idle_exit_min: float = 0.0
 var pid_file: String = ""
 var run_for: float = 0.0
+var http_root: String = ""
+var server_name: String = DEFAULT_NAME
+var discovery_port: int = LanBeacon.DISCOVERY_PORT
+var beacon: bool = true
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -44,6 +58,15 @@ func parse_args(args: PackedStringArray) -> bool:
 			pass
 		elif flag == "--dev-all-stations":
 			dev_all_stations = true
+		elif flag == "--no-beacon":
+			beacon = false
+		elif flag == "--host-secret-env":
+			host_secret = OS.get_environment(HostLauncher.SECRET_ENV)
+			# Children of this process (none yet) shouldn't inherit it.
+			OS.unset_environment(HostLauncher.SECRET_ENV)
+			if host_secret == "":
+				push_error("--host-secret-env: %s is not set" % HostLauncher.SECRET_ENV)
+				return false
 		else:
 			i += 1
 			if i >= args.size() or not _set_flag(flag, args[i]):
@@ -55,19 +78,25 @@ func parse_args(args: PackedStringArray) -> bool:
 	if port < 0 or port > 65535:
 		push_error("--port must be 0..65535")
 		return false
+	if discovery_port <= 0 or discovery_port > 65535:
+		push_error("--discovery-port must be 1..65535")
+		return false
 	return true
 
 
 func _set_flag(flag: String, value: String) -> bool:
 	match flag:
-		"--port", "--seed":
+		"--port", "--seed", "--discovery-port":
 			if not value.is_valid_int():
 				push_error("%s needs a whole number" % flag)
 				return false
-			if flag == "--port":
-				port = value.to_int()
-			else:
-				seed_value = value.to_int()
+			match flag:
+				"--port":
+					port = value.to_int()
+				"--seed":
+					seed_value = value.to_int()
+				_:
+					discovery_port = value.to_int()
 		"--grace-s", "--idle-exit-min", "--run-for":
 			if not value.is_valid_float():
 				push_error("%s needs a number" % flag)
@@ -79,6 +108,10 @@ func _set_flag(flag: String, value: String) -> bool:
 			host_secret = value
 		"--pid-file":
 			pid_file = value
+		"--http-root":
+			http_root = value
+		"--name":
+			server_name = value
 		_:
 			push_error("unknown argument %s" % flag)
 			return false
@@ -102,7 +135,26 @@ func make_server() -> NetServer:
 		server.free()
 		return null
 	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
+	if http_root != "":
+		err = server.start_http(http_root)
+		if err != OK:
+			push_error(
+				(
+					"HTTP server failed to start on %s:%d: %s"
+					% [bind_address, server.port() - 1, error_string(err)]
+				)
+			)
+			server.transport.stop()
+			server.free()
+			return null
+	if beacon:
+		server.start_beacon(server_name, discovery_port)
 	return server
+
+
+## The pid file and idle-exit node that runs next to `server` (FT-NET-003).
+func make_lifecycle(server: NetServer) -> ServerLifecycle:
+	return ServerLifecycle.new(server, pid_file, idle_exit_min)
 
 
 ## Engine settings for a headless server process (not for in-process tests).

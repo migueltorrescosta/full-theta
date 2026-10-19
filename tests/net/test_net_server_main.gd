@@ -60,3 +60,70 @@ func test_makes_a_listening_server() -> void:
 	assert_int(server.world.ship_count()).is_equal(2)
 	server.transport.stop()
 	server.free()
+
+
+# FT: FT-NET-003, FT-NET-012, FT-NET-030
+# The host and LAN flags: pid file, idle exit, web export root, beacon name and port,
+# and the beacon off switch.
+func test_parses_host_and_lan_flags() -> void:
+	var cli: ServerMain = ServerMain.new()
+	assert_bool(cli.beacon).is_true()
+	assert_str(cli.http_root).is_empty()
+	var args: PackedStringArray = [
+		"--server",
+		"--bind",
+		"127.0.0.1",
+		"--http-root",
+		"/srv/web",
+		"--name",
+		"Bridge Party",
+		"--discovery-port",
+		"47791",
+		"--no-beacon",
+		"--idle-exit-min",
+		"0.5",
+	]
+	assert_bool(cli.parse_args(args)).is_true()
+	assert_str(cli.http_root).is_equal("/srv/web")
+	assert_str(cli.server_name).is_equal("Bridge Party")
+	assert_int(cli.discovery_port).is_equal(47791)
+	assert_bool(cli.beacon).is_false()
+	assert_float(cli.idle_exit_min).is_equal(0.5)
+	var bad: PackedStringArray = ["--bind", "127.0.0.1", "--discovery-port", "0"]
+	assert_bool(ServerMain.new().parse_args(bad)).is_false()
+
+
+# FT: FT-NET-001
+# D127: --host-secret-env takes the host secret from FT_HOST_SECRET (what HostLauncher
+# passes, off the world-readable command line) and clears the variable; it fails when
+# the variable is missing.
+func test_host_secret_comes_from_the_environment() -> void:
+	OS.set_environment(HostLauncher.SECRET_ENV, "c0ffee")
+	var cli: ServerMain = ServerMain.new()
+	assert_bool(cli.parse_args(["--server", "--bind", "127.0.0.1", "--host-secret-env"])).is_true()
+	assert_str(cli.host_secret).is_equal("c0ffee")
+	assert_str(OS.get_environment(HostLauncher.SECRET_ENV)).is_empty()
+	var none: ServerMain = ServerMain.new()
+	assert_bool(none.parse_args(["--bind", "127.0.0.1", "--host-secret-env"])).is_false()
+
+
+# FT: FT-NET-012
+# make_server starts the beacon unless --no-beacon, and the HTTP server only with
+# --http-root.
+func test_makes_beacon_and_optional_http() -> void:
+	var cli: ServerMain = ServerMain.new()
+	var args: PackedStringArray = ["--bind", "127.0.0.1", "--port", "0", "--discovery-port", "9"]
+	assert_bool(cli.parse_args(args)).is_true()
+	var server: NetServer = cli.make_server()
+	assert_object(server.beacon).is_not_null()
+	assert_int(server.beacon.ws_port).is_equal(server.port())
+	assert_object(server.http).is_null()
+	server.transport.stop()
+	server.beacon.stop()
+	server.free()
+	var quiet: ServerMain = ServerMain.new()
+	assert_bool(quiet.parse_args(["--bind", "127.0.0.1", "--port", "0", "--no-beacon"])).is_true()
+	var server2: NetServer = quiet.make_server()
+	assert_object(server2.beacon).is_null()
+	server2.transport.stop()
+	server2.free()

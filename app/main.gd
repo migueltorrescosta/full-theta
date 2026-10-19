@@ -1,6 +1,7 @@
 extends Node
-## Entry point: `-- --server --bind ADDR` runs the headless dedicated server (ServerMain,
-## NetServer); the client comes in #7.
+## Entry point: `-- --server --bind ADDR` runs the headless server (ServerMain,
+## NetServer, ServerLifecycle), dedicated or as the Host button's child; the client
+## comes in #7 (HostSession is its Host and orphan-rejoin path).
 
 
 func _ready() -> void:
@@ -18,6 +19,7 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	add_child(server)
+	add_child(cli.make_lifecycle(server))
 	print(
 		(
 			"server: listening on %s:%d, protocol %d"

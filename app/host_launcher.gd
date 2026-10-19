@@ -5,11 +5,13 @@ extends RefCounted
 ## the host client exits (FT-NET-003). The client then connects to
 ## ws://127.0.0.1:<port>.
 ##
-## Each spawn makes a fresh random host secret (D127), passed to the child as
-## `--host-secret HEX`; the host client presents it in its Hello and the server
-## treats that client as the host. Keep it with the stored token
-## (SessionTokenFile.host_secret), not in the pid file. A dedicated server has
-## none.
+## Each spawn makes a fresh random host secret (D127), passed to the child in
+## the FT_HOST_SECRET environment variable with `--host-secret-env`, never on
+## the command line: /proc/<pid>/cmdline is world-readable, while
+## /proc/<pid>/environ is readable only by the same user. The host client
+## presents it in its Hello and the server treats that client as the host. Keep
+## it with the stored token (SessionTokenFile.host_secret), not in the pid file.
+## A dedicated server has none.
 ##
 ## Bound to 127.0.0.1 for now: other machines can join once the host picks a
 ## LAN address (T047 and E13 pass it as `--bind`).
@@ -19,6 +21,8 @@ const BIND: String = "127.0.0.1"
 ## FT-NET-003 leaves N open.
 const DEFAULT_IDLE_EXIT_MIN: int = 10
 const SECRET_BYTES: int = 32
+## Environment variable that carries the host secret to the child (D127).
+const SECRET_ENV: String = "FT_HOST_SECRET"
 
 ## The child's pid, or -1 when none was spawned.
 var pid: int = -1
@@ -26,12 +30,19 @@ var port: int = 0
 var pid_file: String = ServerPidFile.PATH
 ## Hex host secret of the last spawn (D127), "" before the first.
 var host_secret: String = ""
+## Extra engine arguments (before `--`) and server flags for the child; tests
+## pass `--log-file` and `--no-beacon`.
+var engine_args: PackedStringArray = []
+var extra_server_args: PackedStringArray = []
+## True when `pid` is an orphan this client adopted (adopt()) rather than its
+## own child: Godot can only watch its own children.
+var adopted: bool = false
 
 
 ## The command-line arguments that start the server child. `project_path` is
 ## the project folder when running from the editor binary, or "" in an export.
 static func server_args(
-	ws_port: int, pid_file_path: String, idle_exit_min: int, secret: String, project_path: String
+	ws_port: int, pid_file_path: String, idle_exit_min: float, project_path: String
 ) -> PackedStringArray:
 	var args: PackedStringArray = ["--headless"]
 	if project_path != "":
@@ -50,8 +61,7 @@ static func server_args(
 				pid_file_path,
 				"--idle-exit-min",
 				str(idle_exit_min),
-				"--host-secret",
-				secret,
+				"--host-secret-env",
 			]
 		)
 	)
@@ -72,38 +82,61 @@ static func project_path() -> String:
 
 
 ## Spawns the server child. The pid file path is passed absolute so the child
-## writes the same file whatever its working directory.
+## writes the same file whatever its working directory. Port 0 lets the child
+## pick a free port; is_ready() then reads it from the pid file.
 func spawn(
 	ws_port: int,
 	pid_file_path: String = ServerPidFile.PATH,
-	idle_exit_min: int = DEFAULT_IDLE_EXIT_MIN
+	idle_exit_min: float = DEFAULT_IDLE_EXIT_MIN
 ) -> Error:
 	if is_running():
 		return ERR_ALREADY_IN_USE
 	port = ws_port
 	pid_file = pid_file_path
+	adopted = false
 	host_secret = new_secret()
-	var args: PackedStringArray = server_args(
-		ws_port,
-		ProjectSettings.globalize_path(pid_file_path),
-		idle_exit_min,
-		host_secret,
-		project_path()
+	var args: PackedStringArray = engine_args.duplicate()
+	args.append_array(
+		server_args(
+			ws_port, ProjectSettings.globalize_path(pid_file_path), idle_exit_min, project_path()
+		)
 	)
+	args.append_array(extra_server_args)
+	# The child inherits the environment at fork; clear it again at once.
+	OS.set_environment(SECRET_ENV, host_secret)
 	pid = OS.create_process(OS.get_executable_path(), args)
+	OS.unset_environment(SECRET_ENV)
 	return OK if pid > 0 else ERR_CANT_FORK
 
 
-## True while the spawned child runs. Works only for our own child: Godot's
-## `OS.is_process_running` reports false for any other process on Linux.
+## Takes charge of an orphaned server (OrphanCheck, FT-NET-003) the player
+## rejoins, so stop() terminates it later like a child of this client.
+func adopt(info: ServerPidFile, secret: String, pid_file_path: String = ServerPidFile.PATH) -> void:
+	pid = info.pid
+	port = info.port
+	pid_file = pid_file_path
+	host_secret = secret
+	adopted = true
+
+
+## True while the server runs. Our own child is watched with
+## `OS.is_process_running` (which also reaps it); an adopted orphan isn't our
+## child, so Godot reports false for it on Linux, and OrphanCheck asks /proc.
 func is_running() -> bool:
-	return pid > 0 and OS.is_process_running(pid)
+	if pid <= 0:
+		return false
+	return OrphanCheck.process_alive(pid) if adopted else OS.is_process_running(pid)
 
 
-## True once the child has written its pid file, that is once it listens.
+## True once the child has written its pid file, that is once it listens; the
+## port is then the one in the file (it differs from the requested one after a
+## spawn on port 0).
 func is_ready() -> bool:
 	var info: ServerPidFile = ServerPidFile.load_from(pid_file)
-	return is_running() and info != null and info.pid == pid
+	if not is_running() or info == null or info.pid != pid:
+		return false
+	port = info.port
+	return true
 
 
 ## Kills the child and removes its pid file: a killed process can't remove it.
@@ -117,3 +150,4 @@ func stop() -> void:
 	if info != null and info.pid == pid:
 		ServerPidFile.remove(pid_file)
 	pid = -1
+	adopted = false

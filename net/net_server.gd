@@ -6,6 +6,12 @@ extends Node
 ## SimCopy to the net thread (NetTransport), which encodes and sends the 30 Hz
 ## snapshots off the sim thread (FT-NET-040, D111). app/main.gd composes it from the
 ## command line (ServerMain); tests add it to their scene tree.
+##
+## Two optional LAN services share the loop (T046, T047): the static HTTP server for
+## browser stations (StaticServer, on the bind address at the WebSocket port - 1, D108)
+## and the discovery beacon (LanBeacon). Both are polled at the end of the frame, after
+## the sim stepped and the state copy was handed over, so the tick never waits on them;
+## HTTP gets a 400 us budget per frame (FT-NET-039).
 
 ## Ticks between snapshots: 60 Hz sim, 30 Hz snapshots (D70).
 const SNAPSHOT_TICKS: int = 2
@@ -18,6 +24,14 @@ var session: ServerSession
 var run_for: float = 0.0
 ## Sim timing over the last frames that stepped (us), for logs and tests.
 var tick_us_max: int = 0
+## Address the WebSocket listener (and the HTTP server) bind to.
+var bind_address: String = ""
+## Static HTTP server for the web export, or null when off (start_http).
+var http: StaticServer
+## Longest static HTTP poll so far (us), for logs and tests (FT-NET-039).
+var http_us_max: int = 0
+## LAN discovery beacon, or null when off (start_beacon).
+var beacon: LanBeacon
 
 var _next_snapshot_tick: int = 0
 var _started_us: int = 0
@@ -26,13 +40,10 @@ var _started_us: int = 0
 ## Builds the world and starts listening; returns the error, OK on success. port 0
 ## picks a free port (see port()).
 func start(
-	m1: M1Encounter,
-	port: int,
-	bind_address: String,
-	dev_all: bool = false,
-	host_secret: String = ""
+	m1: M1Encounter, port: int, address: String, dev_all: bool = false, host_secret: String = ""
 ) -> Error:
 	encounter = m1
+	bind_address = address
 	world = encounter.build()
 	if world == null:
 		push_error("encounter does not validate: %s" % [encounter.validate()])
@@ -40,7 +51,7 @@ func start(
 	session = ServerSession.new(transport, world)
 	session.dev_all = dev_all
 	session.host_secret = host_secret
-	var err: Error = transport.start(port, bind_address)
+	var err: Error = transport.start(port, address)
 	if err != OK:
 		return err
 	_started_us = Time.get_ticks_usec()
@@ -50,6 +61,62 @@ func start(
 
 func port() -> int:
 	return transport.port()
+
+
+## Serves the web export in `root` over plain HTTP on the bind address at port() - 1
+## (FT-NET-030, D108). Call after start().
+func start_http(root: String) -> Error:
+	http = StaticServer.new(root)
+	var err: Error = http.listen(port() - 1, bind_address)
+	if err != OK:
+		http = null
+	return err
+
+
+## Broadcasts this server on the LAN once a second (FT-NET-012). `destinations` are the
+## addresses the datagram goes to (tests use loopback). Call after start().
+func start_beacon(
+	server_name: String,
+	discovery_port: int = LanBeacon.DISCOVERY_PORT,
+	destinations: PackedStringArray = [LanBeacon.BROADCAST_ADDRESS]
+) -> Error:
+	var http_port: int = http.local_port() if http != null else port() - 1
+	beacon = LanBeacon.new(NetProtocol.PROTOCOL_VERSION, server_name, port(), http_port)
+	beacon.player_cap = session.max_sessions
+	var err: Error = beacon.start(discovery_port, destinations)
+	if err != OK:
+		beacon = null
+	return err
+
+
+## Open WebSocket connections, including ones that haven't said Hello yet (the idle
+## exit counts these; FT-NET-003). Lags the net thread by up to 20 ms.
+func connections() -> int:
+	return (transport.stats().get("conns", {}) as Dictionary).size()
+
+
+## Sessions with a connected client.
+func players() -> int:
+	var n: int = 0
+	for s: NetSession in session.by_id.values():
+		if s.connected():
+			n += 1
+	return n
+
+
+## True while any session exists, connected or within its reconnect grace: a lobby
+## with players or a run, which a relaunched host may rejoin (TECH-8). PROVISIONAL:
+## T043 may narrow it to a started run.
+func session_active() -> bool:
+	return not session.by_id.is_empty()
+
+
+## The connected host's session id (D127), or -1.
+func host_session() -> int:
+	for s: NetSession in session.by_id.values():
+		if s.is_host and s.connected():
+			return s.id
+	return -1
 
 
 func _process(delta: float) -> void:
@@ -65,9 +132,27 @@ func _process(delta: float) -> void:
 		if world.tick >= _next_snapshot_tick:
 			transport.post_state(SimCopy.capture(world))
 			_next_snapshot_tick = world.tick + SNAPSHOT_TICKS
+	_poll_lan_services()
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)
 
 
+## After the tick: static HTTP within its budget, then the beacon (at most one datagram
+## a second).
+func _poll_lan_services() -> void:
+	if http != null:
+		var t0: int = Time.get_ticks_usec()
+		http.poll(StaticServer.DEFAULT_BUDGET_US)
+		http_us_max = maxi(http_us_max, Time.get_ticks_usec() - t0)
+	if beacon != null:
+		beacon.players = players()
+		beacon.session_running = session_active()
+		beacon.poll(Time.get_ticks_usec())
+
+
 func _exit_tree() -> void:
 	transport.stop()
+	if http != null:
+		http.stop()
+	if beacon != null:
+		beacon.stop()
