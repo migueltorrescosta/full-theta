@@ -24,7 +24,7 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 
 - **FT-SIM-001** Ships shall move with 6DOF Newtonian dynamics: forces and torques change linear and angular momentum, with no drag. (v0.3 §5, D24)
 - **FT-SIM-002** Each ship definition shall set maximum thrust per local axis, maximum torque per axis, mass and a diagonal inertia tensor. (v0.3 §5)
-- **FT-SIM-003** A ship with zero input and assist off shall keep its linear and angular velocity. (D24)
+- **FT-SIM-003** A ship with zero input and assist off shall keep its linear momentum and angular momentum (a spin about a principal axis keeps its angular velocity). (D24)
 - **FT-SIM-004** Flight assist shall be on by default, shall act only through thruster commands within the ship's current thrust envelope, and shall hold zero angular rate without rotation input, zero lateral and vertical velocity without strafe input, and forward speed at the throttle setpoint (throttle sets speed, not force). (D24, D97, v0.3 §5, plan review NAV-2)
 - **FT-SIM-005** Helm shall toggle decoupled mode, which disables assist. (D24)
 - **FT-SIM-006** The current thrust envelope shall depend on Engineering's power to engines and thrusters, their health and heat. (P1, D50)
@@ -56,7 +56,7 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 - **FT-SIM-032** Stations shall receive a visual warning when the ship is hit or a subsystem they depend on fails. (v0.3 §5)
 - **FT-SIM-033** All simulation units shall be SI and documented in the content definitions. (v0.3 §3)
 - **FT-SIM-034** The jump drive shall move the ship within the scenario's single global 3D map to the selected site or mark, after a data-defined spool time, arriving at a data-defined stand-off from it, and shall consume propellant per jump. (D29, D34, D77, D98, plan review NAV-4)
-- **FT-SIM-035** Positions shall be stored as a site id plus three 64-bit offsets, each wrapped into [−P/2, P/2) after every integration step with the period P from scenario data, and every position difference shall use the minimum image (velocities and relative vectors may stay float32 `Vector3`); a jump shall change the ship's site. (D98, D104, D124, plan review TECH-1)
+- **FT-SIM-035** Positions shall be stored as a site id plus three 64-bit offsets, each wrapped into [−P/2, P/2) after every integration step with the period P from scenario data (one per world, at least 4 times the longest sensor range and an exact multiple of 500 m, recorded in the command log setup and included in the state hash), and every position difference shall use the minimum image (velocities and relative vectors may stay float32 `Vector3`); a jump shall change the ship's site. (D98, D104, D124, D125, plan review TECH-1)
 - **FT-SIM-036** All-stop shall bring the ship's velocity relative to its site to zero through assist thrust. (D97, plan review NAV-2)
 - **FT-SIM-037** While hold-to-approach is held, assist shall face the selected contact, mark or site, fly to a stand-off distance (data, default 500 m) and match its velocity; releasing it shall return control. (D47, D97, plan review NAV-2)
 - **FT-SIM-038** The integrator shall update position as $x \mathrel{+}= v\,\Delta t + \tfrac12 a\,\Delta t^2$, so it is exact for constant thrust. (FT-ARC-007, plan review TECH-10)

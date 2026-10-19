@@ -193,6 +193,32 @@ func test_retreats_below_hull_threshold() -> void:
 	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.RETREAT)
 
 
+# FT: FT-SIM-035, FT-SIM-027
+# On a small site (P = 40 km) the retreat point is P/4 = 10 km away, not 20 km: a point
+# at P/2 would be the minimum image on the threat's side. Engaged at 2.5 km with its hull
+# at 20 %, the raider selects a point 10 km straight away from the corvette (to 50 m:
+# the ship moves a few metres between choosing it and the check; cosine above 0.99) and
+# opens the distance by over 2 km within 30 s.
+func test_retreat_point_stays_within_a_quarter_period() -> void:
+	var world: SimWorld = SimWorld.new(17, "", 40000.0)
+	_scenario(world, 2500.0)
+	SimFixture.run(world, 10 * HZ)
+	world.damage.health[world.damage.hull_row(1)] = 0.2 * world.defs[1].hull_max
+	var start: float = _distance(world)
+	_run_until_mode(world, AiTable.Mode.RETREAT, 2)
+	SimFixture.run(world, 2)
+	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.POINT)
+	var to_point: Vector3 = AssistSystem.target_offset(world, 1)
+	var away: Vector3 = -world.kin.relative(1, 0).normalized()
+	assert_float(to_point.length()).is_equal_approx(10000.0, 50.0)
+	assert_float(to_point.normalized().dot(away)).is_greater(0.99)
+	var n: int = 0
+	while _distance(world) < start + 2000.0 and n < 30 * HZ:
+		world.step()
+		n += 1
+	assert_float(_distance(world)).is_greater(start + 2000.0)
+
+
 # FT: FT-SIM-028, FT-SIM-027
 # The corvette 18 km out, beyond the raider's 15 km sensors: for 20 s the raider stays
 # in HOLD, selects nothing, submits no command and fires nothing. Moved to 5 km, it is
@@ -312,7 +338,7 @@ func test_retreat_crosses_the_seam_and_escapes() -> void:
 	world.damage.health[world.damage.hull_row(1)] = 0.2 * world.defs[1].hull_max
 	var crossed: bool = false
 	var retreated: bool = false
-	var last: float = world.kin.distance(0, 1)
+	var last: float = _distance(world)
 	var n: int = 0
 	while not retreated and n < 180 * HZ:
 		world.step()
@@ -325,8 +351,8 @@ func test_retreat_crosses_the_seam_and_escapes() -> void:
 		crossed = crossed or k.px[1] < 0.0
 		if n % (10 * HZ) == 0:
 			var msg: String = "not opening the distance at %d s" % (n / HZ)
-			assert_float(k.distance(0, 1)).override_failure_message(msg).is_greater(last)
-			last = k.distance(0, 1)
+			assert_float(_distance(world)).override_failure_message(msg).is_greater(last)
+			last = _distance(world)
 	assert_bool(crossed).is_true()
 	assert_bool(retreated).override_failure_message("no escape in 180 s").is_true()
 	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.RETREAT)

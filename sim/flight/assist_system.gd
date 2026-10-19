@@ -38,8 +38,11 @@ static func step(world: SimWorld) -> void:
 			var tuning: AssistDef = world.defs[row].assist
 			var rot_in: Vector3 = _dead(world.helm.input_rotation[row])
 			var move_in: Vector3 = _dead(world.helm.input_translation[row])
-			_update_modes(world, row, tuning, rot_in, move_in)
-			_command(world, row, tuning, rot_in, move_in)
+			# The target's offset once per ship and tick; ZERO without a target.
+			var targeted: bool = has_target(world, row)
+			var offset: Vector3 = target_offset(world, row) if targeted else Vector3.ZERO
+			_update_modes(world, row, tuning, rot_in, move_in, targeted, offset)
+			_command(world, row, tuning, rot_in, move_in, targeted, offset)
 
 
 ## Whether the ship has a selected target it can fly to: a live ship its faction detects
@@ -83,23 +86,21 @@ static func forward_speed(world: SimWorld, row: int) -> float:
 	return clampf(fwd, tuning.speed_min, tuning.speed_max)
 
 
-## Roll (rad, about the bow) that brings the selected target to 12 o'clock: into the
-## ship's pitch plane, above the bow direction (FT-HLM-007, D124). 0 with no target or
-## the target on the bow line, where every roll will do.
-static func align_roll_error(world: SimWorld, row: int) -> float:
-	if not has_target(world, row):
-		return 0.0
-	var d: Vector3 = world.kin.to_local(row, target_offset(world, row)).normalized()
+## Roll (rad, about the bow) that brings a target at ship-frame offset `local` to 12
+## o'clock: into the ship's pitch plane, above the bow direction (FT-HLM-007, D124). 0
+## with the target on the bow line, where every roll will do.
+static func align_roll_error(local: Vector3) -> float:
+	var d: Vector3 = local.normalized()
 	if Vector2(d.x, d.y).length() < ALIGN_ON_BOW:
 		return 0.0
 	return atan2(-d.x, d.y)
 
 
-## Angle (rad) still to go for an Align stage.
-static func align_error(world: SimWorld, row: int, stage: int) -> float:
-	var err: float = absf(align_roll_error(world, row))
+## Angle (rad) still to go for an Align stage, for a target at site-frame offset `offset`.
+static func _align_error(kin: Kinematics, row: int, stage: int, offset: Vector3) -> float:
+	var err: float = absf(align_roll_error(kin.to_local(row, offset)))
 	if stage == HelmTable.Align.ROLL_AND_FACE:
-		err += world.kin.forward(row).angle_to(target_offset(world, row))
+		err += kin.forward(row).angle_to(offset)
 	return err
 
 
@@ -113,8 +114,15 @@ static func turn_rate_caps(kin: Kinematics, row: int, tuning: AssistDef) -> Vect
 
 ## Mode bookkeeping before the command: ends all-stop and Align, ramps the setpoint.
 ## rot_in and move_in are the Helm inputs after the deadzone.
+## targeted and offset are has_target() and target_offset() for this tick.
 static func _update_modes(
-	world: SimWorld, row: int, tuning: AssistDef, rot_in: Vector3, move_in: Vector3
+	world: SimWorld,
+	row: int,
+	tuning: AssistDef,
+	rot_in: Vector3,
+	move_in: Vector3,
+	targeted: bool,
+	offset: Vector3
 ) -> void:
 	var helm: HelmTable = world.helm
 	var kin: Kinematics = world.kin
@@ -135,9 +143,9 @@ static func _update_modes(
 	if helm.align[row] != HelmTable.Align.OFF:
 		# FT-HLM-007: ends within tolerance, on rotation input or with the target lost.
 		var done: bool = (
-			not has_target(world, row)
+			not targeted
 			or (
-				align_error(world, row, helm.align[row]) < ALIGN_DONE
+				_align_error(kin, row, helm.align[row], offset) < ALIGN_DONE
 				and kin.ang_vel[row].length() < ALIGN_SETTLED_RATE
 			)
 		)
@@ -153,13 +161,18 @@ static func _update_modes(
 
 
 static func _command(
-	world: SimWorld, row: int, tuning: AssistDef, rot_in: Vector3, move_in: Vector3
+	world: SimWorld,
+	row: int,
+	tuning: AssistDef,
+	rot_in: Vector3,
+	move_in: Vector3,
+	targeted: bool,
+	offset: Vector3
 ) -> void:
 	var helm: HelmTable = world.helm
 	var kin: Kinematics = world.kin
 	# Body-frame translation input: forward is -Z.
 	var trans_in: Vector3 = Vector3(move_in.x, move_in.y, -move_in.z)
-	var targeted: bool = has_target(world, row)
 	var stopping: bool = helm.all_stop[row] == 1
 	var approaching: bool = targeted and helm.approach_held[row] == 1
 	var facing: bool = targeted and (helm.face_held[row] == 1 or approaching)
@@ -176,11 +189,11 @@ static func _command(
 		rate_hold = true
 	elif facing:
 		# FT-HLM-005: at the ship's real turn rate; roll stays manual.
-		w_des = _face_rate(kin, row, target_offset(world, row), tuning)
+		w_des = _face_rate(kin, row, offset, tuning)
 		w_des.z = rot_in.z * rates.z
 		rate_hold = true
 	elif targeted and helm.align[row] != HelmTable.Align.OFF:
-		w_des = _align_rate(world, row, helm.align[row], tuning)
+		w_des = _align_rate(kin, row, helm.align[row], tuning, offset)
 		rate_hold = true
 	var torque: Vector3
 	if rate_hold:
@@ -200,7 +213,7 @@ static func _command(
 		# FT-SIM-036: velocity relative to the site to zero.
 		force = -v_local * gain
 	elif approaching:
-		var v_des: Vector3 = kin.to_local(row, _approach_velocity(world, row, tuning))
+		var v_des: Vector3 = kin.to_local(row, _approach_velocity(world, row, tuning, offset))
 		force = (v_des - v_local) * gain
 	elif decoupled:
 		# FT-SIM-005: stick straight to thrust.
@@ -237,13 +250,14 @@ static func _face_rate(kin: Kinematics, row: int, direction: Vector3, tuning: As
 
 
 ## Align (FT-HLM-007, D124): roll the selected target to 12 o'clock; at ROLL_AND_FACE
-## also turn the bow onto it.
-static func _align_rate(world: SimWorld, row: int, stage: int, tuning: AssistDef) -> Vector3:
-	var kin: Kinematics = world.kin
+## also turn the bow onto it. offset is the target's site-frame offset.
+static func _align_rate(
+	kin: Kinematics, row: int, stage: int, tuning: AssistDef, offset: Vector3
+) -> Vector3:
 	var w: Vector3 = Vector3.ZERO
 	if stage == HelmTable.Align.ROLL_AND_FACE:
-		w = _face_rate(kin, row, target_offset(world, row), tuning)
-	var roll: float = align_roll_error(world, row)
+		w = _face_rate(kin, row, offset, tuning)
+	var roll: float = align_roll_error(kin.to_local(row, offset))
 	var alpha: float = kin.torque_limit(row).z / kin.inertia[row].z
 	w.z = signf(roll) * _profile(absf(roll), alpha, turn_rate_caps(kin, row, tuning).z, tuning)
 	return w
@@ -251,9 +265,11 @@ static func _align_rate(world: SimWorld, row: int, stage: int, tuning: AssistDef
 
 ## Site-frame velocity that flies to the stand-off and matches the target
 ## (FT-SIM-037): target velocity plus a closing speed along the line of sight, on a
-## braking curve far out and an exponential settle near the stand-off.
-static func _approach_velocity(world: SimWorld, row: int, tuning: AssistDef) -> Vector3:
-	var rel: Vector3 = target_offset(world, row)
+## braking curve far out and an exponential settle near the stand-off. rel is the
+## target's offset (m, site frame).
+static func _approach_velocity(
+	world: SimWorld, row: int, tuning: AssistDef, rel: Vector3
+) -> Vector3:
 	var target_vel: Vector3 = target_velocity(world, row)
 	var dist: float = rel.length()
 	if dist < 1e-3:

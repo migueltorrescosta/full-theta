@@ -44,7 +44,7 @@ Conventions (D73–D75):
 | T025 | Add sim core: fixed 60 Hz tick, seeded RNG, ship/faction keys | M1 | sim | T006, T011 | FT-ARC-004, FT-ARC-006, FT-ARC-008, FT-ARC-009, FT-ARC-012, FT-M1-014 | |
 | T026 | Add typed .tres definitions and the definition load gate | M1 | content, ci | T007 | FT-DAT-001, FT-DAT-002, FT-DAT-013, FT-SIM-002, FT-SIM-033 | |
 | T027 | Implement the 6DOF integrator with analytic tests | M1 | sim | T012, T025, T026 | FT-SIM-001–003, FT-ARC-007, FT-TST-007, FT-M1-003 | |
-| T028 | Add flight assist, decoupled, face assist, Level, propellant | M1 | sim | T027 | FT-SIM-004, FT-SIM-005, FT-SIM-007, FT-HLM-005–007, FT-M1-003 | |
+| T028 | Add flight assist, decoupled, face assist, Align, propellant | M1 | sim | T027 | FT-SIM-004, FT-SIM-005, FT-SIM-007, FT-HLM-005–007, FT-M1-003 | |
 | T029 | Add collisions with swept projectiles and proximity warning | M1 | sim | T027 | FT-SIM-009, FT-SIM-010 | |
 | T030 | Add power pips, heat and thrust envelope (PWR) | M1 | sim | T027 | FT-SIM-006, FT-SIM-026 | |
 | T031 | Add shields with focus direction, power and tightness | M1 | sim | T030 | FT-SIM-017–019, FT-SIM-031 | |
@@ -302,16 +302,16 @@ Conventions (D73–D75):
 #### T027 Implement the 6DOF integrator with analytic tests
 - **Why:** FT-ARC-007, FT-SIM-001–003; promotes the T012 prototype.
 - **Verification criteria:**
-  - [ ] Semi-implicit integrator with diagonal inertia, quaternions renormalised.
+  - [ ] Integrator keeping world-frame angular momentum (split free flow), quaternions renormalised.
   - [ ] Tests: constant thrust matches analytic position within 1e-6 relative; momentum conserved; zero input holds velocity (FT-TST-007).
   - [ ] Property test: quaternions stay unit, energy bounded with no input.
 - **Instructions:** research/tech §3.
 
-#### T028 Add flight assist, decoupled, face assist, Level, propellant
+#### T028 Add flight assist, decoupled, face assist, Align, propellant
 - **Why:** Assist makes 6DOF playable (FT-SIM-004/005, FT-HLM-005–007).
 - **Verification criteria:**
   - [ ] Assist acts only through thruster commands within the thrust envelope; decoupled disables it (tests).
-  - [ ] Face assist turns at the real turn rate to a contact or mark, in both modes; Level aligns to the ecliptic.
+  - [ ] Face assist turns at the real turn rate to a contact or mark, in both modes; Align rolls the selected item to 12 o'clock; a second press faces it (D124).
   - [ ] Propellant use proportional to impulse; zero when coasting (FT-SIM-007).
 - **Instructions:** Apply T013 feedback when available; don't block on it.
 
@@ -469,7 +469,7 @@ Conventions (D73–D75):
 - **Why:** Shared widgets for all stations (FT-STN-001–003, 006, 008, FT-SPA-003, 005, 007–011).
 - **Verification criteria:**
   - [ ] Top bar with alert chip (any crew station sets it; Captain and viewers can't).
-  - [ ] Disc radar: stems, solid/hollow blips, range ring, B side strip, ship/world frame; contact chips with callsign, clock, height, range.
+  - [ ] Disc radar: stems, solid/hollow blips, range ring, B side strip, ship frame, optionally centred on a selected reference (D124); contact chips with callsign, clock, height, range.
   - [ ] L5 screenshot tests pass; palette checked with a colour-blind simulation script.
 - **Instructions:** station-ui §1–2.
 
@@ -477,7 +477,7 @@ Conventions (D73–D75):
 - **Why:** FT-HLM-001–012, FT-M1-004.
 - **Verification criteria:**
   - [ ] Cockpit view, HUD, target compass, off-screen arrows, shield ring, six-face snap and clock-sector focus, shield track, thrust envelope and propellant.
-  - [ ] C toggles chase camera; F face, L Level work via intents (scene tests).
+  - [ ] C toggles chase camera; F face, L Align work via intents (scene tests).
   - [ ] L5 screenshot baseline.
 - **Instructions:** station-ui Helm; dock/jump controls in E07.
 
@@ -562,7 +562,7 @@ Conventions (D73–D75):
   - [ ] FT-RLY-001–009 and the mark/ping ids traced to tests; ping rate limit and 8-mark cap tested.
   - [ ] Sent marks visible only to the receiving Relay until accepted (L3 test).
 - **Instructions:** Spec §5 Relay, §6, D44, D52, D56, D82.
-- **Tasks:** world-frame 3D map with grid and stems; mark placement/rename/attach/delete; pings on every screen with chime; probes with stock and coverage; routes; ship's log; mark sending and inbox; probe claims; L5 baselines.
+- **Tasks:** freely rotatable 3D map of the wrapping cube with stems (D124); mark placement/rename/attach/delete; pings on every screen with chime; probes with stock and coverage; routes; ship's log; mark sending and inbox; probe claims; L5 baselines.
 
 #### E03 Epic: Captain seat and main screen views
 - **Why:** FT-CPT, FT-MSC: information-only seat and the shared screen.

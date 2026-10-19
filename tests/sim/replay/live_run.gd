@@ -15,10 +15,14 @@ func _init(start: SimWorld) -> void:
 	world = start
 
 
-## The M1 encounter on the shipped definitions, looked up by the ids a log records.
+## The M1 encounter on the shipped definitions, looked up by the ids a log records, at
+## its site period (the default when the log has none, D125).
 static func encounter(seed_value: int, setup: Dictionary, build: String) -> M1Encounter:
 	var lib: DefLibrary = DefLibrary.new()
-	return M1Encounter.new(seed_value, build, lib.ship(setup["player"]), lib.enemy(setup["enemy"]))
+	var period: float = setup.get("site_period", Kinematics.DEFAULT_PERIOD)
+	return M1Encounter.new(
+		seed_value, build, lib.ship(setup["player"]), lib.enemy(setup["enemy"]), period
+	)
 
 
 ## Frames with deltas drawn uniformly from [min_delta, max_delta] (s) until the world

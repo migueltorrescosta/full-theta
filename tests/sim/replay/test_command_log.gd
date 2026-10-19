@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
-## T037: CommandLog records a world's accepted commands and round-trips them through
-## text exactly (FT-ARC-008).
+## T037: CommandLog records each crew or server command of a world (for example a ship
+## reset, accepted or not) and round-trips them through text exactly (FT-ARC-008).
 
 const SETUP: Dictionary = {"player": &"m1_corvette", "enemy": &"m1_raider"}
 ## Floats that a decimal round trip tends to lose: -0.0, non-terminating binary
@@ -47,7 +47,9 @@ func test_from_world_records_commands_with_ticks() -> void:
 	var record: CommandLog = CommandLog.from_world(world, SETUP)
 	assert_int(record.seed_value).is_equal(7)
 	assert_str(record.build_id).is_equal("test")
-	assert_dict(record.setup).is_equal(SETUP)
+	var setup: Dictionary = SETUP.duplicate()
+	setup["site_period"] = Kinematics.DEFAULT_PERIOD
+	assert_dict(record.setup).is_equal(setup)
 	assert_int(record.entries.size()).is_equal(2 * AWKWARD.size() + 1)
 	for i: int in 2 * AWKWARD.size():
 		var d: Dictionary = record.entries[i]
@@ -56,6 +58,25 @@ func test_from_world_records_commands_with_ticks() -> void:
 		assert_bool(d["accepted"]).is_true()
 	assert_bool(record.entries[-1]["accepted"]).is_false()
 	assert_int(world.accepted_commands().size()).is_equal(2 * AWKWARD.size())
+
+
+# FT: FT-ARC-008, FT-SIM-035
+# The setup records the world's site period (D125), and a world rebuilt from the log
+# gets it back; a log without one means the default. The period is in the state hash.
+func test_setup_records_the_site_period() -> void:
+	var enc: M1Encounter = M1Encounter.new(
+		7, "test", TestDefs.corvette(), TestDefs.raider_enemy(), 100000.0
+	)
+	var record: CommandLog = CommandLog.from_world(enc.build(), SETUP)
+	assert_float(record.setup["site_period"]).is_equal(100000.0)
+	var back: CommandLog = CommandLog.from_text(record.to_text())
+	assert_float(LiveRun.encounter(7, back.setup, "test").site_period).is_equal(100000.0)
+	var default_period: float = LiveRun.encounter(7, SETUP, "test").site_period
+	assert_float(default_period).is_equal(Kinematics.DEFAULT_PERIOD)
+	var other: M1Encounter = M1Encounter.new(
+		7, "test", TestDefs.corvette(), TestDefs.raider_enemy()
+	)
+	assert_str(enc.build().state_hash()).is_not_equal(other.build().state_hash())
 
 
 # FT: FT-ARC-008

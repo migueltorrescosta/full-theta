@@ -56,8 +56,8 @@ func test_same_seed_same_hash_over_1000_ticks() -> void:
 
 
 # FT: FT-ARC-008
-# Every accepted crew command is logged with the tick it was applied on, in order,
-# with the world's seed and build id.
+# Each crew or server command (for example a ship reset) is logged with the tick it was
+# applied on, in order, with the world's seed and build id.
 func test_command_log_records_ticks_in_order() -> void:
 	var w: SimWorld = _world(7)
 	_run(w, 100)
@@ -230,6 +230,65 @@ func test_reset_ship_restores_only_that_ship() -> void:
 	w.step()
 	assert_int(w.command_log.size()).is_equal(logged + 1)
 	assert_int(w.command_log[-1].ship_id).is_equal(1)
+
+
+func _reset_command(ship: int, rotation: Quaternion = Quaternion.IDENTITY) -> ResetShipCommand:
+	var c: ResetShipCommand = ResetShipCommand.new()
+	c.ship_id = ship
+	c.x = 5.0
+	c.rotation = rotation
+	return c
+
+
+func _throttle(ship: int) -> HelmInputCommand:
+	var c: HelmInputCommand = HelmInputCommand.new()
+	c.ship_id = ship
+	c.throttle = 1.0
+	return c
+
+
+# FT: FT-MIS-017, FT-ARC-008
+# A ship reset rejects its later commands of the same tick, deterministically: with a
+# reset of ship 0 then throttle commands for ships 0 and 1 in one batch, ship 0's is
+# logged as rejected and leaves no input, ship 1's applies. The log, through text,
+# replays on a fresh world to the same rejections and state hash.
+func test_reset_rejects_the_ships_later_commands_that_tick() -> void:
+	var w: SimWorld = _world(11)
+	for i: int in 10:
+		w.step()
+	w.submit(_reset_command(0))
+	w.submit(_throttle(0))
+	w.submit(_throttle(1))
+	w.step()
+	var accepted: Array[bool] = []
+	for c: SimCommand in w.command_log:
+		accepted.append(c.accepted)
+	assert_array(accepted).is_equal([true, false, true])
+	assert_vector(w.helm.input_translation[0]).is_equal(Vector3.ZERO)
+	assert_vector(w.helm.input_translation[1]).is_equal(Vector3(0, 0, 1))
+	w.submit(_throttle(0))
+	for i: int in 30:
+		w.step()
+	assert_bool(w.command_log[-1].accepted).is_true()
+	var record: CommandLog = CommandLog.from_text(CommandLog.from_world(w).to_text())
+	var fresh: SimWorld = _world(11)
+	assert_array(Array(record.replay(fresh, w.tick))).is_empty()
+	assert_str(fresh.state_hash()).is_equal(w.state_hash())
+
+
+# FT: FT-GEN-002
+# A reset with a non-finite or zero rotation (it can't be normalised) is rejected and
+# leaves the ship as it was.
+func test_reset_rejects_a_bad_rotation() -> void:
+	var w: SimWorld = _world(11)
+	var before: String = w.state_hash()
+	for q: Quaternion in [
+		Quaternion(NAN, 0.0, 0.0, 1.0), Quaternion(0.0, 0.0, 0.0, 0.0), Quaternion(0, 0, 0, 1e-7)
+	]:
+		assert_bool(_reset_command(0, q).apply(w)).is_false()
+	assert_str(w.state_hash()).is_equal(before)
+	assert_bool(_reset_command(0, Quaternion(0.0, 0.0, 0.0, 2.0)).apply(w)).is_true()
+	assert_bool(w.kin.rot[0].is_equal_approx(Quaternion.IDENTITY)).is_true()
 
 
 # FT: FT-ARC-008

@@ -68,7 +68,7 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 - **FT-HLM-004** The cockpit shall show off-screen arrows for the selected target and pinged items. (station-ui §1.6)
 - **FT-HLM-005** Holding F shall rotate the ship to face the selected target at the ship's real turn rate, through flight assist. (D47)
 - **FT-HLM-006** Face assist shall work for contacts and marks, and in decoupled mode. (D47)
-- **FT-HLM-007** Align shall roll the ship about its bow axis until the selected item lies in the ship's pitch plane above the bow (12 o'clock); a second press shall also face it; with nothing selected Align shall do nothing. (D97, D124)
+- **FT-HLM-007** Align shall roll the ship about its bow axis until the selected item lies in the ship's pitch plane above the bow (12 o'clock); a second press, or a press with the roll already done, shall also face it; Align shall end within tolerance, on rotation input or when the target is lost; with nothing selected Align shall do nothing. (D97, D124, D125)
 - **FT-HLM-008** Helm shall snap shield focus to six faces (fore, aft, port, starboard, dorsal, ventral) with one input each. (D48)
 - **FT-HLM-009** Tapping a clock sector with height on the shield ring shall set shield focus to that direction. (D48)
 - **FT-HLM-010** A shield-track toggle shall keep shield focus on the selected callsign as both ships move. (D48)

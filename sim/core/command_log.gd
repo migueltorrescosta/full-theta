@@ -1,8 +1,9 @@
 class_name CommandLog
 extends RefCounted
 ## A replayable record of a run (FT-ARC-008, FT-TST-009): the seed, the build id, the
-## setup parameters that rebuild the starting world (for M1: the player ShipDef id and
-## the EnemyDef id) and every crew or server command (e.g. a ship reset) with the tick
+## setup parameters that rebuild the starting world (for M1: the player ShipDef id, the
+## EnemyDef id and the site period) and every crew or server command (for example a ship
+## reset) with the tick
 ## it was applied on and whether it was accepted, in application order. A fresh world
 ## built from the same setup, with each command submitted right before the step of its
 ## tick, reproduces the run on the same build and platform. Pure: the caller does any
@@ -21,19 +22,23 @@ const FORMAT: int = 2
 var seed_value: int = 0
 var build_id: String = ""
 ## Inputs that rebuild the starting world, e.g. {"player": &"m1_corvette",
-## "enemy": &"m1_raider"}; values must survive var_to_bytes() (no objects).
+## "enemy": &"m1_raider", "site_period": 200000.0}; values must survive var_to_bytes()
+## (no objects). "site_period" is the world's site period (m, D125); a log without it
+## means Kinematics.DEFAULT_PERIOD.
 var setup: Dictionary = {}
 ## Crew and server commands as SimCommand.to_dict() (each with its "tick" and "accepted"), in
 ## application order.
 var entries: Array[Dictionary] = []
 
 
-## The log of a world's run so far: its seed, build id and world.command_log.
+## The log of a world's run so far: its seed, build id, setup_params plus its site period
+## as "site_period" (D125), and world.command_log.
 static func from_world(world: SimWorld, setup_params: Dictionary = {}) -> CommandLog:
 	var out: CommandLog = CommandLog.new()
 	out.seed_value = world.seed_value
 	out.build_id = world.build_id
 	out.setup = setup_params.duplicate(true)
+	out.setup["site_period"] = world.kin.period
 	for c: SimCommand in world.command_log:
 		out.entries.append(c.to_dict())
 	return out

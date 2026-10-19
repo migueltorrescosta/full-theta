@@ -6,7 +6,9 @@ extends SimTable
 ## (FT-SIM-035, D124): offsets are kept in [-period / 2, period / 2) per axis and every
 ## position difference is the minimum image. Only this class reads or writes the
 ## position columns (tools/lint_arch.py): use relative(), relative_to_point(),
-## distance(), point_at(), wrap_point(), place() and translate().
+## point_at(), wrap_point(), wrap(), place() and translate(). A difference of exactly
+## P/2 on an axis wraps to -P/2 either way, so relative(a, b) is not exactly
+## -relative(b, a) there; harmless, as P is at least 4x the longest sensor range (D125).
 ## Velocities and rotation stay float32 Vector3 (D104). Local axes follow Godot: -Z is
 ## the bow, +X starboard, +Y up; angular velocity is in the body frame (x pitch, y yaw,
 ## z roll). Limits are copied from the ShipDef at spawn (FT-ARC-020). Units are SI.
@@ -120,16 +122,29 @@ func wrap_point(x: float, y: float, z: float) -> PackedFloat64Array:
 	return PackedFloat64Array([_wrap(x, period), _wrap(y, period), _wrap(z, period)])
 
 
+## One site-local coordinate (m) wrapped into [-period / 2, period / 2); the caller
+## ensures it is finite (FT-SIM-035). Allocation-free, for hot paths.
+func wrap(v: float) -> float:
+	return _wrap(v, period)
+
+
 ## The site-local point (m, [x, y, z], wrapped) at a site-frame offset from row's centre:
 ## aim, target and retreat points (FT-SIM-035). Empty if the offset is not finite.
 func point_at(row: int, offset: Vector3) -> PackedFloat64Array:
 	return wrap_point(px[row] + offset.x, py[row] + offset.y, pz[row] + offset.z)
 
 
-## Unwrapped broadphase cell of row's centre for a cell size (m); in
-## [-n / 2, n / 2) per axis for n = period / cell. Callers wrap neighbour indexes.
-func cell_of(row: int, cell: float) -> Vector3i:
-	return Vector3i(floori(px[row] / cell), floori(py[row] / cell), floori(pz[row] / cell))
+## Unwrapped broadphase cells overlapped by row's centre padded by pad (m) on every
+## axis, for a cell size (m): out[0..2] the lowest x, y, z cell, out[3..5] the highest
+## (floor((x -/+ pad) / cell)). With pad 0 both are the centre's cell, in [-n / 2, n / 2)
+## for n = period / cell. Callers wrap the indexes modulo n. out must hold 6 ints.
+func cell_range(row: int, cell: float, pad: float, out: PackedInt32Array) -> void:
+	out[0] = floori((px[row] - pad) / cell)
+	out[1] = floori((py[row] - pad) / cell)
+	out[2] = floori((pz[row] - pad) / cell)
+	out[3] = floori((px[row] + pad) / cell)
+	out[4] = floori((py[row] + pad) / cell)
+	out[5] = floori((pz[row] + pad) / cell)
 
 
 ## Whether row a can fly to, track or point at row b: another live ship at its site.
@@ -149,14 +164,6 @@ func relative(a: int, b: int) -> Vector3:
 ## 64-bit; the point need not be wrapped (FT-SIM-035).
 func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:
 	return Vector3(_wrap(x - px[a], period), _wrap(y - py[a], period), _wrap(z - pz[a], period))
-
-
-## Minimum-image distance from row a to row b (m), in 64-bit (FT-SIM-035).
-func distance(a: int, b: int) -> float:
-	var dx: float = _wrap(px[b] - px[a], period)
-	var dy: float = _wrap(py[b] - py[a], period)
-	var dz: float = _wrap(pz[b] - pz[a], period)
-	return sqrt(dx * dx + dy * dy + dz * dz)
 
 
 func is_alive(row: int) -> bool:

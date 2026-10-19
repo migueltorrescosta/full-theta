@@ -48,6 +48,9 @@ var events: Array[SimEvent] = []
 var hits: Array[SimHit] = []
 
 var _queue: Array[SimCommand] = []
+## Ships reset during this tick's command phase: their later commands of the tick are
+## rejected (cleared when the next command phase starts).
+var _reset_this_tick: Dictionary[int, bool] = {}
 var _relations: Dictionary[int, int] = {}
 var _accumulator: float = 0.0
 
@@ -73,8 +76,7 @@ static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[St
 		errors.append("site period must be finite and positive, got %s" % site_period)
 		return errors
 	for cell: float in [CollisionSystem.CELL, CollisionSystem.PAIR_CELL]:
-		var cells: float = site_period / cell
-		if not is_equal_approx(cells, roundf(cells)):
+		if fposmod(site_period, cell) != 0.0:
 			errors.append("site period %.1f m is not a multiple of %.1f m" % [site_period, cell])
 	var longest: float = 0.0
 	for def: ShipDef in ships:
@@ -131,9 +133,10 @@ func spawn_enemy(
 
 ## Restores one ship's state from its definition and places it at a site-local offset
 ## (m, 64-bit, D104, wrapped onto the site's cube), dropping its queued commands; other
-## ships are untouched (FT-MIS-017: a destroyed ship's run state resets on its own). Runs submit a
-## ResetShipCommand instead, which calls this at tick start and is logged for replay
-## (FT-ARC-008); a direct call is not logged.
+## ships are untouched (FT-MIS-017: a destroyed ship's run state resets on its own). Runs
+## submit a ResetShipCommand instead, which calls this at tick start and is logged for
+## replay (FT-ARC-008); a direct call is not logged. Commands for the ship later in the
+## same tick's batch are rejected (_apply_commands), so none lands on the fresh ship.
 func reset_ship(
 	ship_id: int,
 	site: int,
@@ -143,6 +146,7 @@ func reset_ship(
 	rotation: Quaternion = Quaternion.IDENTITY
 ) -> void:
 	_queue.assign(_queue.filter(func(c: SimCommand) -> bool: return c.ship_id != ship_id))
+	_reset_this_tick[ship_id] = true
 	for t: SimTable in tables():
 		t.reset_ship(ship_id, defs[ship_id])
 	kin.place(ship_id, site, x, y, z)
@@ -239,14 +243,14 @@ func drain_events() -> Array[SimEvent]:
 	return out
 
 
-## SHA-256 over every table's columns, the tick, the RNG states, the relations and the
-## queued commands, in a fixed order (FT-ARC-008). Events and the command log are
-## outputs, not state.
+## SHA-256 over every table's columns, the tick, the RNG states, the relations, the site
+## period and the queued commands, in a fixed order (FT-ARC-008, D125). Events and the
+## command log are outputs, not state.
 func state_hash() -> String:
 	var ctx: HashingContext = HashingContext.new()
 	ctx.start(HashingContext.HASH_SHA256)
 	var pending: Array = _queue.map(func(c: SimCommand) -> Array: return [c.to_dict(), c.source])
-	ctx.update(var_to_bytes([tick, rng.states(), _relation_list(), pending]))
+	ctx.update(var_to_bytes([tick, rng.states(), _relation_list(), pending, kin.period]))
 	for t: SimTable in tables():
 		for column: Array in t.columns():
 			ctx.update(var_to_bytes(column))
@@ -256,13 +260,16 @@ func state_hash() -> String:
 func _apply_commands() -> void:
 	var queue: Array[SimCommand] = _queue
 	_queue = []
+	_reset_this_tick.clear()
 	for c: SimCommand in queue:
 		if c.ship_id < 0 or c.ship_id >= defs.size():
 			continue
 		if not (kin.is_alive(c.ship_id) or c.applies_to_destroyed()):
 			continue
 		c.tick = tick
-		c.accepted = c.apply(self)
+		# A ship reset earlier this tick rejects its later commands of the tick (logged
+		# as rejected, so a replay rejects them too).
+		c.accepted = not _reset_this_tick.has(c.ship_id) and c.apply(self)
 		if c.source != SimCommand.Source.AI:
 			command_log.append(c)
 

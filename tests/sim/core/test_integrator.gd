@@ -46,6 +46,29 @@ func test_zero_input_holds_velocity() -> void:
 	assert_float(kin.px[0]).is_equal_approx(10.0 * 10.0, 1e-4)
 
 
+# FT: FT-SIM-003, FT-TST-007
+# Zero input, assist off, a tumble off every principal axis: the body rate changes (it
+# is not a principal spin, so the angular velocity is not kept), but the world-frame
+# angular momentum state stays exactly the same, the L derived from the rate matches it
+# within 1e-5 relative (float32 rounding of the rotations, as in the momentum test) and
+# the linear momentum is exact.
+func test_non_principal_tumble_keeps_angular_momentum() -> void:
+	var kin: Kinematics = _table()
+	kin.rot[0] = Quaternion(Vector3(1.0, -2.0, 0.5).normalized(), 0.7)
+	kin.vel[0] = Vector3(-2.0, 1.0, 3.0)
+	kin.set_angular_velocity(0, Vector3(0.4, -0.25, 0.15))
+	var w0: Vector3 = kin.ang_vel[0]
+	var l0: Vector3 = kin.ang_mom[0]
+	var p0: Vector3 = kin.vel[0] * kin.mass[0]
+	for i: int in 1200:
+		Integrator.step(kin, 0, DT)
+	assert_float((kin.ang_vel[0] - w0).length()).is_greater(1e-3)
+	assert_vector(kin.ang_mom[0]).is_equal(l0)
+	var l1: Vector3 = kin.rot[0] * (kin.inertia[0] * kin.ang_vel[0])
+	assert_float((l1 - l0).length() / l0.length()).is_less(1e-5)
+	assert_vector(kin.vel[0] * kin.mass[0]).is_equal(p0)
+
+
 # FT: FT-TST-007, FT-SIM-001
 # Momentum: with no force the linear momentum is exactly kept; with no torque the
 # world-frame angular momentum state is never touched, and the body rate derived from it

@@ -17,7 +17,8 @@ func apply(world: SimWorld) -> bool:
 	if not AssistSystem.has_target(world, ship_id):
 		return false
 	var helm: HelmTable = world.helm
-	var rolled: bool = absf(AssistSystem.align_roll_error(world, ship_id)) < AssistSystem.ROLLED
+	var local: Vector3 = world.kin.to_local(ship_id, AssistSystem.target_offset(world, ship_id))
+	var rolled: bool = absf(AssistSystem.align_roll_error(local)) < AssistSystem.ROLLED
 	if helm.align[ship_id] == HelmTable.Align.OFF and not rolled:
 		helm.align[ship_id] = HelmTable.Align.ROLL
 	else:

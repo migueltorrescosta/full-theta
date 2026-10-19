@@ -7,7 +7,7 @@ Tests: 79, manual: 9, pending: 313.
 | Id | Status | Verified by |
 |---|---|---|
 | FT-GEN-001 | pending |  |
-| FT-GEN-002 | tests | `tests/sim/pvp/test_pvp.gd` |
+| FT-GEN-002 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/pvp/test_pvp.gd` |
 | FT-GEN-003 | pending |  |
 | FT-GEN-004 | pending |  |
 | FT-GEN-005 | pending |  |
@@ -40,7 +40,7 @@ Tests: 79, manual: 9, pending: 313.
 | FT-ARC-018 | pending |  |
 | FT-ARC-019 | pending |  |
 | FT-ARC-020 | tests | `tests/sim/run/test_run_reset.gd`, `tools/tests/test_lint_arch.py` |
-| FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
+| FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-022 | pending |  |
 | FT-NET-001 | pending |  |
 | FT-NET-002 | pending |  |
@@ -100,7 +100,7 @@ Tests: 79, manual: 9, pending: 313.
 | FT-SIM-011 | tests | `tests/sim/combat/test_weapons.gd` |
 | FT-SIM-012 | tests | `tests/sim/combat/test_weapons.gd`, `tests/sim/power/test_power.gd` |
 | FT-SIM-013 | pending |  |
-| FT-SIM-014 | tests | `tests/shared/test_lead.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/run/test_site_wrap.gd` |
+| FT-SIM-014 | tests | `tests/shared/test_lead.gd`, `tests/sim/combat/test_weapons.gd` |
 | FT-SIM-015 | pending |  |
 | FT-SIM-016 | tests | `tests/sim/combat/test_weapons.gd` |
 | FT-SIM-017 | tests | `tests/sim/shields/test_shields.gd` |
@@ -121,7 +121,7 @@ Tests: 79, manual: 9, pending: 313.
 | FT-SIM-032 | pending |  |
 | FT-SIM-033 | tests | `tests/content/test_content_defs.gd` |
 | FT-SIM-034 | pending |  |
-| FT-SIM-035 | tests | `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/run/test_precision.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
+| FT-SIM-035 | tests | `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/run/test_precision.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
 | FT-SIM-036 | tests | `tests/sim/flight/test_assist_modes.gd` |
 | FT-SIM-037 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd` |
 | FT-SIM-038 | tests | `tests/sim/core/test_integrator.gd` |

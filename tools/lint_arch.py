@@ -131,8 +131,8 @@ def lint(root: Path) -> list[str]:
                     ft = "FT-ARC-020" if what == "resource loading" else "FT-ARC-010"
                     report(pos, f"{word}: no {what} in {module}/ ({ft})")
             if word in POSITION_COLUMNS and dotted and rel not in POSITION_OWNERS:
-                report(pos, f".{word}: use Kinematics.relative, relative_to_point, distance, "
-                       "point_at or wrap, not raw position columns (FT-SIM-035, D124)")
+                report(pos, f".{word}: use Kinematics.relative, relative_to_point, point_at, "
+                       "wrap, place or translate, not raw position columns (FT-SIM-035, D124)")
             if word in LOADERS and not dotted and code[m.end() :].lstrip().startswith("("):
                 report(pos, f"{word}(): no resource loading in {module}/ (FT-ARC-020)")
         if module.split("/")[0] in PURE:

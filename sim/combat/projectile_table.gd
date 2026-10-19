@@ -50,10 +50,9 @@ func spawn(
 ## (FT-SIM-035).
 func advance(k: int, kin: Kinematics, dt: float) -> void:
 	var v: Vector3 = vel[k]
-	var p: PackedFloat64Array = kin.wrap_point(px[k] + v.x * dt, py[k] + v.y * dt, pz[k] + v.z * dt)
-	px[k] = p[0]
-	py[k] = p[1]
-	pz[k] = p[2]
+	px[k] = kin.wrap(px[k] + v.x * dt)
+	py[k] = kin.wrap(py[k] + v.y * dt)
+	pz[k] = kin.wrap(pz[k] + v.z * dt)
 
 
 ## Projectile k's position relative to ship s, both taken dt (s) before the ship's
@@ -64,18 +63,20 @@ func relative_start(k: int, kin: Kinematics, s: int, dt: float) -> Vector3:
 	return kin.relative_to_point(s, px[k] + vs.x * dt, py[k] + vs.y * dt, pz[k] + vs.z * dt)
 
 
-## Unwrapped broadphase cells (lo x, y, z, hi x, y, z) covering projectile k's path over
-## dt (s) from its current position, padded by reach (m), for a cell size (m).
-func cell_box(k: int, dt: float, reach: float, cell: float) -> PackedInt32Array:
+## Writes into out (6 ints) the unwrapped broadphase cells (lo x, y, z, hi x, y, z)
+## covering projectile k's path over dt (s) from its current position, padded by reach
+## (m), for a cell size (m).
+func cell_box(k: int, dt: float, reach: float, cell: float, out: PackedInt32Array) -> void:
 	var v: Vector3 = vel[k]
-	var out: PackedInt32Array = PackedInt32Array()
-	out.resize(6)
-	var start: PackedFloat64Array = PackedFloat64Array([px[k], py[k], pz[k]])
-	for a: int in 3:
-		var end: float = start[a] + v[a] * dt
-		out[a] = floori((minf(start[a], end) - reach) / cell)
-		out[a + 3] = floori((maxf(start[a], end) + reach) / cell)
-	return out
+	var ex: float = px[k] + v.x * dt
+	var ey: float = py[k] + v.y * dt
+	var ez: float = pz[k] + v.z * dt
+	out[0] = floori((minf(px[k], ex) - reach) / cell)
+	out[1] = floori((minf(py[k], ey) - reach) / cell)
+	out[2] = floori((minf(pz[k], ez) - reach) / cell)
+	out[3] = floori((maxf(px[k], ex) + reach) / cell)
+	out[4] = floori((maxf(py[k], ey) + reach) / cell)
+	out[5] = floori((maxf(pz[k], ez) + reach) / cell)
 
 
 ## Removes the given rows (ascending row numbers); the rest keep their order.

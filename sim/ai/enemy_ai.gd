@@ -34,10 +34,12 @@ const AIM_TOLERANCE: float = 0.005
 ## KEEP_RANGE turns back to ATTACK only this far beyond engage_range_max (m), so a
 ## target near the edge doesn't flip the mode every tick.
 const MODE_HYSTERESIS: float = 100.0
-## Distance of the point a retreating ship faces and runs toward (m).
+## Distance of the point a retreating ship faces and runs toward (m), at most a quarter
+## of the site period: a point at or beyond P/2 would be the minimum image on the
+## threat's side (FT-SIM-035).
 const RETREAT_POINT_DISTANCE: float = 20000.0
 ## The retreat point is renewed once its bearing is this far off the wanted one (rad)
-## or it is nearer than half RETREAT_POINT_DISTANCE; a point within
+## or it is nearer than half that distance; a point within
 ## RETREAT_POINT_TOLERANCE (m) counts as reached.
 const RETREAT_REAIM: float = 0.1
 const RETREAT_POINT_TOLERANCE: float = 10.0
@@ -193,11 +195,10 @@ static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 	if away == Vector3.ZERO:
 		_helm_input(world, id, false, 0.0)
 		return
-	var wanted: Vector3 = away * RETREAT_POINT_DISTANCE
+	var reach: float = minf(RETREAT_POINT_DISTANCE, 0.25 * kin.period)
+	var wanted: Vector3 = away * reach
 	var keep: bool = (
-		current
-		and to_point.length() > 0.5 * RETREAT_POINT_DISTANCE
-		and to_point.angle_to(wanted) <= RETREAT_REAIM
+		current and to_point.length() > 0.5 * reach and to_point.angle_to(wanted) <= RETREAT_REAIM
 	)
 	if not keep:
 		var select: SelectTargetCommand = SelectTargetCommand.new()

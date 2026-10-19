@@ -108,7 +108,7 @@ func test_sensors_across_the_seam() -> void:
 	assert_bool(KnowledgeSystem.is_detected(w, CORVETTE_FACTION, far)).is_false()
 
 
-# FT: FT-SIM-035, FT-SIM-014, FT-ARC-021
+# FT: FT-SIM-035
 # The lead intercept across the seam equals the one for the same geometry away from
 # it (shooter at the centre, target 2 km on +X moving 50 m/s on +Y) within 1 mm.
 func test_lead_intercept_across_the_seam() -> void:
@@ -211,7 +211,8 @@ func test_fight_across_the_seam_is_deterministic_and_wrap_invariant() -> void:
 
 # FT: FT-SIM-035
 # The site period is checked at load: it must be finite and positive, a whole number of
-# both broadphase cells (250 m and 500 m) and at least 4x the longest sensor range (the
+# both broadphase cells (250 m and 500 m, checked exactly: 1 mm over fails both, D125)
+# and at least 4x the longest sensor range (the
 # corvette's 20 km). A bad one is reported by validate() and build() returns null; the
 # default 200 km and exactly 80 km pass.
 func test_site_period_validation() -> void:
@@ -220,6 +221,7 @@ func test_site_period_validation() -> void:
 		[80000.0, 0],
 		[79500.0, 1],
 		[200250.0, 1],
+		[200000.001, 2],
 		[NAN, 1],
 		[-200000.0, 1],
 	]
