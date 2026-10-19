@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 # Local gate (FT-TST-002, FT-TST-005): imports the project, then runs tiers.
-#   tools/gate.sh [l0|l1|l2|l3|l4|l5|l6|ci|all]...   (default: ci)
-# ci = the tiers CI runs (l0 l1); all = every implemented tier (l0 l1 l6).
+#   tools/gate.sh [l0|l1|l2|l3|l4|l5|l6|ci|all]... [--update-baselines]   (default: ci)
+# ci = the tiers CI runs (l0 l1); all = every implemented tier (l0 l1 l5 l6).
+# --update-baselines makes l5 regenerate tests/visual/baselines/ instead of diffing.
 # Prints the commit and per-tier results as a block for the PR body.
 set -uo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root" || exit 1
 
 tiers=()
-for arg in "${@:-ci}"; do
+l5_args=()
+for arg in "$@"; do
   case $arg in
-    l0 | l1 | l6) tiers+=("$arg") ;;
+    l0 | l1 | l5 | l6) tiers+=("$arg") ;;
     ci) tiers+=(l0 l1) ;;
-    all) tiers+=(l0 l1 l6) ;;
-    l2 | l3 | l4 | l5) echo "gate: tier $arg is not implemented yet" >&2; exit 2 ;;
+    all) tiers+=(l0 l1 l5 l6) ;;
+    --update-baselines) l5_args+=(--update-baselines) ;;
+    l2 | l3 | l4) echo "gate: tier $arg is not implemented yet" >&2; exit 2 ;;
     *) echo "gate: unknown tier $arg (use l0..l6, ci or all)" >&2; exit 2 ;;
   esac
 done
+(( ${#tiers[@]} )) || tiers=(l0 l1)
+if (( ${#l5_args[@]} )) && [[ " ${tiers[*]} " != *" l5 "* ]]; then
+  echo "gate: --update-baselines needs the l5 tier" >&2; exit 2
+fi
 
 godot=$(tools/get-godot.sh) || exit 1
 
@@ -31,6 +38,10 @@ l1() {
     res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
     --add res://tests --report-directory build/reports --ignoreHeadlessMode
 }
+
+# L5: screenshots under Xvfb with llvmpipe, diffed against tests/visual/baselines/
+# (tools/l5.py; fugaku only, needs xvfb).
+l5() { uv run --quiet --project tools python tools/l5.py "${l5_args[@]}"; }
 
 # L6: export Linux and Windows (export_presets.cfg), smoke-run Linux headless.
 l6() {

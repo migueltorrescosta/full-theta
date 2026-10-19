@@ -1,0 +1,11 @@
+{
+  "size": [640, 360],
+  "shots": [
+    {"name": "s8_a_front", "scene": "res://spikes/s8/ship_view.tscn", "set": {"yaw_degrees": 140, "pitch_degrees": 25, "variant": 0}},
+    {"name": "s8_a_side", "scene": "res://spikes/s8/ship_view.tscn", "set": {"yaw_degrees": 90, "pitch_degrees": 12, "variant": 0}},
+    {"name": "s8_a_rear", "scene": "res://spikes/s8/ship_view.tscn", "set": {"yaw_degrees": -35, "pitch_degrees": 35, "variant": 0}},
+    {"name": "s8_b_front", "scene": "res://spikes/s8/ship_view.tscn", "set": {"yaw_degrees": 140, "pitch_degrees": 25, "variant": 1}},
+    {"name": "s8_b_side", "scene": "res://spikes/s8/ship_view.tscn", "set": {"yaw_degrees": 90, "pitch_degrees": 12, "variant": 1}},
+    {"name": "s8_b_rear", "scene": "res://spikes/s8/ship_view.tscn", "set": {"yaw_degrees": -35, "pitch_degrees": 35, "variant": 1}}
+  ]
+}
