@@ -9,6 +9,8 @@ var _h: NetHarness
 
 
 func before_test() -> void:
+	# The app applies a language at start (MainMenu); a shell built alone needs one.
+	I18n.apply("en")
 	_h = NetHarness.new(self)
 
 
