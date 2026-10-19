@@ -36,8 +36,11 @@ static func list_tres(root: String) -> PackedStringArray:
 		if not sub.begins_with("."):
 			out.append_array(list_tres(root.path_join(sub)))
 	for f: String in dir.get_files():
-		if f.get_extension() == "tres":
-			out.append(root.path_join(f))
+		# An export converts x.tres to x.tres.remap plus a binary resource;
+		# load() follows the remap from the original path.
+		var name: String = f.trim_suffix(".remap")
+		if name.get_extension() == "tres" and not out.has(root.path_join(name)):
+			out.append(root.path_join(name))
 	out.sort()
 	return out
 
