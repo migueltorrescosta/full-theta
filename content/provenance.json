@@ -72,6 +72,22 @@
       "source": "https://github.com/microsoft/playwright",
       "licence": "Apache-2.0",
       "attribution": "Copyright (c) Microsoft Corporation; used only by the S3 spike harness (spikes/s3/harness)"
+    },
+    {
+      "name": "Piper standalone (Windows, TECH-4 test only)",
+      "kind": "tool",
+      "version": "2023.11.14-2",
+      "source": "https://github.com/rhasspy/piper/releases/tag/2023.11.14-2",
+      "licence": "MIT (Piper); bundles eSpeak NG (GPL-3.0-or-later) and ONNX Runtime 1.14 (MIT)",
+      "attribution": "Copyright (c) 2022 Michael Hansen; piper_windows_amd64.zip SHA-256 f3c58906402b24f3a96d92145f58acba6d86c9b5db896d207f78dc80811efcea"
+    },
+    {
+      "name": "Wine",
+      "kind": "tool",
+      "version": "10.0~repack-12ubuntu1",
+      "source": "https://www.winehq.org",
+      "licence": "LGPL-2.1-or-later",
+      "attribution": "Copyright (c) Wine contributors (development and testing only)"
     }
   ]
 }

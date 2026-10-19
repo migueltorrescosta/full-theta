@@ -1,0 +1,36 @@
+{
+ "comment": "S7b: a plausible session closed set per language (D101, FT-AUD-018). Ship names and callsigns use the computer voice, NPC names the NPC voice. Fragments are authored words prerendered at build time by prerender.py with the computer voice, plus the numbers 0-999. Stitched lines are lists of fragment keys: ship:N, callsign:N, npc:N, word:KEY, num:N.",
+ "languages": {
+  "en": {
+   "computer": "en_GB-cori-medium",
+   "npc": "en_US-norman-medium",
+   "ships": ["Wandering Albatross", "Copper Kettle", "Dusty Mule", "Unlikely Hero", "Halcyon", "Brightwater"],
+   "callsigns": ["Kessler One", "Kessler Two", "Viper Three", "Viper Four", "Lantern Five", "Lantern Six", "Marlin Seven", "Marlin Eight", "Osprey Nine", "Osprey Ten", "Juniper One", "Juniper Two", "Granite Three", "Granite Four", "Comet Five", "Comet Six", "Harbour Seven", "Harbour Eight", "Saffron Nine", "Saffron Ten"],
+   "npcs": ["Captain Okafor", "Lieutenant Reyes", "Dockmaster Hale", "Commander Lindqvist", "Doctor Amari", "Trader Bellweather", "Pilot Sato", "Chief Moreau", "Ensign Kowalski", "Admiral Thorne", "Smuggler Vance", "Engineer Patel", "Governor Achebe", "Captain Novak", "Merchant Quill", "Sergeant Ibarra", "Prospector Dunn", "Envoy Castellan", "Major Haddad", "Courier Finch"],
+   "words": {"contact": "Contact", "bearing": "bearing", "range": "range", "km": "kilometres", "hailing": "is hailing.", "docking": "Docking request from", "shields": "shields at", "percent": "percent."}
+  },
+  "it": {
+   "computer": "it_IT-serena-medium",
+   "npc": "it_IT-serena-medium",
+   "ships": ["Rondine Errante", "Pentola di Rame", "Mula Polverosa", "Eroe Improbabile", "Alcione", "Acquachiara"],
+   "callsigns": ["Kessler Uno", "Kessler Due", "Vipera Tre", "Vipera Quattro", "Lanterna Cinque", "Lanterna Sei", "Marlin Sette", "Marlin Otto", "Falco Nove", "Falco Dieci", "Ginepro Uno", "Ginepro Due", "Granito Tre", "Granito Quattro", "Cometa Cinque", "Cometa Sei", "Porto Sette", "Porto Otto", "Zafferano Nove", "Zafferano Dieci"],
+   "npcs": ["Capitano Ricci", "Tenente Esposito", "Capoporto Bruno", "Comandante Galli", "Dottoressa Conti", "Mercante Moretti", "Pilota Ferrara", "Capo Lombardi", "Guardiamarina Rinaldi", "Ammiraglio Greco", "Contrabbandiere Vitale", "Ingegnera Marino", "Governatore Costa", "Capitana Gallo", "Mercante Fontana", "Sergente Caruso", "Cercatore Mancini", "Inviato Barbieri", "Maggiore Testa", "Corriere Serra"],
+   "words": {"contact": "Contatto", "bearing": "rotta", "range": "distanza", "km": "chilometri", "hailing": "chiama.", "docking": "Richiesta di attracco da", "shields": "scudi al", "percent": "per cento."}
+  },
+  "pt": {
+   "computer": "pt_PT-tugão-medium",
+   "npc": "pt_PT-tugão-medium",
+   "ships": ["Andorinha Errante", "Panela de Cobre", "Mula Poeirenta", "Herói Improvável", "Alcíone", "Água Clara"],
+   "callsigns": ["Kessler Um", "Kessler Dois", "Víbora Três", "Víbora Quatro", "Lanterna Cinco", "Lanterna Seis", "Marlim Sete", "Marlim Oito", "Falcão Nove", "Falcão Dez", "Zimbro Um", "Zimbro Dois", "Granito Três", "Granito Quatro", "Cometa Cinco", "Cometa Seis", "Porto Sete", "Porto Oito", "Açafrão Nove", "Açafrão Dez"],
+   "npcs": ["Capitão Sousa", "Tenente Ferreira", "Mestre Rocha", "Comandante Almeida", "Doutora Carvalho", "Mercador Pereira", "Piloto Costa", "Chefe Martins", "Guarda-marinha Lopes", "Almirante Teixeira", "Contrabandista Mendes", "Engenheira Nunes", "Governador Pinto", "Capitã Ribeiro", "Mercador Gomes", "Sargento Correia", "Prospetor Fonseca", "Enviado Matos", "Major Barros", "Estafeta Pacheco"],
+   "words": {"contact": "Contacto", "bearing": "rumo", "range": "distância", "km": "quilómetros", "hailing": "está a chamar.", "docking": "Pedido de atracagem de", "shields": "escudos a", "percent": "por cento."}
+  }
+ },
+ "stitched": [
+  ["word:contact", "callsign:2", "word:bearing", "num:342", "word:range", "num:18", "word:km"],
+  ["word:docking", "ship:1"],
+  ["npc:4", "word:hailing"],
+  ["ship:3", "word:shields", "num:40", "word:percent"],
+  ["word:contact", "callsign:17", "word:bearing", "num:7", "word:range", "num:250", "word:km"]
+ ]
+}
