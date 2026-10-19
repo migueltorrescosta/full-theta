@@ -1,0 +1,38 @@
+class_name SimCommand
+extends RefCounted
+## A typed command for one ship (FT-ARC-005, FT-ARC-008). Stations and the enemy AI
+## emit the same command classes (FT-SIM-027). Commands queue on the World and apply
+## at the start of the next tick, in submission order; the World stamps the tick.
+## Subclasses keep their parameters in plain typed script variables, which to_dict()
+## and SimCommands.from_dict() round-trip for the command log (FT-ARC-008).
+
+enum Source { CREW, AI }
+
+var ship_id: int = -1
+## Tick the command was applied on; -1 until applied.
+var tick: int = -1
+var source: Source = Source.CREW
+
+
+## Stable name used in the command log; subclasses override.
+func kind() -> StringName:
+	return &""
+
+
+## Applies the command; returns false to reject it (rejected commands aren't logged).
+func apply(_world: SimWorld) -> bool:
+	return false
+
+
+func to_dict() -> Dictionary:
+	var d: Dictionary = {"kind": kind()}
+	for p: Dictionary in get_property_list():
+		if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE and p["name"] != "source":
+			d[p["name"]] = get(p["name"])
+	return d
+
+
+func set_from_dict(d: Dictionary) -> void:
+	for k: Variant in d:
+		if k != "kind":
+			set(k, d[k])

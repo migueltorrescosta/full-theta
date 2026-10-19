@@ -1,0 +1,183 @@
+extends GdUnitTestSuite
+## T025: the sim core: fixed tick, ordering, seeded RNG, keyed state, site-local
+## positions (L2).
+
+
+## Test-only command: kicks the ship by a random velocity from the ship's own stream.
+class KickCommand:
+	extends SimCommand
+	var scale: float = 1.0
+
+	func kind() -> StringName:
+		return &"test_kick"
+
+	func apply(world: SimWorld) -> bool:
+		var r: RandomNumberGenerator = world.rng.stream(&"test_kick")
+		var kick: Vector3 = Vector3(
+			r.randf_range(-1, 1), r.randf_range(-1, 1), r.randf_range(-1, 1)
+		)
+		world.kin.vel[ship_id] += kick * scale
+		world.kin.ang_vel[ship_id] += kick * 0.01
+		return true
+
+
+func _world(world_seed: int) -> SimWorld:
+	var w: SimWorld = SimWorld.new(world_seed, "test")
+	w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3(0, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), 2, 0, Vector3(500, 20, -3000))
+	w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3(-800, 0, 100))
+	return w
+
+
+func _run(w: SimWorld, ticks: int) -> void:
+	for t: int in ticks:
+		if t % 37 == 0:
+			var k: KickCommand = KickCommand.new()
+			k.ship_id = t % w.ship_count()
+			k.scale = 2.0
+			w.submit(k)
+		w.step()
+
+
+# FT: FT-ARC-004, FT-ARC-006, FT-ARC-008, FT-SIM-001
+# Same seed and commands give identical state hashes over 1,000 ticks; another seed
+# gives a different run.
+func test_same_seed_same_hash_over_1000_ticks() -> void:
+	var a: SimWorld = _world(42)
+	var b: SimWorld = _world(42)
+	for chunk: int in 10:
+		_run(a, 100)
+		_run(b, 100)
+		assert_str(a.state_hash()).is_equal(b.state_hash())
+	assert_int(a.tick).is_equal(1000)
+	var c: SimWorld = _world(43)
+	_run(c, 1000)
+	assert_str(c.state_hash()).is_not_equal(a.state_hash())
+
+
+# FT: FT-ARC-008
+# Every accepted crew command is logged with the tick it was applied on, in order,
+# with the world's seed and build id.
+func test_command_log_records_ticks_in_order() -> void:
+	var w: SimWorld = _world(7)
+	_run(w, 100)
+	var ticks: Array[int] = []
+	for c: SimCommand in w.command_log:
+		ticks.append(c.tick)
+	assert_array(ticks).is_equal([0, 37, 74])
+	assert_int(w.seed_value).is_equal(7)
+	assert_str(w.build_id).is_equal("test")
+
+
+# FT: FT-ARC-008
+# Each subsystem has its own seeded stream, so draws in one don't shift another.
+func test_rng_streams_independent() -> void:
+	var a: SimRng = SimRng.new(5)
+	var b: SimRng = SimRng.new(5)
+	a.stream(&"weapons").randf()
+	assert_float(a.stream(&"ai").randf()).is_equal(b.stream(&"ai").randf())
+	assert_float(SimRng.new(6).stream(&"ai").randf()).is_not_equal(
+		SimRng.new(5).stream(&"ai").randf()
+	)
+
+
+# FT: FT-ARC-009
+# Ship ids follow spawn order and every per-ship table iterates rows in id order.
+func test_iteration_order_by_id() -> void:
+	var w: SimWorld = _world(1)
+	for t: SimTable in w.tables():
+		var ids: PackedInt32Array = t.ship_ids
+		for r: int in range(1, ids.size()):
+			assert_bool(ids[r] >= ids[r - 1]).is_true()
+	assert_array(Array(w.kin.ship_ids)).is_equal([0, 1, 2])
+
+
+# FT: FT-ARC-012, FT-M1-014
+# Enumerates every state container: each is a SimTable whose rows carry a ship id and
+# faction, and whose columns all have one entry per row.
+func test_every_container_keyed_by_ship_and_faction() -> void:
+	var w: SimWorld = _world(3)
+	_run(w, 10)
+	assert_int(w.tables().size()).is_greater_equal(8)
+	for t: SimTable in w.tables():
+		var cols: Array = t.columns()
+		assert_str(cols[0][0]).is_equal("ship_ids")
+		assert_str(cols[1][0]).is_equal("factions")
+		for col: Array in cols:
+			(
+				assert_int((col[1] as Variant).size())
+				. override_failure_message(
+					(
+						"%s.%s has %d rows, keys %d"
+						% [
+							t.get_script().get_global_name(),
+							col[0],
+							(col[1] as Variant).size(),
+							t.size()
+						]
+					)
+				)
+				. is_equal(t.size())
+			)
+			assert_bool(t.get(col[0]) == col[1]).is_true()
+		for r: int in t.size():
+			assert_int(t.ship_ids[r]).is_between(0, w.ship_count() - 1)
+	assert_array(Array(w.kin.factions)).is_equal([1, 2, 1])
+
+
+# FT: FT-ARC-006
+# The world's own accumulator turns frame time into whole 60 Hz ticks.
+func test_accumulator_steps_fixed_ticks() -> void:
+	var w: SimWorld = _world(1)
+	assert_int(w.advance(0.010)).is_equal(0)
+	assert_int(w.advance(0.010)).is_equal(1)
+	assert_int(w.advance(1.0 / 60.0 * 3.0)).is_equal(3)
+	assert_int(w.advance(5.0)).is_equal(SimWorld.MAX_TICKS_PER_ADVANCE)
+	assert_int(w.tick).is_equal(4 + SimWorld.MAX_TICKS_PER_ADVANCE)
+
+
+# FT: FT-SIM-035, FT-M1-020
+# A position is a site id plus three 64-bit offsets; far from the site centre a slow
+# drift still moves (D104: float32 would freeze under 0.47 m/s at 200 km).
+func test_site_local_64_bit_offsets() -> void:
+	var w: SimWorld = SimWorld.new(1)
+	var id: int = w.spawn_ship_at(TestDefs.corvette(), 1, 9, 199000.0, -199000.0, 0.25)
+	w.kin.vel[id] = Vector3(0.1, 0.0, 0.0)
+	for i: int in 600:
+		w.step()
+	assert_int(w.kin.site[id]).is_equal(9)
+	assert_float(w.kin.px[id]).is_equal_approx(199001.0, 1e-5)
+	assert_float(w.kin.py[id]).is_equal(-199000.0)
+	assert_float(w.kin.pz[id]).is_equal(0.25)
+
+
+# FT: FT-SIM-035, FT-M1-020
+# An offset past 200 km on any axis fails an assertion.
+func test_offset_past_limit_fails_assertion() -> void:
+	var w: SimWorld = SimWorld.new(1)
+	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 0)
+	await (
+		assert_error(func() -> void: w.kin.place(id, 0, 0.0, 200000.5, 0.0))
+		. is_runtime_error(
+			(
+				"Assertion failed: site-local offset past 200000 m: ship 0 at "
+				+ "(0.000000, 200000.500000, 0.000000)"
+			)
+		)
+	)
+
+
+# FT: FT-GEN-002
+# Resetting one ship restores its rows from the definition and leaves the others.
+func test_reset_ship_restores_only_that_ship() -> void:
+	var w: SimWorld = _world(11)
+	_run(w, 200)
+	var other_vel: Vector3 = w.kin.vel[1]
+	var other_px: float = w.kin.px[1]
+	w.kin.propellant[0] = 1.0
+	w.reset_ship(0, 0, Vector3(5, 0, 0))
+	assert_vector(w.kin.vel[0]).is_equal(Vector3.ZERO)
+	assert_float(w.kin.px[0]).is_equal(5.0)
+	assert_float(w.kin.propellant[0]).is_equal(w.defs[0].propellant_capacity)
+	assert_vector(w.kin.vel[1]).is_equal(other_vel)
+	assert_float(w.kin.px[1]).is_equal(other_px)
