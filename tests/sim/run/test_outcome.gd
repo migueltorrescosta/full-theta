@@ -62,10 +62,8 @@ func test_win_when_enemy_destroyed() -> void:
 	assert_int(outcomes[0].tick).is_equal(destroyed[0].tick)
 	var run: RunTable = world.run
 	assert_int(run.status[ENEMY]).is_equal(RunTable.Status.DESTROYED)
-	assert_int(run.status_tick[ENEMY]).is_equal(destroyed[0].tick)
 	assert_int(run.status[PLAYER]).is_equal(RunTable.Status.IN_PLAY)
 	assert_int(run.outcome[PLAYER]).is_equal(RunTable.Outcome.WIN)
-	assert_int(run.outcome_tick[PLAYER]).is_equal(outcomes[0].tick)
 	assert_int(run.outcome[ENEMY]).is_equal(RunTable.Outcome.NONE)
 	var before: int = run.columns().hash()
 	assert_array(SimFixture.of_kind(SimFixture.run(world, 10 * HZ), &"outcome")).is_empty()
@@ -98,7 +96,6 @@ func test_win_when_enemy_retreats() -> void:
 	assert_int(lost.size()).is_equal(1)
 	assert_int(lost[0].tick).is_equal(retreated[0].tick)
 	assert_int(world.run.status[ENEMY]).is_equal(RunTable.Status.RETREATED)
-	assert_int(world.run.status_tick[ENEMY]).is_equal(retreated[0].tick)
 	assert_int(world.ai.mode[ENEMY]).is_equal(AiTable.Mode.RETREAT)
 	assert_float(world.kin.relative(PLAYER, ENEMY).length()).is_greater(20000.0)
 	assert_array(SimFixture.of_kind(SimFixture.run(world, 5 * HZ), &"retreated")).is_empty()

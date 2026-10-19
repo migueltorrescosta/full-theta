@@ -43,9 +43,6 @@ var command_log: Array[SimCommand] = []
 var events: Array[SimEvent] = []
 ## Hits of the current tick, resolved by HitResolver.
 var hits: Array[SimHit] = []
-## Site origins (m, 64-bit x, y, z) by site id: only for maps and jumps, never read
-## per tick (D98).
-var site_origins: Dictionary[int, PackedFloat64Array] = {}
 
 var _queue: Array[SimCommand] = []
 var _relations: Dictionary[int, int] = {}

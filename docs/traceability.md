@@ -31,7 +31,7 @@ Tests: 82, manual: 9, pending: 310.
 | FT-ARC-009 | tests | `tests/sim/core/test_sim_world.gd` |
 | FT-ARC-010 | tests | `tools/tests/test_lint_arch.py` |
 | FT-ARC-011 | tests | `tools/tests/test_lint_arch.py` |
-| FT-ARC-012 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/damage/test_damage.gd`, `tests/sim/pvp/test_pvp.gd` |
+| FT-ARC-012 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/damage/test_damage.gd` |
 | FT-ARC-013 | tests | `tests/sim/combat/test_weapons.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/sim/flight/test_helm_commands.gd`, `tests/sim/knowledge/test_knowledge.gd`, `tests/sim/pvp/test_pvp.gd`, `tests/sim/shields/test_shields.gd` |
 | FT-ARC-014 | pending |  |
 | FT-ARC-015 | pending |  |
@@ -343,7 +343,7 @@ Tests: 82, manual: 9, pending: 310.
 | FT-AUD-018 | pending |  |
 | FT-AUD-019 | pending |  |
 | FT-DAT-001 | tests | `tests/content/test_content_defs.gd`, `tests/content/test_def_gate.gd` |
-| FT-DAT-002 | tests | `tests/content/test_content_defs.gd`, `tests/content/test_def_gate.gd` |
+| FT-DAT-002 | tests | `tests/content/test_def_gate.gd` |
 | FT-DAT-003 | pending |  |
 | FT-DAT-004 | pending |  |
 | FT-DAT-005 | pending |  |

@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="EnemyDef" format=3]
 
 [ext_resource type="Script" path="res://content/defs/enemy_def.gd" id="1_llsng"]
-[ext_resource type="Resource" path="res://tests/content/fixtures/good/weapon.tres" id="2_logl5"]
+[ext_resource type="Resource" path="res://content/weapons/m1_cannon.tres" id="2_logl5"]
 
 [resource]
 script = ExtResource("1_llsng")

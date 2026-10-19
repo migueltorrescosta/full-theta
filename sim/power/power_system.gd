@@ -178,7 +178,7 @@ static func _step_heat(world: SimWorld, s: int, i: int) -> void:
 	world.power.heat[s][i] = h
 	if h > sd.fault_heat_threshold and world.power.fault_armed[s][i] == 1:
 		world.power.fault_armed[s][i] = 0
-		DamageSystem.damage_subsystem(world, s, sd.id, sd.heat_fault_damage, &"heat")
+		DamageSystem.damage_subsystem(world, s, sd.id, sd.heat_fault_damage)
 		world.emit(&"fault", s, -1, h, Vector3.ZERO, sd.id)
 	elif h < sd.fault_heat_threshold * FAULT_REARM and world.power.fault_armed[s][i] == 0:
 		world.power.fault_armed[s][i] = 1

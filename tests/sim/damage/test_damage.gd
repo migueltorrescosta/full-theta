@@ -81,7 +81,7 @@ func test_hit_damages_hull_and_nearest_subsystem_only() -> void:
 	for id: StringName in [&"engines", &"thrusters", &"shields", &"sensors", &"reactor"]:
 		assert_float(_health(w, 0, id)).is_equal(2e7)
 	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal(1.0)
-	assert_float(DamageSystem.health_fraction(w, 1, &"weapons")).is_equal(1.0)
+	assert_float(_health(w, 1, &"weapons")).is_equal(2e7)
 
 
 # FT: FT-SIM-020
@@ -124,12 +124,11 @@ func test_effectiveness_curve_table_points() -> void:
 
 
 # FT: FT-SIM-021
-# A ship without the named subsystem reports full effectiveness and health.
+# A ship without the named subsystem reports full effectiveness.
 func test_unknown_subsystem_is_fully_effective() -> void:
 	var w: SimWorld = _world()
 	assert_float(DamageSystem.effectiveness(w, 0, &"tractor")).is_equal(1.0)
 	assert_float(DamageSystem.effectiveness(w, 0, &"hull")).is_equal(1.0)
-	assert_float(DamageSystem.health_fraction(w, 0, &"tractor")).is_equal(1.0)
 
 
 # FT: FT-SIM-030
@@ -177,12 +176,12 @@ func test_subsystem_damaged_event_fields() -> void:
 # damage_subsystem (heat faults) damages only the named subsystem, not the hull.
 func test_damage_subsystem_direct() -> void:
 	var w: SimWorld = _world()
-	DamageSystem.damage_subsystem(w, 0, &"thrusters", 5e6, &"heat")
-	assert_float(DamageSystem.health_fraction(w, 0, &"thrusters")).is_equal(0.75)
+	DamageSystem.damage_subsystem(w, 0, &"thrusters", 5e6)
+	assert_float(_health(w, 0, &"thrusters")).is_equal(1.5e7)
 	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal(1.0)
-	DamageSystem.damage_subsystem(w, 0, &"nope", 5e6, &"heat")
-	DamageSystem.damage_subsystem(w, 0, &"thrusters", 1e9, &"heat")
-	assert_float(DamageSystem.health_fraction(w, 0, &"thrusters")).is_equal(0.0)
+	DamageSystem.damage_subsystem(w, 0, &"nope", 5e6)
+	DamageSystem.damage_subsystem(w, 0, &"thrusters", 1e9)
+	assert_float(_health(w, 0, &"thrusters")).is_equal(0.0)
 	assert_float(DamageSystem.effectiveness(w, 0, &"thrusters")).is_equal(0.0)
 
 
@@ -210,11 +209,12 @@ func test_rows_and_reset_ship() -> void:
 	assert_str(String(w.damage.part_ids[7])).is_equal("hull")
 	DamageSystem.apply_hit(w, _hit(0, Vector3(0, 0, -25), 4e6), 4e6)
 	DamageSystem.apply_hit(w, _hit(1, Vector3(0, 0, -25), 4e6), 4e6)
-	DamageSystem.damage_subsystem(w, 0, &"engines", 1e6, &"heat")
+	DamageSystem.damage_subsystem(w, 0, &"engines", 1e6)
 	assert_bool(DamageSystem.dispatch(w, 0, 1, &"engines")).is_true()
 	w.reset_ship(0, 0)
 	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal(1.0)
 	assert_float(_health(w, 0, &"weapons")).is_equal(2e7)
-	assert_int(DamageSystem.spare_parts(w, 0)).is_equal(20)
-	assert_str(String(DamageSystem.crew_job(w, 0, 1))).is_equal("")
+	assert_int(w.damage.spare_parts[w.damage.hull_row(0)]).is_equal(20)
+	for r: int in w.damage.rows_of(0):
+		assert_int(w.damage.crews[r]).is_equal(0)
 	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal_approx(0.96, 1e-12)

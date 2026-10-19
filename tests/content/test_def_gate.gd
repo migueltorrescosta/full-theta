@@ -1,6 +1,8 @@
 extends GdUnitTestSuite
 ## The definition load gate (tools/check_defs.gd) on the fixtures in fixtures/: each
-## error line names the file and the field.
+## error line names the file and the field. Each fixture breaks only what its test needs
+## and references the shipped content (res://content) for the rest; the clean case is
+## the shipped content itself.
 
 const GATE: String = "res://tools/check_defs.gd"
 const FIXTURES: String = "res://tests/content/fixtures/"
@@ -20,11 +22,6 @@ func _expect(sub: String, lines: Array[String]) -> void:
 		expected.append(DIR + sub + "/" + line)
 	expected.sort()
 	assert_array(_check(sub)).is_equal(expected)
-
-
-# FT: FT-DAT-001, FT-DAT-002
-func test_good_fixtures_pass() -> void:
-	assert_array(_check("good")).is_empty()
 
 
 # FT: FT-DAT-002
@@ -79,7 +76,9 @@ func test_missing_references_name_file_and_field() -> void:
 	)
 
 
-# FT: FT-DAT-002
+# FT: FT-DAT-001, FT-DAT-002
+# Exit 1 on a fixture directory with errors; exit 0 on the default root, the shipped
+# content.
 func test_gate_exits_1_on_errors_and_0_when_clean() -> void:
 	var project: String = ProjectSettings.globalize_path("res://")
 	var base: PackedStringArray = ["--headless", "--path", project, "-s", GATE, "--"]
@@ -89,5 +88,7 @@ func test_gate_exits_1_on_errors_and_0_when_clean() -> void:
 	)
 	assert_int(code).is_equal(1)
 	assert_str(out[0]).contains(DIR + "bad_type/weapon_string_damage.tres: damage: expected")
-	code = OS.execute(OS.get_executable_path(), base + PackedStringArray([FIXTURES + "good"]), out)
+	out.clear()
+	code = OS.execute(OS.get_executable_path(), base, out)
 	assert_int(code).is_equal(0)
+	assert_str(out[0]).contains("check_defs: res://content: 0 error(s)")

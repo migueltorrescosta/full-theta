@@ -18,29 +18,15 @@ const OUTCOME_NAMES: Array[StringName] = [&"none", &"win", &"loss"]
 
 ## Status of the ship.
 var status: PackedByteArray = PackedByteArray()
-## Tick on which status last changed, or -1 while it is the spawn value.
-var status_tick: PackedInt32Array = PackedInt32Array()
 ## Outcome for the ship's crew; set once, never changed after.
 var outcome: PackedByteArray = PackedByteArray()
-## Tick on which the outcome was set, or -1.
-var outcome_tick: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	add_key(ship_id, faction)
 	status.append(Status.IN_PLAY)
-	status_tick.append(-1)
 	outcome.append(Outcome.NONE)
-	outcome_tick.append(-1)
 
 
 func columns() -> Array:
-	return (
-		super()
-		+ [
-			["status", status],
-			["status_tick", status_tick],
-			["outcome", outcome],
-			["outcome_tick", outcome_tick],
-		]
-	)
+	return super() + [["status", status], ["outcome", outcome]]

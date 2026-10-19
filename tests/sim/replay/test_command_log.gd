@@ -196,7 +196,7 @@ func _no_parts_world() -> SimWorld:
 	var w: SimWorld = (
 		M1Encounter.new(3, "test", TestDefs.corvette(), TestDefs.raider_enemy()).build()
 	)
-	DamageSystem.damage_subsystem(w, M1Encounter.PLAYER_SHIP, &"engines", 1.0e6, &"test")
+	DamageSystem.damage_subsystem(w, M1Encounter.PLAYER_SHIP, &"engines", 1.0e6)
 	w.damage.spare_parts[w.damage.hull_row(M1Encounter.PLAYER_SHIP)] = 0
 	w.drain_events()
 	return w

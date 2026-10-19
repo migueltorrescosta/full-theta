@@ -22,9 +22,9 @@ static func step(world: SimWorld) -> void:
 		if run.status[id] != RunTable.Status.IN_PLAY:
 			continue
 		if not world.kin.is_alive(id):
-			_set_status(world, id, RunTable.Status.DESTROYED)
+			run.status[id] = RunTable.Status.DESTROYED
 		elif _escaped(world, id):
-			_set_status(world, id, RunTable.Status.RETREATED)
+			run.status[id] = RunTable.Status.RETREATED
 			world.emit(&"retreated", id)
 	for id: int in world.ship_count():
 		if world.ai.is_enabled(id) or run.outcome[id] != RunTable.Outcome.NONE:
@@ -80,12 +80,6 @@ static func _enemies_gone(world: SimWorld, id: int) -> bool:
 	return enemies > 0
 
 
-static func _set_status(world: SimWorld, id: int, status: RunTable.Status) -> void:
-	world.run.status[id] = status
-	world.run.status_tick[id] = world.tick
-
-
 static func _set_outcome(world: SimWorld, id: int, outcome: RunTable.Outcome) -> void:
 	world.run.outcome[id] = outcome
-	world.run.outcome_tick[id] = world.tick
 	world.emit(&"outcome", id, -1, outcome, Vector3.ZERO, RunTable.OUTCOME_NAMES[outcome])

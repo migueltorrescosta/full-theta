@@ -91,20 +91,11 @@ static func hull_fraction(world: SimWorld, ship_id: int) -> float:
 	return world.damage.health[h] / world.defs[ship_id].hull_max
 
 
-## Health left as a share of health_max, 0..1; 1 when the ship has no such subsystem.
-static func health_fraction(world: SimWorld, ship_id: int, subsystem_id: StringName) -> float:
-	var t: DamageTable = world.damage
-	var r: int = t.find_subsystem(ship_id, subsystem_id)
-	if r < 0:
-		return 1.0
-	return t.health[r] / _sub_def(world, ship_id, r).health_max
-
-
-## Damages one subsystem directly (heat faults, FT-SIM-026); cause names the source. The
-## &"subsystem_damaged" event carries the subsystem id as its tag, so the caller reports
-## the cause in its own fault event.
+## Damages one subsystem directly (heat faults, FT-SIM-026). The &"subsystem_damaged"
+## event carries the subsystem id as its tag; the caller reports the cause in its own
+## fault event.
 static func damage_subsystem(
-	world: SimWorld, ship_id: int, subsystem_id: StringName, energy: float, _cause: StringName
+	world: SimWorld, ship_id: int, subsystem_id: StringName, energy: float
 ) -> void:
 	if ship_id < 0 or ship_id >= world.ship_count() or not world.kin.is_alive(ship_id):
 		return
@@ -148,20 +139,6 @@ static func recall(world: SimWorld, ship_id: int, crew: int) -> bool:
 	var s: SubsystemDef = _sub_def(world, ship_id, r)
 	world.emit(&"repair_recalled", ship_id, -1, crew, s.position, s.id)
 	return true
-
-
-## Subsystem id the crew is working on, or &"" when idle.
-static func crew_job(world: SimWorld, ship_id: int, crew: int) -> StringName:
-	var t: DamageTable = world.damage
-	for r: int in t.rows_of(ship_id):
-		if crew >= 0 and t.crews[r] & (1 << crew):
-			return t.part_ids[r]
-	return &""
-
-
-## Spare parts in stock (count).
-static func spare_parts(world: SimWorld, ship_id: int) -> int:
-	return world.damage.spare_parts[world.damage.hull_row(ship_id)]
 
 
 static func _damage_row(

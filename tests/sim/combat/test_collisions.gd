@@ -82,7 +82,7 @@ func test_no_tunnelling_at_max_speed_table() -> void:
 			var rel_v: Vector3 = world.kin.vel[target] - vs
 			var r: Vector3 = world.kin.relative(shooter, target)
 			var t: float = Lead.intercept_time(r, rel_v, w.projectile_speed)
-			var dir: Vector3 = Lead.aim_direction(r, rel_v, w.projectile_speed)
+			var dir: Vector3 = Lead.aim_point(r, rel_v, t).normalized()
 			world.projectiles.spawn(
 				shooter, 1, 0, 0.0, 0.0, 0.0, vs + dir * w.projectile_speed, 0.5, 1.0, 600
 			)

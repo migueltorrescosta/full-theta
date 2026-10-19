@@ -78,7 +78,7 @@ func test_damaged_sensors_shrink_range() -> void:
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_true()
 	w.drain_events()
-	DamageSystem.damage_subsystem(w, blue, &"sensors", 1.5e7, &"test")
+	DamageSystem.damage_subsystem(w, blue, &"sensors", 1.5e7)
 	assert_float(DamageSystem.effectiveness(w, blue, &"sensors")).is_equal_approx(0.3, 1e-6)
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_false()

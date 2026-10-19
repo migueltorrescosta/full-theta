@@ -94,12 +94,25 @@ func test_iteration_order_by_id() -> void:
 
 # FT: FT-ARC-012, FT-M1-014
 # Enumerates every state container: each is a SimTable whose rows carry a ship id and
-# faction, and whose columns all have one entry per row.
+# faction, and whose columns all have one entry per row. Mid-fight (ships 0 and 1, of
+# hostile factions, firing at each other with shots in flight) every container holds
+# rows of both, each keyed by the ship's own faction, except knowledge rows: keyed by
+# the contact's id and the observing faction, so each side's row about the other exists.
 func test_every_container_keyed_by_ship_and_faction() -> void:
 	var w: SimWorld = _world(3)
-	_run(w, 10)
+	var crews: Array[ScriptedCrew] = [ScriptedCrew.new(0, 1), ScriptedCrew.new(1, 0)]
+	var limit: int = 30 * SimWorld.HZ
+	while (
+		(w.projectiles.rows_of(0).is_empty() or w.projectiles.rows_of(1).is_empty())
+		and w.tick < limit
+	):
+		for crew: ScriptedCrew in crews:
+			crew.act(w)
+		w.step()
+	assert_int(w.tick).override_failure_message("no shots in flight").is_less(limit)
 	assert_int(w.tables().size()).is_greater_equal(8)
 	for t: SimTable in w.tables():
+		var name: String = t.get_script().get_global_name()
 		var cols: Array = t.columns()
 		assert_str(cols[0][0]).is_equal("ship_ids")
 		assert_str(cols[1][0]).is_equal("factions")
@@ -109,12 +122,7 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 				. override_failure_message(
 					(
 						"%s.%s has %d rows, keys %d"
-						% [
-							t.get_script().get_global_name(),
-							col[0],
-							(col[1] as Variant).size(),
-							t.size()
-						]
+						% [name, col[0], (col[1] as Variant).size(), t.size()]
 					)
 				)
 				. is_equal(t.size())
@@ -122,7 +130,16 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 			assert_bool(t.get(col[0]) == col[1]).is_true()
 		for r: int in t.size():
 			assert_int(t.ship_ids[r]).is_between(0, w.ship_count() - 1)
+			var own: int = w.faction_of(t.ship_ids[r])
+			if t == w.knowledge:
+				assert_int(t.factions[r]).is_not_equal(own)
+			else:
+				assert_int(t.factions[r]).override_failure_message(name).is_equal(own)
+		for ship: int in [0, 1]:
+			assert_int(t.rows_of(ship).size()).override_failure_message(name).is_greater(0)
 	assert_array(Array(w.kin.factions)).is_equal([1, 2, 1])
+	assert_int(w.knowledge.row_for(1, 1)).is_greater_equal(0)
+	assert_int(w.knowledge.row_for(2, 0)).is_greater_equal(0)
 
 
 # FT: FT-ARC-006

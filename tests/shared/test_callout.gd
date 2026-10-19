@@ -11,6 +11,11 @@ func _dir(bearing_deg: float, elevation_deg: float, dist: float = 2300.0) -> Vec
 	return Vector3(sin(b) * cos(e), sin(e), -cos(b) * cos(e)) * dist
 
 
+## Callout for a world-frame offset seen from a ship with this orientation.
+func _spoken(world_offset: Vector3, orientation: Quaternion) -> String:
+	return Callout.clock_height(orientation.inverse() * world_offset)
+
+
 # FT: FT-SPA-004
 # Clock in the deck plane: 12 bow, 3 starboard, 6 stern, 9 port; each hour spans ±15°.
 func test_clock_positions() -> void:
@@ -68,43 +73,16 @@ func test_range_bands() -> void:
 		assert_str(Callout.range_band(c[0])).override_failure_message(str(c)).is_equal(c[1])
 
 
-# FT: FT-SPA-003
-# Exact range text switches unit on the rounded value.
-func test_range_text() -> void:
-	var cases: Array[Array] = [
-		[650.4, "650 m"],
-		[999.4, "999 m"],
-		[999.7, "1.0 km"],
-		[2300.0, "2.3 km"],
-		[99940.0, "99.9 km"],
-		[99960.0, "100 km"],
-		[140000.0, "140 km"],
-	]
-	for c: Array in cases:
-		assert_str(Callout.range_text(c[0])).override_failure_message(str(c)).is_equal(c[1])
-
-
-# FT: FT-SPA-003
-# Chips read callsign, clock and height (or only overhead/under), range band.
-func test_chip_text() -> void:
-	assert_str(Callout.chip("H2", _dir(120.0, 30.0), 50.0)).is_equal("H2 · 4 high · mid ▲closing")
-	assert_str(Callout.chip("H2", _dir(120.0, 70.0), -20.0)).is_equal(
-		"H2 · overhead · mid ▼opening"
-	)
-	assert_str(Callout.chip("U3", _dir(270.0, -5.0, 650.0), 0.5)).is_equal("U3 · 9 level · close")
-	assert_str(Callout.chip("F1", _dir(180.0, -40.0, 25000.0), 0.0)).is_equal("F1 · 6 low · far")
-
-
 # FT: FT-SPA-026, FT-SPA-004
 # The words are ship frame: rolling the ship 180° about its bow turns "12 high" into
 # "12 low"; yawing it 90° to port moves the contact from 12 to 3.
 func test_rolled_ship_flips_high_and_low() -> void:
 	var world_offset: Vector3 = Vector3(0.0, 1000.0, -2000.0)
-	assert_str(Callout.ship_callout(world_offset, Quaternion.IDENTITY)).is_equal("12 high")
+	assert_str(_spoken(world_offset, Quaternion.IDENTITY)).is_equal("12 high")
 	var rolled: Quaternion = Quaternion(Vector3.FORWARD, PI)
-	assert_str(Callout.ship_callout(world_offset, rolled)).is_equal("12 low")
+	assert_str(_spoken(world_offset, rolled)).is_equal("12 low")
 	var yawed: Quaternion = Quaternion(Vector3.UP, PI / 2.0)
-	assert_str(Callout.ship_callout(world_offset, yawed)).is_equal("3 high")
+	assert_str(_spoken(world_offset, yawed)).is_equal("3 high")
 
 
 # FT: FT-SPA-026, FT-ARC-021
@@ -137,7 +115,7 @@ func test_frame_rule_word_sets() -> void:
 		assert_bool(grid_words.search(grid) != null).override_failure_message(grid).is_true()
 		var seen: Dictionary[String, bool] = {}
 		for q: Quaternion in attitudes:
-			var spoken: String = Callout.ship_callout(offset, q)
+			var spoken: String = _spoken(offset, q)
 			(
 				assert_bool(ship_words.search(spoken) != null)
 				. override_failure_message(spoken)

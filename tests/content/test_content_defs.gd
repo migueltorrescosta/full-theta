@@ -1,19 +1,12 @@
 extends GdUnitTestSuite
-## The shipped definitions under res://content: they validate clean, the M1 ship, weapon
-## and enemy exist, and every numeric field documents its SI unit.
+## The shipped definitions under res://content: the M1 ship, weapon and enemy exist, and
+## every numeric field documents its SI unit. That they validate clean is the l0
+## definitions step (tools/check_defs.gd) and test_def_gate's clean case.
 
 const DEFS: String = "res://content/defs/"
 ## A unit in parentheses opening a field's doc comment, e.g. "(kg m^2)" or "(m/s".
 const UNIT: String = "\\((kg|m|N|J|W|s|rad|K|count|dimensionless|1/s)\\b"
 const NUMERIC: PackedStringArray = ["float", "int", "Vector3", "PackedVector2Array"]
-
-
-# FT: FT-DAT-001, FT-DAT-002
-func test_shipped_content_validates_clean() -> void:
-	var errors: PackedStringArray = (load("res://tools/check_defs.gd") as GDScript).call(
-		"check_root", "res://content"
-	)
-	assert_array(Array(errors)).is_empty()
 
 
 # FT: FT-DAT-001, FT-SIM-002

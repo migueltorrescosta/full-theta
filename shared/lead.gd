@@ -51,11 +51,3 @@ static func intercept_time(rel_pos: Vector3, rel_vel: Vector3, speed: float) -> 
 ## Aim point relative to the shooter (m) for an intercept time from intercept_time().
 static func aim_point(rel_pos: Vector3, rel_vel: Vector3, time: float) -> Vector3:
 	return rel_pos + rel_vel * time
-
-
-## Unit aim direction for the intercept, or Vector3.ZERO when there is no solution.
-static func aim_direction(rel_pos: Vector3, rel_vel: Vector3, speed: float) -> Vector3:
-	var t: float = intercept_time(rel_pos, rel_vel, speed)
-	if t < 0.0:
-		return Vector3.ZERO
-	return aim_point(rel_pos, rel_vel, t).normalized()

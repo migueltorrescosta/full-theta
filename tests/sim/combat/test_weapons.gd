@@ -51,57 +51,38 @@ func _shot(world: SimWorld, ship: int) -> String:
 
 
 # FT: FT-SIM-011, FT-TST-008
-# Table: aim directions around the arc edge, in several planes and with the ship
-# turned, fire or are blocked with &"arc". Margins of 1e-3 rad are far above float32
-# error at 2 km (about 1e-7 rad).
+# Table: aim directions around the arc edge, in several planes, with the ship turned
+# and for a 180 degree arc, fire or are blocked with &"arc". Margins of 1e-3 rad are far
+# above float32 error at 2 km (about 1e-7 rad).
 func test_arc_table_with_edge_cases() -> void:
 	var arc: float = TestDefs.corvette().mounts[0].arc_half_angle
 	var diag: Vector3 = Vector3(1, 1, 0).normalized()
 	var yaw90: Quaternion = Quaternion(Vector3.UP, PI / 2)
 	var cases: Array = [
-		# [name, ship rotation, axis (ship frame), angle from forward, expected]
-		["dead ahead", Quaternion.IDENTITY, Vector3.UP, 0.0, "fired"],
-		["10 deg yaw", Quaternion.IDENTITY, Vector3.UP, deg_to_rad(10.0), "fired"],
-		["just inside yaw", Quaternion.IDENTITY, Vector3.UP, arc - 1e-3, "fired"],
-		["just outside yaw", Quaternion.IDENTITY, Vector3.UP, arc + 1e-3, "arc"],
-		["just inside pitch", Quaternion.IDENTITY, Vector3.RIGHT, -(arc - 1e-3), "fired"],
-		["just outside pitch", Quaternion.IDENTITY, Vector3.RIGHT, -(arc + 1e-3), "arc"],
-		["just inside diagonal", Quaternion.IDENTITY, diag, arc - 1e-3, "fired"],
-		["just outside diagonal", Quaternion.IDENTITY, diag, arc + 1e-3, "arc"],
-		["abeam", Quaternion.IDENTITY, Vector3.UP, PI / 2, "arc"],
-		["astern", Quaternion.IDENTITY, Vector3.UP, PI, "arc"],
-		["turned ship, inside", yaw90, Vector3.UP, arc - 1e-3, "fired"],
-		["turned ship, outside", yaw90, Vector3.UP, -(arc + 1e-3), "arc"],
+		# [name, ship rotation, axis (ship frame), angle from forward, expected, half-arc]
+		["dead ahead", Quaternion.IDENTITY, Vector3.UP, 0.0, "fired", arc],
+		["10 deg yaw", Quaternion.IDENTITY, Vector3.UP, deg_to_rad(10.0), "fired", arc],
+		["just inside yaw", Quaternion.IDENTITY, Vector3.UP, arc - 1e-3, "fired", arc],
+		["just outside yaw", Quaternion.IDENTITY, Vector3.UP, arc + 1e-3, "arc", arc],
+		["just inside pitch", Quaternion.IDENTITY, Vector3.RIGHT, -(arc - 1e-3), "fired", arc],
+		["just outside pitch", Quaternion.IDENTITY, Vector3.RIGHT, -(arc + 1e-3), "arc", arc],
+		["just inside diagonal", Quaternion.IDENTITY, diag, arc - 1e-3, "fired", arc],
+		["just outside diagonal", Quaternion.IDENTITY, diag, arc + 1e-3, "arc", arc],
+		["abeam", Quaternion.IDENTITY, Vector3.UP, PI / 2, "arc", arc],
+		["astern", Quaternion.IDENTITY, Vector3.UP, PI, "arc", arc],
+		["turned ship, inside", yaw90, Vector3.UP, arc - 1e-3, "fired", arc],
+		["turned ship, outside", yaw90, Vector3.UP, -(arc + 1e-3), "arc", arc],
+		["180 deg arc, abeam", Quaternion.IDENTITY, Vector3.UP, PI / 2, "fired", PI],
+		["180 deg arc, astern", Quaternion.IDENTITY, Vector3.UP, PI, "fired", PI],
 	]
 	for c: Array in cases:
 		var world: SimWorld = SimWorld.new(1)
 		var rot: Quaternion = c[1]
-		var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0, Vector3.ZERO, rot)
+		var def: ShipDef = _def_with({}, {"arc_half_angle": c[5]})
+		var ship: int = world.spawn_ship(def, 1, 0, Vector3.ZERO, rot)
 		var local: Vector3 = Vector3.FORWARD.rotated(c[2], c[3])
 		_aim(world, ship, rot * (Vector3(0, 0, -22) + local * FAR))
 		assert_str(_shot(world, ship)).override_failure_message(c[0]).is_equal(c[4])
-
-
-# FT: FT-SIM-011, FT-TST-008
-# Table: the arc test itself, for a 15 degree and a 180 degree arc.
-func test_in_arc_table() -> void:
-	var narrow: MountDef = TestDefs.corvette().mounts[0]
-	var wide: MountDef = narrow.duplicate()
-	wide.arc_half_angle = PI
-	var cases: Array = [
-		[narrow, 0.0, true],
-		[narrow, narrow.arc_half_angle - 1e-4, true],
-		[narrow, narrow.arc_half_angle + 1e-4, false],
-		[narrow, PI, false],
-		[wide, PI / 2, true],
-		[wide, PI, true],
-	]
-	for c: Array in cases:
-		var def: MountDef = c[0]
-		var dir: Vector3 = def.forward.rotated(Vector3.UP, c[1])
-		assert_bool(WeaponSystem.in_arc(def, dir)).override_failure_message(str(c[1])).is_equal(
-			c[2]
-		)
 
 
 # FT: FT-SIM-012
@@ -135,7 +116,7 @@ func test_destroyed_weapons_subsystem_blocks() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
 	var sub: StringName = TestDefs.corvette().mounts[0].subsystem_id
-	DamageSystem.damage_subsystem(world, ship, sub, 2e7, &"test")
+	DamageSystem.damage_subsystem(world, ship, sub, 2e7)
 	assert_float(DamageSystem.effectiveness(world, ship, sub)).is_equal(0.0)
 	assert_str(_shot(world, ship)).is_equal("subsystem")
 	assert_int(world.projectiles.size()).is_equal(0)

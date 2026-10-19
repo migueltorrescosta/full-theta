@@ -18,11 +18,6 @@ const FAR_M: float = 10000.0
 const LETTERS: String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
-## Ship-frame offset of a world-frame offset, for a ship with the given orientation.
-static func to_ship(world_offset: Vector3, orientation: Quaternion) -> Vector3:
-	return orientation.inverse() * world_offset
-
-
 ## Bearing 0..360, clockwise from the bow in the deck plane (ship frame).
 static func bearing_deg(local: Vector3) -> float:
 	return fposmod(rad_to_deg(atan2(local.x, -local.z)), 360.0)
@@ -64,11 +59,6 @@ static func clock_height(local: Vector3) -> String:
 	return "%d %s" % [clock(local), h]
 
 
-## clock_height for a world-frame offset seen from a ship with this orientation.
-static func ship_callout(world_offset: Vector3, orientation: Quaternion) -> String:
-	return clock_height(to_ship(world_offset, orientation))
-
-
 ## close < 1 km, mid 1-10 km, far > 10 km (FT-SPA-003): 1 km and 10 km are mid.
 static func range_band(dist: float) -> String:
 	if dist < CLOSE_M:
@@ -76,27 +66,6 @@ static func range_band(dist: float) -> String:
 	if dist <= FAR_M:
 		return "mid"
 	return "far"
-
-
-## Exact range for markers and the radar: "650 m", "2.3 km", "140 km". The unit switches
-## on the rounded value, so 999.7 m reads "1.0 km", never "1000 m".
-static func range_text(dist: float) -> String:
-	if roundi(dist) < 1000:
-		return "%d m" % roundi(dist)
-	if roundi(dist / 100.0) < 1000:
-		return "%.1f km" % (dist / 1000.0)
-	return "%d km" % roundi(dist / 1000.0)
-
-
-## Chip text as spoken, "H2 · 4 high · mid ▲closing" (FT-SPA-003: a band, not a
-## distance). closing_speed (m/s) > 0 means closing; within ±1 m/s no arrow.
-static func chip(callsign: String, local: Vector3, closing_speed: float) -> String:
-	var text: String = "%s · %s · %s" % [callsign, clock_height(local), range_band(local.length())]
-	if closing_speed > 1.0:
-		text += " ▲closing"
-	elif closing_speed < -1.0:
-		text += " ▼opening"
-	return text
 
 
 ## Grid square of a world-frame position on the ecliptic map (FT-SPA-006): columns are

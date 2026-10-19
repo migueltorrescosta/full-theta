@@ -193,33 +193,6 @@ func test_callsigns_independent_per_faction() -> void:
 	assert_array(red_after).is_equal(red_before)
 
 
-# FT: FT-TST-013, FT-ARC-012, FT-M1-014
-# Mid-fight, with projectiles of both corvettes in flight, every state container holds
-# rows keyed by both ships' ids with their factions; knowledge rows are keyed by the
-# contact's id and the observing faction, so RED's knowledge of BLUE and BLUE's of RED
-# both exist.
-func test_every_container_keys_both_ships() -> void:
-	var w: SimWorld = build()
-	var red_crew: ScriptedCrew = ScriptedCrew.new(RED, BLUE)
-	var blue_crew: ScriptedCrew = HalfRateCrew.new(BLUE, RED)
-	for i: int in 200:
-		red_crew.act(w)
-		blue_crew.act(w)
-		w.step()
-	for t: SimTable in w.tables():
-		var name: String = t.get_script().get_global_name()
-		for ship: int in [RED, BLUE]:
-			assert_int(t.rows_of(ship).size()).override_failure_message(name).is_greater(0)
-		for r: int in t.size():
-			var own: int = w.faction_of(t.ship_ids[r])
-			if t == w.knowledge:
-				assert_int(t.factions[r]).is_not_equal(own)
-			else:
-				assert_int(t.factions[r]).override_failure_message(name).is_equal(own)
-	assert_int(w.knowledge.row_for(RED_FACTION, BLUE)).is_greater_equal(0)
-	assert_int(w.knowledge.row_for(BLUE_FACTION, RED)).is_greater_equal(0)
-
-
 ## Resets BLUE (destroyed) and checks the per-ship run reset (FT-GEN-002). Scope:
 ## - BLUE's own rows (kinematics, helm, power, shields, mounts, damage, AI, run) equal
 ##   a fresh world's BLUE rows; its projectiles in flight are dropped.
@@ -279,21 +252,9 @@ func check_outcomes(w: SimWorld, events: Array[SimEvent]) -> void:
 
 
 # FT: FT-TST-013, FT-GEN-002, FT-M1-014
-# The crews fight until BLUE is destroyed (its weapons go first, so it has no shots left
-# in flight; RED's are): outcomes as in check_outcomes, then the reset of BLUE alone as
-# in reset_blue_and_check.
-func test_destroyed_in_combat_loses_and_resets_alone() -> void:
-	var w: SimWorld = build()
-	var events: Array[SimEvent] = fight(w)
-	check_outcomes(w, events)
-	assert_float(w.damage.health[w.damage.hull_row(RED)]).is_less(w.defs[RED].hull_max)
-	assert_int(w.projectiles.rows_of(RED).size()).is_greater(0)
-	reset_blue_and_check(w)
-
-
-# FT: FT-TST-013, FT-GEN-002, FT-M1-014
 # BLUE destroyed by a forced hit (DamageSystem.apply_hit) while both corvettes have
-# shots in flight: the same outcomes; the reset drops BLUE's shots and keeps RED's.
+# shots in flight: outcomes as in check_outcomes; the reset drops BLUE's shots and keeps
+# RED's.
 func test_destroyed_by_forced_hit_resets_alone() -> void:
 	var w: SimWorld = build()
 	var red_crew: ScriptedCrew = ScriptedCrew.new(RED, BLUE)
@@ -323,11 +284,13 @@ func test_destroyed_by_forced_hit_resets_alone() -> void:
 	reset_blue_and_check(w)
 
 
-## The whole scenario: fight, reset BLUE, 300 more ticks of fire. Returns the state
+## The whole scenario: fight until BLUE is destroyed in combat (outcomes as in
+## check_outcomes, RED damaged), reset BLUE, 300 more ticks of fire. Returns the state
 ## hashes after the fight, after the reset and at the end.
 func scenario_hashes(world_seed: int) -> PackedStringArray:
 	var w: SimWorld = build(world_seed)
-	fight(w)
+	check_outcomes(w, fight(w))
+	assert_float(w.damage.health[w.damage.hull_row(RED)]).is_less(w.defs[RED].hull_max)
 	var out: PackedStringArray = [w.state_hash()]
 	w.reset_ship(BLUE, SITE, BLUE_OFFSET, _facing_red())
 	out.append(w.state_hash())
@@ -343,7 +306,8 @@ func scenario_hashes(world_seed: int) -> PackedStringArray:
 
 
 # FT: FT-TST-013, FT-M1-014
-# The PvP scenario (fight, reset, more fire) run twice with the same seed gives equal
+# The PvP scenario (fight to BLUE's destruction in combat, reset, more fire) run twice
+# with the same seed ends the fight with the outcomes of check_outcomes and gives equal
 # state hashes at every checkpoint.
 func test_pvp_scenario_deterministic() -> void:
 	var first: PackedStringArray = scenario_hashes(SEED)

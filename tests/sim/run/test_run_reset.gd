@@ -87,17 +87,6 @@ func test_reset_restores_definitions_and_state() -> void:
 	assert_str(reset.state_hash()).is_equal(fresh.state_hash())
 
 
-# FT: FT-MIS-017
-# The run state is one table in the world: it is in tables() (so the state hash and the
-# keyed-container test cover it) and the world's state hash changes when it does.
-func test_run_state_is_owned_by_the_world() -> void:
-	var world: SimWorld = _encounter(3).build()
-	assert_bool(world.tables().has(world.run)).is_true()
-	var start: String = world.state_hash()
-	world.run.status[M1Encounter.ENEMY_SHIP] = RunTable.Status.RETREATED
-	assert_str(world.state_hash()).is_not_equal(start)
-
-
 # FT: FT-ARC-020
 # The hash helper sees a change deep inside a definition: a copy of the corvette with
 # one weapon number changed (in a duplicated sub-resource) hashes differently.

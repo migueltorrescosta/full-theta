@@ -29,7 +29,6 @@ func test_intercept_matches_analytic_table() -> void:
 		assert_vector(aim).override_failure_message(c["name"]).is_equal_approx(
 			u * (s * t), Vector3.ONE * (s * t * TOL)
 		)
-		assert_vector(Lead.aim_direction(r, v, s)).is_equal_approx(u, Vector3.ONE * TOL)
 
 
 # FT: FT-SIM-014, FT-ARC-021
@@ -39,7 +38,6 @@ func test_no_solution_and_linear_cases() -> void:
 	var s: float = 1000.0
 	var ahead: Vector3 = Vector3(0, 0, -2000)
 	assert_float(Lead.intercept_time(ahead, Vector3(0, 0, -1200), s)).is_equal(Lead.NONE)
-	assert_vector(Lead.aim_direction(ahead, Vector3(0, 0, -1200), s)).is_equal(Vector3.ZERO)
 	assert_float(Lead.intercept_time(ahead, Vector3(0, 0, -1000), s)).is_equal(Lead.NONE)
 	assert_float(Lead.intercept_time(ahead, Vector3(0, 0, 1000), s)).is_equal_approx(1.0, TOL)
 	assert_float(Lead.intercept_time(Vector3.ZERO, Vector3(5, 0, 0), s)).is_equal(0.0)

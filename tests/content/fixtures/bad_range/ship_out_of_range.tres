@@ -1,60 +1,35 @@
 [gd_resource type="Resource" script_class="ShipDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/assist_def.gd" id="1_nt2dc"]
-[ext_resource type="Script" path="res://content/defs/mount_def.gd" id="2_r5qg8"]
-[ext_resource type="Resource" path="res://tests/content/fixtures/good/weapon.tres" id="3_nbng1"]
-[ext_resource type="Script" path="res://content/defs/power_def.gd" id="4_wxelg"]
-[ext_resource type="Script" path="res://content/defs/ship_def.gd" id="5_j7jyo"]
-[ext_resource type="Script" path="res://content/defs/shield_def.gd" id="6_2wkd4"]
-[ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="7_0gjke"]
-
-[sub_resource type="Resource" id="assist"]
-script = ExtResource("1_nt2dc")
-turn_rate_pitch_yaw = 0.6981317007977318
-turn_rate_roll = 1.5707963267948966
-rate_time_constant = 0.12
-velocity_time_constant = 0.4
-attitude_time_constant = 0.3
-attitude_braking = 0.6
-speed_min = -50.0
-speed_max = 300.0
-speed_ramp = 60.0
-approach_standoff = 500.0
-approach_speed_cap = 300.0
-approach_braking = 0.5
-approach_final_time_constant = 4.0
+[ext_resource type="Script" path="res://content/defs/ship_def.gd" id="1_j7jyo"]
+[ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="2_0gjke"]
+[ext_resource type="Script" path="res://content/defs/mount_def.gd" id="3_r5qg8"]
+[ext_resource type="Script" path="res://content/defs/shield_def.gd" id="4_2wkd4"]
+[ext_resource type="Resource" path="res://content/weapons/m1_cannon.tres" id="5_nbng1"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/assist.tres" id="6_w8xyr"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/power.tres" id="7_uml83"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_weapons.tres" id="8_i8epu"]
 
 [sub_resource type="Resource" id="mount_bow"]
-script = ExtResource("2_r5qg8")
+script = ExtResource("3_r5qg8")
 id = &"bow"
 position = Vector3(0, 0, -22)
 forward = Vector3(0, 0, -1)
 arc_half_angle = 0.2617993877991494
 traverse_rate = 0.5
-weapon = ExtResource("3_nbng1")
+weapon = ExtResource("5_nbng1")
 subsystem_id = &"no_such_subsystem"
 
-[sub_resource type="Resource" id="power"]
-script = ExtResource("4_wxelg")
-reactor_pips = 12
-max_pips_per_subsystem = 4
-reactor_output = 20000000.0
-envelope_curve = PackedVector2Array(0, 0.25, 1, 1, 2, 1.5)
-heat_derate = PackedVector2Array(0, 1, 1, 1, 2, 0.5)
-boost_duration = 8.0
-weapons_capacity = 5000000.0
-
 [sub_resource type="Resource" id="shields"]
-script = ExtResource("6_2wkd4")
+script = ExtResource("4_2wkd4")
 max_strength = 30000000.0
 regen_rate = 500000.0
-tightness_min = 0.1
-tightness_max = 1.0
+tightness_min = 0.0
+tightness_max = 4.0
 absorption = 1.0
 low_alert_fraction = 1.5
 
 [sub_resource type="Resource" id="sub_engines"]
-script = ExtResource("7_0gjke")
+script = ExtResource("2_0gjke")
 id = &"engines"
 position = Vector3(0, 0, 18)
 health_max = 20000000.0
@@ -66,22 +41,8 @@ heat_per_overcharge_pip = 5.0
 heat_dissipation = 0.05
 fault_heat_threshold = 100.0
 
-[sub_resource type="Resource" id="sub_weapons"]
-script = ExtResource("7_0gjke")
-id = &"weapons"
-kind = 2
-position = Vector3(0, 0, -18)
-health_max = 20000000.0
-effectiveness = PackedVector2Array(0, 0, 0.25, 0.3, 0.5, 0.8, 1, 1)
-repair_rate = 200000.0
-parts_per_repair = 1
-nominal_pips = 2
-heat_per_overcharge_pip = 5.0
-heat_dissipation = 0.05
-fault_heat_threshold = 100.0
-
 [resource]
-script = ExtResource("5_j7jyo")
+script = ExtResource("1_j7jyo")
 id = &"bad_range_ship"
 display_name = "Corvette"
 mass = -1.0
@@ -98,8 +59,8 @@ spare_parts = 20
 sensor_range = 20000.0
 identify_range = 8000.0
 repair_crews = 2
-subsystems = Array[ExtResource("7_0gjke")]([SubResource("sub_engines"), SubResource("sub_weapons")])
-mounts = Array[ExtResource("2_r5qg8")]([SubResource("mount_bow")])
-assist = SubResource("assist")
-power = SubResource("power")
+subsystems = Array[ExtResource("2_0gjke")]([SubResource("sub_engines"), ExtResource("8_i8epu")])
+mounts = Array[ExtResource("3_r5qg8")]([SubResource("mount_bow")])
+assist = ExtResource("6_w8xyr")
+power = ExtResource("7_uml83")
 shields = SubResource("shields")
