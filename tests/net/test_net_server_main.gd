@@ -61,6 +61,32 @@ func test_makes_a_listening_server() -> void:
 	server.free()
 
 
+# FT: FT-M1-012
+# The L4 encounter's test flag shrinks the crewed ship's hull, not the definition's.
+func test_player_hull_scale_flag() -> void:
+	(
+		assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--m1-player-hull-scale", "0"]))
+		. is_false()
+	)
+	(
+		assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--m1-player-hull-scale", "x"]))
+		. is_false()
+	)
+	var cli: ServerMain = ServerMain.new()
+	var args: PackedStringArray = [
+		"--bind", "127.0.0.1", "--port", "0", "--m1-player-hull-scale", "0.2"
+	]
+	assert_bool(cli.parse_args(args)).is_true()
+	var server: NetServer = cli.make_server()
+	var full: float = DefLibrary.new().ship(&"m1_corvette").hull_max
+	assert_float(server.world.defs[M1Encounter.PLAYER_SHIP].hull_max).is_equal_approx(
+		full * 0.2, 1.0
+	)
+	assert_float(DefLibrary.new().ship(&"m1_corvette").hull_max).is_equal(full)
+	server.transport.stop()
+	server.free()
+
+
 # FT: FT-NET-003, FT-NET-012
 # The host and LAN flags: pid file, idle exit, web export root, beacon name and port,
 # and the beacon off switch.

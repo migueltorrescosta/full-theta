@@ -241,9 +241,10 @@ func item_under_cursor(device: String) -> Dictionary:
 	return {}
 
 
-## Contact ids, nearest first (cycle target).
+## Contact ids but the own ship (snapshots list it too), nearest first (cycle target).
 func contacts_by_range() -> Array:
 	var ids: Array = Array(ctx.interp.contact_ids())
+	ids.erase(ctx.crew.ship)
 	var dist: Callable = func(id: int) -> float:
 		return ctx.interp.offset_to(ctx.interp.contact_position(id)).length()
 	ids.sort_custom(func(a: int, b: int) -> bool: return dist.call(a) < dist.call(b))

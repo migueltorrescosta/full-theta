@@ -6,7 +6,9 @@ extends SceneTree
 ##
 ## godot --headless --path . -s res://tools/l4/l4_client.gd -- --url ws://HOST:PORT
 ##   --name c1 --intent PATH --log PATH [--token-file PATH] [--run-dir DIR] [--max-s 120]
-##   [--set K=V ...]
+##   [--set K=V ...] [--client net|ui]
+## `--client ui` runs the real menu, lobby and station screens (L4Ui) instead of a bare
+## NetClient: the ui_* steps play them, the other steps watch the client they poll.
 ##
 ## Log lines: {"ms", "ev", ...}; ev is start, step (n, line, verb, ok, why, ms_taken),
 ## welcome, catalogue, event, snap (tick, kin hash, gap), note, end (the summary).
@@ -20,6 +22,7 @@ const DEFAULT_TIMEOUT_S: float = 15.0
 const OPS: Array[String] = ["==", "!=", ">=", "<=", "~=", "!~", "=", ">", "<"]
 ## Keys of a step that are parameters, not matchers, in the expect_* steps.
 const PARAMS: Array[String] = ["timeout", "type", "id", "for", "keep"]
+const L4Ui = preload("res://tools/l4/l4_ui.gd")
 const SECTION_NAMES: Dictionary = {
 	StationViews.Section.STATUS: "status",
 	StationViews.Section.HELM: "helm",
@@ -36,6 +39,8 @@ var run_dir: String = ""
 var max_s: float = 120.0
 ## --set K=V: $K in the intent file reads V.
 var vars: Dictionary = {}
+## --client ui: the real client UI.
+var ui_mode: bool = false
 
 var _client: NetClient = NetClient.new()
 var _steps: Array[Dictionary] = []
@@ -66,6 +71,8 @@ var _live: bool = false
 var _leaving: bool = false
 ## Set by host_spawn and orphan_rejoin; it owns and polls _client.
 var _host: HostSession
+## The real UI (--client ui), which polls its own client.
+var _ui: L4Ui
 var _code: int = -1
 
 
@@ -76,6 +83,10 @@ func _initialize() -> void:
 		_finish(2, "bad command line")
 		return
 	_client.name = client_name
+	if ui_mode:
+		# The UI does more per frame; 60 frames/s is a player's rate (2 loaded cores).
+		Engine.max_fps = 60
+		_ui = L4Ui.new(root, run_dir, client_name, token_path)
 	var err: String = _load_intent()
 	var unix_ms: int = int(Time.get_unix_time_from_system() * 1000.0)
 	_line(
@@ -90,7 +101,9 @@ func _initialize() -> void:
 func _process(_delta: float) -> bool:
 	if _code >= 0:
 		return true
-	if _host != null:
+	if _ui != null:
+		_follow_ui_client()
+	elif _host != null:
 		_host.poll()
 	else:
 		_client.poll()
@@ -129,6 +142,8 @@ func _parse_args(args: PackedStringArray) -> bool:
 				max_s = v.to_float()
 			"--set":
 				vars[v.get_slice("=", 0)] = v.get_slice("=", 1)
+			"--client":
+				ui_mode = v == "ui"
 			_:
 				push_error("l4_client: unknown argument %s" % args[i])
 				return false
@@ -157,6 +172,8 @@ func _load_intent() -> String:
 		var step: Dictionary = {"n": n, "line": text, "verb": words[0], "args": []}
 		if not has_method("_do_" + words[0]):
 			return "line %d: unknown step %s" % [n, words[0]]
+		if words[0].begins_with("ui_") and not ui_mode:
+			return "line %d: %s needs --client ui" % [n, words[0]]
 		for w: String in words.slice(1):
 			var m: Array = _matcher(w)
 			if m.is_empty():
@@ -258,9 +275,9 @@ func _run_steps() -> void:
 
 ## Records what arrived this frame: events, Welcome, Catalogue, snapshot cadence.
 func _observe() -> void:
-	for e: Dictionary in _client.take_events():
-		_events.append(e)
-		_line({"ev": "event", "type": e["type"], "seq": e["seq"], "tick": e["tick"]}, e)
+	if _ui == null:
+		for e: Dictionary in _client.take_events():
+			_on_event(e)
 	if _client.is_welcomed() and not _was_welcomed:
 		_line({"ev": "welcome", "welcome": _client.welcome})
 		_line({"ev": "catalogue", "catalogue": _client.catalogue})
@@ -279,6 +296,22 @@ func _observe() -> void:
 		_last_snaps = n
 		var kin: Dictionary = _client.view.kin
 		_line({"ev": "snap", "tick": _client.view.tick, "k": kin.hash(), "gap_ms": gap / 1000})
+
+
+func _on_event(e: Dictionary) -> void:
+	_events.append(e)
+	_line({"ev": "event", "type": e["type"], "seq": e["seq"], "tick": e["tick"]}, e)
+
+
+## UI mode: watch whichever client the menu or shell has now; the shell takes its
+## events, so they reach the log through NetClient.event_received.
+func _follow_ui_client() -> void:
+	var c: NetClient = _ui.client()
+	if c == null:
+		return
+	_client = c
+	if not c.event_received.is_connected(_on_event):
+		c.event_received.connect(_on_event)
 
 
 func _finish(code: int, why: String) -> void:
@@ -461,7 +494,7 @@ func _path_file(name: String) -> String:
 
 
 func _save_token() -> void:
-	if token_path == "" or _host != null:  # HostSession stores its own
+	if token_path == "" or _host != null or _ui != null:  # HostSession and the menu do
 		return
 	var host: String = url.trim_prefix("ws://").get_slice(":", 0)
 	var port: int = url.get_slice(":", 2).to_int()
@@ -793,10 +826,12 @@ func _adopt_host(host: HostSession) -> void:
 	_host.token_file = token_path
 
 
-## host_spawn pid_file=PATH [port=0] [grace=S] [publish=NAME]: HostSession.host():
-## spawns this executable as a headless server child (secret through the environment),
-## waits for its pid file, joins as the host and stores the token and secret.
-## publish writes the server URL to sig.NAME for run.sh.
+## host_spawn pid_file=PATH [port=0] [grace=S] [publish=NAME] [args=[...]]:
+## HostSession.host(): spawns this executable as a headless server child (secret through
+## the environment, `args` appended to its flags), waits for its pid file, joins as the
+## host and stores the token and secret. publish writes the server URL to sig.NAME for
+## run.sh. With --client ui the menu takes the session over, as after its Host button,
+## and the step waits for the shell.
 func _do_host_spawn(step: Dictionary) -> Result:
 	if _host == null:
 		_adopt_host(HostSession.new(client_name))
@@ -806,12 +841,15 @@ func _do_host_spawn(step: Dictionary) -> Result:
 		options.beacon = false
 		if _arg(step, "grace") != null:
 			options.grace_s = str(_arg(step, "grace")).to_float()
+		options.extra_args = PackedStringArray(_arg(step, "args", []))
 		if _host.host(options) != OK:
 			return _fail("HostSession.host: %s" % _host.error)
+		if _ui != null:
+			_ui.menu.host_session = _host  # the menu polls it and opens the shell
 		_line({"ev": "note", "msg": "spawned server pid %d" % _host.launcher.pid})
 	if _host.state == HostSession.State.FAILED:
 		return _fail("HostSession: %s" % _host.error)
-	if not _host.is_joined():
+	if not _host.is_joined() or (_ui != null and _ui.menu.shell == null):
 		return _wait("host session %s" % HostSession.State.keys()[_host.state])
 	url = "ws://%s:%d" % [_host.join_address(), _host.launcher.port]
 	if _arg(step, "publish") != null:
@@ -871,3 +909,62 @@ func _do_host_stop(_step: Dictionary) -> Result:
 	if alive:
 		return _wait("server pid %d still running" % pid)
 	return Result.DONE
+
+
+# --- Steps: the real client UI (--client ui, L4Ui). ---
+
+
+## ui_join [url=ws://...]: types the address into the menu and presses Join; waits until
+## the shell runs (welcomed).
+func _do_ui_join(step: Dictionary) -> Result:
+	if not _st.has("sent"):
+		_st["sent"] = true
+		url = str(_arg(step, "url", url))
+		var why: String = _ui.join(url.trim_prefix("ws://"))
+		if why != "":
+			return _fail(why)
+	if _ui.menu.shell != null:
+		return Result.DONE
+	return _wait("not joined: %s" % _ui.status())
+
+
+## ui_pick entry=E [expect=ok|REASON|none]: presses the entry's pick button in the lobby
+## (of the ship shown) and waits for the answer, like `pick`.
+func _do_ui_pick(step: Dictionary) -> Result:
+	if not _st.has("from"):
+		var why: String = _ui.pick(str(_arg(step, "entry", "")))
+		if why != "":
+			return _wait(why)
+		_st["from"] = _events.size()
+	return _await_answer(step)
+
+
+## ui_button name=N: waits for a visible, enabled button named N in the shell (Start,
+## Vote, RunAgain) and presses it.
+func _do_ui_button(step: Dictionary) -> Result:
+	var why: String = _ui.press(null, str(_arg(step, "name", "")))
+	return Result.DONE if why == "" else _wait(why)
+
+
+## ui_press id=I, ui_hold id=I, ui_release id=I: the intent's KB/M binding pressed and
+## released, pressed, or released, as input events into the station screen.
+func _do_ui_press(step: Dictionary) -> Result:
+	var r: Result = _do_ui_hold(step)
+	return _do_ui_release(step) if r == Result.DONE else r
+
+
+func _do_ui_hold(step: Dictionary) -> Result:
+	var why: String = _ui.intent(str(_arg(step, "id", "")), true)
+	return Result.DONE if why == "" else _wait(why)
+
+
+func _do_ui_release(step: Dictionary) -> Result:
+	var why: String = _ui.intent(str(_arg(step, "id", "")), false)
+	return Result.DONE if why == "" else _wait(why)
+
+
+## ui_expect <matchers>: waits until L4Ui.state() matches (shown, focused, selection.id,
+## marks.contact, claims, contacts, started, card, run_over.outcome, ...).
+func _do_ui_expect(step: Dictionary) -> Result:
+	var why: String = _check(_ui.state(), _matchers(step))
+	return Result.DONE if why == "" else _wait(why)

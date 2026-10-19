@@ -5,9 +5,10 @@
 Each client launch writes OUT_DIR/<name>.<launch>.jsonl (tools/l4/l4_client.gd). Fails if
 a final launch did not end with every step passed, if a launch that was not the last of
 its name ended on its own (only a SIGKILL may cut one short), if any client applied a
-bad snapshot, if two clients disagree on their ship's KIN at the same tick
-(convergence after a rejoin, FT-NET-027), or if no tick was seen by two clients (so
-nothing was compared). Prints one line per launch, with the time from
+bad snapshot, if two clients disagree on their ship's KIN at the same tick of the same
+run (convergence after a rejoin, FT-NET-027; a run reset restarts the tick, so a tick
+that goes down starts a new run), or if no tick was seen by two clients (so nothing
+was compared). Prints one line per launch, with the time from
 the SIGKILL to the relaunched client's Welcome (run.sh's events.txt).
 """
 
@@ -45,7 +46,8 @@ def check(out: Path) -> list[str]:
         if len(f) >= 3 and f[1] == "SIGKILL":
             kills[f[2]].append(float(f[0]))
     problems: list[str] = []
-    kin: dict[int, dict[str, str]] = defaultdict(dict)  # tick -> client launch -> hash
+    # (run, tick) -> client launch -> hash
+    kin: dict[tuple[int, int], dict[str, str]] = defaultdict(dict)
     for name, launches in sorted(logs.items()):
         last = max(launches)
         for launch, lines in sorted(launches.items()):
@@ -53,8 +55,11 @@ def check(out: Path) -> list[str]:
             end = next((x for x in lines if x.get("ev") == "end"), None)
             steps = sum(1 for x in lines if x.get("ev") == "step" and x.get("ok"))
             snaps = [x for x in lines if x.get("ev") == "snap"]
-            for s in snaps:
-                kin[s["tick"]][who] = s["k"]
+            run = 0
+            for prev, s in zip([None, *snaps], snaps, strict=False):
+                if prev is not None and s["tick"] < prev["tick"]:
+                    run += 1
+                kin[(run, s["tick"])][who] = s["k"]
             if end is None:
                 state = "killed"
                 if launch == last:
@@ -80,11 +85,11 @@ def check(out: Path) -> list[str]:
                 f"max gap {gap} ms{rejoin}"
             )
     common = 0
-    for tick, by in sorted(kin.items()):
+    for (run, tick), by in sorted(kin.items()):
         if len(by) > 1:
             common += 1
             if len(set(by.values())) > 1:
-                problems.append(f"KIN differs at tick {tick}: {by}")
+                problems.append(f"KIN differs at run {run} tick {tick}: {by}")
                 break
     print(f"convergence: {common} ticks seen by more than one client")
     if common == 0:

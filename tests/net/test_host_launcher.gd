@@ -90,6 +90,9 @@ func test_dev_all_stations_option_maps_to_the_server_flag() -> void:
 	assert_bool(cli.parse_args(args.slice(args.find("--") + 1))).is_true()
 	OS.unset_environment(HostLauncher.SECRET_ENV)
 	assert_bool(cli.dev_all_stations).is_true()
+	o.extra_args = ["--m1-player-hull-scale", "0.5"]
+	args = HostLauncher.server_args(o, "/u/p.json", "")
+	assert_array(Array(args.slice(-2))).is_equal(["--m1-player-hull-scale", "0.5"])
 
 
 # FT: FT-NET-001

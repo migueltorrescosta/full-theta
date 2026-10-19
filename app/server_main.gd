@@ -26,6 +26,10 @@ extends RefCounted
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
 ##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
 ##                        before launch and Welcome carries it (FT-AUD-013, D41).
+##   --m1-player-hull-scale F
+##                        test flag: the crewed ship's hull is F times its definition's
+##                        (0 < F <= 1), so the L4 encounter (tools/l4) loses a fight in
+##                        under a minute; sim/ and content/ stay as they are [1].
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
@@ -51,6 +55,7 @@ var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
 var language: String = I18n.LANGUAGES[0]
+var player_hull_scale: float = 1.0
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -106,6 +111,11 @@ func _set_flag(flag: String, value: String) -> bool:
 				push_error("%s needs a number" % flag)
 				return false
 			set(flag.trim_prefix("--").replace("-", "_"), value.to_float())
+		"--m1-player-hull-scale":
+			if not value.is_valid_float() or value.to_float() <= 0.0 or value.to_float() > 1.0:
+				push_error("--m1-player-hull-scale needs a number in (0, 1]")
+				return false
+			player_hull_scale = value.to_float()
 		"--bind":
 			bind_address = value
 		"--pid-file":
@@ -133,6 +143,9 @@ func make_server() -> NetServer:
 	if player == null or enemy == null:
 		push_error("missing M1 definitions (m1_corvette, m1_raider)")
 		return null
+	if player_hull_scale != 1.0:
+		player = player.duplicate()
+		player.hull_max *= player_hull_scale
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
 	var server: NetServer = NetServer.new()
 	server.run_for = run_for

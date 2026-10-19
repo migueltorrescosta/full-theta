@@ -8,6 +8,10 @@ extends RefCounted
 ## It never names sim/ (FT-ARC-005): commands are plain dictionaries
 ## ({"kind": "fire", "mount_index": 0}) that the server validates.
 
+## Each event as it arrives, before take_events() hands it out: lets tools/l4 watch a
+## client the station UI polls.
+signal event_received(event: Dictionary)
+
 ## Lifecycle states.
 enum State { IDLE, CONNECTING, WELCOMED, REJECTED, CLOSED }
 
@@ -293,6 +297,7 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 			for e: Dictionary in inbox.receive(msg):
 				_events.append(e)
 				stats["events"] += 1
+				event_received.emit(e)
 		NetProtocol.Type.VOICE:
 			voice_clips.append(msg)
 			stats["voice"] += 1

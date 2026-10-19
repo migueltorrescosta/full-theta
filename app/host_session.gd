@@ -52,6 +52,8 @@ class Options:
 	## Offer the dev entry holding every station (--dev-all-stations, FT-NET-029,
 	## FT-M1-015).
 	var dev_all: bool = false
+	## More server flags, appended as they are (tests: --m1-player-hull-scale).
+	var extra_args: PackedStringArray = []
 
 	func _init(bind_address: String = "") -> void:
 		bind = bind_address

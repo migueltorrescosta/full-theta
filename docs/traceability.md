@@ -367,7 +367,7 @@ Tests: 240, manual: 11, pending: 150.
 | FT-M1-009 | tests | `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_repair.gd` |
 | FT-M1-010 | tests | `tests/pairs/test_p1_engineering_helm.gd` |
 | FT-M1-011 | tests | `tests/stations/test_station_alerts.gd` |
-| FT-M1-012 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_run_reset_l3.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/test_outcome_card.gd` |
+| FT-M1-012 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_run_reset_l3.gd`, `tests/net/test_net_server_main.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/test_outcome_card.gd` |
 | FT-M1-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_net_reconnect_l3.gd` |
 | FT-M1-014 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/pvp/test_pvp.gd` |
 | FT-M1-015 | tests | `tests/net/test_host_launcher.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_client_shell_l3.gd` |

@@ -169,6 +169,23 @@ func test_cycle_select_pinged_claim_request_and_strip() -> void:
 	assert_array(p.got).is_equal(["accept"])
 
 
+# FT: FT-STN-009
+# Snapshots list the own ship among the contacts; cycling never selects it.
+func test_cycle_target_skips_the_own_ship() -> void:
+	var s: StationScreen = _screen("helm")
+	var v: NetViewState = StationFixture.view()
+	v.contacts["model"][s.ctx.crew.ship] = [v.kin["pos"], Vector3i.ZERO, StationFixture.TICK]
+	v.contacts["info"][s.ctx.crew.ship] = [2, "Kestrel"]
+	s.ctx.interp = SnapshotInterpolator.new()
+	s.ctx.interp.push(v, StationFixture.NOW_MS - 100)
+	s.ctx.interp.push(v, StationFixture.NOW_MS)
+	s.ctx.interp.update(StationFixture.NOW_MS)
+	assert_array(s.ctx.interp.contact_ids()).contains([s.ctx.crew.ship])
+	assert_array(s.contacts_by_range()).is_equal(
+		[StationFixture.F4, StationFixture.H2, StationFixture.U3]
+	)
+
+
 # FT: FT-STN-011
 func test_overlay_toggles() -> void:
 	var s: StationScreen = _screen("helm")
