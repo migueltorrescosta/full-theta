@@ -176,3 +176,14 @@ def test_robotic_int16_round_trip():
     assert np.allclose(robotic.from_int16(robotic.to_int16(robotic.from_int16(pcm))), robotic.from_int16(pcm), atol=1e-4)
     out = robotic.robotic_pcm(pcm, RATE)
     assert out.dtype == np.dtype("<i2") and out.size == pcm.size
+
+
+# FT: FT-AUD-018
+def test_number_fragment_keeps_only_its_first_utterance():
+    rate = 1000
+    word = np.full(100, 20000, dtype=np.int16)
+    babble = np.concatenate([word, np.zeros(300, dtype=np.int16), word, np.zeros(50, dtype=np.int16), word])
+    cut = prerender.first_utterance(babble, rate)
+    assert cut.size == 100 + int(prerender.PAD_S * rate)
+    short_pause = np.concatenate([word, np.zeros(100, dtype=np.int16), word])
+    assert prerender.first_utterance(short_pause, rate).size == short_pause.size

@@ -40,6 +40,10 @@ SLOT = re.compile(r"\{[a-z][a-z0-9_]*\}")
 LETTER = re.compile(r"[^\W\d_]")
 THRESHOLD = 0.02  # trim: fraction of full scale (S7b)
 PAD_S = 0.01  # trim padding (S7b)
+# PROVISIONAL: some voices babble after a single word ("and" on cori-medium runs 4-7 s,
+# norman-medium's digits 2-2.7 s), so a number fragment keeps only its first utterance:
+# it ends at the first silence (below THRESHOLD) of at least this long.
+FRAGMENT_GAP_S = 0.2
 PEAK = 0.9  # PROVISIONAL loudness: peak normalise each clip (S7 note; no LUFS yet)
 SYNTH_KEYS = ("length_scale", "noise_scale", "noise_w_scale", "speaker")
 
@@ -89,6 +93,17 @@ def trim(pcm: np.ndarray, rate: int) -> np.ndarray:
     return pcm[max(0, loud[0] - pad) : min(pcm.size, loud[-1] + 1 + pad)]
 
 
+def first_utterance(pcm: np.ndarray, rate: int) -> np.ndarray:
+    """Cuts a trimmed clip at its first silence of FRAGMENT_GAP_S or longer."""
+    loud = np.flatnonzero(np.abs(pcm.astype(np.int32)) > int(THRESHOLD * 32767))
+    if loud.size < 2:
+        return pcm
+    gaps = np.flatnonzero(np.diff(loud) >= int(FRAGMENT_GAP_S * rate))
+    if gaps.size == 0:
+        return pcm
+    return pcm[: min(pcm.size, loud[gaps[0]] + 1 + int(PAD_S * rate))]
+
+
 def normalise(pcm: np.ndarray) -> np.ndarray:
     peak = int(np.max(np.abs(pcm.astype(np.int32)))) if pcm.size else 0
     if peak == 0:
@@ -96,9 +111,14 @@ def normalise(pcm: np.ndarray) -> np.ndarray:
     return np.clip(np.round(pcm.astype(np.float64) * (PEAK * 32767 / peak)), -32768, 32767).astype("<i2")
 
 
-def render_clip(synth: Synth, voice: str, text: str, settings: dict) -> tuple[np.ndarray, int]:
+def render_clip(
+    synth: Synth, voice: str, text: str, settings: dict, fragment: bool = False
+) -> tuple[np.ndarray, int]:
     pcm, rate = synth(voice, text, settings)
-    clip = normalise(trim(np.asarray(pcm, dtype=np.int16), rate))
+    clip = trim(np.asarray(pcm, dtype=np.int16), rate)
+    if fragment:
+        clip = first_utterance(clip, rate)
+    clip = normalise(clip)
     if clip.size == 0:
         raise RuntimeError(f"prerender: {voice}: silent clip for {text!r}")
     return clip, rate
@@ -131,7 +151,10 @@ def piper_synth(voice: str, text: str, settings: dict) -> tuple[np.ndarray, int]
 
 def _render_voice(synth: Synth, voice: str, items: list[tuple]) -> list[tuple]:
     """Every clip of one voice: [(lang, role, key, pcm, rate)]."""
-    return [(lang, role, key, *render_clip(synth, voice, text, settings)) for lang, role, key, text, settings in items]
+    return [
+        (lang, role, key, *render_clip(synth, voice, text, settings, key.startswith("num:")))
+        for lang, role, key, text, settings in items
+    ]
 
 
 def _render_voice_piper(voice: str, items: list[tuple]) -> list[tuple]:
