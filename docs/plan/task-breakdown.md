@@ -405,6 +405,7 @@ Conventions (D73–D75):
 - **Verification criteria:**
   - [ ] Dedicated headless server runs the sim and accepts WS clients (L3 test over loopback).
   - [ ] Invalid commands produce `CommandRejected{reason}`; snapshots sent at 30 Hz.
+  - [ ] Snapshots are encoded and sent on a worker thread from a copy of the state, so the sim tick holds only the sim; tick < 8 ms (mean and p99) at 64 connections on the host's default power profile (D111, S9).
 - **Instructions:** Rate limits per client; validation against holding, claims and rules.
 
 #### T042 Add station definitions and per-station snapshot filter
@@ -633,7 +634,7 @@ Conventions (D73–D75):
   - [ ] Voice-bus unit tests with stub clips (priority, queue, coalescing, max age).
   - [ ] Translation completeness gate for all three languages; runtime line < 1 s (S7b method).
 - **Instructions:** Spec §9; voices from T018; runtime path from T020.
-- **Tasks:** voice bus; per-client routing; prerender pipeline from dialogue JSON; runtime synthesis service; robotic filter; subtitles; session language; i18n gate; voice licence manifest entries.
+- **Tasks:** voice bus with the subtitles-only overflow beyond 4 queued free-text lines (D110); per-client routing; prerender pipeline from dialogue JSON; runtime synthesis service; robotic filter; subtitles; session language; i18n gate; voice licence manifest entries.
 
 #### T062 Death-risk tuning playtests (owner step)
 - **Why:** FT-MIS-009 (5–10 % loss per encounter) and run length need real crews.

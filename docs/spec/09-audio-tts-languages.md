@@ -36,7 +36,7 @@ Semi-realistic science fiction with readable silhouettes: procedural geometry wi
 - **FT-AUD-012** The game shall launch with English, Portuguese (pt_PT) and Italian. (D40)
 - **FT-AUD-013** A session shall use one language for all text and voice, chosen by the host. (D41)
 - **FT-AUD-014** Every shipped Piper voice shall have a licence compatible with redistribution, recorded in the provenance manifest. (D2, D63)
-- **FT-AUD-015** Runtime synthesis shall make a free-text line audible within 1 s of its event on the target client (proposed target, verified by spike S7b). (D38, D39, D101)
+- **FT-AUD-015** Runtime synthesis shall make a free-text line audible within 1 s of its event on the target client (verified by spike S7b); when more than 4 free-text lines are queued for synthesis, further lines shall show subtitles only, with no audio. (D38, D39, D101, D110)
 - **FT-AUD-016** Art shall use procedural or primitive meshes and CC0 packs with semi-realistic PBR-style materials in the Compatibility renderer; sounds shall be CC0. (D63, D107)
 - **FT-AUD-017** Browser clients shall unlock audio with a user gesture on join. (D8)
 - **FT-AUD-018** The host server shall synthesise the session's closed set (ship names, callsigns, NPC names) at Start and cache it per language; numbers shall use prerendered fragments; runtime synthesis shall be used only for free text. (D85, D101)

@@ -10,7 +10,7 @@ Run on fugaku (i7-11800H, 8 cores, 16 threads), 2026-10-19, Godot 4.7.2-stable, 
 | 2. Closed set at Start, numbers from prerendered fragments | **Met.** 46 names per language synthesise in 2.6–3.8 s per language on 2 CPUs, plus 45–75 ms to load the 1,008 prerendered fragments. A stitched line is audible 70 ms (p50) after its event, almost all of it transfer time |
 | 3. Free text, 50 lines, p95 < 1 s; GPL note | **Met** with per-sentence streaming: p95 353 ms isolated and 422 ms under the S9 64-connection load (739 ms on a host loaded by a foreign job too). Whole-clip delivery gives p95 667 ms isolated but 0.87–1.2 s on a loaded host. GPL aggregation note added to `docs/provenance.md` |
 | 4. Standalone Piper on Windows under Wine (TECH-4) | **Met.** `piper.exe` from rhasspy/piper `2023.11.14-2` synthesised a line under Wine 10.0, with no Python |
-| TECH-5 combined run (S9 criterion) | **Not met** for bursts: 6 lines fired at once, with a rendering client and the S9 load, give p95 1.77 s on a moderately loaded host (2.59 s under heavier foreign load). The S7b sim tick stays at p99 3.7 ms; the S9 server tick p99 is 10.5 ms (details below) |
+| TECH-5 combined run (S9 criterion) | **Not met; fallback approved** (D110: beyond 4 queued lines, subtitles only): 6 lines fired at once, with a rendering client and the S9 load, give p95 1.77 s on a moderately loaded host (2.59 s under heavier foreign load). The S7b sim tick stays at p99 3.7 ms; the S9 server tick p99 is 10.5 ms (details below) |
 
 ## Setup
 
@@ -53,6 +53,8 @@ Earlier runs, with the foreign job running on all cores, show how much the resul
 | 2 runs at load 16–19 (all 16 threads busy, SMT siblings loaded) | per sentence | 3,423–5,317, sim tick mean 8–10 ms |
 
 On a quiet or moderately loaded host, per-sentence streaming keeps p95 well under 1 s. Whole clips are borderline, because the longest lines (7–10 s of audio) take 0.7–1.9 s to synthesise. When all cores are busy, the laptop's clock and SMT sharing slow the sim tick and Piper alike, and no setting holds 1 s.
+
+After the review fix that closes a connection on a failed send, an isolated rerun on an idle host (load 0.4) gave free-text audible p50 165 ms, p95 324 ms, max 481 ms over 50 lines, no playback gap, 0 voice bytes to the bystander and no send errors.
 
 ## Criterion 2: closed set at Start
 

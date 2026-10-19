@@ -2,7 +2,7 @@
 
 Repo: migueltorrescosta/full-theta (GPL-3.0). Engine: Godot 4.7.2, typed GDScript. Date: 2026-10-19.
 
-v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D109, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
+v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D111, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
 
 ## How to use this spec
 
@@ -133,7 +133,7 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 
 57. Module dependencies follow the API-boundary diagram; the Scenario API lives in `sim/api/`, and the architecture lint enforces FT-DAT-007 from #2. §2.2, FT-ARC-010, FT-DAT-007. (D103)
 
-### v0.5 update for D104–D109 (#3)
+### v0.5 update for D104–D111 (#3)
 
 58. Site-local offsets are three 64-bit floats, measured by spike S6; R6's budget is mean and p99. §4.1, FT-SIM-035, R6. (D104)
 59. Voices fine-tuned from lessac or ryan are unclear; medium voices for runtime; a clean pt_PT voice is trained (#16). §9.1, FT-LIC-007, FT-AUD-019. (D105)
@@ -141,3 +141,5 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 61. Art moves from toon to semi-realistic PBR-style procedural art with variant B's palette. §9.5, FT-AUD-016, R11. (D107)
 62. Browser stations run from plain HTTP through a patched shell and audio guard; grace stays 10 s; keep-awake by a muted video. FT-NET-030, 033, 046. (D108)
 63. S9's quiet-host tick counts as the pass for R15; #11 re-verifies. R15. (D109)
+64. Free-text voice bursts beyond 4 queued lines show subtitles only. FT-AUD-015, R15. (D110)
+65. Snapshots are encoded and sent off the sim thread (amends D109). FT-NET-040, R15. (D111)

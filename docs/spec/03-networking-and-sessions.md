@@ -90,7 +90,7 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-037** When a send to a client fails, its high-priority queue passes 256 KiB or more than 15 snapshots (about 533 ms at 30 Hz) go unacknowledged, the server shall stop sending it deltas and send a full snapshot once the queue drains; events shall never be dropped. (plan review TECH-2, D106)
 - **FT-NET-038** Messages above a size limit, such as voice clips and full snapshots, shall be sent in chunks, with voice chunks at lower priority than snapshots. (plan review TECH-2)
 - **FT-NET-039** The static HTTP server shall never delay a simulation tick by more than 1 ms. (plan review TECH-3)
-- **FT-NET-040** The server shall encode each snapshot once per distinct view key (ship, catalogue entry, difficulty toggles) and send it to every client sharing that key. (plan review TECH-9)
+- **FT-NET-040** The server shall encode each snapshot once per distinct view key (ship, catalogue entry, difficulty toggles) and send it to every client sharing that key, encoding and sending on a worker thread from a copy of the state so the sim tick holds only the sim. (plan review TECH-9, D111)
 - **FT-NET-041** During a pause, the remaining players of a paused ship and the host shall be able to abandon that ship, which eliminates it and takes it out of play. (D96)
 - **FT-NET-042** During a pause, players of other ships, Captains and viewers shall be able to take over an uncovered station, unless leaving would make their own ship fail the coverage check. (D96)
 - **FT-NET-043** Outside a pause, the server shall reject with `CommandRejected` any mid-run catalogue change that would make a ship fail the coverage check. (D96, plan review CLASH-1)
