@@ -206,3 +206,19 @@ def test_assets_must_match_the_expected_set_and_sums(tmp_path):
 def test_modified_voice_needs_a_provenance_entry_citing_d144():
     with pytest.raises(SystemExit):
         package.voices_md({"en_GB-cori-medium": ["aɪ"]})
+
+
+# FT: FT-ARC-022
+def test_release_lists_agree_with_the_game_voice_table():
+    """tools/tts/voices.json's release and prerender lists must match
+    content/voices.json's languages that aren't dev_only (D141, D153)."""
+    table = json.loads((ROOT / "content/voices.json").read_text())["languages"]
+    shipped = {lang: roles for lang, roles in table.items() if not roles.get("dev_only")}
+    pins = json.loads((ROOT / "tools/tts/voices.json").read_text())
+
+    def voices(kind: str) -> set[str]:
+        return {r[kind] for roles in shipped.values() for k, r in roles.items() if isinstance(r, dict)}
+
+    assert set(pins["release"]) == voices("runtime")
+    assert set(pins["prerender"]) == voices("prerender")
+    assert package.release_languages() == sorted(shipped)

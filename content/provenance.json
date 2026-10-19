@@ -106,30 +106,6 @@
       "attribution": "Copyright (c) Microsoft Corporation; licenses/onnxruntime-LICENSE and onnxruntime-ThirdPartyNotices.txt"
     },
     {
-      "name": "Piper voice en_GB-cori-medium",
-      "kind": "voice",
-      "version": "rhasspy/piper-voices c10ece1aade47bb51c153c893d14e5bf8e5b7117",
-      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_GB/cori/medium",
-      "licence": "Public domain dataset (LibriVox); model repository MIT",
-      "attribution": "Voice by Bryce Beattie (https://brycebeattie.com/files/tts/), trained from scratch on LibriVox recordings; MODEL_CARD shipped with the voice (S7, D105)"
-    },
-    {
-      "name": "Piper voice en_US-norman-medium",
-      "kind": "voice",
-      "version": "rhasspy/piper-voices c10ece1aade47bb51c153c893d14e5bf8e5b7117",
-      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/norman/medium",
-      "licence": "Public domain dataset (LibriVox); model repository MIT",
-      "attribution": "Voice by Bryce Beattie (https://brycebeattie.com/files/tts/), trained from scratch on LibriVox recordings; MODEL_CARD shipped with the voice (S7, D105)"
-    },
-    {
-      "name": "Piper voice it_IT-serena-medium",
-      "kind": "voice",
-      "version": "rhasspy/piper-voices c10ece1aade47bb51c153c893d14e5bf8e5b7117",
-      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/it/it_IT/serena/medium",
-      "licence": "CC-BY-4.0 (dataset committa/serena-synthetic-it-27h; Tatoeba transcripts CC BY 2.0 FR); model repository MIT",
-      "attribution": "Serena voice trained from scratch on the serena-synthetic-it-27h dataset by committa (https://huggingface.co/datasets/committa/serena-synthetic-it-27h, CC BY 4.0), with Tatoeba sentences (CC BY 2.0 FR); MODEL_CARD shipped with the voice (S7, D105). Modified in release packages: the .onnx.json config drops the phoneme_id_map entries aɪ, aʊ, ɔɪ, eɪ, oʊ (more than one codepoint, rejected by the bundled Piper 2023.11.14-2); the model is unchanged (D144, licenses/VOICES.md)"
-    },
-    {
       "name": "Wine",
       "kind": "tool",
       "version": "10.0~repack-12ubuntu1",
@@ -183,7 +159,7 @@
       "version": "rhasspy/piper-voices c10ece1a",
       "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/it/it_IT/serena/medium",
       "licence": "MIT (piper-voices model repository); dataset CC-BY-4.0 (synthetic; Tatoeba transcripts CC-BY-2.0-FR), trained from scratch",
-      "attribution": "Voice: serena, dataset by committa (CC BY 4.0), transcripts from Tatoeba (CC BY 2.0 FR); credit required in the shipped credits. Accepted on its card (D105)."
+      "attribution": "Voice: serena, dataset by committa (CC BY 4.0), transcripts from Tatoeba (CC BY 2.0 FR); credit required in the shipped credits. Accepted on its card (D105). Modified in release packages: the .onnx.json config drops the phoneme_id_map entries aɪ, aʊ, ɔɪ, eɪ, oʊ (more than one codepoint, rejected by the bundled Piper 2023.11.14-2); the model is unchanged (D144, licenses/VOICES.md)."
     },
     {
       "name": "Piper voice it_IT-serena-high",
