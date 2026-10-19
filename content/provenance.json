@@ -156,6 +156,22 @@
       "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/pt/pt_PT/tugão/medium",
       "licence": "Unclear: dataset CC0 (OHF voice-datasets) but fine-tuned from lessac (Blizzard 2013, research only)",
       "attribution": "Voice: tugão (OHF voice-datasets, CC0). Development only, never shipped, until #16 provides a clean pt_PT voice (D105, FT-LIC-007)."
+    },
+    {
+      "name": "python-soundfile",
+      "kind": "tool",
+      "version": "0.13.1",
+      "source": "https://github.com/bastibe/python-soundfile",
+      "licence": "BSD-3-Clause",
+      "attribution": "Copyright (c) 2013 Bastian Bechtold; encodes the clients' Ogg Vorbis voice lines at build time (tools/tts/prerender.py), never shipped"
+    },
+    {
+      "name": "libsndfile with libvorbis and libogg (bundled in soundfile wheels)",
+      "kind": "tool",
+      "version": "libsndfile 1.2.2",
+      "source": "https://github.com/libsndfile/libsndfile",
+      "licence": "LGPL-2.1-or-later (libsndfile); BSD-3-Clause (libvorbis, libogg)",
+      "attribution": "Copyright (c) Erik de Castro Lopo and libsndfile contributors; Xiph.Org Foundation (libvorbis, libogg); build time only"
     }
   ]
 }

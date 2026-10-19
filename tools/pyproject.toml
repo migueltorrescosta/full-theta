@@ -8,6 +8,7 @@ dependencies = [
   "pytest==9.1.1",
   "jsonschema==4.25.1",
   "numpy==2.5.4",
+  "soundfile==0.13.1",
 ]
 
 [tool.uv]

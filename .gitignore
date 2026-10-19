@@ -5,3 +5,4 @@ __pycache__/
 .venv/
 /tmp/
 /audio/prerendered/
+/audio/prerendered_host/

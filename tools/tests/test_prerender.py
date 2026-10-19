@@ -40,6 +40,10 @@ def content_root(tmp_path: Path) -> Path:
     return root
 
 
+def host(out: Path) -> Path:
+    return out.parent / "prerendered_host"
+
+
 def run(tmp_path: Path, langs=("en", "pt_PT", "it")) -> tuple[Path, Path, Spy, dict]:
     root = content_root(tmp_path)
     out = tmp_path / "out"
@@ -72,9 +76,11 @@ def test_keys_are_exactly_those_of_the_dialogue_json(tmp_path):
     root, out, _, indexes = run(tmp_path)
     for lang in ("en", "pt_PT", "it"):
         for role, keys in expected_keys(root, lang).items():
-            assert set(indexes[(lang, role)]["clips"]) == keys
-            on_disk = json.loads((out / lang / f"{role}.json").read_text())
+            assert set(indexes[(lang, role)]["clips"]) == {k for k in keys if not k.startswith("line:")}
+            on_disk = json.loads((host(out) / lang / f"{role}.json").read_text())
             assert on_disk == indexes[(lang, role)]
+        lines = {k[5:] + ".ogg" for keys in expected_keys(root, lang).values() for k in keys if k.startswith("line:")}
+        assert {f.name for f in (out / lang).glob("*.ogg")} == lines
 
 
 # FT: FT-DAT-005
@@ -122,7 +128,7 @@ def test_voices_and_role_settings(tmp_path):
         assert settings in (computer_settings, {})
         assert "robotic" not in settings  # the client's audio bus filters (FT-AUD-004)
     by_text = {(v, t) for v, t, _ in spy.calls}
-    assert (en["computer"]["prerender"], "Hull critical.") in by_text
+    assert (en["computer"]["prerender"], "Hull critical.") in by_text  # a client Ogg line
     assert (en["computer"]["runtime"], "Contact") in by_text
     assert (en["npc"]["runtime"], "hundred") in by_text
     assert sum(1 for v, t, s in spy.calls if t == "hundred") == 2  # once per role
@@ -133,7 +139,7 @@ def test_voices_and_role_settings(tmp_path):
 def test_blobs_and_indexes_agree(tmp_path):
     _, out, spy, indexes = run(tmp_path)
     for (lang, role), index in indexes.items():
-        blob = np.frombuffer((out / lang / f"{role}.pcm").read_bytes(), dtype="<i2")
+        blob = np.frombuffer((host(out) / lang / f"{role}.pcm").read_bytes(), dtype="<i2")
         at = 0
         for key, (first, n) in index["clips"].items():
             assert first == at and n > 0, key
@@ -155,6 +161,7 @@ def test_refuses_tracked_locations(tmp_path):
     with pytest.raises(SystemExit):
         prerender.check_out(ROOT / "build/voice", ROOT)
     prerender.check_out(ROOT / "audio/prerendered", ROOT)
+    prerender.check_out(ROOT / "audio/prerendered_host", ROOT)
     prerender.check_out(tmp_path / "anywhere", ROOT)
 
 
@@ -190,16 +197,17 @@ def test_number_fragment_keeps_only_its_first_utterance():
 
 
 # FT: FT-AUD-002
-def test_release_hook_lists_every_file_of_each_language(tmp_path):
-    import prerender_release
+def test_each_pack_lists_its_files_and_lines_decode(tmp_path):
+    import soundfile
 
     _, out, _, _ = run(tmp_path, langs=("en", "it"))
-    prerender_release.write_indexes(out, ["en", "it"])
     for lang in ("en", "it"):
-        index = json.loads((out / lang / "index.json").read_text())
-        assert index == {
-            "language": lang,
-            "clips": ["computer.json", "computer.pcm", "npc.json", "npc.pcm"],
-        }
-        assert all((out / lang / f).stat().st_size > 0 for f in index["clips"])
+        client = json.loads((out / lang / "index.json").read_text())
+        assert client["language"] == lang
+        assert client["clips"] == sorted(f.name for f in (out / lang).glob("*.ogg"))
+        assert "computer.hull_critical.ogg" in client["clips"]
+        pcm, rate = soundfile.read(out / lang / "computer.hull_critical.ogg", dtype="int16")
+        assert rate == RATE and pcm.size > 0
+        server = json.loads((host(out) / lang / "index.json").read_text())
+        assert server == {"language": lang, "clips": ["computer.json", "computer.pcm", "npc.json", "npc.pcm"]}
     assert not (out / "pt_PT").exists()

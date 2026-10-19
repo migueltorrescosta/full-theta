@@ -3,28 +3,34 @@
     uv run --project tools/tts python tools/tts/prerender.py [LANG...] [--out DIR] [--jobs N] [--threads 1]
 
 Reads only content/dialogue/*.json (lines files and numbers.json, not the
-schemas) and content/voices.json (FT-DAT-005). Per language and role it writes
-DIR/<lang>/<role>.pcm, one blob of 16-bit little-endian mono PCM, and
-DIR/<lang>/<role>.json, {"rate", "voice", "clips": {key: [first_sample, samples]}}.
-"voice" is the role's runtime voice. Keys (audio/README.md):
+schemas) and content/voices.json (FT-DAT-005), and writes two packs (D152, D154):
 
-- line:<id>    a line without slots, whole, the role's prerender voice;
-- seg:<id>:<k> piece k of a slotted line's text split at its slots (k counts
-               every piece, empty ones too; only pieces with a letter are
-               rendered), the role's runtime voice;
-- num:<key>    every numbers.json fragment of the language, the role's runtime voice.
+- client pack, OUT/<lang>/ (default audio/prerendered/): `<line id>.ogg`, Ogg
+  Vorbis, one per line without slots (key line:<id>, whole, the role's prerender
+  voice); clients play these locally, web exports included;
+- host pack, HOST/<lang>/ (default audio/prerendered_host/): per role
+  `<role>.pcm`, one blob of 16-bit little-endian mono PCM, and `<role>.json`,
+  {"rate", "voice", "clips": {key: [first_sample, samples]}} ("voice" is the
+  role's runtime voice), holding the clips the host stitches:
+  - seg:<id>:<k> piece k of a slotted line's text split at its slots (k counts
+                 every piece, empty ones too; only pieces with a letter are
+                 rendered), the role's runtime voice;
+  - num:<key>    every numbers.json fragment of the language, the role's runtime
+                 voice, cut at its first 200 ms silence.
 
-Each clip uses the role's synthesis settings from voices.json `roles`, has its
+Both language folders get index.json {"language", "clips": [file, ...]}, which the
+package inspection checks. Each clip uses the role's synthesis settings from voices.json `roles`, has its
 silence trimmed (0.02 of full scale, 10 ms padding, as spike S7b) and is peak
 normalised to 0.9. The ship computer's robotic filter is applied by the client
-on an audio bus, not here. DIR defaults to audio/prerendered/ at the repo root,
-which is gitignored: generated audio is never committed (FT-AUD-002), so any
-other location inside the repo is refused.
+on an audio bus, not here. Both default folders are gitignored: generated audio
+is never committed (FT-AUD-002), so any other location inside the repo is refused.
 """
 
 import argparse
 import json
+import io
 import re
+import shutil
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -44,6 +50,10 @@ PAD_S = 0.01  # trim padding (S7b)
 # norman-medium's digits 2-2.7 s), so a number fragment keeps only its first utterance:
 # it ends at the first silence (below THRESHOLD) of at least this long.
 FRAGMENT_GAP_S = 0.2
+# PROVISIONAL (D154): libsndfile's Vorbis compression level, 0 best .. 1 smallest;
+# 0.8 gives about 53 kbps (6.6 KB per second of 22.05 kHz mono speech) plus about
+# 3.5 KB of Vorbis headers per file.
+VORBIS_LEVEL = 0.8
 PEAK = 0.9  # PROVISIONAL loudness: peak normalise each clip (S7 note; no LUFS yet)
 SYNTH_KEYS = ("length_scale", "noise_scale", "noise_w_scale", "speaker")
 
@@ -162,20 +172,55 @@ def _render_voice_piper(voice: str, items: list[tuple]) -> list[tuple]:
 
 
 def check_out(out: Path, root: Path) -> None:
-    """Generated audio is never committed (FT-AUD-002): inside the repo only audio/prerendered/ is allowed."""
+    """Generated audio is never committed (FT-AUD-002): inside the repo only the
+    gitignored audio/prerendered/ and audio/prerendered_host/ are allowed."""
     out, root = out.resolve(), root.resolve()
-    if out.is_relative_to(root) and not out.is_relative_to(root / "audio" / "prerendered"):
-        raise SystemExit(f"prerender: refusing {out}: inside the repo only audio/prerendered/ (gitignored) is allowed")
+    allowed = (root / "audio" / "prerendered", root / "audio" / "prerendered_host")
+    if out.is_relative_to(root) and not any(out.is_relative_to(a) for a in allowed):
+        raise SystemExit(
+            f"prerender: refusing {out}: inside the repo only audio/prerendered/ and "
+            "audio/prerendered_host/ (gitignored) are allowed"
+        )
+
+
+def encode_ogg(pcm: np.ndarray, rate: int) -> bytes:
+    """Ogg Vorbis for the client pack (D154); soundfile (libsndfile) is imported here so
+    the module loads without it."""
+    import soundfile
+
+    buf = io.BytesIO()
+    soundfile.write(buf, pcm, rate, format="OGG", subtype="VORBIS", compression_level=VORBIS_LEVEL)
+    return buf.getvalue()
+
+
+def write_index(folder: Path, lang: str) -> list[str]:
+    """index.json for the package inspection: every file of the pack's language folder."""
+    clips = sorted(p.name for p in folder.iterdir() if p.is_file() and p.name != "index.json")
+    index = {"language": lang, "clips": clips}
+    (folder / "index.json").write_text(json.dumps(index, indent=1) + "\n", encoding="utf-8")
+    return clips
 
 
 def prerender(
-    root: Path, out: Path, langs: list[str], synth: Synth | None = None, jobs: int = 1, threads: int = 1
+    root: Path,
+    out: Path,
+    langs: list[str],
+    synth: Synth | None = None,
+    jobs: int = 1,
+    threads: int = 1,
+    host_out: Path | None = None,
 ) -> dict[tuple[str, str], dict]:
-    """Renders and writes every blob; returns the indexes by (lang, role).
+    """Renders and writes both packs; returns the host indexes by (lang, role).
 
-    synth None uses Piper, one process per voice with `jobs` voices in parallel;
-    a given synth (tests) runs in this process."""
+    Client pack, `out/<lang>/`: one Ogg Vorbis file per line without slots,
+    `<line id>.ogg`. Host pack, `host_out/<lang>/` (default: out's sibling
+    `prerendered_host`): per role a PCM blob and its index of the seg:* and num:*
+    clips. Each folder gets an index.json listing its files. synth None uses Piper,
+    one process per voice with `jobs` voices in parallel; a given synth (tests) runs
+    in this process."""
+    host_out = host_out if host_out is not None else out.parent / "prerendered_host"
     check_out(out, root)
+    check_out(host_out, root)
     lines, numbers, voices = load_content(root)
     by_voice: dict[str, list[tuple]] = {}
     plans = {lang: plan(lines, numbers, voices, lang) for lang in langs}
@@ -192,28 +237,39 @@ def prerender(
     rendered = {(lang, role, key): (pcm, rate) for res in results for lang, role, key, pcm, rate in res}
     indexes: dict[tuple[str, str], dict] = {}
     for lang, roles in plans.items():
-        (out / lang).mkdir(parents=True, exist_ok=True)
+        for folder in (out / lang, host_out / lang):
+            if folder.exists():
+                shutil.rmtree(folder)
+            folder.mkdir(parents=True)
         for role, clips in roles.items():
-            rates = {rendered[(lang, role, key)][1] for key, _, _ in clips}
+            for key, _, _ in clips:
+                if key.startswith("line:"):
+                    pcm, rate = rendered[(lang, role, key)]
+                    (out / lang / f"{key[5:]}.ogg").write_bytes(encode_ogg(pcm, rate))
+            stitched = [key for key, _, _ in clips if not key.startswith("line:")]
+            rates = {rendered[(lang, role, key)][1] for key in stitched}
             if len(rates) != 1:
                 raise SystemExit(f"prerender: {lang}/{role}: voices disagree on the sample rate {sorted(rates)}")
             index = {"rate": rates.pop(), "voice": voices["languages"][lang][role]["runtime"], "clips": {}}
             parts, at = [], 0
-            for key, _, _ in clips:
+            for key in stitched:
                 pcm = rendered[(lang, role, key)][0]
                 index["clips"][key] = [at, int(pcm.size)]
                 parts.append(pcm)
                 at += pcm.size
-            (out / lang / f"{role}.pcm").write_bytes(np.concatenate(parts).astype("<i2").tobytes())
-            (out / lang / f"{role}.json").write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
+            (host_out / lang / f"{role}.pcm").write_bytes(np.concatenate(parts).astype("<i2").tobytes())
+            (host_out / lang / f"{role}.json").write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
             indexes[(lang, role)] = index
+        write_index(out / lang, lang)
+        write_index(host_out / lang, lang)
     return indexes
 
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("langs", nargs="*", metavar="LANG", help=f"default: all of {', '.join(LANGS)}")
-    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help="client pack (Ogg lines)")
+    parser.add_argument("--host-out", type=Path, default=None, help="host pack [OUT/../prerendered_host]")
     parser.add_argument("--jobs", type=int, default=1, help="voices rendered in parallel")
     parser.add_argument("--threads", type=int, default=1, help="onnxruntime threads per voice process")
     args = parser.parse_args(argv)
@@ -221,10 +277,15 @@ def main(argv: list[str]) -> int:
     if unknown := [lang for lang in langs if lang not in LANGS]:
         parser.error(f"unknown language {', '.join(unknown)}")
     start = time.perf_counter()
-    indexes = prerender(ROOT, args.out, langs, jobs=args.jobs, threads=args.threads)
+    out = args.out.resolve()
+    host_out = args.host_out.resolve() if args.host_out else None
+    indexes = prerender(ROOT, out, langs, jobs=args.jobs, threads=args.threads, host_out=host_out)
     for (lang, role), index in indexes.items():
         samples = sum(n for _, n in index["clips"].values())
-        print(f"{lang}/{role}: {len(index['clips'])} clips, {samples / index['rate']:.1f} s, {samples * 2} B")
+        print(f"host {lang}/{role}: {len(index['clips'])} clips, {samples / index['rate']:.1f} s, {samples * 2} B")
+    for lang in langs:
+        files = list((out / lang).glob("*.ogg"))
+        print(f"client {lang}: {len(files)} lines, {sum(f.stat().st_size for f in files)} B Ogg")
     print(f"prerender: {time.perf_counter() - start:.1f} s")
     return 0
 
