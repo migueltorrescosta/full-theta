@@ -38,7 +38,7 @@ Tests: 121, manual: 9, pending: 271.
 | FT-ARC-016 | tests | `tools/tests/test_lint_arch.py` |
 | FT-ARC-017 | pending |  |
 | FT-ARC-018 | pending |  |
-| FT-ARC-019 | tests | `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd` |
+| FT-ARC-019 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-ARC-020 | tests | `tests/sim/run/test_run_reset.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-022 | pending |  |
@@ -325,23 +325,23 @@ Tests: 121, manual: 9, pending: 271.
 | FT-MIS-042 | pending |  |
 | FT-AUD-001 | tests | `tools/tests/test_prerender.py` |
 | FT-AUD-002 | tests | `tools/tests/test_licences.py`, `tools/tests/test_prerender.py` |
-| FT-AUD-003 | tests | `tests/net/voice/test_voice_service.gd` |
+| FT-AUD-003 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-AUD-004 | tests | `tests/audio/test_voice_player.gd` |
 | FT-AUD-005 | pending |  |
 | FT-AUD-006 | pending |  |
 | FT-AUD-007 | tests | `tests/audio/test_voice_bus.gd` |
 | FT-AUD-008 | tests | `tests/audio/test_voice_bus.gd` |
 | FT-AUD-009 | pending |  |
-| FT-AUD-010 | tests | `tests/audio/test_subtitle_feed.gd`, `tests/audio/test_voice_player.gd`, `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_service.gd`, `tests/net/voice/test_voice_setup.gd` |
+| FT-AUD-010 | tests | `tests/audio/test_subtitle_feed.gd`, `tests/audio/test_voice_player.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-AUD-011 | tests | `tests/audio/test_voice_bus.gd`, `tests/audio/test_voice_player.gd` |
 | FT-AUD-012 | tests | `tests/content/test_i18n.gd` |
-| FT-AUD-013 | tests | `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd`, `tests/net/voice/test_voice_service.gd` |
-| FT-AUD-014 | tests | `tools/tests/test_licences.py` |
-| FT-AUD-015 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_service.gd` |
+| FT-AUD-013 | tests | `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd` |
+| FT-AUD-014 | tests | `tests/net/voice/test_voice_service.gd`, `tools/tests/test_licences.py` |
+| FT-AUD-015 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-AUD-016 | pending |  |
 | FT-AUD-017 | pending |  |
-| FT-AUD-018 | tests | `tests/net/voice/test_clip_library.gd`, `tests/net/voice/test_number_words.gd`, `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd`, `tools/tests/test_prerender.py` |
-| FT-AUD-019 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd`, `tests/net/voice/test_voice_setup.gd` |
+| FT-AUD-018 | tests | `tests/net/voice/test_clip_library.gd`, `tests/net/voice/test_number_words.gd`, `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd`, `tools/tests/test_prerender.py` |
+| FT-AUD-019 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd`, `tests/net/voice/test_voice_setup.gd` |
 | FT-DAT-001 | tests | `tests/content/test_content_defs.gd`, `tests/content/test_def_gate.gd` |
 | FT-DAT-002 | tests | `tests/content/test_def_gate.gd` |
 | FT-DAT-003 | tests | `tools/tests/test_check_dialogue.py` |
