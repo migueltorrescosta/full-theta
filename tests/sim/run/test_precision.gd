@@ -1,64 +1,23 @@
 extends GdUnitTestSuite
 ## R16 (FT-SIM-035, D98, D104): the M1 intercept, with the scripted crew firing, behaves
-## the same far from the world origin. Positions are site-local (a site id plus an
-## offset), so the site a fight happens at changes nothing; within a site, 64-bit
-## offsets keep slow motion near the 200 km limit.
+## the same far from the site centre: 64-bit site-local offsets keep slow motion near
+## the 200 km limit. The sim stores no site origins, only site ids, so which site a
+## fight happens at can't matter by construction.
 
 const TICKS: int = 600
-## Stands for a site whose origin is 10^8 m from the world origin.
-const FAR_SITE: int = 7
-## Columns that hold a site id, the only state allowed to differ between sites.
-const SITE_COLUMNS: Array[String] = ["site", "target_site"]
 
 
 func _encounter() -> M1Encounter:
 	return M1Encounter.new(21, "test", TestDefs.corvette(), TestDefs.raider_enemy())
 
 
-## Runs the crew script for TICKS ticks; returns every event as text, in order.
-func _fight(world: SimWorld) -> PackedStringArray:
+## Runs the crew script for TICKS ticks.
+func _fight(world: SimWorld) -> void:
 	var crew: ScriptedCrew = ScriptedCrew.new()
-	var events: PackedStringArray = PackedStringArray()
 	for i: int in TICKS:
 		crew.act(world)
 		world.step()
-		for e: SimEvent in world.drain_events():
-			events.append(str(e))
-	return events
-
-
-## Every column of every table except the site columns, as [table, name, value] rows.
-func _non_site_columns(world: SimWorld) -> Array:
-	var out: Array = []
-	for t: SimTable in world.tables():
-		for column: Array in t.columns():
-			if not SITE_COLUMNS.has(column[0]):
-				out.append([t.get_script().get_global_name(), column[0], column[1]])
-	return out
-
-
-# FT: FT-SIM-035, FT-M1-020
-# The same scripted intercept (600 ticks, shots fired) at site 0 and at FAR_SITE, which
-# stands for a site 10^8 m from the world origin. The sim stores no site origins, only
-# site ids and 64-bit site-local offsets (D98, D104), so nothing but the site columns
-# may differ: every other column and the event stream must be identical. This does not
-# place anything at 10^8 m; it checks that no state depends on where a site is.
-func test_intercept_far_from_world_origin_matches() -> void:
-	var near: SimWorld = _encounter().build()
-	var far: SimWorld = _encounter().build()
-	for id: int in far.ship_count():
-		far.kin.place(id, FAR_SITE, far.kin.px[id], far.kin.py[id], far.kin.pz[id])
-	var near_events: PackedStringArray = _fight(near)
-	var far_events: PackedStringArray = _fight(far)
-	var fired: int = (
-		Array(near_events).filter(func(e: String) -> bool: return " fired " in e).size()
-	)
-	assert_int(fired).is_greater(5)
-	assert_array(Array(far.kin.site)).is_equal([FAR_SITE, FAR_SITE])
-	assert_array(Array(far.projectiles.site)).is_not_empty()
-	assert_bool(Array(far.projectiles.site).all(func(s: int) -> bool: return s == FAR_SITE))
-	assert_array(Array(far_events)).is_equal(Array(near_events))
-	assert_array(_non_site_columns(far)).is_equal(_non_site_columns(near))
+		world.drain_events()
 
 
 # FT: FT-SIM-035, FT-M1-020

@@ -144,7 +144,7 @@ static func _select_face_point(world: SimWorld, id: int, target: int) -> void:
 	var helm: HelmTable = world.helm
 	var aim: Vector3 = Vector3.INF
 	if not world.defs[id].mounts.is_empty():
-		aim = _lead_aim(world, id, 0, target)
+		aim = lead_aim(world, id, 0, target, 1)
 	var select: SelectTargetCommand = SelectTargetCommand.new()
 	if aim.is_finite():
 		select.site = kin.site[id]
@@ -231,14 +231,15 @@ static func _helm_input_raw(world: SimWorld, id: int, face: bool, throttle: floa
 
 
 ## The mount's lead intercept point relative to the ship's centre (m, site frame),
-## predicted one tick ahead because the command applies next tick, or Vector3.INF when
-## no shot can reach the target. The shot's reach is its distance from the muzzle.
-static func _lead_aim(world: SimWorld, id: int, m: int, target: int) -> Vector3:
+## predicted ticks_ahead ticks ahead (the AI uses 1 because its command applies next
+## tick), or Vector3.INF when no shot can reach the target. The shot's reach is its
+## distance from the muzzle.
+static func lead_aim(world: SimWorld, id: int, m: int, target: int, ticks_ahead: int) -> Vector3:
 	var kin: Kinematics = world.kin
 	var mount: MountDef = world.defs[id].mounts[m]
 	var muzzle: Vector3 = kin.to_world(id, mount.position)
 	var rel_vel: Vector3 = kin.vel[target] - kin.vel[id]
-	var rel: Vector3 = kin.relative(id, target) - muzzle + rel_vel * SimWorld.DT
+	var rel: Vector3 = kin.relative(id, target) - muzzle + rel_vel * (ticks_ahead * SimWorld.DT)
 	var t: float = Lead.intercept_time(rel, rel_vel, mount.weapon.projectile_speed)
 	if t < 0.0:
 		return Vector3.INF
@@ -248,7 +249,7 @@ static func _lead_aim(world: SimWorld, id: int, m: int, target: int) -> Vector3:
 ## Aims the mount at the lead intercept point and fires when the shot is good.
 static func _aim_and_fire(world: SimWorld, id: int, m: int, target: int, dist: float) -> void:
 	var kin: Kinematics = world.kin
-	var aim: Vector3 = _lead_aim(world, id, m, target)
+	var aim: Vector3 = lead_aim(world, id, m, target, 1)
 	if not aim.is_finite():
 		return
 	# The ship moves two ticks before WeaponSystem reads the point (it applies next tick,

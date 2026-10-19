@@ -17,6 +17,10 @@ var identified: PackedByteArray = PackedByteArray()
 ## detection; never changes (FT-SPA-001, FT-SPA-002).
 var numbers: PackedInt32Array = PackedInt32Array()
 
+## Derived index, not state: row by faction * 65536 + contact id, filled in add_contact
+## (rows never move or go away).
+var _rows: Dictionary[int, int] = {}
+
 
 ## Knowledge rows are added on detection, not on spawn.
 func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
@@ -25,10 +29,7 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 
 ## Row of the faction's knowledge of the contact, or -1 if it never detected it.
 func row_for(faction: int, contact_id: int) -> int:
-	for r: int in ship_ids.size():
-		if ship_ids[r] == contact_id and factions[r] == faction:
-			return r
-	return -1
+	return _rows.get(faction * 65536 + contact_id, -1)
 
 
 ## Adds the faction's row for a newly detected contact with the next callsign number.
@@ -41,6 +42,7 @@ func add_contact(faction: int, contact_id: int) -> int:
 	detected.append(0)
 	identified.append(0)
 	numbers.append(number)
+	_rows[faction * 65536 + contact_id] = row
 	return row
 
 

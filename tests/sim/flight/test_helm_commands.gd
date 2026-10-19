@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 # site grid; non-finite stick input is rejected. Rejected commands change nothing and
 # aren't logged; axes are clamped to [-1, 1].
 func test_invalid_commands_rejected() -> void:
-	var w: SimWorld = FlightFixture.world()
+	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	FlightFixture.select_ship(w, id, id)
 	FlightFixture.select_ship(w, id, 5)
@@ -25,7 +25,7 @@ func test_invalid_commands_rejected() -> void:
 
 # Resetting a ship restores its helm row (assist on, nothing held or selected).
 func test_reset_ship_restores_helm() -> void:
-	var w: SimWorld = FlightFixture.world()
+	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	var other: int = FlightFixture.spawn(w, Vector3(0.0, 0.0, -1000.0))
 	FlightFixture.decouple(w, id, true)
@@ -44,7 +44,7 @@ func test_reset_ship_restores_helm() -> void:
 # FT: FT-ARC-013
 # Helm can select only ships its faction detects.
 func test_select_requires_detection() -> void:
-	var w: SimWorld = FlightFixture.world()
+	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	var far: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(0, 0, -50000))
 	var near: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(0, 0, -5000))

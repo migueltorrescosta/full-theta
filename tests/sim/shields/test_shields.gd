@@ -165,6 +165,24 @@ func test_shield_commands() -> void:
 
 
 # FT: FT-SIM-018
+# Only exactly -1 keeps power or tightness; any other negative value is rejected and
+# changes nothing.
+func test_only_minus_one_keeps() -> void:
+	var w: SimWorld = _world()
+	var shd: int = PowerSystem.subsystem_index(w.defs[0], SHD)
+	assert_bool(_shield(w, 4, 3.0)).is_true()
+	assert_bool(_shield(w, -2, 1.0)).is_false()
+	assert_bool(_shield(w, 3, -0.5)).is_false()
+	assert_bool(_shield(w, 3, -2.0)).is_false()
+	assert_int(w.power.pips[0][shd]).is_equal(4)
+	assert_float(w.shields.tightness[0]).is_equal(3.0)
+	assert_bool(_shield(w, -1, 1.0)).is_true()
+	assert_bool(_shield(w, 3, -1.0)).is_true()
+	assert_int(w.power.pips[0][shd]).is_equal(3)
+	assert_float(w.shields.tightness[0]).is_equal(1.0)
+
+
+# FT: FT-SIM-018
 # Tracking keeps the focus on another ship as it moves (D48).
 func test_focus_tracks_ship() -> void:
 	var w: SimWorld = _world(2)
@@ -179,8 +197,8 @@ func test_focus_tracks_ship() -> void:
 
 
 # FT: FT-SIM-018, FT-ARC-013
-# Helm can track only a ship its faction detects, and the track drops (keeping the last
-# focus) once the contact is lost.
+# Helm can track only a ship its faction detects; while the contact is lost the track
+# stays but the focus freezes where it was, and it follows again once re-detected.
 func test_focus_tracks_only_detected_ships() -> void:
 	var w: SimWorld = _world()
 	var raider: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(50000, 0, 0))
@@ -192,8 +210,12 @@ func test_focus_tracks_only_detected_ships() -> void:
 	w.kin.place(raider, 0, 0.0, 0.0, 50000.0)
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, 1, raider)).is_false()
-	assert_int(w.shields.track_id[0]).is_equal(-1)
+	assert_int(w.shields.track_id[0]).is_equal(raider)
 	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.RIGHT, Vector3.ONE * 1e-6)
+	w.kin.place(raider, 0, 0.0, 0.0, 5000.0)
+	w.step()
+	assert_bool(KnowledgeSystem.is_detected(w, 1, raider)).is_true()
+	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.BACK, Vector3.ONE * 1e-6)
 
 
 # FT: FT-SIM-031

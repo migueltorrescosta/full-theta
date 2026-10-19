@@ -98,9 +98,10 @@ static func power_ratio(world: SimWorld, ship_id: int, kind: int) -> float:
 static func kind_effectiveness(world: SimWorld, ship_id: int, kind: int) -> float:
 	var total: float = 0.0
 	var n: int = 0
-	for s: SubsystemDef in world.defs[ship_id].subsystems:
-		if s.kind == kind:
-			total += DamageSystem.effectiveness(world, ship_id, s.id)
+	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
+	for i: int in subs.size():
+		if subs[i].kind == kind:
+			total += DamageSystem.effectiveness_at(world, ship_id, i)
 			n += 1
 	return total / n if n > 0 else 1.0
 
@@ -178,7 +179,7 @@ static func _step_heat(world: SimWorld, s: int, i: int) -> void:
 	world.power.heat[s][i] = h
 	if h > sd.fault_heat_threshold and world.power.fault_armed[s][i] == 1:
 		world.power.fault_armed[s][i] = 0
-		DamageSystem.damage_subsystem(world, s, sd.id, sd.heat_fault_damage)
+		DamageSystem.damage_subsystem(world, s, i, sd.heat_fault_damage)
 		world.emit(&"fault", s, -1, h, Vector3.ZERO, sd.id)
 	elif h < sd.fault_heat_threshold * FAULT_REARM and world.power.fault_armed[s][i] == 0:
 		world.power.fault_armed[s][i] = 1

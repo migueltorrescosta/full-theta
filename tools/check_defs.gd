@@ -14,6 +14,8 @@ extends SceneTree
 const REF: String = '(Ext|Sub)Resource\\("([^"]+)"\\)'
 const SKIP_KEYS: PackedStringArray = ["script", "resource_name", "resource_local_to_scene"]
 
+static var _ref: RegEx = _regex(REF)
+
 
 func _init() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
@@ -116,7 +118,7 @@ static func _check_section(
 static func _type_problem(
 	text: String, info: Dictionary, parsed: Dictionary, missing: Dictionary[String, bool]
 ) -> String:
-	var refs: Array[RegExMatch] = _regex(REF).search_all(text)
+	var refs: Array[RegExMatch] = _ref.search_all(text)
 	for m: RegExMatch in refs:
 		if m.get_string(1) == "Ext" and missing.has(m.get_string(2)):
 			return "missing reference %s" % _ext_path(parsed, m.get_string(2))
@@ -134,7 +136,7 @@ static func _type_problem(
 			if not text.begins_with("Array[") and text != "[]":
 				return "expected Array[%s], got %s" % [cls, text]
 			var items: String = text.substr(text.find("(") + 1) if text.contains("(") else text
-			for m: RegExMatch in _regex(REF).search_all(items):
+			for m: RegExMatch in _ref.search_all(items):
 				var p: String = _class_problem(m.get_string(), cls, parsed)
 				if p != "":
 					return "element %s" % p
@@ -156,7 +158,7 @@ static func _type_problem(
 static func _class_problem(text: String, cls: String, parsed: Dictionary) -> String:
 	var script: Script = null
 	var native: String = "Resource"
-	var m: RegExMatch = _regex(REF).search(text)
+	var m: RegExMatch = _ref.search(text)
 	if m.get_string(1) == "Ext":
 		var res: Resource = load(_ext_path(parsed, m.get_string(2)))
 		if res == null:
@@ -237,7 +239,7 @@ static func _parse(text: String) -> Dictionary:
 
 
 static func _ref_id(text: String) -> String:
-	var m: RegExMatch = _regex(REF).search(text)
+	var m: RegExMatch = _ref.search(text)
 	return m.get_string(2) if m != null else ""
 
 

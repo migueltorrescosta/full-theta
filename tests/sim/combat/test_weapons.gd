@@ -104,8 +104,12 @@ func test_each_block_reason() -> void:
 		assert_int(world.projectiles.size()).is_equal(0)
 	var w2: SimWorld = SimWorld.new(1)
 	w2.spawn_ship(TestDefs.corvette(), 1, 0)
-	assert_str(WeaponSystem.block_reason(w2, 0, 0.0)).is_equal("subsystem")
-	assert_str(WeaponSystem.block_reason(w2, 0, 0.3)).is_equal("")
+	assert_str(WeaponSystem.block_reason(w2, 0, 0.0, WeaponSystem.aim_direction(w2, 0))).is_equal(
+		"subsystem"
+	)
+	assert_str(WeaponSystem.block_reason(w2, 0, 0.3, WeaponSystem.aim_direction(w2, 0))).is_equal(
+		""
+	)
 
 
 # FT: FT-SIM-012
@@ -116,7 +120,7 @@ func test_destroyed_weapons_subsystem_blocks() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
 	var sub: StringName = TestDefs.corvette().mounts[0].subsystem_id
-	DamageSystem.damage_subsystem(world, ship, sub, 2e7)
+	DamageSystem.damage_subsystem(world, ship, SimFixture.sub_index(world, ship, sub), 2e7)
 	assert_float(DamageSystem.effectiveness(world, ship, sub)).is_equal(0.0)
 	assert_str(_shot(world, ship)).is_equal("subsystem")
 	assert_int(world.projectiles.size()).is_equal(0)
@@ -200,7 +204,7 @@ func test_shot_spawns_projectile_from_mount() -> void:
 	assert_float(world.mounts.heat[0]).is_equal(weapon.heat_per_shot)
 
 
-# FT: FT-WPN-009, FT-SIM-011
+# FT: FT-SIM-011
 # The barrel slews toward the aim point at the traverse rate, holds the aim point in
 # world space when the ship turns, and stops at the arc's edge for an aim outside it.
 func test_barrel_slews_and_holds_world_aim() -> void:
@@ -251,11 +255,13 @@ func test_friendly_fire_warning_and_hit() -> void:
 		if c[1] != 1:
 			world.set_relation(1, c[1], c[2])
 		if c[1] == 3:
-			assert_int(WeaponSystem.path_crosses(world, shooter, 0)).is_equal(-1)
+			assert_int(WeaponSystem.path_crosses(world, world.mounts.row_for(shooter, 0))).is_equal(
+				-1
+			)
 		world.step()
 		var want: int = other if c[4] else -1
 		(
-			assert_int(WeaponSystem.path_crosses(world, shooter, 0))
+			assert_int(WeaponSystem.path_crosses(world, world.mounts.row_for(shooter, 0)))
 			. override_failure_message(c[0])
 			. is_equal(want)
 		)

@@ -28,6 +28,8 @@ static func step(world: SimWorld) -> void:
 
 
 ## Returns the energy that passes the shields (J); the absorbed part comes off strength.
+## Hits resolve before ShieldSystem.step, so a tracking focus is the one from the
+## previous tick's tracking (a one-tick lag, negligible).
 static func absorb(world: SimWorld, hit: SimHit) -> float:
 	var s: int = hit.target_id
 	var absorbed: float = minf(
@@ -65,16 +67,18 @@ static func coverage(k: float, cos_angle: float) -> float:
 	return 2.0 * k * exp(k * (cos_angle - 1.0)) / (1.0 - exp(-2.0 * k))
 
 
-## Engineering sets shield power (pips, -1 keeps them) and tightness (-1 keeps it);
-## rejects tightness outside the definition's range or not finite, or pips over the
-## cap, changing nothing (FT-ENG-003).
+## Engineering sets shield power (pips, exactly -1 keeps them) and tightness (exactly -1
+## keeps it); rejects tightness outside the definition's range or not finite, pips over
+## the cap and any other negative value, changing nothing (FT-ENG-003).
 static func set_power_and_tightness(
 	world: SimWorld, ship_id: int, pips: int, new_tightness: float
 ) -> bool:
 	var def: ShieldDef = world.defs[ship_id].shields
-	var keep: bool = new_tightness < 0.0
+	var keep: bool = new_tightness == -1.0
 	var in_range: bool = new_tightness >= def.tightness_min and new_tightness <= def.tightness_max
 	if not keep and not (is_finite(new_tightness) and in_range):
+		return false
+	if pips < -1:
 		return false
 	if pips >= 0 and not PowerSystem.set_pips(world, ship_id, SubsystemDef.Kind.SHIELDS, pips):
 		return false
@@ -85,7 +89,8 @@ static func set_power_and_tightness(
 
 ## Helm sets the focus direction (ship frame), or tracks another ship at the same site
 ## when target >= 0 (D48, FT-HLM-010). Rejects a zero or non-finite direction, an invalid
-## target and one its faction doesn't detect (FT-ARC-013).
+## target and one its faction doesn't detect now (FT-ARC-013). A track lasts until Helm
+## sets another focus; see _track.
 static func set_focus(world: SimWorld, ship_id: int, direction: Vector3, target: int) -> bool:
 	if target >= 0:
 		if not _can_track(world, ship_id, target):
@@ -100,16 +105,14 @@ static func set_focus(world: SimWorld, ship_id: int, direction: Vector3, target:
 	return true
 
 
-## Points a tracking focus at its target; drops the track once the target is gone or
-## no longer detected (FT-ARC-013).
+## Points a tracking focus at its target. Like Helm's face, the track is kept while the
+## target is out of reach or undetected: the focus stays where it last was (no ground
+## truth leaks, FT-ARC-013) and follows again once the target is detected.
 static func _track(world: SimWorld, s: int) -> void:
 	var target: int = world.shields.track_id[s]
-	if target < 0:
+	if target < 0 or not _can_track(world, s, target):
 		return
 	var kin: Kinematics = world.kin
-	if not _can_track(world, s, target):
-		world.shields.track_id[s] = -1
-		return
 	var local: Vector3 = kin.to_local(s, kin.relative(s, target))
 	if local.length() > 1e-6:
 		world.shields.focus[s] = local.normalized()

@@ -253,8 +253,6 @@ static func _sweep(
 	var vs: Vector3 = kin.vel[s]
 	var dt: float = SimWorld.DT
 	var start: Vector3 = _start(kin, s, x0, y0, z0)
-	if kin.half_length[s] == 0.0:
-		return Sweep.sphere(start, (pv - vs) * dt, kin.radius[s] + r)
 	var axis: Vector3 = kin.to_world(s, Vector3(0.0, 0.0, kin.half_length[s]))
 	return Sweep.capsule(start, (pv - vs) * dt, axis, kin.radius[s] + r)
 

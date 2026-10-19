@@ -88,7 +88,7 @@ func test_crew_repairs_over_time_using_parts() -> void:
 # Two crews on one subsystem repair twice as fast and each job uses its own part.
 func test_two_crews_repair_twice_as_fast() -> void:
 	var w: SimWorld = _world()
-	DamageSystem.damage_subsystem(w, 0, &"engines", 1e6)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"engines"), 1e6)
 	_dispatch(w, 0, &"engines")
 	_dispatch(w, 1, &"engines")
 	_steps(w, 60)
@@ -103,8 +103,8 @@ func test_no_parts_no_repair() -> void:
 	var def: ShipDef = TestDefs.corvette().duplicate(true)
 	def.spare_parts = 1
 	var w: SimWorld = _world(def)
-	DamageSystem.damage_subsystem(w, 0, &"engines", 1e6)
-	DamageSystem.damage_subsystem(w, 0, &"sensors", 1e6)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"engines"), 1e6)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"sensors"), 1e6)
 	w.drain_events()
 	_dispatch(w, 0, &"engines")
 	_dispatch(w, 1, &"sensors")
@@ -125,7 +125,7 @@ func test_no_parts_no_repair() -> void:
 func test_invalid_dispatches_rejected() -> void:
 	var w: SimWorld = _world()
 	assert_bool(DamageSystem.dispatch(w, 0, 0, &"engines")).is_false()
-	DamageSystem.damage_subsystem(w, 0, &"engines", 1e6)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"engines"), 1e6)
 	assert_bool(DamageSystem.dispatch(w, 0, 0, &"tractor")).is_false()
 	assert_bool(DamageSystem.dispatch(w, 0, 0, &"hull")).is_false()
 	assert_bool(DamageSystem.dispatch(w, 0, 2, &"engines")).is_false()
@@ -140,8 +140,8 @@ func test_invalid_dispatches_rejected() -> void:
 # Sending a busy crew elsewhere moves it and starts a new job with a new part.
 func test_recall_and_reassign() -> void:
 	var w: SimWorld = _world()
-	DamageSystem.damage_subsystem(w, 0, &"engines", 1e6)
-	DamageSystem.damage_subsystem(w, 0, &"reactor", 1e6)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"engines"), 1e6)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"reactor"), 1e6)
 	_dispatch(w, 0, &"engines")
 	_steps(w, 60)
 	_recall(w, 0)

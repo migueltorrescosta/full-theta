@@ -1,23 +1,26 @@
 class_name SimCommands
 extends RefCounted
-## Command codec for the command log (FT-ARC-008): kind name to command class. Each area
-## adds one line per command class here.
+## Command codec for the command log (FT-ARC-008): kind name to command class. Adding a
+## command class is one line in the list _classes is built from.
 
-static var _classes: Dictionary[StringName, GDScript] = {
-	&"helm_input": HelmInputCommand,
-	&"helm_decoupled": DecoupledCommand,
-	&"helm_all_stop": AllStopCommand,
-	&"helm_level": LevelCommand,
-	&"helm_select_target": SelectTargetCommand,
-	&"dispatch_repair": DispatchRepairCommand,
-	&"recall_repair": RecallRepairCommand,
-	&"set_pips": SetPipsCommand,
-	&"boost": BoostCommand,
-	&"set_shield": SetShieldCommand,
-	&"set_shield_focus": SetShieldFocusCommand,
-	&"aim_mount": AimMountCommand,
-	&"fire": FireCommand,
-}
+## Kind name to command class, built from the list of classes.
+static var _classes: Dictionary[StringName, GDScript] = _by_kind(
+	[
+		HelmInputCommand,
+		DecoupledCommand,
+		AllStopCommand,
+		LevelCommand,
+		SelectTargetCommand,
+		DispatchRepairCommand,
+		RecallRepairCommand,
+		SetPipsCommand,
+		BoostCommand,
+		SetShieldCommand,
+		SetShieldFocusCommand,
+		AimMountCommand,
+		FireCommand,
+	]
+)
 
 
 static func from_dict(d: Dictionary) -> SimCommand:
@@ -32,5 +35,8 @@ static func make(kind: StringName) -> SimCommand:
 	return cls.new() if cls != null else null
 
 
-static func kinds() -> Array[StringName]:
-	return _classes.keys()
+static func _by_kind(classes: Array[GDScript]) -> Dictionary[StringName, GDScript]:
+	var out: Dictionary[StringName, GDScript] = {}
+	for cls: GDScript in classes:
+		out[(cls.new() as SimCommand).kind()] = cls
+	return out

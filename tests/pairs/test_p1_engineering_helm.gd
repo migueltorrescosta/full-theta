@@ -9,7 +9,7 @@ extends GdUnitTestSuite
 const BETTER: Dictionary = {"time": PairHarness.Better.LOWER, "hull_lost": PairHarness.Better.LOWER}
 
 
-# FT: FT-PAIR-004, FT-PAIR-015, FT-TST-006, FT-M1-010
+# FT: FT-PAIR-004, FT-PAIR-015, FT-M1-010
 # Co-op (boost, overcharge and a tight shield focus Helm points at the raider) beats
 # solo (Helm alone) by P1's pair_min_gain on time-to-intercept and hull lost; solo
 # completes, and the co-op's heat guard keeps it fault-free.

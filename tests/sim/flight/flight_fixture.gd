@@ -1,11 +1,7 @@
 class_name FlightFixture
 extends RefCounted
-## Helpers for the flight tests: a world with M1 corvettes at site 0, and Helm commands
+## Helpers for the flight tests: M1 corvettes at site 0, and Helm commands
 ## submitted the way a station sends them.
-
-
-static func world() -> SimWorld:
-	return SimWorld.new(1, "test")
 
 
 static func spawn(
@@ -72,11 +68,6 @@ static func level(w: SimWorld, id: int) -> void:
 	var c: LevelCommand = LevelCommand.new()
 	c.ship_id = id
 	w.submit(c)
-
-
-static func run(w: SimWorld, ticks: int) -> void:
-	for i: int in ticks:
-		w.step()
 
 
 ## Body-frame velocity of a ship (m/s).

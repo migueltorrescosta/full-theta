@@ -137,7 +137,7 @@ func test_replay_applies_on_recorded_ticks_and_reports_rejections() -> void:
 # Every registered command class round-trips through to_dict()/from_dict() with each
 # parameter set away from its default (per property type).
 func test_every_command_round_trips() -> void:
-	for kind: StringName in SimCommands.kinds():
+	for kind: StringName in SimCommands._classes:
 		var c: SimCommand = SimCommands.make(kind)
 		assert_str(String(c.kind())).is_equal(String(kind))
 		for p: Dictionary in c.get_property_list():
@@ -196,7 +196,8 @@ func _no_parts_world() -> SimWorld:
 	var w: SimWorld = (
 		M1Encounter.new(3, "test", TestDefs.corvette(), TestDefs.raider_enemy()).build()
 	)
-	DamageSystem.damage_subsystem(w, M1Encounter.PLAYER_SHIP, &"engines", 1.0e6)
-	w.damage.spare_parts[w.damage.hull_row(M1Encounter.PLAYER_SHIP)] = 0
+	var ship: int = M1Encounter.PLAYER_SHIP
+	DamageSystem.damage_subsystem(w, ship, SimFixture.sub_index(w, ship, &"engines"), 1.0e6)
+	w.damage.spare_parts[w.damage.hull_row(ship)] = 0
 	w.drain_events()
 	return w

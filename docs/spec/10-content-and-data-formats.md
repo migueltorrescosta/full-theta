@@ -2,7 +2,7 @@
 
 | Content | Format | Validation | Decision |
 |---|---|---|---|
-| Ships, weapons, mounts, subsystems, upgrades, enemies | Typed `Resource` classes saved as text `.tres` | Headless Godot gate loads every file and checks types, ranges and references | D65 |
+| Ships (with assist, power and shield blocks), weapons, mounts, subsystems, upgrades, enemies, pair balance values | Typed `Resource` classes saved as text `.tres` | Headless Godot gate loads every file and checks types, ranges and references | D65 |
 | Dialogue and spoken lines | JSON + JSON Schema, one line id per spoken line, text per language | Schema check; read by the TTS prerenderer and translators | D65 |
 | Scenarios and mission components | Typed GDScript classes in `scenarios/` extending a restricted Scenario API, plus declared metadata for the director | Lint gate forbids access to simulation internals | D64 |
 | Reputation and other random outcomes | Distributions in data (per interaction type) | Gate checks parameters | D34 |

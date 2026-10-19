@@ -40,12 +40,9 @@ func act(world: SimWorld) -> void:
 
 func _aim(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
-	var mount: MountDef = world.defs[ship].mounts[0]
-	var muzzle: Vector3 = kin.to_world(ship, mount.position)
-	var rel_vel: Vector3 = kin.vel[target] - kin.vel[ship]
-	var rel: Vector3 = kin.relative(ship, target) - muzzle
-	var lead_t: float = Lead.intercept_time(rel, rel_vel, mount.weapon.projectile_speed)
-	var aim: Vector3 = muzzle + (Lead.aim_point(rel, rel_vel, lead_t) if lead_t >= 0.0 else rel)
+	var aim: Vector3 = EnemyAi.lead_aim(world, ship, 0, target, 0)
+	if not aim.is_finite():
+		aim = kin.relative(ship, target)
 	var c: AimMountCommand = AimMountCommand.new()
 	c.aim_x = kin.px[ship] + aim.x
 	c.aim_y = kin.py[ship] + aim.y

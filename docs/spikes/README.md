@@ -4,7 +4,7 @@ Results of the M0 spikes (spec §2.4, #2 for S0 and S1, #3 for S2–S9), run on 
 
 From S2 onwards, an unrelated, unpinned 12-worker job loaded fugaku (load average 4–16, some swapping), so timings in S3, S9, S7b and the S8 shots are pessimistic; each report says which runs were affected.
 
-Spike tests carry no `# FT:` tags, so the ids the spikes exercise stay pending in `docs/traceability.md` until the M1 issue that promotes the code; only the L5 gate's tests (FT-TST-003, FT-TST-020) count now.
+Spike tests carry no `# FT:` tags; the ids they exercise are verified by the promoted code's tests (#5 for S5 and S6).
 
 ## Results
 
@@ -58,8 +58,8 @@ The S5 playtest build, the S7 samples, the S8 screenshots (v1 and v2), the S3 we
 
 | From | What | Into |
 |---|---|---|
-| S6 | Packed structure-of-arrays layout, grid broadphase keyed per site (the spike key kept only 4 site bits), swept projectiles relative to each ship; positions as site id plus three 64-bit floats (D104) | T025, T029 (#5) |
-| S5 | Pure integrator ($x \mathrel{+}= v\,\Delta t + \tfrac12 a\,\Delta t^2$, exact rotation update), assist, all-stop, approach, callouts; widgets | T027, T028, T034 (#5); T050 (#7) |
+| S6 | Packed structure-of-arrays layout, grid broadphase keyed per site (the spike key kept only 4 site bits), swept projectiles relative to each ship; positions as site id plus three 64-bit floats (D104) | T025, T029 (#5, done: sim/core/kinematics.gd, sim/combat/collision_system.gd) |
+| S5 | Pure integrator ($x \mathrel{+}= v\,\Delta t + \tfrac12 a\,\Delta t^2$, exact rotation update), assist, all-stop, approach, callouts; widgets | T027, T028, T034 (#5, done: sim/core/integrator.gd, sim/flight/, shared/callout.gd); widgets T050 (#7) |
 | S4 | `S4Chunker`, `S4SendQueue`, `S4Resync`, `S4EventInbox`, `S4Sessions` | T045 (#6) |
 | S9 | `S9Codec` (fixed point, integer dead reckoning, smallest-three quaternions), per-key message cache; encode and send on a worker thread from a state copy (D111) | T040–T042 (#6) |
 | S3 | `S3StaticServer` (budgeted poll, gzip, ETag), `S3KeepAwake`, the shell and audio guard | #6, #12 |

@@ -110,13 +110,6 @@ func reset_ship(
 	kin.rot[ship_id] = rotation.normalized()
 
 
-## Like spawn_ship, with a 64-bit offset (D104).
-func spawn_ship_at(def: ShipDef, faction: int, site: int, x: float, y: float, z: float) -> int:
-	var id: int = spawn_ship(def, faction, site)
-	kin.place(id, site, x, y, z)
-	return id
-
-
 func ship_count() -> int:
 	return defs.size()
 

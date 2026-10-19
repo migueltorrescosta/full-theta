@@ -39,7 +39,7 @@ func _run(w: SimWorld, ticks: int) -> void:
 		w.step()
 
 
-# FT: FT-ARC-004, FT-ARC-006, FT-ARC-008, FT-SIM-001
+# FT: FT-ARC-006, FT-ARC-008, FT-SIM-001
 # Same seed and commands give identical state hashes over 1,000 ticks; another seed
 # gives a different run.
 func test_same_seed_same_hash_over_1000_ticks() -> void:
@@ -158,7 +158,8 @@ func test_accumulator_steps_fixed_ticks() -> void:
 # drift still moves (D104: float32 would freeze under 0.47 m/s at 200 km).
 func test_site_local_64_bit_offsets() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var id: int = w.spawn_ship_at(TestDefs.corvette(), 1, 9, 199000.0, -199000.0, 0.25)
+	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 9)
+	w.kin.place(id, 9, 199000.0, -199000.0, 0.25)
 	w.kin.vel[id] = Vector3(0.1, 0.0, 0.0)
 	w.helm.decoupled[id] = 1  # coast: assist would hold the drift at zero (FT-SIM-004)
 	for i: int in 600:

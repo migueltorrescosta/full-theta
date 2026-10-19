@@ -20,11 +20,22 @@ const SENSORS: StringName = &"sensors"
 static func step(world: SimWorld) -> void:
 	var table: KnowledgeTable = world.knowledge
 	var observing: PackedInt32Array = _factions(world)
+	# Each live ship's sensor and identify ranges scaled by its sensors' effectiveness
+	# (m), once per tick; -1 when the ship can't sense.
+	var sense: PackedFloat64Array = PackedFloat64Array()
+	var identify: PackedFloat64Array = PackedFloat64Array()
+	sense.resize(world.ship_count())
+	identify.resize(world.ship_count())
+	for o: int in world.ship_count():
+		var scale: float = DamageSystem.effectiveness(world, o, SENSORS)
+		var live: bool = world.kin.is_alive(o) and scale > 0.0
+		sense[o] = world.defs[o].sensor_range * scale if live else -1.0
+		identify[o] = world.defs[o].identify_range * scale if live else -1.0
 	for contact: int in world.ship_count():
 		for faction: int in observing:
 			if faction == world.faction_of(contact):
 				continue
-			var scan: Vector2i = _scan(world, faction, contact)
+			var scan: Vector2i = _scan(world, faction, contact, sense, identify)
 			var row: int = table.row_for(faction, contact)
 			if scan.x >= 0:
 				if row < 0:
@@ -90,22 +101,28 @@ static func _prefix(world: SimWorld, faction: int, ship_id: int, row: int) -> St
 
 
 ## x: lowest-id live ship of the faction that detects the contact, or -1; y: 1 if any
-## of them is within identify range.
-static func _scan(world: SimWorld, faction: int, contact: int) -> Vector2i:
+## of them is within identify range. sense and identify are the ships' scaled ranges
+## (m, -1 for a ship that can't sense) by ship id.
+static func _scan(
+	world: SimWorld,
+	faction: int,
+	contact: int,
+	sense: PackedFloat64Array,
+	identify: PackedFloat64Array
+) -> Vector2i:
 	var kin: Kinematics = world.kin
 	var result: Vector2i = Vector2i(-1, 0)
 	if not kin.is_alive(contact):
 		return result
 	for o: int in world.ship_count():
-		if world.faction_of(o) != faction or not kin.is_alive(o) or not kin.same_site(o, contact):
+		if world.faction_of(o) != faction or sense[o] < 0.0 or not kin.same_site(o, contact):
 			continue
-		var scale: float = DamageSystem.effectiveness(world, o, SENSORS)
 		var dist: float = kin.relative(o, contact).length()
-		if scale <= 0.0 or dist > world.defs[o].sensor_range * scale:
+		if dist > sense[o]:
 			continue
 		if result.x < 0:
 			result.x = o
-		if dist <= world.defs[o].identify_range * scale:
+		if dist <= identify[o]:
 			result.y = 1
 			return result
 	return result

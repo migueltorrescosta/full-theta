@@ -79,8 +79,15 @@ static func effectiveness(world: SimWorld, ship_id: int, subsystem_id: StringNam
 	var r: int = world.damage.find_subsystem(ship_id, subsystem_id)
 	if r < 0:
 		return 1.0
-	var s: SubsystemDef = _sub_def(world, ship_id, r)
-	return PowerSystem.curve_at(s.effectiveness, world.damage.health[r] / s.health_max)
+	return effectiveness_at(world, ship_id, r - world.damage.hull_row(ship_id) - 1)
+
+
+## Effectiveness of the ship's subsystem with that index in ShipDef.subsystems, 0..1
+## (FT-SIM-021); the caller passes a valid index.
+static func effectiveness_at(world: SimWorld, ship_id: int, i: int) -> float:
+	var s: SubsystemDef = world.defs[ship_id].subsystems[i]
+	var health: float = world.damage.health[world.damage.subsystem_row(ship_id, i)]
+	return PowerSystem.curve_at(s.effectiveness, health / s.health_max)
 
 
 ## Hull left as a share of hull_max, 0..1.
@@ -91,18 +98,11 @@ static func hull_fraction(world: SimWorld, ship_id: int) -> float:
 	return world.damage.health[h] / world.defs[ship_id].hull_max
 
 
-## Damages one subsystem directly (heat faults, FT-SIM-026). The &"subsystem_damaged"
-## event carries the subsystem id as its tag; the caller reports the cause in its own
-## fault event.
-static func damage_subsystem(
-	world: SimWorld, ship_id: int, subsystem_id: StringName, energy: float
-) -> void:
-	if ship_id < 0 or ship_id >= world.ship_count() or not world.kin.is_alive(ship_id):
-		return
-	var t: DamageTable = world.damage
-	var r: int = t.find_subsystem(ship_id, subsystem_id)
-	if r >= 0:
-		_damage_row(world, ship_id, r - t.hull_row(ship_id) - 1, energy, -1)
+## Damages the ship's subsystem with that index in ShipDef.subsystems directly (heat
+## faults, FT-SIM-026). The &"subsystem_damaged" event carries the subsystem id as its
+## tag; the caller reports the cause in its own fault event.
+static func damage_subsystem(world: SimWorld, ship_id: int, i: int, energy: float) -> void:
+	_damage_row(world, ship_id, i, energy, -1)
 
 
 ## Sends crew to repair the subsystem (FT-SIM-024, FT-M1-009). Each job takes the
@@ -123,7 +123,7 @@ static func dispatch(world: SimWorld, ship_id: int, crew: int, subsystem_id: Str
 	if t.spare_parts[h] < s.parts_per_repair:
 		world.emit(&"repair_no_parts", ship_id, -1, crew, s.position, s.id)
 		return false
-	_unassign(t, ship_id, crew)
+	_unassign(world, ship_id, crew)
 	t.spare_parts[h] -= s.parts_per_repair
 	t.crews[r] |= 1 << crew
 	world.emit(&"repair_started", ship_id, -1, crew, s.position, s.id)
@@ -132,8 +132,7 @@ static func dispatch(world: SimWorld, ship_id: int, crew: int, subsystem_id: Str
 
 ## Calls the crew back from its job; false if it was idle. Parts already used stay used.
 static func recall(world: SimWorld, ship_id: int, crew: int) -> bool:
-	var t: DamageTable = world.damage
-	var r: int = _unassign(t, ship_id, crew)
+	var r: int = _unassign(world, ship_id, crew)
 	if r < 0:
 		return false
 	var s: SubsystemDef = _sub_def(world, ship_id, r)
@@ -162,11 +161,13 @@ static func _sub_def(world: SimWorld, ship_id: int, row: int) -> SubsystemDef:
 
 
 ## Clears the crew from whichever subsystem it works on; returns that row or -1.
-static func _unassign(t: DamageTable, ship_id: int, crew: int) -> int:
+static func _unassign(world: SimWorld, ship_id: int, crew: int) -> int:
 	if crew < 0 or crew >= DamageTable.MAX_CREWS:
 		return -1
+	var t: DamageTable = world.damage
 	var bit: int = 1 << crew
-	for r: int in t.rows_of(ship_id):
+	var first: int = t.subsystem_row(ship_id, 0)
+	for r: int in range(first, first + world.defs[ship_id].subsystems.size()):
 		if t.crews[r] & bit:
 			t.crews[r] &= ~bit
 			return r

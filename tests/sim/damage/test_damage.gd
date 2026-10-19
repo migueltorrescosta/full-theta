@@ -176,11 +176,10 @@ func test_subsystem_damaged_event_fields() -> void:
 # damage_subsystem (heat faults) damages only the named subsystem, not the hull.
 func test_damage_subsystem_direct() -> void:
 	var w: SimWorld = _world()
-	DamageSystem.damage_subsystem(w, 0, &"thrusters", 5e6)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"thrusters"), 5e6)
 	assert_float(_health(w, 0, &"thrusters")).is_equal(1.5e7)
 	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal(1.0)
-	DamageSystem.damage_subsystem(w, 0, &"nope", 5e6)
-	DamageSystem.damage_subsystem(w, 0, &"thrusters", 1e9)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"thrusters"), 1e9)
 	assert_float(_health(w, 0, &"thrusters")).is_equal(0.0)
 	assert_float(DamageSystem.effectiveness(w, 0, &"thrusters")).is_equal(0.0)
 
@@ -209,7 +208,7 @@ func test_rows_and_reset_ship() -> void:
 	assert_str(String(w.damage.part_ids[7])).is_equal("hull")
 	DamageSystem.apply_hit(w, _hit(0, Vector3(0, 0, -25), 4e6), 4e6)
 	DamageSystem.apply_hit(w, _hit(1, Vector3(0, 0, -25), 4e6), 4e6)
-	DamageSystem.damage_subsystem(w, 0, &"engines", 1e6)
+	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"engines"), 1e6)
 	assert_bool(DamageSystem.dispatch(w, 0, 1, &"engines")).is_true()
 	w.reset_ship(0, 0)
 	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal(1.0)

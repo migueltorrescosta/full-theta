@@ -31,12 +31,12 @@ func _hold_cases() -> Array[Array]:
 # constant settles to well under the tolerances (0.05 m/s, 1e-3 rad/s).
 func test_holds_rate_drift_and_speed() -> void:
 	for c: Array in _hold_cases():
-		var w: SimWorld = FlightFixture.world()
+		var w: SimWorld = SimWorld.new(1, "test")
 		var id: int = FlightFixture.spawn(w, Vector3.ZERO, c[4], c[1])
 		assert_bool(w.helm.is_decoupled(id)).is_false()
 		w.kin.ang_vel[id] = c[2]
 		w.helm.throttle_setpoint[id] = c[3]
-		FlightFixture.run(w, 60 * 30)
+		SimFixture.run(w, 60 * 30)
 		var v: Vector3 = FlightFixture.local_velocity(w, id)
 		var msg: String = c[0]
 		assert_float(w.kin.ang_vel[id].length()).override_failure_message(msg).is_less(1e-3)
@@ -48,12 +48,12 @@ func test_holds_rate_drift_and_speed() -> void:
 # Throttle sets speed, not force: full throttle for 2 s ramps the setpoint by 2 s *
 # 60 m/s^2 (speed_ramp) and the ship then holds that speed with the stick released.
 func test_throttle_ramps_setpoint() -> void:
-	var w: SimWorld = FlightFixture.world()
+	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	FlightFixture.input(w, id, Vector3.ZERO, Vector3(0.0, 0.0, 1.0))
-	FlightFixture.run(w, 120)
+	SimFixture.run(w, 120)
 	FlightFixture.input(w, id)
-	FlightFixture.run(w, 60 * 10)
+	SimFixture.run(w, 60 * 10)
 	# Submitted input applies at the start of the next step, so it ramps for 120 ticks.
 	var ramp: float = w.defs[id].assist.speed_ramp
 	assert_float(w.helm.throttle_setpoint[id]).is_equal_approx(ramp * 2.0, 1e-6)
@@ -66,14 +66,14 @@ func test_throttle_ramps_setpoint() -> void:
 # Strafe input fires that axis while the other holds stay on; releasing it holds the
 # drift back to zero.
 func test_strafe_input_overrides_its_hold_only() -> void:
-	var w: SimWorld = FlightFixture.world()
+	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	FlightFixture.input(w, id, Vector3.ZERO, Vector3(1.0, 0.0, 0.0))
-	FlightFixture.run(w, 61)
+	SimFixture.run(w, 61)
 	assert_float(w.kin.force_cmd[id].x).is_equal(w.kin.thrust_limit_pos(id).x)
 	assert_float(FlightFixture.local_velocity(w, id).x).is_greater(10.0)
 	FlightFixture.input(w, id)
-	FlightFixture.run(w, 60 * 10)
+	SimFixture.run(w, 60 * 10)
 	assert_float(FlightFixture.local_velocity(w, id).length()).is_less(0.05)
 
 
@@ -86,7 +86,7 @@ func test_strafe_input_overrides_its_hold_only() -> void:
 func test_turn_rate_cap_follows_torque_envelope() -> void:
 	var ticks: Array[int] = []
 	for boost: bool in [false, true]:
-		var w: SimWorld = FlightFixture.world()
+		var w: SimWorld = SimWorld.new(1, "test")
 		var id: int = FlightFixture.spawn(w)
 		if boost:
 			var b: BoostCommand = BoostCommand.new()
@@ -115,7 +115,7 @@ func test_turn_rate_cap_follows_torque_envelope() -> void:
 # Per-axis clamping bends the commanded direction when several axes saturate (S5).
 func test_every_mode_stays_in_envelope() -> void:
 	for mode: String in ["holds", "stick", "decoupled", "all_stop", "face", "approach"]:
-		var w: SimWorld = FlightFixture.world()
+		var w: SimWorld = SimWorld.new(1, "test")
 		var id: int = FlightFixture.spawn(w, Vector3.ZERO, Quaternion.IDENTITY, Vector3.ONE * 300.0)
 		w.kin.ang_vel[id] = Vector3(2.0, 2.0, 2.0)
 		w.kin.thrust_scale[id] = 0.5
@@ -165,13 +165,13 @@ func test_every_mode_stays_in_envelope() -> void:
 # (about a principal axis), commands nothing and spends nothing. Back to assist, the
 # setpoint becomes the current forward speed and the holds come back.
 func test_decoupled_disables_assist() -> void:
-	var w: SimWorld = FlightFixture.world()
+	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(
 		w, Vector3.ZERO, Quaternion.IDENTITY, Vector3(30.0, 0.0, -50.0)
 	)
 	w.kin.ang_vel[id] = Vector3(0.0, 0.2, 0.0)
 	FlightFixture.decouple(w, id, true)
-	FlightFixture.run(w, 120)
+	SimFixture.run(w, 120)
 	assert_bool(w.helm.is_decoupled(id)).is_true()
 	assert_vector(w.kin.force_cmd[id]).is_equal(Vector3.ZERO)
 	assert_vector(w.kin.torque_cmd[id]).is_equal(Vector3.ZERO)
@@ -182,7 +182,7 @@ func test_decoupled_disables_assist() -> void:
 	FlightFixture.decouple(w, id, false)
 	w.step()
 	assert_float(w.helm.throttle_setpoint[id]).is_equal_approx(fwd, 1e-3)
-	FlightFixture.run(w, 600)
+	SimFixture.run(w, 600)
 	assert_float(w.kin.ang_vel[id].length()).is_less(1e-3)
 	var v: Vector3 = FlightFixture.local_velocity(w, id)
 	assert_float(Vector2(v.x, v.y).length()).is_less(0.05)
@@ -191,7 +191,7 @@ func test_decoupled_disables_assist() -> void:
 # FT: FT-SIM-005
 # Decoupled, the stick maps straight to thrust and torque at the envelope's limits.
 func test_decoupled_stick_maps_to_thrust() -> void:
-	var w: SimWorld = FlightFixture.world()
+	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	FlightFixture.decouple(w, id, true)
 	FlightFixture.input(w, id, Vector3(1.0, -0.5, 0.0), Vector3(0.0, -1.0, 1.0))
@@ -206,11 +206,11 @@ func test_decoupled_stick_maps_to_thrust() -> void:
 # Propellant is impulse over exhaust velocity: full main drive for 1 s through assist
 # (decoupled) spends 1 MN s / 60 km/s.
 func test_assist_propellant_proportional_to_impulse() -> void:
-	var d: SimWorld = FlightFixture.world()
+	var d: SimWorld = SimWorld.new(1, "test")
 	var s: int = FlightFixture.spawn(d)
 	FlightFixture.decouple(d, s, true)
 	FlightFixture.input(d, s, Vector3.ZERO, Vector3(0.0, 0.0, 1.0))
-	FlightFixture.run(d, 60)
+	SimFixture.run(d, 60)
 	var impulse: float = d.kin.thrust_limit_neg(s).z * 60.0 * SimWorld.DT
 	assert_float(d.kin.propellant_used[s]).is_equal_approx(
 		impulse / d.kin.exhaust_velocity[s], 1e-6
@@ -221,7 +221,7 @@ func test_assist_propellant_proportional_to_impulse() -> void:
 # Coasting costs nothing: with assist on and nothing to correct (at rest, or at the
 # setpoint speed) the holds command exactly zero, as does a decoupled coast.
 func test_coasting_consumes_no_propellant() -> void:
-	var w: SimWorld = FlightFixture.world()
+	var w: SimWorld = SimWorld.new(1, "test")
 	var rest: int = FlightFixture.spawn(w)
 	var cruise: int = FlightFixture.spawn(
 		w, Vector3(0.0, 0.0, 5000.0), Quaternion.IDENTITY, Vector3(0.0, 0.0, -100.0)
@@ -231,7 +231,7 @@ func test_coasting_consumes_no_propellant() -> void:
 		w, Vector3(5000.0, 0.0, 0.0), Quaternion.IDENTITY, Vector3(7.0, -3.0, 2.0)
 	)
 	FlightFixture.decouple(w, drift, true)
-	FlightFixture.run(w, 600)
+	SimFixture.run(w, 600)
 	for id: int in [rest, cruise, drift]:
 		assert_float(w.kin.propellant_used[id]).override_failure_message(str(id)).is_equal(0.0)
 	assert_float(w.kin.pz[cruise]).is_equal_approx(4000.0, 1e-6)

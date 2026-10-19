@@ -32,12 +32,13 @@ static func capsule(start: Vector3, motion: Vector3, axis: Vector3, r: float) ->
 	var len2: float = axis.length_squared()
 	if len2 <= _EPS:
 		return sphere(start, motion, r)
-	var best: float = _cylinder(start, motion, axis, r)
-	for end: Vector3 in [axis, -axis]:
-		var t: float = sphere(start - end, motion, r)
-		if t >= 0.0 and (best < 0.0 or t < best):
-			best = t
-	return best
+	var best: float = _earlier(_cylinder(start, motion, axis, r), sphere(start - axis, motion, r))
+	return _earlier(best, sphere(start + axis, motion, r))
+
+
+## The earlier of two sweep times, either of which may be NONE.
+static func _earlier(a: float, b: float) -> float:
+	return b if b >= 0.0 and (a < 0.0 or b < a) else a
 
 
 ## Earliest t in [0, 1] inside the cylinder of radius r around the segment -axis..axis.

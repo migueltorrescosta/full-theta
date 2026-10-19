@@ -22,13 +22,14 @@ static func step(world: SimWorld) -> void:
 		mounts.cooldown[row] = maxf(0.0, mounts.cooldown[row] - dt)
 		mounts.heat[row] *= exp(-def.weapon.heat_dissipation * dt)
 		var eff: float = DamageSystem.effectiveness(world, ship, def.subsystem_id)
-		var target: Vector3 = clamp_to_arc(def, aim_direction(world, row))
+		var aim: Vector3 = aim_direction(world, row)
+		var target: Vector3 = clamp_to_arc(def, aim)
 		mounts.barrel[row] = turn_toward(
 			mounts.barrel[row], target, def.traverse_rate * clampf(eff, 0.0, 1.0) * dt
 		)
 		if mounts.fire_requested[row] == 1:
 			mounts.fire_requested[row] = 0
-			_try_fire(world, row, def, eff)
+			_try_fire(world, row, def, eff, aim)
 
 
 ## The read-only definition of a mount row.
@@ -79,16 +80,15 @@ static func turn_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3
 
 
 ## FT-SIM-016: the first friendly or neutral ship (world.relation not HOSTILE) the
-## mount's next shot would cross within the weapon's range, with every ship keeping
+## mount row's next shot would cross within the weapon's range, with every ship keeping
 ## its velocity, or -1. Only ships the shooter's faction detects count (FT-ARC-013; its
 ## own ships always do). A warning only: friendly fire still happens.
-static func path_crosses(world: SimWorld, ship_id: int, index: int) -> int:
-	var row: int = world.mounts.row_for(ship_id, index)
-	if row < 0:
-		return -1
+static func path_crosses(world: SimWorld, row: int) -> int:
+	var ship_id: int = world.mounts.ship_ids[row]
 	var kin: Kinematics = world.kin
-	var weapon: WeaponDef = mount_def(world, row).weapon
-	var muzzle: Vector3 = kin.to_world(ship_id, mount_def(world, row).position)
+	var def: MountDef = mount_def(world, row)
+	var weapon: WeaponDef = def.weapon
+	var muzzle: Vector3 = kin.to_world(ship_id, def.position)
 	var pv: Vector3 = (
 		kin.vel[ship_id] + kin.to_world(ship_id, world.mounts.barrel[row]) * weapon.projectile_speed
 	)
@@ -117,14 +117,15 @@ static func path_crosses(world: SimWorld, ship_id: int, index: int) -> int:
 
 
 ## Why a requested shot can't fire, or &"" if it can (energy is checked last, by
-## drawing it). FT-SIM-011 arc, FT-SIM-012 condition, cooldown, ammunition, heat.
-static func block_reason(world: SimWorld, row: int, eff: float) -> StringName:
+## drawing it). FT-SIM-011 arc, FT-SIM-012 condition, cooldown, ammunition, heat. aim
+## is the mount's aim_direction this tick.
+static func block_reason(world: SimWorld, row: int, eff: float, aim: Vector3) -> StringName:
 	var mounts: MountTable = world.mounts
 	var def: MountDef = mount_def(world, row)
 	var reason: StringName = &""
 	if eff <= 0.0:
 		reason = &"subsystem"
-	elif not in_arc(def, aim_direction(world, row)):
+	elif not in_arc(def, aim):
 		reason = &"arc"
 	elif mounts.cooldown[row] > COOLDOWN_EPS:
 		reason = &"cooldown"
@@ -135,16 +136,16 @@ static func block_reason(world: SimWorld, row: int, eff: float) -> StringName:
 	return reason
 
 
-static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float) -> void:
+static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float, aim: Vector3) -> void:
 	var ship: int = world.mounts.ship_ids[row]
 	var index: int = world.mounts.mount_index[row]
-	var reason: StringName = block_reason(world, row, eff)
+	var reason: StringName = block_reason(world, row, eff, aim)
 	if reason == &"" and not PowerSystem.draw_energy(world, ship, def.weapon.energy_per_shot):
 		reason = &"energy"
 	if reason != &"":
 		world.emit(&"fire_blocked", ship, -1, index, Vector3.ZERO, reason)
 		return
-	var friend: int = path_crosses(world, ship, index)
+	var friend: int = path_crosses(world, row)
 	_fire(world, row, def)
 	if friend >= 0:
 		world.emit(&"friendly_fire_warning", ship, friend, index)

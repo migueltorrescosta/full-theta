@@ -15,3 +15,8 @@ static func run(world: SimWorld, ticks: int) -> Array[SimEvent]:
 		world.step()
 		events.append_array(world.drain_events())
 	return events
+
+
+## Index in ShipDef.subsystems of the ship's subsystem with that id (it must exist).
+static func sub_index(world: SimWorld, ship: int, subsystem_id: StringName) -> int:
+	return world.damage.find_subsystem(ship, subsystem_id) - world.damage.subsystem_row(ship, 0)

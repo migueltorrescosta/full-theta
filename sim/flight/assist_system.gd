@@ -33,8 +33,10 @@ static func step(world: SimWorld) -> void:
 	for row: int in world.kin.size():
 		if world.kin.is_alive(row):
 			var tuning: AssistDef = world.defs[row].assist
-			_update_modes(world, row, tuning)
-			_command(world, row, tuning)
+			var rot_in: Vector3 = _dead(world.helm.input_rotation[row])
+			var move_in: Vector3 = _dead(world.helm.input_translation[row])
+			_update_modes(world, row, tuning, rot_in, move_in)
+			_command(world, row, tuning, rot_in, move_in)
 
 
 ## Whether the ship has a selected target it can fly to: a live ship its faction detects
@@ -105,11 +107,12 @@ static func turn_rate_caps(kin: Kinematics, row: int, tuning: AssistDef) -> Vect
 
 
 ## Mode bookkeeping before the command: ends all-stop and Level, ramps the setpoint.
-static func _update_modes(world: SimWorld, row: int, tuning: AssistDef) -> void:
+## rot_in and move_in are the Helm inputs after the deadzone.
+static func _update_modes(
+	world: SimWorld, row: int, tuning: AssistDef, rot_in: Vector3, move_in: Vector3
+) -> void:
 	var helm: HelmTable = world.helm
 	var kin: Kinematics = world.kin
-	var rot_in: Vector3 = _dead(helm.input_rotation[row])
-	var move_in: Vector3 = _dead(helm.input_translation[row])
 	if helm.all_stop[row] == 1:
 		# FT-SIM-036, FT-HLM-014: latched until at rest or Helm takes over (any stick,
 		# throttle, face or approach input).
@@ -140,11 +143,11 @@ static func _update_modes(world: SimWorld, row: int, tuning: AssistDef) -> void:
 		)
 
 
-static func _command(world: SimWorld, row: int, tuning: AssistDef) -> void:
+static func _command(
+	world: SimWorld, row: int, tuning: AssistDef, rot_in: Vector3, move_in: Vector3
+) -> void:
 	var helm: HelmTable = world.helm
 	var kin: Kinematics = world.kin
-	var rot_in: Vector3 = _dead(helm.input_rotation[row])
-	var move_in: Vector3 = _dead(helm.input_translation[row])
 	# Body-frame translation input: forward is -Z.
 	var trans_in: Vector3 = Vector3(move_in.x, move_in.y, -move_in.z)
 	var targeted: bool = has_target(world, row)

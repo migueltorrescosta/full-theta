@@ -147,7 +147,7 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 ### v0.5 update for D112–D123 (#5)
 
 66. A faction identifies a contact within one of its ships' identify range. §6.1, FT-SPA-001. (D112)
-67. Grid squares run A… along +X and 1… along +Z from a scenario corner; layers are rounded and omitted at 0. §6.1, FT-SPA-006. (D113)
+67. Grid squares run A… along +X and 1… along +Z from a scenario corner; layers are rounded and omitted at 0. §6.1, FT-SPA-006, FT-SPA-026. (D113)
 68. Chips show the range band, not the exact range. §6.1, FT-SPA-003. (D114)
 69. A repair job takes its parts at dispatch and is refused without enough parts; crews are numbered. §4.4, FT-SIM-024. (D115)
 70. Energy past the shields is split between the nearest subsystem (a per-ship share) and the hull. §4.4, FT-SIM-020. (D116)
