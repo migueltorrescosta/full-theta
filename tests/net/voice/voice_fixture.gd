@@ -40,7 +40,7 @@ func write(lang: String) -> void:
 			continue
 		var pieces: PackedStringArray = DialogueLines.pieces(line["text"][lang])
 		for k: int in pieces.size():
-			if VoiceService._has_letter(pieces[k]):
+			if VoiceSynth.has_letter(pieces[k]):
 				keys.append("seg:%s:%d" % [id, k])
 	levels[lang] = {}
 	for role: String in by_role:

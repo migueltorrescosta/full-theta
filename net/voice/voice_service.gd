@@ -343,7 +343,7 @@ func _stitch_items(line: Dictionary, template: String, args: Dictionary, role: S
 		var seg: Dictionary = library.clip(role, "seg:%s:%d" % [id, k])
 		if not seg.is_empty():
 			items.append(seg["pcm"])
-		elif _has_letter(pieces[k]):
+		elif VoiceSynth.has_letter(pieces[k]):
 			push_warning("VoiceService: no clip seg:%s:%d in %s" % [id, k, lang])
 		if k >= slots.size():
 			continue
@@ -463,13 +463,6 @@ func _new_id() -> int:
 	var id: int = _next_id
 	_next_id += 1
 	return id
-
-
-static func _has_letter(text: String) -> bool:
-	for c: String in text:
-		if c.to_lower() != c.to_upper():
-			return true
-	return false
 
 
 static func _no_npc_audience(npc_id: String) -> PackedInt32Array:

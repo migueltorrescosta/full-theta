@@ -49,7 +49,7 @@ static func server_args(
 	pid_file_path: String,
 	idle_exit_min: float,
 	project_path: String,
-	language: String = ServerMain.LANGUAGES[0]
+	language: String = I18n.LANGUAGES[0]
 ) -> PackedStringArray:
 	var args: PackedStringArray = ["--headless"]
 	if project_path != "":
@@ -97,7 +97,7 @@ func spawn(
 	ws_port: int,
 	pid_file_path: String = ServerPidFile.PATH,
 	idle_exit_min: float = DEFAULT_IDLE_EXIT_MIN,
-	language: String = ServerMain.LANGUAGES[0]
+	language: String = I18n.LANGUAGES[0]
 ) -> Error:
 	if is_running():
 		return ERR_ALREADY_IN_USE

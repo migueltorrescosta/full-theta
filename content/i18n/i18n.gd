@@ -7,6 +7,7 @@ extends RefCounted
 ## (tools/check_dialogue.py) keeps every string complete in each launch language
 ## (FT-DAT-011).
 
+## Session languages (FT-AUD-012); the first is the default.
 const LANGUAGES: PackedStringArray = ["en", "pt_PT", "it"]
 const STRINGS: String = "res://content/i18n/strings.json"
 

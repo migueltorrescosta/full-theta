@@ -107,12 +107,7 @@ static func _add_sentence(out: PackedStringArray, piece: String) -> void:
 	var s: String = piece.strip_edges()
 	if s == "":
 		return
-	var spoken: bool = false
-	for c: String in s:
-		if c.to_lower() != c.to_upper() or c.is_valid_int():
-			spoken = true
-			break
-	if not spoken and not out.is_empty():
+	if not has_letter(s, true) and not out.is_empty():
 		out[out.size() - 1] = out[out.size() - 1] + " " + s
 	else:
 		out.append(s)

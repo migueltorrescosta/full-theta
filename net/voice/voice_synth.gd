@@ -54,3 +54,11 @@ static func make_part(
 	id: int, part: int, last: bool, pcm: PackedByteArray, rate: int, error: String = ""
 ) -> Dictionary:
 	return {"id": id, "part": part, "last": last, "pcm": pcm, "rate": rate, "error": error}
+
+
+## True when text holds a letter (or, with digits, a digit): something a voice speaks.
+static func has_letter(text: String, digits: bool = false) -> bool:
+	for c: String in text:
+		if c.to_lower() != c.to_upper() or (digits and c.is_valid_int()):
+			return true
+	return false
