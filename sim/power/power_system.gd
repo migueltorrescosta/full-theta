@@ -70,7 +70,6 @@ static func step(world: SimWorld) -> void:
 				d.fault_armed[r] = 1
 		# Per kind, in subsystem order (the sums and maxima of power_ratio,
 		# kind_effectiveness and heat_ratio, after this tick's heat and faults).
-		var health: PackedFloat64Array = d.health
 		var weapon_pips: int = 0
 		var eng_pips: int = 0
 		var eng_nominal: int = 0
@@ -84,28 +83,28 @@ static func step(world: SimWorld) -> void:
 		var thr_heat: float = 0.0
 		for i: int in n:
 			var sd: SubsystemDef = subs[i]
-			match sd.kind:
-				SubsystemDef.Kind.WEAPONS:
-					weapon_pips += eff_pips[i]
-				SubsystemDef.Kind.ENGINES:
-					eng_pips += eff_pips[i]
-					eng_nominal += sd.nominal_pips
-					eng_eff += curve_at(sd.effectiveness, health[first + i] / sd.health_max)
-					eng_n += 1
-					eng_heat = maxf(eng_heat, heats[i] / sd.fault_heat_threshold)
-				SubsystemDef.Kind.THRUSTERS:
-					thr_pips += eff_pips[i]
-					thr_nominal += sd.nominal_pips
-					thr_eff += curve_at(sd.effectiveness, health[first + i] / sd.health_max)
-					thr_n += 1
-					thr_heat = maxf(thr_heat, heats[i] / sd.fault_heat_threshold)
+			var kind: int = sd.kind
+			if kind == SubsystemDef.Kind.WEAPONS:
+				weapon_pips += eff_pips[i]
+			elif kind == SubsystemDef.Kind.ENGINES:
+				eng_pips += eff_pips[i]
+				eng_nominal += sd.nominal_pips
+				eng_eff += d.row_effectiveness(first + i, sd)
+				eng_n += 1
+				eng_heat = maxf(eng_heat, heats[i] / sd.fault_heat_threshold)
+			elif kind == SubsystemDef.Kind.THRUSTERS:
+				thr_pips += eff_pips[i]
+				thr_nominal += sd.nominal_pips
+				thr_eff += d.row_effectiveness(first + i, sd)
+				thr_n += 1
+				thr_heat = maxf(thr_heat, heats[i] / sd.fault_heat_threshold)
 		var charge: float = pd.reactor_output * weapon_pips / pd.reactor_pips * SimWorld.DT
 		t.weapon_energy[s] = minf(t.weapon_energy[s] + charge, pd.weapons_capacity)
-		kin.thrust_scale[s] = envelope(
-			pd, _ratio(eng_pips, eng_nominal), eng_eff / eng_n if eng_n > 0 else 1.0, eng_heat
+		kin.thrust_scale[s] = t.envelope_of(
+			s, 0, pd, _ratio(eng_pips, eng_nominal), eng_eff / eng_n if eng_n > 0 else 1.0, eng_heat
 		)
-		kin.torque_scale[s] = envelope(
-			pd, _ratio(thr_pips, thr_nominal), thr_eff / thr_n if thr_n > 0 else 1.0, thr_heat
+		kin.torque_scale[s] = t.envelope_of(
+			s, 1, pd, _ratio(thr_pips, thr_nominal), thr_eff / thr_n if thr_n > 0 else 1.0, thr_heat
 		)
 		# Last, so a boost of n ticks raises heat and the envelope for exactly n ticks.
 		if boosting:
@@ -178,12 +177,12 @@ static func kind_effectiveness(world: SimWorld, ship_id: int, kind: int) -> floa
 	var total: float = 0.0
 	var n: int = 0
 	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
-	var health: PackedFloat64Array = world.damage.health
-	var first: int = world.damage.subsystem_row(ship_id, 0)
+	var d: DamageTable = world.damage
+	var first: int = d.subsystem_row(ship_id, 0)
 	for i: int in subs.size():
 		var s: SubsystemDef = subs[i]
 		if s.kind == kind:
-			total += curve_at(s.effectiveness, health[first + i] / s.health_max)
+			total += d.row_effectiveness(first + i, s)
 			n += 1
 	return total / n if n > 0 else 1.0
 
@@ -208,7 +207,7 @@ static func kind_power(world: SimWorld, ship_id: int, kind: int) -> float:
 			continue
 		pips += def.power.max_pips_per_subsystem if boosting and boosted_kind else d.pips[first + i]
 		nominal += s.nominal_pips
-		total += curve_at(s.effectiveness, d.health[first + i] / s.health_max)
+		total += d.row_effectiveness(first + i, s)
 		n += 1
 	return _ratio(pips, nominal) * (total / n if n > 0 else 1.0)
 

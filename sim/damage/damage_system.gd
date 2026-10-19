@@ -91,8 +91,7 @@ static func effectiveness(world: SimWorld, ship_id: int, subsystem_id: StringNam
 	var n: int = t.size()
 	while r < n and t.ship_ids[r] == ship_id:
 		if t.part_ids[r] == subsystem_id:
-			var s: SubsystemDef = world.defs[ship_id].subsystems[r - h - 1]
-			return PowerSystem.curve_at(s.effectiveness, t.health[r] / s.health_max)
+			return t.row_effectiveness(r, world.defs[ship_id].subsystems[r - h - 1])
 		r += 1
 	return 1.0
 
@@ -100,9 +99,8 @@ static func effectiveness(world: SimWorld, ship_id: int, subsystem_id: StringNam
 ## Effectiveness of the ship's subsystem with that index in ShipDef.subsystems, 0..1
 ## (FT-SIM-021); the caller passes a valid index.
 static func effectiveness_at(world: SimWorld, ship_id: int, i: int) -> float:
-	var s: SubsystemDef = world.defs[ship_id].subsystems[i]
-	var health: float = world.damage.health[world.damage.subsystem_row(ship_id, i)]
-	return PowerSystem.curve_at(s.effectiveness, health / s.health_max)
+	var t: DamageTable = world.damage
+	return t.row_effectiveness(t.subsystem_row(ship_id, i), world.defs[ship_id].subsystems[i])
 
 
 ## Hull left as a share of hull_max, 0..1.
