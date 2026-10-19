@@ -1,7 +1,7 @@
 class_name ShieldTable
 extends SimTable
 ## Shield strength, focus tightness and focus direction, one row per ship in id order
-## (T031, FT-SIM-018). Total shield power is the shield subsystem's pips in PowerTable.
+## (T031, FT-SIM-018). Total shield power is the shield subsystem's pips in DamageTable.
 
 ## Energy the shield can still absorb (J).
 var strength: PackedFloat64Array = PackedFloat64Array()

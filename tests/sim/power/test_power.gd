@@ -39,7 +39,7 @@ func _steps(w: SimWorld, n: int) -> void:
 # overcharge above nominal is allowed; the reactor takes no pips.
 func test_pips_within_cap() -> void:
 	var w: SimWorld = _world()
-	assert_array(Array(w.power.pips[0])).is_equal([2, 2, 2, 2, 2, 0])
+	assert_array(SimFixture.sub_values(w, 0, "pips")).is_equal([2, 2, 2, 2, 2, 0])
 	assert_bool(_pips(w, ENG, 4)).is_true()
 	assert_bool(_pips(w, WPN, 3)).is_false()
 	assert_bool(_pips(w, THR, 5)).is_false()
@@ -47,7 +47,7 @@ func test_pips_within_cap() -> void:
 	assert_bool(_pips(w, SubsystemDef.Kind.REACTOR, 1)).is_false()
 	assert_bool(_pips(w, WPN, 0)).is_true()
 	assert_bool(_pips(w, SHD, 4)).is_true()
-	assert_array(Array(w.power.pips[0])).is_equal([4, 2, 0, 4, 2, 0])
+	assert_array(SimFixture.sub_values(w, 0, "pips")).is_equal([4, 2, 0, 4, 2, 0])
 	assert_int(w.accepted_commands().size()).is_equal(3)
 
 
@@ -58,13 +58,15 @@ func test_pips_within_cap() -> void:
 func test_overcharge_heat_creates_one_fault() -> void:
 	var w: SimWorld = _world()
 	_steps(w, 600)
-	assert_float(w.power.heat[0][0]).is_equal(0.0)
+	assert_float(w.damage.heat[w.damage.subsystem_row(0, 0)]).is_equal(0.0)
 	assert_bool(_pips(w, ENG, 4)).is_true()
 	# The command applied on the tick _pips stepped.
 	var start: int = w.tick - 1
 	_steps(w, 599)
 	# 10 s of overcharge: 200 K * (1 - e^-0.5); exact stepping, float tolerance.
-	assert_float(w.power.heat[0][0]).is_equal_approx(200.0 * (1.0 - exp(-0.5)), 1e-6)
+	assert_float(w.damage.heat[w.damage.subsystem_row(0, 0)]).is_equal_approx(
+		200.0 * (1.0 - exp(-0.5)), 1e-6
+	)
 	_steps(w, 1200)
 	var faults: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"fault")
 	assert_int(faults.size()).is_equal(1)
@@ -74,7 +76,7 @@ func test_overcharge_heat_creates_one_fault() -> void:
 	assert_float(faults[0].value).is_greater(100.0)
 	assert_bool(_pips(w, ENG, 2)).is_true()
 	_steps(w, 60 * 20)
-	assert_float(w.power.heat[0][0]).is_less(80.0)
+	assert_float(w.damage.heat[w.damage.subsystem_row(0, 0)]).is_less(80.0)
 	assert_int(SimFixture.of_kind(w.drain_events(), &"fault").size()).is_equal(0)
 	assert_bool(_pips(w, ENG, 4)).is_true()
 	_steps(w, 60 * 20)
@@ -163,8 +165,10 @@ func test_boost_is_short_overcharge() -> void:
 	w.submit(again)
 	_steps(w, 479)
 	assert_int(w.accepted_commands().size()).is_equal(1)
-	assert_float(w.power.heat[0][0]).is_equal_approx(200.0 * (1.0 - exp(-0.4)), 1e-6)
-	assert_array(Array(w.power.pips[0])).is_equal([2, 2, 2, 2, 2, 0])
+	assert_float(w.damage.heat[w.damage.subsystem_row(0, 0)]).is_equal_approx(
+		200.0 * (1.0 - exp(-0.4)), 1e-6
+	)
+	assert_array(SimFixture.sub_values(w, 0, "pips")).is_equal([2, 2, 2, 2, 2, 0])
 	w.step()
 	assert_float(w.kin.thrust_scale[0]).is_equal(1.0)
 	assert_int(SimFixture.of_kind(w.drain_events(), &"fault").size()).is_equal(0)
@@ -225,13 +229,30 @@ func test_draw_energy_from_weapons_store() -> void:
 	assert_float(w.power.weapon_energy[0]).is_equal(5e6)
 
 
-# A ship reset restores its pips, heat and store.
+# A ship reset restores its pips, heat, fault state and store through the generic
+# SimTable.reset_ship, and leaves the other ship's power state alone.
 func test_reset_restores_power() -> void:
 	var w: SimWorld = _world()
+	w.spawn_ship(TestDefs.corvette(), 1, 0)
 	assert_bool(_pips(w, ENG, 4)).is_true()
+	assert_bool(PowerSystem.set_pips(w, 1, ENG, 4)).is_true()
 	_steps(w, 300)
 	PowerSystem.draw_energy(w, 0, 1e6)
+	w.damage.fault_armed[w.damage.subsystem_row(0, 1)] = 0
+	var other: Array = w.damage.columns().map(
+		func(c: Array) -> Array: return [c[0], Array(c[1]).slice(7, 14)]
+	)
 	w.reset_ship(0, 0)
-	assert_array(Array(w.power.pips[0])).is_equal([2, 2, 2, 2, 2, 0])
-	assert_float(w.power.heat[0][0]).is_equal(0.0)
+	assert_array(SimFixture.sub_values(w, 0, "pips")).is_equal([2, 2, 2, 2, 2, 0])
+	assert_array(SimFixture.sub_values(w, 0, "heat")).is_equal([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+	assert_array(SimFixture.sub_values(w, 0, "fault_armed")).is_equal([1, 1, 1, 1, 1, 1])
 	assert_float(w.power.weapon_energy[0]).is_equal(5e6)
+	assert_int(w.power.boost_ticks[0]).is_equal(0)
+	assert_array(SimFixture.sub_values(w, 1, "pips")).is_equal([4, 2, 2, 2, 2, 0])
+	assert_float(w.damage.heat[w.damage.subsystem_row(1, 0)]).is_greater(0.0)
+	(
+		assert_array(
+			w.damage.columns().map(func(c: Array) -> Array: return [c[0], Array(c[1]).slice(7, 14)])
+		)
+		. is_equal(other)
+	)

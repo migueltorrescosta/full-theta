@@ -20,3 +20,11 @@ static func run(world: SimWorld, ticks: int) -> Array[SimEvent]:
 ## Index in ShipDef.subsystems of the ship's subsystem with that id (it must exist).
 static func sub_index(world: SimWorld, ship: int, subsystem_id: StringName) -> int:
 	return world.damage.find_subsystem(ship, subsystem_id) - world.damage.subsystem_row(ship, 0)
+
+
+## The ship's subsystem values of a DamageTable column (e.g. "pips", "heat"), in
+## ShipDef.subsystems order.
+static func sub_values(world: SimWorld, ship: int, column: String) -> Array:
+	var first: int = world.damage.subsystem_row(ship, 0)
+	var values: Variant = world.damage.get(column)
+	return Array(values.slice(first, first + world.defs[ship].subsystems.size()))

@@ -50,13 +50,14 @@ static func set_pips(world: SimWorld, ship_id: int, kind: int, pips: int) -> boo
 		return false
 	if pips < 0 or pips > def.power.max_pips_per_subsystem:
 		return false
-	var row: PackedInt32Array = world.power.pips[ship_id]
+	var d: DamageTable = world.damage
+	var first: int = d.subsystem_row(ship_id, 0)
 	var total: int = 0
-	for p: int in row:
-		total += p
-	if total - row[i] + pips > def.power.reactor_pips:
+	for r: int in range(first, first + def.subsystems.size()):
+		total += d.pips[r]
+	if total - d.pips[first + i] + pips > def.power.reactor_pips:
 		return false
-	world.power.pips[ship_id][i] = pips
+	d.pips[first + i] = pips
 	return true
 
 
@@ -79,7 +80,7 @@ static func effective_pips(world: SimWorld, ship_id: int, i: int) -> int:
 	var boosted: bool = kind == SubsystemDef.Kind.ENGINES or kind == SubsystemDef.Kind.THRUSTERS
 	if boosted and world.power.boost_ticks[ship_id] > 0:
 		return def.power.max_pips_per_subsystem
-	return world.power.pips[ship_id][i]
+	return world.damage.pips[world.damage.subsystem_row(ship_id, i)]
 
 
 ## Effective pips of a kind over its nominal pips (dimensionless); 1 when the ship has
@@ -109,11 +110,12 @@ static func kind_effectiveness(world: SimWorld, ship_id: int, kind: int) -> floa
 ## Highest heat over threshold among the ship's subsystems of a kind (dimensionless).
 static func heat_ratio(world: SimWorld, ship_id: int, kind: int) -> float:
 	var def: ShipDef = world.defs[ship_id]
+	var first: int = world.damage.subsystem_row(ship_id, 0)
 	var r: float = 0.0
 	for i: int in def.subsystems.size():
 		var s: SubsystemDef = def.subsystems[i]
 		if s.kind == kind:
-			r = maxf(r, world.power.heat[ship_id][i] / s.fault_heat_threshold)
+			r = maxf(r, world.damage.heat[first + i] / s.fault_heat_threshold)
 	return r
 
 
@@ -171,18 +173,20 @@ static func _step_heat(world: SimWorld, s: int, i: int) -> void:
 	var over: int = maxi(effective_pips(world, s, i) - sd.nominal_pips, 0)
 	var q: float = sd.heat_per_overcharge_pip * over
 	var k: float = sd.heat_dissipation
-	var h: float = world.power.heat[s][i]
+	var d: DamageTable = world.damage
+	var r: int = d.subsystem_row(s, i)
+	var h: float = d.heat[r]
 	if k > 0.0:
 		h = q / k + (h - q / k) * exp(-k * SimWorld.DT)
 	else:
 		h += q * SimWorld.DT
-	world.power.heat[s][i] = h
-	if h > sd.fault_heat_threshold and world.power.fault_armed[s][i] == 1:
-		world.power.fault_armed[s][i] = 0
+	d.heat[r] = h
+	if h > sd.fault_heat_threshold and d.fault_armed[r] == 1:
+		d.fault_armed[r] = 0
 		DamageSystem.damage_subsystem(world, s, i, sd.heat_fault_damage)
 		world.emit(&"fault", s, -1, h, Vector3.ZERO, sd.id)
-	elif h < sd.fault_heat_threshold * FAULT_REARM and world.power.fault_armed[s][i] == 0:
-		world.power.fault_armed[s][i] = 1
+	elif h < sd.fault_heat_threshold * FAULT_REARM and d.fault_armed[r] == 0:
+		d.fault_armed[r] = 1
 
 
 ## Sum of effective pips over the ship's subsystems of a kind (count).

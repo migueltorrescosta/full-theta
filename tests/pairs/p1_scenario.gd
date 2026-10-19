@@ -105,8 +105,9 @@ static func engineering(w: SimWorld) -> void:
 		_submit(w, shields)
 	var engines: int = PowerSystem.subsystem_index(w.defs[PLAYER], ENG)
 	var threshold: float = w.defs[PLAYER].subsystems[engines].fault_heat_threshold
-	var hot: bool = w.power.heat[PLAYER][engines] > HEAT_GUARD * threshold
-	if hot and w.power.pips[PLAYER][engines] > 2:
+	var row: int = w.damage.subsystem_row(PLAYER, engines)
+	var hot: bool = w.damage.heat[row] > HEAT_GUARD * threshold
+	if hot and w.damage.pips[row] > 2:
 		_submit(w, _pips(ENG, 2))
 
 

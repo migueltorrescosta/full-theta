@@ -134,7 +134,12 @@ func test_shield_commands() -> void:
 	assert_float(w.shields.tightness[0]).is_equal(0.0)
 	assert_vector(w.shields.focus[0]).is_equal(Vector3.FORWARD)
 	assert_bool(_shield(w, 4, 3.0)).is_true()
-	assert_int(w.power.pips[0][PowerSystem.subsystem_index(w.defs[0], SHD)]).is_equal(4)
+	(
+		assert_int(
+			w.damage.pips[w.damage.subsystem_row(0, PowerSystem.subsystem_index(w.defs[0], SHD))]
+		)
+		. is_equal(4)
+	)
 	assert_float(w.shields.tightness[0]).is_equal(3.0)
 	assert_bool(_shield(w, -1, 4.5)).is_false()
 	assert_bool(_shield(w, 5, 1.0)).is_false()
@@ -174,11 +179,11 @@ func test_only_minus_one_keeps() -> void:
 	assert_bool(_shield(w, -2, 1.0)).is_false()
 	assert_bool(_shield(w, 3, -0.5)).is_false()
 	assert_bool(_shield(w, 3, -2.0)).is_false()
-	assert_int(w.power.pips[0][shd]).is_equal(4)
+	assert_int(w.damage.pips[w.damage.subsystem_row(0, shd)]).is_equal(4)
 	assert_float(w.shields.tightness[0]).is_equal(3.0)
 	assert_bool(_shield(w, -1, 1.0)).is_true()
 	assert_bool(_shield(w, 3, -1.0)).is_true()
-	assert_int(w.power.pips[0][shd]).is_equal(3)
+	assert_int(w.damage.pips[w.damage.subsystem_row(0, shd)]).is_equal(3)
 	assert_float(w.shields.tightness[0]).is_equal(1.0)
 
 
@@ -267,6 +272,7 @@ func test_no_frequency_mechanic() -> void:
 		SubsystemDef.new(),
 		ShieldTable.new(),
 		PowerTable.new(),
+		DamageTable.new(),
 		MountTable.new(),
 		ProjectileTable.new(),
 		SetShieldCommand.new(),

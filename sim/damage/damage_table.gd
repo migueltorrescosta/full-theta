@@ -1,10 +1,12 @@
 class_name DamageTable
 extends SimTable
-## Hull, subsystem health, spare parts and repair crews (T033, FT-SIM-020, FT-SIM-021,
-## FT-SIM-024). Each ship owns a contiguous block of rows: first its hull row (part
-## &"hull"), then one row per subsystem in ShipDef.subsystems order. The hull row's
-## health is the hull (J) and its spare_parts is the ship's stock; subsystem rows keep
-## spare_parts at 0. Repair crews are numbered 0..repair_crews-1 and identified by bit
+## Per-part state: hull and subsystem health, spare parts and repair crews (T033,
+## FT-SIM-020, FT-SIM-021, FT-SIM-024), and the power pips, heat and fault state
+## PowerSystem keeps per subsystem (T030, FT-SIM-026). Each ship owns a contiguous block
+## of rows: first its hull row (part &"hull"), then one row per subsystem in
+## ShipDef.subsystems order. The hull row's health is the hull (J) and its spare_parts is
+## the ship's stock; subsystem rows keep spare_parts at 0. The power columns are 0 on
+## the hull row. Repair crews are numbered 0..repair_crews-1 and identified by bit
 ## index: crews[row] on a subsystem row is the mask of crews working there (always 0 on
 ## the hull row); a crew in no mask is idle.
 
@@ -20,6 +22,14 @@ var health: PackedFloat64Array = PackedFloat64Array()
 var spare_parts: PackedInt32Array = PackedInt32Array()
 ## Mask of repair crews assigned to a subsystem row (bit c = crew c).
 var crews: PackedInt32Array = PackedInt32Array()
+## Pips Engineering set on a subsystem (count); their sum over the ship stays within
+## PowerDef.reactor_pips (FT-ENG-002). A boost overrides engines and thrusters.
+var pips: PackedInt32Array = PackedInt32Array()
+## Subsystem heat: temperature rise above nominal (K, FT-SIM-026).
+var heat: PackedFloat64Array = PackedFloat64Array()
+## 1 while a heat fault may fire on the subsystem; 0 after one fired, until the heat
+## falls back below PowerSystem.FAULT_REARM of the threshold.
+var fault_armed: PackedByteArray = PackedByteArray()
 
 ## Derived index, not state: first (hull) row by ship id, set at spawn (rows never move).
 var _first: PackedInt32Array = PackedInt32Array()
@@ -34,12 +44,18 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	health.append(def.hull_max)
 	spare_parts.append(def.spare_parts)
 	crews.append(0)
+	pips.append(0)
+	heat.append(0.0)
+	fault_armed.append(0)
 	for s: SubsystemDef in def.subsystems:
 		add_key(ship_id, faction)
 		part_ids.append(s.id)
 		health.append(s.health_max)
 		spare_parts.append(0)
 		crews.append(0)
+		pips.append(s.nominal_pips)
+		heat.append(0.0)
+		fault_armed.append(1)
 
 
 func columns() -> Array:
@@ -50,6 +66,9 @@ func columns() -> Array:
 			["health", health],
 			["spare_parts", spare_parts],
 			["crews", crews],
+			["pips", pips],
+			["heat", heat],
+			["fault_armed", fault_armed],
 		]
 	)
 
