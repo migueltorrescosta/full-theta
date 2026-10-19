@@ -8,9 +8,9 @@ extends Resource
 ## Name shown to players and in reports, e.g. "Engineering + Helm".
 @export var display_name: String = ""
 ## Least gain by which the co-op variant must beat the solo variant on each of the
-## pair test's metrics (dimensionless, in (0, 1]; FT-PAIR-015 starts every pair at
-## 0.25): solo / co-op - 1 for a lower-is-better metric such as time, co-op / solo - 1
-## for a higher-is-better one (PairHarness.gain).
+## pair test's metrics (dimensionless, in (0, 1]; FT-PAIR-015 starts pairs at 0.25,
+## P1 is 0.2, D121): (solo - co-op) / solo for a lower-is-better metric such as time,
+## co-op / solo - 1 for a higher-is-better one (PairHarness.gain).
 @export var pair_min_gain: float = 0.0
 
 

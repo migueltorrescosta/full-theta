@@ -68,17 +68,17 @@ func compare(coop: Callable, solo: Callable) -> Dictionary[String, Run]:
 	return {"coop": run(coop), "solo": run(solo)}
 
 
-## Gain of co-op over solo on one metric (dimensionless): how many times better co-op
-## is, minus 1, so 0.25 reads "25 % better": solo / coop - 1 when lower is better (25 %
-## faster, or a quarter of the damage would be 3), coop / solo - 1 when higher is. The
-## same ratio both ways keeps "beats by 25 %" symmetric (provisional, T039 question).
-## Metrics are >= 0; a zero denominator gives INF when the numerator is positive.
+## Gain of co-op over solo on one metric (dimensionless), the rule every pair test uses
+## (D121, FT-PAIR-015): when lower is better, the share of the solo value co-op saves,
+## (solo - coop) / solo, so 0.2 reads "20 % less time"; when higher is better, the share
+## co-op adds, coop / solo - 1. Metrics are >= 0; a zero solo value gives INF when co-op
+## is better (higher) and 0 otherwise.
 static func gain(coop: float, solo: float, better: Better) -> float:
-	var num: float = solo if better == Better.LOWER else coop
-	var den: float = coop if better == Better.LOWER else solo
-	if den == 0.0:
-		return INF if num > 0.0 else 0.0
-	return num / den - 1.0
+	if solo == 0.0:
+		return INF if better == Better.HIGHER and coop > 0.0 else 0.0
+	if better == Better.LOWER:
+		return (solo - coop) / solo
+	return coop / solo - 1.0
 
 
 ## Failure messages for "co-op beats solo by at least min_gain on each listed metric

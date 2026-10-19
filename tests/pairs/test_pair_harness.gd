@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## The pair harness itself (T039): gain is the better-over-worse ratio minus 1, check()
+## The pair harness itself (T039): gain is the share saved or added (D121), check()
 ## names each failure, and runs are deterministic and stop at the predicate or the
 ## tick limit. The toy scenario: a corvette throttles up; done once 500 m out.
 
@@ -32,12 +32,12 @@ func _throttle(boost: bool) -> Callable:
 # FT: FT-PAIR-015
 # Gains for both directions, and the zero-denominator edge.
 func test_gain() -> void:
-	assert_float(PairHarness.gain(8.0, 10.0, PairHarness.Better.LOWER)).is_equal_approx(0.25, 1e-12)
+	assert_float(PairHarness.gain(8.0, 10.0, PairHarness.Better.LOWER)).is_equal_approx(0.2, 1e-12)
 	assert_float(PairHarness.gain(12.5, 10.0, PairHarness.Better.HIGHER)).is_equal_approx(
 		0.25, 1e-12
 	)
 	assert_float(PairHarness.gain(12.0, 10.0, PairHarness.Better.LOWER)).is_less(0.0)
-	assert_float(PairHarness.gain(0.0, 3.0, PairHarness.Better.LOWER)).is_equal(INF)
+	assert_float(PairHarness.gain(0.0, 3.0, PairHarness.Better.LOWER)).is_equal(1.0)
 	assert_float(PairHarness.gain(0.0, 0.0, PairHarness.Better.LOWER)).is_equal(0.0)
 
 

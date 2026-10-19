@@ -6,4 +6,4 @@
 script = ExtResource("1_p1pair")
 id = &"p1"
 display_name = "Engineering + Helm"
-pair_min_gain = 0.25
+pair_min_gain = 0.2
