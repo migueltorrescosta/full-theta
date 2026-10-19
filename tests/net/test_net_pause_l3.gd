@@ -137,7 +137,7 @@ func test_remaining_crew_abandon_by_vote() -> void:
 	var viewer: NetClient = crew[3]
 	var from: int = h.mark(tac)
 	tac.vote_abandon(PLAYER, true)
-	var early: Dictionary = await h.next_event(tac, ServerSession.EVENT_REQUEST_REJECTED, from)
+	var early: Dictionary = await h.next_event(tac, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(early["payload"]["reason"]).is_equal(ServerSession.NOT_PAUSED)
 	await _lose(server, crew[2], viewer)
 	from = h.mark(viewer)
@@ -154,7 +154,7 @@ func test_remaining_crew_abandon_by_vote() -> void:
 	)
 	from = h.mark(viewer)
 	viewer.vote_abandon(PLAYER, true)
-	var refused: Dictionary = await h.next_event(viewer, ServerSession.EVENT_REQUEST_REJECTED, from)
+	var refused: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_CREW)
 	assert_bool(server.session.paused.has(PLAYER)).is_true()
 	from = h.mark(viewer)
@@ -186,6 +186,53 @@ func test_remaining_crew_abandon_by_vote() -> void:
 
 
 # FT: FT-NET-041
+# D128's edges: votes clear when the pause ends (a vote cast in one pause doesn't count
+# in the next), and a voter who drops loses its vote at once (only connected crew vote),
+# while its grace still runs.
+func test_votes_clear_on_resume_and_a_dropped_voter_loses_its_vote() -> void:
+	var server: NetServer = h.server(false, GRACE_S)
+	var crew: Array[NetClient] = await _running(server, ["viewer"])
+	var tac: NetClient = crew[0]
+	var sys: NetClient = crew[1]
+	var viewer: NetClient = crew[3]
+	var token: String = crew[2].token
+	await _lose(server, crew[2], viewer)
+	var from: int = h.mark(viewer)
+	tac.vote_abandon(PLAYER, true)
+	var tac_only: Callable = func(e: Dictionary) -> bool:
+		return e["payload"]["voters"] == ["tactical"]
+	(
+		assert_dict(await h.next_event(viewer, NetProtocol.EVENT_ABANDON_VOTES, from, tac_only))
+		. is_not_empty()
+	)
+	# Ops rejoins: the pause ends and the vote with it.
+	from = h.mark(viewer)
+	var ops: NetClient = await h.welcomed(server, "ops'", token)
+	assert_dict(await h.next_event(viewer, NetProtocol.EVENT_RESUME, from)).is_not_empty()
+	assert_bool(server.session.votes.is_empty()).is_true()
+	# The next pause starts with no votes: Systems' vote is the only one.
+	await _lose(server, ops, viewer)
+	from = h.mark(viewer)
+	sys.vote_abandon(PLAYER, true)
+	var sys_only: Callable = func(e: Dictionary) -> bool:
+		return e["payload"]["voters"] == ["systems"]
+	var votes: Dictionary = await h.next_event(
+		viewer, NetProtocol.EVENT_ABANDON_VOTES, from, sys_only
+	)
+	assert_int(votes["payload"]["needed"]).is_equal(2)
+	assert_bool(server.session.paused.has(PLAYER)).is_true()
+	# Systems drops (within its grace): its vote no longer counts.
+	from = h.mark(viewer)
+	var sys_session: NetSession = h.session_of(server, sys)
+	assert_bool(await h.drop(server, sys)).is_true()
+	var none: Callable = func(e: Dictionary) -> bool: return e["payload"]["voters"] == []
+	votes = await h.next_event(viewer, NetProtocol.EVENT_ABANDON_VOTES, from, none)
+	assert_int(votes["payload"]["needed"]).is_equal(1)
+	assert_bool(server.session.votes[PLAYER].voters.has(sys_session.id)).is_false()
+	assert_bool(server.session.abandoned.has(PLAYER)).is_false()
+
+
+# FT: FT-NET-041
 # The host (the client presenting the host secret, D127) abandons a paused ship alone;
 # another crew player can't.
 func test_host_abandons_alone() -> void:
@@ -198,7 +245,7 @@ func test_host_abandons_alone() -> void:
 	await _lose(server, ops, sys)
 	var from: int = h.mark(sys)
 	sys.abandon(PLAYER)
-	var refused: Dictionary = await h.next_event(sys, ServerSession.EVENT_REQUEST_REJECTED, from)
+	var refused: Dictionary = await h.next_event(sys, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_HOST)
 	assert_bool(server.session.paused.has(PLAYER)).is_true()
 	host.abandon(PLAYER)
@@ -215,7 +262,7 @@ func test_host_abandons_alone() -> void:
 # FT: FT-NET-042
 # During a pause a Viewer of the ship takes over the uncovered station and the pause
 # ends; later the Captain does the same. Outside a pause, or from a crew player, a
-# takeover is refused.
+# takeover is refused. (The requirement's other half, players of other ships, is #11.)
 func test_viewer_or_captain_takes_over() -> void:
 	var server: NetServer = h.server(false, GRACE_S)
 	var crew: Array[NetClient] = await _running(server, ["viewer", "captain"])
@@ -223,13 +270,13 @@ func test_viewer_or_captain_takes_over() -> void:
 	var cap: NetClient = crew[4]
 	var from: int = h.mark(viewer)
 	viewer.takeover(PLAYER, "ops")
-	var early: Dictionary = await h.next_event(viewer, ServerSession.EVENT_REQUEST_REJECTED, from)
+	var early: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(early["payload"]["reason"]).is_equal(ServerSession.NOT_PAUSED)
 	await _lose(server, crew[2], crew[0])
 	from = h.mark(crew[1])
 	crew[1].takeover(PLAYER, "ops")
 	var crew_refused: Dictionary = await h.next_event(
-		crew[1], ServerSession.EVENT_REQUEST_REJECTED, from
+		crew[1], NetProtocol.EVENT_REQUEST_REJECTED, from
 	)
 	assert_str(crew_refused["payload"]["reason"]).is_equal(CommandGate.NOT_ALLOWED)
 	from = h.mark(viewer)

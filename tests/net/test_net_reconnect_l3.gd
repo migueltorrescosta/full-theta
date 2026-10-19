@@ -97,6 +97,62 @@ func test_rejoin_after_grace_restores_only_what_is_free() -> void:
 	assert_int(cap_again.view.full_count).is_equal(0)
 
 
+# FT: FT-NET-014, FT-NET-033
+# A full server refuses a token resume that would add a connection, also for a session
+# within its grace (it keeps its pick until the grace ends), and lets it back in once
+# there is room.
+func test_full_server_refuses_a_resume_within_grace() -> void:
+	var server: NetServer = h.server()
+	var x: NetClient = await h.joined(server, "x", "helm")
+	var xs: NetSession = h.session_of(server, x)
+	assert_bool(await h.drop(server, x)).is_true()
+	await h.welcomed(server, "y")
+	server.session.max_sessions = 1
+	var refused: NetClient = h.client(server, "x'", xs.token)
+	var rejected: Callable = func() -> bool: return refused.state == NetClient.State.REJECTED
+	assert_bool(await h.until(rejected)).is_true()
+	assert_str(refused.reject_reason).is_equal(NetProtocol.REJECT_FULL)
+	assert_bool(xs.connected()).is_false()
+	assert_bool(server.session.by_id.has(xs.id)).is_true()
+	assert_str(xs.entry).is_equal("helm")
+	server.session.max_sessions = 2
+	var again: NetClient = await h.welcomed(server, "x''", xs.token)
+	assert_bool(again.welcome["resumed"]).is_true()
+	assert_str(again.welcome["entry"]).is_equal("helm")
+
+
+# FT: FT-NET-014, FT-NET-026
+# A Hello whose token's grace ran out after the server last checked, refused because
+# the server is full: the session lapses all the same (pick and claims released, out
+# of the live set), and a later rejoin restores what is free.
+func test_refused_rejoin_after_grace_leaves_no_ghost() -> void:
+	var server: NetServer = h.server(false, 0.5)
+	var x: NetClient = await h.joined(server, "x", "helm")
+	var xs: NetSession = h.session_of(server, x)
+	assert_int(server.session.claims.holder(PLAYER, "flight")).is_equal(xs.id)
+	assert_bool(await h.drop(server, x)).is_true()
+	await h.welcomed(server, "y")
+	server.session.max_sessions = 1
+	# The Hello arrives in the frame the grace runs out, before expire() saw it.
+	var hello: Dictionary = {
+		"t": NetProtocol.Type.HELLO,
+		"v": NetProtocol.PROTOCOL_VERSION,
+		"token": xs.token,
+		"name": "x",
+		"kind": "bot",
+		"host_secret": "",
+	}
+	server.session._on_hello(999_999, hello, Time.get_ticks_usec() + 1_000_000)
+	assert_bool(xs.lapsed).is_true()
+	assert_bool(server.session.by_id.has(xs.id)).is_false()
+	assert_str(xs.entry).is_equal("")
+	assert_int(server.session.claims.holder(PLAYER, "flight")).is_equal(-1)
+	server.session.max_sessions = 2
+	var again: NetClient = await h.welcomed(server, "x'", xs.token)
+	assert_str(again.welcome["entry"]).is_equal("helm")
+	assert_int(server.session.claims.holder(PLAYER, "flight")).is_equal(xs.id)
+
+
 # FT: FT-NET-027
 # A client drops mid-run and rejoins: its full snapshot equals the server's model at
 # that snapshot's tick (blocks and own kinematics exactly, contacts within the dead

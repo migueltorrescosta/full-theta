@@ -101,7 +101,7 @@ func test_one_pick_sharing_and_one_captain() -> void:
 	assert_bool(await h.pick(c, "captain")).is_true()
 
 
-# FT: FT-NET-019, FT-NET-020, FT-NET-021, FT-GEN-004, FT-GEN-005, FT-GEN-006, FT-GEN-007
+# FT: FT-NET-019, FT-NET-020, FT-NET-021, FT-GEN-004, FT-GEN-005, FT-GEN-006
 # Start works only once the coverage check passes: with Tactical and Systems (2 crew)
 # plus a Captain and a Viewer the lobby lists Relay and Comms as uncovered and refuses
 # Start; Captain and Viewer can't start; Ops makes it pass, and Start starts the run
@@ -120,12 +120,12 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 	var tick: int = server.world.tick
 	var from: int = h.mark(tac)
 	tac.set_ready(true)
-	var refused: Dictionary = await h.next_event(tac, ServerSession.EVENT_REQUEST_REJECTED, from)
+	var refused: Dictionary = await h.next_event(tac, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_COVERED)
 	assert_array(refused["payload"]["uncovered"]).is_equal(["relay", "comms"])
 	from = h.mark(cap)
 	cap.set_ready(true)
-	refused = await h.next_event(cap, ServerSession.EVENT_REQUEST_REJECTED, from)
+	refused = await h.next_event(cap, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_CREW)
 	await h.wait(300)
 	assert_int(server.world.tick).is_equal(tick)

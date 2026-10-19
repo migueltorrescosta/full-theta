@@ -92,11 +92,11 @@ func test_only_the_claimer_commands_a_claimed_item() -> void:
 	# A claim held by another is refused; an item of another station too.
 	var from: int = h.mark(h2)
 	h2.claim("flight")
-	var refused: Dictionary = await h.next_event(h2, ServerSession.EVENT_REQUEST_REJECTED, from)
+	var refused: Dictionary = await h.next_event(h2, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(CommandGate.CLAIMED)
 	from = h.mark(h2)
 	h2.claim("mount:0")
-	refused = await h.next_event(h2, ServerSession.EVENT_REQUEST_REJECTED, from)
+	refused = await h.next_event(h2, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(CommandGate.NOT_YOUR_STATION)
 
 
@@ -166,3 +166,33 @@ func test_claims_release_on_release_station_change_and_grace() -> void:
 	assert_int(Time.get_ticks_msec() - t0).is_greater_equal(1000)
 	# Released: b, now alone on Engineering, holds every crew again (FT-NET-044).
 	assert_bool(await _holds(server, b, "crew:1", b)).is_true()
+
+
+# FT: FT-NET-023
+# Claim events go only to the ship's players at the item's station, like the OWNERSHIP
+# section: Engineering hears about repair crews and never mounts, Weapons the reverse,
+# and a Viewer about none.
+func test_claim_events_reach_only_that_station() -> void:
+	var server: NetServer = h.server()
+	var w: NetClient = await h.joined(server, "w", "weapons")
+	var e: NetClient = await h.joined(server, "e", "engineering")
+	var v: NetClient = await h.joined(server, "v", "viewer")
+	var from: int = h.mark(w)
+	w.release_claim("mount:0")
+	var freed: Callable = func(ev: Dictionary) -> bool:
+		return ev["payload"]["item"] == "mount:0" and ev["payload"]["session"] == -1
+	assert_dict(await h.next_event(w, NetProtocol.EVENT_CLAIM, from, freed)).is_not_empty()
+	e.release_claim("crew:0")
+	var crew_freed: Callable = func(ev: Dictionary) -> bool:
+		return ev["payload"]["item"] == "crew:0" and ev["payload"]["session"] == -1
+	assert_dict(await h.next_event(e, NetProtocol.EVENT_CLAIM, 0, crew_freed)).is_not_empty()
+	await h.wait(200)
+	var items: Callable = func(c: NetClient) -> Array:
+		return h.events_of(c, NetProtocol.EVENT_CLAIM).map(
+			func(ev: Dictionary) -> String: return StationViews.base_of(ev["payload"]["item"])
+		)
+	assert_array(items.call(w)).contains(["mount"])
+	assert_array(items.call(w)).not_contains(["crew"])
+	assert_array(items.call(e)).contains(["crew"])
+	assert_array(items.call(e)).not_contains(["mount"])
+	assert_array(items.call(v)).is_empty()

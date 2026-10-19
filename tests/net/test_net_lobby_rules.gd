@@ -31,3 +31,19 @@ func test_dev_minimum_is_one() -> void:
 	assert_bool(NetCoverage.passes(["all"], 1)).is_true()
 	assert_bool(NetCoverage.passes(["all"])).is_false()
 	assert_bool(NetCoverage.passes(["tactical"], 1)).is_false()
+
+
+# FT: FT-GEN-007
+# No station can be left off or to automation: with any one of the six stations
+# uncovered, even with five crew on the other five (and a Captain and a Viewer), the
+# check fails and names exactly that station, so Start is refused and a run pauses.
+# The dev entry's lower minimum doesn't change that.
+func test_no_station_may_be_left_off() -> void:
+	for missing: String in StationViews.CREW:
+		var entries: Array = ["captain", "viewer"]
+		for station: String in StationViews.CREW:
+			if station != missing:
+				entries.append(station)
+		assert_bool(NetCoverage.passes(entries)).is_false()
+		assert_bool(NetCoverage.passes(entries, 1)).is_false()
+		assert_array(NetCoverage.uncovered(entries)).is_equal([missing])

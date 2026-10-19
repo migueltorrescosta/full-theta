@@ -7,6 +7,61 @@ extends GdUnitTestSuite
 const PLAYER: int = NetHarness.PLAYER
 const ENEMY: int = NetHarness.ENEMY
 
+const S = StationViews.Section
+
+## Sections each entry must and must not receive, by hand from docs/spec/05-stations.md
+## (not from StationViews): entry -> [required, forbidden].
+const SPEC_05: Dictionary = {
+	# Cockpit with HUD and shield ring, claims flight and shield facing (FT-HLM-001,
+	# FT-HLM-008, FT-NET-022); no mounts or Engineering's tables.
+	"helm":
+	[
+		[S.KIN, S.STATUS, S.CONTACTS, S.HELM, S.NEAR, S.PROJECTILES, S.OWNERSHIP],
+		[S.ENGINEERING, S.MOUNTS],
+	],
+	# Turret camera, every mount with its state and claimer (FT-WPN-001, FT-WPN-004).
+	"weapons":
+	[
+		[S.KIN, S.STATUS, S.CONTACTS, S.MOUNTS, S.NEAR, S.PROJECTILES, S.OWNERSHIP],
+		[S.HELM, S.ENGINEERING],
+	],
+	# Cutaway, pips, repairs; no threat positions beyond the radar (FT-ENG-001 to
+	# FT-ENG-007).
+	"engineering":
+	[
+		[S.KIN, S.STATUS, S.CONTACTS, S.ENGINEERING, S.OWNERSHIP],
+		[S.HELM, S.MOUNTS, S.NEAR, S.PROJECTILES],
+	],
+	# M1 has only their definitions: top bar and disc radar (FT-STN-001, FT-STN-002).
+	"science": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
+	"relay": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
+	"comms": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
+	# Main-screen mirror and the read-only main screen: no ship controls (FT-CPT-003,
+	# FT-MSC-004).
+	"captain":
+	[[S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES], [S.HELM, S.MOUNTS, S.OWNERSHIP]],
+	"viewer":
+	[[S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES], [S.HELM, S.MOUNTS, S.OWNERSHIP]],
+}
+## Fields the spec names: [entry, block, fields, rows field, row fields].
+const SPEC_05_FIELDS: Array = [
+	# Top bar: hull and shields (5.0).
+	["comms", S.STATUS, ["hull", "shields"]],
+	# Shield ring: Helm's focus, Engineering's tightness (FT-HLM-011); propellant (FT-HLM-012).
+	["helm", S.HELM, ["shield_focus", "shield_tightness"]],
+	["helm", S.STATUS, ["propellant"]],
+	# Subsystem table with health, heat and pips; spare parts; shield power and tightness
+	# (FT-ENG-001, FT-ENG-002, FT-ENG-003, FT-ENG-005).
+	[
+		"engineering",
+		S.ENGINEERING,
+		["spare_parts", "shield_strength", "shield_tightness", "subsystems"],
+		"subsystems",
+		["health", "heat", "pips"],
+	],
+	# Every mount with ready, heat and ammo (FT-WPN-004).
+	["weapons", S.MOUNTS, ["mounts"], "mounts", ["cooldown", "heat", "ammo"]],
+]
 var h: NetHarness
 
 
@@ -111,19 +166,25 @@ func test_snapshots_hold_only_their_station_fields() -> void:
 			var c: NetClient = clients[id]
 			assert_int(c.view.rejected).is_equal(0)
 			assert_int(_check_snapshots(c, id)).is_greater(3)
-	# Spot checks of the forbidden: Science and Ops get no Helm, Engineering, mounts or
-	# ownership; Engineering no Helm or tracers; the Viewer no claims.
-	for id: String in ["science", "ops"]:
-		for kind: int in [
-			StationViews.Section.HELM,
-			StationViews.Section.ENGINEERING,
-			StationViews.Section.MOUNTS,
-			StationViews.Section.OWNERSHIP
-		]:
-			assert_array(clients[id].view.kinds).not_contains([kind])
-	assert_array(clients["engineering"].view.kinds).not_contains(
-		[StationViews.Section.HELM, StationViews.Section.PROJECTILES]
-	)
+	# The checks above derive what to expect from the same StationViews tables that
+	# build the snapshots, so a wrong table passes them. These are written by hand from
+	# docs/spec/05-stations.md instead.
+	for id: String in SPEC_05:
+		var kinds: Array[int] = clients[id].view.kinds
+		var row: Array = SPEC_05[id]
+		assert_array(kinds).override_failure_message("%s lacks %s" % [id, row[0]]).contains(row[0])
+		(
+			assert_array(kinds)
+			. override_failure_message("%s got one of %s" % [id, row[1]])
+			. not_contains(row[1])
+		)
+	for want: Array in SPEC_05_FIELDS:
+		var block: Dictionary = clients[want[0]].view.blocks[want[1]]
+		assert_array(block.keys()).contains(want[2])
+		if want.size() > 3:
+			var rows: Array = block[want[3]]
+			assert_array(rows).is_not_empty()
+			assert_array((rows[0] as Dictionary).keys()).contains(want[4])
 	assert_dict(clients["viewer"].view.ownership).is_empty()
 	# Weapons sees the mount's claimer, Engineering the pips' last writer.
 	assert_array(clients["weapons"].view.ownership["claims"]["mount:0"]).is_equal(

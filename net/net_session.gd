@@ -19,8 +19,6 @@ var ship: int = -1
 var entry: String = ""
 ## Difficulty-toggle set of the view key (D14, D69); one set for M1.
 var toggles: String = StationViews.DEFAULT_TOGGLES
-## Pressed Start (Ready{true}) for its ship (T043).
-var ready: bool = false
 ## The grace period ended: pick and claims were released; last_* remember them for a
 ## rejoin (FT-NET-026).
 var lapsed: bool = false

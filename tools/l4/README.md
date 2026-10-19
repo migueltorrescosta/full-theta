@@ -12,7 +12,7 @@ tools/l4/repeat.sh 10                  # 10 runs in a row; build/l4/repeat-summa
 |---|---|
 | `run.sh` | Runs each scenario in its own subshell: starts the processes, kills and relaunches them, waits, runs `check.py`, kills what it started and fails on anything left behind. One line per scenario; logs in `build/l4/<run>/<scenario>/`. |
 | `l4_client.gd` | The client runner: a `NetClient` executing an intent file step by step. |
-| `check.py` | Per scenario: every final client launch passed, no bad snapshots, every client saw the same KIN at the same tick (convergence), time from SIGKILL to the relaunched client's Welcome. |
+| `check.py` | Per scenario: every final client launch passed, no bad snapshots, every client saw the same KIN at the same tick (convergence, with at least one tick seen by two clients), time from SIGKILL to the relaunched client's Welcome. |
 | `repeat.sh N` | N runs in a row, with load average, result and per-scenario seconds per run. |
 | `scenarios/<name>.sh` | The orchestration, sourced by `run.sh`; its intent files are in `scenarios/<name>/`. |
 

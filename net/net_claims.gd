@@ -1,13 +1,12 @@
 class_name NetClaims
 extends RefCounted
-## Claims on shared stations (FT-NET-022 to FT-NET-024, FT-NET-044, D18, STN-3): per
-## ship, item -> the session holding it ("flight", "shield_facing", "mount:1",
-## "crew:0"; StationViews). A claimed item takes commands only from its claimer; an
-## unclaimed one from anyone at its station. A player alone on a station holds all its
-## claims (settle()): when a second player joins, the first keeps them, and they free
-## up on release, station change or grace expiry (PROVISIONAL: STN-3 leaves the join
-## case open; keeping control with the player already flying is the conservative
-## choice). Pure: ServerSession supplies who covers which station.
+## Claims on shared stations (FT-NET-022 to FT-NET-024, FT-NET-044, D18): per ship,
+## item -> the session holding it ("flight", "shield_facing", "mount:1", "crew:0";
+## StationViews). A claimed item takes commands only from its claimer; an unclaimed one
+## from anyone at its station. A player alone on a station holds all its claims
+## (settle()); when a second player joins, the first keeps them (D130), and they free
+## up on release, station change or grace expiry. Pure: ServerSession supplies who
+## covers which station.
 
 ## Ship -> {item: session id}.
 var _held: Dictionary = {}

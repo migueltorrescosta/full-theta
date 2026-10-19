@@ -27,7 +27,7 @@ static func uncovered(entries: Array) -> Array[String]:
 static func crew_count(entries: Array) -> int:
 	var n: int = 0
 	for entry: String in entries:
-		if not StationViews.stations_of(entry).is_empty():
+		if StationViews.is_crew(entry):
 			n += 1
 	return n
 

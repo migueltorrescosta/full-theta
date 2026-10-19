@@ -41,6 +41,8 @@ const VIEWER: String = "viewer"
 ## Development entry holding every station (FT-NET-029, D72), offered with
 ## --dev-all-stations only.
 const ALL: String = "all"
+## stations_of() of an unknown id.
+const NO_STATIONS: Array[String] = []
 
 ## Catalogue entries other than the six stations, in catalogue order: id -> [name,
 ## load tag, covered stations]. M1 offers the Tactical, Systems and Ops joint views
@@ -283,13 +285,17 @@ static func catalogue(dev_all: bool) -> Array:
 	return out
 
 
-## The stations an entry covers (none for Captain, Viewer or an unknown id).
+## The stations an entry covers (none for Captain, Viewer or an unknown id): the
+## StationDef's own array, read-only for callers.
 static func stations_of(entry: String) -> Array[String]:
 	var d: StationDef = def(entry)
-	var out: Array[String] = []
-	if d != null:
-		out.assign(d.stations)
-	return out
+	return d.stations if d != null else NO_STATIONS
+
+
+## Whether an entry is a crew entry: it covers a functional station (FT-NET-020).
+static func is_crew(entry: String) -> bool:
+	var d: StationDef = def(entry)
+	return d != null and d.is_crew()
 
 
 ## The sections an entry sees, ascending (none for an unknown id).

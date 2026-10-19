@@ -27,8 +27,6 @@ const NOT_CLAIMED: String = "not_claimed"
 const CAPTAIN_TAKEN: String = "captain_taken"
 const NOT_COVERED: String = "coverage"
 const STARTED: String = "started"
-## Event to the sender when a lobby, claim or pause request is refused.
-const EVENT_REQUEST_REJECTED: String = NetProtocol.EVENT_REQUEST_REJECTED
 
 var transport: NetTransport
 var world: SimWorld
@@ -68,6 +66,10 @@ var _handlers: Dictionary = {}
 var _ownership_dirty: Dictionary[int, bool] = {}
 ## Ship -> the lobby payload last sent.
 var _lobby_sent: Dictionary[int, Dictionary] = {}
+## Something a lobby state depends on may have changed since the last _publish().
+var _lobby_dirty: bool = true
+## crew_ships(), computed at the first call: M1's ships and AIs don't change during a run.
+var _crew_ships: Array = []
 
 
 func _init(net: NetTransport, sim_world: SimWorld) -> void:
@@ -137,6 +139,8 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		}
 		transport.post_event(event_audience(e), e.tick, String(e.kind), payload)
 		left_play = left_play or e.kind == &"outcome" or e.kind == &"destroyed"
+	# A sim event may change a ship's run status (lobby_state in_play).
+	_lobby_dirty = _lobby_dirty or not events.is_empty()
 	if left_play:
 		_refresh_pause()
 	_publish()
@@ -157,13 +161,15 @@ func event_audience(e: SimEvent) -> PackedInt32Array:
 	return out
 
 
-## Ships a client may pick: those without an AI (M1: the crewed ship).
+## Ships a client may pick: those without an AI (M1: the crewed ship). Cached at the
+## first call; read-only for callers.
 func crew_ships() -> Array:
-	var out: Array = []
+	if not _crew_ships.is_empty():
+		return _crew_ships
 	for id: int in world.ship_count():
 		if not world.ai.is_enabled(id):
 			var def: ShipDef = world.defs[id]
-			out.append(
+			_crew_ships.append(
 				{
 					"id": id,
 					"def": String(def.id),
@@ -171,7 +177,7 @@ func crew_ships() -> Array:
 					"faction": world.faction_of(id)
 				}
 			)
-	return out
+	return _crew_ships
 
 
 ## Sends a server event to one session.
@@ -182,6 +188,7 @@ func notify(session: NetSession, type: String, payload: Dictionary) -> void:
 ## Starts a ship's run (Start, or a test fixture): the sim steps from now on.
 func launch(ship: int) -> void:
 	launched[ship] = true
+	_lobby_dirty = true
 
 
 ## A ship that started and is still in the encounter: not destroyed, retreated or
@@ -297,8 +304,15 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	var session: NetSession = null
 	if msg["token"] != "":
 		session = sessions.resume(msg["token"], now_us)
+	# A grace that ran out after the last expire(): lapse it now, so a refused rejoin
+	# leaves no live session holding the pick and claims.
+	if session != null and session.lapsed and by_id.has(session.id):
+		_lapse(session)
 	var resumed: bool = session != null
-	if session == null or session.lapsed:
+	# The cap counts connected sessions, so every Hello that adds one is checked: a new
+	# session, a lapsed one, and one within its grace; a takeover of a connected session
+	# replaces its socket (FT-NET-014).
+	if session == null or not session.connected():
 		var why: String = admit_rule()
 		if why != "":
 			_refuse(conn, why)
@@ -316,9 +330,9 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	session.conn = conn
 	by_conn[conn] = session
 	if session.lapsed:
-		if by_id.has(session.id):
-			_lapse(session)
 		_restore(session)
+	# The name may have changed (the lobby's captain).
+	_lobby_dirty = true
 	var welcome: Dictionary = {
 		"v": NetProtocol.PROTOCOL_VERSION,
 		"token": session.token,
@@ -405,7 +419,7 @@ func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 		return
 	var reason: String = ""
 	var extra: Dictionary = {}
-	if not s.has_pick() or StationViews.stations_of(s.entry).is_empty():
+	if not s.has_pick() or not StationViews.is_crew(s.entry):
 		reason = NOT_CREW
 	elif launched.has(s.ship):
 		reason = STARTED
@@ -415,7 +429,6 @@ func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if reason != "":
 		_request_rejected(s, NetProtocol.Type.READY, reason, extra)
 		return
-	s.ready = true
 	launch(s.ship)
 	_broadcast(NetProtocol.EVENT_STARTED, {"ship": s.ship, "tick": world.tick})
 	_publish()
@@ -516,7 +529,7 @@ func _on_takeover(conn: int, msg: Dictionary, _now_us: int) -> void:
 		reason = NOT_IMPLEMENTED
 	elif not (s.entry == StationViews.CAPTAIN or s.entry == StationViews.VIEWER):
 		reason = CommandGate.NOT_ALLOWED
-	elif not StationViews.is_entry(entry, dev_all) or StationViews.stations_of(entry).is_empty():
+	elif not StationViews.is_entry(entry, dev_all) or not StationViews.is_crew(entry):
 		reason = BAD_PICK
 	if reason != "":
 		_request_rejected(s, NetProtocol.Type.TAKEOVER, reason, {"ship": ship, "entry": entry})
@@ -557,8 +570,6 @@ func _set_pick(s: NetSession, ship: int, entry: String) -> void:
 		_claim_changed(released[0], released[1])
 	s.ship = ship
 	s.entry = entry
-	if entry == "":
-		s.ready = false
 	transport.set_view(s.id, s.view_key())
 	if votes.has(old_ship):
 		votes[old_ship].keep_only(_connected_crew(old_ship))
@@ -612,12 +623,13 @@ func _abandon(ship: int, by: String) -> void:
 	_refresh_pause()
 
 
-## Recomputes the paused ships. A grace ending (may_pause) pauses every ship in play
-## that fails coverage (FT-NET-034); other changes only update or end a pause: a ship
-## that passes again or leaves play is no longer paused (FT-NET-035). New or changed
-## paused ships get a `pause` event to every client; when none is left the universe
-## resumes and the votes clear (D128).
+## Recomputes the paused ships, and marks the lobby states for a check. A grace ending
+## (may_pause) pauses every ship in play that fails coverage (FT-NET-034); other changes
+## only update or end a pause: a ship that passes again or leaves play is no longer
+## paused (FT-NET-035). New or changed paused ships get a `pause` event to every
+## client; when none is left the universe resumes and the votes clear (D128).
 func _refresh_pause(may_pause: bool = false) -> void:
+	_lobby_dirty = true
 	var now: Dictionary[int, Array] = {}
 	for ship: int in launched:
 		if in_play(ship) and (may_pause or paused.has(ship)):
@@ -671,14 +683,15 @@ func _settle(ship: int) -> void:
 		_claim_changed(ship, claimed[0])
 
 
-## Tells the ship's clients who holds an item now (session -1: free) and marks the
-## OWNERSHIP section for an update.
+## Tells the ship's clients at the item's station who holds it now (session -1: free),
+## like the OWNERSHIP section (FT-NET-023), and marks that section for an update.
 func _claim_changed(ship: int, item: String) -> void:
 	var holder: int = claims.holder(ship, item)
 	var holder_name: String = by_id[holder].name if by_id.has(holder) else ""
 	var payload: Dictionary = {"ship": ship, "item": item, "session": holder, "name": holder_name}
+	var station: String = StationViews.station_of_item(item)
 	for s: NetSession in by_id.values():
-		if s.ship == ship:
+		if s.ship == ship and StationViews.stations_of(s.entry).has(station):
 			notify(s, NetProtocol.EVENT_CLAIM, payload)
 	_ownership_dirty[ship] = true
 
@@ -700,7 +713,7 @@ func _wrote(session_id: int, c: SimCommand) -> void:
 func _connected_crew(ship: int) -> Array[int]:
 	var out: Array[int] = []
 	for s: NetSession in by_id.values():
-		if s.ship == ship and s.connected() and not StationViews.stations_of(s.entry).is_empty():
+		if s.ship == ship and s.connected() and StationViews.is_crew(s.entry):
 			out.append(s.id)
 	return out
 
@@ -732,16 +745,19 @@ func _lobby_visible(s: NetSession, ship: int) -> bool:
 	return s.ship < 0 or world.faction_of(s.ship) == world.faction_of(ship)
 
 
-## Sends changed lobby states and posts changed ownership tables.
+## Sends changed lobby states (checked only when something they depend on changed) and
+## posts changed ownership tables.
 func _publish() -> void:
-	for ship: Dictionary in crew_ships():
-		var id: int = ship["id"]
-		var state: Dictionary = lobby_state(id)
-		if _lobby_sent.get(id, {}) != state:
-			_lobby_sent[id] = state
-			for s: NetSession in by_id.values():
-				if _lobby_visible(s, id):
-					notify(s, NetProtocol.EVENT_LOBBY, state)
+	if _lobby_dirty:
+		_lobby_dirty = false
+		for ship: Dictionary in crew_ships():
+			var id: int = ship["id"]
+			var state: Dictionary = lobby_state(id)
+			if _lobby_sent.get(id, {}) != state:
+				_lobby_sent[id] = state
+				for s: NetSession in by_id.values():
+					if _lobby_visible(s, id):
+						notify(s, NetProtocol.EVENT_LOBBY, state)
 	for ship: int in _ownership_dirty:
 		var table: Dictionary = {"claims": {}, "writers": writers.get(ship, {}).duplicate()}
 		var held: Dictionary = claims.table(ship)
@@ -755,7 +771,7 @@ func _publish() -> void:
 func _request_rejected(s: NetSession, type: int, reason: String, extra: Dictionary) -> void:
 	var payload: Dictionary = {"request": type, "reason": reason}
 	payload.merge(extra)
-	notify(s, EVENT_REQUEST_REJECTED, payload)
+	notify(s, NetProtocol.EVENT_REQUEST_REJECTED, payload)
 
 
 func _reject(session_id: int, seq: int, reason: String) -> void:
