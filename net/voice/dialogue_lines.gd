@@ -38,10 +38,6 @@ func add_lines(list: Array) -> void:
 			lines[line["id"]] = line
 
 
-func has_line(id: String) -> bool:
-	return lines.has(id)
-
-
 ## The line, or {} for an unknown id.
 func line(id: String) -> Dictionary:
 	return lines.get(id, {})
@@ -63,7 +59,7 @@ static func pieces(template: String) -> PackedStringArray:
 static func slot_order(template: String) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	for m: RegExMatch in _slot_re().search_all(template):
-		out.append(m.get_string().substr(1, m.get_string().length() - 2))
+		out.append(m.get_string(1))
 	return out
 
 
@@ -81,16 +77,21 @@ static func is_feminine(line_data: Dictionary, slot: String, lang: String) -> bo
 	return spec is Dictionary and Array((spec as Dictionary).get("feminine", [])).has(lang)
 
 
-## The template with its slots filled from args (numbers as whole numbers).
+## The template with its slots filled from args (numbers as whole numbers), in one pass
+## over the template: a value holding `{slot}` stays as it is.
 static func fill(line_data: Dictionary, template: String, args: Dictionary) -> String:
-	var values: Dictionary = {}
-	for slot: String in slot_order(template):
+	var out: String = ""
+	var at: int = 0
+	for m: RegExMatch in _slot_re().search_all(template):
+		var slot: String = m.get_string(1)
 		var v: Variant = args.get(slot, "")
-		values[slot] = str(int(v)) if slot_kind(line_data, slot) == "number" else str(v)
-	return template.format(values)
+		out += template.substr(at, m.get_start() - at)
+		out += str(int(v)) if slot_kind(line_data, slot) == "number" else str(v)
+		at = m.get_end()
+	return out + template.substr(at)
 
 
 static func _slot_re() -> RegEx:
 	if _slot == null:
-		_slot = RegEx.create_from_string("\\{[a-z][a-z0-9_]*\\}")
+		_slot = RegEx.create_from_string("\\{([a-z][a-z0-9_]*)\\}")
 	return _slot

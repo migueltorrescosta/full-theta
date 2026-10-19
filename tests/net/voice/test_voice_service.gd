@@ -223,6 +223,20 @@ func test_stitched_numbers_follow_the_slot_gender() -> void:
 	)
 
 
+# FT: FT-AUD-010
+# Slots are filled in one pass: a value that looks like a slot is spoken as it is, not
+# filled again.
+func test_slot_values_are_not_filled_again() -> void:
+	var line: Dictionary = DialogueLines.load_dir().line("npc.hail_patrol")
+	var template: String = line["text"]["en"]
+	assert_str(DialogueLines.fill(line, template, {"ship": "{npc}", "npc": "Mara"})).is_equal(
+		"{npc}, this is Mara of the patrol. Hold your course."
+	)
+	assert_str(DialogueLines.fill(line, template, {"ship": "Hawk", "npc": "{ship}"})).is_equal(
+		"Hawk, this is {ship} of the patrol. Hold your course."
+	)
+
+
 # FT: FT-AUD-003, FT-ARC-019
 # A line without slots is local: the event only (the client plays its own prerendered
 # clip), no synthesis and no VOICE message.
@@ -312,7 +326,7 @@ func test_a_closed_set_miss_is_synthesised_once_and_cached() -> void:
 	assert_int(_net.voice.size()).is_equal(2)
 
 
-# FT: FT-AUD-010, FT-AUD-013
+# FT: FT-AUD-014, FT-AUD-010
 # pt_PT's voice is development only (D105): without dev voices every line is subtitles
 # only, nothing is synthesised and the closed set is ready at once.
 func test_a_dev_only_language_is_subtitles_only_in_releases() -> void:
