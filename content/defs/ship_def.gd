@@ -49,6 +49,12 @@ extends Resource
 @export var power: PowerDef
 ## Shield generator (required).
 @export var shields: ShieldDef
+## Range at which this ship detects other ships with undamaged sensors (m); scaled by the
+## sensors subsystem's effectiveness (FT-ARC-013).
+@export var sensor_range: float = 0.0
+## Range within which a detected ship's allegiance becomes known to this ship's faction
+## (m); scaled like sensor_range, at most sensor_range (FT-SPA-001).
+@export var identify_range: float = 0.0
 
 
 func validate() -> Array[String]:
@@ -67,6 +73,8 @@ func validate() -> Array[String]:
 	DefCheck.positive(errors, "hull_max", hull_max)
 	DefCheck.non_negative(errors, "spare_parts", spare_parts)
 	DefCheck.non_negative(errors, "repair_crews", repair_crews)
+	DefCheck.positive(errors, "sensor_range", sensor_range)
+	DefCheck.in_range(errors, "identify_range", identify_range, 0.0, maxf(sensor_range, 0.0))
 	DefCheck.required(errors, "assist", assist)
 	DefCheck.required(errors, "shields", shields)
 	if DefCheck.required(errors, "power", power):
