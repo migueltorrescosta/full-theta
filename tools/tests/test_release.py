@@ -151,3 +151,17 @@ def test_every_pack_includes_the_build_info_clips_and_data_files():
             assert host in exclude and host not in include
         else:
             assert host in include
+
+
+# FT: FT-LIC-005
+def test_voice_config_patch_drops_only_multi_codepoint_phonemes():
+    config = {"phoneme_id_map": {"a": [1], "aɪ": [2], "ˈ": [3], "oʊ": [4]}, "audio": {"sample_rate": 22050}}
+    data, dropped = package.patch_voice_config(json.dumps(config).encode())
+    assert dropped == ["aɪ", "oʊ"]
+    patched = json.loads(data)
+    assert patched["phoneme_id_map"] == {"a": [1], "ˈ": [3]}
+    assert patched["audio"] == config["audio"]
+    same = json.dumps({"phoneme_id_map": {"a": [1]}}).encode()
+    assert package.patch_voice_config(same) == (same, [])
+    md = package.voices_md({"it_IT-serena-medium": ["aɪ"]})
+    assert "Modified" in md and "aɪ" in md

@@ -164,6 +164,12 @@ class Inspector:
         for v in self.voices:
             for f in (f"{v}.onnx", f"{v}.onnx.json", "MODEL_CARD"):
                 self.check(a.has(f"{rel}/{v}/{f}"), where, f"no {rel}/{v}/{f}")
+            config = f"{rel}/{v}/{v}.onnx.json"
+            if a.has(config):
+                # The bundled Piper accepts only one-codepoint phonemes (D144).
+                ids = json.loads(a.read(config)).get("phoneme_id_map", {})
+                bad = [k for k in ids if len(k) != 1]
+                self.check(not bad, where, f"{config} has multi-codepoint phonemes {bad}")
 
     def licences(self, a: Archive, where: str) -> None:
         text = a.read("LICENSE").decode() if a.has("LICENSE") else ""

@@ -127,7 +127,7 @@
       "version": "rhasspy/piper-voices c10ece1aade47bb51c153c893d14e5bf8e5b7117",
       "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/it/it_IT/serena/medium",
       "licence": "CC-BY-4.0 (dataset committa/serena-synthetic-it-27h; Tatoeba transcripts CC BY 2.0 FR); model repository MIT",
-      "attribution": "Serena voice trained from scratch on the serena-synthetic-it-27h dataset by committa (https://huggingface.co/datasets/committa/serena-synthetic-it-27h, CC BY 4.0), with Tatoeba sentences (CC BY 2.0 FR); MODEL_CARD shipped with the voice (S7, D105)"
+      "attribution": "Serena voice trained from scratch on the serena-synthetic-it-27h dataset by committa (https://huggingface.co/datasets/committa/serena-synthetic-it-27h, CC BY 4.0), with Tatoeba sentences (CC BY 2.0 FR); MODEL_CARD shipped with the voice (S7, D105). Modified in release packages: the .onnx.json config drops the phoneme_id_map entries aɪ, aʊ, ɔɪ, eɪ, oʊ (more than one codepoint, rejected by the bundled Piper 2023.11.14-2); the model is unchanged (D144, licenses/VOICES.md)"
     },
     {
       "name": "Wine",

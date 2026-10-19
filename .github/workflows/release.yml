@@ -33,7 +33,7 @@ jobs:
           cache-dependency-glob: tools/uv.lock
       - name: Install llvm-install-name-tool (macOS Piper helper rpath)
         run: |
-          command -v llvm-install-name-tool || {
+          command -v llvm-install-name-tool || ls /usr/lib/llvm-*/bin/llvm-install-name-tool || {
             sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends llvm
           }
       - name: Build packages

@@ -1,9 +1,10 @@
 class_name ReleaseSmoke
 extends RefCounted
 ## L6 smoke test of an exported build (FT-TST-019, tools/l6/run.sh):
-##   <exe> --headless -- --tts-smoke TEXT --out WAV [--voice NAME]
+##   <exe> --headless -- --tts-smoke TEXT --out /ABS/line.wav [--voice NAME]
 ## synthesises TEXT with the package's bundled Piper (BundledPiper) and exits 0
-## when the WAV was written. Without --voice it uses the first bundled voice.
+## when every WAV was written. Without --voice it uses every bundled voice, so
+## each one is shown to load (D144), writing /ABS/line.<voice>.wav.
 
 
 static func handles(args: PackedStringArray) -> bool:
@@ -18,16 +19,25 @@ static func run(args: PackedStringArray) -> int:
 		return 2
 	var voices: PackedStringArray = BundledPiper.voices()
 	print("tts-smoke: bundled voices %s" % ", ".join(voices))
-	var voice: String = opts["voice"]
-	if voice == "" and not voices.is_empty():
-		voice = voices[0]
-	var code: int = BundledPiper.synthesise(opts["text"], voice, opts["out"])
-	var size: int = 0
-	if FileAccess.file_exists(opts["out"]):
-		size = FileAccess.get_file_as_bytes(opts["out"]).size()
-	print("tts-smoke: voice %s exit %d wav %d bytes" % [voice, code, size])
-	# A WAV header alone is 44 bytes; one spoken line is tens of kilobytes.
-	return 0 if code == 0 and size > 1000 else 1
+	var chosen: String = opts["voice"]
+	var todo: PackedStringArray = [chosen] if chosen != "" else voices
+	if todo.is_empty():
+		push_error("no bundled voices")
+		return 1
+	var failed: int = 0
+	for voice: String in todo:
+		var out: String = opts["out"]
+		if chosen == "":
+			out = "%s.%s.wav" % [out.get_basename(), voice]
+		var code: int = BundledPiper.synthesise(opts["text"], voice, out)
+		var size: int = 0
+		if FileAccess.file_exists(out):
+			size = FileAccess.get_file_as_bytes(out).size()
+		print("tts-smoke: voice %s exit %d wav %d bytes" % [voice, code, size])
+		# A WAV header alone is 44 bytes; one spoken line is tens of kilobytes.
+		if code != 0 or size <= 1000:
+			failed += 1
+	return 0 if failed == 0 else 1
 
 
 ## {"text", "out", "voice"} from the command line, or {} when TEXT is missing or

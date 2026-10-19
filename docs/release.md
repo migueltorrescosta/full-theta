@@ -63,6 +63,7 @@ Or run the same build directly: `tools/release/build.sh v0.0.0-dryrun build/dryr
 ## Changing what ships
 
 - **Voices:** the `release` list in `tools/tts/voices.json` (D141). Each voice needs a `Piper voice <name>` entry in `content/provenance.json` (the build fails without one) and must pass the S7 audit (FT-LIC-007, D105). The release languages follow from the voices.
+- **Voice configs:** the bundled Piper rejects phonemes of more than one codepoint, so `package.py` drops them from each voice's `.onnx.json` and notes the change in `licenses/VOICES.md` (D144). Record any such change in the voice's `content/provenance.json` entry too.
 - **Piper:** `tools/release/piper.json` pins the archives, licence files and source archives with their SHA-256 (D140). The program's interface is fixed by `BundledPiper`; the runtime adapter (E10) uses the same paths.
 - **Engine upgrade:** the web shell (`app/web/shell.html`, godotengine/godot#124636) and the `index.js` guard (`tools/release/web_patch.py`, godotengine/godot#124637) are workarounds. `tools/tests/test_release.py` fails when the pinned templates' `index.js` no longer holds the patched pattern. Check both issues and drop each patch once it is fixed upstream. `tools/release/pck.py` reads pack format 4 (Godot 4.7); a new format fails the inspection.
 

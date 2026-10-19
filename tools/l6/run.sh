@@ -3,8 +3,8 @@
 # builds the release packages of the working tree (tools/release/build.sh, which
 # also inspects them), then for the Linux package natively and the Windows
 # package under Wine:
-#   1. the exported game synthesises one line with its bundled Piper
-#      (`--tts-smoke`, ReleaseSmoke) and prints its build line;
+#   1. the exported game synthesises one line with each bundled voice through
+#      its bundled Piper (`--tts-smoke`, ReleaseSmoke) and prints its build line;
 #   2. the exported game serves its bundled web export (--http-root) and
 #      headless Chromium loads it from a non-secure host name until the page
 #      prints the same build line (web_load.mjs): same commit, engine started;
@@ -46,8 +46,13 @@ check() { # kind, port, path prefix for the game's own paths, launcher...
     >"$log/tts.log"
   local code=${PIPESTATUS[0]}
   grep -E "^(build|tts-smoke):" "$log/tts.log" | sed "s/^/l6: $kind: /"
-  if ((code != 0)) || ! grep -qxF "$expected" "$log/tts.log" \
-    || [[ $(head -c 4 "$log/line.wav" 2>/dev/null) != RIFF ]]; then
+  # One WAV per bundled voice (line.<voice>.wav): every voice loads (D144).
+  local voices wavs=0
+  voices=$(sed -n 's/^tts-smoke: bundled voices //p' "$log/tts.log" | tr ',' '\n' | grep -c .)
+  for f in "$log"/line.*.wav; do
+    [[ $(head -c 4 "$f" 2>/dev/null) == RIFF ]] && ((wavs++))
+  done
+  if ((code != 0)) || ! grep -qxF "$expected" "$log/tts.log" || ((voices == 0 || wavs != voices)); then
     echo "l6: $kind: tts smoke FAILED (exit $code, $log/tts.log)" >&2
     failed=1
   fi

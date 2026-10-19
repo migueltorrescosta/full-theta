@@ -95,7 +95,7 @@ breaks, open an issue at {url}/issues and we will send the source.
 """
 
 
-def voices_md() -> str:
+def voices_md(changes: dict[str, list[str]] | None = None) -> str:
     entries = {
         e["name"]: e
         for e in json.loads((ROOT / "content/provenance.json").read_text(encoding="utf-8"))[
@@ -114,8 +114,15 @@ def voices_md() -> str:
             f"- Licence: {e['licence']}",
             f"- Attribution: {e['attribution']}",
             f"- Model card: `piper/voices/{v}/MODEL_CARD`",
-            "",
         ]
+        if changes and changes.get(v):
+            keys = ", ".join(changes[v])
+            lines.append(
+                f"- Modified: `{v}.onnx.json` drops the phoneme_id_map entries {keys}, "
+                "which have more than one codepoint and which the bundled Piper rejects. "
+                "The model (`.onnx`) is unchanged."
+            )
+        lines.append("")
     return "\n".join(lines)
 
 
@@ -124,7 +131,7 @@ def common_files(version: str, commit: str, repo: str) -> dict[str, bytes]:
     files = {"LICENSE": (ROOT / "LICENSE").read_bytes()}
     for name, path in fetch.fetch_group("licences").items():
         files[f"licenses/{name}"] = path.read_bytes()
-    files["licenses/VOICES.md"] = voices_md().encode()
+    files["licenses/VOICES.md"] = voices_md(voice_changes()).encode()
     files["SOURCE.md"] = source_md(version, commit, repo).encode()
     m = fetch.manifest()
     info = {
@@ -137,6 +144,32 @@ def common_files(version: str, commit: str, repo: str) -> dict[str, bytes]:
     }
     files["BUILD.json"] = (json.dumps(info, indent=2) + "\n").encode()
     return files
+
+
+def patch_voice_config(data: bytes) -> tuple[bytes, list[str]]:
+    """Drops phoneme_id_map keys of more than one codepoint, which the bundled
+    Piper 2023.11.14-2 rejects ("Phonemes must be one codepoint"); espeak-ng
+    never emits them as one phoneme, so the voice is unchanged in use (D144).
+    The .onnx model is untouched. Returns the config and the dropped keys."""
+    config = json.loads(data)
+    ids = config.get("phoneme_id_map", {})
+    dropped = sorted(k for k in ids if len(k) != 1)
+    if not dropped:
+        return data, []
+    for k in dropped:
+        del ids[k]
+    return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode(), dropped
+
+
+def voice_changes() -> dict[str, list[str]]:
+    """Voice -> phoneme_id_map keys dropped from its config (D144)."""
+    out = {}
+    for v in release_voices():
+        path = fetch_voices.fetch(v) / f"{v}.onnx.json"
+        dropped = patch_voice_config(path.read_bytes())[1]
+        if dropped:
+            out[v] = dropped
+    return out
 
 
 def voice_files() -> dict[str, Path]:
@@ -218,7 +251,10 @@ class Writer:
 
 def add_voices(w: Writer, rel: str) -> None:
     for name, path in voice_files().items():
-        w.add_file(f"{rel}/{name}", path)
+        if name.endswith(".onnx.json"):
+            w.add_bytes(f"{rel}/{name}", patch_voice_config(path.read_bytes())[0])
+        else:
+            w.add_file(f"{rel}/{name}", path)
 
 
 def package_desktop(kind: str, exe: Path, web: Path, common: dict, out: Path, tmp: Path) -> Path:
@@ -234,6 +270,19 @@ def package_desktop(kind: str, exe: Path, web: Path, common: dict, out: Path, tm
     return path
 
 
+def install_name_tool() -> str | None:
+    """llvm-install-name-tool on PATH, or the newest under /usr/lib/llvm-*/bin
+    (Ubuntu 24.04's llvm package links only some tools into /usr/bin)."""
+    found = shutil.which("llvm-install-name-tool") or shutil.which("install_name_tool")
+    if found:
+        return found
+    versioned = sorted(
+        Path("/usr/lib").glob("llvm-*/bin/llvm-install-name-tool"),
+        key=lambda p: int(p.parts[3].removeprefix("llvm-") or 0),
+    )
+    return str(versioned[-1]) if versioned else None
+
+
 def mac_helper(tmp: Path) -> tuple[Path, Path]:
     """rhasspy's macOS Piper plus piper-phonemize's dylibs, with an rpath so the
     program finds them beside itself (it ships with none; D140)."""
@@ -247,7 +296,7 @@ def mac_helper(tmp: Path) -> tuple[Path, Path]:
     shutil.copy2(tree / "piper", helper / "piper")
     for name in MAC_LIBS:
         shutil.copyfile(libs / name, helper / name)  # follows the version symlinks
-    tool = shutil.which("llvm-install-name-tool") or shutil.which("install_name_tool")
+    tool = install_name_tool()
     if tool is None:
         raise SystemExit("package: needs llvm-install-name-tool (apt install llvm)")
     subprocess.run([tool, "-add_rpath", "@executable_path", str(helper / "piper")], check=True)
