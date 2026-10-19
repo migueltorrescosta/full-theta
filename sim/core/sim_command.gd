@@ -12,6 +12,9 @@ var ship_id: int = -1
 ## Tick the command was applied on; -1 until applied.
 var tick: int = -1
 var source: Source = Source.CREW
+## Whether apply() accepted it; set when applied. The log keeps rejected crew commands
+## too, so a replay re-emits their rejection events (e.g. &"repair_no_parts").
+var accepted: bool = false
 
 
 ## Stable name used in the command log; subclasses override.

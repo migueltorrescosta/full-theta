@@ -116,7 +116,7 @@ Tests: 82, manual: 9, pending: 310.
 | FT-SIM-027 | tests | `tests/sim/ai/test_enemy_ai.gd` |
 | FT-SIM-028 | tests | `tests/sim/ai/test_enemy_ai.gd` |
 | FT-SIM-029 | pending |  |
-| FT-SIM-030 | tests | `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_repair.gd`, `tests/sim/replay/test_replay_determinism.gd`, `tests/sim/run/test_event_stream.gd`, `tests/sim/run/test_outcome.gd` |
+| FT-SIM-030 | tests | `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_repair.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_replay_determinism.gd`, `tests/sim/run/test_event_stream.gd`, `tests/sim/run/test_outcome.gd` |
 | FT-SIM-031 | tests | `tests/sim/run/test_event_stream.gd`, `tests/sim/shields/test_shields.gd` |
 | FT-SIM-032 | pending |  |
 | FT-SIM-033 | tests | `tests/content/test_content_defs.gd` |

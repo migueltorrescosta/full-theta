@@ -16,7 +16,7 @@ func test_invalid_commands_rejected() -> void:
 	w.step()
 	assert_int(w.helm.target_kind[id]).is_equal(HelmTable.Target.NONE)
 	assert_vector(w.helm.input_rotation[id]).is_equal(Vector3.ZERO)
-	assert_int(w.command_log.size()).is_equal(0)
+	assert_int(w.accepted_commands().size()).is_equal(0)
 	FlightFixture.input(w, id, Vector3(3.0, -2.0, 0.0), Vector3(0.0, 0.0, 9.0))
 	w.step()
 	assert_vector(w.helm.input_rotation[id]).is_equal(Vector3(1.0, -1.0, 0.0))

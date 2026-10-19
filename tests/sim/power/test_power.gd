@@ -24,9 +24,9 @@ func _pips(w: SimWorld, kind: int, pips: int) -> bool:
 	c.subsystem_kind = kind
 	c.pips = pips
 	w.submit(c)
-	var logged: int = w.command_log.size()
+	var logged: int = w.accepted_commands().size()
 	w.step()
-	return w.command_log.size() > logged
+	return w.accepted_commands().size() > logged
 
 
 func _steps(w: SimWorld, n: int) -> void:
@@ -48,7 +48,7 @@ func test_pips_within_cap() -> void:
 	assert_bool(_pips(w, WPN, 0)).is_true()
 	assert_bool(_pips(w, SHD, 4)).is_true()
 	assert_array(Array(w.power.pips[0])).is_equal([4, 2, 0, 4, 2, 0])
-	assert_int(w.command_log.size()).is_equal(3)
+	assert_int(w.accepted_commands().size()).is_equal(3)
 
 
 # FT: FT-SIM-026
@@ -162,7 +162,7 @@ func test_boost_is_short_overcharge() -> void:
 	again.ship_id = 0
 	w.submit(again)
 	_steps(w, 479)
-	assert_int(w.command_log.size()).is_equal(1)
+	assert_int(w.accepted_commands().size()).is_equal(1)
 	assert_float(w.power.heat[0][0]).is_equal_approx(200.0 * (1.0 - exp(-0.4)), 1e-6)
 	assert_array(Array(w.power.pips[0])).is_equal([2, 2, 2, 2, 2, 0])
 	w.step()

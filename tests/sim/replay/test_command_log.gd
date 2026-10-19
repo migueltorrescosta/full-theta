@@ -39,19 +39,23 @@ func _world_with_commands() -> SimWorld:
 
 
 # FT: FT-ARC-008
-# The log holds the seed, build id, setup and each accepted command with the tick it
-# was applied on, in application order; rejected commands are absent.
-func test_from_world_records_accepted_commands_with_ticks() -> void:
+# The log holds the seed, build id, setup and each crew command with the tick it was
+# applied on, in application order; a rejected command is kept, marked not accepted, so
+# a replay reproduces its rejection.
+func test_from_world_records_commands_with_ticks() -> void:
 	var world: SimWorld = _world_with_commands()
 	var record: CommandLog = CommandLog.from_world(world, SETUP)
 	assert_int(record.seed_value).is_equal(7)
 	assert_str(record.build_id).is_equal("test")
 	assert_dict(record.setup).is_equal(SETUP)
-	assert_int(record.entries.size()).is_equal(2 * AWKWARD.size())
-	for i: int in record.entries.size():
+	assert_int(record.entries.size()).is_equal(2 * AWKWARD.size() + 1)
+	for i: int in 2 * AWKWARD.size():
 		var d: Dictionary = record.entries[i]
 		assert_int(d["tick"]).is_equal(1 + i / 2)
 		assert_str(d["kind"]).is_equal("aim_mount" if i % 2 == 0 else "helm_input")
+		assert_bool(d["accepted"]).is_true()
+	assert_bool(record.entries[-1]["accepted"]).is_false()
+	assert_int(world.accepted_commands().size()).is_equal(2 * AWKWARD.size())
 
 
 # FT: FT-ARC-008
@@ -163,3 +167,36 @@ func _non_default(v: Variant) -> Variant:
 		TYPE_VECTOR3:
 			return v + Vector3(0.5, -1.0 / 3.0, 0.25)
 	return null
+
+
+# FT: FT-ARC-008, FT-TST-009, FT-SIM-030
+# A rejected crew command is logged, so the replay re-emits its rejection event
+# (&"repair_no_parts": damaged engines, no spare parts).
+func test_replay_reproduces_rejection_events() -> void:
+	var live: SimWorld = _no_parts_world()
+	var dispatch: DispatchRepairCommand = DispatchRepairCommand.new()
+	dispatch.ship_id = M1Encounter.PLAYER_SHIP
+	dispatch.crew = 0
+	dispatch.subsystem_id = &"engines"
+	live.submit(dispatch)
+	live.step()
+	live.step()
+	var live_events: Array = SimFixture.of_kind(live.drain_events(), &"repair_no_parts")
+	assert_int(live_events.size()).is_equal(1)
+	var replayed: SimWorld = _no_parts_world()
+	var record: CommandLog = CommandLog.from_text(CommandLog.from_world(live).to_text())
+	assert_array(record.replay(replayed, live.tick)).is_empty()
+	var events: Array = SimFixture.of_kind(replayed.drain_events(), &"repair_no_parts")
+	assert_int(events.size()).is_equal(1)
+	assert_int(events[0].tick).is_equal(live_events[0].tick)
+	assert_str(replayed.state_hash()).is_equal(live.state_hash())
+
+
+func _no_parts_world() -> SimWorld:
+	var w: SimWorld = (
+		M1Encounter.new(3, "test", TestDefs.corvette(), TestDefs.raider_enemy()).build()
+	)
+	DamageSystem.damage_subsystem(w, M1Encounter.PLAYER_SHIP, &"engines", 1.0e6, &"test")
+	w.damage.spare_parts[w.damage.hull_row(M1Encounter.PLAYER_SHIP)] = 0
+	w.drain_events()
+	return w

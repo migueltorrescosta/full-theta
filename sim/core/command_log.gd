@@ -89,19 +89,22 @@ func replay(world: SimWorld, end_tick: int) -> PackedStringArray:
 	while world.tick < end_tick:
 		var t: int = world.tick
 		var batch: Array[SimCommand] = []
+		var expected: Array[bool] = []
 		while i < cmds.size() and cmds[i].tick <= t:
 			if cmds[i].tick < t:
 				problems.append("command %d (%s) for tick %d is late" % [i, entries[i], t])
 			else:
 				batch.append(cmds[i])
+				expected.append(cmds[i].accepted)
 			world.submit(cmds[i])
 			i += 1
 		var logged: int = world.command_log.size()
 		world.step()
 		var applied: Array[SimCommand] = world.command_log.slice(logged)
-		for c: SimCommand in batch:
-			if not applied.has(c) or c.tick != t:
-				problems.append("command %s rejected or not applied on tick %d" % [c.to_dict(), t])
+		for k: int in batch.size():
+			var c: SimCommand = batch[k]
+			if not applied.has(c) or c.tick != t or c.accepted != expected[k]:
+				problems.append("command %s not applied on tick %d as recorded" % [c.to_dict(), t])
 	return problems
 
 

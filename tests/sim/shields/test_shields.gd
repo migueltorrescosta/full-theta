@@ -20,9 +20,9 @@ func _shield(w: SimWorld, power: int, tightness: float) -> bool:
 	c.power = power
 	c.tightness = tightness
 	w.submit(c)
-	var logged: int = w.command_log.size()
+	var logged: int = w.accepted_commands().size()
 	w.step()
-	return w.command_log.size() > logged
+	return w.accepted_commands().size() > logged
 
 
 func _focus(w: SimWorld, direction: Vector3, track: int = -1) -> bool:
@@ -31,9 +31,9 @@ func _focus(w: SimWorld, direction: Vector3, track: int = -1) -> bool:
 	c.direction = direction
 	c.track_id = track
 	w.submit(c)
-	var logged: int = w.command_log.size()
+	var logged: int = w.accepted_commands().size()
 	w.step()
-	return w.command_log.size() > logged
+	return w.accepted_commands().size() > logged
 
 
 ## Energy that passes a 1 MJ hit from a ship-frame direction, through the hit resolver.
