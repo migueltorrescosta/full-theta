@@ -76,6 +76,9 @@ class RecordingClient:
 	func takeover(ship: int, entry: String) -> void:
 		sent.append(["takeover", [ship, entry]])
 
+	func run_again(ship: int, vote: bool) -> void:
+		sent.append(["run_again", [ship, vote]])
+
 	## The sends of one method, newest last.
 	func of(method: String) -> Array:
 		return sent.filter(func(s: Array) -> bool: return s[0] == method)

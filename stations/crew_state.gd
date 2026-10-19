@@ -7,7 +7,8 @@ extends RefCounted
 ## `changed`; they never write it except through select() and the intents they send.
 
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
-## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset".
+## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
+## &"run_over" (the outcome card and its "Run again" votes, D178).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -48,6 +49,9 @@ var paused: Dictionary = {}
 var votes: Dictionary = {}
 ## ship -> "vote" | "host".
 var abandoned: Dictionary = {}
+## ship -> `run_over` payload {ship, outcome, time_s, hull} plus "voters" and "needed"
+## from `run_votes`, from the outcome until the reset (D178).
+var run_over: Dictionary = {}
 ## item -> {"session": int, "name": String} (claim events; free items erased).
 var claims: Dictionary = {}
 var alert: int = ALERT_NORMAL
@@ -144,6 +148,10 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 		"abandoned":
 			abandoned[int(p["ship"])] = str(p.get("by", ""))
 			changed.emit(&"abandoned")
+		"run_over", "run_votes":
+			var card: Dictionary = run_over.get_or_add(int(p["ship"]), {})
+			card.merge(p, true)
+			changed.emit(&"run_over")
 		"alert":
 			_on_alert(p)
 		"marks":
@@ -229,6 +237,7 @@ func reset_run() -> void:
 	alert_by = ""
 	started.erase(ship)
 	abandoned.erase(ship)
+	run_over.erase(ship)
 	changed.emit(&"reset")
 
 

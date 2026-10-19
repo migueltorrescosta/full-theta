@@ -19,7 +19,8 @@ Protocol, server session and client transport over WebSocket (FT-NET-004). The w
 | `session_token_file.gd` | `SessionTokenFile`: the client's stored token (and host secret), saved 0600, for a rejoin after a relaunch. |
 | `net_transport.gd` | The net thread: sockets, queues, encoder. |
 | `server_session.gd` | Main-thread session logic: handshake, lobby and Start, picks, claims, grace, pause, abandon, takeover. |
-| `net_coverage.gd`, `net_claims.gd`, `net_abandon_vote.gd` | The pure rules: coverage check, claims, abandon vote. |
+| `net_coverage.gd`, `net_claims.gd`, `net_abandon_vote.gd` | The pure rules: coverage check, claims, abandon vote (also the "Run again" vote). |
+| `net_run_reset.gd` | `NetRunReset`: the run reset (D178): outcome card, "Run again" vote, and the call to `NetServer.restart_run()`. |
 | `crew_marks.gd`, `crew_pings.gd` | The pure rules of per-ship crew state outside the sim: `CrewMarks` (8 marks, alert level), `CrewPings` (ping rate limit, copy). |
 | `command_gate.gd` | Command validation. |
 | `net_server.gd` | The server `Node`: sim loop and composition. |
@@ -56,6 +57,7 @@ Who owns what: the main thread owns sessions (`NetSession`, `NetSessions`), pick
 - **Claims** (T044): `claim_rule(session, command)`, which `CommandGate.check` calls for every command; `_on_claim`; `NetClaims` (`settle()`: alone on a station holds its claims); `StationViews.item_of()`; `_wrote()` (last writers); `_publish()` posts the OWNERSHIP tables.
 - **Grace, pause, abandon, takeover** (T045): `NetSessions.expire()` lapses sessions on the wall clock; `_lapse()`, `_restore()` (rejoin), `_refresh_pause()`, `sim_running()` (which `NetServer` checks before stepping), `_on_abandon`, `_on_abandon_vote` (`NetAbandonVote`), `_on_takeover`, `_abandon()` (submits the logged `AbandonShipCommand`).
 - **Marks, pings, alert** (#7): `_on_alert`, `_on_mark`, `_on_ping` with `CrewMarks` and `CrewPings`; `_to_ship()` sends to every pick on the ship only; `_send_crew_state()` after Welcome and each pick; `reset_crew_state(ship)` for the run reset (T058).
+- **Run reset** (T058, D178): `NetRunReset` (owned by `NetServer`, its handler added with `ServerSession.add_handler`) sends `run_over` and `run_votes` after a crewed ship's outcome and counts RunAgain votes; when they pass, `NetServer.restart_run()` builds a new world from the encounter (fresh command log), `NetTransport.reset_snapshots()` restarts the encoder (next snapshot full) and `ServerSession.restart()` swaps the world, clears launched, abandoned, pending commands and last writers, calls `reset_crew_state()` per ship and republishes lobby and ownership.
 - **Voice** (E10): `voice` (`ServerVoice`) calls `VoiceService.start_session()` at the first Start and says ship-computer alert lines from the tick's events; `computer_audience()` is `VoiceService.computer_audience`. `ServerMain.make_voice()` wires both; without it nothing is said.
 - **Session cap** (T046): `admit_rule()` caps at 64. `by_id` holds live sessions (connected or within grace); a lapsed session leaves it and comes back on rejoin.
 - **T046/T047** (host process, LAN): `NetServer.start_http()` and `start_beacon()` poll the static HTTP server and the LAN beacon after the tick; `app/ServerLifecycle` owns the pid file and idle exit (it idles on `NetServer.bound_connections()`, so connections without a session don't keep the server up); `app/HostSession` is the Host flow and orphan rejoin.
@@ -75,7 +77,7 @@ Who owns what: the main thread owns sessions (`NetSession`, `NetSessions`), pick
 
 - `connect_to(url)` sends Hello (with `token` and `host_secret` if set) once the socket opens; `state` goes `CONNECTING` → `WELCOMED`, or `REJECTED` with `reject_reason`, or `CLOSED`.
 - `welcome`, `catalogue`, `token`, `session_id`; `view` (`NetViewState`: `kin`, `blocks[kind]`, `contacts`, `near`, `projectiles`; helpers `own_position()`, `contact_position(id)`, `callsign(id)`).
-- Intents: `pick(ship, entry)`, `release_pick()`, `set_ready(bool)` (Start), `claim(item)`, `release_claim(item)`, `abandon(ship)`, `vote_abandon(ship, bool)`, `takeover(ship, entry)`, `set_alert(level)`, `place_mark(slot, name, contact, site, pos)`, `move_mark(slot, contact, site, pos)`, `rename_mark(slot, name)`, `delete_mark(slot)`, `ping(kind, id, site, pos)`, `command(dict) -> seq`, `helm(throttle, rotation)`, `fire(mount)`, `set_pips(kind, pips)`, `bye()`.
+- Intents: `pick(ship, entry)`, `release_pick()`, `set_ready(bool)` (Start), `claim(item)`, `release_claim(item)`, `abandon(ship)`, `vote_abandon(ship, bool)`, `run_again(ship, bool)`, `takeover(ship, entry)`, `set_alert(level)`, `place_mark(slot, name, contact, site, pos)`, `move_mark(slot, contact, site, pos)`, `rename_mark(slot, name)`, `delete_mark(slot)`, `ping(kind, id, site, pos)`, `command(dict) -> seq`, `helm(throttle, rotation)`, `fire(mount)`, `set_pips(kind, pips)`, `bye()`.
 - `view.ownership` holds the OWNERSHIP section (claimers and last writers of the view's stations); lobby, claim, pause, vote, alert, marks and pings arrive as events (`docs/protocol.md`).
 - Rejoin after a relaunch: save `token` with `SessionTokenFile` after Welcome, and set `token` from it before `connect_to()`.
 - `take_events()` returns the delivered events in order (`CommandRejected` is `type == "command_rejected"`).

@@ -162,6 +162,12 @@ func vote_abandon(ship: int, vote: bool) -> void:
 	_send(NetProtocol.Type.ABANDON_VOTE, {"ship": ship, "vote": vote})
 
 
+## Casts or withdraws a "Run again" vote after the ship's outcome; the host's vote
+## resets the run at once (D178).
+func run_again(ship: int, vote: bool) -> void:
+	_send(NetProtocol.Type.RUN_AGAIN, {"ship": ship, "vote": vote})
+
+
 func takeover(ship: int, entry: String) -> void:
 	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "entry": entry})
 

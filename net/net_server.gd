@@ -12,6 +12,10 @@ extends Node
 ## and the discovery beacon (LanBeacon). Both are polled at the end of the frame, after
 ## the sim stepped and the state copy was handed over, so the tick never waits on them;
 ## HTTP gets a 400 us budget per frame (FT-NET-039).
+##
+## After an outcome the crew may vote to run again (NetRunReset, D178): restart_run()
+## then swaps in a world built from scratch everywhere it is held (here, the session,
+## the voice seam, the net thread's encoder), with a fresh command log.
 
 ## Ticks between snapshots: 60 Hz sim, 30 Hz snapshots (D70).
 const SNAPSHOT_TICKS: int = 2
@@ -20,6 +24,7 @@ var encounter: M1Encounter
 var world: SimWorld
 var transport: NetTransport = NetTransport.new()
 var session: ServerSession
+var run_reset: NetRunReset
 ## Seconds after which the server quits by itself (0: never); for smoke runs.
 var run_for: float = 0.0
 ## Sim timing over the last frames that stepped (us), for logs and tests.
@@ -55,6 +60,7 @@ func start(
 	session = ServerSession.new(transport, world)
 	session.dev_all = dev_all
 	session.host_secret = host_secret
+	run_reset = NetRunReset.new(session, restart_run)
 	var err: Error = transport.start(port, address)
 	if err != OK:
 		return err
@@ -65,6 +71,17 @@ func start(
 
 func port() -> int:
 	return transport.port()
+
+
+## The run reset (FT-M1-012, D178): a new world from the encounter (its command log
+## starts empty), every ship back in the lobby with its picks kept, and the next
+## snapshot full for every client. NetRunReset calls it when the vote passes.
+func restart_run() -> void:
+	world = encounter.build()
+	transport.reset_snapshots()
+	session.restart(world)
+	_next_snapshot_tick = world.tick
+	_idle_state_posted = false
 
 
 ## Serves the web export in `root` over plain HTTP on the bind address at port() - 1
@@ -138,6 +155,7 @@ func _process(delta: float) -> void:
 		return
 	var now_us: int = Time.get_ticks_usec()
 	session.process(now_us)
+	run_reset.process()
 	# The sim steps only after a Start and outside a pause (FT-NET-034); snapshots keep
 	# flowing at 30 Hz of wall clock meanwhile, so joining and rejoining clients get theirs.
 	# The world doesn't change then: it is captured once and re-encoded from that copy,
@@ -159,7 +177,9 @@ func _process(delta: float) -> void:
 		var ticks: int = world.advance(delta)
 		if ticks > 0:
 			tick_us_max = maxi(tick_us_max, (Time.get_ticks_usec() - t0) / ticks)
-			session.after_ticks(world.drain_events())
+			var events: Array[SimEvent] = world.drain_events()
+			session.after_ticks(events)
+			run_reset.after_ticks(events)
 			if world.tick >= _next_snapshot_tick:
 				transport.post_state(SimCopy.capture(world))
 				_next_snapshot_tick = world.tick + SNAPSHOT_TICKS

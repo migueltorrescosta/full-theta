@@ -209,6 +209,28 @@ func reset_crew_state(ship: int) -> void:
 	_to_ship(ship, NetProtocol.EVENT_ALERT, {"ship": ship, "level": marks.alert(ship), "by": ""})
 
 
+## The run reset (D178, NetRunReset): the rebuilt world replaces the old one, every
+## ship is back in the lobby with its picks and claims, its crew state cleared, and
+## the old run's pending commands dropped.
+func restart(sim_world: SimWorld) -> void:
+	world = sim_world
+	voice.world = sim_world
+	_pending.clear()
+	launched.clear()
+	abandoned.clear()
+	writers.clear()
+	_refresh_pause()
+	for ship: Dictionary in crew_ships():
+		reset_crew_state(ship["id"])
+		_ownership_dirty[ship["id"]] = true
+	_publish()
+
+
+## Adds a message handler kept outside this class (NetRunReset).
+func add_handler(type: int, handler: Callable) -> void:
+	_handlers[type] = handler
+
+
 ## Ships a client may pick: those without an AI (M1: the crewed ship). Cached at the
 ## first call; read-only for callers.
 func crew_ships() -> Array:

@@ -32,6 +32,7 @@ enum Type {
 	ALERT = 19,
 	MARK = 20,
 	PING = 21,
+	RUN_AGAIN = 22,
 }
 
 const PROTOCOL_VERSION: int = 4
@@ -65,6 +66,10 @@ const EVENT_ABANDONED: String = "abandoned"
 const EVENT_ALERT: String = "alert"
 const EVENT_MARKS: String = "marks"
 const EVENT_PING: String = "ping"
+## The run reset (D178, NetRunReset), to every session with a pick on the ship:
+## {ship, outcome ("win" | "loss"), time_s, hull} and {ship, voters, needed}.
+const EVENT_RUN_OVER: String = "run_over"
+const EVENT_RUN_VOTES: String = "run_votes"
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -135,6 +140,7 @@ const SCHEMAS: Dictionary = {
 		"y": TYPE_FLOAT,
 		"z": TYPE_FLOAT,
 	},
+	Type.RUN_AGAIN: {"ship": TYPE_INT, "vote": TYPE_BOOL},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -154,6 +160,7 @@ const FROM_CLIENT: Array[int] = [
 	Type.ALERT,
 	Type.MARK,
 	Type.PING,
+	Type.RUN_AGAIN,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -170,6 +177,7 @@ const RATED_REQUESTS: Array[int] = [
 	Type.ALERT,
 	Type.MARK,
 	Type.PING,
+	Type.RUN_AGAIN,
 ]
 
 

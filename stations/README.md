@@ -6,9 +6,9 @@ Station UIs; they read snapshots and send intents, never sim/ (FT-ARC-011). The 
 
 | File | Role |
 |---|---|
-| `client_shell.gd` | `ClientShell`: the session. Polls the client, forwards every event to `VoicePlayer.handle_event` (voice lines) or `CrewState.handle_event`, pumps voice parts, applies Welcome `lang` (`I18n.apply`, `LocalLines`), pushes snapshots into the `SnapshotInterpolator`, resumes a dropped connection with its token, and shows `LobbyScreen` until the pick's ship has started, then the `StationScreen` of the pick, with `PauseOverlay`, the outcome banner, subtitles and `SettingsScreen` on top. |
+| `client_shell.gd` | `ClientShell`: the session. Polls the client, forwards every event to `VoicePlayer.handle_event` (voice lines) or `CrewState.handle_event`, pumps voice parts, applies Welcome `lang` (`I18n.apply`, `LocalLines`), pushes snapshots into the `SnapshotInterpolator`, resumes a dropped connection with its token, and shows `LobbyScreen` until the pick's ship has started, then the `StationScreen` of the pick, with `PauseOverlay`, `OutcomeCard`, subtitles and `SettingsScreen` on top. |
 | `station_context.gd` | `StationContext`: what panels read and send through: `view` (`NetViewState`), `interp`, `crew`, `intents`, `settings`, `matcher`, `clock`; helpers `selection_local()`, `mark_position()`. |
-| `crew_state.gd` | `CrewState`: the model built from Welcome, the Catalogue and events: pick, catalogue, lobby, Start, claims, pause, abandon votes, alert, marks (Alpha to Hotel), pings (3 s pulse, copies), and the selection every panel of the client shares. Signals `changed(what)`, `toast(key, args)`, `pinged(ping)` (the chime seam for the alerts strand). |
+| `crew_state.gd` | `CrewState`: the model built from Welcome, the Catalogue and events: pick, catalogue, lobby, Start, claims, pause, abandon votes, the outcome card and its "Run again" votes (`run_over`), alert, marks (Alpha to Hotel), pings (3 s pulse, copies), and the selection every panel of the client shares. Signals `changed(what)`, `toast(key, args)`, `pinged(ping)` (the chime seam for the alerts strand). |
 | `ship_intents.gd` | `ShipIntents`: the one send seam (alert, marks, pings, claims, picks, Start, votes, commands). Tests swap the client for a recorder. |
 | `station_screen.gd` | `StationScreen`: top bar, one disc radar, panels (one focused in the main area, the rest docked), toasts, controls overlay, first-run tip. Feeds input through `InputMatcher` and routes each intent event by `IntentTable.target`; handles the common actions (`_common`) and the station-less live set (`_live`). |
 | `station_panel.gd` | `StationPanel`: base class of every panel. |
@@ -16,6 +16,7 @@ Station UIs; they read snapshots and send intents, never sim/ (FT-ARC-011). The 
 | `placeholder_panel.gd` | `PlaceholderPanel`: name and StationDef read-out (Science and Comms in M1, FT-M1-005). |
 | `lobby_screen.gd` | `LobbyScreen`: ships, catalogue entries with load tag and joint-view hint (`joint_hint`), coverage, pick, Start. |
 | `pause_overlay.gd` | `PauseOverlay`: the pause, abandon vote, host Abandon, Captain/Viewer takeover. |
+| `outcome_card.gd` | `OutcomeCard`: Victory or Ship lost, run time and hull on every station after the outcome; the crew's "Run again" vote, the host's "Run again now" (D178). |
 | `settings_screen.gd` | `SettingsScreen`: bindings (rebind per device, hold/toggle, reset), UI scale, first-run tips again, invert pitch, comfort. |
 | `client_settings.gd` | `ClientSettings`: per-client settings in one ConfigFile (`user://client_settings.cfg`, path injectable): name, bindings, UI scale, tips seen, invert pitch, comfort (roll lock deck / target / reference, reduced FOV, the cosmetic reference plane). |
 

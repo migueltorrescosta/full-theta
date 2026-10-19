@@ -75,6 +75,11 @@ func abandon(ship: int) -> void:
 	_call(&"abandon", [ship])
 
 
+## "Run again" after the outcome (D178); the host's vote resets at once.
+func run_again(ship: int, vote: bool) -> void:
+	_call(&"run_again", [ship, vote])
+
+
 func takeover(ship: int, entry: String) -> void:
 	_call(&"takeover", [ship, entry])
 

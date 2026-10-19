@@ -4,7 +4,7 @@ extends Control
 ## and runs the session: polls it every frame, feeds every event to the VoicePlayer
 ## (voice lines, audio/README.md "Client") or the CrewState model, records snapshots in
 ## the SnapshotInterpolator, and shows the lobby until the pick's ship has started,
-## then the StationScreen of the pick, with the pause overlay, the outcome banner,
+## then the StationScreen of the pick, with the pause overlay, the outcome card (D178),
 ## subtitles and Settings on top. It resumes a dropped connection with its token
 ## (FT-NET-025) and goes back to the lobby when the server resets the run (FT-M1-012).
 
@@ -19,6 +19,7 @@ var voice: VoicePlayer
 var lobby: LobbyScreen
 var screen: StationScreen
 var pause_overlay: PauseOverlay
+var outcome_card: OutcomeCard
 var settings_screen: SettingsScreen
 
 var _layer: Control
@@ -69,8 +70,8 @@ func _process(_delta: float) -> void:
 	if client.state == NetClient.State.CLOSED and now >= _resume_at:
 		_resume_at = now + RESUME_MS
 		client.resume()
-	_banner.visible = client.state != NetClient.State.WELCOMED or _outcome() != 0
-	_banner.text = tr("shell.reconnecting") if not client.is_welcomed() else _outcome_text()
+	_banner.visible = client.state != NetClient.State.WELCOMED
+	_banner.text = tr("shell.reconnecting")
 	if client.is_welcomed() and not is_same(client.welcome, _welcome):
 		_on_welcome()
 	if ctx.crew.catalogue != client.catalogue and not client.catalogue.is_empty():
@@ -135,20 +136,6 @@ func _on_crew_changed(what: StringName) -> void:
 		_layer.add_child(screen)
 
 
-func _outcome() -> int:
-	return int(ctx.view.blocks.get(StationViews.Section.STATUS, {}).get("outcome", 0))
-
-
-## 1 win, 2 loss (the sim's run outcome).
-func _outcome_text() -> String:
-	match _outcome():
-		1:
-			return tr("outcome.win")
-		2:
-			return tr("outcome.loss")
-	return ""
-
-
 func _show_subtitles() -> void:
 	var lines: PackedStringArray = []
 	for e: Dictionary in voice.subtitles.active(ctx.now_ms()):
@@ -167,6 +154,12 @@ func _build_overlays() -> void:
 	pause_overlay.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(pause_overlay)
 	pause_overlay.setup(ctx)
+	outcome_card = OutcomeCard.new()
+	outcome_card.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	outcome_card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	outcome_card.grow_vertical = Control.GROW_DIRECTION_BOTH
+	add_child(outcome_card)
+	outcome_card.setup(ctx)
 	_banner = Label.new()
 	_banner.add_theme_font_size_override("font_size", 40)
 	_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)

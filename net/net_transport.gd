@@ -169,6 +169,13 @@ func repost_state() -> void:
 	_post(["state", null])
 
 
+## A new world replaces the old one (the run reset, NetRunReset): the encoder starts
+## from empty sections, the last state is dropped, and every client's next snapshot is
+## full (its ticks restart). Post the ownership tables and the new state after it.
+func reset_snapshots() -> void:
+	_post(["reset"])
+
+
 ## A ship's claims and last writers for the OWNERSHIP section (ServerSession).
 func post_ownership(ship: int, table: Dictionary) -> void:
 	_post(["ownership", ship, table.duplicate(true)])
@@ -254,6 +261,13 @@ func _apply(op: Array) -> void:
 				c.queue.push(NetChunker.STREAM_VOICE, op[2])
 		"ownership":
 			_builder.set_ownership(op[1], op[2])
+		"reset":
+			_builder = SnapshotBuilder.new()
+			_builder.chunk_size = chunk_size
+			_state = null
+			_last_state = null
+			for c: Conn in _conns.values():
+				c.resync.force_full()
 
 
 func _bind(
