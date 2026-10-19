@@ -1,0 +1,19 @@
+; Engine configuration file.
+; Pinned engine: tools/godot-version (FT-ARC-001).
+
+config_version=5
+
+[application]
+
+config/name="Full Theta"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+run/main_scene="res://app/main.tscn"
+
+[debug]
+
+gdscript/warnings/untyped_declaration=2
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
