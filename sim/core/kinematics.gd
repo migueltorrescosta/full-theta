@@ -212,6 +212,33 @@ func nearest(a: int, ids: PackedInt32Array) -> int:
 	return best
 
 
+## relative(a, b).length() (m, float32 like it) for each a in ids, in order: one call
+## for a whole scan (knowledge).
+func distances_to(ids: PackedInt32Array, b: int) -> PackedFloat64Array:
+	var half: float = 0.5 * period
+	var xs: PackedFloat64Array = px
+	var ys: PackedFloat64Array = py
+	var zs: PackedFloat64Array = pz
+	var bx: float = xs[b]
+	var by: float = ys[b]
+	var bz: float = zs[b]
+	var out: PackedFloat64Array = PackedFloat64Array()
+	out.resize(ids.size())
+	for k: int in ids.size():
+		var a: int = ids[k]
+		var dx: float = bx - xs[a]
+		var dy: float = by - ys[a]
+		var dz: float = bz - zs[a]
+		if not (dx >= -half and dx < half):
+			dx = _wrap(dx, period)
+		if not (dy >= -half and dy < half):
+			dy = _wrap(dy, period)
+		if not (dz >= -half and dz < half):
+			dz = _wrap(dz, period)
+		out[k] = Vector3(dx, dy, dz).length()
+	return out
+
+
 ## Offset of a site-local point from row a (m, float32) by minimum image, computed in
 ## 64-bit; the point need not be wrapped (FT-SIM-035).
 func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:
