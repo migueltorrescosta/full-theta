@@ -57,13 +57,15 @@ static func step(kin: Kinematics, row: int, dt: float) -> float:
 	var mom: Vector3 = kin.ang_mom[row] + q * tq * dt
 	kin.ang_mom[row] = mom
 	var inertia: Vector3 = kin.inertia[row]
+	# Body-frame momentum, carried through the sub-rotations: turning the body by r turns
+	# m by r^-1 (Vector3 * Quaternion), which leaves its component along the axis as is.
+	var m: Vector3 = mom * q
 	for i: int in SPLIT_AXES.size():
 		var axis: Vector3 = SPLIT_AXES[i]
-		var m: Vector3 = q.inverse() * mom
-		var angle: float = m.dot(axis) / inertia.dot(axis) * SPLIT_SHARES[i] * dt
-		if angle != 0.0:
-			q = q * Quaternion(axis, angle)
+		var r: Quaternion = Quaternion(axis, m.dot(axis) / inertia.dot(axis) * SPLIT_SHARES[i] * dt)
+		q = q * r
+		m = m * r
 	q = q.normalized()
 	kin.rot[row] = q
-	kin.ang_vel[row] = (q.inverse() * mom) / inertia
+	kin.ang_vel[row] = m / inertia
 	return used
