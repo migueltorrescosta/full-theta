@@ -127,6 +127,29 @@ func test_a_shared_voice_gets_the_closed_set_for_both_roles() -> void:
 	assert_int(slow.size()).is_equal(4)
 
 
+# FT: FT-AUD-018, FT-AUD-019
+# With an adapter that only takes process-wide settings (the binary), Italian's roles
+# share the voice with equal effective settings: each name is synthesised once, as one
+# whole clip, and both roles use it.
+func test_a_shared_voice_with_equal_settings_shares_the_names() -> void:
+	_fx.per_request_settings = false
+	_start("it")
+	var serena: Array = _texts(_fx.log, "it_IT-serena-medium")
+	assert_array(serena).contains_exactly_in_any_order(
+		["Valiant", "Viper Three", "Ghost One", "Mara Quill"]
+	)
+	for r: Dictionary in _fx.log:
+		assert_bool(r["whole"]).is_true()
+	var clip: PackedByteArray = _svc.name_clip("npc", "Mara Quill")
+	assert_int(clip.size()).is_equal("Mara Quill".length() * SpyVoiceSynth.LEN_PER_CHAR * 2)
+	assert_bool(_svc.name_clip("computer", "Mara Quill") == clip).is_true()
+	_svc.say("npc.hail_patrol", {"ship": "Valiant", "npc": "Mara Quill"}, PackedInt32Array([1]))
+	assert_int(_fx.log.size()).is_equal(4)
+	assert_array(Array(_fx.decode("it", "npc", _net.voice[0][1]["pcm"]))).is_equal(
+		["name:7", "seg:npc.hail_patrol:1", "name:10", "seg:npc.hail_patrol:2"]
+	)
+
+
 # FT: FT-AUD-003, FT-AUD-018, FT-ARC-019
 # A slotted line with names and numbers needs no synthesis: one voice_line event with
 # the text and coalescing key filled, then one stitched VOICE message (part 0, last)
@@ -300,6 +323,48 @@ func test_more_than_four_queued_free_lines_are_subtitles_only() -> void:
 	assert_int(_svc.free_queued()).is_equal(0)
 	_svc.say_free("Again.", "computer", 1, PackedInt32Array([1]))
 	assert_bool(_net.events[6][3]["audio"]).is_true()
+
+
+# FT: FT-AUD-015, FT-AUD-018
+# A synth that hands over nothing for job_timeout_ms fails its jobs: the closed set
+# completes without the names, a free line's clip ends with an empty last part, and the
+# D110 count drops.
+func test_stalled_jobs_time_out() -> void:
+	_fx.hold = true
+	_svc.job_timeout_ms = 50
+	_svc.start_session("en", CLOSED)
+	_svc.say_free("Hold position. Now.", "npc", 2, PackedInt32Array([4]))
+	_svc._process(0.0)
+	assert_bool(_svc.closed_set_done()).is_false()
+	assert_int(_svc.free_queued()).is_equal(1)
+	OS.delay_msec(120)
+	_svc._process(0.0)
+	assert_bool(_svc.closed_set_done()).is_true()
+	assert_int(_svc.free_queued()).is_equal(0)
+	assert_int(_svc.name_clip("npc", "Mara Quill").size()).is_equal(0)
+	assert_int(_net.voice.size()).is_equal(1)
+	var v: Dictionary = _net.voice[0][1]
+	assert_bool(v["last"]).is_true()
+	assert_int((v["pcm"] as PackedByteArray).size()).is_equal(0)
+	assert_int(_svc.stats["synth_errors"]).is_equal(9)
+	# Late parts of a timed-out job are ignored.
+	for spy: SpyVoiceSynth in _fx.spies.values():
+		spy.release()
+	_svc._process(0.0)
+	assert_int(_net.voice.size()).is_equal(1)
+
+
+# FT: FT-AUD-003, FT-AUD-015
+# Free text is cut to MAX_FREE_CHARS at a space for synthesis; the subtitle keeps it all.
+func test_long_free_text_is_cut_for_synthesis() -> void:
+	_start()
+	_fx.log.clear()
+	var text: String = "word ".repeat(100) + "end."
+	_svc.say_free(text, "npc", 2, PackedInt32Array([4]))
+	var spoken: String = _fx.log[0]["text"]
+	assert_int(spoken.length()).is_less_equal(VoiceService.MAX_FREE_CHARS)
+	assert_bool(spoken.ends_with("word")).is_true()
+	assert_str(_net.events[0][3]["text"]).is_equal(text)
 
 
 # FT: FT-AUD-018
