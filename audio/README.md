@@ -15,12 +15,12 @@ A line's text may hold slots, `{name}`, declared in `slots` with a kind: `ship_n
 
 ## Build time: prerender (FT-AUD-002, FT-DAT-005)
 
-`uv run --project tools/tts python tools/tts/prerender.py [LANG...] [--out DIR]` reads only `content/dialogue/*.json` and `content/voices.json`. Output (default `content/voice/prerendered/`, gitignored, never committed; exports include it) per language and role, read by `ClipLibrary` (`content/voice/clip_library.gd`):
+`uv run --project tools/tts python tools/tts/prerender.py [LANG...] [--out DIR]` reads only `content/dialogue/*.json` and `content/voices.json`. Output (default `audio/prerendered/`, gitignored, never committed; every desktop and web pack includes it) per language and role, read by `ClipLibrary` (`content/voice/clip_library.gd`):
 
 - `DIR/<lang>/<role>.pcm`: one blob of 16-bit little-endian mono PCM;
 - `DIR/<lang>/<role>.json`: `{"rate", "voice", "clips": {key: [first_sample, samples]}}`.
 
-Keys: `line:<id>` (a line without slots, prerender voice), `seg:<id>:<k>` (the k-th literal piece of a slotted line's text in that language, split at the slots, empty pieces skipped; runtime voice, trimmed), `num:<key>` (numbers.json fragments; runtime voice, trimmed). Computer clips are not filtered here: the robotic filter is an effect chain on the client's `VoiceComputer` bus (FT-AUD-004, D153), so it applies alike to prerendered, stitched and synthesised clips and to either Piper build.
+Keys: `line:<id>` (a line without slots, prerender voice), `seg:<id>:<k>` (the k-th literal piece of a slotted line's text in that language, split at the slots; only pieces holding a letter are rendered; runtime voice, trimmed), `num:<key>` (numbers.json fragments; runtime voice, trimmed, cut at the first 200 ms silence because voices babble after a single word). The release build calls `tools/tts/prerender_release.py --out audio/prerendered LANG...`, which also writes `<lang>/index.json` `{"language", "clips": [files]}` for the package inspection. Clips stay 16-bit PCM, not Ogg, because the host stitches from the same fragments. Computer clips are not filtered here: the robotic filter is an effect chain on the client's `VoiceComputer` bus (FT-AUD-004, D153), so it applies alike to prerendered, stitched and synthesised clips and to either Piper build.
 
 ## Host: synthesis and streaming (`net/voice/`)
 
