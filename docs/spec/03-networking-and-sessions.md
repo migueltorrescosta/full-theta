@@ -13,7 +13,7 @@ Commands go up, each with a client sequence number. Down: per-station filtered s
 1. A player joins a ship (or creates one, up to 6).
 2. The player picks one entry from the catalogue: a single functional station, a joint view, the Captain seat, or Viewer (D10, D67).
 3. Several players may pick the same station or joint view; they share it through claims (§3.4).
-4. The ship's Ready/Start control becomes clickable only when the coverage check passes: at least 3 crew players, and every one of Helm, Weapons, Engineering, Science, Relay and Comms covered by at least one crew player's pick (D66, D67).
+4. The ship's Ready/Start control becomes clickable only when the coverage check passes: at least 3 crew players, and every one of Helm, Weapons, Engineering, Science, Relay and Comms covered by at least one crew player's pick (D66, D67) Any crew player of the ship may then press Start; the simulation steps from the first Start (D129).
 
 Joint-view catalogue (D67, D76): every 2-station pair, 15 layouts, all offered in the lobby. Names are working titles; each view is named after the pair it serves (§7.3).
 
@@ -39,7 +39,7 @@ With 2-station joint views, a 3-player crew must be an exact partition, for exam
 
 ## 3.4 Claims on shared stations
 
-Claimable sub-controls (D18): weapon mounts; repair crews; the active scan or hack; probes; NPC conversations; Helm flight control; Helm shield facing. A claimed item is locked for others and shows the claimer's name. Unclaimed items can be claimed by any player at that station. Every other control is ship-wide (FT-NET-044).
+Claimable sub-controls (D18): weapon mounts; repair crews; the active scan or hack; probes; NPC conversations; Helm flight control; Helm shield facing. A claimed item is locked for others and shows the claimer's name. Unclaimed items can be claimed by any player at that station. A player alone on a station holds all its claims; when a second player joins, the first keeps them and the newcomer claims only what the first releases (D130). Every other control is ship-wide (FT-NET-044).
 
 ## 3.5 Reconnect
 

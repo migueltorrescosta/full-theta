@@ -173,3 +173,8 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 84. Load tags per station and joint view are fixed in data: Helm, Weapons and Tactical intense; Engineering, Science and Systems busy; Relay, Comms, Ops and Captain light; Viewer untagged. FT-STN-015. (D126)
 85. The host is the client presenting the secret its Host button gave the child server; a dedicated server has no host. FT-NET-041. (D127)
 86. A paused ship is abandoned by a majority vote of its remaining connected crew, or by the host alone; votes clear when the pause ends. FT-NET-041. (D128)
+
+### v0.5 update for D129–D130 (#6)
+
+87. Any crew player of a covered ship presses Start, and the sim steps from the first Start. §3.3, FT-NET-019. (D129)
+88. A player alone on a station keeps every claim when a second player joins; the newcomer claims what is released. §3.4, FT-NET-044. (D130)
