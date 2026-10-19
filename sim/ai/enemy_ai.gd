@@ -187,7 +187,15 @@ static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void
 	var los: Vector3 = rel / dist if dist > 0.0 else forward
 	var gap: float = dist - 0.5 * (ai.engage_range_min[id] + ai.engage_range_max[id])
 	# Wanted own velocity along the line of sight: the target's plus a closing speed.
-	var along: float = closing_speed(world, id, gap) + target_vel.dot(los)
+	# closing_speed (AssistSystem.closing_speed on the gap's size), inlined.
+	var tuning: AssistDef = def.assist
+	var brake: float = (
+		(kin.max_thrust_pos[id] * kin.thrust_scale[id]).z / kin.mass[id] * tuning.approach_braking
+	)
+	var size: float = absf(gap)
+	var closing: float = minf(sqrt(2.0 * brake * size), size / tuning.approach_final_time_constant)
+	closing = minf(closing, tuning.approach_speed_cap)
+	var along: float = signf(gap) * closing + target_vel.dot(los)
 	_helm_input(world, id, true, along * forward.dot(los))
 	for m: int in mounts.size():
 		var aim: Vector3 = aims[m]
