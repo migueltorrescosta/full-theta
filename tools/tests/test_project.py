@@ -9,8 +9,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 # FT: FT-ARC-001
 def test_tampered_checksum_fails(tmp_path: Path) -> None:
-    sums = (ROOT / "tools/godot.sha512").read_text()
-    (tmp_path / "bad.sha512").write_text("0" + sums[1:])
+    lines = (ROOT / "tools/godot.sha512").read_text().splitlines()
+    bad = ["0" * 128 + line[128:] for line in lines]
+    (tmp_path / "bad.sha512").write_text("\n".join(bad) + "\n")
     env = dict(os.environ, GODOT_SHA512=str(tmp_path / "bad.sha512"))
     result = subprocess.run(
         [str(ROOT / "tools/get-godot.sh")], env=env, capture_output=True, text=True

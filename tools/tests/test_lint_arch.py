@@ -38,7 +38,7 @@ def run(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_every_fixture_pattern_is_listed() -> None:
-    assert sorted(p.name for p in FIXTURES.iterdir()) == sorted(FAILS)
+    assert sorted(p.name for p in FIXTURES.iterdir() if p.is_dir()) == sorted(FAILS)
 
 
 @pytest.mark.parametrize("pattern", FAILS)
