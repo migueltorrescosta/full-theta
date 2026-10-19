@@ -14,6 +14,7 @@ docs/release.md; inspection: inspect_packages.py.
 """
 
 import argparse
+import functools
 import io
 import json
 import shutil
@@ -86,13 +87,27 @@ Licence texts are in `licenses/`.
 The complete corresponding source of every GPL program in this package (Full
 Theta, and eSpeak NG as built into Piper) is offered from the same place as this
 package: the release page above carries, next to the packages, the game's source
-archive and these exact upstream source archives:
+archive and these upstream source archives:
 
 {srcs}
 
+Upstream built Piper's piper-phonemize and eSpeak NG from their master
+branches and recorded no commit. The archives above are the commits those
+branches pointed at when the binaries were built (by date):
+{m["piper_phonemize"]["derivation"]} {m["espeak_ng"]["derivation"]}
+
 They stay available there for as long as the release is offered. If a link
-breaks, open an issue at {url}/issues and we will send the source.
+breaks, or you need the source in another form, open an issue at {url}/issues
+and we will send it.
 """
+
+
+@functools.cache
+def voice_config(voice: str) -> tuple[bytes, tuple[str, ...]]:
+    """The voice's bundled .onnx.json and the keys D144 dropped from it."""
+    path = fetch_voices.fetch(voice) / f"{voice}.onnx.json"
+    data, dropped = patch_voice_config(path.read_bytes())
+    return data, tuple(dropped)
 
 
 def voices_md(changes: dict[str, list[str]] | None = None) -> str:
@@ -116,6 +131,11 @@ def voices_md(changes: dict[str, list[str]] | None = None) -> str:
             f"- Model card: `piper/voices/{v}/MODEL_CARD`",
         ]
         if changes and changes.get(v):
+            if "D144" not in e["attribution"]:
+                raise SystemExit(
+                    f"package: {v}'s config is modified, but its provenance entry "
+                    "doesn't record it (cite D144)"
+                )
             keys = ", ".join(changes[v])
             lines.append(
                 f"- Modified: `{v}.onnx.json` drops the phoneme_id_map entries {keys}, "
@@ -163,13 +183,7 @@ def patch_voice_config(data: bytes) -> tuple[bytes, list[str]]:
 
 def voice_changes() -> dict[str, list[str]]:
     """Voice -> phoneme_id_map keys dropped from its config (D144)."""
-    out = {}
-    for v in release_voices():
-        path = fetch_voices.fetch(v) / f"{v}.onnx.json"
-        dropped = patch_voice_config(path.read_bytes())[1]
-        if dropped:
-            out[v] = dropped
-    return out
+    return {v: list(voice_config(v)[1]) for v in release_voices() if voice_config(v)[1]}
 
 
 def voice_files() -> dict[str, Path]:
@@ -182,6 +196,26 @@ def voice_files() -> dict[str, Path]:
     return out
 
 
+def skipped(rel: str) -> bool:
+    """Upstream files the packages leave out: build metadata and debug symbols."""
+    first = rel.split("/")[0]
+    return first == "pkgconfig" or first.endswith(".dSYM")
+
+
+def upstream_files(kind: str) -> set[str]:
+    """Files under piper/ in the pinned archive for kind, as packaged (the
+    inspection compares each package's Piper folder with this)."""
+    archive = fetch.fetch_group("binaries")[kind]
+    if archive.suffix == ".zip":
+        with zipfile.ZipFile(archive) as z:
+            names = [i.filename for i in z.infolist() if not i.is_dir()]
+    else:
+        with tarfile.open(archive) as t:
+            names = [i.name for i in t.getmembers() if i.isfile() or i.issym()]
+    rels = [n.removeprefix("piper/") for n in names if n.startswith("piper/")]
+    return {r for r in rels if not skipped(r)}
+
+
 def piper_tree(archive: Path, dest: Path) -> Path:
     """Extracts a Piper archive and returns its piper/ folder."""
     if archive.suffix == ".zip":
@@ -191,9 +225,9 @@ def piper_tree(archive: Path, dest: Path) -> Path:
         with tarfile.open(archive) as t:
             t.extractall(dest, filter="data")
     tree = dest / "piper"
-    shutil.rmtree(tree / "pkgconfig", ignore_errors=True)
-    for dsym in tree.glob("*.dSYM"):
-        shutil.rmtree(dsym)
+    for p in list(tree.iterdir()):
+        if skipped(p.name):
+            shutil.rmtree(p) if p.is_dir() else p.unlink()
     return tree
 
 
@@ -252,7 +286,7 @@ class Writer:
 def add_voices(w: Writer, rel: str) -> None:
     for name, path in voice_files().items():
         if name.endswith(".onnx.json"):
-            w.add_bytes(f"{rel}/{name}", patch_voice_config(path.read_bytes())[0])
+            w.add_bytes(f"{rel}/{name}", voice_config(path.parent.name)[0])
         else:
             w.add_file(f"{rel}/{name}", path)
 
@@ -326,7 +360,7 @@ def write_sums(out: Path) -> None:
     lines = [
         f"{fetch.sha256(p)}  {p.name}"
         for p in sorted(out.iterdir())
-        if p.is_file() and p.name != "SHA256SUMS"
+        if p.is_file() and p.name != "SHA256SUMS" and not p.name.startswith(".")
     ]
     (out / "SHA256SUMS").write_text("\n".join(lines) + "\n")
 

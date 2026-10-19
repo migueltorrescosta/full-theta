@@ -16,7 +16,7 @@ set -uo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root" || exit 1
 out=build/l6
-version=l6
+version=v0.0.0-l6
 line="Contact bearing three four two. Shields holding."
 export WINEPREFIX=${WINEPREFIX:-$HOME/.cache/full-theta/l6-wineprefix} WINEDEBUG=-all
 
@@ -42,8 +42,8 @@ check() { # kind, port, path prefix for the game's own paths, launcher...
   mkdir -p "$log"
   echo "l6: $kind: tts smoke"
   # Wine passes the Windows build's CRLF line ends through.
-  "$@" --headless -- --tts-smoke "$line" --out "$prefix$log/line.wav" 2>&1 | tr -d '\r' \
-    >"$log/tts.log"
+  timeout 300 "$@" --headless -- --tts-smoke "$line" --out "$prefix$log/line.wav" 2>&1 \
+    | tr -d '\r' >"$log/tts.log"
   local code=${PIPESTATUS[0]}
   grep -E "^(build|tts-smoke):" "$log/tts.log" | sed "s/^/l6: $kind: /"
   # One WAV per bundled voice (line.<voice>.wav): every voice loads (D144).

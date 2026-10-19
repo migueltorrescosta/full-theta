@@ -16,7 +16,7 @@ The host server synthesises speech at runtime with Piper (GPL-3.0-or-later), whi
 
 ## Release packages
 
-Each release package ships the game (Godot, MIT), its web export, the standalone Piper with its eSpeak NG and ONNX Runtime, and the release voices (D140, D141). `tools/release/package.py` puts the GPL-3.0 text in `LICENSE`, every third-party licence text and `licenses/VOICES.md` (from the voice entries in `content/provenance.json`) in `licenses/`, and the source link and offer in `SOURCE.md`, which names the Piper and eSpeak NG versions. The release page carries the exact upstream source archives next to the packages (FT-LIC-008). `tools/release/inspect_packages.py` checks all of it before a release is drafted (`docs/release.md`).
+Each release package ships the game (Godot, MIT), its web export, the standalone Piper with its eSpeak NG and ONNX Runtime, and the release voices (D140, D141). `tools/release/package.py` puts the GPL-3.0 text in `LICENSE`, every third-party licence text and `licenses/VOICES.md` (from the voice entries in `content/provenance.json`) in `licenses/`, and the source link and offer in `SOURCE.md`, which names the Piper and eSpeak NG versions. The release page carries the upstream source archives next to the packages (FT-LIC-008). Piper's is its release tag. For piper-phonemize and eSpeak NG, the commits are inferred from the build date (D140), and `SOURCE.md` says so and offers the source on request too. `tools/release/inspect_packages.py` checks all of it before a release is drafted (`docs/release.md`).
 
 ## Provenance review checklist
 

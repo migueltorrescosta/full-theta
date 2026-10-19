@@ -32,17 +32,11 @@ static func build_line() -> String:
 	return "build: %s %s" % [info["version"], info["commit"]]
 
 
-## Folder holding the package's own files: the executable's folder, or the app
-## bundle's Resources folder on macOS. "" when running from a checkout.
+## Folder holding the package's own files (BundledPiper.resources_dir_for), or
+## "" when running from a checkout.
 static func resources_dir() -> String:
-	if not OS.has_feature("template"):
-		return ""
-	return resources_dir_for(OS.get_executable_path(), OS.has_feature("macos"))
-
-
-static func resources_dir_for(executable: String, macos: bool) -> String:
-	var dir: String = executable.get_base_dir()
-	return dir.path_join("../Resources").simplify_path() if macos else dir
+	var exe: String = BundledPiper.executable()
+	return "" if exe == "" else BundledPiper.resources_dir_for(exe, OS.get_name() == "macOS")
 
 
 ## The bundled web export's folder, or "" when there is none (a checkout, or a

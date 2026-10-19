@@ -12,18 +12,25 @@ extends RefCounted
 ## The runtime voice processes (E10, FT-ARC-019) use the same paths.
 
 
-## Paths for an executable at `executable` on the given platform; all "" when
-## `executable` is "".
-static func paths_for(executable: String, os_name: String) -> Dictionary:
+## Folder holding a package's own files for the executable at `exe_path`: its
+## folder, or the app bundle's Resources folder on macOS (ReleaseBundle uses it
+## for the web export).
+static func resources_dir_for(exe_path: String, macos: bool) -> String:
+	var dir: String = exe_path.get_base_dir()
+	return dir.path_join("../Resources").simplify_path() if macos else dir
+
+
+## Paths for the executable at `exe_path` on the given platform; all "" when
+## `exe_path` is "".
+static func paths_for(exe_path: String, os_name: String) -> Dictionary:
 	var paths: Dictionary = {"program": "", "data": "", "voices": ""}
-	if executable == "":
+	if exe_path == "":
 		return paths
-	var dir: String = executable.get_base_dir()
-	var data: String = dir.path_join("piper")
+	var macos: bool = os_name == "macOS"
+	var data: String = resources_dir_for(exe_path, macos).path_join("piper")
 	var program: String = data.path_join("piper")
-	if os_name == "macOS":
-		data = dir.path_join("../Resources/piper").simplify_path()
-		program = dir.path_join("../Helpers/piper/piper").simplify_path()
+	if macos:
+		program = exe_path.get_base_dir().path_join("../Helpers/piper/piper").simplify_path()
 	elif os_name == "Windows":
 		program += ".exe"
 	paths["program"] = program
@@ -32,11 +39,15 @@ static func paths_for(executable: String, os_name: String) -> Dictionary:
 	return paths
 
 
-## This build's paths; all "" when running from a checkout (development uses the
+## The running export's executable, or "" in a checkout (development uses the
 ## tools/tts environment instead).
+static func executable() -> String:
+	return OS.get_executable_path() if OS.has_feature("template") else ""
+
+
+## This build's paths; all "" when running from a checkout.
 static func paths() -> Dictionary:
-	var exe: String = OS.get_executable_path() if OS.has_feature("template") else ""
-	return paths_for(exe, OS.get_name())
+	return paths_for(executable(), OS.get_name())
 
 
 ## Voice names the package carries (sorted), from the voices folder.

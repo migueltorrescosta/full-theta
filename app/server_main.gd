@@ -18,8 +18,8 @@ extends RefCounted
 ##   --idle-exit-min M    exit after M minutes without connections, wall clock
 ##                        (FT-NET-003); 0 never [0].
 ##   --pid-file PATH      write the pid file there while running (FT-NET-003).
-##   --http-root DIR      serve this web export over HTTP at port - 1 (FT-NET-030,
-##                        D108); off without it.
+##   --http-root DIR      serve this web export (an absolute path) over HTTP at
+##                        port - 1 (FT-NET-030, D108); off without it.
 ##   --name NAME          server name in the LAN beacon ["Full Theta server"].
 ##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
 ##   --no-beacon          don't broadcast on the LAN (tests).
@@ -109,6 +109,10 @@ func _set_flag(flag: String, value: String) -> bool:
 		"--pid-file":
 			pid_file = value
 		"--http-root":
+			# Relative paths would resolve against res:// in an export.
+			if not value.is_absolute_path():
+				push_error("--http-root needs an absolute path")
+				return false
 			http_root = value
 		"--name":
 			server_name = value

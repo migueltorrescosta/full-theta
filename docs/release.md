@@ -9,8 +9,15 @@ A release is a set of packages for Linux, Windows and macOS, built from one tagg
    ```bash
    git tag -a v0.1.0 -m "Full Theta v0.1.0" <commit> && git push origin v0.1.0
    ```
-3. The workflow builds and inspects the packages and drafts a GitHub release with them, `SHA256SUMS`, the source archives and notes filled from `.github/release-notes.md` (`tools/release/notes.py`). Nothing is public until the owner publishes the draft.
-4. The owner edits the draft's Changes section, ticks the checks, attaches the signed macOS zip from #13 in place of the unsigned one, and publishes.
+3. The workflow's `package` job builds and inspects the packages with a read-only token. Its `draft` job, the only one that can write and which runs no repository code, drafts a GitHub release with the packages, `SHA256SUMS`, the source archives and notes filled from `.github/release-notes.md` (`tools/release/notes.py`). Nothing is public until the owner publishes the draft.
+4. The owner edits the draft's Changes section and ticks the checks. Next, the owner replaces the unsigned macOS zip with the signed one from #13 under the same name, and regenerates the checksums and the Downloads list:
+   ```bash
+   gh release download v0.1.0 -D rel && cp <signed zip> rel/full-theta-v0.1.0-macos.zip
+   (cd rel && sha256sum full-theta-* piper-* espeak-ng-* >SHA256SUMS)
+   gh release upload v0.1.0 rel/full-theta-v0.1.0-macos.zip rel/SHA256SUMS --clobber
+   uv run --project tools python tools/release/notes.py --version v0.1.0 --commit <commit> rel
+   ```
+   The last command prints the notes with the new Downloads list; paste that section into the draft. Then the owner publishes it.
 
 A tag whose packages fail inspection fails the workflow. Delete the tag, fix, and tag again.
 
@@ -22,27 +29,31 @@ A tag whose packages fail inspection fails the workflow. Delete the tag, fix, an
 | `full-theta-V-windows-x86_64.zip` | The same, with `full-theta.exe` and `piper/piper.exe` and its DLLs |
 | `full-theta-V-macos.zip` | `Full Theta.app` (Piper in `Contents/Helpers/piper/`, its data and voices in `Contents/Resources/piper/`, the web export in `Contents/Resources/web/`), and `LICENSE`, `licenses/`, `SOURCE.md`, `BUILD.json` beside it |
 | `full-theta-V-source.tar.gz` | `git archive` of the tagged commit |
-| `piper-…`, `piper-phonemize-…`, `espeak-ng-<commit>.tar.gz` | The exact upstream sources of the bundled Piper and eSpeak NG, which `SOURCE.md` offers |
+| `piper-…`, `piper-phonemize-…`, `espeak-ng-<commit>.tar.gz` | The upstream sources of the bundled Piper and eSpeak NG, which `SOURCE.md` offers. Piper's is its release tag. Upstream built piper-phonemize and eSpeak NG from their master branches and recorded no commit, so these are the commits those branches pointed at on the build date (`derivation` in `tools/release/piper.json`); `SOURCE.md` says so and offers the source on request as well |
 | `SHA256SUMS` | SHA-256 of every asset |
 
 The game finds its bundled files next to its executable (`ReleaseBundle`, `BundledPiper`). The Host button's server child serves `web/` (`HostLauncher`).
 
 ## How the build works
 
-`tools/release/build.sh VERSION OUT_DIR` does every step; the workflow and `gate.sh l6` both call it.
+`tools/release/build.sh VERSION OUT_DIR` does every step; the workflow and `gate.sh l6` both call it. VERSION must look like `v1.2.3` or `v1.2.3-rc.1`. The script refuses an OUT_DIR that holds anything other than an earlier build's output, and writes `.gdignore` there, so Godot never imports or exports build files.
 
 1. Writes `build_info.json` (version, commit). It is gitignored, and every export packs it, so the desktop build and the web page both print `build: VERSION COMMIT` at start (`ReleaseBundle.build_line()`).
 2. Prerenders every release language (`tools/release/prerender.sh`, D154): the client clips into `audio/prerendered/<lang>/` (every pack, web included) and the host's stitching fragments into `audio/prerendered_host/<lang>/` (desktop packs only). It renders with the `prerender` voices of `tools/tts/voices.json`, which don't ship. The packs carry the clips through the export include filter, together with the dialogue and string data the game reads (`content/dialogue/*.json`, `content/i18n/strings.json`, `content/voices.json`), and the inspection checks both in every pack (D150–D152). Until the voice strand adds `tools/tts/prerender_release.py`, the step writes stub indexes. The inspection rejects them unless `--allow-stub-prerender` is given, so a tag can't ship without clips.
 3. Exports the `Linux`, `Windows`, `macOS` and `Web` presets.
 4. Finishes the web export for plain `http://` (`tools/release/web_patch.py`, D108).
 5. Packages everything (`tools/release/package.py`). It fetches the pinned Piper archives, licence files and sources (`tools/release/fetch.py`, `tools/release/piper.json`) and the release voices (`tools/tts/fetch_voices.py`), all checked by SHA-256.
-6. Inspects the packages (`tools/release/inspect_packages.py`). It reads `build_info.json` from inside each desktop pack and each web pack, so it checks that the commit matches the tag. It also checks the patched shell and `index.js`, Piper's files, that the voices are exactly the release list with their model cards, the prerendered clips per release language, the GPL-3.0 text, the licence files, `SOURCE.md`'s versions and source archives, and `SHA256SUMS`.
+6. Inspects the packages (`tools/release/inspect_packages.py`) and fails the build on any problem:
+   - It compares each package's file list exactly with the exports, the pinned upstream Piper archive, the release voices and the licence files, so a missing or extra file fails.
+   - It reads `build_info.json` from inside each desktop pack and each web pack, so it checks that the commit matches the tag.
+   - It checks the data files and prerendered clips in each pack, the patched shell and `index.js`, the voice configs (D144) and the macOS helper's rpath.
+   - It checks the GPL-3.0 text, `SOURCE.md`'s versions and source archives, and that the folder holds exactly the expected assets, each listed in `SHA256SUMS`.
 
 ## L6 on fugaku
 
 `tools/gate.sh l6` (`tools/l6/run.sh`) builds and inspects the packages of the working tree. Then, for the Linux package natively and the Windows package under Wine, it runs three checks:
 
-- The exported game synthesises one line with its bundled Piper (`-- --tts-smoke TEXT --out WAV`).
+- The exported game synthesises one line with each bundled voice through its bundled Piper (`-- --tts-smoke TEXT --out /ABS/line.wav`), under a 300 s timeout.
 - It serves its bundled `web/`, and headless Chromium loads the page from a non-secure host name until the page prints the same build line.
 - A headless server smoke run.
 

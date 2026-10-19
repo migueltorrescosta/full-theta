@@ -1,13 +1,27 @@
 {
-  "comment": "Standalone Piper shipped in release packages (D140, FT-ARC-022). Fetched and SHA-256-checked by tools/release/fetch.py. rhasspy/piper's macOS archives lack their dylibs and are x86_64 only, so macOS takes the dylibs from piper-phonemize (D140, docs/release.md).",
-  "piper": {"name": "Piper", "version": "2023.11.14-2", "licence": "MIT"},
+  "comment": "Standalone Piper shipped in release packages (D140, FT-ARC-022). Fetched and SHA-256-checked by tools/release/fetch.py. rhasspy/piper's macOS archives lack their dylibs and are x86_64 only, so macOS takes the dylibs from piper-phonemize (D140, docs/release.md). Each licence file is read at the same commit as the source archive pinned for it (the tag, or the inferred commit below).",
+  "piper": {
+    "name": "Piper",
+    "version": "2023.11.14-2",
+    "licence": "MIT"
+  },
   "espeak_ng": {
     "name": "eSpeak NG (rhasspy fork)",
     "version": "1.52.0.1, rhasspy/espeak-ng commit 0f65aa301e0d6bae5e172cc74197d32a6182200f",
-    "licence": "GPL-3.0-or-later"
+    "licence": "GPL-3.0-or-later",
+    "derivation": "piper-phonemize built eSpeak NG from rhasspy/espeak-ng master on 2023-11-14; master then pointed at 0f65aa30 (2023-09-13) and moved next on 2023-11-27, and the binaries report 1.52.0.1. Inferred from these dates, not recorded by the build."
   },
-  "piper_phonemize": {"name": "piper-phonemize", "version": "2023.11.14-4", "licence": "MIT"},
-  "onnxruntime": {"name": "ONNX Runtime", "version": "1.14.1", "licence": "MIT"},
+  "piper_phonemize": {
+    "name": "piper-phonemize",
+    "version": "2023.11.14-4",
+    "licence": "MIT",
+    "derivation": "Piper 2023.11.14-2 built piper-phonemize from its master branch on 2023-11-14 (19:09-20:07 UTC); master then pointed at fccd4f33 (2023-11-14 17:54 UTC, tag 2023.11.14-4) and moved next on 2023-11-27. Inferred from these dates, not recorded by the build."
+  },
+  "onnxruntime": {
+    "name": "ONNX Runtime",
+    "version": "1.14.1",
+    "licence": "MIT"
+  },
   "binaries": {
     "linux": {
       "url": "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz",

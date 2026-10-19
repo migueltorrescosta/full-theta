@@ -16,10 +16,6 @@ import fetch  # noqa: E402
 import package  # noqa: E402
 
 TEMPLATE = HERE.parents[1] / ".github/release-notes.md"
-MACOS_NOTE = (
-    "not yet signed or notarised (#13), so macOS refuses to open it until the owner "
-    "signs it; the Piper helper is x86_64 and needs Rosetta 2 on Apple silicon."
-)
 
 
 def notes(version: str, commit: str, out: Path) -> str:
@@ -33,7 +29,6 @@ def notes(version: str, commit: str, out: Path) -> str:
         "VERSION": version,
         "COMMIT": commit,
         "ASSETS": "\n".join(assets),
-        "MACOS_NOTE": MACOS_NOTE,
         "PIPER": m["piper"]["version"],
         "ESPEAK_NG": m["espeak_ng"]["version"],
         "VOICES": ", ".join(package.release_voices()),

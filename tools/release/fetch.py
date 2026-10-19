@@ -6,12 +6,13 @@ Each file is checked against its SHA-256 (FT-ARC-022, FT-LIC-008). The cache is
 $FT_RELEASE_CACHE or ~/.cache/full-theta/release/. Prints the cached paths.
 """
 
-import hashlib
 import json
 import os
 import sys
-import urllib.request
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tts"))
+from fetch_voices import download, sha256  # noqa: E402, F401 (sha256 re-exported)
 
 MANIFEST = Path(__file__).with_name("piper.json")
 GROUPS = ("binaries", "licences", "sources")
@@ -26,31 +27,11 @@ def cache_dir() -> Path:
     return Path(os.environ.get("FT_RELEASE_CACHE", default))
 
 
-def sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for block in iter(lambda: f.read(1 << 20), b""):
-            h.update(block)
-    return h.hexdigest()
-
-
 def fetch_one(group: str, key: str) -> Path:
     """Download one pinned file (if missing or stale) and return its path."""
     meta = manifest()[group][key]
     name = key if group != "binaries" else Path(meta["url"]).name
-    local = cache_dir() / group / name
-    if local.exists() and sha256(local) == meta["sha256"]:
-        return local
-    local.parent.mkdir(parents=True, exist_ok=True)
-    tmp = local.with_name(local.name + ".part")
-    print(f"fetch: {meta['url']}", file=sys.stderr)
-    urllib.request.urlretrieve(meta["url"], tmp)
-    got = sha256(tmp)
-    if got != meta["sha256"]:
-        tmp.unlink()
-        raise SystemExit(f"fetch: {meta['url']}: sha256 {got} != {meta['sha256']}")
-    tmp.replace(local)
-    return local
+    return download(meta["url"], cache_dir() / group / name, meta["sha256"])
 
 
 def fetch_group(group: str) -> dict[str, Path]:

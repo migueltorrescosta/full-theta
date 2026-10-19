@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Builds the release packages for one commit (FT-ARC-022, FT-GEN-012, FT-LIC-008):
 #   tools/release/build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]
-#                          [--skip-inspect]
 # 1. writes build_info.json (version, commit), which every export carries;
 # 2. prerenders each release language's clips (prerender.sh);
 # 3. exports Linux, Windows, macOS and Web (export_presets.cfg) into OUT_DIR/exports;
@@ -10,26 +9,34 @@
 #    voices and the licence material, plus the source archives (package.py);
 # 6. inspects the result (inspect_packages.py) and fails on any problem.
 # The release workflow (.github/workflows/release.yml) and `gate.sh l6` run it;
-# docs/release.md describes the artefacts. --allow-dirty builds an uncommitted
-# tree (the commit gets a -dirty suffix); --allow-stub-prerender accepts the
-# stub clips until the voice strand's prerender lands (never on a tag);
-# --skip-inspect leaves step 6 to the caller (the workflow runs it as its own step).
+# docs/release.md describes the artefacts. VERSION is a tag name such as v1.2.3
+# or v1.2.3-rc.1. OUT_DIR must be new, empty or an earlier build's output.
+# --allow-dirty builds an uncommitted tree (the commit gets a -dirty suffix);
+# --allow-stub-prerender accepts stub clips (l6 and act dry runs, never a tag).
 set -euo pipefail
+usage="usage: build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]"
+version=${1:?$usage}
+out=$(realpath -m -- "${2:?$usage}")
+shift 2
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
-
-version=${1:?usage: build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]}
-out=${2:?usage: build.sh VERSION OUT_DIR [--allow-dirty] [--allow-stub-prerender]}
-shift 2
-allow_dirty=0 inspect=1 inspect_args=()
+allow_dirty=0 inspect_args=()
 for arg in "$@"; do
   case $arg in
     --allow-dirty) allow_dirty=1 ;;
     --allow-stub-prerender) inspect_args+=(--allow-stub-prerender) ;;
-    --skip-inspect) inspect=0 ;;
     *) echo "build.sh: unknown argument $arg" >&2; exit 2 ;;
   esac
 done
+if ! [[ $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
+  echo "build.sh: VERSION $version is not a version tag like v1.2.3 or v1.2.3-rc.1" >&2
+  exit 2
+fi
+marker=.ft-release-build  # inspect_packages.MARKER
+if [[ -e $out ]] && [[ -n $(ls -A "$out") ]] && [[ ! -f $out/$marker ]]; then
+  echo "build.sh: $out is not empty and not an earlier build's output; refusing to replace it" >&2
+  exit 1
+fi
 
 commit=$(git rev-parse HEAD)
 if [[ -n $(git status --porcelain) ]]; then
@@ -41,7 +48,9 @@ py() { uv run --quiet --project tools python "$@"; }
 godot=$(tools/get-godot.sh --with-templates)
 rm -rf "$out"
 mkdir -p "$out"/exports/{linux,windows,macos,web}
-out=$(cd "$out" && pwd)
+# The marker lets a later run replace this folder; .gdignore keeps Godot from
+# importing (and exporting) its files when OUT_DIR is inside the project.
+touch "$out/$marker" "$out/.gdignore"
 trap 'rm -f "$root/build_info.json"' EXIT
 printf '{"commit": "%s", "version": "%s"}\n' "$commit" "$version" >build_info.json
 
@@ -69,7 +78,6 @@ git archive --format=tar.gz --prefix="full-theta-$version/" \
 py tools/release/package.py --version "$version" --commit "$commit" \
   --exports "$out/exports" --out "$out" --repo "${GITHUB_REPOSITORY:-migueltorrescosta/full-theta}"
 
-((inspect)) || exit 0
 echo "build: inspect"
 py tools/release/inspect_packages.py --version "$version" --commit "$commit" \
   "${inspect_args[@]}" "$out"

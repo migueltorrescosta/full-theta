@@ -71,7 +71,7 @@
       "version": "1.64.1",
       "source": "https://github.com/microsoft/playwright",
       "licence": "Apache-2.0",
-      "attribution": "Copyright (c) Microsoft Corporation; used only by the S3 spike harness (spikes/s3/harness)"
+      "attribution": "Copyright (c) Microsoft Corporation; used only by the S3 spike harness (spikes/s3/harness) and the L6 web-export load check (tools/l6)"
     },
     {
       "name": "Piper standalone (shipped in release packages)",
@@ -95,7 +95,7 @@
       "version": "1.52.0.1, commit 0f65aa301e0d6bae5e172cc74197d32a6182200f",
       "source": "https://github.com/rhasspy/espeak-ng/tree/0f65aa301e0d6bae5e172cc74197d32a6182200f",
       "licence": "GPL-3.0-or-later",
-      "attribution": "Copyright (c) eSpeak NG contributors; licenses/espeak-ng-COPYING, source archive attached to each release (SOURCE.md, FT-LIC-008)"
+      "attribution": "Copyright (c) eSpeak NG contributors; licenses/espeak-ng-COPYING, source archive attached to each release (SOURCE.md, FT-LIC-008). The commit is inferred: upstream built from master on 2023-11-14 without recording one (tools/release/piper.json)"
     },
     {
       "name": "ONNX Runtime (in the shipped Piper)",

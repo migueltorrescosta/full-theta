@@ -168,3 +168,41 @@ def test_voice_config_patch_drops_only_multi_codepoint_phonemes():
     assert package.patch_voice_config(same) == (same, [])
     md = package.voices_md({"it_IT-serena-medium": ["aɪ"]})
     assert "Modified" in md and "aɪ" in md
+
+
+def test_pack_reader_rejects_truncated_and_lying_packs():
+    data = make_pack({"build_info.json": b"{}"})
+    for bad in (data[:20], data[:-10], data[:4] + b"\xff" * 4 + data[8:]):
+        with pytest.raises(ValueError):
+            pck.open_pack(bad)
+    lying = b"x" * 10 + struct.pack("<Q", 10**9) + b"GDPC"
+    with pytest.raises(ValueError):
+        pck.open_pack(lying)
+
+
+# FT: FT-LIC-008
+def test_assets_must_match_the_expected_set_and_sums(tmp_path):
+    import inspect_packages
+
+    insp = inspect_packages.Inspector("v1.0.0", "c0ffee", allow_stub=False)
+    names = package.asset_names("v1.0.0")
+    expected = [names[k] for k in ("linux", "windows", "macos", "source")]
+    for n in expected:
+        (tmp_path / n).write_bytes(n.encode())
+    (tmp_path / "SHA256SUMS").write_text("")
+    insp.assets(tmp_path)
+    text = "\n".join(insp.errors)
+    assert "SHA256SUMS lacks" in text and "missing or not the pinned archive" in text
+
+    insp = inspect_packages.Inspector("v1.0.0", "c0ffee", allow_stub=False)
+    (tmp_path / "stray.tar.gz").write_bytes(b"x")
+    (tmp_path / "SHA256SUMS").write_text("not a line\n")
+    insp.assets(tmp_path)
+    text = "\n".join(insp.errors)
+    assert "stray.tar.gz" in text and "malformed" in text
+
+
+# FT: FT-LIC-005
+def test_modified_voice_needs_a_provenance_entry_citing_d144():
+    with pytest.raises(SystemExit):
+        package.voices_md({"en_GB-cori-medium": ["aɪ"]})

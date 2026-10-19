@@ -18,7 +18,9 @@ tablets and phones join from the host's address in a browser.
 
 - **Linux:** extract, then run `full-theta.x86_64`.
 - **Windows:** extract, then run `full-theta.exe`.
-- **macOS:** {{MACOS_NOTE}}
+- **macOS:** not signed or notarised until the owner step in #13, so macOS
+  refuses to open it until then. The Piper helper is x86_64 and needs
+  Rosetta 2 on Apple silicon.
 
 ## Voices
 
@@ -29,8 +31,8 @@ a voice: {{LANGUAGES}}; other languages show subtitles only.
 
 Full Theta is GPL-3.0. Each package has `LICENSE`, `licenses/` and
 `SOURCE.md`, which names the bundled Piper {{PIPER}} and eSpeak NG
-{{ESPEAK_NG}}. Their source archives are attached below with the game's own
-source.
+{{ESPEAK_NG}}. Their source archives are listed under Downloads, next to the
+game's own source.
 
 ## Checks
 

@@ -5,12 +5,12 @@ extends GdUnitTestSuite
 
 # FT: FT-ARC-022
 func test_web_and_resources_folder_per_platform() -> void:
-	assert_str(ReleaseBundle.resources_dir_for("/opt/ft/full-theta.x86_64", false)).is_equal(
+	assert_str(BundledPiper.resources_dir_for("/opt/ft/full-theta.x86_64", false)).is_equal(
 		"/opt/ft"
 	)
 	(
 		assert_str(
-			ReleaseBundle.resources_dir_for("/A/Full Theta.app/Contents/MacOS/Full Theta", true)
+			BundledPiper.resources_dir_for("/A/Full Theta.app/Contents/MacOS/Full Theta", true)
 		)
 		. is_equal("/A/Full Theta.app/Contents/Resources")
 	)
