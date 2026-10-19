@@ -16,6 +16,8 @@ var log: Array[Dictionary] = []
 ## voice -> SpyVoiceSynth made by factory().
 var spies: Dictionary = {}
 var hold: bool = false
+## The spies' takes_settings() (false: like PiperBinarySynth).
+var per_request_settings: bool = true
 ## Voices factory() returns null for (a missing model).
 var missing: PackedStringArray = []
 
@@ -40,7 +42,7 @@ func write(lang: String) -> void:
 			continue
 		var pieces: PackedStringArray = DialogueLines.pieces(line["text"][lang])
 		for k: int in pieces.size():
-			if VoiceService._has_letter(pieces[k]):
+			if VoiceSynth.has_letter(pieces[k]):
 				keys.append("seg:%s:%d" % [id, k])
 	levels[lang] = {}
 	for role: String in by_role:
@@ -78,6 +80,7 @@ func factory() -> Callable:
 			return null
 		var spy: SpyVoiceSynth = SpyVoiceSynth.new(voice, log)
 		spy.hold = hold
+		spy.per_request_settings = per_request_settings
 		spies[voice] = spy
 		return spy
 

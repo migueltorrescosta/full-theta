@@ -10,10 +10,17 @@ extends Node
 ## - Slotted lines are stitched from this host's ClipLibrary (`seg:<id>:<k>`, `num:<key>`
 ##   from NumberWords) and the closed-set names cached at Start; one VOICE message, part
 ##   0, last (FT-AUD-018). No synthesis unless a name is missing from the cache (a
-##   closed-set miss, synthesised once and cached).
+##   closed-set miss, synthesised once and cached). Names come back from the synth
+##   worker as one trimmed, normalised clip (a `whole` request), so the main thread only
+##   stores them. When both roles share a voice with equal effective settings, each name
+##   is synthesised once and the clip shared.
 ## - Free text is synthesised at runtime, one VOICE part per sentence as Piper finishes
-##   it (FT-AUD-003, FT-AUD-015). With more than MAX_QUEUED_FREE_LINES free-text lines
-##   already queued, a new one is subtitles only (D110).
+##   it (FT-AUD-003, FT-AUD-015), the text cut to MAX_FREE_CHARS for synthesis. With more
+##   than MAX_QUEUED_FREE_LINES free-text lines already queued, a new one is subtitles
+##   only (D110).
+## - A job whose voice hands over nothing for job_timeout_ms ends as failed (a free line's
+##   clip ends, a name stays uncached), so the D110 count drops and Start completes even
+##   when a synth stalls.
 ##
 ## Synthesis runs in one persistent Piper process per distinct runtime voice of the
 ## session language, each behind a VoiceSynth (synth_factory) with its own worker
@@ -38,6 +45,13 @@ signal closed_set_ready(lang: String, elapsed_ms: int)
 ## D110, FT-AUD-015: free-text lines queued for synthesis (requested, not finished,
 ## across voices) beyond which a new free-text line is subtitles only. PROVISIONAL.
 const MAX_QUEUED_FREE_LINES: int = 4
+## Free text longer than this is cut (at a space) for synthesis; the subtitle keeps all
+## of it. PROVISIONAL.
+const MAX_FREE_CHARS: int = 400
+## A job ends as failed once its voice has handed over no part for this long since the
+## job was requested (PiperProcessSynth's own deadlines normally end it first).
+## PROVISIONAL.
+const JOB_TIMEOUT_MS: int = 20000
 ## Max age of a free-text line on the client's voice bus (FT-AUD-008). PROVISIONAL.
 const DEFAULT_FREE_MAX_AGE_MS: int = 6000
 const ROLES: PackedStringArray = ["computer", "npc"]
@@ -59,6 +73,7 @@ var dialogue_dir: String = DialogueLines.DEFAULT_DIR
 var voices_path: String = DEFAULT_VOICES
 ## Whether `dev_only` voices (D105) may speak: debug builds only by default.
 var allow_dev_voices: bool = OS.is_debug_build()
+var job_timeout_ms: int = JOB_TIMEOUT_MS
 ## The session language and its data, from start_session().
 var lang: String = ""
 var library: ClipLibrary = ClipLibrary.new()
@@ -81,12 +96,17 @@ var _lang_allowed: bool = false
 var _synths: Dictionary = {}
 var _role_synth: Dictionary = {}
 var _role_settings: Dictionary = {}
+## role -> the role whose name cache it uses (itself, or the first role sharing its voice
+## and effective settings).
+var _name_role: Dictionary = {}
 ## role -> {name text -> trimmed PCM}; role -> {name text -> request id in flight}.
 var _names: Dictionary = {}
 var _names_in_flight: Dictionary = {}
-## request id -> job: {"kind": "name", role, text, closed, pcm, rate} or {"kind": "free",
-## clip, audience}.
+## request id -> job: {"kind": "name", role, text, closed} or {"kind": "free", clip,
+## audience, next_part, rate}; each also {synth, since_ms}.
 var _jobs: Dictionary = {}
+## VoiceSynth -> Time.get_ticks_msec() when it last handed over parts.
+var _progress_ms: Dictionary = {}
 ## Stitched lines waiting for a name: {clip, role, rate, audience, items}.
 var _waiting: Array[Dictionary] = []
 var _next_id: int = 1
@@ -103,7 +123,8 @@ func _init(net: NetTransport = null, factory: Callable = Callable()) -> void:
 
 ## Starts the session's voice: loads lang's prerendered clips and dialogue, starts one
 ## synth per distinct runtime voice, and synthesises every closed-set name once per role
-## in that role's voice and settings (FT-AUD-018); closed_set_ready follows. `closed_set`
+## in that role's voice and settings, or once for both roles when they share a voice and
+## effective settings (FT-AUD-018); closed_set_ready follows. `closed_set`
 ## holds "ship_names", "callsigns" and "npc_names" (Arrays of String).
 func start_session(language: String, closed_set: Dictionary) -> void:
 	stop()
@@ -116,6 +137,7 @@ func start_session(language: String, closed_set: Dictionary) -> void:
 	for role: String in ROLES:
 		_names[role] = {}
 		_names_in_flight[role] = {}
+		_name_role[role] = role
 	if not _lang_allowed:
 		return
 	var by_voice: Dictionary = {}
@@ -139,15 +161,23 @@ func start_session(language: String, closed_set: Dictionary) -> void:
 			push_warning("voice %s failed to start; its lines are subtitles only" % voice)
 			continue
 		_synths[voice] = synth
+		# Effective settings: the role's when the adapter takes them per request, else the
+		# process-wide defaults. Roles that share a voice and these share the names.
+		var effective: Array = []
 		for role: String in roles:
 			_role_synth[role] = synth
+			effective.append(_role_settings[role] if synth.takes_settings() else defaults)
+			for k: int in effective.size() - 1:
+				if effective[k] == effective[-1]:
+					_name_role[role] = _name_role[roles[k]]
+					break
 	var items: PackedStringArray = PackedStringArray()
 	for group: String in ["ship_names", "callsigns", "npc_names"]:
 		for item: Variant in closed_set.get(group, []):
 			if not items.has(str(item)) and str(item) != "":
 				items.append(str(item))
 	for role: String in ROLES:
-		if not _role_synth.has(role):
+		if not _role_synth.has(role) or _name_role[role] != role:
 			continue
 		for item: String in items:
 			_request_name(role, item, true)
@@ -213,6 +243,11 @@ func say_free(
 ) -> int:
 	var clip: int = _new_id()
 	stats["free_lines"] += 1
+	var spoken: String = text
+	if spoken.length() > MAX_FREE_CHARS:
+		spoken = spoken.left(MAX_FREE_CHARS)
+		var cut: int = spoken.rfind(" ")
+		spoken = spoken.left(cut) if cut > 0 else spoken
 	var audio: bool = _lang_allowed and _role_synth.has(role) and not audience.is_empty()
 	if audio and _free_queued > MAX_QUEUED_FREE_LINES:
 		audio = false
@@ -231,9 +266,18 @@ func say_free(
 	}
 	_post_event(audience, event)
 	if audio:
-		_jobs[clip] = {"kind": "free", "clip": clip, "audience": audience}
+		var synth: VoiceSynth = _role_synth[role]
+		_jobs[clip] = {
+			"kind": "free",
+			"clip": clip,
+			"audience": audience,
+			"next_part": 0,
+			"rate": library.rate(role),
+			"synth": synth,
+			"since_ms": Time.get_ticks_msec(),
+		}
 		_free_queued += 1
-		(_role_synth[role] as VoiceSynth).request(clip, text, _role_settings.get(role, {}))
+		synth.request(clip, spoken, _role_settings.get(role, {}))
 	return clip
 
 
@@ -282,7 +326,7 @@ func has_voice(role: String) -> bool:
 
 ## The cached closed-set name clip for a role, or an empty array.
 func name_clip(role: String, text: String) -> PackedByteArray:
-	return (_names.get(role, {}) as Dictionary).get(text, PackedByteArray())
+	return (_names.get(_name_role.get(role, role), {}) as Dictionary).get(text, PackedByteArray())
 
 
 ## Stops every synth; the session's voice is off until the next start_session().
@@ -291,6 +335,7 @@ func stop() -> void:
 		synth.stop()
 	_synths.clear()
 	_role_synth.clear()
+	_progress_ms.clear()
 	_jobs.clear()
 	_waiting.clear()
 	_free_queued = 0
@@ -299,9 +344,14 @@ func stop() -> void:
 
 
 func _process(_delta: float) -> void:
+	var now: int = Time.get_ticks_msec()
 	for synth: VoiceSynth in _synths.values():
-		for part: Dictionary in synth.take_parts():
+		var parts: Array[Dictionary] = synth.take_parts()
+		if not parts.is_empty():
+			_progress_ms[synth] = now
+		for part: Dictionary in parts:
 			_on_part(part)
+	_expire_jobs(now)
 	if not _waiting.is_empty():
 		_flush_waiting()
 	if not _closed_reported and _closed_pending == 0 and lang != "":
@@ -343,7 +393,7 @@ func _stitch_items(line: Dictionary, template: String, args: Dictionary, role: S
 		var seg: Dictionary = library.clip(role, "seg:%s:%d" % [id, k])
 		if not seg.is_empty():
 			items.append(seg["pcm"])
-		elif _has_letter(pieces[k]):
+		elif VoiceSynth.has_letter(pieces[k]):
 			push_warning("VoiceService: no clip seg:%s:%d in %s" % [id, k, lang])
 		if k >= slots.size():
 			continue
@@ -363,11 +413,12 @@ func _stitch_items(line: Dictionary, template: String, args: Dictionary, role: S
 				continue
 			if not _role_synth.has(role):
 				return []
-			if not (_names[role] as Dictionary).has(text):
-				if not (_names_in_flight[role] as Dictionary).has(text):
+			var cache: String = _name_role[role]
+			if not (_names[cache] as Dictionary).has(text):
+				if not (_names_in_flight[cache] as Dictionary).has(text):
 					stats["closed_set_misses"] += 1
-					_request_name(role, text, false)
-			items.append([role, text])
+					_request_name(cache, text, false)
+			items.append([cache, text])
 	return items
 
 
@@ -397,13 +448,20 @@ func _flush_waiting() -> void:
 
 func _request_name(role: String, text: String, closed: bool) -> void:
 	var id: int = _new_id()
+	var synth: VoiceSynth = _role_synth[role]
 	_jobs[id] = {
-		"kind": "name", "role": role, "text": text, "closed": closed, "pcm": PackedByteArray()
+		"kind": "name",
+		"role": role,
+		"text": text,
+		"closed": closed,
+		"synth": synth,
+		"since_ms": Time.get_ticks_msec(),
 	}
 	_names_in_flight[role][text] = id
 	if closed:
 		_closed_pending += 1
-	(_role_synth[role] as VoiceSynth).request(id, text, _role_settings.get(role, {}))
+	# Whole: the worker trims and normalises the name off the main thread.
+	synth.request(id, text, _role_settings.get(role, {}), true)
 
 
 func _on_part(part: Dictionary) -> void:
@@ -416,12 +474,13 @@ func _on_part(part: Dictionary) -> void:
 		_send_voice(
 			job["audience"], job["clip"], part["rate"], part["pcm"], part["part"], part["last"]
 		)
+		job["next_part"] = int(part["part"]) + 1
+		job["rate"] = part["rate"]
 		if part["last"]:
 			_jobs.erase(part["id"])
 			_free_queued -= 1
 		return
-	# PackedByteArray is a value type: store the joined copy back.
-	job["pcm"] = (job["pcm"] as PackedByteArray) + (part["pcm"] as PackedByteArray)
+	# A whole request: one part, the trimmed and normalised name.
 	if not part["last"]:
 		return
 	_jobs.erase(part["id"])
@@ -430,7 +489,6 @@ func _on_part(part: Dictionary) -> void:
 	if job["closed"]:
 		_closed_pending -= 1
 	if part["error"] == "":
-		var pcm: PackedByteArray = PcmStitch.normalise(PcmStitch.trim(job["pcm"], part["rate"]))
 		if part["rate"] != library.rate(role) and library.has_role(role):
 			push_warning(
 				(
@@ -438,7 +496,28 @@ func _on_part(part: Dictionary) -> void:
 					% [role, part["rate"], library.rate(role)]
 				)
 			)
-		_names[role][job["text"]] = pcm
+		_names[role][job["text"]] = part["pcm"]
+
+
+## Ends every job whose voice has handed over nothing for job_timeout_ms since the job
+## was requested, as if the synth had failed it.
+func _expire_jobs(now: int) -> void:
+	for id: int in _jobs.keys():
+		var job: Dictionary = _jobs[id]
+		var since: int = maxi(job["since_ms"], _progress_ms.get(job["synth"], 0))
+		if now - since <= job_timeout_ms:
+			continue
+		push_warning("VoiceService: synthesis job %d timed out; subtitles only" % id)
+		_on_part(
+			VoiceSynth.make_part(
+				id,
+				job.get("next_part", 0),
+				true,
+				PackedByteArray(),
+				job.get("rate", 0),
+				"timed out"
+			)
+		)
 
 
 func _send_voice(
@@ -463,13 +542,6 @@ func _new_id() -> int:
 	var id: int = _next_id
 	_next_id += 1
 	return id
-
-
-static func _has_letter(text: String) -> bool:
-	for c: String in text:
-		if c.to_lower() != c.to_upper():
-			return true
-	return false
 
 
 static func _no_npc_audience(npc_id: String) -> PackedInt32Array:

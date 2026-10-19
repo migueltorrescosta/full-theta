@@ -8,7 +8,7 @@ func after_test() -> void:
 	VoiceSetup.reset()
 
 
-# FT: FT-AUD-019, FT-AUD-010
+# FT: FT-AUD-019
 # An exported build drives the bundled binary with BundledPiper's paths; a voice it
 # doesn't bundle, or a build without BundledPiper, gives no synth (subtitles only).
 func test_exported_builds_use_the_bundled_binary() -> void:

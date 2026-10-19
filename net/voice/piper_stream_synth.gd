@@ -8,6 +8,7 @@ extends PiperProcessSynth
 
 ## ONNX intra-op threads per process (S7b). PROVISIONAL.
 const THREADS: int = 1
+const MAX_HEAD_BYTES: int = 65536
 
 var python: String = ""
 var wrapper: String = ""
@@ -24,10 +25,11 @@ func _init(
 
 
 ## One frame read through `read` (Callable(n: int) -> PackedByteArray, fewer bytes only at
-## EOF): {"head": Dictionary, "pcm": PackedByteArray}, or {} at EOF or on a bad frame.
+## EOF): {"head": Dictionary, "pcm": PackedByteArray}, or {} at EOF or on a bad frame (a
+## header over MAX_HEAD_BYTES or PCM over MAX_PART_BYTES is bad).
 static func read_frame(read: Callable) -> Dictionary:
 	var size: PackedByteArray = read.call(4)
-	if size.size() < 4:
+	if size.size() < 4 or size.decode_u32(0) > MAX_HEAD_BYTES:
 		return {}
 	var head_bytes: PackedByteArray = read.call(size.decode_u32(0))
 	var head: Variant = JSON.parse_string(head_bytes.get_string_from_utf8())
@@ -35,6 +37,8 @@ static func read_frame(read: Callable) -> Dictionary:
 	if size.size() < 4 or not head is Dictionary:
 		return {}
 	var n: int = size.decode_u32(0)
+	if n > MAX_PART_BYTES:
+		return {}
 	var pcm: PackedByteArray = read.call(n)
 	if pcm.size() < n:
 		return {}

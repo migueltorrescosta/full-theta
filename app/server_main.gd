@@ -35,8 +35,6 @@ const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
 ## PROVISIONAL: the beacon's default server name.
 const DEFAULT_NAME: String = "Full Theta server"
-## Session languages (FT-AUD-012); the first is the default.
-const LANGUAGES: PackedStringArray = ["en", "pt_PT", "it"]
 
 var port: int = DEFAULT_PORT
 var bind_address: String = ""
@@ -51,7 +49,7 @@ var http_root: String = ""
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
-var language: String = LANGUAGES[0]
+var language: String = I18n.LANGUAGES[0]
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -118,8 +116,8 @@ func _set_flag(flag: String, value: String) -> bool:
 		"--name":
 			server_name = value
 		"--language":
-			if not LANGUAGES.has(value):
-				push_error("--language must be one of %s" % ", ".join(LANGUAGES))
+			if not I18n.LANGUAGES.has(value):
+				push_error("--language must be one of %s" % ", ".join(I18n.LANGUAGES))
 				return false
 			language = value
 		_:

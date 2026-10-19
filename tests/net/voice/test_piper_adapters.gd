@@ -54,7 +54,7 @@ func _wav(rate: int, pcm: PackedByteArray, channels: int = 1) -> PackedByteArray
 	return out
 
 
-# FT: FT-AUD-015
+# FT: FT-AUD-003, FT-AUD-019
 # Free text streams per sentence: split at . ! ? and … before a space or the end, with
 # closing quotes kept, decimals and abbreviations-without-space untouched, and a piece
 # with nothing to say joined to the one before.
@@ -140,7 +140,7 @@ func test_binary_command_line() -> void:
 	assert_array(Array(stream._command()[1])).is_equal(["/w.py", "/m/v.onnx", "--threads", "1"])
 
 
-# FT: FT-AUD-010
+# FT: FT-AUD-019
 # A Piper that never starts gives up after a few tries; its requests then end at once
 # with an error part (subtitles only) and nothing blocks.
 func test_a_piper_that_cannot_start_fails_requests() -> void:

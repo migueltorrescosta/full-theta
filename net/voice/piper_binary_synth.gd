@@ -107,15 +107,15 @@ static func _add_sentence(out: PackedStringArray, piece: String) -> void:
 	var s: String = piece.strip_edges()
 	if s == "":
 		return
-	var spoken: bool = false
-	for c: String in s:
-		if c.to_lower() != c.to_upper() or c.is_valid_int():
-			spoken = true
-			break
-	if not spoken and not out.is_empty():
+	if not has_letter(s, true) and not out.is_empty():
 		out[out.size() - 1] = out[out.size() - 1] + " " + s
 	else:
 		out.append(s)
+
+
+## The binary takes settings on its command line only (start()'s defaults).
+func takes_settings() -> bool:
+	return false
 
 
 func _command() -> Array:
@@ -159,7 +159,7 @@ func _sentence(text: String) -> Dictionary:
 	_seq += 1
 	var path: String = tmp_dir.path_join("s%d.wav" % _seq)
 	_write_line(JSON.stringify({"text": text, "output_file": path}))
-	var done: String = _stdio.get_line().strip_edges()
+	var done: String = _read_line().strip_edges()
 	if done == "":
 		return {}
 	var wav: Dictionary = parse_wav(FileAccess.get_file_as_bytes(path))
