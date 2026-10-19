@@ -29,10 +29,10 @@ const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
 ## Headless frame pacing (S3 "Server loop"): Godot otherwise sleeps 6.9 ms a frame in
 ## headless mode, capping it near 145 frames/s; 2 ms keeps the 60 Hz tick within about
-## 2 ms of due without spinning. PROVISIONAL.
+## 2 ms of due without spinning. Provisional: see docs/protocol.md, Rates and limits.
 const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
-## PROVISIONAL: the beacon's default server name.
+## The beacon's default server name (provisional: see docs/protocol.md, Rates and limits).
 const DEFAULT_NAME: String = "Full Theta server"
 
 var port: int = DEFAULT_PORT

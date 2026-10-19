@@ -5,7 +5,8 @@ extends RefCounted
 ## returns the same NetSession: connected (a takeover: the old socket may not have
 ## closed yet), within the grace period after a drop (pick and claims kept), or after
 ## it (the session lapsed: ServerSession released its pick and claims and restores
-## what is still free). Tokens live as long as the server (PROVISIONAL).
+## what is still free). Tokens live as long as the server (provisional: see
+## docs/protocol.md, Rates and limits).
 ##
 ## Times are wall-clock microseconds supplied by the caller, outside sim/, so the grace
 ## runs while the sim is paused.

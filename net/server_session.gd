@@ -37,7 +37,8 @@ var dev_all: bool = false
 var host_secret: String = ""
 ## Most sessions connected at once (FT-NET-014; T046 owns the rule).
 var max_sessions: int = 64
-## Per-session command rate limit (PROVISIONAL, FT-NET-006).
+## Per-session command rate limit (FT-NET-006; provisional: see
+## docs/protocol.md, Rates and limits).
 var rate: float = DEFAULT_RATE
 var burst: float = DEFAULT_BURST
 ## Live sessions: connected or within their grace period. A lapsed session leaves

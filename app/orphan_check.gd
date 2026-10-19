@@ -54,8 +54,8 @@ static func decide(file: ServerPidFile, alive: bool, identity: Identity, has_tok
 		return Action.LEAVE
 	if file.session_active:
 		return Action.OFFER_REJOIN if has_token else Action.OFFER_TERMINATE
-	# Provisional: without a way to verify the process, ask rather than risk
-	# killing whatever reused the pid.
+	# Without a way to verify the process, ask rather than risk killing whatever
+	# reused the pid (provisional: see docs/protocol.md, Rates and limits).
 	return Action.TERMINATE if identity == Identity.OURS else Action.OFFER_TERMINATE
 
 
@@ -96,7 +96,7 @@ static func process_alive(pid: int) -> bool:
 
 
 ## The process's arguments, or [] where they can't be read (only Linux reads
-## them, from /proc; elsewhere the identity stays UNVERIFIED, provisional).
+## them, from /proc; elsewhere the identity stays UNVERIFIED; see decide()).
 static func read_cmdline(pid: int) -> PackedStringArray:
 	if OS.get_name() != "Linux":
 		return []

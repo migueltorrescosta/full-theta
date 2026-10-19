@@ -15,7 +15,7 @@ extends RefCounted
 ## A dedicated server has none.
 
 ## Minutes without connected players before the child exits by itself.
-## Provisional: FT-NET-003 leaves N open.
+## FT-NET-003 leaves N open (provisional: see docs/protocol.md, Rates and limits).
 const DEFAULT_IDLE_EXIT_MIN: int = 10
 const SECRET_BYTES: int = 32
 ## Environment variable that carries the host secret to the child (D127).

@@ -157,9 +157,10 @@ static func _summary(h: Host) -> Array:
 ## or IPv6 literal, "[v6]:port", a LAN host name, or a ws:// URL) into the WebSocket
 ## URL to connect to, or a reason it can't.
 ##
-## Provisional: any address is accepted, public ones included (VPNs such as Tailscale
-## use non-private ranges); LAN only (FT-GEN-013) means the game offers no internet
-## service, not that it filters what the player types.
+## Any address is accepted, public ones included (VPNs such as Tailscale use
+## non-private ranges); LAN only (FT-GEN-013) means the game offers no internet
+## service, not that it filters what the player types. Provisional: see
+## docs/protocol.md, Rates and limits.
 static func parse_address(text: String, default_port: int = NetProtocol.DEFAULT_WS_PORT) -> Address:
 	var r: Address = Address.new()
 	var s: String = text.strip_edges()

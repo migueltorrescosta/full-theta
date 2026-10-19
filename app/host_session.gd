@@ -20,8 +20,8 @@ enum State { IDLE, STARTING, CONNECTING, JOINED, FAILED, STOPPED }
 ## The player's answer to an orphan offer.
 enum Answer { REJOIN, TERMINATE, LEAVE }
 
-## PROVISIONAL: how long the child may take to listen (a cold start on a slow
-## machine), and the handshake after that.
+## How long the child may take to listen (a cold start on a slow machine), and the
+## handshake after that. Provisional: see docs/protocol.md, Rates and limits.
 const READY_TIMEOUT_MS: int = 30_000
 const JOIN_TIMEOUT_MS: int = 10_000
 

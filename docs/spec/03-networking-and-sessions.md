@@ -13,7 +13,7 @@ Commands go up, each with a client sequence number. Down: per-station filtered s
 1. A player joins a ship (or creates one, up to 6).
 2. The player picks one entry from the catalogue: a single functional station, a joint view, the Captain seat, or Viewer (D10, D67).
 3. Several players may pick the same station or joint view; they share it through claims (§3.4).
-4. The ship's Ready/Start control becomes clickable only when the coverage check passes: at least 3 crew players, and every one of Helm, Weapons, Engineering, Science, Relay and Comms covered by at least one crew player's pick (D66, D67) Any crew player of the ship may then press Start; the simulation steps from the first Start (D129).
+4. The ship's Ready/Start control becomes clickable only when the coverage check passes: at least 3 crew players, and every one of Helm, Weapons, Engineering, Science, Relay and Comms covered by at least one crew player's pick (D66, D67). Any crew player of the ship may then press Start; the simulation steps from the first Start (D129).
 
 Joint-view catalogue (D67, D76): every 2-station pair, 15 layouts, all offered in the lobby. Names are working titles; each view is named after the pair it serves (§7.3).
 
@@ -69,7 +69,7 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-016** The lobby shall let any number of players pick the same station or joint view, and at most one player per ship pick Captain. (D10, plan review CLASH-10)
 - **FT-NET-017** The lobby shall offer the joint views in the catalogue and no other station combinations. (D13, D67)
 - **FT-NET-018** A joint view shall keep every control of each station it contains. (D20)
-- **FT-NET-019** The Ready/Start control shall become clickable only when the coverage check passes for that ship. (D19, D66, D67)
+- **FT-NET-019** The Ready/Start control shall become clickable only when the coverage check passes for that ship. (D19, D66, D67, D129)
 - **FT-NET-020** The coverage check shall ignore Captain and Viewer picks. (D19, D23)
 - **FT-NET-021** The lobby shall show which functional stations are still uncovered. (D67)
 - **FT-NET-022** Weapon mounts, repair crews, the active scan or hack, probes, NPC conversations, Helm flight control and Helm shield facing shall be claimable. (D18, plan review STN-3)
@@ -94,6 +94,6 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-041** During a pause, the remaining connected crew of a paused ship shall be able to abandon it by a majority vote (more than half of them; a vote may be withdrawn, and votes clear when the pause ends), and the host alone shall be able to abandon it; abandoning eliminates the ship and takes it out of play. The host is the client presenting the host secret its Host button passed to the child server; a dedicated server has no host. (D96, D127, D128)
 - **FT-NET-042** During a pause, players of other ships, Captains and viewers shall be able to take over an uncovered station, unless leaving would make their own ship fail the coverage check. (D96)
 - **FT-NET-043** Outside a pause, the server shall reject with `CommandRejected` any mid-run catalogue change that would make a ship fail the coverage check. (D96, plan review CLASH-1)
-- **FT-NET-044** A player alone on a station shall hold all its claims; controls that are not claimable shall be ship-wide, last writer wins, and show who changed them last. (plan review STN-3)
+- **FT-NET-044** A player alone on a station shall hold all its claims; controls that are not claimable shall be ship-wide, last writer wins, and show who changed them last. (plan review STN-3, D130)
 - **FT-NET-045** Dock, jump, Align and face shall belong to the Helm flight claim, ammo type to the mount claim, and a card's Accept to its conversation claim when one exists. (plan review STN-3, D124)
 - **FT-NET-046** A browser station shall keep the tablet awake while connected (a muted looping VP9 video started by the first tap, since Wake Lock needs a secure context; an H.264 MP4 only if iPads need it; documented Auto-Lock settings as the fallback), so an idle station doesn't drop and pause the universe; S3 and #4 check a 10 min idle. (plan review TECH-3, D108)

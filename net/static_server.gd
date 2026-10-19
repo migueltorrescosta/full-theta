@@ -8,11 +8,11 @@ extends RefCounted
 ## `Content-Encoding: gzip` when the request accepts gzip. Sends an ETag with
 ## `Cache-Control: no-cache`, so a reload revalidates and gets 304. No byte
 ## ranges (#9 re-adds them, and video/mp4, if Safari's keep-awake video needs
-## them). Keeps
-## connections alive. `poll()` does bounded work: it stops once
+## them). Keeps connections alive. `poll()` does bounded work: it stops once
 ## `budget_us` has passed, and each connection writes at most `slice` bytes
 ## per call, read from the file as it goes, so a 30 MB download never blocks
-## the caller's loop.
+## the caller's loop. Budget and limits are provisional: see docs/protocol.md,
+## Rates and limits.
 
 ## The per-frame budget D108 settles on, in microseconds.
 const DEFAULT_BUDGET_US: int = 400

@@ -18,8 +18,9 @@ extends RefCounted
 ##   16 1  server name length n (UTF-8 bytes, at most MAX_NAME_BYTES)
 ##   17 n  server name
 
-## Provisional: UDP discovery port, kept clear of the game's TCP ports (WebSocket
-## 47801, HTTP 47800) to avoid confusion, though UDP and TCP don't clash.
+## UDP discovery port, kept clear of the game's TCP ports to avoid confusion, though
+## UDP and TCP don't clash. Port, interval and broadcast address are provisional: see
+## docs/protocol.md, Rates and limits.
 const DISCOVERY_PORT: int = 47790
 const INTERVAL_USEC: int = 1_000_000
 const MAGIC: PackedByteArray = [0x46, 0x54, 0x4C, 0x42]  # "FTLB"
@@ -27,7 +28,7 @@ const FORMAT: int = 1
 const HEADER_BYTES: int = 17
 const MAX_NAME_BYTES: int = 63
 const FLAG_RUNNING: int = 1
-## Provisional: the limited broadcast address. A multi-homed host may need subnet
+## The limited broadcast address. A multi-homed host may need subnet
 ## broadcast addresses too (IP.get_local_interfaces()); destinations is overridable.
 const BROADCAST_ADDRESS: String = "255.255.255.255"
 
@@ -37,7 +38,7 @@ var ws_port: int
 var http_port: int
 var players: int = 0
 var player_cap: int = 64
-## NetServer.session_active(): a session connected or within its grace.
+## Flag bit 0: NetServer.session_active().
 var session_running: bool = false
 ## Datagrams sent since start(), and the last put_packet error (OK if none).
 var sent: int = 0
