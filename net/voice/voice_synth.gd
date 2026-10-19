@@ -24,8 +24,10 @@ func start(_defaults: Dictionary = {}) -> Error:
 	return OK
 
 
-## Queues a request; never blocks. `settings` holds any of SETTING_KEYS.
-func request(_id: int, _text: String, _settings: Dictionary = {}) -> void:
+## Queues a request; never blocks. `settings` holds any of SETTING_KEYS. With `whole`, the
+## request ends in one part holding the whole clip, trimmed and normalised (whole_clip(),
+## done off the main thread; closed-set names, FT-AUD-018).
+func request(_id: int, _text: String, _settings: Dictionary = {}, _whole: bool = false) -> void:
 	pass
 
 
@@ -37,6 +39,12 @@ func take_parts() -> Array[Dictionary]:
 ## Requests queued or being synthesised.
 func pending() -> int:
 	return 0
+
+
+## True when per-request settings take effect; false when only start()'s defaults do
+## (PiperBinarySynth), so every request speaks with those.
+func takes_settings() -> bool:
+	return true
 
 
 ## True once the voice is loaded and warmed up.
@@ -54,6 +62,11 @@ static func make_part(
 	id: int, part: int, last: bool, pcm: PackedByteArray, rate: int, error: String = ""
 ) -> Dictionary:
 	return {"id": id, "part": part, "last": last, "pcm": pcm, "rate": rate, "error": error}
+
+
+## A `whole` request's clip: silence trimmed, then normalised (PcmStitch).
+static func whole_clip(pcm: PackedByteArray, rate: int) -> PackedByteArray:
+	return PcmStitch.normalise(PcmStitch.trim(pcm, rate))
 
 
 ## True when text holds a letter (or, with digits, a digit): something a voice speaks.

@@ -2,16 +2,18 @@ class_name SpyVoiceSynth
 extends VoiceSynth
 ## A VoiceSynth that records every request and answers it without Piper: one part per
 ## sentence (PiperBinarySynth.split_sentences), each LEN_PER_CHAR samples per character
-## at a constant level, so tests can recognise what was stitched. With `hold`, parts wait
-## for release().
+## at a constant level, so tests can recognise what was stitched; a `whole` request is one
+## part, whole_clip() of the whole text's tone. With `hold`, parts wait for release().
 
 const RATE: int = 1000
 const LEN_PER_CHAR: int = 10
 const LEVEL: int = 12000
 
-## Every request: {"voice", "id", "text", "settings"} (shared across spies of a factory).
+## Every request: {"voice", "id", "text", "settings", "whole"} (shared across spies of a factory).
 var log: Array[Dictionary] = []
 var hold: bool = false
+## takes_settings() (false: like PiperBinarySynth, only start()'s defaults apply).
+var per_request_settings: bool = true
 var started_with: Dictionary = {}
 var started: bool = false
 var stopped: bool = false
@@ -31,10 +33,17 @@ func start(defaults: Dictionary = {}) -> Error:
 	return OK
 
 
-func request(id: int, text: String, settings: Dictionary = {}) -> void:
-	log.append({"voice": voice, "id": id, "text": text, "settings": settings})
+func request(id: int, text: String, settings: Dictionary = {}, whole: bool = false) -> void:
+	log.append({"voice": voice, "id": id, "text": text, "settings": settings, "whole": whole})
 	var sentences: PackedStringArray = PiperBinarySynth.split_sentences(text)
 	var parts: Array[Dictionary] = []
+	if whole:
+		parts.append(
+			VoiceSynth.make_part(
+				id, 0, true, VoiceSynth.whole_clip(tone(text.length() * LEN_PER_CHAR), RATE), RATE
+			)
+		)
+		sentences = PackedStringArray()
 	for i: int in sentences.size():
 		parts.append(
 			VoiceSynth.make_part(
@@ -61,6 +70,10 @@ func take_parts() -> Array[Dictionary]:
 
 func pending() -> int:
 	return _held.size()
+
+
+func takes_settings() -> bool:
+	return per_request_settings
 
 
 func stop() -> void:
