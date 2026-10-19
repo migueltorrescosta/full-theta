@@ -45,14 +45,16 @@ const EVENT_VOICE_LINE: String = "voice_line"
 const DEFAULT_VOICES: String = "res://content/voices.json"
 
 var transport: NetTransport
-## Callable(voice_name: String) -> VoiceSynth (not started) or null; ServerMain passes
-## PiperSetup.make. Unset: no voices, every line subtitles only.
+## Callable(voice_name: String) -> VoiceSynth (not started) or null; the app passes
+## VoiceSetup.make. Unset: no voices, every line subtitles only.
 var synth_factory: Callable
 var npc_audience: Callable = _no_npc_audience
 var computer_audience: Callable = _no_computer_audience
 var tick_source: Callable = Callable()
-## Where the prerendered clips are (ClipLibrary.load_dir), the dialogue JSON and voices.
-var prerender_dir: String = ClipLibrary.DEFAULT_DIR
+## Where the host's prerendered segments and number fragments are (ClipLibrary.load_dir;
+## the app passes res://audio/prerendered_host, which net/ may not name), the dialogue
+## JSON and voices. No clip_dir: no clips, so slotted lines are subtitles only.
+var clip_dir: String = ""
 var dialogue_dir: String = DialogueLines.DEFAULT_DIR
 var voices_path: String = DEFAULT_VOICES
 ## Whether `dev_only` voices (D105) may speak: debug builds only by default.
@@ -108,7 +110,7 @@ func start_session(language: String, closed_set: Dictionary) -> void:
 	lang = language
 	_closed_started_us = Time.get_ticks_usec()
 	_closed_reported = false
-	library = ClipLibrary.load_dir(prerender_dir, lang)
+	library = ClipLibrary.load_dir(clip_dir, lang) if clip_dir != "" else ClipLibrary.new()
 	dialogue = DialogueLines.load_dir(dialogue_dir)
 	_load_voices()
 	for role: String in ROLES:
@@ -167,7 +169,8 @@ func say(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
 	var audio: bool = false
 	var items: Array = []
 	if local:
-		audio = _lang_allowed and library.has_clip(role, "line:" + line_id)
+		# Clients play unslotted lines from their own files; the host has no line:* clips.
+		audio = _lang_allowed
 	elif _lang_allowed and library.has_role(role) and not audience.is_empty():
 		items = _stitch_items(line, template, args, role)
 		audio = not items.is_empty()

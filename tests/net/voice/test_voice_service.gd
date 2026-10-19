@@ -43,7 +43,7 @@ func before_test() -> void:
 		_fx.write(lang)
 	_net = CaptureTransport.new()
 	_svc = VoiceService.new(_net, _fx.factory())
-	_svc.prerender_dir = DIR
+	_svc.clip_dir = DIR
 	_svc.allow_dev_voices = true
 
 

@@ -24,8 +24,8 @@ func _init(path: String) -> void:
 	dir = path
 
 
-## Writes the clips the prerender would make for `lang` from the real dialogue JSON:
-## line:<id>, seg:<id>:<k> and every num:<key>, in both roles.
+## Writes the host blobs the prerender would make for `lang` from the real dialogue JSON
+## (audio/prerendered_host): seg:<id>:<k> and every num:<key>, in both roles.
 func write(lang: String) -> void:
 	var dialogue: DialogueLines = DialogueLines.load_dir()
 	var numbers: Dictionary = JSON.parse_string(
@@ -37,7 +37,6 @@ func write(lang: String) -> void:
 		var line: Dictionary = dialogue.line(id)
 		var keys: PackedStringArray = by_role[line["role"]]
 		if (line.get("slots", {}) as Dictionary).is_empty():
-			keys.append("line:" + id)
 			continue
 		var pieces: PackedStringArray = DialogueLines.pieces(line["text"][lang])
 		for k: int in pieces.size():

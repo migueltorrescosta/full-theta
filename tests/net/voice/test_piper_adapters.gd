@@ -112,7 +112,9 @@ func test_wav_parsing() -> void:
 # FT: FT-AUD-019
 # The binary runs persistent with JSON input; role settings go on its command line.
 func test_binary_command_line() -> void:
-	var synth: PiperBinarySynth = PiperBinarySynth.new("/opt/piper/piper", "/m/v.onnx")
+	var synth: PiperBinarySynth = PiperBinarySynth.new(
+		"/opt/piper/piper", "/opt/piper/espeak-ng-data", "/m/v.onnx"
+	)
 	assert_str(synth.voice).is_equal("v")
 	synth._defaults = {"length_scale": 1.05, "noise_w_scale": 0.333}
 	var cmd: Array = synth._command()
@@ -124,6 +126,8 @@ func test_binary_command_line() -> void:
 				"--quiet",
 				"--model",
 				"/m/v.onnx",
+				"--espeak_data",
+				"/opt/piper/espeak-ng-data",
 				"--json-input",
 				"--length_scale",
 				"1.05",
@@ -142,7 +146,7 @@ func test_binary_command_line() -> void:
 func test_a_piper_that_cannot_start_fails_requests() -> void:
 	if OS.get_name() == "Windows" or not FileAccess.file_exists("/bin/true"):
 		return
-	var synth: PiperBinarySynth = PiperBinarySynth.new("/bin/true", "/none.onnx", "none")
+	var synth: PiperBinarySynth = PiperBinarySynth.new("/bin/true", "/none", "/none.onnx", "none")
 	synth.niceness = 0
 	assert_int(synth.start()).is_equal(OK)
 	synth.request(1, "Hello.")

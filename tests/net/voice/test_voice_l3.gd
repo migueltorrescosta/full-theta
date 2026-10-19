@@ -63,7 +63,7 @@ func test_voice_goes_to_the_target_client_only() -> void:
 	assert_int(_server.start(m1, 0, "127.0.0.1")).is_equal(OK)
 	add_child(_server)
 	_svc = VoiceService.new(_server.transport, _fx.factory())
-	_svc.prerender_dir = DIR
+	_svc.clip_dir = DIR
 	_svc.tick_source = func() -> int: return _server.world.tick
 	add_child(_svc)
 	var target: NetClient = _client("comms")

@@ -49,7 +49,7 @@ func test_clips_from_a_prerender_directory() -> void:
 	var clip: PackedByteArray = lib.clip("computer", key)["pcm"]
 	assert_int(clip.size()).is_equal(VoiceFixture.CLIP_SAMPLES * 2)
 	assert_str(fx.levels["en"]["computer"][clip.decode_s16(0)]).is_equal(key)
-	assert_bool(lib.has_clip("computer", "line:computer.hull_critical")).is_true()
+	assert_bool(lib.has_clip("computer", "line:computer.hull_critical")).is_false()
 	assert_bool(lib.has_clip("npc", "seg:npc.hail_trader:0")).is_true()
 	assert_bool(ClipLibrary.load_dir(DIR, "pt_PT").has_role("computer")).is_false()
 	var f: FileAccess = FileAccess.open(DIR.path_join("en/npc.json"), FileAccess.WRITE)

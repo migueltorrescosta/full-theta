@@ -163,13 +163,10 @@ func make_server() -> NetServer:
 	return server
 
 
-## The host's voice service next to `server` (E10): Piper through PiperSetup, events at
-## the sim tick. Silent until the lobby's Start calls start_session(session.language,
-## closed set).
+## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick.
+## Silent until the lobby's Start calls start_session(session.language, closed set).
 func make_voice(server: NetServer) -> VoiceService:
-	var voice: VoiceService = VoiceService.new(server.transport, PiperSetup.make)
-	voice.tick_source = func() -> int: return server.world.tick
-	return voice
+	return VoiceSetup.make_service(server.transport, func() -> int: return server.world.tick)
 
 
 ## The pid file and idle-exit node that runs next to `server` (FT-NET-003).

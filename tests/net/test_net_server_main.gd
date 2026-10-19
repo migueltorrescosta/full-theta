@@ -168,6 +168,7 @@ func test_welcome_carries_the_language() -> void:
 	var voice: VoiceService = cli.make_voice(server)
 	assert_object(voice.transport).is_same(server.transport)
 	assert_int(voice.tick_source.call()).is_equal(server.world.tick)
+	assert_str(voice.clip_dir).is_equal(VoiceSetup.CLIP_DIR)
 	voice.free()
 	c.drop()
 	server.queue_free()

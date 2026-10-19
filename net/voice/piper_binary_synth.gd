@@ -18,6 +18,8 @@ const _FLAGS: Dictionary = {
 }
 
 var binary: String = ""
+## espeak-ng data directory shipped with the binary (always passed, --espeak_data).
+var espeak_data: String = ""
 var model: String = ""
 ## Where the sentence WAVs go; made by start(), removed by stop().
 var tmp_dir: String = ""
@@ -25,8 +27,9 @@ var tmp_dir: String = ""
 var _seq: int = 0
 
 
-func _init(binary_path: String, model_path: String, name: String = "") -> void:
+func _init(binary_path: String, data_dir: String, model_path: String, name: String = "") -> void:
 	binary = binary_path
+	espeak_data = data_dir
 	model = model_path
 	voice = name if name != "" else model_path.get_file().get_basename()
 
@@ -116,7 +119,8 @@ static func _add_sentence(out: PackedStringArray, piece: String) -> void:
 
 
 func _command() -> Array:
-	var args: PackedStringArray = ["--quiet", "--model", model, "--json-input"]
+	var args: PackedStringArray = ["--quiet", "--model", model, "--espeak_data", espeak_data]
+	args.append("--json-input")
 	for key: String in _FLAGS:
 		if _defaults.has(key):
 			args.append_array([_FLAGS[key], str(float(_defaults[key]))])
