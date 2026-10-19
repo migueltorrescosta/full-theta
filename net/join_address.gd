@@ -8,9 +8,8 @@ extends RefCounted
 ## use non-private ranges); LAN only (FT-GEN-013) means the game offers no internet
 ## service, not that it filters what the player types.
 
-## Provisional: the game's default WebSocket port (ServerMain.DEFAULT_PORT; net/
-## can't name app/). Phase 2 should make ServerMain use this constant.
-const DEFAULT_WS_PORT: int = 47800
+## The game's default WebSocket port.
+const DEFAULT_WS_PORT: int = NetProtocol.DEFAULT_WS_PORT
 const MAX_HOST_LENGTH: int = 253
 
 ## Set by parse(): ok with host, port and url, or not ok with a reason for the player.

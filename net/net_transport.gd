@@ -1,0 +1,446 @@
+class_name NetTransport
+extends RefCounted
+## The server's net thread (FT-NET-040, D111): it owns every socket (accept, poll,
+## receive, decode), the per-connection send queues, stall detection (NetResync), the
+## per-session event outboxes and the snapshot encoder (SnapshotBuilder), so the sim
+## tick on the main thread holds only the sim. The main thread talks to it through two
+## mutex-protected queues: it posts operations (send, close, bind a connection to a
+## session, set a session's view key, events, state copies, voice) and takes inbound
+## decoded messages. Session logic (handshake decisions, lobby, claims, validation)
+## stays on the main thread (ServerSession). See net/README.md.
+
+## Inbound pseudo-type for a connection that closed (no wire message has type 0).
+const CLOSED: int = 0
+## Most bytes in one WebSocket message (a bundle of chunks): under the 64 KiB
+## WebSocketPeer buffers the server keeps at their defaults (D108).
+const BUNDLE_MAX: int = 48 * 1024
+## Close codes.
+const CLOSE_REJECTED: int = 4000
+const CLOSE_TAKEN_OVER: int = 4001
+const CLOSE_SEND_FAILED: int = 4002
+const CLOSE_PROTOCOL: int = 4003
+## How often the net thread publishes stats() (us).
+const STATS_INTERVAL_US: int = 20_000
+## How long a closing connection waits for the client to close first (us).
+const CLOSE_LINGER_US: int = 1_000_000
+## Malformed messages a connection may send before it is closed.
+const MAX_ERRORS: int = 16
+
+
+class Conn:
+	extends RefCounted
+	var id: int = 0
+	var peer: WebSocketPeer
+	var chunker: NetChunker = NetChunker.new()
+	var queue: NetSendQueue
+	var resync: NetResync
+	var session: int = -1
+	var view_key: String = ""
+	var closing: bool = false
+	## When the connection started closing (us).
+	var closing_since_us: int = 0
+	var errors: int = 0
+	var stats: Dictionary = {
+		"bytes": 0, "ws_messages": 0, "fulls": 0, "deltas": 0, "skipped": 0, "stalls": 0
+	}
+
+
+## Stall limit in unacknowledged snapshots (D106).
+var lag_limit: int = 15
+## Chunk payload size (FT-NET-038); tests lower it to force chunking.
+var chunk_size: int = NetChunker.DEFAULT_CHUNK_SIZE
+## Voice chunks per pump when the high lane is empty.
+var voice_per_pump: int = 1
+## Net thread idle sleep per loop (us).
+var loop_sleep_us: int = 1000
+
+var _tcp: TCPServer = TCPServer.new()
+var _thread: Thread
+var _mutex: Mutex = Mutex.new()
+var _running: bool = false
+var _ops: Array = []
+var _inbound: Array = []
+var _stats: Dictionary = {}
+# Net thread only from here on.
+var _conns: Dictionary[int, Conn] = {}
+var _outboxes: Dictionary[int, NetEventOutbox] = {}
+var _builder: SnapshotBuilder = SnapshotBuilder.new()
+var _state: SimWorld
+var _snap_seq: int = 0
+var _next_conn: int = 1
+var _published_us: int = 0
+var _totals: Dictionary = {
+	"snapshots": 0, "sends": 0, "delta_messages": 0, "full_messages": 0, "errors": 0
+}
+
+
+## Listens on bind_address:port (port 0 picks a free one) and starts the net thread.
+func start(port: int, bind_address: String) -> Error:
+	var err: Error = _tcp.listen(port, bind_address)
+	if err != OK:
+		return err
+	_builder.chunk_size = chunk_size
+	_running = true
+	_thread = Thread.new()
+	_thread.start(_run)
+	return OK
+
+
+## The bound WebSocket port.
+func port() -> int:
+	return _tcp.get_local_port()
+
+
+## Stops the thread and closes every socket.
+func stop() -> void:
+	if _thread == null:
+		return
+	_mutex.lock()
+	_running = false
+	_mutex.unlock()
+	_thread.wait_to_finish()
+	_thread = null
+	for c: Conn in _conns.values():
+		c.peer.close(1001, "server stopped")
+		c.peer.poll()
+	_conns.clear()
+	_tcp.stop()
+
+
+# --- Main-thread API: each call queues an operation for the net thread. ---
+
+
+## Queues a message for a connection on a stream's lane.
+func send(conn: int, data: PackedByteArray, stream: int = NetChunker.STREAM_CONTROL) -> void:
+	_post(["send", conn, stream, data])
+
+
+## Closes a connection after its queued messages have gone.
+func close(conn: int, code: int, reason: String) -> void:
+	_post(["close", conn, code, reason])
+
+
+## Binds a connection to a session and sends Welcome (its ev_from is filled in here from
+## the session's outbox). A session already bound to another connection is taken over:
+## that connection is closed. new_session starts an empty outbox.
+func bind(
+	conn: int, session: int, welcome: Dictionary, view_key: String, new_session: bool
+) -> void:
+	_post(["bind", conn, session, welcome, view_key, new_session])
+
+
+## Sets the view key a session's snapshots use ("" for none); the next one is full.
+func set_view(session: int, view_key: String) -> void:
+	_post(["view", session, view_key])
+
+
+## Adds an event to each listed session's reliable stream (FT-NET-011).
+func post_event(sessions: PackedInt32Array, tick: int, type: String, payload: Dictionary) -> void:
+	_post(["event", sessions, tick, type, payload])
+
+
+## Hands over a state copy (SimCopy) for the next snapshot; a newer one replaces an
+## older one the net thread hasn't encoded yet.
+func post_state(copy: SimWorld) -> void:
+	_post(["state", copy])
+
+
+## Queues a voice clip (NetProtocol.Type.VOICE message) on a session's low lane.
+func post_voice(session: int, data: PackedByteArray) -> void:
+	_post(["voice", session, data])
+
+
+## Drops a session's outbox once the session is gone for good.
+func forget(session: int) -> void:
+	_post(["forget", session])
+
+
+## Inbound messages since the last call, oldest first: [conn, Dictionary with "t"].
+func take_inbound() -> Array:
+	_mutex.lock()
+	var out: Array = _inbound
+	_inbound = []
+	_mutex.unlock()
+	return out
+
+
+## Counters published by the net thread: totals plus "conns": conn -> stats.
+func stats() -> Dictionary:
+	_mutex.lock()
+	var out: Dictionary = _stats.duplicate(true)
+	_mutex.unlock()
+	return out
+
+
+func _post(op: Array) -> void:
+	_mutex.lock()
+	_ops.append(op)
+	_mutex.unlock()
+
+
+# --- Net thread. ---
+
+
+func _run() -> void:
+	while true:
+		_mutex.lock()
+		var running: bool = _running
+		var ops: Array = _ops
+		_ops = []
+		_mutex.unlock()
+		if not running:
+			return
+		for op: Array in ops:
+			_apply(op)
+		_accept()
+		var inbound: Array = _poll()
+		if _state != null:
+			_snapshot()
+		_pump()
+		_publish(inbound)
+		OS.delay_usec(loop_sleep_us)
+
+
+func _apply(op: Array) -> void:
+	match op[0]:
+		"send":
+			var c: Conn = _conns.get(op[1])
+			if c != null:
+				c.queue.push(op[2], op[3])
+		"close":
+			var c: Conn = _conns.get(op[1])
+			if c != null:
+				_close(c, op[2], op[3])
+		"bind":
+			_bind(op[1], op[2], op[3], op[4], op[5])
+		"view":
+			for c: Conn in _conns.values():
+				if c.session == op[1] and not c.closing:
+					c.view_key = op[2]
+					c.resync.force_full()
+		"event":
+			_event(op[1], op[2], op[3], op[4])
+		"state":
+			_state = op[1]
+		"voice":
+			for c: Conn in _conns.values():
+				if c.session == op[1] and not c.closing:
+					c.queue.push(NetChunker.STREAM_VOICE, op[2])
+		"forget":
+			_outboxes.erase(op[1])
+
+
+func _bind(
+	conn: int, session: int, welcome: Dictionary, view_key: String, new_session: bool
+) -> void:
+	var c: Conn = _conns.get(conn)
+	if c == null:
+		return
+	for other: Conn in _conns.values():
+		if other != c and other.session == session:
+			other.session = -1
+			_close(other, CLOSE_TAKEN_OVER, "session taken over")
+	if new_session or not _outboxes.has(session):
+		_outboxes[session] = NetEventOutbox.new()
+	var box: NetEventOutbox = _outboxes[session]
+	box.restart()
+	c.session = session
+	c.view_key = view_key
+	c.resync = NetResync.new(lag_limit)
+	welcome["ev_from"] = box.acked
+	c.queue.push(NetChunker.STREAM_CONTROL, NetProtocol.encode(NetProtocol.Type.WELCOME, welcome))
+	_push_events(c)
+
+
+func _event(sessions: PackedInt32Array, tick: int, type: String, payload: Dictionary) -> void:
+	for s: int in sessions:
+		var box: NetEventOutbox = _outboxes.get(s)
+		if box == null:
+			continue
+		box.add(tick, type, payload)
+		for c: Conn in _conns.values():
+			if c.session == s:
+				_push_events(c)
+
+
+## Pushes the session's unpushed events unless the connection is waiting for a full
+## snapshot, which then carries them (pushed right before it).
+func _push_events(c: Conn) -> void:
+	if c.closing or c.session < 0 or (c.view_key != "" and c.resync.holds_events()):
+		return
+	for bytes: PackedByteArray in _outboxes[c.session].take_unpushed():
+		c.queue.push(NetChunker.STREAM_CONTROL, bytes)
+
+
+func _accept() -> void:
+	while _tcp.is_connection_available():
+		var tcp: StreamPeerTCP = _tcp.take_connection()
+		tcp.set_no_delay(true)
+		var c: Conn = Conn.new()
+		c.id = _next_conn
+		_next_conn += 1
+		c.peer = WebSocketPeer.new()
+		c.peer.accept_stream(tcp)
+		c.queue = NetSendQueue.new(chunk_size, voice_per_pump)
+		c.resync = NetResync.new(lag_limit)
+		_conns[c.id] = c
+
+
+## Polls every socket; returns the inbound messages for the main thread.
+func _poll() -> Array:
+	var out: Array = []
+	for c: Conn in _conns.values():
+		c.peer.poll()
+		if c.peer.get_ready_state() == WebSocketPeer.STATE_CLOSED:
+			_conns.erase(c.id)
+			out.append([c.id, {"t": CLOSED, "code": c.peer.get_close_code(), "session": c.session}])
+			continue
+		while c.peer.get_available_packet_count() > 0:
+			var packet: PackedByteArray = c.peer.get_packet()
+			if c.closing:
+				continue
+			var errors_before: int = c.chunker.errors
+			for msg: Dictionary in c.chunker.feed_packet(packet):
+				_receive(c, msg["data"], out)
+			c.errors += c.chunker.errors - errors_before
+		if c.errors > MAX_ERRORS and not c.closing:
+			_close(c, CLOSE_PROTOCOL, "malformed messages")
+	return out
+
+
+func _receive(c: Conn, data: PackedByteArray, out: Array) -> void:
+	var type: int = NetProtocol.type_of(data)
+	if not NetProtocol.FROM_CLIENT.has(type):
+		c.errors += 1
+		_totals["errors"] += 1
+		return
+	var msg: Dictionary = NetProtocol.decode(data)
+	if type == NetProtocol.Type.HELLO and msg.is_empty():
+		# Unreadable or another version's Hello: the main thread answers with a reason.
+		out.append([c.id, {"t": type, "v": NetProtocol.hello_version(data), "invalid": true}])
+		return
+	if msg.is_empty():
+		c.errors += 1
+		_totals["errors"] += 1
+		return
+	if type == NetProtocol.Type.ACK:
+		if c.session >= 0:
+			c.resync.on_ack(msg["snap"])
+			_outboxes[c.session].ack(msg["ev"])
+		return
+	if type != NetProtocol.Type.HELLO and c.session < 0:
+		c.errors += 1
+		return
+	out.append([c.id, msg])
+
+
+func _snapshot() -> void:
+	var world: SimWorld = _state
+	_state = null
+	var keys: Dictionary = {}
+	for c: Conn in _conns.values():
+		if c.session >= 0 and c.view_key != "" and not c.closing:
+			keys[c.view_key] = true
+	if keys.is_empty():
+		return
+	_snap_seq += 1
+	_builder.build(world, _snap_seq, keys.keys())
+	for c: Conn in _conns.values():
+		if c.session < 0 or c.view_key == "" or c.closing:
+			continue
+		var action: NetResync.Action = c.resync.decide(c.queue.high_bytes)
+		if action == NetResync.Action.NONE:
+			c.stats["skipped"] += 1
+			c.stats["stalls"] = c.resync.stall_count
+			continue
+		var is_full: bool = action == NetResync.Action.FULL
+		if is_full:
+			# Events held while the client lagged go right before the full snapshot.
+			c.resync.on_sent(_snap_seq, true)
+			_push_events(c)
+		else:
+			c.resync.on_sent(_snap_seq, false)
+		c.queue.push_chunks(_builder.chunks(c.view_key, is_full))
+		c.stats["fulls" if is_full else "deltas"] += 1
+		c.stats["stalls"] = c.resync.stall_count
+		_totals["sends"] += 1
+	_totals["snapshots"] += 1
+	var counts: Dictionary = _builder.take_counts()
+	_totals["delta_messages"] += counts["delta_messages"]
+	_totals["full_messages"] += counts["full_messages"]
+
+
+func _pump() -> void:
+	for c: Conn in _conns.values():
+		if c.peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
+			continue
+		c.queue.begin_pump()
+		while true:
+			var room: int = mini(
+				BUNDLE_MAX,
+				c.peer.outbound_buffer_size - c.peer.get_current_outbound_buffered_amount()
+			)
+			var size: int = c.queue.peek_size()
+			if size == 0 or size > room:
+				break
+			var bundle: PackedByteArray = c.queue.take_bundle(room)
+			if c.peer.send(bundle) != OK:
+				# The chunks have left the queue, so the stream is broken: close, and the
+				# client resumes with its token and a full snapshot (FT-NET-037, D106).
+				c.resync.on_send_error()
+				_close(c, CLOSE_SEND_FAILED, "send failed")
+				break
+			c.stats["bytes"] += bundle.size()
+			c.stats["ws_messages"] += 1
+		c.peer.poll()
+		# A client drops messages that arrive with the close frame, so the server lets
+		# the client close first (NetClient does on HelloRejected and Bye) and closes
+		# itself CLOSE_LINGER_US after the last message left.
+		if c.closing and c.queue.is_empty() and c.peer.get_current_outbound_buffered_amount() == 0:
+			if Time.get_ticks_usec() - c.closing_since_us > CLOSE_LINGER_US:
+				c.peer.close(c.stats.get("close_code", 1000), c.stats.get("close_reason", ""))
+
+
+## Marks a connection closing: it sends what is queued (for example HelloRejected),
+## then closes; nothing more is queued for it.
+func _close(c: Conn, code: int, reason: String) -> void:
+	if c.closing:
+		return
+	c.closing = true
+	c.closing_since_us = Time.get_ticks_usec()
+	c.stats["close_code"] = code
+	c.stats["close_reason"] = reason
+	if code == CLOSE_SEND_FAILED:
+		c.peer.close(code, reason)
+
+
+func _publish(inbound: Array) -> void:
+	var now: int = Time.get_ticks_usec()
+	if now - _published_us < STATS_INTERVAL_US:
+		if not inbound.is_empty():
+			_mutex.lock()
+			_inbound.append_array(inbound)
+			_mutex.unlock()
+		return
+	_published_us = now
+	var conns: Dictionary = {}
+	for c: Conn in _conns.values():
+		var s: Dictionary = c.stats.duplicate()
+		s["session"] = c.session
+		s["view_key"] = c.view_key
+		s["high_bytes"] = c.queue.high_bytes
+		s["low_bytes"] = c.queue.low_bytes
+		s["stalled"] = c.resync.stalled
+		s["acked_snap"] = c.resync.acked_seq
+		s["last_sent"] = c.resync.last_sent_seq
+		conns[c.id] = s
+	var outboxes: Dictionary = {}
+	for s: int in _outboxes:
+		outboxes[s] = {"pending": _outboxes[s].pending(), "acked": _outboxes[s].acked}
+	_mutex.lock()
+	_inbound.append_array(inbound)
+	_stats = _totals.duplicate()
+	_stats["conns"] = conns
+	_stats["outboxes"] = outboxes
+	_stats["snapshot_seq"] = _snap_seq
+	_mutex.unlock()

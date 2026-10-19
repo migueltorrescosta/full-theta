@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Local gate (FT-TST-002, FT-TST-005): imports the project, then runs tiers.
 #   tools/gate.sh [l0|l1|l2|l3|l4|l5|l6|ci|all]... [--update-baselines]   (default: ci)
-# ci = the tiers CI runs (l0 l1); all = every implemented tier (l0 l1 l5 l6).
+# ci = the tiers CI runs (l0 l1; l1 runs every test, tests/net included); all = every
+# implemented tier (l0 l1 l5 l6). l3 runs only the in-process network tests (tests/net),
+# pinned to 2 cores like a CI runner.
 # --update-baselines makes l5 regenerate tests/visual/baselines/ instead of diffing.
 # Prints the commit and per-tier results as a block for the PR body.
 set -uo pipefail
@@ -12,11 +14,11 @@ tiers=()
 l5_args=()
 for arg in "$@"; do
   case $arg in
-    l0 | l1 | l5 | l6) tiers+=("$arg") ;;
+    l0 | l1 | l3 | l5 | l6) tiers+=("$arg") ;;
     ci) tiers+=(l0 l1) ;;
     all) tiers+=(l0 l1 l5 l6) ;;
     --update-baselines) l5_args+=(--update-baselines) ;;
-    l2 | l3 | l4) echo "gate: tier $arg is not implemented yet" >&2; exit 2 ;;
+    l2 | l4) echo "gate: tier $arg is not implemented yet" >&2; exit 2 ;;
     *) echo "gate: unknown tier $arg (use l0..l6, ci or all)" >&2; exit 2 ;;
   esac
 done
@@ -39,6 +41,14 @@ l1() {
     --add res://tests --report-directory build/reports --ignoreHeadlessMode
 }
 
+# L3: server and clients over loopback WebSocket in one process (tests/net), on 2 cores.
+l3() {
+  rm -rf build/reports
+  taskset -c 0,1 "$godot" --headless --path . -s -d --remote-debug tcp://127.0.0.1:0 \
+    res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+    --add res://tests/net --report-directory build/reports --ignoreHeadlessMode
+}
+
 # L5: screenshots under Xvfb with llvmpipe, diffed against tests/visual/baselines/
 # (tools/l5.py; fugaku only, needs xvfb).
 l5() { uv run --quiet --project tools python tools/l5.py "${l5_args[@]}"; }
@@ -50,7 +60,8 @@ l6() {
   "$godot" --headless --path . --export-release Linux || return 1
   "$godot" --headless --path . --export-release Windows || return 1
   [[ -s build/windows/full-theta.exe ]] || { echo "l6: no Windows build" >&2; return 1; }
-  timeout 5 build/linux/full-theta.x86_64 --headless -- --server
+  timeout 10 build/linux/full-theta.x86_64 --headless -- --server --bind 127.0.0.1 --port 0 \
+    --run-for 2
 }
 
 echo "gate: import"
