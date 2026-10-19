@@ -185,3 +185,13 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 90. The host picks the session language before launch (`--language`); Welcome carries it. FT-AUD-013. (D151)
 91. Clients play unslotted authored lines from their own export; the host stitches slotted lines from segments, the closed set and compositional number fragments, and streams only stitched and synthesised clips. §9.1, FT-AUD-002, 018, FT-ARC-019. (D152, D154)
 92. The ship-computer filter is a client audio-bus effect chain; dev and release use different Piper builds behind one adapter; pt_PT is subtitles only in releases until #16. §9.1, FT-AUD-004, 014, 019. (D153)
+
+### Pending changelog (strand-7)
+
+- Three alert levels, Normal, Yellow and Red, each with a colour, a shape and a letter. FT-STN-006, FT-STN-008. (D170)
+- Marks, pings and the alert level are per-ship server state outside the sim; protocol version 4. §6.3, FT-SPA-012–017. (D171)
+- The comfort roll lock offers the deck plane, the target or a personal reference plane captured from the current attitude. FT-STN-017. (D172)
+- The main screen switches to chase above 45°/s roll or while decoupled, and back after 1.5 s below 30°/s. FT-MSC-001. (D173)
+- The radar side strip toggles with Z (View + d-pad left), not B. §6.2, FT-SPA-009. (D175)
+- A left click selects only over a chip, mark or radar item; elsewhere in the cockpit or turret it fires. FT-STN-009. (D176)
+- The run resets after a majority "Run again" vote of the connected crew, or the host alone. FT-M1-012. (D178)

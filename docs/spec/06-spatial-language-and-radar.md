@@ -36,7 +36,7 @@ Prefer names over directions; directions only for unnamed space.
 
 ## 6.2 Radar (D42, D43)
 
-Elite-style disc: the disc is the deck plane, clock numbers on the rim; each blip has a stem to the disc (solid blip, stem up = above; hollow, stem down = below); a range ring passes through the selected contact's stem foot; an optional side strip (B) shows elevation. Every disc uses the ship frame. Relay, Captain map views and the tactical main-screen view may centre it on a selected mark, site or contact, keeping the ship's axes so clock and height words still match; no radar uses a world-fixed up (D124). Range zooms in fixed steps (2, 10, 50 km); contacts beyond the scale are arrows clamped to the rim. The selected contact's stem is drawn on top.
+Elite-style disc: the disc is the deck plane, clock numbers on the rim; each blip has a stem to the disc (solid blip, stem up = above; hollow, stem down = below); a range ring passes through the selected contact's stem foot; an optional side strip (Z; controller View + d-pad left) shows elevation. Every disc uses the ship frame. Relay, Captain map views and the tactical main-screen view may centre it on a selected mark, site or contact, keeping the ship's axes so clock and height words still match; no radar uses a world-fixed up (D124). Range zooms in fixed steps (2, 10, 50 km); contacts beyond the scale are arrows clamped to the rim. The selected contact's stem is drawn on top.
 
 ```
         .-----------  12  -----------.
@@ -64,7 +64,7 @@ Allied ships share one faction, so they share callsigns and contact knowledge, b
 - **FT-SPA-006** Maps shall show no grid squares, altitude layers or world-fixed up; a point away from the own ship shall be read relative to a mark or site in ship-frame clock, height and range. (D45, D124, plan review NAV-1)
 - **FT-SPA-007** The disc radar shall draw elevation stems, solid blips above and hollow blips below the disc. (D43)
 - **FT-SPA-008** The disc radar shall draw a range ring through the selected contact's stem foot. (D43)
-- **FT-SPA-009** The disc radar shall offer an optional elevation side strip toggled by B. (D43)
+- **FT-SPA-009** The disc radar shall offer an optional elevation side strip toggled by Z (controller: View + d-pad left). (D43, D175)
 - **FT-SPA-010** Every radar shall use the ship frame; Relay, Captain and the tactical main-screen view may centre it on a selected mark, site or contact with the ship's axes; no radar shall use a world-fixed up. (D42, D124)
 - **FT-SPA-011** Orbiting the disc shall be possible on Science and Relay; Helm and Weapons insets shall use a fixed camera angle. (station-ui §1.5)
 - **FT-SPA-012** Each ship shall have at most 8 named marks, Alpha to Hotel; site names, scan positions and hazard zones shall not count toward them. (D44, D98, plan review COOP-6)
