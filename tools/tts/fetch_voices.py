@@ -6,7 +6,8 @@ Files come from the rhasspy/piper-voices revision named in voices.json and are
 checked against their SHA-256. The cache is $FT_PIPER_CACHE or
 ~/.cache/full-theta/piper/<voice>/. Voice models and generated audio are never
 committed (FT-AUD-002); each voice's licence is audited in docs/spikes/S7.md
-(FT-LIC-007).
+(FT-LIC-007). voices.json's "release" list names the voices release packages
+ship (D141, tools/release/package.py).
 """
 
 import hashlib
@@ -33,29 +34,34 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def download(url: str, local: Path, expected: str) -> Path:
+    """Download url to local unless it is already there with the expected
+    SHA-256; fail on a mismatch. Shared with tools/release/fetch.py."""
+    if local.exists() and sha256(local) == expected:
+        return local
+    local.parent.mkdir(parents=True, exist_ok=True)
+    tmp = local.with_name(local.name + ".part")
+    print(f"fetch: {url}", file=sys.stderr)
+    urllib.request.urlretrieve(url, tmp)
+    got = sha256(tmp)
+    if got != expected:
+        tmp.unlink()
+        raise SystemExit(f"fetch: {url}: sha256 {got} != {expected}")
+    tmp.replace(local)
+    return local
+
+
 def fetch(voice: str) -> Path:
     """Download one voice (if missing or stale) and return its directory."""
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if voice not in manifest["voices"]:
         raise SystemExit(f"fetch: unknown voice {voice}")
-    files = manifest["voices"][voice]
     dest = cache_dir() / voice
-    dest.mkdir(parents=True, exist_ok=True)
-    for remote, meta in files.items():
-        local = dest / Path(remote).name
-        if local.exists() and sha256(local) == meta["sha256"]:
-            continue
+    for remote, meta in manifest["voices"][voice].items():
         url = "https://huggingface.co/{}/resolve/{}/{}".format(
             manifest["repo"], manifest["revision"], urllib.parse.quote(remote)
         )
-        tmp = local.with_suffix(local.suffix + ".part")
-        print(f"fetch: {url}", file=sys.stderr)
-        urllib.request.urlretrieve(url, tmp)
-        got = sha256(tmp)
-        if got != meta["sha256"]:
-            tmp.unlink()
-            raise SystemExit(f"fetch: {remote}: sha256 {got} != {meta['sha256']}")
-        tmp.replace(local)
+        download(url, dest / Path(remote).name, meta["sha256"])
     return dest
 
 

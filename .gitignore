@@ -4,5 +4,6 @@
 __pycache__/
 .venv/
 /tmp/
+/build_info.json
 /audio/prerendered/
 /audio/prerendered_host/

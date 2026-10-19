@@ -185,3 +185,10 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 90. The host picks the session language before launch (`--language`); Welcome carries it. FT-AUD-013. (D151)
 91. Clients play unslotted authored lines from their own export; the host stitches slotted lines from segments, the closed set and compositional number fragments, and streams only stitched and synthesised clips. §9.1, FT-AUD-002, 018, FT-ARC-019. (D152, D154)
 92. The ship-computer filter is a client audio-bus effect chain; dev and release use different Piper builds behind one adapter; pt_PT is subtitles only in releases until #16. §9.1, FT-AUD-004, 014, 019. (D153)
+
+### v0.5 update for D140–D144 (#12, E15)
+
+93. Release packages ship the standalone rhasspy/piper 2023.11.14-2 with eSpeak NG 1.52.0.1 and the release voices from one list; macOS assembles Piper from rhasspy/piper and piper-phonemize. FT-ARC-022, FT-LIC-008. (D140, D141)
+94. Exported builds print their build line, and `--tts-smoke` synthesises one line with each bundled voice, for L6. FT-TST-019. (D142)
+95. The release workflow runs on version tags only, builds with a read-only token and drafts the release from a separate job; L6 runs on fugaku before the tag; macOS stays unsigned until #13. §12.1, FT-ARC-017, FT-GEN-012. (D143)
+96. Release voice configs drop multi-codepoint phonemes for the bundled Piper, recorded as a change; L6 checks every bundled voice loads. FT-LIC-005, FT-TST-019. (D144)

@@ -19,3 +19,9 @@ Entry points: the main scene (`main.tscn`, `main.gd`) and the headless server: `
 - `web/keep_awake.gd` (`KeepAwake`): keeps a browser tablet's screen on (FT-NET-046). Owned by the packaging strand.
 
 Tests: `tests/net/test_host_*.gd` (`test_host_flow.gd` spawns real server children), `tests/net/test_lan_*.gd` and `tests/app/web/`.
+
+## Release packages
+
+- `release_bundle.gd` (`ReleaseBundle`): the packed build info (`build: VERSION COMMIT`, printed at start) and the bundled web export's folder, which `HostSession.Options.http_root` defaults to, so the server child serves it (`--http-root`) (FT-ARC-022).
+- `release_smoke.gd` (`ReleaseSmoke`): `-- --tts-smoke TEXT --out WAV [--voice NAME]`, the L6 check that the exported build runs its bundled Piper (FT-TST-019).
+- `web/shell.html`: the web export's HTML shell without the secure-context check, and `web/keepawake.webm` (`tools/release/make_keepawake.sh`) that `web/keep_awake.gd` plays, all from S3 (D108). `docs/release.md` covers the packages.

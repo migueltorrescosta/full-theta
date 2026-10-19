@@ -43,6 +43,7 @@ func test_rejects_bad_command_lines() -> void:
 	assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--warp"])).is_false()
 	# D127: no secret on the command line, which other local users can read.
 	assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--host-secret", "beef"])).is_false()
+	assert_bool(ServerMain.new().parse_args(["--bind", "::1", "--http-root", "web"])).is_false()
 	var cli: ServerMain = ServerMain.new()
 	assert_bool(cli.parse_args(["--server", "--bind", "127.0.0.1"])).is_true()
 	assert_int(cli.port).is_equal(ServerMain.DEFAULT_PORT)

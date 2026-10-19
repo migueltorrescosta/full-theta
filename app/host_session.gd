@@ -45,8 +45,8 @@ class Options:
 	## bound to a non-loopback address.
 	var beacon: bool = true
 	## Web export folder to serve over HTTP at port - 1 (--http-root, FT-NET-030);
-	## "" for none.
-	var http_root: String = ""
+	## "" for none. A release package serves its bundled export (FT-ARC-022).
+	var http_root: String = ReleaseBundle.web_root()
 	## The session language the host picked (--language, FT-AUD-013).
 	var language: String = I18n.LANGUAGES[0]
 

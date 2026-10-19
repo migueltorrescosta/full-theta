@@ -26,3 +26,7 @@ FT_PIPER_BIN=/path/to/piper/piper tools/voice_latency/run.sh /tmp/vl/bin   # rel
 Server flags: `--langs en,it,pt --line-every 1.0 --lines-at 2.0 --tail 3.0 --sim-ships 100 --sim-proj 500 --max-lang-s 300`. Environment: `VL_NICE` (renice the run, for example `-10`, with sudo, to rise above foreign load on a shared host), `VL_LABEL`, and `FT_PIPER_BIN`, `FT_PIPER_DATA`, `FT_PIPER_CACHE`, `FT_PIPER_PYTHON` as read by `app/voice_setup.gd`. Record the host load with each result: on a loaded host the numbers measure the host as much as the code.
 
 The rhasspy/piper 2023.11.14-2 binary can't load `it_IT-serena-medium` (a piper 1.5 voice): it aborts with "Phonemes must be one codepoint (phoneme id map)" on the diphthong keys `aɪ aʊ ɔɪ eɪ oʊ`, so Italian is subtitles only with an unpatched voice. Release packages patch each bundled voice's `.onnx.json` at bundle time by dropping every multi-codepoint `phoneme_id_map` key (D144). To measure the binary in development, point `FT_PIPER_CACHE` at a copy of the voice cache patched by the same rule (synthesis then works; the sound is unreviewed).
+
+## Release packaging and L6
+
+`tools/release/build.sh VERSION OUT_DIR` builds, packages and inspects the Linux, Windows and macOS release packages (`fetch.py`, `prerender.sh`, `web_patch.py`, `package.py`, `inspect_packages.py`, `notes.py`; pins in `piper.json`). `.github/workflows/release.yml` runs it on version tags. `tools/gate.sh l6` runs it on the working tree and then runs the Linux and Windows packages (`tools/l6/run.sh`). See `docs/release.md`.
