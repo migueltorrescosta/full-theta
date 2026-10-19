@@ -136,12 +136,12 @@ def test_repository_has_no_speech_recognition():
 # FT: FT-AUD-002
 def test_committed_audio_fails(tmp_path):
     root = fixture(tmp_path)
-    (root / "content/voice/prerendered/en").mkdir(parents=True)
-    (root / "content/voice/prerendered/en/npc.pcm").write_bytes(b"\0\0")
+    (root / "audio/prerendered/en").mkdir(parents=True)
+    (root / "audio/prerendered/en/npc.pcm").write_bytes(b"\0\0")
     (root / "assets/art/pack/ok.ogg").write_bytes(b"")
     git = ["git", "-C", str(root)]
     subprocess.run(git + ["init", "-q"], check=True)
     subprocess.run(git + ["add", "-A"], check=True)
     assert check_licences.run(root) == [
-        "content/voice/prerendered/en/npc.pcm: audio must not be committed outside assets/ (FT-AUD-002)"
+        "audio/prerendered/en/npc.pcm: audio must not be committed outside assets/ (FT-AUD-002)"
     ]

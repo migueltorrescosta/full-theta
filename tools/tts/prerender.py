@@ -17,7 +17,7 @@ DIR/<lang>/<role>.json, {"rate", "voice", "clips": {key: [first_sample, samples]
 Each clip uses the role's synthesis settings from voices.json `roles`, has its
 silence trimmed (0.02 of full scale, 10 ms padding, as spike S7b) and is peak
 normalised to 0.9. The ship computer's robotic filter is applied by the client
-on an audio bus, not here. DIR defaults to content/voice/prerendered/ at the repo root,
+on an audio bus, not here. DIR defaults to audio/prerendered/ at the repo root,
 which is gitignored: generated audio is never committed (FT-AUD-002), so any
 other location inside the repo is refused.
 """
@@ -34,7 +34,7 @@ from typing import Callable
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_OUT = ROOT / "content" / "voice" / "prerendered"
+DEFAULT_OUT = ROOT / "audio" / "prerendered"
 LANGS = ("en", "pt_PT", "it")
 SLOT = re.compile(r"\{[a-z][a-z0-9_]*\}")
 LETTER = re.compile(r"[^\W\d_]")
@@ -162,10 +162,10 @@ def _render_voice_piper(voice: str, items: list[tuple]) -> list[tuple]:
 
 
 def check_out(out: Path, root: Path) -> None:
-    """Generated audio is never committed (FT-AUD-002): inside the repo only content/voice/prerendered/ is allowed."""
+    """Generated audio is never committed (FT-AUD-002): inside the repo only audio/prerendered/ is allowed."""
     out, root = out.resolve(), root.resolve()
-    if out.is_relative_to(root) and not out.is_relative_to(root / "content" / "voice" / "prerendered"):
-        raise SystemExit(f"prerender: refusing {out}: inside the repo only content/voice/prerendered/ (gitignored) is allowed")
+    if out.is_relative_to(root) and not out.is_relative_to(root / "audio" / "prerendered"):
+        raise SystemExit(f"prerender: refusing {out}: inside the repo only audio/prerendered/ (gitignored) is allowed")
 
 
 def prerender(

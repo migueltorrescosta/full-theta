@@ -4,4 +4,4 @@
 __pycache__/
 .venv/
 /tmp/
-/content/voice/prerendered/
+/audio/prerendered/

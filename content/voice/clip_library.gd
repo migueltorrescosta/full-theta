@@ -5,10 +5,9 @@ extends RefCounted
 ## index {"rate", "voice", "clips": {key: [first_sample, samples]}}. Built at packaging
 ## time from the dialogue JSON and never committed (FT-AUD-002); exports include it, so
 ## clients play authored lines and the host stitches number fragments locally (D152).
-## Keys: line:<id>, seg:<id>:<k>, num:<fragment>.
-
-## PROVISIONAL: where the prerender writes and exports pick the clips up.
-const DEFAULT_DIR: String = "res://content/voice/prerendered"
+## Keys: line:<id>, seg:<id>:<k>, num:<fragment>. Releases ship them in
+## res://audio/prerendered/<lang>/; content/ can't name audio/ (spec §2.2), so the caller
+## (VoicePlayer on clients, the app's voice setup on the host) passes the folder.
 
 var lang: String = ""
 ## role -> {"rate": int, "voice": String, "clips": Dictionary, "pcm": PackedByteArray}

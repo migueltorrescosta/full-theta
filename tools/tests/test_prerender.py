@@ -154,7 +154,7 @@ def test_refuses_tracked_locations(tmp_path):
         prerender.check_out(ROOT / "content", ROOT)
     with pytest.raises(SystemExit):
         prerender.check_out(ROOT / "build/voice", ROOT)
-    prerender.check_out(ROOT / "content/voice/prerendered", ROOT)
+    prerender.check_out(ROOT / "audio/prerendered", ROOT)
     prerender.check_out(tmp_path / "anywhere", ROOT)
 
 
@@ -187,3 +187,19 @@ def test_number_fragment_keeps_only_its_first_utterance():
     assert cut.size == 100 + int(prerender.PAD_S * rate)
     short_pause = np.concatenate([word, np.zeros(100, dtype=np.int16), word])
     assert prerender.first_utterance(short_pause, rate).size == short_pause.size
+
+
+# FT: FT-AUD-002
+def test_release_hook_lists_every_file_of_each_language(tmp_path):
+    import prerender_release
+
+    _, out, _, _ = run(tmp_path, langs=("en", "it"))
+    prerender_release.write_indexes(out, ["en", "it"])
+    for lang in ("en", "it"):
+        index = json.loads((out / lang / "index.json").read_text())
+        assert index == {
+            "language": lang,
+            "clips": ["computer.json", "computer.pcm", "npc.json", "npc.pcm"],
+        }
+        assert all((out / lang / f).stat().st_size > 0 for f in index["clips"])
+    assert not (out / "pt_PT").exists()
