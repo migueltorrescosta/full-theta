@@ -36,6 +36,8 @@ def sha256(path: Path) -> str:
 def fetch(voice: str) -> Path:
     """Download one voice (if missing or stale) and return its directory."""
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    if voice not in manifest["voices"]:
+        raise SystemExit(f"fetch: unknown voice {voice}")
     files = manifest["voices"][voice]
     dest = cache_dir() / voice
     dest.mkdir(parents=True, exist_ok=True)

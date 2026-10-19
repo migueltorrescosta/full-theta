@@ -87,7 +87,7 @@ def read_png(path: Path) -> tuple[int, int, bytes]:
         out[y * stride : (y + 1) * stride] = line
         prev = line
     if bpp == 4:
-        out = bytearray(b for i, b in enumerate(out) if i % 4 != 3)
+        del out[3::4]
     return width, height, bytes(out)
 
 
@@ -178,9 +178,12 @@ def capture(shots_file: Path, out: Path) -> list[str]:
     stale += [f"{s['name']}{ext}" for s in manifest["shots"] for ext in (".png", ".diff.png")]
     for name in stale:
         (out / name).unlink(missing_ok=True)
-    godot = subprocess.run(
-        [ROOT / "tools/get-godot.sh"], check=True, capture_output=True, text=True
-    ).stdout.strip()
+    if not manifest["shots"]:
+        return ["no shots in the manifest"]
+    got = subprocess.run([ROOT / "tools/get-godot.sh"], capture_output=True, text=True)
+    if got.returncode != 0:
+        return [f"get-godot.sh failed: {got.stderr.strip()}"]
+    godot = got.stdout.strip()
     env = dict(os.environ, LIBGL_ALWAYS_SOFTWARE="1", GALLIUM_DRIVER="llvmpipe")
     cmd = [
         "xvfb-run", "-a", f"--server-args=-screen 0 {width}x{height}x24",

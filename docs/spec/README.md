@@ -137,7 +137,7 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 
 58. Site-local offsets are three 64-bit floats, measured by spike S6; R6's budget is mean and p99. §4.1, FT-SIM-035, R6. (D104)
 59. Voices fine-tuned from lessac or ryan are unclear; medium voices for runtime; a clean pt_PT voice is trained (#16). §9.1, FT-LIC-007, FT-AUD-019. (D105)
-60. The stall trigger for a client is fixed at 15 unacknowledged snapshots, a failed send or 256 KiB queued. FT-NET-037. (D106)
+60. The stall trigger for a client is fixed at more than 15 unacknowledged snapshots, a failed send or 256 KiB queued. FT-NET-037. (D106)
 61. Art moves from toon to semi-realistic PBR-style procedural art with variant B's palette. §9.5, FT-AUD-016, R11. (D107)
 62. Browser stations run from plain HTTP through a patched shell and audio guard; grace stays 10 s; keep-awake by a muted video. FT-NET-030, 033, 046. (D108)
 63. S9's quiet-host tick counts as the pass for R15; #11 re-verifies. R15. (D109)
