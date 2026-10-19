@@ -86,10 +86,13 @@ static func bind_addresses() -> PackedStringArray:
 	return out
 
 
-## Host: spawns the server child and joins it as the host (FT-M1-002).
-func host() -> void:
+## Host: spawns the server child and joins it as the host (FT-M1-002), bound to the
+## chosen address, or to `bind` when given (ClientAutopilot).
+func host(bind: String = "") -> void:
 	_remember_name()
-	var o: HostSession.Options = HostSession.Options.new(bind_addresses()[_bind.selected])
+	if bind == "":
+		bind = bind_addresses()[_bind.selected]
+	var o: HostSession.Options = HostSession.Options.new(bind)
 	o.language = I18n.LANGUAGES[_lang.selected]
 	o.dev_all = _dev.button_pressed
 	host_session = HostSession.new(settings.player_name)

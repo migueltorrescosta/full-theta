@@ -1,6 +1,6 @@
 # app/
 
-Entry points: the main scene (`main.tscn`, `main.gd`) and the headless server: `godot --headless --path . -- --server --bind ADDR [--port N]`. `server_main.gd` lists every flag; `main.gd` builds the `NetServer` node (net/) and a `ServerLifecycle` node and adds them to the tree. Without `--server`, `main.gd` starts the client's `MainMenu`.
+Launch instructions for players are in `docs/launch.md`. Entry points: the main scene (`main.tscn`, `main.gd`) and the headless server: `godot --headless --path . -- --server --bind ADDR [--port N]`. `server_main.gd` lists every flag; `main.gd` builds the `NetServer` node (net/) and a `ServerLifecycle` node and adds them to the tree. Without `--server`, `main.gd` starts the client's `MainMenu`.
 
 ## Server process
 
@@ -17,6 +17,7 @@ Entry points: the main scene (`main.tscn`, `main.gd`) and the headless server: `
 ## Client menu
 
 - `main_menu.gd` (`MainMenu`, T049): Name (persisted in `ClientSettings`), Host (bind "This computer only" or a LAN address from `bind_addresses()`, session language, and "Dev: one client holds all stations", which sets `HostSession.Options.dev_all` and so `--dev-all-stations`), Join (the live `LanBrowser` list, or a typed address through `LanBrowser.parse_address`), Rejoin (a stored `SessionTokenFile` without a host secret), Settings, Quit. On start it runs `HostSession.check_orphan` twice (`_check_orphan`): first answering "leave" to learn whether there is a question, then with the player's answer from a dialog (rejoin, end it, leave it running). A welcomed client goes to `ClientShell` (stations/); when the player leaves, a host stops its server and a joined client removes its token.
+- `client_autopilot.gd` (`ClientAutopilot`): test flags that drive the menu without a mouse (`--auto-host`, `--auto-join`, `--screenshot`, `--quit-after`); `main.gd` adds it when one is given. `docs/launch.md` uses them.
 
 ## Web build
 
