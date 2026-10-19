@@ -74,15 +74,21 @@ func _log() -> String:
 	return FileAccess.get_file_as_string(_log_file) if FileAccess.file_exists(_log_file) else ""
 
 
-## True once `pid` has exited and been reaped. A kill is asynchronous, and a killed
-## child of this process stays in /proc as a zombie until is_process_running()
-## reaps it, so a check straight after stop() can still see it.
+## True once `pid` has exited and been reaped. OS.kill() reaps a child of this process
+## itself (it waits for it), so after a kill /proc is the whole answer; asking
+## is_process_running() then logs "not a child of the calling process". Only a child
+## that exited by itself still needs reaping to leave /proc.
 func _gone(pid: int) -> bool:
+	if not OrphanCheck.process_alive(pid):
+		return true
 	return not OS.is_process_running(pid) and not OrphanCheck.process_alive(pid)
 
 
+## True once the host joined; on a failed start or join the failure names the reason.
 func _joined(h: HostSession) -> bool:
-	return await _until(func() -> bool: return h.is_joined() or h.state == h.State.FAILED)
+	await _until(func() -> bool: return h.is_joined() or h.state == h.State.FAILED)
+	assert_str(h.error).is_empty()
+	return h.is_joined()
 
 
 # FT: FT-NET-001, FT-NET-003, FT-M1-002
