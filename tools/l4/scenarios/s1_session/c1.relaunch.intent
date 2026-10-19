@@ -1,0 +1,23 @@
+# c1 relaunched after SIGKILL, within the grace: same ship, pick and claims (FT-NET-026).
+connect
+expect_welcome resumed=true ship=0 entry=p2
+expect_view stats.fulls>=1 blocks.helm.decoupled=true
+expect_view claims.mount:0=c1  # A: claimer names in the snapshot
+command id=aim kind=aim_mount mount_index=0 aim_x=0.0 aim_y=100.0 aim_z=0.0
+expect_accepted id=aim
+signal name=c1_back
+barrier name=rejoined n=3
+# Pause (FT-NET-033, FT-NET-034): c3 (Systems) is killed; after the grace the universe
+# pauses and every client is told what is uncovered; snapshots keep flowing.
+mark
+expect_no_event type=pause for=2
+expect_event type=pause payload.ship=0 payload.uncovered~=engineering payload.uncovered~=science timeout=40  # A
+expect_tick_still for=1
+expect_flowing max_gap_ms=1000
+barrier name=paused n=2
+signal name=paused
+# c3 rejoins and picks Systems again: the universe resumes (FT-NET-035).
+expect_event type=resume timeout=40  # A
+expect_tick_moving
+barrier name=done n=3
+bye

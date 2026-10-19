@@ -23,3 +23,7 @@ A `# FT:` line at the top of a file tags the whole file. The same convention app
 FT_UPDATE_GOLDEN=1 /path/to/godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
   --add res://tests/sim/replay/test_golden_replay.gd --ignoreHeadlessMode
 ```
+
+## L4 network scenarios
+
+The multi-process network tests are not gdUnit4 suites: `tools/gate.sh l4` runs the scenarios in `tools/l4/scenarios/`, each a shell script and one intent file per client (`tools/l4/README.md`). They verify FT-TST-011 and FT-TST-014 by a gate run rather than `# FT:` tags; record the passing commit in the PR body.

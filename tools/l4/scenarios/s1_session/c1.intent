@@ -1,0 +1,33 @@
+# c1: Tactical (Helm + Weapons). Lines marked "A:" follow names T043-T045 still define.
+connect
+expect_welcome resumed=false ship=-1
+expect_catalogue ships.size=1 entries.id~=p2 entries.id~=p10 entries.id~=p15
+pick ship=0 entry=p2
+barrier name=picked n=3
+# Coverage (FT-NET-019, FT-NET-021): Tactical, Tactical, Systems leave Relay and Comms.
+expect_event type=lobby payload.ship=0 payload.uncovered~=relay payload.uncovered~=comms payload.uncovered!~helm keep=true  # A: lobby state event
+ready
+expect_event type=request_rejected payload.request=7  # A: Ready refused before coverage
+# Claims (FT-NET-022, FT-NET-023): c1 claims mount 0 of the station it shares with c2.
+claim item=mount:0  # A: item id
+expect_event type=claim payload.item=mount:0 payload.holder=c1  # A: claim event fields
+command id=aim kind=aim_mount mount_index=0 aim_x=100.0 aim_y=0.0 aim_z=0.0
+expect_accepted id=aim
+expect_view blocks.mounts.mounts.0.aim_set=true
+barrier name=claimed n=3
+barrier name=checked n=3
+# c2 moved to Ops: covered; Ready is accepted and the run starts.
+barrier name=covered n=3
+expect_event type=lobby payload.ship=0 payload.uncovered.size=0 keep=true  # A
+ready
+expect_event type=started  # A: run start event
+expect_tick_moving
+barrier name=started n=3
+# Reconnect after a crash (FT-NET-025, FT-NET-026): set decoupled mode, then die.
+command id=go kind=helm_input throttle=1.0 rotation=Vector3(0, 0.2, 0)
+expect_accepted id=go
+command id=helm kind=helm_decoupled decoupled=true
+expect_accepted id=helm
+expect_view blocks.helm.decoupled=true
+signal name=c1_kill
+await name=never timeout=60

@@ -1,0 +1,33 @@
+# c2: Tactical with c1, then Ops.
+connect
+expect_welcome resumed=false
+pick ship=0 entry=p2
+barrier name=picked n=3
+expect_event type=lobby payload.ship=0 payload.uncovered~=relay payload.uncovered~=comms keep=true  # A
+barrier name=claimed n=3
+# c1 holds mount 0: c2's command on it is rejected and c2 sees who holds it.
+command id=aim kind=aim_mount mount_index=0 aim_x=0.0 aim_y=0.0 aim_z=100.0
+expect_rejected id=aim reason=claimed  # A: claim rejection reason
+expect_view claims.mount:0=c1  # A
+barrier name=checked n=3
+pick ship=0 entry=p15
+barrier name=covered n=3
+expect_event type=lobby payload.ship=0 payload.uncovered.size=0 keep=true  # A
+ready
+expect_event type=started  # A
+barrier name=started n=3
+# c1 crashes and comes back within the grace: no pause, snapshots never stop.
+mark
+await name=c1_back timeout=60
+expect_no_event type=pause for=0.1
+expect_flowing max_gap_ms=1000
+barrier name=rejoined n=3
+mark
+expect_event type=pause payload.ship=0 payload.uncovered~=engineering timeout=40  # A
+expect_tick_still for=1
+expect_flowing max_gap_ms=1000
+barrier name=paused n=2
+expect_event type=resume timeout=40  # A
+expect_tick_moving
+barrier name=done n=3
+bye
