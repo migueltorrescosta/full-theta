@@ -68,8 +68,10 @@ static func step(world: SimWorld) -> void:
 				world.emit(&"fault", s, -1, h, Vector3.ZERO, sd.id)
 			elif h < threshold * FAULT_REARM and armed0[r] == 0:
 				d.fault_armed[r] = 1
-		# Per kind, in subsystem order (the sums and maxima of power_ratio,
-		# kind_effectiveness and heat_ratio, after this tick's heat and faults).
+		# Per envelope (engines, thrusters), after this tick's heat and faults: the
+		# effective pips over the nominal pips (1 when the nominal is 0), the mean
+		# effectiveness (1 with no such subsystem) and the highest heat over threshold,
+		# summed in subsystem order; and the weapons' effective pips.
 		var weapon_pips: int = 0
 		var eng_pips: int = 0
 		var eng_nominal: int = 0
@@ -151,43 +153,9 @@ static func boost(world: SimWorld, ship_id: int) -> bool:
 	return true
 
 
-## Pips subsystem i draws now (count): the set pips, or the maximum during a boost for
-## engines and thrusters.
-static func effective_pips(world: SimWorld, ship_id: int, i: int) -> int:
-	var def: ShipDef = world.defs[ship_id]
-	var kind: int = def.subsystems[i].kind
-	var boosted: bool = kind == SubsystemDef.Kind.ENGINES or kind == SubsystemDef.Kind.THRUSTERS
-	if boosted and world.power.boost_ticks[ship_id] > 0:
-		return def.power.max_pips_per_subsystem
-	return world.damage.pips[world.damage.subsystem_row(ship_id, i)]
-
-
-## Effective pips of a kind over its nominal pips (dimensionless); 1 when the ship has
-## no such subsystem or its nominal is 0.
-static func power_ratio(world: SimWorld, ship_id: int, kind: int) -> float:
-	var nominal: int = 0
-	for s: SubsystemDef in world.defs[ship_id].subsystems:
-		if s.kind == kind:
-			nominal += s.nominal_pips
-	return _ratio(_pips_of(world, ship_id, kind), nominal)
-
-
-## Mean effectiveness of the ship's subsystems of a kind (0..1; 1 if none, FT-SIM-021).
-static func kind_effectiveness(world: SimWorld, ship_id: int, kind: int) -> float:
-	var total: float = 0.0
-	var n: int = 0
-	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
-	var d: DamageTable = world.damage
-	var first: int = d.subsystem_row(ship_id, 0)
-	for i: int in subs.size():
-		var s: SubsystemDef = subs[i]
-		if s.kind == kind:
-			total += d.row_effectiveness(first + i, s)
-			n += 1
-	return total / n if n > 0 else 1.0
-
-
-## power_ratio() times kind_effectiveness() in one pass (shield power, FT-SIM-019).
+## Power of the ship's subsystems of a kind (dimensionless, shield power FT-SIM-019):
+## their effective pips (the maximum during a boost for engines and thrusters) over their
+## nominal pips (1 when that is 0), times their mean effectiveness (1 with none).
 static func kind_power(world: SimWorld, ship_id: int, kind: int) -> float:
 	var def: ShipDef = world.defs[ship_id]
 	var subs: Array[SubsystemDef] = def.subsystems
@@ -210,28 +178,6 @@ static func kind_power(world: SimWorld, ship_id: int, kind: int) -> float:
 		total += d.row_effectiveness(first + i, s)
 		n += 1
 	return _ratio(pips, nominal) * (total / n if n > 0 else 1.0)
-
-
-## Highest heat over threshold among the ship's subsystems of a kind (dimensionless).
-static func heat_ratio(world: SimWorld, ship_id: int, kind: int) -> float:
-	var def: ShipDef = world.defs[ship_id]
-	var first: int = world.damage.subsystem_row(ship_id, 0)
-	var r: float = 0.0
-	for i: int in def.subsystems.size():
-		var s: SubsystemDef = def.subsystems[i]
-		if s.kind == kind:
-			r = maxf(r, world.damage.heat[first + i] / s.fault_heat_threshold)
-	return r
-
-
-## Envelope scale of the ship's engines or thrusters now (FT-SIM-006).
-static func kind_envelope(world: SimWorld, ship_id: int, kind: int) -> float:
-	return envelope(
-		world.defs[ship_id].power,
-		power_ratio(world, ship_id, kind),
-		kind_effectiveness(world, ship_id, kind),
-		heat_ratio(world, ship_id, kind)
-	)
 
 
 ## The envelope function (FT-SIM-006): envelope_curve(pip ratio) * effectiveness *
@@ -273,13 +219,3 @@ static func subsystem_index(def: ShipDef, kind: int) -> int:
 ## Pips over nominal pips (dimensionless), 1 when the nominal is 0.
 static func _ratio(pips: int, nominal: int) -> float:
 	return 1.0 if nominal == 0 else float(pips) / nominal
-
-
-## Sum of effective pips over the ship's subsystems of a kind (count).
-static func _pips_of(world: SimWorld, ship_id: int, kind: int) -> int:
-	var def: ShipDef = world.defs[ship_id]
-	var total: int = 0
-	for i: int in def.subsystems.size():
-		if def.subsystems[i].kind == kind:
-			total += effective_pips(world, ship_id, i)
-	return total

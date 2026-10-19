@@ -85,25 +85,11 @@ static func nearest_subsystem(def: ShipDef, point_local: Vector3) -> int:
 ## Effectiveness of the ship's subsystem, 0..1, from its health and the definition's
 ## curve (FT-SIM-021); 1 when the ship has no such subsystem.
 static func effectiveness(world: SimWorld, ship_id: int, subsystem_id: StringName) -> float:
-	# DamageTable.find_subsystem and effectiveness_at inlined (hot path).
 	var t: DamageTable = world.damage
-	var h: int = t.hull_row(ship_id)
-	if h < 0 or subsystem_id == DamageTable.HULL:
+	var r: int = t.find_subsystem(ship_id, subsystem_id)
+	if r < 0:
 		return 1.0
-	var r: int = h + 1
-	var n: int = t.size()
-	while r < n and t.ship_ids[r] == ship_id:
-		if t.part_ids[r] == subsystem_id:
-			return t.row_effectiveness(r, world.defs[ship_id].subsystems[r - h - 1])
-		r += 1
-	return 1.0
-
-
-## Effectiveness of the ship's subsystem with that index in ShipDef.subsystems, 0..1
-## (FT-SIM-021); the caller passes a valid index.
-static func effectiveness_at(world: SimWorld, ship_id: int, i: int) -> float:
-	var t: DamageTable = world.damage
-	return t.row_effectiveness(t.subsystem_row(ship_id, i), world.defs[ship_id].subsystems[i])
+	return t.row_effectiveness(r, world.defs[ship_id].subsystems[r - t.hull_row(ship_id) - 1])
 
 
 ## Hull left as a share of hull_max, 0..1.

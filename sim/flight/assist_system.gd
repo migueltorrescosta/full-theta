@@ -31,17 +31,15 @@ const ALIGN_ON_BOW: float = 0.01
 const APPROACH_BACKOFF_MAX: float = 20.0
 
 
-## Writes every live ship's force and torque command for this tick, in id order.
-## Hot path: has_target, target_offset, _update_modes and _command inlined with the
-## columns read through locals, the same arithmetic in the same order.
+## Writes every live ship's force and torque command for this tick, in id order: the
+## mode bookkeeping (all-stop and Align ending, the setpoint ramp), then the torque and
+## force commands, with the columns read through locals.
 static func step(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
 	var helm: HelmTable = world.helm
 	# Columns only read here (assist writes all_stop, align, throttle_setpoint,
 	# torque_cmd and force_cmd, and reads those only through the tables).
 	var alive: PackedByteArray = kin.alive
-	var site: PackedInt32Array = kin.site
-	var factions: PackedInt32Array = kin.factions
 	var vel: PackedVector3Array = kin.vel
 	var ang_vel: PackedVector3Array = kin.ang_vel
 	var rot: Array[Quaternion] = kin.rot
@@ -51,48 +49,21 @@ static func step(world: SimWorld) -> void:
 	var max_torque: PackedVector3Array = kin.max_torque
 	var input_rotation: PackedVector3Array = helm.input_rotation
 	var input_translation: PackedVector3Array = helm.input_translation
-	var target_kind: PackedByteArray = helm.target_kind
-	var target_ship: PackedInt32Array = helm.target_ship
-	var target_site: PackedInt32Array = helm.target_site
 	var face_held: PackedByteArray = helm.face_held
 	var approach_held: PackedByteArray = helm.approach_held
 	var decoupled_col: PackedByteArray = helm.decoupled
 	var defs: Array[ShipDef] = world.defs
-	var knowledge: KnowledgeTable = world.knowledge
-	var n: int = alive.size()
-	for row: int in n:
+	for row: int in alive.size():
 		if alive[row] != 1:
 			continue
 		var tuning: AssistDef = defs[row].assist
 		var rot_in: Vector3 = _dead(input_rotation[row])
 		var move_in: Vector3 = _dead(input_translation[row])
-		# has_target() and target_offset(), once per ship and tick.
-		var targeted: bool = false
-		var offset: Vector3 = Vector3.ZERO
-		var kind: int = target_kind[row]
-		if kind == HelmTable.Target.SHIP:
-			var other: int = target_ship[row]
-			if (
-				other >= 0
-				and other < n
-				and other != row
-				and alive[other] == 1
-				and site[row] == site[other]
-			):
-				var faction: int = factions[row]
-				if factions[other] == faction:
-					targeted = true
-				else:
-					var k: int = knowledge.row_for(faction, other)
-					targeted = k >= 0 and knowledge.detected[k] == 1
-			if targeted:
-				offset = kin.relative(row, other)
-		elif kind == HelmTable.Target.POINT:
-			targeted = target_site[row] == site[row]
-			if targeted:
-				offset = kin.relative_to_point(
-					row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
-				)
+		# The target's offset once per ship and tick; not finite without a target.
+		var offset: Vector3 = _targeted_offset(world, kin, helm, row)
+		var targeted: bool = offset.is_finite()
+		if not targeted:
+			offset = Vector3.ZERO
 		var face: int = face_held[row]
 		var approach: int = approach_held[row]
 		var decoupled: bool = decoupled_col[row] == 1
@@ -196,17 +167,27 @@ static func step(world: SimWorld) -> void:
 ## Whether the ship has a selected target it can fly to: a live ship its faction detects
 ## (FT-ARC-013) or a point at its own site (ships at different sites never interact).
 static func has_target(world: SimWorld, row: int) -> bool:
-	var helm: HelmTable = world.helm
-	var kin: Kinematics = world.kin
-	if helm.target_kind[row] == HelmTable.Target.SHIP:
+	return _targeted_offset(world, world.kin, world.helm, row).is_finite()
+
+
+## target_offset() when has_target(), else Vector3.INF (positions are finite, so an
+## offset always is): both in one pass for step().
+static func _targeted_offset(
+	world: SimWorld, kin: Kinematics, helm: HelmTable, row: int
+) -> Vector3:
+	var kind: int = helm.target_kind[row]
+	if kind == HelmTable.Target.SHIP:
 		var other: int = helm.target_ship[row]
-		return (
+		if (
 			kin.can_reach(row, other)
-			and KnowledgeSystem.is_detected(world, world.faction_of(row), other)
+			and KnowledgeSystem.is_detected(world, kin.factions[row], other)
+		):
+			return kin.relative(row, other)
+	elif kind == HelmTable.Target.POINT and helm.target_site[row] == kin.site[row]:
+		return kin.relative_to_point(
+			row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
 		)
-	if helm.target_kind[row] == HelmTable.Target.POINT:
-		return helm.target_site[row] == kin.site[row]
-	return false
+	return Vector3.INF
 
 
 ## Offset of the selected target from the ship (m, site frame), computed in 64-bit.

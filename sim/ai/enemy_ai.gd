@@ -61,15 +61,10 @@ static func step(world: SimWorld) -> void:
 			_think(world, id, candidates[faction])
 
 
-## Nearest live contact at the ship's site that its faction detects and either has
-## identified as hostile or not identified yet (unknowns are closed on, never fired at),
-## or -1. Ties go to the lower id.
-static func pick_target(world: SimWorld, id: int) -> int:
-	return _nearest(world, id, _candidates(world, world.faction_of(id)))
-
-
-## The live contacts the faction detects and doesn't know to be non-hostile, in id
-## order: pick_target's candidates at any site.
+## Target candidates: the live contacts the faction detects and either has identified as
+## hostile or not identified yet (unknowns are closed on, never fired at), at any site,
+## in id order. Each AI ship targets the nearest of them at its own site
+## (Kinematics.nearest: ties go to the lower id).
 static func _candidates(world: SimWorld, faction: int) -> PackedInt32Array:
 	var kin: Kinematics = world.kin
 	var knowledge: KnowledgeTable = world.knowledge
@@ -95,26 +90,10 @@ static func _candidates(world: SimWorld, faction: int) -> PackedInt32Array:
 	return out
 
 
-## The candidate at the ship's site nearest to it, or -1; ties go to the lower id.
-static func _nearest(world: SimWorld, id: int, candidates: PackedInt32Array) -> int:
-	return world.kin.nearest(id, candidates)
-
-
-## The mode the ship should be in this tick.
-static func choose_mode(world: SimWorld, id: int, target: int) -> AiTable.Mode:
-	if target < 0:
-		return _choose_mode(world, id, target, Vector3.ZERO)
-	return _choose_mode(world, id, target, world.kin.relative(id, target))
-
-
-## choose_mode with the target's offset rel (m) already known.
+## The mode the ship should be in this tick, for its target (or -1) at offset rel (m).
 static func _choose_mode(world: SimWorld, id: int, target: int, rel: Vector3) -> AiTable.Mode:
 	var ai: AiTable = world.ai
-	# DamageSystem.hull_fraction, inlined.
-	var d: DamageTable = world.damage
-	var h: int = d.hull_row(id)
-	var hull: float = 1.0 if h < 0 else d.health[h] / world.defs[id].hull_max
-	if hull < ai.retreat_hull_fraction[id]:
+	if DamageSystem.hull_fraction(world, id) < ai.retreat_hull_fraction[id]:
 		return AiTable.Mode.RETREAT
 	if target < 0:
 		return AiTable.Mode.HOLD
@@ -126,7 +105,7 @@ static func _choose_mode(world: SimWorld, id: int, target: int, rel: Vector3) ->
 
 
 static func _think(world: SimWorld, id: int, candidates: PackedInt32Array) -> void:
-	var target: int = _nearest(world, id, candidates)
+	var target: int = world.kin.nearest(id, candidates)
 	# The target's offset once per tick (the AI changes no positions while it thinks).
 	var rel: Vector3 = world.kin.relative(id, target) if target >= 0 else Vector3.ZERO
 	var mode: AiTable.Mode = _choose_mode(world, id, target, rel)
@@ -160,8 +139,8 @@ static func _hold(world: SimWorld, id: int) -> void:
 
 
 ## ATTACK and KEEP_RANGE: face the lead point, hold the middle of the engage band, shoot.
-## rel is the target's offset (m, kin.relative). Hot path: lead_aim, closing_speed and
-## _aim_and_fire's geometry inlined, with the same arithmetic in the same order.
+## rel is the target's offset (m, kin.relative). Each mount's muzzle and lead point are
+## computed once per tick, the first mount's shared by the face point and its aim.
 static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void:
 	var kin: Kinematics = world.kin
 	var ai: AiTable = world.ai
@@ -171,31 +150,24 @@ static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void
 	var own_vel: Vector3 = kin.vel[id]
 	var target_vel: Vector3 = kin.vel[target]
 	var rel_vel: Vector3 = target_vel - own_vel
-	# Each mount's muzzle (site frame, from the centre) and lead point (lead_aim, one
-	# tick ahead), Vector3.INF without a solution.
+	# Each mount's muzzle (site frame, from the centre) and lead point one tick ahead
+	# (lead_aim), Vector3.INF without a solution.
 	var muzzles: PackedVector3Array = PackedVector3Array()
 	var aims: PackedVector3Array = PackedVector3Array()
 	for mount: MountDef in mounts:
 		var muzzle: Vector3 = q * mount.position
-		var r: Vector3 = rel - muzzle + rel_vel * (1 * SimWorld.DT)
-		var t: float = Lead.intercept_time(r, rel_vel, mount.weapon.projectile_speed)
 		muzzles.append(muzzle)
-		aims.append(Vector3.INF if t < 0.0 else muzzle + (r + rel_vel * t))
+		aims.append(_lead_point(muzzle, rel, rel_vel, 1, mount.weapon.projectile_speed))
 	_select_face_point(world, id, target, Vector3.INF if mounts.is_empty() else aims[0])
 	var dist: float = rel.length()
 	var forward: Vector3 = q * Vector3.FORWARD
 	var los: Vector3 = rel / dist if dist > 0.0 else forward
 	var gap: float = dist - 0.5 * (ai.engage_range_min[id] + ai.engage_range_max[id])
 	# Wanted own velocity along the line of sight: the target's plus a closing speed.
-	# closing_speed (AssistSystem.closing_speed on the gap's size), inlined.
-	var tuning: AssistDef = def.assist
-	var brake: float = (
-		(kin.max_thrust_pos[id] * kin.thrust_scale[id]).z / kin.mass[id] * tuning.approach_braking
-	)
-	var size: float = absf(gap)
-	var closing: float = minf(sqrt(2.0 * brake * size), size / tuning.approach_final_time_constant)
-	closing = minf(closing, tuning.approach_speed_cap)
-	var along: float = signf(gap) * closing + target_vel.dot(los)
+	# The closing speed is on the assist's approach curve (FT-SIM-037 tuning), negative
+	# to back off inside the hold distance.
+	var closing: float = signf(gap) * AssistSystem.closing_speed(kin, id, def.assist, absf(gap))
+	var along: float = closing + target_vel.dot(los)
 	_helm_input(world, id, true, along * forward.dot(los))
 	for m: int in mounts.size():
 		var aim: Vector3 = aims[m]
@@ -225,25 +197,12 @@ static func _select_face_point(world: SimWorld, id: int, target: int, aim: Vecto
 	var helm: HelmTable = world.helm
 	var select: SelectTargetCommand = SelectTargetCommand.new()
 	if aim.is_finite():
-		# _set_point, inlined.
-		var p: PackedFloat64Array = kin.point_at(id, aim)
-		select.site = kin.site[id]
-		select.x = p[0]
-		select.y = p[1]
-		select.z = p[2]
+		_set_point(select, kin, id, aim)
 	elif helm.target_kind[id] == HelmTable.Target.SHIP and helm.target_ship[id] == target:
 		return
 	else:
 		select.target_ship = target
 	_submit(world, id, select)
-
-
-## Closing speed (m/s, negative backs off) for a distance gap (m) to the hold distance,
-## on the assist's approach curve (FT-SIM-037 tuning): a braking curve on the retro
-## thrust share far out, an exponential settle near, capped.
-static func closing_speed(world: SimWorld, id: int, gap: float) -> float:
-	var tuning: AssistDef = world.defs[id].assist
-	return signf(gap) * AssistSystem.closing_speed(world.kin, id, tuning, absf(gap))
 
 
 ## RETREAT: face a point RETREAT_POINT_DISTANCE straight away from the threat (on along
@@ -303,33 +262,18 @@ static func _helm_input(world: SimWorld, id: int, face: bool, forward_speed: flo
 	var tuning: AssistDef = world.defs[id].assist
 	var helm: HelmTable = world.helm
 	var ramp: float = tuning.speed_ramp * SimWorld.DT
-	var latched: Vector3 = helm.input_translation[id]
-	var speed_min: float = tuning.speed_min
-	var speed_max: float = tuning.speed_max
+	var latched: float = helm.input_translation[id].z
 	var next_setpoint: float = clampf(
-		helm.throttle_setpoint[id] + latched.z * ramp, speed_min, speed_max
+		helm.throttle_setpoint[id] + latched * ramp, tuning.speed_min, tuning.speed_max
 	)
-	var wanted: float = clampf(forward_speed, speed_min, speed_max)
+	var wanted: float = clampf(forward_speed, tuning.speed_min, tuning.speed_max)
 	var throttle: float = clampf((wanted - next_setpoint) / ramp, -1.0, 1.0)
 	if absf(throttle) <= AssistSystem.INPUT_DEAD_ZONE:
 		throttle = 0.0
-	# _helm_input_raw, inlined.
-	var same: bool = (
-		helm.input_rotation[id] == Vector3.ZERO
-		and latched.x == 0.0
-		and latched.y == 0.0
-		and absf(latched.z - throttle) < INPUT_EPS
-		and helm.face_held[id] == (1 if face else 0)
-		and helm.approach_held[id] == 0
-	)
-	if same:
-		return
-	var c: HelmInputCommand = HelmInputCommand.new()
-	c.throttle = throttle
-	c.face = face
-	_submit(world, id, c)
+	_helm_input_raw(world, id, face, throttle)
 
 
+## Sends a HelmInputCommand with that throttle and face, unless it is already latched.
 static func _helm_input_raw(world: SimWorld, id: int, face: bool, throttle: float) -> void:
 	var helm: HelmTable = world.helm
 	var latched: Vector3 = helm.input_translation[id]
@@ -356,13 +300,25 @@ static func _helm_input_raw(world: SimWorld, id: int, face: bool, throttle: floa
 static func lead_aim(world: SimWorld, id: int, m: int, target: int, ticks_ahead: int) -> Vector3:
 	var kin: Kinematics = world.kin
 	var mount: MountDef = world.defs[id].mounts[m]
-	var muzzle: Vector3 = kin.to_world(id, mount.position)
-	var rel_vel: Vector3 = kin.vel[target] - kin.vel[id]
-	var rel: Vector3 = kin.relative(id, target) - muzzle + rel_vel * (ticks_ahead * SimWorld.DT)
-	var t: float = Lead.intercept_time(rel, rel_vel, mount.weapon.projectile_speed)
+	return _lead_point(
+		kin.to_world(id, mount.position),
+		kin.relative(id, target),
+		kin.vel[target] - kin.vel[id],
+		ticks_ahead,
+		mount.weapon.projectile_speed
+	)
+
+
+## lead_aim from the muzzle and the target's offset rel and velocity rel_vel relative to
+## the ship (site frame) and the shot's muzzle speed.
+static func _lead_point(
+	muzzle: Vector3, rel: Vector3, rel_vel: Vector3, ticks_ahead: int, speed: float
+) -> Vector3:
+	var r: Vector3 = rel - muzzle + rel_vel * (ticks_ahead * SimWorld.DT)
+	var t: float = Lead.intercept_time(r, rel_vel, speed)
 	if t < 0.0:
 		return Vector3.INF
-	return muzzle + Lead.aim_point(rel, rel_vel, t)
+	return muzzle + Lead.aim_point(r, rel_vel, t)
 
 
 ## The fire rule: an identified hostile within engage_range_max and the weapon's
@@ -378,14 +334,15 @@ static func _shot_good(
 	var row: int = mounts.row_for(id, m)
 	var mount: MountDef = world.defs[id].mounts[m]
 	# Cheapest checks first; every one is pure, so the order doesn't change the result.
+	# Each rejects unless its condition holds (not (x <= y)), so a NaN never fires.
 	if (
 		row < 0
 		or mounts.fire_requested[row] != 0
-		or mounts.cooldown[row] > 2.0 * SimWorld.DT + WeaponSystem.COOLDOWN_EPS
+		or not (mounts.cooldown[row] <= 2.0 * SimWorld.DT + WeaponSystem.COOLDOWN_EPS)
 		or mounts.ammo[row] == 0
-		or mounts.heat[row] >= mount.weapon.heat_limit
-		or dist > world.ai.engage_range_max[id]
-		or reach > mount.weapon.max_range
+		or not (mounts.heat[row] < mount.weapon.heat_limit)
+		or not (dist <= world.ai.engage_range_max[id])
+		or not (reach <= mount.weapon.max_range)
 	):
 		return false
 	var faction: int = world.faction_of(id)

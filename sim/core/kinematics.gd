@@ -1,5 +1,5 @@
 # gdlint: disable=max-public-methods
-# (The position helpers are the only way at the position columns, tools/lint_arch.py.)
+# Only this class reads the position columns (tools/lint_arch.py): position helpers live here.
 class_name Kinematics
 extends SimTable
 ## Rigid-body state of every ship, one row per ship in id order (packed layout, S6).
@@ -166,9 +166,9 @@ func cell_coords(cell: float, out: PackedInt32Array) -> void:
 	var zs: PackedFloat64Array = pz
 	out.resize(3 * xs.size())
 	for row: int in xs.size():
-		out[3 * row] = floori((xs[row] - 0.0) / cell)
-		out[3 * row + 1] = floori((ys[row] - 0.0) / cell)
-		out[3 * row + 2] = floori((zs[row] - 0.0) / cell)
+		out[3 * row] = floori(xs[row] / cell)
+		out[3 * row + 1] = floori(ys[row] / cell)
+		out[3 * row + 2] = floori(zs[row] / cell)
 
 
 ## Whether row a can fly to, track or point at row b: another live ship at its site.
