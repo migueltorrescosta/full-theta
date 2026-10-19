@@ -32,6 +32,38 @@
       "source": "https://github.com/pytest-dev/pytest",
       "licence": "MIT",
       "attribution": "Copyright (c) Holger Krekel and others"
+    },
+    {
+      "name": "Piper (piper-tts)",
+      "kind": "tool",
+      "version": "1.8.0",
+      "source": "https://github.com/OHF-Voice/piper1-gpl/releases/tag/v1.8.0",
+      "licence": "GPL-3.0-or-later",
+      "attribution": "Copyright (c) Michael Hansen and Open Home Foundation contributors"
+    },
+    {
+      "name": "eSpeak NG (bundled in piper-tts)",
+      "kind": "tool",
+      "version": "as bundled in piper-tts 1.8.0",
+      "source": "https://github.com/espeak-ng/espeak-ng",
+      "licence": "GPL-3.0-or-later",
+      "attribution": "Copyright (c) eSpeak NG contributors"
+    },
+    {
+      "name": "ONNX Runtime",
+      "kind": "tool",
+      "version": "1.31.0",
+      "source": "https://github.com/microsoft/onnxruntime",
+      "licence": "MIT",
+      "attribution": "Copyright (c) Microsoft Corporation"
+    },
+    {
+      "name": "NumPy",
+      "kind": "tool",
+      "version": "2.5.4",
+      "source": "https://github.com/numpy/numpy",
+      "licence": "BSD-3-Clause",
+      "attribution": "Copyright (c) 2005-present NumPy Developers"
     }
   ]
 }
