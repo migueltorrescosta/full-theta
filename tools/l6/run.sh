@@ -41,8 +41,10 @@ check() { # kind, port, path prefix for the game's own paths, launcher...
   local dir=$prefix$root/$run/$kind log=$root/$run/$kind
   mkdir -p "$log"
   echo "l6: $kind: tts smoke"
-  "$@" --headless -- --tts-smoke "$line" --out "$prefix$log/line.wav" >"$log/tts.log" 2>&1
-  local code=$?
+  # Wine passes the Windows build's CRLF line ends through.
+  "$@" --headless -- --tts-smoke "$line" --out "$prefix$log/line.wav" 2>&1 | tr -d '\r' \
+    >"$log/tts.log"
+  local code=${PIPESTATUS[0]}
   grep -E "^(build|tts-smoke):" "$log/tts.log" | sed "s/^/l6: $kind: /"
   if ((code != 0)) || ! grep -qxF "$expected" "$log/tts.log" \
     || [[ $(head -c 4 "$log/line.wav" 2>/dev/null) != RIFF ]]; then
