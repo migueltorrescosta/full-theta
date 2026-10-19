@@ -4,8 +4,8 @@ extends GdUnitTestSuite
 
 const SETUP: Dictionary = {"player": &"m1_corvette", "enemy": &"m1_raider"}
 ## Floats that a decimal round trip tends to lose: -0.0, non-terminating binary
-## fractions, a subnormal, the largest double inside the site grid (aim points past
-## Kinematics.MAX_OFFSET are rejected) and full-mantissa values.
+## fractions, a subnormal, the largest double below 200 km (the command keeps it even
+## though the aim point wraps onto the site's cube, FT-SIM-035) and full-mantissa values.
 const AWKWARD: Array[float] = [
 	-0.0, 0.1, 1.0 / 3.0, 5e-324, 199999.99999999997, 4.0796475000000005e-12, 123456.789123
 ]

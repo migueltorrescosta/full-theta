@@ -64,8 +64,8 @@ static func all_stop(w: SimWorld, id: int) -> void:
 	w.submit(c)
 
 
-static func level(w: SimWorld, id: int) -> void:
-	var c: LevelCommand = LevelCommand.new()
+static func align(w: SimWorld, id: int) -> void:
+	var c: AlignCommand = AlignCommand.new()
 	c.ship_id = id
 	w.submit(c)
 

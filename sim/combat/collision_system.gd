@@ -4,6 +4,9 @@ extends RefCounted
 ## FT-SIM-010, FT-ARC-007: no Godot physics). Runs after the integrator and the weapons
 ## each tick. Broadphase is a uniform grid per site, rebuilt every tick and keyed by
 ## Vector4i(site, ix, iy, iz), so ships at different sites never share a cell (S6).
+## Sites wrap (FT-SIM-035, D124): cell indexes wrap modulo the cells per axis (the
+## period is a multiple of both cell sizes, SimWorld.period_errors) and every distance
+## is a minimum image, so contacts, warnings and shots work across the seams.
 ## Ships at the start of the tick are taken as end position minus velocity times DT;
 ## the error is a dt^2 / 2, under 3 mm at 20 m/s^2.
 
@@ -34,16 +37,25 @@ static func step(world: SimWorld) -> void:
 		_projectiles(world)
 
 
-## Uniform grid of live ships: cell key to ship ids in id order.
+## Bounding radius of a ship's capsule (m): radius plus half length.
+static func bound(kin: Kinematics, row: int) -> float:
+	return kin.radius[row] + kin.half_length[row]
+
+
+## Cells per axis of a site for a cell size (m).
+static func cells_per_axis(kin: Kinematics, cell: float) -> int:
+	return maxi(1, roundi(kin.period / cell))
+
+
+## Uniform grid of live ships: cell key (wrapped) to ship ids in id order.
 static func build_grid(kin: Kinematics, cell: float) -> Dictionary[Vector4i, Array]:
 	var grid: Dictionary[Vector4i, Array] = {}
-	var inv: float = 1.0 / cell
+	var n: int = cells_per_axis(kin, cell)
 	for i: int in kin.size():
 		if not kin.is_alive(i):
 			continue
-		var key: Vector4i = Vector4i(
-			kin.site[i], floori(kin.px[i] * inv), floori(kin.py[i] * inv), floori(kin.pz[i] * inv)
-		)
+		var c: Vector3i = kin.cell_of(i, cell)
+		var key: Vector4i = Vector4i(kin.site[i], posmod(c.x, n), posmod(c.y, n), posmod(c.z, n))
 		var ids: Array = grid.get(key, EMPTY)
 		if ids.is_empty():
 			ids = []
@@ -52,9 +64,26 @@ static func build_grid(kin: Kinematics, cell: float) -> Dictionary[Vector4i, Arr
 	return grid
 
 
+## Ship ids in the grid cells lo..hi (unwrapped, inclusive) of a site, each wrapped
+## modulo n and each cell visited once, in cell order then id order.
+static func _in_cells(
+	grid: Dictionary[Vector4i, Array], site: int, lo: Vector3i, hi: Vector3i, n: int
+) -> Array[int]:
+	var out: Array[int] = []
+	var count: Vector3i = (hi - lo + Vector3i.ONE).mini(n)
+	for ix: int in range(lo.x, lo.x + count.x):
+		for iy: int in range(lo.y, lo.y + count.y):
+			for iz: int in range(lo.z, lo.z + count.z):
+				var key: Vector4i = Vector4i(site, posmod(ix, n), posmod(iy, n), posmod(iz, n))
+				for j: int in grid.get(key, EMPTY):
+					out.append(j)
+	return out
+
+
 static func _ship_pairs(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
 	var grid: Dictionary[Vector4i, Array] = build_grid(kin, PAIR_CELL)
+	var cells: int = cells_per_axis(kin, PAIR_CELL)
 	var n: int = kin.size()
 	# Per ship: bounding radius plus the distance it covers in the warning horizon, so
 	# a pair farther apart than the sum can neither touch nor warn (cheap reject).
@@ -62,31 +91,22 @@ static func _ship_pairs(world: SimWorld) -> void:
 	reach.resize(n)
 	var reach_max: float = 0.0
 	for i: int in n:
-		reach[i] = kin.bound(i) + kin.vel[i].length() * WARNING_HORIZON
+		reach[i] = bound(kin, i) + kin.vel[i].length() * WARNING_HORIZON
 		if kin.is_alive(i):
 			reach_max = maxf(reach_max, reach[i])
 	for i: int in n:
 		if not kin.is_alive(i):
 			continue
 		# Only the cells within the pair search distance, at most PAIR_CELL (S6).
-		var box: float = minf(reach[i] + reach_max, PAIR_CELL)
-		var x: float = kin.px[i]
-		var y: float = kin.py[i]
-		var z: float = kin.pz[i]
-		for ix: int in range(floori((x - box) / PAIR_CELL), floori((x + box) / PAIR_CELL) + 1):
-			for iy: int in range(floori((y - box) / PAIR_CELL), floori((y + box) / PAIR_CELL) + 1):
-				for iz: int in range(
-					floori((z - box) / PAIR_CELL), floori((z + box) / PAIR_CELL) + 1
-				):
-					for j: int in grid.get(Vector4i(kin.site[i], ix, iy, iz), EMPTY):
-						if j <= i:
-							continue
-						var far: float = reach[i] + reach[j]
-						var ex: float = kin.px[j] - x
-						var ey: float = kin.py[j] - y
-						var ez: float = kin.pz[j] - z
-						if ex * ex + ey * ey + ez * ez <= far * far:
-							_pair(world, i, j)
+		var box: int = ceili(minf(reach[i] + reach_max, PAIR_CELL) / PAIR_CELL)
+		var c: Vector3i = kin.cell_of(i, PAIR_CELL)
+		var span: Vector3i = Vector3i(box, box, box)
+		for j: int in _in_cells(grid, kin.site[i], c - span, c + span, cells):
+			if j <= i:
+				continue
+			var far: float = reach[i] + reach[j]
+			if kin.relative(i, j).length_squared() <= far * far:
+				_pair(world, i, j)
 
 
 ## Contact (impulse and damage) or proximity warning for one pair; j > i.
@@ -94,7 +114,7 @@ static func _pair(world: SimWorld, i: int, j: int) -> void:
 	var kin: Kinematics = world.kin
 	var r: Vector3 = kin.relative(i, j)
 	var v: Vector3 = kin.vel[j] - kin.vel[i]
-	var reach: float = kin.bound(i) + kin.bound(j)
+	var reach: float = bound(kin, i) + bound(kin, j)
 	var far: float = reach + v.length() * WARNING_HORIZON
 	if r.length_squared() > far * far:
 		return
@@ -160,10 +180,7 @@ static func _fallback_normal(kin: Kinematics, i: int, j: int) -> Vector3:
 
 
 static func _shift(kin: Kinematics, row: int, d: Vector3) -> void:
-	kin.px[row] += d.x
-	kin.py[row] += d.y
-	kin.pz[row] += d.z
-	kin.check_offset(row)
+	kin.translate(row, d.x, d.y, d.z)
 
 
 ## point and toward are site-frame vectors relative to the target's centre.
@@ -183,51 +200,37 @@ static func _collision_hit(
 ## Moves every projectile one tick and sweeps it against the ships near its path,
 ## using its motion relative to each ship (FT-SIM-009), so nothing tunnels at any
 ## speed. The earliest hit wins; hit and expired projectiles are removed. A projectile
-## never hits its own shooter (it leaves from inside the shooter's hull).
+## never hits its own shooter (it leaves from inside the shooter's hull). Start points
+## are minimum images, so a shot across a seam hits (FT-SIM-035).
 static func _projectiles(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
 	var proj: ProjectileTable = world.projectiles
 	var grid: Dictionary[Vector4i, Array] = build_grid(kin, CELL)
+	var cells: int = cells_per_axis(kin, CELL)
 	var pad: float = _ship_pad(kin)
 	var dt: float = SimWorld.DT
 	var dead: PackedInt32Array = PackedInt32Array()
 	for k: int in proj.size():
-		var pv: Vector3 = proj.vel[k]
-		var x0: float = proj.px[k]
-		var y0: float = proj.py[k]
-		var z0: float = proj.pz[k]
-		proj.px[k] = x0 + pv.x * dt
-		proj.py[k] = y0 + pv.y * dt
-		proj.pz[k] = z0 + pv.z * dt
 		proj.ttl[k] -= 1
-		var pr: float = proj.radius[k]
-		var site: int = proj.site[k]
 		var shooter: int = proj.ship_ids[k]
-		var reach: float = pad + pr
-		var lo: Vector3i = Vector3i(
-			floori((minf(x0, proj.px[k]) - reach) / CELL),
-			floori((minf(y0, proj.py[k]) - reach) / CELL),
-			floori((minf(z0, proj.pz[k]) - reach) / CELL)
-		)
-		var hi: Vector3i = Vector3i(
-			floori((maxf(x0, proj.px[k]) + reach) / CELL),
-			floori((maxf(y0, proj.py[k]) + reach) / CELL),
-			floori((maxf(z0, proj.pz[k]) + reach) / CELL)
-		)
+		var box: PackedInt32Array = proj.cell_box(k, dt, pad + proj.radius[k], CELL)
+		var lo: Vector3i = Vector3i(box[0], box[1], box[2])
+		var hi: Vector3i = Vector3i(box[3], box[4], box[5])
 		var best: int = -1
 		var best_t: float = 2.0
-		for ix: int in range(lo.x, hi.x + 1):
-			for iy: int in range(lo.y, hi.y + 1):
-				for iz: int in range(lo.z, hi.z + 1):
-					for s: int in grid.get(Vector4i(site, ix, iy, iz), EMPTY):
-						if s == shooter:
-							continue
-						var t: float = _sweep(kin, s, x0, y0, z0, pv, pr)
-						if t >= 0.0 and t < best_t:
-							best_t = t
-							best = s
+		var best_start: Vector3 = Vector3.ZERO
+		for s: int in _in_cells(grid, proj.site[k], lo, hi, cells):
+			if s == shooter:
+				continue
+			var start: Vector3 = proj.relative_start(k, kin, s, dt)
+			var t: float = _sweep(kin, s, start, proj.vel[k], proj.radius[k])
+			if t >= 0.0 and t < best_t:
+				best_t = t
+				best = s
+				best_start = start
+		proj.advance(k, kin, dt)
 		if best >= 0:
-			_projectile_hit(world, k, best, x0, y0, z0, best_t)
+			_projectile_hit(world, k, best, best_start, best_t)
 			dead.append(k)
 		elif proj.ttl[k] <= 0:
 			dead.append(k)
@@ -236,44 +239,26 @@ static func _projectiles(world: SimWorld) -> void:
 
 ## Largest ship bounding radius plus the largest distance a ship moved this tick (m).
 static func _ship_pad(kin: Kinematics) -> float:
-	var bound: float = 0.0
+	var most: float = 0.0
 	var moved: float = 0.0
 	for i: int in kin.size():
 		if kin.is_alive(i):
-			bound = maxf(bound, kin.bound(i))
+			most = maxf(most, bound(kin, i))
 			moved = maxf(moved, kin.vel[i].length() * SimWorld.DT)
-	return bound + moved
+	return most + moved
 
 
-## Sweep time in [0, 1] of a projectile starting this tick at (x0, y0, z0) with
-## velocity pv against ship s, or Sweep.NONE.
-static func _sweep(
-	kin: Kinematics, s: int, x0: float, y0: float, z0: float, pv: Vector3, r: float
-) -> float:
-	var vs: Vector3 = kin.vel[s]
-	var dt: float = SimWorld.DT
-	var start: Vector3 = _start(kin, s, x0, y0, z0)
+## Sweep time in [0, 1] of a projectile starting this tick at `start` relative to ship
+## s at the start of the tick, with velocity pv, against s, or Sweep.NONE.
+static func _sweep(kin: Kinematics, s: int, start: Vector3, pv: Vector3, r: float) -> float:
 	var axis: Vector3 = kin.to_world(s, Vector3(0.0, 0.0, kin.half_length[s]))
-	return Sweep.capsule(start, (pv - vs) * dt, axis, kin.radius[s] + r)
+	return Sweep.capsule(start, (pv - kin.vel[s]) * SimWorld.DT, axis, kin.radius[s] + r)
 
 
-## A point at the start of the tick (x0, y0, z0) relative to ship s at the start of
-## the tick (m, site frame).
-static func _start(kin: Kinematics, s: int, x0: float, y0: float, z0: float) -> Vector3:
-	var vs: Vector3 = kin.vel[s]
-	var dt: float = SimWorld.DT
-	return Vector3(
-		x0 - (kin.px[s] - vs.x * dt), y0 - (kin.py[s] - vs.y * dt), z0 - (kin.pz[s] - vs.z * dt)
-	)
-
-
-static func _projectile_hit(
-	world: SimWorld, k: int, target: int, x0: float, y0: float, z0: float, t: float
-) -> void:
+static func _projectile_hit(world: SimWorld, k: int, target: int, start: Vector3, t: float) -> void:
 	var kin: Kinematics = world.kin
 	var proj: ProjectileTable = world.projectiles
 	var rel_vel: Vector3 = proj.vel[k] - kin.vel[target]
-	var start: Vector3 = _start(kin, target, x0, y0, z0)
 	var hit: SimHit = SimHit.new()
 	hit.target_id = target
 	hit.source_id = proj.ship_ids[k]

@@ -3,15 +3,15 @@ extends GdUnitTestSuite
 
 
 # FT: FT-ARC-008
-# Selecting checks its target: not itself, not an unknown ship, not a point off the
-# site grid; non-finite stick input is rejected. Rejected commands change nothing and
-# aren't logged; axes are clamped to [-1, 1].
+# Selecting checks its target: not itself, not an unknown ship, not a non-finite point
+# (FT-SIM-035: finite points wrap); non-finite stick input is rejected. Rejected
+# commands change nothing and aren't logged; axes are clamped to [-1, 1].
 func test_invalid_commands_rejected() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	FlightFixture.select_ship(w, id, id)
 	FlightFixture.select_ship(w, id, 5)
-	FlightFixture.select_point(w, id, 0, Vector3(0.0, 200001.0, 0.0))
+	FlightFixture.select_point(w, id, 0, Vector3(0.0, NAN, 0.0))
 	FlightFixture.input(w, id, Vector3(NAN, 0.0, 0.0))
 	w.step()
 	assert_int(w.helm.target_kind[id]).is_equal(HelmTable.Target.NONE)

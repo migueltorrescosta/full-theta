@@ -115,7 +115,7 @@ static func _scan(
 	if not kin.is_alive(contact):
 		return result
 	for o: int in world.ship_count():
-		if world.faction_of(o) != faction or sense[o] < 0.0 or not kin.same_site(o, contact):
+		if world.faction_of(o) != faction or sense[o] < 0.0 or kin.site[o] != kin.site[contact]:
 			continue
 		var dist: float = kin.relative(o, contact).length()
 		if dist > sense[o]:

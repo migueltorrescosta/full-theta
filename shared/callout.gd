@@ -5,8 +5,8 @@ extends RefCounted
 ##
 ## Frame rule (FT-SPA-026): the clock and the words level, high, low, overhead and under
 ## are always ship frame, computed from an offset in the ship's local frame (-Z bow,
-## +X starboard, +Y up); `up N` / `down N` are world frame and only ever follow a grid
-## square (grid_callout). No function here mixes the two vocabularies.
+## +X starboard, +Y up). Space has no privileged up and no world grid (D124: sites wrap
+## as a 3-torus), so there are no world-frame words.
 
 ## Height words switch from level to high/low at this elevation (FT-SPA-004).
 const LEVEL_DEG: float = 15.0
@@ -15,7 +15,6 @@ const POLE_DEG: float = 60.0
 ## Range bands (m): close below CLOSE_M, far above FAR_M, mid in between (FT-SPA-003).
 const CLOSE_M: float = 1000.0
 const FAR_M: float = 10000.0
-const LETTERS: String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
 ## Bearing 0..360, clockwise from the bow in the deck plane (ship frame).
@@ -66,49 +65,3 @@ static func range_band(dist: float) -> String:
 	if dist <= FAR_M:
 		return "mid"
 	return "far"
-
-
-## Grid square of a world-frame position on the ecliptic map (FT-SPA-006): columns are
-## letters along +X (A, B, ..., Z, AA, ...), rows are numbers from 1 along +Z, counted from
-## the map corner `origin`, each square `square_size` m wide. "" off the map (left of or
-## before the corner).
-static func grid_square(world_pos: Vector3, origin: Vector3, square_size: float) -> String:
-	var col: int = floori((world_pos.x - origin.x) / square_size)
-	var row: int = floori((world_pos.z - origin.z) / square_size)
-	if col < 0 or row < 0:
-		return ""
-	return _column_letters(col) + str(row + 1)
-
-
-## World height in grid layers above the map plane through `origin`, rounded to the
-## nearest layer: +2 is "up 2" (FT-SPA-026).
-static func grid_layer(world_pos: Vector3, origin: Vector3, layer_size: float) -> int:
-	return roundi((world_pos.y - origin.y) / layer_size)
-
-
-## "grid D4, up 2" / "grid D4, down 1" / "grid D4" on the map plane: the only form in
-## which world height is said (FT-SPA-026). "" off the map.
-static func grid_callout(
-	world_pos: Vector3, origin: Vector3, square_size: float, layer_size: float
-) -> String:
-	var square: String = grid_square(world_pos, origin, square_size)
-	if square.is_empty():
-		return ""
-	var layer: int = grid_layer(world_pos, origin, layer_size)
-	if layer > 0:
-		return "grid %s, up %d" % [square, layer]
-	if layer < 0:
-		return "grid %s, down %d" % [square, -layer]
-	return "grid " + square
-
-
-## 0 -> A, 25 -> Z, 26 -> AA (spreadsheet columns).
-@warning_ignore("integer_division")
-static func _column_letters(col: int) -> String:
-	var text: String = ""
-	var n: int = col + 1
-	while n > 0:
-		n -= 1
-		text = LETTERS[n % 26] + text
-		n /= 26
-	return text

@@ -70,7 +70,7 @@ func test_strafe_input_overrides_its_hold_only() -> void:
 	var id: int = FlightFixture.spawn(w)
 	FlightFixture.input(w, id, Vector3.ZERO, Vector3(1.0, 0.0, 0.0))
 	SimFixture.run(w, 61)
-	assert_float(w.kin.force_cmd[id].x).is_equal(w.kin.thrust_limit_pos(id).x)
+	assert_float(w.kin.force_cmd[id].x).is_equal(w.kin.thrust_limit(id, true).x)
 	assert_float(FlightFixture.local_velocity(w, id).x).is_greater(10.0)
 	FlightFixture.input(w, id)
 	SimFixture.run(w, 60 * 10)
@@ -150,8 +150,8 @@ func test_every_mode_stays_in_envelope() -> void:
 				. is_true()
 			)
 			var dv: Vector3 = frame.inverse() * (w.kin.vel[id] - v_before)
-			var up_to: Vector3 = w.kin.thrust_limit_pos(id) / w.kin.mass[id] * SimWorld.DT
-			var down_to: Vector3 = w.kin.thrust_limit_neg(id) / w.kin.mass[id] * SimWorld.DT
+			var up_to: Vector3 = w.kin.thrust_limit(id, true) / w.kin.mass[id] * SimWorld.DT
+			var down_to: Vector3 = w.kin.thrust_limit(id, false) / w.kin.mass[id] * SimWorld.DT
 			for axis: int in 3:
 				(
 					assert_float(dv[axis])
@@ -198,7 +198,7 @@ func test_decoupled_stick_maps_to_thrust() -> void:
 	w.step()
 	var tq_lim: Vector3 = w.kin.torque_limit(id)
 	assert_vector(w.kin.torque_cmd[id]).is_equal(Vector3(tq_lim.x, -0.5 * tq_lim.y, 0.0))
-	var neg: Vector3 = w.kin.thrust_limit_neg(id)
+	var neg: Vector3 = w.kin.thrust_limit(id, false)
 	assert_vector(w.kin.force_cmd[id]).is_equal(Vector3(0.0, -neg.y, -neg.z))
 
 
@@ -211,7 +211,7 @@ func test_assist_propellant_proportional_to_impulse() -> void:
 	FlightFixture.decouple(d, s, true)
 	FlightFixture.input(d, s, Vector3.ZERO, Vector3(0.0, 0.0, 1.0))
 	SimFixture.run(d, 60)
-	var impulse: float = d.kin.thrust_limit_neg(s).z * 60.0 * SimWorld.DT
+	var impulse: float = d.kin.thrust_limit(s, false).z * 60.0 * SimWorld.DT
 	assert_float(d.kin.propellant_used[s]).is_equal_approx(
 		impulse / d.kin.exhaust_velocity[s], 1e-6
 	)

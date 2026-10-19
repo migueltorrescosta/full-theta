@@ -319,17 +319,24 @@ func test_commands_reject_missing_mount() -> void:
 
 
 # FT: FT-SIM-035
-# An aim point off the site grid or not finite is rejected; the grid edge is accepted.
-func test_aim_rejects_points_off_the_grid() -> void:
+# An aim point off the site's cube wraps onto it (P/2 + 1 m is stored as -P/2 + 1 m,
+# -P/2 stays); a non-finite one is rejected and leaves the stored point.
+func test_aim_wraps_points_and_rejects_non_finite() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
-	var edge: float = Kinematics.MAX_OFFSET
-	for p: Array in [[edge + 1.0, false], [NAN, false], [-INF, false], [-edge, true]]:
+	var half: float = 0.5 * world.kin.period
+	var cases: Array[Array] = [
+		[half + 1.0, true, -half + 1.0],
+		[NAN, false, -half + 1.0],
+		[-INF, false, -half + 1.0],
+		[-half, true, -half]
+	]
+	for p: Array in cases:
 		var c: AimMountCommand = AimMountCommand.new()
 		c.ship_id = ship
 		c.aim_y = p[0]
 		assert_bool(c.apply(world)).override_failure_message(str(p[0])).is_equal(p[1])
-	assert_float(world.mounts.aim_y[0]).is_equal(-edge)
+		assert_float(world.mounts.aim_y[0]).is_equal(p[2])
 
 
 func _with(column: Variant, row: int, value: Variant) -> Variant:

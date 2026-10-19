@@ -154,34 +154,55 @@ func test_accumulator_steps_fixed_ticks() -> void:
 
 
 # FT: FT-SIM-035, FT-M1-020
-# A position is a site id plus three 64-bit offsets; far from the site centre a slow
-# drift still moves (D104: float32 would freeze under 0.47 m/s at 200 km).
+# A position is a site id plus three 64-bit offsets; 1 km inside the +P/2 face (and the
+# -P/2 face on Y) a slow drift still moves (D104: float32 offsets freeze under about
+# 0.23 m/s at 99 km).
 func test_site_local_64_bit_offsets() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 9)
-	w.kin.place(id, 9, 199000.0, -199000.0, 0.25)
+	var near: float = 0.5 * w.kin.period - 1000.0
+	w.kin.place(id, 9, near, -near, 0.25)
 	w.kin.vel[id] = Vector3(0.1, 0.0, 0.0)
 	w.helm.decoupled[id] = 1  # coast: assist would hold the drift at zero (FT-SIM-004)
 	for i: int in 600:
 		w.step()
 	assert_int(w.kin.site[id]).is_equal(9)
-	assert_float(w.kin.px[id]).is_equal_approx(199001.0, 1e-5)
-	assert_float(w.kin.py[id]).is_equal(-199000.0)
+	assert_float(w.kin.px[id]).is_equal_approx(near + 1.0, 1e-5)
+	assert_float(w.kin.py[id]).is_equal(-near)
 	assert_float(w.kin.pz[id]).is_equal(0.25)
 
 
-# FT: FT-SIM-035, FT-M1-020
-# An offset past 200 km on any axis fails an assertion.
-func test_offset_past_limit_fails_assertion() -> void:
+# FT: FT-SIM-035
+# Offsets wrap onto [-P/2, P/2) per axis when placed (P/2 itself becomes -P/2, P/2 +
+# 0.5 m becomes -P/2 + 0.5 m, 1.5 P becomes -P/2); a ship drifting across the +X face
+# comes back in at the -X face, and its offset is always inside the cube.
+func test_offsets_wrap_onto_the_cube() -> void:
+	var w: SimWorld = SimWorld.new(1)
+	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 0)
+	var p: float = w.kin.period
+	var half: float = 0.5 * p
+	w.kin.place(id, 0, half, half + 0.5, 1.5 * p)
+	assert_float(w.kin.px[id]).is_equal(-half)
+	assert_float(w.kin.py[id]).is_equal(-half + 0.5)
+	assert_float(w.kin.pz[id]).is_equal(-half)
+	w.kin.place(id, 0, half - 1.0, 0.0, 0.0)
+	w.kin.vel[id] = Vector3(60.0, 0.0, 0.0)
+	w.helm.decoupled[id] = 1
+	for i: int in 2 * SimWorld.HZ:
+		w.step()
+		assert_bool(w.kin.px[id] >= -half and w.kin.px[id] < half).is_true()
+	assert_float(w.kin.px[id]).is_equal_approx(-half + 119.0, 1e-6)
+
+
+# FT: FT-SIM-035
+# A non-finite offset fails an assertion (wrapping can't place it).
+func test_non_finite_offset_fails_assertion() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 0)
 	await (
-		assert_error(func() -> void: w.kin.place(id, 0, 0.0, 200000.5, 0.0))
+		assert_error(func() -> void: w.kin.place(id, 0, 0.0, NAN, 0.0))
 		. is_runtime_error(
-			(
-				"Assertion failed: site-local offset past 200000 m: ship 0 at "
-				+ "(0.000000, 200000.500000, 0.000000)"
-			)
+			"Assertion failed: non-finite offset for ship 0: (0.000000, nan, 0.000000)"
 		)
 	)
 

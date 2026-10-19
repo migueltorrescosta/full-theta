@@ -6,8 +6,8 @@ extends SimTable
 ## AssistSystem reads it each tick and turns it into thrust. Assist tuning is read from
 ## the ship's AssistDef (world.defs[id].assist), never copied or changed.
 
-## Level stage (FT-HLM-007, D97): OFF, roll only, or roll and pitch onto the ecliptic.
-enum Level { OFF, ROLL, ROLL_AND_PITCH }
+## Align stage (FT-HLM-007, D124): OFF, roll the target to 12 o'clock, or roll and face it.
+enum Align { OFF, ROLL, ROLL_AND_FACE }
 ## What is selected: nothing, a ship (contact; moving targets are ships) or a
 ## site-local point (a mark or a site).
 enum Target { NONE, SHIP, POINT }
@@ -31,8 +31,8 @@ var face_held: PackedByteArray = PackedByteArray()
 var approach_held: PackedByteArray = PackedByteArray()
 ## 1 while all-stop is latched (FT-SIM-036): until at rest or manual input.
 var all_stop: PackedByteArray = PackedByteArray()
-## Level stage, a Level value.
-var level: PackedByteArray = PackedByteArray()
+## Align stage, an Align value; it works on the selected target.
+var align: PackedByteArray = PackedByteArray()
 ## Selected target kind, a Target value.
 var target_kind: PackedByteArray = PackedByteArray()
 ## Selected ship id when target_kind is SHIP, else -1.
@@ -54,7 +54,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	face_held.append(0)
 	approach_held.append(0)
 	all_stop.append(0)
-	level.append(Level.OFF)
+	align.append(Align.OFF)
 	target_kind.append(Target.NONE)
 	target_ship.append(-1)
 	target_site.append(-1)
@@ -78,7 +78,7 @@ func columns() -> Array:
 			["face_held", face_held],
 			["approach_held", approach_held],
 			["all_stop", all_stop],
-			["level", level],
+			["align", align],
 			["target_kind", target_kind],
 			["target_ship", target_ship],
 			["target_site", target_site],

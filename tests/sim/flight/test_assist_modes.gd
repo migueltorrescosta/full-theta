@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## T028: all-stop, hold-to-approach, face and Level (L2: a SimWorld driven through Helm
+## T028: all-stop, hold-to-approach, face and Align (L2: a SimWorld driven through Helm
 ## commands).
 
 
@@ -155,63 +155,91 @@ func test_face_stops_on_lost_contact() -> void:
 	assert_float(w.kin.ang_vel[id].length()).is_less(1e-3)
 
 
-# FT: FT-HLM-007
-# Level rolls first and keeps the heading (the bow stays 30 deg up); a second press
-# also pitches onto the ecliptic. Done within 0.5 deg, then Level clears.
-func test_level_rolls_then_pitches() -> void:
+## Selected point's direction in the ship frame (unit).
+func _target_local(w: SimWorld, id: int) -> Vector3:
+	return w.kin.to_local(id, AssistSystem.target_offset(w, id)).normalized()
+
+
+# FT: FT-HLM-007, FT-SPA-026
+# Align (D124, no privileged up): the first press rolls a point ahead, up and to
+# starboard to 12 o'clock (into the pitch plane, above the bow line: |x| under 0.5 deg
+# of the direction, y > 0) and keeps the bow where it was (within 0.5 deg), then
+# clears; a second press also faces it (bow within 0.5 deg), then clears. 6 s and
+# 10 s are about twice the measured turn times.
+func test_align_rolls_target_to_twelve_then_faces() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
-	var start: Quaternion = (
-		Quaternion(Vector3.RIGHT, deg_to_rad(30.0)) * Quaternion(Vector3.FORWARD, deg_to_rad(70.0))
-	)
-	var id: int = FlightFixture.spawn(w, Vector3.ZERO, start)
-	FlightFixture.level(w, id)
+	var id: int = FlightFixture.spawn(w)
+	var p: Vector3 = Vector3(3000.0, 1000.0, -2000.0)
+	FlightFixture.select_point(w, id, 0, p)
+	FlightFixture.align(w, id)
 	w.step()
-	assert_int(w.helm.level[id]).is_equal(HelmTable.Level.ROLL)
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.ROLL)
 	SimFixture.run(w, 60 * 6)
-	assert_float(rad_to_deg(absf(AssistSystem.roll_error(w.kin, id)))).is_less(0.5)
-	assert_float(rad_to_deg(asin(w.kin.forward(id).y))).is_equal_approx(30.0, 0.5)
-	assert_int(w.helm.level[id]).is_equal(HelmTable.Level.OFF)
-	FlightFixture.level(w, id)
+	var d: Vector3 = _target_local(w, id)
+	assert_float(rad_to_deg(absf(asin(d.x)))).is_less(0.5)
+	assert_float(d.y).is_greater(0.0)
+	assert_int(Callout.clock(d)).is_equal(12)
+	assert_float(FlightFixture.bow_error_deg(w, id, Vector3.FORWARD)).is_less(0.5)
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.OFF)
+	FlightFixture.align(w, id)
 	w.step()
-	assert_int(w.helm.level[id]).is_equal(HelmTable.Level.ROLL_AND_PITCH)
-	SimFixture.run(w, 60 * 6)
-	assert_float(rad_to_deg(absf(asin(w.kin.forward(id).y)))).is_less(0.5)
-	assert_float(w.kin.to_world(id, Vector3.UP).y).is_greater(0.9999)
-	assert_int(w.helm.level[id]).is_equal(HelmTable.Level.OFF)
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.ROLL_AND_FACE)
+	SimFixture.run(w, 60 * 10)
+	assert_float(FlightFixture.bow_error_deg(w, id, AssistSystem.target_offset(w, id))).is_less(0.5)
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.OFF)
 
 
 # FT: FT-HLM-007
-# A second press while still rolling goes straight to roll and pitch, and a third keeps
-# it; rotation input cancels Level. With the bow within 0.03 deg of straight up or down there is no
-# heading to keep, and Level still pitches onto the ecliptic.
-func test_level_second_press_cancel_and_bow_vertical() -> void:
+# Two presses at once go straight to roll and face, and a third keeps it; a target
+# behind and below is rolled above the bow line and faced (bow within 0.5 deg in
+# 15 s); rotation input cancels Align.
+func test_align_second_press_faces_target_behind() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w, Vector3.ZERO, Quaternion(Vector3.FORWARD, 1.0))
-	FlightFixture.level(w, id)
-	FlightFixture.level(w, id)
+	FlightFixture.select_point(w, id, 0, Vector3(500.0, -1000.0, 3000.0))
+	FlightFixture.align(w, id)
+	FlightFixture.align(w, id)
 	w.step()
-	assert_int(w.helm.level[id]).is_equal(HelmTable.Level.ROLL_AND_PITCH)
-	FlightFixture.level(w, id)
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.ROLL_AND_FACE)
+	FlightFixture.align(w, id)
 	w.step()
-	assert_int(w.helm.level[id]).is_equal(HelmTable.Level.ROLL_AND_PITCH)
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.ROLL_AND_FACE)
+	SimFixture.run(w, 60 * 15)
+	assert_float(FlightFixture.bow_error_deg(w, id, AssistSystem.target_offset(w, id))).is_less(0.5)
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.OFF)
+	FlightFixture.align(w, id)
+	FlightFixture.align(w, id)
 	FlightFixture.input(w, id, Vector3(0.0, 0.0, 0.5))
 	w.step()
-	assert_int(w.helm.level[id]).is_equal(HelmTable.Level.OFF)
-	for pitch_deg: float in [89.97, 90.0, -90.0]:
-		var v: SimWorld = SimWorld.new(1, "test")
-		var s: int = FlightFixture.spawn(
-			v, Vector3.ZERO, Quaternion(Vector3.RIGHT, deg_to_rad(pitch_deg))
-		)
-		FlightFixture.level(v, s)
-		v.step()
-		var msg: String = str(pitch_deg)
-		assert_int(v.helm.level[s]).override_failure_message(msg).is_equal(
-			HelmTable.Level.ROLL_AND_PITCH
-		)
-		SimFixture.run(v, 60 * 10)
-		var pitch: float = rad_to_deg(absf(asin(v.kin.forward(s).y)))
-		assert_float(pitch).override_failure_message(msg).is_less(0.5)
-		assert_int(v.helm.level[s]).override_failure_message(msg).is_equal(HelmTable.Level.OFF)
+	w.step()
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.OFF)
+
+
+# FT: FT-HLM-007
+# Align needs a target Helm can fly to: with nothing selected, a contact the faction
+# no longer detects (moved 50 km off) or a point at another site, the press is
+# rejected and nothing turns.
+func test_align_without_target_is_rejected() -> void:
+	var w: SimWorld = SimWorld.new(1, "test")
+	var id: int = FlightFixture.spawn(w, Vector3.ZERO, Quaternion(Vector3.FORWARD, 1.0))
+	var raider: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(5000.0, 0.0, 0.0))
+	FlightFixture.align(w, id)
+	w.step()
+	assert_bool(w.command_log[-1].accepted).is_false()
+	FlightFixture.select_ship(w, id, raider)
+	w.step()
+	w.kin.place(raider, 0, 0.0, 0.0, 50000.0)
+	w.step()
+	FlightFixture.align(w, id)
+	w.step()
+	assert_bool(w.command_log[-1].accepted).is_false()
+	FlightFixture.select_point(w, id, 3, Vector3(0.0, 1000.0, -1000.0))
+	FlightFixture.align(w, id)
+	w.step()
+	assert_bool(w.command_log[-1].accepted).is_false()
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.OFF)
+	SimFixture.run(w, 60)
+	assert_float(w.kin.ang_vel[id].length()).is_less(1e-6)
 
 
 # FT: FT-M1-003, FT-SIM-004, FT-SIM-005, FT-SIM-036, FT-SIM-037

@@ -11,6 +11,9 @@ enum Relation { FRIENDLY, NEUTRAL, HOSTILE }
 
 const HZ: int = 60
 const DT: float = 1.0 / HZ
+## A site's period must be at least this many times the longest sensor range
+## (FT-SIM-035, D124).
+const PERIOD_PER_SENSOR_RANGE: int = 4
 ## Most ticks one advance() runs; a longer stall drops time instead of spiralling.
 const MAX_TICKS_PER_ADVANCE: int = 8
 
@@ -49,10 +52,41 @@ var _relations: Dictionary[int, int] = {}
 var _accumulator: float = 0.0
 
 
-func _init(world_seed: int = 0, build: String = "") -> void:
+## site_period is the side of every site's wrapping cube (m, FT-SIM-035, D124); check it
+## with period_errors() when the ships are known (M1Encounter.validate does).
+func _init(
+	world_seed: int = 0, build: String = "", site_period: float = Kinematics.DEFAULT_PERIOD
+) -> void:
 	seed_value = world_seed
 	build_id = build
 	rng = SimRng.new(world_seed)
+	kin.period = site_period
+
+
+## Why a site period (m) doesn't suit a scenario's ships, or [] if it does (FT-SIM-035,
+## D124): finite and positive, a whole number of both broadphase cells (CollisionSystem
+## CELL and PAIR_CELL), and at least PERIOD_PER_SENSOR_RANGE times the longest sensor
+## range, so a ship is never seen around the seam (or the same ship twice).
+static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[String]:
+	var errors: Array[String] = []
+	if not (is_finite(site_period) and site_period > 0.0):
+		errors.append("site period must be finite and positive, got %s" % site_period)
+		return errors
+	for cell: float in [CollisionSystem.CELL, CollisionSystem.PAIR_CELL]:
+		var cells: float = site_period / cell
+		if not is_equal_approx(cells, roundf(cells)):
+			errors.append("site period %.1f m is not a multiple of %.1f m" % [site_period, cell])
+	var longest: float = 0.0
+	for def: ShipDef in ships:
+		longest = maxf(longest, def.sensor_range)
+	if site_period < PERIOD_PER_SENSOR_RANGE * longest:
+		errors.append(
+			(
+				"site period %.1f m is under %d x the longest sensor range %.1f m"
+				% [site_period, PERIOD_PER_SENSOR_RANGE, longest]
+			)
+		)
+	return errors
 
 
 ## Every state container, in hash order (FT-ARC-012: each is keyed by ship and faction).
@@ -60,7 +94,8 @@ func tables() -> Array[SimTable]:
 	return [kin, helm, power, shields, mounts, projectiles, damage, knowledge, ai, run]
 
 
-## Adds a ship from its definition at a site-local offset and returns its id.
+## Adds a ship from its definition at a site-local offset (wrapped onto the site's cube)
+## and returns its id.
 func spawn_ship(
 	def: ShipDef,
 	faction: int,
@@ -95,8 +130,8 @@ func spawn_enemy(
 
 
 ## Restores one ship's state from its definition and places it at a site-local offset
-## (m, 64-bit, D104), dropping its queued commands; other ships are untouched
-## (FT-MIS-017: a destroyed ship's run state resets on its own). Runs submit a
+## (m, 64-bit, D104, wrapped onto the site's cube), dropping its queued commands; other
+## ships are untouched (FT-MIS-017: a destroyed ship's run state resets on its own). Runs submit a
 ## ResetShipCommand instead, which calls this at tick start and is logged for replay
 ## (FT-ARC-008); a direct call is not logged.
 func reset_ship(

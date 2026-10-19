@@ -1,10 +1,11 @@
 class_name ProjectileTable
 extends SimTable
 ## Live projectiles, one row each, keyed by the shooter's ship id and faction
-## (FT-ARC-012). Positions are site-local 64-bit offsets like ships' (D104); velocity
-## is float32 in the site frame. Packed columns keep 500 projectiles cheap (S6). Rows
-## are appended when a shot is fired and removed when the projectile hits or expires,
-## so a ship has no rows at spawn.
+## (FT-ARC-012). Positions are site-local 64-bit offsets like ships' (D104), wrapped
+## onto the site's cube (FT-SIM-035); only this class and Kinematics read them
+## (tools/lint_arch.py). Velocity is float32 in the site frame. Packed columns keep 500
+## projectiles cheap (S6). Rows are appended when a shot is fired and removed when the
+## projectile hits or expires, so a ship has no rows at spawn.
 
 var site: PackedInt32Array = PackedInt32Array()
 var px: PackedFloat64Array = PackedFloat64Array()
@@ -43,6 +44,38 @@ func spawn(
 	energy.append(energy_j)
 	ttl.append(ttl_ticks)
 	return size() - 1
+
+
+## Moves projectile k by its velocity for dt (s), wrapping across the site's faces
+## (FT-SIM-035).
+func advance(k: int, kin: Kinematics, dt: float) -> void:
+	var v: Vector3 = vel[k]
+	var p: PackedFloat64Array = kin.wrap_point(px[k] + v.x * dt, py[k] + v.y * dt, pz[k] + v.z * dt)
+	px[k] = p[0]
+	py[k] = p[1]
+	pz[k] = p[2]
+
+
+## Projectile k's position relative to ship s, both taken dt (s) before the ship's
+## current position (the ship moving at its current velocity): the start of a tick's
+## sweep (m, site frame), by minimum image so shots across a seam hit (FT-SIM-035).
+func relative_start(k: int, kin: Kinematics, s: int, dt: float) -> Vector3:
+	var vs: Vector3 = kin.vel[s]
+	return kin.relative_to_point(s, px[k] + vs.x * dt, py[k] + vs.y * dt, pz[k] + vs.z * dt)
+
+
+## Unwrapped broadphase cells (lo x, y, z, hi x, y, z) covering projectile k's path over
+## dt (s) from its current position, padded by reach (m), for a cell size (m).
+func cell_box(k: int, dt: float, reach: float, cell: float) -> PackedInt32Array:
+	var v: Vector3 = vel[k]
+	var out: PackedInt32Array = PackedInt32Array()
+	out.resize(6)
+	var start: PackedFloat64Array = PackedFloat64Array([px[k], py[k], pz[k]])
+	for a: int in 3:
+		var end: float = start[a] + v[a] * dt
+		out[a] = floori((minf(start[a], end) - reach) / cell)
+		out[a + 3] = floori((maxf(start[a], end) + reach) / cell)
+	return out
 
 
 ## Removes the given rows (ascending row numbers); the rest keep their order.

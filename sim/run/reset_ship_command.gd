@@ -25,9 +25,10 @@ func applies_to_destroyed() -> bool:
 	return true
 
 
-## Rejects an offset off the site grid (FT-SIM-035).
+## Rejects a negative site or a non-finite offset; an offset off the site's cube wraps
+## onto it (FT-SIM-035, D124).
 func apply(world: SimWorld) -> bool:
-	if site < 0 or not Kinematics.in_bounds(x, y, z):
+	if site < 0 or world.kin.wrap_point(x, y, z).is_empty():
 		return false
 	world.reset_ship(ship_id, site, x, y, z, rotation)
 	return true

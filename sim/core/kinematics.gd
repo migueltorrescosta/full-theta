@@ -1,15 +1,21 @@
 class_name Kinematics
 extends SimTable
 ## Rigid-body state of every ship, one row per ship in id order (packed layout, S6).
-## Positions are site-local: a site id plus an offset of three 64-bit floats, at most
-## MAX_OFFSET per axis (FT-SIM-035, D98, D104); the sim never reads site origins.
+## Positions are site-local: a site id plus an offset of three 64-bit floats (D98,
+## D104); the sim never reads site origins. Each site wraps as a 3-torus of side `period`
+## (FT-SIM-035, D124): offsets are kept in [-period / 2, period / 2) per axis and every
+## position difference is the minimum image. Only this class reads or writes the
+## position columns (tools/lint_arch.py): use relative(), relative_to_point(),
+## distance(), point_at(), wrap_point(), place() and translate().
 ## Velocities and rotation stay float32 Vector3 (D104). Local axes follow Godot: -Z is
 ## the bow, +X starboard, +Y up; angular velocity is in the body frame (x pitch, y yaw,
 ## z roll). Limits are copied from the ShipDef at spawn (FT-ARC-020). Units are SI.
 
-## Largest site-local offset per axis (m, FT-SIM-035).
-const MAX_OFFSET: float = 200000.0
+## Default side of a site's wrapping cube (m, FT-SIM-035, D124).
+const DEFAULT_PERIOD: float = 200000.0
 
+## Side of every site's wrapping cube (m), one period per world (M1); SimWorld sets it.
+var period: float = DEFAULT_PERIOD
 var site: PackedInt32Array = PackedInt32Array()
 var px: PackedFloat64Array = PackedFloat64Array()
 var py: PackedFloat64Array = PackedFloat64Array()
@@ -82,59 +88,75 @@ func set_angular_velocity(row: int, w_body: Vector3) -> void:
 	ang_mom[row] = rot[row] * (inertia[row] * w_body)
 
 
-## Places a ship at a site-local offset; fails an assertion past MAX_OFFSET.
+## Places a ship at a site-local offset (m), wrapped onto the site's cube
+## (FT-SIM-035). Fails an assertion on a non-finite offset.
 func place(row: int, site_id: int, x: float, y: float, z: float) -> void:
-	site[row] = site_id
-	px[row] = x
-	py[row] = y
-	pz[row] = z
-	check_offset(row)
-
-
-## FT-SIM-035, FT-M1-020: every offset axis stays within MAX_OFFSET of its site.
-## A jump (FT-SIM-034, #10) changes the site instead.
-func check_offset(row: int) -> bool:
-	var ok: bool = in_bounds(px[row], py[row], pz[row])
-	if not ok:
-		var msg: String = (
-			"site-local offset past %d m: ship %d at (%f, %f, %f)"
-			% [MAX_OFFSET, ship_ids[row], px[row], py[row], pz[row]]
-		)
+	var p: PackedFloat64Array = wrap_point(x, y, z)
+	if p.is_empty():
+		var msg: String = "non-finite offset for ship %d: (%f, %f, %f)" % [ship_ids[row], x, y, z]
 		push_error(msg)
 		assert(false, msg)
-	return ok
+		return
+	site[row] = site_id
+	px[row] = p[0]
+	py[row] = p[1]
+	pz[row] = p[2]
 
 
-## Whether a site-local point is on the site grid: finite and within MAX_OFFSET per axis
-## (FT-SIM-035).
-static func in_bounds(x: float, y: float, z: float) -> bool:
-	# The comparisons are false for NaN and infinity.
-	return absf(x) <= MAX_OFFSET and absf(y) <= MAX_OFFSET and absf(z) <= MAX_OFFSET
+## Moves a ship by a displacement given per axis in 64-bit (m), wrapping across the
+## site's faces (FT-SIM-035): the integrator and contact separation move ships this way.
+func translate(row: int, dx: float, dy: float, dz: float) -> void:
+	px[row] = _wrap(px[row] + dx, period)
+	py[row] = _wrap(py[row] + dy, period)
+	pz[row] = _wrap(pz[row] + dz, period)
+
+
+## A site-local point (m) wrapped onto the site's cube, as [x, y, z] in 64-bit; empty
+## when any coordinate is not finite (FT-SIM-035: off-cube points wrap, NaN and
+## infinity are rejected).
+func wrap_point(x: float, y: float, z: float) -> PackedFloat64Array:
+	if not (is_finite(x) and is_finite(y) and is_finite(z)):
+		return PackedFloat64Array()
+	return PackedFloat64Array([_wrap(x, period), _wrap(y, period), _wrap(z, period)])
+
+
+## The site-local point (m, [x, y, z], wrapped) at a site-frame offset from row's centre:
+## aim, target and retreat points (FT-SIM-035). Empty if the offset is not finite.
+func point_at(row: int, offset: Vector3) -> PackedFloat64Array:
+	return wrap_point(px[row] + offset.x, py[row] + offset.y, pz[row] + offset.z)
+
+
+## Unwrapped broadphase cell of row's centre for a cell size (m); in
+## [-n / 2, n / 2) per axis for n = period / cell. Callers wrap neighbour indexes.
+func cell_of(row: int, cell: float) -> Vector3i:
+	return Vector3i(floori(px[row] / cell), floori(py[row] / cell), floori(pz[row] / cell))
 
 
 ## Whether row a can fly to, track or point at row b: another live ship at its site.
 func can_reach(a: int, b: int) -> bool:
-	return b >= 0 and b < size() and b != a and is_alive(b) and same_site(a, b)
+	return b >= 0 and b < size() and b != a and is_alive(b) and site[a] == site[b]
 
 
-## Bounding radius of a ship's capsule (m): radius plus half length.
-func bound(row: int) -> float:
-	return radius[row] + half_length[row]
-
-
-## Offset of row b from row a (m, float32), computed in 64-bit. Only meaningful when
-## both are at the same site; callers check same_site() first.
+## Offset of row b from row a (m, float32) by minimum image, computed in 64-bit
+## (FT-SIM-035). Only meaningful when both are at the same site.
 func relative(a: int, b: int) -> Vector3:
-	return Vector3(px[b] - px[a], py[b] - py[a], pz[b] - pz[a])
+	return Vector3(
+		_wrap(px[b] - px[a], period), _wrap(py[b] - py[a], period), _wrap(pz[b] - pz[a], period)
+	)
 
 
-## Offset of a site-local point from row a (m, float32), computed in 64-bit.
+## Offset of a site-local point from row a (m, float32) by minimum image, computed in
+## 64-bit; the point need not be wrapped (FT-SIM-035).
 func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:
-	return Vector3(x - px[a], y - py[a], z - pz[a])
+	return Vector3(_wrap(x - px[a], period), _wrap(y - py[a], period), _wrap(z - pz[a], period))
 
 
-func same_site(a: int, b: int) -> bool:
-	return site[a] == site[b]
+## Minimum-image distance from row a to row b (m), in 64-bit (FT-SIM-035).
+func distance(a: int, b: int) -> float:
+	var dx: float = _wrap(px[b] - px[a], period)
+	var dy: float = _wrap(py[b] - py[a], period)
+	var dz: float = _wrap(pz[b] - pz[a], period)
+	return sqrt(dx * dx + dy * dy + dz * dz)
 
 
 func is_alive(row: int) -> bool:
@@ -153,13 +175,10 @@ func to_world(row: int, local: Vector3) -> Vector3:
 	return rot[row] * local
 
 
-## Thrust limits of the current envelope, per local axis (N, positive numbers).
-func thrust_limit_pos(row: int) -> Vector3:
-	return max_thrust_pos[row] * thrust_scale[row]
-
-
-func thrust_limit_neg(row: int) -> Vector3:
-	return max_thrust_neg[row] * thrust_scale[row]
+## Thrust limits of the current envelope, per local axis (N, positive numbers): toward
+## +X, +Y, +Z when positive, else toward -X, -Y, -Z.
+func thrust_limit(row: int, positive: bool) -> Vector3:
+	return (max_thrust_pos[row] if positive else max_thrust_neg[row]) * thrust_scale[row]
 
 
 func torque_limit(row: int) -> Vector3:
@@ -168,7 +187,7 @@ func torque_limit(row: int) -> Vector3:
 
 ## Clamps a local force to the current envelope, axis by axis.
 func clamp_thrust(row: int, force: Vector3) -> Vector3:
-	return force.clamp(-thrust_limit_neg(row), thrust_limit_pos(row))
+	return force.clamp(-thrust_limit(row, false), thrust_limit(row, true))
 
 
 func clamp_torque(row: int, torque: Vector3) -> Vector3:
@@ -205,3 +224,14 @@ func columns() -> Array:
 			["half_length", half_length],
 		]
 	)
+
+
+## v wrapped into [-p / 2, p / 2) (m). Values already inside are returned unchanged, so
+## wrapping never rounds an in-cube offset (D104).
+static func _wrap(v: float, p: float) -> float:
+	var half: float = 0.5 * p
+	if v >= -half and v < half:
+		return v
+	var w: float = fposmod(v + half, p) - half
+	# fposmod can round up to p for a tiny negative remainder.
+	return w - p if w >= half else w

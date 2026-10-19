@@ -12,5 +12,5 @@ func kind() -> StringName:
 func apply(world: SimWorld) -> bool:
 	world.helm.all_stop[ship_id] = 1
 	world.helm.throttle_setpoint[ship_id] = 0.0
-	world.helm.level[ship_id] = HelmTable.Level.OFF
+	world.helm.align[ship_id] = HelmTable.Align.OFF
 	return true

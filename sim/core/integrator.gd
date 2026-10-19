@@ -2,7 +2,8 @@ class_name Integrator
 extends RefCounted
 ## 6DOF step with no drag (FT-SIM-001, FT-SIM-003, FT-ARC-007; research/tech §3),
 ## promoted from S5. Position is exact under constant force over a tick:
-## x += v dt + a dt^2 / 2 (FT-SIM-038), in 64-bit per axis (D104). Rotation keeps the
+## x += v dt + a dt^2 / 2 (FT-SIM-038), in 64-bit per axis (D104), wrapped onto the
+## site's cube (FT-SIM-035). Rotation keeps the
 ## world-frame angular momentum L as its state: the torque adds R tau dt, and with no
 ## torque L is not touched at all. The attitude then follows the free rigid body by the
 ## symmetric splitting of its energy into the three principal axes (pitch/2, yaw/2,
@@ -46,11 +47,10 @@ static func step(kin: Kinematics, row: int, dt: float) -> float:
 	var v0: Vector3 = kin.vel[row]
 	var a: Vector3 = (kin.rot[row] * f) / kin.mass[row]
 	var half_dt2: float = 0.5 * dt * dt
-	kin.px[row] += v0.x * dt + a.x * half_dt2
-	kin.py[row] += v0.y * dt + a.y * half_dt2
-	kin.pz[row] += v0.z * dt + a.z * half_dt2
+	kin.translate(
+		row, v0.x * dt + a.x * half_dt2, v0.y * dt + a.y * half_dt2, v0.z * dt + a.z * half_dt2
+	)
 	kin.vel[row] = v0 + a * dt
-	kin.check_offset(row)
 
 	# Angular: kick the world-frame momentum, then the free flow by splitting.
 	var q: Quaternion = kin.rot[row]

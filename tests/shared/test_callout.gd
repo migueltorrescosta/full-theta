@@ -86,15 +86,12 @@ func test_rolled_ship_flips_high_and_low() -> void:
 
 
 # FT: FT-SPA-026, FT-ARC-021
-# Frame rule, as a table over orientations: ship-frame callouts use only the clock and
-# level/high/low/overhead/under and change with the ship's attitude; world height is
-# only `up N` / `down N` after a grid square, in grid layers, and ignores attitude.
+# Frame rule, as a table over orientations: callouts use only the clock and
+# level/high/low/overhead/under and change with the ship's attitude; there are no
+# world-frame words (D124: no privileged up, no world grid).
 func test_frame_rule_word_sets() -> void:
 	var ship_words: RegEx = RegEx.create_from_string(
 		"^([1-9]|1[0-2]) (level|high|low)$|^overhead$|^under$"
-	)
-	var grid_words: RegEx = RegEx.create_from_string(
-		"^grid [A-Z]+[1-9][0-9]*(, (up|down) [1-9][0-9]*)?$"
 	)
 	var attitudes: Array[Quaternion] = [
 		Quaternion.IDENTITY,
@@ -102,7 +99,6 @@ func test_frame_rule_word_sets() -> void:
 		Quaternion(Vector3.RIGHT, PI / 2.0),
 		Quaternion(Vector3(1, 1, 0).normalized(), 2.0),
 	]
-	var origin: Vector3 = Vector3(-10000.0, 0.0, -10000.0)
 	var offsets: Array[Vector3] = [
 		Vector3(3500, 1000, 3200),
 		Vector3(-500, -1600, 800),
@@ -111,8 +107,6 @@ func test_frame_rule_word_sets() -> void:
 		Vector3(-2000, -300, 50),
 	]
 	for offset: Vector3 in offsets:
-		var grid: String = Callout.grid_callout(offset, origin, 1000.0, 500.0)
-		assert_bool(grid_words.search(grid) != null).override_failure_message(grid).is_true()
 		var seen: Dictionary[String, bool] = {}
 		for q: Quaternion in attitudes:
 			var spoken: String = _spoken(offset, q)
@@ -123,26 +117,3 @@ func test_frame_rule_word_sets() -> void:
 			)
 			seen[spoken] = true
 		assert_int(seen.size()).override_failure_message(str(offset)).is_greater(1)
-
-
-# FT: FT-SPA-026
-# Grid squares: letters along +X, numbers from 1 along +Z, from the map corner; height
-# in whole layers from the map plane, rounded; nothing off the map.
-func test_grid_callout_table() -> void:
-	var origin: Vector3 = Vector3.ZERO
-	var cases: Array[Array] = [
-		[Vector3(3500, 1000, 3200), "grid D4, up 2"],
-		[Vector3(500, -600, 500), "grid A1, down 1"],
-		[Vector3(500, 240, 999), "grid A1"],
-		[Vector3(25999, 0, 0), "grid Z1"],
-		[Vector3(26000, 0, 0), "grid AA1"],
-		[Vector3(1000, 0, 11000), "grid B12"],
-		[Vector3(-1, 0, 0), ""],
-		[Vector3(0, 0, -1), ""],
-	]
-	for c: Array in cases:
-		var got: String = Callout.grid_callout(c[0], origin, 1000.0, 500.0)
-		assert_str(got).override_failure_message(str(c, " got ", got)).is_equal(c[1])
-	assert_str(Callout.grid_square(Vector3(4500, 0, -500), Vector3(0, 0, -1000), 1000.0)).is_equal(
-		"E1"
-	)

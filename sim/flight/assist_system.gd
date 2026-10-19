@@ -3,7 +3,7 @@ extends RefCounted
 ## Flight assist (T028, promoted from S5's S5Assist and S5World): turns each ship's helm
 ## state into this tick's body-frame force and torque commands (kin.force_cmd,
 ## kin.torque_cmd). It never writes velocity, position or rotation: every hold, face,
-## Level, all-stop and approach goes through the current thrust envelope, and the
+## Align, all-stop and approach goes through the current thrust envelope, and the
 ## integrator charges propellant for exactly that command, so no mode moves a ship for
 ## free (FT-SIM-004, FT-SIM-007, D24, D97).
 ##
@@ -18,12 +18,15 @@ const INPUT_DEAD_ZONE: float = 0.02
 ## All-stop ends once the ship is below both (m/s, rad/s; FT-SIM-036).
 const STOP_SPEED: float = 0.05
 const STOP_RATE: float = 0.002
-## Level clears once within this angle (rad, 0.3 deg) and turning slower than
-## LEVEL_SETTLED_RATE (rad/s).
-const LEVEL_DONE: float = 0.3 * PI / 180.0
-const LEVEL_SETTLED_RATE: float = 0.01
-## A Level press with the roll already within this angle (rad, 1 deg) also pitches.
-const ROLLED_LEVEL: float = PI / 180.0
+## Align clears once within this angle (rad, 0.3 deg) and turning slower than
+## ALIGN_SETTLED_RATE (rad/s).
+const ALIGN_DONE: float = 0.3 * PI / 180.0
+const ALIGN_SETTLED_RATE: float = 0.01
+## An Align press with the roll already within this angle (rad, 1 deg) also faces.
+const ROLLED: float = PI / 180.0
+## With the target within about this sine of the bow line (0.6 deg) it is at 12 o'clock
+## whatever the roll, so Align's roll error is 0.
+const ALIGN_ON_BOW: float = 0.01
 ## Fastest back-off speed (m/s) when closer than the approach stand-off.
 const APPROACH_BACKOFF_MAX: float = 20.0
 
@@ -80,21 +83,23 @@ static func forward_speed(world: SimWorld, row: int) -> float:
 	return clampf(fwd, tuning.speed_min, tuning.speed_max)
 
 
-## Roll (rad, about the bow) that brings the ship's up nearest to ecliptic up (+Y).
-static func roll_error(kin: Kinematics, row: int) -> float:
-	var fwd: Vector3 = kin.forward(row)
-	var want_up: Vector3 = Vector3.UP - fwd * fwd.dot(Vector3.UP)
-	if want_up.length_squared() < 1e-4:
-		return 0.0  # Bow straight up or down: any roll is as level as it gets.
-	var u: Vector3 = kin.to_local(row, want_up.normalized())
-	return atan2(-u.x, u.y)
+## Roll (rad, about the bow) that brings the selected target to 12 o'clock: into the
+## ship's pitch plane, above the bow direction (FT-HLM-007, D124). 0 with no target or
+## the target on the bow line, where every roll will do.
+static func align_roll_error(world: SimWorld, row: int) -> float:
+	if not has_target(world, row):
+		return 0.0
+	var d: Vector3 = world.kin.to_local(row, target_offset(world, row)).normalized()
+	if Vector2(d.x, d.y).length() < ALIGN_ON_BOW:
+		return 0.0
+	return atan2(-d.x, d.y)
 
 
-## Angle (rad) still to go for a Level stage.
-static func level_error(kin: Kinematics, row: int, stage: int) -> float:
-	var err: float = absf(roll_error(kin, row))
-	if stage == HelmTable.Level.ROLL_AND_PITCH:
-		err += absf(asin(clampf(kin.forward(row).y, -1.0, 1.0)))
+## Angle (rad) still to go for an Align stage.
+static func align_error(world: SimWorld, row: int, stage: int) -> float:
+	var err: float = absf(align_roll_error(world, row))
+	if stage == HelmTable.Align.ROLL_AND_FACE:
+		err += world.kin.forward(row).angle_to(target_offset(world, row))
 	return err
 
 
@@ -106,7 +111,7 @@ static func turn_rate_caps(kin: Kinematics, row: int, tuning: AssistDef) -> Vect
 	return Vector3(py, py, tuning.turn_rate_roll * kin.torque_scale[row])
 
 
-## Mode bookkeeping before the command: ends all-stop and Level, ramps the setpoint.
+## Mode bookkeeping before the command: ends all-stop and Align, ramps the setpoint.
 ## rot_in and move_in are the Helm inputs after the deadzone.
 static func _update_modes(
 	world: SimWorld, row: int, tuning: AssistDef, rot_in: Vector3, move_in: Vector3
@@ -127,13 +132,17 @@ static func _update_modes(
 		)
 		if manual or at_rest:
 			helm.all_stop[row] = 0
-	if helm.level[row] != HelmTable.Level.OFF:
+	if helm.align[row] != HelmTable.Align.OFF:
+		# FT-HLM-007: ends within tolerance, on rotation input or with the target lost.
 		var done: bool = (
-			level_error(kin, row, helm.level[row]) < LEVEL_DONE
-			and kin.ang_vel[row].length() < LEVEL_SETTLED_RATE
+			not has_target(world, row)
+			or (
+				align_error(world, row, helm.align[row]) < ALIGN_DONE
+				and kin.ang_vel[row].length() < ALIGN_SETTLED_RATE
+			)
 		)
 		if done or rot_in != Vector3.ZERO:
-			helm.level[row] = HelmTable.Level.OFF
+			helm.align[row] = HelmTable.Align.OFF
 	if not helm.is_decoupled(row) and helm.approach_held[row] == 0:
 		# Throttle sets speed, not force (FT-SIM-004): input ramps the setpoint.
 		helm.throttle_setpoint[row] = clampf(
@@ -158,7 +167,7 @@ static func _command(
 	var rates: Vector3 = turn_rate_caps(kin, row, tuning)
 
 	# Rotation: a body-rate setpoint held through torque, or raw torque when decoupled.
-	# All-stop, face and Level are explicit assist actions, so they run decoupled too
+	# All-stop, face and Align are explicit assist actions, so they run decoupled too
 	# (FT-HLM-006).
 	var w_des: Vector3 = rot_in * rates
 	var rate_hold: bool = not decoupled
@@ -170,8 +179,8 @@ static func _command(
 		w_des = _face_rate(kin, row, target_offset(world, row), tuning)
 		w_des.z = rot_in.z * rates.z
 		rate_hold = true
-	elif helm.level[row] != HelmTable.Level.OFF:
-		w_des = _level_rate(kin, row, helm.level[row], tuning)
+	elif targeted and helm.align[row] != HelmTable.Align.OFF:
+		w_des = _align_rate(world, row, helm.align[row], tuning)
 		rate_hold = true
 	var torque: Vector3
 	if rate_hold:
@@ -227,20 +236,14 @@ static func _face_rate(kin: Kinematics, row: int, direction: Vector3, tuning: As
 	return axis * _profile(angle, alpha, turn_rate_caps(kin, row, tuning).x, tuning)
 
 
-## Level (FT-HLM-007, D97): roll so the ship's up is as close to ecliptic up as the
-## heading allows; at ROLL_AND_PITCH also pitch the bow onto the ecliptic.
-static func _level_rate(kin: Kinematics, row: int, stage: int, tuning: AssistDef) -> Vector3:
+## Align (FT-HLM-007, D124): roll the selected target to 12 o'clock; at ROLL_AND_FACE
+## also turn the bow onto it.
+static func _align_rate(world: SimWorld, row: int, stage: int, tuning: AssistDef) -> Vector3:
+	var kin: Kinematics = world.kin
 	var w: Vector3 = Vector3.ZERO
-	if stage == HelmTable.Level.ROLL_AND_PITCH:
-		var fwd: Vector3 = kin.forward(row)
-		var flat: Vector3 = Vector3(fwd.x, 0.0, fwd.z)
-		if flat.length_squared() <= 1e-6:
-			# Bow (nearly) straight up or down: no heading to keep, so pitch toward
-			# the ship's up, which lies (nearly) in the ecliptic.
-			var u: Vector3 = kin.to_world(row, Vector3.UP)
-			flat = Vector3(u.x, 0.0, u.z)
-		w = _face_rate(kin, row, flat, tuning)
-	var roll: float = roll_error(kin, row)
+	if stage == HelmTable.Align.ROLL_AND_FACE:
+		w = _face_rate(kin, row, target_offset(world, row), tuning)
+	var roll: float = align_roll_error(world, row)
 	var alpha: float = kin.torque_limit(row).z / kin.inertia[row].z
 	w.z = signf(roll) * _profile(absf(roll), alpha, turn_rate_caps(kin, row, tuning).z, tuning)
 	return w
@@ -268,15 +271,15 @@ static func _approach_velocity(world: SimWorld, row: int, tuning: AssistDef) -> 
 ## (FT-SIM-037): a braking curve on the retro thrust share far out, an exponential
 ## settle near, capped.
 static func closing_speed(kin: Kinematics, row: int, tuning: AssistDef, gap: float) -> float:
-	var brake: float = kin.thrust_limit_pos(row).z / kin.mass[row] * tuning.approach_braking
+	var brake: float = kin.thrust_limit(row, true).z / kin.mass[row] * tuning.approach_braking
 	var speed: float = minf(sqrt(2.0 * brake * gap), gap / tuning.approach_final_time_constant)
 	return minf(speed, tuning.approach_speed_cap)
 
 
 ## Full-deflection force in the current envelope for a body-frame input in [-1, 1].
 static func _thrust_for_input(kin: Kinematics, row: int, input: Vector3) -> Vector3:
-	var pos: Vector3 = kin.thrust_limit_pos(row)
-	var neg: Vector3 = kin.thrust_limit_neg(row)
+	var pos: Vector3 = kin.thrust_limit(row, true)
+	var neg: Vector3 = kin.thrust_limit(row, false)
 	return Vector3(
 		input.x * (pos.x if input.x > 0.0 else neg.x),
 		input.y * (pos.y if input.y > 0.0 else neg.y),
