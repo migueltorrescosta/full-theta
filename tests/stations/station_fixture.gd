@@ -220,7 +220,43 @@ static func view() -> NetViewState:
 	model[F4] = [_units(_world(_at(7, 0.0, 600.0)), p_units), Vector3i.ZERO, TICK]
 	info[F4] = [2, "F4"]
 	v.contacts = {"model": model, "info": info}
+	v.blocks[StationViews.Section.ENGINEERING] = engineering_block()
 	return v
+
+
+## The ENGINEERING block (m1_corvette): engines at 40 % and overcharged with crew A on
+## them, weapons at 75 %, shields running hot, 6 spare parts, shields at 70 % with
+## focus tightness 1.5 towards 1 o'clock; 10 of 12 reactor pips used.
+static func engineering_block() -> Dictionary:
+	var subsystems: Array = []
+	# engines, thrusters, weapons, shields, sensors, reactor: [health, pips, heat, crews].
+	for r: Array in [
+		[0.4, 3, 30.0, 1],
+		[1.0, 2, 0.0, 0],
+		[0.75, 2, 0.0, 0],
+		[1.0, 2, 80.0, 0],
+		[1.0, 1, 0.0, 0],
+		[1.0, 0, 0.0, 0]
+	]:
+		subsystems.append(
+			{
+				"health": r[0] * 20_000_000.0,
+				"pips": r[1],
+				"heat": r[2],
+				"crews": r[3],
+				"fault_armed": true
+			}
+		)
+	return {
+		"boost_ticks": 0,
+		"weapon_energy": 3_000_000.0,
+		"hull": 92_000_000.0,
+		"spare_parts": 6,
+		"shield_strength": 21_000_000.0,
+		"shield_tightness": 1.5,
+		"shield_focus": Vector3(0.5, 0.0, -0.866).normalized(),
+		"subsystems": subsystems,
+	}
 
 
 static func own_rotation() -> Quaternion:

@@ -207,6 +207,8 @@ const BLOCKS: Dictionary = {
 		["spare_parts", "u16"],
 		["shield_strength", "f32"],
 		["shield_tightness", "f32"],
+		# Engineering's mirror of Helm's shield ring (§5.3).
+		["shield_focus", "v3n"],
 		[
 			"subsystems",
 			[
@@ -505,6 +507,7 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 		"spare_parts": d.spare_parts[rows[0]],
 		"shield_strength": world.shields.strength[ship],
 		"shield_tightness": world.shields.tightness[ship],
+		"shield_focus": world.shields.focus[ship],
 		"subsystems": subsystems,
 	}
 

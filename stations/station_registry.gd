@@ -7,7 +7,7 @@ extends RefCounted
 const PANELS: Dictionary = {
 	# "helm": "res://stations/helm/helm_panel.gd",
 	"weapons": "res://stations/weapons/weapons_panel.gd",
-	# "engineering": "res://stations/engineering/engineering_panel.gd",
+	"engineering": "res://stations/engineering/engineering_panel.gd",
 	# "relay": "res://stations/relay/relay_panel.gd",
 	# "viewer": "res://stations/viewer/viewer_panel.gd",
 }

@@ -3,8 +3,10 @@
 ## of `entry`), "lobby", or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
 ## `overlay`, `tooltip` (the first-run tip), `strip` (the radar's side strip) and
-## `ui_scale` (the window's content scale, FT-STN-013; reset on exit) and `claim` (a
-## claim item the player holds, e.g. "mount:0").
+## `ui_scale` (the window's content scale, FT-STN-013; reset on exit), `claim` (a
+## claim item the player holds, e.g. "mount:0") and `events` (sim events fed to the
+## crew model 2 s before the shot, after the screen is built; a payload `vector` given
+## as [x, y, z] becomes a Vector3).
 extends Control
 
 var view: String = "screen"
@@ -16,6 +18,7 @@ var tooltip: bool = false
 var strip: bool = false
 var ui_scale: float = 1.0
 var claim: String = ""
+var events: Array = []
 
 var _ctx: StationContext
 
@@ -61,6 +64,12 @@ func _ready() -> void:
 			s.radar.side_strip = strip
 			if overlay:
 				s.dispatch({"id": "overlay", "target": "screen", "pressed": true})
+			for e: Dictionary in events:
+				var p: Dictionary = e.get("payload", {})
+				if p.get("vector") is Array:
+					var v: Array = p["vector"]
+					p["vector"] = Vector3(v[0], v[1], v[2])
+				_ctx.crew.handle_event(e, StationFixture.NOW_MS - 2000)
 
 
 func _exit_tree() -> void:

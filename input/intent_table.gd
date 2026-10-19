@@ -172,6 +172,21 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "harden", "group": "engineering", "kind": PRESS, "kbm": ["H"], "pad": ["LB"]},
 	{"id": "fabricate_probe", "group": "engineering", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
 	{"id": "dispatch_nearest", "group": "engineering", "kind": PRESS, "kbm": [], "pad": ["B"]},
+	{
+		"id": "shield_tighter",
+		"group": "engineering",
+		"kind": PRESS,
+		"kbm": ["Period"],
+		"pad": ["LB+Up"]
+	},
+	{
+		"id": "shield_wider",
+		"group": "engineering",
+		"kind": PRESS,
+		"kbm": ["Comma"],
+		"pad": ["LB+Down"]
+	},
+	{"id": "boost", "group": "engineering", "kind": PRESS, "kbm": ["O"], "pad": ["LB+RT"]},
 	{"id": "eng_cursor_x", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["LS_X"]},
 	{"id": "eng_cursor_y", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["LS_Y"]},
 	{"id": "cutaway_yaw", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["RS_X"]},
