@@ -304,11 +304,15 @@ func _advance_current(now_ms: int) -> void:
 		_record(l, STALLED, now_ms)
 
 
-## Frees the parts the line has played past.
+## Frees the parts the line has played past (by _played: never a part the sink still
+## buffers, so a resume can go back into it).
 func _trim(l: _Line, now_ms: int) -> void:
+	var at: int = _played(l, now_ms)
 	for s: Dictionary in l.segments:
-		if int(s["end_ms"]) <= now_ms:
-			l.parts.erase(int(s["part"]))
+		at -= int(s["samples"])
+		if at < 0:
+			return
+		l.parts.erase(int(s["part"]))
 
 
 ## Fades the playing line; it resumes later from the fade's start, or is dropped.
@@ -328,15 +332,38 @@ func _preempt(now_ms: int) -> void:
 		_record(l, PREEMPTED, now_ms)
 
 
-## Sets the resume position to where playback is at `now_ms`.
-func _set_position(l: _Line, now_ms: int) -> void:
+## Samples (each segment in its own rate) played since the line's start at `now_ms`: by
+## the bus clock, or what the sink reports heard when that is less, since audio still
+## buffered or in the output latency has not been heard (FT-AUD-007).
+func _played(l: _Line, now_ms: int) -> int:
+	var at: int = 0
 	for s: Dictionary in l.segments:
 		if now_ms < int(s["end_ms"]):
-			l.pos_part = int(s["part"])
 			var played: int = int((now_ms - int(s["start_ms"])) * int(s["rate"]) / 1000.0)
-			l.pos_sample = int(s["from"]) + clampi(played, 0, int(s["samples"]))
+			at += clampi(played, 0, int(s["samples"]))
+			break
+		at += int(s["samples"])
+	var heard: int = sink.played(l.clip)
+	return mini(at, heard) if heard >= 0 else at
+
+
+## Sets the resume position to where playback is at `now_ms` (_played).
+func _set_position(l: _Line, now_ms: int) -> void:
+	var at: int = _played(l, now_ms)
+	for s: Dictionary in l.segments:
+		if at < int(s["samples"]):
+			l.pos_part = int(s["part"])
+			l.pos_sample = int(s["from"]) + at
 			_forget_before(l)
 			return
+		at -= int(s["samples"])
+	if not l.segments.is_empty() and now_ms < int(l.segments[-1]["end_ms"]):
+		# At the very end of the last segment pushed.
+		var last: Dictionary = l.segments[-1]
+		l.pos_part = int(last["part"])
+		l.pos_sample = int(last["from"]) + int(last["samples"])
+		_forget_before(l)
+		return
 	# Past everything pushed (an underrun): continue with the next part.
 	l.pos_part = l.pushed_part + 1
 	l.pos_sample = 0

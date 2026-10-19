@@ -1,6 +1,8 @@
 extends VoiceSink
 ## A VoiceSink for tests: records every call as [name, clip, ...], plays nothing.
 var calls: Array[Array] = []
+## What played() reports for every clip; -1: unknown, the bus goes by its clock.
+var heard: int = -1
 
 
 func begin(clip: int, role: String, rate: int) -> void:
@@ -25,6 +27,10 @@ func stop(clip: int) -> void:
 
 func finish(clip: int) -> void:
 	calls.append(["finish", clip])
+
+
+func played(_clip: int) -> int:
+	return heard
 
 
 func named(call_name: String) -> Array[Array]:

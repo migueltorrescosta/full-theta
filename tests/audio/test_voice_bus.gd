@@ -289,6 +289,30 @@ func test_resume_position_spans_parts() -> void:
 	assert_array(_sink.calls.slice(-2)).is_equal([["begin", 1, "npc", RATE], ["push", 1, 200, 50]])
 	_bus.update(580)
 	assert_array(_bus.finished).is_equal([2, 1])
+	# The same, when the sink reports hearing less than the clock (audio buffered or in
+	# the output latency): the line resumes from what was heard.
+	before_test()
+	_bus.offer(_payload(1, 2, {"resume": true}), 0)
+	_bus.add_part(1, 0, RATE, _pcm(200), false, 0)
+	_bus.add_part(1, 1, RATE, _pcm(200), true, 0)
+	_sink.heard = 180  # 70 ms still buffered or in the output latency
+	_bus.update(250)
+	assert_int(_bus.held_parts(1)).is_equal(2)  # part 0 is still heard, so kept
+	_line(2, 1, 100, 250)
+	assert_int(_bus.held_parts(1)).is_equal(2)  # part 0 is not behind the resume point
+	_sink.heard = -1
+	_bus.update(330)
+	_bus.update(430)
+	assert_array(_sink.calls.slice(-3)).is_equal(
+		[["begin", 1, "npc", RATE], ["push", 1, 200, 180], ["push", 1, 200, 0]]
+	)
+	# A sink reporting more than the clock never moves the resume point ahead.
+	_bus.update(450)
+	_sink.heard = 10_000
+	_line(3, 0, 100, 450)
+	_bus.update(530)
+	_bus.update(630)
+	assert_array(_sink.calls.slice(-2)).is_equal([["begin", 1, "npc", RATE], ["push", 1, 200, 0]])
 
 
 # FT: FT-AUD-011

@@ -176,15 +176,24 @@ func test_computer_lines_play_on_the_filtered_bus_and_npc_lines_do_not() -> void
 	var crush: AudioEffectDistortion = AudioServer.get_bus_effect(computer, 3)
 	assert_int(crush.mode).is_equal(AudioEffectDistortion.MODE_LOFI)
 	assert_int(AudioServer.get_bus_effect_count(voice)).is_equal(0)
+	var on_computer: AudioStreamPlayer = vp.players[VoiceBuses.COMPUTER]
+	var on_voice: AudioStreamPlayer = vp.players[VoiceBuses.VOICE]
+	assert_str(on_computer.bus).is_equal(VoiceBuses.COMPUTER)
+	assert_str(on_voice.bus).is_equal(VoiceBuses.VOICE)
 	vp.handle_event(_event(1, 1))
 	vp.handle_voice(_voice(1, 100))
-	assert_str(vp.player.bus).is_equal(VoiceBuses.COMPUTER)
+	assert_object(vp.stream_sink.player_for("computer")).is_same(on_computer)
+	assert_bool(on_computer.playing).is_true()
+	assert_bool(on_voice.playing).is_false()
 	_now = 100
 	vp.bus.update(_now)
 	vp.handle_event(_event(2, 2))
 	vp.handle_voice(_voice(2, 100))
 	assert_int(vp.bus.playing_clip()).is_equal(2)
-	assert_str(vp.player.bus).is_equal(VoiceBuses.VOICE)
+	assert_object(vp.stream_sink.player_for("npc")).is_same(on_voice)
+	assert_bool(on_voice.playing).is_true()
+	assert_str(on_computer.bus).is_equal(VoiceBuses.COMPUTER)
+	assert_str(on_voice.bus).is_equal(VoiceBuses.VOICE)
 
 
 # FT: FT-AUD-011
@@ -192,13 +201,78 @@ func test_parts_reach_the_audio_stream_player() -> void:
 	var vp: VoicePlayer = _player()
 	vp.handle_event(_event(1, 2))
 	vp.handle_voice(_voice(1, 22050))
-	assert_bool(vp.player.playing).is_true()
-	assert_object(vp.player.stream).is_instanceof(AudioStreamGenerator)
+	var p: AudioStreamPlayer = vp.players[VoiceBuses.VOICE]
+	assert_bool(p.playing).is_true()
+	assert_object(p.stream).is_instanceof(AudioStreamGenerator)
 	assert_int(vp.stream_sink.pending_bytes()).is_equal(44100)
+	assert_int(vp.stream_sink.played(1)).is_equal(-1)  # nothing in the generator yet
 	for i: int in range(5):
 		await await_idle_frame()
-	assert_int(vp.stream_sink.frames_pushed).is_greater(0)
-	assert_int(vp.stream_sink.pending_bytes()).is_equal(44100 - 2 * vp.stream_sink.frames_pushed)
+	var pushed: int = vp.stream_sink.frames_pushed()
+	assert_int(pushed).is_greater(0)
+	assert_int(vp.stream_sink.pending_bytes()).is_equal(44100 - 2 * pushed)
+	# What was heard is at most what reached the generator.
+	assert_int(vp.stream_sink.played(1)).is_between(0, pushed)
+
+
+# FT: FT-AUD-004, FT-AUD-007
+func test_lines_on_the_two_buses_never_share_a_player() -> void:
+	var vp: VoicePlayer = _player()
+	var on_computer: AudioStreamPlayer = vp.players[VoiceBuses.COMPUTER]
+	var on_voice: AudioStreamPlayer = vp.players[VoiceBuses.VOICE]
+	vp.handle_event(_event(1, 2, {"resume": true}))
+	vp.handle_voice(_voice(1, 1000))
+	await await_idle_frame()
+	# A computer line preempts: only the NPC player fades, and it keeps its bus.
+	_now = 100
+	vp.handle_event(_event(2, 1))
+	vp.handle_voice(_voice(2, 100))
+	assert_int(vp.bus.fading_clip()).is_equal(1)
+	vp.stream_sink.process(0.04)
+	assert_float(on_voice.volume_linear).is_less(1.0)
+	assert_float(on_computer.volume_linear).is_equal(1.0)
+	assert_str(on_voice.bus).is_equal(VoiceBuses.VOICE)
+	_now = 180
+	vp.bus.update(_now)
+	assert_int(vp.bus.playing_clip()).is_equal(2)
+	assert_str(on_computer.bus).is_equal(VoiceBuses.COMPUTER)
+	assert_float(on_voice.volume_linear).is_equal(1.0)  # the stop resets it
+	assert_float(on_computer.volume_linear).is_equal(1.0)
+	assert_object(on_computer.stream).is_instanceof(AudioStreamGenerator)
+	assert_bool(on_computer.playing).is_true()
+
+
+# FT: FT-AUD-011
+func test_a_finished_line_tail_plays_out_before_the_next_on_its_bus() -> void:
+	var on_voice: AudioStreamPlayer = AudioStreamPlayer.new()
+	var on_computer: AudioStreamPlayer = AudioStreamPlayer.new()
+	add_child(on_voice)
+	add_child(on_computer)
+	var sink: VoiceStreamSink = VoiceStreamSink.new(
+		{VoiceBuses.VOICE: on_voice, VoiceBuses.COMPUTER: on_computer}
+	)
+	var pcm: PackedByteArray = PackedByteArray()
+	pcm.resize(2 * 1000)
+	sink.begin(1, "npc", 22050)
+	sink.push(1, pcm, 22050, 0)
+	sink.finish(1)
+	# A computer line meanwhile leaves the NPC player alone.
+	sink.begin(2, "computer", 22050)
+	sink.push(2, pcm, 22050, 0)
+	assert_str(on_voice.bus).is_equal(VoiceBuses.VOICE)
+	assert_int(sink.pending_bytes()).is_equal(4000)
+	# The next NPC line queues behind line 1's tail instead of dropping it.
+	sink.begin(3, "npc", 22050)
+	sink.push(3, pcm, 22050, 0)
+	assert_int(sink.pending_bytes()).is_equal(6000)
+	var gen: AudioStreamGenerator = on_voice.stream
+	assert_object(gen).is_not_null()
+	# Stopping line 3 drops only what is queued on its bus.
+	sink.stop(3)
+	assert_int(sink.pending_bytes()).is_equal(2000)
+	assert_object(on_voice.stream).is_same(gen)
+	on_voice.queue_free()
+	on_computer.queue_free()
 
 
 # FT: FT-AUD-010

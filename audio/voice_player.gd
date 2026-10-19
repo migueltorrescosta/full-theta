@@ -2,8 +2,8 @@ class_name VoicePlayer
 extends Node
 ## The client's voice output (spec §9, audio/README.md): takes voice_line events and VOICE
 ## parts, keeps the subtitles (SubtitleFeed, FT-AUD-010), queues lines on a VoiceBus driven
-## by real time, and plays them through an AudioStreamPlayer on the Voice buses
-## (VoiceBuses; computer lines on VoiceComputer with the robotic filter, FT-AUD-004).
+## by real time, and plays them through one AudioStreamPlayer per voice bus (VoiceBuses:
+## NPC lines on Voice, computer lines on VoiceComputer with the robotic filter, FT-AUD-004).
 ## Lines with `local` true carry no audio on the wire: they play their prerendered file
 ## from `local_lines` (LocalLines), and a missing file leaves the subtitle only.
 ## Browser audio unlock is #7's.
@@ -22,19 +22,22 @@ var subtitles: SubtitleFeed = SubtitleFeed.new()
 var local_lines: LocalLines = null
 ## Milliseconds; tests may swap it.
 var clock: Callable = Time.get_ticks_msec
-var player: AudioStreamPlayer
+## Bus name (VoiceBuses.VOICE, VoiceBuses.COMPUTER) -> its AudioStreamPlayer.
+var players: Dictionary = {}
 ## Set in _ready unless bus.sink was replaced before (tests).
 var stream_sink: VoiceStreamSink
 
 
 func _ready() -> void:
 	VoiceBuses.ensure()
-	player = AudioStreamPlayer.new()
-	player.name = "VoiceStream"
-	player.bus = VoiceBuses.VOICE
-	add_child(player)
+	for bus_name: String in [VoiceBuses.VOICE, VoiceBuses.COMPUTER]:
+		var p: AudioStreamPlayer = AudioStreamPlayer.new()
+		p.name = bus_name + "Stream"
+		p.bus = bus_name
+		add_child(p)
+		players[bus_name] = p
 	if bus.sink.get_script() == VoiceSink:
-		stream_sink = VoiceStreamSink.new(player)
+		stream_sink = VoiceStreamSink.new(players)
 		bus.sink = stream_sink
 
 
