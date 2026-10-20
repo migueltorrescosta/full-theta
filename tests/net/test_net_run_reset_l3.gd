@@ -151,3 +151,37 @@ func test_loss_then_host_resets_alone() -> void:
 	assert_bool(server.world.kin.is_alive(PLAYER)).is_true()
 	var lobby: Callable = func(e: Dictionary) -> bool: return not e["payload"]["started"]
 	assert_dict(await h.next_event(late, NetProtocol.EVENT_LOBBY, from, lobby)).is_not_empty()
+
+
+# FT: FT-ARC-020
+# Definitions are read-only at runtime: a server from the command line (with the
+# hull-scale test flag) and three in-process clients play the encounter, the ship is
+# lost, the crew reset the run and start again, and every definition under content/,
+# held throughout so load() can't hand back a fresh copy, hashes as before.
+func test_session_and_reset_leave_definitions_unchanged() -> void:
+	var defs: Dictionary[String, Resource] = TestDefs.all_defs()
+	var before: Dictionary[String, String] = TestDefs.hashes(defs)
+	var cli: ServerMain = ServerMain.new()
+	var args: PackedStringArray = [
+		"--bind", "127.0.0.1", "--port", "0", "--no-beacon", "--m1-player-hull-scale", "0.5"
+	]
+	assert_bool(cli.parse_args(args)).is_true()
+	var server: NetServer = cli.make_server()
+	add_child(server)
+	h.servers.append(server)
+	assert_object(server.world.defs[ENEMY]).is_same(defs["res://content/ships/m1_raider.tres"])
+	var crew: Array[NetClient] = await h.crew3(server)
+	assert_bool(await h.start(server, crew[0])).is_true()
+	await h.wait(1000)
+	var from: int = h.mark(crew[0])
+	_destroy(server, PLAYER)
+	assert_dict(await h.next_event(crew[0], NetProtocol.EVENT_RUN_OVER, from)).is_not_empty()
+	var old_world: SimWorld = server.world
+	for c: NetClient in crew:
+		c.run_again(PLAYER, true)
+	assert_bool(await h.until(func() -> bool: return server.world != old_world)).is_true()
+	assert_bool(await h.start(server, crew[0])).is_true()
+	await h.wait(500)
+	assert_dict(TestDefs.hashes(defs)).is_equal(before)
+	for path: String in defs:
+		assert_object(load(path)).is_same(defs[path])

@@ -58,8 +58,13 @@ func test_nearest_subsystem_table() -> void:
 			. override_failure_message("point %s" % c[0])
 			. is_equal(String(c[1]))
 		)
-	var tie: ShipDef = def.duplicate(true)
-	tie.subsystems[1].position = Vector3(0, 0, -18)
+	# duplicate(true) shares sub-resources from other files (each subsystem is its own
+	# .tres), so the changed subsystem is copied first: the loaded one stays as it is.
+	var tie: ShipDef = def.duplicate()
+	var subs: Array[SubsystemDef] = def.subsystems.duplicate()
+	subs[1] = subs[1].duplicate()
+	subs[1].position = Vector3(0, 0, -18)
+	tie.subsystems = subs
 	assert_int(DamageSystem.nearest_subsystem(tie, Vector3(0, 0, -18))).is_equal(1)
 
 

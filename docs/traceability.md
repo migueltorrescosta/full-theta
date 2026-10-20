@@ -39,7 +39,7 @@ Tests: 247, manual: 11, pending: 143.
 | FT-ARC-017 | manual | [#13](https://github.com/migueltorrescosta/full-theta/issues/13) |
 | FT-ARC-018 | pending |  |
 | FT-ARC-019 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd` |
-| FT-ARC-020 | tests | `tests/sim/run/test_run_reset.gd`, `tools/tests/test_lint_arch.py` |
+| FT-ARC-020 | tests | `tests/net/test_net_run_reset_l3.gd`, `tests/sim/run/test_run_reset.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-022 | tests | `tests/release/test_release_bundle.gd`, `tools/tests/test_release.py` |
 | FT-NET-001 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_net_server_main.gd` |
