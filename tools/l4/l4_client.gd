@@ -22,7 +22,10 @@ const DEFAULT_TIMEOUT_S: float = 15.0
 const OPS: Array[String] = ["==", "!=", ">=", "<=", "~=", "!~", "=", ">", "<"]
 ## Keys of a step that are parameters, not matchers, in the expect_* steps.
 const PARAMS: Array[String] = ["timeout", "type", "id", "for", "keep"]
-const L4Ui = preload("res://tools/l4/l4_ui.gd")
+## Loaded only with --client ui: a preload would make every bare client parse the whole
+## client UI at start, seconds on two busy cores, which a relaunch within the grace
+## can't spare.
+const L4_UI: String = "res://tools/l4/l4_ui.gd"
 const SECTION_NAMES: Dictionary = {
 	StationViews.Section.STATUS: "status",
 	StationViews.Section.HELM: "helm",
@@ -72,7 +75,8 @@ var _leaving: bool = false
 ## Set by host_spawn and orphan_rejoin; it owns and polls _client.
 var _host: HostSession
 ## The real UI (--client ui), which polls its own client.
-var _ui: L4Ui
+## The L4Ui driver (--client ui), or null.
+var _ui: Variant = null
 var _code: int = -1
 
 
@@ -86,7 +90,7 @@ func _initialize() -> void:
 	if ui_mode:
 		# The UI does more per frame; 60 frames/s is a player's rate (2 loaded cores).
 		Engine.max_fps = 60
-		_ui = L4Ui.new(root, run_dir, client_name, token_path)
+		_ui = load(L4_UI).new(root, run_dir, client_name, token_path)
 	var err: String = _load_intent()
 	var unix_ms: int = int(Time.get_unix_time_from_system() * 1000.0)
 	_line(

@@ -54,6 +54,9 @@ var _blocked: bool = false
 ## functional stations (Captain, Viewer) get one panel of their own id.
 func setup(context: StationContext) -> void:
 	ctx = context
+	# The matcher outlives screens: a screen freed while blocked (the outcome card before a
+	# run reset) left it restricted.
+	ctx.matcher.restrict([])
 	var def: Dictionary = ctx.crew.entry_def()
 	for s: Variant in def.get("stations", []):
 		stations.append(str(s))

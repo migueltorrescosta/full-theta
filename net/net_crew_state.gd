@@ -8,13 +8,19 @@ extends RefCounted
 ## and a site one the world has; unknown and undetected ids get the same refusal, so a
 ## client can't count the ships it doesn't see.
 
-var session: ServerSession
+## The owning session, held weakly: it owns this object, and a strong reference back
+## would leak both (and the world they hold) when the server goes.
+var session: ServerSession:
+	get:
+		return _session.get_ref() as ServerSession
 var marks: CrewMarks = CrewMarks.new()
 var pings: CrewPings = CrewPings.new()
 
+var _session: WeakRef
+
 
 func _init(server_session: ServerSession) -> void:
-	session = server_session
+	_session = weakref(server_session)
 
 
 ## The current alert and marks of the session's ship, after a (re)join or a pick.

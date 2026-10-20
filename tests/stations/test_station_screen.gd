@@ -291,6 +291,24 @@ func test_overlay_and_blockers_stop_the_input_feed() -> void:
 	assert_array(p.got).is_equal(["fire", "fire/up", "fire"])
 
 
+# FT: FT-M1-012
+# A screen freed while blocked (the outcome card just before a run reset) must not leave
+# the shared matcher restricted for the next run's screen.
+func test_a_new_screen_starts_unblocked() -> void:
+	var s: StationScreen = _screen("weapons")
+	var card: Control = auto_free(Control.new())
+	s.blockers = [card]
+	s.feed(_trigger(0.0))
+	var ctx: StationContext = s.ctx
+	remove_child(s)
+	var s2: StationScreen = auto_free(StationScreen.new())
+	s2.panel_factory = func(_st: String) -> StationPanel: return RecordingPanel.new()
+	s2.setup(ctx)
+	add_child(s2)
+	s2.feed(_key(KEY_T, true))
+	assert_array(s2.ctx.crew.selection.keys()).is_not_empty()
+
+
 # FT: FT-STN-009, FT-STN-014
 # A select that found an item eats the click: a toggle bound to the same button doesn't
 # flip (D176).
