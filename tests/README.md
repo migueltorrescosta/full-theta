@@ -21,7 +21,7 @@ Definitions are read-only (FT-ARC-020), in tests too: `load()` hands every test 
 
 ## Golden replays
 
-`tests/golden/` holds the golden replay of the M1 encounter (FT-TST-009): `m1_encounter.cmdlog` is a `CommandLog` text (`sim/core/command_log.gd`) and `m1_encounter.expected.cfg` the final tick, state hash, platform and readable values it must reach. `tests/sim/replay/test_golden_replay.gd` replays the log and compares; it never writes in a normal run. After an intended sim change, regenerate both files and commit them with that change:
+`tests/golden/` holds the golden replay of the M1 encounter (FT-TST-009): `m1_encounter.cmdlog` is a `CommandLog` text (`sim/core/command_log.gd`) and `m1_encounter.expected.cfg` the final tick, state hash, platform and readable values it must reach. `tests/sim/replay/test_golden_replay.gd` replays the log and compares; it never writes in a normal run. The state hash must match exactly only on the platform the golden was recorded on (same engine version, OS, CPU architecture and, on Linux, glibc version, since libm results differ between glibc versions); elsewhere the readable values are compared within tolerance. After an intended sim change, regenerate both files and commit them with that change:
 
 ```bash
 FT_UPDATE_GOLDEN=1 /path/to/godot --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd \

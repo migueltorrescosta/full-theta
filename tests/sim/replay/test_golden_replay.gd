@@ -30,12 +30,21 @@ static func readable(world: SimWorld) -> Dictionary:
 	return out
 
 
-## Engine version, OS and CPU architecture: the hash must match exactly only here.
+## Engine version, OS, CPU architecture and, on Linux, the C library version: the hash
+## must match exactly only here. libm results for transcendental functions differ
+## between glibc versions, so another glibc counts as another platform.
 static func platform() -> String:
-	return (
+	var out: String = (
 		"%s %s %s"
 		% [Engine.get_version_info()["string"], OS.get_name(), Engine.get_architecture_name()]
 	)
+	if OS.get_name() == "Linux":
+		var lines: Array = []
+		var libc: String = ""
+		if OS.execute("getconf", ["GNU_LIBC_VERSION"], lines) == 0 and not lines.is_empty():
+			libc = String(lines[0]).strip_edges()
+		out += " " + (libc if not libc.is_empty() else "unknown-libc")
+	return out
 
 
 # FT: FT-TST-009, FT-ARC-008
