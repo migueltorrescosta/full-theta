@@ -280,10 +280,12 @@ func test_header_end_resumes_from_the_scanned_offset() -> void:
 
 # FT: FT-NET-039
 # A peer that sends 8 KiB without ending its head (letters, then line feeds, the slow
-# case of a byte loop) keeps each poll within the 400 us budget: the search is native
-# and each byte is searched once. Timed as the median poll, and a whole 8 KiB search
-# as the mean of 20, so a preempted poll on a loaded machine doesn't fail it.
-func test_headerless_8k_peer_stays_within_the_budget() -> void:
+# case of a byte loop) costs each poll only the bytes that arrived since the last: the
+# search resumes where it stopped, so the whole 8 KiB is searched once in total, plus
+# the 3-byte overlap per poll, never once per chunk. Counted, not timed, so a loaded
+# host can't fail it; the 400 us budget itself is measured by
+# tools/static_server_profile.gd (a manual check).
+func test_headerless_8k_peer_is_searched_once() -> void:
 	for fill: int in [65, 10]:
 		_server = StaticServer.new(_dir)
 		assert_int(_server.listen(0, "127.0.0.1")).is_equal(OK)
@@ -292,31 +294,29 @@ func test_headerless_8k_peer_stays_within_the_budget() -> void:
 		var junk: PackedByteArray = PackedByteArray()
 		junk.resize(1024)
 		junk.fill(fill)
-		var times: Array[int] = []
+		var polls: int = 0
 		var deadline: int = Time.get_ticks_msec() + 3000
 		var chunks: int = 0
-		while Time.get_ticks_msec() < deadline and chunks < 8:
+		while Time.get_ticks_msec() < deadline and _received() < 8 * 1024:
 			tcp.poll()
-			if tcp.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+			if tcp.get_status() == StreamPeerTCP.STATUS_CONNECTED and chunks < 8:
 				tcp.put_data(junk)
 				chunks += 1
 			OS.delay_usec(2000)
-			var t0: int = Time.get_ticks_usec()
 			_server.poll(StaticServer.DEFAULT_BUDGET_US)
-			times.append(Time.get_ticks_usec() - t0)
+			polls += 1
 		assert_int(chunks).is_equal(8)
-		# The whole 8 KiB at once, one more search.
-		var whole: PackedByteArray = PackedByteArray()
-		whole.resize(MAX_PROBE)
-		whole.fill(fill)
-		var t1: int = Time.get_ticks_usec()
-		for i: int in 20:
-			StaticServer._header_end(whole)
-		var per_search: int = (Time.get_ticks_usec() - t1) / 20
-		times.sort()
-		assert_int(times[times.size() / 2]).is_less(StaticServer.DEFAULT_BUDGET_US)
-		assert_int(per_search).is_less(StaticServer.DEFAULT_BUDGET_US)
+		assert_int(_received()).is_equal(8 * 1024)
+		# Every byte searched (at least once) ...
+		assert_int(_server.bytes_scanned).is_greater_equal(8 * 1024)
+		# ... and only once: a rescan per chunk would search 1 + 2 + ... + 8 KiB.
+		assert_int(_server.bytes_scanned).is_less_equal(8 * 1024 + 3 * polls)
 		assert_int(_server.open_connections()).is_equal(1)
 		assert_int(_server.requests).is_equal(0)
 		tcp.disconnect_from_host()
 		_server.stop()
+
+
+## Bytes the server holds from its one connection (0 before it has taken it).
+func _received() -> int:
+	return _server._conns[0].inbuf.size() if _server.open_connections() == 1 else 0

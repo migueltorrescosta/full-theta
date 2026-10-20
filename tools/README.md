@@ -10,6 +10,10 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks. 
 
 `tools/gate.sh l4` runs `tools/l4/run.sh`: a server and three headless client processes pinned to 2 cores (`taskset -c 0,1`), driven by intent files, with kills and relaunches (FT-TST-011, FT-TST-014). `tools/l4/repeat.sh N` runs it N times and writes `build/l4/repeat-summary.txt`. The scenarios, the intent format and the logs are in `tools/l4/README.md`.
 
+## HTTP budget
+
+`tools/static_server_profile.gd` times the search for a request head's end over a whole 8 KiB headerless request, the most one `StaticServer` poll searches, against the 400 µs per-frame budget (FT-NET-039, D108). It is wall-clock, so a manual check on an idle host, not a gate test: the L3 test counts the bytes searched instead. Run `taskset -c 0,1 godot --headless --path . -s res://tools/static_server_profile.gd` and record the load average with the result.
+
 ## Voice latency
 
 `tools/voice_latency/` measures FT-AUD-015 (free-text event to audible, p95 under 1 s) and the Start time of FT-AUD-018 on the promoted voice code, by the S7b method (`docs/spikes/S7b.md`). It is a measuring tool, not a gate tier.

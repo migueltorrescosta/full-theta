@@ -56,6 +56,10 @@ var gzip_responses: int = 0
 var not_modified: int = 0
 var errors: int = 0
 var bytes_out: int = 0
+## Bytes searched for the end of a request head, over every connection. A search
+## resumes 3 bytes before where the last one stopped, so a head arriving in pieces
+## costs its size plus 3 bytes a poll, never a rescan (FT-NET-039).
+var bytes_scanned: int = 0
 ## When true, each response appends "<status> <path> <body bytes>" to `log`.
 var keep_log: bool = false
 var log: Array[String] = []
@@ -139,6 +143,7 @@ func _service(c: Conn, now_us: int) -> bool:
 	if c.inbuf.size() > MAX_REQUEST:
 		return false
 	if not c.writing:
+		bytes_scanned += c.inbuf.size() - c.scanned
 		var end: int = _header_end(c.inbuf, c.scanned)
 		if end < 0:
 			c.scanned = maxi(0, c.inbuf.size() - 3)
