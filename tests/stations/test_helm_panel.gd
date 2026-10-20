@@ -143,6 +143,16 @@ func test_mouse_motion_steers_only_while_the_pointer_is_captured() -> void:
 	assert_bool(_ctx().matcher.mouse_stick.value.x > 0.0).is_true()
 
 
+# FT: FT-HLM-001, FT-M1-012
+# The outcome card (the run is over, D178) frees the pointer, like a pause (D183).
+func test_the_end_of_the_run_frees_the_pointer() -> void:
+	_frame()
+	assert_bool(_panel.steering()).is_true()
+	_ctx().crew.run_over[StationFixture.SHIP] = {"ship": StationFixture.SHIP, "outcome": "win"}
+	_frame()
+	assert_bool(_panel.steering()).is_false()
+
+
 # FT: FT-STN-017
 func test_comfort_locks_the_cockpit_roll_and_narrows_the_view() -> void:
 	var s: ClientSettings = _ctx().settings

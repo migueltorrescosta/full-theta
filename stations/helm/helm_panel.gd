@@ -44,8 +44,8 @@ var ring: ShieldRing
 
 var _container: SubViewportContainer
 var _viewport: SubViewport
-## The pointer is captured for steering (KB/M) until the menu, a pause or a focus loss
-## frees it; a click in the view captures it again.
+## The pointer is captured for steering (KB/M) until the menu, a pause, the end of
+## the run or a focus loss frees it; a click in the view captures it again.
 var _captured: bool = true
 var _sent_input: Dictionary = _neutral()
 var _sent_input_ms: int = -INPUT_MS
@@ -99,7 +99,8 @@ func _notification(what: int) -> void:
 func _process(_delta: float) -> void:
 	if ctx == null:
 		return
-	if ctx.crew.paused.has(ctx.crew.ship):
+	# A pause or the end of the run (the outcome card, D178) frees the pointer.
+	if ctx.crew.paused.has(ctx.crew.ship) or ctx.crew.run_over.has(ctx.crew.ship):
 		_captured = false
 	_apply_mouse_mode()
 	sync_target()

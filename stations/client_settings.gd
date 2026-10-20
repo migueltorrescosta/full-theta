@@ -43,22 +43,21 @@ func load_file() -> Error:
 		return OK
 	if err != OK:
 		return err
-	player_name = str(cfg.get_value("player", "name", ""))
-	last_address = str(cfg.get_value("player", "last_address", ""))
-	set_ui_scale(float(cfg.get_value("ui", "scale", 1.0)))
-	invert_pitch = bool(cfg.get_value("input", "invert_pitch", false))
-	var b: Variant = cfg.get_value("input", "bindings", {})
-	bindings.from_dict(b if b is Dictionary else {})
-	var seen: Variant = cfg.get_value("ui", "tooltips_seen", [])
+	player_name = _value(cfg, "player", "name", "")
+	last_address = _value(cfg, "player", "last_address", "")
+	# A non-finite or out-of-range scale (a broken file) is 100 %.
+	var scale: float = _value(cfg, "ui", "scale", 1.0)
+	set_ui_scale(scale if scale >= UI_SCALE_MIN and scale <= UI_SCALE_MAX else 1.0)
+	invert_pitch = _value(cfg, "input", "invert_pitch", false)
+	bindings.from_dict(_value(cfg, "input", "bindings", {}))
 	tooltips_seen.clear()
-	for s: Variant in seen if seen is Array else []:
+	for s: Variant in _value(cfg, "ui", "tooltips_seen", []):
 		tooltips_seen[str(s)] = true
-	comfort = bool(cfg.get_value("comfort", "on", false))
-	var lock: String = str(cfg.get_value("comfort", "roll_lock", "deck"))
+	comfort = _value(cfg, "comfort", "on", false)
+	var lock: String = _value(cfg, "comfort", "roll_lock", "deck")
 	roll_lock = lock if lock in ROLL_LOCKS else "deck"
-	reduced_fov = bool(cfg.get_value("comfort", "reduced_fov", false))
-	var q: Variant = cfg.get_value("comfort", "reference_plane", Quaternion.IDENTITY)
-	reference_plane = q if q is Quaternion else Quaternion.IDENTITY
+	reduced_fov = _value(cfg, "comfort", "reduced_fov", false)
+	reference_plane = _value(cfg, "comfort", "reference_plane", Quaternion.IDENTITY)
 	return OK
 
 
@@ -75,6 +74,12 @@ func save() -> Error:
 	cfg.set_value("comfort", "reduced_fov", reduced_fov)
 	cfg.set_value("comfort", "reference_plane", reference_plane)
 	return cfg.save(path)
+
+
+## The file's value when it has the default's type, else the default.
+static func _value(cfg: ConfigFile, section: String, key: String, default: Variant) -> Variant:
+	var v: Variant = cfg.get_value(section, key, default)
+	return v if typeof(v) == typeof(default) else default
 
 
 ## 75-150 % in 5 % steps (FT-STN-013).

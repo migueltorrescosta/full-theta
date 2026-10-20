@@ -11,8 +11,9 @@ class RecordingPanel:
 	var chips: bool = false
 	var requests: int = 0
 
+	## Ids, releases suffixed "/up".
 	func handle_intent(ev: Dictionary) -> bool:
-		got.append(ev["id"])
+		got.append(ev["id"] if ev.get("pressed", true) else ev["id"] + "/up")
 		return true
 
 	func item_at(_pos: Vector2) -> Dictionary:
@@ -218,3 +219,91 @@ func test_device_events_route_through_the_binding_table() -> void:
 	s.feed(_key(KEY_ALT, true, true))
 	s.feed(_key(KEY_A, true, true))
 	assert_int(_sent(s, "set_alert").size()).is_equal(1)
+
+
+func _trigger(value: float) -> InputEventJoypadMotion:
+	var m: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	m.axis = JOY_AXIS_TRIGGER_RIGHT
+	m.axis_value = value
+	return m
+
+
+# FT: FT-JNT-001, FT-STN-014
+# F1 while Weapons holds fire: the fire ends on Weapons, it doesn't stick.
+func test_a_focus_switch_releases_a_held_fire() -> void:
+	var s: StationScreen = _screen("tactical")
+	var weapons: RecordingPanel = s.panels[1]
+	s.focus(1)
+	s.feed(_trigger(1.0))
+	assert_array(weapons.got).is_equal(["fire"])
+	s.feed(_key(KEY_F1, true))
+	assert_str(s.focused_station()).is_equal("helm")
+	assert_array(weapons.got).is_equal(["fire", "fire/up"])
+	assert_bool(s.ctx.matcher.is_held("fire")).is_false()
+
+
+# FT: FT-STN-014
+# Losing the window or a pad coming or going releases what was held.
+func test_focus_loss_and_pad_changes_release_held_inputs() -> void:
+	var s: StationScreen = _screen("weapons")
+	var p: RecordingPanel = s.panels[0]
+	for why: Callable in [
+		func() -> void: s._notification(NOTIFICATION_APPLICATION_FOCUS_OUT),
+		func() -> void: s._notification(Window.NOTIFICATION_WM_WINDOW_FOCUS_OUT),
+		func() -> void: Input.joy_connection_changed.emit(0, false),
+	]:
+		p.got.clear()
+		s.feed(_trigger(1.0))
+		why.call()
+		assert_array(p.got).is_equal(["fire", "fire/up"])
+		# The pad's raw state is gone too: the trigger must come up and press again.
+		s.feed(_trigger(1.0))
+		assert_array(p.got).is_equal(["fire", "fire/up", "fire"])
+		s.feed(_trigger(0.0))
+
+
+# FT: FT-STN-011, FT-M1-012
+# The controls overlay, Settings or the outcome card take the input: held intents end
+# when one opens, and only Menu and the overlay key reach the screen meanwhile.
+func test_overlay_and_blockers_stop_the_input_feed() -> void:
+	var s: StationScreen = _screen("weapons")
+	var p: RecordingPanel = s.panels[0]
+	s.feed(_trigger(1.0))
+	s.dispatch(_ev("overlay", "kbm", s))
+	assert_array(p.got).is_equal(["fire", "fire/up"])
+	s.feed(_trigger(0.0))
+	s.feed(_trigger(1.0))
+	s.feed(_key(KEY_T, true))
+	assert_array(p.got).is_equal(["fire", "fire/up"])
+	assert_array(s.ctx.crew.selection.keys()).is_empty()
+	s.dispatch(_ev("overlay", "kbm", s))
+	var card: Control = auto_free(Control.new())
+	s.blockers = [card]
+	var menus: Array = []
+	s.menu_requested.connect(func() -> void: menus.append(true))
+	s.feed(_key(KEY_T, false))
+	s.feed(_key(KEY_ESCAPE, true))
+	assert_array(menus).is_equal([true])
+	s.feed(_key(KEY_ESCAPE, false))
+	s.feed(_trigger(0.0))
+	card.visible = false
+	s.feed(_trigger(1.0))
+	assert_array(p.got).is_equal(["fire", "fire/up", "fire"])
+
+
+# FT: FT-STN-009, FT-STN-014
+# A select that found an item eats the click: a toggle bound to the same button doesn't
+# flip (D176).
+func test_a_consumed_select_cancels_the_toggle_flip() -> void:
+	var s: StationScreen = _screen("weapons")
+	var p: RecordingPanel = s.panels[0]
+	s.ctx.settings.bindings.rebind("fire", "pad", PackedStringArray(["A"]))
+	s.ctx.settings.bindings.set_toggle("fire", true)
+	p.item = {"kind": "contact", "id": StationFixture.H2}
+	var a: InputEventJoypadButton = InputEventJoypadButton.new()
+	a.button_index = JOY_BUTTON_A
+	a.pressed = true
+	s.feed(a)
+	assert_dict(s.ctx.crew.selection).is_equal({"kind": "contact", "id": StationFixture.H2})
+	assert_array(p.got).is_empty()
+	assert_bool(s.ctx.matcher.is_held("fire")).is_false()

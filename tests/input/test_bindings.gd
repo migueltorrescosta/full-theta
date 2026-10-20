@@ -58,3 +58,25 @@ func test_unknown_ids_devices_and_non_hold_toggles_are_dropped() -> void:
 	assert_array(b.overrides.keys()).is_equal(["ping"])
 	assert_array(b.overrides["ping"].keys()).is_equal(["kbm"])
 	assert_array(b.toggles.keys()).is_equal(["approach"])
+
+
+# FT: FT-STN-007
+# A hand-edited file with values of the wrong type loads what it can, without errors.
+func test_wrongly_typed_data_is_dropped() -> void:
+	var b: Bindings = Bindings.new()
+	b.from_dict({"overrides": ["ping"], "toggles": 3})
+	assert_dict(b.overrides).is_empty()
+	assert_dict(b.toggles).is_empty()
+	(
+		b
+		. from_dict(
+			{
+				"overrides":
+				{"ping": {"kbm": 5}, "mark": {"kbm": ["P", 3]}, "claim": {"pad": ["A"]}},
+				"toggles": "approach",
+			}
+		)
+	)
+	assert_array(b.overrides.keys()).is_equal(["claim"])
+	assert_array(Array(b.bindings("ping", "kbm"))).is_equal(["MMB"])
+	assert_dict(b.toggles).is_empty()

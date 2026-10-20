@@ -132,6 +132,7 @@ func _on_crew_changed(what: StringName) -> void:
 	else:
 		screen = StationScreen.new()
 		screen.setup(ctx)
+		screen.blockers = [settings_screen, outcome_card]
 		screen.menu_requested.connect(_open_settings)
 		_layer.add_child(screen)
 

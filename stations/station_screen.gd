@@ -16,6 +16,9 @@ extends Control
 ## Menu (Esc / Menu): the shell opens Settings.
 signal menu_requested
 
+## Intents that still reach the screen while it is blocked: they close what blocks it.
+const UNBLOCKED: Array[String] = ["menu", "overlay"]
+
 ## Panel column width and radar size (before UI scale).
 const SIDE_WIDTH: float = 340.0
 const RADAR_HEIGHT: float = 300.0
@@ -38,10 +41,13 @@ var alerts: StationAlerts
 var flash: AlertFlash
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
 var panel_factory: Callable = StationRegistry.make
+## Controls of the shell that take the input while visible (Settings, the outcome card).
+var blockers: Array[Control] = []
 
 var _main: Control
 var _dock: VBoxContainer
 var _side: VBoxContainer
+var _blocked: bool = false
 
 
 ## Builds the screen for the current pick (ctx.crew.entry_def()). Entries without
@@ -65,6 +71,7 @@ func setup(context: StationContext) -> void:
 	add_child(alerts)
 	alerts.setup(ctx, stations, toasts, flash)
 	ctx.settings.bindings.changed.connect(_refresh_overlay)
+	Input.joy_connection_changed.connect(_on_joy_changed)
 	focus(0)
 
 
@@ -81,6 +88,8 @@ func focused_panel() -> StationPanel:
 func focus(i: int) -> void:
 	if i < 0 or i >= panels.size():
 		return
+	# Held intents end on the panels that had them (a held fire doesn't stick).
+	release_all()
 	focus_index = i
 	for j: int in panels.size():
 		var p: StationPanel = panels[j]
@@ -94,7 +103,6 @@ func focus(i: int) -> void:
 		else:
 			p.custom_minimum_size = Vector2(0, DOCK_MIN_HEIGHT)
 		p.set_mode(j == i, j != i)
-	ctx.matcher.release_all()
 	ctx.matcher.set_context(stations, focused_station())
 	radar.orbitable = focused_panel().radar_orbitable()
 	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
@@ -116,6 +124,7 @@ func dispatch(ev: Dictionary) -> bool:
 ## that found an item under the pointer consumes the batch, so the same click doesn't
 ## also fire a panel binding (LMB is select and Weapons fire, provisional).
 func feed(event: InputEvent) -> void:
+	_update_block()
 	if event is InputEventMouseMotion and not focused_panel().mouse_steers():
 		return
 	var batch: Array[Dictionary] = ctx.matcher.feed(event, ctx.now_ms())
@@ -129,6 +138,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_block()
 	_dispatch_batch(ctx.matcher.update(ctx.now_ms(), delta))
 	var now: int = ctx.now_ms()
 	top_bar.can_set_alert = ctx.crew.is_crew()
@@ -145,10 +155,49 @@ func _process(delta: float) -> void:
 	flash.update(now)
 
 
+## Releases every held and toggled intent where it was held (focus loss, a pad coming
+## or going, a popup).
+func release_all() -> void:
+	_dispatch_batch(ctx.matcher.release_all())
+
+
+## A pad came or went: forget its sticks and buttons.
+func _on_joy_changed(_pad: int, _connected: bool) -> void:
+	release_all()
+
+
+func _notification(what: int) -> void:
+	if (
+		ctx != null
+		and what in [NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_FOCUS_OUT]
+	):
+		release_all()
+
+
+## True while Settings, the outcome card, the controls overlay or the alert picker is up.
+func blocked() -> bool:
+	return (
+		overlay.visible
+		or top_bar.picker.visible
+		or blockers.any(func(c: Control) -> bool: return c.visible)
+	)
+
+
+## On blocking: release everything and keep only UNBLOCKED active; on unblocking, all.
+func _update_block() -> void:
+	if blocked() == _blocked:
+		return
+	_blocked = not _blocked
+	release_all()
+	ctx.matcher.restrict(UNBLOCKED if _blocked else [])
+
+
 func _dispatch_batch(batch: Array[Dictionary]) -> void:
 	var consumed: bool = false
 	for ev: Dictionary in batch:
 		if consumed and ev.get("target", "") != "screen":
+			# The press never reached its panel: undo its hold or toggle flip.
+			ctx.matcher.cancel(ev["id"])
 			continue
 		if dispatch(ev) and ev["id"] == "select":
 			consumed = true
@@ -187,8 +236,10 @@ func _common(ev: Dictionary) -> bool:
 		"overlay":
 			overlay.visible = not overlay.visible
 			_refresh_overlay()
+			_update_block()
 		"menu":
 			menu_requested.emit()
+			_update_block()
 		_:
 			handled = _live(id)
 	return handled

@@ -131,14 +131,14 @@ Tests: 243, manual: 11, pending: 147.
 | FT-STN-004 | tests | `tests/stations/test_station_alerts.gd` |
 | FT-STN-005 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_axes.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-STN-006 | tests | `tests/presentation/test_top_bar.gd`, `tools/tests/test_check_palette.py` |
-| FT-STN-007 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/stations/test_client_settings.gd` |
+| FT-STN-007 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd` |
 | FT-STN-008 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_viewer_panel.gd` |
-| FT-STN-009 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_binding_text.gd`, `tests/input/test_input_matcher.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
+| FT-STN-009 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_binding_text.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-STN-010 | pending |  |
-| FT-STN-011 | tests | `tests/presentation/test_controls_overlay.gd`, `tests/stations/test_station_screen.gd` |
+| FT-STN-011 | tests | `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_controls_overlay.gd`, `tests/stations/test_station_screen.gd` |
 | FT-STN-012 | tests | `tests/presentation/test_first_run_tooltip.gd`, `tests/stations/test_client_settings.gd` |
 | FT-STN-013 | tests | `tests/stations/test_client_settings.gd` |
-| FT-STN-014 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/stations/test_client_settings.gd` |
+| FT-STN-014 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_station_screen.gd` |
 | FT-STN-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-STN-016 | pending |  |
 | FT-STN-017 | tests | `tests/stations/test_client_settings.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_viewer_panel.gd`, `tests/stations/test_weapons_panel.gd` |
@@ -223,7 +223,7 @@ Tests: 243, manual: 11, pending: 147.
 | FT-MSC-004 | tests | `tests/net/test_net_viewer_l3.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-MSC-005 | pending |  |
 | FT-MSC-006 | pending |  |
-| FT-JNT-001 | tests | `tests/input/test_binding_table.gd`, `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd` |
+| FT-JNT-001 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd` |
 | FT-JNT-002 | tests | `tests/input/test_binding_table.gd` |
 | FT-JNT-003 | tests | `tests/input/test_binding_table.gd`, `tests/stations/test_joint_views.gd` |
 | FT-JNT-004 | pending |  |
@@ -367,7 +367,7 @@ Tests: 243, manual: 11, pending: 147.
 | FT-M1-009 | tests | `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_repair.gd` |
 | FT-M1-010 | tests | `tests/pairs/test_p1_engineering_helm.gd` |
 | FT-M1-011 | tests | `tests/stations/test_station_alerts.gd` |
-| FT-M1-012 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_run_reset_l3.gd`, `tests/net/test_net_server_main.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/test_outcome_card.gd` |
+| FT-M1-012 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_run_reset_l3.gd`, `tests/net/test_net_server_main.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_outcome_card.gd`, `tests/stations/test_station_screen.gd` |
 | FT-M1-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_net_reconnect_l3.gd` |
 | FT-M1-014 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/pvp/test_pvp.gd` |
 | FT-M1-015 | tests | `tests/net/test_host_launcher.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_client_shell_l3.gd` |

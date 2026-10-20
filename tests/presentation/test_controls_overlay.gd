@@ -50,5 +50,9 @@ func test_labels_are_translated() -> void:
 	var overlay: ControlsOverlay = auto_free(ControlsOverlay.new())
 	overlay.build(Bindings.new(), ["helm"], IntentTable.KBM)
 	assert_str(_row(overlay, "face")["label"]).is_equal("Face selection")
+	# Every label is the English text of its key in the string table, not the key.
+	var table: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(I18n.STRINGS))
 	for r: Dictionary in overlay.rows():
-		assert_str(r["label"]).is_equal(tr(IntentTable.label_key(r["id"])))
+		var key: String = IntentTable.label_key(r["id"])
+		assert_str(r["label"]).is_not_equal(key)
+		assert_str(r["label"]).is_equal(table["strings"][key]["en"])

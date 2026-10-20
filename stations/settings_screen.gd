@@ -13,9 +13,20 @@ signal scale_changed
 ## "Set reference plane to my current deck": the shell stores the ship's orientation.
 signal reference_plane_requested
 
+## Intents that can't be left unbound: the way back to Settings, and the way to say no.
+const ALWAYS_BOUND: Array[String] = ["menu", "decline"]
+const MODIFIER_KEYS: Array[Key] = [KEY_SHIFT, KEY_ALT, KEY_CTRL]
+## A trigger or stick past this deflection is captured.
+const CAPTURE_DEFLECT: float = 0.5
+
 var settings: ClientSettings
 ## Waiting for an input to bind: [intent id, device], or [].
 var capturing: Array = []
+## Why the last captured input was refused ("" when it wasn't).
+var warning: Label
+
+## Modifier keys and pad buttons held during a capture, in press order.
+var _held: Array[String] = []
 
 var _rows: VBoxContainer
 var _scale_label: Label
@@ -37,10 +48,14 @@ func setup(p_settings: ClientSettings, in_session: bool) -> void:
 		_add_button(top, "Leave", tr("settings.leave"), func() -> void: leave_requested.emit())
 	_build_general(col)
 	_build_comfort(col)
+	warning = _label("")
+	warning.name = "Warning"
+	warning.add_theme_color_override("font_color", Palette.color("warn"))
 	var head: HBoxContainer = HBoxContainer.new()
 	col.add_child(head)
 	head.add_child(_label(tr("settings.bindings"), 22))
 	_add_button(head, "ResetBindings", tr("settings.reset_bindings"), _reset_bindings)
+	col.add_child(warning)
 	_rows = VBoxContainer.new()
 	col.add_child(_rows)
 	_build_bindings()
@@ -66,68 +81,147 @@ func set_ui_scale(value: float) -> void:
 ## Starts capturing the next input as the binding of `id` on `device`.
 func start_capture(id: String, device: String) -> void:
 	capturing = [id, device]
+	_held.clear()
+	warning.text = ""
 
 
+## Esc (or the pad's Menu) closes Settings. While capturing: a key, mouse button, pad
+## button, trigger or stick becomes the binding; a modifier key or a pad button held
+## first makes a chord, or binds alone when released alone; Esc cancels and Backspace
+## unbinds, unless that key is the intent's default (Menu's Esc, Decline's Backspace).
 func _input(event: InputEvent) -> void:
-	if capturing.is_empty() or not event.is_pressed() or event.is_echo():
+	if not visible or event.is_echo():
+		return
+	if capturing.is_empty():
+		if event.is_pressed() and _is_back(event):
+			get_viewport().set_input_as_handled()
+			close()
 		return
 	get_viewport().set_input_as_handled()
-	# Escape cancels; Backspace unbinds (provisional).
-	if event is InputEventKey and (event as InputEventKey).keycode in [KEY_ESCAPE, KEY_BACKSPACE]:
-		if (event as InputEventKey).keycode == KEY_BACKSPACE:
-			settings.bindings.rebind(capturing[0], capturing[1], PackedStringArray())
-		capturing = []
-		_build_bindings()
+	var id: String = capturing[0]
+	var device: String = capturing[1]
+	var token: String = binding_from_event(event, device, IntentTable.row(id)["kind"])
+	var pressed: bool = _pressed(event)
+	var key: InputEventKey = event as InputEventKey
+	if key != null and pressed and token not in IntentTable.defaults(id, device):
+		if _code(key) == KEY_ESCAPE:
+			capturing = []
+			_build_bindings()
+			return
+		if _code(key) == KEY_BACKSPACE:
+			_bind([])
+			return
+	if token == "":
 		return
-	var b: String = binding_from_event(event, capturing[1])
-	if b == "":
+	if event is InputEventJoypadMotion and token not in ["LT", "RT"]:
+		# A stick binds at once, after any pad buttons held.
+		_bind(["+".join(_held + [token])])
+	elif device == IntentTable.KBM and (key == null or _code(key) not in MODIFIER_KEYS):
+		if pressed:
+			_bind([token])
+	elif pressed and token not in _held:
+		if device == IntentTable.PAD and not _held.is_empty():
+			_bind(["+".join(_held + [token])])
+		else:
+			_held.append(token)
+	elif not pressed and token in _held:
+		_bind(["+".join(_held)])
+
+
+## The binding string (input/README.md grammar) of one event on `device`, or "": a key
+## (physical, with Shift, Alt and Ctrl held) or mouse button, a pad button, a trigger
+## or a stick past CAPTURE_DEFLECT (an axis intent, kind AXIS, gets the signed axis,
+## "-LS_X"; others the stick, "LS"). Releases give the same name.
+static func binding_from_event(event: InputEvent, device: String, kind: String = "") -> String:
+	if device == IntentTable.KBM and event is InputEventKey:
+		var k: InputEventKey = event
+		if _code(k) == KEY_META:
+			return ""
+		var name: String = OS.get_keycode_string(_code(k))
+		if _code(k) in MODIFIER_KEYS:
+			return name
+		return _mods(k) + name
+	if device == IntentTable.KBM and event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		var mouse: Variant = InputMatcher.MOUSE_NAMES.find_key(mb.button_index)
+		return "" if mouse == null else _mods(mb) + str(mouse)
+	if device == IntentTable.PAD and event is InputEventJoypadButton:
+		var pad: Variant = InputMatcher.PAD_BUTTONS.find_key(event.button_index)
+		return "" if pad == null else str(pad)
+	if device == IntentTable.PAD and event is InputEventJoypadMotion:
+		var m: InputEventJoypadMotion = event
+		var axis: Variant = InputMatcher.PAD_AXES.find_key(m.axis)
+		if axis == null:
+			return ""
+		var a: String = str(axis)
+		if a in ["LT", "RT"]:
+			return a
+		if absf(m.axis_value) < CAPTURE_DEFLECT:
+			return ""
+		if kind == IntentTable.AXIS:
+			return ("-" if m.axis_value < 0.0 else "") + a
+		return a.left(2)
+	return ""
+
+
+## Pressed, with a trigger or stick pressed past CAPTURE_DEFLECT.
+static func _pressed(event: InputEvent) -> bool:
+	if event is InputEventJoypadMotion:
+		return absf((event as InputEventJoypadMotion).axis_value) >= CAPTURE_DEFLECT
+	return event.is_pressed()
+
+
+static func _code(k: InputEventKey) -> Key:
+	return k.physical_keycode if k.physical_keycode != KEY_NONE else k.keycode
+
+
+static func _mods(ev: InputEventWithModifiers) -> String:
+	return (
+		("Shift+" if ev.shift_pressed else "")
+		+ ("Alt+" if ev.alt_pressed else "")
+		+ ("Ctrl+" if ev.ctrl_pressed else "")
+	)
+
+
+static func _is_back(event: InputEvent) -> bool:
+	if event is InputEventKey:
+		return _code(event as InputEventKey) == KEY_ESCAPE
+	return event is InputEventJoypadButton and event.button_index == JOY_BUTTON_START
+
+
+## Binds `list` to the intent being captured, unless that collides with a common or
+## always-live binding (refused with a warning, capture goes on) or leaves Menu or
+## Decline unbound.
+func _bind(list: Array[String]) -> void:
+	var id: String = capturing[0]
+	var device: String = capturing[1]
+	if list.is_empty() and id in ALWAYS_BOUND:
+		warning.text = tr("settings.must_bind")
 		return
-	settings.bindings.rebind(capturing[0], capturing[1], PackedStringArray([b]))
+	for b: String in list:
+		var other: String = collision(settings.bindings, id, device, b)
+		if other != "":
+			warning.text = tr("settings.taken").format({"intent": tr(IntentTable.label_key(other))})
+			_held.clear()
+			return
+	settings.bindings.rebind(id, device, PackedStringArray(list))
 	capturing = []
 	_build_bindings()
 
 
-## The binding string (input/README.md grammar) of a pressed event on `device`, or "".
-static func binding_from_event(event: InputEvent, device: String) -> String:
-	if device == IntentTable.KBM and event is InputEventKey:
-		var k: InputEventKey = event
-		if k.keycode in [KEY_SHIFT, KEY_ALT, KEY_CTRL, KEY_META]:
-			return ""
-		var mods: String = (
-			("Shift+" if k.shift_pressed else "")
-			+ ("Alt+" if k.alt_pressed else "")
-			+ ("Ctrl+" if k.ctrl_pressed else "")
-		)
-		return mods + OS.get_keycode_string(k.keycode)
-	if device == IntentTable.KBM and event is InputEventMouseButton:
-		var names: Dictionary = {
-			MOUSE_BUTTON_LEFT: "LMB",
-			MOUSE_BUTTON_RIGHT: "RMB",
-			MOUSE_BUTTON_MIDDLE: "MMB",
-			MOUSE_BUTTON_WHEEL_UP: "WheelUp",
-			MOUSE_BUTTON_WHEEL_DOWN: "WheelDown",
-		}
-		var mb: InputEventMouseButton = event
-		var mods: String = "Shift+" if mb.shift_pressed else ""
-		return mods + str(names.get(mb.button_index, "")) if names.has(mb.button_index) else ""
-	if device == IntentTable.PAD and event is InputEventJoypadButton:
-		var pads: Dictionary = {
-			JOY_BUTTON_A: "A",
-			JOY_BUTTON_B: "B",
-			JOY_BUTTON_X: "X",
-			JOY_BUTTON_Y: "Y",
-			JOY_BUTTON_LEFT_SHOULDER: "LB",
-			JOY_BUTTON_RIGHT_SHOULDER: "RB",
-			JOY_BUTTON_LEFT_STICK: "L3",
-			JOY_BUTTON_RIGHT_STICK: "R3",
-			JOY_BUTTON_BACK: "View",
-			JOY_BUTTON_START: "Menu",
-			JOY_BUTTON_DPAD_UP: "Up",
-			JOY_BUTTON_DPAD_DOWN: "Down",
-			JOY_BUTTON_DPAD_LEFT: "Left",
-			JOY_BUTTON_DPAD_RIGHT: "Right",
-		}
-		return str(pads.get((event as InputEventJoypadButton).button_index, ""))
+## The intent that `binding` on `device` would clash with if bound to `id`, or "": two
+## intents may share a binding unless one of them is common or always live (they act
+## on every station). LMB is select and fire at once (D176).
+static func collision(bindings: Bindings, id: String, device: String, binding: String) -> String:
+	for other: String in bindings.intents_bound_to(binding, device):
+		if (
+			other == id
+			or (binding == "LMB" and [id, other] in [["fire", "select"], ["select", "fire"]])
+		):
+			continue
+		for x: String in [id, other]:
+			if IntentTable.row(x)["group"] == IntentTable.COMMON or IntentTable.is_live(x, device):
+				return other
 	return ""
 
 

@@ -78,19 +78,28 @@ func to_dict() -> Dictionary:
 	return {"overrides": o, "toggles": toggles.keys()}
 
 
-## Restores to_dict() data; unknown intents and devices are dropped.
+## Restores to_dict() data; unknown intents and devices, and anything of the wrong
+## type (a hand-edited file), are dropped.
 func from_dict(data: Dictionary) -> void:
 	overrides.clear()
 	toggles.clear()
-	var o: Dictionary = data.get("overrides", {})
-	for id: Variant in o:
+	var o: Variant = data.get("overrides", {})
+	for id: Variant in o if o is Dictionary else {}:
 		if not IntentTable.has(str(id)) or not o[id] is Dictionary:
 			continue
 		for device: Variant in o[id]:
-			if str(device) in IntentTable.DEVICES:
+			var list: Variant = o[id][device]
+			if str(device) in IntentTable.DEVICES and _strings(list):
 				var per: Dictionary = overrides.get_or_add(str(id), {})
-				per[str(device)] = PackedStringArray(o[id][device])
-	for id: Variant in data.get("toggles", []):
+				per[str(device)] = PackedStringArray(list)
+	var t: Variant = data.get("toggles", [])
+	for id: Variant in t if t is Array else []:
 		if IntentTable.row(str(id)).get("kind", "") == IntentTable.HOLD:
 			toggles[str(id)] = true
 	changed.emit()
+
+
+static func _strings(list: Variant) -> bool:
+	if list is PackedStringArray:
+		return true
+	return list is Array and (list as Array).all(func(b: Variant) -> bool: return b is String)

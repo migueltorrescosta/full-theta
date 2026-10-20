@@ -33,14 +33,14 @@ const STICK_BUTTON: float = 0.5
 ## Mouse motion shorter than this (px) doesn't switch the device to KB/M.
 const MOUSE_NOISE_PX: float = 2.0
 
-const _MOUSE_NAMES: Dictionary = {
+const MOUSE_NAMES: Dictionary = {
 	"LMB": MOUSE_BUTTON_LEFT,
 	"RMB": MOUSE_BUTTON_RIGHT,
 	"MMB": MOUSE_BUTTON_MIDDLE,
 	"WheelUp": MOUSE_BUTTON_WHEEL_UP,
 	"WheelDown": MOUSE_BUTTON_WHEEL_DOWN,
 }
-const _PAD_BUTTONS: Dictionary = {
+const PAD_BUTTONS: Dictionary = {
 	"A": JOY_BUTTON_A,
 	"B": JOY_BUTTON_B,
 	"X": JOY_BUTTON_X,
@@ -56,7 +56,7 @@ const _PAD_BUTTONS: Dictionary = {
 	"Left": JOY_BUTTON_DPAD_LEFT,
 	"Right": JOY_BUTTON_DPAD_RIGHT,
 }
-const _PAD_AXES: Dictionary = {
+const PAD_AXES: Dictionary = {
 	"LS_X": JOY_AXIS_LEFT_X,
 	"LS_Y": JOY_AXIS_LEFT_Y,
 	"RS_X": JOY_AXIS_RIGHT_X,
@@ -103,6 +103,11 @@ var _toggled: Dictionary = {}
 var _question_key: String = ""
 ## Events waiting for the next feed() or update() (released by set_context).
 var _queue: Array[Dictionary] = []
+## restrict(): the only active intents, or [] for all.
+var _only: Array = []
+## Held and toggled ids -> their bindings and mode when they started (_sig), so a
+## rebind releases them.
+var _sigs: Dictionary = {}
 
 
 func _init(p_bindings: Bindings = null) -> void:
@@ -111,20 +116,34 @@ func _init(p_bindings: Bindings = null) -> void:
 
 ## The screen's stations and the focused one; held and toggled states of intents that
 ## leave the active set are released (with a released event on the next update()).
+## The releases are built before the switch, so they go to the old targets.
 func set_context(stations: Array, focused: String) -> void:
+	_release_where(
+		func(id: String, dev: String) -> bool:
+			return IntentTable.target(id, dev, focused, stations) == ""
+	)
 	_stations = stations.duplicate()
 	_focused = focused
 	_dirty = true
-	for id: String in _holding.keys():
-		var dev: String = _holding[id]["dev"]
-		if IntentTable.target(id, dev, _focused, _stations) == "":
-			_holding.erase(id)
-			_queue.append(_event(id, dev, false))
-	for id: String in _toggled.keys():
-		var dev: String = _toggled[id]
-		if IntentTable.target(id, dev, _focused, _stations) == "":
+
+
+## Limits the active set to `ids` (empty: no limit), e.g. Menu and the overlay key
+## while Settings or the controls overlay is up. Call release_all() first.
+func restrict(ids: Array) -> void:
+	_only = ids.duplicate()
+	_dirty = true
+
+
+## Undoes the hold or the toggle flip of `id` whose event was dropped (a select that
+## found an item consumed the click, D176): as if that press never happened.
+func cancel(id: String) -> void:
+	if bindings.is_toggle(id):
+		if _toggled.has(id):
 			_toggled.erase(id)
-			_queue.append(_event(id, dev, false))
+		else:
+			_toggled[id] = device
+	else:
+		_holding.erase(id)
 
 
 ## Feeds one input event at `now_ms`; returns the intent events it completes.
@@ -145,12 +164,12 @@ func feed(event: InputEvent, now_ms: int) -> Array[Dictionary]:
 	elif event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event
 		_flags(mb)
-		var name: Variant = _MOUSE_NAMES.find_key(mb.button_index)
+		var name: Variant = MOUSE_NAMES.find_key(mb.button_index)
 		if name != null:
 			_button("m:" + str(name), mb.pressed, IntentTable.KBM, now_ms, out)
 	elif event is InputEventJoypadButton:
 		var jb: InputEventJoypadButton = event
-		var pad_name: Variant = _PAD_BUTTONS.find_key(jb.button_index)
+		var pad_name: Variant = PAD_BUTTONS.find_key(jb.button_index)
 		if pad_name != null:
 			_button("p:" + str(pad_name), jb.pressed, IntentTable.PAD, now_ms, out)
 	return out
@@ -224,8 +243,35 @@ func _set_bindings(b: Bindings) -> void:
 	_dirty = true
 
 
+## Held or toggled intents whose binding or hold/toggle mode changed are released.
 func _on_bindings_changed() -> void:
 	_dirty = true
+	_release_where(func(id: String, _dev: String) -> bool: return _sigs.get(id, "") != _sig(id))
+
+
+## Queues a release for every held or toggled intent `drop(id, dev)` picks.
+func _release_where(drop: Callable) -> void:
+	for id: String in _holding.keys():
+		var dev: String = _holding[id]["dev"]
+		if drop.call(id, dev):
+			_holding.erase(id)
+			_queue.append(_event(id, dev, false))
+	for id: String in _toggled.keys():
+		var dev: String = _toggled[id]
+		if drop.call(id, dev):
+			_toggled.erase(id)
+			_queue.append(_event(id, dev, false))
+
+
+func _sig(id: String) -> String:
+	return (
+		"%s|%s|%s"
+		% [
+			bindings.bindings(id, IntentTable.KBM),
+			bindings.bindings(id, IntentTable.PAD),
+			bindings.is_toggle(id),
+		]
+	)
 
 
 func _take_queue() -> Array[Dictionary]:
@@ -246,6 +292,8 @@ func _refresh() -> void:
 		var list: Array[Dictionary] = []
 		for r: Dictionary in IntentTable.INTENTS:
 			if IntentTable.target(r["id"], dev, _focused, _stations) == "":
+				continue
+			if not _only.is_empty() and r["id"] not in _only:
 				continue
 			for b: String in bindings.bindings(r["id"], dev):
 				var e: Dictionary = _parse(b, dev, r["kind"])
@@ -299,10 +347,10 @@ func _parse(binding: String, dev: String, kind: String) -> Dictionary:
 ## The input name of a binding token on `dev`, or "" when unknown.
 func _name(token: String, dev: String) -> String:
 	if dev == IntentTable.PAD:
-		if _PAD_BUTTONS.has(token) or _PAD_AXES.has(token) or token in ["LS", "RS"]:
+		if PAD_BUTTONS.has(token) or PAD_AXES.has(token) or token in ["LS", "RS"]:
 			return "p:" + token
 		return ""
-	if _MOUSE_NAMES.has(token) or token in ["MouseX", "MouseY"]:
+	if MOUSE_NAMES.has(token) or token in ["MouseX", "MouseY"]:
 		return "m:" + token
 	if token == "?":
 		return "k:?"
@@ -472,6 +520,7 @@ func _fire(e: Dictionary, dev: String, out: Array[Dictionary]) -> void:
 		var inputs: Array[String] = [e["main"]]
 		inputs.append_array(e["mods"])
 		_holding[id] = {"inputs": inputs, "dev": dev}
+		_sigs[id] = _sig(id)
 		out.append(_event(id, dev, true))
 
 
@@ -493,6 +542,7 @@ func _flip(id: String, dev: String, out: Array[Dictionary]) -> void:
 		out.append(_event(id, dev, false))
 	else:
 		_toggled[id] = dev
+		_sigs[id] = _sig(id)
 		out.append(_event(id, dev, true))
 
 
@@ -513,7 +563,7 @@ func _event(id: String, dev: String, pressed: bool) -> Dictionary:
 
 
 func _motion(m: InputEventJoypadMotion, now_ms: int, out: Array[Dictionary]) -> void:
-	var axis_name: Variant = _PAD_AXES.find_key(m.axis)
+	var axis_name: Variant = PAD_AXES.find_key(m.axis)
 	if axis_name == null:
 		return
 	var name: String = "p:" + str(axis_name)
@@ -560,7 +610,7 @@ func _value(name: String) -> float:
 		return mouse_stick.value.x
 	if name == "m:MouseY":
 		return mouse_stick.value.y
-	if name.begins_with("p:") and _PAD_AXES.has(name.substr(2)):
+	if name.begins_with("p:") and PAD_AXES.has(name.substr(2)):
 		return _analog(name)
 	return 1.0 if _held(name) else 0.0
 
