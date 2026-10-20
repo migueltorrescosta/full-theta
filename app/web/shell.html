@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+<title>$GODOT_PROJECT_NAME</title>
+<style>
+html, body, #canvas { margin: 0; padding: 0; border: 0; }
+body { color: white; background-color: black; overflow: hidden; touch-action: none; }
+#canvas { display: block; }
+#canvas:focus { outline: none; }
+#status { position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font: 20px sans-serif; }
+</style>
+$GODOT_HEAD_INCLUDE
+</head>
+<body>
+<canvas id="canvas">This browser has no canvas support.</canvas>
+<div id="status">Loading</div>
+<script src="$GODOT_URL"></script>
+<script>
+// Web shell for browser stations (FT-NET-030, D108), promoted from spike S3.
+// Godot's default shell refuses to start outside a secure context, and a plain
+// http:// LAN page isn't one. A no-threads build needs no SharedArrayBuffer, so
+// this shell ignores that one check.
+// Upstream: https://github.com/godotengine/godot/issues/124636; on an engine
+// upgrade, check it and use the default shell once fixed (docs/release.md).
+const GODOT_CONFIG = $GODOT_CONFIG;
+const engine = new Engine(GODOT_CONFIG);
+const status = document.getElementById('status');
+const missing = Engine.getMissingFeatures({ threads: $GODOT_THREADS_ENABLED })
+  .filter((m) => !m.startsWith('Secure Context'));
+if (missing.length !== 0) {
+  status.textContent = 'This browser is missing: ' + missing.join(', ');
+} else {
+  engine.startGame({
+    onProgress: (current, total) => {
+      status.textContent = total > 0 ? 'Loading ' + Math.round(100 * current / total) + ' %' : 'Loading';
+    },
+  }).then(() => status.remove(), (err) => { status.textContent = String(err); });
+}
+</script>
+</body>
+</html>

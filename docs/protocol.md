@@ -1,0 +1,204 @@
+# Network protocol
+
+The custom WebSocket protocol between the headless server and every station (FT-NET-004, D70). Code: `net/net_protocol.gd` (message set, control codec), `net/snapshot_builder.gd` and `net/sections/` (snapshot codec), `net/net_chunker.gd` (chunks and bundles). The threads and seams are in `net/README.md`.
+
+Protocol version: `NetProtocol.PROTOCOL_VERSION` = 4. Bump it on any incompatible change. Version 4 added Alert, Mark, Ping and RunAgain (types 19 to 22), the `alert`, `marks`, `ping`, `run_over` and `run_votes` events, voter `sessions` in `abandon_votes`, and new block fields (STATUS `decoupled`; HELM `shield_power`, `thrust_scale`, `torque_scale`; ENGINEERING `shield_focus`): a version 3 peer would drop the new types and misread the blocks. Version 3 added Ack snap −1 (need a full snapshot), long section lengths, the age in every NEAR record, the little-endian LAN beacon, the client limits below and the voice fields (Welcome `lang`, Voice `part` and `last`, the `voice_line` event).
+
+## Transport
+
+- One WebSocket connection per client, binary messages only. The server listens on `--bind ADDR --port N` (WS, default 47801); the static HTTP server for web stations, when on, listens on N − 1 (D108; see Static HTTP).
+- Every protocol message is split into chunks of at most 16 KiB of payload (FT-NET-038). A chunk has an 11-byte header, little endian: stream u8, msg_id u32, index u16, count u16, length u16. Streams: 0 control (handshake, lobby, commands, acks, events), 1 snapshot, 2 voice.
+- A sender queues all chunks of a message together in one lane, so per stream they arrive contiguously. The receiver keeps one partial message per stream and drops it when another message starts on that stream; malformed chunks and messages over 8 MiB are errors. The server closes a connection once it has sent 16 malformed messages (`NetTransport.MAX_ERRORS`, code 4003).
+- Clients send only on stream 0; a chunk of another stream is malformed. A client message may be at most 64 KiB (`NetTransport.MAX_CLIENT_MESSAGE`); a longer one is dropped as malformed. A connection without a session (no accepted Hello) is closed 5 s after it opened (code 4003, `HELLO_TIMEOUT_US`), and at most 16 such connections are open at once (`MAX_SESSIONLESS`): further ones wait in the listen backlog until one gets a session or closes.
+- Each connection has two lanes. The high lane (control, events, snapshots) is FIFO; the low lane (voice) is served only when the high lane is empty, one chunk per pump, so voice never delays a snapshot by more than one chunk.
+- **Bundles.** All chunks one pump may send to a client go out as one WebSocket message of at most 48 KiB, a concatenation of whole chunks. Receivers split it by the length field (`NetChunker.feed_packet`).
+- The server keeps `WebSocketPeer`'s 64 KiB buffer defaults; bundles and chunks stay under them. Web clients raise `inbound_buffer_size` to 1 MiB (D108); `NetClient.inbound_buffer_size` is where.
+
+### Close codes
+
+| Code | Meaning |
+|---|---|
+| 1000 | Normal: the server's close after a Bye, or a client's own close. |
+| 1001 | Server stopped. |
+| 4000 | Hello rejected (after HelloRejected). |
+| 4001 | Session taken over by a newer connection with its token. |
+| 4002 | A send failed: the socket write failed (D106). |
+| 4003 | Protocol error: a second Hello, 16 malformed messages, or no Hello within 5 s. |
+| 4004 | Queue full: more than 256 KiB queued for a client without a view key. |
+
+The server lets the client close first: it closes 1 s after the last queued message left (`NetTransport.CLOSE_LINGER_US`), and drops a connection still closing after 5 s (`CLOSE_TIMEOUT_US`); 4002 and 4004 close at once. Codes 4000–4004 are `NetTransport.CLOSE_*`.
+
+### Packets per message (known limit)
+
+Godot's `WebSocketPeer` writes each frame's 2–4 byte header and its payload in separate `send` calls, and the server sets `TCP_NODELAY`, so every WebSocket message costs two TCP packets (S9, "Wi-Fi"). GDScript can't change that write path, and turning Nagle back on would trade it for delayed-ACK stalls of up to 200 ms. The cheap part is done: bundling makes it one WebSocket message per client per pump instead of one per protocol message, so a pump that sends a snapshot plus events costs two packets, not two per message. The rest needs an engine change (write header and payload in one `send`); #4 measures the airtime on Wi-Fi.
+
+## Encodings
+
+Every message starts with a u8 type (`NetProtocol.Type`).
+
+- **Snapshots** (type 12) are packed binary (below): they are 30 Hz traffic and the bandwidth budget (R15, S9) needs fixed point and dead reckoning.
+- **Every other message** is the type byte followed by `var_to_bytes` of a Dictionary, decoded with `bytes_to_var` (which never builds objects) and checked against `NetProtocol.SCHEMAS`: every field present with its Variant type, no other field, else the message is dropped. These are rare (handshake, lobby, commands at human rates, events), so a self-describing encoding costs little, keeps the schema in one table, and needs no hand-written codec per message. Commands carry the sim command as a Dictionary (`SimCommand.to_dict()` fields), validated field by field on the server (`CommandGate`).
+
+## Messages
+
+Direction: C client to server, S server to client. Lane: H high, L low. "Task" is the #6 task that fills in the behaviour; T041 defines and round-trips them all (`tests/net/test_net_protocol.gd`).
+
+| Type | Message | Dir | Fields | Lane | When | Task |
+|---|---|---|---|---|---|---|
+| 1 | Hello | C | `v` int, `token` String ("" for a new session), `name` String, `kind` String (desktop, web, bot), `host_secret` String ("" unless host, D127; the launcher hands it to the server child in the `FT_HOST_SECRET` environment variable with `--host-secret-env`, never on the command line) | H | First message after the socket opens. `name` is trimmed and cut to 32 bytes of UTF-8 (`NetProtocol.MAX_NAME_BYTES`); a `kind` other than desktop, web or bot gets `bad_hello`. | T041 |
+| 2 | Welcome | S | `v`, `token`, `session` int, `resumed` bool, `tick` int, `period` float (site period P in m, D124/D125), `ev_from` int (last event acknowledged), `ship` int, `entry` String (current pick, -1/"" for none; after a lapsed rejoin `ship` set and `entry` "" is that ship's pick screen), `dev_all` bool, `host` bool (accepted as the host, D127), `lang` String (the session language, `en`, `pt_PT` or `it`, from the server's `--language`, FT-AUD-013) | H | Reply to an accepted Hello. | T041 |
+| 3 | HelloRejected | S | `v`, `reason`: `version_mismatch`, `session_full`, `bad_hello` | H | Reply to a refused Hello; the server then closes (code 4000) once the client has had time to read it. | T041 (T046: full) |
+| 4 | Catalogue | S | `ships` [{id, def, name, faction}] (crewable ships only), `entries` [StationDef: {id, name, load_tag, stations, crew, sections, fields, commands, claims, controls}], `load_tags` ["light", "busy", "intense"] | H | After Welcome. | T042 |
+| 5 | Pick | C | `ship` int, `entry` String (a StationDef id: `helm` … `comms`, `tactical`, `systems`, `ops`, `captain`, `viewer`, `all` with `--dev-all-stations`) | H | Lobby or mid-run pick; replaces the current one (one pick per player). Answered by a `picked` event. | T043 |
+| 6 | Release | C | — | H | Back to the ship list (ship −1). Same rules as a pick. | T043 |
+| 7 | Ready | C | `ready` bool | H | Start: `true` from a crew player starts the ship's run if its coverage check passes; `false` is ignored. Refusals: `request_rejected` `not_crew`, `started`, `coverage` (with `uncovered`). | T043 |
+| 8 | Claim | C | `item` String (`flight`, `shield_facing`, `mount:N`, `crew:N`) | H | Claim a sub-control of a station the pick covers (FT-NET-022). Answered by a `claim` event to the ship's clients at that item's station, or `request_rejected` `bad_item`, `not_your_station`, `claimed`. | T044 |
+| 9 | ReleaseClaim | C | `item` String | H | Release a claim the sender holds. Refusals: `request_rejected` `bad_item` (no pick, or not an item of the ship), `not_your_station`, `not_claimed`. | T044 |
+| 10 | Command | C | `seq` int (client sequence), `cmd` Dictionary (`kind` plus the command's fields; `ship_id` optional, must be the sender's) | H | Every crew input. | T041 |
+| 11 | Ack | C | `snap` int (newest snapshot applied, 0 before the first; −1: the client couldn't apply a snapshot and needs a full one), `ev` int (newest event delivered) | H | At most every 200 ms, and at once after a full snapshot or a snapshot it couldn't apply. On snap −1 the server sends one full snapshot next (events held for it); the client sends −1 once per failure. Consumed on the net thread. | T041 |
+| 12 | Snapshot | S | packed, below | H | 30 Hz per client with a pick: full on join, pick change or resync, deltas otherwise. | T041, T042 filters |
+| 13 | Event | S | `seq` int (per session, from 1), `tick` int, `type` String, `payload` Dictionary | H | Reliable ordered stream (FT-NET-011), below. | T041 |
+| 14 | Abandon | C | `ship` int | H | The host abandons a paused ship alone (D96, D127). Refusals: `request_rejected` `not_paused`, `not_host`. | T045 |
+| 15 | Takeover | C | `ship` int, `entry` String (a crew entry) | H | During a pause, the Captain or a Viewer of the paused ship takes an uncovered station (FT-NET-042); answered like a pick. Refusals: `not_paused`, `not_allowed` (a crew player: use Pick), `not_implemented` (another ship's player, #11), `bad_pick`. | T045 |
+| 16 | Bye | C | `reason` String | H | Orderly leave; the client then closes. | T041 |
+| 17 | Voice | S | `clip` int, `rate` int (Hz), `pcm` PackedByteArray (16-bit mono), `part` int (from 0), `last` bool (ends the clip) | L | Stitched and synthesised lines, one per sentence or stitched clip, after the line's `voice_line` event (`audio/README.md`, S7b). | E10 fills, T041 carries |
+| 18 | AbandonVote | C | `ship` int, `vote` bool (cast or withdraw) | H | A remaining connected crew player of a paused ship votes to abandon it (D128). Refusals: `not_paused`, `not_crew`. | T045 |
+| 19 | Alert | C | `level` int (0 Normal, 1 Yellow, 2 Red) | H | A crew pick sets its ship's alert level (FT-STN-008, D89). Refusals: `not_crew` (Captain, Viewer, no pick), `bad_level`. | #7 |
+| 20 | Mark | C | `op` String (`place`, `move`, `rename`, `delete`), `slot` int (0–7 Alpha to Hotel; −1 with `place`: the first free one), `name` String ("" with `place` or `rename`: the slot's default; trimmed, cut to 24 bytes), `contact` int (≥ 0 attaches the mark to that contact; −1 free), `site` int, `x`, `y`, `z` float (64-bit site offset, wrapped, D104/D124) | H | Marks of the sender's ship (FT-SPA-012 to FT-SPA-014, FT-SPA-022, FT-RLY-003; rules in `CrewMarks`). Refusals: `not_crew`, `marks_full` (8 used; Relay replaces a slot it names), `slot_taken` (a used slot, not Relay), `not_yours` (another's mark, not Relay), `not_allowed` (the Captain edits nothing), `bad_mark`; with `op` and `slot`. | #7 |
+| 21 | Ping | C | `kind` String (`contact`: `id`; `mark`: `id` = slot; `site`: `site`; `point`: `site` and `x`, `y`, `z`), `id` int, `site` int, `x`, `y`, `z` float | H | Pulse an item on every screen of the ship (FT-SPA-016); crew and Captain. Refusals: `not_crew`, `rate_limited` (FT-SPA-017), `bad_ping`; with `kind`. | #7 |
+| 22 | RunAgain | C | `ship` int, `vote` bool (cast or withdraw) | H | After the ship's outcome, a connected crew player of the ship votes to run it again; the host's `true` resets at once (D178). Refusals: `not_over`, `not_crew`. | #7 |
+
+### Events
+
+`Event.type` is either a sim event kind (`SimEvent.kind`: `hit`, `fired`, `fault`, `contact_detected`, `outcome`, …, with `payload` {ship, faction, other, value, vector, tag}) or a server event:
+
+| Type | Payload | Sent to | Task |
+|---|---|---|---|
+| `command_rejected` | `seq` (the Command's; −1 for a refused Pick or Release), `reason` | the sender only (FT-NET-007) | T041 |
+| `picked` | `ship`, `entry`, `reason` ("" when accepted; `bad_pick`, `captain_taken`, `breaks_coverage`) | the sender | T041, T043 |
+| `request_rejected` | `request` (message type), `reason`, and the request's `item`, `ship`, `entry` or `uncovered` | the sender | T043–T045 |
+| `lobby` | `ship`, `crew` (crew players), `min_crew` (3, or 1 with the dev flag), `uncovered` [stations], `ready` (coverage passes), `started`, `in_play`, `captain` (name or "") | clients on the ship list and those on ships of the ship's faction, on join and whenever it changes (FT-NET-021) | T043 |
+| `started` | `ship`, `tick` | every client, when a ship's Start is accepted | T043 |
+| `claim` | `ship`, `item`, `session` (holder, −1 free), `name` (holder's name, "" free) | the ship's clients at the item's station (like OWNERSHIP), whenever a holder changes | T044 |
+| `pause` | `ship`, `uncovered` [stations], `crew`, `min_crew` | every client, when a ship pauses or its uncovered list changes, and on join (FT-NET-034) | T045 |
+| `resume` | `tick` | every client, when no ship is paused any more | T045 |
+| `abandon_votes` | `ship`, `voters` [names, sorted], `sessions` [voter session ids, sorted: a client finds its own vote by id, not name], `needed` (more than half of the remaining connected crew) | every client, on each vote, withdrawal or voter drop, and on join during a pause (D128) | T045 |
+| `abandoned` | `ship`, `by` (`vote` or `host`) | every client (FT-NET-041) | T045 |
+| `alert` | `ship`, `level`, `by` (setter's name, "" for the current state or a reset) | every session with a pick on that ship (viewers too), on each change, and to a session right after Welcome (with a pick) and after each accepted pick | #7 |
+| `marks` | `ship`, `marks` [{`slot`, `name`, `contact` (−1 free), `site` (−1 attached), `x`, `y`, `z`, `by` (placer's name)}], the whole list in slot order | as `alert` (FT-SPA-020) | #7 |
+| `ping` | `ship`, `kind`, `id`, `site`, `x`, `y`, `z` (fields the kind doesn't use are −1 or 0), `by`, `copy` (the first pinger's name when another station pinged the item within 3 s, FT-SPA-031; "" otherwise) | every session with a pick on that ship, no other ship (FT-SPA-016, FT-SPA-020) | #7 |
+| `run_over` | `ship`, `outcome` (`win` or `loss`), `time_s` (run time, s), `hull` (0–1) | every session with a pick on that ship, at its outcome, and to a session picking it or reconnecting before the reset (D178) | #7 |
+| `run_votes` | `ship`, `voters` [names, sorted], `sessions` [voter session ids, sorted], `needed` (more than half of the ship's connected crew) | as `run_over`, with it and on each vote, withdrawal, voter drop or crew change | #7 |
+| `voice_line` | `clip`, `line` (line id, "" for free text), `text` (session language, slots filled), `role`, `priority`, `max_age_ms`, `coalesce`, `resume`, `audio` (false: subtitles only), `local` (true: the client plays its own prerendered clip) | the line's audience only: the NPC's conversation claimer or the stations concerned (FT-AUD-005, FT-AUD-006) | E10 (`audio/README.md`) |
+
+Command rejection reasons (`CommandGate`): `no_pick`, `rate_limited`, `unknown_kind`, `not_allowed` (server-only command such as `reset_ship`), `not_your_station`, `wrong_ship`, `bad_field`, `bad_value` (non-finite), `claimed` (another player holds the item, FT-NET-023), `ship_abandoned`, `breaks_coverage` (a refused mid-run Pick or Release, seq −1, FT-NET-043), `sim_rejected` (the sim refused it on apply: game rules), `ship_destroyed` (the sim dropped it).
+
+Sim events go to the sessions holding a pick on a ship of the event's faction (FT-NET-010) whose entry sees the kind: repair events only to entries covering Engineering, `fire_blocked` and `friendly_fire_warning` only to Weapons, `ai_mode` to nobody, every other kind to every entry (`StationViews.EVENT_STATIONS`). Events of no ship go to nobody. Each session has its own sequence. The server keeps every event until the client acknowledges it, across stalls and reconnects; nothing is dropped (FT-NET-037). While a client waits for a full snapshot (join, stall) its events are held and sent right before that snapshot. A new connection of a session gets every unacknowledged event again; `NetEventInbox` drops duplicates.
+
+## Lobby, claims and the pause
+
+**Lobby (T043).** The catalogue (`StationViews`, one `StationDef` each) is the six stations, Tactical (Helm + Weapons), Systems (Engineering + Science), Ops (Relay + Comms), Captain and Viewer, plus `all` with `--dev-all-stations`; the other 12 joint views come with M2 (FT-JNT-004). Each player holds one pick; any number may share a station or joint view; one Captain per ship (CLASH-10; a Captain within grace still holds the seat). The coverage check (`NetCoverage`) passes with at least 3 crew players (1 with the dev flag) and all six stations covered; Captain and Viewer don't count. The sim doesn't step until a ship starts: Ready{true} from any crew player of a ship that passes coverage starts it, and the universe steps from the first Start (D129; with several crewable ships, #11 decides whether every ship must start). Snapshots flow before the start and during a pause at 30 Hz of wall clock while anyone holds a pick, re-encoded from one copy of the unchanged world.
+
+**Claims (T044).** Claimable items: `flight` (Helm: `helm_input` with face, decoupled, all-stop, Align; dock and jump when they exist), `shield_facing` (Helm: shield focus), `mount:N` (Weapons: aim and fire; ammo type when it exists), `crew:N` (Engineering: dispatch and recall). A claimed item takes commands only from its claimer (`claimed` otherwise); an unclaimed one from anyone at its station. A player alone on a station holds all its free items; when a second player joins, the first keeps them, implicit ones included, and the newcomer claims only what the first releases (D130). Claims are released by ReleaseClaim, by a pick change that no longer covers the item's station, and when the claimer's grace ends. Every other control is ship-wide, last writer wins (target selection included, approved in #6): `pips:K` (set_pips per subsystem kind), `shield` (set_shield), `boost` (Engineering), `target` (Helm's target selection). The OWNERSHIP snapshot section names claimers and last writers to the entries of that station (`NetViewState.claimer(item)`, `last_writer(control)`). Claims and `claim_rule` apply in the lobby too: a command on an item another player holds is refused at once before Start; accepted commands queue and apply on the first tick after Start.
+
+**Grace and pause (T045).** A dropped session keeps its pick and claims (not its abandon vote: only connected crew vote) for `--grace-s` (10 s), timed on the server's wall clock, also while paused. When the grace ends, the session lapses: its pick and claims are released and remembered, and if a started ship still in play (not destroyed, retreated or abandoned) then fails coverage, the whole universe pauses (only a grace expiry starts a pause; other changes only update or end one): the sim doesn't step, snapshots keep flowing, and every client gets `pause`. During a pause the paused ship's crew may change picks freely; outside it, a Pick or Release that would make a passing ship in play fail coverage is refused (`breaks_coverage`). The universe resumes (`resume`) once no ship in play fails coverage: a rejoin, a takeover, a pick change, or abandoning the ship. Captain and Viewer never count, so their drops never pause.
+
+**Abandon (D128).** During a pause each connected crew player of the paused ship may vote or withdraw; when the votes exceed half of them (2 of 2), or at once when the host sends Abandon, the ship is abandoned: it leaves play, the pause ends, and a logged server command (`AbandonShipCommand`) makes the sim mark it ABANDONED and give it a LOSS, which ends the M1 encounter. Votes clear when the pause ends; a vote cast in one pause doesn't carry into the next. A vote is evaluated only when cast (a voter who drops loses the vote; the others aren't abandoned by someone else's drop; approved in #6). The abandoned ship's crew commands get `ship_abandoned`.
+
+**Marks, pings and alert level (#7, D171).** Per-ship crew state kept by the server outside the sim (no command log, no state hash): `CrewMarks` (8 marks, alert level) and `CrewPings` (rate limit, copy), handled by `NetCrewState` (its `on_alert`, `on_mark` and `on_ping` are ServerSession handlers). A mark records the session that placed it: crew stations rename, move or delete only their own, Relay any; the Captain only fills empty slots. A mark attached to a contact stays attached when the contact is lost or destroyed; clients show its last known position. A ping pulses its item for 3 s on every screen of the ship; another station's ping on the same item within that time is a silent copy (`copy` names the first pinger). Marks and pings may name only a contact of the sender's faction or one it detects, and a site some ship is at; an undetected contact and an id past the ship count get the same `bad_mark` or `bad_ping`, so the refusal doesn't tell the ship count. Mark names lose control and bidi characters. `NetCrewState.reset(ship)` clears marks and pings and sets the alert to Normal, with events (the run reset calls it).
+
+**Run reset (D178, FT-M1-012).** After a crewed ship's outcome every station shows the outcome card (`run_over`). Each connected crew player of the ship may cast or withdraw a RunAgain vote; when the votes exceed half of them, or at once when the host sends `true`, the server builds the world again from the encounter (`NetServer.restart_run()`: a fresh command log, every client's next snapshot full and its ticks restarting at 0), clears marks, pings and the alert (`marks`, `alert`), drops the ship-computer lines still queued, and puts the ship back in the lobby (`lobby` `started` false) with picks and claims kept; the crew presses Start again. Votes are evaluated when cast; a voter who drops loses the vote. In M1 the reset is world-wide (one crewed ship); #11 decides it per ship.
+
+**Rejoin.** A client joining or rejoining during a pause gets the current `lobby`, `pause` and `abandon_votes` events right after Welcome and the Catalogue. A token resumes its session for the server's life (approved in #6). Within the grace everything is as it was. The 64-connection cap applies to every Hello that adds a connection: a new session, a lapsed one, and one resuming within its grace (refused `session_full`; the session keeps its grace). Taking over a still-connected session (a restarted client before its old socket closed) is not refused. A Hello whose token's grace has just run out lapses the session first (pick and claims released), even if it is then refused. After it, the session gets its ship back and its pick if still allowed (the Captain seat may be taken), else that ship's pick screen (Welcome `ship` set, `entry` ""); its old claims come back where still free.
+
+## Handshake and sessions
+
+1. The client sends Hello. The server reads `v` before anything else, so a client of any version gets `HelloRejected{version_mismatch}` (FT-NET-005); a Hello of the right version that fails the schema gets `bad_hello`.
+2. A Hello with a known token resumes that session (same id, pick and event stream; a connection still holding it is closed with code 4001). Otherwise the server opens a session with a new 128-bit token. Every Hello that adds a connection, new or resumed, is checked against the session cap first (`ServerSession.admit_rule`, T046; see Rejoin).
+3. Welcome then Catalogue. A session with a pick gets a full snapshot next.
+
+A session's grace is `--grace-s` (10 s) after its connection drops (`NetSessions`); its token stays valid after that (see Rejoin above).
+
+## Snapshots
+
+Header: u8 type (12), u8 flags (bit 0 full), u32 seq, u32 tick, u8 n sections; then n sections of u8 kind, length, payload; the length is a u16, or 0xFFFF followed by a u32 for a section of 65,535 bytes or more (`SnapshotBuilder.put_length`), so no section is ever dropped. A delta omits sections with nothing to say.
+
+A view key is (ship, catalogue entry, difficulty toggles) (FT-NET-040). Each section is encoded once per snapshot per owner (a ship, or a faction for contacts), each view key's message once, and all clients of a key get the same chunks. Deltas chain on the previous snapshot of the stream; a client that misses one (a stall) gets a full snapshot instead (FT-NET-037). Clients check that a delta's seq follows the last one applied. A client that can't apply a snapshot refuses deltas until the next full one and asks for it with Ack snap −1 (`NetViewState.need_full`).
+
+Fixed point (`NetCodec`): positions 1/16 m as int32 site-local offsets, wrapped into [−P/2, P/2) (D104, D124); velocities 1/16 m/s int16 (±2,048 m/s); angular velocities 1/50 rad/s int8; orientations smallest-three in 32 bits; projectile velocities 1/8 m/s. Dead reckoning is integer arithmetic on both ends, so they agree bit for bit; residuals and predictions use the minimum image with P from Welcome, so a contact crossing a seam costs a small residual.
+
+| Kind | Section | Owner | Content |
+|---|---|---|---|
+| 1 | KIN | ship | Own ship every snapshot: site, position, velocity, orientation, angular velocity (27 B). |
+| 2 | STATUS | ship | Top bar block when it changes: alive, run status, outcome, hull, shields, pips used, propellant, decoupled (the main screen's auto-chase, FT-MSC-001). |
+| 3 | HELM | ship | Helm block: decoupled, throttle setpoint, face, approach, all-stop, Align stage, target, shield focus, track, tightness and power, thrust and torque scales. |
+| 4 | ENGINEERING | ship | Boost, weapon energy, hull, spare parts, shield strength, tightness and focus, per subsystem health, pips, heat, crews, fault armed. |
+| 5 | MOUNTS | ship | Per mount barrel, cooldown, ammo, heat, aim set. |
+| 6 | CONTACTS | faction | Detected contacts and own ships, dead reckoned (0.5 m), with callsign and identified flag on change. |
+| 7 | NEAR | ship | Orientations of contacts within 2 km, dead reckoned (1°); every record, delta or full, carries its age in ticks (a contact entering the range gets the faction model's record, which may be older). |
+| 8 | PROJECTILES | ship | Projectiles within 3 km, sent once each, extrapolated by clients. |
+| 9 | OWNERSHIP | ship, per entry | `var_to_bytes` of {claims: {item: [session, name]}, writers: {control: [session, name]}}, only the entry's own stations' items; whole on change (rare, so self-describing). |
+
+Which entry sees which section, and the block field sets, are each entry's `StationDef` (`net/station_views.gd`; also in the Catalogue). A view key's difficulty-toggle set is one of `easy`, `normal`, `hard`; M1's sim has no data shortcut yet, so no field depends on it (`tests/net/test_net_stations_filter.gd` checks the filter at each set).
+
+## Discovery
+
+The LAN beacon (`net/lan_beacon.gd`, FT-NET-012) is one UDP datagram broadcast to 255.255.255.255:47790 once a second; `LanBrowser` lists a host until 3.5 s after its last datagram. A server bound to a loopback address sends none (no other machine could join it), and neither does one started with `--no-beacon`. Ports: WebSocket 47801, HTTP 47800 (WS − 1, D108), discovery 47790 (UDP).
+
+The datagram is little-endian and append-only: a newer format adds fields at the end, and a parser reads the fields it knows.
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 4 | magic "FTLB" |
+| 4 | 1 | beacon format (`LanBeacon.FORMAT` = 1) |
+| 5 | 4 | protocol version u32 |
+| 9 | 2 | WebSocket port u16 |
+| 11 | 2 | HTTP port u16, 0 when the server doesn't serve the web export |
+| 13 | 1 | players connected |
+| 14 | 1 | player cap |
+| 15 | 1 | flags: bit 0 a session is active (`NetServer.session_active()`: any session connected or within its grace; the pid file's `session_active` means the same) |
+| 16 | 1 | name length n (UTF-8 bytes, at most 63) |
+| 17 | n | server name, UTF-8 |
+
+## Static HTTP
+
+`StaticServer` (`net/static_server.gd`, FT-NET-030, FT-NET-039) serves the web export from `--http-root DIR` on the bind address at the WebSocket port − 1. It answers GET and HEAD only, prefers `<file>.gz` when the request accepts gzip, and sends an ETag with `Cache-Control: no-cache`, so a reload gets 304. It has no byte ranges (a Range header is ignored: 200 with the whole file) and no video/mp4; `.webm` stays (`video/webm`, the packaged keep-awake video). #9 re-adds ranges, and mp4, if Safari's keep-awake video needs them. The server polls it once a frame within a 400 µs budget; the request head search resumes from where it stopped.
+
+## Rates and limits (PROVISIONAL)
+
+Every provisional value, once. Code comments that call a value provisional point here.
+
+| Setting | Value | Where |
+|---|---|---|
+| Snapshot rate | every 2 sim ticks (30 Hz); 33 ms of wall clock while the sim doesn't step | `NetServer.SNAPSHOT_TICKS` |
+| Stall | > 15 unacknowledged snapshots, a failed send (the socket write failed; connection closed, code 4002), or > 256 KiB queued on the high lane (D106) | `NetResync.LAG_LIMIT`, `QUEUED_LIMIT` |
+| Queue without a view key | 256 KiB, then close (4004) | `NetResync.QUEUED_LIMIT` |
+| Command rate limit | 90 per second, burst 180, per session, shared by commands and Pick, Release, Ready, Claim, ReleaseClaim, Abandon, Takeover, AbandonVote, Alert, Mark, Ping, RunAgain; a refused command gets `rate_limited`, a refused request is dropped | `ServerSession.DEFAULT_RATE`, `DEFAULT_BURST`, `NetProtocol.RATED_REQUESTS` |
+| Ping rate limit | 2 per second, burst 3, per session, on top of the above; refused `rate_limited` (FT-SPA-017) | `CrewPings.RATE`, `BURST` |
+| Ping copy window | 3 s | `CrewPings.COPY_US` |
+| Mark name | 24 bytes of UTF-8 | `CrewMarks.MAX_NAME_BYTES` |
+| Ship-computer alerts | hull critical at 25 % hull, once until above it; stations per line | `ServerVoice.HULL_CRITICAL`, `LINES` |
+| Chunk payload | 16 KiB | `NetChunker.DEFAULT_CHUNK_SIZE` |
+| Message size | 8 MiB; 64 KiB from a client | `NetChunker.MAX_MESSAGE_SIZE`, `NetTransport.MAX_CLIENT_MESSAGE` |
+| Bundle | 48 KiB | `NetTransport.BUNDLE_MAX` |
+| Voice | one chunk per pump, only when the high lane is empty | `NetTransport.voice_per_pump` |
+| Malformed messages | 16, then close (4003) | `NetTransport.MAX_ERRORS` |
+| Hello timeout | 5 s, then close (4003) | `NetTransport.HELLO_TIMEOUT_US` |
+| Connections without a session | 16 at once | `NetTransport.MAX_SESSIONLESS` |
+| Hello name | 32 bytes of UTF-8 | `NetProtocol.MAX_NAME_BYTES` |
+| Close linger / timeout | 1 s / 5 s | `NetTransport.CLOSE_LINGER_US`, `CLOSE_TIMEOUT_US` |
+| Ack | at most every 200 ms, at once after a full snapshot | `NetClient.ACK_INTERVAL_US` |
+| Session cap | 64 connected sessions | `ServerSession.max_sessions` |
+| Reconnect grace | 10 s (`--grace-s`) | `NetSessions.DEFAULT_GRACE_US` |
+| Token lifetime | the server's life | `NetSessions` |
+| Dead reckoning | 0.5 m, 1° | `SnapshotBuilder.pos_tol_m`, `rot_tol_deg` |
+| Near and projectile ranges | 2 km, 3 km | `NearSection.DEFAULT_RANGE_M`, `ProjectilesSection.DEFAULT_RANGE_M` |
+| CONTACTS sites | one site per world (M1), so no site field | `ContactsSection` |
+| Discovery | UDP port 47790, every 1 s, to 255.255.255.255; a host expires 3.5 s after its last beacon | `LanBeacon.DISCOVERY_PORT`, `INTERVAL_USEC`, `BROADCAST_ADDRESS`, `LanBrowser.EXPIRY_USEC` |
+| Default server name | "Full Theta server" | `ServerMain.DEFAULT_NAME` |
+| Manual join | any address, public ones included (VPNs) | `LanBrowser.parse_address` |
+| Static HTTP | 400 µs a frame, 8 KiB request head, idle close 15 s | `StaticServer.DEFAULT_BUDGET_US`, `MAX_REQUEST`, `IDLE_US` |
+| Server frame pacing | 2 ms sleep, at most 250 frames/s | `ServerMain.SLEEP_USEC`, `MAX_FPS` |
+| Idle exit | 10 min without connected players (connections with a session) for a hosted child; a dedicated server never exits by default | `HostLauncher.DEFAULT_IDLE_EXIT_MIN` |
+| Host start | 30 s for the child to listen, then 10 s for the handshake | `HostSession.READY_TIMEOUT_MS`, `JOIN_TIMEOUT_MS` |
+| Orphan check off Linux | the process can't be identified, so the player is asked before it is terminated | `OrphanCheck.decide` |

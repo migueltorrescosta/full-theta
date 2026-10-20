@@ -32,6 +32,178 @@
       "source": "https://github.com/pytest-dev/pytest",
       "licence": "MIT",
       "attribution": "Copyright (c) Holger Krekel and others"
+    },
+    {
+      "name": "Piper (piper-tts)",
+      "kind": "tool",
+      "version": "1.8.0",
+      "source": "https://github.com/OHF-Voice/piper1-gpl/releases/tag/v1.8.0",
+      "licence": "GPL-3.0-or-later",
+      "attribution": "Copyright (c) Michael Hansen and Open Home Foundation contributors"
+    },
+    {
+      "name": "eSpeak NG (bundled in piper-tts)",
+      "kind": "tool",
+      "version": "as bundled in piper-tts 1.8.0",
+      "source": "https://github.com/espeak-ng/espeak-ng",
+      "licence": "GPL-3.0-or-later",
+      "attribution": "Copyright (c) eSpeak NG contributors"
+    },
+    {
+      "name": "ONNX Runtime",
+      "kind": "tool",
+      "version": "1.31.0",
+      "source": "https://github.com/microsoft/onnxruntime",
+      "licence": "MIT",
+      "attribution": "Copyright (c) Microsoft Corporation"
+    },
+    {
+      "name": "NumPy",
+      "kind": "tool",
+      "version": "2.5.4",
+      "source": "https://github.com/numpy/numpy",
+      "licence": "BSD-3-Clause",
+      "attribution": "Copyright (c) 2005-present NumPy Developers"
+    },
+    {
+      "name": "playwright-core",
+      "kind": "tool",
+      "version": "1.64.1",
+      "source": "https://github.com/microsoft/playwright",
+      "licence": "Apache-2.0",
+      "attribution": "Copyright (c) Microsoft Corporation; used only by the S3 spike harness (spikes/s3/harness) and the L6 web-export load check (tools/l6)"
+    },
+    {
+      "name": "Piper standalone (shipped in release packages)",
+      "kind": "runtime",
+      "version": "2023.11.14-2",
+      "source": "https://github.com/rhasspy/piper/releases/tag/2023.11.14-2",
+      "licence": "MIT",
+      "attribution": "Copyright (c) 2022 Michael Hansen. Archives and SHA-256 pinned in tools/release/piper.json (linux x86_64, windows amd64, macos x64); licence text shipped as licenses/piper-LICENSE.md (D140)"
+    },
+    {
+      "name": "piper-phonemize (macOS libraries in release packages)",
+      "kind": "runtime",
+      "version": "2023.11.14-4",
+      "source": "https://github.com/rhasspy/piper-phonemize/releases/tag/2023.11.14-4",
+      "licence": "MIT",
+      "attribution": "Copyright (c) 2023 Michael Hansen. Supplies the macOS dylibs rhasspy/piper's macOS archive lacks; licenses/piper-phonemize-LICENSE.md"
+    },
+    {
+      "name": "eSpeak NG, rhasspy fork (in the shipped Piper)",
+      "kind": "runtime",
+      "version": "1.52.0.1, commit 0f65aa301e0d6bae5e172cc74197d32a6182200f",
+      "source": "https://github.com/rhasspy/espeak-ng/tree/0f65aa301e0d6bae5e172cc74197d32a6182200f",
+      "licence": "GPL-3.0-or-later",
+      "attribution": "Copyright (c) eSpeak NG contributors; licenses/espeak-ng-COPYING, source archive attached to each release (SOURCE.md, FT-LIC-008). The commit is inferred: upstream built from master on 2023-11-14 without recording one (tools/release/piper.json)"
+    },
+    {
+      "name": "ONNX Runtime (in the shipped Piper)",
+      "kind": "runtime",
+      "version": "1.14.1",
+      "source": "https://github.com/microsoft/onnxruntime/releases/tag/v1.14.1",
+      "licence": "MIT",
+      "attribution": "Copyright (c) Microsoft Corporation; licenses/onnxruntime-LICENSE and onnxruntime-ThirdPartyNotices.txt"
+    },
+    {
+      "name": "Wine",
+      "kind": "tool",
+      "version": "10.0~repack-12ubuntu1",
+      "source": "https://www.winehq.org",
+      "licence": "LGPL-2.1-or-later",
+      "attribution": "Copyright (c) Wine contributors (development and testing only)"
+    },
+    {
+      "name": "jsonschema",
+      "kind": "tool",
+      "version": "4.25.1",
+      "source": "https://github.com/python-jsonschema/jsonschema",
+      "licence": "MIT",
+      "attribution": "Copyright (c) 2013 Julian Berman (dialogue gate, tools/check_dialogue.py)"
+    },
+    {
+      "name": "Piper voice en_GB-cori-medium",
+      "kind": "voice",
+      "voice": "en_GB-cori-medium",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_GB/cori/medium",
+      "licence": "MIT (piper-voices model repository); dataset public domain (LibriVox), trained from scratch",
+      "attribution": "Voice: cori (LibriVox, public domain); model by the Piper project. Audited in docs/spikes/S7.md (D105)."
+    },
+    {
+      "name": "Piper voice en_GB-cori-high",
+      "kind": "voice",
+      "voice": "en_GB-cori-high",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_GB/cori/high",
+      "licence": "MIT (piper-voices model repository); dataset public domain (LibriVox), trained from scratch",
+      "attribution": "Voice: cori (LibriVox, public domain); model by the Piper project. Prerender only, not shipped (D105)."
+    },
+    {
+      "name": "Piper voice en_US-norman-medium",
+      "kind": "voice",
+      "voice": "en_US-norman-medium",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/norman/medium",
+      "licence": "MIT (piper-voices model repository); dataset public domain (LibriVox), trained from scratch",
+      "attribution": "Voice: norman (LibriVox, public domain); model by the Piper project. Audited in docs/spikes/S7.md (D105)."
+    },
+    {
+      "name": "Piper voice it_IT-serena-medium",
+      "kind": "voice",
+      "voice": "it_IT-serena-medium",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/it/it_IT/serena/medium",
+      "licence": "MIT (piper-voices model repository); dataset CC-BY-4.0 (synthetic; Tatoeba transcripts CC-BY-2.0-FR), trained from scratch",
+      "attribution": "Voice: serena, dataset by committa (CC BY 4.0), transcripts from Tatoeba (CC BY 2.0 FR); credit required in the shipped credits. Accepted on its card (D105). Modified in release packages: the .onnx.json config drops the phoneme_id_map entries aɪ, aʊ, ɔɪ, eɪ, oʊ (more than one codepoint, rejected by the bundled Piper 2023.11.14-2); the model is unchanged (D144, licenses/VOICES.md)."
+    },
+    {
+      "name": "Piper voice it_IT-serena-high",
+      "kind": "voice",
+      "voice": "it_IT-serena-high",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/it/it_IT/serena/high",
+      "licence": "MIT (piper-voices model repository); dataset CC-BY-4.0 (synthetic; Tatoeba transcripts CC-BY-2.0-FR), trained from scratch",
+      "attribution": "Voice: serena, dataset by committa (CC BY 4.0), transcripts from Tatoeba (CC BY 2.0 FR). Prerender only, not shipped (D105)."
+    },
+    {
+      "name": "Piper voice pt_PT-tugão-medium",
+      "kind": "voice",
+      "voice": "pt_PT-tugão-medium",
+      "status": "dev-only",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/pt/pt_PT/tugão/medium",
+      "licence": "Unclear: dataset CC0 (OHF voice-datasets) but fine-tuned from lessac (Blizzard 2013, research only)",
+      "attribution": "Voice: tugão (OHF voice-datasets, CC0). Development only, never shipped, until #16 provides a clean pt_PT voice (D105, FT-LIC-007)."
+    },
+    {
+      "name": "python-soundfile",
+      "kind": "tool",
+      "version": "0.13.1",
+      "source": "https://github.com/bastibe/python-soundfile",
+      "licence": "BSD-3-Clause",
+      "attribution": "Copyright (c) 2013 Bastian Bechtold; encodes the clients' Ogg Vorbis voice lines at build time (tools/tts/prerender.py), never shipped"
+    },
+    {
+      "name": "libsndfile with libvorbis and libogg (bundled in soundfile wheels)",
+      "kind": "tool",
+      "version": "libsndfile 1.2.2",
+      "source": "https://github.com/libsndfile/libsndfile",
+      "licence": "LGPL-2.1-or-later (libsndfile); BSD-3-Clause (libvorbis, libogg)",
+      "attribution": "Copyright (c) Erik de Castro Lopo and libsndfile contributors; Xiph.Org Foundation (libvorbis, libogg); build time only"
+    },
+    {
+      "name": "Alert tones (hit, fault, shield low, proximity, ping, alert level)",
+      "kind": "sound",
+      "path": "assets/sounds/alerts/",
+      "source": "Own work: synthesised by tools/make_alert_tones.py",
+      "licence": "CC0-1.0",
+      "attribution": "Full Theta contributors, dedicated to the public domain (CC0 1.0)"
     }
   ]
 }

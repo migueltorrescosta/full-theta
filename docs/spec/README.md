@@ -2,7 +2,7 @@
 
 Repo: migueltorrescosta/full-theta (GPL-3.0). Engine: Godot 4.7.2, typed GDScript. Date: 2026-10-19.
 
-v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D102, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
+v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D178, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
 
 ## How to use this spec
 
@@ -44,11 +44,11 @@ v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D10
 | Coverage | The condition that a ship's crew picks include every functional station, with at least 3 crew players. Enables Ready/Start. |
 | Claim | A lock a player takes on a sub-control of a shared station (weapon mount, repair crew, probe, NPC conversation, scan/hack slot, Helm flight, Helm shield facing). |
 | Callsign | Per-faction short name for a contact: allegiance letter (H, U, F, N) plus a number that never changes. |
-| Clock / height / range | Spoken ship-relative direction: clock position in the deck plane, height word, range band (`H2 · 4 high · 2.3 km`). |
+| Clock / height / range | Spoken ship-relative direction: clock position in the deck plane, height word, range band (`H2 · 4 high · mid`; D114). |
 | Mark | One of up to 8 named world-anchored points per ship (Alpha–Hotel), free or attached to a contact. |
 | Ping | A rate-limited 3 s pulse plus chime on every screen of the ship, pointing at an item. |
 | Disc radar | Elite-style radar: deck-plane disc with elevation stems, range ring at the selected contact, optional side strip. |
-| Ship frame / world frame | Radar orientation relative to the ship (crew stations) or to the scenario map's ecliptic (Relay, Captain maps). Helm's Level aligns them. |
+| Ship frame | Orientation relative to the ship: deck plane, bow at 12. Every radar and callout uses it; Relay, Captain maps and the tactical view may centre it on a selected mark, site or contact. Space has no world-fixed up (D124). |
 | Request chip | A player-initiated typed request shown on another station; a shortcut toggle, off in the Hard preset. |
 | Data shortcut | A share button or data link that puts one station's data on another station's screen; each is a toggle set before start, preset by difficulty (D84). |
 | Pair (P1–P15) | One of the 15 pairs of functional stations and its cooperative mechanic. |
@@ -57,7 +57,7 @@ v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D10
 | Run | One 20–40 minute playthrough of about 5 encounters; nothing persists after it. |
 | Encounter | A self-contained situation (enemy wave, rescue, derelict, negotiation...) the director places or activates at a site, with its own triggers and outcome (D77). |
 | Scenario map | The single global open 3D map of a scenario; no per-encounter maps (D77). |
-| Site | A named place on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). Positions are site-local, and site names are a callout layer outside the 8 marks (D98). |
+| Site | A named place on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). Positions are site-local, each site a cube that wraps on all three axes with period P, and site names are a callout layer outside the 8 marks (D98, D124). |
 | Slot module | An upgrade fitted to a ship slot, with a trade-off; bought while docked via Comms (D86). |
 | Faction | Owner of knowledge, callsigns and reputation; all state is keyed by ship and faction. Allied ships share one faction; marks stay per ship (D82). |
 | EE | EmptyEpsilon, the reference game (GPL-2.0-only; ideas only). |
@@ -132,3 +132,78 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 ### v0.5 update for D103 (#2)
 
 57. Module dependencies follow the API-boundary diagram; the Scenario API lives in `sim/api/`, and the architecture lint enforces FT-DAT-007 from #2. §2.2, FT-ARC-010, FT-DAT-007. (D103)
+
+### v0.5 update for D104–D111 (#3)
+
+58. Site-local offsets are three 64-bit floats, measured by spike S6; R6's budget is mean and p99. §4.1, FT-SIM-035, R6. (D104)
+59. Voices fine-tuned from lessac or ryan are unclear; medium voices for runtime; a clean pt_PT voice is trained (#16). §9.1, FT-LIC-007, FT-AUD-019. (D105)
+60. The stall trigger for a client is fixed at more than 15 unacknowledged snapshots, a failed send or 256 KiB queued. FT-NET-037. (D106)
+61. Art moves from toon to semi-realistic PBR-style procedural art with variant B's palette. §9.5, FT-AUD-016, R11. (D107)
+62. Browser stations run from plain HTTP through a patched shell and audio guard; grace stays 10 s; keep-awake by a muted video. FT-NET-030, 033, 046. (D108)
+63. S9's quiet-host tick counts as the pass for R15; #11 re-verifies. R15. (D109)
+64. Free-text voice bursts beyond 4 queued lines show subtitles only. FT-AUD-015, R15. (D110)
+65. Snapshots are encoded and sent off the sim thread (amends D109). FT-NET-040, R15. (D111)
+
+### v0.5 update for D112–D123 (#5)
+
+66. A faction identifies a contact within one of its ships' identify range. §6.1, FT-SPA-001. (D112)
+67. Grid squares run A… along +X and 1… along +Z from a scenario corner; layers are rounded and omitted at 0. §6.1, FT-SPA-006, FT-SPA-026. (D113)
+68. Chips show the range band, not the exact range. §6.1, FT-SPA-003. (D114)
+69. A repair job takes its parts at dispatch and is refused without enough parts; crews are numbered. §4.4, FT-SIM-024. (D115)
+70. Energy past the shields is split between the nearest subsystem (a per-ship share) and the hull. §4.4, FT-SIM-020. (D116)
+71. Data thrust limits are the nominal envelope; overcharge and a one-press boost reach 1.5 times them. §4.4, FT-SIM-006. (D117)
+72. Shield tightness runs from an even spread (the spawn value) to a tight lobe; shields absorb collisions too. §4.3, FT-SIM-018, FT-SIM-019. (D118)
+73. Collisions: restitution 0.2, energy lost split half to each ship, warning 5 s ahead within 500 m. §4.1, FT-SIM-009, FT-SIM-010. (D119)
+74. An enemy has retreated once in retreat and undetected by every hostile ship. §4.5, §8.3, FT-M1-012, FT-SIM-027. (D120)
+75. Pair gain is the share of the solo value saved; P1's `pair_min_gain` is 0.2. §7.4, FT-PAIR-015. (D121)
+76. The command log records each crew or server command (for example a ship reset) with its result. FT-ARC-008. (D122)
+77. Hit energy a subsystem can't absorb passes to the next-nearest live subsystem, then the hull. §4.4, FT-SIM-020. (D123)
+
+### v0.5 update for D124 (#5)
+
+78. Each site wraps on all three axes with period P from scenario data (default 200 km, at least 4 times the longest sensing or radar range); offsets wrap after each step and differences use the minimum image, replacing the 200 km bound. §4.1, FT-SIM-035. (D124)
+79. Level becomes Align: roll the selected item into the pitch plane above the bow, a second press faces it. §5.1, FT-HLM-007, 017, FT-NET-045, R5. (D124)
+80. No privileged up: grid squares and altitude layers are retired; points are said relative to a mark or site; radars use the ship frame, optionally centred on a selected reference. §6.1, §6.2, FT-SPA-006, 010, 026. (D124)
+81. Relay's map is a freely rotatable 3D map of the wrapping cube; marks are placed on the view plane with depth on Shift+drag. §5.5, §7.4 P4, FT-RLY-001, 002. (D124)
+82. Turret roll, main-screen stabilisation and the comfort toggle use the ship's deck plane or the target; a per-client cosmetic reference plane is allowed but never spoken or used by rules. FT-WPN-009, FT-MSC-001, FT-STN-017. (D124)
+83. One site period P per world, an exact multiple of 500 m and at least 4 times the longest sensor range, recorded in the command log setup and the state hash; weapon ranges under P/2 by content review. §4.1, FT-SIM-035. (D125)
+
+### v0.5 update for D126–D128 (#6)
+
+84. Load tags per station and joint view are fixed in data: Helm, Weapons and Tactical intense; Engineering, Science and Systems busy; Relay, Comms, Ops and Captain light; Viewer untagged. FT-STN-015. (D126)
+85. The host is the client presenting the secret its Host button gave the child server; a dedicated server has no host. FT-NET-041. (D127)
+86. A paused ship is abandoned by a majority vote of its remaining connected crew, or by the host alone; votes clear when the pause ends. FT-NET-041. (D128)
+
+### v0.5 update for D129–D130 (#6)
+
+87. Any crew player of a covered ship presses Start, and the sim steps from the first Start. §3.3, FT-NET-019. (D129)
+88. A player alone on a station keeps every claim when a second player joins; the newcomer claims what is released. §3.4, FT-NET-044. (D130)
+
+### v0.5 update for D150–D154 (#10, E10)
+
+89. Voice parts: VOICE carries `part` and `last`; in protocol version 3. FT-AUD-019, FT-NET-038. (D150)
+90. The host picks the session language before launch (`--language`); Welcome carries it. FT-AUD-013. (D151)
+91. Clients play unslotted authored lines from their own export; the host stitches slotted lines from segments, the closed set and compositional number fragments, and streams only stitched and synthesised clips. §9.1, FT-AUD-002, 018, FT-ARC-019. (D152, D154)
+92. The ship-computer filter is a client audio-bus effect chain; dev and release use different Piper builds behind one adapter; pt_PT is subtitles only in releases until #16. §9.1, FT-AUD-004, 014, 019. (D153)
+
+### v0.5 update for D140–D144 (#12, E15)
+
+93. Release packages ship the standalone rhasspy/piper 2023.11.14-2 with eSpeak NG 1.52.0.1 and the release voices from one list; macOS assembles Piper from rhasspy/piper and piper-phonemize. FT-ARC-022, FT-LIC-008. (D140, D141)
+94. Exported builds print their build line, and `--tts-smoke` synthesises one line with each bundled voice, for L6. FT-TST-019. (D142)
+95. The release workflow runs on version tags only, builds with a read-only token and drafts the release from a separate job; L6 runs on fugaku before the tag; macOS stays unsigned until #13. §12.1, FT-ARC-017, FT-GEN-012. (D143)
+96. Release voice configs drop multi-codepoint phonemes for the bundled Piper, recorded as a change; L6 checks every bundled voice loads. FT-LIC-005, FT-TST-019. (D144)
+
+### v0.5 update for D160–D161 (#11, E11)
+
+97. The 64-connection load gate (R15 re-verified in #11) runs 6 crewable ships and 6 fighting AI raiders with 36 crew, 6 Captains and 22 viewers; the server is pinned to 2 cores and the clients run on other cores; a 100-ship stress run is reported, not gating. §12.1, FT-GEN-003, FT-TST-011, FT-TST-014. (D160)
+98. Load gate measurement: tick per main-thread sim frame (mean and p99), snapshot age from the server's capture stamp to the client's arrival, payload bytes per connection. FT-NET-040, R15. (D161)
+
+### v0.5 update for D170–D178 (#7)
+
+99. Three alert levels, Normal, Yellow and Red, each with a colour, a shape and a letter. FT-STN-006, FT-STN-008. (D170)
+100. Marks, pings and the alert level are per-ship server state outside the sim; protocol version 4. §6.3, FT-SPA-012–017. (D171)
+101. The comfort roll lock offers the deck plane, the target or a personal reference plane captured from the current attitude. FT-STN-017. (D172)
+102. The main screen switches to chase above 45°/s roll or while decoupled, and back after 1.5 s below 30°/s. FT-MSC-001. (D173)
+103. The radar side strip toggles with Z (View + d-pad left), not B. §6.2, FT-SPA-009. (D175)
+104. A left click selects only over a chip, mark or radar item; elsewhere in the cockpit or turret it fires. FT-STN-009. (D176)
+105. The run resets after a majority "Run again" vote of the connected crew, or the host alone. FT-M1-012. (D178)

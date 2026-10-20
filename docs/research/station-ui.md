@@ -1,5 +1,7 @@
 # Full Theta: station UI and 3D spatial language
 
+Superseded in part by D124 (no world up; Level became Align).
+
 Status: proposal for the owner. Binding inputs: decisions.md (D10–D29), spec sections 4–6, emptyepsilon.md section 4. Wireframes are 16:9 sketches, at most 12 lines by 60 characters. Questions for the owner are in section 5; each option there has a preview where a picture helps.
 
 ## 0. Precedents (what we borrow and what we avoid)

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ShipDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/ship_def.gd" id="1_j7jyo"]
+[ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="2_0gjke"]
+[ext_resource type="Script" path="res://content/defs/mount_def.gd" id="3_r5qg8"]
+
+[sub_resource type="Resource" id="sub_engines"]
+script = ExtResource("2_0gjke")
+id = &"engines"
+health_max = "20 MJ"
+
+[resource]
+script = ExtResource("1_j7jyo")
+id = &"bad_type_ship"
+mass = 50000.0
+inertia = 2000000.0
+subsystems = Array[ExtResource("2_0gjke")]([SubResource("sub_engines")])
+mounts = Array[ExtResource("3_r5qg8")]([SubResource("sub_engines")])

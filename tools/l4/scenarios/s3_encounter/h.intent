@@ -1,0 +1,55 @@
+# h: the host (HostSession; the server child loses fights fast) plays Tactical.
+host_spawn pid_file=$RUN/server.pid.json grace=$GRACE publish=url args=["--m1-player-hull-scale","0.2"] timeout=60
+expect_welcome host=true
+ui_pick entry=tactical
+barrier name=picked n=3 timeout=90
+ui_button name=Start timeout=30
+expect_event type=started payload.ship=0 timeout=30
+ui_expect shown=station focused=helm timeout=30
+barrier name=started n=3 timeout=60
+# Run 1, a win: claim the mount on the Weapons panel, back to Helm, select what Ops
+# pinged, face it and hold fire: from the cockpit it fires the claimed mount at the
+# target's lead (FT-JNT-008).
+ui_press id=focus_2
+ui_expect focused=weapons
+ui_press id=claim
+ui_expect claims.mount:0.name=h
+ui_press id=focus_1
+ui_expect focused=helm
+signal name=ready1
+expect_event type=ping timeout=60
+ui_press id=select_pinged
+ui_expect selection.kind=contact selection.id=1 marks.contact~=1
+ui_hold id=face
+ui_hold id=fire
+expect_view blocks.mounts.mounts.0.ammo<400 timeout=20
+expect_event type=run_over payload.outcome=win timeout=150
+ui_release id=fire
+ui_release id=face
+ui_expect card=true run_over.outcome=win
+barrier name=won n=3 timeout=30
+# The crew votes; the reset brings everyone back to the lobby with their picks.
+ui_expect shown=lobby entry=tactical card=false started=false timeout=30
+barrier name=lobby1 n=3 timeout=30
+ui_button name=Start timeout=30
+expect_event type=started payload.ship=0 timeout=30
+ui_expect shown=station focused=helm marks.size=0 timeout=30
+barrier name=started2 n=3 timeout=60
+# Run 2, a loss: select the ping, face and approach with weapons cold.
+signal name=ready2
+expect_event type=ping timeout=60
+ui_press id=select_pinged
+ui_expect selection.kind=contact selection.id=1
+ui_hold id=face
+ui_hold id=approach
+expect_event type=run_over payload.outcome=loss timeout=90
+ui_release id=approach
+ui_release id=face
+ui_expect card=true run_over.outcome=loss run_over.hull=0
+barrier name=lost n=3 timeout=30
+# The host runs it again alone (D178).
+ui_button name=RunAgain
+ui_expect shown=lobby entry=tactical card=false timeout=30
+barrier name=lobby2 n=3 timeout=30
+barrier name=left n=3 timeout=30
+host_stop

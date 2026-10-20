@@ -1,0 +1,12 @@
+{
+  "lines": [
+    {
+      "id": "malformed.no_portuguese", "role": "computer", "priority": 1, "max_age_ms": 4000,
+      "text": {"en": "Shields holding.", "it": "Scudi stabili."}
+    },
+    {
+      "id": "Malformed Bad Id", "role": "radio", "priority": 7, "max_age_ms": -1, "volume": 3,
+      "text": {"en": "x", "pt_PT": "x", "it": "x"}
+    }
+  ]
+}

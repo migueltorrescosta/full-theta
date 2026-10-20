@@ -1,0 +1,10 @@
+{
+  "name": "full-theta-s3-spike",
+  "private": true,
+  "description": "S3 spike browser harness (Playwright)",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "dependencies": {
+    "playwright-core": "1.64.1"
+  }
+}

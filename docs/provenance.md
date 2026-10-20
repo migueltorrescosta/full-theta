@@ -10,6 +10,24 @@ The EE reference clone stays outside the repository (FT-LIC-003): never clone, v
 
 `content/provenance.json` lists every third-party asset, voice model and dependency with source, licence and attribution (FT-LIC-005). `tools/check_licences.py` (run by `gate.sh l0`) fails on a file under `assets/` or `addons/` that no entry covers by path prefix, and on art or sound that isn't CC0 (FT-LIC-006). The Python tools' transitive dependencies are pinned in `tools/uv.lock`; they run only at development time and never ship.
 
+## Runtime Piper (GPL aggregation)
+
+The host server synthesises speech at runtime with Piper (GPL-3.0-or-later), which carries eSpeak NG (GPL-3.0-or-later) and ONNX Runtime (MIT) (D38, D85, FT-ARC-019). The game doesn't link them: it starts Piper as a separate process and exchanges only text and PCM with it over a pipe (S7b, `tools/tts/piper_stream.py`). Shipping that program next to the game in one package is aggregation. Even read as one combined work, every part is GPL-3.0-compatible, and Full Theta is GPL-3.0 itself, so the licences agree either way. A release that ships Piper must still meet its terms: include its licence text, name the Piper and eSpeak NG versions, and offer or link their exact source alongside the game's (FT-LIC-008, TECH-4). Voice models are data with their own licences (FT-LIC-007, `docs/spikes/S7.md`).
+
+## Release packages
+
+Each release package ships the game (Godot, MIT), its web export, the standalone Piper with its eSpeak NG and ONNX Runtime, and the release voices (D140, D141). `tools/release/package.py` puts the GPL-3.0 text in `LICENSE`, every third-party licence text and `licenses/VOICES.md` (from the voice entries in `content/provenance.json`) in `licenses/`, and the source link and offer in `SOURCE.md`, which names the Piper and eSpeak NG versions. The release page carries the upstream source archives next to the packages (FT-LIC-008). Piper's is its release tag. For piper-phonemize and eSpeak NG, the commits are inferred from the build date (D140), and `SOURCE.md` says so and offers the source on request too. `tools/release/inspect_packages.py` checks all of it before a release is drafted (`docs/release.md`).
+
+## Provenance review checklist
+
+Run through it for every release and for any PR that adds a dependency, asset or voice (FT-LIC-004, FT-LIC-005):
+
+- [ ] Every new file under `assets/` or `addons/` has an entry in `content/provenance.json` (`gate.sh l0` checks this).
+- [ ] Every program or library a package ships, and every voice in the `release` list of `tools/tts/voices.json`, has an entry with source, licence and attribution. A release voice must also have passed the S7 audit (FT-LIC-007). `tools/tests/test_release.py` and the build check the voices.
+- [ ] Art and sound are CC0 (FT-LIC-006, `gate.sh l0`).
+- [ ] The EE mechanics table below matches spec §13.2. `tools/tests/test_release.py` compares them; when a mechanic's status changes, update both.
+- [ ] The inspection passes for every package, so it holds the licence texts, `SOURCE.md` and `BUILD.json`.
+
 ## EE mechanics: reproduced, redesigned, omitted
 
 Seeded from spec §13.2 (`docs/spec/13-licensing-and-provenance.md`). Keep this record current when a mechanic's status changes (FT-LIC-004).

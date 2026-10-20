@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/weapon_def.gd" id="1_4qna5"]
+
+[resource]
+script = ExtResource("1_4qna5")
+id = &"negative_cooldown"
+display_name = "Mass driver"
+projectile_speed = 1500.0
+projectile_radius = 0.5
+max_range = 6000.0
+cooldown = -0.5
+damage = 2000000.0
+ammo_capacity = -3
+energy_per_shot = 500000.0
+heat_per_shot = 2.0
+heat_dissipation = 0.05
+heat_limit = 40.0

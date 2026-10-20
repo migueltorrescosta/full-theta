@@ -44,7 +44,7 @@ Conventions (D73–D75):
 | T025 | Add sim core: fixed 60 Hz tick, seeded RNG, ship/faction keys | M1 | sim | T006, T011 | FT-ARC-004, FT-ARC-006, FT-ARC-008, FT-ARC-009, FT-ARC-012, FT-M1-014 | |
 | T026 | Add typed .tres definitions and the definition load gate | M1 | content, ci | T007 | FT-DAT-001, FT-DAT-002, FT-DAT-013, FT-SIM-002, FT-SIM-033 | |
 | T027 | Implement the 6DOF integrator with analytic tests | M1 | sim | T012, T025, T026 | FT-SIM-001–003, FT-ARC-007, FT-TST-007, FT-M1-003 | |
-| T028 | Add flight assist, decoupled, face assist, Level, propellant | M1 | sim | T027 | FT-SIM-004, FT-SIM-005, FT-SIM-007, FT-HLM-005–007, FT-M1-003 | |
+| T028 | Add flight assist, decoupled, face assist, Align, propellant | M1 | sim | T027 | FT-SIM-004, FT-SIM-005, FT-SIM-007, FT-HLM-005–007, FT-M1-003 | |
 | T029 | Add collisions with swept projectiles and proximity warning | M1 | sim | T027 | FT-SIM-009, FT-SIM-010 | |
 | T030 | Add power pips, heat and thrust envelope (PWR) | M1 | sim | T027 | FT-SIM-006, FT-SIM-026 | |
 | T031 | Add shields with focus direction, power and tightness | M1 | sim | T030 | FT-SIM-017–019, FT-SIM-031 | |
@@ -93,7 +93,7 @@ Conventions (D73–D75):
 | E12 | Epic: PvP scenario types (race, last standing, teams) | M4 | sim, content | E11 | FT-MIS-014, FT-MIS-031–034, FT-PAIR-016, FT-GEN-002 | |
 | E13 | Epic: browser stations over HTTP with touch layouts | M2 (D94) | net, ui, audio, ci | T021, T022, E04 | FT-NET-013, FT-NET-030, FT-STN-005, FT-AUD-017, FT-SCI-013 | |
 | T063 | Multi-ship PvP LAN playtest with tablets (owner step) | M4 | docs | E12, E13 | FT-GEN-001, FT-GEN-003 | Human |
-| E14 | Epic: presentation, toon art, VFX and CC0 sound | M5 | ui, audio, content | T016, E04 | FT-AUD-016, FT-LIC-006, FT-STN-006 | |
+| E14 | Epic: presentation, semi-realistic procedural art (D107), VFX and CC0 sound | M5 | ui, audio, content | T016, E04 | FT-AUD-016, FT-LIC-006, FT-STN-006 | |
 | E15 | Epic: release packaging for Linux, Windows and macOS | M5 | ci, docs | E10, E12, E13, E14 | FT-ARC-017, FT-GEN-012, FT-LIC-004, FT-LIC-005, FT-LIC-008 | |
 | T064 | macOS test machine, signing and notarisation (owner step) | M5 | ci | E15 | FT-ARC-017 | Human |
 | T065 | Windows smoke test and release approval (owner step) | M5 | ci | E15, T064 | FT-GEN-012 | Human |
@@ -302,16 +302,16 @@ Conventions (D73–D75):
 #### T027 Implement the 6DOF integrator with analytic tests
 - **Why:** FT-ARC-007, FT-SIM-001–003; promotes the T012 prototype.
 - **Verification criteria:**
-  - [ ] Semi-implicit integrator with diagonal inertia, quaternions renormalised.
+  - [ ] Integrator keeping world-frame angular momentum (split free flow), quaternions renormalised.
   - [ ] Tests: constant thrust matches analytic position within 1e-6 relative; momentum conserved; zero input holds velocity (FT-TST-007).
   - [ ] Property test: quaternions stay unit, energy bounded with no input.
 - **Instructions:** research/tech §3.
 
-#### T028 Add flight assist, decoupled, face assist, Level, propellant
+#### T028 Add flight assist, decoupled, face assist, Align, propellant
 - **Why:** Assist makes 6DOF playable (FT-SIM-004/005, FT-HLM-005–007).
 - **Verification criteria:**
   - [ ] Assist acts only through thruster commands within the thrust envelope; decoupled disables it (tests).
-  - [ ] Face assist turns at the real turn rate to a contact or mark, in both modes; Level aligns to the ecliptic.
+  - [ ] Face assist turns at the real turn rate to a contact or mark, in both modes; Align rolls the selected item to 12 o'clock; a second press faces it (D124).
   - [ ] Propellant use proportional to impulse; zero when coasting (FT-SIM-007).
 - **Instructions:** Apply T013 feedback when available; don't block on it.
 
@@ -405,6 +405,7 @@ Conventions (D73–D75):
 - **Verification criteria:**
   - [ ] Dedicated headless server runs the sim and accepts WS clients (L3 test over loopback).
   - [ ] Invalid commands produce `CommandRejected{reason}`; snapshots sent at 30 Hz.
+  - [ ] Snapshots are encoded and sent on a worker thread from a copy of the state, so the sim tick holds only the sim; tick < 8 ms (mean and p99) at 64 connections on the host's default power profile (D111, S9).
 - **Instructions:** Rate limits per client; validation against holding, claims and rules.
 
 #### T042 Add station definitions and per-station snapshot filter
@@ -468,7 +469,7 @@ Conventions (D73–D75):
 - **Why:** Shared widgets for all stations (FT-STN-001–003, 006, 008, FT-SPA-003, 005, 007–011).
 - **Verification criteria:**
   - [ ] Top bar with alert chip (any crew station sets it; Captain and viewers can't).
-  - [ ] Disc radar: stems, solid/hollow blips, range ring, B side strip, ship/world frame; contact chips with callsign, clock, height, range.
+  - [ ] Disc radar: stems, solid/hollow blips, range ring, Z side strip (D175), ship frame, optionally centred on a selected reference (D124); contact chips with callsign, clock, height, range.
   - [ ] L5 screenshot tests pass; palette checked with a colour-blind simulation script.
 - **Instructions:** station-ui §1–2.
 
@@ -476,7 +477,7 @@ Conventions (D73–D75):
 - **Why:** FT-HLM-001–012, FT-M1-004.
 - **Verification criteria:**
   - [ ] Cockpit view, HUD, target compass, off-screen arrows, shield ring, six-face snap and clock-sector focus, shield track, thrust envelope and propellant.
-  - [ ] C toggles chase camera; F face, L Level work via intents (scene tests).
+  - [ ] C toggles chase camera; F face, L Align work via intents (scene tests).
   - [ ] L5 screenshot baseline.
 - **Instructions:** station-ui Helm; dock/jump controls in E07.
 
@@ -561,7 +562,7 @@ Conventions (D73–D75):
   - [ ] FT-RLY-001–009 and the mark/ping ids traced to tests; ping rate limit and 8-mark cap tested.
   - [ ] Sent marks visible only to the receiving Relay until accepted (L3 test).
 - **Instructions:** Spec §5 Relay, §6, D44, D52, D56, D82.
-- **Tasks:** world-frame 3D map with grid and stems; mark placement/rename/attach/delete; pings on every screen with chime; probes with stock and coverage; routes; ship's log; mark sending and inbox; probe claims; L5 baselines.
+- **Tasks:** freely rotatable 3D map of the wrapping cube with stems (D124); mark placement/rename/attach/delete; pings on every screen with chime; probes with stock and coverage; routes; ship's log; mark sending and inbox; probe claims; L5 baselines.
 
 #### E03 Epic: Captain seat and main screen views
 - **Why:** FT-CPT, FT-MSC: information-only seat and the shared screen.
@@ -633,7 +634,7 @@ Conventions (D73–D75):
   - [ ] Voice-bus unit tests with stub clips (priority, queue, coalescing, max age).
   - [ ] Translation completeness gate for all three languages; runtime line < 1 s (S7b method).
 - **Instructions:** Spec §9; voices from T018; runtime path from T020.
-- **Tasks:** voice bus; per-client routing; prerender pipeline from dialogue JSON; runtime synthesis service; robotic filter; subtitles; session language; i18n gate; voice licence manifest entries.
+- **Tasks:** voice bus with the subtitles-only overflow beyond 4 queued free-text lines (D110); per-client routing; prerender pipeline from dialogue JSON; runtime synthesis service; robotic filter; subtitles; session language; i18n gate; voice licence manifest entries.
 
 #### T062 Death-risk tuning playtests (owner step)
 - **Why:** FT-MIS-009 (5–10 % loss per encounter) and run length need real crews.
@@ -675,7 +676,7 @@ Conventions (D73–D75):
 
 ### M5 Polish & release (epics)
 
-#### E14 Epic: presentation, toon art, VFX and CC0 sound
+#### E14 Epic: presentation, semi-realistic procedural art (D107), VFX and CC0 sound
 - **Why:** Approved style (T016) applied across the game.
 - **Verification criteria:**
   - [ ] Licence gate passes with only CC0 art and sound; L5 baselines updated.

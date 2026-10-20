@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="ShipDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/ship_def.gd" id="1_j7jyo"]
+[ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="2_0gjke"]
+[ext_resource type="Script" path="res://content/defs/mount_def.gd" id="3_r5qg8"]
+[ext_resource type="Script" path="res://content/defs/shield_def.gd" id="4_2wkd4"]
+[ext_resource type="Resource" path="res://content/weapons/m1_cannon.tres" id="5_nbng1"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/assist.tres" id="6_w8xyr"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/power.tres" id="7_uml83"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_weapons.tres" id="8_i8epu"]
+
+[sub_resource type="Resource" id="mount_bow"]
+script = ExtResource("3_r5qg8")
+id = &"bow"
+position = Vector3(0, 0, -22)
+forward = Vector3(0, 0, -1)
+arc_half_angle = 0.2617993877991494
+traverse_rate = 0.5
+weapon = ExtResource("5_nbng1")
+subsystem_id = &"no_such_subsystem"
+
+[sub_resource type="Resource" id="shields"]
+script = ExtResource("4_2wkd4")
+max_strength = 30000000.0
+regen_rate = 500000.0
+tightness_min = 0.0
+tightness_max = 4.0
+absorption = 1.0
+low_alert_fraction = 1.5
+
+[sub_resource type="Resource" id="sub_engines"]
+script = ExtResource("2_0gjke")
+id = &"engines"
+position = Vector3(0, 0, 18)
+health_max = 20000000.0
+effectiveness = PackedVector2Array(0, 0, 1, 1.5)
+repair_rate = 200000.0
+parts_per_repair = 1
+nominal_pips = 2
+heat_per_overcharge_pip = 5.0
+heat_dissipation = 0.05
+fault_heat_threshold = 100.0
+
+[resource]
+script = ExtResource("1_j7jyo")
+id = &"bad_range_ship"
+display_name = "Corvette"
+mass = -1.0
+inertia = Vector3(2000000, 2400000, 1200000)
+max_thrust_pos = Vector3(600000, 600000, 500000)
+max_thrust_neg = Vector3(600000, 600000, 1000000)
+max_torque = Vector3(3000000, 3600000, 3000000)
+propellant_capacity = 10000.0
+exhaust_velocity = 60000.0
+lever_arm = 10.0
+radius = 25.0
+hull_max = 100000000.0
+spare_parts = 20
+sensor_range = 20000.0
+identify_range = 8000.0
+repair_crews = 2
+subsystems = Array[ExtResource("2_0gjke")]([SubResource("sub_engines"), ExtResource("8_i8epu")])
+mounts = Array[ExtResource("3_r5qg8")]([SubResource("mount_bow")])
+assist = ExtResource("6_w8xyr")
+power = ExtResource("7_uml83")
+shields = SubResource("shields")

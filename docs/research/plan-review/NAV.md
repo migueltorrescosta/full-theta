@@ -1,5 +1,7 @@
 # NAV review: Is 3D navigation simple? (question 4)
 
+Superseded in part by D124 (no world up; Level became Align).
+
 Scope read: spec 04, 06, 05 (§5.0–5.2, 5.5, 5.7–5.9), station-ui §1, §2.1, §2.2, §2.5, §2.7, §5; decisions D24, D25, D29, D42–D49, D52, D60, D61, D77, D80, D84, D94; issues #3, #4, #5, #7; task-breakdown T012, T013, T051.
 
 Verdict: the *naming* layer (callsigns, marks, pings, D44/D45) is strong and frame-proof. The *moving* layer is underspecified: what assist actually holds, how to stop at a place, how to jump, and which frame a height word uses are all left to the implementer, and nothing tests them with novices before #5/#7 harden them.

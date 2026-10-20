@@ -1,0 +1,304 @@
+{
+ "lines": [
+  {
+   "id": "f01",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Docking clearance granted for the Wandering Albatross."
+  },
+  {
+   "id": "f02",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "This is the Dusty Mule, we read you loud and clear."
+  },
+  {
+   "id": "f03",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Autorizzazione all'attracco concessa alla Rondine Errante."
+  },
+  {
+   "id": "f04",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Autorização de atracagem concedida à Andorinha Errante."
+  },
+  {
+   "id": "f05",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Warning. Unknown vessel Pickle Rick Express is closing fast."
+  },
+  {
+   "id": "f06",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "Hold your fire! We surrender!"
+  },
+  {
+   "id": "f07",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Attenzione: nave sconosciuta in rapido avvicinamento."
+  },
+  {
+   "id": "f08",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Atenção: nave desconhecida a aproximar-se depressa."
+  },
+  {
+   "id": "f09",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Message from Lieutenant Okafor: the cargo is ready."
+  },
+  {
+   "id": "f10",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "You again? I told you, the docking fee is three hundred credits, no exceptions."
+  },
+  {
+   "id": "f11",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Messaggio dal tenente Ricci: il carico è pronto."
+  },
+  {
+   "id": "f12",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Mensagem do tenente Sousa: a carga está pronta."
+  },
+  {
+   "id": "f13",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Hull integrity holding."
+  },
+  {
+   "id": "f14",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "Mayday, mayday, our reactor is failing."
+  },
+  {
+   "id": "f15",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Scafo integro."
+  },
+  {
+   "id": "f16",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Casco intacto."
+  },
+  {
+   "id": "f17",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Jump drive spooling. Destination: the Brightwater relay, sector nine."
+  },
+  {
+   "id": "f18",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "Thanks for the help, friend. Drinks are on me next time you're at Port Vesper."
+  },
+  {
+   "id": "f19",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Motore di salto in carica. Destinazione: stazione Acquachiara, settore nove."
+  },
+  {
+   "id": "f20",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Motor de salto a carregar. Destino: estação Água Clara, setor nove."
+  },
+  {
+   "id": "f21",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Incoming hail from the freighter Copper Kettle. They request an escort through the asteroid field near Hadley's Reach."
+  },
+  {
+   "id": "f22",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "Negative."
+  },
+  {
+   "id": "f23",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Chiamata in arrivo dal mercantile Pentola di Rame. Chiedono una scorta attraverso il campo di asteroidi."
+  },
+  {
+   "id": "f24",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Chamada recebida do cargueiro Panela de Cobre. Pedem escolta através do campo de asteroides."
+  },
+  {
+   "id": "f25",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Contact lost."
+  },
+  {
+   "id": "f26",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "We picked up a strange signal near the gas giant. Could be pirates, could be nothing. Want to take a look?"
+  },
+  {
+   "id": "f27",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Contatto perso."
+  },
+  {
+   "id": "f28",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Contacto perdido."
+  },
+  {
+   "id": "f29",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Note from Engineering: reroute coolant before the next jump."
+  },
+  {
+   "id": "f30",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "Your ship, the Unlikely Hero, is cleared for departure."
+  },
+  {
+   "id": "f31",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Qui la Mula Polverosa, vi riceviamo forte e chiaro."
+  },
+  {
+   "id": "f32",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Aqui é a Mula Poeirenta, recebemos-vos em alto e bom som."
+  },
+  {
+   "id": "f33",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Mission update. The convoy has split into two groups. The second group is under attack and requests immediate assistance."
+  },
+  {
+   "id": "f34",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "Keep your distance."
+  },
+  {
+   "id": "f35",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Cessate il fuoco! Ci arrendiamo!"
+  },
+  {
+   "id": "f36",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Cessar fogo! Rendemo-nos!"
+  },
+  {
+   "id": "f37",
+   "lang": "en",
+   "voice": "en_GB-cori-medium",
+   "text": "Welcome aboard, Captain Moonpie."
+  },
+  {
+   "id": "f38",
+   "lang": "en",
+   "voice": "en_US-norman-medium",
+   "text": "I have a cargo of spare parts and medical supplies, but my engines are shot. If you tow me to the station, I'll split the profit with you, fifty fifty."
+  },
+  {
+   "id": "f39",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Ancora voi? La tassa di attracco è di trecento crediti, senza eccezioni."
+  },
+  {
+   "id": "f40",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Outra vez vocês? A taxa de atracagem é de trezentos créditos, sem exceções."
+  },
+  {
+   "id": "f41",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Mayday, mayday, il nostro reattore sta cedendo."
+  },
+  {
+   "id": "f42",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Mayday, mayday, o nosso reator está a falhar."
+  },
+  {
+   "id": "f43",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Grazie dell'aiuto, amici. Alla prossima offro io, al porto di Vespero."
+  },
+  {
+   "id": "f44",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Obrigado pela ajuda, amigos. Da próxima vez, as bebidas são por minha conta, no porto de Véspera."
+  },
+  {
+   "id": "f45",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Negativo."
+  },
+  {
+   "id": "f46",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Negativo."
+  },
+  {
+   "id": "f47",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Abbiamo captato un segnale strano vicino al gigante gassoso. Potrebbero essere pirati, o forse niente. Volete dare un'occhiata?"
+  },
+  {
+   "id": "f48",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Captámos um sinal estranho perto do gigante gasoso. Podem ser piratas, ou pode não ser nada. Querem ir ver?"
+  },
+  {
+   "id": "f49",
+   "lang": "it",
+   "voice": "it_IT-serena-medium",
+   "text": "Aggiornamento missione. Il convoglio si è diviso in due gruppi. Il secondo gruppo è sotto attacco e chiede assistenza immediata."
+  },
+  {
+   "id": "f50",
+   "lang": "pt",
+   "voice": "pt_PT-tugão-medium",
+   "text": "Atualização da missão. O comboio dividiu-se em dois grupos. O segundo grupo está a ser atacado e pede assistência imediata."
+  }
+ ]
+}

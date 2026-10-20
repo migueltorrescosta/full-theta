@@ -1,0 +1,11 @@
+# h relaunched: the orphan check offers to rejoin (a run is active and the stored
+# token names its port); HostSession rejoins on the same ship and pick, as the host.
+orphan_rejoin pid_file=$RUN/server.pid.json expect=offer_rejoin timeout=30
+expect_welcome resumed=true host=true ship=0 entry=tactical
+expect_view stats.fulls>=1 blocks.helm.decoupled=true
+expect_tick_moving
+signal name=h_back
+barrier name=done n=3
+barrier name=left n=3
+# Leaving as the host ends the session: Bye and stop the server.
+host_stop

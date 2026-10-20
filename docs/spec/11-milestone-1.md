@@ -36,7 +36,7 @@ Desktop clients only; browser stations come later (D8).
 - **FT-M1-009** Milestone 1 shall include one subsystem damaged by hit location and repaired by a repair crew using spare parts. (D26, D27)
 - **FT-M1-010** Milestone 1 shall include the P1 Engineering + Helm loop with its automated pair test. (D72)
 - **FT-M1-011** Milestone 1 shall show immediate event notifications and keep station state synchronised. (v0.3 §9)
-- **FT-M1-012** Milestone 1 shall end the encounter with a clear win or loss and reset the run completely. (v0.3 §9, D30)
+- **FT-M1-012** Milestone 1 shall end the encounter with a clear win or loss, shown on every station's outcome card, and reset the run completely (world rebuilt, marks and alert cleared, picks kept, back to the lobby) once the "Run again" votes exceed half of the ship's connected crew, or at once when the host decides. (v0.3 §9, D30, D178)
 - **FT-M1-013** Milestone 1 shall support refresh-to-rejoin with a session token. (D6, D72)
 - **FT-M1-014** Milestone 1 shall key all state by ship and faction and include a headless 2-ship PvP simulation test. (D21, D72)
 - **FT-M1-015** Milestone 1 shall include the dev flag that lets one client hold all stations. (D72)

@@ -1,0 +1,8 @@
+# c3 relaunched after the grace: the token still names its session, which gets its
+# ship and pick back (FT-NET-026), and the universe resumes (FT-NET-035).
+connect
+expect_welcome resumed=true ship=0 entry=systems
+expect_event type=resume timeout=40
+expect_tick_moving
+barrier name=done n=3
+bye

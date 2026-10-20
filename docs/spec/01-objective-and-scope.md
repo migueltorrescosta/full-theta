@@ -1,6 +1,6 @@
 # 1. Objective and scope
 
-Full Theta is a cross-platform, LAN, multi-crew 3D spaceship game loosely inspired by EmptyEpsilon (EE). Players in one room crew one or more spaceships. Each player runs a station: a view of, and controls over, one authoritative simulation. Play combines 6DOF Newtonian combat, exploration, ship operations, branching missions, synthetic voices and crew coordination. The look is colourful, exaggerated retro science fiction with simple, cartoon-like 3D geometry.
+Full Theta is a cross-platform, LAN, multi-crew 3D spaceship game loosely inspired by EmptyEpsilon (EE). Players in one room crew one or more spaceships. Each player runs a station: a view of, and controls over, one authoritative simulation. Play combines 6DOF Newtonian combat, exploration, ship operations, branching missions, synthetic voices and crew coordination. The look is semi-realistic science fiction with procedural geometry and readable silhouettes (D107).
 
 ## 1.1 Session shape
 

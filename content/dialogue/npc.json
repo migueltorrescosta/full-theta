@@ -1,0 +1,54 @@
+{
+  "lines": [
+    {
+      "id": "npc.hail_trader", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "slots": {"npc": "npc_name"},
+      "text": {
+        "en": "This is {npc}, trading vessel. State your business.",
+        "pt_PT": "Fala {npc}, nave mercante. Diga ao que vem.",
+        "it": "Qui {npc}, nave mercantile. Dichiarate le vostre intenzioni."
+      }
+    },
+    {
+      "id": "npc.hail_patrol", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "slots": {"ship": "ship_name", "npc": "npc_name"},
+      "text": {
+        "en": "{ship}, this is {npc} of the patrol. Hold your course.",
+        "pt_PT": "{ship}, fala {npc}, da patrulha. Mantenha o rumo.",
+        "it": "{ship}, qui {npc} della pattuglia. Mantenete la rotta."
+      }
+    },
+    {
+      "id": "npc.trade_offer", "role": "npc", "priority": 2, "max_age_ms": 8000,
+      "coalesce": "offer", "resume": true,
+      "slots": {"count": {"kind": "number", "feminine": ["pt_PT"]}, "price": "number"},
+      "text": {
+        "en": "I can let you have {count} spare parts for {price} credits.",
+        "pt_PT": "Posso ceder-lhe {count} peças sobresselentes por {price} créditos.",
+        "it": "Posso cedervi {count} pezzi di ricambio per {price} crediti."
+      }
+    },
+    {
+      "id": "npc.trade_decline", "role": "npc", "priority": 2, "max_age_ms": 6000,
+      "text": {"en": "No deal. Safe travels.", "pt_PT": "Sem acordo. Boa viagem.", "it": "Niente accordo. Buon viaggio."}
+    },
+    {
+      "id": "npc.distress", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "slots": {"npc": "npc_name"},
+      "text": {
+        "en": "Mayday, mayday, this is {npc}. We are taking fire!",
+        "pt_PT": "Mayday, mayday, fala {npc}. Estamos sob fogo!",
+        "it": "Mayday, mayday, qui {npc}. Siamo sotto attacco!"
+      }
+    },
+    {
+      "id": "npc.ambient_traffic", "role": "npc", "priority": 3, "max_age_ms": 6000,
+      "coalesce": "ambient",
+      "text": {
+        "en": "Traffic control: all clear on the outer lanes.",
+        "pt_PT": "Controlo de tráfego: corredores exteriores livres.",
+        "it": "Controllo del traffico: corsie esterne libere."
+      }
+    }
+  ]
+}

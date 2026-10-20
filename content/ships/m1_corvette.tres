@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="ShipDef" format=3]
+
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/assist.tres" id="1_w8xyr"]
+[ext_resource type="Script" path="res://content/defs/mount_def.gd" id="2_lvnny"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/mount_bow.tres" id="3_e8psk"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/power.tres" id="4_uml83"]
+[ext_resource type="Script" path="res://content/defs/ship_def.gd" id="5_qfm7j"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/shields.tres" id="6_00f8f"]
+[ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="7_jt62l"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_engines.tres" id="8_bsty6"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_thrusters.tres" id="9_h4nev"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_weapons.tres" id="10_i8epu"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_shields.tres" id="11_x6suq"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_sensors.tres" id="12_blilf"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_reactor.tres" id="13_qwme3"]
+
+[resource]
+script = ExtResource("5_qfm7j")
+id = &"m1_corvette"
+display_name = "Corvette"
+mass = 50000.0
+inertia = Vector3(2000000, 2400000, 1200000)
+max_thrust_pos = Vector3(600000, 600000, 500000)
+max_thrust_neg = Vector3(600000, 600000, 1000000)
+max_torque = Vector3(3000000, 3600000, 3000000)
+propellant_capacity = 10000.0
+exhaust_velocity = 60000.0
+lever_arm = 10.0
+radius = 25.0
+hull_max = 100000000.0
+spare_parts = 20
+sensor_range = 20000.0
+identify_range = 8000.0
+repair_crews = 2
+subsystem_damage_share = 0.5
+subsystems = Array[ExtResource("7_jt62l")]([ExtResource("8_bsty6"), ExtResource("9_h4nev"), ExtResource("10_i8epu"), ExtResource("11_x6suq"), ExtResource("12_blilf"), ExtResource("13_qwme3")])
+mounts = Array[ExtResource("2_lvnny")]([ExtResource("3_e8psk")])
+assist = ExtResource("1_w8xyr")
+power = ExtResource("4_uml83")
+shields = ExtResource("6_00f8f")

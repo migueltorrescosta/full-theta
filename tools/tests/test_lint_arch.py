@@ -1,5 +1,6 @@
-# FT: FT-ARC-010, FT-ARC-011, FT-ARC-016, FT-ARC-020, FT-ARC-021, FT-DAT-007
-"""Fixture tests for tools/lint_arch.py (T006; FT-ARC-010, FT-ARC-011, FT-ARC-020, FT-ARC-021).
+# FT: FT-ARC-010, FT-ARC-011, FT-ARC-016, FT-ARC-020, FT-ARC-021, FT-DAT-007, FT-SIM-035
+"""Fixture tests for tools/lint_arch.py (T006; FT-ARC-010, FT-ARC-011, FT-ARC-020, FT-ARC-021,
+FT-SIM-035).
 
 Each pattern has a fixture root under fixtures/lint_arch/<pattern>/ with a `pass`
 tree the lint accepts and a `fail` tree whose findings (file:line) are listed here.
@@ -34,6 +35,15 @@ FAILS = {
         "stations/helm.gd:4",
     ],
     "shared_deps": ["shared/lead.gd:3", "shared/lead.gd:4", "shared/lead.gd:5"],
+    # Raw .px/.py/.pz reads and writes outside kinematics.gd and projectile_table.gd
+    # (FT-SIM-035, D124); tests/ may read positions.
+    "positions": [
+        "shared/lead.gd:4",
+        "sim/combat/hits.gd:4",
+        "sim/combat/hits.gd:4",
+        "sim/combat/hits.gd:7",
+        "sim/combat/hits.gd:8",
+    ],
 }
 
 

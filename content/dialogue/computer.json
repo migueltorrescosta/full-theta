@@ -1,0 +1,46 @@
+{
+  "lines": [
+    {
+      "id": "computer.hull_critical", "role": "computer", "priority": 0, "max_age_ms": 3000,
+      "coalesce": "hull", "resume": false,
+      "text": {"en": "Hull critical.", "pt_PT": "Casco em estado crítico.", "it": "Scafo in condizioni critiche."}
+    },
+    {
+      "id": "computer.collision_warning", "role": "computer", "priority": 0, "max_age_ms": 2000,
+      "coalesce": "collision", "resume": false,
+      "text": {"en": "Collision warning.", "pt_PT": "Alerta de colisão.", "it": "Allarme collisione."}
+    },
+    {
+      "id": "computer.shields_low", "role": "computer", "priority": 1, "max_age_ms": 4000,
+      "coalesce": "shields", "resume": false,
+      "slots": {"pct": "number"},
+      "text": {"en": "Shields at {pct} percent.", "pt_PT": "Escudos a {pct} por cento.", "it": "Scudi al {pct} per cento."}
+    },
+    {
+      "id": "computer.contact", "role": "computer", "priority": 1, "max_age_ms": 4000,
+      "coalesce": "contact:{callsign}", "resume": true,
+      "slots": {"callsign": "callsign", "bearing": "number", "range": "number"},
+      "text": {
+        "en": "Contact {callsign}, bearing {bearing}, range {range} kilometres.",
+        "pt_PT": "Contacto {callsign}, rumo {bearing}, distância {range} quilómetros.",
+        "it": "Contatto {callsign}, rilevamento {bearing}, distanza {range} chilometri."
+      }
+    },
+    {
+      "id": "computer.enemies_remaining", "role": "computer", "priority": 1, "max_age_ms": 5000,
+      "coalesce": "enemies", "resume": false,
+      "slots": {"count": {"kind": "number", "feminine": ["pt_PT", "it"]}},
+      "text": {"en": "{count} enemy ships remaining.", "pt_PT": "Restam {count} naves inimigas.", "it": "Restano {count} navi nemiche."}
+    },
+    {
+      "id": "computer.subsystem_fault", "role": "computer", "priority": 1, "max_age_ms": 4000,
+      "coalesce": "fault", "resume": false,
+      "text": {"en": "Subsystem fault detected.", "pt_PT": "Avaria num subsistema.", "it": "Guasto a un sottosistema."}
+    },
+    {
+      "id": "computer.jump_ready", "role": "computer", "priority": 1, "max_age_ms": 6000,
+      "coalesce": "jump", "resume": true,
+      "text": {"en": "Jump drive ready.", "pt_PT": "Motor de salto pronto.", "it": "Motore di salto pronto."}
+    }
+  ]
+}

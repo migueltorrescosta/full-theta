@@ -8,6 +8,8 @@ config_version=5
 config/name="Full Theta"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 run/main_scene="res://app/main.tscn"
+run/main_scene.s5="res://spikes/s5/helm_prototype.tscn"
+run/main_scene.s3="res://spikes/s3/s3_engineering.tscn"
 
 [debug]
 
