@@ -73,7 +73,7 @@ func test_marks_and_pings_reach_every_station() -> void:
 		assert_str(ctx.crew.marks[1]["name"]).is_equal("Bravo")
 		assert_str(ctx.crew.marks[1]["by"]).is_equal("relay")
 		# Every station draws both marks and can select them (FT-SPA-015).
-		var marks: Array = ContactPicture.build(ctx).filter(
+		var marks: Array = ctx.picture().items.filter(
 			func(it: Dictionary) -> bool: return it["kind"] == "mark"
 		)
 		assert_int(marks.size()).override_failure_message(entry).is_equal(2)
@@ -100,9 +100,7 @@ func test_marks_and_pings_reach_every_station() -> void:
 	relay.ctx.crew.select("", -1)
 	relay.screen.dispatch(_ev("ping", relay.screen))
 	var point: Callable = func(s: ClientShell) -> bool:
-		return ContactPicture.build(s.ctx).any(
-			func(it: Dictionary) -> bool: return it["kind"] == "point"
-		)
+		return s.ctx.picture().items.any(func(it: Dictionary) -> bool: return it["kind"] == "point")
 	assert_bool(await _all(point)).is_true()
 	# The ping limit (FT-SPA-017): Helm's fourth ping in a burst is refused with a toast.
 	var helm: ClientShell = _shell_of("helm")

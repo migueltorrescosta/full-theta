@@ -16,8 +16,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String = "relay") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(entry: String = "relay", seam: bool = false) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(entry, SETTINGS, seam)
 	for s: String in StationViews.CREW:
 		ctx.settings.mark_tooltip_seen(s)
 	var s: StationScreen = auto_free(StationScreen.new())
@@ -87,7 +87,8 @@ func _drag(p: RelayPanel, from: Vector2, to: Vector2, depth_px: float = 0.0) -> 
 
 ## The ship-frame offset from the map centre of a site-local position.
 func _rel(p: RelayPanel, site_pos: Vector3) -> Vector3:
-	return p.map.own_rot.inverse() * (site_pos - p.map.own_pos) - p.map.centre_local()
+	var interp: SnapshotInterpolator = p.map.picture.interp
+	return p.map.picture.rel(interp.offset_to(site_pos), p.map.centre)
 
 
 # FT: FT-RLY-001, FT-SPA-006, FT-M1-017
@@ -95,23 +96,21 @@ func test_map_is_ship_frame_centred_on_ship_or_selection_and_turns_freely() -> v
 	var s: StationScreen = await _screen()
 	var p: RelayPanel = _relay(s)
 	p.refresh()
-	assert_float(p.map.period_m).is_equal(StationFixture.PERIOD_M)
-	var kinds: Array = p.map.items.map(func(it: Dictionary) -> String: return it["kind"])
+	assert_float(p.map.period_m()).is_equal(StationFixture.PERIOD_M)
+	var kinds: Array = p.map.picture.items.map(func(it: Dictionary) -> String: return it["kind"])
 	assert_array(kinds).contains(["contact", "mark"])
 	# Centred on the own ship: the ship projects to the middle.
-	assert_vector(p.map.project(-p.map.centre_local())).is_equal_approx(p.size / 2.0, Vector2.ONE)
+	assert_vector(p.map.project(Vector3.ZERO)).is_equal_approx(p.size / 2.0, Vector2.ONE)
 	# Items sit at their ship-frame offsets from the centre (D124).
 	var h2: Vector3 = _local_of(p, "contact", StationFixture.H2)
 	assert_dict(p.item_at(p.map.project(h2))).is_equal({"kind": "contact", "id": StationFixture.H2})
 	# C centres on the selection, C again back on the ship.
 	s.ctx.crew.select("contact", StationFixture.H2)
 	assert_bool(s.dispatch(_ev("map_centre", "kbm", s))).is_true()
-	assert_vector(p.map.centre_local()).is_equal(h2)
-	assert_vector(p.map.project(h2 - p.map.centre_local())).is_equal_approx(
-		p.size / 2.0, Vector2.ONE
-	)
+	assert_dict(p.map.centre).is_equal(s.ctx.crew.selection)
+	assert_dict(p.item_at(p.size / 2.0)).is_equal({"kind": "contact", "id": StationFixture.H2})
 	s.dispatch(_ev("map_centre", "kbm", s))
-	assert_vector(p.map.centre_local()).is_equal(Vector3.ZERO)
+	assert_dict(p.map.centre).is_empty()
 	# Right-drag turns the camera with no clamp: it can go right over the top (no up).
 	var start: Basis = p.map.view
 	_press(p, Vector2(100, 100), true, MOUSE_BUTTON_RIGHT)
@@ -207,6 +206,39 @@ func test_attach_frees_an_attached_mark_where_it_is() -> void:
 	assert_object(p).is_not_null()
 
 
+# FT: FT-SPA-006, FT-RLY-003
+func test_attach_and_centre_take_the_minimum_image_across_the_seam() -> void:
+	# Echo is half a period from the ship; H5 is 0.7 km from it through the seam, H6
+	# 2.7 km from it on the same side (StationFixture's seam variant, D124).
+	var s: StationScreen = await _screen("relay", true)
+	var p: RelayPanel = _relay(s)
+	s.ctx.crew.select("mark", StationFixture.ECHO_SLOT)
+	s.dispatch(_ev("mark_attach", "kbm", s))
+	assert_array(_sent(s, "move_mark")[0][1].slice(0, 2)).is_equal(
+		[StationFixture.ECHO_SLOT, StationFixture.H5]
+	)
+	# Centred on Echo, H5 sits 0.7 km from the map centre, in the rolled ship's frame.
+	s.dispatch(_ev("map_centre", "kbm", s))
+	var h5: Dictionary = p.map.picture.find({"kind": "contact", "id": StationFixture.H5})
+	var want: Vector3 = (
+		StationFixture.own_rotation().inverse()
+		* (
+			StationFixture.SEAM_H5
+			- StationFixture.SEAM_ECHO
+			- Vector3(StationFixture.PERIOD_M, 0, 0)
+		)
+	)
+	assert_vector(p.map.rel_of(h5)).is_equal_approx(want, Vector3.ONE * 0.5)
+	assert_dict(p.item_at(p.map.project(want))).is_equal(
+		{"kind": "contact", "id": StationFixture.H5}
+	)
+	# A mark dropped on the centre lands on Echo's spot (the server wraps the site).
+	_drag(p, _empty_spot(p, p.size / 2.0 + Vector2(40, 0)), p.size / 2.0 + Vector2(1, 1))
+	var placed: Vector3 = _sent(s, "place_mark")[0][1][4]
+	var echo: Vector3 = s.ctx.mark_position(s.ctx.crew.mark_in_slot(StationFixture.ECHO_SLOT))
+	assert_float(s.ctx.interp.min_image(placed - echo).length()).is_less(2.0 / p.map.ppm())
+
+
 # FT: FT-SPA-022, FT-SPA-012
 func test_with_eight_marks_relay_replaces_the_selected_one() -> void:
 	var s: StationScreen = await _screen()
@@ -276,10 +308,7 @@ func test_docked_relay_is_a_compact_map() -> void:
 
 
 func _local_of(p: RelayPanel, kind: String, id: int) -> Vector3:
-	for it: Dictionary in p.map.items:
-		if it["kind"] == kind and it["id"] == id:
-			return it["local"]
-	return Vector3.INF
+	return p.map.picture.find({"kind": kind, "id": id}).get("local", Vector3.INF)
 
 
 func _nearest(s: StationScreen, slot: int) -> int:
@@ -292,3 +321,11 @@ func _nearest(s: StationScreen, slot: int) -> int:
 			best_d = d
 			best = id
 	return best
+
+
+# FT: FT-RLY-003
+func test_attach_with_a_vanished_mark_selected_does_nothing() -> void:
+	var s: StationScreen = await _screen()
+	s.ctx.crew.select("mark", 6)
+	assert_bool(_relay(s).handle_intent({"id": "mark_attach", "pressed": true})).is_false()
+	assert_array(_sent(s, "move_mark")).is_empty()

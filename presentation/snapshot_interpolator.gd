@@ -34,6 +34,8 @@ var delay_ticks: float = DELAY_TICKS
 var render_tick: float = -1.0
 ## Site period in position units (NetViewState.p_units).
 var p_units: int = 0
+## Bumped whenever the interpolated state is re-evaluated (StationContext.picture()).
+var revision: int = 0
 
 ## Oldest first: {"tick", "site", "pos" (Vector3i units), "rot", "contacts": id ->
 ## Vector3i units at that tick}.
@@ -132,7 +134,7 @@ func contact_position(id: int) -> Vector3:
 
 ## Minimum-image offset (m, world axes) from the own ship to a site-local position.
 func offset_to(pos: Vector3) -> Vector3:
-	return _wrap(pos - _own_pos)
+	return min_image(pos - _own_pos)
 
 
 ## A world-axes offset in the own ship's frame.
@@ -142,6 +144,7 @@ func local(world_offset: Vector3) -> Vector3:
 
 ## Interpolates the samples bracketing render_tick into the cached state.
 func _evaluate() -> void:
+	revision += 1
 	var i: int = 0
 	while i + 1 < _samples.size() and float(_samples[i + 1]["tick"]) <= render_tick:
 		i += 1
@@ -163,11 +166,11 @@ func _evaluate() -> void:
 ## Position (m) a fraction t from a to b along the minimum image, wrapped.
 func _lerp(a: Vector3i, b: Vector3i, t: float) -> Vector3:
 	var d: Vector3 = NetCodec.pos_of(NetCodec.diff(b, a, p_units))
-	return _wrap(NetCodec.pos_of(a) + d * t)
+	return min_image(NetCodec.pos_of(a) + d * t)
 
 
 ## Wraps each axis of a position or offset (m) into [-P/2, P/2) (no wrap without P).
-func _wrap(v: Vector3) -> Vector3:
+func min_image(v: Vector3) -> Vector3:
 	if p_units <= 0:
 		return v
 	var p: float = float(p_units) / NetCodec.POS_Q

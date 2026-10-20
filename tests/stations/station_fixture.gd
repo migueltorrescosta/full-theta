@@ -2,12 +2,18 @@ class_name StationFixture
 extends RefCounted
 ## A deterministic station context with no server (#7): ship 0 "Kestrel" picked at the
 ## given entry, Started; a snapshot view with the own ship at a fixed spot with a fixed
-## orientation (its KIN velocity says 80 m/s along the bow; the position doesn't move),
-## a hostile H2 at 4 high, 2.3 km, an unknown U3 at 11 high, 8 km and an own-faction F4
-## at 7 level, 600 m; a free mark Bravo at 8 low, 1.2 km; alert Normal; a fixed clock;
-## a HELM block (assist on, H2 targeted and shield-tracked). Sends go to a
+## orientation, yawed, pitched and rolled so the ship frame and world axes differ on
+## every axis (D124; its KIN velocity says 80 m/s along the bow; the position doesn't
+## move), a hostile H2 at 4 high, 2.3 km, an unknown U3 at 11 high, 8 km and an
+## own-faction F4 at 7 level, 600 m; a free mark Bravo at 8 low, 1.2 km; alert Normal; a
+## fixed clock; a HELM block (assist on, H2 targeted and shield-tracked). Sends go to a
 ## RecordingClient. Station scene tests and L5 shots build on it:
 ## `var ctx := StationFixture.context("helm")`.
+##
+## The seam variant (`context(entry, path, true)`) adds items about half a period away,
+## across the site's seam from each other (minimum image, D124): hostiles H5 and H6 and
+## a free mark Echo, with H5 0.7 km from Echo through the seam and H6 2.7 km from it the
+## other way.
 
 const SHIP: int = 0
 const SHIP_NAME: String = "Kestrel"
@@ -20,10 +26,17 @@ const NOW_MS: int = 100_000
 const TICK: int = 3600
 const START_TICK: int = 600
 const PERIOD_M: float = 200_000.0
-## The own ship's site-local position (m) and orientation (yawed 30° to port, so ship
-## frame and world axes differ, D124).
+## The own ship's site-local position (m) and orientation: yawed 30° to port, pitched
+## 10° nose up and rolled 25° to port (Basis.from_euler order: yaw, pitch, roll).
 const OWN_POS: Vector3 = Vector3(1200.0, -300.0, 4500.0)
-const OWN_YAW_DEG: float = 30.0
+const OWN_EULER_DEG: Vector3 = Vector3(10.0, 30.0, 25.0)
+## The seam variant's items: world-axes offsets from the own ship (m).
+const H5: int = 5
+const H6: int = 6
+const ECHO_SLOT: int = 4
+const SEAM_H5: Vector3 = Vector3(PERIOD_M / 2.0 - 400.0, 0.0, 0.0)
+const SEAM_H6: Vector3 = Vector3(-PERIOD_M / 2.0 + 3000.0, 0.0, 0.0)
+const SEAM_ECHO: Vector3 = Vector3(-PERIOD_M / 2.0 + 300.0, 0.0, 0.0)
 
 
 ## Records every intent sent: [[method, args], ...].
@@ -97,7 +110,9 @@ class Clock:
 
 ## The context for `entry` (a catalogue id). settings_path: a test-local file.
 static func context(
-	entry: String = "helm", settings_path: String = "user://test_station_fixture.cfg"
+	entry: String = "helm",
+	settings_path: String = "user://test_station_fixture.cfg",
+	seam: bool = false
 ) -> StationContext:
 	var ctx: StationContext = StationContext.new()
 	var rec: RecordingClient = RecordingClient.new()
@@ -132,30 +147,11 @@ static func context(
 		"in_play": true,
 		"captain": ""
 	}
-	crew.handle_event(
-		{
-			"type": "marks",
-			"payload":
-			{
-				"ship": SHIP,
-				"marks":
-				[
-					{
-						"slot": BRAVO_SLOT,
-						"name": "Bravo",
-						"contact": -1,
-						"site": 0,
-						"x": _world(_at(8, -25.0, 1200.0)).x,
-						"y": _world(_at(8, -25.0, 1200.0)).y,
-						"z": _world(_at(8, -25.0, 1200.0)).z,
-						"by": "Ana"
-					}
-				]
-			}
-		},
-		NOW_MS
-	)
-	ctx.view = view()
+	var marks: Array = [_mark(BRAVO_SLOT, "Bravo", _world(_at(8, -25.0, 1200.0)))]
+	if seam:
+		marks.append(_mark(ECHO_SLOT, "Echo", _site_pos(OWN_POS + SEAM_ECHO)))
+	crew.handle_event({"type": "marks", "payload": {"ship": SHIP, "marks": marks}}, NOW_MS)
+	ctx.view = view(seam)
 	ctx.interp.push(ctx.view, NOW_MS - 100)
 	ctx.interp.push(ctx.view, NOW_MS)
 	ctx.interp.update(NOW_MS)
@@ -187,8 +183,9 @@ static func catalogue(dev_all: bool = false) -> Dictionary:
 	}
 
 
-## The snapshot view: own ship, STATUS and MOUNTS blocks, contacts H2, U3, F4.
-static func view() -> NetViewState:
+## The snapshot view: own ship, STATUS and MOUNTS blocks, contacts H2, U3, F4 (and H5,
+## H6 with `seam`).
+static func view(seam: bool = false) -> NetViewState:
 	var p_units: int = NetCodec.period_units(PERIOD_M)
 	var v: NetViewState = NetViewState.new(p_units)
 	v.seq = 10
@@ -239,6 +236,10 @@ static func view() -> NetViewState:
 		info[c[0]] = [0, c[1]]
 	model[F4] = [_units(_world(_at(7, 0.0, 600.0)), p_units), Vector3i.ZERO, TICK]
 	info[F4] = [2, "F4"]
+	if seam:
+		for c: Array in [[H5, "H5", SEAM_H5], [H6, "H6", SEAM_H6]]:
+			model[c[0]] = [_units(OWN_POS + c[2], p_units), Vector3i.ZERO, TICK]
+			info[c[0]] = [0, c[1]]
 	v.contacts = {"model": model, "info": info}
 	v.blocks[StationViews.Section.ENGINEERING] = engineering_block()
 	return v
@@ -280,7 +281,8 @@ static func engineering_block() -> Dictionary:
 
 
 static func own_rotation() -> Quaternion:
-	return Quaternion(Vector3.UP, deg_to_rad(OWN_YAW_DEG))
+	var e: Vector3 = OWN_EULER_DEG
+	return Quaternion.from_euler(Vector3(deg_to_rad(e.x), deg_to_rad(e.y), deg_to_rad(e.z)))
 
 
 ## Ship-frame offset at a clock hour, elevation (degrees) and range (m).
@@ -293,7 +295,31 @@ static func _at(clock_hour: int, elevation_deg: float, range_m: float) -> Vector
 
 ## A ship-frame offset as a site-local position.
 static func _world(local: Vector3) -> Vector3:
-	return OWN_POS + own_rotation() * local
+	return _site_pos(OWN_POS + own_rotation() * local)
+
+
+## A position wrapped into the site, [-P/2, P/2) on each axis.
+static func _site_pos(p: Vector3) -> Vector3:
+	var h: float = PERIOD_M / 2.0
+	return Vector3(
+		fposmod(p.x + h, PERIOD_M) - h,
+		fposmod(p.y + h, PERIOD_M) - h,
+		fposmod(p.z + h, PERIOD_M) - h
+	)
+
+
+## A free mark as the marks event carries it.
+static func _mark(slot: int, mark_name: String, pos: Vector3) -> Dictionary:
+	return {
+		"slot": slot,
+		"name": mark_name,
+		"contact": -1,
+		"site": 0,
+		"x": pos.x,
+		"y": pos.y,
+		"z": pos.z,
+		"by": "Ana",
+	}
 
 
 static func _units(p: Vector3, p_units: int) -> Vector3i:

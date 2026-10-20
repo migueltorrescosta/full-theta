@@ -75,14 +75,11 @@ func _process(delta: float) -> void:
 
 ## Pushes the current picture into the map (every frame; tests call it directly).
 func refresh() -> void:
-	map.items = ContactPicture.build(ctx)
+	map.picture = ctx.picture()
 	map.selected = ctx.crew.selection
 	if ctx.crew.selection.is_empty():
 		_centred = false
 	map.centre = ctx.crew.selection if _centred else {}
-	map.own_rot = ctx.interp.own_rotation()
-	map.own_pos = ctx.interp.own_position()
-	map.period_m = float(ctx.view.p_units) / NetCodec.POS_Q
 	map.cursor_on = focused and ctx.matcher.device == IntentTable.PAD
 	if _cursor.x < 0.0 and size.x > 0.0:
 		_cursor = size / 2.0
@@ -129,15 +126,9 @@ func cursor_pos() -> Vector2:
 ## FT-SPA-022: Relay replaces the selected mark when all 8 are used.
 func replace_mark(item: Dictionary) -> bool:
 	var slot: int = _selected_mark()
-	if slot < 0:
+	if slot < 0 or item.get("kind", "") not in ["contact", "point"]:
 		return false
-	match item.get("kind", ""):
-		"contact":
-			ctx.intents.place_mark(slot, "", int(item["id"]), _site(), Vector3.ZERO)
-		"point":
-			ctx.intents.place_mark(slot, "", -1, int(item.get("site", _site())), item["pos"])
-		_:
-			return false
+	ctx.mark_item(slot, item)
 	return true
 
 
@@ -221,20 +212,11 @@ func _drop() -> void:
 	)
 	if slot < 0:
 		if ctx.crew.marks.size() < CrewState.MAX_MARKS:
-			_place(-1, item)
+			ctx.mark_item(-1, item)
 		elif not replace_mark(item):
 			ctx.crew.toast.emit("toast.relay_marks_full", {})
-	elif item["kind"] == "contact":
-		ctx.intents.move_mark(slot, int(item["id"]), _site(), Vector3.ZERO)
 	else:
-		ctx.intents.move_mark(slot, -1, int(item["site"]), item["pos"])
-
-
-func _place(slot: int, item: Dictionary) -> void:
-	if item["kind"] == "contact":
-		ctx.intents.place_mark(slot, "", int(item["id"]), _site(), Vector3.ZERO)
-	else:
-		ctx.intents.place_mark(slot, "", -1, int(item["site"]), item["pos"])
+		ctx.move_mark_to(slot, item)
 
 
 func _start_rename() -> bool:
@@ -257,29 +239,29 @@ func _on_rename(text: String) -> void:
 	_rename.release_focus()
 
 
-## Attached: free it where it is now. Free: attach it to the contact nearest to it.
+## Attached: free it where it is now. Free: attach it to the contact nearest to it
+## along the minimum image (D124).
 func _toggle_attach() -> bool:
-	var slot: int = _selected_mark()
-	if slot < 0:
+	var m: Dictionary = ctx.crew.mark_in_slot(_selected_mark())
+	if m.is_empty():
 		return false
-	var m: Dictionary = ctx.crew.mark_in_slot(slot)
+	var slot: int = m["slot"]
 	var at: Vector3 = ctx.mark_position(m)
-	if int(m["contact"]) >= 0:
-		ctx.intents.move_mark(slot, -1, _site(), at)
+	if int(m.get("contact", -1)) >= 0:
+		ctx.intents.move_mark(slot, -1, ctx.site(), at)
 		return true
 	var best: int = -1
 	var best_d: float = INF
-	var from: Vector3 = ctx.interp.offset_to(at)
 	for id: int in ctx.interp.contact_ids():
 		if id == ctx.crew.ship:
 			continue
-		var d: float = from.distance_to(ctx.interp.offset_to(ctx.interp.contact_position(id)))
+		var d: float = ctx.interp.min_image(ctx.interp.contact_position(id) - at).length()
 		if d < best_d:
 			best_d = d
 			best = id
 	if best < 0:
 		return false
-	ctx.intents.move_mark(slot, best, _site(), Vector3.ZERO)
+	ctx.move_mark_to(slot, {"kind": "contact", "id": best})
 	return true
 
 
@@ -296,7 +278,7 @@ func _poll_pad(delta: float) -> void:
 
 
 func _point(rel: Vector3) -> Dictionary:
-	return {"kind": "point", "site": _site(), "pos": map.site_position(rel)}
+	return {"kind": "point", "site": ctx.site(), "pos": map.site_position(rel)}
 
 
 func _selected_mark() -> int:
@@ -311,7 +293,3 @@ func _preview_label() -> String:
 		if ctx.crew.mark_in_slot(k).is_empty():
 			return CrewState.MARK_NAMES[k]
 	return ""
-
-
-func _site() -> int:
-	return int(ctx.view.kin.get("site", 0))

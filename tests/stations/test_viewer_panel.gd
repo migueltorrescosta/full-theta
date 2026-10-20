@@ -15,9 +15,11 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen() -> StationScreen:
+## `roll_deg_s`: the own ship's roll rate (body z) from the start, before the first frame.
+func _screen(roll_deg_s: float = 0.0) -> StationScreen:
 	var ctx: StationContext = StationFixture.context("viewer", SETTINGS)
 	ctx.settings.mark_tooltip_seen("viewer")
+	ctx.view.kin["ang"] = NetCodec.quant_ang(Vector3(0.0, 0.0, deg_to_rad(roll_deg_s)))
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -49,7 +51,7 @@ func test_forward_view_wide_radar_and_callsign_rail() -> void:
 	assert_array(rail).is_equal(["F4", "H2", "U3"])
 	assert_str(ChipText.chip("H2", v.rail_items()[1]["local"])).is_equal("H2 · 4 high · mid")
 	# Pings and marks reach the main screen too (FT-MSC-003).
-	var marks: Array = v.radar.items.filter(
+	var marks: Array = v.radar.picture.items.filter(
 		func(it: Dictionary) -> bool: return it["kind"] == "mark"
 	)
 	assert_int(marks.size()).is_equal(1)
@@ -131,6 +133,18 @@ func test_switches_to_chase_while_decoupled_or_rolling_fast() -> void:
 	clock.ms += ViewerPanel.FORWARD_AFTER_MS
 	v.update_view(0.016)
 	assert_bool(v.chase).is_false()
+
+
+# FT: FT-MSC-001
+# The fixture ship is yawed, pitched and rolled. Rolling fast from its very first frame,
+# the chase camera starts on the ship's deck, not on world up (D124: there is none).
+func test_first_chase_frame_keeps_the_ships_up() -> void:
+	var s: StationScreen = await _screen(60.0)
+	var v: ViewerPanel = _viewer(s)
+	var ship: Basis = Basis(s.ctx.interp.own_rotation())
+	assert_bool(v.chase).is_true()
+	assert_vector(v.camera.basis.y).is_equal_approx(ship.y, Vector3.ONE * 1e-4)
+	assert_vector(-v.camera.basis.z).is_equal_approx(-ship.z, Vector3.ONE * 1e-4)
 
 
 # FT: FT-MSC-004, FT-STN-008

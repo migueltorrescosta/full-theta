@@ -177,6 +177,11 @@ func select(kind: String, id: int) -> void:
 	changed.emit(&"selection")
 
 
+## True when the shared selection is this item.
+func is_selected(kind: String, id: int) -> bool:
+	return selection.get("kind", "") == kind and int(selection.get("id", -1)) == id
+
+
 ## Cycle target (FT-STN-009): the candidate after the selected one, in the given order
 ## (e.g. contacts by range); wraps; the first when nothing in the list is selected.
 func cycle(kind: String, ids: Array) -> void:

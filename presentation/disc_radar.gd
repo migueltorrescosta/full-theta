@@ -11,8 +11,9 @@ extends Control
 ## camera angle (FT-SPA-011). Mouse: wheel zooms, a click on the range label steps the
 ## range, right-drag orbits when orbitable; other clicks pass to the screen (item_at).
 ##
-## Projection: ship frame (-Z bow, +X starboard, +Y up) relative to the centre item;
-## the camera sits `tilt_deg` above the disc plane, turned `yaw_deg` around the ship's
+## Projection: ship frame (-Z bow, +X starboard, +Y up) relative to the centre item,
+## from the minimum image of the world-axes difference (D124, ContactPicture.rel); the
+## camera sits `tilt_deg` above the disc plane, turned `yaw_deg` around the ship's
 ## up axis; at yaw 0 the bow points up the screen and starboard right.
 
 ## Range steps (m) (FT-SPA-024).
@@ -29,11 +30,9 @@ const BLIP_R: float = 6.0
 const HIT_PX: float = 12.0
 const ORBIT_DEG_PER_PX: float = 0.4
 
-## Items to draw (ContactPicture.build): {"kind": "contact" | "mark" | "site" |
-## "point", "id", "label", "allegiance" ("H", "U", "F", "N", "" own), "local" (Vector3, m,
-## ship frame, from the own ship), "pulse" (0..1)}. "point" items (point pings) draw
-## only their pulse and are never picked.
-var items: Array[Dictionary] = []
+## The items to draw (ContactPicture). "point" items (point pings) draw only their
+## pulse and are never picked.
+var picture: ContactPicture = ContactPicture.new()
 ## {"kind", "id"} of the shared selection, or {}.
 var selected: Dictionary = {}
 ## The item the disc is centred on ({} = own ship).
@@ -55,8 +54,8 @@ func _init() -> void:
 	clip_contents = true
 
 
-func set_items(p_items: Array[Dictionary], p_selected: Dictionary) -> void:
-	items = p_items
+func set_picture(p_picture: ContactPicture, p_selected: Dictionary) -> void:
+	picture = p_picture
 	selected = p_selected
 	queue_redraw()
 
@@ -96,27 +95,24 @@ func item_at(local_pos: Vector2) -> Dictionary:
 
 ## Bearing and mark of the item under local_pos, for hover only (FT-SPA-005); "" if none.
 func hover_text(local_pos: Vector2) -> String:
-	var hit: Dictionary = item_at(local_pos)
-	for it: Dictionary in items:
-		if not hit.is_empty() and _ref(it) == hit:
-			return ChipText.precise(it["local"])
-	return ""
+	var it: Dictionary = picture.find(item_at(local_pos))
+	return ChipText.precise(it["local"]) if not it.is_empty() else ""
 
 
 ## Screen position (px, this control's coordinates) of an item at `local` (ship frame
 ## from the own ship, m), within range or not.
 func project(local: Vector3) -> Vector2:
-	return _screen(local - _centre_offset())
+	return _screen(_rel(local))
 
 
 ## True when an item at `local` is above the disc plane (solid blip, stem up).
 func is_above(local: Vector3) -> bool:
-	return (local - _centre_offset()).y >= 0.0
+	return _rel(local).y >= 0.0
 
 
 ## True when an item at `local` is beyond the range step (an arrow on the rim).
 func is_beyond(local: Vector3) -> bool:
-	return (local - _centre_offset()).length() > RANGES_M[range_index]
+	return _rel(local).length() > RANGES_M[range_index]
 
 
 ## The disc centre (px).
@@ -187,12 +183,12 @@ func _draw() -> void:
 		_draw_item(sel, true)
 	for e: Dictionary in layout:
 		if e["chip"] != "" and e != sel:
-			_draw_text(font, e["chip_rect"], e["chip"], _item_color(e["item"]))
+			_draw_text(font, e["chip_rect"], e["chip"], Palette.item_color(e["item"]))
 	if not sel.is_empty() and sel["chip"] != "":
 		_draw_text(font, sel["chip_rect"], sel["chip"], Palette.color("selected"))
-	for it: Dictionary in items:
+	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
-			_draw_pulse(project(it["local"]), float(it.get("pulse", 0.0)))
+			_draw_pulse(_screen(_rel_item(it)), float(it.get("pulse", 0.0)))
 	var label: Rect2 = _range_rect()
 	draw_rect(label, Palette.color("panel_focus"))
 	draw_rect(label, Palette.color("line"), false, 1.0)
@@ -221,7 +217,7 @@ func _draw_disc(font: Font, c: Vector2, r: float) -> void:
 
 ## The own ship: a chevron pointing at the bow, with a stem when off-centre.
 func _draw_own() -> void:
-	var off: Vector3 = -_centre_offset()
+	var off: Vector3 = picture.rel(Vector3.ZERO, centre)
 	var p: Vector2 = _screen(off)
 	var col: Color = Palette.color("own")
 	if off != Vector3.ZERO:
@@ -241,7 +237,7 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 	var it: Dictionary = e["item"]
 	if it["kind"] == "point":
 		return
-	var col: Color = _item_color(it)
+	var col: Color = Palette.item_color(it)
 	var pos: Vector2 = e["pos"]
 	var solid: bool = (e["rel"] as Vector3).y >= 0.0
 	if e["beyond"]:
@@ -257,8 +253,7 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		var stem: Color = Palette.color("selected") if is_sel else col * Color(1, 1, 1, 0.7)
 		draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
 		draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
-		var shape: String = "diamond" if it["kind"] == "mark" else _shape(it)
-		_draw_shape(Palette.shape_points(shape, pos, BLIP_R), col, solid)
+		_draw_shape(Palette.shape_points(Palette.item_shape(it), pos, BLIP_R), col, solid)
 	if is_sel:
 		draw_rect(
 			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5
@@ -301,21 +296,19 @@ func _draw_strip(font: Font) -> void:
 		draw_string(
 			font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2, Palette.color("text_dim")
 		)
-	for it: Dictionary in items:
+	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			continue
 		var y: float = y_of.call(Callout.elevation_deg(it["local"]))
 		var is_sel: bool = _is_selected(it)
 		var w: float = 10.0 if is_sel else 6.0
-		var col: Color = Palette.color("selected") if is_sel else _item_color(it)
+		var col: Color = Palette.color("selected") if is_sel else Palette.item_color(it)
 		draw_line(Vector2(mid - w, y), Vector2(mid + w, y), col, 3.0 if is_sel else 2.0)
 
 
 func _draw_text(font: Font, rect: Rect2, text: String, col: Color) -> void:
 	var base: Vector2 = rect.position + Vector2(0.0, font.get_ascent(FONT_SIZE))
-	var bg: Color = Palette.color("background")
-	draw_string_outline(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, 4, bg)
-	draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, col)
+	Palette.draw_outlined(self, font, base, text, FONT_SIZE, col)
 
 
 ## Per item (points last): {"item", "rel" (from the centre), "pos", "foot", "beyond",
@@ -325,12 +318,11 @@ func _layout() -> Array[Dictionary]:
 	var font: Font = get_theme_default_font()
 	var c: Vector2 = disc_centre()
 	var r: float = RANGES_M[range_index]
-	var off: Vector3 = _centre_offset()
-	for it: Dictionary in items:
+	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			continue
 		var local: Vector3 = it["local"]
-		var rel: Vector3 = local - off
+		var rel: Vector3 = _rel_item(it)
 		var beyond: bool = rel.length() > r
 		var pos: Vector2 = _screen(rel)
 		var foot: Vector2 = _screen(Vector3(rel.x, 0.0, rel.z))
@@ -387,14 +379,15 @@ func _ring(radius: float) -> PackedVector2Array:
 	return pts
 
 
-## Ship-frame offset of the centre item from the own ship (ZERO when centred on it).
-func _centre_offset() -> Vector3:
-	if centre.is_empty():
-		return Vector3.ZERO
-	for it: Dictionary in items:
-		if _ref(it) == _ref(centre):
-			return it["local"]
-	return Vector3.ZERO
+## Ship-frame offset from the centre item of a point at `local` (ship frame from the
+## own ship).
+func _rel(local: Vector3) -> Vector3:
+	return picture.rel(picture.interp.own_rotation() * local, centre)
+
+
+## Ship-frame offset of an item from the centre item.
+func _rel_item(it: Dictionary) -> Vector3:
+	return picture.rel(it["world"], centre)
 
 
 func _area() -> Rect2:
@@ -418,16 +411,6 @@ func _hits(e: Dictionary, p: Vector2) -> bool:
 
 func _is_selected(it: Dictionary) -> bool:
 	return not selected.is_empty() and _ref(it) == _ref(selected)
-
-
-func _shape(it: Dictionary) -> String:
-	return Palette.ALLEGIANCE_SHAPES.get(it.get("allegiance", ""), "circle")
-
-
-func _item_color(it: Dictionary) -> Color:
-	if it["kind"] == "mark":
-		return Palette.color("mark")
-	return Palette.allegiance_color(it.get("allegiance", ""))
 
 
 static func _ref(it: Dictionary) -> Dictionary:

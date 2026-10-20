@@ -24,8 +24,6 @@ const CHASE_UP_M: float = 3.5
 const CHASE_LEVEL_RATE: float = 0.6
 ## Vertical field of view (degrees), before comfort narrows it.
 const FOV_DEG: float = 70.0
-const STARS: int = 700
-const STAR_R: float = 9000.0
 const RADAR_SHARE: float = 0.4
 const RAIL_HEIGHT: float = 30.0
 const FONT_SIZE: int = 15
@@ -36,13 +34,12 @@ var camera: Camera3D
 var radar: DiscRadar
 
 var _calm_since: int = -1
-var _chase_up: Vector3 = Vector3.UP
+## The chase camera's up; ZERO until the first chase frame seeds it from the ship (D124).
+var _chase_up: Vector3 = Vector3.ZERO
 var _viewport: SubViewport
-var _world: Node3D
-var _stars: MeshInstance3D
-var _own: ProceduralShip
-## Contact id -> ProceduralShip, for contacts with a NEAR orientation (within 2 km).
-var _ships: Dictionary = {}
+## The forward view; only contacts with a NEAR orientation (within 2 km) are drawn.
+var _space: SpaceView
+var _own: Node3D
 var _overlay: Control
 var _rail: Control
 var _items: Array[Dictionary] = []
@@ -73,7 +70,10 @@ func _setup() -> void:
 	_viewport.own_world_3d = true
 	_viewport.msaa_3d = Viewport.MSAA_DISABLED
 	view.add_child(_viewport)
-	_build_world()
+	_space = SpaceView.new()
+	_space.near_only = true
+	_viewport.add_child(_space)
+	camera = _space.camera
 	_overlay = Control.new()
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -100,11 +100,11 @@ func update_view(delta: float) -> void:
 	var now: int = ctx.now_ms()
 	var status: Dictionary = ctx.view.blocks.get(StationViews.Section.STATUS, {})
 	update_mode(bool(status.get("decoupled", false)), roll_rate_deg_s(), now)
-	_items = ContactPicture.build(ctx)
+	_items = ctx.picture().items
 	var ship: Basis = Basis(ctx.interp.own_rotation())
 	_place_camera(ship, delta)
-	_place_ships()
-	radar.set_items(_items, ctx.crew.selection)
+	_space.sync_ships(ctx)
+	radar.set_picture(ctx.picture(), ctx.crew.selection)
 	_overlay.queue_redraw()
 	_rail.queue_redraw()
 
@@ -131,92 +131,47 @@ func update_mode(decoupled: bool, roll_deg_s: float, now_ms: int) -> void:
 		_calm_since = -1
 
 
-func _build_world() -> void:
-	_world = Node3D.new()
-	_viewport.add_child(_world)
-	var env: WorldEnvironment = WorldEnvironment.new()
-	env.environment = Environment.new()
-	env.environment.background_mode = Environment.BG_COLOR
-	env.environment.background_color = Palette.color("background")
-	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.environment.ambient_light_color = Color(0.35, 0.38, 0.42)
-	_world.add_child(env)
-	var sun: DirectionalLight3D = DirectionalLight3D.new()
-	sun.rotation = Vector3(deg_to_rad(-40.0), deg_to_rad(30.0), 0.0)
-	_world.add_child(sun)
-	camera = Camera3D.new()
-	camera.near = 0.5
-	camera.far = STAR_R * 1.5
-	camera.current = true
-	_world.add_child(camera)
-	_stars = MeshInstance3D.new()
-	_stars.mesh = _star_mesh()
-	_world.add_child(_stars)
-
-
 ## World axes centred on the own ship (minimum image offsets, D124). The forward camera's
 ## roll and field of view follow comfort (ComfortCamera, FT-STN-017).
 func _place_camera(ship: Basis, delta: float) -> void:
 	var fwd: Vector3 = -ship.z
-	camera.fov = ComfortCamera.fov_deg(ctx.settings, FOV_DEG)
+	var fov: float = ComfortCamera.fov_deg(ctx.settings, FOV_DEG)
 	if chase:
+		if _chase_up == Vector3.ZERO:
+			_chase_up = ship.y
 		var calm: bool = roll_rate_deg_s() < FORWARD_ROLL_DEG_S
 		var level: float = clampf(delta * CHASE_LEVEL_RATE, 0.0, 1.0) if calm else 0.0
 		var b: Basis = ComfortCamera.look(fwd, _chase_up.lerp(ship.y, level), ship.y)
 		_chase_up = b.y
-		camera.transform = Transform3D(b, b.z * CHASE_BACK_M + b.y * CHASE_UP_M)
+		_space.place_camera(Transform3D(b, b.z * CHASE_BACK_M + b.y * CHASE_UP_M), fov)
 	else:
 		_chase_up = ship.y
 		var rot: Quaternion = ship.get_rotation_quaternion()
 		var up: Vector3 = ComfortCamera.plane_up(ctx.settings, rot, ComfortCamera.target_rot(ctx))
-		camera.transform = Transform3D(ComfortCamera.look(fwd, up, ship.y), fwd * 3.0)
-	_stars.position = camera.position
+		_space.place_camera(Transform3D(ComfortCamera.look(fwd, up, ship.y), fwd * 3.0), fov)
 	if chase and _own == null:
-		# Built on the first chase: the ship's AO bake takes a moment.
-		_own = ProceduralShip.new()
-		_world.add_child(_own)
+		# Built on the first chase (the first ship model bakes the AO).
+		_own = _space.copy_ship()
 	if _own != null:
 		_own.visible = chase
 		_own.transform = Transform3D(ship, Vector3.ZERO)
 
 
-func _place_ships() -> void:
-	var seen: Dictionary = {}
-	for id: int in ctx.view.near:
-		if id == ctx.crew.ship or id not in ctx.interp.contact_ids():
-			continue
-		seen[id] = true
-		var s: ProceduralShip = _ships.get(id)
-		if s == null:
-			s = ProceduralShip.new()
-			s.wear = 0.6
-			_world.add_child(s)
-			_ships[id] = s
-		var rot: Quaternion = NetCodec.unpack_quat(int(ctx.view.near[id][0]))
-		var at: Vector3 = ctx.interp.offset_to(ctx.interp.contact_position(id))
-		s.transform = Transform3D(Basis(rot), at)
-	for id: int in _ships.keys():
-		if not seen.has(id):
-			(_ships[id] as Node).queue_free()
-			_ships.erase(id)
-
-
 ## Brackets and chips on contacts, big diamonds on marks, big rings on pings (FT-MSC-003).
 func _draw_overlay() -> void:
 	var font: Font = get_theme_default_font()
-	var rot: Quaternion = ctx.interp.own_rotation()
 	for it: Dictionary in _items:
-		var world: Vector3 = rot * (it["local"] as Vector3)
+		var world: Vector3 = it["world"]
 		if camera.is_position_behind(world):
 			continue
 		var p: Vector2 = camera.unproject_position(world)
 		if not Rect2(Vector2.ZERO, _overlay.size).grow(40.0).has_point(p):
 			continue
 		var pulse: float = float(it.get("pulse", 0.0))
-		var col: Color = _color(it)
+		var col: Color = Palette.item_color(it)
 		match str(it["kind"]):
 			"contact":
-				_bracket(p, 14.0, col, _is_selected(it))
+				_bracket(p, 14.0, col, ctx.crew.is_selected(it["kind"], it["id"]))
 				var chip: String = ChipText.chip(it["label"], it["local"])
 				_text(font, p + Vector2(18.0, -6.0), chip, col)
 			"mark":
@@ -263,12 +218,14 @@ func _draw_rail() -> void:
 		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 		if x + w > _rail.size.x:
 			break
-		if float(it.get("pulse", 0.0)) > 0.0 or _is_selected(it):
+		if float(it.get("pulse", 0.0)) > 0.0 or ctx.crew.is_selected(it["kind"], it["id"]):
 			_rail.draw_rect(
 				Rect2(x - 6.0, 3.0, w + 12.0, _rail.size.y - 6.0), Palette.color("panel_focus")
 			)
 		var base: Vector2 = Vector2(x, y + font.get_ascent(FONT_SIZE))
-		_rail.draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, _color(it))
+		_rail.draw_string(
+			font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, Palette.item_color(it)
+		)
 		x += w + 28.0
 		if x < _rail.size.x:
 			_rail.draw_line(
@@ -278,43 +235,4 @@ func _draw_rail() -> void:
 
 func _text(font: Font, at: Vector2, text: String, col: Color) -> void:
 	var base: Vector2 = at + Vector2(0.0, font.get_ascent(FONT_SIZE))
-	var bg: Color = Palette.color("background")
-	_overlay.draw_string_outline(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, 4, bg)
-	_overlay.draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, col)
-
-
-func _is_selected(it: Dictionary) -> bool:
-	var s: Dictionary = ctx.crew.selection
-	return not s.is_empty() and s["kind"] == it["kind"] and int(s["id"]) == int(it["id"])
-
-
-func _color(it: Dictionary) -> Color:
-	if it["kind"] == "mark":
-		return Palette.color("mark")
-	return Palette.allegiance_color(it.get("allegiance", ""))
-
-
-## Seeded points on a sphere, drawn around the camera (they turn with the view only).
-static func _star_mesh() -> ArrayMesh:
-	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = 7
-	var verts: PackedVector3Array = PackedVector3Array()
-	var cols: PackedColorArray = PackedColorArray()
-	for i: int in STARS:
-		var v: Vector3 = Vector3(rng.randfn(), rng.randfn(), rng.randfn()).normalized()
-		verts.append(v * STAR_R)
-		var b: float = rng.randf_range(0.35, 0.9)
-		cols.append(Color(b, b, b * 1.05))
-	var arrays: Array = []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = verts
-	arrays[Mesh.ARRAY_COLOR] = cols
-	var mesh: ArrayMesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_POINTS, arrays)
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.vertex_color_use_as_albedo = true
-	mat.use_point_size = true
-	mat.point_size = 2.0
-	mesh.surface_set_material(0, mat)
-	return mesh
+	Palette.draw_outlined(_overlay, font, base, text, FONT_SIZE, col)

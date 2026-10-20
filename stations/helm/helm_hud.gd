@@ -32,19 +32,16 @@ func markers() -> Array[Dictionary]:
 	if compact or panel == null or panel.view3d == null or panel.view3d.camera == null:
 		return out
 	var cam: Camera3D = panel.view3d.camera
-	var rot: Quaternion = panel.ctx.interp.own_rotation()
 	var rect: Rect2 = Rect2(Vector2.ZERO, size)
-	var sel: Dictionary = panel.ctx.crew.selection
-	for item: Dictionary in ContactPicture.build(panel.ctx):
+	for item: Dictionary in panel.ctx.picture().items:
 		if item["kind"] == "point":
 			continue
-		var world: Vector3 = rot * (item["local"] as Vector3)
+		var world: Vector3 = item["world"]
 		var e: Dictionary = item.duplicate()
-		e["world"] = world
 		e["behind"] = cam.is_position_behind(world)
 		e["pos"] = Vector2.ZERO if e["behind"] else cam.unproject_position(world)
 		e["on_screen"] = not e["behind"] and rect.has_point(e["pos"])
-		e["selected"] = e["kind"] == sel.get("kind", "") and e["id"] == sel.get("id", -1)
+		e["selected"] = panel.ctx.crew.is_selected(e["kind"], e["id"])
 		# Off-screen arrows for the selection and pinged items (FT-HLM-004).
 		e["arrow"] = not e["on_screen"] and (e["selected"] or float(e["pulse"]) > 0.0)
 		out.append(e)
@@ -111,11 +108,10 @@ func _draw_velocity() -> void:
 ## A bracket in the allegiance shape (a diamond for marks) with callsign and range;
 ## bolder when selected, a ring while pinged.
 func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
-	var col: Color = _colour(e)
+	var col: Color = Palette.item_color(e)
 	var p: Vector2 = e["pos"]
 	var r: float = 14.0 if selected else 10.0
-	var shape: String = "diamond" if e["kind"] == "mark" else _shape(e)
-	draw_polyline(Palette.shape_points(shape, p, r), col, 2.5 if selected else 1.2)
+	draw_polyline(Palette.shape_points(Palette.item_shape(e), p, r), col, 2.5 if selected else 1.2)
 	var pulse: float = float(e["pulse"])
 	if pulse > 0.0:
 		draw_arc(p, r + 10.0 * (1.0 - pulse) + 4.0, 0.0, TAU, 24, Color(col, pulse), 2.0)
@@ -136,7 +132,7 @@ func _draw_arrow(font: Font, e: Dictionary, selected: bool) -> void:
 	var t: float = minf(half.x / maxf(absf(dir.x), 1e-6), half.y / maxf(absf(dir.y), 1e-6))
 	var tip: Vector2 = c + dir * t
 	var side: Vector2 = dir.orthogonal() * 8.0
-	var col: Color = _colour(e)
+	var col: Color = Palette.item_color(e)
 	var pts: PackedVector2Array = PackedVector2Array(
 		[tip, tip - dir * 16.0 + side, tip - dir * 16.0 - side]
 	)
@@ -160,7 +156,7 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 	var label: String = tr("helm.no_selection")
 	if local is Vector3:
 		var p: Vector2 = c + compass_point(local, COMPASS_R - 6.0)
-		var col: Color = _colour(_selected_item())
+		var col: Color = Palette.item_color(_selected_item())
 		if compass_filled(local):
 			draw_circle(p, 5.0, col)
 		else:
@@ -292,16 +288,6 @@ func _selected_item() -> Dictionary:
 	if int(info.get(int(s.get("id", -1)), [0])[0]) & ContactsSection.FLAG_OWN:
 		letter = "F"
 	return {"kind": "contact", "allegiance": letter}
-
-
-static func _colour(e: Dictionary) -> Color:
-	if e.get("kind", "") == "mark":
-		return Palette.color("mark")
-	return Palette.allegiance_color(str(e.get("allegiance", "")))
-
-
-static func _shape(e: Dictionary) -> String:
-	return Palette.ALLEGIANCE_SHAPES.get(str(e.get("allegiance", "")), "circle")
 
 
 ## Exact range for markers (D114 keeps it off chips): "850 m", "2.3 km".

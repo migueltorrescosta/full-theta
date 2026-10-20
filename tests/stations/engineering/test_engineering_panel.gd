@@ -301,3 +301,17 @@ func test_systems_joint_view_focused_and_docked() -> void:
 	assert_bool(_press(s, "pip_add")).is_false()
 	s.focus(0)
 	assert_bool(_press(s, "pip_add")).is_true()
+
+
+# FT: FT-ENG-002
+func test_a_ship_without_subsystems_ignores_selection_and_pips() -> void:
+	var s: StationScreen = await _screen()
+	var p: EngineeringPanel = _panel(s)
+	var def: ShipDef = p.ship_def.duplicate()
+	def.subsystems = []
+	p.ship_def = def
+	assert_bool(_press(s, "subsystem_next")).is_false()
+	assert_bool(_press(s, "subsystem_prev")).is_false()
+	_press(s, "pip_add")
+	await await_idle_frame()
+	assert_array(_commands(s)).is_empty()

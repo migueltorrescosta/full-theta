@@ -1,7 +1,7 @@
 class_name WeaponsPanel
 extends StationPanel
 ## Weapons (§5.2, W-B turret camera, D49; T052). Focused, the panel is the turret camera
-## of one mount (FT-WPN-001): stars, contacts (ProceduralShip, D107) with brackets and
+## of one mount (FT-WPN-001): stars and contacts (SpaceView, D107) with brackets and
 ## chips, the mount's arc edge, where the barrel points, the lead reticle on the selected
 ## contact (Lead, shared/, FT-SIM-014), an out-of-arc line with the clock and height to
 ## turn to (FT-WPN-005), and the mount list with state and claimer (FT-WPN-004). The
@@ -33,8 +33,6 @@ const ASSIST_SLOW: float = 0.6
 const ASSIST_PULL: float = 0.1
 ## Contact ship models: ProceduralShip is about 5 units long; ships are about 50 m.
 const SHIP_SCALE: float = 10.0
-const CAMERA_FAR: float = 30000.0
-const STARS: int = 400
 const FONT_SIZE: int = 15
 const RETICLE_R: float = 18.0
 const BRACKET: float = 10.0
@@ -54,24 +52,17 @@ var _next_aim_ms: int = 0
 var _next_fire: Dictionary = {}
 var _firing: bool = false
 var _firing_all: bool = false
-var _stars: PackedVector3Array = PackedVector3Array()
 ## Brackets in view this frame (step), for drawing and item_at: {"item" (ContactPicture's),
 ## "pos", "chip", "rect" (bracket and chip)}.
 var _targets: Array[Dictionary] = []
 var _view: SubViewportContainer
-var _cam: Camera3D
-var _world: Node3D
-var _ships: Dictionary = {}
+## The turret camera's view, from the camera mount.
+var _space: SpaceView
 var _overlay: Control
 
 
 func _setup() -> void:
-	ship_def = _load_ship_def()
-	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = 7
-	for i: int in STARS:
-		var v: Vector3 = Vector3(rng.randfn(), rng.randfn(), rng.randfn())
-		_stars.append(v.normalized() if v.length_squared() > 1e-6 else Vector3.UP)
+	ship_def = ctx.ship_def()
 	_build_view()
 	_overlay = Control.new()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -379,15 +370,6 @@ func _state(i: int) -> String:
 	return "ready"
 
 
-func _load_ship_def() -> ShipDef:
-	for s: Dictionary in ctx.crew.catalogue.get("ships", []):
-		if int(s.get("id", -1)) == ctx.crew.ship:
-			var path: String = "res://content/ships/%s.tres" % str(s.get("def", ""))
-			if ResourceLoader.exists(path):
-				return load(path) as ShipDef
-	return null
-
-
 ## Turns the camera mount's aim by the aim axes (with controller assist).
 func _turn_aim(delta: float) -> void:
 	var x: float = ctx.matcher.axis("aim_x")
@@ -444,16 +426,9 @@ func _try_fire(i: int, now: int) -> bool:
 	return true
 
 
-func _target_rot() -> Variant:
-	var id: int = selected_contact()
-	if not ctx.view.near.has(id):
-		return null
-	return NetCodec.unpack_quat(int(ctx.view.near[id][0]))
-
-
 func _look(dir: Vector3) -> Basis:
 	var rot: Quaternion = ctx.interp.own_rotation()
-	var up: Vector3 = ComfortCamera.plane_up(ctx.settings, rot, _target_rot())
+	var up: Vector3 = ComfortCamera.plane_up(ctx.settings, rot, ComfortCamera.target_rot(ctx))
 	return ComfortCamera.look(dir, up, rot * Vector3.FORWARD)
 
 
@@ -462,28 +437,8 @@ func _update_camera() -> void:
 	fov = ComfortCamera.fov_deg(ctx.settings, FOV_DEG)
 	if not focused:
 		return
-	_cam.basis = cam_basis
-	_cam.fov = fov
-	var rot: Quaternion = ctx.interp.own_rotation()
-	var from: Vector3 = rot * ship_def.mounts[mount].position
-	var ids: Array[int] = ctx.interp.contact_ids()
-	for id: int in _ships.keys():
-		if id not in ids:
-			(_ships[id] as Node3D).queue_free()
-			_ships.erase(id)
-	for id: int in ids:
-		if id == ctx.crew.ship:
-			continue
-		if not _ships.has(id):
-			var s: ProceduralShip = ProceduralShip.new()
-			s.wear = 0.6
-			s.scale = Vector3.ONE * SHIP_SCALE
-			_world.add_child(s)
-			_ships[id] = s
-		var node: Node3D = _ships[id]
-		node.position = ctx.interp.offset_to(ctx.interp.contact_position(id)) - from
-		if ctx.view.near.has(id):
-			node.quaternion = NetCodec.unpack_quat(int(ctx.view.near[id][0]))
+	_space.place_camera(Transform3D(cam_basis, Vector3.ZERO), fov)
+	_space.sync_ships(ctx, ctx.interp.own_rotation() * ship_def.mounts[mount].position)
 
 
 ## Screen position of a world direction seen from the camera mount, or null behind it.
@@ -504,23 +459,9 @@ func _build_view() -> void:
 	var vp: SubViewport = SubViewport.new()
 	vp.own_world_3d = true
 	_view.add_child(vp)
-	_world = Node3D.new()
-	vp.add_child(_world)
-	var env: WorldEnvironment = WorldEnvironment.new()
-	env.environment = Environment.new()
-	env.environment.background_mode = Environment.BG_COLOR
-	env.environment.background_color = Palette.color("background")
-	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.environment.ambient_light_color = Color(0.35, 0.38, 0.42)
-	_world.add_child(env)
-	var sun: DirectionalLight3D = DirectionalLight3D.new()
-	sun.rotation = Vector3(-0.7, 0.6, 0.0)
-	_world.add_child(sun)
-	_cam = Camera3D.new()
-	_cam.near = 1.0
-	_cam.far = CAMERA_FAR
-	_cam.fov = FOV_DEG
-	_world.add_child(_cam)
+	_space = SpaceView.new()
+	_space.ship_scale = SHIP_SCALE
+	vp.add_child(_space)
 
 
 ## Brackets of the contacts and marks in view, with their chips and hit rectangles.
@@ -531,7 +472,7 @@ func _layout_targets() -> void:
 	var font: Font = get_theme_default_font()
 	var rot: Quaternion = ctx.interp.own_rotation()
 	var m: MountDef = ship_def.mounts[mount]
-	for it: Dictionary in ContactPicture.build(ctx):
+	for it: Dictionary in ctx.picture().items:
 		if it["kind"] == "point":
 			continue
 		var p: Variant = project(rot * ((it["local"] as Vector3) - m.position).normalized())
@@ -577,11 +518,6 @@ func _draw_overlay() -> void:
 func _draw_turret(font: Font) -> void:
 	var rot: Quaternion = ctx.interp.own_rotation()
 	var m: MountDef = ship_def.mounts[mount]
-	for s: Vector3 in _stars:
-		var p: Variant = project(s)
-		if p != null:
-			var b: float = 0.35 + 0.4 * absf(s.x * 7.0 - floorf(s.x * 7.0))
-			_draw_star(p, Color(b, b, b + 0.05))
 	# The arc edge: the cone of half-angle arc_half_angle around the rest direction.
 	var axis: Vector3 = m.forward.cross(Vector3.UP if absf(m.forward.y) < 0.9 else Vector3.RIGHT)
 	var edge: Vector3 = m.forward.rotated(axis.normalized(), m.arc_half_angle)
@@ -609,22 +545,11 @@ func _draw_turret(font: Font) -> void:
 		_overlay.draw_line(c + d * (RETICLE_R + 4.0), c + d * (RETICLE_R + 12.0), rc, 1.5, true)
 
 
-func _draw_star(p: Vector2, col: Color) -> void:
-	_overlay.draw_rect(Rect2(p - Vector2.ONE, Vector2(2, 2)), col)
-
-
 func _draw_item(font: Font, t: Dictionary) -> void:
 	var it: Dictionary = t["item"]
 	var p: Vector2 = t["pos"]
-	var sel: bool = (
-		ctx.crew.selection.get("kind", "") == it["kind"]
-		and int(ctx.crew.selection.get("id", -2)) == int(it["id"])
-	)
-	var col: Color = Palette.color("mark")
-	if it["kind"] != "mark":
-		col = Palette.allegiance_color(it["allegiance"])
-	if sel:
-		col = Palette.color("selected")
+	var sel: bool = ctx.crew.is_selected(it["kind"], it["id"])
+	var col: Color = Palette.color("selected") if sel else Palette.item_color(it)
 	if it["kind"] == "mark":
 		_overlay.draw_polyline(Palette.shape_points("diamond", p, BRACKET), col, 1.5, true)
 	else:
@@ -660,9 +585,7 @@ func _hint() -> String:
 
 
 func _text(font: Font, base: Vector2, text: String, col: Color) -> void:
-	var bg: Color = Palette.color("background")
-	_overlay.draw_string_outline(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, 4, bg)
-	_overlay.draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, col)
+	Palette.draw_outlined(_overlay, font, base, text, FONT_SIZE, col)
 
 
 ## "4 high" with its height word translated (ChipText's words).

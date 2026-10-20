@@ -3,6 +3,7 @@ extends Control
 ## Relay's map read-out (§5.5, FT-RLY-001, FT-SPA-006, D124): a freely rotatable 3D view
 ## of the site, centred on the own ship or a selected item, drawn in 2D with an
 ## orthographic camera. Everything is in the ship frame (-Z bow, +X starboard, +Y up),
+## offsets from the centre taken along the minimum image in world axes (D124),
 ## so stems drop to the ship's deck plane through the map centre and chips read like
 ## every other station; the camera turns freely about its own axes, so the map has no
 ## world-fixed up, no grid squares and no layers. The site's wrapping cube is drawn
@@ -25,17 +26,13 @@ const ROTATE_RAD_PER_PX: float = 0.01
 ## The camera starts 35° above the deck plane behind the ship (a start, not an up).
 const START_TILT_DEG: float = 35.0
 
-## ContactPicture.build items (ship frame from the own ship).
-var items: Array[Dictionary] = []
+## The items (ContactPicture); its interpolator gives the own ship's orientation and
+## site-local position, to place the cube and turn map points into site positions, and
+## the site period (no cube without one).
+var picture: ContactPicture = ContactPicture.new()
 var selected: Dictionary = {}
 ## The item the map is centred on ({} = own ship).
 var centre: Dictionary = {}
-## Site period (m); 0 draws no cube.
-var period_m: float = 0.0
-## Own ship orientation and site-local position, to place the cube and to turn map
-## points into site positions.
-var own_rot: Quaternion = Quaternion.IDENTITY
-var own_pos: Vector3 = Vector3.ZERO
 ## Camera orientation in the ship frame: it looks along -view.z, screen right is
 ## view.x and screen up view.y.
 var view: Basis = Basis.from_euler(Vector3(deg_to_rad(-START_TILT_DEG), 0.0, 0.0))
@@ -62,7 +59,7 @@ func ppm() -> float:
 
 ## Zoom in (-1) or out (+1) one step.
 func zoom(step: int) -> void:
-	var top: float = period_m if period_m > 0.0 else 1.0e6
+	var top: float = period_m() if period_m() > 0.0 else 1.0e6
 	span_m = clampf(span_m * pow(ZOOM_STEP, step), SPAN_MIN_M, top)
 	queue_redraw()
 
@@ -75,14 +72,19 @@ func rotate_by(delta_px: Vector2) -> void:
 	queue_redraw()
 
 
-## Ship-frame offset of the centre item from the own ship (ZERO on the ship).
-func centre_local() -> Vector3:
-	if centre.is_empty():
-		return Vector3.ZERO
-	for it: Dictionary in items:
-		if _ref(it) == _ref(centre):
-			return it["local"]
-	return Vector3.ZERO
+## Site period (m), 0 when unknown.
+func period_m() -> float:
+	return float(picture.interp.p_units) / NetCodec.POS_Q
+
+
+## World-axes offset of the centre item from the own ship (ZERO on the ship).
+func centre_world() -> Vector3:
+	return picture.find(centre).get("world", Vector3.ZERO)
+
+
+## Ship-frame offset from the map centre of an item (minimum image, D124).
+func rel_of(it: Dictionary) -> Vector3:
+	return picture.rel(it["world"], centre)
 
 
 ## Screen position (px) of a ship-frame offset from the map centre.
@@ -100,7 +102,15 @@ func unproject(pos: Vector2, depth: float = 0.0) -> Vector3:
 
 ## A ship-frame offset from the map centre as a site-local position (m; the server wraps).
 func site_position(rel: Vector3) -> Vector3:
-	return own_pos + own_rot * (rel + centre_local())
+	var interp: SnapshotInterpolator = picture.interp
+	return interp.own_position() + centre_world() + interp.own_rotation() * rel
+
+
+## The ship-frame offset from the own ship of a ship-frame offset from the map centre
+## (minimum image).
+func from_own(rel: Vector3) -> Vector3:
+	var interp: SnapshotInterpolator = picture.interp
+	return interp.local(interp.min_image(centre_world() + interp.own_rotation() * rel))
 
 
 ## The item drawn under `pos` ({"kind", "id"}), or {}: the selected item first, then the
@@ -127,9 +137,9 @@ func item_at(pos: Vector2) -> Dictionary:
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("background"))
-	var c: Vector3 = centre_local()
+	var c: Vector3 = centre_world()
 	_draw_cube(c)
-	_draw_deck(c)
+	_draw_deck(not centre.is_empty())
 	var layout: Array[Dictionary] = _layout()
 	var sel: Dictionary = {}
 	for e: Dictionary in layout:
@@ -137,17 +147,19 @@ func _draw() -> void:
 			sel = e
 		else:
 			_draw_item(e, false)
-	_draw_own(-c)
+	_draw_own(picture.rel(Vector3.ZERO, centre))
 	if not sel.is_empty():
 		_draw_item(sel, true)
 	for e: Dictionary in layout:
 		if e["chip"] != "":
-			var col: Color = Palette.color("selected") if e == sel else _item_color(e["item"])
+			var col: Color = (
+				Palette.color("selected") if e == sel else Palette.item_color(e["item"])
+			)
 			_draw_text(font, e["chip_rect"].position, e["chip"], col)
-	for it: Dictionary in items:
+	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
-			_draw_pulse(project(it["local"] - c), float(it.get("pulse", 0.0)))
-	_draw_preview(font, c)
+			_draw_pulse(project(rel_of(it)), float(it.get("pulse", 0.0)))
+	_draw_preview(font)
 	if cursor_on:
 		var col: Color = Palette.color("accent")
 		draw_line(cursor - Vector2(10, 0), cursor + Vector2(10, 0), col, 1.5)
@@ -156,15 +168,15 @@ func _draw() -> void:
 	_draw_text(font, Vector2(8.0, size.y - 8.0 - font.get_height(FONT_SIZE)), scale_text, _dim())
 
 
-## The wrapping cube: one period on a side, world-axis aligned, around the own ship.
+## The wrapping cube: one period on a side, world-axis aligned, around the own ship;
+## `c` is the centre item's world-axes offset.
 func _draw_cube(c: Vector3) -> void:
-	if period_m <= 0.0:
+	if period_m() <= 0.0:
 		return
-	var h: float = period_m / 2.0
-	var inv: Quaternion = own_rot.inverse()
+	var h: float = period_m() / 2.0
 	var corner: Callable = func(i: int) -> Vector2:
 		var w: Vector3 = Vector3(h if i & 1 else -h, h if i & 2 else -h, h if i & 4 else -h)
-		return project(inv * w - c)
+		return project(picture.interp.local(w - c))
 	var col: Color = Palette.color("line") * Color(1, 1, 1, 0.5)
 	for i: int in 8:
 		for bit: int in [1, 2, 4]:
@@ -173,8 +185,8 @@ func _draw_cube(c: Vector3) -> void:
 
 
 ## A faint ring in the deck plane through the centre (ship axes) with a bow tick, so
-## stems have something to land on; not a grid.
-func _draw_deck(c: Vector3) -> void:
+## stems have something to land on; not a grid. A cross marks the centre off the ship.
+func _draw_deck(centred: bool) -> void:
 	var r: float = span_m * 0.6
 	var pts: PackedVector2Array = PackedVector2Array()
 	for i: int in 65:
@@ -182,7 +194,7 @@ func _draw_deck(c: Vector3) -> void:
 		pts.append(project(Vector3(cos(a) * r, 0.0, sin(a) * r)))
 	draw_polyline(pts, Palette.color("line"), 1.0, true)
 	draw_line(project(Vector3(0, 0, -r * 0.9)), project(Vector3(0, 0, -r)), _dim(), 1.5, true)
-	if c != Vector3.ZERO:
+	if centred:
 		draw_line(
 			project(Vector3.ZERO) - Vector2(4, 0), project(Vector3.ZERO) + Vector2(4, 0), _dim()
 		)
@@ -205,14 +217,13 @@ func _draw_own(rel: Vector3) -> void:
 
 func _draw_item(e: Dictionary, is_sel: bool) -> void:
 	var it: Dictionary = e["item"]
-	var col: Color = _item_color(it)
+	var col: Color = Palette.item_color(it)
 	var pos: Vector2 = e["pos"]
 	var foot: Vector2 = e["foot"]
 	var stem: Color = Palette.color("selected") if is_sel else col * Color(1, 1, 1, 0.7)
 	draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
 	draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
-	var shape: String = "diamond" if it["kind"] == "mark" else _shape(it)
-	var pts: PackedVector2Array = Palette.shape_points(shape, pos, BLIP_R)
+	var pts: PackedVector2Array = Palette.shape_points(Palette.item_shape(it), pos, BLIP_R)
 	if (e["rel"] as Vector3).y >= 0.0:
 		draw_colored_polygon(pts.slice(0, -1), col)
 	else:
@@ -235,7 +246,7 @@ func _draw_pulse(pos: Vector2, pulse: float) -> void:
 
 ## The mark being placed: an outline diamond, its stem, a line back to the view plane
 ## when Shift+drag moved it in depth, and its chip from the own ship.
-func _draw_preview(font: Font, c: Vector3) -> void:
+func _draw_preview(font: Font) -> void:
 	if preview.is_empty():
 		return
 	var rel: Vector3 = preview["rel"]
@@ -245,25 +256,22 @@ func _draw_preview(font: Font, c: Vector3) -> void:
 	draw_line(project(preview["plane"]), p, col * Color(1, 1, 1, 0.4), 1.0, true)
 	draw_polyline(Palette.shape_points("diamond", p, BLIP_R + 2.0), col, 2.0, true)
 	var label: String = str(preview.get("label", ""))
-	_draw_text(font, p + Vector2(12.0, -8.0), ChipText.chip(label, rel + c), col)
+	_draw_text(font, p + Vector2(12.0, -8.0), ChipText.chip(label, from_own(rel)), col)
 
 
 func _draw_text(font: Font, at: Vector2, text: String, col: Color) -> void:
 	var base: Vector2 = at + Vector2(0.0, font.get_ascent(FONT_SIZE))
-	var bg: Color = Palette.color("background")
-	draw_string_outline(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, 4, bg)
-	draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, col)
+	Palette.draw_outlined(self, font, base, text, FONT_SIZE, col)
 
 
 ## Per item (point pings left out): {"item", "rel", "pos", "foot", "chip", "chip_rect"}.
 func _layout() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var font: Font = get_theme_default_font()
-	var c: Vector3 = centre_local()
-	for it: Dictionary in items:
+	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			continue
-		var rel: Vector3 = (it["local"] as Vector3) - c
+		var rel: Vector3 = rel_of(it)
 		var pos: Vector2 = project(rel)
 		var chip: String = ChipText.chip(it["label"], it["local"]) if chips else ""
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
@@ -289,16 +297,6 @@ func _layout() -> Array[Dictionary]:
 
 func _is_selected(it: Dictionary) -> bool:
 	return not selected.is_empty() and _ref(it) == _ref(selected)
-
-
-func _shape(it: Dictionary) -> String:
-	return Palette.ALLEGIANCE_SHAPES.get(it.get("allegiance", ""), "circle")
-
-
-func _item_color(it: Dictionary) -> Color:
-	if it["kind"] == "mark":
-		return Palette.color("mark")
-	return Palette.allegiance_color(it.get("allegiance", ""))
 
 
 func _dim() -> Color:

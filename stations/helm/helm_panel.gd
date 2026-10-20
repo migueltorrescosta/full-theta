@@ -50,7 +50,6 @@ var _captured: bool = true
 var _sent_input: Dictionary = _neutral()
 var _sent_input_ms: int = -INPUT_MS
 var _sent_target: Dictionary = {}
-var _def: ShipDef = null
 
 
 func _setup() -> void:
@@ -333,23 +332,13 @@ func helm_block() -> Dictionary:
 ## Propellant left as a share of the ship's capacity (ShipDef in content/), or -1 when
 ## the def is unknown.
 func propellant_share() -> float:
-	var def: ShipDef = ship_def()
+	var def: ShipDef = ctx.ship_def()
 	var left: float = float(
 		ctx.view.blocks.get(StationViews.Section.STATUS, {}).get("propellant", 0.0)
 	)
 	if def == null or def.propellant_capacity <= 0.0:
 		return -1.0
 	return clampf(left / def.propellant_capacity, 0.0, 1.0)
-
-
-## The own ship's ShipDef from the catalogue's def id, or null.
-func ship_def() -> ShipDef:
-	if _def == null:
-		for s: Dictionary in ctx.crew.catalogue.get("ships", []):
-			var path: String = "res://content/ships/%s.tres" % str(s.get("def", ""))
-			if int(s.get("id", -1)) == ctx.crew.ship and ResourceLoader.exists(path):
-				_def = load(path) as ShipDef
-	return _def
 
 
 func _shield_power() -> float:

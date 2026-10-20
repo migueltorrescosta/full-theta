@@ -140,7 +140,7 @@ func _process(delta: float) -> void:
 		ctx.crew.mission_seconds(ctx.view.tick),
 		focused_station()
 	)
-	radar.set_items(ContactPicture.build(ctx), ctx.crew.selection)
+	radar.set_picture(ctx.picture(), ctx.crew.selection)
 	toasts.update(now)
 	flash.update(now)
 
@@ -262,12 +262,7 @@ func _ping(device: String) -> void:
 	var item: Dictionary = item_under_cursor(device)
 	if item.is_empty():
 		item = ctx.crew.selection
-	if item.is_empty():
-		return
-	if item["kind"] == "point":
-		ctx.intents.ping("point", -1, int(item.get("site", 0)), item["pos"])
-	else:
-		ctx.intents.ping(item["kind"], int(item["id"]), _site(), Vector3.ZERO)
+	ctx.ping_item(item)
 
 
 ## Mark at the cursor, or on the selection (FT-SPA-013, FT-SPA-022): refused with a
@@ -284,11 +279,7 @@ func _mark(device: String) -> void:
 		if not focused_panel().replace_mark(item):
 			_on_toast("toast.marks_full", {})
 		return
-	match item["kind"]:
-		"contact":
-			ctx.intents.place_mark(-1, "", int(item["id"]), _site(), Vector3.ZERO)
-		"point":
-			ctx.intents.place_mark(-1, "", -1, int(item.get("site", _site())), item["pos"])
+	ctx.mark_item(-1, item)
 
 
 ## Claim or release the focused panel's claim item.
@@ -301,10 +292,6 @@ func _claim() -> void:
 		ctx.intents.release_claim(item)
 	else:
 		ctx.intents.claim(item)
-
-
-func _site() -> int:
-	return int(ctx.view.kin.get("site", 0))
 
 
 # --- Layout and widgets. ---

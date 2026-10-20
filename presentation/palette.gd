@@ -121,3 +121,28 @@ static func shape_points(shape: String, c: Vector2, r: float) -> PackedVector2Ar
 		var a: float = start + TAU * float(i % n) / float(n)
 		pts.append(c + Vector2(cos(a), sin(a)) * r)
 	return pts
+
+
+## A radar item's colour (ContactPicture items): marks in the mark colour, else the
+## allegiance colour.
+static func item_color(it: Dictionary) -> Color:
+	if it.get("kind", "") == "mark":
+		return color("mark")
+	return allegiance_color(it.get("allegiance", ""))
+
+
+## A radar item's shape: diamonds for marks, else the allegiance shape.
+static func item_shape(it: Dictionary) -> String:
+	if it.get("kind", "") == "mark":
+		return "diamond"
+	return ALLEGIANCE_SHAPES.get(it.get("allegiance", ""), "circle")
+
+
+## Text on `canvas` at baseline `base` with a background-coloured outline, readable over
+## any view.
+static func draw_outlined(
+	canvas: CanvasItem, font: Font, base: Vector2, text: String, size: int, col: Color
+) -> void:
+	var bg: Color = color("background")
+	canvas.draw_string_outline(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, bg)
+	canvas.draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)

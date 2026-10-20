@@ -59,7 +59,7 @@ var _wheel_outside: bool = false
 
 
 func _setup() -> void:
-	ship_def = _load_def()
+	ship_def = ctx.ship_def()
 	_row = HBoxContainer.new()
 	_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_row.add_theme_constant_override("separation", 0)
@@ -151,8 +151,8 @@ func handle_intent(ev: Dictionary) -> bool:
 		return select(id.trim_prefix("subsystem_").to_int() - 1)
 	match id:
 		"subsystem_prev", "subsystem_next":
-			var n: int = ship_def.subsystems.size()
-			return select((selected + (1 if id == "subsystem_next" else n - 1)) % n)
+			var n: int = count()
+			return n > 0 and select(posmod(selected + (1 if id == "subsystem_next" else -1), n))
 		"pip_add", "pip_remove":
 			if kbm and _wheel_outside:
 				_wheel_outside = false
@@ -285,6 +285,8 @@ func select(i: int) -> bool:
 ## Sets subsystem i's pips (FT-ENG-002): within 0..max per subsystem and the reactor cap,
 ## overcharge included; the reactor supplies pips and takes none (D117).
 func set_pips(i: int, n: int) -> bool:
+	if i < 0 or i >= count():
+		return false
 	var sd: SubsystemDef = ship_def.subsystems[i]
 	if sd.kind == KIND.REACTOR:
 		_toast("toast.eng_reactor")
@@ -496,13 +498,3 @@ func _index_of(id: StringName) -> int:
 		if ship_def.subsystems[i].id == id:
 			return i
 	return -1
-
-
-## The ShipDef of the own ship (Catalogue `def` id) from content/ships/, or null.
-func _load_def() -> ShipDef:
-	for s: Dictionary in ctx.crew.catalogue.get("ships", []):
-		if int(s.get("id", -1)) == ctx.crew.ship:
-			var path: String = "res://content/ships/%s.tres" % s.get("def", "")
-			if ResourceLoader.exists(path):
-				return load(path) as ShipDef
-	return null

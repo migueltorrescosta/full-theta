@@ -56,7 +56,7 @@ func _ready() -> void:
 			var r: DiscRadar = DiscRadar.new()
 			r.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			r.side_strip = strip
-			r.set_items(ContactPicture.build(_ctx), _ctx.crew.selection)
+			r.set_picture(_ctx.picture(), _ctx.crew.selection)
 			add_child(r)
 		_:
 			var s: StationScreen = StationScreen.new()

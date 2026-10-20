@@ -71,6 +71,27 @@ static func cell_direction(hour: int, band: int) -> Vector3:
 	return Vector3(sin(b) * cos(e), sin(e), -cos(b) * cos(e))
 
 
+## Where the focus dot sits: at its bearing in the middle of its height band (D184:
+## outer high, middle level, inner low, Callout's words), or in the overhead or under
+## half of the centre.
+func focus_point() -> Vector2:
+	var c: Vector2 = centre()
+	var r: float = radius()
+	var bands: Dictionary = {
+		"low": (CENTRE + LOW_LEVEL) / 2.0,
+		"level": (LOW_LEVEL + LEVEL_HIGH) / 2.0,
+		"high": (LEVEL_HIGH + 1.0) / 2.0,
+	}
+	match Callout.height_word(focus):
+		"overhead":
+			return c + Vector2(0.0, -CENTRE * r / 2.0)
+		"under":
+			return c + Vector2(0.0, CENTRE * r / 2.0)
+		var word:
+			var b: float = deg_to_rad(Callout.bearing_deg(focus))
+			return c + Vector2(sin(b), -cos(b)) * float(bands[word]) * r
+
+
 ## Coverage of direction `dir` relative to its peak (ShieldSystem's lobe k e^(k cos) /
 ## sinh k divided by its value at the focus): 1 at the focus, everywhere 1 when spread.
 func coverage(dir: Vector3) -> float:
@@ -115,15 +136,7 @@ func _draw() -> void:
 		var dir: Vector2 = Vector2(cos(a), sin(a))
 		draw_line(c + dir * radii[0], c + dir * r, line, 1.0)
 	draw_line(c - Vector2(radii[0], 0.0), c + Vector2(radii[0], 0.0), line, 1.0)
-	# The focus itself.
-	var f: Vector3 = focus.normalized()
-	var el: float = rad_to_deg(asin(clampf(f.y, -1.0, 1.0)))
-	var bearing: float = atan2(f.x, -f.z)
-	var at: float = remap(clampf(el, -60.0, 60.0), -60.0, 60.0, CENTRE * r, r)
-	var p: Vector2 = c + Vector2(sin(bearing), -cos(bearing)) * at
-	if absf(el) > 60.0:
-		p = c + Vector2(0.0, -radii[0] / 2.0 if el > 0.0 else radii[0] / 2.0)
-	draw_circle(p, 4.0, Palette.color("text"))
+	draw_circle(focus_point(), 4.0, Palette.color("text"))
 	if not label:
 		return
 	var font: Font = get_theme_default_font()

@@ -281,9 +281,7 @@ func _draw_label(i: int, rect: Rect2) -> void:
 	var fs: int = _label_size()
 	var label: String = _label(i)
 	var at: Vector2 = rect.position + Vector2(0.0, font.get_ascent(fs))
-	var bg: Color = Palette.color("background")
-	draw_string_outline(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, bg)
-	draw_string(font, at, label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.color("text"))
+	Palette.draw_outlined(self, font, at, label, fs, Palette.color("text"))
 
 
 func _draw_crews() -> void:
