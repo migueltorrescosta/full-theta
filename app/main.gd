@@ -1,7 +1,8 @@
 extends Node
 ## Entry point: `-- --server --bind ADDR` runs the headless server (ServerMain,
-## NetServer, ServerLifecycle), dedicated or as the Host button's child; the client
-## comes in #7 (HostSession is its Host and orphan-rejoin path).
+## NetServer, ServerLifecycle), dedicated or as the Host button's child; without
+## `--server` it starts the client's MainMenu (T049), driven by ClientAutopilot when
+## its test flags are given.
 
 
 func _ready() -> void:
@@ -12,7 +13,15 @@ func _ready() -> void:
 		get_tree().quit(ReleaseSmoke.run(args))
 		return
 	if not args.has("--server"):
-		get_tree().quit(0)
+		var menu: MainMenu = MainMenu.new()
+		add_child(menu)
+		if ClientAutopilot.wanted(args):
+			var pilot: ClientAutopilot = ClientAutopilot.new()
+			if not pilot.parse_args(args):
+				get_tree().quit(2)
+				return
+			pilot.menu = menu
+			add_child(pilot)
 		return
 	var cli: ServerMain = ServerMain.new()
 	if not cli.parse_args(args):

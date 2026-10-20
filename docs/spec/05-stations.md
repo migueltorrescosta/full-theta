@@ -8,7 +8,7 @@ Wireframes are 16:9 sketches. A requirement below that says "on Easy" for a data
 
 Top bar: ship name, hull, shields, reactor, alert level, station name(s), mission timer. Any crew station sets the alert level from the top bar (D89). Toasts top-right. Colour-blind-safe palette. The shared disc radar (§6) appears on every station (D43). Every callsign chip is clickable (select) and pingable (D61).
 
-Common actions have the same binding on every station (D95). Station-specific bindings below avoid these keys and the always-live keys. In cockpit and turret views, where the mouse or sticks steer, "under the cursor" means under the reticle.
+Common actions have the same binding on every station (D95). Station-specific bindings below avoid these keys and the always-live keys. In cockpit and turret views, where the mouse or sticks steer, "under the cursor" means under the reticle, and a left click selects only when the pointer is over a chip, mark or radar item; elsewhere it fires (T and Y also select). The binding-table check exempts this pointer case (D176).
 
 | Action | KB/M | Controller | Touch |
 |---|---|---|---|
@@ -20,18 +20,19 @@ Common actions have the same binding on every station (D95). Station-specific bi
 | Accept / decline (oldest request, mark or selected card) | Enter / Backspace | X / Y | ACCEPT / DECLINE |
 | Send a request chip (§7.4) | B, then 1–2 if the station has several | View+Y, then d-pad | chip bar |
 | Claim / release | K | View+X | CLAIM |
+| Radar side strip (§6.2) | Z | View + d-pad left | — |
 | Controls overlay | ? | View (tap) | i |
 
-Always-live set (works whatever panel has focus, §5.9): alert (Alt+A; hold View + d-pad), ping (as above), panel switch (F1/F2; hold View + LB/RB; tap the panel), Helm translation (WASD, R/V), face (hold F; hold L3) and all-stop (Space; View+B). On a controller the sticks belong to the focused panel, so Helm translation is KB/M only and flight assist holds the throttle setpoint (D97). No station binds an always-live key for anything else.
+Always-live set (works whatever panel has focus, §5.9): alert (Alt+A cycles; hold View + d-pad up Red, right Yellow, down Normal), ping (as above), panel switch (F1/F2; hold View + LB/RB; tap the panel), Helm translation (WASD, R/V), face (hold F; hold L3) and all-stop (Space; View+B). On a controller the sticks belong to the focused panel, so Helm translation is KB/M only and flight assist holds the throttle setpoint (D97). No station binds an always-live key for anything else.
 
 - **FT-STN-001** Every station shall show the common top bar. (station-ui §2)
 - **FT-STN-002** Every station shall show the shared disc radar at some size. (D43)
 - **FT-STN-003** Every callsign chip and mark shall be selectable by click/tap and pingable by middle-click/long-press. (D44, D61)
 - **FT-STN-004** Every critical alert shall be both visual and audible on the affected stations. (v0.3 §5)
 - **FT-STN-005** Every station shall be usable with KB/M and a controller; touch layouts shall exist for every station once browser stations ship. (v0.3 §2, D8)
-- **FT-STN-006** UI colours shall stay distinguishable under the common forms of colour blindness, and allegiance and alert level shall also be encoded by letter or shape. (station-ui §2, plan review UX-8)
+- **FT-STN-006** UI colours shall stay distinguishable under the common forms of colour blindness, and allegiance and alert level shall also be encoded by letter or shape; the three alert levels are Normal (green circle, N), Yellow (amber triangle, Y) and Red (red square, R). (station-ui §2, plan review UX-8, D170)
 - **FT-STN-007** Input bindings shall be rebindable and persisted per client. (v0.3 §2)
-- **FT-STN-008** Any crew station shall set the ship's alert level from the top bar (KB/M: click the alert chip or Alt+A; controller: hold View and press a d-pad direction; touch: tap the alert chip); the Captain and viewers shall not. (D15, D89)
+- **FT-STN-008** Any crew station shall set the ship's alert level, Normal, Yellow or Red, from the top bar (KB/M: click the alert chip for a three-button picker, or Alt+A to cycle; controller: hold View and press d-pad up for Red, right for Yellow, down for Normal; touch: tap the alert chip); the Captain and viewers shall not. (D15, D89, D170)
 - **FT-STN-009** Every station shall bind the common actions of §5.0 identically, and no station-specific binding shall reuse a common or always-live key. (D95, plan review UX-5)
 - **FT-STN-010** Every crew station shall place a mark at its selection or cursor and send the request chips its pairs define, with one binding per device. (D44, §7.4, plan review STN-6)
 - **FT-STN-011** Every station shall show a controls overlay on `?`, View or `i`, generated from the live input map and translated. (D100, plan review UX-1)
@@ -313,7 +314,7 @@ Forward (or chase) view, wide disc radar along the bottom, and a callsign rail w
 +---------------------------------------------------------+
 ```
 
-- **FT-MSC-001** The main screen shall default to the forward view with a wide disc radar and a callsign rail showing clock and range; the forward camera shall be stabilised on the ship's deck plane or the selected target (or a per-client cosmetic reference plane, never spoken or used by rules) and switch to chase while the ship is decoupled or rolls faster than a data-defined rate. (D60, plan review NAV-9, D124)
+- **FT-MSC-001** The main screen shall default to the forward view with a wide disc radar and a callsign rail showing clock and range; the forward camera shall be stabilised on the ship's deck plane or the selected target (or a per-client cosmetic reference plane, never spoken or used by rules) and switch to chase while the ship is decoupled or rolls faster than 45°/s, and back to forward after 1.5 s below 30°/s. (D60, plan review NAV-9, D124, D173)
 - **FT-MSC-002** The main screen shall offer forward, chase, tactical, target and status views. (D60)
 - **FT-MSC-003** The main screen shall draw pings and marks. (D60, D61)
 - **FT-MSC-004** Any number of viewers shall display the main screen read-only, within the 64-connection cap. (D10, D22)

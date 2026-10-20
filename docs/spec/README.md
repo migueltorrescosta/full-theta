@@ -2,7 +2,7 @@
 
 Repo: migueltorrescosta/full-theta (GPL-3.0). Engine: Godot 4.7.2, typed GDScript. Date: 2026-10-19.
 
-v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D125, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
+v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D178, including the plan review (`../research/plan-review/README.md`). Later decisions supersede earlier ones (`decisions.md`). Where v0.3 conflicts with a decision, the decision wins and the change is listed below.
 
 ## How to use this spec
 
@@ -197,3 +197,13 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 
 97. The 64-connection load gate (R15 re-verified in #11) runs 6 crewable ships and 6 fighting AI raiders with 36 crew, 6 Captains and 22 viewers; the server is pinned to 2 cores and the clients run on other cores; a 100-ship stress run is reported, not gating. §12.1, FT-GEN-003, FT-TST-011, FT-TST-014. (D160)
 98. Load gate measurement: tick per main-thread sim frame (mean and p99), snapshot age from the server's capture stamp to the client's arrival, payload bytes per connection. FT-NET-040, R15. (D161)
+
+### v0.5 update for D170–D178 (#7)
+
+99. Three alert levels, Normal, Yellow and Red, each with a colour, a shape and a letter. FT-STN-006, FT-STN-008. (D170)
+100. Marks, pings and the alert level are per-ship server state outside the sim; protocol version 4. §6.3, FT-SPA-012–017. (D171)
+101. The comfort roll lock offers the deck plane, the target or a personal reference plane captured from the current attitude. FT-STN-017. (D172)
+102. The main screen switches to chase above 45°/s roll or while decoupled, and back after 1.5 s below 30°/s. FT-MSC-001. (D173)
+103. The radar side strip toggles with Z (View + d-pad left), not B. §6.2, FT-SPA-009. (D175)
+104. A left click selects only over a chip, mark or radar item; elsewhere in the cockpit or turret it fires. FT-STN-009. (D176)
+105. The run resets after a majority "Run again" vote of the connected crew, or the host alone. FT-M1-012. (D178)

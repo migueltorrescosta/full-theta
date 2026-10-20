@@ -24,5 +24,6 @@ echo "l0: definitions"  # FT-DAT-002: every .tres under content/ loads and valid
 echo "l0: architecture"; run python tools/lint_arch.py
 echo "l0: traceability"; run python tools/traceability.py --check
 echo "l0: dialogue"; run python tools/check_dialogue.py  # FT-DAT-003, FT-DAT-004, FT-DAT-011
+echo "l0: palette"; run python tools/check_palette.py  # FT-STN-006
 echo "l0: licences"; run python tools/check_licences.py
 echo "l0: tool tests"; run pytest -q tools/tests

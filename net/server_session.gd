@@ -11,7 +11,12 @@ extends RefCounted
 ## - claims and ship-wide controls (T044, NetClaims, claim_rule, the OWNERSHIP section);
 ## - grace, the universe pause, the abandon vote and takeover (T045, FT-NET-033 to
 ##   FT-NET-036, FT-NET-041, FT-NET-042). NetServer steps the sim only while
-##   sim_running(): after a Start and outside a pause.
+##   sim_running(): after a Start and outside a pause;
+## - each ship's marks, alert level and pings: NetCrewState, whose Alert, Mark and Ping
+##   handlers it registers;
+## - the voice seam: with a VoiceService in `voice` (the app composes it), the first
+##   Start calls start_session() with the closed set, and the ship computer speaks
+##   hull, shield, fault and collision alerts to the stations concerned (FT-AUD-006).
 ## Add a message handler in _handlers. docs/protocol.md describes the behaviour.
 
 const DEFAULT_RATE: float = 90.0
@@ -60,6 +65,10 @@ var paused: Dictionary[int, Array] = {}
 var votes: Dictionary[int, NetAbandonVote] = {}
 ## Ship -> {control: [session id, name]}: last writers of ship-wide controls.
 var writers: Dictionary[int, Dictionary] = {}
+## Marks, alert level and pings (D171).
+var crew: NetCrewState
+## The seam to the host's voice service (ServerVoice; its `voice` is null without one).
+var voice: ServerVoice
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -78,6 +87,8 @@ var _crew_ships: Array = []
 func _init(net: NetTransport, sim_world: SimWorld) -> void:
 	transport = net
 	world = sim_world
+	voice = ServerVoice.new(world)
+	crew = NetCrewState.new(self)
 	_handlers = {
 		NetProtocol.Type.HELLO: _on_hello,
 		NetProtocol.Type.PICK: _on_pick,
@@ -89,6 +100,9 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.ABANDON: _on_abandon,
 		NetProtocol.Type.ABANDON_VOTE: _on_abandon_vote,
 		NetProtocol.Type.TAKEOVER: _on_takeover,
+		NetProtocol.Type.ALERT: crew.on_alert,
+		NetProtocol.Type.MARK: crew.on_mark,
+		NetProtocol.Type.PING: crew.on_ping,
 		NetProtocol.Type.BYE: _on_bye,
 		NetTransport.CLOSED: _on_closed,
 	}
@@ -145,6 +159,8 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			"tag": String(e.tag),
 		}
 		transport.post_event(event_audience(e), e.tick, String(e.kind), payload)
+		if _crewable(e.ship_id):
+			voice.on_event(e)
 		left_play = left_play or e.kind == &"outcome" or e.kind == &"destroyed"
 	# A sim event may change a ship's run status (lobby_state in_play).
 	_lobby_dirty = _lobby_dirty or not events.is_empty()
@@ -166,6 +182,42 @@ func event_audience(e: SimEvent) -> PackedInt32Array:
 		if world.faction_of(s.ship) == e.faction and StationViews.sees_event(s.entry, e.kind):
 			out.append(s.id)
 	return out
+
+
+## The sessions on a ship whose pick covers any of the stations: a ship-computer line's
+## audience (FT-AUD-006; VoiceService.computer_audience).
+func computer_audience(ship: int, stations: PackedStringArray) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for s: NetSession in by_id.values():
+		if s.ship != ship:
+			continue
+		for station: String in StationViews.stations_of(s.entry):
+			if stations.has(station):
+				out.append(s.id)
+				break
+	return out
+
+
+## The run reset (D178, NetRunReset): the rebuilt world replaces the old one, every
+## ship is back in the lobby with its picks and claims, its crew state cleared, the
+## old run's pending commands dropped and its queued voice lines too.
+func restart(sim_world: SimWorld) -> void:
+	world = sim_world
+	voice.restart(sim_world)
+	_pending.clear()
+	launched.clear()
+	abandoned.clear()
+	writers.clear()
+	_refresh_pause()
+	for ship: Dictionary in crew_ships():
+		crew.reset(ship["id"])
+		_ownership_dirty[ship["id"]] = true
+	_publish()
+
+
+## Adds a message handler kept outside this class (NetRunReset).
+func add_handler(type: int, handler: Callable) -> void:
+	_handlers[type] = handler
 
 
 ## Ships a client may pick: those without an AI (M1: the crewed ship). Cached at the
@@ -379,6 +431,8 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	for ship: int in paused:
 		notify(session, NetProtocol.EVENT_PAUSE, _pause_payload(ship))
 		_send_votes(ship, session)
+	if session.has_pick():
+		crew.send_to(session)
 	_publish()
 
 
@@ -415,6 +469,8 @@ func _answer_pick(s: NetSession, ship: int, entry: String, reason: String) -> vo
 	elif reason == CommandGate.BREAKS_COVERAGE:
 		_reject(s.id, -1, reason)
 	notify(s, NetProtocol.EVENT_PICKED, {"ship": ship, "entry": entry, "reason": reason})
+	if reason == "" and s.has_pick():
+		crew.send_to(s)
 	_publish()
 
 
@@ -435,10 +491,11 @@ func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 		reason = NOT_COVERED
 		extra = {"uncovered": NetCoverage.uncovered(entries_of(s.ship))}
 	if reason != "":
-		_request_rejected(s, NetProtocol.Type.READY, reason, extra)
+		request_rejected(s, NetProtocol.Type.READY, reason, extra)
 		return
 	launch(s.ship)
 	_broadcast(NetProtocol.EVENT_STARTED, {"ship": s.ship, "tick": world.tick})
+	voice.start(language, crew_ships().map(func(c: Dictionary) -> int: return c["faction"]))
 	_publish()
 
 
@@ -461,7 +518,7 @@ func _on_claim(conn: int, msg: Dictionary, _now_us: int) -> void:
 	elif not claims.release(s.ship, item, s.id):
 		reason = NOT_CLAIMED
 	if reason != "":
-		_request_rejected(s, type, reason, {"item": item})
+		request_rejected(s, type, reason, {"item": item})
 		return
 	_claim_changed(s.ship, item)
 	_settle(s.ship)
@@ -490,9 +547,9 @@ func _on_abandon(conn: int, msg: Dictionary, _now_us: int) -> void:
 		return
 	var ship: int = msg["ship"]
 	if not paused.has(ship):
-		_request_rejected(s, NetProtocol.Type.ABANDON, NOT_PAUSED, {"ship": ship})
+		request_rejected(s, NetProtocol.Type.ABANDON, NOT_PAUSED, {"ship": ship})
 	elif not s.is_host:
-		_request_rejected(s, NetProtocol.Type.ABANDON, NOT_HOST, {"ship": ship})
+		request_rejected(s, NetProtocol.Type.ABANDON, NOT_HOST, {"ship": ship})
 	else:
 		_abandon(ship, "host")
 	_publish()
@@ -505,18 +562,18 @@ func _on_abandon_vote(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if s == null:
 		return
 	var ship: int = msg["ship"]
-	var crew: Array[int] = _connected_crew(ship)
+	var members: Array[int] = connected_crew(ship)
 	if not paused.has(ship):
-		_request_rejected(s, NetProtocol.Type.ABANDON_VOTE, NOT_PAUSED, {"ship": ship})
+		request_rejected(s, NetProtocol.Type.ABANDON_VOTE, NOT_PAUSED, {"ship": ship})
 		return
-	if not crew.has(s.id):
-		_request_rejected(s, NetProtocol.Type.ABANDON_VOTE, NOT_CREW, {"ship": ship})
+	if not members.has(s.id):
+		request_rejected(s, NetProtocol.Type.ABANDON_VOTE, NOT_CREW, {"ship": ship})
 		return
 	var vote: NetAbandonVote = votes.get_or_add(ship, NetAbandonVote.new())
 	vote.cast(s.id, s.name, msg["vote"])
-	vote.keep_only(crew)
+	vote.keep_only(members)
 	_send_votes(ship)
-	if vote.passes(crew.size()):
+	if vote.passes(members.size()):
 		_abandon(ship, "vote")
 	_publish()
 
@@ -540,7 +597,7 @@ func _on_takeover(conn: int, msg: Dictionary, _now_us: int) -> void:
 	elif not StationViews.is_entry(entry, dev_all) or not StationViews.is_crew(entry):
 		reason = BAD_PICK
 	if reason != "":
-		_request_rejected(s, NetProtocol.Type.TAKEOVER, reason, {"ship": ship, "entry": entry})
+		request_rejected(s, NetProtocol.Type.TAKEOVER, reason, {"ship": ship, "entry": entry})
 		return
 	_answer_pick(s, ship, entry, "")
 
@@ -580,7 +637,7 @@ func _set_pick(s: NetSession, ship: int, entry: String) -> void:
 	s.entry = entry
 	transport.set_view(s.id, s.view_key())
 	if votes.has(old_ship):
-		votes[old_ship].keep_only(_connected_crew(old_ship))
+		votes[old_ship].keep_only(connected_crew(old_ship))
 		_send_votes(old_ship)
 	for each: int in [old_ship, ship]:
 		if _crewable(each):
@@ -718,7 +775,8 @@ func _wrote(session_id: int, c: SimCommand) -> void:
 		_ownership_dirty[c.ship_id] = true
 
 
-func _connected_crew(ship: int) -> Array[int]:
+## Session ids of a ship's connected crew players: the voters of D128 and D178.
+func connected_crew(ship: int) -> Array[int]:
 	var out: Array[int] = []
 	for s: NetSession in by_id.values():
 		if s.ship == ship and s.connected() and StationViews.is_crew(s.entry):
@@ -732,7 +790,8 @@ func _send_votes(ship: int, to: NetSession = null) -> void:
 	var payload: Dictionary = {
 		"ship": ship,
 		"voters": vote.names(),
-		"needed": NetAbandonVote.needed(_connected_crew(ship).size()),
+		"sessions": vote.sessions(),
+		"needed": NetAbandonVote.needed(connected_crew(ship).size()),
 	}
 	if to != null:
 		notify(to, NetProtocol.EVENT_ABANDON_VOTES, payload)
@@ -776,7 +835,9 @@ func _publish() -> void:
 	_ownership_dirty.clear()
 
 
-func _request_rejected(s: NetSession, type: int, reason: String, extra: Dictionary) -> void:
+## A `request_rejected` event to one session: the request type, the reason and extra
+## fields.
+func request_rejected(s: NetSession, type: int, reason: String, extra: Dictionary) -> void:
 	var payload: Dictionary = {"request": type, "reason": reason}
 	payload.merge(extra)
 	notify(s, NetProtocol.EVENT_REQUEST_REJECTED, payload)

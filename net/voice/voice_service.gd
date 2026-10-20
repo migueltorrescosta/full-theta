@@ -329,6 +329,16 @@ func name_clip(role: String, text: String) -> PackedByteArray:
 	return (_names.get(_name_role.get(role, role), {}) as Dictionary).get(text, PackedByteArray())
 
 
+## Drops the lines not sent yet: stitched lines waiting for a name and free-text jobs
+## (their late parts are ignored). Synths, the closed set and name jobs stay.
+func flush_lines() -> void:
+	_waiting.clear()
+	for id: int in _jobs.keys():
+		if _jobs[id]["kind"] == "free":
+			_jobs.erase(id)
+	_free_queued = 0
+
+
 ## Stops every synth; the session's voice is off until the next start_session().
 func stop() -> void:
 	for synth: VoiceSynth in _synths.values():

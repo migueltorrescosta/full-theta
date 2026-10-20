@@ -1,0 +1,41 @@
+# c3: Ops on the hosted server: marks the enemy and pings it for Tactical each run;
+# votes "Run again" after the win.
+ui_join timeout=60
+expect_welcome host=false
+ui_pick entry=ops
+barrier name=picked n=3 timeout=90
+expect_event type=started payload.ship=0 timeout=60
+ui_expect shown=station focused=relay timeout=30
+barrier name=started n=3 timeout=60
+# Run 1: select the nearest contact (the raider), mark it, ping it once Tactical waits.
+ui_expect contacts~=1 timeout=30
+ui_press id=cycle_target
+ui_expect selection.kind=contact selection.id=1
+ui_press id=mark
+ui_expect marks.size=1 marks.contact~=1
+await name=ready1 timeout=60
+ui_press id=ping
+expect_event type=run_over payload.outcome=win timeout=150
+ui_expect card=true run_over.outcome=win
+barrier name=won n=3 timeout=30
+ui_button name=Vote
+ui_expect shown=lobby entry=ops card=false timeout=30
+barrier name=lobby1 n=3 timeout=30
+expect_event type=started payload.ship=0 timeout=60
+ui_expect shown=station focused=relay marks.size=0 timeout=30
+barrier name=started2 n=3 timeout=60
+# Run 2: the reset cleared the marks; mark and ping again.
+ui_expect contacts~=1 timeout=30
+ui_press id=cycle_target
+ui_expect selection.kind=contact selection.id=1
+ui_press id=mark
+ui_expect marks.size=1 marks.contact~=1
+await name=ready2 timeout=60
+ui_press id=ping
+expect_event type=run_over payload.outcome=loss timeout=90
+ui_expect card=true run_over.outcome=loss
+barrier name=lost n=3 timeout=30
+ui_expect shown=lobby card=false timeout=30
+barrier name=lobby2 n=3 timeout=30
+bye
+barrier name=left n=3 timeout=30

@@ -5,6 +5,7 @@ None of these needs Xvfb or Godot; they compare small generated images.
 """
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -120,3 +121,45 @@ def test_blank_detection():
     shot = image()
     shot[-1] = 0
     assert not l5.blank(bytes(shot))
+
+
+def test_shot_size_defaults_to_the_manifest():
+    manifest = {"size": [640, 360]}
+    assert l5.shot_size(manifest, {"name": "a"}) == [640, 360]
+    assert l5.shot_size(manifest, {"name": "b", "size": [1280, 720]}) == [1280, 720]
+
+
+def test_capture_checks_each_shot_at_its_own_size(tmp_path, monkeypatch):
+    shots = tmp_path / "shots.json"
+    shots.write_text(
+        json.dumps(
+            {
+                "size": [W, H],
+                "shots": [{"name": "a", "scene": "x"}, {"name": "b", "scene": "x", "size": [300, 50]}],
+            }
+        )
+    )
+    out = tmp_path / "out"
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        if len(calls) == 0:
+            calls.append(cmd)
+            return subprocess.CompletedProcess(cmd, 0, "godot\n", "")
+        calls.append(cmd)
+        # The render: a at the manifest size, b at the wrong size.
+        rgb = bytes(image())
+        rgb = rgb[:-3] + b"\x00\x00\x00"
+        l5.write_png(out / "a.png", W, H, rgb)
+        l5.write_png(out / "b.png", W, H, rgb)
+        (out / "env.json").write_text(json.dumps(ENV))
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(l5.shutil, "which", lambda _: "/usr/bin/xvfb-run")
+    monkeypatch.setattr(l5.subprocess, "run", fake_run)
+    errors = l5.capture(shots, out)
+    assert errors == [f"b: rendered {W}x{H}, expected 300x50"]
+    # The X screen and window fit the largest shot on each axis.
+    render = [str(c) for c in calls[1]]
+    assert f"--server-args=-screen 0 300x{H}x24" in render
+    assert render[render.index("--resolution") + 1] == f"300x{H}"

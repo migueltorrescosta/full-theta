@@ -354,6 +354,25 @@ func test_stalled_jobs_time_out() -> void:
 	assert_int(_net.voice.size()).is_equal(1)
 
 
+# FT: FT-AUD-015, FT-M1-012
+# A run reset flushes the lines not sent yet: free text being synthesised sends no VOICE
+# afterwards and the D110 count is back to 0; the synths and the closed set stay.
+func test_flush_drops_queued_lines_and_keeps_the_session() -> void:
+	_fx.hold = true
+	_start_held()
+	_svc.say_free("Old run. Line one.", "computer", 1, PackedInt32Array([1]))
+	_svc.say_free("Old run. Line two.", "npc", 1, PackedInt32Array([1]))
+	assert_int(_svc.free_queued()).is_equal(2)
+	_svc.flush_lines()
+	assert_int(_svc.free_queued()).is_equal(0)
+	for spy: SpyVoiceSynth in _fx.spies.values():
+		spy.release()
+	_svc._process(0.0)
+	assert_array(_net.voice).is_empty()
+	assert_bool(_svc.has_voice("computer")).is_true()
+	assert_bool(_svc.closed_set_done()).is_true()
+
+
 # FT: FT-AUD-003, FT-AUD-015
 # Free text is cut to MAX_FREE_CHARS at a space for synthesis; the subtitle keeps it all.
 func test_long_free_text_is_cut_for_synthesis() -> void:

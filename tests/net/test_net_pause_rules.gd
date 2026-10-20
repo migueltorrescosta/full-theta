@@ -17,6 +17,7 @@ func test_votes_exceed_half_of_remaining_crew() -> void:
 	v.cast(2, "bo", true)
 	assert_bool(v.passes(2)).is_true()
 	assert_array(v.names()).is_equal(["ana", "bo"])
+	assert_array(v.sessions()).is_equal([1, 2])
 	v.cast(1, "ana", false)
 	assert_bool(v.passes(2)).is_false()
 	assert_array(v.names()).is_equal(["bo"])

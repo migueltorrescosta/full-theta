@@ -183,6 +183,8 @@ const BLOCKS: Dictionary = {
 		["shields", "f32"],
 		["pips_used", "u8"],
 		["propellant", "f32"],
+		# The main screen switches to chase while decoupled (FT-MSC-001).
+		["decoupled", "bool"],
 	],
 	Section.HELM:
 	[
@@ -198,6 +200,10 @@ const BLOCKS: Dictionary = {
 		["shield_track", "s16"],
 		# The shield ring shows Engineering's tightness too (FT-HLM-011).
 		["shield_tightness", "f32"],
+		["shield_power", "f32"],
+		# Engineering's thrust and torque envelope scales (FT-HLM-012).
+		["thrust_scale", "f32"],
+		["torque_scale", "f32"],
 	],
 	Section.ENGINEERING:
 	[
@@ -207,6 +213,8 @@ const BLOCKS: Dictionary = {
 		["spare_parts", "u16"],
 		["shield_strength", "f32"],
 		["shield_tightness", "f32"],
+		# Engineering's mirror of Helm's shield ring (§5.3).
+		["shield_focus", "v3n"],
 		[
 			"subsystems",
 			[
@@ -460,6 +468,7 @@ static func _status(world: SimWorld, ship: int) -> Dictionary:
 		"shields": world.shields.strength[ship],
 		"pips_used": pips,
 		"propellant": world.kin.propellant[ship],
+		"decoupled": world.helm.decoupled[ship] == 1,
 	}
 
 
@@ -477,6 +486,9 @@ static func _helm(world: SimWorld, ship: int) -> Dictionary:
 		"shield_focus": world.shields.focus[ship],
 		"shield_track": world.shields.track_id[ship],
 		"shield_tightness": world.shields.tightness[ship],
+		"shield_power": ShieldSystem.power(world, ship),
+		"thrust_scale": world.kin.thrust_scale[ship],
+		"torque_scale": world.kin.torque_scale[ship],
 	}
 
 
@@ -505,6 +517,7 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 		"spare_parts": d.spare_parts[rows[0]],
 		"shield_strength": world.shields.strength[ship],
 		"shield_tightness": world.shields.tightness[ship],
+		"shield_focus": world.shields.focus[ship],
 		"subsystems": subsystems,
 	}
 

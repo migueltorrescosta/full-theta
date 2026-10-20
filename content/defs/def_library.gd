@@ -26,21 +26,16 @@ func _init(root: String = "res://content") -> void:
 		_by_class[cls][res.get("id")] = res
 
 
-## Every .tres file under root, recursively, sorted (res:// paths).
+## Every .tres file under root, recursively, sorted (res:// paths). ResourceLoader's
+## listing also finds them in an export, where they are stored as .tres.remap.
 static func list_tres(root: String) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
-	var dir: DirAccess = DirAccess.open(root)
-	if dir == null:
-		return out
-	for sub: String in dir.get_directories():
-		if not sub.begins_with("."):
-			out.append_array(list_tres(root.path_join(sub)))
-	for f: String in dir.get_files():
-		# An export converts x.tres to x.tres.remap plus a binary resource;
-		# load() follows the remap from the original path.
-		var name: String = f.trim_suffix(".remap")
-		if name.get_extension() == "tres":
-			out.append(root.path_join(name))
+	for f: String in ResourceLoader.list_directory(root):
+		if f.ends_with("/"):
+			if not f.begins_with("."):
+				out.append_array(list_tres(root.path_join(f.trim_suffix("/"))))
+		elif f.get_extension() == "tres":
+			out.append(root.path_join(f))
 	out.sort()
 	return out
 

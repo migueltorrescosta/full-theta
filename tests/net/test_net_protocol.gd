@@ -51,6 +51,22 @@ func _samples() -> Dictionary:
 			"last": true,
 		},
 		NetProtocol.Type.ABANDON_VOTE: {"ship": 0, "vote": true},
+		NetProtocol.Type.ALERT: {"level": 2},
+		# x keeps 64 bits (D104).
+		NetProtocol.Type.MARK:
+		{
+			"op": "place",
+			"slot": -1,
+			"name": "",
+			"contact": -1,
+			"site": 0,
+			"x": 98765.4321012345,
+			"y": -0.5,
+			"z": 3.0,
+		},
+		NetProtocol.Type.PING:
+		{"kind": "contact", "id": 1, "site": -1, "x": 0.0, "y": 0.0, "z": 0.0},
+		NetProtocol.Type.RUN_AGAIN: {"ship": 0, "vote": true},
 	}
 
 

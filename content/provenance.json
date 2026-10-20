@@ -196,6 +196,14 @@
       "source": "https://github.com/libsndfile/libsndfile",
       "licence": "LGPL-2.1-or-later (libsndfile); BSD-3-Clause (libvorbis, libogg)",
       "attribution": "Copyright (c) Erik de Castro Lopo and libsndfile contributors; Xiph.Org Foundation (libvorbis, libogg); build time only"
+    },
+    {
+      "name": "Alert tones (hit, fault, shield low, proximity, ping, alert level)",
+      "kind": "sound",
+      "path": "assets/sounds/alerts/",
+      "source": "Own work: synthesised by tools/make_alert_tones.py",
+      "licence": "CC0-1.0",
+      "attribution": "Full Theta contributors, dedicated to the public domain (CC0 1.0)"
     }
   ]
 }

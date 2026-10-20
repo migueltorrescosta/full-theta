@@ -1,6 +1,6 @@
 # audio/
 
-Voice system (E10, spec §9): what the client plays, and the contracts with the host's synthesis service in `net/voice/`. Alert tones (FT-AUD-009) are #7's and use their own bus.
+Voice system (E10, spec §9): what the client plays, and the contracts with the host's synthesis service in `net/voice/`. Alert tones (FT-AUD-009): `AlertTones` (`alert_tones.gd`), one player per tone on the `Alerts` bus (created at runtime, sent to Master, so voice never blocks it); `played` is the tests' spy. The tones are our own CC0 work, synthesised by `tools/make_alert_tones.py` into `assets/sounds/alerts/`, which app/ hands over (`AlertTones.sounds_dir`, set by `MainMenu`; audio/ may not name assets/); `StationAlerts` (stations/) decides which station hears what.
 
 ## Data
 
@@ -31,10 +31,10 @@ Clients play authored lines without slots from their own export (`local` lines);
 
 - one persistent Piper process per voice behind a thin adapter: `tools/tts/piper_stream.py` (piper-tts 1.8.0, development) or the standalone rhasspy/piper 2023.11.14-2 binary (releases), each driven by its own worker thread over non-blocking pipes (stderr read and dropped); the main loop only queues requests and collects finished parts (FT-AUD-019, FT-ARC-019). A launch or request past its deadline (PROVISIONAL, scaled by text length) kills and restarts the process and fails the request (subtitles only); a process that died while idle is relaunched before the next request; a job whose voice hands over nothing for `JOB_TIMEOUT_MS` fails in `VoiceService`, so the D110 count drops and Start completes;
 - composed by `VoiceSetup` (`app/voice_setup.gd`): host clips from `res://audio/prerendered_host`, and the synth factory (`BundledPiper`'s binary in exports, found at runtime; the tools/tts venv in development; `FT_PIPER_BIN` forces the binary). Without a voice model, or with a `dev_only` language in a release build, lines are subtitles only;
-- `start_session(lang, closed_set)` at Start (T043 calls it): loads the language's host pack and synthesises every closed-set name in each role's voice, trimmed and normalised on the synth's worker thread and cached; when both roles share a voice with equal effective settings (the binary's process-wide settings), each name is synthesised once and shared (FT-AUD-018);
+- `start_session(lang, closed_set)` at Start (`ServerVoice.start`, at the run's first Start: ship names and every possible contact callsign): loads the language's host pack and synthesises every closed-set name in each role's voice, trimmed and normalised on the synth's worker thread and cached; when both roles share a voice with equal effective settings (the binary's process-wide settings), each name is synthesised once and shared (FT-AUD-018);
 - `say(line_id, args, audience)`: an authored line with no synthesis: a line without slots is sent as a `local` event only; a slotted one is stitched and streamed;
 - `say_free(text, role, priority, audience)`: runtime synthesis, streamed per sentence (text cut at a space to `MAX_FREE_CHARS`, 400, PROVISIONAL, for synthesis; the subtitle keeps it all; parts capped at `PiperProcessSynth.MAX_PART_BYTES`); with more than 4 free-text lines queued for synthesis, further ones are subtitles only (D110);
-- routing hooks for #10's main lead: `npc_audience` (the NPC's conversation claimer, FT-AUD-005) and `computer_audience` (clients holding the stations concerned, FT-AUD-006).
+- routing hooks for #10's main lead: `npc_audience` (the NPC's conversation claimer, FT-AUD-005) and `computer_audience` (clients holding the stations concerned, FT-AUD-006; `ServerSession.computer_audience`, wired by `ServerMain.make_voice`). The server says the hull critical, shields low, subsystem fault and collision warning lines from sim events (`ServerVoice`: stations per line in `LINES`, hull critical to every station).
 
 Per line it sends one reliable event and the clip:
 

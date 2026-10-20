@@ -26,6 +26,11 @@ extends RefCounted
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
 ##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
 ##                        before launch and Welcome carries it (FT-AUD-013, D41).
+##   --m1-player-hull-scale F
+##                        test flag: the crewed ship's hull is F times its definition's
+##                        (0 < F <= 1), so the L4 encounter (tools/l4) loses a fight in
+##                        under a minute; sim/ and content/ stay as they are [1].
+##                        Debug builds only, or with FT_DEV set in the environment.
 ## Load gate only (#11, D160, D161; tools/l4/load.sh), never for play; refused in a
 ## release build unless FT_DEV is set:
 ##   --load-ships N       N crewable ships of one faction plus AI raiders (LoadEncounter)
@@ -44,8 +49,8 @@ const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
 ## 2 ms of due without spinning. Provisional: see docs/protocol.md, Rates and limits.
 const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
-## The load gate's flags (dev and test only) and the variable that allows them in a
-## release build.
+## The load gate's flags (dev and test only), and the variable that allows them and
+## --m1-player-hull-scale in a release build.
 const LOAD_FLAGS: Array[String] = [
 	"--load-ships",
 	"--load-world",
@@ -78,6 +83,10 @@ var probe_out: String = ""
 var probe_picks: int = 64
 var probe_warmup: float = 3.0
 var probe_window: float = 60.0
+var player_hull_scale: float = 1.0
+## Whether test flags (--m1-player-hull-scale, LOAD_FLAGS) are accepted: a debug build (the editor
+## binary that L3 and L4 run) or FT_DEV set.
+var dev_flags: bool = OS.is_debug_build() or OS.get_environment(DEV_ENV) != ""
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -100,7 +109,7 @@ func parse_args(args: PackedStringArray) -> bool:
 				return false
 		else:
 			i += 1
-			if i >= args.size() or not _set_flag(flag, args[i]):
+			if i >= args.size() or not _set_value(flag, args[i]):
 				return false
 		i += 1
 	if bind_address == "":
@@ -125,7 +134,7 @@ func _check_load_flags(args: PackedStringArray) -> bool:
 			given.append(flag)
 	if given.is_empty():
 		return true
-	if not OS.is_debug_build() and OS.get_environment(DEV_ENV) == "":
+	if not dev_flags:
 		push_error("%s: dev and test only (debug build or %s set)" % [given, DEV_ENV])
 		return false
 	if load_ships < 0 or (args.has("--load-world") and load_ships == 0):
@@ -136,6 +145,12 @@ func _check_load_flags(args: PackedStringArray) -> bool:
 			push_error("%s needs --probe-out PATH" % flag)
 			return false
 	return true
+
+
+func _set_value(flag: String, value: String) -> bool:
+	if flag == "--m1-player-hull-scale":
+		return _set_hull_scale(value)
+	return _set_flag(flag, value)
 
 
 func _set_flag(flag: String, value: String) -> bool:
@@ -199,6 +214,18 @@ func _set_flag(flag: String, value: String) -> bool:
 	return true
 
 
+## --m1-player-hull-scale: a test flag (dev_flags) taking a number in (0, 1].
+func _set_hull_scale(value: String) -> bool:
+	if not dev_flags:
+		push_error("--m1-player-hull-scale is a test flag: debug builds, or set " + DEV_ENV)
+		return false
+	if not value.is_valid_float() or value.to_float() <= 0.0 or value.to_float() > 1.0:
+		push_error("--m1-player-hull-scale needs a number in (0, 1]")
+		return false
+	player_hull_scale = value.to_float()
+	return true
+
+
 ## Builds and starts the server node (not yet in the tree); null on failure.
 func make_server() -> NetServer:
 	var defs: DefLibrary = DefLibrary.new()
@@ -207,6 +234,9 @@ func make_server() -> NetServer:
 	if player == null or enemy == null:
 		push_error("missing M1 definitions (m1_corvette, m1_raider)")
 		return null
+	if player_hull_scale != 1.0:
+		player = player.duplicate()
+		player.hull_max *= player_hull_scale
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
 	# STAND-IN (#11 lobby): the multi-ship lobby replaces --load-ships and LoadEncounter.
 	if load_ships > 0:
@@ -242,10 +272,17 @@ func make_server() -> NetServer:
 	return server
 
 
-## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick.
-## Silent until the lobby's Start calls start_session(session.language, closed set).
+## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,
+## wired into the session: silent until the first Start calls start_session() with the
+## session language and closed set; ship-computer lines go to the stations concerned
+## (ServerVoice, ServerSession.computer_audience, FT-AUD-006).
 func make_voice(server: NetServer) -> VoiceService:
-	return VoiceSetup.make_service(server.transport, func() -> int: return server.world.tick)
+	var voice: VoiceService = VoiceSetup.make_service(
+		server.transport, func() -> int: return server.world.tick
+	)
+	voice.computer_audience = server.session.computer_audience
+	server.session.voice.voice = voice
+	return voice
 
 
 ## The pid file and idle-exit node that runs next to `server` (FT-NET-003).
