@@ -37,7 +37,7 @@ func after_test() -> void:
 
 
 # FT: FT-STN-003, FT-SPA-012, FT-SPA-013, FT-SPA-015, FT-SPA-016, FT-SPA-017, FT-SPA-020
-# FT: FT-SPA-022, FT-SPA-031, FT-RLY-003, FT-M1-017, FT-MSC-003, FT-M1-005
+# FT: FT-SPA-022, FT-SPA-031, FT-RLY-003, FT-M1-017, FT-M1-005
 func test_marks_and_pings_reach_every_station() -> void:
 	var server: NetServer = _h.server()
 	for entry: String in ENTRIES:

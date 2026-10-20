@@ -21,6 +21,9 @@ class SpyService:
 		said.append([line_id, args, Array(audience)])
 		return said.size()
 
+	func flush_lines() -> void:
+		said.append(["flushed"])
+
 
 var h: NetHarness
 var _spy: SpyService
@@ -117,3 +120,21 @@ func test_alert_lines_go_to_the_stations_concerned() -> void:
 	damage.health[hull] = server.world.defs[PLAYER].hull_max * 0.1
 	server.session.after_ticks([_event(server, &"hit", PLAYER)])
 	assert_int(_spy.said.size()).is_equal(2)
+
+
+# FT: FT-AUD-006, FT-M1-012
+# The run reset flushes the queued lines and re-arms "Hull critical" on the new world.
+func test_run_reset_flushes_lines_and_rearms_the_hull_alert() -> void:
+	var setup: Array = await _crewed()
+	var server: NetServer = setup[0]
+	var damage: DamageTable = server.world.damage
+	damage.health[damage.hull_row(PLAYER)] = server.world.defs[PLAYER].hull_max * 0.2
+	server.session.after_ticks([_event(server, &"hit", PLAYER)])
+	server.restart_run()
+	assert_object(server.session.voice.world).is_same(server.world)
+	assert_array(_spy.said.back()).is_equal(["flushed"])
+	damage = server.world.damage
+	damage.health[damage.hull_row(PLAYER)] = server.world.defs[PLAYER].hull_max * 0.2
+	server.session.after_ticks([_event(server, &"hit", PLAYER)])
+	assert_str(_spy.said.back()[0]).is_equal("computer.hull_critical")
+	assert_int(_spy.said.size()).is_equal(3)

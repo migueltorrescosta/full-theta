@@ -30,6 +30,7 @@ extends RefCounted
 ##                        test flag: the crewed ship's hull is F times its definition's
 ##                        (0 < F <= 1), so the L4 encounter (tools/l4) loses a fight in
 ##                        under a minute; sim/ and content/ stay as they are [1].
+##                        Debug builds only, or with FT_DEV set in the environment.
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
 const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
@@ -40,6 +41,8 @@ const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
 ## The beacon's default server name (provisional: see docs/protocol.md, Rates and limits).
 const DEFAULT_NAME: String = "Full Theta server"
+## Set (to anything) to accept the test flags in a release export.
+const DEV_ENV: String = "FT_DEV"
 
 var port: int = DEFAULT_PORT
 var bind_address: String = ""
@@ -56,6 +59,9 @@ var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
 var language: String = I18n.LANGUAGES[0]
 var player_hull_scale: float = 1.0
+## Whether test flags (--m1-player-hull-scale) are accepted: a debug build (the editor
+## binary that L3 and L4 run) or FT_DEV set.
+var dev_flags: bool = OS.is_debug_build() or OS.get_environment(DEV_ENV) != ""
 
 
 ## Parses the flags; reports the problem and returns false on a bad command line.
@@ -112,10 +118,8 @@ func _set_flag(flag: String, value: String) -> bool:
 				return false
 			set(flag.trim_prefix("--").replace("-", "_"), value.to_float())
 		"--m1-player-hull-scale":
-			if not value.is_valid_float() or value.to_float() <= 0.0 or value.to_float() > 1.0:
-				push_error("--m1-player-hull-scale needs a number in (0, 1]")
+			if not _set_hull_scale(value):
 				return false
-			player_hull_scale = value.to_float()
 		"--bind":
 			bind_address = value
 		"--pid-file":
@@ -132,6 +136,18 @@ func _set_flag(flag: String, value: String) -> bool:
 		_:
 			push_error("unknown argument %s" % flag)
 			return false
+	return true
+
+
+## --m1-player-hull-scale: a test flag (dev_flags) taking a number in (0, 1].
+func _set_hull_scale(value: String) -> bool:
+	if not dev_flags:
+		push_error("--m1-player-hull-scale is a test flag: debug builds, or set " + DEV_ENV)
+		return false
+	if not value.is_valid_float() or value.to_float() <= 0.0 or value.to_float() > 1.0:
+		push_error("--m1-player-hull-scale needs a number in (0, 1]")
+		return false
+	player_hull_scale = value.to_float()
 	return true
 
 

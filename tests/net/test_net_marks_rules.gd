@@ -61,7 +61,7 @@ func test_an_occupied_slot_is_taken_for_non_relay() -> void:
 	assert_str(m.place(SHIP, CAPTAIN, 9, "Cap", 2, "", _free(6.0))).is_equal(CrewMarks.SLOT_TAKEN)
 	assert_str(m.place(SHIP, CAPTAIN, 9, "Cap", -1, "", _free(6.0))).is_empty()
 	assert_str(m.marks_of(SHIP)[0]["by"]).is_equal("Cap")
-	assert_str(m.place(SHIP, NONE, 7, "Vic", -1, "", _free(6.0))).is_equal(CrewMarks.NOT_CREW)
+	assert_str(m.place(SHIP, NONE, 7, "Vic", -1, "", _free(6.0))).is_equal(ServerSession.NOT_CREW)
 
 
 # FT: FT-SPA-013, FT-RLY-003
@@ -92,13 +92,12 @@ func test_only_relay_edits_others_marks_and_the_captain_never_edits() -> void:
 
 
 # FT: FT-SPA-014
-func test_free_marks_wrap_onto_the_site_and_keep_64_bits() -> void:
-	m.period = 200_000.0
-	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, "", _free(150_000.0))).is_empty()
-	assert_float(m.marks_of(SHIP)[0]["x"]).is_equal(-50_000.0)
+func test_free_marks_keep_64_bits_and_refuse_bad_places() -> void:
 	var fine: float = 99_999.123456789
 	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, "", _free(fine))).is_empty()
-	assert_float(m.marks_of(SHIP)[1]["x"]).is_equal(fine)
+	assert_float(m.marks_of(SHIP)[0]["x"]).is_equal(fine)
+	# NetCrewState turns an unknown contact into -2.
+	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, "", _on(-2))).is_equal(CrewMarks.BAD_MARK)
 	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, "", _free(NAN))).is_equal(CrewMarks.BAD_MARK)
 	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, "", _free(1.0, -1))).is_equal(CrewMarks.BAD_MARK)
 	assert_str(m.place(SHIP, CREW, 1, "Ana", 8, "", _free(1.0))).is_equal(CrewMarks.BAD_MARK)
@@ -108,8 +107,8 @@ func test_free_marks_wrap_onto_the_site_and_keep_64_bits() -> void:
 func test_alert_from_crew_only_and_reset() -> void:
 	assert_int(m.alert(SHIP)).is_equal(CrewMarks.ALERT_NORMAL)
 	assert_str(m.set_alert(SHIP, CREW, CrewMarks.ALERT_RED)).is_empty()
-	assert_str(m.set_alert(SHIP, CAPTAIN, 1)).is_equal(CrewMarks.NOT_CREW)
-	assert_str(m.set_alert(SHIP, NONE, 1)).is_equal(CrewMarks.NOT_CREW)
+	assert_str(m.set_alert(SHIP, CAPTAIN, 1)).is_equal(ServerSession.NOT_CREW)
+	assert_str(m.set_alert(SHIP, NONE, 1)).is_equal(ServerSession.NOT_CREW)
 	assert_str(m.set_alert(SHIP, RELAY, 3)).is_equal(CrewMarks.BAD_LEVEL)
 	assert_int(m.alert(SHIP)).is_equal(CrewMarks.ALERT_RED)
 	_fill()
@@ -151,3 +150,12 @@ func test_a_ping_on_an_item_pinged_by_another_within_3_s_is_a_copy() -> void:
 	assert_str(p.copy_of(SHIP, "point", -1, 0, 1, "Ana", 1_600_000)).is_empty()
 	# Past 3 s it is a new ping.
 	assert_str(p.copy_of(SHIP, "contact", 1, -1, 2, "Rui", 4_600_000)).is_empty()
+
+
+# FT: FT-SPA-012
+func test_mark_names_lose_control_and_bidi_characters() -> void:
+	var raw: String = "\u202Eevil\u0007 one\u2066\u200F"
+	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, raw, _free(0.0))).is_empty()
+	assert_str(m.marks_of(SHIP)[0]["name"]).is_equal("evil one")
+	assert_str(m.rename(SHIP, CREW, 1, 0, "\n\u061C\t")).is_empty()
+	assert_str(m.marks_of(SHIP)[0]["name"]).is_equal("Alpha")

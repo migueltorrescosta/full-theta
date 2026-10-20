@@ -65,7 +65,6 @@ func test_voice_lines_reach_the_player_and_language_applies() -> void:
 	assert_int(AudioServer.get_bus_effect_count(bus)).is_equal(4)
 
 
-# FT: FT-ARC-015
 func test_lobby_until_started_then_the_station_screen() -> void:
 	var s: ClientShell = _shell("en")
 	assert_object(s.lobby).is_not_null()

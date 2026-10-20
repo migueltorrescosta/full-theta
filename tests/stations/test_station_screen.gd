@@ -146,7 +146,7 @@ func test_a_ninth_mark_is_refused_with_a_toast() -> void:
 	assert_array(_sent(v, "place_mark")).is_empty()
 
 
-# FT: FT-STN-009
+# FT: FT-STN-009, FT-SPA-009
 func test_cycle_select_pinged_claim_request_and_strip() -> void:
 	var s: StationScreen = _screen("helm")
 	s.dispatch(_ev("cycle_target", "kbm", s))

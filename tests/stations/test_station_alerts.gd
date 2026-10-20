@@ -162,3 +162,13 @@ func test_tones_play_on_their_own_bus_that_voice_never_blocks() -> void:
 		assert_float(p.stream.get_length()).is_less(1.0)
 	_event(s, "hit", {"vector": Vector3.FORWARD})
 	assert_bool(s.alerts.tones.player_of(&"hit").playing).is_true()
+
+
+# FT: FT-AUD-009
+func test_the_played_spy_keeps_only_the_last_tones() -> void:
+	var tones: AlertTones = auto_free(AlertTones.new())
+	add_child(tones)
+	for i: int in AlertTones.PLAYED_KEPT + 5:
+		assert_bool(tones.play(&"ping" if i < 5 else &"fault", i)).is_true()
+	assert_int(tones.played.size()).is_equal(AlertTones.PLAYED_KEPT)
+	assert_bool(tones.played.has(&"ping")).is_false()

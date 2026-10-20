@@ -469,7 +469,7 @@ Conventions (D73–D75):
 - **Why:** Shared widgets for all stations (FT-STN-001–003, 006, 008, FT-SPA-003, 005, 007–011).
 - **Verification criteria:**
   - [ ] Top bar with alert chip (any crew station sets it; Captain and viewers can't).
-  - [ ] Disc radar: stems, solid/hollow blips, range ring, B side strip, ship frame, optionally centred on a selected reference (D124); contact chips with callsign, clock, height, range.
+  - [ ] Disc radar: stems, solid/hollow blips, range ring, Z side strip (D175), ship frame, optionally centred on a selected reference (D124); contact chips with callsign, clock, height, range.
   - [ ] L5 screenshot tests pass; palette checked with a colour-blind simulation script.
 - **Instructions:** station-ui §1–2.
 

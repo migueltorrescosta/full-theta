@@ -1,6 +1,6 @@
 class_name MainMenu
 extends Control
-## The client's main menu (T049, FT-ARC-015, FT-NET-001, FT-NET-003, FT-NET-012/013):
+## The client's main menu (T049, FT-NET-001, FT-NET-003, FT-NET-012/013):
 ## Name (persisted), Host (bind "This computer only" or a LAN address, session language,
 ## the dev "one client holds all stations" flag), Join (live LAN list, or a typed
 ## address through LanBrowser.parse_address), Rejoin (stored token), Settings, Quit.
@@ -49,8 +49,8 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	browser.poll(Time.get_ticks_usec())
-	if _menu.visible and Engine.get_process_frames() % 30 == 0:
+	# No LAN polling while the shell is up; the list redraws only when it changed.
+	if shell == null and browser.poll(Time.get_ticks_usec()):
 		_refresh_hosts()
 	if host_session != null and shell == null:
 		host_session.poll()

@@ -56,9 +56,13 @@ func test_card_shows_the_outcome_and_crew_vote() -> void:
 	(o.find_child("Vote", true, false) as Button).pressed.emit()
 	var rec: StationFixture.RecordingClient = StationFixture.sent(o.ctx)
 	assert_array(rec.of("run_again")[0][1]).is_equal([0, true])
-	var votes: Dictionary = {"ship": 0, "voters": ["Ana"], "needed": 2}
+	# Another player with the same name voted: still ours to cast (by session id).
+	var votes: Dictionary = {"ship": 0, "voters": ["Ana"], "sessions": [99], "needed": 2}
 	o.ctx.crew.handle_event({"type": "run_votes", "payload": votes}, 0)
 	assert_str(_text(o, "Votes")).contains("1/2: Ana")
+	assert_str((o.find_child("Vote", true, false) as Button).text).is_equal("Run again")
+	votes["sessions"] = [StationFixture.SESSION]
+	o.ctx.crew.handle_event({"type": "run_votes", "payload": votes}, 0)
 	(o.find_child("Vote", true, false) as Button).pressed.emit()
 	assert_array(rec.of("run_again")[1][1]).is_equal([0, false])
 	o.ctx.crew.reset_run()
@@ -80,7 +84,7 @@ func test_viewer_sees_the_card_and_host_restarts() -> void:
 	assert_array(StationFixture.sent(h.ctx).of("run_again")[0][1]).is_equal([0, true])
 
 
-# FT: FT-M1-012, FT-M1-001
+# FT: FT-M1-012
 # Through the shell: the dev entry starts, the enemy is destroyed, the card shows
 # Victory, its Run again button (1 of 1 crew) resets the run, the shell is back in the
 # lobby, and Start brings the station screen up on the new world.

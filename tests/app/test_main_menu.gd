@@ -63,3 +63,34 @@ func test_no_rejoin_without_a_token_and_the_name_persists() -> void:
 	var again: ClientSettings = ClientSettings.new(SETTINGS)
 	again.load_file()
 	assert_str(again.player_name).is_equal("Ana")
+
+
+# FT: FT-NET-012
+# The LAN list redraws when a beacon changes it, and nothing is polled while the shell
+# is up.
+func test_lan_list_updates_on_change_and_pauses_under_the_shell() -> void:
+	var m: MainMenu = _menu()
+	assert_int(m.browser.start(0, "127.0.0.1")).is_equal(OK)
+	var hosts: ItemList = m.find_child("Hosts", true, false)
+	var udp: PacketPeerUDP = PacketPeerUDP.new()
+	udp.set_dest_address("127.0.0.1", m.browser.local_port())
+	var beacon: Callable = func(ws_port: int) -> void:
+		udp.put_packet(LanBeacon.new(NetProtocol.PROTOCOL_VERSION, "A", ws_port).encode())
+	beacon.call(47801)
+	assert_bool(await _frames_until(func() -> bool: return hosts.item_count == 1)).is_true()
+	m.shell = auto_free(ClientShell.new())
+	beacon.call(47802)
+	for i: int in 10:
+		await get_tree().process_frame
+	assert_int(hosts.item_count).is_equal(1)
+	m.shell = null
+	assert_bool(await _frames_until(func() -> bool: return hosts.item_count == 2)).is_true()
+	udp.close()
+
+
+func _frames_until(cond: Callable) -> bool:
+	for i: int in 120:
+		if cond.call():
+			return true
+		await get_tree().process_frame
+	return cond.call()

@@ -1,8 +1,9 @@
 class_name CrewMarks
 extends RefCounted
 ## Per-ship marks and alert level: crew state the server keeps outside the sim, so
-## outside the command log and the state hash. Pure rules; ServerSession checks the
-## sender's pick, validates contact ids and sends the `marks` and `alert` events.
+## outside the command log and the state hash. Pure rules; NetCrewState checks the
+## sender's pick, validates contact and site ids, wraps free points onto the site's cube
+## and sends the `marks` and `alert` events.
 ## - Marks (FT-SPA-012): 8 slots per ship, named Alpha to Hotel by default. A mark is
 ##   free (site + three 64-bit offsets wrapped into [-P/2, P/2), D104, D124) or attached
 ##   to a contact (FT-SPA-014; the client follows the contact, and shows its last known
@@ -21,21 +22,25 @@ const DEFAULT_NAMES: Array[String] = [
 ]
 ## Longest mark name kept (UTF-8 bytes, after trimming). PROVISIONAL.
 const MAX_NAME_BYTES: int = 24
+## C0 and C1 controls and the bidi marks, embeddings, overrides and isolates.
+const UNSAFE_CHARS: String = (
+	"[\\x{0}-\\x{1F}\\x{7F}-\\x{9F}\\x{61C}\\x{200E}\\x{200F}\\x{202A}-\\x{202E}"
+	+ "\\x{2066}-\\x{2069}]"
+)
 const ALERT_NORMAL: int = 0
 const ALERT_YELLOW: int = 1
 const ALERT_RED: int = 2
 
-## Refusal reasons (request_rejected), besides CommandGate.NOT_ALLOWED (the Captain
-## moving, renaming or deleting).
-const NOT_CREW: String = "not_crew"
+## Refusal reasons (request_rejected), besides ServerSession.NOT_CREW and
+## CommandGate.NOT_ALLOWED (the Captain moving, renaming or deleting).
 const MARKS_FULL: String = "marks_full"
 const SLOT_TAKEN: String = "slot_taken"
 const NOT_YOURS: String = "not_yours"
 const BAD_MARK: String = "bad_mark"
 const BAD_LEVEL: String = "bad_level"
 
-## Site period (m, D124); ServerSession sets it from the world.
-var period: float = 200_000.0
+static var _unsafe: RegEx
+
 ## Ship -> Array of SLOTS entries: {} for an empty slot, else {slot, name, contact, site,
 ## x, y, z, by, by_session}.
 var _marks: Dictionary[int, Array] = {}
@@ -59,7 +64,7 @@ func alert(ship: int) -> int:
 ## Sets the alert level; returns why not, or "".
 func set_alert(ship: int, role: Role, level: int) -> String:
 	if role != Role.CREW and role != Role.RELAY:
-		return NOT_CREW
+		return ServerSession.NOT_CREW
 	if level < ALERT_NORMAL or level > ALERT_RED:
 		return BAD_LEVEL
 	_alert[ship] = level
@@ -88,7 +93,7 @@ func place(
 	ship: int, role: Role, session: int, by: String, slot: int, name: String, spot: Dictionary
 ) -> String:
 	if role == Role.NONE:
-		return NOT_CREW
+		return ServerSession.NOT_CREW
 	var slots: Array = _slots(ship)
 	if slot < -1 or slot >= SLOTS:
 		return BAD_MARK
@@ -157,7 +162,7 @@ func _slots(ship: int) -> Array:
 
 func _may_edit(ship: int, role: Role, session: int, slot: int) -> String:
 	if role == Role.NONE:
-		return NOT_CREW
+		return ServerSession.NOT_CREW
 	if not has_mark(ship, slot):
 		return BAD_MARK
 	if role == Role.CAPTAIN:
@@ -168,7 +173,7 @@ func _may_edit(ship: int, role: Role, session: int, slot: int) -> String:
 
 
 ## {contact, site, x, y, z} for an attached (contact >= 0, site -1, zeros) or a free mark
-## (site >= 0, finite offsets wrapped onto the site's cube); {} when invalid.
+## (site >= 0, finite offsets, already wrapped by the caller); {} when invalid.
 func _location(spot: Dictionary) -> Dictionary:
 	var contact: int = spot["contact"]
 	var site: int = spot["site"]
@@ -179,17 +184,14 @@ func _location(spot: Dictionary) -> Dictionary:
 		return {"contact": contact, "site": -1, "x": 0.0, "y": 0.0, "z": 0.0}
 	if contact != -1 or site < 0 or not (is_finite(x) and is_finite(y) and is_finite(z)):
 		return {}
-	return {"contact": -1, "site": site, "x": _wrap(x), "y": _wrap(y), "z": _wrap(z)}
+	return {"contact": -1, "site": site, "x": x, "y": y, "z": z}
 
 
-func _wrap(v: float) -> float:
-	var half: float = 0.5 * period
-	if v >= -half and v < half:
-		return v
-	var w: float = fposmod(v + half, period) - half
-	return w - period if w >= half else w
-
-
+## The name trimmed, without control or bidi characters (a name can't reorder or hide
+## the text around it on another screen), cut to MAX_NAME_BYTES; the default when empty.
 func _name(slot: int, name: String) -> String:
-	var kept: String = NetProtocol.clip_utf8(name.strip_edges(), MAX_NAME_BYTES).strip_edges()
+	if _unsafe == null:
+		_unsafe = RegEx.create_from_string(UNSAFE_CHARS)
+	var clean: String = _unsafe.sub(name, "", true).strip_edges()
+	var kept: String = NetProtocol.clip_utf8(clean, MAX_NAME_BYTES).strip_edges()
 	return kept if kept != "" else DEFAULT_NAMES[slot]

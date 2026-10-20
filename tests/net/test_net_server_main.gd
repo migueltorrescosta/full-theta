@@ -85,6 +85,10 @@ func test_player_hull_scale_flag() -> void:
 	assert_float(DefLibrary.new().ship(&"m1_corvette").hull_max).is_equal(full)
 	server.transport.stop()
 	server.free()
+	# A release build without FT_DEV refuses it.
+	var release: ServerMain = ServerMain.new()
+	release.dev_flags = false
+	assert_bool(release.parse_args(args)).is_false()
 
 
 # FT: FT-NET-003, FT-NET-012

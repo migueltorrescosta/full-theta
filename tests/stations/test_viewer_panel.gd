@@ -34,7 +34,7 @@ func _viewer(s: StationScreen) -> ViewerPanel:
 	return s.panels[0] as ViewerPanel
 
 
-# FT: FT-MSC-001, FT-STN-001, FT-STN-002
+# FT: FT-MSC-001, FT-MSC-003, FT-STN-001, FT-STN-002
 func test_forward_view_wide_radar_and_callsign_rail() -> void:
 	var s: StationScreen = await _screen()
 	var v: ViewerPanel = _viewer(s)

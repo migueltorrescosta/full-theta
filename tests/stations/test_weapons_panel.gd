@@ -76,7 +76,7 @@ func _bearing(clock_deg: float, el_deg: float, range_m: float) -> Vector3:
 	return Vector3(sin(b) * cos(e), sin(e), -cos(b) * cos(e)) * range_m
 
 
-# FT: FT-WPN-001, FT-WPN-002, FT-WPN-004, FT-WPN-006, FT-SIM-014, FT-M1-004, FT-M1-008
+# FT: FT-WPN-001, FT-WPN-002, FT-WPN-004, FT-WPN-006, FT-SIM-014, FT-M1-004
 # The Weapons screen is the turret panel with the screen's disc radar as its inset; the
 # mount list shows state, heat, ammo and claimer; the lead reticle is Lead's aim point;
 # M1's mount has one ammo type, so ammo select only says so.
@@ -151,7 +151,7 @@ func test_swap_between_claimed_mounts_and_claim() -> void:
 	assert_array(StationFixture.sent(s.ctx).of("claim")).is_equal([["claim", ["mount:0"]]])
 
 
-# FT: FT-WPN-005
+# FT: FT-WPN-005, FT-M1-008
 # Out of arc, the line gives the clock and height to turn the bow to; in arc, nothing.
 func test_out_of_arc_gives_the_turn_direction() -> void:
 	var s: StationScreen = _screen()
@@ -167,7 +167,7 @@ func test_out_of_arc_gives_the_turn_direction() -> void:
 	assert_str(p.out_of_arc_text()).is_equal("")
 
 
-# FT: FT-WPN-009, FT-WPN-001
+# FT: FT-WPN-009, FT-WPN-001, FT-M1-008
 # Mouse aim sends one aim point; when the ship then yaws and rolls, the camera keeps the
 # same world direction (no new aim needed), its up stays on the ship's deck plane, and
 # in the sim the barrel slews to that held point at the traverse rate.

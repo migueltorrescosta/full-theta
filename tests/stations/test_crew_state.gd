@@ -34,7 +34,8 @@ func test_marks_list_replaces_and_drops_a_deleted_selection() -> void:
 	crew.select("mark", StationFixture.BRAVO_SLOT)
 	var marks: Array = []
 	for slot: int in [0, 2]:
-		marks.append({"slot": slot, "name": "", "contact": 2, "site": 0, "x": 0, "y": 0, "z": 0})
+		var m: Dictionary = {"slot": slot, "name": CrewState.MARK_NAMES[slot], "contact": 2}
+		marks.append(m.merged({"site": 0, "x": 0, "y": 0, "z": 0}))
 	crew.handle_event(_ev("marks", {"ship": 0, "marks": marks}), NOW)
 	(
 		assert_array(crew.marks.map(func(m: Dictionary) -> String: return m["name"]))

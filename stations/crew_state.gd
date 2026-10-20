@@ -17,18 +17,16 @@ signal pinged(ping: Dictionary)
 ## An event this model doesn't keep (sim events: hit, fault, ...): StationAlerts' seam.
 signal sim_event(kind: StringName, payload: Dictionary)
 
-## Marks per ship, named by slot (FT-SPA-012).
-const MARK_NAMES: Array[String] = [
-	"Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel"
-]
-const MAX_MARKS: int = 8
+## Marks per ship, named by slot (FT-SPA-012): the server's rules (CrewMarks).
+const MARK_NAMES: Array[String] = CrewMarks.DEFAULT_NAMES
+const MAX_MARKS: int = CrewMarks.SLOTS
 ## A ping pulses its item this long on every screen (FT-SPA-016).
 const PING_MS: int = 3000
-## Alert levels (provisional): 0 Normal, 1 Yellow, 2 Red.
-const ALERT_NORMAL: int = 0
-const ALERT_YELLOW: int = 1
-const ALERT_RED: int = 2
-const ALERT_LEVELS: int = 3
+## Alert levels (D170): Normal, Yellow, Red.
+const ALERT_NORMAL: int = CrewMarks.ALERT_NORMAL
+const ALERT_YELLOW: int = CrewMarks.ALERT_YELLOW
+const ALERT_RED: int = CrewMarks.ALERT_RED
+const ALERT_LEVELS: int = CrewMarks.ALERT_RED + 1
 ## Sim ticks per second (spec: 60 Hz), for the mission timer.
 const TICK_HZ: float = 60.0
 
@@ -47,12 +45,12 @@ var lobby: Dictionary = {}
 var started: Dictionary = {}
 ## ship -> `pause` payload, while paused.
 var paused: Dictionary = {}
-## ship -> {"voters": [...], "needed": int}.
+## ship -> {"voters": [names], "sessions": [ids], "needed": int}.
 var votes: Dictionary = {}
 ## ship -> "vote" | "host".
 var abandoned: Dictionary = {}
-## ship -> `run_over` payload {ship, outcome, time_s, hull} plus "voters" and "needed"
-## from `run_votes`, from the outcome until the reset (D178).
+## ship -> `run_over` payload {ship, outcome, time_s, hull} plus "voters", "sessions" and
+## "needed" from `run_votes`, from the outcome until the reset (D178).
 var run_over: Dictionary = {}
 ## item -> {"session": int, "name": String} (claim events; free items erased).
 var claims: Dictionary = {}
@@ -145,7 +143,7 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			votes.clear()
 			changed.emit(&"pause")
 		"abandon_votes":
-			votes[int(p["ship"])] = {"voters": p.get("voters", []), "needed": p.get("needed", 0)}
+			votes[int(p["ship"])] = p
 			changed.emit(&"votes")
 		"abandoned":
 			abandoned[int(p["ship"])] = str(p.get("by", ""))
@@ -298,16 +296,12 @@ func _on_marks(p: Dictionary) -> void:
 		return
 	marks.clear()
 	for m: Dictionary in p.get("marks", []):
-		var slot: int = int(m.get("slot", 0))
-		var mark_name: String = str(m.get("name", ""))
-		if mark_name == "" and slot >= 0 and slot < MARK_NAMES.size():
-			mark_name = MARK_NAMES[slot]
 		(
 			marks
 			. append(
 				{
-					"slot": slot,
-					"name": mark_name,
+					"slot": int(m.get("slot", 0)),
+					"name": str(m.get("name", "")),
 					"contact": int(m.get("contact", -1)),
 					"site": int(m.get("site", 0)),
 					"pos":
@@ -333,7 +327,7 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	# A site ping names its site in `site` (docs/protocol.md); pulse() looks it up by id.
 	var id: int = int(p.get("site" if kind == "site" else "id", -1))
 	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
-	var copy: bool = str(p.get("copy", "")) not in ["", "false"]
+	var copy: bool = str(p.get("copy", "")) != ""
 	if copy:
 		for old: Dictionary in pings:
 			if old["kind"] == kind and old["id"] == id:

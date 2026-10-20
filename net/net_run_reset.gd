@@ -52,7 +52,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 ## pick on a finished ship that hasn't got it on its current connection.
 func process() -> void:
 	for ship: int in over:
-		votes[ship].keep_only(_connected_crew(ship))
+		votes[ship].keep_only(session.connected_crew(ship))
 		if _votes_payload(ship) != _sent_votes.get(ship):
 			_send_votes(ship)
 		for s: NetSession in session.by_id.values():
@@ -68,24 +68,23 @@ func _on_run_again(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if s == null:
 		return
 	var ship: int = msg["ship"]
-	var crew: Array[int] = _connected_crew(ship)
+	var members: Array[int] = session.connected_crew(ship)
 	var why: String = ""
 	if not over.has(ship):
 		why = NOT_OVER
-	elif not s.is_host and not crew.has(s.id):
+	elif not s.is_host and not members.has(s.id):
 		why = ServerSession.NOT_CREW
 	if why != "":
-		var payload: Dictionary = {"request": NetProtocol.Type.RUN_AGAIN, "reason": why}
-		session.notify(s, NetProtocol.EVENT_REQUEST_REJECTED, payload.merged({"ship": ship}))
+		session.request_rejected(s, NetProtocol.Type.RUN_AGAIN, why, {"ship": ship})
 		return
 	if s.is_host and msg["vote"]:
 		_reset()
 		return
 	var vote: NetAbandonVote = votes[ship]
 	vote.cast(s.id, s.name, msg["vote"])
-	vote.keep_only(crew)
+	vote.keep_only(members)
 	_send_votes(ship)
-	if vote.passes(crew.size()):
+	if vote.passes(members.size()):
 		_reset()
 
 
@@ -97,19 +96,12 @@ func _reset() -> void:
 	_rebuild.call()
 
 
-func _connected_crew(ship: int) -> Array[int]:
-	var out: Array[int] = []
-	for s: NetSession in session.by_id.values():
-		if s.ship == ship and s.connected() and StationViews.is_crew(s.entry):
-			out.append(s.id)
-	return out
-
-
 func _votes_payload(ship: int) -> Dictionary:
 	return {
 		"ship": ship,
 		"voters": votes[ship].names(),
-		"needed": NetAbandonVote.needed(_connected_crew(ship).size()),
+		"sessions": votes[ship].sessions(),
+		"needed": NetAbandonVote.needed(session.connected_crew(ship).size()),
 	}
 
 

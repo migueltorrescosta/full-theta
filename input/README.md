@@ -36,7 +36,7 @@ A binding is a string in the `kbm` or `pad` list of an `IntentTable` row (or a `
 - `device` follows every KB/M or pad event, except stick and trigger motion inside the dead zone and mouse motion under 2 px.
 - `invert_pitch` flips the rows marked `pitch`.
 
-Call `feed(event, now_ms)` from the screen's `_unhandled_input` (feed mouse motion only while the mouse steers) and `update(now_ms, delta)` every frame for long presses, sequence timeouts and the mouse stick's re-centring. Both return the intent events to dispatch.
+Call `feed(event, now_ms)` from the screen's `_input` (`StationScreen._input`, which skips events a button, the tooltip or a focused text field owns; feed mouse motion only while the mouse steers) and `update(now_ms, delta)` every frame for long presses, sequence timeouts and the mouse stick's re-centring. Both return the intent events to dispatch.
 
 ## Polling axes
 

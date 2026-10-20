@@ -64,3 +64,17 @@ func test_captain_and_viewers_see_it_read_only() -> void:
 	assert_bool(bar.picker.visible).is_false()
 	assert_array(picked).is_empty()
 	assert_str(bar.chip.tooltip_text).is_equal(tr("alert.readonly"))
+
+
+# FT: FT-STN-001
+# An unchanged frame touches nothing; a change in what is shown (the rounded hull, the
+# second) redraws.
+func test_unchanged_state_is_skipped() -> void:
+	var status: Dictionary = {"hull": 812.6, "shields": 299.4, "pips_used": 6}
+	bar.show_state("Kestrel", status, 0, ["helm"], 125.0)
+	bar._name.text = "untouched"
+	bar.show_state("Kestrel", {"hull": 812.9, "shields": 299.4, "pips_used": 6}, 0, ["helm"], 125.4)
+	assert_str(bar._name.text).is_equal("untouched")
+	bar.show_state("Kestrel", status, 0, ["helm"], 126.0)
+	assert_str(bar._name.text).is_equal("Kestrel")
+	assert_str(bar._timer.text).is_equal("02:06")

@@ -48,7 +48,8 @@ func test_contacts_in_ship_frame_with_allegiance() -> void:
 func test_marks_and_pings() -> void:
 	var ctx: StationContext = _ctx()
 	var marks: Array = [
-		{"slot": 0, "x": 0, "y": 0, "z": 500}, {"slot": 1, "contact": 1, "x": 0, "y": 100, "z": 0}
+		{"slot": 0, "name": "Alpha", "x": 0, "y": 0, "z": 500},
+		{"slot": 1, "name": "Bravo", "contact": 1, "x": 0, "y": 100, "z": 0},
 	]
 	ctx.crew.handle_event({"type": "marks", "payload": {"ship": 0, "marks": marks}}, 1000)
 	ctx.crew.handle_event(

@@ -74,7 +74,7 @@ func _process(_delta: float) -> void:
 	_banner.text = tr("shell.reconnecting")
 	if client.is_welcomed() and not is_same(client.welcome, _welcome):
 		_on_welcome()
-	if ctx.crew.catalogue != client.catalogue and not client.catalogue.is_empty():
+	if not is_same(ctx.crew.catalogue, client.catalogue) and not client.catalogue.is_empty():
 		ctx.crew.set_catalogue(client.catalogue)
 	for e: Dictionary in client.take_events():
 		if not voice.handle_event(e):

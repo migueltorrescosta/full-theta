@@ -5,6 +5,9 @@ extends PanelContainer
 ## with voters and votes needed); the host also gets Abandon (D127); the Captain and
 ## viewers of that ship may take over an uncovered station (FT-NET-042).
 
+## The crew changes the overlay depends on.
+const KINDS: Array[StringName] = [&"pause", &"votes", &"picked", &"catalogue"]
+
 var ctx: StationContext
 
 var _text: Label
@@ -25,7 +28,7 @@ func setup(context: StationContext) -> void:
 	col.add_child(_votes)
 	_buttons = HBoxContainer.new()
 	col.add_child(_buttons)
-	ctx.crew.changed.connect(func(_what: StringName) -> void: refresh())
+	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
 
 
@@ -56,7 +59,7 @@ func refresh() -> void:
 	if id != ctx.crew.ship:
 		return
 	if ctx.crew.is_crew():
-		var voted: bool = _my_name() in voters
+		var voted: bool = ctx.crew.session in v.get("sessions", [])
 		_button("Vote", tr("pause.unvote") if voted else tr("pause.vote")).pressed.connect(
 			func() -> void: ctx.intents.vote_abandon(id, not voted)
 		)
@@ -80,5 +83,6 @@ func _button(node_name: String, text: String) -> Button:
 	return b
 
 
-func _my_name() -> String:
-	return ctx.client.name if ctx.client != null else ctx.settings.player_name
+func _on_crew_changed(what: StringName) -> void:
+	if what in KINDS:
+		refresh()

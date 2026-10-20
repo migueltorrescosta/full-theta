@@ -34,7 +34,8 @@ func _init(sim_world: SimWorld) -> void:
 	world = sim_world
 
 
-## At a Start: the session's voice, once per run (M1's closed set doesn't change).
+## At a Start: the session's voice, once per server (M1's closed set doesn't change, so a
+## run reset keeps it).
 func start(language: String, crew_factions: Array) -> void:
 	if voice == null or _started:
 		return
@@ -76,6 +77,10 @@ func on_event(e: SimEvent) -> void:
 		voice.say_computer(e.ship_id, PackedStringArray(line[1]), line[0], args)
 
 
-## A run reset: the hull alert re-arms.
-func reset(ship: int) -> void:
-	_hull_warned.erase(ship)
+## The run reset: the new world, every hull alert re-armed, and the old run's lines
+## still queued (stitched lines waiting for a name, free text being synthesised) dropped.
+func restart(sim_world: SimWorld) -> void:
+	world = sim_world
+	_hull_warned.clear()
+	if voice != null:
+		voice.flush_lines()

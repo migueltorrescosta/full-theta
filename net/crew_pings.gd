@@ -5,7 +5,6 @@ extends RefCounted
 ## pinged on the same ship within COPY_US names that first pinger. Points never copy
 ## (no two are the same item). Wall-clock microseconds come from the caller.
 
-const KINDS: Array[String] = ["contact", "mark", "site", "point"]
 ## PROVISIONAL (FT-SPA-017): one ping per 0.5 s, burst 3.
 const RATE: float = 2.0
 const BURST: float = 3.0

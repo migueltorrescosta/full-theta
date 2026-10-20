@@ -29,7 +29,7 @@ func _until(cond: Callable, timeout_ms: int = NetHarness.TIMEOUT_MS) -> bool:
 	return true
 
 
-# FT: FT-ARC-015, FT-M1-015, FT-NET-029
+# FT: FT-M1-015, FT-NET-029
 func test_shell_runs_lobby_to_station_with_the_dev_entry() -> void:
 	var s: NetServer = _h.server(true)
 	var c: NetClient = NetClient.new()

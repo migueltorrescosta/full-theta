@@ -7,7 +7,8 @@ a final launch did not end with every step passed, if a launch that was not the 
 its name ended on its own (only a SIGKILL may cut one short), if any client applied a
 bad snapshot, if two clients disagree on their ship's KIN at the same tick of the same
 run (convergence after a rejoin, FT-NET-027; a run reset restarts the tick, so a tick
-that goes down starts a new run), or if no tick was seen by two clients (so nothing
+that goes down starts a new run, counted per client across its launches: a relaunched
+client is still in the run it left), or if no tick was seen by two clients (so nothing
 was compared). Prints one line per launch, with the time from
 the SIGKILL to the relaunched client's Welcome (run.sh's events.txt).
 """
@@ -50,15 +51,16 @@ def check(out: Path) -> list[str]:
     kin: dict[tuple[int, int], dict[str, str]] = defaultdict(dict)
     for name, launches in sorted(logs.items()):
         last = max(launches)
+        run, prev_tick = 0, None
         for launch, lines in sorted(launches.items()):
             who = f"{name}.{launch}"
             end = next((x for x in lines if x.get("ev") == "end"), None)
             steps = sum(1 for x in lines if x.get("ev") == "step" and x.get("ok"))
             snaps = [x for x in lines if x.get("ev") == "snap"]
-            run = 0
-            for prev, s in zip([None, *snaps], snaps, strict=False):
-                if prev is not None and s["tick"] < prev["tick"]:
+            for s in snaps:
+                if prev_tick is not None and s["tick"] < prev_tick:
                     run += 1
+                prev_tick = s["tick"]
                 kin[(run, s["tick"])][who] = s["k"]
             if end is None:
                 state = "killed"

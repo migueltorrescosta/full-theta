@@ -47,8 +47,8 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	crew[0].set_alert(2)
 	var marked: Callable = func() -> bool:
 		return (
-			server.session.marks.marks_of(PLAYER).size() == 1
-			and server.session.marks.alert(PLAYER) == 2
+			server.session.crew.marks.marks_of(PLAYER).size() == 1
+			and server.session.crew.marks.alert(PLAYER) == 2
 		)
 	assert_bool(await h.until(marked)).is_true()
 	var old_world: SimWorld = server.world

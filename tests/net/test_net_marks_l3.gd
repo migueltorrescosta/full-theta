@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
-## L3 tests of marks, pings and the alert level over loopback (ServerSession with
-## CrewMarks and CrewPings): who may do what, who hears it, and the state a joining
-## client gets.
+## L3 tests of marks, pings and the alert level over loopback (NetCrewState with
+## CrewMarks and CrewPings): who may do what, which contacts and sites they may name,
+## who hears it, and the state a joining client gets.
 
 const PLAYER: int = NetHarness.PLAYER
 const ENEMY: int = NetHarness.ENEMY
@@ -28,6 +28,14 @@ func _rejected(c: NetClient, type: int, from: int) -> Dictionary:
 	return e.get("payload", {})
 
 
+## Runs the sensors once without stepping the sim: the player's faction detects the
+## enemy, as in a started run.
+func _detect(server: NetServer) -> void:
+	KnowledgeSystem.step(server.world)
+	var w: SimWorld = server.world
+	assert_bool(KnowledgeSystem.is_detected(w, w.faction_of(PLAYER), ENEMY)).is_true()
+
+
 ## The next `marks` event at or after `from`; its marks list.
 func _marks(c: NetClient, from: int) -> Array:
 	var e: Dictionary = await h.next_event(c, NetProtocol.EVENT_MARKS, from)
@@ -37,6 +45,7 @@ func _marks(c: NetClient, from: int) -> Array:
 # FT: FT-SPA-012, FT-SPA-013, FT-SPA-020, FT-SPA-022, FT-RLY-003
 func test_marks_cap_relay_replace_and_relay_only_edits() -> void:
 	var server: NetServer = h.server()
+	_detect(server)
 	var crew: Array[NetClient] = await h.crew3(server)
 	var tac: NetClient = crew[0]
 	var sys: NetClient = crew[1]
@@ -96,6 +105,7 @@ func test_pings_reach_every_pick_of_the_ship_only() -> void:
 	var server: NetServer = h.server()
 	# The enemy ship without its AI: another crewable ship, to check isolation.
 	server.world.ai.enabled[ENEMY] = 0
+	_detect(server)
 	var crew: Array[NetClient] = await h.crew3(server)
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
 	var captain: NetClient = await h.joined(server, "captain", "captain")
@@ -123,7 +133,7 @@ func test_pings_reach_every_pick_of_the_ship_only() -> void:
 	from = h.mark(viewer)
 	viewer.ping("contact", ENEMY, -1, Vector3.ZERO)
 	var why: Dictionary = await _rejected(viewer, NetProtocol.Type.PING, from)
-	assert_str(why.get("reason", "")).is_equal(CrewMarks.NOT_CREW)
+	assert_str(why.get("reason", "")).is_equal(ServerSession.NOT_CREW)
 	# Rate limit: burst 3, then refused.
 	from = h.mark(crew[2])
 	for i: int in 5:
@@ -154,12 +164,14 @@ func test_alert_from_crew_and_the_state_a_joining_client_gets() -> void:
 		from = h.mark(c)
 		c.set_alert(CrewMarks.ALERT_YELLOW)
 		var why: Dictionary = await _rejected(c, NetProtocol.Type.ALERT, from)
-		assert_str(why.get("reason", "")).is_equal(CrewMarks.NOT_CREW)
-	assert_int(server.session.marks.alert(PLAYER)).is_equal(CrewMarks.ALERT_RED)
+		assert_str(why.get("reason", "")).is_equal(ServerSession.NOT_CREW)
+	assert_int(server.session.crew.marks.alert(PLAYER)).is_equal(CrewMarks.ALERT_RED)
 	crew[0].place_mark(-1, "Rock", -1, 0, Vector3(1.0, 2.0, 3.0))
 	(
 		assert_bool(
-			await h.until(func() -> bool: return server.session.marks.marks_of(PLAYER).size() == 1)
+			await h.until(
+				func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 1
+			)
 		)
 		. is_true()
 	)
@@ -175,7 +187,50 @@ func test_alert_from_crew_and_the_state_a_joining_client_gets() -> void:
 	assert_int(h.last_event(back, NetProtocol.EVENT_ALERT)["payload"]["level"]).is_equal(2)
 	# A run reset clears them, with events.
 	from = h.mark(viewer)
-	server.session.reset_crew_state(PLAYER)
+	server.session.crew.reset(PLAYER)
 	alert = await h.next_event(viewer, NetProtocol.EVENT_ALERT, from)
 	assert_dict(alert.get("payload", {})).contains_key_value("level", CrewMarks.ALERT_NORMAL)
 	assert_array(await _marks(viewer, from)).is_empty()
+
+
+# FT: FT-SPA-012, FT-SPA-014, FT-SPA-016, FT-SPA-020
+# A mark or ping may name only a contact the sender's faction detects (or its own ship)
+# and a site the world has; an undetected contact and an id past the ship count get the
+# same refusal. A free mark is wrapped onto the site's cube.
+func test_marks_and_pings_name_only_detected_contacts_and_real_sites() -> void:
+	var server: NetServer = h.server()
+	var crew: Array[NetClient] = await h.crew3(server)
+	var tac: NetClient = crew[0]
+	var w: SimWorld = server.world
+	assert_bool(KnowledgeSystem.is_detected(w, w.faction_of(PLAYER), ENEMY)).is_false()
+	var reasons: Array = []
+	for contact: int in [ENEMY, w.ship_count(), 999]:
+		var from: int = h.mark(tac)
+		tac.place_mark(-1, "", contact, -1, Vector3.ZERO)
+		reasons.append((await _rejected(tac, NetProtocol.Type.MARK, from)).get("reason", ""))
+		from = h.mark(tac)
+		tac.ping("contact", contact, -1, Vector3.ZERO)
+		reasons.append((await _rejected(tac, NetProtocol.Type.PING, from)).get("reason", ""))
+		await h.wait(600)  # the ping rate limit
+	var mark_bad: Array = [CrewMarks.BAD_MARK, CrewPings.BAD_PING]
+	assert_array(reasons).is_equal(mark_bad + mark_bad + mark_bad)
+	# A site no ship is at.
+	var from: int = h.mark(tac)
+	tac.place_mark(-1, "", -1, 7, Vector3.ZERO)
+	var why: Dictionary = await _rejected(tac, NetProtocol.Type.MARK, from)
+	assert_str(why.get("reason", "")).is_equal(CrewMarks.BAD_MARK)
+	from = h.mark(tac)
+	tac.ping("site", -1, 7, Vector3.ZERO)
+	why = await _rejected(tac, NetProtocol.Type.PING, from)
+	assert_str(why.get("reason", "")).is_equal(CrewPings.BAD_PING)
+	# The own ship is always known; a free mark wraps; a detected enemy may be marked.
+	from = h.mark(tac)
+	tac.place_mark(-1, "", PLAYER, -1, Vector3.ZERO)
+	assert_int((await _marks(tac, from))[0]["contact"]).is_equal(PLAYER)
+	from = h.mark(tac)
+	tac.place_mark(-1, "", -1, 0, Vector3(150_000.0, 0.0, 0.0))
+	assert_float((await _marks(tac, from))[1]["x"]).is_equal(-50_000.0)
+	_detect(server)
+	from = h.mark(tac)
+	tac.place_mark(-1, "", ENEMY, -1, Vector3.ZERO)
+	assert_int((await _marks(tac, from))[2]["contact"]).is_equal(ENEMY)

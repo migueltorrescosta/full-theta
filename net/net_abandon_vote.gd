@@ -39,3 +39,11 @@ func names() -> Array[String]:
 	out.assign(voters.values())
 	out.sort()
 	return out
+
+
+## Voter session ids, sorted: a client checks its own vote by id, not by name.
+func sessions() -> Array[int]:
+	var out: Array[int] = []
+	out.assign(voters.keys())
+	out.sort()
+	return out

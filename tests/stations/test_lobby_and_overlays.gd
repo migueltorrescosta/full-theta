@@ -72,12 +72,19 @@ func test_pause_overlay_vote_and_host_abandon() -> void:
 	var pause: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
 	ctx.crew.handle_event({"type": "pause", "payload": pause}, 0)
 	assert_bool(o.visible).is_true()
-	(o.find_child("Vote", true, false) as Button).pressed.emit()
+	# Crew changes it doesn't show leave its buttons alone.
+	var vote: Button = o.find_child("Vote", true, false)
+	ctx.crew.changed.emit(&"alert")
+	ctx.crew.changed.emit(&"marks")
+	assert_object(o.find_child("Vote", true, false)).is_same(vote)
+	vote.pressed.emit()
 	(o.find_child("Abandon", true, false) as Button).pressed.emit()
 	var rec: StationFixture.RecordingClient = StationFixture.sent(ctx)
 	assert_array(rec.of("vote_abandon")[0][1]).is_equal([0, true])
 	assert_array(rec.of("abandon")[0][1]).is_equal([0])
-	var votes: Dictionary = {"ship": 0, "voters": ["Ana"], "needed": 2}
+	var votes: Dictionary = {
+		"ship": 0, "voters": ["Ana"], "sessions": [StationFixture.SESSION], "needed": 2
+	}
 	ctx.crew.handle_event({"type": "abandon_votes", "payload": votes}, 0)
 	(o.find_child("Vote", true, false) as Button).pressed.emit()
 	assert_array(rec.of("vote_abandon")[1][1]).is_equal([0, false])

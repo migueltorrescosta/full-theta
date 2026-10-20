@@ -34,7 +34,7 @@ Tests: 243, manual: 11, pending: 147.
 | FT-ARC-012 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/damage/test_damage.gd` |
 | FT-ARC-013 | tests | `tests/sim/combat/test_weapons.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/sim/flight/test_helm_commands.gd`, `tests/sim/knowledge/test_knowledge.gd`, `tests/sim/pvp/test_pvp.gd`, `tests/sim/run/test_site_wrap.gd`, `tests/sim/shields/test_shields.gd` |
 | FT-ARC-014 | tests | `tests/net/test_net_stations_defs.gd`, `tests/net/test_net_stations_filter.gd` |
-| FT-ARC-015 | tests | `tests/presentation/test_snapshot_interpolator.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_client_shell_l3.gd` |
+| FT-ARC-015 | tests | `tests/presentation/test_snapshot_interpolator.gd` |
 | FT-ARC-016 | tests | `tools/tests/test_lint_arch.py` |
 | FT-ARC-017 | pending |  |
 | FT-ARC-018 | pending |  |
@@ -53,7 +53,7 @@ Tests: 243, manual: 11, pending: 147.
 | FT-NET-009 | tests | `tests/net/test_net_engineering_view_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/net/test_net_stations_filter.gd` |
 | FT-NET-010 | tests | `tests/net/test_net_stations_filter.gd` |
 | FT-NET-011 | tests | `tests/net/test_net_protocol.gd`, `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
-| FT-NET-012 | tests | `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_server.gd`, `tests/net/test_net_server_main.gd` |
+| FT-NET-012 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_server.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_parse_address.gd`, `tests/net/test_lan_server.gd` |
 | FT-NET-014 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd` |
@@ -150,9 +150,9 @@ Tests: 243, manual: 11, pending: 147.
 | FT-HLM-006 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-007 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-008 | tests | `tests/stations/test_helm_controls.gd` |
-| FT-HLM-009 | tests | `tests/stations/test_helm_panel.gd` |
+| FT-HLM-009 | tests | `tests/stations/test_helm_panel.gd`, `tests/stations/test_shield_ring.gd` |
 | FT-HLM-010 | tests | `tests/stations/test_helm_controls.gd` |
-| FT-HLM-011 | tests | `tests/stations/test_helm_panel.gd` |
+| FT-HLM-011 | tests | `tests/stations/test_helm_panel.gd`, `tests/stations/test_shield_ring.gd` |
 | FT-HLM-012 | tests | `tests/stations/test_helm_panel.gd` |
 | FT-HLM-013 | tests | `tests/stations/test_helm_controls.gd` |
 | FT-HLM-014 | tests | `tests/stations/test_helm_controls.gd` |
@@ -219,7 +219,7 @@ Tests: 243, manual: 11, pending: 147.
 | FT-CPT-005 | pending |  |
 | FT-MSC-001 | tests | `tests/net/test_net_viewer_l3.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-MSC-002 | pending |  |
-| FT-MSC-003 | tests | `tests/stations/test_marks_pings_l3.gd` |
+| FT-MSC-003 | tests | `tests/stations/test_viewer_panel.gd` |
 | FT-MSC-004 | tests | `tests/net/test_net_viewer_l3.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-MSC-005 | pending |  |
 | FT-MSC-006 | pending |  |
@@ -239,12 +239,12 @@ Tests: 243, manual: 11, pending: 147.
 | FT-SPA-006 | tests | `tests/stations/test_relay_panel.gd` |
 | FT-SPA-007 | tests | `tests/presentation/test_disc_radar.gd` |
 | FT-SPA-008 | tests | `tests/presentation/test_disc_radar.gd` |
-| FT-SPA-009 | tests | `tests/presentation/test_disc_radar.gd` |
+| FT-SPA-009 | tests | `tests/input/test_input_matcher.gd`, `tests/presentation/test_disc_radar.gd`, `tests/stations/test_station_screen.gd` |
 | FT-SPA-010 | tests | `tests/presentation/test_disc_radar.gd` |
 | FT-SPA-011 | tests | `tests/presentation/test_disc_radar.gd` |
 | FT-SPA-012 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-SPA-013 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd` |
-| FT-SPA-014 | tests | `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_contact_picture.gd`, `tests/stations/test_relay_panel.gd` |
+| FT-SPA-014 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_contact_picture.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-SPA-015 | tests | `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-SPA-016 | tests | `tests/net/test_net_marks_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd` |
 | FT-SPA-017 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_marks_pings_l3.gd` |
@@ -356,7 +356,7 @@ Tests: 243, manual: 11, pending: 147.
 | FT-DAT-012 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
 | FT-DAT-013 | tests | `tests/content/test_content_defs.gd` |
 | FT-DAT-014 | pending |  |
-| FT-M1-001 | tests | `tests/stations/test_outcome_card.gd`, [#7](https://github.com/migueltorrescosta/full-theta/issues/7) |
+| FT-M1-001 | manual | [#7](https://github.com/migueltorrescosta/full-theta/issues/7) |
 | FT-M1-002 | tests | `tests/net/test_host_flow.gd` |
 | FT-M1-003 | tests | `tests/sim/flight/test_assist_modes.gd` |
 | FT-M1-004 | tests | `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_weapons_panel.gd` |
@@ -367,7 +367,7 @@ Tests: 243, manual: 11, pending: 147.
 | FT-M1-009 | tests | `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_repair.gd` |
 | FT-M1-010 | tests | `tests/pairs/test_p1_engineering_helm.gd` |
 | FT-M1-011 | tests | `tests/stations/test_station_alerts.gd` |
-| FT-M1-012 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_run_reset_l3.gd`, `tests/net/test_net_server_main.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_outcome_card.gd`, `tests/stations/test_station_screen.gd` |
+| FT-M1-012 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_run_reset_l3.gd`, `tests/net/test_net_server_main.gd`, `tests/net/voice/test_server_voice.gd`, `tests/net/voice/test_voice_service.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_outcome_card.gd`, `tests/stations/test_station_screen.gd` |
 | FT-M1-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_net_reconnect_l3.gd` |
 | FT-M1-014 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/pvp/test_pvp.gd` |
 | FT-M1-015 | tests | `tests/net/test_host_launcher.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_client_shell_l3.gd` |
@@ -387,7 +387,7 @@ Tests: 243, manual: 11, pending: 147.
 | FT-TST-008 | tests | `tests/sim/combat/test_weapons.gd` |
 | FT-TST-009 | tests | `tests/sim/pvp/test_pvp.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_golden_replay.gd`, `tests/sim/replay/test_replay_determinism.gd` |
 | FT-TST-010 | tests | `tests/net/test_net_stations_filter.gd` |
-| FT-TST-011 | manual | [#6](https://github.com/migueltorrescosta/full-theta/issues/6) |
+| FT-TST-011 | tests | `tools/tests/test_l4_check.py`, [#6](https://github.com/migueltorrescosta/full-theta/issues/6) |
 | FT-TST-012 | pending |  |
 | FT-TST-013 | tests | `tests/sim/pvp/test_pvp.gd` |
 | FT-TST-014 | manual | [#6](https://github.com/migueltorrescosta/full-theta/issues/6) |

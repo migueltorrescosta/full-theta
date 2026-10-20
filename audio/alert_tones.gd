@@ -6,7 +6,8 @@ extends Node
 ## ship computer's spoken lines, they don't repeat words. The files are synthesised by
 ## tools/make_alert_tones.py (assets/sounds/alerts/, content/provenance.json).
 ##
-## `played` records every tone that started (the spy seam for scene tests).
+## `played` records the last PLAYED_KEPT tones that started (the spy seam for scene
+## tests; capped, so a long session doesn't grow it).
 ##
 ## The tone files live in assets/, which audio/ may not name (spec §2.2): app/ sets
 ## `sounds_dir` (MainMenu, ALERT_SOUNDS); while it is empty tones are recorded silently.
@@ -28,11 +29,12 @@ const TONES: Array[StringName] = [
 ## A tone repeated within this gap is skipped (ms), so a burst of hits or the sim's
 ## repeating proximity warning doesn't drone. PROVISIONAL.
 const GAP_MS: Dictionary = {&"hit": 200, &"proximity": 2000}
+const PLAYED_KEPT: int = 32
 
 ## Folder of the `<tone>.wav` files, set by app/.
 static var sounds_dir: String = ""
 
-## Tone names that started, oldest first.
+## The last PLAYED_KEPT tone names that started, oldest first.
 var played: Array[StringName] = []
 
 var _players: Dictionary = {}
@@ -71,6 +73,8 @@ func play(tone: StringName, now_ms: int) -> bool:
 	_last_ms[tone] = now_ms
 	player.play()
 	played.append(tone)
+	if played.size() > PLAYED_KEPT:
+		played.pop_front()
 	tone_played.emit(tone)
 	return true
 

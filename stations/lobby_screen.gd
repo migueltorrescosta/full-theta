@@ -7,6 +7,8 @@ extends Control
 ## go to the server (ShipIntents.pick); the screen shows what the events say.
 
 const LOAD_ROLES: Dictionary = {"light": "ok", "busy": "warn", "intense": "danger"}
+## The crew changes the lobby depends on.
+const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked"]
 
 var ctx: StationContext
 ## The ship whose catalogue is shown.
@@ -22,7 +24,7 @@ var _start: Button
 func setup(context: StationContext) -> void:
 	ctx = context
 	_build()
-	ctx.crew.changed.connect(func(_what: StringName) -> void: refresh())
+	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
 
 
@@ -160,3 +162,8 @@ static func _clear(box: Container) -> void:
 	for c: Node in box.get_children():
 		box.remove_child(c)
 		c.queue_free()
+
+
+func _on_crew_changed(what: StringName) -> void:
+	if what in KINDS:
+		refresh()

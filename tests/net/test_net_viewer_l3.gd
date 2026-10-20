@@ -59,7 +59,7 @@ func test_viewers_receive_only_main_screen_state_and_change_nothing() -> void:
 		from = h.mark(viewer)
 		send.call()
 		var e: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_REQUEST_REJECTED, from)
-		assert_str(e.get("payload", {}).get("reason", "")).is_equal(CrewMarks.NOT_CREW)
+		assert_str(e.get("payload", {}).get("reason", "")).is_equal(ServerSession.NOT_CREW)
 
 
 ## Section kinds of a snapshot message.

@@ -3,7 +3,7 @@ extends MatcherSuite
 ## driven by synthetic InputEvents with explicit times.
 
 
-# FT: FT-STN-005, FT-STN-009
+# FT: FT-STN-005, FT-STN-009, FT-SPA-009
 func test_plain_key_fires_on_press_with_target_and_device() -> void:
 	var events: Array[Dictionary] = _m.feed(_key("T", true), 0)
 	assert_array(_ids(events)).is_equal(["cycle_target"])
@@ -11,9 +11,11 @@ func test_plain_key_fires_on_press_with_target_and_device() -> void:
 	assert_str(events[0]["group"]).is_equal("common")
 	assert_str(events[0]["device"]).is_equal("kbm")
 	assert_array(_feed(_key("T", false), 10)).is_empty()
+	# D175: Z toggles the radar side strip.
+	assert_array(_feed(_key("Z", true), 20)).is_equal(["radar_strip"])
 
 
-# FT: FT-STN-005, FT-STN-009
+# FT: FT-STN-005, FT-STN-009, FT-SPA-009
 func test_longest_chord_wins_view_x_over_x() -> void:
 	assert_array(_feed(_pad("View", true), 0)).is_empty()
 	assert_array(_feed(_pad("X", true), 50)).is_equal(["claim"])

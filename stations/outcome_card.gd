@@ -5,6 +5,9 @@ extends PanelContainer
 ## (voters and votes needed shown, like the abandon vote); the host runs it again at
 ## once. The card goes when the server resets the run (CrewState.reset_run).
 
+## The crew changes the card depends on.
+const KINDS: Array[StringName] = [&"run_over", &"reset", &"picked", &"catalogue"]
+
 var ctx: StationContext
 
 var _title: Label
@@ -33,7 +36,7 @@ func setup(context: StationContext) -> void:
 	_buttons = HBoxContainer.new()
 	_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_child(_buttons)
-	ctx.crew.changed.connect(func(_what: StringName) -> void: refresh())
+	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
 
 
@@ -59,7 +62,7 @@ func refresh() -> void:
 			func() -> void: ctx.intents.run_again(ship, true)
 		)
 	elif ctx.crew.is_crew():
-		var voted: bool = _my_name() in voters
+		var voted: bool = ctx.crew.session in card.get("sessions", [])
 		_button("Vote", tr("outcome.unvote") if voted else tr("outcome.vote")).pressed.connect(
 			func() -> void: ctx.intents.run_again(ship, not voted)
 		)
@@ -73,5 +76,6 @@ func _button(node_name: String, text: String) -> Button:
 	return b
 
 
-func _my_name() -> String:
-	return ctx.client.name if ctx.client != null else ctx.settings.player_name
+func _on_crew_changed(what: StringName) -> void:
+	if what in KINDS:
+		refresh()

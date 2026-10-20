@@ -28,6 +28,8 @@ var _shields: Label = Label.new()
 var _pips: Label = Label.new()
 var _stations: Label = Label.new()
 var _timer: Label = Label.new()
+## What show_state last showed, to skip unchanged frames.
+var _shown: Array = []
 
 
 func _init() -> void:
@@ -62,9 +64,10 @@ func _init() -> void:
 	can_set_alert = false
 
 
-## Refreshes every field. status: the STATUS block ({} before the first snapshot);
-## stations: functional station ids (translated as "station.<id>"); in a joint view the
-## focused one is starred (§5.9 wireframes: "ENG*+SCI").
+## Refreshes every field, unless nothing shown changed. status: the STATUS block ({}
+## before the first snapshot); stations: functional station ids (translated as
+## "station.<id>"); in a joint view the focused one is starred (§5.9 wireframes:
+## "ENG*+SCI").
 func show_state(
 	ship_name: String,
 	status: Dictionary,
@@ -73,10 +76,18 @@ func show_state(
 	mission_s: float,
 	focused: String = ""
 ) -> void:
+	var hull: String = _num(status, "hull")
+	var shields: String = _num(status, "shields")
+	var pips: String = _num(status, "pips_used")
+	var state: Array = [ship_name, hull, shields, pips, alert, stations.duplicate()]
+	state.append_array([int(mission_s), focused])
+	if state == _shown:
+		return
+	_shown = state
 	_name.text = ship_name
-	_hull.text = tr("topbar.hull") % _num(status, "hull")
-	_shields.text = tr("topbar.shields") % _num(status, "shields")
-	_pips.text = tr("topbar.reactor") % _num(status, "pips_used")
+	_hull.text = tr("topbar.hull") % hull
+	_shields.text = tr("topbar.shields") % shields
+	_pips.text = tr("topbar.reactor") % pips
 	alert_style = Palette.alert(alert)
 	chip.text = "       " + tr(alert_style["key"])
 	chip.add_theme_color_override("font_color", Palette.color(alert_style["role"]))
