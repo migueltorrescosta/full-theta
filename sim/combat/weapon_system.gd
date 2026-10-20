@@ -12,23 +12,40 @@ const COOLDOWN_EPS: float = 1e-9
 
 static func step(world: SimWorld) -> void:
 	var mounts: MountTable = world.mounts
+	var kin: Kinematics = world.kin
 	var dt: float = SimWorld.DT
-	for row: int in mounts.size():
-		var ship: int = mounts.ship_ids[row]
-		if not world.kin.is_alive(ship):
-			mounts.fire_requested[row] = 0
+	var ship_ids: PackedInt32Array = mounts.ship_ids
+	var mount_index: PackedInt32Array = mounts.mount_index
+	var alive: PackedByteArray = kin.alive
+	var fire_requested: PackedByteArray = mounts.fire_requested
+	var cooldown: PackedFloat64Array = mounts.cooldown
+	var heat: PackedFloat64Array = mounts.heat
+	var barrel: PackedVector3Array = mounts.barrel
+	var aim_set: PackedByteArray = mounts.aim_set
+	var defs: Array[ShipDef] = world.defs
+	for row: int in ship_ids.size():
+		var ship: int = ship_ids[row]
+		if alive[ship] != 1:
+			fire_requested[row] = 0
 			continue
-		var def: MountDef = mount_def(world, row)
-		mounts.cooldown[row] = maxf(0.0, mounts.cooldown[row] - dt)
-		mounts.heat[row] *= exp(-def.weapon.heat_dissipation * dt)
+		var def: MountDef = defs[ship].mounts[mount_index[row]]
+		cooldown[row] = maxf(0.0, cooldown[row] - dt)
+		heat[row] *= exp(-def.weapon.heat_dissipation * dt)
 		var eff: float = DamageSystem.effectiveness(world, ship, def.subsystem_id)
-		var aim: Vector3 = aim_direction(world, row)
+		# aim_direction(), inlined.
+		var aim: Vector3 = def.forward
+		if aim_set[row] != 0:
+			var to_aim: Vector3 = kin.relative_to_point(
+				ship, mounts.aim_x[row], mounts.aim_y[row], mounts.aim_z[row]
+			)
+			var local: Vector3 = kin.rot[ship].inverse() * to_aim - def.position
+			aim = barrel[row] if local.length_squared() < 1e-12 else local.normalized()
 		var target: Vector3 = clamp_to_arc(def, aim)
-		mounts.barrel[row] = turn_toward(
-			mounts.barrel[row], target, def.traverse_rate * clampf(eff, 0.0, 1.0) * dt
+		barrel[row] = turn_toward(
+			barrel[row], target, def.traverse_rate * clampf(eff, 0.0, 1.0) * dt
 		)
-		if mounts.fire_requested[row] == 1:
-			mounts.fire_requested[row] = 0
+		if fire_requested[row] == 1:
+			fire_requested[row] = 0
 			_try_fire(world, row, def, eff, aim)
 
 

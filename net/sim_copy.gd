@@ -7,8 +7,9 @@ extends RefCounted
 ## helpers, KnowledgeSystem.callsign) while the sim moves on.
 ##
 ## capture() duplicates every script variable of every table: the columns() state and
-## the derived indexes (DamageTable._first), so the capture shares nothing mutable with
-## the live world. Packed arrays copy on write, so duplicating them costs no element
+## the derived indexes and caches (DamageTable._first, _eff_health and _eff;
+## PowerTable._env_in and _env), so the capture shares nothing mutable with the live
+## world. Packed arrays copy on write, so duplicating them costs no element
 ## copies until the sim writes; the other containers hold only values, so a shallow
 ## duplicate is enough. KnowledgeTable._rows is left out (a Dictionary is the slowest
 ## variable to duplicate): restore() rebuilds it from the key columns. Definitions are

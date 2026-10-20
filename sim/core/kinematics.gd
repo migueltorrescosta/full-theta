@@ -1,3 +1,5 @@
+# gdlint: disable=max-public-methods
+# Only this class reads the position columns (tools/lint_arch.py): position helpers live here.
 class_name Kinematics
 extends SimTable
 ## Rigid-body state of every ship, one row per ship in id order (packed layout, S6).
@@ -119,7 +121,15 @@ func translate(row: int, dx: float, dy: float, dz: float) -> void:
 func wrap_point(x: float, y: float, z: float) -> PackedFloat64Array:
 	if not (is_finite(x) and is_finite(y) and is_finite(z)):
 		return PackedFloat64Array()
-	return PackedFloat64Array([_wrap(x, period), _wrap(y, period), _wrap(z, period)])
+	# _wrap inlined for in-cube coordinates, the common case (hot path).
+	var half: float = 0.5 * period
+	if not (x >= -half and x < half):
+		x = _wrap(x, period)
+	if not (y >= -half and y < half):
+		y = _wrap(y, period)
+	if not (z >= -half and z < half):
+		z = _wrap(z, period)
+	return PackedFloat64Array([x, y, z])
 
 
 ## One site-local coordinate (m) wrapped into [-period / 2, period / 2); the caller
@@ -147,6 +157,20 @@ func cell_range(row: int, cell: float, pad: float, out: PackedInt32Array) -> voi
 	out[5] = floori((pz[row] + pad) / cell)
 
 
+## Every row's broadphase cell for a cell size (m), unwrapped, as cell_range() with
+## pad 0 gives it: out[3 * row .. 3 * row + 2] = x, y, z (out is resized to 3 rows).
+## One call for a whole grid build.
+func cell_coords(cell: float, out: PackedInt32Array) -> void:
+	var xs: PackedFloat64Array = px
+	var ys: PackedFloat64Array = py
+	var zs: PackedFloat64Array = pz
+	out.resize(3 * xs.size())
+	for row: int in xs.size():
+		out[3 * row] = floori(xs[row] / cell)
+		out[3 * row + 1] = floori(ys[row] / cell)
+		out[3 * row + 2] = floori(zs[row] / cell)
+
+
 ## Whether row a can fly to, track or point at row b: another live ship at its site.
 func can_reach(a: int, b: int) -> bool:
 	return b >= 0 and b < size() and b != a and is_alive(b) and site[a] == site[b]
@@ -155,15 +179,67 @@ func can_reach(a: int, b: int) -> bool:
 ## Offset of row b from row a (m, float32) by minimum image, computed in 64-bit
 ## (FT-SIM-035). Only meaningful when both are at the same site.
 func relative(a: int, b: int) -> Vector3:
-	return Vector3(
-		_wrap(px[b] - px[a], period), _wrap(py[b] - py[a], period), _wrap(pz[b] - pz[a], period)
-	)
+	# _wrap inlined for in-cube differences, the common case (hot path).
+	var half: float = 0.5 * period
+	var dx: float = px[b] - px[a]
+	var dy: float = py[b] - py[a]
+	var dz: float = pz[b] - pz[a]
+	if not (dx >= -half and dx < half):
+		dx = _wrap(dx, period)
+	if not (dy >= -half and dy < half):
+		dy = _wrap(dy, period)
+	if not (dz >= -half and dz < half):
+		dz = _wrap(dz, period)
+	return Vector3(dx, dy, dz)
+
+
+## The ship among ids at row a's site nearest to it (distance as relative().length(),
+## float32), or -1; the earlier one in ids wins a tie. One loop for target scans.
+func nearest(a: int, ids: PackedInt32Array) -> int:
+	var half: float = 0.5 * period
+	var xs: PackedFloat64Array = px
+	var ys: PackedFloat64Array = py
+	var zs: PackedFloat64Array = pz
+	var sites: PackedInt32Array = site
+	var ax: float = xs[a]
+	var ay: float = ys[a]
+	var az: float = zs[a]
+	var s: int = sites[a]
+	var best: int = -1
+	var best_dist: float = INF
+	for b: int in ids:
+		if sites[b] != s:
+			continue
+		var dx: float = xs[b] - ax
+		var dy: float = ys[b] - ay
+		var dz: float = zs[b] - az
+		if not (dx >= -half and dx < half):
+			dx = _wrap(dx, period)
+		if not (dy >= -half and dy < half):
+			dy = _wrap(dy, period)
+		if not (dz >= -half and dz < half):
+			dz = _wrap(dz, period)
+		var dist: float = Vector3(dx, dy, dz).length()
+		if dist < best_dist:
+			best_dist = dist
+			best = b
+	return best
 
 
 ## Offset of a site-local point from row a (m, float32) by minimum image, computed in
 ## 64-bit; the point need not be wrapped (FT-SIM-035).
 func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:
-	return Vector3(_wrap(x - px[a], period), _wrap(y - py[a], period), _wrap(z - pz[a], period))
+	var half: float = 0.5 * period
+	var dx: float = x - px[a]
+	var dy: float = y - py[a]
+	var dz: float = z - pz[a]
+	if not (dx >= -half and dx < half):
+		dx = _wrap(dx, period)
+	if not (dy >= -half and dy < half):
+		dy = _wrap(dy, period)
+	if not (dz >= -half and dz < half):
+		dz = _wrap(dz, period)
+	return Vector3(dx, dy, dz)
 
 
 func is_alive(row: int) -> bool:

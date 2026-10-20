@@ -18,20 +18,27 @@ extends RefCounted
 
 static func step(world: SimWorld) -> void:
 	var run: RunTable = world.run
-	for id: int in world.ship_count():
-		if run.status[id] != RunTable.Status.IN_PLAY:
+	var status: PackedByteArray = run.status
+	var outcome: PackedByteArray = run.outcome
+	var alive: PackedByteArray = world.kin.alive
+	var enabled: PackedByteArray = world.ai.enabled
+	var mode: PackedByteArray = world.ai.mode
+	var n: int = world.ship_count()
+	for id: int in n:
+		if status[id] != RunTable.Status.IN_PLAY:
 			continue
-		if not world.kin.is_alive(id):
-			run.status[id] = RunTable.Status.DESTROYED
-		elif _escaped(world, id):
-			run.status[id] = RunTable.Status.RETREATED
+		if alive[id] != 1:
+			status[id] = RunTable.Status.DESTROYED
+		elif enabled[id] == 1 and mode[id] == AiTable.Mode.RETREAT and _escaped(world, id):
+			status[id] = RunTable.Status.RETREATED
 			world.emit(&"retreated", id)
-	for id: int in world.ship_count():
-		if world.ai.is_enabled(id) or run.outcome[id] != RunTable.Outcome.NONE:
+	for id: int in n:
+		if enabled[id] == 1 or outcome[id] != RunTable.Outcome.NONE:
 			continue
-		if run.status[id] in [RunTable.Status.DESTROYED, RunTable.Status.ABANDONED]:
+		var st: int = status[id]
+		if st == RunTable.Status.DESTROYED or st == RunTable.Status.ABANDONED:
 			_set_outcome(world, id, RunTable.Outcome.LOSS)
-		elif run.status[id] == RunTable.Status.IN_PLAY and _enemies_gone(world, id):
+		elif st == RunTable.Status.IN_PLAY and _enemies_gone(world, id):
 			_set_outcome(world, id, RunTable.Outcome.WIN)
 
 
@@ -70,11 +77,18 @@ static func _escaped(world: SimWorld, id: int) -> bool:
 ## Every ship of a faction hostile to the ship's is out of play, and there is one.
 static func _enemies_gone(world: SimWorld, id: int) -> bool:
 	var faction: int = world.faction_of(id)
+	var factions: PackedInt32Array = world.kin.factions
+	var status: PackedByteArray = world.run.status
+	# Relation to each faction, looked up once.
+	var hostile: Dictionary[int, bool] = {}
 	var enemies: int = 0
 	for o: int in world.ship_count():
-		if world.relation(faction, world.faction_of(o)) != SimWorld.Relation.HOSTILE:
+		var f: int = factions[o]
+		if not hostile.has(f):
+			hostile[f] = world.relation(faction, f) == SimWorld.Relation.HOSTILE
+		if not hostile[f]:
 			continue
-		if world.run.status[o] == RunTable.Status.IN_PLAY:
+		if status[o] == RunTable.Status.IN_PLAY:
 			return false
 		enemies += 1
 	return enemies > 0

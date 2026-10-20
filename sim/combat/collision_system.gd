@@ -2,8 +2,10 @@ class_name CollisionSystem
 extends RefCounted
 ## Ship contacts, proximity warnings and swept projectiles (T029, FT-SIM-009,
 ## FT-SIM-010, FT-ARC-007: no Godot physics). Runs after the integrator and the weapons
-## each tick. Broadphase is a uniform grid per site, rebuilt every tick and keyed by
-## Vector4i(site, ix, iy, iz), so ships at different sites never share a cell (S6).
+## each tick. Broadphase is a uniform grid per site, rebuilt every tick: site to cell
+## (ix, iy, iz packed into one int, _key) to ship ids, so ships at different sites never
+## share a cell (S6). Ship pairs scan the later ships directly when there are fewer of them
+## than cells to look up, with the same pairs in the same order.
 ## Sites wrap (FT-SIM-035, D124): cell indexes wrap modulo the cells per axis (the
 ## period is a multiple of both cell sizes, SimWorld.period_errors) and every distance
 ## is a minimum image, so contacts, warnings and shots work across the seams.
@@ -27,7 +29,6 @@ const WARNING_HORIZON: float = 5.0
 ## one fires on the tick motion brings the pair within reach; when a velocity change
 ## makes it warnable instead, it can wait up to this many ticks (stateless check).
 const WARNING_REPEAT_TICKS: int = 30
-const EMPTY: Array = []
 
 
 static func step(world: SimWorld) -> void:
@@ -47,65 +48,137 @@ static func _cells_per_axis(kin: Kinematics, cell: float) -> int:
 	return maxi(1, roundi(kin.period / cell))
 
 
-## Uniform grid of live ships: cell key (wrapped) to ship ids in id order.
-static func build_grid(kin: Kinematics, cell: float) -> Dictionary[Vector4i, Array]:
-	var grid: Dictionary[Vector4i, Array] = {}
+## Uniform grid of live ships: site to cell key (_key of the wrapped cell) to ship ids
+## in id order.
+static func build_grid(kin: Kinematics, cell: float) -> Dictionary[int, Dictionary]:
+	var grid: Dictionary[int, Dictionary] = {}
 	var n: int = _cells_per_axis(kin, cell)
-	var c: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0])
-	for i: int in kin.size():
-		if not kin.is_alive(i):
+	var alive: PackedByteArray = kin.alive
+	var site: PackedInt32Array = kin.site
+	var c: PackedInt32Array = PackedInt32Array()
+	kin.cell_coords(cell, c)
+	for i: int in alive.size():
+		if alive[i] != 1:
 			continue
-		kin.cell_range(i, cell, 0.0, c)
-		var key: Vector4i = Vector4i(kin.site[i], posmod(c[0], n), posmod(c[1], n), posmod(c[2], n))
-		var ids: Array = grid.get(key, EMPTY)
-		if ids.is_empty():
-			ids = []
-			grid[key] = ids
-		ids.append(i)
+		_add(
+			grid,
+			site[i],
+			_key(posmod(c[3 * i], n), posmod(c[3 * i + 1], n), posmod(c[3 * i + 2], n), n),
+			i
+		)
 	return grid
+
+
+## Appends ship i to the grid's cell key at a site.
+static func _add(grid: Dictionary[int, Dictionary], site: int, key: int, i: int) -> void:
+	if not grid.has(site):
+		grid[site] = {}
+	var cells: Dictionary = grid[site]
+	if cells.has(key):
+		cells[key].append(i)
+	else:
+		cells[key] = PackedInt32Array([i])
+
+
+## Grid key of a wrapped cell (x, y, z in [0, n)), n cells per axis: below 2^60 as
+## n is at most SimWorld.MAX_CELLS_PER_AXIS (SimWorld.period_errors).
+static func _key(x: int, y: int, z: int, n: int) -> int:
+	return (x * n + y) * n + z
 
 
 ## Fills out with the ship ids in the grid cells box[0..2]..box[3..5] (unwrapped,
 ## inclusive) of a site, each wrapped modulo n and each cell visited once, in cell order
 ## then id order.
 static func _in_cells(
-	grid: Dictionary[Vector4i, Array], site: int, box: PackedInt32Array, n: int, out: Array[int]
+	grid: Dictionary[int, Dictionary],
+	site: int,
+	box: PackedInt32Array,
+	n: int,
+	out: PackedInt32Array
 ) -> void:
 	out.clear()
-	var lo: Vector3i = Vector3i(box[0], box[1], box[2])
-	var hi: Vector3i = Vector3i(box[3], box[4], box[5])
-	var count: Vector3i = (hi - lo + Vector3i.ONE).mini(n)
-	for ix: int in range(lo.x, lo.x + count.x):
-		for iy: int in range(lo.y, lo.y + count.y):
-			for iz: int in range(lo.z, lo.z + count.z):
-				var key: Vector4i = Vector4i(site, posmod(ix, n), posmod(iy, n), posmod(iz, n))
-				for j: int in grid.get(key, EMPTY):
-					out.append(j)
+	if not grid.has(site):
+		return
+	var cells: Dictionary = grid[site]
+	var lx: int = box[0]
+	var ly: int = box[1]
+	var lz: int = box[2]
+	var cx: int = mini(box[3] - lx + 1, n)
+	var cy: int = mini(box[4] - ly + 1, n)
+	var cz: int = mini(box[5] - lz + 1, n)
+	for ix: int in range(lx, lx + cx):
+		var kx: int = posmod(ix, n)
+		for iy: int in range(ly, ly + cy):
+			var ky: int = kx * n + posmod(iy, n)
+			for iz: int in range(lz, lz + cz):
+				var key: int = ky * n + posmod(iz, n)
+				if cells.has(key):
+					out.append_array(cells[key])
 
 
 static func _ship_pairs(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
-	var grid: Dictionary[Vector4i, Array] = build_grid(kin, PAIR_CELL)
 	var cells: int = _cells_per_axis(kin, PAIR_CELL)
 	var n: int = kin.size()
+	var alive: PackedByteArray = kin.alive
+	var site: PackedInt32Array = kin.site
+	var vel: PackedVector3Array = kin.vel
+	# The grid (build_grid), each live ship's wrapped cell, and the live ships in id
+	# order. Collisions don't change liveness, so the list holds for the whole pass.
+	var grid: Dictionary[int, Dictionary] = {}
+	var cell: PackedInt32Array = PackedInt32Array()
+	kin.cell_coords(PAIR_CELL, cell)
+	var live: PackedInt32Array = PackedInt32Array()
+	var box: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0])
 	# Per ship: bounding radius plus the distance it covers in the warning horizon, so
 	# a pair farther apart than the sum can neither touch nor warn (cheap reject).
 	var reach: PackedFloat64Array = PackedFloat64Array()
 	reach.resize(n)
 	var reach_max: float = 0.0
 	for i: int in n:
-		reach[i] = _bound(kin, i) + kin.vel[i].length() * WARNING_HORIZON
-		if kin.is_alive(i):
-			reach_max = maxf(reach_max, reach[i])
-	var box: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0])
-	var near: Array[int] = []
-	for i: int in n:
-		if not kin.is_alive(i):
+		reach[i] = kin.radius[i] + kin.half_length[i] + vel[i].length() * WARNING_HORIZON
+		if alive[i] != 1:
 			continue
+		reach_max = maxf(reach_max, reach[i])
+		var x: int = posmod(cell[3 * i], cells)
+		var y: int = posmod(cell[3 * i + 1], cells)
+		var z: int = posmod(cell[3 * i + 2], cells)
+		cell[3 * i] = x
+		cell[3 * i + 1] = y
+		cell[3 * i + 2] = z
+		live.append(i)
+		_add(grid, site[i], _key(x, y, z, cells), i)
+	var near: PackedInt32Array = PackedInt32Array()
+	var order: PackedInt64Array = PackedInt64Array()
+	for li: int in live.size():
+		var i: int = live[li]
 		# Only the cells within the pair search distance, at most PAIR_CELL (S6): farther
 		# pairs can neither touch nor warn.
 		kin.cell_range(i, PAIR_CELL, minf(reach[i] + reach_max, PAIR_CELL), box)
-		_in_cells(grid, kin.site[i], box, cells, near)
+		var cx: int = mini(box[3] - box[0] + 1, cells)
+		var cy: int = mini(box[4] - box[1] + 1, cells)
+		var cz: int = mini(box[5] - box[2] + 1, cells)
+		if live.size() - li - 1 < cx * cy * cz:
+			# Fewer later ships than cells: the later ships in the box, in the order
+			# _in_cells lists them (cell order, then id), found by their cells' offsets
+			# from the box's low corner.
+			near.clear()
+			order.clear()
+			var s: int = site[i]
+			for lj: int in range(li + 1, live.size()):
+				var j: int = live[lj]
+				if site[j] != s:
+					continue
+				var ox: int = posmod(cell[3 * j] - box[0], cells)
+				var oy: int = posmod(cell[3 * j + 1] - box[1], cells)
+				var oz: int = posmod(cell[3 * j + 2] - box[2], cells)
+				if ox < cx and oy < cy and oz < cz:
+					order.append((((ox * cy + oy) * cz + oz) << 32) | j)
+			order.sort()
+			for k: int in order:
+				near.append(k & 0xFFFFFFFF)
+		else:
+			_in_cells(grid, site[i], box, cells, near)
 		for j: int in near:
 			if j <= i:
 				continue
@@ -210,18 +283,23 @@ static func _collision_hit(
 static func _projectiles(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
 	var proj: ProjectileTable = world.projectiles
-	var grid: Dictionary[Vector4i, Array] = build_grid(kin, CELL)
+	var grid: Dictionary[int, Dictionary] = build_grid(kin, CELL)
 	var cells: int = _cells_per_axis(kin, CELL)
 	var pad: float = _ship_pad(kin)
 	var dt: float = SimWorld.DT
 	var dead: PackedInt32Array = PackedInt32Array()
 	var box: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0])
-	var near: Array[int] = []
-	for k: int in proj.size():
-		proj.ttl[k] -= 1
-		var shooter: int = proj.ship_ids[k]
-		proj.cell_box(k, dt, pad + proj.radius[k], CELL, box)
-		_in_cells(grid, proj.site[k], box, cells, near)
+	var near: PackedInt32Array = PackedInt32Array()
+	var ttl: PackedInt32Array = proj.ttl
+	var shooters: PackedInt32Array = proj.ship_ids
+	var radius: PackedFloat64Array = proj.radius
+	var pvel: PackedVector3Array = proj.vel
+	var psite: PackedInt32Array = proj.site
+	for k: int in shooters.size():
+		ttl[k] -= 1
+		var shooter: int = shooters[k]
+		proj.cell_box(k, dt, pad + radius[k], CELL, box)
+		_in_cells(grid, psite[k], box, cells, near)
 		var best: int = -1
 		var best_t: float = 2.0
 		var best_start: Vector3 = Vector3.ZERO
@@ -229,7 +307,7 @@ static func _projectiles(world: SimWorld) -> void:
 			if s == shooter:
 				continue
 			var start: Vector3 = proj.relative_start(k, kin, s, dt)
-			var t: float = _sweep(kin, s, start, proj.vel[k], proj.radius[k])
+			var t: float = _sweep(kin, s, start, pvel[k], radius[k])
 			if t >= 0.0 and t < best_t:
 				best_t = t
 				best = s
@@ -238,7 +316,7 @@ static func _projectiles(world: SimWorld) -> void:
 		if best >= 0:
 			_projectile_hit(world, k, best, best_start, best_t)
 			dead.append(k)
-		elif proj.ttl[k] <= 0:
+		elif ttl[k] <= 0:
 			dead.append(k)
 	proj.remove_rows(dead)
 
@@ -247,10 +325,14 @@ static func _projectiles(world: SimWorld) -> void:
 static func _ship_pad(kin: Kinematics) -> float:
 	var most: float = 0.0
 	var moved: float = 0.0
-	for i: int in kin.size():
-		if kin.is_alive(i):
-			most = maxf(most, _bound(kin, i))
-			moved = maxf(moved, kin.vel[i].length() * SimWorld.DT)
+	var alive: PackedByteArray = kin.alive
+	var radius: PackedFloat64Array = kin.radius
+	var half_length: PackedFloat64Array = kin.half_length
+	var vel: PackedVector3Array = kin.vel
+	for i: int in alive.size():
+		if alive[i] == 1:
+			most = maxf(most, radius[i] + half_length[i])
+			moved = maxf(moved, vel[i].length() * SimWorld.DT)
 	return most + moved
 
 

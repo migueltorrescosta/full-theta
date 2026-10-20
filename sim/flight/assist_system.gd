@@ -31,34 +31,163 @@ const ALIGN_ON_BOW: float = 0.01
 const APPROACH_BACKOFF_MAX: float = 20.0
 
 
-## Writes every live ship's force and torque command for this tick, in id order.
+## Writes every live ship's force and torque command for this tick, in id order: the
+## mode bookkeeping (all-stop and Align ending, the setpoint ramp), then the torque and
+## force commands, with the columns read through locals.
 static func step(world: SimWorld) -> void:
-	for row: int in world.kin.size():
-		if world.kin.is_alive(row):
-			var tuning: AssistDef = world.defs[row].assist
-			var rot_in: Vector3 = _dead(world.helm.input_rotation[row])
-			var move_in: Vector3 = _dead(world.helm.input_translation[row])
-			# The target's offset once per ship and tick; ZERO without a target.
-			var targeted: bool = has_target(world, row)
-			var offset: Vector3 = target_offset(world, row) if targeted else Vector3.ZERO
-			_update_modes(world, row, tuning, rot_in, move_in, targeted, offset)
-			_command(world, row, tuning, rot_in, move_in, targeted, offset)
+	var kin: Kinematics = world.kin
+	var helm: HelmTable = world.helm
+	# Columns only read here (assist writes all_stop, align, throttle_setpoint,
+	# torque_cmd and force_cmd, and reads those only through the tables).
+	var alive: PackedByteArray = kin.alive
+	var vel: PackedVector3Array = kin.vel
+	var ang_vel: PackedVector3Array = kin.ang_vel
+	var rot: Array[Quaternion] = kin.rot
+	var inertias: PackedVector3Array = kin.inertia
+	var mass: PackedFloat64Array = kin.mass
+	var torque_scale: PackedFloat64Array = kin.torque_scale
+	var max_torque: PackedVector3Array = kin.max_torque
+	var input_rotation: PackedVector3Array = helm.input_rotation
+	var input_translation: PackedVector3Array = helm.input_translation
+	var face_held: PackedByteArray = helm.face_held
+	var approach_held: PackedByteArray = helm.approach_held
+	var decoupled_col: PackedByteArray = helm.decoupled
+	var defs: Array[ShipDef] = world.defs
+	for row: int in alive.size():
+		if alive[row] != 1:
+			continue
+		var tuning: AssistDef = defs[row].assist
+		var rot_in: Vector3 = _dead(input_rotation[row])
+		var move_in: Vector3 = _dead(input_translation[row])
+		# The target's offset once per ship and tick; not finite without a target.
+		var offset: Vector3 = _targeted_offset(world, kin, helm, row)
+		var targeted: bool = offset.is_finite()
+		if not targeted:
+			offset = Vector3.ZERO
+		var face: int = face_held[row]
+		var approach: int = approach_held[row]
+		var decoupled: bool = decoupled_col[row] == 1
+		var w: Vector3 = ang_vel[row]
+		var q: Quaternion = rot[row]
+
+		# _update_modes.
+		if helm.all_stop[row] == 1:
+			# FT-SIM-036, FT-HLM-014: latched until at rest or Helm takes over (any stick,
+			# throttle, face or approach input).
+			var manual: bool = (
+				rot_in != Vector3.ZERO or move_in != Vector3.ZERO or face == 1 or approach == 1
+			)
+			var at_rest: bool = vel[row].length() < STOP_SPEED and w.length() < STOP_RATE
+			if manual or at_rest:
+				helm.all_stop[row] = 0
+		if helm.align[row] != HelmTable.Align.OFF:
+			# FT-HLM-007: ends within tolerance, on rotation input or with the target lost.
+			var done: bool = (
+				not targeted
+				or (
+					_align_error(kin, row, helm.align[row], offset) < ALIGN_DONE
+					and w.length() < ALIGN_SETTLED_RATE
+				)
+			)
+			if done or rot_in != Vector3.ZERO:
+				helm.align[row] = HelmTable.Align.OFF
+		if not decoupled and approach == 0:
+			# Throttle sets speed, not force (FT-SIM-004): input ramps the setpoint.
+			helm.throttle_setpoint[row] = clampf(
+				helm.throttle_setpoint[row] + move_in.z * tuning.speed_ramp * SimWorld.DT,
+				tuning.speed_min,
+				tuning.speed_max
+			)
+
+		# _command.
+		# Body-frame translation input: forward is -Z.
+		var trans_in: Vector3 = Vector3(move_in.x, move_in.y, -move_in.z)
+		var stopping: bool = helm.all_stop[row] == 1
+		var approaching: bool = targeted and approach == 1
+		var facing: bool = targeted and (face == 1 or approaching)
+		var tscale: float = torque_scale[row]
+		var py: float = tuning.turn_rate_pitch_yaw * tscale
+		var rates: Vector3 = Vector3(py, py, tuning.turn_rate_roll * tscale)
+		var inertia: Vector3 = inertias[row]
+		var torque_limit: Vector3 = max_torque[row] * tscale
+
+		# Rotation: a body-rate setpoint held through torque, or raw torque when decoupled.
+		# All-stop, face and Align are explicit assist actions, so they run decoupled too
+		# (FT-HLM-006).
+		var w_des: Vector3 = rot_in * rates
+		var rate_hold: bool = not decoupled
+		if stopping:
+			w_des = Vector3.ZERO
+			rate_hold = true
+		elif facing:
+			# FT-HLM-005: at the ship's real turn rate; roll stays manual.
+			w_des = _face_rate_at(q, inertia, torque_limit, rates.x, offset, tuning)
+			w_des.z = rot_in.z * rates.z
+			rate_hold = true
+		elif targeted and helm.align[row] != HelmTable.Align.OFF:
+			w_des = _align_rate(kin, row, helm.align[row], tuning, offset)
+			rate_hold = true
+		var torque: Vector3
+		if rate_hold:
+			# The gyroscopic term makes the hold cancel cross-coupling too.
+			torque = (w_des - w) * inertia / tuning.rate_time_constant + w.cross(w * inertia)
+		else:
+			torque = rot_in * torque_limit
+		kin.torque_cmd[row] = torque.clamp(-torque_limit, torque_limit)
+
+		# Translation.
+		var v_local: Vector3 = q.inverse() * vel[row]
+		var gain: float = mass[row] / tuning.velocity_time_constant
+		var force: Vector3
+		if stopping:
+			# FT-SIM-036: velocity relative to the site to zero.
+			force = -v_local * gain
+		elif approaching:
+			var v_des: Vector3 = q.inverse() * _approach_velocity(world, row, tuning, offset)
+			force = (v_des - v_local) * gain
+		elif decoupled:
+			# FT-SIM-005: stick straight to thrust.
+			force = _thrust_for_input(kin, row, trans_in)
+		else:
+			# The three holds of FT-SIM-004: no drift without strafe input, forward speed
+			# at the setpoint. Strafe input fires that axis at full thrust.
+			var hold: Vector3 = (Vector3(0.0, 0.0, -helm.throttle_setpoint[row]) - v_local) * gain
+			if trans_in.x != 0.0 or trans_in.y != 0.0:
+				var direct: Vector3 = _thrust_for_input(kin, row, trans_in)
+				force = Vector3(
+					direct.x if trans_in.x != 0.0 else hold.x,
+					direct.y if trans_in.y != 0.0 else hold.y,
+					hold.z
+				)
+			else:
+				force = hold
+		kin.force_cmd[row] = kin.clamp_thrust(row, force)
 
 
 ## Whether the ship has a selected target it can fly to: a live ship its faction detects
 ## (FT-ARC-013) or a point at its own site (ships at different sites never interact).
 static func has_target(world: SimWorld, row: int) -> bool:
-	var helm: HelmTable = world.helm
-	var kin: Kinematics = world.kin
-	if helm.target_kind[row] == HelmTable.Target.SHIP:
+	return _targeted_offset(world, world.kin, world.helm, row).is_finite()
+
+
+## target_offset() when has_target(), else Vector3.INF (positions are finite, so an
+## offset always is): both in one pass for step().
+static func _targeted_offset(
+	world: SimWorld, kin: Kinematics, helm: HelmTable, row: int
+) -> Vector3:
+	var kind: int = helm.target_kind[row]
+	if kind == HelmTable.Target.SHIP:
 		var other: int = helm.target_ship[row]
-		return (
+		if (
 			kin.can_reach(row, other)
-			and KnowledgeSystem.is_detected(world, world.faction_of(row), other)
+			and KnowledgeSystem.is_detected(world, kin.factions[row], other)
+		):
+			return kin.relative(row, other)
+	elif kind == HelmTable.Target.POINT and helm.target_site[row] == kin.site[row]:
+		return kin.relative_to_point(
+			row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
 		)
-	if helm.target_kind[row] == HelmTable.Target.POINT:
-		return helm.target_site[row] == kin.site[row]
-	return false
+	return Vector3.INF
 
 
 ## Offset of the selected target from the ship (m, site frame), computed in 64-bit.
@@ -112,141 +241,39 @@ static func turn_rate_caps(kin: Kinematics, row: int, tuning: AssistDef) -> Vect
 	return Vector3(py, py, tuning.turn_rate_roll * kin.torque_scale[row])
 
 
-## Mode bookkeeping before the command: ends all-stop and Align, ramps the setpoint.
-## rot_in and move_in are the Helm inputs after the deadzone.
-## targeted and offset are has_target() and target_offset() for this tick.
-static func _update_modes(
-	world: SimWorld,
-	row: int,
-	tuning: AssistDef,
-	rot_in: Vector3,
-	move_in: Vector3,
-	targeted: bool,
-	offset: Vector3
-) -> void:
-	var helm: HelmTable = world.helm
-	var kin: Kinematics = world.kin
-	if helm.all_stop[row] == 1:
-		# FT-SIM-036, FT-HLM-014: latched until at rest or Helm takes over (any stick,
-		# throttle, face or approach input).
-		var manual: bool = (
-			rot_in != Vector3.ZERO
-			or move_in != Vector3.ZERO
-			or helm.face_held[row] == 1
-			or helm.approach_held[row] == 1
-		)
-		var at_rest: bool = (
-			kin.vel[row].length() < STOP_SPEED and kin.ang_vel[row].length() < STOP_RATE
-		)
-		if manual or at_rest:
-			helm.all_stop[row] = 0
-	if helm.align[row] != HelmTable.Align.OFF:
-		# FT-HLM-007: ends within tolerance, on rotation input or with the target lost.
-		var done: bool = (
-			not targeted
-			or (
-				_align_error(kin, row, helm.align[row], offset) < ALIGN_DONE
-				and kin.ang_vel[row].length() < ALIGN_SETTLED_RATE
-			)
-		)
-		if done or rot_in != Vector3.ZERO:
-			helm.align[row] = HelmTable.Align.OFF
-	if not helm.is_decoupled(row) and helm.approach_held[row] == 0:
-		# Throttle sets speed, not force (FT-SIM-004): input ramps the setpoint.
-		helm.throttle_setpoint[row] = clampf(
-			helm.throttle_setpoint[row] + move_in.z * tuning.speed_ramp * SimWorld.DT,
-			tuning.speed_min,
-			tuning.speed_max
-		)
-
-
-static func _command(
-	world: SimWorld,
-	row: int,
-	tuning: AssistDef,
-	rot_in: Vector3,
-	move_in: Vector3,
-	targeted: bool,
-	offset: Vector3
-) -> void:
-	var helm: HelmTable = world.helm
-	var kin: Kinematics = world.kin
-	# Body-frame translation input: forward is -Z.
-	var trans_in: Vector3 = Vector3(move_in.x, move_in.y, -move_in.z)
-	var stopping: bool = helm.all_stop[row] == 1
-	var approaching: bool = targeted and helm.approach_held[row] == 1
-	var facing: bool = targeted and (helm.face_held[row] == 1 or approaching)
-	var decoupled: bool = helm.is_decoupled(row)
-	var rates: Vector3 = turn_rate_caps(kin, row, tuning)
-
-	# Rotation: a body-rate setpoint held through torque, or raw torque when decoupled.
-	# All-stop, face and Align are explicit assist actions, so they run decoupled too
-	# (FT-HLM-006).
-	var w_des: Vector3 = rot_in * rates
-	var rate_hold: bool = not decoupled
-	if stopping:
-		w_des = Vector3.ZERO
-		rate_hold = true
-	elif facing:
-		# FT-HLM-005: at the ship's real turn rate; roll stays manual.
-		w_des = _face_rate(kin, row, offset, tuning)
-		w_des.z = rot_in.z * rates.z
-		rate_hold = true
-	elif targeted and helm.align[row] != HelmTable.Align.OFF:
-		w_des = _align_rate(kin, row, helm.align[row], tuning, offset)
-		rate_hold = true
-	var torque: Vector3
-	if rate_hold:
-		var w: Vector3 = kin.ang_vel[row]
-		var inertia: Vector3 = kin.inertia[row]
-		# The gyroscopic term makes the hold cancel cross-coupling too.
-		torque = (w_des - w) * inertia / tuning.rate_time_constant + w.cross(w * inertia)
-	else:
-		torque = rot_in * kin.torque_limit(row)
-	kin.torque_cmd[row] = kin.clamp_torque(row, torque)
-
-	# Translation.
-	var v_local: Vector3 = kin.to_local(row, kin.vel[row])
-	var gain: float = kin.mass[row] / tuning.velocity_time_constant
-	var force: Vector3
-	if stopping:
-		# FT-SIM-036: velocity relative to the site to zero.
-		force = -v_local * gain
-	elif approaching:
-		var v_des: Vector3 = kin.to_local(row, _approach_velocity(world, row, tuning, offset))
-		force = (v_des - v_local) * gain
-	elif decoupled:
-		# FT-SIM-005: stick straight to thrust.
-		force = _thrust_for_input(kin, row, trans_in)
-	else:
-		# The three holds of FT-SIM-004: no drift without strafe input, forward speed
-		# at the setpoint. Strafe input fires that axis at full thrust.
-		var hold: Vector3 = (Vector3(0.0, 0.0, -helm.throttle_setpoint[row]) - v_local) * gain
-		var direct: Vector3 = _thrust_for_input(kin, row, trans_in)
-		force = Vector3(
-			direct.x if trans_in.x != 0.0 else hold.x,
-			direct.y if trans_in.y != 0.0 else hold.y,
-			hold.z
-		)
-	kin.force_cmd[row] = kin.clamp_thrust(row, force)
-
-
 ## Body-frame rate that turns the bow toward a site-frame direction at the real turn
 ## rate, braking in time to stop on it (D47).
 static func _face_rate(kin: Kinematics, row: int, direction: Vector3, tuning: AssistDef) -> Vector3:
+	return _face_rate_at(
+		kin.rot[row],
+		kin.inertia[row],
+		kin.torque_limit(row),
+		turn_rate_caps(kin, row, tuning).x,
+		direction,
+		tuning
+	)
+
+
+## _face_rate from the ship's rotation, inertia, torque limit and pitch/yaw rate cap.
+static func _face_rate_at(
+	rot: Quaternion,
+	inertia: Vector3,
+	limit: Vector3,
+	cap: float,
+	direction: Vector3,
+	tuning: AssistDef
+) -> Vector3:
 	if direction.length_squared() < 1e-6:
 		return Vector3.ZERO
-	var d: Vector3 = kin.to_local(row, direction).normalized()
+	var d: Vector3 = (rot.inverse() * direction).normalized()
 	var angle: float = Vector3.FORWARD.angle_to(d)
 	var axis: Vector3 = Vector3.FORWARD.cross(d)
 	if axis.length_squared() < 1e-12:
 		# Dead ahead, or dead astern: pitch over.
 		axis = Vector3.RIGHT if angle > 1.0 else Vector3.ZERO
 	axis = axis.normalized()
-	var limit: Vector3 = kin.torque_limit(row)
-	var inertia: Vector3 = kin.inertia[row]
 	var alpha: float = minf(limit.x / inertia.x, limit.y / inertia.y)
-	return axis * _profile(angle, alpha, turn_rate_caps(kin, row, tuning).x, tuning)
+	return axis * _profile(angle, alpha, cap, tuning)
 
 
 ## Align (FT-HLM-007, D124): roll the selected target to 12 o'clock; at ROLL_AND_FACE

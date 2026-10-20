@@ -19,34 +19,67 @@ const SENSORS: StringName = &"sensors"
 
 static func step(world: SimWorld) -> void:
 	var table: KnowledgeTable = world.knowledge
+	var kin: Kinematics = world.kin
+	var n: int = world.ship_count()
 	var observing: PackedInt32Array = _factions(world)
 	# Each live ship's sensor and identify ranges scaled by its sensors' effectiveness
 	# (m), once per tick; -1 when the ship can't sense.
 	var sense: PackedFloat64Array = PackedFloat64Array()
 	var identify: PackedFloat64Array = PackedFloat64Array()
-	sense.resize(world.ship_count())
-	identify.resize(world.ship_count())
-	for o: int in world.ship_count():
+	sense.resize(n)
+	identify.resize(n)
+	# The ships that can sense, per observing faction (same order), in id order.
+	var sensing: Array[PackedInt32Array] = []
+	for f: int in observing.size():
+		sensing.append(PackedInt32Array())
+	var factions: PackedInt32Array = kin.factions
+	var alive: PackedByteArray = kin.alive
+	var site: PackedInt32Array = kin.site
+	var detected: PackedByteArray = table.detected
+	var defs: Array[ShipDef] = world.defs
+	for o: int in n:
 		var scale: float = DamageSystem.effectiveness(world, o, SENSORS)
-		var live: bool = world.kin.is_alive(o) and scale > 0.0
-		sense[o] = world.defs[o].sensor_range * scale if live else -1.0
-		identify[o] = world.defs[o].identify_range * scale if live else -1.0
-	for contact: int in world.ship_count():
-		for faction: int in observing:
-			if faction == world.faction_of(contact):
+		var can_sense: bool = alive[o] == 1 and scale > 0.0
+		sense[o] = defs[o].sensor_range * scale if can_sense else -1.0
+		identify[o] = defs[o].identify_range * scale if can_sense else -1.0
+		if not sense[o] < 0.0:
+			sensing[observing.bsearch(factions[o])].append(o)
+	for contact: int in n:
+		var own: int = factions[contact]
+		var live: bool = alive[contact] == 1
+		var contact_site: int = site[contact]
+		for fi: int in observing.size():
+			var faction: int = observing[fi]
+			if faction == own:
 				continue
-			var scan: Vector2i = _scan(world, faction, contact, sense, identify)
+			# The lowest-id ship of the faction that detects the contact (or -1), and
+			# whether any of them is within identify range (_scan, inlined).
+			var by: int = -1
+			var ident: bool = false
+			if live:
+				for o: int in sensing[fi]:
+					if site[o] != contact_site:
+						continue
+					var dist: float = kin.relative(o, contact).length()
+					if dist > sense[o]:
+						continue
+					if by < 0:
+						by = o
+					if dist <= identify[o]:
+						ident = true
+						break
 			var row: int = table.row_for(faction, contact)
-			if scan.x >= 0:
+			if by >= 0:
 				if row < 0:
 					row = table.add_contact(faction, contact)
-				if scan.y == 1:
+					# add_contact grows the columns in place; detected still refers to it.
+				if ident:
 					table.identified[row] = 1
-				if table.detected[row] == 0:
-					table.detected[row] = 1
-					_emit(world, &"contact_detected", scan.x, contact, row)
-			elif row >= 0 and table.detected[row] == 1:
-				table.detected[row] = 0
+				if detected[row] == 0:
+					detected[row] = 1
+					_emit(world, &"contact_detected", by, contact, row)
+			elif row >= 0 and detected[row] == 1:
+				detected[row] = 0
 				_emit(world, &"contact_lost", _any_ship(world, faction), contact, row)
 
 
@@ -69,11 +102,7 @@ static func is_identified(world: SimWorld, faction: int, ship_id: int) -> bool:
 
 ## Ships the faction currently detects, other than its own, in id order.
 static func contacts(world: SimWorld, faction: int) -> PackedInt32Array:
-	var out: PackedInt32Array = PackedInt32Array()
-	for id: int in world.ship_count():
-		if world.faction_of(id) != faction and is_detected(world, faction, id):
-			out.append(id)
-	return out
+	return world.knowledge.detected_ships(faction, world.kin.factions)
 
 
 ## The callsign the faction uses for the ship, for example "H2" (FT-SPA-001,
@@ -98,34 +127,6 @@ static func _prefix(world: SimWorld, faction: int, ship_id: int, row: int) -> St
 		SimWorld.Relation.NEUTRAL:
 			return "N"
 	return "H"
-
-
-## x: lowest-id live ship of the faction that detects the contact, or -1; y: 1 if any
-## of them is within identify range. sense and identify are the ships' scaled ranges
-## (m, -1 for a ship that can't sense) by ship id.
-static func _scan(
-	world: SimWorld,
-	faction: int,
-	contact: int,
-	sense: PackedFloat64Array,
-	identify: PackedFloat64Array
-) -> Vector2i:
-	var kin: Kinematics = world.kin
-	var result: Vector2i = Vector2i(-1, 0)
-	if not kin.is_alive(contact):
-		return result
-	for o: int in world.ship_count():
-		if world.faction_of(o) != faction or sense[o] < 0.0 or kin.site[o] != kin.site[contact]:
-			continue
-		var dist: float = kin.relative(o, contact).length()
-		if dist > sense[o]:
-			continue
-		if result.x < 0:
-			result.x = o
-		if dist <= identify[o]:
-			result.y = 1
-			return result
-	return result
 
 
 ## Factions that have at least one ship, ascending.

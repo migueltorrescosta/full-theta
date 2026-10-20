@@ -33,6 +33,10 @@ var fault_armed: PackedByteArray = PackedByteArray()
 
 ## Derived index, not state: first (hull) row by ship id, set at spawn (rows never move).
 var _first: PackedInt32Array = PackedInt32Array()
+## Derived cache, not state: per row, the health the effectiveness curve was last
+## sampled at (NAN before any) and the result (DamageSystem.row_effectiveness).
+var _eff_health: PackedFloat64Array = PackedFloat64Array()
+var _eff: PackedFloat64Array = PackedFloat64Array()
 
 
 func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
@@ -47,6 +51,8 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	pips.append(0)
 	heat.append(0.0)
 	fault_armed.append(0)
+	_eff_health.append(NAN)
+	_eff.append(1.0)
 	for s: SubsystemDef in def.subsystems:
 		add_key(ship_id, faction)
 		part_ids.append(s.id)
@@ -56,6 +62,8 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 		pips.append(s.nominal_pips)
 		heat.append(0.0)
 		fault_armed.append(1)
+		_eff_health.append(NAN)
+		_eff.append(1.0)
 
 
 func columns() -> Array:
@@ -71,6 +79,16 @@ func columns() -> Array:
 			["fault_armed", fault_armed],
 		]
 	)
+
+
+## Effectiveness of subsystem row r with definition s (FT-SIM-021): its curve at the
+## row's health fraction, cached per row by health (the curve is the row's own, fixed).
+func row_effectiveness(r: int, s: SubsystemDef) -> float:
+	var h: float = health[r]
+	if h != _eff_health[r]:
+		_eff_health[r] = h
+		_eff[r] = PowerSystem.curve_at(s.effectiveness, h / s.health_max)
+	return _eff[r]
 
 
 ## The ship's hull row, or -1.

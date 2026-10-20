@@ -7,6 +7,8 @@ extends SceneTree
 ## taskset -c 0,1 godot --headless --path . -s res://tools/l4/sim_profile.gd --
 ##   [--world 12] [--crew 6] [--ticks 3600] [--every 600] [--seed 1] [--neutral]
 ## --world is the total ship count (6 crew + raiders); --neutral leaves the crew alone.
+## At the end it prints the state hash and a hash of every event: an optimisation that
+## keeps behaviour keeps both for the same arguments.
 
 const PHASES: Array[String] = [
 	"apply",
@@ -68,6 +70,8 @@ func _initialize() -> void:
 	acc.resize(PHASES.size() + 1)
 	var ticks: PackedInt64Array = PackedInt64Array()
 	var from: int = 0
+	var events: HashingContext = HashingContext.new()
+	events.start(HashingContext.HASH_SHA256)
 	for n: int in _opt["ticks"]:
 		var t: PackedInt64Array = PackedInt64Array([Time.get_ticks_usec()])
 		w.call("_apply_commands")
@@ -95,7 +99,7 @@ func _initialize() -> void:
 		OutcomeSystem.step(w)
 		t.append(Time.get_ticks_usec())
 		w.tick += 1
-		w.drain_events()
+		var drained: Array[SimEvent] = w.drain_events()
 		if n % 2 == 0:
 			SimCopy.capture(w)
 		t.append(Time.get_ticks_usec())
@@ -106,6 +110,13 @@ func _initialize() -> void:
 			_report(w, n + 1, ticks.slice(from), acc)
 			from = n + 1
 			acc.fill(0.0)
+		for e: SimEvent in drained:
+			events.update(
+				var_to_bytes(
+					[e.tick, e.kind, e.ship_id, e.faction, e.other_id, e.value, e.vector, e.tag]
+				)
+			)
+	print("state hash %s events hash %s" % [w.state_hash(), events.finish().hex_encode()])
 	quit(0)
 
 

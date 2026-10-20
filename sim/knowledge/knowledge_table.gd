@@ -32,6 +32,30 @@ func row_for(faction: int, contact_id: int) -> int:
 	return _rows.get(faction * 65536 + contact_id, -1)
 
 
+## Ships of other factions that the faction currently detects, in id order;
+## ship_factions is every ship's faction by id (Kinematics.factions). One loop here
+## instead of a KnowledgeSystem.is_detected call per ship (hot path).
+func detected_ships(faction: int, ship_factions: PackedInt32Array) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for r: int in detected_rows(faction, ship_factions):
+		out.append(ship_ids[r])
+	return out
+
+
+## The faction's rows of the ships detected_ships() lists, in the same order.
+func detected_rows(faction: int, ship_factions: PackedInt32Array) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	var base: int = faction * 65536
+	var rows: Dictionary[int, int] = _rows
+	var det: PackedByteArray = detected
+	for id: int in ship_factions.size():
+		if ship_factions[id] != faction:
+			var r: int = rows.get(base + id, -1)
+			if r >= 0 and det[r] == 1:
+				out.append(r)
+	return out
+
+
 ## Adds the faction's row for a newly detected contact with the next callsign number.
 func add_contact(faction: int, contact_id: int) -> int:
 	var number: int = 1

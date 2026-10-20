@@ -14,6 +14,9 @@ const DT: float = 1.0 / HZ
 ## A site's period must be at least this many times the longest sensor range
 ## (FT-SIM-035, D124).
 const PERIOD_PER_SENSOR_RANGE: int = 4
+## Most broadphase cells per axis of a site (2^20), so CollisionSystem's int cell keys
+## stay below 2^60: a period of at most 2^20 * CollisionSystem.CELL (262 144 km).
+const MAX_CELLS_PER_AXIS: int = 1 << 20
 ## Most ticks one advance() runs; a longer stall drops time instead of spiralling.
 const MAX_TICKS_PER_ADVANCE: int = 8
 
@@ -68,8 +71,9 @@ func _init(
 
 ## Why a site period (m) doesn't suit a scenario's ships, or [] if it does (FT-SIM-035,
 ## D124): finite and positive, a whole number of both broadphase cells (CollisionSystem
-## CELL and PAIR_CELL), and at least PERIOD_PER_SENSOR_RANGE times the longest sensor
-## range, so a ship is never seen around the seam (or the same ship twice).
+## CELL and PAIR_CELL) and at most MAX_CELLS_PER_AXIS of either, and at least
+## PERIOD_PER_SENSOR_RANGE times the longest sensor range, so a ship is never seen around
+## the seam (or the same ship twice).
 static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[String]:
 	var errors: Array[String] = []
 	if not (is_finite(site_period) and site_period > 0.0):
@@ -78,6 +82,13 @@ static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[St
 	for cell: float in [CollisionSystem.CELL, CollisionSystem.PAIR_CELL]:
 		if fposmod(site_period, cell) != 0.0:
 			errors.append("site period %.1f m is not a multiple of %.1f m" % [site_period, cell])
+		if site_period / cell > MAX_CELLS_PER_AXIS:
+			errors.append(
+				(
+					"site period %.1f m is over %d cells of %.1f m"
+					% [site_period, MAX_CELLS_PER_AXIS, cell]
+				)
+			)
 	var longest: float = 0.0
 	for def: ShipDef in ships:
 		longest = maxf(longest, def.sensor_range)
@@ -261,15 +272,18 @@ func _apply_commands() -> void:
 	var queue: Array[SimCommand] = _queue
 	_queue = []
 	_reset_this_tick.clear()
+	var alive: PackedByteArray = kin.alive
+	var n: int = defs.size()
 	for c: SimCommand in queue:
-		if c.ship_id < 0 or c.ship_id >= defs.size():
+		var id: int = c.ship_id
+		if id < 0 or id >= n:
 			continue
-		if not (kin.is_alive(c.ship_id) or c.applies_to_destroyed()):
+		if not (alive[id] == 1 or c.applies_to_destroyed()):
 			continue
 		c.tick = tick
 		# A ship reset earlier this tick rejects its later commands of the tick (logged
 		# as rejected, so a replay rejects them too).
-		c.accepted = not _reset_this_tick.has(c.ship_id) and c.apply(self)
+		c.accepted = not _reset_this_tick.has(id) and c.apply(self)
 		if c.source != SimCommand.Source.AI:
 			command_log.append(c)
 

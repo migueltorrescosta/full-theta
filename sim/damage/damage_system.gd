@@ -17,14 +17,17 @@ extends RefCounted
 ## subsystem is whole, its crews go idle (FT-SIM-024).
 static func step(world: SimWorld) -> void:
 	var t: DamageTable = world.damage
+	var alive: PackedByteArray = world.kin.alive
+	var crews: PackedInt32Array = t.crews
+	var defs: Array[ShipDef] = world.defs
 	for ship: int in world.ship_count():
-		if not world.kin.is_alive(ship):
+		if alive[ship] != 1:
 			continue
-		var subs: Array[SubsystemDef] = world.defs[ship].subsystems
+		var subs: Array[SubsystemDef] = defs[ship].subsystems
 		var h: int = t.hull_row(ship)
 		for i: int in subs.size():
 			var r: int = h + 1 + i
-			var mask: int = t.crews[r]
+			var mask: int = crews[r]
 			if mask == 0:
 				continue
 			var s: SubsystemDef = subs[i]
@@ -82,18 +85,11 @@ static func nearest_subsystem(def: ShipDef, point_local: Vector3) -> int:
 ## Effectiveness of the ship's subsystem, 0..1, from its health and the definition's
 ## curve (FT-SIM-021); 1 when the ship has no such subsystem.
 static func effectiveness(world: SimWorld, ship_id: int, subsystem_id: StringName) -> float:
-	var r: int = world.damage.find_subsystem(ship_id, subsystem_id)
+	var t: DamageTable = world.damage
+	var r: int = t.find_subsystem(ship_id, subsystem_id)
 	if r < 0:
 		return 1.0
-	return effectiveness_at(world, ship_id, r - world.damage.hull_row(ship_id) - 1)
-
-
-## Effectiveness of the ship's subsystem with that index in ShipDef.subsystems, 0..1
-## (FT-SIM-021); the caller passes a valid index.
-static func effectiveness_at(world: SimWorld, ship_id: int, i: int) -> float:
-	var s: SubsystemDef = world.defs[ship_id].subsystems[i]
-	var health: float = world.damage.health[world.damage.subsystem_row(ship_id, i)]
-	return PowerSystem.curve_at(s.effectiveness, health / s.health_max)
+	return t.row_effectiveness(r, world.defs[ship_id].subsystems[r - t.hull_row(ship_id) - 1])
 
 
 ## Hull left as a share of hull_max, 0..1.
