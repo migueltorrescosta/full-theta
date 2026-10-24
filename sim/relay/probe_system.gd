@@ -33,7 +33,7 @@ static func coverage_at(world: SimWorld, faction: int, pos: Vector3, site: int =
 		if t.factions[r] != faction or t.deployed[r] == 0 or t.site[r] != site:
 			continue
 		var d: Vector3 = Vector3(
-			kin.wrap(pos.x - t.px[r]), kin.wrap(pos.y - t.py[r]), kin.wrap(pos.z - t.pz[r])
+			kin.wrap(pos.x - t.at_x[r]), kin.wrap(pos.y - t.at_y[r]), kin.wrap(pos.z - t.at_z[r])
 		)
 		if d.length() <= world.defs[t.ship_ids[r]].probe_range:
 			return true
@@ -54,13 +54,13 @@ static func launch(world: SimWorld, ship: int, x: float, y: float, z: float) -> 
 	r.stock[ship] -= 1
 	var serial_no: int = r.launched[ship]
 	r.launched[ship] += 1
-	var row: int = ship
+	var from: PackedFloat64Array = kin.point_at(ship, Vector3.ZERO)
 	world.probes.launch(
 		ship,
 		world.faction_of(ship),
 		serial_no,
-		kin.site[row],
-		Vector3(kin.px[row], kin.py[row], kin.pz[row]),
+		kin.site[ship],
+		Vector3(from[0], from[1], from[2]),
 		Vector3(to[0], to[1], to[2])
 	)
 	world.emit(&"probe_launched", ship, -1, serial_no)
@@ -103,20 +103,22 @@ static func _fly(world: SimWorld) -> void:
 			continue
 		var speed: float = world.defs[t.ship_ids[r]].probe_speed
 		var d: Vector3 = Vector3(
-			kin.wrap(t.tx[r] - t.px[r]), kin.wrap(t.ty[r] - t.py[r]), kin.wrap(t.tz[r] - t.pz[r])
+			kin.wrap(t.to_x[r] - t.at_x[r]),
+			kin.wrap(t.to_y[r] - t.at_y[r]),
+			kin.wrap(t.to_z[r] - t.at_z[r])
 		)
 		var step_m: float = speed * SimWorld.DT
 		if d.length() <= step_m:
-			t.px[r] = t.tx[r]
-			t.py[r] = t.ty[r]
-			t.pz[r] = t.tz[r]
+			t.at_x[r] = t.to_x[r]
+			t.at_y[r] = t.to_y[r]
+			t.at_z[r] = t.to_z[r]
 			t.deployed[r] = 1
 			world.emit(&"probe_deployed", t.ship_ids[r], -1, t.serial[r])
 			continue
 		var m: Vector3 = d.normalized() * step_m
-		t.px[r] = kin.wrap(t.px[r] + m.x)
-		t.py[r] = kin.wrap(t.py[r] + m.y)
-		t.pz[r] = kin.wrap(t.pz[r] + m.z)
+		t.at_x[r] = kin.wrap(t.at_x[r] + m.x)
+		t.at_y[r] = kin.wrap(t.at_y[r] + m.y)
+		t.at_z[r] = kin.wrap(t.at_z[r] + m.z)
 
 
 static func _warn_lanes(world: SimWorld) -> void:

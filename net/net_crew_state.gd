@@ -366,9 +366,8 @@ func _resolved(ship: int, slot: int) -> Dictionary:
 		if c >= 0:
 			var kin: Kinematics = session.world.kin
 			out.merge({"site": kin.site[c]}, true)
-			var at: Vector3 = (
-				Vector3(kin.px[c], kin.py[c], kin.pz[c]) + Vector3(m["x"], m["y"], m["z"])
-			)
+			var here: PackedFloat64Array = kin.point_at(c, Vector3(m["x"], m["y"], m["z"]))
+			var at: Vector3 = Vector3(here[0], here[1], here[2])
 			out.merge({"x": at.x, "y": at.y, "z": at.z}, true)
 		return out
 	return {}

@@ -10,13 +10,13 @@ extends SimTable
 var serial: PackedInt32Array = PackedInt32Array()
 var site: PackedInt32Array = PackedInt32Array()
 ## Site-local position (m, 64-bit, D104).
-var px: PackedFloat64Array = PackedFloat64Array()
-var py: PackedFloat64Array = PackedFloat64Array()
-var pz: PackedFloat64Array = PackedFloat64Array()
+var at_x: PackedFloat64Array = PackedFloat64Array()
+var at_y: PackedFloat64Array = PackedFloat64Array()
+var at_z: PackedFloat64Array = PackedFloat64Array()
 ## Target point (m, wrapped).
-var tx: PackedFloat64Array = PackedFloat64Array()
-var ty: PackedFloat64Array = PackedFloat64Array()
-var tz: PackedFloat64Array = PackedFloat64Array()
+var to_x: PackedFloat64Array = PackedFloat64Array()
+var to_y: PackedFloat64Array = PackedFloat64Array()
+var to_z: PackedFloat64Array = PackedFloat64Array()
 ## 1 once the probe reached its target.
 var deployed: PackedByteArray = PackedByteArray()
 
@@ -32,12 +32,12 @@ func launch(
 	var row: int = add_key(ship_id, faction)
 	serial.append(serial_no)
 	site.append(site_id)
-	px.append(from.x)
-	py.append(from.y)
-	pz.append(from.z)
-	tx.append(to.x)
-	ty.append(to.y)
-	tz.append(to.z)
+	at_x.append(from.x)
+	at_y.append(from.y)
+	at_z.append(from.z)
+	to_x.append(to.x)
+	to_y.append(to.y)
+	to_z.append(to.z)
 	deployed.append(0)
 	return row
 
@@ -64,12 +64,12 @@ func columns() -> Array:
 		+ [
 			["serial", serial],
 			["site", site],
-			["px", px],
-			["py", py],
-			["pz", pz],
-			["tx", tx],
-			["ty", ty],
-			["tz", tz],
+			["at_x", at_x],
+			["at_y", at_y],
+			["at_z", at_z],
+			["to_x", to_x],
+			["to_y", to_y],
+			["to_z", to_z],
 			["deployed", deployed],
 		]
 	)

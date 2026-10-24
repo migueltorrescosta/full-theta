@@ -43,7 +43,7 @@ func test_launch_flight_deploy_and_coverage() -> void:
 	events = _steps(w, 60 * 10 + 2)
 	assert_int(w.probes.deployed[0]).is_equal(1)
 	assert_int(SimFixture.of_kind(events, &"probe_deployed").size()).is_equal(1)
-	assert_float(w.probes.pz[0]).is_equal_approx(-5000.0, 0.01)
+	assert_float(w.probes.at_z[0]).is_equal_approx(-5000.0, 0.01)
 	assert_bool(ProbeSystem.coverage_at(w, 1, Vector3(0, 0, -5000 - 7900))).is_true()
 	assert_bool(ProbeSystem.coverage_at(w, 1, Vector3(0, 0, -5000 - 8100))).is_false()
 	# Per faction: the other side has no coverage.

@@ -595,7 +595,7 @@ static func _relay(world: SimWorld, ship: int) -> Dictionary:
 				{
 					"serial": t.serial[p],
 					"deployed": t.deployed[p] == 1,
-					"pos": Vector3(t.px[p], t.py[p], t.pz[p]),
+					"pos": Vector3(t.at_x[p], t.at_y[p], t.at_z[p]),
 					"range": world.defs[ship].probe_range,
 				}
 			)
