@@ -13,6 +13,10 @@ var crew: CrewState = CrewState.new()
 var view: NetViewState = NetViewState.new()
 var interp: SnapshotInterpolator = SnapshotInterpolator.new()
 var settings: ClientSettings = ClientSettings.new()
+## The host's own server: the address it listens on and its WebSocket port, for the
+## lobby's join info; "" for a player who joined someone else's game.
+var host_bind: String = ""
+var host_port: int = 0
 var matcher: InputMatcher = InputMatcher.new()
 ## Milliseconds; fixtures pin it.
 var clock: Callable = Time.get_ticks_msec

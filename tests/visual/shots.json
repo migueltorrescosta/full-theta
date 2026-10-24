@@ -8,6 +8,7 @@
     {"name": "station_lobby", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"view": "lobby", "entry": "systems"}},
     {"name": "station_science", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "science", "ping": 3, "tooltip": true}},
     {"name": "station_overlay", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "comms", "overlay": true}},
+    {"name": "station_menu_settings", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "comms", "menu_tab": "Settings"}},
     {"name": "station_radar", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"view": "radar", "strip": true, "ping": 3}},
     {"name": "station_comms_150", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "comms", "ui_scale": 1.5}},
     {"name": "station_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0"}},

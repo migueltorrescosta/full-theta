@@ -2,7 +2,7 @@ class_name IntentTable
 extends RefCounted
 ## The one binding table (FT-JNT-002, FT-STN-009, D95): every intent of every station
 ## and view, with its group, kind, default KB/M and controller bindings and the
-## translation key the controls overlay shows (FT-STN-011). Stations, joint views and
+## translation key the Controls tab shows (FT-STN-011). Stations, joint views and
 ## the overlay all read this table; a station's bindings are the same in every view
 ## that contains it because there is only this table. Bindings (bindings.gd) layers the
 ## player's rebinds and hold-to-toggle choices on top (FT-STN-007, FT-STN-014).

@@ -7,9 +7,13 @@ extends GdUnitTestSuite
 class FakeClient:
 	extends NetClient
 	var queued: Array[Dictionary] = []
+	var said_bye: bool = false
 
 	func poll() -> void:
 		pass
+
+	func bye(_reason: String = "") -> void:
+		said_bye = true
 
 	func take_events() -> Array[Dictionary]:
 		var out: Array[Dictionary] = queued
@@ -76,3 +80,98 @@ func test_lobby_until_started_then_the_station_screen() -> void:
 	await get_tree().process_frame
 	assert_object(s.screen).is_not_null()
 	assert_array(s.screen.stations).is_equal(["engineering", "science"])
+
+
+# FT: FT-NET-003
+# The lobby's Main menu button leaves the session: the client says Bye and the shell
+# emits `left`, which the menu answers by stopping the host's server.
+func test_lobby_main_menu_button_leaves() -> void:
+	var s: ClientShell = _shell("en")
+	var left: Array[bool] = []
+	s.left.connect(func() -> void: left.append(true))
+	(s.lobby.find_child("MainMenu", true, false) as Button).pressed.emit()
+	assert_array(left).has_size(1)
+	assert_bool((s.ctx.client as FakeClient).said_bye).is_true()
+
+
+## A shell on the station screen of "systems" (ship 0, started); `fresh` makes it the
+## first visit.
+func _on_station(fresh: bool) -> ClientShell:
+	var s: ClientShell = _shell("en")
+	if fresh:
+		s.ctx.settings.reset_tooltips()
+	else:
+		s.ctx.settings.mark_tooltip_seen("engineering")
+		s.ctx.settings.mark_tooltip_seen("science")
+	var c: FakeClient = s.ctx.client as FakeClient
+	c.queued.append({"type": "picked", "payload": {"ship": 0, "entry": "systems", "reason": ""}})
+	c.queued.append({"type": "started", "payload": {"ship": 0, "tick": 10}})
+	await get_tree().process_frame
+	return s
+
+
+func _labels(menu: SettingsScreen) -> Array[String]:
+	var out: Array[String] = []
+	for l: Node in menu.find_children("*", "Label", true, false):
+		out.append((l as Label).text)
+	return out
+
+
+# FT: FT-STN-011
+# Escape (the menu intent) opens the one menu on Settings, Escape again closes it, and
+# it comes back on the tab last used.
+func test_escape_opens_the_menu() -> void:
+	var s: ClientShell = await _on_station(false)
+	var menu: SettingsScreen = s.settings_screen
+	assert_bool(menu.visible).is_false()
+	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
+	assert_bool(menu.visible).is_true()
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
+	assert_bool(s.screen.blocked()).is_true()
+	menu.open(SettingsScreen.TAB_KEYS)
+	menu.close()
+	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_KEYS)
+	menu.close()
+	assert_bool(s.screen.blocked()).is_false()
+
+
+# FT: FT-STN-011
+# `?` opens the same menu on Controls, from any tab, and a second press closes it.
+func test_help_key_opens_the_controls_tab() -> void:
+	var s: ClientShell = await _on_station(false)
+	var menu: SettingsScreen = s.settings_screen
+	menu.open(SettingsScreen.TAB_KEYS)
+	s.screen.dispatch({"id": "overlay", "target": "screen", "pressed": true})
+	assert_bool(menu.visible).is_true()
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
+	assert_array(menu.controls.rows()).is_not_empty()
+	s.screen.dispatch({"id": "overlay", "target": "screen", "pressed": true})
+	assert_bool(menu.visible).is_false()
+
+
+# FT: FT-STN-012
+# The first visit opens the menu on Controls by itself, headed by the seat's role, and
+# the screen takes no game input meanwhile.
+func test_first_visit_opens_controls_with_the_role_heading() -> void:
+	var s: ClientShell = await _on_station(true)
+	var menu: SettingsScreen = s.settings_screen
+	assert_bool(menu.visible).is_true()
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
+	assert_array(_labels(menu)).contains([tr("role.systems")])
+	assert_bool(s.screen.blocked()).is_true()
+
+
+# FT: FT-STN-011, FT-AUD-013
+# A language switch retranslates the open menu, tab and all.
+func test_language_switch_retranslates_the_open_menu() -> void:
+	var s: ClientShell = await _on_station(false)
+	var menu: SettingsScreen = s.settings_screen
+	menu.open(SettingsScreen.TAB_SETTINGS)
+	assert_array(_labels(menu)).contains(["UI scale"])
+	I18n.apply("it")
+	assert_bool(menu.visible).is_true()
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
+	assert_array(_labels(menu)).contains([tr("settings.ui_scale")])
+	assert_array(_labels(menu)).not_contains(["UI scale"])
+	assert_str(menu.tabs.get_tab_title(0)).is_equal(tr("overlay.title"))

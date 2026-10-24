@@ -2,7 +2,8 @@
 ## context and shows one view of it, set from shots.json: "screen" (the StationScreen
 ## of `entry`), "lobby", or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
-## `overlay`, `tooltip` (the first-run tip), `strip` (the radar's side strip) and
+## `overlay` (the menu on its Controls tab), `menu_tab` (the menu on that tab), `tooltip`
+## (the first visit: it opens by itself), `strip` (the radar's side strip) and
 ## `ui_scale` (the window's content scale, FT-STN-013; reset on exit), `claim` (a
 ## claim item the player holds, e.g. "mount:0") and `events` (sim events fed to the
 ## crew model 2 s before the shot, after the screen is built; a payload `vector` given
@@ -15,6 +16,8 @@ var selected: int = StationFixture.H2
 var ping: int = -1
 var overlay: bool = false
 var tooltip: bool = false
+## A menu tab to open (SettingsScreen.TAB_SETTINGS), "" for none.
+var menu_tab: String = ""
 var strip: bool = false
 var ui_scale: float = 1.0
 var claim: String = ""
@@ -29,9 +32,8 @@ func _ready() -> void:
 	get_tree().root.content_scale_factor = ui_scale
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
-	if not tooltip:
-		for s: String in StationViews.CREW + ["viewer", "captain"]:
-			_ctx.settings.mark_tooltip_seen(s)
+	if tooltip:
+		_ctx.settings.reset_tooltips()
 	if claim != "":
 		_ctx.crew.claims[claim] = {"session": StationFixture.SESSION, "name": "Ana"}
 	if selected >= 0:
@@ -61,11 +63,25 @@ func _ready() -> void:
 		_:
 			var s: StationScreen = StationScreen.new()
 			s.setup(_ctx)
+			var menu: SettingsScreen = SettingsScreen.new()
+			menu.visible = false
+			s.help_requested.connect(
+				func() -> void:
+					menu.set_controls(
+						_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.entry
+					)
+					menu.open(SettingsScreen.TAB_CONTROLS)
+			)
+			add_child(menu)
+			menu.setup(_ctx.settings, true)
 			add_child(s)
+			move_child(menu, -1)
 			s.focus(focus)
 			s.radar.side_strip = strip
 			if overlay:
-				s.dispatch({"id": "overlay", "target": "screen", "pressed": true})
+				s.help_requested.emit()
+			if menu_tab != "":
+				menu.open(menu_tab)
 			for e: Dictionary in events:
 				var p: Dictionary = e.get("payload", {})
 				if p.get("vector") is Array:

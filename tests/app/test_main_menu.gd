@@ -88,6 +88,24 @@ func test_lan_list_updates_on_change_and_pauses_under_the_shell() -> void:
 	udp.close()
 
 
+# FT: FT-NET-003
+# Leaving from the lobby ends the host's server and brings the menu back.
+func test_leaving_stops_the_host_session_and_shows_the_menu() -> void:
+	var m: MainMenu = _menu()
+	var hosted: HostSession = HostSession.new()
+	hosted.token_file = TOKEN
+	hosted.state = HostSession.State.JOINED
+	m.host_session = hosted
+	m.shell = ClientShell.new()
+	m.add_child(m.shell)
+	m.shell.left.connect(m._on_left)
+	m.shell.left.emit()
+	assert_int(hosted.state).is_equal(HostSession.State.STOPPED)
+	assert_object(m.host_session).is_null()
+	assert_object(m.shell).is_null()
+	assert_bool((m.find_child("Host", true, false) as Button).is_visible_in_tree()).is_true()
+
+
 func _frames_until(cond: Callable) -> bool:
 	for i: int in 120:
 		if cond.call():

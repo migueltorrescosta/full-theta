@@ -128,7 +128,7 @@ func set_context(stations: Array, focused: String) -> void:
 
 
 ## Limits the active set to `ids` (empty: no limit), e.g. Menu and the overlay key
-## while Settings or the controls overlay is up. Call release_all() first.
+## while the menu is up. Call release_all() first.
 func restrict(ids: Array) -> void:
 	_only = ids.duplicate()
 	_dirty = true

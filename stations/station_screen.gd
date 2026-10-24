@@ -13,8 +13,10 @@ extends Control
 ## device). The common actions act on the shared selection, marks and pings in
 ## ctx.crew (FT-STN-009, FT-STN-003).
 
-## Menu (Esc / Menu): the shell opens Settings.
+## Menu (Esc / Menu): the shell opens the menu.
 signal menu_requested
+## `?` / View, or the first visit to a station: the shell opens the menu on Controls.
+signal help_requested
 
 ## Intents that still reach the screen while it is blocked: they close what blocks it.
 const UNBLOCKED: Array[String] = ["menu", "overlay"]
@@ -35,8 +37,6 @@ var focus_index: int = 0
 var top_bar: TopBar
 var radar: DiscRadar
 var toasts: Toasts
-var overlay: ControlsOverlay
-var tooltip: FirstRunTooltip
 var alerts: StationAlerts
 var flash: AlertFlash
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
@@ -73,9 +73,12 @@ func setup(context: StationContext) -> void:
 	alerts = StationAlerts.new()
 	add_child(alerts)
 	alerts.setup(ctx, stations, toasts, flash)
-	ctx.settings.bindings.changed.connect(_refresh_overlay)
 	Input.joy_connection_changed.connect(_on_joy_changed)
 	focus(0)
+
+
+func _ready() -> void:
+	_open_first_visit_help()
 
 
 func focused_station() -> String:
@@ -109,8 +112,7 @@ func focus(i: int) -> void:
 	ctx.matcher.set_context(stations, focused_station())
 	radar.orbitable = focused_panel().radar_orbitable()
 	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
-	_show_tooltip()
-	_refresh_overlay()
+	_open_first_visit_help()
 
 
 ## Routes one intent event (InputMatcher's dictionary); true when something handled
@@ -177,13 +179,9 @@ func _notification(what: int) -> void:
 		release_all()
 
 
-## True while Settings, the outcome card, the controls overlay or the alert picker is up.
+## True while the menu, the outcome card or the alert picker is up.
 func blocked() -> bool:
-	return (
-		overlay.visible
-		or top_bar.picker.visible
-		or blockers.any(func(c: Control) -> bool: return c.visible)
-	)
+	return top_bar.picker.visible or blockers.any(func(c: Control) -> bool: return c.visible)
 
 
 ## On blocking: release everything and keep only UNBLOCKED active; on unblocking, all.
@@ -237,8 +235,7 @@ func _common(ev: Dictionary) -> bool:
 		"claim":
 			_claim()
 		"overlay":
-			overlay.visible = not overlay.visible
-			_refresh_overlay()
+			help_requested.emit()
 			_update_block()
 		"menu":
 			menu_requested.emit()
@@ -396,35 +393,19 @@ func _build() -> void:
 	flash = AlertFlash.new()
 	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(flash)
-	tooltip = FirstRunTooltip.new()
-	tooltip.visible = false
-	tooltip.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	tooltip.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	tooltip.position += Vector2(16, -16)
-	tooltip.dismissed.connect(_on_tooltip_dismissed)
-	add_child(tooltip)
-	overlay = ControlsOverlay.new()
-	overlay.visible = false
-	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(overlay)
 
 
-func _refresh_overlay() -> void:
-	if overlay.visible:
-		overlay.build(ctx.settings.bindings, stations, ctx.matcher.device)
-
-
-## First-run tip of the focused station, once per client and station (FT-STN-012).
-func _show_tooltip() -> void:
-	var p: StationPanel = focused_panel()
-	tooltip.visible = tooltip.show_for(
-		p.station, p.tooltip_intents(), ctx.settings.bindings, ctx.matcher.device, ctx.settings
-	)
-
-
-func _on_tooltip_dismissed(_station: String) -> void:
-	tooltip.visible = false
+## The first visit to a station asks for the menu's Controls tab, once per client and
+## station (FT-STN-012, D185); Settings re-enables it. The first station waits for the
+## screen to enter the tree, so the shell has connected `help_requested` by then.
+func _open_first_visit_help() -> void:
+	var station: String = focused_station()
+	if not is_inside_tree() or ctx.settings.tooltip_seen(station):
+		return
+	ctx.settings.mark_tooltip_seen(station)
 	ctx.settings.save()
+	help_requested.emit()
+	_update_block()
 
 
 func _on_toast(key: String, args: Dictionary) -> void:
@@ -443,8 +424,7 @@ func _on_panel_input(event: InputEvent, p: StationPanel) -> void:
 		accept_event()
 
 
-## Events a GUI widget owns: typing in a text field, clicks on buttons, the overlay and
-## the tooltip.
+## Events a GUI widget owns: typing in a text field and clicks on buttons.
 func _gui_owns(event: InputEvent) -> bool:
 	var vp: Viewport = get_viewport()
 	if vp == null:
@@ -453,5 +433,5 @@ func _gui_owns(event: InputEvent) -> bool:
 		return true
 	if event is InputEventMouseButton:
 		var hovered: Control = vp.gui_get_hovered_control()
-		return hovered is BaseButton or (hovered != null and tooltip.is_ancestor_of(hovered))
+		return hovered is BaseButton
 	return false

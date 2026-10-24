@@ -9,14 +9,20 @@ html, body, #canvas { margin: 0; padding: 0; border: 0; }
 body { color: white; background-color: black; overflow: hidden; touch-action: none; }
 #canvas { display: block; }
 #canvas:focus { outline: none; }
-#status { position: absolute; inset: 0; display: flex; align-items: center;
-  justify-content: center; font: 20px sans-serif; }
+#status { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; font: 20px sans-serif; gap: 16px; }
+#tips { font: 14px sans-serif; opacity: 0.7; width: 80%; text-align: center; overflow: hidden; }
+#tips .strip { display: inline-block; white-space: nowrap; animation: ticker linear infinite; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 </style>
 $GODOT_HEAD_INCLUDE
 </head>
 <body>
 <canvas id="canvas">This browser has no canvas support.</canvas>
-<div id="status">Loading</div>
+<div id="status">
+  <span id="progress">Loading</span>
+  <span id="tips"></span>
+</div>
 <script src="$GODOT_URL"></script>
 <script>
 // Web shell for browser stations (FT-NET-030, D108), promoted from spike S3.
@@ -27,17 +33,71 @@ $GODOT_HEAD_INCLUDE
 // upgrade, check it and use the default shell once fixed (docs/release.md).
 const GODOT_CONFIG = $GODOT_CONFIG;
 const engine = new Engine(GODOT_CONFIG);
-const status = document.getElementById('status');
+const progress = document.getElementById('progress');
+const statusEl = document.getElementById('status');
+const tipsEl = document.getElementById('tips');
 const missing = Engine.getMissingFeatures({ threads: $GODOT_THREADS_ENABLED })
   .filter((m) => !m.startsWith('Secure Context'));
+const LOADING_TIPS = [
+  "Hold F to face your target.",
+  "Space is all-stop.",
+  "Say where things are like a clock: 12 is ahead, 3 is right.",
+  "Press ? for the controls.",
+  "Middle-click pings what's under the cursor.",
+  "Hold X to close in on your target.",
+  "Press T to cycle targets.",
+  "Shift+middle-click drops a mark."
+];
+// The tips scroll right to left like a news banner, in a random order (shuffled once
+// per page load). The strip holds the line twice and moves by half its width, so the
+// loop has no seam. With prefers-reduced-motion they rotate every 4 s instead.
+function shuffled(list) {
+  const out = list.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+const tips = shuffled(LOADING_TIPS);
+var tipIndex = 0;
+var tipTimer = null;
+function showNextTip() {
+  tipsEl.textContent = tips[tipIndex];
+  tipIndex = (tipIndex + 1) % tips.length;
+}
+function startTips() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    showNextTip();
+    tipTimer = setInterval(showNextTip, 4000);
+    return;
+  }
+  const line = tips.join(' \u2022 ') + ' \u2022 ';
+  const strip = document.createElement('span');
+  strip.className = 'strip';
+  strip.textContent = line + line;
+  tipsEl.appendChild(strip);
+  // About 80 px per second, whatever the text length.
+  strip.style.animationDuration = (strip.scrollWidth / 2 / 80) + 's';
+}
 if (missing.length !== 0) {
-  status.textContent = 'This browser is missing: ' + missing.join(', ');
+  progress.textContent = 'This browser is missing: ' + missing.join(', ');
+  tipsEl.remove();
 } else {
+  startTips();
   engine.startGame({
     onProgress: (current, total) => {
-      status.textContent = total > 0 ? 'Loading ' + Math.round(100 * current / total) + ' %' : 'Loading';
+      progress.textContent = total > 0 ? 'Loading ' + Math.round(100 * current / total) + ' %' : 'Loading';
     },
-  }).then(() => status.remove(), (err) => { status.textContent = String(err); });
+  }).then(() => {
+    if (tipTimer) { clearInterval(tipTimer); }
+    // The whole overlay goes: it covers the canvas and would swallow every tap.
+    statusEl.remove();
+  }, (err) => {
+    if (tipTimer) { clearInterval(tipTimer); }
+    progress.textContent = String(err);
+    tipsEl.remove();
+  });
 }
 </script>
 </body>

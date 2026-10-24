@@ -13,8 +13,7 @@ Rendering, cameras and shared widgets; never sim/ (FT-ARC-011). May name station
 - `top_bar.gd` (`TopBar`): ship name, hull, shields, reactor pips, the alert chip and its crew-only picker (`alert_picked`), station names, mission timer (FT-STN-001, FT-STN-006, FT-STN-008).
 - `toasts.gd` (`Toasts`): top-right lines that expire (`SHOW_MS`, `MAX`).
 - `alert_flash.gd` (`AlertFlash`): the screen-edge flash of an alert, fading over `FLASH_MS`.
-- `controls_overlay.gd` (`ControlsOverlay`): the `?` overlay, generated from `Bindings` and `IntentTable` for the screen's stations and device; it follows rebinds (FT-STN-011).
-- `first_run_tooltip.gd` (`FirstRunTooltip`): a station's controls tip, once per client and station (FT-STN-012).
+- `controls_list.gd` (`ControlsList`): the menu's Controls tab, generated from `Bindings` and `IntentTable` for the screen's stations and device; it follows rebinds (FT-STN-011).
 - `procedural_ship.gd` (`ProceduralShip`): the approved ship art (D107).
 - `comfort_camera.gd` (`ComfortCamera`): the comfort toggle's camera roll (deck, target, reference plane) and field of view (FT-STN-017), for the cockpit, turret and main screen; `target_rot(ctx)` reads the selected ship's NEAR orientation.
 

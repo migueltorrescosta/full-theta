@@ -3,7 +3,7 @@ extends RefCounted
 ## The player's bindings: IntentTable's defaults plus this client's rebinds per intent
 ## and device (FT-STN-007) and the hold intents switched to toggles (FT-STN-014).
 ## Persisted by ClientSettings through to_dict()/from_dict(); `changed` fires after
-## every edit so the controls overlay regenerates (FT-STN-011).
+## every edit so the Controls tab regenerates (FT-STN-011).
 
 signal changed
 
