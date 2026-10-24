@@ -44,7 +44,7 @@ Tests: 247, manual: 11, pending: 143.
 | FT-ARC-022 | tests | `tests/release/test_release_bundle.gd`, `tools/tests/test_release.py` |
 | FT-NET-001 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-002 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_server_main.gd` |
-| FT-NET-003 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_idle_exit_timer.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_orphan_check.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_net_server_main.gd` |
+| FT-NET-003 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_idle_exit_timer.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_orphan_check.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_net_server_main.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-004 | tests | `tests/net/test_net_codec.gd`, `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-005 | tests | `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-006 | tests | `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
@@ -54,9 +54,9 @@ Tests: 247, manual: 11, pending: 143.
 | FT-NET-010 | tests | `tests/net/test_net_stations_filter.gd` |
 | FT-NET-011 | tests | `tests/net/test_net_protocol.gd`, `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-012 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_server.gd`, `tests/net/test_net_server_main.gd` |
-| FT-NET-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_parse_address.gd`, `tests/net/test_lan_server.gd` |
+| FT-NET-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_parse_address.gd`, `tests/net/test_lan_server.gd`, `tests/presentation/test_qr_code.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-014 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_net_load_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_server.gd`, `tools/tests/test_load_check.py` |
-| FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd` |
+| FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-016 | tests | `tests/net/test_net_lobby_l3.gd` |
 | FT-NET-017 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd` |
 | FT-NET-018 | tests | `tests/net/test_net_stations_defs.gd`, `tests/stations/test_joint_views.gd` |
