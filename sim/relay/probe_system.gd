@@ -44,8 +44,8 @@ static func coverage_at(world: SimWorld, faction: int, pos: Vector3, site: int =
 ## ScienceSystem.probe_covered falls back to when SimWorld.probe_coverage is not set.
 static func covers_contact(world: SimWorld, ship: int, contact: int) -> bool:
 	var kin: Kinematics = world.kin
-	var at: Vector3 = Vector3(kin.px[contact], kin.py[contact], kin.pz[contact])
-	return coverage_at(world, world.faction_of(ship), at, kin.site[contact])
+	var p: PackedFloat64Array = kin.point_at(contact, Vector3.ZERO)
+	return coverage_at(world, world.faction_of(ship), Vector3(p[0], p[1], p[2]), kin.site[contact])
 
 
 ## Launches one probe toward a site-local point (m) from the ship's stock; false (with
