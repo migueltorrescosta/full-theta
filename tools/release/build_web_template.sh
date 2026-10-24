@@ -10,7 +10,8 @@
 # the result when it exists; delete it to export with the stock template.
 #
 # Kept on (by what the game uses): 3D rendering (the Helm and Viewer scenes), gdscript,
-# freetype and the fallback text server (Latin text only), websocket, regex, svg (the
+# freetype and the fallback text server (Latin text only), brotli (the default font is a
+# WOFF2: without it no text is drawn), websocket, regex, svg (the
 # default theme's icons), webp/jpg (imported textures), ogg and vorbis (prerendered
 # voice lines), mbedtls (Crypto), JavaScript eval (JavaScriptBridge).
 set -euo pipefail
@@ -47,7 +48,7 @@ args=(
   platform=web target=template_release arch=wasm32 threads=no dlink_enabled=no
   javascript_eval=yes optimize=size lto=full debug_symbols=no
   disable_physics_2d=yes disable_physics_3d=yes disable_navigation_2d=yes
-  disable_navigation_3d=yes disable_xr=yes minizip=no brotli=no vulkan=no accesskit=no
+  disable_navigation_3d=yes disable_xr=yes minizip=no vulkan=no accesskit=no
 )
 for m in "${disabled_modules[@]}"; do args+=("module_${m}_enabled=no"); done
 
