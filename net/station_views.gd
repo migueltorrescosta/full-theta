@@ -20,6 +20,15 @@ enum Section {
 	NEAR = 7,
 	PROJECTILES = 8,
 	OWNERSHIP = 9,
+	# Reserved for M2 (#9); each strand fills its own section's fields and getter.
+	# Science contact card, scan and hack state (strand A).
+	SCIENCE = 10,
+	# Relay probes, coverage, routes, hazards and inbox (strand B).
+	RELAY = 11,
+	# Captain and main screen: main-screen view, open chips, cards (strand F).
+	CAPTAIN = 12,
+	# Open request chips of the ship (strand G).
+	CHIPS = 13,
 }
 
 ## Load tags (FT-STN-015, D126).
@@ -45,11 +54,24 @@ const ALL: String = "all"
 const NO_STATIONS: Array[String] = []
 
 ## Catalogue entries other than the six stations, in catalogue order: id -> [name,
-## load tag, covered stations]. M1 offers the Tactical, Systems and Ops joint views
-## (FT-M1-006, FT-JNT-003); the other 12 of the 15 pairs come with M2 (FT-JNT-004).
+## load tag, covered stations]. One joint view per pair of functional stations, in
+## §7.3 pair order (FT-JNT-004, FT-NET-032, spec §3.3); a joint view takes the busier
+## of its stations' load tags (D198).
 const ENTRIES: Dictionary = {
+	"drive": ["Drive", INTENSE, ["engineering", "helm"]],
 	"tactical": ["Tactical", INTENSE, ["helm", "weapons"]],
+	"survey": ["Survey", INTENSE, ["helm", "science"]],
+	"nav": ["Nav", INTENSE, ["helm", "relay"]],
+	"approach": ["Approach", INTENSE, ["helm", "comms"]],
+	"gunnery": ["Gunnery", INTENSE, ["weapons", "engineering"]],
+	"targeting": ["Targeting", INTENSE, ["weapons", "science"]],
+	"fire_control": ["Fire Control", INTENSE, ["weapons", "relay"]],
+	"parley": ["Parley", INTENSE, ["weapons", "comms"]],
 	"systems": ["Systems", BUSY, ["engineering", "science"]],
+	"logistics": ["Logistics", BUSY, ["engineering", "relay"]],
+	"quartermaster": ["Quartermaster", BUSY, ["engineering", "comms"]],
+	"sensors": ["Sensors", BUSY, ["science", "relay"]],
+	"intel": ["Intel", BUSY, ["science", "comms"]],
 	"ops": ["Ops", LIGHT, ["relay", "comms"]],
 	"captain": ["Captain", LIGHT, []],
 	"viewer": ["Viewer", "", []],

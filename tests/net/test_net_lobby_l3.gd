@@ -16,7 +16,7 @@ func after_test() -> void:
 
 
 # FT: FT-NET-015, FT-NET-017, FT-STN-015, FT-M1-018, FT-M1-006
-# The catalogue offers the six stations, Tactical, Systems, Ops, Captain and Viewer, in
+# The catalogue offers the six stations, the 15 joint views, Captain and Viewer, in
 # that order, each with its StationDef and load tag, and nothing else without the dev
 # flag.
 func test_catalogue_offers_m1_entries_with_load_tags() -> void:
@@ -33,8 +33,20 @@ func test_catalogue_offers_m1_entries_with_load_tags() -> void:
 			"science",
 			"relay",
 			"comms",
+			"drive",
 			"tactical",
+			"survey",
+			"nav",
+			"approach",
+			"gunnery",
+			"targeting",
+			"fire_control",
+			"parley",
 			"systems",
+			"logistics",
+			"quartermaster",
+			"sensors",
+			"intel",
 			"ops",
 			"captain",
 			"viewer"
@@ -50,6 +62,18 @@ func test_catalogue_offers_m1_entries_with_load_tags() -> void:
 			"light",
 			"light",
 			"intense",
+			"intense",
+			"intense",
+			"intense",
+			"intense",
+			"intense",
+			"intense",
+			"intense",
+			"intense",
+			"busy",
+			"busy",
+			"busy",
+			"busy",
 			"busy",
 			"light",
 			"light",

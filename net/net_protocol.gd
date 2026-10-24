@@ -33,9 +33,24 @@ enum Type {
 	MARK = 20,
 	PING = 21,
 	RUN_AGAIN = 22,
+	# Reserved for M2 (#9); each strand adds its schema, FROM_CLIENT and docs/protocol.md
+	# rows. Lobby data-shortcut toggles and preset, host only (strand G).
+	TOGGLES = 23,
+	# Send or answer a request chip (strand G).
+	CHIP = 24,
+	# Main-screen view switch by the Captain, or Relay with no Captain (strand F).
+	MAIN_VIEW = 25,
+	# Relay sends a mark to an allied Relay, or accepts one from its inbox (strand B).
+	MARK_SEND = 26,
+	MARK_ACCEPT = 27,
+	# Scan or hack minigame: puzzle from the server, moves and solution from Science
+	# (strands A and E).
+	MINIGAME = 28,
+	# A client's snapshot-age report for the session log (strand D, D199).
+	CLIENT_STATS = 29,
 }
 
-const PROTOCOL_VERSION: int = 4
+const PROTOCOL_VERSION: int = 5
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 

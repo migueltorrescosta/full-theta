@@ -11,7 +11,7 @@ extends RefCounted
 ## Times are wall-clock microseconds supplied by the caller, outside sim/, so the grace
 ## runs while the sim is paused.
 
-const DEFAULT_GRACE_US: int = 10_000_000
+const DEFAULT_GRACE_US: int = 15_000_000
 
 var grace_us: int = DEFAULT_GRACE_US
 var _by_token: Dictionary[String, NetSession] = {}
