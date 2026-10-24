@@ -19,6 +19,10 @@ enum State { IDLE, CONNECTING, WELCOMED, REJECTED, CLOSED }
 ## couldn't apply (S9: every 200 ms is enough for the 15-snapshot stall limit and saves
 ## packets).
 const ACK_INTERVAL_US: int = 200_000
+## D199: a report goes out every STATS_INTERVAL_US with at most STATS_MAX_PAIRS pairs of
+## snapshot seq and arrival unix us.
+const STATS_INTERVAL_US: int = 2_000_000
+const STATS_MAX_PAIRS: int = 400
 
 var name: String = "client"
 var client_kind: String = "bot"
@@ -50,6 +54,10 @@ var raw_snapshots: Dictionary = {}
 ## time it arrived, before decoding (us), to snapshot_log.
 var log_snapshots: bool = false
 var snapshot_log: PackedInt64Array = PackedInt64Array()
+## D199: whether the client reports snapshot arrival times to the server, and the
+## browser's user agent it sends with them ("" off the web).
+var report_stats: bool = true
+var user_agent: String = ""
 
 var _peer: WebSocketPeer
 var _chunker: NetChunker = NetChunker.new()
@@ -62,6 +70,8 @@ var _force_ack: bool = false
 ## Sent Ack snap -1 for the current need_full (once: a second would cost another full).
 var _full_asked: bool = false
 var _hello_sent: bool = false
+var _arrivals: PackedInt64Array = PackedInt64Array()
+var _last_report_us: int = 0
 
 
 ## Connects to ws://host:port and sends Hello once open (with the token, if any).
@@ -73,6 +83,7 @@ func connect_to(server_url: String) -> Error:
 	_queue = NetSendQueue.new()
 	welcome = {}
 	_hello_sent = false
+	_arrivals.clear()
 	state = State.CONNECTING
 	var err: Error = _peer.connect_to_url(url)
 	if err != OK:
@@ -124,6 +135,7 @@ func poll() -> void:
 	if ready_state != WebSocketPeer.STATE_OPEN:
 		return
 	_maybe_ack()
+	_maybe_report()
 	_flush()
 
 
@@ -268,9 +280,14 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 	if type == NetProtocol.Type.SNAPSHOT:
 		if keep_raw:
 			raw_snapshots[SnapshotBuilder.peek(data)[0]] = data
-		var got_us: int = LoadProbe.unix_us() if log_snapshots else 0
+		var got_us: int = LoadProbe.unix_us() if (log_snapshots or report_stats) else 0
 		if view.apply(data):
 			stats["snapshots"] += 1
+			if report_stats:
+				_arrivals.append(view.seq)
+				_arrivals.append(got_us)
+				if _arrivals.size() > 2 * STATS_MAX_PAIRS * 4:
+					_arrivals = _arrivals.slice(_arrivals.size() - 2 * STATS_MAX_PAIRS * 4)
 			if log_snapshots:
 				snapshot_log.append(view.seq)
 				snapshot_log.append(got_us)
@@ -309,6 +326,23 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 		NetProtocol.Type.VOICE:
 			voice_clips.append(msg)
 			stats["voice"] += 1
+
+
+## Sends the arrivals gathered since the last report (D199).
+func _maybe_report() -> void:
+	if state != State.WELCOMED or _arrivals.is_empty():
+		return
+	var now: int = Time.get_ticks_usec()
+	if now - _last_report_us < STATS_INTERVAL_US:
+		return
+	_last_report_us = now
+	var take: int = mini(_arrivals.size(), 2 * STATS_MAX_PAIRS)
+	var pairs: PackedInt64Array = _arrivals.slice(0, take)
+	_arrivals = _arrivals.slice(take)
+	_send(
+		NetProtocol.Type.CLIENT_STATS,
+		{"sent_us": LoadProbe.unix_us(), "ua": user_agent.left(200), "pairs": pairs}
+	)
 
 
 ## Acks the newest snapshot applied (0 before the first) and event delivered; a view

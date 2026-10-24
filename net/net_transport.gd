@@ -11,6 +11,8 @@ extends RefCounted
 
 ## Inbound pseudo-type for a connection that closed (no wire message has type 0).
 const CLOSED: int = 0
+## Snapshot capture stamps kept for the snapshot-age log (about 40 s at 30 Hz).
+const STAMP_KEEP: int = 1200
 ## Most bytes in one WebSocket message (a bundle of chunks): under the 64 KiB
 ## WebSocketPeer buffers the server keeps at their defaults (D108).
 const BUNDLE_MAX: int = 48 * 1024
@@ -117,6 +119,11 @@ var _state: SimWorld
 ## The last state restored, for repost_state().
 var _last_state: SimWorld
 var _snap_seq: int = 0
+## Snapshot seq -> unix us of the capture it was built from (a re-encoded idle state
+## counts from its encode time), the newest STAMP_KEEP seqs: the server's side of the
+## snapshot age (D199). Read from the main thread through stamp_of().
+var _stamps: Dictionary = {}
+var _state_fresh: bool = false
 var _next_conn: int = 1
 var _published_us: int = 0
 var _totals: Dictionary = {
@@ -347,6 +354,7 @@ func _apply(op: Array) -> void:
 		"state":
 			# A repost (op[1] null) re-encodes the last state: same capture stamp, no restore.
 			_restore_us = 0
+			_state_fresh = op[1] != null
 			if op[1] != null:
 				var t0: int = Time.get_ticks_usec()
 				_last_state = SimCopy.restore(op[1])
@@ -513,6 +521,8 @@ func _snapshot() -> void:
 	if keys.is_empty():
 		return
 	_snap_seq += 1
+	_record_stamp(_snap_seq, _state_stamp_us if _state_fresh else LoadProbe.unix_us())
+	_state_fresh = false
 	var t0: int = Time.get_ticks_usec()
 	_builder.build(world, _snap_seq, keys.keys())
 	var t1: int = Time.get_ticks_usec()
@@ -558,6 +568,23 @@ func _snapshot() -> void:
 		)
 		_probe_snaps.append_array(_builder.part_us)
 		_builder.part_us.fill(0)
+
+
+func _record_stamp(seq: int, stamp_us: int) -> void:
+	_mutex.lock()
+	_stamps[seq] = stamp_us
+	_stamps.erase(seq - STAMP_KEEP)
+	_mutex.unlock()
+
+
+## Unix us of the capture snapshot `seq` was built from, or 0 when it is older than the
+## last STAMP_KEEP snapshots (or unknown). Main thread; a client's report joins its
+## arrival times to these (SnapshotAgeStats).
+func stamp_of(seq: int) -> int:
+	_mutex.lock()
+	var us: int = _stamps.get(seq, 0)
+	_mutex.unlock()
+	return us
 
 
 func _pump() -> void:

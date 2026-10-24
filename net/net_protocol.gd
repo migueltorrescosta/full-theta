@@ -156,6 +156,7 @@ const SCHEMAS: Dictionary = {
 		"z": TYPE_FLOAT,
 	},
 	Type.RUN_AGAIN: {"ship": TYPE_INT, "vote": TYPE_BOOL},
+	Type.CLIENT_STATS: {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -176,6 +177,7 @@ const FROM_CLIENT: Array[int] = [
 	Type.MARK,
 	Type.PING,
 	Type.RUN_AGAIN,
+	Type.CLIENT_STATS,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
