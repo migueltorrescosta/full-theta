@@ -312,10 +312,6 @@ func claim_item() -> String:
 	return StationViews.CLAIM_FLIGHT
 
 
-func tooltip_intents() -> Array[String]:
-	return ["face", "align", "all_stop", "helm_pointer", "overlay"]
-
-
 func mouse_steers() -> bool:
 	return steering()
 

@@ -144,10 +144,6 @@ func claim_item() -> String:
 	return "%s:%d" % [StationViews.CLAIM_MOUNT, mount] if mount_count() > 0 else ""
 
 
-func tooltip_intents() -> Array[String]:
-	return ["aim_x", "fire", "fire_all", "mount_next", "mount_1", "claim", "overlay"]
-
-
 # --- Mounts. ---
 
 

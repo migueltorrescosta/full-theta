@@ -219,3 +219,4 @@
 - D182 Relay's ninth mark (owner, FT-SPA-022): with 8 marks, Relay's new mark replaces the selected mark; with none selected it is refused with a toast.
 - D183 Helm pointer (owner, FT-HLM-001): the cockpit captures the mouse to steer; holding Ctrl (rebindable, may be a toggle) frees it, as do Esc or the menu, a pause and losing window focus; a click in the view captures it again.
 - D184 Shield ring layout (owner, FT-HLM-009, FT-HLM-011): 12 clock sectors in 3 height bands (outer high, middle level, inner low) around a centre split into overhead and under.
+- D185 One help menu (owner, 2026-10-24, #22, after the #8 playtest, supersedes the separate tooltip of D100): the first-run tooltip is folded into the `?` controls overlay, which opens by itself on a seat's first visit, headed by the seat's role summary. The overlay is opaque and covers the station behind it. Every lobby entry shows the same role summary, and a language switch retranslates every open screen.

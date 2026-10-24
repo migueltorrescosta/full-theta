@@ -132,10 +132,6 @@ func replace_mark(item: Dictionary) -> bool:
 	return true
 
 
-func tooltip_intents() -> Array[String]:
-	return ["mark_rename", "mark_delete", "mark_attach", "overlay"]
-
-
 func _gui_input(event: InputEvent) -> void:
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	if mb != null:

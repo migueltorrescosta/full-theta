@@ -2,7 +2,8 @@ class_name LobbyScreen
 extends Control
 ## The lobby (FT-NET-019-021, D126, D129, FT-STN-015, FT-JNT-006): the ship list, the
 ## catalogue of the chosen ship with each entry's load tag and, for joint views, a
-## one-line hint naming the pair it makes solo; the coverage state from `lobby` events;
+## one-line hint naming the pair it makes solo and its role summary; the coverage state
+## from `lobby` events;
 ## the player's pick; and Start, which any crew player of a covered ship presses. Picks
 ## go to the server (ShipIntents.pick); the screen shows what the events say.
 
@@ -19,6 +20,8 @@ var _entries: VBoxContainer
 var _coverage: Label
 var _pick: Label
 var _start: Button
+var _title: Label
+var _leave: Button
 
 
 func setup(context: StationContext) -> void:
@@ -108,6 +111,12 @@ func _entry_row(def: Dictionary) -> Control:
 	hint.text = joint_hint(def)
 	hint.add_theme_color_override("font_color", Palette.color("text_dim"))
 	row.add_child(hint)
+	var role: Label = Label.new()
+	role.name = "Role"
+	role.text = tr("role." + id)
+	role.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(role)
 	return row
 
 
@@ -130,10 +139,10 @@ func _build() -> void:
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 12)
 	margin.add_child(col)
-	var title: Label = Label.new()
-	title.text = tr("lobby.title")
-	title.add_theme_font_size_override("font_size", 32)
-	col.add_child(title)
+	_title = Label.new()
+	_title.text = tr("lobby.title")
+	_title.add_theme_font_size_override("font_size", 32)
+	col.add_child(_title)
 	_ships = HBoxContainer.new()
 	col.add_child(_ships)
 	_coverage = Label.new()
@@ -152,16 +161,25 @@ func _build() -> void:
 	_start.text = tr("lobby.start")
 	_start.pressed.connect(func() -> void: ctx.intents.start())
 	bottom.add_child(_start)
-	var leave: Button = Button.new()
-	leave.text = tr("lobby.leave_pick")
-	leave.pressed.connect(func() -> void: ctx.intents.release_pick())
-	bottom.add_child(leave)
+	_leave = Button.new()
+	_leave.text = tr("lobby.leave_pick")
+	_leave.pressed.connect(func() -> void: ctx.intents.release_pick())
+	bottom.add_child(_leave)
 
 
 static func _clear(box: Container) -> void:
 	for c: Node in box.get_children():
 		box.remove_child(c)
 		c.queue_free()
+
+
+## A language switch retranslates the whole lobby.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and ctx != null:
+		_title.text = tr("lobby.title")
+		_start.text = tr("lobby.start")
+		_leave.text = tr("lobby.leave_pick")
+		refresh()
 
 
 func _on_crew_changed(what: StringName) -> void:

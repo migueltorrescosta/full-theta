@@ -2,7 +2,8 @@
 ## context and shows one view of it, set from shots.json: "screen" (the StationScreen
 ## of `entry`), "lobby", or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
-## `overlay`, `tooltip` (the first-run tip), `strip` (the radar's side strip) and
+## `overlay`, `tooltip` (the first visit: the overlay opens by itself), `strip` (the radar's
+## side strip) and
 ## `ui_scale` (the window's content scale, FT-STN-013; reset on exit), `claim` (a
 ## claim item the player holds, e.g. "mount:0") and `events` (sim events fed to the
 ## crew model 2 s before the shot, after the screen is built; a payload `vector` given
@@ -29,9 +30,8 @@ func _ready() -> void:
 	get_tree().root.content_scale_factor = ui_scale
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
-	if not tooltip:
-		for s: String in StationViews.CREW + ["viewer", "captain"]:
-			_ctx.settings.mark_tooltip_seen(s)
+	if tooltip:
+		_ctx.settings.reset_tooltips()
 	if claim != "":
 		_ctx.crew.claims[claim] = {"session": StationFixture.SESSION, "name": "Ana"}
 	if selected >= 0:

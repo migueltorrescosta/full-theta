@@ -177,10 +177,6 @@ func claim_item() -> String:
 	return "%s:%d" % [StationViews.CLAIM_CREW, crew_pick] if crew_count() > 0 else ""
 
 
-func tooltip_intents() -> Array[String]:
-	return ["subsystem_1", "pip_add", "pip_remove", "dispatch_nearest", "boost", "overlay"]
-
-
 # --- Reading the ENGINEERING block. ---
 
 

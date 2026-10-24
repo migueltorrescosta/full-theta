@@ -39,3 +39,14 @@ func test_apply_switches_all_ui_text_to_the_session_language() -> void:
 func test_unknown_language_is_refused() -> void:
 	assert_bool(I18n.apply("fr")).is_false()
 	assert_object(I18n.translation("pt_BR")).is_null()
+
+
+# FT: FT-STN-012, FT-AUD-012
+func test_every_seat_has_a_role_summary_in_every_language() -> void:
+	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(I18n.STRINGS))
+	var ids: Array = StationViews.STATIONS.keys() + StationViews.ENTRIES.keys()
+	ids.append(StationViews.ALL)
+	for id: String in ids:
+		var entry: Dictionary = data["strings"].get("role." + id, {})
+		for lang: String in I18n.LANGUAGES:
+			assert_str(str(entry.get(lang, ""))).is_not_empty()
