@@ -191,7 +191,7 @@
     "load.light": {"en": "light", "pt_PT": "leve", "it": "leggero"},
     "lobby.covered": {"en": "every station covered", "pt_PT": "todos os postos cobertos", "it": "tutte le postazioni coperte"},
     "lobby.crew": {"en": "crew %d/%d", "pt_PT": "tripulação %d/%d", "it": "equipaggio %d/%d"},
-    "lobby.joint_hint": {"en": "Plays %s and %s solo.", "pt_PT": "Joga %s e %s sozinho.", "it": "Gioca %s e %s da solo."},
+    "lobby.joint_pair": {"en": "%s + %s", "pt_PT": "%s + %s", "it": "%s + %s"},
     "lobby.join_browser": {"en": "Browser: %s", "pt_PT": "Navegador: %s", "it": "Browser: %s"},
     "lobby.join_desktop": {"en": "Desktop game: %s", "pt_PT": "Jogo de computador: %s", "it": "Gioco desktop: %s"},
     "lobby.join_local": {"en": "Only this computer can join (%s). Host on a network address to invite others.", "pt_PT": "Só este computador pode entrar (%s). Cria o jogo num endereço de rede para convidar outros.", "it": "Solo questo computer può entrare (%s). Ospita su un indirizzo di rete per invitare altri."},

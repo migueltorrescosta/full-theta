@@ -95,7 +95,7 @@ static func joint_hint(def: Dictionary) -> String:
 	if st.size() != 2:
 		return ""
 	return (
-		TranslationServer.translate("lobby.joint_hint")
+		TranslationServer.translate("lobby.joint_pair")
 		% [
 			TranslationServer.translate("station." + str(st[0])),
 			TranslationServer.translate("station." + str(st[1])),
@@ -103,12 +103,21 @@ static func joint_hint(def: Dictionary) -> String:
 	)
 
 
+## The pick button's text: the entry's name, and for a joint view its pair on a second
+## line (FT-JNT-006, D186), e.g. "Tactical\nHelm + Weapons".
+static func entry_label(def: Dictionary) -> String:
+	var name: String = TranslationServer.translate("station." + str(def["id"]))
+	var pair: String = joint_hint(def)
+	return name if pair == "" else name + "\n" + pair
+
+
 func _entry_row(def: Dictionary) -> Control:
 	var id: String = def["id"]
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "Entry_" + id
 	var pick: Button = Button.new()
-	pick.text = tr("station." + id)
+	pick.name = "Pick"
+	pick.text = entry_label(def)
 	pick.custom_minimum_size = Vector2(180, 0)
 	pick.toggle_mode = true
 	pick.button_pressed = id == ctx.crew.entry and ship == ctx.crew.ship
@@ -121,11 +130,6 @@ func _entry_row(def: Dictionary) -> Control:
 	tag_label.text = tr("load." + tag) if tag != "" else ""
 	tag_label.add_theme_color_override("font_color", Palette.color(LOAD_ROLES.get(tag, "text")))
 	row.add_child(tag_label)
-	var hint: Label = Label.new()
-	hint.name = "Hint"
-	hint.text = joint_hint(def)
-	hint.add_theme_color_override("font_color", Palette.color("text_dim"))
-	row.add_child(hint)
 	var role: Label = Label.new()
 	role.name = "Role"
 	role.text = tr("role." + id)

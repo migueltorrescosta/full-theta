@@ -350,7 +350,7 @@ A joint view keeps one top bar and one disc radar; each extra station becomes a 
 - **FT-JNT-003** Milestone 1 shall provide the Tactical, Systems and Ops joint views. (D72)
 - **FT-JNT-004** The 12 joint views not built in milestone 1 shall follow FT-JNT-001 and FT-JNT-002 and ship with milestone M2 (Full crew). (D75, D76)
 - **FT-JNT-005** A joint view shall get the union of its stations' data; data shortcuts between its own stations shall show as if their toggles were on, and requests between them shall run as direct actions (Boost in a Helm+Engineering view overcharges at once). (plan review COOP-1)
-- **FT-JNT-006** The lobby shall show a one-line hint per joint view naming the pair it makes solo. (plan review COOP-1)
+- **FT-JNT-006** The lobby shall show each joint view's pair under its name on the pick button, e.g. "Tactical / Helm + Weapons" (D186). (plan review COOP-1)
 - **FT-JNT-007** The always-live set (alert, ping, panel switch, Helm translation, face, all-stop; §5.0) shall work whatever panel has focus. (D95)
 - **FT-JNT-008** In Tactical, Helm focus shall show the cockpit, where Helm flies and the KB/M fire buttons fire claimed mounts at the selected target; Weapons focus shall show the turret, where Weapons aims, flight assist holds attitude and Helm keeps the always-live set. (D95, plan review STN-1, UX-2)
 

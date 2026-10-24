@@ -70,8 +70,8 @@ func _welcomed(c: NetClient) -> bool:
 
 # FT: FT-STN-015, FT-JNT-006, FT-M1-018
 # Over a real connection the lobby shows each entry's load tag from its StationDef in
-# the Catalogue (the Viewer untagged) and one hint per joint view naming its pair.
-func test_lobby_shows_load_tags_and_joint_hints_from_the_catalogue() -> void:
+# the Catalogue (the Viewer untagged), and each joint view's pair under its name (D186).
+func test_lobby_shows_load_tags_and_joint_pairs_from_the_catalogue() -> void:
 	var s: NetServer = _h.server()
 	var c: NetClient = NetClient.new()
 	c.name = "Ana"
@@ -84,10 +84,11 @@ func test_lobby_shows_load_tags_and_joint_hints_from_the_catalogue() -> void:
 	var rows: Callable = func() -> bool:
 		return shell.lobby != null and shell.lobby.find_child("Entry_ops", true, false) != null
 	assert_bool(await _until(rows)).is_true()
-	var hints: Dictionary = {
-		"tactical": "Plays Helm and Weapons solo.",
-		"systems": "Plays Engineering and Science solo.",
-		"ops": "Plays Relay and Comms solo.",
+	var labels: Dictionary = {
+		"tactical": "Tactical\nHelm + Weapons",
+		"systems": "Systems\nEngineering + Science",
+		"ops": "Ops\nRelay + Comms",
+		"helm": "Helm",
 	}
 	var entries: Array = shell.ctx.crew.catalogue["entries"]
 	assert_int(entries.size()).is_equal(11)
@@ -96,4 +97,6 @@ func test_lobby_shows_load_tags_and_joint_hints_from_the_catalogue() -> void:
 		var tag: String = StationViews.def(e["id"]).load_tag
 		var want: String = tr("load." + tag) if tag != "" else ""
 		assert_str((row.get_node("LoadTag") as Label).text).is_equal(want)
-		assert_str((row.get_node("Hint") as Label).text).is_equal(hints.get(e["id"], ""))
+		assert_object(row.get_node_or_null("Hint")).is_null()
+		if labels.has(e["id"]):
+			assert_str((row.get_node("Pick") as Button).text).is_equal(labels[e["id"]])

@@ -20,7 +20,7 @@ func _row(l: LobbyScreen, id: String) -> Control:
 
 
 # FT: FT-STN-015, FT-JNT-006, FT-M1-018, FT-M1-005
-func test_catalogue_shows_load_tags_and_joint_hints() -> void:
+func test_catalogue_shows_load_tags_and_joint_pairs() -> void:
 	var l: LobbyScreen = _lobby("helm")
 	var tags: Dictionary = {
 		"helm": "intense",
@@ -38,9 +38,9 @@ func test_catalogue_shows_load_tags_and_joint_hints() -> void:
 		var tag: Label = _row(l, id).get_node("LoadTag")
 		assert_str(tag.text).is_equal(tr("load." + tags[id]))
 	assert_str((_row(l, "viewer").get_node("LoadTag") as Label).text).is_empty()
-	var hint: Label = _row(l, "systems").get_node("Hint")
-	assert_str(hint.text).is_equal("Plays Engineering and Science solo.")
-	assert_str((_row(l, "helm").get_node("Hint") as Label).text).is_empty()
+	var pick: Button = _row(l, "systems").get_node("Pick")
+	assert_str(pick.text).is_equal("Systems\nEngineering + Science")
+	assert_str((_row(l, "helm").get_node("Pick") as Button).text).is_equal("Helm")
 	# Science and Comms are pickable (placeholders, FT-M1-005).
 	(_row(l, "science").get_child(0) as Button).pressed.emit()
 	assert_array(StationFixture.sent(l.ctx).of("pick")[0][1]).is_equal([0, "science"])
