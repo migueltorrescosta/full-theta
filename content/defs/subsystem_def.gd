@@ -37,6 +37,23 @@ enum Kind { ENGINES, THRUSTERS, WEAPONS, SHIELDS, SENSORS, REACTOR }
 ## Whether this subsystem is a weak point: hits aimed at it once a scan has revealed
 ## it damage it directly (FT-SIM-023, FT-SCI-003; #9 strands A and C).
 @export var weak_point: bool = false
+## Share of a hit's energy past the shields that a revealed weak point takes, in place
+## of the ship's subsystem_damage_share (dimensionless, 0..1; FT-SIM-023). Only read
+## when weak_point is set.
+@export var weak_point_share: float = 0.0
+## Causes a fault on this subsystem may have (ids; FT-SIM-025). Engineering picks one;
+## the right pick repairs at full rate. Empty: the subsystem has no unknown-cause fault.
+@export var fault_causes: Array[StringName] = []
+## Repair speed of a fault whose cause is unknown or guessed wrong, as a share of
+## repair_rate (dimensionless, in (0, 1]; FT-SIM-025). PROVISIONAL default.
+@export var fault_brute_force_factor: float = 0.25
+## Damage taken while hardened, as a multiple (dimensionless, in (0, 1]; FT-ENG-008).
+## PROVISIONAL default.
+@export var harden_factor: float = 0.5
+## How long a hardening lasts (s). PROVISIONAL default.
+@export var harden_duration: float = 30.0
+## Spare parts hardening consumes (count). PROVISIONAL default.
+@export var harden_parts: int = 1
 
 
 func validate() -> Array[String]:
@@ -51,4 +68,12 @@ func validate() -> Array[String]:
 	DefCheck.non_negative(errors, "heat_dissipation", heat_dissipation)
 	DefCheck.positive(errors, "fault_heat_threshold", fault_heat_threshold)
 	DefCheck.non_negative(errors, "heat_fault_damage", heat_fault_damage)
+	if weak_point:
+		DefCheck.in_range_open_low(errors, "weak_point_share", weak_point_share, 0.0, 1.0)
+	DefCheck.in_range_open_low(
+		errors, "fault_brute_force_factor", fault_brute_force_factor, 0.0, 1.0
+	)
+	DefCheck.in_range_open_low(errors, "harden_factor", harden_factor, 0.0, 1.0)
+	DefCheck.positive(errors, "harden_duration", harden_duration)
+	DefCheck.non_negative(errors, "harden_parts", harden_parts)
 	return errors

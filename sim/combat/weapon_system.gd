@@ -6,6 +6,12 @@ extends RefCounted
 ## and a requested shot fires or is blocked (FT-SIM-012). Shots are projectiles moved
 ## and swept by CollisionSystem in the same tick.
 
+## Beams (FT-SIM-013) hit the first ship along the barrel at once, fill the mount with
+## heat and lock it when it overheats (P6); missiles and torpedoes launch as projectiles
+## that GuidanceSystem steers (FT-WPN-008). A mount may switch ammunition type
+## (FT-WPN-006): weapon_of() is the type selected. Events added: &"mount_overheated" and
+## &"mount_cooled" (mount index as value, on the shooter).
+
 ## Cooldown below this counts as done (s); absorbs float drift of repeated - DT.
 const COOLDOWN_EPS: float = 1e-9
 
@@ -29,8 +35,14 @@ static func step(world: SimWorld) -> void:
 			fire_requested[row] = 0
 			continue
 		var def: MountDef = defs[ship].mounts[mount_index[row]]
+		var weapon: WeaponDef = def.weapon
+		if mounts.ammo_type[row] != 0:
+			weapon = def.alt_weapons[mounts.ammo_type[row] - 1]
 		cooldown[row] = maxf(0.0, cooldown[row] - dt)
-		heat[row] *= exp(-def.weapon.heat_dissipation * dt)
+		heat[row] *= exp(-weapon.heat_dissipation * dt)
+		if mounts.locked[row] == 1 and heat[row] <= weapon.heat_limit * weapon.overheat_release:
+			mounts.locked[row] = 0
+			world.emit(&"mount_cooled", ship, -1, mount_index[row])
 		var eff: float = DamageSystem.effectiveness(world, ship, def.subsystem_id)
 		# aim_direction(), inlined.
 		var aim: Vector3 = def.forward
@@ -47,6 +59,15 @@ static func step(world: SimWorld) -> void:
 		if fire_requested[row] == 1:
 			fire_requested[row] = 0
 			_try_fire(world, row, def, eff, aim)
+			mounts.guide_target[row] = -1
+			mounts.guide_point[row] = 0
+
+
+## The weapon of the mount row's selected ammunition type (read-only).
+static func weapon_of(world: SimWorld, row: int) -> WeaponDef:
+	var def: MountDef = mount_def(world, row)
+	var t: int = world.mounts.ammo_type[row]
+	return def.weapon if t == 0 else def.alt_weapons[t - 1]
 
 
 ## The read-only definition of a mount row.
@@ -104,12 +125,15 @@ static func path_crosses(world: SimWorld, row: int) -> int:
 	var ship_id: int = world.mounts.ship_ids[row]
 	var kin: Kinematics = world.kin
 	var def: MountDef = mount_def(world, row)
-	var weapon: WeaponDef = def.weapon
+	var weapon: WeaponDef = weapon_of(world, row)
 	var muzzle: Vector3 = kin.to_world(ship_id, def.position)
+	var beam: bool = weapon.kind == WeaponDef.Kind.BEAM
 	var pv: Vector3 = (
 		kin.vel[ship_id] + kin.to_world(ship_id, world.mounts.barrel[row]) * weapon.projectile_speed
 	)
-	var flight: float = weapon.max_range / weapon.projectile_speed
+	var flight: float = 1.0 if beam else weapon.max_range / weapon.projectile_speed
+	# A beam arrives at once: its reach is the barrel direction times the range.
+	var beam_reach: Vector3 = kin.to_world(ship_id, world.mounts.barrel[row]) * weapon.max_range
 	var faction: int = world.faction_of(ship_id)
 	var best: int = -1
 	var best_t: float = 2.0
@@ -123,7 +147,7 @@ static func path_crosses(world: SimWorld, row: int) -> int:
 		var axis: Vector3 = kin.to_world(j, Vector3(0.0, 0.0, kin.half_length[j]))
 		var t: float = Sweep.capsule(
 			muzzle - kin.relative(ship_id, j),
-			(pv - kin.vel[j]) * flight,
+			beam_reach if beam else (pv - kin.vel[j]) * flight,
 			axis,
 			kin.radius[j] + weapon.projectile_radius
 		)
@@ -134,7 +158,8 @@ static func path_crosses(world: SimWorld, row: int) -> int:
 
 
 ## Why a requested shot can't fire, or &"" if it can (energy is checked last, by
-## drawing it). FT-SIM-011 arc, FT-SIM-012 condition, cooldown, ammunition, heat. aim
+## drawing it). FT-SIM-011 arc, FT-SIM-012 condition, cooldown, ammunition, overheat lock
+## (P6), heat. aim
 ## is the mount's aim_direction this tick.
 static func block_reason(world: SimWorld, row: int, eff: float, aim: Vector3) -> StringName:
 	var mounts: MountTable = world.mounts
@@ -148,7 +173,9 @@ static func block_reason(world: SimWorld, row: int, eff: float, aim: Vector3) ->
 		reason = &"cooldown"
 	elif mounts.ammo[row] == 0:
 		reason = &"ammo"
-	elif mounts.heat[row] >= def.weapon.heat_limit:
+	elif mounts.locked[row] == 1:
+		reason = &"overheated"
+	elif mounts.heat[row] >= weapon_of(world, row).heat_limit:
 		reason = &"heat"
 	return reason
 
@@ -157,43 +184,97 @@ static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float, aim:
 	var ship: int = world.mounts.ship_ids[row]
 	var index: int = world.mounts.mount_index[row]
 	var reason: StringName = block_reason(world, row, eff, aim)
-	if reason == &"" and not PowerSystem.draw_energy(world, ship, def.weapon.energy_per_shot):
+	var weapon: WeaponDef = weapon_of(world, row)
+	if reason == &"" and not PowerSystem.draw_energy(world, ship, weapon.energy_per_shot):
 		reason = &"energy"
 	if reason != &"":
 		world.emit(&"fire_blocked", ship, -1, index, Vector3.ZERO, reason)
 		return
 	var friend: int = path_crosses(world, row)
-	_fire(world, row, def)
+	_fire(world, row, def, weapon)
 	if friend >= 0:
 		world.emit(&"friendly_fire_warning", ship, friend, index)
 
 
-## Spawns the projectile from the mount's hull position along the barrel, with the
-## ship's velocity plus the muzzle velocity. It is placed where the muzzle was at the
-## start of the tick, so CollisionSystem's full-tick sweep starts at the muzzle.
-static func _fire(world: SimWorld, row: int, def: MountDef) -> void:
+## Fires the selected weapon: a beam at once, anything else as a projectile spawned from
+## the mount's hull position along the barrel, with the ship's velocity plus the muzzle
+## velocity. It is placed where the muzzle was at the start of the tick, so
+## CollisionSystem's full-tick sweep starts at the muzzle. Guided ordnance takes the
+## target or point the fire request carried (FireGuidedCommand).
+static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -> void:
 	var mounts: MountTable = world.mounts
 	var kin: Kinematics = world.kin
 	var ship: int = mounts.ship_ids[row]
-	var weapon: WeaponDef = def.weapon
 	if mounts.ammo[row] > 0:
 		mounts.ammo[row] -= 1
 	mounts.cooldown[row] = weapon.cooldown
 	mounts.heat[row] += weapon.heat_per_shot
 	var dir: Vector3 = kin.to_world(ship, mounts.barrel[row])
-	var vs: Vector3 = kin.vel[ship]
-	var back: Vector3 = kin.to_world(ship, def.position) - vs * SimWorld.DT
-	var start: PackedFloat64Array = kin.point_at(ship, back)
-	world.projectiles.spawn(
-		ship,
-		world.faction_of(ship),
-		kin.site[ship],
-		start[0],
-		start[1],
-		start[2],
-		vs + dir * weapon.projectile_speed,
-		weapon.projectile_radius,
-		weapon.damage,
-		ceili(weapon.max_range / weapon.projectile_speed * SimWorld.HZ)
-	)
+	if weapon.kind == WeaponDef.Kind.BEAM:
+		_beam_hit(world, row, def, weapon, dir)
+	else:
+		var vs: Vector3 = kin.vel[ship]
+		var back: Vector3 = kin.to_world(ship, def.position) - vs * SimWorld.DT
+		var start: PackedFloat64Array = kin.point_at(ship, back)
+		var k: int = world.projectiles.spawn(
+			ship,
+			world.faction_of(ship),
+			kin.site[ship],
+			start[0],
+			start[1],
+			start[2],
+			vs + dir * weapon.projectile_speed,
+			weapon.projectile_radius,
+			weapon.damage,
+			ceili(weapon.max_range / weapon.projectile_speed * SimWorld.HZ)
+		)
+		if weapon.damage_type != &"kinetic" or weapon.is_guided():
+			world.projectiles.set_payload(
+				k,
+				weapon.damage_type,
+				weapon.turn_rate if weapon.is_guided() else 0.0,
+				mounts.guide_target[row],
+				mounts.guide_point[row] == 1,
+				mounts.guide_x[row],
+				mounts.guide_y[row],
+				mounts.guide_z[row]
+			)
+	if weapon.overheat_release > 0.0 and mounts.heat[row] >= weapon.heat_limit:
+		mounts.locked[row] = 1
+		world.emit(&"mount_overheated", ship, -1, mounts.mount_index[row])
 	world.emit(&"fired", ship, -1, mounts.mount_index[row], dir, weapon.id)
+
+
+## A beam shot: the first ship (not the shooter's) the barrel line crosses within
+## max_range takes a hit of the weapon's damage at once (FT-SIM-013).
+static func _beam_hit(
+	world: SimWorld, row: int, def: MountDef, weapon: WeaponDef, dir: Vector3
+) -> void:
+	var kin: Kinematics = world.kin
+	var shooter: int = world.mounts.ship_ids[row]
+	var muzzle: Vector3 = kin.to_world(shooter, def.position)
+	var reach: Vector3 = dir * weapon.max_range
+	var best: int = -1
+	var best_t: float = 2.0
+	var best_start: Vector3 = Vector3.ZERO
+	for j: int in kin.size():
+		if j == shooter or not kin.is_alive(j) or kin.site[shooter] != kin.site[j]:
+			continue
+		var start: Vector3 = muzzle - kin.relative(shooter, j)
+		var axis: Vector3 = kin.to_world(j, Vector3(0.0, 0.0, kin.half_length[j]))
+		var t: float = Sweep.capsule(start, reach, axis, kin.radius[j] + weapon.projectile_radius)
+		if t >= 0.0 and t < best_t:
+			best_t = t
+			best = j
+			best_start = start
+	if best < 0:
+		return
+	var hit: SimHit = SimHit.new()
+	hit.target_id = best
+	hit.source_id = shooter
+	hit.kind = &"beam"
+	hit.point_local = kin.to_local(best, best_start + reach * best_t)
+	hit.from_local = kin.to_local(best, -dir).normalized()
+	hit.energy = weapon.damage
+	hit.damage_type = weapon.damage_type
+	world.hits.append(hit)

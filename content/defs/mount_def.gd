@@ -15,9 +15,19 @@ extends Resource
 @export var traverse_rate: float = 0.0
 ## Weapon fitted to the mount (required).
 @export var weapon: WeaponDef
+## Further ammunition types the mount can switch to (FT-WPN-006), each a weapon with its
+## own damage, damage type and ammunition; `weapon` is type 0. Mostly empty.
+@export var alt_weapons: Array[WeaponDef] = []
 ## Id of the ship subsystem whose condition gates firing (FT-SIM-012); must name one
 ## of the ship's subsystems (checked by ShipDef.validate).
 @export var subsystem_id: StringName = &""
+
+
+## Ammunition types of the mount, the default weapon first.
+func ammo_types() -> Array[WeaponDef]:
+	var out: Array[WeaponDef] = [weapon]
+	out.append_array(alt_weapons)
+	return out
 
 
 func validate() -> Array[String]:
@@ -27,5 +37,7 @@ func validate() -> Array[String]:
 	DefCheck.in_range_open_low(errors, "arc_half_angle", arc_half_angle, 0.0, PI)
 	DefCheck.non_negative(errors, "traverse_rate", traverse_rate)
 	DefCheck.required(errors, "weapon", weapon)
+	for i: int in alt_weapons.size():
+		DefCheck.required(errors, "alt_weapons[%d]" % i, alt_weapons[i])
 	DefCheck.id(errors, "subsystem_id", subsystem_id)
 	return errors

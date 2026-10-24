@@ -16,6 +16,12 @@ var identified: PackedByteArray = PackedByteArray()
 ## Callsign number, unique within the observing faction, from 1 in order of first
 ## detection; never changes (FT-SPA-001, FT-SPA-002).
 var numbers: PackedInt32Array = PackedInt32Array()
+## Bit i set once a scan revealed the contact's subsystem i (index in ShipDef.subsystems)
+## as a weak point to the faction (FT-SIM-023, FT-SCI-003). Never cleared.
+var weak_revealed: PackedInt32Array = PackedInt32Array()
+## Bit i set once the faction learned the contact's resistance to the i-th damage type
+## of its ShipDef.resistances in sorted key order (FT-SIM-022). Never cleared.
+var resist_revealed: PackedInt32Array = PackedInt32Array()
 
 ## Derived index, not state: row by faction * 65536 + contact id, filled in add_contact
 ## (rows never move or go away).
@@ -66,12 +72,23 @@ func add_contact(faction: int, contact_id: int) -> int:
 	detected.append(0)
 	identified.append(0)
 	numbers.append(number)
+	weak_revealed.append(0)
+	resist_revealed.append(0)
 	_rows[faction * 65536 + contact_id] = row
 	return row
 
 
 func columns() -> Array:
-	return super() + [["detected", detected], ["identified", identified], ["numbers", numbers]]
+	return (
+		super()
+		+ [
+			["detected", detected],
+			["identified", identified],
+			["numbers", numbers],
+			["weak_revealed", weak_revealed],
+			["resist_revealed", resist_revealed],
+		]
+	)
 
 
 ## Per-ship run reset (FT-MIS-017): the ship's rows as a contact drop to undetected, so

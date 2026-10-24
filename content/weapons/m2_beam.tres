@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/weapon_def.gd" id="1_yfiv1"]
+
+[resource]
+script = ExtResource("1_yfiv1")
+id = &"m2_beam"
+display_name = "Beam"
+projectile_speed = 0.0
+projectile_radius = 0.3
+max_range = 4000.0
+cooldown = 0.25
+damage = 600000.0
+ammo_capacity = -1
+energy_per_shot = 150000.0
+heat_per_shot = 6.0
+heat_dissipation = 0.05
+heat_limit = 40.0
+overheat_release = 0.5
+kind = 1
+damage_type = &"thermal"

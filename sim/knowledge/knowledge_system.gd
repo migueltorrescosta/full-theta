@@ -129,6 +129,82 @@ static func _prefix(world: SimWorld, faction: int, ship_id: int, row: int) -> St
 	return "H"
 
 
+## Marks the contact's subsystem a weak point known to the faction, as a Science scan
+## does (FT-SIM-023, FT-SCI-003). False, changing nothing, when the faction never
+## detected the contact or the subsystem is unknown or not a weak point.
+static func reveal_weak_point(
+	world: SimWorld, faction: int, contact: int, subsystem_id: StringName
+) -> bool:
+	var row: int = world.knowledge.row_for(faction, contact)
+	var i: int = _subsystem_index(world, contact, subsystem_id)
+	if row < 0 or i < 0 or not world.defs[contact].subsystems[i].weak_point:
+		return false
+	world.knowledge.weak_revealed[row] |= 1 << i
+	return true
+
+
+## Whether the faction knows the subsystem is a weak point; a faction knows its own
+## ships'.
+static func knows_weak_point(
+	world: SimWorld, faction: int, contact: int, subsystem_id: StringName
+) -> bool:
+	var i: int = _subsystem_index(world, contact, subsystem_id)
+	if i < 0 or not world.defs[contact].subsystems[i].weak_point:
+		return false
+	if world.faction_of(contact) == faction:
+		return true
+	var row: int = world.knowledge.row_for(faction, contact)
+	return row >= 0 and (world.knowledge.weak_revealed[row] & (1 << i)) != 0
+
+
+## Marks the contact's resistance to a damage type known to the faction (FT-SIM-022,
+## FT-SCI-003). False, changing nothing, when the faction never detected the contact or
+## the contact lists no resistance to the type.
+static func reveal_resistance(
+	world: SimWorld, faction: int, contact: int, damage_type: StringName
+) -> bool:
+	var row: int = world.knowledge.row_for(faction, contact)
+	var i: int = _resistance_index(world, contact, damage_type)
+	if row < 0 or i < 0:
+		return false
+	world.knowledge.resist_revealed[row] |= 1 << i
+	return true
+
+
+## Whether the faction knows the contact's resistance to the type; a faction knows its
+## own ships'.
+static func knows_resistance(
+	world: SimWorld, faction: int, contact: int, damage_type: StringName
+) -> bool:
+	var i: int = _resistance_index(world, contact, damage_type)
+	if i < 0:
+		return false
+	if world.faction_of(contact) == faction:
+		return true
+	var row: int = world.knowledge.row_for(faction, contact)
+	return row >= 0 and (world.knowledge.resist_revealed[row] & (1 << i)) != 0
+
+
+static func _subsystem_index(world: SimWorld, ship_id: int, subsystem_id: StringName) -> int:
+	if ship_id < 0 or ship_id >= world.ship_count():
+		return -1
+	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
+	for i: int in mini(subs.size(), 31):
+		if subs[i].id == subsystem_id:
+			return i
+	return -1
+
+
+## Position of the type among the ship's resistances in sorted key order, or -1.
+static func _resistance_index(world: SimWorld, ship_id: int, damage_type: StringName) -> int:
+	if ship_id < 0 or ship_id >= world.ship_count():
+		return -1
+	var keys: Array = world.defs[ship_id].resistances.keys()
+	keys.sort()
+	var i: int = keys.find(damage_type)
+	return i if i < 31 else -1
+
+
 ## Factions that have at least one ship, ascending.
 static func _factions(world: SimWorld) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
