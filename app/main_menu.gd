@@ -46,6 +46,7 @@ func _ready() -> void:
 	_build()
 	browser.start()
 	_check_orphan.call_deferred()
+	_apply_web_join_config()
 
 
 func _process(_delta: float) -> void:
@@ -217,6 +218,16 @@ func _answer_orphan(answer: HostSession.Answer) -> void:
 	_refresh_rejoin()
 
 
+## Applies web join config: pre-fills address with page hostname, auto-joins if ?join=1.
+func _apply_web_join_config() -> void:
+	var cfg: JoinHelpers.WebJoinConfig = JoinHelpers.web_config()
+	if cfg.address.is_empty():
+		return
+	_address.text = cfg.address
+	if cfg.auto_join:
+		join(cfg.address)
+
+
 # --- Layout. ---
 
 
@@ -313,6 +324,7 @@ func _build_join(col: VBoxContainer) -> void:
 	_address.placeholder_text = tr("menu.address")
 	_address.text = settings.last_address
 	_address.custom_minimum_size = Vector2(320, 0)
+	_address.virtual_keyboard_enabled = true
 	_address.text_submitted.connect(join)
 	row.add_child(_address)
 	_button(row, "Join", tr("menu.join"), func() -> void: join(_address.text))
