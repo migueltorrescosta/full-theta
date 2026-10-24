@@ -159,3 +159,10 @@ func test_hardened_subsystems_are_listed() -> void:
 	e._refresh_lists()
 	var shown: Array = e._lists.get_children().map(func(l: Label) -> String: return l.text)
 	assert_array(shown).contains(["Engines hardened 11 s"])
+
+
+# FT: FT-ENG-006
+# The cause-cycle key is a real key the matcher knows (a mistyped name would never match).
+func test_cause_key_is_a_known_key() -> void:
+	var binding: String = IntentTable.row("cause_next")["kbm"][0]
+	assert_int(OS.find_keycode_from_string(binding)).is_not_equal(KEY_NONE)
