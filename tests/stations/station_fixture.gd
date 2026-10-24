@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name StationFixture
 extends RefCounted
 ## A deterministic station context with no server (#7): ship 0 "Kestrel" picked at the
