@@ -194,6 +194,19 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	# Routes: Hard keeps them off Tactical (FT-PAIR-008), Relay still sees them.
 	h.session_of(server, helm).toggles = "hard"
 	from = h.mark(helm)
+	# Zones survive Hard (FT-SPA-028): Tactical still gets a new hazard.
+	relay.hazard_add(1000.0, 0, Vector3(-300.0, 0.0, 100.0))
+	var hard_zones: Dictionary = await h.next_event(
+		helm,
+		NetProtocol.EVENT_ZONES,
+		from,
+		func(e: Dictionary) -> bool: return e["payload"]["zones"].size() == 3
+	)
+	assert_dict(hard_zones).is_not_empty()
+	var drop: int = hard_zones["payload"]["zones"][-1]["id"]
+	relay.hazard_delete(drop)
+	await h.until(func() -> bool: return server.session.crew.relay.zones_of(PLAYER).size() == 2)
+	from = h.mark(helm)
 	var relay_from: int = h.mark(relay)
 	relay.route_add(0, 0, Vector3(0.0, 0.0, -2000.0))
 	relay.route_add(0, 0, Vector3(900.0, 0.0, -4000.0))
@@ -301,3 +314,31 @@ func test_probe_launch_log_and_lane_warning_events() -> void:
 	assert_int(warn.get("payload", {}).get("other", -1)).is_equal(NetHarness.ENEMY)
 	await h.wait(200)
 	assert_array(h.events_of(sys, "lane_warning").slice(tac_from)).is_empty()
+
+
+# FT: FT-RLY-004, FT-NET-022
+# The probe launcher is a claim: with two Relay players only the claimer launches, and
+# the claim shows in the other's OWNERSHIP view.
+func test_two_relay_players_share_the_probe_launcher_by_claim() -> void:
+	var server: NetServer = h.server()
+	var first: NetClient = await h.joined(server, "ana", "relay")
+	var second: NetClient = await h.joined(server, "bo", "ops")
+	var id: int = h.session_of(server, first).id
+	var held: Callable = func() -> bool:
+		return second.view.ownership.get("claims", {}).get("probe", [-1])[0] == id
+	assert_bool(await h.until(held)).is_true()
+	assert_str(second.view.claimer("probe")).is_equal("ana")
+	server.session.launch(PLAYER)
+	var cmd: Dictionary = {"kind": "launch_probe", "x": 0.0, "y": 0.0, "z": -500.0}
+	var from: int = h.mark(second)
+	var seq: int = second.command(cmd)
+	var refused: Dictionary = await h.next_event(
+		second,
+		NetProtocol.EVENT_COMMAND_REJECTED,
+		from,
+		func(e: Dictionary) -> bool: return e["payload"]["seq"] == seq
+	)
+	assert_str(refused.get("payload", {}).get("reason", "")).is_equal(CommandGate.CLAIMED)
+	first.command(cmd)
+	var launched: Callable = func() -> bool: return server.world.relay.stock[PLAYER] == 2
+	assert_bool(await h.until(launched)).is_true()

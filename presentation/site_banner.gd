@@ -27,6 +27,11 @@ static func draw(canvas: CanvasItem, font: Font, site: Dictionary, selected: boo
 	canvas.draw_rect(box, col, false, 1.5 if selected else 1.0)
 	var base: Vector2 = box.position + Vector2(4.0, 3.0 + font.get_ascent(FONT_SIZE))
 	Palette.draw_outlined(canvas, font, base, str(site["label"]), FONT_SIZE, col)
+	var copies: Array = site.get("copies", [])
+	if not copies.is_empty():
+		var text: String = "+ " + ", ".join(PackedStringArray(copies))
+		var at: Vector2 = box.position + Vector2(4.0, box.size.y + font.get_ascent(FONT_SIZE))
+		Palette.draw_outlined(canvas, font, at, text, FONT_SIZE, Palette.color("ping"))
 	var pulse: float = float(site.get("pulse", 0.0))
 	if pulse > 0.0:
 		var ring: Color = Palette.color("ping")

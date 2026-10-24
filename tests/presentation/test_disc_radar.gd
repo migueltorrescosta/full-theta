@@ -200,3 +200,54 @@ func test_centring_takes_the_minimum_image_on_a_rolled_ship() -> void:
 	assert_vector(radar.project(pic.items[0]["local"])).is_equal_approx(
 		radar.disc_centre(), Vector2.ONE * 0.01
 	)
+
+
+# FT: FT-SPA-024, FT-SPA-025
+# Fixed range steps of 2, 10 and 50 km, in and out and stopping at the ends; a contact past
+# the scale is an arrow on the rim at its bearing, whichever step; the selected stem is
+# drawn last, on top.
+func test_range_steps_rim_arrows_and_the_selected_stem_on_top() -> void:
+	assert_array(DiscRadar.RANGES_M).is_equal([2000.0, 10000.0, 50000.0])
+	var items: Array[Dictionary] = [
+		_it("contact", 1, "H1", "H", Vector3(3000, 0, 0)),
+		_it("contact", 2, "H2", "H", Vector3(0, 0, -30000)),
+		_it("contact", 3, "H3", "H", Vector3(500, 100, -500)),
+	]
+	radar.set_picture(_pic(items), {"kind": "contact", "id": 1})
+	var expect: Array = [
+		# [range index, H1 past the scale, H2 past the scale]
+		[0, true, true],
+		[1, false, true],
+		[2, false, false],
+	]
+	for row: Array in expect:
+		radar.range_index = row[0]
+		assert_bool(radar.is_beyond(items[0]["local"])).is_equal(row[1])
+		assert_bool(radar.is_beyond(items[1]["local"])).is_equal(row[2])
+	# Zoom out stops at 50 km, in at 2 km.
+	radar.range_index = 1
+	radar.zoom(1)
+	radar.zoom(1)
+	assert_int(radar.range_index).is_equal(2)
+	radar.zoom(-1)
+	radar.zoom(-1)
+	radar.zoom(-1)
+	assert_int(radar.range_index).is_equal(0)
+	# At 2 km H2 (dead ahead) is an arrow on the rim straight above the centre; H1 (3 o'clock)
+	# on the rim to its right.
+	var c: Vector2 = radar.disc_centre()
+	var layout: Array[Dictionary] = radar._layout()
+	var h2: Dictionary = layout[1]
+	assert_bool(h2["beyond"]).is_true()
+	assert_float((h2["pos"] as Vector2).distance_to(radar.project(Vector3(0, 0, -2000)))).is_less(
+		0.5
+	)
+	assert_float((h2["pos"] as Vector2).x).is_equal_approx(c.x, 0.5)
+	assert_float((layout[0]["pos"] as Vector2).y).is_equal_approx(c.y, 0.5)
+	assert_float((layout[0]["pos"] as Vector2).x).is_greater(c.x)
+	# Selected last, whichever item is selected.
+	assert_array(radar.draw_order()).is_equal(
+		[{"kind": "contact", "id": 2}, {"kind": "contact", "id": 3}, {"kind": "contact", "id": 1}]
+	)
+	radar.set_picture(_pic(items), {"kind": "contact", "id": 3})
+	assert_dict(radar.draw_order()[-1]).is_equal({"kind": "contact", "id": 3})

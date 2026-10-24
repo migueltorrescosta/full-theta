@@ -234,6 +234,16 @@ func pulse(kind: String, id: int, now_ms: int) -> float:
 	return clampf(best, 0.0, 1.0)
 
 
+## The names of the stations that copied the newest live ping on an item, silently
+## (FT-SPA-031); [] when it has none.
+func copies(kind: String, id: int, now_ms: int) -> Array:
+	_expire(now_ms)
+	for i: int in range(pings.size() - 1, -1, -1):
+		if pings[i]["kind"] == kind and pings[i]["id"] == id:
+			return (pings[i]["copies"] as Array).duplicate()
+	return []
+
+
 ## Pings still pulsing at now_ms (point pings included).
 func live_pings(now_ms: int) -> Array[Dictionary]:
 	_expire(now_ms)

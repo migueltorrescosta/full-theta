@@ -31,6 +31,7 @@ var _left: PanelContainer
 var _bottom: PanelContainer
 var _probes: Label
 var _fab: Label
+var _probe_rows: VBoxContainer
 var _contacts: VBoxContainer
 var _marks: HFlowContainer
 var _log: VBoxContainer
@@ -50,6 +51,8 @@ func setup(context: StationContext) -> void:
 	_left.add_child(col)
 	_probes = Label.new()
 	col.add_child(_probes)
+	_probe_rows = VBoxContainer.new()
+	col.add_child(_probe_rows)
 	_fab = Label.new()
 	col.add_child(_fab)
 	launch = _button(col, "Launch", "relay.launch", launch_pressed.emit)
@@ -104,6 +107,17 @@ func refresh() -> void:
 	var stock: int = int(blk.get("stock", 0))
 	var out: int = (blk.get("probes", []) as Array).size()
 	_probes.text = tr("relay.probes") % [stock, out]
+	_clear(_probe_rows)
+	for pr: Dictionary in blk.get("probes", []):
+		var flying: bool = not bool(pr["deployed"])
+		_probe_rows.add_child(
+			_dim(
+				(
+					tr("relay.probe_flying" if flying else "relay.probe_ready")
+					% (int(pr["serial"]) + 1)
+				)
+			)
+		)
 	var fab: float = float(blk.get("fab_left", 0.0))
 	_fab.text = tr("relay.fab") % ceili(fab) if fab > 0.0 else ""
 	_fab.visible = fab > 0.0

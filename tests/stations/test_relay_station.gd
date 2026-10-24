@@ -43,15 +43,15 @@ func _relay(s: StationScreen) -> RelayPanel:
 	return s.panels[s.stations.find("relay")] as RelayPanel
 
 
-func _ev(id: String, s: StationScreen) -> Dictionary:
+func _ev(id: String, s: StationScreen, device: String = IntentTable.KBM) -> Dictionary:
 	return {
 		"id": id,
 		"group": IntentTable.row(id)["group"],
-		"target": IntentTable.target(id, IntentTable.KBM, s.focused_station(), s.stations),
+		"target": IntentTable.target(id, device, s.focused_station(), s.stations),
 		"kind": IntentTable.row(id)["kind"],
 		"pressed": true,
 		"value": 1.0,
-		"device": IntentTable.KBM,
+		"device": device,
 	}
 
 
@@ -423,3 +423,138 @@ func test_weapons_is_warned_before_a_shot_along_a_flagged_lane() -> void:
 			{"type": "lane_warning", "payload": payload}, other.ctx.now_ms()
 		)
 		assert_array(other.toasts.texts()).is_empty()
+
+
+## A forward-looking panel whose pointer finds whatever the test sets.
+class ForwardPanel:
+	extends StationPanel
+	var item: Dictionary = {}
+
+	func item_at(_screen_pos: Vector2) -> Dictionary:
+		return item
+
+	func marks_attach_only() -> bool:
+		return true
+
+
+# FT: FT-SPA-030
+# A mark placed on a forward view attaches to the tapped contact; a tap that hits no
+# contact (empty space, a map point, a mark) places no mark.
+func test_forward_view_marks_attach_to_the_tapped_contact_or_none() -> void:
+	for entry: String in ["helm", "weapons"]:
+		var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+		var s: StationScreen = auto_free(StationScreen.new())
+		s.panel_factory = func(_st: String) -> StationPanel: return ForwardPanel.new()
+		s.setup(ctx)
+		add_child(s)
+		var p: ForwardPanel = s.panels[0]
+		p.item = {"kind": "contact", "id": StationFixture.H2}
+		s.dispatch(_ev("mark", s, IntentTable.PAD))
+		assert_array(_sent(s, "place_mark")[0]).is_equal(
+			[-1, "", StationFixture.H2, 0, Vector3.ZERO]
+		)
+		for miss: Dictionary in [
+			{}, {"kind": "point", "site": 0, "pos": Vector3(1, 2, 3)}, {"kind": "mark", "id": 1}
+		]:
+			p.item = miss
+			s.dispatch(_ev("mark", s, IntentTable.PAD))
+		assert_int(_sent(s, "place_mark").size()).is_equal(1)
+		# With nothing under the reticle the selected contact takes it, a selected mark doesn't.
+		p.item = {}
+		ctx.crew.select("mark", StationFixture.BRAVO_SLOT)
+		s.dispatch(_ev("mark", s, IntentTable.PAD))
+		assert_int(_sent(s, "place_mark").size()).is_equal(1)
+		ctx.crew.select("contact", StationFixture.F4)
+		s.dispatch(_ev("mark", s, IntentTable.PAD))
+		assert_array(_sent(s, "place_mark")[1]).is_equal(
+			[-1, "", StationFixture.F4, 0, Vector3.ZERO]
+		)
+	# Relay's map, which is not a forward view, still marks a map point.
+	assert_bool(auto_free(RelayPanel.new()).marks_attach_only()).is_false()
+
+
+# FT: FT-SPA-031
+# A ping on an item another station is already pinging is a silent copy: no new chime or
+# pulse, and the copier's name shows on the original ping (contact, mark or site).
+func test_a_copied_ping_shows_the_copier_on_the_original() -> void:
+	var s: StationScreen = await _screen()
+	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	var chimes: Array = []
+	s.ctx.crew.pinged.connect(func(ping: Dictionary) -> void: chimes.append(ping["by"]))
+	var base: Dictionary = {"ship": SHIP, "x": 0.0, "y": 0.0, "z": 0.0}
+	for what: Array in [
+		["contact", StationFixture.H2, -1], ["mark", StationFixture.BRAVO_SLOT, -1], ["site", -1, 0]
+	]:
+		var ping: Dictionary = base.merged({"kind": what[0], "id": what[1], "site": what[2]})
+		_event(s, "ping", ping.merged({"by": "Ana", "copy": ""}))
+		_event(s, "ping", ping.merged({"by": "Bo", "copy": "Ana"}))
+		_event(s, "ping", ping.merged({"by": "Cy", "copy": "Ana"}))
+	assert_array(chimes).is_equal(["Ana", "Ana", "Ana"])
+	assert_int(s.ctx.crew.pings.size()).is_equal(3)
+	var pic: ContactPicture = s.ctx.picture()
+	assert_array(pic.find({"kind": "contact", "id": StationFixture.H2})["copies"]).is_equal(
+		["Bo", "Cy"]
+	)
+	assert_array(pic.find({"kind": "mark", "id": StationFixture.BRAVO_SLOT})["copies"]).is_equal(
+		["Bo", "Cy"]
+	)
+	assert_array(pic.site["copies"]).is_equal(["Bo", "Cy"])
+	assert_array(pic.find({"kind": "contact", "id": StationFixture.U3})["copies"]).is_empty()
+	# After the 3 s pulse the copies go with it.
+	StationFixture.clock(s.ctx).ms += CrewState.PING_MS + 1
+	assert_array(s.ctx.picture().site["copies"]).is_empty()
+
+
+# FT: FT-RLY-001, FT-RLY-004, FT-RLY-005, FT-RLY-006, FT-SPA-014
+# The map draws probes with their coverage, routes, hazards and flagged lanes without
+# error, and the HUD lists each probe; a mark on a subsystem goes out as contact + index.
+func test_map_draws_everything_and_probes_are_listed() -> void:
+	var s: StationScreen = await _screen()
+	var p: RelayPanel = _relay(s)
+	var probes: Array = [
+		{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0},
+		{"serial": 1, "deployed": false, "pos": Vector3(500, 200, -1000), "range": 8000.0},
+	]
+	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(1, true, probes)
+	_event(
+		s,
+		"routes",
+		{"ship": SHIP, "routes": [[{"site": 0, "x": 0.0, "y": 0.0, "z": -4000.0}], [], [], []]}
+	)
+	_event(
+		s,
+		"zones",
+		{
+			"ship": SHIP,
+			"zones":
+			[
+				{
+					"id": 1,
+					"kind": "hazard",
+					"site": 0,
+					"x": 900.0,
+					"y": 0.0,
+					"z": -2000.0,
+					"radius": 1500.0,
+					"by": "Ana"
+				}
+			]
+		}
+	)
+	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	p.refresh()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_int(p.map.probes.size()).is_equal(2)
+	assert_int(p.map.routes[0].size()).is_equal(1)
+	var rows: Array = p.hud._probe_rows.get_children().map(func(l: Label) -> String: return l.text)
+	assert_array(rows).is_equal(["P1 on station", "P2 en route"])
+	# The hazard's bubble is the map item's radius; the zone is a map item.
+	var zone_items: Array = s.ctx.picture().items.filter(
+		func(it: Dictionary) -> bool: return it["kind"] == "zone"
+	)
+	assert_float(zone_items[0]["radius"]).is_equal(1500.0)
+	s.ctx.mark_subsystem(-1, StationFixture.H2, 3)
+	assert_array(_sent(s, "place_mark")[0]).is_equal(
+		[-1, "", StationFixture.H2, 0, Vector3(4, 0, 0)]
+	)

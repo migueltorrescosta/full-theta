@@ -346,15 +346,18 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		draw_rect(
 			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5
 		)
-	_draw_pulse(pos, float(it.get("pulse", 0.0)))
+	_draw_pulse(pos, float(it.get("pulse", 0.0)), it.get("copies", []))
 
 
-func _draw_pulse(pos: Vector2, pulse: float) -> void:
+func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 	if pulse <= 0.0:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
 	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	if not copies.is_empty():
+		var text: String = "+ " + ", ".join(PackedStringArray(copies))
+		_draw_text(get_theme_default_font(), pos + Vector2(-8.0, 14.0), text, col)
 
 
 ## The mark being placed: an outline diamond, its stem, a line back to the view plane

@@ -79,6 +79,13 @@ func replace_mark(_item: Dictionary) -> bool:
 	return false
 
 
+## True when the panel's main view looks forward (Helm's cockpit, the turret): a mark
+## there attaches to the tapped contact and a tap that hits none places no mark
+## (FT-SPA-030).
+func marks_attach_only() -> bool:
+	return false
+
+
 ## True when the panel has request chips (B / View+Y sends one, §5.0, §7.4).
 func has_request_chip() -> bool:
 	return false

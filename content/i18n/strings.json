@@ -421,6 +421,8 @@
     "toast.route_full": {"en": "That route is full.", "pt_PT": "Essa rota está cheia.", "it": "Quella rotta è piena."},
     "toast.zones_full": {"en": "No room for more zones.", "pt_PT": "Não cabem mais zonas.", "it": "Non c'è posto per altre zone."},
     "zone.hazard": {"en": "Hazard", "pt_PT": "Perigo", "it": "Pericolo"},
-    "zone.scan": {"en": "Scan", "pt_PT": "Varrimento", "it": "Scansione"}
+    "zone.scan": {"en": "Scan", "pt_PT": "Varrimento", "it": "Scansione"},
+    "relay.probe_flying": {"en": "P%d en route", "pt_PT": "P%d a caminho", "it": "P%d in rotta"},
+    "relay.probe_ready": {"en": "P%d on station", "pt_PT": "P%d em posição", "it": "P%d in posizione"}
   }
 }

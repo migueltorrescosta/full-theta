@@ -166,6 +166,19 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+## The items in the order their blips and stems are drawn: the selected one last, on top
+## of all others (FT-SPA-025).
+func draw_order() -> Array[Dictionary]:
+	var rest: Array[Dictionary] = []
+	var top: Array[Dictionary] = []
+	for e: Dictionary in _layout():
+		if _is_selected(e["item"]):
+			top.append(_ref(e["item"]))
+		else:
+			rest.append(_ref(e["item"]))
+	return rest + top
+
+
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	var c: Vector2 = disc_centre()
@@ -263,7 +276,7 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		draw_rect(
 			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5
 		)
-	_draw_pulse(pos, float(it.get("pulse", 0.0)))
+	_draw_pulse(pos, float(it.get("pulse", 0.0)), it.get("copies", []))
 
 
 func _draw_shape(pts: PackedVector2Array, col: Color, solid: bool) -> void:
@@ -275,12 +288,22 @@ func _draw_shape(pts: PackedVector2Array, col: Color, solid: bool) -> void:
 
 
 ## FT-SPA-016: a ring that grows and fades as the ping's pulse runs out.
-func _draw_pulse(pos: Vector2, pulse: float) -> void:
+func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 	if pulse <= 0.0:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
 	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	_draw_copies(pos, col, copies)
+
+
+## FT-SPA-031: "+ Bo, Cy" under a pulse names the stations that copied the ping.
+func _draw_copies(pos: Vector2, col: Color, copies: Array) -> void:
+	if copies.is_empty():
+		return
+	var font: Font = get_theme_default_font()
+	var text: String = "+ " + ", ".join(PackedStringArray(copies))
+	Palette.draw_outlined(self, font, pos + Vector2(-8.0, 26.0), text, FONT_SIZE, col)
 
 
 ## FT-SPA-009: elevation -90..+90 of every item from the own ship, one tick each.

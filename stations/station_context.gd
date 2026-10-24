@@ -78,6 +78,13 @@ func mark_item(slot: int, item: Dictionary) -> void:
 		intents.place_mark(slot, "", -1, int(item.get("site", site())), item["pos"])
 
 
+## Places a mark (slot -1: the first free one) on one of a contact's scanned subsystems
+## (FT-SPA-014, D202): an attached mark's x names the subsystem as its ShipDef.subsystems
+## index plus one; the server refuses it until a scan revealed that weak point.
+func mark_subsystem(slot: int, contact: int, subsystem: int) -> void:
+	intents.place_mark(slot, "", contact, site(), Vector3(float(subsystem + 1), 0.0, 0.0))
+
+
 ## Moves mark `slot` onto a contact (attached) or a map point.
 func move_mark_to(slot: int, item: Dictionary) -> void:
 	if item.get("kind", "") == "contact":

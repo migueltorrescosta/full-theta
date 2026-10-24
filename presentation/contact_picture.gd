@@ -10,7 +10,8 @@ extends RefCounted
 
 ## {"kind": "contact" | "mark" | "zone" | "point", "id", "label", "allegiance" ("H", "U", "F",
 ## "N", "" own), "world" (Vector3, m), "local" (Vector3, m), "pulse" (0..1)}; "zone" items
-## also hold "zone" ("hazard" | "scan") and "radius" (m).
+## also hold "zone" ("hazard" | "scan") and "radius" (m); every item holds "copies", the
+## names of the stations that copied its live ping.
 var items: Array[Dictionary] = []
 ## The own site's name as a callout layer on every station (FT-SPA-027, D98): {"kind":
 ## "site", "id", "label", "pulse"}, or {} when the scenario names none.
@@ -52,6 +53,11 @@ static func build(ctx: StationContext) -> ContactPicture:
 		var zone_label: String = String(TranslationServer.translate("zone." + kind))
 		pic._add("zone", z["id"], zone_label, "", z["pos"], ctx.crew.pulse("zone", z["id"], now))
 		pic.items[-1].merge({"zone": kind, "radius": z["radius"]})
+	# The stations that silently copied a ping show on the original (FT-SPA-031).
+	for it: Dictionary in pic.items:
+		it["copies"] = ctx.crew.copies(it["kind"], it["id"], now)
+	if not pic.site.is_empty():
+		pic.site["copies"] = ctx.crew.copies("site", pic.site["id"], now)
 	for p: Dictionary in ctx.crew.live_pings(now):
 		if p["kind"] == "point":
 			var pulse: float = 1.0 - float(now - int(p["at_ms"])) / float(CrewState.PING_MS)
