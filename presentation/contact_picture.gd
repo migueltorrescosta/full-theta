@@ -8,9 +8,13 @@ extends RefCounted
 ## and never selects them. The own ship is the disc centre, not an item. Stations read
 ## it through StationContext.picture(), built once per frame.
 
-## {"kind": "contact" | "mark" | "point", "id", "label", "allegiance" ("H", "U", "F",
-## "N", "" own), "world" (Vector3, m), "local" (Vector3, m), "pulse" (0..1)}.
+## {"kind": "contact" | "mark" | "zone" | "point", "id", "label", "allegiance" ("H", "U", "F",
+## "N", "" own), "world" (Vector3, m), "local" (Vector3, m), "pulse" (0..1)}; "zone" items
+## also hold "zone" ("hazard" | "scan") and "radius" (m).
 var items: Array[Dictionary] = []
+## The own site's name as a callout layer on every station (FT-SPA-027, D98): {"kind":
+## "site", "id", "label", "pulse"}, or {} when the scenario names none.
+var site: Dictionary = {}
 ## The interpolator the picture was built from: own position and rotation, site period.
 ## A fresh one (identity rotation, no wrap) for pictures built by hand.
 var interp: SnapshotInterpolator = SnapshotInterpolator.new()
@@ -35,6 +39,19 @@ static func build(ctx: StationContext) -> ContactPicture:
 		var slot: int = m["slot"]
 		var pulse: float = ctx.crew.pulse("mark", slot, now)
 		pic._add("mark", slot, m["name"], "", ctx.mark_position(m), pulse)
+	var own_site: int = ctx.site()
+	var site_label: String = ctx.crew.site_name(own_site)
+	if site_label != "":
+		var site_pulse: float = ctx.crew.pulse("site", own_site, now)
+		pic.site = {"kind": "site", "id": own_site, "label": site_label, "pulse": site_pulse}
+	# Hazard zones and scan positions: MARK items outside the 8 marks (FT-SPA-028).
+	for z: Dictionary in ctx.crew.zones:
+		if z["site"] != own_site:
+			continue
+		var kind: String = z["kind"]
+		var zone_label: String = String(TranslationServer.translate("zone." + kind))
+		pic._add("zone", z["id"], zone_label, "", z["pos"], ctx.crew.pulse("zone", z["id"], now))
+		pic.items[-1].merge({"zone": kind, "radius": z["radius"]})
 	for p: Dictionary in ctx.crew.live_pings(now):
 		if p["kind"] == "point":
 			var pulse: float = 1.0 - float(now - int(p["at_ms"])) / float(CrewState.PING_MS)

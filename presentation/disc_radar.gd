@@ -5,7 +5,9 @@ extends Control
 ## the rim, each item a blip with a stem to the disc (solid above, hollow below), a
 ## range ring through the selected item's stem foot, an optional elevation side strip,
 ## fixed range steps with beyond-scale arrows on the rim, the selected stem drawn on
-## top, marks as diamonds with stems, contact chips (ChipText) and ping pulses. Ship
+## top, marks as diamonds with stems, hazard zones and scan positions as octagons, the
+## site's name as a banner (SiteBanner, FT-SPA-027), contact chips (ChipText) and ping
+## pulses. Ship
 ## frame always; optionally centred on a selected mark, site or contact while keeping
 ## the ship's axes (no world-fixed up, D124). Drawn in 2D with a fixed or orbitable
 ## camera angle (FT-SPA-011). Mouse: wheel zooms, a click on the range label steps the
@@ -74,6 +76,8 @@ func toggle_strip() -> void:
 ## The item drawn under local_pos ({"kind", "id"}), or {}: the selected item first,
 ## then the nearest blip or mark within HIT_PX, then a chip under the pointer.
 func item_at(local_pos: Vector2) -> Dictionary:
+	if SiteBanner.rect(get_theme_default_font(), picture.site).has_point(local_pos):
+		return _ref(picture.site)
 	var layout: Array[Dictionary] = _layout()
 	for e: Dictionary in layout:
 		if _is_selected(e["item"]) and _hits(e, local_pos):
@@ -193,6 +197,7 @@ func _draw() -> void:
 	draw_rect(label, Palette.color("panel_focus"))
 	draw_rect(label, Palette.color("line"), false, 1.0)
 	_draw_text(font, label.grow(-4.0), _range_text(), Palette.color("text"))
+	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
 	if side_strip:
 		_draw_strip(font)
 

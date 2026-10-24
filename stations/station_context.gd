@@ -42,6 +42,8 @@ func picture() -> ContactPicture:
 		interp.revision,
 		crew.marks.duplicate(true),
 		crew.pings.duplicate(true),
+		crew.zones.duplicate(true),
+		crew.sites.duplicate(true),
 	]
 	if _picture == null or _picture.interp != interp or key != _picture_key:
 		_picture = ContactPicture.build(self)
@@ -106,6 +108,9 @@ func selection_local() -> Variant:
 			if m.is_empty():
 				return null
 			return interp.local(interp.offset_to(mark_position(m)))
+		"zone":
+			var z: Dictionary = crew.zone_by_id(int(s["id"]))
+			return null if z.is_empty() else interp.local(interp.offset_to(z["pos"]))
 	return null
 
 

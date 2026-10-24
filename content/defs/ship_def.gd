@@ -39,13 +39,16 @@ extends Resource
 @export var spare_parts: int = 0
 ## Repair crews Engineering can dispatch (count, FT-SIM-024; at most 31, one bit each).
 @export var repair_crews: int = 0
-## Probes (Relay, FT-RLY-004, D56; strand B of #9): the stock at launch (count), the flight
-## speed (m/s), the radius of the coverage bubble around a deployed probe (m), and
-## Engineering's fabrication: spare parts one probe takes (count) and its build time (s).
+## Probes in stock at launch (count; Relay launches them, Engineering fabricates more,
+## FT-RLY-004, D56).
 @export var probes: int = 0
+## Probe flight speed (m/s).
 @export var probe_speed: float = 0.0
+## Radius of the coverage bubble around a deployed probe (m).
 @export var probe_range: float = 0.0
+## Spare parts one fabricated probe takes (count).
 @export var probe_parts: int = 0
+## Time to fabricate one probe (s).
 @export var probe_fab_s: float = 0.0
 ## Share of a hit's energy past the shields that the subsystem nearest the impact takes;
 ## the hull takes the rest (dimensionless, 0..1, FT-SIM-020).

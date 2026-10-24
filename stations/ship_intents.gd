@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name ShipIntents
 extends RefCounted
 ## What a station sends: the one seam between the station UI and NetClient. Panels call
@@ -44,6 +45,39 @@ func delete_mark(slot: int) -> void:
 ## kind "contact" | "mark" | "site" | "point" (FT-SPA-016).
 func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
 	_call(&"ping", [kind, id, site, pos])
+
+
+## Relay (strand B of #9): send the mark in `slot` to an allied ship's Relay (FT-RLY-008);
+## accept the inbox item `id`, replacing `slot` when all 8 marks are used (slot -1: a free
+## one), or decline it (FT-RLY-009, FT-SPA-022).
+func send_mark(slot: int, to_ship: int) -> void:
+	_call(&"send_mark", [slot, to_ship])
+
+
+func accept_mark(id: int, slot: int) -> void:
+	_call(&"accept_mark", [id, slot])
+
+
+func decline_mark(id: int) -> void:
+	_call(&"decline_mark", [id])
+
+
+## Routes and hazard zones (FT-RLY-005, FT-SPA-028): a waypoint on route `route`, clear
+## it, a hazard of `radius_m` at a point, delete the zone `id`.
+func route_add(route: int, site: int, pos: Vector3) -> void:
+	_call(&"route_add", [route, site, pos])
+
+
+func route_clear(route: int) -> void:
+	_call(&"route_clear", [route])
+
+
+func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
+	_call(&"hazard_add", [radius_m, site, pos])
+
+
+func hazard_delete(id: int) -> void:
+	_call(&"hazard_delete", [id])
 
 
 func claim(item: String) -> void:

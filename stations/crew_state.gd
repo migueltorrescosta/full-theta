@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name CrewState
 extends RefCounted
 ## The client's model of everything that isn't a snapshot (#7): pick, catalogue, lobby,
@@ -8,7 +9,8 @@ extends RefCounted
 
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
-## &"run_over" (the outcome card and its "Run again" votes, D178).
+## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
+## &"sites", &"zones", &"routes", &"inbox", &"relay_log".
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -27,6 +29,8 @@ const ALERT_NORMAL: int = CrewMarks.ALERT_NORMAL
 const ALERT_YELLOW: int = CrewMarks.ALERT_YELLOW
 const ALERT_RED: int = CrewMarks.ALERT_RED
 const ALERT_LEVELS: int = CrewMarks.ALERT_RED + 1
+## Most log entries kept (the server keeps CrewRelay.MAX_LOG).
+const MAX_LOG: int = CrewRelay.MAX_LOG
 ## Sim ticks per second (spec: 60 Hz), for the mission timer.
 const TICK_HZ: float = 60.0
 
@@ -60,8 +64,21 @@ var alert_by: String = ""
 var marks: Array[Dictionary] = []
 ## Active pings, oldest first: {"kind", "id", "site", "pos", "by", "at_ms", "copies"}.
 var pings: Array[Dictionary] = []
-## The shared selection: {"kind": "contact" | "mark" | "site", "id": int}, or {}.
+## The shared selection: {"kind": "contact" | "mark" | "site" | "zone", "id": int}, or {}.
 var selection: Dictionary = {}
+## The scenario's site names, the callout layer every station shows (FT-SPA-027): [{"site",
+## "name"}].
+var sites: Array[Dictionary] = []
+## Hazard zones and scan positions, outside the 8 marks (FT-SPA-028): {"id", "kind"
+## ("hazard" | "scan"), "site", "pos" (Vector3, m), "radius" (m), "by"}.
+var zones: Array[Dictionary] = []
+## Relay's routes (FT-RLY-005), by route number: Array of {"site", "pos"} waypoints.
+var routes: Array = []
+## Relay only: marks other ships sent, waiting for Accept or Decline (FT-RLY-009): {"id",
+## "from_ship", "from", "name", "site", "pos"}; and the ship's log (FT-RLY-006): {"tick",
+## "key", "args"}, oldest first.
+var inbox: Array[Dictionary] = []
+var relay_log: Array[Dictionary] = []
 
 
 ## Takes the Welcome fields (NetClient.welcome).
@@ -158,6 +175,8 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_marks(p)
 		"ping":
 			_on_ping(p, now_ms)
+		"sites", "zones", "routes", "inbox", "relay_log":
+			_on_relay(str(e["type"]), p)
 		"request_rejected", "command_rejected":
 			toast.emit("toast." + str(p.get("reason", "rejected")), p)
 		_:
@@ -221,6 +240,21 @@ func live_pings(now_ms: int) -> Array[Dictionary]:
 	return pings.duplicate()
 
 
+## The name of a site, "" when the scenario gives none (FT-SPA-027).
+func site_name(site: int) -> String:
+	for d: Dictionary in sites:
+		if d["site"] == site:
+			return d["name"]
+	return ""
+
+
+func zone_by_id(id: int) -> Dictionary:
+	for z: Dictionary in zones:
+		if z["id"] == id:
+			return z
+	return {}
+
+
 func mark_in_slot(slot: int) -> Dictionary:
 	for m: Dictionary in marks:
 		if m["slot"] == slot:
@@ -238,6 +272,10 @@ func claimer(item: String) -> String:
 func reset_run() -> void:
 	marks.clear()
 	pings.clear()
+	zones.clear()
+	routes.clear()
+	inbox.clear()
+	relay_log.clear()
 	selection = {}
 	alert = ALERT_NORMAL
 	alert_by = ""
@@ -245,6 +283,75 @@ func reset_run() -> void:
 	abandoned.erase(ship)
 	run_over.erase(ship)
 	changed.emit(&"reset")
+
+
+## The Relay and callout-layer events (docs/protocol.md "Relay").
+func _on_relay(type: String, p: Dictionary) -> void:
+	if type != "sites" and not _mine(p):
+		return
+	match type:
+		"sites":
+			sites.clear()
+			for d: Dictionary in p.get("sites", []):
+				sites.append({"site": int(d["site"]), "name": str(d["name"])})
+		"zones":
+			zones.clear()
+			for z: Dictionary in p.get("zones", []):
+				(
+					zones
+					. append(
+						{
+							"id": int(z["id"]),
+							"kind": str(z["kind"]),
+							"site": int(z["site"]),
+							"pos": Vector3(float(z["x"]), float(z["y"]), float(z["z"])),
+							"radius": float(z["radius"]),
+							"by": str(z.get("by", "")),
+						}
+					)
+				)
+			if selection.get("kind", "") == "zone" and zone_by_id(selection["id"]).is_empty():
+				selection = {}
+				changed.emit(&"selection")
+		"routes":
+			routes.clear()
+			for route: Array in p.get("routes", []):
+				var points: Array = []
+				for w: Dictionary in route:
+					(
+						points
+						. append(
+							{
+								"site": int(w["site"]),
+								"pos": Vector3(float(w["x"]), float(w["y"]), float(w["z"])),
+							}
+						)
+					)
+				routes.append(points)
+		"inbox":
+			inbox.clear()
+			for m: Dictionary in p.get("items", []):
+				(
+					inbox
+					. append(
+						{
+							"id": int(m["id"]),
+							"from_ship": int(m["from_ship"]),
+							"from": str(m["from"]),
+							"name": str(m["name"]),
+							"site": int(m["site"]),
+							"pos": Vector3(float(m["x"]), float(m["y"]), float(m["z"])),
+						}
+					)
+				)
+		_:
+			if bool(p.get("replace", false)):
+				relay_log.clear()
+			for entry: Dictionary in p.get("entries", []):
+				relay_log.append(entry)
+			while relay_log.size() > MAX_LOG:
+				relay_log.pop_front()
+	changed.emit(StringName(type))
 
 
 func _mine(p: Dictionary) -> bool:

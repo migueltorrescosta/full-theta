@@ -112,7 +112,7 @@ static func alert(level: int) -> Dictionary:
 	return ALERTS[clampi(level, 0, ALERTS.size() - 1)]
 
 
-## Points of a shape ("circle", "triangle", "square", "hexagon", "diamond") of radius
+## Points of a shape ("circle", "triangle", "square", "hexagon", "diamond", "octagon") of radius
 ## r around c, for draw_polygon / draw_polyline (closed: first point repeated).
 static func shape_points(shape: String, c: Vector2, r: float) -> PackedVector2Array:
 	var n: int = 16
@@ -128,6 +128,9 @@ static func shape_points(shape: String, c: Vector2, r: float) -> PackedVector2Ar
 		"hexagon":
 			n = 6
 			start = 0.0
+		"octagon":
+			n = 8
+			start = PI / 8.0
 	var pts: PackedVector2Array = PackedVector2Array()
 	for i: int in n + 1:
 		var a: float = start + TAU * float(i % n) / float(n)
@@ -135,18 +138,22 @@ static func shape_points(shape: String, c: Vector2, r: float) -> PackedVector2Ar
 	return pts
 
 
-## A radar item's colour (ContactPicture items): marks in the mark colour, else the
-## allegiance colour.
+## A radar item's colour (ContactPicture items): marks in the mark colour, zones amber
+## (hazard) or blue (scan position), else the allegiance colour.
 static func item_color(it: Dictionary) -> Color:
 	if it.get("kind", "") == "mark":
 		return color("mark")
+	if it.get("kind", "") == "zone":
+		return color("warn" if it.get("zone", "") == "hazard" else "accent")
 	return allegiance_color(it.get("allegiance", ""))
 
 
-## A radar item's shape: diamonds for marks, else the allegiance shape.
+## A radar item's shape: diamonds for marks, octagons for zones, else the allegiance shape.
 static func item_shape(it: Dictionary) -> String:
 	if it.get("kind", "") == "mark":
 		return "diamond"
+	if it.get("kind", "") == "zone":
+		return "octagon"
 	return ALLEGIANCE_SHAPES.get(it.get("allegiance", ""), "circle")
 
 

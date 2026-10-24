@@ -212,15 +212,20 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "cutaway_pitch", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["RS_Y"]},
 	# Relay (§5.5); drags on the map (place, Shift+drag depth, right-drag rotate) are
 	# the map's own pointer handling.
-	{"id": "route", "group": "relay", "kind": PRESS, "kbm": ["G"], "pad": []},
-	{"id": "flag_lanes", "group": "relay", "kind": PRESS, "kbm": ["L"], "pad": []},
+	{"id": "route", "group": "relay", "kind": PRESS, "kbm": ["G"], "pad": ["LB+Up"]},
+	{"id": "route_clear", "group": "relay", "kind": PRESS, "kbm": ["Shift+G"], "pad": []},
+	{"id": "flag_lanes", "group": "relay", "kind": PRESS, "kbm": ["L"], "pad": ["LB+Down"]},
+	# Probes and hazards: with something selected they go to it, else the next click on
+	# the map places them (strand B of #9).
+	{"id": "probe_launch", "group": "relay", "kind": PRESS, "kbm": ["P"], "pad": ["Right"]},
+	{"id": "hazard_add", "group": "relay", "kind": PRESS, "kbm": ["H"], "pad": ["LB+Right"]},
 	{"id": "mark_delete", "group": "relay", "kind": PRESS, "kbm": ["Delete"], "pad": ["Down"]},
 	{"id": "mark_rename", "group": "relay", "kind": PRESS, "kbm": ["N"], "pad": []},
 	# Attach the selected mark to the nearest contact, or free it where it is.
 	{"id": "mark_attach", "group": "relay", "kind": PRESS, "kbm": ["M"], "pad": ["Up"]},
 	# Centre the map on the selection, or back on the ship.
 	{"id": "map_centre", "group": "relay", "kind": PRESS, "kbm": ["C"], "pad": ["Left"]},
-	{"id": "mark_send", "group": "relay", "kind": PRESS, "kbm": ["X"], "pad": []},
+	{"id": "mark_send", "group": "relay", "kind": PRESS, "kbm": ["X"], "pad": ["LB+Left"]},
 	{"id": "relay_radial", "group": "relay", "kind": HOLD, "kbm": [], "pad": ["long B"]},
 	{"id": "relay_cursor_x", "group": "relay", "kind": AXIS, "kbm": [], "pad": ["LS_X"]},
 	{"id": "relay_cursor_y", "group": "relay", "kind": AXIS, "kbm": [], "pad": ["LS_Y"]},
