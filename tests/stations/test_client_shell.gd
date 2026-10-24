@@ -7,9 +7,13 @@ extends GdUnitTestSuite
 class FakeClient:
 	extends NetClient
 	var queued: Array[Dictionary] = []
+	var said_bye: bool = false
 
 	func poll() -> void:
 		pass
+
+	func bye(_reason: String = "") -> void:
+		said_bye = true
 
 	func take_events() -> Array[Dictionary]:
 		var out: Array[Dictionary] = queued
@@ -76,3 +80,15 @@ func test_lobby_until_started_then_the_station_screen() -> void:
 	await get_tree().process_frame
 	assert_object(s.screen).is_not_null()
 	assert_array(s.screen.stations).is_equal(["engineering", "science"])
+
+
+# FT: FT-NET-003
+# The lobby's Main menu button leaves the session: the client says Bye and the shell
+# emits `left`, which the menu answers by stopping the host's server.
+func test_lobby_main_menu_button_leaves() -> void:
+	var s: ClientShell = _shell("en")
+	var left: Array[bool] = []
+	s.left.connect(func() -> void: left.append(true))
+	(s.lobby.find_child("MainMenu", true, false) as Button).pressed.emit()
+	assert_array(left).has_size(1)
+	assert_bool((s.ctx.client as FakeClient).said_bye).is_true()

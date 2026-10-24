@@ -5,7 +5,13 @@ extends Control
 ## one-line hint naming the pair it makes solo and its role summary; the coverage state
 ## from `lobby` events;
 ## the player's pick; and Start, which any crew player of a covered ship presses. Picks
-## go to the server (ShipIntents.pick); the screen shows what the events say.
+## go to the server (ShipIntents.pick); the screen shows what the events say. The host's
+## lobby also shows how to join (FT-NET-013): the browser URL with a QR code and the
+## desktop address.
+
+## The player wants out of the session (Main menu): the shell leaves, and the host's
+## menu also stops its server.
+signal menu_requested
 
 const LOAD_ROLES: Dictionary = {"light": "ok", "busy": "warn", "intense": "danger"}
 ## The crew changes the lobby depends on.
@@ -22,6 +28,10 @@ var _pick: Label
 var _start: Button
 var _title: Label
 var _leave: Button
+var _menu: Button
+var _join_panel: VBoxContainer
+## After "Back to ships": no ship is chosen until the player picks one.
+var _browsing: bool = false
 
 
 func setup(context: StationContext) -> void:
@@ -34,7 +44,9 @@ func setup(context: StationContext) -> void:
 ## Rebuilds every list from ctx.crew.
 func refresh() -> void:
 	var ships: Array = ctx.crew.catalogue.get("ships", [])
-	if ship < 0:
+	if _browsing:
+		ship = -1
+	elif ship < 0:
 		ship = ctx.crew.ship if ctx.crew.ship >= 0 else (int(ships[0]["id"]) if ships else -1)
 	_clear(_ships)
 	for s: Dictionary in ships:
@@ -57,7 +69,10 @@ func refresh() -> void:
 	_start.disabled = not (
 		ctx.crew.is_crew() and ctx.crew.ship == ship and bool(state.get("ready", false))
 	)
-	_start.visible = not bool(state.get("started", false))
+	_start.visible = not _browsing and not bool(state.get("started", false))
+	_entries.visible = not _browsing
+	if _browsing:
+		_pick.text = tr("lobby.pick_ship")
 
 
 ## "Crew 2/3 · uncovered: Science, Comms" (FT-NET-021).
@@ -121,8 +136,60 @@ func _entry_row(def: Dictionary) -> Control:
 
 
 func _choose_ship(id: int) -> void:
+	_browsing = false
 	ship = id
 	refresh()
+
+
+## "Back to ships": gives up the seat (the server answers with a `picked` event of no
+## ship) and shows the ship list alone until a ship is chosen.
+func _back_to_ships() -> void:
+	ctx.intents.release_pick()
+	_browsing = true
+	refresh()
+
+
+## The browser URL of the host's web stations: HTTP listens one port below the
+## WebSocket port (D108, docs/launch.md).
+static func join_url(bind: String, ws_port: int) -> String:
+	return "http://%s:%d/?join=1" % [bind, ws_port - 1]
+
+
+## True for an address only this computer can reach.
+static func is_local_only(bind: String) -> bool:
+	return bind.begins_with("127.") or bind == "::1" or bind == "localhost"
+
+
+## The host's "How to join" panel: URL and QR code, the desktop address, or why nobody
+## else can join.
+func _build_join_panel(col: Container) -> void:
+	var panel: VBoxContainer = VBoxContainer.new()
+	panel.name = "JoinPanel"
+	col.add_child(panel)
+	_join_panel = panel
+	var head: Label = Label.new()
+	head.text = tr("lobby.join_title")
+	head.add_theme_font_size_override("font_size", 20)
+	panel.add_child(head)
+	if is_local_only(ctx.host_bind):
+		var local: Label = Label.new()
+		local.name = "JoinLocal"
+		local.text = tr("lobby.join_local") % ctx.host_bind
+		panel.add_child(local)
+		return
+	var url: String = join_url(ctx.host_bind, ctx.host_port)
+	var browser: Label = Label.new()
+	browser.name = "JoinUrl"
+	browser.text = tr("lobby.join_browser") % url
+	panel.add_child(browser)
+	var desktop: Label = Label.new()
+	desktop.name = "JoinDesktop"
+	desktop.text = tr("lobby.join_desktop") % ctx.host_bind
+	panel.add_child(desktop)
+	var qr: QrView = QrView.new()
+	qr.name = "JoinQr"
+	qr.set_text(url)
+	panel.add_child(qr)
 
 
 func _build() -> void:
@@ -163,8 +230,16 @@ func _build() -> void:
 	bottom.add_child(_start)
 	_leave = Button.new()
 	_leave.text = tr("lobby.leave_pick")
-	_leave.pressed.connect(func() -> void: ctx.intents.release_pick())
+	_leave.name = "BackToShips"
+	_leave.pressed.connect(_back_to_ships)
 	bottom.add_child(_leave)
+	_menu = Button.new()
+	_menu.name = "MainMenu"
+	_menu.text = tr("lobby.menu")
+	_menu.pressed.connect(menu_requested.emit)
+	bottom.add_child(_menu)
+	if ctx.host_bind != "":
+		_build_join_panel(col)
 
 
 static func _clear(box: Container) -> void:
@@ -179,6 +254,14 @@ func _notification(what: int) -> void:
 		_title.text = tr("lobby.title")
 		_start.text = tr("lobby.start")
 		_leave.text = tr("lobby.leave_pick")
+		_menu.text = tr("lobby.menu")
+		if _join_panel != null:
+			var col: Container = _join_panel.get_parent()
+			var at: int = _join_panel.get_index()
+			col.remove_child(_join_panel)
+			_join_panel.queue_free()
+			_build_join_panel(col)
+			col.move_child(_join_panel, at)
 		refresh()
 
 

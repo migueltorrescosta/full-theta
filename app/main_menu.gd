@@ -154,7 +154,10 @@ func _save_token(c: NetClient) -> void:
 func _start_shell(client: NetClient) -> void:
 	shell = ClientShell.new()
 	add_child(shell)
-	shell.setup(client, settings)
+	if host_session != null:
+		shell.setup(client, settings, host_session.launcher.bind, host_session.launcher.port)
+	else:
+		shell.setup(client, settings)
 	shell.left.connect(_on_left)
 	_menu.visible = false
 	_status.text = ""

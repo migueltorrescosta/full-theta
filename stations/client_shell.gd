@@ -32,9 +32,14 @@ var _resume_at: int = 0
 var _welcome: Dictionary = {}
 
 
-## Starts the session on a welcomed client.
-func setup(client: NetClient, settings: ClientSettings) -> void:
+## Starts the session on a welcomed client. The host passes its server's address and
+## WebSocket port for the lobby's join info.
+func setup(
+	client: NetClient, settings: ClientSettings, host_bind: String = "", host_port: int = 0
+) -> void:
 	ctx.client = client
+	ctx.host_bind = host_bind
+	ctx.host_port = host_port
 	ctx.intents = ShipIntents.new(client)
 	ctx.settings = settings
 	ctx.matcher = InputMatcher.new(settings.bindings)
@@ -140,6 +145,7 @@ func _on_crew_changed(what: StringName) -> void:
 	if want == "lobby":
 		lobby = LobbyScreen.new()
 		lobby.setup(ctx)
+		lobby.menu_requested.connect(leave)
 		_layer.add_child(lobby)
 	else:
 		screen = StationScreen.new()
