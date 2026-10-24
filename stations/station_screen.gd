@@ -36,7 +36,6 @@ var top_bar: TopBar
 var radar: DiscRadar
 var toasts: Toasts
 var overlay: ControlsOverlay
-var tooltip: FirstRunTooltip
 var alerts: StationAlerts
 var flash: AlertFlash
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
@@ -109,7 +108,7 @@ func focus(i: int) -> void:
 	ctx.matcher.set_context(stations, focused_station())
 	radar.orbitable = focused_panel().radar_orbitable()
 	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
-	_show_tooltip()
+	_open_first_visit_help()
 	_refresh_overlay()
 
 
@@ -396,13 +395,6 @@ func _build() -> void:
 	flash = AlertFlash.new()
 	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(flash)
-	tooltip = FirstRunTooltip.new()
-	tooltip.visible = false
-	tooltip.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	tooltip.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	tooltip.position += Vector2(16, -16)
-	tooltip.dismissed.connect(_on_tooltip_dismissed)
-	add_child(tooltip)
 	overlay = ControlsOverlay.new()
 	overlay.visible = false
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -411,20 +403,19 @@ func _build() -> void:
 
 func _refresh_overlay() -> void:
 	if overlay.visible:
-		overlay.build(ctx.settings.bindings, stations, ctx.matcher.device)
+		overlay.build(ctx.settings.bindings, stations, ctx.matcher.device, ctx.crew.entry)
 
 
-## First-run tip of the focused station, once per client and station (FT-STN-012).
-func _show_tooltip() -> void:
-	var p: StationPanel = focused_panel()
-	tooltip.visible = tooltip.show_for(
-		p.station, p.tooltip_intents(), ctx.settings.bindings, ctx.matcher.device, ctx.settings
-	)
-
-
-func _on_tooltip_dismissed(_station: String) -> void:
-	tooltip.visible = false
+## The first visit to a station opens the controls overlay by itself, once per client and
+## station (FT-STN-012, D185); Settings re-enables it.
+func _open_first_visit_help() -> void:
+	var station: String = focused_station()
+	if ctx.settings.tooltip_seen(station):
+		return
+	ctx.settings.mark_tooltip_seen(station)
 	ctx.settings.save()
+	overlay.visible = true
+	_update_block()
 
 
 func _on_toast(key: String, args: Dictionary) -> void:
@@ -443,8 +434,7 @@ func _on_panel_input(event: InputEvent, p: StationPanel) -> void:
 		accept_event()
 
 
-## Events a GUI widget owns: typing in a text field, clicks on buttons, the overlay and
-## the tooltip.
+## Events a GUI widget owns: typing in a text field and clicks on buttons.
 func _gui_owns(event: InputEvent) -> bool:
 	var vp: Viewport = get_viewport()
 	if vp == null:
@@ -453,5 +443,5 @@ func _gui_owns(event: InputEvent) -> bool:
 		return true
 	if event is InputEventMouseButton:
 		var hovered: Control = vp.gui_get_hovered_control()
-		return hovered is BaseButton or (hovered != null and tooltip.is_ancestor_of(hovered))
+		return hovered is BaseButton
 	return false

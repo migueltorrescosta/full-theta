@@ -97,20 +97,6 @@ func claim_item() -> String:
 	return ""
 
 
-## Intent ids the first-run tooltip explains, most important first (FT-STN-012).
-## Default: the station's first three press or hold intents (the common select, ping
-## and mark for a station without any), then the controls overlay.
-func tooltip_intents() -> Array[String]:
-	var out: Array[String] = []
-	for id: String in IntentTable.ids_of(station):
-		if IntentTable.row(id)["kind"] != IntentTable.AXIS and out.size() < 3:
-			out.append(id)
-	if out.is_empty():
-		out = ["select", "ping", "mark"]
-	out.append("overlay")
-	return out
-
-
 ## Whether mouse motion steers this panel (the mouse stick behind "MouseX"/"MouseY")
 ## while it has focus; Helm says no while the pointer is free.
 func mouse_steers() -> bool:

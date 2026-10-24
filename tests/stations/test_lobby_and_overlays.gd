@@ -46,6 +46,18 @@ func test_catalogue_shows_load_tags_and_joint_hints() -> void:
 	assert_array(StationFixture.sent(l.ctx).of("pick")[0][1]).is_equal([0, "science"])
 
 
+# FT: FT-STN-012
+func test_every_entry_shows_its_role_summary_and_a_language_switch_retranslates() -> void:
+	var l: LobbyScreen = _lobby("helm")
+	for id: String in StationViews.STATIONS.keys() + StationViews.ENTRIES.keys():
+		assert_str((_row(l, id).get_node("Role") as Label).text).is_equal(tr("role." + id))
+	assert_str((_row(l, "science").get_node("Role") as Label).text).contains("Placeholder")
+	I18n.apply("pt_PT")
+	assert_str((_row(l, "helm").get_node("Role") as Label).text).is_equal(tr("role.helm"))
+	assert_str((l.find_child("Start", true, false) as Button).text).is_equal("Começar")
+	I18n.apply("en")
+
+
 # FT: FT-NET-019
 func test_start_is_for_crew_of_a_covered_ship() -> void:
 	var l: LobbyScreen = _lobby("ops")

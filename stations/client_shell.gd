@@ -109,6 +109,18 @@ func _on_welcome() -> void:
 	_on_crew_changed(&"picked")
 
 
+## A language switch rebuilds the open lobby or station screen in the new language,
+## keeping the controls overlay open if it was.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or ctx == null or _shown == "":
+		return
+	var help: bool = screen != null and screen.overlay.visible
+	_shown = ""
+	_on_crew_changed(&"picked")
+	if help and screen != null:
+		screen.dispatch({"id": "overlay", "target": "screen", "pressed": true})
+
+
 func _on_crew_changed(what: StringName) -> void:
 	if what not in [&"picked", &"lobby", &"started", &"reset", &"catalogue"]:
 		return

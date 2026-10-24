@@ -1,14 +1,18 @@
 class_name ControlsOverlay
 extends Control
-## The controls overlay (FT-STN-011, D100): generated from the live bindings, so a rebind
+## The controls overlay (FT-STN-011, FT-STN-012, D100, D185): generated from the live
+## bindings, so a rebind
 ## shows at once; one section for the common actions and the always-live set and one
 ## per station of the screen, for the device in use; translated labels. Intents with no
-## binding on the device are left out; hold intents switched to a toggle say so.
+## binding on the device are left out; hold intents switched to a toggle say so. Headed
+## by the seat's role summary; opaque over the station; it retranslates itself when the
+## language changes.
 
 var _rows: Array[Dictionary] = []
 var _bindings: Bindings = null
 var _stations: Array = []
 var _device: String = IntentTable.KBM
+var _role: String = ""
 var _list: VBoxContainer = VBoxContainer.new()
 
 
@@ -29,13 +33,15 @@ func _init() -> void:
 	panel.add_child(_list)
 
 
-## Regenerates the rows for `stations` on `device`; follows later rebinds.
-func build(bindings: Bindings, stations: Array, device: String) -> void:
+## Regenerates the rows for `stations` on `device` under the role summary of seat `role`
+## (an ENTRIES or STATIONS id; none when empty); follows later rebinds.
+func build(bindings: Bindings, stations: Array, device: String, role: String = "") -> void:
 	if _bindings != null and _bindings.changed.is_connected(_rebuild):
 		_bindings.changed.disconnect(_rebuild)
 	_bindings = bindings
 	_stations = stations
 	_device = device
+	_role = role
 	_bindings.changed.connect(_rebuild)
 	_rebuild()
 
@@ -45,8 +51,15 @@ func rows() -> Array[Dictionary]:
 	return _rows
 
 
+## Opaque: the 0.8-alpha background tint let the station show through everywhere but the
+## small centred box.
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("background") * Color(1, 1, 1, 0.8))
+	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("panel"))
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and _bindings != null:
+		_rebuild()
 
 
 func _rebuild() -> void:
@@ -55,6 +68,11 @@ func _rebuild() -> void:
 		_list.remove_child(c)
 		c.queue_free()
 	_list.add_child(_label(tr("overlay.title"), "text", 20))
+	if _role != "":
+		var summary: Label = _label(tr("role." + _role), "text", 0)
+		summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		summary.custom_minimum_size = Vector2(480, 0)
+		_list.add_child(summary)
 	var common: Array[String] = IntentTable.ids_of(IntentTable.COMMON)
 	common.append_array(IntentTable.ids_of(IntentTable.LIVE))
 	_section("overlay.common", common)

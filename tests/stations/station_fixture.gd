@@ -123,6 +123,9 @@ static func context(
 	ctx.clock = clock.now
 	ctx.settings = ClientSettings.new(settings_path)
 	ctx.settings.player_name = rec.name
+	# The first-visit help (FT-STN-012) would open the controls overlay and block input.
+	for station: String in StationViews.CREW + [StationViews.VIEWER, StationViews.CAPTAIN]:
+		ctx.settings.mark_tooltip_seen(station)
 	ctx.matcher = InputMatcher.new(ctx.settings.bindings)
 	var crew: CrewState = ctx.crew
 	crew.welcome(
