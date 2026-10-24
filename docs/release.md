@@ -88,7 +88,16 @@ Browser stations load the web export from the host's own HTTP server (`net/stati
 
 `tools/release/build_web_template.sh` builds the slim template: Godot 4.7.2-stable from source with emsdk 4.0.11 (the version the engine's own CI uses), the no-threads web target, `optimize=size`, full LTO, and the modules and servers the game doesn't use off (3D rendering stays: the Helm and Viewer scenes use it). The result goes to `~/.cache/full-theta/web-template/web_nothreads_release.zip`, where `export_web.sh` finds it; without it the export uses the stock template. `FT_STOCK_WEB_TEMPLATE=1` forces the stock one. The recipe, flags and numbers are in `BUILD.txt` beside the zip and in the table below.
 
-WEB_TEMPLATE_TABLE
+Measured on fugaku, the same page and server, headless Chromium on 2 cores with software rendering (a CPU-bound number, so only the ratios carry over to a phone):
+
+| | Stock template | Slim template |
+|---|---|---|
+| `index.wasm` | 39.5 MB (10.1 MB gzip) | 26.3 MB (6.6 MB gzip), 34 % smaller |
+| Engine started (`startGame` resolved), 3 loads | 4.6, 6.0 and 4.0 s | 3.1, 3.0 and 2.9 s |
+| Template build | none | 675 s with `-j8` on a quiet machine (1,309 s on a busy one), mostly the full-LTO link |
+
+The 10 s join budget on a phone (S3 took 12.2 s, mostly engine start-up) is the owner's device check (#9): the first join on the slim build with a cold cache, then one with a warm cache. The pack is 0.8 MB, so the wasm decides. `tools/release/build_web_template.sh` has to be run on a machine before `export_web.sh` uses the slim template; CI and the release workflow don't build it, so they export with the stock template until the zip is kept somewhere they can fetch it (open question for the lead).
+
 
 ## macOS
 
