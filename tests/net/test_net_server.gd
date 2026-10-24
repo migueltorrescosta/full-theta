@@ -97,7 +97,7 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_int(c.welcome["v"]).is_equal(NetProtocol.PROTOCOL_VERSION)
 	assert_str(c.token).has_length(32)
 	assert_float(c.welcome["period"]).is_equal(server.world.kin.period)
-	assert_int((c.catalogue["entries"] as Array).size()).is_equal(6 + 3 + 2 + 1)
+	assert_int((c.catalogue["entries"] as Array).size()).is_equal(6 + 15 + 2 + 1)
 	assert_int((c.catalogue["ships"] as Array).size()).is_equal(1)
 	var picked: Array[Dictionary] = _events_of(c.take_events(), NetProtocol.EVENT_PICKED)
 	assert_str(picked[0]["payload"]["reason"]).is_equal("")

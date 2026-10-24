@@ -34,6 +34,9 @@ enum Kind { ENGINES, THRUSTERS, WEAPONS, SHIELDS, SENSORS, REACTOR }
 ## Damage a heat fault does to the subsystem when heat passes the threshold (J,
 ## FT-SIM-026).
 @export var heat_fault_damage: float = 0.0
+## Whether this subsystem is a weak point: hits aimed at it once a scan has revealed
+## it damage it directly (FT-SIM-023, FT-SCI-003; #9 strands A and C).
+@export var weak_point: bool = false
 
 
 func validate() -> Array[String]:

@@ -26,6 +26,9 @@ extends Resource
 @export var heat_dissipation: float = 0.0
 ## The weapon won't fire while its heat is at or above this (K, FT-SIM-012).
 @export var heat_limit: float = 0.0
+## Damage type, matched against the target's resistances (FT-SIM-022; M2 #9 strand C
+## defines the set and its effect).
+@export var damage_type: StringName = &"kinetic"
 
 
 func validate() -> Array[String]:

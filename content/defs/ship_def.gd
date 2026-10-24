@@ -58,6 +58,9 @@ extends Resource
 ## Range within which a detected ship's allegiance becomes known to this ship's faction
 ## (m); scaled like sensor_range, at most sensor_range (FT-SPA-001).
 @export var identify_range: float = 0.0
+## Damage multiplier per damage type (dimensionless; a missing type is 1.0), revealed
+## to a faction by Science scans (FT-SIM-022, FT-SCI-003; #9 strands A and C).
+@export var resistances: Dictionary[StringName, float] = {}
 
 
 func validate() -> Array[String]:

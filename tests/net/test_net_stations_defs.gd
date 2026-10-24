@@ -18,8 +18,20 @@ func test_every_entry_has_a_station_def_with_its_load_tag() -> void:
 		"science": "busy",
 		"relay": "light",
 		"comms": "light",
+		"drive": "intense",
 		"tactical": "intense",
+		"survey": "intense",
+		"nav": "intense",
+		"approach": "intense",
+		"gunnery": "intense",
+		"targeting": "intense",
+		"fire_control": "intense",
+		"parley": "intense",
 		"systems": "busy",
+		"logistics": "busy",
+		"quartermaster": "busy",
+		"sensors": "busy",
+		"intel": "busy",
 		"ops": "light",
 		"captain": "light",
 		"viewer": "",
@@ -54,12 +66,24 @@ func test_every_entry_has_a_station_def_with_its_load_tag() -> void:
 
 # FT: FT-ARC-014, FT-NET-018, FT-NET-017, FT-JNT-005
 # A joint view is the union of its two stations: sections, fields, commands, claims and
-# controls; M1 offers Tactical, Systems and Ops and no other combination, plus the dev
+# controls; every pair is offered, plus the dev
 # entry holding all six only with the flag.
 func test_joint_views_are_unions_of_their_stations() -> void:
 	var pairs: Dictionary = {
+		"drive": ["engineering", "helm"],
 		"tactical": ["helm", "weapons"],
+		"survey": ["helm", "science"],
+		"nav": ["helm", "relay"],
+		"approach": ["helm", "comms"],
+		"gunnery": ["weapons", "engineering"],
+		"targeting": ["weapons", "science"],
+		"fire_control": ["weapons", "relay"],
+		"parley": ["weapons", "comms"],
 		"systems": ["engineering", "science"],
+		"logistics": ["engineering", "relay"],
+		"quartermaster": ["engineering", "comms"],
+		"sensors": ["science", "relay"],
+		"intel": ["science", "comms"],
 		"ops": ["relay", "comms"]
 	}
 	for id: String in pairs:

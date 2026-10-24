@@ -91,7 +91,7 @@ func test_lobby_colours_load_and_shows_joint_pairs_from_the_catalogue() -> void:
 		"helm": "Helm",
 	}
 	var entries: Array = shell.ctx.crew.catalogue["entries"]
-	assert_int(entries.size()).is_equal(11)
+	assert_int(entries.size()).is_equal(23)
 	for e: Dictionary in entries:
 		var row: Node = shell.lobby.find_child("Entry_" + str(e["id"]), true, false)
 		var tag: String = StationViews.def(e["id"]).load_tag

@@ -138,7 +138,7 @@ func test_station_views_map_entries() -> void:
 	assert_str(StationViews.station_of_command(&"reset_ship")).is_equal("")
 	assert_bool(StationViews.is_entry(StationViews.ALL)).is_false()
 	assert_bool(StationViews.is_entry(StationViews.ALL, true)).is_true()
-	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 3 + 2)
+	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 15 + 2)
 
 
 # FT: FT-NET-040
