@@ -20,6 +20,7 @@ var can_set_alert: bool = false:
 ## Palette.alert() of the level shown: role, letter, shape, key.
 var alert_style: Dictionary = Palette.alert(0)
 var chip: Button = Button.new()
+var sound: SoundToggle = SoundToggle.new()
 var picker: PopupPanel = PopupPanel.new()
 
 var _name: Label = Label.new()
@@ -46,7 +47,7 @@ func _init() -> void:
 	chip.draw.connect(_draw_chip)
 	var spacer: Control = Control.new()
 	spacer.size_flags_horizontal = SIZE_EXPAND_FILL
-	for c: Control in [_name, _hull, _shields, _pips, chip, _stations, spacer, _timer]:
+	for c: Control in [_name, _hull, _shields, _pips, chip, _stations, spacer, _timer, sound]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
 		row.add_child(c)
 	for l: Label in [_hull, _shields, _pips, _stations, _timer]:

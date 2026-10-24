@@ -91,6 +91,7 @@ func start_session_log(path: String) -> Error:
 	session_log = SessionLog.open(path)
 	if session_log == null:
 		return ERR_CANT_CREATE
+	session.session_log = session_log
 	session.add_handler(NetProtocol.Type.CLIENT_STATS, _on_client_stats)
 	session_log.event(
 		"start", {"port": port(), "bind": bind_address, "protocol": NetProtocol.PROTOCOL_VERSION}
