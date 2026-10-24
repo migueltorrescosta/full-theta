@@ -13,7 +13,7 @@ extends RefCounted
 ##   --host-secret-env    read the host secret from the FT_HOST_SECRET environment
 ##                        variable (what HostLauncher passes; D127); the host client
 ##                        presents it in Hello. None by default.
-##   --grace-s S          reconnect grace (s) [10] (FT-NET-033; T045 owns the rules).
+##   --grace-s S          reconnect grace (s) [15] (FT-NET-033; T045 owns the rules).
 ##   --idle-exit-min M    exit after M minutes without connected players (connections
 ##                        with a session), wall clock (FT-NET-003); 0 never [0].
 ##   --pid-file PATH      write the pid file there while running (FT-NET-003).
