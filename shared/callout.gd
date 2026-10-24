@@ -65,3 +65,22 @@ static func range_band(dist: float) -> String:
 	if dist <= FAR_M:
 		return "mid"
 	return "far"
+
+
+## "Bravo, 12 high, 3 km": a point away from the speaker's ship said relative to a named
+## mark or site (FT-SPA-006, FT-SPA-026, D124). `from_ref` is the point's offset from the
+## reference in the SPEAKER's ship frame, so the clock and height words are ship frame
+## like every other callout; a point over a pole says only overhead or under.
+static func relative(ref_name: String, from_ref: Vector3) -> String:
+	return "%s, %s, %s" % [ref_name, clock_height(from_ref), distance_text(from_ref.length())]
+
+
+## A distance for speech: whole metres to the nearest 100 under 1 km, one decimal of a
+## kilometre to 10 km (dropped when it is whole), whole kilometres beyond.
+static func distance_text(dist: float) -> String:
+	if dist < CLOSE_M:
+		return "%d m" % (roundi(dist / 100.0) * 100)
+	if dist < FAR_M:
+		var km: float = snappedf(dist / 1000.0, 0.1)
+		return "%d km" % int(km) if is_equal_approx(km, floorf(km)) else "%.1f km" % km
+	return "%d km" % roundi(dist / 1000.0)

@@ -317,7 +317,8 @@ func _ping(device: String) -> void:
 
 
 ## Mark at the cursor, or on the selection (FT-SPA-013, FT-SPA-022): refused with a
-## toast when the ship has 8 marks, unless the focused panel replaces one (Relay).
+## toast when the ship has 8 marks, unless the focused panel replaces one (Relay). On a
+## forward view only a contact takes a mark (FT-SPA-030).
 func _mark(device: String) -> void:
 	if ctx.crew.entry == StationViews.VIEWER:
 		return
@@ -325,6 +326,9 @@ func _mark(device: String) -> void:
 	if item.is_empty():
 		item = ctx.crew.selection
 	if item.is_empty():
+		return
+	# A forward view marks only a contact (FT-SPA-030).
+	if focused_panel().marks_attach_only() and item.get("kind", "") != "contact":
 		return
 	if ctx.crew.marks.size() >= CrewState.MAX_MARKS:
 		if not focused_panel().replace_mark(item):

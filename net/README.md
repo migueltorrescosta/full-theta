@@ -22,6 +22,7 @@ Protocol, server session and client transport over WebSocket (FT-NET-004). The w
 | `net_coverage.gd`, `net_claims.gd`, `net_abandon_vote.gd` | The pure rules: coverage check, claims, abandon vote (also the "Run again" vote). |
 | `net_run_reset.gd` | `NetRunReset`: the run reset (D178): outcome card, "Run again" vote, and the call to `NetServer.restart_run()`. |
 | `net_crew_state.gd`, `crew_marks.gd`, `crew_pings.gd` | Per-ship crew state outside the sim (D171): `NetCrewState` answers Alert, Mark and Ping for `ServerSession`; the pure rules `CrewMarks` (8 marks, alert level) and `CrewPings` (ping rate limit, copy). |
+| `crew_relay.gd` | `CrewRelay` (strand B of #9): Relay's per-ship crew state outside the sim: hazard zones and scan positions, routes, the mark inbox, the ship's log; `NetCrewState` answers MarkSend, MarkAccept and the Mark route/hazard ops. |
 | `command_gate.gd` | Command validation. |
 | `net_server.gd` | The server `Node`: sim loop and composition. |
 | `load_probe.gd` | The load gate's probe (`--probe-out`, dev and test only, D161): tick-frame timings and the measured window; `NetTransport.probe` records the net thread's side. |

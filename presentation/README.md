@@ -7,8 +7,9 @@ Rendering, cameras and shared widgets; never sim/ (FT-ARC-011). May name station
 - `palette.gd` (`Palette`): the colour roles (`ROLES`), the groups that must stay apart (`GROUPS`) and the text contrast pairs (`CONTRAST`), checked by `tools/check_palette.py` in l0 (FT-STN-006); allegiance letter to shape and role, alert levels (`ALERTS`), `shape_points` for blips and chips.
 - `snapshot_interpolator.gd` (`SnapshotInterpolator`): the own ship and contacts between snapshots, a render clock behind the newest snapshot, minimum-image interpolation (FT-ARC-015, D124). The class comment covers the clock and when contacts appear and go.
 - `chip_text.gd` (`ChipText`): `chip` ("H2 · 4 high · mid") and `precise` (hover bearing and mark), from `Callout` (FT-SPA-003, FT-SPA-005, D114).
-- `contact_picture.gd` (`ContactPicture`): the frame's items from a `StationContext` (contacts, marks, point pings, with ping pulses), each with its world-axis minimum-image offset from the own ship (`world`) and its ship-frame offset (`local`); built at most once a frame by `StationContext.picture()`.
+- `contact_picture.gd` (`ContactPicture`): the frame's items from a `StationContext` (contacts, marks, point pings, with ping pulses, hazard zones and scan positions as zones, the site's name as `site`), each with its world-axis minimum-image offset from the own ship (`world`) and its ship-frame offset (`local`); built at most once a frame by `StationContext.picture()`.
 - `space_view.gd` (`SpaceView`): the shared 3D space of Helm, Weapons and the main screen: environment, stars and the other ships (`sync_ships`).
+- `site_banner.gd` (`SiteBanner`): the site's shared name as a selectable callout on every radar and on Relay's map (FT-SPA-027).
 - `disc_radar.gd` (`DiscRadar`): the shared disc radar, drawn in 2D (§6.2). Helpers `project`, `is_above`, `is_beyond`, `item_at`, `hover_text`.
 - `top_bar.gd` (`TopBar`): ship name, hull, shields, reactor pips, the alert chip and its crew-only picker (`alert_picked`), station names, mission timer (FT-STN-001, FT-STN-006, FT-STN-008).
 - `toasts.gd` (`Toasts`): top-right lines that expire (`SHOW_MS`, `MAX`).

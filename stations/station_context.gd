@@ -42,6 +42,8 @@ func picture() -> ContactPicture:
 		interp.revision,
 		crew.marks.duplicate(true),
 		crew.pings.duplicate(true),
+		crew.zones.duplicate(true),
+		crew.sites.duplicate(true),
 	]
 	if _picture == null or _picture.interp != interp or key != _picture_key:
 		_picture = ContactPicture.build(self)
@@ -76,6 +78,13 @@ func mark_item(slot: int, item: Dictionary) -> void:
 		intents.place_mark(slot, "", -1, int(item.get("site", site())), item["pos"])
 
 
+## Places a mark (slot -1: the first free one) on one of a contact's scanned subsystems
+## (FT-SPA-014, D202): an attached mark's x names the subsystem as its ShipDef.subsystems
+## index plus one; the server refuses it until a scan revealed that weak point.
+func mark_subsystem(slot: int, contact: int, subsystem: int) -> void:
+	intents.place_mark(slot, "", contact, site(), Vector3(float(subsystem + 1), 0.0, 0.0))
+
+
 ## Moves mark `slot` onto a contact (attached) or a map point.
 func move_mark_to(slot: int, item: Dictionary) -> void:
 	if item.get("kind", "") == "contact":
@@ -106,6 +115,9 @@ func selection_local() -> Variant:
 			if m.is_empty():
 				return null
 			return interp.local(interp.offset_to(mark_position(m)))
+		"zone":
+			var z: Dictionary = crew.zone_by_id(int(s["id"]))
+			return null if z.is_empty() else interp.local(interp.offset_to(z["pos"]))
 	return null
 
 

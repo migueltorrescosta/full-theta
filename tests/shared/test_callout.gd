@@ -117,3 +117,24 @@ func test_frame_rule_word_sets() -> void:
 			)
 			seen[spoken] = true
 		assert_int(seen.size()).override_failure_message(str(offset)).is_greater(1)
+
+
+# FT: FT-SPA-026, FT-SPA-006
+# A far point is said relative to a mark or site with ship-frame words and a spoken range;
+# the same offset from the same reference reads differently once the ship has turned.
+func test_far_point_is_said_relative_to_a_mark_or_site() -> void:
+	var cases: Array = [
+		# [reference, offset from it in the ship frame, spoken]
+		["Bravo", Vector3(0.0, 800.0, -2900.0), "Bravo, 12 high, 3 km"],
+		["Bravo", Vector3(2500.0, 0.0, 0.0), "Bravo, 3 level, 2.5 km"],
+		["Kestrel Yard", Vector3(-1000.0, -4000.0, 12000.0), "Kestrel Yard, 6 low, 13 km"],
+		["Bravo", Vector3(0.0, 4000.0, -100.0), "Bravo, overhead, 4 km"],
+		["Charlie", Vector3(0.0, -9000.0, 0.0), "Charlie, under, 9 km"],
+		["Alpha", Vector3(0.0, 0.0, -840.0), "Alpha, 12 level, 800 m"],
+	]
+	for c: Array in cases:
+		assert_str(Callout.relative(c[0], c[1])).override_failure_message(str(c)).is_equal(c[2])
+	# Ship frame: turning the ship 90° to port moves the same world offset from 12 to 3.
+	var world: Vector3 = Vector3(0.0, 800.0, -2900.0)
+	var turned: Quaternion = Quaternion(Vector3.UP, PI / 2.0)
+	assert_str(Callout.relative("Bravo", turned.inverse() * world)).is_equal("Bravo, 3 high, 3 km")

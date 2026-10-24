@@ -5,7 +5,9 @@ extends Control
 ## the rim, each item a blip with a stem to the disc (solid above, hollow below), a
 ## range ring through the selected item's stem foot, an optional elevation side strip,
 ## fixed range steps with beyond-scale arrows on the rim, the selected stem drawn on
-## top, marks as diamonds with stems, contact chips (ChipText) and ping pulses. Ship
+## top, marks as diamonds with stems, hazard zones and scan positions as octagons, the
+## site's name as a banner (SiteBanner, FT-SPA-027), contact chips (ChipText) and ping
+## pulses. Ship
 ## frame always; optionally centred on a selected mark, site or contact while keeping
 ## the ship's axes (no world-fixed up, D124). Drawn in 2D with a fixed or orbitable
 ## camera angle (FT-SPA-011). Mouse: wheel zooms, a click on the range label steps the
@@ -74,6 +76,8 @@ func toggle_strip() -> void:
 ## The item drawn under local_pos ({"kind", "id"}), or {}: the selected item first,
 ## then the nearest blip or mark within HIT_PX, then a chip under the pointer.
 func item_at(local_pos: Vector2) -> Dictionary:
+	if SiteBanner.rect(get_theme_default_font(), picture.site).has_point(local_pos):
+		return _ref(picture.site)
 	var layout: Array[Dictionary] = _layout()
 	for e: Dictionary in layout:
 		if _is_selected(e["item"]) and _hits(e, local_pos):
@@ -162,6 +166,19 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+## The items in the order their blips and stems are drawn: the selected one last, on top
+## of all others (FT-SPA-025).
+func draw_order() -> Array[Dictionary]:
+	var rest: Array[Dictionary] = []
+	var top: Array[Dictionary] = []
+	for e: Dictionary in _layout():
+		if _is_selected(e["item"]):
+			top.append(_ref(e["item"]))
+		else:
+			rest.append(_ref(e["item"]))
+	return rest + top
+
+
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	var c: Vector2 = disc_centre()
@@ -193,6 +210,7 @@ func _draw() -> void:
 	draw_rect(label, Palette.color("panel_focus"))
 	draw_rect(label, Palette.color("line"), false, 1.0)
 	_draw_text(font, label.grow(-4.0), _range_text(), Palette.color("text"))
+	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
 	if side_strip:
 		_draw_strip(font)
 
@@ -258,7 +276,7 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		draw_rect(
 			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5
 		)
-	_draw_pulse(pos, float(it.get("pulse", 0.0)))
+	_draw_pulse(pos, float(it.get("pulse", 0.0)), it.get("copies", []))
 
 
 func _draw_shape(pts: PackedVector2Array, col: Color, solid: bool) -> void:
@@ -270,12 +288,22 @@ func _draw_shape(pts: PackedVector2Array, col: Color, solid: bool) -> void:
 
 
 ## FT-SPA-016: a ring that grows and fades as the ping's pulse runs out.
-func _draw_pulse(pos: Vector2, pulse: float) -> void:
+func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 	if pulse <= 0.0:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
 	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	_draw_copies(pos, col, copies)
+
+
+## FT-SPA-031: "+ Bo, Cy" under a pulse names the stations that copied the ping.
+func _draw_copies(pos: Vector2, col: Color, copies: Array) -> void:
+	if copies.is_empty():
+		return
+	var font: Font = get_theme_default_font()
+	var text: String = "+ " + ", ".join(PackedStringArray(copies))
+	Palette.draw_outlined(self, font, pos + Vector2(-8.0, 26.0), text, FONT_SIZE, col)
 
 
 ## FT-SPA-009: elevation -90..+90 of every item from the own ship, one tick each.

@@ -138,6 +138,9 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 				assert_int(t.factions[r]).is_not_equal(own)
 			else:
 				assert_int(t.factions[r]).override_failure_message(name).is_equal(own)
+		# Probes are rows added by launching: none before Relay launches one.
+		if t == w.probes:
+			continue
 		for ship: int in [0, 1]:
 			assert_int(t.rows_of(ship).size()).override_failure_message(name).is_greater(0)
 	assert_array(Array(w.kin.factions)).is_equal([1, 2, 1])

@@ -18,6 +18,15 @@ static func chip(label: String, local: Vector3) -> String:
 	return SEP.join([label, " ".join(words), band])
 
 
+## "Bravo, 12 high, 3 km": a far point said relative to a mark or site, in the session
+## language (Callout.relative; `from_ref` is its offset from the reference in the ship
+## frame, FT-SPA-006, FT-SPA-026).
+static func relative(ref_name: String, from_ref: Vector3) -> String:
+	var words: PackedStringArray = Callout.clock_height(from_ref).split(" ")
+	words[-1] = _tr("callout." + words[-1])
+	return ", ".join([ref_name, " ".join(words), Callout.distance_text(from_ref.length())])
+
+
 ## "brg 123 · mk +12" for hover (FT-SPA-005).
 static func precise(local: Vector3) -> String:
 	var bearing: int = roundi(Callout.bearing_deg(local)) % 360

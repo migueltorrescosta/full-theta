@@ -85,6 +85,16 @@ const EVENT_PING: String = "ping"
 ## {ship, outcome ("win" | "loss"), time_s, hull} and {ship, voters, needed}.
 const EVENT_RUN_OVER: String = "run_over"
 const EVENT_RUN_VOTES: String = "run_votes"
+## Relay and the callout layer (strand B of #9, docs/protocol.md "Relay"): {sites: [{site,
+## name}]} to every pick; {ship, zones: [...]} (hazard zones and scan positions, every pick
+## of the ship); {ship, routes: [[{site, x, y, z}]]} (Relay, and other stations unless the
+## toggle set is Hard); {ship, items: [...]} the mark inbox and {ship, entries: [{tick, key,
+## args}], replace} the ship's log (Relay picks only).
+const EVENT_SITES: String = "sites"
+const EVENT_ZONES: String = "zones"
+const EVENT_ROUTES: String = "routes"
+const EVENT_INBOX: String = "inbox"
+const EVENT_RELAY_LOG: String = "relay_log"
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -156,6 +166,8 @@ const SCHEMAS: Dictionary = {
 		"z": TYPE_FLOAT,
 	},
 	Type.RUN_AGAIN: {"ship": TYPE_INT, "vote": TYPE_BOOL},
+	Type.MARK_SEND: {"slot": TYPE_INT, "ship": TYPE_INT},
+	Type.MARK_ACCEPT: {"id": TYPE_INT, "accept": TYPE_BOOL, "slot": TYPE_INT},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -176,6 +188,8 @@ const FROM_CLIENT: Array[int] = [
 	Type.MARK,
 	Type.PING,
 	Type.RUN_AGAIN,
+	Type.MARK_SEND,
+	Type.MARK_ACCEPT,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -193,6 +207,8 @@ const RATED_REQUESTS: Array[int] = [
 	Type.MARK,
 	Type.PING,
 	Type.RUN_AGAIN,
+	Type.MARK_SEND,
+	Type.MARK_ACCEPT,
 ]
 
 
