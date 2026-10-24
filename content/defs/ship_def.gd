@@ -39,6 +39,14 @@ extends Resource
 @export var spare_parts: int = 0
 ## Repair crews Engineering can dispatch (count, FT-SIM-024; at most 31, one bit each).
 @export var repair_crews: int = 0
+## Probes (Relay, FT-RLY-004, D56; strand B of #9): the stock at launch (count), the flight
+## speed (m/s), the radius of the coverage bubble around a deployed probe (m), and
+## Engineering's fabrication: spare parts one probe takes (count) and its build time (s).
+@export var probes: int = 0
+@export var probe_speed: float = 0.0
+@export var probe_range: float = 0.0
+@export var probe_parts: int = 0
+@export var probe_fab_s: float = 0.0
 ## Share of a hit's energy past the shields that the subsystem nearest the impact takes;
 ## the hull takes the rest (dimensionless, 0..1, FT-SIM-020).
 @export var subsystem_damage_share: float = 0.0
@@ -79,6 +87,7 @@ func validate() -> Array[String]:
 	DefCheck.positive(errors, "hull_max", hull_max)
 	DefCheck.non_negative(errors, "spare_parts", spare_parts)
 	DefCheck.in_range(errors, "repair_crews", repair_crews, 0, 31)
+	_validate_probes(errors)
 	DefCheck.in_range(errors, "subsystem_damage_share", subsystem_damage_share, 0.0, 1.0)
 	DefCheck.positive(errors, "sensor_range", sensor_range)
 	DefCheck.in_range(errors, "identify_range", identify_range, 0.0, maxf(sensor_range, 0.0))
@@ -89,6 +98,18 @@ func validate() -> Array[String]:
 	var ids: Dictionary[StringName, bool] = _validate_subsystems(errors)
 	_validate_mounts(errors, ids)
 	return errors
+
+
+## A ship that carries or fabricates probes needs their numbers.
+func _validate_probes(errors: Array[String]) -> void:
+	DefCheck.non_negative(errors, "probes", probes)
+	DefCheck.non_negative(errors, "probe_speed", probe_speed)
+	DefCheck.non_negative(errors, "probe_range", probe_range)
+	DefCheck.non_negative(errors, "probe_parts", probe_parts)
+	DefCheck.non_negative(errors, "probe_fab_s", probe_fab_s)
+	if probes > 0 or probe_parts > 0:
+		DefCheck.positive(errors, "probe_speed", probe_speed)
+		DefCheck.positive(errors, "probe_range", probe_range)
 
 
 ## Returns the set of subsystem ids.

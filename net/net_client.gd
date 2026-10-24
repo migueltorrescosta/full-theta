@@ -235,6 +235,39 @@ func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
 	)
 
 
+## Relay (strand B of #9). Sends one of the ship's marks to an allied ship's Relay inbox
+## (FT-RLY-008); accepts the inbox item `id` as a mark, replacing `slot` when all 8 are in
+## use (slot -1 takes a free one), or declines it (FT-RLY-009, FT-SPA-022).
+func send_mark(slot: int, to_ship: int) -> void:
+	_send(NetProtocol.Type.MARK_SEND, {"slot": slot, "ship": to_ship})
+
+
+func accept_mark(id: int, slot: int = -1) -> void:
+	_send(NetProtocol.Type.MARK_ACCEPT, {"id": id, "accept": true, "slot": slot})
+
+
+func decline_mark(id: int) -> void:
+	_send(NetProtocol.Type.MARK_ACCEPT, {"id": id, "accept": false, "slot": -1})
+
+
+## Routes and hazard zones are Relay's Mark ops: a waypoint on route `route`, a hazard of
+## `radius_m` (a multiple of 100 m) at a point, deleting a zone by id (FT-RLY-005).
+func route_add(route: int, site: int, pos: Vector3) -> void:
+	_mark("route_add", route, "", -1, site, pos)
+
+
+func route_clear(route: int) -> void:
+	_mark("route_clear", route, "", -1, -1, Vector3.ZERO)
+
+
+func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
+	_mark("hazard_add", roundi(radius_m / 100.0), "", -1, site, pos)
+
+
+func hazard_delete(id: int) -> void:
+	_mark("hazard_delete", id, "", -1, -1, Vector3.ZERO)
+
+
 ## Sends a raw, already-encoded message (tests: malformed or foreign messages).
 func send_raw(data: PackedByteArray) -> void:
 	_queue.push(NetChunker.STREAM_CONTROL, data)

@@ -67,6 +67,8 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.PING:
 		{"kind": "contact", "id": 1, "site": -1, "x": 0.0, "y": 0.0, "z": 0.0},
 		NetProtocol.Type.RUN_AGAIN: {"ship": 0, "vote": true},
+		NetProtocol.Type.MARK_SEND: {"slot": 2, "ship": 1},
+		NetProtocol.Type.MARK_ACCEPT: {"id": 7, "accept": true, "slot": -1},
 	}
 
 

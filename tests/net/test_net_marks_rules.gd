@@ -48,6 +48,7 @@ func test_eight_named_slots_then_marks_full() -> void:
 			"x": 0.0,
 			"y": 0.0,
 			"z": 0.0,
+			"sub": -1,
 			"by": "Rui"
 		}
 	)

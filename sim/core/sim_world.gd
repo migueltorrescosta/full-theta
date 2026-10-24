@@ -24,6 +24,9 @@ const MAX_TICKS_PER_ADVANCE: int = 8
 var tick: int = 0
 var seed_value: int = 0
 var build_id: String = ""
+## Site id -> the name every station of every ship uses for it as a callout layer
+## (FT-SPA-027, D98). Scenario data like defs: not state, so not hashed or copied.
+var site_names: Dictionary[int, String] = {0: "Kestrel Yard"}
 var rng: SimRng
 ## Definitions by ship id, read-only (FT-ARC-020).
 var defs: Array[ShipDef] = []
@@ -40,6 +43,9 @@ var knowledge: KnowledgeTable = KnowledgeTable.new()
 var ai: AiTable = AiTable.new()
 ## Run state: each ship's status and the encounter outcome (T036, FT-MIS-017).
 var run: RunTable = RunTable.new()
+# --- #9 strand B: Relay's stock, launched probes and lane flags. ---
+var relay: RelayTable = RelayTable.new()
+var probes: ProbeTable = ProbeTable.new()
 
 ## Crew and server commands in application order, each stamped with its tick and
 ## whether it was accepted (FT-ARC-008, D122); rejected ones stay so replays reproduce
@@ -104,7 +110,9 @@ static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[St
 
 ## Every state container, in hash order (FT-ARC-012: each is keyed by ship and faction).
 func tables() -> Array[SimTable]:
-	return [kin, helm, power, shields, mounts, projectiles, damage, knowledge, ai, run]
+	return [
+		kin, helm, power, shields, mounts, projectiles, damage, knowledge, ai, run, relay, probes
+	]
 
 
 ## Adds a ship from its definition at a site-local offset (wrapped onto the site's cube)
@@ -210,6 +218,7 @@ func step() -> void:
 	EnemyAi.step(self)
 	PowerSystem.step(self)
 	AssistSystem.step(self)
+	ProbeSystem.step(self)
 	Integrator.step_all(kin, DT)
 	WeaponSystem.step(self)
 	CollisionSystem.step(self)

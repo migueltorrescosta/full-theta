@@ -34,7 +34,9 @@ const SPEC_05: Dictionary = {
 	],
 	# M1 has only their definitions: top bar and disc radar (FT-STN-001, FT-STN-002).
 	"science": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
-	"relay": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
+	# Probes, coverage, lanes and the probe-launcher claim (FT-RLY-004, FT-NET-022).
+	"relay":
+	[[S.KIN, S.STATUS, S.CONTACTS, S.RELAY, S.OWNERSHIP], [S.HELM, S.MOUNTS, S.ENGINEERING]],
 	"comms": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
 	# Main-screen mirror and the read-only main screen: no ship controls (FT-CPT-003,
 	# FT-MSC-004).
@@ -61,6 +63,8 @@ const SPEC_05_FIELDS: Array = [
 	],
 	# Every mount with ready, heat and ammo (FT-WPN-004).
 	["weapons", S.MOUNTS, ["mounts"], "mounts", ["cooldown", "heat", "ammo"]],
+	# Probe stock, fabrication and the lane switch (FT-RLY-004, FT-RLY-011).
+	["relay", S.RELAY, ["stock", "fab_left", "lanes", "probes"]],
 ]
 var h: NetHarness
 

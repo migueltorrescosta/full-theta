@@ -31,6 +31,9 @@ enum Section {
 	CHIPS = 13,
 }
 
+## Most probes a RELAY block lists.
+const RELAY_PROBE_ROWS: int = 64
+
 ## Load tags (FT-STN-015, D126).
 const LIGHT: String = "light"
 const BUSY: String = "busy"
@@ -115,7 +118,7 @@ const STATION_SECTIONS: Dictionary = {
 	"engineering":
 	[Section.KIN, Section.STATUS, Section.ENGINEERING, Section.CONTACTS, Section.OWNERSHIP],
 	"science": [Section.KIN, Section.STATUS, Section.CONTACTS],
-	"relay": [Section.KIN, Section.STATUS, Section.CONTACTS],
+	"relay": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.RELAY, Section.OWNERSHIP],
 	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS],
 	"captain": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.NEAR, Section.PROJECTILES],
 	"viewer": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.NEAR, Section.PROJECTILES],
@@ -138,7 +141,7 @@ const STATION_COMMANDS: Dictionary = {
 	"weapons": [&"aim_mount", &"fire"],
 	"engineering": [&"set_pips", &"boost", &"set_shield", &"dispatch_repair", &"recall_repair"],
 	"science": [],
-	"relay": [],
+	"relay": [&"launch_probe", &"flag_lanes"],
 	"comms": [],
 }
 
@@ -149,11 +152,14 @@ const CLAIM_FLIGHT: String = "flight"
 const CLAIM_SHIELD_FACING: String = "shield_facing"
 const CLAIM_MOUNT: String = "mount"
 const CLAIM_CREW: String = "crew"
+## Relay's probe launcher (strand B of #9): a second Relay seat claims it to launch.
+const CLAIM_PROBE: String = "probe"
 ## Station -> claimable item kinds.
 const STATION_CLAIMS: Dictionary = {
 	"helm": [CLAIM_FLIGHT, CLAIM_SHIELD_FACING],
 	"weapons": [CLAIM_MOUNT],
 	"engineering": [CLAIM_CREW],
+	"relay": [CLAIM_PROBE],
 }
 ## Station -> ship-wide controls: last writer wins, and snapshots name the last writer
 ## (FT-NET-044). A control is the name, or "name:index" (pips per subsystem kind).
@@ -178,6 +184,7 @@ const COMMAND_ITEMS: Dictionary = {
 	&"set_pips": ["pips", "subsystem_kind"],
 	&"set_shield": ["shield", ""],
 	&"boost": ["boost", ""],
+	&"launch_probe": [CLAIM_PROBE, ""],
 }
 
 ## Sim events that only some stations get (FT-NET-009): kind -> stations; a session
@@ -191,6 +198,14 @@ const EVENT_STATIONS: Dictionary = {
 	&"fire_blocked": ["weapons"],
 	&"friendly_fire_warning": ["weapons"],
 	&"ai_mode": [],
+	# Relay's probes and lanes (strand B of #9); fabrication also tells Engineering.
+	&"probe_launched": ["relay"],
+	&"probe_deployed": ["relay"],
+	&"probe_no_stock": ["relay"],
+	&"probe_fabricating": ["relay", "engineering"],
+	&"probe_fabricated": ["relay", "engineering"],
+	&"probe_no_parts": ["engineering"],
+	&"lane_warning": ["weapons", "relay"],
 }
 
 ## Field sets of the block sections: Section -> NetBlock schema. A block is sent whole
@@ -247,6 +262,26 @@ const BLOCKS: Dictionary = {
 					["heat", "f32"],
 					["crews", "u32"],
 					["fault_armed", "bool"]
+				],
+			],
+		],
+	],
+	# Relay's probes: the stock, Engineering's build in progress, the lane switch and
+	# the ship's launched probes (site-local position in m, bubble radius in m).
+	Section.RELAY:
+	[
+		["stock", "u16"],
+		["fab_left", "f32"],
+		["lanes", "bool"],
+		[
+			"probes",
+			[
+				"rows",
+				[
+					["serial", "u16"],
+					["deployed", "bool"],
+					["pos", "v3f"],
+					["range", "f32"],
 				],
 			],
 		],
@@ -393,7 +428,7 @@ static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 	for i: int in ship_def.repair_crews:
 		crews.append("%s:%d" % [CLAIM_CREW, i])
 	var helm: Array[String] = [CLAIM_FLIGHT, CLAIM_SHIELD_FACING]
-	return {"helm": helm, "weapons": mounts, "engineering": crews}
+	return {"helm": helm, "weapons": mounts, "engineering": crews, "relay": [CLAIM_PROBE]}
 
 
 ## Whether a sim event of this kind reaches a session holding entry (faction and ship
@@ -474,6 +509,8 @@ static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
 			return _helm(world, ship)
 		Section.ENGINEERING:
 			return _engineering(world, ship)
+		Section.RELAY:
+			return _relay(world, ship)
 	return _mounts(world, ship)
 
 
@@ -541,6 +578,33 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 		"shield_tightness": world.shields.tightness[ship],
 		"shield_focus": world.shields.focus[ship],
 		"subsystems": subsystems,
+	}
+
+
+## Relay's block: at most the newest RELAY_PROBE_ROWS probes (a row count is one byte).
+static func _relay(world: SimWorld, ship: int) -> Dictionary:
+	var r: RelayTable = world.relay
+	var t: ProbeTable = world.probes
+	var rows: PackedInt32Array = t.rows_of(ship)
+	var probes: Array = []
+	for i: int in range(maxi(0, rows.size() - RELAY_PROBE_ROWS), rows.size()):
+		var p: int = rows[i]
+		(
+			probes
+			. append(
+				{
+					"serial": t.serial[p],
+					"deployed": t.deployed[p] == 1,
+					"pos": Vector3(t.px[p], t.py[p], t.pz[p]),
+					"range": world.defs[ship].probe_range,
+				}
+			)
+		)
+	return {
+		"stock": r.stock[ship],
+		"fab_left": r.fab_left[ship],
+		"lanes": r.lanes_flagged[ship] == 1,
+		"probes": probes,
 	}
 
 

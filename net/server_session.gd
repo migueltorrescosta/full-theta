@@ -103,6 +103,8 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.ALERT: crew.on_alert,
 		NetProtocol.Type.MARK: crew.on_mark,
 		NetProtocol.Type.PING: crew.on_ping,
+		NetProtocol.Type.MARK_SEND: crew.on_mark_send,
+		NetProtocol.Type.MARK_ACCEPT: crew.on_mark_accept,
 		NetProtocol.Type.BYE: _on_bye,
 		NetTransport.CLOSED: _on_closed,
 	}
@@ -159,6 +161,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			"tag": String(e.tag),
 		}
 		transport.post_event(event_audience(e), e.tick, String(e.kind), payload)
+		crew.on_sim_event(e)
 		if _crewable(e.ship_id):
 			voice.on_event(e)
 		left_play = left_play or e.kind == &"outcome" or e.kind == &"destroyed"
