@@ -156,6 +156,7 @@ func _process(delta: float) -> void:
 		focused_station()
 	)
 	radar.set_picture(ctx.picture(), ctx.crew.selection)
+	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
 	flash.update(now)
 

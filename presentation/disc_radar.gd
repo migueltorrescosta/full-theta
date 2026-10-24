@@ -45,6 +45,9 @@ var tilt_deg: float = 35.0
 var yaw_deg: float = 0.0
 ## Draw chips next to contacts (off on small insets).
 var chips: bool = true
+## Contact id -> blip size factor (Science's detection confidence, FT-SCI-001); a contact
+## not listed draws at the usual size.
+var blip_scale: Dictionary = {}
 
 var _orbiting: bool = false
 
@@ -72,14 +75,15 @@ func toggle_strip() -> void:
 
 
 ## The item drawn under local_pos ({"kind", "id"}), or {}: the selected item first,
-## then the nearest blip or mark within HIT_PX, then a chip under the pointer.
-func item_at(local_pos: Vector2) -> Dictionary:
+## then the nearest blip or mark within `reach` px (HIT_PX; a controller cursor snaps
+## from farther), then a chip under the pointer.
+func item_at(local_pos: Vector2, reach: float = HIT_PX) -> Dictionary:
 	var layout: Array[Dictionary] = _layout()
 	for e: Dictionary in layout:
 		if _is_selected(e["item"]) and _hits(e, local_pos):
 			return _ref(e["item"])
 	var best: Dictionary = {}
-	var best_d: float = HIT_PX
+	var best_d: float = reach
 	for e: Dictionary in layout:
 		var d: float = (e["pos"] as Vector2).distance_to(local_pos)
 		if d <= best_d:
@@ -253,7 +257,10 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		var stem: Color = Palette.color("selected") if is_sel else col * Color(1, 1, 1, 0.7)
 		draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
 		draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
-		_draw_shape(Palette.shape_points(Palette.item_shape(it), pos, BLIP_R), col, solid)
+		var radius: float = (
+			BLIP_R * float(blip_scale.get(it["id"], 1.0)) if it["kind"] == "contact" else BLIP_R
+		)
+		_draw_shape(Palette.shape_points(Palette.item_shape(it), pos, radius), col, solid)
 	if is_sel:
 		draw_rect(
 			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5
