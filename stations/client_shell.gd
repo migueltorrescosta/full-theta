@@ -5,7 +5,8 @@ extends Control
 ## (voice lines, audio/README.md "Client") or the CrewState model, records snapshots in
 ## the SnapshotInterpolator, and shows the lobby until the pick's ship has started,
 ## then the StationScreen of the pick, with the pause overlay, the outcome card (D178),
-## subtitles and Settings on top. It resumes a dropped connection with its token
+## subtitles and the menu (Settings and Controls, D185) on top. It resumes a dropped
+## connection with its token
 ## (FT-NET-025) and goes back to the lobby when the server resets the run (FT-M1-012).
 
 ## The player left (Settings > Leave); the menu takes over again.
@@ -114,16 +115,13 @@ func _on_welcome() -> void:
 	_on_crew_changed(&"picked")
 
 
-## A language switch rebuilds the open lobby or station screen in the new language,
-## keeping the controls overlay open if it was.
+## A language switch rebuilds the open lobby or station screen in the new language (the
+## menu retranslates itself).
 func _notification(what: int) -> void:
 	if what != NOTIFICATION_TRANSLATION_CHANGED or ctx == null or _shown == "":
 		return
-	var help: bool = screen != null and screen.overlay.visible
 	_shown = ""
 	_on_crew_changed(&"picked")
-	if help and screen != null:
-		screen.dispatch({"id": "overlay", "target": "screen", "pressed": true})
 
 
 func _on_crew_changed(what: StringName) -> void:
@@ -151,7 +149,8 @@ func _on_crew_changed(what: StringName) -> void:
 		screen = StationScreen.new()
 		screen.setup(ctx)
 		screen.blockers = [settings_screen, outcome_card]
-		screen.menu_requested.connect(_open_settings)
+		screen.menu_requested.connect(settings_screen.open)
+		screen.help_requested.connect(_toggle_help)
 		_layer.add_child(screen)
 
 
@@ -162,8 +161,15 @@ func _show_subtitles() -> void:
 	_subtitles.text = "\n".join(lines)
 
 
-func _open_settings() -> void:
-	settings_screen.open()
+## `?`, View, or a first visit: the menu on Controls for this screen's stations; the
+## same key again closes it.
+func _toggle_help() -> void:
+	var menu: SettingsScreen = settings_screen
+	if menu.visible and menu.current_tab_name() == SettingsScreen.TAB_CONTROLS:
+		menu.close()
+		return
+	menu.set_controls(ctx.settings.bindings, screen.stations, ctx.matcher.device, ctx.crew.entry)
+	menu.open(SettingsScreen.TAB_CONTROLS)
 
 
 func _build_overlays() -> void:

@@ -188,12 +188,13 @@ func test_cycle_target_skips_the_own_ship() -> void:
 
 
 # FT: FT-STN-011
-func test_overlay_toggles() -> void:
+func test_overlay_key_asks_for_the_controls_tab() -> void:
 	var s: StationScreen = _screen("helm")
+	var asked: Array[bool] = []
+	s.help_requested.connect(func() -> void: asked.append(true))
 	s.dispatch(_ev("overlay", "pad", s))
-	assert_bool(s.overlay.visible).is_true()
 	s.dispatch(_ev("overlay", "kbm", s))
-	assert_bool(s.overlay.visible).is_false()
+	assert_array(asked).has_size(2)
 
 
 func _key(code: Key, pressed: bool, alt: bool = false) -> InputEventKey:
@@ -263,20 +264,23 @@ func test_focus_loss_and_pad_changes_release_held_inputs() -> void:
 
 
 # FT: FT-STN-011, FT-M1-012
-# The controls overlay, Settings or the outcome card take the input: held intents end
-# when one opens, and only Menu and the overlay key reach the screen meanwhile.
-func test_overlay_and_blockers_stop_the_input_feed() -> void:
+# The menu or the outcome card take the input: held intents end when one opens, and
+# only Menu and the overlay key reach the screen meanwhile.
+func test_blockers_stop_the_input_feed() -> void:
 	var s: StationScreen = _screen("weapons")
 	var p: RecordingPanel = s.panels[0]
+	var menu: Control = auto_free(Control.new())
+	menu.visible = false
+	s.blockers = [menu]
 	s.feed(_trigger(1.0))
-	s.dispatch(_ev("overlay", "kbm", s))
-	assert_array(p.got).is_equal(["fire", "fire/up"])
+	menu.visible = true
 	s.feed(_trigger(0.0))
+	assert_array(p.got).is_equal(["fire", "fire/up"])
 	s.feed(_trigger(1.0))
 	s.feed(_key(KEY_T, true))
 	assert_array(p.got).is_equal(["fire", "fire/up"])
 	assert_array(s.ctx.crew.selection.keys()).is_empty()
-	s.dispatch(_ev("overlay", "kbm", s))
+	menu.visible = false
 	var card: Control = auto_free(Control.new())
 	s.blockers = [card]
 	var menus: Array = []

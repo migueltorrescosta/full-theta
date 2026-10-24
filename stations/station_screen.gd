@@ -13,8 +13,10 @@ extends Control
 ## device). The common actions act on the shared selection, marks and pings in
 ## ctx.crew (FT-STN-009, FT-STN-003).
 
-## Menu (Esc / Menu): the shell opens Settings.
+## Menu (Esc / Menu): the shell opens the menu.
 signal menu_requested
+## `?` / View, or the first visit to a station: the shell opens the menu on Controls.
+signal help_requested
 
 ## Intents that still reach the screen while it is blocked: they close what blocks it.
 const UNBLOCKED: Array[String] = ["menu", "overlay"]
@@ -35,7 +37,6 @@ var focus_index: int = 0
 var top_bar: TopBar
 var radar: DiscRadar
 var toasts: Toasts
-var overlay: ControlsOverlay
 var alerts: StationAlerts
 var flash: AlertFlash
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
@@ -72,9 +73,12 @@ func setup(context: StationContext) -> void:
 	alerts = StationAlerts.new()
 	add_child(alerts)
 	alerts.setup(ctx, stations, toasts, flash)
-	ctx.settings.bindings.changed.connect(_refresh_overlay)
 	Input.joy_connection_changed.connect(_on_joy_changed)
 	focus(0)
+
+
+func _ready() -> void:
+	_open_first_visit_help()
 
 
 func focused_station() -> String:
@@ -109,7 +113,6 @@ func focus(i: int) -> void:
 	radar.orbitable = focused_panel().radar_orbitable()
 	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
 	_open_first_visit_help()
-	_refresh_overlay()
 
 
 ## Routes one intent event (InputMatcher's dictionary); true when something handled
@@ -176,13 +179,9 @@ func _notification(what: int) -> void:
 		release_all()
 
 
-## True while Settings, the outcome card, the controls overlay or the alert picker is up.
+## True while the menu, the outcome card or the alert picker is up.
 func blocked() -> bool:
-	return (
-		overlay.visible
-		or top_bar.picker.visible
-		or blockers.any(func(c: Control) -> bool: return c.visible)
-	)
+	return top_bar.picker.visible or blockers.any(func(c: Control) -> bool: return c.visible)
 
 
 ## On blocking: release everything and keep only UNBLOCKED active; on unblocking, all.
@@ -236,8 +235,7 @@ func _common(ev: Dictionary) -> bool:
 		"claim":
 			_claim()
 		"overlay":
-			overlay.visible = not overlay.visible
-			_refresh_overlay()
+			help_requested.emit()
 			_update_block()
 		"menu":
 			menu_requested.emit()
@@ -395,26 +393,18 @@ func _build() -> void:
 	flash = AlertFlash.new()
 	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(flash)
-	overlay = ControlsOverlay.new()
-	overlay.visible = false
-	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(overlay)
 
 
-func _refresh_overlay() -> void:
-	if overlay.visible:
-		overlay.build(ctx.settings.bindings, stations, ctx.matcher.device, ctx.crew.entry)
-
-
-## The first visit to a station opens the controls overlay by itself, once per client and
-## station (FT-STN-012, D185); Settings re-enables it.
+## The first visit to a station asks for the menu's Controls tab, once per client and
+## station (FT-STN-012, D185); Settings re-enables it. The first station waits for the
+## screen to enter the tree, so the shell has connected `help_requested` by then.
 func _open_first_visit_help() -> void:
 	var station: String = focused_station()
-	if ctx.settings.tooltip_seen(station):
+	if not is_inside_tree() or ctx.settings.tooltip_seen(station):
 		return
 	ctx.settings.mark_tooltip_seen(station)
 	ctx.settings.save()
-	overlay.visible = true
+	help_requested.emit()
 	_update_block()
 
 

@@ -1,11 +1,14 @@
 class_name SettingsScreen
 extends PanelContainer
-## Settings (per client, ClientSettings): bindings per intent and device with rebind,
-## hold/toggle and reset (FT-STN-007, FT-STN-014), UI scale 75-150 % (FT-STN-013),
-## first-run tips again (FT-STN-012), invert pitch, and comfort (FT-STN-017: on/off,
-## roll lock deck / target / reference plane, "set reference plane to my current deck",
-## reduced field of view; the station cameras apply them). Saved on close. In a session
-## it also offers Leave.
+## The menu (per client, ClientSettings), one opaque screen with tabs: Controls (only in
+## a session: the live bindings under the seat's role summary, ControlsList; FT-STN-011,
+## FT-STN-012, D185), Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-run
+## tips again, and comfort FT-STN-017: on/off, roll lock deck / target / reference plane,
+## "set reference plane to my current deck", reduced field of view; the station cameras
+## apply them) and Rebind keys (bindings per intent and device with rebind, hold/toggle
+## and reset, FT-STN-007, FT-STN-014). Esc opens it on the tab last used (Settings at
+## first), `?` and the first visit to a seat open Controls. Saved on close; a language
+## switch retranslates it at once. In a session it also offers Leave.
 
 signal closed
 signal leave_requested
@@ -19,50 +22,63 @@ const MODIFIER_KEYS: Array[Key] = [KEY_SHIFT, KEY_ALT, KEY_CTRL]
 ## A trigger or stick past this deflection is captured.
 const CAPTURE_DEFLECT: float = 0.5
 
+## The tab names: the children of `tabs`.
+const TAB_CONTROLS: String = "Controls"
+const TAB_SETTINGS: String = "Settings"
+const TAB_KEYS: String = "Keys"
+
 var settings: ClientSettings
 ## Waiting for an input to bind: [intent id, device], or [].
 var capturing: Array = []
 ## Why the last captured input was refused ("" when it wasn't).
 var warning: Label
+var tabs: TabContainer
+## The Controls tab's rows; null outside a session.
+var controls: ControlsList
 
 ## Modifier keys and pad buttons held during a capture, in press order.
 var _held: Array[String] = []
 
+var _in_session: bool = false
+## What _build fills: a notification may not change the children of its own node.
+var _root: VBoxContainer
+## What `controls` shows, kept to refill it when the menu is rebuilt: [bindings,
+## stations, device, role] or [].
+var _controls_args: Array = []
 var _rows: VBoxContainer
 var _scale_label: Label
 
 
 func setup(p_settings: ClientSettings, in_session: bool) -> void:
 	settings = p_settings
+	_in_session = in_session
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var scroll: ScrollContainer = ScrollContainer.new()
-	add_child(scroll)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", 8)
-	scroll.add_child(col)
-	var top: HBoxContainer = HBoxContainer.new()
-	col.add_child(top)
-	_add_button(top, "Close", tr("settings.close"), close)
-	if in_session:
-		_add_button(top, "Leave", tr("settings.leave"), func() -> void: leave_requested.emit())
-	_build_general(col)
-	_build_comfort(col)
-	warning = _label("")
-	warning.name = "Warning"
-	warning.add_theme_color_override("font_color", Palette.color("warn"))
-	var head: HBoxContainer = HBoxContainer.new()
-	col.add_child(head)
-	head.add_child(_label(tr("settings.bindings"), 22))
-	_add_button(head, "ResetBindings", tr("settings.reset_bindings"), _reset_bindings)
-	col.add_child(warning)
-	_rows = VBoxContainer.new()
-	col.add_child(_rows)
-	_build_bindings()
+	# Opaque: the station behind must not show through (D185).
+	var box: StyleBoxFlat = StyleBoxFlat.new()
+	box.bg_color = Palette.color("panel")
+	box.set_content_margin_all(16)
+	add_theme_stylebox_override("panel", box)
+	_root = VBoxContainer.new()
+	add_child(_root)
+	_build()
 
 
-func open() -> void:
+## Fills the Controls tab for `stations` on `device` under the role summary of `role`.
+func set_controls(bindings: Bindings, stations: Array, device: String, role: String) -> void:
+	_controls_args = [bindings, stations, device, role]
+	if controls != null:
+		controls.build(bindings, stations, device, role)
+
+
+## Opens the menu on `tab` (a TAB_ name), or on the tab last used when empty.
+func open(tab: String = "") -> void:
 	visible = true
+	open_tab(tab)
+
+
+## The name of the tab showing.
+func current_tab_name() -> String:
+	return tabs.get_current_tab_control().name
 
 
 func close() -> void:
@@ -76,6 +92,70 @@ func set_ui_scale(value: float) -> void:
 	settings.set_ui_scale(value)
 	_scale_label.text = "%d %%" % roundi(settings.ui_scale * 100.0)
 	scale_changed.emit()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and settings != null:
+		_build()
+
+
+## (Re)builds the tabs in the current language, keeping the tab showing.
+func _build() -> void:
+	var keep: String = current_tab_name() if tabs != null else TAB_SETTINGS
+	capturing = []
+	for c: Node in _root.get_children():
+		_root.remove_child(c)
+		c.queue_free()
+	var col: VBoxContainer = _root
+	col.add_theme_constant_override("separation", 8)
+	var top: HBoxContainer = HBoxContainer.new()
+	col.add_child(top)
+	_add_button(top, "Close", tr("settings.close"), close)
+	if _in_session:
+		_add_button(top, "Leave", tr("settings.leave"), func() -> void: leave_requested.emit())
+	tabs = TabContainer.new()
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.add_child(tabs)
+	controls = null
+	if _in_session:
+		controls = ControlsList.new()
+		_tab(TAB_CONTROLS, tr("overlay.title"), controls)
+		if not _controls_args.is_empty():
+			controls.build(
+				_controls_args[0], _controls_args[1], _controls_args[2], _controls_args[3]
+			)
+	var general: VBoxContainer = VBoxContainer.new()
+	_tab(TAB_SETTINGS, tr("menu.settings"), general)
+	_build_general(general)
+	_build_comfort(general)
+	var keys: VBoxContainer = VBoxContainer.new()
+	_tab(TAB_KEYS, tr("settings.bindings"), keys)
+	warning = _label("")
+	warning.name = "Warning"
+	warning.add_theme_color_override("font_color", Palette.color("warn"))
+	_add_button(keys, "ResetBindings", tr("settings.reset_bindings"), _reset_bindings)
+	keys.add_child(warning)
+	_rows = VBoxContainer.new()
+	keys.add_child(_rows)
+	_build_bindings()
+	open_tab(keep)
+
+
+## One scrolling tab named `node_name` titled `title` holding `content`.
+func _tab(node_name: String, title: String, content: Control) -> void:
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.name = node_name
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 8)
+	scroll.add_child(content)
+	tabs.add_child(scroll)
+	tabs.set_tab_title(scroll.get_index(), title)
+
+
+func open_tab(tab: String) -> void:
+	var node: Node = tabs.get_node_or_null(tab)
+	if node != null:
+		tabs.current_tab = tabs.get_tab_idx_from_control(node as Control)
 
 
 ## Starts capturing the next input as the binding of `id` on `device`.

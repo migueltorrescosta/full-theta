@@ -261,7 +261,7 @@
     "role.tactical": {"en": "You fly the ship and fire its guns from one seat. Call out where you are heading and what you shoot.", "pt_PT": "Pilotas a nave e disparas as armas no mesmo posto. Diz para onde vais e no que atiras.", "it": "Pilota la nave e spara con i cannoni da un'unica postazione. Di' dove stai andando e cosa colpisci."},
     "role.viewer": {"en": "You watch the main screen. You can't change anything.", "pt_PT": "Vês o ecrã principal. Não podes mudar nada.", "it": "Guardi lo schermo principale. Non puoi cambiare nulla."},
     "role.weapons": {"en": "You aim and fire the guns. Call out your target before you shoot.", "pt_PT": "Apontas e disparas as armas. Diz o alvo antes de disparar.", "it": "Punti e spari con i cannoni. Di' il bersaglio prima di sparare."},
-    "settings.bindings": {"en": "Controls", "pt_PT": "Controlos", "it": "Comandi"},
+    "settings.bindings": {"en": "Rebind keys", "pt_PT": "Mudar teclas", "it": "Riassegna tasti"},
     "settings.close": {"en": "Back", "pt_PT": "Voltar", "it": "Indietro"},
     "settings.comfort": {"en": "Comfort", "pt_PT": "Conforto", "it": "Comfort"},
     "settings.comfort_on": {"en": "Comfort mode", "pt_PT": "Modo conforto", "it": "Modalità comfort"},

@@ -135,8 +135,8 @@ Tests: 247, manual: 11, pending: 143.
 | FT-STN-008 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-STN-009 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_binding_text.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-STN-010 | pending |  |
-| FT-STN-011 | tests | `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_controls_overlay.gd`, `tests/stations/test_station_screen.gd` |
-| FT-STN-012 | tests | `tests/content/test_i18n.gd`, `tests/presentation/test_controls_overlay.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_first_visit_help.gd`, `tests/stations/test_lobby_and_overlays.gd` |
+| FT-STN-011 | tests | `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_station_screen.gd` |
+| FT-STN-012 | tests | `tests/content/test_i18n.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_first_visit_help.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-STN-013 | tests | `tests/stations/test_client_settings.gd` |
 | FT-STN-014 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_station_screen.gd` |
 | FT-STN-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
@@ -335,7 +335,7 @@ Tests: 247, manual: 11, pending: 143.
 | FT-AUD-010 | tests | `tests/audio/test_subtitle_feed.gd`, `tests/audio/test_voice_player.gd`, `tests/net/voice/test_voice_service.gd`, `tests/stations/test_client_shell.gd` |
 | FT-AUD-011 | tests | `tests/audio/test_voice_bus.gd`, `tests/audio/test_voice_player.gd` |
 | FT-AUD-012 | tests | `tests/content/test_i18n.gd` |
-| FT-AUD-013 | tests | `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd`, `tests/presentation/test_controls_overlay.gd`, `tests/stations/test_client_shell.gd` |
+| FT-AUD-013 | tests | `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd` |
 | FT-AUD-014 | tests | `tests/net/voice/test_voice_service.gd`, `tools/tests/test_licences.py`, `tools/tests/test_prerender.py` |
 | FT-AUD-015 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_service.gd`, [#10](https://github.com/migueltorrescosta/full-theta/issues/10) |
 | FT-AUD-016 | pending |  |
@@ -374,7 +374,7 @@ Tests: 247, manual: 11, pending: 143.
 | FT-M1-016 | tests | `tests/app/test_client_autopilot.gd` |
 | FT-M1-017 | tests | `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-M1-018 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
-| FT-M1-019 | tests | `tests/presentation/test_controls_overlay.gd`, `tests/stations/test_first_visit_help.gd` |
+| FT-M1-019 | tests | `tests/presentation/test_controls_list.gd`, `tests/stations/test_first_visit_help.gd` |
 | FT-M1-020 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/run/test_precision.gd` |
 | FT-M1-021 | pending |  |
 | FT-TST-001 | tests | `tests/sim/test_sample.gd` |
