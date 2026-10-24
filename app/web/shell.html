@@ -32,6 +32,7 @@ $GODOT_HEAD_INCLUDE
 window.ft = (function () {
   const canvas = document.getElementById('canvas');
   const ft = {
+    audioContexts: [], // every AudioContext the engine creates (it keeps its own out of reach)
     inputs: {},       // id -> {x, y, w, h} in canvas pixels, registered by WebTextField
     active: null,     // id of the text field whose overlay input has focus
     texts: {},        // id -> {text, submitted, closed} waiting for GDScript
@@ -41,6 +42,16 @@ window.ft = (function () {
     keepAwake: null,  // set by KeepAwake: {play: fn}; retried on every gesture until playing
   };
   let el = null;
+
+  // The engine's audio object is private to its closure, so record the contexts it creates:
+  // the first tap resumes them (FT-AUD-017), and the top bar shows their state.
+  ['AudioContext', 'webkitAudioContext'].forEach(function (name) {
+    const Native = window[name];
+    if (!Native) { return; }
+    window[name] = class extends Native {
+      constructor(...args) { super(...args); ft.audioContexts.push(this); }
+    };
+  });
 
   function overlay() {
     if (el) { return el; }
@@ -128,9 +139,9 @@ window.ft = (function () {
       }
     }
     // The first gesture unlocks audio (FT-AUD-017) and starts the keep-awake video.
-    if (typeof GodotAudio !== 'undefined' && GodotAudio.ctx && GodotAudio.ctx.state !== 'running') {
-      GodotAudio.ctx.resume().catch(function () {});
-    }
+    ft.audioContexts.forEach(function (ctx) {
+      if (ctx.state !== 'running') { ctx.resume().catch(function () {}); }
+    });
     if (ft.keepAwake) { ft.keepAwake(); }
   }
   ['pointerup', 'touchend', 'click', 'keydown'].forEach(function (name) {
@@ -139,7 +150,7 @@ window.ft = (function () {
 
   // Audio state for the top-bar toggle: 'running', 'suspended' or '' before the engine's audio starts.
   ft.audioState = function () {
-    return (typeof GodotAudio !== 'undefined' && GodotAudio.ctx) ? GodotAudio.ctx.state : '';
+    return ft.audioContexts.length ? ft.audioContexts[0].state : '';
   };
 
   // Safari suspends a page that is hidden, and its socket may be dead on return without

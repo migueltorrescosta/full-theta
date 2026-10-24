@@ -49,6 +49,7 @@ var age_stats: SnapshotAgeStats = SnapshotAgeStats.new()
 
 var _next_snapshot_tick: int = 0
 var _next_stats_us: int = 0
+var _logged_counters: Dictionary = {}
 ## While the sim doesn't step (lobby, pause), when the next snapshot goes out (us), and
 ## whether the net thread already holds the idle world's state.
 var _next_idle_post_us: int = 0
@@ -258,6 +259,10 @@ func _process(delta: float) -> void:
 		if (window["pooled"] as Dictionary)["n"] > 0:
 			_add_resyncs(window)
 			session_log.event("snapshot_age", window)
+		# Counters as they stand, so a server that is killed (no final summary) still has them.
+		if session_log.counters() != _logged_counters:
+			_logged_counters = session_log.counters()
+			session_log.event("counters", {"counters": _logged_counters})
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)
 

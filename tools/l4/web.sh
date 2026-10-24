@@ -46,9 +46,10 @@ until [[ -e $out/sig.systems_picked && -e $out/sig.ops_picked ]] || ((waited >= 
 done
 taskset -c "$cpus" node tools/l4/web_station.mjs "http://ft-l4web.lan:$((port - 1))/" "$out" 150 \
   | tee "$out/web.log" || failed=1
+# The server writes its snapshot-age line every 10 s: let the last window land.
+sleep 11
 touch "$out/sig.web_done"
 wait "${bots[@]}" 2>/dev/null
-# SIGTERM makes the server quit through the tree, so the session log gets its summary.
 kill "$server" 2>/dev/null
 wait "$server" 2>/dev/null
 python3 tools/l4/web_check.py "$out/session.jsonl" || failed=1

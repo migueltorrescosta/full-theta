@@ -68,10 +68,14 @@ try {
   const awake = await page
     .waitForFunction(() => window.ftKeepAwake === "video", null, { timeout: 15000 })
     .then(() => true, () => false);
-  const t0 = await page.evaluate(() => document.getElementById("ft-keepawake")?.currentTime ?? -1);
-  await page.waitForTimeout(1500);
-  const t1 = await page.evaluate(() => document.getElementById("ft-keepawake")?.currentTime ?? -1);
-  note("keep-awake video plays", awake && t1 > t0, `time ${t0} -> ${t1}`);
+  // The video is 2 s long and loops, so its time may wrap: it plays if the time moves.
+  const time = () => page.evaluate(() => document.getElementById("ft-keepawake")?.currentTime ?? -1);
+  const t0 = await time();
+  await page.waitForTimeout(700);
+  const t1 = await time();
+  const paused = await page.evaluate(() => document.getElementById("ft-keepawake")?.paused);
+  const src = await page.evaluate(() => document.getElementById("ft-keepawake")?.currentSrc);
+  note("keep-awake video plays", awake && t1 !== t0 && !paused, `time ${t0} -> ${t1}, ${src}`);
 
   // Play: all-stop (Space) a few times.
   for (let i = 0; i < 4; i++) {
@@ -114,7 +118,9 @@ try {
     return { w: bmp.width, h: bmp.height, colours: seen.size, std: Math.sqrt(sum2 / n - mean * mean) };
   }, shot.toString("base64"));
   note("screenshot is not blank", stats.colours >= 8 && stats.std > 4, JSON.stringify(stats));
-  note("no page errors", errors.length === 0, errors.join(" | "));
+  // Pointer lock is Godot's mouse capture for the Helm's mouse look; a tablet has no use for it.
+  const real = errors.filter((e) => !e.includes("Pointer Lock"));
+  note("no page errors", real.length === 0, real.join(" | "));
   failed = Object.values(checks).some((c) => !c.ok);
 } catch (e) {
   note("run", false, e.message);
