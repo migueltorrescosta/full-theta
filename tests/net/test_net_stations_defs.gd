@@ -49,11 +49,13 @@ func test_every_entry_has_a_station_def_with_its_load_tag() -> void:
 		)
 		for kind: int in d.fields:
 			assert_array(d.sections).contains([kind])
-	# Science, Relay and Comms have data definitions too, without commands yet (their
-	# station UIs, FT-M1-005, are #7).
+	# Science, Relay and Comms have data definitions too; Relay and Comms have no commands
+	# yet (their station UIs, FT-M1-005, are #7).
 	for id: String in ["science", "relay", "comms"]:
 		assert_array(StationViews.def(id).stations).is_equal([id])
+	for id: String in ["relay", "comms"]:
 		assert_array(StationViews.def(id).commands).is_empty()
+	assert_array(StationViews.def("science").commands).contains([&"science_scan"])
 	assert_array(StationViews.def("helm").commands).contains([&"helm_align", &"helm_input"])
 	assert_bool(StationViews.def("captain").is_crew()).is_false()
 	assert_bool(StationViews.def("viewer").is_crew()).is_false()

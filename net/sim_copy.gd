@@ -18,7 +18,7 @@ extends RefCounted
 ## commands, events or command log; don't step it.
 
 ## Leading entries of a capture, before the tables.
-enum { SEED, BUILD, TICK, DEFS, RNG, RELATIONS, HEADER }
+enum { SEED, BUILD, TICK, DEFS, RNG, RELATIONS, SCIENCE_DEF, HEADER }
 
 ## Table script -> Array[StringName] of its script variables but KnowledgeTable._rows
 ## (get_property_list is slow, so each class is listed once). Main thread only; each
@@ -41,6 +41,7 @@ static func capture(world: SimWorld) -> Array:
 		world.defs.duplicate(),
 		world.rng.states(),
 		(world.get("_relations") as Dictionary).duplicate(),
+		world.science_def,
 	]
 	for table: SimTable in world.tables():
 		var names: Array[StringName] = _vars_of(table)
@@ -63,6 +64,7 @@ static func restore(state: Array) -> SimWorld:
 	for pair: Array in state[RNG]:
 		copy.rng.stream(pair[0]).state = pair[1]
 	copy.set("_relations", state[RELATIONS])
+	copy.science_def = state[SCIENCE_DEF]
 	var k: int = HEADER
 	for table: SimTable in copy.tables():
 		var names: Array[StringName] = state[k]
