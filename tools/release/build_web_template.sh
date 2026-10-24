@@ -10,7 +10,7 @@
 # the result when it exists; delete it to export with the stock template.
 #
 # Kept on (by what the game uses): 3D rendering (the Helm and Viewer scenes), gdscript,
-# freetype and the fallback text server (Latin text only), brotli (the default font is a
+# freetype and the fallback text server (Latin text only; it must be switched on by hand), brotli (the default font is a
 # WOFF2: without it no text is drawn), websocket, regex, svg (the
 # default theme's icons), webp/jpg (imported textures), ogg and vorbis (prerendered
 # voice lines), mbedtls (Crypto), JavaScript eval (JavaScriptBridge).
@@ -51,6 +51,9 @@ args=(
   disable_navigation_3d=yes disable_xr=yes minizip=no vulkan=no accesskit=no
 )
 for m in "${disabled_modules[@]}"; do args+=("module_${m}_enabled=no"); done
+# The advanced text server is off, and the fallback one is off by default: without one no
+# text is drawn.
+args+=(module_text_server_fb_enabled=yes)
 
 cd "$src"
 start=$SECONDS
