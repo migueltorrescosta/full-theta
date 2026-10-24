@@ -192,7 +192,7 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "fabricate_probe", "group": "engineering", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
 	{"id": "dispatch_nearest", "group": "engineering", "kind": PRESS, "kbm": [], "pad": ["B"]},
 	# Cycle the cause picked for the selected subsystem's unknown fault (FT-ENG-006).
-	{"id": "cause_next", "group": "engineering", "kind": PRESS, "kbm": ["C"], "pad": ["Down"]},
+	{"id": "cause_next", "group": "engineering", "kind": PRESS, "kbm": ["I"], "pad": ["Down"]},
 	{
 		"id": "shield_tighter",
 		"group": "engineering",
