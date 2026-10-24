@@ -180,7 +180,7 @@ Tests: 278, manual: 11, pending: 112.
 | FT-SCI-002 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd` |
 | FT-SCI-003 | tests | `tests/sim/science/test_science_noise.gd` |
 | FT-SCI-004 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_minigame_timing.gd`, `tests/sim/science/test_scan.gd` |
-| FT-SCI-005 | tests | `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd` |
+| FT-SCI-005 | tests | `tests/net/test_net_relay_l3.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd` |
 | FT-SCI-006 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_minigame_timing.gd` |
 | FT-SCI-007 | tests | `tests/sim/science/test_hack.gd` |
 | FT-SCI-008 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd` |
@@ -263,7 +263,7 @@ Tests: 278, manual: 11, pending: 112.
 | FT-SPA-031 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_station.gd` |
 | FT-PAIR-001 | pending |  |
 | FT-PAIR-002 | pending |  |
-| FT-PAIR-003 | tests | `tests/sim/science/test_hack.gd`, `tests/sim/science/test_reveals.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd` |
+| FT-PAIR-003 | tests | `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_reveals.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd` |
 | FT-PAIR-004 | tests | `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_pair_harness.gd` |
 | FT-PAIR-005 | tests | `tests/net/test_net_stations_filter.gd` |
 | FT-PAIR-007 | pending |  |

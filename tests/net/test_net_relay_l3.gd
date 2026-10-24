@@ -342,3 +342,49 @@ func test_two_relay_players_share_the_probe_launcher_by_claim() -> void:
 	first.command(cmd)
 	var launched: Callable = func() -> bool: return server.world.relay.stock[PLAYER] == 2
 	assert_bool(await h.until(launched)).is_true()
+
+
+# FT: FT-SPA-014
+# Without a test override the weak-point gate reads Science's scan knowledge (D202,
+# FT-SIM-023): the subsystem marks once the contact's scan confidence reveals it.
+func test_subsystem_mark_follows_science_knowledge() -> void:
+	var server: NetServer = h.server()
+	var enemy: int = NetHarness.ENEMY
+	server.world.science_def = ScienceFixture.science()
+	server.world.defs[enemy] = ScienceFixture.weak_raider()
+	KnowledgeSystem.step(server.world)
+	var relay: NetClient = await h.joined(server, "relay", "ops")
+	var from: int = h.mark(relay)
+	relay.place_mark(-1, "Core", enemy, 0, Vector3(1.0, 0.0, 0.0))
+	var why: Dictionary = await _rejected(relay, NetProtocol.Type.MARK, from)
+	assert_str(why.get("reason", "")).is_equal(CrewMarks.BAD_MARK)
+	ScienceKnowledge.record(server.world, server.world.faction_of(PLAYER), enemy, 1.0)
+	from = h.mark(relay)
+	relay.place_mark(-1, "Core", enemy, 0, Vector3(1.0, 0.0, 0.0))
+	var marks: Dictionary = await h.next_event(relay, NetProtocol.EVENT_MARKS, from)
+	assert_int(marks["payload"]["marks"][0]["sub"]).is_equal(0)
+
+
+# FT: FT-SPA-028, FT-SCI-005
+# Science's scan-position mark becomes one scan zone of the ship, outside the 8 marks;
+# a new mark replaces it and a repeated one adds nothing.
+func test_science_scan_mark_makes_a_scan_position() -> void:
+	var server: NetServer = h.server()
+	var enemy: int = NetHarness.ENEMY
+	server.world.science_def = ScienceFixture.science()
+	KnowledgeSystem.step(server.world)
+	var crew: NetCrewState = server.session.crew
+	assert_bool(ScienceSystem.place_mark(server.world, PLAYER, enemy)).is_true()
+	for e: SimEvent in server.world.drain_events():
+		crew.on_sim_event(e)
+	var zones: Array = crew.relay.zones_of(PLAYER)
+	assert_int(zones.size()).is_equal(1)
+	assert_str(zones[0]["kind"]).is_equal("scan")
+	assert_float(zones[0]["radius"]).is_equal(server.world.science_def.mark_radius)
+	assert_float(zones[0]["x"]).is_equal_approx(server.world.science.mark_x[PLAYER], 0.001)
+	assert_int(crew.marks.marks_of(PLAYER).size()).is_equal(0)
+	var again: SimEvent = SimEvent.new()
+	again.kind = &"scan_mark"
+	again.ship_id = PLAYER
+	crew.on_sim_event(again)
+	assert_int(crew.relay.zones_of(PLAYER).size()).is_equal(1)

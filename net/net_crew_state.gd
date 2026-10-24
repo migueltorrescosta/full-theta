@@ -9,6 +9,8 @@ extends RefCounted
 ## client can't count the ships it doesn't see.
 
 ## Sim events kept in the ship's log: event kind -> log key (i18n relay.log.<key>).
+## The `by` of the scan position Science's mark creates.
+const SCIENCE_BY: String = "science"
 const LOG_EVENTS: Dictionary = {
 	&"contact_detected": "contact_detected",
 	&"contact_lost": "contact_lost",
@@ -183,6 +185,9 @@ func on_mark_accept(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## losses, probes and lane warnings of the event's ship, as keys and arguments, never
 ## text of a character.
 func on_sim_event(e: SimEvent) -> void:
+	if e.kind == &"scan_mark":
+		_science_scan_position(e.ship_id)
+		return
 	var key: String = LOG_EVENTS.get(e.kind, "")
 	if key == "" or e.ship_id < 0:
 		return
@@ -330,12 +335,33 @@ func _spot(s: NetSession, msg: Dictionary) -> Dictionary:
 	return spot
 
 
-## Whether the sender's faction has revealed that subsystem's weak point (D202).
+## Whether the sender's faction has revealed that subsystem's weak point (D202):
+## weak_check when a test set one, else Science's scan knowledge (FT-SIM-023).
 func _revealed(s: NetSession, contact: int, sub: int) -> bool:
-	if not weak_check.is_valid():
-		return false
 	var world: SimWorld = session.world
-	return weak_check.call(world, world.faction_of(s.ship), contact, sub)
+	var faction: int = world.faction_of(s.ship)
+	if weak_check.is_valid():
+		return weak_check.call(world, faction, contact, sub)
+	return sub in ScienceKnowledge.weak_points(world, faction, contact)
+
+
+## Science's scan-position mark (FT-SCI-010) becomes a scan position of the ship's zones
+## (FT-SPA-028): one per ship, replacing the one Science made before; unchanged marks add
+## nothing.
+func _science_scan_position(ship: int) -> void:
+	var world: SimWorld = session.world
+	var def: ScienceDef = world.science_def
+	if def == null or ship < 0 or ship >= world.science.size():
+		return
+	var t: ScienceTable = world.science
+	var at: Vector3 = Vector3(t.mark_x[ship], t.mark_y[ship], t.mark_z[ship])
+	for z: Dictionary in relay.zones_of(ship):
+		if z["kind"] != CrewRelay.KIND_SCAN or z["by"] != SCIENCE_BY:
+			continue
+		if z["site"] == t.mark_site[ship] and Vector3(z["x"], z["y"], z["z"]) == at:
+			return
+		relay.delete_zone(ship, z["id"])
+	add_scan_position(ship, t.mark_site[ship], at, def.mark_radius, SCIENCE_BY)
 
 
 func _ship_name(ship: int) -> String:

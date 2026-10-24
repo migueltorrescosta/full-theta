@@ -68,6 +68,12 @@ static func step(world: SimWorld) -> void:
 					if dist <= identify[o]:
 						ident = true
 						break
+			# A deployed probe's bubble detects too (P13, FT-RLY-004): the contact gets a
+			# row, so Science can scan and hack inside it.
+			if by < 0 and live and world.probes.size() > 0:
+				var at: Vector3 = Vector3(kin.px[contact], kin.py[contact], kin.pz[contact])
+				if ProbeSystem.coverage_at(world, faction, at, contact_site):
+					by = _any_ship(world, faction)
 			var row: int = table.row_for(faction, contact)
 			if by >= 0:
 				if row < 0:

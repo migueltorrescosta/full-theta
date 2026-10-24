@@ -50,7 +50,8 @@ var hacks: HackTable = HackTable.new()
 ## encounter passes it in (M1Encounter.science).
 var science_def: ScienceDef
 ## Whether a contact is in probe coverage for a ship (P13): Callable(ship, contact) ->
-## bool, set by the probe system's wiring; not state. Invalid: nothing is covered.
+## bool, an override for tests; not state. Invalid: Relay's probes answer
+## (ProbeSystem.covers_contact).
 var probe_coverage: Callable = Callable()
 # --- #9 strand B: Relay's stock, launched probes and lane flags. ---
 var relay: RelayTable = RelayTable.new()
@@ -120,8 +121,20 @@ static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[St
 ## Every state container, in hash order (FT-ARC-012: each is keyed by ship and faction).
 func tables() -> Array[SimTable]:
 	return [
-		kin, helm, power, shields, mounts, projectiles, damage, knowledge, ai, run, science, hacks,
-		relay, probes
+		kin,
+		helm,
+		power,
+		shields,
+		mounts,
+		projectiles,
+		damage,
+		knowledge,
+		ai,
+		run,
+		science,
+		hacks,
+		relay,
+		probes
 	]
 
 

@@ -98,10 +98,12 @@ static func contact_noise(world: SimWorld, ship: int, contact: int) -> float:
 
 
 ## Whether the contact is inside a probe's coverage for the ship's faction (FT-SCI-005,
-## P13). The lead wires strand B's probe system into SimWorld.probe_coverage, a
-## Callable(ship_id, contact_id) -> bool; without it nothing is covered.
+## P13): SimWorld.probe_coverage, a Callable(ship_id, contact_id) -> bool, when set (tests
+## stand in), else Relay's deployed probes (ProbeSystem.covers_contact).
 static func probe_covered(world: SimWorld, ship: int, contact: int) -> bool:
-	return world.probe_coverage.is_valid() and bool(world.probe_coverage.call(ship, contact))
+	if world.probe_coverage.is_valid():
+		return bool(world.probe_coverage.call(ship, contact))
+	return ProbeSystem.covers_contact(world, ship, contact)
 
 
 ## Whether the ship is within mark_radius of its scan-position mark for that contact
