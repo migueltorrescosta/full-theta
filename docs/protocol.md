@@ -67,6 +67,7 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | 20 | Mark | C | `op` String (`place`, `move`, `rename`, `delete`), `slot` int (0–7 Alpha to Hotel; −1 with `place`: the first free one), `name` String ("" with `place` or `rename`: the slot's default; trimmed, cut to 24 bytes), `contact` int (≥ 0 attaches the mark to that contact; −1 free), `site` int, `x`, `y`, `z` float (64-bit site offset, wrapped, D104/D124) | H | Marks of the sender's ship (FT-SPA-012 to FT-SPA-014, FT-SPA-022, FT-RLY-003; rules in `CrewMarks`). Refusals: `not_crew`, `marks_full` (8 used; Relay replaces a slot it names), `slot_taken` (a used slot, not Relay), `not_yours` (another's mark, not Relay), `not_allowed` (the Captain edits nothing), `bad_mark`; with `op` and `slot`. | #7 |
 | 21 | Ping | C | `kind` String (`contact`: `id`; `mark`: `id` = slot; `site`: `site`; `point`: `site` and `x`, `y`, `z`), `id` int, `site` int, `x`, `y`, `z` float | H | Pulse an item on every screen of the ship (FT-SPA-016); crew and Captain. Refusals: `not_crew`, `rate_limited` (FT-SPA-017), `bad_ping`; with `kind`. | #7 |
 | 22 | RunAgain | C | `ship` int, `vote` bool (cast or withdraw) | H | After the ship's outcome, a connected crew player of the ship votes to run it again; the host's `true` resets at once (D178). Refusals: `not_over`, `not_crew`. | #7 |
+| 29 | ClientStats | C | `sent_us` int (client unix µs), `ua` string (the browser's user agent, ≤ 200 bytes; "" off the web), `pairs` PackedInt64Array (snapshot seq, arrival unix µs, …; at most 400 pairs) | — | Every 2 s while snapshots arrive (`NetClient.STATS_INTERVAL_US`): when each snapshot reached the client, before decoding. The server joins the arrivals to its capture stamps by seq (`NetTransport.stamp_of`) and logs the snapshot age (D199, see Session log). Not rate limited; a report of more than 800 values is ignored; no answer. | #9 D |
 
 ### Events
 
@@ -162,7 +163,20 @@ The datagram is little-endian and append-only: a newer format adds fields at the
 
 ## Static HTTP
 
-`StaticServer` (`net/static_server.gd`, FT-NET-030, FT-NET-039) serves the web export from `--http-root DIR` on the bind address at the WebSocket port − 1. It answers GET and HEAD only, prefers `<file>.gz` when the request accepts gzip, and sends an ETag with `Cache-Control: no-cache`, so a reload gets 304. It has no byte ranges (a Range header is ignored: 200 with the whole file) and no video/mp4; `.webm` stays (`video/webm`, the packaged keep-awake video). #9 re-adds ranges, and mp4, if Safari's keep-awake video needs them. The server polls it once a frame within a 400 µs budget; the request head search resumes from where it stopped.
+`StaticServer` (`net/static_server.gd`, FT-NET-030, FT-NET-039) serves the web export from `--http-root DIR` on the bind address at the WebSocket port − 1. It answers GET and HEAD only, prefers `<file>.gz` when the request accepts gzip, and sends an ETag with `Cache-Control: no-cache`, so a reload gets 304. It answers one byte range (`Range: bytes=a-b`, `a-` or `-n`: 206 with `Content-Range`; unsatisfiable: 416) of the file itself, never of its `.gz` (Safari fetches the keep-awake video that way), and serves `.mp4` (`video/mp4`, H.264, for Safari) beside `.webm`. A file whose name carries a 10-digit hex content hash (`index.<hash>.wasm`, `.pck` and the audio worklets, renamed by `tools/release/web_patch.py`) is sent `Cache-Control: public, max-age=31536000, immutable`, so a returning browser reuses its wasm and pack without asking (D197); every other file keeps `no-cache` and an ETag. The server polls it once a frame within a 400 µs budget; the request head search resumes from where it stopped.
+
+## Session log
+
+`SessionLog` (`net/session_log.gd`, D199) is the server's append-only log, JSON Lines: `{"t": seconds since it opened, "kind": ..., ...}`. `--session-log PATH` sets the file (`off` writes none; default `user://logs/session-<unix time>.jsonl`). Other systems write to it through `NetServer.session_log` (null until `start_session_log()`): `event(kind, fields)` for something that happens rarely, `count(name, n)` for something that happens often (the final `summary` line holds every counter), `close(extra)` at the end. Lines the server writes:
+
+| kind | fields | when |
+|---|---|---|
+| `start` | `port`, `bind`, `protocol` | the log opens |
+| `join` | `session`, `name`, `client` (desktop, web, bot), `resumed` | after each accepted Hello |
+| `snapshot_age` | `pooled` and `clients[]`: `n`, `age_p50_ms`, `age_p99_ms`, `gap_p99_ms` (clients also `session`, `name`, `client`, `ua`, and `fulls` and `stalls`, the full snapshots and stalls on its current connection so far: a device that keeps resyncing shows here) | every 10 s with snapshots in the window |
+| `summary` | `counters` (`commands` and whatever other systems count), `snapshot_age` over the whole session (same shape, plus `unmatched` per client), `tick` | the server quits |
+
+Snapshot age is the client's arrival time (before decoding, taken when the game polls its socket, so a throttled phone's frame gaps count) minus the server's capture stamp (a re-encoded idle state counts from its encode time), joined by snapshot seq as in D161. Clients on other machines have another clock: the server takes the smallest `server receive time - client send time` over a client's reports as that clock's offset, which includes the quickest uplink trip, so ages read at most that trip (a few ms on Wi-Fi) too high. Percentiles come from 1 ms histograms (values above 3 s count as 3 s). Gaps are between a client's consecutive arrivals. #13's M4 check reads `snapshot_age.pooled.age_p99_ms < 150` from the summary of a real Wi-Fi session.
 
 ## Rates and limits (PROVISIONAL)
 

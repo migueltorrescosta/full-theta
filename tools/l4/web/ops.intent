@@ -1,0 +1,6 @@
+# Ops, so the browser's Tactical pick can start the run (tools/l4/web.sh).
+connect
+expect_welcome resumed=false
+pick ship=0 entry=ops
+signal name=ops_picked
+await name=web_done timeout=170

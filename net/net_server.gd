@@ -100,6 +100,18 @@ func start_session_log(path: String) -> Error:
 	return OK
 
 
+## Adds each client's full snapshots and stalls on its current connection (cumulative),
+## so a phone that keeps resyncing shows next to its ages (D199).
+func _add_resyncs(window: Dictionary) -> void:
+	var by_session: Dictionary = {}
+	for c: Dictionary in (transport.stats().get("conns", {}) as Dictionary).values():
+		by_session[c["session"]] = c
+	for line: Dictionary in window["clients"]:
+		var c: Dictionary = by_session.get(line["session"], {})
+		line["fulls"] = c.get("fulls", 0)
+		line["stalls"] = c.get("stalls", 0)
+
+
 ## A client's report of snapshot arrival times (D199).
 func _on_client_stats(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var from: NetSession = session.by_conn.get(conn)
@@ -244,6 +256,7 @@ func _process(delta: float) -> void:
 		_next_stats_us = now_us + STATS_PERIOD_US
 		var window: Dictionary = age_stats.window_summary()
 		if (window["pooled"] as Dictionary)["n"] > 0:
+			_add_resyncs(window)
 			session_log.event("snapshot_age", window)
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)

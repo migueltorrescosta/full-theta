@@ -409,6 +409,19 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 		"lang": language,
 	}
 	transport.bind(conn, session.id, welcome, session.view_key(), not resumed)
+	if session_log != null:
+		(
+			session_log
+			. event(
+				"join",
+				{
+					"session": session.id,
+					"name": session.name,
+					"client": session.client_kind,
+					"resumed": resumed,
+				}
+			)
+		)
 	(
 		transport
 		. send(

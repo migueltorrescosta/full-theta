@@ -10,6 +10,8 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks. 
 
 `tools/gate.sh l4` runs `tools/l4/run.sh`: a server and three headless client processes pinned to 2 cores (`taskset -c 0,1`), driven by intent files, with kills and relaunches (FT-TST-011, FT-TST-014). `tools/l4/repeat.sh N` runs it N times and writes `build/l4/repeat-summary.txt`. The scenarios, the intent format and the logs are in `tools/l4/README.md`.
 
+`tools/l4/web.sh` (run by `tools/gate.sh l4` after the scenarios) is the browser smoke test (FT-TST-021, FT-NET-013, FT-NET-046, FT-AUD-017): it exports the web build (`tools/release/export_web.sh`), serves it from a dedicated server on 2 cores, and drives it with headless Chromium on the same 2 cores, one worker (`tools/l4/web_station.mjs`; needs `npm ci` in `tools/l6` once, which the script does). The page joins by itself, takes Tactical through the `?pick=tactical&ready=1` hooks, unlocks audio after a tap, plays, is woken after a simulated suspension, and one screenshot must not be blank. `tools/l4/web_check.py` then reads the server's session log (joins, the resumed join, commands, snapshot ages). Logs and `shot.png` in `build/l4web/`.
+
 ## HTTP budget
 
 `tools/static_server_profile.gd` times the search for a request head's end over a whole 8 KiB headerless request, the most one `StaticServer` poll searches, against the 400 µs per-frame budget (FT-NET-039, D108). It is wall-clock, so a manual check on an idle host, not a gate test: the L3 test counts the bytes searched instead. Run `taskset -c 0,1 godot --headless --path . -s res://tools/static_server_profile.gd` and record the load average with the result.
