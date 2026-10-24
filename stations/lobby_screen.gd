@@ -243,9 +243,20 @@ func _build() -> void:
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 32)
 	add_child(margin)
+	# The seat list and the host's join panel scroll on short screens; the bottom bar
+	# (pick, Start, Back to ships, Main menu) stays in view below them.
+	var outer: VBoxContainer = VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 12)
+	margin.add_child(outer)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.name = "Scroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer.add_child(scroll)
 	var col: VBoxContainer = VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 12)
-	margin.add_child(col)
+	scroll.add_child(col)
 	_title = Label.new()
 	_title.text = tr("lobby.title")
 	_title.add_theme_font_size_override("font_size", 32)
@@ -264,7 +275,7 @@ func _build() -> void:
 	col.add_child(_entries)
 	var bottom: HBoxContainer = HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 16)
-	col.add_child(bottom)
+	outer.add_child(bottom)
 	_pick = Label.new()
 	bottom.add_child(_pick)
 	_start = Button.new()
