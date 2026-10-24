@@ -115,7 +115,7 @@ try {
   let stats = null;
   const seenBy = Date.now() + 45000;
   while (Date.now() < seenBy) {
-    const shot = await page.screenshot({ path: `${outDir}/shot.png` });
+    const shot = await page.screenshot({ path: `${outDir}/shot.png`, timeout: 120000 });
     stats = await look(page, shot);
     if (stats.colours >= 8 && stats.std > 4) break;
     await page.waitForTimeout(2000);
