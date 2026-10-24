@@ -241,6 +241,7 @@ func make_server() -> NetServer:
 	# STAND-IN (#11 lobby): the multi-ship lobby replaces --load-ships and LoadEncounter.
 	if load_ships > 0:
 		encounter = LoadEncounter.new(seed_value, "server", player, enemy, load_ships, load_world)
+	encounter.science = defs.science()
 	var server: NetServer = NetServer.new()
 	server.run_for = run_for
 	if probe_out != "":

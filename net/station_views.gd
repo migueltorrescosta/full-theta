@@ -114,7 +114,7 @@ const STATION_SECTIONS: Dictionary = {
 	],
 	"engineering":
 	[Section.KIN, Section.STATUS, Section.ENGINEERING, Section.CONTACTS, Section.OWNERSHIP],
-	"science": [Section.KIN, Section.STATUS, Section.CONTACTS],
+	"science": [Section.KIN, Section.STATUS, Section.SCIENCE, Section.CONTACTS, Section.OWNERSHIP],
 	"relay": [Section.KIN, Section.STATUS, Section.CONTACTS],
 	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS],
 	"captain": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.NEAR, Section.PROJECTILES],
@@ -137,7 +137,19 @@ const STATION_COMMANDS: Dictionary = {
 	],
 	"weapons": [&"aim_mount", &"fire"],
 	"engineering": [&"set_pips", &"boost", &"set_shield", &"dispatch_repair", &"recall_repair"],
-	"science": [],
+	"science":
+	[
+		&"science_scan",
+		&"science_scan_submit",
+		&"science_hack",
+		&"science_hack_move",
+		&"science_cancel",
+		&"science_self_scan",
+		&"science_sensor_mode",
+		&"science_ping",
+		&"science_scan_mark",
+		&"science_select",
+	],
 	"relay": [],
 	"comms": [],
 }
@@ -149,11 +161,14 @@ const CLAIM_FLIGHT: String = "flight"
 const CLAIM_SHIELD_FACING: String = "shield_facing"
 const CLAIM_MOUNT: String = "mount"
 const CLAIM_CREW: String = "crew"
+## The one active scan or hack (or own-ship scan) at a time (FT-NET-022, FT-SCI-004).
+const CLAIM_SCAN: String = "scan"
 ## Station -> claimable item kinds.
 const STATION_CLAIMS: Dictionary = {
 	"helm": [CLAIM_FLIGHT, CLAIM_SHIELD_FACING],
 	"weapons": [CLAIM_MOUNT],
 	"engineering": [CLAIM_CREW],
+	"science": [CLAIM_SCAN],
 }
 ## Station -> ship-wide controls: last writer wins, and snapshots name the last writer
 ## (FT-NET-044). A control is the name, or "name:index" (pips per subsystem kind).
@@ -178,6 +193,12 @@ const COMMAND_ITEMS: Dictionary = {
 	&"set_pips": ["pips", "subsystem_kind"],
 	&"set_shield": ["shield", ""],
 	&"boost": ["boost", ""],
+	&"science_scan": [CLAIM_SCAN, ""],
+	&"science_scan_submit": [CLAIM_SCAN, ""],
+	&"science_hack": [CLAIM_SCAN, ""],
+	&"science_hack_move": [CLAIM_SCAN, ""],
+	&"science_cancel": [CLAIM_SCAN, ""],
+	&"science_self_scan": [CLAIM_SCAN, ""],
 }
 
 ## Sim events that only some stations get (FT-NET-009): kind -> stations; a session
@@ -191,6 +212,19 @@ const EVENT_STATIONS: Dictionary = {
 	&"fire_blocked": ["weapons"],
 	&"friendly_fire_warning": ["weapons"],
 	&"ai_mode": [],
+	&"science_refused": ["science"],
+	&"scan_started": ["science"],
+	&"scan_done": ["science"],
+	&"scan_failed": ["science"],
+	&"scan_mark": ["science", "helm"],
+	&"hack_started": ["science"],
+	&"hack_traced": ["science"],
+	&"hack_failed": ["science"],
+	&"hack_done": ["science", "weapons"],
+	&"hack_window_end": ["science", "weapons"],
+	&"self_scan_started": ["science"],
+	&"self_scan_done": ["science", "engineering"],
+	&"active_ping": ["science"],
 }
 
 ## Field sets of the block sections: Section -> NetBlock schema. A block is sent whole
@@ -250,6 +284,63 @@ const BLOCKS: Dictionary = {
 				],
 			],
 		],
+	],
+	# Science (strand A, E01): sensors, the noise preview of the selected contact, the
+	# scan-position mark, the open minigame session with its puzzle, the contact cards of
+	# the faction's knowledge (FT-SCI-001, FT-SCI-002) and the faction's open hack
+	# windows (P7). noise_flags: bit 0 active, 1 ping, 2 probe, 3 at the mark.
+	Section.SCIENCE:
+	[
+		["active", "bool"],
+		["ping_left", "f32"],
+		["ping_cool", "f32"],
+		["selected", "s16"],
+		["noise", "f32"],
+		["noise_range", "f32"],
+		["noise_aspect", "f32"],
+		["noise_health", "f32"],
+		["noise_flags", "u8"],
+		["mark_contact", "s16"],
+		["mark_site", "s16"],
+		["mark_pos", "v3f"],
+		["self_scanned", "bool"],
+		# Session: 0 none, 1 scan, 2 hack, 3 own-ship scan.
+		["session", "u8"],
+		["session_target", "s16"],
+		["session_noise", "f32"],
+		["session_start", "u32"],
+		["session_probe", "bool"],
+		# Scan: open axes mask (1 x, 2 y, 4 z), the wireframe and the cloud.
+		["axes", "u8"],
+		["wire", ["rows", [["p", "v3f"]]]],
+		["cloud", ["rows", [["p", "v3f"]]]],
+		# Hack: grid size, the node the route is at, the goal, the subsystem index,
+		# the trace bar, the known-node mask and the edge mask of each known node.
+		["hack_cols", "u8"],
+		["hack_rows", "u8"],
+		["hack_node", "s16"],
+		["hack_goal", "s16"],
+		["hack_sub", "s16"],
+		["trace", "f32"],
+		["known", "u32"],
+		["edges", ["rows", [["mask", "u8"]]]],
+		[
+			"cards",
+			[
+				"rows",
+				[
+					["contact", "s16"],
+					["detect", "f32"],
+					["scan", "f32"],
+					["class_id", "u32"],
+					["intent", "u8"],
+					["weak_mask", "u32"],
+					["resist", ["rows", [["type", "u32"], ["factor", "f32"]]]],
+					["hack", "bool"],
+				],
+			],
+		],
+		["hacks", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
 	],
 	Section.MOUNTS:
 	[
@@ -383,7 +474,7 @@ static func station_of_item(item: String) -> String:
 
 
 ## The claimable items of a ship by station: flight and shield facing (Helm), one per
-## weapon mount (Weapons), one per repair crew (Engineering).
+## weapon mount (Weapons), one per repair crew (Engineering), the scan (Science).
 static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 	var ship_def: ShipDef = world.defs[ship]
 	var mounts: Array[String] = []
@@ -393,7 +484,7 @@ static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 	for i: int in ship_def.repair_crews:
 		crews.append("%s:%d" % [CLAIM_CREW, i])
 	var helm: Array[String] = [CLAIM_FLIGHT, CLAIM_SHIELD_FACING]
-	return {"helm": helm, "weapons": mounts, "engineering": crews}
+	return {"helm": helm, "weapons": mounts, "engineering": crews, "science": [CLAIM_SCAN]}
 
 
 ## Whether a sim event of this kind reaches a session holding entry (faction and ship
@@ -474,6 +565,8 @@ static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
 			return _helm(world, ship)
 		Section.ENGINEERING:
 			return _engineering(world, ship)
+		Section.SCIENCE:
+			return ScienceView.block(world, ship)
 	return _mounts(world, ship)
 
 

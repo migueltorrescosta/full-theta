@@ -33,7 +33,8 @@ const SPEC_05: Dictionary = {
 		[S.HELM, S.MOUNTS, S.NEAR, S.PROJECTILES],
 	],
 	# M1 has only their definitions: top bar and disc radar (FT-STN-001, FT-STN-002).
-	"science": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
+	"science":
+	[[S.KIN, S.STATUS, S.CONTACTS, S.SCIENCE, S.OWNERSHIP], [S.HELM, S.MOUNTS, S.ENGINEERING]],
 	"relay": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
 	"comms": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
 	# Main-screen mirror and the read-only main screen: no ship controls (FT-CPT-003,

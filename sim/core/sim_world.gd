@@ -40,6 +40,15 @@ var knowledge: KnowledgeTable = KnowledgeTable.new()
 var ai: AiTable = AiTable.new()
 ## Run state: each ship's status and the encounter outcome (T036, FT-MIS-017).
 var run: RunTable = RunTable.new()
+## Science state and open hack windows (E01, strand A).
+var science: ScienceTable = ScienceTable.new()
+var hacks: HackTable = HackTable.new()
+## Science tuning, read-only (FT-ARC-020); null disables the Science commands. The
+## encounter passes it in (M1Encounter.science).
+var science_def: ScienceDef
+## Whether a contact is in probe coverage for a ship (P13): Callable(ship, contact) ->
+## bool, set by the probe system's wiring; not state. Invalid: nothing is covered.
+var probe_coverage: Callable = Callable()
 
 ## Crew and server commands in application order, each stamped with its tick and
 ## whether it was accepted (FT-ARC-008, D122); rejected ones stay so replays reproduce
@@ -104,7 +113,9 @@ static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[St
 
 ## Every state container, in hash order (FT-ARC-012: each is keyed by ship and faction).
 func tables() -> Array[SimTable]:
-	return [kin, helm, power, shields, mounts, projectiles, damage, knowledge, ai, run]
+	return [
+		kin, helm, power, shields, mounts, projectiles, damage, knowledge, ai, run, science, hacks
+	]
 
 
 ## Adds a ship from its definition at a site-local offset (wrapped onto the site's cube)
@@ -205,6 +216,8 @@ func advance(frame_delta: float) -> int:
 ## Advances one fixed tick. The phase order is part of the determinism contract.
 func step() -> void:
 	_apply_commands()
+	# Science first: its clocks and hack windows feed this tick's sensors and power.
+	ScienceSystem.step(self)
 	KnowledgeSystem.step(self)
 	# The AI decides on this tick's knowledge; its commands apply next tick (FT-SIM-028).
 	EnemyAi.step(self)

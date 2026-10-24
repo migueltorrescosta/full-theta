@@ -26,6 +26,7 @@ func _init(owner: Node) -> void:
 func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = "") -> NetServer:
 	var s: NetServer = NetServer.new()
 	var m1: M1Encounter = M1Encounter.new(5, "test", TestDefs.corvette(), TestDefs.raider_enemy())
+	m1.science = load("res://content/science/science.tres") as ScienceDef
 	if s.start(m1, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
 	s.session.sessions.grace_us = int(grace_s * 1_000_000.0)

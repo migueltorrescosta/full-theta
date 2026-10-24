@@ -24,6 +24,8 @@ var player: ShipDef
 var enemy: EnemyDef
 ## Side of the site's wrapping cube (m, FT-SIM-035, D124).
 var site_period: float
+## Science tuning for the built worlds (E01); null leaves the Science commands refused.
+var science: ScienceDef
 
 
 func _init(
@@ -53,6 +55,7 @@ func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
 	var world: SimWorld = SimWorld.new(world_seed, build_id, site_period)
+	world.science_def = science
 	world.set_relation(PLAYER_FACTION, ENEMY_FACTION, SimWorld.Relation.HOSTILE)
 	world.spawn_ship(player, PLAYER_FACTION, SITE)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)

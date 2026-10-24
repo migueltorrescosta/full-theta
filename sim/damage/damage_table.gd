@@ -31,6 +31,12 @@ var heat: PackedFloat64Array = PackedFloat64Array()
 ## falls back below PowerSystem.FAULT_REARM of the threshold.
 var fault_armed: PackedByteArray = PackedByteArray()
 
+## Derived cache, not state: per row, the product of the open hack windows' effectiveness
+## factors (1 with none), written by ScienceSystem.step from HackTable (FT-SCI-008, P7).
+var hack_scale: PackedFloat64Array = PackedFloat64Array()
+## Derived: hack_scale may hold a factor other than 1, so step() must rewrite it.
+var hack_dirty: bool = false
+
 ## Derived index, not state: first (hull) row by ship id, set at spawn (rows never move).
 var _first: PackedInt32Array = PackedInt32Array()
 ## Derived cache, not state: per row, the health the effectiveness curve was last
@@ -53,6 +59,7 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	fault_armed.append(0)
 	_eff_health.append(NAN)
 	_eff.append(1.0)
+	hack_scale.append(1.0)
 	for s: SubsystemDef in def.subsystems:
 		add_key(ship_id, faction)
 		part_ids.append(s.id)
@@ -64,6 +71,7 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 		fault_armed.append(1)
 		_eff_health.append(NAN)
 		_eff.append(1.0)
+		hack_scale.append(1.0)
 
 
 func columns() -> Array:
@@ -88,7 +96,7 @@ func row_effectiveness(r: int, s: SubsystemDef) -> float:
 	if h != _eff_health[r]:
 		_eff_health[r] = h
 		_eff[r] = PowerSystem.curve_at(s.effectiveness, h / s.health_max)
-	return _eff[r]
+	return _eff[r] * hack_scale[r]
 
 
 ## The ship's hull row, or -1.
