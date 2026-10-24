@@ -68,6 +68,10 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
+  const engineLog = [];
+  page.on("console", (m) => {
+    if (["error", "warning"].includes(m.type())) engineLog.push(`${m.type()}: ${m.text().slice(0, 300)}`);
+  });
   const start = Date.now();
   await page.goto(`${url}?pick=tactical&ready=1`);
 
@@ -145,6 +149,7 @@ try {
   const real = errors.filter((e) => !e.includes("Pointer Lock"));
   note("no page errors", real.length === 0, real.join(" | "));
   failed = Object.values(checks).some((c) => !c.ok);
+  if (failed) console.log(`web_station: engine console (errors, warnings):\n  ${engineLog.slice(0, 25).join("\n  ")}`);
 } catch (e) {
   note("run", false, e.message);
 } finally {
