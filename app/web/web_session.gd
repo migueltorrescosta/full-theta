@@ -1,7 +1,7 @@
 class_name WebSession
 extends Node
-## What a browser station does beside the ordinary client session (ClientShell adds one
-## in a browser build, nothing elsewhere): keeps the tablet awake while joined
+## What a browser station does beside the ordinary client session (MainMenu adds one to its
+## ClientShell in a browser build, nothing elsewhere): keeps the tablet awake while joined
 ## (FT-NET-046), reconnects with its token when the page comes back from a suspension or
 ## the network returns (without a reload, D108), tells the page which panel it shows
 ## (WebPage.set_panel, for tools/l4/web.sh), and runs the ?pick= test hooks

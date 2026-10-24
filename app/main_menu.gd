@@ -162,6 +162,7 @@ func _start_shell(client: NetClient) -> void:
 		shell.setup(client, settings, host_session.launcher.bind, host_session.launcher.port)
 	else:
 		shell.setup(client, settings)
+	WebSession.attach(shell)
 	shell.left.connect(_on_left)
 	_menu.visible = false
 	_status.text = ""

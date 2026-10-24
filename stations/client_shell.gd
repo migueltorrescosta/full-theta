@@ -56,7 +56,6 @@ func setup(
 	_on_welcome()
 	ctx.crew.changed.connect(_on_crew_changed)
 	apply_ui_scale()
-	WebSession.attach(self)
 
 
 ## The UI scale setting (FT-STN-013) as the window's content scale.
