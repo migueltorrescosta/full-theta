@@ -55,3 +55,7 @@ func weapon(id: StringName) -> WeaponDef:
 
 func enemy(id: StringName) -> EnemyDef:
 	return get_def(&"EnemyDef", id) as EnemyDef
+
+
+func science(id: StringName = &"science") -> ScienceDef:
+	return get_def(&"ScienceDef", id) as ScienceDef

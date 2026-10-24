@@ -52,6 +52,7 @@ func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
 	var world: SimWorld = SimWorld.new(world_seed, build_id, site_period)
+	world.science_def = science
 	world.set_relation(RAIDER_FACTIONS[0], RAIDER_FACTIONS[1], SimWorld.Relation.HOSTILE)
 	if not crew_hostile:
 		for f: int in RAIDER_FACTIONS:
