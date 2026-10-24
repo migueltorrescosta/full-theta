@@ -10,8 +10,12 @@ extends StationPanel
 ## Reads the ENGINEERING block (ctx.view.blocks) against the ship's ShipDef from
 ## content/ (subsystem order, positions, limits). Hit marks come from `hit` events on the
 ## own ship (vector in the ship frame), through CrewState.sim_event. Sends set_pips,
-## set_shield, boost, dispatch_repair and recall_repair. Nothing here shows a threat
-## position: Engineering's view has no NEAR or PROJECTILES section (FT-ENG-007).
+## set_shield, boost, dispatch_repair and recall_repair; harden (pre-harden the selected
+## subsystem) and fabricate_probe (FT-ENG-008, the probe itself is Relay's sim);
+## pick_fault_cause for a fault of unknown cause (FT-ENG-006): the faults list says so,
+## names the cause once Science's scan found it, and the cause-cycle intent picks.
+## Nothing here shows a threat position: Engineering's view has no NEAR or PROJECTILES
+## section (FT-ENG-007).
 
 const S = StationViews.Section
 const KIND = SubsystemDef.Kind
@@ -165,9 +169,12 @@ func handle_intent(ev: Dictionary) -> bool:
 			boost()
 		"dispatch_nearest":
 			dispatch_nearest()
-		"harden", "fabricate_probe":
-			# Reserved: hardening and probes come later (FT-ENG-008).
-			_toast("toast.eng_later")
+		"harden":
+			harden(selected)
+		"fabricate_probe":
+			fabricate_probe()
+		"cause_next":
+			cycle_cause(selected)
 		_:
 			return false
 	return true
@@ -359,6 +366,76 @@ func dispatch_nearest() -> bool:
 	return dispatch(other, selected)
 
 
+## Pre-hardens subsystem i (FT-ENG-008): the sim takes its parts and refuses a repeat.
+func harden(i: int) -> bool:
+	if i < 0 or i >= count():
+		return false
+	if hardened_ticks(i) > 0:
+		_toast("toast.eng_hardened")
+		return false
+	if spare_parts() < ship_def.subsystems[i].harden_parts:
+		_toast("toast.eng_no_parts")
+		return false
+	ctx.intents.command({"kind": "harden", "subsystem_id": String(ship_def.subsystems[i].id)})
+	return true
+
+
+## Asks for a probe fabricated from spare parts (FT-ENG-008, P11): the command is Relay's
+## sim (`fabricate_probe`), which takes the parts and adds the probe.
+func fabricate_probe() -> bool:
+	ctx.intents.command({"kind": "fabricate_probe"})
+	return true
+
+
+## Ticks of hardening left on subsystem i (the block row).
+func hardened_ticks(i: int) -> int:
+	return int(row(i).get("hardened", 0))
+
+
+## Whether subsystem i has a fault of unknown cause (FT-SIM-025).
+func has_fault(i: int) -> bool:
+	return bool(row(i).get("fault", false))
+
+
+## Index plus 1 in the subsystem's fault_causes of the cause Science's scan found (0:
+## not found yet).
+func known_cause(i: int) -> int:
+	return int(row(i).get("fault_cause", 0))
+
+
+## Index plus 1 of the cause Engineering picked (0: none), as sent, until the snapshot
+## agrees.
+func picked_cause(i: int) -> int:
+	return int(_pending_value("cause:%d" % i, int(row(i).get("fault_pick", 0))))
+
+
+## Picks the next cause in the subsystem's list for its fault (FT-ENG-006).
+func cycle_cause(i: int) -> bool:
+	if i < 0 or i >= count():
+		return false
+	var causes: Array[StringName] = ship_def.subsystems[i].fault_causes
+	if not has_fault(i) or causes.is_empty():
+		_toast("toast.eng_no_fault")
+		return false
+	var next: int = picked_cause(i) % causes.size() + 1
+	ctx.intents.command(
+		{
+			"kind": "pick_fault_cause",
+			"subsystem_id": String(ship_def.subsystems[i].id),
+			"cause": String(causes[next - 1])
+		}
+	)
+	_pending["cause:%d" % i] = [next, ctx.now_ms()]
+	return true
+
+
+## A cause's name: its strings entry `eng.cause.<id>`, else the id as words.
+func cause_name(i: int, index_plus_one: int) -> String:
+	var id: String = String(ship_def.subsystems[i].fault_causes[index_plus_one - 1])
+	var text: String = tr("eng.cause." + id)
+	return text if text != "eng.cause." + id else id.replace("_", " ")
+
+
 # --- Faults, queue, parts (FT-ENG-005). ---
 
 
@@ -374,11 +451,29 @@ func fault_lines() -> Array:
 			out.append([tr("eng.fault_down") % full_name(i), "danger"])
 		elif faults.has(i) and now - int(faults[i]) < FAULT_MS:
 			out.append([tr("eng.fault_heat") % [full_name(i), roundi(h * 100)], "danger"])
+		elif has_fault(i):
+			out.append(_fault_line(i, h))
 		elif h < 1.0:
 			out.append([tr("eng.fault_damaged") % [full_name(i), roundi(h * 100)], "warn"])
 		elif heat_frac(i) >= HOT:
 			out.append([tr("eng.fault_hot") % full_name(i), "warn"])
 	return out
+
+
+## The faults-list line of a subsystem with a fault of unknown cause: the cause is
+## unknown until Science's scan found it (FT-SIM-025); Engineering's pick is shown.
+func _fault_line(i: int, h: float) -> Array:
+	var name: String = full_name(i)
+	var pick: int = picked_cause(i)
+	var known: int = known_cause(i)
+	var pct: int = roundi(h * 100)
+	if known > 0:
+		if pick == known:
+			return [tr("eng.fault_right") % [name, pct, cause_name(i, known)], "warn"]
+		return [tr("eng.fault_diagnosed") % [name, pct, cause_name(i, known)], "danger"]
+	if pick > 0:
+		return [tr("eng.fault_guess") % [name, pct, cause_name(i, pick)], "warn"]
+	return [tr("eng.fault_unknown") % [name, pct], "danger"]
 
 
 ## The repair queue: damaged subsystems, most damaged first, with their crews.
@@ -418,6 +513,11 @@ func _refresh_lists() -> void:
 	var lines: Array = [[tr("eng.faults"), "accent"]]
 	var f: Array = fault_lines()
 	lines.append_array(f if not f.is_empty() else [[tr("eng.no_faults"), "ok"]])
+	for i: int in count():
+		if hardened_ticks(i) > 0:
+			lines.append(
+				[tr("eng.hardened") % [full_name(i), ceili(hardened_ticks(i) / 60.0)], "accent"]
+			)
 	lines.append(["", "text"])
 	lines.append([tr("eng.repairs"), "accent"])
 	lines.append_array(queue_lines())

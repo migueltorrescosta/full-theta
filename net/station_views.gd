@@ -135,8 +135,19 @@ const STATION_COMMANDS: Dictionary = {
 		&"helm_select_target",
 		&"set_shield_focus",
 	],
-	"weapons": [&"aim_mount", &"fire"],
-	"engineering": [&"set_pips", &"boost", &"set_shield", &"dispatch_repair", &"recall_repair"],
+	"weapons": [&"aim_mount", &"fire", &"fire_guided", &"set_ammo_type"],
+	"engineering":
+	[
+		&"set_pips",
+		&"boost",
+		&"set_shield",
+		&"dispatch_repair",
+		&"recall_repair",
+		&"pick_fault_cause",
+		&"harden",
+		# Strand B's probe fabrication (FT-ENG-008); Engineering only sends it.
+		&"fabricate_probe",
+	],
 	"science": [],
 	"relay": [],
 	"comms": [],
@@ -172,6 +183,8 @@ const COMMAND_ITEMS: Dictionary = {
 	&"set_shield_focus": [CLAIM_SHIELD_FACING, ""],
 	&"aim_mount": [CLAIM_MOUNT, "mount_index"],
 	&"fire": [CLAIM_MOUNT, "mount_index"],
+	&"fire_guided": [CLAIM_MOUNT, "mount_index"],
+	&"set_ammo_type": [CLAIM_MOUNT, "mount_index"],
 	&"dispatch_repair": [CLAIM_CREW, "crew"],
 	&"recall_repair": [CLAIM_CREW, "crew"],
 	&"helm_select_target": ["target", ""],
@@ -190,6 +203,17 @@ const EVENT_STATIONS: Dictionary = {
 	&"repair_recalled": ["engineering"],
 	&"fire_blocked": ["weapons"],
 	&"friendly_fire_warning": ["weapons"],
+	&"mount_overheated": ["weapons", "engineering"],
+	&"mount_cooled": ["weapons", "engineering"],
+	&"guidance_lost": ["weapons"],
+	&"weak_point_hit": ["weapons"],
+	&"fault_inflicted": ["engineering"],
+	&"fault_cause_revealed": ["engineering"],
+	&"fault_cause_picked": ["engineering"],
+	&"fault_cleared": ["engineering"],
+	&"hardened": ["engineering"],
+	&"harden_expired": ["engineering"],
+	&"harden_no_parts": ["engineering"],
 	&"ai_mode": [],
 }
 
@@ -246,7 +270,14 @@ const BLOCKS: Dictionary = {
 					["pips", "u8"],
 					["heat", "f32"],
 					["crews", "u32"],
-					["fault_armed", "bool"]
+					["fault_armed", "bool"],
+					# Unknown-cause fault (FT-SIM-025): whether one is open, the cause's
+					# index in SubsystemDef.fault_causes plus 1 once revealed (else 0),
+					# Engineering's pick the same way, and ticks of hardening left.
+					["fault", "bool"],
+					["fault_cause", "u8"],
+					["fault_pick", "u8"],
+					["hardened", "u16"],
 				],
 			],
 		],
@@ -262,7 +293,10 @@ const BLOCKS: Dictionary = {
 					["cooldown", "f32"],
 					["ammo", "s32"],
 					["heat", "f32"],
-					["aim_set", "bool"]
+					["aim_set", "bool"],
+					# Selected ammunition type (FT-WPN-006), overheat lock (P6).
+					["ammo_type", "u8"],
+					["locked", "bool"]
 				],
 			],
 		],
@@ -529,6 +563,11 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 					"heat": d.heat[r],
 					"crews": d.crews[r],
 					"fault_armed": d.fault_armed[r] == 1,
+					"fault": d.fault_cause[r] != &"",
+					"fault_cause":
+					_cause_index(world, ship, i - 1, d.fault_cause[r], d.fault_known[r]),
+					"fault_pick": _cause_index(world, ship, i - 1, d.fault_pick[r], 1),
+					"hardened": mini(d.hardened_ticks[r], 65535),
 				}
 			)
 		)
@@ -544,6 +583,15 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 	}
 
 
+## Index of the cause in the subsystem's fault_causes plus 1 when known, else 0.
+static func _cause_index(
+	world: SimWorld, ship: int, sub: int, cause: StringName, known: int
+) -> int:
+	if cause == &"" or known == 0:
+		return 0
+	return (world.defs[ship].subsystems[sub].fault_causes.find(cause) + 1) & 0xff
+
+
 static func _mounts(world: SimWorld, ship: int) -> Dictionary:
 	var m: MountTable = world.mounts
 	var mounts: Array = []
@@ -557,6 +605,8 @@ static func _mounts(world: SimWorld, ship: int) -> Dictionary:
 					"ammo": m.ammo[r],
 					"heat": m.heat[r],
 					"aim_set": m.aim_set[r] == 1,
+					"ammo_type": m.ammo_type[r],
+					"locked": m.locked[r] == 1,
 				}
 			)
 		)

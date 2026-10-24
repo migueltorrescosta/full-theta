@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name WeaponsPanel
 extends StationPanel
 ## Weapons (§5.2, W-B turret camera, D49; T052). Focused, the panel is the turret camera
@@ -121,9 +122,11 @@ func handle_intent(ev: Dictionary) -> bool:
 			if pressed:
 				swap(1 if id == "mount_next" else -1)
 		"ammo_next", "ammo_prev":
-			# FT-WPN-006: M1's weapon has one ammunition type; nothing to cycle.
 			if pressed:
-				ctx.crew.toast.emit("toast.one_ammo", {})
+				cycle_ammo(1 if id == "ammo_next" else -1)
+		"fire_guided":
+			if pressed:
+				fire_guided(mount)
 		_:
 			return false
 	return true
@@ -138,6 +141,88 @@ func item_at(screen_pos: Vector2) -> Dictionary:
 		if (t["rect"] as Rect2).has_point(screen_pos):
 			return {"kind": t["item"]["kind"], "id": t["item"]["id"]}
 	return {}
+
+
+## The weapon of mount i's selected ammunition type.
+func weapon_of(i: int) -> WeaponDef:
+	var types: Array[WeaponDef] = ship_def.mounts[i].ammo_types()
+	return types[clampi(int(_mount_row(i).get("ammo_type", 0)), 0, types.size() - 1)]
+
+
+## Switches the camera mount to the next (or previous) ammunition type it has; false, with
+## a toast, when it has only one or this client may not use it.
+func cycle_ammo(direction: int) -> bool:
+	if mount_count() == 0 or not is_usable(mount):
+		return false
+	var n: int = ship_def.mounts[mount].ammo_types().size()
+	if n < 2:
+		ctx.crew.toast.emit("toast.one_ammo", {})
+		return false
+	var now: int = int(_mount_row(mount).get("ammo_type", 0))
+	ctx.intents.command(
+		{"kind": "set_ammo_type", "mount_index": mount, "ammo_type": posmod(now + direction, n)}
+	)
+	return true
+
+
+## What guided ordnance would fly at (FT-WPN-008): {"target": contact id} for the selected
+## contact, or for a selected mark attached to a contact in view; {"point": Vector3,
+## site-local} for a free mark; {} when nothing usable is selected.
+func guided_goal() -> Dictionary:
+	var s: Dictionary = ctx.crew.selection
+	var id: int = int(s.get("id", -1))
+	match str(s.get("kind", "")):
+		"contact":
+			return {"target": id} if id in ctx.interp.contact_ids() else {}
+		"mark":
+			var m: Dictionary = ctx.crew.mark_in_slot(id)
+			if m.is_empty():
+				return {}
+			var contact: int = int(m["contact"])
+			if contact >= 0:
+				return {"target": contact} if contact in ctx.interp.contact_ids() else {}
+			return {"point": m["pos"]}
+	return {}
+
+
+## Fires mount i's guided ordnance at the selected mark or contact (FT-WPN-008): aims the
+## mount at it, and sends `fire_guided` when it is in arc and loaded. False, with a toast
+## where the player can fix it, when it doesn't fire.
+func fire_guided(i: int) -> bool:
+	if mount_count() == 0 or not is_usable(i):
+		return false
+	var w: WeaponDef = weapon_of(i)
+	if not w.is_guided():
+		ctx.crew.toast.emit("toast.not_guided", {})
+		return false
+	var goal: Dictionary = guided_goal()
+	if goal.is_empty():
+		ctx.crew.toast.emit("toast.guided_no_mark", {})
+		return false
+	var now: int = ctx.now_ms()
+	var row: Dictionary = _mount_row(i)
+	if now < int(_next_fire.get(i, 0)) or int(row.get("ammo", 1)) == 0:
+		return false
+	var at: Vector3 = (
+		ctx.interp.contact_position(int(goal["target"])) if goal.has("target") else goal["point"]
+	)
+	_aims[i] = at
+	_dirty[i] = true
+	if not _in_arc(i, aim_dir(i)):
+		ctx.crew.toast.emit("toast.guided_out_of_arc", {})
+		return false
+	_flush_aims(now, true)
+	var cmd: Dictionary = {"kind": "fire_guided", "mount_index": i, "target": -1}
+	if goal.has("target"):
+		cmd["target"] = int(goal["target"])
+	else:
+		cmd["has_point"] = true
+		cmd["x"] = at.x
+		cmd["y"] = at.y
+		cmd["z"] = at.z
+	ctx.intents.command(cmd)
+	_next_fire[i] = now + roundi(w.cooldown * 1000.0)
+	return true
 
 
 func claim_item() -> String:
@@ -237,7 +322,7 @@ func _barrel(i: int) -> Vector3:
 
 ## Aims mount i along `dir` (world unit vector): a point at the weapon's range.
 func set_aim_dir(i: int, dir: Vector3) -> void:
-	var p: Vector3 = _mount_position(i) + dir * ship_def.mounts[i].weapon.max_range
+	var p: Vector3 = _mount_position(i) + dir * weapon_of(i).max_range
 	_aims[i] = p
 	if not _sent.has(i) or (_sent[i] as Vector3).distance_to(p) > AIM_SEND_M:
 		_dirty[i] = true
@@ -257,7 +342,10 @@ func lead_dir(i: int, contact: int) -> Variant:
 	var vel: Vector3i = model[contact][1] if model.has(contact) else Vector3i.ZERO
 	var own: Vector3i = ctx.view.kin.get("vel", Vector3i.ZERO)
 	var rel_vel: Vector3 = Vector3(vel - own) / NetCodec.VEL_Q
-	var speed: float = ship_def.mounts[i].weapon.projectile_speed
+	var speed: float = weapon_of(i).projectile_speed
+	if speed <= 0.0:
+		# A beam arrives at once: aim straight at the contact.
+		return rel.normalized() if rel.length_squared() > 1e-6 else null
 	var t: float = Lead.intercept_time(rel, rel_vel, speed)
 	if t < 0.0:
 		return null
@@ -301,15 +389,16 @@ func mount_rows() -> Array[String]:
 	for i: int in mount_count():
 		var m: MountDef = ship_def.mounts[i]
 		var row: Dictionary = _mount_row(i)
-		var ammo: int = int(row.get("ammo", m.weapon.ammo_capacity))
-		var ammo_text: String = "∞" if ammo < 0 else "%d/%d" % [ammo, m.weapon.ammo_capacity]
+		var w: WeaponDef = weapon_of(i)
+		var ammo: int = int(row.get("ammo", w.ammo_capacity))
+		var ammo_text: String = "∞" if ammo < 0 else "%d/%d" % [ammo, w.ammo_capacity]
 		var holder: Dictionary = _holder(i)
 		var who: String = tr("weapons.free")
 		if is_mine(i):
 			who = tr("weapons.you")
 		elif not holder.is_empty():
 			who = str(holder.get("name", ""))
-		var heat: float = float(row.get("heat", 0.0)) / m.weapon.heat_limit
+		var heat: float = float(row.get("heat", 0.0)) / w.heat_limit
 		(
 			out
 			. append(
@@ -330,9 +419,11 @@ func mount_rows() -> Array[String]:
 	return out
 
 
-## The ammunition line (FT-WPN-006): M1's weapons have one type.
+## The ammunition line (FT-WPN-006): the selected type, "standard" for a mount with one.
 func _ammo_text() -> String:
-	return tr("weapons.ammo") % tr("weapons.ammo_standard")
+	if mount_count() == 0 or ship_def.mounts[mount].alt_weapons.is_empty():
+		return tr("weapons.ammo") % tr("weapons.ammo_standard")
+	return tr("weapons.ammo") % weapon_of(mount).display_name
 
 
 # --- Internals. ---
@@ -354,11 +445,13 @@ func _first_mount() -> int:
 
 func _state(i: int) -> String:
 	var row: Dictionary = _mount_row(i)
-	var w: WeaponDef = ship_def.mounts[i].weapon
+	var w: WeaponDef = weapon_of(i)
 	if row.is_empty():
 		return "no_data"
 	if int(row["ammo"]) == 0:
 		return "empty"
+	if bool(row.get("locked", false)):
+		return "locked"
 	if float(row["heat"]) >= w.heat_limit:
 		return "hot"
 	if float(row["cooldown"]) > 0.0:
@@ -410,11 +503,13 @@ func _flush_aims(now: int, force: bool) -> void:
 
 ## One shot from mount i when usable, in arc, loaded and cool, at most once per cooldown.
 func _try_fire(i: int, now: int) -> bool:
-	var w: WeaponDef = ship_def.mounts[i].weapon
+	var w: WeaponDef = weapon_of(i)
 	var row: Dictionary = _mount_row(i)
 	if not is_usable(i) or now < int(_next_fire.get(i, 0)) or not _in_arc(i, aim_dir(i)):
 		return false
 	if int(row.get("ammo", 1)) == 0 or float(row.get("heat", 0.0)) >= w.heat_limit:
+		return false
+	if bool(row.get("locked", false)):
 		return false
 	_flush_aims(now, true)
 	ctx.intents.command({"kind": "fire", "mount_index": i})
