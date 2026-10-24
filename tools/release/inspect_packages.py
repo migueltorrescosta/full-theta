@@ -24,6 +24,7 @@ problem.
 import argparse
 import hashlib
 import json
+import re
 import sys
 import tarfile
 import zipfile
@@ -194,8 +195,15 @@ class Inspector:
         self.check(patched, where, "index.js unpatched")
         html = a.read(f"{rel}/index.html").decode("utf-8", "replace")
         self.check("startsWith('Secure Context')" in html, where, "index.html is not the custom shell")
-        if a.has(f"{rel}/index.pck"):
-            self.pack(f"{where} web pack", a.read(f"{rel}/index.pck"), desktop=False)
+        packs = [f for f in exported if re.fullmatch(r"index\.[0-9a-f]{10}\.pck", f)]
+        self.check(len(packs) == 1, where, f"expected one hashed index.<hash>.pck, found {packs}")
+        if packs and a.has(f"{rel}/{packs[0]}"):
+            self.pack(f"{where} web pack", a.read(f"{rel}/{packs[0]}"), desktop=False)
+        self.check(
+            f'"executable":"{packs[0][:-4]}"' in html if packs else False,
+            where,
+            "index.html does not name the hashed files",
+        )
 
     def voices_in(self, a: Archive, rel: str, where: str) -> None:
         self.same(where, f"{rel}/", a.files_under(f"{rel}/"), self.voice_files)
