@@ -71,7 +71,7 @@ Tests: 247, manual: 11, pending: 143.
 | FT-NET-027 | tests | `tests/net/test_net_reconnect_l3.gd` |
 | FT-NET-028 | tests | `tests/net/test_net_viewer_l3.gd` |
 | FT-NET-029 | tests | `tests/net/test_host_launcher.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_client_shell_l3.gd` |
-| FT-NET-030 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tools/tests/test_release.py` |
+| FT-NET-030 | tests | `tests/app/web/test_shell_html.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tools/tests/test_release.py` |
 | FT-NET-031 | tests | `tests/net/test_lan_no_internet.gd` |
 | FT-NET-032 | pending |  |
 | FT-NET-033 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_resync.gd` |

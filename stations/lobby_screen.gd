@@ -1,8 +1,9 @@
 class_name LobbyScreen
 extends Control
 ## The lobby (FT-NET-019-021, D126, D129, FT-STN-015, FT-JNT-006): the ship list, the
-## catalogue of the chosen ship with each entry's load tag and, for joint views, a
-## one-line hint naming the pair it makes solo and its role summary; the coverage state
+## catalogue of the chosen ship with each entry's load as the colour of its name (D187),
+## a legend above it and, for joint views, the pair it makes solo and its role summary;
+## the coverage state
 ## from `lobby` events;
 ## the player's pick; and Start, which any crew player of a covered ship presses. Picks
 ## go to the server (ShipIntents.pick); the screen shows what the events say. The host's
@@ -13,7 +14,16 @@ extends Control
 ## menu also stops its server.
 signal menu_requested
 
-const LOAD_ROLES: Dictionary = {"light": "ok", "busy": "warn", "intense": "danger"}
+## The load tags, in legend order, and the colour word the legend names them with.
+const LOAD_TAGS: Array[String] = ["intense", "busy", "light"]
+## Every Button font colour a pick button shows (normal, hover, pressed, focus, ...).
+const BUTTON_COLORS: Array[String] = [
+	"font_color",
+	"font_hover_color",
+	"font_pressed_color",
+	"font_hover_pressed_color",
+	"font_focus_color",
+]
 ## The crew changes the lobby depends on.
 const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked"]
 
@@ -24,6 +34,7 @@ var ship: int = -1
 var _ships: HBoxContainer
 var _entries: VBoxContainer
 var _coverage: Label
+var _legend: HBoxContainer
 var _pick: Label
 var _start: Button
 var _title: Label
@@ -56,6 +67,7 @@ func refresh() -> void:
 		b.button_pressed = int(s["id"]) == ship
 		b.pressed.connect(_choose_ship.bind(int(s["id"])))
 		_ships.add_child(b)
+	_build_legend()
 	_clear(_entries)
 	for def: Dictionary in ctx.crew.catalogue.get("entries", []):
 		_entries.add_child(_entry_row(def))
@@ -71,6 +83,7 @@ func refresh() -> void:
 	)
 	_start.visible = not _browsing and not bool(state.get("started", false))
 	_entries.visible = not _browsing
+	_legend.visible = not _browsing
 	if _browsing:
 		_pick.text = tr("lobby.pick_ship")
 
@@ -111,6 +124,32 @@ static func entry_label(def: Dictionary) -> String:
 	return name if pair == "" else name + "\n" + pair
 
 
+## The one-line legend above the seat list: "Red: intense · Yellow: busy · Green: light",
+## each part in its colour (D187).
+func _build_legend() -> void:
+	_clear(_legend)
+	for i: int in LOAD_TAGS.size():
+		if i > 0:
+			_legend.add_child(_label("·"))
+		var tag: String = LOAD_TAGS[i]
+		var item: Label = _label(tr("lobby.legend_" + tag))
+		item.name = "Legend_" + tag
+		item.add_theme_color_override("font_color", load_color(tag))
+		_legend.add_child(item)
+
+
+## The colour of a seat's load tag (intense, busy, light); the normal text colour for
+## no tag (the Viewer).
+static func load_color(tag: String) -> Color:
+	return Palette.color("load_" + tag if tag in LOAD_TAGS else "text")
+
+
+static func _label(text: String) -> Label:
+	var l: Label = Label.new()
+	l.text = text
+	return l
+
+
 func _entry_row(def: Dictionary) -> Control:
 	var id: String = def["id"]
 	var row: HBoxContainer = HBoxContainer.new()
@@ -119,17 +158,14 @@ func _entry_row(def: Dictionary) -> Control:
 	pick.name = "Pick"
 	pick.text = entry_label(def)
 	pick.custom_minimum_size = Vector2(180, 0)
+	var tag: String = str(def.get("load_tag", ""))
+	if tag != "":
+		for c: String in BUTTON_COLORS:
+			pick.add_theme_color_override(c, load_color(tag))
 	pick.toggle_mode = true
 	pick.button_pressed = id == ctx.crew.entry and ship == ctx.crew.ship
 	pick.pressed.connect(func() -> void: ctx.intents.pick(ship, id))
 	row.add_child(pick)
-	var tag: String = str(def.get("load_tag", ""))
-	var tag_label: Label = Label.new()
-	tag_label.name = "LoadTag"
-	tag_label.custom_minimum_size = Vector2(90, 0)
-	tag_label.text = tr("load." + tag) if tag != "" else ""
-	tag_label.add_theme_color_override("font_color", Palette.color(LOAD_ROLES.get(tag, "text")))
-	row.add_child(tag_label)
 	var role: Label = Label.new()
 	role.name = "Role"
 	role.text = tr("role." + id)
@@ -219,6 +255,10 @@ func _build() -> void:
 	_coverage = Label.new()
 	_coverage.name = "Coverage"
 	col.add_child(_coverage)
+	_legend = HBoxContainer.new()
+	_legend.name = "Legend"
+	_legend.add_theme_constant_override("separation", 8)
+	col.add_child(_legend)
 	_entries = VBoxContainer.new()
 	_entries.name = "Entries"
 	col.add_child(_entries)

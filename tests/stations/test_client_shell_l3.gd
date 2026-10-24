@@ -69,9 +69,9 @@ func _welcomed(c: NetClient) -> bool:
 
 
 # FT: FT-STN-015, FT-JNT-006, FT-M1-018
-# Over a real connection the lobby shows each entry's load tag from its StationDef in
-# the Catalogue (the Viewer untagged), and each joint view's pair under its name (D186).
-func test_lobby_shows_load_tags_and_joint_pairs_from_the_catalogue() -> void:
+# Over a real connection the lobby colours each entry's name by its StationDef load tag in
+# the Catalogue (the Viewer in normal text), and each joint view's pair under its name (D186).
+func test_lobby_colours_load_and_shows_joint_pairs_from_the_catalogue() -> void:
 	var s: NetServer = _h.server()
 	var c: NetClient = NetClient.new()
 	c.name = "Ana"
@@ -95,8 +95,10 @@ func test_lobby_shows_load_tags_and_joint_pairs_from_the_catalogue() -> void:
 	for e: Dictionary in entries:
 		var row: Node = shell.lobby.find_child("Entry_" + str(e["id"]), true, false)
 		var tag: String = StationViews.def(e["id"]).load_tag
-		var want: String = tr("load." + tag) if tag != "" else ""
-		assert_str((row.get_node("LoadTag") as Label).text).is_equal(want)
+		var pick: Button = row.get_node("Pick")
+		assert_bool(pick.has_theme_color_override("font_color")).is_equal(tag != "")
+		if tag != "":
+			assert_object(pick.get_theme_color("font_color")).is_equal(LobbyScreen.load_color(tag))
 		assert_object(row.get_node_or_null("Hint")).is_null()
 		if labels.has(e["id"]):
 			assert_str((row.get_node("Pick") as Button).text).is_equal(labels[e["id"]])

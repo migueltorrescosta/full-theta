@@ -24,6 +24,11 @@ const ROLES: Dictionary = {
 	"alert_normal": Color("#3fbf7f"),
 	"alert_yellow": Color("#e69f00"),
 	"alert_red": Color("#d7263d"),
+	# Seat load in the lobby (D187): intense, busy, light. Red is the deepest red that
+	# still reads on a button in every colour-vision check.
+	"load_intense": Color("#ff7a70"),
+	"load_busy": Color("#f2c94c"),
+	"load_light": Color("#35c9a0"),
 	# Chrome.
 	"background": Color("#0b0f14"),
 	"panel": Color("#151b23"),
@@ -43,6 +48,7 @@ const GROUPS: Dictionary = {
 	"allegiance": ["hostile", "unknown", "friendly", "neutral", "own"],
 	"radar": ["hostile", "unknown", "friendly", "neutral", "mark", "selected"],
 	"alert": ["alert_normal", "alert_yellow", "alert_red"],
+	"load": ["load_intense", "load_busy", "load_light"],
 }
 ## [foreground, background] pairs that must keep a readable contrast ratio under each
 ## simulated deficiency (tools/check_palette.py).
@@ -54,6 +60,12 @@ const CONTRAST: Array[Array] = [
 	["text_dim", "panel"],
 	["accent", "background"],
 	["accent", "panel"],
+	["load_intense", "panel"],
+	["load_intense", "panel_focus"],
+	["load_busy", "panel"],
+	["load_busy", "panel_focus"],
+	["load_light", "panel"],
+	["load_light", "panel_focus"],
 ]
 
 ## Allegiance letter -> blip shape (station-ui §1.5; marks are diamonds everywhere, D44).

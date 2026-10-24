@@ -11,7 +11,9 @@ body { color: white; background-color: black; overflow: hidden; touch-action: no
 #canvas:focus { outline: none; }
 #status { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
   justify-content: center; font: 20px sans-serif; gap: 16px; }
-#tips { font: 14px sans-serif; opacity: 0.7; max-width: 80%; text-align: center; }
+#tips { font: 14px sans-serif; opacity: 0.7; width: 80%; text-align: center; overflow: hidden; }
+#tips .strip { display: inline-block; white-space: nowrap; animation: ticker linear infinite; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 </style>
 $GODOT_HEAD_INCLUDE
 </head>
@@ -32,6 +34,7 @@ $GODOT_HEAD_INCLUDE
 const GODOT_CONFIG = $GODOT_CONFIG;
 const engine = new Engine(GODOT_CONFIG);
 const progress = document.getElementById('progress');
+const statusEl = document.getElementById('status');
 const tipsEl = document.getElementById('tips');
 const missing = Engine.getMissingFeatures({ threads: $GODOT_THREADS_ENABLED })
   .filter((m) => !m.startsWith('Secure Context'));
@@ -45,30 +48,55 @@ const LOADING_TIPS = [
   "Press T to cycle targets.",
   "Shift+middle-click drops a mark."
 ];
+// The tips scroll right to left like a news banner, in a random order (shuffled once
+// per page load). The strip holds the line twice and moves by half its width, so the
+// loop has no seam. With prefers-reduced-motion they rotate every 4 s instead.
+function shuffled(list) {
+  const out = list.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+const tips = shuffled(LOADING_TIPS);
 var tipIndex = 0;
 var tipTimer = null;
 function showNextTip() {
-  tipsEl.textContent = LOADING_TIPS[tipIndex];
-  tipIndex = (tipIndex + 1) % LOADING_TIPS.length;
+  tipsEl.textContent = tips[tipIndex];
+  tipIndex = (tipIndex + 1) % tips.length;
+}
+function startTips() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    showNextTip();
+    tipTimer = setInterval(showNextTip, 4000);
+    return;
+  }
+  const line = tips.join(' \u2022 ') + ' \u2022 ';
+  const strip = document.createElement('span');
+  strip.className = 'strip';
+  strip.textContent = line + line;
+  tipsEl.appendChild(strip);
+  // About 80 px per second, whatever the text length.
+  strip.style.animationDuration = (strip.scrollWidth / 2 / 80) + 's';
 }
 if (missing.length !== 0) {
   progress.textContent = 'This browser is missing: ' + missing.join(', ');
-  tipsEl.textContent = '';
+  tipsEl.remove();
 } else {
-  showNextTip();
-  tipTimer = setInterval(showNextTip, 4000);
+  startTips();
   engine.startGame({
     onProgress: (current, total) => {
       progress.textContent = total > 0 ? 'Loading ' + Math.round(100 * current / total) + ' %' : 'Loading';
     },
   }).then(() => {
     if (tipTimer) { clearInterval(tipTimer); }
-    progress.remove();
-    tipsEl.remove();
+    // The whole overlay goes: it covers the canvas and would swallow every tap.
+    statusEl.remove();
   }, (err) => {
     if (tipTimer) { clearInterval(tipTimer); }
     progress.textContent = String(err);
-    tipsEl.textContent = '';
+    tipsEl.remove();
   });
 }
 </script>
