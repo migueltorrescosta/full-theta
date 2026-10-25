@@ -64,9 +64,10 @@ static func all_stop(w: SimWorld, id: int) -> void:
 	w.submit(c)
 
 
-static func align(w: SimWorld, id: int) -> void:
+static func align(w: SimWorld, id: int, mount_index: int = -1) -> void:
 	var c: AlignCommand = AlignCommand.new()
 	c.ship_id = id
+	c.mount_index = mount_index
 	w.submit(c)
 
 

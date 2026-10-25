@@ -242,6 +242,38 @@ func test_align_without_target_is_rejected() -> void:
 	assert_float(w.kin.ang_vel[id].length()).is_less(1e-6)
 
 
+# FT: FT-JNT-005, FT-HLM-007
+# Align with a mount (the direct "bring mount N to bear") turns that mount's rest direction
+# onto the target, not the bow, and clears there; a mount the ship doesn't have is rejected.
+func test_align_with_a_mount_turns_its_rest_direction_onto_the_target() -> void:
+	var ship: ShipDef = TestDefs.corvette().duplicate()
+	var mount: MountDef = ship.mounts[0].duplicate()
+	var rest: Vector3 = Vector3(sin(deg_to_rad(40.0)), 0.0, -cos(deg_to_rad(40.0)))
+	mount.forward = rest
+	var mounts: Array[MountDef] = [mount]
+	ship.mounts = mounts
+	var w: SimWorld = SimWorld.new(1, "test")
+	var id: int = w.spawn_ship(ship, 1, 0)
+	var p: Vector3 = Vector3(0.0, 0.0, -2000.0)
+	FlightFixture.select_point(w, id, 0, p)
+	FlightFixture.align(w, id, 3)
+	w.step()
+	assert_bool(w.command_log[-1].accepted).is_false()
+	FlightFixture.align(w, id, 0)
+	w.step()
+	assert_bool(w.command_log[-1].accepted).is_true()
+	SimFixture.run(w, 60 * 12)
+	var toward: Vector3 = AssistSystem.target_offset(w, id)
+	assert_float(rad_to_deg(w.kin.to_world(id, rest).angle_to(toward))).is_less(0.5)
+	assert_float(FlightFixture.bow_error_deg(w, id, toward)).is_greater(35.0)
+	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.OFF)
+	# A plain press afterwards aligns the bow again.
+	FlightFixture.align(w, id)
+	FlightFixture.align(w, id)
+	SimFixture.run(w, 60 * 12)
+	assert_float(FlightFixture.bow_error_deg(w, id, toward)).is_less(0.5)
+
+
 # FT: FT-M1-003, FT-SIM-004, FT-SIM-005, FT-SIM-036, FT-SIM-037
 # The M1 ship flies 6DOF with assist on by default and its holds, all-stop,
 # hold-to-approach and decoupled mode, in one flight through Helm commands.

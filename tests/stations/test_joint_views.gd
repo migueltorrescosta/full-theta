@@ -348,6 +348,25 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 
 
 # FT: FT-JNT-005
+# "Bring mount N to bear" in a Helm + Weapons view aligns the requested mount, not the bow:
+# the Align command names the weapons panel's selected mount.
+func test_direct_bring_to_bear_names_the_requested_mount() -> void:
+	var s: StationScreen = _screen("tactical")
+	var weapons: WeaponsPanel = s.panels[s.stations.find("weapons")] as WeaponsPanel
+	weapons.mount = weapons.mount_count() - 1
+	var chip: ChipDef
+	for c: ChipDef in NetChips.def().chips:
+		if c.id == &"bring_to_bear":
+			chip = c
+	s.focus(s.stations.find("weapons"))
+	s.ctx.crew.select("contact", StationFixture.H2)
+	weapons.send_chip(chip)
+	var aligns: Array = _commands(s, "helm_align")
+	assert_int(aligns.size()).is_equal(1)
+	assert_int(aligns[0]["mount_index"]).is_equal(weapons.mount)
+
+
+# FT: FT-JNT-005
 # The direct power chips respect the reactor: with the reactor full the request is refused
 # with the "take it from something else" toast, and at the per-subsystem maximum with the
 # "full power" toast; nothing is sent.

@@ -33,6 +33,9 @@ var approach_held: PackedByteArray = PackedByteArray()
 var all_stop: PackedByteArray = PackedByteArray()
 ## Align stage, an Align value; it works on the selected target.
 var align: PackedByteArray = PackedByteArray()
+## Ship-frame direction Align brings onto the target: the bow, or a mount's rest direction
+## (AlignCommand.mount_index, FT-JNT-005). Read while align is not OFF.
+var align_bow: PackedVector3Array = PackedVector3Array()
 ## Selected target kind, a Target value.
 var target_kind: PackedByteArray = PackedByteArray()
 ## Selected ship id when target_kind is SHIP, else -1.
@@ -55,6 +58,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	approach_held.append(0)
 	all_stop.append(0)
 	align.append(Align.OFF)
+	align_bow.append(Vector3.FORWARD)
 	target_kind.append(Target.NONE)
 	target_ship.append(-1)
 	target_site.append(-1)
@@ -79,6 +83,7 @@ func columns() -> Array:
 			["approach_held", approach_held],
 			["all_stop", all_stop],
 			["align", align],
+			["align_bow", align_bow],
 			["target_kind", target_kind],
 			["target_ship", target_ship],
 			["target_site", target_site],

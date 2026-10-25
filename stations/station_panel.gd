@@ -184,7 +184,8 @@ func _on_screen(chip: ChipDef) -> bool:
 ## chip is one command of the receiving station, run with the sender's own data: Boost and
 ## fabricate a probe need none; power is one more pip (the reactor cap and the per-
 ## subsystem maximum still apply, so the player takes power from something else); bring to
-## bear aligns the bow with the selected contact; the scan mark places Science's mark.
+## bear turns the requested mount's rest direction onto the selected contact; the scan mark
+## places Science's mark.
 ## Hold fire (Comms, inert until #10) has no receiving station on a screen.
 func _direct(chip: ChipDef) -> void:
 	match chip.id:
@@ -197,7 +198,7 @@ func _direct(chip: ChipDef) -> void:
 		&"sensor_power":
 			_more_pips(SubsystemDef.Kind.SENSORS)
 		&"bring_to_bear":
-			_bring_to_bear()
+			_bring_to_bear(chip_arg(chip))
 		&"scan_mark":
 			_scan_mark()
 		_:
@@ -230,9 +231,9 @@ func _more_pips(kind: SubsystemDef.Kind) -> void:
 		ctx.intents.command({"kind": "set_pips", "subsystem_kind": int(kind), "pips": pips})
 
 
-## Aligns the bow with the selected contact (Helm's Align; the corvette's mount is on the
-## bow, FT-JNT-005).
-func _bring_to_bear() -> void:
+## Turns the rest direction of the requested mount (-1: the bow) onto the selected contact
+## (Helm's Align with the mount, FT-JNT-005).
+func _bring_to_bear(mount_index: int) -> void:
 	var sel: Dictionary = ctx.crew.selection
 	if sel.get("kind", "") != "contact":
 		ctx.crew.toast.emit("toast.select_first", {})
@@ -247,7 +248,7 @@ func _bring_to_bear() -> void:
 			"z": 0.0
 		}
 	)
-	ctx.intents.command({"kind": "helm_align"})
+	ctx.intents.command({"kind": "helm_align", "mount_index": mount_index})
 
 
 ## Science's scan-position mark for the selected contact (Helm sees where to fly).
