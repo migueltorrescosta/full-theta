@@ -16,6 +16,7 @@
     "alerts.hit": {"en": "Hit, {dir}", "pt_PT": "Atingidos, {dir}", "it": "Colpiti, {dir}"},
     "alerts.proximity": {"en": "Collision course", "pt_PT": "Rota de colisão", "it": "Rotta di collisione"},
     "alerts.shield_low": {"en": "Shields {pct} %", "pt_PT": "Escudos a {pct} %", "it": "Scudi al {pct} %"},
+    "alerts.shield_low_plain": {"en": "Shields low", "pt_PT": "Escudos fracos", "it": "Scudi bassi"},
     "callout.close": {"en": "close", "pt_PT": "perto", "it": "vicino"},
     "callout.far": {"en": "far", "pt_PT": "longe", "it": "lontano"},
     "callout.high": {"en": "high", "pt_PT": "alto", "it": "alto"},

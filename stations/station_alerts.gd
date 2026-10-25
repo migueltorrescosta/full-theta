@@ -114,7 +114,11 @@ func _text(kind: StringName, p: Dictionary) -> String:
 			var v: Vector3 = p.get("vector", Vector3.ZERO)
 			return tr("alerts.hit").format({"dir": _direction(v)})
 		&"shield_low":
-			return tr("alerts.shield_low").format({"pct": roundi(float(p.get("value", 0)) * 100.0)})
+			# An absent summary (Hard) arrives as 0: the alert without a number (D224).
+			var pct: int = roundi(float(p.get("value", 0)) * 100.0)
+			if pct <= 0:
+				return tr("alerts.shield_low_plain")
+			return tr("alerts.shield_low").format({"pct": pct})
 		&"fault":
 			var tag: String = str(p.get("tag", ""))
 			return tr("alerts.fault." + tag if FAULT_KEYS.has(tag) else "alerts.fault")

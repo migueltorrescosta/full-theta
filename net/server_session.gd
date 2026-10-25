@@ -187,7 +187,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			"tag": String(e.tag),
 		}
 		var audience: PackedInt32Array = event_audience(e)
-		transport.post_event(audience, e.tick, String(e.kind), payload)
+		_post_event(audience, e, payload)
 		crew.on_sim_event(e)
 		coop.on_sim_event(e, audience)
 		if e.kind == &"fault_cause_revealed":
@@ -200,6 +200,27 @@ func after_ticks(events: Array[SimEvent]) -> void:
 	if left_play:
 		_refresh_pause()
 	_publish()
+
+
+## Posts an event; an EXACT_EVENTS value goes to each session as its view may carry it, so
+## the audience is split by that value (D224).
+func _post_event(audience: PackedInt32Array, e: SimEvent, payload: Dictionary) -> void:
+	if not StationViews.EXACT_EVENTS.has(e.kind):
+		transport.post_event(audience, e.tick, String(e.kind), payload)
+		return
+	var groups: Dictionary = {}
+	for id: int in audience:
+		var s: NetSession = by_id.get(id)
+		if s == null:
+			continue
+		var v: float = StationViews.event_value(s.entry, e.kind, e.value, s.view_code())
+		var ids: PackedInt32Array = groups.get(v, PackedInt32Array())
+		ids.append(id)
+		groups[v] = ids
+	for v: float in groups:
+		var scrubbed: Dictionary = payload.duplicate()
+		scrubbed["value"] = v
+		transport.post_event(groups[v], e.tick, String(e.kind), scrubbed)
 
 
 ## P10 on Easy (FT-ENG-006): the cause Science's own-ship scan revealed is pre-filled as
