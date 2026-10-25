@@ -79,7 +79,7 @@ func _bearing(clock_deg: float, el_deg: float, range_m: float) -> Vector3:
 # FT: FT-WPN-001, FT-WPN-002, FT-WPN-004, FT-WPN-006, FT-SIM-014, FT-M1-004
 # The Weapons screen is the turret panel with the screen's disc radar as its inset; the
 # mount list shows state, heat, ammo and claimer; the lead reticle is Lead's aim point;
-# M1's mount has one ammo type, so ammo select only says so.
+# the corvette's mount carries four ammo types (D220), so ammo select sends the next one.
 func test_turret_mount_list_lead_and_ammo() -> void:
 	var s: StationScreen = _screen()
 	await await_idle_frame()
@@ -110,12 +110,14 @@ func test_turret_mount_list_lead_and_ammo() -> void:
 	)
 	p.step(0.016)
 	assert_object(p.project(want)).is_not_null()
-	# Ammo select: a toast, no command.
+	# Ammo select: the next type, no toast.
 	var toasts: Array = []
 	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
 	assert_bool(s.dispatch(_ev(s, "ammo_next"))).is_true()
-	assert_array(toasts).is_equal(["toast.one_ammo"])
-	assert_array(StationFixture.sent(s.ctx).of("command")).is_empty()
+	assert_array(toasts).is_empty()
+	var switched: Array = _commands(s, "set_ammo_type")
+	assert_int(switched.size()).is_equal(1)
+	assert_int(int(switched[0]["ammo_type"])).is_equal(1)
 
 
 # FT: FT-WPN-003, FT-WPN-004

@@ -111,7 +111,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-SIM-022 | tests | `tests/sim/combat/test_ordnance.gd`, `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_reveals.gd` |
 | FT-SIM-023 | tests | `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_reveals.gd` |
 | FT-SIM-024 | tests | `tests/sim/damage/test_repair.gd` |
-| FT-SIM-025 | tests | `tests/sim/damage/test_faults.gd`, `tests/sim/science/test_self_scan_faults.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd` |
+| FT-SIM-025 | tests | `tests/content/test_content_defs.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/science/test_self_scan_faults.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd` |
 | FT-SIM-026 | tests | `tests/sim/power/test_power.gd` |
 | FT-SIM-027 | tests | `tests/sim/ai/test_enemy_ai.gd` |
 | FT-SIM-028 | tests | `tests/sim/ai/test_enemy_ai.gd` |
@@ -164,7 +164,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-WPN-003 | tests | `tests/stations/test_weapons_panel.gd` |
 | FT-WPN-004 | tests | `tests/stations/test_weapons_panel.gd` |
 | FT-WPN-005 | tests | `tests/stations/test_weapons_panel.gd` |
-| FT-WPN-006 | tests | `tests/pairs/test_p6_weapons_engineering.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/stations/test_weapons_guided.gd`, `tests/stations/test_weapons_panel.gd` |
+| FT-WPN-006 | tests | `tests/content/test_content_defs.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/stations/test_weapons_guided.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-WPN-007 | tests | `tests/net/test_view_filter.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-WPN-008 | tests | `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_weapons_guided.gd` |
 | FT-WPN-009 | tests | `tests/stations/test_weapons_panel.gd` |
@@ -195,7 +195,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-RLY-001 | tests | `tests/net/test_hazard_view.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-002 | tests | `tests/stations/test_relay_panel.gd` |
 | FT-RLY-003 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
-| FT-RLY-004 | tests | `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/stations/test_relay_station.gd` |
+| FT-RLY-004 | tests | `tests/content/test_content_defs.gd`, `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-005 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_helm_route_ribbon.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-006 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-007 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_relay_station.gd` |
@@ -297,7 +297,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-MIS-014 | pending |  |
 | FT-MIS-015 | pending |  |
 | FT-MIS-016 | pending |  |
-| FT-MIS-017 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
+| FT-MIS-017 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
 | FT-MIS-018 | pending |  |
 | FT-MIS-019 | pending |  |
 | FT-MIS-020 | pending |  |

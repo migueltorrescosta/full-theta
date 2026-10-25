@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="HazardDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/hazard_def.gd" id="1_hazard"]
+
+[resource]
+script = ExtResource("1_hazard")
+id = &"m1_dust_cloud"
+kind = 0
+center = Vector3(-900, 0, -2500)
+radius = 1200.0
+damage_w = 250000.0
+drag = 0.04
+targets = Array[StringName]([&"sensors"])
+detect_range = 4000.0

@@ -61,5 +61,11 @@ func hazard(id: StringName) -> HazardDef:
 	return get_def(&"HazardDef", id) as HazardDef
 
 
+## The two hazards of the M1 encounter (D220): a dust cloud beside the line of fire and a
+## radiation front sweeping in from behind the enemy.
+func m1_hazards() -> Array[HazardDef]:
+	return [hazard(&"m1_dust_cloud"), hazard(&"m1_radiation_front")]
+
+
 func science(id: StringName = &"science") -> ScienceDef:
 	return get_def(&"ScienceDef", id) as ScienceDef

@@ -18,6 +18,8 @@ func _def(fields: Dictionary = {}) -> ShipDef:
 			copy.fault_causes = CAUSES
 			for k: String in fields:
 				copy.set(k, fields[k])
+		else:
+			copy.fault_causes = []
 		subs.append(copy)
 	def.subsystems = subs
 	return def
@@ -107,9 +109,8 @@ func test_brute_force_factor_is_data() -> void:
 
 # FT: FT-SIM-025, FT-ENG-006
 # Science's scan reveals the cause (the station may then read it); Engineering still has
-# to pick it unless the Easy shortcut pre-fills the pick, which makes the repair fast
-# without a pick command. Revealing a subsystem without a fault does nothing.
-func test_revealed_cause_and_prefill() -> void:
+# to pick it. Revealing a subsystem without a fault does nothing.
+func test_revealed_cause() -> void:
 	var world: SimWorld = _world()
 	assert_bool(DamageSystem.reveal_fault_cause(world, 0, &"engines")).is_false()
 	DamageSystem.inflict_fault(world, 0, &"engines", &"software", FAULT_J)
@@ -122,10 +123,6 @@ func test_revealed_cause_and_prefill() -> void:
 	assert_float(revealed[0].value).is_equal(3.0)
 	# Revealed but not picked: still brute force.
 	assert_int(_repair_ticks(world)).is_greater(3 * TICKS_FULL)
-	var easy: SimWorld = _world()
-	DamageSystem.inflict_fault(easy, 0, &"engines", &"software", FAULT_J)
-	DamageSystem.reveal_fault_cause(easy, 0, &"engines", true)
-	assert_int(_repair_ticks(easy)).is_between(TICKS_FULL - 5, TICKS_FULL + 5)
 
 
 # FT: FT-ENG-006
@@ -260,3 +257,68 @@ func test_commands_round_trip() -> void:
 	var harden: HardenCommand = HardenCommand.new()
 	harden.subsystem_id = &"engines"
 	assert_dict(SimCommands.from_dict(harden.to_dict()).to_dict()).is_equal(harden.to_dict())
+
+
+## A world whose ship has the given fault-on-hit numbers and fault causes everywhere.
+func _heavy_world(world_seed: int, threshold: float, chance: float) -> SimWorld:
+	var def: ShipDef = _def()
+	def.fault_hit_threshold = threshold
+	def.fault_hit_chance = chance
+	var subs: Array[SubsystemDef] = []
+	for s: SubsystemDef in def.subsystems:
+		var copy: SubsystemDef = s.duplicate()
+		copy.fault_causes = CAUSES
+		subs.append(copy)
+	def.subsystems = subs
+	var world: SimWorld = SimWorld.new(world_seed)
+	world.spawn_ship(def, 2, 0)
+	return world
+
+
+func _hit(world: SimWorld, energy: float) -> void:
+	var hit: SimHit = SimHit.new()
+	hit.target_id = 0
+	hit.point_local = world.defs[0].subsystems[0].position
+	hit.kind = &"projectile"
+	DamageSystem.apply_hit(world, hit, energy)
+
+
+func _faults(world: SimWorld) -> int:
+	var n: int = 0
+	for cause: StringName in world.damage.fault_cause:
+		n += 1 if cause != &"" else 0
+	return n
+
+
+# FT: FT-SIM-025
+# D220: a hit above the ship's threshold causes an unknown-cause fault in the subsystem it
+# landed on with the ship's chance; a lighter hit, a chance of 0 and a subsystem that
+# already has a fault change nothing; the draw is seeded, so a world repeats.
+func test_heavy_hits_can_cause_a_fault() -> void:
+	var light: SimWorld = _heavy_world(4, 1.0e6, 1.0)
+	_hit(light, 1.0e6)
+	assert_int(_faults(light)).is_equal(0)
+	var never: SimWorld = _heavy_world(4, 1.0e6, 0.0)
+	_hit(never, 5.0e6)
+	assert_int(_faults(never)).is_equal(0)
+	var heavy: SimWorld = _heavy_world(4, 1.0e6, 1.0)
+	_hit(heavy, 5.0e6)
+	assert_int(_faults(heavy)).is_equal(1)
+	var row: int = heavy.damage.subsystem_row(0, 0)
+	assert_bool(heavy.damage.fault_cause[row] in CAUSES).is_true()
+	assert_int(SimFixture.of_kind(heavy.drain_events(), &"fault_inflicted").size()).is_equal(1)
+	var before: StringName = heavy.damage.fault_cause[row]
+	_hit(heavy, 5.0e6)
+	assert_str(heavy.damage.fault_cause[row]).is_equal(before)
+	var again: SimWorld = _heavy_world(4, 1.0e6, 1.0)
+	_hit(again, 5.0e6)
+	var first: SimWorld = _heavy_world(4, 1.0e6, 1.0)
+	_hit(first, 5.0e6)
+	assert_str(again.state_hash()).is_equal(first.state_hash())
+	# About a fifth of the heavy hits fault at the shipped 0.2.
+	var hits: int = 0
+	for i: int in 200:
+		var w: SimWorld = _heavy_world(i, 1.0e6, 0.2)
+		_hit(w, 5.0e6)
+		hits += _faults(w)
+	assert_int(hits).is_between(20, 60)

@@ -1,8 +1,9 @@
 class_name DamageSystem
 extends RefCounted
 ## Hull and subsystem damage by hit location, and repair crews with spare parts (T033).
-## Damage is a pure function of the hit energy and the table state: no random draws and
-## no outcome forcing (FT-SIM-029).
+## Damage is a pure function of the hit energy and the table state: no outcome forcing
+## (FT-SIM-029). The one random draw is whether a heavy hit also causes a fault
+## (ShipDef.fault_hit_chance), from the seeded "faults" stream.
 ##
 ## Events (FT-SIM-030), all on the damaged ship:
 ## - &"subsystem_damaged": tag subsystem id, value health fraction after, vector the
@@ -76,6 +77,7 @@ static func apply_hit(world: SimWorld, hit: SimHit, energy: float) -> void:
 		world.emit(&"weak_point_hit", ship, hit.source_id, energy, ws.position, ws.id)
 	var left: float = energy * share if def.subsystems.size() > 0 else 0.0
 	var to_hull: float = energy - left
+	var fault_at: int = _nearest_live(world, ship, hit.point_local) if _heavy(def, energy) else -1
 	# Each pass either absorbs the rest or destroys a subsystem, so this ends (D123).
 	while left > 0.0:
 		var i: int = _nearest_live(world, ship, hit.point_local)
@@ -83,6 +85,31 @@ static func apply_hit(world: SimWorld, hit: SimHit, energy: float) -> void:
 			break
 		left = _damage_row(world, ship, i, left, hit.source_id)
 	damage_hull(world, ship, to_hull + left, hit.source_id)
+	if fault_at >= 0:
+		_maybe_fault(world, ship, fault_at, def)
+
+
+## Whether a hit of this energy (past the shields) can cause a fault on the ship.
+static func _heavy(def: ShipDef, energy: float) -> bool:
+	return def.fault_hit_chance > 0.0 and energy > def.fault_hit_threshold
+
+
+## A heavy hit on subsystem i causes an unknown-cause fault with the ship's chance, if the
+## subsystem lists causes, isn't destroyed and has no fault yet (D220, FT-SIM-025). The
+## hit has already done its damage; the cause is drawn uniformly from the subsystem's.
+static func _maybe_fault(world: SimWorld, ship_id: int, i: int, def: ShipDef) -> void:
+	var t: DamageTable = world.damage
+	var r: int = t.subsystem_row(ship_id, i)
+	var causes: Array[StringName] = def.subsystems[i].fault_causes
+	if causes.is_empty() or t.fault_cause[r] != &"" or t.health[r] <= 0.0:
+		return
+	var rng: RandomNumberGenerator = world.rng.stream(&"faults")
+	if rng.randf() >= def.fault_hit_chance:
+		return
+	t.fault_cause[r] = causes[rng.randi_range(0, causes.size() - 1)]
+	world.emit(
+		&"fault_inflicted", ship_id, -1, 0.0, def.subsystems[i].position, def.subsystems[i].id
+	)
 
 
 ## Index of the weak point a hit lands on, or -1 (FT-SIM-023, P7): the subsystem nearest
@@ -176,19 +203,14 @@ static func inflict_fault(
 	return true
 
 
-## Science's own-ship scan names the fault's cause (FT-SIM-025, P10). With prefill
-## (Easy's diagnosed-cause shortcut, FT-ENG-006) it also becomes Engineering's pick unless
-## one is set. False when the subsystem has no fault.
-static func reveal_fault_cause(
-	world: SimWorld, ship_id: int, subsystem_id: StringName, prefill: bool = false
-) -> bool:
+## Science's own-ship scan names the fault's cause (FT-SIM-025, P10). False when the
+## subsystem has no fault.
+static func reveal_fault_cause(world: SimWorld, ship_id: int, subsystem_id: StringName) -> bool:
 	var t: DamageTable = world.damage
 	var r: int = t.find_subsystem(ship_id, subsystem_id)
 	if r < 0 or t.fault_cause[r] == &"":
 		return false
 	t.fault_known[r] = 1
-	if prefill and t.fault_pick[r] == &"":
-		t.fault_pick[r] = t.fault_cause[r]
 	var s: SubsystemDef = _sub_def(world, ship_id, r)
 	world.emit(
 		&"fault_cause_revealed",

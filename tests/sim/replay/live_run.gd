@@ -20,9 +20,11 @@ func _init(start: SimWorld) -> void:
 static func encounter(seed_value: int, setup: Dictionary, build: String) -> M1Encounter:
 	var lib: DefLibrary = DefLibrary.new()
 	var period: float = setup.get("site_period", Kinematics.DEFAULT_PERIOD)
-	return M1Encounter.new(
+	var enc: M1Encounter = M1Encounter.new(
 		seed_value, build, lib.ship(setup["player"]), lib.enemy(setup["enemy"]), period
 	)
+	enc.hazards = lib.m1_hazards()
+	return enc
 
 
 ## Frames with deltas drawn uniformly from [min_delta, max_delta] (s) until the world

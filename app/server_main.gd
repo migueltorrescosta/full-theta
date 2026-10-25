@@ -248,6 +248,8 @@ func make_server() -> NetServer:
 	if load_ships > 0:
 		encounter = LoadEncounter.new(seed_value, "server", player, enemy, load_ships, load_world)
 	encounter.science = defs.science()
+	if load_ships <= 0:
+		encounter.hazards = defs.m1_hazards()
 	var server: NetServer = NetServer.new()
 	server.run_for = run_for
 	if probe_out != "":

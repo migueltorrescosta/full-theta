@@ -131,7 +131,7 @@ func test_naming_the_cause_of_an_unknown_fault() -> void:
 	engines["fault_pick"] = 2
 	e._pending.clear()
 	lines = e.fault_lines().map(func(l: Array) -> String: return l[0])
-	assert_array(lines).contains(["Engines 90%: trying short"])
+	assert_array(lines).contains(["Engines 90%: trying Short circuit"])
 
 
 # FT: FT-ENG-006, FT-SIM-025
@@ -146,10 +146,10 @@ func test_diagnosed_cause_is_shown() -> void:
 	engines["fault_pick"] = 0
 	engines["health"] = 0.9 * 20_000_000.0
 	var lines: Array = e.fault_lines().map(func(l: Array) -> String: return l[0])
-	assert_array(lines).contains(["Engines 90%: Science found software. Pick it."])
+	assert_array(lines).contains(["Engines 90%: Science found Software fault. Pick it."])
 	engines["fault_pick"] = 3
 	lines = e.fault_lines().map(func(l: Array) -> String: return l[0])
-	assert_array(lines).contains(["Engines 90%: software (diagnosed)"])
+	assert_array(lines).contains(["Engines 90%: Software fault (diagnosed)"])
 
 
 # FT: FT-ENG-008
