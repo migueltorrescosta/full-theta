@@ -227,11 +227,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-JNT-002 | tests | `tests/input/test_binding_table.gd`, `tests/stations/test_joint_views.gd` |
 | FT-JNT-003 | tests | `tests/input/test_binding_table.gd`, `tests/stations/test_joint_views.gd` |
 | FT-JNT-004 | tests | `tests/stations/test_joint_views.gd` |
-<<<<<<< HEAD
-| FT-JNT-005 | tests | `tests/net/test_net_stations_defs.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd` |
-=======
-| FT-JNT-005 | tests | `tests/net/test_net_stations_defs.gd`, `tests/net/test_view_filter.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd` |
->>>>>>> ft-9-m2-j
+| FT-JNT-005 | tests | `tests/net/test_net_stations_defs.gd`, `tests/net/test_view_filter.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd` |
 | FT-JNT-006 | tests | `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-JNT-007 | tests | `tests/input/test_input_matcher.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_screen.gd` |
 | FT-JNT-008 | tests | `tests/stations/test_joint_views.gd` |

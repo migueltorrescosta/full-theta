@@ -57,13 +57,15 @@ func test_the_block_lists_known_hazards_with_their_geometry() -> void:
 
 
 # FT: FT-PAIR-007, FT-PAIR-020
-# Relay's hazards reach another station through the countdown toggle only: Engineering has
-# them on Easy and Normal and not on Hard; Relay keeps them on Hard; a Helm + Relay view
-# holds the source.
+# Relay's hazards reach another station through the countdown toggle and a Relay share
+# (D217): Engineering has them on Easy and Normal once shared, never unshared and not on
+# Hard; Relay keeps them on Hard; a Helm + Relay view holds the source and needs no press.
 func test_other_stations_get_the_hazards_by_toggle() -> void:
-	assert_int(_hazards("engineering", "easy").size()).is_equal(1)
-	assert_int(_hazards("engineering", "normal").size()).is_equal(1)
-	assert_array(_hazards("engineering", "hard")).is_empty()
+	var shared: String = "#hazard_countdowns"
+	assert_array(_hazards("engineering", "easy")).is_empty()
+	assert_int(_hazards("engineering", "easy" + shared).size()).is_equal(1)
+	assert_int(_hazards("engineering", "normal" + shared).size()).is_equal(1)
+	assert_array(_hazards("engineering", "hard" + shared)).is_empty()
 	assert_int(_hazards("relay", "hard").size()).is_equal(1)
 	assert_int(_hazards("nav", "hard").size()).is_equal(1)
 

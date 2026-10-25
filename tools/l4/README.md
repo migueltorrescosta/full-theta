@@ -70,7 +70,7 @@ Add `scenarios/<name>.sh` and `scenarios/<name>/*.intent`. The script runs insid
 
 ## UI steps (`--client ui`)
 
-The runner builds the real `MainMenu` (settings, token and pid files in the run folder, named after the client) and plays it; the other steps watch the client the menu or shell polls (events through `NetClient.event_received`). Mouse buttons go to a corner of the radar box, where nothing is under the pointer, so ping and mark fall back to the selection.
+The runner builds the real `MainMenu` (settings, token and pid files in the run folder, named after the client) and plays it; the other steps watch the client the menu or shell polls (events through `NetClient.event_received`). Mouse buttons go to the radar box's top-right corner, where nothing is under the pointer, so ping and mark fall back to the selection.
 
 | Step | Does |
 |---|---|

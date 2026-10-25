@@ -180,7 +180,6 @@ func test_engineering_shows_the_countdown_by_toggle() -> void:
 	assert_float(etas["hard"]).is_equal(-1.0)
 
 
-<<<<<<< HEAD
 # FT: FT-PAIR-007, FT-JNT-005
 # The share buttons: one per shortcut whose source is on the screen, whose toggle is on and
 # whose partner is not on the screen too; a press and the Share binding send the shortcut
@@ -226,10 +225,12 @@ func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
 	await get_tree().process_frame
 	assert_str((buttons[0] as Button).text).contains("13 s")
 	assert_str((buttons[1] as Button).text).not_contains(" s")
-=======
+
+
 # FT: FT-ENG-008, FT-PAIR-020
 # The countdown also follows the sim hazards the faction knows (the RELAY block's forecast,
-# D208): the soonest of the real fronts' arrival and the marked zones', by the same toggle.
+# D208): the soonest of the real fronts' arrival and the marked zones', by the same toggle
+# and only while Relay shares it (D217).
 func test_engineering_countdown_uses_the_sim_hazard_forecast() -> void:
 	var etas: Dictionary = {}
 	for code: String in ["easy", "hard"]:
@@ -240,7 +241,13 @@ func test_engineering_countdown_uses_the_sim_hazard_forecast() -> void:
 		var s: StationScreen = auto_free(StationScreen.new())
 		s.setup(ctx)
 		add_child(s)
-		etas[code] = (s.panels[0] as EngineeringPanel).hazard_eta()
+		var eng: EngineeringPanel = s.panels[0] as EngineeringPanel
+		# Without a share the toggle alone delivers nothing.
+		assert_float(eng.hazard_eta()).is_equal(-1.0)
+		ctx.crew.handle_event(
+			{"type": "shares", "payload": {"ship": 0, "left": {"hazard_countdowns": 20.0}}},
+			ctx.now_ms()
+		)
+		etas[code] = eng.hazard_eta()
 	assert_float(etas["easy"]).is_equal(7.5)
 	assert_float(etas["hard"]).is_equal(-1.0)
->>>>>>> ft-9-m2-j
