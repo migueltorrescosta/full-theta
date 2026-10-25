@@ -98,11 +98,8 @@ static func contact_noise(world: SimWorld, ship: int, contact: int) -> float:
 
 
 ## Whether the contact is inside a probe's coverage for the ship's faction (FT-SCI-005,
-## P13): SimWorld.probe_coverage, a Callable(ship_id, contact_id) -> bool, when set (tests
-## stand in), else Relay's deployed probes (ProbeSystem.covers_contact).
+## P13): Relay's deployed probes (ProbeSystem.covers_contact).
 static func probe_covered(world: SimWorld, ship: int, contact: int) -> bool:
-	if world.probe_coverage.is_valid():
-		return bool(world.probe_coverage.call(ship, contact))
 	return ProbeSystem.covers_contact(world, ship, contact)
 
 
@@ -254,9 +251,10 @@ static func start_hack(world: SimWorld, ship: int, contact: int, subsystem_id: S
 	return true
 
 
-## Moves the route to an adjacent node (FT-SCI-006, FT-SCI-011): the edge must exist; the
-## node becomes known, the trace bar rises by trace_per_move, and reaching the goal
-## opens the hack window.
+## Moves the route to an adjacent node (FT-SCI-006, FT-SCI-011): the edge must exist (a move
+## along a missing edge is refused but still raises the trace by trace_per_move, so mapping
+## the maze by trying edges isn't free); the node becomes known, the trace bar rises by
+## trace_per_move, and reaching the goal opens the hack window.
 static func hack_move(world: SimWorld, ship: int, node: int) -> bool:
 	var t: ScienceTable = world.science
 	var def: ScienceDef = world.science_def
@@ -266,7 +264,11 @@ static func hack_move(world: SimWorld, ship: int, node: int) -> bool:
 	var goal: int = HackPuzzle.goal(def, t.subsystem[ship])
 	var edges: PackedByteArray = HackPuzzle.edges(def, t.puzzle_seed[ship], goal)
 	if node < 0 or node >= edges.size() or not HackPuzzle.connected(edges, def, t.node[ship], node):
-		return _refuse(world, ship, contact, REASON_NO_EDGE)
+		t.trace[ship] += def.trace_per_move
+		var refused: bool = _refuse(world, ship, contact, REASON_NO_EDGE)  # false
+		if t.trace[ship] >= 1.0:
+			_fail(world, t, ship, &"hack_traced", &"")
+		return refused
 	t.node[ship] = node
 	t.known[ship] |= 1 << node
 	t.trace[ship] += def.trace_per_move
@@ -305,25 +307,6 @@ static func start_self_scan(world: SimWorld, ship: int) -> bool:
 	return true
 
 
-## Whether the ship's own-ship scan has finished at least once (FT-SCI-009, P10).
-static func self_scanned(world: SimWorld, ship: int) -> bool:
-	return world.science.self_scanned[ship] >= 0
-
-
-## Seconds left of the hack window on the ship's subsystem (index in ShipDef.subsystems)
-## for hacks by that faction, 0 if none (P7: the hack-window timer).
-static func hack_left(world: SimWorld, ship: int, sub_index: int, hacker_faction: int) -> float:
-	var h: HackTable = world.hacks
-	for r: int in h.size():
-		if (
-			h.ship_ids[r] == ship
-			and h.subsystem[r] == sub_index
-			and h.factions[r] == hacker_faction
-		):
-			return maxf(0.0, (h.until_tick[r] - world.tick) * SimWorld.DT)
-	return 0.0
-
-
 static func _step_session(world: SimWorld, def: ScienceDef, t: ScienceTable, ship: int) -> void:
 	var k: int = t.kind[ship]
 	var elapsed: int = world.tick - t.start_tick[ship]
@@ -338,8 +321,9 @@ static func _step_session(world: SimWorld, def: ScienceDef, t: ScienceTable, shi
 	var contact: int = t.target[ship]
 	var faction: int = world.faction_of(ship)
 	var row: int = world.knowledge.row_for(faction, contact)
+	# A probe's bubble makes a contact detected too (KnowledgeSystem), so this covers it.
 	var seen: bool = row >= 0 and world.knowledge.detected[row] == 1
-	if not world.kin.is_alive(contact) or not (seen or t.probe[ship] == 1):
+	if not world.kin.is_alive(contact) or not seen:
 		_fail(world, t, ship, fail_kind, &"lost")
 	elif k == ScienceTable.Session.SCAN:
 		if elapsed >= ceili(def.scan_cap_s * SimWorld.HZ):
@@ -371,10 +355,10 @@ static func _finish_self_scan(world: SimWorld, t: ScienceTable, ship: int) -> vo
 	t.self_scanned[ship] = world.tick
 	t.clear_session(ship)
 	world.emit(&"self_scan_done", ship, ship)
-	# P10 (FT-SIM-025): the scan names the cause of every unknown fault. Prefill (Easy's
-	# diagnosed-cause shortcut, FT-ENG-006) is the difficulty toggle's, strand G's later.
+	# P10 (FT-SIM-025): the scan names the cause of every unknown fault. Easy's diagnosed-cause
+	# shortcut (FT-ENG-006) is the net layer's (NetShares.prefill_cause).
 	for sub: SubsystemDef in world.defs[ship].subsystems:
-		DamageSystem.reveal_fault_cause(world, ship, sub.id, false)
+		DamageSystem.reveal_fault_cause(world, ship, sub.id)
 
 
 static func _fail(
@@ -427,7 +411,7 @@ static func _check_target(world: SimWorld, ship: int, contact: int, need_free: b
 		return REASON_BAD_CONTACT
 	var probe: bool = probe_covered(world, ship, contact)
 	var row: int = world.knowledge.row_for(world.faction_of(ship), contact)
-	if row < 0 or (world.knowledge.detected[row] == 0 and not probe):
+	if row < 0 or world.knowledge.detected[row] == 0:
 		return REASON_NOT_DETECTED
 	var reach: float = (
 		world.defs[ship].sensor_range
