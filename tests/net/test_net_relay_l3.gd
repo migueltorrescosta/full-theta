@@ -170,7 +170,7 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	var helm: NetClient = await h.joined(server, "helm", "tactical")
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
 	var sites: Array = h.last_event(viewer, NetProtocol.EVENT_SITES)["payload"]["sites"]
-	assert_str(sites[0]["name"]).is_equal("Kestrel Yard")
+	assert_str(sites[0]["name"]).is_equal("site.kestrel_yard")
 	# Eight marks, and zones beyond them.
 	for k: int in CrewMarks.SLOTS:
 		relay.place_mark(-1, "", -1, 0, Vector3(5.0 * k, 0.0, 0.0))
