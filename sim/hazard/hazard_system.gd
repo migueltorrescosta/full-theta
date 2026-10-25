@@ -137,11 +137,14 @@ static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -
 	if h.duration_s > 0.0 and t > h.start_s + h.duration_s:
 		return
 	var d: float = edge_distance(h, ship_offset(world, ship, h), t)
+	var first_look: bool = table.seen[ship] & bit == 0
+	table.seen[ship] |= bit
 	if d > EDGE_EPS:
 		return
 	table.crossed[ship] |= bit
-	# A ship already behind the surface when the front sets off is not hit.
-	if t <= h.start_s:
+	# A ship already behind the surface at the first look (the front sets off behind it, or
+	# the ship is spawned or reset there) is crossed without a hit.
+	if first_look:
 		return
 	world.emit(&"hazard_hit", ship, -1, h.hit_j, Vector3.ZERO, h.id)
 	if h.targets.is_empty():

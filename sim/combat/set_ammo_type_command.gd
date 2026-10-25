@@ -1,8 +1,10 @@
 class_name SetAmmoTypeCommand
 extends SimCommand
 ## Switches a mount to another ammunition type (FT-WPN-006): 0 is MountDef.weapon, i is
-## alt_weapons[i - 1]. Each type keeps its own rounds; heat, cooldown and an overheat
-## lock stay with the mount. Rejects an unknown mount or type.
+## alt_weapons[i - 1]. Each type keeps its own rounds; heat and cooldown stay with the mount.
+## An overheat lock is released by the switch: only a beam locks, and the other type may have
+## no release level to ever clear it (the heat limit of the type fired still blocks a shot).
+## Rejects an unknown mount or type.
 
 var mount_index: int = 0
 var ammo_type: int = 0
@@ -25,4 +27,5 @@ func apply(world: SimWorld) -> bool:
 		m.ammo[row] = stock[ammo_type]
 		m.type_ammo[row] = stock
 		m.ammo_type[row] = ammo_type
+		m.locked[row] = 0
 	return true

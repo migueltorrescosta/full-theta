@@ -148,6 +148,29 @@ func test_beam_overheat_locks_the_mount() -> void:
 	assert_int(SimFixture.of_kind(world.drain_events(), &"fired").size()).is_equal(1)
 
 
+# FT: FT-SIM-013, FT-WPN-006
+# A beam's overheat lock is released by switching to a type that has no release level (a
+# missile), which would never clear it; the mount fires the missile.
+func test_ammo_switch_releases_an_overheat_lock() -> void:
+	var world: SimWorld = SimWorld.new(7)
+	var alts: Array[WeaponDef] = [_weapon(MISSILE)]
+	var shooter: int = world.spawn_ship(_shooter(_weapon(BEAM), alts), 1, 0)
+	world.spawn_ship(TestDefs.raider(), 2, 0, Vector3(0, 0, -2000))
+	world.step()
+	world.drain_events()
+	world.mounts.locked[0] = 1
+	var c: SetAmmoTypeCommand = SetAmmoTypeCommand.new()
+	c.ship_id = shooter
+	c.ammo_type = 1
+	world.submit(c)
+	world.step()
+	assert_int(world.mounts.locked[0]).is_equal(0)
+	world.mounts.cooldown[0] = 0.0
+	_fire(world, shooter)
+	world.step()
+	assert_int(SimFixture.of_kind(world.drain_events(), &"fired").size()).is_equal(1)
+
+
 # FT: FT-SIM-013, FT-WPN-008
 # A missile fired at a tracked contact that crosses the line of fire hits it; the same
 # missile fired unguided (FireCommand) misses.
