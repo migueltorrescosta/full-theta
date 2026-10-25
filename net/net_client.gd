@@ -239,12 +239,19 @@ func delete_mark(slot: int) -> void:
 
 
 ## Pings an item on every screen of the ship (FT-SPA-016): kind "contact" (id), "mark"
-## (id = slot), "site" (site) or "point" (pos on site).
+## (id = slot), "card" (id = a Comms card, FT-CPT-005), "site" (site) or "point" (pos on
+## site).
 func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
 	_send(
 		NetProtocol.Type.PING,
 		{"kind": kind, "id": id, "site": site, "x": pos.x, "y": pos.y, "z": pos.z}
 	)
+
+
+## Switches the ship's main screen to view (MainScreen.View): the Captain, or Relay with
+## no Captain seated (FT-MSC-005).
+func set_main_view(view: int) -> void:
+	_send(NetProtocol.Type.MAIN_VIEW, {"view": view})
 
 
 ## Relay (strand B of #9). Sends one of the ship's marks to an allied ship's Relay inbox
