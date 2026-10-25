@@ -26,9 +26,11 @@ func apply(world: SimWorld) -> bool:
 		if mount_index >= world.defs[ship_id].mounts.size():
 			return false
 		helm.align_bow[ship_id] = world.defs[ship_id].mounts[mount_index].forward
+		helm.align_mount[ship_id] = 1
 		helm.align[ship_id] = HelmTable.Align.ROLL_AND_FACE
 		return true
 	helm.align_bow[ship_id] = Vector3.FORWARD
+	helm.align_mount[ship_id] = 0
 	var local: Vector3 = world.kin.to_local(ship_id, AssistSystem.target_offset(world, ship_id))
 	var rolled: bool = absf(AssistSystem.align_roll_error(local)) < AssistSystem.ROLLED
 	if helm.align[ship_id] == HelmTable.Align.OFF and not rolled:

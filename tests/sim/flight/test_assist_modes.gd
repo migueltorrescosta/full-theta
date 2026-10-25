@@ -274,6 +274,25 @@ func test_align_with_a_mount_turns_its_rest_direction_onto_the_target() -> void:
 	assert_float(FlightFixture.bow_error_deg(w, id, toward)).is_less(0.5)
 
 
+# FT: FT-JNT-005
+# A mount that faces straight ahead, like every shipped mount, is brought to bear with no
+# roll: the ship pitches and yaws onto the target and its roll rate stays zero.
+func test_bow_mount_align_does_not_roll() -> void:
+	var w: SimWorld = SimWorld.new(1, "test")
+	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 0)
+	assert_vector(TestDefs.corvette().mounts[0].forward).is_equal(Vector3.FORWARD)
+	var p: Vector3 = Vector3(1500.0, 1500.0, -1500.0)
+	FlightFixture.select_point(w, id, 0, p)
+	FlightFixture.align(w, id, 0)
+	var roll: float = 0.0
+	for i: int in 60 * 8:
+		w.step()
+		roll = maxf(roll, absf(w.kin.ang_vel[id].z))
+	assert_float(roll).is_less(1e-3)
+	var toward: Vector3 = AssistSystem.target_offset(w, id)
+	assert_float(FlightFixture.bow_error_deg(w, id, toward)).is_less(1.0)
+
+
 # FT: FT-M1-003, FT-SIM-004, FT-SIM-005, FT-SIM-036, FT-SIM-037
 # The M1 ship flies 6DOF with assist on by default and its holds, all-stop,
 # hold-to-approach and decoupled mode, in one flight through Helm commands.
