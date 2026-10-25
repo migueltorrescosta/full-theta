@@ -279,6 +279,15 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 			BLIP_R * float(blip_scale.get(it["id"], 1.0)) if it["kind"] == "contact" else BLIP_R
 		)
 		_draw_shape(Palette.shape_points(Palette.item_shape(it), pos, radius), col, solid)
+	if it.get("zone", "") == "probe" and not e["beyond"]:
+		# The probe's coverage bubble, as a ring in the disc plane.
+		var ring: PackedVector2Array = PackedVector2Array()
+		for i: int in 65:
+			var a: float = TAU * float(i % 64) / 64.0
+			ring.append(
+				_screen((e["rel"] as Vector3) + Vector3(cos(a), 0.0, sin(a)) * float(it["radius"]))
+			)
+		draw_polyline(ring, col * Color(1, 1, 1, 0.5), 1.0, true)
 	if is_sel:
 		draw_rect(
 			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5

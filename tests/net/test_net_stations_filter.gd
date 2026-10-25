@@ -34,7 +34,10 @@ const SPEC_05: Dictionary = {
 	],
 	# M1 has only their definitions: top bar and disc radar (FT-STN-001, FT-STN-002).
 	"science":
-	[[S.KIN, S.STATUS, S.CONTACTS, S.SCIENCE, S.OWNERSHIP], [S.HELM, S.MOUNTS, S.ENGINEERING]],
+	[
+		[S.KIN, S.STATUS, S.CONTACTS, S.SCIENCE, S.RELAY, S.OWNERSHIP],
+		[S.HELM, S.MOUNTS, S.ENGINEERING]
+	],
 	# Probes, coverage, lanes and the probe-launcher claim (FT-RLY-004, FT-NET-022).
 	"relay":
 	[[S.KIN, S.STATUS, S.CONTACTS, S.RELAY, S.OWNERSHIP], [S.HELM, S.MOUNTS, S.ENGINEERING]],

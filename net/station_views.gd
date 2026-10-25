@@ -124,7 +124,15 @@ const STATION_SECTIONS: Dictionary = {
 		Section.RELAY,
 		Section.OWNERSHIP,
 	],
-	"science": [Section.KIN, Section.STATUS, Section.SCIENCE, Section.CONTACTS, Section.OWNERSHIP],
+	"science":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.SCIENCE,
+		Section.CONTACTS,
+		Section.RELAY,
+		Section.OWNERSHIP,
+	],
 	"relay": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.RELAY, Section.OWNERSHIP],
 	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS],
 	"captain": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.NEAR, Section.PROJECTILES],

@@ -53,6 +53,13 @@ static func build(ctx: StationContext) -> ContactPicture:
 		var zone_label: String = String(TranslationServer.translate("zone." + kind))
 		pic._add("zone", z["id"], zone_label, "", z["pos"], ctx.crew.pulse("zone", z["id"], now))
 		pic.items[-1].merge({"zone": kind, "radius": z["radius"]})
+	# Deployed probes with their bubbles (P13): Science and Relay see where coverage is.
+	var probe_label: String = String(TranslationServer.translate("zone.probe"))
+	for p: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("probes", []):
+		if p["deployed"]:
+			var id: int = int(p["serial"])
+			pic._add("zone", -1 - id, probe_label, "", p["pos"], 0.0)
+			pic.items[-1].merge({"zone": "probe", "radius": p["range"]})
 	# The stations that silently copied a ping show on the original (FT-SPA-031).
 	for it: Dictionary in pic.items:
 		it["copies"] = ctx.crew.copies(it["kind"], it["id"], now)

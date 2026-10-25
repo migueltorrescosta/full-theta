@@ -180,7 +180,7 @@ Tests: 285, manual: 11, pending: 105.
 | FT-SCI-002 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-003 | tests | `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_science_noise.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-004 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_minigame_timing.gd`, `tests/sim/science/test_scan.gd`, `tests/stations/test_science_panel.gd` |
-| FT-SCI-005 | tests | `tests/net/test_net_relay_l3.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd` |
+| FT-SCI-005 | tests | `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd` |
 | FT-SCI-006 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_minigame_timing.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-007 | tests | `tests/sim/science/test_hack.gd` |
 | FT-SCI-008 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd` |
@@ -195,7 +195,7 @@ Tests: 285, manual: 11, pending: 105.
 | FT-RLY-001 | tests | `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-002 | tests | `tests/stations/test_relay_panel.gd` |
 | FT-RLY-003 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
-| FT-RLY-004 | tests | `tests/net/test_net_relay_l3.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/sim/relay/test_probes.gd`, `tests/stations/test_relay_station.gd` |
+| FT-RLY-004 | tests | `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/sim/relay/test_probes.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-005 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-006 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-007 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_relay_station.gd` |

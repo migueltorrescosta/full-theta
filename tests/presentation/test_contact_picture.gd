@@ -84,3 +84,23 @@ func test_context_builds_the_picture_once_and_again_on_change() -> void:
 	var second: ContactPicture = ctx.picture()
 	assert_object(second).is_not_same(first)
 	assert_int(second.items.size()).is_equal(first.items.size() + 1)
+
+
+# FT: FT-RLY-004, FT-SCI-005
+# Deployed probes (the RELAY block, which Science gets too) show as zone items with their
+# bubble radius; a probe still flying does not.
+func test_deployed_probes_show_their_bubble() -> void:
+	var ctx: StationContext = _ctx()
+	ctx.view.blocks[StationViews.Section.RELAY] = {
+		"probes":
+		[
+			{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0},
+			{"serial": 1, "deployed": false, "pos": Vector3(0, 0, -1000), "range": 8000.0},
+		]
+	}
+	var zones: Array = ContactPicture.build(ctx).items.filter(
+		func(it: Dictionary) -> bool: return it["kind"] == "zone"
+	)
+	assert_int(zones.size()).is_equal(1)
+	assert_str(zones[0]["zone"]).is_equal("probe")
+	assert_float(zones[0]["radius"]).is_equal(8000.0)
