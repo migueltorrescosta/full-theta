@@ -74,6 +74,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.CHIP:
 		{"op": "send", "chip": "bring_to_bear", "arg": 2, "id": -1, "accept": false},
 		NetProtocol.Type.CLIENT_STATS: {"sent_us": 5, "ua": "x", "pairs": PackedInt64Array([1, 2])},
+		NetProtocol.Type.SHARE: {"feature": "routes"},
 	}
 
 

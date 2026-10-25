@@ -303,6 +303,12 @@ func answer_chip(id: int, accept: bool) -> void:
 	_send(NetProtocol.Type.CHIP, _chip("answer", "", -1, id, accept))
 
 
+## Strand K (D210). The source station shares a data shortcut (a toggle id, e.g. "routes")
+## with its partner for DataToggles.share_seconds().
+func share(feature: String) -> void:
+	_send(NetProtocol.Type.SHARE, {"feature": feature})
+
+
 ## Sends a raw, already-encoded message (tests: malformed or foreign messages).
 func send_raw(data: PackedByteArray) -> void:
 	_queue.push(NetChunker.STREAM_CONTROL, data)

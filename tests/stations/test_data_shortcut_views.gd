@@ -150,7 +150,8 @@ func test_hazard_countdown_follows_the_toggle() -> void:
 
 # FT: FT-ENG-008, FT-PAIR-020
 # Engineering's countdown to the nearest hazard ahead is shown when the hazard-countdown
-# toggle is on (Easy and Normal) and not on Hard, where Relay says it by voice.
+# toggle is on (Easy and Normal) and Relay shared it (D210), and not on Hard, where Relay
+# says it by voice; the share ends with the server's `shares` event.
 func test_engineering_shows_the_countdown_by_toggle() -> void:
 	var etas: Dictionary = {}
 	for code: String in ["easy", "normal", "hard"]:
@@ -165,7 +166,62 @@ func test_engineering_shows_the_countdown_by_toggle() -> void:
 		ctx.crew.handle_event(
 			{"type": "zones", "payload": {"ship": 0, "zones": [zone]}}, StationFixture.NOW_MS
 		)
-		etas[code] = (s.panels[0] as EngineeringPanel).hazard_eta()
+		var panel: EngineeringPanel = s.panels[0] as EngineeringPanel
+		assert_float(panel.hazard_eta()).override_failure_message(code).is_equal(-1.0)
+		var shared: Dictionary = {"ship": 0, "left": {"hazard_countdowns": 30.0}}
+		ctx.crew.handle_event({"type": "shares", "payload": shared}, StationFixture.NOW_MS)
+		etas[code] = panel.hazard_eta()
+		ctx.crew.handle_event(
+			{"type": "shares", "payload": {"ship": 0, "left": {}}}, StationFixture.NOW_MS
+		)
+		assert_float(panel.hazard_eta()).override_failure_message(code).is_equal(-1.0)
 	assert_float(etas["easy"]).is_equal_approx(4000.0 / 80.0, 0.5)
 	assert_float(etas["normal"]).is_equal_approx(4000.0 / 80.0, 0.5)
 	assert_float(etas["hard"]).is_equal(-1.0)
+
+
+# FT: FT-PAIR-007, FT-JNT-005
+# The share buttons: one per shortcut whose source is on the screen, whose toggle is on and
+# whose partner is not on the screen too; a press and the Share binding send the shortcut
+# (D210), and the button counts down the seconds left of a share.
+func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
+	var cases: Array = [
+		["relay", "easy", [&"routes", &"hazard_countdowns", &"track_feeds"]],
+		["science", "easy", [&"weak_points", &"diagnosed_causes"]],
+		["science", "normal", []],
+		["relay", "normal", [&"routes", &"hazard_countdowns"]],
+		["relay", "hard", []],
+		["weapons", "easy", []],
+		# Targeting is Weapons + Science: the weak points are direct there.
+		["targeting", "easy", [&"diagnosed_causes"]],
+		["captain", "easy", []],
+	]
+	for c: Array in cases:
+		var ctx: StationContext = _ctx(c[0], c[1])
+		var s: StationScreen = auto_free(StationScreen.new())
+		s.setup(ctx)
+		add_child(s)
+		var want: Array[StringName] = []
+		want.assign(c[2])
+		assert_array(s.shareable()).override_failure_message("%s %s" % [c[0], c[1]]).is_equal(want)
+	var ctx: StationContext = _ctx("relay", "easy")
+	var s: StationScreen = auto_free(StationScreen.new())
+	s.setup(ctx)
+	add_child(s)
+	await get_tree().process_frame
+	var buttons: Array[Node] = s.share_bar.find_children("*", "Button", true, false)
+	assert_int(buttons.size()).is_equal(3)
+	assert_bool(s.share_bar.visible).is_true()
+	(buttons[0] as Button).pressed.emit()
+	var sent: Array = StationFixture.sent(ctx).of("share")
+	assert_int(sent.size()).is_equal(1)
+	assert_array(sent[0][1]).is_equal(["routes"])
+	# The binding shares all of the screen's shortcuts.
+	s.dispatch({"id": "share", "target": "screen", "pressed": true, "device": "kbm"})
+	assert_int(StationFixture.sent(ctx).of("share").size()).is_equal(4)
+	ctx.crew.handle_event(
+		{"type": "shares", "payload": {"ship": 0, "left": {"routes": 12.3}}}, ctx.now_ms()
+	)
+	await get_tree().process_frame
+	assert_str((buttons[0] as Button).text).contains("13 s")
+	assert_str((buttons[1] as Button).text).not_contains(" s")

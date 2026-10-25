@@ -40,6 +40,7 @@ var toasts: Toasts
 var alerts: StationAlerts
 var flash: AlertFlash
 var chip_strip: ChipStrip
+var share_bar: ShareBar
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
 var panel_factory: Callable = StationRegistry.make
 ## Controls of the shell that take the input while visible (Settings, the outcome card).
@@ -166,6 +167,10 @@ func _process(delta: float) -> void:
 	chip_strip.show_chips(
 		ChipView.incoming(ctx.view, stations), ChipView.outgoing(ctx.view, stations), ctx.view
 	)
+	var left: Dictionary = {}
+	for id: StringName in ctx.crew.shares:
+		left[id] = ctx.crew.share_left(id, now)
+	share_bar.show_features(shareable(), left)
 
 
 ## The own ship's hull and shield maxima (J), for the top bar's percentages.
@@ -252,6 +257,10 @@ func _common(ev: Dictionary) -> bool:
 			radar.toggle_strip()
 		"claim":
 			_claim()
+		"share":
+			handled = not shareable().is_empty()
+			for feature: StringName in shareable():
+				ctx.intents.share(String(feature))
 		"overlay":
 			help_requested.emit()
 			_update_block()
@@ -261,6 +270,14 @@ func _common(ev: Dictionary) -> bool:
 		_:
 			handled = _live(id)
 	return handled
+
+
+## The data shortcuts this screen's stations may share with their partners (D210).
+func shareable() -> Array[StringName]:
+	var out: Array[StringName] = []
+	if ctx.crew.is_crew():
+		out = ShareBar.features(stations, ctx.crew.toggles)
+	return out
 
 
 ## Answers the oldest request chip sent to this screen, the focused station's first
@@ -429,6 +446,14 @@ func _build() -> void:
 	chip_strip.position = Vector2(8.0, TOP_BAR_HEIGHT + 8.0)
 	chip_strip.visible = false
 	add_child(chip_strip)
+	share_bar = ShareBar.new()
+	share_bar.anchor_top = 1.0
+	share_bar.anchor_bottom = 1.0
+	share_bar.offset_left = 8.0
+	share_bar.offset_top = -60.0
+	share_bar.visible = false
+	share_bar.share_pressed.connect(func(id: StringName) -> void: ctx.intents.share(String(id)))
+	add_child(share_bar)
 	flash = AlertFlash.new()
 	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(flash)

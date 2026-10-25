@@ -55,6 +55,11 @@ func _view(entry: String, code: String) -> NetViewState:
 	return view
 
 
+## A toggle code with shortcuts shared (the view key's "#a,b" suffix, D210).
+func _shared(code: String, features: Array) -> String:
+	return ViewFilter.code_with(code, features)
+
+
 func _status(entry: String, code: String) -> Dictionary:
 	return _view(entry, code).blocks[S]
 
@@ -156,51 +161,75 @@ func test_a_joint_view_gets_the_union_of_its_stations() -> void:
 	# Tactical is Helm + Weapons: Engineering's summaries are still absent on Hard.
 	assert_float(tactical.blocks[S]["shields"]).is_equal(0.0)
 	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
+	# Direct: no press needed in a view holding both stations (FT-JNT-005, D210).
 	var targeting: NetViewState = _view("targeting", "hard")
 	assert_array(targeting.blocks[StationViews.Section.FEEDS]["weak"]).is_not_empty()
 	assert_array(_view("weapons", "hard").blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
 
 
 # FT: FT-WPN-007, FT-PAIR-007, FT-PAIR-020, FT-PAIR-017
-# Weak points and resistances reach Weapons when the weak-points toggle is on: Easy yes,
-# Normal (by voice) and Hard no; an edited Normal with the toggle on yes. The facts are
-# what Science revealed, no more.
+# Weak points and resistances reach Weapons when the weak-points toggle is on and Science
+# shared them (D210): Easy yes after a share, Normal (by voice) and Hard no even then; an
+# edited Normal with the toggle on yes after a share. The facts are what Science revealed,
+# no more.
 func test_weak_points_reach_weapons_by_toggle() -> void:
 	assert_array(_view("weapons", "easy").blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
 	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
-	var easy: Dictionary = _view("weapons", "easy").blocks[StationViews.Section.FEEDS]
+	# The toggle alone delivers nothing: Science has to share.
+	assert_array(_view("weapons", "easy").blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+	var easy: Dictionary = _view("weapons", _shared("easy", [&"weak_points"])).blocks[
+		StationViews.Section.FEEDS
+	]
 	assert_int(easy["weak"].size()).is_equal(1)
 	assert_int(easy["weak"][0]["contact"]).is_equal(FOE)
 	assert_int(easy["weak"][0]["weak_mask"]).is_equal(1)
 	assert_float(easy["weak"][0]["resist"][0]["factor"]).is_equal_approx(0.5, 1e-6)
 	for code: String in ["normal", "hard"]:
-		assert_array(_view("weapons", code).blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+		var shared: String = _shared(code, [&"weak_points"])
+		assert_array(_view("weapons", shared).blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
 	var custom: DataToggles = DataToggles.of_preset("normal").with_value(&"weak_points", 1)
-	var shown: Dictionary = _view("weapons", custom.encode()).blocks[StationViews.Section.FEEDS]
+	(
+		assert_array(_view("weapons", custom.encode()).blocks[StationViews.Section.FEEDS]["weak"])
+		. is_empty()
+	)
+	var shown: Dictionary = _view("weapons", _shared(custom.encode(), [&"weak_points"])).blocks[
+		StationViews.Section.FEEDS
+	]
 	assert_int(shown["weak"].size()).is_equal(1)
 	# The other toggles of the edited set stay as Normal has them.
 	assert_array(shown["tracks"]).is_empty()
 
 
 # FT: FT-PAIR-007, FT-PAIR-020
-# Track feeds with their quality reach Weapons on Easy only; Hard and Normal get none.
+# Track feeds with their quality reach Weapons on Easy once Relay shared them; Hard and
+# Normal get none, shared or not.
 func test_track_feeds_reach_weapons_by_toggle() -> void:
-	var easy: Array = _view("weapons", "easy").blocks[StationViews.Section.FEEDS]["tracks"]
+	assert_array(_view("weapons", "easy").blocks[StationViews.Section.FEEDS]["tracks"]).is_empty()
+	var easy: Array = (
+		_view("weapons", _shared("easy", [&"track_feeds"]))
+		. blocks[StationViews.Section.FEEDS]["tracks"]
+	)
 	assert_int(easy.size()).is_equal(1)
 	assert_int(easy[0]["contact"]).is_equal(FOE)
 	assert_float(easy[0]["quality"]).is_between(0.05, 1.0)
 	assert_bool(easy[0]["probe"]).is_false()
 	for code: String in ["normal", "hard"]:
-		assert_array(_view("weapons", code).blocks[StationViews.Section.FEEDS]["tracks"]).is_empty()
+		var shared: String = _shared(code, [&"track_feeds"])
+		(
+			assert_array(_view("weapons", shared).blocks[StationViews.Section.FEEDS]["tracks"])
+			. is_empty()
+		)
 	var custom: DataToggles = DataToggles.of_preset("hard").with_value(&"track_feeds", 1)
-	var shown: Dictionary = _view("weapons", custom.encode()).blocks[StationViews.Section.FEEDS]
+	var shown: Dictionary = _view("weapons", _shared(custom.encode(), [&"track_feeds"])).blocks[
+		StationViews.Section.FEEDS
+	]
 	assert_int(shown["tracks"].size()).is_equal(1)
 	assert_array(shown["weak"]).is_empty()
 
 
 # FT: FT-ENG-006, FT-PAIR-020, FT-PAIR-014
-# A diagnosed cause shows on Engineering when the toggle is on or Science shares its view;
-# Science's own-ship scan reveals it in the sim at every difficulty.
+# A diagnosed cause shows on Engineering when the toggle is on and Science shared it, or when
+# the view holds Science; Science's own-ship scan reveals it in the sim at every difficulty.
 func test_diagnosed_cause_shows_by_toggle() -> void:
 	assert_bool(DamageSystem.inflict_fault(world, ME, &"engines", &"short", 1e6)).is_true()
 	DamageSystem.reveal_fault_cause(world, ME, &"engines")
@@ -208,15 +237,14 @@ func test_diagnosed_cause_shows_by_toggle() -> void:
 	var cause: Callable = func(code: String, entry: String = "engineering") -> int:
 		var rows: Array = _view(entry, code).blocks[StationViews.Section.ENGINEERING]["subsystems"]
 		return rows[engines]["fault_cause"]
-	assert_int(cause.call("easy")).is_equal(2)
-	assert_int(cause.call("normal")).is_equal(0)
-	assert_int(cause.call("hard")).is_equal(0)
-	(
-		assert_int(
-			cause.call(DataToggles.of_preset("hard").with_value(&"diagnosed_causes", 1).encode())
-		)
-		. is_equal(2)
-	)
+	var shared: Callable = func(code: String) -> String: return _shared(code, [&"diagnosed_causes"])
+	assert_int(cause.call("easy")).is_equal(0)
+	assert_int(cause.call(shared.call("easy"))).is_equal(2)
+	assert_int(cause.call(shared.call("normal"))).is_equal(0)
+	assert_int(cause.call(shared.call("hard"))).is_equal(0)
+	var custom: String = DataToggles.of_preset("hard").with_value(&"diagnosed_causes", 1).encode()
+	assert_int(cause.call(custom)).is_equal(0)
+	assert_int(cause.call(shared.call(custom))).is_equal(2)
 	# Systems is Engineering + Science: its own shortcut shows as on.
 	assert_int(cause.call("hard", "systems")).is_equal(2)
 	# The fault itself is Engineering's own symptom and is always shown.
@@ -262,9 +290,15 @@ func test_hard_leaks_only_marks_and_pings() -> void:
 		assert_bool(StationViews.sees_event("science", &"hack_done", code)).is_true()
 		assert_bool(StationViews.sees_event("relay", &"lane_warning", code)).is_true()
 		assert_bool(StationViews.sees_event("helm", &"scan_mark", code)).is_true()
-	assert_bool(StationViews.sees_event("weapons", &"hack_done", "easy")).is_true()
-	assert_bool(StationViews.sees_event("engineering", &"self_scan_done", "easy")).is_true()
-	assert_bool(StationViews.sees_event("weapons", &"lane_warning", "easy")).is_true()
+	# Easy delivers them only while the source shares (D210).
+	assert_bool(StationViews.sees_event("weapons", &"hack_done", "easy")).is_false()
+	var weak: String = _shared("easy", [&"weak_points"])
+	assert_bool(StationViews.sees_event("weapons", &"hack_done", weak)).is_true()
+	assert_bool(StationViews.sees_event("weapons", &"lane_warning", weak)).is_false()
+	var causes: String = _shared("easy", [&"diagnosed_causes"])
+	assert_bool(StationViews.sees_event("engineering", &"self_scan_done", causes)).is_true()
+	var tracks: String = _shared("easy", [&"track_feeds"])
+	assert_bool(StationViews.sees_event("weapons", &"lane_warning", tracks)).is_true()
 	# A joint view holding the source station gets them at any difficulty.
 	assert_bool(StationViews.sees_event("targeting", &"hack_done", "hard")).is_true()
 	assert_bool(StationViews.sees_event("systems", &"self_scan_done", "hard")).is_true()
@@ -292,3 +326,30 @@ func test_equal_filters_share_a_section() -> void:
 	var bad: String = StationViews.key(ME, "weapons", "extreme")
 	b.build(SimCopy.of(world), 2, [bad])
 	assert_bool(b.message(bad, true).size() > SnapshotBuilder.HEADER_BYTES).is_true()
+
+
+# FT: FT-PAIR-007, FT-JNT-005
+# A toggle code carries the shared shortcuts after a "#" (D210): the filter grants a
+# shortcut to a non-source view only when its toggle is on and it is shared; the source's
+# own views and joint views holding it need no share, and a share without the toggle
+# delivers nothing.
+func test_a_shortcut_needs_its_toggle_and_a_share() -> void:
+	var code: String = ViewFilter.code_with("easy", [&"weak_points", &"routes"])
+	assert_str(code).is_equal("easy#routes,weak_points")
+	assert_str(ViewFilter.code_with("hard", [])).is_equal("hard")
+	var shared: ViewFilter = ViewFilter.of("weapons", code)
+	assert_bool(shared.grants(ViewFilter.WEAK_POINTS)).is_true()
+	assert_bool(shared.grants(ViewFilter.TRACK_FEEDS)).is_false()
+	assert_bool(ViewFilter.of("weapons", "easy").grants(ViewFilter.WEAK_POINTS)).is_false()
+	(
+		assert_bool(ViewFilter.of("weapons", "hard#weak_points").grants(ViewFilter.WEAK_POINTS))
+		. is_false()
+	)
+	assert_bool(ViewFilter.of("targeting", "hard").grants(ViewFilter.WEAK_POINTS)).is_true()
+	assert_bool(ViewFilter.of("science", "hard").grants(ViewFilter.WEAK_POINTS)).is_true()
+	assert_bool(ViewFilter.of("captain", "hard").grants(ViewFilter.TRACK_FEEDS)).is_true()
+	assert_object(ViewFilter.of("weapons", "nonsense#routes")).is_null()
+	# The shared set splits the encoded sections.
+	assert_str(shared.signature(StationViews.Section.FEEDS)).is_not_equal(
+		ViewFilter.of("weapons", "easy").signature(StationViews.Section.FEEDS)
+	)

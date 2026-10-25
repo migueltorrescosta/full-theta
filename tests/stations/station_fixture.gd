@@ -130,6 +130,9 @@ class RecordingClient:
 	func answer_chip(id: int, accept: bool) -> void:
 		sent.append(["answer_chip", [id, accept]])
 
+	func share(feature: String) -> void:
+		sent.append(["share", [feature]])
+
 	## The sends of one method, newest last.
 	func of(method: String) -> Array:
 		return sent.filter(func(s: Array) -> bool: return s[0] == method)

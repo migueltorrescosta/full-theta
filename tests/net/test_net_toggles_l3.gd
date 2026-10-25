@@ -138,14 +138,19 @@ func test_difficulty_never_changes_hidden_stats() -> void:
 
 # FT: FT-ENG-006, FT-PAIR-014, FT-PAIR-020
 # Science's own-ship scan names an unknown fault's cause at every difficulty; with the
-# diagnosed-cause toggle on (Easy) the server also pre-fills Engineering's pick, through a
-# logged command, so the repair needs no pick from Engineering.
+# diagnosed-cause toggle on (Easy) and Science's share the server also pre-fills Engineering's
+# pick, through a logged command, so the repair needs no pick from Engineering (D210): a
+# share before the scan pre-fills at the reveal, one after it at the press, and the toggle
+# alone or a share with the toggle off pre-fills nothing.
 func test_easy_prefills_the_diagnosed_cause() -> void:
 	var picks: Dictionary = {}
 	var known: Dictionary = {}
-	for code: String in ["easy", "normal", "hard"]:
+	for variant: String in ["easy early", "easy late", "easy never", "normal early", "hard early"]:
+		var code: String = variant.split(" ")[0]
+		var when: String = variant.split(" ")[1]
 		var server: NetServer = h.server(false, 10.0, SECRET)
 		var host: NetClient = await h.welcomed(server, "host", "", SECRET)
+		var science: NetClient = await h.joined(server, "sci", "science")
 		host.set_toggles(code)
 		(
 			assert_bool(
@@ -153,6 +158,22 @@ func test_easy_prefills_the_diagnosed_cause() -> void:
 			)
 			. is_true()
 		)
+		var share: Callable = func() -> void:
+			var from: int = h.mark(science)
+			science.share("diagnosed_causes")
+			var opened: Callable = func() -> bool:
+				return (
+					server.session.shares.active(PLAYER, ViewFilter.DIAGNOSED_CAUSES)
+					or not (
+						h
+						. events_of(science, NetProtocol.EVENT_REQUEST_REJECTED)
+						. slice(from)
+						. is_empty()
+					)
+				)
+			await h.until(opened)
+		if when == "early":
+			await share.call()
 		var world: SimWorld = server.world
 		var def: ShipDef = TestDefs.corvette().duplicate()
 		var subs: Array[SubsystemDef] = []
@@ -171,14 +192,19 @@ func test_easy_prefills_the_diagnosed_cause() -> void:
 			world.step()
 			server.session.after_ticks(world.drain_events())
 		world.step()
+		if when == "late":
+			await share.call()
+			world.step()
 		var r: int = world.damage.find_subsystem(PLAYER, &"engines")
-		known[code] = DamageSystem.known_fault_cause(world, PLAYER, &"engines")
-		picks[code] = world.damage.fault_pick[r]
-	for code: String in known:
-		assert_str(known[code]).override_failure_message(code).is_equal("short")
-	assert_str(picks["easy"]).is_equal("short")
-	assert_str(picks["normal"]).is_equal("")
-	assert_str(picks["hard"]).is_equal("")
+		known[variant] = DamageSystem.known_fault_cause(world, PLAYER, &"engines")
+		picks[variant] = world.damage.fault_pick[r]
+	for variant: String in known:
+		assert_str(known[variant]).override_failure_message(variant).is_equal("short")
+	assert_str(picks["easy early"]).is_equal("short")
+	assert_str(picks["easy late"]).is_equal("short")
+	assert_str(picks["easy never"]).is_equal("")
+	assert_str(picks["normal early"]).is_equal("")
+	assert_str(picks["hard early"]).is_equal("")
 
 
 # FT: FT-SPA-019, FT-SPA-029, FT-PAIR-008

@@ -620,6 +620,12 @@
     "weapons.rating": {"en": "Ammo vs %s: x%.2f", "pt_PT": "Munição vs %s: x%.2f", "it": "Munizioni vs %s: x%.2f"},
     "weapons.window": {"en": "Hack window: %d s", "pt_PT": "Janela de hack: %d s", "it": "Finestra hack: %d s"},
     "weapons.track": {"en": "Track %d%% [%s]", "pt_PT": "Pista %d%% [%s]", "it": "Traccia %d%% [%s]"},
-    "eng.hazard_eta": {"en": "Hazard in %d s", "pt_PT": "Perigo em %d s", "it": "Pericolo tra %d s"}
+    "eng.hazard_eta": {"en": "Hazard in %d s", "pt_PT": "Perigo em %d s", "it": "Pericolo tra %d s"},
+    "intent.share": {"en": "Share data with the crew", "pt_PT": "Partilhar dados com a tripulação", "it": "Condividi i dati con l'equipaggio"},
+    "share.button": {"en": "Share: %s", "pt_PT": "Partilhar: %s", "it": "Condividi: %s"},
+    "toast.share_off": {"en": "That shortcut is off.", "pt_PT": "Esse atalho está desligado.", "it": "Quel collegamento è disattivato."},
+    "toast.share_bad_feature": {"en": "Nothing to share there.", "pt_PT": "Não há nada para partilhar aí.", "it": "Non c'è nulla da condividere."},
+    "toast.share_not_source": {"en": "Your station can't share that.", "pt_PT": "O teu posto não pode partilhar isso.", "it": "La tua postazione non può condividerlo."},
+    "toast.share_same_screen": {"en": "You hold both stations: you already see it.", "pt_PT": "Tens os dois postos: já o vês.", "it": "Hai entrambe le postazioni: lo vedi già."}
   }
 }

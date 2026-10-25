@@ -84,6 +84,7 @@ var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
 ## Request chips (NetChips) and the cooperative events counted for the debrief (CoopEvents).
 var chips: NetChips
 var coop: NetCoop
+var shares: NetShares
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -106,6 +107,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 	crew = NetCrewState.new(self)
 	chips = NetChips.new(self)
 	coop = NetCoop.new(self)
+	shares = NetShares.new(self)
 	_handlers = {
 		NetProtocol.Type.HELLO: _on_hello,
 		NetProtocol.Type.PICK: _on_pick,
@@ -125,6 +127,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.MARK_ACCEPT: crew.on_mark_accept,
 		NetProtocol.Type.TOGGLES: _on_toggles,
 		NetProtocol.Type.CHIP: chips.on_chip,
+		NetProtocol.Type.SHARE: shares.on_share,
 		NetProtocol.Type.BYE: _on_bye,
 		NetTransport.CLOSED: _on_closed,
 	}
@@ -146,6 +149,7 @@ func process(now_us: int) -> void:
 	for gone: NetSession in sessions.expire(now_us):
 		_lapse(gone)
 	chips.step()
+	shares.step()
 	coop.step()
 	_publish()
 
@@ -199,22 +203,13 @@ func after_ticks(events: Array[SimEvent]) -> void:
 
 
 ## P10 on Easy (FT-ENG-006): the cause Science's own-ship scan revealed is pre-filled as
-## Engineering's pick, through a logged server command like any other pick, unless
-## Engineering already picked one. The scan reveals the cause at every difficulty; the toggle
-## only decides whether the pick is made for Engineering (FT-PAIR-014).
+## Engineering's pick once Science shared the diagnosed causes (D210), through a logged
+## server command like any other pick, unless Engineering already picked one. The scan reveals
+## the cause at every difficulty; the toggle only decides whether the pick is made for
+## Engineering (FT-PAIR-014).
 func _prefill_cause(e: SimEvent) -> void:
-	if not toggles.on(ViewFilter.DIAGNOSED_CAUSES):
-		return
-	var t: DamageTable = world.damage
-	var r: int = t.find_subsystem(e.ship_id, e.tag)
-	if r < 0 or t.fault_pick[r] != &"":
-		return
-	var c: PickFaultCauseCommand = PickFaultCauseCommand.new()
-	c.ship_id = e.ship_id
-	c.subsystem_id = e.tag
-	c.cause = DamageSystem.known_fault_cause(world, e.ship_id, e.tag)
-	if c.cause != &"":
-		world.submit(c)
+	if shares.active(e.ship_id, ViewFilter.DIAGNOSED_CAUSES):
+		shares.prefill_cause(e.ship_id, e.tag)
 
 
 ## Sessions that receive a sim event (FT-NET-009, FT-NET-010): those holding a pick on
@@ -229,7 +224,7 @@ func event_audience(e: SimEvent) -> PackedInt32Array:
 			continue
 		if (
 			world.faction_of(s.ship) == e.faction
-			and StationViews.sees_event(s.entry, e.kind, s.toggles)
+			and StationViews.sees_event(s.entry, e.kind, s.view_code())
 		):
 			out.append(s.id)
 	return out
@@ -263,6 +258,7 @@ func restart(sim_world: SimWorld) -> void:
 	for ship: Dictionary in crew_ships():
 		crew.reset(ship["id"])
 		chips.reset(ship["id"])
+		shares.reset(ship["id"])
 		coop.reset_ship(ship["id"])
 		_ownership_dirty[ship["id"]] = true
 	coop.reset()
@@ -736,6 +732,7 @@ func _set_pick(s: NetSession, ship: int, entry: String) -> void:
 		_claim_changed(released[0], released[1])
 	s.ship = ship
 	s.entry = entry
+	s.shares = shares.active_of(ship)
 	transport.set_view(s.id, s.view_key())
 	if votes.has(old_ship):
 		votes[old_ship].keep_only(connected_crew(old_ship))

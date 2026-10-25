@@ -54,6 +54,7 @@ func send_to(s: NetSession) -> void:
 	session.notify(s, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, ""))
 	session.notify(s, NetProtocol.EVENT_SITES, _sites_payload())
 	session.notify(s, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
+	session.shares.send_to(s)
 	if _sees_routes(s):
 		session.notify(s, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
 	if _is_relay(s):
@@ -317,13 +318,9 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 	if why != "":
 		return why
 	if op.begins_with("route"):
-		var told: Array = []
 		for t: NetSession in session.by_id.values():
 			if t.ship == s.ship and t.has_pick() and _sees_routes(t):
 				session.notify(t, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
-				told.append(t)
-		if op == "route_add":
-			session.coop.on_routes_shared(s.ship, told)
 		_log(s.ship, "route_" + op.trim_prefix("route_"), {"route": slot + 1})
 	else:
 		_to_ship(s.ship, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
@@ -443,17 +440,36 @@ func _resolved(ship: int, slot: int) -> Dictionary:
 	return {}
 
 
+## Routes shared or unshared (NetShares): the ship's picks that don't hold Relay get the
+## routes when their view sees them now, else an empty list. Returns whether any pick got
+## routes (a press that shared them).
+func sync_routes(ship: int) -> bool:
+	var any: bool = false
+	for t: NetSession in session.by_id.values():
+		if t.ship != ship or not t.has_pick() or StationViews.stations_of(t.entry).has("relay"):
+			continue
+		var seen: bool = _sees_routes(t)
+		any = any or seen
+		session.notify(
+			t,
+			NetProtocol.EVENT_ROUTES,
+			_routes_payload(ship) if seen else {"ship": ship, "routes": []}
+		)
+	return any
+
+
 func _is_relay(s: NetSession) -> bool:
 	return s.has_pick() and CrewMarks.role_of(s.entry) == CrewMarks.Role.RELAY
 
 
-## Routes reach Relay always and the other stations when the routes toggle is on or their
-## view holds Relay (FT-SPA-029, FT-PAIR-008, FT-JNT-005).
+## Routes reach Relay always and the other stations while Relay shares them (the routes
+## toggle is on and the press hasn't expired) or their view holds Relay (FT-SPA-029,
+## FT-PAIR-008, FT-JNT-005, D210).
 func _sees_routes(s: NetSession) -> bool:
 	if not s.has_pick():
 		return false
-	var f: ViewFilter = ViewFilter.of(s.entry, s.toggles)
-	return f == null or f.stations.has("relay") or f.toggles.on(ViewFilter.ROUTES)
+	var f: ViewFilter = ViewFilter.of(s.entry, s.view_code())
+	return f == null or f.grants(ViewFilter.ROUTES)
 
 
 func _sites_payload() -> Dictionary:

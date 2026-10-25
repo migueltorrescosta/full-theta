@@ -219,8 +219,17 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	assert_float(routes["payload"]["routes"][0][1]["x"]).is_equal(900.0)
 	await h.wait(200)
 	assert_array(h.events_of(helm, NetProtocol.EVENT_ROUTES).slice(from)).is_empty()
-	# On Normal Tactical gets them; the zones stayed on Hard.
+	# On Normal Tactical gets them once Relay shares them (D210); the zones stayed on Hard.
 	h.session_of(server, helm).toggles = "normal"
+	relay.share("routes")
+	routes = await h.next_event(
+		helm,
+		NetProtocol.EVENT_ROUTES,
+		from,
+		func(e: Dictionary) -> bool: return not e["payload"]["routes"][0].is_empty()
+	)
+	assert_int(routes["payload"]["routes"][0].size()).is_equal(2)
+	from = h.mark(helm)
 	relay.route_add(1, 0, Vector3(1.0, 1.0, 1.0))
 	routes = await h.next_event(helm, NetProtocol.EVENT_ROUTES, from)
 	assert_int(routes["payload"]["routes"][1].size()).is_equal(1)
@@ -268,7 +277,7 @@ func test_mark_on_a_revealed_subsystem_only() -> void:
 # FT: FT-RLY-004, FT-RLY-006, FT-RLY-007, FT-RLY-011
 # Relay launches a probe through the command path; the stock and the probe reach its
 # snapshot, the ship's log records it as keys (no text), and a lane warning reaches
-# Relay and Weapons only.
+# Relay and, once Relay shared its track feeds, Weapons only.
 func test_probe_launch_log_and_lane_warning_events() -> void:
 	var server: NetServer = h.server()
 	var relay: NetClient = await h.joined(server, "relay", "ops")
@@ -308,6 +317,15 @@ func test_probe_launch_log_and_lane_warning_events() -> void:
 	var w: SimWorld = server.world
 	w.ai.enabled[NetHarness.ENEMY] = 0
 	w.kin.factions[NetHarness.ENEMY] = w.faction_of(PLAYER)
+	# The warning is a track-feed shortcut: it reaches Weapons once Relay shares (D210).
+	relay.share("track_feeds")
+	var tac_session: NetSession = h.session_of(server, tac)
+	(
+		assert_bool(
+			await h.until(func() -> bool: return tac_session.shares.has(ViewFilter.TRACK_FEEDS))
+		)
+		. is_true()
+	)
 	from = h.mark(tac)
 	var tac_from: int = h.mark(sys)
 	relay.command({"kind": "flag_lanes", "on": true})
