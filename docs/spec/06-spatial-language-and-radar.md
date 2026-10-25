@@ -23,7 +23,7 @@ Precise layer, on hover or long-press only: bearing 000–359 clockwise from the
 | "Jump to Kestrel Yard" | Select Kestrel Yard, JUMP |
 | "Look here" | Ping: middle-click or long-press |
 
-Callout grammar (plan review NAV, used by the callout card):
+Callout grammar (plan review NAV, used by the [callout card](../callout-card.md)):
 
 ```
 <who>, <verb> <object> [<qualifier>]
