@@ -125,7 +125,9 @@ static func engineering(w: SimWorld) -> void:
 	for crew: int in SUBSYSTEMS.size():
 		var id: StringName = SUBSYSTEMS[crew]
 		var row: int = w.damage.find_subsystem(PLAYER, id)
-		var damaged: bool = w.damage.health[row] < w.defs[PLAYER].subsystems[_index(w, id)].health_max
+		var damaged: bool = (
+			w.damage.health[row] < w.defs[PLAYER].subsystems[_index(w, id)].health_max
+		)
 		if damaged and w.damage.crews[row] == 0:
 			var dispatch: DispatchRepairCommand = DispatchRepairCommand.new()
 			dispatch.crew = crew

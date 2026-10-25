@@ -20,7 +20,9 @@ func test_full_chain_beats_every_chain_with_a_link_removed() -> void:
 			failures.append("without link %d: %s" % [link, cut.metrics])
 	(
 		assert_array(failures)
-		. override_failure_message("\n".join(lines) + "\nnot strictly slower:\n" + "\n".join(failures))
+		. override_failure_message(
+			"\n".join(lines) + "\nnot strictly slower:\n" + "\n".join(failures)
+		)
 		. is_empty()
 	)
 

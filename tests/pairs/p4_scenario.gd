@@ -81,15 +81,25 @@ static func helm(w: SimWorld, points: Array[Vector3]) -> void:
 	while (
 		leg < points.size() - 1
 		and (
-			w.kin.relative_to_point(PLAYER, points[leg].x, points[leg].y, points[leg].z).length()
-			< WAYPOINT_R
+			(
+				(
+					w
+					. kin
+					. relative_to_point(PLAYER, points[leg].x, points[leg].y, points[leg].z)
+					. length()
+				)
+				< WAYPOINT_R
+			)
 			or _passed(w, points, leg)
 		)
 	):
 		leg += 1
 	var p: Vector3 = points[leg]
-	if w.helm.target_kind[PLAYER] != HelmTable.Target.POINT or w.helm.target_z[PLAYER] != p.z \
-			or w.helm.target_x[PLAYER] != p.x:
+	if (
+		w.helm.target_kind[PLAYER] != HelmTable.Target.POINT
+		or w.helm.target_z[PLAYER] != p.z
+		or w.helm.target_x[PLAYER] != p.x
+	):
 		var select: SelectTargetCommand = SelectTargetCommand.new()
 		select.site = 0
 		select.x = p.x
