@@ -602,6 +602,7 @@
     "toast.chip_inert": {"en": "Not wired up yet.", "pt_PT": "Ainda não funciona.", "it": "Non ancora attiva."},
     "toast.chip_not_yours": {"en": "Your station can't send that.", "pt_PT": "O teu posto não pode enviar isso.", "it": "La tua postazione non può inviarla."},
     "toast.chip_same_screen": {"en": "You hold both stations: do it yourself.", "pt_PT": "Tens os dois postos: faz tu.", "it": "Hai entrambe le postazioni: fallo tu."},
+    "toast.chip_pips_max": {"en": "Already at full power.", "pt_PT": "Já está com a energia no máximo.", "it": "Già a piena potenza."},
     "toast.chip_nobody": {"en": "Nobody is at that station.", "pt_PT": "Ninguém está nesse posto.", "it": "Nessuno è in quella postazione."},
     "toast.chip_open": {"en": "That request is already open.", "pt_PT": "Esse pedido já está aberto.", "it": "Quella richiesta è già aperta."},
     "toast.chips_full": {"en": "Too many open requests.", "pt_PT": "Demasiados pedidos abertos.", "it": "Troppe richieste aperte."},

@@ -180,14 +180,80 @@ func _on_screen(chip: ChipDef) -> bool:
 	return ctx.crew.stations().has(String(chip.to_station))
 
 
-## FT-JNT-005: the commands a request between a joint view's own stations stands for. The
-## others have no single command (power and bearing are the other station's own controls),
-## so the player is told to do them.
+## FT-JNT-005: the commands a request between a joint view's own stations stands for. Each
+## chip is one command of the receiving station, run with the sender's own data: Boost and
+## fabricate a probe need none; power is one more pip (the reactor cap and the per-
+## subsystem maximum still apply, so the player takes power from something else); bring to
+## bear aligns the bow with the selected contact; the scan mark places Science's mark.
+## Hold fire (Comms, inert until #10) has no receiving station on a screen.
 func _direct(chip: ChipDef) -> void:
 	match chip.id:
 		&"boost":
 			ctx.intents.command({"kind": "boost"})
 		&"fabricate_probe":
 			ctx.intents.command({"kind": "fabricate_probe"})
+		&"power":
+			_more_pips(SubsystemDef.Kind.WEAPONS)
+		&"sensor_power":
+			_more_pips(SubsystemDef.Kind.SENSORS)
+		&"bring_to_bear":
+			_bring_to_bear()
+		&"scan_mark":
+			_scan_mark()
 		_:
 			ctx.crew.toast.emit("toast.chip_same_screen", {})
+
+
+## One more pip on the ship's first subsystem of `kind`, from the ENGINEERING block of the
+## view (a joint view with Engineering has it).
+func _more_pips(kind: SubsystemDef.Kind) -> void:
+	var def: ShipDef = ctx.ship_def()
+	var rows: Array = ctx.view.blocks.get(StationViews.Section.ENGINEERING, {}).get(
+		"subsystems", []
+	)
+	if def == null or def.power == null or rows.size() != def.subsystems.size():
+		return
+	var at: int = -1
+	var used: int = 0
+	for i: int in rows.size():
+		used += int(rows[i].get("pips", 0))
+		if at < 0 and def.subsystems[i].kind == kind:
+			at = i
+	if at < 0:
+		return
+	var pips: int = int(rows[at].get("pips", 0)) + 1
+	if pips > def.power.max_pips_per_subsystem:
+		ctx.crew.toast.emit("toast.chip_pips_max", {})
+	elif used + 1 > def.power.reactor_pips:
+		ctx.crew.toast.emit("toast.eng_cap", {})
+	else:
+		ctx.intents.command({"kind": "set_pips", "subsystem_kind": int(kind), "pips": pips})
+
+
+## Aligns the bow with the selected contact (Helm's Align; the corvette's mount is on the
+## bow, FT-JNT-005).
+func _bring_to_bear() -> void:
+	var sel: Dictionary = ctx.crew.selection
+	if sel.get("kind", "") != "contact":
+		ctx.crew.toast.emit("toast.select_first", {})
+		return
+	ctx.intents.command(
+		{
+			"kind": "helm_select_target",
+			"target_ship": int(sel["id"]),
+			"site": -1,
+			"x": 0.0,
+			"y": 0.0,
+			"z": 0.0
+		}
+	)
+	ctx.intents.command({"kind": "helm_align"})
+
+
+## Science's scan-position mark for the selected contact (Helm sees where to fly).
+func _scan_mark() -> void:
+	var sel: Dictionary = ctx.crew.selection
+	if sel.get("kind", "") != "contact":
+		ctx.crew.toast.emit("toast.select_first", {})
+		return
+	ctx.intents.command({"kind": "science_scan_mark", "contact": int(sel["id"])})
