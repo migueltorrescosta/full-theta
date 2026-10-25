@@ -8,7 +8,8 @@ extends Node
 ## (WebAutoplay).
 
 var shell: ClientShell
-var _wakes: int = 0
+var _woken: bool = false
+var _wake_callback: JavaScriptObject
 var _awake: bool = false
 var _panel: String = ""
 var _layout: String = ""
@@ -33,7 +34,7 @@ static func attach(shell_node: ClientShell) -> void:
 
 
 func _ready() -> void:
-	_wakes = WebPage.wakes()
+	_wake_callback = WebPage.on_wake(func() -> void: _woken = true)
 
 
 func _process(_delta: float) -> void:
@@ -41,9 +42,8 @@ func _process(_delta: float) -> void:
 	if client.is_welcomed() and not _awake:
 		_awake = true
 		KeepAwake.start()
-	var wakes: int = WebPage.wakes()
-	if wakes != _wakes:
-		_wakes = wakes
+	if _woken:
+		_woken = false
 		# The socket may look open and be dead; resume() replaces it and the server hands
 		# the same session back with a full snapshot (FT-NET-025).
 		if client.state != NetClient.State.REJECTED:

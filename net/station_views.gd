@@ -20,7 +20,6 @@ enum Section {
 	NEAR = 7,
 	PROJECTILES = 8,
 	OWNERSHIP = 9,
-	# Reserved for M2 (#9); each strand fills its own section's fields and getter.
 	# Science contact card, scan and hack state (strand A).
 	SCIENCE = 10,
 	# Relay probes, coverage, routes, hazards and inbox (strand B).

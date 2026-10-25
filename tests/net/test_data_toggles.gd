@@ -85,7 +85,7 @@ func test_an_edited_set_is_custom_and_round_trips() -> void:
 	assert_str(normal.with_value(&"chips", 2).encode()).is_equal("normal")
 	assert_str(normal.with_value(&"nope", 1).encode()).is_equal("normal")
 	# Choosing another preset replaces the edits.
-	assert_str(edited.with_preset("hard").encode()).is_equal("hard")
+	assert_str(DataToggles.of_preset("hard").encode()).is_equal("hard")
 
 
 # FT: FT-PAIR-017

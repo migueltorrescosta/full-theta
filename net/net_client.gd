@@ -352,7 +352,9 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 				_arrivals.append(view.seq)
 				_arrivals.append(got_us)
 				if _arrivals.size() > 2 * NetProtocol.MAX_STATS_PAIRS * 4:
-					_arrivals = _arrivals.slice(_arrivals.size() - 2 * NetProtocol.MAX_STATS_PAIRS * 4)
+					_arrivals = _arrivals.slice(
+						_arrivals.size() - 2 * NetProtocol.MAX_STATS_PAIRS * 4
+					)
 			if log_snapshots:
 				snapshot_log.append(view.seq)
 				snapshot_log.append(got_us)
@@ -406,7 +408,11 @@ func _maybe_report() -> void:
 	_arrivals = _arrivals.slice(take)
 	_send(
 		NetProtocol.Type.CLIENT_STATS,
-		{"sent_us": LoadProbe.unix_us(), "ua": user_agent.left(NetProtocol.MAX_UA_BYTES), "pairs": pairs}
+		{
+			"sent_us": LoadProbe.unix_us(),
+			"ua": user_agent.left(NetProtocol.MAX_UA_BYTES),
+			"pairs": pairs
+		}
 	)
 
 

@@ -33,8 +33,7 @@ enum Type {
 	MARK = 20,
 	PING = 21,
 	RUN_AGAIN = 22,
-	# Reserved for M2 (#9); each strand adds its schema, FROM_CLIENT and docs/protocol.md
-	# rows. Lobby data-shortcut toggles and preset, host only (strand G).
+	# Lobby data-shortcut toggles and preset, host only (strand G).
 	TOGGLES = 23,
 	# Send or answer a request chip (strand G).
 	CHIP = 24,
@@ -43,9 +42,7 @@ enum Type {
 	# Relay sends a mark to an allied Relay, or accepts one from its inbox (strand B).
 	MARK_SEND = 26,
 	MARK_ACCEPT = 27,
-	# Scan or hack minigame: puzzle from the server, moves and solution from Science
-	# (strands A and E).
-	MINIGAME = 28,
+	# 28 is unused: Science's puzzle rides the SCIENCE section and its commands.
 	# A client's snapshot-age report for the session log (strand D, D199).
 	CLIENT_STATS = 29,
 	# A source station shares a data shortcut with its partner (strand K, D210).

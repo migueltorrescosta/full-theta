@@ -5,8 +5,8 @@ extends RefCounted
 ## against the session's DataToggles. A field of another station's data reaches the view
 ## only through a toggle:
 ## - a summary (the top bar's shields and reactor, Helm's thrust envelope and shield ring,
-##   propellant, the probe stock and fabrication timer) is exact, banded to the four bands of D193 or absent, by the summaries
-##   toggle;
+##   propellant, the probe stock and fabrication timer) is exact, banded to the four bands of
+##   D193 or absent, by the summaries toggle;
 ## - a shortcut (routes on Helm, weak points and track feeds on Weapons, diagnosed causes and
 ##   hazard countdowns on Engineering) is delivered when its toggle is on and its source
 ##   station has shared it (D210; the code's "#a,b" suffix names the shared ones);

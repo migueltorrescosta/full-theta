@@ -11,6 +11,7 @@ extends Node
 var edit: LineEdit
 var field_id: String = ""
 var _sent: String = ""
+var _callback: JavaScriptObject
 
 
 ## Backs `line_edit` with an overlay input. Call once, after it is in the tree or before.
@@ -25,15 +26,21 @@ static func attach(line_edit: LineEdit) -> void:
 	line_edit.add_child(f)
 
 
+func _enter_tree() -> void:
+	_callback = JavaScriptBridge.create_callback(_on_page_event)
+	JavaScriptBridge.get_interface("ft").call("listen", field_id, _callback)
+
+
 func _process(_delta: float) -> void:
 	if not edit.is_visible_in_tree():
 		_clear()
 		return
 	_register()
-	var got: String = str(JavaScriptBridge.eval("ft.take('%s')" % field_id, true))
-	if got.is_empty():
-		return
-	var parsed: Variant = JSON.parse_string(got)
+
+
+## What the page says happened to the field (`ft.listen`): the typed text, Enter.
+func _on_page_event(args: Array) -> void:
+	var parsed: Variant = JSON.parse_string(str(args[0]))
 	if not parsed is Dictionary:
 		return
 	var d: Dictionary = parsed
@@ -47,6 +54,7 @@ func _process(_delta: float) -> void:
 
 
 func _exit_tree() -> void:
+	JavaScriptBridge.get_interface("ft").call("listen", field_id, null)
 	_clear()
 
 

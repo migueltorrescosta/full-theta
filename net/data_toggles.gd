@@ -143,8 +143,3 @@ func with_value(id: StringName, v: int) -> DataToggles:
 		if _def.toggles[i].id == id and v >= 0 and v <= _def.toggles[i].max_value():
 			out.values[i] = v
 	return out
-
-
-## A copy with a preset's values (the lobby's preset buttons).
-func with_preset(name: String) -> DataToggles:
-	return of_preset(name)

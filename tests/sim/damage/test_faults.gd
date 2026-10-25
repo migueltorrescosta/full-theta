@@ -107,9 +107,8 @@ func test_brute_force_factor_is_data() -> void:
 
 # FT: FT-SIM-025, FT-ENG-006
 # Science's scan reveals the cause (the station may then read it); Engineering still has
-# to pick it unless the Easy shortcut pre-fills the pick, which makes the repair fast
-# without a pick command. Revealing a subsystem without a fault does nothing.
-func test_revealed_cause_and_prefill() -> void:
+# to pick it. Revealing a subsystem without a fault does nothing.
+func test_revealed_cause() -> void:
 	var world: SimWorld = _world()
 	assert_bool(DamageSystem.reveal_fault_cause(world, 0, &"engines")).is_false()
 	DamageSystem.inflict_fault(world, 0, &"engines", &"software", FAULT_J)
@@ -122,10 +121,6 @@ func test_revealed_cause_and_prefill() -> void:
 	assert_float(revealed[0].value).is_equal(3.0)
 	# Revealed but not picked: still brute force.
 	assert_int(_repair_ticks(world)).is_greater(3 * TICKS_FULL)
-	var easy: SimWorld = _world()
-	DamageSystem.inflict_fault(easy, 0, &"engines", &"software", FAULT_J)
-	DamageSystem.reveal_fault_cause(easy, 0, &"engines", true)
-	assert_int(_repair_ticks(easy)).is_between(TICKS_FULL - 5, TICKS_FULL + 5)
 
 
 # FT: FT-ENG-006

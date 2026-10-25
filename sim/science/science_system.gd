@@ -374,7 +374,7 @@ static func _finish_self_scan(world: SimWorld, t: ScienceTable, ship: int) -> vo
 	# P10 (FT-SIM-025): the scan names the cause of every unknown fault. Prefill (Easy's
 	# diagnosed-cause shortcut, FT-ENG-006) is the difficulty toggle's, strand G's later.
 	for sub: SubsystemDef in world.defs[ship].subsystems:
-		DamageSystem.reveal_fault_cause(world, ship, sub.id, false)
+		DamageSystem.reveal_fault_cause(world, ship, sub.id)
 
 
 static func _fail(

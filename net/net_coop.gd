@@ -41,7 +41,9 @@ func on_sim_event(e: SimEvent) -> void:
 			)
 		&"scan_done", &"hack_done":
 			if _probe_scans.get(e.ship_id, false):
-				record(PROBE_SCAN, pair_of("science", "relay"), e.ship_id, {"event": String(e.kind)})
+				record(
+					PROBE_SCAN, pair_of("science", "relay"), e.ship_id, {"event": String(e.kind)}
+				)
 			_probe_scans.erase(e.ship_id)
 		&"scan_failed", &"hack_failed", &"hack_traced", &"science_refused":
 			_probe_scans.erase(e.ship_id)

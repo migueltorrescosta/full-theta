@@ -50,25 +50,49 @@ func test_exact_values_follow_the_summaries_toggle_and_never_reach_comms() -> vo
 		var marks: Dictionary = {}
 		for c: NetClient in [eng, helm, sci, comms]:
 			marks[c] = h.mark(c)
-		server.session.after_ticks(
-			[
-				_event(server, &"shield_low", 0.4, &""),
-				_event(server, &"fault", 7.0, &"engines"),
-				_event(server, &"subsystem_damaged", 0.4, &"engines"),
-				_event(server, &"hit", 0.4, &"plain"),
-			]
+		(
+			server
+			. session
+			. after_ticks(
+				[
+					_event(server, &"shield_low", 0.4, &""),
+					_event(server, &"fault", 7.0, &"engines"),
+					_event(server, &"subsystem_damaged", 0.4, &"engines"),
+					_event(server, &"hit", 0.4, &"plain"),
+				]
+			)
 		)
-		assert_bool(await h.until(func() -> bool: return _value(sci, "hit", marks[sci]) >= 0.0)).is_true()
-		assert_bool(await h.until(func() -> bool: return _value(eng, "subsystem_damaged", marks[eng]) >= 0.0)).is_true()
+		(
+			assert_bool(await h.until(func() -> bool: return _value(sci, "hit", marks[sci]) >= 0.0))
+			. is_true()
+		)
+		(
+			assert_bool(
+				await h.until(
+					func() -> bool: return _value(eng, "subsystem_damaged", marks[eng]) >= 0.0
+				)
+			)
+			. is_true()
+		)
 		await h.wait(200)
 		var code: String = row[0]
 		# Engineering: always exact.
-		assert_float(_value(eng, "shield_low", marks[eng])).override_failure_message(code).is_equal_approx(0.4, 0.001)
+		(
+			assert_float(_value(eng, "shield_low", marks[eng]))
+			. override_failure_message(code)
+			. is_equal_approx(0.4, 0.001)
+		)
 		assert_float(_value(eng, "fault", marks[eng])).is_equal_approx(7.0, 0.001)
 		assert_float(_value(eng, "subsystem_damaged", marks[eng])).is_equal_approx(0.4, 0.001)
 		# Helm: the shield alert as its summary, the fault as a plain alert, no damage event.
-		assert_float(_value(helm, "shield_low", marks[helm])).override_failure_message(code).is_equal_approx(row[1], 0.001)
-		assert_float(_value(helm, "fault", marks[helm])).override_failure_message(code).is_equal(0.0)
+		(
+			assert_float(_value(helm, "shield_low", marks[helm]))
+			. override_failure_message(code)
+			. is_equal_approx(row[1], 0.001)
+		)
+		assert_float(_value(helm, "fault", marks[helm])).override_failure_message(code).is_equal(
+			0.0
+		)
 		assert_float(_value(helm, "subsystem_damaged", marks[helm])).is_equal(-1.0)
 		# Science: no shield alert, the fault with no value, no damage event.
 		assert_float(_value(sci, "shield_low", marks[sci])).is_equal(-1.0)
@@ -76,5 +100,9 @@ func test_exact_values_follow_the_summaries_toggle_and_never_reach_comms() -> vo
 		assert_float(_value(sci, "subsystem_damaged", marks[sci])).is_equal(-1.0)
 		# Comms gets none of them, at any setting, but still the plain alerts.
 		for kind: String in ["shield_low", "fault", "subsystem_damaged"]:
-			assert_float(_value(comms, kind, marks[comms])).override_failure_message(code + kind).is_equal(-1.0)
+			(
+				assert_float(_value(comms, kind, marks[comms]))
+				. override_failure_message(code + kind)
+				. is_equal(-1.0)
+			)
 		assert_float(_value(comms, "hit", marks[comms])).is_equal_approx(0.4, 0.001)
