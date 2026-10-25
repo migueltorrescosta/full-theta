@@ -39,6 +39,7 @@ var radar: DiscRadar
 var toasts: Toasts
 var alerts: StationAlerts
 var flash: AlertFlash
+var chip_strip: ChipStrip
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
 var panel_factory: Callable = StationRegistry.make
 ## Controls of the shell that take the input while visible (Settings, the outcome card).
@@ -147,19 +148,24 @@ func _process(delta: float) -> void:
 	_dispatch_batch(ctx.matcher.update(ctx.now_ms(), delta))
 	var now: int = ctx.now_ms()
 	top_bar.can_set_alert = ctx.crew.is_crew()
+	var status: Dictionary = ctx.view.blocks.get(StationViews.Section.STATUS, {})
 	top_bar.show_state(
 		ctx.crew.ship_name(),
-		ctx.view.blocks.get(StationViews.Section.STATUS, {}),
+		status,
 		ctx.crew.alert,
 		stations,
 		ctx.crew.mission_seconds(ctx.view.tick),
 		focused_station(),
-		_maxes()
+		_maxes(),
+		ctx.crew.summaries(status, ctx.ship_def())
 	)
 	radar.set_picture(ctx.picture(), ctx.crew.selection)
 	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
 	flash.update(now)
+	chip_strip.show_chips(
+		ChipView.incoming(ctx.view, stations), ChipView.outgoing(ctx.view, stations), ctx.view
+	)
 
 
 ## The own ship's hull and shield maxima (J), for the top bar's percentages.
@@ -237,7 +243,7 @@ func _common(ev: Dictionary) -> bool:
 		"mark":
 			_mark(device)
 		"accept", "decline":
-			handled = focused_panel().handle_intent(ev)
+			handled = focused_panel().handle_intent(ev) or _answer_chip(id == "accept")
 		"request":
 			handled = focused_panel().has_request_chip()
 			if handled:
@@ -255,6 +261,19 @@ func _common(ev: Dictionary) -> bool:
 		_:
 			handled = _live(id)
 	return handled
+
+
+## Answers the oldest request chip sent to this screen, the focused station's first
+## (FT-PAIR-013); false when none is open.
+func _answer_chip(accept: bool) -> bool:
+	var open: Array[Dictionary] = ChipView.incoming(ctx.view, stations)
+	if open.is_empty():
+		return false
+	var mine: Array[Dictionary] = open.filter(
+		func(c: Dictionary) -> bool: return c["to"] == focused_station()
+	)
+	ctx.intents.answer_chip(int((mine if not mine.is_empty() else open)[0]["id"]), accept)
+	return true
 
 
 ## Select under the pointer; false over nothing, so the click falls through to the
@@ -406,6 +425,10 @@ func _build() -> void:
 	toasts.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toasts)
+	chip_strip = ChipStrip.new()
+	chip_strip.position = Vector2(8.0, TOP_BAR_HEIGHT + 8.0)
+	chip_strip.visible = false
+	add_child(chip_strip)
 	flash = AlertFlash.new()
 	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(flash)

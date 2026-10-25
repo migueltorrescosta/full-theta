@@ -287,6 +287,22 @@ func hazard_delete(id: int) -> void:
 	_mark("hazard_delete", id, "", -1, -1, Vector3.ZERO)
 
 
+## Strand G. The host sets the session's data-shortcut toggles in the lobby (a DataToggles
+## code, FT-PAIR-017); a station sends a request chip (NetChips: chip id from
+## content/chips/chips.tres, arg a mount index or contact id, -1 for none) or answers one
+## it received (FT-PAIR-021).
+func set_toggles(code: String) -> void:
+	_send(NetProtocol.Type.TOGGLES, {"set": code})
+
+
+func send_chip(chip: String, arg: int = -1) -> void:
+	_send(NetProtocol.Type.CHIP, _chip("send", chip, arg, -1, false))
+
+
+func answer_chip(id: int, accept: bool) -> void:
+	_send(NetProtocol.Type.CHIP, _chip("answer", "", -1, id, accept))
+
+
 ## Sends a raw, already-encoded message (tests: malformed or foreign messages).
 func send_raw(data: PackedByteArray) -> void:
 	_queue.push(NetChunker.STREAM_CONTROL, data)
@@ -298,6 +314,10 @@ func send_raw(data: PackedByteArray) -> void:
 
 func _send(type: NetProtocol.Type, fields: Dictionary) -> void:
 	_queue.push(NetChunker.STREAM_CONTROL, NetProtocol.encode(type, fields))
+
+
+func _chip(op: String, chip: String, arg: int, id: int, accept: bool) -> Dictionary:
+	return {"op": op, "chip": chip, "arg": arg, "id": id, "accept": accept}
 
 
 func _mark(op: String, slot: int, name: String, contact: int, site: int, pos: Vector3) -> void:

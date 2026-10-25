@@ -121,6 +121,15 @@ class RecordingClient:
 	func set_main_view(view: int) -> void:
 		sent.append(["set_main_view", [view]])
 
+	func set_toggles(code: String) -> void:
+		sent.append(["set_toggles", [code]])
+
+	func send_chip(chip: String, arg: int) -> void:
+		sent.append(["send_chip", [chip, arg]])
+
+	func answer_chip(id: int, accept: bool) -> void:
+		sent.append(["answer_chip", [id, accept]])
+
 	## The sends of one method, newest last.
 	func of(method: String) -> Array:
 		return sent.filter(func(s: Array) -> bool: return s[0] == method)

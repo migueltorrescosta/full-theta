@@ -133,9 +133,9 @@ func _check_snapshots(c: NetClient, entry: String) -> int:
 # One client per catalogue entry (the dev entry included) on a running ship with
 # claims, last writers, shots and helm input in play: every full snapshot holds exactly
 # the entry's sections, every delta a subset, each block exactly its field set, and the
-# OWNERSHIP section only the entry's own stations' items; at each difficulty-toggle set
-# (M1 has no toggle-gated field, so the sets share one filter and differ only in the
-# view key, which is what this checks for the toggle plumbing).
+# OWNERSHIP section only the entry's own stations' items; at each of the three presets (the
+# toggles change values, never a block's field set; the values are tests/net/
+# test_view_filter.gd's).
 func test_snapshots_hold_only_their_station_fields() -> void:
 	var server: NetServer = h.server(true)
 	var ids: Array[String] = StationViews.catalogue_ids(true)
@@ -153,7 +153,7 @@ func test_snapshots_hold_only_their_station_fields() -> void:
 	var wrote: Callable = func() -> bool:
 		return server.session.writers.get(PLAYER, {}).has("pips:%d" % SubsystemDef.Kind.ENGINES)
 	assert_bool(await h.until(wrote)).is_true()
-	for toggles: String in StationViews.TOGGLE_SETS:
+	for toggles: String in DataToggles.PRESETS:
 		var fulls: Dictionary = {}
 		for id: String in ids:
 			var c: NetClient = clients[id]

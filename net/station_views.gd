@@ -29,6 +29,9 @@ enum Section {
 	CAPTAIN = 12,
 	# Open request chips of the ship (strand G).
 	CHIPS = 13,
+	# What Weapons gets from other stations' work when a toggle lets it: weak points and
+	# resistances, hack windows, track feeds (strand G, P7 and P8).
+	FEEDS = 14,
 }
 
 ## The CAPTAIN block's objective kinds, as clients name them (stations/ may not name
@@ -44,12 +47,21 @@ const BUSY: String = "busy"
 const INTENSE: String = "intense"
 const LOAD_TAGS: Array[String] = [LIGHT, BUSY, INTENSE]
 
-## Difficulty-toggle sets of the view key (D14, D69, D84): the three presets. M1 has
-## no data shortcut in its sim (weak points, track feeds, routes come with #8 to #10),
-## so no field depends on the set yet; the set is still part of the view key and the
-## filter is checked at each (tests/net/test_net_stations_filter.gd).
-const TOGGLE_SETS: Array[String] = ["easy", "normal", "hard"]
-const DEFAULT_TOGGLES: String = "normal"
+## The toggle part of the view key (D14, D69, D84): a DataToggles code, "easy", "normal",
+## "hard" or an edited set ("normal:1011000"). Every session of a server shares one, set
+## in the lobby and locked at Start (FT-PAIR-017); a first launch is Easy (FT-STN-016).
+## The sections that depend on it are FILTERED and are encoded once per ViewFilter
+## signature, not once per ship.
+const DEFAULT_TOGGLES: String = "easy"
+## The sections whose content a ViewFilter changes.
+const FILTERED: Array[int] = [
+	Section.STATUS,
+	Section.HELM,
+	Section.ENGINEERING,
+	Section.RELAY,
+	Section.FEEDS,
+	Section.CHIPS,
+]
 
 const CREW: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
 const CAPTAIN: String = "captain"
@@ -108,6 +120,7 @@ const STATION_SECTIONS: Dictionary = {
 		Section.NEAR,
 		Section.PROJECTILES,
 		Section.OWNERSHIP,
+		Section.CHIPS,
 	],
 	"weapons":
 	[
@@ -118,6 +131,8 @@ const STATION_SECTIONS: Dictionary = {
 		Section.NEAR,
 		Section.PROJECTILES,
 		Section.OWNERSHIP,
+		Section.FEEDS,
+		Section.CHIPS,
 	],
 	"engineering":
 	[
@@ -127,6 +142,7 @@ const STATION_SECTIONS: Dictionary = {
 		Section.CONTACTS,
 		Section.RELAY,
 		Section.OWNERSHIP,
+		Section.CHIPS,
 	],
 	"science":
 	[
@@ -136,9 +152,18 @@ const STATION_SECTIONS: Dictionary = {
 		Section.CONTACTS,
 		Section.RELAY,
 		Section.OWNERSHIP,
+		Section.CHIPS,
 	],
-	"relay": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.RELAY, Section.OWNERSHIP],
-	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS],
+	"relay":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.CONTACTS,
+		Section.RELAY,
+		Section.OWNERSHIP,
+		Section.CHIPS,
+	],
+	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.CHIPS],
 	"captain":
 	[
 		Section.KIN,
@@ -299,6 +324,20 @@ const EVENT_STATIONS: Dictionary = {
 	&"probe_fabricated": ["relay", "engineering"],
 	&"probe_no_parts": ["engineering"],
 	&"lane_warning": ["weapons", "relay"],
+}
+
+## Events that are a data shortcut when they leave the station that produced them: kind ->
+## [toggle, source station]. The source's own sessions always get them; another station
+## gets one when the toggle is on or it is in a joint view with the source (ViewFilter.grants,
+## FT-PAIR-008). Hack windows and weak-point hits are Science's work shown on Weapons (P7),
+## own-ship scan results Science's shown on Engineering (P10), flagged lanes Relay's shown
+## on Weapons (P8). Scan-position marks are MARK items and reach Helm at every difficulty.
+const EVENT_SHORTCUTS: Dictionary = {
+	&"hack_done": [&"weak_points", "science"],
+	&"hack_window_end": [&"weak_points", "science"],
+	&"self_scan_done": [&"diagnosed_causes", "science"],
+	&"fault_cause_revealed": [&"diagnosed_causes", "science"],
+	&"lane_warning": [&"track_feeds", "relay"],
 }
 
 ## Field sets of the block sections: Section -> NetBlock schema. A block is sent whole
@@ -471,6 +510,49 @@ const BLOCKS: Dictionary = {
 			],
 		],
 	],
+	# What Weapons gets from other stations when a toggle lets it (strand G, FeedsView): the
+	# faction's scanned weak points (bit i: subsystem i of the contact) and resistances (P7),
+	# the open hack windows (P7) and the track quality of detected contacts (P8, quality is
+	# the detection confidence, probe whether a deployed probe covers the contact).
+	Section.FEEDS:
+	[
+		[
+			"weak",
+			[
+				"rows",
+				[
+					["contact", "s16"],
+					["class_id", "u32"],
+					["weak_mask", "u32"],
+					["resist", ["rows", [["type", "u32"], ["factor", "f32"]]]],
+				],
+			],
+		],
+		["windows", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
+		["tracks", ["rows", [["contact", "s16"], ["quality", "f32"], ["probe", "bool"]]]],
+	],
+	# The ship's open request chips (strand G, ChipsSection; NetChips on the server): the
+	# chip's index in content/chips/chips.tres, its argument (mount index or contact id, -1
+	# for none), the sending and receiving station (index in CREW) and the sim ticks it was
+	# sent and expires at. A crew view lists the chips it sends or receives.
+	Section.CHIPS:
+	[
+		[
+			"chips",
+			[
+				"rows",
+				[
+					["id", "u16"],
+					["chip", "u8"],
+					["arg", "s16"],
+					["from", "u8"],
+					["to", "u8"],
+					["sent", "u32"],
+					["expires", "u32"],
+				],
+			],
+		],
+	],
 }
 
 ## Entry id -> StationDef, built once when the class loads (read-only after, so both
@@ -608,11 +690,19 @@ static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 
 ## Whether a sim event of this kind reaches a session holding entry (faction and ship
 ## checks are ServerSession.event_audience()'s).
-static func sees_event(entry: String, kind: StringName) -> bool:
+static func sees_event(entry: String, kind: StringName, toggles: String = DEFAULT_TOGGLES) -> bool:
 	if not EVENT_STATIONS.has(kind):
 		return true
+	var shortcut: Array = EVENT_SHORTCUTS.get(kind, [])
+	var filter: ViewFilter = null
 	for station: String in stations_of(entry):
-		if (EVENT_STATIONS[kind] as Array).has(station):
+		if not (EVENT_STATIONS[kind] as Array).has(station):
+			continue
+		if shortcut.is_empty() or station == shortcut[1]:
+			return true
+		if filter == null:
+			filter = ViewFilter.of(entry, toggles)
+		if filter != null and filter.grants(shortcut[0]):
 			return true
 	return false
 
@@ -672,8 +762,13 @@ static func _build(entry: String) -> StationDef:
 
 
 ## The block section's fields for a ship, read from a (copied) world, encoded.
-static func block_bytes(kind: int, world: SimWorld, ship: int) -> PackedByteArray:
-	return NetBlock.encode(BLOCKS[kind], _block_values(kind, world, ship))
+static func block_bytes(
+	kind: int, world: SimWorld, ship: int, filter: ViewFilter = null
+) -> PackedByteArray:
+	var values: Dictionary = _block_values(kind, world, ship)
+	if filter != null:
+		filter.apply(kind, values, world, ship)
+	return NetBlock.encode(BLOCKS[kind], values)
 
 
 static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
@@ -690,6 +785,8 @@ static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
 			return _relay(world, ship)
 		Section.CAPTAIN:
 			return _captain(world, ship)
+		Section.FEEDS:
+			return FeedsView.block(world, ship)
 	return _mounts(world, ship)
 
 

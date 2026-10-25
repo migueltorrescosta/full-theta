@@ -439,6 +439,19 @@ func cause_name(i: int, index_plus_one: int) -> String:
 # --- Faults, queue, parts (FT-ENG-005). ---
 
 
+## Seconds until the ship reaches a hazard Relay marked, at its present velocity, or -1 when
+## the countdown toggle is off for this view or no hazard is ahead (P11, strand G).
+func hazard_eta() -> float:
+	if not ctx.crew.filter().grants(ViewFilter.HAZARD_COUNTDOWNS):
+		return -1.0
+	var offsets: Dictionary = {}
+	for z: Dictionary in ctx.crew.zones:
+		if int(z["site"]) == ctx.site():
+			offsets[z["id"]] = ctx.interp.offset_to(z["pos"])
+	var vel: Vector3i = ctx.view.kin.get("vel", Vector3i.ZERO)
+	return HazardEta.soonest(ctx.crew.zones, offsets, Vector3(vel) / NetCodec.VEL_Q)
+
+
 ## [text, palette role] lines of the faults list, worst first.
 func fault_lines() -> Array:
 	var out: Array = []
@@ -518,6 +531,9 @@ func _refresh_lists() -> void:
 			lines.append(
 				[tr("eng.hardened") % [full_name(i), ceili(hardened_ticks(i) / 60.0)], "accent"]
 			)
+	var hazard: float = hazard_eta()
+	if hazard >= 0.0:
+		lines.append([tr("eng.hazard_eta") % ceili(hazard), "warn"])
 	lines.append(["", "text"])
 	lines.append([tr("eng.repairs"), "accent"])
 	lines.append_array(queue_lines())

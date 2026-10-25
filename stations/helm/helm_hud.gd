@@ -48,6 +48,51 @@ func markers() -> Array[Dictionary]:
 	return out
 
 
+## Relay's routes on this view, in screen pixels (FT-RLY-005, P4): one entry per route with
+## a Vector2 per waypoint, or null for a waypoint at another site or behind the camera. They
+## only exist while the routes toggle lets them reach Helm (the server withholds them on
+## Hard, FT-PAIR-008).
+func route_points() -> Array:
+	var out: Array = []
+	if compact or panel == null or panel.view3d == null or panel.view3d.camera == null:
+		return out
+	var cam: Camera3D = panel.view3d.camera
+	for route: Array in panel.ctx.crew.routes:
+		var points: Array = []
+		for w: Dictionary in route:
+			var spot: Variant = null
+			if int(w["site"]) == panel.ctx.site():
+				var world: Vector3 = panel.ctx.interp.offset_to(w["pos"])
+				if not cam.is_position_behind(world):
+					spot = cam.unproject_position(world)
+			points.append(spot)
+		out.append(points)
+	return out
+
+
+## The ribbon: a wide soft line through the waypoints, a gate ring and number at each, and a
+## thin leader from the reticle to the first waypoint in view.
+func _draw_routes(font: Font) -> void:
+	var col: Color = Palette.color("accent")
+	for points: Array in route_points():
+		var previous: Variant = null
+		var first: bool = true
+		for i: int in points.size():
+			var p: Variant = points[i]
+			if p == null:
+				previous = null
+				continue
+			if previous != null:
+				draw_line(previous, p, Color(col, 0.35), 8.0)
+				draw_line(previous, p, Color(col, 0.9), 1.5)
+			elif first:
+				draw_line(size / 2.0, p, Color(col, 0.5), 1.0)
+			first = false
+			draw_arc(p, 12.0, 0.0, TAU, 20, col, 2.0)
+			_text(font, (p as Vector2) + Vector2(16.0, -10.0), str(i + 1), col, SMALL)
+			previous = p
+
+
 func _draw() -> void:
 	if panel == null or panel.ctx == null:
 		return
@@ -58,6 +103,7 @@ func _draw() -> void:
 		return
 	_draw_reticle()
 	_draw_velocity()
+	_draw_routes(font)
 	for e: Dictionary in markers():
 		if e["on_screen"]:
 			_draw_marker(font, e, e["selected"])

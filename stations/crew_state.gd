@@ -10,7 +10,8 @@ extends RefCounted
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
 ## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
-## &"sites", &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F).
+## &"sites", &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F);
+## &"toggles" when the session's data-shortcut set changed (strand G).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -88,6 +89,52 @@ var routes: Array = []
 ## "key", "args"}, oldest first.
 var inbox: Array[Dictionary] = []
 var relay_log: Array[Dictionary] = []
+## The session's data-shortcut toggles, from the `lobby` events (every ship shares them,
+## FT-PAIR-017); Easy until the server says otherwise.
+var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
+
+var _filter: ViewFilter = null
+var _filter_key: String = ""
+
+
+## What this pick may see of other stations' data at the session's toggles (ViewFilter): the
+## clients draw an em dash for an absent summary, a band for a banded one.
+func filter() -> ViewFilter:
+	var key: String = "%s|%s" % [entry, toggles.encode()]
+	if _filter == null or key != _filter_key:
+		_filter_key = key
+		_filter = ViewFilter.of(entry, toggles.encode())
+	return _filter
+
+
+## How the top bar shows the STATUS values that are another station's data at the session's
+## toggles (FT-PAIR-019, D193): {key: {"text": word or dash, "band": HealthBand.Band or -1}}
+## for the keys that aren't exact numbers; the keys whose numbers show stay out. `def` is the
+## own ship's definition (the bands are shares of its maxima), null without one.
+func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
+	var f: ViewFilter = filter()
+	var out: Dictionary = {}
+	if f == null or f.sees_all or def == null or status.is_empty():
+		return out
+	var maxima: Dictionary = {
+		"hull": def.hull_max,
+		"shields": def.shields.max_strength,
+		"pips_used": float(def.power.reactor_pips),
+	}
+	for key: String in maxima:
+		# The hull is the ship's: exact unless the view holds Comms without Engineering,
+		# when it is the band at every difficulty (FT-PAIR-010).
+		var mode: int = f.summary_mode(ViewFilter.ENG)
+		if key == "hull":
+			mode = 1 if f.condition_hidden else 2
+		if mode == 1:
+			var share: float = float(status.get(key, 0.0)) / maxima[key]
+			var band: HealthBand.Band = HealthBand.band_of(share, DataToggles.def().band_edges)
+			var word: String = TranslationServer.translate("band." + HealthBand.word(band))
+			out[key] = {"text": word, "band": band}
+		elif mode == 0:
+			out[key] = {"text": TranslationServer.translate("topbar.absent"), "band": -1}
+	return out
 
 
 ## Takes the Welcome fields (NetClient.welcome).
@@ -188,6 +235,8 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_ping(p, now_ms)
 		"sites", "zones", "routes", "inbox", "relay_log":
 			_on_relay(str(e["type"]), p)
+		"chip_answer":
+			_on_chip_answer(p)
 		"request_rejected", "command_rejected":
 			toast.emit("toast." + str(p.get("reason", "rejected")), p)
 		_:
@@ -398,10 +447,24 @@ func _on_lobby(p: Dictionary) -> void:
 	var id: int = int(p["ship"])
 	var was_started: bool = bool(lobby.get(id, {}).get("started", false))
 	lobby[id] = p
+	var code: String = str(p.get("toggles", toggles.encode()))
+	var parsed: DataToggles = DataToggles.parse(code)
+	if parsed != null and code != toggles.encode():
+		toggles = parsed
+		changed.emit(&"toggles")
 	changed.emit(&"lobby")
 	# The server resets a finished run: the ship is back in the lobby (FT-M1-012).
 	if id == ship and was_started and not bool(p.get("started", false)):
 		reset_run()
+
+
+## A request chip this client sent was answered: a toast naming who and what.
+func _on_chip_answer(p: Dictionary) -> void:
+	var chip: Dictionary = {"chip": str(p.get("chip", "")), "arg": int(p.get("arg", -1))}
+	var args: Dictionary = {"by": str(p.get("by", "")), "chip": ChipView.label(chip)}
+	toast.emit(
+		"toast.chip_answered" if bool(p.get("accept", false)) else "toast.chip_declined", args
+	)
 
 
 func _on_claim(p: Dictionary) -> void:

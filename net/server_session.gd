@@ -32,6 +32,8 @@ const NOT_CLAIMED: String = "not_claimed"
 const CAPTAIN_TAKEN: String = "captain_taken"
 const NOT_COVERED: String = "coverage"
 const STARTED: String = "started"
+const TOGGLES_LOCKED: String = "toggles_locked"
+const BAD_TOGGLES: String = "bad_toggles"
 
 var transport: NetTransport
 var world: SimWorld
@@ -70,7 +72,18 @@ var crew: NetCrewState
 ## The seam to the host's voice service (ServerVoice; its `voice` is null without one).
 var voice: ServerVoice
 ## The session log (D199) once NetServer.start_session_log() opened it; counts commands.
-var session_log: SessionLog
+var session_log: SessionLog:
+	set(value):
+		session_log = value
+		if coop != null:
+			coop.session_log = value
+
+## The data-shortcut toggle set of the session, one for every ship (FT-PAIR-017): the host
+## changes it in the lobby until a ship starts; sessions' view keys follow (strand G).
+var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
+## Request chips (NetChips) and the cooperative events counted for the debrief (CoopEvents).
+var chips: NetChips
+var coop: NetCoop
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -91,6 +104,8 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 	world = sim_world
 	voice = ServerVoice.new(world)
 	crew = NetCrewState.new(self)
+	chips = NetChips.new(self)
+	coop = NetCoop.new(self)
 	_handlers = {
 		NetProtocol.Type.HELLO: _on_hello,
 		NetProtocol.Type.PICK: _on_pick,
@@ -108,6 +123,8 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.MAIN_VIEW: crew.on_main_view,
 		NetProtocol.Type.MARK_SEND: crew.on_mark_send,
 		NetProtocol.Type.MARK_ACCEPT: crew.on_mark_accept,
+		NetProtocol.Type.TOGGLES: _on_toggles,
+		NetProtocol.Type.CHIP: chips.on_chip,
 		NetProtocol.Type.BYE: _on_bye,
 		NetTransport.CLOSED: _on_closed,
 	}
@@ -128,6 +145,8 @@ func process(now_us: int) -> void:
 			handler.call(item[0], msg, now_us)
 	for gone: NetSession in sessions.expire(now_us):
 		_lapse(gone)
+	chips.step()
+	coop.step()
 	_publish()
 
 
@@ -163,8 +182,12 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			"vector": e.vector,
 			"tag": String(e.tag),
 		}
-		transport.post_event(event_audience(e), e.tick, String(e.kind), payload)
+		var audience: PackedInt32Array = event_audience(e)
+		transport.post_event(audience, e.tick, String(e.kind), payload)
 		crew.on_sim_event(e)
+		coop.on_sim_event(e, audience)
+		if e.kind == &"fault_cause_revealed":
+			_prefill_cause(e)
 		if _crewable(e.ship_id):
 			voice.on_event(e)
 		left_play = left_play or e.kind == &"outcome" or e.kind == &"destroyed"
@@ -173,6 +196,25 @@ func after_ticks(events: Array[SimEvent]) -> void:
 	if left_play:
 		_refresh_pause()
 	_publish()
+
+
+## P10 on Easy (FT-ENG-006): the cause Science's own-ship scan revealed is pre-filled as
+## Engineering's pick, through a logged server command like any other pick, unless
+## Engineering already picked one. The scan reveals the cause at every difficulty; the toggle
+## only decides whether the pick is made for Engineering (FT-PAIR-014).
+func _prefill_cause(e: SimEvent) -> void:
+	if not toggles.on(ViewFilter.DIAGNOSED_CAUSES):
+		return
+	var t: DamageTable = world.damage
+	var r: int = t.find_subsystem(e.ship_id, e.tag)
+	if r < 0 or t.fault_pick[r] != &"":
+		return
+	var c: PickFaultCauseCommand = PickFaultCauseCommand.new()
+	c.ship_id = e.ship_id
+	c.subsystem_id = e.tag
+	c.cause = DamageSystem.known_fault_cause(world, e.ship_id, e.tag)
+	if c.cause != &"":
+		world.submit(c)
 
 
 ## Sessions that receive a sim event (FT-NET-009, FT-NET-010): those holding a pick on
@@ -185,7 +227,10 @@ func event_audience(e: SimEvent) -> PackedInt32Array:
 	for s: NetSession in by_id.values():
 		if not s.has_pick() or s.ship >= world.ship_count():
 			continue
-		if world.faction_of(s.ship) == e.faction and StationViews.sees_event(s.entry, e.kind):
+		if (
+			world.faction_of(s.ship) == e.faction
+			and StationViews.sees_event(s.entry, e.kind, s.toggles)
+		):
 			out.append(s.id)
 	return out
 
@@ -217,7 +262,10 @@ func restart(sim_world: SimWorld) -> void:
 	_refresh_pause()
 	for ship: Dictionary in crew_ships():
 		crew.reset(ship["id"])
+		chips.reset(ship["id"])
+		coop.reset_ship(ship["id"])
 		_ownership_dirty[ship["id"]] = true
+	coop.reset()
 	_publish()
 
 
@@ -296,6 +344,7 @@ func lobby_state(ship: int) -> Dictionary:
 		"started": launched.has(ship),
 		"in_play": not abandoned.has(ship) and world.run.status[ship] == RunTable.Status.IN_PLAY,
 		"captain": captain,
+		"toggles": toggles.encode(),
 	}
 
 
@@ -393,6 +442,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	session.client_kind = msg["kind"]
 	session.is_host = host_secret != "" and msg["host_secret"] == host_secret
 	session.conn = conn
+	session.toggles = toggles.encode()
 	by_conn[conn] = session
 	if session.lapsed:
 		_restore(session)
@@ -515,6 +565,36 @@ func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 	launch(s.ship)
 	_broadcast(NetProtocol.EVENT_STARTED, {"ship": s.ship, "tick": world.tick})
 	voice.start(language, crew_ships().map(func(c: Dictionary) -> int: return c["faction"]))
+	_publish()
+
+
+## Toggles{set} (FT-PAIR-017): the host sets the session's data-shortcut toggles from the
+## lobby, a preset or an edited set (DataToggles code); locked once any ship has started.
+## Every session's view follows, and the lobby events carry the code.
+func _on_toggles(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var s: NetSession = by_conn.get(conn)
+	if s == null:
+		return
+	var picked: DataToggles = DataToggles.parse(msg["set"])
+	var reason: String = ""
+	if not s.is_host:
+		reason = NOT_HOST
+	elif not launched.is_empty():
+		reason = TOGGLES_LOCKED
+	elif picked == null:
+		reason = BAD_TOGGLES
+	if reason != "":
+		request_rejected(s, NetProtocol.Type.TOGGLES, reason, {})
+		return
+	if picked.encode() == toggles.encode():
+		return
+	toggles = picked
+	var code: String = picked.encode()
+	for each: NetSession in by_id.values():
+		each.toggles = code
+		if each.has_pick():
+			transport.set_view(each.id, each.view_key())
+	_lobby_dirty = true
 	_publish()
 
 
@@ -785,6 +865,7 @@ func _claim_changed(ship: int, item: String) -> void:
 ## An accepted command on a ship-wide control: its writer is now the last writer
 ## (FT-NET-044).
 func _wrote(session_id: int, c: SimCommand) -> void:
+	coop.on_command(session_id, c)
 	var item: String = StationViews.item_of(c)
 	if item == "" or StationViews.is_claimable(item):
 		return

@@ -70,6 +70,9 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.MAIN_VIEW: {"view": 3},
 		NetProtocol.Type.MARK_SEND: {"slot": 2, "ship": 1},
 		NetProtocol.Type.MARK_ACCEPT: {"id": 7, "accept": true, "slot": -1},
+		NetProtocol.Type.TOGGLES: {"set": "normal:11111000"},
+		NetProtocol.Type.CHIP:
+		{"op": "send", "chip": "bring_to_bear", "arg": 2, "id": -1, "accept": false},
 		NetProtocol.Type.CLIENT_STATS: {"sent_us": 5, "ua": "x", "pairs": PackedInt64Array([1, 2])},
 	}
 

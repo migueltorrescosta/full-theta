@@ -96,6 +96,8 @@ const EVENT_ROUTES: String = "routes"
 const EVENT_INBOX: String = "inbox"
 const EVENT_RELAY_LOG: String = "relay_log"
 const EVENT_MAIN_VIEW: String = "main_view"
+## A request chip the session sent was answered (strand G, NetChips): {chip, arg, accept, by}.
+const EVENT_CHIP_ANSWER: String = "chip_answer"
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -170,6 +172,9 @@ const SCHEMAS: Dictionary = {
 	Type.MAIN_VIEW: {"view": TYPE_INT},
 	Type.MARK_SEND: {"slot": TYPE_INT, "ship": TYPE_INT},
 	Type.MARK_ACCEPT: {"id": TYPE_INT, "accept": TYPE_BOOL, "slot": TYPE_INT},
+	Type.TOGGLES: {"set": TYPE_STRING},
+	Type.CHIP:
+	{"op": TYPE_STRING, "chip": TYPE_STRING, "arg": TYPE_INT, "id": TYPE_INT, "accept": TYPE_BOOL},
 	Type.CLIENT_STATS: {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY},
 }
 
@@ -194,6 +199,8 @@ const FROM_CLIENT: Array[int] = [
 	Type.MAIN_VIEW,
 	Type.MARK_SEND,
 	Type.MARK_ACCEPT,
+	Type.TOGGLES,
+	Type.CHIP,
 	Type.CLIENT_STATS,
 ]
 
@@ -215,6 +222,8 @@ const RATED_REQUESTS: Array[int] = [
 	Type.MAIN_VIEW,
 	Type.MARK_SEND,
 	Type.MARK_ACCEPT,
+	Type.TOGGLES,
+	Type.CHIP,
 ]
 
 

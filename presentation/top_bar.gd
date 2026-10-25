@@ -29,6 +29,8 @@ var _shields: Label = Label.new()
 var _pips: Label = Label.new()
 var _stations: Label = Label.new()
 var _timer: Label = Label.new()
+## The shape beside a banded hull, shields and reactor (BandBadge), by status key.
+var _badges: Dictionary = {}
 ## What show_state last showed, to skip unchanged frames.
 var _shown: Array = []
 
@@ -47,9 +49,16 @@ func _init() -> void:
 	chip.draw.connect(_draw_chip)
 	var spacer: Control = Control.new()
 	spacer.size_flags_horizontal = SIZE_EXPAND_FILL
+	var keyed: Dictionary = {_hull: "hull", _shields: "shields", _pips: "pips_used"}
 	for c: Control in [_name, _hull, _shields, _pips, chip, _stations, spacer, _timer, sound]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
 		row.add_child(c)
+		if keyed.has(c):
+			var badge: BandBadge = BandBadge.new()
+			badge.visible = false
+			badge.size_flags_vertical = SIZE_SHRINK_CENTER
+			_badges[keyed[c]] = badge
+			row.add_child(badge)
 	for l: Label in [_hull, _shields, _pips, _stations, _timer]:
 		l.add_theme_color_override("font_color", Palette.color("text_dim"))
 	var buttons: HBoxContainer = HBoxContainer.new()
@@ -76,12 +85,15 @@ func show_state(
 	stations: Array,
 	mission_s: float,
 	focused: String = "",
-	maxes: Dictionary = {}
+	maxes: Dictionary = {},
+	summaries: Dictionary = {}
 ) -> void:
-	var hull: String = _amount(status, "hull", float(maxes.get("hull", 0.0)))
-	var shields: String = _amount(status, "shields", float(maxes.get("shields", 0.0)))
-	var pips: String = _num(status, "pips_used")
+	var hull: String = _text(status, "hull", summaries, float(maxes.get("hull", 0.0)))
+	var shields: String = _text(status, "shields", summaries, float(maxes.get("shields", 0.0)))
+	var pips: String = _text(status, "pips_used", summaries)
 	var state: Array = [ship_name, hull, shields, pips, alert, stations.duplicate()]
+	for key: String in _badges:
+		state.append(summaries.get(key, {}).get("band", -1))
 	state.append_array([int(mission_s), focused])
 	if state == _shown:
 		return
@@ -90,6 +102,11 @@ func show_state(
 	_hull.text = tr("topbar.hull") % hull
 	_shields.text = tr("topbar.shields") % shields
 	_pips.text = tr("topbar.reactor") % pips
+	for key: String in _badges:
+		var band: int = summaries.get(key, {}).get("band", -1)
+		(_badges[key] as BandBadge).visible = band >= 0
+		if band >= 0:
+			(_badges[key] as BandBadge).set_band(band as HealthBand.Band)
 	alert_style = Palette.alert(alert)
 	chip.text = "       " + tr(alert_style["key"])
 	chip.add_theme_color_override("font_color", Palette.color(alert_style["role"]))
@@ -139,6 +156,8 @@ func _pick(level: int) -> void:
 	alert_picked.emit(level)
 
 
+
+
 ## Hull and shields are energies in joules (about 10^8): as a percentage of the ship's
 ## maximum when `max_value` is known (the spec's "hull 92"), else with a k, M or G suffix
 ## so the bar never shows "Hull 100000000".
@@ -155,6 +174,19 @@ static func _amount(status: Dictionary, key: String, max_value: float) -> String
 	if absf(v) >= 1.0e4:
 		return "%dk" % roundi(v / 1.0e3)
 	return str(roundi(v))
+
+
+## A status number, or what a summary replaces it with (the band's word, or a dash). Without
+## a summary the value is exact (Captain, Viewer, or the toggle on): an energy for a
+## `max_value` of 0 or more (a share of it when above 0), else a plain number.
+static func _text(
+	status: Dictionary, key: String, summaries: Dictionary, max_value: float = -1.0
+) -> String:
+	if summaries.has(key):
+		return str(summaries[key]["text"])
+	if max_value >= 0.0:
+		return _amount(status, key, max_value)
+	return _num(status, key)
 
 
 static func _num(status: Dictionary, key: String) -> String:
