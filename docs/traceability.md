@@ -281,8 +281,8 @@ Tests: 315, manual: 12, pending: 74.
 | FT-PAIR-019 | tests | `tests/net/test_view_filter.gd`, `tests/shared/test_health_band.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-PAIR-020 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-PAIR-021 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/test_request_chips.gd` |
-| FT-PAIR-022 | tests | `tests/pairs/test_hack_alpha.gd`, `tests/pairs/test_over_horizon_strike.gd`, `tests/pairs/test_play_hack_alpha.gd`, `tests/pairs/test_play_over_horizon_strike.gd` |
-| FT-PAIR-023 | tests | `tests/net/test_net_science_l3.gd`, `tests/pairs/test_play_hack_alpha.gd`, `tests/sim/science/test_hack.gd` |
+| FT-PAIR-022 | tests | `tests/pairs/test_hack_alpha.gd`, `tests/pairs/test_over_horizon_strike.gd` |
+| FT-PAIR-023 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd` |
 | FT-MIS-001 | pending |  |
 | FT-MIS-003 | pending |  |
 | FT-MIS-004 | pending |  |
