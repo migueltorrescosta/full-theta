@@ -372,3 +372,20 @@ func _tap(c: Control, at: Vector2) -> void:
 	c._gui_input(mb)
 	mb.pressed = false
 	c._gui_input(mb)
+
+
+# FT: FT-SCI-003, FT-NET-022
+# A contact selected before the panel starts (a late pick, a reconnect) is sent when the
+# panel starts, so the server's science state follows the shared selection.
+func test_panel_start_sends_the_current_selection() -> void:
+	var ctx: StationContext = StationFixture.context("science", SETTINGS)
+	ctx.settings.mark_tooltip_seen("science")
+	ctx.view.blocks[S.SCIENCE] = _block({})
+	ctx.crew.select("contact", H2)
+	var s: StationScreen = auto_free(StationScreen.new())
+	s.setup(ctx)
+	add_child(s)
+	await get_tree().process_frame
+	var sent: Array = _cmds(s, "science_select")
+	assert_int(sent.size()).is_equal(1)
+	assert_int(sent[0][1][0]["contact"]).is_equal(H2)

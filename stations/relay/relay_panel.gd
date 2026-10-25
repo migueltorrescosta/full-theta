@@ -299,9 +299,7 @@ func _item_pos(s: Dictionary) -> Variant:
 			if not m.is_empty():
 				return ctx.mark_position(m)
 		"zone":
-			var z: Dictionary = ctx.crew.zone_by_id(int(s["id"]))
-			if not z.is_empty():
-				return z["pos"]
+			return ctx.zone_position(int(s["id"]))
 		"site":
 			return Vector3.ZERO
 	return null

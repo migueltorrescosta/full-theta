@@ -116,8 +116,27 @@ func selection_local() -> Variant:
 				return null
 			return interp.local(interp.offset_to(mark_position(m)))
 		"zone":
-			var z: Dictionary = crew.zone_by_id(int(s["id"]))
-			return null if z.is_empty() else interp.local(interp.offset_to(z["pos"]))
+			var at: Variant = zone_position(int(s["id"]))
+			return null if at == null else interp.local(interp.offset_to(at as Vector3))
+	return null
+
+
+## The site-local position (m) of a zone item, or null: a marked zone (id 0 and up), a
+## deployed probe's bubble (id -1 - serial) or a sim hazard (id -1000 - hazard id) the
+## faction knows (D222, D208).
+func zone_position(id: int) -> Variant:
+	if id >= 0:
+		var z: Dictionary = crew.zone_by_id(id)
+		return null if z.is_empty() else z["pos"]
+	var relay: Dictionary = view.blocks.get(StationViews.Section.RELAY, {})
+	if id <= -1000:
+		for h: Dictionary in relay.get("hazards", []):
+			if -1000 - int(h["id"]) == id:
+				return h["pos"]
+	else:
+		for p: Dictionary in relay.get("probes", []):
+			if bool(p["deployed"]) and -1 - int(p["serial"]) == id:
+				return p["pos"]
 	return null
 
 
