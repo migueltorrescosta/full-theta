@@ -120,6 +120,18 @@ func test_one_pick_sharing_and_one_captain() -> void:
 	assert_str(h.session_of(server, c).entry).is_equal("tactical")
 	var lobby: Dictionary = h.last_event(d, NetProtocol.EVENT_LOBBY)
 	assert_str(lobby["payload"]["captain"]).is_equal("b")
+	# The station grid names who sits where (D216).
+	(
+		assert_array(lobby["payload"]["seats"])
+		. contains_exactly_in_any_order(
+			[
+				{"name": "a", "entry": "systems"},
+				{"name": "b", "entry": "captain"},
+				{"name": "c", "entry": "tactical"},
+				{"name": "d", "entry": "tactical"},
+			]
+		)
+	)
 	b.release_pick()
 	assert_bool(await h.until(func() -> bool: return h.session_of(server, b).entry == "")).is_true()
 	assert_bool(await h.pick(c, "captain")).is_true()

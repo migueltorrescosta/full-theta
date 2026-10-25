@@ -400,7 +400,33 @@ func _layout() -> Array[Dictionary]:
 				}
 			)
 		)
+	_declutter(out)
 	return out
+
+
+## Moves overlapping chips apart: top to bottom, a chip that overlaps one already placed
+## drops below it, so close blips don't print their callsigns over each other.
+static func _declutter(entries: Array[Dictionary]) -> void:
+	var order: Array[Dictionary] = entries.filter(
+		func(e: Dictionary) -> bool: return e["chip"] != ""
+	)
+	order.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			return (a["chip_rect"] as Rect2).position.y < (b["chip_rect"] as Rect2).position.y
+	)
+	var placed: Array[Rect2] = []
+	for e: Dictionary in order:
+		var r: Rect2 = e["chip_rect"]
+		for _pass: int in order.size():
+			var hit: bool = false
+			for o: Rect2 in placed:
+				if o.intersects(r):
+					r.position.y = o.end.y
+					hit = true
+			if not hit:
+				break
+		e["chip_rect"] = r
+		placed.append(r)
 
 
 ## Screen position of a ship-frame offset from the centre item (m).

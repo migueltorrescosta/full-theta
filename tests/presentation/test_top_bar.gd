@@ -24,7 +24,7 @@ func test_shows_every_field() -> void:
 	assert_str(bar._name.text).is_equal("Kestrel")
 	assert_str(bar._hull.text).is_equal("Hull 813")
 	assert_str(bar._shields.text).is_equal("Shields 299")
-	assert_str(bar._pips.text).is_equal("RX 6")
+	assert_str(bar._pips.text).is_equal("Reactor pips 6")
 	assert_str(bar._timer.text).is_equal("02:05")
 	bar.show_state("Kestrel", {}, 0, [], 0.0)
 	assert_str(bar._hull.text).is_equal("Hull -")

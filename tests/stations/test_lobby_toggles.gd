@@ -51,6 +51,9 @@ func test_the_lobby_defaults_to_easy_and_remembers_the_host() -> void:
 	assert_str(fresh.host_toggles).is_equal("easy")
 	var l: LobbyScreen = _lobby()
 	assert_str((l.find_child("PresetName", true, false) as Label).text).is_equal("Easy")
+	assert_str((l.find_child("DifficultyLine", true, false) as Label).text).is_equal(
+		"Difficulty: Easy"
+	)
 	(l.find_child("Preset_hard", true, false) as Button).pressed.emit()
 	assert_array(_sent(l)[-1][1]).is_equal(["hard"])
 	var reloaded: ClientSettings = ClientSettings.new(PATH)
@@ -90,9 +93,11 @@ func test_the_host_lobby_pushes_its_saved_set_once() -> void:
 func test_each_toggle_has_a_description_naming_both_stations() -> void:
 	var l: LobbyScreen = _lobby()
 	var rows: Control = l.find_child("Toggles", true, false)
-	assert_bool(rows.visible).is_false()
-	(l.find_child("Customise", true, false) as Button).button_pressed = true
-	assert_bool(rows.visible).is_true()
+	var dialog: Window = l.find_child("DifficultyDialog", true, false)
+	assert_bool(dialog.visible).is_false()
+	(l.find_child("Customise", true, false) as Button).pressed.emit()
+	assert_bool(dialog.visible).is_true()
+	dialog.hide()
 	assert_int(rows.get_child_count()).is_equal(DataToggles.def().toggles.size())
 	for lang: String in ["en", "pt_PT", "it"]:
 		I18n.apply(lang)
@@ -114,8 +119,8 @@ func test_each_toggle_has_a_description_naming_both_stations() -> void:
 				assert_str(desc).contains(tr("station." + String(t.target)))
 	I18n.apply("en")
 	for id: String in ["contract_flags", "verify_chip"]:
-		assert_str((_row(l, id).get_node("Name") as Label).text).contains("arrives in M3")
-	assert_bool((_row(l, "routes").get_node("Name") as Label).text.contains("M3")).is_false()
+		assert_str((_row(l, id).get_node("Line/Name") as Label).text).contains("arrives in M3")
+	assert_bool((_row(l, "routes").get_node("Line/Name") as Label).text.contains("M3")).is_false()
 
 
 # FT: FT-PAIR-017
@@ -127,7 +132,7 @@ func test_an_edited_set_is_named_custom() -> void:
 	assert_str((l.find_child("PresetName", true, false) as Label).text).is_equal("Normal")
 	var pressed: Button = l.find_child("Preset_normal", true, false)
 	assert_bool(pressed.button_pressed).is_true()
-	var weak: OptionButton = _row(l, "weak_points").get_node("Value")
+	var weak: OptionButton = _row(l, "weak_points").get_node("Line/Value")
 	assert_int(weak.get_selected_id()).is_equal(0)
 	weak.select(weak.get_item_index(1))
 	weak.item_selected.emit(weak.get_item_index(1))
@@ -137,7 +142,9 @@ func test_an_edited_set_is_named_custom() -> void:
 	assert_str((l.find_child("PresetName", true, false) as Label).text).is_equal("Normal (custom)")
 	assert_bool(pressed.button_pressed).is_false()
 	(
-		assert_int((_row(l, "weak_points").get_node("Value") as OptionButton).get_selected_id())
+		assert_int(
+			(_row(l, "weak_points").get_node("Line/Value") as OptionButton).get_selected_id()
+		)
 		. is_equal(1)
 	)
 	I18n.apply("pt_PT")
@@ -151,14 +158,17 @@ func test_an_edited_set_is_named_custom() -> void:
 func test_values_read_only_for_a_guest_and_locked_at_start() -> void:
 	var l: LobbyScreen = _lobby()
 	_lobby_event(l, "easy")
-	var summaries: OptionButton = _row(l, "summaries").get_node("Value")
+	var summaries: OptionButton = _row(l, "summaries").get_node("Line/Value")
 	assert_int(summaries.item_count).is_equal(3)
 	assert_int(summaries.get_selected_id()).is_equal(2)
 	assert_bool(summaries.disabled).is_false()
-	assert_int((_row(l, "chips").get_node("Value") as OptionButton).item_count).is_equal(2)
+	assert_int((_row(l, "chips").get_node("Line/Value") as OptionButton).item_count).is_equal(2)
 	var guest: LobbyScreen = _lobby(false)
 	_lobby_event(guest, "normal")
-	assert_bool((_row(guest, "summaries").get_node("Value") as OptionButton).disabled).is_true()
+	(
+		assert_bool((_row(guest, "summaries").get_node("Line/Value") as OptionButton).disabled)
+		. is_true()
+	)
 	assert_bool((guest.find_child("Preset_easy", true, false) as Button).disabled).is_true()
 	assert_str((guest.find_child("ToggleNote", true, false) as Label).text).is_equal(
 		"Only the host changes these."

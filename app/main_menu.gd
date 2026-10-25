@@ -42,6 +42,7 @@ func _ready() -> void:
 	AlertTones.sounds_dir = ALERT_SOUNDS
 	settings.load_file()
 	I18n.apply(I18n.LANGUAGES[0])
+	UiTheme.apply(get_tree().root)
 	get_tree().root.content_scale_factor = settings.ui_scale
 	_build()
 	browser.start()
@@ -256,7 +257,7 @@ func _build() -> void:
 	_menu.add_child(col)
 	var title: Label = Label.new()
 	title.text = "FULL THETA"
-	title.add_theme_font_size_override("font_size", 40)
+	title.theme_type_variation = "TitleLabel"
 	col.add_child(title)
 	_name = LineEdit.new()
 	_name.name = "Name"

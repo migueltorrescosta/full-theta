@@ -34,7 +34,10 @@ const RAIL_HEIGHT: float = 30.0
 const FONT_SIZE: int = 15
 ## The target view's camera stands this far from the target, towards the own ship (m),
 ## or at half the range when closer.
-const TARGET_STANDOFF_M: float = 60.0
+const TARGET_STANDOFF_M: float = 150.0
+## Contact models in the target view are drawn at the ships' real size (Helm's scale), so
+## the target fills a good part of the view; elsewhere the main screen draws them small.
+const TARGET_SCALE: float = 9.0
 ## The pinged card's share of the screen width, and its font size.
 const CARD_SHARE: float = 0.38
 const CARD_FONT: int = 20
@@ -144,6 +147,8 @@ func update_view(delta: float) -> void:
 		var captain: Dictionary = ctx.view.blocks.get(StationViews.Section.CAPTAIN, {})
 		status_view.show_model(StatusView.model(status, captain, ctx.ship_def(), ctx.crew.alert))
 	elif view_id != MainScreen.View.TACTICAL:
+		_space.show_id = -1
+		_space.ship_scale = 1.0
 		if view_id != MainScreen.View.TARGET or not _place_target_camera():
 			_place_camera(ship, delta)
 		_space.sync_ships(ctx)
@@ -175,6 +180,8 @@ func _place_target_camera() -> bool:
 	var target: Dictionary = _target_item()
 	if target.is_empty():
 		return false
+	_space.show_id = int(target["id"])
+	_space.ship_scale = TARGET_SCALE
 	var at: Vector3 = target["world"]
 	var dist: float = at.length()
 	var back: Vector3 = -at.normalized() if dist > 0.001 else Vector3.BACK
