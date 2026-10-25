@@ -28,7 +28,8 @@ static func config_from(hostname: String, page_port: int, search: String) -> Web
 	var host: String = hostname.strip_edges()
 	if host.is_empty():
 		return cfg
-	if host.contains(":"):
+	# location.hostname already brackets an IPv6 literal; a bare one gets brackets.
+	if host.contains(":") and not host.begins_with("["):
 		host = "[%s]" % host
 	cfg.address = host
 	var ws_port: int = page_port + 1
