@@ -150,21 +150,6 @@ static func knows_weak_point(
 	)
 
 
-## Whether the faction knows the contact's resistance to the type (FT-SIM-022): its own
-## ships' always, others' once Science's scans reveal the resistances.
-static func knows_resistance(
-	world: SimWorld, faction: int, contact: int, damage_type: StringName
-) -> bool:
-	if contact < 0 or contact >= world.ship_count():
-		return false
-	if not world.defs[contact].resistances.has(damage_type):
-		return false
-	return (
-		world.faction_of(contact) == faction
-		or ScienceKnowledge.resistances_known(world, faction, contact)
-	)
-
-
 static func _subsystem_index(world: SimWorld, ship_id: int, subsystem_id: StringName) -> int:
 	if ship_id < 0 or ship_id >= world.ship_count():
 		return -1

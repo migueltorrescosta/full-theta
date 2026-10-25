@@ -30,6 +30,32 @@ func test_m1_ship_weapon_and_enemy_exist() -> void:
 	assert_object(enemy.ship).is_same(lib.ship(&"m1_raider"))
 
 
+# FT: FT-WPN-006, FT-RLY-004, FT-SIM-025
+# D220: the corvette's bow mount carries a missile, a torpedo and a beam next to its cannon;
+# heavy hits can fault it; the M1 hazards are a dust cloud and a radiation front.
+func test_m2_content_is_in_the_shipped_game() -> void:
+	var lib: DefLibrary = DefLibrary.new()
+	var mount: MountDef = lib.ship(&"m1_corvette").mounts[0]
+	var kinds: Array[int] = []
+	for w: WeaponDef in mount.ammo_types():
+		kinds.append(w.kind)
+	assert_array(kinds).has_size(4)
+	assert_array(kinds).contains_exactly(
+		[
+			WeaponDef.Kind.PROJECTILE,
+			WeaponDef.Kind.MISSILE,
+			WeaponDef.Kind.TORPEDO,
+			WeaponDef.Kind.BEAM
+		]
+	)
+	var ship: ShipDef = lib.ship(&"m1_corvette")
+	assert_float(ship.fault_hit_chance).is_greater(0.0)
+	assert_float(ship.fault_hit_threshold).is_greater(0.0)
+	var hazards: Array[HazardDef] = lib.m1_hazards()
+	assert_bool(hazards[0].is_front()).is_false()
+	assert_bool(hazards[1].is_front()).is_true()
+
+
 # FT: FT-DAT-013, FT-SIM-033
 func test_every_numeric_field_documents_its_si_unit() -> void:
 	var unit: RegEx = RegEx.create_from_string(UNIT)

@@ -9,6 +9,26 @@ func _encounter(world_seed: int) -> M1Encounter:
 	return M1Encounter.new(world_seed, "test", TestDefs.corvette(), TestDefs.raider_enemy())
 
 
+# FT: FT-MIS-017, FT-RLY-004
+# D220: the encounter places the hazards it is given in every world it builds, and refuses
+# more than HazardSystem.MAX_HAZARDS with a clear error (one bit each in HazardTable).
+func test_encounter_places_hazards_and_caps_them() -> void:
+	var encounter: M1Encounter = _encounter(5)
+	var lib: DefLibrary = DefLibrary.new()
+	encounter.hazards = lib.m1_hazards()
+	assert_int(encounter.hazards.size()).is_equal(2)
+	assert_object(encounter.hazards[0]).is_not_null()
+	assert_object(encounter.hazards[1]).is_not_null()
+	assert_int(encounter.build().hazards.size()).is_equal(2)
+	var many: Array[HazardDef] = []
+	for i: int in HazardSystem.MAX_HAZARDS + 1:
+		many.append(encounter.hazards[0])
+	encounter.hazards = many
+	assert_array(encounter.validate()).has_size(1)
+	assert_str(encounter.validate()[0]).contains("at most 30")
+	assert_object(encounter.build()).is_null()
+
+
 # FT: FT-MIS-017, FT-ARC-020, FT-GEN-010, FT-M1-012
 # A full encounter fought to its outcome with the scripted crew (a win by destruction
 # at tick 3189) leaves every definition's hash unchanged; the reset world (build()

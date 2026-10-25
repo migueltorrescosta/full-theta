@@ -53,6 +53,12 @@ extends Resource
 ## Share of a hit's energy past the shields that the subsystem nearest the impact takes;
 ## the hull takes the rest (dimensionless, 0..1, FT-SIM-020).
 @export var subsystem_damage_share: float = 0.0
+## A hit that passes the shields with more than this energy (J) can cause an unknown-cause
+## fault in the subsystem it lands on (FT-SIM-025, D220); 0 with a chance of 0 never does.
+@export var fault_hit_threshold: float = 0.0
+## Chance of that fault per such hit (dimensionless, 0..1); drawn from the world's seeded
+## "faults" stream, only for hits above the threshold, so other runs' draws don't shift.
+@export var fault_hit_chance: float = 0.0
 ## Subsystems (at least one; ids unique within the ship).
 @export var subsystems: Array[SubsystemDef] = []
 ## Weapon mounts (may be empty; ids unique within the ship).
@@ -92,6 +98,8 @@ func validate() -> Array[String]:
 	DefCheck.in_range(errors, "repair_crews", repair_crews, 0, 31)
 	_validate_probes(errors)
 	DefCheck.in_range(errors, "subsystem_damage_share", subsystem_damage_share, 0.0, 1.0)
+	DefCheck.non_negative(errors, "fault_hit_threshold", fault_hit_threshold)
+	DefCheck.in_range(errors, "fault_hit_chance", fault_hit_chance, 0.0, 1.0)
 	DefCheck.positive(errors, "sensor_range", sensor_range)
 	DefCheck.in_range(errors, "identify_range", identify_range, 0.0, maxf(sensor_range, 0.0))
 	DefCheck.required(errors, "assist", assist)

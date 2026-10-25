@@ -86,7 +86,14 @@ static func step(world: SimWorld) -> void:
 				not targeted
 				or (
 					(
-						_align_error(kin, row, helm.align[row], offset, helm.align_bow[row])
+						_align_error(
+							kin,
+							row,
+							helm.align[row],
+							offset,
+							helm.align_bow[row],
+							helm.align_mount[row] == 1
+						)
 						< ALIGN_DONE
 					)
 					and w.length() < ALIGN_SETTLED_RATE
@@ -128,7 +135,15 @@ static func step(world: SimWorld) -> void:
 			w_des.z = rot_in.z * rates.z
 			rate_hold = true
 		elif targeted and helm.align[row] != HelmTable.Align.OFF:
-			w_des = _align_rate(kin, row, helm.align[row], tuning, offset, helm.align_bow[row])
+			w_des = _align_rate(
+				kin,
+				row,
+				helm.align[row],
+				tuning,
+				offset,
+				helm.align_bow[row],
+				helm.align_mount[row] == 1
+			)
 			rate_hold = true
 		var torque: Vector3
 		if rate_hold:
@@ -230,9 +245,14 @@ static func align_roll_error(local: Vector3) -> float:
 
 ## Angle (rad) still to go for an Align stage, for a target at site-frame offset `offset`.
 static func _align_error(
-	kin: Kinematics, row: int, stage: int, offset: Vector3, bow: Vector3 = Vector3.FORWARD
+	kin: Kinematics,
+	row: int,
+	stage: int,
+	offset: Vector3,
+	bow: Vector3 = Vector3.FORWARD,
+	mount: bool = false
 ) -> float:
-	if bow != Vector3.FORWARD:
+	if mount:
 		return kin.to_world(row, bow).angle_to(offset)
 	var err: float = absf(align_roll_error(kin.to_local(row, offset)))
 	if stage == HelmTable.Align.ROLL_AND_FACE:
@@ -297,9 +317,10 @@ static func _align_rate(
 	stage: int,
 	tuning: AssistDef,
 	offset: Vector3,
-	bow: Vector3 = Vector3.FORWARD
+	bow: Vector3 = Vector3.FORWARD,
+	mount: bool = false
 ) -> Vector3:
-	if bow != Vector3.FORWARD:
+	if mount:
 		return _face_rate_at(
 			kin.rot[row],
 			kin.inertia[row],

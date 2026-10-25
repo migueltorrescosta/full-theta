@@ -43,6 +43,8 @@ func test_hack_needs_access_and_follows_edges() -> void:
 	events = ScienceFixture.do(w, ScienceFixture.move_cmd(far - 1))
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("no_edge")
 	assert_int(t.node[ME]).is_equal(HackPuzzle.entry(def))
+	# The refused move still costs trace, as a step does: trying edges isn't a free map.
+	assert_float(t.trace[ME]).is_greater_equal(def.trace_per_move)
 	events = _walk(w)
 	assert_int(SimFixture.of_kind(events, &"hack_done").size()).is_equal(1)
 	assert_int(t.kind[ME]).is_equal(ScienceTable.Session.NONE)
@@ -126,10 +128,7 @@ func test_hack_window_applies_and_ends() -> void:
 	assert_float(DamageSystem.effectiveness(w, FOE, &"weapons")).is_equal(0.0)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"engines")).is_equal(1.0)
 	assert_float(DamageSystem.effectiveness(w, ME, &"weapons")).is_equal(1.0)
-	(
-		assert_float(ScienceSystem.hack_left(w, FOE, SimFixture.sub_index(w, FOE, &"weapons"), 1))
-		. is_greater(window_s - 0.1)
-	)
+	assert_float((w.hacks.until_tick[0] - w.tick) * SimWorld.DT).is_greater(window_s - 0.1)
 	var ticks: int = ceili(window_s * 60.0)
 	SimFixture.run(w, ticks - 2)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"weapons")).is_equal(0.0)
@@ -175,7 +174,7 @@ func test_probe_coverage_slows_the_trace() -> void:
 	_start(plain)
 	SimFixture.run(plain, 120)
 	var covered: SimWorld = _scanned()
-	covered.probe_coverage = func(_ship: int, _contact: int) -> bool: return true
+	ScienceFixture.cover(covered)
 	_start(covered)
 	SimFixture.run(covered, 120)
 	assert_float(covered.science.trace[ME]).is_less(plain.science.trace[ME])

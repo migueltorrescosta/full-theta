@@ -386,7 +386,12 @@ func _on_relay(type: String, p: Dictionary) -> void:
 		"sites":
 			sites.clear()
 			for d: Dictionary in p.get("sites", []):
-				sites.append({"site": int(d["site"]), "name": str(d["name"])})
+				sites.append(
+					{
+						"site": int(d["site"]),
+						"name": TranslationServer.translate(StringName(d["name"]))
+					}
+				)
 		"zones":
 			zones.clear()
 			for z: Dictionary in p.get("zones", []):

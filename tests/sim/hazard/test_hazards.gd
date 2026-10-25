@@ -110,6 +110,23 @@ func test_sphere_shell_and_ships_already_behind_are_not_hit() -> void:
 	assert_int(SimFixture.of_kind(late, &"hazard_hit").size()).is_equal(0)
 
 
+# FT: FT-RLY-001, FT-MIS-017
+# A ship reset (or spawned) behind a front's surface after it set off is crossed without a
+# hit at its first look; one reset ahead of it is still hit on arrival.
+func test_ship_reset_behind_a_front_is_not_hit() -> void:
+	var w: SimWorld = _world([_plane(Vector3(0.0, 0.0, -600.0), 100.0)])
+	SimFixture.run(w, 60)
+	w.reset_ship(0, 0, 0.0, 0.0, -2000.0)
+	var events: Array[SimEvent] = SimFixture.run(w, 10 * SimWorld.HZ)
+	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(0)
+	assert_int(w.hazard_state.crossed[0]).is_equal(1)
+	var ahead: SimWorld = _world([_plane(Vector3(0.0, 0.0, -600.0), 100.0)])
+	SimFixture.run(ahead, 60)
+	ahead.reset_ship(0, 0, 0.0, 0.0, 300.0)
+	events = SimFixture.run(ahead, 10 * SimWorld.HZ)
+	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(1)
+
+
 # FT: FT-RLY-001
 # A front hits the named subsystems, and a hardened one takes less (FT-ENG-008).
 func test_front_hits_named_subsystems_and_hardening_applies() -> void:

@@ -30,7 +30,7 @@ const TICK_LIMIT: int = 240 * SimWorld.HZ
 
 
 static func harness() -> PairHarness:
-	return PairHarness.new(build, no_environment, done, measure, TICK_LIMIT)
+	return PairHarness.new(build, PairHarness.no_environment, done, measure, TICK_LIMIT)
 
 
 static func build() -> SimWorld:
@@ -38,11 +38,6 @@ static func build() -> SimWorld:
 	w.spawn_ship(TestDefs.corvette(), 1, 0)
 	w.hazards = [load("res://content/hazards/p4_dust_cloud.tres") as HazardDef]
 	return w
-
-
-## Nothing but the crew and the sim's hazard.
-static func no_environment(_w: SimWorld) -> void:
-	pass
 
 
 static func done(w: SimWorld) -> bool:
@@ -106,12 +101,12 @@ static func helm(w: SimWorld, points: Array[Vector3]) -> void:
 		select.x = p.x
 		select.y = p.y
 		select.z = p.z
-		_submit(w, select)
+		PairHarness.send(w, select)
 	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, p.x, p.y, p.z)
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_point) < ON_POINT
 	var throttle: float = 1.0 if w.helm.throttle_setpoint[PLAYER] < CRUISE and on_point else 0.0
 	if w.tick == 0 or throttle != w.helm.input_translation[PLAYER].z:
-		_submit(w, _helm_input(throttle))
+		PairHarness.send(w, PairHarness.helm_input(throttle))
 
 
 ## Whether the ship is moving away from the point after closing on it.
@@ -119,15 +114,3 @@ static func _passed(w: SimWorld, points: Array[Vector3], leg: int) -> bool:
 	var p: Vector3 = points[leg]
 	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, p.x, p.y, p.z)
 	return w.tick > 0 and w.kin.vel[PLAYER].dot(to_point) < 0.0
-
-
-static func _helm_input(throttle: float) -> HelmInputCommand:
-	var c: HelmInputCommand = HelmInputCommand.new()
-	c.face = true
-	c.throttle = throttle
-	return c
-
-
-static func _submit(w: SimWorld, c: SimCommand) -> void:
-	c.ship_id = PLAYER
-	w.submit(c)
