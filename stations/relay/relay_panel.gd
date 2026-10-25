@@ -19,6 +19,8 @@ extends StationPanel
 ## turns the map; A, R3 and hold R3 select, ping and mark at the cursor (§5.0).
 
 ## A press that moves less than this is a click (select), not a drag (px).
+## Under this width (a phone, D195) the HUD stacks around the map.
+const NARROW_W: float = 560.0
 const DRAG_PX: float = 6.0
 ## Controller cursor speed (px/s), depth speed (map spans/s), turn speed (px-equivalent/s).
 const PAD_CURSOR_PX_S: float = 420.0
@@ -62,6 +64,7 @@ func _setup() -> void:
 	hud = RelayHud.new()
 	add_child(hud)
 	hud.setup(ctx)
+	resized.connect(func() -> void: hud.set_narrow(size.x < NARROW_W))
 	hud.launch_pressed.connect(func() -> void: _arm("probe"))
 	hud.hazard_pressed.connect(func() -> void: _arm("hazard"))
 	hud.lanes_pressed.connect(_toggle_lanes)

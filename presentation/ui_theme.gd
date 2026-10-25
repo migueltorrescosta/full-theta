@@ -32,21 +32,27 @@ const CELL_PAD: int = 8
 const LOAD_VARIANTS: Array[String] = ["intense", "busy", "light", "none"]
 
 
-## A fresh theme. The result is a plain resource; `apply` puts it on a window.
-static func build() -> Theme:
+## A fresh theme. The result is a plain resource; `apply` puts it on a window. With
+## `touch` every plain button, option button, check box and text field is tap-sized (the
+## touch and phone layouts of LayoutMode, FT-STN-005); the Touch* variations are tap-sized
+## either way.
+static func build(touch: bool = false) -> Theme:
 	var t: Theme = Theme.new()
 	t.default_font_size = FONT_SIZE
 	_labels(t)
-	_buttons(t, "Button", "", 8, 4)
+	_buttons(t, "Button", "", 16 if touch else 8, TOUCH_PAD if touch else 4)
 	_buttons(t, "Button", "TouchButton", 16, TOUCH_PAD)
-	_buttons(t, "OptionButton", "", 8, 4)
+	_buttons(t, "OptionButton", "", 16 if touch else 8, TOUCH_PAD if touch else 4)
 	_buttons(t, "OptionButton", "TouchOptionButton", 16, TOUCH_PAD)
-	_check(t, "CheckBox", "", 4)
+	_check(t, "CheckBox", "", TOUCH_PAD if touch else 4)
 	_check(t, "CheckBox", "TouchCheckBox", TOUCH_PAD)
 	for tag: String in LOAD_VARIANTS:
 		_cell(t, tag)
 	_panels(t)
-	_fields(t)
+	_fields(t, TOUCH_PAD if touch else 6)
+	if touch:
+		# A list row is a tap target too.
+		t.set_constant("v_separation", "ItemList", 18)
 	_popups(t)
 	t.set_constant("separation", "VBoxContainer", SPACING)
 	t.set_constant("separation", "HBoxContainer", SPACING)
@@ -164,10 +170,10 @@ static func _panels(t: Theme) -> void:
 		t.set_color(c, "TabContainer", Palette.color("text"))
 
 
-static func _fields(t: Theme) -> void:
-	t.set_stylebox("normal", "LineEdit", box("background", "line", 8, 6))
-	t.set_stylebox("focus", "LineEdit", ring(8, 6))
-	t.set_stylebox("read_only", "LineEdit", box("panel", "line", 8, 6))
+static func _fields(t: Theme, pad_y: int) -> void:
+	t.set_stylebox("normal", "LineEdit", box("background", "line", 8, pad_y))
+	t.set_stylebox("focus", "LineEdit", ring(8, pad_y))
+	t.set_stylebox("read_only", "LineEdit", box("panel", "line", 8, pad_y))
 	t.set_color("font_color", "LineEdit", Palette.color("text"))
 	t.set_color("font_placeholder_color", "LineEdit", Palette.color("text_dim"))
 	t.set_color("caret_color", "LineEdit", Palette.color("accent"))

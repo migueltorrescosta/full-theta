@@ -28,6 +28,7 @@ var send: Button
 var send_to: OptionButton
 
 var _left: PanelContainer
+var _bottom_row: BoxContainer
 var _bottom: PanelContainer
 var _probes: Label
 var _fab: Label
@@ -48,7 +49,11 @@ func setup(context: StationContext) -> void:
 	ctx = context
 	_left = _box([0.0, 0.0, 0.0, 1.0], [8.0, 8.0, 216.0, -110.0])
 	var col: VBoxContainer = VBoxContainer.new()
-	_left.add_child(col)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_left.add_child(scroll)
+	scroll.add_child(col)
 	_probes = Label.new()
 	col.add_child(_probes)
 	_probe_rows = VBoxContainer.new()
@@ -65,7 +70,10 @@ func setup(context: StationContext) -> void:
 	_marks = HFlowContainer.new()
 	col.add_child(_marks)
 	_bottom = _box([0.0, 1.0, 1.0, 1.0], [224.0, -102.0, -8.0, -8.0])
-	var row: HBoxContainer = HBoxContainer.new()
+	# Tap-sized buttons make the box taller than its 94 px: it grows upward (D194).
+	_bottom.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var row: BoxContainer = BoxContainer.new()
+	_bottom_row = row
 	row.add_theme_constant_override("separation", 16)
 	_bottom.add_child(row)
 	var log_col: VBoxContainer = VBoxContainer.new()
@@ -127,6 +135,22 @@ func refresh() -> void:
 	_fill_marks()
 	_fill_log()
 	_fill_inbox()
+
+
+## A phone-wide HUD (D195): the probe and contact column spans the top, the log and inbox
+## stack at the bottom, so the map keeps the middle.
+func set_narrow(narrow: bool) -> void:
+	_bottom_row.vertical = narrow
+	_place(_left, [0.0, 0.0, 1.0, 0.0] if narrow else [0.0, 0.0, 0.0, 1.0])
+	_left.offset_left = 8.0
+	_left.offset_top = 8.0
+	_left.offset_right = -8.0 if narrow else 216.0
+	_left.offset_bottom = 230.0 if narrow else -110.0
+	_place(_bottom, [0.0, 1.0, 1.0, 1.0])
+	_bottom.offset_left = 8.0 if narrow else 224.0
+	_bottom.offset_right = -8.0
+	_bottom.offset_top = -170.0 if narrow else -102.0
+	_bottom.offset_bottom = -8.0
 
 
 ## Whether the HUD is shown (not in the docked view).
@@ -247,13 +271,17 @@ func _on_send() -> void:
 		send_pressed.emit(send_target())
 
 
-## A translucent panel with anchors and offsets as [left, top, right, bottom].
-func _box(anchors: Array, offsets: Array) -> PanelContainer:
-	var box: PanelContainer = PanelContainer.new()
+func _place(box: Control, anchors: Array) -> void:
 	box.anchor_left = anchors[0]
 	box.anchor_top = anchors[1]
 	box.anchor_right = anchors[2]
 	box.anchor_bottom = anchors[3]
+
+
+## A translucent panel with anchors and offsets as [left, top, right, bottom].
+func _box(anchors: Array, offsets: Array) -> PanelContainer:
+	var box: PanelContainer = PanelContainer.new()
+	_place(box, anchors)
 	box.offset_left = offsets[0]
 	box.offset_top = offsets[1]
 	box.offset_right = offsets[2]

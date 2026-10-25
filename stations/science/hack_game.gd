@@ -20,7 +20,7 @@ const NODE_R: float = 18.0
 ## Width of the target's name drawn below its node.
 const GOAL_LABEL_W: float = 120.0
 const BUTTON_W: float = 110.0
-const BUTTON_H: float = 34.0
+const BUTTON_H: float = 44.0
 
 var cols: int = 0
 var rows: int = 0
@@ -104,7 +104,7 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _grid_rect() -> Rect2:
-	return Rect2(Vector2(60.0, 80.0), Vector2(maxf(size.x - 120.0, 1.0), maxf(size.y - 190.0, 1.0)))
+	return Rect2(Vector2(60.0, 80.0), Vector2(maxf(size.x - 120.0, 1.0), maxf(size.y - 200.0, 1.0)))
 
 
 func _button_rect() -> Rect2:

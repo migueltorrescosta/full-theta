@@ -36,6 +36,8 @@ const TURN_RATE: float = 2.0
 ## Below this width (px) the lists sit under the cutaway instead of in a column of
 ## their own (150 % UI scale, FT-STN-013).
 const NARROW: float = 760.0
+## Under this width (a phone, D195) the cutaway, the board and the lists stack and scroll.
+const PHONE_W: float = 560.0
 const CREW_LETTERS: String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var ship_def: ShipDef = null
@@ -50,7 +52,7 @@ var faults: Dictionary = {}
 var cutaway: EngineeringCutaway
 var board: EngineeringBoard
 
-var _row: HBoxContainer
+var _row: BoxContainer
 var _left: VBoxContainer
 var _side: PanelContainer
 var _lists: VBoxContainer
@@ -64,10 +66,15 @@ var _wheel_outside: bool = false
 
 func _setup() -> void:
 	ship_def = ctx.ship_def()
-	_row = HBoxContainer.new()
-	_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_row = BoxContainer.new()
 	_row.add_theme_constant_override("separation", 0)
-	add_child(_row)
+	var scroll_all: ScrollContainer = ScrollContainer.new()
+	scroll_all.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll_all.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	add_child(scroll_all)
+	_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll_all.add_child(_row)
 	_left = VBoxContainer.new()
 	_left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_left.size_flags_stretch_ratio = 5.0
@@ -113,6 +120,11 @@ func _mode_changed() -> void:
 
 func _place_lists() -> void:
 	var narrow: bool = size.x < NARROW
+	var phone: bool = size.x < PHONE_W
+	_row.vertical = phone
+	cutaway.custom_minimum_size.y = 260.0 if phone else 0.0
+	board.custom_minimum_size = Vector2(0, 460) if phone else Vector2(270, 0)
+	_side.custom_minimum_size = Vector2(0, 220) if phone else Vector2(210, 0)
 	var parent: Control = _left if narrow else _row
 	_side.size_flags_stretch_ratio = 1.0 if narrow else 2.2
 	if _side.get_parent() != parent:

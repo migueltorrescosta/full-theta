@@ -10,6 +10,11 @@ extends StationPanel
 
 const SIDE_WIDTH: float = 330.0
 const BUTTON_HEIGHT: float = 44.0
+## Under this width (a phone or a tablet upright, D195) the mirror and the right column
+## stack and scroll.
+const NARROW_W: float = 760.0
+const STACK_MIRROR_H: float = 320.0
+const STACK_SIDE_H: float = 520.0
 
 var mirror: ViewerPanel
 var chips: ChipList
@@ -18,6 +23,8 @@ var cards: FixtureCards
 var buttons: Array[Button] = []
 
 var _row: Control
+var _cols: BoxContainer
+var _side: VBoxContainer
 
 
 func full_screen() -> bool:
@@ -30,11 +37,18 @@ func radar_orbitable() -> bool:
 
 func _setup() -> void:
 	clip_contents = true
-	var cols: HBoxContainer = HBoxContainer.new()
-	cols.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var cols: BoxContainer = BoxContainer.new()
+	_cols = cols
 	cols.add_theme_constant_override("separation", 8)
 	cols.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(cols)
+	cols.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(scroll)
+	scroll.add_child(cols)
 	var left: VBoxContainer = VBoxContainer.new()
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_theme_constant_override("separation", 0)
@@ -45,7 +59,7 @@ func _setup() -> void:
 	mirror.setup(ctx, StationViews.VIEWER)
 	mirror.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(mirror)
-	_row = HBoxContainer.new()
+	_row = HFlowContainer.new()
 	_row.custom_minimum_size = Vector2(0, BUTTON_HEIGHT)
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	left.add_child(_row)
@@ -55,6 +69,7 @@ func _setup() -> void:
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(88, 0)
 		b.pressed.connect(set_view.bind(i))
 		_row.add_child(b)
 		buttons.append(b)
@@ -63,11 +78,22 @@ func _setup() -> void:
 	side.add_theme_constant_override("separation", 12)
 	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cols.add_child(side)
+	_side = side
 	chips = ChipList.new()
 	side.add_child(chips)
 	cards = FixtureCards.new()
 	cards.setup()
 	side.add_child(cards)
+	resized.connect(_stack)
+	_stack()
+
+
+## Narrow: the mirror above the right column, scrolling; wide: side by side.
+func _stack() -> void:
+	var narrow: bool = size.x < NARROW_W
+	_cols.vertical = narrow
+	mirror.custom_minimum_size.y = STACK_MIRROR_H if narrow else 0.0
+	_side.custom_minimum_size = Vector2(0, STACK_SIDE_H) if narrow else Vector2(SIDE_WIDTH, 0)
 
 
 func _process(_delta: float) -> void:

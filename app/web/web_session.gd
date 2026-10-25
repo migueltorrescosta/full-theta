@@ -3,14 +3,15 @@ extends Node
 ## What a browser station does beside the ordinary client session (MainMenu adds one to its
 ## ClientShell in a browser build, nothing elsewhere): keeps the tablet awake while joined
 ## (FT-NET-046), reconnects with its token when the page comes back from a suspension or
-## the network returns (without a reload, D108), tells the page which panel it shows
-## (WebPage.set_panel, for tools/l4/web.sh), and runs the ?pick= test hooks
+## the network returns (without a reload, D108), tells the page which panel and layout it shows
+## (WebPage.set_panel, WebPage.set_layout, for tools/l4/web.sh), and runs the ?pick= test hooks
 ## (WebAutoplay).
 
 var shell: ClientShell
 var _wakes: int = 0
 var _awake: bool = false
 var _panel: String = ""
+var _layout: String = ""
 
 
 ## Adds a WebSession to `shell` in a browser build.
@@ -53,6 +54,10 @@ func _process(_delta: float) -> void:
 	if panel != _panel:
 		_panel = panel
 		WebPage.set_panel(panel)
+	var layout: String = LayoutMode.Kind.keys()[LayoutMode.kind_of(shell)].to_lower()
+	if layout != _layout:
+		_layout = layout
+		WebPage.set_layout(layout)
 
 
 func _exit_tree() -> void:

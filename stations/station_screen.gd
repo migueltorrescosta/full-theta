@@ -25,6 +25,15 @@ const UNBLOCKED: Array[String] = ["menu", "overlay"]
 const SIDE_WIDTH: float = 340.0
 const RADAR_HEIGHT: float = 300.0
 const TOP_BAR_HEIGHT: float = 40.0
+## The bar of the touch layouts: tap-sized alert chip and sound button (D194).
+const TOUCH_BAR_HEIGHT: float = 52.0
+## Under this width the top bar takes two rows (a phone, a tablet upright).
+const COMPACT_WIDTH: float = 900.0
+## A phone's smaller bar text fits one row down to this width.
+const COMPACT_PHONE_WIDTH: float = 480.0
+## The phone's radar column: a smaller disc (D195).
+const PHONE_RADAR: float = 180.0
+const PHONE_SIDE_WIDTH: float = 180.0
 ## Least height of a docked panel: top bar, radar and one docked panel fit 720p at
 ## 150 % UI scale (480 px), so the screen never grows past the window.
 const DOCK_MIN_HEIGHT: float = 120.0
@@ -48,7 +57,12 @@ var blockers: Array[Control] = []
 
 var _main: Control
 var _dock: VBoxContainer
-var _side: VBoxContainer
+## The radar and the extras column (share buttons, docked panels): beside the main area
+## in landscape, below it in portrait (D216); it hides for a lone full-screen panel.
+var _side: BoxContainer
+var _body: BoxContainer
+var _extras: VBoxContainer
+var _kind: LayoutMode.Kind = LayoutMode.Kind.DESKTOP
 var _blocked: bool = false
 
 
@@ -65,6 +79,7 @@ func setup(context: StationContext) -> void:
 	if stations.is_empty():
 		stations.append(ctx.crew.entry)
 	_build()
+	_relayout()
 	for s: String in stations:
 		var p: StationPanel = panel_factory.call(s)
 		p.setup(ctx, s)
@@ -80,6 +95,8 @@ func setup(context: StationContext) -> void:
 
 
 func _ready() -> void:
+	get_viewport().size_changed.connect(_relayout)
+	_relayout()
 	_open_first_visit_help()
 
 
@@ -415,23 +432,30 @@ func _build() -> void:
 	top_bar.custom_minimum_size = Vector2(0, TOP_BAR_HEIGHT)
 	top_bar.alert_picked.connect(_set_alert)
 	rows.add_child(top_bar)
-	var body: HBoxContainer = HBoxContainer.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	rows.add_child(body)
+	_body = BoxContainer.new()
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rows.add_child(_body)
 	_main = Control.new()
 	_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_main.clip_contents = true
-	body.add_child(_main)
-	var side: VBoxContainer = VBoxContainer.new()
-	side.custom_minimum_size = Vector2(SIDE_WIDTH, 0)
-	body.add_child(side)
-	_side = side
+	_body.add_child(_main)
+	_side = BoxContainer.new()
+	_body.add_child(_side)
 	radar = DiscRadar.new()
-	radar.custom_minimum_size = Vector2(SIDE_WIDTH, RADAR_HEIGHT)
-	side.add_child(radar)
+	_side.add_child(radar)
+	_extras = VBoxContainer.new()
+	_extras.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_extras.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_side.add_child(_extras)
+	# The share buttons sit above the docked panels, not over them (D217).
+	share_bar = ShareBar.new()
+	share_bar.visible = false
+	share_bar.share_pressed.connect(func(id: StringName) -> void: ctx.intents.share(String(id)))
+	_extras.add_child(share_bar)
 	_dock = VBoxContainer.new()
 	_dock.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	side.add_child(_dock)
+	_extras.add_child(_dock)
 	toasts = Toasts.new()
 	toasts.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	# Top-right of the screen (§5.0), over the radar's empty corner, not the panel.
@@ -446,17 +470,46 @@ func _build() -> void:
 	chip_strip.position = Vector2(8.0, TOP_BAR_HEIGHT + 8.0)
 	chip_strip.visible = false
 	add_child(chip_strip)
-	share_bar = ShareBar.new()
-	share_bar.anchor_top = 1.0
-	share_bar.anchor_bottom = 1.0
-	share_bar.offset_left = 8.0
-	share_bar.offset_top = -60.0
-	share_bar.visible = false
-	share_bar.share_pressed.connect(func(id: StringName) -> void: ctx.intents.share(String(id)))
-	add_child(share_bar)
 	flash = AlertFlash.new()
 	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(flash)
+
+
+## Arranges the screen for the viewport (LayoutMode): the bar's height and rows, and the
+## radar column beside the main area (landscape) or below it (portrait), narrower or
+## shorter on a phone. Runs on every resize and rotation.
+func _relayout() -> void:
+	if _body == null or not is_inside_tree():
+		return
+	var size_now: Vector2 = get_viewport().get_visible_rect().size
+	_kind = LayoutMode.kind_of(self)
+	var phone: bool = _kind == LayoutMode.Kind.PHONE
+	var touch: bool = LayoutMode.is_touch(_kind)
+	var portrait: bool = LayoutMode.portrait(size_now)
+	_body.vertical = portrait
+	_side.vertical = not portrait
+	var bar: float = TOP_BAR_HEIGHT
+	if touch:
+		bar = TOUCH_BAR_HEIGHT
+	var two_rows: bool = size_now.x < (COMPACT_PHONE_WIDTH if phone else COMPACT_WIDTH)
+	top_bar.set_compact(two_rows, bar, phone)
+	top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0)
+	var disc: float = RADAR_HEIGHT
+	if phone:
+		disc = PHONE_RADAR
+	_side.custom_minimum_size = Vector2.ZERO
+	if portrait:
+		radar.custom_minimum_size = Vector2(disc, disc)
+		_side.custom_minimum_size.y = disc
+	else:
+		var width: float = PHONE_SIDE_WIDTH if phone else SIDE_WIDTH
+		radar.custom_minimum_size = Vector2(width, disc if not phone else width)
+		_side.custom_minimum_size.x = width
+	share_bar.min_width = 110.0 if phone else 200.0
+	var top: float = top_bar.custom_minimum_size.y + 8.0
+	toasts.offset_top = top
+	toasts.offset_bottom = top
+	chip_strip.position = Vector2(8.0, top)
 
 
 ## The first visit to a station asks for the menu's Controls tab, once per client and

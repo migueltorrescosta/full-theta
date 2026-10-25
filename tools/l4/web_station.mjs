@@ -120,9 +120,13 @@ try {
     if (stats.colours >= 8 && stats.std > 4) break;
     await page.waitForTimeout(2000);
   }
-  note("screenshot is not blank and shows the panel",
-    stats && stats.colours >= 8 && stats.std > 4 && (await page.evaluate(() => window.ftPanel)) === "tactical",
-    JSON.stringify(stats));
+  // The tablet's touch layout (FT-STN-005, D194): the client chose it from the viewport and
+  // the pointer, and the picture is the Tactical station, not a blank or an error page.
+  const layout = await page.evaluate(() => window.ftLayout);
+  note("screenshot is a touch layout, not blank, and shows the panel",
+    stats && stats.colours >= 8 && stats.std > 4 && layout === "touch" &&
+      (await page.evaluate(() => window.ftPanel)) === "tactical",
+    `${layout} ${JSON.stringify(stats)}`);
 
   // Play: all-stop (Space) a few times.
   for (let i = 0; i < 4; i++) {
