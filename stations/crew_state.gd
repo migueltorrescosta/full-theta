@@ -11,7 +11,8 @@ extends RefCounted
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
 ## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
 ## &"sites", &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F);
-## &"toggles" when the session's data-shortcut set changed (strand G).
+## &"toggles" when the session's data-shortcut set changed (strand G), &"shares" when a
+## shortcut was shared or ran out (strand K).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -93,6 +94,10 @@ var relay_log: Array[Dictionary] = []
 ## FT-PAIR-017); Easy until the server says otherwise.
 var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
 
+## The shortcuts shared to this ship (the `shares` event, D210): feature -> client clock (ms)
+## at which the share ends.
+var shares: Dictionary = {}
+
 var _filter: ViewFilter = null
 var _filter_key: String = ""
 
@@ -100,11 +105,19 @@ var _filter_key: String = ""
 ## What this pick may see of other stations' data at the session's toggles (ViewFilter): the
 ## clients draw an em dash for an absent summary, a band for a banded one.
 func filter() -> ViewFilter:
-	var key: String = "%s|%s" % [entry, toggles.encode()]
+	var code: String = ViewFilter.code_with(toggles.encode(), shares.keys())
+	var key: String = "%s|%s" % [entry, code]
 	if _filter == null or key != _filter_key:
 		_filter_key = key
-		_filter = ViewFilter.of(entry, toggles.encode())
+		_filter = ViewFilter.of(entry, code)
 	return _filter
+
+
+## Seconds left of a shared shortcut, 0 when it isn't shared.
+func share_left(feature: StringName, now_ms: int) -> float:
+	return (
+		maxf(0.0, (int(shares.get(feature, 0)) - now_ms) / 1000.0) if shares.has(feature) else 0.0
+	)
 
 
 ## How the top bar shows the STATUS values that are another station's data at the session's
@@ -237,6 +250,12 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_relay(str(e["type"]), p)
 		"chip_answer":
 			_on_chip_answer(p)
+		"shares":
+			if _mine(p):
+				shares.clear()
+				for id: String in p.get("left", {}):
+					shares[StringName(id)] = now_ms + roundi(float(p["left"][id]) * 1000.0)
+				changed.emit(&"shares")
 		"request_rejected", "command_rejected":
 			toast.emit("toast." + str(p.get("reason", "rejected")), p)
 		_:
@@ -344,6 +363,7 @@ func reset_run() -> void:
 	pings.clear()
 	zones.clear()
 	routes.clear()
+	shares.clear()
 	inbox.clear()
 	relay_log.clear()
 	selection = {}

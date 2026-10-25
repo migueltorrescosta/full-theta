@@ -36,6 +36,27 @@ static func ids() -> Array[StringName]:
 	return out
 
 
+## The ids of the shortcuts that need a press on their source station (D210): the SHORTCUT
+## toggles that move a station's data to another one (not the request chips). Those that
+## involve Comms wait for its data (#10, D190) and have no press yet.
+static func shareable() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for t: DataToggleDef in _def.toggles:
+		if (
+			t.kind == DataToggleDef.Kind.SHORTCUT
+			and t.source != &""
+			and t.source != &"comms"
+			and t.target != &"comms"
+		):
+			out.append(t.id)
+	return out
+
+
+## How long a press keeps the data on the partner (s).
+static func share_seconds() -> float:
+	return _def.share_seconds
+
+
 ## The toggle's definition, or null.
 static func toggle_def(id: StringName) -> DataToggleDef:
 	for t: DataToggleDef in _def.toggles:

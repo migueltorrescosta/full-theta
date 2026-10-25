@@ -8,7 +8,8 @@ extends RefCounted
 ##   propellant) is exact, banded to the four bands of D193 or absent, by the summaries
 ##   toggle;
 ## - a shortcut (routes on Helm, weak points and track feeds on Weapons, diagnosed causes and
-##   hazard countdowns on Engineering) is delivered when its toggle is on;
+##   hazard countdowns on Engineering) is delivered when its toggle is on and its source
+##   station has shared it (D210; the code's "#a,b" suffix names the shared ones);
 ## - a joint view that holds the source station sees it as if the toggle were on;
 ## - the Captain and the Viewer are no station of the pairs and see everything;
 ## - Engineering's data never reaches a view holding Comms but not Engineering, at any
@@ -34,18 +35,36 @@ const RELAY_OWNER: Array = ["relay"]
 var entry: String = ""
 var toggles: DataToggles
 var stations: Array[String] = []
+## The shortcuts the source stations shared and that haven't expired (feature -> true).
+var shared: Dictionary = {}
 ## Captain, Viewer: no filtering.
 var sees_all: bool = false
 ## A Comms view without Engineering: no Engineering data, hull as a band.
 var condition_hidden: bool = false
 
 
-## The filter of an entry at a toggle code; null when the code is malformed.
+## A toggle code with the shared shortcuts appended: "<code>#a,b" (just the code for none).
+static func code_with(code: String, shared_features: Array) -> String:
+	if shared_features.is_empty():
+		return code
+	var names: Array[String] = []
+	for id: Variant in shared_features:
+		names.append(String(id))
+	names.sort()
+	return code + "#" + ",".join(names)
+
+
+## The filter of an entry at a toggle code (DataToggles code, optionally with the shared
+## shortcuts after a "#", code_with()); null when the code is malformed.
 static func of(entry_id: String, code: String) -> ViewFilter:
-	var picked: DataToggles = DataToggles.parse(code)
+	var parts: PackedStringArray = code.split("#", true, 1)
+	var picked: DataToggles = DataToggles.parse(parts[0])
 	if picked == null:
 		return null
 	var f: ViewFilter = ViewFilter.new()
+	if parts.size() > 1:
+		for id: String in parts[1].split(",", false):
+			f.shared[StringName(id)] = true
 	f.entry = entry_id
 	f.toggles = picked
 	f.stations = StationViews.stations_of(entry_id)
@@ -54,14 +73,16 @@ static func of(entry_id: String, code: String) -> ViewFilter:
 	return f
 
 
-## Whether a shortcut reaches the view: its toggle is on, or the view holds the source
-## station (FT-JNT-005).
+## Whether a shortcut reaches the view: the view holds the source station (FT-JNT-005, no
+## press needed), or its toggle is on and the source shared it (D210).
 func grants(feature: StringName) -> bool:
 	if sees_all:
 		return true
 	var def: DataToggleDef = DataToggles.toggle_def(feature)
-	if def != null and def.source != &"" and stations.has(String(def.source)):
-		return true
+	if def != null and def.source != &"":
+		if stations.has(String(def.source)):
+			return true
+		return toggles.on(feature) and shared.has(feature)
 	return toggles.on(feature)
 
 

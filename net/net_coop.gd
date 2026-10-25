@@ -1,7 +1,7 @@
 class_name NetCoop
 extends CoopEvents
 ## Watches the server for the cooperative events of FT-PAIR-013 that are not chips (NetChips
-## counts those): a data shortcut delivering one station's work to another, a mark one
+## counts those, and NetShares the data shortcuts a source station shares): a mark one
 ## station placed and another used, a probe-enabled scan. ServerSession calls the hooks;
 ## the counts and the log lines are CoopEvents'. A joint view's own stations are no pair
 ## between players, so work inside one view counts nothing.
@@ -33,8 +33,8 @@ func _init(server_session: ServerSession) -> void:
 	_session = weakref(server_session)
 
 
-## A sim event of the tick, with the sessions that received it.
-func on_sim_event(e: SimEvent, audience: PackedInt32Array) -> void:
+## A sim event of the tick, with the sessions that received it (unused since D210).
+func on_sim_event(e: SimEvent, _audience: PackedInt32Array) -> void:
 	match e.kind:
 		&"scan_started", &"hack_started":
 			_probe_scans[e.ship_id] = (
@@ -47,31 +47,6 @@ func on_sim_event(e: SimEvent, audience: PackedInt32Array) -> void:
 			_probe_scans.erase(e.ship_id)
 		&"scan_failed", &"hack_failed", &"hack_traced", &"science_refused":
 			_probe_scans.erase(e.ship_id)
-	if StationViews.EVENT_SHORTCUTS.has(e.kind):
-		var source: String = StationViews.EVENT_SHORTCUTS[e.kind][1]
-		var pairs: Dictionary = {}
-		for id: int in audience:
-			var s: NetSession = session.by_id.get(id)
-			if s == null:
-				continue
-			var stations: Array[String] = StationViews.stations_of(s.entry)
-			if stations.has(source):
-				continue
-			for station: String in stations:
-				if (StationViews.EVENT_STATIONS[e.kind] as Array).has(station):
-					pairs[pair_of(source, station)] = true
-		for pair: String in pairs:
-			record(SHORTCUT_SHARED, pair, e.ship_id, {"event": String(e.kind)})
-
-
-## A route update reached the ship's sessions: Relay's work shown on Helm counts once when a
-## session that holds Helm but not Relay got it (P4).
-func on_routes_shared(ship: int, receivers: Array) -> void:
-	for s: NetSession in receivers:
-		var stations: Array[String] = StationViews.stations_of(s.entry)
-		if stations.has("helm") and not stations.has("relay"):
-			record(SHORTCUT_SHARED, pair_of("relay", "helm"), ship, {"event": "routes"})
-			return
 
 
 ## A ping on mark `slot` by a session: a use when another station placed it.

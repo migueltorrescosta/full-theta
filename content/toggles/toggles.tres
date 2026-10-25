@@ -118,3 +118,4 @@ id = &"toggles"
 toggles = Array[ExtResource("2_tg")]([SubResource("Resource_summaries"), SubResource("Resource_chips"), SubResource("Resource_routes"), SubResource("Resource_lanes"), SubResource("Resource_hazard_countdowns"), SubResource("Resource_weak_points"), SubResource("Resource_track_feeds"), SubResource("Resource_diagnosed_causes"), SubResource("Resource_contract_flags"), SubResource("Resource_verify_chip"), SubResource("Resource_mission_icon")])
 default_preset = &"easy"
 band_edges = PackedFloat64Array(0.75, 0.5, 0.25)
+share_seconds = 30.0

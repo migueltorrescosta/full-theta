@@ -48,6 +48,8 @@ enum Type {
 	MINIGAME = 28,
 	# A client's snapshot-age report for the session log (strand D, D199).
 	CLIENT_STATS = 29,
+	# A source station shares a data shortcut with its partner (strand K, D210).
+	SHARE = 30,
 }
 
 const PROTOCOL_VERSION: int = 5
@@ -98,6 +100,9 @@ const EVENT_RELAY_LOG: String = "relay_log"
 const EVENT_MAIN_VIEW: String = "main_view"
 ## A request chip the session sent was answered (strand G, NetChips): {chip, arg, accept, by}.
 const EVENT_CHIP_ANSWER: String = "chip_answer"
+## The shortcuts shared to the session's ship (strand K, NetShares): {ship, left: {feature:
+## seconds until the share ends}}; sent to its picks when the set changes.
+const EVENT_SHARES: String = "shares"
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -175,6 +180,7 @@ const SCHEMAS: Dictionary = {
 	Type.TOGGLES: {"set": TYPE_STRING},
 	Type.CHIP:
 	{"op": TYPE_STRING, "chip": TYPE_STRING, "arg": TYPE_INT, "id": TYPE_INT, "accept": TYPE_BOOL},
+	Type.SHARE: {"feature": TYPE_STRING},
 	Type.CLIENT_STATS: {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY},
 }
 
@@ -201,6 +207,7 @@ const FROM_CLIENT: Array[int] = [
 	Type.MARK_ACCEPT,
 	Type.TOGGLES,
 	Type.CHIP,
+	Type.SHARE,
 	Type.CLIENT_STATS,
 ]
 
@@ -224,6 +231,7 @@ const RATED_REQUESTS: Array[int] = [
 	Type.MARK_ACCEPT,
 	Type.TOGGLES,
 	Type.CHIP,
+	Type.SHARE,
 ]
 
 

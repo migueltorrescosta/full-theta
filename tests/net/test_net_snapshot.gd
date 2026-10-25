@@ -45,7 +45,9 @@ func test_views_track_server_model() -> void:
 	var keys: Array = [
 		StationViews.key(PLAYER, "helm"),
 		StationViews.key(PLAYER, "engineering"),
-		StationViews.key(PLAYER, "tactical"),
+		# Relay and Science shared their shortcuts with Tactical (D210), so its view is
+		# the unfiltered truth.
+		StationViews.key(PLAYER, "tactical", "easy#track_feeds,weak_points"),
 		StationViews.key(PLAYER, "viewer"),
 	]
 	var p_units: int = NetCodec.period_units(world.kin.period)

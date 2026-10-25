@@ -12,6 +12,9 @@ extends Resource
 ## Share of the maximum at which a banded summary steps down from ok to scratched, from
 ## scratched to damaged and from damaged to critical (dimensionless, descending, D193).
 @export var band_edges: PackedFloat64Array = PackedFloat64Array()
+## How long a shared shortcut reaches its partner after the source's press (s, D210): the
+## partner sees the data until then, a newer press renews it.
+@export var share_seconds: float = 30.0
 
 
 func validate() -> Array[String]:
@@ -39,4 +42,6 @@ func validate() -> Array[String]:
 				errors.append("band_edges[%d]: must be in (0, 1), got %s" % [i, band_edges[i]])
 			if i > 0 and not band_edges[i] < band_edges[i - 1]:
 				errors.append("band_edges[%d]: must be below the previous edge" % i)
+	if not share_seconds > 0.0:
+		errors.append("share_seconds: must be above 0, got %s" % share_seconds)
 	return errors

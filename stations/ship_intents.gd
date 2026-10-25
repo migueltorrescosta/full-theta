@@ -100,6 +100,11 @@ func answer_chip(id: int, accept: bool) -> void:
 	_call(&"answer_chip", [id, accept])
 
 
+## Strand K (D210): shares a data shortcut from the source station (a toggle id).
+func share(feature: String) -> void:
+	_call(&"share", [feature])
+
+
 func claim(item: String) -> void:
 	_call(&"claim", [item])
 
