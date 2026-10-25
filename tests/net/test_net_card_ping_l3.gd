@@ -37,6 +37,18 @@ func test_a_card_ping_reaches_the_main_screen() -> void:
 	assert_str(r["payload"]["reason"]).is_equal(CrewPings.BAD_PING)
 
 
+# FT: FT-CPT-005
+# D215: only the Captain pings a card; a crew station's card ping is refused.
+func test_a_crew_station_cannot_ping_a_card() -> void:
+	var server: NetServer = h.server()
+	var helm: NetClient = await h.joined(server, "helm", "helm")
+	var from: int = h.mark(helm)
+	helm.ping("card", 2, 0, Vector3.ZERO)
+	var r: Dictionary = await h.next_event(helm, NetProtocol.EVENT_REQUEST_REJECTED, from)
+	assert_str(r["payload"]["reason"]).is_equal(CrewPings.BAD_PING)
+	assert_array(h.events_of(helm, NetProtocol.EVENT_PING)).is_empty()
+
+
 # FT: FT-SPA-013, FT-CPT-002, FT-CPT-003
 func test_the_captain_fills_empty_slots_only() -> void:
 	var server: NetServer = h.server()

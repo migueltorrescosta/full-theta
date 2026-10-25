@@ -235,7 +235,8 @@ func on_sim_event(e: SimEvent) -> void:
 
 
 ## Ping{kind, id, site, x, y, z}: any crew pick and the Captain ping an item for every
-## pick on the ship, viewers included (FT-SPA-016, FT-SPA-020), rate-limited per session
+## pick on the ship, viewers included (FT-SPA-016, FT-SPA-020; a card only the Captain),
+## rate-limited per session
 ## (FT-SPA-017); a ping on an item another session pinged within 3 s is a copy naming
 ## that first pinger (FT-SPA-031).
 func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
@@ -263,10 +264,20 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 				else:
 					session.coop.on_mark_pinged(s, msg["id"])
 			"card":
-				# A mission or contract card of Comms' list (FT-CPT-005); Comms' cards come
-				# with #10, the id is checked against the fixture's size only.
+				# A mission or contract card of Comms' list (FT-CPT-005, D215): the Captain
+				# pings it. Comms' cards come with #10, the id is checked against the
+				# fixture's size only.
 				payload["id"] = msg["id"]
-				if msg["id"] < 0 or msg["id"] >= MAX_CARDS:
+				if (
+					CrewMarks.role_of(s.entry) != CrewMarks.Role.CAPTAIN
+					or msg["id"] < 0
+					or msg["id"] >= MAX_CARDS
+				):
+					why = CrewPings.BAD_PING
+			"zone":
+				# A hazard zone, scan position or probe bubble (D222, FT-SPA-028).
+				payload["id"] = msg["id"]
+				if not _is_zone(s.ship, msg["id"]):
 					why = CrewPings.BAD_PING
 			"site", "point":
 				payload["site"] = msg["site"]
@@ -343,6 +354,21 @@ func _known(s: NetSession, contact: int) -> bool:
 		and contact < world.ship_count()
 		and KnowledgeSystem.is_detected(world, world.faction_of(s.ship), contact)
 	)
+
+
+## Whether `id` names one of the ship's zones, or the bubble of one of its launched probes
+## (CrewPings.PROBE_ZONE_BASE).
+func _is_zone(ship: int, id: int) -> bool:
+	if id >= CrewPings.PROBE_ZONE_BASE:
+		var t: ProbeTable = session.world.probes
+		for row: int in t.rows_of(ship):
+			if t.serial[row] == id - CrewPings.PROBE_ZONE_BASE:
+				return true
+		return false
+	for z: Dictionary in relay.zones_of(ship):
+		if z["id"] == id:
+			return true
+	return false
 
 
 ## Whether a ship of the world is at the site.
