@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="PairDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/pair_def.gd" id="1_p11pair"]
+
+[resource]
+script = ExtResource("1_p11pair")
+id = &"p11"
+display_name = "Engineering + Relay"
+pair_min_gain = 0.25

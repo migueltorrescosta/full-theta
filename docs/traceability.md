@@ -261,10 +261,10 @@ Tests: 315, manual: 12, pending: 74.
 | FT-SPA-029 | tests | `tests/net/test_net_relay_l3.gd`, `tests/net/test_net_toggles_l3.gd` |
 | FT-SPA-030 | tests | `tests/stations/test_relay_station.gd` |
 | FT-SPA-031 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_station.gd` |
-| FT-PAIR-001 | tests | `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd` |
+| FT-PAIR-001 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd` |
 | FT-PAIR-002 | pending |  |
-| FT-PAIR-003 | tests | `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_reveals.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd`, `tests/sim/science/test_self_scan_faults.gd` |
-| FT-PAIR-004 | tests | `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_pair_harness.gd` |
+| FT-PAIR-003 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_reveals.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd`, `tests/sim/science/test_self_scan_faults.gd` |
+| FT-PAIR-004 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_pair_harness.gd` |
 | FT-PAIR-005 | tests | `tests/net/test_net_stations_filter.gd`, `tests/net/test_view_filter.gd` |
 | FT-PAIR-007 | tests | `tests/net/test_net_coop_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_helm_route_ribbon.gd` |
 | FT-PAIR-008 | tests | `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd` |
@@ -274,15 +274,15 @@ Tests: 315, manual: 12, pending: 74.
 | FT-PAIR-012 | tests | `tests/net/test_net_chips_l3.gd` |
 | FT-PAIR-013 | tests | `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_coop_l3.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-014 | tests | `tests/net/test_net_coop_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd` |
-| FT-PAIR-015 | tests | `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_pair_harness.gd` |
+| FT-PAIR-015 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_pair_harness.gd` |
 | FT-PAIR-016 | pending |  |
 | FT-PAIR-017 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_lobby_toggles.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-018 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd` |
 | FT-PAIR-019 | tests | `tests/net/test_view_filter.gd`, `tests/shared/test_health_band.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-PAIR-020 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-PAIR-021 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/test_request_chips.gd` |
-| FT-PAIR-022 | tests | `tests/pairs/test_hack_alpha.gd`, `tests/pairs/test_over_horizon_strike.gd` |
-| FT-PAIR-023 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd` |
+| FT-PAIR-022 | tests | `tests/pairs/test_hack_alpha.gd`, `tests/pairs/test_over_horizon_strike.gd`, `tests/pairs/test_play_hack_alpha.gd`, `tests/pairs/test_play_over_horizon_strike.gd` |
+| FT-PAIR-023 | tests | `tests/net/test_net_science_l3.gd`, `tests/pairs/test_play_hack_alpha.gd`, `tests/sim/science/test_hack.gd` |
 | FT-MIS-001 | pending |  |
 | FT-MIS-003 | pending |  |
 | FT-MIS-004 | pending |  |
@@ -382,7 +382,7 @@ Tests: 315, manual: 12, pending: 74.
 | FT-TST-003 | tests | `tools/tests/test_l5.py` |
 | FT-TST-004 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
 | FT-TST-005 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
-| FT-TST-006 | tests | `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd` |
+| FT-TST-006 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd` |
 | FT-TST-007 | tests | `tests/sim/core/test_integrator.gd` |
 | FT-TST-008 | tests | `tests/sim/combat/test_weapons.gd` |
 | FT-TST-009 | tests | `tests/sim/pvp/test_pvp.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_golden_replay.gd`, `tests/sim/replay/test_replay_determinism.gd` |
