@@ -16,8 +16,10 @@ extends RefCounted
 ## - Science (use_scan): ScienceHand scans the raider as soon as it is a contact (through
 ##   the probe when there is one) and so reveals the weak point (FT-SIM-023);
 ## - Weapons (always): fires one guided missile per cooldown at the raider while it is
-##   tracked and within FIRE_RANGE. With use_track off Weapons ignores what the probe
-##   tracks and waits for its own sensors (the Relay -> Weapons link removed).
+##   tracked, within FIRE_RANGE and the track's quality bar (GuidanceSystem.track_quality,
+##   D214) is at FIRE_QUALITY or more: a missile on a poor track turns slowly and is
+##   wasted. With use_track off Weapons ignores what the probe tracks and waits for its own
+##   sensors (the Relay -> Weapons link removed).
 
 const SEED: int = 61
 const PLAYER: int = 0
@@ -29,6 +31,8 @@ const PROBE_AT: Vector3 = Vector3(0.0, 0.0, -7000.0)
 const SENSOR_RANGE: float = 5000.0
 ## Weapons fires while the raider is closer than this (m); the missile's range is 8 km.
 const FIRE_RANGE: float = 7500.0
+## Weapons holds fire below this track quality (dimensionless, 0..1).
+const FIRE_QUALITY: float = 0.3
 ## The share of a hit past the shields that the raider's revealed weak point takes.
 const WEAK_POINT_SHARE: float = 0.9
 const TICK_LIMIT: int = 200 * SimWorld.HZ
@@ -110,15 +114,18 @@ static func measure(w: SimWorld) -> Dictionary:
 	}
 
 
-## A crew: Weapons plus the parts switched on. A fresh one per run.
-static func crew(use_probe: bool, use_scan: bool, use_track: bool) -> Callable:
+## A crew: Weapons plus the parts switched on. A fresh one per run. `shots` collects the
+## track quality of each missile fired.
+static func crew(
+	use_probe: bool, use_scan: bool, use_track: bool, shots: Array[float] = []
+) -> Callable:
 	var hand: ScienceHand = ScienceHand.new(PLAYER, RAIDER, PLAYER_SEED)
 	return func(w: SimWorld) -> void:
 		if use_probe:
 			relay(w)
 		if use_scan:
 			hand.act(w)
-		weapons(w, use_track)
+		weapons(w, use_track, shots)
 
 
 ## Relay: launches the probe at the start.
@@ -134,18 +141,20 @@ static func relay(w: SimWorld) -> void:
 
 ## Weapons: one guided missile per cooldown at the raider while it is in range and
 ## tracked, by the probe or not (use_track), else by the own sensors alone.
-static func weapons(w: SimWorld, use_track: bool) -> void:
+static func weapons(w: SimWorld, use_track: bool, shots: Array[float] = []) -> void:
 	var dist: float = w.kin.relative(PLAYER, RAIDER).length()
 	if w.mounts.cooldown[0] > 0.0 or w.mounts.ammo[0] <= 0 or dist > FIRE_RANGE:
 		return
 	var tracked: bool = GuidanceSystem.is_tracked(w, w.faction_of(PLAYER), RAIDER)
 	if not use_track:
 		tracked = dist <= w.defs[PLAYER].sensor_range
-	if tracked:
+	var quality: float = GuidanceSystem.track_quality(w, w.faction_of(PLAYER), RAIDER)
+	if tracked and quality >= FIRE_QUALITY:
 		var c: FireGuidedCommand = FireGuidedCommand.new()
 		c.ship_id = PLAYER
 		c.target = RAIDER
 		w.submit(c)
+		shots.append(quality)
 
 
 static func _weapons_row(w: SimWorld) -> int:

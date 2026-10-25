@@ -41,6 +41,9 @@ enum Kind { PROJECTILE, BEAM, MISSILE, TORPEDO }
 @export var kind: Kind = Kind.PROJECTILE
 ## Guided ordnance only: how fast the velocity direction can turn (rad/s).
 @export var turn_rate: float = 0.0
+## Guided ordnance only: the share of turn_rate it keeps when it follows a track of quality
+## 0, rising linearly to all of it at quality 1 (dimensionless, in [0, 1]; D214).
+@export var track_floor: float = 1.0
 ## Beams only: once heat reaches heat_limit after a shot the mount locks until its heat
 ## has fallen to this share of heat_limit (dimensionless, in (0, 1]; P6). 0 means no
 ## lock: the weapon just waits for heat to fall below heat_limit.
@@ -64,6 +67,7 @@ func validate() -> Array[String]:
 	DefCheck.positive(errors, "heat_limit", heat_limit)
 	if is_guided():
 		DefCheck.positive(errors, "turn_rate", turn_rate)
+		DefCheck.in_range(errors, "track_floor", track_floor, 0.0, 1.0)
 	if kind == Kind.BEAM:
 		DefCheck.in_range_open_low(errors, "overheat_release", overheat_release, 0.0, 1.0)
 	return errors

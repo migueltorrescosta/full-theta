@@ -17,5 +17,6 @@ heat_per_shot = 3.0
 heat_dissipation = 0.05
 heat_limit = 40.0
 turn_rate = 1.2
+track_floor = 0.25
 kind = 2
 damage_type = &"explosive"

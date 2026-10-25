@@ -60,7 +60,6 @@ static func step(world: SimWorld) -> void:
 			fire_requested[row] = 0
 			_try_fire(world, row, def, eff, aim)
 			mounts.guide_target[row] = -1
-			mounts.guide_point[row] = 0
 
 
 ## The weapon of the mount row's selected ammunition type (read-only).
@@ -200,7 +199,7 @@ static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float, aim:
 ## the mount's hull position along the barrel, with the ship's velocity plus the muzzle
 ## velocity. It is placed where the muzzle was at the start of the tick, so
 ## CollisionSystem's full-tick sweep starts at the muzzle. Guided ordnance takes the
-## target or point the fire request carried (FireGuidedCommand).
+## target the fire request carried (FireGuidedCommand).
 static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -> void:
 	var mounts: MountTable = world.mounts
 	var kin: Kinematics = world.kin
@@ -234,10 +233,7 @@ static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -
 				weapon.damage_type,
 				weapon.turn_rate if weapon.is_guided() else 0.0,
 				mounts.guide_target[row],
-				mounts.guide_point[row] == 1,
-				mounts.guide_x[row],
-				mounts.guide_y[row],
-				mounts.guide_z[row]
+				weapon.track_floor
 			)
 	if weapon.overheat_release > 0.0 and mounts.heat[row] >= weapon.heat_limit:
 		mounts.locked[row] = 1

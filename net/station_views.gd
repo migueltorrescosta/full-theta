@@ -530,7 +530,8 @@ const BLOCKS: Dictionary = {
 	# What Weapons gets from other stations when a toggle lets it (strand G, FeedsView): the
 	# faction's scanned weak points (bit i: subsystem i of the contact) and resistances (P7),
 	# the open hack windows (P7) and the track quality of detected contacts (P8, quality is
-	# the detection confidence, probe whether a deployed probe covers the contact).
+	# the track quality (GuidanceSystem.track_quality), probe whether a deployed probe covers
+	# the contact).
 	Section.FEEDS:
 	[
 		[
