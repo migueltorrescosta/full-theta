@@ -278,7 +278,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-PAIR-016 | pending |  |
 | FT-PAIR-017 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_lobby_toggles.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-018 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd` |
-| FT-PAIR-019 | tests | `tests/net/test_net_event_values_l3.gd`, `tests/net/test_view_filter.gd`, `tests/shared/test_health_band.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_main_screen_views.gd` |
+| FT-PAIR-019 | tests | `tests/net/test_net_event_values_l3.gd`, `tests/net/test_view_filter.gd`, `tests/net/voice/test_server_voice.gd`, `tests/shared/test_health_band.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_main_screen_views.gd` |
 | FT-PAIR-020 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_hazard_view.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-PAIR-021 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-022 | tests | `tests/pairs/test_hack_alpha.gd`, `tests/pairs/test_over_horizon_strike.gd` |

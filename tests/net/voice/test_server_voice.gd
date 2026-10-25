@@ -101,7 +101,8 @@ func test_alert_lines_go_to_the_stations_concerned() -> void:
 		assert_array(_spy.said)
 		. is_equal(
 			[
-				["computer.shields_low", {"pct": 24}, [tac, sys]],
+				["computer.shields_low", {"pct": 24}, [sys]],
+				["computer.shields_low", {"pct": 24}, [tac]],
 				["computer.subsystem_fault", {}, [sys]],
 				["computer.collision_warning", {}, [tac]],
 			]
@@ -120,6 +121,36 @@ func test_alert_lines_go_to_the_stations_concerned() -> void:
 	damage.health[hull] = server.world.defs[PLAYER].hull_max * 0.1
 	server.session.after_ticks([_event(server, &"hit", PLAYER)])
 	assert_int(_spy.said.size()).is_equal(2)
+
+
+# FT: FT-AUD-006, FT-PAIR-019
+func test_shields_low_is_spoken_by_the_summaries_toggle() -> void:
+	var setup: Array = await _crewed()
+	var server: NetServer = setup[0]
+	var crew: Array[NetClient] = setup[1]
+	var tac: int = crew[0].session_id
+	var sys: int = crew[1].session_id
+	var band: int = roundi(HealthBand.quantise(0.4, DataToggles.def().band_edges) * 100.0)
+	var rows: Array = [
+		["easy", ["computer.shields_low", {"pct": 40}]],
+		["normal", ["computer.shields_low", {"pct": band}]],
+		["hard", ["computer.shields_low_plain", {}]],
+	]
+	for row: Array in rows:
+		server.session.voice.toggles = DataToggles.of_preset(row[0]).encode()
+		_spy.said.clear()
+		server.session.after_ticks([_event(server, &"shield_low", PLAYER, 0.4)])
+		# Engineering always hears the exact percentage; Helm what its toggle allows.
+		(
+			assert_array(_spy.said)
+			. override_failure_message(row[0])
+			. is_equal(
+				[
+					["computer.shields_low", {"pct": 40}, [sys]],
+					[row[1][0], row[1][1], [tac]],
+				]
+			)
+		)
 
 
 # FT: FT-AUD-006, FT-M1-012

@@ -585,6 +585,7 @@ func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 		return
 	launch(s.ship)
 	_broadcast(NetProtocol.EVENT_STARTED, {"ship": s.ship, "tick": world.tick})
+	voice.toggles = toggles.encode()
 	voice.start(language, crew_ships().map(func(c: Dictionary) -> int: return c["faction"]))
 	_publish()
 
