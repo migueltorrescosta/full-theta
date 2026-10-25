@@ -228,6 +228,8 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 				payload["id"] = msg["id"]
 				if not marks.has_mark(s.ship, msg["id"]):
 					why = CrewPings.BAD_PING
+				else:
+					session.coop.on_mark_pinged(s, msg["id"])
 			"site", "point":
 				payload["site"] = msg["site"]
 				var at: PackedFloat64Array = session.world.kin.wrap_point(
@@ -277,9 +279,13 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 	if why != "":
 		return why
 	if op.begins_with("route"):
+		var told: Array = []
 		for t: NetSession in session.by_id.values():
 			if t.ship == s.ship and t.has_pick() and _sees_routes(t):
 				session.notify(t, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
+				told.append(t)
+		if op == "route_add":
+			session.coop.on_routes_shared(s.ship, told)
 		_log(s.ship, "route_" + op.trim_prefix("route_"), {"route": slot + 1})
 	else:
 		_to_ship(s.ship, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
@@ -403,10 +409,13 @@ func _is_relay(s: NetSession) -> bool:
 	return s.has_pick() and CrewMarks.role_of(s.entry) == CrewMarks.Role.RELAY
 
 
-## Routes reach Relay always and the other stations unless the toggle set is Hard
-## (FT-SPA-029, FT-PAIR-008).
+## Routes reach Relay always and the other stations when the routes toggle is on or their
+## view holds Relay (FT-SPA-029, FT-PAIR-008, FT-JNT-005).
 func _sees_routes(s: NetSession) -> bool:
-	return s.has_pick() and (_is_relay(s) or s.toggles != "hard")
+	if not s.has_pick():
+		return false
+	var f: ViewFilter = ViewFilter.of(s.entry, s.toggles)
+	return f == null or f.stations.has("relay") or f.toggles.on(ViewFilter.ROUTES)
 
 
 func _sites_payload() -> Dictionary:

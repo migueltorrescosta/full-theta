@@ -82,6 +82,14 @@ func marks_of(ship: int) -> Array:
 	return out
 
 
+## The session that placed the mark in a slot, or -1 for an empty slot (the debrief's
+## "placed by one station, used by another", NetCoop).
+func placer_of(ship: int, slot: int) -> int:
+	if not has_mark(ship, slot):
+		return -1
+	return int((_slots(ship)[slot] as Dictionary).get("by_session", -1))
+
+
 func has_mark(ship: int, slot: int) -> bool:
 	return slot >= 0 and slot < SLOTS and not (_slots(ship)[slot] as Dictionary).is_empty()
 

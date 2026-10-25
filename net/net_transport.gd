@@ -233,6 +233,11 @@ func post_ownership(ship: int, table: Dictionary) -> void:
 	_post(["ownership", ship, table.duplicate(true)])
 
 
+## A ship's open request chips for the CHIPS section (NetChips).
+func post_chips(ship: int, rows: Array) -> void:
+	_post(["chips", ship, rows.duplicate(true)])
+
+
 ## Queues a voice clip (NetProtocol.Type.VOICE message) on a session's low lane.
 func post_voice(session: int, data: PackedByteArray) -> void:
 	_post(["voice", session, data])
@@ -367,6 +372,8 @@ func _apply(op: Array) -> void:
 				c.queue.push(NetChunker.STREAM_VOICE, op[2])
 		"ownership":
 			_builder.set_ownership(op[1], op[2])
+		"chips":
+			_builder.set_chips(op[1], op[2])
 		"reset":
 			_builder = SnapshotBuilder.new()
 			_builder.chunk_size = chunk_size

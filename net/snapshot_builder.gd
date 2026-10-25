@@ -46,6 +46,10 @@ var _cache: Dictionary = {}
 var _ownership: Dictionary = {}
 ## Faction -> the ship ids it knows (ContactsSection.known), computed once per build.
 var _known: Dictionary = {}
+## Ship -> the ship's open request chips posted by the main thread (ChipsSection).
+var _chips: Dictionary = {}
+## View key -> ViewFilter (its toggle code and entry fixed by the key).
+var _filters: Dictionary = {}
 
 
 func _init() -> void:
@@ -69,8 +73,10 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 		var ship: int = k[0]
 		if ship < 0 or ship >= world.ship_count():
 			continue
+		var filter: ViewFilter = _filter_of(view_key)
 		for kind: int in StationViews.sections_of(k[1]):
-			needed[_skey(kind, _owner(kind, ship))] = [kind, _owner(kind, ship)]
+			var skey: String = _skey(kind, _owner(kind, ship), _signature(kind, filter))
+			needed[skey] = [kind, _owner(kind, ship), filter]
 			if kind == StationViews.Section.NEAR:
 				near_ships[ship] = true
 	for skey: String in _sections.keys():
@@ -78,7 +84,7 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 			_sections.erase(skey)
 	for skey: String in needed:
 		if not _sections.has(skey):
-			_sections[skey] = _make(needed[skey][0], needed[skey][1])
+			_sections[skey] = _make(needed[skey][0], needed[skey][1], needed[skey][2])
 	# Near sets first: one orientation model per faction serves all its ships.
 	var near_sets: Dictionary = {}
 	var unions: Dictionary = {}
@@ -100,6 +106,8 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 			(section as OwnershipSection).data = _ownership.get(section.owner, {})
 		elif section is ContactsSection:
 			(section as ContactsSection).ids = _known_of(section.owner)
+		elif section is ChipsSection:
+			(section as ChipsSection).rows = _chips.get(section.owner, [])
 		if section is NearSection:
 			_deltas[skey] = (section as NearSection).update_members(world, near_sets[section.owner])
 		else:
@@ -136,8 +144,9 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 	buf.put_u32(tick)
 	buf.put_u8(0)
 	var n: int = 0
+	var filter: ViewFilter = _filter_of(view_key)
 	for kind: int in StationViews.sections_of(k[1]):
-		var skey: String = _skey(kind, _owner(kind, ship))
+		var skey: String = _skey(kind, _owner(kind, ship), _signature(kind, filter))
 		if not _sections.has(skey):
 			continue
 		var part: PackedByteArray = (
@@ -161,15 +170,23 @@ func set_ownership(ship: int, table: Dictionary) -> void:
 	_ownership[ship] = table
 
 
+## Sets a ship's open request chips (net thread, from NetTransport): the rows of
+## ChipsSection, {id, chip, arg, from, to, sent, expires} with from and to the station
+## indices of StationViews.CREW.
+func set_chips(ship: int, rows: Array) -> void:
+	_chips[ship] = rows
+
+
 func take_counts() -> Dictionary:
 	var out: Dictionary = counts
 	counts = {"builds": 0, "section_updates": 0, "delta_messages": 0, "full_messages": 0}
 	return out
 
 
-## The section of a kind and owner, or null (tests).
-func section(kind: int, owner: int) -> SnapshotSection:
-	return _sections.get(_skey(kind, owner))
+## The section of a kind and owner, or null (tests). `signature` names the filtered
+## variant (ViewFilter.signature) of a section in StationViews.FILTERED.
+func section(kind: int, owner: int, signature: String = "") -> SnapshotSection:
+	return _sections.get(_skey(kind, owner, signature))
 
 
 ## Writes a section length (u16, or LONG_SECTION then a u32).
@@ -196,19 +213,24 @@ func _owner(kind: int, ship: int) -> int:
 	return _world.faction_of(ship) if kind == StationViews.Section.CONTACTS else ship
 
 
-func _make(kind: int, owner: int) -> SnapshotSection:
+func _make(kind: int, owner: int, filter: ViewFilter) -> SnapshotSection:
+	var section: SnapshotSection
 	match kind:
 		StationViews.Section.KIN:
-			return KinSection.new(kind, owner)
+			section = KinSection.new(kind, owner)
 		StationViews.Section.CONTACTS:
-			return ContactsSection.new(owner, pos_tol_m)
+			section = ContactsSection.new(owner, pos_tol_m)
 		StationViews.Section.NEAR:
-			return NearSection.new(owner, _orient_of(_world.faction_of(owner)), near_range_m)
+			section = NearSection.new(owner, _orient_of(_world.faction_of(owner)), near_range_m)
 		StationViews.Section.PROJECTILES:
-			return ProjectilesSection.new(owner, proj_range_m)
+			section = ProjectilesSection.new(owner, proj_range_m)
 		StationViews.Section.OWNERSHIP:
-			return OwnershipSection.new(kind, owner)
-	return BlockSection.new(kind, owner)
+			section = OwnershipSection.new(kind, owner)
+		StationViews.Section.CHIPS:
+			section = ChipsSection.new(kind, owner, filter)
+		_:
+			section = BlockSection.new(kind, owner, filter)
+	return section
 
 
 func _known_of(faction: int) -> PackedInt32Array:
@@ -223,5 +245,18 @@ func _orient_of(faction: int) -> OrientModel:
 	return _orient[faction]
 
 
-static func _skey(kind: int, owner: int) -> String:
-	return "%d:%d" % [kind, owner]
+## The filter of a view key (an unreadable toggle code gets the default set).
+func _filter_of(view_key: String) -> ViewFilter:
+	if not _filters.has(view_key):
+		var k: Array = StationViews.parse_key(view_key)
+		var f: ViewFilter = ViewFilter.of(k[1], k[2])
+		_filters[view_key] = f if f != null else ViewFilter.of(k[1], StationViews.DEFAULT_TOGGLES)
+	return _filters[view_key]
+
+
+static func _signature(kind: int, filter: ViewFilter) -> String:
+	return filter.signature(kind) if StationViews.FILTERED.has(kind) else ""
+
+
+static func _skey(kind: int, owner: int, signature: String = "") -> String:
+	return "%d:%d" % [kind, owner] if signature == "" else "%d:%d:%s" % [kind, owner, signature]

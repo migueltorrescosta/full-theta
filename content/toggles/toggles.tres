@@ -1,0 +1,120 @@
+[gd_resource type="Resource" script_class="DataTogglesDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/data_toggles_def.gd" id="1_tgs"]
+[ext_resource type="Script" path="res://content/defs/data_toggle_def.gd" id="2_tg"]
+
+[sub_resource type="Resource" id="Resource_summaries"]
+script = ExtResource("2_tg")
+id = &"summaries"
+kind = 0
+pairs = "all but P12"
+easy = 2
+normal = 1
+hard = 0
+
+[sub_resource type="Resource" id="Resource_chips"]
+script = ExtResource("2_tg")
+id = &"chips"
+pairs = "P1 P2 P3 P6 P9 P10 P11"
+easy = 1
+normal = 1
+hard = 0
+
+[sub_resource type="Resource" id="Resource_routes"]
+script = ExtResource("2_tg")
+id = &"routes"
+pairs = "P4"
+source = &"relay"
+target = &"helm"
+easy = 1
+normal = 1
+hard = 0
+
+[sub_resource type="Resource" id="Resource_lanes"]
+script = ExtResource("2_tg")
+id = &"lanes"
+pairs = "P5"
+source = &"comms"
+target = &"helm"
+easy = 1
+normal = 1
+hard = 0
+
+[sub_resource type="Resource" id="Resource_hazard_countdowns"]
+script = ExtResource("2_tg")
+id = &"hazard_countdowns"
+pairs = "P11"
+source = &"relay"
+target = &"engineering"
+easy = 1
+normal = 1
+hard = 0
+
+[sub_resource type="Resource" id="Resource_weak_points"]
+script = ExtResource("2_tg")
+id = &"weak_points"
+pairs = "P7"
+source = &"science"
+target = &"weapons"
+easy = 1
+normal = 0
+hard = 0
+
+[sub_resource type="Resource" id="Resource_track_feeds"]
+script = ExtResource("2_tg")
+id = &"track_feeds"
+pairs = "P8"
+source = &"relay"
+target = &"weapons"
+easy = 1
+normal = 0
+hard = 0
+
+[sub_resource type="Resource" id="Resource_diagnosed_causes"]
+script = ExtResource("2_tg")
+id = &"diagnosed_causes"
+pairs = "P10"
+source = &"science"
+target = &"engineering"
+easy = 1
+normal = 0
+hard = 0
+
+[sub_resource type="Resource" id="Resource_contract_flags"]
+script = ExtResource("2_tg")
+id = &"contract_flags"
+pairs = "P9"
+source = &"comms"
+target = &"weapons"
+easy = 1
+normal = 0
+hard = 0
+arrives_m3 = true
+
+[sub_resource type="Resource" id="Resource_verify_chip"]
+script = ExtResource("2_tg")
+id = &"verify_chip"
+pairs = "P14"
+source = &"science"
+target = &"comms"
+easy = 1
+normal = 0
+hard = 0
+arrives_m3 = true
+
+[sub_resource type="Resource" id="Resource_mission_icon"]
+script = ExtResource("2_tg")
+id = &"mission_icon"
+pairs = "P15"
+source = &"relay"
+target = &"comms"
+easy = 1
+normal = 1
+hard = 0
+
+[resource]
+script = ExtResource("1_tgs")
+id = &"toggles"
+toggles = Array[ExtResource("2_tg")]([SubResource("Resource_summaries"), SubResource("Resource_chips"), SubResource("Resource_routes"), SubResource("Resource_lanes"), SubResource("Resource_hazard_countdowns"), SubResource("Resource_weak_points"), SubResource("Resource_track_feeds"), SubResource("Resource_diagnosed_causes"), SubResource("Resource_contract_flags"), SubResource("Resource_verify_chip"), SubResource("Resource_mission_icon")])
+default_preset = &"easy"
+band_edges = PackedFloat64Array(0.75, 0.5, 0.25)

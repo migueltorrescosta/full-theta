@@ -1,0 +1,294 @@
+extends GdUnitTestSuite
+## What a snapshot carries of other stations' data, per toggle (ViewFilter, SnapshotBuilder,
+## FeedsView): exact, banded and absent summaries, the shortcuts of Weapons, Helm and
+## Engineering, Engineering's data never on Comms, Hard leaking nothing, a joint view getting
+## the union of its stations' data.
+
+const ME: int = ScienceFixture.ME
+const FOE: int = ScienceFixture.FOE
+const CAUSES: Array[StringName] = [&"coolant_leak", &"short", &"software"]
+const S: StationViews.Section = StationViews.Section.STATUS
+
+var world: SimWorld
+var max_shields: float
+var max_hull: float
+
+
+func before_test() -> void:
+	var def: ShipDef = TestDefs.corvette().duplicate()
+	var subs: Array[SubsystemDef] = []
+	for s: SubsystemDef in def.subsystems:
+		var copy: SubsystemDef = s.duplicate()
+		if copy.id == &"engines":
+			copy.fault_causes = CAUSES
+		subs.append(copy)
+	def.subsystems = subs
+	world = SimWorld.new(7)
+	world.science_def = ScienceFixture.science()
+	world.spawn_ship(def, ScienceFixture.BLUE, 0)
+	world.spawn_ship(
+		ScienceFixture.weak_raider(),
+		ScienceFixture.RED,
+		0,
+		Vector3(0, 0, -3000),
+		Quaternion(Vector3.UP, PI / 2.0)
+	)
+	world.step()
+	world.drain_events()
+	max_shields = def.shields.max_strength
+	max_hull = def.hull_max
+	# A ship at 40 % shields, 60 % hull, 5 pips more than it has now, fuel at 30 %.
+	world.shields.strength[ME] = 0.4 * max_shields
+	world.damage.health[world.damage.rows_of(ME)[0]] = 0.6 * max_hull
+	world.kin.propellant[ME] = 0.3 * def.propellant_capacity
+	world.kin.thrust_scale[ME] = 0.3
+	world.kin.torque_scale[ME] = 0.3
+
+
+## The decoded view of one entry at a toggle code on the current world.
+func _view(entry: String, code: String) -> NetViewState:
+	var b: SnapshotBuilder = SnapshotBuilder.new()
+	var key: String = StationViews.key(ME, entry, code)
+	b.build(SimCopy.of(world), 1, [key])
+	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
+	assert_bool(view.apply(b.message(key, true))).is_true()
+	return view
+
+
+func _status(entry: String, code: String) -> Dictionary:
+	return _view(entry, code).blocks[S]
+
+
+## Banded values the way D193 gives them: the middle of the band of the share.
+func _banded(value: float, maximum: float) -> float:
+	return HealthBand.quantise(value / maximum, DataToggles.def().band_edges) * maximum
+
+
+# FT: FT-PAIR-019, FT-PAIR-007
+# Summaries of other stations' data are exact on Easy, banded to the middle of one of four
+# bands on Normal, and absent on Hard (the top bar's shields, reactor and propellant); the
+# owning station always has the exact value.
+func test_summaries_are_exact_banded_or_absent() -> void:
+	var pips: int = int(_status("engineering", "easy")["pips_used"])
+	assert_int(pips).is_greater(0)
+	for entry: String in ["helm", "weapons", "science", "relay"]:
+		var easy: Dictionary = _status(entry, "easy")
+		assert_float(easy["shields"]).is_equal_approx(0.4 * max_shields, 1e-3)
+		assert_int(easy["pips_used"]).is_equal(pips)
+		var normal: Dictionary = _status(entry, "normal")
+		assert_float(normal["shields"]).is_equal_approx(
+			_banded(0.4 * max_shields, max_shields), 1e-3
+		)
+		assert_float(normal["shields"]).is_not_equal(easy["shields"])
+		var hard: Dictionary = _status(entry, "hard")
+		assert_float(hard["shields"]).is_equal(0.0)
+		assert_int(hard["pips_used"]).is_equal(0)
+	# Engineering owns shields and the reactor: exact at every difficulty.
+	for code: String in ["easy", "normal", "hard"]:
+		var own: Dictionary = _status("engineering", code)
+		assert_float(own["shields"]).is_equal_approx(0.4 * max_shields, 1e-3)
+		assert_int(own["pips_used"]).is_equal(pips)
+	# Helm owns the propellant too.
+	assert_float(_status("helm", "hard")["propellant"]).is_greater(0.0)
+	assert_float(_status("weapons", "hard")["propellant"]).is_equal(0.0)
+	assert_float(_status("weapons", "easy")["propellant"]).is_greater(0.0)
+	# Hull is the ship's, not a station's: exact for everyone but Comms.
+	for code: String in ["easy", "normal", "hard"]:
+		assert_float(_status("weapons", code)["hull"]).is_equal_approx(0.6 * max_hull, 1e-3)
+
+
+# FT: FT-PAIR-019, FT-HLM-011, FT-HLM-012
+# The thrust envelope and the shield ring Helm shows are Engineering's data: exact, banded
+# or neutral by the same toggle.
+func test_helm_envelope_follows_the_summaries_toggle() -> void:
+	var easy: Dictionary = _view("helm", "easy").blocks[StationViews.Section.HELM]
+	assert_float(easy["thrust_scale"]).is_equal_approx(0.3, 1e-6)
+	var normal: Dictionary = _view("helm", "normal").blocks[StationViews.Section.HELM]
+	assert_float(normal["thrust_scale"]).is_equal_approx(0.375, 1e-6)
+	var hard: Dictionary = _view("helm", "hard").blocks[StationViews.Section.HELM]
+	assert_float(hard["thrust_scale"]).is_equal(1.0)
+	assert_float(hard["torque_scale"]).is_equal(1.0)
+	assert_float(hard["shield_tightness"]).is_equal(0.0)
+	assert_float(hard["shield_power"]).is_equal(0.0)
+	# Helm's own fields stay.
+	assert_bool(hard.has("throttle_setpoint")).is_true()
+
+
+# FT: FT-PAIR-010, FT-PAIR-019
+# Engineering's data never reaches a Comms view at any difficulty: shields and reactor are
+# absent, and Comms' only view of condition is the hull band, the same at all three.
+func test_engineering_data_never_reaches_comms() -> void:
+	var bands: Array = []
+	for code: String in ["easy", "normal", "hard", "easy:21111111110", "normal:11111111111"]:
+		var st: Dictionary = _status("comms", code)
+		assert_float(st["shields"]).override_failure_message(code).is_equal(0.0)
+		assert_int(st["pips_used"]).is_equal(0)
+		assert_float(st["propellant"]).is_equal(0.0)
+		assert_float(st["hull"]).is_equal_approx(_banded(0.6 * max_hull, max_hull), 1e-3)
+		bands.append(st["hull"])
+	assert_array(bands).is_equal([bands[0], bands[0], bands[0], bands[0], bands[0]])
+	# Not even a field of the Engineering block: Comms has no such section.
+	var kinds: Array[int] = StationViews.sections_of("comms")
+	assert_bool(kinds.has(StationViews.Section.ENGINEERING)).is_false()
+	assert_bool(kinds.has(StationViews.Section.FEEDS)).is_false()
+	# A view that joins Comms to another station is the same: Approach is Helm + Comms.
+	var approach: Dictionary = _status("approach", "easy")
+	assert_float(approach["shields"]).is_equal(0.0)
+	assert_float(approach["hull"]).is_equal_approx(_banded(0.6 * max_hull, max_hull), 1e-3)
+	# Quartermaster holds both Engineering and Comms by design (D76): everything exact.
+	var qm: Dictionary = _status("quartermaster", "hard")
+	assert_float(qm["shields"]).is_equal_approx(0.4 * max_shields, 1e-3)
+	assert_float(qm["hull"]).is_equal_approx(0.6 * max_hull, 1e-3)
+
+
+# FT: FT-JNT-005, FT-PAIR-019
+# A joint view gets the union of its stations' data, and a shortcut between its own stations
+# shows as if its toggle were on: Drive (Engineering + Helm) sees the envelope exactly on
+# Hard; Weapons + Science sees weak points on Normal and Hard.
+func test_a_joint_view_gets_the_union_of_its_stations() -> void:
+	var drive: NetViewState = _view("drive", "hard")
+	assert_float(drive.blocks[S]["shields"]).is_equal_approx(0.4 * max_shields, 1e-3)
+	assert_float(drive.blocks[StationViews.Section.HELM]["thrust_scale"]).is_equal_approx(0.3, 1e-6)
+	assert_bool(drive.blocks.has(StationViews.Section.ENGINEERING)).is_true()
+	var tactical: NetViewState = _view("tactical", "hard")
+	assert_bool(tactical.blocks.has(StationViews.Section.HELM)).is_true()
+	assert_bool(tactical.blocks.has(StationViews.Section.MOUNTS)).is_true()
+	# Tactical is Helm + Weapons: Engineering's summaries are still absent on Hard.
+	assert_float(tactical.blocks[S]["shields"]).is_equal(0.0)
+	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
+	var targeting: NetViewState = _view("targeting", "hard")
+	assert_array(targeting.blocks[StationViews.Section.FEEDS]["weak"]).is_not_empty()
+	assert_array(_view("weapons", "hard").blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+
+
+# FT: FT-WPN-007, FT-PAIR-007, FT-PAIR-020, FT-PAIR-017
+# Weak points and resistances reach Weapons when the weak-points toggle is on: Easy yes,
+# Normal (by voice) and Hard no; an edited Normal with the toggle on yes. The facts are
+# what Science revealed, no more.
+func test_weak_points_reach_weapons_by_toggle() -> void:
+	assert_array(_view("weapons", "easy").blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
+	var easy: Dictionary = _view("weapons", "easy").blocks[StationViews.Section.FEEDS]
+	assert_int(easy["weak"].size()).is_equal(1)
+	assert_int(easy["weak"][0]["contact"]).is_equal(FOE)
+	assert_int(easy["weak"][0]["weak_mask"]).is_equal(1)
+	assert_float(easy["weak"][0]["resist"][0]["factor"]).is_equal_approx(0.5, 1e-6)
+	for code: String in ["normal", "hard"]:
+		assert_array(_view("weapons", code).blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+	var custom: DataToggles = DataToggles.of_preset("normal").with_value(&"weak_points", 1)
+	var shown: Dictionary = _view("weapons", custom.encode()).blocks[StationViews.Section.FEEDS]
+	assert_int(shown["weak"].size()).is_equal(1)
+	# The other toggles of the edited set stay as Normal has them.
+	assert_array(shown["tracks"]).is_empty()
+
+
+# FT: FT-PAIR-007, FT-PAIR-020
+# Track feeds with their quality reach Weapons on Easy only; Hard and Normal get none.
+func test_track_feeds_reach_weapons_by_toggle() -> void:
+	var easy: Array = _view("weapons", "easy").blocks[StationViews.Section.FEEDS]["tracks"]
+	assert_int(easy.size()).is_equal(1)
+	assert_int(easy[0]["contact"]).is_equal(FOE)
+	assert_float(easy[0]["quality"]).is_between(0.05, 1.0)
+	assert_bool(easy[0]["probe"]).is_false()
+	for code: String in ["normal", "hard"]:
+		assert_array(_view("weapons", code).blocks[StationViews.Section.FEEDS]["tracks"]).is_empty()
+	var custom: DataToggles = DataToggles.of_preset("hard").with_value(&"track_feeds", 1)
+	var shown: Dictionary = _view("weapons", custom.encode()).blocks[StationViews.Section.FEEDS]
+	assert_int(shown["tracks"].size()).is_equal(1)
+	assert_array(shown["weak"]).is_empty()
+
+
+# FT: FT-ENG-006, FT-PAIR-020, FT-PAIR-014
+# A diagnosed cause shows on Engineering when the toggle is on or Science shares its view;
+# Science's own-ship scan reveals it in the sim at every difficulty.
+func test_diagnosed_cause_shows_by_toggle() -> void:
+	assert_bool(DamageSystem.inflict_fault(world, ME, &"engines", &"short", 1e6)).is_true()
+	DamageSystem.reveal_fault_cause(world, ME, &"engines")
+	var engines: int = 0
+	var cause: Callable = func(code: String, entry: String = "engineering") -> int:
+		var rows: Array = _view(entry, code).blocks[StationViews.Section.ENGINEERING]["subsystems"]
+		return rows[engines]["fault_cause"]
+	assert_int(cause.call("easy")).is_equal(2)
+	assert_int(cause.call("normal")).is_equal(0)
+	assert_int(cause.call("hard")).is_equal(0)
+	(
+		assert_int(
+			cause.call(DataToggles.of_preset("hard").with_value(&"diagnosed_causes", 1).encode())
+		)
+		. is_equal(2)
+	)
+	# Systems is Engineering + Science: its own shortcut shows as on.
+	assert_int(cause.call("hard", "systems")).is_equal(2)
+	# The fault itself is Engineering's own symptom and is always shown.
+	var rows: Array = (
+		_view("engineering", "hard").blocks[StationViews.Section.ENGINEERING]["subsystems"]
+	)
+	assert_bool(rows[engines]["fault"]).is_true()
+
+
+# FT: FT-PAIR-008, FT-PAIR-009
+# On Hard no data of another station reaches a screen but marks and pings: every shortcut
+# field is empty or neutral in every single-station view, and the events that carry
+# another station's work do not reach it.
+func test_hard_leaks_only_marks_and_pings() -> void:
+	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
+	DamageSystem.inflict_fault(world, ME, &"engines", &"short", 1e6)
+	DamageSystem.reveal_fault_cause(world, ME, &"engines")
+	for entry: String in StationViews.CREW:
+		var view: NetViewState = _view(entry, "hard")
+		var st: Dictionary = view.blocks[S]
+		if entry == "engineering":
+			assert_float(st["shields"]).is_greater(0.0)
+		else:
+			assert_float(st["shields"]).override_failure_message(entry).is_equal(0.0)
+		if view.blocks.has(StationViews.Section.FEEDS):
+			var feeds: Dictionary = view.blocks[StationViews.Section.FEEDS]
+			assert_array(feeds["weak"]).is_empty()
+			assert_array(feeds["tracks"]).is_empty()
+			assert_array(feeds["windows"]).is_empty()
+		if view.blocks.has(StationViews.Section.ENGINEERING):
+			for row: Dictionary in view.blocks[StationViews.Section.ENGINEERING]["subsystems"]:
+				assert_int(row["fault_cause"]).is_equal(0)
+		if view.blocks.has(StationViews.Section.RELAY) and entry != "relay":
+			assert_array(view.blocks[StationViews.Section.RELAY]["probes"]).is_empty()
+			assert_int(view.blocks[StationViews.Section.RELAY]["stock"]).is_equal(0)
+	# Events: Science's work reaches Weapons and Engineering only through a toggle; scan
+	# positions are MARK items and reach Helm at every difficulty.
+	for code: String in ["normal", "hard"]:
+		assert_bool(StationViews.sees_event("weapons", &"hack_done", code)).is_false()
+		assert_bool(StationViews.sees_event("weapons", &"hack_window_end", code)).is_false()
+		assert_bool(StationViews.sees_event("engineering", &"self_scan_done", code)).is_false()
+		assert_bool(StationViews.sees_event("weapons", &"lane_warning", code)).is_false()
+		assert_bool(StationViews.sees_event("science", &"hack_done", code)).is_true()
+		assert_bool(StationViews.sees_event("relay", &"lane_warning", code)).is_true()
+		assert_bool(StationViews.sees_event("helm", &"scan_mark", code)).is_true()
+	assert_bool(StationViews.sees_event("weapons", &"hack_done", "easy")).is_true()
+	assert_bool(StationViews.sees_event("engineering", &"self_scan_done", "easy")).is_true()
+	assert_bool(StationViews.sees_event("weapons", &"lane_warning", "easy")).is_true()
+	# A joint view holding the source station gets them at any difficulty.
+	assert_bool(StationViews.sees_event("targeting", &"hack_done", "hard")).is_true()
+	assert_bool(StationViews.sees_event("systems", &"self_scan_done", "hard")).is_true()
+
+
+# FT: FT-NET-009, FT-PAIR-005
+# Two toggle sets that filter alike share one encoded section; unlike ones don't.
+func test_equal_filters_share_a_section() -> void:
+	var b: SnapshotBuilder = SnapshotBuilder.new()
+	var keys: Array = [
+		StationViews.key(ME, "weapons", "easy"),
+		StationViews.key(ME, "weapons", "normal"),
+		StationViews.key(ME, "weapons", "hard"),
+		StationViews.key(ME, "helm", "easy"),
+		StationViews.key(ME, "science", "easy"),
+	]
+	b.build(SimCopy.of(world), 1, keys)
+	assert_object(b.section(S, ME, ViewFilter.of("helm", "easy").signature(S))).is_same(
+		b.section(S, ME, ViewFilter.of("science", "easy").signature(S))
+	)
+	assert_object(b.section(S, ME, ViewFilter.of("weapons", "hard").signature(S))).is_not_same(
+		b.section(S, ME, ViewFilter.of("weapons", "easy").signature(S))
+	)
+	# A malformed code in a key reads as the default set, never a crash.
+	var bad: String = StationViews.key(ME, "weapons", "extreme")
+	b.build(SimCopy.of(world), 2, [bad])
+	assert_bool(b.message(bad, true).size() > SnapshotBuilder.HEADER_BYTES).is_true()
