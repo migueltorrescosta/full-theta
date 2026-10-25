@@ -168,6 +168,7 @@ const SCHEMAS: Dictionary = {
 	Type.RUN_AGAIN: {"ship": TYPE_INT, "vote": TYPE_BOOL},
 	Type.MARK_SEND: {"slot": TYPE_INT, "ship": TYPE_INT},
 	Type.MARK_ACCEPT: {"id": TYPE_INT, "accept": TYPE_BOOL, "slot": TYPE_INT},
+	Type.CLIENT_STATS: {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -190,6 +191,7 @@ const FROM_CLIENT: Array[int] = [
 	Type.RUN_AGAIN,
 	Type.MARK_SEND,
 	Type.MARK_ACCEPT,
+	Type.CLIENT_STATS,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession

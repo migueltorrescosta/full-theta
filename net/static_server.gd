@@ -29,6 +29,7 @@ const MIME: Dictionary = {
 	"ico": "image/x-icon",
 	"json": "application/json",
 	"webm": "video/webm",
+	"mp4": "video/mp4",
 	"txt": "text/plain; charset=utf-8",
 }
 
@@ -54,6 +55,9 @@ var slice: int = 65536
 var requests: int = 0
 var gzip_responses: int = 0
 var not_modified: int = 0
+## 206 responses, and Range requests answered 416.
+var ranges: int = 0
+var ranged_errors: int = 0
 var errors: int = 0
 var bytes_out: int = 0
 ## Bytes searched for the end of a request head, over every connection. A search
@@ -211,6 +215,12 @@ func _respond(c: Conn, req: Dictionary) -> void:
 	var gz: bool = (
 		accepts_gzip(headers.get("accept-encoding", "")) and FileAccess.file_exists(path + ".gz")
 	)
+	var range_header: String = String(headers.get("range", ""))
+	# A byte range is always of the file itself; If-Range with another ETag means the
+	# client's copy is stale, so it gets the whole file.
+	var ranged: bool = range_header != ""
+	if ranged:
+		gz = false
 	var send_path: String = path + ".gz" if gz else path
 	var file: FileAccess = FileAccess.open(send_path, FileAccess.READ)
 	if file == null:
@@ -223,12 +233,18 @@ func _respond(c: Conn, req: Dictionary) -> void:
 	var out: Array[String] = [
 		"Content-Type: " + mime_for(name),
 		"ETag: " + etag,
-		"Cache-Control: no-cache",
+		"Cache-Control: " + cache_control(name),
 		"Vary: Accept-Encoding",
+		"Accept-Ranges: bytes",
 	]
+	if ranged and headers.get("if-range", etag) != etag:
+		ranged = false
 	if headers.get("if-none-match", "") == etag:
 		not_modified += 1
 		_head(c, 304, "Not Modified", out, 0)
+		return
+	if ranged:
+		_respond_range(c, file, size, out, range_header, is_get)
 		return
 	if gz:
 		gzip_responses += 1
@@ -238,6 +254,27 @@ func _respond(c: Conn, req: Dictionary) -> void:
 	if is_get and size > 0:
 		c.file = file
 		c.remaining = size
+
+
+## A 206 for `range_header`, or 416 when it can't be satisfied. `out` holds the headers
+## so far: the four every file response has, then Accept-Ranges.
+func _respond_range(
+	c: Conn, file: FileAccess, size: int, out: Array[String], range_header: String, is_get: bool
+) -> void:
+	var r: Vector2i = parse_range(range_header, size)
+	if r.x < 0:
+		ranged_errors += 1
+		_simple(c, 416, "Range Not Satisfiable", is_get, ["Content-Range: bytes */%d" % size])
+		return
+	var length: int = r.y - r.x + 1
+	out.append("Content-Range: bytes %d-%d/%d" % [r.x, r.y, size])
+	out.append("Content-Length: %d" % length)
+	ranges += 1
+	_head(c, 206, "Partial Content", out, length if is_get else 0)
+	if is_get:
+		file.seek(r.x)
+		c.file = file
+		c.remaining = length
 
 
 ## An error response. A HEAD response carries the GET headers but no body:
@@ -306,6 +343,40 @@ static func resolve(path: String) -> String:
 	if name.contains("/") or name.contains("\\") or name.begins_with("."):
 		return ""
 	return name
+
+
+## The Cache-Control of a file: immutable for a content-hashed name, else revalidate.
+static func cache_control(name: String) -> String:
+	var parts: PackedStringArray = name.split(".")
+	for part: String in parts.slice(1, parts.size() - 1):
+		if part.length() == 10 and part.is_valid_hex_number():
+			return "public, max-age=31536000, immutable"
+	return "no-cache"
+
+
+## A single `bytes=a-b`, `bytes=a-` or `bytes=-n` range of a file of `size` bytes as
+## (first, last), both inclusive; (-1, -1) when it can't be satisfied or isn't a single
+## range (the caller answers 416).
+static func parse_range(value: String, size: int) -> Vector2i:
+	var v: String = value.strip_edges()
+	if not v.begins_with("bytes=") or v.contains(",") or size <= 0:
+		return Vector2i(-1, -1)
+	var spec: PackedStringArray = v.trim_prefix("bytes=").split("-")
+	if spec.size() != 2:
+		return Vector2i(-1, -1)
+	var a: String = spec[0].strip_edges()
+	var b: String = spec[1].strip_edges()
+	if (a != "" and not a.is_valid_int()) or (b != "" and not b.is_valid_int()):
+		return Vector2i(-1, -1)
+	if a == "":
+		if b == "" or b.to_int() <= 0:
+			return Vector2i(-1, -1)
+		return Vector2i(maxi(0, size - b.to_int()), size - 1)
+	var first: int = a.to_int()
+	var last: int = size - 1 if b == "" else mini(b.to_int(), size - 1)
+	if first < 0 or first >= size or last < first:
+		return Vector2i(-1, -1)
+	return Vector2i(first, last)
 
 
 static func mime_for(name: String) -> String:

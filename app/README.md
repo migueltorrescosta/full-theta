@@ -21,7 +21,11 @@ Launch instructions for players are in `docs/launch.md`. Entry points: the main 
 
 ## Web build
 
-- `web/keep_awake.gd` (`KeepAwake`): keeps a browser tablet's screen on (FT-NET-046). Owned by the packaging strand.
+- `web/shell.html`: the page. Besides loading the engine (loading screen with scrolling tips), its `window.ft` object does what must happen inside a real tap handler: opens an HTML `<input>` over a registered text field (iOS only raises the keyboard that way), resumes the audio context and retries the keep-awake video on the first tap, and counts the times the page came back from a suspension.
+- `web/web_session.gd` (`WebSession`): added by `MainMenu` to its `ClientShell` in a browser build: starts `KeepAwake` when welcomed, reconnects with the token (`NetClient.resume()`) when `WebPage.wakes()` changes, publishes the shown panel (`window.ftPanel`), and runs the `?pick=ENTRY&ready=1` test hooks (`WebAutoplay`).
+- `web/web_text_field.gd` (`WebTextField.attach(line_edit)`): backs a `LineEdit` with the shell's overlay input (D196). `web/web_page.gd` (`WebPage`): user agent, wakes, audio state. `web/join_helpers.gd` (`JoinHelpers`): the page's host as the join address; a browser joins at once unless the URL has `?join=0`.
+- `web/keep_awake.gd` (`KeepAwake`): keeps a browser tablet's screen on (FT-NET-046).
+- Export: `tools/release/export_web.sh DIR` (Web preset, slim template when built, then `web_patch.py`: audio guard, content-hashed names, videos, gzip). The slim engine template: `tools/release/build_web_template.sh` (D197; sizes and times in `docs/release.md`).
 
 Tests: `tests/net/test_host_*.gd` (`test_host_flow.gd` spawns real server children), `tests/net/test_lan_*.gd` and `tests/app/web/`.
 

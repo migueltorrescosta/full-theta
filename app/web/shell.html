@@ -25,6 +25,147 @@ $GODOT_HEAD_INCLUDE
 </div>
 <script src="$GODOT_URL"></script>
 <script>
+// Page helpers for the game (window.ft), used through app/web/*.gd (D196, D200, FT-NET-046).
+// They live here, not in GDScript, because iOS only raises the keyboard, plays a video
+// or resumes audio from inside a real touch or click handler, and Godot's input events
+// reach GDScript a frame later, outside that handler.
+window.ft = (function () {
+  const canvas = document.getElementById('canvas');
+  const ft = {
+    audioContexts: [], // every AudioContext the engine creates (it keeps its own out of reach)
+    inputs: {},       // id -> {x, y, w, h} in canvas pixels, registered by WebTextField
+    active: null,     // id of the text field whose overlay input has focus
+    texts: {},        // id -> {text, submitted, closed} waiting for GDScript
+    wakes: 0,         // times the page came back after being hidden for 2 s or more
+    hiddenAt: 0,
+    openedAt: 0,
+    keepAwake: null,  // set by KeepAwake: {play: fn}; retried on every gesture until playing
+  };
+  let el = null;
+
+  // The engine's audio object is private to its closure, so record the contexts it creates:
+  // the first tap resumes them (FT-AUD-017), and the top bar shows their state.
+  ['AudioContext', 'webkitAudioContext'].forEach(function (name) {
+    const Native = window[name];
+    if (!Native) { return; }
+    window[name] = class extends Native {
+      constructor(...args) { super(...args); ft.audioContexts.push(this); }
+    };
+  });
+
+  function overlay() {
+    if (el) { return el; }
+    el = document.createElement('input');
+    el.type = 'text';
+    el.autocomplete = 'off';
+    el.autocapitalize = 'none';
+    el.spellcheck = false;
+    // 16 px or more keeps iOS from zooming the page when the input takes focus.
+    el.style.cssText = 'position:fixed;display:none;box-sizing:border-box;z-index:10;' +
+      'margin:0;padding:0 8px;border:2px solid #7aa7ff;border-radius:6px;' +
+      'background:#10141c;color:#e8eefc;font:16px sans-serif;outline:none';
+    el.addEventListener('input', () => {
+      if (ft.active) { ft.texts[ft.active] = Object.assign(ft.texts[ft.active] || {}, { text: el.value }); }
+    });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && ft.active) {
+        ft.texts[ft.active] = Object.assign(ft.texts[ft.active] || {}, { text: el.value, submitted: true });
+        el.blur();
+      }
+      e.stopPropagation();
+    });
+    el.addEventListener('keyup', (e) => e.stopPropagation());
+    el.addEventListener('blur', () => {
+      if (ft.active) { ft.texts[ft.active] = Object.assign(ft.texts[ft.active] || {}, { text: el.value, closed: true }); }
+      ft.active = null;
+      el.style.display = 'none';
+    });
+    document.body.appendChild(el);
+    return el;
+  }
+
+  // Registers (or moves) the overlay target of one text field; rect in canvas pixels.
+  ft.setInput = function (id, x, y, w, h, text, placeholder, maxLength) {
+    ft.inputs[id] = { x: x, y: y, w: w, h: h, text: text, placeholder: placeholder, max: maxLength };
+    if (ft.active === id) { place(id); }
+  };
+  ft.clearInput = function (id) {
+    delete ft.inputs[id];
+    if (ft.active === id && el) { el.blur(); }
+  };
+  function place(id) {
+    const r = ft.inputs[id], box = canvas.getBoundingClientRect();
+    const k = box.width / canvas.width;
+    el.style.left = (box.left + r.x * k) + 'px';
+    el.style.top = (box.top + r.y * k) + 'px';
+    el.style.width = (r.w * k) + 'px';
+    el.style.height = (r.h * k) + 'px';
+  }
+  function open(id) {
+    const r = ft.inputs[id], input = overlay();
+    ft.active = id;
+    input.value = r.text || '';
+    input.placeholder = r.placeholder || '';
+    input.maxLength = r.max > 0 ? r.max : 524288;
+    place(id);
+    input.style.display = 'block';
+    input.focus();           // inside the gesture: this is what raises the keyboard
+    ft.openedAt = Date.now();
+    // Godot focuses its canvas on the emulated mouse events that follow; take it back.
+    [60, 250].forEach(function (ms) {
+      setTimeout(function () { if (ft.active === id && document.activeElement !== input) { input.focus(); } }, ms);
+    });
+    ft.texts[id] = { text: input.value, opened: true };
+  }
+  // What happened to a field since the last call, as JSON, or "" when nothing did.
+  ft.take = function (id) {
+    const t = ft.texts[id];
+    if (!t) { return ''; }
+    delete ft.texts[id];
+    return JSON.stringify(t);
+  };
+
+  function onGesture(e) {
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    // A touch also fires an emulated click a moment later: it mustn't close what it opened.
+    if (ft.active !== null && el && e.target !== el && Date.now() - ft.openedAt > 600) { el.blur(); }
+    if (t && typeof t.clientX === 'number' && ft.active === null) {
+      const box = canvas.getBoundingClientRect();
+      const x = (t.clientX - box.left) * canvas.width / box.width;
+      const y = (t.clientY - box.top) * canvas.height / box.height;
+      for (const id in ft.inputs) {
+        const r = ft.inputs[id];
+        if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) { open(id); break; }
+      }
+    }
+    // The first gesture unlocks audio (FT-AUD-017) and starts the keep-awake video.
+    ft.audioContexts.forEach(function (ctx) {
+      if (ctx.state !== 'running') { ctx.resume().catch(function () {}); }
+    });
+    if (ft.keepAwake) { ft.keepAwake(); }
+  }
+  ['pointerup', 'touchend', 'click', 'keydown'].forEach(function (name) {
+    document.addEventListener(name, onGesture, { capture: true, passive: true });
+  });
+
+  // Audio state for the top-bar toggle: 'running', 'suspended' or '' before the engine's audio starts.
+  ft.audioState = function () {
+    return ft.audioContexts.length ? ft.audioContexts[0].state : '';
+  };
+
+  // Safari suspends a page that is hidden, and its socket may be dead on return without
+  // a close event: tell the game, which reconnects with its token (no reload).
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { ft.hiddenAt = Date.now(); return; }
+    if (ft.hiddenAt && Date.now() - ft.hiddenAt >= 2000) { ft.wakes++; }
+    ft.hiddenAt = 0;
+  });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) { ft.wakes++; } });
+  window.addEventListener('online', function () { ft.wakes++; });
+  return ft;
+})();
+</script>
+<script>
 // Web shell for browser stations (FT-NET-030, D108), promoted from spike S3.
 // Godot's default shell refuses to start outside a secure context, and a plain
 // http:// LAN page isn't one. A no-threads build needs no SharedArrayBuffer, so

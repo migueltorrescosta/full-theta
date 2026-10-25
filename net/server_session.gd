@@ -69,6 +69,8 @@ var writers: Dictionary[int, Dictionary] = {}
 var crew: NetCrewState
 ## The seam to the host's voice service (ServerVoice; its `voice` is null without one).
 var voice: ServerVoice
+## The session log (D199) once NetServer.start_session_log() opened it; counts commands.
+var session_log: SessionLog
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -410,6 +412,19 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 		"lang": language,
 	}
 	transport.bind(conn, session.id, welcome, session.view_key(), not resumed)
+	if session_log != null:
+		(
+			session_log
+			. event(
+				"join",
+				{
+					"session": session.id,
+					"name": session.name,
+					"client": session.client_kind,
+					"resumed": resumed,
+				}
+			)
+		)
 	(
 		transport
 		. send(
@@ -540,6 +555,8 @@ func _on_command(conn: int, msg: Dictionary, now_us: int) -> void:
 		_reject(s.id, msg["seq"], result[1])
 		return
 	world.submit(result[0])
+	if session_log != null:
+		session_log.count("commands")
 	_pending.append([s.id, msg["seq"], result[0], world.tick])
 
 

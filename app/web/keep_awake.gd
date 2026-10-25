@@ -2,21 +2,20 @@ class_name KeepAwake
 extends RefCounted
 ## Keeps a browser tablet's screen on over plain http:// while connected
 ## (FT-NET-046, D108), promoted from spike S3. The client calls `start()` from
-## the first tap and `stop()` when the link closes; off the web every call is
-## a no-op.
+## the join and `stop()` when the client leaves; off the web every call is a no-op.
 ##
 ## The Screen Wake Lock API needs a secure context, which an http:// LAN page
 ## isn't, so this plays a tiny muted looping video, as NoSleep.js does. It has
-## to start from a user gesture. The video (keepawake.webm, plus keepawake.mp4
-## if present) must sit next to index.html; spikes/s3/build.sh builds it until
-## the export pipeline (#12) takes it over. Uses the Wake Lock API instead when
+## to start from a user gesture, so the shell's gesture handler (window.ft in
+## app/web/shell.html) retries `play()` on every tap and key until it plays. The
+## videos (keepawake.mp4 for Safari, keepawake.webm; tools/release/make_keepawake.sh)
+## sit next to index.html; web_patch.py copies them. Uses the Wake Lock API instead when
 ## the page is a secure context. Browsers release a wake lock and pause the
 ## video when the page is hidden, so both are taken again when it becomes
 ## visible, until `stop()`.
 ##
-## Lives with the web build (app/web/), which the packaging strand owns. The
-## server's StaticServer serves keepawake.webm as video/webm without byte ranges;
-## #9 re-adds ranges (and mp4) if Safari needs them for it.
+## Lives with the web build (app/web/). The server's StaticServer serves the videos
+## as video/mp4 and video/webm with byte ranges, which Safari asks for.
 
 const START_JS: String = """
 (function () {
@@ -63,6 +62,13 @@ const START_JS: String = """
     });
   }
   ka.on = true;
+  if (window.ft) {
+    window.ft.keepAwake = function () {
+      if (ka.on && ka.mode === 'video' && ka.video().paused) {
+        ka.video().play().catch(function () {});
+      }
+    };
+  }
   ka.mode = (window.isSecureContext && navigator.wakeLock) ? 'wakelock' : 'video';
   if (ka.mode === 'wakelock') {
     if (!ka.lock || ka.lock.released) { ka.lockScreen(); }
@@ -81,6 +87,7 @@ const STOP_JS: String = """
   var ka = window.ftKa;
   if (!ka) { return; }
   ka.on = false;
+  if (window.ft) { window.ft.keepAwake = null; }
   if (ka.lock) { ka.lock.release().catch(function () {}); ka.lock = null; }
   var v = document.getElementById('ft-keepawake');
   if (v) { v.pause(); }

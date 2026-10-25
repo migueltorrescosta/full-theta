@@ -72,8 +72,8 @@ export_preset() { # preset, path
 export_preset Linux "$out/exports/linux/full-theta.x86_64"
 export_preset Windows "$out/exports/windows/full-theta.exe"
 export_preset macOS "$out/exports/macos/full-theta.zip"
-export_preset Web "$out/exports/web/index.html"
-py tools/release/web_patch.py "$out/exports/web"
+echo "build: export Web"
+tools/release/export_web.sh "$out/exports/web" "$out/exports/Web.log"
 
 echo "build: package"
 git archive --format=tar.gz --prefix="full-theta-$version/" \

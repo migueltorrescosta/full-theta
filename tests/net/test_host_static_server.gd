@@ -106,8 +106,7 @@ func test_mime_types() -> void:
 	assert_str(StaticServer.mime_for("index.js")).starts_with("text/javascript")
 	assert_str(StaticServer.mime_for("index.html")).starts_with("text/html")
 	assert_str(StaticServer.mime_for("keepawake.webm")).is_equal("video/webm")
-	# No mp4 (trimmed with byte ranges; #9 re-adds both if Safari needs them).
-	assert_str(StaticServer.mime_for("keepawake.mp4")).is_equal("application/octet-stream")
+	assert_str(StaticServer.mime_for("keepawake.mp4")).is_equal("video/mp4")
 	assert_str(StaticServer.mime_for("index.pck")).is_equal("application/octet-stream")
 
 
@@ -122,7 +121,7 @@ func test_accepts_gzip() -> void:
 
 
 # FT: FT-NET-030
-func test_serves_gzip_etag_and_304_without_ranges_over_loopback() -> void:
+func test_serves_gzip_etag_and_304_over_loopback() -> void:
 	_server = StaticServer.new(_dir, 16384)
 	var server: StaticServer = _server
 	assert_int(server.listen(0, "127.0.0.1")).is_equal(OK)
@@ -141,18 +140,70 @@ func test_serves_gzip_etag_and_304_without_ranges_over_loopback() -> void:
 		server, "GET /big.wasm HTTP/1.1\r\nHost: t\r\nIf-None-Match: %s\r\n\r\n" % etag
 	)
 	assert_int(again["status"]).is_equal(304)
-	# A Range header is ignored: the whole file, no Accept-Ranges.
-	var part: Dictionary = _fetch(
-		server, "GET /big.wasm HTTP/1.1\r\nHost: t\r\nRange: bytes=10-19\r\n\r\n"
-	)
-	assert_int(part["status"]).is_equal(200)
-	assert_int((part["body"] as PackedByteArray).size()).is_equal(300_000)
-	assert_bool(part["headers"].has("accept-ranges")).is_false()
 	var missing: Dictionary = _fetch(server, "GET /nope.js HTTP/1.1\r\nHost: t\r\n\r\n")
 	assert_int(missing["status"]).is_equal(404)
 	var post: Dictionary = _fetch(server, "POST / HTTP/1.1\r\nHost: t\r\n\r\n")
 	assert_int(post["status"]).is_equal(405)
 	assert_str(post["headers"]["allow"]).is_equal("GET, HEAD")
+
+
+# FT: FT-NET-030, FT-NET-046
+func test_serves_one_byte_range_of_the_file_itself() -> void:
+	_server = StaticServer.new(_dir, 16384)
+	var server: StaticServer = _server
+	assert_int(server.listen(0, "127.0.0.1")).is_equal(OK)
+	var part: Dictionary = _fetch(
+		server,
+		"GET /big.wasm HTTP/1.1\r\nHost: t\r\nRange: bytes=10-19\r\nAccept-Encoding: gzip\r\n\r\n"
+	)
+	assert_int(part["status"]).is_equal(206)
+	assert_str(part["headers"]["content-range"]).is_equal("bytes 10-19/300000")
+	assert_str(part["headers"]["accept-ranges"]).is_equal("bytes")
+	assert_bool(part["headers"].has("content-encoding")).is_false()
+	var body: PackedByteArray = part["body"]
+	assert_int(body.size()).is_equal(10)
+	assert_int(body[0]).is_equal(10 % 251)
+	var tail: Dictionary = _fetch(
+		server, "GET /big.wasm HTTP/1.1\r\nHost: t\r\nRange: bytes=-5\r\n\r\n"
+	)
+	assert_str(tail["headers"]["content-range"]).is_equal("bytes 299995-299999/300000")
+	var open_end: Dictionary = _fetch(
+		server, "GET /big.wasm HTTP/1.1\r\nHost: t\r\nRange: bytes=299990-\r\n\r\n"
+	)
+	assert_int((open_end["body"] as PackedByteArray).size()).is_equal(10)
+	var bad: Dictionary = _fetch(
+		server, "GET /big.wasm HTTP/1.1\r\nHost: t\r\nRange: bytes=400000-\r\n\r\n"
+	)
+	assert_int(bad["status"]).is_equal(416)
+	assert_str(bad["headers"]["content-range"]).is_equal("bytes */300000")
+	# A stale If-Range gets the whole file.
+	var stale: Dictionary = _fetch(
+		server, 'GET /big.wasm HTTP/1.1\r\nHost: t\r\nRange: bytes=0-9\r\nIf-Range: "x"\r\n\r\n'
+	)
+	assert_int(stale["status"]).is_equal(200)
+	assert_int((stale["body"] as PackedByteArray).size()).is_equal(300_000)
+	# Ranges don't stop a keep-alive connection from serving the next request.
+	assert_int(server.ranges).is_equal(3)
+
+
+# FT: FT-NET-030
+func test_range_parsing_and_cache_control() -> void:
+	assert_that(StaticServer.parse_range("bytes=0-0", 5)).is_equal(Vector2i(0, 0))
+	assert_that(StaticServer.parse_range("bytes=2-", 5)).is_equal(Vector2i(2, 4))
+	assert_that(StaticServer.parse_range("bytes=2-99", 5)).is_equal(Vector2i(2, 4))
+	assert_that(StaticServer.parse_range("bytes=-2", 5)).is_equal(Vector2i(3, 4))
+	assert_that(StaticServer.parse_range("bytes=-99", 5)).is_equal(Vector2i(0, 4))
+	for bad: String in [
+		"bytes=5-", "bytes=3-1", "bytes=0-1,3-4", "items=0-1", "bytes=-", "bytes=a-"
+	]:
+		assert_that(StaticServer.parse_range(bad, 5)).is_equal(Vector2i(-1, -1))
+	assert_str(StaticServer.cache_control("index.html")).is_equal("no-cache")
+	assert_str(StaticServer.cache_control("index.wasm")).is_equal("no-cache")
+	assert_str(StaticServer.cache_control("index.0123456789.wasm")).contains("immutable")
+	assert_str(StaticServer.cache_control("index.0123456789.audio.worklet.js")).contains(
+		"immutable"
+	)
+	assert_str(StaticServer.cache_control("index.0123456789xy.wasm")).is_equal("no-cache")
 
 
 # FT: FT-NET-039

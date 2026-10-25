@@ -41,7 +41,7 @@ The game finds its bundled files next to its executable (`ReleaseBundle`, `Bundl
 1. Writes `build_info.json` (version, commit). It is gitignored, and every export packs it, so the desktop build and the web page both print `build: VERSION COMMIT` at start (`ReleaseBundle.build_line()`).
 2. Prerenders every release language (`tools/release/prerender.sh`, D154): the client clips into `audio/prerendered/<lang>/` (every pack, web included) and the host's stitching fragments into `audio/prerendered_host/<lang>/` (desktop packs only). It runs `tools/tts/prerender_release.py` (`audio/README.md`) with the `prerender` voices of `tools/tts/voices.json`, which don't ship, and the runtime (`release`) voices for the host pack. The packs carry the clips through the export include filter, together with the dialogue and string data the game reads (`content/dialogue/*.json`, `content/i18n/strings.json`, `content/voices.json`), and the inspection checks both in every pack (D150–D152). A language with no clips fails the inspection.
 3. Exports the `Linux`, `Windows`, `macOS` and `Web` presets.
-4. Finishes the web export for plain `http://` (`tools/release/web_patch.py`, D108).
+4. Finishes the web export for plain `http://` (`tools/release/export_web.sh`, which exports the `Web` preset and runs `tools/release/web_patch.py`, D108): the AudioWorklet guard, both keep-awake videos, content-hashed names for the wasm, pack and worklets (`index.<hash>.wasm`, served `immutable`, D197) and gzip copies. It uses the slim engine template when one is built (see Web build).
 5. Packages everything (`tools/release/package.py`). It fetches the pinned Piper archives, licence files and sources (`tools/release/fetch.py`, `tools/release/piper.json`) and the release voices (`tools/tts/fetch_voices.py`), all checked by SHA-256.
 6. Inspects the packages (`tools/release/inspect_packages.py`) and fails the build on any problem:
    - It compares each package's file list exactly with the exports, the pinned upstream Piper archive, the release voices and the licence files, so a missing or extra file fails.
@@ -81,6 +81,23 @@ Or run the same build directly: `tools/release/build.sh v0.0.0-dryrun build/dryr
 - **Voice configs:** the bundled Piper rejects phonemes of more than one codepoint, so `package.py` drops them from each voice's `.onnx.json` and notes the change in `licenses/VOICES.md` (D144). Record any such change in the voice's `content/provenance.json` entry too.
 - **Piper:** `tools/release/piper.json` pins the archives, licence files and source archives with their SHA-256 (D140). The program's interface is fixed by `BundledPiper`; the runtime adapter (E10) uses the same paths.
 - **Engine upgrade:** the web shell (`app/web/shell.html`, godotengine/godot#124636) and the `index.js` guard (`tools/release/web_patch.py`, godotengine/godot#124637) are workarounds. `tools/tests/test_release.py` fails when the pinned templates' `index.js` no longer holds the patched pattern. Check both issues and drop each patch once it is fixed upstream. `tools/release/pck.py` reads pack format 4 (Godot 4.7); a new format fails the inspection.
+
+## Web build
+
+Browser stations load the web export from the host's own HTTP server (`net/static_server.gd`). Two things keep the load short on a phone (D197): a **slim engine template** and **caching**. The wasm, pack and audio worklets carry a content hash in their names, so `StaticServer` sends them `Cache-Control: immutable` and a returning browser never asks again; `index.js` and the page are revalidated by ETag. (A service worker would also cache them, but browsers allow one only in a secure context, which a LAN `http://` page isn't.) While the engine starts, the page shows a loading screen with scrolling tips (`app/web/shell.html`).
+
+`tools/release/build_web_template.sh` builds the slim template: Godot 4.7.2-stable from source with emsdk 4.0.11 (the version the engine's own CI uses), the no-threads web target, `optimize=size`, full LTO, and the modules and servers the game doesn't use off (3D rendering stays: the Helm and Viewer scenes use it). The result goes to `~/.cache/full-theta/web-template/web_nothreads_release.zip`, where `export_web.sh` finds it; without it the export uses the stock template. `FT_STOCK_WEB_TEMPLATE=1` forces the stock one. The recipe, flags and numbers are in `BUILD.txt` beside the zip and in the table below.
+
+Measured on fugaku, the same page and server, headless Chromium on 2 cores with software rendering (a CPU-bound number, so only the ratios carry over to a phone):
+
+| | Stock template | Slim template |
+|---|---|---|
+| `index.wasm` | 39.5 MB (10.1 MB gzip) | 26.3 MB (6.6 MB gzip), 34 % smaller |
+| Engine started (`startGame` resolved), 3 loads | 4.6, 6.0 and 4.0 s | 3.1, 3.0 and 2.9 s |
+| Template build | none | 675 s with `-j8` on a quiet machine (1,309 s on a busy one), mostly the full-LTO link |
+
+The 10 s join budget on a phone (S3 took 12.2 s, mostly engine start-up) is the owner's device check (#9): the first join on the slim build with a cold cache, then one with a warm cache. The pack is 0.8 MB, so the wasm decides. `tools/release/build_web_template.sh` has to be run on a machine before `export_web.sh` uses the slim template; CI and the release workflow don't build it, so they export with the stock template until the zip is kept somewhere they can fetch it (open question for the lead).
+
 
 ## macOS
 

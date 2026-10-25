@@ -13,12 +13,15 @@ extends RefCounted
 ##   --host-secret-env    read the host secret from the FT_HOST_SECRET environment
 ##                        variable (what HostLauncher passes; D127); the host client
 ##                        presents it in Hello. None by default.
-##   --grace-s S          reconnect grace (s) [10] (FT-NET-033; T045 owns the rules).
+##   --grace-s S          reconnect grace (s) [15] (FT-NET-033; T045 owns the rules).
 ##   --idle-exit-min M    exit after M minutes without connected players (connections
 ##                        with a session), wall clock (FT-NET-003); 0 never [0].
 ##   --pid-file PATH      write the pid file there while running (FT-NET-003).
 ##   --http-root DIR      serve this web export (an absolute path) over HTTP at
 ##                        port - 1 (FT-NET-030, D108); off without it.
+##   --session-log PATH   write the session log (JSON Lines: snapshot-age summaries every
+##                        10 s and a final summary, D199) there; "off" writes none
+##                        [user://logs/session-<unix time>.jsonl].
 ##   --name NAME          server name in the LAN beacon ["Full Theta server"].
 ##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
 ##   --no-beacon          don't broadcast on the LAN. A server bound to a loopback
@@ -73,6 +76,7 @@ var idle_exit_min: float = 0.0
 var pid_file: String = ""
 var run_for: float = 0.0
 var http_root: String = ""
+var session_log_path: String = SessionLog.default_path()
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
@@ -201,6 +205,8 @@ func _set_flag(flag: String, value: String) -> bool:
 			http_root = value
 		"--probe-out":
 			probe_out = value
+		"--session-log":
+			session_log_path = "" if value == "off" else value
 		"--name":
 			server_name = value
 		"--language":
@@ -270,6 +276,8 @@ func make_server() -> NetServer:
 			return null
 	if beacon and not is_loopback(bind_address):
 		server.start_beacon(server_name, discovery_port)
+	if session_log_path != "":
+		server.start_session_log(session_log_path)
 	return server
 
 

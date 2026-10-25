@@ -113,6 +113,7 @@ func join(text: String) -> void:
 		_status.text = addr.error
 		return
 	settings.last_address = text
+	_remember_name()
 	_connect(addr.url, "")
 
 
@@ -136,7 +137,10 @@ func _connect(url: String, token: String) -> void:
 	_remember_name()
 	joining = NetClient.new()
 	joining.name = settings.player_name
-	joining.client_kind = "desktop"
+	joining.client_kind = "web" if OS.has_feature("web") else "desktop"
+	joining.user_agent = WebPage.user_agent()
+	if OS.has_feature("web"):
+		joining.inbound_buffer_size = 1 << 20  # D108
 	joining.token = token
 	if joining.connect_to(url) != OK:
 		_status.text = tr("menu.join_failed") % url
@@ -158,6 +162,7 @@ func _start_shell(client: NetClient) -> void:
 		shell.setup(client, settings, host_session.launcher.bind, host_session.launcher.port)
 	else:
 		shell.setup(client, settings)
+	WebSession.attach(shell)
 	shell.left.connect(_on_left)
 	_menu.visible = false
 	_status.text = ""
@@ -221,7 +226,8 @@ func _answer_orphan(answer: HostSession.Answer) -> void:
 	_refresh_rejoin()
 
 
-## Applies web join config: pre-fills address with page hostname, auto-joins if ?join=1.
+## A browser station joins the host that served its page without typing (D196, FT-NET-013):
+## the address field is pre-filled and, unless the page has ?join=0, joined at once.
 func _apply_web_join_config() -> void:
 	var cfg: JoinHelpers.WebJoinConfig = JoinHelpers.web_config()
 	if cfg.address.is_empty():
@@ -259,7 +265,10 @@ func _build() -> void:
 	_name.custom_minimum_size = Vector2(320, 0)
 	_name.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	col.add_child(_name)
-	_build_host(col)
+	WebTextField.attach(_name)
+	# A browser can't start a server; it joins the one that served the page.
+	if not OS.has_feature("web"):
+		_build_host(col)
 	_build_join(col)
 	var bottom: HBoxContainer = HBoxContainer.new()
 	col.add_child(bottom)
@@ -330,6 +339,7 @@ func _build_join(col: VBoxContainer) -> void:
 	_address.virtual_keyboard_enabled = true
 	_address.text_submitted.connect(join)
 	row.add_child(_address)
+	WebTextField.attach(_address)
 	_button(row, "Join", tr("menu.join"), func() -> void: join(_address.text))
 
 

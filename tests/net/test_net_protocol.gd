@@ -69,6 +69,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.RUN_AGAIN: {"ship": 0, "vote": true},
 		NetProtocol.Type.MARK_SEND: {"slot": 2, "ship": 1},
 		NetProtocol.Type.MARK_ACCEPT: {"id": 7, "accept": true, "slot": -1},
+		NetProtocol.Type.CLIENT_STATS: {"sent_us": 5, "ua": "x", "pairs": PackedInt64Array([1, 2])},
 	}
 
 
