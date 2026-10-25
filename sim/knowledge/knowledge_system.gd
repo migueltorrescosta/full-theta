@@ -135,6 +135,46 @@ static func _prefix(world: SimWorld, faction: int, ship_id: int, row: int) -> St
 	return "H"
 
 
+## Whether the faction knows the subsystem is a weak point (FT-SIM-023): a faction knows
+## its own ships', and otherwise Science's scans reveal it (ScienceKnowledge, the one
+## store of what scans revealed).
+static func knows_weak_point(
+	world: SimWorld, faction: int, contact: int, subsystem_id: StringName
+) -> bool:
+	var i: int = _subsystem_index(world, contact, subsystem_id)
+	if i < 0 or not world.defs[contact].subsystems[i].weak_point:
+		return false
+	return (
+		world.faction_of(contact) == faction
+		or i in ScienceKnowledge.weak_points(world, faction, contact)
+	)
+
+
+## Whether the faction knows the contact's resistance to the type (FT-SIM-022): its own
+## ships' always, others' once Science's scans reveal the resistances.
+static func knows_resistance(
+	world: SimWorld, faction: int, contact: int, damage_type: StringName
+) -> bool:
+	if contact < 0 or contact >= world.ship_count():
+		return false
+	if not world.defs[contact].resistances.has(damage_type):
+		return false
+	return (
+		world.faction_of(contact) == faction
+		or ScienceKnowledge.resistances_known(world, faction, contact)
+	)
+
+
+static func _subsystem_index(world: SimWorld, ship_id: int, subsystem_id: StringName) -> int:
+	if ship_id < 0 or ship_id >= world.ship_count():
+		return -1
+	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
+	for i: int in mini(subs.size(), 31):
+		if subs[i].id == subsystem_id:
+			return i
+	return -1
+
+
 ## Factions that have at least one ship, ascending.
 static func _factions(world: SimWorld) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()

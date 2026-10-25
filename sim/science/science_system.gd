@@ -371,8 +371,10 @@ static func _finish_self_scan(world: SimWorld, t: ScienceTable, ship: int) -> vo
 	t.self_scanned[ship] = world.tick
 	t.clear_session(ship)
 	world.emit(&"self_scan_done", ship, ship)
-	# Seam for P10 (FT-SCI-009): the lead wires strand C's fault-cause reveal here, or
-	# C reads self_scanned() instead.
+	# P10 (FT-SIM-025): the scan names the cause of every unknown fault. Prefill (Easy's
+	# diagnosed-cause shortcut, FT-ENG-006) is the difficulty toggle's, strand G's later.
+	for sub: SubsystemDef in world.defs[ship].subsystems:
+		DamageSystem.reveal_fault_cause(world, ship, sub.id, false)
 
 
 static func _fail(

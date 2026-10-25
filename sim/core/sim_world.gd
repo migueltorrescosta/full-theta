@@ -246,6 +246,7 @@ func step() -> void:
 	ProbeSystem.step(self)
 	Integrator.step_all(kin, DT)
 	WeaponSystem.step(self)
+	GuidanceSystem.step(self)
 	CollisionSystem.step(self)
 	HitResolver.resolve(self)
 	ShieldSystem.step(self)

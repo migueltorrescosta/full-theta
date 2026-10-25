@@ -29,7 +29,7 @@ const SPEC_05: Dictionary = {
 	# FT-ENG-007).
 	"engineering":
 	[
-		[S.KIN, S.STATUS, S.CONTACTS, S.ENGINEERING, S.OWNERSHIP],
+		[S.KIN, S.STATUS, S.CONTACTS, S.ENGINEERING, S.RELAY, S.OWNERSHIP],
 		[S.HELM, S.MOUNTS, S.NEAR, S.PROJECTILES],
 	],
 	# M1 has only their definitions: top bar and disc radar (FT-STN-001, FT-STN-002).
