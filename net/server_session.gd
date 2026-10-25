@@ -189,7 +189,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		var audience: PackedInt32Array = event_audience(e)
 		_post_event(audience, e, payload)
 		crew.on_sim_event(e)
-		coop.on_sim_event(e, audience)
+		coop.on_sim_event(e)
 		if e.kind == &"fault_cause_revealed":
 			_prefill_cause(e)
 		if _crewable(e.ship_id):

@@ -8,21 +8,18 @@ script = ExtResource("2_chip")
 id = &"boost"
 from_station = &"helm"
 to_station = &"engineering"
-pair = &"p1"
 
 [sub_resource type="Resource" id="Resource_power"]
 script = ExtResource("2_chip")
 id = &"power"
 from_station = &"weapons"
 to_station = &"engineering"
-pair = &"p6"
 
 [sub_resource type="Resource" id="Resource_bring_to_bear"]
 script = ExtResource("2_chip")
 id = &"bring_to_bear"
 from_station = &"weapons"
 to_station = &"helm"
-pair = &"p2"
 arg = 1
 
 [sub_resource type="Resource" id="Resource_sensor_power"]
@@ -30,28 +27,24 @@ script = ExtResource("2_chip")
 id = &"sensor_power"
 from_station = &"science"
 to_station = &"engineering"
-pair = &"p10"
 
 [sub_resource type="Resource" id="Resource_scan_mark"]
 script = ExtResource("2_chip")
 id = &"scan_mark"
 from_station = &"science"
 to_station = &"helm"
-pair = &"p3"
 
 [sub_resource type="Resource" id="Resource_fabricate_probe"]
 script = ExtResource("2_chip")
 id = &"fabricate_probe"
 from_station = &"relay"
 to_station = &"engineering"
-pair = &"p11"
 
 [sub_resource type="Resource" id="Resource_hold_fire"]
 script = ExtResource("2_chip")
 id = &"hold_fire"
 from_station = &"comms"
 to_station = &"weapons"
-pair = &"p9"
 arg = 2
 active = false
 

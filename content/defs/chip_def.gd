@@ -15,9 +15,6 @@ const STATIONS: Array[String] = ["helm", "weapons", "engineering", "science", "r
 @export var id: StringName = &""
 @export var from_station: StringName = &""
 @export var to_station: StringName = &""
-## The pair of spec §7.3 the chip belongs to, lower case (e.g. p1); the debrief counts per
-## pair (FT-PAIR-013).
-@export var pair: StringName = &""
 @export var arg: Arg = Arg.NONE
 ## False while nothing can answer the chip: hold fire (Comms to Weapons) is in the list but
 ## inert until #10 wires Comms (D191).

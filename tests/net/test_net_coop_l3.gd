@@ -184,6 +184,24 @@ func test_a_route_shared_to_helm_is_counted() -> void:
 
 
 # FT: FT-PAIR-013
+# A run reset forgets which marks were used: the new run's first use counts again, not
+# suppressed by the old run's tick stamps.
+func test_a_run_reset_clears_the_mark_use_table() -> void:
+	var server: NetServer = h.server(false, 10.0, SECRET)
+	var crew: Dictionary = await _crew(server)
+	var from: int = h.mark(crew["weapons"])
+	crew["relay"].place_mark(-1, "Rock", -1, 0, Vector3(10.0, 0.0, 0.0))
+	await h.next_event(crew["weapons"], NetProtocol.EVENT_MARKS, from)
+	var user: NetSession = h.session_of(server, crew["weapons"])
+	server.session.coop.on_mark_pinged(user, 0)
+	server.session.coop.on_mark_pinged(user, 0)
+	assert_int(server.session.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(1)
+	server.session.coop.reset_ship(PLAYER)
+	server.session.coop.on_mark_pinged(user, 0)
+	assert_int(server.session.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(2)
+
+
+# FT: FT-PAIR-013
 # A mark one station placed and another pinged is a use, counted on their pair once per
 # 10 s; the placer pinging its own mark, or a copy of it, counts nothing.
 func test_a_mark_used_by_another_station_is_counted() -> void:
