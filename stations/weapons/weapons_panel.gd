@@ -231,6 +231,11 @@ func fire_guided(i: int) -> bool:
 	return true
 
 
+## "Bring mount N to bear" (Helm's chip) names the selected mount (strand G).
+func chip_arg(chip: ChipDef) -> int:
+	return mount if chip.arg == ChipDef.Arg.MOUNT else -1
+
+
 func claim_item() -> String:
 	return "%s:%d" % [StationViews.CLAIM_MOUNT, mount] if mount_count() > 0 else ""
 
@@ -425,6 +430,42 @@ func mount_rows() -> Array[String]:
 	return out
 
 
+## What other stations' work says of the selected target (strand G, FT-WPN-007, P7, P8): its
+## weak points by name, how the selected ammunition fares against its resistances, the open
+## hack window and the track quality. Each line exists only while the server sends its feed,
+## that is while its toggle is on or Science and Relay share this view.
+func feed_lines() -> Array[String]:
+	var out: Array[String] = []
+	var id: int = selected_contact()
+	var feeds: Dictionary = ctx.view.blocks.get(StationViews.Section.FEEDS, {})
+	if id < 0 or feeds.is_empty():
+		return out
+	for row: Dictionary in feeds["weak"]:
+		if row["contact"] != id:
+			continue
+		var def: ShipDef = ScienceLookup.ship_class(row["class_id"])
+		var names: PackedStringArray = PackedStringArray()
+		for i: int in 32:
+			if (int(row["weak_mask"]) >> i) & 1 == 1 and def != null and i < def.subsystems.size():
+				names.append(String(def.subsystems[i].id))
+		if not names.is_empty():
+			out.append(tr("weapons.weak") % ", ".join(names))
+		if mount_count() > 0:
+			var kind: StringName = weapon_of(mount).damage_type
+			for r: Dictionary in row["resist"]:
+				if r["type"] == ScienceView.code(kind):
+					out.append(tr("weapons.rating") % [String(kind), float(r["factor"])])
+	for w: Dictionary in feeds["windows"]:
+		if w["target"] == id:
+			out.append(tr("weapons.window") % ceili(float(w["left"])))
+	for t: Dictionary in feeds["tracks"]:
+		if t["contact"] == id:
+			var q: float = clampf(float(t["quality"]), 0.0, 1.0)
+			var bar: String = "#".repeat(roundi(q * 8.0)) + "-".repeat(8 - roundi(q * 8.0))
+			out.append(tr("weapons.track") % [roundi(q * 100.0), bar])
+	return out
+
+
 ## The ammunition line (FT-WPN-006): the selected type, "standard" for a mount with one.
 func _ammo_text() -> String:
 	if mount_count() == 0 or ship_def.mounts[mount].alt_weapons.is_empty():
@@ -593,6 +634,8 @@ func _draw_overlay() -> void:
 	var target: String = _target_line()
 	if target != "":
 		lines.append(target)
+	if focused:
+		lines.append_array(feed_lines())
 	var arc: String = out_of_arc_text()
 	if focused:
 		lines.append(_ammo_text())

@@ -493,6 +493,7 @@ const BLOCKS: Dictionary = {
 				"rows",
 				[
 					["contact", "s16"],
+					["class_id", "u32"],
 					["weak_mask", "u32"],
 					["resist", ["rows", [["type", "u32"], ["factor", "f32"]]]],
 				],

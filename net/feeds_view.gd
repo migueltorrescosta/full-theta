@@ -69,4 +69,6 @@ static func _weak_row(world: SimWorld, faction: int, contact: int) -> Dictionary
 		resist.append({"type": ScienceView.code(type), "factor": factors[type]})
 	if mask == 0 and resist.is_empty():
 		return {}
-	return {"contact": contact, "weak_mask": mask, "resist": resist}
+	# The weak points name subsystems of the contact's class: that is known once they are.
+	var class_id: int = ScienceView.code(world.defs[contact].id)
+	return {"contact": contact, "class_id": class_id, "weak_mask": mask, "resist": resist}

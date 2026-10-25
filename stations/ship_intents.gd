@@ -80,6 +80,21 @@ func hazard_delete(id: int) -> void:
 	_call(&"hazard_delete", [id])
 
 
+## Strand G. The host sets the session's data-shortcut toggles in the lobby (a DataToggles
+## code); a station sends a request chip (id from content/chips/chips.tres, arg a mount index
+## or contact id) or answers one it received.
+func set_toggles(code: String) -> void:
+	_call(&"set_toggles", [code])
+
+
+func send_chip(chip: String, arg: int = -1) -> void:
+	_call(&"send_chip", [chip, arg])
+
+
+func answer_chip(id: int, accept: bool) -> void:
+	_call(&"answer_chip", [id, accept])
+
+
 func claim(item: String) -> void:
 	_call(&"claim", [item])
 

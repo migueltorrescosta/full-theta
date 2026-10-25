@@ -41,7 +41,7 @@ The layout is fixed: top bar; the focused panel in the main area on the left; th
 - Select (click, A): the item under the pointer or reticle; over nothing the click falls through, so LMB still fires in the turret (owner decision in #7).
 - Cycle target (T, RB tap): contacts nearest first. Select last pinged (Y, hold RB).
 - Ping (middle-click, R3 tap): under the cursor, else the selection. Mark (Shift+middle-click, hold R3): under the cursor, else on the selected contact; refused with a toast at 8 marks; viewers don't mark.
-- Accept and decline (Enter / Backspace, X / Y): to the focused panel. Request chip (B, View+Y): the focused panel's.
+- Accept and decline (Enter / Backspace, X / Y): to the focused panel, else they answer the oldest request chip sent to the screen (`ChipStrip`). Request chip (B, View+Y): the panel's `request_chips()` from `content/chips/chips.tres`: one is sent at once, several open the numbered `ChipMenu` (B, then 1-2); a chip to a station on the same screen runs as a direct action (FT-JNT-005). A panel overrides `chip_arg()` for a chip's argument (Weapons: the mount).
 - Radar side strip (Z, View+Left; moved off B by the owner in #7). Claim or release (K, View+X): the focused panel's `claim_item()`.
 - Overlay (?, View tap), menu (Esc, Menu).
 - Alert (Alt+A cycles; hold View + d-pad; the top bar's chip picker): crew only (FT-STN-008).

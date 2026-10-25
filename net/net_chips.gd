@@ -55,6 +55,12 @@ static func index_of(chip_id: String) -> int:
 	return -1
 
 
+## What the chip's argument names (ChipDef.Arg), NONE for an unknown chip.
+static func arg_kind(chip_id: String) -> ChipDef.Arg:
+	var at: int = index_of(chip_id)
+	return _def.chips[at].arg if at >= 0 else ChipDef.Arg.NONE
+
+
 ## Chip{op, ...}.
 func on_chip(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = session.by_conn.get(conn)

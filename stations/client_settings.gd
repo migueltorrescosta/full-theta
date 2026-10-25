@@ -29,6 +29,9 @@ var roll_lock: String = "deck"
 var reduced_fov: bool = false
 var reference_plane: Quaternion = Quaternion.IDENTITY
 var bindings: Bindings = Bindings.new()
+## The data-shortcut toggle set the host starts a lobby with (DataToggles code, FT-STN-016):
+## Easy on a first launch, then whatever the host last chose.
+var host_toggles: String = StationViews.DEFAULT_TOGGLES
 
 
 func _init(file_path: String = PATH) -> void:
@@ -58,6 +61,8 @@ func load_file() -> Error:
 	roll_lock = lock if lock in ROLL_LOCKS else "deck"
 	reduced_fov = _value(cfg, "comfort", "reduced_fov", false)
 	reference_plane = _value(cfg, "comfort", "reference_plane", Quaternion.IDENTITY)
+	var toggles: String = _value(cfg, "lobby", "toggles", StationViews.DEFAULT_TOGGLES)
+	host_toggles = toggles if DataToggles.is_valid(toggles) else StationViews.DEFAULT_TOGGLES
 	return OK
 
 
@@ -73,6 +78,7 @@ func save() -> Error:
 	cfg.set_value("comfort", "roll_lock", roll_lock)
 	cfg.set_value("comfort", "reduced_fov", reduced_fov)
 	cfg.set_value("comfort", "reference_plane", reference_plane)
+	cfg.set_value("lobby", "toggles", host_toggles)
 	return cfg.save(path)
 
 

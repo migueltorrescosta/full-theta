@@ -25,7 +25,7 @@ const BUTTON_COLORS: Array[String] = [
 	"font_focus_color",
 ]
 ## The crew changes the lobby depends on.
-const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked"]
+const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked", &"toggles"]
 
 var ctx: StationContext
 ## The ship whose catalogue is shown.
@@ -41,6 +41,16 @@ var _title: Label
 var _leave: Button
 var _menu: Button
 var _join_panel: VBoxContainer
+## The data-shortcut section (strand G): preset buttons, the current name, the Customise
+## button and the toggle rows behind it.
+var _data_box: VBoxContainer
+var _preset_buttons: Dictionary = {}
+var _preset_name: Label
+var _customise: Button
+var _toggle_rows: VBoxContainer
+var _toggle_note: Label
+## The host's saved set was sent to the server for this connection.
+var _pushed: bool = false
 ## After "Back to ships": no ship is chosen until the player picks one.
 var _browsing: bool = false
 
@@ -84,8 +94,31 @@ func refresh() -> void:
 	_start.visible = not _browsing and not bool(state.get("started", false))
 	_entries.visible = not _browsing
 	_legend.visible = not _browsing
+	_data_box.visible = not _browsing
+	_refresh_data()
 	if _browsing:
 		_pick.text = tr("lobby.pick_ship")
+
+
+## "Easy", or "Easy (custom)" for a set with a toggle changed (FT-PAIR-017, D92).
+static func preset_label(toggles: DataToggles) -> String:
+	var name: String = TranslationServer.translate("lobby.preset_" + toggles.preset)
+	if toggles.is_custom():
+		return TranslationServer.translate("lobby.preset_custom") % name
+	return name
+
+
+## Whether a run has started on any ship: the toggles are locked from then on.
+func toggles_locked() -> bool:
+	for state: Dictionary in ctx.crew.lobby.values():
+		if bool(state.get("started", false)):
+			return true
+	return false
+
+
+## Only the host changes the toggles, and only before a run starts.
+func can_edit_toggles() -> bool:
+	return ctx.crew.host and not toggles_locked()
 
 
 ## "Crew 2/3 · uncovered: Science, Comms" (FT-NET-021).
@@ -273,6 +306,7 @@ func _build() -> void:
 	_entries = VBoxContainer.new()
 	_entries.name = "Entries"
 	col.add_child(_entries)
+	_build_data_box(col)
 	var bottom: HBoxContainer = HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 16)
 	outer.add_child(bottom)
@@ -295,6 +329,145 @@ func _build() -> void:
 	bottom.add_child(_menu)
 	if ctx.host_bind != "":
 		_build_join_panel(col)
+
+
+## The data-shortcut section (FT-PAIR-017, FT-STN-016): the three presets and the name of
+## the set, then "Customise", behind which each toggle has a one-line description naming
+## both stations, its value and, for the two Comms toggles, that it arrives in M3 (D190).
+func _build_data_box(col: Container) -> void:
+	_data_box = VBoxContainer.new()
+	_data_box.name = "DataShortcuts"
+	_data_box.add_theme_constant_override("separation", 6)
+	col.add_child(_data_box)
+	var head: Label = Label.new()
+	head.name = "DataTitle"
+	head.text = tr("lobby.data")
+	head.add_theme_font_size_override("font_size", 20)
+	_data_box.add_child(head)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "Presets"
+	row.add_theme_constant_override("separation", 8)
+	_data_box.add_child(row)
+	for preset: String in DataToggles.PRESETS:
+		var b: Button = Button.new()
+		b.name = "Preset_" + preset
+		b.toggle_mode = true
+		b.pressed.connect(_choose_preset.bind(preset))
+		_preset_buttons[preset] = b
+		row.add_child(b)
+	_preset_name = Label.new()
+	_preset_name.name = "PresetName"
+	row.add_child(_preset_name)
+	_customise = Button.new()
+	_customise.name = "Customise"
+	_customise.toggle_mode = true
+	_customise.text = tr("lobby.customise")
+	_customise.toggled.connect(func(on: bool) -> void: _toggle_rows.visible = on)
+	row.add_child(_customise)
+	_toggle_note = Label.new()
+	_toggle_note.name = "ToggleNote"
+	_data_box.add_child(_toggle_note)
+	_toggle_rows = VBoxContainer.new()
+	_toggle_rows.name = "Toggles"
+	_toggle_rows.visible = false
+	_toggle_rows.add_theme_constant_override("separation", 4)
+	_data_box.add_child(_toggle_rows)
+	for def: DataToggleDef in DataToggles.def().toggles:
+		_toggle_rows.add_child(_toggle_row(def))
+
+
+func _toggle_row(def: DataToggleDef) -> Control:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "Toggle_" + String(def.id)
+	row.add_theme_constant_override("separation", 12)
+	var name: Label = Label.new()
+	name.name = "Name"
+	name.custom_minimum_size = Vector2(200, 0)
+	row.add_child(name)
+	var value: OptionButton = OptionButton.new()
+	value.name = "Value"
+	value.item_selected.connect(func(i: int) -> void: _set_value(def.id, value.get_item_id(i)))
+	row.add_child(value)
+	var desc: Label = Label.new()
+	desc.name = "Desc"
+	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(desc)
+	return row
+
+
+## Shows the session's set: the current name, the pressed preset, every toggle's text and
+## value, and whether the host can still change them.
+func _refresh_data() -> void:
+	var toggles: DataToggles = ctx.crew.toggles
+	var editable: bool = can_edit_toggles()
+	_data_box.get_node("DataTitle").text = tr("lobby.data")
+	_customise.text = tr("lobby.customise")
+	_preset_name.text = preset_label(toggles)
+	for preset: String in _preset_buttons:
+		var b: Button = _preset_buttons[preset]
+		b.text = tr("lobby.preset_" + preset)
+		b.button_pressed = preset == toggles.preset and not toggles.is_custom()
+		b.disabled = not editable
+	var note: String = ""
+	if toggles_locked():
+		note = tr("lobby.toggles_locked")
+	elif not ctx.crew.host:
+		note = tr("lobby.toggles_host_only")
+	_toggle_note.text = note
+	for def: DataToggleDef in DataToggles.def().toggles:
+		var row: Control = _toggle_rows.get_node("Toggle_" + String(def.id))
+		var text: String = tr("lobby.toggle." + String(def.id))
+		if def.arrives_m3:
+			text += " (%s)" % tr("lobby.arrives_m3")
+		row.get_node("Name").text = text
+		row.get_node("Desc").text = tr("lobby.toggle.%s.desc" % def.id)
+		var value: OptionButton = row.get_node("Value")
+		value.clear()
+		var choices: Array = [2, 1, 0] if def.kind == DataToggleDef.Kind.SUMMARY else [1, 0]
+		for v: int in choices:
+			var key: String = (
+				"lobby.v_"
+				+ (
+					["absent", "banded", "exact"][v]
+					if def.kind == DataToggleDef.Kind.SUMMARY
+					else ["off", "on"][v]
+				)
+			)
+			value.add_item(tr(key), v)
+		value.select(value.get_item_index(toggles.value(def.id)))
+		value.disabled = not editable
+
+
+func _choose_preset(preset: String) -> void:
+	if can_edit_toggles():
+		_apply_toggles(DataToggles.of_preset(preset))
+	else:
+		_refresh_data()
+
+
+func _set_value(id: StringName, v: int) -> void:
+	if can_edit_toggles():
+		_apply_toggles(ctx.crew.toggles.with_value(id, v))
+	else:
+		_refresh_data()
+
+
+## Sends the host's choice and remembers it for the next lobby (FT-STN-016).
+func _apply_toggles(toggles: DataToggles) -> void:
+	var code: String = toggles.encode()
+	ctx.settings.host_toggles = code
+	ctx.settings.save()
+	ctx.intents.set_toggles(code)
+
+
+## The host's lobby starts from its saved set: sent once per connection, before any run.
+func _push_saved_toggles() -> void:
+	if _pushed or not ctx.crew.host or toggles_locked():
+		return
+	_pushed = true
+	if ctx.settings.host_toggles != ctx.crew.toggles.encode():
+		ctx.intents.set_toggles(ctx.settings.host_toggles)
 
 
 static func _clear(box: Container) -> void:
@@ -321,5 +494,7 @@ func _notification(what: int) -> void:
 
 
 func _on_crew_changed(what: StringName) -> void:
-	if what in KINDS:
+	if what == &"lobby":
+		_push_saved_toggles()
+	if what in KINDS or what == &"toggles":
 		refresh()

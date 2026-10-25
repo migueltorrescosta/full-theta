@@ -213,8 +213,8 @@ func test_tactical_cockpit_fires_claimed_mounts_and_turret_aims() -> void:
 # FT: FT-JNT-005
 # A joint view gets the union of its stations' data: Tactical's one snapshot feeds
 # Helm's HELM block and Weapons' MOUNTS block, and both panels send through the one
-# ShipIntents. M1 has no request chips (§7.4 comes with #9), so no request runs between
-# joint stations yet; StationPanel.send_request documents the direct-action rule.
+# ShipIntents. A request between the view's own stations is a direct action, not a chip
+# (tests/stations/test_request_chips.gd sends them); the chips for other stations stay.
 func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
 	var def: StationDef = StationViews.def("tactical")
 	assert_bool(StationViews.Section.HELM in def.sections).is_true()
@@ -231,4 +231,9 @@ func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
 	assert_int(_commands(s, "helm_all_stop").size()).is_equal(1)
 	assert_int(_commands(s, "fire").size()).is_equal(1)
 	for p: StationPanel in s.panels:
-		assert_bool(p.has_request_chip()).is_false()
+		assert_bool(p.has_request_chip()).is_true()
+	var to_helm: Array = weapons.request_chips().filter(
+		func(c: ChipDef) -> bool: return c.id == &"bring_to_bear"
+	)
+	assert_int(to_helm.size()).is_equal(1)
+	assert_str(String(to_helm[0].to_station)).is_equal("helm")
