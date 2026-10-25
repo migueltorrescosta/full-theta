@@ -18,9 +18,9 @@ extends StationPanel
 ## Controller: the left stick moves a cursor, the triggers its depth, the right stick
 ## turns the map; A, R3 and hold R3 select, ping and mark at the cursor (§5.0).
 
-## A press that moves less than this is a click (select), not a drag (px).
 ## Under this width (a phone, D195) the HUD stacks around the map.
 const NARROW_W: float = 560.0
+## A press that moves less than this is a click (select), not a drag (px).
 const DRAG_PX: float = 6.0
 ## Controller cursor speed (px/s), depth speed (map spans/s), turn speed (px-equivalent/s).
 const PAD_CURSOR_PX_S: float = 420.0
@@ -299,9 +299,7 @@ func _item_pos(s: Dictionary) -> Variant:
 			if not m.is_empty():
 				return ctx.mark_position(m)
 		"zone":
-			var z: Dictionary = ctx.crew.zone_by_id(int(s["id"]))
-			if not z.is_empty():
-				return z["pos"]
+			return ctx.zone_position(int(s["id"]))
 		"site":
 			return Vector3.ZERO
 	return null

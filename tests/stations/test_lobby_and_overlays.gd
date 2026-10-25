@@ -315,3 +315,22 @@ func test_placeholder_reads_out_its_station_def() -> void:
 	var text: String = (p.get_child(0).get_child(1) as Label).text
 	assert_str(text).contains("kin").contains("status").contains("contacts")
 	assert_str((p.get_child(0).get_child(0) as Label).text).is_equal("Comms")
+
+
+# FT: FT-NET-015
+# A refresh updates the grid in place: the cell nodes survive a crew change, so a tap
+# that lands around the `lobby` event still arrives (a rebuild eats the click).
+func test_refresh_keeps_the_cell_buttons() -> void:
+	var l: LobbyScreen = _lobby("viewer")
+	var helm: Button = _cell(l, "helm")
+	var ship_button: Button = l._ships.get_child(0)
+	l.ctx.crew.lobby[0]["seats"] = [{"name": "Ana", "entry": "helm"}]
+	l.refresh()
+	assert_object(_cell(l, "helm")).is_same(helm)
+	assert_object(l._ships.get_child(0)).is_same(ship_button)
+	assert_str((helm.find_child("Crew", true, false) as Label).text).is_equal("Ana")
+	l.ctx.crew.lobby[0]["seats"] = []
+	l.refresh()
+	assert_object(helm.find_child("Crew", true, false)).is_null()
+	helm.pressed.emit()
+	assert_array(_sent_picks(l)).is_not_empty()

@@ -3,7 +3,7 @@ extends StationPanel
 ## The Captain's seat (§5.7, FT-CPT-001 to FT-CPT-005, D54): a mirror of the main screen
 ## (a ViewerPanel on the same state, taking clicks), buttons or keys 1 to 5 for its view,
 ## pings and marks, and a right column with the read-only list of open request chips
-## (ChipSource) and Comms' mission and contract cards (FixtureCards, fixtures until #10).
+## (ChipList) and Comms' mission and contract cards (FixtureCards, fixtures until #10).
 ## Information only: the only things it sends are the main-screen view (MainView), pings
 ## and marks into empty slots (the server refuses anything else, FT-SPA-013, FT-CPT-003).
 ## A ping on a card shows it on the main screen for 10 s or until the next ping.
@@ -100,7 +100,7 @@ func _process(_delta: float) -> void:
 	var view: int = ctx.crew.main_view
 	for i: int in buttons.size():
 		buttons[i].set_pressed_no_signal(i == view)
-	chips.show_rows(ChipSource.open_chips(ctx))
+	chips.show_rows(ChipList.open_rows(ctx.view))
 	cards.highlight = ctx.crew.shown_card(ctx.now_ms())
 	cards.queue_redraw()
 

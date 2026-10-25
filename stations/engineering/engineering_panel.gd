@@ -452,20 +452,14 @@ func cause_name(i: int, index_plus_one: int) -> String:
 
 
 ## Seconds until the ship meets a hazard, or -1 when the countdown toggle is off for this
-## view or none is coming (P11): the sim hazards the faction knows (the RELAY block's
-## forecast, a real front's arrival, D208), and the zones Relay marked, at the ship's
-## present velocity.
+## view or none is coming (P11): the soonest forecast of the sim hazards the faction
+## knows (the RELAY block, D208).
 func hazard_eta() -> float:
 	if not ctx.crew.filter().grants(ViewFilter.HAZARD_COUNTDOWNS):
 		return -1.0
-	var offsets: Dictionary = {}
-	for z: Dictionary in ctx.crew.zones:
-		if int(z["site"]) == ctx.site():
-			offsets[z["id"]] = ctx.interp.offset_to(z["pos"])
-	var vel: Vector3i = ctx.view.kin.get("vel", Vector3i.ZERO)
-	var best: float = HazardEta.soonest(ctx.crew.zones, offsets, Vector3(vel) / NetCodec.VEL_Q)
-	var sim: Array = ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("hazards", [])
-	return HazardEta.sooner(best, HazardEta.forecast(sim))
+	return HazardEta.forecast(
+		ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("hazards", [])
+	)
 
 
 ## [text, palette role] lines of the faults list, worst first.

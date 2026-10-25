@@ -110,6 +110,10 @@ func _setup() -> void:
 	resized.connect(_stack)
 	_stack()
 	ctx.crew.changed.connect(_on_crew_changed)
+	# A contact picked before this panel existed (late pick, reconnect) is still the
+	# server's science_select to learn.
+	if selected_contact() >= 0:
+		_on_crew_changed(&"selection")
 	ctx.crew.sim_event.connect(_on_sim_event)
 	refresh()
 

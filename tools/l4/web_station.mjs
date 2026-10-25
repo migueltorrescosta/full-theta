@@ -107,9 +107,6 @@ try {
   const src = await page.evaluate(() => document.getElementById("ft-keepawake")?.currentSrc);
   note("keep-awake video plays", awake && t1 !== t0 && !paused, `time ${t0} -> ${t1}, ${src}`);
 
-  // A first visit opens the controls list over the station: close it with its Back button.
-  await page.touchscreen.tap(38, 32);
-
   // The screenshot (FT-TST-021): software rendering on 2 cores draws a frame a second or
   // so, so look until the station is on screen (not blank: several colours, some contrast).
   let stats = null;

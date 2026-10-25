@@ -24,8 +24,6 @@ var callsign: String = ""
 var card: Dictionary = {}
 ## Seconds left of a hack window on this contact: {"sub": index, "left": s} rows.
 var hacks: Array = []
-var self_scanned: bool = false
-var own: bool = false
 
 
 func set_card(p_callsign: String, p_card: Dictionary, p_hacks: Array) -> void:

@@ -28,6 +28,20 @@ func test_kind_follows_size_and_pointer() -> void:
 
 
 # FT: FT-STN-005
+# D223: the UI scale never changes the layout. A 1280 x 720 desktop at 150 % shows an
+# 853 x 480 viewport; a 390 x 844 CSS-px phone at dpr 3 is a 1170 x 2532 px window.
+func test_kind_is_independent_of_ui_scale_and_density() -> void:
+	var desktop: Vector2 = LayoutMode.dp_size(Vector2(1280, 720) / 1.5, 1.5, 1.0)
+	assert_vector(desktop).is_equal_approx(Vector2(1280, 720), Vector2(0.01, 0.01))
+	assert_int(LayoutMode.kind_for(desktop, false)).is_equal(LayoutMode.Kind.DESKTOP)
+	var phone: Vector2 = LayoutMode.dp_size(Vector2(1170, 2532), 1.0, 3.0)
+	assert_vector(phone).is_equal_approx(Vector2(390, 844), Vector2(0.01, 0.01))
+	assert_int(LayoutMode.kind_for(phone, true)).is_equal(LayoutMode.Kind.PHONE)
+	var scaled_phone: Vector2 = LayoutMode.dp_size(Vector2(1170, 2532) / 1.25, 1.25, 3.0)
+	assert_int(LayoutMode.kind_for(scaled_phone, true)).is_equal(LayoutMode.Kind.PHONE)
+
+
+# FT: FT-STN-005
 func test_touch_theme_makes_every_button_tap_sized() -> void:
 	var heights: Dictionary = {}
 	for kind: LayoutMode.Kind in LayoutMode.Kind.values():

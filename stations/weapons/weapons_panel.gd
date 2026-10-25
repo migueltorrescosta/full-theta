@@ -173,7 +173,7 @@ func cycle_ammo(direction: int) -> bool:
 
 ## What guided ordnance would fly at (FT-WPN-008, D209): {"target": contact id} for the
 ## selected contact, or for a selected mark attached to a contact in view; {} when nothing
-## usable is selected, a free mark included.
+## usable is selected: a free mark, or a mark on a contact out of view, is not a goal.
 func guided_goal() -> Dictionary:
 	var s: Dictionary = ctx.crew.selection
 	var id: int = int(s.get("id", -1))

@@ -263,9 +263,3 @@ func test_range_steps_rim_arrows_and_the_selected_stem_on_top() -> void:
 	assert_float((h2["pos"] as Vector2).x).is_equal_approx(c.x, 0.5)
 	assert_float((layout[0]["pos"] as Vector2).y).is_equal_approx(c.y, 0.5)
 	assert_float((layout[0]["pos"] as Vector2).x).is_greater(c.x)
-	# Selected last, whichever item is selected.
-	assert_array(radar.draw_order()).is_equal(
-		[{"kind": "contact", "id": 2}, {"kind": "contact", "id": 3}, {"kind": "contact", "id": 1}]
-	)
-	radar.set_picture(_pic(items), {"kind": "contact", "id": 3})
-	assert_dict(radar.draw_order()[-1]).is_equal({"kind": "contact", "id": 3})

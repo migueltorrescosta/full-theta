@@ -45,13 +45,12 @@ func test_mirror_buttons_chips_and_cards() -> void:
 		. is_equal(["Forward", "Chase", "Tactical", "Target", "Status"])
 	)
 	assert_bool(cap.buttons[0].button_pressed).is_true()
-	# Read-only lists: the fixture chip and the four fixture cards (D190).
-	assert_int(cap.chips.rows.size()).is_equal(1)
-	assert_str(ChipList.row_text(cap.chips.rows[0])).is_equal("Helm > Engineering  boost  6 s")
+	# Read-only lists: no chip before the CHIPS block, and the four fixture cards (D190).
+	assert_int(cap.chips.rows.size()).is_equal(0)
 	assert_int(FixtureCards.all().size()).is_equal(4)
 	assert_int(cap.cards.card_at(Vector2(10.0, FixtureCards.HEADER_HEIGHT + 5.0))).is_equal(0)
 	assert_int(cap.cards.card_at(Vector2(10.0, 2.0))).is_equal(-1)
-	# The ship's CHIPS block replaces the fixture: the Captain sees every open chip, read-only.
+	# The ship's CHIPS block fills the list: the Captain sees every open chip, read-only.
 	s.ctx.view.blocks[StationViews.Section.CHIPS] = {}
 	await get_tree().process_frame
 	assert_int(cap.chips.rows.size()).is_equal(0)

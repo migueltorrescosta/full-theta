@@ -72,6 +72,9 @@ var _browsing: bool = false
 ## answer to the first must still add to it. Empty of meaning while `_tapped` is false.
 var _local: Array[String] = []
 var _tapped: bool = false
+## The ship ids and station ids whose buttons exist; a refresh rebuilds only when they change.
+var _ship_ids: Array = []
+var _cell_ids: Array[String] = []
 
 
 func setup(context: StationContext) -> void:
@@ -90,14 +93,19 @@ func refresh() -> void:
 		ship = -1
 	elif ship < 0:
 		ship = ctx.crew.ship if ctx.crew.ship >= 0 else (int(ships[0]["id"]) if ships else -1)
-	_clear(_ships)
-	for s: Dictionary in ships:
-		var b: Button = Button.new()
-		b.text = str(s.get("name", ""))
-		b.toggle_mode = true
-		b.button_pressed = int(s["id"]) == ship
-		b.pressed.connect(_choose_ship.bind(int(s["id"])))
-		_ships.add_child(b)
+	var ship_ids: Array = ships.map(func(s: Dictionary) -> Variant: return s["id"])
+	if ship_ids != _ship_ids:
+		_ship_ids = ship_ids
+		_clear(_ships)
+		for s: Dictionary in ships:
+			var b: Button = Button.new()
+			b.toggle_mode = true
+			b.pressed.connect(_choose_ship.bind(int(s["id"])))
+			_ships.add_child(b)
+	for i: int in ships.size():
+		var b: Button = _ships.get_child(i) as Button
+		b.text = str(ships[i].get("name", ""))
+		b.set_pressed_no_signal(int(ships[i]["id"]) == ship)
 	var state: Dictionary = ctx.crew.lobby.get(ship, {})
 	_coverage.text = coverage_text(state)
 	_build_legend()
@@ -287,22 +295,30 @@ static func _label(text: String, variation: String = "") -> Label:
 	return l
 
 
+## Cells are kept while the same stations are listed; a refresh only updates their state
+## and crew names, so a tap that lands during a refresh is not lost.
 func _refresh_grid() -> void:
-	_clear(_grid)
 	var picks: Array[String] = selected_stations()
 	var full: bool = picks.size() >= MAX_STATIONS
 	# The dev entry holds every station: all six cells show as selected and locked; a tap
 	# on one leaves it for that station alone.
 	var dev: bool = ctx.crew.ship == ship and ctx.crew.entry == DEV_ALL
+	var listed: Array[String] = []
 	for id: String in GRID_STATIONS:
-		var def: Dictionary = ctx.crew.def_of(id)
-		if def.is_empty():
-			continue
-		var cell: Button = _cell(id, str(def.get("load_tag", "")))
-		cell.set_pressed_no_signal(dev or id in picks)
-		cell.disabled = full and not id in picks
-		cell.modulate = Color(1, 1, 1, 0.45) if cell.disabled else Color.WHITE
-		_grid.add_child(cell)
+		if not ctx.crew.def_of(id).is_empty():
+			listed.append(id)
+	if listed != _cell_ids:
+		_cell_ids = listed
+		_clear(_grid)
+		for id: String in listed:
+			_grid.add_child(_cell(id, str(ctx.crew.def_of(id).get("load_tag", ""))))
+	for cell: Node in _grid.get_children():
+		var b: Button = cell as Button
+		var id: String = str(b.name).trim_prefix("Entry_")
+		b.set_pressed_no_signal(dev or id in picks)
+		b.disabled = full and not id in picks
+		b.modulate = Color(1, 1, 1, 0.45) if b.disabled else Color.WHITE
+		_set_crew(b, crew_at(id))
 	_apply_columns()
 
 
@@ -329,12 +345,24 @@ func _cell(id: String, tag: String) -> Button:
 	b.add_child(box)
 	box.add_child(_cell_label("Name", tr("station." + id), "HeadingLabel"))
 	box.add_child(_cell_label("Role", tr("role." + id), "CaptionLabel"))
-	var crew: PackedStringArray = crew_at(id)
-	if not crew.is_empty():
-		box.add_child(_cell_label("Crew", ", ".join(crew), "CrewLabel"))
 	box.minimum_size_changed.connect(_fit_cell.bind(b, box))
 	_fit_cell.call_deferred(b, box)
 	return b
+
+
+## Shows the crew's names on a cell: a "Crew" label while someone sits there.
+func _set_crew(cell: Button, crew: PackedStringArray) -> void:
+	var box: Node = cell.get_child(0)
+	var label: Label = box.get_node_or_null("Crew") as Label
+	if crew.is_empty():
+		if label != null:
+			box.remove_child(label)
+			label.queue_free()
+		return
+	if label == null:
+		label = _cell_label("Crew", "", "CrewLabel")
+		box.add_child(label)
+	label.text = ", ".join(crew)
 
 
 func _cell_label(node_name: String, text: String, variation: String) -> Label:
@@ -643,17 +671,12 @@ func _refresh_data() -> void:
 		row.get_node("Desc").text = tr("lobby.toggle.%s.desc" % def.id)
 		var value: OptionButton = row.get_node("Line/Value")
 		value.clear()
-		var choices: Array = [2, 1, 0] if def.kind == DataToggleDef.Kind.SUMMARY else [1, 0]
-		for v: int in choices:
-			var key: String = (
-				"lobby.v_"
-				+ (
-					["absent", "banded", "exact"][v]
-					if def.kind == DataToggleDef.Kind.SUMMARY
-					else ["off", "on"][v]
-				)
-			)
-			value.add_item(tr(key), v)
+		var summary: bool = def.kind == DataToggleDef.Kind.SUMMARY
+		var names: Array[String] = ["off", "on"]
+		if summary:
+			names = ["absent", "banded", "exact"]
+		for v: int in range(names.size() - 1, -1, -1):
+			value.add_item(tr("lobby.v_" + names[v]), v)
 		value.select(value.get_item_index(toggles.value(def.id)))
 		value.disabled = not editable
 

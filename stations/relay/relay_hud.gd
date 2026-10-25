@@ -38,6 +38,9 @@ var _marks: HFlowContainer
 var _log: VBoxContainer
 var _mail: Label
 var _key: Array = []
+var _contact_ids: Array = []
+var _mark_slots: Array = []
+var _ally_list: Array[Dictionary] = []
 
 
 func _init() -> void:
@@ -201,31 +204,45 @@ func _contact_rows() -> Array:
 	return rows.slice(0, CONTACT_ROWS)
 
 
+## Buttons are kept while the same items are listed and only their text and state change,
+## so a press that lands during a refresh still arrives (a rebuild eats the click).
 func _fill_contacts(rows: Array) -> void:
-	_clear(_contacts)
-	for r: Array in rows:
-		var b: Button = Button.new()
-		b.flat = true
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	var ids: Array = rows.map(func(r: Array) -> Variant: return r[0])
+	if ids != _contact_ids:
+		_contact_ids = ids
+		_clear(_contacts)
+		for r: Array in rows:
+			var b: Button = Button.new()
+			b.flat = true
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			var id: int = r[0]
+			b.pressed.connect(func() -> void: ctx.crew.select("contact", id))
+			_contacts.add_child(b)
+	for i: int in rows.size():
+		var b: Button = _contacts.get_child(i) as Button
+		var r: Array = rows[i]
 		b.text = ChipText.chip(r[1], r[2])
 		b.add_theme_color_override(
 			"font_color", Palette.allegiance_color(Palette.allegiance(str(r[1])))
 		)
-		var id: int = r[0]
-		b.pressed.connect(func() -> void: ctx.crew.select("contact", id))
-		_contacts.add_child(b)
 
 
 func _fill_marks() -> void:
-	_clear(_marks)
-	for m: Dictionary in ctx.crew.marks:
-		var b: Button = Button.new()
+	var slots: Array = ctx.crew.marks.map(func(m: Dictionary) -> Variant: return m["slot"])
+	if slots != _mark_slots:
+		_mark_slots = slots
+		_clear(_marks)
+		for m: Dictionary in ctx.crew.marks:
+			var b: Button = Button.new()
+			b.toggle_mode = true
+			var slot: int = m["slot"]
+			b.pressed.connect(func() -> void: ctx.crew.select("mark", slot))
+			_marks.add_child(b)
+	for i: int in ctx.crew.marks.size():
+		var m: Dictionary = ctx.crew.marks[i]
+		var b: Button = _marks.get_child(i) as Button
 		b.text = str(m["name"])
-		b.toggle_mode = true
-		b.button_pressed = ctx.crew.is_selected("mark", m["slot"])
-		var slot: int = m["slot"]
-		b.pressed.connect(func() -> void: ctx.crew.select("mark", slot))
-		_marks.add_child(b)
+		b.set_pressed_no_signal(ctx.crew.is_selected("mark", m["slot"]))
 
 
 func _fill_log() -> void:
@@ -246,13 +263,16 @@ func _fill_inbox() -> void:
 		_mail.text = tr("relay.inbox_item") % [item["name"], item["from"]] + more
 	accept.disabled = item.is_empty()
 	decline.disabled = item.is_empty()
-	var kept: int = send_target()
-	send_to.clear()
-	for a: Dictionary in allies():
-		send_to.add_item(a["name"])
-		send_to.set_item_metadata(send_to.item_count - 1, a["id"])
-		if a["id"] == kept:
-			send_to.select(send_to.item_count - 1)
+	var targets: Array = allies()
+	if targets != _ally_list:
+		_ally_list = targets
+		var kept: int = send_target()
+		send_to.clear()
+		for a: Dictionary in targets:
+			send_to.add_item(a["name"])
+			send_to.set_item_metadata(send_to.item_count - 1, a["id"])
+			if a["id"] == kept:
+				send_to.select(send_to.item_count - 1)
 	send.disabled = send_to.item_count == 0 or ctx.crew.selection.get("kind", "") != "mark"
 
 

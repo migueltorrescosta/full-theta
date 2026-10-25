@@ -601,3 +601,57 @@ func test_map_shows_the_sim_hazards() -> void:
 	assert_float(items[1]["eta"]).is_equal(12.0)
 	p.map.queue_redraw()
 	await get_tree().process_frame
+
+
+# FT: FT-RLY-004, FT-STN-005
+# A refresh updates the HUD's buttons in place: the same nodes survive, so a press that
+# lands around a refresh still arrives and an open SEND dropdown keeps its choice.
+func test_hud_refresh_keeps_its_buttons() -> void:
+	var s: StationScreen = await _screen()
+	var hud: RelayHud = _relay(s).hud
+	assert_int(hud._contacts.get_child_count()).is_greater(0)
+	assert_int(hud._marks.get_child_count()).is_greater(0)
+	var contact: Button = hud._contacts.get_child(0)
+	var mark: Button = hud._marks.get_child(0)
+	var target: OptionButton = hud.send_to
+	var slot: int = s.ctx.crew.marks[0]["slot"]
+	s.ctx.crew.marks[0]["name"] = "Renamed"
+	s.ctx.crew.select("mark", slot)
+	hud.refresh()
+	assert_object(hud._contacts.get_child(0)).is_same(contact)
+	assert_object(hud._marks.get_child(0)).is_same(mark)
+	assert_str(mark.text).is_equal("Renamed")
+	assert_bool(mark.button_pressed).is_true()
+	assert_int(hud.send_target()).is_equal(ALLY)
+	assert_int(target.item_count).is_equal(1)
+	contact.pressed.emit()
+	assert_str(str(s.ctx.crew.selection.get("kind", ""))).is_equal("contact")
+	# A new contact or mark changes the set of items: only then is the list rebuilt.
+	s.ctx.crew.marks.append({"slot": 7, "name": "Extra", "pos": Vector3.ZERO})
+	hud.refresh()
+	assert_int(hud._marks.get_child_count()).is_equal(2)
+
+
+# FT: FT-SPA-028
+# D222: a probe's bubble is a zone item that can be selected and pinged as `zone`; a
+# `zones` update (marked hazards and scan positions only) leaves that selection alone
+# and the selection still has a position.
+func test_probe_bubbles_are_selectable_and_pingable_zones() -> void:
+	var s: StationScreen = await _screen()
+	var probes: Array = [
+		{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0}
+	]
+	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(1, false, probes)
+	assert_dict(s.ctx.picture().find({"kind": "zone", "id": -1})).is_not_empty()
+	s.ctx.crew.select("zone", -1)
+	_event(s, "zones", {"ship": SHIP, "zones": []})
+	assert_bool(s.ctx.crew.is_selected("zone", -1)).is_true()
+	assert_bool(s.ctx.selection_local() is Vector3).is_true()
+	s.ctx.ping_item(s.ctx.crew.selection)
+	var sent: Array = _sent(s, "ping")
+	assert_str(str(sent[-1][0])).is_equal("zone")
+	assert_int(int(sent[-1][1])).is_equal(-1)
+	# A marked zone that disappears still clears the selection.
+	s.ctx.crew.select("zone", 4)
+	_event(s, "zones", {"ship": SHIP, "zones": []})
+	assert_bool(s.ctx.crew.selection.is_empty()).is_true()

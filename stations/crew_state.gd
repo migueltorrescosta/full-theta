@@ -403,7 +403,13 @@ func _on_relay(type: String, p: Dictionary) -> void:
 						}
 					)
 				)
-			if selection.get("kind", "") == "zone" and zone_by_id(selection["id"]).is_empty():
+			# Probe bubbles and sim hazards (ids below 0) are not in this list: only a
+			# marked zone that is gone clears the selection (D222).
+			if (
+				selection.get("kind", "") == "zone"
+				and int(selection["id"]) >= 0
+				and zone_by_id(selection["id"]).is_empty()
+			):
 				selection = {}
 				changed.emit(&"selection")
 		"routes":
