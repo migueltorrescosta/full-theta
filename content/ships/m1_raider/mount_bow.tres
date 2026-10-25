@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="MountDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/mount_def.gd" id="1_8m7hl"]
+[ext_resource type="Resource" path="res://content/weapons/m1_raider_cannon.tres" id="2_7ghu4"]
+
+[resource]
+script = ExtResource("1_8m7hl")
+id = &"bow"
+position = Vector3(0, 0, -22)
+forward = Vector3(0, 0, -1)
+arc_half_angle = 0.2617993877991494
+traverse_rate = 0.5
+weapon = ExtResource("2_7ghu4")
+subsystem_id = &"weapons"

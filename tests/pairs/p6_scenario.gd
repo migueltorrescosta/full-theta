@@ -1,10 +1,11 @@
 class_name P6Scenario
 extends RefCounted
-## P6 Weapons + Engineering pair scenario (spec §7.4, FT-PAIR-015): a gunship (the M1
-## corvette with MOUNTS mass drivers on the bow) fires at a raider at rest 2 km dead
-## ahead and must destroy it. Eight mounts want 8 MJ/s of weapons energy
-## (one 0.5 MJ shot per mount every 0.5 s), more than the 3.3 MJ/s two pips on the
-## weapons recharge, so the energy store, not the cooldown, limits the fire.
+## P6 Weapons + Engineering pair scenario (spec §7.4, FT-PAIR-015, D212): the M1 corvette
+## and its one mass driver fire at a raider at rest 2 km dead ahead and must destroy it.
+## A shot costs more energy (content/weapons/m1_cannon.tres) than the 3.3 MJ/s two pips on
+## the weapons recharge supply at the mount's cooldown rate, so sustained fire runs the
+## store dry and the energy, not the cooldown, limits the fire; four pips (6.7 MJ/s) keep
+## up with the cooldown.
 ## - Weapons (both variants): the gunner aims every mount at the raider and fires each
 ##   mount that is ready and has the energy (Gunnery.gun).
 ## - Engineering (co-op only): puts the reactor's 2 spare pips on the weapons (4 pips,
@@ -17,8 +18,9 @@ extends RefCounted
 const SEED: int = 43
 const PLAYER: int = 0
 const RAIDER: int = 1
-const MOUNTS: int = 8
 const RAIDER_AT: Vector3 = Vector3(0.0, 0.0, -2000.0)
+## Hull of the raider (J): 15 mass-driver hits.
+const RAIDER_HULL: float = 3e7
 const HEAT_GUARD: float = 0.9
 const TICK_LIMIT: int = 60 * SimWorld.HZ
 
@@ -32,10 +34,18 @@ static func harness() -> PairHarness:
 static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p6")
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
-	w.spawn_ship(Gunnery.gunship(MOUNTS), 1, 0)
-	var raider: int = w.spawn_ship(Gunnery.raider_with_shields(0.0), 2, 0, RAIDER_AT)
+	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	var raider: int = w.spawn_ship(_target(), 2, 0, RAIDER_AT)
 	w.shields.strength[raider] = 0.0
 	return w
+
+
+## The raider with no shields and no subsystems (every hit lands on a hull of RAIDER_HULL J).
+static func _target() -> ShipDef:
+	var ship: ShipDef = Gunnery.raider_with_shields(0.0)
+	ship.subsystems = []
+	ship.hull_max = RAIDER_HULL
+	return ship
 
 
 static func no_environment(_w: SimWorld) -> void:
