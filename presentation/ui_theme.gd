@@ -61,11 +61,6 @@ static func build(touch: bool = false) -> Theme:
 	return t
 
 
-## Puts the theme on the window, so every Control below inherits it.
-static func apply(window: Window) -> void:
-	window.theme = build()
-
-
 ## A rounded box in the palette: fill and border roles, a content margin on each side.
 static func box(fill: String, line: String, pad_x: int, pad_y: int) -> StyleBoxFlat:
 	var s: StyleBoxFlat = StyleBoxFlat.new()

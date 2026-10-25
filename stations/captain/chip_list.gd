@@ -1,7 +1,9 @@
 class_name ChipList
 extends Control
 ## The Captain's read-only list of open request chips: "Helm > Engineering  boost  6 s"
-## (FT-CPT-004). It takes rows as ChipSource returns them and answers no input.
+## (FT-CPT-004). It reads the CHIPS block through ChipView (`open_rows`) and answers no input.
+##
+## A row: {"from": station id, "to": station id, "label": text, "left_s": seconds left}.
 
 const ROW_HEIGHT: float = 26.0
 const HEADER_HEIGHT: float = 26.0
@@ -14,6 +16,26 @@ var rows: Array[Dictionary] = []
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	custom_minimum_size = Vector2(0, HEADER_HEIGHT + ROW_HEIGHT * MAX_ROWS)
+
+
+## Rows of the view's CHIPS block: all of the ship's open chips (the Captain sees them
+## all), with the text in the session language and the seconds left.
+static func open_rows(view: NetViewState) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for chip: Dictionary in ChipView.open_chips(view):
+		var callsign: String = view.callsign(int(chip["arg"])) if int(chip["arg"]) >= 0 else ""
+		(
+			out
+			. append(
+				{
+					"from": chip["from"],
+					"to": chip["to"],
+					"label": ChipView.label(chip, callsign),
+					"left_s": ChipView.left_s(view, chip),
+				}
+			)
+		)
+	return out
 
 
 ## The row text: "Helm > Engineering  boost  6 s".

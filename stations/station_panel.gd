@@ -110,11 +110,9 @@ func send_request() -> void:
 			_chip_menu.chosen.connect(func(i: int) -> void: send_chip(request_chips()[i]))
 			add_child(_chip_menu)
 		var labels: PackedStringArray = PackedStringArray()
-		var enabled: Array[bool] = []
 		for c: ChipDef in chips:
 			labels.append(chip_label(c))
-			enabled.append(true)
-		_chip_menu.open(tr("chip.menu"), labels, enabled)
+		_chip_menu.open(tr("chip.menu"), labels)
 
 
 ## The chips this station can send now, from the data list (content/chips/chips.tres): the

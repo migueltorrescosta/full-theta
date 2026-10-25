@@ -8,6 +8,8 @@ extends Control
 const FONT_SIZE: int = 22
 const BAR_HEIGHT: float = 18.0
 const ROW_GAP: float = 12.0
+## The bar colour role of each health band (D193: split at 75, 50 and 25 %).
+const BAR_ROLES: Array[String] = ["ok", "warn", "warn", "danger"]
 
 var _model: Dictionary = {}
 
@@ -50,6 +52,11 @@ static func objective_text(kind: int, left: int) -> String:
 
 static func _frac(value: float, max_value: float) -> float:
 	return clampf(value / max_value, 0.0, 1.0) if max_value > 0.0 else 0.0
+
+
+## The palette role of a bar filled to `frac` (0..1).
+static func bar_role(frac: float) -> String:
+	return BAR_ROLES[HealthBand.band_of(frac)]
 
 
 func _init() -> void:
@@ -158,7 +165,7 @@ func _bar(font: Font, x: float, y: float, w: float, name: String, frac: float) -
 	y += font.get_height(FONT_SIZE) + 4.0
 	var r: Rect2 = Rect2(x, y, w, BAR_HEIGHT)
 	draw_rect(r, Palette.color("panel"))
-	var role: String = "ok" if frac > 0.6 else ("warn" if frac > 0.25 else "danger")
+	var role: String = bar_role(frac)
 	draw_rect(Rect2(x, y, w * frac, BAR_HEIGHT), Palette.color(role))
 	draw_rect(r, Palette.color("line"), false, 1.0)
 	return y + BAR_HEIGHT + ROW_GAP

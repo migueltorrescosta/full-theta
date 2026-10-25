@@ -128,58 +128,6 @@ func test_weapons_lists_the_feeds_of_the_selected_target() -> void:
 	assert_array(panel.feed_lines()).is_empty()
 
 
-# FT: FT-ENG-008, FT-PAIR-020
-# The countdown to a hazard Relay marked is the time to its edge at the present velocity: 0
-# inside, none when not closing; Engineering shows it when the toggle is on and not on Normal.
-func test_hazard_countdown_follows_the_toggle() -> void:
-	assert_float(HazardEta.eta(Vector3(0, 0, -5000), 1000.0, Vector3(0, 0, -200))).is_equal(20.0)
-	assert_float(HazardEta.eta(Vector3(0, 0, -500), 1000.0, Vector3(0, 0, -200))).is_equal(0.0)
-	assert_float(HazardEta.eta(Vector3(0, 0, -5000), 1000.0, Vector3(0, 0, 200))).is_equal(-1.0)
-	assert_float(HazardEta.eta(Vector3(0, 0, -5000), 1000.0, Vector3.ZERO)).is_equal(-1.0)
-	var zones: Array = [
-		{"id": 1, "kind": "hazard", "radius": 1000.0},
-		{"id": 2, "kind": "scan", "radius": 100.0},
-		{"id": 3, "kind": "hazard", "radius": 500.0},
-	]
-	var offsets: Dictionary = {
-		1: Vector3(0, 0, -5000), 2: Vector3(0, 0, -300), 3: Vector3(0, 0, -2500)
-	}
-	assert_float(HazardEta.soonest(zones, offsets, Vector3(0, 0, -200))).is_equal(10.0)
-	assert_float(HazardEta.soonest([], {}, Vector3(0, 0, -200))).is_equal(-1.0)
-
-
-# FT: FT-ENG-008, FT-PAIR-020
-# Engineering's countdown to the nearest hazard ahead is shown when the hazard-countdown
-# toggle is on (Easy and Normal) and Relay shared it (D210), and not on Hard, where Relay
-# says it by voice; the share ends with the server's `shares` event.
-func test_engineering_shows_the_countdown_by_toggle() -> void:
-	var etas: Dictionary = {}
-	for code: String in ["easy", "normal", "hard"]:
-		var ctx: StationContext = _ctx("engineering", code)
-		var s: StationScreen = auto_free(StationScreen.new())
-		s.setup(ctx)
-		add_child(s)
-		var vel: Vector3 = Vector3(ctx.view.kin["vel"]) / NetCodec.VEL_Q
-		var at: Vector3 = ctx.interp.own_position() + vel.normalized() * 5000.0
-		var zone: Dictionary = {"id": 1, "kind": "hazard", "site": ctx.site(), "radius": 1000.0}
-		zone.merge({"x": at.x, "y": at.y, "z": at.z, "by": "Rui"})
-		ctx.crew.handle_event(
-			{"type": "zones", "payload": {"ship": 0, "zones": [zone]}}, StationFixture.NOW_MS
-		)
-		var panel: EngineeringPanel = s.panels[0] as EngineeringPanel
-		assert_float(panel.hazard_eta()).override_failure_message(code).is_equal(-1.0)
-		var shared: Dictionary = {"ship": 0, "left": {"hazard_countdowns": 30.0}}
-		ctx.crew.handle_event({"type": "shares", "payload": shared}, StationFixture.NOW_MS)
-		etas[code] = panel.hazard_eta()
-		ctx.crew.handle_event(
-			{"type": "shares", "payload": {"ship": 0, "left": {}}}, StationFixture.NOW_MS
-		)
-		assert_float(panel.hazard_eta()).override_failure_message(code).is_equal(-1.0)
-	assert_float(etas["easy"]).is_equal_approx(4000.0 / 80.0, 0.5)
-	assert_float(etas["normal"]).is_equal_approx(4000.0 / 80.0, 0.5)
-	assert_float(etas["hard"]).is_equal(-1.0)
-
-
 # FT: FT-PAIR-007, FT-JNT-005
 # The share buttons: one per shortcut whose source is on the screen, whose toggle is on and
 # whose partner is not on the screen too; a press and the Share binding send the shortcut
@@ -229,8 +177,7 @@ func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
 
 # FT: FT-ENG-008, FT-PAIR-020
 # The countdown also follows the sim hazards the faction knows (the RELAY block's forecast,
-# D208): the soonest of the real fronts' arrival and the marked zones', by the same toggle
-# and only while Relay shares it (D217).
+# D208): the soonest arrival, by the same toggle and only while Relay shares it (D217).
 func test_engineering_countdown_uses_the_sim_hazard_forecast() -> void:
 	var etas: Dictionary = {}
 	for code: String in ["easy", "hard"]:

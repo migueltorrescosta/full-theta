@@ -62,7 +62,6 @@ var _dock: VBoxContainer
 var _side: BoxContainer
 var _body: BoxContainer
 var _extras: VBoxContainer
-var _kind: LayoutMode.Kind = LayoutMode.Kind.DESKTOP
 var _blocked: bool = false
 
 
@@ -482,9 +481,9 @@ func _relayout() -> void:
 	if _body == null or not is_inside_tree():
 		return
 	var size_now: Vector2 = get_viewport().get_visible_rect().size
-	_kind = LayoutMode.kind_of(self)
-	var phone: bool = _kind == LayoutMode.Kind.PHONE
-	var touch: bool = LayoutMode.is_touch(_kind)
+	var kind: LayoutMode.Kind = LayoutMode.kind_of(self)
+	var phone: bool = kind == LayoutMode.Kind.PHONE
+	var touch: bool = LayoutMode.is_touch(kind)
 	var portrait: bool = LayoutMode.portrait(size_now)
 	_body.vertical = portrait
 	_side.vertical = not portrait

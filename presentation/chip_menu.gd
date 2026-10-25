@@ -28,8 +28,8 @@ func _init() -> void:
 	_box.add_child(_title)
 
 
-## Shows the lines (already translated; a line is greyed when `enabled[i]` is false).
-func open(title: String, labels: PackedStringArray, enabled: Array[bool]) -> void:
+## Shows the lines (already translated).
+func open(title: String, labels: PackedStringArray) -> void:
 	for c: Node in _box.get_children():
 		if c != _title:
 			_box.remove_child(c)
@@ -41,7 +41,6 @@ func open(title: String, labels: PackedStringArray, enabled: Array[bool]) -> voi
 		b.name = "Chip%d" % (i + 1)
 		b.text = "%d  %s" % [i + 1, labels[i]]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.disabled = not enabled[i]
 		b.pressed.connect(choose.bind(i))
 		_box.add_child(b)
 	visible = true

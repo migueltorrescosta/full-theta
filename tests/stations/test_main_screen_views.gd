@@ -171,3 +171,15 @@ func test_target_view_draws_a_target_beyond_near_range() -> void:
 	assert_bool(v._space.ships.has(StationFixture.H2)).is_true()
 	await _show(s, MainScreen.View.FORWARD)
 	assert_bool(v._space.ships.has(StationFixture.H2)).is_false()
+
+
+# FT: FT-PAIR-019
+# The status bars colour by D193's bands, split at 75, 50 and 25 % (edges belong to the
+# better band).
+func test_status_bars_follow_the_health_bands() -> void:
+	assert_str(StatusView.bar_role(1.0)).is_equal("ok")
+	assert_str(StatusView.bar_role(0.75)).is_equal("ok")
+	assert_str(StatusView.bar_role(0.7)).is_equal("warn")
+	assert_str(StatusView.bar_role(0.5)).is_equal("warn")
+	assert_str(StatusView.bar_role(0.3)).is_equal("warn")
+	assert_str(StatusView.bar_role(0.2)).is_equal("danger")

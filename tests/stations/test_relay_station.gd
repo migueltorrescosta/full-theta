@@ -638,9 +638,11 @@ func test_hud_refresh_keeps_its_buttons() -> void:
 # and the selection still has a position.
 func test_probe_bubbles_are_selectable_and_pingable_zones() -> void:
 	var s: StationScreen = await _screen()
-	var probes: Array = [{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0}]
+	var probes: Array = [
+		{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0}
+	]
 	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(1, false, probes)
-	assert_int(s.ctx.picture().items.filter(func(i: Dictionary) -> bool: return i["id"] == -1).size()).is_equal(1)
+	assert_dict(s.ctx.picture().find({"kind": "zone", "id": -1})).is_not_empty()
 	s.ctx.crew.select("zone", -1)
 	_event(s, "zones", {"ship": SHIP, "zones": []})
 	assert_bool(s.ctx.crew.is_selected("zone", -1)).is_true()

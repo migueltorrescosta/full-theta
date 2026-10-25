@@ -6,8 +6,9 @@ extends RefCounted
 ## of at least 44 px) and phone (the short side under PHONE_SHORT). The size is measured
 ## in device-independent pixels: window pixels divided by the screen density (the screen
 ## DPI over 96 on a desktop, `devicePixelRatio` in a browser), so a 1280 x 720 desktop at
-## 150 % UI scale is still a desktop and a 390 x 844 CSS-px phone at dpr 3 is a phone. Touch and phone change sizes and arrangement only, never what
-## a station can do (FT-NET-018). A portrait viewport stacks the main area above the
+## 150 % UI scale is still a desktop and a 390 x 844 CSS-px phone at dpr 3 is a phone.
+## Touch and phone change sizes and arrangement only, never what a station can do
+## (FT-NET-018). A portrait viewport stacks the main area above the
 ## radar column; a landscape one puts them side by side, on every device (D216).
 ##
 ## `apply` puts the matching theme on a window and keeps it matching on resize and

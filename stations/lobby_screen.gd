@@ -671,17 +671,12 @@ func _refresh_data() -> void:
 		row.get_node("Desc").text = tr("lobby.toggle.%s.desc" % def.id)
 		var value: OptionButton = row.get_node("Line/Value")
 		value.clear()
-		var choices: Array = [2, 1, 0] if def.kind == DataToggleDef.Kind.SUMMARY else [1, 0]
-		for v: int in choices:
-			var key: String = (
-				"lobby.v_"
-				+ (
-					["absent", "banded", "exact"][v]
-					if def.kind == DataToggleDef.Kind.SUMMARY
-					else ["off", "on"][v]
-				)
-			)
-			value.add_item(tr(key), v)
+		var summary: bool = def.kind == DataToggleDef.Kind.SUMMARY
+		var names: Array[String] = ["off", "on"]
+		if summary:
+			names = ["absent", "banded", "exact"]
+		for v: int in range(names.size() - 1, -1, -1):
+			value.add_item(tr("lobby.v_" + names[v]), v)
 		value.select(value.get_item_index(toggles.value(def.id)))
 		value.disabled = not editable
 

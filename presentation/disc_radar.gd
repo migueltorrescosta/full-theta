@@ -170,19 +170,6 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
-## The items in the order their blips and stems are drawn: the selected one last, on top
-## of all others (FT-SPA-025).
-func draw_order() -> Array[Dictionary]:
-	var rest: Array[Dictionary] = []
-	var top: Array[Dictionary] = []
-	for e: Dictionary in _layout():
-		if _is_selected(e["item"]):
-			top.append(_ref(e["item"]))
-		else:
-			rest.append(_ref(e["item"]))
-	return rest + top
-
-
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	var c: Vector2 = disc_centre()
