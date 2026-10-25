@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="HazardDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/hazard_def.gd" id="1_hazard"]
+
+[resource]
+script = ExtResource("1_hazard")
+id = &"p4_dust_cloud"
+kind = 0
+center = Vector3(0, 0, -4000)
+radius = 2000.0
+damage_w = 1000000.0
+drag = 0.08
+detect_range = 5000.0

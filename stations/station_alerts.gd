@@ -10,12 +10,15 @@ extends Node
 ## screen of the ship.
 
 ## Sim event kind -> [stations that see and hear it ([] for every screen), toast and
-## flash palette role].
+## flash palette role, optionally the tone to play].
 const ROUTES: Dictionary = {
 	&"hit": [[], "danger"],
 	&"shield_low": [["helm", "engineering"], "warn"],
 	&"fault": [["engineering"], "warn"],
 	&"proximity": [["helm"], "danger"],
+	# Weapons is warned before a shot along a lane Relay flagged (FT-RLY-011), with the
+	# proximity tone (the third entry is the tone, when it isn't the event's own).
+	&"lane_warning": [["weapons"], "danger", &"proximity"],
 }
 ## Fault tag (the subsystem id, content/ships/) -> stations that depend on it and see
 ## its fault (FT-SIM-032). PROVISIONAL.
@@ -78,7 +81,7 @@ func on_sim_event(kind: StringName, p: Dictionary) -> void:
 		_toast_ms[kind] = now
 		toasts.push(_text(kind, p), role, now)
 	if audible:
-		tones.play(kind, now)
+		tones.play(route[2] if route.size() > 2 else kind, now)
 
 
 func _on_crew_changed(what: StringName) -> void:
@@ -111,7 +114,11 @@ func _text(kind: StringName, p: Dictionary) -> String:
 			var v: Vector3 = p.get("vector", Vector3.ZERO)
 			return tr("alerts.hit").format({"dir": _direction(v)})
 		&"shield_low":
-			return tr("alerts.shield_low").format({"pct": roundi(float(p.get("value", 0)) * 100.0)})
+			# An absent summary (Hard) arrives as 0: the alert without a number (D224).
+			var pct: int = roundi(float(p.get("value", 0)) * 100.0)
+			if pct <= 0:
+				return tr("alerts.shield_low_plain")
+			return tr("alerts.shield_low").format({"pct": pct})
 		&"fault":
 			var tag: String = str(p.get("tag", ""))
 			return tr("alerts.fault." + tag if FAULT_KEYS.has(tag) else "alerts.fault")

@@ -24,6 +24,11 @@ var player: ShipDef
 var enemy: EnemyDef
 ## Side of the site's wrapping cube (m, FT-SIM-035, D124).
 var site_period: float
+## Science tuning for the built worlds (E01); null leaves the Science commands refused.
+var science: ScienceDef
+## The hazards of the built worlds (D208, D220), already loaded; at most
+## HazardSystem.MAX_HAZARDS, which validate() checks.
+var hazards: Array[HazardDef] = []
 
 
 func _init(
@@ -44,7 +49,12 @@ func _init(
 ## and the broadphase cells, SimWorld.period_errors).
 func validate() -> Array[String]:
 	var ships: Array[ShipDef] = [player, enemy.ship]
-	return SimWorld.period_errors(site_period, ships)
+	var errors: Array[String] = SimWorld.period_errors(site_period, ships)
+	if hazards.size() > HazardSystem.MAX_HAZARDS:
+		errors.append(
+			"%d hazards, at most %d are supported" % [hazards.size(), HazardSystem.MAX_HAZARDS]
+		)
+	return errors
 
 
 ## A new world at tick 0 holding the encounter, or null when validate() reports errors.
@@ -53,6 +63,8 @@ func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
 	var world: SimWorld = SimWorld.new(world_seed, build_id, site_period)
+	world.science_def = science
+	world.hazards = hazards.duplicate()
 	world.set_relation(PLAYER_FACTION, ENEMY_FACTION, SimWorld.Relation.HOSTILE)
 	world.spawn_ship(player, PLAYER_FACTION, SITE)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)

@@ -20,7 +20,25 @@ enum Section {
 	NEAR = 7,
 	PROJECTILES = 8,
 	OWNERSHIP = 9,
+	# Science contact card, scan and hack state (strand A).
+	SCIENCE = 10,
+	# Relay probes, coverage, routes, hazards and inbox (strand B).
+	RELAY = 11,
+	# Captain and main screen: main-screen view, open chips, cards (strand F).
+	CAPTAIN = 12,
+	# Open request chips of the ship (strand G).
+	CHIPS = 13,
+	# What Weapons gets from other stations' work when a toggle lets it: weak points and
+	# resistances, hack windows, track feeds (strand G, P7 and P8).
+	FEEDS = 14,
 }
+
+## The CAPTAIN block's objective kinds, as clients name them (stations/ may not name
+## sim/): Objectives.Kind's values, which test_net_main_screen_rules checks.
+const OBJECTIVE_DESTROY_HOSTILES: int = 1
+
+## Most probes a RELAY block lists.
+const RELAY_PROBE_ROWS: int = 64
 
 ## Load tags (FT-STN-015, D126).
 const LIGHT: String = "light"
@@ -28,12 +46,21 @@ const BUSY: String = "busy"
 const INTENSE: String = "intense"
 const LOAD_TAGS: Array[String] = [LIGHT, BUSY, INTENSE]
 
-## Difficulty-toggle sets of the view key (D14, D69, D84): the three presets. M1 has
-## no data shortcut in its sim (weak points, track feeds, routes come with #8 to #10),
-## so no field depends on the set yet; the set is still part of the view key and the
-## filter is checked at each (tests/net/test_net_stations_filter.gd).
-const TOGGLE_SETS: Array[String] = ["easy", "normal", "hard"]
-const DEFAULT_TOGGLES: String = "normal"
+## The toggle part of the view key (D14, D69, D84): a DataToggles code, "easy", "normal",
+## "hard" or an edited set ("normal:1011000"). Every session of a server shares one, set
+## in the lobby and locked at Start (FT-PAIR-017); a first launch is Easy (FT-STN-016).
+## The sections that depend on it are FILTERED and are encoded once per ViewFilter
+## signature, not once per ship.
+const DEFAULT_TOGGLES: String = "easy"
+## The sections whose content a ViewFilter changes.
+const FILTERED: Array[int] = [
+	Section.STATUS,
+	Section.HELM,
+	Section.ENGINEERING,
+	Section.RELAY,
+	Section.FEEDS,
+	Section.CHIPS,
+]
 
 const CREW: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
 const CAPTAIN: String = "captain"
@@ -45,11 +72,24 @@ const ALL: String = "all"
 const NO_STATIONS: Array[String] = []
 
 ## Catalogue entries other than the six stations, in catalogue order: id -> [name,
-## load tag, covered stations]. M1 offers the Tactical, Systems and Ops joint views
-## (FT-M1-006, FT-JNT-003); the other 12 of the 15 pairs come with M2 (FT-JNT-004).
+## load tag, covered stations]. One joint view per pair of functional stations, in
+## §7.3 pair order (FT-JNT-004, FT-NET-032, spec §3.3); a joint view takes the busier
+## of its stations' load tags (D198).
 const ENTRIES: Dictionary = {
+	"drive": ["Drive", INTENSE, ["engineering", "helm"]],
 	"tactical": ["Tactical", INTENSE, ["helm", "weapons"]],
+	"survey": ["Survey", INTENSE, ["helm", "science"]],
+	"nav": ["Nav", INTENSE, ["helm", "relay"]],
+	"approach": ["Approach", INTENSE, ["helm", "comms"]],
+	"gunnery": ["Gunnery", INTENSE, ["weapons", "engineering"]],
+	"targeting": ["Targeting", INTENSE, ["weapons", "science"]],
+	"fire_control": ["Fire Control", INTENSE, ["weapons", "relay"]],
+	"parley": ["Parley", INTENSE, ["weapons", "comms"]],
 	"systems": ["Systems", BUSY, ["engineering", "science"]],
+	"logistics": ["Logistics", BUSY, ["engineering", "relay"]],
+	"quartermaster": ["Quartermaster", BUSY, ["engineering", "comms"]],
+	"sensors": ["Sensors", BUSY, ["science", "relay"]],
+	"intel": ["Intel", BUSY, ["science", "comms"]],
 	"ops": ["Ops", LIGHT, ["relay", "comms"]],
 	"captain": ["Captain", LIGHT, []],
 	"viewer": ["Viewer", "", []],
@@ -79,6 +119,7 @@ const STATION_SECTIONS: Dictionary = {
 		Section.NEAR,
 		Section.PROJECTILES,
 		Section.OWNERSHIP,
+		Section.CHIPS,
 	],
 	"weapons":
 	[
@@ -89,14 +130,58 @@ const STATION_SECTIONS: Dictionary = {
 		Section.NEAR,
 		Section.PROJECTILES,
 		Section.OWNERSHIP,
+		Section.FEEDS,
+		Section.CHIPS,
 	],
 	"engineering":
-	[Section.KIN, Section.STATUS, Section.ENGINEERING, Section.CONTACTS, Section.OWNERSHIP],
-	"science": [Section.KIN, Section.STATUS, Section.CONTACTS],
-	"relay": [Section.KIN, Section.STATUS, Section.CONTACTS],
-	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS],
-	"captain": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.NEAR, Section.PROJECTILES],
-	"viewer": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.NEAR, Section.PROJECTILES],
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.ENGINEERING,
+		Section.CONTACTS,
+		Section.RELAY,
+		Section.OWNERSHIP,
+		Section.CHIPS,
+	],
+	"science":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.SCIENCE,
+		Section.CONTACTS,
+		Section.RELAY,
+		Section.OWNERSHIP,
+		Section.CHIPS,
+	],
+	"relay":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.CONTACTS,
+		Section.RELAY,
+		Section.OWNERSHIP,
+		Section.CHIPS,
+	],
+	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.CHIPS],
+	"captain":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.CONTACTS,
+		Section.NEAR,
+		Section.PROJECTILES,
+		Section.CAPTAIN,
+		Section.CHIPS,
+	],
+	"viewer":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.CONTACTS,
+		Section.NEAR,
+		Section.PROJECTILES,
+		Section.CAPTAIN,
+	],
 }
 
 ## Crew command kinds (SimCommand.kind()) per station. A command is accepted only from
@@ -113,10 +198,33 @@ const STATION_COMMANDS: Dictionary = {
 		&"helm_select_target",
 		&"set_shield_focus",
 	],
-	"weapons": [&"aim_mount", &"fire"],
-	"engineering": [&"set_pips", &"boost", &"set_shield", &"dispatch_repair", &"recall_repair"],
-	"science": [],
-	"relay": [],
+	"weapons": [&"aim_mount", &"fire", &"fire_guided", &"set_ammo_type"],
+	"engineering":
+	[
+		&"set_pips",
+		&"boost",
+		&"set_shield",
+		&"dispatch_repair",
+		&"recall_repair",
+		&"pick_fault_cause",
+		&"harden",
+		# Strand B's probe fabrication (FT-ENG-008); Engineering only sends it.
+		&"fabricate_probe",
+	],
+	"science":
+	[
+		&"science_scan",
+		&"science_scan_submit",
+		&"science_hack",
+		&"science_hack_move",
+		&"science_cancel",
+		&"science_self_scan",
+		&"science_sensor_mode",
+		&"science_ping",
+		&"science_scan_mark",
+		&"science_select",
+	],
+	"relay": [&"launch_probe", &"flag_lanes"],
 	"comms": [],
 }
 
@@ -127,11 +235,17 @@ const CLAIM_FLIGHT: String = "flight"
 const CLAIM_SHIELD_FACING: String = "shield_facing"
 const CLAIM_MOUNT: String = "mount"
 const CLAIM_CREW: String = "crew"
+## The one active scan or hack (or own-ship scan) at a time (FT-NET-022, FT-SCI-004).
+const CLAIM_SCAN: String = "scan"
+## Relay's probe launcher (strand B of #9): a second Relay seat claims it to launch.
+const CLAIM_PROBE: String = "probe"
 ## Station -> claimable item kinds.
 const STATION_CLAIMS: Dictionary = {
 	"helm": [CLAIM_FLIGHT, CLAIM_SHIELD_FACING],
 	"weapons": [CLAIM_MOUNT],
 	"engineering": [CLAIM_CREW],
+	"science": [CLAIM_SCAN],
+	"relay": [CLAIM_PROBE],
 }
 ## Station -> ship-wide controls: last writer wins, and snapshots name the last writer
 ## (FT-NET-044). A control is the name, or "name:index" (pips per subsystem kind).
@@ -150,12 +264,21 @@ const COMMAND_ITEMS: Dictionary = {
 	&"set_shield_focus": [CLAIM_SHIELD_FACING, ""],
 	&"aim_mount": [CLAIM_MOUNT, "mount_index"],
 	&"fire": [CLAIM_MOUNT, "mount_index"],
+	&"fire_guided": [CLAIM_MOUNT, "mount_index"],
+	&"set_ammo_type": [CLAIM_MOUNT, "mount_index"],
 	&"dispatch_repair": [CLAIM_CREW, "crew"],
 	&"recall_repair": [CLAIM_CREW, "crew"],
 	&"helm_select_target": ["target", ""],
 	&"set_pips": ["pips", "subsystem_kind"],
 	&"set_shield": ["shield", ""],
 	&"boost": ["boost", ""],
+	&"science_scan": [CLAIM_SCAN, ""],
+	&"science_scan_submit": [CLAIM_SCAN, ""],
+	&"science_hack": [CLAIM_SCAN, ""],
+	&"science_hack_move": [CLAIM_SCAN, ""],
+	&"science_cancel": [CLAIM_SCAN, ""],
+	&"science_self_scan": [CLAIM_SCAN, ""],
+	&"launch_probe": [CLAIM_PROBE, ""],
 }
 
 ## Sim events that only some stations get (FT-NET-009): kind -> stations; a session
@@ -168,7 +291,65 @@ const EVENT_STATIONS: Dictionary = {
 	&"repair_recalled": ["engineering"],
 	&"fire_blocked": ["weapons"],
 	&"friendly_fire_warning": ["weapons"],
+	&"mount_overheated": ["weapons", "engineering"],
+	&"mount_cooled": ["weapons", "engineering"],
+	&"guidance_lost": ["weapons"],
+	&"weak_point_hit": ["weapons"],
+	# Exact-value events (EXACT_EVENTS, D224): Engineering's, or a plain alert elsewhere.
+	&"subsystem_damaged": ["engineering"],
+	&"subsystem_destroyed": ["engineering"],
+	&"shield_low": ["helm", "engineering"],
+	&"fault_inflicted": ["engineering"],
+	&"fault_cause_revealed": ["engineering"],
+	&"fault_cause_picked": ["engineering"],
+	&"fault_cleared": ["engineering"],
+	&"hardened": ["engineering"],
+	&"harden_expired": ["engineering"],
+	&"harden_no_parts": ["engineering"],
 	&"ai_mode": [],
+	&"science_refused": ["science"],
+	&"scan_started": ["science"],
+	&"scan_done": ["science"],
+	&"scan_failed": ["science"],
+	&"scan_mark": ["science", "helm"],
+	&"hack_started": ["science"],
+	&"hack_traced": ["science"],
+	&"hack_failed": ["science"],
+	&"hack_done": ["science", "weapons"],
+	&"hack_window_end": ["science", "weapons"],
+	&"self_scan_started": ["science"],
+	&"self_scan_done": ["science", "engineering"],
+	&"active_ping": ["science"],
+	# Relay's probes and lanes (strand B of #9); fabrication also tells Engineering.
+	&"probe_launched": ["relay"],
+	&"probe_deployed": ["relay"],
+	&"probe_no_stock": ["relay"],
+	&"probe_fabricating": ["relay", "engineering"],
+	&"probe_fabricated": ["relay", "engineering"],
+	&"probe_no_parts": ["engineering"],
+	&"lane_warning": ["weapons", "relay"],
+}
+
+## Events whose `value` is Engineering's exact data (a health fraction, a heat, the shield
+## fraction), D224: a view without Engineering gets the value as its summaries toggle says
+## (exact, banded or 0), and a Comms view without Engineering gets the event not at all.
+## Fault and shield_low double as plain alerts on the stations that depend on them.
+const EXACT_EVENTS: Array[StringName] = [
+	&"subsystem_damaged", &"subsystem_destroyed", &"fault", &"shield_low"
+]
+
+## Events that are a data shortcut when they leave the station that produced them: kind ->
+## [toggle, source station]. The source's own sessions always get them; another station
+## gets one when the toggle is on or it is in a joint view with the source (ViewFilter.grants,
+## FT-PAIR-008). Hack windows and weak-point hits are Science's work shown on Weapons (P7),
+## own-ship scan results Science's shown on Engineering (P10), flagged lanes Relay's shown
+## on Weapons (P8). Scan-position marks are MARK items and reach Helm at every difficulty.
+const EVENT_SHORTCUTS: Dictionary = {
+	&"hack_done": [&"weak_points", "science"],
+	&"hack_window_end": [&"weak_points", "science"],
+	&"self_scan_done": [&"diagnosed_causes", "science"],
+	&"fault_cause_revealed": [&"diagnosed_causes", "science"],
+	&"lane_warning": [&"track_feeds", "relay"],
 }
 
 ## Field sets of the block sections: Section -> NetBlock schema. A block is sent whole
@@ -224,10 +405,119 @@ const BLOCKS: Dictionary = {
 					["pips", "u8"],
 					["heat", "f32"],
 					["crews", "u32"],
-					["fault_armed", "bool"]
+					["fault_armed", "bool"],
+					# Unknown-cause fault (FT-SIM-025): whether one is open, the cause's
+					# index in SubsystemDef.fault_causes plus 1 once revealed (else 0),
+					# Engineering's pick the same way, and ticks of hardening left.
+					["fault", "bool"],
+					["fault_cause", "u8"],
+					["fault_pick", "u8"],
+					["hardened", "u16"],
 				],
 			],
 		],
+	],
+	# Science (strand A, E01): sensors, the noise preview of the selected contact, the
+	# scan-position mark, the open minigame session with its puzzle, the contact cards of
+	# the faction's knowledge (FT-SCI-001, FT-SCI-002) and the faction's open hack
+	# windows (P7). noise_flags: bit 0 active, 1 ping, 2 probe, 3 at the mark.
+	Section.SCIENCE:
+	[
+		["active", "bool"],
+		["ping_left", "f32"],
+		["ping_cool", "f32"],
+		["selected", "s16"],
+		["noise", "f32"],
+		["noise_range", "f32"],
+		["noise_aspect", "f32"],
+		["noise_health", "f32"],
+		["noise_flags", "u8"],
+		["mark_contact", "s16"],
+		["mark_site", "s16"],
+		["mark_pos", "v3f"],
+		["self_scanned", "bool"],
+		# Session: 0 none, 1 scan, 2 hack, 3 own-ship scan.
+		["session", "u8"],
+		["session_target", "s16"],
+		["session_noise", "f32"],
+		["session_start", "u32"],
+		["session_probe", "bool"],
+		# Scan: open axes mask (1 x, 2 y, 4 z), the wireframe and the cloud.
+		["axes", "u8"],
+		["wire", ["rows", [["p", "v3f"]]]],
+		["cloud", ["rows", [["p", "v3f"]]]],
+		# Hack: grid size, the node the route is at, the goal, the subsystem index,
+		# the trace bar, the known-node mask and the edge mask of each known node.
+		["hack_cols", "u8"],
+		["hack_rows", "u8"],
+		["hack_node", "s16"],
+		["hack_goal", "s16"],
+		["hack_sub", "s16"],
+		["trace", "f32"],
+		["known", "u32"],
+		["edges", ["rows", [["mask", "u8"]]]],
+		[
+			"cards",
+			[
+				"rows",
+				[
+					["contact", "s16"],
+					["detect", "f32"],
+					["scan", "f32"],
+					["class_id", "u32"],
+					["intent", "u8"],
+					["weak_mask", "u32"],
+					["resist", ["rows", [["type", "u32"], ["factor", "f32"]]]],
+					["hack", "bool"],
+				],
+			],
+		],
+		["hacks", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
+	],
+	# Relay's probes: the stock, Engineering's build in progress, the lane switch and
+	# the ship's launched probes (site-local position in m, bubble radius in m); then the
+	# sim hazards the faction knows (strand J, HazardView): zone, shell or plane, where now,
+	# the radius now, a plane's direction and the forecast seconds to the ship (-1: none).
+	Section.RELAY:
+	[
+		["stock", "u16"],
+		["fab_left", "f32"],
+		["lanes", "bool"],
+		[
+			"probes",
+			[
+				"rows",
+				[
+					["serial", "u16"],
+					["deployed", "bool"],
+					["pos", "v3f"],
+					["range", "f32"],
+				],
+			],
+		],
+		[
+			"hazards",
+			[
+				"rows",
+				[
+					["id", "u8"],
+					["shape", "u8"],
+					["pos", "v3f"],
+					["radius", "f32"],
+					["dir", "v3f"],
+					["eta", "f32"],
+				],
+			],
+		],
+	],
+	# The main screen's status view (strand F, FT-MSC-006): each subsystem's health in
+	# ShipDef.subsystems order and the ship's open objectives (Objectives.Kind, how many
+	# are left). The view itself and the open cards are crew state, not sim: the
+	# `main_view` event and the ping events.
+	Section.CAPTAIN:
+	[
+		["subsystems", ["rows", [["health", "f32"]]]],
+		["objectives", ["rows", [["kind", "u8"], ["left", "u16"]]]],
 	],
 	Section.MOUNTS:
 	[
@@ -240,7 +530,54 @@ const BLOCKS: Dictionary = {
 					["cooldown", "f32"],
 					["ammo", "s32"],
 					["heat", "f32"],
-					["aim_set", "bool"]
+					["aim_set", "bool"],
+					# Selected ammunition type (FT-WPN-006), overheat lock (P6).
+					["ammo_type", "u8"],
+					["locked", "bool"]
+				],
+			],
+		],
+	],
+	# What Weapons gets from other stations when a toggle lets it (strand G, FeedsView): the
+	# faction's scanned weak points (bit i: subsystem i of the contact) and resistances (P7),
+	# the open hack windows (P7) and the track quality of detected contacts (P8, quality is
+	# the track quality (GuidanceSystem.track_quality), probe whether a deployed probe covers
+	# the contact).
+	Section.FEEDS:
+	[
+		[
+			"weak",
+			[
+				"rows",
+				[
+					["contact", "s16"],
+					["class_id", "u32"],
+					["weak_mask", "u32"],
+					["resist", ["rows", [["type", "u32"], ["factor", "f32"]]]],
+				],
+			],
+		],
+		["windows", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
+		["tracks", ["rows", [["contact", "s16"], ["quality", "f32"], ["probe", "bool"]]]],
+	],
+	# The ship's open request chips (strand G, ChipsSection; NetChips on the server): the
+	# chip's index in content/chips/chips.tres, its argument (mount index or contact id, -1
+	# for none), the sending and receiving station (index in CREW) and the sim ticks it was
+	# sent and expires at. A crew view lists the chips it sends or receives.
+	Section.CHIPS:
+	[
+		[
+			"chips",
+			[
+				"rows",
+				[
+					["id", "u16"],
+					["chip", "u8"],
+					["arg", "s16"],
+					["from", "u8"],
+					["to", "u8"],
+					["sent", "u32"],
+					["expires", "u32"],
 				],
 			],
 		],
@@ -361,7 +698,7 @@ static func station_of_item(item: String) -> String:
 
 
 ## The claimable items of a ship by station: flight and shield facing (Helm), one per
-## weapon mount (Weapons), one per repair crew (Engineering).
+## weapon mount (Weapons), one per repair crew (Engineering), the scan (Science).
 static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 	var ship_def: ShipDef = world.defs[ship]
 	var mounts: Array[String] = []
@@ -371,18 +708,60 @@ static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 	for i: int in ship_def.repair_crews:
 		crews.append("%s:%d" % [CLAIM_CREW, i])
 	var helm: Array[String] = [CLAIM_FLIGHT, CLAIM_SHIELD_FACING]
-	return {"helm": helm, "weapons": mounts, "engineering": crews}
+	return {
+		"helm": helm,
+		"weapons": mounts,
+		"engineering": crews,
+		"science": [CLAIM_SCAN],
+		"relay": [CLAIM_PROBE],
+	}
 
 
 ## Whether a sim event of this kind reaches a session holding entry (faction and ship
 ## checks are ServerSession.event_audience()'s).
-static func sees_event(entry: String, kind: StringName) -> bool:
+static func sees_event(entry: String, kind: StringName, toggles: String = DEFAULT_TOGGLES) -> bool:
+	if EXACT_EVENTS.has(kind):
+		var seen: ViewFilter = ViewFilter.of(entry, toggles)
+		if seen != null and seen.condition_hidden:
+			return false
 	if not EVENT_STATIONS.has(kind):
 		return true
+	var shortcut: Array = EVENT_SHORTCUTS.get(kind, [])
+	var filter: ViewFilter = null
 	for station: String in stations_of(entry):
-		if (EVENT_STATIONS[kind] as Array).has(station):
+		if not (EVENT_STATIONS[kind] as Array).has(station):
+			continue
+		if shortcut.is_empty() or station == shortcut[1]:
+			return true
+		if filter == null:
+			filter = ViewFilter.of(entry, toggles)
+		if filter != null and filter.grants(shortcut[0]):
 			return true
 	return false
+
+
+## The `value` of a sim event as an entry's view may carry it: an EXACT_EVENTS value as the
+## summaries toggle says (exact for Engineering and at the exact setting, the middle of its
+## D193 band, else 0; a fault's heat is Engineering's alone); any other event's value as it
+## is (D224).
+static func event_value(
+	entry: String, kind: StringName, value: float, toggles: String = DEFAULT_TOGGLES
+) -> float:
+	if not EXACT_EVENTS.has(kind):
+		return value
+	var filter: ViewFilter = ViewFilter.of(entry, toggles)
+	if filter == null:
+		return 0.0
+	# A fault's heat is no summary at any setting: Engineering's alone.
+	var mode: int = filter.summary_mode(ViewFilter.ENG)
+	if kind == &"fault":
+		return value if filter.sees_all or filter.stations.has("engineering") else 0.0
+	match mode:
+		2:
+			return value
+		1:
+			return HealthBand.quantise(clampf(value, 0.0, 1.0), DataToggles.def().band_edges)
+	return 0.0
 
 
 ## The OWNERSHIP section content an entry sees: the claims and last writers of its own
@@ -440,8 +819,13 @@ static func _build(entry: String) -> StationDef:
 
 
 ## The block section's fields for a ship, read from a (copied) world, encoded.
-static func block_bytes(kind: int, world: SimWorld, ship: int) -> PackedByteArray:
-	return NetBlock.encode(BLOCKS[kind], _block_values(kind, world, ship))
+static func block_bytes(
+	kind: int, world: SimWorld, ship: int, filter: ViewFilter = null
+) -> PackedByteArray:
+	var values: Dictionary = _block_values(kind, world, ship)
+	if filter != null:
+		filter.apply(kind, values, world, ship)
+	return NetBlock.encode(BLOCKS[kind], values)
 
 
 static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
@@ -452,6 +836,14 @@ static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
 			return _helm(world, ship)
 		Section.ENGINEERING:
 			return _engineering(world, ship)
+		Section.SCIENCE:
+			return ScienceView.block(world, ship)
+		Section.RELAY:
+			return _relay(world, ship)
+		Section.CAPTAIN:
+			return _captain(world, ship)
+		Section.FEEDS:
+			return FeedsView.block(world, ship)
 	return _mounts(world, ship)
 
 
@@ -507,6 +899,11 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 					"heat": d.heat[r],
 					"crews": d.crews[r],
 					"fault_armed": d.fault_armed[r] == 1,
+					"fault": d.fault_cause[r] != &"",
+					"fault_cause":
+					_cause_index(world, ship, i - 1, d.fault_cause[r], d.fault_known[r]),
+					"fault_pick": _cause_index(world, ship, i - 1, d.fault_pick[r], 1),
+					"hardened": mini(d.hardened_ticks[r], 65535),
 				}
 			)
 		)
@@ -522,6 +919,52 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 	}
 
 
+## Relay's block: at most the newest RELAY_PROBE_ROWS probes (a row count is one byte).
+static func _relay(world: SimWorld, ship: int) -> Dictionary:
+	var r: RelayTable = world.relay
+	var t: ProbeTable = world.probes
+	var rows: PackedInt32Array = t.rows_of(ship)
+	var probes: Array = []
+	for i: int in range(maxi(0, rows.size() - RELAY_PROBE_ROWS), rows.size()):
+		var p: int = rows[i]
+		(
+			probes
+			. append(
+				{
+					"serial": t.serial[p],
+					"deployed": t.deployed[p] == 1,
+					"pos": Vector3(t.at_x[p], t.at_y[p], t.at_z[p]),
+					"range": world.defs[ship].probe_range,
+				}
+			)
+		)
+	return {
+		"stock": r.stock[ship],
+		"fab_left": r.fab_left[ship],
+		"lanes": r.lanes_flagged[ship] == 1,
+		"probes": probes,
+		"hazards": HazardView.rows(world, ship),
+	}
+
+
+## The status view's block: subsystem health and open objectives.
+static func _captain(world: SimWorld, ship: int) -> Dictionary:
+	var rows: PackedInt32Array = world.damage.rows_of(ship)
+	var subsystems: Array = []
+	for i: int in range(1, rows.size()):
+		subsystems.append({"health": world.damage.health[rows[i]]})
+	return {"subsystems": subsystems, "objectives": Objectives.of_ship(world, ship)}
+
+
+## Index of the cause in the subsystem's fault_causes plus 1 when known, else 0.
+static func _cause_index(
+	world: SimWorld, ship: int, sub: int, cause: StringName, known: int
+) -> int:
+	if cause == &"" or known == 0:
+		return 0
+	return (world.defs[ship].subsystems[sub].fault_causes.find(cause) + 1) & 0xff
+
+
 static func _mounts(world: SimWorld, ship: int) -> Dictionary:
 	var m: MountTable = world.mounts
 	var mounts: Array = []
@@ -535,6 +978,8 @@ static func _mounts(world: SimWorld, ship: int) -> Dictionary:
 					"ammo": m.ammo[r],
 					"heat": m.heat[r],
 					"aim_set": m.aim_set[r] == 1,
+					"ammo_type": m.ammo_type[r],
+					"locked": m.locked[r] == 1,
 				}
 			)
 		)

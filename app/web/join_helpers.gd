@@ -1,8 +1,10 @@
 class_name JoinHelpers
 extends RefCounted
-## Web join helpers (FT-NET-030): a browser station pre-fills the join address with the
-## page's own host and joins at once on ?join=1. The host serves the page over HTTP on
-## the WebSocket port minus one (D108, app/host_session.gd). The logic takes the page
+## Web join helpers (FT-NET-030, D196): a browser station joins the host that served its
+## page at once, with nothing typed; ?join=0 only pre-fills the address. The host serves
+## the page over HTTP on the WebSocket port minus one (D108, app/host_session.gd). The
+## test hooks ?pick=ENTRY and ?ready=1 take a station and press Ready (tools/l4/web.sh;
+## they act only when a server offers the station). The logic takes the page
 ## facts as inputs so it needs no browser; only web_config() reads JavaScriptBridge.
 
 
@@ -11,8 +13,11 @@ class WebJoinConfig:
 	extends RefCounted
 	## "host" or "host:port"; empty when there is nothing to pre-fill.
 	var address: String = ""
-	## True when the query string has join=1.
+	## True unless the query string has join=0.
 	var auto_join: bool = false
+	## Test hooks (?pick=ENTRY, ?ready=1): the station to take and whether to press Ready.
+	var pick: String = ""
+	var ready: bool = false
 
 
 ## Builds the config from the page's hostname, port (0 when the URL names none) and
@@ -23,13 +28,19 @@ static func config_from(hostname: String, page_port: int, search: String) -> Web
 	var host: String = hostname.strip_edges()
 	if host.is_empty():
 		return cfg
-	if host.contains(":"):
+	# location.hostname already brackets an IPv6 literal; a bare one gets brackets.
+	if host.contains(":") and not host.begins_with("["):
 		host = "[%s]" % host
 	cfg.address = host
 	var ws_port: int = page_port + 1
 	if page_port > 0 and ws_port != NetProtocol.DEFAULT_WS_PORT and ws_port <= 65535:
 		cfg.address = "%s:%d" % [host, ws_port]
-	cfg.auto_join = search.trim_prefix("?").split("&").has("join=1")
+	var query: PackedStringArray = search.trim_prefix("?").split("&")
+	cfg.auto_join = not query.has("join=0")
+	cfg.ready = query.has("ready=1")
+	for item: String in query:
+		if item.begins_with("pick="):
+			cfg.pick = item.trim_prefix("pick=").uri_decode()
 	return cfg
 
 

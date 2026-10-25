@@ -66,3 +66,14 @@ func test_a_joint_view_asks_for_each_station_on_its_first_focus() -> void:
 	assert_bool(ctx.settings.tooltip_seen("weapons")).is_true()
 	s.focus(0)
 	assert_array(asked).has_size(2)
+
+
+# FT: FT-STN-012, FT-TST-021
+# The browser test hooks (?pick=) switch the first-visit menu off, so it never covers the
+# station the test photographs.
+func test_browser_test_hooks_skip_the_first_visit_menu() -> void:
+	var ctx: StationContext = _fresh("helm")
+	ctx.settings.skip_first_visit_help = true
+	var asked: Array[bool] = []
+	_screen(ctx, asked)
+	assert_array(asked).is_empty()

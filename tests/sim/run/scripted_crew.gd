@@ -2,10 +2,11 @@ class_name ScriptedCrew
 extends RefCounted
 ## A fixed crew script for the M1 encounter tests: before each step it submits the
 ## commands stations would send for the crewed ship. Tick 1 (once the sensors have run):
-## select the enemy and hold Face. Every AIM_EVERY ticks: aim the bow mount at the
-## enemy's lead intercept point. Every FIRE_EVERY ticks from FIRST_FIRE: fire. It reads
-## the target's true state, as a crew with a radar lock would; it is deterministic, so
-## the same world gives the same commands.
+## put the reactor's 2 spare pips on the weapons (a shot costs more than two pips recharge
+## at the cooldown rate, D212), select the enemy and hold Face. Every AIM_EVERY ticks: aim
+## the bow mount at the enemy's lead intercept point. Every FIRE_EVERY ticks from
+## FIRST_FIRE: fire. It reads the target's true state, as a crew with a radar lock would; it
+## is deterministic, so the same world gives the same commands.
 
 const AIM_EVERY: int = 6
 const FIRE_EVERY: int = 30
@@ -26,6 +27,10 @@ func act(world: SimWorld) -> void:
 	if not world.kin.is_alive(ship) or not world.kin.is_alive(target):
 		return
 	if t == 1:
+		var pips: SetPipsCommand = SetPipsCommand.new()
+		pips.subsystem_kind = SubsystemDef.Kind.WEAPONS
+		pips.pips = world.defs[ship].power.max_pips_per_subsystem
+		_submit(world, pips)
 		var select: SelectTargetCommand = SelectTargetCommand.new()
 		select.target_ship = target
 		_submit(world, select)

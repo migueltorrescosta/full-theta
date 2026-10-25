@@ -128,6 +128,9 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 				. is_equal(t.size())
 			)
 			assert_bool(t.get(col[0]) == col[1]).is_true()
+		if t == w.hacks:
+			# Hack windows come and go: keyed by the hacked ship and the HACKER's faction.
+			continue
 		for r: int in t.size():
 			assert_int(t.ship_ids[r]).is_between(0, w.ship_count() - 1)
 			var own: int = w.faction_of(t.ship_ids[r])
@@ -135,6 +138,9 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 				assert_int(t.factions[r]).is_not_equal(own)
 			else:
 				assert_int(t.factions[r]).override_failure_message(name).is_equal(own)
+		# Probes are rows added by launching: none before Relay launches one.
+		if t == w.probes:
+			continue
 		for ship: int in [0, 1]:
 			assert_int(t.rows_of(ship).size()).override_failure_message(name).is_greater(0)
 	assert_array(Array(w.kin.factions)).is_equal([1, 2, 1])

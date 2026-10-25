@@ -128,8 +128,8 @@ Left: rotatable low-poly cutaway, subsystems coloured by health and heat, hit lo
 +-----------------------------------------------------+
 ```
 
-- KB/M: number keys select subsystem, +/- or scroll pips, drag crews, H harden selected subsystem, P fabricate probe; Enter/Backspace accept/decline request, middle-click ping a subsystem (§5.0).
-- Controller: left stick cursor with snap to subsystems, d-pad left/right cycle subsystem, LT/RT remove/add pip, right stick rotate cutaway, B dispatch nearest crew, LB harden, d-pad up fabricate probe; A select, X/Y accept/decline (§5.0).
+- KB/M: number keys select subsystem, +/- or scroll pips, drag crews, H harden selected subsystem, P fabricate probe, Semicolon cycle the cause picked for its unknown fault; Enter/Backspace accept/decline request, middle-click ping a subsystem (§5.0).
+- Controller: left stick cursor with snap to subsystems, d-pad left/right cycle subsystem, LT/RT remove/add pip, right stick rotate cutaway, B dispatch nearest crew, LB harden, d-pad up fabricate probe, d-pad down cycle the fault cause; A select, X/Y accept/decline (§5.0).
 - Touch: tap pips, drag crews, pinch-rotate cutaway, HARDEN and PROBE buttons.
 
 - **FT-ENG-001** Engineering shall show a rotatable cutaway with subsystems coloured by health and heat and recent hit locations. (D50, D26)

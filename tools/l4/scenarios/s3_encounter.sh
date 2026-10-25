@@ -3,9 +3,9 @@
 # client UI (--client ui: menu, lobby, station screens, outcome card). The host plays
 # Tactical (HostSession, its server child started with the test flag
 # --m1-player-hull-scale), c2 Systems, c3 Ops. Run 1: Ops marks the enemy and pings
-# it, Tactical selects the ping, faces it and fires the claimed mount until the enemy
-# is destroyed (a win, about 55 s of sim); the crew votes "Run again" (2 of 3) and
-# everyone is back in the lobby. Run 2: Tactical charges with weapons cold and the
+# it, Systems puts the spare pips on the weapons (D212), Tactical selects the ping, faces
+# it and fires the claimed mount until the enemy is destroyed (a win, about a minute of sim);
+# the crew votes "Run again" (2 of 3) and everyone is back in the lobby. Run 2: Tactical charges with weapons cold and the
 # raider destroys the ship (a loss, about 40 s with the hull scaled to 20 %); the host
 # runs it again alone (D178). Two fights don't fit the default 90 s, so this scenario
 # raises its own limit.

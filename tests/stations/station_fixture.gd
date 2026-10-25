@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name StationFixture
 extends RefCounted
 ## A deterministic station context with no server (#7): ship 0 "Kestrel" picked at the
@@ -93,6 +94,44 @@ class RecordingClient:
 
 	func run_again(ship: int, vote: bool) -> void:
 		sent.append(["run_again", [ship, vote]])
+
+	# Relay (strand B of #9).
+	func send_mark(slot: int, to_ship: int) -> void:
+		sent.append(["send_mark", [slot, to_ship]])
+
+	func accept_mark(id: int, slot: int) -> void:
+		sent.append(["accept_mark", [id, slot]])
+
+	func decline_mark(id: int) -> void:
+		sent.append(["decline_mark", [id]])
+
+	func route_add(route: int, site: int, pos: Vector3) -> void:
+		sent.append(["route_add", [route, site, pos]])
+
+	func route_clear(route: int) -> void:
+		sent.append(["route_clear", [route]])
+
+	func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
+		sent.append(["hazard_add", [radius_m, site, pos]])
+
+	func hazard_delete(id: int) -> void:
+		sent.append(["hazard_delete", [id]])
+
+	# Captain and main screen (strand F).
+	func set_main_view(view: int) -> void:
+		sent.append(["set_main_view", [view]])
+
+	func set_toggles(code: String) -> void:
+		sent.append(["set_toggles", [code]])
+
+	func send_chip(chip: String, arg: int) -> void:
+		sent.append(["send_chip", [chip, arg]])
+
+	func answer_chip(id: int, accept: bool) -> void:
+		sent.append(["answer_chip", [id, accept]])
+
+	func share(feature: String) -> void:
+		sent.append(["share", [feature]])
 
 	## The sends of one method, newest last.
 	func of(method: String) -> Array:

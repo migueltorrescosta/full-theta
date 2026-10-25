@@ -10,6 +10,11 @@ extends Control
 ## honestly as faint edges: one period P on a side around the own ship, the region the
 ## minimum image places every item in (D124).
 ##
+## Probes (a ring and dot with the coverage bubble as a circle of its radius), hazard zones
+## (the same, amber), routes (dashed lines with an arrow), flagged lanes that cross a
+## friendly (red lines, FT-RLY-011) and the site's name as a banner (FT-SPA-027) are drawn
+## here from what the panel hands in.
+##
 ## The panel (RelayPanel) owns input; this control only draws and maps between screen
 ## points and ship-frame offsets: project() and unproject() at a depth along the view
 ## direction (0 = the plane through the map centre perpendicular to the view, FT-RLY-002).
@@ -25,6 +30,11 @@ const ZOOM_STEP: float = 1.25
 const ROTATE_RAD_PER_PX: float = 0.01
 ## The camera starts 35° above the deck plane behind the ship (a start, not an up).
 const START_TILT_DEG: float = 35.0
+## A lane crossing a friendly counts when the friendly is within this of the line (m).
+const LANE_R: float = 200.0
+## A plane hazard front's bar is this long each way, its arrow this long (px).
+const FRONT_HALF_PX: float = 60.0
+const FRONT_ARROW_PX: float = 24.0
 
 ## The items (ContactPicture); its interpolator gives the own ship's orientation and
 ## site-local position, to place the cube and turn map points into site positions, and
@@ -45,6 +55,13 @@ var preview: Dictionary = {}
 ## The controller cursor (px), drawn when cursor_on.
 var cursor: Vector2 = Vector2.ZERO
 var cursor_on: bool = false
+## The ship's probes (the RELAY block's rows): {"serial", "deployed", "pos" (site-local
+## m), "range" (m)}.
+var probes: Array = []
+## Routes (CrewState.routes): arrays of {"site", "pos"} waypoints.
+var routes: Array = []
+## Lane flagging is on (the RELAY block's `lanes`): lanes crossing a friendly are drawn.
+var lanes_on: bool = false
 
 
 func _init() -> void:
@@ -116,6 +133,8 @@ func from_own(rel: Vector3) -> Vector3:
 ## The item drawn under `pos` ({"kind", "id"}), or {}: the selected item first, then the
 ## nearest within HIT_PX, then a chip. Point pings are never picked.
 func item_at(pos: Vector2) -> Dictionary:
+	if SiteBanner.rect(get_theme_default_font(), picture.site).has_point(pos):
+		return _ref(picture.site)
 	var layout: Array[Dictionary] = _layout()
 	var best: Dictionary = {}
 	var best_d: float = HIT_PX
@@ -134,6 +153,30 @@ func item_at(pos: Vector2) -> Dictionary:
 	return {}
 
 
+## The lanes from the own ship to a hostile or unknown contact that pass within LANE_R of a
+## friendly or neutral one (FT-RLY-011, P8): [{"target": id, "friend": id, "label":
+## friend's label}]. Items are ContactPicture items (world offsets from the own ship).
+static func crossing_lanes(items: Array[Dictionary]) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for t: Dictionary in items:
+		if t["kind"] != "contact" or t["allegiance"] not in ["H", "U"]:
+			continue
+		var line: Vector3 = t["world"]
+		var len2: float = line.length_squared()
+		if len2 < 1.0:
+			continue
+		for f: Dictionary in items:
+			if f["kind"] != "contact" or f["allegiance"] not in ["F", "N"] or f["id"] == t["id"]:
+				continue
+			var at: Vector3 = f["world"]
+			var along: float = at.dot(line) / len2
+			if along <= 0.0 or along >= 1.0:
+				continue
+			if at.distance_to(line * along) <= LANE_R:
+				out.append({"target": t["id"], "friend": f["id"], "label": f["label"]})
+	return out
+
+
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("background"))
@@ -141,6 +184,10 @@ func _draw() -> void:
 	_draw_cube(c)
 	_draw_deck(not centre.is_empty())
 	var layout: Array[Dictionary] = _layout()
+	_draw_routes()
+	_draw_bubbles(layout)
+	if lanes_on:
+		_draw_lanes(layout, font)
 	var sel: Dictionary = {}
 	for e: Dictionary in layout:
 		if _is_selected(e["item"]):
@@ -159,13 +206,96 @@ func _draw() -> void:
 	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			_draw_pulse(project(rel_of(it)), float(it.get("pulse", 0.0)))
+	_draw_probes(font)
 	_draw_preview(font)
+	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
 	if cursor_on:
 		var col: Color = Palette.color("accent")
 		draw_line(cursor - Vector2(10, 0), cursor + Vector2(10, 0), col, 1.5)
 		draw_line(cursor - Vector2(0, 10), cursor + Vector2(0, 10), col, 1.5)
 	var scale_text: String = tr("relay.span") % _km(span_m)
 	_draw_text(font, Vector2(8.0, size.y - 8.0 - font.get_height(FONT_SIZE)), scale_text, _dim())
+
+
+## Hazard bubbles: the sphere's silhouette is a circle of its radius; a sim plane front
+## (`dir`) is a line across its travel with an arrowhead along it.
+func _draw_bubbles(layout: Array[Dictionary]) -> void:
+	for e: Dictionary in layout:
+		var it: Dictionary = e["item"]
+		if it["kind"] == "zone" and it.has("dir"):
+			_draw_front(e)
+		elif it["kind"] == "zone":
+			var col: Color = Palette.item_color(it)
+			var r_px: float = float(it.get("radius", 0.0)) * ppm()
+			draw_circle(e["pos"], r_px, col * Color(1, 1, 1, 0.12))
+			draw_arc(e["pos"], r_px, 0.0, TAU, 48, col * Color(1, 1, 1, 0.6), 1.5, true)
+
+
+## A plane front: a bar through its nearest point, square to its travel on screen, and an
+## arrow along the travel.
+func _draw_front(e: Dictionary) -> void:
+	var col: Color = Palette.item_color(e["item"])
+	var ahead: Vector2 = project(e["rel"] + (e["item"]["dir"] as Vector3) * 1000.0) - e["pos"]
+	var along: Vector2 = ahead.normalized() if ahead.length() > 1.0 else Vector2.DOWN
+	var across: Vector2 = Vector2(-along.y, along.x)
+	draw_line(e["pos"] - across * FRONT_HALF_PX, e["pos"] + across * FRONT_HALF_PX, col, 3.0, true)
+	draw_line(e["pos"], e["pos"] + along * FRONT_ARROW_PX, col, 1.5, true)
+
+
+## Probes: a ring with a dot, solid once on station; a deployed probe's coverage bubble is
+## a circle of its range (FT-RLY-001, FT-RLY-004).
+func _draw_probes(font: Font) -> void:
+	var col: Color = Palette.color("accent")
+	for pr: Dictionary in probes:
+		var rel: Vector3 = picture.rel(picture.interp.offset_to(pr["pos"]), centre)
+		var p: Vector2 = project(rel)
+		draw_line(project(Vector3(rel.x, 0.0, rel.z)), p, col * Color(1, 1, 1, 0.5), 1.0, true)
+		if pr["deployed"]:
+			var r_px: float = float(pr["range"]) * ppm()
+			draw_circle(p, r_px, col * Color(1, 1, 1, 0.08))
+			draw_arc(p, r_px, 0.0, TAU, 48, col * Color(1, 1, 1, 0.5), 1.0, true)
+		draw_arc(p, BLIP_R, 0.0, TAU, 20, col, 2.0, true)
+		draw_circle(p, 2.0, col if pr["deployed"] else Palette.color("background"))
+		_draw_text(font, p + Vector2(10.0, -8.0), "P%d" % (int(pr["serial"]) + 1), col)
+
+
+## Routes: dashed lines from the ship through each waypoint, an arrowhead at the end.
+func _draw_routes() -> void:
+	var col: Color = Palette.color("mark")
+	for route: Array in routes:
+		if route.is_empty():
+			continue
+		var last: Vector2 = project(picture.rel(Vector3.ZERO, centre))
+		for w: Dictionary in route:
+			var rel: Vector3 = picture.rel(picture.interp.offset_to(w["pos"]), centre)
+			var p: Vector2 = project(rel)
+			draw_dashed_line(last, p, col, 2.0, 6.0, true)
+			draw_circle(p, 3.0, col)
+			if w == route[-1]:
+				var d: Vector2 = (p - last).normalized()
+				var n: Vector2 = Vector2(-d.y, d.x)
+				draw_colored_polygon(
+					PackedVector2Array([p + d * 7.0, p - d * 3.0 + n * 5.0, p - d * 3.0 - n * 5.0]),
+					col
+				)
+			last = p
+
+
+## Lanes that cross a friendly, red, with "lane x N7" at the friendly (FT-RLY-011).
+func _draw_lanes(layout: Array[Dictionary], font: Font) -> void:
+	var own: Vector2 = project(picture.rel(Vector3.ZERO, centre))
+	var by_id: Dictionary = {}
+	for e: Dictionary in layout:
+		if e["item"]["kind"] == "contact":
+			by_id[e["item"]["id"]] = e
+	for lane: Dictionary in crossing_lanes(picture.items):
+		var t: Dictionary = by_id.get(lane["target"], {})
+		var f: Dictionary = by_id.get(lane["friend"], {})
+		if t.is_empty() or f.is_empty():
+			continue
+		var col: Color = Palette.color("danger")
+		draw_line(own, t["pos"], col, 2.0, true)
+		_draw_text(font, f["pos"] + Vector2(10.0, 8.0), tr("relay.lane") % lane["label"], col)
 
 
 ## The wrapping cube: one period on a side, world-axis aligned, around the own ship;
@@ -233,15 +363,18 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		draw_rect(
 			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5
 		)
-	_draw_pulse(pos, float(it.get("pulse", 0.0)))
+	_draw_pulse(pos, float(it.get("pulse", 0.0)), it.get("copies", []))
 
 
-func _draw_pulse(pos: Vector2, pulse: float) -> void:
+func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 	if pulse <= 0.0:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
 	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	if not copies.is_empty():
+		var text: String = "+ " + ", ".join(PackedStringArray(copies))
+		_draw_text(get_theme_default_font(), pos + Vector2(-8.0, 14.0), text, col)
 
 
 ## The mark being placed: an outline diamond, its stem, a line back to the view plane
@@ -256,7 +389,36 @@ func _draw_preview(font: Font) -> void:
 	draw_line(project(preview["plane"]), p, col * Color(1, 1, 1, 0.4), 1.0, true)
 	draw_polyline(Palette.shape_points("diamond", p, BLIP_R + 2.0), col, 2.0, true)
 	var label: String = str(preview.get("label", ""))
-	_draw_text(font, p + Vector2(12.0, -8.0), ChipText.chip(label, from_own(rel)), col)
+	_draw_text(font, p + Vector2(12.0, -8.0), say_point(label, rel), col)
+
+
+## What the map says of a point at `rel` (ship frame from the centre): its chip from the
+## own ship, or, past the far band (10 km), the point said relative to the nearest mark
+## or the site (`Bravo, 12 high, 3 km`, FT-SPA-006, FT-SPA-026).
+func say_point(label: String, rel: Vector3) -> String:
+	var interp: SnapshotInterpolator = picture.interp
+	var local: Vector3 = from_own(rel)
+	if local.length() <= Callout.FAR_M:
+		return ChipText.chip(label, local)
+	var at: Vector3 = centre_world() + interp.own_rotation() * rel
+	var refs: Array[Dictionary] = []
+	for it: Dictionary in picture.items:
+		if it["kind"] == "mark":
+			refs.append({"name": it["label"], "world": it["world"]})
+	if not picture.site.is_empty():
+		refs.append({"name": picture.site["label"], "world": interp.offset_to(Vector3.ZERO)})
+	var best: Vector3 = Vector3.ZERO
+	var best_name: String = ""
+	var best_d: float = INF
+	for r: Dictionary in refs:
+		var off: Vector3 = interp.min_image(at - (r["world"] as Vector3))
+		if off.length() < best_d:
+			best_d = off.length()
+			best = off
+			best_name = r["name"]
+	if best_name == "":
+		return ChipText.chip(label, local)
+	return "%s: %s" % [label, ChipText.relative(best_name, interp.local(best))]
 
 
 func _draw_text(font: Font, at: Vector2, text: String, col: Color) -> void:

@@ -33,7 +33,9 @@ Each cross-station data shortcut is an individual toggle, set in the lobby befor
 | Marks and pings | all | on | on | on |
 | Engineering ↔ Comms | P12 | verbal | verbal | verbal |
 
-"voice" means the toggle is off and the data travels by speech. "Verbal" and "voice" mean same-room speech; the game has no voice chat, so remote players need external voice. Crews speak in the callout grammar of §6.1, summarised on a one-page callout card (`docs/callout-card.md`, written in M2, #9).
+A shortcut that is on still needs a press (D210): the source station has a share button and one binding per device for each of its shortcuts (routes, hazard countdowns, weak points, track feeds, diagnosed causes), and the partner sees the data only after a press. A press keeps the shortcut open for 30 s (`share_seconds` in `content/toggles/toggles.tres`); a newer press renews it, and the partner's view loses the data when it ends. Each press counts as a shared shortcut of the pair in the debrief (FT-PAIR-013). A toggle that is off means no shortcut at all, and a joint view holding both stations shows the data without a press (FT-JNT-005).
+
+"voice" means the toggle is off and the data travels by speech. "Verbal" and "voice" mean same-room speech; the game has no voice chat, so remote players need external voice. Crews speak in the callout grammar of §6.1, summarised on a one-page callout card ([`docs/callout-card.md`](../callout-card.md), M2, #9).
 
 Game rules (a probe enabling a remote scan, a scan fact unlocking a dialogue option, an intent change renaming a callsign) apply at every difficulty; D69 governs only how data reaches another station's screen.
 
@@ -111,7 +113,7 @@ A joint view holding both stations of a pair makes that pair's requests direct a
 - **FT-PAIR-004** Each pair shall have a no-partner path that completes, at a cost in time, resources or precision. (v0.3 §6)
 - **FT-PAIR-005** Information asymmetry shall be enforced by the server's per-station snapshot filter. (v0.3 §6, D14)
 - ~~**FT-PAIR-006**~~ Removed (D84): superseded by FT-PAIR-019.
-- **FT-PAIR-007** On Easy, share buttons and data links shall deliver weak points to Weapons, routes to Helm and probe tracks to Weapons. (D69)
+- **FT-PAIR-007** On Easy, share buttons and data links shall deliver weak points to Weapons, routes to Helm and probe tracks to Weapons; each shortcut reaches its partner only after a press on its source station, which counts as a cooperative event, and a joint view holding both stations needs no press. (D69, D210)
 - **FT-PAIR-008** On Hard, no cross-station data shall reach another station's screen except marks and pings, that is MARK items other than routes and approach lanes (FT-SPA-029). (D69)
 - **FT-PAIR-009** Request chips shall be disabled on Hard. (D69)
 - **FT-PAIR-010** Between different players holding Engineering and Comms there shall be no data link, status snapshot or share button at any difficulty; Comms' only view of condition shall be the hull band, the same at every difficulty; a Quartermaster player sees both by design. (D68, D76, plan review CLASH-3, CLASH-4)

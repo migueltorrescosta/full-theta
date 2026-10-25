@@ -19,6 +19,8 @@ extends Node
 
 ## Ticks between snapshots: 60 Hz sim, 30 Hz snapshots (D70).
 const SNAPSHOT_TICKS: int = 2
+## How often the snapshot-age summary line is written (us).
+const STATS_PERIOD_US: int = 10_000_000
 
 var encounter: M1Encounter
 var world: SimWorld
@@ -40,7 +42,14 @@ var beacon: LanBeacon
 ## The load gate's probe (`--probe-out`, D161), or null; set before start().
 var probe: LoadProbe
 
+## The session log (D199), or null until start_session_log(); other systems add their
+## events and counters to it (SessionLog).
+var session_log: SessionLog
+var age_stats: SnapshotAgeStats = SnapshotAgeStats.new()
+
 var _next_snapshot_tick: int = 0
+var _next_stats_us: int = 0
+var _logged_counters: Dictionary = {}
 ## While the sim doesn't step (lobby, pause), when the next snapshot goes out (us), and
 ## whether the net thread already holds the idle world's state.
 var _next_idle_post_us: int = 0
@@ -74,6 +83,45 @@ func start(
 
 func port() -> int:
 	return transport.port()
+
+
+## Opens the session log at `path` (SessionLog.default_path() in a normal session): the
+## snapshot-age summary every STATS_PERIOD_US and a final summary on exit (D199). Call
+## after start().
+func start_session_log(path: String) -> Error:
+	session_log = SessionLog.open(path)
+	if session_log == null:
+		return ERR_CANT_CREATE
+	session.session_log = session_log
+	session.add_handler(NetProtocol.Type.CLIENT_STATS, _on_client_stats)
+	session_log.event(
+		"start", {"port": port(), "bind": bind_address, "protocol": NetProtocol.PROTOCOL_VERSION}
+	)
+	_next_stats_us = Time.get_ticks_usec() + STATS_PERIOD_US
+	return OK
+
+
+## Adds each client's full snapshots and stalls on its current connection (cumulative),
+## so a phone that keeps resyncing shows next to its ages (D199).
+func _add_resyncs(window: Dictionary) -> void:
+	var by_session: Dictionary = {}
+	for c: Dictionary in (transport.stats().get("conns", {}) as Dictionary).values():
+		by_session[c["session"]] = c
+	for line: Dictionary in window["clients"]:
+		var c: Dictionary = by_session.get(line["session"], {})
+		line["fulls"] = c.get("fulls", 0)
+		line["stalls"] = c.get("stalls", 0)
+
+
+## A client's report of snapshot arrival times (D199).
+func _on_client_stats(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var from: NetSession = session.by_conn.get(conn)
+	var pairs: PackedInt64Array = msg["pairs"]
+	if from == null or pairs.size() > 2 * NetProtocol.MAX_STATS_PAIRS:
+		return
+	var c: SnapshotAgeStats.Client = age_stats.client_for(from.id, from.name, from.client_kind)
+	c.user_agent = NetProtocol.clip_utf8(msg["ua"], NetProtocol.MAX_UA_BYTES)
+	age_stats.report(c, msg["sent_us"], LoadProbe.unix_us(), pairs, transport.stamp_of)
 
 
 ## The run reset (FT-M1-012, D178): a new world from the encounter (its command log
@@ -205,6 +253,16 @@ func _process(delta: float) -> void:
 		if probe.update(all_in, session.launched.size()):
 			get_tree().quit(0)
 	_poll_lan_services()
+	if session_log != null and now_us >= _next_stats_us:
+		_next_stats_us = now_us + STATS_PERIOD_US
+		var window: Dictionary = age_stats.window_summary()
+		if (window["pooled"] as Dictionary)["n"] > 0:
+			_add_resyncs(window)
+			session_log.event("snapshot_age", window)
+		# Counters as they stand, so a server that is killed (no final summary) still has them.
+		if session_log.counters() != _logged_counters:
+			_logged_counters = session_log.counters()
+			session_log.event("counters", {"counters": _logged_counters})
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)
 
@@ -240,6 +298,8 @@ func _picks() -> int:
 
 func _exit_tree() -> void:
 	transport.stop()
+	if session_log != null:
+		session_log.close({"snapshot_age": age_stats.total_summary(), "tick": world.tick})
 	if probe != null:
 		var sessions: Dictionary = {}
 		for s: NetSession in session.by_id.values():

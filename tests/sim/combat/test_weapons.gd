@@ -129,17 +129,17 @@ func test_destroyed_weapons_subsystem_blocks() -> void:
 
 
 # FT: FT-SIM-012
-# With the real PowerSystem: emptying the 5 MJ weapons store blocks the next shot with
-# reason "energy" (one tick recharges 20 MW * 2/12 pips / 60 = 55.6 kJ, under the
-# 500 kJ a shot draws); once the store holds a shot's energy again (10 ticks later) the
-# mount fires.
+# With the real PowerSystem: emptying the weapons store blocks the next shot with reason
+# "energy" (one tick recharges 20 MW * 2/12 pips / 60 = 55.6 kJ, under the 5 MJ a shot
+# draws, D212); once the store holds a shot's energy again (90 ticks later) the mount
+# fires.
 func test_empty_weapons_store_blocks() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
 	assert_bool(PowerSystem.draw_energy(world, ship, world.power.weapon_energy[ship])).is_true()
 	assert_str(_shot(world, ship)).is_equal("energy")
 	assert_int(world.projectiles.size()).is_equal(0)
-	for i: int in 10:
+	for i: int in 90:
 		world.step()
 	assert_str(_shot(world, ship)).is_equal("fired")
 

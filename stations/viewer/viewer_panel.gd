@@ -11,7 +11,12 @@ extends StationPanel
 ## decoupled or rolls faster than CHASE_ROLL_DEG_S, and back once the roll has stayed
 ## under FORWARD_ROLL_DEG_S for FORWARD_AFTER_MS. The chase camera follows the bow but
 ## not the roll, so a fast roll shows the ship turning rather than the sky spinning.
-## The other views (FT-MSC-002) come with the Captain in #10.
+##
+## The Captain, or Relay with no Captain seated, switches the view (FT-MSC-002,
+## FT-MSC-005): forward (with the auto-chase), chase (always), tactical (the radar fills
+## the screen), target (a camera on the selected contact, else the nearest) and status
+## (StatusView: hull, shields, subsystems, objectives, alert). `ctx.crew.main_view` holds
+## it. A card the Captain pinged shows over every view for CARD_MS (FT-CPT-005).
 
 ## Auto-chase thresholds (PROVISIONAL, approved by the owner in #7).
 const CHASE_ROLL_DEG_S: float = 45.0
@@ -27,16 +32,36 @@ const FOV_DEG: float = 70.0
 const RADAR_SHARE: float = 0.4
 const RAIL_HEIGHT: float = 30.0
 const FONT_SIZE: int = 15
+## The target view's camera stands this far from the target, towards the own ship (m),
+## or at half the range when closer.
+const TARGET_STANDOFF_M: float = 150.0
+## Contact models in the target view are drawn at the ships' real size (Helm's scale), so
+## the target fills a good part of the view; elsewhere the main screen draws them small.
+const TARGET_SCALE: float = 9.0
+## The pinged card's share of the screen width, and its font size.
+const CARD_SHARE: float = 0.38
+const CARD_FONT: int = 20
+## A click within this many pixels of an item's mark picks it (the Captain's mirror).
+const ITEM_REACH_PX: float = 28.0
 
 ## True while the chase camera is up.
 var chase: bool = false
 var camera: Camera3D
 var radar: DiscRadar
+## True on the Captain's mirror: the views take clicks (select, ping, mark); a plain
+## viewer only watches.
+var interactive: bool = false
+## The view drawn now (MainScreen.View).
+var view_id: int = MainScreen.View.FORWARD
+var status_view: StatusView
 
 var _calm_since: int = -1
 ## The chase camera's up; ZERO until the first chase frame seeds it from the ship (D124).
 var _chase_up: Vector3 = Vector3.ZERO
 var _viewport: SubViewport
+var _view_box: SubViewportContainer
+var _card_layer: Control
+var _card_shown: int = -1
 ## The forward view; only contacts with a NEAR orientation (within 2 km) are drawn.
 var _space: SpaceView
 var _own: Node3D
@@ -61,11 +86,17 @@ func _setup() -> void:
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rows)
 	var view: SubViewportContainer = SubViewportContainer.new()
+	_view_box = view
 	view.stretch = true
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.size_flags_stretch_ratio = (1.0 - RADAR_SHARE) / RADAR_SHARE
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows.add_child(view)
+	status_view = StatusView.new()
+	status_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	status_view.size_flags_stretch_ratio = (1.0 - RADAR_SHARE) / RADAR_SHARE
+	status_view.visible = false
+	rows.add_child(status_view)
 	_viewport = SubViewport.new()
 	_viewport.own_world_3d = true
 	_viewport.msaa_3d = Viewport.MSAA_DISABLED
@@ -89,6 +120,11 @@ func _setup() -> void:
 	radar.tilt_deg = DiscRadar.TILT_MIN
 	radar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows.add_child(radar)
+	_card_layer = Control.new()
+	_card_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_card_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_card_layer.draw.connect(_draw_card)
+	add_child(_card_layer)
 
 
 func _process(_delta: float) -> void:
@@ -99,14 +135,98 @@ func _process(_delta: float) -> void:
 func update_view(delta: float) -> void:
 	var now: int = ctx.now_ms()
 	var status: Dictionary = ctx.view.blocks.get(StationViews.Section.STATUS, {})
-	update_mode(bool(status.get("decoupled", false)), roll_rate_deg_s(), now)
+	_show_view(ctx.crew.main_view)
+	if view_id == MainScreen.View.CHASE:
+		chase = true
+		_calm_since = -1
+	else:
+		update_mode(bool(status.get("decoupled", false)), roll_rate_deg_s(), now)
 	_items = ctx.picture().items
 	var ship: Basis = Basis(ctx.interp.own_rotation())
-	_place_camera(ship, delta)
-	_space.sync_ships(ctx)
+	if view_id == MainScreen.View.STATUS:
+		var captain: Dictionary = ctx.view.blocks.get(StationViews.Section.CAPTAIN, {})
+		status_view.show_model(StatusView.model(status, captain, ctx.ship_def(), ctx.crew.alert))
+	elif view_id != MainScreen.View.TACTICAL:
+		_space.show_id = -1
+		_space.ship_scale = 1.0
+		if view_id != MainScreen.View.TARGET or not _place_target_camera():
+			_place_camera(ship, delta)
+		_space.sync_ships(ctx)
 	radar.set_picture(ctx.picture(), ctx.crew.selection)
 	_overlay.queue_redraw()
 	_rail.queue_redraw()
+	var card: int = ctx.crew.shown_card(now)
+	if card != _card_shown:
+		_card_shown = card
+		_card_layer.queue_redraw()
+
+
+## Shows the view's parts: the 3D view for forward, chase and target, the status sheet
+## for status, only the radar and rail for tactical.
+func _show_view(id: int) -> void:
+	view_id = clampi(id, 0, MainScreen.NAMES.size() - 1)
+	var three_d: bool = view_id != MainScreen.View.TACTICAL and view_id != MainScreen.View.STATUS
+	_view_box.visible = three_d
+	status_view.visible = view_id == MainScreen.View.STATUS
+	_viewport.render_target_update_mode = (
+		SubViewport.UPDATE_ALWAYS if three_d else SubViewport.UPDATE_DISABLED
+	)
+
+
+## The target view's camera (world axes centred on the own ship): TARGET_STANDOFF_M from
+## the target towards the ship, looking at it. The target is the selected contact, else
+## the nearest one; false when there is none (the forward camera is used).
+func _place_target_camera() -> bool:
+	var target: Dictionary = _target_item()
+	if target.is_empty():
+		return false
+	_space.show_id = int(target["id"])
+	_space.ship_scale = TARGET_SCALE
+	var at: Vector3 = target["world"]
+	var dist: float = at.length()
+	var back: Vector3 = -at.normalized() if dist > 0.001 else Vector3.BACK
+	var stand: float = minf(TARGET_STANDOFF_M, dist * 0.5)
+	var eye: Vector3 = at + back * stand
+	var up: Vector3 = Vector3.UP if absf(back.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
+	var look: Basis = Basis.looking_at((at - eye).normalized(), up)
+	_space.place_camera(Transform3D(look, eye), ComfortCamera.fov_deg(ctx.settings, FOV_DEG))
+	if _own != null:
+		_own.visible = false
+	return true
+
+
+## The contact the target view and its card are about: the selection, else the nearest.
+func _target_item() -> Dictionary:
+	var sel: Dictionary = ctx.crew.selection
+	for it: Dictionary in _items:
+		if it["kind"] == "contact" and sel.get("kind", "") == "contact" and it["id"] == sel["id"]:
+			return it
+	var near: Array[Dictionary] = rail_items()
+	return near[0] if not near.is_empty() else {}
+
+
+## Clicks on the mirror: the item under `pos` (panel coordinates) for select, ping and
+## mark; {} on a plain viewer (read-only) and over empty space.
+func item_at(pos: Vector2) -> Dictionary:
+	if not interactive:
+		return {}
+	var local: Vector2 = pos - radar.position
+	if radar.is_visible_in_tree() and Rect2(Vector2.ZERO, radar.size).has_point(local):
+		return radar.item_at(local)
+	if not _view_box.visible:
+		return {}
+	var at: Vector2 = pos - _view_box.position
+	var best: Dictionary = {}
+	var best_d: float = ITEM_REACH_PX
+	for it: Dictionary in _items:
+		var world: Vector3 = it["world"]
+		if camera.is_position_behind(world) or str(it["kind"]) not in ["contact", "mark"]:
+			continue
+		var d: float = camera.unproject_position(world).distance_to(at)
+		if d < best_d:
+			best_d = d
+			best = {"kind": it["kind"], "id": it["id"]}
+	return best
 
 
 ## The own ship's roll rate (degrees per second) from the KIN section (body frame).
@@ -160,6 +280,12 @@ func _place_camera(ship: Basis, delta: float) -> void:
 ## Brackets and chips on contacts, big diamonds on marks, big rings on pings (FT-MSC-003).
 func _draw_overlay() -> void:
 	var font: Font = get_theme_default_font()
+	if view_id == MainScreen.View.TARGET:
+		var target: Dictionary = _target_item()
+		var caption: String = TranslationServer.translate("view.no_target")
+		if not target.is_empty():
+			caption = ChipText.chip(target["label"], target["local"])
+		_text(font, Vector2(16.0, 12.0), caption, Palette.color("text"))
 	for it: Dictionary in _items:
 		var world: Vector3 = it["world"]
 		if camera.is_position_behind(world):
@@ -182,6 +308,16 @@ func _draw_overlay() -> void:
 			var ping: Color = Palette.color("ping")
 			ping.a = pulse
 			_overlay.draw_arc(p, 20.0 + (1.0 - pulse) * 60.0, 0.0, TAU, 48, ping, 4.0, true)
+
+
+## The Captain's pinged card over the view (FT-CPT-005).
+func _draw_card() -> void:
+	var card: Dictionary = FixtureCards.find(_card_shown) if _card_shown >= 0 else {}
+	if card.is_empty():
+		return
+	var w: float = size.x * CARD_SHARE
+	var rect: Rect2 = Rect2(size.x - w - 24.0, 24.0, w, CARD_FONT * 6.0)
+	FixtureCards.draw_card(_card_layer, rect, card, CARD_FONT)
 
 
 func _bracket(p: Vector2, r: float, col: Color, selected: bool) -> void:

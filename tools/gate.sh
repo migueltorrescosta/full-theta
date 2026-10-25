@@ -54,8 +54,9 @@ l1() { gdunit res://tests; }
 l3() { gdunit res://tests/net taskset -c 0,1; }
 
 # L4: a server and 3 headless client processes on 2 cores, driven by intent files;
-# logs in build/l4/<run>/ (tools/l4/run.sh).
-l4() { tools/l4/run.sh; }
+# logs in build/l4/<run>/ (tools/l4/run.sh); then the browser station on the same 2 cores
+# (tools/l4/web.sh, headless Chromium, logs in build/l4web/).
+l4() { tools/l4/run.sh && tools/l4/web.sh; }
 
 # L4 load gate (#11): 6 ships, 64 connections, connection 65 refused; budgets checked by
 # tools/l4/load_check.py; logs and summary.md in build/l4load/<run>/.

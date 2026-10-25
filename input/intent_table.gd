@@ -40,7 +40,7 @@ const AXIS: String = "axis"
 const COMMON: String = "common"
 const LIVE: String = "live"
 const GROUPS: Array[String] = [
-	COMMON, LIVE, "helm", "weapons", "engineering", "science", "relay", "comms", "viewer"
+	COMMON, LIVE, "helm", "weapons", "engineering", "science", "relay", "comms", "captain", "viewer"
 ]
 
 # gdlint: disable=max-line-length
@@ -54,6 +54,8 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "decline", "group": COMMON, "kind": PRESS, "kbm": ["Backspace"], "pad": ["Y"]},
 	# A request chip (§7.4).
 	{"id": "request", "group": COMMON, "kind": PRESS, "kbm": ["B"], "pad": ["View+Y"]},
+	# Share the screen's data shortcuts with their partner stations (§7.2, D210).
+	{"id": "share", "group": COMMON, "kind": PRESS, "kbm": ["Alt+S"], "pad": ["View+RT"]},
 	# The radar's elevation side strip (FT-SPA-009; off B, owner decision in #7).
 	{"id": "radar_strip", "group": COMMON, "kind": PRESS, "kbm": ["Z"], "pad": ["View+Left"]},
 	{"id": "claim", "group": COMMON, "kind": PRESS, "kbm": ["K"], "pad": ["View+X"]},
@@ -191,6 +193,14 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "harden", "group": "engineering", "kind": PRESS, "kbm": ["H"], "pad": ["LB"]},
 	{"id": "fabricate_probe", "group": "engineering", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
 	{"id": "dispatch_nearest", "group": "engineering", "kind": PRESS, "kbm": [], "pad": ["B"]},
+	# Cycle the cause picked for the selected subsystem's unknown fault (FT-ENG-006).
+	{
+		"id": "cause_next",
+		"group": "engineering",
+		"kind": PRESS,
+		"kbm": ["Semicolon"],
+		"pad": ["Down"]
+	},
 	{
 		"id": "shield_tighter",
 		"group": "engineering",
@@ -210,17 +220,54 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "eng_cursor_y", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["LS_Y"]},
 	{"id": "cutaway_yaw", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["RS_X"]},
 	{"id": "cutaway_pitch", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["RS_Y"]},
+	# Science (§5.4, E01). The dials turn the open axes of a scan and the arrows move a
+	# hack's route; outside a minigame the left stick is the cursor and the right stick
+	# orbits the radar (the panel reads the same axes by state). The d-pad also moves a
+	# hack's route. Drags on the radar and the minigames are their own pointer handling.
+	{"id": "sci_scan", "group": "science", "kind": PRESS, "kbm": ["E"], "pad": ["RT"]},
+	{"id": "sci_hack", "group": "science", "kind": PRESS, "kbm": ["H"], "pad": ["LT"]},
+	{"id": "sci_ping", "group": "science", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
+	{"id": "sci_scan_mark", "group": "science", "kind": PRESS, "kbm": ["M"], "pad": ["Down"]},
+	{"id": "sci_mode", "group": "science", "kind": PRESS, "kbm": ["Q"], "pad": ["LB"]},
+	{"id": "sci_self_scan", "group": "science", "kind": PRESS, "kbm": ["Home"], "pad": ["LB+Down"]},
+	{
+		"id": "sci_sub_prev",
+		"group": "science",
+		"kind": PRESS,
+		"kbm": ["BracketLeft"],
+		"pad": ["Left"]
+	},
+	{
+		"id": "sci_sub_next",
+		"group": "science",
+		"kind": PRESS,
+		"kbm": ["BracketRight"],
+		"pad": ["Right"]
+	},
+	{"id": "sci_up", "group": "science", "kind": PRESS, "kbm": ["Up"], "pad": []},
+	{"id": "sci_down", "group": "science", "kind": PRESS, "kbm": ["Down"], "pad": []},
+	{"id": "sci_left", "group": "science", "kind": PRESS, "kbm": ["Left"], "pad": []},
+	{"id": "sci_right", "group": "science", "kind": PRESS, "kbm": ["Right"], "pad": []},
+	{"id": "sci_dial_1", "group": "science", "kind": AXIS, "kbm": ["Left/Right"], "pad": ["LS_X"]},
+	{"id": "sci_dial_2", "group": "science", "kind": AXIS, "kbm": ["Down/Up"], "pad": ["LS_Y"]},
+	{"id": "sci_dial_3", "group": "science", "kind": AXIS, "kbm": ["Minus/Equal"], "pad": ["RS_X"]},
+	{"id": "sci_orbit_y", "group": "science", "kind": AXIS, "kbm": [], "pad": ["RS_Y"]},
 	# Relay (§5.5); drags on the map (place, Shift+drag depth, right-drag rotate) are
 	# the map's own pointer handling.
-	{"id": "route", "group": "relay", "kind": PRESS, "kbm": ["G"], "pad": []},
-	{"id": "flag_lanes", "group": "relay", "kind": PRESS, "kbm": ["L"], "pad": []},
+	{"id": "route", "group": "relay", "kind": PRESS, "kbm": ["G"], "pad": ["LB+Up"]},
+	{"id": "route_clear", "group": "relay", "kind": PRESS, "kbm": ["Shift+G"], "pad": []},
+	{"id": "flag_lanes", "group": "relay", "kind": PRESS, "kbm": ["L"], "pad": ["LB+Down"]},
+	# Probes and hazards: with something selected they go to it, else the next click on
+	# the map places them (strand B of #9).
+	{"id": "probe_launch", "group": "relay", "kind": PRESS, "kbm": ["P"], "pad": ["Right"]},
+	{"id": "hazard_add", "group": "relay", "kind": PRESS, "kbm": ["H"], "pad": ["LB+Right"]},
 	{"id": "mark_delete", "group": "relay", "kind": PRESS, "kbm": ["Delete"], "pad": ["Down"]},
 	{"id": "mark_rename", "group": "relay", "kind": PRESS, "kbm": ["N"], "pad": []},
 	# Attach the selected mark to the nearest contact, or free it where it is.
 	{"id": "mark_attach", "group": "relay", "kind": PRESS, "kbm": ["M"], "pad": ["Up"]},
 	# Centre the map on the selection, or back on the ship.
 	{"id": "map_centre", "group": "relay", "kind": PRESS, "kbm": ["C"], "pad": ["Left"]},
-	{"id": "mark_send", "group": "relay", "kind": PRESS, "kbm": ["X"], "pad": []},
+	{"id": "mark_send", "group": "relay", "kind": PRESS, "kbm": ["X"], "pad": ["LB+Left"]},
 	{"id": "relay_radial", "group": "relay", "kind": HOLD, "kbm": [], "pad": ["long B"]},
 	{"id": "relay_cursor_x", "group": "relay", "kind": AXIS, "kbm": [], "pad": ["LS_X"]},
 	{"id": "relay_cursor_y", "group": "relay", "kind": AXIS, "kbm": [], "pad": ["LS_Y"]},
@@ -232,6 +279,20 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "main_view_3", "group": "relay", "kind": PRESS, "kbm": ["Alt+3"], "pad": []},
 	{"id": "main_view_4", "group": "relay", "kind": PRESS, "kbm": ["Alt+4"], "pad": []},
 	{"id": "main_view_5", "group": "relay", "kind": PRESS, "kbm": ["Alt+5"], "pad": []},
+	# Captain (§5.7, strand F): the main screen's view, 1 to 5 or the d-pad.
+	{"id": "captain_view_1", "group": "captain", "kind": PRESS, "kbm": ["1"], "pad": []},
+	{"id": "captain_view_2", "group": "captain", "kind": PRESS, "kbm": ["2"], "pad": []},
+	{"id": "captain_view_3", "group": "captain", "kind": PRESS, "kbm": ["3"], "pad": []},
+	{"id": "captain_view_4", "group": "captain", "kind": PRESS, "kbm": ["4"], "pad": []},
+	{"id": "captain_view_5", "group": "captain", "kind": PRESS, "kbm": ["5"], "pad": []},
+	{
+		"id": "captain_view_next",
+		"group": "captain",
+		"kind": PRESS,
+		"kbm": ["Tab"],
+		"pad": ["Right"]
+	},
+	{"id": "captain_view_prev", "group": "captain", "kind": PRESS, "kbm": [], "pad": ["Left"]},
 	# Science and Comms are placeholders in M1 (FT-M1-005): no bindings yet (#9, #10).
 ]
 # gdlint: enable=max-line-length

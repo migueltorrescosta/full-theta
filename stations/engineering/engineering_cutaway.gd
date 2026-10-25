@@ -227,6 +227,14 @@ func _draw_subsystem(i: int) -> void:
 	if heat > 0.02:
 		var role: String = "danger" if heat >= EngineeringPanel.HOT else "warn"
 		draw_arc(c, NODE_R + 3.0, -PI / 2.0, -PI / 2.0 + TAU * heat, 24, Palette.color(role), 3.0)
+	# Hardened (FT-ENG-008): a blue rim; an unknown-cause fault (FT-SIM-025): a "?".
+	if panel.hardened_ticks(i) > 0:
+		draw_arc(c, NODE_R + 5.5, 0.0, TAU, 32, Palette.color("accent"), 2.0)
+	if panel.has_fault(i):
+		var font: Font = get_theme_default_font()
+		Palette.draw_outlined(
+			self, font, c + Vector2(NODE_R * 0.7, -NODE_R * 0.7), "?", 16, Palette.color("warn")
+		)
 	if i == panel.selected:
 		draw_arc(c, NODE_R + 8.0, 0.0, TAU, 32, Palette.color("selected"), 2.0)
 

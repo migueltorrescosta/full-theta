@@ -269,14 +269,9 @@ func test_faults_repair_queue_and_spares_list() -> void:
 	assert_array(shown).contains(["Faults", "Repairs", "Spare parts: 6", "Engines 40%"])
 
 
-func test_reserved_keys_and_claims_and_wheel_over_the_radar() -> void:
+func test_claims_and_wheel_over_the_radar() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
-	# Harden and probes come later (FT-ENG-008): H and P are taken but do nothing yet.
-	assert_bool(_press(s, "harden")).is_true()
-	assert_bool(_press(s, "fabricate_probe", "pad")).is_true()
-	assert_array(_commands(s)).is_empty()
-	assert_array(_toasts).contains(["toast.eng_later"])
 	# K claims the picked crew.
 	_press(s, "claim")
 	assert_array(StationFixture.sent(s.ctx).of("claim")).is_equal([["claim", ["crew:0"]]])

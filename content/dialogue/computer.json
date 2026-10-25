@@ -41,6 +41,11 @@
       "id": "computer.jump_ready", "role": "computer", "priority": 1, "max_age_ms": 6000,
       "coalesce": "jump", "resume": true,
       "text": {"en": "Jump drive ready.", "pt_PT": "Motor de salto pronto.", "it": "Motore di salto pronto."}
+    },
+    {
+      "id": "computer.shields_low_plain", "role": "computer", "priority": 1, "max_age_ms": 4000,
+      "coalesce": "shields", "resume": false,
+      "text": {"en": "Shields low.", "pt_PT": "Escudos fracos.", "it": "Scudi bassi."}
     }
   ]
 }

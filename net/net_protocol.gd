@@ -33,9 +33,23 @@ enum Type {
 	MARK = 20,
 	PING = 21,
 	RUN_AGAIN = 22,
+	# Lobby data-shortcut toggles and preset, host only (strand G).
+	TOGGLES = 23,
+	# Send or answer a request chip (strand G).
+	CHIP = 24,
+	# Main-screen view switch by the Captain, or Relay with no Captain (strand F).
+	MAIN_VIEW = 25,
+	# Relay sends a mark to an allied Relay, or accepts one from its inbox (strand B).
+	MARK_SEND = 26,
+	MARK_ACCEPT = 27,
+	# 28 is unused: Science's puzzle rides the SCIENCE section and its commands.
+	# A client's snapshot-age report for the session log (strand D, D199).
+	CLIENT_STATS = 29,
+	# A source station shares a data shortcut with its partner (strand K, D210).
+	SHARE = 30,
 }
 
-const PROTOCOL_VERSION: int = 4
+const PROTOCOL_VERSION: int = 5
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -43,6 +57,9 @@ const DEFAULT_WS_PORT: int = 47801
 const CLIENT_KINDS: Array[String] = ["desktop", "web", "bot"]
 ## Longest Hello.name kept (UTF-8 bytes, after trimming); longer names are cut.
 const MAX_NAME_BYTES: int = 32
+## ClientStats limits (D199, D207): pairs per report and bytes of the user agent.
+const MAX_STATS_PAIRS: int = 400
+const MAX_UA_BYTES: int = 200
 
 ## HelloRejected reasons.
 const REJECT_VERSION: String = "version_mismatch"
@@ -70,6 +87,22 @@ const EVENT_PING: String = "ping"
 ## {ship, outcome ("win" | "loss"), time_s, hull} and {ship, voters, needed}.
 const EVENT_RUN_OVER: String = "run_over"
 const EVENT_RUN_VOTES: String = "run_votes"
+## Relay and the callout layer (strand B of #9, docs/protocol.md "Relay"): {sites: [{site,
+## name}]} to every pick; {ship, zones: [...]} (hazard zones and scan positions, every pick
+## of the ship); {ship, routes: [[{site, x, y, z}]]} (Relay, and other stations unless the
+## toggle set is Hard); {ship, items: [...]} the mark inbox and {ship, entries: [{tick, key,
+## args}], replace} the ship's log (Relay picks only).
+const EVENT_SITES: String = "sites"
+const EVENT_ZONES: String = "zones"
+const EVENT_ROUTES: String = "routes"
+const EVENT_INBOX: String = "inbox"
+const EVENT_RELAY_LOG: String = "relay_log"
+const EVENT_MAIN_VIEW: String = "main_view"
+## A request chip the session sent was answered (strand G, NetChips): {chip, arg, accept, by}.
+const EVENT_CHIP_ANSWER: String = "chip_answer"
+## The shortcuts shared to the session's ship (strand K, NetShares): {ship, left: {feature:
+## seconds until the share ends}}; sent to its picks when the set changes.
+const EVENT_SHARES: String = "shares"
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -141,6 +174,14 @@ const SCHEMAS: Dictionary = {
 		"z": TYPE_FLOAT,
 	},
 	Type.RUN_AGAIN: {"ship": TYPE_INT, "vote": TYPE_BOOL},
+	Type.MAIN_VIEW: {"view": TYPE_INT},
+	Type.MARK_SEND: {"slot": TYPE_INT, "ship": TYPE_INT},
+	Type.MARK_ACCEPT: {"id": TYPE_INT, "accept": TYPE_BOOL, "slot": TYPE_INT},
+	Type.TOGGLES: {"set": TYPE_STRING},
+	Type.CHIP:
+	{"op": TYPE_STRING, "chip": TYPE_STRING, "arg": TYPE_INT, "id": TYPE_INT, "accept": TYPE_BOOL},
+	Type.SHARE: {"feature": TYPE_STRING},
+	Type.CLIENT_STATS: {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -161,6 +202,13 @@ const FROM_CLIENT: Array[int] = [
 	Type.MARK,
 	Type.PING,
 	Type.RUN_AGAIN,
+	Type.MAIN_VIEW,
+	Type.MARK_SEND,
+	Type.MARK_ACCEPT,
+	Type.TOGGLES,
+	Type.CHIP,
+	Type.SHARE,
+	Type.CLIENT_STATS,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -178,6 +226,13 @@ const RATED_REQUESTS: Array[int] = [
 	Type.MARK,
 	Type.PING,
 	Type.RUN_AGAIN,
+	Type.MAIN_VIEW,
+	Type.MARK_SEND,
+	Type.MARK_ACCEPT,
+	Type.TOGGLES,
+	Type.CHIP,
+	Type.SHARE,
+	Type.CLIENT_STATS,
 ]
 
 

@@ -18,12 +18,14 @@ const HULL_CRITICAL: float = 0.25
 ## Sim event kind -> [line id, stations concerned]; hull critical goes to every crew
 ## station (FT-AUD-006, owner-approved in #7).
 const LINES: Dictionary = {
-	&"shield_low": ["computer.shields_low", ["helm", "engineering"]],
 	&"fault": ["computer.subsystem_fault", ["engineering"]],
 	&"proximity": ["computer.collision_warning", ["helm"]],
 }
 
 var voice: VoiceService
+## The session's toggle code (ServerSession sets it at every Start; the toggles are
+## locked once a run launches): the summaries toggle decides what Helm hears of the shields.
+var toggles: String = StationViews.DEFAULT_TOGGLES
 var world: SimWorld
 var _started: bool = false
 ## Ships whose "Hull critical" was said and not re-armed.
@@ -69,12 +71,26 @@ func on_event(e: SimEvent) -> void:
 			voice.say_computer(e.ship_id, all, "computer.hull_critical")
 		elif not critical:
 			_hull_warned.erase(e.ship_id)
+	elif e.kind == &"shield_low":
+		_say_shields_low(e)
 	elif LINES.has(e.kind):
 		var line: Array = LINES[e.kind]
-		var args: Dictionary = {}
-		if e.kind == &"shield_low":
-			args["pct"] = roundi(e.value * 100.0)
-		voice.say_computer(e.ship_id, PackedStringArray(line[1]), line[0], args)
+		voice.say_computer(e.ship_id, PackedStringArray(line[1]), line[0])
+
+
+## "Shields low" follows the text alert's summaries rule (D224, FT-PAIR-019): Engineering
+## always hears the exact percentage; Helm hears it exact (Easy), as its band's midpoint
+## (Normal) or with no number (Hard, "computer.shields_low_plain"); never Comms.
+func _say_shields_low(e: SimEvent) -> void:
+	var exact: int = roundi(e.value * 100.0)
+	var eng: PackedStringArray = PackedStringArray(["engineering"])
+	voice.say_computer(e.ship_id, eng, "computer.shields_low", {"pct": exact})
+	var seen: float = StationViews.event_value("helm", e.kind, e.value, toggles)
+	if seen <= 0.0:
+		voice.say_computer(e.ship_id, PackedStringArray(["helm"]), "computer.shields_low_plain")
+	else:
+		var args: Dictionary = {"pct": roundi(seen * 100.0)}
+		voice.say_computer(e.ship_id, PackedStringArray(["helm"]), "computer.shields_low", args)
 
 
 ## The run reset: the new world, every hull alert re-armed, and the old run's lines

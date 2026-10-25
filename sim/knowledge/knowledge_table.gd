@@ -16,6 +16,10 @@ var identified: PackedByteArray = PackedByteArray()
 ## Callsign number, unique within the observing faction, from 1 in order of first
 ## detection; never changes (FT-SPA-001, FT-SPA-002).
 var numbers: PackedInt32Array = PackedInt32Array()
+## Best confidence of the faction's Science scans of the contact, 0..1 (0: never scanned,
+## FT-SCI-016). What it reveals is ScienceKnowledge's: class, identity, intent, weak
+## points, resistances and hack access, each from its own threshold (E01).
+var scan_conf: PackedFloat64Array = PackedFloat64Array()
 
 ## Derived index, not state: row by faction * 65536 + contact id, filled in add_contact
 ## (rows never move or go away).
@@ -66,12 +70,21 @@ func add_contact(faction: int, contact_id: int) -> int:
 	detected.append(0)
 	identified.append(0)
 	numbers.append(number)
+	scan_conf.append(0.0)
 	_rows[faction * 65536 + contact_id] = row
 	return row
 
 
 func columns() -> Array:
-	return super() + [["detected", detected], ["identified", identified], ["numbers", numbers]]
+	return (
+		super()
+		+ [
+			["detected", detected],
+			["identified", identified],
+			["numbers", numbers],
+			["scan_conf", scan_conf]
+		]
+	)
 
 
 ## Per-ship run reset (FT-MIS-017): the ship's rows as a contact drop to undetected, so

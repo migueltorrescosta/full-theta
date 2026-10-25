@@ -21,7 +21,7 @@ func setup(context: StationContext) -> void:
 	col.add_theme_constant_override("separation", 10)
 	add_child(col)
 	_text = Label.new()
-	_text.add_theme_font_size_override("font_size", 24)
+	_text.theme_type_variation = "HeadingLabel"
 	col.add_child(_text)
 	_votes = Label.new()
 	_votes.name = "Votes"

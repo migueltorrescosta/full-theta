@@ -24,6 +24,9 @@ const MAX_TICKS_PER_ADVANCE: int = 8
 var tick: int = 0
 var seed_value: int = 0
 var build_id: String = ""
+## Site id -> the I18n key of the name every station of every ship uses for it as a callout layer
+## (FT-SPA-027, D98). Scenario data like defs: not state, so not hashed or copied.
+var site_names: Dictionary[int, String] = {0: "site.kestrel_yard"}
 var rng: SimRng
 ## Definitions by ship id, read-only (FT-ARC-020).
 var defs: Array[ShipDef] = []
@@ -40,6 +43,19 @@ var knowledge: KnowledgeTable = KnowledgeTable.new()
 var ai: AiTable = AiTable.new()
 ## Run state: each ship's status and the encounter outcome (T036, FT-MIS-017).
 var run: RunTable = RunTable.new()
+## Science state and open hack windows (E01).
+var science: ScienceTable = ScienceTable.new()
+var hacks: HackTable = HackTable.new()
+## Science tuning, read-only (FT-ARC-020); null disables the Science commands. The
+## encounter passes it in (M1Encounter.science).
+var science_def: ScienceDef
+# --- Relay's stock, launched probes and lane flags (#9). ---
+var relay: RelayTable = RelayTable.new()
+var probes: ProbeTable = ProbeTable.new()
+## The world's hazards, read-only like defs (FT-ARC-020, D208), and which fronts have
+## crossed each ship. Empty: none. At most HazardSystem.MAX_HAZARDS (checked by the encounter).
+var hazards: Array[HazardDef] = []
+var hazard_state: HazardTable = HazardTable.new()
 
 ## Crew and server commands in application order, each stamped with its tick and
 ## whether it was accepted (FT-ARC-008, D122); rejected ones stay so replays reproduce
@@ -104,7 +120,23 @@ static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[St
 
 ## Every state container, in hash order (FT-ARC-012: each is keyed by ship and faction).
 func tables() -> Array[SimTable]:
-	return [kin, helm, power, shields, mounts, projectiles, damage, knowledge, ai, run]
+	return [
+		kin,
+		helm,
+		power,
+		shields,
+		mounts,
+		projectiles,
+		damage,
+		knowledge,
+		ai,
+		run,
+		science,
+		hacks,
+		relay,
+		probes,
+		hazard_state
+	]
 
 
 ## Adds a ship from its definition at a site-local offset (wrapped onto the site's cube)
@@ -205,13 +237,18 @@ func advance(frame_delta: float) -> int:
 ## Advances one fixed tick. The phase order is part of the determinism contract.
 func step() -> void:
 	_apply_commands()
+	# Science first: its clocks and hack windows feed this tick's sensors and power.
+	ScienceSystem.step(self)
 	KnowledgeSystem.step(self)
 	# The AI decides on this tick's knowledge; its commands apply next tick (FT-SIM-028).
 	EnemyAi.step(self)
 	PowerSystem.step(self)
 	AssistSystem.step(self)
+	ProbeSystem.step(self)
+	HazardSystem.step(self)
 	Integrator.step_all(kin, DT)
 	WeaponSystem.step(self)
+	GuidanceSystem.step(self)
 	CollisionSystem.step(self)
 	HitResolver.resolve(self)
 	ShieldSystem.step(self)

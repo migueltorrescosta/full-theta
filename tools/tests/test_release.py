@@ -127,15 +127,40 @@ def test_provenance_record_matches_the_spec_table():
     assert table("docs/provenance.md") == table("docs/spec/13-licensing-and-provenance.md")
 
 
-def test_web_patch_gzip_is_reproducible(tmp_path):
-    (tmp_path / "index.js").write_text("x" + web_patch.UNGUARDED)
-    (tmp_path / "index.wasm").write_bytes(b"\0asm" * 100)
+def make_web(folder, wasm=b"\0asm" * 100):
+    (folder / "index.js").write_text("x" + web_patch.UNGUARDED)
+    (folder / "index.wasm").write_bytes(wasm)
+    (folder / "index.pck").write_bytes(b"GDPC" * 10)
+    (folder / "index.html").write_text(
+        'const GODOT_CONFIG = {"executable":"index","fileSizes":{"index.pck":40,"index.wasm":400}};'
+    )
+
+
+# FT: FT-NET-030
+def test_web_patch_gzip_is_reproducible_and_names_carry_a_content_hash(tmp_path):
+    make_web(tmp_path)
     web_patch.finish(tmp_path)
-    first = (tmp_path / "index.wasm.gz").read_bytes()
-    (tmp_path / "index.js").write_text("x" + web_patch.UNGUARDED)
-    web_patch.finish(tmp_path)
-    assert (tmp_path / "index.wasm.gz").read_bytes() == first
-    assert (tmp_path / "keepawake.webm").is_file()
+    found = [p.name for p in tmp_path.glob("index.*.wasm.gz")]
+    tag = re.fullmatch(r"index\.([0-9a-f]{10})\.wasm\.gz", found[0]) if found else None
+    assert tag, sorted(p.name for p in tmp_path.iterdir())
+    name = f"index.{tag.group(1)}.wasm"
+    first = (tmp_path / f"{name}.gz").read_bytes()
+    assert (tmp_path / f"index.{tag.group(1)}.pck").is_file()
+    assert not (tmp_path / "index.wasm").exists()
+    html = (tmp_path / "index.html").read_text()
+    assert f'"executable":"index.{tag.group(1)}"' in html
+    assert f'"index.{tag.group(1)}.pck":40' in html and f'"{name}":400' in html
+    other = tmp_path.parent / (tmp_path.name + "-2")
+    other.mkdir()
+    make_web(other)
+    web_patch.finish(other)
+    assert (other / f"{name}.gz").read_bytes() == first
+    changed = tmp_path.parent / (tmp_path.name + "-3")
+    changed.mkdir()
+    make_web(changed, wasm=b"\0asm" * 101)
+    web_patch.finish(changed)
+    assert not (changed / name).exists()
+    assert (tmp_path / "keepawake.webm").is_file() and (tmp_path / "keepawake.mp4").is_file()
     assert io.BytesIO(first).read(2) == b"\x1f\x8b"
 
 

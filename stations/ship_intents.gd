@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name ShipIntents
 extends RefCounted
 ## What a station sends: the one seam between the station UI and NetClient. Panels call
@@ -41,9 +42,67 @@ func delete_mark(slot: int) -> void:
 	_call(&"delete_mark", [slot])
 
 
-## kind "contact" | "mark" | "site" | "point" (FT-SPA-016).
+## The main screen's view, a MainScreen.View: the Captain, or Relay without a Captain.
+func set_main_view(view: int) -> void:
+	_call(&"set_main_view", [view])
+
+
+## kind "contact" | "mark" | "card" | "site" | "point" (FT-SPA-016, FT-CPT-005).
 func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
 	_call(&"ping", [kind, id, site, pos])
+
+
+## Relay (strand B of #9): send the mark in `slot` to an allied ship's Relay (FT-RLY-008);
+## accept the inbox item `id`, replacing `slot` when all 8 marks are used (slot -1: a free
+## one), or decline it (FT-RLY-009, FT-SPA-022).
+func send_mark(slot: int, to_ship: int) -> void:
+	_call(&"send_mark", [slot, to_ship])
+
+
+func accept_mark(id: int, slot: int) -> void:
+	_call(&"accept_mark", [id, slot])
+
+
+func decline_mark(id: int) -> void:
+	_call(&"decline_mark", [id])
+
+
+## Routes and hazard zones (FT-RLY-005, FT-SPA-028): a waypoint on route `route`, clear
+## it, a hazard of `radius_m` at a point, delete the zone `id`.
+func route_add(route: int, site: int, pos: Vector3) -> void:
+	_call(&"route_add", [route, site, pos])
+
+
+func route_clear(route: int) -> void:
+	_call(&"route_clear", [route])
+
+
+func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
+	_call(&"hazard_add", [radius_m, site, pos])
+
+
+func hazard_delete(id: int) -> void:
+	_call(&"hazard_delete", [id])
+
+
+## Strand G. The host sets the session's data-shortcut toggles in the lobby (a DataToggles
+## code); a station sends a request chip (id from content/chips/chips.tres, arg a mount index
+## or contact id) or answers one it received.
+func set_toggles(code: String) -> void:
+	_call(&"set_toggles", [code])
+
+
+func send_chip(chip: String, arg: int = -1) -> void:
+	_call(&"send_chip", [chip, arg])
+
+
+func answer_chip(id: int, accept: bool) -> void:
+	_call(&"answer_chip", [id, accept])
+
+
+## Strand K (D210): shares a data shortcut from the source station (a toggle id).
+func share(feature: String) -> void:
+	_call(&"share", [feature])
 
 
 func claim(item: String) -> void:

@@ -68,6 +68,12 @@ static func step(world: SimWorld) -> void:
 					if dist <= identify[o]:
 						ident = true
 						break
+			# A deployed probe's bubble detects too (P13, FT-RLY-004): the contact gets a
+			# row, so Science can scan and hack inside it.
+			if by < 0 and live and world.probes.size() > 0:
+				var p: PackedFloat64Array = kin.point_at(contact, Vector3.ZERO)
+				if ProbeSystem.coverage_at(world, faction, Vector3(p[0], p[1], p[2]), contact_site):
+					by = _any_ship(world, faction)
 			var row: int = table.row_for(faction, contact)
 			if by >= 0:
 				if row < 0:
@@ -127,6 +133,31 @@ static func _prefix(world: SimWorld, faction: int, ship_id: int, row: int) -> St
 		SimWorld.Relation.NEUTRAL:
 			return "N"
 	return "H"
+
+
+## Whether the faction knows the subsystem is a weak point (FT-SIM-023): a faction knows
+## its own ships', and otherwise Science's scans reveal it (ScienceKnowledge, the one
+## store of what scans revealed).
+static func knows_weak_point(
+	world: SimWorld, faction: int, contact: int, subsystem_id: StringName
+) -> bool:
+	var i: int = _subsystem_index(world, contact, subsystem_id)
+	if i < 0 or not world.defs[contact].subsystems[i].weak_point:
+		return false
+	return (
+		world.faction_of(contact) == faction
+		or i in ScienceKnowledge.weak_points(world, faction, contact)
+	)
+
+
+static func _subsystem_index(world: SimWorld, ship_id: int, subsystem_id: StringName) -> int:
+	if ship_id < 0 or ship_id >= world.ship_count():
+		return -1
+	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
+	for i: int in mini(subs.size(), 31):
+		if subs[i].id == subsystem_id:
+			return i
+	return -1
 
 
 ## Factions that have at least one ship, ascending.

@@ -8,9 +8,14 @@ extends RefCounted
 ## and never selects them. The own ship is the disc centre, not an item. Stations read
 ## it through StationContext.picture(), built once per frame.
 
-## {"kind": "contact" | "mark" | "point", "id", "label", "allegiance" ("H", "U", "F",
-## "N", "" own), "world" (Vector3, m), "local" (Vector3, m), "pulse" (0..1)}.
+## {"kind": "contact" | "mark" | "zone" | "point", "id", "label", "allegiance" ("H", "U", "F",
+## "N", "" own), "world" (Vector3, m), "local" (Vector3, m), "pulse" (0..1)}; "zone" items
+## also hold "zone" ("hazard" | "scan") and "radius" (m); every item holds "copies", the
+## names of the stations that copied its live ping.
 var items: Array[Dictionary] = []
+## The own site's name as a callout layer on every station (FT-SPA-027, D98): {"kind":
+## "site", "id", "label", "pulse"}, or {} when the scenario names none.
+var site: Dictionary = {}
 ## The interpolator the picture was built from: own position and rotation, site period.
 ## A fresh one (identity rotation, no wrap) for pictures built by hand.
 var interp: SnapshotInterpolator = SnapshotInterpolator.new()
@@ -35,6 +40,39 @@ static func build(ctx: StationContext) -> ContactPicture:
 		var slot: int = m["slot"]
 		var pulse: float = ctx.crew.pulse("mark", slot, now)
 		pic._add("mark", slot, m["name"], "", ctx.mark_position(m), pulse)
+	var own_site: int = ctx.site()
+	var site_label: String = ctx.crew.site_name(own_site)
+	if site_label != "":
+		var site_pulse: float = ctx.crew.pulse("site", own_site, now)
+		pic.site = {"kind": "site", "id": own_site, "label": site_label, "pulse": site_pulse}
+	# Hazard zones and scan positions: MARK items outside the 8 marks (FT-SPA-028).
+	for z: Dictionary in ctx.crew.zones:
+		if z["site"] != own_site:
+			continue
+		var kind: String = z["kind"]
+		var zone_label: String = String(TranslationServer.translate("zone." + kind))
+		pic._add("zone", z["id"], zone_label, "", z["pos"], ctx.crew.pulse("zone", z["id"], now))
+		pic.items[-1].merge({"zone": kind, "radius": z["radius"]})
+	# The sim's hazards the faction knows (D208): zones and shells as hazard bubbles, a plane
+	# front as a line across its travel (`dir`, ship frame).
+	var hazard_label: String = String(TranslationServer.translate("zone.hazard"))
+	for h: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("hazards", []):
+		pic._add("zone", -1000 - int(h["id"]), hazard_label, "", h["pos"], 0.0)
+		pic.items[-1].merge({"zone": "hazard", "radius": h["radius"], "eta": h["eta"]})
+		if int(h["shape"]) == HazardView.PLANE:
+			pic.items[-1]["dir"] = pic.interp.local(h["dir"])
+	# Deployed probes with their bubbles (P13): Science and Relay see where coverage is.
+	var probe_label: String = String(TranslationServer.translate("zone.probe"))
+	for p: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("probes", []):
+		if p["deployed"]:
+			var id: int = int(p["serial"])
+			pic._add("zone", -1 - id, probe_label, "", p["pos"], 0.0)
+			pic.items[-1].merge({"zone": "probe", "radius": p["range"]})
+	# The stations that silently copied a ping show on the original (FT-SPA-031).
+	for it: Dictionary in pic.items:
+		it["copies"] = ctx.crew.copies(it["kind"], it["id"], now)
+	if not pic.site.is_empty():
+		pic.site["copies"] = ctx.crew.copies("site", pic.site["id"], now)
 	for p: Dictionary in ctx.crew.live_pings(now):
 		if p["kind"] == "point":
 			var pulse: float = 1.0 - float(now - int(p["at_ms"])) / float(CrewState.PING_MS)

@@ -23,7 +23,7 @@ func setup(context: StationContext) -> void:
 	add_child(col)
 	_title = Label.new()
 	_title.name = "Title"
-	_title.add_theme_font_size_override("font_size", 40)
+	_title.theme_type_variation = "TitleLabel"
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(_title)
 	_stats = Label.new()

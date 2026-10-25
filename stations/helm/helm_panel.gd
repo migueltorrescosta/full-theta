@@ -308,6 +308,12 @@ func item_at(screen_pos: Vector2) -> Dictionary:
 	return best
 
 
+## The cockpit and the turret look forward: a mark attaches to the tapped contact or none
+## is placed (FT-SPA-030).
+func marks_attach_only() -> bool:
+	return focused
+
+
 func claim_item() -> String:
 	return StationViews.CLAIM_FLIGHT
 

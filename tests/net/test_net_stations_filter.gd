@@ -29,12 +29,18 @@ const SPEC_05: Dictionary = {
 	# FT-ENG-007).
 	"engineering":
 	[
-		[S.KIN, S.STATUS, S.CONTACTS, S.ENGINEERING, S.OWNERSHIP],
+		[S.KIN, S.STATUS, S.CONTACTS, S.ENGINEERING, S.RELAY, S.OWNERSHIP],
 		[S.HELM, S.MOUNTS, S.NEAR, S.PROJECTILES],
 	],
 	# M1 has only their definitions: top bar and disc radar (FT-STN-001, FT-STN-002).
-	"science": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
-	"relay": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
+	"science":
+	[
+		[S.KIN, S.STATUS, S.CONTACTS, S.SCIENCE, S.RELAY, S.OWNERSHIP],
+		[S.HELM, S.MOUNTS, S.ENGINEERING]
+	],
+	# Probes, coverage, lanes and the probe-launcher claim (FT-RLY-004, FT-NET-022).
+	"relay":
+	[[S.KIN, S.STATUS, S.CONTACTS, S.RELAY, S.OWNERSHIP], [S.HELM, S.MOUNTS, S.ENGINEERING]],
 	"comms": [[S.KIN, S.STATUS, S.CONTACTS], [S.HELM, S.MOUNTS, S.ENGINEERING, S.OWNERSHIP]],
 	# Main-screen mirror and the read-only main screen: no ship controls (FT-CPT-003,
 	# FT-MSC-004).
@@ -61,6 +67,8 @@ const SPEC_05_FIELDS: Array = [
 	],
 	# Every mount with ready, heat and ammo (FT-WPN-004).
 	["weapons", S.MOUNTS, ["mounts"], "mounts", ["cooldown", "heat", "ammo"]],
+	# Probe stock, fabrication and the lane switch (FT-RLY-004, FT-RLY-011).
+	["relay", S.RELAY, ["stock", "fab_left", "lanes", "probes"]],
 ]
 var h: NetHarness
 
@@ -125,9 +133,9 @@ func _check_snapshots(c: NetClient, entry: String) -> int:
 # One client per catalogue entry (the dev entry included) on a running ship with
 # claims, last writers, shots and helm input in play: every full snapshot holds exactly
 # the entry's sections, every delta a subset, each block exactly its field set, and the
-# OWNERSHIP section only the entry's own stations' items; at each difficulty-toggle set
-# (M1 has no toggle-gated field, so the sets share one filter and differ only in the
-# view key, which is what this checks for the toggle plumbing).
+# OWNERSHIP section only the entry's own stations' items; at each of the three presets (the
+# toggles change values, never a block's field set; the values are tests/net/
+# test_view_filter.gd's).
 func test_snapshots_hold_only_their_station_fields() -> void:
 	var server: NetServer = h.server(true)
 	var ids: Array[String] = StationViews.catalogue_ids(true)
@@ -145,7 +153,7 @@ func test_snapshots_hold_only_their_station_fields() -> void:
 	var wrote: Callable = func() -> bool:
 		return server.session.writers.get(PLAYER, {}).has("pips:%d" % SubsystemDef.Kind.ENGINES)
 	assert_bool(await h.until(wrote)).is_true()
-	for toggles: String in StationViews.TOGGLE_SETS:
+	for toggles: String in DataToggles.PRESETS:
 		var fulls: Dictionary = {}
 		for id: String in ids:
 			var c: NetClient = clients[id]

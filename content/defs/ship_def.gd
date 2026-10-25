@@ -39,9 +39,26 @@ extends Resource
 @export var spare_parts: int = 0
 ## Repair crews Engineering can dispatch (count, FT-SIM-024; at most 31, one bit each).
 @export var repair_crews: int = 0
+## Probes in stock at launch (count; Relay launches them, Engineering fabricates more,
+## FT-RLY-004, D56).
+@export var probes: int = 0
+## Probe flight speed (m/s).
+@export var probe_speed: float = 0.0
+## Radius of the coverage bubble around a deployed probe (m).
+@export var probe_range: float = 0.0
+## Spare parts one fabricated probe takes (count).
+@export var probe_parts: int = 0
+## Time to fabricate one probe (s).
+@export var probe_fab_s: float = 0.0
 ## Share of a hit's energy past the shields that the subsystem nearest the impact takes;
 ## the hull takes the rest (dimensionless, 0..1, FT-SIM-020).
 @export var subsystem_damage_share: float = 0.0
+## A hit that passes the shields with more than this energy (J) can cause an unknown-cause
+## fault in the subsystem it lands on (FT-SIM-025, D220); 0 with a chance of 0 never does.
+@export var fault_hit_threshold: float = 0.0
+## Chance of that fault per such hit (dimensionless, 0..1); drawn from the world's seeded
+## "faults" stream, only for hits above the threshold, so other runs' draws don't shift.
+@export var fault_hit_chance: float = 0.0
 ## Subsystems (at least one; ids unique within the ship).
 @export var subsystems: Array[SubsystemDef] = []
 ## Weapon mounts (may be empty; ids unique within the ship).
@@ -58,6 +75,9 @@ extends Resource
 ## Range within which a detected ship's allegiance becomes known to this ship's faction
 ## (m); scaled like sensor_range, at most sensor_range (FT-SPA-001).
 @export var identify_range: float = 0.0
+## Damage multiplier per damage type (dimensionless; a missing type is 1.0), revealed
+## to a faction by Science scans (FT-SIM-022, FT-SCI-003; #9 strands A and C).
+@export var resistances: Dictionary[StringName, float] = {}
 
 
 func validate() -> Array[String]:
@@ -76,7 +96,10 @@ func validate() -> Array[String]:
 	DefCheck.positive(errors, "hull_max", hull_max)
 	DefCheck.non_negative(errors, "spare_parts", spare_parts)
 	DefCheck.in_range(errors, "repair_crews", repair_crews, 0, 31)
+	_validate_probes(errors)
 	DefCheck.in_range(errors, "subsystem_damage_share", subsystem_damage_share, 0.0, 1.0)
+	DefCheck.non_negative(errors, "fault_hit_threshold", fault_hit_threshold)
+	DefCheck.in_range(errors, "fault_hit_chance", fault_hit_chance, 0.0, 1.0)
 	DefCheck.positive(errors, "sensor_range", sensor_range)
 	DefCheck.in_range(errors, "identify_range", identify_range, 0.0, maxf(sensor_range, 0.0))
 	DefCheck.required(errors, "assist", assist)
@@ -86,6 +109,18 @@ func validate() -> Array[String]:
 	var ids: Dictionary[StringName, bool] = _validate_subsystems(errors)
 	_validate_mounts(errors, ids)
 	return errors
+
+
+## A ship that carries or fabricates probes needs their numbers.
+func _validate_probes(errors: Array[String]) -> void:
+	DefCheck.non_negative(errors, "probes", probes)
+	DefCheck.non_negative(errors, "probe_speed", probe_speed)
+	DefCheck.non_negative(errors, "probe_range", probe_range)
+	DefCheck.non_negative(errors, "probe_parts", probe_parts)
+	DefCheck.non_negative(errors, "probe_fab_s", probe_fab_s)
+	if probes > 0 or probe_parts > 0:
+		DefCheck.positive(errors, "probe_speed", probe_speed)
+		DefCheck.positive(errors, "probe_range", probe_range)
 
 
 ## Returns the set of subsystem ids.

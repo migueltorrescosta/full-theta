@@ -31,7 +31,7 @@ func _button(l: LobbyScreen, node_name: String) -> Button:
 # kept showing the same ship's seats, so nothing seemed to happen.
 func test_back_to_ships_releases_the_seat_and_returns_to_ship_selection() -> void:
 	var l: LobbyScreen = _lobby()
-	var entries: Control = l.find_child("Entries", true, false)
+	var entries: Control = l.find_child("Body", true, false)
 	assert_bool(entries.visible).is_true()
 	_button(l, "BackToShips").pressed.emit()
 	assert_int(StationFixture.sent(l.ctx).of("release_pick").size()).is_equal(1)

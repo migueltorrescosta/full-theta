@@ -19,6 +19,8 @@ var ship: int = -1
 var entry: String = ""
 ## Difficulty-toggle set of the view key (D14, D69); one set for M1.
 var toggles: String = StationViews.DEFAULT_TOGGLES
+## The shortcuts shared to the session's ship that haven't expired (NetShares, D210).
+var shares: Array[StringName] = []
 ## The grace period ended: pick and claims were released; last_* remember them for a
 ## rejoin (FT-NET-026).
 var lapsed: bool = false
@@ -46,4 +48,10 @@ func has_pick() -> bool:
 
 ## The view key the snapshot builder encodes for this session, or "" without a pick.
 func view_key() -> String:
-	return StationViews.key(ship, entry, toggles) if has_pick() else ""
+	return StationViews.key(ship, entry, view_code()) if has_pick() else ""
+
+
+## The toggle code the view filters by: the toggles and the shortcuts shared so far
+## (ViewFilter.of).
+func view_code() -> String:
+	return ViewFilter.code_with(toggles, shares)

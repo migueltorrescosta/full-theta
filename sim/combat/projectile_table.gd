@@ -19,6 +19,14 @@ var radius: PackedFloat64Array = PackedFloat64Array()
 var energy: PackedFloat64Array = PackedFloat64Array()
 ## Ticks left before the projectile expires.
 var ttl: PackedInt32Array = PackedInt32Array()
+## Damage type of the hit (FT-SIM-022).
+var damage_type: Array[StringName] = []
+## Guided ordnance (FT-SIM-013, FT-WPN-008): turn rate (rad/s; 0 flies straight) and the
+## tracked contact followed (ship id or -1). GuidanceSystem steers these each tick.
+var turn_rate: PackedFloat64Array = PackedFloat64Array()
+var guide_target: PackedInt32Array = PackedInt32Array()
+## Share of the turn rate left at track quality 0 (WeaponDef.track_floor, D214).
+var track_floor: PackedFloat64Array = PackedFloat64Array()
 
 
 ## Appends a projectile and returns its row.
@@ -43,7 +51,27 @@ func spawn(
 	radius.append(radius_m)
 	energy.append(energy_j)
 	ttl.append(ttl_ticks)
+	damage_type.append(&"kinetic")
+	turn_rate.append(0.0)
+	guide_target.append(-1)
+	track_floor.append(1.0)
 	return size() - 1
+
+
+## Gives projectile k its damage type and, when turn_rate_rad is positive, guidance at
+## the contact (target >= 0).
+func set_payload(
+	k: int, type: StringName, turn_rate_rad: float = 0.0, target: int = -1, floor_share: float = 1.0
+) -> void:
+	damage_type[k] = type
+	turn_rate[k] = turn_rate_rad
+	guide_target[k] = target
+	track_floor[k] = floor_share
+
+
+## From projectile k to ship s (m, minimum image; the same site).
+func offset_to_ship(k: int, kin: Kinematics, s: int) -> Vector3:
+	return -kin.relative_to_point(s, px[k], py[k], pz[k])
 
 
 ## Moves projectile k by its velocity for dt (s), wrapping across the site's faces
@@ -98,6 +126,10 @@ func remove_rows(rows: PackedInt32Array) -> void:
 		radius.remove_at(r)
 		energy.remove_at(r)
 		ttl.remove_at(r)
+		damage_type.remove_at(r)
+		turn_rate.remove_at(r)
+		guide_target.remove_at(r)
+		track_floor.remove_at(r)
 
 
 ## A ship's run reset drops its projectiles (FT-MIS-017); add_ship adds none.
@@ -117,5 +149,9 @@ func columns() -> Array:
 			["radius", radius],
 			["energy", energy],
 			["ttl", ttl],
+			["damage_type", damage_type],
+			["turn_rate", turn_rate],
+			["guide_target", guide_target],
+			["track_floor", track_floor],
 		]
 	)

@@ -12,11 +12,18 @@
    pattern is missing, so an engine upgrade that changes it stops the build;
    tools/tests/test_release.py checks the pinned template too. Drop the patch
    once upstream is fixed (docs/release.md).
-2. Copies the keep-awake video (app/web/keepawake.webm, FT-NET-046).
-3. Writes .gz copies the static server sends to clients that accept gzip.
+2. Copies the keep-awake videos (app/web/keepawake.webm and .mp4, FT-NET-046).
+3. Puts a content hash in the names of the wasm, the pack and the audio worklets
+   (index.wasm becomes index.<10 hex digits>.wasm) and in the page's "executable" and
+   "fileSizes", so the static server can send them as immutable and a returning
+   browser reuses its cached copy without asking (D197, StaticServer.cache_control).
+   index.js and index.html keep their names and are revalidated.
+4. Writes .gz copies the static server sends to clients that accept gzip.
 """
 
 import gzip
+import hashlib
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -28,6 +35,8 @@ GUARDED = (
     "ctx.audioWorklet.addModule(path):new Promise(function(){})"
 )
 GZIP_SUFFIXES = (".html", ".js", ".wasm", ".pck", ".svg", ".json")
+HASHED_SUFFIXES = (".wasm", ".pck", ".audio.worklet.js", ".audio.position.worklet.js")
+KEEPAWAKE = ("keepawake.webm", "keepawake.mp4")
 
 
 def patch_index_js(text: str) -> str:
@@ -37,10 +46,33 @@ def patch_index_js(text: str) -> str:
     return text.replace(UNGUARDED, GUARDED)
 
 
+def hash_names(web: Path) -> str:
+    """Renames the files in HASHED_SUFFIXES to index.<hash><suffix> and points index.html
+    at them; returns the hash. The hash covers their bytes, so it changes with any."""
+    present = [(suffix, web / f"index{suffix}") for suffix in HASHED_SUFFIXES]
+    present = [(suffix, f) for suffix, f in present if f.is_file()]
+    digest = hashlib.sha256()
+    for suffix, f in present:
+        digest.update(suffix.encode() + f.read_bytes())
+    tag = digest.hexdigest()[:10]
+    html_path = web / "index.html"
+    html = html_path.read_text(encoding="utf-8")
+    if html.count('"executable":"index"') != 1:
+        raise ValueError('web_patch: expected "executable":"index" once in index.html')
+    html = html.replace('"executable":"index"', f'"executable":"index.{tag}"')
+    for suffix, f in present:
+        f.rename(web / f"index.{tag}{suffix}")
+        html = html.replace(f'"index{suffix}":', f'"index.{tag}{suffix}":')
+    html_path.write_text(html, encoding="utf-8")
+    return tag
+
+
 def finish(web: Path) -> None:
     index_js = web / "index.js"
     index_js.write_text(patch_index_js(index_js.read_text(encoding="utf-8")), encoding="utf-8")
-    shutil.copy2(ROOT / "app/web/keepawake.webm", web / "keepawake.webm")
+    for video in KEEPAWAKE:
+        shutil.copy2(ROOT / "app/web" / video, web / video)
+    hash_names(web)
     for f in sorted(web.iterdir()):
         if f.suffix in GZIP_SUFFIXES:
             # mtime=0 keeps the .gz bytes reproducible.

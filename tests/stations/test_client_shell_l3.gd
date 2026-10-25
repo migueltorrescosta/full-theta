@@ -69,9 +69,10 @@ func _welcomed(c: NetClient) -> bool:
 
 
 # FT: FT-STN-015, FT-JNT-006, FT-M1-018
-# Over a real connection the lobby colours each entry's name by its StationDef load tag in
-# the Catalogue (the Viewer in normal text), and each joint view's pair under its name (D186).
-func test_lobby_colours_load_and_shows_joint_pairs_from_the_catalogue() -> void:
+# Over a real connection the lobby shows the six stations as grid cells bordered by their
+# StationDef load tag in the Catalogue, Captain and Viewer below, and maps each pair of
+# stations to its joint view in the Catalogue (D216).
+func test_lobby_grid_follows_the_catalogue_load_tags_and_joint_views() -> void:
 	var s: NetServer = _h.server()
 	var c: NetClient = NetClient.new()
 	c.name = "Ana"
@@ -81,24 +82,15 @@ func test_lobby_colours_load_and_shows_joint_pairs_from_the_catalogue() -> void:
 	var shell: ClientShell = auto_free(ClientShell.new())
 	shell.setup(c, ClientSettings.new(SETTINGS))
 	add_child(shell)
-	var rows: Callable = func() -> bool:
-		return shell.lobby != null and shell.lobby.find_child("Entry_ops", true, false) != null
-	assert_bool(await _until(rows)).is_true()
-	var labels: Dictionary = {
-		"tactical": "Tactical\nHelm + Weapons",
-		"systems": "Systems\nEngineering + Science",
-		"ops": "Ops\nRelay + Comms",
-		"helm": "Helm",
-	}
-	var entries: Array = shell.ctx.crew.catalogue["entries"]
-	assert_int(entries.size()).is_equal(11)
-	for e: Dictionary in entries:
-		var row: Node = shell.lobby.find_child("Entry_" + str(e["id"]), true, false)
-		var tag: String = StationViews.def(e["id"]).load_tag
-		var pick: Button = row.get_node("Pick")
-		assert_bool(pick.has_theme_color_override("font_color")).is_equal(tag != "")
-		if tag != "":
-			assert_object(pick.get_theme_color("font_color")).is_equal(LobbyScreen.load_color(tag))
-		assert_object(row.get_node_or_null("Hint")).is_null()
-		if labels.has(e["id"]):
-			assert_str((row.get_node("Pick") as Button).text).is_equal(labels[e["id"]])
+	var cells: Callable = func() -> bool:
+		return shell.lobby != null and shell.lobby.find_child("Entry_comms", true, false) != null
+	assert_bool(await _until(cells)).is_true()
+	assert_int(shell.ctx.crew.catalogue["entries"].size()).is_equal(23)
+	for id: String in LobbyScreen.GRID_STATIONS:
+		var cell: Button = shell.lobby.find_child("Entry_" + id, true, false)
+		var tag: String = StationViews.def(id).load_tag
+		assert_str(cell.theme_type_variation).is_equal("LoadCell_" + tag)
+	for id: String in ["captain", "viewer", "all"]:
+		assert_object(shell.lobby.find_child("Entry_" + id, true, false)).is_not_null()
+	assert_str(shell.lobby.entry_for(["helm", "weapons"] as Array[String])).is_equal("tactical")
+	assert_str(shell.lobby.entry_for(["relay", "comms"] as Array[String])).is_equal("ops")

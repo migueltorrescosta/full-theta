@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name CrewState
 extends RefCounted
 ## The client's model of everything that isn't a snapshot (#7): pick, catalogue, lobby,
@@ -8,7 +9,10 @@ extends RefCounted
 
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
-## &"run_over" (the outcome card and its "Run again" votes, D178).
+## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
+## &"sites", &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F);
+## &"toggles" when the session's data-shortcut set changed (strand G), &"shares" when a
+## shortcut was shared or ran out (strand K).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -22,11 +26,16 @@ const MARK_NAMES: Array[String] = CrewMarks.DEFAULT_NAMES
 const MAX_MARKS: int = CrewMarks.SLOTS
 ## A ping pulses its item this long on every screen (FT-SPA-016).
 const PING_MS: int = 3000
+## A Captain's ping on a card shows it on the main screen this long, or until the next
+## ping (FT-CPT-005).
+const CARD_MS: int = 10000
 ## Alert levels (D170): Normal, Yellow, Red.
 const ALERT_NORMAL: int = CrewMarks.ALERT_NORMAL
 const ALERT_YELLOW: int = CrewMarks.ALERT_YELLOW
 const ALERT_RED: int = CrewMarks.ALERT_RED
 const ALERT_LEVELS: int = CrewMarks.ALERT_RED + 1
+## Most log entries kept (the server keeps CrewRelay.MAX_LOG).
+const MAX_LOG: int = CrewRelay.MAX_LOG
 ## Sim ticks per second (spec: 60 Hz), for the mission timer.
 const TICK_HZ: float = 60.0
 
@@ -60,8 +69,85 @@ var alert_by: String = ""
 var marks: Array[Dictionary] = []
 ## Active pings, oldest first: {"kind", "id", "site", "pos", "by", "at_ms", "copies"}.
 var pings: Array[Dictionary] = []
-## The shared selection: {"kind": "contact" | "mark" | "site", "id": int}, or {}.
+## The main screen's view (MainScreen.View), set by the Captain or by Relay.
+var main_view: int = MainScreen.View.FORWARD
+var main_view_by: String = ""
+## The Comms card the latest ping named: {"id", "by", "at_ms"}, or {} when a later ping
+## named something else. Not in `pings`: it pulses nothing on the radar.
+var card_ping: Dictionary = {}
+## The shared selection: {"kind": "contact" | "mark" | "site" | "zone", "id": int}, or {}.
 var selection: Dictionary = {}
+## The scenario's site names, the callout layer every station shows (FT-SPA-027): [{"site",
+## "name"}].
+var sites: Array[Dictionary] = []
+## Hazard zones and scan positions, outside the 8 marks (FT-SPA-028): {"id", "kind"
+## ("hazard" | "scan"), "site", "pos" (Vector3, m), "radius" (m), "by"}.
+var zones: Array[Dictionary] = []
+## Relay's routes (FT-RLY-005), by route number: Array of {"site", "pos"} waypoints.
+var routes: Array = []
+## Relay only: marks other ships sent, waiting for Accept or Decline (FT-RLY-009): {"id",
+## "from_ship", "from", "name", "site", "pos"}; and the ship's log (FT-RLY-006): {"tick",
+## "key", "args"}, oldest first.
+var inbox: Array[Dictionary] = []
+var relay_log: Array[Dictionary] = []
+## The session's data-shortcut toggles, from the `lobby` events (every ship shares them,
+## FT-PAIR-017); Easy until the server says otherwise.
+var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
+
+## The shortcuts shared to this ship (the `shares` event, D210): feature -> client clock (ms)
+## at which the share ends.
+var shares: Dictionary = {}
+
+var _filter: ViewFilter = null
+var _filter_key: String = ""
+
+
+## What this pick may see of other stations' data at the session's toggles (ViewFilter): the
+## clients draw an em dash for an absent summary, a band for a banded one.
+func filter() -> ViewFilter:
+	var code: String = ViewFilter.code_with(toggles.encode(), shares.keys())
+	var key: String = "%s|%s" % [entry, code]
+	if _filter == null or key != _filter_key:
+		_filter_key = key
+		_filter = ViewFilter.of(entry, code)
+	return _filter
+
+
+## Seconds left of a shared shortcut, 0 when it isn't shared.
+func share_left(feature: StringName, now_ms: int) -> float:
+	return (
+		maxf(0.0, (int(shares.get(feature, 0)) - now_ms) / 1000.0) if shares.has(feature) else 0.0
+	)
+
+
+## How the top bar shows the STATUS values that are another station's data at the session's
+## toggles (FT-PAIR-019, D193): {key: {"text": word or dash, "band": HealthBand.Band or -1}}
+## for the keys that aren't exact numbers; the keys whose numbers show stay out. `def` is the
+## own ship's definition (the bands are shares of its maxima), null without one.
+func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
+	var f: ViewFilter = filter()
+	var out: Dictionary = {}
+	if f == null or f.sees_all or def == null or status.is_empty():
+		return out
+	var maxima: Dictionary = {
+		"hull": def.hull_max,
+		"shields": def.shields.max_strength,
+		"pips_used": float(def.power.reactor_pips),
+	}
+	for key: String in maxima:
+		# The hull is the ship's: exact unless the view holds Comms without Engineering,
+		# when it is the band at every difficulty (FT-PAIR-010).
+		var mode: int = f.summary_mode(ViewFilter.ENG)
+		if key == "hull":
+			mode = 1 if f.condition_hidden else 2
+		if mode == 1:
+			var share: float = float(status.get(key, 0.0)) / maxima[key]
+			var band: HealthBand.Band = HealthBand.band_of(share, DataToggles.def().band_edges)
+			var word: String = TranslationServer.translate("band." + HealthBand.word(band))
+			out[key] = {"text": word, "band": band}
+		elif mode == 0:
+			out[key] = {"text": TranslationServer.translate("topbar.absent"), "band": -1}
+	return out
 
 
 ## Takes the Welcome fields (NetClient.welcome).
@@ -154,10 +240,22 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			changed.emit(&"run_over")
 		"alert":
 			_on_alert(p)
+		"main_view":
+			_on_main_view(p)
 		"marks":
 			_on_marks(p)
 		"ping":
 			_on_ping(p, now_ms)
+		"sites", "zones", "routes", "inbox", "relay_log":
+			_on_relay(str(e["type"]), p)
+		"chip_answer":
+			_on_chip_answer(p)
+		"shares":
+			if _mine(p):
+				shares.clear()
+				for id: String in p.get("left", {}):
+					shares[StringName(id)] = now_ms + roundi(float(p["left"][id]) * 1000.0)
+				changed.emit(&"shares")
 		"request_rejected", "command_rejected":
 			toast.emit("toast." + str(p.get("reason", "rejected")), p)
 		_:
@@ -215,10 +313,35 @@ func pulse(kind: String, id: int, now_ms: int) -> float:
 	return clampf(best, 0.0, 1.0)
 
 
+## The names of the stations that copied the newest live ping on an item, silently
+## (FT-SPA-031); [] when it has none.
+func copies(kind: String, id: int, now_ms: int) -> Array:
+	_expire(now_ms)
+	for i: int in range(pings.size() - 1, -1, -1):
+		if pings[i]["kind"] == kind and pings[i]["id"] == id:
+			return (pings[i]["copies"] as Array).duplicate()
+	return []
+
+
 ## Pings still pulsing at now_ms (point pings included).
 func live_pings(now_ms: int) -> Array[Dictionary]:
 	_expire(now_ms)
 	return pings.duplicate()
+
+
+## The name of a site, "" when the scenario gives none (FT-SPA-027).
+func site_name(site: int) -> String:
+	for d: Dictionary in sites:
+		if d["site"] == site:
+			return d["name"]
+	return ""
+
+
+func zone_by_id(id: int) -> Dictionary:
+	for z: Dictionary in zones:
+		if z["id"] == id:
+			return z
+	return {}
 
 
 func mark_in_slot(slot: int) -> Dictionary:
@@ -238,13 +361,101 @@ func claimer(item: String) -> String:
 func reset_run() -> void:
 	marks.clear()
 	pings.clear()
+	zones.clear()
+	routes.clear()
+	shares.clear()
+	inbox.clear()
+	relay_log.clear()
 	selection = {}
+	card_ping = {}
+	main_view = MainScreen.View.FORWARD
+	main_view_by = ""
 	alert = ALERT_NORMAL
 	alert_by = ""
 	started.erase(ship)
 	abandoned.erase(ship)
 	run_over.erase(ship)
 	changed.emit(&"reset")
+
+
+## The Relay and callout-layer events (docs/protocol.md "Relay").
+func _on_relay(type: String, p: Dictionary) -> void:
+	if type != "sites" and not _mine(p):
+		return
+	match type:
+		"sites":
+			sites.clear()
+			for d: Dictionary in p.get("sites", []):
+				sites.append(
+					{
+						"site": int(d["site"]),
+						"name": TranslationServer.translate(StringName(d["name"]))
+					}
+				)
+		"zones":
+			zones.clear()
+			for z: Dictionary in p.get("zones", []):
+				(
+					zones
+					. append(
+						{
+							"id": int(z["id"]),
+							"kind": str(z["kind"]),
+							"site": int(z["site"]),
+							"pos": Vector3(float(z["x"]), float(z["y"]), float(z["z"])),
+							"radius": float(z["radius"]),
+							"by": str(z.get("by", "")),
+						}
+					)
+				)
+			# Probe bubbles and sim hazards (ids below 0) are not in this list: only a
+			# marked zone that is gone clears the selection (D222).
+			if (
+				selection.get("kind", "") == "zone"
+				and int(selection["id"]) >= 0
+				and zone_by_id(selection["id"]).is_empty()
+			):
+				selection = {}
+				changed.emit(&"selection")
+		"routes":
+			routes.clear()
+			for route: Array in p.get("routes", []):
+				var points: Array = []
+				for w: Dictionary in route:
+					(
+						points
+						. append(
+							{
+								"site": int(w["site"]),
+								"pos": Vector3(float(w["x"]), float(w["y"]), float(w["z"])),
+							}
+						)
+					)
+				routes.append(points)
+		"inbox":
+			inbox.clear()
+			for m: Dictionary in p.get("items", []):
+				(
+					inbox
+					. append(
+						{
+							"id": int(m["id"]),
+							"from_ship": int(m["from_ship"]),
+							"from": str(m["from"]),
+							"name": str(m["name"]),
+							"site": int(m["site"]),
+							"pos": Vector3(float(m["x"]), float(m["y"]), float(m["z"])),
+						}
+					)
+				)
+		_:
+			if bool(p.get("replace", false)):
+				relay_log.clear()
+			for entry: Dictionary in p.get("entries", []):
+				relay_log.append(entry)
+			while relay_log.size() > MAX_LOG:
+				relay_log.pop_front()
+	changed.emit(StringName(type))
 
 
 func _mine(p: Dictionary) -> bool:
@@ -267,10 +478,24 @@ func _on_lobby(p: Dictionary) -> void:
 	var id: int = int(p["ship"])
 	var was_started: bool = bool(lobby.get(id, {}).get("started", false))
 	lobby[id] = p
+	var code: String = str(p.get("toggles", toggles.encode()))
+	var parsed: DataToggles = DataToggles.parse(code)
+	if parsed != null and code != toggles.encode():
+		toggles = parsed
+		changed.emit(&"toggles")
 	changed.emit(&"lobby")
 	# The server resets a finished run: the ship is back in the lobby (FT-M1-012).
 	if id == ship and was_started and not bool(p.get("started", false)):
 		reset_run()
+
+
+## A request chip this client sent was answered: a toast naming who and what.
+func _on_chip_answer(p: Dictionary) -> void:
+	var chip: Dictionary = {"chip": str(p.get("chip", "")), "arg": int(p.get("arg", -1))}
+	var args: Dictionary = {"by": str(p.get("by", "")), "chip": ChipView.label(chip)}
+	toast.emit(
+		"toast.chip_answered" if bool(p.get("accept", false)) else "toast.chip_declined", args
+	)
 
 
 func _on_claim(p: Dictionary) -> void:
@@ -289,6 +514,34 @@ func _on_alert(p: Dictionary) -> void:
 	alert = clampi(int(p.get("level", 0)), 0, ALERT_LEVELS - 1)
 	alert_by = str(p.get("by", ""))
 	changed.emit(&"alert")
+
+
+func _on_main_view(p: Dictionary) -> void:
+	if not _mine(p):
+		return
+	main_view = clampi(int(p.get("view", 0)), 0, MainScreen.NAMES.size() - 1)
+	main_view_by = str(p.get("by", ""))
+	changed.emit(&"main_view")
+
+
+## Whether this ship has a Captain pick (connected or in grace), from the lobby event.
+func captain_seated(id: int = ship) -> bool:
+	return str(lobby.get(id, {}).get("captain", "")) != ""
+
+
+## Whether this pick may switch the main screen now (FT-MSC-005): the Captain, or Relay
+## while no Captain is seated. The server decides; this only hides dead buttons.
+func may_switch_main_view() -> bool:
+	if entry == StationViews.CAPTAIN:
+		return true
+	return stations().has("relay") and not captain_seated()
+
+
+## The Comms card the main screen shows at now_ms (FT-CPT-005), or -1.
+func shown_card(now_ms: int) -> int:
+	if card_ping.is_empty() or now_ms - int(card_ping["at_ms"]) >= CARD_MS:
+		return -1
+	return int(card_ping["id"])
 
 
 func _on_marks(p: Dictionary) -> void:
@@ -328,6 +581,15 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	var id: int = int(p.get("site" if kind == "site" else "id", -1))
 	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
 	var copy: bool = str(p.get("copy", "")) != ""
+	if kind == "card":
+		card_ping = {"id": int(p.get("id", -1)), "by": str(p.get("by", "")), "at_ms": now_ms}
+		changed.emit(&"card")
+		if not copy:
+			pinged.emit(card_ping)
+		return
+	if not copy and not card_ping.is_empty():
+		card_ping = {}
+		changed.emit(&"card")
 	if copy:
 		for old: Dictionary in pings:
 			if old["kind"] == kind and old["id"] == id:

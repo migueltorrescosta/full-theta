@@ -2,8 +2,8 @@
 
 [ext_resource type="Resource" path="res://content/ships/m1_corvette/assist.tres" id="1_gdcbd"]
 [ext_resource type="Script" path="res://content/defs/mount_def.gd" id="2_xhyu7"]
-[ext_resource type="Resource" path="res://content/ships/m1_corvette/mount_bow.tres" id="3_wa30x"]
-[ext_resource type="Resource" path="res://content/ships/m1_corvette/power.tres" id="4_ovpdr"]
+[ext_resource type="Resource" path="res://content/ships/m1_raider/mount_bow.tres" id="3_wa30x"]
+[ext_resource type="Resource" path="res://content/ships/m1_raider/power.tres" id="4_ovpdr"]
 [ext_resource type="Script" path="res://content/defs/ship_def.gd" id="5_4l44g"]
 [ext_resource type="Resource" path="res://content/ships/m1_raider/shields.tres" id="6_ekbvn"]
 [ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="7_nnjya"]

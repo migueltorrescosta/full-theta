@@ -5,6 +5,10 @@ ui_pick entry=systems
 barrier name=picked n=3 timeout=90
 expect_event type=started payload.ship=0 timeout=60
 ui_expect shown=station focused=engineering timeout=30
+# Engineering puts the reactor's 2 spare pips on the weapons: a cannon shot costs more than
+# two pips recharge at the cooldown rate (D212).
+command id=pips kind=set_pips subsystem_kind=2 pips=4
+expect_accepted id=pips
 barrier name=started n=3 timeout=60
 expect_event type=run_over payload.outcome=win timeout=150
 ui_expect card=true run_over.outcome=win

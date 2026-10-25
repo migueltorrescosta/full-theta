@@ -213,8 +213,8 @@ func test_tactical_cockpit_fires_claimed_mounts_and_turret_aims() -> void:
 # FT: FT-JNT-005
 # A joint view gets the union of its stations' data: Tactical's one snapshot feeds
 # Helm's HELM block and Weapons' MOUNTS block, and both panels send through the one
-# ShipIntents. M1 has no request chips (§7.4 comes with #9), so no request runs between
-# joint stations yet; StationPanel.send_request documents the direct-action rule.
+# ShipIntents. A request between the view's own stations is a direct action, not a chip
+# (tests/stations/test_request_chips.gd sends them); the chips for other stations stay.
 func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
 	var def: StationDef = StationViews.def("tactical")
 	assert_bool(StationViews.Section.HELM in def.sections).is_true()
@@ -231,4 +231,208 @@ func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
 	assert_int(_commands(s, "helm_all_stop").size()).is_equal(1)
 	assert_int(_commands(s, "fire").size()).is_equal(1)
 	for p: StationPanel in s.panels:
-		assert_bool(p.has_request_chip()).is_false()
+		assert_bool(p.has_request_chip()).is_true()
+	var to_helm: Array = weapons.request_chips().filter(
+		func(c: ChipDef) -> bool: return c.id == &"bring_to_bear"
+	)
+	assert_int(to_helm.size()).is_equal(1)
+	assert_str(String(to_helm[0].to_station)).is_equal("helm")
+
+
+## Every catalogue entry that is a joint view: the 15 pairs (FT-NET-032).
+func _views() -> Array[String]:
+	var out: Array[String] = []
+	for entry: String in StationViews.ENTRIES:
+		if (StationViews.ENTRIES[entry][2] as Array).size() == 2:
+			out.append(entry)
+	return out
+
+
+# FT: FT-NET-017, FT-NET-032, FT-JNT-001, FT-JNT-004
+# All 15 views build as one screen of exactly two panels (never 3 or more stations): one top
+# bar, one disc radar, the first station's panel in the main area, the second docked and the
+# panels of the registry; F2 moves the focus.
+func test_all_fifteen_views_are_modal_two_panel_screens() -> void:
+	var views: Array[String] = _views()
+	assert_int(views.size()).is_equal(15)
+	var pairs: Dictionary = {}
+	for entry: String in views:
+		var stations: Array = StationViews.stations_of(entry)
+		pairs[",".join(PackedStringArray(stations))] = true
+		var s: StationScreen = _screen(entry)
+		assert_array(s.stations).is_equal(stations)
+		assert_int(s.panels.size()).is_equal(2)
+		assert_int(_count(s, TopBar)).is_equal(1)
+		assert_int(_count(s, DiscRadar)).is_equal(1)
+		assert_object(s.panels[0].get_parent()).is_same(s._main)
+		assert_object(s.panels[1].get_parent()).is_same(s._dock)
+		for i: int in 2:
+			assert_str(s.panels[i].station).is_equal(stations[i])
+		_tap(s, "F2")
+		assert_str(s.focused_station()).is_equal(stations[1])
+		assert_object(s.panels[0].get_parent()).is_same(s._dock)
+		assert_bool(s.panels[0].docked).is_true()
+		_tap(s, "F1")
+		assert_str(s.focused_station()).is_equal(stations[0])
+		# The pair name is under the view name in the lobby (D186).
+		var def: StationDef = StationViews.def(entry)
+		assert_str(def.load_tag).is_not_empty()
+	assert_int(pairs.size()).is_equal(15)
+
+
+# FT: FT-NET-018, FT-JNT-005, FT-JNT-004
+# A view keeps every control of its stations and gets the union of their data: its
+# sections, commands, claims and ship-wide controls contain each station's, and each
+# panel reads its own station's blocks from the one snapshot.
+func test_all_fifteen_views_keep_every_control_and_get_the_union() -> void:
+	for entry: String in _views():
+		var def: StationDef = StationViews.def(entry)
+		for station: String in def.stations:
+			var own: StationDef = StationViews.def(station)
+			for kind: int in own.sections:
+				assert_bool(kind in def.sections).override_failure_message(entry).is_true()
+			for c: Variant in own.commands:
+				assert_bool(c in def.commands).override_failure_message(entry).is_true()
+			for c: Variant in own.claims:
+				assert_bool(c in def.claims).override_failure_message(entry).is_true()
+			for c: Variant in own.controls:
+				assert_bool(c in def.controls).override_failure_message(entry).is_true()
+		var s: StationScreen = _screen(entry)
+		for p: StationPanel in s.panels:
+			assert_bool(p.ctx.view == s.ctx.view).is_true()
+
+
+# FT: FT-JNT-005, FT-STN-010, FT-PAIR-021
+# Every chip between a view's own two stations runs as a direct command at any difficulty:
+# nothing is sent as a chip and no toast says "do it yourself". Each chip's sender is the
+# focused panel, with a contact selected for the chips that need one.
+func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
+	var expect: Dictionary = {
+		"boost": "boost",
+		"power": "set_pips",
+		"bring_to_bear": "helm_align",
+		"sensor_power": "set_pips",
+		"scan_mark": "science_scan_mark",
+		"fabricate_probe": "fabricate_probe",
+	}
+	var seen: Dictionary = {}
+	for entry: String in _views():
+		var stations: Array = StationViews.stations_of(entry)
+		for chip: ChipDef in NetChips.def().chips:
+			if not chip.active:
+				continue
+			var from: String = String(chip.from_station)
+			if not (from in stations and String(chip.to_station) in stations):
+				continue
+			var s: StationScreen = _screen(entry)
+			var toasts: Array[String] = []
+			s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
+			s.focus(stations.find(from))
+			s.ctx.crew.select("contact", StationFixture.H2)
+			s.focused_panel().send_chip(chip)
+			var id: String = String(chip.id)
+			(
+				assert_array(StationFixture.sent(s.ctx).of("send_chip"))
+				. override_failure_message(entry + " " + id)
+				. is_empty()
+			)
+			assert_array(toasts).override_failure_message(entry + " " + id).is_empty()
+			(
+				assert_int(_commands(s, expect[id]).size())
+				. override_failure_message(entry + " " + id)
+				. is_equal(1)
+			)
+			seen[id] = true
+	# Every active chip belongs to some view, so all six are covered.
+	assert_int(seen.size()).is_equal(6)
+
+
+# FT: FT-JNT-005
+# "Bring mount N to bear" in a Helm + Weapons view aligns the requested mount, not the bow:
+# the Align command names the weapons panel's selected mount.
+func test_direct_bring_to_bear_names_the_requested_mount() -> void:
+	var s: StationScreen = _screen("tactical")
+	var weapons: WeaponsPanel = s.panels[s.stations.find("weapons")] as WeaponsPanel
+	weapons.mount = weapons.mount_count() - 1
+	var chip: ChipDef
+	for c: ChipDef in NetChips.def().chips:
+		if c.id == &"bring_to_bear":
+			chip = c
+	s.focus(s.stations.find("weapons"))
+	s.ctx.crew.select("contact", StationFixture.H2)
+	weapons.send_chip(chip)
+	var aligns: Array = _commands(s, "helm_align")
+	assert_int(aligns.size()).is_equal(1)
+	assert_int(aligns[0]["mount_index"]).is_equal(weapons.mount)
+
+
+# FT: FT-JNT-005
+# The direct power chips respect the reactor: with the reactor full the request is refused
+# with the "take it from something else" toast, and at the per-subsystem maximum with the
+# "full power" toast; nothing is sent.
+func test_direct_power_respects_the_reactor_and_the_maximum() -> void:
+	var s: StationScreen = _screen("gunnery")
+	var toasts: Array[String] = []
+	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
+	var power: ChipDef
+	for c: ChipDef in NetChips.def().chips:
+		if c.id == &"power":
+			power = c
+	var rows: Array = s.ctx.view.blocks[StationViews.Section.ENGINEERING]["subsystems"]
+	var used: int = 0
+	for r: Dictionary in rows:
+		used += int(r["pips"])
+	rows[0]["pips"] += s.ctx.ship_def().power.reactor_pips - used
+	s.focus(0)
+	s.panels[0].send_chip(power)
+	assert_array(_commands(s, "set_pips")).is_empty()
+	assert_array(toasts).is_equal(["toast.eng_cap"])
+	rows[0]["pips"] = 1
+	rows[2]["pips"] = s.ctx.ship_def().power.max_pips_per_subsystem
+	toasts.clear()
+	s.panels[0].send_chip(power)
+	assert_array(_commands(s, "set_pips")).is_empty()
+	assert_array(toasts).is_equal(["toast.chip_pips_max"])
+
+
+# FT: FT-JNT-004, FT-NET-018, FT-STN-001
+# The four views with Comms (and Ops) show the fixture cards as the Comms half; a view
+# without Comms shows none.
+func test_the_views_with_comms_show_the_fixture_cards() -> void:
+	for entry: String in _views():
+		var s: StationScreen = _screen(entry)
+		var has_comms: bool = "comms" in s.stations
+		assert_int(_count(s, FixtureCards)).is_equal(1 if has_comms else 0)
+	assert_array(FixtureCards.all()).is_not_empty()
+
+
+## The physical inputs of one binding (as tests/input/test_binding_table.gd splits them).
+static func _inputs(binding: String) -> Array:
+	var out: Array = []
+	for part: String in binding.trim_prefix("long ").split("/"):
+		out.append(part.trim_prefix("-"))
+	return out
+
+
+# FT: FT-JNT-002, FT-JNT-001, FT-JNT-003
+# The binding-table check for each view (tests/input/test_binding_table.gd covers the
+# whole catalogue): with either panel focused, no physical input is bound to intents of
+# both stations of the view that the screen routes at once, on either device. Inside one
+# station an input may serve two modes (Science's dial and arrows); the common set and
+# the pointer's select and fire (D176) are checked by the whole-catalogue test.
+func test_no_key_is_used_by_both_panels_of_any_view() -> void:
+	for entry: String in _views():
+		var stations: Array = StationViews.stations_of(entry)
+		for focused: String in stations:
+			for device: String in IntentTable.DEVICES:
+				var owner_of: Dictionary = {}
+				for r: Dictionary in IntentTable.INTENTS:
+					var target: String = IntentTable.target(r["id"], device, focused, stations)
+					if target == "" or target == "screen":
+						continue
+					for b: String in IntentTable.defaults(r["id"], device):
+						for i: String in _inputs(b):
+							var first: String = owner_of.get(i, target)
+							var msg: String = "%s %s %s: %s" % [entry, focused, device, i]
+							assert_str(target).override_failure_message(msg).is_equal(first)
+							owner_of[i] = target

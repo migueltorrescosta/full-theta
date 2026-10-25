@@ -25,6 +25,15 @@ const UNBLOCKED: Array[String] = ["menu", "overlay"]
 const SIDE_WIDTH: float = 340.0
 const RADAR_HEIGHT: float = 300.0
 const TOP_BAR_HEIGHT: float = 40.0
+## The bar of the touch layouts: tap-sized alert chip and sound button (D194).
+const TOUCH_BAR_HEIGHT: float = 52.0
+## Under this width the top bar takes two rows (a phone, a tablet upright).
+const COMPACT_WIDTH: float = 900.0
+## A phone's smaller bar text fits one row down to this width.
+const COMPACT_PHONE_WIDTH: float = 480.0
+## The phone's radar column: a smaller disc (D195).
+const PHONE_RADAR: float = 180.0
+const PHONE_SIDE_WIDTH: float = 180.0
 ## Least height of a docked panel: top bar, radar and one docked panel fit 720p at
 ## 150 % UI scale (480 px), so the screen never grows past the window.
 const DOCK_MIN_HEIGHT: float = 120.0
@@ -39,6 +48,8 @@ var radar: DiscRadar
 var toasts: Toasts
 var alerts: StationAlerts
 var flash: AlertFlash
+var chip_strip: ChipStrip
+var share_bar: ShareBar
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
 var panel_factory: Callable = StationRegistry.make
 ## Controls of the shell that take the input while visible (Settings, the outcome card).
@@ -46,7 +57,11 @@ var blockers: Array[Control] = []
 
 var _main: Control
 var _dock: VBoxContainer
-var _side: VBoxContainer
+## The radar and the extras column (share buttons, docked panels): beside the main area
+## in landscape, below it in portrait (D216); it hides for a lone full-screen panel.
+var _side: BoxContainer
+var _body: BoxContainer
+var _extras: VBoxContainer
 var _blocked: bool = false
 
 
@@ -63,6 +78,7 @@ func setup(context: StationContext) -> void:
 	if stations.is_empty():
 		stations.append(ctx.crew.entry)
 	_build()
+	_relayout()
 	for s: String in stations:
 		var p: StationPanel = panel_factory.call(s)
 		p.setup(ctx, s)
@@ -78,6 +94,8 @@ func setup(context: StationContext) -> void:
 
 
 func _ready() -> void:
+	get_viewport().size_changed.connect(_relayout)
+	_relayout()
 	_open_first_visit_help()
 
 
@@ -147,17 +165,38 @@ func _process(delta: float) -> void:
 	_dispatch_batch(ctx.matcher.update(ctx.now_ms(), delta))
 	var now: int = ctx.now_ms()
 	top_bar.can_set_alert = ctx.crew.is_crew()
+	var status: Dictionary = ctx.view.blocks.get(StationViews.Section.STATUS, {})
 	top_bar.show_state(
 		ctx.crew.ship_name(),
-		ctx.view.blocks.get(StationViews.Section.STATUS, {}),
+		status,
 		ctx.crew.alert,
 		stations,
 		ctx.crew.mission_seconds(ctx.view.tick),
-		focused_station()
+		focused_station(),
+		_maxes(),
+		ctx.crew.summaries(status, ctx.ship_def())
 	)
 	radar.set_picture(ctx.picture(), ctx.crew.selection)
+	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
 	flash.update(now)
+	chip_strip.show_chips(
+		ChipView.incoming(ctx.view, stations), ChipView.outgoing(ctx.view, stations), ctx.view
+	)
+	var left: Dictionary = {}
+	for id: StringName in ctx.crew.shares:
+		left[id] = ctx.crew.share_left(id, now)
+	share_bar.show_features(shareable(), left)
+
+
+## The own ship's hull and shield maxima (J), for the top bar's percentages.
+func _maxes() -> Dictionary:
+	var def: ShipDef = ctx.ship_def()
+	if def == null:
+		return {}
+	return {
+		"hull": def.hull_max, "shields": def.shields.max_strength if def.shields != null else 0.0
+	}
 
 
 ## Releases every held and toggled intent where it was held (focus loss, a pad coming
@@ -225,7 +264,7 @@ func _common(ev: Dictionary) -> bool:
 		"mark":
 			_mark(device)
 		"accept", "decline":
-			handled = focused_panel().handle_intent(ev)
+			handled = focused_panel().handle_intent(ev) or _answer_chip(id == "accept")
 		"request":
 			handled = focused_panel().has_request_chip()
 			if handled:
@@ -234,6 +273,10 @@ func _common(ev: Dictionary) -> bool:
 			radar.toggle_strip()
 		"claim":
 			_claim()
+		"share":
+			handled = not shareable().is_empty()
+			for feature: StringName in shareable():
+				ctx.intents.share(String(feature))
 		"overlay":
 			help_requested.emit()
 			_update_block()
@@ -245,11 +288,32 @@ func _common(ev: Dictionary) -> bool:
 	return handled
 
 
+## The data shortcuts this screen's stations may share with their partners (D210).
+func shareable() -> Array[StringName]:
+	var out: Array[StringName] = []
+	if ctx.crew.is_crew():
+		out = ShareBar.features(stations, ctx.crew.toggles)
+	return out
+
+
+## Answers the oldest request chip sent to this screen, the focused station's first
+## (FT-PAIR-013); false when none is open.
+func _answer_chip(accept: bool) -> bool:
+	var open: Array[Dictionary] = ChipView.incoming(ctx.view, stations)
+	if open.is_empty():
+		return false
+	var mine: Array[Dictionary] = open.filter(
+		func(c: Dictionary) -> bool: return c["to"] == focused_station()
+	)
+	ctx.intents.answer_chip(int((mine if not mine.is_empty() else open)[0]["id"]), accept)
+	return true
+
+
 ## Select under the pointer; false over nothing, so the click falls through to the
 ## panel (owner decision in #7: LMB fires in the turret).
 func _select(device: String) -> bool:
 	var item: Dictionary = item_under_cursor(device)
-	if item.is_empty() or item["kind"] == "point":
+	if item.is_empty() or item["kind"] == "point" or item["kind"] == "card":
 		return false
 	ctx.crew.select(item["kind"], item["id"])
 	return true
@@ -317,7 +381,8 @@ func _ping(device: String) -> void:
 
 
 ## Mark at the cursor, or on the selection (FT-SPA-013, FT-SPA-022): refused with a
-## toast when the ship has 8 marks, unless the focused panel replaces one (Relay).
+## toast when the ship has 8 marks, unless the focused panel replaces one (Relay). On a
+## forward view only a contact takes a mark (FT-SPA-030).
 func _mark(device: String) -> void:
 	if ctx.crew.entry == StationViews.VIEWER:
 		return
@@ -325,6 +390,9 @@ func _mark(device: String) -> void:
 	if item.is_empty():
 		item = ctx.crew.selection
 	if item.is_empty():
+		return
+	# A forward view marks only a contact (FT-SPA-030).
+	if focused_panel().marks_attach_only() and item.get("kind", "") != "contact":
 		return
 	if ctx.crew.marks.size() >= CrewState.MAX_MARKS:
 		if not focused_panel().replace_mark(item):
@@ -363,23 +431,30 @@ func _build() -> void:
 	top_bar.custom_minimum_size = Vector2(0, TOP_BAR_HEIGHT)
 	top_bar.alert_picked.connect(_set_alert)
 	rows.add_child(top_bar)
-	var body: HBoxContainer = HBoxContainer.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	rows.add_child(body)
+	_body = BoxContainer.new()
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rows.add_child(_body)
 	_main = Control.new()
 	_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_main.clip_contents = true
-	body.add_child(_main)
-	var side: VBoxContainer = VBoxContainer.new()
-	side.custom_minimum_size = Vector2(SIDE_WIDTH, 0)
-	body.add_child(side)
-	_side = side
+	_body.add_child(_main)
+	_side = BoxContainer.new()
+	_body.add_child(_side)
 	radar = DiscRadar.new()
-	radar.custom_minimum_size = Vector2(SIDE_WIDTH, RADAR_HEIGHT)
-	side.add_child(radar)
+	_side.add_child(radar)
+	_extras = VBoxContainer.new()
+	_extras.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_extras.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_side.add_child(_extras)
+	# The share buttons sit above the docked panels, not over them (D217).
+	share_bar = ShareBar.new()
+	share_bar.visible = false
+	share_bar.share_pressed.connect(func(id: StringName) -> void: ctx.intents.share(String(id)))
+	_extras.add_child(share_bar)
 	_dock = VBoxContainer.new()
 	_dock.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	side.add_child(_dock)
+	_extras.add_child(_dock)
 	toasts = Toasts.new()
 	toasts.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	# Top-right of the screen (§5.0), over the radar's empty corner, not the panel.
@@ -390,9 +465,50 @@ func _build() -> void:
 	toasts.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toasts)
+	chip_strip = ChipStrip.new()
+	chip_strip.position = Vector2(8.0, TOP_BAR_HEIGHT + 8.0)
+	chip_strip.visible = false
+	add_child(chip_strip)
 	flash = AlertFlash.new()
 	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(flash)
+
+
+## Arranges the screen for the viewport (LayoutMode): the bar's height and rows, and the
+## radar column beside the main area (landscape) or below it (portrait), narrower or
+## shorter on a phone. Runs on every resize and rotation.
+func _relayout() -> void:
+	if _body == null or not is_inside_tree():
+		return
+	var size_now: Vector2 = get_viewport().get_visible_rect().size
+	var kind: LayoutMode.Kind = LayoutMode.kind_of(self)
+	var phone: bool = kind == LayoutMode.Kind.PHONE
+	var touch: bool = LayoutMode.is_touch(kind)
+	var portrait: bool = LayoutMode.portrait(size_now)
+	_body.vertical = portrait
+	_side.vertical = not portrait
+	var bar: float = TOP_BAR_HEIGHT
+	if touch:
+		bar = TOUCH_BAR_HEIGHT
+	var two_rows: bool = size_now.x < (COMPACT_PHONE_WIDTH if phone else COMPACT_WIDTH)
+	top_bar.set_compact(two_rows, bar, phone)
+	top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0)
+	var disc: float = RADAR_HEIGHT
+	if phone:
+		disc = PHONE_RADAR
+	_side.custom_minimum_size = Vector2.ZERO
+	if portrait:
+		radar.custom_minimum_size = Vector2(disc, disc)
+		_side.custom_minimum_size.y = disc
+	else:
+		var width: float = PHONE_SIDE_WIDTH if phone else SIDE_WIDTH
+		radar.custom_minimum_size = Vector2(width, disc if not phone else width)
+		_side.custom_minimum_size.x = width
+	share_bar.min_width = 110.0 if phone else 200.0
+	var top: float = top_bar.custom_minimum_size.y + 8.0
+	toasts.offset_top = top
+	toasts.offset_bottom = top
+	chip_strip.position = Vector2(8.0, top)
 
 
 ## The first visit to a station asks for the menu's Controls tab, once per client and

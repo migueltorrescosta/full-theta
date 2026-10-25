@@ -19,6 +19,9 @@ enum State { IDLE, CONNECTING, WELCOMED, REJECTED, CLOSED }
 ## couldn't apply (S9: every 200 ms is enough for the 15-snapshot stall limit and saves
 ## packets).
 const ACK_INTERVAL_US: int = 200_000
+## D199: a report goes out every STATS_INTERVAL_US with at most NetProtocol.MAX_STATS_PAIRS pairs of
+## snapshot seq and arrival unix us.
+const STATS_INTERVAL_US: int = 2_000_000
 
 var name: String = "client"
 var client_kind: String = "bot"
@@ -50,6 +53,10 @@ var raw_snapshots: Dictionary = {}
 ## time it arrived, before decoding (us), to snapshot_log.
 var log_snapshots: bool = false
 var snapshot_log: PackedInt64Array = PackedInt64Array()
+## D199: whether the client reports snapshot arrival times to the server, and the
+## browser's user agent it sends with them ("" off the web).
+var report_stats: bool = true
+var user_agent: String = ""
 
 var _peer: WebSocketPeer
 var _chunker: NetChunker = NetChunker.new()
@@ -62,6 +69,8 @@ var _force_ack: bool = false
 ## Sent Ack snap -1 for the current need_full (once: a second would cost another full).
 var _full_asked: bool = false
 var _hello_sent: bool = false
+var _arrivals: PackedInt64Array = PackedInt64Array()
+var _last_report_us: int = 0
 
 
 ## Connects to ws://host:port and sends Hello once open (with the token, if any).
@@ -73,6 +82,7 @@ func connect_to(server_url: String) -> Error:
 	_queue = NetSendQueue.new()
 	welcome = {}
 	_hello_sent = false
+	_arrivals.clear()
 	state = State.CONNECTING
 	var err: Error = _peer.connect_to_url(url)
 	if err != OK:
@@ -124,6 +134,7 @@ func poll() -> void:
 	if ready_state != WebSocketPeer.STATE_OPEN:
 		return
 	_maybe_ack()
+	_maybe_report()
 	_flush()
 
 
@@ -227,12 +238,74 @@ func delete_mark(slot: int) -> void:
 
 
 ## Pings an item on every screen of the ship (FT-SPA-016): kind "contact" (id), "mark"
-## (id = slot), "site" (site) or "point" (pos on site).
+## (id = slot), "card" (id = a Comms card, FT-CPT-005), "site" (site) or "point" (pos on
+## site).
 func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
 	_send(
 		NetProtocol.Type.PING,
 		{"kind": kind, "id": id, "site": site, "x": pos.x, "y": pos.y, "z": pos.z}
 	)
+
+
+## Switches the ship's main screen to view (MainScreen.View): the Captain, or Relay with
+## no Captain seated (FT-MSC-005).
+func set_main_view(view: int) -> void:
+	_send(NetProtocol.Type.MAIN_VIEW, {"view": view})
+
+
+## Relay (strand B of #9). Sends one of the ship's marks to an allied ship's Relay inbox
+## (FT-RLY-008); accepts the inbox item `id` as a mark, replacing `slot` when all 8 are in
+## use (slot -1 takes a free one), or declines it (FT-RLY-009, FT-SPA-022).
+func send_mark(slot: int, to_ship: int) -> void:
+	_send(NetProtocol.Type.MARK_SEND, {"slot": slot, "ship": to_ship})
+
+
+func accept_mark(id: int, slot: int = -1) -> void:
+	_send(NetProtocol.Type.MARK_ACCEPT, {"id": id, "accept": true, "slot": slot})
+
+
+func decline_mark(id: int) -> void:
+	_send(NetProtocol.Type.MARK_ACCEPT, {"id": id, "accept": false, "slot": -1})
+
+
+## Routes and hazard zones are Relay's Mark ops: a waypoint on route `route`, a hazard of
+## `radius_m` (a multiple of 100 m) at a point, deleting a zone by id (FT-RLY-005).
+func route_add(route: int, site: int, pos: Vector3) -> void:
+	_mark("route_add", route, "", -1, site, pos)
+
+
+func route_clear(route: int) -> void:
+	_mark("route_clear", route, "", -1, -1, Vector3.ZERO)
+
+
+func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
+	_mark("hazard_add", roundi(radius_m / 100.0), "", -1, site, pos)
+
+
+func hazard_delete(id: int) -> void:
+	_mark("hazard_delete", id, "", -1, -1, Vector3.ZERO)
+
+
+## Strand G. The host sets the session's data-shortcut toggles in the lobby (a DataToggles
+## code, FT-PAIR-017); a station sends a request chip (NetChips: chip id from
+## content/chips/chips.tres, arg a mount index or contact id, -1 for none) or answers one
+## it received (FT-PAIR-021).
+func set_toggles(code: String) -> void:
+	_send(NetProtocol.Type.TOGGLES, {"set": code})
+
+
+func send_chip(chip: String, arg: int = -1) -> void:
+	_send(NetProtocol.Type.CHIP, _chip("send", chip, arg, -1, false))
+
+
+func answer_chip(id: int, accept: bool) -> void:
+	_send(NetProtocol.Type.CHIP, _chip("answer", "", -1, id, accept))
+
+
+## Strand K (D210). The source station shares a data shortcut (a toggle id, e.g. "routes")
+## with its partner for DataToggles.share_seconds().
+func share(feature: String) -> void:
+	_send(NetProtocol.Type.SHARE, {"feature": feature})
 
 
 ## Sends a raw, already-encoded message (tests: malformed or foreign messages).
@@ -246,6 +319,10 @@ func send_raw(data: PackedByteArray) -> void:
 
 func _send(type: NetProtocol.Type, fields: Dictionary) -> void:
 	_queue.push(NetChunker.STREAM_CONTROL, NetProtocol.encode(type, fields))
+
+
+func _chip(op: String, chip: String, arg: int, id: int, accept: bool) -> Dictionary:
+	return {"op": op, "chip": chip, "arg": arg, "id": id, "accept": accept}
 
 
 func _mark(op: String, slot: int, name: String, contact: int, site: int, pos: Vector3) -> void:
@@ -268,9 +345,16 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 	if type == NetProtocol.Type.SNAPSHOT:
 		if keep_raw:
 			raw_snapshots[SnapshotBuilder.peek(data)[0]] = data
-		var got_us: int = LoadProbe.unix_us() if log_snapshots else 0
+		var got_us: int = LoadProbe.unix_us() if (log_snapshots or report_stats) else 0
 		if view.apply(data):
 			stats["snapshots"] += 1
+			if report_stats:
+				_arrivals.append(view.seq)
+				_arrivals.append(got_us)
+				if _arrivals.size() > 2 * NetProtocol.MAX_STATS_PAIRS * 4:
+					_arrivals = _arrivals.slice(
+						_arrivals.size() - 2 * NetProtocol.MAX_STATS_PAIRS * 4
+					)
 			if log_snapshots:
 				snapshot_log.append(view.seq)
 				snapshot_log.append(got_us)
@@ -309,6 +393,27 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 		NetProtocol.Type.VOICE:
 			voice_clips.append(msg)
 			stats["voice"] += 1
+
+
+## Sends the arrivals gathered since the last report (D199).
+func _maybe_report() -> void:
+	if state != State.WELCOMED or _arrivals.is_empty():
+		return
+	var now: int = Time.get_ticks_usec()
+	if now - _last_report_us < STATS_INTERVAL_US:
+		return
+	_last_report_us = now
+	var take: int = mini(_arrivals.size(), 2 * NetProtocol.MAX_STATS_PAIRS)
+	var pairs: PackedInt64Array = _arrivals.slice(0, take)
+	_arrivals = _arrivals.slice(take)
+	_send(
+		NetProtocol.Type.CLIENT_STATS,
+		{
+			"sent_us": LoadProbe.unix_us(),
+			"ua": user_agent.left(NetProtocol.MAX_UA_BYTES),
+			"pairs": pairs
+		}
+	)
 
 
 ## Acks the newest snapshot applied (0 before the first) and event delivered; a view

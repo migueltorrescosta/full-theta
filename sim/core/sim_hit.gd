@@ -7,7 +7,7 @@ extends RefCounted
 var target_id: int = -1
 ## The shooter or the other ship, or -1.
 var source_id: int = -1
-## &"projectile" or &"collision".
+## &"projectile", &"beam" or &"collision".
 var kind: StringName = &""
 ## Impact point in the target's body frame, relative to its centre (m).
 var point_local: Vector3 = Vector3.ZERO
@@ -15,3 +15,5 @@ var point_local: Vector3 = Vector3.ZERO
 var from_local: Vector3 = Vector3.FORWARD
 ## Damage energy before shields (J).
 var energy: float = 0.0
+## Damage type, matched against the target's resistances (FT-SIM-022).
+var damage_type: StringName = &"kinetic"

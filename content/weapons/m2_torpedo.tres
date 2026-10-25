@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/weapon_def.gd" id="1_yfiv1"]
+
+[resource]
+script = ExtResource("1_yfiv1")
+id = &"m2_torpedo"
+display_name = "Torpedo"
+projectile_speed = 250.0
+projectile_radius = 2.0
+max_range = 10000.0
+cooldown = 10.0
+damage = 25000000.0
+ammo_capacity = 3
+energy_per_shot = 1000000.0
+heat_per_shot = 5.0
+heat_dissipation = 0.05
+heat_limit = 40.0
+turn_rate = 0.4
+track_floor = 0.25
+kind = 3
+damage_type = &"explosive"

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PowerDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/power_def.gd" id="1_5e7f3"]
+
+[resource]
+script = ExtResource("1_5e7f3")
+reactor_pips = 12
+max_pips_per_subsystem = 4
+reactor_output = 20000000.0
+envelope_curve = PackedVector2Array(0, 0.25, 1, 1, 2, 1.5)
+heat_derate = PackedVector2Array(0, 1, 1, 1, 2, 0.5)
+boost_duration = 8.0
+weapons_capacity = 5000000.0

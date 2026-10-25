@@ -42,6 +42,8 @@ func picture() -> ContactPicture:
 		interp.revision,
 		crew.marks.duplicate(true),
 		crew.pings.duplicate(true),
+		crew.zones.duplicate(true),
+		crew.sites.duplicate(true),
 	]
 	if _picture == null or _picture.interp != interp or key != _picture_key:
 		_picture = ContactPicture.build(self)
@@ -76,6 +78,13 @@ func mark_item(slot: int, item: Dictionary) -> void:
 		intents.place_mark(slot, "", -1, int(item.get("site", site())), item["pos"])
 
 
+## Places a mark (slot -1: the first free one) on one of a contact's scanned subsystems
+## (FT-SPA-014, D202): an attached mark's x names the subsystem as its ShipDef.subsystems
+## index plus one; the server refuses it until a scan revealed that weak point.
+func mark_subsystem(slot: int, contact: int, subsystem: int) -> void:
+	intents.place_mark(slot, "", contact, site(), Vector3(float(subsystem + 1), 0.0, 0.0))
+
+
 ## Moves mark `slot` onto a contact (attached) or a map point.
 func move_mark_to(slot: int, item: Dictionary) -> void:
 	if item.get("kind", "") == "contact":
@@ -106,6 +115,28 @@ func selection_local() -> Variant:
 			if m.is_empty():
 				return null
 			return interp.local(interp.offset_to(mark_position(m)))
+		"zone":
+			var at: Variant = zone_position(int(s["id"]))
+			return null if at == null else interp.local(interp.offset_to(at as Vector3))
+	return null
+
+
+## The site-local position (m) of a zone item, or null: a marked zone (id 0 and up), a
+## deployed probe's bubble (id -1 - serial) or a sim hazard (id -1000 - hazard id) the
+## faction knows (D222, D208).
+func zone_position(id: int) -> Variant:
+	if id >= 0:
+		var z: Dictionary = crew.zone_by_id(id)
+		return null if z.is_empty() else z["pos"]
+	var relay: Dictionary = view.blocks.get(StationViews.Section.RELAY, {})
+	if id <= -1000:
+		for h: Dictionary in relay.get("hazards", []):
+			if -1000 - int(h["id"]) == id:
+				return h["pos"]
+	else:
+		for p: Dictionary in relay.get("probes", []):
+			if bool(p["deployed"]) and -1 - int(p["serial"]) == id:
+				return p["pos"]
 	return null
 
 

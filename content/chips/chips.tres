@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="ChipsDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/chips_def.gd" id="1_chips"]
+[ext_resource type="Script" path="res://content/defs/chip_def.gd" id="2_chip"]
+
+[sub_resource type="Resource" id="Resource_boost"]
+script = ExtResource("2_chip")
+id = &"boost"
+from_station = &"helm"
+to_station = &"engineering"
+
+[sub_resource type="Resource" id="Resource_power"]
+script = ExtResource("2_chip")
+id = &"power"
+from_station = &"weapons"
+to_station = &"engineering"
+
+[sub_resource type="Resource" id="Resource_bring_to_bear"]
+script = ExtResource("2_chip")
+id = &"bring_to_bear"
+from_station = &"weapons"
+to_station = &"helm"
+arg = 1
+
+[sub_resource type="Resource" id="Resource_sensor_power"]
+script = ExtResource("2_chip")
+id = &"sensor_power"
+from_station = &"science"
+to_station = &"engineering"
+
+[sub_resource type="Resource" id="Resource_scan_mark"]
+script = ExtResource("2_chip")
+id = &"scan_mark"
+from_station = &"science"
+to_station = &"helm"
+
+[sub_resource type="Resource" id="Resource_fabricate_probe"]
+script = ExtResource("2_chip")
+id = &"fabricate_probe"
+from_station = &"relay"
+to_station = &"engineering"
+
+[sub_resource type="Resource" id="Resource_hold_fire"]
+script = ExtResource("2_chip")
+id = &"hold_fire"
+from_station = &"comms"
+to_station = &"weapons"
+arg = 2
+active = false
+
+[resource]
+script = ExtResource("1_chips")
+id = &"chips"
+chips = Array[ExtResource("2_chip")]([SubResource("Resource_boost"), SubResource("Resource_power"), SubResource("Resource_bring_to_bear"), SubResource("Resource_sensor_power"), SubResource("Resource_scan_mark"), SubResource("Resource_fabricate_probe"), SubResource("Resource_hold_fire")])
+expiry_s = 20.0
+max_open = 8

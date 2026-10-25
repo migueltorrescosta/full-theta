@@ -6,8 +6,8 @@ extends RefCounted
 ## and sends the `marks` and `alert` events.
 ## - Marks (FT-SPA-012): 8 slots per ship, named Alpha to Hotel by default. A mark is
 ##   free (site + three 64-bit offsets wrapped into [-P/2, P/2), D104, D124) or attached
-##   to a contact (FT-SPA-014; the client follows the contact, and shows its last known
-##   position once it is lost).
+##   to a contact or to one of its scanned subsystems (FT-SPA-014, D202; the client
+##   follows the contact, and shows its last known position once it is lost).
 ## - Who may do what (FT-SPA-013, FT-SPA-022, FT-RLY-003): any crew station places;
 ##   with all 8 used only Relay places, replacing the slot it names. Relay renames,
 ##   moves, attaches and deletes any mark; other crew only their own (`by_session`).
@@ -42,7 +42,7 @@ const BAD_LEVEL: String = "bad_level"
 static var _unsafe: RegEx
 
 ## Ship -> Array of SLOTS entries: {} for an empty slot, else {slot, name, contact, site,
-## x, y, z, by, by_session}.
+## x, y, z, sub, by, by_session}.
 var _marks: Dictionary[int, Array] = {}
 ## Ship -> alert level (missing: Normal).
 var _alert: Dictionary[int, int] = {}
@@ -82,13 +82,22 @@ func marks_of(ship: int) -> Array:
 	return out
 
 
+## The session that placed the mark in a slot, or -1 for an empty slot (the debrief's
+## "placed by one station, used by another", NetCoop).
+func placer_of(ship: int, slot: int) -> int:
+	if not has_mark(ship, slot):
+		return -1
+	return int((_slots(ship)[slot] as Dictionary).get("by_session", -1))
+
+
 func has_mark(ship: int, slot: int) -> bool:
 	return slot >= 0 and slot < SLOTS and not (_slots(ship)[slot] as Dictionary).is_empty()
 
 
 ## Places a mark (slot -1: the first free one; name "": the slot's default). `spot`
 ## holds the Mark message's contact, site, x, y and z: contact >= 0 attaches the mark
-## (the caller checked the id), else it is free at (site, x, y, z).
+## (the caller checked the id, and the scanned subsystem `sub` with its place `off`),
+## else it is free at (site, x, y, z).
 func place(
 	ship: int, role: Role, session: int, by: String, slot: int, name: String, spot: Dictionary
 ) -> String:
@@ -181,10 +190,15 @@ func _location(spot: Dictionary) -> Dictionary:
 	var y: float = spot["y"]
 	var z: float = spot["z"]
 	if contact >= 0:
-		return {"contact": contact, "site": -1, "x": 0.0, "y": 0.0, "z": 0.0}
+		# Attached to a contact, or to one of its scanned subsystems (FT-SPA-014, D202):
+		# `sub` is the ShipDef.subsystems index and (x, y, z) its place in the contact's
+		# frame, filled in by the caller; a plain contact mark has none.
+		var off: Vector3 = spot.get("off", Vector3.ZERO)
+		var sub: int = spot.get("sub", -1)
+		return {"contact": contact, "site": -1, "x": off.x, "y": off.y, "z": off.z, "sub": sub}
 	if contact != -1 or site < 0 or not (is_finite(x) and is_finite(y) and is_finite(z)):
 		return {}
-	return {"contact": -1, "site": site, "x": x, "y": y, "z": z}
+	return {"contact": -1, "site": site, "x": x, "y": y, "z": z, "sub": -1}
 
 
 ## The name trimmed, without control or bidi characters (a name can't reorder or hide

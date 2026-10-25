@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="HazardDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/hazard_def.gd" id="1_hazard"]
+
+[resource]
+script = ExtResource("1_hazard")
+id = &"p11_radiation_wave"
+kind = 1
+shape = 1
+center = Vector3(0, 0, -12000)
+direction = Vector3(0, 0, 1)
+speed = 200.0
+hit_j = 8000000.0
+targets = Array[StringName]([&"sensors", &"shields"])
+detect_range = 1000.0

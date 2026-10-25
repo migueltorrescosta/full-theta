@@ -5,7 +5,9 @@ extends Control
 ## the rim, each item a blip with a stem to the disc (solid above, hollow below), a
 ## range ring through the selected item's stem foot, an optional elevation side strip,
 ## fixed range steps with beyond-scale arrows on the rim, the selected stem drawn on
-## top, marks as diamonds with stems, contact chips (ChipText) and ping pulses. Ship
+## top, marks as diamonds with stems, hazard zones and scan positions as octagons, the
+## site's name as a banner (SiteBanner, FT-SPA-027), contact chips (ChipText) and ping
+## pulses. Ship
 ## frame always; optionally centred on a selected mark, site or contact while keeping
 ## the ship's axes (no world-fixed up, D124). Drawn in 2D with a fixed or orbitable
 ## camera angle (FT-SPA-011). Mouse: wheel zooms, a click on the range label steps the
@@ -45,6 +47,9 @@ var tilt_deg: float = 35.0
 var yaw_deg: float = 0.0
 ## Draw chips next to contacts (off on small insets).
 var chips: bool = true
+## Contact id -> blip size factor (Science's detection confidence, FT-SCI-001); a contact
+## not listed draws at the usual size.
+var blip_scale: Dictionary = {}
 
 var _orbiting: bool = false
 
@@ -72,14 +77,17 @@ func toggle_strip() -> void:
 
 
 ## The item drawn under local_pos ({"kind", "id"}), or {}: the selected item first,
-## then the nearest blip or mark within HIT_PX, then a chip under the pointer.
-func item_at(local_pos: Vector2) -> Dictionary:
+## then the nearest blip or mark within `reach` px (HIT_PX; a controller cursor snaps
+## from farther), then a chip under the pointer.
+func item_at(local_pos: Vector2, reach: float = HIT_PX) -> Dictionary:
+	if SiteBanner.rect(get_theme_default_font(), picture.site).has_point(local_pos):
+		return _ref(picture.site)
 	var layout: Array[Dictionary] = _layout()
 	for e: Dictionary in layout:
 		if _is_selected(e["item"]) and _hits(e, local_pos):
 			return _ref(e["item"])
 	var best: Dictionary = {}
-	var best_d: float = HIT_PX
+	var best_d: float = reach
 	for e: Dictionary in layout:
 		var d: float = (e["pos"] as Vector2).distance_to(local_pos)
 		if d <= best_d:
@@ -193,6 +201,7 @@ func _draw() -> void:
 	draw_rect(label, Palette.color("panel_focus"))
 	draw_rect(label, Palette.color("line"), false, 1.0)
 	_draw_text(font, label.grow(-4.0), _range_text(), Palette.color("text"))
+	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
 	if side_strip:
 		_draw_strip(font)
 
@@ -253,12 +262,24 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		var stem: Color = Palette.color("selected") if is_sel else col * Color(1, 1, 1, 0.7)
 		draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
 		draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
-		_draw_shape(Palette.shape_points(Palette.item_shape(it), pos, BLIP_R), col, solid)
+		var radius: float = (
+			BLIP_R * float(blip_scale.get(it["id"], 1.0)) if it["kind"] == "contact" else BLIP_R
+		)
+		_draw_shape(Palette.shape_points(Palette.item_shape(it), pos, radius), col, solid)
+	if it.get("zone", "") == "probe" and not e["beyond"]:
+		# The probe's coverage bubble, as a ring in the disc plane.
+		var ring: PackedVector2Array = PackedVector2Array()
+		for i: int in 65:
+			var a: float = TAU * float(i % 64) / 64.0
+			ring.append(
+				_screen((e["rel"] as Vector3) + Vector3(cos(a), 0.0, sin(a)) * float(it["radius"]))
+			)
+		draw_polyline(ring, col * Color(1, 1, 1, 0.5), 1.0, true)
 	if is_sel:
 		draw_rect(
 			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5
 		)
-	_draw_pulse(pos, float(it.get("pulse", 0.0)))
+	_draw_pulse(pos, float(it.get("pulse", 0.0)), it.get("copies", []))
 
 
 func _draw_shape(pts: PackedVector2Array, col: Color, solid: bool) -> void:
@@ -270,12 +291,22 @@ func _draw_shape(pts: PackedVector2Array, col: Color, solid: bool) -> void:
 
 
 ## FT-SPA-016: a ring that grows and fades as the ping's pulse runs out.
-func _draw_pulse(pos: Vector2, pulse: float) -> void:
+func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 	if pulse <= 0.0:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
 	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	_draw_copies(pos, col, copies)
+
+
+## FT-SPA-031: "+ Bo, Cy" under a pulse names the stations that copied the ping.
+func _draw_copies(pos: Vector2, col: Color, copies: Array) -> void:
+	if copies.is_empty():
+		return
+	var font: Font = get_theme_default_font()
+	var text: String = "+ " + ", ".join(PackedStringArray(copies))
+	Palette.draw_outlined(self, font, pos + Vector2(-8.0, 26.0), text, FONT_SIZE, col)
 
 
 ## FT-SPA-009: elevation -90..+90 of every item from the own ship, one tick each.
@@ -356,7 +387,33 @@ func _layout() -> Array[Dictionary]:
 				}
 			)
 		)
+	_declutter(out)
 	return out
+
+
+## Moves overlapping chips apart: top to bottom, a chip that overlaps one already placed
+## drops below it, so close blips don't print their callsigns over each other.
+static func _declutter(entries: Array[Dictionary]) -> void:
+	var order: Array[Dictionary] = entries.filter(
+		func(e: Dictionary) -> bool: return e["chip"] != ""
+	)
+	order.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			return (a["chip_rect"] as Rect2).position.y < (b["chip_rect"] as Rect2).position.y
+	)
+	var placed: Array[Rect2] = []
+	for e: Dictionary in order:
+		var r: Rect2 = e["chip_rect"]
+		for _pass: int in order.size():
+			var hit: bool = false
+			for o: Rect2 in placed:
+				if o.intersects(r):
+					r.position.y = o.end.y
+					hit = true
+			if not hit:
+				break
+		e["chip_rect"] = r
+		placed.append(r)
 
 
 ## Screen position of a ship-frame offset from the centre item (m).

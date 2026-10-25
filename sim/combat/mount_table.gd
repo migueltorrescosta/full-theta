@@ -23,6 +23,17 @@ var ammo: PackedInt32Array = PackedInt32Array()
 var heat: PackedFloat64Array = PackedFloat64Array()
 ## 1 when a FireCommand asked for a shot this tick.
 var fire_requested: PackedByteArray = PackedByteArray()
+## Selected ammunition type: 0 is MountDef.weapon, i is alt_weapons[i - 1] (FT-WPN-006).
+var ammo_type: PackedInt32Array = PackedInt32Array()
+## Rounds of each ammunition type, by type index. The selected type's entry is stale:
+## `ammo` is its count while it is selected (SetAmmoTypeCommand swaps them).
+var type_ammo: Array[PackedInt32Array] = []
+## 1 while an overheated mount is locked: set when a shot of a beam takes heat to its
+## limit, cleared when heat falls to WeaponDef.overheat_release of it (P6).
+var locked: PackedByteArray = PackedByteArray()
+## Guided shot requested with fire_requested: the tracked contact to follow (ship id) or
+## -1 (FT-WPN-008).
+var guide_target: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
@@ -39,6 +50,13 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 		ammo.append(mount.weapon.ammo_capacity)
 		heat.append(0.0)
 		fire_requested.append(0)
+		ammo_type.append(0)
+		var stock: PackedInt32Array = PackedInt32Array()
+		for w: WeaponDef in mount.ammo_types():
+			stock.append(w.ammo_capacity)
+		type_ammo.append(stock)
+		locked.append(0)
+		guide_target.append(-1)
 
 
 ## Row of the ship's mount, or -1 if the ship has no such mount.
@@ -66,5 +84,9 @@ func columns() -> Array:
 			["ammo", ammo],
 			["heat", heat],
 			["fire_requested", fire_requested],
+			["ammo_type", ammo_type],
+			["type_ammo", type_ammo],
+			["locked", locked],
+			["guide_target", guide_target],
 		]
 	)

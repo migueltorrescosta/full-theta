@@ -1,0 +1,95 @@
+[gd_resource type="Resource" script_class="ScienceDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/science_def.gd" id="1_sci"]
+[ext_resource type="Script" path="res://content/defs/hack_effect_def.gd" id="2_eff"]
+
+[sub_resource type="Resource" id="Resource_weapons"]
+script = ExtResource("2_eff")
+id = &"jam_weapons"
+subsystem_kind = 2
+factor = 0.0
+window_s = 10.0
+
+[sub_resource type="Resource" id="Resource_engines"]
+script = ExtResource("2_eff")
+id = &"throttle_engines"
+subsystem_kind = 0
+factor = 0.25
+window_s = 12.0
+
+[sub_resource type="Resource" id="Resource_thrusters"]
+script = ExtResource("2_eff")
+id = &"seize_thrusters"
+subsystem_kind = 1
+factor = 0.25
+window_s = 10.0
+
+[sub_resource type="Resource" id="Resource_shields"]
+script = ExtResource("2_eff")
+id = &"drop_shields"
+subsystem_kind = 3
+factor = 0.0
+window_s = 8.0
+
+[sub_resource type="Resource" id="Resource_sensors"]
+script = ExtResource("2_eff")
+id = &"blind_sensors"
+subsystem_kind = 4
+factor = 0.0
+window_s = 10.0
+
+[sub_resource type="Resource" id="Resource_reactor"]
+script = ExtResource("2_eff")
+id = &"choke_reactor"
+subsystem_kind = 5
+factor = 0.5
+window_s = 8.0
+
+[resource]
+script = ExtResource("1_sci")
+id = &"science"
+noise_base = 0.05
+range_ref = 20000.0
+range_weight = 0.45
+aspect_weight = 0.2
+health_weight = 0.3
+pip_gain = 0.12
+active_factor = 0.8
+ping_factor = 0.7
+probe_factor = 0.6
+mark_factor = 0.6
+mark_radius = 600.0
+mark_distance = 3000.0
+ping_duration_s = 8.0
+ping_cooldown_s = 15.0
+scan_range_factor = 1.0
+nominal_noise = 0.33
+axes_noise_steps = PackedFloat64Array(0.25, 0.5)
+pre_aligned_axes = 2
+wire_vertices = 9
+clutter_max = 12
+sigma_max = 0.12
+min_angle = 0.8
+quality_span = 0.6
+lock_threshold = 0.85
+lock_bonus = 0.1
+noise_penalty = 0.25
+full_scan_conf = 0.9
+scan_cap_s = 60.0
+self_scan_s = 6.0
+reveal_class = 0.15
+reveal_identity = 0.3
+reveal_intent = 0.45
+reveal_weak_points = 0.6
+reveal_resistances = 0.75
+reveal_hack = 0.4
+hack_cols = 5
+hack_rows = 3
+edge_density = 0.35
+hidden_fraction = 0.25
+probe_reveal = 0.5
+trace_rate = 0.03
+trace_per_move = 0.03
+trace_noise_gain = 0.8
+probe_trace_factor = 0.6
+effects = Array[ExtResource("2_eff")]([SubResource("Resource_engines"), SubResource("Resource_thrusters"), SubResource("Resource_weapons"), SubResource("Resource_shields"), SubResource("Resource_sensors"), SubResource("Resource_reactor")])

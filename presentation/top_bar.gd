@@ -20,24 +20,42 @@ var can_set_alert: bool = false:
 ## Palette.alert() of the level shown: role, letter, shape, key.
 var alert_style: Dictionary = Palette.alert(0)
 var chip: Button = Button.new()
+var sound: SoundToggle = SoundToggle.new()
 var picker: PopupPanel = PopupPanel.new()
 
+var _row: HBoxContainer
+## The phone's second row: hull, shields and reactor (set_compact).
+var _row2: HBoxContainer = HBoxContainer.new()
+var _compact: bool = false
+## Every control of the row in order, to put them back after the compact row.
+var _order: Array[Control] = []
 var _name: Label = Label.new()
 var _hull: Label = Label.new()
 var _shields: Label = Label.new()
 var _pips: Label = Label.new()
 var _stations: Label = Label.new()
 var _timer: Label = Label.new()
+## The shape beside a banded hull, shields and reactor (BandBadge), by status key.
+var _badges: Dictionary = {}
 ## What show_state last showed, to skip unchanged frames.
 var _shown: Array = []
 
 
 func _init() -> void:
 	custom_minimum_size = Vector2(0.0, HEIGHT)
+	var rows: VBoxContainer = VBoxContainer.new()
+	rows.set_anchors_and_offsets_preset(PRESET_FULL_RECT, PRESET_MODE_MINSIZE, 8)
+	rows.add_theme_constant_override("separation", 0)
+	add_child(rows)
 	var row: HBoxContainer = HBoxContainer.new()
-	row.set_anchors_and_offsets_preset(PRESET_FULL_RECT, PRESET_MODE_MINSIZE, 8)
 	row.add_theme_constant_override("separation", 18)
-	add_child(row)
+	row.size_flags_vertical = SIZE_EXPAND_FILL
+	rows.add_child(row)
+	_row = row
+	_row2.add_theme_constant_override("separation", 12)
+	_row2.size_flags_vertical = SIZE_EXPAND_FILL
+	_row2.visible = false
+	rows.add_child(_row2)
 	_name.add_theme_color_override("font_color", Palette.color("text"))
 	chip.flat = true
 	chip.custom_minimum_size = Vector2(0.0, HEIGHT - 8.0)
@@ -46,9 +64,18 @@ func _init() -> void:
 	chip.draw.connect(_draw_chip)
 	var spacer: Control = Control.new()
 	spacer.size_flags_horizontal = SIZE_EXPAND_FILL
-	for c: Control in [_name, _hull, _shields, _pips, chip, _stations, spacer, _timer]:
+	var keyed: Dictionary = {_hull: "hull", _shields: "shields", _pips: "pips_used"}
+	for c: Control in [_name, _hull, _shields, _pips, chip, _stations, spacer, _timer, sound]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
 		row.add_child(c)
+		_order.append(c)
+		if keyed.has(c):
+			var badge: BandBadge = BandBadge.new()
+			badge.visible = false
+			badge.size_flags_vertical = SIZE_SHRINK_CENTER
+			_badges[keyed[c]] = badge
+			row.add_child(badge)
+			_order.append(badge)
 	for l: Label in [_hull, _shields, _pips, _stations, _timer]:
 		l.add_theme_color_override("font_color", Palette.color("text_dim"))
 	var buttons: HBoxContainer = HBoxContainer.new()
@@ -64,6 +91,36 @@ func _init() -> void:
 	can_set_alert = false
 
 
+## The phone's top bar (D195): hull, shields and reactor move to a second row, and the
+## chip and sound button are `height` tall (a tap target). `height` is one row's.
+func set_compact(compact: bool, height: float = HEIGHT, small: bool = false) -> void:
+	chip.custom_minimum_size = Vector2(0.0, height - 8.0)
+	sound.custom_minimum_size = Vector2(0.0, height - 8.0) if height > HEIGHT else Vector2.ZERO
+	_row.add_theme_constant_override("separation", 10 if compact else 18)
+	# A phone's bar reads at 13 px so a row holds its labels.
+	_stations.visible = not small
+	for l: Label in [_name, _hull, _shields, _pips, _stations, _timer]:
+		if small:
+			l.add_theme_font_size_override("font_size", 13)
+		else:
+			l.remove_theme_font_size_override("font_size")
+	if compact == _compact:
+		return
+	_compact = compact
+	_row2.visible = compact
+	var second: Array[Control] = []
+	for c: Control in _order:
+		if c == _hull or c == _shields or c == _pips or c in _badges.values():
+			second.append(c)
+	for c: Control in _order:
+		var target: HBoxContainer = _row2 if compact and c in second else _row
+		if c.get_parent() != target:
+			c.reparent(target, false)
+	for i: int in _order.size():
+		var c: Control = _order[i]
+		c.get_parent().move_child(c, -1)
+
+
 ## Refreshes every field, unless nothing shown changed. status: the STATUS block ({}
 ## before the first snapshot); stations: functional station ids (translated as
 ## "station.<id>"); in a joint view the focused one is starred (§5.9 wireframes:
@@ -74,12 +131,16 @@ func show_state(
 	alert: int,
 	stations: Array,
 	mission_s: float,
-	focused: String = ""
+	focused: String = "",
+	maxes: Dictionary = {},
+	summaries: Dictionary = {}
 ) -> void:
-	var hull: String = _num(status, "hull")
-	var shields: String = _num(status, "shields")
-	var pips: String = _num(status, "pips_used")
+	var hull: String = _text(status, "hull", summaries, float(maxes.get("hull", 0.0)))
+	var shields: String = _text(status, "shields", summaries, float(maxes.get("shields", 0.0)))
+	var pips: String = _text(status, "pips_used", summaries)
 	var state: Array = [ship_name, hull, shields, pips, alert, stations.duplicate()]
+	for key: String in _badges:
+		state.append(summaries.get(key, {}).get("band", -1))
 	state.append_array([int(mission_s), focused])
 	if state == _shown:
 		return
@@ -88,6 +149,11 @@ func show_state(
 	_hull.text = tr("topbar.hull") % hull
 	_shields.text = tr("topbar.shields") % shields
 	_pips.text = tr("topbar.reactor") % pips
+	for key: String in _badges:
+		var band: int = summaries.get(key, {}).get("band", -1)
+		(_badges[key] as BandBadge).visible = band >= 0
+		if band >= 0:
+			(_badges[key] as BandBadge).set_band(band as HealthBand.Band)
 	alert_style = Palette.alert(alert)
 	chip.text = "       " + tr(alert_style["key"])
 	chip.add_theme_color_override("font_color", Palette.color(alert_style["role"]))
@@ -135,6 +201,37 @@ func _draw_chip() -> void:
 func _pick(level: int) -> void:
 	picker.hide()
 	alert_picked.emit(level)
+
+
+## Hull and shields are energies in joules (about 10^8): as a percentage of the ship's
+## maximum when `max_value` is known (the spec's "hull 92"), else with a k, M or G suffix
+## so the bar never shows "Hull 100000000".
+static func _amount(status: Dictionary, key: String, max_value: float) -> String:
+	if not status.has(key):
+		return "-"
+	var v: float = float(status[key])
+	if max_value > 0.0:
+		return "%d%%" % roundi(100.0 * v / max_value)
+	if absf(v) >= 1.0e9:
+		return "%dG" % roundi(v / 1.0e9)
+	if absf(v) >= 1.0e6:
+		return "%dM" % roundi(v / 1.0e6)
+	if absf(v) >= 1.0e4:
+		return "%dk" % roundi(v / 1.0e3)
+	return str(roundi(v))
+
+
+## A status number, or what a summary replaces it with (the band's word, or a dash). Without
+## a summary the value is exact (Captain, Viewer, or the toggle on): an energy for a
+## `max_value` of 0 or more (a share of it when above 0), else a plain number.
+static func _text(
+	status: Dictionary, key: String, summaries: Dictionary, max_value: float = -1.0
+) -> String:
+	if summaries.has(key):
+		return str(summaries[key]["text"])
+	if max_value >= 0.0:
+		return _amount(status, key, max_value)
+	return _num(status, key)
 
 
 static func _num(status: Dictionary, key: String) -> String:

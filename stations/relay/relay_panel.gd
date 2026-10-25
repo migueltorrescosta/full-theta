@@ -1,8 +1,12 @@
 class_name RelayPanel
 extends StationPanel
-## Relay in M1 (T054, §5.5): the map read-out (RelayMap) and the marks it curates
-## (FT-RLY-001 to FT-RLY-003, FT-SPA-006, FT-M1-017). Probes, routes, lanes, the inbox
-## and the main-screen view switch come with #9 and #10.
+## Relay (T054, §5.5, E02): the map read-out (RelayMap), the marks it curates (FT-RLY-001
+## to FT-RLY-003, FT-SPA-006, FT-M1-017), probes (P launches one to the selection, else
+## arms the next click; H the same for a hazard zone), routes (G adds the selection as a
+## waypoint, Shift+G clears), lane flagging (L), and the HUD around the map (RelayHud):
+## probes, contacts, marks, the ship's log and the inbox of marks other ships sent
+## (Enter accepts and Backspace declines the oldest, X sends the selected mark to the
+## ship chosen beside SEND). The main-screen view switch comes with the Captain (F).
 ##
 ## KB/M: drag on empty map places a mark on the view plane through the map centre
 ## (FT-RLY-002); drag a mark to move it, drop it on a contact to attach it; hold Shift
@@ -14,14 +18,21 @@ extends StationPanel
 ## Controller: the left stick moves a cursor, the triggers its depth, the right stick
 ## turns the map; A, R3 and hold R3 select, ping and mark at the cursor (§5.0).
 
+## Under this width (a phone, D195) the HUD stacks around the map.
+const NARROW_W: float = 560.0
 ## A press that moves less than this is a click (select), not a drag (px).
 const DRAG_PX: float = 6.0
 ## Controller cursor speed (px/s), depth speed (map spans/s), turn speed (px-equivalent/s).
 const PAD_CURSOR_PX_S: float = 420.0
 const PAD_DEPTH_SPANS_S: float = 0.5
 const PAD_TURN_PX_S: float = 160.0
+## A new hazard zone's radius (m). PROVISIONAL.
+const HAZARD_RADIUS_M: float = 2000.0
 
 var map: RelayMap
+var hud: RelayHud
+## What the next click on the map places: "" (a mark), "probe" or "hazard".
+var armed: String = ""
 var _hint: Label
 var _rename: LineEdit
 ## The drag in progress: {"slot" (-1 places a new mark), "start", "plane" (px), "depth"
@@ -44,13 +55,22 @@ func _setup() -> void:
 	_hint.add_theme_color_override("font_color", Palette.color("text_dim"))
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	_hint.offset_left = 90.0
+	_hint.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	_hint.offset_left = 260.0
 	_hint.offset_right = -8.0
-	_hint.offset_bottom = -6.0
-	_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_hint.offset_top = 8.0
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_hint)
+	hud = RelayHud.new()
+	add_child(hud)
+	hud.setup(ctx)
+	resized.connect(func() -> void: hud.set_narrow(size.x < NARROW_W))
+	hud.launch_pressed.connect(func() -> void: _arm("probe"))
+	hud.hazard_pressed.connect(func() -> void: _arm("hazard"))
+	hud.lanes_pressed.connect(_toggle_lanes)
+	hud.accept_pressed.connect(_accept)
+	hud.decline_pressed.connect(func(id: int) -> void: ctx.intents.decline_mark(id))
+	hud.send_pressed.connect(_send_selected)
 	_rename = LineEdit.new()
 	_rename.name = "Rename"
 	_rename.visible = false
@@ -65,6 +85,7 @@ func _setup() -> void:
 func _mode_changed() -> void:
 	map.chips = not docked
 	_hint.visible = not docked
+	hud.set_docked(docked)
 
 
 func _process(delta: float) -> void:
@@ -84,27 +105,74 @@ func refresh() -> void:
 	if _cursor.x < 0.0 and size.x > 0.0:
 		_cursor = size / 2.0
 	map.cursor = _cursor
+	var blk: Dictionary = ctx.view.blocks.get(StationViews.Section.RELAY, {})
+	map.probes = blk.get("probes", [])
+	map.lanes_on = bool(blk.get("lanes", false))
+	map.routes = ctx.crew.routes
 	map.queue_redraw()
+	hud.refresh()
+	_hint.text = tr("relay.armed_" + armed) if armed != "" else tr("relay.hint")
 
 
 func handle_intent(ev: Dictionary) -> bool:
 	if not bool(ev.get("pressed", true)):
 		return false
+	var handled: bool = true
 	match str(ev["id"]):
 		"mark_delete":
 			var slot: int = _selected_mark()
 			if slot < 0:
-				return false
-			ctx.intents.delete_mark(slot)
+				handled = _delete_zone()
+			else:
+				ctx.intents.delete_mark(slot)
 		"mark_rename":
-			return _start_rename()
+			handled = _start_rename()
 		"mark_attach":
-			return _toggle_attach()
+			handled = _toggle_attach()
 		"map_centre":
 			_centred = not _centred and not ctx.crew.selection.is_empty()
 			refresh()
+		"probe_launch":
+			_to_selection_or_arm("probe")
+		"hazard_add":
+			_to_selection_or_arm("hazard")
+		"route":
+			handled = _route_to_selection()
+		"route_clear":
+			ctx.intents.route_clear(0)
+		"flag_lanes":
+			_toggle_lanes()
+		"mark_send":
+			handled = _send_selected(hud.send_target())
+		"accept", "decline":
+			handled = _answer_oldest(str(ev["id"]) == "accept")
 		_:
-			return false
+			handled = _main_view(str(ev["id"]))
+	return handled
+
+
+## Alt+1 to Alt+5: Relay switches the main screen's view while no Captain is seated
+## (FT-RLY-010, D88); with one the server would refuse, so say so instead.
+func _main_view(id: String) -> bool:
+	var n: String = id.trim_prefix("main_view_")
+	if n == id or not n.is_valid_int():
+		return false
+	if not ctx.crew.may_switch_main_view():
+		ctx.crew.toast.emit("toast.captain_seated", {})
+		return true
+	ctx.intents.set_main_view(n.to_int() - 1)
+	return true
+
+
+## Accepts or declines the oldest mark in the inbox (Enter / Backspace, X / Y).
+func _answer_oldest(accept: bool) -> bool:
+	if ctx.crew.inbox.is_empty():
+		return false
+	var id: int = ctx.crew.inbox[0]["id"]
+	if accept:
+		_accept(id)
+	else:
+		ctx.intents.decline_mark(id)
 	return true
 
 
@@ -130,6 +198,111 @@ func replace_mark(item: Dictionary) -> bool:
 		return false
 	ctx.mark_item(slot, item)
 	return true
+
+
+## The claim K takes or releases: the probe launcher (a second Relay seat waits for it).
+func claim_item() -> String:
+	return StationViews.CLAIM_PROBE
+
+
+## P and H: with something selected the probe or hazard goes to it; else the next click on
+## the map places it (the same key again lets go).
+func _to_selection_or_arm(what: String) -> void:
+	var at: Variant = _selection_pos()
+	if at == null:
+		_arm(what)
+	else:
+		_place(what, at)
+
+
+## Arms what the next click places; the same again disarms.
+func _arm(what: String) -> void:
+	armed = "" if armed == what else what
+	refresh()
+
+
+## Sends a probe or a hazard zone to a site-local point (m).
+func _place(what: String, at: Vector3) -> void:
+	if what == "probe":
+		var blk: Dictionary = ctx.view.blocks.get(StationViews.Section.RELAY, {})
+		if int(blk.get("stock", 1)) <= 0:
+			ctx.crew.toast.emit("toast.relay_no_probes", {})
+			return
+		ctx.intents.command({"kind": "launch_probe", "x": at.x, "y": at.y, "z": at.z})
+	else:
+		ctx.intents.hazard_add(HAZARD_RADIUS_M, ctx.site(), at)
+
+
+## G: the selection becomes the next waypoint of route 1 (FT-RLY-005).
+func _route_to_selection() -> bool:
+	var at: Variant = _selection_pos()
+	if at == null:
+		ctx.crew.toast.emit("toast.select_first", {})
+		return false
+	ctx.intents.route_add(0, ctx.site(), at)
+	return true
+
+
+func _toggle_lanes() -> void:
+	var blk: Dictionary = ctx.view.blocks.get(StationViews.Section.RELAY, {})
+	ctx.intents.command({"kind": "flag_lanes", "on": not bool(blk.get("lanes", false))})
+
+
+## Accepts an inbox mark; with all 8 used it replaces the selected mark, else the toast
+## (FT-SPA-022, D182).
+func _accept(id: int) -> void:
+	var slot: int = -1
+	if ctx.crew.marks.size() >= CrewState.MAX_MARKS:
+		slot = _selected_mark()
+		if slot < 0:
+			ctx.crew.toast.emit("toast.relay_marks_full", {})
+			return
+	ctx.intents.accept_mark(id, slot)
+
+
+## Sends the selected mark to an allied ship's Relay (FT-RLY-008).
+func _send_selected(ship: int) -> bool:
+	var slot: int = _selected_mark()
+	if slot < 0:
+		ctx.crew.toast.emit("toast.select_first", {})
+		return false
+	if ship < 0:
+		return false
+	ctx.intents.send_mark(slot, ship)
+	return true
+
+
+## Delete with a hazard zone selected removes it (scan positions stay Science's).
+func _delete_zone() -> bool:
+	var s: Dictionary = ctx.crew.selection
+	if s.get("kind", "") != "zone":
+		return false
+	if ctx.crew.zone_by_id(int(s["id"])).get("kind", "") != "hazard":
+		return false
+	ctx.intents.hazard_delete(int(s["id"]))
+	return true
+
+
+## The site-local position (m) of the shared selection, or null.
+func _selection_pos() -> Variant:
+	return _item_pos(ctx.crew.selection)
+
+
+## The site-local position (m) of an item ({"kind", "id"}), or null.
+func _item_pos(s: Dictionary) -> Variant:
+	match s.get("kind", ""):
+		"contact":
+			if int(s["id"]) in ctx.interp.contact_ids():
+				return ctx.interp.contact_position(int(s["id"]))
+		"mark":
+			var m: Dictionary = ctx.crew.mark_in_slot(int(s["id"]))
+			if not m.is_empty():
+				return ctx.mark_position(m)
+		"zone":
+			return ctx.zone_position(int(s["id"]))
+		"site":
+			return Vector3.ZERO
+	return null
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -169,7 +342,16 @@ func _on_button(mb: InputEventMouseButton) -> void:
 			if mb.pressed:
 				refresh()
 				var hit: Dictionary = map.item_at(mb.position)
-				if hit.is_empty() or hit["kind"] == "mark":
+				if armed != "":
+					# Armed: this click (or drag, Shift for depth) places the probe or hazard.
+					_drag = {
+						"slot": -2,
+						"start": mb.position,
+						"plane": mb.position,
+						"depth": 0.0,
+						"moved": false
+					}
+				elif hit.is_empty() or hit["kind"] == "mark":
 					var slot: int = int(hit["id"]) if not hit.is_empty() else -1
 					_drag = {
 						"slot": slot,
@@ -179,7 +361,7 @@ func _on_button(mb: InputEventMouseButton) -> void:
 						"moved": false
 					}
 			else:
-				if not _drag.is_empty() and _drag["moved"]:
+				if not _drag.is_empty() and (_drag["moved"] or _drag["slot"] == -2):
 					_drop()
 				_drag = {}
 				map.preview = {}
@@ -203,6 +385,11 @@ func _drop() -> void:
 	var slot: int = _drag["slot"]
 	var depth: float = _drag["depth"]
 	var on: Dictionary = map.item_at(_drag["plane"]) if depth == 0.0 else {}
+	if slot == -2:
+		var at: Variant = _item_pos(on) if on.get("kind", "") != "site" else null
+		_place(armed, at if at != null else map.site_position(map.unproject(_drag["plane"], depth)))
+		armed = ""
+		return
 	var item: Dictionary = (
 		on if on.get("kind", "") == "contact" else _point(map.unproject(_drag["plane"], depth))
 	)

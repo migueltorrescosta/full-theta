@@ -85,7 +85,17 @@ static func step(world: SimWorld) -> void:
 			var done: bool = (
 				not targeted
 				or (
-					_align_error(kin, row, helm.align[row], offset) < ALIGN_DONE
+					(
+						_align_error(
+							kin,
+							row,
+							helm.align[row],
+							offset,
+							helm.align_bow[row],
+							helm.align_mount[row] == 1
+						)
+						< ALIGN_DONE
+					)
 					and w.length() < ALIGN_SETTLED_RATE
 				)
 			)
@@ -125,7 +135,15 @@ static func step(world: SimWorld) -> void:
 			w_des.z = rot_in.z * rates.z
 			rate_hold = true
 		elif targeted and helm.align[row] != HelmTable.Align.OFF:
-			w_des = _align_rate(kin, row, helm.align[row], tuning, offset)
+			w_des = _align_rate(
+				kin,
+				row,
+				helm.align[row],
+				tuning,
+				offset,
+				helm.align_bow[row],
+				helm.align_mount[row] == 1
+			)
 			rate_hold = true
 		var torque: Vector3
 		if rate_hold:
@@ -226,7 +244,16 @@ static func align_roll_error(local: Vector3) -> float:
 
 
 ## Angle (rad) still to go for an Align stage, for a target at site-frame offset `offset`.
-static func _align_error(kin: Kinematics, row: int, stage: int, offset: Vector3) -> float:
+static func _align_error(
+	kin: Kinematics,
+	row: int,
+	stage: int,
+	offset: Vector3,
+	bow: Vector3 = Vector3.FORWARD,
+	mount: bool = false
+) -> float:
+	if mount:
+		return kin.to_world(row, bow).angle_to(offset)
 	var err: float = absf(align_roll_error(kin.to_local(row, offset)))
 	if stage == HelmTable.Align.ROLL_AND_FACE:
 		err += kin.forward(row).angle_to(offset)
@@ -261,26 +288,48 @@ static func _face_rate_at(
 	limit: Vector3,
 	cap: float,
 	direction: Vector3,
-	tuning: AssistDef
+	tuning: AssistDef,
+	bow: Vector3 = Vector3.FORWARD
 ) -> Vector3:
 	if direction.length_squared() < 1e-6:
 		return Vector3.ZERO
 	var d: Vector3 = (rot.inverse() * direction).normalized()
-	var angle: float = Vector3.FORWARD.angle_to(d)
-	var axis: Vector3 = Vector3.FORWARD.cross(d)
+	var angle: float = bow.angle_to(d)
+	var axis: Vector3 = bow.cross(d)
 	if axis.length_squared() < 1e-12:
 		# Dead ahead, or dead astern: pitch over.
-		axis = Vector3.RIGHT if angle > 1.0 else Vector3.ZERO
+		axis = (
+			(Vector3.RIGHT if bow == Vector3.FORWARD else bow.cross(Vector3.UP))
+			if angle > 1.0
+			else Vector3.ZERO
+		)
 	axis = axis.normalized()
 	var alpha: float = minf(limit.x / inertia.x, limit.y / inertia.y)
 	return axis * _profile(angle, alpha, cap, tuning)
 
 
 ## Align (FT-HLM-007, D124): roll the selected target to 12 o'clock; at ROLL_AND_FACE
-## also turn the bow onto it. offset is the target's site-frame offset.
+## also turn the bow onto it. offset is the target's site-frame offset. With `bow` a mount's
+## rest direction (FT-JNT-005) there is no roll: that direction is turned onto the target.
 static func _align_rate(
-	kin: Kinematics, row: int, stage: int, tuning: AssistDef, offset: Vector3
+	kin: Kinematics,
+	row: int,
+	stage: int,
+	tuning: AssistDef,
+	offset: Vector3,
+	bow: Vector3 = Vector3.FORWARD,
+	mount: bool = false
 ) -> Vector3:
+	if mount:
+		return _face_rate_at(
+			kin.rot[row],
+			kin.inertia[row],
+			kin.torque_limit(row),
+			turn_rate_caps(kin, row, tuning).x,
+			offset,
+			tuning,
+			bow
+		)
 	var w: Vector3 = Vector3.ZERO
 	if stage == HelmTable.Align.ROLL_AND_FACE:
 		w = _face_rate(kin, row, offset, tuning)

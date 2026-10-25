@@ -354,4 +354,5 @@ static func _projectile_hit(world: SimWorld, k: int, target: int, start: Vector3
 	hit.point_local = kin.to_local(target, start + rel_vel * (SimWorld.DT * t))
 	hit.from_local = kin.to_local(target, -rel_vel).normalized()
 	hit.energy = proj.energy[k]
+	hit.damage_type = proj.damage_type[k]
 	world.hits.append(hit)

@@ -202,8 +202,10 @@ func test_rejoined_client_converges_within_one_snapshot() -> void:
 func _model(world: SimWorld) -> Dictionary:
 	var kin: KinSection = KinSection.new(StationViews.Section.KIN, PLAYER)
 	var blocks: Dictionary = {}
+	# The dev entry holds every station, not the Captain's or the main screen's block.
 	for kind: int in StationViews.BLOCKS:
-		blocks[kind] = StationViews.block_bytes(kind, world, PLAYER)
+		if StationViews.sections_of(StationViews.ALL).has(kind):
+			blocks[kind] = StationViews.block_bytes(kind, world, PLAYER)
 	var contacts: Dictionary = {}
 	for id: int in ContactsSection.known(world, world.faction_of(PLAYER)):
 		var p: PackedFloat64Array = world.kin.point_at(id, Vector3.ZERO)

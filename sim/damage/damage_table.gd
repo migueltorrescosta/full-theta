@@ -30,6 +30,22 @@ var heat: PackedFloat64Array = PackedFloat64Array()
 ## 1 while a heat fault may fire on the subsystem; 0 after one fired, until the heat
 ## falls back below PowerSystem.FAULT_REARM of the threshold.
 var fault_armed: PackedByteArray = PackedByteArray()
+## Unknown-cause fault on a subsystem row (FT-SIM-025, P10): the true cause (an id from
+## SubsystemDef.fault_causes), or &"" for none. Hidden from stations until revealed.
+var fault_cause: Array[StringName] = []
+## 1 once Science's own-ship scan revealed the cause (DamageSystem.reveal_fault_cause).
+var fault_known: PackedByteArray = PackedByteArray()
+## The cause Engineering chose for the repair (a cause id), or &"" for none: the right
+## one repairs at full rate, anything else at the brute-force rate.
+var fault_pick: Array[StringName] = []
+## Ticks of hardening left on a subsystem row (FT-ENG-008); 0 when not hardened.
+var hardened_ticks: PackedInt32Array = PackedInt32Array()
+
+## Derived cache, not state: per row, the product of the open hack windows' effectiveness
+## factors (1 with none), written by ScienceSystem.step from HackTable (FT-SCI-008, P7).
+var hack_scale: PackedFloat64Array = PackedFloat64Array()
+## Derived: hack_scale may hold a factor other than 1, so step() must rewrite it.
+var hack_dirty: bool = false
 
 ## Derived index, not state: first (hull) row by ship id, set at spawn (rows never move).
 var _first: PackedInt32Array = PackedInt32Array()
@@ -51,8 +67,13 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	pips.append(0)
 	heat.append(0.0)
 	fault_armed.append(0)
+	fault_cause.append(&"")
+	fault_known.append(0)
+	fault_pick.append(&"")
+	hardened_ticks.append(0)
 	_eff_health.append(NAN)
 	_eff.append(1.0)
+	hack_scale.append(1.0)
 	for s: SubsystemDef in def.subsystems:
 		add_key(ship_id, faction)
 		part_ids.append(s.id)
@@ -62,8 +83,13 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 		pips.append(s.nominal_pips)
 		heat.append(0.0)
 		fault_armed.append(1)
+		fault_cause.append(&"")
+		fault_known.append(0)
+		fault_pick.append(&"")
+		hardened_ticks.append(0)
 		_eff_health.append(NAN)
 		_eff.append(1.0)
+		hack_scale.append(1.0)
 
 
 func columns() -> Array:
@@ -77,6 +103,10 @@ func columns() -> Array:
 			["pips", pips],
 			["heat", heat],
 			["fault_armed", fault_armed],
+			["fault_cause", fault_cause],
+			["fault_known", fault_known],
+			["fault_pick", fault_pick],
+			["hardened_ticks", hardened_ticks],
 		]
 	)
 
@@ -88,7 +118,7 @@ func row_effectiveness(r: int, s: SubsystemDef) -> float:
 	if h != _eff_health[r]:
 		_eff_health[r] = h
 		_eff[r] = PowerSystem.curve_at(s.effectiveness, h / s.health_max)
-	return _eff[r]
+	return _eff[r] * hack_scale[r]
 
 
 ## The ship's hull row, or -1.

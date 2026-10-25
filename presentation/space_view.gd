@@ -20,6 +20,9 @@ var ship_scale: float = 1.0
 var wear: float = 0.6
 ## Draw only contacts with a NEAR orientation (within 2 km), as the main screen does.
 var near_only: bool = false
+## A contact drawn even when near_only would drop it (the main screen's target, which can
+## be farther than NEAR's range): its orientation is the last known, else the default.
+var show_id: int = -1
 var camera: Camera3D
 ## Contact id -> Node3D of each drawn contact.
 var ships: Dictionary = {}
@@ -63,7 +66,7 @@ func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
 	var seen: Dictionary = {}
 	for id: int in ctx.interp.contact_ids():
 		var near: bool = ctx.view.near.has(id)
-		if id == ctx.crew.ship or (near_only and not near):
+		if id == ctx.crew.ship or (near_only and not near and id != show_id):
 			continue
 		seen[id] = true
 		if not ships.has(id):
@@ -73,6 +76,7 @@ func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
 		if near:
 			var q: Quaternion = NetCodec.unpack_quat(int(ctx.view.near[id][0]))
 			node.basis = Basis(q).scaled(Vector3.ONE * ship_scale)
+		node.scale = Vector3.ONE * ship_scale
 		node.position = ctx.interp.offset_to(ctx.interp.contact_position(id)) - origin
 	for id: int in ships.keys():
 		if not seen.has(id):
