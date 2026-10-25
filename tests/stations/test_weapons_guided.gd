@@ -149,25 +149,21 @@ func test_guided_fire_at_a_mark_on_a_contact() -> void:
 
 
 # FT: FT-WPN-008
-# A free mark is a point: the command carries its site-local position.
-func test_guided_fire_at_a_free_mark_sends_its_point() -> void:
+# A free mark in space is refused (D209): no goal, no command, and the toast says to select a
+# mark on a tracked contact.
+func test_guided_fire_at_a_free_mark_is_refused() -> void:
 	var s: StationScreen = _screen(1)
-	var ahead: Vector3 = Vector3(0.0, 0.0, -3000.0)
-	_mark(s, -1, ahead)
+	_mark(s, -1, Vector3(0.0, 0.0, -3000.0))
 	s.ctx.crew.select("mark", StationFixture.BRAVO_SLOT)
-	assert_bool(s.dispatch(_ev(s, "fire_guided"))).is_true()
-	var fired: Dictionary = _commands(s, "fire_guided")[0]
-	var at: Vector3 = StationFixture.OWN_POS + StationFixture.own_rotation() * ahead
-	assert_int(fired["target"]).is_equal(-1)
-	assert_bool(fired["has_point"]).is_true()
-	assert_vector(Vector3(fired["x"], fired["y"], fired["z"])).is_equal_approx(
-		at, Vector3.ONE * 1e-3
-	)
+	assert_dict(_panel(s).guided_goal()).is_empty()
+	s.dispatch(_ev(s, "fire_guided"))
+	assert_array(_commands(s, "fire_guided")).is_empty()
+	assert_array(_toasts).is_equal(["toast.guided_no_mark"])
 
 
 # FT: FT-WPN-008
-# Nothing to send, and why: no selection, a mark on a contact out of view, a target out of
-# arc, or ammunition that isn't guided.
+# Nothing to send, and why: no selection, a mark on a contact out of view (or on no
+# contact), a target out of arc, or ammunition that isn't guided.
 func test_guided_fire_refusals_say_why() -> void:
 	var s: StationScreen = _screen(1)
 	s.dispatch(_ev(s, "fire_guided"))

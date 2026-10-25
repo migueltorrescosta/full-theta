@@ -21,15 +21,12 @@ var energy: PackedFloat64Array = PackedFloat64Array()
 var ttl: PackedInt32Array = PackedInt32Array()
 ## Damage type of the hit (FT-SIM-022).
 var damage_type: Array[StringName] = []
-## Guided ordnance (FT-SIM-013, FT-WPN-008): turn rate (rad/s; 0 flies straight), the
-## tracked contact followed (ship id or -1), and a site-local point steered at when
-## guide_point is 1. GuidanceSystem steers these each tick.
+## Guided ordnance (FT-SIM-013, FT-WPN-008): turn rate (rad/s; 0 flies straight) and the
+## tracked contact followed (ship id or -1). GuidanceSystem steers these each tick.
 var turn_rate: PackedFloat64Array = PackedFloat64Array()
 var guide_target: PackedInt32Array = PackedInt32Array()
-var guide_point: PackedByteArray = PackedByteArray()
-var guide_x: PackedFloat64Array = PackedFloat64Array()
-var guide_y: PackedFloat64Array = PackedFloat64Array()
-var guide_z: PackedFloat64Array = PackedFloat64Array()
+## Share of the turn rate left at track quality 0 (WeaponDef.track_floor, D214).
+var track_floor: PackedFloat64Array = PackedFloat64Array()
 
 
 ## Appends a projectile and returns its row.
@@ -57,50 +54,24 @@ func spawn(
 	damage_type.append(&"kinetic")
 	turn_rate.append(0.0)
 	guide_target.append(-1)
-	guide_point.append(0)
-	guide_x.append(0.0)
-	guide_y.append(0.0)
-	guide_z.append(0.0)
+	track_floor.append(1.0)
 	return size() - 1
 
 
 ## Gives projectile k its damage type and, when turn_rate_rad is positive, guidance at
-## the contact (target >= 0) and/or the site-local point (has_point).
+## the contact (target >= 0).
 func set_payload(
-	k: int,
-	type: StringName,
-	turn_rate_rad: float = 0.0,
-	target: int = -1,
-	has_point: bool = false,
-	x: float = 0.0,
-	y: float = 0.0,
-	z: float = 0.0
+	k: int, type: StringName, turn_rate_rad: float = 0.0, target: int = -1, floor_share: float = 1.0
 ) -> void:
 	damage_type[k] = type
 	turn_rate[k] = turn_rate_rad
 	guide_target[k] = target
-	guide_point[k] = 1 if has_point else 0
-	guide_x[k] = x
-	guide_y[k] = y
-	guide_z[k] = z
+	track_floor[k] = floor_share
 
 
 ## From projectile k to ship s (m, minimum image; the same site).
 func offset_to_ship(k: int, kin: Kinematics, s: int) -> Vector3:
 	return -kin.relative_to_point(s, px[k], py[k], pz[k])
-
-
-## From projectile k to its guide point (m, minimum image).
-func offset_to_guide_point(k: int, kin: Kinematics) -> Vector3:
-	var half: float = 0.5 * kin.period
-	var dx: float = guide_x[k] - px[k]
-	var dy: float = guide_y[k] - py[k]
-	var dz: float = guide_z[k] - pz[k]
-	return Vector3(
-		dx if dx >= -half and dx < half else kin.wrap(dx),
-		dy if dy >= -half and dy < half else kin.wrap(dy),
-		dz if dz >= -half and dz < half else kin.wrap(dz)
-	)
 
 
 ## Moves projectile k by its velocity for dt (s), wrapping across the site's faces
@@ -158,10 +129,7 @@ func remove_rows(rows: PackedInt32Array) -> void:
 		damage_type.remove_at(r)
 		turn_rate.remove_at(r)
 		guide_target.remove_at(r)
-		guide_point.remove_at(r)
-		guide_x.remove_at(r)
-		guide_y.remove_at(r)
-		guide_z.remove_at(r)
+		track_floor.remove_at(r)
 
 
 ## A ship's run reset drops its projectiles (FT-MIS-017); add_ship adds none.
@@ -184,9 +152,6 @@ func columns() -> Array:
 			["damage_type", damage_type],
 			["turn_rate", turn_rate],
 			["guide_target", guide_target],
-			["guide_point", guide_point],
-			["guide_x", guide_x],
-			["guide_y", guide_y],
-			["guide_z", guide_z],
+			["track_floor", track_floor],
 		]
 	)

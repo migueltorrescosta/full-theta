@@ -171,9 +171,9 @@ func cycle_ammo(direction: int) -> bool:
 	return true
 
 
-## What guided ordnance would fly at (FT-WPN-008): {"target": contact id} for the selected
-## contact, or for a selected mark attached to a contact in view; {"point": Vector3,
-## site-local} for a free mark; {} when nothing usable is selected.
+## What guided ordnance would fly at (FT-WPN-008, D209): {"target": contact id} for the
+## selected contact, or for a selected mark attached to a contact in view; {} when nothing
+## usable is selected, a free mark included.
 func guided_goal() -> Dictionary:
 	var s: Dictionary = ctx.crew.selection
 	var id: int = int(s.get("id", -1))
@@ -185,9 +185,8 @@ func guided_goal() -> Dictionary:
 			if m.is_empty():
 				return {}
 			var contact: int = int(m["contact"])
-			if contact >= 0:
-				return {"target": contact} if contact in ctx.interp.contact_ids() else {}
-			return {"point": m["pos"]}
+			if contact >= 0 and contact in ctx.interp.contact_ids():
+				return {"target": contact}
 	return {}
 
 
@@ -209,24 +208,14 @@ func fire_guided(i: int) -> bool:
 	var row: Dictionary = _mount_row(i)
 	if now < int(_next_fire.get(i, 0)) or int(row.get("ammo", 1)) == 0:
 		return false
-	var at: Vector3 = (
-		ctx.interp.contact_position(int(goal["target"])) if goal.has("target") else goal["point"]
-	)
+	var at: Vector3 = ctx.interp.contact_position(int(goal["target"]))
 	_aims[i] = at
 	_dirty[i] = true
 	if not _in_arc(i, aim_dir(i)):
 		ctx.crew.toast.emit("toast.guided_out_of_arc", {})
 		return false
 	_flush_aims(now, true)
-	var cmd: Dictionary = {"kind": "fire_guided", "mount_index": i, "target": -1}
-	if goal.has("target"):
-		cmd["target"] = int(goal["target"])
-	else:
-		cmd["has_point"] = true
-		cmd["x"] = at.x
-		cmd["y"] = at.y
-		cmd["z"] = at.z
-	ctx.intents.command(cmd)
+	ctx.intents.command({"kind": "fire_guided", "mount_index": i, "target": int(goal["target"])})
 	_next_fire[i] = now + roundi(w.cooldown * 1000.0)
 	return true
 

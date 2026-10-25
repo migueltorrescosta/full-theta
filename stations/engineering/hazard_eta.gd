@@ -30,3 +30,18 @@ static func soonest(zones: Array, offsets: Dictionary, velocity: Vector3) -> flo
 		if t >= 0.0 and (best < 0.0 or t < best):
 			best = t
 	return best
+
+
+## The soonest forecast over the RELAY block's sim hazards (rows with `eta`), or -1.
+static func forecast(rows: Array) -> float:
+	var best: float = -1.0
+	for row: Dictionary in rows:
+		best = sooner(best, float(row["eta"]))
+	return best
+
+
+## The sooner of two countdowns, -1 meaning none.
+static func sooner(a: float, b: float) -> float:
+	if a < 0.0:
+		return b
+	return a if b < 0.0 else minf(a, b)

@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## M2 strand C: beams, missiles and torpedoes next to the cannon (FT-SIM-013), guided
-## ordnance at a tracked contact or a point (FT-WPN-008, P8), beam overheat locks
+## ordnance at a tracked contact (FT-WPN-008, D209, P8), beam overheat locks
 ## (P6) and ammunition types (FT-WPN-006). The shooter is the M1 corvette (bow mount
 ## at (0, 0, -22) facing -Z, 15 degree half-arc, sensor range 20 km) with its weapon
 ## replaced; the target is the M1 raider (radius 20 m), shields zeroed so a hit's
@@ -52,17 +52,10 @@ func _fire(world: SimWorld, ship: int) -> void:
 	world.submit(c)
 
 
-func _fire_guided(
-	world: SimWorld, ship: int, target: int, point: Variant = null
-) -> FireGuidedCommand:
+func _fire_guided(world: SimWorld, ship: int, target: int) -> FireGuidedCommand:
 	var c: FireGuidedCommand = FireGuidedCommand.new()
 	c.ship_id = ship
 	c.target = target
-	if point != null:
-		c.has_point = true
-		c.x = (point as Vector3).x
-		c.y = (point as Vector3).y
-		c.z = (point as Vector3).z
 	world.submit(c)
 	return c
 
@@ -214,8 +207,8 @@ func test_probe_coverage_counts_as_tracked() -> void:
 
 # FT: FT-WPN-008
 # Guided fire at a contact the shooter's faction doesn't track, at a dead one or at itself
-# is rejected, and so is guided fire from a weapon that isn't guided ordnance; a point
-# needs no track.
+# is rejected, and so is guided fire from a weapon that isn't guided ordnance; a free
+# point in space is refused (D209: the command carries a contact only).
 func test_guided_fire_needs_a_tracked_contact_and_guided_ordnance() -> void:
 	var missile: WeaponDef = _weapon(MISSILE)
 	var far: Array = _duel(missile, 50000.0)
@@ -227,11 +220,9 @@ func test_guided_fire_needs_a_tracked_contact_and_guided_ordnance() -> void:
 	var world: SimWorld = d[0]
 	var own: FireGuidedCommand = _fire_guided(world, d[1], d[1])
 	var nothing: FireGuidedCommand = _fire_guided(world, d[1], -1)
-	var point: FireGuidedCommand = _fire_guided(world, d[1], -1, Vector3(0, 0, -3000))
 	world.step()
 	assert_bool(own.accepted).is_false()
 	assert_bool(nothing.accepted).is_false()
-	assert_bool(point.accepted).is_true()
 	world.mounts.cooldown[0] = 0.0
 	var tracked: FireGuidedCommand = _fire_guided(world, d[1], d[2])
 	world.step()
@@ -244,19 +235,6 @@ func test_guided_fire_needs_a_tracked_contact_and_guided_ordnance() -> void:
 	var gun_cmd: FireGuidedCommand = _fire_guided(gun[0], gun[1], gun[2])
 	gun[0].step()
 	assert_bool(gun_cmd.accepted).is_false()
-
-
-# FT: FT-WPN-008
-# Ordnance fired at a point turns toward it while the barrel points straight ahead.
-func test_guided_fire_at_a_point_steers_to_it() -> void:
-	var d: Array = _duel(_weapon(MISSILE), 3000.0)
-	var world: SimWorld = d[0]
-	_fire_guided(world, d[1], -1, Vector3(1500.0, 0.0, -3000.0))
-	SimFixture.run(world, 60)
-	assert_int(world.projectiles.size()).is_equal(1)
-	var v: Vector3 = world.projectiles.vel[0]
-	assert_float(v.x).is_greater(100.0)
-	assert_float(v.length()).is_equal_approx(_weapon(MISSILE).projectile_speed, 1.0)
 
 
 # FT: FT-WPN-008
@@ -319,8 +297,6 @@ func test_new_commands_round_trip() -> void:
 	g.ship_id = 1
 	g.mount_index = 2
 	g.target = 5
-	g.has_point = true
-	g.x = 1.5
 	var back: SimCommand = SimCommands.from_dict(g.to_dict())
 	assert_dict(back.to_dict()).is_equal(g.to_dict())
 	var a: SetAmmoTypeCommand = SetAmmoTypeCommand.new()

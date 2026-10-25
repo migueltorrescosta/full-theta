@@ -210,11 +210,11 @@ func test_back_to_back_boosts_fault() -> void:
 
 
 # FT: FT-SIM-012
-# The weapons store starts full (5 MJ), each draw takes its energy or nothing, and it
+# The weapons store starts full (10 MJ, D212), each draw takes its energy or nothing, and it
 # recharges with the weapons share of the reactor: 20 MW * 2 / 12 pips.
 func test_draw_energy_from_weapons_store() -> void:
 	var w: SimWorld = _world()
-	for i: int in 10:
+	for i: int in 20:
 		assert_bool(PowerSystem.draw_energy(w, 0, 500000.0)).is_true()
 	assert_bool(PowerSystem.draw_energy(w, 0, 1.0)).is_false()
 	assert_float(w.power.weapon_energy[0]).is_equal_approx(0.0, 1e-6)
@@ -226,7 +226,7 @@ func test_draw_energy_from_weapons_store() -> void:
 	assert_float(w.power.weapon_energy[0]).is_equal(before)
 	assert_bool(_pips(w, WPN, 4)).is_true()
 	_steps(w, 600)
-	assert_float(w.power.weapon_energy[0]).is_equal(5e6)
+	assert_float(w.power.weapon_energy[0]).is_equal(10e6)
 
 
 # A ship reset restores its pips, heat, fault state and store through the generic
@@ -246,7 +246,7 @@ func test_reset_restores_power() -> void:
 	assert_array(SimFixture.sub_values(w, 0, "pips")).is_equal([2, 2, 2, 2, 2, 0])
 	assert_array(SimFixture.sub_values(w, 0, "heat")).is_equal([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 	assert_array(SimFixture.sub_values(w, 0, "fault_armed")).is_equal([1, 1, 1, 1, 1, 1])
-	assert_float(w.power.weapon_energy[0]).is_equal(5e6)
+	assert_float(w.power.weapon_energy[0]).is_equal(10e6)
 	assert_int(w.power.boost_ticks[0]).is_equal(0)
 	assert_array(SimFixture.sub_values(w, 1, "pips")).is_equal([4, 2, 2, 2, 2, 0])
 	assert_float(w.damage.heat[w.damage.subsystem_row(1, 0)]).is_greater(0.0)

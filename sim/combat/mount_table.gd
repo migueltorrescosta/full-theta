@@ -32,12 +32,8 @@ var type_ammo: Array[PackedInt32Array] = []
 ## limit, cleared when heat falls to WeaponDef.overheat_release of it (P6).
 var locked: PackedByteArray = PackedByteArray()
 ## Guided shot requested with fire_requested: the tracked contact to follow (ship id) or
-## -1, and a site-local point to steer at when guide_point is 1 (FT-WPN-008).
+## -1 (FT-WPN-008).
 var guide_target: PackedInt32Array = PackedInt32Array()
-var guide_point: PackedByteArray = PackedByteArray()
-var guide_x: PackedFloat64Array = PackedFloat64Array()
-var guide_y: PackedFloat64Array = PackedFloat64Array()
-var guide_z: PackedFloat64Array = PackedFloat64Array()
 
 
 func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
@@ -61,10 +57,6 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 		type_ammo.append(stock)
 		locked.append(0)
 		guide_target.append(-1)
-		guide_point.append(0)
-		guide_x.append(0.0)
-		guide_y.append(0.0)
-		guide_z.append(0.0)
 
 
 ## Row of the ship's mount, or -1 if the ship has no such mount.
@@ -96,9 +88,5 @@ func columns() -> Array:
 			["type_ammo", type_ammo],
 			["locked", locked],
 			["guide_target", guide_target],
-			["guide_point", guide_point],
-			["guide_x", guide_x],
-			["guide_y", guide_y],
-			["guide_z", guide_z],
 		]
 	)

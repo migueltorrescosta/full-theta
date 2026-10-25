@@ -8,8 +8,6 @@ extends CoopEvents
 
 ## Ticks between two counts of the same mark used by the same player (60 Hz: 10 s).
 const REUSE_TICKS: int = 600
-## How close a guided shot's point must be to a mark to use it (m).
-const MARK_REACH_M: float = 100.0
 ## Ticks between two looks at whether a ship reached a scan position (60 Hz: 0.5 s).
 const SCAN_LOOK_TICKS: int = 30
 
@@ -54,7 +52,7 @@ func on_mark_pinged(user: NetSession, slot: int) -> void:
 	_mark_used(user, slot)
 
 
-## An accepted command: a guided shot at a mark's contact or point uses that mark.
+## An accepted command: a guided shot at a mark's contact uses that mark.
 func on_command(session_id: int, c: SimCommand) -> void:
 	if c.kind() != &"fire_guided":
 		return
@@ -64,17 +62,7 @@ func on_command(session_id: int, c: SimCommand) -> void:
 	var g: FireGuidedCommand = c as FireGuidedCommand
 	var marks: CrewMarks = session.crew.marks
 	for m: Dictionary in marks.marks_of(c.ship_id):
-		var near: bool = false
-		if g.target >= 0:
-			near = m["contact"] == g.target
-		elif g.has_point and m["contact"] < 0:
-			var at: Vector3 = Vector3(g.x, g.y, g.z)
-			var there: Vector3 = Vector3(m["x"], m["y"], m["z"])
-			near = (
-				session.world.kin.site[c.ship_id] == m["site"]
-				and (at.distance_to(there) <= MARK_REACH_M)
-			)
-		if near:
+		if m["contact"] == g.target:
 			_mark_used(user, m["slot"])
 
 

@@ -4,8 +4,9 @@ extends RefCounted
 ## ratings, hack windows; P8 track feeds with a quality bar), built from KNOW and the hack
 ## table when ViewFilter.grants() lets the view have it (FT-PAIR-007, FT-WPN-007). The
 ## weak points and resistances are the faction's scan knowledge (ScienceKnowledge): what
-## Science revealed, no more. Tracks are the contacts the faction detects, with the
-## detection confidence as quality (the bar) and whether a deployed probe covers them.
+## Science revealed, no more. Tracks are the contacts the faction detects, with the track
+## quality (GuidanceSystem.track_quality, D214: the bar) and whether a deployed probe covers
+## them.
 
 ## Rows a list may hold (a row count is one byte).
 const MAX_ROWS: int = 255
@@ -27,7 +28,7 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 				. append(
 					{
 						"contact": contact,
-						"quality": ScienceKnowledge.detection_confidence(world, faction, contact),
+						"quality": GuidanceSystem.track_quality(world, faction, contact),
 						"probe": ProbeSystem.covers_contact(world, ship, contact),
 					}
 				)
