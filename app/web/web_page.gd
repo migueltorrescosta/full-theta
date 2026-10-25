@@ -34,3 +34,10 @@ static func audio_state() -> String:
 static func set_panel(entry: String) -> void:
 	if OS.has_feature("web"):
 		JavaScriptBridge.eval("window.ftPanel = %s" % JSON.stringify(entry), true)
+
+
+## Tells the page which layout the client chose ("desktop", "touch" or "phone",
+## LayoutMode), for the browser smoke test. No effect off the web.
+static func set_layout(kind: String) -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("window.ftLayout = %s" % JSON.stringify(kind), true)

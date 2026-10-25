@@ -23,6 +23,12 @@ var chip: Button = Button.new()
 var sound: SoundToggle = SoundToggle.new()
 var picker: PopupPanel = PopupPanel.new()
 
+var _row: HBoxContainer
+## The phone's second row: hull, shields and reactor (set_compact).
+var _row2: HBoxContainer = HBoxContainer.new()
+var _compact: bool = false
+## Every control of the row in order, to put them back after the compact row.
+var _order: Array[Control] = []
 var _name: Label = Label.new()
 var _hull: Label = Label.new()
 var _shields: Label = Label.new()
@@ -37,10 +43,19 @@ var _shown: Array = []
 
 func _init() -> void:
 	custom_minimum_size = Vector2(0.0, HEIGHT)
+	var rows: VBoxContainer = VBoxContainer.new()
+	rows.set_anchors_and_offsets_preset(PRESET_FULL_RECT, PRESET_MODE_MINSIZE, 8)
+	rows.add_theme_constant_override("separation", 0)
+	add_child(rows)
 	var row: HBoxContainer = HBoxContainer.new()
-	row.set_anchors_and_offsets_preset(PRESET_FULL_RECT, PRESET_MODE_MINSIZE, 8)
 	row.add_theme_constant_override("separation", 18)
-	add_child(row)
+	row.size_flags_vertical = SIZE_EXPAND_FILL
+	rows.add_child(row)
+	_row = row
+	_row2.add_theme_constant_override("separation", 12)
+	_row2.size_flags_vertical = SIZE_EXPAND_FILL
+	_row2.visible = false
+	rows.add_child(_row2)
 	_name.add_theme_color_override("font_color", Palette.color("text"))
 	chip.flat = true
 	chip.custom_minimum_size = Vector2(0.0, HEIGHT - 8.0)
@@ -53,12 +68,14 @@ func _init() -> void:
 	for c: Control in [_name, _hull, _shields, _pips, chip, _stations, spacer, _timer, sound]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
 		row.add_child(c)
+		_order.append(c)
 		if keyed.has(c):
 			var badge: BandBadge = BandBadge.new()
 			badge.visible = false
 			badge.size_flags_vertical = SIZE_SHRINK_CENTER
 			_badges[keyed[c]] = badge
 			row.add_child(badge)
+			_order.append(badge)
 	for l: Label in [_hull, _shields, _pips, _stations, _timer]:
 		l.add_theme_color_override("font_color", Palette.color("text_dim"))
 	var buttons: HBoxContainer = HBoxContainer.new()
@@ -72,6 +89,36 @@ func _init() -> void:
 	picker.add_child(buttons)
 	add_child(picker)
 	can_set_alert = false
+
+
+## The phone's top bar (D195): hull, shields and reactor move to a second row, and the
+## chip and sound button are `height` tall (a tap target). `height` is one row's.
+func set_compact(compact: bool, height: float = HEIGHT, small: bool = false) -> void:
+	chip.custom_minimum_size = Vector2(0.0, height - 8.0)
+	sound.custom_minimum_size = Vector2(0.0, height - 8.0) if height > HEIGHT else Vector2.ZERO
+	_row.add_theme_constant_override("separation", 10 if compact else 18)
+	# A phone's bar reads at 13 px so a row holds its labels.
+	_stations.visible = not small
+	for l: Label in [_name, _hull, _shields, _pips, _stations, _timer]:
+		if small:
+			l.add_theme_font_size_override("font_size", 13)
+		else:
+			l.remove_theme_font_size_override("font_size")
+	if compact == _compact:
+		return
+	_compact = compact
+	_row2.visible = compact
+	var second: Array[Control] = []
+	for c: Control in _order:
+		if c == _hull or c == _shields or c == _pips or c in _badges.values():
+			second.append(c)
+	for c: Control in _order:
+		var target: HBoxContainer = _row2 if compact and c in second else _row
+		if c.get_parent() != target:
+			c.reparent(target, false)
+	for i: int in _order.size():
+		var c: Control = _order[i]
+		c.get_parent().move_child(c, -1)
 
 
 ## Refreshes every field, unless nothing shown changed. status: the STATUS block ({}

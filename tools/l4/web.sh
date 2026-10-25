@@ -3,7 +3,7 @@
 # web build, serves it from a dedicated server on 2 cores, and drives it with headless
 # Chromium (tools/l4/web_station.mjs, one worker, also pinned to the same 2 cores), with two
 # headless clients holding Systems and Ops: the page joins by itself, plays the Tactical station, unlocks audio after a tap, is
-# woken after a suspension, and a screenshot must not be blank. Afterwards the server's
+# woken after a suspension, and a tablet-sized touch-layout screenshot must not be blank. Afterwards the server's
 # session log must show the join, the resumed join, commands, and snapshot ages from the
 # browser. Logs and shot.png in build/l4web/.
 #   tools/l4/web.sh        Env: L4_CPUS [0,1]

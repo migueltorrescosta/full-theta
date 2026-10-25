@@ -44,7 +44,7 @@ ENV_HINT = (
     " (compare the renders in build/l5/ with the baselines by eye before"
     " regenerating them with --update-baselines)"
 )
-CAPTURE_TIMEOUT = 300  # seconds for one Godot run over all shots
+CAPTURE_TIMEOUT = 600  # seconds for one Godot run over all shots
 
 
 def read_png(path: Path) -> tuple[int, int, bytes]:

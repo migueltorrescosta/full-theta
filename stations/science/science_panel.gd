@@ -32,6 +32,10 @@ const STICK_MOVE: float = 0.6
 const STICK_RELEASE: float = 0.3
 const LIST_W: float = 190.0
 const CARD_W: float = 250.0
+## Under this width the list, stage and card stack (a phone, a tablet upright, D195).
+const NARROW_W: float = 900.0
+const STACK_LIST_H: float = 110.0
+const STACK_CARD_H: float = 200.0
 ## Detection confidence 0..1 -> blip size factor.
 const BLIP_MIN: float = 0.6
 const BLIP_MAX: float = 1.7
@@ -48,7 +52,8 @@ var card_view: ScienceCard
 var _list: ItemList
 var _list_key: Array = []
 var _stage: Control
-var _bar: HBoxContainer
+var _bar: HFlowContainer
+var _top: BoxContainer
 var _status: Label
 var _buttons: Dictionary = {}
 var _sub_index: int = 0
@@ -64,7 +69,8 @@ func _setup() -> void:
 	rows.add_theme_constant_override("separation", 4)
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rows)
-	var top: HBoxContainer = HBoxContainer.new()
+	var top: BoxContainer = BoxContainer.new()
+	_top = top
 	top.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	top.add_theme_constant_override("separation", 4)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -75,6 +81,7 @@ func _setup() -> void:
 	top.add_child(_list)
 	_stage = Control.new()
 	_stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_stage.clip_contents = true
 	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(_stage)
@@ -100,14 +107,17 @@ func _setup() -> void:
 	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if radar == null else 0
 	top.add_child(card_view)
 	_build_bar(rows)
+	resized.connect(_stack)
+	_stack()
 	ctx.crew.changed.connect(_on_crew_changed)
 	ctx.crew.sim_event.connect(_on_sim_event)
 	refresh()
 
 
 func _build_bar(rows: VBoxContainer) -> void:
-	_bar = HBoxContainer.new()
-	_bar.add_theme_constant_override("separation", 6)
+	_bar = HFlowContainer.new()
+	_bar.add_theme_constant_override("h_separation", 6)
+	_bar.add_theme_constant_override("v_separation", 4)
 	rows.add_child(_bar)
 	for spec: Array in [
 		["mode", "sci.mode_passive", _toggle_mode],
@@ -129,12 +139,31 @@ func _build_bar(rows: VBoxContainer) -> void:
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.add_theme_color_override("font_color", Palette.color("text_dim"))
 	_status.clip_text = true
+	_status.custom_minimum_size = Vector2(120, 0)
 	_bar.add_child(_status)
 
 
+## The list and card show unless docked; a narrow panel gives a minigame their room.
+func _show_parts() -> void:
+	var playing: bool = int(block().get("session", SESSION_NONE)) != SESSION_NONE
+	var show: bool = not docked and not (playing and size.x < NARROW_W)
+	_list.visible = show
+	card_view.visible = show
+
+
+## A narrow panel stacks the list above the stage and the card below it (the bar wraps by
+## itself); a wide one puts them side by side.
+func _stack() -> void:
+	var narrow: bool = size.x < NARROW_W
+	_top.vertical = narrow
+	_list.custom_minimum_size = Vector2(0, STACK_LIST_H) if narrow else Vector2(LIST_W, 0)
+	card_view.custom_minimum_size = Vector2(0, STACK_CARD_H) if narrow else Vector2(CARD_W, 0)
+	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if radar == null or narrow else 0
+	_show_parts()
+
+
 func _mode_changed() -> void:
-	_list.visible = not docked
-	card_view.visible = not docked
+	_show_parts()
 	_bar.visible = not docked
 	if radar != null:
 		radar.chips = not docked
@@ -208,6 +237,7 @@ func refresh() -> void:
 		radar.set_picture(ctx.picture(), ctx.crew.selection)
 		radar.blip_scale = _blip_scale(b)
 		radar.visible = session == SESSION_NONE
+	_show_parts()
 	_stage.visible = radar != null or session != SESSION_NONE
 	scan_game.visible = session == SESSION_SCAN
 	hack_game.visible = session == SESSION_HACK

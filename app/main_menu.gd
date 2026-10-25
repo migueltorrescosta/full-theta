@@ -24,7 +24,12 @@ var joining: NetClient = null
 var shell: ClientShell = null
 var browser: LanBrowser = LanBrowser.new(NetProtocol.PROTOCOL_VERSION)
 
-var _menu: Control
+## A browser client: no Host section, it joins the server that served the page. Tests
+## and L5 shots set it to draw the browser's menu.
+var web: bool = OS.has_feature("web")
+
+var _menu: MarginContainer
+var _join_row: HBoxContainer
 var _name: LineEdit
 var _bind: OptionButton
 var _lang: OptionButton
@@ -42,9 +47,11 @@ func _ready() -> void:
 	AlertTones.sounds_dir = ALERT_SOUNDS
 	settings.load_file()
 	I18n.apply(I18n.LANGUAGES[0])
-	UiTheme.apply(get_tree().root)
+	LayoutMode.apply(get_tree().root)
 	get_tree().root.content_scale_factor = settings.ui_scale
 	_build()
+	_relayout()
+	get_viewport().size_changed.connect(_relayout)
 	browser.start()
 	_check_orphan.call_deferred()
 	_apply_web_join_config()
@@ -249,12 +256,15 @@ func _build() -> void:
 	add_child(bg)
 	_menu = MarginContainer.new()
 	_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side: String in ["left", "right", "top", "bottom"]:
-		_menu.add_theme_constant_override("margin_" + side, 40)
 	add_child(_menu)
+	# A short screen (a phone on its side) scrolls the menu.
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_menu.add_child(scroll)
 	var col: VBoxContainer = VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 12)
-	_menu.add_child(col)
+	scroll.add_child(col)
 	var title: Label = Label.new()
 	title.text = "FULL THETA"
 	title.theme_type_variation = "TitleLabel"
@@ -263,15 +273,13 @@ func _build() -> void:
 	_name.name = "Name"
 	_name.placeholder_text = tr("menu.name")
 	_name.text = settings.player_name
-	_name.custom_minimum_size = Vector2(320, 0)
-	_name.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	col.add_child(_name)
 	WebTextField.attach(_name)
 	# A browser can't start a server; it joins the one that served the page.
-	if not OS.has_feature("web"):
+	if not web:
 		_build_host(col)
 	_build_join(col)
-	var bottom: HBoxContainer = HBoxContainer.new()
+	var bottom: HFlowContainer = HFlowContainer.new()
 	col.add_child(bottom)
 	_rejoin = _button(bottom, "Rejoin", tr("menu.rejoin"), rejoin)
 	_button(bottom, "Settings", tr("menu.settings"), func() -> void: _settings_screen.open())
@@ -299,9 +307,27 @@ func _build() -> void:
 	add_child(_orphan_dialog)
 
 
+## Sizes the menu for the viewport (LayoutMode): wide fields and tight margins on a phone
+## (D195), the fixed field widths of a desktop window otherwise. Runs on every resize.
+func _relayout() -> void:
+	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var margin: int = 16 if phone else 40
+	for side: String in ["left", "right", "top", "bottom"]:
+		_menu.add_theme_constant_override("margin_" + side, margin)
+	var wide: Control.SizeFlags = (
+		(Control.SIZE_EXPAND_FILL if phone else Control.SIZE_SHRINK_BEGIN) as Control.SizeFlags
+	)
+	_name.size_flags_horizontal = wide
+	_hosts.size_flags_horizontal = wide
+	_join_row.size_flags_horizontal = wide
+	_name.custom_minimum_size = Vector2(0 if phone else 320, 0)
+	_hosts.custom_minimum_size = Vector2(0 if phone else 480, 120)
+	_address.custom_minimum_size = Vector2(0 if phone else 320, 0)
+
+
 func _build_host(col: VBoxContainer) -> void:
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	var row: HFlowContainer = HFlowContainer.new()
+	row.add_theme_constant_override("h_separation", 8)
 	col.add_child(row)
 	_bind = OptionButton.new()
 	_bind.name = "Bind"
@@ -324,19 +350,18 @@ func _build_join(col: VBoxContainer) -> void:
 	col.add_child(_label(tr("menu.lan_games")))
 	_hosts = ItemList.new()
 	_hosts.name = "Hosts"
-	_hosts.custom_minimum_size = Vector2(480, 120)
-	_hosts.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_hosts.item_activated.connect(
 		func(i: int) -> void: _connect(str(_hosts.get_item_metadata(i)), "")
 	)
 	col.add_child(_hosts)
 	var row: HBoxContainer = HBoxContainer.new()
+	_join_row = row
 	col.add_child(row)
 	_address = LineEdit.new()
 	_address.name = "Address"
 	_address.placeholder_text = tr("menu.address")
 	_address.text = settings.last_address
-	_address.custom_minimum_size = Vector2(320, 0)
+	_address.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_address.virtual_keyboard_enabled = true
 	_address.text_submitted.connect(join)
 	row.add_child(_address)

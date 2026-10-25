@@ -21,7 +21,8 @@ const VIEW_YAW: float = 0.5
 const VIEW_PITCH: float = 0.35
 const FONT_SIZE: int = 15
 const CHIP_W: float = 64.0
-const CHIP_H: float = 34.0
+## Tap-sized (44 px, FT-STN-005).
+const CHIP_H: float = 44.0
 const BUTTON_W: float = 110.0
 
 var wire: Array[Vector3] = []
@@ -138,6 +139,13 @@ func _press(at: Vector2) -> bool:
 	return false
 
 
+## Footer rows: the axis chips and the buttons share one, or the buttons take the row
+## above on a narrow stage (a phone).
+func _rows() -> int:
+	var chips: float = 12.0 + open_axes().size() * (CHIP_W + 6.0)
+	return 1 if size.x >= chips + 2.0 * (BUTTON_W + 6.0) + 12.0 else 2
+
+
 func _chip_rect(i: int) -> Rect2:
 	return Rect2(
 		Vector2(12.0 + i * (CHIP_W + 6.0), size.y - CHIP_H - 10.0), Vector2(CHIP_W, CHIP_H)
@@ -146,7 +154,8 @@ func _chip_rect(i: int) -> Rect2:
 
 func _button_rect(i: int) -> Rect2:
 	var x: float = size.x - 12.0 - (i + 1) * (BUTTON_W + 6.0) + 6.0
-	return Rect2(Vector2(x, size.y - CHIP_H - 10.0), Vector2(BUTTON_W, CHIP_H))
+	var y: float = size.y - CHIP_H - 10.0 - (0.0 if _rows() == 1 else CHIP_H + 6.0)
+	return Rect2(Vector2(x, y), Vector2(BUTTON_W, CHIP_H))
 
 
 func _draw() -> void:
@@ -162,7 +171,7 @@ func _draw() -> void:
 		Palette.color("text")
 	)
 	var mid: Vector2 = Vector2(size.x / 2.0, size.y / 2.0 - 14.0)
-	var scale: float = minf(size.x, size.y - 90.0) * 0.4
+	var scale: float = minf(size.x, size.y - 56.0 - CHIP_H * _rows()) * 0.4
 	for c: Vector3 in cloud:
 		var p: Vector2 = _project(c, mid, scale)
 		draw_circle(p, 3.0, Palette.color("text_dim"))
@@ -183,7 +192,7 @@ func _draw_footer(font: Font) -> void:
 	var def: ScienceDef = ScienceLookup.science_def()
 	var lock: float = def.lock_threshold if def != null else 0.85
 	var col: Color = Palette.color("ok") if q >= lock else Palette.color("warn")
-	var y: float = size.y - CHIP_H - 22.0
+	var y: float = size.y - CHIP_H * _rows() - 22.0 - (6.0 if _rows() == 2 else 0.0)
 	draw_string(
 		font,
 		Vector2(12.0, y),
