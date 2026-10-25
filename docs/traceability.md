@@ -81,7 +81,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-NET-037 | tests | `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-038 | tests | `tests/net/test_net_chunking.gd`, `tests/net/test_net_server.gd`, `tests/net/voice/test_voice_l3.gd` |
 | FT-NET-039 | tests | `tests/net/test_host_static_server.gd` |
-| FT-NET-040 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_sim_copy.gd`, `tests/net/test_net_snapshot.gd`, `tools/tests/test_load_check.py` |
+| FT-NET-040 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_sim_copy.gd`, `tests/net/test_net_snapshot.gd`, `tests/net/test_probe_layout.gd`, `tools/tests/test_load_check.py` |
 | FT-NET-041 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_pause_rules.gd`, `tests/sim/run/test_outcome.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-042 | tests | `tests/net/test_net_pause_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-043 | tests | `tests/net/test_net_lobby_l3.gd` |
@@ -387,7 +387,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-TST-008 | tests | `tests/sim/combat/test_weapons.gd` |
 | FT-TST-009 | tests | `tests/sim/pvp/test_pvp.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_golden_replay.gd`, `tests/sim/replay/test_replay_determinism.gd` |
 | FT-TST-010 | tests | `tests/net/test_net_stations_filter.gd` |
-| FT-TST-011 | tests | `tests/net/test_net_load_l3.gd`, `tools/tests/test_l4_check.py`, [#6](https://github.com/migueltorrescosta/full-theta/issues/6) |
+| FT-TST-011 | tests | `tests/net/test_net_load_l3.gd`, `tests/net/test_probe_layout.gd`, `tools/tests/test_l4_check.py`, [#6](https://github.com/migueltorrescosta/full-theta/issues/6) |
 | FT-TST-012 | pending |  |
 | FT-TST-013 | tests | `tests/sim/pvp/test_pvp.gd` |
 | FT-TST-014 | manual | [#6](https://github.com/migueltorrescosta/full-theta/issues/6) |
