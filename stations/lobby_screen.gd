@@ -68,12 +68,17 @@ var _toggle_note: Label
 var _pushed: bool = false
 ## After "Back to ships": no ship is chosen until the player picks one.
 var _browsing: bool = false
+## The stations tapped since the server last answered a pick: a second tap before the
+## answer to the first must still add to it. Empty of meaning while `_tapped` is false.
+var _local: Array[String] = []
+var _tapped: bool = false
 
 
 func setup(context: StationContext) -> void:
 	ctx = context
 	_build()
 	ctx.crew.changed.connect(_on_crew_changed)
+	ctx.crew.toast.connect(_on_refused)
 	resized.connect(_apply_columns)
 	refresh()
 
@@ -176,6 +181,9 @@ static func columns_for(size: Vector2) -> int:
 ## the dev entry).
 func selected_stations() -> Array[String]:
 	var out: Array[String] = []
+	if _tapped:
+		out.assign(_local)
+		return out
 	if ctx.crew.ship != ship or ctx.crew.entry in [DEV_ALL, ""]:
 		return out
 	for st: Variant in ctx.crew.stations():
@@ -224,14 +232,20 @@ func tap_station(id: String) -> void:
 		ctx.intents.release_pick()
 	else:
 		var entry: String = entry_for(picks)
-		if entry != "":
-			ctx.intents.pick(ship, entry)
+		if entry == "":
+			refresh()
+			return
+		ctx.intents.pick(ship, entry)
+	_local = picks
+	_tapped = true
 	refresh()
 
 
 ## A tap on Captain, Viewer or the dev entry: picks it, or gives it up when it is the
 ## pick.
 func tap_seat(id: String) -> void:
+	_tapped = true
+	_local = []
 	if ctx.crew.ship == ship and ctx.crew.entry == id:
 		ctx.intents.release_pick()
 	else:
@@ -699,7 +713,15 @@ func _notification(what: int) -> void:
 		refresh()
 
 
+## The server refused a pick: the screen goes back to what the server holds.
+func _on_refused(_key: String, _args: Dictionary) -> void:
+	_tapped = false
+	refresh()
+
+
 func _on_crew_changed(what: StringName) -> void:
+	if what == &"picked":
+		_tapped = false
 	if what == &"lobby":
 		_push_saved_toggles()
 	if what in KINDS or what == &"toggles":

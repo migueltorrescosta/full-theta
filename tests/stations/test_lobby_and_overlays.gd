@@ -120,6 +120,19 @@ func test_taps_multi_select_up_to_two_and_pick_the_joint_view() -> void:
 	assert_str((l.find_child("SummaryName", true, false) as Label).text).is_equal("Captain")
 
 
+# FT: FT-NET-015, FT-NET-032
+# A second tap before the server answered the first still makes the pair.
+func test_a_quick_second_tap_adds_to_the_first() -> void:
+	var l: LobbyScreen = _lobby("viewer")
+	_cell(l, "science").pressed.emit()
+	_cell(l, "relay").pressed.emit()
+	assert_array(_sent_picks(l)[-1][1]).is_equal([0, "sensors"])
+	# A refusal puts the screen back to what the server holds.
+	l.ctx.crew.toast.emit("toast.captain_taken", {})
+	assert_bool(_cell(l, "science").button_pressed).is_false()
+	assert_bool(_cell(l, "viewer").button_pressed).is_true()
+
+
 # FT: FT-NET-032
 # Every pair of stations maps to its joint view entry.
 func test_every_pair_maps_to_its_joint_view() -> void:
