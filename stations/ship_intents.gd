@@ -42,7 +42,12 @@ func delete_mark(slot: int) -> void:
 	_call(&"delete_mark", [slot])
 
 
-## kind "contact" | "mark" | "site" | "point" (FT-SPA-016).
+## The main screen's view, a MainScreen.View: the Captain, or Relay without a Captain.
+func set_main_view(view: int) -> void:
+	_call(&"set_main_view", [view])
+
+
+## kind "contact" | "mark" | "card" | "site" | "point" (FT-SPA-016, FT-CPT-005).
 func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
 	_call(&"ping", [kind, id, site, pos])
 

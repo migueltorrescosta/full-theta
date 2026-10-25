@@ -153,12 +153,23 @@ func _process(delta: float) -> void:
 		ctx.crew.alert,
 		stations,
 		ctx.crew.mission_seconds(ctx.view.tick),
-		focused_station()
+		focused_station(),
+		_maxes()
 	)
 	radar.set_picture(ctx.picture(), ctx.crew.selection)
 	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
 	flash.update(now)
+
+
+## The own ship's hull and shield maxima (J), for the top bar's percentages.
+func _maxes() -> Dictionary:
+	var def: ShipDef = ctx.ship_def()
+	if def == null:
+		return {}
+	return {
+		"hull": def.hull_max, "shields": def.shields.max_strength if def.shields != null else 0.0
+	}
 
 
 ## Releases every held and toggled intent where it was held (focus loss, a pad coming
@@ -250,7 +261,7 @@ func _common(ev: Dictionary) -> bool:
 ## panel (owner decision in #7: LMB fires in the turret).
 func _select(device: String) -> bool:
 	var item: Dictionary = item_under_cursor(device)
-	if item.is_empty() or item["kind"] == "point":
+	if item.is_empty() or item["kind"] == "point" or item["kind"] == "card":
 		return false
 	ctx.crew.select(item["kind"], item["id"])
 	return true

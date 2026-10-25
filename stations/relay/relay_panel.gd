@@ -144,8 +144,21 @@ func handle_intent(ev: Dictionary) -> bool:
 		"accept", "decline":
 			handled = _answer_oldest(str(ev["id"]) == "accept")
 		_:
-			handled = false
+			handled = _main_view(str(ev["id"]))
 	return handled
+
+
+## Alt+1 to Alt+5: Relay switches the main screen's view while no Captain is seated
+## (FT-RLY-010, D88); with one the server would refuse, so say so instead.
+func _main_view(id: String) -> bool:
+	var n: String = id.trim_prefix("main_view_")
+	if n == id or not n.is_valid_int():
+		return false
+	if not ctx.crew.may_switch_main_view():
+		ctx.crew.toast.emit("toast.captain_seated", {})
+		return true
+	ctx.intents.set_main_view(n.to_int() - 1)
+	return true
 
 
 ## Accepts or declines the oldest mark in the inbox (Enter / Backspace, X / Y).

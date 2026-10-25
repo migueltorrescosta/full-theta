@@ -30,6 +30,24 @@ func test_shows_every_field() -> void:
 	assert_str(bar._hull.text).is_equal("Hull -")
 
 
+# FT: FT-STN-001
+# Hull and shields are joules (a corvette's hull is 10^8): the bar shows a percentage of
+# the ship's maximum, or a short SI form without one, never "Hull 100000000".
+func test_hull_and_shields_are_not_raw_joules() -> void:
+	var status: Dictionary = {"hull": 92_000_000.0, "shields": 21_000_000.0, "pips_used": 6}
+	bar.show_state(
+		"Kestrel", status, 0, [], 0.0, "", {"hull": 100_000_000.0, "shields": 30_000_000.0}
+	)
+	assert_str(bar._hull.text).is_equal("Hull 92%")
+	assert_str(bar._shields.text).is_equal("Shields 70%")
+	bar.show_state("Kestrel", {"hull": 100_000_000.0, "shields": 30_000_000.0}, 0, [], 1.0)
+	assert_str(bar._hull.text).is_equal("Hull 100M")
+	assert_str(bar._shields.text).is_equal("Shields 30M")
+	bar.show_state("Kestrel", {"hull": 25_400.0, "shields": 9_999.0}, 0, [], 2.0)
+	assert_str(bar._hull.text).is_equal("Hull 25k")
+	assert_str(bar._shields.text).is_equal("Shields 9999")
+
+
 # FT: FT-STN-006
 func test_alert_levels_have_their_own_letter_and_shape() -> void:
 	var letters: Dictionary = {}

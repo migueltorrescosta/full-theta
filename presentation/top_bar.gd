@@ -75,10 +75,11 @@ func show_state(
 	alert: int,
 	stations: Array,
 	mission_s: float,
-	focused: String = ""
+	focused: String = "",
+	maxes: Dictionary = {}
 ) -> void:
-	var hull: String = _num(status, "hull")
-	var shields: String = _num(status, "shields")
+	var hull: String = _amount(status, "hull", float(maxes.get("hull", 0.0)))
+	var shields: String = _amount(status, "shields", float(maxes.get("shields", 0.0)))
 	var pips: String = _num(status, "pips_used")
 	var state: Array = [ship_name, hull, shields, pips, alert, stations.duplicate()]
 	state.append_array([int(mission_s), focused])
@@ -136,6 +137,24 @@ func _draw_chip() -> void:
 func _pick(level: int) -> void:
 	picker.hide()
 	alert_picked.emit(level)
+
+
+## Hull and shields are energies in joules (about 10^8): as a percentage of the ship's
+## maximum when `max_value` is known (the spec's "hull 92"), else with a k, M or G suffix
+## so the bar never shows "Hull 100000000".
+static func _amount(status: Dictionary, key: String, max_value: float) -> String:
+	if not status.has(key):
+		return "-"
+	var v: float = float(status[key])
+	if max_value > 0.0:
+		return "%d%%" % roundi(100.0 * v / max_value)
+	if absf(v) >= 1.0e9:
+		return "%dG" % roundi(v / 1.0e9)
+	if absf(v) >= 1.0e6:
+		return "%dM" % roundi(v / 1.0e6)
+	if absf(v) >= 1.0e4:
+		return "%dk" % roundi(v / 1.0e3)
+	return str(roundi(v))
 
 
 static func _num(status: Dictionary, key: String) -> String:

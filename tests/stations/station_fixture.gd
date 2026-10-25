@@ -117,6 +117,10 @@ class RecordingClient:
 	func hazard_delete(id: int) -> void:
 		sent.append(["hazard_delete", [id]])
 
+	# Captain and main screen (strand F).
+	func set_main_view(view: int) -> void:
+		sent.append(["set_main_view", [view]])
+
 	## The sends of one method, newest last.
 	func of(method: String) -> Array:
 		return sent.filter(func(s: Array) -> bool: return s[0] == method)

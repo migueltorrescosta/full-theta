@@ -10,7 +10,7 @@ extends RefCounted
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
 ## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
-## &"sites", &"zones", &"routes", &"inbox", &"relay_log".
+## &"sites", &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -24,6 +24,9 @@ const MARK_NAMES: Array[String] = CrewMarks.DEFAULT_NAMES
 const MAX_MARKS: int = CrewMarks.SLOTS
 ## A ping pulses its item this long on every screen (FT-SPA-016).
 const PING_MS: int = 3000
+## A Captain's ping on a card shows it on the main screen this long, or until the next
+## ping (FT-CPT-005).
+const CARD_MS: int = 10000
 ## Alert levels (D170): Normal, Yellow, Red.
 const ALERT_NORMAL: int = CrewMarks.ALERT_NORMAL
 const ALERT_YELLOW: int = CrewMarks.ALERT_YELLOW
@@ -64,6 +67,12 @@ var alert_by: String = ""
 var marks: Array[Dictionary] = []
 ## Active pings, oldest first: {"kind", "id", "site", "pos", "by", "at_ms", "copies"}.
 var pings: Array[Dictionary] = []
+## The main screen's view (MainScreen.View), set by the Captain or by Relay.
+var main_view: int = MainScreen.View.FORWARD
+var main_view_by: String = ""
+## The Comms card the latest ping named: {"id", "by", "at_ms"}, or {} when a later ping
+## named something else. Not in `pings`: it pulses nothing on the radar.
+var card_ping: Dictionary = {}
 ## The shared selection: {"kind": "contact" | "mark" | "site" | "zone", "id": int}, or {}.
 var selection: Dictionary = {}
 ## The scenario's site names, the callout layer every station shows (FT-SPA-027): [{"site",
@@ -171,6 +180,8 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			changed.emit(&"run_over")
 		"alert":
 			_on_alert(p)
+		"main_view":
+			_on_main_view(p)
 		"marks":
 			_on_marks(p)
 		"ping":
@@ -287,6 +298,9 @@ func reset_run() -> void:
 	inbox.clear()
 	relay_log.clear()
 	selection = {}
+	card_ping = {}
+	main_view = MainScreen.View.FORWARD
+	main_view_by = ""
 	alert = ALERT_NORMAL
 	alert_by = ""
 	started.erase(ship)
@@ -408,6 +422,34 @@ func _on_alert(p: Dictionary) -> void:
 	changed.emit(&"alert")
 
 
+func _on_main_view(p: Dictionary) -> void:
+	if not _mine(p):
+		return
+	main_view = clampi(int(p.get("view", 0)), 0, MainScreen.NAMES.size() - 1)
+	main_view_by = str(p.get("by", ""))
+	changed.emit(&"main_view")
+
+
+## Whether this ship has a Captain pick (connected or in grace), from the lobby event.
+func captain_seated(id: int = ship) -> bool:
+	return str(lobby.get(id, {}).get("captain", "")) != ""
+
+
+## Whether this pick may switch the main screen now (FT-MSC-005): the Captain, or Relay
+## while no Captain is seated. The server decides; this only hides dead buttons.
+func may_switch_main_view() -> bool:
+	if entry == StationViews.CAPTAIN:
+		return true
+	return stations().has("relay") and not captain_seated()
+
+
+## The Comms card the main screen shows at now_ms (FT-CPT-005), or -1.
+func shown_card(now_ms: int) -> int:
+	if card_ping.is_empty() or now_ms - int(card_ping["at_ms"]) >= CARD_MS:
+		return -1
+	return int(card_ping["id"])
+
+
 func _on_marks(p: Dictionary) -> void:
 	if not _mine(p):
 		return
@@ -445,6 +487,15 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	var id: int = int(p.get("site" if kind == "site" else "id", -1))
 	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
 	var copy: bool = str(p.get("copy", "")) != ""
+	if kind == "card":
+		card_ping = {"id": int(p.get("id", -1)), "by": str(p.get("by", "")), "at_ms": now_ms}
+		changed.emit(&"card")
+		if not copy:
+			pinged.emit(card_ping)
+		return
+	if not copy and not card_ping.is_empty():
+		card_ping = {}
+		changed.emit(&"card")
 	if copy:
 		for old: Dictionary in pings:
 			if old["kind"] == kind and old["id"] == id:
