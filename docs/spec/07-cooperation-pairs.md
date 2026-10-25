@@ -35,7 +35,7 @@ Each cross-station data shortcut is an individual toggle, set in the lobby befor
 
 A shortcut that is on still needs a press (D210): the source station has a share button and one binding per device for each of its shortcuts (routes, hazard countdowns, weak points, track feeds, diagnosed causes), and the partner sees the data only after a press. A press keeps the shortcut open for 30 s (`share_seconds` in `content/toggles/toggles.tres`); a newer press renews it, and the partner's view loses the data when it ends. Each press counts as a shared shortcut of the pair in the debrief (FT-PAIR-013). A toggle that is off means no shortcut at all, and a joint view holding both stations shows the data without a press (FT-JNT-005).
 
-"voice" means the toggle is off and the data travels by speech. "Verbal" and "voice" mean same-room speech; the game has no voice chat, so remote players need external voice. Crews speak in the callout grammar of §6.1, summarised on a one-page callout card (`docs/callout-card.md`, written in M2, #9).
+"voice" means the toggle is off and the data travels by speech. "Verbal" and "voice" mean same-room speech; the game has no voice chat, so remote players need external voice. Crews speak in the callout grammar of §6.1, summarised on a one-page callout card ([`docs/callout-card.md`](../callout-card.md), M2, #9).
 
 Game rules (a probe enabling a remote scan, a scan fact unlocking a dialogue option, an intent change renaming a callsign) apply at every difficulty; D69 governs only how data reaches another station's screen.
 
