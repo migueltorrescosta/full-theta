@@ -9,6 +9,7 @@
 #    voices and the licence material, plus the source archives (package.py);
 # 6. inspects the result (inspect_packages.py) and fails on any problem.
 # The release workflow (.github/workflows/release.yml) and `gate.sh l6` run it;
+# release mode needs the slim web template (D211): export_web.sh fails without it;
 # docs/release.md describes the artefacts. VERSION is a tag name such as v1.2.3
 # or v1.2.3-rc.1. OUT_DIR must be new, empty or an earlier build's output.
 # --allow-dirty builds an uncommitted tree (the commit gets a -dirty suffix).
@@ -73,7 +74,7 @@ export_preset Linux "$out/exports/linux/full-theta.x86_64"
 export_preset Windows "$out/exports/windows/full-theta.exe"
 export_preset macOS "$out/exports/macos/full-theta.zip"
 echo "build: export Web"
-tools/release/export_web.sh "$out/exports/web" "$out/exports/Web.log"
+FT_REQUIRE_SLIM_WEB_TEMPLATE=1 tools/release/export_web.sh "$out/exports/web" "$out/exports/Web.log"
 
 echo "build: package"
 git archive --format=tar.gz --prefix="full-theta-$version/" \

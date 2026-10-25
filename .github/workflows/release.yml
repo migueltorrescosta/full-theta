@@ -4,7 +4,9 @@
 # tools/release/build.sh, inspects them, and drafts a GitHub release the owner
 # publishes after the smoke tests and macOS signing (#13). gate.sh l6 runs on
 # fugaku before the tag (FT-TST-005). Only the draft job can write to the
-# repository, and it runs no repository code. docs/release.md.
+# repository, and it runs no repository code. The web export uses the slim
+# engine template (D197, D211), built from source by the template job and
+# cached by the recipe's hash. docs/release.md.
 name: release
 
 on:
@@ -19,8 +21,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Builds the slim Godot web template (tools/release/build_web_template.sh,
+  # D211) unless the cache already holds it. The key hashes the recipe (which
+  # pins emsdk and the SCons flags) and the Godot version, so changing either
+  # rebuilds. A cache saved on a tag is visible to that tag's reruns only, so
+  # each new tag builds once (docs/release.md, Web build).
+  web-template:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/full-theta/web-template
+          key: web-template-${{ runner.os }}-${{ hashFiles('tools/release/build_web_template.sh', 'tools/godot-version') }}
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Build the slim web template (D197, D211)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: tools/release/build_web_template.sh "$(nproc)"
+      - name: Check the template
+        run: unzip -l ~/.cache/full-theta/web-template/web_nothreads_release.zip | grep -q '\.wasm'
+
   # Builds with a read-only token; checkout keeps no credentials in .git.
   package:
+    needs: web-template
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -31,6 +59,12 @@ jobs:
         with:
           path: ~/.cache/full-theta
           key: release-${{ hashFiles('tools/godot-version', 'tools/godot.sha512', 'tools/release/piper.json', 'tools/tts/voices.json') }}
+      - name: Restore the slim web template (D211)
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/full-theta/web-template
+          key: web-template-${{ runner.os }}-${{ hashFiles('tools/release/build_web_template.sh', 'tools/godot-version') }}
+          fail-on-cache-miss: true
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true

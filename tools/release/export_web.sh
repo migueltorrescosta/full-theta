@@ -3,7 +3,9 @@
 #   tools/release/export_web.sh DIR [LOG]
 # Uses the slim web template (tools/release/build_web_template.sh, D197) when
 # $WEB_TEMPLATE_OUT/web_nothreads_release.zip exists (default ~/.cache/full-theta/web-template),
-# else the stock one; FT_STOCK_WEB_TEMPLATE=1 forces the stock template. The preset file is
+# else the stock one; FT_STOCK_WEB_TEMPLATE=1 forces the stock template. With
+# FT_REQUIRE_SLIM_WEB_TEMPLATE=1 (release builds: tools/release/build.sh sets it) a missing
+# slim template, or FT_STOCK_WEB_TEMPLATE=1, is an error instead of a silent stock export. The preset file is
 # swapped for a copy that names the template while the export runs, and restored.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
@@ -12,6 +14,12 @@ dir=$1
 log=${2:-/dev/null}
 godot=$(tools/get-godot.sh --with-templates)
 template=${WEB_TEMPLATE_OUT:-$HOME/.cache/full-theta/web-template}/web_nothreads_release.zip
+if [[ -n ${FT_REQUIRE_SLIM_WEB_TEMPLATE:-} ]]; then
+  [[ -z ${FT_STOCK_WEB_TEMPLATE:-} ]] \
+    || { echo "export_web: release mode needs the slim template, but FT_STOCK_WEB_TEMPLATE is set" >&2; exit 1; }
+  [[ -f $template ]] \
+    || { echo "export_web: release mode needs the slim template $template; run tools/release/build_web_template.sh" >&2; exit 1; }
+fi
 mkdir -p "$dir"
 presets=$(mktemp)
 cp export_presets.cfg "$presets"
