@@ -24,9 +24,7 @@ var _route: Array[int] = []
 var _next: int = 0
 
 
-func _init(
-	ship_id: int, contact_id: int, start: int, hack: StringName = &""
-) -> void:
+func _init(ship_id: int, contact_id: int, start: int, hack: StringName = &"") -> void:
 	ship = ship_id
 	contact = contact_id
 	start_tick = start
