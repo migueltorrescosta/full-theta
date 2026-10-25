@@ -13,6 +13,7 @@ const PANELS: Dictionary = {
 	"relay": "res://stations/relay/relay_panel.gd",
 	"science": "res://stations/science/science_panel.gd",
 	"viewer": "res://stations/viewer/viewer_panel.gd",
+	"captain": "res://stations/captain/captain_panel.gd",
 }
 
 

@@ -31,6 +31,10 @@ enum Section {
 	CHIPS = 13,
 }
 
+## The CAPTAIN block's objective kinds, as clients name them (stations/ may not name
+## sim/): Objectives.Kind's values, which test_net_main_screen_rules checks.
+const OBJECTIVE_DESTROY_HOSTILES: int = 1
+
 ## Most probes a RELAY block lists.
 const RELAY_PROBE_ROWS: int = 64
 
@@ -135,8 +139,24 @@ const STATION_SECTIONS: Dictionary = {
 	],
 	"relay": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.RELAY, Section.OWNERSHIP],
 	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS],
-	"captain": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.NEAR, Section.PROJECTILES],
-	"viewer": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.NEAR, Section.PROJECTILES],
+	"captain":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.CONTACTS,
+		Section.NEAR,
+		Section.PROJECTILES,
+		Section.CAPTAIN,
+	],
+	"viewer":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.CONTACTS,
+		Section.NEAR,
+		Section.PROJECTILES,
+		Section.CAPTAIN,
+	],
 }
 
 ## Crew command kinds (SimCommand.kind()) per station. A command is accepted only from
@@ -423,6 +443,15 @@ const BLOCKS: Dictionary = {
 			],
 		],
 	],
+	# The main screen's status view (strand F, FT-MSC-006): each subsystem's health in
+	# ShipDef.subsystems order and the ship's open objectives (Objectives.Kind, how many
+	# are left). The view itself and the open cards are crew state, not sim: the
+	# `main_view` event and the ping events.
+	Section.CAPTAIN:
+	[
+		["subsystems", ["rows", [["health", "f32"]]]],
+		["objectives", ["rows", [["kind", "u8"], ["left", "u16"]]]],
+	],
 	Section.MOUNTS:
 	[
 		[
@@ -659,6 +688,8 @@ static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
 			return ScienceView.block(world, ship)
 		Section.RELAY:
 			return _relay(world, ship)
+		Section.CAPTAIN:
+			return _captain(world, ship)
 	return _mounts(world, ship)
 
 
@@ -759,6 +790,15 @@ static func _relay(world: SimWorld, ship: int) -> Dictionary:
 		"lanes": r.lanes_flagged[ship] == 1,
 		"probes": probes,
 	}
+
+
+## The status view's block: subsystem health and open objectives.
+static func _captain(world: SimWorld, ship: int) -> Dictionary:
+	var rows: PackedInt32Array = world.damage.rows_of(ship)
+	var subsystems: Array = []
+	for i: int in range(1, rows.size()):
+		subsystems.append({"health": world.damage.health[rows[i]]})
+	return {"subsystems": subsystems, "objectives": Objectives.of_ship(world, ship)}
 
 
 ## Index of the cause in the subsystem's fault_causes plus 1 when known, else 0.

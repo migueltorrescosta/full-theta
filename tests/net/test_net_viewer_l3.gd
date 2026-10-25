@@ -1,11 +1,12 @@
 extends GdUnitTestSuite
 ## L3: the main screen over loopback. Any number of viewers get the main-screen state
 ## only (KIN, STATUS with the decoupled flag the auto-chase needs, CONTACTS, NEAR,
-## PROJECTILES; no station blocks, no ownership) and can't change anything.
+## PROJECTILES, and the CAPTAIN block of the status view; no station blocks, no
+## ownership) and can't change anything.
 
 const PLAYER: int = NetHarness.PLAYER
 const S = StationViews.Section
-const MAIN_SCREEN: Array[int] = [S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES]
+const MAIN_SCREEN: Array[int] = [S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES, S.CAPTAIN]
 
 var h: NetHarness
 
@@ -43,7 +44,7 @@ func test_viewers_receive_only_main_screen_state_and_change_nothing() -> void:
 			for kind: int in _kinds(data):
 				assert_array(MAIN_SCREEN).contains([kind])
 		assert_dict(v.view.ownership).is_empty()
-		assert_array(v.view.blocks.keys()).is_equal([S.STATUS])
+		assert_array(v.view.blocks.keys()).is_equal([S.STATUS, S.CAPTAIN])
 		assert_float(v.view.blocks[S.STATUS]["hull"]).is_greater(0.0)
 	# Read-only: commands, alert, marks and pings are refused.
 	var viewer: NetClient = viewers[0]

@@ -40,7 +40,7 @@ const AXIS: String = "axis"
 const COMMON: String = "common"
 const LIVE: String = "live"
 const GROUPS: Array[String] = [
-	COMMON, LIVE, "helm", "weapons", "engineering", "science", "relay", "comms", "viewer"
+	COMMON, LIVE, "helm", "weapons", "engineering", "science", "relay", "comms", "captain", "viewer"
 ]
 
 # gdlint: disable=max-line-length
@@ -277,6 +277,20 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "main_view_3", "group": "relay", "kind": PRESS, "kbm": ["Alt+3"], "pad": []},
 	{"id": "main_view_4", "group": "relay", "kind": PRESS, "kbm": ["Alt+4"], "pad": []},
 	{"id": "main_view_5", "group": "relay", "kind": PRESS, "kbm": ["Alt+5"], "pad": []},
+	# Captain (§5.7, strand F): the main screen's view, 1 to 5 or the d-pad.
+	{"id": "captain_view_1", "group": "captain", "kind": PRESS, "kbm": ["1"], "pad": []},
+	{"id": "captain_view_2", "group": "captain", "kind": PRESS, "kbm": ["2"], "pad": []},
+	{"id": "captain_view_3", "group": "captain", "kind": PRESS, "kbm": ["3"], "pad": []},
+	{"id": "captain_view_4", "group": "captain", "kind": PRESS, "kbm": ["4"], "pad": []},
+	{"id": "captain_view_5", "group": "captain", "kind": PRESS, "kbm": ["5"], "pad": []},
+	{
+		"id": "captain_view_next",
+		"group": "captain",
+		"kind": PRESS,
+		"kbm": ["Tab"],
+		"pad": ["Right"]
+	},
+	{"id": "captain_view_prev", "group": "captain", "kind": PRESS, "kbm": [], "pad": ["Left"]},
 	# Science and Comms are placeholders in M1 (FT-M1-005): no bindings yet (#9, #10).
 ]
 # gdlint: enable=max-line-length

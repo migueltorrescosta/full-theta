@@ -21,6 +21,9 @@ const LOG_EVENTS: Dictionary = {
 	&"lane_warning": "lane_warning",
 }
 
+## Most cards a card ping may name.
+const MAX_CARDS: int = 64
+
 ## The owning session, held weakly: it owns this object, and a strong reference back
 ## would leak both (and the world they hold) when the server goes.
 var session: ServerSession:
@@ -30,6 +33,8 @@ var marks: CrewMarks = CrewMarks.new()
 var pings: CrewPings = CrewPings.new()
 ## Relay's zones, routes, mark inbox and log (E02).
 var relay: CrewRelay = CrewRelay.new()
+## Ship -> the main screen's view (MainScreen.View; missing: forward).
+var main_views: Dictionary[int, int] = {}
 ## Whether the sender's faction has scanned a contact's subsystem so far that its weak
 ## point shows (D202): Callable(world, faction, contact, subsystem) -> bool. Science's
 ## scan state (KNOW) answers it; until that lands nothing is revealed. Tests set it.
@@ -46,6 +51,7 @@ func _init(server_session: ServerSession) -> void:
 func send_to(s: NetSession) -> void:
 	session.notify(s, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, ""))
 	session.notify(s, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
+	session.notify(s, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, ""))
 	session.notify(s, NetProtocol.EVENT_SITES, _sites_payload())
 	session.notify(s, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
 	if _sees_routes(s):
@@ -61,6 +67,8 @@ func reset(ship: int) -> void:
 	marks.reset(ship)
 	pings.reset(ship)
 	relay.reset(ship)
+	main_views.erase(ship)
+	_to_ship(ship, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(ship, ""))
 	_to_ship(ship, NetProtocol.EVENT_ZONES, _zones_payload(ship))
 	_to_ship(ship, NetProtocol.EVENT_ROUTES, _routes_payload(ship))
 	_to_relay(ship, NetProtocol.EVENT_INBOX, _inbox_payload(ship))
@@ -80,6 +88,30 @@ func on_alert(conn: int, msg: Dictionary, _now_us: int) -> void:
 		session.request_rejected(s, NetProtocol.Type.ALERT, why, {"level": level})
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, s.name))
+
+
+## MainView{view}: the Captain switches the ship's main screen; with no Captain seated
+## (a Captain within reconnect grace is seated) Relay does (FT-MSC-005, FT-RLY-010, D88).
+func on_main_view(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var s: NetSession = session.by_conn.get(conn)
+	if s == null:
+		return
+	var view: int = msg["view"]
+	var role: CrewMarks.Role = CrewMarks.role_of(s.entry) if s.has_pick() else CrewMarks.Role.NONE
+	var why: String = MainScreen.rule(role, view, captain_seated(s.ship))
+	if why != "":
+		session.request_rejected(s, NetProtocol.Type.MAIN_VIEW, why, {"view": view})
+		return
+	main_views[s.ship] = view
+	_to_ship(s.ship, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, s.name))
+
+
+## Whether the ship has a Captain pick, connected or within reconnect grace.
+func captain_seated(ship: int) -> bool:
+	for o: NetSession in session.by_id.values():
+		if o.ship == ship and o.entry == StationViews.CAPTAIN:
+			return true
+	return false
 
 
 ## Mark{op, ...}: place, move, rename or delete one of the ship's marks (CrewMarks).
@@ -227,6 +259,12 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 			"mark":
 				payload["id"] = msg["id"]
 				if not marks.has_mark(s.ship, msg["id"]):
+					why = CrewPings.BAD_PING
+			"card":
+				# A mission or contract card of Comms' list (FT-CPT-005); Comms' cards come
+				# with #10, the id is checked against the fixture's size only.
+				payload["id"] = msg["id"]
+				if msg["id"] < 0 or msg["id"] >= MAX_CARDS:
 					why = CrewPings.BAD_PING
 			"site", "point":
 				payload["site"] = msg["site"]
@@ -442,6 +480,10 @@ func _log(ship: int, key: String, args: Dictionary = {}, tick: int = -1) -> void
 		ship, tick if tick >= 0 else session.world.tick, key, args
 	)
 	_to_relay(ship, NetProtocol.EVENT_RELAY_LOG, _log_payload(ship, false, [entry]))
+
+
+func _main_view_payload(ship: int, by: String) -> Dictionary:
+	return {"ship": ship, "view": main_views.get(ship, MainScreen.View.FORWARD), "by": by}
 
 
 func _alert_payload(ship: int, by: String) -> Dictionary:
