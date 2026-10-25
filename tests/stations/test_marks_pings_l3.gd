@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## crew station plus a viewer and the Captain. Marks placed from a station's common
 ## action and from Relay's map, and pings and their copies, reach every client's model
 ## and radar picture; marks are selectable everywhere; the ping limit, the 8-mark cap
-## and Relay's replacement work end to end. Science and Comms come up as placeholders
+## and Relay's replacement work end to end. Comms comes up as a placeholder
 ## with the top bar.
 
 const PLAYER: int = NetHarness.PLAYER
@@ -46,10 +46,12 @@ func test_marks_and_pings_reach_every_station() -> void:
 	assert_bool(await _all(func(s: ClientShell) -> bool: return s.screen != null)).is_true()
 	var seen: Callable = func(s: ClientShell) -> bool: return ENEMY in s.ctx.interp.contact_ids()
 	assert_bool(await _all(seen)).is_true()
-	# Science and Comms: placeholders with the top bar (FT-M1-005).
+	# Science has its panel (E01); Comms is a placeholder with the top bar (FT-M1-005).
+	assert_object(_shell_of("science").screen.panels[0]).is_instanceof(SciencePanel)
 	for entry: String in ["science", "comms"]:
 		var screen: StationScreen = _shell_of(entry).screen
-		assert_object(screen.panels[0]).is_instanceof(PlaceholderPanel)
+		if entry == "comms":
+			assert_object(screen.panels[0]).is_instanceof(PlaceholderPanel)
 		assert_str(screen.top_bar._name.text).is_equal(_shell_of(entry).ctx.crew.ship_name())
 	# Science marks its selected contact with the common action (hold R3).
 	var science: ClientShell = _shell_of("science")

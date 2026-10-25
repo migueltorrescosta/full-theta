@@ -114,3 +114,9 @@ func mouse_steers() -> bool:
 ## Science and Relay yes, Helm and Weapons insets fixed).
 func radar_orbitable() -> bool:
 	return station in ["science", "relay"]
+
+
+## Contact id -> blip size factor for the screen's disc radar while this panel is
+## focused (Science's detection confidence, FT-SCI-001); {} draws every blip alike.
+func blip_scale() -> Dictionary:
+	return {}

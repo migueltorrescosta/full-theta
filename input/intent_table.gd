@@ -218,6 +218,38 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "eng_cursor_y", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["LS_Y"]},
 	{"id": "cutaway_yaw", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["RS_X"]},
 	{"id": "cutaway_pitch", "group": "engineering", "kind": AXIS, "kbm": [], "pad": ["RS_Y"]},
+	# Science (§5.4, E01). The dials turn the open axes of a scan and the arrows move a
+	# hack's route; outside a minigame the left stick is the cursor and the right stick
+	# orbits the radar (the panel reads the same axes by state). The d-pad also moves a
+	# hack's route. Drags on the radar and the minigames are their own pointer handling.
+	{"id": "sci_scan", "group": "science", "kind": PRESS, "kbm": ["E"], "pad": ["RT"]},
+	{"id": "sci_hack", "group": "science", "kind": PRESS, "kbm": ["H"], "pad": ["LT"]},
+	{"id": "sci_ping", "group": "science", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
+	{"id": "sci_scan_mark", "group": "science", "kind": PRESS, "kbm": ["M"], "pad": ["Down"]},
+	{"id": "sci_mode", "group": "science", "kind": PRESS, "kbm": ["Q"], "pad": ["LB"]},
+	{"id": "sci_self_scan", "group": "science", "kind": PRESS, "kbm": ["Home"], "pad": ["LB+Down"]},
+	{
+		"id": "sci_sub_prev",
+		"group": "science",
+		"kind": PRESS,
+		"kbm": ["BracketLeft"],
+		"pad": ["Left"]
+	},
+	{
+		"id": "sci_sub_next",
+		"group": "science",
+		"kind": PRESS,
+		"kbm": ["BracketRight"],
+		"pad": ["Right"]
+	},
+	{"id": "sci_up", "group": "science", "kind": PRESS, "kbm": ["Up"], "pad": []},
+	{"id": "sci_down", "group": "science", "kind": PRESS, "kbm": ["Down"], "pad": []},
+	{"id": "sci_left", "group": "science", "kind": PRESS, "kbm": ["Left"], "pad": []},
+	{"id": "sci_right", "group": "science", "kind": PRESS, "kbm": ["Right"], "pad": []},
+	{"id": "sci_dial_1", "group": "science", "kind": AXIS, "kbm": ["Left/Right"], "pad": ["LS_X"]},
+	{"id": "sci_dial_2", "group": "science", "kind": AXIS, "kbm": ["Down/Up"], "pad": ["LS_Y"]},
+	{"id": "sci_dial_3", "group": "science", "kind": AXIS, "kbm": ["Minus/Equal"], "pad": ["RS_X"]},
+	{"id": "sci_orbit_y", "group": "science", "kind": AXIS, "kbm": [], "pad": ["RS_Y"]},
 	# Relay (§5.5); drags on the map (place, Shift+drag depth, right-drag rotate) are
 	# the map's own pointer handling.
 	{"id": "route", "group": "relay", "kind": PRESS, "kbm": ["G"], "pad": ["LB+Up"]},
