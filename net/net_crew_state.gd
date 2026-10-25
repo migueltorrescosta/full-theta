@@ -35,10 +35,6 @@ var pings: CrewPings = CrewPings.new()
 var relay: CrewRelay = CrewRelay.new()
 ## Ship -> the main screen's view (MainScreen.View; missing: forward).
 var main_views: Dictionary[int, int] = {}
-## Whether the sender's faction has scanned a contact's subsystem so far that its weak
-## point shows (D202): Callable(world, faction, contact, subsystem) -> bool. Science's
-## scan state (KNOW) answers it; until that lands nothing is revealed. Tests set it.
-var weak_check: Callable = Callable()
 
 var _session: WeakRef
 
@@ -149,7 +145,8 @@ func on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
 
 ## MarkSend{slot, ship}: Relay sends one of its ship's marks to another ship of its
 ## faction; it waits in that ship's Relay inbox (FT-RLY-008, FT-SPA-021). An attached
-## mark goes as the point where its contact is now.
+## mark goes as the point where its contact is now, and is refused once the faction no
+## longer detects the contact (D221, FT-RLY-009): the true position would leak.
 func on_mark_send(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = session.by_conn.get(conn)
 	if s == null:
@@ -162,6 +159,8 @@ func on_mark_send(conn: int, msg: Dictionary, _now_us: int) -> void:
 		why = CrewMarks.BAD_MARK
 	elif not _allied(s.ship, to):
 		why = CrewRelay.BAD_TARGET
+	elif not _sendable(s, msg["slot"]):
+		why = CrewRelay.LOST_CONTACT
 	if why == "":
 		var mark: Dictionary = _resolved(s.ship, msg["slot"])
 		if mark.is_empty():
@@ -376,13 +375,11 @@ func _spot(s: NetSession, msg: Dictionary) -> Dictionary:
 	return spot
 
 
-## Whether the sender's faction has revealed that subsystem's weak point (D202):
-## weak_check when a test set one, else Science's scan knowledge (FT-SIM-023).
+## Whether the sender's faction has revealed that subsystem's weak point (D202), from
+## Science's scan knowledge (FT-SIM-023).
 func _revealed(s: NetSession, contact: int, sub: int) -> bool:
 	var world: SimWorld = session.world
 	var faction: int = world.faction_of(s.ship)
-	if weak_check.is_valid():
-		return weak_check.call(world, faction, contact, sub)
 	return sub in ScienceKnowledge.weak_points(world, faction, contact)
 
 
@@ -419,6 +416,14 @@ func _allied(a: int, b: int) -> bool:
 		and world.faction_of(a) == world.faction_of(b)
 		and not world.ai.is_enabled(b)
 	)
+
+
+## Whether the mark's contact, if it has one, is one the sender's faction still detects.
+func _sendable(s: NetSession, slot: int) -> bool:
+	for m: Dictionary in marks.marks_of(s.ship):
+		if m["slot"] == slot:
+			return m["contact"] < 0 or _known(s, m["contact"])
+	return true
 
 
 ## A mark of the ship as a free point: an attached one at its contact's position now.

@@ -60,6 +60,9 @@ const DEFAULT_WS_PORT: int = 47801
 const CLIENT_KINDS: Array[String] = ["desktop", "web", "bot"]
 ## Longest Hello.name kept (UTF-8 bytes, after trimming); longer names are cut.
 const MAX_NAME_BYTES: int = 32
+## ClientStats limits (D199, D207): pairs per report and bytes of the user agent.
+const MAX_STATS_PAIRS: int = 400
+const MAX_UA_BYTES: int = 200
 
 ## HelloRejected reasons.
 const REJECT_VERSION: String = "version_mismatch"
@@ -232,6 +235,7 @@ const RATED_REQUESTS: Array[int] = [
 	Type.TOGGLES,
 	Type.CHIP,
 	Type.SHARE,
+	Type.CLIENT_STATS,
 ]
 
 

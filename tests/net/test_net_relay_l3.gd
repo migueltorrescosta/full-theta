@@ -160,6 +160,31 @@ func test_accepting_at_eight_marks_replaces_and_send_rules() -> void:
 	assert_str(why.get("reason", "")).is_equal(CrewMarks.BAD_MARK)
 
 
+# FT: FT-RLY-009
+# D221: a mark attached to a contact the faction no longer detects can't be sent (it would
+# go as the contact's true position); while the contact is detected the send works.
+func test_lost_contact_mark_cannot_be_sent() -> void:
+	var a: Array = await _allies()
+	var server: NetServer = a[0]
+	var sender: NetClient = a[1]
+	var w: SimWorld = server.world
+	var foe: int = w.spawn_enemy(TestDefs.raider_enemy(), 7, 0, Vector3(500.0, 0.0, 0.0))
+	KnowledgeSystem.step(w)
+	var faction: int = w.faction_of(PLAYER)
+	assert_bool(KnowledgeSystem.is_detected(w, faction, foe)).is_true()
+	var from: int = h.mark(sender)
+	sender.place_mark(-1, "Foe", foe, 0, Vector3.ZERO)
+	await h.until(func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 1)
+	sender.send_mark(0, ALLY)
+	await h.until(func() -> bool: return server.session.crew.relay.inbox_of(ALLY).size() == 1)
+	w.knowledge.detected[w.knowledge.row_for(faction, foe)] = 0
+	from = h.mark(sender)
+	sender.send_mark(0, ALLY)
+	var why: Dictionary = await _rejected(sender, NetProtocol.Type.MARK_SEND, from)
+	assert_str(why.get("reason", "")).is_equal(CrewRelay.LOST_CONTACT)
+	assert_int(server.session.crew.relay.inbox_of(ALLY).size()).is_equal(1)
+
+
 # FT: FT-SPA-027, FT-SPA-028, FT-SPA-012, FT-SPA-029, FT-RLY-005
 # Every pick gets the scenario's site names; hazard zones and scan positions sit outside
 # the 8-mark cap and every pick of the ship gets them at every difficulty; routes reach
@@ -245,6 +270,8 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 # the mark then rides on the subsystem's place in the contact's frame.
 func test_mark_on_a_revealed_subsystem_only() -> void:
 	var server: NetServer = h.server()
+	server.world.science_def = ScienceFixture.science()
+	server.world.defs[NetHarness.ENEMY] = ScienceFixture.weak_raider()
 	KnowledgeSystem.step(server.world)
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var enemy: int = NetHarness.ENEMY
@@ -252,9 +279,8 @@ func test_mark_on_a_revealed_subsystem_only() -> void:
 	relay.place_mark(-1, "Core", enemy, 0, Vector3(1.0, 0.0, 0.0))
 	var why: Dictionary = await _rejected(relay, NetProtocol.Type.MARK, from)
 	assert_str(why.get("reason", "")).is_equal(CrewMarks.BAD_MARK)
-	# After the scan (a fixture standing in for Science's KNOW flag).
-	server.session.crew.weak_check = func(_w: SimWorld, _f: int, _c: int, sub: int) -> bool:
-		return sub == 0
+	# After the scan.
+	ScienceKnowledge.record(server.world, server.world.faction_of(PLAYER), enemy, 1.0)
 	from = h.mark(relay)
 	relay.place_mark(-1, "Core", enemy, 0, Vector3(1.0, 0.0, 0.0))
 	var marks: Dictionary = await h.next_event(relay, NetProtocol.EVENT_MARKS, from)

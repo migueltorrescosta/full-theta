@@ -500,6 +500,7 @@
     "toast.bad_inbox": {"en": "That mark is gone.", "pt_PT": "Essa marca já não está lá.", "it": "Quel segnalino non c'è più."},
     "toast.bad_route": {"en": "That spot doesn't work.", "pt_PT": "Esse sítio não serve.", "it": "Quel punto non va."},
     "toast.bad_target": {"en": "Pick an allied ship.", "pt_PT": "Escolhe uma nave aliada.", "it": "Scegli una nave alleata."},
+    "toast.lost_contact": {"en": "That contact is lost. Move the mark first.", "pt_PT": "Esse contacto perdeu-se. Move primeiro a marca.", "it": "Quel contatto è perso. Sposta prima il segnale."},
     "toast.bad_zone": {"en": "That spot doesn't work.", "pt_PT": "Esse sítio não serve.", "it": "Quel punto non va."},
     "toast.inbox_full": {"en": "That ship's inbox is full.", "pt_PT": "A receção dessa nave está cheia.", "it": "I ricevuti di quella nave sono pieni."},
     "toast.not_relay": {"en": "Only Relay can do that.", "pt_PT": "Só a Retransmissão pode fazer isso.", "it": "Solo il Collegamento può farlo."},
