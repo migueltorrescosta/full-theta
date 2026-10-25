@@ -8,8 +8,9 @@ extends RefCounted
 ## per second, which the speed hold buys back with propellant.
 ## - Helm (both variants): selects the point it is told to fly to, holds Face, throttles up
 ##   once the bow is on it, and takes the next point when within WAYPOINT_R of this one.
-## - Relay (co-op only): sees the cloud on its 3D map and sends a route around it, one
-##   waypoint abeam of the cloud (the route ribbon, FT-RLY-005), then the intercept point.
+## - Relay (co-op only): sees the cloud on its 3D map once the faction knows of it
+##   (HazardSystem.known_to) and sends a route around it, one waypoint abeam of the cloud
+##   (the route ribbon, FT-RLY-005), then the intercept point.
 ## - Solo: Helm has only the intercept point and the compass, no knowledge of the cloud
 ##   until it is in it: it flies the straight line (FT-PAIR-004).
 ## Metrics: hull lost (J), propellant used (kg) and time (s) to within CAPTURE of the point.
@@ -17,14 +18,9 @@ extends RefCounted
 const SEED: int = 104
 const PLAYER: int = 0
 const POINT: Vector3 = Vector3(0.0, 0.0, -8000.0)
-const CLOUD_AT: Vector3 = Vector3(0.0, 0.0, -4000.0)
-const CLOUD_RADIUS: float = 2000.0
-## Hull damage in the cloud (J/s) and the share of velocity it removes per second.
-const DAMAGE_W: float = 1e6
-const DRAG: float = 0.08
-## Relay's route: a waypoint 2.7 km abeam of the cloud's centre; the legs to and from it
-## clear the cloud's edge by 238 m.
-const ROUTE: Array[Vector3] = [Vector3(2700.0, 0.0, -4000.0), POINT]
+## Relay's route: a waypoint abeam of the cloud's centre at this many radii (the legs to
+## and from it clear the cloud's edge by 238 m), then the intercept point.
+const ABEAM: float = 1.35
 const WAYPOINT_R: float = 300.0
 const CAPTURE: float = 50.0
 const ON_POINT: float = PI / 36.0
@@ -34,22 +30,19 @@ const TICK_LIMIT: int = 240 * SimWorld.HZ
 
 
 static func harness() -> PairHarness:
-	return PairHarness.new(build, cloud, done, measure, TICK_LIMIT)
+	return PairHarness.new(build, no_environment, done, measure, TICK_LIMIT)
 
 
 static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p4")
 	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	w.hazards = [load("res://content/hazards/p4_dust_cloud.tres") as HazardDef]
 	return w
 
 
-## The environment: inside the cloud, hull damage and drag.
-static func cloud(w: SimWorld) -> void:
-	if w.kin.relative_to_point(PLAYER, CLOUD_AT.x, CLOUD_AT.y, CLOUD_AT.z).length() > CLOUD_RADIUS:
-		return
-	var hull: int = w.damage.hull_row(PLAYER)
-	w.damage.health[hull] = maxf(0.0, w.damage.health[hull] - DAMAGE_W * SimWorld.DT)
-	w.kin.vel[PLAYER] *= 1.0 - DRAG * SimWorld.DT
+## Nothing but the crew and the sim's hazard.
+static func no_environment(_w: SimWorld) -> void:
+	pass
 
 
 static func done(w: SimWorld) -> bool:
@@ -70,7 +63,15 @@ static func solo(w: SimWorld) -> void:
 
 
 static func coop(w: SimWorld) -> void:
-	helm(w, ROUTE)
+	helm(w, route(w))
+
+
+## Relay's route: around the cloud once the faction knows of it, else the straight line.
+static func route(w: SimWorld) -> Array[Vector3]:
+	if not HazardSystem.known_to(w, w.faction_of(PLAYER), 0):
+		return [POINT]
+	var cloud: HazardDef = w.hazards[0]
+	return [cloud.center + Vector3(ABEAM * cloud.radius, 0.0, 0.0), POINT]
 
 
 ## Helm flying the points in order. A point is passed when the ship is within

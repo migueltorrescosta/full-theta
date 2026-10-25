@@ -53,6 +53,14 @@ static func build(ctx: StationContext) -> ContactPicture:
 		var zone_label: String = String(TranslationServer.translate("zone." + kind))
 		pic._add("zone", z["id"], zone_label, "", z["pos"], ctx.crew.pulse("zone", z["id"], now))
 		pic.items[-1].merge({"zone": kind, "radius": z["radius"]})
+	# The sim's hazards the faction knows (D208): zones and shells as hazard bubbles, a plane
+	# front as a line across its travel (`dir`, ship frame).
+	var hazard_label: String = String(TranslationServer.translate("zone.hazard"))
+	for h: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("hazards", []):
+		pic._add("zone", -1000 - int(h["id"]), hazard_label, "", h["pos"], 0.0)
+		pic.items[-1].merge({"zone": "hazard", "radius": h["radius"], "eta": h["eta"]})
+		if int(h["shape"]) == HazardView.PLANE:
+			pic.items[-1]["dir"] = pic.interp.local(h["dir"])
 	# Deployed probes with their bubbles (P13): Science and Relay see where coverage is.
 	var probe_label: String = String(TranslationServer.translate("zone.probe"))
 	for p: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("probes", []):

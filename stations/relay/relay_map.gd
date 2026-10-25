@@ -32,6 +32,9 @@ const ROTATE_RAD_PER_PX: float = 0.01
 const START_TILT_DEG: float = 35.0
 ## A lane crossing a friendly counts when the friendly is within this of the line (m).
 const LANE_R: float = 200.0
+## A plane hazard front's bar is this long each way, its arrow this long (px).
+const FRONT_HALF_PX: float = 60.0
+const FRONT_ARROW_PX: float = 24.0
 
 ## The items (ContactPicture); its interpolator gives the own ship's orientation and
 ## site-local position, to place the cube and turn map points into site positions, and
@@ -214,15 +217,29 @@ func _draw() -> void:
 	_draw_text(font, Vector2(8.0, size.y - 8.0 - font.get_height(FONT_SIZE)), scale_text, _dim())
 
 
-## Hazard bubbles: the sphere's silhouette is a circle of its radius.
+## Hazard bubbles: the sphere's silhouette is a circle of its radius; a sim plane front
+## (`dir`) is a line across its travel with an arrowhead along it.
 func _draw_bubbles(layout: Array[Dictionary]) -> void:
 	for e: Dictionary in layout:
 		var it: Dictionary = e["item"]
-		if it["kind"] == "zone":
+		if it["kind"] == "zone" and it.has("dir"):
+			_draw_front(e)
+		elif it["kind"] == "zone":
 			var col: Color = Palette.item_color(it)
 			var r_px: float = float(it.get("radius", 0.0)) * ppm()
 			draw_circle(e["pos"], r_px, col * Color(1, 1, 1, 0.12))
 			draw_arc(e["pos"], r_px, 0.0, TAU, 48, col * Color(1, 1, 1, 0.6), 1.5, true)
+
+
+## A plane front: a bar through its nearest point, square to its travel on screen, and an
+## arrow along the travel.
+func _draw_front(e: Dictionary) -> void:
+	var col: Color = Palette.item_color(e["item"])
+	var ahead: Vector2 = project(e["rel"] + (e["item"]["dir"] as Vector3) * 1000.0) - e["pos"]
+	var along: Vector2 = ahead.normalized() if ahead.length() > 1.0 else Vector2.DOWN
+	var across: Vector2 = Vector2(-along.y, along.x)
+	draw_line(e["pos"] - across * FRONT_HALF_PX, e["pos"] + across * FRONT_HALF_PX, col, 3.0, true)
+	draw_line(e["pos"], e["pos"] + along * FRONT_ARROW_PX, col, 1.5, true)
 
 
 ## Probes: a ring with a dot, solid once on station; a deployed probe's coverage bubble is

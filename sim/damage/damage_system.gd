@@ -82,13 +82,7 @@ static func apply_hit(world: SimWorld, hit: SimHit, energy: float) -> void:
 		if i < 0:
 			break
 		left = _damage_row(world, ship, i, left, hit.source_id)
-	to_hull += left
-	var t: DamageTable = world.damage
-	var h: int = t.hull_row(ship)
-	t.health[h] = maxf(0.0, t.health[h] - to_hull)
-	if t.health[h] <= 0.0:
-		world.kin.alive[ship] = 0
-		world.emit(&"destroyed", ship, hit.source_id)
+	damage_hull(world, ship, to_hull + left, hit.source_id)
 
 
 ## Index of the weak point a hit lands on, or -1 (FT-SIM-023, P7): the subsystem nearest
@@ -141,6 +135,17 @@ static func hull_fraction(world: SimWorld, ship_id: int) -> float:
 	if h < 0:
 		return 1.0
 	return world.damage.health[h] / world.defs[ship_id].hull_max
+
+
+## Takes energy (J) off the ship's hull; the ship is destroyed (&"destroyed", other_id the
+## source ship or -1) when the hull is gone.
+static func damage_hull(world: SimWorld, ship_id: int, energy: float, source_id: int = -1) -> void:
+	var t: DamageTable = world.damage
+	var h: int = t.hull_row(ship_id)
+	t.health[h] = maxf(0.0, t.health[h] - energy)
+	if t.health[h] <= 0.0 and world.kin.alive[ship_id] == 1:
+		world.kin.alive[ship_id] = 0
+		world.emit(&"destroyed", ship_id, source_id)
 
 
 ## Damages the ship's subsystem with that index in ShipDef.subsystems directly (heat

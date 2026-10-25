@@ -56,6 +56,10 @@ var probe_coverage: Callable = Callable()
 # --- #9 strand B: Relay's stock, launched probes and lane flags. ---
 var relay: RelayTable = RelayTable.new()
 var probes: ProbeTable = ProbeTable.new()
+## The world's hazards, read-only like defs (FT-ARC-020, D208), and which fronts have
+## crossed each ship (strand J). Empty: none.
+var hazards: Array[HazardDef] = []
+var hazard_state: HazardTable = HazardTable.new()
 
 ## Crew and server commands in application order, each stamped with its tick and
 ## whether it was accepted (FT-ARC-008, D122); rejected ones stay so replays reproduce
@@ -134,7 +138,8 @@ func tables() -> Array[SimTable]:
 		science,
 		hacks,
 		relay,
-		probes
+		probes,
+		hazard_state
 	]
 
 
@@ -244,6 +249,7 @@ func step() -> void:
 	PowerSystem.step(self)
 	AssistSystem.step(self)
 	ProbeSystem.step(self)
+	HazardSystem.step(self)
 	Integrator.step_all(kin, DT)
 	WeaponSystem.step(self)
 	GuidanceSystem.step(self)

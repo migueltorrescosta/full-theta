@@ -558,3 +558,46 @@ func test_map_draws_everything_and_probes_are_listed() -> void:
 	assert_array(_sent(s, "place_mark")[0]).is_equal(
 		[-1, "", StationFixture.H2, 0, Vector3(4, 0, 0)]
 	)
+
+
+# FT: FT-RLY-001
+# The sim hazards the faction knows (the RELAY block's `hazards`) are map items beside the
+# marked zones: a zone or shell is a bubble of its radius, a plane front carries its
+# direction in the ship frame and is drawn as a bar; the map draws both without error.
+func test_map_shows_the_sim_hazards() -> void:
+	var s: StationScreen = await _screen()
+	var p: RelayPanel = _relay(s)
+	var block: Dictionary = _block(1, false)
+	block["hazards"] = [
+		{
+			"id": 0,
+			"shape": HazardView.ZONE,
+			"pos": Vector3(0, 0, -4000),
+			"radius": 2000.0,
+			"dir": Vector3.ZERO,
+			"eta": -1.0,
+		},
+		{
+			"id": 1,
+			"shape": HazardView.PLANE,
+			"pos": Vector3(0, 0, -3000),
+			"radius": 0.0,
+			"dir": Vector3(0, 0, 1),
+			"eta": 12.0,
+		},
+	]
+	s.ctx.view.blocks[StationViews.Section.RELAY] = block
+	p.refresh()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var items: Array = s.ctx.picture().items.filter(
+		func(it: Dictionary) -> bool: return it["kind"] == "zone" and it["id"] <= -1000
+	)
+	assert_int(items.size()).is_equal(2)
+	assert_str(items[0]["zone"]).is_equal("hazard")
+	assert_float(items[0]["radius"]).is_equal(2000.0)
+	assert_bool(items[0].has("dir")).is_false()
+	assert_bool(items[1].has("dir")).is_true()
+	assert_float(items[1]["eta"]).is_equal(12.0)
+	p.map.queue_redraw()
+	await get_tree().process_frame

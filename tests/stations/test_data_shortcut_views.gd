@@ -169,3 +169,21 @@ func test_engineering_shows_the_countdown_by_toggle() -> void:
 	assert_float(etas["easy"]).is_equal_approx(4000.0 / 80.0, 0.5)
 	assert_float(etas["normal"]).is_equal_approx(4000.0 / 80.0, 0.5)
 	assert_float(etas["hard"]).is_equal(-1.0)
+
+
+# FT: FT-ENG-008, FT-PAIR-020
+# The countdown also follows the sim hazards the faction knows (the RELAY block's forecast,
+# D208): the soonest of the real fronts' arrival and the marked zones', by the same toggle.
+func test_engineering_countdown_uses_the_sim_hazard_forecast() -> void:
+	var etas: Dictionary = {}
+	for code: String in ["easy", "hard"]:
+		var ctx: StationContext = _ctx("engineering", code)
+		ctx.view.blocks[StationViews.Section.RELAY] = {
+			"hazards": [{"eta": 31.0}, {"eta": 7.5}, {"eta": -1.0}]
+		}
+		var s: StationScreen = auto_free(StationScreen.new())
+		s.setup(ctx)
+		add_child(s)
+		etas[code] = (s.panels[0] as EngineeringPanel).hazard_eta()
+	assert_float(etas["easy"]).is_equal(7.5)
+	assert_float(etas["hard"]).is_equal(-1.0)

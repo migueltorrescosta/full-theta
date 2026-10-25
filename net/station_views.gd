@@ -464,7 +464,9 @@ const BLOCKS: Dictionary = {
 		["hacks", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
 	],
 	# Relay's probes: the stock, Engineering's build in progress, the lane switch and
-	# the ship's launched probes (site-local position in m, bubble radius in m).
+	# the ship's launched probes (site-local position in m, bubble radius in m); then the
+	# sim hazards the faction knows (strand J, HazardView): zone, shell or plane, where now,
+	# the radius now, a plane's direction and the forecast seconds to the ship (-1: none).
 	Section.RELAY:
 	[
 		["stock", "u16"],
@@ -479,6 +481,20 @@ const BLOCKS: Dictionary = {
 					["deployed", "bool"],
 					["pos", "v3f"],
 					["range", "f32"],
+				],
+			],
+		],
+		[
+			"hazards",
+			[
+				"rows",
+				[
+					["id", "u8"],
+					["shape", "u8"],
+					["pos", "v3f"],
+					["radius", "f32"],
+					["dir", "v3f"],
+					["eta", "f32"],
 				],
 			],
 		],
@@ -887,6 +903,7 @@ static func _relay(world: SimWorld, ship: int) -> Dictionary:
 		"fab_left": r.fab_left[ship],
 		"lanes": r.lanes_flagged[ship] == 1,
 		"probes": probes,
+		"hazards": HazardView.rows(world, ship),
 	}
 
 

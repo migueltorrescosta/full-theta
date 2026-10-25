@@ -136,6 +136,9 @@ func apply(kind: int, values: Dictionary, world: SimWorld, ship: int) -> void:
 			if mode == 0:
 				values["probes"] = []
 				values["lanes"] = false
+			# The hazards Relay knows reach another station through the countdown toggle.
+			if not (stations.has("relay") or grants(HAZARD_COUNTDOWNS)):
+				values["hazards"] = []
 		StationViews.Section.FEEDS:
 			if not grants(WEAK_POINTS):
 				values["weak"] = []
@@ -159,7 +162,8 @@ func signature(kind: int) -> String:
 		StationViews.Section.ENGINEERING:
 			out = "c%d.f%d" % [1 if grants(DIAGNOSED_CAUSES) else 0, summary_mode(HELM)]
 		StationViews.Section.RELAY:
-			out = "p%d" % summary_mode(RELAY_OWNER)
+			var hazards: bool = stations.has("relay") or grants(HAZARD_COUNTDOWNS)
+			out = "p%dh%d" % [summary_mode(RELAY_OWNER), 1 if hazards else 0]
 		StationViews.Section.FEEDS:
 			out = "w%dt%d" % [1 if grants(WEAK_POINTS) else 0, 1 if grants(TRACK_FEEDS) else 0]
 		StationViews.Section.CHIPS:
