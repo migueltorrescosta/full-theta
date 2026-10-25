@@ -69,7 +69,8 @@ func test_zone_damage_goes_to_the_named_subsystems() -> void:
 	var events: Array[SimEvent] = SimFixture.run(w, SimWorld.HZ)
 	assert_float(_hull(w)).is_equal(full)
 	var row: int = w.damage.find_subsystem(0, &"sensors")
-	var max_h: float = TestDefs.corvette().subsystems[SimFixture.sub_index(w, 0, &"sensors")].health_max
+	var index: int = SimFixture.sub_index(w, 0, &"sensors")
+	var max_h: float = TestDefs.corvette().subsystems[index].health_max
 	assert_float(max_h - w.damage.health[row]).is_equal_approx(1e6, 2e5)
 	assert_int(SimFixture.of_kind(events, &"subsystem_damaged").size()).is_less_equal(
 		SimWorld.HZ / HazardSystem.DAMAGE_EVERY
@@ -102,9 +103,11 @@ func test_sphere_shell_and_ships_already_behind_are_not_hit() -> void:
 	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(1)
 	assert_int(SimFixture.of_kind(events, &"hazard_hit")[0].tick).is_equal(6 * SimWorld.HZ)
 	var inside: SimWorld = _world([shell], Vector3(0.0, 0.0, -400.0))
-	assert_int(SimFixture.of_kind(SimFixture.run(inside, 600), &"hazard_hit").size()).is_equal(0)
+	var late: Array[SimEvent] = SimFixture.run(inside, 600)
+	assert_int(SimFixture.of_kind(late, &"hazard_hit").size()).is_equal(0)
 	var away: HazardDef = _plane(Vector3(0.0, 0.0, 600.0), 100.0)
-	assert_int(SimFixture.of_kind(SimFixture.run(_world([away]), 600), &"hazard_hit").size()).is_equal(0)
+	late = SimFixture.run(_world([away]), 600)
+	assert_int(SimFixture.of_kind(late, &"hazard_hit").size()).is_equal(0)
 
 
 # FT: FT-RLY-001

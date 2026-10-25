@@ -31,7 +31,9 @@ static func rows(world: SimWorld, ship: int) -> Array:
 		var row: Dictionary = {"id": i, "eta": HazardSystem.eta(world, ship, i)}
 		var since: float = maxf(0.0, t - h.start_s)
 		if h.is_front() and h.shape == HazardDef.Shape.PLANE:
-			var gap: float = HazardSystem.edge_distance(h, HazardSystem.ship_offset(world, ship, h), t)
+			var gap: float = HazardSystem.edge_distance(
+				h, HazardSystem.ship_offset(world, ship, h), t
+			)
 			row.merge({"shape": PLANE, "pos": _ship_at(world, ship) - h.direction * gap})
 			row.merge({"radius": 0.0, "dir": h.direction})
 		else:

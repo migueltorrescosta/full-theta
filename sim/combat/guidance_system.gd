@@ -74,7 +74,7 @@ static func step(world: SimWorld) -> void:
 		if proj.turn_rate[k] <= 0.0:
 			continue
 		var want: Variant = null
-		var turn: float = proj.turn_rate[k]
+		var rate: float = proj.turn_rate[k]
 		var target: int = proj.guide_target[k]
 		if target >= 0:
 			if kin.site[target] == proj.site[k] and is_tracked(world, proj.factions[k], target):
@@ -82,7 +82,7 @@ static func step(world: SimWorld) -> void:
 				var key: int = proj.factions[k] * 65536 + target
 				if not quality.has(key):
 					quality[key] = track_quality(world, proj.factions[k], target)
-				turn *= lerpf(proj.track_floor[k], 1.0, quality[key])
+				rate *= lerpf(proj.track_floor[k], 1.0, quality[key])
 			else:
 				world.emit(&"guidance_lost", proj.ship_ids[k], target)
 				proj.guide_target[k] = -1
@@ -94,5 +94,5 @@ static func step(world: SimWorld) -> void:
 		if to.length_squared() < 1e-12 or speed < 1e-9:
 			continue
 		proj.vel[k] = (
-			WeaponSystem.turn_toward(v / speed, to.normalized(), turn * SimWorld.DT) * speed
+			WeaponSystem.turn_toward(v / speed, to.normalized(), rate * SimWorld.DT) * speed
 		)
