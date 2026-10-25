@@ -29,7 +29,7 @@ var proj_range_m: float = ProjectilesSection.DEFAULT_RANGE_M
 ## messages assembled (delta and full).
 var counts: Dictionary = {}
 ## When true, build() adds its time per part to part_us (the load probe, D161): index 0
-## the near sets and orientation models, then one per StationViews.Section kind (1..9).
+## the near sets and orientation models, then one per StationViews.Section kind (SNAP_FIELDS names them).
 var time_parts: bool = false
 var part_us: PackedInt64Array = PackedInt64Array()
 
