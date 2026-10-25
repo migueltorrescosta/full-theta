@@ -56,7 +56,7 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "request", "group": COMMON, "kind": PRESS, "kbm": ["B"], "pad": ["View+Y"]},
 	# The radar's elevation side strip (FT-SPA-009; off B, owner decision in #7).
 	# Share the screen's data shortcuts with their partner stations (§7.2, D210).
-	{"id": "share", "group": COMMON, "kind": PRESS, "kbm": ["Alt+S"], "pad": ["View+A"]},
+	{"id": "share", "group": COMMON, "kind": PRESS, "kbm": ["Alt+S"], "pad": ["View+RT"]},
 	{"id": "radar_strip", "group": COMMON, "kind": PRESS, "kbm": ["Z"], "pad": ["View+Left"]},
 	{"id": "claim", "group": COMMON, "kind": PRESS, "kbm": ["K"], "pad": ["View+X"]},
 	{"id": "overlay", "group": COMMON, "kind": PRESS, "kbm": ["?"], "pad": ["View"]},
