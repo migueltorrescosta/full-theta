@@ -254,6 +254,25 @@ func test_diagnosed_cause_shows_by_toggle() -> void:
 	assert_bool(rows[engines]["fault"]).is_true()
 
 
+# FT: FT-PAIR-007, FT-PAIR-010, FT-PAIR-019
+# Engineering's fabrication timer on Relay's block is a summary like the probe stock:
+# exact for Relay and Engineering, then exact, banded or absent for the others by the
+# summaries toggle, and never on Comms.
+func test_fabrication_timer_is_a_summary() -> void:
+	world.defs[ME].probe_fab_s = 30.0
+	world.relay.fab_left[ME] = 10.0
+	var left: Callable = func(entry: String, code: String) -> float:
+		return _view(entry, code).blocks[StationViews.Section.RELAY]["fab_left"]
+	for code: String in ["easy", "normal", "hard"]:
+		assert_float(left.call("relay", code)).is_equal_approx(10.0, 0.01)
+		assert_float(left.call("engineering", code)).is_equal_approx(10.0, 0.01)
+	assert_float(left.call("science", "easy")).is_equal_approx(10.0, 0.01)
+	var banded: float = left.call("science", "normal")
+	assert_float(banded).is_greater(0.0)
+	assert_float(banded).is_not_equal(10.0)
+	assert_float(left.call("science", "hard")).is_equal(0.0)
+
+
 # FT: FT-PAIR-008, FT-PAIR-009
 # On Hard no data of another station reaches a screen but marks and pings: every shortcut
 # field is empty or neutral in every single-station view, and the events that carry

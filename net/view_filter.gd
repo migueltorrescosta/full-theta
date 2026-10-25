@@ -5,7 +5,7 @@ extends RefCounted
 ## against the session's DataToggles. A field of another station's data reaches the view
 ## only through a toggle:
 ## - a summary (the top bar's shields and reactor, Helm's thrust envelope and shield ring,
-##   propellant) is exact, banded to the four bands of D193 or absent, by the summaries
+##   propellant, the probe stock and fabrication timer) is exact, banded to the four bands of D193 or absent, by the summaries
 ##   toggle;
 ## - a shortcut (routes on Helm, weak points and track feeds on Weapons, diagnosed causes and
 ##   hazard countdowns on Engineering) is delivered when its toggle is on and its source
@@ -31,6 +31,8 @@ const ENG: Array = ["engineering"]
 const HELM: Array = ["helm"]
 const HELM_ENG: Array = ["helm", "engineering"]
 const RELAY_OWNER: Array = ["relay"]
+## The fabrication timer is Engineering's build shown on Relay's screen.
+const RELAY_ENG: Array = ["relay", "engineering"]
 
 var entry: String = ""
 var toggles: DataToggles
@@ -157,6 +159,7 @@ func apply(kind: int, values: Dictionary, world: SimWorld, ship: int) -> void:
 			if mode == 0:
 				values["probes"] = []
 				values["lanes"] = false
+			values["fab_left"] = summarise(values["fab_left"], def.probe_fab_s, RELAY_ENG)
 			# The hazards Relay knows reach another station through the countdown toggle.
 			if not (stations.has("relay") or grants(HAZARD_COUNTDOWNS)):
 				values["hazards"] = []
@@ -184,7 +187,10 @@ func signature(kind: int) -> String:
 			out = "c%d.f%d" % [1 if grants(DIAGNOSED_CAUSES) else 0, summary_mode(HELM)]
 		StationViews.Section.RELAY:
 			var hazards: bool = stations.has("relay") or grants(HAZARD_COUNTDOWNS)
-			out = "p%dh%d" % [summary_mode(RELAY_OWNER), 1 if hazards else 0]
+			out = (
+				"p%dh%df%d"
+				% [summary_mode(RELAY_OWNER), 1 if hazards else 0, summary_mode(RELAY_ENG)]
+			)
 		StationViews.Section.FEEDS:
 			out = "w%dt%d" % [1 if grants(WEAK_POINTS) else 0, 1 if grants(TRACK_FEEDS) else 0]
 		StationViews.Section.CHIPS:
