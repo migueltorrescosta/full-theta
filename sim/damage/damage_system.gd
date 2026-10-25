@@ -176,19 +176,15 @@ static func inflict_fault(
 	return true
 
 
-## Science's own-ship scan names the fault's cause (FT-SIM-025, P10). With prefill
-## (Easy's diagnosed-cause shortcut, FT-ENG-006) it also becomes Engineering's pick unless
-## one is set. False when the subsystem has no fault.
-static func reveal_fault_cause(
-	world: SimWorld, ship_id: int, subsystem_id: StringName, prefill: bool = false
-) -> bool:
+## Science's own-ship scan names the fault's cause (FT-SIM-025, P10); the shortcut that
+## makes it Engineering's pick is the server's (ServerSession._prefill_cause, FT-ENG-006).
+## False when the subsystem has no fault.
+static func reveal_fault_cause(world: SimWorld, ship_id: int, subsystem_id: StringName) -> bool:
 	var t: DamageTable = world.damage
 	var r: int = t.find_subsystem(ship_id, subsystem_id)
 	if r < 0 or t.fault_cause[r] == &"":
 		return false
 	t.fault_known[r] = 1
-	if prefill and t.fault_pick[r] == &"":
-		t.fault_pick[r] = t.fault_cause[r]
 	var s: SubsystemDef = _sub_def(world, ship_id, r)
 	world.emit(
 		&"fault_cause_revealed",

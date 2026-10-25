@@ -30,6 +30,8 @@ const BAD_ZONE: String = "bad_zone"
 const INBOX_FULL: String = "inbox_full"
 const BAD_INBOX: String = "bad_inbox"
 const BAD_TARGET: String = "bad_target"
+## A mark attached to a contact the faction no longer detects can't be sent (D221).
+const LOST_CONTACT: String = "lost_contact"
 const NOT_RELAY: String = "not_relay"
 
 ## Ship -> Array of {id, kind, site, x, y, z, radius, by}.

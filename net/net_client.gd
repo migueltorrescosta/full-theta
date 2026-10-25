@@ -19,10 +19,9 @@ enum State { IDLE, CONNECTING, WELCOMED, REJECTED, CLOSED }
 ## couldn't apply (S9: every 200 ms is enough for the 15-snapshot stall limit and saves
 ## packets).
 const ACK_INTERVAL_US: int = 200_000
-## D199: a report goes out every STATS_INTERVAL_US with at most STATS_MAX_PAIRS pairs of
+## D199: a report goes out every STATS_INTERVAL_US with at most NetProtocol.MAX_STATS_PAIRS pairs of
 ## snapshot seq and arrival unix us.
 const STATS_INTERVAL_US: int = 2_000_000
-const STATS_MAX_PAIRS: int = 400
 
 var name: String = "client"
 var client_kind: String = "bot"
@@ -352,8 +351,10 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 			if report_stats:
 				_arrivals.append(view.seq)
 				_arrivals.append(got_us)
-				if _arrivals.size() > 2 * STATS_MAX_PAIRS * 4:
-					_arrivals = _arrivals.slice(_arrivals.size() - 2 * STATS_MAX_PAIRS * 4)
+				if _arrivals.size() > 2 * NetProtocol.MAX_STATS_PAIRS * 4:
+					_arrivals = _arrivals.slice(
+						_arrivals.size() - 2 * NetProtocol.MAX_STATS_PAIRS * 4
+					)
 			if log_snapshots:
 				snapshot_log.append(view.seq)
 				snapshot_log.append(got_us)
@@ -402,12 +403,16 @@ func _maybe_report() -> void:
 	if now - _last_report_us < STATS_INTERVAL_US:
 		return
 	_last_report_us = now
-	var take: int = mini(_arrivals.size(), 2 * STATS_MAX_PAIRS)
+	var take: int = mini(_arrivals.size(), 2 * NetProtocol.MAX_STATS_PAIRS)
 	var pairs: PackedInt64Array = _arrivals.slice(0, take)
 	_arrivals = _arrivals.slice(take)
 	_send(
 		NetProtocol.Type.CLIENT_STATS,
-		{"sent_us": LoadProbe.unix_us(), "ua": user_agent.left(200), "pairs": pairs}
+		{
+			"sent_us": LoadProbe.unix_us(),
+			"ua": user_agent.left(NetProtocol.MAX_UA_BYTES),
+			"pairs": pairs
+		}
 	)
 
 

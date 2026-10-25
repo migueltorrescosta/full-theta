@@ -44,7 +44,7 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 	if world.science_def != null:
 		_session(out, world, ship)
 		out["cards"] = _cards(world, ship)
-		out["hacks"] = _hacks(world, world.faction_of(ship))
+		out["hacks"] = hacks(world, world.faction_of(ship))
 	return out
 
 
@@ -165,19 +165,28 @@ static func _cards(world: SimWorld, ship: int) -> Array:
 			card["class_id"] = code(world.defs[contact].id)
 		if ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.INTENT):
 			card["intent"] = 1 + world.ai.mode[contact] if world.ai.enabled[contact] == 1 else 1
-		for i: int in ScienceKnowledge.weak_points(world, faction, contact):
-			card["weak_mask"] |= 1 << i
-		var resist: Dictionary[StringName, float] = ScienceKnowledge.resistances(
-			world, faction, contact
-		)
-		for type: StringName in resist:
-			(card["resist"] as Array).append({"type": code(type), "factor": resist[type]})
+		card.merge(revealed_traits(world, faction, contact), true)
 		rows.append(card)
 	return rows
 
 
+## The contact's weak-point subsystem mask and resistances (`weak_mask`, `resist`: rows of
+## {type, factor}) as far as the faction's scans revealed them; 0 and [] before.
+static func revealed_traits(world: SimWorld, faction: int, contact: int) -> Dictionary:
+	var mask: int = 0
+	for i: int in ScienceKnowledge.weak_points(world, faction, contact):
+		mask |= 1 << i
+	var resist: Array = []
+	var factors: Dictionary[StringName, float] = ScienceKnowledge.resistances(
+		world, faction, contact
+	)
+	for type: StringName in factors:
+		resist.append({"type": code(type), "factor": factors[type]})
+	return {"weak_mask": mask, "resist": resist}
+
+
 ## The faction's open hack windows (P7: the hack-window timer Weapons sees).
-static func _hacks(world: SimWorld, faction: int) -> Array:
+static func hacks(world: SimWorld, faction: int) -> Array:
 	var h: HackTable = world.hacks
 	var rows: Array = []
 	for r: int in h.size():

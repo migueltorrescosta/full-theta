@@ -107,7 +107,7 @@ func send(s: NetSession, chip_id: String, arg: int) -> String:
 	_next_id = (_next_id + 1) & 0xffff
 	open.append(row)
 	_dirty[s.ship] = true
-	session.coop.record(CoopEvents.CHIP_SENT, chip.pair, s.ship, {"chip": String(chip.id)})
+	session.coop.record(CoopEvents.CHIP_SENT, _pair(chip), s.ship, {"chip": String(chip.id)})
 	return ""
 
 
@@ -128,7 +128,7 @@ func answer(s: NetSession, id: int, accept: bool) -> String:
 		open.remove_at(i)
 		_dirty[s.ship] = true
 		var kind: String = CoopEvents.CHIP_ANSWERED if accept else CoopEvents.CHIP_DECLINED
-		session.coop.record(kind, chip.pair, s.ship, {"chip": String(chip.id)})
+		session.coop.record(kind, _pair(chip), s.ship, {"chip": String(chip.id)})
 		_tell_sender(s.ship, row, accept, s.name)
 		return ""
 	return BAD_ID
@@ -144,7 +144,7 @@ func step() -> void:
 			if tick >= int(open[i]["expires"]):
 				var chip: ChipDef = _def.chips[open[i]["chip"]]
 				session.coop.record(
-					CoopEvents.CHIP_EXPIRED, chip.pair, ship, {"chip": String(chip.id)}
+					CoopEvents.CHIP_EXPIRED, _pair(chip), ship, {"chip": String(chip.id)}
 				)
 				open.remove_at(i)
 				_dirty[ship] = true
@@ -255,3 +255,8 @@ func _tell_sender(ship: int, row: Dictionary, accept: bool, by: String) -> void:
 				"by": by
 			}
 		)
+
+
+## The pair the chip belongs to, for the debrief's counts (FT-PAIR-013).
+func _pair(chip: ChipDef) -> String:
+	return CoopEvents.pair_of(String(chip.from_station), String(chip.to_station))

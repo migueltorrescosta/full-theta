@@ -35,7 +35,9 @@ window.ft = (function () {
     audioContexts: [], // every AudioContext the engine creates (it keeps its own out of reach)
     inputs: {},       // id -> {x, y, w, h} in canvas pixels, registered by WebTextField
     active: null,     // id of the text field whose overlay input has focus
-    texts: {},        // id -> {text, submitted, closed} waiting for GDScript
+    texts: {},        // id -> {text, submitted, closed} waiting for a listener
+    listeners: {},    // id -> fn(json): GDScript's callback of a text field
+    onWake: null,     // fn(): GDScript's callback for a page wake
     wakes: 0,         // times the page came back after being hidden for 2 s or more
     hiddenAt: 0,
     openedAt: 0,
@@ -53,6 +55,17 @@ window.ft = (function () {
     };
   });
 
+  // Records what happened to a field and, when GDScript listens to it, hands it over as JSON.
+  function note(id, patch) {
+    const t = Object.assign(ft.texts[id] || {}, patch);
+    ft.texts[id] = t;
+    const listener = ft.listeners[id];
+    if (listener) {
+      delete ft.texts[id];
+      listener(JSON.stringify(t));
+    }
+  }
+
   function overlay() {
     if (el) { return el; }
     el = document.createElement('input');
@@ -65,18 +78,18 @@ window.ft = (function () {
       'margin:0;padding:0 8px;border:2px solid #7aa7ff;border-radius:6px;' +
       'background:#10141c;color:#e8eefc;font:16px sans-serif;outline:none';
     el.addEventListener('input', () => {
-      if (ft.active) { ft.texts[ft.active] = Object.assign(ft.texts[ft.active] || {}, { text: el.value }); }
+      if (ft.active) { note(ft.active, { text: el.value }); }
     });
     el.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && ft.active) {
-        ft.texts[ft.active] = Object.assign(ft.texts[ft.active] || {}, { text: el.value, submitted: true });
+        note(ft.active, { text: el.value, submitted: true });
         el.blur();
       }
       e.stopPropagation();
     });
     el.addEventListener('keyup', (e) => e.stopPropagation());
     el.addEventListener('blur', () => {
-      if (ft.active) { ft.texts[ft.active] = Object.assign(ft.texts[ft.active] || {}, { text: el.value, closed: true }); }
+      if (ft.active) { note(ft.active, { text: el.value, closed: true }); }
       ft.active = null;
       el.style.display = 'none';
     });
@@ -115,15 +128,17 @@ window.ft = (function () {
     [60, 250].forEach(function (ms) {
       setTimeout(function () { if (ft.active === id && document.activeElement !== input) { input.focus(); } }, ms);
     });
-    ft.texts[id] = { text: input.value, opened: true };
+    note(id, { text: input.value, opened: true });
   }
-  // What happened to a field since the last call, as JSON, or "" when nothing did.
-  ft.take = function (id) {
-    const t = ft.texts[id];
-    if (!t) { return ''; }
-    delete ft.texts[id];
-    return JSON.stringify(t);
+  // Sets (or with null removes) the function that gets a field's events as JSON.
+  ft.listen = function (id, fn) {
+    if (fn) { ft.listeners[id] = fn; } else { delete ft.listeners[id]; delete ft.texts[id]; }
   };
+  ft.setOnWake = function (fn) { ft.onWake = fn; };
+  function wake() {
+    ft.wakes++;
+    if (ft.onWake) { ft.onWake(); }
+  }
 
   function onGesture(e) {
     const t = e.changedTouches ? e.changedTouches[0] : e;
@@ -157,11 +172,11 @@ window.ft = (function () {
   // a close event: tell the game, which reconnects with its token (no reload).
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) { ft.hiddenAt = Date.now(); return; }
-    if (ft.hiddenAt && Date.now() - ft.hiddenAt >= 2000) { ft.wakes++; }
+    if (ft.hiddenAt && Date.now() - ft.hiddenAt >= 2000) { wake(); }
     ft.hiddenAt = 0;
   });
-  window.addEventListener('pageshow', function (e) { if (e.persisted) { ft.wakes++; } });
-  window.addEventListener('online', function () { ft.wakes++; });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) { wake(); } });
+  window.addEventListener('online', wake);
   return ft;
 })();
 </script>

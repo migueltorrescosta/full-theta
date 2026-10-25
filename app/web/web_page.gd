@@ -2,8 +2,8 @@ class_name WebPage
 extends RefCounted
 ## Facts about the browser page that GDScript can't see (D196, D200, FT-NET-046): its
 ## user agent, whether it was suspended and came back, the audio context's state. Backed
-## by window.ft in app/web/shell.html. Off the web: empty user agent, no wakes, audio
-## "running" (nothing to unlock).
+## by window.ft in app/web/shell.html. Off the web: empty user agent, no wake callbacks,
+## audio "running" (nothing to unlock).
 
 
 ## The browser's user agent, or "" off the web.
@@ -13,13 +13,17 @@ static func user_agent() -> String:
 	return str(JavaScriptBridge.eval("navigator.userAgent", true))
 
 
-## How many times the page came back after 2 s or more hidden (Safari suspends a page
-## in the background; its socket may be dead on return), or the network came back.
-## Compare with the last value: a change means "reconnect now".
-static func wakes() -> int:
+## Calls `on_wake` (no arguments) each time the page came back after 2 s or more hidden
+## (Safari suspends a page in the background; its socket may be dead on return), or the
+## network came back. Returns the callback object to keep alive, or null off the web.
+static func on_wake(on_wake_fn: Callable) -> JavaScriptObject:
 	if not OS.has_feature("web"):
-		return 0
-	return int(JavaScriptBridge.eval("window.ft ? window.ft.wakes : 0", true))
+		return null
+	var cb: JavaScriptObject = JavaScriptBridge.create_callback(
+		func(_args: Array) -> void: on_wake_fn.call()
+	)
+	JavaScriptBridge.get_interface("ft").call("setOnWake", cb)
+	return cb
 
 
 ## "running", "suspended" (waiting for a tap) or "" before the engine's audio started.

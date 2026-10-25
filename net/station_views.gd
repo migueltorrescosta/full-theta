@@ -20,7 +20,6 @@ enum Section {
 	NEAR = 7,
 	PROJECTILES = 8,
 	OWNERSHIP = 9,
-	# Reserved for M2 (#9); each strand fills its own section's fields and getter.
 	# Science contact card, scan and hack state (strand A).
 	SCIENCE = 10,
 	# Relay probes, coverage, routes, hazards and inbox (strand B).
@@ -296,6 +295,10 @@ const EVENT_STATIONS: Dictionary = {
 	&"mount_cooled": ["weapons", "engineering"],
 	&"guidance_lost": ["weapons"],
 	&"weak_point_hit": ["weapons"],
+	# Exact-value events (EXACT_EVENTS, D224): Engineering's, or a plain alert elsewhere.
+	&"subsystem_damaged": ["engineering"],
+	&"subsystem_destroyed": ["engineering"],
+	&"shield_low": ["helm", "engineering"],
 	&"fault_inflicted": ["engineering"],
 	&"fault_cause_revealed": ["engineering"],
 	&"fault_cause_picked": ["engineering"],
@@ -326,6 +329,14 @@ const EVENT_STATIONS: Dictionary = {
 	&"probe_no_parts": ["engineering"],
 	&"lane_warning": ["weapons", "relay"],
 }
+
+## Events whose `value` is Engineering's exact data (a health fraction, a heat, the shield
+## fraction), D224: a view without Engineering gets the value as its summaries toggle says
+## (exact, banded or 0), and a Comms view without Engineering gets the event not at all.
+## Fault and shield_low double as plain alerts on the stations that depend on them.
+const EXACT_EVENTS: Array[StringName] = [
+	&"subsystem_damaged", &"subsystem_destroyed", &"fault", &"shield_low"
+]
 
 ## Events that are a data shortcut when they leave the station that produced them: kind ->
 ## [toggle, source station]. The source's own sessions always get them; another station
@@ -709,6 +720,10 @@ static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 ## Whether a sim event of this kind reaches a session holding entry (faction and ship
 ## checks are ServerSession.event_audience()'s).
 static func sees_event(entry: String, kind: StringName, toggles: String = DEFAULT_TOGGLES) -> bool:
+	if EXACT_EVENTS.has(kind):
+		var seen: ViewFilter = ViewFilter.of(entry, toggles)
+		if seen != null and seen.condition_hidden:
+			return false
 	if not EVENT_STATIONS.has(kind):
 		return true
 	var shortcut: Array = EVENT_SHORTCUTS.get(kind, [])
@@ -723,6 +738,30 @@ static func sees_event(entry: String, kind: StringName, toggles: String = DEFAUL
 		if filter != null and filter.grants(shortcut[0]):
 			return true
 	return false
+
+
+## The `value` of a sim event as an entry's view may carry it: an EXACT_EVENTS value as the
+## summaries toggle says (exact for Engineering and at the exact setting, the middle of its
+## D193 band, else 0; a fault's heat is Engineering's alone); any other event's value as it
+## is (D224).
+static func event_value(
+	entry: String, kind: StringName, value: float, toggles: String = DEFAULT_TOGGLES
+) -> float:
+	if not EXACT_EVENTS.has(kind):
+		return value
+	var filter: ViewFilter = ViewFilter.of(entry, toggles)
+	if filter == null:
+		return 0.0
+	# A fault's heat is no summary at any setting: Engineering's alone.
+	var mode: int = filter.summary_mode(ViewFilter.ENG)
+	if kind == &"fault":
+		return value if filter.sees_all or filter.stations.has("engineering") else 0.0
+	match mode:
+		2:
+			return value
+		1:
+			return HealthBand.quantise(clampf(value, 0.0, 1.0), DataToggles.def().band_edges)
+	return 0.0
 
 
 ## The OWNERSHIP section content an entry sees: the claims and last writers of its own

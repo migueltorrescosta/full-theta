@@ -121,7 +121,6 @@ func join(text: String) -> void:
 		_status.text = addr.error
 		return
 	settings.last_address = text
-	_remember_name()
 	_connect(addr.url, "")
 
 

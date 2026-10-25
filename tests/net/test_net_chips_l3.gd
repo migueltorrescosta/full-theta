@@ -108,13 +108,16 @@ func test_the_chip_list_is_the_spec_list() -> void:
 	for chip: ChipDef in def.chips:
 		assert_array(want.keys()).contains([String(chip.id)])
 		(
-			assert_array([String(chip.from_station), String(chip.to_station), String(chip.pair)])
+			assert_array(
+				[
+					String(chip.from_station),
+					String(chip.to_station),
+					CoopEvents.pair_of(String(chip.from_station), String(chip.to_station))
+				]
+			)
 			. is_equal(want[String(chip.id)])
 		)
 		assert_bool(chip.active).is_equal(String(chip.id) != "hold_fire")
-		assert_str(CoopEvents.pair_of(String(chip.from_station), String(chip.to_station))).is_equal(
-			String(chip.pair)
-		)
 
 
 # FT: FT-PAIR-021, FT-PAIR-009, FT-PAIR-012

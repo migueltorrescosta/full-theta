@@ -71,7 +71,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-NET-027 | tests | `tests/net/test_net_reconnect_l3.gd` |
 | FT-NET-028 | tests | `tests/net/test_net_viewer_l3.gd` |
 | FT-NET-029 | tests | `tests/net/test_host_launcher.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_client_shell_l3.gd` |
-| FT-NET-030 | tests | `tests/app/web/test_shell_html.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tools/tests/test_release.py` |
+| FT-NET-030 | tests | `tests/app/test_join_helpers.gd`, `tests/app/web/test_shell_html.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tools/tests/test_release.py` |
 | FT-NET-031 | tests | `tests/net/test_lan_no_internet.gd` |
 | FT-NET-032 | tests | `tests/stations/test_joint_views.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-033 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_resync.gd` |
@@ -246,7 +246,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-SPA-013 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_captain_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd` |
 | FT-SPA-014 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-SPA-015 | tests | `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
-| FT-SPA-016 | tests | `tests/net/test_net_marks_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd` |
+| FT-SPA-016 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd` |
 | FT-SPA-017 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_marks_pings_l3.gd` |
 | FT-SPA-019 | tests | `tests/net/test_net_toggles_l3.gd` |
 | FT-SPA-020 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_relay_l3.gd`, `tests/stations/test_marks_pings_l3.gd` |
@@ -269,7 +269,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-PAIR-007 | tests | `tests/net/test_hazard_view.gd`, `tests/net/test_net_coop_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_helm_route_ribbon.gd` |
 | FT-PAIR-008 | tests | `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd` |
 | FT-PAIR-009 | tests | `tests/net/test_net_chips_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_request_chips.gd` |
-| FT-PAIR-010 | tests | `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd` |
+| FT-PAIR-010 | tests | `tests/net/test_net_event_values_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-PAIR-011 | pending |  |
 | FT-PAIR-012 | tests | `tests/net/test_net_chips_l3.gd` |
 | FT-PAIR-013 | tests | `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_coop_l3.gd`, `tests/stations/test_request_chips.gd` |
@@ -278,7 +278,7 @@ Tests: 318, manual: 11, pending: 72.
 | FT-PAIR-016 | pending |  |
 | FT-PAIR-017 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_lobby_toggles.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-018 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd` |
-| FT-PAIR-019 | tests | `tests/net/test_view_filter.gd`, `tests/shared/test_health_band.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_main_screen_views.gd` |
+| FT-PAIR-019 | tests | `tests/net/test_net_event_values_l3.gd`, `tests/net/test_view_filter.gd`, `tests/shared/test_health_band.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_main_screen_views.gd` |
 | FT-PAIR-020 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_hazard_view.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-PAIR-021 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-022 | tests | `tests/pairs/test_hack_alpha.gd`, `tests/pairs/test_over_horizon_strike.gd` |

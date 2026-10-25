@@ -35,10 +35,6 @@ var pings: CrewPings = CrewPings.new()
 var relay: CrewRelay = CrewRelay.new()
 ## Ship -> the main screen's view (MainScreen.View; missing: forward).
 var main_views: Dictionary[int, int] = {}
-## Whether the sender's faction has scanned a contact's subsystem so far that its weak
-## point shows (D202): Callable(world, faction, contact, subsystem) -> bool. Science's
-## scan state (KNOW) answers it; until that lands nothing is revealed. Tests set it.
-var weak_check: Callable = Callable()
 
 var _session: WeakRef
 
@@ -149,7 +145,8 @@ func on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
 
 ## MarkSend{slot, ship}: Relay sends one of its ship's marks to another ship of its
 ## faction; it waits in that ship's Relay inbox (FT-RLY-008, FT-SPA-021). An attached
-## mark goes as the point where its contact is now.
+## mark goes as the point where its contact is now, and is refused once the faction no
+## longer detects the contact (D221, FT-RLY-009): the true position would leak.
 func on_mark_send(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = session.by_conn.get(conn)
 	if s == null:
@@ -162,6 +159,8 @@ func on_mark_send(conn: int, msg: Dictionary, _now_us: int) -> void:
 		why = CrewMarks.BAD_MARK
 	elif not _allied(s.ship, to):
 		why = CrewRelay.BAD_TARGET
+	elif not _sendable(s, msg["slot"]):
+		why = CrewRelay.LOST_CONTACT
 	if why == "":
 		var mark: Dictionary = _resolved(s.ship, msg["slot"])
 		if mark.is_empty():
@@ -236,7 +235,8 @@ func on_sim_event(e: SimEvent) -> void:
 
 
 ## Ping{kind, id, site, x, y, z}: any crew pick and the Captain ping an item for every
-## pick on the ship, viewers included (FT-SPA-016, FT-SPA-020), rate-limited per session
+## pick on the ship, viewers included (FT-SPA-016, FT-SPA-020; a card only the Captain),
+## rate-limited per session
 ## (FT-SPA-017); a ping on an item another session pinged within 3 s is a copy naming
 ## that first pinger (FT-SPA-031).
 func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
@@ -264,10 +264,20 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 				else:
 					session.coop.on_mark_pinged(s, msg["id"])
 			"card":
-				# A mission or contract card of Comms' list (FT-CPT-005); Comms' cards come
-				# with #10, the id is checked against the fixture's size only.
+				# A mission or contract card of Comms' list (FT-CPT-005, D215): the Captain
+				# pings it. Comms' cards come with #10, the id is checked against the
+				# fixture's size only.
 				payload["id"] = msg["id"]
-				if msg["id"] < 0 or msg["id"] >= MAX_CARDS:
+				if (
+					CrewMarks.role_of(s.entry) != CrewMarks.Role.CAPTAIN
+					or msg["id"] < 0
+					or msg["id"] >= MAX_CARDS
+				):
+					why = CrewPings.BAD_PING
+			"zone":
+				# A hazard zone, scan position or probe bubble (D222, FT-SPA-028).
+				payload["id"] = msg["id"]
+				if not _is_zone(s.ship, msg["id"]):
 					why = CrewPings.BAD_PING
 			"site", "point":
 				payload["site"] = msg["site"]
@@ -346,6 +356,25 @@ func _known(s: NetSession, contact: int) -> bool:
 	)
 
 
+## Whether `id` names a zone the ship's faction can ping (CrewPings.HAZARD_ZONE_BASE): a
+## marked zone, one of its launched probes (-1 - serial) or a known sim hazard.
+func _is_zone(ship: int, id: int) -> bool:
+	var world: SimWorld = session.world
+	if id <= CrewPings.HAZARD_ZONE_BASE:
+		var h: int = CrewPings.HAZARD_ZONE_BASE - id
+		return h < world.hazards.size() and HazardSystem.known_to(world, world.faction_of(ship), h)
+	if id < 0:
+		var t: ProbeTable = world.probes
+		for row: int in t.rows_of(ship):
+			if t.serial[row] == -1 - id:
+				return true
+		return false
+	for z: Dictionary in relay.zones_of(ship):
+		if z["id"] == id:
+			return true
+	return false
+
+
 ## Whether a ship of the world is at the site.
 func _is_site(site: int) -> bool:
 	return site >= 0 and session.world.kin.site.has(site)
@@ -376,13 +405,11 @@ func _spot(s: NetSession, msg: Dictionary) -> Dictionary:
 	return spot
 
 
-## Whether the sender's faction has revealed that subsystem's weak point (D202):
-## weak_check when a test set one, else Science's scan knowledge (FT-SIM-023).
+## Whether the sender's faction has revealed that subsystem's weak point (D202), from
+## Science's scan knowledge (FT-SIM-023).
 func _revealed(s: NetSession, contact: int, sub: int) -> bool:
 	var world: SimWorld = session.world
 	var faction: int = world.faction_of(s.ship)
-	if weak_check.is_valid():
-		return weak_check.call(world, faction, contact, sub)
 	return sub in ScienceKnowledge.weak_points(world, faction, contact)
 
 
@@ -419,6 +446,14 @@ func _allied(a: int, b: int) -> bool:
 		and world.faction_of(a) == world.faction_of(b)
 		and not world.ai.is_enabled(b)
 	)
+
+
+## Whether the mark's contact, if it has one, is one the sender's faction still detects.
+func _sendable(s: NetSession, slot: int) -> bool:
+	for m: Dictionary in marks.marks_of(s.ship):
+		if m["slot"] == slot:
+			return m["contact"] < 0 or _known(s, m["contact"])
+	return true
 
 
 ## A mark of the ship as a free point: an attached one at its contact's position now.

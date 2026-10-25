@@ -31,8 +31,8 @@ func _init(server_session: ServerSession) -> void:
 	_session = weakref(server_session)
 
 
-## A sim event of the tick, with the sessions that received it (unused since D210).
-func on_sim_event(e: SimEvent, _audience: PackedInt32Array) -> void:
+## A sim event of the tick.
+func on_sim_event(e: SimEvent) -> void:
 	match e.kind:
 		&"scan_started", &"hack_started":
 			_probe_scans[e.ship_id] = (
@@ -41,7 +41,9 @@ func on_sim_event(e: SimEvent, _audience: PackedInt32Array) -> void:
 			)
 		&"scan_done", &"hack_done":
 			if _probe_scans.get(e.ship_id, false):
-				record(PROBE_SCAN, "p13", e.ship_id, {"event": String(e.kind)})
+				record(
+					PROBE_SCAN, pair_of("science", "relay"), e.ship_id, {"event": String(e.kind)}
+				)
 			_probe_scans.erase(e.ship_id)
 		&"scan_failed", &"hack_failed", &"hack_traced", &"science_refused":
 			_probe_scans.erase(e.ship_id)
@@ -88,6 +90,9 @@ func step() -> void:
 
 func reset_ship(ship: int) -> void:
 	_probe_scans.erase(ship)
+	for key: String in _used_at.keys():
+		if key.begins_with("%d|" % ship):
+			_used_at.erase(key)
 	for key: String in _reached.keys():
 		if key.begins_with("%d|" % ship):
 			_reached.erase(key)

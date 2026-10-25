@@ -38,20 +38,7 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 		var card: Dictionary = _weak_row(world, faction, contact)
 		if not card.is_empty():
 			(out["weak"] as Array).append(card)
-	var h: HackTable = world.hacks
-	for r: int in h.size():
-		if h.factions[r] == faction and (out["windows"] as Array).size() < MAX_ROWS:
-			(
-				(out["windows"] as Array)
-				. append(
-					{
-						"target": h.ship_ids[r],
-						"sub": h.subsystem[r],
-						"left": maxf(0.0, (h.until_tick[r] - world.tick) * SimWorld.DT),
-						"by": h.by[r],
-					}
-				)
-			)
+	out["windows"] = ScienceView.hacks(world, faction)
 	return out
 
 
@@ -59,17 +46,14 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 static func _weak_row(world: SimWorld, faction: int, contact: int) -> Dictionary:
 	if world.science_def == null:
 		return {}
-	var mask: int = 0
-	for i: int in ScienceKnowledge.weak_points(world, faction, contact):
-		mask |= 1 << i
-	var resist: Array = []
-	var factors: Dictionary[StringName, float] = ScienceKnowledge.resistances(
-		world, faction, contact
-	)
-	for type: StringName in factors:
-		resist.append({"type": ScienceView.code(type), "factor": factors[type]})
-	if mask == 0 and resist.is_empty():
+	var traits: Dictionary = ScienceView.revealed_traits(world, faction, contact)
+	if traits["weak_mask"] == 0 and (traits["resist"] as Array).is_empty():
 		return {}
 	# The weak points name subsystems of the contact's class: that is known once they are.
 	var class_id: int = ScienceView.code(world.defs[contact].id)
-	return {"contact": contact, "class_id": class_id, "weak_mask": mask, "resist": resist}
+	return {
+		"contact": contact,
+		"class_id": class_id,
+		"weak_mask": traits["weak_mask"],
+		"resist": traits["resist"]
+	}

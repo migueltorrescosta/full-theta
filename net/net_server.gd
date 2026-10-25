@@ -117,10 +117,10 @@ func _add_resyncs(window: Dictionary) -> void:
 func _on_client_stats(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var from: NetSession = session.by_conn.get(conn)
 	var pairs: PackedInt64Array = msg["pairs"]
-	if from == null or pairs.size() > 2 * 2 * 400:
+	if from == null or pairs.size() > 2 * NetProtocol.MAX_STATS_PAIRS:
 		return
 	var c: SnapshotAgeStats.Client = age_stats.client_for(from.id, from.name, from.client_kind)
-	c.user_agent = msg["ua"]
+	c.user_agent = NetProtocol.clip_utf8(msg["ua"], NetProtocol.MAX_UA_BYTES)
 	age_stats.report(c, msg["sent_us"], LoadProbe.unix_us(), pairs, transport.stamp_of)
 
 

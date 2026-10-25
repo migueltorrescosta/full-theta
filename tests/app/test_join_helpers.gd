@@ -27,6 +27,13 @@ func test_ipv6_hostname_is_bracketed() -> void:
 	assert_int(LanBrowser.parse_address(cfg.address).port).is_equal(6001)
 
 
+# FT: FT-NET-030
+# The browser's location.hostname already carries the brackets of an IPv6 literal.
+func test_bracketed_ipv6_hostname_is_not_bracketed_twice() -> void:
+	var cfg: JoinHelpers.WebJoinConfig = JoinHelpers.config_from("[fd00::1]", 6000, "")
+	assert_str(cfg.address).is_equal("[fd00::1]:6001")
+
+
 func test_join_is_automatic_unless_switched_off() -> void:
 	assert_bool(JoinHelpers.config_from("h", 47800, "").auto_join).is_true()
 	assert_bool(JoinHelpers.config_from("h", 47800, "?join=1").auto_join).is_true()
