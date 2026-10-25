@@ -215,7 +215,7 @@ Tests: 312, manual: 12, pending: 77.
 | FT-CPT-001 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/net/test_net_main_screen_rules.gd`, `tests/stations/test_captain_panel.gd` |
 | FT-CPT-002 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/stations/test_captain_panel.gd` |
 | FT-CPT-003 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/stations/test_captain_panel.gd` |
-| FT-CPT-004 | tests | `tests/stations/test_captain_panel.gd` |
+| FT-CPT-004 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/stations/test_captain_panel.gd` |
 | FT-CPT-005 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/stations/test_captain_panel.gd` |
 | FT-MSC-001 | tests | `tests/net/test_net_viewer_l3.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-MSC-002 | tests | `tests/stations/test_main_screen_views.gd` |

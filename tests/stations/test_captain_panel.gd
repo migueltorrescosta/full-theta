@@ -51,10 +51,32 @@ func test_mirror_buttons_chips_and_cards() -> void:
 	assert_int(FixtureCards.all().size()).is_equal(4)
 	assert_int(cap.cards.card_at(Vector2(10.0, FixtureCards.HEADER_HEIGHT + 5.0))).is_equal(0)
 	assert_int(cap.cards.card_at(Vector2(10.0, 2.0))).is_equal(-1)
-	# Another chip source replaces the fixture once strand G's block exists.
+	# The ship's CHIPS block replaces the fixture: the Captain sees every open chip, read-only.
 	s.ctx.view.blocks[StationViews.Section.CHIPS] = {}
 	await get_tree().process_frame
 	assert_int(cap.chips.rows.size()).is_equal(0)
+	var boost: int = NetChips.def().chips.find_custom(
+		func(c: ChipDef) -> bool: return c.id == &"boost"
+	)
+	var tick: int = s.ctx.view.tick
+	s.ctx.view.blocks[StationViews.Section.CHIPS] = {
+		"chips":
+		[
+			{
+				"id": 1,
+				"chip": boost,
+				"arg": -1,
+				"from": StationViews.CREW.find("helm"),
+				"to": StationViews.CREW.find("engineering"),
+				"sent": tick,
+				"expires": tick + 8 * SimWorld.HZ,
+			}
+		]
+	}
+	await get_tree().process_frame
+	assert_int(cap.chips.rows.size()).is_equal(1)
+	assert_str(ChipList.row_text(cap.chips.rows[0])).is_equal("Helm > Engineering  Boost  8 s")
+	assert_array(StationViews.STATION_SECTIONS["captain"]).contains([StationViews.Section.CHIPS])
 
 
 # FT: FT-CPT-001

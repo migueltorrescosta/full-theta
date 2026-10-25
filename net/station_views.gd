@@ -172,6 +172,7 @@ const STATION_SECTIONS: Dictionary = {
 		Section.NEAR,
 		Section.PROJECTILES,
 		Section.CAPTAIN,
+		Section.CHIPS,
 	],
 	"viewer":
 	[

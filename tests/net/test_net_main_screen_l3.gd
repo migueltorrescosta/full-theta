@@ -83,7 +83,7 @@ func test_the_captain_alone_switches_while_seated_even_in_grace() -> void:
 	assert_bool(await _sees(viewer, MainScreen.View.CHASE)).is_true()
 
 
-# FT: FT-MSC-006, FT-CPT-001
+# FT: FT-MSC-006, FT-CPT-001, FT-CPT-004
 # The Captain and the viewer get the status view's data: subsystem health and the
 # encounter objective; the Captain gets no station block.
 func test_captain_and_viewer_get_the_status_block() -> void:
@@ -99,4 +99,6 @@ func test_captain_and_viewer_get_the_status_block() -> void:
 		assert_float(block["subsystems"][0]["health"]).is_greater(0.0)
 		assert_int(block["objectives"][0]["kind"]).is_equal(Objectives.Kind.DESTROY_HOSTILES)
 		assert_int(block["objectives"][0]["left"]).is_equal(1)
-		assert_array(c.view.blocks.keys()).is_equal([S.STATUS, S.CAPTAIN])
+		# The Captain also gets the ship's open request chips (FT-CPT-004).
+		var keys: Array = [S.STATUS, S.CAPTAIN] + ([S.CHIPS] if c == cap else [])
+		assert_array(c.view.blocks.keys()).is_equal(keys)

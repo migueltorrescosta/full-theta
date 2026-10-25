@@ -156,8 +156,6 @@ func _pick(level: int) -> void:
 	alert_picked.emit(level)
 
 
-
-
 ## Hull and shields are energies in joules (about 10^8): as a percentage of the ship's
 ## maximum when `max_value` is known (the spec's "hull 92"), else with a k, M or G suffix
 ## so the bar never shows "Hull 100000000".
