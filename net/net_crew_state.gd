@@ -356,13 +356,17 @@ func _known(s: NetSession, contact: int) -> bool:
 	)
 
 
-## Whether `id` names one of the ship's zones, or the bubble of one of its launched probes
-## (CrewPings.PROBE_ZONE_BASE).
+## Whether `id` names a zone the ship's faction can ping (CrewPings.HAZARD_ZONE_BASE): a
+## marked zone, one of its launched probes (-1 - serial) or a known sim hazard.
 func _is_zone(ship: int, id: int) -> bool:
-	if id >= CrewPings.PROBE_ZONE_BASE:
-		var t: ProbeTable = session.world.probes
+	var world: SimWorld = session.world
+	if id <= CrewPings.HAZARD_ZONE_BASE:
+		var h: int = CrewPings.HAZARD_ZONE_BASE - id
+		return h < world.hazards.size() and HazardSystem.known_to(world, world.faction_of(ship), h)
+	if id < 0:
+		var t: ProbeTable = world.probes
 		for row: int in t.rows_of(ship):
-			if t.serial[row] == id - CrewPings.PROBE_ZONE_BASE:
+			if t.serial[row] == -1 - id:
 				return true
 		return false
 	for z: Dictionary in relay.zones_of(ship):

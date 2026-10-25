@@ -11,9 +11,10 @@ const BURST: float = 3.0
 ## A ping pulses for 3 s (FT-SPA-016); another ping on its item meanwhile is a copy.
 const COPY_US: int = 3_000_000
 const BAD_PING: String = "bad_ping"
-## A `zone` ping names a zone of the ship's `zones` event by its id, or a launched probe's
-## bubble as PROBE_ZONE_BASE + the probe's serial (D222). MAX_ZONES is far below it.
-const PROBE_ZONE_BASE: int = 1000
+## A `zone` ping names a marked zone of the ship's `zones` event by its id (>= 0), a launched
+## probe's bubble as -1 - the probe's serial, or a sim hazard the faction knows as
+## HAZARD_ZONE_BASE - its index (D222). The probe ids stay above HAZARD_ZONE_BASE.
+const HAZARD_ZONE_BASE: int = -1000
 
 ## Session id -> NetTokenBucket.
 var _buckets: Dictionary[int, NetTokenBucket] = {}

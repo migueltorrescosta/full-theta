@@ -207,16 +207,16 @@ func test_zones_and_probe_bubbles_can_be_pinged() -> void:
 	)
 	assert_int(e["payload"]["id"]).is_equal(zone)
 	from = h.mark(relay)
-	helm.ping("zone", CrewPings.PROBE_ZONE_BASE + 3, -1, Vector3.ZERO)
+	helm.ping("zone", -4, -1, Vector3.ZERO)
 	e = await h.next_event(
 		relay,
 		NetProtocol.EVENT_PING,
 		from,
 		func(ev: Dictionary) -> bool: return ev["payload"]["kind"] == "zone"
 	)
-	assert_int(e["payload"]["id"]).is_equal(CrewPings.PROBE_ZONE_BASE + 3)
+	assert_int(e["payload"]["id"]).is_equal(-4)
 	from = h.mark(helm)
-	helm.ping("zone", CrewPings.PROBE_ZONE_BASE + 4, -1, Vector3.ZERO)
+	helm.ping("zone", CrewPings.HAZARD_ZONE_BASE - 7, -1, Vector3.ZERO)
 	var why: Dictionary = await _rejected(helm, NetProtocol.Type.PING, from)
 	assert_str(why.get("reason", "")).is_equal(CrewPings.BAD_PING)
 
