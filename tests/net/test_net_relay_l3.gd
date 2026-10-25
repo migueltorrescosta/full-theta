@@ -296,12 +296,13 @@ func test_probe_launch_log_and_lane_warning_events() -> void:
 		var blk: Dictionary = relay.view.blocks.get(StationViews.Section.RELAY, {})
 		return not blk.is_empty() and blk["stock"] == 2 and blk["probes"].size() == 1
 	assert_bool(await h.until(snap)).is_true()
-	# Ticks of flight: it deploys; the other stations never got a Relay block.
+	# Ticks of flight: it deploys; Weapons never gets a Relay block (Engineering and
+	# Science do: fabrication seconds, probe bubbles), nor Relay's events.
 	var deployed: Callable = func() -> bool:
 		return relay.view.blocks[StationViews.Section.RELAY]["probes"][0]["deployed"]
 	assert_bool(await h.until(deployed, 20000)).is_true()
 	assert_bool(tac.view.blocks.has(StationViews.Section.RELAY)).is_false()
-	assert_bool(sys.view.blocks.has(StationViews.Section.RELAY)).is_false()
+	assert_bool(sys.view.blocks.has(StationViews.Section.RELAY)).is_true()
 	assert_array(h.events_of(sys, "probe_launched")).is_empty()
 	# Lane flagging and its warning: a friendly in the bow mount's line.
 	var w: SimWorld = server.world
