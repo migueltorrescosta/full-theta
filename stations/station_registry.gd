@@ -1,8 +1,8 @@
 class_name StationRegistry
 extends RefCounted
 ## Station id -> the StationPanel script that draws it. Station strands add one line
-## each; a station missing here gets PlaceholderPanel (Comms in M1,
-## FT-M1-005, Comms; and any unknown id). Paths, loaded on first use, not class names: naming
+## each; a station missing here gets PlaceholderPanel
+## (any unknown id). Paths, loaded on first use, not class names: naming
 ## the panel classes here would load every station (and its art) whenever the shell
 ## loads, which costs a client over a second of start-up on two busy cores.
 
@@ -12,6 +12,7 @@ const PANELS: Dictionary = {
 	"engineering": "res://stations/engineering/engineering_panel.gd",
 	"relay": "res://stations/relay/relay_panel.gd",
 	"science": "res://stations/science/science_panel.gd",
+	"comms": "res://stations/comms/comms_panel.gd",
 	"viewer": "res://stations/viewer/viewer_panel.gd",
 	"captain": "res://stations/captain/captain_panel.gd",
 }
