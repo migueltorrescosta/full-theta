@@ -28,7 +28,7 @@ const TICK_LIMIT: int = 240 * SimWorld.HZ
 
 
 static func harness() -> PairHarness:
-	return PairHarness.new(build, no_environment, done, measure, TICK_LIMIT)
+	return PairHarness.new(build, PairHarness.no_environment, done, measure, TICK_LIMIT)
 
 
 static func build() -> SimWorld:
@@ -36,11 +36,6 @@ static func build() -> SimWorld:
 	w.spawn_ship(TestDefs.corvette(), 1, 0)
 	w.hazards = [load("res://content/hazards/p11_radiation_wave.tres") as HazardDef]
 	return w
-
-
-## Nothing but the crew and the sim's hazard.
-static func no_environment(_w: SimWorld) -> void:
-	pass
 
 
 ## The tick the front hit the ship, or -1 before.
@@ -85,13 +80,13 @@ static func relay(w: SimWorld) -> void:
 		launch.x = PROBE_AT.x
 		launch.y = PROBE_AT.y
 		launch.z = PROBE_AT.z
-		_submit(w, launch)
+		PairHarness.send(w, launch)
 	var eta: float = forecast(w)
 	if eta <= HARDEN_LEAD:
 		for id: StringName in SUBSYSTEMS:
 			var harden: HardenCommand = HardenCommand.new()
 			harden.subsystem_id = id
-			_submit(w, harden)
+			PairHarness.send(w, harden)
 
 
 ## The forecast arrival of the front at the ship (s), INF until the faction knows of the
@@ -115,7 +110,7 @@ static func engineering(w: SimWorld) -> void:
 			var dispatch: DispatchRepairCommand = DispatchRepairCommand.new()
 			dispatch.crew = crew
 			dispatch.subsystem_id = id
-			_submit(w, dispatch)
+			PairHarness.send(w, dispatch)
 
 
 static func _lost(w: SimWorld) -> float:
@@ -128,8 +123,3 @@ static func _lost(w: SimWorld) -> float:
 
 static func _index(w: SimWorld, id: StringName) -> int:
 	return w.damage.find_subsystem(PLAYER, id) - w.damage.hull_row(PLAYER) - 1
-
-
-static func _submit(w: SimWorld, c: SimCommand) -> void:
-	c.ship_id = PLAYER
-	w.submit(c)

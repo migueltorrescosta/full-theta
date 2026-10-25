@@ -3,9 +3,9 @@ extends RefCounted
 ## What a faction has learned of a contact by Science scans, in KnowledgeTable.scan_conf
 ## (E01, FT-SCI-002, D28): class, identity, intent, weak points, resistances and hack
 ## access, each revealed once the scan confidence reaches its ScienceDef threshold. A
-## faction always knows its own ships. Other strands read these functions: Weapons
-## aiming at a weak point and damage with resistances (strand C) call weak_points_known
-## and resistances_known; the Science card is built from card().
+## faction always knows its own ships. Weapons aiming at a weak point and damage with
+## resistances call weak_points_known and resistances_known; the Science card is built
+## from card().
 
 const CLASS: StringName = &"class"
 const IDENTITY: StringName = &"identity"
@@ -13,7 +13,6 @@ const INTENT: StringName = &"intent"
 const WEAK_POINTS: StringName = &"weak_points"
 const RESISTANCES: StringName = &"resistances"
 const HACK: StringName = &"hack"
-const PARTS: Array[StringName] = [CLASS, IDENTITY, INTENT, WEAK_POINTS, RESISTANCES, HACK]
 
 
 ## The faction's best scan confidence of the contact, 0..1 (1 for its own ships).
@@ -83,15 +82,6 @@ static func resistances(
 	if not resistances_known(world, faction, contact):
 		return {}
 	return world.defs[contact].resistances
-
-
-## Number of card parts revealed (0 to 6).
-static func level(world: SimWorld, faction: int, contact: int) -> int:
-	var n: int = 0
-	for part: StringName in PARTS:
-		if revealed(world, faction, contact, part):
-			n += 1
-	return n
 
 
 ## Whether the faction has fully scanned the contact's class this run: any contact of

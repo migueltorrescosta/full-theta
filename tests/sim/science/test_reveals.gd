@@ -10,12 +10,29 @@ func _set_conf(w: SimWorld, faction: int, conf: float) -> void:
 	w.knowledge.scan_conf[w.knowledge.row_for(faction, FOE)] = conf
 
 
+## Number of card parts revealed to faction 1 (0 to 6).
+func _level(w: SimWorld) -> int:
+	var parts: Array[StringName] = [
+		ScienceKnowledge.CLASS,
+		ScienceKnowledge.IDENTITY,
+		ScienceKnowledge.INTENT,
+		ScienceKnowledge.WEAK_POINTS,
+		ScienceKnowledge.RESISTANCES,
+		ScienceKnowledge.HACK
+	]
+	var n: int = 0
+	for part: StringName in parts:
+		if ScienceKnowledge.revealed(w, 1, FOE, part):
+			n += 1
+	return n
+
+
 # FT: FT-SCI-002
 # Each part of the card appears at its own threshold, in order, and the level counts them.
 func test_card_parts_appear_at_their_thresholds() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	var def: ScienceDef = w.science_def
-	assert_int(ScienceKnowledge.level(w, 1, FOE)).is_equal(0)
+	assert_int(_level(w)).is_equal(0)
 	var steps: Array[float] = [
 		def.reveal_class,
 		def.reveal_identity,
@@ -28,7 +45,7 @@ func test_card_parts_appear_at_their_thresholds() -> void:
 	var last: int = 0
 	for conf: float in steps:
 		_set_conf(w, 1, conf)
-		var level: int = ScienceKnowledge.level(w, 1, FOE)
+		var level: int = _level(w)
 		assert_int(level).is_greater(last)
 		last = level
 	assert_int(last).is_equal(6)

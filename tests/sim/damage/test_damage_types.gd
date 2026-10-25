@@ -134,13 +134,13 @@ func test_resistance_knowledge() -> void:
 	var resist: Dictionary[StringName, float] = {&"thermal": 0.5}
 	var w: Array = _world(_target_def(resist))
 	var world: SimWorld = w[0]
-	assert_bool(KnowledgeSystem.knows_resistance(world, 1, w[2], &"thermal")).is_false()
-	assert_bool(KnowledgeSystem.knows_resistance(world, 1, w[2], &"kinetic")).is_false()
+	assert_bool(ScienceKnowledge.resistances(world, 1, w[2]).has(&"thermal")).is_false()
+	assert_bool(ScienceKnowledge.resistances(world, 1, w[2]).has(&"kinetic")).is_false()
 	assert_bool(_scan(world, 3, w[2])).is_false()
 	assert_bool(_scan(world, 1, w[2])).is_true()
-	assert_bool(KnowledgeSystem.knows_resistance(world, 1, w[2], &"thermal")).is_true()
-	assert_bool(KnowledgeSystem.knows_resistance(world, 3, w[2], &"thermal")).is_false()
-	assert_bool(KnowledgeSystem.knows_resistance(world, 2, w[2], &"thermal")).is_true()
+	assert_bool(ScienceKnowledge.resistances(world, 1, w[2]).has(&"thermal")).is_true()
+	assert_bool(ScienceKnowledge.resistances(world, 3, w[2]).has(&"thermal")).is_false()
+	assert_bool(ScienceKnowledge.resistances(world, 2, w[2]).has(&"thermal")).is_true()
 
 
 # FT: FT-SIM-023

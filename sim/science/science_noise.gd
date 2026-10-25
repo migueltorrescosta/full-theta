@@ -11,7 +11,7 @@ extends RefCounted
 ## 1 bow-on or stern-on); pip_factor is 1 - pip_gain * (pips - nominal), clamped to
 ## 0.5..2 (more sensor pips, less noise; P10); mode_factor is active_factor in active
 ## mode; the ping, probe (P13) and mark (P3) factors apply while their condition holds.
-## Occlusion by hazards is a probe/Relay concern (strand B) and not modelled here.
+## Occlusion by hazards is a probe/Relay concern and not modelled here.
 
 
 ## The noise of a scan, 0..1. `aspect` is the aspect term (0..1) and `sensor_eff` the

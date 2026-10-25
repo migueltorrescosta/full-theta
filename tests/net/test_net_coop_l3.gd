@@ -271,13 +271,12 @@ func test_a_probe_enabled_scan_is_counted() -> void:
 		)
 		var world: SimWorld = server.world
 		KnowledgeSystem.step(world)
-		world.probe_coverage = func(_ship: int, _contact: int) -> bool: return false
 		var scan: ScienceScanCommand = ScienceScanCommand.new()
 		scan.contact = ENEMY
 		_do(server, scan)
 		_do(server, ScienceFixture.submit_cmd(ScienceFixture.solution(world)))
 		assert_int(server.session.coop.count_of("p13", CoopEvents.PROBE_SCAN)).is_equal(0)
-		world.probe_coverage = func(_ship: int, _contact: int) -> bool: return true
+		ScienceFixture.cover(world, ENEMY)
 		var again: ScienceScanCommand = ScienceScanCommand.new()
 		again.contact = ENEMY
 		_do(server, again)

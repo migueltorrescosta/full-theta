@@ -40,8 +40,7 @@ static func coverage_at(world: SimWorld, faction: int, pos: Vector3, site: int =
 	return false
 
 
-## Whether a deployed probe of the ship's faction covers the contact (P13): the wiring
-## ScienceSystem.probe_covered falls back to when SimWorld.probe_coverage is not set.
+## Whether a deployed probe of the ship's faction covers the contact (P13).
 static func covers_contact(world: SimWorld, ship: int, contact: int) -> bool:
 	var kin: Kinematics = world.kin
 	var p: PackedFloat64Array = kin.point_at(contact, Vector3.ZERO)

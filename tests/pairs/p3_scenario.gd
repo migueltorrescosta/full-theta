@@ -94,22 +94,14 @@ static func helm(w: SimWorld) -> void:
 		select.y = t.mark_y[PLAYER]
 		select.z = t.mark_z[PLAYER]
 		w.submit(select)
-		w.submit(_helm_input(0.0))
+		w.submit(PairHarness.helm_input(0.0))
 	var to_mark: Vector3 = w.kin.relative_to_point(
 		PLAYER, t.mark_x[PLAYER], t.mark_y[PLAYER], t.mark_z[PLAYER]
 	)
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_mark) < ON_POINT
 	var throttle: float = 1.0 if (on_point and not inside) else 0.0
 	if w.tick > 2 and w.helm.input_translation[PLAYER].z != throttle:
-		w.submit(_helm_input(throttle))
-
-
-static func _helm_input(throttle: float) -> HelmInputCommand:
-	var c: HelmInputCommand = HelmInputCommand.new()
-	c.ship_id = PLAYER
-	c.face = true
-	c.throttle = throttle
-	return c
+		w.submit(PairHarness.helm_input(throttle))
 
 
 static func at_mark(w: SimWorld) -> bool:

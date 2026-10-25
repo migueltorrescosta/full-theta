@@ -1,10 +1,11 @@
 class_name ScienceHand
 extends RefCounted
-## The scripted Science station of the pair scenarios (P3, P7, P13): the average player
-## of the minigame timing test (ScriptedPlayer's model, FT-SCI-012, D192) acting through
-## the commands a client sends, one tick at a time. It waits until its faction detects the
-## contact (by its own sensors or a probe's bubble), opens a scan, solves it after the
-## time the player model needs for the open axes, and, when asked, hacks a subsystem
+## The scripted Science station of the pair scenarios (P3, P7, P13, Hack alpha, strike): the
+## average player of the minigame timing test (ScriptedPlayer's model, FT-SCI-012, D192)
+## acting through the commands a client sends, one tick at a time. It waits until its
+## faction detects the contact (by its own sensors or a probe's bubble), opens a scan,
+## solves it after the time the player model needs for the open axes, and, when asked,
+## hacks a subsystem
 ## along the shortest route and retries once the trace has failed it. One instance plays
 ## one run: build a fresh one per run (act() is the crew Callable).
 
@@ -15,6 +16,11 @@ var hack_subsystem: StringName = &""
 ## When set, a Callable(world) -> bool that must hold before the script opens its scan
 ## (P3: Science waits until Helm has brought the ship to the scan-position mark).
 var start_gate: Callable = Callable()
+## The script does nothing before this tick.
+var start_tick: int = 0
+## True: it submits the exact solution of the scan, with none of the average player's angle
+## error, so a run is the same on every seed (Hack alpha plans its window on it).
+var exact: bool = false
 
 var _ship: int
 var _contact: int
@@ -29,6 +35,15 @@ func _init(ship: int, contact: int, player_seed: int) -> void:
 	_ship = ship
 	_contact = contact
 	_rng.seed = player_seed
+
+
+## A script with no angle error that starts at `start`, optionally hacking `hack` afterwards.
+static func exact_from(ship: int, contact: int, start: int, hack: StringName = &"") -> ScienceHand:
+	var hand: ScienceHand = ScienceHand.new(ship, contact, 0)
+	hand.exact = true
+	hand.start_tick = start
+	hand.hack_subsystem = hack
+	return hand
 
 
 ## Whether the script has nothing left to do.
@@ -48,6 +63,8 @@ func act(w: SimWorld) -> void:
 
 
 func _wait(w: SimWorld) -> void:
+	if w.tick < start_tick:
+		return
 	if not KnowledgeSystem.is_detected(w, w.faction_of(_ship), _contact):
 		return
 	if w.science.kind[_ship] != ScienceTable.Session.NONE:
@@ -101,7 +118,7 @@ func _scan(w: SimWorld) -> void:
 	var guess: Vector3 = Vector3.ZERO
 	for a: int in 3:
 		if t.axes[_ship] & (1 << a):
-			guess[a] = truth[a] + _rng.randfn(0.0, ScriptedPlayer.ANGLE_SD)
+			guess[a] = truth[a] + (0.0 if exact else _rng.randfn(0.0, ScriptedPlayer.ANGLE_SD))
 	var submit: ScienceScanSubmitCommand = ScienceFixture.submit_cmd(guess)
 	submit.ship_id = _ship
 	w.submit(submit)

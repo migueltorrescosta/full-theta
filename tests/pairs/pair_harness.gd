@@ -68,6 +68,26 @@ func compare(coop: Callable, solo: Callable) -> Dictionary[String, Run]:
 	return {"coop": run(coop), "solo": run(solo)}
 
 
+## The environment of a scenario with none: a no-op for PairHarness.new.
+static func no_environment(_w: SimWorld) -> void:
+	pass
+
+
+## Submits a crew command for ship `ship` (the player's ship, 0, by default).
+static func send(w: SimWorld, c: SimCommand, ship: int = 0) -> void:
+	c.ship_id = ship
+	w.submit(c)
+
+
+## A Helm command holding Face with the given throttle.
+static func helm_input(throttle: float, ship: int = 0) -> HelmInputCommand:
+	var c: HelmInputCommand = HelmInputCommand.new()
+	c.ship_id = ship
+	c.face = true
+	c.throttle = throttle
+	return c
+
+
 ## Gain of co-op over solo on one metric (dimensionless), the rule every pair test uses
 ## (D121, FT-PAIR-015): when lower is better, the share of the solo value co-op saves,
 ## (solo - coop) / solo, so 0.2 reads "20 % less time"; when higher is better, the share

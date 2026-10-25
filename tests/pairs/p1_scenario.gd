@@ -81,41 +81,34 @@ static func helm(w: SimWorld) -> void:
 		select.x = POINT.x
 		select.y = POINT.y
 		select.z = POINT.z
-		_submit(w, select)
-		_submit(w, _helm_input(0.0))
+		PairHarness.send(w, select)
+		PairHarness.send(w, PairHarness.helm_input(0.0))
 	if w.tick == 1:
 		# The raider is a contact after the first tick's sensor sweep (FT-ARC-013).
 		var focus: SetShieldFocusCommand = SetShieldFocusCommand.new()
 		focus.track_id = RAIDER
-		_submit(w, focus)
+		PairHarness.send(w, focus)
 	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, POINT.x, POINT.y, POINT.z)
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_point) < ON_POINT
 	if on_point and w.helm.input_translation[PLAYER].z == 0.0:
-		_submit(w, _helm_input(1.0))
+		PairHarness.send(w, PairHarness.helm_input(1.0))
 
 
 static func engineering(w: SimWorld) -> void:
 	if w.tick == 0:
-		_submit(w, BoostCommand.new())
-		_submit(w, _pips(WPN, 0))
-		_submit(w, _pips(ENG, 4))
+		PairHarness.send(w, BoostCommand.new())
+		PairHarness.send(w, _pips(WPN, 0))
+		PairHarness.send(w, _pips(ENG, 4))
 		var shields: SetShieldCommand = SetShieldCommand.new()
 		shields.power = 4
 		shields.tightness = w.defs[PLAYER].shields.tightness_max
-		_submit(w, shields)
+		PairHarness.send(w, shields)
 	var engines: int = PowerSystem.subsystem_index(w.defs[PLAYER], ENG)
 	var threshold: float = w.defs[PLAYER].subsystems[engines].fault_heat_threshold
 	var row: int = w.damage.subsystem_row(PLAYER, engines)
 	var hot: bool = w.damage.heat[row] > HEAT_GUARD * threshold
 	if hot and w.damage.pips[row] > 2:
-		_submit(w, _pips(ENG, 2))
-
-
-static func _helm_input(throttle: float) -> HelmInputCommand:
-	var c: HelmInputCommand = HelmInputCommand.new()
-	c.face = true
-	c.throttle = throttle
-	return c
+		PairHarness.send(w, _pips(ENG, 2))
 
 
 static func _pips(kind: int, pips: int) -> SetPipsCommand:
@@ -123,8 +116,3 @@ static func _pips(kind: int, pips: int) -> SetPipsCommand:
 	c.subsystem_kind = kind
 	c.pips = pips
 	return c
-
-
-static func _submit(w: SimWorld, c: SimCommand) -> void:
-	c.ship_id = PLAYER
-	w.submit(c)

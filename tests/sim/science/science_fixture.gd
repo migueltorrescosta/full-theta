@@ -40,6 +40,15 @@ static func world(
 	return w
 
 
+## A deployed probe of the ship's faction on the contact, so the contact is in coverage.
+static func cover(w: SimWorld, contact: int = FOE, ship: int = ME) -> void:
+	var p: PackedFloat64Array = w.kin.point_at(contact, Vector3.ZERO)
+	var at: Vector3 = Vector3(p[0], p[1], p[2])
+	var row: int = w.probes.launch(ship, w.faction_of(ship), 0, w.kin.site[contact], at, at)
+	w.probes.deployed[row] = 1
+	KnowledgeSystem.step(w)
+
+
 ## Submits the command, steps one tick and returns the events of that tick.
 static func do(w: SimWorld, c: SimCommand, ship: int = ME) -> Array[SimEvent]:
 	c.ship_id = ship

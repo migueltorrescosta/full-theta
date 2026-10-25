@@ -24,9 +24,9 @@ const MAX_TICKS_PER_ADVANCE: int = 8
 var tick: int = 0
 var seed_value: int = 0
 var build_id: String = ""
-## Site id -> the name every station of every ship uses for it as a callout layer
+## Site id -> the I18n key of the name every station of every ship uses for it as a callout layer
 ## (FT-SPA-027, D98). Scenario data like defs: not state, so not hashed or copied.
-var site_names: Dictionary[int, String] = {0: "Kestrel Yard"}
+var site_names: Dictionary[int, String] = {0: "site.kestrel_yard"}
 var rng: SimRng
 ## Definitions by ship id, read-only (FT-ARC-020).
 var defs: Array[ShipDef] = []
@@ -43,21 +43,17 @@ var knowledge: KnowledgeTable = KnowledgeTable.new()
 var ai: AiTable = AiTable.new()
 ## Run state: each ship's status and the encounter outcome (T036, FT-MIS-017).
 var run: RunTable = RunTable.new()
-## Science state and open hack windows (E01, strand A).
+## Science state and open hack windows (E01).
 var science: ScienceTable = ScienceTable.new()
 var hacks: HackTable = HackTable.new()
 ## Science tuning, read-only (FT-ARC-020); null disables the Science commands. The
 ## encounter passes it in (M1Encounter.science).
 var science_def: ScienceDef
-## Whether a contact is in probe coverage for a ship (P13): Callable(ship, contact) ->
-## bool, an override for tests; not state. Invalid: Relay's probes answer
-## (ProbeSystem.covers_contact).
-var probe_coverage: Callable = Callable()
-# --- #9 strand B: Relay's stock, launched probes and lane flags. ---
+# --- Relay's stock, launched probes and lane flags (#9). ---
 var relay: RelayTable = RelayTable.new()
 var probes: ProbeTable = ProbeTable.new()
 ## The world's hazards, read-only like defs (FT-ARC-020, D208), and which fronts have
-## crossed each ship (strand J). Empty: none.
+## crossed each ship. Empty: none. At most HazardSystem.MAX_HAZARDS (checked by the encounter).
 var hazards: Array[HazardDef] = []
 var hazard_state: HazardTable = HazardTable.new()
 

@@ -22,7 +22,7 @@ const TICK_LIMIT: int = 120 * SimWorld.HZ
 
 
 static func harness() -> PairHarness:
-	return PairHarness.new(build, no_environment, done, measure, TICK_LIMIT)
+	return PairHarness.new(build, PairHarness.no_environment, done, measure, TICK_LIMIT)
 
 
 ## The faulty corvette, built as a copy of the M1 definition with the cause list
@@ -41,10 +41,6 @@ static func build() -> SimWorld:
 	w.spawn_ship(def, 1, 0)
 	DamageSystem.inflict_fault(w, PLAYER, SUBSYSTEM, CAUSE, FAULT_J)
 	return w
-
-
-static func no_environment(_w: SimWorld) -> void:
-	pass
 
 
 static func done(w: SimWorld) -> bool:
@@ -71,21 +67,16 @@ static func engineering(w: SimWorld) -> void:
 		var dispatch: DispatchRepairCommand = DispatchRepairCommand.new()
 		dispatch.crew = 0
 		dispatch.subsystem_id = SUBSYSTEM
-		_submit(w, dispatch)
+		PairHarness.send(w, dispatch)
 
 
 static func science(w: SimWorld) -> void:
 	if w.tick == 0:
-		_submit(w, ScienceSelfScanCommand.new())
+		PairHarness.send(w, ScienceSelfScanCommand.new())
 	var named: StringName = DamageSystem.known_fault_cause(w, PLAYER, SUBSYSTEM)
 	var row: int = w.damage.find_subsystem(PLAYER, SUBSYSTEM)
 	if named != &"" and w.damage.fault_pick[row] != named:
 		var pick: PickFaultCauseCommand = PickFaultCauseCommand.new()
 		pick.subsystem_id = SUBSYSTEM
 		pick.cause = named
-		_submit(w, pick)
-
-
-static func _submit(w: SimWorld, c: SimCommand) -> void:
-	c.ship_id = PLAYER
-	w.submit(c)
+		PairHarness.send(w, pick)

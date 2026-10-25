@@ -58,7 +58,7 @@ func test_scan_targets_are_checked() -> void:
 	far.science_def.scan_range_factor = 0.5
 	events = ScienceFixture.do(far, ScienceFixture.scan_cmd())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("out_of_range")
-	far.probe_coverage = func(_ship: int, _contact: int) -> bool: return true
+	ScienceFixture.cover(far)
 	events = ScienceFixture.do(far, ScienceFixture.scan_cmd())
 	assert_int(SimFixture.of_kind(events, &"scan_started").size()).is_equal(1)
 
@@ -189,14 +189,14 @@ func test_cancel_and_lost_contact() -> void:
 # seam strand C reads to reveal fault causes); a second scan can't start meanwhile.
 func test_own_ship_scan() -> void:
 	var w: SimWorld = ScienceFixture.world()
-	assert_bool(ScienceSystem.self_scanned(w, ME)).is_false()
+	assert_bool(w.science.self_scanned[ME] >= 0).is_false()
 	var events: Array[SimEvent] = ScienceFixture.do(w, ScienceSelfScanCommand.new())
 	assert_int(SimFixture.of_kind(events, &"self_scan_started").size()).is_equal(1)
 	events = ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("busy")
 	events = SimFixture.run(w, int(w.science_def.self_scan_s * 60.0) + 2)
 	assert_int(SimFixture.of_kind(events, &"self_scan_done").size()).is_equal(1)
-	assert_bool(ScienceSystem.self_scanned(w, ME)).is_true()
+	assert_bool(w.science.self_scanned[ME] >= 0).is_true()
 	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.NONE)
 
 

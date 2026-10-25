@@ -28,7 +28,7 @@ const WPN: int = SubsystemDef.Kind.WEAPONS
 
 
 static func harness() -> PairHarness:
-	return PairHarness.new(build, no_environment, done, measure, TICK_LIMIT)
+	return PairHarness.new(build, PairHarness.no_environment, done, measure, TICK_LIMIT)
 
 
 static func build() -> SimWorld:
@@ -46,10 +46,6 @@ static func _target() -> ShipDef:
 	ship.subsystems = []
 	ship.hull_max = RAIDER_HULL
 	return ship
-
-
-static func no_environment(_w: SimWorld) -> void:
-	pass
 
 
 static func done(w: SimWorld) -> bool:

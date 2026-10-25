@@ -36,12 +36,12 @@ func test_full_chain_beats_every_chain_with_one_link_removed() -> void:
 
 
 # FT: FT-PAIR-022
-# The window the damage is counted in is the one the full chain's hack opens: WINDOW_START
-# is the tick of its hack_done, and the hack_done event comes at the same tick on every
-# run. If this fails, the Science script's timing or the sim changed: set WINDOW_START to
-# the tick reported.
+# The window the damage is counted in is the one the full chain's hack opens: window_start()
+# (measured with Science alone) is the tick of its hack_done there too, and the hack_done
+# event comes at the same tick on every run. If this fails, the other stations disturb
+# Science's hack.
 func test_window_starts_where_the_plan_says() -> void:
 	var run: PairHarness.Run = HackAlphaScenario.harness().run(HackAlphaScenario.crew(-1))
-	assert_float(run.metrics.hack_done_tick).is_equal(float(HackAlphaScenario.WINDOW_START))
+	assert_float(run.metrics.hack_done_tick).is_equal(float(HackAlphaScenario.window_start()))
 	var again: PairHarness.Run = HackAlphaScenario.harness().run(HackAlphaScenario.crew(-1))
 	assert_str(again.state_hash).is_equal(run.state_hash)

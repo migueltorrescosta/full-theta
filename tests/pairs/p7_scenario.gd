@@ -8,7 +8,7 @@ extends RefCounted
 ## numbers (type 1). Weapons must disable the raider's weapons (subsystem down to a
 ## quarter of its health, the effectiveness curve's 0.3 point).
 ## - Weapons (both variants): the gunner fires the mount whenever it is ready (Gunnery.gun).
-## - Science (co-op only): scans the raider (ScienceScript, the average player's timing,
+## - Science (co-op only): scans the raider (ScienceHand, the average player's timing,
 ##   scan time included in the run); once the scan has revealed the weak points and the
 ##   resistances Weapons aims at the weak point and switches to the unresisted ammunition.
 ## - Solo: nobody scans: aim at the hull's centre with the default ammunition, nearest
@@ -32,7 +32,7 @@ const SCAN_AT: int = 2
 
 
 static func harness() -> PairHarness:
-	return PairHarness.new(build, no_environment, done, measure, TICK_LIMIT)
+	return PairHarness.new(build, PairHarness.no_environment, done, measure, TICK_LIMIT)
 
 
 ## The mass driver with a thermal lance as its second ammunition type.
@@ -69,10 +69,6 @@ static func build() -> SimWorld:
 	return w
 
 
-static func no_environment(_w: SimWorld) -> void:
-	pass
-
-
 ## Health of the raider's weapons subsystem as a share of its maximum.
 static func weapons_health(w: SimWorld) -> float:
 	var row: int = w.damage.find_subsystem(RAIDER, WEAK_ID)
@@ -98,7 +94,7 @@ static func solo(w: SimWorld) -> void:
 
 ## The co-op crew, a fresh one per run: Science scans, Weapons uses what it reveals.
 static func coop_crew() -> Callable:
-	var science: ScienceScript = ScienceScript.new(PLAYER, RAIDER, SCAN_AT)
+	var science: ScienceHand = ScienceHand.exact_from(PLAYER, RAIDER, SCAN_AT)
 	return func(w: SimWorld) -> void:
 		science.act(w)
 		weapons_with_science(w)
