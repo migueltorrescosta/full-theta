@@ -68,6 +68,24 @@ func test_chip_is_clickable() -> void:
 	assert_dict(radar.item_at(p)).is_empty()
 
 
+# FT: FT-STN-003
+# Callsigns of close blips don't print over each other (checkpoint render: Bravo, F4, H2).
+func test_chips_of_close_blips_do_not_overlap() -> void:
+	var items: Array[Dictionary] = [
+		_it("contact", 2, "H2", "H", Vector3(0, 0, -3000)),
+		_it("contact", 4, "F4", "F", Vector3(60, 0, -3010)),
+		_it("mark", 1, "Bravo", "", Vector3(-60, 0, -2990)),
+	]
+	radar.set_picture(_pic(items), {})
+	var rects: Array[Rect2] = []
+	for e: Dictionary in radar._layout():
+		rects.append(e["chip_rect"])
+	assert_int(rects.size()).is_equal(3)
+	for i: int in rects.size():
+		for j: int in range(i + 1, rects.size()):
+			assert_bool(rects[i].intersects(rects[j])).is_false()
+
+
 # FT: FT-SPA-007, FT-SPA-010
 func test_projection_is_ship_frame() -> void:
 	var c: Vector2 = radar.disc_centre()

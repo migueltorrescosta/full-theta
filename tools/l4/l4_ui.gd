@@ -51,14 +51,23 @@ func status() -> String:
 	return label.text
 
 
-## Presses the lobby's pick button of an entry; "" or why not (yet).
+## Taps the lobby's cells (or seat button) of an entry; "" or why not (yet).
 func pick(entry: String) -> String:
 	if menu.shell == null or menu.shell.lobby == null:
 		return "no lobby"
-	var row: Node = menu.shell.lobby.find_child("Entry_" + entry, true, false)
-	if row == null:
+	var lobby: LobbyScreen = menu.shell.lobby
+	if (
+		lobby.find_child("Entry_" + entry, true, false) == null
+		and lobby.ctx.crew.def_of(entry).is_empty()
+	):
 		return "no entry %s in the lobby" % entry
-	(row.get_child(0) as Button).pressed.emit()
+	# The grid has the six stations; a joint view is a tap on each of its two.
+	var stations: Array = lobby.ctx.crew.def_of(entry).get("stations", [])
+	if stations.is_empty() or entry == LobbyScreen.DEV_ALL:
+		lobby.tap_seat(entry)
+	else:
+		for st: Variant in stations:
+			lobby.tap_station(str(st))
 	return ""
 
 

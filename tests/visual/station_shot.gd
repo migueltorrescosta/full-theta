@@ -29,6 +29,7 @@ var _ctx: StationContext
 
 func _ready() -> void:
 	I18n.apply("en")
+	UiTheme.apply(get_tree().root)
 	get_tree().root.content_scale_factor = ui_scale
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")

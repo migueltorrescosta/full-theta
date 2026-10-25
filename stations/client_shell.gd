@@ -186,7 +186,7 @@ func _build_overlays() -> void:
 	add_child(outcome_card)
 	outcome_card.setup(ctx)
 	_banner = Label.new()
-	_banner.add_theme_font_size_override("font_size", 40)
+	_banner.theme_type_variation = "TitleLabel"
 	_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_banner.position.y += 80

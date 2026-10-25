@@ -328,7 +328,10 @@ func entries_of(ship: int) -> Array:
 func lobby_state(ship: int) -> Dictionary:
 	var entries: Array = entries_of(ship)
 	var captain: String = ""
+	var seats: Array = []
 	for s: NetSession in by_id.values():
+		if s.ship == ship and s.entry != "":
+			seats.append({"name": s.name, "entry": s.entry})
 		if s.ship == ship and s.entry == StationViews.CAPTAIN:
 			captain = s.name
 	return {
@@ -340,6 +343,7 @@ func lobby_state(ship: int) -> Dictionary:
 		"started": launched.has(ship),
 		"in_play": not abandoned.has(ship) and world.run.status[ship] == RunTable.Status.IN_PLAY,
 		"captain": captain,
+		"seats": seats,
 		"toggles": toggles.encode(),
 	}
 

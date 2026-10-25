@@ -22,6 +22,7 @@ static func attach(shell_node: ClientShell) -> void:
 	shell_node.add_child(s)
 	var cfg: JoinHelpers.WebJoinConfig = JoinHelpers.web_config()
 	if cfg.pick != "":
+		shell_node.ctx.settings.skip_first_visit_help = true
 		var a: WebAutoplay = WebAutoplay.new()
 		a.client = shell_node.ctx.client
 		a.crew = shell_node.ctx.crew

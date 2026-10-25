@@ -22,6 +22,9 @@ var ui_scale: float = 1.0
 var invert_pitch: bool = false
 ## Station id -> true once its first-run tooltip was dismissed.
 var tooltips_seen: Dictionary = {}
+## Not saved: the browser test hooks (?pick=) set it so the first-visit Controls menu never
+## covers the station under test.
+var skip_first_visit_help: bool = false
 ## Comfort (FT-STN-017): on/off, roll lock, reduced field of view, and the cosmetic
 ## reference plane as a world orientation ("Set reference plane to my current deck").
 var comfort: bool = false
@@ -94,7 +97,7 @@ func set_ui_scale(value: float) -> void:
 
 
 func tooltip_seen(station: String) -> bool:
-	return tooltips_seen.has(station)
+	return skip_first_visit_help or tooltips_seen.has(station)
 
 
 func mark_tooltip_seen(station: String) -> void:

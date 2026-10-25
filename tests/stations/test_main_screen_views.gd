@@ -155,3 +155,19 @@ func test_top_bar_shows_hull_as_a_percentage_of_the_ships_maximum() -> void:
 	s._process(0.016)
 	assert_str(s.top_bar._hull.text).is_equal("Hull 100%")
 	assert_str(s.top_bar._shields.text).is_equal("Shields 50%")
+
+
+# FT: FT-MSC-002
+# The target view draws its target even beyond NEAR's range (H2 is 2.3 km out, NEAR sees
+# 2 km): before, the view showed an empty sky with the label and bracket only. Other
+# views still draw only contacts with a NEAR orientation.
+func test_target_view_draws_a_target_beyond_near_range() -> void:
+	var s: StationScreen = await _screen()
+	assert_bool(s.ctx.view.near.has(StationFixture.H2)).is_false()
+	s.ctx.crew.select("contact", StationFixture.H2)
+	var v: ViewerPanel = await _show(s, MainScreen.View.FORWARD)
+	assert_bool(v._space.ships.has(StationFixture.H2)).is_false()
+	await _show(s, MainScreen.View.TARGET)
+	assert_bool(v._space.ships.has(StationFixture.H2)).is_true()
+	await _show(s, MainScreen.View.FORWARD)
+	assert_bool(v._space.ships.has(StationFixture.H2)).is_false()

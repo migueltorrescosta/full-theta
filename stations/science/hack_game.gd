@@ -17,6 +17,8 @@ const LEFT: int = 4
 const UP: int = 8
 const FONT_SIZE: int = 15
 const NODE_R: float = 18.0
+## Width of the target's name drawn below its node.
+const GOAL_LABEL_W: float = 120.0
 const BUTTON_W: float = 110.0
 const BUTTON_H: float = 34.0
 
@@ -152,7 +154,16 @@ func _draw_node(font: Font, n: int, reach: Array[int]) -> void:
 	draw_arc(c, NODE_R, 0.0, TAU, 24, col, 2.5 if n in reach or n == node else 1.5, true)
 	var label: String = ""
 	if n == goal:
-		label = target_text
+		# Below the node and as wide as the text needs: inside it "weapons" was clipped.
+		draw_string(
+			font,
+			c + Vector2(-GOAL_LABEL_W / 2.0, NODE_R + 16.0),
+			target_text,
+			HORIZONTAL_ALIGNMENT_CENTER,
+			GOAL_LABEL_W,
+			FONT_SIZE - 2,
+			col
+		)
 	elif n == entry:
 		label = tr("sci.hack_in")
 	elif not is_known:
