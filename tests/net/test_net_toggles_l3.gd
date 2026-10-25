@@ -179,3 +179,48 @@ func test_easy_prefills_the_diagnosed_cause() -> void:
 	assert_str(picks["easy"]).is_equal("short")
 	assert_str(picks["normal"]).is_equal("")
 	assert_str(picks["hard"]).is_equal("")
+
+
+# FT: FT-SPA-019, FT-SPA-029, FT-PAIR-008
+# On Hard the only things that still cross between stations are MARK items other than routes
+# and approach lanes, and pings: a mark, a ping and a hazard zone reach every station of the
+# ship, Relay's route reaches Relay alone.
+func test_marks_and_pings_survive_hard_and_routes_do_not() -> void:
+	var server: NetServer = h.server(false, 10.0, SECRET)
+	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
+	var crew: Dictionary = {}
+	for station: String in ["helm", "weapons", "engineering", "science", "relay", "comms"]:
+		crew[station] = await h.joined(server, station, station)
+	host.set_toggles("hard")
+	for station: String in crew:
+		assert_bool(await _view_follows(server, crew[station], "hard")).is_true()
+	var from: Dictionary = {}
+	for station: String in crew:
+		from[station] = h.mark(crew[station])
+	crew["helm"].place_mark(-1, "Rock", -1, 0, Vector3(5.0, 0.0, 0.0))
+	crew["science"].ping("site", -1, 0, Vector3.ZERO)
+	crew["relay"].hazard_add(1000.0, 0, Vector3(0.0, 0.0, -2000.0))
+	crew["relay"].route_add(0, 0, Vector3(0.0, 0.0, -1000.0))
+	for station: String in crew:
+		var c: NetClient = crew[station]
+		var marks: Dictionary = await h.next_event(c, NetProtocol.EVENT_MARKS, from[station])
+		assert_str(marks["payload"]["marks"][0]["name"]).override_failure_message(station).is_equal(
+			"Rock"
+		)
+		var ping: Dictionary = await h.next_event(c, NetProtocol.EVENT_PING, from[station])
+		assert_str(ping["payload"]["kind"]).is_equal("site")
+		var zones: Dictionary = await h.next_event(
+			c,
+			NetProtocol.EVENT_ZONES,
+			from[station],
+			func(e: Dictionary) -> bool: return not e["payload"]["zones"].is_empty()
+		)
+		assert_str(zones["payload"]["zones"][0]["kind"]).is_equal("hazard")
+	var routes: Dictionary = await h.next_event(
+		crew["relay"], NetProtocol.EVENT_ROUTES, from["relay"]
+	)
+	assert_dict(routes).is_not_empty()
+	await h.wait(200)
+	for station: String in ["helm", "weapons", "engineering", "science", "comms"]:
+		var seen: Array = h.events_of(crew[station], NetProtocol.EVENT_ROUTES).slice(from[station])
+		assert_array(seen).override_failure_message(station).is_empty()

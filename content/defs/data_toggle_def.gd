@@ -19,9 +19,11 @@ enum Kind { SUMMARY, SHORTCUT }
 ## the data as if the toggle were on (FT-JNT-005).
 @export var source: StringName = &""
 @export var target: StringName = &""
-## The value in each preset (see Kind).
+## The value in the Easy preset (dimensionless, see Kind).
 @export var easy: int = 0
+## The value in the Normal preset (dimensionless, see Kind).
 @export var normal: int = 0
+## The value in the Hard preset (dimensionless, see Kind).
 @export var hard: int = 0
 ## True while the data the toggle moves doesn't exist yet: P9 and P14 need Comms (#10), so
 ## the lobby lists them as arriving in M3 (D190). P5 and P15 likewise wait for Comms but
