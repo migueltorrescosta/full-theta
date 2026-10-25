@@ -62,6 +62,11 @@ const SNAP_FIELDS: Array[String] = [
 	"near_us",
 	"projectiles_us",
 	"ownership_us",
+	"science_us",
+	"relay_us",
+	"captain_us",
+	"chips_us",
+	"feeds_us",
 ]
 ## ops_us includes SimCopy.restore; snapshot_us is _snapshot() (build and queue).
 const SECOND_FIELDS: Array[String] = [
