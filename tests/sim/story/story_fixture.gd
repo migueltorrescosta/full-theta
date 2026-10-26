@@ -23,7 +23,11 @@ static func spawn(
 ## distributions, the raider answering hails with the trader conversation, and Kappa's
 ## market at SITE. Ships are the caller's.
 static func world(world_seed: int = 1) -> SimWorld:
-	var w: SimWorld = SimWorld.new(world_seed, "test")
+	return wire(SimWorld.new(world_seed, "test"))
+
+
+## Gives a world the scenario data app/ will load (the L3 tests wire the server's world).
+static func wire(w: SimWorld) -> SimWorld:
 	var c: Dictionary = content()
 	w.conversations = c["conversations"]
 	w.hail_conversations = {&"m1_raider": &"conv.trader_bluff"}

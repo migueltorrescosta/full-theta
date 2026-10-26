@@ -31,6 +31,10 @@ enum Section {
 	# What Weapons gets from other stations' work when a toggle lets it: weak points and
 	# resistances, hack windows, track feeds (strand G, P7 and P8).
 	FEEDS = 14,
+	# --- strand C ---
+	# Comms' card board: cards, the open conversation nodes, offers, modules and credits.
+	COMMS = 15,
+	# --- end strand C ---
 }
 
 ## The CAPTAIN block's objective kinds, as clients name them (stations/ may not name
@@ -60,6 +64,7 @@ const FILTERED: Array[int] = [
 	Section.RELAY,
 	Section.FEEDS,
 	Section.CHIPS,
+	Section.COMMS,  # strand C
 ]
 
 const CREW: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
@@ -162,7 +167,7 @@ const STATION_SECTIONS: Dictionary = {
 		Section.OWNERSHIP,
 		Section.CHIPS,
 	],
-	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.CHIPS],
+	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.CHIPS, Section.COMMS],
 	"captain":
 	[
 		Section.KIN,
@@ -172,6 +177,7 @@ const STATION_SECTIONS: Dictionary = {
 		Section.PROJECTILES,
 		Section.CAPTAIN,
 		Section.CHIPS,
+		Section.COMMS,  # strand C
 	],
 	"viewer":
 	[
@@ -225,7 +231,7 @@ const STATION_COMMANDS: Dictionary = {
 		&"science_select",
 	],
 	"relay": [&"launch_probe", &"flag_lanes"],
-	"comms": [],
+	"comms": CommsView.COMMANDS,  # strand C
 }
 
 ## Claimable item kinds (FT-NET-022, D18). An item is the kind, or "kind:index" for
@@ -239,6 +245,9 @@ const CLAIM_CREW: String = "crew"
 const CLAIM_SCAN: String = "scan"
 ## Relay's probe launcher (strand B of #9): a second Relay seat claims it to launch.
 const CLAIM_PROBE: String = "probe"
+## One NPC conversation, item "npc:<card id>" (strand C, FT-COM-006, D18): only its claimer
+## replies and hears the NPC. The items are the ship's open conversations (claim_items).
+const CLAIM_NPC: String = "npc"
 ## Station -> claimable item kinds.
 const STATION_CLAIMS: Dictionary = {
 	"helm": [CLAIM_FLIGHT, CLAIM_SHIELD_FACING],
@@ -246,6 +255,7 @@ const STATION_CLAIMS: Dictionary = {
 	"engineering": [CLAIM_CREW],
 	"science": [CLAIM_SCAN],
 	"relay": [CLAIM_PROBE],
+	"comms": [CLAIM_NPC],  # strand C
 }
 ## Station -> ship-wide controls: last writer wins, and snapshots name the last writer
 ## (FT-NET-044). A control is the name, or "name:index" (pips per subsystem kind).
@@ -279,6 +289,10 @@ const COMMAND_ITEMS: Dictionary = {
 	&"science_cancel": [CLAIM_SCAN, ""],
 	&"science_self_scan": [CLAIM_SCAN, ""],
 	&"launch_probe": [CLAIM_PROBE, ""],
+	# --- strand C: a reply or an opening acts on one conversation; accepting, declining
+	# and trading are Comms' alone and need no claim (FT-COM-003) ---
+	&"comms_answer": [CLAIM_NPC, "card"],
+	&"comms_reply": [CLAIM_NPC, "card"],
 }
 
 ## Sim events that only some stations get (FT-NET-009): kind -> stations; a session
@@ -544,6 +558,8 @@ const BLOCKS: Dictionary = {
 	# the contact).
 	Section.FEEDS:
 	[
+		# Contract target flags on detected contacts, KnowledgeTable.Flag (strand C, P9).
+		["flags", ["rows", [["contact", "s16"], ["flag", "u8"]]]],
 		[
 			"weak",
 			[
@@ -563,6 +579,13 @@ const BLOCKS: Dictionary = {
 	# chip's index in content/chips/chips.tres, its argument (mount index or contact id, -1
 	# for none), the sending and receiving station (index in CREW) and the sim ticks it was
 	# sent and expires at. A crew view lists the chips it sends or receives.
+	# Comms' board (strand C, CommsView, CommsSection): the ship's docked site and credits,
+	# the hull band (Comms' only view of condition, FT-PAIR-010), reputation per faction,
+	# the cards (kind and state are StoryTable's; rep_lo/rep_hi only where rep_vis; claimer
+	# the session holding the conversation, -1 for none), the open conversation nodes
+	# with their replies, what the docked market sells, the modules it offers per slot
+	# with the trade-in of the module now fitted, and the fitted modules.
+	Section.COMMS: CommsView.SCHEMA,
 	Section.CHIPS:
 	[
 		[
@@ -708,6 +731,7 @@ static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 		crews.append("%s:%d" % [CLAIM_CREW, i])
 	var helm: Array[String] = [CLAIM_FLIGHT, CLAIM_SHIELD_FACING]
 	return {
+		"comms": CommsView.npc_items(world, ship),  # strand C
 		"helm": helm,
 		"weapons": mounts,
 		"engineering": crews,
@@ -723,6 +747,8 @@ static func sees_event(entry: String, kind: StringName, toggles: String = DEFAUL
 		var seen: ViewFilter = ViewFilter.of(entry, toggles)
 		if seen != null and seen.condition_hidden:
 			return false
+	if CommsView.EVENTS.has(kind):  # strand C: Comms' own events
+		return stations_of(entry).has("comms")
 	if not EVENT_STATIONS.has(kind):
 		return true
 	var shortcut: Array = EVENT_SHORTCUTS.get(kind, [])
@@ -843,6 +869,8 @@ static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
 			return _captain(world, ship)
 		Section.FEEDS:
 			return FeedsView.block(world, ship)
+		Section.COMMS:
+			return CommsView.block(world, ship)  # strand C (the builder adds claims, filter)
 	return _mounts(world, ship)
 
 

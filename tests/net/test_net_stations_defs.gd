@@ -53,7 +53,9 @@ func test_every_entry_has_a_station_def_with_its_load_tag() -> void:
 	# yet (their station UIs, FT-M1-005, are #7).
 	for id: String in ["science", "relay", "comms"]:
 		assert_array(StationViews.def(id).stations).is_equal([id])
-	assert_array(StationViews.def("comms").commands).is_empty()
+	assert_array(StationViews.def("comms").commands).contains(
+		[&"comms_hail", &"comms_reply", &"comms_trade"]
+	)
 	assert_array(StationViews.def("science").commands).contains([&"science_scan"])
 	# Relay launches probes and flags lanes (FT-RLY-004, FT-RLY-011).
 	assert_array(StationViews.def("relay").commands).is_equal([&"launch_probe", &"flag_lanes"])

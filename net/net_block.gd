@@ -7,7 +7,8 @@ extends RefCounted
 ## Array of Dictionaries) and decode the same way, with floats where the type is one.
 ##
 ## Types: "bool" and "u8" (1 B), "u16", "s16" (2 B), "u32", "s32" (4 B), "f32"
-## (4 B float), "v3f" (3 x f32), "v3n" (a unit vector, 3 x s16 over [-1, 1]).
+## (4 B float), "v3f" (3 x f32), "v3n" (a unit vector, 3 x s16 over [-1, 1]), "str" (UTF-8
+## text of at most 255 bytes: u8 length, then the bytes; ids and i18n keys, strand C).
 
 const ROWS: String = "rows"
 
@@ -47,6 +48,10 @@ static func put(buf: StreamPeerBuffer, schema: Array, values: Dictionary) -> voi
 				buf.put_32(int(value))
 			"f32":
 				buf.put_float(float(value))
+			"str":
+				var bytes: PackedByteArray = String(value if value != null else "").to_utf8_buffer()
+				buf.put_u8(mini(bytes.size(), 255))
+				buf.put_data(bytes.slice(0, 255))
 			"v3f":
 				var v: Vector3 = value
 				buf.put_float(v.x)
@@ -86,6 +91,9 @@ static func read(buf: StreamPeerBuffer, schema: Array) -> Dictionary:
 				out[name] = buf.get_32()
 			"f32":
 				out[name] = buf.get_float()
+			"str":
+				var n: int = buf.get_u8()
+				out[name] = (buf.get_data(n)[1] as PackedByteArray).get_string_from_utf8()
 			"v3f":
 				out[name] = Vector3(buf.get_float(), buf.get_float(), buf.get_float())
 			"v3n":

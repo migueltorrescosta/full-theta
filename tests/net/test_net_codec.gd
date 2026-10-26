@@ -116,5 +116,6 @@ func _sample(type: Variant) -> Variant:
 		"f32": 1.5,
 		"v3f": Vector3(1.5, -2.0, 0.25),
 		"v3n": Vector3(0.0, -1.0, 0.0),
+		"str": "npc.hail_trader",
 	}
 	return samples[type]

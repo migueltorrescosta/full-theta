@@ -18,7 +18,7 @@ extends RefCounted
 ## commands, events or command log; don't step it.
 
 ## Leading entries of a capture, before the tables.
-enum { SEED, BUILD, TICK, DEFS, RNG, RELATIONS, SCIENCE_DEF, HAZARDS, HEADER }
+enum { SEED, BUILD, TICK, DEFS, RNG, RELATIONS, SCIENCE_DEF, HAZARDS, STORY_DATA, HEADER }
 
 ## Table script -> Array[StringName] of its script variables but KnowledgeTable._rows
 ## (get_property_list is slow, so each class is listed once). Main thread only; each
@@ -43,6 +43,16 @@ static func capture(world: SimWorld) -> Array:
 		(world.get("_relations") as Dictionary).duplicate(),
 		world.science_def,
 		world.hazards.duplicate(),
+		# --- strand C: the read-only data the COMMS section reads (shared, never changed) ---
+		[
+			world.base_defs.duplicate(),
+			world.conversations,
+			world.hail_conversations,
+			world.markets,
+			world.site_markets,
+			world.module_defs,
+			world.rep_dists,
+		],
 	]
 	for table: SimTable in world.tables():
 		var names: Array[StringName] = _vars_of(table)
@@ -67,6 +77,14 @@ static func restore(state: Array) -> SimWorld:
 	copy.set("_relations", state[RELATIONS])
 	copy.science_def = state[SCIENCE_DEF]
 	copy.hazards = state[HAZARDS]
+	var data: Array = state[STORY_DATA]  # strand C
+	copy.base_defs.assign(data[0])
+	copy.conversations = data[1]
+	copy.hail_conversations = data[2]
+	copy.markets = data[3]
+	copy.site_markets = data[4]
+	copy.module_defs = data[5]
+	copy.rep_dists = data[6]
 	var k: int = HEADER
 	for table: SimTable in copy.tables():
 		var names: Array[StringName] = state[k]
