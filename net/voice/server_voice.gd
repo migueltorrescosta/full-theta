@@ -107,6 +107,10 @@ func _say(e: SimEvent) -> void:
 	args.erase("npc_id")
 	args.erase("stations")
 	if line.get("role", "computer") == "npc":
+		# Routed by the card, never by the speaker's name: two ships can meet NPCs of the
+		# same name, and a name outlives its run (FT-COM-006).
+		npc_id = card_key(int(args.get("card", _card_of(e.ship_id, npc_id))))
+		args.erase("card")
 		if (voice.npc_audience.call(npc_id) as PackedInt32Array).is_empty():
 			var comms: PackedStringArray = PackedStringArray(["comms"])
 			var all: PackedInt32Array = voice.computer_audience.call(e.ship_id, comms)
@@ -118,6 +122,30 @@ func _say(e: SimEvent) -> void:
 
 
 # --- end strand G1 ---
+## The key VoiceService.npc_audience takes for a card's conversation.
+static func card_key(card: int) -> String:
+	return "card:%d" % card
+
+
+## The card a key names, or -1.
+static func card_of_key(key: String) -> int:
+	return int(key.trim_prefix("card:")) if key.begins_with("card:") else -1
+
+
+## The newest live card with an open conversation that `npc` speaks on, on the ship's
+## board (a line said by name, not by Story: a scenario's message()); -1 for none.
+func _card_of(ship: int, npc: String) -> int:
+	for card: int in range(world.story.size() - 1, -1, -1):
+		if (
+			String(world.story.npc[card]) == npc
+			and world.story.node[card] != StoryTable.NO_TEXT
+			and Story.is_live(world, card)
+			and Story.visible_to(world, card, ship)
+		):
+			return card
+	return -1
+
+
 ## "Shields low" follows the text alert's summaries rule (D224, FT-PAIR-019): Engineering
 ## always hears the exact percentage; Helm hears it exact (Easy), as its band's midpoint
 ## (Normal) or with no number (Hard, "computer.shields_low_plain"); never Comms.

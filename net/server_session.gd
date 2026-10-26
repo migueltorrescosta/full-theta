@@ -39,11 +39,6 @@ var transport: NetTransport
 var world: SimWorld
 var sessions: NetSessions = NetSessions.new()
 var claims: NetClaims = NetClaims.new()
-# --- strand G1 ---
-## NPC id -> the card id of its open conversation (strand C fills it); the claim item is
-## "npc:<card id>" (FT-COM-006).
-var npc_cards: Dictionary = {}
-# --- end strand G1 ---
 var dev_all: bool = false
 ## The host secret (D127): a client presenting it in Hello is the host; "" for none.
 var host_secret: String = ""
@@ -244,7 +239,9 @@ func _prefill_cause(e: SimEvent) -> void:
 ## (StationViews.EVENT_STATIONS). Events of no ship go to nobody.
 func event_audience(e: SimEvent) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
-	if e.faction < 0:
+	# A spoken line reaches only its conversation's claimer or Comms' subtitle, through
+	# ServerVoice (FT-COM-006): the raw event, whose tag is the line id, goes to nobody.
+	if e.faction < 0 or e.kind == &"say":
 		return out
 	for s: NetSession in by_id.values():
 		if not s.has_pick() or s.ship >= world.ship_count():
@@ -272,29 +269,25 @@ func computer_audience(ship: int, stations: PackedStringArray) -> PackedInt32Arr
 
 
 # --- strand G1 ---
-## The session holding the claim on that NPC's open card, as VoiceService.npc_audience
-## wants it: empty while nobody holds it (FT-AUD-005, FT-COM-006).
-func npc_audience(npc_id: String) -> PackedInt32Array:
+## The session holding the claim on the conversation `npc_key` names, as
+## VoiceService.npc_audience wants it: empty while nobody holds it (FT-AUD-005,
+## FT-COM-006). The key is ServerVoice.card_key(card): only the ships that see the card
+## are asked, so one ship's NPC never reaches another ship's claimer.
+func npc_audience(npc_key: String) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
-	_sync_npc_cards()  # strand C
-	var item: String = "npc:" + str(npc_cards.get(npc_id, npc_id))
+	var card: int = ServerVoice.card_of_key(npc_key)
+	if card < 0 or card >= world.story.size():
+		return out
 	for ship: Dictionary in crew_ships():
-		var holder: int = claims.holder(ship["id"], item)
+		if not Story.visible_to(world, card, ship["id"]):
+			continue
+		var holder: int = claims.holder(ship["id"], "npc:" + str(card))
 		if holder >= 0 and by_id.has(holder):
 			out.append(holder)
 	return out
 
 
 # --- end strand G1 ---
-# --- strand C ---
-## Adds to npc_cards from STORY: each NPC's newest open conversation card.
-func _sync_npc_cards() -> void:
-	for card: int in world.story.size():
-		if world.story.node[card] != StoryTable.NO_TEXT and Story.is_live(world, card):
-			npc_cards[String(world.story.npc[card])] = card
-
-
-# --- end strand C ---
 ## The run reset (D178, NetRunReset): the rebuilt world replaces the old one, every
 ## ship is back in the lobby with its picks and claims, its crew state cleared, the
 ## old run's pending commands dropped and its queued voice lines too.
@@ -867,7 +860,8 @@ func _refresh_pause(may_pause: bool = false) -> void:
 	paused = now
 	for ship: int in changed:
 		_broadcast(NetProtocol.EVENT_PAUSE, _pause_payload(ship))
-	if was_paused and paused.is_empty():
+	# The universe resumes only when the host pause is off too (NetHostPause).
+	if was_paused and paused.is_empty() and not host_paused:
 		_broadcast(NetProtocol.EVENT_RESUME, {"tick": world.tick})
 
 

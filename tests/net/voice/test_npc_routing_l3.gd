@@ -48,7 +48,20 @@ func _crew() -> Array:
 	var crew: Array[NetClient] = []
 	for entry: String in ["ops", "parley", "systems"]:
 		crew.append(await h.joined(server, entry, entry))
-	server.session.npc_cards = {NPC: "card_7"}
+	# One open conversation of the NPC (card 0) on the player ship's board.
+	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER, &"conv.escort_contract")
+	spec.npc_id = StringName(NPC)
+	spec.ship_id = PLAYER
+	spec.source = SimCommand.Source.SERVER
+	StoryFixture.wire(server.world)
+	server.world.submit(spec)
+	server.world.step()
+	var open: AnswerHailCommand = AnswerHailCommand.new()
+	open.card = 0
+	open.ship_id = PLAYER
+	server.world.submit(open)
+	server.world.step()
+	server.world.events.clear()
 	return [server, crew]
 
 
@@ -83,12 +96,12 @@ func test_npc_line_goes_to_the_claimer_only_and_unclaimed_is_subtitle_only() -> 
 	assert_dict(_spy.said[0][2]).is_equal({"npc": "Rosa"})
 	# The second player claims the NPC's card: only they get the clip.
 	_spy.said.clear()
-	assert_bool(server.session.claims.claim(PLAYER, "npc:card_7", second)).is_true()
+	assert_bool(server.session.claims.claim(PLAYER, "npc:0", second)).is_true()
 	_say(server, "npc.hail_trader", args)
 	assert_array(_spy.said).is_equal([["clip", "npc.hail_trader", {"npc": "Rosa"}, [second]]])
 	# Released again: back to subtitles for both.
 	_spy.said.clear()
-	server.session.claims.release(PLAYER, "npc:card_7", second)
+	server.session.claims.release(PLAYER, "npc:0", second)
 	_say(server, "npc.hail_trader", args)
 	assert_str(_spy.said[0][0]).is_equal("subtitle")
 
@@ -118,3 +131,38 @@ func test_npc_names_join_the_closed_set() -> void:
 	server.session.voice.npc_names = ["Rosa", "Captain Voss"]
 	var closed: Dictionary = server.session.voice.closed_set([server.world.faction_of(PLAYER)])
 	assert_array(closed["npc_names"]).is_equal(["Rosa", "Captain Voss"])
+
+
+# FT: FT-COM-006
+# Two open conversations of NPCs with the same name are told apart by card: a line from
+# card 1 reaches card 1's claimer, not the claimer of card 0, and the raw say event
+# reaches no session.
+func test_same_named_npcs_route_by_card() -> void:
+	var setup: Array = await _crew()
+	var server: NetServer = setup[0]
+	var crew: Array[NetClient] = setup[1]
+	var first: int = crew[0].session_id
+	var second: int = crew[1].session_id
+	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER, &"conv.escort_contract")
+	spec.npc_id = StringName(NPC)
+	spec.ship_id = PLAYER
+	spec.source = SimCommand.Source.SERVER
+	server.world.submit(spec)
+	server.world.step()
+	Story.open_node(server.world, PLAYER, 1, "n0")
+	server.world.events.clear()
+	assert_bool(server.session.claims.claim(PLAYER, "npc:0", first)).is_true()
+	assert_bool(server.session.claims.claim(PLAYER, "npc:1", second)).is_true()
+	Story.say(server.world, PLAYER, 1, "npc.hail_trader")
+	var fresh: Array[SimEvent] = []
+	fresh.assign(server.world.events.filter(func(e: SimEvent) -> bool: return e.kind == &"say"))
+	assert_array(Array(server.session.event_audience(fresh[0]))).is_empty()
+	server.session.after_ticks(fresh)
+	assert_array(_spy.said).has_size(1)
+	assert_array(_spy.said[0][3]).is_equal([second])
+	_spy.said.clear()
+	server.world.events.clear()
+	Story.say(server.world, PLAYER, 0, "npc.hail_trader")
+	fresh.assign(server.world.events.filter(func(e: SimEvent) -> bool: return e.kind == &"say"))
+	server.session.after_ticks(fresh)
+	assert_array(_spy.said[0][3]).is_equal([first])

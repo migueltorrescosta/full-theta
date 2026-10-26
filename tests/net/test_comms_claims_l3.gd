@@ -70,7 +70,7 @@ func test_only_the_claimer_replies() -> void:
 	)
 	assert_int(CommsL3.card_row(ana, 0)["claimer"]).is_equal(ana_id)
 	# The NPC is heard by its claimer alone (G1 routes by this).
-	assert_array(Array(server.session.npc_audience("Harbour Master"))).is_equal([ana_id])
+	assert_array(Array(server.session.npc_audience(ServerVoice.card_key(0)))).is_equal([ana_id])
 	var reply: Dictionary = {"kind": "comms_reply", "card": 0, "option": "o2"}
 	assert_str(await CommsL3.verdict(h, server, bo, reply)).is_equal(CommandGate.CLAIMED)
 	assert_str(await CommsL3.verdict(h, server, ana, reply)).is_equal("")
@@ -83,7 +83,8 @@ func test_only_the_claimer_replies() -> void:
 	(
 		assert_bool(
 			await h.until(
-				func() -> bool: return server.session.npc_audience("Harbour Master").is_empty()
+				func() -> bool:
+					return server.session.npc_audience(ServerVoice.card_key(0)).is_empty()
 			)
 		)
 		. is_true()
