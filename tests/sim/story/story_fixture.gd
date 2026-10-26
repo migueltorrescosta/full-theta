@@ -50,7 +50,7 @@ static func duel(world_seed: int = 1, range_m: float = 5000.0) -> SimWorld:
 
 ## Docks the ship at a site for real: the world gets dockable sites at the origin up to
 ## `site` (ids below it exist, the ship is moved there if it is out of dock range and
-## stopped), then a DockCommand is applied.
+## stopped), then a DockCommand is applied without stepping.
 static func dock(w: SimWorld, ship: int, site: int = SITE) -> void:
 	while w.sites.size() <= site:
 		var d: SiteDef = SiteDef.new()
@@ -68,9 +68,9 @@ static func dock(w: SimWorld, ship: int, site: int = SITE) -> void:
 	var c: DockCommand = DockCommand.new()
 	c.ship_id = ship
 	c.site_id = site
-	w.submit(c)
-	w.step()
-	assert(c.accepted, "StoryFixture.dock: the dock was refused")
+	# Applied at once, not queued, so a world built at tick 0 stays at tick 0.
+	var docked: bool = c.apply(w)
+	assert(docked, "StoryFixture.dock: the dock was refused")
 
 
 ## Resets a ship in place.
