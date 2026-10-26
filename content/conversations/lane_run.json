@@ -1,0 +1,15 @@
+{
+  "_comment": "Traffic control's offer on a debris leg (D234): fly the lane to the named site for a fee; Weapons can shoot the debris as point defence.",
+  "id": "conv.lane_run",
+  "npc_role": "npc",
+  "start": "n0",
+  "nodes": {
+    "n0": {
+      "line": "npc.lane_warning",
+      "options": [
+        {"id": "o1", "text": "comms.opt.accept_run", "effects": [{"accept": true}]},
+        {"id": "o2", "text": "comms.opt.close"}
+      ]
+    }
+  }
+}

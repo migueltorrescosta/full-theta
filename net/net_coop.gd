@@ -60,6 +60,10 @@ func on_mark_pinged(user: NetSession, slot: int) -> void:
 
 ## An accepted command: a guided shot at a mark's contact uses that mark.
 func on_command(session_id: int, c: SimCommand) -> void:
+	# --- strand E ---
+	var at: int = c.tick if c.tick >= 0 else session.world.tick
+	session.first_use.on_command(c.ship_id, c, at)
+	# --- end strand E ---
 	if c.kind() != &"fire_guided":
 		return
 	var user: NetSession = session.by_id.get(session_id)

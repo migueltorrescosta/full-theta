@@ -163,7 +163,15 @@ func test_session_and_reset_leave_definitions_unchanged() -> void:
 	var before: Dictionary[String, String] = TestDefs.hashes(defs)
 	var cli: ServerMain = ServerMain.new()
 	var args: PackedStringArray = [
-		"--bind", "127.0.0.1", "--port", "0", "--no-beacon", "--m1-player-hull-scale", "0.5"
+		"--bind",
+		"127.0.0.1",
+		"--port",
+		"0",
+		"--no-beacon",
+		"--encounter",
+		"m1",
+		"--m1-player-hull-scale",
+		"0.5"
 	]
 	assert_bool(cli.parse_args(args)).is_true()
 	var server: NetServer = cli.make_server()

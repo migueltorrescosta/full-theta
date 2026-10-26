@@ -83,6 +83,10 @@ var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
 ## Request chips (NetChips) and the cooperative events counted for the debrief (CoopEvents).
 var chips: NetChips
 var coop: NetCoop
+# --- strand E ---
+## When each station first used each core action, for the debrief (FT-MIS-038).
+var first_use: FirstUse = FirstUse.new()
+# --- end strand E ---
 var shares: NetShares
 var host_pause: NetHostPause  # strand D1
 
@@ -306,6 +310,7 @@ func restart(sim_world: SimWorld) -> void:
 		coop.reset_ship(ship["id"])
 		_ownership_dirty[ship["id"]] = true
 	coop.reset()
+	first_use.reset()  # strand E
 	_publish()
 
 

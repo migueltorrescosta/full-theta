@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EnemyDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/enemy_def.gd" id="1_enemy"]
+[ext_resource type="Resource" path="res://content/ships/m3_stranded.tres" id="2_ship"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"stranded_freighter"
+display_name = "Calliope"
+ship = ExtResource("2_ship")
+engage_range_min = 1.0
+engage_range_max = 2.0
+retreat_hull_fraction = 0.1
+fire_cone = 0.05

@@ -1,5 +1,5 @@
 # h: the host (HostSession; the server child loses fights fast) plays Tactical.
-host_spawn pid_file=$RUN/server.pid.json grace=$GRACE publish=url args=["--m1-player-hull-scale","0.2"] timeout=60
+host_spawn pid_file=$RUN/server.pid.json grace=$GRACE publish=url args=["--encounter","m1","--m1-player-hull-scale","0.2"] timeout=60
 expect_welcome host=true
 ui_pick entry=tactical
 barrier name=picked n=3 timeout=90

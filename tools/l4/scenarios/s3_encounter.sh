@@ -2,7 +2,7 @@
 # Scenario 3 (T058, FT-M1-001, FT-M1-012): the encounter end to end through the real
 # client UI (--client ui: menu, lobby, station screens, outcome card). The host plays
 # Tactical (HostSession, its server child started with the test flag
-# --m1-player-hull-scale), c2 Systems, c3 Ops. Run 1: Ops marks the enemy and pings
+# --encounter m1 and --m1-player-hull-scale: the run is the default now), c2 Systems, c3 Ops. Run 1: Ops marks the enemy and pings
 # it, Systems puts the spare pips on the weapons (D212), Tactical selects the ping, faces
 # it and fires the claimed mount until the enemy is destroyed (a win, about a minute of sim);
 # the crew votes "Run again" (2 of 3) and everyone is back in the lobby. Run 2: Tactical charges with weapons cold and the

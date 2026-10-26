@@ -2,6 +2,11 @@ class_name CardView
 extends RefCounted
 ## A value copy of one card on a ship's Comms board (FT-ARC-016, FT-DAT-009, FT-COM-001).
 
+# --- strand E ---
+## The card states, the same numbers as StoryTable.State (scenarios name this, not the table).
+enum State { OPEN, ACCEPTED, DECLINED, DONE, FAILED, EXPIRED }
+# --- end strand E ---
+
 var id: int = -1
 ## CardSpec.Kind value.
 var kind: int = 0

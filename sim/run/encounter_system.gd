@@ -22,7 +22,7 @@ static func step(world: SimWorld) -> void:
 	var count: int = table.size()
 	if count == 0:
 		return
-	var jumped: PackedInt32Array = _jumped_this_tick(world)
+	var jumped: Dictionary[int, int] = _jumped_this_tick(world)
 	for id: int in count:
 		var result: int = table.result[id]
 		if result > EncounterTable.Result.ACTIVE:
@@ -94,13 +94,16 @@ static func _arrived(world: SimWorld, id: int) -> bool:
 	return false
 
 
-static func _check_flee(world: SimWorld, id: int, jumped: PackedInt32Array) -> void:
+static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, int]) -> void:
 	var table: EncounterTable = world.encounters
 	var site: int = table.site[id]
 	if site < 0 or jumped.is_empty():
 		return
 	for ship: int in _ships(table.ships_mask[id]):
 		if world.run.encounter[ship] != id or not jumped.has(ship):
+			continue
+		# Only a jump that starts at the encounter's site is leaving it.
+		if jumped[ship] != site:
 			continue
 		if SiteTable.at_site(world, ship) == site:
 			continue
@@ -118,7 +121,9 @@ static func _check_losses(world: SimWorld, id: int) -> void:
 	var table: EncounterTable = world.encounters
 	var mask: int = table.ships_mask[id]
 	for ship: int in _ships(mask):
-		if world.run.status[ship] == RunTable.Status.IN_PLAY:
+		# A ship still in play and in this encounter stays; one reset out of it (FT-MIS-011)
+		# or destroyed has left as a loss.
+		if world.run.status[ship] == RunTable.Status.IN_PLAY and world.run.encounter[ship] == id:
 			continue
 		if EncounterTable.has_bit(table.losses_mask[id] | table.fled_mask[id], ship):
 			continue
@@ -149,14 +154,15 @@ static func _hostile_seeing(world: SimWorld, ship: int) -> int:
 	return -1
 
 
-## Ships that emitted &"jump_arrive" during this tick (events of the tick being stepped).
-static func _jumped_this_tick(world: SimWorld) -> PackedInt32Array:
-	var out: PackedInt32Array = PackedInt32Array()
+## Ships that emitted &"jump_arrive" during this tick (events of the tick being stepped),
+## each with the site id it jumped from (-1: none).
+static func _jumped_this_tick(world: SimWorld) -> Dictionary[int, int]:
+	var out: Dictionary[int, int] = {}
 	var events: Array[SimEvent] = world.events
 	var i: int = events.size() - 1
 	while i >= 0 and events[i].tick == world.tick:
 		if events[i].kind == &"jump_arrive":
-			out.append(events[i].ship_id)
+			out[events[i].ship_id] = String(events[i].tag).to_int()
 		i -= 1
 	return out
 

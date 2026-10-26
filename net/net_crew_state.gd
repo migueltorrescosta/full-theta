@@ -138,6 +138,10 @@ func on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
 		session.request_rejected(s, NetProtocol.Type.MARK, why, {"op": msg["op"], "slot": slot})
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
+	# --- strand E --- (FT-MIS-038: Relay's first mark)
+	if msg["op"] == "place" and role == CrewMarks.Role.RELAY:
+		session.first_use.on_crew_op(s.ship, "relay", "mark_place", session.world.tick)
+	# --- end strand E ---
 	# --- strand F --- (P15: Relay's mark on a mission's contact locates the mission)
 	if msg["op"] == "place" and role == CrewMarks.Role.RELAY:
 		_mark_mission(s, _spot(s, msg))
@@ -348,6 +352,8 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 			why = relay.delete_zone(s.ship, slot)
 	if why != "":
 		return why
+	if op == "route_add":  # strand E: FT-MIS-038, Relay's first route
+		session.first_use.on_crew_op(s.ship, "relay", "route_add", session.world.tick)
 	if op.begins_with("route"):
 		for t: NetSession in session.by_id.values():
 			if t.ship == s.ship and t.has_pick() and _sees_routes(t):

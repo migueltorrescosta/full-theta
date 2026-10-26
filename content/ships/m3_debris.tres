@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="ShipDef" format=3]
+
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/assist.tres" id="1_assist"]
+[ext_resource type="Resource" path="res://content/ships/m3_debris/power.tres" id="2_power"]
+[ext_resource type="Script" path="res://content/defs/ship_def.gd" id="3_ship"]
+[ext_resource type="Resource" path="res://content/ships/m3_debris/shields.tres" id="4_shields"]
+[ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="5_sub"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_sensors.tres" id="6_sensors"]
+
+[resource]
+script = ExtResource("3_ship")
+id = &"m3_debris"
+display_name = "Debris"
+mass = 3000.0
+inertia = Vector3(5000, 5000, 5000)
+max_thrust_pos = Vector3(10, 10, 10)
+max_thrust_neg = Vector3(10, 10, 10)
+max_torque = Vector3(10, 10, 10)
+propellant_capacity = 0.0
+exhaust_velocity = 60000.0
+lever_arm = 1.0
+radius = 8.0
+hull_max = 3000000.0
+spare_parts = 0
+sensor_range = 1.0
+identify_range = 0.0
+repair_crews = 0
+subsystem_damage_share = 0.0
+subsystems = Array[ExtResource("5_sub")]([ExtResource("6_sensors")])
+assist = ExtResource("1_assist")
+power = ExtResource("2_power")
+shields = ExtResource("4_shields")

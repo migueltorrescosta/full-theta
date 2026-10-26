@@ -91,6 +91,11 @@ const EVENT_PING: String = "ping"
 ## {ship, outcome ("win" | "loss"), time_s, hull} and {ship, voters, needed}.
 const EVENT_RUN_OVER: String = "run_over"
 const EVENT_RUN_VOTES: String = "run_votes"
+# --- strand E ---
+## The end-of-run debrief (RunDebrief.for_ship, FT-MIS-006, FT-MIS-010, FT-MIS-038,
+## FT-PAIR-013), right after `run_over` to every session with a pick on the ship.
+const EVENT_DEBRIEF: String = "debrief"
+# --- end strand E ---
 ## Relay (strand B of #9, docs/protocol.md "Relay"): {ship, zones: [...]} (hazard zones and
 ## scan positions, every pick of the ship); {ship, routes: [[{x, y, z}]]} (Relay, and other
 ## stations unless the toggle set is Hard); {ship, items: [...]} the mark inbox and {ship,

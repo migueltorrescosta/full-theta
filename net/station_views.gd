@@ -245,6 +245,31 @@ const STATION_COMMANDS: Dictionary = {
 	"captain": [&"training_next"],
 }
 
+# --- strand E ---
+## Core actions per station (D232, FT-MIS-038), in StationDef.core_actions' "action=source"
+## form. Relay's mark and route are net-side crew ops (NetCrewState), the rest commands.
+const STATION_CORE_ACTIONS: Dictionary = {
+	"helm":
+	[
+		"face=helm_input.face",
+		"approach=helm_input.approach",
+		"all_stop=helm_all_stop",
+		"jump=helm_jump",
+	],
+	"weapons": ["aim=aim_mount", "fire=fire|fire_guided", "ammo_type=set_ammo_type"],
+	"engineering": ["pips=set_pips", "dispatch_repair=dispatch_repair", "boost=boost"],
+	"science": ["scan=science_scan", "hack=science_hack"],
+	"relay": ["mark=op:mark_place", "probe=launch_probe", "route=op:route_add"],
+	"comms":
+	[
+		"answer_hail=comms_answer",
+		"reply=comms_reply",
+		"accept_card=comms_accept",
+		"trade=comms_trade"
+	],
+}
+# --- end strand E ---
+
 ## Claimable item kinds (FT-NET-022, D18). An item is the kind, or "kind:index" for
 ## one of several (a mount, a repair crew). The active scan or hack, probes and NPC
 ## conversations come with #9 and #10.
@@ -867,6 +892,7 @@ static func _build(entry: String) -> StationDef:
 			d.commands.append_array(STATION_COMMANDS[s])
 		d.claims.append_array(STATION_CLAIMS.get(s, []))
 		d.controls.append_array(STATION_CONTROLS.get(s, []))
+		d.core_actions.append_array(STATION_CORE_ACTIONS.get(s, []))  # strand E
 	# --- strand B ---
 	seen[Section.SITES] = true  # Every view sees the named sites (FT-SPA-015).
 	# --- end strand B ---
