@@ -127,14 +127,14 @@ Tests: 357, manual: 10, pending: 34.
 | FT-SIM-038 | tests | `tests/sim/core/test_hot_path_equivalence.gd`, `tests/sim/core/test_integrator.gd` |
 | FT-STN-001 | tests | `tests/presentation/test_top_bar.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_main_screen_views.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-STN-002 | tests | `tests/presentation/test_contact_picture.gd`, `tests/presentation/test_disc_radar.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_viewer_panel.gd` |
-| FT-STN-003 | tests | `tests/presentation/test_disc_radar.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
+| FT-STN-003 | tests | `tests/presentation/test_disc_radar.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-STN-004 | tests | `tests/stations/test_relay_station.gd`, `tests/stations/test_station_alerts.gd` |
-| FT-STN-005 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_axes.gd`, `tests/presentation/test_layout_mode.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
+| FT-STN-005 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_axes.gd`, `tests/presentation/test_layout_mode.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-STN-006 | tests | `tests/presentation/test_top_bar.gd`, `tools/tests/test_check_palette.py` |
 | FT-STN-007 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd` |
 | FT-STN-008 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_viewer_panel.gd` |
-| FT-STN-009 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_binding_text.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
-| FT-STN-010 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd`, `tests/stations/test_weapons_guided.gd` |
+| FT-STN-009 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_binding_text.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
+| FT-STN-010 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd`, `tests/stations/test_weapons_guided.gd` |
 | FT-STN-011 | tests | `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_station_screen.gd` |
 | FT-STN-012 | tests | `tests/content/test_i18n.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_first_visit_help.gd` |
 | FT-STN-013 | tests | `tests/stations/test_client_settings.gd`, `tests/stations/test_lobby_and_overlays.gd` |
@@ -203,20 +203,20 @@ Tests: 357, manual: 10, pending: 34.
 | FT-RLY-009 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-010 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/net/test_net_main_screen_rules.gd`, `tests/stations/test_main_screen_views.gd` |
 | FT-RLY-011 | tests | `tests/net/test_net_relay_l3.gd`, `tests/sim/relay/test_probes.gd`, `tests/stations/test_relay_station.gd` |
-| FT-COM-001 | tests | `tests/net/test_comms_view.gd`, `tests/sim/story/test_cards.gd` |
-| FT-COM-002 | tests | `tests/sim/story/test_cards.gd` |
-| FT-COM-003 | tests | `tests/net/test_comms_claims_l3.gd`, `tests/sim/story/test_cards.gd` |
-| FT-COM-004 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_economy.gd` |
-| FT-COM-005 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_reputation.gd` |
-| FT-COM-006 | tests | `tests/net/test_comms_claims_l3.gd`, `tests/net/voice/test_npc_routing_l3.gd` |
-| FT-COM-007 | tests | `tests/net/test_comms_view.gd`, `tests/sim/story/test_cards.gd`, `tools/tests/test_conversations.py` |
-| FT-COM-008 | tests | `tests/net/test_comms_view.gd`, `tests/sim/story/test_cards.gd` |
-| FT-COM-009 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_modules.gd` |
+| FT-COM-001 | tests | `tests/net/test_comms_view.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_comms_trade.gd` |
+| FT-COM-002 | tests | `tests/sim/story/test_cards.gd`, `tests/stations/test_comms_board.gd` |
+| FT-COM-003 | tests | `tests/net/test_comms_claims_l3.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_comms_board.gd` |
+| FT-COM-004 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_economy.gd`, `tests/stations/test_comms_trade.gd` |
+| FT-COM-005 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_reputation.gd`, `tests/stations/test_comms_board.gd` |
+| FT-COM-006 | tests | `tests/net/test_comms_claims_l3.gd`, `tests/net/voice/test_npc_routing_l3.gd`, `tests/stations/test_comms_board.gd` |
+| FT-COM-007 | tests | `tests/net/test_comms_view.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_comms_board.gd`, `tools/tests/test_conversations.py` |
+| FT-COM-008 | tests | `tests/net/test_comms_view.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_comms_board.gd` |
+| FT-COM-009 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_modules.gd`, `tests/stations/test_comms_trade.gd` |
 | FT-CPT-001 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/net/test_net_main_screen_rules.gd`, `tests/stations/test_captain_panel.gd` |
 | FT-CPT-002 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/stations/test_captain_panel.gd` |
 | FT-CPT-003 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/stations/test_captain_panel.gd` |
-| FT-CPT-004 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/stations/test_captain_panel.gd` |
-| FT-CPT-005 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/stations/test_captain_panel.gd` |
+| FT-CPT-004 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/stations/test_captain_panel.gd`, `tests/stations/test_comms_board.gd` |
+| FT-CPT-005 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/stations/test_captain_panel.gd`, `tests/stations/test_comms_board.gd` |
 | FT-MSC-001 | tests | `tests/net/test_net_viewer_l3.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-MSC-002 | tests | `tests/stations/test_main_screen_views.gd` |
 | FT-MSC-003 | tests | `tests/stations/test_viewer_panel.gd` |
@@ -226,7 +226,7 @@ Tests: 357, manual: 10, pending: 34.
 | FT-JNT-001 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/test_first_visit_help.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_science_panel.gd`, `tests/stations/test_station_screen.gd` |
 | FT-JNT-002 | tests | `tests/input/test_binding_table.gd`, `tests/stations/test_joint_views.gd` |
 | FT-JNT-003 | tests | `tests/input/test_binding_table.gd`, `tests/stations/test_joint_views.gd` |
-| FT-JNT-004 | tests | `tests/stations/test_joint_views.gd` |
+| FT-JNT-004 | tests | `tests/stations/test_comms_board.gd`, `tests/stations/test_joint_views.gd` |
 | FT-JNT-005 | tests | `tests/net/test_net_stations_defs.gd`, `tests/net/test_view_filter.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd` |
 | FT-JNT-006 | tests | `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-JNT-007 | tests | `tests/input/test_input_matcher.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_screen.gd` |
@@ -266,7 +266,7 @@ Tests: 357, manual: 10, pending: 34.
 | FT-PAIR-003 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_reveals.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd`, `tests/sim/science/test_self_scan_faults.gd` |
 | FT-PAIR-004 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_pair_harness.gd`, `tests/sim/economy/test_economy.gd` |
 | FT-PAIR-005 | tests | `tests/net/test_net_stations_filter.gd`, `tests/net/test_view_filter.gd` |
-| FT-PAIR-007 | tests | `tests/net/test_hazard_view.gd`, `tests/net/test_net_coop_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_helm_route_ribbon.gd` |
+| FT-PAIR-007 | tests | `tests/net/test_hazard_view.gd`, `tests/net/test_net_coop_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_helm_route_ribbon.gd`, `tests/stations/test_weapons_flags.gd` |
 | FT-PAIR-008 | tests | `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd` |
 | FT-PAIR-009 | tests | `tests/net/test_net_chips_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-010 | tests | `tests/net/test_comms_view.gd`, `tests/net/test_eng_comms_l3.gd`, `tests/net/test_net_event_values_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd` |
@@ -276,11 +276,11 @@ Tests: 357, manual: 10, pending: 34.
 | FT-PAIR-014 | tests | `tests/net/test_net_coop_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd` |
 | FT-PAIR-015 | tests | `tests/net/test_hazard_view.gd`, `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_pair_harness.gd`, `tests/sim/hazard/test_hazards.gd` |
 | FT-PAIR-016 | pending |  |
-| FT-PAIR-017 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_lobby_toggles.gd`, `tests/stations/test_request_chips.gd` |
+| FT-PAIR-017 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_lobby_toggles.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-018 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd` |
 | FT-PAIR-019 | tests | `tests/net/test_eng_comms_l3.gd`, `tests/net/test_net_event_values_l3.gd`, `tests/net/test_view_filter.gd`, `tests/net/voice/test_server_voice.gd`, `tests/shared/test_health_band.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_main_screen_views.gd` |
 | FT-PAIR-020 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_hazard_view.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_data_shortcut_views.gd` |
-| FT-PAIR-021 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd` |
+| FT-PAIR-021 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-022 | tests | `tests/pairs/test_hack_alpha.gd`, `tests/pairs/test_over_horizon_strike.gd` |
 | FT-PAIR-023 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd` |
 | FT-MIS-001 | tests | `tests/sim/run/test_encounter_pacing.gd` |
@@ -316,13 +316,13 @@ Tests: 357, manual: 10, pending: 34.
 | FT-MIS-033 | pending |  |
 | FT-MIS-034 | pending |  |
 | FT-MIS-035 | tests | `tests/sim/economy/test_modules.gd` |
-| FT-MIS-036 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/story/test_cards.gd` |
+| FT-MIS-036 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_comms_trade.gd` |
 | FT-MIS-037 | pending |  |
 | FT-MIS-038 | pending |  |
 | FT-MIS-039 | pending |  |
 | FT-MIS-040 | tests | `tests/net/test_host_pause_l3.gd`, `tests/stations/test_pause_overlay.gd` |
 | FT-MIS-041 | tests | `tests/sim/api/test_scenario_meta.gd` |
-| FT-MIS-042 | tests | `tests/net/test_contract_flags_l3.gd`, `tests/sim/story/test_cards.gd` |
+| FT-MIS-042 | tests | `tests/net/test_contract_flags_l3.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_weapons_flags.gd` |
 | FT-AUD-001 | tests | `tools/tests/test_prerender.py` |
 | FT-AUD-002 | tests | `tools/tests/test_licences.py`, `tools/tests/test_prerender.py` |
 | FT-AUD-003 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_service.gd` |
@@ -345,7 +345,7 @@ Tests: 357, manual: 10, pending: 34.
 | FT-DAT-001 | tests | `tests/content/test_content_defs.gd`, `tests/content/test_def_gate.gd` |
 | FT-DAT-002 | tests | `tests/content/test_def_gate.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_reputation.gd` |
 | FT-DAT-003 | tests | `tools/tests/test_check_dialogue.py`, `tools/tests/test_conversations.py` |
-| FT-DAT-004 | tests | `tools/tests/test_check_dialogue.py` |
+| FT-DAT-004 | tests | `tests/stations/test_comms_trade.gd`, `tools/tests/test_check_dialogue.py` |
 | FT-DAT-005 | tests | `tools/tests/test_prerender.py` |
 | FT-DAT-006 | tests | `tests/sim/api/test_scenario_meta.gd`, [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
 | FT-DAT-007 | tests | `tools/tests/test_lint_arch.py` |
