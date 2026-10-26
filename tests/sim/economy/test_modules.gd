@@ -194,3 +194,34 @@ func test_module_and_slot_validation() -> void:
 	var errors: String = "\n".join(ship.validate())
 	assert_str(errors).contains("slots[0].count: must be in [1.0, 8.0]")
 	assert_str(errors).contains("slots[1].slot_type: duplicate engine")
+
+
+## Speed after `ticks` ticks of full throttle for a ship fitted with the module (or none).
+func _speed_after(module: StringName, ticks: int) -> float:
+	var w: SimWorld = _docked()[0]
+	if module != &"":
+		ModuleSystem.fit(w, 0, 0, _module(module))
+	w.helm.docked_site[0] = -1
+	var c: HelmInputCommand = HelmInputCommand.new()
+	c.throttle = 1.0
+	StoryFixture.run(w, 0, c)
+	for i: int in ticks:
+		w.step()
+	return w.kin.vel[0].length()
+
+
+# FT: FT-MIS-035
+# A module's thrust and mass deltas reach flight, not only the effective definition: the
+# afterburner raises the kinematics thrust limit and the reactor's mass cost applies.
+func test_module_deltas_reach_flight() -> void:
+	var w: SimWorld = _docked()[0]
+	var base_mass: float = w.kin.mass[0]
+	var base_thrust: float = w.kin.max_thrust_pos[0].z
+	ModuleSystem.fit(w, 0, 0, _module(&"hx2_afterburner"))
+	assert_float(w.kin.max_thrust_pos[0].z).is_equal_approx(base_thrust * 1.25, 0.01)
+	ModuleSystem.fit(w, 0, 0, _module(&"bx3_reactor"))
+	assert_float(w.kin.mass[0]).is_equal_approx(base_mass * 1.1, 0.01)
+	assert_float(w.kin.max_thrust_pos[0].z).is_equal_approx(base_thrust, 0.01)
+	ModuleSystem.fit(w, 0, 0, null)
+	assert_float(w.kin.mass[0]).is_equal(base_mass)
+	assert_float(_speed_after(&"hx2_afterburner", 30)).is_greater(_speed_after(&"", 30))

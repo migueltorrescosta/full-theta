@@ -56,13 +56,20 @@ static func refit(world: SimWorld, ship: int) -> void:
 		var module: ModuleDef = world.module_defs[ix]
 		for stat: StringName in module.deltas:
 			sums[stat] = sums.get(stat, 0.0) + module.deltas[stat]
-	if sums.is_empty():
-		world.defs[ship] = base
-		return
-	var def: ShipDef = base.duplicate()
-	for stat: StringName in sums:
-		_apply(def, stat, maxf(1.0 + sums[stat], MIN_FACTOR))
+	var def: ShipDef = base
+	if not sums.is_empty():
+		def = base.duplicate()
+		for stat: StringName in sums:
+			_apply(def, stat, maxf(1.0 + sums[stat], MIN_FACTOR))
 	world.defs[ship] = def
+	# Flight reads the kinematics columns, copied from the definition at spawn: carry the
+	# module-scaled mass, thrust and torque there too.
+	var kin: Kinematics = world.kin
+	if ship >= 0 and ship < kin.size():
+		kin.mass[ship] = def.mass
+		kin.max_thrust_pos[ship] = def.max_thrust_pos
+		kin.max_thrust_neg[ship] = def.max_thrust_neg
+		kin.max_torque[ship] = def.max_torque
 
 
 ## Scales one stat of a private copy of the definition, copying the sub-resource first
