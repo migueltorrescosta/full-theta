@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="PairDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/pair_def.gd" id="1_p14pair"]
+
+[resource]
+script = ExtResource("1_p14pair")
+id = &"p14"
+display_name = "Science + Comms"
+stations = Array[StringName]([&"science", &"comms"])
+pair_min_gain = 0.25
