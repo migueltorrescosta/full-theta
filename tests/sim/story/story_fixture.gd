@@ -12,11 +12,11 @@ const KAPPA: StringName = &"kappa"
 static var _content: Dictionary = {}
 
 
-## Spawns a ship `offset` m from the origin. B0: drop the site argument (0) here.
+## Spawns a ship `offset` m from the origin.
 static func spawn(
 	world: SimWorld, def: ShipDef, faction: int, offset: Vector3 = Vector3.ZERO
 ) -> int:
-	return world.spawn_ship(def, faction, 0, offset)
+	return world.spawn_ship(def, faction, offset)
 
 
 ## A world wired like app/ will wire it: conversations, markets, modules, reputation
@@ -53,9 +53,9 @@ static func dock(w: SimWorld, ship: int, site: int = SITE) -> void:
 	w.story.dock_stub[ship] = site
 
 
-## Resets a ship in place (B0: drop the site argument here).
+## Resets a ship in place.
 static func reset(w: SimWorld, ship: int) -> void:
-	w.reset_ship(ship, 0)
+	w.reset_ship(ship)
 
 
 ## Submits a command from a ship and steps one tick; returns whether it was accepted.
