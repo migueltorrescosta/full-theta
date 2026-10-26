@@ -203,7 +203,7 @@ Hack minigame (Hack-A node route, D59): find a path from entry to the chosen sub
 
 ## 5.5 Relay (world map; D52, D124)
 
-Centre: the world map, a freely rotatable 3D map of the site's wrapping cube, centred on the ship or a selected mark, site or contact, with probe coverage bubbles, routes, hazards and all marks; it has no grid squares, altitude layers or world-fixed up (D124). Left: probes (stock, launch) and contacts by faction. Bottom: log and the inbox of marks sent by allied ships, each waiting for Accept or Decline (D82). With no Captain seated, Relay alone switches the main-screen view (D88). No NPC text.
+Centre: the world map, a freely rotatable 3D map of the scenario's wrapping cube, centred on the ship or a selected mark, site or contact, with probe coverage bubbles, routes, hazards and all marks; it has no grid squares, altitude layers or world-fixed up (D124, D229). Left: probes (stock, launch) and contacts by faction. Bottom: log and the inbox of marks sent by allied ships, each waiting for Accept or Decline (D82). With no Captain seated, Relay alone switches the main-screen view (D88). No NPC text.
 
 ```
 +-[RELAY]-----------------------------------------------+
@@ -222,7 +222,7 @@ Centre: the world map, a freely rotatable 3D map of the site's wrapping cube, ce
 - Controller: left stick cursor plus a radial menu on hold B (probe, mark, route, flag lanes, send mark, main-screen view), triggers move the cursor nearer/farther, right stick rotate; X/Y accept/decline received mark (§5.0).
 - Touch: drag to place, second finger slides depth, pinch zoom, two-finger rotate, SEND on a selected mark, ACCEPT/DECLINE in the inbox, main-screen view buttons.
 
-- **FT-RLY-001** Relay shall show a freely rotatable 3D map of the site's wrapping cube, centred on the ship or a selected mark, site or contact, with probe coverage, routes, hazards and marks, and no grid squares, altitude layers or world-fixed up. (D52, D124)
+- **FT-RLY-001** Relay shall show a freely rotatable 3D map of the scenario's wrapping cube, centred on the ship or a selected mark, site or contact, with probe coverage, routes, hazards and marks, and no grid squares, altitude layers or world-fixed up. (D52, D124, D229)
 - **FT-RLY-002** Relay shall place marks by dragging on the view plane through the map's centre and set depth along the view direction with Shift+drag. (D52, D124)
 - **FT-RLY-003** Relay shall rename, attach to a contact, move and delete any mark of its ship. (D44)
 - **FT-RLY-004** Relay shall launch probes to a chosen point from a finite stock. (D56)

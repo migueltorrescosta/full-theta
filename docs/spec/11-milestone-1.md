@@ -4,7 +4,7 @@ One ship, three networked clients covering all six functional stations through j
 
 ## 11.1 Scope
 
-1. Controllable ship with 6DOF Newtonian movement, flight assist (rotation, drift and throttle holds), all-stop, hold-to-approach and decoupled mode (D97), at site-local positions (D98).
+1. Controllable ship with 6DOF Newtonian movement, flight assist (rotation, drift and throttle holds), all-stop, hold-to-approach and decoupled mode (D97), at site-local positions (D98; M3 replaces them with offsets in one cube, D230).
 2. Helm, Weapons and Engineering interfaces at their chosen layouts; Science, Relay and Comms with station definitions and enough UI to be covered in the lobby; Relay's map read-out.
 3. Tactical, Systems and Ops joint views, modal with one focused panel (D95), the coverage check and lobby load tags (D99).
 4. Marks and pings on every station.
