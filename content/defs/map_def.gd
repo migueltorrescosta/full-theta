@@ -21,7 +21,8 @@ const PERIOD_PER_SENSOR_RANGE: int = 4
 ## The pool the director opens sites from (strand A's OpenSiteCommand).
 @export var spawnable: Array[SiteDef] = []
 ## Travel legs the director may put debris on (D233): [{from, to, debris, count}], with
-## from and to site ids and debris a hazard id.
+## from and to site keys and debris the key of a destructible debris EnemyDef (content/enemies)
+## that the debris_leg scenario places on the route with spawn_on_leg (D234), count pieces.
 @export var legs: Array[Dictionary] = []
 
 

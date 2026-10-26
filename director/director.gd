@@ -102,6 +102,10 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 	var keep: Array[ActiveRun] = []
 	for run: ActiveRun in _runs:
 		var ev: EncounterView = api.encounter(run.encounter)
+		# An id predicted for a begin can land on another ship's encounter when an earlier
+		# begin of the same tick is rejected: only ours counts.
+		if ev.id >= 0 and (not ev.ships.has(run.ship) or ev.scenario_id != run.scenario.meta().id):
+			ev = EncounterView.new()
 		if ev.id < 0:
 			# Not created: the command was rejected, or has not applied yet.
 			if now - run.issued_tick < CONFIRM_TICKS:

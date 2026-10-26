@@ -1,0 +1,15 @@
+{
+  "_comment": "The salvage branch of the rescue scenario (FT-MIS-004): strip the stranded freighter's cargo. Pays more than the escort and costs standing with the freighter's faction (rep.salvage_wreck) when the scenario settles the card.",
+  "id": "conv.rescue_salvage",
+  "npc_role": "npc",
+  "start": "n0",
+  "nodes": {
+    "n0": {
+      "line": "npc.salvage_offer",
+      "options": [
+        {"id": "o1", "text": "comms.opt.salvage_accept", "effects": [{"accept": true}]},
+        {"id": "o2", "text": "comms.opt.close"}
+      ]
+    }
+  }
+}

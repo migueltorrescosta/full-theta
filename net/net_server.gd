@@ -83,6 +83,7 @@ func start(
 	session.host_secret = host_secret
 	transport.probe = probe != null
 	run_reset = NetRunReset.new(session, restart_run)
+	run_reset.decisions = _director_decisions  # strand E
 	var err: Error = transport.start(port, address)
 	if err != OK:
 		return err
@@ -147,6 +148,15 @@ func restart_run() -> void:
 	_idle_state_posted = false
 
 
+# --- strand E ---
+## The director's decisions so far for the debrief; none with another driver.
+func _director_decisions() -> Array:
+	if driver is Director:
+		return (driver as Director).decisions()
+	return []
+
+
+# --- end strand E ---
 ## Serves the web export in `root` over plain HTTP on the bind address at port() - 1
 ## (FT-NET-030, D108). Call after start().
 func start_http(root: String) -> Error:

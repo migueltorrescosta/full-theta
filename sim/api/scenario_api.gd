@@ -69,6 +69,7 @@ func ship(id: int) -> ShipView:
 	v.at_site = SiteTable.at_site(_world, id)
 	v.hull_frac = DamageSystem.hull_fraction(_world, id)
 	v.status = _world.run.status[id]
+	v.in_play = v.status == RunTable.Status.IN_PLAY  # strand E
 	v.outcome = _world.run.outcome[id]
 	v.docked_site = _helm(&"docked_site", id, -1) as int
 	v.jumping = (_helm(&"jump_left", id, 0.0) as float) > 0.0
@@ -102,7 +103,16 @@ func site(id: int) -> SiteView:
 
 ## Site keys of the map's pool the director has not opened yet.
 func spawnable_sites() -> PackedStringArray:
-	return _world.sites.closed_keys()
+	# Keys an open_site queued this tick has claimed are not offered again.
+	var out: PackedStringArray = PackedStringArray()
+	var taken: Array[StringName] = []
+	for c: SimCommand in _world.queued_commands():
+		if c is OpenSiteCommand:
+			taken.append((c as OpenSiteCommand).site_key)
+	for key: String in _world.sites.closed_keys():
+		if not taken.has(StringName(key)):
+			out.append(key)
+	return out
 
 
 func encounter(id: int) -> EncounterView:
@@ -192,6 +202,36 @@ func events() -> Array[ApiEvent]:
 	return out
 
 
+# --- strand E ---
+## Straight-line distance between two ships (m), by the minimum image across the cube's seams.
+func distance(a: int, b: int) -> float:
+	if a < 0 or b < 0 or a >= _world.ship_count() or b >= _world.ship_count():
+		return INF
+	return _world.kin.relative(a, b).length()
+
+
+## The map's travel legs that debris may sit on (MapDef.legs), as value copies: {from, to}
+## site ids, {debris} the enemy key and {count}; legs with an end not open yet are left out.
+func legs() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if _world.run_def == null or _world.run_def.map == null:
+		return out
+	for leg: Dictionary in _world.run_def.map.legs:
+		var a: int = _world.sites.id_of(StringName(leg["from"]))
+		var b: int = _world.sites.id_of(StringName(leg["to"]))
+		if a >= 0 and b >= 0:
+			out.append(
+				{
+					"from": a,
+					"to": b,
+					"debris": StringName(leg["debris"]),
+					"count": int(leg["count"])
+				}
+			)
+	return out
+
+
+# --- end strand E ---
 ## The id a ship spawned by a command queued now will get (spawns apply in queue order).
 func next_ship_id() -> int:
 	return _world.ship_count() + _queued(&"spawn_ship")
@@ -263,6 +303,8 @@ func open_site(site_key: StringName) -> int:
 
 ## Posts a card on the ship's Comms board; returns the card id it will get.
 func offer(ship_id: int, card: CardSpec) -> int:
+	# A crew hail queued ahead of this write may add a card too, so the id is a prediction:
+	# scenarios find their cards again by title (cards_of) once they exist.
 	var id: int = _card_count() + _queued(&"post_card")
 	var cmd: PostCardCommand = PostCardCommand.new()
 	cmd.source = SimCommand.Source.SERVER
@@ -281,8 +323,32 @@ func offer(ship_id: int, card: CardSpec) -> int:
 	cmd.faction_wide = card.faction_wide
 	cmd.rep_faction = card.rep_faction
 	cmd.site = card.site
+	# --- strand E ---
+	cmd.lane_open_s = card.lane_open_s
+	cmd.lane_s = card.lane_s
+	cmd.needs_subsystem = card.needs_subsystem
+	cmd.needs_pips = card.needs_pips
+	# --- end strand E ---
 	_world.submit(cmd)
 	return id
+
+
+# --- strand E ---
+## Settles an accepted card (FT-MIS-021, FT-MIS-019): success pays its reward and draws its
+## reputation change, failure draws the "<interaction>.fail" change if there is one. The
+## command is the card's own ship's; nothing is queued for a card that doesn't exist.
+func settle_card(card: int, success: bool) -> void:
+	if card < 0 or card >= _world.story.size():
+		return
+	var cmd: CardResultCommand = CardResultCommand.new()
+	cmd.source = SimCommand.Source.SERVER
+	cmd.ship_id = Story.audience_ship(_world, card)
+	cmd.card = card
+	cmd.success = success
+	_world.submit(cmd)
+
+
+# --- end strand E ---
 
 
 ## Says a dialogue line to a ship (an NPC's, or the ship computer's for some stations).

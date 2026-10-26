@@ -65,6 +65,10 @@ var abandoned: Dictionary = {}
 ## ship -> `run_over` payload {ship, outcome, time_s, hull} plus "voters", "sessions" and
 ## "needed" from `run_votes`, from the outcome until the reset (D178).
 var run_over: Dictionary = {}
+# --- strand E ---
+## ship -> its debrief record (RunDebrief.for_ship), sent right after `run_over`.
+var debrief: Dictionary = {}
+# --- end strand E ---
 ## item -> {"session": int, "name": String} (claim events; free items erased).
 var claims: Dictionary = {}
 var alert: int = ALERT_NORMAL
@@ -272,6 +276,9 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			var card: Dictionary = run_over.get_or_add(int(p["ship"]), {})
 			card.merge(p, true)
 			changed.emit(&"run_over")
+		"debrief":  # strand E
+			debrief[int(p["ship"])] = p
+			changed.emit(&"debrief")
 		"alert":
 			_on_alert(p)
 		"main_view":
@@ -419,6 +426,7 @@ func reset_run() -> void:
 	started.erase(ship)
 	abandoned.erase(ship)
 	run_over.erase(ship)
+	debrief.erase(ship)  # strand E
 	changed.emit(&"reset")
 
 

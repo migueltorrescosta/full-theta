@@ -4,7 +4,8 @@ extends ServerCommand
 ## begin_encounter(). The row starts PENDING and turns ACTIVE when a ship arrives at the
 ## site or the arrival timeout passes (EncounterSystem). One encounter is open per ship at
 ## a time, so it is rejected when any of its ships is in another. Emits &"encounter_open"
-## (ship_id the first ship, value the encounter id, tag the scenario id).
+## (ship_id the first ship, value the encounter id, tag the scenario id). The site is
+## revealed to the ships' factions.
 
 var scenario_id: StringName = &""
 var site: int = -1
@@ -38,5 +39,7 @@ func apply(world: SimWorld) -> bool:
 	)
 	for s: int in ships:
 		world.run.encounter[s] = id
+		# The crew must be able to see, select and jump to the site it is sent to (strand E).
+		world.sites.reveal(site, world.faction_of(s))
 	world.emit(&"encounter_open", ships[0], -1, id, Vector3.ZERO, scenario_id)
 	return true

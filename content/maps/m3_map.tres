@@ -13,6 +13,7 @@ radius_m = 3000.0
 dockable = true
 dock_range_m = 1500.0
 dock_max_speed = 10.0
+market = &"kappa"
 
 [sub_resource type="Resource" id="Resource_vesper_beacon"]
 script = ExtResource("2_site")
@@ -80,4 +81,4 @@ period_m = 400000.0
 sites = Array[ExtResource("2_site")]([SubResource("Resource_kestrel_yard"), SubResource("Resource_vesper_beacon"), SubResource("Resource_cinder_field"), SubResource("Resource_pale_drift"), SubResource("Resource_anchorage_nine"), SubResource("Resource_hollow_gate")])
 known_at_start = Array[StringName]([&"kestrel_yard", &"vesper_beacon", &"cinder_field", &"anchorage_nine"])
 spawnable = Array[ExtResource("2_site")]([SubResource("Resource_drifting_wreck"), SubResource("Resource_ember_cloud")])
-legs = Array[Dictionary]([{"from": &"kestrel_yard", "to": &"vesper_beacon", "debris": &"m1_dust_cloud", "count": 2}])
+legs = Array[Dictionary]([{"from": &"vesper_beacon", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"cinder_field", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"pale_drift", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"anchorage_nine", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"hollow_gate", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"drifting_wreck", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"ember_cloud", "to": &"kestrel_yard", "debris": &"debris", "count": 6}])

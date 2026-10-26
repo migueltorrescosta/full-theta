@@ -22,6 +22,14 @@ var commands: Array[StringName] = []
 var claims: Array[String] = []
 ## Ship-wide (last writer wins) controls of its stations (FT-NET-044).
 var controls: Array[String] = []
+# --- strand E ---
+## Its stations' core actions, the D232 list (FT-MIS-038): each entry "action=source", the
+## source a command kind ("helm_all_stop"), a command kind and a boolean field of it that
+## must be set ("helm_input.face"), or a net-side crew op ("op:mark_place"). Several sources
+## for one action are joined with "|". FirstUse times the first use of each for the debrief
+## and the Shakedown teaches them first.
+var core_actions: Array[String] = []
+# --- end strand E ---
 
 
 ## A crew entry: it covers at least one functional station.
@@ -44,4 +52,5 @@ func to_dict() -> Dictionary:
 		"commands": commands.map(func(k: StringName) -> String: return String(k)),
 		"claims": claims.duplicate(),
 		"controls": controls.duplicate(),
+		"core_actions": core_actions.duplicate(),  # strand E
 	}

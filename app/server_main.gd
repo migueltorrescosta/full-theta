@@ -29,11 +29,11 @@ extends RefCounted
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
 ##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
 ##                        before launch and Welcome carries it (FT-AUD-013, D41).
-##   --encounter NAME     what the world holds: m1, the Milestone 1 encounter [m1], or
-##                        run, the director's run (RunSetup on content/runs/m3_run.tres,
-##                        E07), or shakedown, the training scenario (FT-MIS-039: RunSetup on
-##                        content/runs/shakedown.tres, one ship, no director; strand G2).
-##                        The default moves to run once the scenarios exist.
+##   --encounter NAME     what the world holds: run, the director's run (RunSetup on
+##                        content/runs/m3_run.tres, E07) [run], shakedown, the training
+##                        scenario (FT-MIS-039: RunSetup on content/runs/shakedown.tres, one
+##                        ship, no director; strand G2), or m1, the Milestone 1 encounter
+##                        (the L4 encounter scenario and the golden tests).
 ##   --m1-player-hull-scale F
 ##                        test flag: the crewed ship's hull is F times its definition's
 ##                        (0 < F <= 1), so the L4 encounter (tools/l4) loses a fight in
@@ -70,6 +70,10 @@ const LOAD_FLAGS: Array[String] = [
 	"--probe-window"
 ]
 const DEV_ENV: String = "FT_DEV"
+## The enemies a crew can hail, and the conversation each answers with (STORY, strand E).
+const HAIL_CONVERSATIONS: Dictionary[StringName, StringName] = {
+	&"m1_raider": &"conv.surrender_demand"
+}
 ## The beacon's default server name (provisional: see docs/protocol.md, Rates and limits).
 const DEFAULT_NAME: String = "Full Theta server"
 
@@ -95,7 +99,7 @@ var probe_picks: int = 64
 var probe_warmup: float = 3.0
 var probe_window: float = 60.0
 var player_hull_scale: float = 1.0
-var encounter_name: String = "m1"  # strand A
+var encounter_name: String = "run"  # strand A, E
 ## Whether test flags (--m1-player-hull-scale, LOAD_FLAGS) are accepted: a debug build (the editor
 ## binary that L3 and L4 run) or FT_DEV set.
 var dev_flags: bool = OS.is_debug_build() or OS.get_environment(DEV_ENV) != ""
@@ -258,7 +262,7 @@ func make_server() -> NetServer:
 		player = player.duplicate()
 		player.hull_max *= player_hull_scale
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
-	var run: RunSetup = _run_setup(defs) if encounter_name in RUN_ENCOUNTERS else null  # strand A
+	var run: RunSetup = run_setup(defs) if encounter_name in RUN_ENCOUNTERS else null  # strand A
 	if encounter_name in RUN_ENCOUNTERS:  # strand G2
 		if run == null:
 			return null
@@ -309,7 +313,7 @@ func make_server() -> NetServer:
 
 # --- strand A ---
 ## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).
-func _run_setup(defs: DefLibrary) -> RunSetup:
+func run_setup(defs: DefLibrary) -> RunSetup:
 	var run_def: RunDef = defs.run(&"shakedown" if encounter_name == "shakedown" else &"m3_run")
 	if run_def == null:
 		push_error("missing run definition for --encounter %s" % encounter_name)
@@ -325,6 +329,13 @@ func _run_setup(defs: DefLibrary) -> RunSetup:
 	for path: String in DefLibrary.list_tres("res://content/economy/markets"):
 		var market: MarketDef = load(path) as MarketDef
 		setup.markets[market.id] = market
+	# --- strand E --- (the site ids are the map's load order; hails by enemy key)
+	var sites: Array[SiteDef] = run_def.map.sites if run_def.map != null else []
+	for i: int in sites.size():
+		if sites[i].market != &"":
+			setup.site_markets[i] = sites[i].market
+	setup.hail_conversations = HAIL_CONVERSATIONS
+	# --- end strand E ---
 	return setup
 
 

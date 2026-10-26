@@ -12,5 +12,5 @@ budget_per_ship = Dictionary[StringName, int]({
 })
 spawn_site_every_s = 120.0
 max_open_sites = 2
-gap_s = 30.0
+gap_s = 180.0
 arrival_timeout_s = 180.0
