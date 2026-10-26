@@ -194,6 +194,8 @@ func _non_default(v: Variant) -> Variant:
 		TYPE_DICTIONARY:
 			out = {"k": 1.0 / 3.0, "s": "x"}
 		# --- end strand G1 ---
+		TYPE_PACKED_INT32_ARRAY:  # strand A
+			out = (v as PackedInt32Array) + PackedInt32Array([3, 5])
 		TYPE_VECTOR3:
 			out = v + Vector3(0.5, -1.0 / 3.0, 0.25)
 		TYPE_QUATERNION:

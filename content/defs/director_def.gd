@@ -9,9 +9,9 @@ extends Resource
 @export var id: StringName = &""
 ## Threat budget per crewed ship by preset name (threat-cost points, FT-MIS-029).
 @export var budget_per_ship: Dictionary[StringName, int] = {}
-## Seconds between the director opening a new site (0: never).
+## Time between the director opening a new site (s, 0: never).
 @export var spawn_site_every_s: float = 0.0
-## Most sites the director keeps open besides the known ones.
+## Most sites the director keeps open besides the known ones (count).
 @export var max_open_sites: int = 0
 ## Quiet time between one encounter ending and the next being picked (s, D230).
 @export var gap_s: float = 0.0

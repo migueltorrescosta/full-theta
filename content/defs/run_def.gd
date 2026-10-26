@@ -8,13 +8,14 @@ extends Resource
 @export var id: StringName = &""
 ## The one wrapping cube with its named sites (D229). Set once the map exists (strand B).
 @export var map: MapDef
-## The run ends in a win after this many encounters (FT-MIS-001).
+## The run ends in a win after this many encounters (count, FT-MIS-001).
 @export var encounters: int = 5
 ## Scenario ids the director may pick.
 @export var scenarios: PackedStringArray = PackedStringArray()
 @export var director: DirectorDef
 @export var flee_cost: FleeCostDef
 @export var player_ship: ShipDef
+## Credits each crewed ship starts with (count).
 @export var start_credits: int = 0
 
 

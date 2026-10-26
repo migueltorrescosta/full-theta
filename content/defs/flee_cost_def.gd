@@ -6,7 +6,7 @@ extends Resource
 ## the numbers are placeholders for #13 to tune. Read-only at runtime (FT-ARC-020).
 
 @export var id: StringName = &""
-## Credits taken from the fleeing ship (cr).
+## Credits taken from the fleeing ship (count).
 @export var credits: int = 0
 ## RepDistDef id of the reputation draw with the hostile faction (FT-MIS-019), or &"".
 @export var rep_dist: StringName = &""

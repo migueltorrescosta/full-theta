@@ -24,22 +24,28 @@ func test_a_complete_declaration_has_no_errors() -> void:
 func test_each_wrong_field_is_reported() -> void:
 	var cases: Dictionary = {
 		"id is empty": func(m: ScenarioMeta) -> void: m.id = &"",
-		"unknown tag": func(m: ScenarioMeta) -> void: m.tags = PackedStringArray(["hostile", "wat"]),
+		"unknown tag":
+		func(m: ScenarioMeta) -> void: m.tags = PackedStringArray(["hostile", "wat"]),
 		"threat_cost": func(m: ScenarioMeta) -> void: m.threat_cost = -1,
 		"duration_s": func(m: ScenarioMeta) -> void: m.duration_s = 0.0,
-		"unknown station": func(m: ScenarioMeta) -> void: m.stations = PackedStringArray(["bridge"]),
+		"unknown station":
+		func(m: ScenarioMeta) -> void: m.stations = PackedStringArray(["bridge"]),
 		"not pN": func(m: ScenarioMeta) -> void: m.pairs = PackedStringArray(["q5"]),
 		"needs an id and an outcome": func(m: ScenarioMeta) -> void: m.branches = [{"id": "win"}],
-		"unknown comms beat": func(m: ScenarioMeta) -> void: m.comms_beats = PackedStringArray(["wave"]),
+		"unknown comms beat":
+		func(m: ScenarioMeta) -> void: m.comms_beats = PackedStringArray(["wave"]),
 		"training and the training tag": func(m: ScenarioMeta) -> void: m.training = true,
 	}
 	for needle: String in cases:
 		var m: ScenarioMeta = _valid()
 		(cases[needle] as Callable).call(m)
 		var errors: Array[String] = m.errors()
-		assert_bool(errors.any(func(e: String) -> bool: return e.contains(needle))).override_failure_message(
-			"%s not reported in %s" % [needle, errors]
-		).is_true()
+		var found: Array[String] = errors.filter(func(e: String) -> bool: return e.contains(needle))
+		(
+			assert_bool(not found.is_empty())
+			. override_failure_message("%s not reported in %s" % [needle, errors])
+			. is_true()
+		)
 
 
 # FT: FT-MIS-041, FT-DAT-008

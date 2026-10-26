@@ -67,21 +67,31 @@ func test_spawn_at_site_and_on_leg_land_where_asked() -> void:
 # FT: FT-DAT-009, FT-ARC-016
 func test_each_write_is_one_server_command() -> void:
 	var w: SimWorld = ApiFixture.world()
-	_one(w, func(a: ScenarioApi) -> void: a.spawn_at_range(ApiFixture.RAIDER, 2, 0, 3000.0, 12, 1), &"spawn_ship")
-	_one(w, func(a: ScenarioApi) -> void: a.spawn_at_site(ApiFixture.RAIDER, 2, 1, Vector3.ZERO), &"spawn_ship")
-	_one(w, func(a: ScenarioApi) -> void: a.spawn_on_leg(ApiFixture.RAIDER, 2, 0, 1, 0.3, 50.0), &"spawn_ship")
-	_one(w, func(a: ScenarioApi) -> void: a.open_site(&"beta"), &"open_site")
-	_one(w, func(a: ScenarioApi) -> void: a.set_flag(&"f", 4), &"set_flag")
-	_one(w, func(a: ScenarioApi) -> void: a.set_relation(1, 2, SimWorld.Relation.NEUTRAL), &"set_relation")
-	_one(w, func(a: ScenarioApi) -> void: a.begin_encounter(&"s_a", 1, PackedInt32Array([0]), 3), &"begin_encounter")
-	_one(w, func(a: ScenarioApi) -> void: a.end_encounter(0, Scenario.Result.WON), &"end_encounter")
-	_one(
-		w,
-		func(a: ScenarioApi) -> void: a.message("computer.hello", {"x": 1}, SayTarget.computer(0, PackedStringArray(["helm"]))),
-		&"say"
-	)
-	_one(w, func(a: ScenarioApi) -> void: a.offer(0, CardSpec.new()), &"post_card")
-	_one(w, func(a: ScenarioApi) -> void: a.set_contract_flag(1, 2, 1), &"set_contract_flag")
+	var r: StringName = ApiFixture.RAIDER
+	var helm: PackedStringArray = PackedStringArray(["helm"])
+	var ship0: PackedInt32Array = PackedInt32Array([0])
+	var writes: Array = [
+		[func(a: ScenarioApi) -> void: a.spawn_at_range(r, 2, 0, 3000.0, 12, 1), &"spawn_ship"],
+		[func(a: ScenarioApi) -> void: a.spawn_at_site(r, 2, 1, Vector3.ZERO), &"spawn_ship"],
+		[func(a: ScenarioApi) -> void: a.spawn_on_leg(r, 2, 0, 1, 0.3, 50.0), &"spawn_ship"],
+		[func(a: ScenarioApi) -> void: a.open_site(&"beta"), &"open_site"],
+		[func(a: ScenarioApi) -> void: a.set_flag(&"f", 4), &"set_flag"],
+		[
+			func(a: ScenarioApi) -> void: a.set_relation(1, 2, SimWorld.Relation.NEUTRAL),
+			&"set_relation"
+		],
+		[func(a: ScenarioApi) -> void: a.begin_encounter(&"s_a", 1, ship0, 3), &"begin_encounter"],
+		[func(a: ScenarioApi) -> void: a.end_encounter(0, Scenario.Result.WON), &"end_encounter"],
+		[
+			func(a: ScenarioApi) -> void:
+				a.message("computer.hello", {"x": 1}, SayTarget.computer(0, helm)),
+			&"say"
+		],
+		[func(a: ScenarioApi) -> void: a.offer(0, CardSpec.new()), &"post_card"],
+		[func(a: ScenarioApi) -> void: a.set_contract_flag(1, 2, 1), &"set_contract_flag"],
+	]
+	for pair: Array in writes:
+		_one(w, pair[0], pair[1])
 
 
 # FT: FT-DAT-009

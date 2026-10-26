@@ -10,7 +10,9 @@ func _world(crew: int = 1) -> SimWorld:
 	return ApiFixture.world(crew, ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), TIMEOUT_S))
 
 
-func _begin(w: SimWorld, site: int, ships: PackedInt32Array = PackedInt32Array([0])) -> BeginEncounterCommand:
+func _begin(
+	w: SimWorld, site: int, ships: PackedInt32Array = PackedInt32Array([0])
+) -> BeginEncounterCommand:
 	var c: BeginEncounterCommand = BeginEncounterCommand.new()
 	c.scenario_id = &"s_a"
 	c.site = site
@@ -19,6 +21,10 @@ func _begin(w: SimWorld, site: int, ships: PackedInt32Array = PackedInt32Array([
 	w.submit(c)
 	w.step()
 	return c
+
+
+func _events(w: SimWorld, kind: StringName) -> Array[SimEvent]:
+	return w.events.filter(func(e: SimEvent) -> bool: return e.kind == kind)
 
 
 func _result(w: SimWorld, id: int) -> int:
@@ -40,7 +46,7 @@ func test_pending_until_the_ship_arrives_at_the_site() -> void:
 	w.step()
 	assert_int(_result(w, 0)).is_equal(EncounterTable.Result.ACTIVE)
 	assert_int(w.encounters.start_tick[0]).is_equal(arrival)
-	var starts: Array[SimEvent] = w.events.filter(func(e: SimEvent) -> bool: return e.kind == &"encounter_start")
+	var starts: Array[SimEvent] = _events(w, &"encounter_start")
 	assert_array(starts).has_size(1)
 	assert_int(starts[0].ship_id).is_equal(0)
 	assert_str(String(starts[0].tag)).is_equal("s_a")
@@ -132,7 +138,7 @@ func test_end_encounter_stamps_the_result_and_refuses_a_second_end() -> void:
 	w.submit(again)
 	w.step()
 	assert_bool(again.accepted).is_false()
-	var ended: Array[SimEvent] = w.events.filter(func(e: SimEvent) -> bool: return e.kind == &"encounter_end")
+	var ended: Array[SimEvent] = _events(w, &"encounter_end")
 	assert_array(ended).has_size(1)
 	assert_int(int(ended[0].value)).is_equal(EncounterTable.Result.WON)
 
