@@ -40,7 +40,7 @@ func apply(world: SimWorld) -> bool:
 		return false
 	var card: int = t.add_card(ship_id, faction, StoryTable.Kind.HAIL)
 	t.state[card] = StoryTable.State.ACCEPTED
-	t.npc[card] = world.defs[target].id
+	t.npc[card] = StringName(world.defs[target].display_name)
 	t.title[card] = "comms.card.hail"
 	t.conversation[card] = conv
 	t.target[card] = target

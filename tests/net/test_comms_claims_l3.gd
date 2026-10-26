@@ -69,6 +69,8 @@ func test_only_the_claimer_replies() -> void:
 		. is_true()
 	)
 	assert_int(CommsL3.card_row(ana, 0)["claimer"]).is_equal(ana_id)
+	# The NPC is heard by its claimer alone (G1 routes by this).
+	assert_array(Array(server.session.npc_audience("Harbour Master"))).is_equal([ana_id])
 	var reply: Dictionary = {"kind": "comms_reply", "card": 0, "option": "o2"}
 	assert_str(await CommsL3.verdict(h, server, bo, reply)).is_equal(CommandGate.CLAIMED)
 	assert_str(await CommsL3.verdict(h, server, ana, reply)).is_equal("")
@@ -78,6 +80,14 @@ func test_only_the_claimer_replies() -> void:
 	var refused: Dictionary = await h.next_event(bo, NetProtocol.EVENT_REQUEST_REJECTED)
 	assert_str(refused["payload"]["reason"]).is_equal(CommandGate.CLAIMED)
 	ana.release_claim("npc:0")
+	(
+		assert_bool(
+			await h.until(
+				func() -> bool: return server.session.npc_audience("Harbour Master").is_empty()
+			)
+		)
+		. is_true()
+	)
 	(
 		assert_bool(await h.until(func() -> bool: return CommsL3.card_row(bo, 0)["claimer"] == -1))
 		. is_true()

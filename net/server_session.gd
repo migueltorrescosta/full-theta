@@ -276,6 +276,7 @@ func computer_audience(ship: int, stations: PackedStringArray) -> PackedInt32Arr
 ## wants it: empty while nobody holds it (FT-AUD-005, FT-COM-006).
 func npc_audience(npc_id: String) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
+	_sync_npc_cards()  # strand C
 	var item: String = "npc:" + str(npc_cards.get(npc_id, npc_id))
 	for ship: Dictionary in crew_ships():
 		var holder: int = claims.holder(ship["id"], item)
@@ -285,6 +286,15 @@ func npc_audience(npc_id: String) -> PackedInt32Array:
 
 
 # --- end strand G1 ---
+# --- strand C ---
+## Adds to npc_cards from STORY: each NPC's newest open conversation card.
+func _sync_npc_cards() -> void:
+	for card: int in world.story.size():
+		if world.story.node[card] != StoryTable.NO_TEXT and Story.is_live(world, card):
+			npc_cards[String(world.story.npc[card])] = card
+
+
+# --- end strand C ---
 ## The run reset (D178, NetRunReset): the rebuilt world replaces the old one, every
 ## ship is back in the lobby with its picks and claims, its crew state cleared, the
 ## old run's pending commands dropped and its queued voice lines too.

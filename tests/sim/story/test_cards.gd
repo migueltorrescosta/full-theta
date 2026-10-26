@@ -32,12 +32,14 @@ func test_hail_a_contact_and_reply() -> void:
 	assert_int(t.kind[0]).is_equal(StoryTable.Kind.HAIL)
 	assert_int(t.state[0]).is_equal(StoryTable.State.ACCEPTED)
 	assert_str(t.node[0]).is_equal("n0")
-	assert_str(t.npc[0]).is_equal("m1_raider")
+	assert_str(t.npc[0]).is_equal("Raider")
 	assert_int(t.rep_faction[0]).is_equal(RED)
 	var say: Array[SimEvent] = StoryFixture.events(w, &"say")
 	assert_int(say.size()).is_equal(1)
 	assert_str(say[0].tag).is_equal("npc.hail_trader")
 	assert_int(say[0].other_id).is_equal(1)
+	assert_str(say[0].args["npc_id"]).is_equal("Raider")
+	assert_array(Story.npc_names(w)).is_equal(["Raider"])
 	# The options are the node's, with the bluff locked until the cargo is scanned.
 	var options: Array[Dictionary] = Story.options(w, 0)
 	(

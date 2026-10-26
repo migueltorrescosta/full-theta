@@ -130,9 +130,29 @@ static func open_node(world: SimWorld, ship: int, card: int, node_id: String) ->
 	world.story.node[card] = StringName(node_id)
 	var node: Dictionary = node_of(world, card)
 	if not node.is_empty():
-		world.emit(
-			&"say", ship, world.story.target[card], 0.0, Vector3.ZERO, StringName(node["line"])
-		)
+		say(world, ship, card, node["line"])
+
+
+## The card's NPC says a dialogue line: event say, tag the line id, other_id the contact
+## ship or -1, args["npc_id"] the speaker (ServerVoice routes it to the conversation's
+## claimer, or as a subtitle to Comms while nobody holds it; G1).
+static func say(world: SimWorld, ship: int, card: int, line_id: String) -> void:
+	var e: SimEvent = world.emit(
+		&"say", ship, world.story.target[card], 0.0, Vector3.ZERO, StringName(line_id)
+	)
+	e.args = {"npc_id": String(world.story.npc[card]), "stations": []}
+
+
+## The names of every NPC on the board: they join the voice closed set at Start (FT-AUD-018).
+static func npc_names(world: SimWorld) -> Array[String]:
+	var out: Array[String] = []
+	for n: StringName in world.story.npc:
+		if n != &"" and not out.has(String(n)):
+			out.append(String(n))
+	for def: ShipDef in world.defs:
+		if world.hail_conversations.has(def.id) and not out.has(def.display_name):
+			out.append(def.display_name)
+	return out
 
 
 ## The options of the card's open node as {id, text, enabled, verify}: `enabled` when its
@@ -201,7 +221,7 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 				world, ship, t.factions[card], t.rep_faction[card], StringName(effect["rep"])
 			)
 		if effect.has("say"):
-			world.emit(&"say", ship, t.target[card], 0.0, Vector3.ZERO, StringName(effect["say"]))
+			say(world, ship, card, effect["say"])
 		if effect.has("verify"):
 			t.verify[card] = StringName(effect["verify"])
 	if not is_live(world, card):
