@@ -241,6 +241,8 @@ const STATION_COMMANDS: Dictionary = {
 	],
 	"relay": [&"launch_probe", &"flag_lanes"],
 	"comms": CommsView.COMMANDS,  # strand C
+	# --- strand G2 --- Next (Shakedown, D235) is sent by every crew station and the Captain.
+	"captain": [&"training_next"],
 }
 
 ## Claimable item kinds (FT-NET-022, D18). An item is the kind, or "kind:index" for

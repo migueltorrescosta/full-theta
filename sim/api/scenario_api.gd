@@ -322,6 +322,15 @@ func commands_this_tick(ship_id: int) -> Array[ApiEvent]:
 			v.ship_id = ship_id
 			v.tag = c.kind()
 			out.append(v)
+			# --- strand G2 --- a coarse kind also reports what it did, as kind:detail.
+			for detail: String in _details(c):
+				var d: ApiEvent = ApiEvent.new()
+				d.tick = v.tick
+				d.kind = v.kind
+				d.ship_id = ship_id
+				d.tag = StringName("%s:%s" % [c.kind(), detail])
+				out.append(d)
+			# --- end strand G2 ---
 	return out
 
 
@@ -373,6 +382,32 @@ func end_encounter(id: int, result: int) -> void:
 
 
 # --- helpers ---
+
+
+# --- strand G2 ---
+## What a helm_input does, for the Shakedown's steps: face, approach and each axis that is
+## not at rest (throttle, strafe, lift, pitch, yaw, roll). Other commands have no detail.
+static func _details(c: SimCommand) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	if c.kind() != &"helm_input":
+		return out
+	var rotation: Vector3 = c.get("rotation")
+	for pair: Array in [
+		["face", c.get("face")],
+		["approach", c.get("approach")],
+		["throttle", c.get("throttle") != 0.0],
+		["strafe", c.get("strafe") != 0.0],
+		["lift", c.get("lift") != 0.0],
+		["pitch", rotation.x != 0.0],
+		["yaw", rotation.y != 0.0],
+		["roll", rotation.z != 0.0],
+	]:
+		if pair[1]:
+			out.append(pair[0])
+	return out
+
+
+# --- end strand G2 ---
 
 
 func _spawn(enemy_key: StringName, faction: int, point: PackedFloat64Array, rot: Quaternion) -> int:
