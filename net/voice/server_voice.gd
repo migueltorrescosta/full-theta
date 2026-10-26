@@ -31,6 +31,9 @@ var world: SimWorld
 ## NPC display names that join the closed set at Start (FT-AUD-018), filled from the story's NPCs.
 var npc_names: Array[String] = []
 var _started: bool = false
+var _table: Translation
+## The session language, as given at Start (the voice sets its own after the closed set).
+var _lang: String = I18n.LANGUAGES[0]
 ## Ships whose "Hull critical" was said and not re-armed.
 var _hull_warned: Dictionary[int, bool] = {}
 
@@ -45,6 +48,7 @@ func start(language: String, crew_factions: Array) -> void:
 	if voice == null or _started:
 		return
 	_started = true
+	_lang = language
 	voice.start_session(language, closed_set(crew_factions))
 
 
@@ -60,8 +64,35 @@ func closed_set(crew_factions: Array) -> Dictionary:
 		for n: int in range(1, others + 1):
 			callsigns.append(prefix + str(n))
 	return {
-		"ship_names": names, "callsigns": callsigns, "npc_names": npc_names + Story.npc_names(world)
+		"ship_names": names,
+		"callsigns": callsigns,
+		"npc_names": npc_names + Story.npc_names(world),
+		"site_names": _site_names(),
 	}
+
+
+## The display names of the map's sites in the session language (FT-AUD-018), so a line can
+## say where an encounter is.
+func _site_names() -> Array[String]:
+	var out: Array[String] = []
+	var map: MapDef = world.run_def.map if world.run_def != null else null
+	if map == null:
+		return out
+	for site: SiteDef in map.all_sites():
+		var text: String = site_text(site.name_key)
+		if not out.has(text):
+			out.append(text)
+	return out
+
+
+## A site's name key in the session language (the key itself when there is no table).
+func site_text(name_key: String) -> String:
+	if _table == null or _table.locale != _lang:
+		_table = I18n.translation(_lang)
+	if _table == null:
+		return name_key
+	var text: String = String(_table.get_message(name_key))
+	return text if text != "" else name_key
 
 
 ## A sim event of a crewed ship.
@@ -101,6 +132,9 @@ func _say(e: SimEvent) -> void:
 	var stations: PackedStringArray = PackedStringArray(args.get("stations", []))
 	args.erase("npc_id")
 	args.erase("stations")
+	for slot: String in line.get("slots", {}):
+		if DialogueLines.slot_kind(line, slot) == "site_name" and args.has(slot):
+			args[slot] = site_text(str(args[slot]))
 	if line.get("role", "computer") == "npc":
 		# Routed by the card, never by the speaker's name: two ships can meet NPCs of the
 		# same name, and a name outlives its run (FT-COM-006).

@@ -125,7 +125,7 @@ func _init(net: NetTransport = null, factory: Callable = Callable()) -> void:
 ## synth per distinct runtime voice, and synthesises every closed-set name once per role
 ## in that role's voice and settings, or once for both roles when they share a voice and
 ## effective settings (FT-AUD-018); closed_set_ready follows. `closed_set`
-## holds "ship_names", "callsigns" and "npc_names" (Arrays of String).
+## holds "ship_names", "callsigns", "npc_names" and "site_names" (Arrays of String).
 func start_session(language: String, closed_set: Dictionary) -> void:
 	stop()
 	lang = language
@@ -172,7 +172,7 @@ func start_session(language: String, closed_set: Dictionary) -> void:
 					_name_role[role] = _name_role[roles[k]]
 					break
 	var items: PackedStringArray = PackedStringArray()
-	for group: String in ["ship_names", "callsigns", "npc_names"]:
+	for group: String in ["ship_names", "callsigns", "npc_names", "site_names"]:
 		for item: Variant in closed_set.get(group, []):
 			if not items.has(str(item)) and str(item) != "":
 				items.append(str(item))

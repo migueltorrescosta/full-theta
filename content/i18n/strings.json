@@ -784,6 +784,7 @@
     "card.rescue.detail": {"en": "Reach N4 before time runs out.", "pt_PT": "Chega a N4 antes que o tempo acabe.", "it": "Raggiungi N4 prima che scada il tempo."},
     "card.escort.title": {"en": "Escort the convoy", "pt_PT": "Escoltar o comboio", "it": "Scorta il convoglio"},
     "card.escort.detail": {"en": "Keep every freighter alive to the gate.", "pt_PT": "Mantém todos os cargueiros vivos até à porta.", "it": "Tieni in vita ogni cargo fino al varco."},
+    "card.encounter_pending.detail": {"en": "Contact expected here. It starts when you arrive.", "pt_PT": "Contacto previsto aqui. Começa quando chegares.", "it": "Contatto previsto qui. Inizia quando arrivi."},
     "card.salvage.title": {"en": "Salvage rights", "pt_PT": "Direitos de salvamento", "it": "Diritti di recupero"},
     "card.salvage.detail": {"en": "Bring the wreck's cargo to the yard.", "pt_PT": "Leva a carga do destroço para o estaleiro.", "it": "Porta il carico del relitto al cantiere."},
     "card.resupply.title": {"en": "Fuel resupply", "pt_PT": "Reabastecimento", "it": "Rifornimento"},

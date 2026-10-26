@@ -2,12 +2,12 @@ class_name DialogueLines
 extends RefCounted
 ## The authored dialogue lines (content/dialogue/*.json, audio/README.md) by id, and the
 ## slot helpers the host uses to fill and stitch them. A slot is `{name}` in a line's
-## text, declared in `slots` as a kind (`ship_name`, `callsign`, `npc_name`, `number`)
+## text, declared in `slots` as a kind (`ship_name`, `callsign`, `npc_name`, `site_name`, `number`)
 ## or as {"kind": ..., "feminine": [languages]} for numbers.
 
 const DEFAULT_DIR: String = "res://content/dialogue"
 ## The closed-set slot kinds, synthesised at Start (FT-AUD-018).
-const NAME_KINDS: PackedStringArray = ["ship_name", "callsign", "npc_name"]
+const NAME_KINDS: PackedStringArray = ["ship_name", "callsign", "npc_name", "site_name"]
 ## The text-only slot kind (FT-MIS-039): the subtitle carries the player's current binding of
 ## the slot's intent, which only the client knows; nothing voices it. fill() leaves
 ## `{binding:<intent>}` in the text for the client to resolve (BindingText.fill_markers).

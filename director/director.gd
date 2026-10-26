@@ -19,6 +19,10 @@ const CONFIRM_TICKS: int = 3
 ## Site 0 is the home station (Kestrel Yard, D205): no encounter is placed there.
 const HOME_SITE: int = 0
 
+## The ship-computer line and the Comms card text that name a pending encounter's site.
+const PENDING_LINE: String = "computer.encounter_pending"
+const PENDING_DETAIL: StringName = &"card.encounter_pending.detail"
+
 ## Encounters a ship goes through before the run ends (RunDef.encounters); set by app/.
 var encounters_per_run: int = 5
 
@@ -287,6 +291,7 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 	run.encounter = api.begin_encounter(meta.id, site, PackedInt32Array([ship]), cost)
 	run.api = api.for_encounter(run.encounter)
 	_runs.append(run)
+	_announce_site(api, ship, site)
 	_spent[ship] = _spent.get(ship, 0) + cost
 	_last_pick[ship] = meta.id
 	_log(
@@ -303,6 +308,25 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 			"args": {"cost": cost, "left": budget_left(ship)},
 		}
 	)
+
+
+## PROVISIONAL (Q23): tells the crew where a pending encounter is (D231). BeginEncounterCommand
+## has already revealed the site to the ship's faction; the ship computer says its name and
+## a Comms card carries it as its title until the arrival timeout, when the encounter starts
+## anyway.
+func _announce_site(api: ScenarioApi, ship: int, site: int) -> void:
+	var name_key: String = ""
+	for s: SiteView in api.sites():
+		if s.id == site:
+			name_key = s.name_key
+	if name_key == "":
+		return
+	api.message(PENDING_LINE, {"site": name_key}, SayTarget.computer(ship, PackedStringArray()))
+	var card: CardSpec = CardSpec.new()
+	card.title_key = StringName(name_key)
+	card.detail_key = PENDING_DETAIL
+	card.expires_s = _def.arrival_timeout_s
+	api.offer(ship, card)
 
 
 func _index_of(scenario: Scenario) -> int:
