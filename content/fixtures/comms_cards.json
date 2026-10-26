@@ -1,9 +1,0 @@
-{
-  "note": "Fixture mission and contract cards (D190) until Comms and #10 build the real ones. Shown by FixtureCards on the Captain's list, on the main screen when the Captain pings one, and later on the Comms half of Approach, Parley, Quartermaster and Intel. title and detail are i18n keys; time_s is the time left (0: none).",
-  "cards": [
-    {"id": 0, "kind": "mission", "title": "card.rescue.title", "detail": "card.rescue.detail", "time_s": 570},
-    {"id": 1, "kind": "mission", "title": "card.escort.title", "detail": "card.escort.detail", "time_s": 0},
-    {"id": 2, "kind": "contract", "title": "card.salvage.title", "detail": "card.salvage.detail", "time_s": 0},
-    {"id": 3, "kind": "contract", "title": "card.resupply.title", "detail": "card.resupply.detail", "time_s": 1200}
-  ]
-}
