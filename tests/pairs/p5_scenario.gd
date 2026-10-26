@@ -11,9 +11,8 @@ extends RefCounted
 ##   lanes toggle) and flies at the speed that brings it to the yard in the middle of the
 ##   window.
 ## - Helm solo: has no lane and rushes at CRUISE_SOLO, arriving before the window opens.
-## The dock itself is the environment's: WAITS ON B (the real docking is B's DockCommand and
-## HelmTable.docked_site; until it lands the test stub StoryTable.dock_stub holds it, and
-## the site is A's SiteTable stub).
+## The dock itself is the environment's: StoryFixture.dock stops the ship and applies the
+## real DockCommand (HelmTable.docked_site) at the yard, a dockable site of the SiteTable.
 ## Metrics: reputation lost with the yard's faction, and seconds to dock.
 
 const SEED: int = 105
@@ -39,7 +38,6 @@ static func harness() -> PairHarness:
 static func build() -> SimWorld:
 	var w: SimWorld = StoryFixture.world(SEED)
 	w.spawn_ship(TestDefs.corvette(), BLUE)
-	# WAITS ON B: the yard is A's SiteTable stub; B's map will hold it.
 	w.sites.register(&"yard", YARD_AT, 500.0, &"station")
 	_yard = w.sites.open(w, &"yard")
 	return w
@@ -58,7 +56,7 @@ static func environment(w: SimWorld) -> void:
 		Story.docked_site(w, PLAYER) < 0
 		and w.kin.relative_to_point(PLAYER, YARD_AT.x, YARD_AT.y, YARD_AT.z).length() < DOCK_R
 	):
-		StoryFixture.dock(w, PLAYER, _yard)  # WAITS ON B: DockCommand
+		StoryFixture.dock(w, PLAYER, _yard)
 
 
 static func done(w: SimWorld) -> bool:

@@ -71,8 +71,8 @@ static func clearance_for(world: SimWorld, ship: int, site: int) -> int:
 	return -1
 
 
-## A ship that docked at a site with a clearance card (WAITS ON B: the dock itself is
-## B's DockCommand, read through Story.docked_site). Inside the window the card is done and
+## A ship that docked at a site with a clearance card (DockCommand, read through
+## Story.docked_site). Inside the window the card is done and
 ## pays its reward; otherwise the standing with the site's faction falls by the
 ## rep.uncleared_approach draw and the card fails. Emits dock_cleared or dock_uncleared.
 static func on_dock(world: SimWorld, ship: int, site: int) -> void:

@@ -172,7 +172,7 @@ func _route_slots(ship: int) -> Array:
 
 # --- strand F ---
 ## The ship's approach lanes (P5): one MARK item per accepted clearance card of its board, at
-## the card's site (WAITS ON B: SiteTable.point, A's stub until B lands), with the seconds
+## the card's site (SiteTable.point), with the seconds
 ## until the window opens and closes (negative once past), {card, x, y, z, open_s, close_s,
 ## by}. A lane exists while its card is ACCEPTED: docking, expiry or a decline remove it.
 static func lane_items(world: SimWorld, ship: int) -> Array:
