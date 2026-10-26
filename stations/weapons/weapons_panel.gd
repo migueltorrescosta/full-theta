@@ -429,6 +429,9 @@ func feed_lines() -> Array[String]:
 	var feeds: Dictionary = ctx.view.blocks.get(StationViews.Section.FEEDS, {})
 	if id < 0 or feeds.is_empty():
 		return out
+	var flag: int = contract_flag(id)
+	if flag != 0:
+		out.append(tr("weapons.flag_line_%d" % flag))
 	for row: Dictionary in feeds["weak"]:
 		if row["contact"] != id:
 			continue
@@ -453,6 +456,17 @@ func feed_lines() -> Array[String]:
 			var bar: String = "#".repeat(roundi(q * 8.0)) + "-".repeat(8 - roundi(q * 8.0))
 			out.append(tr("weapons.track") % [roundi(q * 100.0), bar])
 	return out
+
+
+## The contract flag a contact carries (P9, FT-MIS-042): 1 disable ("do not destroy"), 2
+## protect, 0 none. The FEEDS block holds the rows only while the contract flags are shared
+## with this view (the P9 toggle, or Comms on this screen).
+func contract_flag(contact: int) -> int:
+	var feeds: Dictionary = ctx.view.blocks.get(StationViews.Section.FEEDS, {})
+	for row: Dictionary in feeds.get("flags", []):
+		if int(row["contact"]) == contact:
+			return int(row["flag"])
+	return 0
 
 
 ## The ammunition line (FT-WPN-006): the selected type, "standard" for a mount with one.
@@ -591,6 +605,16 @@ func _build_view() -> void:
 	vp.add_child(_space)
 
 
+## The chip text of an item: "H2 4 high 2.3km", and a contact a contract flags names its
+## flag ("[disable]", "[protect]", P9).
+func target_chip(it: Dictionary) -> String:
+	var chip: String = ChipText.chip(it["label"], it["local"])
+	var flag: int = contract_flag(int(it["id"])) if it["kind"] == "contact" else 0
+	if flag != 0:
+		chip += " [%s]" % tr("weapons.flag_%d" % flag)
+	return chip
+
+
 ## Brackets of the contacts and marks in view, with their chips and hit rectangles.
 func _layout_targets() -> void:
 	_targets.clear()
@@ -605,7 +629,7 @@ func _layout_targets() -> void:
 		var p: Variant = project(rot * ((it["local"] as Vector3) - m.position).normalized())
 		if p == null:
 			continue
-		var chip: String = ChipText.chip(it["label"], it["local"])
+		var chip: String = target_chip(it)
 		var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 		var at: Vector2 = (p as Vector2) + Vector2(BRACKET + 6.0, 4.0 - FONT_SIZE)
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
@@ -679,6 +703,9 @@ func _draw_item(font: Font, t: Dictionary) -> void:
 	var p: Vector2 = t["pos"]
 	var sel: bool = ctx.crew.is_selected(it["kind"], it["id"])
 	var col: Color = Palette.color("selected") if sel else Palette.item_color(it)
+	var flag: int = contract_flag(int(it["id"])) if it["kind"] == "contact" else 0
+	if flag != 0 and not sel:
+		col = Palette.color("warn") if flag == 1 else Palette.color("ok")
 	if it["kind"] == "mark":
 		_overlay.draw_polyline(Palette.shape_points("diamond", p, BRACKET), col, 1.5, true)
 	else:
