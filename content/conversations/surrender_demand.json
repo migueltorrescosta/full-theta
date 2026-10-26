@@ -1,0 +1,22 @@
+{
+  "_comment": "Weapons' pair in P9: Comms asks a hostile contact to surrender. The chance rises with the contact's engine damage (base 0.1, up to 0.8 more, at most 0.9); a yes sets the faction's intent for it to surrendering, a no to hostile. Comms may ask again.",
+  "id": "conv.surrender_demand",
+  "npc_role": "npc",
+  "start": "n0",
+  "nodes": {
+    "n0": {
+      "line": "npc.hail_patrol",
+      "options": [
+        {"id": "o1", "text": "comms.opt.demand_surrender", "effects": [{"surrender": {"base": 0.1, "per_damage": 0.8, "cap": 0.9}}], "next": "n1"},
+        {"id": "o2", "text": "comms.opt.close"}
+      ]
+    },
+    "n1": {
+      "line": "npc.trade_decline",
+      "options": [
+        {"id": "o1", "text": "comms.opt.demand_surrender", "effects": [{"surrender": {"base": 0.1, "per_damage": 0.8, "cap": 0.9}}], "next": "n1"},
+        {"id": "o2", "text": "comms.opt.close"}
+      ]
+    }
+  }
+}

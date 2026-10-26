@@ -10,3 +10,4 @@ static func step(world: SimWorld) -> void:
 		var due: int = t.expires_tick[card]
 		if due >= 0 and world.tick >= due and Story.is_live(world, card):
 			Story.set_state(world, Story.audience_ship(world, card), card, StoryTable.State.EXPIRED)
+	StoryRules.step(world)  # --- strand F ---

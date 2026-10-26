@@ -90,6 +90,9 @@ extends Resource
 @export var reveal_resistances: float = 0.0
 ## Scan confidence at which a hack may start (dimensionless, 0..1).
 @export var reveal_hack: float = 0.0
+## Scan confidence that teaches the faction the contact's cargo, the scan fact that unlocks
+## "call the bluff" (dimensionless, 0..1, P14).
+@export var reveal_cargo: float = 0.0
 
 @export_group("Hack")
 ## Node grid columns (count); the entry is in the first, the subsystem in the last.
@@ -181,6 +184,7 @@ func _validate_reveals(errors: Array[String]) -> void:
 			errors.append("%s: must not be below the reveal before it (%s)" % [f, last])
 		last = v
 	DefCheck.in_range_open_low(errors, "reveal_hack", reveal_hack, 0.0, 1.0)
+	DefCheck.in_range_open_low(errors, "reveal_cargo", reveal_cargo, 0.0, 1.0)
 
 
 func _validate_hack(errors: Array[String]) -> void:

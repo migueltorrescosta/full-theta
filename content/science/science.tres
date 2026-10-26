@@ -83,6 +83,7 @@ reveal_intent = 0.45
 reveal_weak_points = 0.6
 reveal_resistances = 0.75
 reveal_hack = 0.4
+reveal_cargo = 0.35
 hack_cols = 5
 hack_rows = 3
 edge_density = 0.35

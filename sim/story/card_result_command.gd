@@ -14,17 +14,7 @@ func kind() -> StringName:
 
 
 func apply(world: SimWorld) -> bool:
-	var t: StoryTable = world.story
 	if not Story.visible_to(world, card, ship_id) or not Story.is_live(world, card):
 		return false
-	Story.set_state(
-		world, ship_id, card, StoryTable.State.DONE if success else StoryTable.State.FAILED
-	)
-	var dist: StringName = t.rep_interaction[card]
-	if success:
-		Economy.add_credits(world, ship_id, t.reward[card])
-	elif dist != &"":
-		dist = StringName(String(dist) + ".fail")
-	if dist != &"" and t.rep_faction[card] >= 0:
-		Reputation.change(world, ship_id, t.factions[card], t.rep_faction[card], dist)
+	StoryRules.settle(world, ship_id, card, success)  # strand F: the shared settlement
 	return true
