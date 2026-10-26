@@ -3,7 +3,7 @@ extends StationPanel
 ## The Captain's seat (§5.7, FT-CPT-001 to FT-CPT-005, D54): a mirror of the main screen
 ## (a ViewerPanel on the same state, taking clicks), buttons or keys 1 to 5 for its view,
 ## pings and marks, and a right column with the read-only list of open request chips
-## (ChipList) and Comms' mission and contract cards (FixtureCards, fixtures until #10).
+## (ChipList) and Comms' mission and contract cards (CardList, the COMMS block).
 ## Information only: the only things it sends are the main-screen view (MainView), pings
 ## and marks into empty slots (the server refuses anything else, FT-SPA-013, FT-CPT-003).
 ## A ping on a card shows it on the main screen for 10 s or until the next ping.
@@ -18,7 +18,7 @@ const STACK_SIDE_H: float = 520.0
 
 var mirror: ViewerPanel
 var chips: ChipList
-var cards: FixtureCards
+var cards: CardList
 ## One button per MainScreen.View, in order.
 var buttons: Array[Button] = []
 
@@ -81,8 +81,7 @@ func _setup() -> void:
 	_side = side
 	chips = ChipList.new()
 	side.add_child(chips)
-	cards = FixtureCards.new()
-	cards.setup()
+	cards = CardList.new()
 	side.add_child(cards)
 	resized.connect(_stack)
 	_stack()
@@ -101,6 +100,7 @@ func _process(_delta: float) -> void:
 	for i: int in buttons.size():
 		buttons[i].set_pressed_no_signal(i == view)
 	chips.show_rows(ChipList.open_rows(ctx.view))
+	cards.setup(CardList.rows(ctx.view, [CardList.MISSION, CardList.CONTRACT]))
 	cards.highlight = ctx.crew.shown_card(ctx.now_ms())
 	cards.queue_redraw()
 

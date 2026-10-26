@@ -76,7 +76,8 @@ var pings: Array[Dictionary] = []
 ## The main screen's view (MainScreen.View), set by the Captain or by Relay.
 var main_view: int = MainScreen.View.FORWARD
 var main_view_by: String = ""
-## The Comms card the latest ping named: {"id", "by", "at_ms"}, or {} when a later ping
+## The Comms card the latest ping named: {"id", "by", "at_ms", "card" (the ping's copy of
+## its kind, title, detail and expires, for the main screen)}, or {} when a later ping
 ## named something else. Not in `pings`: it pulses nothing on the radar.
 var card_ping: Dictionary = {}
 ## The shared selection: {"kind": "contact" | "mark" | "site" | "zone", "id": int}, or {}.
@@ -608,7 +609,12 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
 	var copy: bool = str(p.get("copy", "")) != ""
 	if kind == "card":
-		card_ping = {"id": int(p.get("id", -1)), "by": str(p.get("by", "")), "at_ms": now_ms}
+		card_ping = {
+			"id": int(p.get("id", -1)),
+			"by": str(p.get("by", "")),
+			"at_ms": now_ms,
+			"card": p.get("card", {}),
+		}
 		changed.emit(&"card")
 		if not copy:
 			pinged.emit(card_ping)
