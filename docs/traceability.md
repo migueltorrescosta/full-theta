@@ -121,7 +121,7 @@ Tests: 368, manual: 10, pending: 23.
 | FT-SIM-032 | tests | `tests/stations/test_station_alerts.gd` |
 | FT-SIM-033 | tests | `tests/content/test_content_defs.gd` |
 | FT-SIM-034 | tests | `tests/sim/core/test_no_space_id.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/story/test_conversation_guards.gd` |
-| FT-SIM-035 | tests | `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_no_space_id.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_precision.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
+| FT-SIM-035 | tests | `tests/sim/ai/test_enemy_ai.gd`, `tests/sim/combat/test_weapons.gd`, `tests/sim/core/test_no_space_id.gd`, `tests/sim/core/test_sim_world.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_precision.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_site_wrap.gd`, `tools/tests/test_lint_arch.py` |
 | FT-SIM-036 | tests | `tests/sim/flight/test_assist_modes.gd` |
 | FT-SIM-037 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd` |
 | FT-SIM-038 | tests | `tests/sim/core/test_hot_path_equivalence.gd`, `tests/sim/core/test_integrator.gd` |
@@ -304,10 +304,10 @@ Tests: 368, manual: 10, pending: 23.
 | FT-MIS-021 | tests | `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_economy.gd` |
 | FT-MIS-022 | tests | `tests/sim/economy/test_modules.gd` |
 | FT-MIS-023 | pending |  |
-| FT-MIS-024 | tests | `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_seeded_run.gd` |
-| FT-MIS-025 | tests | `tests/director/test_director_budget.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd` |
+| FT-MIS-024 | tests | `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_seeded_run.gd` |
+| FT-MIS-025 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pending_site.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd` |
 | FT-MIS-026 | tests | `tests/scenarios/test_debris_leg.gd`, `tests/sim/flight/test_jump.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_seeded_run.gd` |
-| FT-MIS-027 | tests | `tests/director/test_director_budget.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd` |
+| FT-MIS-027 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pending_site.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd` |
 | FT-MIS-028 | tests | `tests/director/test_director_budget.gd` |
 | FT-MIS-029 | tests | `tests/director/test_director_budget.gd` |
 | FT-MIS-030 | pending |  |
@@ -328,7 +328,7 @@ Tests: 368, manual: 10, pending: 23.
 | FT-AUD-003 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-AUD-004 | tests | `tests/audio/test_voice_player.gd`, `tests/stations/test_client_shell.gd` |
 | FT-AUD-005 | tests | `tests/net/voice/test_npc_routing_l3.gd` |
-| FT-AUD-006 | tests | `tests/net/voice/test_npc_routing_l3.gd`, `tests/net/voice/test_server_voice.gd` |
+| FT-AUD-006 | tests | `tests/director/test_director_pending_site.gd`, `tests/net/voice/test_npc_routing_l3.gd`, `tests/net/voice/test_server_voice.gd` |
 | FT-AUD-007 | tests | `tests/audio/test_voice_bus.gd`, `tests/audio/test_voice_player.gd` |
 | FT-AUD-008 | tests | `tests/audio/test_voice_bus.gd` |
 | FT-AUD-009 | tests | `tests/stations/test_station_alerts.gd` |
