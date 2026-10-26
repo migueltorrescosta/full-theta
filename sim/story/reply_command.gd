@@ -27,7 +27,7 @@ func apply(world: SimWorld) -> bool:
 				chosen = o
 		if chosen.is_empty():
 			why = &"no_option"
-		elif not Story.requirement_met(world, card, chosen.get("requires", {})):
+		elif not Story.requirement_met(world, card, chosen.get("requires", {}), ship_id):
 			why = &"requirement"
 	if why != &"":
 		world.emit(&"reply_refused", ship_id, card, 0.0, Vector3.ZERO, why)
@@ -38,5 +38,7 @@ func apply(world: SimWorld) -> bool:
 	if req.has("scan_fact"):
 		world.emit(&"scan_option", ship_id, card, 0.0, Vector3.ZERO, StringName(req["scan_fact"]))
 	# --- end strand F ---
-	Story.apply_option(world, ship_id, card, chosen)
+	if not Story.apply_option(world, ship_id, card, chosen):
+		world.emit(&"reply_refused", ship_id, card, 0.0, Vector3.ZERO, &"effect_refused")
+		return false
 	return true

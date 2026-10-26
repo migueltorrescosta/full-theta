@@ -105,7 +105,7 @@ static func hear_claim(w: SimWorld) -> void:
 static func call_bluff(w: SimWorld) -> void:
 	if w.tick <= HAIL_TICK or w.story.size() < 2 or w.story.node[1] != &"n0":
 		return
-	for o: Dictionary in Story.options(w, 1):
+	for o: Dictionary in Story.options(w, 1, 0):
 		if o["id"] == &"o3" and o["enabled"]:
 			var r: ReplyCommand = ReplyCommand.new()
 			r.card = 1

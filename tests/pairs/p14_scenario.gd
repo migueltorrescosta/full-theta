@@ -42,7 +42,7 @@ static func measure(w: SimWorld) -> Dictionary:
 static func option(w: SimWorld, id: StringName) -> Dictionary:
 	if w.story.size() == 0 or w.story.node[0] == StoryTable.NO_TEXT:
 		return {}
-	for o: Dictionary in Story.options(w, 0):
+	for o: Dictionary in Story.options(w, 0, 0):
 		if o["id"] == id:
 			return o
 	return {}

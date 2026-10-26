@@ -41,7 +41,7 @@ func test_hail_a_contact_and_reply() -> void:
 	assert_str(say[0].args["npc_id"]).is_equal("Raider")
 	assert_array(Story.npc_names(w)).is_equal(["Raider"])
 	# The options are the node's, with the bluff locked until the cargo is scanned.
-	var options: Array[Dictionary] = Story.options(w, 0)
+	var options: Array[Dictionary] = Story.options(w, 0, 0)
 	(
 		assert_array(options.map(func(o: Dictionary) -> String: return o["id"]))
 		. is_equal(["o1", "o2", "o3", "o4"])
@@ -108,7 +108,7 @@ func test_replies_are_structured_choices_with_effects() -> void:
 	assert_str(why[0].tag).is_equal("no_option")
 	assert_str(why[1].tag).is_equal("requirement")
 	Story.learn_fact(w, BLUE, 1, "cargo")
-	assert_bool(Story.options(w, 0)[2]["enabled"]).is_true()
+	assert_bool(Story.options(w, 0, 0)[2]["enabled"]).is_true()
 	assert_bool(_reply(w, 0, &"o3")).is_true()
 	var row: int = w.knowledge.row_for(BLUE, 1)
 	assert_int(w.knowledge.intent[row]).is_equal(KnowledgeTable.Intent.BLUFFING)
@@ -116,7 +116,7 @@ func test_replies_are_structured_choices_with_effects() -> void:
 	assert_float(w.reputation.value_of(BLUE, RED)).is_between(-5.0, 15.0)
 	assert_int(w.reputation.row_for(BLUE, RED)).is_greater_equal(0)
 	# n2 has no options: the conversation can't go on.
-	assert_array(Story.options(w, 0)).is_empty()
+	assert_array(Story.options(w, 0, 0)).is_empty()
 
 
 # FT: FT-COM-007

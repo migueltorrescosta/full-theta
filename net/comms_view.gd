@@ -158,7 +158,7 @@ static func block(
 	for card: int in _board(world, ship):
 		(out["cards"] as Array).append(_card_row(world, card, claims, icon))
 		if world.story.node[card] != StoryTable.NO_TEXT and Story.is_live(world, card):
-			(out["nodes"] as Array).append(_node_row(world, card, verify))
+			(out["nodes"] as Array).append(_node_row(world, ship, card, verify))
 		if world.story.kind[card] == StoryTable.Kind.OFFER and Story.is_live(world, card):
 			_offer_rows(world, ship, card, out)
 	for r: int in world.modules.rows_of(ship):
@@ -229,9 +229,9 @@ static func _card_row(world: SimWorld, card: int, claims: Dictionary, icon: bool
 
 
 ## The open node of a card's conversation: the NPC's line id and the replies.
-static func _node_row(world: SimWorld, card: int, verify: bool) -> Dictionary:
+static func _node_row(world: SimWorld, ship: int, card: int, verify: bool) -> Dictionary:
 	var options: Array = []
-	for o: Dictionary in Story.options(world, card):
+	for o: Dictionary in Story.options(world, card, ship):
 		options.append(
 			{
 				"id": o["id"],

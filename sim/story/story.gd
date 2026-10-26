@@ -23,6 +23,8 @@ const FLAGS: Dictionary[StringName, int] = {
 
 ## The site the ship is docked at, or -1 (D86): HelmTable.docked_site (DockCommand).
 static func docked_site(world: SimWorld, ship: int) -> int:
+	if ship < 0 or ship >= world.helm.size():
+		return -1
 	return world.helm.docked_site[ship]
 
 
@@ -93,9 +95,15 @@ static func accept(world: SimWorld, ship: int, card: int) -> bool:
 	return true
 
 
-## Declines an OPEN card, or ends an answered hail.
+## Declines an OPEN card, or ends an answered hail (a live HAIL card becomes DONE, so
+## the contact can be hailed again).
 static func decline(world: SimWorld, ship: int, card: int) -> bool:
-	if not visible_to(world, card, ship) or world.story.state[card] != StoryTable.State.OPEN:
+	var t: StoryTable = world.story
+	var seen: bool = visible_to(world, card, ship)
+	if seen and t.kind[card] == StoryTable.Kind.HAIL and is_live(world, card):
+		set_state(world, ship, card, StoryTable.State.DONE)
+		return true
+	if not seen or t.state[card] != StoryTable.State.OPEN:
 		world.emit(&"card_refused", ship, card, 0.0, Vector3.ZERO, &"not_open")
 		return false
 	set_state(world, ship, card, StoryTable.State.DECLINED)
@@ -131,13 +139,13 @@ static func open_node(world: SimWorld, ship: int, card: int, node_id: String) ->
 
 
 ## The card's NPC says a dialogue line: event say, tag the line id, other_id the contact
-## ship or -1, args["npc_id"] the speaker (ServerVoice routes it to the conversation's
-## claimer, or as a subtitle to Comms while nobody holds it; G1).
+## ship or -1, args["npc_id"] the speaker, args["card"] the card (ServerVoice routes it to that
+## card's conversation claimer, or as a subtitle to Comms while nobody holds it; G1).
 static func say(world: SimWorld, ship: int, card: int, line_id: String) -> void:
 	var e: SimEvent = world.emit(
 		&"say", ship, world.story.target[card], 0.0, Vector3.ZERO, StringName(line_id)
 	)
-	e.args = {"npc_id": String(world.story.npc[card]), "stations": []}
+	e.args = {"npc_id": String(world.story.npc[card]), "stations": [], "card": card}
 
 
 ## The names of every NPC on the board: they join the voice closed set at Start (FT-AUD-018).
@@ -152,9 +160,9 @@ static func npc_names(world: SimWorld) -> Array[String]:
 	return out
 
 
-## The options of the card's open node as {id, text, enabled, verify}: `enabled` when its
-## requirements hold, `verify` when it needs a scan fact (Science's icon, P14).
-static func options(world: SimWorld, card: int) -> Array[Dictionary]:
+## The options of the card's open node as {id, text, enabled, verify} for the replying ship:
+## `enabled` when its requirements hold, `verify` when it needs a scan fact (Science's icon, P14).
+static func options(world: SimWorld, card: int, ship: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for option: Dictionary in node_of(world, card).get("options", []):
 		var req: Dictionary = option.get("requires", {})
@@ -164,7 +172,7 @@ static func options(world: SimWorld, card: int) -> Array[Dictionary]:
 				{
 					"id": StringName(option["id"]),
 					"text": String(option["text"]),
-					"enabled": requirement_met(world, card, req),
+					"enabled": requirement_met(world, card, req, ship),
 					"verify": req.has("scan_fact"),
 				}
 			)
@@ -173,8 +181,9 @@ static func options(world: SimWorld, card: int) -> Array[Dictionary]:
 
 
 ## Whether an option's `requires` holds: scan_fact (the faction learned the fact about
-## the card's contact), flag (a story flag at least `min`, default 1), docked.
-static func requirement_met(world: SimWorld, card: int, req: Dictionary) -> bool:
+## the card's contact), flag (a story flag at least `min`, default 1), docked (the replying
+## ship's own state, not the card's ship: a faction-wide card has none).
+static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: int) -> bool:
 	var t: StoryTable = world.story
 	if (
 		req.has("scan_fact")
@@ -186,10 +195,7 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary) -> bool
 		and world.story_flags.get_flag(StringName(req["flag"])) < int(req.get("min", 1))
 	):
 		return false
-	if (
-		req.has("docked")
-		and bool(req["docked"]) != (docked_site(world, world.story.ship_ids[card]) >= 0)
-	):
+	if req.has("docked") and bool(req["docked"]) != (docked_site(world, ship) >= 0):
 		return false
 	return true
 
@@ -198,14 +204,17 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary) -> bool
 ## Effects (one key each): accept, decline, intent (hostile|neutral|surrendering|bluffing),
 ## contract_flag (none|disable|protect), flag (story flag name, with value), rep (a
 ## RepDistDef id), say (a dialogue line id), verify (a scan fact to check, P14), surrender
-## ({base, per_damage, cap}: StoryRules.roll_surrender, P9).
-static func apply_option(world: SimWorld, ship: int, card: int, option: Dictionary) -> void:
+## ({base, per_damage, cap}: StoryRules.roll_surrender, P9). A refused accept or decline
+## stops the option there (nothing is drawn, the node stays open) and returns false. A
+## rep draw happens once per card, or once per contact on a hail (a new hail of the same
+## contact doesn't repeat it).
+static func apply_option(world: SimWorld, ship: int, card: int, option: Dictionary) -> bool:
 	var t: StoryTable = world.story
 	for effect: Dictionary in option.get("effects", []):
-		if effect.has("accept"):
-			accept(world, ship, card)
-		if effect.has("decline"):
-			decline(world, ship, card)
+		if effect.has("accept") and not accept(world, ship, card):
+			return false
+		if effect.has("decline") and not decline(world, ship, card):
+			return false
 		if effect.has("intent") and t.target[card] >= 0:
 			var row: int = world.knowledge.ensure_contact(t.factions[card], t.target[card])
 			world.knowledge.intent[row] = INTENTS.get(StringName(effect["intent"]), 0)
@@ -214,7 +223,11 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 			world.knowledge.flag[frow] = FLAGS.get(StringName(effect["contract_flag"]), 0)
 		if effect.has("flag"):
 			world.story_flags.set_flag(StringName(effect["flag"]), int(effect.get("value", 1)))
-		if effect.has("rep") and t.rep_faction[card] >= 0:
+		if (
+			effect.has("rep")
+			and t.rep_faction[card] >= 0
+			and _first_draw(world, card, effect["rep"])
+		):
 			Reputation.change(
 				world, ship, t.factions[card], t.rep_faction[card], StringName(effect["rep"])
 			)
@@ -227,7 +240,7 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 			StoryRules.roll_surrender(world, ship, card, effect["surrender"])
 		# --- end strand F ---
 	if not is_live(world, card):
-		return
+		return true
 	var nodes: Dictionary = conversation(world, card).get("nodes", {})
 	if option.has("next") and nodes.has(option["next"]):
 		open_node(world, ship, card, option["next"])
@@ -235,6 +248,21 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 		t.node[card] = StoryTable.NO_TEXT
 		if t.kind[card] == StoryTable.Kind.HAIL:
 			set_state(world, ship, card, StoryTable.State.DONE)
+	return true
+
+
+## Whether this reputation draw has not been made yet for the card (a hail: for its
+## contact), and marks it made.
+static func _first_draw(world: SimWorld, card: int, dist: String) -> bool:
+	var t: StoryTable = world.story
+	var who: String = "c%d" % card
+	if t.kind[card] == StoryTable.Kind.HAIL and t.target[card] >= 0:
+		who = "t%d.%d" % [t.factions[card], t.target[card]]
+	var flag: StringName = StringName("repdraw.%s.%s" % [who, dist])
+	if world.story_flags.get_flag(flag) == 1:
+		return false
+	world.story_flags.set_flag(flag, 1)
+	return true
 
 
 # --- scan facts (P14) ---
