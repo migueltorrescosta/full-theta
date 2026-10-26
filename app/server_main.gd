@@ -29,6 +29,9 @@ extends RefCounted
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
 ##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
 ##                        before launch and Welcome carries it (FT-AUD-013, D41).
+##   --encounter NAME     what the world holds: m1, the Milestone 1 encounter [m1], or
+##                        run, the director's run (RunSetup on content/runs/m3_run.tres,
+##                        E07). The default moves to run once the scenarios exist.
 ##   --m1-player-hull-scale F
 ##                        test flag: the crewed ship's hull is F times its definition's
 ##                        (0 < F <= 1), so the L4 encounter (tools/l4) loses a fight in
@@ -88,6 +91,7 @@ var probe_picks: int = 64
 var probe_warmup: float = 3.0
 var probe_window: float = 60.0
 var player_hull_scale: float = 1.0
+var encounter_name: String = "m1"  # strand A
 ## Whether test flags (--m1-player-hull-scale, LOAD_FLAGS) are accepted: a debug build (the editor
 ## binary that L3 and L4 run) or FT_DEV set.
 var dev_flags: bool = OS.is_debug_build() or OS.get_environment(DEV_ENV) != ""
@@ -154,6 +158,12 @@ func _check_load_flags(args: PackedStringArray) -> bool:
 func _set_value(flag: String, value: String) -> bool:
 	if flag == "--m1-player-hull-scale":
 		return _set_hull_scale(value)
+	if flag == "--encounter":  # strand A
+		if not ["m1", "run"].has(value):
+			push_error("--encounter must be m1 or run")
+			return false
+		encounter_name = value
+		return true
 	return _set_flag(flag, value)
 
 
@@ -244,13 +254,21 @@ func make_server() -> NetServer:
 		player = player.duplicate()
 		player.hull_max *= player_hull_scale
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
+	var run: RunSetup = _run_setup(defs) if encounter_name == "run" else null  # strand A
+	if encounter_name == "run":
+		if run == null:
+			return null
+		encounter = run
 	# STAND-IN (#11 lobby): the multi-ship lobby replaces --load-ships and LoadEncounter.
 	if load_ships > 0:
 		encounter = LoadEncounter.new(seed_value, "server", player, enemy, load_ships, load_world)
+		run = null  # strand A
 	encounter.science = defs.science()
-	if load_ships <= 0:
+	if load_ships <= 0 and run == null:
 		encounter.hazards = defs.m1_hazards()
 	var server: NetServer = NetServer.new()
+	if run != null:  # strand A
+		server.driver_factory = _director_factory(run)
 	server.run_for = run_for
 	if probe_out != "":
 		server.probe = LoadProbe.new(probe_out)
@@ -283,6 +301,33 @@ func make_server() -> NetServer:
 	return server
 
 
+# --- strand A ---
+## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).
+func _run_setup(defs: DefLibrary) -> RunSetup:
+	var run_def: RunDef = defs.run(&"m3_run")
+	if run_def == null:
+		push_error("missing run definition m3_run")
+		return null
+	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.enemies())
+	setup.science = defs.science()
+	return setup
+
+
+## Makes the director for a run when the first tick steps: the lobby's difficulty preset
+## picks its budget, the catalogue is the scenarios the run lists (E07, D81).
+func _director_factory(setup: RunSetup) -> Callable:
+	return func(difficulty: StringName) -> Director:
+		var d: Director = Director.new(
+			setup.run_def.director,
+			difficulty,
+			ScenarioCatalogue.load_for(setup.run_def.scenarios),
+			seed_value
+		)
+		d.encounters_per_run = setup.run_def.encounters
+		return d
+
+
+# --- end strand A ---
 ## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,
 ## wired into the session: silent until the first Start calls start_session() with the
 ## session language and closed set; ship-computer lines go to the stations concerned

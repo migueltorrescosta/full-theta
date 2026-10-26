@@ -1,0 +1,36 @@
+class_name RunDef
+extends Resource
+## One run of the campaign (E07, FT-MIS-001, FT-MIS-002): the map it plays on, how many
+## encounters it lasts, which scenarios the director may pick, and the numbers the run
+## reads (director, flee cost, the crew's ship, starting credits). RunSetup builds the
+## world from it. Read-only at runtime (FT-ARC-020).
+
+@export var id: StringName = &""
+## The one wrapping cube with its named sites (D229). Set once the map exists (strand B).
+@export var map: MapDef
+## The run ends in a win after this many encounters (FT-MIS-001).
+@export var encounters: int = 5
+## Scenario ids the director may pick.
+@export var scenarios: PackedStringArray = PackedStringArray()
+@export var director: DirectorDef
+@export var flee_cost: FleeCostDef
+@export var player_ship: ShipDef
+@export var start_credits: int = 0
+
+
+func validate() -> Array[String]:
+	var errors: Array[String] = []
+	DefCheck.id(errors, "id", id)
+	if encounters < 1:
+		errors.append("encounters must be at least 1, got %d" % encounters)
+	var seen: Dictionary[String, bool] = {}
+	for s: String in scenarios:
+		if seen.has(s):
+			errors.append("scenario %s listed twice" % s)
+		seen[s] = true
+	DefCheck.required(errors, "director", director)
+	DefCheck.required(errors, "flee_cost", flee_cost)
+	DefCheck.required(errors, "player_ship", player_ship)
+	if start_credits < 0:
+		errors.append("start_credits must be at least 0, got %d" % start_credits)
+	return errors

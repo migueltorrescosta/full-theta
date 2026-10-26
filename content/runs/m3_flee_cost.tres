@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="FleeCostDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/flee_cost_def.gd" id="1_flee"]
+
+[resource]
+script = ExtResource("1_flee")
+id = &"m3_flee_cost"
+credits = 150
+rep_dist = &"flee"

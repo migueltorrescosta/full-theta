@@ -38,6 +38,10 @@ static func step(world: SimWorld) -> void:
 		var st: int = status[id]
 		if st == RunTable.Status.DESTROYED or st == RunTable.Status.ABANDONED:
 			_set_outcome(world, id, RunTable.Outcome.LOSS)
+		elif st == RunTable.Status.IN_PLAY and world.run_def != null:
+			# --- strand A --- a run wins by finishing its encounters, not by a clear sky.
+			if EncounterSystem.run_complete(world, id):
+				_set_outcome(world, id, RunTable.Outcome.WIN)
 		elif st == RunTable.Status.IN_PLAY and _enemies_gone(world, id):
 			_set_outcome(world, id, RunTable.Outcome.WIN)
 

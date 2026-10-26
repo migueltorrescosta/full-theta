@@ -24,6 +24,15 @@ const STATS_PERIOD_US: int = 10_000_000
 
 var encounter: M1Encounter
 var world: SimWorld
+# --- strand A ---
+## Steps the world with the director's before_tick (E07); rebuilt with every new world.
+var host: ScenarioHost
+## The director (or Shakedown's training driver): anything with before_tick(api). Made on the
+## first step of a run from driver_factory(difficulty preset), so it sees the lobby's toggles;
+## null with no factory (the M1 encounter).
+var driver: RefCounted
+var driver_factory: Callable
+# --- end strand A ---
 var transport: NetTransport = NetTransport.new()
 var session: ServerSession
 var run_reset: NetRunReset
@@ -68,6 +77,7 @@ func start(
 	if world == null:
 		push_error("encounter does not validate: %s" % [encounter.validate()])
 		return ERR_INVALID_DATA
+	host = ScenarioHost.new(world)  # strand A
 	session = ServerSession.new(transport, world)
 	session.dev_all = dev_all
 	session.host_secret = host_secret
@@ -129,6 +139,8 @@ func _on_client_stats(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## snapshot full for every client. NetRunReset calls it when the vote passes.
 func restart_run() -> void:
 	world = encounter.build()
+	host = ScenarioHost.new(world)  # strand A
+	driver = null
 	transport.reset_snapshots()
 	session.restart(world)
 	_next_snapshot_tick = world.tick
@@ -227,7 +239,13 @@ func _process(delta: float) -> void:
 			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / 60
 	else:
 		_idle_state_posted = false
-		ticks = world.advance(delta)
+		if not host.holds(world):  # strand A: a test swapped the world
+			host = ScenarioHost.new(world)
+		if driver == null and driver_factory.is_valid():
+			driver = driver_factory.call(StringName(session.toggles.preset))
+		ticks = host.advance(
+			delta, Callable(driver, &"before_tick") if driver != null else Callable()
+		)
 		t[2] = Time.get_ticks_usec()
 		t[3] = t[2]
 		t[4] = t[2]

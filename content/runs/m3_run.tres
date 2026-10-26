@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="RunDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/run_def.gd" id="1_run"]
+[ext_resource type="Resource" path="res://content/runs/m3_director.tres" id="2_director"]
+[ext_resource type="Resource" path="res://content/runs/m3_flee_cost.tres" id="3_flee"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette.tres" id="4_ship"]
+
+[resource]
+script = ExtResource("1_run")
+id = &"m3_run"
+encounters = 5
+director = ExtResource("2_director")
+flee_cost = ExtResource("3_flee")
+player_ship = ExtResource("4_ship")
+start_credits = 500
