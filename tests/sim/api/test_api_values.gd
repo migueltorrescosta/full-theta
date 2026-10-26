@@ -23,13 +23,17 @@ func _walk(value: Variant, path: String) -> void:
 	match typeof(value):
 		TYPE_OBJECT:
 			var obj: Object = value
-			assert_bool(obj is SimWorld or obj is SimTable or obj is Resource).override_failure_message(
-				"%s is a %s" % [path, obj.get_class()]
-			).is_false()
+			(
+				assert_bool(obj is SimWorld or obj is SimTable or obj is Resource)
+				. override_failure_message("%s is a %s" % [path, obj.get_class()])
+				. is_false()
+			)
 			var name: StringName = (obj.get_script() as Script).get_global_name()
-			assert_bool(VALUE_CLASSES.has(name)).override_failure_message(
-				"%s is a %s, not a value class" % [path, name]
-			).is_true()
+			(
+				assert_bool(VALUE_CLASSES.has(name))
+				. override_failure_message("%s is a %s, not a value class" % [path, name])
+				. is_true()
+			)
 			for p: Dictionary in obj.get_property_list():
 				if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
 					_walk(obj.get(p["name"]), "%s.%s" % [path, p["name"]])
