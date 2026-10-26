@@ -10,6 +10,8 @@
 - Space wraps per site, so pure modules read and write the position columns (.px,
   .py, .pz) only through the Kinematics helpers; only the two files that own the
   columns touch them (FT-SIM-035, D124).
+- ScenarioApi keeps the world in `_world`, which GDScript can't hide: pure modules
+  outside sim/api/ may not access `._world` (FT-ARC-016).
 
 A token scan over .gd files with comments and strings stripped; string contents are
 checked only for res:// paths. Prints file:line messages and exits 1 on any finding.
@@ -53,6 +55,8 @@ LOADERS = {"load", "preload"}  # banned only as bare calls, not as methods (x.lo
 SKIP_PREFIX = ("tools/tests/fixtures/",)
 # Position columns, and the files that own them (FT-SIM-035, D124).
 POSITION_COLUMNS = {"px", "py", "pz"}
+# Scenario API members that hold the world; GDScript has no private, so the lint does.
+PRIVATE_API = {"_world"}
 POSITION_OWNERS = {"sim/core/kinematics.gd", "sim/combat/projectile_table.gd"}
 
 
@@ -133,6 +137,9 @@ def lint(root: Path) -> list[str]:
             if word in POSITION_COLUMNS and dotted and rel not in POSITION_OWNERS:
                 report(pos, f".{word}: use Kinematics.relative, relative_to_point, point_at, "
                        "wrap, place or translate, not raw position columns (FT-SIM-035, D124)")
+            if word in PRIVATE_API and dotted and module != "sim/api":
+                report(pos, f".{word}: the Scenario API's world is private; GDScript can't hide it, "
+                       "so only sim/api/ may reach it (FT-ARC-016)")
             if word in LOADERS and not dotted and code[m.end() :].lstrip().startswith("("):
                 report(pos, f"{word}(): no resource loading in {module}/ (FT-ARC-020)")
         if module.split("/")[0] in PURE:

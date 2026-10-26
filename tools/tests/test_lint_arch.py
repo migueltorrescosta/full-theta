@@ -123,3 +123,13 @@ def test_the_real_director_cannot_name_the_world(tmp_path: Path) -> None:
     bad = run("--root", str(root))
     assert bad.returncode == 1
     assert "director/director.gd:" in bad.stderr and "EncounterTable" in bad.stderr
+
+
+def test_the_real_scenarios_cannot_reach_the_api_world(tmp_path: Path) -> None:
+    # FT: FT-ARC-016
+    root = real_tree(tmp_path)
+    target = sorted((root / "scenarios").glob("*.gd"))[0]
+    target.write_text(target.read_text() + "\nfunc poke(api: ScenarioApi) -> void:\n    api._world.kin.vel[0] = Vector3.ZERO\n")
+    bad = run("--root", str(root))
+    assert bad.returncode == 1
+    assert f"scenarios/{target.name}:" in bad.stderr and "._world" in bad.stderr
