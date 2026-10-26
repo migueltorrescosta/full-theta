@@ -293,7 +293,28 @@ const INTENTS: Array[Dictionary] = [
 		"pad": ["Right"]
 	},
 	{"id": "captain_view_prev", "group": "captain", "kind": PRESS, "kbm": [], "pad": ["Left"]},
-	# Science and Comms are placeholders in M1 (FT-M1-005): no bindings yet (#9, #10).
+	# Comms (§5.6, FT-COM-008). The board: arrows or the d-pad move between cards and columns,
+	# Tab the next column, O (a controller's A, the common select, which Comms takes) opens a
+	# card, H hails the selected contact, 1 to 4 pick a reply, and E or X buy and sell the
+	# highlighted line of an open trade. Enter and Backspace (X, Y), K (View+X) and B (View+Y)
+	# are the common accept, decline, claim and hold-fire request; Esc (the common menu)
+	# closes the overlay first, a controller's B closes it too.
+	{"id": "comms_open", "group": "comms", "kind": PRESS, "kbm": ["O"], "pad": []},
+	{"id": "comms_close", "group": "comms", "kind": PRESS, "kbm": [], "pad": ["B"]},
+	{"id": "comms_up", "group": "comms", "kind": PRESS, "kbm": ["Up"], "pad": ["Up"]},
+	{"id": "comms_down", "group": "comms", "kind": PRESS, "kbm": ["Down"], "pad": ["Down"]},
+	{"id": "comms_left", "group": "comms", "kind": PRESS, "kbm": ["Left"], "pad": ["Left"]},
+	{"id": "comms_right", "group": "comms", "kind": PRESS, "kbm": ["Right"], "pad": ["Right"]},
+	{"id": "comms_next_column", "group": "comms", "kind": PRESS, "kbm": ["Tab"], "pad": []},
+	{"id": "comms_hail", "group": "comms", "kind": PRESS, "kbm": ["H"], "pad": ["LB"]},
+	{"id": "comms_reply_1", "group": "comms", "kind": PRESS, "kbm": ["1"], "pad": []},
+	{"id": "comms_reply_2", "group": "comms", "kind": PRESS, "kbm": ["2"], "pad": []},
+	{"id": "comms_reply_3", "group": "comms", "kind": PRESS, "kbm": ["3"], "pad": []},
+	{"id": "comms_reply_4", "group": "comms", "kind": PRESS, "kbm": ["4"], "pad": []},
+	{"id": "comms_buy", "group": "comms", "kind": PRESS, "kbm": ["E"], "pad": ["RT"]},
+	{"id": "comms_sell", "group": "comms", "kind": PRESS, "kbm": ["X"], "pad": ["LT"]},
+	{"id": "comms_stick_x", "group": "comms", "kind": AXIS, "kbm": [], "pad": ["LS_X"]},
+	{"id": "comms_stick_y", "group": "comms", "kind": AXIS, "kbm": [], "pad": ["LS_Y"]},
 ]
 # gdlint: enable=max-line-length
 

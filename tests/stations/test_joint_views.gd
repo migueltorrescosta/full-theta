@@ -319,9 +319,10 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 	for entry: String in _views():
 		var stations: Array = StationViews.stations_of(entry)
 		for chip: ChipDef in NetChips.def().chips:
-			if not chip.active:
-				continue
 			var from: String = String(chip.from_station)
+			# Hold fire has no direct action: Parley's one player says so (next test).
+			if chip.id == &"hold_fire":
+				continue
 			if not (from in stations and String(chip.to_station) in stations):
 				continue
 			var s: StationScreen = _screen(entry)
@@ -345,6 +346,21 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 			seen[id] = true
 	# Every active chip belongs to some view, so all six are covered.
 	assert_int(seen.size()).is_equal(6)
+
+
+# FT: FT-JNT-005, FT-PAIR-021
+# Hold fire in Parley (Weapons + Comms) is the one chip with no direct action: nothing is sent
+# and the toast tells the player they hold both stations.
+func test_hold_fire_in_parley_is_a_toast() -> void:
+	var s: StationScreen = _screen("parley")
+	var toasts: Array[String] = []
+	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
+	var chip: ChipDef = NetChips.def().chips[NetChips.index_of("hold_fire")]
+	s.focus(s.stations.find("comms"))
+	s.ctx.crew.select("contact", StationFixture.H2)
+	s.focused_panel().send_chip(chip)
+	assert_array(StationFixture.sent(s.ctx).of("send_chip")).is_empty()
+	assert_array(toasts).is_equal(["toast.chip_same_screen"])
 
 
 # FT: FT-JNT-005
@@ -396,14 +412,19 @@ func test_direct_power_respects_the_reactor_and_the_maximum() -> void:
 
 
 # FT: FT-JNT-004, FT-NET-018, FT-STN-001
-# The four views with Comms (and Ops) show the fixture cards as the Comms half; a view
-# without Comms shows none.
-func test_the_views_with_comms_show_the_fixture_cards() -> void:
+# The four views with Comms (and Ops) show the ship's live cards as the Comms half, the real
+# rows of the COMMS block; a view without Comms shows none.
+func test_the_views_with_comms_show_the_real_cards() -> void:
 	for entry: String in _views():
 		var s: StationScreen = _screen(entry)
 		var has_comms: bool = "comms" in s.stations
-		assert_int(_count(s, FixtureCards)).is_equal(1 if has_comms else 0)
-	assert_array(FixtureCards.all()).is_not_empty()
+		assert_int(_count(s, CardList)).is_equal(1 if has_comms else 0)
+		if has_comms:
+			CommsFixture.install(s.ctx)
+			var panel: CommsPanel = s.panels[s.stations.find("comms")] as CommsPanel
+			panel.refresh(true)
+			assert_int(panel.list._cards.size()).is_equal(4)
+			assert_int(int(panel.list._cards[0]["id"])).is_equal(CommsFixture.MISSION)
 
 
 ## The physical inputs of one binding (as tests/input/test_binding_table.gd splits them).

@@ -308,8 +308,7 @@ func test_viewers_of_a_paused_ship_may_take_over() -> void:
 # FT: FT-M1-005
 func test_placeholder_reads_out_its_station_def() -> void:
 	var ctx: StationContext = StationFixture.context("comms")
-	var p: PlaceholderPanel = auto_free(StationRegistry.make("comms") as PlaceholderPanel)
-	assert_object(p).is_not_null()
+	var p: PlaceholderPanel = auto_free(PlaceholderPanel.new())
 	p.setup(ctx, "comms")
 	add_child(p)
 	var text: String = (p.get_child(0).get_child(1) as Label).text
