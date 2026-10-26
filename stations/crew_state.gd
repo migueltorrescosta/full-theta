@@ -12,7 +12,7 @@ extends RefCounted
 ## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
 ## &"sites", &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F);
 ## &"toggles" when the session's data-shortcut set changed (strand G), &"shares" when a
-## shortcut was shared or ran out (strand K).
+## shortcut was shared or ran out (strand K), &"lanes" when the approach lanes changed (F).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -102,6 +102,12 @@ var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
 ## The shortcuts shared to this ship (the `shares` event, D210): feature -> client clock (ms)
 ## at which the share ends.
 var shares: Dictionary = {}
+# --- strand F ---
+## The ship's approach lanes (P5, the `lanes` event): {"card", "pos" (Vector3, m), "opens_ms",
+## "closes_ms" (client clock, ms), "by"}. Only while the lanes toggle lets them reach this
+## station (Comms always, the others once Comms shared them).
+var lanes: Array[Dictionary] = []
+# --- end strand F ---
 
 var _filter: ViewFilter = null
 var _filter_key: String = ""
@@ -281,6 +287,23 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_relay(str(e["type"]), p)
 		"chip_answer":
 			_on_chip_answer(p)
+		"lanes":  # strand F
+			if _mine(p):
+				lanes.clear()
+				for l: Dictionary in p.get("lanes", []):
+					(
+						lanes
+						. append(
+							{
+								"card": int(l["card"]),
+								"pos": Vector3(float(l["x"]), float(l["y"]), float(l["z"])),
+								"opens_ms": now_ms + roundi(float(l["open_s"]) * 1000.0),
+								"closes_ms": now_ms + roundi(float(l["close_s"]) * 1000.0),
+								"by": str(l.get("by", "")),
+							}
+						)
+					)
+				changed.emit(&"lanes")
 		"shares":
 			if _mine(p):
 				shares.clear()
@@ -395,6 +418,7 @@ func reset_run() -> void:
 	zones.clear()
 	routes.clear()
 	shares.clear()
+	lanes.clear()  # strand F
 	inbox.clear()
 	relay_log.clear()
 	selection = {}

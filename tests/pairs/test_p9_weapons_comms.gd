@@ -21,7 +21,9 @@ func test_coop_beats_solo() -> void:
 
 
 func _surrender_params() -> Dictionary:
-	return ((ConversationLibrary.load_dir()[&"conv.surrender_demand"] as Dictionary)["nodes"]["n0"]["options"][0]["effects"][0])["surrender"]
+	var conversation: Dictionary = ConversationLibrary.load_dir()[&"conv.surrender_demand"]
+	var option: Dictionary = conversation["nodes"]["n0"]["options"][0]
+	return option["effects"][0]["surrender"]
 
 
 func _yes_of_hundred(left: float) -> int:

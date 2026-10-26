@@ -8,6 +8,8 @@ extends RefCounted
 ## - the inbox of marks other ships' Relays sent, visible only to the receiving Relay
 ##   until it accepts one (FT-RLY-008, FT-RLY-009, FT-SPA-021);
 ## - the ship's log (FT-RLY-006): short keyed entries, never NPC text (FT-RLY-007).
+## - approach lanes (P5, strand F): MARK items Comms' accepted clearance creates, derived from
+##   STORY (lane_items), that Hard keeps off other stations (FT-SPA-029, FT-PAIR-008).
 ## NetCrewState checks who may do what and sends the events.
 
 const KIND_HAZARD: String = "hazard"
@@ -166,3 +168,40 @@ func _route_slots(ship: int) -> Array:
 			slots.append([])
 		_routes[ship] = slots
 	return _routes[ship]
+
+
+# --- strand F ---
+## The ship's approach lanes (P5): one MARK item per accepted clearance card of its board, at
+## the card's site (WAITS ON B: SiteTable.point, A's stub until B lands), with the seconds
+## until the window opens and closes (negative once past), {card, x, y, z, open_s, close_s,
+## by}. A lane exists while its card is ACCEPTED: docking, expiry or a decline remove it.
+static func lane_items(world: SimWorld, ship: int) -> Array:
+	var out: Array = []
+	for card: int in world.story.size():
+		var window: Array[int] = StoryRules.lane_window(world, card)
+		if (
+			window.is_empty()
+			or world.story.state[card] != StoryTable.State.ACCEPTED
+			or not Story.visible_to(world, card, ship)
+			or world.story.site[card] < 0
+			or world.story.site[card] >= world.sites.size()
+		):
+			continue
+		var at: PackedFloat64Array = world.sites.point(world.story.site[card])
+		(
+			out
+			. append(
+				{
+					"card": card,
+					"x": at[0],
+					"y": at[1],
+					"z": at[2],
+					"open_s": (window[0] - world.tick) * SimWorld.DT,
+					"close_s": (window[1] - world.tick) * SimWorld.DT,
+					"by": "comms",
+				}
+			)
+		)
+	return out
+
+# --- end strand F ---

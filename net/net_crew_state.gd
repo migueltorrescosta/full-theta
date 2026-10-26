@@ -48,6 +48,7 @@ func send_to(s: NetSession) -> void:
 	session.notify(s, NetProtocol.EVENT_SITES, _sites_payload())
 	session.notify(s, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
 	session.shares.send_to(s)
+	session.notify(s, NetProtocol.EVENT_LANES, _lanes_payload(s))  # strand F
 	if _sees_routes(s):
 		session.notify(s, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
 	if _is_relay(s):
@@ -138,6 +139,10 @@ func on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
 		session.request_rejected(s, NetProtocol.Type.MARK, why, {"op": msg["op"], "slot": slot})
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
+	# --- strand F --- (P15: Relay's mark on a mission's contact locates the mission)
+	if msg["op"] == "place" and role == CrewMarks.Role.RELAY:
+		_mark_mission(s, _spot(s, msg))
+	# --- end strand F ---
 
 
 ## MarkSend{slot, ship}: Relay sends one of its ship's marks to another ship of its
@@ -213,6 +218,9 @@ func on_mark_accept(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## losses, probes and lane warnings of the event's ship, as keys and arguments, never
 ## text of a character.
 func on_sim_event(e: SimEvent) -> void:
+	if e.kind == &"card_state" and e.ship_id >= 0:  # strand F: a clearance became a lane
+		sync_lanes(e.ship_id)
+		return
 	if e.kind == &"scan_mark":
 		_science_scan_position(e.ship_id)
 		return
@@ -482,6 +490,51 @@ func _resolved(ship: int, slot: int) -> Dictionary:
 	return {}
 
 
+# --- strand F ---
+## A Relay mark attached to the contact of a live mission card of the ship marks the mission
+## (MarkMissionCommand): the card then shows the mission icon where the toggle lets Comms
+## see it (P15).
+func _mark_mission(s: NetSession, spot: Dictionary) -> void:
+	var contact: int = int(spot.get("contact", -1))
+	if contact < 0:
+		return
+	var card: int = StoryRules.mission_of_contact(session.world, s.ship, contact)
+	if card >= 0 and not StoryRules.is_marked(session.world, card):
+		var c: MarkMissionCommand = MarkMissionCommand.new()
+		c.ship_id = s.ship
+		c.card = card
+		session.world.submit(c)
+
+
+## The ship's picks get its approach lanes (CrewRelay.lane_items) when their view sees them
+## now, else an empty list. Called when a clearance changes state and when Comms' lanes share
+## starts or ends (NetShares). Returns whether any pick got lanes.
+func sync_lanes(ship: int) -> bool:
+	var any: bool = false
+	for t: NetSession in session.by_id.values():
+		if t.ship != ship or not t.has_pick():
+			continue
+		var payload: Dictionary = _lanes_payload(t)
+		any = any or not (payload["lanes"] as Array).is_empty()
+		session.notify(t, NetProtocol.EVENT_LANES, payload)
+	return any
+
+
+## Lanes reach Comms always and the other stations while Comms shares them or their view
+## holds Comms (FT-SPA-029, FT-PAIR-008, FT-JNT-005, D210).
+func _sees_lanes(s: NetSession) -> bool:
+	if not s.has_pick():
+		return false
+	var f: ViewFilter = ViewFilter.of(s.entry, s.view_code())
+	return f == null or f.grants(ViewFilter.LANES)
+
+
+func _lanes_payload(s: NetSession) -> Dictionary:
+	var items: Array = CrewRelay.lane_items(session.world, s.ship) if _sees_lanes(s) else []
+	return {"ship": s.ship, "lanes": items}
+
+
+# --- end strand F ---
 ## Routes shared or unshared (NetShares): the ship's picks that don't hold Relay get the
 ## routes when their view sees them now, else an empty list. Returns whether any pick got
 ## routes (a press that shared them).

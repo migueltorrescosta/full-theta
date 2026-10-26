@@ -342,6 +342,15 @@ const EVENT_STATIONS: Dictionary = {
 	&"probe_fabricated": ["relay", "engineering"],
 	&"probe_no_parts": ["engineering"],
 	&"lane_warning": ["weapons", "relay"],
+	# --- strand F --- Comms' pairs: a lane's dock, a surrender, a scan-unlocked reply, a
+	# marked mission. None carries Engineering's data (FT-PAIR-010).
+	&"dock_cleared": ["helm", "comms"],
+	&"dock_uncleared": ["helm", "comms"],
+	&"surrender_roll": ["comms"],
+	&"surrender_killed": ["weapons", "comms"],
+	&"scan_option": ["science", "comms"],
+	&"mission_marked": ["relay", "comms"],
+	# --- end strand F ---
 }
 
 ## Events whose `value` is Engineering's exact data (a health fraction, a heat, the shield

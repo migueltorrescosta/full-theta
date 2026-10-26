@@ -107,6 +107,14 @@ const EVENT_CHIP_ANSWER: String = "chip_answer"
 ## The shortcuts shared to the session's ship (strand K, NetShares): {ship, left: {feature:
 ## seconds until the share ends}}; sent to its picks when the set changes.
 const EVENT_SHARES: String = "shares"
+# --- strand F ---
+## The ship's approach lanes (P5, CrewRelay.lane_items), to Comms always and to the other
+## stations while Comms shares them (the lanes toggle on and the press not expired) or their
+## view holds Comms: {ship, lanes: [{card, x, y, z, open_s, close_s, by}]}, the seconds being
+## the time left at sending. Sent when a clearance is accepted or settled and when a share
+## starts or ends.
+const EVENT_LANES: String = "lanes"
+# --- end strand F ---
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {

@@ -92,6 +92,49 @@ func _draw_routes(font: Font) -> void:
 			previous = p
 
 
+# --- strand F ---
+## Comms' approach lanes on this view, in screen pixels (P5, FT-PAIR-001): {"pos" (Vector2),
+## "state" ("wait" amber until the window opens, "open" green inside it, "late" red after),
+## "left_s" (s until the window opens, or closes while open)}, only for lanes in front of the
+## camera. They exist only while the lanes toggle lets them reach Helm (Comms shared them, or
+## the view holds Comms; the server withholds them on Hard).
+func lane_marks() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if compact or panel == null or panel.view3d == null or panel.view3d.camera == null:
+		return out
+	var cam: Camera3D = panel.view3d.camera
+	var now: int = panel.ctx.now_ms()
+	for lane: Dictionary in panel.ctx.crew.lanes:
+		var world: Vector3 = panel.ctx.interp.offset_to(lane["pos"])
+		if cam.is_position_behind(world):
+			continue
+		var state: String = "wait"
+		var left: float = (int(lane["opens_ms"]) - now) / 1000.0
+		if now >= int(lane["closes_ms"]):
+			state = "late"
+			left = 0.0
+		elif now >= int(lane["opens_ms"]):
+			state = "open"
+			left = (int(lane["closes_ms"]) - now) / 1000.0
+		out.append({"pos": cam.unproject_position(world), "state": state, "left_s": left})
+	return out
+
+
+## A ring and a countdown at each lane's site: amber while the window is ahead, green inside
+## it, red once it has closed.
+func _draw_lanes(font: Font) -> void:
+	var colours: Dictionary[String, String] = {"wait": "warn", "open": "ok", "late": "danger"}
+	for lane: Dictionary in lane_marks():
+		var col: Color = Palette.color(colours[lane["state"]])
+		var at: Vector2 = lane["pos"]
+		draw_arc(at, 18.0, 0.0, TAU, 28, col, 2.5)
+		var text: String = tr("helm.lane." + String(lane["state"]))
+		if lane["state"] != "late":
+			text += " %d s" % ceili(float(lane["left_s"]))
+		_text(font, at + Vector2(24.0, -4.0), text, col, SMALL)
+
+
+# --- end strand F ---
 func _draw() -> void:
 	if panel == null or panel.ctx == null:
 		return
@@ -103,6 +146,7 @@ func _draw() -> void:
 	_draw_reticle()
 	_draw_velocity()
 	_draw_routes(font)
+	_draw_lanes(font)  # strand F
 	for e: Dictionary in markers():
 		if e["on_screen"]:
 			_draw_marker(font, e, e["selected"])
