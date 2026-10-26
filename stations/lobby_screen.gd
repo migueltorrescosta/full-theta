@@ -618,8 +618,7 @@ func _open_join() -> void:
 	_join_dialog.popup_centered_clamped(Vector2i(360, 320), 0.9)
 
 
-## One toggle: its name, its value and a one-line description naming both stations, and
-## for the two Comms toggles that it arrives in M3 (D190).
+## One toggle: its name, its value and a one-line description naming both stations.
 func _toggle_row(def: DataToggleDef) -> Control:
 	var row: VBoxContainer = VBoxContainer.new()
 	row.name = "Toggle_" + String(def.id)
@@ -664,10 +663,7 @@ func _refresh_data() -> void:
 	_toggle_note.text = note
 	for def: DataToggleDef in DataToggles.def().toggles:
 		var row: Control = _toggle_rows.get_node("Toggle_" + String(def.id))
-		var text: String = tr("lobby.toggle." + String(def.id))
-		if def.arrives_m3:
-			text += " (%s)" % tr("lobby.arrives_m3")
-		row.get_node("Line/Name").text = text
+		row.get_node("Line/Name").text = tr("lobby.toggle." + String(def.id))
 		row.get_node("Desc").text = tr("lobby.toggle.%s.desc" % def.id)
 		var value: OptionButton = row.get_node("Line/Value")
 		value.clear()

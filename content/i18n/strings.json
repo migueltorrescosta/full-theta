@@ -800,7 +800,6 @@
     "lobby.customise": {"en": "Customise", "pt_PT": "Personalizar", "it": "Personalizza"},
     "lobby.toggles_locked": {"en": "Locked: the run has started.", "pt_PT": "Bloqueado: a missão já começou.", "it": "Bloccato: la missione è iniziata."},
     "lobby.toggles_host_only": {"en": "Only the host changes these.", "pt_PT": "Só o anfitrião muda isto.", "it": "Solo l'ospite può cambiarle."},
-    "lobby.arrives_m3": {"en": "arrives in M3", "pt_PT": "chega na M3", "it": "arriva in M3"},
     "lobby.v_exact": {"en": "Exact", "pt_PT": "Exato", "it": "Esatto"},
     "lobby.v_banded": {"en": "Banded", "pt_PT": "Em faixas", "it": "A fasce"},
     "lobby.v_absent": {"en": "Hidden", "pt_PT": "Escondido", "it": "Nascosto"},

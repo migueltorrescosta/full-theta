@@ -89,7 +89,6 @@ target = &"weapons"
 easy = 1
 normal = 0
 hard = 0
-arrives_m3 = true
 
 [sub_resource type="Resource" id="Resource_verify_chip"]
 script = ExtResource("2_tg")
@@ -100,7 +99,6 @@ target = &"comms"
 easy = 1
 normal = 0
 hard = 0
-arrives_m3 = true
 
 [sub_resource type="Resource" id="Resource_mission_icon"]
 script = ExtResource("2_tg")
