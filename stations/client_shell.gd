@@ -206,6 +206,14 @@ func _build_overlays() -> void:
 	add_child(settings_screen)
 	settings_screen.setup(ctx.settings, true)
 	settings_screen.leave_requested.connect(leave)
+	# --- strand D1 ---
+	settings_screen.host_pause_requested.connect(func() -> void: ctx.intents.host_pause(true))
+	ctx.crew.changed.connect(
+		func(_what: StringName) -> void:
+			settings_screen.set_pause_control(ctx.crew.can_host_pause())
+	)
+	settings_screen.set_pause_control(ctx.crew.can_host_pause())
+	# --- end strand D1 ---
 	settings_screen.scale_changed.connect(apply_ui_scale)
 	settings_screen.closed.connect(
 		func() -> void: ctx.matcher.invert_pitch = ctx.settings.invert_pitch

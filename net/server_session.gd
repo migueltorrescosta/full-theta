@@ -10,15 +10,14 @@ extends RefCounted
 ##   change that breaks coverage, FT-NET-043), the coverage check (NetCoverage) and
 ##   Start, sent to clients as `lobby` events;
 ## - claims and ship-wide controls (T044, NetClaims, claim_rule, the OWNERSHIP section);
-## - grace, the universe pause, the abandon vote and takeover (T045, FT-NET-033 to
-##   FT-NET-036, FT-NET-041, FT-NET-042). NetServer steps the sim only while
-##   sim_running(): after a Start and outside a pause;
-## - each ship's marks, alert level and pings: NetCrewState, whose Alert, Mark and Ping
-##   handlers it registers;
-## - the voice seam: with a VoiceService in `voice` (the app composes it), the first
-##   Start calls start_session() with the closed set, and the ship computer speaks
-##   hull, shield, fault and collision alerts to the stations concerned (FT-AUD-006).
-## Add a message handler in _handlers. docs/protocol.md describes the behaviour.
+## - grace, the universe pause, the abandon vote and takeover (T045, FT-NET-033 to FT-NET-036,
+##   FT-NET-041, FT-NET-042). NetServer steps the sim only while sim_running(): after a
+##   Start, outside a pause and a host pause (NetHostPause);
+## - each ship's marks, alert level and pings: NetCrewState, whose handlers it registers;
+## - the voice seam: with a VoiceService in `voice` (the app composes it), the first Start
+##   calls start_session() with the closed set, and the ship computer speaks hull, shield,
+##   fault and collision alerts to the stations concerned (FT-AUD-006).
+## Add a handler with add_handler(). docs/protocol.md describes the behaviour.
 
 const DEFAULT_RATE: float = 90.0
 const DEFAULT_BURST: float = 180.0
@@ -52,12 +51,10 @@ var host_secret: String = ""
 var language: String = "en"
 ## Most sessions connected at once (FT-NET-014; T046 owns the rule).
 var max_sessions: int = 64
-## Per-session command rate limit (FT-NET-006; provisional: see
-## docs/protocol.md, Rates and limits).
+## Per-session command rate limit (FT-NET-006; provisional: docs/protocol.md, Rates).
 var rate: float = DEFAULT_RATE
 var burst: float = DEFAULT_BURST
-## Live sessions: connected or within their grace period. A lapsed session leaves
-## (its token still resumes it, FT-NET-026).
+## Live sessions: connected or within grace; a lapsed one leaves (its token resumes, FT-NET-026).
 var by_id: Dictionary[int, NetSession] = {}
 var by_conn: Dictionary[int, NetSession] = {}
 ## Counts of rejected commands by reason (tests, logs).
@@ -69,6 +66,7 @@ var abandoned: Dictionary[int, bool] = {}
 ## Paused ships still in play: ship -> uncovered stations. The universe is paused while
 ## this is not empty (FT-NET-034).
 var paused: Dictionary[int, Array] = {}
+var host_paused: bool = false  # strand D1 (FT-MIS-040), apart from the coverage pause
 ## Ship -> NetAbandonVote, during a pause (D128).
 var votes: Dictionary[int, NetAbandonVote] = {}
 ## Ship -> {control: [session id, name]}: last writers of ship-wide controls.
@@ -91,6 +89,7 @@ var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
 var chips: NetChips
 var coop: NetCoop
 var shares: NetShares
+var host_pause: NetHostPause  # strand D1
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -137,6 +136,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.BYE: _on_bye,
 		NetTransport.CLOSED: _on_closed,
 	}
+	host_pause = NetHostPause.new(self)  # strand D1, registers HostPause
 
 
 ## Handles everything the transport received since the last call, lapses the sessions
@@ -162,7 +162,7 @@ func process(now_us: int) -> void:
 
 ## Whether NetServer steps the sim: a ship has started and the universe isn't paused.
 func sim_running() -> bool:
-	return not launched.is_empty() and paused.is_empty()
+	return not launched.is_empty() and paused.is_empty() and not host_paused
 
 
 ## After the sim stepped: reports commands the sim rejected (or dropped, for a destroyed
@@ -538,6 +538,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	for ship: Dictionary in crew_ships():
 		if _lobby_visible(session, ship["id"]):
 			notify(session, NetProtocol.EVENT_LOBBY, lobby_state(ship["id"]))
+	host_pause.send_to(session)  # strand D1
 	for ship: int in paused:
 		notify(session, NetProtocol.EVENT_PAUSE, _pause_payload(ship))
 		_send_votes(ship, session)

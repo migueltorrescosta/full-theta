@@ -177,6 +177,13 @@ func abandon(ship: int) -> void:
 	_send(NetProtocol.Type.ABANDON, {"ship": ship})
 
 
+# --- strand D1 ---
+## The host pauses or resumes the whole universe (co-op only, FT-MIS-040).
+func host_pause(on: bool) -> void:
+	_send(NetProtocol.Type.HOST_PAUSE, {"on": on})
+
+
+# --- end strand D1 ---
 func vote_abandon(ship: int, vote: bool) -> void:
 	_send(NetProtocol.Type.ABANDON_VOTE, {"ship": ship, "vote": vote})
 

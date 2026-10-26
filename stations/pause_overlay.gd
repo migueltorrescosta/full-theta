@@ -41,9 +41,20 @@ func paused_ship() -> int:
 
 func refresh() -> void:
 	var id: int = paused_ship()
-	visible = id >= 0
+	visible = id >= 0 or ctx.crew.host_paused
 	if not visible:
 		return
+	# --- strand D1 ---
+	for c: Node in _buttons.get_children():
+		_buttons.remove_child(c)
+		c.queue_free()
+	if id < 0:
+		# A host pause alone (FT-MIS-040): no uncovered list, no abandon.
+		_text.text = tr("pause.host")
+		_votes.visible = false
+		_resume_button()
+		return
+	# --- end strand D1 ---
 	var p: Dictionary = ctx.crew.paused[id]
 	var names: PackedStringArray = []
 	for s: Variant in p.get("uncovered", []):
@@ -53,10 +64,8 @@ func refresh() -> void:
 	var voters: Array = v.get("voters", [])
 	_votes.text = tr("pause.votes") % [voters.size(), int(v.get("needed", 0)), ", ".join(voters)]
 	_votes.visible = id == ctx.crew.ship
-	for c: Node in _buttons.get_children():
-		_buttons.remove_child(c)
-		c.queue_free()
 	if id != ctx.crew.ship:
+		_resume_button()
 		return
 	if ctx.crew.is_crew():
 		var voted: bool = ctx.crew.session in v.get("sessions", [])
@@ -73,8 +82,19 @@ func refresh() -> void:
 		_button("Abandon", tr("pause.abandon")).pressed.connect(
 			func() -> void: ctx.intents.abandon(id)
 		)
+	_resume_button()
 
 
+# --- strand D1 ---
+## Resume, on the host's client during a host pause (also over a coverage pause).
+func _resume_button() -> void:
+	if ctx.crew.host_paused and ctx.crew.host:
+		_button("Resume", tr("pause.resume")).pressed.connect(
+			func() -> void: ctx.intents.host_pause(false)
+		)
+
+
+# --- end strand D1 ---
 func _button(node_name: String, text: String) -> Button:
 	var b: Button = Button.new()
 	b.name = node_name

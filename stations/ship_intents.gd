@@ -134,6 +134,15 @@ func abandon(ship: int) -> void:
 	_call(&"abandon", [ship])
 
 
+# --- strand D1 ---
+## The host pauses or resumes the universe (FT-MIS-040).
+func host_pause(on: bool) -> void:
+	_call(&"host_pause", [on])
+
+
+# --- end strand D1 ---
+
+
 ## "Run again" after the outcome (D178); the host's vote resets at once.
 func run_again(ship: int, vote: bool) -> void:
 	_call(&"run_again", [ship, vote])

@@ -89,6 +89,9 @@ class RecordingClient:
 	func abandon(ship: int) -> void:
 		sent.append(["abandon", [ship]])
 
+	func host_pause(on: bool) -> void:
+		sent.append(["host_pause", [on]])
+
 	func takeover(ship: int, entry: String) -> void:
 		sent.append(["takeover", [ship, entry]])
 

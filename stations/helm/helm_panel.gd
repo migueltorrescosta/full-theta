@@ -100,7 +100,12 @@ func _process(_delta: float) -> void:
 	if ctx == null:
 		return
 	# A pause or the end of the run (the outcome card, D178) frees the pointer.
-	if ctx.crew.paused.has(ctx.crew.ship) or ctx.crew.run_over.has(ctx.crew.ship):
+	# strand D1: a host pause frees the pointer too
+	if (
+		ctx.crew.paused.has(ctx.crew.ship)
+		or ctx.crew.host_paused
+		or ctx.crew.run_over.has(ctx.crew.ship)
+	):
 		_captured = false
 	_apply_mouse_mode()
 	sync_target()

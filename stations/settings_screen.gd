@@ -12,6 +12,9 @@ extends PanelContainer
 
 signal closed
 signal leave_requested
+# --- strand D1 ---
+signal host_pause_requested
+# --- end strand D1 ---
 signal scale_changed
 ## "Set reference plane to my current deck": the shell stores the ship's orientation.
 signal reference_plane_requested
@@ -40,6 +43,10 @@ var controls: ControlsList
 var _held: Array[String] = []
 
 var _in_session: bool = false
+# --- strand D1 ---
+## The host's Pause control is offered (co-op host only, FT-MIS-040).
+var _pause_control: bool = false
+# --- end strand D1 ---
 ## What _build fills: a notification may not change the children of its own node.
 var _root: VBoxContainer
 ## What `controls` shows, kept to refill it when the menu is rebuilt: [bindings,
@@ -71,6 +78,16 @@ func set_controls(bindings: Bindings, stations: Array, device: String, role: Str
 
 
 ## Opens the menu on `tab` (a TAB_ name), or on the tab last used when empty.
+# --- strand D1 ---
+## Shows or hides the host's Pause control (rebuilds the menu on a change).
+func set_pause_control(on: bool) -> void:
+	if on != _pause_control:
+		_pause_control = on
+		if _root != null:
+			_build()
+
+
+# --- end strand D1 ---
 func open(tab: String = "") -> void:
 	visible = true
 	open_tab(tab)
@@ -111,6 +128,17 @@ func _build() -> void:
 	var top: HBoxContainer = HBoxContainer.new()
 	col.add_child(top)
 	_add_button(top, "Close", tr("settings.close"), close)
+	# --- strand D1 ---
+	if _pause_control:
+		_add_button(
+			top,
+			"HostPause",
+			tr("settings.pause"),
+			func() -> void:
+				host_pause_requested.emit()
+				close()
+		)
+	# --- end strand D1 ---
 	if _in_session:
 		_add_button(top, "Leave", tr("settings.leave"), func() -> void: leave_requested.emit())
 	tabs = TabContainer.new()

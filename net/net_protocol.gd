@@ -47,6 +47,10 @@ enum Type {
 	CLIENT_STATS = 29,
 	# A source station shares a data shortcut with its partner (strand K, D210).
 	SHARE = 30,
+	# --- strand D1 ---
+	# The host pauses or resumes the whole universe in co-op (D127, FT-MIS-040).
+	HOST_PAUSE = 40,
+	# --- end strand D1 ---
 }
 
 const PROTOCOL_VERSION: int = 6
@@ -141,6 +145,9 @@ const SCHEMAS: Dictionary = {
 	Type.EVENT:
 	{"seq": TYPE_INT, "tick": TYPE_INT, "type": TYPE_STRING, "payload": TYPE_DICTIONARY},
 	Type.ABANDON: {"ship": TYPE_INT},
+	# --- strand D1 ---
+	Type.HOST_PAUSE: {"on": TYPE_BOOL},
+	# --- end strand D1 ---
 	Type.TAKEOVER: {"ship": TYPE_INT, "entry": TYPE_STRING},
 	Type.BYE: {"reason": TYPE_STRING},
 	Type.VOICE:
@@ -207,6 +214,9 @@ const FROM_CLIENT: Array[int] = [
 	Type.CHIP,
 	Type.SHARE,
 	Type.CLIENT_STATS,
+	# --- strand D1 ---
+	Type.HOST_PAUSE,
+	# --- end strand D1 ---
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -231,6 +241,9 @@ const RATED_REQUESTS: Array[int] = [
 	Type.CHIP,
 	Type.SHARE,
 	Type.CLIENT_STATS,
+	# --- strand D1 ---
+	Type.HOST_PAUSE,
+	# --- end strand D1 ---
 ]
 
 

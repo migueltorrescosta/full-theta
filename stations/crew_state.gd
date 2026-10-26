@@ -54,6 +54,10 @@ var lobby: Dictionary = {}
 var started: Dictionary = {}
 ## ship -> `pause` payload, while paused.
 var paused: Dictionary = {}
+# --- strand D1 ---
+## The host paused the universe (FT-MIS-040); independent of `paused`.
+var host_paused: bool = false
+# --- end strand D1 ---
 ## ship -> {"voters": [names], "sessions": [ids], "needed": int}.
 var votes: Dictionary = {}
 ## ship -> "vote" | "host".
@@ -189,6 +193,22 @@ func is_crew() -> bool:
 	return bool(entry_def().get("crew", false))
 
 
+# --- strand D1 ---
+## Co-op: every crew ship shares one faction (a client-side view of the server's rule,
+## which also checks relations); PvP sessions have no pause control (FT-MIS-040).
+func is_coop() -> bool:
+	var factions: Dictionary = {}
+	for s: Dictionary in catalogue.get("ships", []):
+		factions[int(s.get("faction", 0))] = true
+	return factions.size() <= 1
+
+
+## Whether the menu offers the host pause.
+func can_host_pause() -> bool:
+	return host and is_coop()
+
+
+# --- end strand D1 ---
 func ship_name(id: int = ship) -> String:
 	for s: Dictionary in catalogue.get("ships", []):
 		if int(s.get("id", -2)) == id:
@@ -222,11 +242,21 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 		"claim":
 			_on_claim(p)
 		"pause":
-			paused[int(p["ship"])] = p
+			# --- strand D1 ---
+			if p.get("host", false):
+				host_paused = true
+			else:
+				paused[int(p["ship"])] = p
+			# --- end strand D1 ---
 			changed.emit(&"pause")
 		"resume":
-			paused.clear()
-			votes.clear()
+			# --- strand D1 ---
+			if p.get("host", false):
+				host_paused = false
+			else:
+				paused.clear()
+				votes.clear()
+			# --- end strand D1 ---
 			changed.emit(&"pause")
 		"abandon_votes":
 			votes[int(p["ship"])] = p
