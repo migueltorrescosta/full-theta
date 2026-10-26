@@ -71,7 +71,7 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "focus_1", "group": LIVE, "kind": PRESS, "kbm": ["F1"], "pad": ["View+LB"]},
 	{"id": "focus_2", "group": LIVE, "kind": PRESS, "kbm": ["F2"], "pad": ["View+RB"]},
 	# The Shakedown's Next button (FT-MIS-039, D235): live on every station, ignored outside training.
-	{"id": "training_next", "group": LIVE, "kind": PRESS, "kbm": ["Alt+N"], "pad": ["View+A"]},
+	{"id": "training_next", "group": LIVE, "kind": PRESS, "kbm": ["Alt+N"], "pad": ["View+LT"]},
 	# Helm (§5.1). Translation is live on KB/M only; face and all-stop on both.
 	{
 		"id": "helm_surge",
