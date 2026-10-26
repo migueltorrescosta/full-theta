@@ -1,0 +1,2187 @@
+[gd_resource type="Resource" script_class="TrainingStepsDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/training_steps_def.gd" id="1_steps"]
+[ext_resource type="Script" path="res://content/defs/training_step_def.gd" id="2_step"]
+
+[sub_resource type="Resource" id="Resource_s1"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"face"
+kind = 0
+command = &"helm_input:face"
+line = "shakedown.helm.face"
+example = "train.ex.face"
+
+[sub_resource type="Resource" id="Resource_s2"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"approach"
+kind = 0
+command = &"helm_input:approach"
+line = "shakedown.helm.approach"
+example = "train.ex.approach"
+
+[sub_resource type="Resource" id="Resource_s3"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"all_stop"
+kind = 0
+command = &"helm_all_stop"
+line = "shakedown.helm.all_stop"
+example = "train.ex.all_stop"
+
+[sub_resource type="Resource" id="Resource_s4"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"jump"
+kind = 0
+command = &"helm_jump"
+line = "shakedown.helm.jump"
+example = "train.ex.jump"
+
+[sub_resource type="Resource" id="Resource_s5"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"helm_surge"
+kind = 0
+command = &"helm_input:throttle"
+line = "shakedown.helm.helm_surge"
+example = "train.ex.helm_surge"
+
+[sub_resource type="Resource" id="Resource_s6"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"helm_sway"
+kind = 0
+command = &"helm_input:strafe"
+line = "shakedown.helm.helm_sway"
+example = "train.ex.helm_sway"
+
+[sub_resource type="Resource" id="Resource_s7"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"helm_heave"
+kind = 0
+command = &"helm_input:lift"
+line = "shakedown.helm.helm_heave"
+example = "train.ex.helm_heave"
+
+[sub_resource type="Resource" id="Resource_s8"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"helm_pitch"
+kind = 0
+command = &"helm_input:pitch"
+line = "shakedown.helm.helm_pitch"
+example = "train.ex.helm_pitch"
+
+[sub_resource type="Resource" id="Resource_s9"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"helm_yaw"
+kind = 0
+command = &"helm_input:yaw"
+line = "shakedown.helm.helm_yaw"
+example = "train.ex.helm_yaw"
+
+[sub_resource type="Resource" id="Resource_s10"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"helm_roll"
+kind = 0
+command = &"helm_input:roll"
+line = "shakedown.helm.helm_roll"
+example = "train.ex.helm_roll"
+
+[sub_resource type="Resource" id="Resource_s11"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"decoupled"
+kind = 0
+command = &"helm_decoupled"
+line = "shakedown.helm.decoupled"
+example = "train.ex.decoupled"
+
+[sub_resource type="Resource" id="Resource_s12"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"align"
+kind = 0
+command = &"helm_align"
+line = "shakedown.helm.align"
+example = "train.ex.align"
+
+[sub_resource type="Resource" id="Resource_s13"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"chase_camera"
+kind = 1
+line = "shakedown.helm.chase_camera"
+example = "train.ex.chase_camera"
+
+[sub_resource type="Resource" id="Resource_s14"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"dock"
+kind = 0
+command = &"helm_dock"
+line = "shakedown.helm.dock"
+example = "train.ex.dock"
+
+[sub_resource type="Resource" id="Resource_s15"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"shield_track"
+kind = 0
+command = &"set_shield_focus"
+line = "shakedown.helm.shield_track"
+example = "train.ex.shield_track"
+
+[sub_resource type="Resource" id="Resource_s16"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"helm_radial"
+kind = 1
+line = "shakedown.helm.helm_radial"
+example = "train.ex.helm_radial"
+
+[sub_resource type="Resource" id="Resource_s17"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"helm_pointer"
+kind = 1
+line = "shakedown.helm.helm_pointer"
+example = "train.ex.helm_pointer"
+
+[sub_resource type="Resource" id="Resource_s18"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"shield_fore"
+kind = 0
+command = &"set_shield_focus"
+line = "shakedown.helm.shield_fore"
+example = "train.ex.shield_fore"
+
+[sub_resource type="Resource" id="Resource_s19"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"shield_aft"
+kind = 0
+command = &"set_shield_focus"
+line = "shakedown.helm.shield_aft"
+example = "train.ex.shield_aft"
+
+[sub_resource type="Resource" id="Resource_s20"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"shield_port"
+kind = 0
+command = &"set_shield_focus"
+line = "shakedown.helm.shield_port"
+example = "train.ex.shield_port"
+
+[sub_resource type="Resource" id="Resource_s21"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"shield_starboard"
+kind = 0
+command = &"set_shield_focus"
+line = "shakedown.helm.shield_starboard"
+example = "train.ex.shield_starboard"
+
+[sub_resource type="Resource" id="Resource_s22"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"shield_dorsal"
+kind = 0
+command = &"set_shield_focus"
+line = "shakedown.helm.shield_dorsal"
+example = "train.ex.shield_dorsal"
+
+[sub_resource type="Resource" id="Resource_s23"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"shield_ventral"
+kind = 0
+command = &"set_shield_focus"
+line = "shakedown.helm.shield_ventral"
+example = "train.ex.shield_ventral"
+
+[sub_resource type="Resource" id="Resource_s24"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"select"
+kind = 1
+line = "shakedown.helm.select"
+example = "train.ex.select"
+
+[sub_resource type="Resource" id="Resource_s25"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"cycle_target"
+kind = 1
+line = "shakedown.helm.cycle_target"
+example = "train.ex.cycle_target"
+
+[sub_resource type="Resource" id="Resource_s26"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"select_pinged"
+kind = 1
+line = "shakedown.helm.select_pinged"
+example = "train.ex.select_pinged"
+
+[sub_resource type="Resource" id="Resource_s27"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"mark"
+kind = 1
+line = "shakedown.helm.mark"
+example = "train.ex.mark"
+
+[sub_resource type="Resource" id="Resource_s28"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"accept"
+kind = 1
+line = "shakedown.helm.accept"
+example = "train.ex.accept"
+
+[sub_resource type="Resource" id="Resource_s29"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"decline"
+kind = 1
+line = "shakedown.helm.decline"
+example = "train.ex.decline"
+
+[sub_resource type="Resource" id="Resource_s30"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"request"
+kind = 1
+line = "shakedown.helm.request"
+example = "train.ex.request"
+
+[sub_resource type="Resource" id="Resource_s31"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"share"
+kind = 1
+line = "shakedown.helm.share"
+example = "train.ex.share"
+
+[sub_resource type="Resource" id="Resource_s32"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"radar_strip"
+kind = 1
+line = "shakedown.helm.radar_strip"
+example = "train.ex.radar_strip"
+
+[sub_resource type="Resource" id="Resource_s33"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"claim"
+kind = 1
+line = "shakedown.helm.claim"
+example = "train.ex.claim"
+
+[sub_resource type="Resource" id="Resource_s34"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"overlay"
+kind = 1
+line = "shakedown.helm.overlay"
+example = "train.ex.overlay"
+
+[sub_resource type="Resource" id="Resource_s35"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"menu"
+kind = 1
+line = "shakedown.helm.menu"
+example = "train.ex.menu"
+
+[sub_resource type="Resource" id="Resource_s36"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"ping"
+kind = 1
+line = "shakedown.helm.ping"
+example = "train.ex.ping"
+
+[sub_resource type="Resource" id="Resource_s37"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"alert_cycle"
+kind = 1
+line = "shakedown.helm.alert_cycle"
+example = "train.ex.alert_cycle"
+
+[sub_resource type="Resource" id="Resource_s38"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"alert_red"
+kind = 1
+line = "shakedown.helm.alert_red"
+example = "train.ex.alert_red"
+
+[sub_resource type="Resource" id="Resource_s39"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"alert_yellow"
+kind = 1
+line = "shakedown.helm.alert_yellow"
+example = "train.ex.alert_yellow"
+
+[sub_resource type="Resource" id="Resource_s40"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"alert_normal"
+kind = 1
+line = "shakedown.helm.alert_normal"
+example = "train.ex.alert_normal"
+
+[sub_resource type="Resource" id="Resource_s41"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"focus_1"
+kind = 1
+line = "shakedown.helm.focus_1"
+example = "train.ex.focus_1"
+
+[sub_resource type="Resource" id="Resource_s42"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"focus_2"
+kind = 1
+line = "shakedown.helm.focus_2"
+example = "train.ex.focus_2"
+
+[sub_resource type="Resource" id="Resource_s43"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"aim_x"
+kind = 0
+command = &"aim_mount"
+line = "shakedown.weapons.aim_x"
+example = "train.ex.aim_x"
+
+[sub_resource type="Resource" id="Resource_s44"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"fire"
+kind = 0
+command = &"fire"
+line = "shakedown.weapons.fire"
+example = "train.ex.fire"
+
+[sub_resource type="Resource" id="Resource_s45"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"ammo_next"
+kind = 0
+command = &"set_ammo_type"
+line = "shakedown.weapons.ammo_next"
+example = "train.ex.ammo_next"
+
+[sub_resource type="Resource" id="Resource_s46"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"fire_all"
+kind = 0
+command = &"fire"
+line = "shakedown.weapons.fire_all"
+example = "train.ex.fire_all"
+
+[sub_resource type="Resource" id="Resource_s47"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"aim_y"
+kind = 0
+command = &"aim_mount"
+line = "shakedown.weapons.aim_y"
+example = "train.ex.aim_y"
+
+[sub_resource type="Resource" id="Resource_s48"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"mount_1"
+kind = 1
+line = "shakedown.weapons.mount_1"
+example = "train.ex.mount_1"
+
+[sub_resource type="Resource" id="Resource_s49"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"mount_2"
+kind = 1
+line = "shakedown.weapons.mount_2"
+example = "train.ex.mount_2"
+
+[sub_resource type="Resource" id="Resource_s50"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"mount_3"
+kind = 1
+line = "shakedown.weapons.mount_3"
+example = "train.ex.mount_3"
+
+[sub_resource type="Resource" id="Resource_s51"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"mount_4"
+kind = 1
+line = "shakedown.weapons.mount_4"
+example = "train.ex.mount_4"
+
+[sub_resource type="Resource" id="Resource_s52"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"mount_prev"
+kind = 1
+line = "shakedown.weapons.mount_prev"
+example = "train.ex.mount_prev"
+
+[sub_resource type="Resource" id="Resource_s53"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"mount_next"
+kind = 1
+line = "shakedown.weapons.mount_next"
+example = "train.ex.mount_next"
+
+[sub_resource type="Resource" id="Resource_s54"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"ammo_prev"
+kind = 0
+command = &"set_ammo_type"
+line = "shakedown.weapons.ammo_prev"
+example = "train.ex.ammo_prev"
+
+[sub_resource type="Resource" id="Resource_s55"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"fire_guided"
+kind = 0
+command = &"fire_guided"
+line = "shakedown.weapons.fire_guided"
+example = "train.ex.fire_guided"
+
+[sub_resource type="Resource" id="Resource_s56"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"select"
+kind = 1
+line = "shakedown.weapons.select"
+example = "train.ex.select"
+
+[sub_resource type="Resource" id="Resource_s57"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"cycle_target"
+kind = 1
+line = "shakedown.weapons.cycle_target"
+example = "train.ex.cycle_target"
+
+[sub_resource type="Resource" id="Resource_s58"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"select_pinged"
+kind = 1
+line = "shakedown.weapons.select_pinged"
+example = "train.ex.select_pinged"
+
+[sub_resource type="Resource" id="Resource_s59"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"mark"
+kind = 1
+line = "shakedown.weapons.mark"
+example = "train.ex.mark"
+
+[sub_resource type="Resource" id="Resource_s60"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"accept"
+kind = 1
+line = "shakedown.weapons.accept"
+example = "train.ex.accept"
+
+[sub_resource type="Resource" id="Resource_s61"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"decline"
+kind = 1
+line = "shakedown.weapons.decline"
+example = "train.ex.decline"
+
+[sub_resource type="Resource" id="Resource_s62"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"request"
+kind = 1
+line = "shakedown.weapons.request"
+example = "train.ex.request"
+
+[sub_resource type="Resource" id="Resource_s63"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"share"
+kind = 1
+line = "shakedown.weapons.share"
+example = "train.ex.share"
+
+[sub_resource type="Resource" id="Resource_s64"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"radar_strip"
+kind = 1
+line = "shakedown.weapons.radar_strip"
+example = "train.ex.radar_strip"
+
+[sub_resource type="Resource" id="Resource_s65"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"claim"
+kind = 1
+line = "shakedown.weapons.claim"
+example = "train.ex.claim"
+
+[sub_resource type="Resource" id="Resource_s66"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"overlay"
+kind = 1
+line = "shakedown.weapons.overlay"
+example = "train.ex.overlay"
+
+[sub_resource type="Resource" id="Resource_s67"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"menu"
+kind = 1
+line = "shakedown.weapons.menu"
+example = "train.ex.menu"
+
+[sub_resource type="Resource" id="Resource_s68"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"ping"
+kind = 1
+line = "shakedown.weapons.ping"
+example = "train.ex.ping"
+
+[sub_resource type="Resource" id="Resource_s69"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"alert_cycle"
+kind = 1
+line = "shakedown.weapons.alert_cycle"
+example = "train.ex.alert_cycle"
+
+[sub_resource type="Resource" id="Resource_s70"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"alert_red"
+kind = 1
+line = "shakedown.weapons.alert_red"
+example = "train.ex.alert_red"
+
+[sub_resource type="Resource" id="Resource_s71"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"alert_yellow"
+kind = 1
+line = "shakedown.weapons.alert_yellow"
+example = "train.ex.alert_yellow"
+
+[sub_resource type="Resource" id="Resource_s72"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"alert_normal"
+kind = 1
+line = "shakedown.weapons.alert_normal"
+example = "train.ex.alert_normal"
+
+[sub_resource type="Resource" id="Resource_s73"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"focus_1"
+kind = 1
+line = "shakedown.weapons.focus_1"
+example = "train.ex.focus_1"
+
+[sub_resource type="Resource" id="Resource_s74"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"focus_2"
+kind = 1
+line = "shakedown.weapons.focus_2"
+example = "train.ex.focus_2"
+
+[sub_resource type="Resource" id="Resource_s75"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"pip_add"
+kind = 0
+command = &"set_pips"
+line = "shakedown.engineering.pip_add"
+example = "train.ex.pip_add"
+
+[sub_resource type="Resource" id="Resource_s76"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"dispatch_nearest"
+kind = 1
+line = "shakedown.engineering.dispatch_nearest"
+example = "train.ex.dispatch_nearest"
+
+[sub_resource type="Resource" id="Resource_s77"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"boost"
+kind = 0
+command = &"boost"
+line = "shakedown.engineering.boost"
+example = "train.ex.boost"
+
+[sub_resource type="Resource" id="Resource_s78"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"subsystem_1"
+kind = 1
+line = "shakedown.engineering.subsystem_1"
+example = "train.ex.subsystem_1"
+
+[sub_resource type="Resource" id="Resource_s79"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"subsystem_2"
+kind = 1
+line = "shakedown.engineering.subsystem_2"
+example = "train.ex.subsystem_2"
+
+[sub_resource type="Resource" id="Resource_s80"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"subsystem_3"
+kind = 1
+line = "shakedown.engineering.subsystem_3"
+example = "train.ex.subsystem_3"
+
+[sub_resource type="Resource" id="Resource_s81"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"subsystem_4"
+kind = 1
+line = "shakedown.engineering.subsystem_4"
+example = "train.ex.subsystem_4"
+
+[sub_resource type="Resource" id="Resource_s82"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"subsystem_5"
+kind = 1
+line = "shakedown.engineering.subsystem_5"
+example = "train.ex.subsystem_5"
+
+[sub_resource type="Resource" id="Resource_s83"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"subsystem_6"
+kind = 1
+line = "shakedown.engineering.subsystem_6"
+example = "train.ex.subsystem_6"
+
+[sub_resource type="Resource" id="Resource_s84"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"subsystem_prev"
+kind = 1
+line = "shakedown.engineering.subsystem_prev"
+example = "train.ex.subsystem_prev"
+
+[sub_resource type="Resource" id="Resource_s85"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"subsystem_next"
+kind = 1
+line = "shakedown.engineering.subsystem_next"
+example = "train.ex.subsystem_next"
+
+[sub_resource type="Resource" id="Resource_s86"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"pip_remove"
+kind = 0
+command = &"set_pips"
+line = "shakedown.engineering.pip_remove"
+example = "train.ex.pip_remove"
+
+[sub_resource type="Resource" id="Resource_s87"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"harden"
+kind = 0
+command = &"harden"
+line = "shakedown.engineering.harden"
+example = "train.ex.harden"
+
+[sub_resource type="Resource" id="Resource_s88"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"fabricate_probe"
+kind = 0
+command = &"fabricate_probe"
+line = "shakedown.engineering.fabricate_probe"
+example = "train.ex.fabricate_probe"
+
+[sub_resource type="Resource" id="Resource_s89"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"cause_next"
+kind = 1
+line = "shakedown.engineering.cause_next"
+example = "train.ex.cause_next"
+
+[sub_resource type="Resource" id="Resource_s90"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"shield_tighter"
+kind = 0
+command = &"set_shield"
+line = "shakedown.engineering.shield_tighter"
+example = "train.ex.shield_tighter"
+
+[sub_resource type="Resource" id="Resource_s91"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"shield_wider"
+kind = 0
+command = &"set_shield"
+line = "shakedown.engineering.shield_wider"
+example = "train.ex.shield_wider"
+
+[sub_resource type="Resource" id="Resource_s92"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"eng_cursor_x"
+kind = 1
+line = "shakedown.engineering.eng_cursor_x"
+example = "train.ex.eng_cursor_x"
+
+[sub_resource type="Resource" id="Resource_s93"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"eng_cursor_y"
+kind = 1
+line = "shakedown.engineering.eng_cursor_y"
+example = "train.ex.eng_cursor_y"
+
+[sub_resource type="Resource" id="Resource_s94"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"cutaway_yaw"
+kind = 1
+line = "shakedown.engineering.cutaway_yaw"
+example = "train.ex.cutaway_yaw"
+
+[sub_resource type="Resource" id="Resource_s95"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"cutaway_pitch"
+kind = 1
+line = "shakedown.engineering.cutaway_pitch"
+example = "train.ex.cutaway_pitch"
+
+[sub_resource type="Resource" id="Resource_s96"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"select"
+kind = 1
+line = "shakedown.engineering.select"
+example = "train.ex.select"
+
+[sub_resource type="Resource" id="Resource_s97"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"cycle_target"
+kind = 1
+line = "shakedown.engineering.cycle_target"
+example = "train.ex.cycle_target"
+
+[sub_resource type="Resource" id="Resource_s98"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"select_pinged"
+kind = 1
+line = "shakedown.engineering.select_pinged"
+example = "train.ex.select_pinged"
+
+[sub_resource type="Resource" id="Resource_s99"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"mark"
+kind = 1
+line = "shakedown.engineering.mark"
+example = "train.ex.mark"
+
+[sub_resource type="Resource" id="Resource_s100"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"accept"
+kind = 1
+line = "shakedown.engineering.accept"
+example = "train.ex.accept"
+
+[sub_resource type="Resource" id="Resource_s101"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"decline"
+kind = 1
+line = "shakedown.engineering.decline"
+example = "train.ex.decline"
+
+[sub_resource type="Resource" id="Resource_s102"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"request"
+kind = 1
+line = "shakedown.engineering.request"
+example = "train.ex.request"
+
+[sub_resource type="Resource" id="Resource_s103"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"share"
+kind = 1
+line = "shakedown.engineering.share"
+example = "train.ex.share"
+
+[sub_resource type="Resource" id="Resource_s104"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"radar_strip"
+kind = 1
+line = "shakedown.engineering.radar_strip"
+example = "train.ex.radar_strip"
+
+[sub_resource type="Resource" id="Resource_s105"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"claim"
+kind = 1
+line = "shakedown.engineering.claim"
+example = "train.ex.claim"
+
+[sub_resource type="Resource" id="Resource_s106"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"overlay"
+kind = 1
+line = "shakedown.engineering.overlay"
+example = "train.ex.overlay"
+
+[sub_resource type="Resource" id="Resource_s107"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"menu"
+kind = 1
+line = "shakedown.engineering.menu"
+example = "train.ex.menu"
+
+[sub_resource type="Resource" id="Resource_s108"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"ping"
+kind = 1
+line = "shakedown.engineering.ping"
+example = "train.ex.ping"
+
+[sub_resource type="Resource" id="Resource_s109"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"alert_cycle"
+kind = 1
+line = "shakedown.engineering.alert_cycle"
+example = "train.ex.alert_cycle"
+
+[sub_resource type="Resource" id="Resource_s110"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"alert_red"
+kind = 1
+line = "shakedown.engineering.alert_red"
+example = "train.ex.alert_red"
+
+[sub_resource type="Resource" id="Resource_s111"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"alert_yellow"
+kind = 1
+line = "shakedown.engineering.alert_yellow"
+example = "train.ex.alert_yellow"
+
+[sub_resource type="Resource" id="Resource_s112"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"alert_normal"
+kind = 1
+line = "shakedown.engineering.alert_normal"
+example = "train.ex.alert_normal"
+
+[sub_resource type="Resource" id="Resource_s113"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"focus_1"
+kind = 1
+line = "shakedown.engineering.focus_1"
+example = "train.ex.focus_1"
+
+[sub_resource type="Resource" id="Resource_s114"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"focus_2"
+kind = 1
+line = "shakedown.engineering.focus_2"
+example = "train.ex.focus_2"
+
+[sub_resource type="Resource" id="Resource_s115"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_scan"
+kind = 0
+command = &"science_scan"
+line = "shakedown.science.sci_scan"
+example = "train.ex.sci_scan"
+
+[sub_resource type="Resource" id="Resource_s116"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_hack"
+kind = 0
+command = &"science_hack"
+line = "shakedown.science.sci_hack"
+example = "train.ex.sci_hack"
+
+[sub_resource type="Resource" id="Resource_s117"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_ping"
+kind = 0
+command = &"science_ping"
+line = "shakedown.science.sci_ping"
+example = "train.ex.sci_ping"
+
+[sub_resource type="Resource" id="Resource_s118"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_scan_mark"
+kind = 0
+command = &"science_scan_mark"
+line = "shakedown.science.sci_scan_mark"
+example = "train.ex.sci_scan_mark"
+
+[sub_resource type="Resource" id="Resource_s119"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_mode"
+kind = 0
+command = &"science_sensor_mode"
+line = "shakedown.science.sci_mode"
+example = "train.ex.sci_mode"
+
+[sub_resource type="Resource" id="Resource_s120"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_self_scan"
+kind = 0
+command = &"science_self_scan"
+line = "shakedown.science.sci_self_scan"
+example = "train.ex.sci_self_scan"
+
+[sub_resource type="Resource" id="Resource_s121"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_sub_prev"
+kind = 1
+line = "shakedown.science.sci_sub_prev"
+example = "train.ex.sci_sub_prev"
+
+[sub_resource type="Resource" id="Resource_s122"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_sub_next"
+kind = 1
+line = "shakedown.science.sci_sub_next"
+example = "train.ex.sci_sub_next"
+
+[sub_resource type="Resource" id="Resource_s123"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_up"
+kind = 1
+line = "shakedown.science.sci_up"
+example = "train.ex.sci_up"
+
+[sub_resource type="Resource" id="Resource_s124"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_down"
+kind = 1
+line = "shakedown.science.sci_down"
+example = "train.ex.sci_down"
+
+[sub_resource type="Resource" id="Resource_s125"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_left"
+kind = 1
+line = "shakedown.science.sci_left"
+example = "train.ex.sci_left"
+
+[sub_resource type="Resource" id="Resource_s126"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_right"
+kind = 1
+line = "shakedown.science.sci_right"
+example = "train.ex.sci_right"
+
+[sub_resource type="Resource" id="Resource_s127"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_dial_1"
+kind = 1
+line = "shakedown.science.sci_dial_1"
+example = "train.ex.sci_dial_1"
+
+[sub_resource type="Resource" id="Resource_s128"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_dial_2"
+kind = 1
+line = "shakedown.science.sci_dial_2"
+example = "train.ex.sci_dial_2"
+
+[sub_resource type="Resource" id="Resource_s129"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_dial_3"
+kind = 1
+line = "shakedown.science.sci_dial_3"
+example = "train.ex.sci_dial_3"
+
+[sub_resource type="Resource" id="Resource_s130"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"sci_orbit_y"
+kind = 1
+line = "shakedown.science.sci_orbit_y"
+example = "train.ex.sci_orbit_y"
+
+[sub_resource type="Resource" id="Resource_s131"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"select"
+kind = 1
+line = "shakedown.science.select"
+example = "train.ex.select"
+
+[sub_resource type="Resource" id="Resource_s132"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"cycle_target"
+kind = 1
+line = "shakedown.science.cycle_target"
+example = "train.ex.cycle_target"
+
+[sub_resource type="Resource" id="Resource_s133"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"select_pinged"
+kind = 1
+line = "shakedown.science.select_pinged"
+example = "train.ex.select_pinged"
+
+[sub_resource type="Resource" id="Resource_s134"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"mark"
+kind = 1
+line = "shakedown.science.mark"
+example = "train.ex.mark"
+
+[sub_resource type="Resource" id="Resource_s135"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"accept"
+kind = 1
+line = "shakedown.science.accept"
+example = "train.ex.accept"
+
+[sub_resource type="Resource" id="Resource_s136"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"decline"
+kind = 1
+line = "shakedown.science.decline"
+example = "train.ex.decline"
+
+[sub_resource type="Resource" id="Resource_s137"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"request"
+kind = 1
+line = "shakedown.science.request"
+example = "train.ex.request"
+
+[sub_resource type="Resource" id="Resource_s138"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"share"
+kind = 1
+line = "shakedown.science.share"
+example = "train.ex.share"
+
+[sub_resource type="Resource" id="Resource_s139"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"radar_strip"
+kind = 1
+line = "shakedown.science.radar_strip"
+example = "train.ex.radar_strip"
+
+[sub_resource type="Resource" id="Resource_s140"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"claim"
+kind = 1
+line = "shakedown.science.claim"
+example = "train.ex.claim"
+
+[sub_resource type="Resource" id="Resource_s141"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"overlay"
+kind = 1
+line = "shakedown.science.overlay"
+example = "train.ex.overlay"
+
+[sub_resource type="Resource" id="Resource_s142"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"menu"
+kind = 1
+line = "shakedown.science.menu"
+example = "train.ex.menu"
+
+[sub_resource type="Resource" id="Resource_s143"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"ping"
+kind = 1
+line = "shakedown.science.ping"
+example = "train.ex.ping"
+
+[sub_resource type="Resource" id="Resource_s144"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"alert_cycle"
+kind = 1
+line = "shakedown.science.alert_cycle"
+example = "train.ex.alert_cycle"
+
+[sub_resource type="Resource" id="Resource_s145"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"alert_red"
+kind = 1
+line = "shakedown.science.alert_red"
+example = "train.ex.alert_red"
+
+[sub_resource type="Resource" id="Resource_s146"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"alert_yellow"
+kind = 1
+line = "shakedown.science.alert_yellow"
+example = "train.ex.alert_yellow"
+
+[sub_resource type="Resource" id="Resource_s147"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"alert_normal"
+kind = 1
+line = "shakedown.science.alert_normal"
+example = "train.ex.alert_normal"
+
+[sub_resource type="Resource" id="Resource_s148"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"focus_1"
+kind = 1
+line = "shakedown.science.focus_1"
+example = "train.ex.focus_1"
+
+[sub_resource type="Resource" id="Resource_s149"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"focus_2"
+kind = 1
+line = "shakedown.science.focus_2"
+example = "train.ex.focus_2"
+
+[sub_resource type="Resource" id="Resource_s150"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"mark"
+kind = 1
+line = "shakedown.relay.mark"
+example = "train.ex.mark"
+
+[sub_resource type="Resource" id="Resource_s151"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"probe_launch"
+kind = 0
+command = &"launch_probe"
+line = "shakedown.relay.probe_launch"
+example = "train.ex.probe_launch"
+
+[sub_resource type="Resource" id="Resource_s152"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"route"
+kind = 1
+line = "shakedown.relay.route"
+example = "train.ex.route"
+
+[sub_resource type="Resource" id="Resource_s153"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"route_clear"
+kind = 1
+line = "shakedown.relay.route_clear"
+example = "train.ex.route_clear"
+
+[sub_resource type="Resource" id="Resource_s154"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"flag_lanes"
+kind = 0
+command = &"flag_lanes"
+line = "shakedown.relay.flag_lanes"
+example = "train.ex.flag_lanes"
+
+[sub_resource type="Resource" id="Resource_s155"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"hazard_add"
+kind = 1
+line = "shakedown.relay.hazard_add"
+example = "train.ex.hazard_add"
+
+[sub_resource type="Resource" id="Resource_s156"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"mark_delete"
+kind = 1
+line = "shakedown.relay.mark_delete"
+example = "train.ex.mark_delete"
+
+[sub_resource type="Resource" id="Resource_s157"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"mark_rename"
+kind = 1
+line = "shakedown.relay.mark_rename"
+example = "train.ex.mark_rename"
+
+[sub_resource type="Resource" id="Resource_s158"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"mark_attach"
+kind = 1
+line = "shakedown.relay.mark_attach"
+example = "train.ex.mark_attach"
+
+[sub_resource type="Resource" id="Resource_s159"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"map_centre"
+kind = 1
+line = "shakedown.relay.map_centre"
+example = "train.ex.map_centre"
+
+[sub_resource type="Resource" id="Resource_s160"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"mark_send"
+kind = 1
+line = "shakedown.relay.mark_send"
+example = "train.ex.mark_send"
+
+[sub_resource type="Resource" id="Resource_s161"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"relay_radial"
+kind = 1
+line = "shakedown.relay.relay_radial"
+example = "train.ex.relay_radial"
+
+[sub_resource type="Resource" id="Resource_s162"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"relay_cursor_x"
+kind = 1
+line = "shakedown.relay.relay_cursor_x"
+example = "train.ex.relay_cursor_x"
+
+[sub_resource type="Resource" id="Resource_s163"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"relay_cursor_y"
+kind = 1
+line = "shakedown.relay.relay_cursor_y"
+example = "train.ex.relay_cursor_y"
+
+[sub_resource type="Resource" id="Resource_s164"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"relay_depth"
+kind = 1
+line = "shakedown.relay.relay_depth"
+example = "train.ex.relay_depth"
+
+[sub_resource type="Resource" id="Resource_s165"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"relay_rotate_x"
+kind = 1
+line = "shakedown.relay.relay_rotate_x"
+example = "train.ex.relay_rotate_x"
+
+[sub_resource type="Resource" id="Resource_s166"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"relay_rotate_y"
+kind = 1
+line = "shakedown.relay.relay_rotate_y"
+example = "train.ex.relay_rotate_y"
+
+[sub_resource type="Resource" id="Resource_s167"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"main_view_1"
+kind = 1
+line = "shakedown.relay.main_view_1"
+example = "train.ex.main_view_1"
+
+[sub_resource type="Resource" id="Resource_s168"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"main_view_2"
+kind = 1
+line = "shakedown.relay.main_view_2"
+example = "train.ex.main_view_2"
+
+[sub_resource type="Resource" id="Resource_s169"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"main_view_3"
+kind = 1
+line = "shakedown.relay.main_view_3"
+example = "train.ex.main_view_3"
+
+[sub_resource type="Resource" id="Resource_s170"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"main_view_4"
+kind = 1
+line = "shakedown.relay.main_view_4"
+example = "train.ex.main_view_4"
+
+[sub_resource type="Resource" id="Resource_s171"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"main_view_5"
+kind = 1
+line = "shakedown.relay.main_view_5"
+example = "train.ex.main_view_5"
+
+[sub_resource type="Resource" id="Resource_s172"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"select"
+kind = 1
+line = "shakedown.relay.select"
+example = "train.ex.select"
+
+[sub_resource type="Resource" id="Resource_s173"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"cycle_target"
+kind = 1
+line = "shakedown.relay.cycle_target"
+example = "train.ex.cycle_target"
+
+[sub_resource type="Resource" id="Resource_s174"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"select_pinged"
+kind = 1
+line = "shakedown.relay.select_pinged"
+example = "train.ex.select_pinged"
+
+[sub_resource type="Resource" id="Resource_s175"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"accept"
+kind = 1
+line = "shakedown.relay.accept"
+example = "train.ex.accept"
+
+[sub_resource type="Resource" id="Resource_s176"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"decline"
+kind = 1
+line = "shakedown.relay.decline"
+example = "train.ex.decline"
+
+[sub_resource type="Resource" id="Resource_s177"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"request"
+kind = 1
+line = "shakedown.relay.request"
+example = "train.ex.request"
+
+[sub_resource type="Resource" id="Resource_s178"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"share"
+kind = 1
+line = "shakedown.relay.share"
+example = "train.ex.share"
+
+[sub_resource type="Resource" id="Resource_s179"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"radar_strip"
+kind = 1
+line = "shakedown.relay.radar_strip"
+example = "train.ex.radar_strip"
+
+[sub_resource type="Resource" id="Resource_s180"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"claim"
+kind = 1
+line = "shakedown.relay.claim"
+example = "train.ex.claim"
+
+[sub_resource type="Resource" id="Resource_s181"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"overlay"
+kind = 1
+line = "shakedown.relay.overlay"
+example = "train.ex.overlay"
+
+[sub_resource type="Resource" id="Resource_s182"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"menu"
+kind = 1
+line = "shakedown.relay.menu"
+example = "train.ex.menu"
+
+[sub_resource type="Resource" id="Resource_s183"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"ping"
+kind = 1
+line = "shakedown.relay.ping"
+example = "train.ex.ping"
+
+[sub_resource type="Resource" id="Resource_s184"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"alert_cycle"
+kind = 1
+line = "shakedown.relay.alert_cycle"
+example = "train.ex.alert_cycle"
+
+[sub_resource type="Resource" id="Resource_s185"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"alert_red"
+kind = 1
+line = "shakedown.relay.alert_red"
+example = "train.ex.alert_red"
+
+[sub_resource type="Resource" id="Resource_s186"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"alert_yellow"
+kind = 1
+line = "shakedown.relay.alert_yellow"
+example = "train.ex.alert_yellow"
+
+[sub_resource type="Resource" id="Resource_s187"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"alert_normal"
+kind = 1
+line = "shakedown.relay.alert_normal"
+example = "train.ex.alert_normal"
+
+[sub_resource type="Resource" id="Resource_s188"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"focus_1"
+kind = 1
+line = "shakedown.relay.focus_1"
+example = "train.ex.focus_1"
+
+[sub_resource type="Resource" id="Resource_s189"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"focus_2"
+kind = 1
+line = "shakedown.relay.focus_2"
+example = "train.ex.focus_2"
+
+[sub_resource type="Resource" id="Resource_s190"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_open"
+kind = 1
+line = "shakedown.comms.comms_open"
+example = "train.ex.comms_open"
+
+[sub_resource type="Resource" id="Resource_s191"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_reply_1"
+kind = 1
+line = "shakedown.comms.comms_reply_1"
+example = "train.ex.comms_reply_1"
+
+[sub_resource type="Resource" id="Resource_s192"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"accept"
+kind = 1
+line = "shakedown.comms.accept"
+example = "train.ex.accept"
+
+[sub_resource type="Resource" id="Resource_s193"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_buy"
+kind = 1
+line = "shakedown.comms.comms_buy"
+example = "train.ex.comms_buy"
+
+[sub_resource type="Resource" id="Resource_s194"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_close"
+kind = 1
+line = "shakedown.comms.comms_close"
+example = "train.ex.comms_close"
+
+[sub_resource type="Resource" id="Resource_s195"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_up"
+kind = 1
+line = "shakedown.comms.comms_up"
+example = "train.ex.comms_up"
+
+[sub_resource type="Resource" id="Resource_s196"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_down"
+kind = 1
+line = "shakedown.comms.comms_down"
+example = "train.ex.comms_down"
+
+[sub_resource type="Resource" id="Resource_s197"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_left"
+kind = 1
+line = "shakedown.comms.comms_left"
+example = "train.ex.comms_left"
+
+[sub_resource type="Resource" id="Resource_s198"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_right"
+kind = 1
+line = "shakedown.comms.comms_right"
+example = "train.ex.comms_right"
+
+[sub_resource type="Resource" id="Resource_s199"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_next_column"
+kind = 1
+line = "shakedown.comms.comms_next_column"
+example = "train.ex.comms_next_column"
+
+[sub_resource type="Resource" id="Resource_s200"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_hail"
+kind = 0
+command = &"comms_hail"
+line = "shakedown.comms.comms_hail"
+example = "train.ex.comms_hail"
+
+[sub_resource type="Resource" id="Resource_s201"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_reply_2"
+kind = 1
+line = "shakedown.comms.comms_reply_2"
+example = "train.ex.comms_reply_2"
+
+[sub_resource type="Resource" id="Resource_s202"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_reply_3"
+kind = 1
+line = "shakedown.comms.comms_reply_3"
+example = "train.ex.comms_reply_3"
+
+[sub_resource type="Resource" id="Resource_s203"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_reply_4"
+kind = 1
+line = "shakedown.comms.comms_reply_4"
+example = "train.ex.comms_reply_4"
+
+[sub_resource type="Resource" id="Resource_s204"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_sell"
+kind = 1
+line = "shakedown.comms.comms_sell"
+example = "train.ex.comms_sell"
+
+[sub_resource type="Resource" id="Resource_s205"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_stick_x"
+kind = 1
+line = "shakedown.comms.comms_stick_x"
+example = "train.ex.comms_stick_x"
+
+[sub_resource type="Resource" id="Resource_s206"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"comms_stick_y"
+kind = 1
+line = "shakedown.comms.comms_stick_y"
+example = "train.ex.comms_stick_y"
+
+[sub_resource type="Resource" id="Resource_s207"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"select"
+kind = 1
+line = "shakedown.comms.select"
+example = "train.ex.select"
+
+[sub_resource type="Resource" id="Resource_s208"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"cycle_target"
+kind = 1
+line = "shakedown.comms.cycle_target"
+example = "train.ex.cycle_target"
+
+[sub_resource type="Resource" id="Resource_s209"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"select_pinged"
+kind = 1
+line = "shakedown.comms.select_pinged"
+example = "train.ex.select_pinged"
+
+[sub_resource type="Resource" id="Resource_s210"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"mark"
+kind = 1
+line = "shakedown.comms.mark"
+example = "train.ex.mark"
+
+[sub_resource type="Resource" id="Resource_s211"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"decline"
+kind = 1
+line = "shakedown.comms.decline"
+example = "train.ex.decline"
+
+[sub_resource type="Resource" id="Resource_s212"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"request"
+kind = 1
+line = "shakedown.comms.request"
+example = "train.ex.request"
+
+[sub_resource type="Resource" id="Resource_s213"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"share"
+kind = 1
+line = "shakedown.comms.share"
+example = "train.ex.share"
+
+[sub_resource type="Resource" id="Resource_s214"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"radar_strip"
+kind = 1
+line = "shakedown.comms.radar_strip"
+example = "train.ex.radar_strip"
+
+[sub_resource type="Resource" id="Resource_s215"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"claim"
+kind = 1
+line = "shakedown.comms.claim"
+example = "train.ex.claim"
+
+[sub_resource type="Resource" id="Resource_s216"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"overlay"
+kind = 1
+line = "shakedown.comms.overlay"
+example = "train.ex.overlay"
+
+[sub_resource type="Resource" id="Resource_s217"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"menu"
+kind = 1
+line = "shakedown.comms.menu"
+example = "train.ex.menu"
+
+[sub_resource type="Resource" id="Resource_s218"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"ping"
+kind = 1
+line = "shakedown.comms.ping"
+example = "train.ex.ping"
+
+[sub_resource type="Resource" id="Resource_s219"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"alert_cycle"
+kind = 1
+line = "shakedown.comms.alert_cycle"
+example = "train.ex.alert_cycle"
+
+[sub_resource type="Resource" id="Resource_s220"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"alert_red"
+kind = 1
+line = "shakedown.comms.alert_red"
+example = "train.ex.alert_red"
+
+[sub_resource type="Resource" id="Resource_s221"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"alert_yellow"
+kind = 1
+line = "shakedown.comms.alert_yellow"
+example = "train.ex.alert_yellow"
+
+[sub_resource type="Resource" id="Resource_s222"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"alert_normal"
+kind = 1
+line = "shakedown.comms.alert_normal"
+example = "train.ex.alert_normal"
+
+[sub_resource type="Resource" id="Resource_s223"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"focus_1"
+kind = 1
+line = "shakedown.comms.focus_1"
+example = "train.ex.focus_1"
+
+[sub_resource type="Resource" id="Resource_s224"]
+script = ExtResource("2_step")
+station = &"comms"
+intent = &"focus_2"
+kind = 1
+line = "shakedown.comms.focus_2"
+example = "train.ex.focus_2"
+
+[sub_resource type="Resource" id="Resource_s225"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"captain_view_1"
+kind = 1
+line = "shakedown.captain.captain_view_1"
+example = "train.ex.captain_view_1"
+
+[sub_resource type="Resource" id="Resource_s226"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"captain_view_2"
+kind = 1
+line = "shakedown.captain.captain_view_2"
+example = "train.ex.captain_view_2"
+
+[sub_resource type="Resource" id="Resource_s227"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"captain_view_3"
+kind = 1
+line = "shakedown.captain.captain_view_3"
+example = "train.ex.captain_view_3"
+
+[sub_resource type="Resource" id="Resource_s228"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"captain_view_4"
+kind = 1
+line = "shakedown.captain.captain_view_4"
+example = "train.ex.captain_view_4"
+
+[sub_resource type="Resource" id="Resource_s229"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"captain_view_5"
+kind = 1
+line = "shakedown.captain.captain_view_5"
+example = "train.ex.captain_view_5"
+
+[sub_resource type="Resource" id="Resource_s230"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"captain_view_next"
+kind = 1
+line = "shakedown.captain.captain_view_next"
+example = "train.ex.captain_view_next"
+
+[sub_resource type="Resource" id="Resource_s231"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"captain_view_prev"
+kind = 1
+line = "shakedown.captain.captain_view_prev"
+example = "train.ex.captain_view_prev"
+
+[sub_resource type="Resource" id="Resource_s232"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"select"
+kind = 1
+line = "shakedown.captain.select"
+example = "train.ex.select"
+
+[sub_resource type="Resource" id="Resource_s233"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"cycle_target"
+kind = 1
+line = "shakedown.captain.cycle_target"
+example = "train.ex.cycle_target"
+
+[sub_resource type="Resource" id="Resource_s234"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"select_pinged"
+kind = 1
+line = "shakedown.captain.select_pinged"
+example = "train.ex.select_pinged"
+
+[sub_resource type="Resource" id="Resource_s235"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"mark"
+kind = 1
+line = "shakedown.captain.mark"
+example = "train.ex.mark"
+
+[sub_resource type="Resource" id="Resource_s236"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"accept"
+kind = 1
+line = "shakedown.captain.accept"
+example = "train.ex.accept"
+
+[sub_resource type="Resource" id="Resource_s237"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"decline"
+kind = 1
+line = "shakedown.captain.decline"
+example = "train.ex.decline"
+
+[sub_resource type="Resource" id="Resource_s238"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"request"
+kind = 1
+line = "shakedown.captain.request"
+example = "train.ex.request"
+
+[sub_resource type="Resource" id="Resource_s239"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"share"
+kind = 1
+line = "shakedown.captain.share"
+example = "train.ex.share"
+
+[sub_resource type="Resource" id="Resource_s240"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"radar_strip"
+kind = 1
+line = "shakedown.captain.radar_strip"
+example = "train.ex.radar_strip"
+
+[sub_resource type="Resource" id="Resource_s241"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"claim"
+kind = 1
+line = "shakedown.captain.claim"
+example = "train.ex.claim"
+
+[sub_resource type="Resource" id="Resource_s242"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"overlay"
+kind = 1
+line = "shakedown.captain.overlay"
+example = "train.ex.overlay"
+
+[sub_resource type="Resource" id="Resource_s243"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"menu"
+kind = 1
+line = "shakedown.captain.menu"
+example = "train.ex.menu"
+
+[sub_resource type="Resource" id="Resource_s244"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"ping"
+kind = 1
+line = "shakedown.captain.ping"
+example = "train.ex.ping"
+
+[sub_resource type="Resource" id="Resource_s245"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"alert_cycle"
+kind = 1
+line = "shakedown.captain.alert_cycle"
+example = "train.ex.alert_cycle"
+
+[sub_resource type="Resource" id="Resource_s246"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"alert_red"
+kind = 1
+line = "shakedown.captain.alert_red"
+example = "train.ex.alert_red"
+
+[sub_resource type="Resource" id="Resource_s247"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"alert_yellow"
+kind = 1
+line = "shakedown.captain.alert_yellow"
+example = "train.ex.alert_yellow"
+
+[sub_resource type="Resource" id="Resource_s248"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"alert_normal"
+kind = 1
+line = "shakedown.captain.alert_normal"
+example = "train.ex.alert_normal"
+
+[sub_resource type="Resource" id="Resource_s249"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"focus_1"
+kind = 1
+line = "shakedown.captain.focus_1"
+example = "train.ex.focus_1"
+
+[sub_resource type="Resource" id="Resource_s250"]
+script = ExtResource("2_step")
+station = &"captain"
+intent = &"focus_2"
+kind = 1
+line = "shakedown.captain.focus_2"
+example = "train.ex.focus_2"
+
+[sub_resource type="Resource" id="Resource_s251"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"pair_p1"
+partner = &"helm"
+kind = 1
+line = "shakedown.pair_p1"
+example = "train.ex.pair_p1"
+
+[sub_resource type="Resource" id="Resource_s252"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"pair_p2"
+partner = &"weapons"
+kind = 1
+line = "shakedown.pair_p2"
+example = "train.ex.pair_p2"
+
+[sub_resource type="Resource" id="Resource_s253"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"pair_p3"
+partner = &"science"
+kind = 1
+line = "shakedown.pair_p3"
+example = "train.ex.pair_p3"
+
+[sub_resource type="Resource" id="Resource_s254"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"pair_p4"
+partner = &"relay"
+kind = 1
+line = "shakedown.pair_p4"
+example = "train.ex.pair_p4"
+
+[sub_resource type="Resource" id="Resource_s255"]
+script = ExtResource("2_step")
+station = &"helm"
+intent = &"pair_p5"
+partner = &"comms"
+kind = 1
+line = "shakedown.pair_p5"
+example = "train.ex.pair_p5"
+
+[sub_resource type="Resource" id="Resource_s256"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"pair_p6"
+partner = &"engineering"
+kind = 1
+line = "shakedown.pair_p6"
+example = "train.ex.pair_p6"
+
+[sub_resource type="Resource" id="Resource_s257"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"pair_p7"
+partner = &"science"
+kind = 1
+line = "shakedown.pair_p7"
+example = "train.ex.pair_p7"
+
+[sub_resource type="Resource" id="Resource_s258"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"pair_p8"
+partner = &"relay"
+kind = 1
+line = "shakedown.pair_p8"
+example = "train.ex.pair_p8"
+
+[sub_resource type="Resource" id="Resource_s259"]
+script = ExtResource("2_step")
+station = &"weapons"
+intent = &"pair_p9"
+partner = &"comms"
+kind = 1
+line = "shakedown.pair_p9"
+example = "train.ex.pair_p9"
+
+[sub_resource type="Resource" id="Resource_s260"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"pair_p10"
+partner = &"science"
+kind = 1
+line = "shakedown.pair_p10"
+example = "train.ex.pair_p10"
+
+[sub_resource type="Resource" id="Resource_s261"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"pair_p11"
+partner = &"relay"
+kind = 1
+line = "shakedown.pair_p11"
+example = "train.ex.pair_p11"
+
+[sub_resource type="Resource" id="Resource_s262"]
+script = ExtResource("2_step")
+station = &"engineering"
+intent = &"pair_p12"
+partner = &"comms"
+kind = 1
+line = "shakedown.pair_p12"
+example = "train.ex.pair_p12"
+
+[sub_resource type="Resource" id="Resource_s263"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"pair_p13"
+partner = &"relay"
+kind = 1
+line = "shakedown.pair_p13"
+example = "train.ex.pair_p13"
+
+[sub_resource type="Resource" id="Resource_s264"]
+script = ExtResource("2_step")
+station = &"science"
+intent = &"pair_p14"
+partner = &"comms"
+kind = 1
+line = "shakedown.pair_p14"
+example = "train.ex.pair_p14"
+
+[sub_resource type="Resource" id="Resource_s265"]
+script = ExtResource("2_step")
+station = &"relay"
+intent = &"pair_p15"
+partner = &"comms"
+kind = 1
+line = "shakedown.pair_p15"
+example = "train.ex.pair_p15"
+
+[resource]
+script = ExtResource("1_steps")
+id = &"shakedown"
+steps = Array[ExtResource("2_step")]([SubResource("Resource_s1"), SubResource("Resource_s2"), SubResource("Resource_s3"), SubResource("Resource_s4"), SubResource("Resource_s5"), SubResource("Resource_s6"), SubResource("Resource_s7"), SubResource("Resource_s8"), SubResource("Resource_s9"), SubResource("Resource_s10"), SubResource("Resource_s11"), SubResource("Resource_s12"), SubResource("Resource_s13"), SubResource("Resource_s14"), SubResource("Resource_s15"), SubResource("Resource_s16"), SubResource("Resource_s17"), SubResource("Resource_s18"), SubResource("Resource_s19"), SubResource("Resource_s20"), SubResource("Resource_s21"), SubResource("Resource_s22"), SubResource("Resource_s23"), SubResource("Resource_s24"), SubResource("Resource_s25"), SubResource("Resource_s26"), SubResource("Resource_s27"), SubResource("Resource_s28"), SubResource("Resource_s29"), SubResource("Resource_s30"), SubResource("Resource_s31"), SubResource("Resource_s32"), SubResource("Resource_s33"), SubResource("Resource_s34"), SubResource("Resource_s35"), SubResource("Resource_s36"), SubResource("Resource_s37"), SubResource("Resource_s38"), SubResource("Resource_s39"), SubResource("Resource_s40"), SubResource("Resource_s41"), SubResource("Resource_s42"), SubResource("Resource_s43"), SubResource("Resource_s44"), SubResource("Resource_s45"), SubResource("Resource_s46"), SubResource("Resource_s47"), SubResource("Resource_s48"), SubResource("Resource_s49"), SubResource("Resource_s50"), SubResource("Resource_s51"), SubResource("Resource_s52"), SubResource("Resource_s53"), SubResource("Resource_s54"), SubResource("Resource_s55"), SubResource("Resource_s56"), SubResource("Resource_s57"), SubResource("Resource_s58"), SubResource("Resource_s59"), SubResource("Resource_s60"), SubResource("Resource_s61"), SubResource("Resource_s62"), SubResource("Resource_s63"), SubResource("Resource_s64"), SubResource("Resource_s65"), SubResource("Resource_s66"), SubResource("Resource_s67"), SubResource("Resource_s68"), SubResource("Resource_s69"), SubResource("Resource_s70"), SubResource("Resource_s71"), SubResource("Resource_s72"), SubResource("Resource_s73"), SubResource("Resource_s74"), SubResource("Resource_s75"), SubResource("Resource_s76"), SubResource("Resource_s77"), SubResource("Resource_s78"), SubResource("Resource_s79"), SubResource("Resource_s80"), SubResource("Resource_s81"), SubResource("Resource_s82"), SubResource("Resource_s83"), SubResource("Resource_s84"), SubResource("Resource_s85"), SubResource("Resource_s86"), SubResource("Resource_s87"), SubResource("Resource_s88"), SubResource("Resource_s89"), SubResource("Resource_s90"), SubResource("Resource_s91"), SubResource("Resource_s92"), SubResource("Resource_s93"), SubResource("Resource_s94"), SubResource("Resource_s95"), SubResource("Resource_s96"), SubResource("Resource_s97"), SubResource("Resource_s98"), SubResource("Resource_s99"), SubResource("Resource_s100"), SubResource("Resource_s101"), SubResource("Resource_s102"), SubResource("Resource_s103"), SubResource("Resource_s104"), SubResource("Resource_s105"), SubResource("Resource_s106"), SubResource("Resource_s107"), SubResource("Resource_s108"), SubResource("Resource_s109"), SubResource("Resource_s110"), SubResource("Resource_s111"), SubResource("Resource_s112"), SubResource("Resource_s113"), SubResource("Resource_s114"), SubResource("Resource_s115"), SubResource("Resource_s116"), SubResource("Resource_s117"), SubResource("Resource_s118"), SubResource("Resource_s119"), SubResource("Resource_s120"), SubResource("Resource_s121"), SubResource("Resource_s122"), SubResource("Resource_s123"), SubResource("Resource_s124"), SubResource("Resource_s125"), SubResource("Resource_s126"), SubResource("Resource_s127"), SubResource("Resource_s128"), SubResource("Resource_s129"), SubResource("Resource_s130"), SubResource("Resource_s131"), SubResource("Resource_s132"), SubResource("Resource_s133"), SubResource("Resource_s134"), SubResource("Resource_s135"), SubResource("Resource_s136"), SubResource("Resource_s137"), SubResource("Resource_s138"), SubResource("Resource_s139"), SubResource("Resource_s140"), SubResource("Resource_s141"), SubResource("Resource_s142"), SubResource("Resource_s143"), SubResource("Resource_s144"), SubResource("Resource_s145"), SubResource("Resource_s146"), SubResource("Resource_s147"), SubResource("Resource_s148"), SubResource("Resource_s149"), SubResource("Resource_s150"), SubResource("Resource_s151"), SubResource("Resource_s152"), SubResource("Resource_s153"), SubResource("Resource_s154"), SubResource("Resource_s155"), SubResource("Resource_s156"), SubResource("Resource_s157"), SubResource("Resource_s158"), SubResource("Resource_s159"), SubResource("Resource_s160"), SubResource("Resource_s161"), SubResource("Resource_s162"), SubResource("Resource_s163"), SubResource("Resource_s164"), SubResource("Resource_s165"), SubResource("Resource_s166"), SubResource("Resource_s167"), SubResource("Resource_s168"), SubResource("Resource_s169"), SubResource("Resource_s170"), SubResource("Resource_s171"), SubResource("Resource_s172"), SubResource("Resource_s173"), SubResource("Resource_s174"), SubResource("Resource_s175"), SubResource("Resource_s176"), SubResource("Resource_s177"), SubResource("Resource_s178"), SubResource("Resource_s179"), SubResource("Resource_s180"), SubResource("Resource_s181"), SubResource("Resource_s182"), SubResource("Resource_s183"), SubResource("Resource_s184"), SubResource("Resource_s185"), SubResource("Resource_s186"), SubResource("Resource_s187"), SubResource("Resource_s188"), SubResource("Resource_s189"), SubResource("Resource_s190"), SubResource("Resource_s191"), SubResource("Resource_s192"), SubResource("Resource_s193"), SubResource("Resource_s194"), SubResource("Resource_s195"), SubResource("Resource_s196"), SubResource("Resource_s197"), SubResource("Resource_s198"), SubResource("Resource_s199"), SubResource("Resource_s200"), SubResource("Resource_s201"), SubResource("Resource_s202"), SubResource("Resource_s203"), SubResource("Resource_s204"), SubResource("Resource_s205"), SubResource("Resource_s206"), SubResource("Resource_s207"), SubResource("Resource_s208"), SubResource("Resource_s209"), SubResource("Resource_s210"), SubResource("Resource_s211"), SubResource("Resource_s212"), SubResource("Resource_s213"), SubResource("Resource_s214"), SubResource("Resource_s215"), SubResource("Resource_s216"), SubResource("Resource_s217"), SubResource("Resource_s218"), SubResource("Resource_s219"), SubResource("Resource_s220"), SubResource("Resource_s221"), SubResource("Resource_s222"), SubResource("Resource_s223"), SubResource("Resource_s224"), SubResource("Resource_s225"), SubResource("Resource_s226"), SubResource("Resource_s227"), SubResource("Resource_s228"), SubResource("Resource_s229"), SubResource("Resource_s230"), SubResource("Resource_s231"), SubResource("Resource_s232"), SubResource("Resource_s233"), SubResource("Resource_s234"), SubResource("Resource_s235"), SubResource("Resource_s236"), SubResource("Resource_s237"), SubResource("Resource_s238"), SubResource("Resource_s239"), SubResource("Resource_s240"), SubResource("Resource_s241"), SubResource("Resource_s242"), SubResource("Resource_s243"), SubResource("Resource_s244"), SubResource("Resource_s245"), SubResource("Resource_s246"), SubResource("Resource_s247"), SubResource("Resource_s248"), SubResource("Resource_s249"), SubResource("Resource_s250"), SubResource("Resource_s251"), SubResource("Resource_s252"), SubResource("Resource_s253"), SubResource("Resource_s254"), SubResource("Resource_s255"), SubResource("Resource_s256"), SubResource("Resource_s257"), SubResource("Resource_s258"), SubResource("Resource_s259"), SubResource("Resource_s260"), SubResource("Resource_s261"), SubResource("Resource_s262"), SubResource("Resource_s263"), SubResource("Resource_s264"), SubResource("Resource_s265")])

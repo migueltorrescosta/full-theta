@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="ShipDef" format=3]
+
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/assist.tres" id="1_gdcbd"]
+[ext_resource type="Resource" path="res://content/ships/m1_raider/power.tres" id="4_ovpdr"]
+[ext_resource type="Script" path="res://content/defs/ship_def.gd" id="5_4l44g"]
+[ext_resource type="Resource" path="res://content/ships/m1_raider/shields.tres" id="6_ekbvn"]
+[ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="7_nnjya"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_engines.tres" id="8_so0ye"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_thrusters.tres" id="9_uxp02"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_weapons.tres" id="10_f6ry1"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_shields.tres" id="11_jbjwq"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_sensors.tres" id="12_3e58g"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_reactor.tres" id="13_c3o2i"]
+
+[resource]
+script = ExtResource("5_4l44g")
+id = &"drone"
+display_name = "Drone"
+mass = 30000.0
+inertia = Vector3(1200000, 1440000, 720000)
+max_thrust_pos = Vector3(360000, 360000, 300000)
+max_thrust_neg = Vector3(360000, 360000, 600000)
+max_torque = Vector3(1800000, 2160000, 1800000)
+propellant_capacity = 6000.0
+exhaust_velocity = 60000.0
+lever_arm = 8.0
+radius = 20.0
+hull_max = 50000000.0
+spare_parts = 5
+sensor_range = 15000.0
+identify_range = 6000.0
+repair_crews = 1
+subsystem_damage_share = 0.5
+subsystems = Array[ExtResource("7_nnjya")]([ExtResource("8_so0ye"), ExtResource("9_uxp02"), ExtResource("10_f6ry1"), ExtResource("11_jbjwq"), ExtResource("12_3e58g"), ExtResource("13_c3o2i")])
+assist = ExtResource("1_gdcbd")
+power = ExtResource("4_ovpdr")
+shields = ExtResource("6_ekbvn")

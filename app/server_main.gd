@@ -31,7 +31,9 @@ extends RefCounted
 ##                        before launch and Welcome carries it (FT-AUD-013, D41).
 ##   --encounter NAME     what the world holds: m1, the Milestone 1 encounter [m1], or
 ##                        run, the director's run (RunSetup on content/runs/m3_run.tres,
-##                        E07). The default moves to run once the scenarios exist.
+##                        E07), or shakedown, the training scenario (FT-MIS-039: RunSetup on
+##                        content/runs/shakedown.tres, one ship, no director; strand G2).
+##                        The default moves to run once the scenarios exist.
 ##   --m1-player-hull-scale F
 ##                        test flag: the crewed ship's hull is F times its definition's
 ##                        (0 < F <= 1), so the L4 encounter (tools/l4) loses a fight in
@@ -55,6 +57,8 @@ const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
 ## 2 ms of due without spinning. Provisional: see docs/protocol.md, Rates and limits.
 const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
+## The --encounter values that build a RunSetup (the director's run, the Shakedown).
+const RUN_ENCOUNTERS: Array[String] = ["run", "shakedown"]  # strand G2
 ## The load gate's flags (dev and test only), and the variable that allows them and
 ## --m1-player-hull-scale in a release build.
 const LOAD_FLAGS: Array[String] = [
@@ -159,8 +163,8 @@ func _set_value(flag: String, value: String) -> bool:
 	if flag == "--m1-player-hull-scale":
 		return _set_hull_scale(value)
 	if flag == "--encounter":  # strand A
-		if not ["m1", "run"].has(value):
-			push_error("--encounter must be m1 or run")
+		if not ["m1", "run", "shakedown"].has(value):  # strand G2
+			push_error("--encounter must be m1, run or shakedown")
 			return false
 		encounter_name = value
 		return true
@@ -254,8 +258,8 @@ func make_server() -> NetServer:
 		player = player.duplicate()
 		player.hull_max *= player_hull_scale
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
-	var run: RunSetup = _run_setup(defs) if encounter_name == "run" else null  # strand A
-	if encounter_name == "run":
+	var run: RunSetup = _run_setup(defs) if encounter_name in RUN_ENCOUNTERS else null  # strand A
+	if encounter_name in RUN_ENCOUNTERS:  # strand G2
 		if run == null:
 			return null
 		encounter = run
@@ -268,7 +272,9 @@ func make_server() -> NetServer:
 		encounter.hazards = defs.m1_hazards()
 	var server: NetServer = NetServer.new()
 	if run != null:  # strand A
-		server.driver_factory = _director_factory(run)
+		server.driver_factory = (
+			_training_factory() if encounter_name == "shakedown" else _director_factory(run)
+		)  # G2
 	server.run_for = run_for
 	if probe_out != "":
 		server.probe = LoadProbe.new(probe_out)
@@ -304,9 +310,9 @@ func make_server() -> NetServer:
 # --- strand A ---
 ## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).
 func _run_setup(defs: DefLibrary) -> RunSetup:
-	var run_def: RunDef = defs.run(&"m3_run")
+	var run_def: RunDef = defs.run(&"shakedown" if encounter_name == "shakedown" else &"m3_run")
 	if run_def == null:
-		push_error("missing run definition m3_run")
+		push_error("missing run definition for --encounter %s" % encounter_name)
 		return null
 	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.enemies())
 	setup.science = defs.science()
@@ -337,6 +343,19 @@ func _director_factory(setup: RunSetup) -> Callable:
 
 
 # --- end strand A ---
+# --- strand G2 ---
+## The Shakedown's driver when the first tick steps (FT-MIS-039): its one scenario and the
+## step list. The difficulty preset changes nothing in training.
+func _training_factory() -> Callable:
+	return func(_difficulty: StringName) -> TrainingDriver:
+		var scenarios: Array[Scenario] = ScenarioCatalogue.load_for(
+			PackedStringArray(["shakedown"])
+		)
+		var steps: TrainingStepsDef = load("res://content/training/steps.tres") as TrainingStepsDef
+		return TrainingDriver.new(scenarios[0], steps)
+
+
+# --- end strand G2 ---
 ## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,
 ## wired into the session: silent until the first Start calls start_session() with the
 ## session language and closed set; ship-computer lines go to the stations concerned
