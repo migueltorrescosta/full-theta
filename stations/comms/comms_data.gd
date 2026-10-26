@@ -109,7 +109,7 @@ static func range_text(card_row: Dictionary) -> String:
 
 
 ## The NPC's line as text in the session language, its slots filled with the NPC's name and
-## the ship's; the line id itself when the dialogue files don't have it.
+## the ship's (other slots show "…"); the line id itself when the dialogue files don't have it.
 static func line_text(line_id: String, npc: String, ship: String) -> String:
 	if _lines == null:
 		_lines = DialogueLines.load_dir()
@@ -118,4 +118,8 @@ static func line_text(line_id: String, npc: String, ship: String) -> String:
 		return line_id
 	var texts: Dictionary = data.get("text", {})
 	var template: String = str(texts.get(TranslationServer.get_locale(), texts.get("en", line_id)))
+	# Only the names are known here: a number the host fills in while speaking is "…".
+	for slot: String in DialogueLines.slot_order(template):
+		if slot != "npc" and slot != "ship":
+			template = template.replace("{%s}" % slot, "…")
 	return DialogueLines.fill(data, template, {"npc": npc, "ship": ship})

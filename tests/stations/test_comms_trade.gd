@@ -200,3 +200,24 @@ func test_results_are_shown() -> void:
 	assert_str(panel.overlay.status).is_equal("Dock first.")
 	s.ctx.crew.sim_event.emit(&"hail_refused", {"tag": "nonsense"})
 	assert_str(panel.overlay.status).is_equal("Refused.")
+
+
+# FT: FT-COM-001, FT-DAT-004
+# The NPC's line shows as text in the session language: the NPC's name filled in, the numbers
+# the host speaks left as "…", and an id the dialogue files lack as itself.
+func test_the_npc_line_is_text() -> void:
+	var line: String = CommsData.line_text("npc.hail_patrol", "Vega", "Kestrel")
+	assert_str(line).is_equal("Kestrel, this is Vega of the patrol. Hold your course.")
+	(
+		assert_str(CommsData.line_text("npc.trade_offer", "Kappa", "Kestrel"))
+		. contains("…")
+		. not_contains("{")
+	)
+	assert_str(CommsData.line_text("npc.no_such_line", "Kappa", "Kestrel")).is_equal(
+		"npc.no_such_line"
+	)
+	I18n.apply("it")
+	assert_str(CommsData.line_text("npc.hail_patrol", "Vega", "Kestrel")).starts_with(
+		"Kestrel, qui Vega"
+	)
+	I18n.apply("en")
