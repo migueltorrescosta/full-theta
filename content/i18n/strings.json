@@ -635,6 +635,18 @@
     "toast.share_off": {"en": "That shortcut is off.", "pt_PT": "Esse atalho está desligado.", "it": "Quel collegamento è disattivato."},
     "toast.share_bad_feature": {"en": "Nothing to share there.", "pt_PT": "Não há nada para partilhar aí.", "it": "Non c'è nulla da condividere."},
     "toast.share_not_source": {"en": "Your station can't share that.", "pt_PT": "O teu posto não pode partilhar isso.", "it": "La tua postazione non può condividerlo."},
-    "toast.share_same_screen": {"en": "You hold both stations: you already see it.", "pt_PT": "Tens os dois postos: já o vês.", "it": "Hai entrambe le postazioni: lo vedi già."}
+    "toast.share_same_screen": {"en": "You hold both stations: you already see it.", "pt_PT": "Tens os dois postos: já o vês.", "it": "Hai entrambe le postazioni: lo vedi già."},
+    "comms.opt.accept_claim": {"en": "Take their word", "pt_PT": "Aceitar a palavra deles", "it": "Fidarsi della loro parola"},
+    "comms.opt.ask_cargo": {"en": "Ask what they carry", "pt_PT": "Perguntar o que levam", "it": "Chiedere cosa trasportano"},
+    "comms.opt.call_bluff": {"en": "Call the bluff", "pt_PT": "Desmascarar o bluff", "it": "Smascherare il bluff"},
+    "comms.opt.close": {"en": "Close the channel", "pt_PT": "Fechar o canal", "it": "Chiudere il canale"},
+    "comms.opt.back": {"en": "Go back", "pt_PT": "Voltar", "it": "Tornare indietro"},
+    "comms.opt.accept_contract": {"en": "Accept the contract", "pt_PT": "Aceitar o contrato", "it": "Accettare il contratto"},
+    "comms.opt.decline_contract": {"en": "Decline the contract", "pt_PT": "Recusar o contrato", "it": "Rifiutare il contratto"},
+    "comms.card.hail": {"en": "Hail", "pt_PT": "Chamada", "it": "Chiamata"},
+    "comms.card.offer": {"en": "Trade offer", "pt_PT": "Oferta de comércio", "it": "Offerta commerciale"},
+    "module.hx2_afterburner": {"en": "HX-2 Afterburner", "pt_PT": "Pós-combustor HX-2", "it": "Postbruciatore HX-2"},
+    "module.bx3_reactor": {"en": "BX-3 Reactor", "pt_PT": "Reator BX-3", "it": "Reattore BX-3"},
+    "module.lx1_longscan": {"en": "LX-1 Long Scan", "pt_PT": "Sensor LX-1 de longo alcance", "it": "Scanner LX-1 a lungo raggio"}
   }
 }

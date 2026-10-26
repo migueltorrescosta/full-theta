@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="MarketDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/market_def.gd" id="1_market"]
+
+[resource]
+script = ExtResource("1_market")
+id = &"kappa"
+prices = Dictionary[StringName, int]({
+&"ammo:m1_cannon": 1,
+&"parts": 25,
+&"probes": 120,
+&"propellant": 2
+})
+stock = Dictionary[StringName, int]({
+&"ammo:m1_cannon": 400,
+&"parts": 20,
+&"probes": 3,
+&"propellant": 5000
+})
+repairs = Dictionary[StringName, int]({
+&"engines": 300,
+&"sensors": 250,
+&"thrusters": 300,
+&"weapons": 350
+})
+modules = Array[StringName]([&"hx2_afterburner", &"bx3_reactor", &"lx1_longscan"])
+sell_ratio = 0.5

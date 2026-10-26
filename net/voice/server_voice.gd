@@ -60,7 +60,9 @@ func closed_set(crew_factions: Array) -> Dictionary:
 	for prefix: String in ["U", "H", "F", "N"]:
 		for n: int in range(1, others + 1):
 			callsigns.append(prefix + str(n))
-	return {"ship_names": names, "callsigns": callsigns, "npc_names": npc_names.duplicate()}
+	return {
+		"ship_names": names, "callsigns": callsigns, "npc_names": npc_names + Story.npc_names(world)
+	}  # strand C
 
 
 ## A sim event of a crewed ship.

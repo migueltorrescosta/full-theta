@@ -1,0 +1,15 @@
+{
+  "_comment": "A contract offer: accepting marks its target (the card's target flag) and draws the contract reputation; declining draws the decline reputation.",
+  "id": "conv.escort_contract",
+  "npc_role": "npc",
+  "start": "n0",
+  "nodes": {
+    "n0": {
+      "line": "npc.trade_offer",
+      "options": [
+        {"id": "o1", "text": "comms.opt.accept_contract", "effects": [{"accept": true}, {"rep": "rep.accept_contract"}]},
+        {"id": "o2", "text": "comms.opt.decline_contract", "effects": [{"decline": true}, {"rep": "rep.decline"}]}
+      ]
+    }
+  }
+}

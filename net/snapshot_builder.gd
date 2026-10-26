@@ -109,6 +109,8 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 			(section as ContactsSection).ids = _known_of(section.owner)
 		elif section is ChipsSection:
 			(section as ChipsSection).rows = _chips.get(section.owner, [])
+		elif section is CommsSection:  # strand C: the claims name each conversation's claimer
+			(section as CommsSection).claims = _ownership.get(section.owner, {}).get("claims", {})
 		if section is NearSection:
 			_deltas[skey] = (section as NearSection).update_members(world, near_sets[section.owner])
 		else:
@@ -229,6 +231,8 @@ func _make(kind: int, owner: int, filter: ViewFilter) -> SnapshotSection:
 			section = OwnershipSection.new(kind, owner)
 		StationViews.Section.CHIPS:
 			section = ChipsSection.new(kind, owner, filter)
+		StationViews.Section.COMMS:  # strand C
+			section = CommsSection.new(kind, owner, filter)
 		_:
 			section = BlockSection.new(kind, owner, filter)
 	return section

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ModuleDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/module_def.gd" id="1_mod"]
+
+[resource]
+script = ExtResource("1_mod")
+id = &"hx2_afterburner"
+name_key = "module.hx2_afterburner"
+slot_type = &"engine"
+price = 900
+deltas = Dictionary[StringName, float]({
+&"heat_capacity": -0.15,
+&"thrust": 0.25
+})

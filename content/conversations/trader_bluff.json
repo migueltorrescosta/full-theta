@@ -1,0 +1,28 @@
+{
+  "_comment": "A trader's claim the crew can take at its word or check with a cargo scan (P14, P9). The bluff option exists only after Science scanned the cargo.",
+  "id": "conv.trader_bluff",
+  "npc_role": "npc",
+  "start": "n0",
+  "nodes": {
+    "n0": {
+      "line": "npc.hail_trader",
+      "options": [
+        {"id": "o1", "text": "comms.opt.accept_claim", "effects": [{"intent": "neutral"}]},
+        {"id": "o2", "text": "comms.opt.ask_cargo", "effects": [{"verify": "cargo"}], "next": "n1"},
+        {"id": "o3", "text": "comms.opt.call_bluff", "requires": {"scan_fact": "cargo"}, "effects": [{"intent": "bluffing"}, {"rep": "rep.call_bluff"}], "next": "n2"},
+        {"id": "o4", "text": "comms.opt.close"}
+      ]
+    },
+    "n1": {
+      "line": "npc.trade_offer",
+      "options": [
+        {"id": "o5", "text": "comms.opt.back", "next": "n0"},
+        {"id": "o4", "text": "comms.opt.close"}
+      ]
+    },
+    "n2": {
+      "line": "npc.trade_decline",
+      "options": []
+    }
+  }
+}
