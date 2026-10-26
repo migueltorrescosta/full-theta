@@ -3,7 +3,8 @@ extends RefCounted
 ## The host pause (FT-MIS-040, D100, D127): in a co-op session the host pauses or resumes
 ## the whole universe through the pause events of the coverage pause (FT-NET-034), without
 ## an abandon vote. The flag is ServerSession.host_paused; it is independent of the
-## coverage pause, which a host pause leaves alone. Message: HostPause{on}.
+## coverage pause, which a host pause leaves alone: the `resume` event goes out only when
+## neither pause is left. Message: HostPause{on}.
 
 ## request_rejected reason: any two crew factions are hostile, or the session has no host.
 const PVP_NO_PAUSE: String = "pvp_no_pause"
@@ -38,6 +39,8 @@ func on_host_pause(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if on == session.host_paused:
 		return
 	session.host_paused = on
+	if not on and not session.paused.is_empty():
+		return  # a coverage pause still holds the universe: no resume until it ends
 	var ids: PackedInt32Array = PackedInt32Array(session.by_id.keys())
 	var type: String = NetProtocol.EVENT_PAUSE if on else NetProtocol.EVENT_RESUME
 	var body: Dictionary = payload() if on else {"tick": session.world.tick, "host": true}

@@ -311,6 +311,17 @@ static func step(world: SimWorld) -> void:
 	_watch_docks(world)
 
 
+## Records where each crewed ship is docked without calling on_dock, for the first card
+## posted: _watch_docks keeps no record while the board is empty, so a dock made before
+## a clearance exists must not count as an arrival once it does.
+static func sync_docks(world: SimWorld) -> void:
+	for ship: int in world.ship_count():
+		if not world.ai.is_enabled(ship):
+			world.story_flags.set_flag(
+				StringName(_DOCKED % ship), Story.docked_site(world, ship) + 1
+			)
+
+
 ## Remembers where each crewed ship is docked and calls on_dock when it arrives.
 static func _watch_docks(world: SimWorld) -> void:
 	if world.story.size() == 0:

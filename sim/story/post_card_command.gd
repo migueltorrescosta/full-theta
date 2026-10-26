@@ -40,7 +40,13 @@ func apply(world: SimWorld) -> bool:
 		return false
 	if conversation_id != &"" and not world.conversations.has(conversation_id):
 		return false
+	if target_flag < 0 or target_flag > KnowledgeTable.Flag.PROTECT:
+		return false
+	if not _terms_valid():
+		return false
 	var t: StoryTable = world.story
+	if t.size() == 0:
+		StoryRules.sync_docks(world)
 	var faction: int = world.faction_of(ship_id)
 	var card: int = t.add_card(
 		-1 if faction_wide else ship_id, faction, card_kind as StoryTable.Kind
@@ -63,3 +69,9 @@ func apply(world: SimWorld) -> bool:
 	StoryRules.set_need(world, card, needs_subsystem, needs_pips)
 	world.emit(&"card_posted", ship_id, card, card_kind)
 	return true
+
+
+## The power terms (P12) are both set or both unset, with positive pips. The subsystem may
+## be one the ship lacks: that is a term it cannot meet.
+func _terms_valid() -> bool:
+	return (needs_subsystem == &"") == (needs_pips == 0) and needs_pips >= 0

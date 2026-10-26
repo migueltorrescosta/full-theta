@@ -386,8 +386,7 @@ func _apply_commands() -> void:
 	var queue: Array[SimCommand] = _queue
 	_queue = []
 	_reset_this_tick.clear()
-	var alive: PackedByteArray = kin.alive
-	var n: int = defs.size()
+	# Sizes and liveness are read per command: an earlier command of the batch may spawn a ship.
 	for c: SimCommand in queue:
 		var id: int = c.ship_id
 		if id < 0 and c is ServerCommand:
@@ -396,9 +395,9 @@ func _apply_commands() -> void:
 			c.accepted = c.apply(self)
 			command_log.append(c)
 			continue
-		if id < 0 or id >= n:
+		if id < 0 or id >= defs.size():
 			continue
-		if not (alive[id] == 1 or c.applies_to_destroyed()):
+		if not (kin.alive[id] == 1 or c.applies_to_destroyed()):
 			continue
 		c.tick = tick
 		# A ship reset earlier this tick rejects its later commands of the tick (logged

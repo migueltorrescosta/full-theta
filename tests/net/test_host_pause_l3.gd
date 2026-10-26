@@ -125,8 +125,11 @@ func test_host_pause_keeps_a_coverage_pause() -> void:
 	crew[0].host_pause(true)
 	assert_bool(await h.until(func() -> bool: return server.session.host_paused)).is_true()
 	assert_bool(crew[0].is_welcomed()).is_true()
+	var from: int = h.mark(crew[1])
 	crew[0].host_pause(false)
 	assert_bool(await h.until(func() -> bool: return not server.session.host_paused)).is_true()
+	# No resume while the coverage pause still holds the universe.
+	assert_dict(await h.next_event(crew[1], NetProtocol.EVENT_RESUME, from)).is_empty()
 	assert_bool(server.session.paused.is_empty()).is_false()
 	assert_bool(server.session.sim_running()).is_false()
 	assert_bool(await _frozen(server, 300)).is_true()

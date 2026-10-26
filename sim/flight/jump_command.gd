@@ -23,6 +23,8 @@ func kind() -> StringName:
 
 
 func apply(world: SimWorld) -> bool:
+	if target_kind != HelmTable.JumpKind.SITE and target_kind != HelmTable.JumpKind.MARK:
+		return false
 	var def: ShipDef = world.defs[ship_id]
 	var helm: HelmTable = world.helm
 	var busy: bool = helm.jump_left[ship_id] > 0 or helm.docked_site[ship_id] >= 0
