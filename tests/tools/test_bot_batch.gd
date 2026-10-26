@@ -9,7 +9,7 @@ func _batch() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for profile: String in BotProfiles.NAMES:
 		for n: int in 2:
-			out.append(BotRun.play(defs, profile, "easy", 1 + n, 700.0))
+			out.append(BotRun.play(defs, profile, "easy", 1 + n, 1500.0))
 	return out
 
 

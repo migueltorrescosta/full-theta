@@ -87,7 +87,7 @@ func test_player_hull_scale_flag() -> void:
 	)
 	var cli: ServerMain = ServerMain.new()
 	var args: PackedStringArray = [
-		"--bind", "127.0.0.1", "--port", "0", "--m1-player-hull-scale", "0.2"
+		"--bind", "127.0.0.1", "--port", "0", "--encounter", "m1", "--m1-player-hull-scale", "0.2"
 	]
 	assert_bool(cli.parse_args(args)).is_true()
 	var server: NetServer = cli.make_server()
