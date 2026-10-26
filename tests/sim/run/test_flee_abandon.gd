@@ -32,7 +32,7 @@ func _enemy_near(w: SimWorld, offset: Vector3) -> int:
 
 func _jump_to(w: SimWorld, to: Vector3) -> void:
 	ApiFixture.place(w, 0, to)
-	w.emit(&"jump_arrive", 0, -1, 1.0)
+	w.emit(&"jump_arrive", 0, -1, 1.0, Vector3.ZERO, &"1")
 	w.step()
 
 

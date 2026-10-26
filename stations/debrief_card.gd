@@ -9,6 +9,8 @@ extends PanelContainer
 const MIN_SIZE: Vector2 = Vector2(720.0, 420.0)
 ## Director decisions shown at most; the session log holds all of them.
 const MAX_DECISIONS: int = 24
+## The sim's ticks per second (stations do not name the sim).
+const TICKS_PER_S: float = 60.0
 
 var ctx: StationContext
 
@@ -122,7 +124,7 @@ static func _decision_line(d: Dictionary) -> String:
 	var what: String = _t("debrief.kind.%s" % d.get("kind", "SKIP"))
 	if str(d.get("scenario_id", "")) != "":
 		what += " " + _t("debrief.scenario.%s" % d["scenario_id"])
-	return "%s  %s: %s" % [clock(float(d.get("tick", 0)) / SimWorld.HZ), what, reason]
+	return "%s  %s: %s" % [clock(float(d.get("tick", 0)) / TICKS_PER_S), what, reason]
 
 
 static func _first_use_line(station: String, actions: Dictionary) -> String:

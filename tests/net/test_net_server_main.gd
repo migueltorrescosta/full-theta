@@ -50,10 +50,22 @@ func test_rejects_bad_command_lines() -> void:
 
 
 # FT: FT-NET-002
-# The server builds the M1 encounter from the content definitions and listens.
+# The server builds the director's run by default (E07) and the M1 encounter with
+# --encounter m1, from the content definitions, and listens.
 func test_makes_a_listening_server() -> void:
 	var cli: ServerMain = ServerMain.new()
-	assert_bool(cli.parse_args(["--server", "--bind", "127.0.0.1", "--port", "0"])).is_true()
+	var args: Array[String] = ["--server", "--bind", "127.0.0.1", "--port", "0"]
+	assert_bool(cli.parse_args(PackedStringArray(args))).is_true()
+	var run: NetServer = cli.make_server()
+	assert_object(run).is_not_null()
+	assert_int(run.world.ship_count()).is_equal(1)
+	assert_object(run.world.run_def).is_not_null()
+	assert_array(run.world.site_markets.keys()).is_not_empty()
+	run.transport.stop()
+	run.free()
+	cli = ServerMain.new()
+	args.append_array(["--encounter", "m1"])
+	assert_bool(cli.parse_args(PackedStringArray(args))).is_true()
 	var server: NetServer = cli.make_server()
 	assert_object(server).is_not_null()
 	assert_int(server.port()).is_greater(0)

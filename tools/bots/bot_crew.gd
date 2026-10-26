@@ -196,7 +196,7 @@ func _travel(world: SimWorld) -> void:
 			_helm(world, false, false)
 			_submit(world, AllStopCommand.new())
 		return
-	_go(world, dest, _by_jump)
+	_go(world, dest, false)
 
 
 ## The site the crew is bound for: its pending or active encounter's, or the yard on a
@@ -213,10 +213,10 @@ func _destination(world: SimWorld) -> int:
 
 
 ## Heads for a site: select it, hold Face, then jump once the bow is on it, or hold Approach.
-func _go(world: SimWorld, site: int, by_jump: bool) -> void:
+func _go(world: SimWorld, site: int, must_jump: bool) -> void:
 	if _going != site:
 		_going = site
-		_by_jump = by_jump if by_jump else _rng.randf() < profile.jump_share
+		_by_jump = must_jump or _rng.randf() < profile.jump_share
 		var select: SelectTargetCommand = SelectTargetCommand.new()
 		select.site_id = site
 		_submit(world, select)
