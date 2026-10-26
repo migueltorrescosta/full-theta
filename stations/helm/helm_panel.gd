@@ -7,15 +7,16 @@ extends StationPanel
 ## Sends (net/StationViews.STATION_COMMANDS["helm"]): `helm_input` only when the polled
 ## sticks, throttle, face or approach change (HelmInputCommand latches, at most every
 ## INPUT_MS while the sticks move), `helm_select_target` when the shared selection
-## changes, `helm_align`, `helm_all_stop`, `helm_decoupled` and `set_shield_focus`.
+## changes (a contact, a mark or a named site), `helm_align`, `helm_all_stop`,
+## `helm_decoupled`, `set_shield_focus`, and `helm_jump`, `helm_dock` and `helm_undock`
+## for the selected site or mark (FT-HLM-013, FT-HLM-016).
 ## Rules live in sim/: this panel only turns intents into commands.
 
 ## The controller Helm radial (hold View + right stick, FT-HLM-017): flick toward an
-## item and let go. Dock and jump are reserved for #10 (FT-HLM-013, FT-HLM-016).
+## item and let go.
 const RADIAL: Array[String] = [
 	"chase_camera", "align", "decoupled", "shield_track", "ping", "dock", "jump"
 ]
-const RESERVED: Array[String] = ["dock", "jump"]
 ## The six shield faces (FT-HLM-008), ship frame (-Z bow).
 const FACES: Dictionary = {
 	"shield_fore": Vector3.FORWARD,
@@ -144,7 +145,7 @@ func handle_intent(ev: Dictionary) -> bool:
 	return run(id)
 
 
-## Runs one Helm action (a key, a radial item); false for unknown or reserved ones.
+## Runs one Helm action (a key, a radial item); false for unknown ones.
 func run(id: String) -> bool:
 	match id:
 		"all_stop":
@@ -165,9 +166,55 @@ func run(id: String) -> bool:
 			_toggle_track()
 		"ping":
 			_ping()
+		"jump":
+			_jump()
+		"dock":
+			_dock()
 		_:
 			return false
 	return true
+
+
+## J: jump to the selected site or mark once the bow is on it (FT-HLM-016). The sim
+## refuses a jump that isn't faced; the toast only saves the round trip.
+func _jump() -> void:
+	var s: Dictionary = ctx.crew.selection
+	var cmd: Dictionary = {
+		"kind": "helm_jump", "target_kind": 0, "target_id": -1, "x": 0.0, "y": 0.0, "z": 0.0
+	}
+	match s.get("kind", ""):
+		"site":
+			cmd["target_id"] = int(s["id"])
+		"mark":
+			var m: Dictionary = ctx.crew.mark_in_slot(int(s["id"]))
+			if m.is_empty():
+				ctx.crew.toast.emit("toast.jump_select", {})
+				return
+			var p: Vector3 = ctx.mark_position(m)
+			cmd.merge({"target_kind": 1, "x": p.x, "y": p.y, "z": p.z}, true)
+		_:
+			ctx.crew.toast.emit("toast.jump_select", {})
+			return
+	var def: ShipDef = ctx.ship_def()
+	var local: Variant = ctx.selection_local()
+	if def != null and local is Vector3:
+		if (local as Vector3).angle_to(Vector3.FORWARD) > def.jump_face_tolerance_rad:
+			ctx.crew.toast.emit("toast.jump_face", {})
+			return
+	ctx.intents.command(cmd)
+
+
+## H: undock when docked, else dock at the selected site (FT-HLM-013).
+func _dock() -> void:
+	if int(helm_block().get("docked_site", -1)) >= 0:
+		ctx.intents.command({"kind": "helm_undock"})
+		return
+	var s: Dictionary = ctx.crew.selection
+	var site: Dictionary = ctx.picture().find(s)
+	if s.get("kind", "") != "site" or not bool(site.get("dockable", false)):
+		ctx.crew.toast.emit("toast.dock_select", {})
+		return
+	ctx.intents.command({"kind": "helm_dock", "site_id": int(s["id"])})
 
 
 ## Sends helm_select_target when the shared selection (or the selected free mark's
@@ -181,14 +228,15 @@ func sync_target() -> void:
 		ctx.intents.command(t)
 
 
-## The helm_select_target command for the current selection: a contact, a mark's
-## contact when attached, else the mark's point; {} with nothing selected yet, and a
+## The helm_select_target command for the current selection: a contact, a named site, a
+## mark's contact when attached, else the mark's point; {} with nothing selected yet, and a
 ## "none" target once something was selected and the selection was cleared.
 func target_command() -> Dictionary:
 	var s: Dictionary = ctx.crew.selection
 	var cmd: Dictionary = {
 		"kind": "helm_select_target",
 		"target_ship": -1,
+		"site_id": -1,
 		"point": false,
 		"x": 0.0,
 		"y": 0.0,
@@ -197,6 +245,8 @@ func target_command() -> Dictionary:
 	match s.get("kind", ""):
 		"contact":
 			cmd["target_ship"] = int(s["id"])
+		"site":
+			cmd["site_id"] = int(s["id"])
 		"mark":
 			var m: Dictionary = ctx.crew.mark_in_slot(int(s["id"]))
 			if m.is_empty():

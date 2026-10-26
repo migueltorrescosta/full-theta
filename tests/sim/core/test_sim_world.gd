@@ -128,6 +128,9 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 				. is_equal(t.size())
 			)
 			assert_bool(t.get(col[0]) == col[1]).is_true()
+		if t == w.sites:
+			# Named sites are rows of the map, keyed by no ship (strand B).
+			continue
 		if t == w.hacks:
 			# Hack windows come and go: keyed by the hacked ship and the HACKER's faction.
 			continue

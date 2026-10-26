@@ -91,12 +91,10 @@ const EVENT_PING: String = "ping"
 ## {ship, outcome ("win" | "loss"), time_s, hull} and {ship, voters, needed}.
 const EVENT_RUN_OVER: String = "run_over"
 const EVENT_RUN_VOTES: String = "run_votes"
-## Relay and the callout layer (strand B of #9, docs/protocol.md "Relay"): {sites: [{site,
-## name}]} to every pick; {ship, zones: [...]} (hazard zones and scan positions, every pick
-## of the ship); {ship, routes: [[{x, y, z}]]} (Relay, and other stations unless the
-## toggle set is Hard); {ship, items: [...]} the mark inbox and {ship, entries: [{tick, key,
-## args}], replace} the ship's log (Relay picks only).
-const EVENT_SITES: String = "sites"
+## Relay (strand B of #9, docs/protocol.md "Relay"): {ship, zones: [...]} (hazard zones and
+## scan positions, every pick of the ship); {ship, routes: [[{x, y, z}]]} (Relay, and other
+## stations unless the toggle set is Hard); {ship, items: [...]} the mark inbox and {ship,
+## entries: [{tick, key, args}], replace} the ship's log (Relay picks only).
 const EVENT_ZONES: String = "zones"
 const EVENT_ROUTES: String = "routes"
 const EVENT_INBOX: String = "inbox"

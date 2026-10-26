@@ -43,7 +43,7 @@ func picture() -> ContactPicture:
 		crew.marks.duplicate(true),
 		crew.pings.duplicate(true),
 		crew.zones.duplicate(true),
-		crew.sites.duplicate(true),
+		view.sites.duplicate(true),
 	]
 	if _picture == null or _picture.interp != interp or key != _picture_key:
 		_picture = ContactPicture.build(self)
@@ -100,20 +100,24 @@ func ping_item(item: Dictionary) -> void:
 ## nothing is selected or its position is unknown (no data).
 func selection_local() -> Variant:
 	var s: Dictionary = crew.selection
+	var out: Variant = null
 	match s.get("kind", ""):
 		"contact":
-			if int(s["id"]) not in interp.contact_ids():
-				return null
-			return interp.local(interp.offset_to(interp.contact_position(int(s["id"]))))
+			if int(s["id"]) in interp.contact_ids():
+				out = interp.local(interp.offset_to(interp.contact_position(int(s["id"]))))
 		"mark":
 			var m: Dictionary = crew.mark_in_slot(int(s["id"]))
-			if m.is_empty():
-				return null
-			return interp.local(interp.offset_to(mark_position(m)))
+			if not m.is_empty():
+				out = interp.local(interp.offset_to(mark_position(m)))
 		"zone":
 			var at: Variant = zone_position(int(s["id"]))
-			return null if at == null else interp.local(interp.offset_to(at as Vector3))
-	return null
+			if at != null:
+				out = interp.local(interp.offset_to(at as Vector3))
+		"site":
+			var site: Dictionary = picture().find(s)
+			if not site.is_empty():
+				out = site["local"]
+	return out
 
 
 ## The position (m) of a zone item, or null: a marked zone (id 0 and up), a

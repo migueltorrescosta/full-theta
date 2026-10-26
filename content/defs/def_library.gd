@@ -79,5 +79,9 @@ func m1_hazards() -> Array[HazardDef]:
 	return [hazard(&"m1_dust_cloud"), hazard(&"m1_radiation_front")]
 
 
+func map(id: StringName) -> MapDef:
+	return get_def(&"MapDef", id) as MapDef
+
+
 func science(id: StringName = &"science") -> ScienceDef:
 	return get_def(&"ScienceDef", id) as ScienceDef

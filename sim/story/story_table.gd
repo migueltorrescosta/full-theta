@@ -41,10 +41,6 @@ var site: PackedInt32Array = PackedInt32Array()
 ## The scan fact a conversation asked the crew to verify (P14), or none.
 var verify: Array[StringName] = []
 
-## Not state: the site each ship is docked at, for tests, until HelmTable.docked_site
-## exists (strand B). Story.docked_site reads it first. Remove once B has landed.
-var dock_stub: Dictionary[int, int] = {}
-
 
 func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 	pass

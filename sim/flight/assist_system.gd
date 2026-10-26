@@ -183,7 +183,7 @@ static func step(world: SimWorld) -> void:
 
 
 ## Whether the ship has a selected target it can fly to: a live ship its faction detects
-## (FT-ARC-013) or a point in the cube.
+## (FT-ARC-013), a point in the cube or a named site.
 static func has_target(world: SimWorld, row: int) -> bool:
 	return _targeted_offset(world, world.kin, world.helm, row).is_finite()
 
@@ -205,6 +205,8 @@ static func _targeted_offset(
 		return kin.relative_to_point(
 			row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
 		)
+	elif kind == HelmTable.Target.SITE:
+		return SiteTable.offset_to(world, row, helm.target_site[row])
 	return Vector3.INF
 
 
@@ -213,6 +215,8 @@ static func target_offset(world: SimWorld, row: int) -> Vector3:
 	var helm: HelmTable = world.helm
 	if helm.target_kind[row] == HelmTable.Target.SHIP:
 		return world.kin.relative(row, helm.target_ship[row])
+	if helm.target_kind[row] == HelmTable.Target.SITE:
+		return SiteTable.offset_to(world, row, helm.target_site[row])
 	return world.kin.relative_to_point(
 		row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
 	)

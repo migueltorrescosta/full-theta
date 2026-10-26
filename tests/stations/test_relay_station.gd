@@ -324,19 +324,33 @@ func test_ship_log_lines() -> void:
 	I18n.apply("en")
 
 
+## The SITES section as the client decodes it: Kestrel Yard, site 0, at the origin.
+func _sites(s: StationScreen) -> void:
+	s.ctx.view.sites = [
+		{
+			"id": 0,
+			"name_key": "Kestrel Yard",
+			"kind": &"station",
+			"dockable": true,
+			"radius": 3000.0,
+			"pos": Vector3.ZERO,
+		}
+	]
+
+
 # FT: FT-SPA-027, FT-SPA-015
 # The scenario's site name is a callout layer on every station: a banner on the radar and
 # on Relay's map, selectable by click.
 func test_site_names_show_on_every_station() -> void:
 	for entry: String in ["relay", "helm", "weapons", "viewer"]:
 		var s: StationScreen = await _screen(entry)
-		_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+		_sites(s)
 		assert_str(s.ctx.picture().site["label"]).is_equal("Kestrel Yard")
 		var box: Rect2 = SiteBanner.rect(s.radar.get_theme_default_font(), s.ctx.picture().site)
 		s.radar.set_picture(s.ctx.picture(), {})
 		assert_dict(s.radar.item_at(box.get_center())).is_equal({"kind": "site", "id": 0})
 	var s: StationScreen = await _screen()
-	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	_sites(s)
 	var p: RelayPanel = _relay(s)
 	p.refresh()
 	var at: Vector2 = SiteBanner.rect(p.get_theme_default_font(), p.map.picture.site).get_center()
@@ -377,7 +391,7 @@ func test_far_point_is_said_relative_to_a_mark_or_site() -> void:
 	# Bravo is the only reference: the point is 12 km dead ahead of it.
 	assert_str(p.map.say_point("Delta", far)).is_equal("Delta: Bravo, 12 level, 12 km")
 	# With the site named and nearer, the point is said from the site, whatever the words.
-	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	_sites(s)
 	p.refresh()
 	var said: String = p.map.say_point("Delta", far)
 	assert_str(said).starts_with("Delta: Kestrel Yard, ")
@@ -459,7 +473,7 @@ func test_forward_view_marks_attach_to_the_tapped_contact_or_none() -> void:
 # pulse, and the copier's name shows on the original ping (contact, mark or site).
 func test_a_copied_ping_shows_the_copier_on_the_original() -> void:
 	var s: StationScreen = await _screen()
-	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	_sites(s)
 	var chimes: Array = []
 	s.ctx.crew.pinged.connect(func(ping: Dictionary) -> void: chimes.append(ping["by"]))
 	var base: Dictionary = {"ship": SHIP, "x": 0.0, "y": 0.0, "z": 0.0}
@@ -519,7 +533,7 @@ func test_map_draws_everything_and_probes_are_listed() -> void:
 			]
 		}
 	)
-	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	_sites(s)
 	p.refresh()
 	await get_tree().process_frame
 	await get_tree().process_frame

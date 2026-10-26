@@ -1,30 +1,179 @@
 class_name SiteTable
 extends SimTable
-## STUB until strand B merges (#10): B's sim/run/site_table.gd replaces this file (on merge
-## take B's). It has
-## the columns of contracts.md section 2 plus the accessors strand A calls (listed in the
-## strand A report): register, load_map, open, has_key, key_of, point, kind_of,
-## dockable_of, closed_keys, nearest, at_site, offset_to. Take strand B's file on merge.
+## The named sites of the world (D229, D230, FT-SPA-027, FT-MIS-026): one row per site that
+## is open, a point with a radius in the one cube. The site id is the row. Rows are keyed
+## by ship id -1 and the site's faction, so the table is hashed like the others
+## (FT-ARC-012). Which sites exist comes from the MapDef (SimWorld.add_site); the director
+## opens more from the map's spawnable pool (open(), strand A's OpenSiteCommand).
+## Positions are 64-bit like ships' (D104). Helpers take a ship id and use the minimum
+## image, so "at a site" and "the nearest site" need no stored space id.
 
-var key_ix: PackedInt32Array = PackedInt32Array()
-var px: PackedFloat64Array = PackedFloat64Array()
-var py: PackedFloat64Array = PackedFloat64Array()
-var pz: PackedFloat64Array = PackedFloat64Array()
-var radius: PackedFloat64Array = PackedFloat64Array()
-var known_mask: PackedInt32Array = PackedInt32Array()
-var opened_tick: PackedInt32Array = PackedInt32Array()
-## key_ix indexes this.
+## Mask for "every faction knows it".
+const ALL_FACTIONS: int = 0x7FFFFFFF
+
+## Site ids by row (SiteDef.id) and the matching I18n name keys: data like defs, so not
+## hashed (the key_ix column says which). Copied with the table (SimCopy).
 var keys: Array[StringName] = []
-## Site data by key (not state): pos, radius, kind, dockable.
-var catalogue: Dictionary[StringName, Dictionary] = {}
+var name_keys: Array[String] = []
+## The sites the director may still open, read-only like defs.
+var pool: Array[SiteDef] = []
+
+## Index into `keys` (equal to the row).
+var key_ix: PackedInt32Array = PackedInt32Array()
+var pos_x: PackedFloat64Array = PackedFloat64Array()
+var pos_y: PackedFloat64Array = PackedFloat64Array()
+var pos_z: PackedFloat64Array = PackedFloat64Array()
+var radius: PackedFloat64Array = PackedFloat64Array()
+## One bit per faction that knows the site (factions 0 to 30).
+var known_mask: PackedInt32Array = PackedInt32Array()
+## Tick the site opened on.
+var opened_tick: PackedInt32Array = PackedInt32Array()
+## Index into SiteDef.KINDS.
+var kind_ix: PackedByteArray = PackedByteArray()
+var dockable: PackedByteArray = PackedByteArray()
+var dock_range: PackedFloat64Array = PackedFloat64Array()
+var dock_max_speed: PackedFloat64Array = PackedFloat64Array()
 
 
-func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
-	pass
+## Adds a site (its point wrapped onto the cube of `period`) and returns its site id.
+func add_site(def: SiteDef, period: float, known: int, tick: int = 0) -> int:
+	var id: int = add_key(-1, def.faction)
+	keys.append(def.id)
+	name_keys.append(def.name_key)
+	key_ix.append(id)
+	pos_x.append(_wrap(def.pos.x, period))
+	pos_y.append(_wrap(def.pos.y, period))
+	pos_z.append(_wrap(def.pos.z, period))
+	radius.append(def.radius_m)
+	known_mask.append(known)
+	opened_tick.append(tick)
+	kind_ix.append(maxi(0, SiteDef.KINDS.find(def.kind)))
+	dockable.append(1 if def.dockable else 0)
+	dock_range.append(def.dock_range_m)
+	dock_max_speed.append(def.dock_max_speed)
+	return id
 
 
-func reset_ship(_ship_id: int, _def: ShipDef) -> void:
-	pass
+## Puts a site in the pool the director may open (tests and scenarios build maps this way; a
+## MapDef's `spawnable` goes in through load_map). `kind` &"station" is dockable.
+func register(key: StringName, pos: Vector3, site_radius: float, kind: StringName = &"nav") -> void:
+	var def: SiteDef = SiteDef.new()
+	def.id = key
+	def.name_key = "site.%s" % key
+	def.kind = kind
+	def.pos = pos
+	def.radius_m = site_radius
+	def.dockable = kind == &"station"
+	def.dock_range_m = 0.5 * site_radius
+	def.dock_max_speed = 10.0
+	pool.append(def)
+
+
+## Opens the map's sites (all of MapDef.sites, in order, so site 0 comes first; the ones in
+## known_at_start known to every faction, the rest to none until revealed) and keeps its
+## spawnable pool for open() (D229, FT-MIS-027).
+func load_map(world: SimWorld, map: MapDef) -> void:
+	for def: SiteDef in map.sites:
+		var known: int = ALL_FACTIONS if map.known_at_start.has(def.id) else 0
+		world.add_site(def, known)
+	pool.append_array(map.spawnable)
+
+
+func has_key(key: StringName) -> bool:
+	return keys.has(key)
+
+
+## The site id of a site key, or -1.
+func id_of(key: StringName) -> int:
+	return keys.find(key)
+
+
+## The site id of the key, opening it from the pool when it is closed (known to every
+## faction: the director opened it for the run); -1 for a key in neither.
+func open(world: SimWorld, key: StringName) -> int:
+	var existing: int = keys.find(key)
+	if existing >= 0:
+		return existing
+	for def: SiteDef in pool:
+		if def.id == key:
+			return world.add_site(def, ALL_FACTIONS)
+	return -1
+
+
+func key_of(site: int) -> StringName:
+	return keys[site]
+
+
+func kind_of(site: int) -> StringName:
+	return SiteDef.KINDS[kind_ix[site]]
+
+
+func dockable_of(site: int) -> bool:
+	return dockable[site] == 1
+
+
+## Pool keys not opened yet, sorted.
+func closed_keys() -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	for def: SiteDef in pool:
+		if not keys.has(def.id):
+			out.append(def.id)
+	out.sort()
+	return out
+
+
+func is_known(site: int, faction: int) -> bool:
+	return site >= 0 and site < size() and (known_mask[site] >> faction) & 1 == 1
+
+
+## Lets a faction know the site.
+func reveal(site: int, faction: int) -> void:
+	if site >= 0 and site < size():
+		known_mask[site] |= 1 << faction
+
+
+## The site's point in the cube (m, 64-bit [x, y, z]).
+func point(site: int) -> PackedFloat64Array:
+	return PackedFloat64Array([pos_x[site], pos_y[site], pos_z[site]])
+
+
+## The same as a Vector3 (float32).
+func point3(site: int) -> Vector3:
+	return Vector3(pos_x[site], pos_y[site], pos_z[site])
+
+
+## The nearest site to a ship by minimum image (lowest id on a tie), or -1 with no sites.
+static func nearest(world: SimWorld, ship: int) -> int:
+	var sites: SiteTable = world.sites
+	var best: int = -1
+	var best_d: float = INF
+	for s: int in sites.size():
+		var d: float = (
+			world.kin.relative_to_point(ship, sites.pos_x[s], sites.pos_y[s], sites.pos_z[s]).length()
+		)
+		if d < best_d:
+			best_d = d
+			best = s
+	return best
+
+
+## The site the ship is within the radius of (the nearest one), else -1.
+static func at_site(world: SimWorld, ship: int) -> int:
+	var s: int = nearest(world, ship)
+	if s < 0:
+		return -1
+	var sites: SiteTable = world.sites
+	var d: float = world.kin.relative_to_point(ship, sites.pos_x[s], sites.pos_y[s], sites.pos_z[s]).length()
+	return s if d <= sites.radius[s] else -1
+
+
+## Offset from the ship to the site's point (m, world axes) by minimum image; Vector3.INF
+## for an unknown site id.
+static func offset_to(world: SimWorld, ship: int, site: int) -> Vector3:
+	var sites: SiteTable = world.sites
+	if site < 0 or site >= sites.size():
+		return Vector3.INF
+	return world.kin.relative_to_point(ship, sites.pos_x[site], sites.pos_y[site], sites.pos_z[site])
 
 
 func columns() -> Array:
@@ -32,94 +181,19 @@ func columns() -> Array:
 		super()
 		+ [
 			["key_ix", key_ix],
-			["px", px],
-			["py", py],
-			["pz", pz],
+			["pos_x", pos_x],
+			["pos_y", pos_y],
+			["pos_z", pos_z],
 			["radius", radius],
 			["known_mask", known_mask],
-			["opened_tick", opened_tick]
+			["opened_tick", opened_tick],
+			["kind_ix", kind_ix],
+			["dockable", dockable],
+			["dock_range", dock_range],
+			["dock_max_speed", dock_max_speed],
 		]
 	)
 
 
-func register(key: StringName, pos: Vector3, site_radius: float, kind: StringName = &"nav") -> void:
-	catalogue[key] = {"pos": pos, "radius": site_radius, "kind": kind}
-
-
-func load_map(world: SimWorld, map: MapDef) -> void:
-	for key: StringName in map.known_at_start:
-		open(world, key)
-
-
-func has_key(key: StringName) -> bool:
-	return keys.has(key)
-
-
-## The site id of the key (opening it when it is in the catalogue), or -1.
-func open(world: SimWorld, key: StringName) -> int:
-	var row: int = keys.find(key)
-	if row >= 0:
-		return row
-	if not catalogue.has(key):
-		return -1
-	var d: Dictionary = catalogue[key]
-	var pos: Vector3 = d["pos"]
-	row = add_key(-1, -1)
-	keys.append(key)
-	key_ix.append(keys.size() - 1)
-	px.append(pos.x)
-	py.append(pos.y)
-	pz.append(pos.z)
-	radius.append(d["radius"])
-	known_mask.append(0)
-	opened_tick.append(world.tick)
-	return row
-
-
-func key_of(site: int) -> StringName:
-	return keys[key_ix[site]]
-
-
-func point(site: int) -> PackedFloat64Array:
-	return PackedFloat64Array([px[site], py[site], pz[site]])
-
-
-func kind_of(site: int) -> StringName:
-	return catalogue[key_of(site)]["kind"]
-
-
-func dockable_of(site: int) -> bool:
-	return kind_of(site) == &"station"
-
-
-## Catalogue keys not opened yet, sorted.
-func closed_keys() -> PackedStringArray:
-	var out: PackedStringArray = PackedStringArray()
-	for key: StringName in catalogue:
-		if not keys.has(key):
-			out.append(key)
-	out.sort()
-	return out
-
-
-static func nearest(world: SimWorld, ship: int) -> int:
-	var best: int = -1
-	var best_d: float = INF
-	for s: int in world.sites.size():
-		var d: float = offset_to(world, ship, s).length()
-		if d < best_d:
-			best_d = d
-			best = s
-	return best
-
-
-static func at_site(world: SimWorld, ship: int) -> int:
-	var s: int = nearest(world, ship)
-	if s >= 0 and offset_to(world, ship, s).length() <= world.sites.radius[s]:
-		return s
-	return -1
-
-
-static func offset_to(world: SimWorld, ship: int, site: int) -> Vector3:
-	var p: PackedFloat64Array = world.sites.point(site)
-	return world.kin.relative_to_point(ship, p[0], p[1], p[2])
+static func _wrap(v: float, period: float) -> float:
+	return fposmod(v + 0.5 * period, period) - 0.5 * period

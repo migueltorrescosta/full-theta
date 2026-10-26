@@ -83,6 +83,16 @@ extends Resource
 ## each. Fitted modules change a copy of this definition (ModuleSystem.refit).
 @export var slots: Array[SlotDef] = []
 # --- end strand C ---
+# --- strand B ---
+## Jump drive spool time (s; 0 means the ship can't jump, FT-SIM-034).
+@export var jump_spool_s: float = 0.0
+## How far short of the target a jump arrives (m).
+@export var jump_standoff_m: float = 0.0
+## Propellant a jump takes (kg).
+@export var jump_propellant_kg: float = 0.0
+## How closely Helm must face the target to start a jump (rad, FT-HLM-016).
+@export var jump_face_tolerance_rad: float = 0.0
+# --- end strand B ---
 
 
 func validate() -> Array[String]:
@@ -107,6 +117,15 @@ func validate() -> Array[String]:
 	DefCheck.in_range(errors, "fault_hit_chance", fault_hit_chance, 0.0, 1.0)
 	DefCheck.positive(errors, "sensor_range", sensor_range)
 	DefCheck.in_range(errors, "identify_range", identify_range, 0.0, maxf(sensor_range, 0.0))
+	# --- strand B ---
+	DefCheck.non_negative(errors, "jump_spool_s", jump_spool_s)
+	DefCheck.non_negative(errors, "jump_standoff_m", jump_standoff_m)
+	DefCheck.non_negative(errors, "jump_propellant_kg", jump_propellant_kg)
+	DefCheck.in_range(errors, "jump_face_tolerance_rad", jump_face_tolerance_rad, 0.0, PI)
+	if jump_spool_s > 0.0:
+		DefCheck.positive(errors, "jump_propellant_kg", jump_propellant_kg)
+		DefCheck.positive(errors, "jump_face_tolerance_rad", jump_face_tolerance_rad)
+	# --- end strand B ---
 	DefCheck.required(errors, "assist", assist)
 	DefCheck.required(errors, "shields", shields)
 	if DefCheck.required(errors, "power", power):

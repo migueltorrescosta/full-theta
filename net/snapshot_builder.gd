@@ -55,7 +55,7 @@ var _filters: Dictionary = {}
 
 func _init() -> void:
 	take_counts()
-	part_us.resize(StationViews.Section.size() + 1)
+	part_us.resize(int(StationViews.Section.values().max()) + 1)
 
 
 ## Advances every section the view keys need to the copied world's tick. Keys naming a
@@ -213,6 +213,10 @@ static func peek(data: PackedByteArray) -> Array:
 
 
 func _owner(kind: int, ship: int) -> int:
+	# --- strand B ---
+	if kind == StationViews.Section.SITES:
+		return _world.faction_of(ship)
+	# --- end strand B ---
 	return _world.faction_of(ship) if kind == StationViews.Section.CONTACTS else ship
 
 
@@ -233,6 +237,10 @@ func _make(kind: int, owner: int, filter: ViewFilter) -> SnapshotSection:
 			section = ChipsSection.new(kind, owner, filter)
 		StationViews.Section.COMMS:  # strand C
 			section = CommsSection.new(kind, owner, filter)
+		# --- strand B ---
+		StationViews.Section.SITES:
+			section = SitesSection.new(owner)
+		# --- end strand B ---
 		_:
 			section = BlockSection.new(kind, owner, filter)
 	return section

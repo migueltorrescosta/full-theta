@@ -48,9 +48,29 @@ static func duel(world_seed: int = 1, range_m: float = 5000.0) -> SimWorld:
 	return w
 
 
-## Docks the ship (until strand B's HelmTable.docked_site exists, through the test stub).
+## Docks the ship at a site for real: the world gets dockable sites at the origin up to
+## `site` (ids below it exist, the ship is moved there if it is out of dock range and
+## stopped), then a DockCommand is applied.
 static func dock(w: SimWorld, ship: int, site: int = SITE) -> void:
-	w.story.dock_stub[ship] = site
+	while w.sites.size() <= site:
+		var d: SiteDef = SiteDef.new()
+		d.id = StringName("fx%d" % w.sites.size())
+		d.name_key = "site.kestrel_yard"
+		d.radius_m = 3000.0
+		d.dockable = true
+		d.dock_range_m = 1500.0
+		d.dock_max_speed = 10.0
+		w.add_site(d)
+	if SiteTable.offset_to(w, ship, site).length() > w.sites.dock_range[site]:
+		w.kin.place(ship, w.sites.px[site], w.sites.py[site], w.sites.pz[site])
+	w.helm.docked_site[ship] = -1  # a ship docked elsewhere lets go first
+	w.kin.vel[ship] = Vector3.ZERO
+	var c: DockCommand = DockCommand.new()
+	c.ship_id = ship
+	c.site_id = site
+	w.submit(c)
+	w.step()
+	assert(c.accepted, "StoryFixture.dock: the dock was refused")
 
 
 ## Resets a ship in place.

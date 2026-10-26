@@ -138,7 +138,7 @@ func test_trading_needs_docking() -> void:
 	StoryFixture.dock(w, 0, 9)
 	assert_bool(_trade(w, card, &"parts", 1)).is_false()
 	assert_str(_why(w)).is_equal("not_docked")
-	w.story.dock_stub.erase(0)
+	w.helm.docked_site[0] = -1
 	assert_bool(_trade(w, card, &"parts", 1)).is_false()
 	assert_str(_why(w)).is_equal("not_docked")
 	StoryFixture.dock(w, 0)

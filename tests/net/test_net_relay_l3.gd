@@ -222,16 +222,16 @@ func test_zones_and_probe_bubbles_can_be_pinged() -> void:
 
 
 # FT: FT-SPA-027, FT-SPA-028, FT-SPA-012, FT-SPA-029, FT-RLY-005
-# Every pick gets the scenario's site names; hazard zones and scan positions sit outside
-# the 8-mark cap and every pick of the ship gets them at every difficulty; routes reach
+# Every pick gets the scenario's sites (the SITES section); hazard zones and scan positions
+# sit outside the 8-mark cap and every pick of the ship gets them at every difficulty; routes reach
 # Relay always and the other stations except on Hard.
 func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	var server: NetServer = h.server()
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var helm: NetClient = await h.joined(server, "helm", "tactical")
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
-	var sites: Array = h.last_event(viewer, NetProtocol.EVENT_SITES)["payload"]["sites"]
-	assert_str(sites[0]["name"]).is_equal("site.kestrel_yard")
+	assert_bool(await h.until(func() -> bool: return not viewer.view.sites.is_empty())).is_true()
+	assert_str(viewer.view.sites[0]["name_key"]).is_equal("site.kestrel_yard")
 	# Eight marks, and zones beyond them.
 	for k: int in CrewMarks.SLOTS:
 		relay.place_mark(-1, "", -1, Vector3(5.0 * k, 0.0, 0.0))

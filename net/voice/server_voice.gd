@@ -20,6 +20,9 @@ const HULL_CRITICAL: float = 0.25
 const LINES: Dictionary = {
 	&"fault": ["computer.subsystem_fault", ["engineering"]],
 	&"proximity": ["computer.collision_warning", ["helm"]],
+	# --- strand B ---
+	&"jump_arrive": ["computer.jump_ready", ["helm"]],
+	# --- end strand B ---
 }
 
 var voice: VoiceService

@@ -4,11 +4,13 @@
 [ext_resource type="Resource" path="res://content/runs/m3_director.tres" id="2_director"]
 [ext_resource type="Resource" path="res://content/runs/m3_flee_cost.tres" id="3_flee"]
 [ext_resource type="Resource" path="res://content/ships/m1_corvette.tres" id="4_ship"]
+[ext_resource type="Resource" path="res://content/maps/m3_map.tres" id="5_map"]
 
 [resource]
 script = ExtResource("1_run")
 id = &"m3_run"
 encounters = 5
+map = ExtResource("5_map")
 director = ExtResource("2_director")
 flee_cost = ExtResource("3_flee")
 player_ship = ExtResource("4_ship")

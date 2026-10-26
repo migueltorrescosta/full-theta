@@ -45,7 +45,6 @@ func send_to(s: NetSession) -> void:
 	session.notify(s, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, ""))
 	session.notify(s, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
 	session.notify(s, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, ""))
-	session.notify(s, NetProtocol.EVENT_SITES, _sites_payload())
 	session.notify(s, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
 	session.shares.send_to(s)
 	session.notify(s, NetProtocol.EVENT_LANES, _lanes_payload(s))  # strand F
@@ -283,9 +282,9 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 				if not _is_zone(s.ship, msg["id"]):
 					why = CrewPings.BAD_PING
 			"site":
-				# A named site: its id is `id` (SimWorld.site_names).
+				# A named site the ship's faction knows: its id is `id` (SiteTable row).
 				payload["id"] = msg["id"]
-				if not session.world.site_names.has(msg["id"]):
+				if not session.world.sites.is_known(msg["id"], session.world.faction_of(s.ship)):
 					why = CrewPings.BAD_PING
 			"point":
 				var at: PackedFloat64Array = session.world.kin.wrap_point(
@@ -565,16 +564,6 @@ func _sees_routes(s: NetSession) -> bool:
 		return false
 	var f: ViewFilter = ViewFilter.of(s.entry, s.view_code())
 	return f == null or f.grants(ViewFilter.ROUTES)
-
-
-func _sites_payload() -> Dictionary:
-	var out: Array = []
-	var names: Dictionary[int, String] = session.world.site_names
-	var ids: Array = names.keys()
-	ids.sort()
-	for id: int in ids:
-		out.append({"site": id, "name": names[id]})
-	return {"sites": out}
 
 
 func _zones_payload(ship: int) -> Dictionary:

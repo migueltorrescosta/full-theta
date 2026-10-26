@@ -80,8 +80,6 @@ var rep_dists: Dictionary[StringName, RepDistDef] = {}
 # --- strand A ---
 ## The run's encounters and story flags (E07, FT-MIS-025).
 var encounters: EncounterTable = EncounterTable.new()
-## STUB until strand B: the named sites (SiteTable; B adds it to tables()).
-var sites: SiteTable = SiteTable.new()
 ## Read-only run data like defs (FT-ARC-020), filled by RunSetup: the enemies SpawnShipCommand
 ## can spawn by key, the scenario ids an encounter's scenario_ix indexes, and the run's
 ## numbers. null run_def: not a director run (the M1 encounter, tests).
@@ -96,6 +94,10 @@ var step_log_from: int = 0
 ## state hash, because the scenarios do not run on replay; what they decide is in the log.
 var script_rng: SimRng
 # --- end strand A ---
+# --- strand B ---
+## The named sites, points in the one cube (D229); add_site() fills it from a MapDef.
+var sites: SiteTable = SiteTable.new()
+# --- end strand B ---
 
 ## Crew and server commands in application order, each stamped with its tick and
 ## whether it was accepted (FT-ARC-008, D122); rejected ones stay so replays reproduce
@@ -183,6 +185,8 @@ func tables() -> Array[SimTable]:
 		reputation,
 		modules,
 		encounters,  # strand A
+		# --- strand B ---
+		sites,
 	]
 
 
@@ -242,6 +246,16 @@ func reset_ship(
 	kin.rot[ship_id] = rotation.normalized()
 
 
+# --- strand B ---
+## Opens a named site at `def`'s point (wrapped onto the cube), known to the factions in
+## `known` (SiteTable bits), and returns its site id (D229). The name goes to site_names.
+func add_site(def: SiteDef, known: int = SiteTable.ALL_FACTIONS) -> int:
+	var id: int = sites.add_site(def, kin.period, known, tick)
+	site_names[id] = def.name_key
+	return id
+
+
+# --- end strand B ---
 func ship_count() -> int:
 	return defs.size()
 
@@ -301,6 +315,9 @@ func step() -> void:
 	EnemyAi.step(self)
 	PowerSystem.step(self)
 	AssistSystem.step(self)
+	# --- strand B ---
+	JumpSystem.step(self)
+	# --- end strand B ---
 	ProbeSystem.step(self)
 	HazardSystem.step(self)
 	Integrator.step_all(kin, DT)

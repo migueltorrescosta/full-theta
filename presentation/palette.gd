@@ -145,6 +145,8 @@ static func item_color(it: Dictionary) -> Color:
 		return color("mark")
 	if it.get("kind", "") == "zone":
 		return color("warn" if it.get("zone", "") == "hazard" else "accent")
+	if it.get("kind", "") == "site":
+		return color("accent")
 	return allegiance_color(it.get("allegiance", ""))
 
 
@@ -152,7 +154,7 @@ static func item_color(it: Dictionary) -> Color:
 static func item_shape(it: Dictionary) -> String:
 	if it.get("kind", "") == "mark":
 		return "diamond"
-	if it.get("kind", "") == "zone":
+	if it.get("kind", "") == "zone" or it.get("kind", "") == "site":
 		return "octagon"
 	return ALLEGIANCE_SHAPES.get(it.get("allegiance", ""), "circle")
 

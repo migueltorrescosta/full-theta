@@ -21,13 +21,9 @@ const FLAGS: Dictionary[StringName, int] = {
 }
 
 
-## The site the ship is docked at, or -1 (D86). Reads HelmTable.docked_site once strand B
-## adds it; until then only the test stub (StoryTable.dock_stub) can dock a ship.
+## The site the ship is docked at, or -1 (D86): HelmTable.docked_site (DockCommand).
 static func docked_site(world: SimWorld, ship: int) -> int:
-	if world.story.dock_stub.has(ship):
-		return world.story.dock_stub[ship]
-	var col: Variant = world.helm.get(&"docked_site")
-	return col[ship] if col is PackedInt32Array else -1
+	return world.helm.docked_site[ship]
 
 
 # --- cards ---

@@ -24,7 +24,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## The items on the view: ContactPicture's contacts and marks with their screen
+## The items on the view: ContactPicture's contacts, marks and named sites with their screen
 ## position, `on_screen`, `behind`, `selected` and `arrow`; [] when there is no camera
 ## (docked).
 func markers() -> Array[Dictionary]:
@@ -33,7 +33,8 @@ func markers() -> Array[Dictionary]:
 		return out
 	var cam: Camera3D = panel.view3d.camera
 	var rect: Rect2 = Rect2(Vector2.ZERO, size)
-	for item: Dictionary in panel.ctx.picture().items:
+	var picture: ContactPicture = panel.ctx.picture()
+	for item: Dictionary in picture.items + picture.sites:
 		if item["kind"] == "point":
 			continue
 		var world: Vector3 = item["world"]
@@ -294,6 +295,10 @@ func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 			modes.append(tr(m[1]))
 	if int(h.get("align", 0)) != 0:
 		modes.append(tr("helm.align"))
+	if int(h.get("jump_left", 0)) > 0:
+		modes.append(tr("helm.jump_spool") % (float(h["jump_left"]) / NetCodec.TICK_HZ))
+	if int(h.get("docked_site", -1)) >= 0:
+		modes.append(tr("helm.docked"))
 	if not modes.is_empty():
 		_text(font, at + Vector2(0.0, 40.0), "  ".join(modes), Palette.color("accent"))
 	if not full:
@@ -331,8 +336,7 @@ func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) 
 	)
 
 
-## The controller radial: items clockwise from the top, the picked one lit, reserved
-## ones dimmed.
+## The controller radial: items clockwise from the top, the picked one lit.
 func _draw_radial(font: Font) -> void:
 	var c: Vector2 = size / 2.0
 	var r: float = 120.0
@@ -343,9 +347,7 @@ func _draw_radial(font: Font) -> void:
 		var a: float = TAU * i / n - PI / 2.0
 		var p: Vector2 = c + Vector2(cos(a), sin(a)) * r
 		var col: Color = Palette.color("text")
-		if id in HelmPanel.RESERVED:
-			col = Palette.color("line")
-		elif i == panel.radial_pick:
+		if i == panel.radial_pick:
 			col = Palette.color("accent")
 			draw_circle(p, 34.0, Color(col, 0.25))
 		var text: String = tr(IntentTable.label_key(id))
@@ -360,11 +362,13 @@ func velocity() -> Vector3:
 	return Vector3(v) / NetCodec.VEL_Q
 
 
-## The selection's label: a contact's callsign or a mark's name.
+## The selection's label: a contact's callsign, a mark's name or a site's name.
 func selection_label() -> String:
 	var s: Dictionary = panel.ctx.crew.selection
 	if s.get("kind", "") == "mark":
 		return str(panel.ctx.crew.mark_in_slot(int(s["id"])).get("name", ""))
+	if s.get("kind", "") == "site":
+		return str(panel.ctx.picture().find(s).get("label", ""))
 	return panel.ctx.view.callsign(int(s.get("id", -1)))
 
 
@@ -372,6 +376,8 @@ func _selected_item() -> Dictionary:
 	var s: Dictionary = panel.ctx.crew.selection
 	if s.get("kind", "") == "mark":
 		return {"kind": "mark", "allegiance": ""}
+	if s.get("kind", "") == "site":
+		return {"kind": "site", "allegiance": ""}
 	var info: Dictionary = panel.ctx.view.contacts.get("info", {})
 	var letter: String = Palette.allegiance(selection_label())
 	if int(info.get(int(s.get("id", -1)), [0])[0]) & ContactsSection.FLAG_OWN:

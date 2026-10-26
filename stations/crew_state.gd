@@ -10,7 +10,7 @@ extends RefCounted
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
 ## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
-## &"sites", &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F);
+## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F);
 ## &"toggles" when the session's data-shortcut set changed (strand G), &"shares" when a
 ## shortcut was shared or ran out (strand K), &"lanes" when the approach lanes changed (F).
 signal changed(what: StringName)
@@ -82,9 +82,6 @@ var main_view_by: String = ""
 var card_ping: Dictionary = {}
 ## The shared selection: {"kind": "contact" | "mark" | "site" | "zone", "id": int}, or {}.
 var selection: Dictionary = {}
-## The scenario's site names, the callout layer every station shows (FT-SPA-027): [{"site",
-## "name"}].
-var sites: Array[Dictionary] = []
 ## Hazard zones and scan positions, outside the 8 marks (FT-SPA-028): {"id", "kind"
 ## ("hazard" | "scan"), "pos" (Vector3, m), "radius" (m), "by"}.
 var zones: Array[Dictionary] = []
@@ -283,7 +280,7 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_marks(p)
 		"ping":
 			_on_ping(p, now_ms)
-		"sites", "zones", "routes", "inbox", "relay_log":
+		"zones", "routes", "inbox", "relay_log":
 			_on_relay(str(e["type"]), p)
 		"chip_answer":
 			_on_chip_answer(p)
@@ -383,14 +380,6 @@ func live_pings(now_ms: int) -> Array[Dictionary]:
 	return pings.duplicate()
 
 
-## The name of a site, "" when the scenario gives none (FT-SPA-027).
-func site_name(site: int) -> String:
-	for d: Dictionary in sites:
-		if d["site"] == site:
-			return d["name"]
-	return ""
-
-
 func zone_by_id(id: int) -> Dictionary:
 	for z: Dictionary in zones:
 		if z["id"] == id:
@@ -433,20 +422,11 @@ func reset_run() -> void:
 	changed.emit(&"reset")
 
 
-## The Relay and callout-layer events (docs/protocol.md "Relay").
+## The Relay events (docs/protocol.md "Relay").
 func _on_relay(type: String, p: Dictionary) -> void:
-	if type != "sites" and not _mine(p):
+	if not _mine(p):
 		return
 	match type:
-		"sites":
-			sites.clear()
-			for d: Dictionary in p.get("sites", []):
-				sites.append(
-					{
-						"site": int(d["site"]),
-						"name": TranslationServer.translate(StringName(d["name"]))
-					}
-				)
 		"zones":
 			zones.clear()
 			for z: Dictionary in p.get("zones", []):

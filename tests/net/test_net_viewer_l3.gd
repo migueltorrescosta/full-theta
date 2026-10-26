@@ -6,7 +6,9 @@ extends GdUnitTestSuite
 
 const PLAYER: int = NetHarness.PLAYER
 const S = StationViews.Section
-const MAIN_SCREEN: Array[int] = [S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES, S.CAPTAIN]
+const MAIN_SCREEN: Array[int] = [
+	S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES, S.CAPTAIN, S.SITES
+]
 
 var h: NetHarness
 

@@ -35,6 +35,11 @@ enum Section {
 	# Comms' card board: cards, the open conversation nodes, offers, modules and credits.
 	COMMS = 15,
 	# --- end strand C ---
+	# --- strand B ---
+	# The named sites the faction knows, sent on change (SitesSection, D229, FT-SPA-015);
+	# 15 is COMMS (strand C).
+	SITES = 16,
+	# --- end strand B ---
 }
 
 ## The CAPTAIN block's objective kinds, as clients name them (stations/ may not name
@@ -203,6 +208,10 @@ const STATION_COMMANDS: Dictionary = {
 		&"helm_align",
 		&"helm_select_target",
 		&"set_shield_focus",
+		# --- strand B ---
+		&"helm_jump",
+		&"helm_dock",
+		&"helm_undock",
 	],
 	"weapons": [&"aim_mount", &"fire", &"fire_guided", &"set_ammo_type"],
 	"engineering":
@@ -271,6 +280,10 @@ const COMMAND_ITEMS: Dictionary = {
 	&"helm_decoupled": [CLAIM_FLIGHT, ""],
 	&"helm_all_stop": [CLAIM_FLIGHT, ""],
 	&"helm_align": [CLAIM_FLIGHT, ""],
+	# --- strand B ---
+	&"helm_jump": [CLAIM_FLIGHT, ""],
+	&"helm_dock": [CLAIM_FLIGHT, ""],
+	&"helm_undock": [CLAIM_FLIGHT, ""],
 	&"set_shield_focus": [CLAIM_SHIELD_FACING, ""],
 	&"aim_mount": [CLAIM_MOUNT, "mount_index"],
 	&"fire": [CLAIM_MOUNT, "mount_index"],
@@ -400,6 +413,14 @@ const BLOCKS: Dictionary = {
 		["align", "u8"],
 		["target_kind", "u8"],
 		["target_ship", "s16"],
+		# --- strand B ---
+		# The selected named site (target_kind SITE), the jump spool left in ticks and its
+		# target site (-1: a free mark), and the site the ship is docked at (-1: none).
+		["target_site", "s16"],
+		["jump_left", "u16"],
+		["jump_target", "s16"],
+		["docked_site", "s16"],
+		# --- end strand B ---
 		["shield_focus", "v3n"],
 		["shield_track", "s16"],
 		# The shield ring shows Engineering's tightness too (FT-HLM-011).
@@ -844,6 +865,9 @@ static func _build(entry: String) -> StationDef:
 			d.commands.append_array(STATION_COMMANDS[s])
 		d.claims.append_array(STATION_CLAIMS.get(s, []))
 		d.controls.append_array(STATION_CONTROLS.get(s, []))
+	# --- strand B ---
+	seen[Section.SITES] = true  # Every view sees the named sites (FT-SPA-015).
+	# --- end strand B ---
 	d.sections.assign(seen.keys())
 	d.sections.sort()
 	for kind: int in d.sections:
@@ -911,6 +935,12 @@ static func _helm(world: SimWorld, ship: int) -> Dictionary:
 		"align": h.align[ship],
 		"target_kind": h.target_kind[ship],
 		"target_ship": h.target_ship[ship],
+		# --- strand B ---
+		"target_site": h.target_site[ship],
+		"jump_left": mini(h.jump_left[ship], 65535),
+		"jump_target": h.jump_target[ship],
+		"docked_site": h.docked_site[ship],
+		# --- end strand B ---
 		"shield_focus": world.shields.focus[ship],
 		"shield_track": world.shields.track_id[ship],
 		"shield_tightness": world.shields.tightness[ship],
