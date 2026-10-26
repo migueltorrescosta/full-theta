@@ -7,7 +7,7 @@ Principle: players talk about things, not angles. Every contact and point of int
 1. **Callsigns.** Each contact gets a name on detection, coloured by known allegiance: `H1` hostile, `U2` unknown, `F3` friendly, `N4` neutral; player ships by ship name. The number never changes: `U2` identified as hostile becomes `H2`. In M1 a faction identifies a contact once one of its ships has it within that ship's identify range (D112).
 2. **Clock, height, range (ship frame, spoken).** `12` bow, `3` starboard, `6` stern, `9` port in the deck plane. Height: `level` (within ±15°), `high`/`low` (15°–60°), `overhead`/`under` (over 60°, said without a clock). Range: `close` (< 1 km), `mid` (1–10 km), `far` (> 10 km). Chips read like the callout: `H2 · 4 high · mid ▲closing` (D114).
 3. **Marks (world-anchored).** Up to 8 per ship, named Alpha to Hotel, free or attached to a contact; drawn as a diamond with a stem everywhere (D44).
-4. **Sites.** Each site has a shared name from the scenario (`Kestrel Yard`), selectable like marks and outside the 8-mark cap (D98).
+4. **Sites.** Each site is a named point with a radius on the scenario map, with a shared name from the scenario (`Kestrel Yard`), selectable like marks and outside the 8-mark cap (D98, D229).
 
 Frame rule (D97, D124): clock and the words level/high/low/overhead/under are always ship frame, on every station, including Relay and the Captain. Space has no privileged up: no word or rule uses a world-fixed direction. A point away from the own ship is said relative to a mark or site, with the speaker's ship-frame clock, height and range (`Bravo, 12 high, 3 km`).
 
@@ -82,7 +82,7 @@ Allied ships share one faction, so they share callsigns and contact knowledge, b
 - **FT-SPA-024** The disc radar shall zoom in fixed range steps (2, 10, 50 km) and draw contacts beyond the scale as arrows clamped to the rim. (plan review NAV-7)
 - **FT-SPA-025** The disc radar shall draw the selected contact's stem on top of all others. (plan review NAV-7)
 - **FT-SPA-026** Clock positions and the words level, high, low, overhead and under shall be ship frame on every station; no callout or rule shall use a world-fixed direction, and a point away from the own ship shall be said relative to a mark or site (`Bravo, 12 high, 3 km`). (D97, D124, plan review NAV-1)
-- **FT-SPA-027** Each site shall have a shared name from scenario data, used by every station of every ship as a callout layer. (D98, plan review NAV-4)
+- **FT-SPA-027** Each site shall have a shared name from scenario data, used by every station of every ship as a callout layer; a site is a named point with a radius on the scenario's one map. (D98, D229, plan review NAV-4)
 - **FT-SPA-028** Scan positions and hazard zones shall be MARK items outside the 8 named marks and shall remain at every difficulty, including Hard. (plan review COOP-6)
 - **FT-SPA-029** "Marks" in FT-PAIR-008 and the difficulty presets shall mean every MARK item (§7.1) except routes and approach lanes. (D84, plan review COOP-6)
 - **FT-SPA-030** A mark placed on the forward view shall attach to the tapped contact; a tap that hits no contact shall place no mark. (plan review STN-5)

@@ -44,5 +44,5 @@ Desktop clients only; browser stations come later (D8).
 - **FT-M1-017** Milestone 1 shall include marks, pings and Relay's map read-out (FT-RLY-001 to FT-RLY-003, FT-SPA-006, FT-SPA-012 to FT-SPA-015). (D99)
 - **FT-M1-018** Milestone 1's lobby shall show a load tag (light, busy, intense) per station and joint view. (D99)
 - **FT-M1-019** Milestone 1 shall include the controls overlay generated from the input map and per-station first-run tooltips. (D100)
-- **FT-M1-020** Milestone 1 shall store positions as a site id plus a local offset (FT-SIM-035). (D98)
+- **FT-M1-020** Milestone 1 shall store positions as a site id plus a local offset (FT-SIM-035); M3 drops the site id for offsets in one cube. (D98, D230)
 - **FT-M1-021** The milestone 1 playtest shall rotate every player through Tactical, Systems and Ops. (D99)

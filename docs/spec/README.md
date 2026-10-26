@@ -57,7 +57,7 @@ v0.4 amended spec v0.3 with the owner decisions D1–D89; v0.5 applies D90–D17
 | Run | One 20–40 minute playthrough of about 5 encounters; nothing persists after it. |
 | Encounter | A self-contained situation (enemy wave, rescue, derelict, negotiation...) the director places or activates at a site, with its own triggers and outcome (D77). |
 | Scenario map | The single global open 3D map of a scenario; no per-encounter maps (D77). |
-| Site | A named place on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). Positions are site-local, each site a cube that wraps on all three axes with period P, and site names are a callout layer outside the 8 marks (D98, D124). |
+| Site | A named point with a radius on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). The whole map is one cube that wraps on all three axes with period P; positions are offsets in it, and site names are a callout layer outside the 8 marks (D98, D229, D230). |
 | Slot module | An upgrade fitted to a ship slot, with a trade-off; bought while docked via Comms (D86). |
 | Faction | Owner of knowledge, callsigns and reputation; all state is keyed by ship and faction. Allied ships share one faction; marks stay per ship (D82). |
 | EE | EmptyEpsilon, the reference game (GPL-2.0-only; ideas only). |
@@ -212,3 +212,8 @@ The plan review (`../research/plan-review/README.md`) found 60 issues, merged in
 108. Normal's banded summaries use four bands split at 75, 50 and 25 %. FT-PAIR-019. (D193)
 109. One generic theme for every client; phone layouts for the menu, lobby, Captain, Viewer, Engineering and Relay. FT-STN-005. (D194, D195)
 110. Browser stations join their page's host without typing, from a slimmed, cached web build. FT-NET-013, FT-STN-005. (D196, D197)
+
+### v0.5 update for D229–D235 (#10)
+
+111. One wrapping cube per scenario (default P 400 km, sites spaced beyond sensor range); named sites are points with a radius; the jump is fast travel in the cube; positions carry no site id. Amends items 45 and 78. §4, §6.1, §8.1, FT-SIM-034, FT-SIM-035, FT-MIS-026, FT-SPA-027. (D229, D230)
+112. One active encounter per ship, started on arrival or after a timeout; core actions per station in data; fleeing is a jump out while detected, at a data cost; travel-leg debris for Weapons as point defence; Shakedown tracks per station with Next for client-only controls. FT-MIS-015, FT-MIS-025, FT-MIS-038, FT-MIS-039, FT-MIS-041. (D231–D235)
