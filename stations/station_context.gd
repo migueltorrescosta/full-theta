@@ -51,6 +51,14 @@ func picture() -> ContactPicture:
 	return _picture
 
 
+## The translated name of a named site the faction knows, "" when it doesn't (FT-SPA-027).
+func site_name(site: int) -> String:
+	for row: Dictionary in view.sites:
+		if row["id"] == site:
+			return String(TranslationServer.translate(StringName(row["name_key"])))
+	return ""
+
+
 ## The own ship's ShipDef (content/ships/<def>.tres from the catalogue), or null.
 func ship_def() -> ShipDef:
 	for s: Dictionary in crew.catalogue.get("ships", []):

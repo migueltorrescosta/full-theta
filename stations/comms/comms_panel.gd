@@ -128,7 +128,7 @@ func refresh(force: bool = false) -> void:
 	if changed:
 		board.claim_names = names
 		board.own_name = ctx.settings.player_name
-		board.site_name = ctx.crew.site_name(int(blk.get("site", -1)))
+		board.site_name = ctx.site_name(int(blk.get("site", -1)))
 		board.set_data(blk)
 		if overlay.card_id >= 0:
 			if CommsData.card(blk, overlay.card_id).is_empty():

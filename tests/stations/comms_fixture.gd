@@ -114,4 +114,13 @@ static func block() -> Dictionary:
 ## Puts the block, site 0's name and the context's claim of the hail on `ctx`.
 static func install(ctx: StationContext, blk: Dictionary = block()) -> void:
 	ctx.view.blocks[StationViews.Section.COMMS] = blk
-	ctx.crew.sites = [{"site": SITE, "name": "Kappa"}]
+	ctx.view.sites = [
+		{
+			"id": SITE,
+			"name_key": "Kappa",
+			"kind": &"station",
+			"dockable": true,
+			"radius": 3000.0,
+			"pos": Vector3.ZERO
+		}
+	]
