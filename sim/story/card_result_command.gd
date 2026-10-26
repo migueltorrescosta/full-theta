@@ -16,5 +16,5 @@ func kind() -> StringName:
 func apply(world: SimWorld) -> bool:
 	if not Story.visible_to(world, card, ship_id) or not Story.is_live(world, card):
 		return false
-	StoryRules.settle(world, ship_id, card, success)  # strand F: the shared settlement
+	StoryRules.settle(world, ship_id, card, success)  # the shared settlement
 	return true

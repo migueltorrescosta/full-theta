@@ -119,7 +119,7 @@ func _apply(ship: int, pressed: bool) -> void:
 		session.transport.set_view(s.id, s.view_key())
 		session.notify(s, NetProtocol.EVENT_SHARES, _payload(ship))
 	session.crew.sync_routes(ship)
-	session.crew.sync_lanes(ship)  # strand F
+	session.crew.sync_lanes(ship)
 	if pressed and active(ship, ViewFilter.DIAGNOSED_CAUSES):
 		prefill_causes(ship)
 

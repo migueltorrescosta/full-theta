@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Slot modules (strand C): fitting changes a private copy of the ship's definition by the
+## Slot modules: fitting changes a private copy of the ship's definition by the
 ## module's trade-off, a full slot sells its old module in the same trade, builds differ,
 ## and the shared definitions are never touched (FT-ARC-020).
 

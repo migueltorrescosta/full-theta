@@ -1,5 +1,5 @@
 extends HelmSuite
-## Helm's jump and dock (#10 strand B): named sites are selectable like contacts, show on the
+## Helm's jump and dock (#10): named sites are selectable like contacts, show on the
 ## compass and the HUD, J jumps to the selected site or mark once it is faced, H docks at
 ## the selected dockable site and undocks when docked, and the spool shows in the read-out.
 ## The fixture's ship has its own yawed, pitched and rolled frame; site 5 is 20 km dead

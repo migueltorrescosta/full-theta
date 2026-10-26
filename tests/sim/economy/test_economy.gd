@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## The economy (strand C): what a ship holds, what it earns from cards, and docked trading
+## The economy: what a ship holds, what it earns from cards, and docked trading
 ## at a market through Comms. BLUE's corvette is ship 0, docked at the Kappa site with an
 ## OFFER card on its board.
 

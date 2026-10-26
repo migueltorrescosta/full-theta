@@ -1,6 +1,6 @@
 class_name CommsL3
 extends RefCounted
-## Helpers for the Comms L3 tests (strand C): wiring a server's world with the scenario
+## Helpers for the Comms L3 tests: wiring a server's world with the scenario
 ## data app/ will load, posting cards, and sending a command to learn its verdict.
 
 const PLAYER: int = NetHarness.PLAYER

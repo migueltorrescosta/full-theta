@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## holder of that NPC's conversation claim only, a subtitle for every Comms holder while
 ## nobody holds it (PROVISIONAL, Q8), a ship-computer line to the stations concerned.
 ## A spy VoiceService records the calls; two Comms players share the player ship. The
-## claim is a stub on NetClaims (strand C builds the real "npc" claim kind and cards).
+## claim is a stub on NetClaims (the real "npc" claim kind and cards are in the server).
 
 const PLAYER: int = NetHarness.PLAYER
 const NPC: String = "trader_1"

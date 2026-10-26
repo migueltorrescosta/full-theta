@@ -50,7 +50,7 @@ var alerts: StationAlerts
 var flash: AlertFlash
 var chip_strip: ChipStrip
 var share_bar: ShareBar
-var training: TrainingBanner  # strand G2
+var training: TrainingBanner
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
 var panel_factory: Callable = StationRegistry.make
 ## Controls of the shell that take the input while visible (Settings, the outcome card).
@@ -90,12 +90,11 @@ func setup(context: StationContext) -> void:
 	alerts = StationAlerts.new()
 	add_child(alerts)
 	alerts.setup(ctx, stations, toasts, flash)
-	# --- strand G2 --- the Shakedown's step banner and Next (FT-MIS-039).
+	# the Shakedown's step banner and Next (FT-MIS-039).
 	training = TrainingBanner.new()
 	training.station = stations[0]
 	add_child(training)
 	training.setup(ctx)
-	# --- end strand G2 ---
 	Input.joy_connection_changed.connect(_on_joy_changed)
 	focus(0)
 
@@ -135,7 +134,7 @@ func focus(i: int) -> void:
 			p.custom_minimum_size = Vector2(0, DOCK_MIN_HEIGHT)
 		p.set_mode(j == i, j != i)
 	ctx.matcher.set_context(stations, focused_station())
-	if training != null:  # strand G2
+	if training != null:
 		training.station = focused_station()
 	radar.orbitable = focused_panel().radar_orbitable()
 	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
@@ -342,7 +341,7 @@ func _live(id: String) -> bool:
 			_set_alert(CrewState.ALERT_YELLOW)
 		"alert_normal":
 			_set_alert(CrewState.ALERT_NORMAL)
-		"training_next":  # strand G2
+		"training_next":
 			return training.press()
 		"focus_1", "focus_2":
 			var n: int = panels.size()

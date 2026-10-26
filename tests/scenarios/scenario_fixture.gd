@@ -1,6 +1,6 @@
 class_name ScenarioFixture
 extends RefCounted
-## Worlds for the real scenarios (E07 strand E): the server's own RunSetup on m3_run (the
+## Worlds for the real scenarios (E07): the server's own RunSetup on m3_run (the
 ## M3 map, the enemy catalogue, conversations and reputation), one crewed ship at the yard,
 ## and a small driver that plays one scenario the way the Director does.
 

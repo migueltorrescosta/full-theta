@@ -52,7 +52,7 @@ func ping(kind: String, id: int, pos: Vector3) -> void:
 	_call(&"ping", [kind, id, pos])
 
 
-## Relay (strand B of #9): send the mark in `slot` to an allied ship's Relay (FT-RLY-008);
+## Relay: send the mark in `slot` to an allied ship's Relay (FT-RLY-008);
 ## accept the inbox item `id`, replacing `slot` when all 8 marks are used (slot -1: a free
 ## one), or decline it (FT-RLY-009, FT-SPA-022).
 func send_mark(slot: int, to_ship: int) -> void:
@@ -85,7 +85,7 @@ func hazard_delete(id: int) -> void:
 	_call(&"hazard_delete", [id])
 
 
-## Strand G. The host sets the session's data-shortcut toggles in the lobby (a DataToggles
+## The host sets the session's data-shortcut toggles in the lobby (a DataToggles
 ## code); a station sends a request chip (id from content/chips/chips.tres, arg a mount index
 ## or contact id) or answers one it received.
 func set_toggles(code: String) -> void:
@@ -100,7 +100,7 @@ func answer_chip(id: int, accept: bool) -> void:
 	_call(&"answer_chip", [id, accept])
 
 
-## Strand K (D210): shares a data shortcut from the source station (a toggle id).
+## (D210) Shares a data shortcut from the source station (a toggle id).
 func share(feature: String) -> void:
 	_call(&"share", [feature])
 
@@ -134,13 +134,9 @@ func abandon(ship: int) -> void:
 	_call(&"abandon", [ship])
 
 
-# --- strand D1 ---
 ## The host pauses or resumes the universe (FT-MIS-040).
 func host_pause(on: bool) -> void:
 	_call(&"host_pause", [on])
-
-
-# --- end strand D1 ---
 
 
 ## "Run again" after the outcome (D178); the host's vote resets at once.

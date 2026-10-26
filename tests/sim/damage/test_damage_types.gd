@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## M2 strand C: damage types and resistances (FT-SIM-022), weak points revealed by scans
+## Damage types and resistances (FT-SIM-022), weak points revealed by scans
 ## (FT-SIM-023, P7). The shooter is a corvette of faction 1 at the origin; the target is
 ## a raider of faction 2, 2 km ahead, with shields zeroed. Hits are fed to the
 ## HitResolver directly. Raider and corvette share their subsystem files: sensors at

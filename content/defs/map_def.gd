@@ -11,9 +11,9 @@ extends Resource
 @export var sites: Array[SiteDef] = []
 ## Site ids (SiteDef.id) every crew faction knows at the start (FT-MIS-027).
 @export var known_at_start: Array[StringName] = []
-## The pool the director opens sites from (strand A's OpenSiteCommand).
+## The pool the director opens sites from (OpenSiteCommand).
 @export var spawnable: Array[SiteDef] = []
-## Travel legs the director may put debris on (D233): [{from, to, debris, count}], with
+## Travel legs the director may put debris on (D234): [{from, to, debris, count}], with
 ## from and to site keys and debris the key of a destructible debris EnemyDef (content/enemies)
 ## that the debris_leg scenario places on the route with spawn_on_leg (D234), count pieces.
 @export var legs: Array[Dictionary] = []

@@ -6,7 +6,7 @@ extends RefCounted
 ## counters, written as one `summary` line when the log closes, so a system that happens
 ## often (a request chip, a minigame move) counts instead of logging every occurrence.
 ##
-## API, for every strand:
+## API:
 ## - `SessionLog.open(path)` returns a log, or null when the file can't be created;
 ##   `SessionLog.default_path()` is `user://logs/session-<unix time>.jsonl`.
 ## - `event(kind, fields)` appends a line (`kind` is a short snake_case name; `fields`

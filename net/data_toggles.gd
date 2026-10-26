@@ -44,7 +44,7 @@ static func ids() -> Array[StringName]:
 static func shareable() -> Array[StringName]:
 	var out: Array[StringName] = []
 	for t: DataToggleDef in _def.toggles:
-		if t.kind == DataToggleDef.Kind.SHORTCUT and t.source != &"":  # strand F (Q10)
+		if t.kind == DataToggleDef.Kind.SHORTCUT and t.source != &"":  # (Q10)
 			out.append(t.id)
 	return out
 

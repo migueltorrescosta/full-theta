@@ -77,7 +77,7 @@ static func server_args(
 		args.append("--no-beacon")
 	if options.dev_all:
 		args.append("--dev-all-stations")
-	if options.encounter != "":  # strand G2
+	if options.encounter != "":
 		args.append_array(["--encounter", options.encounter])
 	args.append_array(options.extra_args)
 	return args

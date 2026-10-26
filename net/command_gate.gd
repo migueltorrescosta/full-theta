@@ -49,7 +49,7 @@ static func check(
 	var station: String = StationViews.station_of_command(kind)
 	if station == "":
 		return [null, NOT_ALLOWED]
-	# --- strand G2 --- Next (Shakedown, D235) names the station that presses it: any crew
+	# Next (Shakedown, D235) names the station that presses it: any crew
 	# station of the pick, or the Captain seat.
 	if kind == &"training_next":
 		var named: String = str(cmd.get("station", ""))
@@ -58,7 +58,6 @@ static func check(
 			return [null, NOT_YOUR_STATION]
 	elif not StationViews.stations_of(session.entry).has(station):
 		return [null, NOT_YOUR_STATION]
-	# --- end strand G2 ---
 	if cmd.has("ship_id") and not (cmd["ship_id"] is int and cmd["ship_id"] == session.ship):
 		return [null, WRONG_SHIP]
 	var template: Dictionary = command.to_dict()

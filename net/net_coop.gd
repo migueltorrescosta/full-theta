@@ -47,10 +47,9 @@ func on_sim_event(e: SimEvent) -> void:
 			_probe_scans.erase(e.ship_id)
 		&"scan_failed", &"hack_failed", &"hack_traced", &"science_refused":
 			_probe_scans.erase(e.ship_id)
-		# --- strand F --- (Comms' pairs, CoopEvents.on_story_event)
+		# (Comms' pairs, CoopEvents.on_story_event)
 		&"scan_option", &"dock_cleared", &"mission_marked", &"surrender_killed":
 			on_story_event(e)
-		# --- end strand F ---
 
 
 ## A ping on mark `slot` by a session: a use when another station placed it.
@@ -60,10 +59,8 @@ func on_mark_pinged(user: NetSession, slot: int) -> void:
 
 ## An accepted command: a guided shot at a mark's contact uses that mark.
 func on_command(session_id: int, c: SimCommand) -> void:
-	# --- strand E ---
 	var at: int = c.tick if c.tick >= 0 else session.world.tick
 	session.first_use.on_command(c.ship_id, c, at)
-	# --- end strand E ---
 	if c.kind() != &"fire_guided":
 		return
 	var user: NetSession = session.by_id.get(session_id)

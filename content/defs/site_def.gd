@@ -23,7 +23,7 @@ const KINDS: Array[StringName] = [&"station", &"nav", &"field", &"derelict"]
 @export var dock_range_m: float = 0.0
 ## ... and at or under this speed (m/s).
 @export var dock_max_speed: float = 0.0
-## MarketDef id, or &"" for none (strand C).
+## MarketDef id, or &"" for none.
 @export var market: StringName = &""
 ## The faction that holds the site (dimensionless index); 0 for none.
 @export var faction: int = 0

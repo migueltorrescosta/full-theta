@@ -21,11 +21,9 @@ done
 echo "l0: definitions"  # FT-DAT-002: every .tres under content/ loads and validates
 "$godot" --headless --path . -s res://tools/check_defs.gd 2>"$root/.godot/defs.log" \
   || { echo "l0: definitions failed (engine log: .godot/defs.log)" >&2; exit 1; }
-# --- strand A ---
 echo "l0: scenarios"  # FT-DAT-008: every scenario's ScenarioMeta is complete (FT-MIS-041)
 "$godot" --headless --path . -s res://tools/check_scenarios.gd 2>"$root/.godot/scenarios.log" \
   || { cat "$root/.godot/scenarios.log" >&2; echo "l0: scenarios failed" >&2; exit 1; }
-# --- end strand A ---
 echo "l0: architecture"; run python tools/lint_arch.py
 echo "l0: traceability"; run python tools/traceability.py --check
 echo "l0: dialogue"; run python tools/check_dialogue.py  # FT-DAT-003, FT-DAT-004, FT-DAT-011

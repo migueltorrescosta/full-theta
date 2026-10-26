@@ -10,9 +10,9 @@ extends RefCounted
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
 ## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
-## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F);
-## &"toggles" when the session's data-shortcut set changed (strand G), &"shares" when a
-## shortcut was shared or ran out (strand K), &"lanes" when the approach lanes changed (F).
+## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view";
+## &"toggles" when the session's data-shortcut set changed, &"shares" when a
+## shortcut was shared or ran out, &"lanes" when the approach lanes changed (F).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -54,10 +54,8 @@ var lobby: Dictionary = {}
 var started: Dictionary = {}
 ## ship -> `pause` payload, while paused.
 var paused: Dictionary = {}
-# --- strand D1 ---
 ## The host paused the universe (FT-MIS-040); independent of `paused`.
 var host_paused: bool = false
-# --- end strand D1 ---
 ## ship -> {"voters": [names], "sessions": [ids], "needed": int}.
 var votes: Dictionary = {}
 ## ship -> "vote" | "host".
@@ -65,10 +63,8 @@ var abandoned: Dictionary = {}
 ## ship -> `run_over` payload {ship, outcome, time_s, hull} plus "voters", "sessions" and
 ## "needed" from `run_votes`, from the outcome until the reset (D178).
 var run_over: Dictionary = {}
-# --- strand E ---
 ## ship -> its debrief record (RunDebrief.for_ship), sent right after `run_over`.
 var debrief: Dictionary = {}
-# --- end strand E ---
 ## item -> {"session": int, "name": String} (claim events; free items erased).
 var claims: Dictionary = {}
 var alert: int = ALERT_NORMAL
@@ -103,12 +99,10 @@ var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
 ## The shortcuts shared to this ship (the `shares` event, D210): feature -> client clock (ms)
 ## at which the share ends.
 var shares: Dictionary = {}
-# --- strand F ---
 ## The ship's approach lanes (P5, the `lanes` event): {"card", "pos" (Vector3, m), "opens_ms",
 ## "closes_ms" (client clock, ms), "by"}. Only while the lanes toggle lets them reach this
 ## station (Comms always, the others once Comms shared them).
 var lanes: Array[Dictionary] = []
-# --- end strand F ---
 
 var _filter: ViewFilter = null
 var _filter_key: String = ""
@@ -201,7 +195,6 @@ func is_crew() -> bool:
 	return bool(entry_def().get("crew", false))
 
 
-# --- strand D1 ---
 ## Co-op: every crew ship shares one faction (a client-side view of the server's rule,
 ## which also checks relations); PvP sessions have no pause control (FT-MIS-040).
 func is_coop() -> bool:
@@ -216,7 +209,6 @@ func can_host_pause() -> bool:
 	return host and is_coop()
 
 
-# --- end strand D1 ---
 func ship_name(id: int = ship) -> String:
 	for s: Dictionary in catalogue.get("ships", []):
 		if int(s.get("id", -2)) == id:
@@ -250,21 +242,17 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 		"claim":
 			_on_claim(p)
 		"pause":
-			# --- strand D1 ---
 			if p.get("host", false):
 				host_paused = true
 			else:
 				paused[int(p["ship"])] = p
-			# --- end strand D1 ---
 			changed.emit(&"pause")
 		"resume":
-			# --- strand D1 ---
 			if p.get("host", false):
 				host_paused = false
 			else:
 				paused.clear()
 				votes.clear()
-			# --- end strand D1 ---
 			changed.emit(&"pause")
 		"abandon_votes":
 			votes[int(p["ship"])] = p
@@ -276,7 +264,7 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			var card: Dictionary = run_over.get_or_add(int(p["ship"]), {})
 			card.merge(p, true)
 			changed.emit(&"run_over")
-		"debrief":  # strand E
+		"debrief":
 			debrief[int(p["ship"])] = p
 			changed.emit(&"debrief")
 		"alert":
@@ -291,7 +279,7 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_relay(str(e["type"]), p)
 		"chip_answer":
 			_on_chip_answer(p)
-		"lanes":  # strand F
+		"lanes":
 			if _mine(p):
 				lanes.clear()
 				for l: Dictionary in p.get("lanes", []):
@@ -414,7 +402,7 @@ func reset_run() -> void:
 	zones.clear()
 	routes.clear()
 	shares.clear()
-	lanes.clear()  # strand F
+	lanes.clear()
 	inbox.clear()
 	relay_log.clear()
 	selection = {}
@@ -426,7 +414,7 @@ func reset_run() -> void:
 	started.erase(ship)
 	abandoned.erase(ship)
 	run_over.erase(ship)
-	debrief.erase(ship)  # strand E
+	debrief.erase(ship)
 	changed.emit(&"reset")
 
 

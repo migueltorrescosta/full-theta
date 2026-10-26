@@ -1,6 +1,6 @@
 class_name StoryRules
 extends RefCounted
-## The cooperation rules of Comms with other stations (strand F, #10): what STORY does
+## The cooperation rules of Comms with other stations (#10): what STORY does
 ## when the rest of the crew acts. The flags are Story's named integers (StoryFlagTable),
 ## so these rules add no column to a table. All of them apply at every difficulty
 ## (FT-PAIR-014); the toggles only decide what a screen shows.

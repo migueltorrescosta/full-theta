@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Review fixes in the run layer (strand E): an encounter reveals its site to the crew, a ship
+## Review fixes in the run layer: an encounter reveals its site to the crew, a ship
 ## reset out of its encounter ends it as a loss, a site opened this tick is not offered again,
 ## and a card's predicted id counts a crew hail queued ahead.
 

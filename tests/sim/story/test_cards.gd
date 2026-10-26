@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## STORY (strand C): hails, answers, replies, and accepting or declining alone, on the
+## STORY: hails, answers, replies, and accepting or declining alone, on the
 ## cards of Comms' board. The world comes from StoryFixture; BLUE's corvette is ship 0 and
 ## RED's raider ship 1.
 

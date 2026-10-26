@@ -20,26 +20,22 @@ enum Section {
 	NEAR = 7,
 	PROJECTILES = 8,
 	OWNERSHIP = 9,
-	# Science contact card, scan and hack state (strand A).
+	# Science contact card, scan and hack state.
 	SCIENCE = 10,
-	# Relay probes, coverage, routes, hazards and inbox (strand B).
+	# Relay probes, coverage, routes, hazards and inbox.
 	RELAY = 11,
-	# Captain and main screen: main-screen view, open chips, cards (strand F).
+	# Captain and main screen: main-screen view, open chips, cards.
 	CAPTAIN = 12,
-	# Open request chips of the ship (strand G).
+	# Open request chips of the ship.
 	CHIPS = 13,
 	# What Weapons gets from other stations' work when a toggle lets it: weak points and
-	# resistances, hack windows, track feeds (strand G, P7 and P8).
+	# resistances, hack windows, track feeds (P7 and P8).
 	FEEDS = 14,
-	# --- strand C ---
 	# Comms' card board: cards, the open conversation nodes, offers, modules and credits.
 	COMMS = 15,
-	# --- end strand C ---
-	# --- strand B ---
 	# The named sites the faction knows, sent on change (SitesSection, D229, FT-SPA-015);
-	# 15 is COMMS (strand C).
+	# 15 is COMMS.
 	SITES = 16,
-	# --- end strand B ---
 }
 
 ## The CAPTAIN block's objective kinds, as clients name them (stations/ may not name
@@ -69,7 +65,7 @@ const FILTERED: Array[int] = [
 	Section.RELAY,
 	Section.FEEDS,
 	Section.CHIPS,
-	Section.COMMS,  # strand C
+	Section.COMMS,
 ]
 
 const CREW: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
@@ -182,7 +178,7 @@ const STATION_SECTIONS: Dictionary = {
 		Section.PROJECTILES,
 		Section.CAPTAIN,
 		Section.CHIPS,
-		Section.COMMS,  # strand C
+		Section.COMMS,
 	],
 	"viewer":
 	[
@@ -208,7 +204,6 @@ const STATION_COMMANDS: Dictionary = {
 		&"helm_align",
 		&"helm_select_target",
 		&"set_shield_focus",
-		# --- strand B ---
 		&"helm_jump",
 		&"helm_dock",
 		&"helm_undock",
@@ -223,7 +218,7 @@ const STATION_COMMANDS: Dictionary = {
 		&"recall_repair",
 		&"pick_fault_cause",
 		&"harden",
-		# Strand B's probe fabrication (FT-ENG-008); Engineering only sends it.
+		# Probe fabrication (FT-ENG-008); Engineering only sends it.
 		&"fabricate_probe",
 	],
 	"science":
@@ -240,12 +235,11 @@ const STATION_COMMANDS: Dictionary = {
 		&"science_select",
 	],
 	"relay": [&"launch_probe", &"flag_lanes"],
-	"comms": CommsView.COMMANDS,  # strand C
-	# --- strand G2 --- Next (Shakedown, D235) is sent by every crew station and the Captain.
+	"comms": CommsView.COMMANDS,
+	# Next (Shakedown, D235) is sent by every crew station and the Captain.
 	"captain": [&"training_next"],
 }
 
-# --- strand E ---
 ## Core actions per station (D232, FT-MIS-038), in StationDef.core_actions' "action=source"
 ## form. Relay's mark and route are net-side crew ops (NetCrewState), the rest commands.
 const STATION_CORE_ACTIONS: Dictionary = {
@@ -268,7 +262,6 @@ const STATION_CORE_ACTIONS: Dictionary = {
 		"trade=comms_trade"
 	],
 }
-# --- end strand E ---
 
 ## Claimable item kinds (FT-NET-022, D18). An item is the kind, or "kind:index" for
 ## one of several (a mount, a repair crew). The active scan or hack, probes and NPC
@@ -279,9 +272,9 @@ const CLAIM_MOUNT: String = "mount"
 const CLAIM_CREW: String = "crew"
 ## The one active scan or hack (or own-ship scan) at a time (FT-NET-022, FT-SCI-004).
 const CLAIM_SCAN: String = "scan"
-## Relay's probe launcher (strand B of #9): a second Relay seat claims it to launch.
+## Relay's probe launcher: a second Relay seat claims it to launch.
 const CLAIM_PROBE: String = "probe"
-## One NPC conversation, item "npc:<card id>" (strand C, FT-COM-006, D18): only its claimer
+## One NPC conversation, item "npc:<card id>" (FT-COM-006, D18): only its claimer
 ## replies and hears the NPC. The items are the ship's open conversations (claim_items).
 const CLAIM_NPC: String = "npc"
 ## Station -> claimable item kinds.
@@ -291,7 +284,7 @@ const STATION_CLAIMS: Dictionary = {
 	"engineering": [CLAIM_CREW],
 	"science": [CLAIM_SCAN],
 	"relay": [CLAIM_PROBE],
-	"comms": [CLAIM_NPC],  # strand C
+	"comms": [CLAIM_NPC],
 }
 ## Station -> ship-wide controls: last writer wins, and snapshots name the last writer
 ## (FT-NET-044). A control is the name, or "name:index" (pips per subsystem kind).
@@ -307,7 +300,6 @@ const COMMAND_ITEMS: Dictionary = {
 	&"helm_decoupled": [CLAIM_FLIGHT, ""],
 	&"helm_all_stop": [CLAIM_FLIGHT, ""],
 	&"helm_align": [CLAIM_FLIGHT, ""],
-	# --- strand B ---
 	&"helm_jump": [CLAIM_FLIGHT, ""],
 	&"helm_dock": [CLAIM_FLIGHT, ""],
 	&"helm_undock": [CLAIM_FLIGHT, ""],
@@ -329,8 +321,8 @@ const COMMAND_ITEMS: Dictionary = {
 	&"science_cancel": [CLAIM_SCAN, ""],
 	&"science_self_scan": [CLAIM_SCAN, ""],
 	&"launch_probe": [CLAIM_PROBE, ""],
-	# --- strand C: a reply or an opening acts on one conversation; accepting, declining
-	# and trading are Comms' alone and need no claim (FT-COM-003) ---
+	# A reply or an opening acts on one conversation; accepting, declining and
+	# trading are Comms' alone and need no claim (FT-COM-003).
 	&"comms_answer": [CLAIM_NPC, "card"],
 	&"comms_reply": [CLAIM_NPC, "card"],
 }
@@ -374,7 +366,7 @@ const EVENT_STATIONS: Dictionary = {
 	&"self_scan_started": ["science"],
 	&"self_scan_done": ["science", "engineering"],
 	&"active_ping": ["science"],
-	# Relay's probes and lanes (strand B of #9); fabrication also tells Engineering.
+	# Relay's probes and lanes; fabrication also tells Engineering.
 	&"probe_launched": ["relay"],
 	&"probe_deployed": ["relay"],
 	&"probe_no_stock": ["relay"],
@@ -382,7 +374,7 @@ const EVENT_STATIONS: Dictionary = {
 	&"probe_fabricated": ["relay", "engineering"],
 	&"probe_no_parts": ["engineering"],
 	&"lane_warning": ["weapons", "relay"],
-	# --- strand F --- Comms' pairs: a lane's dock, a surrender, a scan-unlocked reply, a
+	# Comms' pairs: a lane's dock, a surrender, a scan-unlocked reply, a
 	# marked mission. None carries Engineering's data (FT-PAIR-010).
 	&"dock_cleared": ["helm", "comms"],
 	&"dock_uncleared": ["helm", "comms"],
@@ -390,7 +382,6 @@ const EVENT_STATIONS: Dictionary = {
 	&"surrender_killed": ["weapons", "comms"],
 	&"scan_option": ["science", "comms"],
 	&"mission_marked": ["relay", "comms"],
-	# --- end strand F ---
 }
 
 ## Events whose `value` is Engineering's exact data (a health fraction, a heat, the shield
@@ -440,14 +431,12 @@ const BLOCKS: Dictionary = {
 		["align", "u8"],
 		["target_kind", "u8"],
 		["target_ship", "s16"],
-		# --- strand B ---
 		# The selected named site (target_kind SITE), the jump spool left in ticks and its
 		# target site (-1: a free mark), and the site the ship is docked at (-1: none).
 		["target_site", "s16"],
 		["jump_left", "u16"],
 		["jump_target", "s16"],
 		["docked_site", "s16"],
-		# --- end strand B ---
 		["shield_focus", "v3n"],
 		["shield_track", "s16"],
 		# The shield ring shows Engineering's tightness too (FT-HLM-011).
@@ -488,7 +477,7 @@ const BLOCKS: Dictionary = {
 			],
 		],
 	],
-	# Science (strand A, E01): sensors, the noise preview of the selected contact, the
+	# Science (E01): sensors, the noise preview of the selected contact, the
 	# scan-position mark, the open minigame session with its puzzle, the contact cards of
 	# the faction's knowledge (FT-SCI-001, FT-SCI-002) and the faction's open hack
 	# windows (P7). noise_flags: bit 0 active, 1 ping, 2 probe, 3 at the mark.
@@ -546,7 +535,7 @@ const BLOCKS: Dictionary = {
 	],
 	# Relay's probes: the stock, Engineering's build in progress, the lane switch and
 	# the ship's launched probes (position in m, bubble radius in m); then the
-	# sim hazards the faction knows (strand J, HazardView): zone, shell or plane, where now,
+	# sim hazards the faction knows (HazardView): zone, shell or plane, where now,
 	# the radius now, a plane's direction and the forecast seconds to the ship (-1: none).
 	Section.RELAY:
 	[
@@ -580,7 +569,7 @@ const BLOCKS: Dictionary = {
 			],
 		],
 	],
-	# The main screen's status view (strand F, FT-MSC-006): each subsystem's health in
+	# The main screen's status view (FT-MSC-006): each subsystem's health in
 	# ShipDef.subsystems order and the ship's open objectives (Objectives.Kind, how many
 	# are left). The view itself and the open cards are crew state, not sim: the
 	# `main_view` event and the ping events.
@@ -608,14 +597,14 @@ const BLOCKS: Dictionary = {
 			],
 		],
 	],
-	# What Weapons gets from other stations when a toggle lets it (strand G, FeedsView): the
+	# What Weapons gets from other stations when a toggle lets it (FeedsView): the
 	# faction's scanned weak points (bit i: subsystem i of the contact) and resistances (P7),
 	# the open hack windows (P7) and the track quality of detected contacts (P8, quality is
 	# the track quality (GuidanceSystem.track_quality), probe whether a deployed probe covers
 	# the contact).
 	Section.FEEDS:
 	[
-		# Contract target flags on detected contacts, KnowledgeTable.Flag (strand C, P9).
+		# Contract target flags on detected contacts, KnowledgeTable.Flag (P9).
 		["flags", ["rows", [["contact", "s16"], ["flag", "u8"]]]],
 		[
 			"weak",
@@ -632,11 +621,11 @@ const BLOCKS: Dictionary = {
 		["windows", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
 		["tracks", ["rows", [["contact", "s16"], ["quality", "f32"], ["probe", "bool"]]]],
 	],
-	# The ship's open request chips (strand G, ChipsSection; NetChips on the server): the
+	# The ship's open request chips (ChipsSection; NetChips on the server): the
 	# chip's index in content/chips/chips.tres, its argument (mount index or contact id, -1
 	# for none), the sending and receiving station (index in CREW) and the sim ticks it was
 	# sent and expires at. A crew view lists the chips it sends or receives.
-	# Comms' board (strand C, CommsView, CommsSection): the ship's docked site and credits,
+	# Comms' board (CommsView, CommsSection): the ship's docked site and credits,
 	# the hull band (Comms' only view of condition, FT-PAIR-010), reputation per faction,
 	# the cards (kind and state are StoryTable's; rep_lo/rep_hi only where rep_vis; claimer
 	# the session holding the conversation, -1 for none), the open conversation nodes
@@ -788,7 +777,7 @@ static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 		crews.append("%s:%d" % [CLAIM_CREW, i])
 	var helm: Array[String] = [CLAIM_FLIGHT, CLAIM_SHIELD_FACING]
 	return {
-		"comms": CommsView.npc_items(world, ship),  # strand C
+		"comms": CommsView.npc_items(world, ship),
 		"helm": helm,
 		"weapons": mounts,
 		"engineering": crews,
@@ -804,7 +793,7 @@ static func sees_event(entry: String, kind: StringName, toggles: String = DEFAUL
 		var seen: ViewFilter = ViewFilter.of(entry, toggles)
 		if seen != null and seen.condition_hidden:
 			return false
-	if CommsView.EVENTS.has(kind):  # strand C: Comms' own events
+	if CommsView.EVENTS.has(kind):  # Comms' own events
 		return stations_of(entry).has("comms")
 	if not EVENT_STATIONS.has(kind):
 		return true
@@ -892,10 +881,8 @@ static func _build(entry: String) -> StationDef:
 			d.commands.append_array(STATION_COMMANDS[s])
 		d.claims.append_array(STATION_CLAIMS.get(s, []))
 		d.controls.append_array(STATION_CONTROLS.get(s, []))
-		d.core_actions.append_array(STATION_CORE_ACTIONS.get(s, []))  # strand E
-	# --- strand B ---
+		d.core_actions.append_array(STATION_CORE_ACTIONS.get(s, []))
 	seen[Section.SITES] = true  # Every view sees the named sites (FT-SPA-015).
-	# --- end strand B ---
 	d.sections.assign(seen.keys())
 	d.sections.sort()
 	for kind: int in d.sections:
@@ -931,7 +918,7 @@ static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
 		Section.FEEDS:
 			return FeedsView.block(world, ship)
 		Section.COMMS:
-			return CommsView.block(world, ship)  # strand C (the builder adds claims, filter)
+			return CommsView.block(world, ship)  # (the builder adds claims, filter)
 	return _mounts(world, ship)
 
 
@@ -963,12 +950,10 @@ static func _helm(world: SimWorld, ship: int) -> Dictionary:
 		"align": h.align[ship],
 		"target_kind": h.target_kind[ship],
 		"target_ship": h.target_ship[ship],
-		# --- strand B ---
 		"target_site": h.target_site[ship],
 		"jump_left": mini(h.jump_left[ship], 65535),
 		"jump_target": h.jump_target[ship],
 		"docked_site": h.docked_site[ship],
-		# --- end strand B ---
 		"shield_focus": world.shields.focus[ship],
 		"shield_track": world.shields.track_id[ship],
 		"shield_tightness": world.shields.tightness[ship],

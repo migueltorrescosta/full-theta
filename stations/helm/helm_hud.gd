@@ -93,7 +93,6 @@ func _draw_routes(font: Font) -> void:
 			previous = p
 
 
-# --- strand F ---
 ## Comms' approach lanes on this view, in screen pixels (P5, FT-PAIR-001): {"pos" (Vector2),
 ## "state" ("wait" amber until the window opens, "open" green inside it, "late" red after),
 ## "left_s" (s until the window opens, or closes while open)}, only for lanes in front of the
@@ -135,7 +134,6 @@ func _draw_lanes(font: Font) -> void:
 		_text(font, at + Vector2(24.0, -4.0), text, col, SMALL)
 
 
-# --- end strand F ---
 func _draw() -> void:
 	if panel == null or panel.ctx == null:
 		return
@@ -147,7 +145,7 @@ func _draw() -> void:
 	_draw_reticle()
 	_draw_velocity()
 	_draw_routes(font)
-	_draw_lanes(font)  # strand F
+	_draw_lanes(font)
 	for e: Dictionary in markers():
 		if e["on_screen"]:
 			_draw_marker(font, e, e["selected"])

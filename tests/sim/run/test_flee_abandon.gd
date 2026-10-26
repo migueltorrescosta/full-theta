@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
 ## Fleeing and abandoning (E07, FT-MIS-015, FT-MIS-016, D233): a jump out of the encounter
 ## site while a hostile ship detects the ship is fleeing, at the data cost; out of sight it
-## is not; the crew's abandon ends the run. JumpSystem is strand B's, so the tests emit the
-## &"jump_arrive" event it will emit and place the ship where the jump would.
+## is not; the crew's abandon ends the run. The tests emit the &"jump_arrive" event JumpSystem
+## emits and place the ship where the jump would.
 
 ## Where the ship sits in the encounter, and the enemy 5 km from it (inside its sensors).
 const AT_ALPHA: Vector3 = Vector3(30000.0, 0.0, 0.0)

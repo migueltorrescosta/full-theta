@@ -21,21 +21,19 @@ const OUTCOME_NAMES: Array[StringName] = [&"none", &"win", &"loss"]
 var status: PackedByteArray = PackedByteArray()
 ## Outcome for the ship's crew; set once, never changed after.
 var outcome: PackedByteArray = PackedByteArray()
-# --- strand A ---
 ## Encounters the ship has been through (finished, fled or lost), and the id of the one
 ## it is in (PENDING or ACTIVE), or -1. Fled encounters are also counted in fled_count
 ## (E07, FT-MIS-010, FT-MIS-025).
 var encounters_done: PackedInt32Array = PackedInt32Array()
 var encounter: PackedInt32Array = PackedInt32Array()
 var fled_count: PackedInt32Array = PackedInt32Array()
-# --- end strand A ---
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	add_key(ship_id, faction)
 	status.append(Status.IN_PLAY)
 	outcome.append(Outcome.NONE)
-	encounters_done.append(0)  # strand A
+	encounters_done.append(0)
 	encounter.append(-1)
 	fled_count.append(0)
 
@@ -46,7 +44,7 @@ func columns() -> Array:
 		+ [
 			["status", status],
 			["outcome", outcome],
-			["encounters_done", encounters_done],  # strand A
+			["encounters_done", encounters_done],
 			["encounter", encounter],
 			["fled_count", fled_count],
 		]

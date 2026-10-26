@@ -15,10 +15,8 @@ var at_site: int = -1
 var hull_frac: float = 0.0
 ## RunTable.Status and RunTable.Outcome values.
 var status: int = 0
-# --- strand E ---
 ## Alive and still in the run (status IN_PLAY): a scenario's "is it still out there".
 var in_play: bool = false
-# --- end strand E ---
 var outcome: int = 0
 ## Site id the ship is docked at, or -1.
 var docked_site: int = -1

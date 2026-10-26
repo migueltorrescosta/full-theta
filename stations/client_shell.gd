@@ -49,7 +49,7 @@ func setup(
 	voice = VoicePlayer.new()
 	add_child(voice)
 	voice.subtitle.connect(func(_entry: Dictionary) -> void: _show_subtitles())
-	voice.subtitle.connect(_note_training)  # strand G2
+	voice.subtitle.connect(_note_training)
 	_layer = Control.new()
 	_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_layer)
@@ -158,16 +158,14 @@ func _on_crew_changed(what: StringName) -> void:
 func _show_subtitles() -> void:
 	var lines: PackedStringArray = []
 	for e: Dictionary in voice.subtitles.active(ctx.now_ms()):
-		# --- strand G2 --- a line's binding slot shows the player's current binding.
+		# a line's binding slot shows the player's current binding.
 		var text: String = BindingText.fill_markers(
 			str(e["text"]), ctx.settings.bindings, ctx.matcher.device
 		)
 		lines.append("%s: %s" % [tr(str(e["label_key"])), text])
-		# --- end strand G2 ---
 	_subtitles.text = "\n".join(lines)
 
 
-# --- strand G2 ---
 ## Keeps the Shakedown's latest step per station for the banner (TrainingBanner).
 func _note_training(entry: Dictionary) -> void:
 	TrainingBanner.note(ctx.training, entry, _pair_stations)
@@ -181,9 +179,6 @@ func _pair_stations(pair_id: String) -> Array:
 			if s.intent == StringName(pair_id):
 				return [String(s.station), String(s.partner)]
 	return []
-
-
-# --- end strand G2 ---
 
 
 ## `?`, View, or a first visit: the menu on Controls for this screen's stations; the
@@ -231,14 +226,12 @@ func _build_overlays() -> void:
 	add_child(settings_screen)
 	settings_screen.setup(ctx.settings, true)
 	settings_screen.leave_requested.connect(leave)
-	# --- strand D1 ---
 	settings_screen.host_pause_requested.connect(func() -> void: ctx.intents.host_pause(true))
 	ctx.crew.changed.connect(
 		func(_what: StringName) -> void:
 			settings_screen.set_pause_control(ctx.crew.can_host_pause())
 	)
 	settings_screen.set_pause_control(ctx.crew.can_host_pause())
-	# --- end strand D1 ---
 	settings_screen.scale_changed.connect(apply_ui_scale)
 	settings_screen.closed.connect(
 		func() -> void: ctx.matcher.invert_pitch = ctx.settings.invert_pitch

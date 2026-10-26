@@ -38,9 +38,7 @@ static var _classes: Dictionary[StringName, GDScript] = _by_kind(
 		LaunchProbeCommand,
 		FabricateProbeCommand,
 		FlagLanesCommand,
-		# --- strand G1 ---
 		SayCommand,
-		# --- strand C ---
 		HailCommand,
 		AnswerHailCommand,
 		ReplyCommand,
@@ -52,9 +50,7 @@ static var _classes: Dictionary[StringName, GDScript] = _by_kind(
 		PostCardCommand,
 		SetContractFlagCommand,
 		CardResultCommand,
-		# --- strand F ---
 		MarkMissionCommand,
-		# --- strand A ---
 		SpawnShipCommand,
 		OpenSiteCommand,
 		SetFlagCommand,
@@ -62,9 +58,7 @@ static var _classes: Dictionary[StringName, GDScript] = _by_kind(
 		BeginEncounterCommand,
 		EndEncounterCommand,
 		AbandonRunCommand,
-		# --- strand G2 ---
 		TrainingNextCommand,
-		# --- strand B ---
 		JumpCommand,
 		DockCommand,
 		UndockCommand,

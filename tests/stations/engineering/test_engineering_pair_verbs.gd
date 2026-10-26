@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Engineering (M2 strand C): pre-harden, fabricate a probe and name the cause of a fault
+## Engineering (M2): pre-harden, fabricate a probe and name the cause of a fault
 ## of unknown cause, on the station fixture (FT-ENG-006, FT-ENG-008, FT-STN-010). The
 ## fixture's corvette has engines selected at 40 %, 6 spare parts.
 

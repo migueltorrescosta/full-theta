@@ -39,7 +39,7 @@ func apply(world: SimWorld) -> bool:
 	)
 	for s: int in ships:
 		world.run.encounter[s] = id
-		# The crew must be able to see, select and jump to the site it is sent to (strand E).
+		# The crew must be able to see, select and jump to the site it is sent to.
 		world.sites.reveal(site, world.faction_of(s))
 	world.emit(&"encounter_open", ships[0], -1, id, Vector3.ZERO, scenario_id)
 	return true

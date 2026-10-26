@@ -44,7 +44,6 @@ func _init(
 	site_period = period
 
 
-# --- strand B ---
 ## Site 0, Kestrel Yard (D205, D229), the one named site of the M1 map: at the origin, where the
 ## player starts, dockable.
 static func kestrel_yard() -> SiteDef:
@@ -59,7 +58,6 @@ static func kestrel_yard() -> SiteDef:
 	return site
 
 
-# --- end strand B ---
 ## Why the setup can't be built, or [] (site_period against the ships' sensor ranges
 ## and the broadphase cells, SimWorld.period_errors).
 func validate() -> Array[String]:
@@ -80,9 +78,7 @@ func build() -> SimWorld:
 	var world: SimWorld = SimWorld.new(world_seed, build_id, site_period)
 	world.science_def = science
 	world.hazards = hazards.duplicate()
-	# --- strand B ---
 	world.add_site(kestrel_yard())
-	# --- end strand B ---
 	world.set_relation(PLAYER_FACTION, ENEMY_FACTION, SimWorld.Relation.HOSTILE)
 	world.spawn_ship(player, PLAYER_FACTION)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)

@@ -109,7 +109,7 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 			(section as ContactsSection).ids = _known_of(section.owner)
 		elif section is ChipsSection:
 			(section as ChipsSection).rows = _chips.get(section.owner, [])
-		elif section is CommsSection:  # strand C: the claims name each conversation's claimer
+		elif section is CommsSection:  # the claims name each conversation's claimer
 			(section as CommsSection).claims = _ownership.get(section.owner, {}).get("claims", {})
 		if section is NearSection:
 			_deltas[skey] = (section as NearSection).update_members(world, near_sets[section.owner])
@@ -213,10 +213,8 @@ static func peek(data: PackedByteArray) -> Array:
 
 
 func _owner(kind: int, ship: int) -> int:
-	# --- strand B ---
 	if kind == StationViews.Section.SITES:
 		return _world.faction_of(ship)
-	# --- end strand B ---
 	return _world.faction_of(ship) if kind == StationViews.Section.CONTACTS else ship
 
 
@@ -235,12 +233,10 @@ func _make(kind: int, owner: int, filter: ViewFilter) -> SnapshotSection:
 			section = OwnershipSection.new(kind, owner)
 		StationViews.Section.CHIPS:
 			section = ChipsSection.new(kind, owner, filter)
-		StationViews.Section.COMMS:  # strand C
+		StationViews.Section.COMMS:
 			section = CommsSection.new(kind, owner, filter)
-		# --- strand B ---
 		StationViews.Section.SITES:
 			section = SitesSection.new(owner)
-		# --- end strand B ---
 		_:
 			section = BlockSection.new(kind, owner, filter)
 	return section

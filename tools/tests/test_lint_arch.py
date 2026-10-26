@@ -72,7 +72,7 @@ def test_fail_fixture_reports_each_violation(pattern: str) -> None:
 
 
 
-# --- strand A: the real scenario case (FT-DAT-007) ---
+# The real scenario case (FT-DAT-007)
 
 SAMPLE_SCENARIO = """class_name EnemyWave
 extends Scenario

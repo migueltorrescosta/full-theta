@@ -260,7 +260,7 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "route_clear", "group": "relay", "kind": PRESS, "kbm": ["Shift+G"], "pad": []},
 	{"id": "flag_lanes", "group": "relay", "kind": PRESS, "kbm": ["L"], "pad": ["LB+Down"]},
 	# Probes and hazards: with something selected they go to it, else the next click on
-	# the map places them (strand B of #9).
+	# the map places them.
 	{"id": "probe_launch", "group": "relay", "kind": PRESS, "kbm": ["P"], "pad": ["Right"]},
 	{"id": "hazard_add", "group": "relay", "kind": PRESS, "kbm": ["H"], "pad": ["LB+Right"]},
 	{"id": "mark_delete", "group": "relay", "kind": PRESS, "kbm": ["Delete"], "pad": ["Down"]},
@@ -281,7 +281,7 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "main_view_3", "group": "relay", "kind": PRESS, "kbm": ["Alt+3"], "pad": []},
 	{"id": "main_view_4", "group": "relay", "kind": PRESS, "kbm": ["Alt+4"], "pad": []},
 	{"id": "main_view_5", "group": "relay", "kind": PRESS, "kbm": ["Alt+5"], "pad": []},
-	# Captain (§5.7, strand F): the main screen's view, 1 to 5 or the d-pad.
+	# Captain (§5.7): the main screen's view, 1 to 5 or the d-pad.
 	{"id": "captain_view_1", "group": "captain", "kind": PRESS, "kbm": ["1"], "pad": []},
 	{"id": "captain_view_2", "group": "captain", "kind": PRESS, "kbm": ["2"], "pad": []},
 	{"id": "captain_view_3", "group": "captain", "kind": PRESS, "kbm": ["3"], "pad": []},

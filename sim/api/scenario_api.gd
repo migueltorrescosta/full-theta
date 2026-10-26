@@ -69,7 +69,7 @@ func ship(id: int) -> ShipView:
 	v.at_site = SiteTable.at_site(_world, id)
 	v.hull_frac = DamageSystem.hull_fraction(_world, id)
 	v.status = _world.run.status[id]
-	v.in_play = v.status == RunTable.Status.IN_PLAY  # strand E
+	v.in_play = v.status == RunTable.Status.IN_PLAY
 	v.outcome = _world.run.outcome[id]
 	v.docked_site = _helm(&"docked_site", id, -1) as int
 	v.jumping = (_helm(&"jump_left", id, 0.0) as float) > 0.0
@@ -202,7 +202,6 @@ func events() -> Array[ApiEvent]:
 	return out
 
 
-# --- strand E ---
 ## Straight-line distance between two ships (m), by the minimum image across the cube's seams.
 func distance(a: int, b: int) -> float:
 	if a < 0 or b < 0 or a >= _world.ship_count() or b >= _world.ship_count():
@@ -231,7 +230,6 @@ func legs() -> Array[Dictionary]:
 	return out
 
 
-# --- end strand E ---
 ## The id a ship spawned by a command queued now will get (spawns apply in queue order).
 func next_ship_id() -> int:
 	return _world.ship_count() + _queued(&"spawn_ship")
@@ -269,7 +267,7 @@ func spawn_at_site(enemy_key: StringName, faction: int, site_id: int, offset: Ve
 
 
 ## Spawns an enemy (debris) on the leg between two sites, a share `t` (0 to 1) of the way
-## and `lateral_m` off the line (D233). Returns the new ship's id.
+## and `lateral_m` off the line (D234). Returns the new ship's id.
 func spawn_on_leg(
 	enemy_key: StringName, faction: int, from_site: int, to_site: int, t: float, lateral_m: float
 ) -> int:
@@ -323,17 +321,14 @@ func offer(ship_id: int, card: CardSpec) -> int:
 	cmd.faction_wide = card.faction_wide
 	cmd.rep_faction = card.rep_faction
 	cmd.site = card.site
-	# --- strand E ---
 	cmd.lane_open_s = card.lane_open_s
 	cmd.lane_s = card.lane_s
 	cmd.needs_subsystem = card.needs_subsystem
 	cmd.needs_pips = card.needs_pips
-	# --- end strand E ---
 	_world.submit(cmd)
 	return id
 
 
-# --- strand E ---
 ## Settles an accepted card (FT-MIS-021, FT-MIS-019): success pays its reward and draws its
 ## reputation change, failure draws the "<interaction>.fail" change if there is one. The
 ## command is the card's own ship's; nothing is queued for a card that doesn't exist.
@@ -346,9 +341,6 @@ func settle_card(card: int, success: bool) -> void:
 	cmd.card = card
 	cmd.success = success
 	_world.submit(cmd)
-
-
-# --- end strand E ---
 
 
 ## Says a dialogue line to a ship (an NPC's, or the ship computer's for some stations).
@@ -388,7 +380,7 @@ func commands_this_tick(ship_id: int) -> Array[ApiEvent]:
 			v.ship_id = ship_id
 			v.tag = c.kind()
 			out.append(v)
-			# --- strand G2 --- a coarse kind also reports what it did, as kind:detail.
+			# a coarse kind also reports what it did, as kind:detail.
 			for detail: String in _details(c):
 				var d: ApiEvent = ApiEvent.new()
 				d.tick = v.tick
@@ -396,7 +388,6 @@ func commands_this_tick(ship_id: int) -> Array[ApiEvent]:
 				d.ship_id = ship_id
 				d.tag = StringName("%s:%s" % [c.kind(), detail])
 				out.append(d)
-			# --- end strand G2 ---
 	return out
 
 
@@ -450,7 +441,6 @@ func end_encounter(id: int, result: int) -> void:
 # --- helpers ---
 
 
-# --- strand G2 ---
 ## What a helm_input does, for the Shakedown's steps: face, approach and each axis that is
 ## not at rest (throttle, strafe, lift, pitch, yaw, roll). Other commands have no detail.
 static func _details(c: SimCommand) -> PackedStringArray:
@@ -471,9 +461,6 @@ static func _details(c: SimCommand) -> PackedStringArray:
 		if pair[1]:
 			out.append(pair[0])
 	return out
-
-
-# --- end strand G2 ---
 
 
 func _spawn(enemy_key: StringName, faction: int, point: PackedFloat64Array, rot: Quaternion) -> int:
@@ -521,8 +508,7 @@ func _first_ship_of(faction: int) -> int:
 	return -1
 
 
-## A HelmTable column value for the ship, or `fallback` while the column does not exist
-## (strand B adds docked_site and jump_left).
+## A HelmTable column value for the ship, or `fallback` while the column does not exist.
 func _helm(column: StringName, id: int, fallback: Variant) -> Variant:
 	var col: Variant = _world.helm.get(column)
 	return col[id] if col != null else fallback

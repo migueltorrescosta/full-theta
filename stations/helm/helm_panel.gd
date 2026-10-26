@@ -101,7 +101,7 @@ func _process(_delta: float) -> void:
 	if ctx == null:
 		return
 	# A pause or the end of the run (the outcome card, D178) frees the pointer.
-	# strand D1: a host pause frees the pointer too
+	# a host pause frees the pointer too
 	if (
 		ctx.crew.paused.has(ctx.crew.ship)
 		or ctx.crew.host_paused

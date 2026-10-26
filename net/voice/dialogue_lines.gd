@@ -8,12 +8,10 @@ extends RefCounted
 const DEFAULT_DIR: String = "res://content/dialogue"
 ## The closed-set slot kinds, synthesised at Start (FT-AUD-018).
 const NAME_KINDS: PackedStringArray = ["ship_name", "callsign", "npc_name"]
-# --- strand G2 ---
 ## The text-only slot kind (FT-MIS-039): the subtitle carries the player's current binding of
 ## the slot's intent, which only the client knows; nothing voices it. fill() leaves
 ## `{binding:<intent>}` in the text for the client to resolve (BindingText.fill_markers).
 const BINDING_KIND: String = "binding"
-# --- end strand G2 ---
 
 static var _slot: RegEx
 
@@ -92,7 +90,7 @@ static func fill(line_data: Dictionary, template: String, args: Dictionary) -> S
 		var slot: String = m.get_string(1)
 		var v: Variant = args.get(slot, "")
 		out += template.substr(at, m.get_start() - at)
-		if slot_kind(line_data, slot) == BINDING_KIND:  # strand G2
+		if slot_kind(line_data, slot) == BINDING_KIND:
 			out += "{%s:%s}" % [BINDING_KIND, binding_intent(line_data, slot)]
 		else:
 			out += str(int(v)) if slot_kind(line_data, slot) == "number" else str(v)
@@ -100,7 +98,6 @@ static func fill(line_data: Dictionary, template: String, args: Dictionary) -> S
 	return out + template.substr(at)
 
 
-# --- strand G2 ---
 ## The IntentTable id a binding slot shows ("" for any other slot).
 static func binding_intent(line_data: Dictionary, slot: String) -> String:
 	var spec: Variant = (line_data.get("slots", {}) as Dictionary).get(slot, "")
@@ -116,9 +113,6 @@ static func has_voiced_slots(line_data: Dictionary) -> bool:
 		if slot_kind(line_data, slot) != BINDING_KIND:
 			return true
 	return false
-
-
-# --- end strand G2 ---
 
 
 static func _slot_re() -> RegEx:

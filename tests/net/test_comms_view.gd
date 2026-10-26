@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## The COMMS block (strand C, CommsView): what Comms' board carries for a ship, built from
+## The COMMS block (CommsView): what Comms' board carries for a ship, built from
 ## STORY, the economy and the module table, and the same from the net thread's copy of the
 ## world (SimCopy). It never holds Engineering data beyond the hull band (FT-PAIR-010).
 

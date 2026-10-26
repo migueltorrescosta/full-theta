@@ -184,7 +184,7 @@ func test_cancel_and_lost_contact() -> void:
 
 # FT: FT-SCI-009, FT-PAIR-003
 # P10: the own-ship scan takes self_scan_s, then marks the ship as self-scanned (the
-# seam strand C reads to reveal fault causes); a second scan can't start meanwhile.
+# seam that reveals fault causes); a second scan can't start meanwhile.
 func test_own_ship_scan() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	assert_bool(w.science.self_scanned[ME] >= 0).is_false()

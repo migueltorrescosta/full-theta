@@ -4,7 +4,7 @@ extends SimTable
 ## is open, a point with a radius in the one cube. The site id is the row. Rows are keyed
 ## by ship id -1 and the site's faction, so the table is hashed like the others
 ## (FT-ARC-012). Which sites exist comes from the MapDef (SimWorld.add_site); the director
-## opens more from the map's spawnable pool (open(), strand A's OpenSiteCommand).
+## opens more from the map's spawnable pool (open(), OpenSiteCommand).
 ## Positions are 64-bit like ships' (D104). Helpers take a ship id and use the minimum
 ## image, so "at a site" and "the nearest site" need no stored space id.
 

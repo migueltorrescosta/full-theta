@@ -220,7 +220,7 @@ func fire_guided(i: int) -> bool:
 	return true
 
 
-## "Bring mount N to bear" (Helm's chip) names the selected mount (strand G).
+## "Bring mount N to bear" (Helm's chip) names the selected mount.
 func chip_arg(chip: ChipDef) -> int:
 	return mount if chip.arg == ChipDef.Arg.MOUNT else -1
 
@@ -419,7 +419,7 @@ func mount_rows() -> Array[String]:
 	return out
 
 
-## What other stations' work says of the selected target (strand G, FT-WPN-007, P7, P8): its
+## What other stations' work says of the selected target (FT-WPN-007, P7, P8): its
 ## weak points by name, how the selected ammunition fares against its resistances, the open
 ## hack window and the track quality. Each line exists only while the server sends its feed,
 ## that is while its toggle is on or Science and Relay share this view.

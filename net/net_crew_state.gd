@@ -47,7 +47,7 @@ func send_to(s: NetSession) -> void:
 	session.notify(s, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, ""))
 	session.notify(s, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
 	session.shares.send_to(s)
-	session.notify(s, NetProtocol.EVENT_LANES, _lanes_payload(s))  # strand F
+	session.notify(s, NetProtocol.EVENT_LANES, _lanes_payload(s))
 	if _sees_routes(s):
 		session.notify(s, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
 	if _is_relay(s):
@@ -138,14 +138,12 @@ func on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
 		session.request_rejected(s, NetProtocol.Type.MARK, why, {"op": msg["op"], "slot": slot})
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
-	# --- strand E --- (FT-MIS-038: Relay's first mark)
+	# (FT-MIS-038: Relay's first mark)
 	if msg["op"] == "place" and role == CrewMarks.Role.RELAY:
 		session.first_use.on_crew_op(s.ship, "relay", "mark_place", session.world.tick)
-	# --- end strand E ---
-	# --- strand F --- (P15: Relay's mark on a mission's contact locates the mission)
+	# (P15: Relay's mark on a mission's contact locates the mission)
 	if msg["op"] == "place" and role == CrewMarks.Role.RELAY:
 		_mark_mission(s, _spot(s, msg))
-	# --- end strand F ---
 
 
 ## MarkSend{slot, ship}: Relay sends one of its ship's marks to another ship of its
@@ -221,7 +219,7 @@ func on_mark_accept(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## losses, probes and lane warnings of the event's ship, as keys and arguments, never
 ## text of a character.
 func on_sim_event(e: SimEvent) -> void:
-	if e.kind == &"card_state" and e.ship_id >= 0:  # strand F: a clearance became a lane
+	if e.kind == &"card_state" and e.ship_id >= 0:  # a clearance became a lane
 		sync_lanes(e.ship_id)
 		return
 	if e.kind == &"scan_mark":
@@ -352,7 +350,7 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 			why = relay.delete_zone(s.ship, slot)
 	if why != "":
 		return why
-	if op == "route_add":  # strand E: FT-MIS-038, Relay's first route
+	if op == "route_add":  # FT-MIS-038, Relay's first route
 		session.first_use.on_crew_op(s.ship, "relay", "route_add", session.world.tick)
 	if op.begins_with("route"):
 		for t: NetSession in session.by_id.values():
@@ -495,7 +493,6 @@ func _resolved(ship: int, slot: int) -> Dictionary:
 	return {}
 
 
-# --- strand F ---
 ## A Relay mark attached to the contact of a live mission card of the ship marks the mission
 ## (MarkMissionCommand): the card then shows the mission icon where the toggle lets Comms
 ## see it (P15).
@@ -539,7 +536,6 @@ func _lanes_payload(s: NetSession) -> Dictionary:
 	return {"ship": s.ship, "lanes": items}
 
 
-# --- end strand F ---
 ## Routes shared or unshared (NetShares): the ship's picks that don't hold Relay get the
 ## routes when their view sees them now, else an empty list. Returns whether any pick got
 ## routes (a press that shared them).

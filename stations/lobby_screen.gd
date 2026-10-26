@@ -56,7 +56,7 @@ var _dev_all: Button
 var _join_button: Button
 var _join_dialog: AcceptDialog
 var _join_panel: VBoxContainer
-## Difficulty (strand G's toggles): the one-line summary and its dialog.
+## Difficulty (toggles): the one-line summary and its dialog.
 var _difficulty: Label
 var _customise: Button
 var _dialog: AcceptDialog

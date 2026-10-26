@@ -25,14 +25,10 @@ const TRACK_FEEDS: StringName = &"track_feeds"
 const DIAGNOSED_CAUSES: StringName = &"diagnosed_causes"
 const HAZARD_COUNTDOWNS: StringName = &"hazard_countdowns"
 const CHIPS: StringName = &"chips"
-# --- strand C ---
 const CONTRACT_FLAGS: StringName = &"contract_flags"
 const VERIFY_CHIP: StringName = &"verify_chip"
-# --- end strand C ---
-# --- strand F ---
 const LANES: StringName = &"lanes"
 const MISSION_ICON: StringName = &"mission_icon"
-# --- end strand F ---
 
 ## Owners of the summarised fields.
 const ENG: Array = ["engineering"]
@@ -177,7 +173,7 @@ func apply(kind: int, values: Dictionary, world: SimWorld, ship: int) -> void:
 				values["windows"] = []
 			if not grants(TRACK_FEEDS):
 				values["tracks"] = []
-			if not grants(CONTRACT_FLAGS):  # strand C (P9, FT-MIS-042)
+			if not grants(CONTRACT_FLAGS):  # (P9, FT-MIS-042)
 				values["flags"] = []
 
 
@@ -207,11 +203,11 @@ func signature(kind: int) -> String:
 				% [
 					1 if grants(WEAK_POINTS) else 0,
 					1 if grants(TRACK_FEEDS) else 0,
-					1 if grants(CONTRACT_FLAGS) else 0,  # strand C
+					1 if grants(CONTRACT_FLAGS) else 0,
 				]
 			)
 		StationViews.Section.CHIPS:
 			out = "*" if sees_all else ",".join(stations)
-		StationViews.Section.COMMS:  # strand C: the science icon on replies (P14)
+		StationViews.Section.COMMS:  # the science icon on replies (P14)
 			out = "v%d.m%d" % [1 if grants(VERIFY_CHIP) else 0, 1 if grants(MISSION_ICON) else 0]  # F
 	return out

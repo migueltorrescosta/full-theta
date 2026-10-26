@@ -43,7 +43,7 @@ static func capture(world: SimWorld) -> Array:
 		(world.get("_relations") as Dictionary).duplicate(),
 		world.science_def,
 		world.hazards.duplicate(),
-		# --- strand C: the read-only data the COMMS section reads (shared, never changed) ---
+		# The read-only data the COMMS section reads (shared, never changed).
 		[
 			world.base_defs.duplicate(),
 			world.conversations,
@@ -77,7 +77,7 @@ static func restore(state: Array) -> SimWorld:
 	copy.set("_relations", state[RELATIONS])
 	copy.science_def = state[SCIENCE_DEF]
 	copy.hazards = state[HAZARDS]
-	var data: Array = state[STORY_DATA]  # strand C
+	var data: Array = state[STORY_DATA]
 	copy.base_defs.assign(data[0])
 	copy.conversations = data[1]
 	copy.hail_conversations = data[2]

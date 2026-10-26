@@ -57,7 +57,6 @@ var probes: ProbeTable = ProbeTable.new()
 ## crossed each ship. Empty: none. At most HazardSystem.MAX_HAZARDS (checked by the encounter).
 var hazards: Array[HazardDef] = []
 var hazard_state: HazardTable = HazardTable.new()
-# --- strand C ---
 ## STORY and the economy (#10, FT-COM-001 to FT-COM-009, FT-MIS-018 to FT-MIS-022).
 var story: StoryTable = StoryTable.new()
 var story_flags: StoryFlagTable = StoryFlagTable.new()
@@ -76,8 +75,6 @@ var markets: Dictionary[StringName, MarketDef] = {}
 var site_markets: Dictionary[int, StringName] = {}
 var module_defs: Array[ModuleDef] = []
 var rep_dists: Dictionary[StringName, RepDistDef] = {}
-# --- end strand C ---
-# --- strand A ---
 ## The run's encounters and story flags (E07, FT-MIS-025).
 var encounters: EncounterTable = EncounterTable.new()
 ## Read-only run data like defs (FT-ARC-020), filled by RunSetup: the enemies SpawnShipCommand
@@ -93,11 +90,8 @@ var step_log_from: int = 0
 ## Draws for scenarios and the director (ScenarioApi.rand): a stream of its own, not in the
 ## state hash, because the scenarios do not run on replay; what they decide is in the log.
 var script_rng: SimRng
-# --- end strand A ---
-# --- strand B ---
 ## The named sites, points in the one cube (D229); add_site() fills it from a MapDef.
 var sites: SiteTable = SiteTable.new()
-# --- end strand B ---
 
 ## Crew and server commands in application order, each stamped with its tick and
 ## whether it was accepted (FT-ARC-008, D122); rejected ones stay so replays reproduce
@@ -124,7 +118,7 @@ func _init(
 	seed_value = world_seed
 	build_id = build
 	rng = SimRng.new(world_seed)
-	script_rng = SimRng.new(world_seed ^ 0x5CE7A210)  # strand A
+	script_rng = SimRng.new(world_seed ^ 0x5CE7A210)
 	kin.period = site_period
 
 
@@ -155,13 +149,12 @@ func tables() -> Array[SimTable]:
 		relay,
 		probes,
 		hazard_state,
-		story,  # strand C
+		story,
 		story_flags,
 		economy,
 		reputation,
 		modules,
-		encounters,  # strand A
-		# --- strand B ---
+		encounters,
 		sites,
 	]
 
@@ -177,7 +170,7 @@ func spawn_ship(
 ) -> int:
 	var id: int = defs.size()
 	defs.append(def)
-	base_defs.append(def)  # strand C
+	base_defs.append(def)
 	for t: SimTable in tables():
 		t.add_ship(id, faction, def)
 	kin.place(id, offset.x, offset.y, offset.z)
@@ -215,14 +208,13 @@ func reset_ship(
 ) -> void:
 	_queue.assign(_queue.filter(func(c: SimCommand) -> bool: return c.ship_id != ship_id))
 	_reset_this_tick[ship_id] = true
-	defs[ship_id] = base_defs[ship_id]  # strand C: fitted modules are run progress (FT-MIS-011)
+	defs[ship_id] = base_defs[ship_id]  # fitted modules are run progress (FT-MIS-011)
 	for t: SimTable in tables():
 		t.reset_ship(ship_id, defs[ship_id])
 	kin.place(ship_id, x, y, z)
 	kin.rot[ship_id] = rotation.normalized()
 
 
-# --- strand B ---
 ## Opens a named site at `def`'s point (wrapped onto the cube), known to the factions in
 ## `known` (SiteTable bits), and returns its site id (D229). The name goes to site_names.
 func add_site(def: SiteDef, known: int = SiteTable.ALL_FACTIONS) -> int:
@@ -231,7 +223,6 @@ func add_site(def: SiteDef, known: int = SiteTable.ALL_FACTIONS) -> int:
 	return id
 
 
-# --- end strand B ---
 func ship_count() -> int:
 	return defs.size()
 
@@ -258,7 +249,7 @@ func submit(command: SimCommand) -> void:
 
 
 ## The commands queued for the next tick, in submission order (a copy of the list).
-func queued_commands() -> Array[SimCommand]:  # strand A
+func queued_commands() -> Array[SimCommand]:
 	return _queue.duplicate()
 
 
@@ -273,7 +264,7 @@ func advance(frame_delta: float, before_step: Callable = Callable()) -> int:
 		n = MAX_TICKS_PER_ADVANCE
 		_accumulator = 0.0
 	for i: int in n:
-		if before_step.is_valid():  # strand A
+		if before_step.is_valid():
 			before_step.call()
 		step()
 	return n
@@ -281,7 +272,7 @@ func advance(frame_delta: float, before_step: Callable = Callable()) -> int:
 
 ## Advances one fixed tick. The phase order is part of the determinism contract.
 func step() -> void:
-	var events_from: int = events.size()  # strand A
+	var events_from: int = events.size()
 	step_log_from = command_log.size()
 	_apply_commands()
 	# Science first: its clocks and hack windows feed this tick's sensors and power.
@@ -291,9 +282,7 @@ func step() -> void:
 	EnemyAi.step(self)
 	PowerSystem.step(self)
 	AssistSystem.step(self)
-	# --- strand B ---
 	JumpSystem.step(self)
-	# --- end strand B ---
 	ProbeSystem.step(self)
 	HazardSystem.step(self)
 	Integrator.step_all(kin, DT)
@@ -303,11 +292,11 @@ func step() -> void:
 	HitResolver.resolve(self)
 	ShieldSystem.step(self)
 	DamageSystem.step(self)
-	StorySystem.step(self)  # strand C
-	EncounterSystem.step(self)  # strand A
+	StorySystem.step(self)
+	EncounterSystem.step(self)
 	# Last: statuses and outcomes see this tick's destructions and knowledge (T036).
 	OutcomeSystem.step(self)
-	step_events = events.slice(events_from)  # strand A
+	step_events = events.slice(events_from)
 	tick += 1
 
 
@@ -366,7 +355,7 @@ func _apply_commands() -> void:
 	for c: SimCommand in queue:
 		var id: int = c.ship_id
 		if id < 0 and c is ServerCommand:
-			# --- strand A --- a run-wide server command names no ship.
+			# a run-wide server command names no ship.
 			c.tick = tick
 			c.accepted = c.apply(self)
 			command_log.append(c)

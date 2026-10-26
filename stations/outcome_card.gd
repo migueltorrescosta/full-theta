@@ -14,7 +14,7 @@ var _title: Label
 var _stats: Label
 var _votes: Label
 var _buttons: HBoxContainer
-var _debrief: DebriefCard  # strand E
+var _debrief: DebriefCard
 
 
 func setup(context: StationContext) -> void:
@@ -37,13 +37,12 @@ func setup(context: StationContext) -> void:
 	_buttons = HBoxContainer.new()
 	_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_child(_buttons)
-	# --- strand E --- (the debrief, opened by its button)
+	# (the debrief, opened by its button)
 	_debrief = DebriefCard.new()
 	_debrief.name = "Debrief"
 	_debrief.visible = false
 	col.add_child(_debrief)
 	_debrief.setup(ctx)
-	# --- end strand E ---
 	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
 
@@ -65,14 +64,12 @@ func refresh() -> void:
 		_buttons.remove_child(c)
 		c.queue_free()
 	var ship: int = ctx.crew.ship
-	# --- strand E ---
 	if _debrief.available():
 		_button("OpenDebrief", tr("debrief.open")).pressed.connect(
 			func() -> void: _debrief.visible = not _debrief.visible
 		)
 	else:
 		_debrief.visible = false
-	# --- end strand E ---
 	if ctx.crew.host:
 		_button("RunAgain", tr("outcome.restart")).pressed.connect(
 			func() -> void: ctx.intents.run_again(ship, true)

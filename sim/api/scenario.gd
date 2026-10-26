@@ -9,10 +9,8 @@ extends RefCounted
 ## finished() returns ACTIVE while the scenario goes on.
 enum Result { PENDING, ACTIVE, WON, LOST, FLED, ABANDONED }
 
-# --- strand E ---
 ## The relations set_relation takes, the same numbers as SimWorld.Relation (a test checks).
 enum Relation { FRIENDLY, NEUTRAL, HOSTILE }
-# --- end strand E ---
 
 
 ## A new instance for one encounter, so two encounters never share state. The default is a

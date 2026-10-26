@@ -32,7 +32,7 @@ extends RefCounted
 ##   --encounter NAME     what the world holds: run, the director's run (RunSetup on
 ##                        content/runs/m3_run.tres, E07) [run], shakedown, the training
 ##                        scenario (FT-MIS-039: RunSetup on content/runs/shakedown.tres, one
-##                        ship, no director; strand G2), or m1, the Milestone 1 encounter
+##                        ship, no director), or m1, the Milestone 1 encounter
 ##                        (the L4 encounter scenario and the golden tests).
 ##   --m1-player-hull-scale F
 ##                        test flag: the crewed ship's hull is F times its definition's
@@ -58,7 +58,7 @@ const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
 const SLEEP_USEC: int = 2000
 const MAX_FPS: int = 250
 ## The --encounter values that build a RunSetup (the director's run, the Shakedown).
-const RUN_ENCOUNTERS: Array[String] = ["run", "shakedown"]  # strand G2
+const RUN_ENCOUNTERS: Array[String] = ["run", "shakedown"]
 ## The load gate's flags (dev and test only), and the variable that allows them and
 ## --m1-player-hull-scale in a release build.
 const LOAD_FLAGS: Array[String] = [
@@ -70,7 +70,7 @@ const LOAD_FLAGS: Array[String] = [
 	"--probe-window"
 ]
 const DEV_ENV: String = "FT_DEV"
-## The enemies a crew can hail, and the conversation each answers with (STORY, strand E).
+## The enemies a crew can hail, and the conversation each answers with (STORY).
 const HAIL_CONVERSATIONS: Dictionary[StringName, StringName] = {
 	&"m1_raider": &"conv.surrender_demand"
 }
@@ -99,7 +99,7 @@ var probe_picks: int = 64
 var probe_warmup: float = 3.0
 var probe_window: float = 60.0
 var player_hull_scale: float = 1.0
-var encounter_name: String = "run"  # strand A, E
+var encounter_name: String = "run"
 ## Whether test flags (--m1-player-hull-scale, LOAD_FLAGS) are accepted: a debug build (the editor
 ## binary that L3 and L4 run) or FT_DEV set.
 var dev_flags: bool = OS.is_debug_build() or OS.get_environment(DEV_ENV) != ""
@@ -166,8 +166,8 @@ func _check_load_flags(args: PackedStringArray) -> bool:
 func _set_value(flag: String, value: String) -> bool:
 	if flag == "--m1-player-hull-scale":
 		return _set_hull_scale(value)
-	if flag == "--encounter":  # strand A
-		if not ["m1", "run", "shakedown"].has(value):  # strand G2
+	if flag == "--encounter":
+		if not ["m1", "run", "shakedown"].has(value):
 			push_error("--encounter must be m1, run or shakedown")
 			return false
 		encounter_name = value
@@ -262,20 +262,20 @@ func make_server() -> NetServer:
 		player = player.duplicate()
 		player.hull_max *= player_hull_scale
 	var encounter: M1Encounter = M1Encounter.new(seed_value, "server", player, enemy)
-	var run: RunSetup = run_setup(defs) if encounter_name in RUN_ENCOUNTERS else null  # strand A
-	if encounter_name in RUN_ENCOUNTERS:  # strand G2
+	var run: RunSetup = run_setup(defs) if encounter_name in RUN_ENCOUNTERS else null
+	if encounter_name in RUN_ENCOUNTERS:
 		if run == null:
 			return null
 		encounter = run
 	# STAND-IN (#11 lobby): the multi-ship lobby replaces --load-ships and LoadEncounter.
 	if load_ships > 0:
 		encounter = LoadEncounter.new(seed_value, "server", player, enemy, load_ships, load_world)
-		run = null  # strand A
+		run = null
 	encounter.science = defs.science()
 	if load_ships <= 0 and run == null:
 		encounter.hazards = defs.m1_hazards()
 	var server: NetServer = NetServer.new()
-	if run != null:  # strand A
+	if run != null:
 		server.driver_factory = (
 			_training_factory() if encounter_name == "shakedown" else _director_factory(run)
 		)  # G2
@@ -311,7 +311,6 @@ func make_server() -> NetServer:
 	return server
 
 
-# --- strand A ---
 ## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).
 func run_setup(defs: DefLibrary) -> RunSetup:
 	var run_def: RunDef = defs.run(&"shakedown" if encounter_name == "shakedown" else &"m3_run")
@@ -329,13 +328,12 @@ func run_setup(defs: DefLibrary) -> RunSetup:
 	for path: String in DefLibrary.list_tres("res://content/economy/markets"):
 		var market: MarketDef = load(path) as MarketDef
 		setup.markets[market.id] = market
-	# --- strand E --- (the site ids are the map's load order; hails by enemy key)
+	# (the site ids are the map's load order; hails by enemy key)
 	var sites: Array[SiteDef] = run_def.map.sites if run_def.map != null else []
 	for i: int in sites.size():
 		if sites[i].market != &"":
 			setup.site_markets[i] = sites[i].market
 	setup.hail_conversations = HAIL_CONVERSATIONS
-	# --- end strand E ---
 	return setup
 
 
@@ -353,8 +351,6 @@ func _director_factory(setup: RunSetup) -> Callable:
 		return d
 
 
-# --- end strand A ---
-# --- strand G2 ---
 ## The Shakedown's driver when the first tick steps (FT-MIS-039): its one scenario and the
 ## step list. The difficulty preset changes nothing in training.
 func _training_factory() -> Callable:
@@ -366,7 +362,6 @@ func _training_factory() -> Callable:
 		return TrainingDriver.new(scenarios[0], steps)
 
 
-# --- end strand G2 ---
 ## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,
 ## wired into the session: silent until the first Start calls start_session() with the
 ## session language and closed set; ship-computer lines go to the stations concerned
@@ -376,7 +371,7 @@ func make_voice(server: NetServer) -> VoiceService:
 		server.transport, func() -> int: return server.world.tick
 	)
 	voice.computer_audience = server.session.computer_audience
-	voice.npc_audience = server.session.npc_audience  # --- strand G1 ---
+	voice.npc_audience = server.session.npc_audience
 	server.session.voice.voice = voice
 	return voice
 

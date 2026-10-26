@@ -8,7 +8,7 @@ extends RefCounted
 ## - the inbox of marks other ships' Relays sent, visible only to the receiving Relay
 ##   until it accepts one (FT-RLY-008, FT-RLY-009, FT-SPA-021);
 ## - the ship's log (FT-RLY-006): short keyed entries, never NPC text (FT-RLY-007).
-## - approach lanes (P5, strand F): MARK items Comms' accepted clearance creates, derived from
+## - approach lanes (P5): MARK items Comms' accepted clearance creates, derived from
 ##   STORY (lane_items), that Hard keeps off other stations (FT-SPA-029, FT-PAIR-008).
 ## NetCrewState checks who may do what and sends the events.
 
@@ -170,7 +170,6 @@ func _route_slots(ship: int) -> Array:
 	return _routes[ship]
 
 
-# --- strand F ---
 ## The ship's approach lanes (P5): one MARK item per accepted clearance card of its board, at
 ## the card's site (SiteTable.point), with the seconds
 ## until the window opens and closes (negative once past), {card, x, y, z, open_s, close_s,
@@ -203,5 +202,3 @@ static func lane_items(world: SimWorld, ship: int) -> Array:
 			)
 		)
 	return out
-
-# --- end strand F ---

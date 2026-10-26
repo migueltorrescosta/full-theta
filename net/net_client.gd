@@ -177,13 +177,11 @@ func abandon(ship: int) -> void:
 	_send(NetProtocol.Type.ABANDON, {"ship": ship})
 
 
-# --- strand D1 ---
 ## The host pauses or resumes the whole universe (co-op only, FT-MIS-040).
 func host_pause(on: bool) -> void:
 	_send(NetProtocol.Type.HOST_PAUSE, {"on": on})
 
 
-# --- end strand D1 ---
 func vote_abandon(ship: int, vote: bool) -> void:
 	_send(NetProtocol.Type.ABANDON_VOTE, {"ship": ship, "vote": vote})
 
@@ -257,7 +255,7 @@ func set_main_view(view: int) -> void:
 	_send(NetProtocol.Type.MAIN_VIEW, {"view": view})
 
 
-## Relay (strand B of #9). Sends one of the ship's marks to an allied ship's Relay inbox
+## Relay. Sends one of the ship's marks to an allied ship's Relay inbox
 ## (FT-RLY-008); accepts the inbox item `id` as a mark, replacing `slot` when all 8 are in
 ## use (slot -1 takes a free one), or declines it (FT-RLY-009, FT-SPA-022).
 func send_mark(slot: int, to_ship: int) -> void:
@@ -290,7 +288,7 @@ func hazard_delete(id: int) -> void:
 	_mark("hazard_delete", id, "", -1, Vector3.ZERO)
 
 
-## Strand G. The host sets the session's data-shortcut toggles in the lobby (a DataToggles
+## The host sets the session's data-shortcut toggles in the lobby (a DataToggles
 ## code, FT-PAIR-017); a station sends a request chip (NetChips: chip id from
 ## content/chips/chips.tres, arg a mount index or contact id, -1 for none) or answers one
 ## it received (FT-PAIR-021).
@@ -306,7 +304,7 @@ func answer_chip(id: int, accept: bool) -> void:
 	_send(NetProtocol.Type.CHIP, _chip("answer", "", -1, id, accept))
 
 
-## Strand K (D210). The source station shares a data shortcut (a toggle id, e.g. "routes")
+## (D210) The source station shares a data shortcut (a toggle id, e.g. "routes")
 ## with its partner for DataToggles.share_seconds().
 func share(feature: String) -> void:
 	_send(NetProtocol.Type.SHARE, {"feature": feature})

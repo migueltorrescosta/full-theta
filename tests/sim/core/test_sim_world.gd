@@ -129,7 +129,7 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 			)
 			assert_bool(t.get(col[0]) == col[1]).is_true()
 		if t == w.sites:
-			# Named sites are rows of the map, keyed by no ship (strand B).
+			# Named sites are rows of the map, keyed by no ship.
 			continue
 		if t == w.hacks:
 			# Hack windows come and go: keyed by the hacked ship and the HACKER's faction.
@@ -144,7 +144,7 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 		# Probes are rows added by launching: none before Relay launches one.
 		if t == w.probes:
 			continue
-		# Strand C: cards, flags and reputation come with play; modules need slots (the raider has none).
+		# Cards, flags and reputation come with play; modules need slots (the raider has none).
 		if [w.story, w.story_flags, w.reputation, w.modules, w.encounters].has(t):
 			continue
 		for ship: int in [0, 1]:

@@ -87,7 +87,7 @@ static func accept(world: SimWorld, ship: int, card: int) -> bool:
 		world.emit(&"card_refused", ship, card, 0.0, Vector3.ZERO, why)
 		return false
 	set_state(world, ship, card, StoryTable.State.ACCEPTED)
-	StoryRules.on_accept(world, card)  # --- strand F --- (P5: a clearance starts its clock)
+	StoryRules.on_accept(world, card)  # P5: a clearance starts its clock
 	if t.target_flag[card] != 0 and t.target[card] >= 0:
 		world.knowledge.flag[world.knowledge.ensure_contact(t.factions[card], t.target[card])] = (
 			t.target_flag[card]
@@ -235,10 +235,9 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 			say(world, ship, card, effect["say"])
 		if effect.has("verify"):
 			t.verify[card] = StringName(effect["verify"])
-		# --- strand F --- (P9: ask the contact to surrender)
+		# (P9: ask the contact to surrender)
 		if effect.has("surrender") and t.target[card] >= 0:
 			StoryRules.roll_surrender(world, ship, card, effect["surrender"])
-		# --- end strand F ---
 	if not is_live(world, card):
 		return true
 	var nodes: Dictionary = conversation(world, card).get("nodes", {})

@@ -6,7 +6,7 @@ extends Resource
 ## world from it. Read-only at runtime (FT-ARC-020).
 
 @export var id: StringName = &""
-## The one wrapping cube with its named sites (D229). Set once the map exists (strand B).
+## The one wrapping cube with its named sites (D229). Set once the map exists.
 @export var map: MapDef
 ## The run ends in a win after this many encounters (count, FT-MIS-001).
 @export var encounters: int = 5
@@ -17,11 +17,9 @@ extends Resource
 @export var player_ship: ShipDef
 ## Credits each crewed ship starts with (count).
 @export var start_credits: int = 0
-# --- strand G2 ---
 ## A training run (the Shakedown, FT-MIS-039): a crewed ship at hull 0 is reset at the yard
 ## instead of eliminated. A rule of the training world, not a stat change (FT-SIM-029).
 @export var training: bool = false
-# --- end strand G2 ---
 
 
 func validate() -> Array[String]:

@@ -49,7 +49,6 @@ var target_ship: PackedInt32Array = PackedInt32Array()
 var target_x: PackedFloat64Array = PackedFloat64Array()
 var target_y: PackedFloat64Array = PackedFloat64Array()
 var target_z: PackedFloat64Array = PackedFloat64Array()
-# --- strand B ---
 ## Selected site id when target_kind is SITE, else -1 (FT-HLM-016).
 var target_site: PackedInt32Array = PackedInt32Array()
 ## Ticks of spool left before the jump (FT-SIM-034); 0 when no jump is under way.
@@ -63,7 +62,6 @@ var jump_y: PackedFloat64Array = PackedFloat64Array()
 var jump_z: PackedFloat64Array = PackedFloat64Array()
 ## Site id the ship is docked at, or -1 (FT-HLM-013).
 var docked_site: PackedInt32Array = PackedInt32Array()
-# --- end strand B ---
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
@@ -83,7 +81,6 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	target_x.append(0.0)
 	target_y.append(0.0)
 	target_z.append(0.0)
-	# --- strand B ---
 	target_site.append(-1)
 	jump_left.append(0)
 	jump_kind.append(JumpKind.SITE)
@@ -92,7 +89,6 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	jump_y.append(0.0)
 	jump_z.append(0.0)
 	docked_site.append(-1)
-	# --- end strand B ---
 
 
 func is_decoupled(row: int) -> bool:
@@ -118,7 +114,6 @@ func columns() -> Array:
 			["target_x", target_x],
 			["target_y", target_y],
 			["target_z", target_z],
-			# --- strand B ---
 			["target_site", target_site],
 			["jump_left", jump_left],
 			["jump_kind", jump_kind],

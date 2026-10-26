@@ -1,6 +1,6 @@
 class_name StoryFixture
 extends RefCounted
-## Worlds and helpers for the STORY, economy and module suites (strand C). Every ship is
+## Worlds and helpers for the STORY, economy and module suites. Every ship is
 ## built through spawn(), the one place that calls SimWorld.spawn_ship, so the space-id
 ## removal (B0) changes one line.
 

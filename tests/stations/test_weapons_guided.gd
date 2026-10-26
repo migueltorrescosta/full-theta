@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Weapons (M2 strand C): ammunition types and guided ordnance on the station fixture
+## Weapons (M2): ammunition types and guided ordnance on the station fixture
 ## (FT-WPN-006, FT-WPN-008, FT-STN-010). The fixture's corvette gets a second ammunition
 ## type on its bow mount, a missile.
 

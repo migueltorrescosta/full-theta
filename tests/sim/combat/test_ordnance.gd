@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## M2 strand C: beams, missiles and torpedoes next to the cannon (FT-SIM-013), guided
+## Beams, missiles and torpedoes next to the cannon (FT-SIM-013), guided
 ## ordnance at a tracked contact (FT-WPN-008, D209, P8), beam overheat locks
 ## (P6) and ammunition types (FT-WPN-006). The shooter is the M1 corvette (bow mount
 ## at (0, 0, -22) facing -Z, 15 degree half-arc, sensor range 20 km) with its weapon

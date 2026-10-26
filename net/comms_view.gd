@@ -154,7 +154,7 @@ static func block(
 			{"faction": other, "value": world.reputation.value_of(faction, other)}
 		)
 	var verify: bool = filter == null or filter.grants(ViewFilter.VERIFY_CHIP)
-	var icon: bool = filter == null or filter.grants(ViewFilter.MISSION_ICON)  # strand F (P15)
+	var icon: bool = filter == null or filter.grants(ViewFilter.MISSION_ICON)  # (P15)
 	for card: int in _board(world, ship):
 		(out["cards"] as Array).append(_card_row(world, card, claims, icon))
 		if world.story.node[card] != StoryTable.NO_TEXT and Story.is_live(world, card):
@@ -224,7 +224,7 @@ static func _card_row(world: SimWorld, card: int, claims: Dictionary, icon: bool
 		"open": t.node[card] != StoryTable.NO_TEXT,
 		"requires_docked": t.requires_docked[card] == 1,
 		"site": t.site[card],
-		"marked": icon and StoryRules.is_marked(world, card),  # strand F: the mission icon (P15)
+		"marked": icon and StoryRules.is_marked(world, card),  # the mission icon (P15)
 	}
 
 

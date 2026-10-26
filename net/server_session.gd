@@ -61,7 +61,7 @@ var abandoned: Dictionary[int, bool] = {}
 ## Paused ships still in play: ship -> uncovered stations. The universe is paused while
 ## this is not empty (FT-NET-034).
 var paused: Dictionary[int, Array] = {}
-var host_paused: bool = false  # strand D1 (FT-MIS-040), apart from the coverage pause
+var host_paused: bool = false  # (FT-MIS-040), apart from the coverage pause
 ## Ship -> NetAbandonVote, during a pause (D128).
 var votes: Dictionary[int, NetAbandonVote] = {}
 ## Ship -> {control: [session id, name]}: last writers of ship-wide controls.
@@ -78,17 +78,15 @@ var session_log: SessionLog:
 			coop.session_log = value
 
 ## The data-shortcut toggle set of the session, one for every ship (FT-PAIR-017): the host
-## changes it in the lobby until a ship starts; sessions' view keys follow (strand G).
+## changes it in the lobby until a ship starts; sessions' view keys follow.
 var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
 ## Request chips (NetChips) and the cooperative events counted for the debrief (CoopEvents).
 var chips: NetChips
 var coop: NetCoop
-# --- strand E ---
 ## When each station first used each core action, for the debrief (FT-MIS-038).
 var first_use: FirstUse = FirstUse.new()
-# --- end strand E ---
 var shares: NetShares
-var host_pause: NetHostPause  # strand D1
+var host_pause: NetHostPause
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -135,7 +133,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.BYE: _on_bye,
 		NetTransport.CLOSED: _on_closed,
 	}
-	host_pause = NetHostPause.new(self)  # strand D1, registers HostPause
+	host_pause = NetHostPause.new(self)  # registers HostPause
 
 
 ## Handles everything the transport received since the last call, lapses the sessions
@@ -272,7 +270,6 @@ func computer_audience(ship: int, stations: PackedStringArray) -> PackedInt32Arr
 	return out
 
 
-# --- strand G1 ---
 ## The session holding the claim on the conversation `npc_key` names, as
 ## VoiceService.npc_audience wants it: empty while nobody holds it (FT-AUD-005,
 ## FT-COM-006). The key is ServerVoice.card_key(card): only the ships that see the card
@@ -291,7 +288,6 @@ func npc_audience(npc_key: String) -> PackedInt32Array:
 	return out
 
 
-# --- end strand G1 ---
 ## The run reset (D178, NetRunReset): the rebuilt world replaces the old one, every
 ## ship is back in the lobby with its picks and claims, its crew state cleared, the
 ## old run's pending commands dropped and its queued voice lines too.
@@ -310,7 +306,7 @@ func restart(sim_world: SimWorld) -> void:
 		coop.reset_ship(ship["id"])
 		_ownership_dirty[ship["id"]] = true
 	coop.reset()
-	first_use.reset()  # strand E
+	first_use.reset()
 	_publish()
 
 
@@ -546,7 +542,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	for ship: Dictionary in crew_ships():
 		if _lobby_visible(session, ship["id"]):
 			notify(session, NetProtocol.EVENT_LOBBY, lobby_state(ship["id"]))
-	host_pause.send_to(session)  # strand D1
+	host_pause.send_to(session)
 	for ship: int in paused:
 		notify(session, NetProtocol.EVENT_PAUSE, _pause_payload(ship))
 		_send_votes(ship, session)

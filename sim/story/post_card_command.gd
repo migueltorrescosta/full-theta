@@ -20,7 +20,6 @@ var expires_s: float = 0.0
 var requires_docked: bool = false
 var site: int = -1
 var faction_wide: bool = false
-# --- strand F ---
 ## A clearance (P5): the approach lane opens this long after the card is accepted (s) and
 ## stays open lane_s (s); 0 for a card that isn't a clearance.
 var lane_open_s: float = 0.0
@@ -28,7 +27,6 @@ var lane_s: float = 0.0
 ## Terms the ship may not meet (P12): this subsystem must supply this many pips.
 var needs_subsystem: StringName = &""
 var needs_pips: int = 0
-# --- end strand F ---
 
 
 func kind() -> StringName:
@@ -65,7 +63,7 @@ func apply(world: SimWorld) -> bool:
 	t.target_flag[card] = target_flag
 	t.requires_docked[card] = 1 if requires_docked else 0
 	t.site[card] = site
-	StoryRules.set_lane(world, card, lane_open_s, lane_s)  # --- strand F ---
+	StoryRules.set_lane(world, card, lane_open_s, lane_s)
 	StoryRules.set_need(world, card, needs_subsystem, needs_pips)
 	world.emit(&"card_posted", ship_id, card, card_kind)
 	return true

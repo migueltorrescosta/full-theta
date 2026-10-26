@@ -35,7 +35,7 @@ enum Kind { ENGINES, THRUSTERS, WEAPONS, SHIELDS, SENSORS, REACTOR }
 ## FT-SIM-026).
 @export var heat_fault_damage: float = 0.0
 ## Whether this subsystem is a weak point: hits aimed at it once a scan has revealed
-## it damage it directly (FT-SIM-023, FT-SCI-003; #9 strands A and C).
+## it damage it directly (FT-SIM-023, FT-SCI-003).
 @export var weak_point: bool = false
 ## Share of a hit's energy past the shields that a revealed weak point takes, in place
 ## of the ship's subsystem_damage_share (dimensionless, 0..1; FT-SIM-023). Only read

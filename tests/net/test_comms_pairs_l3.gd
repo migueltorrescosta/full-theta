@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## L3 tests of Comms' pairs over loopback (strand F of #10, P5, P9, P14, P15): their shortcuts
+## L3 tests of Comms' pairs over loopback (P5, P9, P14, P15): their shortcuts
 ## need a press like every other (D210, PROVISIONAL (Q10)), the approach lane reaches Helm
 ## only after Comms' press, and the cooperative events are counted for the debrief.
 

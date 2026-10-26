@@ -73,9 +73,7 @@ func _samples() -> Dictionary:
 		{"op": "send", "chip": "bring_to_bear", "arg": 2, "id": -1, "accept": false},
 		NetProtocol.Type.CLIENT_STATS: {"sent_us": 5, "ua": "x", "pairs": PackedInt64Array([1, 2])},
 		NetProtocol.Type.SHARE: {"feature": "routes"},
-		# --- strand D1 ---
 		NetProtocol.Type.HOST_PAUSE: {"on": true},
-		# --- end strand D1 ---
 	}
 
 

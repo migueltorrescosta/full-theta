@@ -8,7 +8,7 @@ extends RefCounted
 ##
 ## Types: "bool" and "u8" (1 B), "u16", "s16" (2 B), "u32", "s32" (4 B), "f32"
 ## (4 B float), "v3f" (3 x f32), "v3n" (a unit vector, 3 x s16 over [-1, 1]), "str" (UTF-8
-## text of at most 255 bytes: u8 length, then the bytes; ids and i18n keys, strand C).
+## text of at most 255 bytes: u8 length, then the bytes; ids and i18n keys).
 
 const ROWS: String = "rows"
 

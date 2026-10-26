@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## L3 tests of the SITES snapshot section (#10 strand B, D229, D225): the named sites a
+## L3 tests of the SITES snapshot section (D229, D225): the named sites a
 ## faction knows reach every view, sent whole and only when the list changes, at most 32
 ## rows, and the position is a cube offset quantised by NetCodec.
 

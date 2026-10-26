@@ -44,7 +44,6 @@ func refresh() -> void:
 	visible = id >= 0 or ctx.crew.host_paused
 	if not visible:
 		return
-	# --- strand D1 ---
 	for c: Node in _buttons.get_children():
 		_buttons.remove_child(c)
 		c.queue_free()
@@ -54,7 +53,6 @@ func refresh() -> void:
 		_votes.visible = false
 		_resume_button()
 		return
-	# --- end strand D1 ---
 	var p: Dictionary = ctx.crew.paused[id]
 	var names: PackedStringArray = []
 	for s: Variant in p.get("uncovered", []):
@@ -85,7 +83,6 @@ func refresh() -> void:
 	_resume_button()
 
 
-# --- strand D1 ---
 ## Resume, on the host's client during a host pause (also over a coverage pause).
 func _resume_button() -> void:
 	if ctx.crew.host_paused and ctx.crew.host:
@@ -94,7 +91,6 @@ func _resume_button() -> void:
 		)
 
 
-# --- end strand D1 ---
 func _button(node_name: String, text: String) -> Button:
 	var b: Button = Button.new()
 	b.name = node_name

@@ -4,7 +4,7 @@ extends RefCounted
 ## Science client draws and plays, read from a (copied) world for the ship and its
 ## faction's knowledge. Pure reads; the field set is in StationViews.
 ##
-## Client API for the minigames (the panels are strand E's):
+## Client API for the minigames (the panels use it):
 ## - Scan: when `session` is 1, `wire` is the wireframe the player turns, `cloud` the
 ##   point cloud to match, `axes` the open rotation axes (bit 0 x, 1 y, 2 z). The player
 ##   sets an angle per open axis; the pose is Basis.from_euler(Vector3(ax, ay, az)) with

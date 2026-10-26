@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Reputation (strand C): changes drawn from seeded, data-defined distributions, one per
+## Reputation: changes drawn from seeded, data-defined distributions, one per
 ## interaction type, with the range shown where the data says so.
 
 const BLUE: int = StoryFixture.BLUE

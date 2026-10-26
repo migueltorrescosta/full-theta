@@ -98,7 +98,7 @@ class RecordingClient:
 	func run_again(ship: int, vote: bool) -> void:
 		sent.append(["run_again", [ship, vote]])
 
-	# Relay (strand B of #9).
+	# Relay.
 	func send_mark(slot: int, to_ship: int) -> void:
 		sent.append(["send_mark", [slot, to_ship]])
 
@@ -120,7 +120,7 @@ class RecordingClient:
 	func hazard_delete(id: int) -> void:
 		sent.append(["hazard_delete", [id]])
 
-	# Captain and main screen (strand F).
+	# Captain and main screen.
 	func set_main_view(view: int) -> void:
 		sent.append(["set_main_view", [view]])
 

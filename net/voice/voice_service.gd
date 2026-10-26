@@ -195,7 +195,7 @@ func say(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
 	var clip: int = _new_id()
 	var role: String = str(line.get("role", "computer"))
 	var template: String = str((line.get("text", {}) as Dictionary).get(lang, ""))
-	var local: bool = not DialogueLines.has_voiced_slots(line)  # strand G2: bindings are text-only
+	var local: bool = not DialogueLines.has_voiced_slots(line)  # bindings are text-only
 	var audio: bool = false
 	var items: Array = []
 	if local:
@@ -231,7 +231,6 @@ func say(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
 	return clip
 
 
-# --- strand G1 ---
 ## Shows an authored line as a subtitle only, to `audience`: no clip, no VOICE message
 ## (FT-AUD-010; an NPC line nobody has claimed, PROVISIONAL Q8).
 func say_subtitle(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
@@ -259,7 +258,6 @@ func say_subtitle(line_id: String, args: Dictionary, audience: PackedInt32Array)
 	return clip
 
 
-# --- end strand G1 ---
 ## Says free text in a role's voice: synthesised now and streamed per sentence
 ## (FT-AUD-003); subtitles only when the voice is unavailable or more than
 ## MAX_QUEUED_FREE_LINES free-text lines are already queued (D110, FT-AUD-015).

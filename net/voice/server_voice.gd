@@ -20,9 +20,7 @@ const HULL_CRITICAL: float = 0.25
 const LINES: Dictionary = {
 	&"fault": ["computer.subsystem_fault", ["engineering"]],
 	&"proximity": ["computer.collision_warning", ["helm"]],
-	# --- strand B ---
 	&"jump_arrive": ["computer.jump_ready", ["helm"]],
-	# --- end strand B ---
 }
 
 var voice: VoiceService
@@ -30,10 +28,8 @@ var voice: VoiceService
 ## locked once a run launches): the summaries toggle decides what Helm hears of the shields.
 var toggles: String = StationViews.DEFAULT_TOGGLES
 var world: SimWorld
-# --- strand G1 ---
-## NPC display names that join the closed set at Start (FT-AUD-018); strand C fills it.
+## NPC display names that join the closed set at Start (FT-AUD-018), filled from the story's NPCs.
 var npc_names: Array[String] = []
-# --- end strand G1 ---
 var _started: bool = false
 ## Ships whose "Hull critical" was said and not re-armed.
 var _hull_warned: Dictionary[int, bool] = {}
@@ -65,7 +61,7 @@ func closed_set(crew_factions: Array) -> Dictionary:
 			callsigns.append(prefix + str(n))
 	return {
 		"ship_names": names, "callsigns": callsigns, "npc_names": npc_names + Story.npc_names(world)
-	}  # strand C
+	}
 
 
 ## A sim event of a crewed ship.
@@ -89,7 +85,6 @@ func on_event(e: SimEvent) -> void:
 		voice.say_computer(e.ship_id, PackedStringArray(line[1]), line[0])
 
 
-# --- strand G1 ---
 ## A spoken line from the sim (SayCommand): an NPC line (role npc in the dialogue data)
 ## goes to the holder of that NPC's conversation claim only (FT-AUD-005, FT-COM-006);
 ## while nobody holds it, it is a subtitle for every Comms holder of the ship
@@ -121,7 +116,6 @@ func _say(e: SimEvent) -> void:
 		voice.say_computer(e.ship_id, stations, line_id, args)
 
 
-# --- end strand G1 ---
 ## The key VoiceService.npc_audience takes for a card's conversation.
 static func card_key(card: int) -> String:
 	return "card:%d" % card

@@ -28,10 +28,9 @@ static func step(world: SimWorld) -> void:
 		if status[id] != RunTable.Status.IN_PLAY:
 			continue
 		if alive[id] != 1:
-			# --- strand G2 --- a training run resets the crewed ship at the yard instead.
+			# a training run resets the crewed ship at the yard instead.
 			if _training_reset(world, id):
 				continue
-			# --- end strand G2 ---
 			status[id] = RunTable.Status.DESTROYED
 		elif enabled[id] == 1 and mode[id] == AiTable.Mode.RETREAT and _escaped(world, id):
 			status[id] = RunTable.Status.RETREATED
@@ -43,7 +42,7 @@ static func step(world: SimWorld) -> void:
 		if st == RunTable.Status.DESTROYED or st == RunTable.Status.ABANDONED:
 			_set_outcome(world, id, RunTable.Outcome.LOSS)
 		elif st == RunTable.Status.IN_PLAY and world.run_def != null:
-			# --- strand A --- a run wins by finishing its encounters, not by a clear sky.
+			# a run wins by finishing its encounters, not by a clear sky.
 			if EncounterSystem.run_complete(world, id):
 				_set_outcome(world, id, RunTable.Outcome.WIN)
 		elif st == RunTable.Status.IN_PLAY and _enemies_gone(world, id):
@@ -102,7 +101,6 @@ static func _enemies_gone(world: SimWorld, id: int) -> bool:
 	return enemies > 0
 
 
-# --- strand G2 ---
 ## In a training run (RunDef.training, FT-MIS-039) a crewed ship at hull 0 is not eliminated:
 ## ResetShipCommand's reset puts it back at the yard (site 0). The reset is a pure function
 ## of the state, so a replay reaches it on the same tick. True when it reset the ship.
@@ -120,7 +118,6 @@ static func _training_reset(world: SimWorld, id: int) -> bool:
 	return true
 
 
-# --- end strand G2 ---
 static func _set_outcome(world: SimWorld, id: int, outcome: RunTable.Outcome) -> void:
 	world.run.outcome[id] = outcome
 	world.emit(&"outcome", id, -1, outcome, Vector3.ZERO, RunTable.OUTCOME_NAMES[outcome])

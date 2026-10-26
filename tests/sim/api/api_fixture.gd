@@ -1,9 +1,8 @@
 class_name ApiFixture
 extends RefCounted
 ## Worlds for the Scenario API, director and run tests (E07): a RunSetup world holding crewed
-## ships at the yard, a raider in the catalogue, and three sites registered in the SiteTable
-## stub (tests/stubs, until strand B's table lands): "yard" (home, site 0), "alpha" 30 km
-## along +X and "beta" 60 km along +Y, 3 km radius each.
+## ships at the yard, a raider in the catalogue, and three sites registered in the SiteTable:
+## "yard" (home, site 0), "alpha" 30 km along +X and "beta" 60 km along +Y, 3 km radius each.
 
 const RAIDER: StringName = &"raider"
 const FACTION_ENEMY: int = 2

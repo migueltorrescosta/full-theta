@@ -1,6 +1,6 @@
 class_name SiteFixture
 extends RefCounted
-## Helpers for the jump, dock and map tests (#10 strand B): the M3 map's sites in a world,
+## Helpers for the jump, dock and map tests (#10): the M3 map's sites in a world,
 ## and Helm commands submitted the way a station sends them.
 
 const SHIP_FACTION: int = 1

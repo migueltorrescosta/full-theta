@@ -33,24 +33,22 @@ enum Type {
 	MARK = 20,
 	PING = 21,
 	RUN_AGAIN = 22,
-	# Lobby data-shortcut toggles and preset, host only (strand G).
+	# Lobby data-shortcut toggles and preset, host only.
 	TOGGLES = 23,
-	# Send or answer a request chip (strand G).
+	# Send or answer a request chip.
 	CHIP = 24,
-	# Main-screen view switch by the Captain, or Relay with no Captain (strand F).
+	# Main-screen view switch by the Captain, or Relay with no Captain.
 	MAIN_VIEW = 25,
-	# Relay sends a mark to an allied Relay, or accepts one from its inbox (strand B).
+	# Relay sends a mark to an allied Relay, or accepts one from its inbox.
 	MARK_SEND = 26,
 	MARK_ACCEPT = 27,
 	# 28 is unused: Science's puzzle rides the SCIENCE section and its commands.
-	# A client's snapshot-age report for the session log (strand D, D199).
+	# A client's snapshot-age report for the session log (D199).
 	CLIENT_STATS = 29,
-	# A source station shares a data shortcut with its partner (strand K, D210).
+	# A source station shares a data shortcut with its partner (D210).
 	SHARE = 30,
-	# --- strand D1 ---
 	# The host pauses or resumes the whole universe in co-op (D127, FT-MIS-040).
 	HOST_PAUSE = 40,
-	# --- end strand D1 ---
 }
 
 const PROTOCOL_VERSION: int = 7
@@ -91,12 +89,10 @@ const EVENT_PING: String = "ping"
 ## {ship, outcome ("win" | "loss"), time_s, hull} and {ship, voters, needed}.
 const EVENT_RUN_OVER: String = "run_over"
 const EVENT_RUN_VOTES: String = "run_votes"
-# --- strand E ---
 ## The end-of-run debrief (RunDebrief.for_ship, FT-MIS-006, FT-MIS-010, FT-MIS-038,
 ## FT-PAIR-013), right after `run_over` to every session with a pick on the ship.
 const EVENT_DEBRIEF: String = "debrief"
-# --- end strand E ---
-## Relay (strand B of #9, docs/protocol.md "Relay"): {ship, zones: [...]} (hazard zones and
+## Relay (docs/protocol.md "Relay"): {ship, zones: [...]} (hazard zones and
 ## scan positions, every pick of the ship); {ship, routes: [[{x, y, z}]]} (Relay, and other
 ## stations unless the toggle set is Hard); {ship, items: [...]} the mark inbox and {ship,
 ## entries: [{tick, key, args}], replace} the ship's log (Relay picks only).
@@ -105,19 +101,17 @@ const EVENT_ROUTES: String = "routes"
 const EVENT_INBOX: String = "inbox"
 const EVENT_RELAY_LOG: String = "relay_log"
 const EVENT_MAIN_VIEW: String = "main_view"
-## A request chip the session sent was answered (strand G, NetChips): {chip, arg, accept, by}.
+## A request chip the session sent was answered (NetChips): {chip, arg, accept, by}.
 const EVENT_CHIP_ANSWER: String = "chip_answer"
-## The shortcuts shared to the session's ship (strand K, NetShares): {ship, left: {feature:
+## The shortcuts shared to the session's ship (NetShares): {ship, left: {feature:
 ## seconds until the share ends}}; sent to its picks when the set changes.
 const EVENT_SHARES: String = "shares"
-# --- strand F ---
 ## The ship's approach lanes (P5, CrewRelay.lane_items), to Comms always and to the other
 ## stations while Comms shares them (the lanes toggle on and the press not expired) or their
 ## view holds Comms: {ship, lanes: [{card, x, y, z, open_s, close_s, by}]}, the seconds being
 ## the time left at sending. Sent when a clearance is accepted or settled and when a share
 ## starts or ends.
 const EVENT_LANES: String = "lanes"
-# --- end strand F ---
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -156,9 +150,7 @@ const SCHEMAS: Dictionary = {
 	Type.EVENT:
 	{"seq": TYPE_INT, "tick": TYPE_INT, "type": TYPE_STRING, "payload": TYPE_DICTIONARY},
 	Type.ABANDON: {"ship": TYPE_INT},
-	# --- strand D1 ---
 	Type.HOST_PAUSE: {"on": TYPE_BOOL},
-	# --- end strand D1 ---
 	Type.TAKEOVER: {"ship": TYPE_INT, "entry": TYPE_STRING},
 	Type.BYE: {"reason": TYPE_STRING},
 	Type.VOICE:
@@ -225,9 +217,7 @@ const FROM_CLIENT: Array[int] = [
 	Type.CHIP,
 	Type.SHARE,
 	Type.CLIENT_STATS,
-	# --- strand D1 ---
 	Type.HOST_PAUSE,
-	# --- end strand D1 ---
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -252,9 +242,7 @@ const RATED_REQUESTS: Array[int] = [
 	Type.CHIP,
 	Type.SHARE,
 	Type.CLIENT_STATS,
-	# --- strand D1 ---
 	Type.HOST_PAUSE,
-	# --- end strand D1 ---
 ]
 
 
