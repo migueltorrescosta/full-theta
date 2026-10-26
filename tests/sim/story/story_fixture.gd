@@ -62,7 +62,7 @@ static func dock(w: SimWorld, ship: int, site: int = SITE) -> void:
 		d.dock_max_speed = 10.0
 		w.add_site(d)
 	if SiteTable.offset_to(w, ship, site).length() > w.sites.dock_range[site]:
-		w.kin.place(ship, w.sites.px[site], w.sites.py[site], w.sites.pz[site])
+		w.kin.place(ship, w.sites.pos_x[site], w.sites.pos_y[site], w.sites.pos_z[site])
 	w.helm.docked_site[ship] = -1  # a ship docked elsewhere lets go first
 	w.kin.vel[ship] = Vector3.ZERO
 	var c: DockCommand = DockCommand.new()
