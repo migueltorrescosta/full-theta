@@ -292,6 +292,7 @@ func make_voice(server: NetServer) -> VoiceService:
 		server.transport, func() -> int: return server.world.tick
 	)
 	voice.computer_audience = server.session.computer_audience
+	voice.npc_audience = server.session.npc_audience  # --- strand G1 ---
 	server.session.voice.voice = voice
 	return voice
 

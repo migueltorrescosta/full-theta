@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name ServerSession
 extends RefCounted
 ## Session logic on the server's main thread, fed with the decoded messages NetTransport
@@ -39,6 +40,11 @@ var transport: NetTransport
 var world: SimWorld
 var sessions: NetSessions = NetSessions.new()
 var claims: NetClaims = NetClaims.new()
+# --- strand G1 ---
+## NPC id -> the card id of its open conversation (strand C fills it); the claim item is
+## "npc:<card id>" (FT-COM-006).
+var npc_cards: Dictionary = {}
+# --- end strand G1 ---
 var dev_all: bool = false
 ## The host secret (D127): a client presenting it in Hello is the host; "" for none.
 var host_secret: String = ""
@@ -265,6 +271,20 @@ func computer_audience(ship: int, stations: PackedStringArray) -> PackedInt32Arr
 	return out
 
 
+# --- strand G1 ---
+## The session holding the claim on that NPC's open card, as VoiceService.npc_audience
+## wants it: empty while nobody holds it (FT-AUD-005, FT-COM-006).
+func npc_audience(npc_id: String) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	var item: String = "npc:" + str(npc_cards.get(npc_id, npc_id))
+	for ship: Dictionary in crew_ships():
+		var holder: int = claims.holder(ship["id"], item)
+		if holder >= 0 and by_id.has(holder):
+			out.append(holder)
+	return out
+
+
+# --- end strand G1 ---
 ## The run reset (D178, NetRunReset): the rebuilt world replaces the old one, every
 ## ship is back in the lobby with its picks and claims, its crew state cleared, the
 ## old run's pending commands dropped and its queued voice lines too.

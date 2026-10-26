@@ -27,6 +27,10 @@ var voice: VoiceService
 ## locked once a run launches): the summaries toggle decides what Helm hears of the shields.
 var toggles: String = StationViews.DEFAULT_TOGGLES
 var world: SimWorld
+# --- strand G1 ---
+## NPC display names that join the closed set at Start (FT-AUD-018); strand C fills it.
+var npc_names: Array[String] = []
+# --- end strand G1 ---
 var _started: bool = false
 ## Ships whose "Hull critical" was said and not re-armed.
 var _hull_warned: Dictionary[int, bool] = {}
@@ -56,14 +60,16 @@ func closed_set(crew_factions: Array) -> Dictionary:
 	for prefix: String in ["U", "H", "F", "N"]:
 		for n: int in range(1, others + 1):
 			callsigns.append(prefix + str(n))
-	return {"ship_names": names, "callsigns": callsigns, "npc_names": []}
+	return {"ship_names": names, "callsigns": callsigns, "npc_names": npc_names.duplicate()}
 
 
 ## A sim event of a crewed ship.
 func on_event(e: SimEvent) -> void:
 	if voice == null:
 		return
-	if e.kind == &"hit" and world.kin.is_alive(e.ship_id):
+	if e.kind == &"say":
+		_say(e)
+	elif e.kind == &"hit" and world.kin.is_alive(e.ship_id):
 		var critical: bool = DamageSystem.hull_fraction(world, e.ship_id) <= HULL_CRITICAL
 		if critical and not _hull_warned.has(e.ship_id):
 			_hull_warned[e.ship_id] = true
@@ -78,6 +84,35 @@ func on_event(e: SimEvent) -> void:
 		voice.say_computer(e.ship_id, PackedStringArray(line[1]), line[0])
 
 
+# --- strand G1 ---
+## A spoken line from the sim (SayCommand): an NPC line (role npc in the dialogue data)
+## goes to the holder of that NPC's conversation claim only (FT-AUD-005, FT-COM-006);
+## while nobody holds it, it is a subtitle for every Comms holder of the ship
+## (PROVISIONAL, Q8; FT-AUD-010). A ship-computer line goes to the stations it concerns
+## (FT-AUD-006).
+func _say(e: SimEvent) -> void:
+	var line_id: String = String(e.tag)
+	var line: Dictionary = voice.dialogue.line(line_id)
+	if line.is_empty():
+		push_warning("ServerVoice: say event for unknown line %s" % line_id)
+		return
+	var args: Dictionary = e.args.duplicate(true)
+	var npc_id: String = str(args.get("npc_id", ""))
+	var stations: PackedStringArray = PackedStringArray(args.get("stations", []))
+	args.erase("npc_id")
+	args.erase("stations")
+	if line.get("role", "computer") == "npc":
+		if (voice.npc_audience.call(npc_id) as PackedInt32Array).is_empty():
+			var comms: PackedStringArray = PackedStringArray(["comms"])
+			var all: PackedInt32Array = voice.computer_audience.call(e.ship_id, comms)
+			voice.say_subtitle(line_id, args, all)
+		else:
+			voice.say_npc(npc_id, line_id, args)
+	else:
+		voice.say_computer(e.ship_id, stations, line_id, args)
+
+
+# --- end strand G1 ---
 ## "Shields low" follows the text alert's summaries rule (D224, FT-PAIR-019): Engineering
 ## always hears the exact percentage; Helm hears it exact (Easy), as its band's midpoint
 ## (Normal) or with no number (Hard, "computer.shields_low_plain"); never Comms.
