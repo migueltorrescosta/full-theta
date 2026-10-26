@@ -29,6 +29,10 @@ const CHIPS: StringName = &"chips"
 const CONTRACT_FLAGS: StringName = &"contract_flags"
 const VERIFY_CHIP: StringName = &"verify_chip"
 # --- end strand C ---
+# --- strand F ---
+const LANES: StringName = &"lanes"
+const MISSION_ICON: StringName = &"mission_icon"
+# --- end strand F ---
 
 ## Owners of the summarised fields.
 const ENG: Array = ["engineering"]
@@ -209,5 +213,5 @@ func signature(kind: int) -> String:
 		StationViews.Section.CHIPS:
 			out = "*" if sees_all else ",".join(stations)
 		StationViews.Section.COMMS:  # strand C: the science icon on replies (P14)
-			out = "v%d" % (1 if grants(VERIFY_CHIP) else 0)
+			out = "v%d.m%d" % [1 if grants(VERIFY_CHIP) else 0, 1 if grants(MISSION_ICON) else 0]  # F
 	return out

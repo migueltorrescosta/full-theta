@@ -5,7 +5,8 @@ extends RefCounted
 ## It carries no Engineering data beyond the hull band (FT-PAIR-010, D68): Comms' only view
 ## of condition is the same at every difficulty, and nothing here names a subsystem, a
 ## spare part count or a heat. The claimer of each conversation comes from the ship's claims
-## (`npc:<card>` items), the science icon on options from the verify_chip toggle (P14).
+## (`npc:<card>` items), the science icon on options from the verify_chip toggle (P14) and
+## the mission mark icon on cards from the mission_icon toggle (P15).
 
 ## The wire schema (StationViews.BLOCKS[Section.COMMS], NetBlock): the ship's docked site
 ## and credits, the hull band (Comms' only view of condition, FT-PAIR-010), reputation per
@@ -41,6 +42,7 @@ const SCHEMA: Array = [
 				["open", "bool"],
 				["requires_docked", "bool"],
 				["site", "s16"],
+				["marked", "bool"],
 			],
 		],
 	],
@@ -152,8 +154,9 @@ static func block(
 			{"faction": other, "value": world.reputation.value_of(faction, other)}
 		)
 	var verify: bool = filter == null or filter.grants(ViewFilter.VERIFY_CHIP)
+	var icon: bool = filter == null or filter.grants(ViewFilter.MISSION_ICON)  # strand F (P15)
 	for card: int in _board(world, ship):
-		(out["cards"] as Array).append(_card_row(world, card, claims))
+		(out["cards"] as Array).append(_card_row(world, card, claims, icon))
 		if world.story.node[card] != StoryTable.NO_TEXT and Story.is_live(world, card):
 			(out["nodes"] as Array).append(_node_row(world, card, verify))
 		if world.story.kind[card] == StoryTable.Kind.OFFER and Story.is_live(world, card):
@@ -196,7 +199,7 @@ static func _hull_band(world: SimWorld, ship: int) -> int:
 	return HealthBand.band_of(hull / world.defs[ship].hull_max, DataToggles.def().band_edges)
 
 
-static func _card_row(world: SimWorld, card: int, claims: Dictionary) -> Dictionary:
+static func _card_row(world: SimWorld, card: int, claims: Dictionary, icon: bool) -> Dictionary:
 	var t: StoryTable = world.story
 	var range: Array[float] = Reputation.visible_range(world, t.rep_interaction[card])
 	var left: float = -1.0
@@ -221,6 +224,7 @@ static func _card_row(world: SimWorld, card: int, claims: Dictionary) -> Diction
 		"open": t.node[card] != StoryTable.NO_TEXT,
 		"requires_docked": t.requires_docked[card] == 1,
 		"site": t.site[card],
+		"marked": icon and StoryRules.is_marked(world, card),  # strand F: the mission icon (P15)
 	}
 
 
