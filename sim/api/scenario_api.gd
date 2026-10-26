@@ -129,15 +129,14 @@ func encounter_count() -> int:
 	return _world.encounters.size()
 
 
-## The cards on the ship's Comms board, including its faction's (D82). Empty until the STORY
-## table exists (strand C).
+## The cards on the ship's Comms board, including its faction's (D82).
 func cards_of(ship_id: int) -> Array[CardView]:
 	var out: Array[CardView] = []
-	var story: Variant = _world.get(&"story")
-	if story == null or ship_id < 0 or ship_id >= _world.ship_count():
+	var story: StoryTable = _world.story
+	if ship_id < 0 or ship_id >= _world.ship_count():
 		return out
 	var faction: int = _world.faction_of(ship_id)
-	for row: int in (story.ship_ids as PackedInt32Array).size():
+	for row: int in story.size():
 		var owner: int = story.ship_ids[row]
 		if owner != ship_id and not (owner == -1 and story.factions[row] == faction):
 			continue
@@ -156,7 +155,7 @@ func cards_of(ship_id: int) -> Array[CardView]:
 
 ## The story flag's value, 0 when unset.
 func flag(name: StringName) -> int:
-	return _world.encounters.get_flag(name)
+	return _world.story_flags.get_flag(name)
 
 
 ## How much the faction knows of the contact: 0 never detected, 1 detected, 2 identified,
@@ -279,6 +278,9 @@ func offer(ship_id: int, card: CardSpec) -> int:
 	cmd.target_flag = card.target_flag
 	cmd.expires_s = card.expires_s
 	cmd.requires_docked = card.requires_docked
+	cmd.faction_wide = card.faction_wide
+	cmd.rep_faction = card.rep_faction
+	cmd.site = card.site
 	_world.submit(cmd)
 	return id
 
@@ -408,8 +410,7 @@ func _queued(kind: StringName) -> int:
 
 
 func _card_count() -> int:
-	var story: Variant = _world.get(&"story")
-	return (story.size() as int) if story != null else 0
+	return _world.story.size()
 
 
 func _first_ship_of(faction: int) -> int:

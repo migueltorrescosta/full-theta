@@ -14,6 +14,14 @@ var run_def: RunDef
 var catalog: Dictionary[StringName, EnemyDef] = {}
 ## Crewable ships to spawn.
 var crew_ships: int = 1
+## Read-only scenario data the world carries like defs (SimWorld): parsed conversations,
+## the module catalogue, reputation distributions, markets and the market of each site.
+var conversations: Dictionary[StringName, Dictionary] = {}
+var module_defs: Array[ModuleDef] = []
+var rep_dists: Dictionary[StringName, RepDistDef] = {}
+var markets: Dictionary[StringName, MarketDef] = {}
+var site_markets: Dictionary[int, StringName] = {}
+var hail_conversations: Dictionary[StringName, StringName] = {}
 ## Gap between the crewed ships at the start (m), so they do not overlap at the yard.
 var crew_spacing_m: float = 100.0
 
@@ -66,8 +74,18 @@ func build() -> SimWorld:
 	world.catalog = catalog
 	world.scenario_ids = run_def.scenarios
 	world.run_def = run_def
+	world.conversations = conversations
+	world.module_defs = module_defs
+	world.rep_dists = rep_dists
+	world.markets = markets
+	world.site_markets = site_markets
+	world.hail_conversations = hail_conversations
 	if run_def.map != null:
 		world.sites.load_map(world, run_def.map)
 	for i: int in crew_ships:
-		world.spawn_ship(run_def.player_ship, PLAYER_FACTION, Vector3(i * crew_spacing_m, 0.0, 0.0))
+		var id: int = world.spawn_ship(
+			run_def.player_ship, PLAYER_FACTION, Vector3(i * crew_spacing_m, 0.0, 0.0)
+		)
+		# A ship reset sets credits to 0, so the run's starting purse is set here (FT-MIS-018).
+		Economy.add_credits(world, id, run_def.start_credits)
 	return world

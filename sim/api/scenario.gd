@@ -10,6 +10,12 @@ extends RefCounted
 enum Result { PENDING, ACTIVE, WON, LOST, FLED, ABANDONED }
 
 
+## A new instance for one encounter, so two encounters never share state. The default is a
+## new object of the same class; a scenario configured after construction overrides it.
+func fresh() -> Scenario:
+	return (get_script() as GDScript).new()
+
+
 ## The declared metadata (constant): what the director budgets and what the lint checks.
 func meta() -> ScenarioMeta:
 	return null

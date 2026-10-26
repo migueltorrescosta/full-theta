@@ -6,4 +6,4 @@
 script = ExtResource("1_flee")
 id = &"m3_flee_cost"
 credits = 150
-rep_dist = &"flee"
+rep_dist = &"rep.flee"

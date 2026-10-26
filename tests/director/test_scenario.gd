@@ -34,9 +34,8 @@ func meta() -> ScenarioMeta:
 	return m
 
 
-## Copies keep the configuration (the director clones from the catalogue instance by script).
-func _init() -> void:
-	pass
+func fresh() -> Scenario:
+	return TestScenario.make(_id, _cost, _spawn, _ticks, _hostile)
 
 
 func start(api: ScenarioApi, params: Dictionary) -> void:

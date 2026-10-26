@@ -52,10 +52,15 @@ func test_a_jump_out_while_detected_is_fleeing_at_the_data_cost() -> void:
 	var fled: Array[SimEvent] = w.events.filter(func(e: SimEvent) -> bool: return e.kind == &"fled")
 	assert_array(fled).has_size(1)
 	assert_int(fled[0].other_id).is_equal(enemy)
-	var cost: Array[SimEvent] = w.events.filter(func(e: SimEvent) -> bool: return e.kind == &"flee_cost")
+	var cost: Array[SimEvent] = w.events.filter(
+		func(e: SimEvent) -> bool: return e.kind == &"flee_cost"
+	)
 	assert_array(cost).has_size(1)
 	var def: FleeCostDef = w.run_def.flee_cost
 	assert_int(int(cost[0].value)).is_equal(def.credits)
+	assert_int(Economy.credits(w, 0)).is_equal(w.run_def.start_credits - def.credits)
+	var standing: float = w.reputation.value[w.reputation.ensure(1, 2)]
+	assert_float(standing).is_between(-6.0, -2.0)
 	assert_str(String(cost[0].tag)).is_equal(String(def.rep_dist))
 
 

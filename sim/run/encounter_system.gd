@@ -57,15 +57,20 @@ static func run_complete(world: SimWorld, ship: int) -> bool:
 	)
 
 
-## Sets the credits and reputation a fled ship pays. PROVISIONAL until strand C's economy
-## merges: it emits &"flee_cost" (ship_id the ship, other_id the hostile ship that saw it,
-## value the credits, tag the reputation distribution id), and the integrator applies the
-## credits (Economy.add_credits) and the draw (Reputation.change) here.
+## Charges a fled ship the FleeCostDef (D233): credits (all it has, when it holds less) and
+## a reputation draw with the hostile faction that saw it go. &"flee_cost" is emitted
+## (ship_id the ship, other_id the hostile ship, value the credits taken, tag the
+## distribution id).
 static func _charge_flee(world: SimWorld, ship: int, hostile_ship: int) -> void:
 	var cost: FleeCostDef = world.run_def.flee_cost if world.run_def != null else null
 	if cost == null:
 		return
-	world.emit(&"flee_cost", ship, hostile_ship, cost.credits, Vector3.ZERO, cost.rep_dist)
+	var paid: int = mini(cost.credits, Economy.credits(world, ship))
+	Economy.add_credits(world, ship, -paid)
+	Reputation.change(
+		world, ship, world.faction_of(ship), world.faction_of(hostile_ship), cost.rep_dist
+	)
+	world.emit(&"flee_cost", ship, hostile_ship, paid, Vector3.ZERO, cost.rep_dist)
 
 
 static func _activate(world: SimWorld, id: int) -> void:

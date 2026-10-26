@@ -276,7 +276,7 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 	var cost: int = _cost_of(index)
 	var before: int = budget_left(ship)
 	var run: ActiveRun = ActiveRun.new()
-	run.scenario = (_catalogue[index].get_script() as GDScript).new()
+	run.scenario = _catalogue[index].fresh()
 	run.ship = ship
 	run.site = site
 	run.issued_tick = now

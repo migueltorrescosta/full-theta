@@ -310,6 +310,15 @@ func _run_setup(defs: DefLibrary) -> RunSetup:
 		return null
 	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.enemies())
 	setup.science = defs.science()
+	setup.conversations = ConversationLibrary.load_dir()
+	for path: String in DefLibrary.list_tres("res://content/modules"):
+		setup.module_defs.append(load(path) as ModuleDef)
+	for path: String in DefLibrary.list_tres("res://content/economy/rep"):
+		var dist: RepDistDef = load(path) as RepDistDef
+		setup.rep_dists[dist.id] = dist
+	for path: String in DefLibrary.list_tres("res://content/economy/markets"):
+		var market: MarketDef = load(path) as MarketDef
+		setup.markets[market.id] = market
 	return setup
 
 

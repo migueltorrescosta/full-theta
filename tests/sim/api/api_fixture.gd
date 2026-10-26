@@ -35,7 +35,7 @@ static func run_def(
 	r.director = d
 	r.flee_cost = f
 	r.player_ship = TestDefs.corvette()
-	r.start_credits = 100
+	r.start_credits = 500
 	return r
 
 
@@ -44,6 +44,12 @@ static func world(crew: int = 1, def: RunDef = null) -> SimWorld:
 	var catalog: Dictionary[StringName, EnemyDef] = {RAIDER: TestDefs.raider_enemy()}
 	var setup: RunSetup = RunSetup.new(7, "test", run, catalog, crew)
 	var w: SimWorld = setup.build()
+	var dist: RepDistDef = RepDistDef.new()
+	dist.id = &"flee"
+	dist.kind = &"uniform"
+	dist.lo = -6.0
+	dist.hi = -2.0
+	w.rep_dists[&"flee"] = dist
 	w.sites.register(&"yard", Vector3.ZERO, 2000.0, &"station")
 	w.sites.register(&"alpha", ALPHA, 3000.0, &"nav")
 	w.sites.register(&"beta", BETA, 3000.0, &"field")
