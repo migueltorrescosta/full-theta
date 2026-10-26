@@ -58,7 +58,9 @@ def expected_keys(root: Path, lang: str) -> dict[str, set[str]]:
             continue
         for line in json.loads(f.read_text())["lines"]:
             text = line["text"][lang]
-            if not line.get("slots"):
+            # A binding slot is text-only (FT-MIS-039): a line with only those is one whole clip.
+            voiced = [n for n, spec in line.get("slots", {}).items() if not (isinstance(spec, dict) and spec.get("kind") == "binding")]
+            if not voiced:
                 keys[line["role"]].add(f"line:{line['id']}")
                 continue
             for k, piece in enumerate(re.split(r"\{[a-z][a-z0-9_]*\}", text)):

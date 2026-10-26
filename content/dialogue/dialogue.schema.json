@@ -13,7 +13,7 @@
   },
   "$defs": {
     "text": {"type": "string", "minLength": 1},
-    "slot_kind": {"enum": ["ship_name", "callsign", "npc_name", "number"]},
+    "slot_kind": {"enum": ["ship_name", "callsign", "npc_name", "number", "binding"]},
     "line": {
       "type": "object",
       "additionalProperties": false,
@@ -42,7 +42,8 @@
                 "required": ["kind"],
                 "properties": {
                   "kind": {"$ref": "#/$defs/slot_kind"},
-                  "feminine": {"description": "Languages in which the counted noun is feminine (pt_PT duas, it una).", "type": "array", "items": {"enum": ["en", "pt_PT", "it"]}}
+                  "feminine": {"description": "Languages in which the counted noun is feminine (pt_PT duas, it una).", "type": "array", "items": {"enum": ["en", "pt_PT", "it"]}},
+                  "intent": {"description": "binding slots: the IntentTable id whose binding the client shows (Shakedown steps). A binding slot is text-only: never voiced, never prerendered; the client fills it with the player's current binding (FT-MIS-039).", "type": "string", "pattern": "^[a-z][a-z0-9_]*$"}
                 }
               }
             ]

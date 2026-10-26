@@ -77,15 +77,37 @@ def load_content(root: Path) -> tuple[list[dict], dict, dict]:
     return lines, numbers, voices
 
 
+# --- strand G2 ---
+def _is_binding(spec) -> bool:
+    return spec == "binding" or (isinstance(spec, dict) and spec.get("kind") == "binding")
+
+
+def _voiced_slots(line: dict) -> list[str]:
+    """The line's slots other than the text-only binding ones."""
+    return [name for name, spec in line.get("slots", {}).items() if not _is_binding(spec)]
+
+
+def strip_bindings(line: dict, text: str) -> str:
+    """The text without its binding slots (and the space before each): what is voiced."""
+    for name, spec in line.get("slots", {}).items():
+        if _is_binding(spec):
+            text = re.sub(r"\s*\{" + re.escape(name) + r"\}", "", text)
+    return text.strip()
+
+
+# --- end strand G2 ---
 def plan(lines: list[dict], numbers: dict, voices: dict, lang: str) -> dict[str, list[tuple[str, str, str]]]:
     """Per role, the clips to render in blob order: (key, voice name, text)."""
     roles = voices["languages"][lang]
     out: dict[str, list[tuple[str, str, str]]] = {role: [] for role in voices["roles"]}
     for line in lines:
         role, text = line["role"], line["text"][lang]
-        if not line.get("slots"):
-            out[role].append((f"line:{line['id']}", roles[role]["prerender"], text))
+        # --- strand G2 --- A binding slot is text-only (FT-MIS-039): it is never voiced, so a
+        # line whose only slots are bindings is one whole clip of its text without them.
+        if not _voiced_slots(line):
+            out[role].append((f"line:{line['id']}", roles[role]["prerender"], strip_bindings(line, text)))
             continue
+        # --- end strand G2 ---
         for k, piece in enumerate(SLOT.split(text)):
             if LETTER.search(piece):
                 out[role].append((f"seg:{line['id']}:{k}", roles[role]["runtime"], piece.strip()))

@@ -47,6 +47,30 @@ def _validate(data, schema: dict, rel: str, errors: list[str]) -> bool:
     return not found
 
 
+def _intent_ids(root: Path) -> set[str] | None:
+    """The IntentTable's ids (input/intent_table.gd), for binding slots; None in a tree without it."""
+    table = root / "input/intent_table.gd"
+    if not table.is_file():
+        return None
+    return set(re.findall(r'\{\s*"id":\s*"([a-z0-9_]+)"', table.read_text(encoding="utf-8")))
+
+
+# --- strand G2 ---
+def _check_binding_slots(line: dict, rel: str, intents: set[str] | None, errors: list[str]) -> None:
+    """A binding slot names an IntentTable intent and is text-only (never voiced)."""
+    for name, spec in line.get("slots", {}).items():
+        if spec == "binding" or (isinstance(spec, dict) and spec.get("kind") == "binding"):
+            intent = spec.get("intent") if isinstance(spec, dict) else None
+            if intents is not None and intent not in intents:
+                errors.append(f"{rel}: {line['id']}: binding slot {name} names no IntentTable intent: {intent}")
+        elif isinstance(spec, dict) and "intent" in spec:
+            errors.append(f"{rel}: {line['id']}: slot {name}: only a binding slot has an intent")
+    kinds = [spec if isinstance(spec, str) else spec.get("kind") for spec in line.get("slots", {}).values()]
+    if "binding" in kinds and any(k != "binding" for k in kinds):
+        errors.append(f"{rel}: {line['id']}: a binding slot can't share a line with a voiced slot")
+
+
+# --- end strand G2 ---
 def _check_line(line: dict, rel: str, stem: str, seen: dict, errors: list[str]) -> None:
     lid = line["id"]
     if lid in seen:
@@ -173,6 +197,7 @@ def run(root: Path) -> list[str]:
     if errors:
         return errors
     seen: dict[str, str] = {}
+    intents = _intent_ids(root)  # strand G2
     files = [p for p in sorted(folder.glob("*.json")) if not p.name.endswith(".schema.json")]
     if not any(p.name not in SCHEMAS for p in files):
         errors.append("content/dialogue: no dialogue files")
@@ -187,6 +212,7 @@ def run(root: Path) -> list[str]:
             continue
         for line in data["lines"]:
             _check_line(line, rel, path.stem, seen, errors)
+            _check_binding_slots(line, rel, intents, errors)  # strand G2
     _check_strings(root, errors)
     _check_conversations(root, seen, errors)
     return errors
