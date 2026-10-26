@@ -1,9 +1,10 @@
 class_name SiteTable
 extends SimTable
-## STUB until strand B merges (#10): B's sim/run/site_table.gd replaces this file. It has
+## STUB until strand B merges (#10): B's sim/run/site_table.gd replaces this file (on merge
+## take B's). It has
 ## the columns of contracts.md section 2 plus the accessors strand A calls (listed in the
 ## strand A report): register, load_map, open, has_key, key_of, point, kind_of,
-## dockable_of, closed_keys, nearest, at_site, offset_to. Delete with tests/stubs/.
+## dockable_of, closed_keys, nearest, at_site, offset_to. Take strand B's file on merge.
 
 var key_ix: PackedInt32Array = PackedInt32Array()
 var px: PackedFloat64Array = PackedFloat64Array()
@@ -120,5 +121,5 @@ static func at_site(world: SimWorld, ship: int) -> int:
 
 
 static func offset_to(world: SimWorld, ship: int, site: int) -> Vector3:
-	var t: SiteTable = world.sites
-	return world.kin.relative_to_point(ship, t.px[site], t.py[site], t.pz[site])
+	var p: PackedFloat64Array = world.sites.point(site)
+	return world.kin.relative_to_point(ship, p[0], p[1], p[2])
