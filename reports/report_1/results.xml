@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<testsuites id="2026-10-26" name="report_1" tests="1" failures="0" skipped="0" flaky="0" time="0.000">
-	<testsuite id="0" name="test_golden_replay" package="tests/sim/replay" timestamp="2026-10-26T11:31:41" hostname="localhost" tests="1" failures="0" errors="0" skipped="0" flaky="0" time="0.840">
-		<testcase name="test_golden_replay_matches" classname="test_golden_replay" time="0.828">
-		</testcase>
-	</testsuite>
-</testsuites>

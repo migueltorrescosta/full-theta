@@ -30,7 +30,7 @@ const STATS: Array[StringName] = [
 @export var name_key: String = ""
 ## The slot type it fits (SlotDef.slot_type).
 @export var slot_type: StringName = &""
-## Price when bought (credits); selling pays MarketDef.sell_ratio of it.
+## (dimensionless, credits) Price when bought; selling pays MarketDef.sell_ratio of it.
 @export var price: int = 0
 ## Stat -> fractional change (dimensionless).
 @export var deltas: Dictionary[StringName, float] = {}

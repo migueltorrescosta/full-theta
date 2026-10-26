@@ -12,8 +12,11 @@ const KINDS: Array[StringName] = [&"uniform", &"triangular", &"normal_clamped"]
 ## uniform on lo..hi; triangular with its peak at mode; normal_clamped with mean mode and
 ## a standard deviation of a sixth of the range, clamped to lo..hi.
 @export var kind: StringName = &"uniform"
+## (dimensionless, reputation points) Lowest change.
 @export var lo: float = 0.0
+## (dimensionless, reputation points) Highest change.
 @export var hi: float = 0.0
+## (dimensionless, reputation points) The peak (triangular) or mean (normal_clamped).
 @export var mode: float = 0.0
 ## Whether Comms shows lo..hi before the interaction.
 @export var visible: bool = false

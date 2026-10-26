@@ -249,7 +249,7 @@ static func _offer_rows(world: SimWorld, ship: int, card: int, out: Dictionary) 
 		return
 	var offers: Array = out["offers"]
 	var items: Array = m.prices.keys()
-	items.sort()
+	items.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	for item: StringName in items:
 		if Economy.is_item(world, ship, item) and offers.size() < MAX_ROWS:
 			(
@@ -265,7 +265,7 @@ static func _offer_rows(world: SimWorld, ship: int, card: int, out: Dictionary) 
 				)
 			)
 	var repairs: Array = m.repairs.keys()
-	repairs.sort()
+	repairs.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	for sub: StringName in repairs:
 		if world.damage.find_subsystem(ship, sub) >= 0 and offers.size() < MAX_ROWS:
 			(
