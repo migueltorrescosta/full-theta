@@ -3,13 +3,6 @@ extends Resource
 ## A scenario's whole map (D229, FT-MIS-024, FT-SIM-035): one wrapping cube with period P
 ## and the named sites in it. Read-only at runtime (FT-ARC-020).
 
-## The broadphase cells (m, CollisionSystem.CELL and PAIR_CELL), the most cells per axis and
-## the sensor-range factor of SimWorld.period_errors.
-const CELL_M: float = 250.0
-const PAIR_CELL_M: float = 500.0
-const MAX_CELLS_PER_AXIS: int = 1 << 20
-const PERIOD_PER_SENSOR_RANGE: int = 4
-
 ## Unique among maps (dimensionless id).
 @export var id: StringName = &""
 ## Side of the cube (m); the default is D229's.
@@ -96,36 +89,13 @@ func all_sites() -> Array[SiteDef]:
 	return out
 
 
-## The period rules (FT-SIM-035, D124, D229), the same as SimWorld.period_errors (content/
-## may not name sim/; a test keeps the two equal): a finite positive whole number of the
-## broadphase cells (250 m and 500 m, so of 500 m), at most 2^20 of either per axis and at
-## least 4 x the longest sensor range.
+## The period rules (FT-SIM-035, D124, D229), the same as SimWorld.period_errors: both are
+## PeriodRules.errors.
 func period_errors(ships: Array[ShipDef]) -> Array[String]:
-	var out: Array[String] = []
-	if not (is_finite(period_m) and period_m > 0.0):
-		out.append("site period must be finite and positive, got %s" % period_m)
-		return out
-	for cell: float in [CELL_M, PAIR_CELL_M]:
-		if fposmod(period_m, cell) != 0.0:
-			out.append("site period %.1f m is not a multiple of %.1f m" % [period_m, cell])
-		if period_m / cell > MAX_CELLS_PER_AXIS:
-			out.append(
-				(
-					"site period %.1f m is over %d cells of %.1f m"
-					% [period_m, MAX_CELLS_PER_AXIS, cell]
-				)
-			)
 	var longest: float = 0.0
 	for def: ShipDef in ships:
 		longest = maxf(longest, def.sensor_range)
-	if period_m < PERIOD_PER_SENSOR_RANGE * longest:
-		out.append(
-			(
-				"site period %.1f m is under %d x the longest sensor range %.1f m"
-				% [period_m, PERIOD_PER_SENSOR_RANGE, longest]
-			)
-		)
-	return out
+	return PeriodRules.errors(period_m, longest)
 
 
 ## Minimum-image distance (m) between two points of the cube.

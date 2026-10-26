@@ -13,12 +13,12 @@ extends RefCounted
 ## the error is a dt^2 / 2, under 3 mm at 20 m/s^2.
 
 ## Projectile broadphase cell (m, S6).
-const CELL: float = 250.0
+const CELL: float = PeriodRules.CELL
 ## Ship-pair broadphase cell (m): pairs up to this far apart are always checked, so
 ## proximity warnings get the full horizon for closing speeds up to about
 ## (PAIR_CELL - reach) / WARNING_HORIZON (90 m/s for two corvettes, D119) and at least
 ## PAIR_CELL of warning distance above that.
-const PAIR_CELL: float = 500.0
+const PAIR_CELL: float = PeriodRules.PAIR_CELL
 ## Coefficient of restitution of ship-ship contacts (dimensionless): hulls are mostly
 ## inelastic, so most of the closing kinetic energy turns into damage.
 const RESTITUTION: float = 0.2

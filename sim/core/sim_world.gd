@@ -13,10 +13,10 @@ const HZ: int = 60
 const DT: float = 1.0 / HZ
 ## The cube's period must be at least this many times the longest sensor range
 ## (FT-SIM-035, D124, D229).
-const PERIOD_PER_SENSOR_RANGE: int = 4
+const PERIOD_PER_SENSOR_RANGE: int = PeriodRules.PERIOD_PER_SENSOR_RANGE
 ## Most broadphase cells per axis (2^20), so CollisionSystem's int cell keys
 ## stay below 2^60: a period of at most 2^20 * CollisionSystem.CELL (262 144 km).
-const MAX_CELLS_PER_AXIS: int = 1 << 20
+const MAX_CELLS_PER_AXIS: int = PeriodRules.MAX_CELLS_PER_AXIS
 ## Most ticks one advance() runs; a longer stall drops time instead of spiralling.
 const MAX_TICKS_PER_ADVANCE: int = 8
 
@@ -128,37 +128,13 @@ func _init(
 	kin.period = site_period
 
 
-## Why a period (m) doesn't suit a scenario's ships, or [] if it does (FT-SIM-035,
-## D124): finite and positive, a whole number of both broadphase cells (CollisionSystem
-## CELL and PAIR_CELL) and at most MAX_CELLS_PER_AXIS of either, and at least
-## PERIOD_PER_SENSOR_RANGE times the longest sensor range, so a ship is never seen around
-## the seam (or the same ship twice).
+## Why a period (m) doesn't suit a scenario's ships, or [] if it does (PeriodRules.errors,
+## FT-SIM-035, D124).
 static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[String]:
-	var errors: Array[String] = []
-	if not (is_finite(site_period) and site_period > 0.0):
-		errors.append("site period must be finite and positive, got %s" % site_period)
-		return errors
-	for cell: float in [CollisionSystem.CELL, CollisionSystem.PAIR_CELL]:
-		if fposmod(site_period, cell) != 0.0:
-			errors.append("site period %.1f m is not a multiple of %.1f m" % [site_period, cell])
-		if site_period / cell > MAX_CELLS_PER_AXIS:
-			errors.append(
-				(
-					"site period %.1f m is over %d cells of %.1f m"
-					% [site_period, MAX_CELLS_PER_AXIS, cell]
-				)
-			)
 	var longest: float = 0.0
 	for def: ShipDef in ships:
 		longest = maxf(longest, def.sensor_range)
-	if site_period < PERIOD_PER_SENSOR_RANGE * longest:
-		errors.append(
-			(
-				"site period %.1f m is under %d x the longest sensor range %.1f m"
-				% [site_period, PERIOD_PER_SENSOR_RANGE, longest]
-			)
-		)
-	return errors
+	return PeriodRules.errors(site_period, longest)
 
 
 ## Every state container, in hash order (FT-ARC-012: each is keyed by ship and faction).

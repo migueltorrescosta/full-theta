@@ -45,8 +45,9 @@ func _init(
 	crew_ships = crew
 
 
-## Why the run can't be built, or []: the RunDef's own errors, the crew size and the
-## cube's period against the longest sensor range of any ship that can be in it.
+## Why the run can't be built, or []: the RunDef's own errors, the crew size and the map
+## against the longest sensor range of any ship that can be in it (its period and the
+## spacing of its sites, D229).
 func validate() -> Array[String]:
 	var errors: Array[String] = run_def.validate()
 	if crew_ships < 1:
@@ -56,7 +57,10 @@ func validate() -> Array[String]:
 	var ships: Array[ShipDef] = [run_def.player_ship]
 	for key: StringName in catalog:
 		ships.append(catalog[key].ship)
-	errors.append_array(SimWorld.period_errors(site_period, ships))
+	if run_def.map != null:
+		errors.append_array(run_def.map.errors(ships))  # period and the D229 site spacing
+	else:
+		errors.append_array(SimWorld.period_errors(site_period, ships))
 	if hazards.size() > HazardSystem.MAX_HAZARDS:
 		errors.append(
 			"%d hazards, at most %d are supported" % [hazards.size(), HazardSystem.MAX_HAZARDS]

@@ -54,7 +54,7 @@ func test_period_rules() -> void:
 
 
 # FT: FT-SIM-035
-# MapDef.period_errors (content/ may not name sim/) says what SimWorld.period_errors says.
+# MapDef.period_errors and SimWorld.period_errors both are PeriodRules.errors; kept equal here.
 func test_period_rules_match_the_sim_world() -> void:
 	for period: float in [0.0, NAN, 1500.0, 79500.0, 80000.0, 400000.0, 400250.0, 6.0e8]:
 		var m: MapDef = _map([_site(&"a", Vector3.ZERO)], period)
