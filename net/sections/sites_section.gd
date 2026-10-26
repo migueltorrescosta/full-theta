@@ -33,7 +33,9 @@ func update(world: SimWorld) -> PackedByteArray:
 		buf.put_u8(sites.kind_ix[id])
 		buf.put_u8(sites.dockable[id])
 		buf.put_float(sites.radius[id])
-		NetCodec.put3_32(buf, NetCodec.quant_pos(sites.pos_x[id], sites.pos_y[id], sites.pos_z[id], p_units))
+		NetCodec.put3_32(
+			buf, NetCodec.quant_pos(sites.pos_x[id], sites.pos_y[id], sites.pos_z[id], p_units)
+		)
 		buf.put_u8(name.size())
 		buf.put_data(name)
 		n += 1

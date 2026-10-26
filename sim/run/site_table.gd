@@ -149,7 +149,10 @@ static func nearest(world: SimWorld, ship: int) -> int:
 	var best_d: float = INF
 	for s: int in sites.size():
 		var d: float = (
-			world.kin.relative_to_point(ship, sites.pos_x[s], sites.pos_y[s], sites.pos_z[s]).length()
+			world
+			. kin
+			. relative_to_point(ship, sites.pos_x[s], sites.pos_y[s], sites.pos_z[s])
+			. length()
 		)
 		if d < best_d:
 			best_d = d
@@ -163,7 +166,9 @@ static func at_site(world: SimWorld, ship: int) -> int:
 	if s < 0:
 		return -1
 	var sites: SiteTable = world.sites
-	var d: float = world.kin.relative_to_point(ship, sites.pos_x[s], sites.pos_y[s], sites.pos_z[s]).length()
+	var d: float = (
+		world.kin.relative_to_point(ship, sites.pos_x[s], sites.pos_y[s], sites.pos_z[s]).length()
+	)
 	return s if d <= sites.radius[s] else -1
 
 
@@ -173,7 +178,9 @@ static func offset_to(world: SimWorld, ship: int, site: int) -> Vector3:
 	var sites: SiteTable = world.sites
 	if site < 0 or site >= sites.size():
 		return Vector3.INF
-	return world.kin.relative_to_point(ship, sites.pos_x[site], sites.pos_y[site], sites.pos_z[site])
+	return world.kin.relative_to_point(
+		ship, sites.pos_x[site], sites.pos_y[site], sites.pos_z[site]
+	)
 
 
 func columns() -> Array:

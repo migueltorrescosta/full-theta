@@ -57,5 +57,7 @@ func _target_point(world: SimWorld) -> PackedFloat64Array:
 		var sites: SiteTable = world.sites
 		if not sites.is_known(target_id, world.faction_of(ship_id)):
 			return PackedFloat64Array()
-		return PackedFloat64Array([sites.pos_x[target_id], sites.pos_y[target_id], sites.pos_z[target_id]])
+		return PackedFloat64Array(
+			[sites.pos_x[target_id], sites.pos_y[target_id], sites.pos_z[target_id]]
+		)
 	return world.kin.wrap_point(x, y, z)
