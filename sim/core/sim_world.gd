@@ -57,6 +57,26 @@ var probes: ProbeTable = ProbeTable.new()
 ## crossed each ship. Empty: none. At most HazardSystem.MAX_HAZARDS (checked by the encounter).
 var hazards: Array[HazardDef] = []
 var hazard_state: HazardTable = HazardTable.new()
+# --- strand C ---
+## STORY and the economy (#10, FT-COM-001 to FT-COM-009, FT-MIS-018 to FT-MIS-022).
+var story: StoryTable = StoryTable.new()
+var story_flags: StoryFlagTable = StoryFlagTable.new()
+var economy: EconomyTable = EconomyTable.new()
+var reputation: ReputationTable = ReputationTable.new()
+var modules: ModuleTable = ModuleTable.new()
+## Each ship's definition before any module (defs[id] is the one with them fitted).
+var base_defs: Array[ShipDef] = []
+## Read-only scenario data like defs, filled by app/: conversations by id (parsed
+## content/conversations/*.json), the conversation each ShipDef id answers a hail with,
+## markets by id and the market each site id trades with, the module catalogue (the
+## index into it is ModuleTable.module_ix) and the reputation distributions by id.
+var conversations: Dictionary[StringName, Dictionary] = {}
+var hail_conversations: Dictionary[StringName, StringName] = {}
+var markets: Dictionary[StringName, MarketDef] = {}
+var site_markets: Dictionary[int, StringName] = {}
+var module_defs: Array[ModuleDef] = []
+var rep_dists: Dictionary[StringName, RepDistDef] = {}
+# --- end strand C ---
 
 ## Crew and server commands in application order, each stamped with its tick and
 ## whether it was accepted (FT-ARC-008, D122); rejected ones stay so replays reproduce
@@ -136,7 +156,12 @@ func tables() -> Array[SimTable]:
 		hacks,
 		relay,
 		probes,
-		hazard_state
+		hazard_state,
+		story,  # strand C
+		story_flags,
+		economy,
+		reputation,
+		modules,
 	]
 
 
@@ -151,6 +176,7 @@ func spawn_ship(
 ) -> int:
 	var id: int = defs.size()
 	defs.append(def)
+	base_defs.append(def)  # strand C
 	for t: SimTable in tables():
 		t.add_ship(id, faction, def)
 	kin.place(id, offset.x, offset.y, offset.z)
@@ -188,6 +214,7 @@ func reset_ship(
 ) -> void:
 	_queue.assign(_queue.filter(func(c: SimCommand) -> bool: return c.ship_id != ship_id))
 	_reset_this_tick[ship_id] = true
+	defs[ship_id] = base_defs[ship_id]  # strand C: fitted modules are run progress (FT-MIS-011)
 	for t: SimTable in tables():
 		t.reset_ship(ship_id, defs[ship_id])
 	kin.place(ship_id, x, y, z)
@@ -251,6 +278,7 @@ func step() -> void:
 	HitResolver.resolve(self)
 	ShieldSystem.step(self)
 	DamageSystem.step(self)
+	StorySystem.step(self)  # strand C
 	# Last: statuses and outcomes see this tick's destructions and knowledge (T036).
 	OutcomeSystem.step(self)
 	tick += 1

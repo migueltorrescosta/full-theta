@@ -40,6 +40,18 @@ static var _classes: Dictionary[StringName, GDScript] = _by_kind(
 		FlagLanesCommand,
 		# --- strand G1 ---
 		SayCommand,
+		# --- strand C ---
+		HailCommand,
+		AnswerHailCommand,
+		ReplyCommand,
+		AcceptCardCommand,
+		DeclineCardCommand,
+		TradeCommand,
+		BuyModuleCommand,
+		SellModuleCommand,
+		PostCardCommand,
+		SetContractFlagCommand,
+		CardResultCommand,
 	]
 )
 

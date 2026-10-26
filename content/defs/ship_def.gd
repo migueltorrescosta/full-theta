@@ -78,6 +78,11 @@ extends Resource
 ## Damage multiplier per damage type (dimensionless; a missing type is 1.0), revealed
 ## to a faction by Science scans (FT-SIM-022, FT-SCI-003; #9 strands A and C).
 @export var resistances: Dictionary[StringName, float] = {}
+# --- strand C ---
+## Module slots (FT-DAT-014, D86): groups of slots by type; a ModuleDef of that type fits
+## each. Fitted modules change a copy of this definition (ModuleSystem.refit).
+@export var slots: Array[SlotDef] = []
+# --- end strand C ---
 
 
 func validate() -> Array[String]:
@@ -108,7 +113,25 @@ func validate() -> Array[String]:
 		_validate_pips(errors)
 	var ids: Dictionary[StringName, bool] = _validate_subsystems(errors)
 	_validate_mounts(errors, ids)
+	_validate_slots(errors)  # strand C
 	return errors
+
+
+# --- strand C ---
+func _validate_slots(errors: Array[String]) -> void:
+	var types: Dictionary[StringName, bool] = {}
+	for i: int in slots.size():
+		var s: SlotDef = slots[i]
+		if not DefCheck.required(errors, "slots[%d]" % i, s):
+			continue
+		for e: String in s.validate():
+			errors.append("slots[%d].%s" % [i, e])
+		if types.has(s.slot_type):
+			errors.append("slots[%d].slot_type: duplicate %s" % [i, s.slot_type])
+		types[s.slot_type] = true
+
+
+# --- end strand C ---
 
 
 ## A ship that carries or fabricates probes needs their numbers.

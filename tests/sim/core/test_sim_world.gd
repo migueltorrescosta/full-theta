@@ -141,6 +141,9 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 		# Probes are rows added by launching: none before Relay launches one.
 		if t == w.probes:
 			continue
+		# Strand C: cards, flags and reputation come with play; modules need slots (the raider has none).
+		if [w.story, w.story_flags, w.reputation, w.modules].has(t):
+			continue
 		for ship: int in [0, 1]:
 			assert_int(t.rows_of(ship).size()).override_failure_message(name).is_greater(0)
 	assert_array(Array(w.kin.factions)).is_equal([1, 2, 1])

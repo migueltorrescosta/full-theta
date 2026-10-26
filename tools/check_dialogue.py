@@ -7,6 +7,10 @@
   files and prefixed by their file's name (`computer.json` holds `computer.*`).
 - Each language's text uses exactly the line's declared slots, and a coalescing key
   only declared slots.
+- Every content/conversations/**/*.json validates against conversation.schema.json (FT-DAT-003,
+  FT-COM-007); its id is conv.<file name>; every NPC line is a dialogue line, every reply
+  text a UI string and every rep a reputation distribution (content/economy/rep/); start
+  and next name nodes, option ids are unique per node and every node is reachable.
 - Translation completeness: every line, number table and UI string
   (content/i18n/*.json) has non-blank text in each launch language.
 
@@ -91,6 +95,72 @@ def _check_strings(root: Path, errors: list[str]) -> None:
                 errors.append(f"{rel}: {key}: unknown languages {sorted(extra)}")
 
 
+def _rep_ids(root: Path) -> set[str]:
+    ids = set()
+    for path in (root / "content/economy/rep").glob("*.tres"):
+        m = re.search(r'^id = &"([^"]+)"', path.read_text(encoding="utf-8"), re.M)
+        if m:
+            ids.add(m.group(1))
+    return ids
+
+
+def _check_conversation(data: dict, rel: str, lines: dict, texts: set, reps: set, errors: list[str]):
+    nodes = data["nodes"]
+    if data["start"] not in nodes:
+        errors.append(f"{rel}: start names no node: {data['start']}")
+    reached, todo = set(), [data["start"]]
+    while todo:
+        name = todo.pop()
+        if name in reached or name not in nodes:
+            continue
+        reached.add(name)
+        todo += [o["next"] for o in nodes[name]["options"] if "next" in o]
+    for name, node in nodes.items():
+        if name not in reached:
+            errors.append(f"{rel}: node {name} is unreachable")
+        if node["line"] not in lines:
+            errors.append(f"{rel}: {name}: unknown dialogue line {node['line']}")
+        ids = [o["id"] for o in node["options"]]
+        for dup in sorted({i for i in ids if ids.count(i) > 1}):
+            errors.append(f"{rel}: {name}: duplicate option id {dup}")
+        for option in node["options"]:
+            where = f"{rel}: {name}.{option['id']}"
+            if option["text"] not in texts:
+                errors.append(f"{where}: unknown UI string {option['text']}")
+            if "next" in option and option["next"] not in nodes:
+                errors.append(f"{where}: next names no node: {option['next']}")
+            for effect in option.get("effects", []):
+                if "say" in effect and effect["say"] not in lines:
+                    errors.append(f"{where}: unknown dialogue line {effect['say']}")
+                if "rep" in effect and effect["rep"] not in reps:
+                    errors.append(f"{where}: unknown reputation distribution {effect['rep']}")
+
+
+def _check_conversations(root: Path, lines: dict, errors: list[str]) -> None:
+    folder = root / "content/conversations"
+    if not folder.is_dir():
+        return
+    schema = _load(folder / "conversation.schema.json", "content/conversations/conversation.schema.json", errors)
+    if schema is None:
+        return
+    Draft202012Validator.check_schema(schema)
+    strings = json.loads((root / "content/i18n/strings.json").read_text(encoding="utf-8"))["strings"]
+    reps, seen = _rep_ids(root), {}
+    for path in sorted(folder.rglob("*.json")):
+        if path.name.endswith(".schema.json"):
+            continue
+        rel = path.relative_to(root).as_posix()
+        data = _load(path, rel, errors)
+        if data is None or not _validate(data, schema, rel, errors):
+            continue
+        if data["id"] != f"conv.{path.stem}":
+            errors.append(f"{rel}: id {data['id']} must be conv.{path.stem}")
+        if data["id"] in seen:
+            errors.append(f"{rel}: duplicate conversation id {data['id']} (also in {seen[data['id']]})")
+        seen.setdefault(data["id"], rel)
+        _check_conversation(data, rel, lines, set(strings), reps, errors)
+
+
 def run(root: Path) -> list[str]:
     errors: list[str] = []
     folder = root / "content/dialogue"
@@ -118,6 +188,7 @@ def run(root: Path) -> list[str]:
         for line in data["lines"]:
             _check_line(line, rel, path.stem, seen, errors)
     _check_strings(root, errors)
+    _check_conversations(root, seen, errors)
     return errors
 
 

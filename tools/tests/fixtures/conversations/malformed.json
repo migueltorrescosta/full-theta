@@ -1,0 +1,13 @@
+{
+  "id": "Conv.Malformed",
+  "npc_role": "radio",
+  "nodes": {
+    "n0": {
+      "line": "npc.hail_trader",
+      "options": [
+        {"id": "o1", "text": "comms.opt.close", "effects": [{"intent": "furious"}], "volume": 3},
+        {"id": "o2", "text": "comms.opt.close", "effects": [{"accept": true, "decline": true}]}
+      ]
+    }
+  }
+}

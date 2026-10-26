@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RepDistDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/rep_dist_def.gd" id="1_rep"]
+
+[resource]
+script = ExtResource("1_rep")
+id = &"rep.call_bluff"
+kind = &"normal_clamped"
+lo = -5.0
+hi = 15.0
+mode = 6.0
+visible = false
