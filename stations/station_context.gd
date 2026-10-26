@@ -18,6 +18,10 @@ var settings: ClientSettings = ClientSettings.new()
 var host_bind: String = ""
 var host_port: int = 0
 var matcher: InputMatcher = InputMatcher.new()
+# --- strand G2 ---
+## The Shakedown's latest step per station (TrainingBanner.note); empty outside training.
+var training: Dictionary = {}
+# --- end strand G2 ---
 ## Milliseconds; fixtures pin it.
 var clock: Callable = Time.get_ticks_msec
 
