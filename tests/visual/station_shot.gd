@@ -10,7 +10,9 @@
 ## crew model 2 s before the shot, after the screen is built; a payload `vector` given
 ## as [x, y, z] becomes a Vector3), `focus` (the focused panel of a joint view, F1 = 0),
 ## `science` (a Science block with the cards, a scan or a hack open) and `touch` (the touch
-## layout whatever the pointer; a viewport under 600 px is a phone anyway, D195).
+## layout whatever the pointer; a viewport under 600 px is a phone anyway, D195) and `comms`
+## (CommsFixture's COMMS block is on every shot; "trade" also opens Kappa's offer card,
+## "conversation" the hail, "off" leaves the block out).
 extends Control
 
 var view: String = "screen"
@@ -30,6 +32,7 @@ var focus: int = 0
 var touch: bool = false
 ## A SCIENCE block for the shot ("cards", "scan" or "hack", ScienceShotBlocks); "" none.
 var science: String = ""
+var comms: String = "board"
 
 var _ctx: StationContext
 
@@ -43,6 +46,8 @@ func _ready() -> void:
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
 	if science != "":
 		_ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(science)
+	if comms != "off":
+		CommsFixture.install(_ctx)
 	if tooltip:
 		_ctx.settings.reset_tooltips()
 	if claim != "":
@@ -96,6 +101,9 @@ func _ready() -> void:
 			add_child(s)
 			move_child(menu, -1)
 			s.focus(focus)
+			if comms in ["trade", "conversation"]:
+				var panel: CommsPanel = s.panels[s.stations.find("comms")] as CommsPanel
+				panel.open_card(CommsFixture.OFFER if comms == "trade" else CommsFixture.HAIL)
 			s.radar.side_strip = strip
 			if overlay:
 				s.help_requested.emit()

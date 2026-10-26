@@ -46,12 +46,12 @@ func test_marks_and_pings_reach_every_station() -> void:
 	assert_bool(await _all(func(s: ClientShell) -> bool: return s.screen != null)).is_true()
 	var seen: Callable = func(s: ClientShell) -> bool: return ENEMY in s.ctx.interp.contact_ids()
 	assert_bool(await _all(seen)).is_true()
-	# Science has its panel (E01); Comms is a placeholder with the top bar (FT-M1-005).
+	# Science and Comms have their panels, with the top bar (FT-M1-005).
 	assert_object(_shell_of("science").screen.panels[0]).is_instanceof(SciencePanel)
 	for entry: String in ["science", "comms"]:
 		var screen: StationScreen = _shell_of(entry).screen
 		if entry == "comms":
-			assert_object(screen.panels[0]).is_instanceof(PlaceholderPanel)
+			assert_object(screen.panels[0]).is_instanceof(CommsPanel)
 		assert_str(screen.top_bar._name.text).is_equal(_shell_of(entry).ctx.crew.ship_name())
 	# Science marks its selected contact with the common action (hold R3).
 	var science: ClientShell = _shell_of("science")

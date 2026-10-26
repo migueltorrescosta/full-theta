@@ -62,6 +62,18 @@ func item_at(_screen_pos: Vector2) -> Dictionary:
 	return {}
 
 
+## Esc (the common menu) first closes what the panel has open on top of its view (Comms'
+## overlay): true when it closed something, else the menu opens.
+func close_overlay() -> bool:
+	return false
+
+
+## A pressed on a controller, the common select, offered to the focused panel first: a panel
+## with a focus of its own (Comms' card board) takes it and returns true.
+func take_select() -> bool:
+	return false
+
+
 ## Where a controller's "under the cursor" points on this panel (its coordinates): the
 ## reticle at the centre unless the panel moves a cursor (Relay's map).
 func cursor_pos() -> Vector2:
@@ -116,14 +128,14 @@ func send_request() -> void:
 
 
 ## The chips this station can send now, from the data list (content/chips/chips.tres): the
-## active ones from this station, to a station on this screen (direct action) or, while the
+## ones from this station, to a station on this screen (direct action) or, while the
 ## session's chips toggle is on (Hard turns them off, FT-PAIR-009), to another.
 func request_chips() -> Array[ChipDef]:
 	var out: Array[ChipDef] = []
 	if ctx == null:
 		return out
 	for c: ChipDef in NetChips.def().chips:
-		if String(c.from_station) != station or not c.active:
+		if String(c.from_station) != station:
 			continue
 		if _on_screen(c) or ctx.crew.toggles.on(ViewFilter.CHIPS):
 			out.append(c)
@@ -184,7 +196,8 @@ func _on_screen(chip: ChipDef) -> bool:
 ## subsystem maximum still apply, so the player takes power from something else); bring to
 ## bear turns the requested mount's rest direction onto the selected contact; the scan mark
 ## places Science's mark.
-## Hold fire (Comms, inert until #10) has no receiving station on a screen.
+## Hold fire (Comms to Weapons) in Parley, which holds both, has no direct action: the toast
+## says so.
 func _direct(chip: ChipDef) -> void:
 	match chip.id:
 		&"boost":

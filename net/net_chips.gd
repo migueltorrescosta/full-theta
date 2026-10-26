@@ -14,7 +14,6 @@ extends RefCounted
 ## request_rejected reasons.
 const OFF: String = "chips_off"
 const BAD_CHIP: String = "bad_chip"
-const INERT: String = "chip_inert"
 const NOT_YOURS: String = "chip_not_yours"
 const SAME_SCREEN: String = "chip_same_screen"
 const NOBODY: String = "chip_nobody"
@@ -190,15 +189,13 @@ func _sender_rule(s: NetSession) -> String:
 	return why
 
 
-## The chip may go from this session to its receiver: active, from a station the session
+## The chip may go from this session to its receiver: from a station the session
 ## holds and not to one it holds too (a joint view runs it as a direct action), with a
 ## sensible argument and a player at the receiving station.
 func _chip_rule(s: NetSession, chip: ChipDef, arg: int) -> String:
 	var stations: Array[String] = StationViews.stations_of(s.entry)
 	var why: String = ""
-	if not chip.active:
-		why = INERT
-	elif stations.has(String(chip.to_station)):
+	if stations.has(String(chip.to_station)):
 		why = SAME_SCREEN
 	elif not stations.has(String(chip.from_station)):
 		why = NOT_YOURS

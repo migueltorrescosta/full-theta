@@ -21,9 +21,6 @@ const LOG_EVENTS: Dictionary = {
 	&"lane_warning": "lane_warning",
 }
 
-## Most cards a card ping may name.
-const MAX_CARDS: int = 64
-
 ## The owning session, held weakly: it owns this object, and a strong reference back
 ## would leak both (and the world they hold) when the server goes.
 var session: ServerSession:
@@ -263,16 +260,15 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 				else:
 					session.coop.on_mark_pinged(s, msg["id"])
 			"card":
-				# A mission or contract card of Comms' list (FT-CPT-005, D215): the Captain
-				# pings it. Comms' cards come with #10, the id is checked against the
-				# fixture's size only.
+				# A card of the ship's Comms board (FT-CPT-005, D215): the Captain pings it,
+				# and the ping carries the card's text, so the main screen (a viewer, which has
+				# no Comms section) can draw it.
 				payload["id"] = msg["id"]
-				if (
-					CrewMarks.role_of(s.entry) != CrewMarks.Role.CAPTAIN
-					or msg["id"] < 0
-					or msg["id"] >= MAX_CARDS
-				):
+				var card: Dictionary = _board_card(s.ship, msg["id"])
+				if CrewMarks.role_of(s.entry) != CrewMarks.Role.CAPTAIN or card.is_empty():
 					why = CrewPings.BAD_PING
+				else:
+					payload["card"] = card
 			"zone":
 				# A hazard zone, scan position or probe bubble (D222, FT-SPA-028).
 				payload["id"] = msg["id"]
@@ -299,6 +295,23 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 	payload["by"] = s.name
 	payload["copy"] = pings.copy_of(s.ship, kind, payload["id"], s.id, s.name, now_us)
 	_to_ship(s.ship, NetProtocol.EVENT_PING, payload)
+
+
+## A card of the ship's board as the ping shows it: kind (StoryTable.Kind), the title and
+## detail text keys and the seconds left (-1: none); {} for an id the ship has no card with.
+func _board_card(ship: int, id: int) -> Dictionary:
+	var w: SimWorld = session.world
+	if id < 0 or id >= w.story.size() or not Story.visible_to(w, id, ship):
+		return {}
+	var left: float = -1.0
+	if w.story.expires_tick[id] >= 0:
+		left = maxf(0.0, float(w.story.expires_tick[id] - w.tick) / SimWorld.HZ)
+	return {
+		"kind": w.story.kind[id],
+		"title": w.story.title[id],
+		"detail": w.story.detail[id],
+		"expires": left,
+	}
 
 
 ## The Mark message's zone and route ops (Relay only): the point is (x, y, z); a

@@ -281,8 +281,10 @@ func _common(ev: Dictionary) -> bool:
 			help_requested.emit()
 			_update_block()
 		"menu":
-			menu_requested.emit()
-			_update_block()
+			# Esc first closes what the focused panel has open on top (Comms' overlay).
+			if not focused_panel().close_overlay():
+				menu_requested.emit()
+				_update_block()
 		_:
 			handled = _live(id)
 	return handled
@@ -312,6 +314,8 @@ func _answer_chip(accept: bool) -> bool:
 ## Select under the pointer; false over nothing, so the click falls through to the
 ## panel (owner decision in #7: LMB fires in the turret).
 func _select(device: String) -> bool:
+	if device == IntentTable.PAD and focused_panel().take_select():
+		return true
 	var item: Dictionary = item_under_cursor(device)
 	if item.is_empty() or item["kind"] == "point" or item["kind"] == "card":
 		return false
