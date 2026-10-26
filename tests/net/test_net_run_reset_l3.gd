@@ -43,7 +43,7 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
 	assert_bool(await h.start(server, crew[0])).is_true()
 	var tac: NetSession = h.session_of(server, crew[0])
-	crew[2].place_mark(-1, "", ENEMY, 0, Vector3.ZERO)
+	crew[2].place_mark(-1, "", ENEMY, Vector3.ZERO)
 	crew[0].set_alert(2)
 	var marked: Callable = func() -> bool:
 		return (

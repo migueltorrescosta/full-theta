@@ -136,7 +136,7 @@ func test_loss_when_own_ship_destroyed() -> void:
 func test_per_ship_elimination_and_no_enemy() -> void:
 	var world: SimWorld = _world(13)
 	var wing: int = world.spawn_ship(
-		TestDefs.corvette(), M1Encounter.PLAYER_FACTION, M1Encounter.SITE, Vector3(500, 0, 0)
+		TestDefs.corvette(), M1Encounter.PLAYER_FACTION, Vector3(500, 0, 0)
 	)
 	_destroy(world, PLAYER, ENEMY)
 	SimFixture.run(world, 2)
@@ -149,7 +149,7 @@ func test_per_ship_elimination_and_no_enemy() -> void:
 	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
 	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.WIN)
 	var alone: SimWorld = SimWorld.new(1)
-	alone.spawn_ship(TestDefs.corvette(), 1, 0)
+	alone.spawn_ship(TestDefs.corvette(), 1)
 	assert_array(SimFixture.of_kind(SimFixture.run(alone, 60), &"outcome")).is_empty()
 	assert_int(OutcomeSystem.encounter_outcome(alone)).is_equal(RunTable.Outcome.NONE)
 

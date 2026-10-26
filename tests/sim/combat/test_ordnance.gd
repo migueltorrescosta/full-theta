@@ -30,9 +30,9 @@ func _shooter(weapon: WeaponDef, alts: Array[WeaponDef] = []) -> ShipDef:
 ## one step first, so the shooter's faction has detected it.
 func _duel(weapon: WeaponDef, range_m: float, vel: Vector3 = Vector3.ZERO) -> Array:
 	var world: SimWorld = SimWorld.new(7)
-	var shooter: int = world.spawn_ship(_shooter(weapon), 1, 0)
+	var shooter: int = world.spawn_ship(_shooter(weapon), 1)
 	var target: int = world.spawn_ship(
-		TestDefs.raider(), 2, 0, Vector3(0, 0, -range_m), Quaternion.IDENTITY, vel
+		TestDefs.raider(), 2, Vector3(0, 0, -range_m), Quaternion.IDENTITY, vel
 	)
 	world.step()
 	world.drain_events()
@@ -154,8 +154,8 @@ func test_beam_overheat_locks_the_mount() -> void:
 func test_ammo_switch_releases_an_overheat_lock() -> void:
 	var world: SimWorld = SimWorld.new(7)
 	var alts: Array[WeaponDef] = [_weapon(MISSILE)]
-	var shooter: int = world.spawn_ship(_shooter(_weapon(BEAM), alts), 1, 0)
-	world.spawn_ship(TestDefs.raider(), 2, 0, Vector3(0, 0, -2000))
+	var shooter: int = world.spawn_ship(_shooter(_weapon(BEAM), alts), 1)
+	world.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -2000))
 	world.step()
 	world.drain_events()
 	world.mounts.locked[0] = 1
@@ -284,7 +284,7 @@ func test_ammunition_types_keep_their_own_rounds() -> void:
 	var missile: WeaponDef = _weapon(MISSILE)
 	var world: SimWorld = SimWorld.new(3)
 	var alts: Array[WeaponDef] = [missile]
-	var ship: int = world.spawn_ship(_shooter(cannon, alts), 1, 0)
+	var ship: int = world.spawn_ship(_shooter(cannon, alts), 1)
 	var rounds: Callable = func() -> int: return world.mounts.ammo[0]
 	_fire(world, ship)
 	world.step()

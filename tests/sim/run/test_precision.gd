@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
 ## R16 (FT-SIM-035, D98, D104): the M1 intercept, with the scripted crew firing, behaves
-## the same far from the site centre: 64-bit site-local offsets keep slow motion near
-## the site's wrapping faces at +-P/2 (D124). The sim stores no site origins, only site
-## ids, so which site a fight happens at can't matter by construction.
+## the same far from the origin: 64-bit offsets keep slow motion near the cube's
+## wrapping faces at +-P/2 (D124, D229). The sim stores no space id (D230), so where in
+## the cube a fight happens can't matter by construction.
 
 const TICKS: int = 600
 ## Where the intercept is moved on X (m): 1 km inside the +P/2 face.
@@ -23,17 +23,17 @@ func _fight(world: SimWorld) -> void:
 
 
 # FT: FT-SIM-035, FT-M1-020
-# The same intercept moved to +P/2 - 1 km (99 km) on X within the site, the corvette
-# coasting decoupled at 0.2 m/s (float32 offsets freeze under about 0.23 m/s there,
+# The same intercept moved to +P/2 - 1 km (199 km) on X within the cube, the corvette
+# coasting decoupled at 0.2 m/s (float32 offsets freeze under about 0.47 m/s there,
 # D104): after 600 ticks the corvette has moved 2 m, and both ships' positions relative
 # to the start and to each other match the run at the origin within 1 mm (they differ
-# only by the 64-bit rounding of the offsets, about 1.5e-11 m at 99 km).
+# only by the 64-bit rounding of the offsets, about 1.5e-11 m at 199 km).
 func test_slow_drift_near_offset_limit() -> void:
 	var worlds: Array[SimWorld] = []
 	for shift: float in [0.0, SHIFT]:
 		var w: SimWorld = _encounter().build()
 		for id: int in w.ship_count():
-			w.kin.place(id, M1Encounter.SITE, w.kin.px[id] + shift, w.kin.py[id], w.kin.pz[id])
+			w.kin.place(id, w.kin.px[id] + shift, w.kin.py[id], w.kin.pz[id])
 		var coast: DecoupledCommand = DecoupledCommand.new()
 		coast.ship_id = M1Encounter.PLAYER_SHIP
 		w.submit(coast)

@@ -12,7 +12,7 @@ extends RefCounted
 ## `var ctx := StationFixture.context("helm")`.
 ##
 ## The seam variant (`context(entry, path, true)`) adds items about half a period away,
-## across the site's seam from each other (minimum image, D124): hostiles H5 and H6 and
+## across the cube's seam from each other (minimum image, D124): hostiles H5 and H6 and
 ## a free mark Echo, with H5 0.7 km from Echo through the seam and H6 2.7 km from it the
 ## other way.
 
@@ -27,7 +27,7 @@ const NOW_MS: int = 100_000
 const TICK: int = 3600
 const START_TICK: int = 600
 const PERIOD_M: float = 200_000.0
-## The own ship's site-local position (m) and orientation: yawed 30° to port, pitched
+## The own ship's position (m) and orientation: yawed 30° to port, pitched
 ## 10° nose up and rolled 25° to port (Basis.from_euler order: yaw, pitch, roll).
 const OWN_POS: Vector3 = Vector3(1200.0, -300.0, 4500.0)
 const OWN_EULER_DEG: Vector3 = Vector3(10.0, 30.0, 25.0)
@@ -53,11 +53,11 @@ class RecordingClient:
 	func set_alert(level: int) -> void:
 		sent.append(["set_alert", [level]])
 
-	func place_mark(slot: int, n: String, contact: int, site: int, pos: Vector3) -> void:
-		sent.append(["place_mark", [slot, n, contact, site, pos]])
+	func place_mark(slot: int, n: String, contact: int, pos: Vector3) -> void:
+		sent.append(["place_mark", [slot, n, contact, pos]])
 
-	func move_mark(slot: int, contact: int, site: int, pos: Vector3) -> void:
-		sent.append(["move_mark", [slot, contact, site, pos]])
+	func move_mark(slot: int, contact: int, pos: Vector3) -> void:
+		sent.append(["move_mark", [slot, contact, pos]])
 
 	func rename_mark(slot: int, n: String) -> void:
 		sent.append(["rename_mark", [slot, n]])
@@ -65,8 +65,8 @@ class RecordingClient:
 	func delete_mark(slot: int) -> void:
 		sent.append(["delete_mark", [slot]])
 
-	func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
-		sent.append(["ping", [kind, id, site, pos]])
+	func ping(kind: String, id: int, pos: Vector3) -> void:
+		sent.append(["ping", [kind, id, pos]])
 
 	func claim(item: String) -> void:
 		sent.append(["claim", [item]])
@@ -105,14 +105,14 @@ class RecordingClient:
 	func decline_mark(id: int) -> void:
 		sent.append(["decline_mark", [id]])
 
-	func route_add(route: int, site: int, pos: Vector3) -> void:
-		sent.append(["route_add", [route, site, pos]])
+	func route_add(route: int, pos: Vector3) -> void:
+		sent.append(["route_add", [route, pos]])
 
 	func route_clear(route: int) -> void:
 		sent.append(["route_clear", [route]])
 
-	func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
-		sent.append(["hazard_add", [radius_m, site, pos]])
+	func hazard_add(radius_m: float, pos: Vector3) -> void:
+		sent.append(["hazard_add", [radius_m, pos]])
 
 	func hazard_delete(id: int) -> void:
 		sent.append(["hazard_delete", [id]])
@@ -233,7 +233,6 @@ static func view(seam: bool = false) -> NetViewState:
 	v.seq = 10
 	v.tick = TICK
 	v.kin = {
-		"site": 0,
 		"pos": _units(OWN_POS, p_units),
 		"vel": NetCodec.quant_vel(own_rotation() * Vector3(0.0, 0.0, -80.0)),
 		"rot": own_rotation(),
@@ -335,12 +334,12 @@ static func _at(clock_hour: int, elevation_deg: float, range_m: float) -> Vector
 	return Vector3(sin(b) * h, range_m * sin(e), -cos(b) * h)
 
 
-## A ship-frame offset as a site-local position.
+## A ship-frame offset as a position.
 static func _world(local: Vector3) -> Vector3:
 	return _site_pos(OWN_POS + own_rotation() * local)
 
 
-## A position wrapped into the site, [-P/2, P/2) on each axis.
+## A position wrapped into the cube, [-P/2, P/2) on each axis.
 static func _site_pos(p: Vector3) -> Vector3:
 	var h: float = PERIOD_M / 2.0
 	return Vector3(
@@ -356,7 +355,6 @@ static func _mark(slot: int, mark_name: String, pos: Vector3) -> Dictionary:
 		"slot": slot,
 		"name": mark_name,
 		"contact": -1,
-		"site": 0,
 		"x": pos.x,
 		"y": pos.y,
 		"z": pos.z,

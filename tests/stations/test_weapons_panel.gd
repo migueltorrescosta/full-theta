@@ -212,7 +212,7 @@ func test_aim_holds_in_world_while_the_ship_turns() -> void:
 	# point while the ship turns.
 	var def: ShipDef = load("res://content/ships/m1_corvette.tres")
 	var world: SimWorld = SimWorld.new(1)
-	var ship: int = world.spawn_ship(def, 0, 0, StationFixture.OWN_POS, rot0)
+	var ship: int = world.spawn_ship(def, 0, StationFixture.OWN_POS, rot0)
 	var cmd: Dictionary = aims[0].duplicate()
 	var c: SimCommand = SimCommands.from_dict(cmd)
 	c.ship_id = ship

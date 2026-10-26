@@ -8,8 +8,7 @@ extends SimTable
 
 ## Launch serial within the ship, from 0 (what the Relay panel lists).
 var serial: PackedInt32Array = PackedInt32Array()
-var site: PackedInt32Array = PackedInt32Array()
-## Site-local position (m, 64-bit, D104).
+## Position in the cube (m, 64-bit, D104).
 var at_x: PackedFloat64Array = PackedFloat64Array()
 var at_y: PackedFloat64Array = PackedFloat64Array()
 var at_z: PackedFloat64Array = PackedFloat64Array()
@@ -26,12 +25,9 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 
 
 ## Adds a probe at (x, y, z) heading for (tx, ty, tz); returns its row.
-func launch(
-	ship_id: int, faction: int, serial_no: int, site_id: int, from: Vector3, to: Vector3
-) -> int:
+func launch(ship_id: int, faction: int, serial_no: int, from: Vector3, to: Vector3) -> int:
 	var row: int = add_key(ship_id, faction)
 	serial.append(serial_no)
-	site.append(site_id)
 	at_x.append(from.x)
 	at_y.append(from.y)
 	at_z.append(from.z)
@@ -63,7 +59,6 @@ func columns() -> Array:
 		super()
 		+ [
 			["serial", serial],
-			["site", site],
 			["at_x", at_x],
 			["at_y", at_y],
 			["at_z", at_z],

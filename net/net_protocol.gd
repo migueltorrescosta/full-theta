@@ -49,7 +49,7 @@ enum Type {
 	SHARE = 30,
 }
 
-const PROTOCOL_VERSION: int = 5
+const PROTOCOL_VERSION: int = 6
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -79,7 +79,7 @@ const EVENT_RESUME: String = "resume"
 const EVENT_ABANDON_VOTES: String = "abandon_votes"
 const EVENT_ABANDONED: String = "abandoned"
 ## Crew state of a ship (CrewMarks, CrewPings), to every session with a pick on it:
-## {ship, level, by}, {ship, marks}, {ship, kind, id, site, x, y, z, by, copy}.
+## {ship, level, by}, {ship, marks}, {ship, kind, id, x, y, z, by, copy}.
 const EVENT_ALERT: String = "alert"
 const EVENT_MARKS: String = "marks"
 const EVENT_PING: String = "ping"
@@ -89,7 +89,7 @@ const EVENT_RUN_OVER: String = "run_over"
 const EVENT_RUN_VOTES: String = "run_votes"
 ## Relay and the callout layer (strand B of #9, docs/protocol.md "Relay"): {sites: [{site,
 ## name}]} to every pick; {ship, zones: [...]} (hazard zones and scan positions, every pick
-## of the ship); {ship, routes: [[{site, x, y, z}]]} (Relay, and other stations unless the
+## of the ship); {ship, routes: [[{x, y, z}]]} (Relay, and other stations unless the
 ## toggle set is Hard); {ship, items: [...]} the mark inbox and {ship, entries: [{tick, key,
 ## args}], replace} the ship's log (Relay picks only).
 const EVENT_SITES: String = "sites"
@@ -159,7 +159,6 @@ const SCHEMAS: Dictionary = {
 		"slot": TYPE_INT,
 		"name": TYPE_STRING,
 		"contact": TYPE_INT,
-		"site": TYPE_INT,
 		"x": TYPE_FLOAT,
 		"y": TYPE_FLOAT,
 		"z": TYPE_FLOAT,
@@ -168,7 +167,6 @@ const SCHEMAS: Dictionary = {
 	{
 		"kind": TYPE_STRING,
 		"id": TYPE_INT,
-		"site": TYPE_INT,
 		"x": TYPE_FLOAT,
 		"y": TYPE_FLOAT,
 		"z": TYPE_FLOAT,

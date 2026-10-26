@@ -80,8 +80,8 @@ static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "strike")
 	w.science_def = ScienceFixture.science()
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
-	w.spawn_ship(shooter_def(), 1, 0)
-	w.spawn_ship(raider_def(), 2, 0, RAIDER_AT, Quaternion(Vector3.UP, PI))
+	w.spawn_ship(shooter_def(), 1)
+	w.spawn_ship(raider_def(), 2, RAIDER_AT, Quaternion(Vector3.UP, PI))
 	return w
 
 

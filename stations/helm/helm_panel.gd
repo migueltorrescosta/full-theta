@@ -182,7 +182,12 @@ func sync_target() -> void:
 func target_command() -> Dictionary:
 	var s: Dictionary = ctx.crew.selection
 	var cmd: Dictionary = {
-		"kind": "helm_select_target", "target_ship": -1, "site": -1, "x": 0.0, "y": 0.0, "z": 0.0
+		"kind": "helm_select_target",
+		"target_ship": -1,
+		"point": false,
+		"x": 0.0,
+		"y": 0.0,
+		"z": 0.0
 	}
 	match s.get("kind", ""):
 		"contact":
@@ -195,7 +200,7 @@ func target_command() -> Dictionary:
 				cmd["target_ship"] = int(m["contact"])
 			else:
 				var p: Vector3 = m["pos"]
-				cmd["site"] = int(m.get("site", 0))
+				cmd["point"] = true
 				cmd["x"] = p.x
 				cmd["y"] = p.y
 				cmd["z"] = p.z
@@ -282,9 +287,7 @@ func _ping() -> void:
 	if item.is_empty():
 		item = ctx.crew.selection
 	if not item.is_empty():
-		ctx.intents.ping(
-			item["kind"], int(item["id"]), int(ctx.view.kin.get("site", 0)), Vector3.ZERO
-		)
+		ctx.intents.ping(item["kind"], int(item["id"]), Vector3.ZERO)
 
 
 # --- StationPanel. ---

@@ -240,7 +240,7 @@ func _bring_to_bear(mount_index: int) -> void:
 		{
 			"kind": "helm_select_target",
 			"target_ship": int(sel["id"]),
-			"site": -1,
+			"point": false,
 			"x": 0.0,
 			"y": 0.0,
 			"z": 0.0

@@ -11,10 +11,10 @@ enum Relation { FRIENDLY, NEUTRAL, HOSTILE }
 
 const HZ: int = 60
 const DT: float = 1.0 / HZ
-## A site's period must be at least this many times the longest sensor range
-## (FT-SIM-035, D124).
+## The cube's period must be at least this many times the longest sensor range
+## (FT-SIM-035, D124, D229).
 const PERIOD_PER_SENSOR_RANGE: int = 4
-## Most broadphase cells per axis of a site (2^20), so CollisionSystem's int cell keys
+## Most broadphase cells per axis (2^20), so CollisionSystem's int cell keys
 ## stay below 2^60: a period of at most 2^20 * CollisionSystem.CELL (262 144 km).
 const MAX_CELLS_PER_AXIS: int = 1 << 20
 ## Most ticks one advance() runs; a longer stall drops time instead of spiralling.
@@ -24,8 +24,9 @@ const MAX_TICKS_PER_ADVANCE: int = 8
 var tick: int = 0
 var seed_value: int = 0
 var build_id: String = ""
-## Site id -> the I18n key of the name every station of every ship uses for it as a callout layer
-## (FT-SPA-027, D98). Scenario data like defs: not state, so not hashed or copied.
+## Named site id -> the I18n key of the name every station of every ship uses for it as a
+## callout layer (FT-SPA-027, D98; site 0 is Kestrel Yard at the origin, D229). Scenario
+## data like defs: not state, so not hashed or copied.
 var site_names: Dictionary[int, String] = {0: "site.kestrel_yard"}
 var rng: SimRng
 ## Definitions by ship id, read-only (FT-ARC-020).
@@ -74,7 +75,7 @@ var _relations: Dictionary[int, int] = {}
 var _accumulator: float = 0.0
 
 
-## site_period is the side of every site's wrapping cube (m, FT-SIM-035, D124); check it
+## site_period is the side of the scenario's wrapping cube (m, FT-SIM-035, D229); check it
 ## with period_errors() when the ships are known (M1Encounter.validate does).
 func _init(
 	world_seed: int = 0, build: String = "", site_period: float = Kinematics.DEFAULT_PERIOD
@@ -85,7 +86,7 @@ func _init(
 	kin.period = site_period
 
 
-## Why a site period (m) doesn't suit a scenario's ships, or [] if it does (FT-SIM-035,
+## Why a period (m) doesn't suit a scenario's ships, or [] if it does (FT-SIM-035,
 ## D124): finite and positive, a whole number of both broadphase cells (CollisionSystem
 ## CELL and PAIR_CELL) and at most MAX_CELLS_PER_AXIS of either, and at least
 ## PERIOD_PER_SENSOR_RANGE times the longest sensor range, so a ship is never seen around
@@ -139,12 +140,11 @@ func tables() -> Array[SimTable]:
 	]
 
 
-## Adds a ship from its definition at a site-local offset (wrapped onto the site's cube)
-## and returns its id.
+## Adds a ship from its definition at an offset in the cube (wrapped onto it) and returns
+## its id.
 func spawn_ship(
 	def: ShipDef,
 	faction: int,
-	site: int,
 	offset: Vector3 = Vector3.ZERO,
 	rotation: Quaternion = Quaternion.IDENTITY,
 	velocity: Vector3 = Vector3.ZERO
@@ -153,7 +153,7 @@ func spawn_ship(
 	defs.append(def)
 	for t: SimTable in tables():
 		t.add_ship(id, faction, def)
-	kin.place(id, site, offset.x, offset.y, offset.z)
+	kin.place(id, offset.x, offset.y, offset.z)
 	kin.rot[id] = rotation.normalized()
 	kin.vel[id] = velocity
 	return id
@@ -164,25 +164,23 @@ func spawn_ship(
 func spawn_enemy(
 	enemy: EnemyDef,
 	faction: int,
-	site: int,
 	offset: Vector3 = Vector3.ZERO,
 	rotation: Quaternion = Quaternion.IDENTITY,
 	velocity: Vector3 = Vector3.ZERO
 ) -> int:
-	var id: int = spawn_ship(enemy.ship, faction, site, offset, rotation, velocity)
+	var id: int = spawn_ship(enemy.ship, faction, offset, rotation, velocity)
 	ai.enable(id, enemy)
 	return id
 
 
-## Restores one ship's state from its definition and places it at a site-local offset
-## (m, 64-bit, D104, wrapped onto the site's cube), dropping its queued commands; other
+## Restores one ship's state from its definition and places it at an offset
+## (m, 64-bit, D104, wrapped onto the cube), dropping its queued commands; other
 ## ships are untouched (FT-MIS-017: a destroyed ship's run state resets on its own). Runs
 ## submit a ResetShipCommand instead, which calls this at tick start and is logged for
 ## replay (FT-ARC-008); a direct call is not logged. Commands for the ship later in the
 ## same tick's batch are rejected (_apply_commands), so none lands on the fresh ship.
 func reset_ship(
 	ship_id: int,
-	site: int,
 	x: float = 0.0,
 	y: float = 0.0,
 	z: float = 0.0,
@@ -192,7 +190,7 @@ func reset_ship(
 	_reset_this_tick[ship_id] = true
 	for t: SimTable in tables():
 		t.reset_ship(ship_id, defs[ship_id])
-	kin.place(ship_id, site, x, y, z)
+	kin.place(ship_id, x, y, z)
 	kin.rot[ship_id] = rotation.normalized()
 
 
@@ -291,7 +289,7 @@ func drain_events() -> Array[SimEvent]:
 	return out
 
 
-## SHA-256 over every table's columns, the tick, the RNG states, the relations, the site
+## SHA-256 over every table's columns, the tick, the RNG states, the relations, the
 ## period and the queued commands, in a fixed order (FT-ARC-008, D125). Events and the
 ## command log are outputs, not state.
 func state_hash() -> String:

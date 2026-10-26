@@ -49,7 +49,7 @@ func markers() -> Array[Dictionary]:
 
 
 ## Relay's routes on this view, in screen pixels (FT-RLY-005, P4): one entry per route with
-## a Vector2 per waypoint, or null for a waypoint at another site or behind the camera. They
+## a Vector2 per waypoint, or null for a waypoint behind the camera. They
 ## only exist while the routes toggle lets them reach Helm (the server withholds them on
 ## Hard, FT-PAIR-008).
 func route_points() -> Array:
@@ -61,10 +61,9 @@ func route_points() -> Array:
 		var points: Array = []
 		for w: Dictionary in route:
 			var spot: Variant = null
-			if int(w["site"]) == panel.ctx.site():
-				var world: Vector3 = panel.ctx.interp.offset_to(w["pos"])
-				if not cam.is_position_behind(world):
-					spot = cam.unproject_position(world)
+			var world: Vector3 = panel.ctx.interp.offset_to(w["pos"])
+			if not cam.is_position_behind(world):
+				spot = cam.unproject_position(world)
 			points.append(spot)
 		out.append(points)
 	return out

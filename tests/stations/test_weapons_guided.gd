@@ -84,7 +84,6 @@ func _mark(s: StationScreen, contact: int, local: Vector3) -> void:
 		"slot": StationFixture.BRAVO_SLOT,
 		"name": "Bravo",
 		"contact": contact,
-		"site": 0,
 		"x": p.x,
 		"y": p.y,
 		"z": p.z,

@@ -433,7 +433,6 @@ const BLOCKS: Dictionary = {
 		["noise_health", "f32"],
 		["noise_flags", "u8"],
 		["mark_contact", "s16"],
-		["mark_site", "s16"],
 		["mark_pos", "v3f"],
 		["self_scanned", "bool"],
 		# Session: 0 none, 1 scan, 2 hack, 3 own-ship scan.
@@ -475,7 +474,7 @@ const BLOCKS: Dictionary = {
 		["hacks", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
 	],
 	# Relay's probes: the stock, Engineering's build in progress, the lane switch and
-	# the ship's launched probes (site-local position in m, bubble radius in m); then the
+	# the ship's launched probes (position in m, bubble radius in m); then the
 	# sim hazards the faction knows (strand J, HazardView): zone, shell or plane, where now,
 	# the radius now, a plane's direction and the forecast seconds to the ship (-1: none).
 	Section.RELAY:

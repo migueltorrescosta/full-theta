@@ -120,7 +120,7 @@ func test_every_mode_stays_in_envelope() -> void:
 		w.kin.set_angular_velocity(id, Vector3(2.0, 2.0, 2.0))
 		w.kin.thrust_scale[id] = 0.5
 		w.kin.torque_scale[id] = 0.5
-		FlightFixture.select_point(w, id, 0, Vector3(-3000.0, 2000.0, 5000.0))
+		FlightFixture.select_point(w, id, Vector3(-3000.0, 2000.0, 5000.0))
 		match mode:
 			"stick":
 				FlightFixture.input(w, id, Vector3(1.0, -1.0, 1.0), Vector3(-1.0, 1.0, 1.0))

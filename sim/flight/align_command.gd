@@ -6,8 +6,8 @@ extends SimCommand
 ## already done, also faces it (pitch and yaw onto it); further presses keep that.
 ## With mount_index set (the direct "bring mount N to bear" of a joint view, FT-JNT-005) it
 ## turns that mount's rest direction onto the target instead, with no roll.
-## Rejected with nothing selected or a target Helm can't fly to (undetected, another
-## site), or with a mount the ship doesn't have. Ends within tolerance, on rotation input
+## Rejected with nothing selected or a target Helm can't fly to (undetected),
+## or with a mount the ship doesn't have. Ends within tolerance, on rotation input
 ## or when the target is lost (AssistSystem).
 
 ## The mount whose rest direction is brought onto the target, or -1 for the bow.

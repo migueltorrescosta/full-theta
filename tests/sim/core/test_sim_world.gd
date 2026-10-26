@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## T025: the sim core: fixed tick, ordering, seeded RNG, keyed state, site-local
+## T025: the sim core: fixed tick, ordering, seeded RNG, keyed state, 64-bit
 ## positions (L2).
 
 
@@ -23,9 +23,9 @@ class KickCommand:
 
 func _world(world_seed: int) -> SimWorld:
 	var w: SimWorld = SimWorld.new(world_seed, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3(0, 0, 0))
-	w.spawn_ship(TestDefs.corvette(), 2, 0, Vector3(500, 20, -3000))
-	w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3(-800, 0, 100))
+	w.spawn_ship(TestDefs.corvette(), 1, Vector3(0, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), 2, Vector3(500, 20, -3000))
+	w.spawn_ship(TestDefs.corvette(), 1, Vector3(-800, 0, 100))
 	return w
 
 
@@ -160,19 +160,18 @@ func test_accumulator_steps_fixed_ticks() -> void:
 
 
 # FT: FT-SIM-035, FT-M1-020
-# A position is a site id plus three 64-bit offsets; 1 km inside the +P/2 face (and the
+# A position is three 64-bit offsets with no space id (D230); 1 km inside the +P/2 face (and the
 # -P/2 face on Y) a slow drift still moves (D104: float32 offsets freeze under about
-# 0.23 m/s at 99 km).
-func test_site_local_64_bit_offsets() -> void:
+# 0.47 m/s at 199 km).
+func test_64_bit_offsets() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 9)
+	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	var near: float = 0.5 * w.kin.period - 1000.0
-	w.kin.place(id, 9, near, -near, 0.25)
+	w.kin.place(id, near, -near, 0.25)
 	w.kin.vel[id] = Vector3(0.1, 0.0, 0.0)
 	w.helm.decoupled[id] = 1  # coast: assist would hold the drift at zero (FT-SIM-004)
 	for i: int in 600:
 		w.step()
-	assert_int(w.kin.site[id]).is_equal(9)
 	assert_float(w.kin.px[id]).is_equal_approx(near + 1.0, 1e-5)
 	assert_float(w.kin.py[id]).is_equal(-near)
 	assert_float(w.kin.pz[id]).is_equal(0.25)
@@ -184,14 +183,14 @@ func test_site_local_64_bit_offsets() -> void:
 # comes back in at the -X face, and its offset is always inside the cube.
 func test_offsets_wrap_onto_the_cube() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 0)
+	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	var p: float = w.kin.period
 	var half: float = 0.5 * p
-	w.kin.place(id, 0, half, half + 0.5, 1.5 * p)
+	w.kin.place(id, half, half + 0.5, 1.5 * p)
 	assert_float(w.kin.px[id]).is_equal(-half)
 	assert_float(w.kin.py[id]).is_equal(-half + 0.5)
 	assert_float(w.kin.pz[id]).is_equal(-half)
-	w.kin.place(id, 0, half - 1.0, 0.0, 0.0)
+	w.kin.place(id, half - 1.0, 0.0, 0.0)
 	w.kin.vel[id] = Vector3(60.0, 0.0, 0.0)
 	w.helm.decoupled[id] = 1
 	for i: int in 2 * SimWorld.HZ:
@@ -204,9 +203,9 @@ func test_offsets_wrap_onto_the_cube() -> void:
 # A non-finite offset fails an assertion (wrapping can't place it).
 func test_non_finite_offset_fails_assertion() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 0)
+	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	await (
-		assert_error(func() -> void: w.kin.place(id, 0, 0.0, NAN, 0.0))
+		assert_error(func() -> void: w.kin.place(id, 0.0, NAN, 0.0))
 		. is_runtime_error(
 			"Assertion failed: non-finite offset for ship 0: (0.000000, nan, 0.000000)"
 		)
@@ -227,7 +226,7 @@ func test_reset_ship_restores_only_that_ship() -> void:
 		k.ship_id = id
 		w.submit(k)
 	var logged: int = w.command_log.size()
-	w.reset_ship(0, 0, 5.0)
+	w.reset_ship(0, 5.0)
 	assert_vector(w.kin.vel[0]).is_equal(Vector3.ZERO)
 	assert_float(w.kin.px[0]).is_equal(5.0)
 	assert_float(w.kin.propellant[0]).is_equal(w.defs[0].propellant_capacity)

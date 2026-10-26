@@ -142,16 +142,7 @@ func test_marks_only_into_empty_slots() -> void:
 	var marks: Array = []
 	for slot: int in CrewState.MAX_MARKS:
 		marks.append(
-			{
-				"slot": slot,
-				"name": "M%d" % slot,
-				"contact": -1,
-				"site": 0,
-				"x": 0,
-				"y": 0,
-				"z": 0,
-				"by": "Ana"
-			}
+			{"slot": slot, "name": "M%d" % slot, "contact": -1, "x": 0, "y": 0, "z": 0, "by": "Ana"}
 		)
 	s.ctx.crew.handle_event({"type": "marks", "payload": {"ship": 0, "marks": marks}}, 1)
 	s._mark(IntentTable.KBM)
@@ -180,7 +171,7 @@ func test_a_card_ping_shows_the_card_for_ten_seconds() -> void:
 	crew.handle_event(
 		{
 			"type": "ping",
-			"payload": {"ship": 0, "kind": "card", "id": 2, "site": -1, "by": "captain", "copy": ""}
+			"payload": {"ship": 0, "kind": "card", "id": 2, "by": "captain", "copy": ""}
 		},
 		t0
 	)
@@ -194,7 +185,7 @@ func test_a_card_ping_shows_the_card_for_ten_seconds() -> void:
 	crew.handle_event(
 		{
 			"type": "ping",
-			"payload": {"ship": 0, "kind": "contact", "id": 2, "site": 0, "by": "Ana", "copy": ""}
+			"payload": {"ship": 0, "kind": "contact", "id": 2, "by": "Ana", "copy": ""}
 		},
 		t0 + 6000
 	)
@@ -203,7 +194,7 @@ func test_a_card_ping_shows_the_card_for_ten_seconds() -> void:
 	crew.handle_event(
 		{
 			"type": "ping",
-			"payload": {"ship": 0, "kind": "card", "id": 1, "site": -1, "by": "captain", "copy": ""}
+			"payload": {"ship": 0, "kind": "card", "id": 1, "by": "captain", "copy": ""}
 		},
 		t0 + 7000
 	)

@@ -4,7 +4,7 @@ extends Node3D
 ## background, ambient and sun, one camera, a star field and the other ships. Put it in a
 ## SubViewport with its own world. The own ship sits at the origin with world axes; every
 ## other ship is drawn at its minimum-image offset (D124), so precision never depends on
-## where the ship is in the site. Ships are the approved procedural ship (D107), oriented
+## where the ship is in the cube. Ships are the approved procedural ship (D107), oriented
 ## from NEAR when known (the last known orientation otherwise). All ships share one
 ## template's meshes and materials, built on the first ship, so a view with no ships pays
 ## no AO bake. Kept cheap for llvmpipe: no post-processing, the stars one point mesh.

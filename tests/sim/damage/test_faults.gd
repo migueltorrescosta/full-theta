@@ -27,7 +27,7 @@ func _def(fields: Dictionary = {}) -> ShipDef:
 
 func _world(fields: Dictionary = {}) -> SimWorld:
 	var world: SimWorld = SimWorld.new(9)
-	world.spawn_ship(_def(fields), 2, 0)
+	world.spawn_ship(_def(fields), 2)
 	return world
 
 
@@ -271,7 +271,7 @@ func _heavy_world(world_seed: int, threshold: float, chance: float) -> SimWorld:
 		subs.append(copy)
 	def.subsystems = subs
 	var world: SimWorld = SimWorld.new(world_seed)
-	world.spawn_ship(def, 2, 0)
+	world.spawn_ship(def, 2)
 	return world
 
 

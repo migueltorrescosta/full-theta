@@ -22,7 +22,7 @@ const FORMAT: int = 2
 var seed_value: int = 0
 var build_id: String = ""
 ## Inputs that rebuild the starting world, e.g. {"player": &"m1_corvette",
-## "enemy": &"m1_raider", "site_period": 200000.0}; values must survive var_to_bytes()
+## "enemy": &"m1_raider", "site_period": 400000.0}; values must survive var_to_bytes()
 ## (no objects). "site_period" is the world's site period (m, D125); a log without it
 ## means Kinematics.DEFAULT_PERIOD.
 var setup: Dictionary = {}

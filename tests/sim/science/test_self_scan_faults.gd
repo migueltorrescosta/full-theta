@@ -16,7 +16,7 @@ func _world() -> SimWorld:
 	def.subsystems = subs
 	var w: SimWorld = SimWorld.new(4)
 	w.science_def = ScienceFixture.science()
-	w.spawn_ship(def, 1, 0)
+	w.spawn_ship(def, 1)
 	return w
 
 

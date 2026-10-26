@@ -5,7 +5,7 @@ extends RefCounted
 ## the Alert, Mark and Ping messages for ServerSession, which registers these handlers;
 ## events go to every pick on the sender's ship only (FT-SPA-016, FT-SPA-020).
 ## A contact a mark or ping names must be one of the sender's faction or one it detects,
-## and a site one the world has; unknown and undetected ids get the same refusal, so a
+## and a named site one the world has; unknown and undetected ids get the same refusal, so a
 ## client can't count the ships it doesn't see.
 
 ## Sim events kept in the ship's log: event kind -> log key (i18n relay.log.<key>).
@@ -195,7 +195,6 @@ func on_mark_accept(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if why == "" and msg["accept"]:
 		var spot: Dictionary = {
 			"contact": -1,
-			"site": pending["site"],
 			"x": pending["x"],
 			"y": pending["y"],
 			"z": pending["z"],
@@ -234,7 +233,7 @@ func on_sim_event(e: SimEvent) -> void:
 	_log(e.ship_id, key, args, e.tick)
 
 
-## Ping{kind, id, site, x, y, z}: any crew pick and the Captain ping an item for every
+## Ping{kind, id, x, y, z}: any crew pick and the Captain ping an item for every
 ## pick on the ship, viewers included (FT-SPA-016, FT-SPA-020; a card only the Captain),
 ## rate-limited per session
 ## (FT-SPA-017); a ping on an item another session pinged within 3 s is a copy naming
@@ -244,7 +243,7 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 	if s == null:
 		return
 	var kind: String = msg["kind"]
-	var payload: Dictionary = {"ship": s.ship, "kind": kind, "id": -1, "site": -1}
+	var payload: Dictionary = {"ship": s.ship, "kind": kind, "id": -1}
 	payload.merge({"x": 0.0, "y": 0.0, "z": 0.0})
 	var why: String = ""
 	if not s.has_pick() or CrewMarks.role_of(s.entry) == CrewMarks.Role.NONE:
@@ -279,14 +278,18 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 				payload["id"] = msg["id"]
 				if not _is_zone(s.ship, msg["id"]):
 					why = CrewPings.BAD_PING
-			"site", "point":
-				payload["site"] = msg["site"]
+			"site":
+				# A named site: its id is `id` (SimWorld.site_names).
+				payload["id"] = msg["id"]
+				if not session.world.site_names.has(msg["id"]):
+					why = CrewPings.BAD_PING
+			"point":
 				var at: PackedFloat64Array = session.world.kin.wrap_point(
 					msg["x"], msg["y"], msg["z"]
 				)
-				if not _is_site(msg["site"]) or (kind == "point" and at.is_empty()):
+				if at.is_empty():
 					why = CrewPings.BAD_PING
-				elif kind == "point":
+				else:
 					payload.merge({"x": at[0], "y": at[1], "z": at[2]}, true)
 			_:
 				why = CrewPings.BAD_PING
@@ -294,13 +297,11 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 		session.request_rejected(s, NetProtocol.Type.PING, why, {"kind": kind})
 		return
 	payload["by"] = s.name
-	payload["copy"] = pings.copy_of(
-		s.ship, kind, payload["id"], payload["site"], s.id, s.name, now_us
-	)
+	payload["copy"] = pings.copy_of(s.ship, kind, payload["id"], s.id, s.name, now_us)
 	_to_ship(s.ship, NetProtocol.EVENT_PING, payload)
 
 
-## The Mark message's zone and route ops (Relay only): the point is (site, x, y, z); a
+## The Mark message's zone and route ops (Relay only): the point is (x, y, z); a
 ## hazard's radius is `slot` hundreds of metres; `slot` is the route or zone id.
 ## Returns "" once it answered, else the refusal.
 func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> String:
@@ -312,17 +313,17 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 	var why: String = ""
 	match op:
 		"route_add":
-			if at.is_empty() or not _is_site(msg["site"]):
+			if at.is_empty():
 				return CrewRelay.BAD_ROUTE
-			why = relay.route_add(s.ship, slot, msg["site"], Vector3(at[0], at[1], at[2]))
+			why = relay.route_add(s.ship, slot, Vector3(at[0], at[1], at[2]))
 		"route_clear":
 			why = relay.route_clear(s.ship, slot)
 		"hazard_add":
-			if at.is_empty() or not _is_site(msg["site"]):
+			if at.is_empty():
 				return CrewRelay.BAD_ZONE
 			var centre: Vector3 = Vector3(at[0], at[1], at[2])
 			var radius: float = slot * 100.0
-			why = relay.add_zone(s.ship, CrewRelay.KIND_HAZARD, msg["site"], centre, radius, s.name)
+			why = relay.add_zone(s.ship, CrewRelay.KIND_HAZARD, centre, radius, s.name)
 		_:
 			why = relay.delete_zone(s.ship, slot)
 	if why != "":
@@ -339,8 +340,8 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 
 
 ## Adds a scan position (Science's, FT-SPA-028) as a zone of the ship and tells its picks.
-func add_scan_position(ship: int, site: int, at: Vector3, radius: float, by: String) -> String:
-	var why: String = relay.add_zone(ship, CrewRelay.KIND_SCAN, site, at, radius, by)
+func add_scan_position(ship: int, at: Vector3, radius: float, by: String) -> String:
+	var why: String = relay.add_zone(ship, CrewRelay.KIND_SCAN, at, radius, by)
 	if why == "":
 		_to_ship(ship, NetProtocol.EVENT_ZONES, _zones_payload(ship))
 	return why
@@ -375,13 +376,8 @@ func _is_zone(ship: int, id: int) -> bool:
 	return false
 
 
-## Whether a ship of the world is at the site.
-func _is_site(site: int) -> bool:
-	return site >= 0 and session.world.kin.site.has(site)
-
-
 ## A Mark message's place as CrewMarks takes it: a contact the sender can't name becomes
-## -2, a site the world lacks -1, and a free point is wrapped onto the site's cube
+## -2, and a free point is wrapped onto the cube
 ## (NaN when not finite), so CrewMarks refuses them all alike (BAD_MARK).
 func _spot(s: NetSession, msg: Dictionary) -> Dictionary:
 	var contact: int = msg["contact"]
@@ -390,8 +386,7 @@ func _spot(s: NetSession, msg: Dictionary) -> Dictionary:
 	var at: PackedFloat64Array = session.world.kin.wrap_point(msg["x"], msg["y"], msg["z"])
 	if at.is_empty():
 		at = PackedFloat64Array([NAN, NAN, NAN])
-	var site: int = msg["site"] if _is_site(msg["site"]) else -1
-	var spot: Dictionary = {"contact": contact, "site": site, "x": at[0], "y": at[1], "z": at[2]}
+	var spot: Dictionary = {"contact": contact, "x": at[0], "y": at[1], "z": at[2]}
 	# An attached mark's x names a scanned subsystem as index + 1 (FT-SPA-014, D202); one
 	# whose weak point no scan revealed isn't placed.
 	if contact >= 0 and msg["x"] >= 1.0:
@@ -426,10 +421,10 @@ func _science_scan_position(ship: int) -> void:
 	for z: Dictionary in relay.zones_of(ship):
 		if z["kind"] != CrewRelay.KIND_SCAN or z["by"] != SCIENCE_BY:
 			continue
-		if z["site"] == t.mark_site[ship] and Vector3(z["x"], z["y"], z["z"]) == at:
+		if Vector3(z["x"], z["y"], z["z"]) == at:
 			return
 		relay.delete_zone(ship, z["id"])
-	add_scan_position(ship, t.mark_site[ship], at, def.mark_radius, SCIENCE_BY)
+	add_scan_position(ship, at, def.mark_radius, SCIENCE_BY)
 
 
 func _ship_name(ship: int) -> String:
@@ -457,17 +452,16 @@ func _sendable(s: NetSession, slot: int) -> bool:
 
 
 ## A mark of the ship as a free point: an attached one at its contact's position now.
-## {name, site, x, y, z}, or {} when the slot is empty.
+## {name, x, y, z}, or {} when the slot is empty.
 func _resolved(ship: int, slot: int) -> Dictionary:
 	for m: Dictionary in marks.marks_of(ship):
 		if m["slot"] != slot:
 			continue
-		var out: Dictionary = {"name": m["name"], "site": m["site"]}
+		var out: Dictionary = {"name": m["name"]}
 		out.merge({"x": m["x"], "y": m["y"], "z": m["z"]})
 		var c: int = m["contact"]
 		if c >= 0:
 			var kin: Kinematics = session.world.kin
-			out.merge({"site": kin.site[c]}, true)
 			var here: PackedFloat64Array = kin.point_at(c, Vector3(m["x"], m["y"], m["z"]))
 			var at: Vector3 = Vector3(here[0], here[1], here[2])
 			out.merge({"x": at.x, "y": at.y, "z": at.z}, true)

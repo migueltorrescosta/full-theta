@@ -29,12 +29,10 @@ func take(session: int, now_us: int) -> bool:
 
 ## Records a ping on the item and returns the original pinger's name when it is a copy,
 ## else "" (and this ping becomes the item's original).
-func copy_of(
-	ship: int, kind: String, id: int, site: int, session: int, name: String, now_us: int
-) -> String:
+func copy_of(ship: int, kind: String, id: int, session: int, name: String, now_us: int) -> String:
 	if kind == "point":
 		return ""
-	var key: String = "%s:%d" % [kind, site if kind == "site" else id]
+	var key: String = "%s:%d" % [kind, id]
 	var recent: Dictionary = _recent.get_or_add(ship, {})
 	var first: Array = recent.get(key, [])
 	if not first.is_empty() and now_us - int(first[0]) < COPY_US and first[1] != session:

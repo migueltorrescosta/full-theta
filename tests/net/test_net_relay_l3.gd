@@ -53,7 +53,7 @@ func test_sent_mark_waits_in_the_receiving_relay_inbox() -> void:
 	var from: int = h.mark(receiver)
 	var by_from: int = h.mark(bystander)
 	var own_from: int = h.mark(own)
-	sender.place_mark(-1, "Rock", -1, 0, Vector3(1.0, 2.0, 3.0))
+	sender.place_mark(-1, "Rock", -1, Vector3(1.0, 2.0, 3.0))
 	await h.until(func() -> bool: return not h.events_of(own, NetProtocol.EVENT_MARKS).is_empty())
 	sender.send_mark(0, ALLY)
 	var inbox: Dictionary = await h.next_event(
@@ -116,10 +116,10 @@ func test_accepting_at_eight_marks_replaces_and_send_rules() -> void:
 	var receiver: NetClient = a[2]
 	var own: NetClient = a[4]
 	for k: int in CrewMarks.SLOTS:
-		receiver.place_mark(-1, "", -1, 0, Vector3(10.0 * k, 0.0, 0.0))
+		receiver.place_mark(-1, "", -1, Vector3(10.0 * k, 0.0, 0.0))
 	await h.until(func() -> bool: return server.session.crew.marks.marks_of(ALLY).size() == 8)
 	var from: int = h.mark(receiver)
-	sender.place_mark(-1, "Rock", -1, 0, Vector3(9.0, 0.0, 0.0))
+	sender.place_mark(-1, "Rock", -1, Vector3(9.0, 0.0, 0.0))
 	await h.until(func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 1)
 	sender.send_mark(0, ALLY)
 	var inbox: Dictionary = await h.next_event(
@@ -168,12 +168,12 @@ func test_lost_contact_mark_cannot_be_sent() -> void:
 	var server: NetServer = a[0]
 	var sender: NetClient = a[1]
 	var w: SimWorld = server.world
-	var foe: int = w.spawn_enemy(TestDefs.raider_enemy(), 7, 0, Vector3(500.0, 0.0, 0.0))
+	var foe: int = w.spawn_enemy(TestDefs.raider_enemy(), 7, Vector3(500.0, 0.0, 0.0))
 	KnowledgeSystem.step(w)
 	var faction: int = w.faction_of(PLAYER)
 	assert_bool(KnowledgeSystem.is_detected(w, faction, foe)).is_true()
 	var from: int = h.mark(sender)
-	sender.place_mark(-1, "Foe", foe, 0, Vector3.ZERO)
+	sender.place_mark(-1, "Foe", foe, Vector3.ZERO)
 	await h.until(func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 1)
 	sender.send_mark(0, ALLY)
 	await h.until(func() -> bool: return server.session.crew.relay.inbox_of(ALLY).size() == 1)
@@ -193,12 +193,12 @@ func test_zones_and_probe_bubbles_can_be_pinged() -> void:
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var helm: NetClient = await h.joined(server, "helm", "tactical")
 	var w: SimWorld = server.world
-	w.probes.launch(PLAYER, w.faction_of(PLAYER), 3, 0, Vector3.ZERO, Vector3(0.0, 0.0, -100.0))
-	relay.hazard_add(2000.0, 0, Vector3(1000.0, 0.0, -3000.0))
+	w.probes.launch(PLAYER, w.faction_of(PLAYER), 3, Vector3.ZERO, Vector3(0.0, 0.0, -100.0))
+	relay.hazard_add(2000.0, Vector3(1000.0, 0.0, -3000.0))
 	await h.until(func() -> bool: return server.session.crew.relay.zones_of(PLAYER).size() == 1)
 	var zone: int = server.session.crew.relay.zones_of(PLAYER)[0]["id"]
 	var from: int = h.mark(relay)
-	helm.ping("zone", zone, -1, Vector3.ZERO)
+	helm.ping("zone", zone, Vector3.ZERO)
 	var e: Dictionary = await h.next_event(
 		relay,
 		NetProtocol.EVENT_PING,
@@ -207,7 +207,7 @@ func test_zones_and_probe_bubbles_can_be_pinged() -> void:
 	)
 	assert_int(e["payload"]["id"]).is_equal(zone)
 	from = h.mark(relay)
-	helm.ping("zone", -4, -1, Vector3.ZERO)
+	helm.ping("zone", -4, Vector3.ZERO)
 	e = await h.next_event(
 		relay,
 		NetProtocol.EVENT_PING,
@@ -216,7 +216,7 @@ func test_zones_and_probe_bubbles_can_be_pinged() -> void:
 	)
 	assert_int(e["payload"]["id"]).is_equal(-4)
 	from = h.mark(helm)
-	helm.ping("zone", CrewPings.HAZARD_ZONE_BASE - 7, -1, Vector3.ZERO)
+	helm.ping("zone", CrewPings.HAZARD_ZONE_BASE - 7, Vector3.ZERO)
 	var why: Dictionary = await _rejected(helm, NetProtocol.Type.PING, from)
 	assert_str(why.get("reason", "")).is_equal(CrewPings.BAD_PING)
 
@@ -234,9 +234,9 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	assert_str(sites[0]["name"]).is_equal("site.kestrel_yard")
 	# Eight marks, and zones beyond them.
 	for k: int in CrewMarks.SLOTS:
-		relay.place_mark(-1, "", -1, 0, Vector3(5.0 * k, 0.0, 0.0))
-	relay.hazard_add(2000.0, 0, Vector3(1000.0, 0.0, -3000.0))
-	server.session.crew.add_scan_position(PLAYER, 0, Vector3(5.0, 6.0, 7.0), 500.0, "science")
+		relay.place_mark(-1, "", -1, Vector3(5.0 * k, 0.0, 0.0))
+	relay.hazard_add(2000.0, Vector3(1000.0, 0.0, -3000.0))
+	server.session.crew.add_scan_position(PLAYER, Vector3(5.0, 6.0, 7.0), 500.0, "science")
 	var two: Callable = func() -> bool:
 		var z: Dictionary = h.last_event(viewer, NetProtocol.EVENT_ZONES)
 		return not z.is_empty() and z["payload"]["zones"].size() == 2
@@ -249,14 +249,14 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	assert_int(server.session.crew.marks.marks_of(PLAYER).size()).is_equal(8)
 	# Only Relay changes zones and routes.
 	var from: int = h.mark(helm)
-	helm.hazard_add(1000.0, 0, Vector3.ZERO)
+	helm.hazard_add(1000.0, Vector3.ZERO)
 	var why: Dictionary = await _rejected(helm, NetProtocol.Type.MARK, from)
 	assert_str(why.get("reason", "")).is_equal(CrewRelay.NOT_RELAY)
 	# Routes: Hard keeps them off Tactical (FT-PAIR-008), Relay still sees them.
 	h.session_of(server, helm).toggles = "hard"
 	from = h.mark(helm)
 	# Zones survive Hard (FT-SPA-028): Tactical still gets a new hazard.
-	relay.hazard_add(1000.0, 0, Vector3(-300.0, 0.0, 100.0))
+	relay.hazard_add(1000.0, Vector3(-300.0, 0.0, 100.0))
 	var hard_zones: Dictionary = await h.next_event(
 		helm,
 		NetProtocol.EVENT_ZONES,
@@ -269,8 +269,8 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	await h.until(func() -> bool: return server.session.crew.relay.zones_of(PLAYER).size() == 2)
 	from = h.mark(helm)
 	var relay_from: int = h.mark(relay)
-	relay.route_add(0, 0, Vector3(0.0, 0.0, -2000.0))
-	relay.route_add(0, 0, Vector3(900.0, 0.0, -4000.0))
+	relay.route_add(0, Vector3(0.0, 0.0, -2000.0))
+	relay.route_add(0, Vector3(900.0, 0.0, -4000.0))
 	var routes: Dictionary = await h.next_event(
 		relay,
 		NetProtocol.EVENT_ROUTES,
@@ -291,7 +291,7 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	)
 	assert_int(routes["payload"]["routes"][0].size()).is_equal(2)
 	from = h.mark(helm)
-	relay.route_add(1, 0, Vector3(1.0, 1.0, 1.0))
+	relay.route_add(1, Vector3(1.0, 1.0, 1.0))
 	routes = await h.next_event(helm, NetProtocol.EVENT_ROUTES, from)
 	assert_int(routes["payload"]["routes"][1].size()).is_equal(1)
 	assert_int(server.session.crew.relay.zones_of(PLAYER).size()).is_equal(2)
@@ -312,13 +312,13 @@ func test_mark_on_a_revealed_subsystem_only() -> void:
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var enemy: int = NetHarness.ENEMY
 	var from: int = h.mark(relay)
-	relay.place_mark(-1, "Core", enemy, 0, Vector3(1.0, 0.0, 0.0))
+	relay.place_mark(-1, "Core", enemy, Vector3(1.0, 0.0, 0.0))
 	var why: Dictionary = await _rejected(relay, NetProtocol.Type.MARK, from)
 	assert_str(why.get("reason", "")).is_equal(CrewMarks.BAD_MARK)
 	# After the scan.
 	ScienceKnowledge.record(server.world, server.world.faction_of(PLAYER), enemy, 1.0)
 	from = h.mark(relay)
-	relay.place_mark(-1, "Core", enemy, 0, Vector3(1.0, 0.0, 0.0))
+	relay.place_mark(-1, "Core", enemy, Vector3(1.0, 0.0, 0.0))
 	var marks: Dictionary = await h.next_event(relay, NetProtocol.EVENT_MARKS, from)
 	var m: Dictionary = marks["payload"]["marks"][0]
 	assert_int(m["contact"]).is_equal(enemy)
@@ -328,10 +328,10 @@ func test_mark_on_a_revealed_subsystem_only() -> void:
 	# A subsystem that is not revealed, or does not exist, is refused; a plain contact mark
 	# needs no scan.
 	from = h.mark(relay)
-	relay.place_mark(-1, "Nope", enemy, 0, Vector3(3.0, 0.0, 0.0))
+	relay.place_mark(-1, "Nope", enemy, Vector3(3.0, 0.0, 0.0))
 	why = await _rejected(relay, NetProtocol.Type.MARK, from)
 	assert_str(why.get("reason", "")).is_equal(CrewMarks.BAD_MARK)
-	relay.place_mark(-1, "Plain", enemy, 0, Vector3.ZERO)
+	relay.place_mark(-1, "Plain", enemy, Vector3.ZERO)
 	await h.until(func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 2)
 	assert_int(server.session.crew.marks.marks_of(PLAYER)[1]["sub"]).is_equal(-1)
 
@@ -436,12 +436,12 @@ func test_subsystem_mark_follows_science_knowledge() -> void:
 	KnowledgeSystem.step(server.world)
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var from: int = h.mark(relay)
-	relay.place_mark(-1, "Core", enemy, 0, Vector3(1.0, 0.0, 0.0))
+	relay.place_mark(-1, "Core", enemy, Vector3(1.0, 0.0, 0.0))
 	var why: Dictionary = await _rejected(relay, NetProtocol.Type.MARK, from)
 	assert_str(why.get("reason", "")).is_equal(CrewMarks.BAD_MARK)
 	ScienceKnowledge.record(server.world, server.world.faction_of(PLAYER), enemy, 1.0)
 	from = h.mark(relay)
-	relay.place_mark(-1, "Core", enemy, 0, Vector3(1.0, 0.0, 0.0))
+	relay.place_mark(-1, "Core", enemy, Vector3(1.0, 0.0, 0.0))
 	var marks: Dictionary = await h.next_event(relay, NetProtocol.EVENT_MARKS, from)
 	assert_int(marks["payload"]["marks"][0]["sub"]).is_equal(0)
 

@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## reckoning, wrap-aware residuals (D124, D125), and the block field sets.
 # FT: FT-NET-004
 
-const P_UNITS: int = 200000 * 16
+const P_UNITS: int = 400000 * 16
 
 
 func test_quaternion_smallest_three_round_trip() -> void:
@@ -30,7 +30,7 @@ func test_integer_prediction_rounds_half_up() -> void:
 
 
 func test_positions_wrap_into_the_cube() -> void:
-	var half: float = 100000.0
+	var half: float = 0.5 * P_UNITS / 16.0
 	assert_that(NetCodec.quant_pos(half - 0.01, 0.0, -half, P_UNITS)).is_equal(
 		Vector3i(-P_UNITS / 2, 0, -P_UNITS / 2)
 	)

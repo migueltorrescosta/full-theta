@@ -13,8 +13,8 @@ const FOE: int = 1
 func _world() -> SimWorld:
 	var w: SimWorld = SimWorld.new(3)
 	w.science_def = ScienceFixture.science()
-	w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(0, 0, -22000))
+	w.spawn_ship(TestDefs.corvette(), BLUE)
+	w.spawn_ship(TestDefs.raider(), RED, Vector3(0, 0, -22000))
 	return w
 
 

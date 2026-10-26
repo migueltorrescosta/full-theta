@@ -114,7 +114,7 @@ func test_marks_and_pings_reach_every_station() -> void:
 	assert_bool(await _all(limited)).is_true()
 	# Eight marks: a crew station gets the toast; Relay replaces the selected mark.
 	for k: int in 6:
-		helm.ctx.intents.place_mark(-1, "", -1, 0, Vector3(5000.0 + 900.0 * k, 4000.0, 0.0))
+		helm.ctx.intents.place_mark(-1, "", -1, Vector3(5000.0 + 900.0 * k, 4000.0, 0.0))
 	var full: Callable = func(s: ClientShell) -> bool:
 		return s.ctx.crew.marks.size() == CrewState.MAX_MARKS
 	assert_bool(await _all(full)).is_true()

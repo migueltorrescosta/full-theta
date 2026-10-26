@@ -1,6 +1,6 @@
 class_name FlightFixture
 extends RefCounted
-## Helpers for the flight tests: M1 corvettes at site 0, and Helm commands
+## Helpers for the flight tests: M1 corvettes, and Helm commands
 ## submitted the way a station sends them.
 
 
@@ -8,10 +8,9 @@ static func spawn(
 	w: SimWorld,
 	offset: Vector3 = Vector3.ZERO,
 	rotation: Quaternion = Quaternion.IDENTITY,
-	velocity: Vector3 = Vector3.ZERO,
-	site: int = 0
+	velocity: Vector3 = Vector3.ZERO
 ) -> int:
-	return w.spawn_ship(TestDefs.corvette(), 1, site, offset, rotation, velocity)
+	return w.spawn_ship(TestDefs.corvette(), 1, offset, rotation, velocity)
 
 
 ## Latches Helm input: rotation (pitch, yaw, roll), move (strafe, lift, throttle).
@@ -41,10 +40,10 @@ static func select_ship(w: SimWorld, id: int, target: int) -> void:
 	w.submit(c)
 
 
-static func select_point(w: SimWorld, id: int, site: int, p: Vector3) -> void:
+static func select_point(w: SimWorld, id: int, p: Vector3) -> void:
 	var c: SelectTargetCommand = SelectTargetCommand.new()
 	c.ship_id = id
-	c.site = site
+	c.point = true
 	c.x = p.x
 	c.y = p.y
 	c.z = p.z
@@ -76,6 +75,6 @@ static func local_velocity(w: SimWorld, id: int) -> Vector3:
 	return w.kin.to_local(id, w.kin.vel[id])
 
 
-## Angle (deg) between the bow and the direction to a site-frame offset.
+## Angle (deg) between the bow and the direction to a world-frame offset.
 static func bow_error_deg(w: SimWorld, id: int, offset: Vector3) -> float:
 	return rad_to_deg(w.kin.forward(id).angle_to(offset))

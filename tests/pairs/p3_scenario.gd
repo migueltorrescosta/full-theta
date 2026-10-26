@@ -32,9 +32,9 @@ static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p3")
 	w.science_def = ScienceFixture.science()
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
-	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	w.spawn_ship(TestDefs.corvette(), 1)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)
-	w.spawn_ship(TestDefs.raider(), 2, 0, RAIDER_AT, facing_player)
+	w.spawn_ship(TestDefs.raider(), 2, RAIDER_AT, facing_player)
 	return w
 
 
@@ -89,7 +89,7 @@ static func helm(w: SimWorld) -> void:
 	if w.tick == 2:
 		var select: SelectTargetCommand = SelectTargetCommand.new()
 		select.ship_id = PLAYER
-		select.site = t.mark_site[PLAYER]
+		select.point = true
 		select.x = t.mark_x[PLAYER]
 		select.y = t.mark_y[PLAYER]
 		select.z = t.mark_z[PLAYER]

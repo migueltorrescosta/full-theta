@@ -37,7 +37,6 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 	out["ping_cool"] = t.ping_cool[ship]
 	out["selected"] = t.selected[ship]
 	out["mark_contact"] = t.mark_contact[ship]
-	out["mark_site"] = t.mark_site[ship]
 	out["mark_pos"] = Vector3(t.mark_x[ship], t.mark_y[ship], t.mark_z[ship])
 	out["self_scanned"] = t.self_scanned[ship] >= 0
 	_preview(out, t.preview[ship])
@@ -60,7 +59,6 @@ static func _empty() -> Dictionary:
 		"noise_health": 0.0,
 		"noise_flags": 0,
 		"mark_contact": -1,
-		"mark_site": 0,
 		"mark_pos": Vector3.ZERO,
 		"self_scanned": false,
 		"session": 0,

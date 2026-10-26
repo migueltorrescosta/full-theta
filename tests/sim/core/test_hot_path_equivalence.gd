@@ -26,7 +26,7 @@ func test_step_all_equals_step_per_row() -> void:
 
 # FT: FT-HLM-005, FT-ARC-013
 # The target lookup AssistSystem.step uses is target_offset() exactly when has_target()
-# holds and not finite otherwise: ships and points, other sites, dead, own and
+# holds and not finite otherwise: ships and points, dead, own and
 # undetected ships.
 func test_targeted_offset_equals_has_target_and_target_offset() -> void:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -39,7 +39,6 @@ func test_targeted_offset_equals_has_target_and_target_offset() -> void:
 			w.spawn_ship(
 				TestDefs.corvette(),
 				rng.randi_range(1, 3),
-				rng.randi_range(0, 1),
 				Vector3(
 					rng.randf_range(-99000, 99000),
 					rng.randf_range(-99000, 99000),
@@ -53,7 +52,6 @@ func test_targeted_offset_equals_has_target_and_target_offset() -> void:
 			var kind: int = rng.randi_range(0, 2)
 			w.helm.target_kind[row] = kind
 			w.helm.target_ship[row] = rng.randi_range(-1, n) if kind == 1 else -1
-			w.helm.target_site[row] = rng.randi_range(0, 1) if kind == 2 else -1
 			w.helm.target_x[row] = rng.randf_range(-99000, 99000)
 			w.helm.target_y[row] = rng.randf_range(-99000, 99000)
 			w.helm.target_z[row] = rng.randf_range(-99000, 99000)
@@ -77,7 +75,6 @@ func _random_table(rng: RandomNumberGenerator, c: int) -> Kinematics:
 		kin.add_ship(i, 1, TestDefs.corvette() if i % 2 == 0 else TestDefs.raider())
 		kin.place(
 			i,
-			0,
 			rng.randf_range(-100000, 100000),
 			rng.randf_range(-100000, 100000),
 			rng.randf_range(-100000, 100000)

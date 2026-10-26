@@ -13,7 +13,7 @@ func _def(cls: String = "zone") -> HazardDef:
 
 func _world(hazards: Array[HazardDef], at: Vector3 = Vector3.ZERO) -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "hazard")
-	w.spawn_ship(TestDefs.corvette(), 1, 0, at)
+	w.spawn_ship(TestDefs.corvette(), 1, at)
 	w.hazards = hazards
 	return w
 
@@ -116,13 +116,13 @@ func test_sphere_shell_and_ships_already_behind_are_not_hit() -> void:
 func test_ship_reset_behind_a_front_is_not_hit() -> void:
 	var w: SimWorld = _world([_plane(Vector3(0.0, 0.0, -600.0), 100.0)])
 	SimFixture.run(w, 60)
-	w.reset_ship(0, 0, 0.0, 0.0, -2000.0)
+	w.reset_ship(0, 0.0, 0.0, -2000.0)
 	var events: Array[SimEvent] = SimFixture.run(w, 10 * SimWorld.HZ)
 	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(0)
 	assert_int(w.hazard_state.crossed[0]).is_equal(1)
 	var ahead: SimWorld = _world([_plane(Vector3(0.0, 0.0, -600.0), 100.0)])
 	SimFixture.run(ahead, 60)
-	ahead.reset_ship(0, 0, 0.0, 0.0, 300.0)
+	ahead.reset_ship(0, 0.0, 0.0, 300.0)
 	events = SimFixture.run(ahead, 10 * SimWorld.HZ)
 	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(1)
 

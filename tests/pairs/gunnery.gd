@@ -54,7 +54,7 @@ static func site_point(w: SimWorld, ship: int, local: Vector3) -> Vector3:
 	return Vector3(w.kin.px[ship] + at.x, w.kin.py[ship] + at.y, w.kin.pz[ship] + at.z)
 
 
-## The gunner's tick: aims every mount at `point` (a site-local position, m; the lead
+## The gunner's tick: aims every mount at `point` (a position, m; the lead
 ## point for a moving target) every AIM_EVERY ticks and fires each mount that is ready,
 ## has the aim inside its arc and the barrel on it, and has the energy for a shot.
 static func gun(w: SimWorld, ship: int, point: Vector3) -> void:

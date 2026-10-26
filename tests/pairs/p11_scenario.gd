@@ -20,7 +20,7 @@ extends RefCounted
 const SEED: int = 111
 const PLAYER: int = 0
 const SUBSYSTEMS: Array[StringName] = [&"sensors", &"shields"]
-## Where Relay sends the probe: on the front's path, 6 km out (m, site frame).
+## Where Relay sends the probe: on the front's path, 6 km out (m, world frame).
 const PROBE_AT: Vector3 = Vector3(0.0, 0.0, -6000.0)
 ## Engineering hardens once the forecast arrival is within this many seconds.
 const HARDEN_LEAD: float = 15.0
@@ -33,7 +33,7 @@ static func harness() -> PairHarness:
 
 static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p11")
-	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	w.spawn_ship(TestDefs.corvette(), 1)
 	w.hazards = [load("res://content/hazards/p11_radiation_wave.tres") as HazardDef]
 	return w
 

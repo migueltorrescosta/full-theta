@@ -9,7 +9,7 @@ extends SimTable
 ## Align stage (FT-HLM-007, D124): OFF, roll the target to 12 o'clock, or roll and face it.
 enum Align { OFF, ROLL, ROLL_AND_FACE }
 ## What is selected: nothing, a ship (contact; moving targets are ships) or a
-## site-local point (a mark or a site).
+## point in the cube (a mark).
 enum Target { NONE, SHIP, POINT }
 
 ## 1 in decoupled mode, which turns the holds off (FT-SIM-005); 0, assist on, is the
@@ -43,9 +43,7 @@ var align_mount: PackedByteArray = PackedByteArray()
 var target_kind: PackedByteArray = PackedByteArray()
 ## Selected ship id when target_kind is SHIP, else -1.
 var target_ship: PackedInt32Array = PackedInt32Array()
-## Site of the selected point when target_kind is POINT, else -1.
-var target_site: PackedInt32Array = PackedInt32Array()
-## Site-local 64-bit offset of the selected point (m, D104).
+## 64-bit offset in the cube of the selected point (m, D104).
 var target_x: PackedFloat64Array = PackedFloat64Array()
 var target_y: PackedFloat64Array = PackedFloat64Array()
 var target_z: PackedFloat64Array = PackedFloat64Array()
@@ -65,7 +63,6 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	align_mount.append(0)
 	target_kind.append(Target.NONE)
 	target_ship.append(-1)
-	target_site.append(-1)
 	target_x.append(0.0)
 	target_y.append(0.0)
 	target_z.append(0.0)
@@ -91,7 +88,6 @@ func columns() -> Array:
 			["align_mount", align_mount],
 			["target_kind", target_kind],
 			["target_ship", target_ship],
-			["target_site", target_site],
 			["target_x", target_x],
 			["target_y", target_y],
 			["target_z", target_z],

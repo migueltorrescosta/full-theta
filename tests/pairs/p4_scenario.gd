@@ -35,7 +35,7 @@ static func harness() -> PairHarness:
 
 static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p4")
-	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	w.spawn_ship(TestDefs.corvette(), 1)
 	w.hazards = [load("res://content/hazards/p4_dust_cloud.tres") as HazardDef]
 	return w
 
@@ -97,7 +97,7 @@ static func helm(w: SimWorld, points: Array[Vector3]) -> void:
 		or w.helm.target_x[PLAYER] != p.x
 	):
 		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.site = 0
+		select.point = true
 		select.x = p.x
 		select.y = p.y
 		select.z = p.z

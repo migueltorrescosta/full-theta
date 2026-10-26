@@ -21,8 +21,7 @@ var ping_cool: PackedFloat64Array = PackedFloat64Array()
 var selected: PackedInt32Array = PackedInt32Array()
 ## Contact the scan-position mark was placed for, or -1 for none (FT-SCI-010).
 var mark_contact: PackedInt32Array = PackedInt32Array()
-## Site and site-local position of the mark (m, 64-bit like Kinematics).
-var mark_site: PackedInt32Array = PackedInt32Array()
+## Position of the mark (m, 64-bit like Kinematics).
 var mark_x: PackedFloat64Array = PackedFloat64Array()
 var mark_y: PackedFloat64Array = PackedFloat64Array()
 var mark_z: PackedFloat64Array = PackedFloat64Array()
@@ -63,7 +62,6 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	ping_cool.append(0.0)
 	selected.append(-1)
 	mark_contact.append(-1)
-	mark_site.append(0)
 	mark_x.append(0.0)
 	mark_y.append(0.0)
 	mark_z.append(0.0)
@@ -91,7 +89,6 @@ func columns() -> Array:
 			["ping_cool", ping_cool],
 			["selected", selected],
 			["mark_contact", mark_contact],
-			["mark_site", mark_site],
 			["mark_x", mark_x],
 			["mark_y", mark_y],
 			["mark_z", mark_z],

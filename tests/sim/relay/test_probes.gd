@@ -7,7 +7,7 @@ const RAIDER_AT: float = -6000.0
 
 func _world() -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3.ZERO)
+	w.spawn_ship(TestDefs.corvette(), 1, Vector3.ZERO)
 	return w
 
 
@@ -66,7 +66,7 @@ func test_coverage_wraps_across_the_seam() -> void:
 	var w: SimWorld = _world()
 	var half: float = w.kin.period / 2.0
 	_launch(w, Vector3(0, 0, half - 1000.0))
-	_steps(w, 60 * 250)
+	_steps(w, 60 * 410)
 	assert_int(w.probes.deployed[0]).is_equal(1)
 	# 3 km past the seam is 4 km from the probe.
 	assert_bool(ProbeSystem.coverage_at(w, 1, Vector3(0, 0, -half + 3000.0))).is_true()
@@ -82,7 +82,7 @@ func test_reset_drops_probes_and_hash_covers_them() -> void:
 	_launch(w, Vector3(0, 0, -1000))
 	_steps(w, 2)
 	assert_str(w.state_hash()).is_not_equal(before)
-	w.reset_ship(0, 0)
+	w.reset_ship(0)
 	assert_int(w.probes.size()).is_equal(0)
 	assert_int(w.relay.stock[0]).is_equal(3)
 	var copy: SimWorld = SimCopy.of(w)
@@ -123,10 +123,10 @@ func test_fabrication_takes_parts_and_adds_one_probe() -> void:
 
 func _lane_world(flag: bool) -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3.ZERO)
+	w.spawn_ship(TestDefs.corvette(), 1, Vector3.ZERO)
 	# A friendly dead ahead on the bow mount's line, and the hostile beyond it.
-	w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3(0, 0, RAIDER_AT / 3.0))
-	w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(0, 0, RAIDER_AT))
+	w.spawn_ship(TestDefs.corvette(), 1, Vector3(0, 0, RAIDER_AT / 3.0))
+	w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, RAIDER_AT))
 	if flag:
 		var f: FlagLanesCommand = FlagLanesCommand.new()
 		f.ship_id = 0
@@ -147,10 +147,10 @@ func test_flagged_lane_warns_before_the_shot_once() -> void:
 	assert_int(SimFixture.of_kind(events, &"fired").size()).is_equal(0)
 	# Still crossing: no second warning. The lane clears and re-crosses: a new one.
 	assert_int(SimFixture.of_kind(_steps(w, 30), &"lane_warning").size()).is_equal(0)
-	w.kin.place(1, 0, 8000.0, 0.0, 0.0)
+	w.kin.place(1, 8000.0, 0.0, 0.0)
 	_steps(w, 2)
 	assert_int(w.relay.lane_warned[0]).is_equal(-1)
-	w.kin.place(1, 0, 0.0, 0.0, RAIDER_AT / 3.0)
+	w.kin.place(1, 0.0, 0.0, RAIDER_AT / 3.0)
 	assert_int(SimFixture.of_kind(_steps(w, 2), &"lane_warning").size()).is_equal(1)
 	var off: SimWorld = _lane_world(false)
 	assert_int(SimFixture.of_kind(_steps(off, 30), &"lane_warning").size()).is_equal(0)

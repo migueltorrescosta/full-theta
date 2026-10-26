@@ -18,8 +18,8 @@ func _world(range_m: float, side_m: float = 0.0, science: bool = true) -> SimWor
 	var w: SimWorld = SimWorld.new(5)
 	if science:
 		w.science_def = ScienceFixture.science()
-	w.spawn_ship(ship, 1, 0)
-	w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(side_m, 0.0, -range_m))
+	w.spawn_ship(ship, 1)
+	w.spawn_ship(TestDefs.raider(), 2, Vector3(side_m, 0.0, -range_m))
 	w.step()
 	w.drain_events()
 	return w
@@ -52,7 +52,7 @@ func test_probe_quality_falls_with_distance_from_the_probe() -> void:
 	for probe_z: float in [-29900.0, -26000.0, -22500.0]:
 		var w: SimWorld = _world(30000.0)
 		var row: int = w.probes.launch(
-			ME, 1, 0, 0, Vector3(0.0, 0.0, probe_z), Vector3(0.0, 0.0, probe_z)
+			ME, 1, 0, Vector3(0.0, 0.0, probe_z), Vector3(0.0, 0.0, probe_z)
 		)
 		w.probes.deployed[row] = 1
 		qualities.append(GuidanceSystem.track_quality(w, 1, FOE))
@@ -93,7 +93,7 @@ func test_the_track_feed_shows_the_quality() -> void:
 	assert_int(feed["tracks"][0]["contact"]).is_equal(FOE)
 	assert_float(feed["tracks"][0]["quality"]).is_equal(GuidanceSystem.track_quality(w, 1, FOE))
 	assert_bool(feed["tracks"][0]["probe"]).is_false()
-	var row: int = w.probes.launch(ME, 1, 0, 0, Vector3(0.0, 0.0, -11000.0), Vector3.ZERO)
+	var row: int = w.probes.launch(ME, 1, 0, Vector3(0.0, 0.0, -11000.0), Vector3.ZERO)
 	w.probes.deployed[row] = 1
 	var probed: Dictionary = FeedsView.block(w, ME)["tracks"][0]
 	assert_bool(probed["probe"]).is_true()

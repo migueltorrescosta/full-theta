@@ -65,9 +65,9 @@ var run_over: Dictionary = {}
 var claims: Dictionary = {}
 var alert: int = ALERT_NORMAL
 var alert_by: String = ""
-## Sorted by slot: {"slot", "name", "contact", "site", "pos" (Vector3, m), "by"}.
+## Sorted by slot: {"slot", "name", "contact", "pos" (Vector3, m), "by"}.
 var marks: Array[Dictionary] = []
-## Active pings, oldest first: {"kind", "id", "site", "pos", "by", "at_ms", "copies"}.
+## Active pings, oldest first: {"kind", "id", "pos", "by", "at_ms", "copies"}.
 var pings: Array[Dictionary] = []
 ## The main screen's view (MainScreen.View), set by the Captain or by Relay.
 var main_view: int = MainScreen.View.FORWARD
@@ -81,12 +81,12 @@ var selection: Dictionary = {}
 ## "name"}].
 var sites: Array[Dictionary] = []
 ## Hazard zones and scan positions, outside the 8 marks (FT-SPA-028): {"id", "kind"
-## ("hazard" | "scan"), "site", "pos" (Vector3, m), "radius" (m), "by"}.
+## ("hazard" | "scan"), "pos" (Vector3, m), "radius" (m), "by"}.
 var zones: Array[Dictionary] = []
-## Relay's routes (FT-RLY-005), by route number: Array of {"site", "pos"} waypoints.
+## Relay's routes (FT-RLY-005), by route number: Array of {"pos"} waypoints.
 var routes: Array = []
 ## Relay only: marks other ships sent, waiting for Accept or Decline (FT-RLY-009): {"id",
-## "from_ship", "from", "name", "site", "pos"}; and the ship's log (FT-RLY-006): {"tick",
+## "from_ship", "from", "name", "pos"}; and the ship's log (FT-RLY-006): {"tick",
 ## "key", "args"}, oldest first.
 var inbox: Array[Dictionary] = []
 var relay_log: Array[Dictionary] = []
@@ -401,7 +401,6 @@ func _on_relay(type: String, p: Dictionary) -> void:
 						{
 							"id": int(z["id"]),
 							"kind": str(z["kind"]),
-							"site": int(z["site"]),
 							"pos": Vector3(float(z["x"]), float(z["y"]), float(z["z"])),
 							"radius": float(z["radius"]),
 							"by": str(z.get("by", "")),
@@ -426,7 +425,6 @@ func _on_relay(type: String, p: Dictionary) -> void:
 						points
 						. append(
 							{
-								"site": int(w["site"]),
 								"pos": Vector3(float(w["x"]), float(w["y"]), float(w["z"])),
 							}
 						)
@@ -443,7 +441,6 @@ func _on_relay(type: String, p: Dictionary) -> void:
 							"from_ship": int(m["from_ship"]),
 							"from": str(m["from"]),
 							"name": str(m["name"]),
-							"site": int(m["site"]),
 							"pos": Vector3(float(m["x"]), float(m["y"]), float(m["z"])),
 						}
 					)
@@ -556,7 +553,6 @@ func _on_marks(p: Dictionary) -> void:
 					"slot": int(m.get("slot", 0)),
 					"name": str(m.get("name", "")),
 					"contact": int(m.get("contact", -1)),
-					"site": int(m.get("site", 0)),
 					"pos":
 					Vector3(float(m.get("x", 0)), float(m.get("y", 0)), float(m.get("z", 0))),
 					"by": str(m.get("by", "")),
@@ -577,8 +573,8 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 		return
 	_expire(now_ms)
 	var kind: String = str(p.get("kind", "point"))
-	# A site ping names its site in `site` (docs/protocol.md); pulse() looks it up by id.
-	var id: int = int(p.get("site" if kind == "site" else "id", -1))
+	# A site ping names its named site in `id` (docs/protocol.md).
+	var id: int = int(p.get("id", -1))
 	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
 	var copy: bool = str(p.get("copy", "")) != ""
 	if kind == "card":
@@ -599,7 +595,6 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	var ping: Dictionary = {
 		"kind": kind,
 		"id": id,
-		"site": int(p.get("site", 0)),
 		"pos": Vector3(float(p.get("x", 0)), float(p.get("y", 0)), float(p.get("z", 0))),
 		"by": str(p.get("by", "")),
 		"at_ms": now_ms,

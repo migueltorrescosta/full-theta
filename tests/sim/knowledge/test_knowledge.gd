@@ -9,7 +9,7 @@ const GREEN: int = 3
 
 
 func _place(w: SimWorld, id: int, x: float, z: float = 0.0) -> void:
-	w.kin.place(id, w.kin.site[id], x, 0.0, z)
+	w.kin.place(id, x, 0.0, z)
 
 
 # FT: FT-ARC-013
@@ -17,8 +17,8 @@ func _place(w: SimWorld, id: int, x: float, z: float = 0.0) -> void:
 # the raider, but the raider (15 km) does not detect the corvette; at 12 km both do.
 func test_detection_is_per_faction() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	var red: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(18000, 0, 0))
+	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE)
+	var red: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(18000, 0, 0))
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_true()
 	assert_bool(KnowledgeSystem.is_detected(w, RED, blue)).is_false()
@@ -32,23 +32,21 @@ func test_detection_is_per_faction() -> void:
 
 
 # FT: FT-ARC-013
-# Ships at another site, destroyed ships and destroyed observers never detect or count.
-func test_site_and_destroyed_ships() -> void:
+# Destroyed ships and destroyed observers never detect or count.
+func test_destroyed_ships() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	var red: int = w.spawn_ship(TestDefs.raider(), RED, 1, Vector3(100, 0, 0))
-	w.step()
-	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_false()
-	var near: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(100, 0, 0))
+	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE)
+	var near: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(100, 0, 0))
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, near)).is_true()
 	w.kin.alive[near] = 0
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, near)).is_false()
 	w.kin.alive[blue] = 0
-	w.kin.place(red, 0, 50.0, 0.0, 0.0)
+	w.kin.alive[near] = 1
+	w.kin.place(near, 50.0, 0.0, 0.0)
 	w.step()
-	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_false()
+	assert_bool(KnowledgeSystem.is_detected(w, BLUE, near)).is_false()
 
 
 # FT: FT-ARC-013
@@ -58,8 +56,8 @@ func test_sensor_range_from_definition() -> void:
 	short.sensor_range = 5000.0
 	short.identify_range = 1000.0
 	var w: SimWorld = SimWorld.new(1)
-	w.spawn_ship(short, BLUE, 0)
-	var red: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(0, 0, -6000))
+	w.spawn_ship(short, BLUE)
+	var red: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(0, 0, -6000))
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_false()
 	_place(w, red, 0.0, -4000.0)
@@ -73,8 +71,8 @@ func test_sensor_range_from_definition() -> void:
 # on the M1 curve, so 20 km * 0.3 = 6 km) the contact is lost, and at 5 km it is back.
 func test_damaged_sensors_shrink_range() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	var red: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(10000, 0, 0))
+	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE)
+	var red: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(10000, 0, 0))
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_true()
 	w.drain_events()
@@ -95,8 +93,8 @@ func test_damaged_sensors_shrink_range() -> void:
 # H, N or F; identification is kept when the contact moves back out. The number stays.
 func test_callsign_prefix_by_allegiance() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	var red: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(12000, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), BLUE)
+	var red: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(12000, 0, 0))
 	w.step()
 	assert_str(KnowledgeSystem.callsign(w, BLUE, red)).is_equal("U1")
 	assert_bool(KnowledgeSystem.is_identified(w, BLUE, red)).is_false()
@@ -117,10 +115,10 @@ func test_callsign_prefix_by_allegiance() -> void:
 # a contact keeps its number, and the next new contact gets the next number.
 func test_number_never_changes_after_loss() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	var a: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(5000, 0, 0))
-	var b: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(30000, 0, 0))
-	var c: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(40000, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), BLUE)
+	var a: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(5000, 0, 0))
+	var b: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(30000, 0, 0))
+	var c: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(40000, 0, 0))
 	w.step()
 	_place(w, b, -5000.0)
 	w.step()
@@ -147,11 +145,11 @@ func test_number_never_changes_after_loss() -> void:
 # ships go by ship name.
 func test_callsigns_per_faction() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var blue_a: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	var blue_b: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0, Vector3(100000, 0, 0))
-	var green: int = w.spawn_ship(TestDefs.corvette(), GREEN, 0, Vector3(95000, 0, 0))
-	var red_x: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(3000, 0, 0))
-	var red_y: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(97000, 0, 0))
+	var blue_a: int = w.spawn_ship(TestDefs.corvette(), BLUE)
+	var blue_b: int = w.spawn_ship(TestDefs.corvette(), BLUE, Vector3(100000, 0, 0))
+	var green: int = w.spawn_ship(TestDefs.corvette(), GREEN, Vector3(95000, 0, 0))
+	var red_x: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(3000, 0, 0))
+	var red_y: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(97000, 0, 0))
 	w.step()
 	# BLUE detects red_x (via blue_a), green, red_y (via blue_b) in contact id order.
 	assert_str(KnowledgeSystem.callsign(w, BLUE, green)).is_equal("H1")
@@ -171,9 +169,9 @@ func test_callsigns_per_faction() -> void:
 # value the number and tag the callsign.
 func test_events_keyed_to_observing_faction() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	var blue_b: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0, Vector3(-5000, 0, 0))
-	var red: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(-22000, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), BLUE)
+	var blue_b: int = w.spawn_ship(TestDefs.corvette(), BLUE, Vector3(-5000, 0, 0))
+	var red: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(-22000, 0, 0))
 	w.step()
 	var found: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"contact_detected")
 	assert_int(found.size()).is_equal(1)
@@ -197,12 +195,12 @@ func test_events_keyed_to_observing_faction() -> void:
 # until the next step re-detects it, with the same callsign. Other rows are untouched.
 func test_reset_ship_keeps_numbers() -> void:
 	var w: SimWorld = SimWorld.new(1)
-	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE, 0)
-	var red: int = w.spawn_ship(TestDefs.raider(), RED, 0, Vector3(5000, 0, 0))
+	var blue: int = w.spawn_ship(TestDefs.corvette(), BLUE)
+	var red: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(5000, 0, 0))
 	w.step()
 	var before: Array = w.knowledge.columns()
 	assert_int(w.knowledge.size()).is_equal(2)
-	w.reset_ship(red, 0, 4000.0)
+	w.reset_ship(red, 4000.0)
 	assert_int(w.knowledge.size()).is_equal(2)
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_false()
 	assert_bool(KnowledgeSystem.is_detected(w, RED, blue)).is_true()

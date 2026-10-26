@@ -37,7 +37,7 @@ const FRONT_HALF_PX: float = 60.0
 const FRONT_ARROW_PX: float = 24.0
 
 ## The items (ContactPicture); its interpolator gives the own ship's orientation and
-## site-local position, to place the cube and turn map points into site positions, and
+## position, to place the cube and turn map points into positions, and
 ## the site period (no cube without one).
 var picture: ContactPicture = ContactPicture.new()
 var selected: Dictionary = {}
@@ -55,10 +55,10 @@ var preview: Dictionary = {}
 ## The controller cursor (px), drawn when cursor_on.
 var cursor: Vector2 = Vector2.ZERO
 var cursor_on: bool = false
-## The ship's probes (the RELAY block's rows): {"serial", "deployed", "pos" (site-local
+## The ship's probes (the RELAY block's rows): {"serial", "deployed", "pos" (
 ## m), "range" (m)}.
 var probes: Array = []
-## Routes (CrewState.routes): arrays of {"site", "pos"} waypoints.
+## Routes (CrewState.routes): arrays of {"pos"} waypoints.
 var routes: Array = []
 ## Lane flagging is on (the RELAY block's `lanes`): lanes crossing a friendly are drawn.
 var lanes_on: bool = false
@@ -117,7 +117,7 @@ func unproject(pos: Vector2, depth: float = 0.0) -> Vector3:
 	return view * Vector3(d.x, -d.y, depth)
 
 
-## A ship-frame offset from the map centre as a site-local position (m; the server wraps).
+## A ship-frame offset from the map centre as a position (m; the server wraps).
 func site_position(rel: Vector3) -> Vector3:
 	var interp: SnapshotInterpolator = picture.interp
 	return interp.own_position() + centre_world() + interp.own_rotation() * rel

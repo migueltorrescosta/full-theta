@@ -61,7 +61,7 @@ static func noise_parts(world: SimWorld, ship: int, contact: int) -> Dictionary:
 	var kin: Kinematics = world.kin
 	var dist: float = INF
 	var aspect: float = 0.0
-	if kin.site[ship] == kin.site[contact] and ship != contact:
+	if ship != contact:
 		var los: Vector3 = kin.relative(ship, contact)
 		dist = los.length()
 		if dist > 0.0:
@@ -107,7 +107,7 @@ static func probe_covered(world: SimWorld, ship: int, contact: int) -> bool:
 ## (P3).
 static func at_scan_mark(world: SimWorld, ship: int, contact: int) -> bool:
 	var t: ScienceTable = world.science
-	if t.mark_contact[ship] != contact or world.kin.site[ship] != t.mark_site[ship]:
+	if t.mark_contact[ship] != contact:
 		return false
 	var off: Vector3 = world.kin.relative_to_point(
 		ship, t.mark_x[ship], t.mark_y[ship], t.mark_z[ship]
@@ -159,7 +159,6 @@ static func place_mark(world: SimWorld, ship: int, contact: int) -> bool:
 	var t: ScienceTable = world.science
 	var at: PackedFloat64Array = kin.point_at(contact, offset)
 	t.mark_contact[ship] = contact
-	t.mark_site[ship] = kin.site[contact]
 	t.mark_x[ship] = at[0]
 	t.mark_y[ship] = at[1]
 	t.mark_z[ship] = at[2]
@@ -406,7 +405,6 @@ static func _check_target(world: SimWorld, ship: int, contact: int, need_free: b
 		or contact == ship
 		or world.faction_of(contact) == world.faction_of(ship)
 		or not kin.is_alive(contact)
-		or kin.site[contact] != kin.site[ship]
 	):
 		return REASON_BAD_CONTACT
 	var probe: bool = probe_covered(world, ship, contact)

@@ -79,7 +79,7 @@ func test_arc_table_with_edge_cases() -> void:
 		var world: SimWorld = SimWorld.new(1)
 		var rot: Quaternion = c[1]
 		var def: ShipDef = _def_with({}, {"arc_half_angle": c[5]})
-		var ship: int = world.spawn_ship(def, 1, 0, Vector3.ZERO, rot)
+		var ship: int = world.spawn_ship(def, 1, Vector3.ZERO, rot)
 		var local: Vector3 = Vector3.FORWARD.rotated(c[2], c[3])
 		_aim(world, ship, rot * (Vector3(0, 0, -22) + local * FAR))
 		assert_str(_shot(world, ship)).override_failure_message(c[0]).is_equal(c[4])
@@ -98,12 +98,12 @@ func test_each_block_reason() -> void:
 	]
 	for c: Array in cases:
 		var world: SimWorld = SimWorld.new(1)
-		var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+		var ship: int = world.spawn_ship(TestDefs.corvette(), 1)
 		world.mounts.set(c[1], _with(world.mounts.get(c[1]), 0, c[2]))
 		assert_str(_shot(world, ship)).override_failure_message(c[0]).is_equal(c[0])
 		assert_int(world.projectiles.size()).is_equal(0)
 	var w2: SimWorld = SimWorld.new(1)
-	w2.spawn_ship(TestDefs.corvette(), 1, 0)
+	w2.spawn_ship(TestDefs.corvette(), 1)
 	assert_str(WeaponSystem.block_reason(w2, 0, 0.0, WeaponSystem.aim_direction(w2, 0))).is_equal(
 		"subsystem"
 	)
@@ -118,7 +118,7 @@ func test_each_block_reason() -> void:
 # the M1 curve) it fires again.
 func test_destroyed_weapons_subsystem_blocks() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+	var ship: int = world.spawn_ship(TestDefs.corvette(), 1)
 	var sub: StringName = TestDefs.corvette().mounts[0].subsystem_id
 	DamageSystem.damage_subsystem(world, ship, SimFixture.sub_index(world, ship, sub), 2e7)
 	assert_float(DamageSystem.effectiveness(world, ship, sub)).is_equal(0.0)
@@ -135,7 +135,7 @@ func test_destroyed_weapons_subsystem_blocks() -> void:
 # fires.
 func test_empty_weapons_store_blocks() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+	var ship: int = world.spawn_ship(TestDefs.corvette(), 1)
 	assert_bool(PowerSystem.draw_energy(world, ship, world.power.weapon_energy[ship])).is_true()
 	assert_str(_shot(world, ship)).is_equal("energy")
 	assert_int(world.projectiles.size()).is_equal(0)
@@ -150,7 +150,7 @@ func test_empty_weapons_store_blocks() -> void:
 # limit blocks the third shot.
 func test_cooldown_ammo_heat_sequences() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+	var ship: int = world.spawn_ship(TestDefs.corvette(), 1)
 	assert_str(_shot(world, ship)).is_equal("fired")
 	for i: int in 28:
 		world.step()
@@ -161,7 +161,7 @@ func test_cooldown_ammo_heat_sequences() -> void:
 	]
 	for setup: Array in setups:
 		var w: SimWorld = SimWorld.new(1)
-		var s: int = w.spawn_ship(_def_with(setup[0]), 1, 0)
+		var s: int = w.spawn_ship(_def_with(setup[0]), 1)
 		var got: Array[String] = []
 		for shot: int in 3:
 			got.append(_shot(w, s))
@@ -176,9 +176,7 @@ func test_cooldown_ammo_heat_sequences() -> void:
 func test_shot_spawns_projectile_from_mount() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var vs: Vector3 = Vector3(0, 0, -100)
-	var ship: int = world.spawn_ship(
-		TestDefs.corvette(), 1, 0, Vector3.ZERO, Quaternion.IDENTITY, vs
-	)
+	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, Vector3.ZERO, Quaternion.IDENTITY, vs)
 	var weapon: WeaponDef = TestDefs.corvette().mounts[0].weapon
 	# Decoupled with the stick centred, so assist doesn't brake the ship this tick.
 	var coast: DecoupledCommand = DecoupledCommand.new()
@@ -209,7 +207,7 @@ func test_shot_spawns_projectile_from_mount() -> void:
 # world space when the ship turns, and stops at the arc's edge for an aim outside it.
 func test_barrel_slews_and_holds_world_aim() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+	var ship: int = world.spawn_ship(TestDefs.corvette(), 1)
 	var mount: MountDef = TestDefs.corvette().mounts[0]
 	var dir: Vector3 = Vector3.FORWARD.rotated(Vector3.UP, deg_to_rad(10.0))
 	var aim: Vector3 = mount.position + dir * FAR
@@ -250,8 +248,8 @@ func test_friendly_fire_warning_and_hit() -> void:
 	]
 	for c: Array in cases:
 		var world: SimWorld = SimWorld.new(1)
-		var shooter: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
-		var other: int = world.spawn_ship(TestDefs.corvette(), c[1], 0, Vector3(0, 0, -c[3]))
+		var shooter: int = world.spawn_ship(TestDefs.corvette(), 1)
+		var other: int = world.spawn_ship(TestDefs.corvette(), c[1], Vector3(0, 0, -c[3]))
 		if c[1] != 1:
 			world.set_relation(1, c[1], c[2])
 		if c[1] == 3:
@@ -285,9 +283,9 @@ func test_friendly_fire_warning_and_hit() -> void:
 # The sim's shot, aimed each tick at the shared lead point of a crossing target, hits it.
 func test_lead_aimed_shot_hits_crossing_target() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var shooter: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+	var shooter: int = world.spawn_ship(TestDefs.corvette(), 1)
 	var target: int = world.spawn_ship(
-		TestDefs.corvette(), 2, 0, Vector3(-150, 40, -2500), Quaternion.IDENTITY, Vector3(120, 0, 0)
+		TestDefs.corvette(), 2, Vector3(-150, 40, -2500), Quaternion.IDENTITY, Vector3(120, 0, 0)
 	)
 	var speed: float = TestDefs.corvette().mounts[0].weapon.projectile_speed
 	var muzzle: Vector3 = TestDefs.corvette().mounts[0].position
@@ -309,7 +307,7 @@ func test_lead_aimed_shot_hits_crossing_target() -> void:
 # Commands naming a mount the ship doesn't have are rejected.
 func test_commands_reject_missing_mount() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+	var ship: int = world.spawn_ship(TestDefs.corvette(), 1)
 	var c: FireCommand = FireCommand.new()
 	c.ship_id = ship
 	c.mount_index = 1
@@ -323,7 +321,7 @@ func test_commands_reject_missing_mount() -> void:
 # -P/2 stays); a non-finite one is rejected and leaves the stored point.
 func test_aim_wraps_points_and_rejects_non_finite() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, 0)
+	var ship: int = world.spawn_ship(TestDefs.corvette(), 1)
 	var half: float = 0.5 * world.kin.period
 	var cases: Array[Array] = [
 		[half + 1.0, true, -half + 1.0],

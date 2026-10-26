@@ -3,9 +3,9 @@
 class_name Kinematics
 extends SimTable
 ## Rigid-body state of every ship, one row per ship in id order (packed layout, S6).
-## Positions are site-local: a site id plus an offset of three 64-bit floats (D98,
-## D104); the sim never reads site origins. Each site wraps as a 3-torus of side `period`
-## (FT-SIM-035, D124): offsets are kept in [-period / 2, period / 2) per axis and every
+## Positions are plain offsets in the scenario's one cube: three 64-bit floats, no space
+## id (D229, D230). The cube wraps as a 3-torus of side `period`
+## (FT-SIM-035): offsets are kept in [-period / 2, period / 2) per axis and every
 ## position difference is the minimum image. Only this class reads or writes the
 ## position columns (tools/lint_arch.py): use relative(), relative_to_point(),
 ## point_at(), wrap_point(), wrap(), place() and translate(). A difference of exactly
@@ -15,16 +15,15 @@ extends SimTable
 ## the bow, +X starboard, +Y up; angular velocity is in the body frame (x pitch, y yaw,
 ## z roll). Limits are copied from the ShipDef at spawn (FT-ARC-020). Units are SI.
 
-## Default side of a site's wrapping cube (m, FT-SIM-035, D124).
-const DEFAULT_PERIOD: float = 200000.0
+## Default side of the scenario's wrapping cube (m, FT-SIM-035, D229).
+const DEFAULT_PERIOD: float = 400000.0
 
-## Side of every site's wrapping cube (m), one period per world (M1); SimWorld sets it.
+## Side of the world's wrapping cube (m); SimWorld sets it.
 var period: float = DEFAULT_PERIOD
-var site: PackedInt32Array = PackedInt32Array()
 var px: PackedFloat64Array = PackedFloat64Array()
 var py: PackedFloat64Array = PackedFloat64Array()
 var pz: PackedFloat64Array = PackedFloat64Array()
-## Velocity relative to the site (m/s, site frame).
+## Velocity in the world frame (m/s).
 var vel: PackedVector3Array = PackedVector3Array()
 var rot: Array[Quaternion] = []
 ## World-frame angular momentum (N m s): the integrator's rotational state (FT-ARC-007).
@@ -59,7 +58,6 @@ var half_length: PackedFloat64Array = PackedFloat64Array()
 
 func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	add_key(ship_id, faction)
-	site.append(0)
 	px.append(0.0)
 	py.append(0.0)
 	pz.append(0.0)
@@ -92,30 +90,29 @@ func set_angular_velocity(row: int, w_body: Vector3) -> void:
 	ang_mom[row] = rot[row] * (inertia[row] * w_body)
 
 
-## Places a ship at a site-local offset (m), wrapped onto the site's cube
+## Places a ship at an offset in the cube (m), wrapped onto it
 ## (FT-SIM-035). Fails an assertion on a non-finite offset.
-func place(row: int, site_id: int, x: float, y: float, z: float) -> void:
+func place(row: int, x: float, y: float, z: float) -> void:
 	var p: PackedFloat64Array = wrap_point(x, y, z)
 	if p.is_empty():
 		var msg: String = "non-finite offset for ship %d: (%f, %f, %f)" % [ship_ids[row], x, y, z]
 		push_error(msg)
 		assert(false, msg)
 		return
-	site[row] = site_id
 	px[row] = p[0]
 	py[row] = p[1]
 	pz[row] = p[2]
 
 
 ## Moves a ship by a displacement given per axis in 64-bit (m), wrapping across the
-## site's faces (FT-SIM-035): the integrator and contact separation move ships this way.
+## cube's faces (FT-SIM-035): the integrator and contact separation move ships this way.
 func translate(row: int, dx: float, dy: float, dz: float) -> void:
 	px[row] = _wrap(px[row] + dx, period)
 	py[row] = _wrap(py[row] + dy, period)
 	pz[row] = _wrap(pz[row] + dz, period)
 
 
-## A site-local point (m) wrapped onto the site's cube, as [x, y, z] in 64-bit; empty
+## A point (m) wrapped onto the cube, as [x, y, z] in 64-bit; empty
 ## when any coordinate is not finite (FT-SIM-035: off-cube points wrap, NaN and
 ## infinity are rejected).
 func wrap_point(x: float, y: float, z: float) -> PackedFloat64Array:
@@ -132,13 +129,13 @@ func wrap_point(x: float, y: float, z: float) -> PackedFloat64Array:
 	return PackedFloat64Array([x, y, z])
 
 
-## One site-local coordinate (m) wrapped into [-period / 2, period / 2); the caller
+## One coordinate (m) wrapped into [-period / 2, period / 2); the caller
 ## ensures it is finite (FT-SIM-035). Allocation-free, for hot paths.
 func wrap(v: float) -> float:
 	return _wrap(v, period)
 
 
-## The site-local point (m, [x, y, z], wrapped) at a site-frame offset from row's centre:
+## The point (m, [x, y, z], wrapped) at a world-frame offset from row's centre:
 ## aim, target and retreat points (FT-SIM-035). Empty if the offset is not finite.
 func point_at(row: int, offset: Vector3) -> PackedFloat64Array:
 	return wrap_point(px[row] + offset.x, py[row] + offset.y, pz[row] + offset.z)
@@ -171,13 +168,13 @@ func cell_coords(cell: float, out: PackedInt32Array) -> void:
 		out[3 * row + 2] = floori(zs[row] / cell)
 
 
-## Whether row a can fly to, track or point at row b: another live ship at its site.
+## Whether row a can fly to, track or point at row b: another live ship.
 func can_reach(a: int, b: int) -> bool:
-	return b >= 0 and b < size() and b != a and is_alive(b) and site[a] == site[b]
+	return b >= 0 and b < size() and b != a and is_alive(b)
 
 
 ## Offset of row b from row a (m, float32) by minimum image, computed in 64-bit
-## (FT-SIM-035). Only meaningful when both are at the same site.
+## (FT-SIM-035).
 func relative(a: int, b: int) -> Vector3:
 	# _wrap inlined for in-cube differences, the common case (hot path).
 	var half: float = 0.5 * period
@@ -193,23 +190,19 @@ func relative(a: int, b: int) -> Vector3:
 	return Vector3(dx, dy, dz)
 
 
-## The ship among ids at row a's site nearest to it (distance as relative().length(),
+## The ship among ids nearest to it (distance as relative().length(),
 ## float32), or -1; the earlier one in ids wins a tie. One loop for target scans.
 func nearest(a: int, ids: PackedInt32Array) -> int:
 	var half: float = 0.5 * period
 	var xs: PackedFloat64Array = px
 	var ys: PackedFloat64Array = py
 	var zs: PackedFloat64Array = pz
-	var sites: PackedInt32Array = site
 	var ax: float = xs[a]
 	var ay: float = ys[a]
 	var az: float = zs[a]
-	var s: int = sites[a]
 	var best: int = -1
 	var best_dist: float = INF
 	for b: int in ids:
-		if sites[b] != s:
-			continue
 		var dx: float = xs[b] - ax
 		var dy: float = ys[b] - ay
 		var dz: float = zs[b] - az
@@ -226,7 +219,7 @@ func nearest(a: int, ids: PackedInt32Array) -> int:
 	return best
 
 
-## Offset of a site-local point from row a (m, float32) by minimum image, computed in
+## Offset of a point from row a (m, float32) by minimum image, computed in
 ## 64-bit; the point need not be wrapped (FT-SIM-035).
 func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:
 	var half: float = 0.5 * period
@@ -281,7 +274,6 @@ func columns() -> Array:
 	return (
 		super()
 		+ [
-			["site", site],
 			["px", px],
 			["py", py],
 			["pz", pz],

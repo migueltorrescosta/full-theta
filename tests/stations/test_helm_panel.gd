@@ -49,9 +49,7 @@ func test_compass_dot_is_filled_ahead_and_hollow_behind() -> void:
 func test_off_screen_arrows_for_the_selection_and_pinged_items() -> void:
 	var ctx: StationContext = _ctx()
 	ctx.crew.select("contact", StationFixture.H2)
-	var p: Dictionary = {
-		"ship": 0, "kind": "contact", "id": StationFixture.F4, "site": 0, "by": "Bo"
-	}
+	var p: Dictionary = {"ship": 0, "kind": "contact", "id": StationFixture.F4, "by": "Bo"}
 	ctx.crew.handle_event({"type": "ping", "payload": p}, StationFixture.NOW_MS - 500)
 	_frame()
 	var arrows: Array = []

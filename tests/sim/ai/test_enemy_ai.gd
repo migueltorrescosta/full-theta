@@ -35,13 +35,13 @@ func _tough_corvette() -> ShipDef:
 ## Corvette id 0 at the origin, raider id 1 at (0, 0, -distance), bow -Z (away from
 ## the corvette, so the AI has to turn first).
 func _scenario(world: SimWorld, distance: float, corvette_velocity: Vector3 = Vector3.ZERO) -> void:
-	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, 0, Vector3.ZERO)
+	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, Vector3.ZERO)
 	if corvette_velocity != Vector3.ZERO:
 		var drift: DecoupledCommand = DecoupledCommand.new()
 		drift.ship_id = 0
 		world.submit(drift)
 		world.kin.vel[0] = corvette_velocity
-	world.spawn_enemy(TestDefs.raider_enemy(), RAIDER_FACTION, 0, Vector3(0, 0, -distance))
+	world.spawn_enemy(TestDefs.raider_enemy(), RAIDER_FACTION, Vector3(0, 0, -distance))
 
 
 func _distance(world: SimWorld) -> float:
@@ -235,7 +235,7 @@ func test_undetected_target_is_ignored_until_detected() -> void:
 	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.NONE)
 	assert_array(world.submitted).is_empty()
 	# Moved into sensor range (a test placement, not physics).
-	world.kin.place(0, 0, 0.0, 0.0, -13000.0)
+	world.kin.place(0, 0.0, 0.0, -13000.0)
 	var fired: int = 0
 	var n: int = 0
 	while fired == 0 and n < 40 * HZ:
@@ -245,18 +245,6 @@ func test_undetected_target_is_ignored_until_detected() -> void:
 	assert_int(fired).is_greater(0)
 	assert_int(world.ai.target[1]).is_equal(0)
 	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.POINT)
-
-
-# FT: FT-SIM-028
-# A corvette 2 km away but at another site is never a target.
-func test_target_at_other_site_is_ignored() -> void:
-	var world: RecordingWorld = RecordingWorld.new(23)
-	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, 1, Vector3.ZERO)
-	world.spawn_enemy(TestDefs.raider_enemy(), RAIDER_FACTION, 0, Vector3(0, 0, -2000))
-	var events: Array[SimEvent] = SimFixture.run(world, 10 * HZ)
-	assert_int(_count(events, &"fired", 1)).is_equal(0)
-	assert_array(_mode_tags(events)).is_empty()
-	assert_array(world.submitted).is_empty()
 
 
 # FT: FT-SIM-027, FT-ARC-008
@@ -291,7 +279,7 @@ func test_holds_position_without_target() -> void:
 	_scenario(world, 5000.0)
 	SimFixture.run(world, 12 * HZ)
 	assert_float(world.kin.vel[1].length()).is_greater(10.0)
-	world.kin.place(0, 0, 0.0, 0.0, 30000.0)
+	world.kin.place(0, 0.0, 0.0, 30000.0)
 	var events: Array[SimEvent] = _run_until_mode(world, AiTable.Mode.HOLD, 2)
 	assert_array(_mode_tags(events)).is_equal([&"hold"])
 	var n: int = 0
@@ -312,7 +300,7 @@ func test_reset_keeps_ai_and_clears_mode() -> void:
 	assert_bool(world.ai.is_enabled(0)).is_false()
 	assert_bool(world.ai.is_enabled(1)).is_true()
 	assert_int(world.ai.target[1]).is_equal(0)
-	world.reset_ship(1, 0, 0.0, 0.0, -2500.0)
+	world.reset_ship(1, 0.0, 0.0, -2500.0)
 	assert_bool(world.ai.is_enabled(1)).is_true()
 	assert_float(world.ai.engage_range_max[1]).is_equal(3000.0)
 	assert_float(world.ai.fire_cone[1]).is_equal(0.05)
@@ -330,10 +318,10 @@ func test_reset_keeps_ai_and_clears_mode() -> void:
 func test_retreat_crosses_the_seam_and_escapes() -> void:
 	var world: SimWorld = SimWorld.new(23)
 	var half: float = 0.5 * world.kin.period
-	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, 0, Vector3(half - 10000.0, 0, 0))
+	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, Vector3(half - 10000.0, 0, 0))
 	var bow_out: Quaternion = Quaternion(Vector3.UP, -PI / 2.0)
 	world.spawn_enemy(
-		TestDefs.raider_enemy(), RAIDER_FACTION, 0, Vector3(half - 5000.0, 0, 0), bow_out
+		TestDefs.raider_enemy(), RAIDER_FACTION, Vector3(half - 5000.0, 0, 0), bow_out
 	)
 	world.damage.health[world.damage.hull_row(1)] = 0.2 * world.defs[1].hull_max
 	var crossed: bool = false

@@ -21,7 +21,7 @@ const RAIDER_AT: Vector3 = Vector3(0.0, 0.0, -30000.0)
 ## The raider's cruise speed (m/s), bow on the corvette: its throttle is held until the
 ## setpoint reaches it (the speed follows with a lag), then released, which keeps it.
 const RAIDER_SPEED: float = 100.0
-## Where Relay sends the probe (m, site frame).
+## Where Relay sends the probe (m, world frame).
 const PROBE_AT: Vector3 = Vector3(0.0, 0.0, -24000.0)
 const TICK_LIMIT: int = 200 * SimWorld.HZ
 const PLAYER_SEED: int = 5
@@ -53,8 +53,8 @@ static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p13")
 	w.science_def = ScienceFixture.science()
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
-	w.spawn_ship(TestDefs.corvette(), 1, 0)
-	w.spawn_ship(TestDefs.raider(), 2, 0, RAIDER_AT, Quaternion(Vector3.UP, PI))
+	w.spawn_ship(TestDefs.corvette(), 1)
+	w.spawn_ship(TestDefs.raider(), 2, RAIDER_AT, Quaternion(Vector3.UP, PI))
 	return w
 
 

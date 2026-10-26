@@ -50,7 +50,7 @@ func _ready() -> void:
 	if selected >= 0:
 		_ctx.crew.select("contact", selected)
 	if ping >= 0:
-		var p: Dictionary = {"ship": 0, "kind": "contact", "id": ping, "site": 0, "by": "Bo"}
+		var p: Dictionary = {"ship": 0, "kind": "contact", "id": ping, "by": "Bo"}
 		_ctx.crew.handle_event({"type": "ping", "payload": p}, StationFixture.NOW_MS - 1000)
 	match view:
 		"menu", "menu_web":

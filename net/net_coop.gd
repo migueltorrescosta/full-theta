@@ -100,8 +100,6 @@ func reset_ship(ship: int) -> void:
 
 func _within(world: SimWorld, ship: int, z: Dictionary) -> bool:
 	var kin: Kinematics = world.kin
-	if kin.site[ship] != z["site"]:
-		return false
 	var p: PackedFloat64Array = kin.point_at(ship, Vector3.ZERO)
 	var d: Vector3 = Vector3(
 		kin.wrap(z["x"] - p[0]), kin.wrap(z["y"] - p[1]), kin.wrap(z["z"] - p[2])

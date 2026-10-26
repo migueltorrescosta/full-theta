@@ -10,7 +10,7 @@ const SHD: int = SubsystemDef.Kind.SHIELDS
 func _world(n: int = 1) -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "test")
 	for i: int in n:
-		w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3(0, 0, -1000.0 * i))
+		w.spawn_ship(TestDefs.corvette(), 1, Vector3(0, 0, -1000.0 * i))
 	return w
 
 
@@ -194,7 +194,7 @@ func test_focus_tracks_ship() -> void:
 	assert_bool(_focus(w, Vector3.ZERO, 0)).is_false()
 	assert_bool(_focus(w, Vector3.ZERO, 1)).is_true()
 	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.FORWARD, Vector3.ONE * 1e-6)
-	w.kin.place(1, 0, 1000.0, 0.0, 0.0)
+	w.kin.place(1, 1000.0, 0.0, 0.0)
 	w.step()
 	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.RIGHT, Vector3.ONE * 1e-6)
 	assert_bool(_focus(w, Vector3.UP)).is_true()
@@ -206,18 +206,18 @@ func test_focus_tracks_ship() -> void:
 # stays but the focus freezes where it was, and it follows again once re-detected.
 func test_focus_tracks_only_detected_ships() -> void:
 	var w: SimWorld = _world()
-	var raider: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(50000, 0, 0))
+	var raider: int = w.spawn_ship(TestDefs.raider(), 2, Vector3(50000, 0, 0))
 	assert_bool(_focus(w, Vector3.ZERO, raider)).is_false()
-	w.kin.place(raider, 0, 5000.0, 0.0, 0.0)
+	w.kin.place(raider, 5000.0, 0.0, 0.0)
 	w.step()
 	assert_bool(_focus(w, Vector3.ZERO, raider)).is_true()
 	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.RIGHT, Vector3.ONE * 1e-6)
-	w.kin.place(raider, 0, 0.0, 0.0, 50000.0)
+	w.kin.place(raider, 0.0, 0.0, 50000.0)
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, 1, raider)).is_false()
 	assert_int(w.shields.track_id[0]).is_equal(raider)
 	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.RIGHT, Vector3.ONE * 1e-6)
-	w.kin.place(raider, 0, 0.0, 0.0, 5000.0)
+	w.kin.place(raider, 0.0, 0.0, 5000.0)
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, 1, raider)).is_true()
 	assert_vector(w.shields.focus[0]).is_equal_approx(Vector3.BACK, Vector3.ONE * 1e-6)

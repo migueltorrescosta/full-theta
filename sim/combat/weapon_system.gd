@@ -137,7 +137,7 @@ static func path_crosses(world: SimWorld, row: int) -> int:
 	var best: int = -1
 	var best_t: float = 2.0
 	for j: int in kin.size():
-		if j == ship_id or not kin.is_alive(j) or kin.site[ship_id] != kin.site[j]:
+		if j == ship_id or not kin.is_alive(j):
 			continue
 		if world.relation(faction, world.faction_of(j)) == SimWorld.Relation.HOSTILE:
 			continue
@@ -218,7 +218,6 @@ static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -
 		var k: int = world.projectiles.spawn(
 			ship,
 			world.faction_of(ship),
-			kin.site[ship],
 			start[0],
 			start[1],
 			start[2],
@@ -254,7 +253,7 @@ static func _beam_hit(
 	var best_t: float = 2.0
 	var best_start: Vector3 = Vector3.ZERO
 	for j: int in kin.size():
-		if j == shooter or not kin.is_alive(j) or kin.site[shooter] != kin.site[j]:
+		if j == shooter or not kin.is_alive(j):
 			continue
 		var start: Vector3 = muzzle - kin.relative(shooter, j)
 		var axis: Vector3 = kin.to_world(j, Vector3(0.0, 0.0, kin.half_length[j]))

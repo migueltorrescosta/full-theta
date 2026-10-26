@@ -88,7 +88,7 @@ func last_writer(control: String) -> String:
 	return writers[control][1] if writers.has(control) else ""
 
 
-## Own ship position (m, site-local, wrapped), or ZERO before the first snapshot.
+## Own ship position (m, wrapped), or ZERO before the first snapshot.
 func own_position() -> Vector3:
 	return NetCodec.pos_of(kin.get("pos", Vector3i.ZERO))
 

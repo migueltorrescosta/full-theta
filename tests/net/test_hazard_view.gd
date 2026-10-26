@@ -10,7 +10,7 @@ var world: SimWorld
 
 func before_test() -> void:
 	world = SimWorld.new(3)
-	world.spawn_ship(TestDefs.corvette(), 1, 0)
+	world.spawn_ship(TestDefs.corvette(), 1)
 	var wave: HazardDef = load("res://content/hazards/p11_radiation_wave.tres") as HazardDef
 	var cloud: HazardDef = load("res://content/hazards/p4_dust_cloud.tres") as HazardDef
 	world.hazards = [wave, cloud]

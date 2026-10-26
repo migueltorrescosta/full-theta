@@ -24,13 +24,13 @@ static func step(world: SimWorld) -> void:
 	_warn_lanes(world)
 
 
-## Whether a deployed probe of the faction covers the site-local point (m): the minimum
+## Whether a deployed probe of the faction covers the point (m): the minimum
 ## image distance to its position is within the launching ship's probe_range.
-static func coverage_at(world: SimWorld, faction: int, pos: Vector3, site: int = 0) -> bool:
+static func coverage_at(world: SimWorld, faction: int, pos: Vector3) -> bool:
 	var t: ProbeTable = world.probes
 	var kin: Kinematics = world.kin
 	for r: int in t.size():
-		if t.factions[r] != faction or t.deployed[r] == 0 or t.site[r] != site:
+		if t.factions[r] != faction or t.deployed[r] == 0:
 			continue
 		var d: Vector3 = Vector3(
 			kin.wrap(pos.x - t.at_x[r]), kin.wrap(pos.y - t.at_y[r]), kin.wrap(pos.z - t.at_z[r])
@@ -44,10 +44,10 @@ static func coverage_at(world: SimWorld, faction: int, pos: Vector3, site: int =
 static func covers_contact(world: SimWorld, ship: int, contact: int) -> bool:
 	var kin: Kinematics = world.kin
 	var p: PackedFloat64Array = kin.point_at(contact, Vector3.ZERO)
-	return coverage_at(world, world.faction_of(ship), Vector3(p[0], p[1], p[2]), kin.site[contact])
+	return coverage_at(world, world.faction_of(ship), Vector3(p[0], p[1], p[2]))
 
 
-## Launches one probe toward a site-local point (m) from the ship's stock; false (with
+## Launches one probe toward a point (m) from the ship's stock; false (with
 ## &"probe_no_stock") when none is left or the point is not finite.
 static func launch(world: SimWorld, ship: int, x: float, y: float, z: float) -> bool:
 	var r: RelayTable = world.relay
@@ -66,7 +66,6 @@ static func launch(world: SimWorld, ship: int, x: float, y: float, z: float) -> 
 		ship,
 		world.faction_of(ship),
 		serial_no,
-		kin.site[ship],
 		Vector3(from[0], from[1], from[2]),
 		Vector3(to[0], to[1], to[2])
 	)

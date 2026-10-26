@@ -1,7 +1,7 @@
 class_name LoadEncounter
 extends M1Encounter
 ## The 64-connection load scene (#11, FT-GEN-003, FT-NET-040): `crew_ships` crewable
-## ships of one co-op faction plus AI raiders up to `world_ships`, at one site: 6 + 6
+## ships of one co-op faction plus AI raiders up to `world_ships`, in one cube: 6 + 6
 ## for the gate, 6 + 94 (the S6/S9 envelope) for the stress run (D160). TEST AND DEV
 ## ONLY (`--load-ships`): the real multi-ship lobby and scenarios replace it (#11, E11).
 ##
@@ -61,10 +61,10 @@ func build() -> SimWorld:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = world_seed
 	for i: int in crew_ships:
-		world.spawn_ship(player, CREW_FACTION, SITE, _point(rng, CREW_SPREAD), _rotation(rng))
+		world.spawn_ship(player, CREW_FACTION, _point(rng, CREW_SPREAD), _rotation(rng))
 	for i: int in world_ships - crew_ships:
 		var f: int = RAIDER_FACTIONS[i % RAIDER_FACTIONS.size()]
-		world.spawn_enemy(enemy, f, SITE, _point(rng, ARENA * 0.5), _rotation(rng))
+		world.spawn_enemy(enemy, f, _point(rng, ARENA * 0.5), _rotation(rng))
 	return world
 
 

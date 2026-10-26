@@ -1,17 +1,16 @@
 class_name ProjectileTable
 extends SimTable
 ## Live projectiles, one row each, keyed by the shooter's ship id and faction
-## (FT-ARC-012). Positions are site-local 64-bit offsets like ships' (D104), wrapped
-## onto the site's cube (FT-SIM-035); only this class and Kinematics read them
-## (tools/lint_arch.py). Velocity is float32 in the site frame. Packed columns keep 500
+## (FT-ARC-012). Positions are 64-bit offsets in the cube like ships' (D104), wrapped
+## onto it (FT-SIM-035); only this class and Kinematics read them
+## (tools/lint_arch.py). Velocity is float32 in the world frame. Packed columns keep 500
 ## projectiles cheap (S6). Rows are appended when a shot is fired and removed when the
 ## projectile hits or expires, so a ship has no rows at spawn.
 
-var site: PackedInt32Array = PackedInt32Array()
 var px: PackedFloat64Array = PackedFloat64Array()
 var py: PackedFloat64Array = PackedFloat64Array()
 var pz: PackedFloat64Array = PackedFloat64Array()
-## Velocity relative to the site (m/s).
+## Velocity (m/s).
 var vel: PackedVector3Array = PackedVector3Array()
 ## Swept-sphere radius (m, FT-SIM-009).
 var radius: PackedFloat64Array = PackedFloat64Array()
@@ -33,7 +32,6 @@ var track_floor: PackedFloat64Array = PackedFloat64Array()
 func spawn(
 	shooter: int,
 	faction: int,
-	site_id: int,
 	x: float,
 	y: float,
 	z: float,
@@ -43,7 +41,6 @@ func spawn(
 	ttl_ticks: int
 ) -> int:
 	add_key(shooter, faction)
-	site.append(site_id)
 	px.append(x)
 	py.append(y)
 	pz.append(z)
@@ -69,12 +66,12 @@ func set_payload(
 	track_floor[k] = floor_share
 
 
-## From projectile k to ship s (m, minimum image; the same site).
+## From projectile k to ship s (m, minimum image; wrapped).
 func offset_to_ship(k: int, kin: Kinematics, s: int) -> Vector3:
 	return -kin.relative_to_point(s, px[k], py[k], pz[k])
 
 
-## Moves projectile k by its velocity for dt (s), wrapping across the site's faces
+## Moves projectile k by its velocity for dt (s), wrapping across the cube's faces
 ## (FT-SIM-035).
 func advance(k: int, kin: Kinematics, dt: float) -> void:
 	var v: Vector3 = vel[k]
@@ -90,7 +87,7 @@ func advance(k: int, kin: Kinematics, dt: float) -> void:
 
 ## Projectile k's position relative to ship s, both taken dt (s) before the ship's
 ## current position (the ship moving at its current velocity): the start of a tick's
-## sweep (m, site frame), by minimum image so shots across a seam hit (FT-SIM-035).
+## sweep (m, world frame), by minimum image so shots across a seam hit (FT-SIM-035).
 func relative_start(k: int, kin: Kinematics, s: int, dt: float) -> Vector3:
 	var vs: Vector3 = kin.vel[s]
 	return kin.relative_to_point(s, px[k] + vs.x * dt, py[k] + vs.y * dt, pz[k] + vs.z * dt)
@@ -118,7 +115,6 @@ func remove_rows(rows: PackedInt32Array) -> void:
 		var r: int = rows[i]
 		ship_ids.remove_at(r)
 		factions.remove_at(r)
-		site.remove_at(r)
 		px.remove_at(r)
 		py.remove_at(r)
 		pz.remove_at(r)
@@ -141,7 +137,6 @@ func columns() -> Array:
 	return (
 		super()
 		+ [
-			["site", site],
 			["px", px],
 			["py", py],
 			["pz", pz],

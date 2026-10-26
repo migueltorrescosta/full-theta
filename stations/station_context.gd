@@ -64,45 +64,40 @@ func ship_def() -> ShipDef:
 	return null
 
 
-## The own ship's site id.
-func site() -> int:
-	return int(view.kin.get("site", 0))
-
-
 ## Places a new mark (slot -1: the first free one) or replaces `slot` on an item as
 ## item_at returns it: on a contact (attached) or a map point.
 func mark_item(slot: int, item: Dictionary) -> void:
 	if item.get("kind", "") == "contact":
-		intents.place_mark(slot, "", int(item["id"]), site(), Vector3.ZERO)
+		intents.place_mark(slot, "", int(item["id"]), Vector3.ZERO)
 	elif item.get("kind", "") == "point":
-		intents.place_mark(slot, "", -1, int(item.get("site", site())), item["pos"])
+		intents.place_mark(slot, "", -1, item["pos"])
 
 
 ## Places a mark (slot -1: the first free one) on one of a contact's scanned subsystems
 ## (FT-SPA-014, D202): an attached mark's x names the subsystem as its ShipDef.subsystems
 ## index plus one; the server refuses it until a scan revealed that weak point.
 func mark_subsystem(slot: int, contact: int, subsystem: int) -> void:
-	intents.place_mark(slot, "", contact, site(), Vector3(float(subsystem + 1), 0.0, 0.0))
+	intents.place_mark(slot, "", contact, Vector3(float(subsystem + 1), 0.0, 0.0))
 
 
 ## Moves mark `slot` onto a contact (attached) or a map point.
 func move_mark_to(slot: int, item: Dictionary) -> void:
 	if item.get("kind", "") == "contact":
-		intents.move_mark(slot, int(item["id"]), site(), Vector3.ZERO)
+		intents.move_mark(slot, int(item["id"]), Vector3.ZERO)
 	elif item.get("kind", "") == "point":
-		intents.move_mark(slot, -1, int(item.get("site", site())), item["pos"])
+		intents.move_mark(slot, -1, item["pos"])
 
 
 ## Pings an item (contact, mark) or a map point.
 func ping_item(item: Dictionary) -> void:
 	if item.get("kind", "") == "point":
-		intents.ping("point", -1, int(item.get("site", site())), item["pos"])
+		intents.ping("point", -1, item["pos"])
 	elif not item.is_empty():
-		intents.ping(item["kind"], int(item["id"]), site(), Vector3.ZERO)
+		intents.ping(item["kind"], int(item["id"]), Vector3.ZERO)
 
 
 ## The shared selection's offset from the own ship in the ship frame (m), or null when
-## nothing is selected or its position is unknown (a site without data).
+## nothing is selected or its position is unknown (no data).
 func selection_local() -> Variant:
 	var s: Dictionary = crew.selection
 	match s.get("kind", ""):
@@ -121,7 +116,7 @@ func selection_local() -> Variant:
 	return null
 
 
-## The site-local position (m) of a zone item, or null: a marked zone (id 0 and up), a
+## The position (m) of a zone item, or null: a marked zone (id 0 and up), a
 ## deployed probe's bubble (id -1 - serial) or a sim hazard (id -1000 - hazard id) the
 ## faction knows (D222, D208).
 func zone_position(id: int) -> Variant:
@@ -140,7 +135,7 @@ func zone_position(id: int) -> Variant:
 	return null
 
 
-## A mark's site-local position (m): its contact's position plus the stored offset
+## A mark's position (m): its contact's position plus the stored offset
 ## when attached (the contact's last known position once it is lost,
 ## docs/protocol.md), else its own position.
 func mark_position(m: Dictionary) -> Vector3:

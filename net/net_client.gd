@@ -217,34 +217,31 @@ func set_alert(level: int) -> void:
 
 
 ## Places a mark: slot -1 takes the first free one, name "" the slot's default; contact
-## >= 0 attaches it to that contact, else it is free at pos on site (FT-SPA-012 to
+## >= 0 attaches it to that contact, else it is free at pos (FT-SPA-012 to
 ## FT-SPA-014).
-func place_mark(slot: int, name: String, contact: int, site: int, pos: Vector3) -> void:
-	_mark("place", slot, name, contact, site, pos)
+func place_mark(slot: int, name: String, contact: int, pos: Vector3) -> void:
+	_mark("place", slot, name, contact, pos)
 
 
-## Moves a mark to pos on site, or attaches it to a contact (contact >= 0).
-func move_mark(slot: int, contact: int, site: int, pos: Vector3) -> void:
-	_mark("move", slot, "", contact, site, pos)
+## Moves a mark to pos, or attaches it to a contact (contact >= 0).
+func move_mark(slot: int, contact: int, pos: Vector3) -> void:
+	_mark("move", slot, "", contact, pos)
 
 
 ## Renames a mark ("" restores the slot's default name).
 func rename_mark(slot: int, name: String) -> void:
-	_mark("rename", slot, name, -1, -1, Vector3.ZERO)
+	_mark("rename", slot, name, -1, Vector3.ZERO)
 
 
 func delete_mark(slot: int) -> void:
-	_mark("delete", slot, "", -1, -1, Vector3.ZERO)
+	_mark("delete", slot, "", -1, Vector3.ZERO)
 
 
 ## Pings an item on every screen of the ship (FT-SPA-016): kind "contact" (id), "mark"
-## (id = slot), "card" (id = a Comms card, FT-CPT-005), "site" (site) or "point" (pos on
-## site).
-func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
-	_send(
-		NetProtocol.Type.PING,
-		{"kind": kind, "id": id, "site": site, "x": pos.x, "y": pos.y, "z": pos.z}
-	)
+## (id = slot), "card" (id = a Comms card, FT-CPT-005), "site" (id = a named site) or
+## "point" (pos).
+func ping(kind: String, id: int, pos: Vector3) -> void:
+	_send(NetProtocol.Type.PING, {"kind": kind, "id": id, "x": pos.x, "y": pos.y, "z": pos.z})
 
 
 ## Switches the ship's main screen to view (MainScreen.View): the Captain, or Relay with
@@ -270,20 +267,20 @@ func decline_mark(id: int) -> void:
 
 ## Routes and hazard zones are Relay's Mark ops: a waypoint on route `route`, a hazard of
 ## `radius_m` (a multiple of 100 m) at a point, deleting a zone by id (FT-RLY-005).
-func route_add(route: int, site: int, pos: Vector3) -> void:
-	_mark("route_add", route, "", -1, site, pos)
+func route_add(route: int, pos: Vector3) -> void:
+	_mark("route_add", route, "", -1, pos)
 
 
 func route_clear(route: int) -> void:
-	_mark("route_clear", route, "", -1, -1, Vector3.ZERO)
+	_mark("route_clear", route, "", -1, Vector3.ZERO)
 
 
-func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
-	_mark("hazard_add", roundi(radius_m / 100.0), "", -1, site, pos)
+func hazard_add(radius_m: float, pos: Vector3) -> void:
+	_mark("hazard_add", roundi(radius_m / 100.0), "", -1, pos)
 
 
 func hazard_delete(id: int) -> void:
-	_mark("hazard_delete", id, "", -1, -1, Vector3.ZERO)
+	_mark("hazard_delete", id, "", -1, Vector3.ZERO)
 
 
 ## Strand G. The host sets the session's data-shortcut toggles in the lobby (a DataToggles
@@ -325,9 +322,9 @@ func _chip(op: String, chip: String, arg: int, id: int, accept: bool) -> Diction
 	return {"op": op, "chip": chip, "arg": arg, "id": id, "accept": accept}
 
 
-func _mark(op: String, slot: int, name: String, contact: int, site: int, pos: Vector3) -> void:
+func _mark(op: String, slot: int, name: String, contact: int, pos: Vector3) -> void:
 	var fields: Dictionary = {"op": op, "slot": slot, "name": name, "contact": contact}
-	fields.merge({"site": site, "x": pos.x, "y": pos.y, "z": pos.z})
+	fields.merge({"x": pos.x, "y": pos.y, "z": pos.z})
 	_send(NetProtocol.Type.MARK, fields)
 
 

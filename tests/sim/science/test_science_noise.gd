@@ -107,6 +107,6 @@ func test_scan_position_mark_lowers_noise() -> void:
 	var t: ScienceTable = w.science
 	assert_int(t.mark_contact[ME]).is_equal(FOE)
 	# Fly there: the mark is broadside to the raider, which faces the corvette.
-	w.kin.place(ME, 0, t.mark_x[ME], t.mark_y[ME], t.mark_z[ME])
+	w.kin.place(ME, t.mark_x[ME], t.mark_y[ME], t.mark_z[ME])
 	assert_bool(ScienceSystem.at_scan_mark(w, ME, FOE)).is_true()
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(before)

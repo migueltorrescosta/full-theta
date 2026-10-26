@@ -26,12 +26,12 @@ func set_alert(level: int) -> void:
 
 ## slot -1 takes the first free one; contact >= 0 attaches the mark, else it is free at
 ## site + pos (FT-SPA-012, FT-SPA-014).
-func place_mark(slot: int, mark_name: String, contact: int, site: int, pos: Vector3) -> void:
-	_call(&"place_mark", [slot, mark_name, contact, site, pos])
+func place_mark(slot: int, mark_name: String, contact: int, pos: Vector3) -> void:
+	_call(&"place_mark", [slot, mark_name, contact, pos])
 
 
-func move_mark(slot: int, contact: int, site: int, pos: Vector3) -> void:
-	_call(&"move_mark", [slot, contact, site, pos])
+func move_mark(slot: int, contact: int, pos: Vector3) -> void:
+	_call(&"move_mark", [slot, contact, pos])
 
 
 func rename_mark(slot: int, mark_name: String) -> void:
@@ -48,8 +48,8 @@ func set_main_view(view: int) -> void:
 
 
 ## kind "contact" | "mark" | "card" | "site" | "point" (FT-SPA-016, FT-CPT-005).
-func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
-	_call(&"ping", [kind, id, site, pos])
+func ping(kind: String, id: int, pos: Vector3) -> void:
+	_call(&"ping", [kind, id, pos])
 
 
 ## Relay (strand B of #9): send the mark in `slot` to an allied ship's Relay (FT-RLY-008);
@@ -69,16 +69,16 @@ func decline_mark(id: int) -> void:
 
 ## Routes and hazard zones (FT-RLY-005, FT-SPA-028): a waypoint on route `route`, clear
 ## it, a hazard of `radius_m` at a point, delete the zone `id`.
-func route_add(route: int, site: int, pos: Vector3) -> void:
-	_call(&"route_add", [route, site, pos])
+func route_add(route: int, pos: Vector3) -> void:
+	_call(&"route_add", [route, pos])
 
 
 func route_clear(route: int) -> void:
 	_call(&"route_clear", [route])
 
 
-func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
-	_call(&"hazard_add", [radius_m, site, pos])
+func hazard_add(radius_m: float, pos: Vector3) -> void:
+	_call(&"hazard_add", [radius_m, pos])
 
 
 func hazard_delete(id: int) -> void:

@@ -9,7 +9,7 @@ extends StationPanel
 ## screen's disc radar is the inset (FT-WPN-002). Docked, it shows the mount list and
 ## the target line only.
 ##
-## Aim: the aim axes turn the camera mount's aim at AIM_RATE. The aim is a site-local
+## Aim: the aim axes turn the camera mount's aim at AIM_RATE. The aim is a
 ## point, like the sim's (`aim_mount`, FT-WPN-009): it holds in world space while the
 ## ship turns, the barrel slews to it at the mount's traverse rate (sim), and the camera
 ## looks at it with its roll on the deck plane (ComfortCamera, FT-STN-017). Light aim
@@ -45,7 +45,7 @@ var ship_def: ShipDef = null
 var cam_basis: Basis = Basis.IDENTITY
 var fov: float = FOV_DEG
 
-## Mount index -> site-local aim point (m); a mount without one rests on its barrel.
+## Mount index -> aim point (m); a mount without one rests on its barrel.
 var _aims: Dictionary = {}
 var _sent: Dictionary = {}
 var _dirty: Dictionary = {}
@@ -299,7 +299,7 @@ func fire_claimed_at(contact: int, keep_aim: int = -1) -> int:
 # --- Aim. ---
 
 
-## The site-local position of mount i (m).
+## The position of mount i (m).
 func _mount_position(i: int) -> Vector3:
 	return ctx.interp.own_position() + ctx.interp.own_rotation() * ship_def.mounts[i].position
 
