@@ -80,15 +80,7 @@ func test_only_the_claimer_replies() -> void:
 	var refused: Dictionary = await h.next_event(bo, NetProtocol.EVENT_REQUEST_REJECTED)
 	assert_str(refused["payload"]["reason"]).is_equal(CommandGate.CLAIMED)
 	ana.release_claim("npc:0")
-	(
-		assert_bool(
-			await h.until(
-				func() -> bool:
-					return server.session.npc_audience(ServerVoice.card_key(0)).is_empty()
-			)
-		)
-		. is_true()
-	)
+	assert_bool(await h.until(func() -> bool: return _unheard(server, 0))).is_true()
 	(
 		assert_bool(await h.until(func() -> bool: return CommsL3.card_row(bo, 0)["claimer"] == -1))
 		. is_true()
@@ -146,3 +138,8 @@ func test_claims_cover_conversations_not_decisions() -> void:
 	assert_str(await CommsL3.verdict(h, server, bo, {"kind": "comms_decline", "card": 1})).is_equal(
 		""
 	)
+
+
+## Whether nobody holds the claim on the card's NPC.
+func _unheard(server: NetServer, card: int) -> bool:
+	return server.session.npc_audience(ServerVoice.card_key(card)).is_empty()
