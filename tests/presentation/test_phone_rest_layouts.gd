@@ -182,3 +182,24 @@ func test_viewer_radar_goes_beside_the_view_on_its_side() -> void:
 	var up: StationScreen = await _screen(Vector2i(390, 844), "viewer", PORTRAIT)
 	assert_bool((up.focused_panel() as ViewerPanel).radar_beside()).is_false()
 	_drop(up)
+
+
+# FT: FT-JNT-001, FT-NET-018, FT-STN-005
+# A joint view on a phone on its side shows the focused panel alone and a switch to the
+# other station; on a desktop the other panel docks as before.
+func test_joint_view_on_a_phone_switches_instead_of_docking() -> void:
+	var s: StationScreen = await _screen(Vector2i(844, 390), "tactical", LANDSCAPE)
+	assert_bool(s._dock.visible).is_false()
+	assert_bool(s.joint_switch.is_visible_in_tree()).is_true()
+	assert_float(s.joint_switch.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
+	assert_str(s.joint_switch.text).contains(tr("station.weapons"))
+	s.joint_switch.pressed.emit()
+	await _frames(2)
+	assert_int(s.focus_index).is_equal(1)
+	assert_str(s.joint_switch.text).contains(tr("station.helm"))
+	_assert_clean(s.joint_switch, "switch")
+	_drop(s)
+	var desk: StationScreen = await _screen(Vector2i(1280, 720), "tactical", [])
+	assert_bool(desk._dock.visible).is_true()
+	assert_object(desk.joint_switch).is_null()
+	_drop(desk)

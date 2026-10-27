@@ -53,6 +53,9 @@ const SCROLL_BAR_W: float = 14.0
 ## (the bare digits and Alt + digit belong to the stations' own keys).
 const TABS_FROM: int = 3
 const TAB_HINT_KEY: String = "dev_tabs"
+## The joint-view switch on a phone on its side: width and arrow (#28).
+const JOINT_SWITCH_W: float = 160.0
+const JOINT_SWITCH_ARROW: String = "⇄"
 
 var ctx: StationContext
 ## Station ids of the panels, in order (F1, F2, ...).
@@ -76,6 +79,8 @@ var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
 ## Show the "turn sideways" banner on a phone held upright (#28).
 var rotate_prompt: bool = true
 var rotate_banner: RotateBanner
+## A joint view's switch to its other station on a phone on its side (#28); null until then.
+var joint_switch: RailButton = null
 
 var _rows: VBoxContainer
 var _main: Control
@@ -172,10 +177,45 @@ func focus(i: int) -> void:
 	_open_first_visit_help()
 
 
-## The radar column hides for a lone full-screen panel (which may depend on the form).
+## The radar column hides for a lone full-screen panel (which may depend on the form). A
+## joint view on a phone on its side (#28) shows only the focused panel, which gets the
+## whole width when it draws its own rails and radar, and a switch to the other station
+## instead of the docked panel (FT-JNT-001: tap to focus): at the top of the radar column,
+## or, with the column hidden, at the bottom centre of the main area (clear of the rails).
 func _show_side() -> void:
-	if not panels.is_empty():
-		_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
+	if panels.is_empty():
+		return
+	var joint_phone: bool = (
+		panels.size() == 2
+		and is_inside_tree()
+		and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
+	)
+	var alone: bool = panels.size() == 1 or joint_phone
+	_side.visible = not (alone and focused_panel().full_screen())
+	_dock.visible = not joint_phone
+	if joint_phone and joint_switch == null:
+		joint_switch = RailButton.make("")
+		joint_switch.name = "JointSwitch"
+		joint_switch.pressed.connect(func() -> void: focus(1 - focus_index))
+		_extras.add_child(joint_switch)
+	if joint_switch == null:
+		return
+	joint_switch.visible = joint_phone
+	var other: String = stations[1 - focus_index] if panels.size() == 2 else ""
+	joint_switch.text = "%s %s" % [JOINT_SWITCH_ARROW, tr("station." + other)]
+	var parent: Control = _extras if _side.visible else _main
+	if joint_switch.get_parent() != parent:
+		joint_switch.reparent(parent, false)
+	if parent == _extras:
+		_extras.move_child(joint_switch, 0)
+		joint_switch.custom_minimum_size = Vector2(0, UiTheme.TOUCH_PRIMARY)
+	else:
+		joint_switch.custom_minimum_size = Vector2(JOINT_SWITCH_W, UiTheme.TOUCH_PRIMARY)
+		joint_switch.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+		joint_switch.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		joint_switch.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		joint_switch.offset_bottom = -UiTheme.TOUCH_GAP
+		_main.move_child(joint_switch, -1)
 
 
 ## The dev seat's station switcher: a tab per panel, numbered for Shift + digit, and until the

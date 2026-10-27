@@ -114,6 +114,22 @@
     {"name": "l5_php_safe_helm", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "insets": [0, 47, 0, 34]}},
     {"name": "l5_phl_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "insets": [47, 0, 47, 21]}},
     {"name": "l5_phl_weapons_free", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "weapons", "insets": [47, 0, 47, 21]}},
-    {"name": "l5_php_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "insets": [0, 47, 0, 34]}}
+    {"name": "l5_php_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_phl_menu_safe", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "menu_web", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_menu_host", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "menu", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_ph_menu_safe", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"view": "menu_web", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_phl_safe_comms", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "comms", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_comms_trade", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "comms", "comms": "trade", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_captain", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "captain", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_viewer", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "viewer", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_systems", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "systems", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_tactical", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "tactical", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_tactical_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "tactical", "focus": 1, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_parley", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "parley", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_ops", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "ops", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_ph_safe_engineering", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "engineering", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_ph_safe_comms", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "comms", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_ph_safe_captain", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "captain", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_ph_safe_viewer", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "viewer", "insets": [0, 47, 0, 34]}}
   ]
 }
