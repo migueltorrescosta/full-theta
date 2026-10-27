@@ -30,6 +30,14 @@ var fled_count: PackedInt32Array = PackedInt32Array()
 ## 1 once the director has closed the ship's run (CloseRunCommand); it then wins when it is in
 ## no encounter (EncounterSystem.run_complete, Q4).
 var closed: PackedByteArray = PackedByteArray()
+## Session counters of a multi-ship session (#11, M4-Q2, M4-Q9): times the ship has
+## relaunched (RelaunchShipCommand) and crewed ships of another side it destroyed (PvP kills,
+## OutcomeSystem). A ship reset keeps both.
+var relaunches: PackedInt32Array = PackedInt32Array()
+var kills: PackedInt32Array = PackedInt32Array()
+## Tick the crewed ship's outcome was set: its run complete (WIN) or it left play (LOSS); -1
+## while it plays. The scoreboard's finish time, a race's first finisher and a holdout's score.
+var finish_tick: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
@@ -40,6 +48,9 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	encounter.append(-1)
 	fled_count.append(0)
 	closed.append(0)
+	relaunches.append(0)
+	kills.append(0)
+	finish_tick.append(-1)
 
 
 func columns() -> Array:
@@ -52,5 +63,21 @@ func columns() -> Array:
 			["encounter", encounter],
 			["fled_count", fled_count],
 			["closed", closed],
+			["relaunches", relaunches],
+			["kills", kills],
+			["finish_tick", finish_tick],
 		]
 	)
+
+
+## A ship reset (a relaunch or a training reset, FT-MIS-011, FT-MIS-017) restores the ship's
+## run progress but keeps its session counters, relaunches and kills.
+func reset_ship(ship_id: int, def: ShipDef) -> void:
+	var row: int = row_of(ship_id)
+	if row < 0:
+		return
+	var relaunched: int = relaunches[row]
+	var killed: int = kills[row]
+	super(ship_id, def)
+	relaunches[row] = relaunched
+	kills[row] = killed

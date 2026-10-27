@@ -85,6 +85,11 @@ var rules: SessionRules = SessionRules.new()
 ## Crewed ship id -> its team (ShipSlot.team), filled by RunSetup from its slots; read through
 ## team_of().
 var ship_teams: Dictionary[int, int] = {}
+## Crewed ship id -> where it starts (an offset in the cube, m) and the site it starts at
+## (-1 with no map), filled by RunSetup: a relaunch puts the ship back there, and a race's
+## site copies are placed relative to it (#11). Fixed for the run, like ship_teams.
+var ship_starts: Dictionary[int, Vector3] = {}
+var ship_start_site: Dictionary[int, int] = {}
 ## The events and the first command-log entry of the latest step(), kept for the Scenario
 ## API (events(), commands_this_tick()) whichever way the caller drains the world.
 var step_events: Array[SimEvent] = []
