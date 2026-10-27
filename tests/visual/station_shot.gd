@@ -13,7 +13,13 @@
 ## `science` (a Science block with the cards, a scan or a hack open) and `touch` (the touch
 ## layout whatever the pointer; a viewport under 600 px is a phone anyway, D195) and `comms`
 ## (CommsFixture's COMMS block is on every shot; "trade" also opens Kappa's offer card,
-## "conversation" the hail, "off" leaves the block out).
+## "conversation" the hail, "off" leaves the block out). Phones (#28): `insets` simulates a
+## device's safe-area insets [left, top, right, bottom] in px (SafeArea.simulate; the
+## mockups' iPhone: [47, 0, 47, 21] in landscape, [0, 47, 0, 34] upright) and draws them
+## with the gesture band in translucent red; `fullscreen` forces the fullscreen button
+## (1 shown, 0 hidden); `audit` writes TapAudit.check of the shot as JSON to that path.
+## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
+## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
 
 var view: String = "screen"
@@ -35,12 +41,23 @@ var touch: bool = false
 ## A SCIENCE block for the shot ("cards", "scan" or "hack", ScienceShotBlocks); "" none.
 var science: String = ""
 var comms: String = "board"
+## Simulated safe-area insets [l, t, r, b] in px; [] none.
+var insets: Array = []
+## FullscreenButton.forced for the shot.
+var fullscreen: int = 0
+## Where to write the TapAudit report (JSON); "" none.
+var audit: String = ""
+## The touch_kit view's rails are docked.
+var docked: bool = false
 
 var _ctx: StationContext
 
 
 func _ready() -> void:
 	LayoutMode.forced = LayoutMode.Kind.TOUCH if touch else -1
+	SafeArea.simulate(insets)
+	FullscreenButton.forced = fullscreen
+	RotateBanner.dismissed_here = false
 	I18n.apply("en")
 	LayoutMode.apply(get_tree().root)
 	get_tree().root.content_scale_factor = ui_scale
@@ -81,6 +98,8 @@ func _ready() -> void:
 			var l: LobbyScreen = LobbyScreen.new()
 			l.setup(_ctx)
 			add_child(l)
+		"touch_kit":
+			_touch_kit()
 		"radar":
 			var bg: ColorRect = ColorRect.new()
 			bg.color = Palette.color("background")
@@ -124,8 +143,121 @@ func _ready() -> void:
 					var v: Array = p["vector"]
 					p["vector"] = Vector3(v[0], v[1], v[2])
 				_ctx.crew.handle_event(e, StationFixture.NOW_MS - 2000)
+	if not insets.is_empty():
+		var shade: InsetShade = InsetShade.new()
+		shade.insets = insets
+		add_child(shade)
+	if audit != "":
+		_write_audit.call_deferred()
+
+
+## The touch widgets in the three rail patterns' parts (#28): a radar as the view, a
+## throttle, All stop, Approach and a Radar drawer on the left, Nav / Shield tabs and a
+## stick on the right.
+func _touch_kit() -> void:
+	var bg: ColorRect = ColorRect.new()
+	bg.color = Palette.color("background")
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(bg)
+	var frame: Control = Control.new()
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(frame)
+	var m: Vector4 = SafeArea.margins(self)
+	frame.offset_left = m.x
+	frame.offset_top = m.y
+	frame.offset_right = -m.z
+	frame.offset_bottom = -m.w
+	var layout: RailLayout = RailLayout.new()
+	layout.docked = docked
+	frame.add_child(layout)
+	var r: DiscRadar = DiscRadar.new()
+	r.set_picture(_ctx.picture(), _ctx.crew.selection)
+	layout.set_content(r)
+	var left: TouchRail = layout.rail(SIDE_LEFT)
+	var throttle: ThrottleSlider = ThrottleSlider.new()
+	throttle.value = 0.8
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_child(RailButton.make("All stop", RailButton.Role.DANGER))
+	col.add_child(RailButton.make("Approach"))
+	var opener: RailButton = RailButton.make("Radar")
+	col.add_child(opener)
+	var row: HBoxContainer = left.add_row([throttle, col])
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	throttle.size_flags_horizontal = Control.SIZE_FILL
+	left.custom_minimum_size.x = 176.0
+	var drawer: TouchDrawer = layout.add_drawer(TouchDrawer.new("Contacts", SIDE_LEFT))
+	var list: Label = Label.new()
+	list.text = "U3  8.0 km\nKappa  4.7 km"
+	drawer.body.add_child(list)
+	drawer.bind_opener(opener)
+	drawer.open()
+	var right: TouchRail = layout.rail(SIDE_RIGHT)
+	var tabs: TouchTabs = TouchTabs.new()
+	var nav: GridContainer = GridContainer.new()
+	nav.columns = 2
+	for t: String in ["Face", "Align", "Dock", "Jump"]:
+		var b: RailButton = RailButton.make(t)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nav.add_child(b)
+	tabs.add_tab("Nav", nav)
+	tabs.add_tab("Shield", Control.new())
+	right.add(tabs)
+	right.add(FullscreenButton.new())
+	right.add_spacer()
+	var stick: VirtualStick = VirtualStick.new()
+	stick.label = "Slide"
+	right.add(stick)
+	right.custom_minimum_size.x = 136.0
+
+
+## Writes the TapAudit report once the layout has settled (rects as [x, y, w, h]).
+func _write_audit() -> void:
+	for i: int in 3:
+		await get_tree().process_frame
+	var report: Dictionary = TapAudit.check(self)
+	var rows: Array = []
+	for t: Dictionary in report["targets"]:
+		var r: Rect2 = t["rect"]
+		rows.append(
+			{
+				"kind": t["kind"],
+				"text": t["text"],
+				"rect": [r.position.x, r.position.y, r.size.x, r.size.y]
+			}
+		)
+	report["targets"] = rows
+	var f: FileAccess = FileAccess.open(audit, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify(report, "  "))
+
+
+## The simulated insets and the gesture band, drawn over the shot (translucent red).
+class InsetShade:
+	extends Control
+	var insets: Array = []
+
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		z_index = 100
+
+	func _draw() -> void:
+		var tint: Color = Color(1.0, 0.25, 0.25, 0.12)
+		var l: float = insets[0]
+		var t: float = insets[1]
+		var r: float = insets[2]
+		var b: float = insets[3]
+		draw_rect(Rect2(0, 0, l, size.y), tint)
+		draw_rect(Rect2(size.x - r, 0, r, size.y), tint)
+		draw_rect(Rect2(0, 0, size.x, t), tint)
+		var band: float = SafeArea.tap_band(self)
+		draw_rect(Rect2(0, size.y - band, size.x, band), tint)
 
 
 func _exit_tree() -> void:
+	SafeArea.simulate([])
+	FullscreenButton.forced = -1
 	LayoutMode.forced = -1
 	get_tree().root.content_scale_factor = 1.0

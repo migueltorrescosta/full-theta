@@ -106,6 +106,11 @@
     {"name": "l5_phl_engineering", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "engineering"}},
     {"name": "l5_phl_relay", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "relay"}},
     {"name": "l5_phl_lobby", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "lobby", "entry": "systems"}},
-    {"name": "l5_phl_menu", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "menu_web"}}
+    {"name": "l5_phl_menu", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "menu_web"}},
+    {"name": "l5_phl_safe_engineering", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "engineering", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_settings", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "engineering", "menu_tab": "Settings", "insets": [47, 0, 47, 21], "fullscreen": 1}},
+    {"name": "l5_phl_touch_kit", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "touch_kit", "insets": [47, 0, 47, 21], "fullscreen": 1}},
+    {"name": "l5_phl_touch_kit_docked", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "touch_kit", "docked": true, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_safe_helm", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "insets": [0, 47, 0, 34]}}
   ]
 }

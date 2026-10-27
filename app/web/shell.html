@@ -2,11 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
 <title>$GODOT_PROJECT_NAME</title>
 <style>
 html, body, #canvas { margin: 0; padding: 0; border: 0; }
+/* The page is the dynamic viewport (it tracks the browser's toolbars, #28); the canvas
+   fills it edge to edge and the game keeps its controls inside the safe area itself
+   (presentation/touch/safe_area.gd reads the insets through ft.safeArea). */
+html, body { height: 100vh; height: 100dvh; }
 body { color: white; background-color: black; overflow: hidden; touch-action: none; }
+/* Measures env(safe-area-inset-*): the notch, the home indicator. */
+#safe { position: fixed; visibility: hidden; pointer-events: none; top: 0; left: 0;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
 #canvas { display: block; }
 #canvas:focus { outline: none; }
 #status { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
@@ -19,6 +27,7 @@ $GODOT_HEAD_INCLUDE
 </head>
 <body>
 <canvas id="canvas">This browser has no canvas support.</canvas>
+<div id="safe"></div>
 <div id="status">
   <span id="progress">Loading</span>
   <span id="tips"></span>
@@ -42,8 +51,25 @@ window.ft = (function () {
     hiddenAt: 0,
     openedAt: 0,
     keepAwake: null,  // set by KeepAwake: {play: fn}; retried on every gesture until playing
+    actions: {},      // id -> {x, y, w, h, name} in canvas pixels: buttons whose tap needs a gesture
+    maxDpr: 2,        // the render scale cap (#28): a dpr-3 phone draws 4x, not 9x, the pixels
   };
   let el = null;
+
+  // Caps the device pixel ratio the engine sizes its canvas by (and LayoutMode reads):
+  // fill rate is a phone's main battery cost. Text is a little softer on a 3x screen.
+  (function capDpr() {
+    try {
+      const own = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio') ||
+        Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio');
+      if (!own) { return; }
+      const read = own.get ? function () { return own.get.call(window); } : function () { return own.value; };
+      Object.defineProperty(window, 'devicePixelRatio', {
+        configurable: true,
+        get: function () { return Math.min(ft.maxDpr, read() || 1); },
+      });
+    } catch (e) { /* the engine uses the native ratio */ }
+  })();
 
   // The engine's audio object is private to its closure, so record the contexts it creates:
   // the first tap resumes them (FT-AUD-017), and the top bar shows their state.
@@ -130,6 +156,55 @@ window.ft = (function () {
     });
     note(id, { text: input.value, opened: true });
   }
+  // Registers (or moves) a button whose action needs the tap itself (fullscreen); rect in
+  // canvas pixels. The game draws the button; the shell acts inside the tap handler.
+  ft.setAction = function (id, x, y, w, h, name) {
+    ft.actions[id] = { x: x, y: y, w: w, h: h, name: name };
+  };
+  ft.clearAction = function (id) { delete ft.actions[id]; };
+
+  // The safe-area insets (notch, home indicator) in CSS pixels, as JSON {l, t, r, b}.
+  ft.safeArea = function () {
+    const probe = document.getElementById('safe');
+    if (!probe) { return '{"l":0,"t":0,"r":0,"b":0}'; }
+    const cs = getComputedStyle(probe);
+    const px = function (v) { return parseFloat(v) || 0; };
+    return JSON.stringify({ l: px(cs.paddingLeft), t: px(cs.paddingTop),
+      r: px(cs.paddingRight), b: px(cs.paddingBottom) });
+  };
+  // Canvas pixels per CSS pixel: the capped device pixel ratio the engine used.
+  ft.canvasScale = function () {
+    const box = canvas.getBoundingClientRect();
+    return box.width > 0 ? canvas.width / box.width : (window.devicePixelRatio || 1);
+  };
+
+  // Fullscreen and a landscape lock: offered on Android and iPad, never on iPhone, whose
+  // Safari has no element fullscreen (#28). The lock works on Android only, in fullscreen.
+  function fullscreenApi() {
+    const d = document.documentElement;
+    return d.requestFullscreen || d.webkitRequestFullscreen || null;
+  }
+  function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  ft.fullscreenOffered = function () {
+    const ua = navigator.userAgent;
+    const ipad = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    return !!fullscreenApi() && !/iPhone|iPod/.test(ua) && (/Android/.test(ua) || ipad) && !isFullscreen();
+  };
+  let fullscreenAt = 0;
+  function goFullscreen() {
+    // One tap fires pointerup, touchend and click: act on the first.
+    if (isFullscreen() || Date.now() - fullscreenAt < 1000) { return; }
+    fullscreenAt = Date.now();
+    try {
+      const done = fullscreenApi().call(document.documentElement);
+      Promise.resolve(done).then(function () {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(function () {});
+        }
+      }).catch(function () {});
+    } catch (e) { /* refused: the page stays as it is */ }
+  }
+
   // Sets (or with null removes) the function that gets a field's events as JSON.
   ft.listen = function (id, fn) {
     if (fn) { ft.listeners[id] = fn; } else { delete ft.listeners[id]; delete ft.texts[id]; }
@@ -151,6 +226,12 @@ window.ft = (function () {
       for (const id in ft.inputs) {
         const r = ft.inputs[id];
         if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) { open(id); break; }
+      }
+      for (const id in ft.actions) {
+        const a = ft.actions[id];
+        if (x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h && a.name === 'fullscreen') {
+          goFullscreen();
+        }
       }
     }
     // The first gesture unlocks audio (FT-AUD-017) and starts the keep-awake video.
