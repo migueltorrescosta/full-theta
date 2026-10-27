@@ -201,7 +201,7 @@ func test_cells_name_the_crewmates_from_the_seats() -> void:
 	l.refresh()
 	assert_str((_cell(l, "helm").find_child("Crew", true, false) as Label).text).is_equal("Ana, Bo")
 	assert_str((_cell(l, "weapons").find_child("Crew", true, false) as Label).text).is_equal("Ana")
-	assert_object(_cell(l, "science").find_child("Crew", true, false)).is_null()
+	assert_str((_cell(l, "science").find_child("Crew", true, false) as Label).text).is_empty()
 
 
 # FT: FT-NET-017
