@@ -32,7 +32,22 @@ var browser: LanBrowser = LanBrowser.new(NetProtocol.PROTOCOL_VERSION)
 var web: bool = OS.has_feature("web")
 
 var _menu: MarginContainer
+## The single column (desktop, tablet, phone upright) and the two columns of a phone on its
+## side (#28): the player's details left, the games to join right.
+var _col: VBoxContainer
+var _wide: HBoxContainer
+var _scroll: ScrollContainer
+var _wide_scroll: ScrollContainer
+var _left: VBoxContainer
+var _right: VBoxContainer
+## The menu's rows in single-column order, each with its side in the two columns.
+var _items: Array[Control] = []
+var _item_right: Array[bool] = []
+var _join_label: Label
 var _join_row: HBoxContainer
+var _bottom: HFlowContainer
+## The Host form's row; null on the web.
+var _host_row: HFlowContainer
 var _name: LineEdit
 var _bind: OptionButton
 var _lang: OptionButton
@@ -52,7 +67,7 @@ func _ready() -> void:
 	settings.load_file()
 	I18n.apply(I18n.LANGUAGES[0])
 	LayoutMode.apply(get_tree().root)
-	get_tree().root.content_scale_factor = settings.ui_scale
+	_apply_scale()
 	_build()
 	_relayout()
 	get_viewport().size_changed.connect(_relayout)
@@ -191,7 +206,7 @@ func _on_left() -> void:
 		SessionTokenFile.remove(token_path)
 	_menu.visible = true
 	_refresh_rejoin()
-	get_tree().root.content_scale_factor = settings.ui_scale
+	_apply_scale()
 
 
 func _stop_host() -> void:
@@ -252,6 +267,22 @@ func _apply_web_join_config() -> void:
 # --- Layout. ---
 
 
+## The window's content scale for a UI scale (FT-STN-013). A browser draws in canvas pixels,
+## `density` (the capped devicePixelRatio) per CSS pixel, so on the web the UI scale is
+## multiplied by it: a 48 px button stays 48 CSS px at dpr 2 (#28). Native windows keep the
+## UI scale alone.
+static func content_scale(ui_scale: float, on_web: bool, density: float) -> float:
+	return ui_scale * (maxf(density, 1.0) if on_web else 1.0)
+
+
+## Sets the window's content scale from the player's UI scale (and the browser's density).
+func _apply_scale() -> void:
+	var w: Window = get_tree().root
+	var k: float = content_scale(settings.ui_scale, OS.has_feature("web"), LayoutMode.density())
+	if not is_equal_approx(w.content_scale_factor, k):
+		w.content_scale_factor = k
+
+
 func _build() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var bg: ColorRect = ColorRect.new()
@@ -265,39 +296,57 @@ func _build() -> void:
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_menu.add_child(scroll)
+	_scroll = scroll
 	var col: VBoxContainer = VBoxContainer.new()
+	_col = col
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 12)
 	scroll.add_child(col)
+	_wide_scroll = ScrollContainer.new()
+	_wide_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_wide_scroll.visible = false
+	_menu.add_child(_wide_scroll)
+	_wide = HBoxContainer.new()
+	_wide.name = "TwoColumns"
+	_wide.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_wide.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_wide_scroll.add_child(_wide)
+	_wide.add_theme_constant_override("separation", 24)
+	_left = VBoxContainer.new()
+	_right = VBoxContainer.new()
+	for c: VBoxContainer in [_left, _right]:
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		c.add_theme_constant_override("separation", 12)
+		_wide.add_child(c)
 	var title: Label = Label.new()
 	title.text = "FULL THETA"
 	title.theme_type_variation = "TitleLabel"
-	col.add_child(title)
+	_item(col, title, false)
 	_name = LineEdit.new()
 	_name.name = "Name"
 	_name.placeholder_text = tr("menu.name")
 	_name.text = settings.player_name
-	col.add_child(_name)
+	_item(col, _name, false)
 	WebTextField.attach(_name)
 	# A browser can't start a server; it joins the one that served the page.
 	if not web:
 		_build_host(col)
 	_build_join(col)
-	var bottom: HFlowContainer = HFlowContainer.new()
-	col.add_child(bottom)
+	_bottom = HFlowContainer.new()
+	var bottom: HFlowContainer = _bottom
+	# Two columns: with the Host form on the left, the buttons and status go under Join.
+	_item(col, bottom, not web)
 	_rejoin = _button(bottom, "Rejoin", tr("menu.rejoin"), rejoin)
 	_button(bottom, "Settings", tr("menu.settings"), func() -> void: _settings_screen.open())
 	_button(bottom, "Quit", tr("menu.quit"), quit)
 	_status = Label.new()
 	_status.name = "Status"
-	col.add_child(_status)
+	_item(col, _status, not web)
 	_settings_screen = SettingsScreen.new()
 	_settings_screen.visible = false
 	add_child(_settings_screen)
 	_settings_screen.setup(settings, false)
-	_settings_screen.scale_changed.connect(
-		func() -> void: get_tree().root.content_scale_factor = settings.ui_scale
-	)
+	_settings_screen.scale_changed.connect(_apply_scale)
 	_orphan_dialog = ConfirmationDialog.new()
 	_orphan_dialog.title = tr("menu.orphan_title")
 	_orphan_dialog.ok_button_text = tr("menu.orphan_rejoin")
@@ -314,10 +363,35 @@ func _build() -> void:
 ## Sizes the menu for the viewport (LayoutMode): wide fields and tight margins on a phone
 ## (D195), the fixed field widths of a desktop window otherwise. Runs on every resize.
 func _relayout() -> void:
+	# The game's root node is a plain Node, which stops the window's theme from reaching
+	# the menu: follow it here (LayoutMode.apply re-sets it first on a resize).
+	theme = get_window().theme
+	_apply_scale()
 	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
-	var margin: int = 16 if phone else 40
-	for side: String in ["left", "right", "top", "bottom"]:
-		_menu.add_theme_constant_override("margin_" + side, margin)
+	var margin: float = 16.0 if phone else 40.0
+	# On a phone nothing sits under a notch or in the gesture band (#28, SafeArea).
+	var m: Vector4 = SafeArea.margins(self)
+	var band: float = SafeArea.tap_band(self)
+	var sides: Array[float] = [
+		maxf(margin, m.x + 8.0), maxf(margin, m.z + 8.0), maxf(margin, m.y), maxf(margin, band)
+	]
+	if not phone:
+		sides = [margin, margin, margin, margin]
+	for i: int in 4:
+		_menu.add_theme_constant_override(
+			"margin_" + ["left", "right", "top", "bottom"][i], roundi(sides[i])
+		)
+	# Phone buttons keep the 8 px gap of touch targets (#28).
+	if phone:
+		_bottom.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
+	else:
+		_bottom.remove_theme_constant_override("h_separation")
+	if _host_row != null:
+		if phone:
+			_host_row.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
+		else:
+			_host_row.remove_theme_constant_override("v_separation")
+	_arrange(LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE)
 	var wide: Control.SizeFlags = (
 		(Control.SIZE_EXPAND_FILL if phone else Control.SIZE_SHRINK_BEGIN) as Control.SizeFlags
 	)
@@ -326,13 +400,38 @@ func _relayout() -> void:
 	_join_row.size_flags_horizontal = wide
 	_name.custom_minimum_size = Vector2(0 if phone else 320, 0)
 	_hosts.custom_minimum_size = Vector2(0 if phone else 480, 120)
+	_relayout_lists(_wide_scroll.visible)
 	_address.custom_minimum_size = Vector2(0 if phone else 320, 0)
+
+
+## A phone on its side shows two columns that fit without scrolling: the title, name, host
+## form and buttons left, the games list, address and Join right (#28). Else one column.
+func _arrange(two: bool) -> void:
+	if two == _wide_scroll.visible:
+		return
+	_wide_scroll.visible = two
+	_scroll.visible = not two
+	for i: int in _items.size():
+		var row: Control = _items[i]
+		var to: VBoxContainer = _col
+		if two:
+			to = _right if _item_right[i] else _left
+		row.get_parent().remove_child(row)
+		to.add_child(row)
+	_hosts.size_flags_vertical = Control.SIZE_EXPAND_FILL if two else Control.SIZE_FILL
+	_relayout_lists(two)
+
+
+## The games list takes the right column's free height in two columns.
+func _relayout_lists(two: bool) -> void:
+	_hosts.custom_minimum_size.y = 48.0 if two else 120.0
 
 
 func _build_host(col: VBoxContainer) -> void:
 	var row: HFlowContainer = HFlowContainer.new()
 	row.add_theme_constant_override("h_separation", 8)
-	col.add_child(row)
+	_host_row = row
+	_item(col, row, false)
 	_bind = OptionButton.new()
 	_bind.name = "Bind"
 	for a: String in bind_addresses():
@@ -358,16 +457,17 @@ func _build_host(col: VBoxContainer) -> void:
 
 
 func _build_join(col: VBoxContainer) -> void:
-	col.add_child(_label(tr("menu.lan_games")))
+	_join_label = _label(tr("menu.lan_games"))
+	_item(col, _join_label, true)
 	_hosts = ItemList.new()
 	_hosts.name = "Hosts"
 	_hosts.item_activated.connect(
 		func(i: int) -> void: _connect(str(_hosts.get_item_metadata(i)), "")
 	)
-	col.add_child(_hosts)
+	_item(col, _hosts, true)
 	var row: HBoxContainer = HBoxContainer.new()
 	_join_row = row
-	col.add_child(row)
+	_item(col, row, true)
 	_address = LineEdit.new()
 	_address.name = "Address"
 	_address.placeholder_text = tr("menu.address")
@@ -394,6 +494,13 @@ func _refresh_hosts() -> void:
 func _refresh_rejoin() -> void:
 	var t: SessionTokenFile = SessionTokenFile.load_from(token_path)
 	_rejoin.visible = t != null and t.host_secret == ""
+
+
+## Adds one of the menu's rows to the single column, remembering its side in the two.
+func _item(col: VBoxContainer, row: Control, right: bool) -> void:
+	col.add_child(row)
+	_items.append(row)
+	_item_right.append(right)
 
 
 func _label(text: String) -> Label:
