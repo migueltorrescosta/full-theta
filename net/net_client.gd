@@ -196,6 +196,26 @@ func takeover(ship: int, entry: String) -> void:
 	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "entry": entry})
 
 
+## Multi-ship lobby and PvP (#11, docs/protocol.md "Multi-ship sessions and PvP"): any player
+## adds a ship (M4-Q3); a crew puts its ship on a team (M4-Q6); the host sets the mode, the
+## team win rule and the holdout lives (-1: the mode's default); an eliminated crew votes to
+## relaunch (M4-Q2). Answers arrive as `fleet`, `relaunch_votes` and `request_rejected` events.
+func add_ship(ship_name: String) -> void:
+	_send(NetProtocol.Type.SHIP_ADD, {"name": ship_name})
+
+
+func set_team(ship: int, team: int) -> void:
+	_send(NetProtocol.Type.SHIP_TEAM, {"ship": ship, "team": team})
+
+
+func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
+	_send(NetProtocol.Type.SESSION_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
+
+
+func vote_relaunch(ship: int, vote: bool) -> void:
+	_send(NetProtocol.Type.RELAUNCH, {"ship": ship, "vote": vote})
+
+
 ## Sends a crew command; returns its seq (`command_rejected` events name it).
 func command(cmd: Dictionary) -> int:
 	var seq: int = _next_seq

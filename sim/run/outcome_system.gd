@@ -66,6 +66,29 @@ static func encounter_outcome(world: SimWorld) -> RunTable.Outcome:
 	return RunTable.Outcome.LOSS if crewed > 0 and lost == crewed else RunTable.Outcome.NONE
 
 
+## The session's outcome under world.rules (#11): who won and why, derived from RunTable each
+## time it is asked. COOP: OBJECTIVE with every crewed ship that won once the fleet run's
+## final objective is complete (FT-MIS-013, M4-Q1), ALL_LOST once every crewed ship lost.
+## RACE: FIRST_TO_FINISH, the first ship to complete the final objective (FT-MIS-032).
+## LAST_STANDING: LAST_STANDING, the one crewed ship left in play (FT-MIS-033). TEAMS: by
+## rules.team_win, the last team with a ship in play or the first team to finish, its ships
+## the winners (FT-MIS-034, M4-Q6). HOLDOUT: HOLDOUT_OVER once the finite side has no ship
+## in play and no relaunch left, held_ticks its time (M4-Q2).
+##
+## CONTRACT STUB (strand A): every mode reads like COOP, from encounter_outcome().
+static func session_outcome(world: SimWorld) -> SessionOutcome:
+	var out: SessionOutcome = SessionOutcome.new()
+	match encounter_outcome(world):
+		RunTable.Outcome.WIN:
+			out.reason = SessionOutcome.Reason.OBJECTIVE
+			for id: int in world.ship_count():
+				if not world.ai.is_enabled(id) and world.run.outcome[id] == RunTable.Outcome.WIN:
+					out.winners.append(id)
+		RunTable.Outcome.LOSS:
+			out.reason = SessionOutcome.Reason.ALL_LOST
+	return out
+
+
 ## An AI ship in RETREAT that no live ship of a hostile faction detects.
 static func _escaped(world: SimWorld, id: int) -> bool:
 	if not world.ai.is_enabled(id) or world.ai.mode[id] != AiTable.Mode.RETREAT:

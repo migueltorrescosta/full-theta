@@ -49,9 +49,16 @@ enum Type {
 	SHARE = 30,
 	# The host pauses or resumes the whole universe in co-op (D127, FT-MIS-040).
 	HOST_PAUSE = 40,
+	# Multi-ship lobby and PvP (#11, version 8): any player adds a ship (M4-Q3); a crew puts
+	# its ship on a team (M4-Q6); the host sets the mode and its options; a destroyed ship's
+	# crew votes to relaunch (M4-Q2).
+	SHIP_ADD = 41,
+	SHIP_TEAM = 42,
+	SESSION_MODE = 43,
+	RELAUNCH = 44,
 }
 
-const PROTOCOL_VERSION: int = 7
+const PROTOCOL_VERSION: int = 8
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -112,6 +119,20 @@ const EVENT_SHARES: String = "shares"
 ## the time left at sending. Sent when a clearance is accepted or settled and when a share
 ## starts or ends.
 const EVENT_LANES: String = "lanes"
+## Multi-ship sessions and PvP (#11, version 8); FleetMessages builds and checks each payload.
+## `fleet`: the multi-ship lobby, to every session. `takeover`: who took which station in a
+## pause, to every session of the ship's side. `handover`: an eliminated session's new view.
+## `scoreboard`: the live scoreboard rows, to the sessions on it. `eliminated`, `relaunch_votes`
+## and `relaunched`: a ship left play, its crew's relaunch vote, and its relaunch.
+## `session_over`: who won and why, to every session.
+const EVENT_FLEET: String = "fleet"
+const EVENT_TAKEOVER: String = "takeover"
+const EVENT_HANDOVER: String = "handover"
+const EVENT_SCOREBOARD: String = "scoreboard"
+const EVENT_ELIMINATED: String = "eliminated"
+const EVENT_RELAUNCH_VOTES: String = "relaunch_votes"
+const EVENT_RELAUNCHED: String = "relaunched"
+const EVENT_SESSION_OVER: String = "session_over"
 
 ## Field name -> Variant type, per control message type.
 const SCHEMAS: Dictionary = {
@@ -190,6 +211,10 @@ const SCHEMAS: Dictionary = {
 	{"op": TYPE_STRING, "chip": TYPE_STRING, "arg": TYPE_INT, "id": TYPE_INT, "accept": TYPE_BOOL},
 	Type.SHARE: {"feature": TYPE_STRING},
 	Type.CLIENT_STATS: {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY},
+	Type.SHIP_ADD: {"name": TYPE_STRING},
+	Type.SHIP_TEAM: {"ship": TYPE_INT, "team": TYPE_INT},
+	Type.SESSION_MODE: {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT},
+	Type.RELAUNCH: {"ship": TYPE_INT, "vote": TYPE_BOOL},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -218,6 +243,10 @@ const FROM_CLIENT: Array[int] = [
 	Type.SHARE,
 	Type.CLIENT_STATS,
 	Type.HOST_PAUSE,
+	Type.SHIP_ADD,
+	Type.SHIP_TEAM,
+	Type.SESSION_MODE,
+	Type.RELAUNCH,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -243,6 +272,10 @@ const RATED_REQUESTS: Array[int] = [
 	Type.SHARE,
 	Type.CLIENT_STATS,
 	Type.HOST_PAUSE,
+	Type.SHIP_ADD,
+	Type.SHIP_TEAM,
+	Type.SESSION_MODE,
+	Type.RELAUNCH,
 ]
 
 
@@ -348,3 +381,22 @@ static func command(seq: int, cmd: Dictionary) -> PackedByteArray:
 
 static func event(seq: int, tick: int, type: String, payload: Dictionary) -> PackedByteArray:
 	return encode(Type.EVENT, {"seq": seq, "tick": tick, "type": type, "payload": payload})
+
+
+## SessionMode{mode, team_win, lives} (host only, in the lobby): mode a SessionRules.MODE_NAMES
+## entry, team_win a TEAM_WIN_NAMES entry (read in teams), lives the finite side's relaunches
+## in holdout (-1: the mode's default).
+static func session_mode(mode: String, team_win: String, lives: int = -1) -> PackedByteArray:
+	return encode(Type.SESSION_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
+
+
+static func ship_add(name: String) -> PackedByteArray:
+	return encode(Type.SHIP_ADD, {"name": name})
+
+
+static func ship_team(ship: int, team: int) -> PackedByteArray:
+	return encode(Type.SHIP_TEAM, {"ship": ship, "team": team})
+
+
+static func relaunch(ship: int, vote: bool) -> PackedByteArray:
+	return encode(Type.RELAUNCH, {"ship": ship, "vote": vote})

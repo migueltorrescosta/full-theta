@@ -90,6 +90,8 @@ var coop: NetCoop
 var first_use: FirstUse = FirstUse.new()
 var shares: NetShares
 var host_pause: NetHostPause
+## The multi-ship lobby and PvP rules (#11).
+var fleet: NetFleet
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -137,6 +139,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetTransport.CLOSED: _on_closed,
 	}
 	host_pause = NetHostPause.new(self)  # registers HostPause
+	fleet = NetFleet.new(self)  # registers ShipAdd, ShipTeam, SessionMode and Relaunch
 
 
 ## Handles everything the transport received since the last call, lapses the sessions

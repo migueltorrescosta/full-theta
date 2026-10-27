@@ -45,7 +45,7 @@ Tests: 368, manual: 13, pending: 20.
 | FT-NET-001 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-002 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-003 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_idle_exit_timer.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_orphan_check.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_net_server_main.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_lobby_join.gd` |
-| FT-NET-004 | tests | `tests/net/test_net_codec.gd`, `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
+| FT-NET-004 | tests | `tests/net/test_fleet_messages.gd`, `tests/net/test_net_codec.gd`, `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-005 | tests | `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-006 | tests | `tests/net/test_net_resync.gd`, `tests/net/test_net_science_l3.gd`, `tests/net/test_net_server.gd`, `tests/net/test_training_next_gate.gd` |
 | FT-NET-007 | tests | `tests/net/test_net_server.gd` |

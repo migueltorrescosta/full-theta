@@ -24,6 +24,13 @@ var site_markets: Dictionary[int, StringName] = {}
 var hail_conversations: Dictionary[StringName, StringName] = {}
 ## Gap between the crewed ships at the start (m), so they do not overlap at the yard.
 var crew_spacing_m: float = 100.0
+## The session built from the multi-ship lobby (#11, FT-GEN-001, M4-Q3): one crewed ship per
+## slot, in slot order, with the slot's faction and team. Empty: `crew_ships` ships of
+## PLAYER_FACTION, as before M4.
+var slots: Array[ShipSlot] = []
+## The session's rules (mode, team win rule, relaunch policies); build() hands them to the
+## world. Defaults to COOP.
+var rules: SessionRules = SessionRules.new()
 
 
 func _init(
@@ -52,6 +59,8 @@ func validate() -> Array[String]:
 	var errors: Array[String] = run_def.validate()
 	if crew_ships < 1:
 		errors.append("crew_ships must be at least 1, got %d" % crew_ships)
+	if not slots.is_empty():
+		errors.append_array(rules.slot_errors(slots))
 	if run_def.player_ship == null:
 		return errors
 	var ships: Array[ShipDef] = [run_def.player_ship]
@@ -86,10 +95,20 @@ func build() -> SimWorld:
 	world.hail_conversations = hail_conversations
 	if run_def.map != null:
 		world.sites.load_map(world, run_def.map)
-	for i: int in crew_ships:
+	world.rules = rules
+	# Crew factions of different sides are hostile by SimWorld's default (PvP); allies share one.
+	for i: int in crew_count():
+		var faction: int = slots[i].faction if not slots.is_empty() else PLAYER_FACTION
 		var id: int = world.spawn_ship(
-			run_def.player_ship, PLAYER_FACTION, Vector3(i * crew_spacing_m, 0.0, 0.0)
+			run_def.player_ship, faction, Vector3(i * crew_spacing_m, 0.0, 0.0)
 		)
+		if not slots.is_empty():
+			world.ship_teams[id] = slots[i].team
 		# A ship reset sets credits to 0, so the run's starting purse is set here (FT-MIS-018).
 		Economy.add_credits(world, id, run_def.start_credits)
 	return world
+
+
+## Crewed ships build() spawns: one per slot, or `crew_ships` without slots.
+func crew_count() -> int:
+	return slots.size() if not slots.is_empty() else crew_ships

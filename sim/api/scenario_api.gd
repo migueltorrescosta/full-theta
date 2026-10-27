@@ -37,6 +37,27 @@ func crew_ships() -> PackedInt32Array:
 	return out
 
 
+## Crewable ships in play of one faction: a fleet's ships for its director (#11, M4-Q1).
+func crew_ships_of(faction: int) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for id: int in crew_ships():
+		if _world.faction_of(id) == faction:
+			out.append(id)
+	return out
+
+
+## The session's mode, a SessionRules.Mode value (#11): the director keys on it.
+func session_mode() -> int:
+	return _world.rules.mode
+
+
+## A ship's side (SimWorld.team_of, #11).
+func team_of(id: int) -> int:
+	if id < 0 or id >= _world.ship_count():
+		return -1
+	return _world.team_of(id)
+
+
 func ship(id: int) -> ShipView:
 	var v: ShipView = ShipView.new()
 	if id < 0 or id >= _world.ship_count():

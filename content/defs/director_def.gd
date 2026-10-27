@@ -26,6 +26,13 @@ const TRAINING: StringName = &"shakedown"
 ## (enemy_wave, rescue), rounded, at least 1 enemy. A preset missing here counts 1.0
 ## (Q14, owner 2026-10-26; PROVISIONAL numbers for #13).
 @export var strength_per_preset: Dictionary[StringName, float] = {}
+## A fleet run's encounters grow by this much strength per crewed ship beyond the first
+## (multiplier points per ship, #11, FT-MIS-023, M4-Q1; 0: no scaling). PROVISIONAL for #13.
+@export var fleet_strength_per_ship: float = 0.0
+## LAST_STANDING raider waves (#11, M4-Q7): a wave at every surviving ship this often (s, 0:
+## none), each wave's strength this much above the last (multiplier points). PROVISIONAL.
+@export var raider_wave_every_s: float = 0.0
+@export var raider_wave_growth: float = 0.0
 
 
 func validate() -> Array[String]:
@@ -46,6 +53,9 @@ func validate() -> Array[String]:
 		var least: int = 0 if scenario == TRAINING else 1
 		if costs[scenario] < least:
 			errors.append("costs[%s] must be at least %d" % [scenario, least])
+	DefCheck.non_negative(errors, "fleet_strength_per_ship", fleet_strength_per_ship)
+	DefCheck.non_negative(errors, "raider_wave_every_s", raider_wave_every_s)
+	DefCheck.non_negative(errors, "raider_wave_growth", raider_wave_growth)
 	for preset: StringName in strength_per_preset:
 		if not strength_per_preset[preset] > 0.0:
 			errors.append("strength_per_preset[%s] must be > 0" % preset)
