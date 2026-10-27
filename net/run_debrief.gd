@@ -59,7 +59,7 @@ func _row(id: int, ship: int) -> Dictionary:
 		"id": id,
 		"scenario": _world.scenario_ids[ix] if ix >= 0 and ix < _world.scenario_ids.size() else "",
 		"site": site,
-		"site_name_key": _world.site_names.get(site, ""),
+		"site_name_key": _world.sites.name_key_of(site),
 		"result": EncounterTable.Result.keys()[t.result[id]].to_lower(),
 		"lost": EncounterTable.has_bit(t.losses_mask[id], ship),
 		"fled": EncounterTable.has_bit(t.fled_mask[id], ship),

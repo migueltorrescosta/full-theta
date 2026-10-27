@@ -4,7 +4,7 @@ extends RefCounted
 ## budget before and after, and why. The reason is an i18n key "director.reason.<x>" with
 ## arguments, so the end-of-run debrief shows it in the player's language (FT-MIS-010).
 
-enum Kind { PICK_ENCOUNTER, OPEN_SITE, SPAWN_WAVE, PARAMS, SKIP, END_RUN }
+enum Kind { PICK_ENCOUNTER, OPEN_SITE, SKIP, END_RUN }
 
 var tick: int = 0
 var ship: int = -1

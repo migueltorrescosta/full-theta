@@ -38,7 +38,7 @@ static func harness() -> PairHarness:
 static func build() -> SimWorld:
 	var w: SimWorld = StoryFixture.world(SEED)
 	w.spawn_ship(TestDefs.corvette(), BLUE)
-	w.sites.register(&"yard", YARD_AT, 500.0, &"station")
+	SitePool.load_pool(w, [SitePool.def(&"yard", YARD_AT, 500.0, &"station")])
 	_yard = w.sites.open(w, &"yard")
 	return w
 

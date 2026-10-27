@@ -97,7 +97,7 @@ func test_a_clearance_is_a_lane_helm_sees_after_the_press() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
 	var crew: Dictionary = await _crew(server)
 	var w: SimWorld = StoryFixture.wire(server.world)
-	w.sites.register(&"yard", YARD_AT, 500.0, &"station")
+	SitePool.load_pool(w, [SitePool.def(&"yard", YARD_AT, 500.0, &"station")])
 	var site: int = w.sites.open(w, &"yard")
 	var clearance: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"", site)
 	clearance.source = SimCommand.Source.SERVER

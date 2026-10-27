@@ -24,10 +24,6 @@ const MAX_TICKS_PER_ADVANCE: int = 8
 var tick: int = 0
 var seed_value: int = 0
 var build_id: String = ""
-## Named site id -> the I18n key of the name every station of every ship uses for it as a
-## callout layer (FT-SPA-027, D98; site 0 is Kestrel Yard at the origin, D229). Scenario
-## data like defs: not state, so not hashed or copied.
-var site_names: Dictionary[int, String] = {0: "site.kestrel_yard"}
 var rng: SimRng
 ## Definitions by ship id, read-only (FT-ARC-020).
 var defs: Array[ShipDef] = []
@@ -216,11 +212,9 @@ func reset_ship(
 
 
 ## Opens a named site at `def`'s point (wrapped onto the cube), known to the factions in
-## `known` (SiteTable bits), and returns its site id (D229). The name goes to site_names.
+## `known` (SiteTable bits), and returns its site id (D229).
 func add_site(def: SiteDef, known: int = SiteTable.ALL_FACTIONS) -> int:
-	var id: int = sites.add_site(def, kin.period, known, tick)
-	site_names[id] = def.name_key
-	return id
+	return sites.add_site(def, kin.period, known, tick)
 
 
 func ship_count() -> int:

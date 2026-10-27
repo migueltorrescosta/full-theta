@@ -90,7 +90,7 @@ func site(id: int) -> SiteView:
 		return v
 	v.id = id
 	v.key = t.key_of(id)
-	v.name_key = _world.site_names.get(id, "")
+	v.name_key = t.name_key_of(id)
 	v.kind = t.kind_of(id)
 	v.pos = t.point(id)
 	v.radius_m = t.radius[id]

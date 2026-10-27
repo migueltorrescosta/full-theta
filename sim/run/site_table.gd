@@ -11,15 +11,14 @@ extends SimTable
 ## Mask for "every faction knows it".
 const ALL_FACTIONS: int = 0x7FFFFFFF
 
-## Site ids by row (SiteDef.id) and the matching I18n name keys: data like defs, so not
-## hashed (the key_ix column says which). Copied with the table (SimCopy).
+## Site ids by row (SiteDef.id) and the matching I18n name keys (the name every station of
+## every ship uses for the site as a callout layer, FT-SPA-027): data like defs, so not
+## hashed. Copied with the table (SimCopy).
 var keys: Array[StringName] = []
 var name_keys: Array[String] = []
 ## The sites the director may still open, read-only like defs.
 var pool: Array[SiteDef] = []
 
-## Index into `keys` (equal to the row).
-var key_ix: PackedInt32Array = PackedInt32Array()
 var pos_x: PackedFloat64Array = PackedFloat64Array()
 var pos_y: PackedFloat64Array = PackedFloat64Array()
 var pos_z: PackedFloat64Array = PackedFloat64Array()
@@ -40,7 +39,6 @@ func add_site(def: SiteDef, period: float, known: int, tick: int = 0) -> int:
 	var id: int = add_key(-1, def.faction)
 	keys.append(def.id)
 	name_keys.append(def.name_key)
-	key_ix.append(id)
 	pos_x.append(_wrap(def.pos.x, period))
 	pos_y.append(_wrap(def.pos.y, period))
 	pos_z.append(_wrap(def.pos.z, period))
@@ -52,21 +50,6 @@ func add_site(def: SiteDef, period: float, known: int, tick: int = 0) -> int:
 	dock_range.append(def.dock_range_m)
 	dock_max_speed.append(def.dock_max_speed)
 	return id
-
-
-## Puts a site in the pool the director may open (tests and scenarios build maps this way; a
-## MapDef's `spawnable` goes in through load_map). `kind` &"station" is dockable.
-func register(key: StringName, pos: Vector3, site_radius: float, kind: StringName = &"nav") -> void:
-	var def: SiteDef = SiteDef.new()
-	def.id = key
-	def.name_key = "site.%s" % key
-	def.kind = kind
-	def.pos = pos
-	def.radius_m = site_radius
-	def.dockable = kind == &"station"
-	def.dock_range_m = 0.5 * site_radius
-	def.dock_max_speed = 10.0
-	pool.append(def)
 
 
 ## Opens the map's sites (all of MapDef.sites, in order, so site 0 comes first; the ones in
@@ -102,6 +85,11 @@ func open(world: SimWorld, key: StringName) -> int:
 
 func key_of(site: int) -> StringName:
 	return keys[site]
+
+
+## The I18n key of the site's name, or "" for an unknown site id.
+func name_key_of(site: int) -> String:
+	return name_keys[site] if site >= 0 and site < name_keys.size() else ""
 
 
 func kind_of(site: int) -> StringName:
@@ -187,7 +175,6 @@ func columns() -> Array:
 	return (
 		super()
 		+ [
-			["key_ix", key_ix],
 			["pos_x", pos_x],
 			["pos_y", pos_y],
 			["pos_z", pos_z],

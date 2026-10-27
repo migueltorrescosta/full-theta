@@ -49,9 +49,14 @@ static func world(crew: int = 1, def: RunDef = null) -> SimWorld:
 	dist.lo = -6.0
 	dist.hi = -2.0
 	w.rep_dists[&"flee"] = dist
-	w.sites.register(&"yard", Vector3.ZERO, 2000.0, &"station")
-	w.sites.register(&"alpha", ALPHA, 3000.0, &"nav")
-	w.sites.register(&"beta", BETA, 3000.0, &"field")
+	SitePool.load_pool(
+		w,
+		[
+			SitePool.def(&"yard", Vector3.ZERO, 2000.0, &"station"),
+			SitePool.def(&"alpha", ALPHA, 3000.0),
+			SitePool.def(&"beta", BETA, 3000.0, &"field"),
+		]
+	)
 	w.sites.open(w, &"yard")
 	w.sites.open(w, &"alpha")
 	return w
