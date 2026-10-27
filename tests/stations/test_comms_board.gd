@@ -200,6 +200,39 @@ func test_accept_decline_and_pad_navigation() -> void:
 	assert_int(panel.overlay.card_id).is_equal(CommsFixture.HAIL)
 
 
+# FT: FT-COM-003, FT-MIS-027
+# An information card (kind 4, Q23) hides the Accept button and its binding does nothing,
+# while a mission card keeps both; Decline still reaches the server.
+func test_an_information_card_cannot_be_accepted() -> void:
+	var blk: Dictionary = CommsFixture.block()
+	var info: int = 7
+	(blk["cards"] as Array).append(
+		CommsFixture.card(info, CardList.INFO, "Kappa", {"detail": "card.encounter_pending.detail"})
+	)
+	var ctx: StationContext = StationFixture.context("comms", SETTINGS)
+	CommsFixture.install(ctx, blk)
+	var s: StationScreen = auto_free(StationScreen.new())
+	s.setup(ctx)
+	add_child(s)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var panel: CommsPanel = _comms(s)
+	var accept: Button = panel._buttons["accept"]
+	panel.board.select(CommsFixture.MISSION)
+	panel.refresh()
+	assert_bool(accept.visible).is_true()
+	panel.board.select(info)
+	panel.refresh()
+	assert_bool(accept.visible).is_false()
+	assert_bool(s.dispatch(_ev("accept", s))).is_true()
+	assert_array(_commands(s, "comms_accept")).is_empty()
+	assert_bool(s.dispatch(_ev("decline", s))).is_true()
+	assert_int(_commands(s, "comms_decline")[0]["card"]).is_equal(info)
+	panel.board.select(CommsFixture.MISSION)
+	panel.refresh()
+	assert_bool(accept.visible).is_true()
+
+
 # FT: FT-COM-006
 # K claims the open conversation's NPC (`npc:<card>`), again releases it; a card without a
 # conversation has no claim.

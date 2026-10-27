@@ -911,6 +911,7 @@
     "cards.none": {"en": "No cards.", "pt_PT": "Sem cartões.", "it": "Nessuna scheda."},
     "card.kind_offer": {"en": "Offer", "pt_PT": "Oferta", "it": "Offerta"},
     "card.kind_hail": {"en": "Hail", "pt_PT": "Chamada", "it": "Chiamata"},
+    "card.kind_info": {"en": "Info", "pt_PT": "Informação", "it": "Informazione"},
     "comms.col_missions": {"en": "MISSIONS", "pt_PT": "MISSÕES", "it": "MISSIONI"},
     "comms.col_contracts": {"en": "CONTRACTS", "pt_PT": "CONTRATOS", "it": "CONTRATTI"},
     "comms.col_offers": {"en": "OFFERS + HAILS", "pt_PT": "OFERTAS + CHAMADAS", "it": "OFFERTE + CHIAMATE"},

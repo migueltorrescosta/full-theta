@@ -388,7 +388,7 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 	)
 
 
-## PROVISIONAL (Q23): only a Comms card names a pending encounter's site (D231); Comms
+## Q23 (owner, 2026-10-26): only a Comms card names a pending encounter's site (D231); Comms
 ## relays it to Helm. BeginEncounterCommand has already revealed the site to the ship's
 ## faction, so Helm can select and jump to it. The card only informs (CardSpec.Kind.INFO)
 ## and lapses when the arrival timeout starts the encounter anyway.

@@ -151,6 +151,9 @@ func _refresh_buttons() -> void:
 	var live: bool = not card.is_empty() and CardList.is_live(card)
 	var open_state: bool = not card.is_empty() and int(card["state"]) == CardList.STATE_OPEN
 	(_buttons["hail"] as Button).disabled = hail_target() < 0
+	# An information card has nothing to accept (Q23): its Accept button is hidden.
+	var info: bool = not card.is_empty() and int(card["kind"]) == CardList.INFO
+	(_buttons["accept"] as Button).visible = not info
 	(_buttons["accept"] as Button).disabled = not open_state
 	(_buttons["decline"] as Button).disabled = not open_state
 	var item: String = claim_item()
@@ -245,6 +248,8 @@ func _answer_card(accept: bool) -> bool:
 	if card.is_empty():
 		return false
 	var id: int = int(card["id"])
+	if accept and int(card["kind"]) == CardList.INFO:
+		return true  # nothing to accept (Q23); the key is taken, not passed on to a chip
 	if accept and int(card["kind"]) == CardList.HAIL:
 		open_card(id)
 	else:

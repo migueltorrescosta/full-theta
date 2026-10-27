@@ -12,7 +12,9 @@ const MISSION: int = 0
 const CONTRACT: int = 1
 const OFFER: int = 2
 const HAIL: int = 3
-const KIND_NAMES: Array[String] = ["mission", "contract", "offer", "hail"]
+## A card that only tells (Q23): nothing to accept.
+const INFO: int = 4
+const KIND_NAMES: Array[String] = ["mission", "contract", "offer", "hail", "info"]
 const STATE_OPEN: int = 0
 const STATE_ACCEPTED: int = 1
 
