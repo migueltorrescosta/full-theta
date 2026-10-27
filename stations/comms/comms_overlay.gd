@@ -189,7 +189,7 @@ func more_below() -> bool:
 ## Shows the next page of rows (a swipe up), or the previous one; false when there is none.
 func page(down: bool) -> bool:
 	var to: int = first_line + (maxi(_lines_shown, 1) if down else -maxi(_lines_shown, 1))
-	to = clampi(to, 0, maxi(_line_count - maxi(_lines_shown, 1), 0))
+	to = clampi(to, 0, maxi(_line_count - 1, 0))
 	if to == first_line:
 		return false
 	first_line = to
