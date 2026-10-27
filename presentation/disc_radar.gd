@@ -50,8 +50,22 @@ var chips: bool = true
 ## Contact id -> blip size factor (Science's detection confidence, FT-SCI-001); a contact
 ## not listed draws at the usual size.
 var blip_scale: Dictionary = {}
+## The part of the control the disc, the range label and the site banner keep to, in its
+## coordinates; empty for all of it. Overlay thumb rails cover the rest (#28).
+var view_rect: Rect2 = Rect2():
+	set(value):
+		view_rect = value
+		queue_redraw()
+## The least side (px) of the range label and of the site banner's tap area, 0 for the
+## text's size; above 0 each also gets a control with the `tap` meta, so TapAudit sees
+## them (a phone, #28).
+var touch_min: float = 0.0:
+	set(value):
+		touch_min = value
+		queue_redraw()
 
 var _orbiting: bool = false
+var _taps: Array[Control] = []
 
 
 func _init() -> void:
@@ -80,7 +94,7 @@ func toggle_strip() -> void:
 ## then the nearest blip or mark within `reach` px (HIT_PX; a controller cursor snaps
 ## from farther), then a chip under the pointer.
 func item_at(local_pos: Vector2, reach: float = HIT_PX) -> Dictionary:
-	if SiteBanner.rect(get_theme_default_font(), picture.site).has_point(local_pos):
+	if _site_rect().has_point(local_pos):
 		return _ref(picture.site)
 	var layout: Array[Dictionary] = _layout()
 	for e: Dictionary in layout:
@@ -200,10 +214,18 @@ func _draw() -> void:
 	var label: Rect2 = _range_rect()
 	draw_rect(label, Palette.color("panel_focus"))
 	draw_rect(label, Palette.color("line"), false, 1.0)
-	_draw_text(font, label.grow(-4.0), _range_text(), Palette.color("text"))
+	var text: String = _range_text()
+	var tsz: Vector2 = Vector2(
+		font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+		font.get_height(FONT_SIZE)
+	)
+	_draw_text(font, Rect2(label.get_center() - tsz / 2.0, tsz), text, Palette.color("text"))
+	draw_set_transform(_view().position)
 	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
+	draw_set_transform(Vector2.ZERO)
 	if side_strip:
 		_draw_strip(font)
+	_sync_taps()
 
 
 ## The disc, half-range ring, clock ticks every 30° and the numbers 12, 3, 6, 9.
@@ -311,7 +333,7 @@ func _draw_copies(pos: Vector2, col: Color, copies: Array) -> void:
 
 ## FT-SPA-009: elevation -90..+90 of every item from the own ship, one tick each.
 func _draw_strip(font: Font) -> void:
-	var x0: float = size.x - STRIP_W
+	var x0: float = _view().end.x - STRIP_W
 	var top: float = PAD
 	var bottom: float = size.y - PAD
 	draw_rect(Rect2(x0, 0.0, STRIP_W, size.y), Palette.color("panel"))
@@ -447,15 +469,53 @@ func _rel_item(it: Dictionary) -> Vector3:
 	return picture.rel(it["world"], centre)
 
 
+## The rectangle the radar draws in: view_rect, or the whole control.
+func _view() -> Rect2:
+	return view_rect if view_rect.has_area() else Rect2(Vector2.ZERO, size)
+
+
 func _area() -> Rect2:
-	return Rect2(Vector2.ZERO, size - Vector2(STRIP_W if side_strip else 0.0, 0.0))
+	var v: Rect2 = _view()
+	return Rect2(v.position, v.size - Vector2(STRIP_W if side_strip else 0.0, 0.0))
 
 
+## The range label: bottom left of the view, at least touch_min on each side.
 func _range_rect() -> Rect2:
 	var font: Font = get_theme_default_font()
 	var sz: Vector2 = font.get_string_size(_range_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 	sz = Vector2(sz.x, font.get_height(FONT_SIZE)) + Vector2(8.0, 8.0)
-	return Rect2(Vector2(6.0, size.y - sz.y - 6.0), sz)
+	sz = sz.max(Vector2(touch_min, touch_min))
+	var v: Rect2 = _view()
+	return Rect2(Vector2(v.position.x + 6.0, v.end.y - sz.y - 6.0), sz)
+
+
+## Where a tap picks the site banner: its box, at least touch_min tall and wide.
+func _site_rect() -> Rect2:
+	var r: Rect2 = SiteBanner.rect(get_theme_default_font(), picture.site)
+	if not r.has_area():
+		return r
+	r.position += _view().position
+	r.size = r.size.max(Vector2(touch_min, touch_min))
+	return r
+
+
+## The range label's and site banner's tap controls follow them (only with touch_min).
+func _sync_taps() -> void:
+	if touch_min <= 0.0 and _taps.is_empty():
+		return
+	if _taps.is_empty():
+		for n: String in ["RangeTap", "SiteTap"]:
+			var c: Control = Control.new()
+			c.name = n
+			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			c.set_meta("tap", true)
+			add_child(c)
+			_taps.append(c)
+	var rects: Array[Rect2] = [_range_rect(), _site_rect()]
+	for i: int in _taps.size():
+		_taps[i].visible = touch_min > 0.0 and rects[i].has_area()
+		_taps[i].position = rects[i].position
+		_taps[i].size = rects[i].size
 
 
 func _range_text() -> String:
