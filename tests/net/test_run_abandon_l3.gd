@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
 ## L3 tests of abandoning the run outside a pause (D241, Q13): the co-op host abandons at
 ## once, or the ship's connected crew vote by more than half; the run then ends with
-## `run_over` and the debrief. Refused when the ship is not in a run, and in PvP.
+## `run_over` and the debrief. Refused when the ship is not in a run; in PvP it is a forfeit
+## (test_fleet_pause_l3.gd).
 
 const PLAYER: int = NetHarness.PLAYER
 const SECRET: String = "c0ffee"
@@ -122,19 +123,4 @@ func test_crew_cannot_abandon_alone() -> void:
 	var from: int = h.mark(crew[1])
 	crew[1].abandon(PLAYER)
 	assert_str(await _rejected(crew[1], NetProtocol.Type.ABANDON, from)).is_equal("not_host")
-	assert_int(server.world.run.status[PLAYER]).is_equal(RunTable.Status.IN_PLAY)
-
-
-# FT: FT-MIS-016
-# PvP (two hostile crew factions): no abandon outside a pause, even for the host.
-func test_pvp_refuses() -> void:
-	var server: NetServer = h.server(false, 10.0, SECRET)
-	var crew: Array[NetClient] = await _running(server)
-	server.session._crew_ships = [
-		{"id": 0, "def": "a", "name": "A", "faction": 0},
-		{"id": 1, "def": "b", "name": "B", "faction": 1},
-	]
-	var from: int = h.mark(crew[0])
-	crew[0].abandon(PLAYER)
-	assert_str(await _rejected(crew[0], NetProtocol.Type.ABANDON, from)).is_equal("pvp_no_abandon")
 	assert_int(server.world.run.status[PLAYER]).is_equal(RunTable.Status.IN_PLAY)

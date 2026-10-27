@@ -339,16 +339,17 @@ func run_setup(defs: DefLibrary) -> RunSetup:
 
 
 ## Makes the director for a run when the first tick steps: the lobby's difficulty preset
-## picks its budget, the catalogue is the scenarios the run lists (E07, D81).
+## picks its budget, the catalogue is the scenarios the run lists (E07, D81), and the
+## session's mode keys it per faction (FleetDirector, #11, M4-Q1).
 func _director_factory(setup: RunSetup) -> Callable:
-	return func(difficulty: StringName) -> Director:
-		var d: Director = Director.new(
+	return func(difficulty: StringName) -> FleetDirector:
+		return FleetDirector.new(
 			setup.run_def.director,
 			difficulty,
 			ScenarioCatalogue.load_for(setup.run_def.scenarios),
-			seed_value
+			seed_value,
+			setup.rules.mode
 		)
-		return d
 
 
 ## The Shakedown's driver when the first tick steps (FT-MIS-039): its one scenario and the

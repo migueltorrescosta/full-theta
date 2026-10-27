@@ -13,6 +13,7 @@ extends Node
 ## the sim stepped and the state copy was handed over, so the tick never waits on them;
 ## HTTP gets a 400 us budget per frame (FT-NET-039).
 ##
+## The multi-ship lobby (NetFleet, #11) rebuilds a RunSetup's world through rebuild_fleet().
 ## After an outcome the crew may vote to run again (NetRunReset, D178): restart_run()
 ## then swaps in a world built from scratch everywhere it is held (here, the session,
 ## the voice seam, the net thread's encoder), with a fresh command log.
@@ -82,6 +83,11 @@ func start(
 	transport.probe = probe != null
 	run_reset = NetRunReset.new(session, restart_run)
 	run_reset.decisions = _director_decisions
+	var setup: RunSetup = encounter as RunSetup
+	if setup != null:  # the multi-ship lobby rebuilds a RunSetup's world (#11)
+		session.fleet.rules = setup.rules
+		session.fleet.slots = setup.slots if not setup.slots.is_empty() else _default_slots(setup)
+		session.fleet.rebuild = rebuild_fleet
 	var err: Error = transport.start(port, address)
 	if err != OK:
 		return err
@@ -146,8 +152,29 @@ func restart_run() -> void:
 	_idle_state_posted = false
 
 
+## The multi-ship lobby's rebuild (NetFleet.rebuild): the RunSetup's slots and rules, then
+## the run reset's fresh world (#11, M4-Q3).
+func rebuild_fleet(slots: Array[ShipSlot], rules: SessionRules) -> void:
+	var setup: RunSetup = encounter as RunSetup
+	setup.slots = slots.duplicate()
+	setup.rules = rules
+	restart_run()
+
+
+## The lobby's slots for a RunSetup built without any: its co-op ships, named after the ship.
+static func _default_slots(setup: RunSetup) -> Array[ShipSlot]:
+	var out: Array[ShipSlot] = []
+	var ship_name: String = setup.run_def.player_ship.display_name
+	for i: int in setup.crew_count():
+		var label: String = ship_name if setup.crew_count() == 1 else "%s %d" % [ship_name, i + 1]
+		out.append(ShipSlot.of(label, SessionRules.CREW_FACTIONS[0], 0))
+	return out
+
+
 ## The director's decisions so far for the debrief; none with another driver.
 func _director_decisions() -> Array:
+	if driver is FleetDirector:
+		return (driver as FleetDirector).decisions()
 	if driver is Director:
 		return (driver as Director).decisions()
 	return []

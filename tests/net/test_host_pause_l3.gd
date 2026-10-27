@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## L3 tests of the host pause (FT-MIS-040): the co-op host pauses and resumes the
-## universe through the pause events; others and PvP sessions are refused.
+## universe through the pause events; others are refused (PvP: test_fleet_lobby_l3.gd).
 
 const PLAYER: int = NetHarness.PLAYER
 const SECRET: String = "c0ffee"
@@ -90,23 +90,6 @@ func test_dedicated_server_refuses() -> void:
 	crew[0].host_pause(true)
 	assert_str(await _rejected(crew[0], from)).is_equal("pvp_no_pause")
 	assert_bool(server.session.host_paused).is_false()
-
-
-# FT: FT-MIS-040
-# Two hostile crew factions (PvP): even the host is refused.
-func test_pvp_refuses_the_host() -> void:
-	var server: NetServer = h.server(false, 10.0, SECRET)
-	var crew: Array[NetClient] = await _running(server)
-	server.session._crew_ships = [
-		{"id": 0, "def": "a", "name": "A", "faction": 0},
-		{"id": 1, "def": "b", "name": "B", "faction": 1},
-	]
-	assert_bool(server.session.host_pause.is_pvp()).is_true()
-	var from: int = h.mark(crew[0])
-	crew[0].host_pause(true)
-	assert_str(await _rejected(crew[0], from)).is_equal("pvp_no_pause")
-	assert_bool(server.session.host_paused).is_false()
-	assert_bool(await _stepping(server)).is_true()
 
 
 ## A started ship whose Ops player has lapsed: a coverage pause holds, crew[2] is gone.
