@@ -2,8 +2,8 @@ class_name SpawnShipCommand
 extends ServerCommand
 ## Spawns an enemy ship from the world's catalogue (E07, FT-MIS-005): the Scenario API's
 ## spawn_* writes. The enemy is looked up by key in SimWorld.catalog (read-only data app/
-## fills from DefLibrary). The new ship's id is the world's ship count at that moment, so
-## the API's next_ship_id() names it when no other spawn is queued ahead.
+## fills from DefLibrary). The new ship's id is the world's ship count at that moment, and
+## result_id carries it to the API's handle.
 
 var enemy_key: StringName = &""
 var faction: int = 0
@@ -29,4 +29,5 @@ func apply(world: SimWorld) -> bool:
 		return false
 	var id: int = world.spawn_enemy(enemy, faction, Vector3(x, y, z), rot)
 	world.emit(&"ship_spawned", id, -1, 0.0, Vector3.ZERO, enemy_key)
+	result_id = id
 	return true

@@ -66,6 +66,7 @@ func apply(world: SimWorld) -> bool:
 	StoryRules.set_lane(world, card, lane_open_s, lane_s)
 	StoryRules.set_need(world, card, needs_subsystem, needs_pips)
 	world.emit(&"card_posted", ship_id, card, card_kind)
+	result_id = card
 	return true
 
 

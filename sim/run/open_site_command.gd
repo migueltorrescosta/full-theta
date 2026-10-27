@@ -18,4 +18,5 @@ func apply(world: SimWorld) -> bool:
 		return false
 	if world.sites.size() > before:
 		world.emit(&"site_opened", -1, site, 0.0, Vector3.ZERO, site_key)
+	result_id = site
 	return true

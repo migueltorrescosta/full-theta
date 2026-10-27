@@ -13,7 +13,6 @@ func _populated() -> SimWorld:
 	var w: SimWorld = ApiFixture.world(2)
 	var api: ScenarioApi = ScenarioApi.new(w)
 	api.spawn_at_range(ApiFixture.RAIDER, ApiFixture.FACTION_ENEMY, 0, 3000.0, 12, 0)
-	api.set_flag(&"met_trader", 3)
 	api.begin_encounter(&"s_a", 1, PackedInt32Array([0]), 3)
 	ApiFixture.step(w, 3)
 	return w
@@ -51,35 +50,28 @@ func _walk(value: Variant, path: String) -> void:
 # FT: FT-ARC-016, FT-DAT-009, FT-TST-012
 func test_every_query_returns_only_values() -> void:
 	var w: SimWorld = _populated()
-	var api: ScenarioApi = ScenarioApi.new(w, 0)
+	var api: ScenarioApi = ScenarioApi.new(w)
 	var results: Dictionary = {
 		"tick": api.tick(),
-		"ships": api.ships(),
 		"crew_ships": api.crew_ships(),
 		"ship0": api.ship(0),
 		"ship2": api.ship(2),
 		"ship_none": api.ship(99),
 		"sites": api.sites(),
-		"site1": api.site(1),
 		"spawnable": api.spawnable_sites(),
 		"encounter0": api.encounter(0),
 		"encounter_none": api.encounter(9),
-		"encounter_count": api.encounter_count(),
+		"limits": api.encounter_limits(),
 		"cards": api.cards_of(0),
 		"flag": api.flag(&"met_trader"),
-		"knows": api.knows(1, 2),
-		"relation": api.relation(1, 2),
 		"events": api.events(),
-		"next_ship_id": api.next_ship_id(),
 		"rand": api.rand(&"test"),
 		"commands": api.commands_this_tick(0),
-		"for_encounter": api.for_encounter(0).encounter_id(),
 	}
 	for key: String in results:
 		_walk(results[key], key)
 	assert_array(api.sites()).has_size(2)
 	assert_int(api.ship(2).faction).is_equal(ApiFixture.FACTION_ENEMY)
-	assert_int(api.flag(&"met_trader")).is_equal(3)
 	assert_int(api.ship(99).id).is_equal(-1)
 
 
@@ -94,9 +86,9 @@ func test_views_are_fresh_copies() -> void:
 	a.pos[0] = 123456.0
 	assert_float(api.ship(0).hull_frac).is_equal(1.0)
 	assert_float(w.kin.px[0]).is_not_equal(123456.0)
-	var s: SiteView = api.site(1)
+	var s: SiteView = api.sites()[1]
 	s.pos[0] = -1.0
-	assert_float(api.site(1).pos[0]).is_equal(ApiFixture.ALPHA.x)
+	assert_float(api.sites()[1].pos[0]).is_equal(ApiFixture.ALPHA.x)
 	var packed: PackedInt32Array = api.crew_ships()
 	packed.append(77)
 	assert_array(api.crew_ships()).has_size(2)

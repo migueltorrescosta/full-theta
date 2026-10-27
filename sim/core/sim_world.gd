@@ -202,6 +202,11 @@ func reset_ship(
 	z: float = 0.0,
 	rotation: Quaternion = Quaternion.IDENTITY
 ) -> void:
+	# The commands dropped here are reported as rejected, for the API handles waiting on them.
+	for c: SimCommand in _queue:
+		if c.ship_id == ship_id:
+			c.tick = tick
+			c.accepted = false
 	_queue.assign(_queue.filter(func(c: SimCommand) -> bool: return c.ship_id != ship_id))
 	_reset_this_tick[ship_id] = true
 	defs[ship_id] = base_defs[ship_id]  # fitted modules are run progress (FT-MIS-011)
@@ -354,9 +359,10 @@ func _apply_commands() -> void:
 			c.accepted = c.apply(self)
 			command_log.append(c)
 			continue
-		if id < 0 or id >= defs.size():
-			continue
-		if not (kin.alive[id] == 1 or c.applies_to_destroyed()):
+		if id < 0 or id >= defs.size() or not (kin.alive[id] == 1 or c.applies_to_destroyed()):
+			# Dropped, not logged: marked rejected so an API handle waiting on it ends.
+			c.tick = tick
+			c.accepted = false
 			continue
 		c.tick = tick
 		# A ship reset earlier this tick rejects its later commands of the tick (logged

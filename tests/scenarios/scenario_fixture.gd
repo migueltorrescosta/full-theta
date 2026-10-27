@@ -12,7 +12,7 @@ var api: ScenarioApi
 var encounter: int = -1
 var site: int = -1
 var _started: bool = false
-var _scenario_api: ScenarioApi
+var _begin: ApiHandle
 
 
 ## A world at tick 0 with the ship waiting at the yard.
@@ -31,9 +31,9 @@ func begin(scenario_id: StringName, site_key: StringName) -> void:
 	site = world.sites.open(world, site_key)
 	var p: Vector3 = world.sites.point3(site)
 	world.kin.place(0, p.x, p.y, p.z)
-	encounter = api.begin_encounter(scenario_id, site, PackedInt32Array([0]), 0)
-	_scenario_api = api.for_encounter(encounter)
+	_begin = api.begin_encounter(scenario_id, site, PackedInt32Array([0]), 0)
 	world.step()
+	encounter = _begin.id()
 
 
 ## One tick, then the scenario's start, step and finish as the Director does.
@@ -44,11 +44,11 @@ func tick() -> void:
 	if view.result == Scenario.Result.ACTIVE:
 		if not _started:
 			_started = true
-			scenario.start(_scenario_api, {"site": site, "ships": view.ships})
-		scenario.step(_scenario_api)
-		var result: int = scenario.finished(_scenario_api)
+			scenario.start(api, {"site": site, "ships": view.ships})
+		scenario.step(api)
+		var result: int = scenario.finished(api)
 		if result != Scenario.Result.ACTIVE:
-			_scenario_api.end_encounter(encounter, result)
+			api.end_encounter(encounter, result)
 
 
 ## Ticks until the encounter has ended or `limit` ticks passed; returns its result.

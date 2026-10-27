@@ -11,11 +11,13 @@ const BETA: Vector3 = Vector3(0.0, 60000.0, 0.0)
 
 
 ## A RunDef built in code: a director with the given timeout and gap, a flee cost, the
-## corvette, and the scenario ids.
+## corvette, the scenario ids and the fewest and most encounters.
 static func run_def(
 	scenario_ids: PackedStringArray = PackedStringArray(["s_a", "s_b"]),
 	timeout_s: float = 10.0,
-	gap_s: float = 1.0
+	gap_s: float = 1.0,
+	min_encounters: int = 1,
+	max_encounters: int = 2
 ) -> RunDef:
 	var d: DirectorDef = DirectorDef.new()
 	d.id = &"test_director"
@@ -29,7 +31,8 @@ static func run_def(
 	f.rep_dist = &"flee"
 	var r: RunDef = RunDef.new()
 	r.id = &"test_run"
-	r.encounters = 2
+	r.min_encounters = min_encounters
+	r.max_encounters = max_encounters
 	r.scenarios = scenario_ids
 	r.director = d
 	r.flee_cost = f

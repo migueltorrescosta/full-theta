@@ -7,30 +7,18 @@ extends RefCounted
 ## CardView, ApiEvent): never a table, the world or a resource. Every write builds one
 ## SimCommand with source SERVER and queues it with SimWorld.submit(), so it applies at
 ## the next tick and lands in the command log: a replay needs neither the director nor
-## the scenarios (FT-ARC-008). Writes return the id the new thing will get, or nothing.
-##
-## An instance serves one encounter (encounter_id) or the director (-1).
+## the scenarios (FT-ARC-008). A write that creates a ship, card, encounter or site returns
+## an ApiHandle, which resolves to the real id once the command has applied (Q24); the API
+## predicts no id.
 
 ## Ticks per second, for scenarios and the director to turn seconds into ticks.
 const HZ: int = SimWorld.HZ
 
 var _world: SimWorld
-var _encounter: int
 
 
-func _init(world: SimWorld, encounter_id: int = -1) -> void:
+func _init(world: SimWorld) -> void:
 	_world = world
-	_encounter = encounter_id
-
-
-## The encounter this view serves, or -1 for the director's.
-func encounter_id() -> int:
-	return _encounter
-
-
-## A view of the same world for one encounter's scenario.
-func for_encounter(id: int) -> ScenarioApi:
-	return ScenarioApi.new(_world, id)
 
 
 # --- queries (value copies) ---
@@ -38,14 +26,6 @@ func for_encounter(id: int) -> ScenarioApi:
 
 func tick() -> int:
 	return _world.tick
-
-
-## Every ship id.
-func ships() -> PackedInt32Array:
-	var out: PackedInt32Array = PackedInt32Array()
-	for id: int in _world.ship_count():
-		out.append(id)
-	return out
 
 
 ## Crewable ships in play: not AI-flown and not out of the run.
@@ -79,11 +59,11 @@ func ship(id: int) -> ShipView:
 func sites() -> Array[SiteView]:
 	var out: Array[SiteView] = []
 	for id: int in _world.sites.size():
-		out.append(site(id))
+		out.append(_site(id))
 	return out
 
 
-func site(id: int) -> SiteView:
+func _site(id: int) -> SiteView:
 	var v: SiteView = SiteView.new()
 	var t: SiteTable = _world.sites
 	if id < 0 or id >= t.size():
@@ -134,9 +114,11 @@ func encounter(id: int) -> EncounterView:
 	return v
 
 
-## Encounters opened so far (ids 0 to count - 1).
-func encounter_count() -> int:
-	return _world.encounters.size()
+## The fewest and the most encounters a ship goes through, as (min, max): the RunDef's.
+func encounter_limits() -> Vector2i:
+	if _world.run_def == null:
+		return Vector2i(1, 1)
+	return Vector2i(_world.run_def.min_encounters, _world.run_def.max_encounters)
 
 
 ## The cards on the ship's Comms board, including its faction's (D82).
@@ -166,25 +148,6 @@ func cards_of(ship_id: int) -> Array[CardView]:
 ## The story flag's value, 0 when unset.
 func flag(name: StringName) -> int:
 	return _world.story_flags.get_flag(name)
-
-
-## How much the faction knows of the contact: 0 never detected, 1 detected, 2 identified,
-## 3 scanned.
-func knows(faction: int, contact: int) -> int:
-	var k: KnowledgeTable = _world.knowledge
-	var row: int = k.row_for(faction, contact)
-	if row < 0:
-		return 0
-	if k.scan_conf[row] > 0.0:
-		return 3
-	if k.identified[row] == 1:
-		return 2
-	return 1 if k.detected[row] == 1 else 0
-
-
-## SimWorld.Relation between two factions as an int.
-func relation(a: int, b: int) -> int:
-	return _world.relation(a, b)
 
 
 ## The events of the latest step, copied.
@@ -230,11 +193,6 @@ func legs() -> Array[Dictionary]:
 	return out
 
 
-## The id a ship spawned by a command queued now will get (spawns apply in queue order).
-func next_ship_id() -> int:
-	return _world.ship_count() + _queued(&"spawn_ship")
-
-
 ## A draw in [0, 1) from the stream of the scenarios' own generator. It is not part of the
 ## state hash: the scenarios do not run on replay, and what they decide is in the log.
 func rand(stream: StringName) -> float:
@@ -246,31 +204,27 @@ func rand(stream: StringName) -> float:
 
 ## Spawns an enemy `range_m` from ship `near`, at a ship-frame clock position (1 to 12, 12
 ## the bow) and height (0 level, 1 high, -1 low, 2 overhead, -2 under), facing it.
-## Returns the new ship's id.
+## Returns a handle on the new ship's id.
 func spawn_at_range(
 	enemy_key: StringName, faction: int, near: int, range_m: float, clock: int, height: int
-) -> int:
+) -> ApiHandle:
 	var world_dir: Vector3 = _world.kin.to_world(near, _local_direction(clock, height))
 	var point: PackedFloat64Array = _world.kin.point_at(near, world_dir * range_m)
 	return _spawn(enemy_key, faction, point, _facing(-world_dir))
 
 
-## Spawns an enemy at `offset` from a site's point. Returns the new ship's id.
-func spawn_at_site(enemy_key: StringName, faction: int, site_id: int, offset: Vector3) -> int:
-	var p: PackedFloat64Array = _world.sites.point(site_id)
-	return _spawn(
-		enemy_key,
-		faction,
-		PackedFloat64Array([p[0] + offset.x, p[1] + offset.y, p[2] + offset.z]),
-		Quaternion.IDENTITY
-	)
+## Spawns an enemy `offset` (world axes, m) from ship `near`, at rest and unrotated: for a
+## scenario that places a ship by the course of another, such as off an arriving ship's track.
+## Returns a handle on the new ship's id.
+func spawn_at_offset(enemy_key: StringName, faction: int, near: int, offset: Vector3) -> ApiHandle:
+	return _spawn(enemy_key, faction, _world.kin.point_at(near, offset), Quaternion.IDENTITY)
 
 
 ## Spawns an enemy (debris) on the leg between two sites, a share `t` (0 to 1) of the way
-## and `lateral_m` off the line (D234). Returns the new ship's id.
+## and `lateral_m` off the line (D234). Returns a handle on the new ship's id.
 func spawn_on_leg(
 	enemy_key: StringName, faction: int, from_site: int, to_site: int, t: float, lateral_m: float
-) -> int:
+) -> ApiHandle:
 	var a: PackedFloat64Array = _world.sites.point(from_site)
 	var b: PackedFloat64Array = _world.sites.point(to_site)
 	var kin: Kinematics = _world.kin
@@ -287,23 +241,20 @@ func spawn_on_leg(
 	)
 
 
-## Opens a site of the map's pool; returns its site id (the existing one when already open,
-## with nothing queued).
-func open_site(site_key: StringName) -> int:
+## Opens a site of the map's pool; returns a handle on its site id (resolved at once to the
+## existing one when the site is already open, with nothing queued).
+func open_site(site_key: StringName) -> ApiHandle:
 	if _world.sites.has_key(site_key):
-		return _world.sites.open(_world, site_key)
-	var id: int = _world.sites.size() + _queued(&"open_site")
+		return ApiHandle.new(null, _world.sites.id_of(site_key))
 	var cmd: OpenSiteCommand = OpenSiteCommand.new()
 	cmd.site_key = site_key
 	_world.submit(cmd)
-	return id
+	return ApiHandle.new(cmd)
 
 
-## Posts a card on the ship's Comms board; returns the card id it will get.
-func offer(ship_id: int, card: CardSpec) -> int:
-	# A crew hail queued ahead of this write may add a card too, so the id is a prediction:
-	# scenarios find their cards again by title (cards_of) once they exist.
-	var id: int = _card_count() + _queued(&"post_card")
+## Posts a card on the ship's Comms board; returns a handle on the card id. A crew hail
+## applied in the same tick may add a card first, so only the handle knows the id.
+func offer(ship_id: int, card: CardSpec) -> ApiHandle:
 	var cmd: PostCardCommand = PostCardCommand.new()
 	cmd.source = SimCommand.Source.SERVER
 	cmd.ship_id = ship_id
@@ -326,7 +277,7 @@ func offer(ship_id: int, card: CardSpec) -> int:
 	cmd.needs_subsystem = card.needs_subsystem
 	cmd.needs_pips = card.needs_pips
 	_world.submit(cmd)
-	return id
+	return ApiHandle.new(cmd)
 
 
 ## Settles an accepted card (FT-MIS-021, FT-MIS-019): success pays its reward and draws its
@@ -358,13 +309,6 @@ func message(line_id: String, args: Dictionary, to: SayTarget) -> void:
 	cmd.npc_id = String(to.npc_id)
 	cmd.stations = Array(to.stations)
 	cmd.args = args.duplicate(true)
-	_world.submit(cmd)
-
-
-func set_flag(name: StringName, value: int) -> void:
-	var cmd: SetFlagCommand = SetFlagCommand.new()
-	cmd.flag_name = name
-	cmd.value = value
 	_world.submit(cmd)
 
 
@@ -400,34 +344,18 @@ func set_relation(a: int, b: int, relation_value: int) -> void:
 	_world.submit(cmd)
 
 
-## Puts a contract flag (KnowledgeTable.Flag) on a contact in a faction's knowledge
-## (FT-MIS-042). Nothing is queued for a faction with no ship.
-func set_contract_flag(faction: int, contact: int, flag_value: int) -> void:
-	var holder: int = _first_ship_of(faction)
-	if holder < 0:
-		return
-	var cmd: SetContractFlagCommand = SetContractFlagCommand.new()
-	cmd.source = SimCommand.Source.SERVER
-	cmd.ship_id = holder
-	cmd.faction = faction
-	cmd.contact = contact
-	cmd.flag = flag_value
-	_world.submit(cmd)
-
-
 ## Opens an encounter for crewed ships at a site (-1: none) charging `cost` threat points;
-## returns the id it will get.
+## returns a handle on its id (rejected when a ship is already in an encounter).
 func begin_encounter(
 	scenario_id: StringName, site_id: int, ship_ids: PackedInt32Array, cost: int
-) -> int:
-	var id: int = _world.encounters.size() + _queued(&"begin_encounter")
+) -> ApiHandle:
 	var cmd: BeginEncounterCommand = BeginEncounterCommand.new()
 	cmd.scenario_id = scenario_id
 	cmd.site = site_id
 	cmd.ships = ship_ids.duplicate()
 	cmd.cost = cost
 	_world.submit(cmd)
-	return id
+	return ApiHandle.new(cmd)
 
 
 ## Ends an open encounter with a Scenario.Result.
@@ -435,6 +363,14 @@ func end_encounter(id: int, result: int) -> void:
 	var cmd: EndEncounterCommand = EndEncounterCommand.new()
 	cmd.encounter = id
 	cmd.result = result
+	_world.submit(cmd)
+
+
+## Closes the crewed ship's run (Q4): it wins once it is in no encounter. Rejected below
+## RunDef.min_encounters.
+func close_run(ship_id: int) -> void:
+	var cmd: CloseRunCommand = CloseRunCommand.new()
+	cmd.ship = ship_id
 	_world.submit(cmd)
 
 
@@ -463,8 +399,9 @@ static func _details(c: SimCommand) -> PackedStringArray:
 	return out
 
 
-func _spawn(enemy_key: StringName, faction: int, point: PackedFloat64Array, rot: Quaternion) -> int:
-	var id: int = next_ship_id()
+func _spawn(
+	enemy_key: StringName, faction: int, point: PackedFloat64Array, rot: Quaternion
+) -> ApiHandle:
 	var cmd: SpawnShipCommand = SpawnShipCommand.new()
 	cmd.enemy_key = enemy_key
 	cmd.faction = faction
@@ -473,7 +410,7 @@ func _spawn(enemy_key: StringName, faction: int, point: PackedFloat64Array, rot:
 	cmd.z = point[2]
 	cmd.rot = rot
 	_world.submit(cmd)
-	return id
+	return ApiHandle.new(cmd)
 
 
 ## Unit vector in the ship frame (-Z bow, +X starboard, +Y up) for a clock and height.
@@ -487,25 +424,6 @@ static func _local_direction(clock: int, height: int) -> Vector3:
 static func _facing(dir: Vector3) -> Quaternion:
 	var up: Vector3 = Vector3.UP if absf(dir.normalized().y) < 0.99 else Vector3.RIGHT
 	return Basis.looking_at(dir.normalized(), up).get_rotation_quaternion()
-
-
-func _queued(kind: StringName) -> int:
-	var n: int = 0
-	for c: SimCommand in _world.queued_commands():
-		if c.kind() == kind:
-			n += 1
-	return n
-
-
-func _card_count() -> int:
-	return _world.story.size()
-
-
-func _first_ship_of(faction: int) -> int:
-	for id: int in _world.ship_count():
-		if _world.faction_of(id) == faction:
-			return id
-	return -1
 
 
 ## A HelmTable column value for the ship, or `fallback` while the column does not exist.

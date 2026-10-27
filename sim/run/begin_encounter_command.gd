@@ -42,4 +42,5 @@ func apply(world: SimWorld) -> bool:
 		# The crew must be able to see, select and jump to the site it is sent to.
 		world.sites.reveal(site, world.faction_of(s))
 	world.emit(&"encounter_open", ships[0], -1, id, Vector3.ZERO, scenario_id)
+	result_id = id
 	return true
