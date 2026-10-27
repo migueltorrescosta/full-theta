@@ -18,6 +18,8 @@ var keys: Array[StringName] = []
 var name_keys: Array[String] = []
 ## The sites the director may still open, read-only like defs.
 var pool: Array[SiteDef] = []
+## The map's own sites, read-only like defs: a race opens copies of them (open_copy).
+var map_sites: Array[SiteDef] = []
 
 var pos_x: PackedFloat64Array = PackedFloat64Array()
 var pos_y: PackedFloat64Array = PackedFloat64Array()
@@ -34,14 +36,22 @@ var dock_range: PackedFloat64Array = PackedFloat64Array()
 var dock_max_speed: PackedFloat64Array = PackedFloat64Array()
 
 
-## Adds a site (its point wrapped onto the cube of `period`) and returns its site id.
-func add_site(def: SiteDef, period: float, known: int, tick: int = 0) -> int:
+## Adds a site (its point wrapped onto the cube of `period`) and returns its site id. A copy
+## (open_copy) passes its own key and the offset from the def's point.
+func add_site(
+	def: SiteDef,
+	period: float,
+	known: int,
+	tick: int = 0,
+	key: StringName = &"",
+	offset: Vector3 = Vector3.ZERO
+) -> int:
 	var id: int = add_key(-1, def.faction)
-	keys.append(def.id)
+	keys.append(key if key != &"" else def.id)
 	name_keys.append(def.name_key)
-	pos_x.append(_wrap(def.pos.x, period))
-	pos_y.append(_wrap(def.pos.y, period))
-	pos_z.append(_wrap(def.pos.z, period))
+	pos_x.append(_wrap(def.pos.x + offset.x, period))
+	pos_y.append(_wrap(def.pos.y + offset.y, period))
+	pos_z.append(_wrap(def.pos.z + offset.z, period))
 	radius.append(def.radius_m)
 	known_mask.append(known)
 	opened_tick.append(tick)
@@ -59,6 +69,7 @@ func load_map(world: SimWorld, map: MapDef) -> void:
 	for def: SiteDef in map.sites:
 		var known: int = ALL_FACTIONS if map.known_at_start.has(def.id) else 0
 		world.add_site(def, known)
+	map_sites.append_array(map.sites)
 	pool.append_array(map.spawnable)
 
 
@@ -81,6 +92,43 @@ func open(world: SimWorld, key: StringName) -> int:
 		if def.id == key:
 			return world.add_site(def, ALL_FACTIONS)
 	return -1
+
+
+## RACE (#11, M4-Q5): the site id of the ship's own copy of a map or pool site, opening it
+## when needed; -1 for an unknown key. Each ship's copies sit where the site is when the whole
+## map is moved by the ship's start site's offset from site 0, so every ship's legs have the
+## same lengths in the wrapping cube; a ship starting at site 0 uses the site itself (open()).
+## A copy is known to the ship's faction and keyed copy_key().
+func open_copy(world: SimWorld, key: StringName, ship: int) -> int:
+	var copy: StringName = copy_key(world, key, ship)
+	if copy == key:
+		return open(world, key)
+	var existing: int = keys.find(copy)
+	if existing >= 0:
+		return existing
+	for def: SiteDef in map_sites + pool:
+		if def.id == key:
+			var known: int = 1 << world.faction_of(ship)
+			return add_site(
+				def, world.kin.period, known, world.tick, copy, copy_offset(world, ship)
+			)
+	return -1
+
+
+## The key of the ship's copy of a site: "<key>@<team>", or the key itself when the ship
+## starts at site 0.
+static func copy_key(world: SimWorld, key: StringName, ship: int) -> StringName:
+	if copy_offset(world, ship) == Vector3.ZERO:
+		return key
+	return StringName("%s@%d" % [key, world.team_of(ship)])
+
+
+## The offset of the ship's start site from site 0 (m), zero for a ship starting there.
+static func copy_offset(world: SimWorld, ship: int) -> Vector3:
+	var start: int = world.ship_start_site.get(ship, -1)
+	if start <= 0 or start >= world.sites.size():
+		return Vector3.ZERO
+	return world.sites.point3(start) - world.sites.point3(0)
 
 
 func key_of(site: int) -> StringName:
