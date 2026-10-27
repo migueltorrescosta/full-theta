@@ -272,7 +272,7 @@ Comms holds all NPC text and replies, contracts, priorities, missions, opportuni
 - **FT-COM-003** Comms shall accept or decline contracts alone, with no co-sign. (D57)
 - **FT-COM-004** Comms shall show what can be bought and sold, with prices, and shall make trades. (D68, D34)
 - **FT-COM-005** Comms shall show reputation per faction and the visible range of reputation outcomes where sensible. (D34)
-- **FT-COM-006** Each NPC conversation shall be claimable, and only its claimer shall hear that NPC's voice. (D18, D39)
+- **FT-COM-006** Each NPC conversation shall be claimable, and only its claimer shall hear that NPC's voice; while nobody holds the claim, every Comms holder of that ship shall hear its lines. (D18, D39, D238)
 - **FT-COM-007** Dialogue replies shall be structured choices; free text input shall not be required. (v0.3 §8)
 - **FT-COM-008** Comms shall show missions, contracts, offers and hails as cards on a board, and shall open a card's conversation as an overlay above the board. (D87)
 - **FT-COM-009** While the ship is docked, Comms shall buy and sell slot modules among the station's offers. (D86)

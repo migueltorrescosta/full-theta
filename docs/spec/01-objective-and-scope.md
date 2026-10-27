@@ -8,7 +8,7 @@ Full Theta is a cross-platform, LAN, multi-crew 3D spaceship game loosely inspir
 - Each ship needs at least 3 crew players covering the 6 functional stations through stations and joint views (D19, D66, D67). Typical crews are 3–6 players; several players may share a station (D10, D18).
 - The Captain seat and main-screen viewers are optional extras (D15, D23, D54).
 - One session admits at most 64 connections in total: crew, Captains and viewers (D22).
-- A run lasts 20–40 minutes and holds about 5 encounters (v0.3 §2, D31). Nothing persists between runs (D32).
+- A run lasts 20–40 minutes and holds 4 to 6 encounters (v0.3 §2, D31, D236). Nothing persists between runs (D32).
 - Players communicate by voice in the same room, aided by shared names, marks, pings and alerts. Speech recognition is out of scope (v0.3 §2).
 - No human game master: an adaptive director composes handcrafted scenario components (v0.3 §2, D35, D64).
 

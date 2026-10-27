@@ -8,7 +8,7 @@ Six functional stations make 15 pairs; each has a cooperative mechanic built on 
 |---|---|---|---|
 | PWR | Power bus | reactor output, pips, heat, overcharge | E |
 | COND | Ship condition | subsystem health, faults, crews, parts, ammo, propellant, probe stock, mount arcs | damage, E, W, R |
-| KNOW | Contact knowledge (per faction) | detection, scan level, class, intent, weak points, resistances, hack access, tracks | S, R (probes), C (intent) |
+| KNOW | Contact knowledge (per faction) | detection, scan level, class, intent (UNKNOWN until a scan or a reply sets it, D249), weak points, resistances, hack access, tracks | S, R (probes), C (intent) |
 | MARK | Marks and pings | marks, pings, routes, approach lanes, hazard zones, scan positions | any station; R curates |
 | STORY | Story state | conversations, contracts, missions, opportunities, clearances, reputation per faction | C, director |
 | CUE | Requests and cues | request chips, acknowledgements, audio cues, debrief log | any station |

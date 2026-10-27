@@ -31,3 +31,5 @@ FT_UPDATE_GOLDEN=1 /path/to/godot --headless --path . -s res://addons/gdUnit4/bi
 ## L4 network scenarios
 
 The multi-process network tests are not gdUnit4 suites: `tools/gate.sh l4` runs the scenarios in `tools/l4/scenarios/`, each a shell script and one intent file per client (`tools/l4/README.md`). They verify FT-TST-011 and FT-TST-014 by a gate run rather than `# FT:` tags; record the passing commit in the PR body.
+
+`tools/gate.sh l2` runs the simulation-side suites only (`tests/sim`, `tests/pairs`, `tests/scenarios`, `tests/director`) for a quick check while working on the sim; `l1` already runs them. `l3` runs `tests/net` on 2 cores (D244).
