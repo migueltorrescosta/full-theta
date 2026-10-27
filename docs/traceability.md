@@ -290,7 +290,7 @@ Tests: 368, manual: 13, pending: 20.
 | FT-MIS-006 | tests | `tests/director/test_director_no_write.gd`, `tests/director/test_reason_keys.gd`, `tests/net/test_debrief_l3.gd` |
 | FT-MIS-008 | tests | `tests/director/test_director_budget.gd`, `tests/net/test_net_toggles_l3.gd` |
 | FT-MIS-009 | manual | [#13](https://github.com/migueltorrescosta/full-theta/issues/13) |
-| FT-MIS-010 | tests | `tests/net/test_debrief_l3.gd` |
+| FT-MIS-010 | tests | `tests/net/test_debrief_l3.gd`, `tests/sim/run/test_encounter_fixes.gd` |
 | FT-MIS-011 | tests | `tests/sim/economy/test_modules.gd`, `tests/sim/run/test_encounter_fixes.gd` |
 | FT-MIS-012 | pending |  |
 | FT-MIS-013 | pending |  |
