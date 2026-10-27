@@ -65,3 +65,21 @@ func test_impulse_flight_reaches_the_next_site() -> void:
 			break
 	assert_int(SiteTable.at_site(f.world, 0)).is_equal(vesper)
 	assert_float(absf(f.world.kin.px[0])).is_less(f.world.kin.period / 2.0)
+
+
+# FT: FT-MIS-041
+# Review 2 M5: a ship still at the yard when the leg starts (the arrival timeout) has crossed
+# nothing, so the encounter doesn't end at once; it ends when the ship has left and come back.
+func test_a_ship_at_the_yard_has_not_crossed_the_leg() -> void:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	f.begin(&"debris_leg", &"vesper_beacon")
+	var yard: Vector3 = f.world.sites.point3(0)
+	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	f.run(60 * 5)
+	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.ACTIVE)
+	assert_int(f.ships_of(&"m3_debris").size()).is_equal(6)
+	var away: Vector3 = f.world.sites.point3(f.site)
+	f.world.kin.place(0, away.x, away.y, away.z)
+	f.run(5)
+	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)

@@ -145,3 +145,47 @@ func test_the_next_encounter_waits_a_quiet_gap_and_opens_a_site() -> void:
 	)
 	assert_int(ends.size()).is_equal(1)
 	assert_int(w.run.encounters_done[0]).is_equal(3)
+
+
+# FT: FT-MIS-029
+# Q14: every scenario costs at least 1; only the training scenario may be free.
+func test_a_free_scenario_is_rejected_except_training() -> void:
+	var def: DirectorDef = _def().director
+	def.costs = {&"enemy_wave": 0}
+	assert_array(def.validate()).has_size(1)
+	def.costs = {&"shakedown": 0}
+	assert_array(def.validate()).is_empty()
+	var run: RunDef = _def(7, 8)
+	(
+		assert_array(run.validate().filter(func(e: String) -> bool: return e.contains("budget")))
+		. has_size(1)
+	)
+
+
+# FT: FT-MIS-029
+# Review 2 M4: when an earlier begin of the tick is rejected, the director's run for the next
+# ship keeps its own encounter, found by its handle and not by a predicted id.
+func test_a_rejected_begin_does_not_block_the_ship_for_the_run() -> void:
+	var w: SimWorld = ApiFixture.world(1, _def(1, 2))
+	var api: ScenarioApi = ScenarioApi.new(w)
+	# Someone else's begin takes the ship's encounter slot in the same tick, so the director's
+	# own begin is rejected; its predicted id would have named the other's encounter.
+	api.begin_encounter(&"s_a", 1, PackedInt32Array([0]), 1)
+	var d: Director = Director.new(w.run_def.director, &"hard", _catalogue(), 3)
+	var host: ScenarioHost = ScenarioHost.new(w)
+	for i: int in 400:
+		host.advance(SimWorld.DT * 1.001, d.before_tick)
+	var refunds: Array[DirectorDecision] = d.decisions().filter(
+		func(x: DirectorDecision) -> bool: return x.reason_key == "director.reason.rejected"
+	)
+	assert_int(w.encounters.size()).is_greater_equal(1)
+	# The foreign encounter was never stepped by the director; once it ends, the ship goes on.
+	var end: EndEncounterCommand = EndEncounterCommand.new()
+	end.encounter = 0
+	end.result = EncounterTable.Result.WON
+	w.submit(end)
+	for i: int in 800:
+		host.advance(SimWorld.DT * 1.001, d.before_tick)
+	assert_int(w.encounters.size()).is_greater_equal(2)
+	assert_int(w.run.encounters_done[0]).is_greater_equal(2)
+	assert_array(refunds).is_not_empty()
