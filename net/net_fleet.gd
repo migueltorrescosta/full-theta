@@ -142,8 +142,11 @@ func waiting() -> Array[int]:
 
 ## Start pressed by `s`, whose ship passes coverage (ServerSession._on_ready checked it). Returns
 ## the ships to launch now, all together, or [] while others wait (M4-Q4). With the mode's slot
-## errors (SessionRules.slot_errors) the press is refused `bad_mode` with the errors.
+## errors (SessionRules.slot_errors) the press is refused `bad_mode` with the errors. On a
+## fixed world a ship crewed after the universe started starts alone.
 func press_start(s: NetSession) -> Array[int]:
+	if not session.launched.is_empty():
+		return [s.ship]
 	pressed[s.ship] = true
 	_dirty = true
 	if not waiting().is_empty():
