@@ -18,7 +18,8 @@ extends StationPanel
 ## orbit, RT scan, LT hack, d-pad up ping, down scan-position mark, left / right
 ## subsystem, LB sensors mode, LB + d-pad down own-ship scan; in a scan the sticks turn
 ## the open axes, X submits, Y cancels; in a hack the stick or d-pad moves the route.
-## Touch: the buttons and the minigames' tap and drag.
+## Touch: the buttons and the minigames' tap and drag. A lone Science panel on a phone
+## moves its parts into thumb rails (SciencePhone, #28).
 
 ## Scan dial rate with a key or stick at full deflection (rad/s).
 const DIAL_RATE: float = 1.6
@@ -48,6 +49,8 @@ var radar: DiscRadar
 var scan_game: ScanGame
 var hack_game: HackGame
 var card_view: ScienceCard
+## The phone arrangement (SciencePhone), null in the wide layout.
+var phone: SciencePhone
 
 var _list: ItemList
 var _list_key: Array = []
@@ -60,6 +63,7 @@ var _sub_index: int = 0
 var _cursor: Vector2 = Vector2(-1, -1)
 var _stick_armed: bool = true
 var _last_sent: int = -2
+var _rows: VBoxContainer
 
 
 func _setup() -> void:
@@ -69,6 +73,7 @@ func _setup() -> void:
 	rows.add_theme_constant_override("separation", 4)
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rows)
+	_rows = rows
 	var top: BoxContainer = BoxContainer.new()
 	_top = top
 	top.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -107,7 +112,7 @@ func _setup() -> void:
 	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if radar == null else 0
 	top.add_child(card_view)
 	_build_bar(rows)
-	resized.connect(_stack)
+	resized.connect(_on_resized)
 	_stack()
 	ctx.crew.changed.connect(_on_crew_changed)
 	# A contact picked before this panel existed (late pick, reconnect) is still the
@@ -123,16 +128,7 @@ func _build_bar(rows: VBoxContainer) -> void:
 	_bar.add_theme_constant_override("h_separation", 6)
 	_bar.add_theme_constant_override("v_separation", 4)
 	rows.add_child(_bar)
-	for spec: Array in [
-		["mode", "sci.mode_passive", _toggle_mode],
-		["scan", "sci.scan", _scan],
-		["hack", "sci.hack", _hack],
-		["sub", "", _cycle_subsystem.bind(1)],
-		["ping", "sci.ping", _ping],
-		["mark", "sci.scan_mark", _scan_mark],
-		["self", "sci.self_scan", _self_scan],
-		["claim", "sci.claim", _claim_scan],
-	]:
+	for spec: Array in actions():
 		var b: Button = Button.new()
 		b.text = tr(spec[1]) if spec[1] != "" else ""
 		b.pressed.connect(spec[2])
@@ -145,6 +141,51 @@ func _build_bar(rows: VBoxContainer) -> void:
 	_status.clip_text = true
 	_status.custom_minimum_size = Vector2(120, 0)
 	_bar.add_child(_status)
+
+
+## The eight actions as [key, label key, command]: the bar's buttons and a phone's rails.
+func actions() -> Array[Array]:
+	return [
+		["mode", "sci.mode_passive", _toggle_mode],
+		["scan", "sci.scan", _scan],
+		["hack", "sci.hack", _hack],
+		["sub", "", _cycle_subsystem.bind(1)],
+		["ping", "sci.ping", _ping],
+		["mark", "sci.scan_mark", _scan_mark],
+		["self", "sci.self_scan", _self_scan],
+		["claim", "sci.claim", _claim_scan],
+	]
+
+
+func _on_resized() -> void:
+	_arrange()
+	if phone == null:
+		_stack()
+
+
+## A lone panel on a phone uses the phone arrangement for the form (rebuilt when the
+## phone turns); elsewhere, and docked, the wide one.
+func _arrange() -> void:
+	var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
+	if is_inside_tree():
+		form = SciencePhone.form_of_panel(self)
+	var want: bool = radar != null and not docked and LayoutMode.is_phone(form)
+	if want and phone != null and phone.form == form:
+		return
+	if not want and phone == null:
+		return
+	if phone != null:
+		phone.release()
+		phone.queue_free()
+		phone = null
+	if want:
+		phone = SciencePhone.new()
+		add_child(phone)
+		phone.build(self, form)
+	_rows.visible = phone == null
+	if phone == null:
+		_stack()
+	refresh()
 
 
 ## The list and card show unless docked; a narrow panel gives a minigame their room.
@@ -167,6 +208,7 @@ func _stack() -> void:
 
 
 func _mode_changed() -> void:
+	_arrange()
 	_show_parts()
 	_bar.visible = not docked
 	if radar != null:
@@ -262,6 +304,8 @@ func refresh() -> void:
 	card_view.set_card(ctx.view.callsign(sel) if sel >= 0 else "", card_of(sel), _hacks_on(sel))
 	_refresh_list()
 	_refresh_buttons(b, session)
+	if phone != null:
+		phone.update(session)
 
 
 func _blip_scale(b: Dictionary) -> Dictionary:

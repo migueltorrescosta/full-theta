@@ -57,6 +57,9 @@ var cursor: Vector2 = Vector2.ZERO
 var cursor_on: bool = false
 ## The y the span caption sits above (the HUD's bottom box), or -1 for the panel's bottom.
 var caption_bottom: float = -1.0
+## The part of the map the view centres in and fits, in its coordinates; empty for all of
+## it. A phone's overlay rails cover the rest (#28).
+var view_rect: Rect2 = Rect2()
 ## The ship's probes (the RELAY block's rows): {"serial", "deployed", "pos" (
 ## m), "range" (m)}.
 var probes: Array = []
@@ -73,7 +76,12 @@ func _init() -> void:
 
 ## Pixels per metre.
 func ppm() -> float:
-	return minf(size.x, size.y) / 2.0 / span_m
+	var v: Vector2 = _view().size
+	return minf(v.x, v.y) / 2.0 / span_m
+
+
+func _view() -> Rect2:
+	return view_rect if view_rect.has_area() else Rect2(Vector2.ZERO, size)
 
 
 ## Zoom in (-1) or out (+1) one step.
@@ -109,13 +117,13 @@ func rel_of(it: Dictionary) -> Vector3:
 ## Screen position (px) of a ship-frame offset from the map centre.
 func project(rel: Vector3) -> Vector2:
 	var p: Vector3 = view.transposed() * rel
-	return size / 2.0 + Vector2(p.x, -p.y) * ppm()
+	return _view().get_center() + Vector2(p.x, -p.y) * ppm()
 
 
 ## Ship-frame offset from the map centre of a screen point at `depth` metres along the
 ## view direction (positive toward the camera; 0 is the plane through the centre).
 func unproject(pos: Vector2, depth: float = 0.0) -> Vector3:
-	var d: Vector2 = (pos - size / 2.0) / ppm()
+	var d: Vector2 = (pos - _view().get_center()) / ppm()
 	return view * Vector3(d.x, -d.y, depth)
 
 
@@ -213,8 +221,9 @@ func _draw() -> void:
 		draw_line(cursor - Vector2(10, 0), cursor + Vector2(10, 0), col, 1.5)
 		draw_line(cursor - Vector2(0, 10), cursor + Vector2(0, 10), col, 1.5)
 	var scale_text: String = tr("relay.span") % _km(span_m)
-	var base: float = size.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0
-	_draw_text(font, Vector2(8.0, base - font.get_height(FONT_SIZE)), scale_text, _dim())
+	var base: float = _view().end.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0
+	var x: float = _view().position.x + 8.0
+	_draw_text(font, Vector2(x, base - font.get_height(FONT_SIZE)), scale_text, _dim())
 
 
 ## Hazard bubbles: the sphere's silhouette is a circle of its radius; a sim plane front

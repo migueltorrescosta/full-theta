@@ -17,6 +17,9 @@ extends StationPanel
 ## the selected mark, else it is refused with a toast (FT-SPA-022).
 ## Controller: the left stick moves a cursor, the triggers its depth, the right stick
 ## turns the map; A, R3 and hold R3 select, ping and mark at the cursor (§5.0).
+## Touch: the HUD's buttons and drags on the map; a lone Relay panel on a phone puts the
+## buttons in thumb rails over the full map instead (RelayPhone, #28) and drops the
+## screen's radar column.
 
 ## Under this width (a phone, D195) the HUD stacks around the map.
 const NARROW_W: float = 560.0
@@ -33,6 +36,8 @@ const HAZARD_RADIUS_M: float = 2000.0
 
 var map: RelayMap
 var hud: RelayHud
+## The phone arrangement (RelayPhone), null in the wide layout.
+var phone: RelayPhone
 ## What the next click on the map places: "" (a mark), "probe" or "hazard".
 var armed: String = ""
 var _hint: Label
@@ -70,6 +75,7 @@ func _setup() -> void:
 		func() -> void:
 			hud.set_narrow(size.x < NARROW_W)
 			hud.set_short(size.x >= NARROW_W and size.y < SHORT_H)
+			_arrange()
 	)
 	hud.launch_pressed.connect(func() -> void: _arm("probe"))
 	hud.hazard_pressed.connect(func() -> void: _arm("hazard"))
@@ -90,14 +96,48 @@ func _setup() -> void:
 
 func _mode_changed() -> void:
 	map.chips = not docked
+	_arrange()
 	_update_hint()
-	hud.set_docked(docked)
+	hud.set_docked(docked or phone != null)
+
+
+## A lone panel on a phone takes the whole screen in the phone arrangement (#28).
+func full_screen() -> bool:
+	return _wants_phone()
+
+
+func _wants_phone() -> bool:
+	if docked or not is_inside_tree() or ctx.crew.stations().size() > 1:
+		return false
+	return LayoutMode.is_phone(RelayPhone.form_of_panel(self))
+
+
+## Builds, rebuilds (a turned phone) or drops the phone arrangement.
+func _arrange() -> void:
+	var want: bool = _wants_phone()
+	var form: LayoutMode.Form = RelayPhone.form_of_panel(self) if want else LayoutMode.Form.DESKTOP
+	if want and phone != null and phone.form == form:
+		return
+	if not want and phone == null:
+		return
+	if phone != null:
+		phone.release()
+		phone.queue_free()
+		phone = null
+	if want:
+		phone = RelayPhone.new()
+		add_child(phone)
+		move_child(phone, hud.get_index())
+		phone.build(self, form)
+	refresh()
 
 
 ## The hint sits top right over the map; a phone-wide HUD covers that corner, so there it
-## only shows while a probe or hazard is armed.
+## only shows while a probe or hazard is armed. A phone shows it only then too: its
+## mouse-and-keyboard text means nothing on a touch screen (#28).
 func _update_hint() -> void:
-	_hint.visible = not docked and (armed != "" or size.x >= NARROW_W)
+	var wide: bool = size.x >= NARROW_W and phone == null
+	_hint.visible = not docked and (armed != "" or wide)
 
 
 func _process(delta: float) -> void:
@@ -125,6 +165,8 @@ func refresh() -> void:
 	map.caption_bottom = hud.bottom_top() if hud.visible and size.x < NARROW_W else -1.0
 	map.queue_redraw()
 	hud.refresh()
+	if phone != null:
+		phone.update()
 	_hint.text = tr("relay.armed_" + armed) if armed != "" else tr("relay.hint")
 	_update_hint()
 

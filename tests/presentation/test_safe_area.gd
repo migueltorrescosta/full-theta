@@ -92,7 +92,7 @@ func test_phone_portrait_shows_the_dismissible_banner() -> void:
 	var s: StationScreen = await _screen(Vector2i(390, 844), "helm", PORTRAIT)
 	assert_int(s.form).is_equal(LayoutMode.Form.PHONE_PORTRAIT)
 	assert_bool(s.rotate_banner.visible).is_true()
-	assert_str(s.rotate_banner.label.text).is_equal(RotateBanner.TEXT)
+	assert_str(s.rotate_banner.label.text).is_equal(HelmTouch.ROTATE_TEXT)
 	var report: Dictionary = TapAudit.check(s)
 	assert_array(report["outside_safe"]).is_empty()
 	assert_array(report["in_band"]).is_empty()

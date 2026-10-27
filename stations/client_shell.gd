@@ -8,10 +8,28 @@ extends Control
 ## subtitles and the menu (Settings and Controls, D185) on top. It resumes a dropped
 ## connection with its token
 ## (FT-NET-025) and goes back to the lobby when the server resets the run (FT-M1-012).
+##
+## Multi-ship sessions (#11): a session handed over to the scoreboard (no friendly ship
+## left, D91) or in a PvP session that is over shows the ScoreboardScreen; a handover to a
+## friendly ship's main screen shows the HandoverNotice over it; the give-up (forfeit) and
+## relaunch votes show as VotePrompts; the host's abandon or give-up from the menu asks
+## for a confirmation first, since it takes the ship out of play at once.
 
 ## The player left (Settings > Leave); the menu takes over again.
 signal left
 
+## The crew changes that may switch between the lobby, a station and the scoreboard.
+const SCREEN_KINDS: Array[StringName] = [
+	&"picked",
+	&"lobby",
+	&"started",
+	&"reset",
+	&"catalogue",
+	&"fleet",
+	&"handover",
+	&"session_over",
+	&"relaunch",
+]
 ## Retry a dropped connection this often (ms).
 const RESUME_MS: int = 2000
 
@@ -22,6 +40,12 @@ var screen: StationScreen
 var pause_overlay: PauseOverlay
 var outcome_card: OutcomeCard
 var settings_screen: SettingsScreen
+var scoreboard: ScoreboardScreen
+var handover_notice: HandoverNotice
+var forfeit_prompt: VotePrompt
+var relaunch_prompt: VotePrompt
+## The host's "abandon now" confirmation (the menu's abandon or give-up control).
+var confirm_abandon: ConfirmationDialog
 
 var _layer: Control
 var _banner: Label
@@ -126,13 +150,15 @@ func _notification(what: int) -> void:
 
 
 func _on_crew_changed(what: StringName) -> void:
-	if what not in [&"picked", &"lobby", &"started", &"reset", &"catalogue"]:
+	if what not in SCREEN_KINDS:
 		return
 	var want: String = (
 		"lobby"
 		if ctx.crew.entry == "" or not ctx.crew.is_started() or ctx.crew.catalogue.is_empty()
 		else "station:%d:%s" % [ctx.crew.ship, ctx.crew.entry]
 	)
+	if ctx.crew.on_scoreboard():
+		want = "scoreboard"
 	if want == _shown:
 		return
 	_shown = want
@@ -141,7 +167,13 @@ func _on_crew_changed(what: StringName) -> void:
 		c.queue_free()
 	screen = null
 	lobby = null
-	if want == "lobby":
+	scoreboard = null
+	if want == "scoreboard":
+		scoreboard = ScoreboardScreen.new()
+		scoreboard.setup(ctx)
+		scoreboard.menu_requested.connect(leave)
+		_layer.add_child(scoreboard)
+	elif want == "lobby":
 		lobby = LobbyScreen.new()
 		lobby.setup(ctx)
 		lobby.menu_requested.connect(leave)
@@ -192,6 +224,40 @@ func _toggle_help() -> void:
 	menu.open(SettingsScreen.TAB_CONTROLS)
 
 
+## The menu's abandon (co-op) or give-up (PvP) control: a crew player's vote, which they can
+## take back, goes at once; the host's, which ends the ship's run at once, asks first.
+func request_abandon() -> void:
+	if ctx.crew.host:
+		confirm_abandon.dialog_text = (
+			tr("confirm.abandon" if ctx.crew.is_coop() else "confirm.forfeit")
+			% ctx.crew.ship_name()
+		)
+		confirm_abandon.ok_button_text = tr("confirm.yes")
+		confirm_abandon.cancel_button_text = tr("confirm.no")
+		confirm_abandon.popup_centered_clamped(Vector2i(420, 160), 0.9)
+	else:
+		ctx.intents.vote_abandon(ctx.crew.ship, not ctx.crew.has_abandon_vote())
+
+
+func _build_fleet_overlays() -> void:
+	handover_notice = HandoverNotice.new()
+	handover_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	handover_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	handover_notice.position.y += 64
+	add_child(handover_notice)
+	handover_notice.setup(ctx)
+	forfeit_prompt = VotePrompt.new()
+	add_child(forfeit_prompt)
+	forfeit_prompt.setup(ctx, VotePrompt.Kind.FORFEIT)
+	relaunch_prompt = VotePrompt.new()
+	add_child(relaunch_prompt)
+	relaunch_prompt.setup(ctx, VotePrompt.Kind.RELAUNCH)
+	confirm_abandon = ConfirmationDialog.new()
+	confirm_abandon.name = "ConfirmAbandon"
+	confirm_abandon.confirmed.connect(func() -> void: ctx.intents.abandon(ctx.crew.ship))
+	add_child(confirm_abandon)
+
+
 func _build_overlays() -> void:
 	pause_overlay = PauseOverlay.new()
 	pause_overlay.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -205,6 +271,7 @@ func _build_overlays() -> void:
 	outcome_card.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(outcome_card)
 	outcome_card.setup(ctx)
+	_build_fleet_overlays()
 	_banner = Label.new()
 	_banner.theme_type_variation = "TitleLabel"
 	_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -227,13 +294,7 @@ func _build_overlays() -> void:
 	settings_screen.setup(ctx.settings, true)
 	settings_screen.leave_requested.connect(leave)
 	settings_screen.host_pause_requested.connect(func() -> void: ctx.intents.host_pause(true))
-	settings_screen.abandon_requested.connect(
-		func() -> void:
-			if ctx.crew.host:
-				ctx.intents.abandon(ctx.crew.ship)
-			else:
-				ctx.intents.vote_abandon(ctx.crew.ship, not ctx.crew.has_abandon_vote())
-	)
+	settings_screen.abandon_requested.connect(request_abandon)
 	ctx.crew.changed.connect(
 		func(_what: StringName) -> void:
 			settings_screen.set_pause_control(ctx.crew.can_host_pause())
