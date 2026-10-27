@@ -34,6 +34,20 @@ func test_a_ship_reset_out_of_its_encounter_ends_it_as_a_loss() -> void:
 	assert_int(f.world.encounters.result[0]).is_equal(EncounterTable.Result.LOST)
 
 
+# FT: FT-MIS-010, FT-MIS-025
+# A scenario ending the encounter as won on the tick after the crewed ship was destroyed (a
+# ram that took the last raider too) still counts the ship as lost in it.
+func test_a_scenario_ending_an_encounter_after_the_ship_died_records_the_loss() -> void:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	_begin(f, 1)
+	f.world.step()
+	f.world.encounters.result[0] = EncounterTable.Result.ACTIVE
+	f.world.run.status[0] = RunTable.Status.DESTROYED
+	EncounterSystem.finish(f.world, 0, EncounterTable.Result.WON)
+	assert_bool(EncounterTable.has_bit(f.world.encounters.losses_mask[0], 0)).is_true()
+	assert_int(f.world.run.encounter[0]).is_equal(-1)
+
+
 # FT: FT-MIS-027
 func test_a_site_opened_this_tick_is_not_offered_again() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()

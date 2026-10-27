@@ -42,6 +42,11 @@ static func step(world: SimWorld) -> void:
 ## result, other_id the id, tag the scenario).
 static func finish(world: SimWorld, id: int, result: EncounterTable.Result) -> void:
 	var table: EncounterTable = world.encounters
+	# A ship destroyed or abandoned before the scenario ended the encounter (a ram that
+	# also took the last raider with it) is a loss of this encounter all the same.
+	for ship: int in _ships(table.ships_mask[id]):
+		if world.run.encounter[ship] == id and world.run.status[ship] != RunTable.Status.IN_PLAY:
+			table.losses_mask[id] |= 1 << ship
 	table.result[id] = result
 	table.end_tick[id] = world.tick
 	for ship: int in _ships(table.ships_mask[id]):
