@@ -12,6 +12,7 @@ var api: ScenarioApi
 var encounter: int = -1
 var site: int = -1
 var _started: bool = false
+var strength: float = 1.0
 var _begin: ApiHandle
 
 
@@ -44,7 +45,7 @@ func tick() -> void:
 	if view.result == Scenario.Result.ACTIVE:
 		if not _started:
 			_started = true
-			scenario.start(api, {"site": site, "ships": view.ships})
+			scenario.start(api, {"site": site, "ships": view.ships, "strength": strength})
 		scenario.step(api)
 		var result: int = scenario.finished(api)
 		if result != Scenario.Result.ACTIVE:

@@ -1,8 +1,9 @@
 extends SceneTree
 ## The headless bot batch (FT-TST-022, FT-MIS-009, FT-MIS-037, FT-GEN-011): plays whole runs
 ## of the director's run with scripted crews, without a network, and writes a markdown
-## report of the per-encounter loss rate, fled encounters, run length and the share of runs
-## that survive 3 of 5 encounters. Run it as a transient unit (tools/bot_batch.sh).
+## report of the per-encounter loss rate, fled encounters, encounters per run (4 to 6, Q4),
+## run length (all runs, won and lost apart) and the share of runs that survive 60 % of
+## their encounters. Run it as a transient unit (tools/bot_batch.sh).
 ##   godot --headless --path . -s res://tools/bot_batch.gd -- [flags]
 ##   --profiles average,novice   crews [average,novice]
 ##   --difficulties easy,normal  presets [easy,normal]

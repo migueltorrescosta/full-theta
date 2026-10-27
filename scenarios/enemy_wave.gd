@@ -15,8 +15,10 @@ const NPC: StringName = &"Marauder Kass"
 ## first. The difficulty preset scales the count (Q14, owner 2026-10-26), at least one.
 const COUNT: int = 2
 const RANGE_M: float = 9000.0
-## The second raider joins this long after the first (s), from behind the first's side.
+## The second raider joins this long after the first (s), from behind the first's side, and
+## each further one this long after the one before.
 const SECOND_AFTER_S: float = 45.0
+const NEXT_EVERY_S: float = 15.0
 const TAUNT_AFTER_S: float = 25.0
 const MAX_S: float = 240.0
 
@@ -67,7 +69,10 @@ func step(api: ScenarioApi) -> void:
 	if not _taunted and elapsed_s >= TAUNT_AFTER_S:
 		_taunted = true
 		api.message("npc.taunt_raider", {}, SayTarget.npc(NPC, _ship))
-	if _raiders.size() < _count and elapsed_s >= SECOND_AFTER_S:
+	if (
+		_raiders.size() < _count
+		and elapsed_s >= SECOND_AFTER_S + NEXT_EVERY_S * (_raiders.size() - 1)
+	):
 		_raiders.append(api.spawn_at_range(ENEMY, RAIDER_FACTION, _ship, RANGE_M, _clock(api), 0))
 	for e: ApiEvent in api.events():
 		if e.kind == &"surrender_roll" and e.ship_id == _ship and not _surrendered:

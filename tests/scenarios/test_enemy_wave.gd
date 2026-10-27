@@ -81,3 +81,44 @@ func test_relation_enum_matches_the_sim() -> void:
 	assert_int(Scenario.Relation.NEUTRAL).is_equal(SimWorld.Relation.NEUTRAL)
 	assert_int(Scenario.Relation.HOSTILE).is_equal(SimWorld.Relation.HOSTILE)
 	assert_int(CardView.State.EXPIRED).is_equal(StoryTable.State.EXPIRED)
+
+
+## The wave at a difficulty's enemy strength (Q14).
+func _wave_at(strength: float) -> ScenarioFixture:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	f.strength = strength
+	f.begin(&"enemy_wave", SITE)
+	f.run(60 * 80)
+	return f
+
+
+# FT: FT-MIS-003, FT-MIS-029
+# Q14, owner 2026-10-26: the difficulty preset scales the raiders in the wave, rounded, at
+# least one: Easy (0.5) one, Normal two, Hard (1.5) three.
+func test_the_wave_scales_with_the_difficulty_strength() -> void:
+	assert_int(_wave_at(0.5).ships_of(&"m1_raider").size()).is_equal(1)
+	assert_int(_wave_at(1.0).ships_of(&"m1_raider").size()).is_equal(2)
+	assert_int(_wave_at(1.5).ships_of(&"m1_raider").size()).is_equal(3)
+	assert_int(_wave_at(0.1).ships_of(&"m1_raider").size()).is_equal(1)
+
+
+# FT: FT-PAIR-004, FT-TST-022
+# Review 2 L2: an answered hail is ACCEPTED, not OPEN, and the bot crew still follows it with
+# the surrender demand; the demand sets the faction's intent for the raider (Q22: it was
+# UNKNOWN) and the roll is logged.
+func test_the_bot_crew_demands_surrender_after_the_hail_is_answered() -> void:
+	var f: ScenarioFixture = _wave()
+	var crew: BotCrew = BotCrew.new(BotProfiles.average(), 0, 5)
+	var raider: int = f.ships_of(&"m1_raider")[0]
+	var row: int = f.world.knowledge.ensure_contact(1, raider)
+	assert_int(f.world.knowledge.intent[row]).is_equal(KnowledgeTable.Intent.UNKNOWN)
+	var replied: bool = false
+	for i: int in 60 * 40:
+		crew.act(f.world)
+		f.tick()
+		for c: SimCommand in f.world.command_log:
+			replied = replied or (c is ReplyCommand and c.accepted)
+		if replied:
+			break
+	assert_bool(replied).is_true()
+	assert_int(f.world.knowledge.intent[row]).is_not_equal(KnowledgeTable.Intent.UNKNOWN)

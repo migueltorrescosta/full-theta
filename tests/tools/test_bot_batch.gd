@@ -25,8 +25,11 @@ func test_a_smoke_batch_gives_a_deterministic_report() -> void:
 	assert_str(report).contains("| easy / novice |")
 	assert_str(report).contains("loss rate")
 	assert_str(report).contains("fled rate")
-	assert_str(report).contains("run length min")
-	assert_str(report).contains("survive 3 of 5")
+	assert_str(report).contains("run length min, all runs")
+	assert_str(report).contains("won runs")
+	assert_str(report).contains("lost runs")
+	assert_str(report).contains("encounters per run")
+	assert_str(report).contains("survive 60 %")
 	assert_str(BotReport.markdown(_batch())).is_equal(report)
 
 
@@ -61,3 +64,39 @@ func test_the_report_counts_losses_and_fled_encounters_apart() -> void:
 	var report: String = BotReport.markdown([run])
 	assert_str(report).contains("| 3 | 1 | 33.3 % | 1 | 33.3 % |")
 	assert_str(report).contains("| enemy_wave | 2 | 1 | 50.0 % | 0 | 0.0 % |")
+
+
+# FT: FT-TST-022, FT-GEN-011
+# Q4: the run length is averaged over all runs and over the won and lost ones apart, and the
+# encounters per run (4 to 6) are counted.
+func test_the_report_averages_run_length_over_all_runs_and_counts_encounters() -> void:
+	var enc: Dictionary = {"scenario": "rescue", "result": "won", "lost": false, "fled": false}
+	var lost_enc: Dictionary = {"scenario": "rescue", "result": "lost", "lost": true, "fled": false}
+	var runs: Array[Dictionary] = [
+		{
+			"profile": "average",
+			"difficulty": "easy",
+			"outcome": "win",
+			"run_s": 1200.0,
+			"encounters": [enc, enc, enc, enc]
+		},
+		{
+			"profile": "average",
+			"difficulty": "easy",
+			"outcome": "win",
+			"run_s": 2400.0,
+			"encounters": [enc, enc, enc, enc, enc, enc]
+		},
+		{
+			"profile": "average",
+			"difficulty": "easy",
+			"outcome": "loss",
+			"run_s": 600.0,
+			"encounters": [enc, lost_enc]
+		},
+	]
+	var report: String = BotReport.markdown(runs)
+	# All runs: (20 + 40 + 10) / 3 = 23.3, median 20; won: 30, 40 (median of two taken high);
+	# lost: 10. Encounters per run: 12 over 3 runs, 2 to 6. Survived 60 %: two of three runs.
+	assert_str(report).contains("| 4.0 (2 to 6) | 12 |")
+	assert_str(report).contains("| 23.3, 20.0 | 30.0, 40.0 | 10.0, 10.0 | 66.7 % |")

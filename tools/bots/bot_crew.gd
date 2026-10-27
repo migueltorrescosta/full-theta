@@ -243,11 +243,22 @@ func _go(world: SimWorld, site: int, must_jump: bool) -> void:
 func _comms(world: SimWorld) -> void:
 	var story: StoryTable = world.story
 	for card: int in story.size():
-		if not Story.visible_to(world, card, ship) or story.state[card] != StoryTable.State.OPEN:
+		if not Story.visible_to(world, card, ship):
 			continue
-		if story.kind[card] == StoryTable.Kind.HAIL:
-			if profile.demands_surrender and story.conversation[card] == &"conv.surrender_demand":
+		var kind: int = story.kind[card]
+		var state: int = story.state[card]
+		# An answered hail is ACCEPTED, not OPEN: the surrender demand follows the answer
+		# (review 2 L2).
+		if kind == StoryTable.Kind.HAIL:
+			var live: bool = state == StoryTable.State.OPEN or state == StoryTable.State.ACCEPTED
+			if (
+				live
+				and profile.demands_surrender
+				and story.conversation[card] == &"conv.surrender_demand"
+			):
 				_demand_surrender(world, card)
+		elif state != StoryTable.State.OPEN or kind == StoryTable.Kind.INFO:
+			continue  # an information card has nothing to accept (Q23)
 		elif not _decided.has(card) and _after_card(world, card):
 			_decided[card] = true
 			if _accepts(story.title[card]):
