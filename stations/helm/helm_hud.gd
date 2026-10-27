@@ -7,11 +7,15 @@ extends Control
 ## (assist or decoupled, speed, setpoint, active assist modes), the thrust envelope and
 ## propellant (FT-HLM-012) and the controller radial. Compact (docked): compass and
 ## read-out only. Drawn every frame from the panel's context; never captures input.
+## On a phone the read-outs and edge arrows stay inside `area()`, clear of the touch rails
+## (HelmPanel.hud_area, #28).
 
 const FONT_SIZE: int = 14
 const SMALL: int = 12
 ## Off-screen arrows sit this far inside the view's edge.
 const EDGE: float = 36.0
+## On a phone an arrow keeps this far (px) from the read-outs (its label sits beside it).
+const ARROW_CLEAR: float = 14.0
 const COMPASS_R: float = 46.0
 ## Envelope bars show 0..BAR_MAX of nominal; a tick marks nominal.
 const BAR_MAX: float = 1.5
@@ -28,6 +32,9 @@ const NARROW_W: float = 640.0
 const PHONE_W: float = 420.0
 ## The flight read-out's top edge, from the view's bottom.
 const READOUT_H: float = 168.0
+## Envelope bar length, and on a phone (narrower, so the compass fits beside the read-out).
+const BAR_W: float = 140.0
+const PHONE_BAR_W: float = 100.0
 
 var panel: HelmPanel
 var compact: bool = false
@@ -35,6 +42,23 @@ var compact: bool = false
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+## Where the read-outs go (this control's coordinates): the view clear of a phone's rails,
+## else all of it.
+func area() -> Rect2:
+	if panel == null:
+		return Rect2(Vector2.ZERO, size)
+	return panel.hud_area(self)
+
+
+## True with a phone's touch layout over the view.
+func touch_layout() -> bool:
+	return panel != null and panel.touch_ui != null
+
+
+func _bar_w() -> float:
+	return PHONE_BAR_W if touch_layout() else BAR_W
 
 
 ## The items on the view: ContactPicture's contacts, marks and named sites with their screen
@@ -165,11 +189,12 @@ func _draw() -> void:
 			_draw_marker(font, e, e["selected"])
 		elif e["arrow"]:
 			_draw_arrow(font, e, e["selected"])
+	var a: Rect2 = area()
 	_draw_compass(font, _compass_centre())
-	_draw_readout(font, Vector2(16.0, size.y - 150.0), true)
+	_draw_readout(font, Vector2(a.position.x + 16.0, a.end.y - 150.0), true)
 	if panel.chase:
-		_text(font, Vector2(16.0, 24.0), tr("helm.chase"), Palette.color("text_dim"))
-	if not panel.steering() and panel.ctx.matcher.device == IntentTable.KBM:
+		_text(font, a.position + Vector2(16.0, 24.0), tr("helm.chase"), Palette.color("text_dim"))
+	if not panel.steering() and panel.ctx.matcher.device == IntentTable.KBM and not touch_layout():
 		_text(font, Vector2(16.0, 44.0), tr("helm.pointer_free"), Palette.color("text_dim"))
 	if panel.ctx.matcher.is_held("helm_radial"):
 		_draw_radial(font)
@@ -243,6 +268,10 @@ func thrust_input() -> Vector3:
 
 ## The thrust cross's centre: beside the compass, clear of the ring.
 func thrust_centre() -> Vector2:
+	var a: Rect2 = area()
+	if touch_layout():
+		# A phone's view: top left of the part clear of the rails.
+		return a.position + Vector2(CROSS_ARM + 22.0, 52.0)
 	if size.x < PHONE_W:
 		# A phone has no room beside the compass: top left, under the mode captions.
 		return Vector2(CROSS_ARM + 22.0, 92.0)
@@ -364,7 +393,7 @@ func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
 	var marker: Rect2 = Rect2(p - Vector2(r, r) * 1.3, Vector2(r, r) * 2.6)
 	var best: Rect2 = right
 	var best_d: float = INF
-	var inside: Rect2 = Rect2(Vector2.ZERO, size)
+	var inside: Rect2 = area()
 	for t: Rect2 in tries:
 		if _hits(t, avoid) or t.intersects(marker) or not inside.encloses(t):
 			continue
@@ -380,18 +409,33 @@ func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
 ## compass (with its chip) and the flight read-out.
 func reserved() -> Array[Rect2]:
 	var out: Array[Rect2] = []
-	if panel != null and panel.ring != null and panel.ring.visible:
+	if (
+		panel != null
+		and panel.ring != null
+		and panel.ring.visible
+		and panel.ring.get_parent() == panel
+	):
 		out.append(panel.ring.get_rect().grow(2.0))
-	var c: Vector2 = _compass_centre()
-	out.append(Rect2(c - Vector2(2.0 * COMPASS_R, COMPASS_R), Vector2(4.0, 2.0) * COMPASS_R))
-	out[-1].size.y += 24.0
+	out.append(_compass_rect())
 	# The flight read-out: mode, speed, active modes and the three bars.
-	out.append(Rect2(Vector2(14.0, size.y - READOUT_H), Vector2(262.0, 130.0)))
+	out.append(readout_rect())
 	out.append(thrust_rect())
 	return out
 
 
+## The flight read-out's box: mode, speed, active modes and the three bars.
+func readout_rect() -> Rect2:
+	var a: Rect2 = area()
+	return Rect2(
+		Vector2(a.position.x + 14.0, a.end.y - READOUT_H), Vector2(_bar_w() + 122.0, 130.0)
+	)
+
+
 func _compass_centre() -> Vector2:
+	var a: Rect2 = area()
+	if touch_layout():
+		# Bottom right of the clear view, beside the read-out.
+		return Vector2(a.end.x - 2.0 * COMPASS_R - 4.0, a.end.y - COMPASS_R - 40.0)
 	return Vector2(300.0, size.y - COMPASS_R - 40.0)
 
 
@@ -428,13 +472,62 @@ static func _hits(box: Rect2, others: Array[Rect2]) -> bool:
 	return false
 
 
-## Where a ray from the view centre along `dir` (screen axes) meets the edge inset by EDGE.
+## Where a ray from the view centre along `dir` (screen axes) meets the edge inset by EDGE
+## (on a phone, the edge of the view clear of the rails).
 func _edge_point(dir: Vector2) -> Vector2:
 	dir = dir.normalized() if dir.length() >= 1e-3 else Vector2.DOWN
 	var c: Vector2 = size / 2.0
-	var half: Vector2 = c - Vector2(EDGE, EDGE)
-	var t: float = minf(half.x / maxf(absf(dir.x), 1e-6), half.y / maxf(absf(dir.y), 1e-6))
-	return c + dir * t
+	if not touch_layout():
+		var half: Vector2 = c - Vector2(EDGE, EDGE)
+		var t: float = minf(half.x / maxf(absf(dir.x), 1e-6), half.y / maxf(absf(dir.y), 1e-6))
+		return c + dir * t
+	var box: Rect2 = area().grow(-EDGE)
+	c = c.clamp(box.position, box.end)
+	var tx: float = ((box.end.x if dir.x > 0.0 else box.position.x) - c.x) / dir.x
+	var ty: float = ((box.end.y if dir.y > 0.0 else box.position.y) - c.y) / dir.y
+	if absf(dir.x) < 1e-6:
+		tx = INF
+	if absf(dir.y) < 1e-6:
+		ty = INF
+	return c + dir * minf(tx, ty)
+
+
+## An arrow tip moved off the read-outs, along the view's edge: the nearest spot on its
+## edge clear of them (above or below on a side edge, beside on the top or bottom edge);
+## where none is clear it stays.
+func arrow_tip(tip: Vector2) -> Vector2:
+	var a: Rect2 = area().grow(-EDGE)
+	var keeps: Array[Rect2] = []
+	for r: Rect2 in [readout_rect(), _compass_rect(), thrust_rect()]:
+		keeps.append(r.grow(ARROW_CLEAR))
+	if not keeps.any(func(k: Rect2) -> bool: return k.has_point(tip)):
+		return tip
+	var side: bool = is_equal_approx(tip.x, a.position.x) or is_equal_approx(tip.x, a.end.x)
+	var best: Vector2 = tip
+	var best_d: float = INF
+	for k: Rect2 in keeps:
+		var spots: Array[Vector2] = []
+		if side:
+			spots = [Vector2(tip.x, k.position.y - 1.0), Vector2(tip.x, k.end.y + 1.0)]
+		else:
+			spots = [Vector2(k.position.x - 1.0, tip.y), Vector2(k.end.x + 1.0, tip.y)]
+		for p: Vector2 in spots:
+			if (
+				not a.grow(1.0).has_point(p)
+				or keeps.any(func(q: Rect2) -> bool: return q.has_point(p))
+			):
+				continue
+			if p.distance_to(tip) < best_d:
+				best_d = p.distance_to(tip)
+				best = p
+	return best
+
+
+func _compass_rect() -> Rect2:
+	var c: Vector2 = _compass_centre()
+	return Rect2(
+		c - Vector2(2.0 * COMPASS_R, COMPASS_R), Vector2(4.0 * COMPASS_R, 2.0 * COMPASS_R + 24.0)
+	)
 
 
 ## An arrow on the view's edge toward an item off screen or behind (FT-HLM-004).
@@ -444,6 +537,8 @@ func _draw_arrow(font: Font, e: Dictionary, selected: bool) -> void:
 	var dir: Vector2 = Vector2(d.x, -d.y)
 	dir = dir.normalized() if dir.length() >= 1e-3 else Vector2.DOWN
 	var tip: Vector2 = _edge_point(dir)
+	if touch_layout():
+		tip = arrow_tip(tip)
 	var side: Vector2 = dir.orthogonal() * 8.0
 	var col: Color = Palette.item_color(e)
 	var pts: PackedVector2Array = PackedVector2Array(
@@ -538,7 +633,7 @@ func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) 
 	if value < 0.0:
 		return
 	_text(font, at + Vector2(0.0, 10.0), label, Palette.color("text_dim"), SMALL)
-	var bar: Rect2 = Rect2(at + Vector2(48.0, 0.0), Vector2(140.0, 10.0))
+	var bar: Rect2 = Rect2(at + Vector2(48.0, 0.0), Vector2(_bar_w(), 10.0))
 	var top: float = BAR_MAX if envelope else 1.0
 	draw_rect(bar, Color(Palette.color("background"), 0.6))
 	var fill: Rect2 = Rect2(bar.position, Vector2(bar.size.x * clampf(value / top, 0.0, 1.0), 10.0))

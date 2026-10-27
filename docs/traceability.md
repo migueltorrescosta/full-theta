@@ -91,7 +91,7 @@ Tests: 368, manual: 13, pending: 20.
 | FT-SIM-001 | tests | `tests/sim/core/test_integrator.gd`, `tests/sim/core/test_sim_world.gd` |
 | FT-SIM-002 | tests | `tests/content/test_content_defs.gd`, `tests/content/test_def_gate.gd`, `tests/pairs/test_p2_helm_weapons.gd` |
 | FT-SIM-003 | tests | `tests/sim/core/test_integrator.gd`, `tests/sim/flight/test_assist_holds.gd` |
-| FT-SIM-004 | tests | `tests/sim/flight/test_assist_holds.gd`, `tests/sim/flight/test_assist_modes.gd` |
+| FT-SIM-004 | tests | `tests/sim/flight/test_assist_holds.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/stations/helm/test_helm_touch.gd` |
 | FT-SIM-005 | tests | `tests/sim/flight/test_assist_holds.gd`, `tests/sim/flight/test_assist_modes.gd` |
 | FT-SIM-006 | tests | `tests/sim/core/test_integrator.gd`, `tests/sim/flight/test_assist_holds.gd`, `tests/sim/power/test_power.gd` |
 | FT-SIM-007 | tests | `tests/sim/core/test_integrator.gd`, `tests/sim/flight/test_assist_holds.gd` |
@@ -127,9 +127,9 @@ Tests: 368, manual: 13, pending: 20.
 | FT-SIM-038 | tests | `tests/sim/core/test_hot_path_equivalence.gd`, `tests/sim/core/test_integrator.gd` |
 | FT-STN-001 | tests | `tests/presentation/test_top_bar.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_main_screen_views.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-STN-002 | tests | `tests/presentation/test_contact_picture.gd`, `tests/presentation/test_disc_radar.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_viewer_panel.gd` |
-| FT-STN-003 | tests | `tests/presentation/test_disc_radar.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
+| FT-STN-003 | tests | `tests/presentation/test_disc_radar.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-STN-004 | tests | `tests/stations/test_relay_station.gd`, `tests/stations/test_station_alerts.gd` |
-| FT-STN-005 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_axes.gd`, `tests/presentation/test_layout_mode.gd`, `tests/presentation/test_safe_area.gd`, `tests/presentation/test_touch_widgets.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
+| FT-STN-005 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_axes.gd`, `tests/presentation/test_layout_mode.gd`, `tests/presentation/test_safe_area.gd`, `tests/presentation/test_touch_widgets.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-STN-006 | tests | `tests/presentation/test_top_bar.gd`, `tests/stations/test_helm_panel.gd`, `tools/tests/test_check_palette.py` |
 | FT-STN-007 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd` |
 | FT-STN-008 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_viewer_panel.gd` |
@@ -138,26 +138,26 @@ Tests: 368, manual: 13, pending: 20.
 | FT-STN-011 | tests | `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_station_screen.gd` |
 | FT-STN-012 | tests | `tests/content/test_i18n.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_first_visit_help.gd` |
 | FT-STN-013 | tests | `tests/stations/test_client_settings.gd`, `tests/stations/test_lobby_and_overlays.gd` |
-| FT-STN-014 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_station_screen.gd` |
+| FT-STN-014 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_station_screen.gd` |
 | FT-STN-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-STN-016 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/stations/test_lobby_toggles.gd` |
 | FT-STN-017 | tests | `tests/stations/test_client_settings.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_viewer_panel.gd`, `tests/stations/test_weapons_panel.gd` |
-| FT-HLM-001 | tests | `tests/stations/test_helm_panel.gd` |
+| FT-HLM-001 | tests | `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd` |
 | FT-HLM-002 | tests | `tests/stations/test_helm_controls.gd` |
-| FT-HLM-003 | tests | `tests/stations/test_helm_panel.gd` |
-| FT-HLM-004 | tests | `tests/stations/test_helm_panel.gd` |
-| FT-HLM-005 | tests | `tests/sim/core/test_hot_path_equivalence.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd`, `tests/stations/test_helm_controls.gd` |
+| FT-HLM-003 | tests | `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd` |
+| FT-HLM-004 | tests | `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd` |
+| FT-HLM-005 | tests | `tests/sim/core/test_hot_path_equivalence.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-006 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd`, `tests/stations/test_helm_controls.gd` |
-| FT-HLM-007 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/stations/test_helm_controls.gd` |
+| FT-HLM-007 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-008 | tests | `tests/stations/test_helm_controls.gd` |
-| FT-HLM-009 | tests | `tests/stations/test_helm_panel.gd`, `tests/stations/test_shield_ring.gd` |
-| FT-HLM-010 | tests | `tests/stations/test_helm_controls.gd` |
+| FT-HLM-009 | tests | `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_shield_ring.gd` |
+| FT-HLM-010 | tests | `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-HLM-011 | tests | `tests/net/test_view_filter.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_shield_ring.gd` |
-| FT-HLM-012 | tests | `tests/net/test_view_filter.gd`, `tests/stations/test_helm_panel.gd` |
-| FT-HLM-013 | tests | `tests/sim/flight/test_dock.gd`, `tests/stations/test_helm_controls.gd`, `tests/stations/test_helm_jump_dock.gd` |
-| FT-HLM-014 | tests | `tests/stations/test_helm_controls.gd` |
-| FT-HLM-015 | tests | `tests/stations/test_helm_controls.gd` |
-| FT-HLM-016 | tests | `tests/sim/flight/test_jump.gd`, `tests/sim/run/test_map_def.gd`, `tests/stations/test_helm_jump_dock.gd` |
+| FT-HLM-012 | tests | `tests/net/test_view_filter.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd` |
+| FT-HLM-013 | tests | `tests/sim/flight/test_dock.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd`, `tests/stations/test_helm_jump_dock.gd` |
+| FT-HLM-014 | tests | `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
+| FT-HLM-015 | tests | `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_controls.gd` |
+| FT-HLM-016 | tests | `tests/sim/flight/test_jump.gd`, `tests/sim/run/test_map_def.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_jump_dock.gd` |
 | FT-HLM-017 | tests | `tests/input/test_binding_table.gd`, `tests/stations/test_helm_controls.gd` |
 | FT-WPN-001 | tests | `tests/stations/test_weapons_panel.gd` |
 | FT-WPN-002 | tests | `tests/stations/test_weapons_panel.gd` |

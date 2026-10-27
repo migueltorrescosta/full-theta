@@ -111,6 +111,11 @@
     {"name": "l5_phl_safe_settings", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "engineering", "menu_tab": "Settings", "insets": [47, 0, 47, 21], "fullscreen": 1}},
     {"name": "l5_phl_touch_kit", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "touch_kit", "insets": [47, 0, 47, 21], "fullscreen": 1}},
     {"name": "l5_phl_touch_kit_docked", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "touch_kit", "docked": true, "insets": [47, 0, 47, 21]}},
-    {"name": "l5_php_safe_helm", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "insets": [0, 47, 0, 34]}}
+    {"name": "l5_php_safe_helm", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_phl_helm", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "ping": 4, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_helm_shield", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "helm_tab": 1, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_helm_radar", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "radar_open": true, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_ph_helm_portrait", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "ping": 4, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_ph_helm_portrait_radar", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "radar_open": true, "stick_slides": true, "insets": [0, 47, 0, 34]}}
   ]
 }
