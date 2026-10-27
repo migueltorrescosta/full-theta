@@ -53,6 +53,11 @@ var board: CommsBoard
 var overlay: CommsOverlay
 var list: CardList
 
+## The phone-landscape arrangement (#28, docked rails like Weapons B): the five buttons in a
+## docked rail at the screen's left edge, the board beside it. Made on first use.
+var touch_layout: RailLayout = null
+
+var _rows: VBoxContainer
 var _bar: HFlowContainer
 var _buttons: Dictionary = {}
 var _status: Label
@@ -68,6 +73,7 @@ func _setup() -> void:
 	rows.add_theme_constant_override("separation", 4)
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rows)
+	_rows = rows
 	board = CommsBoard.new()
 	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	board.card_activated.connect(open_card)
@@ -110,15 +116,79 @@ func _setup() -> void:
 ## A phone's width (under NARROW_BAR px) keeps the five buttons on one row: smaller text and
 ## gaps, so Hold fire doesn't drop to a row of its own.
 func _fit_bar() -> void:
-	var narrow: bool = size.x < NARROW_BAR
-	_bar.add_theme_constant_override("h_separation", 3 if narrow else 6)
+	_arrange_rails()
+	var rails: bool = touch_layout != null and touch_layout.visible
+	# A phone upright (the reduced layout, #28): touch-sized buttons 8 px apart, on two rows.
+	var upright: bool = (
+		is_inside_tree() and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_PORTRAIT
+	)
+	var narrow: bool = size.x < NARROW_BAR and not rails and not upright
+	_bar.add_theme_constant_override(
+		"h_separation", UiTheme.TOUCH_GAP if upright else (3 if narrow else 6)
+	)
+	_bar.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP if upright else 4)
 	for b: Button in _buttons.values():
+		if not rails:
+			b.custom_minimum_size = (
+				Vector2(UiTheme.TOUCH_PRIMARY, UiTheme.TOUCH_PRIMARY) if upright else Vector2.ZERO
+			)
 		if narrow:
 			b.add_theme_font_size_override("font_size", 14)
 			b.add_theme_stylebox_override("normal", _tight(b, "normal"))
 		else:
 			b.remove_theme_font_size_override("font_size")
 			b.remove_theme_stylebox_override("normal")
+
+
+## True when the panel takes the phone-landscape arrangement: focused on a phone on its side.
+func phone_landscape() -> bool:
+	return (
+		is_inside_tree()
+		and not docked
+		and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
+	)
+
+
+## Moves the buttons to the rail on a phone on its side, back under the board elsewhere.
+func _arrange_rails() -> void:
+	var rails: bool = phone_landscape()
+	if rails == (touch_layout != null and touch_layout.visible):
+		return
+	var order: Array[String] = ["hail", "accept", "decline", "claim", "hold_fire"]
+	if rails:
+		if touch_layout == null:
+			touch_layout = RailLayout.new()
+			touch_layout.docked = true
+			touch_layout.offset_top = UiTheme.TOUCH_GAP
+			add_child(touch_layout)
+			touch_layout.rail(SIDE_LEFT)
+		touch_layout.visible = true
+		var gap: MarginContainer = MarginContainer.new()
+		gap.add_theme_constant_override("margin_left", UiTheme.TOUCH_GAP)
+		_rows.reparent(gap, false)
+		_rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		touch_layout.set_content(gap)
+		for id: String in order:
+			var b: Button = _buttons[id]
+			b.reparent(touch_layout.left.box, false)
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.custom_minimum_size.y = UiTheme.TOUCH_PRIMARY
+	else:
+		touch_layout.visible = false
+		var gap: Control = _rows.get_parent()
+		_rows.reparent(self, false)
+		move_child(_rows, 0)
+		_rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		touch_layout.remove_child(gap)
+		gap.queue_free()
+		for id: String in order:
+			var b: Button = _buttons[id]
+			b.reparent(_bar, false)
+			b.size_flags_horizontal = Control.SIZE_FILL
+			b.custom_minimum_size.y = 0.0
+			_bar.move_child(b, order.find(id))
+	if overlay != null:
+		move_child(overlay, -1)
 
 
 ## The button's own style with 6 px side margins.
@@ -140,6 +210,8 @@ func _mode_changed() -> void:
 	board.visible = not docked
 	_bar.visible = not docked
 	list.visible = docked
+	if is_inside_tree():
+		_fit_bar()
 	if docked and overlay != null:
 		overlay.close()
 

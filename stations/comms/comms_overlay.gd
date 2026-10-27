@@ -19,6 +19,10 @@ const MAX_W: float = 760.0
 const SWIPE_PX: float = 60.0
 ## Replies are numbered 1 to MAX_REPLIES.
 const MAX_REPLIES: int = 4
+## A phone's rows (#28): touch-sized with 8 px gaps, in two columns when the box is this wide
+## (a phone on its side), and no keyboard hint under them.
+const PHONE_ROW_H: float = 44.0
+const PHONE_TWO_COLS_W: float = 520.0
 
 ## The COMMS block, the open card, and the focused row (index into `rows()`).
 var data: Dictionary = {}
@@ -31,10 +35,18 @@ var holder: String = ""
 var own_name: String = ""
 var ship_name: String = ""
 
+## Rows that don't fit show a page at a time (a phone's trade offer, #28): the first line
+## of rows shown.
+var first_line: int = 0
+
 var _rows: Array[Dictionary] = []
 var _rects: Array[Rect2] = []
 var _box: Rect2 = Rect2()
 var _press: Vector2 = Vector2(-1.0, -1.0)
+## The line each row is on, and the lines a page shows (see first_line).
+var _line_of: Array[int] = []
+var _lines_shown: int = 0
+var _line_count: int = 0
 
 
 func _init() -> void:
@@ -55,6 +67,7 @@ func show_card(blk: Dictionary, id: int) -> void:
 	card_id = id
 	if fresh:
 		focus = 0
+		first_line = 0
 		status = ""
 	_rows = _make_rows()
 	focus = clampi(focus, 0, maxi(0, _rows.size() - 1))
@@ -158,7 +171,30 @@ func move_focus(step: int) -> void:
 	if _rows.is_empty():
 		return
 	focus = clampi(focus + step, 0, _rows.size() - 1)
+	if focus < _line_of.size():
+		var line: int = _line_of[focus]
+		if line < first_line:
+			first_line = line
+		elif line >= first_line + _lines_shown:
+			first_line = line - _lines_shown + 1
+		_layout()
 	queue_redraw()
+
+
+## True when rows below the page shown don't fit.
+func more_below() -> bool:
+	return first_line + _lines_shown < _line_count
+
+
+## Shows the next page of rows (a swipe up), or the previous one; false when there is none.
+func page(down: bool) -> bool:
+	var to: int = first_line + (maxi(_lines_shown, 1) if down else -maxi(_lines_shown, 1))
+	to = clampi(to, 0, maxi(_line_count - maxi(_lines_shown, 1), 0))
+	if to == first_line:
+		return false
+	first_line = to
+	_layout()
+	return true
 
 
 func _make_rows() -> Array[Dictionary]:
@@ -251,7 +287,12 @@ func _layout() -> void:
 	if not visible and card_id < 0:
 		return
 	var font: Font = get_theme_default_font()
+	var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 	var w: float = minf(size.x - 24.0, MAX_W)
+	var cols: int = 2 if phone and w >= PHONE_TWO_COLS_W else 1
+	var gap: float = float(UiTheme.TOUCH_GAP) if phone else 4.0
+	var row_min: float = PHONE_ROW_H if phone else ROW_H
+	var row_w: float = (w - 2.0 * PAD - (cols - 1) * gap) / cols
 	var body: Vector2 = font.get_multiline_string_size(
 		_body(), HORIZONTAL_ALIGNMENT_LEFT, w - 2.0 * PAD, FONT_SIZE
 	)
@@ -262,19 +303,48 @@ func _layout() -> void:
 		var text_h: float = (
 			font
 			. get_multiline_string_size(
-				row_text(row), HORIZONTAL_ALIGNMENT_LEFT, w - 2.0 * PAD - 16.0, FONT_SIZE
+				row_text(row), HORIZONTAL_ALIGNMENT_LEFT, row_w - 16.0, FONT_SIZE
 			)
 			. y
 		)
-		heights.append(maxf(ROW_H, text_h + 16.0))
-		rows_h += heights[-1] + 4.0
-	var h: float = PAD + 24.0 + body.y + 12.0 + rows_h + 70.0
-	h = minf(h, size.y - 16.0)
+		heights.append(maxf(row_min, text_h + 16.0))
+	# Rows go left to right, then down; a line of rows is as tall as its tallest.
+	var lines: Array[float] = []
+	for i: int in heights.size():
+		if i % cols == 0:
+			lines.append(0.0)
+		lines[-1] = maxf(lines[-1], heights[i])
+	for lh: float in lines:
+		rows_h += lh + gap
+	var foot: float = 70.0
+	if phone:
+		foot = PAD + 22.0
+	var h: float = PAD + 24.0 + body.y + 12.0 + rows_h + foot
+	h = minf(h, size.y - (8.0 if phone else 16.0))
 	_box = Rect2((size.x - w) / 2.0, (size.y - h) / 2.0, w, h)
 	var y: float = _box.position.y + PAD + 24.0 + body.y + 12.0
+	# The lines that fit above the foot; the rest wait for a swipe (page).
+	var room: float = _box.end.y - foot - y
+	_line_count = lines.size()
+	first_line = clampi(first_line, 0, maxi(_line_count - 1, 0))
+	_lines_shown = 0
+	var used: float = 0.0
+	for k: int in range(first_line, lines.size()):
+		if used + lines[k] > room and _lines_shown > 0:
+			break
+		used += lines[k] + gap
+		_lines_shown += 1
+	_line_of.clear()
 	for i: int in _rows.size():
-		_rects.append(Rect2(_box.position.x + PAD, y, w - 2.0 * PAD, heights[i]))
-		y += heights[i] + 4.0
+		var line: int = floori(i / float(cols))
+		_line_of.append(line)
+		if line < first_line or line >= first_line + _lines_shown:
+			_rects.append(Rect2())
+			continue
+		var x: float = _box.position.x + PAD + (i % cols) * (row_w + gap)
+		_rects.append(Rect2(x, y, row_w, lines[line]))
+		if i % cols == cols - 1 or i == _rows.size() - 1:
+			y += lines[line] + gap
 	queue_redraw()
 
 
@@ -286,8 +356,14 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	var moved: Vector2 = event.position - _press
 	_press = Vector2(-1.0, -1.0)
-	if moved.y >= SWIPE_PX and absf(moved.y) > absf(moved.x):
-		close()
+	var vertical: bool = absf(moved.y) > absf(moved.x)
+	# A swipe up shows the rows below; down the rows above, and on the first page closes.
+	if moved.y <= -SWIPE_PX and vertical:
+		page(true)
+		return
+	if moved.y >= SWIPE_PX and vertical:
+		if not page(false):
+			close()
 		return
 	if moved.length() > 12.0:
 		return
@@ -358,6 +434,9 @@ func _draw() -> void:
 		_draw_row(font, i)
 	var foot_y: float = _box.end.y - PAD
 	var hint: String = TranslationServer.translate("comms.overlay_hint")
+	# A phone has no keys to hint at (#28); it says when more rows wait below.
+	if LayoutMode.is_phone(LayoutMode.form_of(self)):
+		hint = TouchText.of("comms.more_rows", "Swipe up for more") if more_below() else ""
 	if status != "":
 		hint = status
 	draw_string(
@@ -373,6 +452,8 @@ func _draw() -> void:
 
 func _draw_row(font: Font, i: int) -> void:
 	var r: Rect2 = _rects[i]
+	if r.size == Vector2.ZERO:
+		return
 	var row: Dictionary = _rows[i]
 	var off: bool = row["kind"] == "reply" and not bool(row["enabled"])
 	draw_rect(r, Palette.color("panel_focus") if i == focus else Palette.color("background"))
