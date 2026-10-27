@@ -29,6 +29,24 @@ def test_map_lists_active_ids_and_excludes_removed(tmp_path):
     assert traceability.run(root, check=True) == []
 
 
+# FT: FT-TST-017
+def test_owner_judged_entry_wins_over_tests(tmp_path):
+    root = fixture(tmp_path)
+    manual = root / "docs/traceability-manual.md"
+    manual.write_text(
+        manual.read_text()
+        + "- FT-AAA-001 https://github.com/owner/repo/issues/8 tests and a playtest\n"
+        + "- FT-AAA-002 (owner-judged) https://github.com/owner/repo/issues/9 target\n"
+    )
+    assert traceability.run(root, check=False) == []
+    text = (root / "docs/traceability.md").read_text()
+    assert "| FT-AAA-001 | tests |" in text
+    assert (
+        "| FT-AAA-002 | manual | `tools/tests/check_sample.py`,"
+        " [#9](https://github.com/owner/repo/issues/9) |" in text
+    )
+
+
 # FT: FT-TST-015
 def test_check_fails_on_stale_map(tmp_path):
     root = fixture(tmp_path)
