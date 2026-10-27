@@ -14,8 +14,14 @@ extends RefCounted
 ## `apply` puts the matching theme on a window and keeps it matching on resize and
 ## rotation; screens ask `kind_of` / `portrait` for their arrangement and listen to the
 ## viewport's `size_changed`.
+##
+## `form_of` adds the orientation to the kind (#28, extends D223): a phone in landscape
+## (about 360-430 px tall) gets the thumb-rail layouts, a phone upright the reduced
+## portrait layouts with a prompt to turn sideways. The theme depends on the kind only.
 
 enum Kind { DESKTOP, TOUCH, PHONE }
+## The kind with the orientation: TABLET is the TOUCH kind in either orientation.
+enum Form { DESKTOP, TABLET, PHONE_PORTRAIT, PHONE_LANDSCAPE }
 
 ## The short side (device-independent px) under which a window is a phone.
 const PHONE_SHORT: float = 600.0
@@ -48,6 +54,27 @@ static func portrait(size: Vector2) -> bool:
 ## The kind of the viewport a node is in.
 static func kind_of(node: Node) -> Kind:
 	return kind_for(dp_size_of(node.get_viewport()), coarse_pointer())
+
+
+## The form for a window of `size` device-independent pixels and a pointer that is coarse
+## or not: the kind, and for a phone its orientation.
+static func form_for(size: Vector2, coarse: bool) -> Form:
+	match kind_for(size, coarse):
+		Kind.PHONE:
+			return Form.PHONE_PORTRAIT if portrait(size) else Form.PHONE_LANDSCAPE
+		Kind.TOUCH:
+			return Form.TABLET
+	return Form.DESKTOP
+
+
+## The form of the viewport a node is in.
+static func form_of(node: Node) -> Form:
+	return form_for(dp_size_of(node.get_viewport()), coarse_pointer())
+
+
+## True for both phone forms.
+static func is_phone(form: Form) -> bool:
+	return form == Form.PHONE_PORTRAIT or form == Form.PHONE_LANDSCAPE
 
 
 ## The window size in device-independent pixels: the visible rect (already divided by the
