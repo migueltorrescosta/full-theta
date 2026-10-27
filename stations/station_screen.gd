@@ -15,6 +15,9 @@ extends Control
 
 ## Menu (Esc / Menu): the shell opens the menu.
 signal menu_requested
+## The viewport changed form (a rotation, a resize past a phone's size; LayoutMode.Form):
+## panels with phone layouts rearrange (#28).
+signal form_changed(form: LayoutMode.Form)
 ## `?` / View, or the first visit to a station: the shell opens the menu on Controls.
 signal help_requested
 
@@ -33,6 +36,8 @@ const SHORT_SIDE_WIDTH: float = 280.0
 const TOP_BAR_HEIGHT: float = 40.0
 ## The bar of the touch layouts: tap-sized alert chip and sound button (D194).
 const TOUCH_BAR_HEIGHT: float = 52.0
+## A phone's bar: the chip and sound button are primary targets (48 px, #28).
+const PHONE_BAR_HEIGHT: float = 56.0
 ## Under this width the top bar takes two rows (a phone, a tablet upright).
 const COMPACT_WIDTH: float = 900.0
 ## A phone's smaller bar text fits one row down to this width.
@@ -66,7 +71,13 @@ var training: TrainingBanner
 var panel_factory: Callable = StationRegistry.make
 ## Controls of the shell that take the input while visible (Settings, the outcome card).
 var blockers: Array[Control] = []
+## The viewport's form (LayoutMode.Form), kept by _relayout; panels read it.
+var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
+## Show the "turn sideways" banner on a phone held upright (#28).
+var rotate_prompt: bool = true
+var rotate_banner: RotateBanner
 
+var _rows: VBoxContainer
 var _main: Control
 var _dock: VBoxContainer
 ## The radar and the extras column (share buttons, docked panels): beside the main area
@@ -113,6 +124,8 @@ func setup(context: StationContext) -> void:
 	Input.joy_connection_changed.connect(_on_joy_changed)
 	_build_tabs()
 	focus(0)
+	rotate_banner.settings = ctx.settings
+	rotate_banner.refresh()
 
 
 func _ready() -> void:
@@ -153,10 +166,16 @@ func focus(i: int) -> void:
 	if training != null:
 		training.station = focused_station()
 	radar.orbitable = focused_panel().radar_orbitable()
-	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
+	_show_side()
 	if _tabs != null:
 		_show_tabs()
 	_open_first_visit_help()
+
+
+## The radar column hides for a lone full-screen panel (which may depend on the form).
+func _show_side() -> void:
+	if not panels.is_empty():
+		_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
 
 
 ## The dev seat's station switcher: a tab per panel, numbered for Shift + digit, and until the
@@ -513,14 +532,18 @@ func _build() -> void:
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
+	# Everything but the background and the flash stays inside the safe area (#28).
 	var rows: VBoxContainer = VBoxContainer.new()
 	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	rows.add_theme_constant_override("separation", 0)
 	add_child(rows)
+	_rows = rows
 	top_bar = TopBar.new()
 	top_bar.custom_minimum_size = Vector2(0, TOP_BAR_HEIGHT)
 	top_bar.alert_picked.connect(_set_alert)
 	rows.add_child(top_bar)
+	rotate_banner = RotateBanner.new()
+	rows.add_child(rotate_banner)
 	_body = BoxContainer.new()
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	rows.add_child(_body)
@@ -582,12 +605,23 @@ func _relayout() -> void:
 	var size_now: Vector2 = get_viewport().get_visible_rect().size
 	var kind: LayoutMode.Kind = LayoutMode.kind_of(self)
 	var phone: bool = kind == LayoutMode.Kind.PHONE
+	# The safe area: on a phone also clear of the gesture band, so nothing on the screen
+	# can be tapped there (#28).
+	var m: Vector4 = SafeArea.margins(self)
+	var bottom: float = maxf(m.w, SafeArea.tap_band(self))
+	_rows.offset_left = m.x
+	_rows.offset_top = m.y
+	_rows.offset_right = -m.z
+	_rows.offset_bottom = -bottom
+	size_now -= Vector2(m.x + m.z, m.y + bottom)
 	var touch: bool = LayoutMode.is_touch(kind)
 	var portrait: bool = LayoutMode.portrait(size_now)
 	_body.vertical = portrait
 	_side.vertical = not portrait
 	var bar: float = TOP_BAR_HEIGHT
-	if touch:
+	if phone:
+		bar = PHONE_BAR_HEIGHT
+	elif touch:
 		bar = TOUCH_BAR_HEIGHT
 	var two_rows: bool = size_now.x < (COMPACT_PHONE_WIDTH if phone else COMPACT_WIDTH)
 	top_bar.set_compact(two_rows, bar, phone)
@@ -610,10 +644,20 @@ func _relayout() -> void:
 		_side.custom_minimum_size.x = width
 	share_bar.min_width = 150.0 if phone else 260.0
 	share_bar.button_h = ShareBar.SHORT_H if short and not touch else ShareBar.BUTTON_H
-	var top: float = top_bar.custom_minimum_size.y + 8.0
+	var top: float = m.y + top_bar.custom_minimum_size.y + 8.0
 	toasts.offset_top = top
 	toasts.offset_bottom = top
-	chip_strip.position = Vector2(8.0, top)
+	toasts.offset_left = -16.0 - m.z
+	toasts.offset_right = -16.0 - m.z
+	chip_strip.position = Vector2(8.0 + m.x, top)
+	rotate_banner.visible = false
+	if rotate_prompt:
+		rotate_banner.refresh()
+	_show_side()
+	var now: LayoutMode.Form = LayoutMode.form_of(self)
+	if now != form:
+		form = now
+		form_changed.emit(form)
 
 
 ## The first visit to a station asks for the menu's Controls tab, once per client and
@@ -651,6 +695,9 @@ func _gui_owns(event: InputEvent) -> bool:
 	if vp == null:
 		return false
 	if event is InputEventKey and vp.gui_get_focus_owner() is LineEdit:
+		return true
+	# A finger on a rail, stick or drawer (and the mouse Godot makes from it, #28).
+	if TouchInput.owns(get_tree(), event):
 		return true
 	if event is InputEventMouseButton:
 		var hovered: Control = vp.gui_get_hovered_control()
