@@ -4,7 +4,7 @@ extends RailButton
 ## browser allows (Android), locks landscape. Never shown on an iPhone, whose Safari can't,
 ## nor off the web or once fullscreen. A browser only allows fullscreen inside the tap's
 ## own handler, which Godot's events arrive after, so the page acts on the tap itself:
-## this button registers its rectangle with the shell (WebPage.set_action), the way
+## this button registers its rectangle with the shell (TouchPage.set_action), the way
 ## WebTextField does for text fields.
 
 const TEXT_KEY: String = "touch.fullscreen"
@@ -36,7 +36,7 @@ func _ready() -> void:
 static func offered() -> bool:
 	if forced >= 0:
 		return forced == 1
-	return WebPage.fullscreen_offered()
+	return TouchPage.fullscreen_offered()
 
 
 func _process(_delta: float) -> void:
@@ -51,7 +51,7 @@ func _process(_delta: float) -> void:
 	var r: Rect2 = xf * Rect2(Vector2.ZERO, size)
 	if r != _sent:
 		_sent = r
-		WebPage.set_action(_id, r, "fullscreen")
+		TouchPage.set_action(_id, r, "fullscreen")
 
 
 func _refresh() -> void:
@@ -66,7 +66,7 @@ func _exit_tree() -> void:
 
 func _clear() -> void:
 	if _sent != Rect2():
-		WebPage.clear_action(_id)
+		TouchPage.clear_action(_id)
 		_sent = Rect2()
 
 

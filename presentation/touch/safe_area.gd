@@ -40,7 +40,7 @@ static func simulate(insets: Array) -> void:
 static func raw_insets() -> Vector4:
 	if simulating:
 		return simulated * LayoutMode.density()
-	return WebPage.safe_insets()
+	return TouchPage.safe_insets()
 
 
 ## The margins a screen keeps on each side (left, top, right, bottom in x, y, z, w), in
