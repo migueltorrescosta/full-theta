@@ -59,8 +59,9 @@ l2() {
   done
 }
 
-# L3: server and clients over loopback WebSocket in one process (tests/net), on 2 cores.
-l3() { gdunit res://tests/net taskset -c 0,1; }
+# L3: server and clients over loopback WebSocket in one process (tests/net), on 2 cores
+# (L3_CPUS, default 0,1, like L4_CPUS).
+l3() { gdunit res://tests/net taskset -c "${L3_CPUS:-0,1}"; }
 
 # L4: a server and 3 headless client processes on 2 cores, driven by intent files;
 # logs in build/l4/<run>/ (tools/l4/run.sh); then the browser station on the same 2 cores
