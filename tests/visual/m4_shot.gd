@@ -8,7 +8,7 @@
 ## - "forfeit": Helm in a race with a crewmate's give-up vote;
 ## - "takeover": Helm of Osprey over its ally Kestrel's pause, offering Kestrel's stations.
 ## `insets` simulates a phone's safe-area insets [left, top, right, bottom] in device-
-## independent px (#28), when SafeArea exists.
+## independent px (#28).
 extends Control
 
 var view: String = "lobby"
@@ -19,6 +19,7 @@ var _ctx: StationContext
 
 func _ready() -> void:
 	LayoutMode.forced = -1
+	SafeArea.simulate(insets)
 	I18n.apply("en")
 	LayoutMode.apply(get_tree().root)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -63,6 +64,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	LayoutMode.forced = -1
+	SafeArea.simulate([])
 
 
 ## Four ships: Kestrel and Osprey on team A, Heron and Merlin on team B.

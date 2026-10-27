@@ -31,7 +31,7 @@ func setup(context: StationContext) -> void:
 	col.add_child(_text)
 	_ok = Button.new()
 	_ok.name = "Ok"
-	_ok.custom_minimum_size = Vector2(160, 48)
+	_ok.custom_minimum_size = Vector2(160, UiTheme.TOUCH_PRIMARY)
 	_ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_ok.pressed.connect(dismiss)
 	col.add_child(_ok)

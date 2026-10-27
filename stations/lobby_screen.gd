@@ -53,10 +53,6 @@ const VIEWER: String = "viewer"
 const DEV_ALL: String = "all"
 ## The crew changes the lobby depends on.
 const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked", &"toggles", &"fleet"]
-## The session modes and team win rules the host picks from, in SessionRules order (the
-## wire names, M4-Q6).
-const MODES: Array[String] = ["coop", "race", "last_standing", "teams", "holdout"]
-const TEAM_WINS: Array[String] = ["last_team_standing", "first_to_finish"]
 ## The names a new ship takes, the first one not in use (M4-Q3).
 const NEW_SHIP_NAMES: Array[String] = [
 	"Kestrel", "Heron", "Osprey", "Merlin", "Petrel", "Tern", "Curlew", "Swift"
@@ -64,8 +60,8 @@ const NEW_SHIP_NAMES: Array[String] = [
 ## The team letters (team 0 is A).
 const TEAM_LETTERS: Array[String] = ["A", "B"]
 ## Phone tap targets (#28): primary targets at least this tall, this far apart.
-const PHONE_TARGET: int = 48
-const PHONE_GAP: int = 8
+const PHONE_TARGET: int = UiTheme.TOUCH_PRIMARY
+const PHONE_GAP: int = UiTheme.TOUCH_GAP
 
 var ctx: StationContext
 ## The ship whose stations are shown.
@@ -78,10 +74,7 @@ var _new_ship: Button
 var _teams: HBoxContainer
 var _team_buttons: Array[Button] = []
 var _mode_button: Button
-var _mode_dialog: AcceptDialog
-var _mode_grid: GridContainer
-var _mode_desc: Label
-var _team_win_row: HBoxContainer
+var _mode_dialog: ModeDialog
 ## The name of the ship this player just added: chosen once the `fleet` event lists it.
 var _added: String = ""
 ## Why the server refused the last request, shown under the grid until the next change.
@@ -231,11 +224,6 @@ func next_ship_name() -> String:
 	return "Ship %d" % (used.size() + 1)
 
 
-## Whether the host may change the mode: only before the universe starts.
-func can_edit_mode() -> bool:
-	return ctx.crew.host and not bool(ctx.crew.fleet.get("started", false))
-
-
 ## A player adds a ship (M4-Q3); the lobby shows it once the server lists it.
 func add_ship() -> void:
 	_added = next_ship_name()
@@ -247,17 +235,6 @@ func choose_team(team: int) -> void:
 	if ctx.crew.ship == ship and not bool(ctx.crew.fleet.get("started", false)):
 		ctx.intents.set_team(ship, team)
 	refresh()
-
-
-## The host's choice of mode and team win rule (M4-Q6); holdout lives stay the mode's
-## default (-1).
-func choose_mode(mode: String, team_win: String = "") -> void:
-	if can_edit_mode():
-		var rule: String = (
-			team_win if team_win != "" else str(ctx.crew.fleet.get("team_win", TEAM_WINS[0]))
-		)
-		ctx.intents.set_mode(mode, rule, -1)
-	_refresh_mode_dialog()
 
 
 ## The New ship and team buttons and the mode line, from the `fleet` event.
@@ -274,7 +251,8 @@ func _refresh_fleet() -> void:
 		b.disabled = not mine
 	_mode_button.text = mode_text()
 	_mode_button.visible = not ctx.crew.fleet.is_empty()
-	_refresh_mode_dialog()
+	if _mode_dialog != null:
+		_mode_dialog.refresh()
 
 
 ## "Easy", or "Easy (custom)" for a set with a toggle changed (FT-PAIR-017, D92).
@@ -571,6 +549,17 @@ func _apply_columns() -> void:
 			_customise.text = (preset_label(ctx.crew.toggles) if _short else tr("lobby.customise"))
 		if is_inside_tree():
 			_apply_targets(LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE)
+			_apply_safe_area()
+
+
+## Keeps the lobby inside the safe area (#28): clear of notches on each side and, on a
+## phone, of the bottom gesture band.
+func _apply_safe_area() -> void:
+	var m: Vector4 = SafeArea.margins(self)
+	_margin.offset_left = m.x
+	_margin.offset_top = m.y
+	_margin.offset_right = -m.z
+	_margin.offset_bottom = -maxf(m.w, SafeArea.tap_band(self))
 
 
 ## Phones (#28): every button at least PHONE_TARGET px tall and PHONE_GAP px from the next;
@@ -580,13 +569,13 @@ func _apply_targets(phone: bool) -> void:
 	for box: Control in [_grid, _ships]:
 		box.add_theme_constant_override("h_separation", gap)
 		box.add_theme_constant_override("v_separation", gap)
-	for box: Control in [_head, _seat_row, _diff_row, _teams]:
+	for box: Control in [_head, _seat_row, _diff_row, _teams, _body]:
 		box.add_theme_constant_override("separation", gap if phone else 4)
 	_outer.add_theme_constant_override("separation", PHONE_GAP if phone else (3 if _short else 6))
 	for b: Node in find_children("*", "BaseButton", true, false):
 		var button: BaseButton = b as BaseButton
 		if not str(button.name).begins_with("Entry_") or button.get_parent() == _seat_row:
-			button.custom_minimum_size.y = PHONE_TARGET if phone else 0.0
+			button.custom_minimum_size = Vector2.ONE * (PHONE_TARGET if phone else 0.0)
 	_grid.set_meta(&"phone", phone)
 	if phone != _phone:
 		for cell: Node in _grid.get_children():
@@ -866,7 +855,9 @@ func _build_dialogs() -> void:
 	scroll.add_child(_toggle_rows)
 	for def: DataToggleDef in DataToggles.def().toggles:
 		_toggle_rows.add_child(_toggle_row(def))
-	_build_mode_dialog()
+	_mode_dialog = ModeDialog.new()
+	add_child(_mode_dialog)
+	_mode_dialog.setup(ctx)
 	_join_dialog = AcceptDialog.new()
 	_join_dialog.name = "JoinDialog"
 	_join_dialog.title = tr("lobby.join_title")
@@ -876,82 +867,8 @@ func _build_dialogs() -> void:
 		_build_join_panel(_join_dialog)
 
 
-## The host's mode dialog (M4-Q6, FT-MIS-031): a button per mode, the mode's one-line
-## description, and in TEAMS the win rule. Read-only for the others.
-func _build_mode_dialog() -> void:
-	_mode_dialog = AcceptDialog.new()
-	_mode_dialog.name = "ModeDialog"
-	_mode_dialog.title = tr("lobby.mode_title")
-	_mode_dialog.ok_button_text = tr("lobby.done")
-	add_child(_mode_dialog)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.custom_minimum_size = Vector2(300, 0)
-	col.add_theme_constant_override("separation", PHONE_GAP)
-	_mode_dialog.add_child(col)
-	_mode_grid = GridContainer.new()
-	_mode_grid.name = "Modes"
-	_mode_grid.columns = LANDSCAPE_COLUMNS
-	_mode_grid.add_theme_constant_override("h_separation", PHONE_GAP)
-	_mode_grid.add_theme_constant_override("v_separation", PHONE_GAP)
-	col.add_child(_mode_grid)
-	for mode: String in MODES:
-		var b: Button = _button("Mode_" + mode, "", choose_mode.bind(mode, ""))
-		b.toggle_mode = true
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_mode_grid.add_child(b)
-	_mode_desc = _label("", "DimLabel")
-	_mode_desc.name = "ModeDesc"
-	_mode_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	col.add_child(_mode_desc)
-	_team_win_row = HBoxContainer.new()
-	_team_win_row.name = "TeamWin"
-	_team_win_row.add_theme_constant_override("separation", PHONE_GAP)
-	col.add_child(_team_win_row)
-	for rule: String in TEAM_WINS:
-		var b: Button = _button("Win_" + rule, "", _choose_team_win.bind(rule))
-		b.toggle_mode = true
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_team_win_row.add_child(b)
-
-
-func _choose_team_win(rule: String) -> void:
-	choose_mode(ctx.crew.mode(), rule)
-
-
-## Shows the session's mode in the dialog and whether the host may still change it.
-func _refresh_mode_dialog() -> void:
-	if _mode_dialog == null:
-		return
-	var editable: bool = can_edit_mode()
-	var mode: String = ctx.crew.mode()
-	_mode_dialog.title = tr("lobby.mode_title")
-	_mode_dialog.ok_button_text = tr("lobby.done")
-	for b: Node in _mode_grid.get_children():
-		var id: String = str(b.name).trim_prefix("Mode_")
-		(b as Button).text = tr("mode." + id)
-		(b as Button).set_pressed_no_signal(id == mode)
-		(b as Button).disabled = not editable
-	var desc: String = tr("mode.%s.desc" % mode)
-	if mode == "holdout":
-		desc = desc % maxi(int(ctx.crew.fleet.get("lives", 3)), 0)
-	if not ctx.crew.host:
-		desc += " " + tr("lobby.mode_host_only")
-	_mode_desc.text = desc
-	_team_win_row.visible = mode == "teams"
-	for b: Node in _team_win_row.get_children():
-		var rule: String = str(b.name).trim_prefix("Win_")
-		(b as Button).text = tr("mode.win." + rule)
-		(b as Button).set_pressed_no_signal(rule == str(ctx.crew.fleet.get("team_win", "")))
-		(b as Button).disabled = not editable
-
-
 func _open_mode() -> void:
-	var narrow: bool = get_viewport_rect().size.x < 600.0
-	_mode_grid.columns = 2 if narrow else LANDSCAPE_COLUMNS
-	# An autowrapped label needs a width, or the dialog grows tall.
-	_mode_desc.custom_minimum_size.x = 300.0 if narrow else 480.0
-	_refresh_mode_dialog()
-	_mode_dialog.popup_centered_clamped(Vector2i(560, 0), 0.9)
+	_mode_dialog.open(get_viewport_rect().size.x < 600.0)
 
 
 func _open_difficulty() -> void:

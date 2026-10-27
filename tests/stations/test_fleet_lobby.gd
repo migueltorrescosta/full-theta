@@ -94,7 +94,7 @@ func test_host_picks_the_mode_and_team_win_rule() -> void:
 	var mode: Button = _button(l, "ModeButton")
 	assert_str(mode.text).is_equal("Mode: Co-op")
 	mode.pressed.emit()
-	for m: String in LobbyScreen.MODES:
+	for m: String in ModeDialog.MODES:
 		assert_bool(_button(l, "Mode_" + m).disabled).is_false()
 	assert_str(_button(l, "Mode_last_standing").text).is_equal("Last ship standing")
 	_button(l, "Mode_teams").pressed.emit()
@@ -155,22 +155,30 @@ func test_a_refused_ship_add_says_why() -> void:
 
 
 # FT: FT-GEN-001
-# A phone in landscape (844 x 390, #28): the ship row keeps its own row, Start joins the bottom
-# row, everything fits on screen with every button at least 48 px tall.
-func test_phone_landscape_lobby_fits_with_48_px_targets() -> void:
+# A phone in landscape (844 x 390 with 47 px side insets and a 21 px bottom inset, #28): the
+# ship row keeps its own row, Start joins the bottom row, and every tap target is at least
+# 48 px, 8 px from the next, inside the safe area and above the gesture band (TapAudit).
+func test_phone_landscape_lobby_meets_the_touch_rules() -> void:
 	var l: LobbyScreen = _lobby("teams", [0, 1, 1], true)
 	var old: Vector2i = get_tree().root.size
-	get_tree().root.size = Vector2i(844, 390)
 	LayoutMode.forced = LayoutMode.Kind.PHONE
+	SafeArea.simulate([47, 0, 47, 21])
+	LayoutMode.apply(get_tree().root)
+	get_tree().root.size = Vector2i(844, 390)
 	l.size = Vector2(844, 390)
-	await get_tree().process_frame
-	await get_tree().process_frame
+	for i: int in 4:
+		await get_tree().process_frame
 	assert_object(_button(l, "Start").get_parent()).is_same(l.find_child("Difficulty", true, false))
-	for b: Node in l.find_children("*", "BaseButton", true, false):
-		var button: BaseButton = b as BaseButton
-		if not button.is_visible_in_tree():
-			continue
-		assert_float(button.size.y).override_failure_message(button.name).is_greater_equal(48.0)
-		assert_float(button.get_global_rect().end.y).is_less_equal(390.0)
+	var report: Dictionary = TapAudit.check(l)
+	SafeArea.simulate([])
 	LayoutMode.forced = -1
 	get_tree().root.size = old
+	LayoutMode.apply(get_tree().root)
+	assert_array(report["targets"]).is_not_empty()
+	for key: String in ["under_min", "under_primary", "in_band", "outside_safe", "tight"]:
+		assert_array(report[key]).override_failure_message("%s: %s" % [key, report[key]]).is_empty()
+	for t: Dictionary in report["targets"]:
+		var r: Rect2 = t["rect"]
+		assert_float(minf(r.size.x, r.size.y)).override_failure_message(t["text"]).is_greater_equal(
+			48.0
+		)

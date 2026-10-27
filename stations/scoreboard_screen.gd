@@ -19,6 +19,7 @@ var ctx: StationContext
 ## The relaunch vote of the player's eliminated ship, above the rows (M4-Q2).
 var relaunch: VotePrompt
 
+var _margin: MarginContainer
 var _title: Label
 var _sub: Label
 var _table: GridContainer
@@ -38,6 +39,8 @@ func setup(context: StationContext) -> void:
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 16)
 	add_child(margin)
+	_margin = margin
+	resized.connect(_apply_safe_area)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
 	margin.add_child(col)
@@ -52,7 +55,7 @@ func setup(context: StationContext) -> void:
 	head.add_child(_title)
 	_menu = Button.new()
 	_menu.name = "MainMenu"
-	_menu.custom_minimum_size = Vector2(0, UiTheme.TOUCH_MIN + 4)
+	_menu.custom_minimum_size = Vector2(0, UiTheme.TOUCH_PRIMARY)
 	_menu.pressed.connect(menu_requested.emit)
 	head.add_child(_menu)
 	_sub = Label.new()
@@ -183,6 +186,17 @@ func _cell(text: String, variation: String) -> Label:
 	l.theme_type_variation = variation
 	_table.add_child(l)
 	return l
+
+
+## Keeps the screen inside the safe area, above a phone's gesture band (#28).
+func _apply_safe_area() -> void:
+	if not is_inside_tree():
+		return
+	var m: Vector4 = SafeArea.margins(self)
+	_margin.offset_left = m.x
+	_margin.offset_top = m.y
+	_margin.offset_right = -m.z
+	_margin.offset_bottom = -maxf(m.w, SafeArea.tap_band(self))
 
 
 func _on_crew_changed(what: StringName) -> void:

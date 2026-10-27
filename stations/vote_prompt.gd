@@ -23,7 +23,7 @@ const KINDS: Array[StringName] = [
 ]
 
 ## Distance from the top bar or the bottom edge, px.
-const EDGE_GAP: float = 64.0
+const EDGE_GAP: float = 72.0
 
 var ctx: StationContext
 var kind: Kind = Kind.FORFEIT
@@ -154,7 +154,7 @@ func _button(node_name: String, text: String, variation: String = "") -> Button:
 	b.name = node_name
 	b.text = text
 	b.theme_type_variation = variation
-	b.custom_minimum_size = Vector2(140, 48)
+	b.custom_minimum_size = Vector2(140, UiTheme.TOUCH_PRIMARY)
 	_buttons.add_child(b)
 	return b
 

@@ -123,7 +123,7 @@ func _button(node_name: String, text: String) -> Button:
 	var b: Button = Button.new()
 	b.name = node_name
 	b.text = text
-	b.custom_minimum_size = Vector2(0, 48)
+	b.custom_minimum_size = Vector2(0, UiTheme.TOUCH_PRIMARY)
 	_buttons.add_child(b)
 	return b
 
