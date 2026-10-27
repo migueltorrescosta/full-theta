@@ -14,8 +14,9 @@ extends SimTable
 ## under the contract_flags toggle (P9).
 enum Flag { NONE, DISABLE, PROTECT }
 ## What the faction has learned of the contact's intent through conversation (P9); the
-## Science card's intent (from scans) is separate.
-enum Intent { HOSTILE, NEUTRAL, SURRENDERING, BLUFFING }
+## Science card's intent (from scans) is separate. A new contact is UNKNOWN until a reply
+## or a surrender roll sets it (Q22, owner 2026-10-26).
+enum Intent { UNKNOWN, HOSTILE, NEUTRAL, SURRENDERING, BLUFFING }
 
 ## 1 while the observing faction currently detects the contact.
 var detected: PackedByteArray = PackedByteArray()
@@ -85,7 +86,7 @@ func add_contact(faction: int, contact_id: int) -> int:
 	numbers.append(number)
 	scan_conf.append(0.0)
 	flag.append(Flag.NONE)
-	intent.append(Intent.HOSTILE)
+	intent.append(Intent.UNKNOWN)
 	_rows[faction * 65536 + contact_id] = row
 	return row
 

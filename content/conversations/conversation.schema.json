@@ -56,7 +56,7 @@
       "oneOf": [
         {"type": "object", "additionalProperties": false, "required": ["accept"], "properties": {"accept": {"const": true}}},
         {"type": "object", "additionalProperties": false, "required": ["decline"], "properties": {"decline": {"const": true}}},
-        {"type": "object", "additionalProperties": false, "required": ["intent"], "properties": {"intent": {"enum": ["hostile", "neutral", "surrendering", "bluffing"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["intent"], "properties": {"intent": {"enum": ["unknown", "hostile", "neutral", "surrendering", "bluffing"]}}},
         {"type": "object", "additionalProperties": false, "required": ["contract_flag"], "properties": {"contract_flag": {"enum": ["none", "disable", "protect"]}}},
         {"type": "object", "additionalProperties": false, "required": ["flag"], "properties": {"flag": {"type": "string", "minLength": 1}, "value": {"type": "integer"}}},
         {"type": "object", "additionalProperties": false, "required": ["rep"], "properties": {"rep": {"description": "A RepDistDef id (content/economy/rep/).", "type": "string", "pattern": "^rep\\.[a-z0-9_.]+$"}}},

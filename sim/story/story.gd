@@ -9,6 +9,7 @@ extends RefCounted
 const DISABLE: StringName = &"disable"
 const PROTECT: StringName = &"protect"
 const INTENTS: Dictionary[StringName, int] = {
+	&"unknown": KnowledgeTable.Intent.UNKNOWN,
 	&"hostile": KnowledgeTable.Intent.HOSTILE,
 	&"neutral": KnowledgeTable.Intent.NEUTRAL,
 	&"surrendering": KnowledgeTable.Intent.SURRENDERING,
@@ -201,7 +202,7 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: i
 
 
 ## Applies one option's effects in order, then follows `next` or ends the conversation.
-## Effects (one key each): accept, decline, intent (hostile|neutral|surrendering|bluffing),
+## Effects (one key each): accept, decline, intent (unknown|hostile|neutral|surrendering|bluffing),
 ## contract_flag (none|disable|protect), flag (story flag name, with value), rep (a
 ## RepDistDef id), say (a dialogue line id), verify (a scan fact to check, P14), surrender
 ## ({base, per_damage, cap}: StoryRules.roll_surrender, P9). A refused accept or decline
@@ -217,7 +218,9 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 			return false
 		if effect.has("intent") and t.target[card] >= 0:
 			var row: int = world.knowledge.ensure_contact(t.factions[card], t.target[card])
-			world.knowledge.intent[row] = INTENTS.get(StringName(effect["intent"]), 0)
+			world.knowledge.intent[row] = INTENTS.get(
+				StringName(effect["intent"]), KnowledgeTable.Intent.UNKNOWN
+			)
 		if effect.has("contract_flag") and t.target[card] >= 0:
 			var frow: int = world.knowledge.ensure_contact(t.factions[card], t.target[card])
 			world.knowledge.flag[frow] = FLAGS.get(StringName(effect["contract_flag"]), 0)

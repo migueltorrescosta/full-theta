@@ -208,3 +208,19 @@ func test_reset_ship_keeps_numbers() -> void:
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, red)).is_true()
 	assert_array(w.knowledge.columns()).is_equal(before)
+
+
+# FT: FT-PAIR-004
+# Q22 (owner, 2026-10-26): a contact's conversation intent is UNKNOWN until a reply or a
+# surrender roll sets it; a refused surrender sets HOSTILE, not the default.
+func test_intent_is_unknown_until_a_conversation_sets_it() -> void:
+	var w: SimWorld = SimWorld.new(1)
+	w.spawn_ship(TestDefs.corvette(), BLUE)
+	var red: int = w.spawn_ship(TestDefs.raider(), RED, Vector3(100, 0, 0))
+	w.step()
+	var row: int = w.knowledge.row_for(BLUE, red)
+	assert_int(w.knowledge.intent[row]).is_equal(KnowledgeTable.Intent.UNKNOWN)
+	assert_int(w.knowledge.ensure_contact(GREEN, red)).is_greater_equal(0)
+	assert_int(w.knowledge.intent[w.knowledge.row_for(GREEN, red)]).is_equal(
+		KnowledgeTable.Intent.UNKNOWN
+	)
