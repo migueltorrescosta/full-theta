@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## SnapshotInterpolator (FT-ARC-015): interpolation between snapshots, no extrapolation,
 ## minimum image across a site seam (D124), rotation slerp.
 
-## A 1 km site: positions wrap into [-500 m, 500 m).
+## A 1 km cube: positions wrap into [-500 m, 500 m).
 const P_UNITS: int = 16000
 
 
@@ -12,7 +12,7 @@ func _view(
 ) -> NetViewState:
 	var v: NetViewState = NetViewState.new(P_UNITS)
 	v.tick = tick
-	v.kin = {"site": 0, "pos": _units(own), "rot": rot}
+	v.kin = {"pos": _units(own), "rot": rot}
 	v.contacts = {"model": {7: [_units(contact), Vector3i.ZERO, tick]}, "info": {7: [0, "H1"]}}
 	return v
 
@@ -76,7 +76,7 @@ func test_seam_crossing_uses_the_minimum_image() -> void:
 	interp.render_tick = 101.0
 	interp.update(0)
 	assert_float(interp.contact_position(7).x).is_equal_approx(499.5, 0.01)
-	# The offset to a point just over the seam is short, not across the site.
+	# The offset to a point just over the seam is short, not across the cube.
 	assert_vector(interp.offset_to(Vector3(-499.5, 0, 0))).is_equal_approx(
 		Vector3(1, 0, 0), Vector3.ONE * 0.01
 	)

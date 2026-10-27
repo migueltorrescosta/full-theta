@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## L3 tests of request chips (NetChips, ChipsSection) and the host's lobby toggles over
-## loopback: sending and answering, silent expiry, Hard switching chips off, the inert hold
-## fire chip, player-initiated only, and the cooperative events counted per pair.
+## loopback: sending and answering, silent expiry, Hard switching chips off, the hold fire
+## chip from Comms to Weapons, player-initiated only, and the cooperative events counted per pair.
 
 const PLAYER: int = NetHarness.PLAYER
 const CHIPS: StationViews.Section = StationViews.Section.CHIPS
@@ -91,8 +91,7 @@ func test_a_chip_is_sent_shown_and_answered() -> void:
 
 
 # FT: FT-PAIR-021, FT-STN-010
-# Every chip of §7.4 is in the data list with its sender and receiver; hold fire is there
-# but inert until Comms is wired (D191); the rest are active.
+# Every chip of §7.4 is in the data list with its sender and receiver, hold fire included.
 func test_the_chip_list_is_the_spec_list() -> void:
 	var want: Dictionary = {
 		"boost": ["helm", "engineering", "p1"],
@@ -117,19 +116,18 @@ func test_the_chip_list_is_the_spec_list() -> void:
 			)
 			. is_equal(want[String(chip.id)])
 		)
-		assert_bool(chip.active).is_equal(String(chip.id) != "hold_fire")
 
 
 # FT: FT-PAIR-021, FT-PAIR-009, FT-PAIR-012
 # The sender must hold the chip's sender station and not its receiver (a joint view runs it
-# as a direct action), the receiver must be played, hold fire is inert, an argument must
-# make sense, and a chip already open is not sent twice.
+# as a direct action), the receiver must be played, an argument must make sense, and a chip
+# already open is not sent twice.
 func test_chip_rules() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
 	var crew: Dictionary = await _crew(server)
 	var cases: Array = [
 		["weapons", "boost", -1, NetChips.NOT_YOURS],
-		["comms", "hold_fire", 1, NetChips.INERT],
+		["comms", "hold_fire", 1, NetChips.BAD_ARG],
 		["weapons", "bring_to_bear", 9, NetChips.BAD_ARG],
 		["helm", "no_such_chip", -1, NetChips.BAD_CHIP],
 	]
@@ -160,6 +158,38 @@ func test_chip_rules() -> void:
 	from = h.mark(helm)
 	helm.send_chip("boost")
 	assert_str(await _rejected(helm, from)).is_equal(NetChips.NOBODY)
+
+
+# FT: FT-PAIR-021, FT-PAIR-012
+# Hold fire (D191) goes from Comms to Weapons and carries a detected contact: Weapons gets it
+# with the contact's id, Comms again at once is refused as open, and an undetected contact is
+# a bad argument. Nothing else receives it.
+func test_hold_fire_goes_from_comms_to_weapons() -> void:
+	var server: NetServer = h.server(false, 10.0, SECRET)
+	var crew: Dictionary = await _crew(server)
+	var w: SimWorld = server.world
+	var comms: NetClient = crew["comms"]
+	var from: int = h.mark(comms)
+	comms.send_chip("hold_fire", NetHarness.ENEMY)
+	assert_str(await _rejected(comms, from)).is_equal(NetChips.BAD_ARG)
+	w.knowledge.detected[w.knowledge.ensure_contact(w.faction_of(PLAYER), NetHarness.ENEMY)] = 1
+	comms.send_chip("hold_fire", NetHarness.ENEMY)
+	assert_bool(await h.until(func() -> bool: return _chips(crew["weapons"]).size() == 1)).is_true()
+	var row: Dictionary = _chips(crew["weapons"])[0]
+	assert_int(row["chip"]).is_equal(NetChips.index_of("hold_fire"))
+	assert_int(row["arg"]).is_equal(NetHarness.ENEMY)
+	assert_int(row["from"]).is_equal(StationViews.CREW.find("comms"))
+	assert_int(row["to"]).is_equal(StationViews.CREW.find("weapons"))
+	from = h.mark(comms)
+	comms.send_chip("hold_fire", NetHarness.ENEMY)
+	assert_str(await _rejected(comms, from)).is_equal(NetChips.ALREADY_OPEN)
+	await h.wait(300)
+	for other: String in ["helm", "science", "relay", "engineering"]:
+		assert_array(_chips(crew[other])).override_failure_message(other).is_empty()
+	crew["weapons"].answer_chip(row["id"], true)
+	assert_bool(await h.until(func() -> bool: return _chips(crew["weapons"]).is_empty())).is_true()
+	assert_int(_count(server, "p9", CoopEvents.CHIP_SENT)).is_equal(1)
+	assert_int(_count(server, "p9", CoopEvents.CHIP_ANSWERED)).is_equal(1)
 
 
 # FT: FT-PAIR-009, FT-PAIR-017, FT-PAIR-018

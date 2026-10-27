@@ -24,6 +24,12 @@ const UNBLOCKED: Array[String] = ["menu", "overlay"]
 ## Panel column width and radar size (before UI scale).
 const SIDE_WIDTH: float = 340.0
 const RADAR_HEIGHT: float = 300.0
+## A short or narrow viewport (a 720p window at 150 % UI scale is 853 x 480) gets a
+## smaller radar and a narrower column, so the share buttons fit under it and Relay's map
+## keeps its width.
+const SHORT_H: float = 560.0
+const SHORT_RADAR: float = 220.0
+const SHORT_SIDE_WIDTH: float = 280.0
 const TOP_BAR_HEIGHT: float = 40.0
 ## The bar of the touch layouts: tap-sized alert chip and sound button (D194).
 const TOUCH_BAR_HEIGHT: float = 52.0
@@ -37,6 +43,11 @@ const PHONE_SIDE_WIDTH: float = 180.0
 ## Least height of a docked panel: top bar, radar and one docked panel fit 720p at
 ## 150 % UI scale (480 px), so the screen never grows past the window.
 const DOCK_MIN_HEIGHT: float = 120.0
+const SCROLL_BAR_W: float = 14.0
+## More panels than this (the dev seat's six) get a tab strip; Shift + 1..9 picks a panel
+## (the bare digits and Alt + digit belong to the stations' own keys).
+const TABS_FROM: int = 3
+const TAB_HINT_KEY: String = "dev_tabs"
 
 var ctx: StationContext
 ## Station ids of the panels, in order (F1, F2, ...).
@@ -50,6 +61,7 @@ var alerts: StationAlerts
 var flash: AlertFlash
 var chip_strip: ChipStrip
 var share_bar: ShareBar
+var training: TrainingBanner
 ## Makes the panel of a station; tests swap it (default StationRegistry.make).
 var panel_factory: Callable = StationRegistry.make
 ## Controls of the shell that take the input while visible (Settings, the outcome card).
@@ -63,6 +75,10 @@ var _side: BoxContainer
 var _body: BoxContainer
 var _extras: VBoxContainer
 var _blocked: bool = false
+## The dev seat's station tabs (one button per panel) and its one-line hint; null when the
+## screen holds one or two panels.
+var _tabs: HFlowContainer
+var _hint: Label
 
 
 ## Builds the screen for the current pick (ctx.crew.entry_def()). Entries without
@@ -89,7 +105,13 @@ func setup(context: StationContext) -> void:
 	alerts = StationAlerts.new()
 	add_child(alerts)
 	alerts.setup(ctx, stations, toasts, flash)
+	# the Shakedown's step banner and Next (FT-MIS-039).
+	training = TrainingBanner.new()
+	training.station = stations[0]
+	add_child(training)
+	training.setup(ctx)
 	Input.joy_connection_changed.connect(_on_joy_changed)
+	_build_tabs()
 	focus(0)
 
 
@@ -128,9 +150,69 @@ func focus(i: int) -> void:
 			p.custom_minimum_size = Vector2(0, DOCK_MIN_HEIGHT)
 		p.set_mode(j == i, j != i)
 	ctx.matcher.set_context(stations, focused_station())
+	if training != null:
+		training.station = focused_station()
 	radar.orbitable = focused_panel().radar_orbitable()
 	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
+	if _tabs != null:
+		_show_tabs()
 	_open_first_visit_help()
+
+
+## The dev seat's station switcher: a tab per panel, numbered for Shift + digit, and until the
+## first switch a one-line hint (kept in the first-run tips).
+func _build_tabs() -> void:
+	if panels.size() < TABS_FROM:
+		return
+	_tabs = HFlowContainer.new()
+	_tabs.add_theme_constant_override("h_separation", 4)
+	_tabs.add_theme_constant_override("v_separation", 2)
+	top_bar.get_parent().add_child(_tabs)
+	top_bar.get_parent().move_child(_tabs, top_bar.get_index() + 1)
+	for i: int in panels.size():
+		var b: Button = Button.new()
+		b.name = "Tab%d" % (i + 1)
+		b.toggle_mode = true
+		b.text = "%d %s" % [i + 1, tr("station." + stations[i])]
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(focus.bind(i))
+		_tabs.add_child(b)
+	_hint = Label.new()
+	_hint.text = tr("screen.tabs_hint") % panels.size()
+	_hint.add_theme_color_override("font_color", Palette.color("text_dim"))
+	_hint.visible = not ctx.settings.tooltip_seen(TAB_HINT_KEY)
+	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_tabs.add_child(_hint)
+
+
+## Marks the focused tab; a switch after the first panel retires the hint.
+func _show_tabs() -> void:
+	for i: int in panels.size():
+		(_tabs.get_child(i) as Button).set_pressed_no_signal(i == focus_index)
+	if _hint.visible and focus_index != 0:
+		_hint.visible = false
+		ctx.settings.mark_tooltip_seen(TAB_HINT_KEY)
+		ctx.settings.save()
+
+
+## Shift + 1..N focuses panel N while the tab strip exists.
+func _tab_hotkey(event: InputEvent) -> bool:
+	var k: InputEventKey = event as InputEventKey
+	if (
+		_tabs == null
+		or k == null
+		or not k.pressed
+		or k.echo
+		or not k.shift_pressed
+		or k.alt_pressed
+		or k.ctrl_pressed
+	):
+		return false
+	var i: int = (k.physical_keycode if k.physical_keycode != KEY_NONE else k.keycode) - KEY_1
+	if i < 0 or i >= panels.size():
+		return false
+	focus(i)
+	return true
 
 
 ## Routes one intent event (InputMatcher's dictionary); true when something handled
@@ -148,6 +230,8 @@ func dispatch(ev: Dictionary) -> bool:
 ## also fire a panel binding (LMB is select and Weapons fire, provisional).
 func feed(event: InputEvent) -> void:
 	_update_block()
+	if not _blocked and _tab_hotkey(event):
+		return
 	if event is InputEventMouseMotion and not focused_panel().mouse_steers():
 		return
 	var batch: Array[Dictionary] = ctx.matcher.feed(event, ctx.now_ms())
@@ -281,8 +365,10 @@ func _common(ev: Dictionary) -> bool:
 			help_requested.emit()
 			_update_block()
 		"menu":
-			menu_requested.emit()
-			_update_block()
+			# Esc first closes what the focused panel has open on top (Comms' overlay).
+			if not focused_panel().close_overlay():
+				menu_requested.emit()
+				_update_block()
 		_:
 			handled = _live(id)
 	return handled
@@ -312,6 +398,8 @@ func _answer_chip(accept: bool) -> bool:
 ## Select under the pointer; false over nothing, so the click falls through to the
 ## panel (owner decision in #7: LMB fires in the turret).
 func _select(device: String) -> bool:
+	if device == IntentTable.PAD and focused_panel().take_select():
+		return true
 	var item: Dictionary = item_under_cursor(device)
 	if item.is_empty() or item["kind"] == "point" or item["kind"] == "card":
 		return false
@@ -329,6 +417,8 @@ func _live(id: String) -> bool:
 			_set_alert(CrewState.ALERT_YELLOW)
 		"alert_normal":
 			_set_alert(CrewState.ALERT_NORMAL)
+		"training_next":
+			return training.press()
 		"focus_1", "focus_2":
 			var n: int = panels.size()
 			if n <= 2:
@@ -443,10 +533,19 @@ func _build() -> void:
 	_body.add_child(_side)
 	radar = DiscRadar.new()
 	_side.add_child(radar)
+	# The column scrolls instead of growing the screen past the viewport (150 % UI scale,
+	# a phone with four share buttons): the radar keeps its size, the rest is reachable.
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# A wide bar shows at a glance that the column scrolls.
+	scroll.get_v_scroll_bar().custom_minimum_size.x = SCROLL_BAR_W
+	_side.add_child(scroll)
 	_extras = VBoxContainer.new()
 	_extras.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_extras.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_side.add_child(_extras)
+	scroll.add_child(_extras)
 	# The share buttons sit above the docked panels, not over them (D217).
 	share_bar = ShareBar.new()
 	share_bar.visible = false
@@ -494,17 +593,23 @@ func _relayout() -> void:
 	top_bar.set_compact(two_rows, bar, phone)
 	top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0)
 	var disc: float = RADAR_HEIGHT
+	var short: bool = size_now.y < SHORT_H and not phone
 	if phone:
 		disc = PHONE_RADAR
+	elif short:
+		disc = SHORT_RADAR
 	_side.custom_minimum_size = Vector2.ZERO
 	if portrait:
 		radar.custom_minimum_size = Vector2(disc, disc)
 		_side.custom_minimum_size.y = disc
 	else:
 		var width: float = PHONE_SIDE_WIDTH if phone else SIDE_WIDTH
+		if short and size_now.x < COMPACT_WIDTH:
+			width = SHORT_SIDE_WIDTH
 		radar.custom_minimum_size = Vector2(width, disc if not phone else width)
 		_side.custom_minimum_size.x = width
-	share_bar.min_width = 110.0 if phone else 200.0
+	share_bar.min_width = 150.0 if phone else 260.0
+	share_bar.button_h = ShareBar.SHORT_H if short and not touch else ShareBar.BUTTON_H
 	var top: float = top_bar.custom_minimum_size.y + 8.0
 	toasts.offset_top = top
 	toasts.offset_bottom = top

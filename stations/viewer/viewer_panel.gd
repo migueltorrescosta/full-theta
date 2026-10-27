@@ -312,12 +312,12 @@ func _draw_overlay() -> void:
 
 ## The Captain's pinged card over the view (FT-CPT-005).
 func _draw_card() -> void:
-	var card: Dictionary = FixtureCards.find(_card_shown) if _card_shown >= 0 else {}
+	var card: Dictionary = ctx.crew.card_ping.get("card", {}) if _card_shown >= 0 else {}
 	if card.is_empty():
 		return
 	var w: float = size.x * CARD_SHARE
 	var rect: Rect2 = Rect2(size.x - w - 24.0, 24.0, w, CARD_FONT * 6.0)
-	FixtureCards.draw_card(_card_layer, rect, card, CARD_FONT)
+	CardList.draw_card(_card_layer, rect, card, CARD_FONT)
 
 
 func _bracket(p: Vector2, r: float, col: Color, selected: bool) -> void:

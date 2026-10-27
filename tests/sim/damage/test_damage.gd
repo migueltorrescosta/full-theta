@@ -8,8 +8,8 @@ extends GdUnitTestSuite
 
 func _world(world_seed: int = 1) -> SimWorld:
 	var w: SimWorld = SimWorld.new(world_seed, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, 0, Vector3.ZERO)
-	w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(0, 0, -2000))
+	w.spawn_ship(TestDefs.corvette(), 1, Vector3.ZERO)
+	w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -2000))
 	return w
 
 
@@ -305,7 +305,7 @@ func test_rows_and_reset_ship() -> void:
 	DamageSystem.apply_hit(w, _hit(1, Vector3(0, 0, -25), 4e6), 4e6)
 	DamageSystem.damage_subsystem(w, 0, SimFixture.sub_index(w, 0, &"engines"), 1e6)
 	assert_bool(DamageSystem.dispatch(w, 0, 1, &"engines")).is_true()
-	w.reset_ship(0, 0)
+	w.reset_ship(0)
 	assert_float(DamageSystem.hull_fraction(w, 0)).is_equal(1.0)
 	assert_float(_health(w, 0, &"weapons")).is_equal(2e7)
 	assert_int(w.damage.spare_parts[w.damage.hull_row(0)]).is_equal(20)

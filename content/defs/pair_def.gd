@@ -12,10 +12,15 @@ extends Resource
 ## P1 is 0.2, D121): (solo - co-op) / solo for a lower-is-better metric such as time,
 ## co-op / solo - 1 for a higher-is-better one (PairHarness.gain).
 @export var pair_min_gain: float = 0.0
+## The two crew stations of the pair (ids of StationViews.CREW), never the Captain
+## (FT-PAIR-001, FT-PAIR-002), in the order of the display name.
+@export var stations: Array[StringName] = []
 
 
 func validate() -> Array[String]:
 	var errors: Array[String] = []
 	DefCheck.id(errors, "id", id)
 	DefCheck.in_range_open_low(errors, "pair_min_gain", pair_min_gain, 0.0, 1.0)
+	if stations.size() != 2 or stations[0] == stations[1]:
+		errors.append("stations: needs two different stations, got %s" % [stations])
 	return errors

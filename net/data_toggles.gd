@@ -37,17 +37,14 @@ static func ids() -> Array[StringName]:
 
 
 ## The ids of the shortcuts that need a press on their source station (D210): the SHORTCUT
-## toggles that move a station's data to another one (not the request chips). Those that
-## involve Comms wait for its data (#10, D190) and have no press yet.
+## toggles that move a station's data to another one (not the request chips). Comms' are
+## among them since #10 (PROVISIONAL (Q10): the same press as every other shortcut): lanes
+## and contract flags from Comms, the verify chip from Science, the mission icon from Relay.
+## Engineering and Comms have none (D68).
 static func shareable() -> Array[StringName]:
 	var out: Array[StringName] = []
 	for t: DataToggleDef in _def.toggles:
-		if (
-			t.kind == DataToggleDef.Kind.SHORTCUT
-			and t.source != &""
-			and t.source != &"comms"
-			and t.target != &"comms"
-		):
+		if t.kind == DataToggleDef.Kind.SHORTCUT and t.source != &"":  # (Q10)
 			out.append(t.id)
 	return out
 

@@ -42,7 +42,6 @@ func test_events_are_tick_stamped_and_keyed() -> void:
 	var wing: int = world.spawn_ship(
 		TestDefs.corvette(),
 		M1Encounter.PLAYER_FACTION,
-		M1Encounter.SITE,
 		Vector3(20, 0, -400),
 		Quaternion.IDENTITY,
 		Vector3(0, 0, 20)

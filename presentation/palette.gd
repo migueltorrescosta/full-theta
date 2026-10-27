@@ -29,6 +29,19 @@ const ROLES: Dictionary = {
 	"load_intense": Color("#ff7a70"),
 	"load_busy": Color("#f2c94c"),
 	"load_light": Color("#35c9a0"),
+	# Station groups of the controls diagram (station tints; names always say the station).
+	"st_helm": Color("#56b4e9"),
+	"st_weapons": Color("#d55e00"),
+	"st_engineering": Color("#e69f00"),
+	"st_science": Color("#009e73"),
+	"st_relay": Color("#cc79a7"),
+	"st_comms": Color("#f0e442"),
+	"st_captain": Color("#b8b8ff"),
+	"st_viewer": Color("#8b98a5"),
+	# The controls diagram's hardware: dark-blue outline and keys.
+	"hardware": Color("#10243d"),
+	"hardware_edge": Color("#3b6ea8"),
+	"key": Color("#1b3a63"),
 	# Chrome.
 	"background": Color("#0b0f14"),
 	"panel": Color("#151b23"),
@@ -49,6 +62,8 @@ const GROUPS: Dictionary = {
 	"radar": ["hostile", "unknown", "friendly", "neutral", "mark", "selected"],
 	"alert": ["alert_normal", "alert_yellow", "alert_red"],
 	"load": ["load_intense", "load_busy", "load_light"],
+	# Any two stations share a diagram in a joint view (net/station_views.gd ENTRIES).
+	"stations": ["st_helm", "st_weapons", "st_engineering", "st_science", "st_relay", "st_comms"],
 }
 ## [foreground, background] pairs that must keep a readable contrast ratio under each
 ## simulated deficiency (tools/check_palette.py).
@@ -145,6 +160,8 @@ static func item_color(it: Dictionary) -> Color:
 		return color("mark")
 	if it.get("kind", "") == "zone":
 		return color("warn" if it.get("zone", "") == "hazard" else "accent")
+	if it.get("kind", "") == "site":
+		return color("accent")
 	return allegiance_color(it.get("allegiance", ""))
 
 
@@ -152,7 +169,7 @@ static func item_color(it: Dictionary) -> Color:
 static func item_shape(it: Dictionary) -> String:
 	if it.get("kind", "") == "mark":
 		return "diamond"
-	if it.get("kind", "") == "zone":
+	if it.get("kind", "") == "zone" or it.get("kind", "") == "site":
 		return "octagon"
 	return ALLEGIANCE_SHAPES.get(it.get("allegiance", ""), "circle")
 

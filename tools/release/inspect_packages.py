@@ -45,7 +45,7 @@ PRERENDER_HOST_DIR = "audio/prerendered_host"
 # Data files the game reads with FileAccess, which the export include filter
 # (export_presets.cfg) must put in every pack: each file of the checkout that
 # matches must be in the pack (D150-D152).
-DATA_GLOBS = ("content/dialogue/*.json", "content/i18n/strings.json", "content/voices.json")
+DATA_GLOBS = ("content/dialogue/*.json", "content/conversations/*.json", "content/i18n/strings.json", "content/voices.json")
 COMMON_TOP = {"LICENSE", "licenses", "SOURCE.md", "BUILD.json"}
 EXES = {"linux": "full-theta.x86_64", "windows": "full-theta.exe"}
 # Written by build.sh into its output folder; not assets.

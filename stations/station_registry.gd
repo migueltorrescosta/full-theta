@@ -1,6 +1,6 @@
 class_name StationRegistry
 extends RefCounted
-## Station id -> the StationPanel script that draws it. Station strands add one line
+## Station id -> the StationPanel script that draws it. A new station adds one line
 ## each; a station missing here gets PlaceholderPanel
 ## (any unknown id). Paths, loaded on first use, not class names: naming
 ## the panel classes here would load every station (and its art) whenever the shell

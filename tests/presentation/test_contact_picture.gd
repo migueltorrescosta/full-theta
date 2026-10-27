@@ -9,7 +9,7 @@ func _ctx() -> StationContext:
 	var v: NetViewState = NetViewState.new(0)
 	v.tick = 100
 	# Own ship at the origin, yawed 90° to port: world -X is its bow.
-	v.kin = {"site": 0, "pos": Vector3i.ZERO, "rot": Quaternion(Vector3.UP, PI / 2.0)}
+	v.kin = {"pos": Vector3i.ZERO, "rot": Quaternion(Vector3.UP, PI / 2.0)}
 	v.contacts = {
 		"model":
 		{

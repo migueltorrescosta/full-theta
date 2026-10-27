@@ -31,8 +31,6 @@ static func step(world: SimWorld) -> void:
 			continue
 		for i: int in hazards.size():
 			var h: HazardDef = hazards[i]
-			if h.site != world.kin.site[ship]:
-				continue
 			if h.is_front():
 				_front(world, ship, i, h, t)
 			else:
@@ -64,7 +62,7 @@ static func ship_offset(world: SimWorld, ship: int, h: HazardDef) -> Vector3:
 
 
 ## Whether the faction knows of the hazard i now: it is live, and one of the faction's live
-## ships on its site has its sensors (detect_range, scaled by their health) or one of its
+## ships has its sensors (detect_range, scaled by their health) or one of its
 ## deployed probes has its bubble within reach of the hazard's surface.
 static func known_to(world: SimWorld, faction: int, i: int) -> bool:
 	var h: HazardDef = world.hazards[i]
@@ -73,14 +71,14 @@ static func known_to(world: SimWorld, faction: int, i: int) -> bool:
 		return false
 	var kin: Kinematics = world.kin
 	for s: int in world.ship_count():
-		if kin.factions[s] != faction or not kin.is_alive(s) or kin.site[s] != h.site:
+		if kin.factions[s] != faction or not kin.is_alive(s):
 			continue
 		var reach: float = h.detect_range * DamageSystem.effectiveness(world, s, &"sensors")
 		if _gap(h, ship_offset(world, s, h), t) <= reach:
 			return true
 	var probes: ProbeTable = world.probes
 	for p: int in probes.size():
-		if probes.factions[p] != faction or probes.deployed[p] == 0 or probes.site[p] != h.site:
+		if probes.factions[p] != faction or probes.deployed[p] == 0:
 			continue
 		var at: Vector3 = Vector3(
 			kin.wrap(probes.at_x[p] - h.center.x),
@@ -98,7 +96,7 @@ static func known_to(world: SimWorld, faction: int, i: int) -> bool:
 static func eta(world: SimWorld, ship: int, i: int) -> float:
 	var h: HazardDef = world.hazards[i]
 	var t: float = world.tick * SimWorld.DT
-	if h.site != world.kin.site[ship] or not is_live(h, t):
+	if not is_live(h, t):
 		return -1.0
 	var from_centre: Vector3 = ship_offset(world, ship, h)
 	var d: float = edge_distance(h, from_centre, t)

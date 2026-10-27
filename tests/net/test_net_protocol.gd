@@ -59,13 +59,11 @@ func _samples() -> Dictionary:
 			"slot": -1,
 			"name": "",
 			"contact": -1,
-			"site": 0,
 			"x": 98765.4321012345,
 			"y": -0.5,
 			"z": 3.0,
 		},
-		NetProtocol.Type.PING:
-		{"kind": "contact", "id": 1, "site": -1, "x": 0.0, "y": 0.0, "z": 0.0},
+		NetProtocol.Type.PING: {"kind": "contact", "id": 1, "x": 0.0, "y": 0.0, "z": 0.0},
 		NetProtocol.Type.RUN_AGAIN: {"ship": 0, "vote": true},
 		NetProtocol.Type.MAIN_VIEW: {"view": 3},
 		NetProtocol.Type.MARK_SEND: {"slot": 2, "ship": 1},
@@ -75,6 +73,7 @@ func _samples() -> Dictionary:
 		{"op": "send", "chip": "bring_to_bear", "arg": 2, "id": -1, "accept": false},
 		NetProtocol.Type.CLIENT_STATS: {"sent_us": 5, "ua": "x", "pairs": PackedInt64Array([1, 2])},
 		NetProtocol.Type.SHARE: {"feature": "routes"},
+		NetProtocol.Type.HOST_PAUSE: {"on": true},
 	}
 
 

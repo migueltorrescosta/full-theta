@@ -6,4 +6,5 @@
 script = ExtResource("1_p2pair")
 id = &"p2"
 display_name = "Helm + Weapons"
+stations = Array[StringName]([&"helm", &"weapons"])
 pair_min_gain = 0.25

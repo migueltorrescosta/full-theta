@@ -14,12 +14,12 @@ func before_test() -> void:
 	m = CrewMarks.new()
 
 
-static func _free(x: float, site: int = 0) -> Dictionary:
-	return {"contact": -1, "site": site, "x": x, "y": 0.0, "z": 0.0}
+static func _free(x: float) -> Dictionary:
+	return {"contact": -1, "x": x, "y": 0.0, "z": 0.0}
 
 
 static func _on(contact: int) -> Dictionary:
-	return {"contact": contact, "site": -1, "x": 0.0, "y": 0.0, "z": 0.0}
+	return {"contact": contact, "x": 0.0, "y": 0.0, "z": 0.0}
 
 
 func _fill(role: CrewMarks.Role = CREW, session: int = 1) -> void:
@@ -44,7 +44,6 @@ func test_eight_named_slots_then_marks_full() -> void:
 			"slot": 3,
 			"name": "Rally",
 			"contact": 1,
-			"site": -1,
 			"x": 0.0,
 			"y": 0.0,
 			"z": 0.0,
@@ -85,7 +84,7 @@ func test_only_relay_edits_others_marks_and_the_captain_never_edits() -> void:
 	assert_str(m.rename(SHIP, RELAY, 2, 1, "Cap's")).is_empty()
 	assert_str(m.move(SHIP, RELAY, 2, 0, _on(1))).is_empty()
 	assert_int(m.marks_of(SHIP)[0]["contact"]).is_equal(1)
-	assert_str(m.move(SHIP, RELAY, 2, 0, _free(7.0, 0))).is_empty()
+	assert_str(m.move(SHIP, RELAY, 2, 0, _free(7.0))).is_empty()
 	assert_int(m.marks_of(SHIP)[0]["contact"]).is_equal(-1)
 	assert_str(m.delete(SHIP, RELAY, 2, 1)).is_empty()
 	assert_bool(m.has_mark(SHIP, 1)).is_false()
@@ -100,7 +99,6 @@ func test_free_marks_keep_64_bits_and_refuse_bad_places() -> void:
 	# NetCrewState turns an unknown contact into -2.
 	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, "", _on(-2))).is_equal(CrewMarks.BAD_MARK)
 	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, "", _free(NAN))).is_equal(CrewMarks.BAD_MARK)
-	assert_str(m.place(SHIP, CREW, 1, "Ana", -1, "", _free(1.0, -1))).is_equal(CrewMarks.BAD_MARK)
 	assert_str(m.place(SHIP, CREW, 1, "Ana", 8, "", _free(1.0))).is_equal(CrewMarks.BAD_MARK)
 
 
@@ -141,16 +139,16 @@ func test_ping_rate_limit_is_per_session() -> void:
 # FT: FT-SPA-031
 func test_a_ping_on_an_item_pinged_by_another_within_3_s_is_a_copy() -> void:
 	var p: CrewPings = CrewPings.new()
-	assert_str(p.copy_of(SHIP, "contact", 1, -1, 1, "Ana", 0)).is_empty()
-	assert_str(p.copy_of(SHIP, "contact", 1, -1, 2, "Rui", 1_000_000)).is_equal("Ana")
+	assert_str(p.copy_of(SHIP, "contact", 1, 1, "Ana", 0)).is_empty()
+	assert_str(p.copy_of(SHIP, "contact", 1, 2, "Rui", 1_000_000)).is_equal("Ana")
 	# The pinger's own repeat, another item, another ship: not copies.
-	assert_str(p.copy_of(SHIP, "contact", 1, -1, 1, "Ana", 1_500_000)).is_empty()
-	assert_str(p.copy_of(SHIP, "contact", 2, -1, 2, "Rui", 1_500_000)).is_empty()
-	assert_str(p.copy_of(1, "contact", 1, -1, 2, "Rui", 1_500_000)).is_empty()
-	assert_str(p.copy_of(SHIP, "point", -1, 0, 2, "Rui", 1_600_000)).is_empty()
-	assert_str(p.copy_of(SHIP, "point", -1, 0, 1, "Ana", 1_600_000)).is_empty()
+	assert_str(p.copy_of(SHIP, "contact", 1, 1, "Ana", 1_500_000)).is_empty()
+	assert_str(p.copy_of(SHIP, "contact", 2, 2, "Rui", 1_500_000)).is_empty()
+	assert_str(p.copy_of(1, "contact", 1, 2, "Rui", 1_500_000)).is_empty()
+	assert_str(p.copy_of(SHIP, "point", -1, 2, "Rui", 1_600_000)).is_empty()
+	assert_str(p.copy_of(SHIP, "point", -1, 1, "Ana", 1_600_000)).is_empty()
 	# Past 3 s it is a new ping.
-	assert_str(p.copy_of(SHIP, "contact", 1, -1, 2, "Rui", 4_600_000)).is_empty()
+	assert_str(p.copy_of(SHIP, "contact", 1, 2, "Rui", 4_600_000)).is_empty()
 
 
 # FT: FT-SPA-012

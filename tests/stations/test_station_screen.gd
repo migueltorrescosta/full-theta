@@ -113,10 +113,8 @@ func test_select_ping_and_mark_under_the_reticle() -> void:
 	assert_dict(s.ctx.crew.selection).is_equal({"kind": "contact", "id": StationFixture.H2})
 	s.dispatch(_ev("ping", "pad", s))
 	s.dispatch(_ev("mark", "pad", s))
-	assert_array(_sent(s, "ping")[0][1]).is_equal(["contact", StationFixture.H2, 0, Vector3.ZERO])
-	assert_array(_sent(s, "place_mark")[0][1]).is_equal(
-		[-1, "", StationFixture.H2, 0, Vector3.ZERO]
-	)
+	assert_array(_sent(s, "ping")[0][1]).is_equal(["contact", StationFixture.H2, Vector3.ZERO])
+	assert_array(_sent(s, "place_mark")[0][1]).is_equal([-1, "", StationFixture.H2, Vector3.ZERO])
 	# Nothing under the reticle: select falls through (LMB fires in the turret), ping and
 	# mark use the selection.
 	p.item = {}
@@ -130,7 +128,7 @@ func test_a_ninth_mark_is_refused_with_a_toast() -> void:
 	var s: StationScreen = _screen("helm")
 	var marks: Array = []
 	for slot: int in CrewState.MAX_MARKS:
-		marks.append({"slot": slot, "name": "", "contact": -1, "site": 0, "x": 0, "y": 0, "z": 0})
+		marks.append({"slot": slot, "name": "", "contact": -1, "x": 0, "y": 0, "z": 0})
 	s.ctx.crew.handle_event({"type": "marks", "payload": {"ship": 0, "marks": marks}}, 0)
 	var toasts: Array = []
 	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))

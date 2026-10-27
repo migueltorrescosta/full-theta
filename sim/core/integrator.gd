@@ -3,7 +3,7 @@ extends RefCounted
 ## 6DOF step with no drag (FT-SIM-001, FT-SIM-003, FT-ARC-007; replaces tech §3's Euler
 ## update), promoted from S5. Position is exact under constant force over a tick:
 ## x += v dt + a dt^2 / 2 (FT-SIM-038), in 64-bit per axis (D104), wrapped onto the
-## site's cube (FT-SIM-035). Rotation keeps the
+## cube (FT-SIM-035). Rotation keeps the
 ## world-frame angular momentum L as its state: the torque adds R tau dt, and with no
 ## torque L is not touched at all. The attitude then follows the free rigid body by the
 ## symmetric splitting of its energy into the three principal axes (pitch/2, yaw/2,

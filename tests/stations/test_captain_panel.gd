@@ -18,6 +18,7 @@ func after_test() -> void:
 
 func _screen() -> StationScreen:
 	var ctx: StationContext = StationFixture.context(StationViews.CAPTAIN, SETTINGS)
+	CommsFixture.install(ctx)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -45,10 +46,11 @@ func test_mirror_buttons_chips_and_cards() -> void:
 		. is_equal(["Forward", "Chase", "Tactical", "Target", "Status"])
 	)
 	assert_bool(cap.buttons[0].button_pressed).is_true()
-	# Read-only lists: no chip before the CHIPS block, and the four fixture cards (D190).
+	# Read-only lists: no chip before the CHIPS block, and the mission and the contract of the
+	# COMMS block (the offer and the hail are Comms' own).
 	assert_int(cap.chips.rows.size()).is_equal(0)
-	assert_int(FixtureCards.all().size()).is_equal(4)
-	assert_int(cap.cards.card_at(Vector2(10.0, FixtureCards.HEADER_HEIGHT + 5.0))).is_equal(0)
+	assert_int(CardList.rows(s.ctx.view, [CardList.MISSION, CardList.CONTRACT]).size()).is_equal(2)
+	assert_int(cap.cards.card_at(Vector2(10.0, CardList.HEADER_HEIGHT + 5.0))).is_equal(0)
 	assert_int(cap.cards.card_at(Vector2(10.0, 2.0))).is_equal(-1)
 	# The ship's CHIPS block fills the list: the Captain sees every open chip, read-only.
 	s.ctx.view.blocks[StationViews.Section.CHIPS] = {}
@@ -142,16 +144,7 @@ func test_marks_only_into_empty_slots() -> void:
 	var marks: Array = []
 	for slot: int in CrewState.MAX_MARKS:
 		marks.append(
-			{
-				"slot": slot,
-				"name": "M%d" % slot,
-				"contact": -1,
-				"site": 0,
-				"x": 0,
-				"y": 0,
-				"z": 0,
-				"by": "Ana"
-			}
+			{"slot": slot, "name": "M%d" % slot, "contact": -1, "x": 0, "y": 0, "z": 0, "by": "Ana"}
 		)
 	s.ctx.crew.handle_event({"type": "marks", "payload": {"ship": 0, "marks": marks}}, 1)
 	s._mark(IntentTable.KBM)
@@ -170,21 +163,33 @@ func test_a_card_ping_shows_the_card_for_ten_seconds() -> void:
 	var row: float = cap.cards.global_position.y - cap.global_position.y
 	var at: Vector2 = Vector2(
 		cap.cards.global_position.x - cap.global_position.x + 20.0,
-		row + FixtureCards.HEADER_HEIGHT + FixtureCards.ROW_HEIGHT * 2.0 + 5.0
+		row + CardList.HEADER_HEIGHT + CardList.ROW_HEIGHT * 1.0 + 5.0
 	)
-	assert_dict(cap.item_at(at)).is_equal({"kind": "card", "id": 2})
+	assert_dict(cap.item_at(at)).is_equal({"kind": "card", "id": 1})
 	s.ctx.ping_item(cap.item_at(at))
-	assert_array(rec.of("ping")[0][1].slice(0, 2)).is_equal(["card", 2])
+	assert_array(rec.of("ping")[0][1].slice(0, 2)).is_equal(["card", 1])
 	var crew: CrewState = s.ctx.crew
 	var t0: int = StationFixture.NOW_MS
-	crew.handle_event(
-		{
-			"type": "ping",
-			"payload": {"ship": 0, "kind": "card", "id": 2, "site": -1, "by": "captain", "copy": ""}
-		},
-		t0
+	(
+		crew
+		. handle_event(
+			{
+				"type": "ping",
+				"payload":
+				{
+					"ship": 0,
+					"kind": "card",
+					"id": 2,
+					"by": "captain",
+					"copy": "",
+					"card": {"kind": 2, "title": "comms.card.offer", "detail": "", "expires": -1.0},
+				}
+			},
+			t0
+		)
 	)
 	assert_int(crew.shown_card(t0 + 9900)).is_equal(2)
+	assert_str(crew.card_ping["card"]["title"]).is_equal("comms.card.offer")
 	assert_int(crew.shown_card(t0 + CrewState.CARD_MS)).is_equal(-1)
 	# The main screen draws it while it is shown.
 	s.ctx.clock = func() -> int: return t0 + 5000
@@ -194,7 +199,7 @@ func test_a_card_ping_shows_the_card_for_ten_seconds() -> void:
 	crew.handle_event(
 		{
 			"type": "ping",
-			"payload": {"ship": 0, "kind": "contact", "id": 2, "site": 0, "by": "Ana", "copy": ""}
+			"payload": {"ship": 0, "kind": "contact", "id": 2, "by": "Ana", "copy": ""}
 		},
 		t0 + 6000
 	)
@@ -203,7 +208,7 @@ func test_a_card_ping_shows_the_card_for_ten_seconds() -> void:
 	crew.handle_event(
 		{
 			"type": "ping",
-			"payload": {"ship": 0, "kind": "card", "id": 1, "site": -1, "by": "captain", "copy": ""}
+			"payload": {"ship": 0, "kind": "card", "id": 1, "by": "captain", "copy": ""}
 		},
 		t0 + 7000
 	)

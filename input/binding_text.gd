@@ -36,6 +36,23 @@ static func describe(binding: String) -> String:
 	return "+".join(out)
 
 
+## The subtitle text with each `{binding:<intent>}` marker (DialogueLines.fill) replaced by
+## the player's current binding of that intent on `device` ("Alt+A", "hold RB"); "-" for an
+## intent with no binding there. A rebind shows at once because bindings are read here.
+static func fill_markers(text: String, bindings: Bindings, device: String) -> String:
+	if not "{binding:" in text:
+		return text
+	var re: RegEx = RegEx.create_from_string("\\{binding:([a-z][a-z0-9_]*)\\}")
+	var out: String = ""
+	var at: int = 0
+	for m: RegExMatch in re.search_all(text):
+		out += text.substr(at, m.get_start() - at)
+		var list: PackedStringArray = bindings.bindings(m.get_string(1), device)
+		out += describe_all(list) if not list.is_empty() else "-"
+		at = m.get_end()
+	return out + text.substr(at)
+
+
 ## Every binding of `id` on `device`, joined: "T / RB".
 static func describe_all(list: PackedStringArray) -> String:
 	return " / ".join(Array(list).map(func(b: String) -> String: return describe(b)))

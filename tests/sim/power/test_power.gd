@@ -14,7 +14,7 @@ const SHD: int = SubsystemDef.Kind.SHIELDS
 
 func _world() -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	w.spawn_ship(TestDefs.corvette(), 1)
 	return w
 
 
@@ -233,7 +233,7 @@ func test_draw_energy_from_weapons_store() -> void:
 # SimTable.reset_ship, and leaves the other ship's power state alone.
 func test_reset_restores_power() -> void:
 	var w: SimWorld = _world()
-	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	w.spawn_ship(TestDefs.corvette(), 1)
 	assert_bool(_pips(w, ENG, 4)).is_true()
 	assert_bool(PowerSystem.set_pips(w, 1, ENG, 4)).is_true()
 	_steps(w, 300)
@@ -242,7 +242,7 @@ func test_reset_restores_power() -> void:
 	var other: Array = w.damage.columns().map(
 		func(c: Array) -> Array: return [c[0], Array(c[1]).slice(7, 14)]
 	)
-	w.reset_ship(0, 0)
+	w.reset_ship(0)
 	assert_array(SimFixture.sub_values(w, 0, "pips")).is_equal([2, 2, 2, 2, 2, 0])
 	assert_array(SimFixture.sub_values(w, 0, "heat")).is_equal([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 	assert_array(SimFixture.sub_values(w, 0, "fault_armed")).is_equal([1, 1, 1, 1, 1, 1])

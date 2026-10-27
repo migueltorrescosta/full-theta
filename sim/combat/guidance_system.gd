@@ -4,7 +4,7 @@ extends RefCounted
 ## before collisions, a projectile with a turn rate turns its velocity toward the tracked
 ## contact it follows, at most turn_rate * dt and keeping its speed; the turn rate is cut by
 ## the track's quality (D214, track_quality). A contact the shooter's faction stops
-## tracking, or that is destroyed or at another site, is dropped: the ordnance then flies
+## tracking, or that is destroyed, is dropped: the ordnance then flies
 ## on straight (&"guidance_lost" on the shooter, other_id the contact).
 
 ## The least quality of a track (dimensionless): a tracked contact is never quite lost.
@@ -19,9 +19,7 @@ static func is_tracked(world: SimWorld, faction: int, ship_id: int) -> bool:
 	if KnowledgeSystem.is_detected(world, faction, ship_id):
 		return true
 	var p: PackedFloat64Array = world.kin.point_at(ship_id, Vector3.ZERO)
-	return ProbeSystem.coverage_at(
-		world, faction, Vector3(p[0], p[1], p[2]), world.kin.site[ship_id]
-	)
+	return ProbeSystem.coverage_at(world, faction, Vector3(p[0], p[1], p[2]))
 
 
 ## How good the faction's track of the ship is, 0..1 (D214, FT-WPN-007, P8): 0 when it is
@@ -54,8 +52,6 @@ static func track_quality(world: SimWorld, faction: int, ship_id: int) -> float:
 	for r: int in probes.size():
 		if probes.factions[r] != faction or probes.deployed[r] == 0:
 			continue
-		if probes.site[r] != kin.site[ship_id]:
-			continue
 		var off: Vector3 = Vector3(
 			kin.wrap(p[0] - probes.at_x[r]),
 			kin.wrap(p[1] - probes.at_y[r]),
@@ -77,7 +73,7 @@ static func step(world: SimWorld) -> void:
 		var rate: float = proj.turn_rate[k]
 		var target: int = proj.guide_target[k]
 		if target >= 0:
-			if kin.site[target] == proj.site[k] and is_tracked(world, proj.factions[k], target):
+			if is_tracked(world, proj.factions[k], target):
 				want = proj.offset_to_ship(k, kin, target)
 				var key: int = proj.factions[k] * 65536 + target
 				if not quality.has(key):

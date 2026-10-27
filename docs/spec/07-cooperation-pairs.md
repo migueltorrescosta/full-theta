@@ -8,7 +8,7 @@ Six functional stations make 15 pairs; each has a cooperative mechanic built on 
 |---|---|---|---|
 | PWR | Power bus | reactor output, pips, heat, overcharge | E |
 | COND | Ship condition | subsystem health, faults, crews, parts, ammo, propellant, probe stock, mount arcs | damage, E, W, R |
-| KNOW | Contact knowledge (per faction) | detection, scan level, class, intent, weak points, resistances, hack access, tracks | S, R (probes), C (intent) |
+| KNOW | Contact knowledge (per faction) | detection, scan level, class, intent (UNKNOWN until a scan or a reply sets it, D249), weak points, resistances, hack access, tracks | S, R (probes), C (intent) |
 | MARK | Marks and pings | marks, pings, routes, approach lanes, hazard zones, scan positions | any station; R curates |
 | STORY | Story state | conversations, contracts, missions, opportunities, clearances, reputation per faction | C, director |
 | CUE | Requests and cues | request chips, acknowledgements, audio cues, debrief log | any station |
@@ -81,7 +81,7 @@ A joint view holding both stations of a pair makes that pair's requests direct a
 
 **P8 Weapons + Relay.** Probes keep tracks beyond own sensors; guided ordnance can fire at a Relay mark attached to a tracked contact; Relay flags lanes crossing friendlies (D37). Alone: engagement within own sensor range. Info: Relay sees the whole picture; Weapons a ship-centred view. Feedback: track-quality bar (Easy); red lane overlay and tone before a friendly-fire shot. Failure: shorter range, friendly fire, wasted ordnance. Test: target at 1.5× own sensor range is engageable only with an attached mark; hit probability rises with track quality; friendly-lane warning fires before the shot.
 
-**P9 Weapons + Comms.** Conversation sets intent (hostile, neutral, surrendering, bluffing) in KNOW; contracts mark targets "disable, do not destroy" or "protect". Alone: Weapons fires at anything; Comms talks to anything. Info: Comms knows terms; Weapons sees the callsign and, on Easy, contract flags. Feedback: reticle chip turns white for surrendering; NPC line on Comms only (D39). Failure: reputation and reward loss; avoidable fights continue. Test: surrender probability with prior engine damage > without; destroying a surrendered contact reduces reputation within range and logs a debrief line.
+**P9 Weapons + Comms.** Conversation sets intent (unknown until set, then hostile, neutral, surrendering, bluffing; Q22) in KNOW; contracts mark targets "disable, do not destroy" or "protect". Alone: Weapons fires at anything; Comms talks to anything. Info: Comms knows terms; Weapons sees the callsign and, on Easy, contract flags. Feedback: reticle chip turns white for surrendering; NPC line on Comms only (D39). Failure: reputation and reward loss; avoidable fights continue. Test: surrender probability with prior engine damage > without; destroying a surrendered contact reduces reputation within range and logs a debrief line.
 
 **P10 Engineering + Science.** Unknown faults need a cause; Science's internal scan names it; the right repair is fast. Engineering's sensor pips set scan noise and range. Alone: slow brute-force repair. Info: Engineering sees symptoms; Science sees causes. Feedback: "?" becomes a named cause (Easy) or Science calls it; noise bar drops with sensor pips. Failure: slow repairs, wasted parts. Test: repair time with correct cause < brute force; noise at pips 3 < pips 1; brute force still repairs.
 

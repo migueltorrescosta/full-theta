@@ -20,6 +20,8 @@ extends StationPanel
 
 ## Under this width (a phone, D195) the HUD stacks around the map.
 const NARROW_W: float = 560.0
+## Under this height the HUD's bottom box is one row (a phone on its side).
+const SHORT_H: float = 480.0
 ## A press that moves less than this is a click (select), not a drag (px).
 const DRAG_PX: float = 6.0
 ## Controller cursor speed (px/s), depth speed (map spans/s), turn speed (px-equivalent/s).
@@ -64,7 +66,11 @@ func _setup() -> void:
 	hud = RelayHud.new()
 	add_child(hud)
 	hud.setup(ctx)
-	resized.connect(func() -> void: hud.set_narrow(size.x < NARROW_W))
+	resized.connect(
+		func() -> void:
+			hud.set_narrow(size.x < NARROW_W)
+			hud.set_short(size.x >= NARROW_W and size.y < SHORT_H)
+	)
 	hud.launch_pressed.connect(func() -> void: _arm("probe"))
 	hud.hazard_pressed.connect(func() -> void: _arm("hazard"))
 	hud.lanes_pressed.connect(_toggle_lanes)
@@ -84,8 +90,14 @@ func _setup() -> void:
 
 func _mode_changed() -> void:
 	map.chips = not docked
-	_hint.visible = not docked
+	_update_hint()
 	hud.set_docked(docked)
+
+
+## The hint sits top right over the map; a phone-wide HUD covers that corner, so there it
+## only shows while a probe or hazard is armed.
+func _update_hint() -> void:
+	_hint.visible = not docked and (armed != "" or size.x >= NARROW_W)
 
 
 func _process(delta: float) -> void:
@@ -109,9 +121,12 @@ func refresh() -> void:
 	map.probes = blk.get("probes", [])
 	map.lanes_on = bool(blk.get("lanes", false))
 	map.routes = ctx.crew.routes
+	# Narrow, the log and inbox box covers the map's bottom edge: the span caption sits above it.
+	map.caption_bottom = hud.bottom_top() if hud.visible and size.x < NARROW_W else -1.0
 	map.queue_redraw()
 	hud.refresh()
 	_hint.text = tr("relay.armed_" + armed) if armed != "" else tr("relay.hint")
+	_update_hint()
 
 
 func handle_intent(ev: Dictionary) -> bool:
@@ -221,7 +236,7 @@ func _arm(what: String) -> void:
 	refresh()
 
 
-## Sends a probe or a hazard zone to a site-local point (m).
+## Sends a probe or a hazard zone to a point (m).
 func _place(what: String, at: Vector3) -> void:
 	if what == "probe":
 		var blk: Dictionary = ctx.view.blocks.get(StationViews.Section.RELAY, {})
@@ -230,7 +245,7 @@ func _place(what: String, at: Vector3) -> void:
 			return
 		ctx.intents.command({"kind": "launch_probe", "x": at.x, "y": at.y, "z": at.z})
 	else:
-		ctx.intents.hazard_add(HAZARD_RADIUS_M, ctx.site(), at)
+		ctx.intents.hazard_add(HAZARD_RADIUS_M, at)
 
 
 ## G: the selection becomes the next waypoint of route 1 (FT-RLY-005).
@@ -239,7 +254,7 @@ func _route_to_selection() -> bool:
 	if at == null:
 		ctx.crew.toast.emit("toast.select_first", {})
 		return false
-	ctx.intents.route_add(0, ctx.site(), at)
+	ctx.intents.route_add(0, at)
 	return true
 
 
@@ -283,12 +298,12 @@ func _delete_zone() -> bool:
 	return true
 
 
-## The site-local position (m) of the shared selection, or null.
+## The position (m) of the shared selection, or null.
 func _selection_pos() -> Variant:
 	return _item_pos(ctx.crew.selection)
 
 
-## The site-local position (m) of an item ({"kind", "id"}), or null.
+## The position (m) of an item ({"kind", "id"}), or null.
 func _item_pos(s: Dictionary) -> Variant:
 	match s.get("kind", ""):
 		"contact":
@@ -431,7 +446,7 @@ func _toggle_attach() -> bool:
 	var slot: int = m["slot"]
 	var at: Vector3 = ctx.mark_position(m)
 	if int(m.get("contact", -1)) >= 0:
-		ctx.intents.move_mark(slot, -1, ctx.site(), at)
+		ctx.intents.move_mark(slot, -1, at)
 		return true
 	var best: int = -1
 	var best_d: float = INF
@@ -461,7 +476,7 @@ func _poll_pad(delta: float) -> void:
 
 
 func _point(rel: Vector3) -> Dictionary:
-	return {"kind": "point", "site": ctx.site(), "pos": map.site_position(rel)}
+	return {"kind": "point", "pos": map.site_position(rel)}
 
 
 func _selected_mark() -> int:

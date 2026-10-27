@@ -26,12 +26,12 @@ func set_alert(level: int) -> void:
 
 ## slot -1 takes the first free one; contact >= 0 attaches the mark, else it is free at
 ## site + pos (FT-SPA-012, FT-SPA-014).
-func place_mark(slot: int, mark_name: String, contact: int, site: int, pos: Vector3) -> void:
-	_call(&"place_mark", [slot, mark_name, contact, site, pos])
+func place_mark(slot: int, mark_name: String, contact: int, pos: Vector3) -> void:
+	_call(&"place_mark", [slot, mark_name, contact, pos])
 
 
-func move_mark(slot: int, contact: int, site: int, pos: Vector3) -> void:
-	_call(&"move_mark", [slot, contact, site, pos])
+func move_mark(slot: int, contact: int, pos: Vector3) -> void:
+	_call(&"move_mark", [slot, contact, pos])
 
 
 func rename_mark(slot: int, mark_name: String) -> void:
@@ -48,11 +48,11 @@ func set_main_view(view: int) -> void:
 
 
 ## kind "contact" | "mark" | "card" | "site" | "point" (FT-SPA-016, FT-CPT-005).
-func ping(kind: String, id: int, site: int, pos: Vector3) -> void:
-	_call(&"ping", [kind, id, site, pos])
+func ping(kind: String, id: int, pos: Vector3) -> void:
+	_call(&"ping", [kind, id, pos])
 
 
-## Relay (strand B of #9): send the mark in `slot` to an allied ship's Relay (FT-RLY-008);
+## Relay: send the mark in `slot` to an allied ship's Relay (FT-RLY-008);
 ## accept the inbox item `id`, replacing `slot` when all 8 marks are used (slot -1: a free
 ## one), or decline it (FT-RLY-009, FT-SPA-022).
 func send_mark(slot: int, to_ship: int) -> void:
@@ -69,23 +69,23 @@ func decline_mark(id: int) -> void:
 
 ## Routes and hazard zones (FT-RLY-005, FT-SPA-028): a waypoint on route `route`, clear
 ## it, a hazard of `radius_m` at a point, delete the zone `id`.
-func route_add(route: int, site: int, pos: Vector3) -> void:
-	_call(&"route_add", [route, site, pos])
+func route_add(route: int, pos: Vector3) -> void:
+	_call(&"route_add", [route, pos])
 
 
 func route_clear(route: int) -> void:
 	_call(&"route_clear", [route])
 
 
-func hazard_add(radius_m: float, site: int, pos: Vector3) -> void:
-	_call(&"hazard_add", [radius_m, site, pos])
+func hazard_add(radius_m: float, pos: Vector3) -> void:
+	_call(&"hazard_add", [radius_m, pos])
 
 
 func hazard_delete(id: int) -> void:
 	_call(&"hazard_delete", [id])
 
 
-## Strand G. The host sets the session's data-shortcut toggles in the lobby (a DataToggles
+## The host sets the session's data-shortcut toggles in the lobby (a DataToggles
 ## code); a station sends a request chip (id from content/chips/chips.tres, arg a mount index
 ## or contact id) or answers one it received.
 func set_toggles(code: String) -> void:
@@ -100,7 +100,7 @@ func answer_chip(id: int, accept: bool) -> void:
 	_call(&"answer_chip", [id, accept])
 
 
-## Strand K (D210): shares a data shortcut from the source station (a toggle id).
+## (D210) Shares a data shortcut from the source station (a toggle id).
 func share(feature: String) -> void:
 	_call(&"share", [feature])
 
@@ -132,6 +132,11 @@ func vote_abandon(ship: int, vote: bool) -> void:
 
 func abandon(ship: int) -> void:
 	_call(&"abandon", [ship])
+
+
+## The host pauses or resumes the universe (FT-MIS-040).
+func host_pause(on: bool) -> void:
+	_call(&"host_pause", [on])
 
 
 ## "Run again" after the outcome (D178); the host's vote resets at once.

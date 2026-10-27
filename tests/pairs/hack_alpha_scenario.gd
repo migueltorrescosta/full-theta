@@ -76,8 +76,8 @@ static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "hack_alpha")
 	w.science_def = ScienceFixture.science()
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
-	w.spawn_ship(Gunnery.gunship(MOUNTS), 1, 0)
-	w.spawn_ship(target_def(), 2, 0, RAIDER_AT)
+	w.spawn_ship(Gunnery.gunship(MOUNTS), 1)
+	w.spawn_ship(target_def(), 2, RAIDER_AT)
 	return w
 
 

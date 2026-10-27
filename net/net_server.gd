@@ -24,6 +24,13 @@ const STATS_PERIOD_US: int = 10_000_000
 
 var encounter: M1Encounter
 var world: SimWorld
+## Steps the world with the director's before_tick (E07); rebuilt with every new world.
+var host: ScenarioHost
+## The director (or Shakedown's training driver): anything with before_tick(api). Made on the
+## first step of a run from driver_factory(difficulty preset), so it sees the lobby's toggles;
+## null with no factory (the M1 encounter).
+var driver: RefCounted
+var driver_factory: Callable
 var transport: NetTransport = NetTransport.new()
 var session: ServerSession
 var run_reset: NetRunReset
@@ -68,11 +75,13 @@ func start(
 	if world == null:
 		push_error("encounter does not validate: %s" % [encounter.validate()])
 		return ERR_INVALID_DATA
+	host = ScenarioHost.new(world)
 	session = ServerSession.new(transport, world)
 	session.dev_all = dev_all
 	session.host_secret = host_secret
 	transport.probe = probe != null
 	run_reset = NetRunReset.new(session, restart_run)
+	run_reset.decisions = _director_decisions
 	var err: Error = transport.start(port, address)
 	if err != OK:
 		return err
@@ -129,10 +138,19 @@ func _on_client_stats(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## snapshot full for every client. NetRunReset calls it when the vote passes.
 func restart_run() -> void:
 	world = encounter.build()
+	host = ScenarioHost.new(world)
+	driver = null
 	transport.reset_snapshots()
 	session.restart(world)
 	_next_snapshot_tick = world.tick
 	_idle_state_posted = false
+
+
+## The director's decisions so far for the debrief; none with another driver.
+func _director_decisions() -> Array:
+	if driver is Director:
+		return (driver as Director).decisions()
+	return []
 
 
 ## Serves the web export in `root` over plain HTTP on the bind address at port() - 1
@@ -227,7 +245,13 @@ func _process(delta: float) -> void:
 			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / 60
 	else:
 		_idle_state_posted = false
-		ticks = world.advance(delta)
+		if not host.holds(world):  # a test swapped the world
+			host = ScenarioHost.new(world)
+		if driver == null and driver_factory.is_valid():
+			driver = driver_factory.call(StringName(session.toggles.preset))
+		ticks = host.advance(
+			delta, Callable(driver, &"before_tick") if driver != null else Callable()
+		)
 		t[2] = Time.get_ticks_usec()
 		t[3] = t[2]
 		t[4] = t[2]

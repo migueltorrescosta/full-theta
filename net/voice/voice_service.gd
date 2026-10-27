@@ -195,7 +195,7 @@ func say(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
 	var clip: int = _new_id()
 	var role: String = str(line.get("role", "computer"))
 	var template: String = str((line.get("text", {}) as Dictionary).get(lang, ""))
-	var local: bool = (line.get("slots", {}) as Dictionary).is_empty()
+	var local: bool = not DialogueLines.has_voiced_slots(line)  # bindings are text-only
 	var audio: bool = false
 	var items: Array = []
 	if local:

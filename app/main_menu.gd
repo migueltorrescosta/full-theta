@@ -12,6 +12,9 @@ extends Control
 const LOOPBACK: String = "127.0.0.1"
 ## The alert tones (AlertTones.sounds_dir; audio/ may not name assets/, spec §2.2).
 const ALERT_SOUNDS: String = "res://assets/sounds/alerts"
+## The Host form's scenarios: the --encounter each passes, and the label key of each.
+const SCENARIOS: Array[String] = ["run", "shakedown"]
+const SCENARIO_KEYS: Array[String] = ["train.mode_run", "train.mode_shakedown"]
 
 var settings: ClientSettings = ClientSettings.new()
 ## Paths injectable for tests.
@@ -34,6 +37,7 @@ var _name: LineEdit
 var _bind: OptionButton
 var _lang: OptionButton
 var _dev: CheckBox
+var _scenario: OptionButton
 var _hosts: ItemList
 var _address: LineEdit
 var _status: Label
@@ -104,6 +108,7 @@ func host(bind: String = "") -> void:
 	var o: HostSession.Options = HostSession.Options.new(bind)
 	o.language = I18n.LANGUAGES[_lang.selected]
 	o.dev_all = _dev.button_pressed
+	o.encounter = SCENARIOS[_scenario.selected]
 	host_session = HostSession.new(settings.player_name)
 	host_session.token_file = token_path
 	host_session.launcher.pid_file = pid_path
@@ -338,6 +343,13 @@ func _build_host(col: VBoxContainer) -> void:
 	for l: String in I18n.LANGUAGES:
 		_lang.add_item(tr("language." + l))
 	row.add_child(_lang)
+	# the scenario the server holds: the run, or the Shakedown (Q17 A).
+	_scenario = OptionButton.new()
+	_scenario.name = "Scenario"
+	_scenario.tooltip_text = tr("train.mode")
+	for key: String in SCENARIO_KEYS:
+		_scenario.add_item(tr(key))
+	row.add_child(_scenario)
 	_dev = CheckBox.new()
 	_dev.name = "DevAll"
 	_dev.text = tr("menu.dev_all")

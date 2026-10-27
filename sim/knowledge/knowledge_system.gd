@@ -1,8 +1,8 @@
 class_name KnowledgeSystem
 extends RefCounted
 ## Per-faction detection, identification and callsigns (FT-ARC-013, T034). Runs every
-## tick before power: a faction detects a contact while any live ship of that faction at
-## the same site has it within sensor_range scaled by its sensors' effectiveness; it
+## tick before power: a faction detects a contact while any live ship of that faction
+## has it within sensor_range scaled by its sensors' effectiveness; it
 ## identifies the contact's allegiance once one is within identify_range, scaled alike
 ## (D112; Science scans extend it, E01), and never forgets it. Callsigns are
 ## per faction (FT-SPA-002), so allied ships, being one faction, share them (FT-ARC-018).
@@ -34,7 +34,6 @@ static func step(world: SimWorld) -> void:
 		sensing.append(PackedInt32Array())
 	var factions: PackedInt32Array = kin.factions
 	var alive: PackedByteArray = kin.alive
-	var site: PackedInt32Array = kin.site
 	var detected: PackedByteArray = table.detected
 	var defs: Array[ShipDef] = world.defs
 	for o: int in n:
@@ -47,7 +46,6 @@ static func step(world: SimWorld) -> void:
 	for contact: int in n:
 		var own: int = factions[contact]
 		var live: bool = alive[contact] == 1
-		var contact_site: int = site[contact]
 		for fi: int in observing.size():
 			var faction: int = observing[fi]
 			if faction == own:
@@ -58,8 +56,6 @@ static func step(world: SimWorld) -> void:
 			var ident: bool = false
 			if live:
 				for o: int in sensing[fi]:
-					if site[o] != contact_site:
-						continue
 					var dist: float = kin.relative(o, contact).length()
 					if dist > sense[o]:
 						continue
@@ -72,7 +68,7 @@ static func step(world: SimWorld) -> void:
 			# row, so Science can scan and hack inside it.
 			if by < 0 and live and world.probes.size() > 0:
 				var p: PackedFloat64Array = kin.point_at(contact, Vector3.ZERO)
-				if ProbeSystem.coverage_at(world, faction, Vector3(p[0], p[1], p[2]), contact_site):
+				if ProbeSystem.coverage_at(world, faction, Vector3(p[0], p[1], p[2])):
 					by = _any_ship(world, faction)
 			var row: int = table.row_for(faction, contact)
 			if by >= 0:

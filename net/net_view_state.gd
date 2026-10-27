@@ -16,6 +16,8 @@ var kin: Dictionary = {}
 var blocks: Dictionary = {}
 ## {"model": id -> [pos, vel, tick], "info": id -> [flags, callsign]}.
 var contacts: Dictionary = {}
+## The named sites the faction knows (SitesSection.read), in site id order.
+var sites: Array[Dictionary] = []
 ## id -> [packed quaternion, angular velocity, tick].
 var near: Dictionary = {}
 ## id -> [pos, vel, tick].
@@ -54,6 +56,7 @@ func apply(data: PackedByteArray) -> bool:
 		kin = {}
 		blocks = {}
 		contacts = {}
+		sites = []
 		near = {}
 		projectiles = {}
 		ownership = {}
@@ -88,7 +91,7 @@ func last_writer(control: String) -> String:
 	return writers[control][1] if writers.has(control) else ""
 
 
-## Own ship position (m, site-local, wrapped), or ZERO before the first snapshot.
+## Own ship position (m, wrapped), or ZERO before the first snapshot.
 func own_position() -> Vector3:
 	return NetCodec.pos_of(kin.get("pos", Vector3i.ZERO))
 
@@ -122,6 +125,8 @@ func _apply_section(
 			kin = KinSection.read(buf)
 		StationViews.Section.CONTACTS:
 			return ContactsSection.apply(contacts, buf, is_full, at, p_units)
+		StationViews.Section.SITES:
+			sites = SitesSection.read(buf)
 		StationViews.Section.NEAR:
 			NearSection.apply(near, buf, is_full, at)
 		StationViews.Section.PROJECTILES:

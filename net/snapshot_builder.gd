@@ -55,7 +55,7 @@ var _filters: Dictionary = {}
 
 func _init() -> void:
 	take_counts()
-	part_us.resize(StationViews.Section.size() + 1)
+	part_us.resize(int(StationViews.Section.values().max()) + 1)
 
 
 ## Advances every section the view keys need to the copied world's tick. Keys naming a
@@ -109,6 +109,8 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 			(section as ContactsSection).ids = _known_of(section.owner)
 		elif section is ChipsSection:
 			(section as ChipsSection).rows = _chips.get(section.owner, [])
+		elif section is CommsSection:  # the claims name each conversation's claimer
+			(section as CommsSection).claims = _ownership.get(section.owner, {}).get("claims", {})
 		if section is NearSection:
 			_deltas[skey] = (section as NearSection).update_members(world, near_sets[section.owner])
 		else:
@@ -211,6 +213,8 @@ static func peek(data: PackedByteArray) -> Array:
 
 
 func _owner(kind: int, ship: int) -> int:
+	if kind == StationViews.Section.SITES:
+		return _world.faction_of(ship)
 	return _world.faction_of(ship) if kind == StationViews.Section.CONTACTS else ship
 
 
@@ -229,6 +233,10 @@ func _make(kind: int, owner: int, filter: ViewFilter) -> SnapshotSection:
 			section = OwnershipSection.new(kind, owner)
 		StationViews.Section.CHIPS:
 			section = ChipsSection.new(kind, owner, filter)
+		StationViews.Section.COMMS:
+			section = CommsSection.new(kind, owner, filter)
+		StationViews.Section.SITES:
+			section = SitesSection.new(owner)
 		_:
 			section = BlockSection.new(kind, owner, filter)
 	return section

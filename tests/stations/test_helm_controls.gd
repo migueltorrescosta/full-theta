@@ -68,7 +68,7 @@ func test_hold_to_approach_on_x_and_pad_b() -> void:
 	_key("X")
 	_frame()
 	assert_bool(_cmds("helm_input").back()["approach"]).is_true()
-	assert_int(_cmds("helm_select_target").back()["site"]).is_equal(0)
+	assert_bool(_cmds("helm_select_target").back()["point"]).is_true()
 	_key("X", false)
 	_frame()
 	assert_bool(_cmds("helm_input").back()["approach"]).is_false()
@@ -164,7 +164,7 @@ func test_selection_changes_send_helm_select_target_once() -> void:
 	assert_vector(Vector3(t["x"], t["y"], t["z"])).is_equal(pos)
 	ctx.crew.select("", -1)
 	_frame()
-	assert_int(_cmds("helm_select_target").back()["site"]).is_equal(-1)
+	assert_bool(_cmds("helm_select_target").back()["point"]).is_false()
 	assert_int(_cmds("helm_select_target").size()).is_equal(3)
 
 

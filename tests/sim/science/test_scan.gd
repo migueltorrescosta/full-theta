@@ -89,9 +89,7 @@ func test_fully_scanned_class_starts_pre_aligned() -> void:
 	ScienceFixture.do(w, ScienceFixture.submit_cmd(ScienceFixture.solution(w)))
 	assert_bool(ScienceKnowledge.class_fully_scanned(w, 1, FOE)).is_true()
 	# A second raider of the same class, scanned for the first time, starts pre-aligned.
-	var other: int = w.spawn_ship(
-		TestDefs.raider(), 2, 0, Vector3(0, 0, -18000), Quaternion.IDENTITY
-	)
+	var other: int = w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -18000), Quaternion.IDENTITY)
 	w.step()
 	ScienceFixture.do(w, ScienceFixture.scan_cmd(other))
 	assert_int(_open_axes(w)).is_equal(1)
@@ -133,7 +131,7 @@ func test_scan_at_the_mark_is_cleaner() -> void:
 	mark.contact = FOE
 	ScienceFixture.do(at, mark)
 	var t: ScienceTable = at.science
-	at.kin.place(ME, 0, t.mark_x[ME], t.mark_y[ME], t.mark_z[ME])
+	at.kin.place(ME, t.mark_x[ME], t.mark_y[ME], t.mark_z[ME])
 	ScienceFixture.do(at, ScienceFixture.scan_cmd())
 	assert_float(t.noise[ME]).is_less(off_noise)
 	var def: ScienceDef = at.science_def
@@ -179,14 +177,14 @@ func test_cancel_and_lost_contact() -> void:
 	assert_str(SimFixture.of_kind(events, &"scan_failed")[0].tag).is_equal("cancelled")
 	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.NONE)
 	ScienceFixture.do(w, ScienceFixture.scan_cmd())
-	w.kin.place(FOE, 0, 0.0, 0.0, -60000.0)
+	w.kin.place(FOE, 0.0, 0.0, -60000.0)
 	events = SimFixture.run(w, 2)
 	assert_str(SimFixture.of_kind(events, &"scan_failed")[0].tag).is_equal("lost")
 
 
 # FT: FT-SCI-009, FT-PAIR-003
 # P10: the own-ship scan takes self_scan_s, then marks the ship as self-scanned (the
-# seam strand C reads to reveal fault causes); a second scan can't start meanwhile.
+# seam that reveals fault causes); a second scan can't start meanwhile.
 func test_own_ship_scan() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	assert_bool(w.science.self_scanned[ME] >= 0).is_false()

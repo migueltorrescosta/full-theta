@@ -5,7 +5,9 @@ ids (`- ~~**FT-...**~~`) are removed and excluded (FT-TST-015). Tests name the
 ids they verify on `# FT: <ids>` comment lines in .gd and .py files under
 tests/ and tools/tests/ (fixtures excluded) (FT-TST-016). Ids verified by a
 playtest or owner step are listed with an issue link in
-docs/traceability-manual.md (FT-TST-017).
+docs/traceability-manual.md (FT-TST-017). An entry marked `(owner-judged)` right after
+the id is a target the owner judges from a report: it shows `manual` even when a test
+reports on it (D252); other entries show `manual` only for ids with no test.
 
 Usage: traceability.py [--check]
 """
@@ -19,6 +21,7 @@ ACTIVE = re.compile(rf"^- \*\*({ID})\*\*", re.M)
 REMOVED = re.compile(rf"^- ~~\*\*({ID})\*\*~~", re.M)
 TAG = re.compile(r"^\s*#\s*FT:(.*)$", re.M)
 MANUAL = re.compile(rf"^- ({ID})\b(.*)$", re.M)
+JUDGED = "(owner-judged)"
 LINK = re.compile(r"https://github\.com/[\w.-]+/[\w.-]+/issues/\d+|(?:[\w.-]+/[\w.-]+)?#\d+")
 OUT = "docs/traceability.md"
 
@@ -51,24 +54,32 @@ def tagged_tests(root: Path) -> tuple[dict[str, list[str]], list[str]]:
     return tags, errors
 
 
-def manual_ids(root: Path) -> tuple[dict[str, str], list[str]]:
+def manual_ids(root: Path) -> tuple[dict[str, str], set[str], list[str]]:
     f = root / "docs/traceability-manual.md"
     manual: dict[str, str] = {}
+    judged: set[str] = set()
     errors: list[str] = []
     for i, rest in MANUAL.findall(f.read_text() if f.exists() else ""):
         link = LINK.search(rest)
         if link:
             manual[i] = link.group(0)
+            if rest.lstrip().startswith(JUDGED):
+                judged.add(i)
         else:
             errors.append(f"docs/traceability-manual.md: {i} has no issue link")
-    return manual, errors
+    return manual, judged, errors
 
 
-def render(active: list[str], tags: dict[str, list[str]], manual: dict[str, str]) -> str:
+def render(
+    active: list[str], tags: dict[str, list[str]], manual: dict[str, str], judged: set[str]
+) -> str:
     rows = []
     counts = {"tests": 0, "manual": 0, "pending": 0}
     for i in active:
-        status = "tests" if i in tags else "manual" if i in manual else "pending"
+        if i in judged:
+            status = "manual"
+        else:
+            status = "tests" if i in tags else "manual" if i in manual else "pending"
         counts[status] += 1
         by = [f"`{t}`" for t in tags.get(i, [])]
         if i in manual:
@@ -94,7 +105,7 @@ def render(active: list[str], tags: dict[str, list[str]], manual: dict[str, str]
 def run(root: Path, check: bool) -> list[str]:
     active, removed = spec_ids(root)
     tags, errors = tagged_tests(root)
-    manual, manual_errors = manual_ids(root)
+    manual, judged, manual_errors = manual_ids(root)
     errors += manual_errors
     known = set(active)
     for source, ids in (("test tag", tags), ("manual entry", manual)):
@@ -103,7 +114,7 @@ def run(root: Path, check: bool) -> list[str]:
                 errors.append(f"{source} names removed id {i}")
             elif i not in known:
                 errors.append(f"{source} names unknown id {i}")
-    text = render(active, tags, manual)
+    text = render(active, tags, manual, judged)
     out = root / OUT
     if check:
         if not out.exists() or out.read_text() != text:

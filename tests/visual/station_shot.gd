@@ -3,14 +3,17 @@
 ## of `entry`), "lobby", "menu" or "menu_web" (the main menu, with or without the Host
 ## section), or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
-## `overlay` (the menu on its Controls tab), `menu_tab` (the menu on that tab), `tooltip`
-## (the first visit: it opens by itself), `strip` (the radar's side strip) and
+## `overlay` (the menu on its Controls tab; `controls_view` picks its view, a ControlsPane.VIEW_),
+## `menu_tab` (the menu on that tab), `tooltip` (the first visit: it
+## opens by itself), `strip` (the radar's side strip) and
 ## `ui_scale` (the window's content scale, FT-STN-013; reset on exit), `claim` (a
 ## claim item the player holds, e.g. "mount:0") and `events` (sim events fed to the
 ## crew model 2 s before the shot, after the screen is built; a payload `vector` given
 ## as [x, y, z] becomes a Vector3), `focus` (the focused panel of a joint view, F1 = 0),
 ## `science` (a Science block with the cards, a scan or a hack open) and `touch` (the touch
-## layout whatever the pointer; a viewport under 600 px is a phone anyway, D195).
+## layout whatever the pointer; a viewport under 600 px is a phone anyway, D195) and `comms`
+## (CommsFixture's COMMS block is on every shot; "trade" also opens Kappa's offer card,
+## "conversation" the hail, "off" leaves the block out).
 extends Control
 
 var view: String = "screen"
@@ -18,6 +21,7 @@ var entry: String = "science"
 var selected: int = StationFixture.H2
 var ping: int = -1
 var overlay: bool = false
+var controls_view: String = ""
 var tooltip: bool = false
 ## A menu tab to open (SettingsScreen.TAB_SETTINGS), "" for none.
 var menu_tab: String = ""
@@ -30,6 +34,7 @@ var focus: int = 0
 var touch: bool = false
 ## A SCIENCE block for the shot ("cards", "scan" or "hack", ScienceShotBlocks); "" none.
 var science: String = ""
+var comms: String = "board"
 
 var _ctx: StationContext
 
@@ -43,6 +48,8 @@ func _ready() -> void:
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
 	if science != "":
 		_ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(science)
+	if comms != "off":
+		CommsFixture.install(_ctx)
 	if tooltip:
 		_ctx.settings.reset_tooltips()
 	if claim != "":
@@ -50,7 +57,7 @@ func _ready() -> void:
 	if selected >= 0:
 		_ctx.crew.select("contact", selected)
 	if ping >= 0:
-		var p: Dictionary = {"ship": 0, "kind": "contact", "id": ping, "site": 0, "by": "Bo"}
+		var p: Dictionary = {"ship": 0, "kind": "contact", "id": ping, "by": "Bo"}
 		_ctx.crew.handle_event({"type": "ping", "payload": p}, StationFixture.NOW_MS - 1000)
 	match view:
 		"menu", "menu_web":
@@ -66,6 +73,11 @@ func _ready() -> void:
 			_ctx.crew.lobby[0]["ready"] = false
 			_ctx.crew.lobby[0]["crew"] = 2
 			_ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
+			_ctx.crew.lobby[0]["seats"] = [
+				{"entry": "helm", "name": "Ana"},
+				{"entry": "weapons", "name": "Bo"},
+				{"entry": "systems", "name": "Cy"},
+			]
 			var l: LobbyScreen = LobbyScreen.new()
 			l.setup(_ctx)
 			add_child(l)
@@ -96,9 +108,14 @@ func _ready() -> void:
 			add_child(s)
 			move_child(menu, -1)
 			s.focus(focus)
+			if comms in ["trade", "conversation"]:
+				var panel: CommsPanel = s.panels[s.stations.find("comms")] as CommsPanel
+				panel.open_card(CommsFixture.OFFER if comms == "trade" else CommsFixture.HAIL)
 			s.radar.side_strip = strip
 			if overlay:
 				s.help_requested.emit()
+				if controls_view != "":
+					menu.controls_pane.show_view(controls_view)
 			if menu_tab != "":
 				menu.open(menu_tab)
 			for e: Dictionary in events:

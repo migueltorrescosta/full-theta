@@ -223,10 +223,10 @@ func test_marks_and_pings_survive_hard_and_routes_do_not() -> void:
 	var from: Dictionary = {}
 	for station: String in crew:
 		from[station] = h.mark(crew[station])
-	crew["helm"].place_mark(-1, "Rock", -1, 0, Vector3(5.0, 0.0, 0.0))
-	crew["science"].ping("site", -1, 0, Vector3.ZERO)
-	crew["relay"].hazard_add(1000.0, 0, Vector3(0.0, 0.0, -2000.0))
-	crew["relay"].route_add(0, 0, Vector3(0.0, 0.0, -1000.0))
+	crew["helm"].place_mark(-1, "Rock", -1, Vector3(5.0, 0.0, 0.0))
+	crew["science"].ping("site", 0, Vector3.ZERO)
+	crew["relay"].hazard_add(1000.0, Vector3(0.0, 0.0, -2000.0))
+	crew["relay"].route_add(0, Vector3(0.0, 0.0, -1000.0))
 	for station: String in crew:
 		var c: NetClient = crew[station]
 		var marks: Dictionary = await h.next_event(c, NetProtocol.EVENT_MARKS, from[station])

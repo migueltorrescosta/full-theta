@@ -6,7 +6,7 @@ extends PanelContainer
 ## once. The card goes when the server resets the run (CrewState.reset_run).
 
 ## The crew changes the card depends on.
-const KINDS: Array[StringName] = [&"run_over", &"reset", &"picked", &"catalogue"]
+const KINDS: Array[StringName] = [&"run_over", &"reset", &"picked", &"catalogue", &"debrief"]
 
 var ctx: StationContext
 
@@ -14,6 +14,7 @@ var _title: Label
 var _stats: Label
 var _votes: Label
 var _buttons: HBoxContainer
+var _debrief: DebriefCard
 
 
 func setup(context: StationContext) -> void:
@@ -36,6 +37,12 @@ func setup(context: StationContext) -> void:
 	_buttons = HBoxContainer.new()
 	_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_child(_buttons)
+	# (the debrief, opened by its button)
+	_debrief = DebriefCard.new()
+	_debrief.name = "Debrief"
+	_debrief.visible = false
+	col.add_child(_debrief)
+	_debrief.setup(ctx)
 	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
 
@@ -57,6 +64,12 @@ func refresh() -> void:
 		_buttons.remove_child(c)
 		c.queue_free()
 	var ship: int = ctx.crew.ship
+	if _debrief.available():
+		_button("OpenDebrief", tr("debrief.open")).pressed.connect(
+			func() -> void: _debrief.visible = not _debrief.visible
+		)
+	else:
+		_debrief.visible = false
 	if ctx.crew.host:
 		_button("RunAgain", tr("outcome.restart")).pressed.connect(
 			func() -> void: ctx.intents.run_again(ship, true)

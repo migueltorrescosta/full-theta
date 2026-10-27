@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## M2 strand C: faults of unknown cause and their diagnosis (FT-SIM-025, FT-ENG-006,
+## Faults of unknown cause and their diagnosis (FT-SIM-025, FT-ENG-006,
 ## P10) and pre-hardening a subsystem (FT-ENG-008, P11). One raider, as faction 2, with
 ## its engines listing three possible causes. Engines: 2e7 J, repaired at 2e5 J/s per
 ## crew (so a 2e6 J fault takes 10 s at full rate); brute force is a quarter of that.
@@ -27,7 +27,7 @@ func _def(fields: Dictionary = {}) -> ShipDef:
 
 func _world(fields: Dictionary = {}) -> SimWorld:
 	var world: SimWorld = SimWorld.new(9)
-	world.spawn_ship(_def(fields), 2, 0)
+	world.spawn_ship(_def(fields), 2)
 	return world
 
 
@@ -271,7 +271,7 @@ func _heavy_world(world_seed: int, threshold: float, chance: float) -> SimWorld:
 		subs.append(copy)
 	def.subsystems = subs
 	var world: SimWorld = SimWorld.new(world_seed)
-	world.spawn_ship(def, 2, 0)
+	world.spawn_ship(def, 2)
 	return world
 
 

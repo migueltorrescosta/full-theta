@@ -5,10 +5,10 @@ extends RefCounted
 ## update() advances a render clock in ticks with real time, held DELAY_TICKS behind the
 ## newest snapshot (about two snapshot intervals, PROVISIONAL) and never past it, so a
 ## late snapshot freezes the picture at the newest one rather than guessing ahead.
-## Positions interpolate along the minimum image (D124: a site wraps with period P), so
-## a contact crossing a seam doesn't sweep across the site.
+## Positions interpolate along the minimum image (D124: the cube wraps with period P), so
+## a contact crossing a seam doesn't sweep across the cube.
 ##
-## All positions are metres, site-local, in world axes; local() turns a world offset
+## All positions are metres, in the cube, in world axes; local() turns a world offset
 ## into the ship frame (-Z bow, +X starboard, +Y up) that the radar and chips use.
 ##
 ## Contacts at the render tick are those of the older of the two bracketing samples
@@ -37,7 +37,7 @@ var p_units: int = 0
 ## Bumped whenever the interpolated state is re-evaluated (StationContext.picture()).
 var revision: int = 0
 
-## Oldest first: {"tick", "site", "pos" (Vector3i units), "rot", "contacts": id ->
+## Oldest first: {"tick", "pos" (Vector3i units), "rot", "contacts": id ->
 ## Vector3i units at that tick}.
 var _samples: Array[Dictionary] = []
 var _last_ms: int = 0
@@ -48,15 +48,14 @@ var _contacts: Dictionary = {}
 
 
 ## Records the view's current snapshot (call after NetClient.poll() when view.seq
-## changed). A full snapshot of a new site or a jump back in ticks restarts the buffer.
+## changed). A jump back in ticks restarts the buffer.
 func push(view: NetViewState, now_ms: int) -> void:
 	if view.kin.is_empty():
 		return
 	p_units = view.p_units
-	var site: int = int(view.kin.get("site", 0))
 	if not _samples.is_empty():
 		var last: Dictionary = _samples.back()
-		if view.tick < int(last["tick"]) or site != int(last["site"]):
+		if view.tick < int(last["tick"]):
 			_samples.clear()
 		elif view.tick == int(last["tick"]):
 			_samples.pop_back()
@@ -70,7 +69,6 @@ func push(view: NetViewState, now_ms: int) -> void:
 		. append(
 			{
 				"tick": view.tick,
-				"site": site,
 				"pos": view.kin["pos"],
 				"rot": view.kin.get("rot", Quaternion.IDENTITY),
 				"contacts": contacts,
@@ -132,7 +130,7 @@ func contact_position(id: int) -> Vector3:
 	return _contacts.get(id, Vector3.ZERO)
 
 
-## Minimum-image offset (m, world axes) from the own ship to a site-local position.
+## Minimum-image offset (m, world axes) from the own ship to a position in the cube.
 func offset_to(pos: Vector3) -> Vector3:
 	return min_image(pos - _own_pos)
 

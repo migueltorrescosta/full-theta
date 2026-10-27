@@ -18,9 +18,9 @@ extends RefCounted
 const SEED: int = 39
 const PLAYER: int = 0
 const RAIDER: int = 1
-## The intercept point (m, site frame): 2 km to port of the start.
+## The intercept point (m, world frame): 2 km to port of the start.
 const POINT: Vector3 = Vector3(-2000.0, 0.0, 0.0)
-## The raider's position (m, site frame): 3 km to starboard.
+## The raider's position (m, world frame): 3 km to starboard.
 const RAIDER_AT: Vector3 = Vector3(3000.0, 0.0, 0.0)
 ## Distance to the point that counts as intercepting it (m).
 const CAPTURE: float = 25.0
@@ -42,9 +42,9 @@ static func harness() -> PairHarness:
 static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p1")
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
-	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	w.spawn_ship(TestDefs.corvette(), 1)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI / 2.0)
-	w.spawn_ship(TestDefs.raider(), 2, 0, RAIDER_AT, facing_player)
+	w.spawn_ship(TestDefs.raider(), 2, RAIDER_AT, facing_player)
 	return w
 
 
@@ -77,7 +77,7 @@ static func coop(w: SimWorld) -> void:
 static func helm(w: SimWorld) -> void:
 	if w.tick == 0:
 		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.site = 0
+		select.point = true
 		select.x = POINT.x
 		select.y = POINT.y
 		select.z = POINT.z

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ShieldDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/shield_def.gd" id="1_shield"]
+
+[resource]
+script = ExtResource("1_shield")
+max_strength = 100000.0
+regen_rate = 0.0
+tightness_min = 0.0
+tightness_max = 4.0
+absorption = 1.0
+low_alert_fraction = 0.4

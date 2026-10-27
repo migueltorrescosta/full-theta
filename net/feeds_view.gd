@@ -16,7 +16,7 @@ const MAX_ROWS: int = 255
 ## the view may not have).
 static func block(world: SimWorld, ship: int) -> Dictionary:
 	var faction: int = world.faction_of(ship)
-	var out: Dictionary = {"weak": [], "windows": [], "tracks": []}
+	var out: Dictionary = {"weak": [], "windows": [], "tracks": [], "flags": []}
 	var k: KnowledgeTable = world.knowledge
 	for r: int in k.size():
 		if k.factions[r] != faction:
@@ -33,6 +33,13 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 					}
 				)
 			)
+		# Contract target flags held in the faction's KNOW (FT-MIS-042, P9).
+		if (
+			k.detected[r] == 1
+			and k.flag[r] != KnowledgeTable.Flag.NONE
+			and (out["flags"] as Array).size() < MAX_ROWS
+		):
+			(out["flags"] as Array).append({"contact": contact, "flag": k.flag[r]})
 		if (out["weak"] as Array).size() >= MAX_ROWS:
 			continue
 		var card: Dictionary = _weak_row(world, faction, contact)

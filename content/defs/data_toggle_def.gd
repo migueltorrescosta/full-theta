@@ -25,10 +25,6 @@ enum Kind { SUMMARY, SHORTCUT }
 @export var normal: int = 0
 ## The value in the Hard preset (dimensionless, see Kind).
 @export var hard: int = 0
-## True while the data the toggle moves doesn't exist yet: P9 and P14 need Comms (#10), so
-## the lobby lists them as arriving in M3 (D190). P5 and P15 likewise wait for Comms but
-## are not marked in D190, so they stay plain.
-@export var arrives_m3: bool = false
 
 
 ## The preset's value, or -1 for an unknown preset.

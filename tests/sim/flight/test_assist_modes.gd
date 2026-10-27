@@ -4,8 +4,8 @@ extends GdUnitTestSuite
 
 
 # FT: FT-SIM-036
-# All-stop from a tumbling 185 m/s (S5's start): assist brings velocity relative to the
-# site and rotation to rest (< 0.05 m/s, < 0.002 rad/s, then it clears itself) through
+# All-stop from a tumbling 185 m/s (S5's start): assist brings velocity and
+# rotation to rest (< 0.05 m/s, < 0.002 rad/s, then it clears itself) through
 # real thrust, in under 30 s (S5: 17.6 s), and propellant is spent. It runs decoupled
 # too.
 func test_all_stop_from_tumble() -> void:
@@ -58,7 +58,7 @@ func test_approach_point_stops_at_standoff() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	var mark: Vector3 = Vector3(4000.0, -800.0, -6000.0)
-	FlightFixture.select_point(w, id, 0, mark)
+	FlightFixture.select_point(w, id, mark)
 	FlightFixture.input(w, id, Vector3.ZERO, Vector3.ZERO, false, true)
 	SimFixture.run(w, 60 * 90)
 	var rel: Vector3 = w.kin.relative_to_point(id, mark.x, mark.y, mark.z)
@@ -106,7 +106,7 @@ func test_face_contact_and_mark_in_both_modes() -> void:
 			if on_ship:
 				FlightFixture.select_ship(w, id, other)
 			else:
-				FlightFixture.select_point(w, id, 0, where)
+				FlightFixture.select_point(w, id, where)
 			FlightFixture.decouple(w, id, decoupled)
 			FlightFixture.input(w, id, Vector3.ZERO, Vector3.ZERO, true)
 			var cap: float = w.defs[id].assist.turn_rate_pitch_yaw
@@ -122,34 +122,20 @@ func test_face_contact_and_mark_in_both_modes() -> void:
 			assert_float(w.kin.propellant_used[id]).override_failure_message(msg).is_greater(0.0)
 
 
-# FT: FT-HLM-006
-# A target at another site is out of reach (ships at different sites never interact):
-# face does nothing and the holds stay on.
-func test_face_ignores_other_site() -> void:
-	var w: SimWorld = SimWorld.new(1, "test")
-	var id: int = FlightFixture.spawn(w)
-	FlightFixture.select_point(w, id, 7, Vector3(0.0, 0.0, 3000.0))
-	FlightFixture.input(w, id, Vector3.ZERO, Vector3.ZERO, true)
-	SimFixture.run(w, 120)
-	assert_bool(AssistSystem.has_target(w, id)).is_false()
-	assert_vector(w.kin.ang_vel[id]).is_equal(Vector3.ZERO)
-	assert_float(w.kin.propellant_used[id]).is_equal(0.0)
-
-
 # FT: FT-HLM-005, FT-ARC-013
 # Face follows a selected contact only while the faction detects it: once the raider
 # leaves sensor range the ship has no target and stops turning.
 func test_face_stops_on_lost_contact() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
-	var raider: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(5000.0, 0.0, 0.0))
+	var raider: int = w.spawn_ship(TestDefs.raider(), 2, Vector3(5000.0, 0.0, 0.0))
 	w.step()
 	FlightFixture.select_ship(w, id, raider)
 	FlightFixture.input(w, id, Vector3.ZERO, Vector3.ZERO, true)
 	SimFixture.run(w, 30)
 	assert_bool(AssistSystem.has_target(w, id)).is_true()
 	assert_float(w.kin.ang_vel[id].y).is_less(-0.01)
-	w.kin.place(raider, 0, 0.0, 0.0, 50000.0)
+	w.kin.place(raider, 0.0, 0.0, 50000.0)
 	SimFixture.run(w, 120)
 	assert_bool(AssistSystem.has_target(w, id)).is_false()
 	assert_float(w.kin.ang_vel[id].length()).is_less(1e-3)
@@ -170,7 +156,7 @@ func test_align_rolls_target_to_twelve_then_faces() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
 	var p: Vector3 = Vector3(3000.0, 1000.0, -2000.0)
-	FlightFixture.select_point(w, id, 0, p)
+	FlightFixture.select_point(w, id, p)
 	FlightFixture.align(w, id)
 	w.step()
 	assert_int(w.helm.align[id]).is_equal(HelmTable.Align.ROLL)
@@ -196,7 +182,7 @@ func test_align_rolls_target_to_twelve_then_faces() -> void:
 func test_align_second_press_faces_target_behind() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w, Vector3.ZERO, Quaternion(Vector3.FORWARD, 1.0))
-	FlightFixture.select_point(w, id, 0, Vector3(500.0, -1000.0, 3000.0))
+	FlightFixture.select_point(w, id, Vector3(500.0, -1000.0, 3000.0))
 	FlightFixture.align(w, id)
 	FlightFixture.align(w, id)
 	w.step()
@@ -217,23 +203,19 @@ func test_align_second_press_faces_target_behind() -> void:
 
 # FT: FT-HLM-007
 # Align needs a target Helm can fly to: with nothing selected, a contact the faction
-# no longer detects (moved 50 km off) or a point at another site, the press is
+# no longer detects (moved 50 km off), the press is
 # rejected and nothing turns.
 func test_align_without_target_is_rejected() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w, Vector3.ZERO, Quaternion(Vector3.FORWARD, 1.0))
-	var raider: int = w.spawn_ship(TestDefs.raider(), 2, 0, Vector3(5000.0, 0.0, 0.0))
+	var raider: int = w.spawn_ship(TestDefs.raider(), 2, Vector3(5000.0, 0.0, 0.0))
 	FlightFixture.align(w, id)
 	w.step()
 	assert_bool(w.command_log[-1].accepted).is_false()
 	FlightFixture.select_ship(w, id, raider)
 	w.step()
-	w.kin.place(raider, 0, 0.0, 0.0, 50000.0)
+	w.kin.place(raider, 0.0, 0.0, 50000.0)
 	w.step()
-	FlightFixture.align(w, id)
-	w.step()
-	assert_bool(w.command_log[-1].accepted).is_false()
-	FlightFixture.select_point(w, id, 3, Vector3(0.0, 1000.0, -1000.0))
 	FlightFixture.align(w, id)
 	w.step()
 	assert_bool(w.command_log[-1].accepted).is_false()
@@ -253,9 +235,9 @@ func test_align_with_a_mount_turns_its_rest_direction_onto_the_target() -> void:
 	var mounts: Array[MountDef] = [mount]
 	ship.mounts = mounts
 	var w: SimWorld = SimWorld.new(1, "test")
-	var id: int = w.spawn_ship(ship, 1, 0)
+	var id: int = w.spawn_ship(ship, 1)
 	var p: Vector3 = Vector3(0.0, 0.0, -2000.0)
-	FlightFixture.select_point(w, id, 0, p)
+	FlightFixture.select_point(w, id, p)
 	FlightFixture.align(w, id, 3)
 	w.step()
 	assert_bool(w.command_log[-1].accepted).is_false()
@@ -279,10 +261,10 @@ func test_align_with_a_mount_turns_its_rest_direction_onto_the_target() -> void:
 # roll: the ship pitches and yaws onto the target and its roll rate stays zero.
 func test_bow_mount_align_does_not_roll() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
-	var id: int = w.spawn_ship(TestDefs.corvette(), 1, 0)
+	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	assert_vector(TestDefs.corvette().mounts[0].forward).is_equal(Vector3.FORWARD)
 	var p: Vector3 = Vector3(1500.0, 1500.0, -1500.0)
-	FlightFixture.select_point(w, id, 0, p)
+	FlightFixture.select_point(w, id, p)
 	FlightFixture.align(w, id, 0)
 	var roll: float = 0.0
 	for i: int in 60 * 8:
@@ -317,7 +299,7 @@ func test_m1_ship_flight_modes() -> void:
 	assert_float(w.kin.vel[id].length()).is_less(0.05)
 	# Hold-to-approach to a point 3 km off.
 	var p: Vector3 = Vector3(w.kin.px[id] + 2000.0, w.kin.py[id], w.kin.pz[id] + 2236.0)
-	FlightFixture.select_point(w, id, 0, p)
+	FlightFixture.select_point(w, id, p)
 	FlightFixture.input(w, id, Vector3.ZERO, Vector3.ZERO, false, true)
 	SimFixture.run(w, 60 * 60)
 	assert_float(w.kin.relative_to_point(id, p.x, p.y, p.z).length()).is_equal_approx(500.0, 0.5)

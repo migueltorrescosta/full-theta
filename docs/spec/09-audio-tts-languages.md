@@ -6,7 +6,7 @@ Piper voices speak NPC radio, ship-computer announcements and alerts (D38). Auth
 
 ## 9.2 Routing
 
-Only the relevant client plays a line, usually the Comms player. If two players use Comms, only the one talking to that NPC hears it (D39). Ship-computer lines play on the stations they concern. Subtitles always show.
+Only the relevant client plays a line, usually the Comms player. If two players use Comms, only the one talking to that NPC hears it; until someone claims the conversation, every Comms holder of the ship hears its lines (D39, D238). English NPCs speak with `en_US-kristin-medium`, a voice distinct from the crew and computer voice; Italian NPCs use `it_IT-serena`; pt_PT NPC lines are subtitles only until #16 (D243). Ship-computer lines play on the stations they concern. Subtitles always show.
 
 ## 9.3 Voice bus
 
@@ -26,7 +26,7 @@ Semi-realistic science fiction with readable silhouettes: procedural geometry wi
 - **FT-AUD-002** Authored lines shall be prerendered at build time per language; generated audio shall not be committed. (D38)
 - **FT-AUD-003** Dynamic lines (names, numbers, free text) shall be voiced with Piper as in FT-AUD-018 and FT-AUD-019. (D38, D101)
 - **FT-AUD-004** The ship computer shall use a Piper voice with a robotic/radio filter. (D71)
-- **FT-AUD-005** An NPC line shall play only on the client holding that NPC's conversation claim. (D39)
+- **FT-AUD-005** An NPC line shall play only on the client holding that NPC's conversation claim; while the conversation is unclaimed it shall play on every client holding Comms of that ship. (D39, D238)
 - **FT-AUD-006** A ship-computer line shall play only on clients holding the stations it concerns. (D39)
 - **FT-AUD-007** The voice bus shall order lines P0 > P1 > P2 > P3; a higher priority shall preempt a lower one. (v0.3 §8)
 - **FT-AUD-008** Equal-priority lines shall queue; a queued line older than its maximum age or superseded by its coalescing key shall be dropped. (v0.3 §8)

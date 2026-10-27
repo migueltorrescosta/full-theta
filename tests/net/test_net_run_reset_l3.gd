@@ -43,7 +43,7 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
 	assert_bool(await h.start(server, crew[0])).is_true()
 	var tac: NetSession = h.session_of(server, crew[0])
-	crew[2].place_mark(-1, "", ENEMY, 0, Vector3.ZERO)
+	crew[2].place_mark(-1, "", ENEMY, Vector3.ZERO)
 	crew[0].set_alert(2)
 	var marked: Callable = func() -> bool:
 		return (
@@ -163,7 +163,15 @@ func test_session_and_reset_leave_definitions_unchanged() -> void:
 	var before: Dictionary[String, String] = TestDefs.hashes(defs)
 	var cli: ServerMain = ServerMain.new()
 	var args: PackedStringArray = [
-		"--bind", "127.0.0.1", "--port", "0", "--no-beacon", "--m1-player-hull-scale", "0.5"
+		"--bind",
+		"127.0.0.1",
+		"--port",
+		"0",
+		"--no-beacon",
+		"--encounter",
+		"m1",
+		"--m1-player-hull-scale",
+		"0.5"
 	]
 	assert_bool(cli.parse_args(args)).is_true()
 	var server: NetServer = cli.make_server()

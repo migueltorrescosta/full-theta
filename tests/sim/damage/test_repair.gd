@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 
 func _world(def: ShipDef = null) -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "test")
-	w.spawn_ship(def if def != null else TestDefs.corvette(), 1, 0, Vector3.ZERO)
+	w.spawn_ship(def if def != null else TestDefs.corvette(), 1, Vector3.ZERO)
 	return w
 
 

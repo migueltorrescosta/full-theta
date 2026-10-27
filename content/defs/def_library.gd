@@ -57,6 +57,18 @@ func enemy(id: StringName) -> EnemyDef:
 	return get_def(&"EnemyDef", id) as EnemyDef
 
 
+## Every EnemyDef by id, for SimWorld.catalog (E07).
+func enemies() -> Dictionary[StringName, EnemyDef]:
+	var out: Dictionary[StringName, EnemyDef] = {}
+	for id: StringName in _by_class.get(&"EnemyDef", {}):
+		out[id] = _by_class[&"EnemyDef"][id]
+	return out
+
+
+func run(id: StringName) -> RunDef:
+	return get_def(&"RunDef", id) as RunDef
+
+
 func hazard(id: StringName) -> HazardDef:
 	return get_def(&"HazardDef", id) as HazardDef
 
@@ -65,6 +77,10 @@ func hazard(id: StringName) -> HazardDef:
 ## radiation front sweeping in from behind the enemy.
 func m1_hazards() -> Array[HazardDef]:
 	return [hazard(&"m1_dust_cloud"), hazard(&"m1_radiation_front")]
+
+
+func map(id: StringName) -> MapDef:
+	return get_def(&"MapDef", id) as MapDef
 
 
 func science(id: StringName = &"science") -> ScienceDef:

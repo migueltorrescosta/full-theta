@@ -186,6 +186,14 @@ func _non_default(v: Variant) -> Variant:
 			out = 1.0 / 3.0 + v
 		TYPE_STRING_NAME:
 			out = StringName(String(v) + "_x")
+		TYPE_STRING:
+			out = v + "_x"
+		TYPE_ARRAY:
+			out = (v as Array) + ["x", 1]
+		TYPE_DICTIONARY:
+			out = {"k": 1.0 / 3.0, "s": "x"}
+		TYPE_PACKED_INT32_ARRAY:
+			out = (v as PackedInt32Array) + PackedInt32Array([3, 5])
 		TYPE_VECTOR3:
 			out = v + Vector3(0.5, -1.0 / 3.0, 0.25)
 		TYPE_QUATERNION:

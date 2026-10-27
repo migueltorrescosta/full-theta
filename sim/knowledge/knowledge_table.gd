@@ -9,6 +9,15 @@ extends SimTable
 ## ships. Rows are appended in detection order (tick, then contact id, then faction), so
 ## they are deterministic but not one per ship: reset_ship is overridden.
 
+## A contract's target flag on the contact (FT-MIS-042, D82): DISABLE (do not destroy) or
+## PROTECT, held in the faction's knowledge so its allied Weapons stations can show it
+## under the contract_flags toggle (P9).
+enum Flag { NONE, DISABLE, PROTECT }
+## What the faction has learned of the contact's intent through conversation (P9); the
+## Science card's intent (from scans) is separate. A new contact is UNKNOWN until a reply
+## or a surrender roll sets it (Q22, owner 2026-10-26).
+enum Intent { UNKNOWN, HOSTILE, NEUTRAL, SURRENDERING, BLUFFING }
+
 ## 1 while the observing faction currently detects the contact.
 var detected: PackedByteArray = PackedByteArray()
 ## 1 once the faction knows the contact's allegiance; it stays known (FT-SPA-001).
@@ -20,6 +29,11 @@ var numbers: PackedInt32Array = PackedInt32Array()
 ## FT-SCI-016). What it reveals is ScienceKnowledge's: class, identity, intent, weak
 ## points, resistances and hack access, each from its own threshold (E01).
 var scan_conf: PackedFloat64Array = PackedFloat64Array()
+
+## A contract's target flag on the contact and what the faction learned of its intent
+## (Flag, Intent above).
+var flag: PackedByteArray = PackedByteArray()
+var intent: PackedByteArray = PackedByteArray()
 
 ## Derived index, not state: row by faction * 65536 + contact id, filled in add_contact
 ## (rows never move or go away).
@@ -71,8 +85,17 @@ func add_contact(faction: int, contact_id: int) -> int:
 	identified.append(0)
 	numbers.append(number)
 	scan_conf.append(0.0)
+	flag.append(Flag.NONE)
+	intent.append(Intent.UNKNOWN)
 	_rows[faction * 65536 + contact_id] = row
 	return row
+
+
+## Row of the faction's knowledge of the contact, added undetected if it has none (a
+## contract flag or an intent can precede the first detection).
+func ensure_contact(faction: int, contact_id: int) -> int:
+	var r: int = row_for(faction, contact_id)
+	return r if r >= 0 else add_contact(faction, contact_id)
 
 
 func columns() -> Array:
@@ -82,7 +105,9 @@ func columns() -> Array:
 			["detected", detected],
 			["identified", identified],
 			["numbers", numbers],
-			["scan_conf", scan_conf]
+			["scan_conf", scan_conf],
+			["flag", flag],
+			["intent", intent],
 		]
 	)
 

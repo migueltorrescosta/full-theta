@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 func _harness() -> PairHarness:
 	var build: Callable = func() -> SimWorld:
 		var w: SimWorld = SimWorld.new(7, "harness")
-		w.spawn_ship(TestDefs.corvette(), 1, 0)
+		w.spawn_ship(TestDefs.corvette(), 1)
 		return w
 	var done: Callable = func(w: SimWorld) -> bool:
 		return w.kin.relative_to_point(0, 0.0, 0.0, 0.0).length() > 500.0

@@ -2,23 +2,23 @@ class_name CollisionSystem
 extends RefCounted
 ## Ship contacts, proximity warnings and swept projectiles (T029, FT-SIM-009,
 ## FT-SIM-010, FT-ARC-007: no Godot physics). Runs after the integrator and the weapons
-## each tick. Broadphase is a uniform grid per site, rebuilt every tick: site to cell
-## (ix, iy, iz packed into one int, _key) to ship ids, so ships at different sites never
-## share a cell (S6). Ship pairs scan the later ships directly when there are fewer of them
-## than cells to look up, with the same pairs in the same order.
-## Sites wrap (FT-SIM-035, D124): cell indexes wrap modulo the cells per axis (the
+## each tick. Broadphase is a uniform grid over the one cube, rebuilt every tick: cell
+## (ix, iy, iz packed into one int, _key) to ship ids (S6, D230). Ship pairs
+## scan the later ships directly when there are fewer of them than cells to look up, with
+## the same pairs in the same order.
+## The cube wraps (FT-SIM-035, D124, D229): cell indexes wrap modulo the cells per axis (the
 ## period is a multiple of both cell sizes, SimWorld.period_errors) and every distance
 ## is a minimum image, so contacts, warnings and shots work across the seams.
 ## Ships at the start of the tick are taken as end position minus velocity times DT;
 ## the error is a dt^2 / 2, under 3 mm at 20 m/s^2.
 
 ## Projectile broadphase cell (m, S6).
-const CELL: float = 250.0
+const CELL: float = PeriodRules.CELL
 ## Ship-pair broadphase cell (m): pairs up to this far apart are always checked, so
 ## proximity warnings get the full horizon for closing speeds up to about
 ## (PAIR_CELL - reach) / WARNING_HORIZON (90 m/s for two corvettes, D119) and at least
 ## PAIR_CELL of warning distance above that.
-const PAIR_CELL: float = 500.0
+const PAIR_CELL: float = PeriodRules.PAIR_CELL
 ## Coefficient of restitution of ship-ship contacts (dimensionless): hulls are mostly
 ## inelastic, so most of the closing kinetic energy turns into damage.
 const RESTITUTION: float = 0.2
@@ -43,41 +43,34 @@ static func _bound(kin: Kinematics, row: int) -> float:
 	return kin.radius[row] + kin.half_length[row]
 
 
-## Cells per axis of a site for a cell size (m).
+## Cells per axis of the cube for a cell size (m).
 static func _cells_per_axis(kin: Kinematics, cell: float) -> int:
 	return maxi(1, roundi(kin.period / cell))
 
 
-## Uniform grid of live ships: site to cell key (_key of the wrapped cell) to ship ids
-## in id order.
-static func build_grid(kin: Kinematics, cell: float) -> Dictionary[int, Dictionary]:
-	var grid: Dictionary[int, Dictionary] = {}
+## Uniform grid of live ships: cell key (_key of the wrapped cell) to ship ids in id
+## order.
+static func build_grid(kin: Kinematics, cell: float) -> Dictionary[int, PackedInt32Array]:
+	var grid: Dictionary[int, PackedInt32Array] = {}
 	var n: int = _cells_per_axis(kin, cell)
 	var alive: PackedByteArray = kin.alive
-	var site: PackedInt32Array = kin.site
 	var c: PackedInt32Array = PackedInt32Array()
 	kin.cell_coords(cell, c)
 	for i: int in alive.size():
 		if alive[i] != 1:
 			continue
 		_add(
-			grid,
-			site[i],
-			_key(posmod(c[3 * i], n), posmod(c[3 * i + 1], n), posmod(c[3 * i + 2], n), n),
-			i
+			grid, _key(posmod(c[3 * i], n), posmod(c[3 * i + 1], n), posmod(c[3 * i + 2], n), n), i
 		)
 	return grid
 
 
-## Appends ship i to the grid's cell key at a site.
-static func _add(grid: Dictionary[int, Dictionary], site: int, key: int, i: int) -> void:
-	if not grid.has(site):
-		grid[site] = {}
-	var cells: Dictionary = grid[site]
-	if cells.has(key):
-		cells[key].append(i)
+## Appends ship i to the grid's cell key.
+static func _add(grid: Dictionary[int, PackedInt32Array], key: int, i: int) -> void:
+	if grid.has(key):
+		grid[key].append(i)
 	else:
-		cells[key] = PackedInt32Array([i])
+		grid[key] = PackedInt32Array([i])
 
 
 ## Grid key of a wrapped cell (x, y, z in [0, n)), n cells per axis: below 2^60 as
@@ -87,19 +80,12 @@ static func _key(x: int, y: int, z: int, n: int) -> int:
 
 
 ## Fills out with the ship ids in the grid cells box[0..2]..box[3..5] (unwrapped,
-## inclusive) of a site, each wrapped modulo n and each cell visited once, in cell order
+## inclusive), each wrapped modulo n and each cell visited once, in cell order
 ## then id order.
 static func _in_cells(
-	grid: Dictionary[int, Dictionary],
-	site: int,
-	box: PackedInt32Array,
-	n: int,
-	out: PackedInt32Array
+	grid: Dictionary[int, PackedInt32Array], box: PackedInt32Array, n: int, out: PackedInt32Array
 ) -> void:
 	out.clear()
-	if not grid.has(site):
-		return
-	var cells: Dictionary = grid[site]
 	var lx: int = box[0]
 	var ly: int = box[1]
 	var lz: int = box[2]
@@ -112,8 +98,8 @@ static func _in_cells(
 			var ky: int = kx * n + posmod(iy, n)
 			for iz: int in range(lz, lz + cz):
 				var key: int = ky * n + posmod(iz, n)
-				if cells.has(key):
-					out.append_array(cells[key])
+				if grid.has(key):
+					out.append_array(grid[key])
 
 
 static func _ship_pairs(world: SimWorld) -> void:
@@ -121,11 +107,10 @@ static func _ship_pairs(world: SimWorld) -> void:
 	var cells: int = _cells_per_axis(kin, PAIR_CELL)
 	var n: int = kin.size()
 	var alive: PackedByteArray = kin.alive
-	var site: PackedInt32Array = kin.site
 	var vel: PackedVector3Array = kin.vel
 	# The grid (build_grid), each live ship's wrapped cell, and the live ships in id
 	# order. Collisions don't change liveness, so the list holds for the whole pass.
-	var grid: Dictionary[int, Dictionary] = {}
+	var grid: Dictionary[int, PackedInt32Array] = {}
 	var cell: PackedInt32Array = PackedInt32Array()
 	kin.cell_coords(PAIR_CELL, cell)
 	var live: PackedInt32Array = PackedInt32Array()
@@ -147,7 +132,7 @@ static func _ship_pairs(world: SimWorld) -> void:
 		cell[3 * i + 1] = y
 		cell[3 * i + 2] = z
 		live.append(i)
-		_add(grid, site[i], _key(x, y, z, cells), i)
+		_add(grid, _key(x, y, z, cells), i)
 	var near: PackedInt32Array = PackedInt32Array()
 	var order: PackedInt64Array = PackedInt64Array()
 	for li: int in live.size():
@@ -164,11 +149,8 @@ static func _ship_pairs(world: SimWorld) -> void:
 			# from the box's low corner.
 			near.clear()
 			order.clear()
-			var s: int = site[i]
 			for lj: int in range(li + 1, live.size()):
 				var j: int = live[lj]
-				if site[j] != s:
-					continue
 				var ox: int = posmod(cell[3 * j] - box[0], cells)
 				var oy: int = posmod(cell[3 * j + 1] - box[1], cells)
 				var oz: int = posmod(cell[3 * j + 2] - box[2], cells)
@@ -178,7 +160,7 @@ static func _ship_pairs(world: SimWorld) -> void:
 			for k: int in order:
 				near.append(k & 0xFFFFFFFF)
 		else:
-			_in_cells(grid, site[i], box, cells, near)
+			_in_cells(grid, box, cells, near)
 		for j: int in near:
 			if j <= i:
 				continue
@@ -261,7 +243,7 @@ static func _shift(kin: Kinematics, row: int, d: Vector3) -> void:
 	kin.translate(row, d.x, d.y, d.z)
 
 
-## point and toward are site-frame vectors relative to the target's centre.
+## point and toward are world-frame vectors relative to the target's centre.
 static func _collision_hit(
 	world: SimWorld, target: int, other: int, point: Vector3, toward: Vector3, energy: float
 ) -> void:
@@ -283,7 +265,7 @@ static func _collision_hit(
 static func _projectiles(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
 	var proj: ProjectileTable = world.projectiles
-	var grid: Dictionary[int, Dictionary] = build_grid(kin, CELL)
+	var grid: Dictionary[int, PackedInt32Array] = build_grid(kin, CELL)
 	var cells: int = _cells_per_axis(kin, CELL)
 	var pad: float = _ship_pad(kin)
 	var dt: float = SimWorld.DT
@@ -294,12 +276,11 @@ static func _projectiles(world: SimWorld) -> void:
 	var shooters: PackedInt32Array = proj.ship_ids
 	var radius: PackedFloat64Array = proj.radius
 	var pvel: PackedVector3Array = proj.vel
-	var psite: PackedInt32Array = proj.site
 	for k: int in shooters.size():
 		ttl[k] -= 1
 		var shooter: int = shooters[k]
 		proj.cell_box(k, dt, pad + radius[k], CELL, box)
-		_in_cells(grid, psite[k], box, cells, near)
+		_in_cells(grid, box, cells, near)
 		var best: int = -1
 		var best_t: float = 2.0
 		var best_start: Vector3 = Vector3.ZERO

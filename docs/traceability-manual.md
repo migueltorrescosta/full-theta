@@ -1,6 +1,6 @@
 # Manually verified FT ids
 
-Ids verified by a review item, playtest or owner step rather than a test. One line per id: `- FT-AREA-NNN <issue link> <how>`. `tools/traceability.py --check` fails on an entry without an issue link (FT-TST-017).
+Ids verified by a review item, playtest or owner step rather than a test. An id marked `(owner-judged)` after the id is a target the owner judges from a report; it shows `manual` even when a test reports on it. One line per id: `- FT-AREA-NNN <issue link> <how>`. `tools/traceability.py --check` fails on an entry without an issue link (FT-TST-017).
 
 - FT-LIC-002 https://github.com/migueltorrescosta/full-theta/issues/2 "No EmptyEpsilon code" item in `.github/pull_request_template.md`, checked on every PR.
 - FT-LIC-003 https://github.com/migueltorrescosta/full-theta/issues/2 `docs/provenance.md` keeps the EmptyEpsilon clone outside the repository.
@@ -18,3 +18,6 @@ Ids verified by a review item, playtest or owner step rather than a test. One li
 - FT-ARC-017 https://github.com/migueltorrescosta/full-theta/issues/13 The release workflow builds the macOS package with the Piper helper (`docs/release.md`); signing, notarisation and a run on a Mac are the owner step in #13.
 - FT-M1-001 https://github.com/migueltorrescosta/full-theta/issues/7 `tools/gate.sh l4` scenario `s3_encounter`: a host and three real UI clients (Tactical, Systems, Ops) fight the raider to a win and a loss, with Ops marking it and the run reset between.
 - FT-TST-021 https://github.com/migueltorrescosta/full-theta/issues/9 `tools/gate.sh l4` (`tools/l4/web.sh`, `tools/l4/web_station.mjs`): headless Chromium on 2 cores joins the web build by itself, plays Tactical, unlocks audio after a tap and is woken after a suspension; one 1024x768 touch-layout screenshot must be non-blank with `window.ftPanel` naming the expected panel. The pass is recorded in the PR body.
+- FT-GEN-011 (owner-judged) https://github.com/migueltorrescosta/full-theta/issues/13 The owner judges the run length (20 to 40 minutes) from the bot batch report in #13; `tests/tools/test_bot_batch.gd` checks the report's numbers, not the target (D252).
+- FT-MIS-009 (owner-judged) https://github.com/migueltorrescosta/full-theta/issues/13 The owner judges the average crew's loss rate (5 to 10 % of encounters) from the bot batch and playtests in #13 (D252).
+- FT-MIS-037 (owner-judged) https://github.com/migueltorrescosta/full-theta/issues/13 The owner judges the first-time Easy survival share (at least 3 encounters and 60 % of the run's) from the bot batch in #13 (D252).

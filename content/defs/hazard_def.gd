@@ -15,9 +15,7 @@ enum Shape { SPHERE, PLANE }
 @export var id: StringName = &""
 @export var kind: Kind = Kind.ZONE
 @export var shape: Shape = Shape.SPHERE
-## The site the hazard is at (dimensionless id).
-@export var site: int = 0
-## Site-local point (m): a zone's or sphere's centre, a plane front's point at the start.
+## Point (m): a zone's or sphere's centre, a plane front's point at the start.
 @export var center: Vector3 = Vector3.ZERO
 ## A zone's radius, a sphere front's radius at the start (m).
 @export var radius: float = 0.0

@@ -148,7 +148,7 @@ func test_a_route_shared_to_helm_is_counted() -> void:
 	var crew: Dictionary = await _crew(server)
 	var relay: NetClient = crew["relay"]
 	var from: int = h.mark(crew["helm"])
-	relay.route_add(0, 0, Vector3(0.0, 0.0, -1000.0))
+	relay.route_add(0, Vector3(0.0, 0.0, -1000.0))
 	await h.until(
 		func() -> bool: return not server.session.crew.relay.routes_of(PLAYER)[0].is_empty()
 	)
@@ -190,7 +190,7 @@ func test_a_run_reset_clears_the_mark_use_table() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
 	var crew: Dictionary = await _crew(server)
 	var from: int = h.mark(crew["weapons"])
-	crew["relay"].place_mark(-1, "Rock", -1, 0, Vector3(10.0, 0.0, 0.0))
+	crew["relay"].place_mark(-1, "Rock", -1, Vector3(10.0, 0.0, 0.0))
 	await h.next_event(crew["weapons"], NetProtocol.EVENT_MARKS, from)
 	var user: NetSession = h.session_of(server, crew["weapons"])
 	server.session.coop.on_mark_pinged(user, 0)
@@ -208,12 +208,12 @@ func test_a_mark_used_by_another_station_is_counted() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
 	var crew: Dictionary = await _crew(server)
 	var from: int = h.mark(crew["weapons"])
-	crew["relay"].place_mark(-1, "Rock", -1, 0, Vector3(10.0, 0.0, 0.0))
+	crew["relay"].place_mark(-1, "Rock", -1, Vector3(10.0, 0.0, 0.0))
 	await h.next_event(crew["weapons"], NetProtocol.EVENT_MARKS, from)
-	crew["relay"].ping("mark", 0, 0, Vector3.ZERO)
+	crew["relay"].ping("mark", 0, Vector3.ZERO)
 	await h.wait(150)
 	assert_dict(server.session.coop.counts()).is_empty()
-	crew["weapons"].ping("mark", 0, 0, Vector3.ZERO)
+	crew["weapons"].ping("mark", 0, Vector3.ZERO)
 	(
 		assert_bool(
 			await h.until(
@@ -222,11 +222,11 @@ func test_a_mark_used_by_another_station_is_counted() -> void:
 		)
 		. is_true()
 	)
-	crew["weapons"].ping("mark", 0, 0, Vector3.ZERO)
+	crew["weapons"].ping("mark", 0, Vector3.ZERO)
 	await h.wait(150)
 	assert_int(server.session.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(1)
 	# Another station using it counts on its own pair.
-	crew["helm"].ping("mark", 0, 0, Vector3.ZERO)
+	crew["helm"].ping("mark", 0, Vector3.ZERO)
 	(
 		assert_bool(
 			await h.until(
@@ -248,7 +248,7 @@ func test_reaching_the_scan_position_is_counted() -> void:
 	(
 		assert_str(
 			server.session.crew.add_scan_position(
-				PLAYER, 0, Vector3(4000.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
+				PLAYER, Vector3(4000.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
 			)
 		)
 		. is_empty()
@@ -261,7 +261,7 @@ func test_reaching_the_scan_position_is_counted() -> void:
 	(
 		assert_str(
 			server.session.crew.add_scan_position(
-				PLAYER, 0, Vector3(100.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
+				PLAYER, Vector3(100.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
 			)
 		)
 		. is_empty()

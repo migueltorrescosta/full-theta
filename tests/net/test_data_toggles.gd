@@ -52,14 +52,12 @@ func test_normal_and_hard_follow_d90() -> void:
 
 
 # FT: FT-PAIR-017, FT-STN-016
-# P9 (contract flags) and P14 (verify chip) are listed but arrive in M3 (D190); a first
-# launch is Easy.
-func test_m3_toggles_are_marked_and_the_default_is_easy() -> void:
-	var m3: Array[StringName] = []
-	for t: DataToggleDef in DataToggles.def().toggles:
-		if t.arrives_m3:
-			m3.append(t.id)
-	assert_array(m3).contains_exactly_in_any_order([&"contract_flags", &"verify_chip"])
+# P9 (contract flags) and P14 (verify chip) are live since M3 (D190), so no toggle is listed
+# as arriving later; a first launch is Easy.
+func test_every_toggle_is_live_and_the_default_is_easy() -> void:
+	var ids: Array[StringName] = DataToggles.ids()
+	assert_bool(ids.has(&"contract_flags")).is_true()
+	assert_bool(ids.has(&"verify_chip")).is_true()
 	assert_str(String(DataToggles.def().default_preset)).is_equal("easy")
 	assert_str(StationViews.DEFAULT_TOGGLES).is_equal("easy")
 

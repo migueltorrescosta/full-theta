@@ -8,9 +8,11 @@ extends SimTable
 
 ## Align stage (FT-HLM-007, D124): OFF, roll the target to 12 o'clock, or roll and face it.
 enum Align { OFF, ROLL, ROLL_AND_FACE }
-## What is selected: nothing, a ship (contact; moving targets are ships) or a
-## site-local point (a mark or a site).
-enum Target { NONE, SHIP, POINT }
+## What is selected: nothing, a ship (contact; moving targets are ships), a point in the
+## cube (a mark) or a named site (D229).
+enum Target { NONE, SHIP, POINT, SITE }
+## What a jump aims at: a named site or a free point (JumpCommand).
+enum JumpKind { SITE, MARK }
 
 ## 1 in decoupled mode, which turns the holds off (FT-SIM-005); 0, assist on, is the
 ## default (FT-SIM-004).
@@ -43,12 +45,26 @@ var align_mount: PackedByteArray = PackedByteArray()
 var target_kind: PackedByteArray = PackedByteArray()
 ## Selected ship id when target_kind is SHIP, else -1.
 var target_ship: PackedInt32Array = PackedInt32Array()
-## Site of the selected point when target_kind is POINT, else -1.
-var target_site: PackedInt32Array = PackedInt32Array()
-## Site-local 64-bit offset of the selected point (m, D104).
+## 64-bit offset in the cube of the selected point (m, D104).
 var target_x: PackedFloat64Array = PackedFloat64Array()
 var target_y: PackedFloat64Array = PackedFloat64Array()
 var target_z: PackedFloat64Array = PackedFloat64Array()
+## Selected site id when target_kind is SITE, else -1 (FT-HLM-016).
+var target_site: PackedInt32Array = PackedInt32Array()
+## Ticks of spool left before the jump (FT-SIM-034); 0 when no jump is under way.
+var jump_left: PackedInt32Array = PackedInt32Array()
+## What the jump aims at, a JumpKind, with the site id (SITE, else -1) and the 64-bit point
+## in the cube (MARK; the site's point for SITE) it was commanded to.
+var jump_kind: PackedByteArray = PackedByteArray()
+var jump_target: PackedInt32Array = PackedInt32Array()
+var jump_x: PackedFloat64Array = PackedFloat64Array()
+var jump_y: PackedFloat64Array = PackedFloat64Array()
+var jump_z: PackedFloat64Array = PackedFloat64Array()
+## The ship of a hostile faction that detected this ship when its jump started, or -1: the
+## encounter system reads it at arrival to tell a flight from a hop (D233, review 2 M3).
+var jump_seen_by: PackedInt32Array = PackedInt32Array()
+## Site id the ship is docked at, or -1 (FT-HLM-013).
+var docked_site: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
@@ -65,10 +81,18 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	align_mount.append(0)
 	target_kind.append(Target.NONE)
 	target_ship.append(-1)
-	target_site.append(-1)
 	target_x.append(0.0)
 	target_y.append(0.0)
 	target_z.append(0.0)
+	target_site.append(-1)
+	jump_left.append(0)
+	jump_kind.append(JumpKind.SITE)
+	jump_target.append(-1)
+	jump_x.append(0.0)
+	jump_y.append(0.0)
+	jump_z.append(0.0)
+	jump_seen_by.append(-1)
+	docked_site.append(-1)
 
 
 func is_decoupled(row: int) -> bool:
@@ -91,9 +115,17 @@ func columns() -> Array:
 			["align_mount", align_mount],
 			["target_kind", target_kind],
 			["target_ship", target_ship],
-			["target_site", target_site],
 			["target_x", target_x],
 			["target_y", target_y],
 			["target_z", target_z],
+			["target_site", target_site],
+			["jump_left", jump_left],
+			["jump_kind", jump_kind],
+			["jump_target", jump_target],
+			["jump_x", jump_x],
+			["jump_y", jump_y],
+			["jump_z", jump_z],
+			["jump_seen_by", jump_seen_by],
+			["docked_site", docked_site],
 		]
 	)

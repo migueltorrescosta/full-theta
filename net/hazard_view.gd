@@ -2,7 +2,7 @@ class_name HazardView
 extends RefCounted
 ## The sim hazards a faction knows of, as the RELAY block lists them (D208, FT-RLY-001,
 ## P4, P11): where each is now and when it reaches the ship. Relay draws them on its map
-## and Engineering's countdown reads the forecast. Only hazards on the ship's site that
+## and Engineering's countdown reads the forecast. Only hazards that
 ## HazardSystem.known_to the ship's faction are listed (sensors or a probe's bubble).
 
 ## Row shapes (u8 on the wire).
@@ -14,8 +14,8 @@ const PLANE: int = 2
 const MAX_ROWS: int = 32
 
 
-## The rows for a ship: {id (the hazard's index in SimWorld.hazards), shape, pos (site-local
-## m: a zone's or shell's centre, the point of a plane nearest the ship), radius (m: the
+## The rows for a ship: {id (the hazard's index in SimWorld.hazards), shape, pos
+## (m: a zone's or shell's centre, the point of a plane nearest the ship), radius (m: the
 ## zone's or the shell's now, 0 for a plane), dir (unit vector: a plane's travel, else 0),
 ## eta (s until it reaches the ship at its present velocity, -1 when it is not coming)}.
 static func rows(world: SimWorld, ship: int) -> Array:
@@ -24,7 +24,7 @@ static func rows(world: SimWorld, ship: int) -> Array:
 	var t: float = world.tick * SimWorld.DT
 	for i: int in world.hazards.size():
 		var h: HazardDef = world.hazards[i]
-		if h.site != world.kin.site[ship] or not HazardSystem.known_to(world, faction, i):
+		if not HazardSystem.known_to(world, faction, i):
 			continue
 		if out.size() >= MAX_ROWS:
 			break

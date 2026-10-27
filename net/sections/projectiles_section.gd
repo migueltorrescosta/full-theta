@@ -45,8 +45,6 @@ func update(world: SimWorld) -> PackedByteArray:
 		var pair: int = _key(proj.ship_ids[k], _tick + proj.ttl[k], 0)
 		var nth: int = ordinal.get(pair, 0)
 		ordinal[pair] = nth + 1
-		if proj.site[k] != kin.site[owner]:
-			continue
 		var rel: Vector3 = proj.relative_start(k, kin, owner, 0.0)
 		if rel.length_squared() > r2:
 			continue

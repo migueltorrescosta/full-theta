@@ -89,7 +89,7 @@ static func set_power_and_tightness(
 	return true
 
 
-## Helm sets the focus direction (ship frame), or tracks another ship at the same site
+## Helm sets the focus direction (ship frame), or tracks another ship in the world
 ## when target >= 0 (D48, FT-HLM-010). Rejects a zero or non-finite direction, an invalid
 ## target and one its faction doesn't detect now (FT-ARC-013). A track lasts until Helm
 ## sets another focus; see _track.

@@ -134,14 +134,21 @@ func test_weapons_lists_the_feeds_of_the_selected_target() -> void:
 # (D210), and the button counts down the seconds left of a share.
 func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
 	var cases: Array = [
-		["relay", "easy", [&"routes", &"hazard_countdowns", &"track_feeds"]],
-		["science", "easy", [&"weak_points", &"diagnosed_causes"]],
+		["relay", "easy", [&"routes", &"hazard_countdowns", &"track_feeds", &"mission_icon"]],
+		["science", "easy", [&"weak_points", &"diagnosed_causes", &"verify_chip"]],
 		["science", "normal", []],
-		["relay", "normal", [&"routes", &"hazard_countdowns"]],
+		["relay", "normal", [&"routes", &"hazard_countdowns", &"mission_icon"]],
 		["relay", "hard", []],
 		["weapons", "easy", []],
+		# Comms' shortcuts need a press too (#10, Q10).
+		["comms", "easy", [&"lanes", &"contract_flags"]],
+		["comms", "normal", [&"lanes"]],
 		# Targeting is Weapons + Science: the weak points are direct there.
-		["targeting", "easy", [&"diagnosed_causes"]],
+		["targeting", "easy", [&"diagnosed_causes", &"verify_chip"]],
+		# Parley is Weapons + Comms and Approach Helm + Comms: there the flags and the lanes are
+		# direct, the other one still needs its press.
+		["parley", "easy", [&"lanes"]],
+		["approach", "easy", [&"contract_flags"]],
 		["captain", "easy", []],
 	]
 	for c: Array in cases:
@@ -158,7 +165,7 @@ func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
 	add_child(s)
 	await get_tree().process_frame
 	var buttons: Array[Node] = s.share_bar.find_children("*", "Button", true, false)
-	assert_int(buttons.size()).is_equal(3)
+	assert_int(buttons.size()).is_equal(4)
 	assert_bool(s.share_bar.visible).is_true()
 	(buttons[0] as Button).pressed.emit()
 	var sent: Array = StationFixture.sent(ctx).of("share")
@@ -166,7 +173,7 @@ func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
 	assert_array(sent[0][1]).is_equal(["routes"])
 	# The binding shares all of the screen's shortcuts.
 	s.dispatch({"id": "share", "target": "screen", "pressed": true, "device": "kbm"})
-	assert_int(StationFixture.sent(ctx).of("share").size()).is_equal(4)
+	assert_int(StationFixture.sent(ctx).of("share").size()).is_equal(5)
 	ctx.crew.handle_event(
 		{"type": "shares", "payload": {"ship": 0, "left": {"routes": 12.3}}}, ctx.now_ms()
 	)

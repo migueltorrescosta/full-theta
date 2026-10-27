@@ -28,9 +28,9 @@ static func harness() -> PairHarness:
 static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p2")
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
-	w.spawn_ship(TestDefs.corvette(), 1, 0)
+	w.spawn_ship(TestDefs.corvette(), 1)
 	var raider: int = w.spawn_ship(
-		Gunnery.raider_with_shields(0.0), 2, 0, START, Quaternion.IDENTITY, VELOCITY
+		Gunnery.raider_with_shields(0.0), 2, START, Quaternion.IDENTITY, VELOCITY
 	)
 	w.shields.strength[raider] = 0.0
 	return w

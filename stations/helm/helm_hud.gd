@@ -15,6 +15,19 @@ const EDGE: float = 36.0
 const COMPASS_R: float = 46.0
 ## Envelope bars show 0..BAR_MAX of nominal; a tick marks nominal.
 const BAR_MAX: float = 1.5
+## Speeds under this (m/s) show no velocity markers.
+const DRIFT_MIN: float = 0.5
+## Translation input above this lights its thrust arrow.
+const THRUST_LIT: float = 0.05
+## The thrust cross: arm distance and arrow size (px).
+const CROSS_ARM: float = 24.0
+const CROSS_ARROW: float = 9.0
+## Narrower views move the thrust cross above the flight read-out.
+const NARROW_W: float = 640.0
+## A phone (portrait) keeps it top left.
+const PHONE_W: float = 420.0
+## The flight read-out's top edge, from the view's bottom.
+const READOUT_H: float = 168.0
 
 var panel: HelmPanel
 var compact: bool = false
@@ -24,7 +37,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## The items on the view: ContactPicture's contacts and marks with their screen
+## The items on the view: ContactPicture's contacts, marks and named sites with their screen
 ## position, `on_screen`, `behind`, `selected` and `arrow`; [] when there is no camera
 ## (docked).
 func markers() -> Array[Dictionary]:
@@ -33,7 +46,8 @@ func markers() -> Array[Dictionary]:
 		return out
 	var cam: Camera3D = panel.view3d.camera
 	var rect: Rect2 = Rect2(Vector2.ZERO, size)
-	for item: Dictionary in panel.ctx.picture().items:
+	var picture: ContactPicture = panel.ctx.picture()
+	for item: Dictionary in picture.items + picture.sites:
 		if item["kind"] == "point":
 			continue
 		var world: Vector3 = item["world"]
@@ -49,7 +63,7 @@ func markers() -> Array[Dictionary]:
 
 
 ## Relay's routes on this view, in screen pixels (FT-RLY-005, P4): one entry per route with
-## a Vector2 per waypoint, or null for a waypoint at another site or behind the camera. They
+## a Vector2 per waypoint, or null for a waypoint behind the camera. They
 ## only exist while the routes toggle lets them reach Helm (the server withholds them on
 ## Hard, FT-PAIR-008).
 func route_points() -> Array:
@@ -61,10 +75,9 @@ func route_points() -> Array:
 		var points: Array = []
 		for w: Dictionary in route:
 			var spot: Variant = null
-			if int(w["site"]) == panel.ctx.site():
-				var world: Vector3 = panel.ctx.interp.offset_to(w["pos"])
-				if not cam.is_position_behind(world):
-					spot = cam.unproject_position(world)
+			var world: Vector3 = panel.ctx.interp.offset_to(w["pos"])
+			if not cam.is_position_behind(world):
+				spot = cam.unproject_position(world)
 			points.append(spot)
 		out.append(points)
 	return out
@@ -93,6 +106,47 @@ func _draw_routes(font: Font) -> void:
 			previous = p
 
 
+## Comms' approach lanes on this view, in screen pixels (P5, FT-PAIR-001): {"pos" (Vector2),
+## "state" ("wait" amber until the window opens, "open" green inside it, "late" red after),
+## "left_s" (s until the window opens, or closes while open)}, only for lanes in front of the
+## camera. They exist only while the lanes toggle lets them reach Helm (Comms shared them, or
+## the view holds Comms; the server withholds them on Hard).
+func lane_marks() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if compact or panel == null or panel.view3d == null or panel.view3d.camera == null:
+		return out
+	var cam: Camera3D = panel.view3d.camera
+	var now: int = panel.ctx.now_ms()
+	for lane: Dictionary in panel.ctx.crew.lanes:
+		var world: Vector3 = panel.ctx.interp.offset_to(lane["pos"])
+		if cam.is_position_behind(world):
+			continue
+		var state: String = "wait"
+		var left: float = (int(lane["opens_ms"]) - now) / 1000.0
+		if now >= int(lane["closes_ms"]):
+			state = "late"
+			left = 0.0
+		elif now >= int(lane["opens_ms"]):
+			state = "open"
+			left = (int(lane["closes_ms"]) - now) / 1000.0
+		out.append({"pos": cam.unproject_position(world), "state": state, "left_s": left})
+	return out
+
+
+## A ring and a countdown at each lane's site: amber while the window is ahead, green inside
+## it, red once it has closed.
+func _draw_lanes(font: Font) -> void:
+	var colours: Dictionary[String, String] = {"wait": "warn", "open": "ok", "late": "danger"}
+	for lane: Dictionary in lane_marks():
+		var col: Color = Palette.color(colours[lane["state"]])
+		var at: Vector2 = lane["pos"]
+		draw_arc(at, 18.0, 0.0, TAU, 28, col, 2.5)
+		var text: String = tr("helm.lane." + String(lane["state"]))
+		if lane["state"] != "late":
+			text += " %d s" % ceili(float(lane["left_s"]))
+		_text(font, at + Vector2(24.0, -4.0), text, col, SMALL)
+
+
 func _draw() -> void:
 	if panel == null or panel.ctx == null:
 		return
@@ -102,14 +156,16 @@ func _draw() -> void:
 		_draw_readout(font, Vector2(2.0 * COMPASS_R + 28.0, size.y / 2.0 - 24.0), false)
 		return
 	_draw_reticle()
-	_draw_velocity()
+	_draw_velocity(font)
+	_draw_thrust(font)
 	_draw_routes(font)
+	_draw_lanes(font)
 	for e: Dictionary in markers():
 		if e["on_screen"]:
 			_draw_marker(font, e, e["selected"])
 		elif e["arrow"]:
 			_draw_arrow(font, e, e["selected"])
-	_draw_compass(font, Vector2(300.0, size.y - COMPASS_R - 40.0))
+	_draw_compass(font, _compass_centre())
 	_draw_readout(font, Vector2(16.0, size.y - 150.0), true)
 	if panel.chase:
 		_text(font, Vector2(16.0, 24.0), tr("helm.chase"), Palette.color("text_dim"))
@@ -130,18 +186,43 @@ func _draw_reticle() -> void:
 		draw_circle(c + stick * 80.0, 3.0, Palette.color("ok"))
 
 
-## Prograde (circle with ticks) and retrograde (circle with a cross).
-func _draw_velocity() -> void:
+## The velocity markers on the view, in screen pixels (HUD coordinates): `kind` "pro"
+## (prograde, along the drift) always, "retro" only while moving backwards; `pos`,
+## `on_screen`, and `edge` for a marker clamped to the view's edge because its direction is
+## off screen or behind. [] when nearly still or there is no camera.
+func velocity_markers() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	var v: Vector3 = velocity()
-	if v.length() < 1.0:
-		return
+	if compact or panel == null or panel.view3d == null or panel.view3d.camera == null:
+		return out
+	if v.length() < DRIFT_MIN:
+		return out
 	var cam: Camera3D = panel.view3d.camera
-	var col: Color = Palette.color("ok")
+	var rect: Rect2 = Rect2(Vector2.ZERO, size)
 	for pro: bool in [true, false]:
-		var p: Vector3 = v.normalized() * 5000.0 * (1.0 if pro else -1.0)
-		if cam.is_position_behind(p):
+		if not pro and local_velocity().z <= 0.0:
 			continue
-		var s: Vector2 = cam.unproject_position(p)
+		var dir: Vector3 = v.normalized() * (1.0 if pro else -1.0)
+		var world: Vector3 = dir * 5000.0
+		var behind: bool = cam.is_position_behind(world)
+		var at: Vector2 = Vector2.ZERO if behind else cam.unproject_position(world)
+		var edge: bool = behind or not rect.has_point(at)
+		if edge:
+			var d: Vector3 = cam.global_transform.basis.inverse() * world
+			at = _edge_point(Vector2(d.x, -d.y))
+		out.append({"kind": "pro" if pro else "retro", "pos": at, "edge": edge})
+	return out
+
+
+## Prograde (circle with ticks) and retrograde (circle with a cross), clamped to the
+## view's edge when off screen, each named.
+func _draw_velocity(font: Font) -> void:
+	var col: Color = Palette.color("ok")
+	for m: Dictionary in velocity_markers():
+		var s: Vector2 = m["pos"]
+		var pro: bool = m["kind"] == "pro"
+		if m["edge"]:
+			draw_circle(s, 12.0, Color(Palette.color("background"), 0.6))
 		draw_arc(s, 8.0, 0.0, TAU, 20, col, 1.5)
 		if pro:
 			for d: Vector2 in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP]:
@@ -149,6 +230,92 @@ func _draw_velocity() -> void:
 		else:
 			draw_line(s + Vector2(-6.0, -6.0), s + Vector2(6.0, 6.0), col, 1.5)
 			draw_line(s + Vector2(-6.0, 6.0), s + Vector2(6.0, -6.0), col, 1.5)
+		var text: String = tr("helm.prograde" if pro else "helm.retrograde")
+		var at: Rect2 = label_rect(font, text, s, 14.0)
+		_text(font, at.position + Vector2(0.0, font.get_ascent(FONT_SIZE)), text, col)
+
+
+## The translation input that lights the thrust arrows: x starboard +, y up +, z forward +.
+func thrust_input() -> Vector3:
+	var cmd: Dictionary = panel.input_command()
+	return Vector3(cmd["strafe"], cmd["lift"], cmd["throttle"])
+
+
+## The thrust cross's centre: beside the compass, clear of the ring.
+func thrust_centre() -> Vector2:
+	if size.x < PHONE_W:
+		# A phone has no room beside the compass: top left, under the mode captions.
+		return Vector2(CROSS_ARM + 22.0, 92.0)
+	if size.x < NARROW_W:
+		# No room beside the compass: a fixed panel on the left, just above the read-out,
+		# where no contact marker or the ring sits.
+		return Vector2(CROSS_ARM + 22.0, size.y - READOUT_H - CROSS_ARM - 20.0)
+	var x: float = clampf(size.x / 2.0, 440.0, maxf(440.0, size.x - 360.0))
+	return Vector2(x, size.y - 72.0)
+
+
+## Arrows for sway (left, right), heave (up, down) and forward / astern (the pair beside
+## the cross), lit while that thrust fires, with the ship-frame speeds (forward, lateral,
+## vertical) beside them.
+func _draw_thrust(font: Font) -> void:
+	var c: Vector2 = thrust_centre()
+	var t: Vector3 = thrust_input()
+	# [where from the centre (in CROSS_ARM), pointing, input].
+	var arrows: Array = [
+		[Vector2.LEFT, Vector2.LEFT, -t.x],
+		[Vector2.RIGHT, Vector2.RIGHT, t.x],
+		[Vector2.UP, Vector2.UP, t.y],
+		[Vector2.DOWN, Vector2.DOWN, -t.y],
+		[Vector2(2.6, -0.8), Vector2.UP, t.z],
+		[Vector2(2.6, 0.8), Vector2.DOWN, -t.z],
+	]
+	draw_rect(thrust_rect(), Color(Palette.color("background"), 0.5))
+	for a: Array in arrows:
+		var lit: bool = float(a[2]) > THRUST_LIT
+		var col: Color = Palette.color("accent") if lit else Color(Palette.color("text_dim"), 0.45)
+		var pts: PackedVector2Array = _triangle(c + (a[0] as Vector2) * CROSS_ARM, a[1])
+		if lit:
+			draw_colored_polygon(pts, col)
+		else:
+			pts.append(pts[0])
+			draw_polyline(pts, col, 1.5)
+	var l: Vector3 = local_velocity()
+	var rows: Array = [
+		[tr("helm.vel_fwd"), -l.z], [tr("helm.vel_side"), l.x], [tr("helm.vel_up"), l.y]
+	]
+	for i: int in rows.size():
+		var text: String = "%s %s" % [rows[i][0], speed_text(float(rows[i][1]))]
+		var at: Vector2 = c + Vector2(CROSS_ARM * 3.6, -14.0 + 16.0 * i)
+		_text(font, at, text, Palette.color("text"), SMALL)
+
+
+## The thrust cross and its read-outs, for the labels to keep clear of.
+func thrust_rect() -> Rect2:
+	var c: Vector2 = thrust_centre()
+	return Rect2(
+		c - Vector2(CROSS_ARM + 14.0, CROSS_ARM + 14.0), Vector2(250.0, 2.0 * CROSS_ARM + 28.0)
+	)
+
+
+## A triangle of CROSS_ARROW at `base` pointing along `dir`.
+static func _triangle(base: Vector2, dir: Vector2) -> PackedVector2Array:
+	var side: Vector2 = dir.orthogonal()
+	return PackedVector2Array(
+		[
+			base + dir * CROSS_ARROW,
+			base - dir * CROSS_ARROW * 0.6 + side * CROSS_ARROW * 0.8,
+			base - dir * CROSS_ARROW * 0.6 - side * CROSS_ARROW * 0.8,
+		]
+	)
+
+
+## A signed speed in m/s: one decimal under 10, else whole.
+static func speed_text(mps: float) -> String:
+	if absf(mps) < 0.05:
+		return "+0.0 m/s"
+	if absf(mps) < 9.95:
+		return "%+.1f m/s" % mps
+	return "%+d m/s" % roundi(mps)
 
 
 ## A bracket in the allegiance shape (a diamond for marks) with callsign and range;
@@ -162,7 +329,112 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 	if pulse > 0.0:
 		draw_arc(p, r + 10.0 * (1.0 - pulse) + 4.0, 0.0, TAU, 24, Color(col, pulse), 2.0)
 	var text: String = "%s %s" % [e["label"], _range(e["world"].length())]
-	_text(font, p + Vector2(r + 6.0, 5.0), text, col)
+	var at: Rect2 = label_rect(font, text, p, r)
+	if at.position.x != p.x + r + 6.0 or at.position.y != p.y + 5.0 - font.get_ascent(FONT_SIZE):
+		# Moved clear of something: a thin leader keeps it tied to its marker.
+		var tip: Vector2 = Vector2(
+			clampf(p.x, at.position.x, at.end.x), clampf(p.y, at.position.y, at.end.y)
+		)
+		draw_line(p, tip, Color(col, 0.5), 1.0)
+	_text(font, at.position + Vector2(0.0, font.get_ascent(FONT_SIZE)), text, col)
+
+
+## Where a marker's label goes (HUD coordinates): right of the marker, else the nearest spot
+## clear of the marker and of `reserved()`; a label that fits nowhere clear stays on the
+## right.
+func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+	var h: float = font.get_height(FONT_SIZE)
+	var right: Rect2 = Rect2(p + Vector2(r + 6.0, 5.0 - font.get_ascent(FONT_SIZE)), Vector2(w, h))
+	var avoid: Array[Rect2] = reserved()
+	if not _hits(right, avoid):
+		return right
+	var tries: Array[Rect2] = [
+		Rect2(right.position - Vector2(w + 2.0 * r + 12.0, 0.0), right.size),
+	]
+	for a: Rect2 in avoid:
+		for x: float in [a.position.x - w - 4.0, a.end.x + 4.0]:
+			tries.append(Rect2(Vector2(x, right.position.y), right.size))
+		for y: float in [a.position.y - h - 2.0, a.end.y + 2.0]:
+			tries.append(Rect2(Vector2(right.position.x, y), right.size))
+		# Beside a reserved box, nudged up or down off its neighbours.
+		for x: float in [a.position.x - w - 4.0, a.end.x + 4.0]:
+			for k: int in [-2, -1, 1, 2]:
+				tries.append(Rect2(Vector2(x, right.position.y + k * h), right.size))
+	var marker: Rect2 = Rect2(p - Vector2(r, r) * 1.3, Vector2(r, r) * 2.6)
+	var best: Rect2 = right
+	var best_d: float = INF
+	var inside: Rect2 = Rect2(Vector2.ZERO, size)
+	for t: Rect2 in tries:
+		if _hits(t, avoid) or t.intersects(marker) or not inside.encloses(t):
+			continue
+		if not _leader_clear(p, t, avoid):
+			continue
+		if t.get_center().distance_to(p) < best_d:
+			best_d = t.get_center().distance_to(p)
+			best = t
+	return best
+
+
+## What marker labels keep clear of: the panel's shield ring (with its caption), the target
+## compass (with its chip) and the flight read-out.
+func reserved() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if panel != null and panel.ring != null and panel.ring.visible:
+		out.append(panel.ring.get_rect().grow(2.0))
+	var c: Vector2 = _compass_centre()
+	out.append(Rect2(c - Vector2(2.0 * COMPASS_R, COMPASS_R), Vector2(4.0, 2.0) * COMPASS_R))
+	out[-1].size.y += 24.0
+	# The flight read-out: mode, speed, active modes and the three bars.
+	out.append(Rect2(Vector2(14.0, size.y - READOUT_H), Vector2(262.0, 130.0)))
+	out.append(thrust_rect())
+	return out
+
+
+func _compass_centre() -> Vector2:
+	return Vector2(300.0, size.y - COMPASS_R - 40.0)
+
+
+## True when the leader from `p` to the label `box` crosses none of `avoid` (a box that
+## holds `p` itself doesn't count).
+static func _leader_clear(p: Vector2, box: Rect2, avoid: Array[Rect2]) -> bool:
+	var tip: Vector2 = Vector2(
+		clampf(p.x, box.position.x, box.end.x), clampf(p.y, box.position.y, box.end.y)
+	)
+	for a: Rect2 in avoid:
+		if a.has_point(p):
+			continue
+		if a.has_point(tip):
+			return false
+		var corners: Array[Vector2] = [
+			a.position,
+			Vector2(a.end.x, a.position.y),
+			a.end,
+			Vector2(a.position.x, a.end.y),
+		]
+		for i: int in 4:
+			if (
+				Geometry2D.segment_intersects_segment(p, tip, corners[i], corners[(i + 1) % 4])
+				!= null
+			):
+				return false
+	return true
+
+
+static func _hits(box: Rect2, others: Array[Rect2]) -> bool:
+	for o: Rect2 in others:
+		if box.intersects(o):
+			return true
+	return false
+
+
+## Where a ray from the view centre along `dir` (screen axes) meets the edge inset by EDGE.
+func _edge_point(dir: Vector2) -> Vector2:
+	dir = dir.normalized() if dir.length() >= 1e-3 else Vector2.DOWN
+	var c: Vector2 = size / 2.0
+	var half: Vector2 = c - Vector2(EDGE, EDGE)
+	var t: float = minf(half.x / maxf(absf(dir.x), 1e-6), half.y / maxf(absf(dir.y), 1e-6))
+	return c + dir * t
 
 
 ## An arrow on the view's edge toward an item off screen or behind (FT-HLM-004).
@@ -170,13 +442,8 @@ func _draw_arrow(font: Font, e: Dictionary, selected: bool) -> void:
 	var cam: Camera3D = panel.view3d.camera
 	var d: Vector3 = cam.global_transform.basis.inverse() * (e["world"] as Vector3)
 	var dir: Vector2 = Vector2(d.x, -d.y)
-	if dir.length() < 1e-3:
-		dir = Vector2.DOWN
-	dir = dir.normalized()
-	var c: Vector2 = size / 2.0
-	var half: Vector2 = c - Vector2(EDGE, EDGE)
-	var t: float = minf(half.x / maxf(absf(dir.x), 1e-6), half.y / maxf(absf(dir.y), 1e-6))
-	var tip: Vector2 = c + dir * t
+	dir = dir.normalized() if dir.length() >= 1e-3 else Vector2.DOWN
+	var tip: Vector2 = _edge_point(dir)
 	var side: Vector2 = dir.orthogonal() * 8.0
 	var col: Color = Palette.item_color(e)
 	var pts: PackedVector2Array = PackedVector2Array(
@@ -251,6 +518,10 @@ func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 			modes.append(tr(m[1]))
 	if int(h.get("align", 0)) != 0:
 		modes.append(tr("helm.align"))
+	if int(h.get("jump_left", 0)) > 0:
+		modes.append(tr("helm.jump_spool") % (float(h["jump_left"]) / NetCodec.TICK_HZ))
+	if int(h.get("docked_site", -1)) >= 0:
+		modes.append(tr("helm.docked"))
 	if not modes.is_empty():
 		_text(font, at + Vector2(0.0, 40.0), "  ".join(modes), Palette.color("accent"))
 	if not full:
@@ -288,8 +559,7 @@ func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) 
 	)
 
 
-## The controller radial: items clockwise from the top, the picked one lit, reserved
-## ones dimmed.
+## The controller radial: items clockwise from the top, the picked one lit.
 func _draw_radial(font: Font) -> void:
 	var c: Vector2 = size / 2.0
 	var r: float = 120.0
@@ -300,9 +570,7 @@ func _draw_radial(font: Font) -> void:
 		var a: float = TAU * i / n - PI / 2.0
 		var p: Vector2 = c + Vector2(cos(a), sin(a)) * r
 		var col: Color = Palette.color("text")
-		if id in HelmPanel.RESERVED:
-			col = Palette.color("line")
-		elif i == panel.radial_pick:
+		if i == panel.radial_pick:
 			col = Palette.color("accent")
 			draw_circle(p, 34.0, Color(col, 0.25))
 		var text: String = tr(IntentTable.label_key(id))
@@ -317,11 +585,18 @@ func velocity() -> Vector3:
 	return Vector3(v) / NetCodec.VEL_Q
 
 
-## The selection's label: a contact's callsign or a mark's name.
+## Own velocity in the ship frame (m/s): x starboard, y up, z astern (the bow is -Z).
+func local_velocity() -> Vector3:
+	return panel.ctx.interp.own_rotation().inverse() * velocity()
+
+
+## The selection's label: a contact's callsign, a mark's name or a site's name.
 func selection_label() -> String:
 	var s: Dictionary = panel.ctx.crew.selection
 	if s.get("kind", "") == "mark":
 		return str(panel.ctx.crew.mark_in_slot(int(s["id"])).get("name", ""))
+	if s.get("kind", "") == "site":
+		return str(panel.ctx.picture().find(s).get("label", ""))
 	return panel.ctx.view.callsign(int(s.get("id", -1)))
 
 
@@ -329,6 +604,8 @@ func _selected_item() -> Dictionary:
 	var s: Dictionary = panel.ctx.crew.selection
 	if s.get("kind", "") == "mark":
 		return {"kind": "mark", "allegiance": ""}
+	if s.get("kind", "") == "site":
+		return {"kind": "site", "allegiance": ""}
 	var info: Dictionary = panel.ctx.view.contacts.get("info", {})
 	var letter: String = Palette.allegiance(selection_label())
 	if int(info.get(int(s.get("id", -1)), [0])[0]) & ContactsSection.FLAG_OWN:

@@ -9,7 +9,7 @@ extends StationPanel
 ## screen's disc radar is the inset (FT-WPN-002). Docked, it shows the mount list and
 ## the target line only.
 ##
-## Aim: the aim axes turn the camera mount's aim at AIM_RATE. The aim is a site-local
+## Aim: the aim axes turn the camera mount's aim at AIM_RATE. The aim is a
 ## point, like the sim's (`aim_mount`, FT-WPN-009): it holds in world space while the
 ## ship turns, the barrel slews to it at the mount's traverse rate (sim), and the camera
 ## looks at it with its roll on the deck plane (ComfortCamera, FT-STN-017). Light aim
@@ -45,7 +45,7 @@ var ship_def: ShipDef = null
 var cam_basis: Basis = Basis.IDENTITY
 var fov: float = FOV_DEG
 
-## Mount index -> site-local aim point (m); a mount without one rests on its barrel.
+## Mount index -> aim point (m); a mount without one rests on its barrel.
 var _aims: Dictionary = {}
 var _sent: Dictionary = {}
 var _dirty: Dictionary = {}
@@ -220,7 +220,7 @@ func fire_guided(i: int) -> bool:
 	return true
 
 
-## "Bring mount N to bear" (Helm's chip) names the selected mount (strand G).
+## "Bring mount N to bear" (Helm's chip) names the selected mount.
 func chip_arg(chip: ChipDef) -> int:
 	return mount if chip.arg == ChipDef.Arg.MOUNT else -1
 
@@ -299,7 +299,7 @@ func fire_claimed_at(contact: int, keep_aim: int = -1) -> int:
 # --- Aim. ---
 
 
-## The site-local position of mount i (m).
+## The position of mount i (m).
 func _mount_position(i: int) -> Vector3:
 	return ctx.interp.own_position() + ctx.interp.own_rotation() * ship_def.mounts[i].position
 
@@ -419,7 +419,7 @@ func mount_rows() -> Array[String]:
 	return out
 
 
-## What other stations' work says of the selected target (strand G, FT-WPN-007, P7, P8): its
+## What other stations' work says of the selected target (FT-WPN-007, P7, P8): its
 ## weak points by name, how the selected ammunition fares against its resistances, the open
 ## hack window and the track quality. Each line exists only while the server sends its feed,
 ## that is while its toggle is on or Science and Relay share this view.
@@ -429,6 +429,9 @@ func feed_lines() -> Array[String]:
 	var feeds: Dictionary = ctx.view.blocks.get(StationViews.Section.FEEDS, {})
 	if id < 0 or feeds.is_empty():
 		return out
+	var flag: int = contract_flag(id)
+	if flag != 0:
+		out.append(tr("weapons.flag_line_%d" % flag))
 	for row: Dictionary in feeds["weak"]:
 		if row["contact"] != id:
 			continue
@@ -453,6 +456,17 @@ func feed_lines() -> Array[String]:
 			var bar: String = "#".repeat(roundi(q * 8.0)) + "-".repeat(8 - roundi(q * 8.0))
 			out.append(tr("weapons.track") % [roundi(q * 100.0), bar])
 	return out
+
+
+## The contract flag a contact carries (P9, FT-MIS-042): 1 disable ("do not destroy"), 2
+## protect, 0 none. The FEEDS block holds the rows only while the contract flags are shared
+## with this view (the P9 toggle, or Comms on this screen).
+func contract_flag(contact: int) -> int:
+	var feeds: Dictionary = ctx.view.blocks.get(StationViews.Section.FEEDS, {})
+	for row: Dictionary in feeds.get("flags", []):
+		if int(row["contact"]) == contact:
+			return int(row["flag"])
+	return 0
 
 
 ## The ammunition line (FT-WPN-006): the selected type, "standard" for a mount with one.
@@ -591,6 +605,16 @@ func _build_view() -> void:
 	vp.add_child(_space)
 
 
+## The chip text of an item: "H2 4 high 2.3km", and a contact a contract flags names its
+## flag ("[disable]", "[protect]", P9).
+func target_chip(it: Dictionary) -> String:
+	var chip: String = ChipText.chip(it["label"], it["local"])
+	var flag: int = contract_flag(int(it["id"])) if it["kind"] == "contact" else 0
+	if flag != 0:
+		chip += " [%s]" % tr("weapons.flag_%d" % flag)
+	return chip
+
+
 ## Brackets of the contacts and marks in view, with their chips and hit rectangles.
 func _layout_targets() -> void:
 	_targets.clear()
@@ -605,7 +629,7 @@ func _layout_targets() -> void:
 		var p: Variant = project(rot * ((it["local"] as Vector3) - m.position).normalized())
 		if p == null:
 			continue
-		var chip: String = ChipText.chip(it["label"], it["local"])
+		var chip: String = target_chip(it)
 		var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 		var at: Vector2 = (p as Vector2) + Vector2(BRACKET + 6.0, 4.0 - FONT_SIZE)
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
@@ -679,6 +703,9 @@ func _draw_item(font: Font, t: Dictionary) -> void:
 	var p: Vector2 = t["pos"]
 	var sel: bool = ctx.crew.is_selected(it["kind"], it["id"])
 	var col: Color = Palette.color("selected") if sel else Palette.item_color(it)
+	var flag: int = contract_flag(int(it["id"])) if it["kind"] == "contact" else 0
+	if flag != 0 and not sel:
+		col = Palette.color("warn") if flag == 1 else Palette.color("ok")
 	if it["kind"] == "mark":
 		_overlay.draw_polyline(Palette.shape_points("diamond", p, BRACKET), col, 1.5, true)
 	else:

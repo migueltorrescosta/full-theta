@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ModuleDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/module_def.gd" id="1_mod"]
+
+[resource]
+script = ExtResource("1_mod")
+id = &"bx3_reactor"
+name_key = "module.bx3_reactor"
+slot_type = &"engine"
+price = 1200
+deltas = Dictionary[StringName, float]({
+&"mass": 0.1,
+&"reactor_output": 0.2
+})

@@ -85,7 +85,7 @@ func _drag(p: RelayPanel, from: Vector2, to: Vector2, depth_px: float = 0.0) -> 
 	_press(p, to, false)
 
 
-## The ship-frame offset from the map centre of a site-local position.
+## The ship-frame offset from the map centre of a position.
 func _rel(p: RelayPanel, site_pos: Vector3) -> Vector3:
 	var interp: SnapshotInterpolator = p.map.picture.interp
 	return p.map.picture.rel(interp.offset_to(site_pos), p.map.centre)
@@ -135,14 +135,14 @@ func test_drag_places_on_the_view_plane_and_shift_drag_sets_depth() -> void:
 	var placed: Array = _sent(s, "place_mark")
 	assert_int(placed.size()).is_equal(1)
 	var args: Array = placed[0][1]
-	assert_array(args.slice(0, 4)).is_equal([-1, "", -1, 0])
-	var rel: Vector3 = _rel(p, args[4])
+	assert_array(args.slice(0, 3)).is_equal([-1, "", -1])
+	var rel: Vector3 = _rel(p, args[3])
 	# On the plane through the centre, perpendicular to the view, under the drop point.
 	assert_float(rel.dot(p.map.view.z)).is_equal_approx(0.0, 0.5)
 	assert_vector(p.map.project(rel)).is_equal_approx(b, Vector2.ONE)
 	# Shift+drag pushes it along the view direction; it still sits under the pointer.
 	_drag(p, a, b, -100.0)
-	rel = _rel(p, _sent(s, "place_mark")[1][1][4])
+	rel = _rel(p, _sent(s, "place_mark")[1][1][3])
 	assert_float(rel.dot(p.map.view.z)).is_equal_approx(-100.0 / p.map.ppm(), 0.5)
 	assert_vector(p.map.project(rel)).is_equal_approx(b, Vector2.ONE)
 	# A click (no drag) places nothing.
@@ -164,8 +164,8 @@ func test_relay_moves_attaches_renames_and_deletes_marks() -> void:
 	var to: Vector2 = _empty_spot(p, at + Vector2(60, -90))
 	_drag(p, at, to)
 	var moved: Array = _sent(s, "move_mark")[0][1]
-	assert_array(moved.slice(0, 3)).is_equal([bravo, -1, 0])
-	assert_vector(p.map.project(_rel(p, moved[3]))).is_equal_approx(to, Vector2.ONE)
+	assert_array(moved.slice(0, 2)).is_equal([bravo, -1])
+	assert_vector(p.map.project(_rel(p, moved[2]))).is_equal_approx(to, Vector2.ONE)
 	# Dropped on a contact: attached to it.
 	_drag(p, at, p.map.project(_local_of(p, "contact", StationFixture.H2)))
 	assert_array(_sent(s, "move_mark")[1][1].slice(0, 2)).is_equal([bravo, StationFixture.H2])
@@ -194,15 +194,15 @@ func test_relay_moves_attaches_renames_and_deletes_marks() -> void:
 func test_attach_frees_an_attached_mark_where_it_is() -> void:
 	var s: StationScreen = await _screen()
 	var p: RelayPanel = _relay(s)
-	var marks: Array = [{"slot": 2, "name": "Charlie", "contact": StationFixture.H2, "site": -1}]
+	var marks: Array = [{"slot": 2, "name": "Charlie", "contact": StationFixture.H2}]
 	marks[0].merge({"x": 0.0, "y": 0.0, "z": 0.0, "by": "Bo"})
 	s.ctx.crew.handle_event({"type": "marks", "payload": {"ship": 0, "marks": marks}}, 0)
 	s.ctx.crew.select("mark", 2)
 	s.dispatch(_ev("mark_attach", "pad", s))
 	var args: Array = _sent(s, "move_mark")[0][1]
-	assert_array(args.slice(0, 3)).is_equal([2, -1, 0])
+	assert_array(args.slice(0, 2)).is_equal([2, -1])
 	var h2: Vector3 = s.ctx.interp.contact_position(StationFixture.H2)
-	assert_vector(args[3]).is_equal_approx(h2, Vector3.ONE * 0.01)
+	assert_vector(args[2]).is_equal_approx(h2, Vector3.ONE * 0.01)
 	assert_object(p).is_not_null()
 
 
@@ -232,9 +232,9 @@ func test_attach_and_centre_take_the_minimum_image_across_the_seam() -> void:
 	assert_dict(p.item_at(p.map.project(want))).is_equal(
 		{"kind": "contact", "id": StationFixture.H5}
 	)
-	# A mark dropped on the centre lands on Echo's spot (the server wraps the site).
+	# A mark dropped on the centre lands on Echo's spot (the server wraps it).
 	_drag(p, _empty_spot(p, p.size / 2.0 + Vector2(40, 0)), p.size / 2.0 + Vector2(1, 1))
-	var placed: Vector3 = _sent(s, "place_mark")[0][1][4]
+	var placed: Vector3 = _sent(s, "place_mark")[0][1][3]
 	var echo: Vector3 = s.ctx.mark_position(s.ctx.crew.mark_in_slot(StationFixture.ECHO_SLOT))
 	assert_float(s.ctx.interp.min_image(placed - echo).length()).is_less(2.0 / p.map.ppm())
 
@@ -245,7 +245,7 @@ func test_with_eight_marks_relay_replaces_the_selected_one() -> void:
 	var p: RelayPanel = _relay(s)
 	var marks: Array = []
 	for k: int in CrewState.MAX_MARKS:
-		marks.append({"slot": k, "contact": -1, "site": 0, "x": 100.0 * k, "y": 0, "z": 0})
+		marks.append({"slot": k, "contact": -1, "x": 100.0 * k, "y": 0, "z": 0})
 	s.ctx.crew.handle_event({"type": "marks", "payload": {"ship": 0, "marks": marks}}, 0)
 	var toasts: Array = []
 	s.ctx.crew.toast.connect(func(key: String, _a: Dictionary) -> void: toasts.append(key))
@@ -282,8 +282,8 @@ func test_controller_cursor_selects_pings_and_marks_with_depth() -> void:
 	# Hold R3 marks the map point under the cursor, pushed away by the trigger.
 	s.dispatch(_ev("mark", "pad", s))
 	var args: Array = _sent(s, "place_mark")[0][1]
-	assert_array(args.slice(0, 4)).is_equal([-1, "", -1, 0])
-	var rel: Vector3 = _rel(p, args[4])
+	assert_array(args.slice(0, 3)).is_equal([-1, "", -1])
+	var rel: Vector3 = _rel(p, args[3])
 	assert_float(rel.dot(p.map.view.z)).is_less(-1.0)
 	assert_vector(p.map.project(rel)).is_equal_approx(p.cursor_pos(), Vector2.ONE)
 	# A selects and R3 pings the item under the cursor.

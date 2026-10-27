@@ -1,7 +1,7 @@
 class_name LaunchProbeCommand
 extends SimCommand
-## Relay launches a probe from the ship's stock to a site-local point (m, wrapped onto
-## the site's cube; FT-RLY-004, D56). See ProbeSystem.launch.
+## Relay launches a probe from the ship's stock to a point (m, wrapped onto
+## the cube; FT-RLY-004, D56). See ProbeSystem.launch.
 
 var x: float = 0.0
 var y: float = 0.0

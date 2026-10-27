@@ -97,22 +97,16 @@ func test_bring_to_bear_carries_the_selected_mount() -> void:
 
 
 # FT: FT-PAIR-009, FT-PAIR-021, FT-PAIR-017
-# Hard turns request chips off; an edited set with the toggle off does too; the inert hold
-# fire chip is in the data list but Comms has nothing to send in M2.
-func test_chips_are_off_on_hard_and_hold_fire_is_inert() -> void:
+# Hard turns request chips off; an edited set with the toggle off does too.
+func test_chips_are_off_on_hard_and_off_by_toggle() -> void:
 	var hard: StationScreen = await _screen("helm", "hard")
 	assert_bool(hard.dispatch(_ev("request", hard))).is_false()
 	assert_array(_sent(hard, "send_chip")).is_empty()
 	var custom: String = DataToggles.of_preset("easy").with_value(&"chips", 0).encode()
 	var off: StationScreen = await _screen("weapons", custom)
 	assert_bool(off.dispatch(_ev("request", off))).is_false()
-	var comms: StationScreen = await _screen("comms")
+	var comms: StationScreen = await _screen("comms", custom)
 	assert_bool(comms.dispatch(_ev("request", comms))).is_false()
-	var listed: Array = NetChips.def().chips.filter(
-		func(c: ChipDef) -> bool: return c.id == &"hold_fire"
-	)
-	assert_int(listed.size()).is_equal(1)
-	assert_bool(listed[0].active).is_false()
 
 
 # FT: FT-JNT-005

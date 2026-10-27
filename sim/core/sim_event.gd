@@ -14,6 +14,8 @@ var value: float = 0.0
 ## A point or direction, in the ship's frame unless the event says otherwise.
 var vector: Vector3 = Vector3.ZERO
 var tag: StringName = &""
+## A value copy of the arguments of a spoken line (&"say"); not hashed.
+var args: Dictionary = {}
 
 
 func _to_string() -> String:

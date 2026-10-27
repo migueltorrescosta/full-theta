@@ -10,9 +10,9 @@ extends RefCounted
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
 ## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
-## &"sites", &"zones", &"routes", &"inbox", &"relay_log"; &"main_view" (strand F);
-## &"toggles" when the session's data-shortcut set changed (strand G), &"shares" when a
-## shortcut was shared or ran out (strand K).
+## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view";
+## &"toggles" when the session's data-shortcut set changed, &"shares" when a
+## shortcut was shared or ran out, &"lanes" when the approach lanes changed (F).
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -54,6 +54,8 @@ var lobby: Dictionary = {}
 var started: Dictionary = {}
 ## ship -> `pause` payload, while paused.
 var paused: Dictionary = {}
+## The host paused the universe (FT-MIS-040); independent of `paused`.
+var host_paused: bool = false
 ## ship -> {"voters": [names], "sessions": [ids], "needed": int}.
 var votes: Dictionary = {}
 ## ship -> "vote" | "host".
@@ -61,32 +63,32 @@ var abandoned: Dictionary = {}
 ## ship -> `run_over` payload {ship, outcome, time_s, hull} plus "voters", "sessions" and
 ## "needed" from `run_votes`, from the outcome until the reset (D178).
 var run_over: Dictionary = {}
+## ship -> its debrief record (RunDebrief.for_ship), sent right after `run_over`.
+var debrief: Dictionary = {}
 ## item -> {"session": int, "name": String} (claim events; free items erased).
 var claims: Dictionary = {}
 var alert: int = ALERT_NORMAL
 var alert_by: String = ""
-## Sorted by slot: {"slot", "name", "contact", "site", "pos" (Vector3, m), "by"}.
+## Sorted by slot: {"slot", "name", "contact", "pos" (Vector3, m), "by"}.
 var marks: Array[Dictionary] = []
-## Active pings, oldest first: {"kind", "id", "site", "pos", "by", "at_ms", "copies"}.
+## Active pings, oldest first: {"kind", "id", "pos", "by", "at_ms", "copies"}.
 var pings: Array[Dictionary] = []
 ## The main screen's view (MainScreen.View), set by the Captain or by Relay.
 var main_view: int = MainScreen.View.FORWARD
 var main_view_by: String = ""
-## The Comms card the latest ping named: {"id", "by", "at_ms"}, or {} when a later ping
+## The Comms card the latest ping named: {"id", "by", "at_ms", "card" (the ping's copy of
+## its kind, title, detail and expires, for the main screen)}, or {} when a later ping
 ## named something else. Not in `pings`: it pulses nothing on the radar.
 var card_ping: Dictionary = {}
 ## The shared selection: {"kind": "contact" | "mark" | "site" | "zone", "id": int}, or {}.
 var selection: Dictionary = {}
-## The scenario's site names, the callout layer every station shows (FT-SPA-027): [{"site",
-## "name"}].
-var sites: Array[Dictionary] = []
 ## Hazard zones and scan positions, outside the 8 marks (FT-SPA-028): {"id", "kind"
-## ("hazard" | "scan"), "site", "pos" (Vector3, m), "radius" (m), "by"}.
+## ("hazard" | "scan"), "pos" (Vector3, m), "radius" (m), "by"}.
 var zones: Array[Dictionary] = []
-## Relay's routes (FT-RLY-005), by route number: Array of {"site", "pos"} waypoints.
+## Relay's routes (FT-RLY-005), by route number: Array of {"pos"} waypoints.
 var routes: Array = []
 ## Relay only: marks other ships sent, waiting for Accept or Decline (FT-RLY-009): {"id",
-## "from_ship", "from", "name", "site", "pos"}; and the ship's log (FT-RLY-006): {"tick",
+## "from_ship", "from", "name", "pos"}; and the ship's log (FT-RLY-006): {"tick",
 ## "key", "args"}, oldest first.
 var inbox: Array[Dictionary] = []
 var relay_log: Array[Dictionary] = []
@@ -97,6 +99,10 @@ var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
 ## The shortcuts shared to this ship (the `shares` event, D210): feature -> client clock (ms)
 ## at which the share ends.
 var shares: Dictionary = {}
+## The ship's approach lanes (P5, the `lanes` event): {"card", "pos" (Vector3, m), "opens_ms",
+## "closes_ms" (client clock, ms), "by"}. Only while the lanes toggle lets them reach this
+## station (Comms always, the others once Comms shared them).
+var lanes: Array[Dictionary] = []
 
 var _filter: ViewFilter = null
 var _filter_key: String = ""
@@ -189,6 +195,37 @@ func is_crew() -> bool:
 	return bool(entry_def().get("crew", false))
 
 
+## Co-op: every crew ship shares one faction (a client-side view of the server's rule,
+## which also checks relations); PvP sessions have no pause control (FT-MIS-040).
+func is_coop() -> bool:
+	var factions: Dictionary = {}
+	for s: Dictionary in catalogue.get("ships", []):
+		factions[int(s.get("faction", 0))] = true
+	return factions.size() <= 1
+
+
+## Whether the menu offers the host pause.
+func can_host_pause() -> bool:
+	return host and is_coop()
+
+
+## The menu's abandon-run control (D241, FT-MIS-016): "" none (PvP, not started, run over,
+## not crew), else the string key of its label.
+func abandon_control() -> String:
+	if not is_coop() or not started.has(ship) or run_over.has(ship) or abandoned.has(ship):
+		return ""
+	if host:
+		return "settings.abandon"
+	if not is_crew():
+		return ""
+	return "settings.abandon_unvote" if has_abandon_vote() else "settings.abandon_vote"
+
+
+## Whether this session's abandon vote for its ship stands.
+func has_abandon_vote() -> bool:
+	return session in votes.get(ship, {}).get("sessions", [])
+
+
 func ship_name(id: int = ship) -> String:
 	for s: Dictionary in catalogue.get("ships", []):
 		if int(s.get("id", -2)) == id:
@@ -222,11 +259,18 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 		"claim":
 			_on_claim(p)
 		"pause":
-			paused[int(p["ship"])] = p
+			if p.get("host", false):
+				host_paused = true
+			else:
+				paused[int(p["ship"])] = p
 			changed.emit(&"pause")
 		"resume":
-			paused.clear()
-			votes.clear()
+			# Each pause that lifts has its own resume; clear only the one it names.
+			if p.get("host", false):
+				host_paused = false
+			else:
+				paused.clear()
+				votes.clear()
 			changed.emit(&"pause")
 		"abandon_votes":
 			votes[int(p["ship"])] = p
@@ -238,6 +282,9 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			var card: Dictionary = run_over.get_or_add(int(p["ship"]), {})
 			card.merge(p, true)
 			changed.emit(&"run_over")
+		"debrief":
+			debrief[int(p["ship"])] = p
+			changed.emit(&"debrief")
 		"alert":
 			_on_alert(p)
 		"main_view":
@@ -246,10 +293,27 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_marks(p)
 		"ping":
 			_on_ping(p, now_ms)
-		"sites", "zones", "routes", "inbox", "relay_log":
+		"zones", "routes", "inbox", "relay_log":
 			_on_relay(str(e["type"]), p)
 		"chip_answer":
 			_on_chip_answer(p)
+		"lanes":
+			if _mine(p):
+				lanes.clear()
+				for l: Dictionary in p.get("lanes", []):
+					(
+						lanes
+						. append(
+							{
+								"card": int(l["card"]),
+								"pos": Vector3(float(l["x"]), float(l["y"]), float(l["z"])),
+								"opens_ms": now_ms + roundi(float(l["open_s"]) * 1000.0),
+								"closes_ms": now_ms + roundi(float(l["close_s"]) * 1000.0),
+								"by": str(l.get("by", "")),
+							}
+						)
+					)
+				changed.emit(&"lanes")
 		"shares":
 			if _mine(p):
 				shares.clear()
@@ -329,14 +393,6 @@ func live_pings(now_ms: int) -> Array[Dictionary]:
 	return pings.duplicate()
 
 
-## The name of a site, "" when the scenario gives none (FT-SPA-027).
-func site_name(site: int) -> String:
-	for d: Dictionary in sites:
-		if d["site"] == site:
-			return d["name"]
-	return ""
-
-
 func zone_by_id(id: int) -> Dictionary:
 	for z: Dictionary in zones:
 		if z["id"] == id:
@@ -364,6 +420,7 @@ func reset_run() -> void:
 	zones.clear()
 	routes.clear()
 	shares.clear()
+	lanes.clear()
 	inbox.clear()
 	relay_log.clear()
 	selection = {}
@@ -375,23 +432,15 @@ func reset_run() -> void:
 	started.erase(ship)
 	abandoned.erase(ship)
 	run_over.erase(ship)
+	debrief.erase(ship)
 	changed.emit(&"reset")
 
 
-## The Relay and callout-layer events (docs/protocol.md "Relay").
+## The Relay events (docs/protocol.md "Relay").
 func _on_relay(type: String, p: Dictionary) -> void:
-	if type != "sites" and not _mine(p):
+	if not _mine(p):
 		return
 	match type:
-		"sites":
-			sites.clear()
-			for d: Dictionary in p.get("sites", []):
-				sites.append(
-					{
-						"site": int(d["site"]),
-						"name": TranslationServer.translate(StringName(d["name"]))
-					}
-				)
 		"zones":
 			zones.clear()
 			for z: Dictionary in p.get("zones", []):
@@ -401,7 +450,6 @@ func _on_relay(type: String, p: Dictionary) -> void:
 						{
 							"id": int(z["id"]),
 							"kind": str(z["kind"]),
-							"site": int(z["site"]),
 							"pos": Vector3(float(z["x"]), float(z["y"]), float(z["z"])),
 							"radius": float(z["radius"]),
 							"by": str(z.get("by", "")),
@@ -426,7 +474,6 @@ func _on_relay(type: String, p: Dictionary) -> void:
 						points
 						. append(
 							{
-								"site": int(w["site"]),
 								"pos": Vector3(float(w["x"]), float(w["y"]), float(w["z"])),
 							}
 						)
@@ -443,7 +490,6 @@ func _on_relay(type: String, p: Dictionary) -> void:
 							"from_ship": int(m["from_ship"]),
 							"from": str(m["from"]),
 							"name": str(m["name"]),
-							"site": int(m["site"]),
 							"pos": Vector3(float(m["x"]), float(m["y"]), float(m["z"])),
 						}
 					)
@@ -556,7 +602,6 @@ func _on_marks(p: Dictionary) -> void:
 					"slot": int(m.get("slot", 0)),
 					"name": str(m.get("name", "")),
 					"contact": int(m.get("contact", -1)),
-					"site": int(m.get("site", 0)),
 					"pos":
 					Vector3(float(m.get("x", 0)), float(m.get("y", 0)), float(m.get("z", 0))),
 					"by": str(m.get("by", "")),
@@ -577,12 +622,17 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 		return
 	_expire(now_ms)
 	var kind: String = str(p.get("kind", "point"))
-	# A site ping names its site in `site` (docs/protocol.md); pulse() looks it up by id.
-	var id: int = int(p.get("site" if kind == "site" else "id", -1))
+	# A site ping names its named site in `id` (docs/protocol.md).
+	var id: int = int(p.get("id", -1))
 	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
 	var copy: bool = str(p.get("copy", "")) != ""
 	if kind == "card":
-		card_ping = {"id": int(p.get("id", -1)), "by": str(p.get("by", "")), "at_ms": now_ms}
+		card_ping = {
+			"id": int(p.get("id", -1)),
+			"by": str(p.get("by", "")),
+			"at_ms": now_ms,
+			"card": p.get("card", {}),
+		}
 		changed.emit(&"card")
 		if not copy:
 			pinged.emit(card_ping)
@@ -599,7 +649,6 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	var ping: Dictionary = {
 		"kind": kind,
 		"id": id,
-		"site": int(p.get("site", 0)),
 		"pos": Vector3(float(p.get("x", 0)), float(p.get("y", 0)), float(p.get("z", 0))),
 		"by": str(p.get("by", "")),
 		"at_ms": now_ms,

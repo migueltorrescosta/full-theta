@@ -72,10 +72,10 @@ func test_no_tunnelling_at_max_speed_table() -> void:
 			var label: String = "%s r=%s h=%s" % [course[0], shape[0], shape[1]]
 			var world: SimWorld = SimWorld.new(1)
 			var vs: Vector3 = Vector3(0, 0, -SHIP_SPEED)
-			var shooter: int = world.spawn_ship(_ship(25.0), 1, 0, Vector3.ZERO)
+			var shooter: int = world.spawn_ship(_ship(25.0), 1, Vector3.ZERO)
 			world.kin.vel[shooter] = vs
 			var target: int = world.spawn_ship(
-				_ship(shape[0], shape[1]), 2, 0, Vector3(0, 0, -4000), Quaternion.IDENTITY
+				_ship(shape[0], shape[1]), 2, Vector3(0, 0, -4000), Quaternion.IDENTITY
 			)
 			world.kin.vel[target] = course[1]
 			_coast(world)
@@ -84,7 +84,7 @@ func test_no_tunnelling_at_max_speed_table() -> void:
 			var t: float = Lead.intercept_time(r, rel_v, w.projectile_speed)
 			var dir: Vector3 = Lead.aim_point(r, rel_v, t).normalized()
 			world.projectiles.spawn(
-				shooter, 1, 0, 0.0, 0.0, 0.0, vs + dir * w.projectile_speed, 0.5, 1.0, 600
+				shooter, 1, 0.0, 0.0, 0.0, vs + dir * w.projectile_speed, 0.5, 1.0, 600
 			)
 			for i: int in 200:
 				world.step()
@@ -106,12 +106,12 @@ func test_no_tunnelling_at_max_speed_table() -> void:
 # impact point and incoming direction in the target's body frame.
 func test_earliest_hit_wins_with_local_point() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var shooter: int = world.spawn_ship(_ship(25.0), 1, 0, Vector3.ZERO)
+	var shooter: int = world.spawn_ship(_ship(25.0), 1, Vector3.ZERO)
 	# The near target is turned 90 degrees about Y, so the local frame differs from the site's.
 	var yaw: Quaternion = Quaternion(Vector3.UP, PI / 2)
-	var near: int = world.spawn_ship(_ship(25.0), 2, 0, Vector3(0, 0, -1000), yaw)
-	var far: int = world.spawn_ship(_ship(25.0), 2, 0, Vector3(0, 0, -2000))
-	world.projectiles.spawn(shooter, 1, 0, 0.0, 0.0, -100.0, Vector3(0, 0, -1500), 0.5, 7.0, 600)
+	var near: int = world.spawn_ship(_ship(25.0), 2, Vector3(0, 0, -1000), yaw)
+	var far: int = world.spawn_ship(_ship(25.0), 2, Vector3(0, 0, -2000))
+	world.projectiles.spawn(shooter, 1, 0.0, 0.0, -100.0, Vector3(0, 0, -1500), 0.5, 7.0, 600)
 	for i: int in 60:
 		CollisionSystem.step(world)
 		if not world.hits.is_empty():
@@ -135,8 +135,8 @@ func test_earliest_hit_wins_with_local_point() -> void:
 # A projectile never hits its shooter, and expires after its time to live.
 func test_projectile_ignores_shooter_and_expires() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var shooter: int = world.spawn_ship(_ship(25.0), 1, 0, Vector3.ZERO)
-	world.projectiles.spawn(shooter, 1, 0, 0.0, 0.0, 0.0, Vector3(0, 0, -1500), 0.5, 1.0, 10)
+	var shooter: int = world.spawn_ship(_ship(25.0), 1, Vector3.ZERO)
+	world.projectiles.spawn(shooter, 1, 0.0, 0.0, 0.0, Vector3(0, 0, -1500), 0.5, 1.0, 10)
 	for i: int in 9:
 		world.step()
 	assert_int(world.projectiles.size()).is_equal(1)
@@ -153,9 +153,9 @@ func test_projectile_ignores_shooter_and_expires() -> void:
 func test_friendly_contact_impulse_and_damage() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var def: ShipDef = TestDefs.corvette()
-	var a: int = world.spawn_ship(def, 1, 0, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 10))
+	var a: int = world.spawn_ship(def, 1, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 10))
 	var b: int = world.spawn_ship(
-		def, 1, 0, Vector3(0, 0, 60), Quaternion.IDENTITY, Vector3(0, 0, -10)
+		def, 1, Vector3(0, 0, 60), Quaternion.IDENTITY, Vector3(0, 0, -10)
 	)
 	assert_int(world.relation(1, 1)).is_equal(SimWorld.Relation.FRIENDLY)
 	_coast(world)
@@ -199,9 +199,9 @@ func test_friendly_contact_impulse_and_damage() -> void:
 func test_proximity_warning_before_impact() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var def: ShipDef = TestDefs.corvette()
-	var a: int = world.spawn_ship(def, 1, 0, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 15))
+	var a: int = world.spawn_ship(def, 1, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 15))
 	var b: int = world.spawn_ship(
-		def, 2, 0, Vector3(10, 0, 500), Quaternion.IDENTITY, Vector3(0, 0, -15)
+		def, 2, Vector3(10, 0, 500), Quaternion.IDENTITY, Vector3(0, 0, -15)
 	)
 	_coast(world)
 	var warnings: Array[SimEvent] = []
@@ -235,8 +235,8 @@ func test_fast_pair_warned_on_entering_search_distance() -> void:
 		var world: SimWorld = SimWorld.new(1)
 		var def: ShipDef = TestDefs.corvette()
 		var start: float = 1000.0 + shift * 5 * 400.0 / 60.0 + 1.0
-		world.spawn_ship(def, 1, 0, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 200))
-		world.spawn_ship(def, 2, 0, Vector3(10, 0, start), Quaternion.IDENTITY, Vector3(0, 0, -200))
+		world.spawn_ship(def, 1, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 200))
+		world.spawn_ship(def, 2, Vector3(10, 0, start), Quaternion.IDENTITY, Vector3(0, 0, -200))
 		_coast(world)
 		var warned_before: bool = false
 		var warned_on_entry: bool = false
@@ -255,25 +255,21 @@ func test_fast_pair_warned_on_entering_search_distance() -> void:
 
 
 # FT: FT-SIM-010
-# Ships passing wide of each other get no warning; ships at different sites never
-# warn or collide, even at the same offsets in the same grid cell numbers (site 16
-# and site 0 shared cells in the S6 spike).
-func test_no_warning_when_missing_or_at_other_site() -> void:
+# Ships passing wide of each other get no warning, and a destroyed ship next to one
+# never warns or collides.
+func test_no_warning_when_missing_or_destroyed() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var def: ShipDef = TestDefs.corvette()
-	world.spawn_ship(def, 1, 0, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 15))
-	world.spawn_ship(def, 2, 0, Vector3(80, 0, 300), Quaternion.IDENTITY, Vector3(0, 0, -15))
-	world.spawn_ship(def, 1, 16, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 15))
-	world.spawn_ship(def, 2, 16, Vector3(0, 0, 200), Quaternion.IDENTITY, Vector3(0, 0, -15))
-	world.spawn_ship(def, 2, 0, Vector3(0, 0, -5), Quaternion.IDENTITY, Vector3.ZERO)
-	world.kin.alive[4] = 0
-	world.spawn_ship(def, 3, 32, Vector3(0, 0, 20))
+	world.spawn_ship(def, 1, Vector3.ZERO, Quaternion.IDENTITY, Vector3(0, 0, 15))
+	world.spawn_ship(def, 2, Vector3(80, 0, 300), Quaternion.IDENTITY, Vector3(0, 0, -15))
+	world.spawn_ship(def, 2, Vector3(0, 0, -5), Quaternion.IDENTITY, Vector3.ZERO)
+	world.kin.alive[2] = 0
 	_coast(world)
 	for i: int in 900:
 		world.step()
 	var kinds: Array[StringName] = []
 	for e: SimEvent in world.drain_events():
-		if not (e.ship_id >= 2 and e.ship_id <= 3) and e.kind in [&"proximity", &"hit"]:
+		if e.kind in [&"proximity", &"hit"]:
 			kinds.append(e.kind)
 	assert_array(kinds).is_empty()
 
@@ -283,9 +279,9 @@ func test_no_warning_when_missing_or_at_other_site() -> void:
 # touch where spheres of the same radius would pass.
 func test_capsule_contact() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var a: int = world.spawn_ship(_ship(10.0, 40.0), 1, 0, Vector3.ZERO)
+	var a: int = world.spawn_ship(_ship(10.0, 40.0), 1, Vector3.ZERO)
 	var b: int = world.spawn_ship(
-		_ship(10.0, 40.0), 2, 0, Vector3(25, 0, 35), Quaternion.IDENTITY, Vector3(-5, 0, 0)
+		_ship(10.0, 40.0), 2, Vector3(25, 0, 35), Quaternion.IDENTITY, Vector3(-5, 0, 0)
 	)
 	_coast(world)
 	for i: int in 120:
@@ -299,12 +295,12 @@ func test_capsule_contact() -> void:
 # Resetting a ship drops its projectiles and leaves others'.
 func test_reset_ship_drops_its_projectiles() -> void:
 	var world: SimWorld = SimWorld.new(1)
-	var a: int = world.spawn_ship(_ship(25.0), 1, 0, Vector3.ZERO)
-	var b: int = world.spawn_ship(_ship(25.0), 2, 0, Vector3(5000, 0, 0))
+	var a: int = world.spawn_ship(_ship(25.0), 1, Vector3.ZERO)
+	var b: int = world.spawn_ship(_ship(25.0), 2, Vector3(5000, 0, 0))
 	for k: int in 3:
-		world.projectiles.spawn(a, 1, 0, 0.0, 0.0, -k, Vector3.FORWARD, 0.5, 1.0, 100)
-		world.projectiles.spawn(b, 2, 0, 5000.0, 0.0, -k, Vector3.FORWARD, 0.5, 1.0, 100)
-	world.reset_ship(a, 0)
+		world.projectiles.spawn(a, 1, 0.0, 0.0, -k, Vector3.FORWARD, 0.5, 1.0, 100)
+		world.projectiles.spawn(b, 2, 5000.0, 0.0, -k, Vector3.FORWARD, 0.5, 1.0, 100)
+	world.reset_ship(a)
 	assert_array(Array(world.projectiles.ship_ids)).is_equal([b, b, b])
 	assert_array(Array(world.projectiles.pz)).is_equal([0.0, -1.0, -2.0])
 	for col: Array in world.projectiles.columns():

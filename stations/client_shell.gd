@@ -49,6 +49,7 @@ func setup(
 	voice = VoicePlayer.new()
 	add_child(voice)
 	voice.subtitle.connect(func(_entry: Dictionary) -> void: _show_subtitles())
+	voice.subtitle.connect(_note_training)
 	_layer = Control.new()
 	_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_layer)
@@ -157,8 +158,27 @@ func _on_crew_changed(what: StringName) -> void:
 func _show_subtitles() -> void:
 	var lines: PackedStringArray = []
 	for e: Dictionary in voice.subtitles.active(ctx.now_ms()):
-		lines.append("%s: %s" % [tr(str(e["label_key"])), e["text"]])
+		# a line's binding slot shows the player's current binding.
+		var text: String = BindingText.fill_markers(
+			str(e["text"]), ctx.settings.bindings, ctx.matcher.device
+		)
+		lines.append("%s: %s" % [tr(str(e["label_key"])), text])
 	_subtitles.text = "\n".join(lines)
+
+
+## Keeps the Shakedown's latest step per station for the banner (TrainingBanner).
+func _note_training(entry: Dictionary) -> void:
+	TrainingBanner.note(ctx.training, entry, _pair_stations)
+
+
+## The two stations of a pair step line ("pair_p3").
+func _pair_stations(pair_id: String) -> Array:
+	var steps: TrainingStepsDef = load("res://content/training/steps.tres") as TrainingStepsDef
+	if steps != null:
+		for s: TrainingStepDef in steps.pairs():
+			if s.intent == StringName(pair_id):
+				return [String(s.station), String(s.partner)]
+	return []
 
 
 ## `?`, View, or a first visit: the menu on Controls for this screen's stations; the
@@ -206,6 +226,21 @@ func _build_overlays() -> void:
 	add_child(settings_screen)
 	settings_screen.setup(ctx.settings, true)
 	settings_screen.leave_requested.connect(leave)
+	settings_screen.host_pause_requested.connect(func() -> void: ctx.intents.host_pause(true))
+	settings_screen.abandon_requested.connect(
+		func() -> void:
+			if ctx.crew.host:
+				ctx.intents.abandon(ctx.crew.ship)
+			else:
+				ctx.intents.vote_abandon(ctx.crew.ship, not ctx.crew.has_abandon_vote())
+	)
+	ctx.crew.changed.connect(
+		func(_what: StringName) -> void:
+			settings_screen.set_pause_control(ctx.crew.can_host_pause())
+			settings_screen.set_abandon_control(ctx.crew.abandon_control())
+	)
+	settings_screen.set_pause_control(ctx.crew.can_host_pause())
+	settings_screen.set_abandon_control(ctx.crew.abandon_control())
 	settings_screen.scale_changed.connect(apply_ui_scale)
 	settings_screen.closed.connect(
 		func() -> void: ctx.matcher.invert_pitch = ctx.settings.invert_pitch

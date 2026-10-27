@@ -21,13 +21,36 @@ const OUTCOME_NAMES: Array[StringName] = [&"none", &"win", &"loss"]
 var status: PackedByteArray = PackedByteArray()
 ## Outcome for the ship's crew; set once, never changed after.
 var outcome: PackedByteArray = PackedByteArray()
+## Encounters the ship has been through (finished, fled or lost), and the id of the one
+## it is in (PENDING or ACTIVE), or -1. Fled encounters are also counted in fled_count
+## (E07, FT-MIS-010, FT-MIS-025).
+var encounters_done: PackedInt32Array = PackedInt32Array()
+var encounter: PackedInt32Array = PackedInt32Array()
+var fled_count: PackedInt32Array = PackedInt32Array()
+## 1 once the director has closed the ship's run (CloseRunCommand); it then wins when it is in
+## no encounter (EncounterSystem.run_complete, Q4).
+var closed: PackedByteArray = PackedByteArray()
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	add_key(ship_id, faction)
 	status.append(Status.IN_PLAY)
 	outcome.append(Outcome.NONE)
+	encounters_done.append(0)
+	encounter.append(-1)
+	fled_count.append(0)
+	closed.append(0)
 
 
 func columns() -> Array:
-	return super() + [["status", status], ["outcome", outcome]]
+	return (
+		super()
+		+ [
+			["status", status],
+			["outcome", outcome],
+			["encounters_done", encounters_done],
+			["encounter", encounter],
+			["fled_count", fled_count],
+			["closed", closed],
+		]
+	)

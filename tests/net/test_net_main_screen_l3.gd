@@ -100,5 +100,5 @@ func test_captain_and_viewer_get_the_status_block() -> void:
 		assert_int(block["objectives"][0]["kind"]).is_equal(Objectives.Kind.DESTROY_HOSTILES)
 		assert_int(block["objectives"][0]["left"]).is_equal(1)
 		# The Captain also gets the ship's open request chips (FT-CPT-004).
-		var keys: Array = [S.STATUS, S.CAPTAIN] + ([S.CHIPS] if c == cap else [])
+		var keys: Array = [S.STATUS, S.CAPTAIN] + ([S.CHIPS, S.COMMS] if c == cap else [])
 		assert_array(c.view.blocks.keys()).is_equal(keys)

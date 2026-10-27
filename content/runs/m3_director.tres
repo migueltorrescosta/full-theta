@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="DirectorDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/director_def.gd" id="1_director"]
+
+[resource]
+script = ExtResource("1_director")
+id = &"m3_director"
+budget_per_ship = Dictionary[StringName, int]({
+&"easy": 6,
+&"hard": 12,
+&"normal": 9
+})
+strength_per_preset = Dictionary[StringName, float]({
+&"easy": 0.5,
+&"hard": 1.5,
+&"normal": 1.0
+})
+spawn_site_every_s = 120.0
+max_open_sites = 2
+gap_s = 180.0
+arrival_timeout_s = 180.0

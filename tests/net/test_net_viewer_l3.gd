@@ -6,7 +6,9 @@ extends GdUnitTestSuite
 
 const PLAYER: int = NetHarness.PLAYER
 const S = StationViews.Section
-const MAIN_SCREEN: Array[int] = [S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES, S.CAPTAIN]
+const MAIN_SCREEN: Array[int] = [
+	S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES, S.CAPTAIN, S.SITES
+]
 
 var h: NetHarness
 
@@ -54,8 +56,8 @@ func test_viewers_receive_only_main_screen_state_and_change_nothing() -> void:
 	assert_str(refused.get("payload", {}).get("reason", "")).is_equal("not_your_station")
 	for send: Callable in [
 		func() -> void: viewer.set_alert(2),
-		func() -> void: viewer.place_mark(-1, "", -1, 0, Vector3.ZERO),
-		func() -> void: viewer.ping("point", -1, 0, Vector3.ZERO),
+		func() -> void: viewer.place_mark(-1, "", -1, Vector3.ZERO),
+		func() -> void: viewer.ping("point", -1, Vector3.ZERO),
 	]:
 		from = h.mark(viewer)
 		send.call()

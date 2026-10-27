@@ -8,6 +8,8 @@ extends RefCounted
 ## - the inbox of marks other ships' Relays sent, visible only to the receiving Relay
 ##   until it accepts one (FT-RLY-008, FT-RLY-009, FT-SPA-021);
 ## - the ship's log (FT-RLY-006): short keyed entries, never NPC text (FT-RLY-007).
+## - approach lanes (P5): MARK items Comms' accepted clearance creates, derived from
+##   STORY (lane_items), that Hard keeps off other stations (FT-SPA-029, FT-PAIR-008).
 ## NetCrewState checks who may do what and sends the events.
 
 const KIND_HAZARD: String = "hazard"
@@ -34,11 +36,11 @@ const BAD_TARGET: String = "bad_target"
 const LOST_CONTACT: String = "lost_contact"
 const NOT_RELAY: String = "not_relay"
 
-## Ship -> Array of {id, kind, site, x, y, z, radius, by}.
+## Ship -> Array of {id, kind, x, y, z, radius, by}.
 var _zones: Dictionary[int, Array] = {}
-## Ship -> Array (MAX_ROUTES slots) of Arrays of {site, x, y, z}.
+## Ship -> Array (MAX_ROUTES slots) of Arrays of {x, y, z}.
 var _routes: Dictionary[int, Array] = {}
-## Ship -> Array of {id, from_ship, from, name, site, x, y, z}.
+## Ship -> Array of {id, from_ship, from, name, x, y, z}.
 var _inbox: Dictionary[int, Array] = {}
 ## Ship -> Array of {tick, key, args}.
 var _log: Dictionary[int, Array] = {}
@@ -49,8 +51,8 @@ func zones_of(ship: int) -> Array:
 	return (_zones.get(ship, []) as Array).duplicate(true)
 
 
-## Adds a zone (kind KIND_HAZARD or KIND_SCAN) at a site-local point; returns "" or why not.
-func add_zone(ship: int, kind: String, site: int, at: Vector3, radius: float, by: String) -> String:
+## Adds a zone (kind KIND_HAZARD or KIND_SCAN) at a point in the cube; returns "" or why not.
+func add_zone(ship: int, kind: String, at: Vector3, radius: float, by: String) -> String:
 	if kind != KIND_HAZARD and kind != KIND_SCAN:
 		return BAD_ZONE
 	if not (is_finite(radius) and radius > 0.0 and radius <= MAX_RADIUS):
@@ -64,7 +66,6 @@ func add_zone(ship: int, kind: String, site: int, at: Vector3, radius: float, by
 			{
 				"id": _next_id,
 				"kind": kind,
-				"site": site,
 				"x": at.x,
 				"y": at.y,
 				"z": at.z,
@@ -92,7 +93,7 @@ func routes_of(ship: int) -> Array:
 
 
 ## Appends a waypoint to route `route`.
-func route_add(ship: int, route: int, site: int, at: Vector3) -> String:
+func route_add(ship: int, route: int, at: Vector3) -> String:
 	if route < 0 or route >= MAX_ROUTES or not (is_finite(at.x) and is_finite(at.y)):
 		return BAD_ROUTE
 	if not is_finite(at.z):
@@ -100,7 +101,7 @@ func route_add(ship: int, route: int, site: int, at: Vector3) -> String:
 	var points: Array = _route_slots(ship)[route]
 	if points.size() >= MAX_WAYPOINTS:
 		return ROUTE_FULL
-	points.append({"site": site, "x": at.x, "y": at.y, "z": at.z})
+	points.append({"x": at.x, "y": at.y, "z": at.z})
 	return ""
 
 
@@ -115,14 +116,14 @@ func inbox_of(ship: int) -> Array:
 	return (_inbox.get(ship, []) as Array).duplicate(true)
 
 
-## Queues a mark for the receiving ship's Relay (`mark`: name, site, x, y, z); returns
+## Queues a mark for the receiving ship's Relay (`mark`: name, x, y, z); returns
 ## "" or why not.
 func send(to_ship: int, from_ship: int, from: String, mark: Dictionary) -> String:
 	var box: Array = _inbox.get_or_add(to_ship, [])
 	if box.size() >= MAX_INBOX:
 		return INBOX_FULL
 	var item: Dictionary = {"id": _next_id, "from_ship": from_ship, "from": from}
-	item.merge({"name": mark["name"], "site": mark["site"]})
+	item.merge({"name": mark["name"]})
 	item.merge({"x": mark["x"], "y": mark["y"], "z": mark["z"]})
 	box.append(item)
 	_next_id += 1
@@ -167,3 +168,37 @@ func _route_slots(ship: int) -> Array:
 			slots.append([])
 		_routes[ship] = slots
 	return _routes[ship]
+
+
+## The ship's approach lanes (P5): one MARK item per accepted clearance card of its board, at
+## the card's site (SiteTable.point), with the seconds
+## until the window opens and closes (negative once past), {card, x, y, z, open_s, close_s,
+## by}. A lane exists while its card is ACCEPTED: docking, expiry or a decline remove it.
+static func lane_items(world: SimWorld, ship: int) -> Array:
+	var out: Array = []
+	for card: int in world.story.size():
+		var window: Array[int] = StoryRules.lane_window(world, card)
+		if (
+			window.is_empty()
+			or world.story.state[card] != StoryTable.State.ACCEPTED
+			or not Story.visible_to(world, card, ship)
+			or world.story.site[card] < 0
+			or world.story.site[card] >= world.sites.size()
+		):
+			continue
+		var at: PackedFloat64Array = world.sites.point(world.story.site[card])
+		(
+			out
+			. append(
+				{
+					"card": card,
+					"x": at[0],
+					"y": at[1],
+					"z": at[2],
+					"open_s": (window[0] - world.tick) * SimWorld.DT,
+					"close_s": (window[1] - world.tick) * SimWorld.DT,
+					"by": "comms",
+				}
+			)
+		)
+	return out

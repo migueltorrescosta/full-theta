@@ -8,7 +8,7 @@ extends RefCounted
 ##
 ## Variations (set `theme_type_variation`):
 ## - Label: TitleLabel, HeadingLabel, SmallLabel, DimLabel, CaptionLabel (small and dim),
-##   CrewLabel (small, accent).
+##   CrewLabel (small, normal text colour: the seat holders' names, D257).
 ## - Button: TouchButton, OptionButton: TouchOptionButton, CheckBox: TouchCheckBox -
 ##   targets at least TOUCH_MIN px tall at 100 %, for the touch layouts.
 ## - Button: LoadCell_intense, LoadCell_busy, LoadCell_light, LoadCell_none - the lobby's
@@ -97,7 +97,7 @@ static func _labels(t: Theme) -> void:
 	t.set_type_variation("CaptionLabel", "SmallLabel")
 	t.set_color("font_color", "CaptionLabel", Palette.color("text_dim"))
 	t.set_type_variation("CrewLabel", "SmallLabel")
-	t.set_color("font_color", "CrewLabel", Palette.color("accent"))
+	t.set_color("font_color", "CrewLabel", Palette.color("text"))
 
 
 ## The four button states and the focus ring of a Button-like type.
@@ -143,8 +143,11 @@ static func _cell(t: Theme, tag: String) -> void:
 	var chosen: StyleBoxFlat = box("panel_focus", line, CELL_PAD, CELL_PAD)
 	chosen.set_border_width_all(4)
 	var off: StyleBoxFlat = box("background", "line", CELL_PAD, CELL_PAD)
+	# Hover: the chosen fill with a mid-width border, so it differs from a picked cell.
+	var hover: StyleBoxFlat = box("panel_focus", line, CELL_PAD, CELL_PAD)
+	hover.set_border_width_all(3)
 	t.set_stylebox("normal", name, normal)
-	t.set_stylebox("hover", name, chosen)
+	t.set_stylebox("hover", name, hover)
 	t.set_stylebox("pressed", name, chosen)
 	t.set_stylebox("hover_pressed", name, chosen)
 	t.set_stylebox("disabled", name, off)

@@ -19,11 +19,22 @@ var over: Dictionary[int, Dictionary] = {}
 ## Ship -> its "Run again" votes.
 var votes: Dictionary[int, NetAbandonVote] = {}
 
+## The director's decisions so far (a Callable returning an Array of DirectorDecision), set
+## by NetServer; none while no director runs.
+var decisions: Callable
+## Ship -> its debrief (RunDebrief.for_ship), built a few ticks after its outcome, so the
+## encounter the ship was lost in has been closed by then.
+var debriefs: Dictionary[int, Dictionary] = {}
+
 var _rebuild: Callable
 ## Session id -> the connection and ship its card was last sent to.
 var _told: Dictionary[int, Vector2i] = {}
 ## Ship -> the `run_votes` payload last sent.
 var _sent_votes: Dictionary[int, Dictionary] = {}
+## Ship -> the tick of its outcome, until its debrief is built.
+var _outcome_tick: Dictionary[int, int] = {}
+## Session id -> the connection and ship its debrief was last sent to.
+var _told_debrief: Dictionary[int, Vector2i] = {}
 
 
 func _init(server_session: ServerSession, rebuild: Callable) -> void:
@@ -45,6 +56,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			"hull": clampf(hull, 0.0, 1.0),
 		}
 		votes[e.ship_id] = NetAbandonVote.new()
+		_outcome_tick[e.ship_id] = e.tick
 
 
 ## Every frame, after ServerSession.process(): drops the votes of crew who left (and
@@ -52,6 +64,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 ## pick on a finished ship that hasn't got it on its current connection.
 func process() -> void:
 	for ship: int in over:
+		_build_debrief(ship)
 		votes[ship].keep_only(session.connected_crew(ship))
 		if _votes_payload(ship) != _sent_votes.get(ship):
 			_send_votes(ship)
@@ -61,6 +74,10 @@ func process() -> void:
 				_told[s.id] = key
 				session.notify(s, NetProtocol.EVENT_RUN_OVER, over[ship])
 				session.notify(s, NetProtocol.EVENT_RUN_VOTES, _votes_payload(ship))
+			if debriefs.has(ship) and s.ship == ship and s.has_pick() and s.connected():
+				if _told_debrief.get(s.id) != key:
+					_told_debrief[s.id] = key
+					session.notify(s, NetProtocol.EVENT_DEBRIEF, debriefs[ship])
 
 
 func _on_run_again(conn: int, msg: Dictionary, _now_us: int) -> void:
@@ -93,6 +110,9 @@ func _reset() -> void:
 	votes.clear()
 	_told.clear()
 	_sent_votes.clear()
+	debriefs.clear()
+	_outcome_tick.clear()
+	_told_debrief.clear()
 	_rebuild.call()
 
 
@@ -110,3 +130,16 @@ func _send_votes(ship: int) -> void:
 	for s: NetSession in session.by_id.values():
 		if s.ship == ship and s.has_pick():
 			session.notify(s, NetProtocol.EVENT_RUN_VOTES, _sent_votes[ship])
+
+
+## Builds the ship's debrief once two ticks have passed since its outcome (EncounterSystem
+## closes the encounter a ship was lost in on the tick after OutcomeSystem), and writes it to
+## the session log as `debrief` (the bot batch and #13 read it).
+func _build_debrief(ship: int) -> void:
+	if debriefs.has(ship) or session.world.tick < _outcome_tick.get(ship, 0) + 2:
+		return
+	var list: Array = decisions.call() if decisions.is_valid() else []
+	var record: RunDebrief = RunDebrief.new(session.world, list, session.coop, session.first_use)
+	debriefs[ship] = record.for_ship(ship)
+	if session.session_log != null:
+		session.session_log.event("debrief", {"ship": ship, "debrief": debriefs[ship]})

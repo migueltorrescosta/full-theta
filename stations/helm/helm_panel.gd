@@ -7,15 +7,16 @@ extends StationPanel
 ## Sends (net/StationViews.STATION_COMMANDS["helm"]): `helm_input` only when the polled
 ## sticks, throttle, face or approach change (HelmInputCommand latches, at most every
 ## INPUT_MS while the sticks move), `helm_select_target` when the shared selection
-## changes, `helm_align`, `helm_all_stop`, `helm_decoupled` and `set_shield_focus`.
+## changes (a contact, a mark or a named site), `helm_align`, `helm_all_stop`,
+## `helm_decoupled`, `set_shield_focus`, and `helm_jump`, `helm_dock` and `helm_undock`
+## for the selected site or mark (FT-HLM-013, FT-HLM-016).
 ## Rules live in sim/: this panel only turns intents into commands.
 
 ## The controller Helm radial (hold View + right stick, FT-HLM-017): flick toward an
-## item and let go. Dock and jump are reserved for #10 (FT-HLM-013, FT-HLM-016).
+## item and let go.
 const RADIAL: Array[String] = [
 	"chase_camera", "align", "decoupled", "shield_track", "ping", "dock", "jump"
 ]
-const RESERVED: Array[String] = ["dock", "jump"]
 ## The six shield faces (FT-HLM-008), ship frame (-Z bow).
 const FACES: Dictionary = {
 	"shield_fore": Vector3.FORWARD,
@@ -85,7 +86,10 @@ func _mode_changed() -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_EXIT_TREE:
+	if (
+		what in [NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_FOCUS_OUT]
+		or what == NOTIFICATION_EXIT_TREE
+	):
 		_captured = false
 		_apply_mouse_mode()
 	elif what == NOTIFICATION_ENTER_TREE:
@@ -99,8 +103,15 @@ func _notification(what: int) -> void:
 func _process(_delta: float) -> void:
 	if ctx == null:
 		return
-	# A pause or the end of the run (the outcome card, D178) frees the pointer.
-	if ctx.crew.paused.has(ctx.crew.ship) or ctx.crew.run_over.has(ctx.crew.ship):
+	# A pause, the end of the run (the outcome card, D178) or anything blocking the
+	# screen (the menu on any tab, the alert picker) frees the pointer; only a new left
+	# click in the view takes it back (D183).
+	if (
+		ctx.crew.paused.has(ctx.crew.ship)
+		or ctx.crew.host_paused
+		or ctx.crew.run_over.has(ctx.crew.ship)
+		or _overlay_open()
+	):
 		_captured = false
 	_apply_mouse_mode()
 	sync_target()
@@ -139,7 +150,7 @@ func handle_intent(ev: Dictionary) -> bool:
 	return run(id)
 
 
-## Runs one Helm action (a key, a radial item); false for unknown or reserved ones.
+## Runs one Helm action (a key, a radial item); false for unknown ones.
 func run(id: String) -> bool:
 	match id:
 		"all_stop":
@@ -160,9 +171,55 @@ func run(id: String) -> bool:
 			_toggle_track()
 		"ping":
 			_ping()
+		"jump":
+			_jump()
+		"dock":
+			_dock()
 		_:
 			return false
 	return true
+
+
+## J: jump to the selected site or mark once the bow is on it (FT-HLM-016). The sim
+## refuses a jump that isn't faced; the toast only saves the round trip.
+func _jump() -> void:
+	var s: Dictionary = ctx.crew.selection
+	var cmd: Dictionary = {
+		"kind": "helm_jump", "target_kind": 0, "target_id": -1, "x": 0.0, "y": 0.0, "z": 0.0
+	}
+	match s.get("kind", ""):
+		"site":
+			cmd["target_id"] = int(s["id"])
+		"mark":
+			var m: Dictionary = ctx.crew.mark_in_slot(int(s["id"]))
+			if m.is_empty():
+				ctx.crew.toast.emit("toast.jump_select", {})
+				return
+			var p: Vector3 = ctx.mark_position(m)
+			cmd.merge({"target_kind": 1, "x": p.x, "y": p.y, "z": p.z}, true)
+		_:
+			ctx.crew.toast.emit("toast.jump_select", {})
+			return
+	var def: ShipDef = ctx.ship_def()
+	var local: Variant = ctx.selection_local()
+	if def != null and local is Vector3:
+		if (local as Vector3).angle_to(Vector3.FORWARD) > def.jump_face_tolerance_rad:
+			ctx.crew.toast.emit("toast.jump_face", {})
+			return
+	ctx.intents.command(cmd)
+
+
+## H: undock when docked, else dock at the selected site (FT-HLM-013).
+func _dock() -> void:
+	if int(helm_block().get("docked_site", -1)) >= 0:
+		ctx.intents.command({"kind": "helm_undock"})
+		return
+	var s: Dictionary = ctx.crew.selection
+	var site: Dictionary = ctx.picture().find(s)
+	if s.get("kind", "") != "site" or not bool(site.get("dockable", false)):
+		ctx.crew.toast.emit("toast.dock_select", {})
+		return
+	ctx.intents.command({"kind": "helm_dock", "site_id": int(s["id"])})
 
 
 ## Sends helm_select_target when the shared selection (or the selected free mark's
@@ -176,17 +233,25 @@ func sync_target() -> void:
 		ctx.intents.command(t)
 
 
-## The helm_select_target command for the current selection: a contact, a mark's
-## contact when attached, else the mark's point; {} with nothing selected yet, and a
+## The helm_select_target command for the current selection: a contact, a named site, a
+## mark's contact when attached, else the mark's point; {} with nothing selected yet, and a
 ## "none" target once something was selected and the selection was cleared.
 func target_command() -> Dictionary:
 	var s: Dictionary = ctx.crew.selection
 	var cmd: Dictionary = {
-		"kind": "helm_select_target", "target_ship": -1, "site": -1, "x": 0.0, "y": 0.0, "z": 0.0
+		"kind": "helm_select_target",
+		"target_ship": -1,
+		"site_id": -1,
+		"point": false,
+		"x": 0.0,
+		"y": 0.0,
+		"z": 0.0
 	}
 	match s.get("kind", ""):
 		"contact":
 			cmd["target_ship"] = int(s["id"])
+		"site":
+			cmd["site_id"] = int(s["id"])
 		"mark":
 			var m: Dictionary = ctx.crew.mark_in_slot(int(s["id"]))
 			if m.is_empty():
@@ -195,7 +260,7 @@ func target_command() -> Dictionary:
 				cmd["target_ship"] = int(m["contact"])
 			else:
 				var p: Vector3 = m["pos"]
-				cmd["site"] = int(m.get("site", 0))
+				cmd["point"] = true
 				cmd["x"] = p.x
 				cmd["y"] = p.y
 				cmd["z"] = p.z
@@ -282,9 +347,7 @@ func _ping() -> void:
 	if item.is_empty():
 		item = ctx.crew.selection
 	if not item.is_empty():
-		ctx.intents.ping(
-			item["kind"], int(item["id"]), int(ctx.view.kin.get("site", 0)), Vector3.ZERO
-		)
+		ctx.intents.ping(item["kind"], int(item["id"]), Vector3.ZERO)
 
 
 # --- StationPanel. ---
@@ -352,18 +415,38 @@ func _free_pointer() -> void:
 	_captured = false
 
 
+## The screen is blocked by the menu (Controls, Settings, Rebind keys), the outcome card
+## or the alert picker.
+func _overlay_open() -> bool:
+	var node: Node = get_parent()
+	while node != null and not node is StationScreen:
+		node = node.get_parent()
+	return node != null and (node as StationScreen).blocked()
+
+
 ## A click in the view that selected nothing captures the pointer again.
 func _on_gui_input(event: InputEvent) -> void:
 	var mb: InputEventMouseButton = event as InputEventMouseButton
-	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and focused:
+	if (
+		mb != null
+		and mb.pressed
+		and mb.button_index == MOUSE_BUTTON_LEFT
+		and focused
+		and not _overlay_open()
+	):
 		_captured = true
+
+
+## CAPTURED only while the mouse steers (KB/M); VISIBLE for everything else.
+func mouse_mode_wanted() -> Input.MouseMode:
+	if ctx != null and steering() and ctx.matcher.device == IntentTable.KBM:
+		return Input.MOUSE_MODE_CAPTURED
+	return Input.MOUSE_MODE_VISIBLE
 
 
 func _apply_mouse_mode() -> void:
 	if DisplayServer.get_name() == "headless" or not is_inside_tree():
 		return
-	var want: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
-	if ctx != null and steering() and ctx.matcher.device == IntentTable.KBM:
-		want = Input.MOUSE_MODE_CAPTURED
+	var want: Input.MouseMode = mouse_mode_wanted()
 	if Input.mouse_mode != want:
 		Input.mouse_mode = want

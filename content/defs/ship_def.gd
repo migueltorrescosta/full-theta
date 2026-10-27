@@ -76,8 +76,19 @@ extends Resource
 ## (m); scaled like sensor_range, at most sensor_range (FT-SPA-001).
 @export var identify_range: float = 0.0
 ## Damage multiplier per damage type (dimensionless; a missing type is 1.0), revealed
-## to a faction by Science scans (FT-SIM-022, FT-SCI-003; #9 strands A and C).
+## to a faction by Science scans (FT-SIM-022, FT-SCI-003).
 @export var resistances: Dictionary[StringName, float] = {}
+## Module slots (FT-DAT-014, D86): groups of slots by type; a ModuleDef of that type fits
+## each. Fitted modules change a copy of this definition (ModuleSystem.refit).
+@export var slots: Array[SlotDef] = []
+## Jump drive spool time (s; 0 means the ship can't jump, FT-SIM-034).
+@export var jump_spool_s: float = 0.0
+## How far short of the target a jump arrives (m).
+@export var jump_standoff_m: float = 0.0
+## Propellant a jump takes (kg).
+@export var jump_propellant_kg: float = 0.0
+## How closely Helm must face the target to start a jump (rad, FT-HLM-016).
+@export var jump_face_tolerance_rad: float = 0.0
 
 
 func validate() -> Array[String]:
@@ -102,13 +113,34 @@ func validate() -> Array[String]:
 	DefCheck.in_range(errors, "fault_hit_chance", fault_hit_chance, 0.0, 1.0)
 	DefCheck.positive(errors, "sensor_range", sensor_range)
 	DefCheck.in_range(errors, "identify_range", identify_range, 0.0, maxf(sensor_range, 0.0))
+	DefCheck.non_negative(errors, "jump_spool_s", jump_spool_s)
+	DefCheck.non_negative(errors, "jump_standoff_m", jump_standoff_m)
+	DefCheck.non_negative(errors, "jump_propellant_kg", jump_propellant_kg)
+	DefCheck.in_range(errors, "jump_face_tolerance_rad", jump_face_tolerance_rad, 0.0, PI)
+	if jump_spool_s > 0.0:
+		DefCheck.positive(errors, "jump_propellant_kg", jump_propellant_kg)
+		DefCheck.positive(errors, "jump_face_tolerance_rad", jump_face_tolerance_rad)
 	DefCheck.required(errors, "assist", assist)
 	DefCheck.required(errors, "shields", shields)
 	if DefCheck.required(errors, "power", power):
 		_validate_pips(errors)
 	var ids: Dictionary[StringName, bool] = _validate_subsystems(errors)
 	_validate_mounts(errors, ids)
+	_validate_slots(errors)
 	return errors
+
+
+func _validate_slots(errors: Array[String]) -> void:
+	var types: Dictionary[StringName, bool] = {}
+	for i: int in slots.size():
+		var s: SlotDef = slots[i]
+		if not DefCheck.required(errors, "slots[%d]" % i, s):
+			continue
+		for e: String in s.validate():
+			errors.append("slots[%d].%s" % [i, e])
+		if types.has(s.slot_type):
+			errors.append("slots[%d].slot_type: duplicate %s" % [i, s.slot_type])
+		types[s.slot_type] = true
 
 
 ## A ship that carries or fabricates probes needs their numbers.

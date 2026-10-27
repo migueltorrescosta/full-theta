@@ -1,5 +1,5 @@
 {
-  "_comment": "Voice per session language and role (FT-AUD-001, FT-AUD-012, D105). PROVISIONAL picks pending #4; release voices (owner, packaging strand): en_GB-cori-medium, en_US-norman-medium, it_IT-serena-medium. 'runtime' (medium) speaks the closed set at Start, free text, number fragments and template segments, and is what releases ship; 'prerender' speaks whole authored lines at build time (high allowed, D105; not shipped). pt_PT has no release voice until #16: tugao is dev_only, so release sessions in pt_PT are subtitles only. Names are tools/tts/voices.json keys.",
+  "_comment": "Voice per session language and role (FT-AUD-001, FT-AUD-012, D105). PROVISIONAL picks pending #4; release voices (owner, packaging strand; the English NPC is a female voice, Q15, owner 2026-10-26): en_GB-cori-medium, en_US-kristin-medium, it_IT-serena-medium. 'runtime' (medium) speaks the closed set at Start, free text, number fragments and template segments, and is what releases ship; 'prerender' speaks whole authored lines at build time (high allowed, D105; not shipped). pt_PT has no release voice until #16: tugao is dev_only, so release sessions in pt_PT are subtitles only. Names are tools/tts/voices.json keys.",
   "languages": {
     "en": {
       "computer": {
@@ -7,8 +7,8 @@
         "prerender": "en_GB-cori-high"
       },
       "npc": {
-        "runtime": "en_US-norman-medium",
-        "prerender": "en_US-norman-medium"
+        "runtime": "en_US-kristin-medium",
+        "prerender": "en_US-kristin-medium"
       }
     },
     "pt_PT": {

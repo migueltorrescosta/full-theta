@@ -1,16 +1,19 @@
 class_name SelectTargetCommand
 extends SimCommand
 ## Selects Helm's target for face and approach: a ship (contact) when target_ship >= 0,
-## else a site-local point (mark or site) when site >= 0, else nothing. Rejects its own
+## else a named site when site_id >= 0 (FT-HLM-016, FT-SPA-015), else a point in the cube
+## (mark) when point is set, else nothing. Rejects its own
 ## ship, an unknown ship id, a ship its faction doesn't detect (FT-ARC-013, FT-SIM-028)
-## and a non-finite point; a point off the site's cube is wrapped onto it (FT-SIM-035,
+## and a non-finite point; a point off the cube is wrapped onto it (FT-SIM-035,
 ## D124).
 
 ## Ship id to select, or -1.
 var target_ship: int = -1
-## Site of the point to select, or -1.
-var site: int = -1
-## Site-local offset of the point (m, 64-bit, D104).
+## Site id to select (FT-SPA-027), or -1.
+var site_id: int = -1
+## Whether to select the point (x, y, z) rather than nothing.
+var point: bool = false
+## Offset of the point in the cube (m, 64-bit, D104).
 var x: float = 0.0
 var y: float = 0.0
 var z: float = 0.0
@@ -30,14 +33,18 @@ func apply(world: SimWorld) -> bool:
 		if not KnowledgeSystem.is_detected(world, world.faction_of(ship_id), target_ship):
 			return false
 		kind_value = HelmTable.Target.SHIP
-	elif site >= 0:
+	elif site_id >= 0:
+		if not world.sites.is_known(site_id, world.faction_of(ship_id)):
+			return false
+		kind_value = HelmTable.Target.SITE
+	elif point:
 		if p.is_empty():
 			return false
 		kind_value = HelmTable.Target.POINT
 	var is_point: bool = kind_value == HelmTable.Target.POINT
 	helm.target_kind[ship_id] = kind_value
 	helm.target_ship[ship_id] = target_ship if kind_value == HelmTable.Target.SHIP else -1
-	helm.target_site[ship_id] = site if is_point else -1
+	helm.target_site[ship_id] = site_id if kind_value == HelmTable.Target.SITE else -1
 	helm.target_x[ship_id] = p[0] if is_point else 0.0
 	helm.target_y[ship_id] = p[1] if is_point else 0.0
 	helm.target_z[ship_id] = p[2] if is_point else 0.0

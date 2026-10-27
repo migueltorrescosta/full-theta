@@ -11,7 +11,7 @@ Voice system (E10, spec §9): what the client plays, and the contracts with the 
 | `content/i18n/strings.json` | UI strings per language | `tools/check_dialogue.py` |
 | `content/voices.json` | Voice per language and role, runtime (medium) and prerender (high allowed), role synthesis settings; pt_PT `dev_only` (D105) | `tools/check_licences.py` (FT-AUD-014) |
 
-A line's text may hold slots, `{name}`, declared in `slots` with a kind: `ship_name`, `callsign`, `npc_name` (the closed set, synthesised at Start) or `number` (stitched from fragments; `feminine` lists the languages where the counted noun is feminine). The coalescing key may use slots too (`contact:{callsign}`).
+A line's text may hold slots, `{name}`, declared in `slots` with a kind: `ship_name`, `callsign`, `npc_name`, `site_name` (the closed set, synthesised at Start) or `number` (stitched from fragments; `feminine` lists the languages where the counted noun is feminine). The coalescing key may use slots too (`contact:{callsign}`).
 
 ## Build time: prerender (FT-AUD-002, FT-DAT-005)
 

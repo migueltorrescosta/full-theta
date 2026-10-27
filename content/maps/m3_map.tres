@@ -1,0 +1,84 @@
+[gd_resource type="Resource" script_class="MapDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/map_def.gd" id="1_map"]
+[ext_resource type="Script" path="res://content/defs/site_def.gd" id="2_site"]
+
+[sub_resource type="Resource" id="Resource_kestrel_yard"]
+script = ExtResource("2_site")
+id = &"kestrel_yard"
+name_key = "site.kestrel_yard"
+kind = &"station"
+pos = Vector3(0, 0, 0)
+radius_m = 3000.0
+dockable = true
+dock_range_m = 1500.0
+dock_max_speed = 10.0
+market = &"kappa"
+
+[sub_resource type="Resource" id="Resource_vesper_beacon"]
+script = ExtResource("2_site")
+id = &"vesper_beacon"
+name_key = "site.vesper_beacon"
+kind = &"nav"
+pos = Vector3(120000, 40000, -60000)
+radius_m = 3000.0
+
+[sub_resource type="Resource" id="Resource_cinder_field"]
+script = ExtResource("2_site")
+id = &"cinder_field"
+name_key = "site.cinder_field"
+kind = &"field"
+pos = Vector3(-110000, 90000, 70000)
+radius_m = 5000.0
+
+[sub_resource type="Resource" id="Resource_pale_drift"]
+script = ExtResource("2_site")
+id = &"pale_drift"
+name_key = "site.pale_drift"
+kind = &"derelict"
+pos = Vector3(60000, -130000, 100000)
+radius_m = 3000.0
+
+[sub_resource type="Resource" id="Resource_anchorage_nine"]
+script = ExtResource("2_site")
+id = &"anchorage_nine"
+name_key = "site.anchorage_nine"
+kind = &"station"
+pos = Vector3(-90000, -80000, -120000)
+radius_m = 3000.0
+dockable = true
+dock_range_m = 1500.0
+dock_max_speed = 10.0
+
+[sub_resource type="Resource" id="Resource_hollow_gate"]
+script = ExtResource("2_site")
+id = &"hollow_gate"
+name_key = "site.hollow_gate"
+kind = &"nav"
+pos = Vector3(150000, -60000, -150000)
+radius_m = 3000.0
+
+[sub_resource type="Resource" id="Resource_drifting_wreck"]
+script = ExtResource("2_site")
+id = &"drifting_wreck"
+name_key = "site.drifting_wreck"
+kind = &"derelict"
+pos = Vector3(-30000, 150000, -100000)
+radius_m = 3000.0
+
+[sub_resource type="Resource" id="Resource_ember_cloud"]
+script = ExtResource("2_site")
+id = &"ember_cloud"
+name_key = "site.ember_cloud"
+kind = &"field"
+pos = Vector3(170000, 150000, 60000)
+radius_m = 5000.0
+
+[resource]
+script = ExtResource("1_map")
+id = &"m3_map"
+period_m = 400000.0
+sites = Array[ExtResource("2_site")]([SubResource("Resource_kestrel_yard"), SubResource("Resource_vesper_beacon"), SubResource("Resource_cinder_field"), SubResource("Resource_pale_drift"), SubResource("Resource_anchorage_nine"), SubResource("Resource_hollow_gate")])
+known_at_start = Array[StringName]([&"kestrel_yard", &"vesper_beacon", &"cinder_field", &"anchorage_nine"])
+spawnable = Array[ExtResource("2_site")]([SubResource("Resource_drifting_wreck"), SubResource("Resource_ember_cloud")])
+legs = Array[Dictionary]([{"from": &"vesper_beacon", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"cinder_field", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"pale_drift", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"anchorage_nine", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"hollow_gate", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"drifting_wreck", "to": &"kestrel_yard", "debris": &"debris", "count": 6}, {"from": &"ember_cloud", "to": &"kestrel_yard", "debris": &"debris", "count": 6}])

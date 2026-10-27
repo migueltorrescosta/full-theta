@@ -54,6 +54,9 @@ class Options:
 	var dev_all: bool = false
 	## More server flags, appended as they are (tests: --m1-player-hull-scale).
 	var extra_args: PackedStringArray = []
+	## What the world holds (--encounter, PROVISIONAL Q17 A): "run", the director's run, or
+	## "shakedown", the training scenario (co-op, one ship). "" leaves the server's default.
+	var encounter: String = ""
 
 	func _init(bind_address: String = "") -> void:
 		bind = bind_address

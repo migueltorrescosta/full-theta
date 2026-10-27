@@ -131,4 +131,5 @@ static func record(world: SimWorld, faction: int, contact: int, conf: float) -> 
 		and world.knowledge.scan_conf[row] >= world.science_def.reveal_identity
 	):
 		world.knowledge.identified[row] = 1
+	StoryRules.learn_scan_facts(world, faction, contact, world.knowledge.scan_conf[row])  # F
 	return true

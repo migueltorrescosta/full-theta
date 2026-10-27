@@ -35,7 +35,7 @@ func test_marks_list_replaces_and_drops_a_deleted_selection() -> void:
 	var marks: Array = []
 	for slot: int in [0, 2]:
 		var m: Dictionary = {"slot": slot, "name": CrewState.MARK_NAMES[slot], "contact": 2}
-		marks.append(m.merged({"site": 0, "x": 0, "y": 0, "z": 0}))
+		marks.append(m.merged({"x": 0, "y": 0, "z": 0}))
 	crew.handle_event(_ev("marks", {"ship": 0, "marks": marks}), NOW)
 	(
 		assert_array(crew.marks.map(func(m: Dictionary) -> String: return m["name"]))
@@ -49,7 +49,7 @@ func test_pings_pulse_three_seconds_and_copies_are_silent() -> void:
 	var crew: CrewState = _crew()
 	var chimes: Array = []
 	crew.pinged.connect(func(p: Dictionary) -> void: chimes.append(p))
-	var p: Dictionary = {"ship": 0, "kind": "contact", "id": 2, "site": 0, "x": 0, "y": 0}
+	var p: Dictionary = {"ship": 0, "kind": "contact", "id": 2, "x": 0, "y": 0}
 	p.merge({"z": 0, "by": "Ana", "copy": ""})
 	crew.handle_event(_ev("ping", p), NOW)
 	assert_float(crew.pulse("contact", 2, NOW)).is_equal(1.0)

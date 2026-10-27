@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Weapons (M2 strand C): ammunition types and guided ordnance on the station fixture
+## Weapons (M2): ammunition types and guided ordnance on the station fixture
 ## (FT-WPN-006, FT-WPN-008, FT-STN-010). The fixture's corvette gets a second ammunition
 ## type on its bow mount, a missile.
 
@@ -84,7 +84,6 @@ func _mark(s: StationScreen, contact: int, local: Vector3) -> void:
 		"slot": StationFixture.BRAVO_SLOT,
 		"name": "Bravo",
 		"contact": contact,
-		"site": 0,
 		"x": p.x,
 		"y": p.y,
 		"z": p.z,

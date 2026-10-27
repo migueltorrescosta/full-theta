@@ -4,8 +4,8 @@ extends RefCounted
 ## integer dead reckoning that server and client compute bit for bit, wrap-aware
 ## residuals, and smallest-three quaternions. Buffers are little-endian StreamPeerBuffers.
 ##
-## Positions are site-local offsets taken as 64-bit floats (D104) and quantised to
-## 1/16 m in int32. Each site wraps with period P (D124, D125): a quantised position
+## Positions are offsets in the scenario's cube taken as 64-bit floats (D104) and quantised to
+## 1/16 m in int32. The cube wraps with period P (D124, D125, D229): a quantised position
 ## lies in [-P_u / 2, P_u / 2) for P_u = P * POS_Q units, and every position
 ## difference (dead-reckoning residual, near-range test) is the minimum image, so a
 ## contact crossing a seam costs one small residual, not an absolute record.
@@ -36,12 +36,12 @@ const VEL_S8: int = 1
 const VEL_ABS: int = 2
 
 
-## The site period P (m) in position units; P is a multiple of 500 m (D125), so even.
+## The cube's period P (m) in position units; P is a multiple of 500 m (D125), so even.
 static func period_units(period: float) -> int:
 	return roundi(period * POS_Q)
 
 
-## A 64-bit site-local offset (m) quantised and wrapped into [-P_u / 2, P_u / 2).
+## A 64-bit offset (m) quantised and wrapped into [-P_u / 2, P_u / 2).
 static func quant_pos(x: float, y: float, z: float, p_units: int) -> Vector3i:
 	return wrap_units(Vector3i(roundi(x * POS_Q), roundi(y * POS_Q), roundi(z * POS_Q)), p_units)
 

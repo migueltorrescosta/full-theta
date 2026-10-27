@@ -46,7 +46,6 @@ id = &"hold_fire"
 from_station = &"comms"
 to_station = &"weapons"
 arg = 2
-active = false
 
 [resource]
 script = ExtResource("1_chips")

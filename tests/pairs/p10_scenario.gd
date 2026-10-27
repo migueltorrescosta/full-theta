@@ -38,7 +38,7 @@ static func build() -> SimWorld:
 	def.subsystems = subs
 	var w: SimWorld = SimWorld.new(SEED, "p10")
 	w.science_def = ScienceFixture.science()
-	w.spawn_ship(def, 1, 0)
+	w.spawn_ship(def, 1)
 	DamageSystem.inflict_fault(w, PLAYER, SUBSYSTEM, CAUSE, FAULT_J)
 	return w
 

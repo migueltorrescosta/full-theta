@@ -319,9 +319,10 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 	for entry: String in _views():
 		var stations: Array = StationViews.stations_of(entry)
 		for chip: ChipDef in NetChips.def().chips:
-			if not chip.active:
-				continue
 			var from: String = String(chip.from_station)
+			# Hold fire has no direct action: Parley's one player says so (next test).
+			if chip.id == &"hold_fire":
+				continue
 			if not (from in stations and String(chip.to_station) in stations):
 				continue
 			var s: StationScreen = _screen(entry)
@@ -345,6 +346,21 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 			seen[id] = true
 	# Every active chip belongs to some view, so all six are covered.
 	assert_int(seen.size()).is_equal(6)
+
+
+# FT: FT-JNT-005, FT-PAIR-021
+# Hold fire in Parley (Weapons + Comms) is the one chip with no direct action: nothing is sent
+# and the toast tells the player they hold both stations.
+func test_hold_fire_in_parley_is_a_toast() -> void:
+	var s: StationScreen = _screen("parley")
+	var toasts: Array[String] = []
+	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
+	var chip: ChipDef = NetChips.def().chips[NetChips.index_of("hold_fire")]
+	s.focus(s.stations.find("comms"))
+	s.ctx.crew.select("contact", StationFixture.H2)
+	s.focused_panel().send_chip(chip)
+	assert_array(StationFixture.sent(s.ctx).of("send_chip")).is_empty()
+	assert_array(toasts).is_equal(["toast.chip_same_screen"])
 
 
 # FT: FT-JNT-005
@@ -396,14 +412,19 @@ func test_direct_power_respects_the_reactor_and_the_maximum() -> void:
 
 
 # FT: FT-JNT-004, FT-NET-018, FT-STN-001
-# The four views with Comms (and Ops) show the fixture cards as the Comms half; a view
-# without Comms shows none.
-func test_the_views_with_comms_show_the_fixture_cards() -> void:
+# The four views with Comms (and Ops) show the ship's live cards as the Comms half, the real
+# rows of the COMMS block; a view without Comms shows none.
+func test_the_views_with_comms_show_the_real_cards() -> void:
 	for entry: String in _views():
 		var s: StationScreen = _screen(entry)
 		var has_comms: bool = "comms" in s.stations
-		assert_int(_count(s, FixtureCards)).is_equal(1 if has_comms else 0)
-	assert_array(FixtureCards.all()).is_not_empty()
+		assert_int(_count(s, CardList)).is_equal(1 if has_comms else 0)
+		if has_comms:
+			CommsFixture.install(s.ctx)
+			var panel: CommsPanel = s.panels[s.stations.find("comms")] as CommsPanel
+			panel.refresh(true)
+			assert_int(panel.list._cards.size()).is_equal(4)
+			assert_int(int(panel.list._cards[0]["id"])).is_equal(CommsFixture.MISSION)
 
 
 ## The physical inputs of one binding (as tests/input/test_binding_table.gd splits them).
@@ -436,3 +457,39 @@ func test_no_key_is_used_by_both_panels_of_any_view() -> void:
 							var msg: String = "%s %s %s: %s" % [entry, focused, device, i]
 							assert_str(target).override_failure_message(msg).is_equal(first)
 							owner_of[i] = target
+
+
+# FT: FT-JNT-001
+# The dev seat (all six stations) shows a tab per station, numbered for Shift + digit, and a
+# one-line hint until the first switch; a tab click or Shift + digit moves the focus.
+func test_the_dev_seat_has_numbered_station_tabs_and_a_hint() -> void:
+	var s: StationScreen = _screen(StationViews.ALL)
+	assert_array(s.panels).has_size(6)
+	var tab: Button = s.find_child("Tab3", true, false) as Button
+	assert_str(tab.text).is_equal("3 Engineering")
+	assert_bool((s.find_child("Tab1", true, false) as Button).button_pressed).is_true()
+	var hint: Label = null
+	for l: Node in s.find_children("*", "Label", true, false):
+		if (l as Label).text.begins_with("Click a tab"):
+			hint = l as Label
+	assert_bool(hint.visible).is_true()
+	assert_str(hint.text).contains("Shift+1 to Shift+6")
+	tab.pressed.emit()
+	assert_int(s.focus_index).is_equal(2)
+	assert_bool(tab.button_pressed).is_true()
+	assert_bool(hint.visible).is_false()
+	assert_bool(s.ctx.settings.tooltip_seen("dev_tabs")).is_true()
+	var k: InputEventKey = InputEventKey.new()
+	k.physical_keycode = KEY_5
+	k.pressed = true
+	k.shift_pressed = true
+	s.feed(k)
+	assert_str(s.focused_station()).is_equal("relay")
+	# Alt + digit stays Relay's main-view switch.
+	_key(s, "4", true, true)
+	assert_str(s.focused_station()).is_equal("relay")
+	# A bare digit stays the focused station's own key.
+	_key(s, "2")
+	assert_str(s.focused_station()).is_equal("relay")
+	# One- and two-panel screens have no strip.
+	assert_object(_screen("tactical").find_child("Tab1", true, false)).is_null()

@@ -24,7 +24,7 @@ extends RefCounted
 ##   and the barrel is on the aim.
 ## - RETREAT: hull below retreat_hull_fraction: face a point straight away from the
 ##   threat and run at full throttle; with no threat detected, keep running on the same
-##   bearing. Sites wrap (FT-SIM-035, D124), so there is no edge: the ship runs straight
+##   bearing. The cube wraps (FT-SIM-035, D229), so there is no edge: the ship runs straight
 ##   on across the seams until hostiles no longer detect it (D120).
 ## Mode changes emit &"ai_mode": ship_id the AI ship, other_id its target (or -1),
 ## value the AiTable.Mode, tag its name in AiTable.MODE_NAMES.
@@ -35,7 +35,7 @@ const AIM_TOLERANCE: float = 0.005
 ## target near the edge doesn't flip the mode every tick.
 const MODE_HYSTERESIS: float = 100.0
 ## Distance of the point a retreating ship faces and runs toward (m), at most a quarter
-## of the site period: a point at or beyond P/2 would be the minimum image on the
+## of the period: a point at or beyond P/2 would be the minimum image on the
 ## threat's side (FT-SIM-035).
 const RETREAT_POINT_DISTANCE: float = 20000.0
 ## The retreat point is renewed once its bearing is this far off the wanted one (rad)
@@ -62,9 +62,8 @@ static func step(world: SimWorld) -> void:
 
 
 ## Target candidates: the live contacts the faction detects and either has identified as
-## hostile or not identified yet (unknowns are closed on, never fired at), at any site,
-## in id order. Each AI ship targets the nearest of them at its own site
-## (Kinematics.nearest: ties go to the lower id).
+## hostile or not identified yet (unknowns are closed on, never fired at), in id order.
+## Each AI ship targets the nearest of them (Kinematics.nearest: ties go to the lower id).
 static func _candidates(world: SimWorld, faction: int) -> PackedInt32Array:
 	var kin: Kinematics = world.kin
 	var knowledge: KnowledgeTable = world.knowledge
@@ -150,7 +149,7 @@ static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void
 	var own_vel: Vector3 = kin.vel[id]
 	var target_vel: Vector3 = kin.vel[target]
 	var rel_vel: Vector3 = target_vel - own_vel
-	# Each mount's muzzle (site frame, from the centre) and lead point one tick ahead
+	# Each mount's muzzle (world frame, from the centre) and lead point one tick ahead
 	# (lead_aim), Vector3.INF without a solution.
 	var muzzles: PackedVector3Array = PackedVector3Array()
 	var aims: PackedVector3Array = PackedVector3Array()
@@ -207,14 +206,12 @@ static func _select_face_point(world: SimWorld, id: int, target: int, aim: Vecto
 
 ## RETREAT: face a point RETREAT_POINT_DISTANCE straight away from the threat (on along
 ## the current retreat point's bearing when no threat is detected; nothing without one)
-## and run at full throttle. Sites wrap, so the ship crosses the seams and keeps going
+## and run at full throttle. The cube wraps, so the ship crosses the seams and keeps going
 ## (FT-SIM-035, D124) until hostiles lose it (D120).
 static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 	var kin: Kinematics = world.kin
 	var helm: HelmTable = world.helm
-	var current: bool = (
-		helm.target_kind[id] == HelmTable.Target.POINT and helm.target_site[id] == kin.site[id]
-	)
+	var current: bool = helm.target_kind[id] == HelmTable.Target.POINT
 	var to_point: Vector3 = Vector3.ZERO
 	if current:
 		to_point = kin.relative_to_point(
@@ -243,13 +240,13 @@ static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 	_helm_input_raw(world, id, true, 1.0)
 
 
-## Points a selection at the site-local point `offset` (m, site frame) from the ship,
-## wrapped onto the site's cube (FT-SIM-035).
+## Points a selection at the point `offset` (m, world frame) from the ship,
+## wrapped onto the cube (FT-SIM-035).
 static func _set_point(
 	select: SelectTargetCommand, kin: Kinematics, id: int, offset: Vector3
 ) -> void:
 	var p: PackedFloat64Array = kin.point_at(id, offset)
-	select.site = kin.site[id]
+	select.point = true
 	select.x = p[0]
 	select.y = p[1]
 	select.z = p[2]
@@ -293,7 +290,7 @@ static func _helm_input_raw(world: SimWorld, id: int, face: bool, throttle: floa
 	_submit(world, id, c)
 
 
-## The mount's lead intercept point relative to the ship's centre (m, site frame),
+## The mount's lead intercept point relative to the ship's centre (m, world frame),
 ## predicted ticks_ahead ticks ahead (the AI uses 1 because its command applies next
 ## tick), or Vector3.INF when no shot can reach the target. The shot's reach is its
 ## distance from the muzzle.
@@ -310,7 +307,7 @@ static func lead_aim(world: SimWorld, id: int, m: int, target: int, ticks_ahead:
 
 
 ## lead_aim from the muzzle and the target's offset rel and velocity rel_vel relative to
-## the ship (site frame) and the shot's muzzle speed.
+## the ship (world frame) and the shot's muzzle speed.
 static func _lead_point(
 	muzzle: Vector3, rel: Vector3, rel_vel: Vector3, ticks_ahead: int, speed: float
 ) -> Vector3:

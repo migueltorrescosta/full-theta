@@ -1,7 +1,7 @@
 class_name SettingsScreen
 extends PanelContainer
 ## The menu (per client, ClientSettings), one opaque screen with tabs: Controls (only in
-## a session: the live bindings under the seat's role summary, ControlsList; FT-STN-011,
+## a session: the live bindings under the seat's role summary, ControlsPane; FT-STN-011,
 ## FT-STN-012, D185), Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-run
 ## tips again, and comfort FT-STN-017: on/off, roll lock deck / target / reference plane,
 ## "set reference plane to my current deck", reduced field of view; the station cameras
@@ -12,6 +12,9 @@ extends PanelContainer
 
 signal closed
 signal leave_requested
+signal host_pause_requested
+## The abandon-run control was pressed (D241): the host abandons, a crew player votes.
+signal abandon_requested
 signal scale_changed
 ## "Set reference plane to my current deck": the shell stores the ship's orientation.
 signal reference_plane_requested
@@ -33,13 +36,19 @@ var capturing: Array = []
 ## Why the last captured input was refused ("" when it wasn't).
 var warning: Label
 var tabs: TabContainer
-## The Controls tab's rows; null outside a session.
+## The Controls tab's text list; null outside a session.
 var controls: ControlsList
+## The Controls tab: the diagrams and the list (ControlsPane); null outside a session.
+var controls_pane: ControlsPane
 
 ## Modifier keys and pad buttons held during a capture, in press order.
 var _held: Array[String] = []
 
 var _in_session: bool = false
+## The host's Pause control is offered (co-op host only, FT-MIS-040).
+var _pause_control: bool = false
+## The string key of the abandon-run control's label, "" when it isn't offered (D241).
+var _abandon_key: String = ""
 ## What _build fills: a notification may not change the children of its own node.
 var _root: VBoxContainer
 ## What `controls` shows, kept to refill it when the menu is rebuilt: [bindings,
@@ -66,11 +75,27 @@ func setup(p_settings: ClientSettings, in_session: bool) -> void:
 ## Fills the Controls tab for `stations` on `device` under the role summary of `role`.
 func set_controls(bindings: Bindings, stations: Array, device: String, role: String) -> void:
 	_controls_args = [bindings, stations, device, role]
-	if controls != null:
-		controls.build(bindings, stations, device, role)
+	if controls_pane != null:
+		controls_pane.build(bindings, stations, device, role)
 
 
 ## Opens the menu on `tab` (a TAB_ name), or on the tab last used when empty.
+## Shows or hides the host's Pause control (rebuilds the menu on a change).
+func set_pause_control(on: bool) -> void:
+	if on != _pause_control:
+		_pause_control = on
+		if _root != null:
+			_build()
+
+
+## Shows the abandon-run control under `key` (CrewState.abandon_control), "" hides it.
+func set_abandon_control(key: String) -> void:
+	if key != _abandon_key:
+		_abandon_key = key
+		if _root != null:
+			_build()
+
+
 func open(tab: String = "") -> void:
 	visible = true
 	open_tab(tab)
@@ -111,17 +136,37 @@ func _build() -> void:
 	var top: HBoxContainer = HBoxContainer.new()
 	col.add_child(top)
 	_add_button(top, "Close", tr("settings.close"), close)
+	if _pause_control:
+		_add_button(
+			top,
+			"HostPause",
+			tr("settings.pause"),
+			func() -> void:
+				host_pause_requested.emit()
+				close()
+		)
+	if _abandon_key != "":
+		_add_button(
+			top,
+			"Abandon",
+			tr(_abandon_key),
+			func() -> void:
+				abandon_requested.emit()
+				close()
+		)
 	if _in_session:
 		_add_button(top, "Leave", tr("settings.leave"), func() -> void: leave_requested.emit())
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(tabs)
 	controls = null
+	controls_pane = null
 	if _in_session:
-		controls = ControlsList.new()
-		_tab(TAB_CONTROLS, tr("overlay.title"), controls)
+		controls_pane = ControlsPane.new()
+		controls = controls_pane.list
+		_tab(TAB_CONTROLS, tr("overlay.title"), controls_pane)
 		if not _controls_args.is_empty():
-			controls.build(
+			controls_pane.build(
 				_controls_args[0], _controls_args[1], _controls_args[2], _controls_args[3]
 			)
 	var general: VBoxContainer = VBoxContainer.new()

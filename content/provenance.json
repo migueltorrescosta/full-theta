@@ -142,6 +142,16 @@
       "attribution": "Voice: cori (LibriVox, public domain); model by the Piper project. Prerender only, not shipped (D105)."
     },
     {
+      "name": "Piper voice en_US-kristin-medium",
+      "kind": "voice",
+      "voice": "en_US-kristin-medium",
+      "status": "accept",
+      "version": "rhasspy/piper-voices c10ece1a",
+      "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/kristin/medium",
+      "licence": "MIT (piper-voices model repository); dataset public domain (LibriVox), trained from scratch",
+      "attribution": "Voice: kristin (LibriVox, public domain); model by the Piper project. Audited in docs/spikes/S7.md (D105)."
+    },
+    {
       "name": "Piper voice en_US-norman-medium",
       "kind": "voice",
       "voice": "en_US-norman-medium",
@@ -149,7 +159,7 @@
       "version": "rhasspy/piper-voices c10ece1a",
       "source": "https://huggingface.co/rhasspy/piper-voices/tree/c10ece1aade47bb51c153c893d14e5bf8e5b7117/en/en_US/norman/medium",
       "licence": "MIT (piper-voices model repository); dataset public domain (LibriVox), trained from scratch",
-      "attribution": "Voice: norman (LibriVox, public domain); model by the Piper project. Audited in docs/spikes/S7.md (D105)."
+      "attribution": "Voice: norman (LibriVox, public domain); model by the Piper project. Spike S7b only, not shipped since Q15 (kristin is the English NPC voice)."
     },
     {
       "name": "Piper voice it_IT-serena-medium",

@@ -89,7 +89,7 @@ func test_the_host_lobby_pushes_its_saved_set_once() -> void:
 
 # FT: FT-STN-016, FT-PAIR-017
 # The toggles sit behind "Customise", each with a one-line description that names both
-# stations, in every language; the two Comms toggles say they arrive in M3 (D190).
+# stations, in every language; none says it arrives later.
 func test_each_toggle_has_a_description_naming_both_stations() -> void:
 	var l: LobbyScreen = _lobby()
 	var rows: Control = l.find_child("Toggles", true, false)
@@ -118,9 +118,9 @@ func test_each_toggle_has_a_description_naming_both_stations() -> void:
 				assert_str(desc).contains(tr("station." + String(t.source)))
 				assert_str(desc).contains(tr("station." + String(t.target)))
 	I18n.apply("en")
-	for id: String in ["contract_flags", "verify_chip"]:
-		assert_str((_row(l, id).get_node("Line/Name") as Label).text).contains("arrives in M3")
-	assert_bool((_row(l, "routes").get_node("Line/Name") as Label).text.contains("M3")).is_false()
+	for id: String in ["contract_flags", "verify_chip", "routes"]:
+		var named: String = (_row(l, id).get_node("Line/Name") as Label).text
+		assert_bool(named.contains("M3")).override_failure_message(named).is_false()
 
 
 # FT: FT-PAIR-017

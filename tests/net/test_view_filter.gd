@@ -25,11 +25,10 @@ func before_test() -> void:
 	def.subsystems = subs
 	world = SimWorld.new(7)
 	world.science_def = ScienceFixture.science()
-	world.spawn_ship(def, ScienceFixture.BLUE, 0)
+	world.spawn_ship(def, ScienceFixture.BLUE)
 	world.spawn_ship(
 		ScienceFixture.weak_raider(),
 		ScienceFixture.RED,
-		0,
 		Vector3(0, 0, -3000),
 		Quaternion(Vector3.UP, PI / 2.0)
 	)

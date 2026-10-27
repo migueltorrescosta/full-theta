@@ -49,6 +49,90 @@
         "pt_PT": "Controlo de tráfego: corredores exteriores livres.",
         "it": "Controllo del traffico: corsie esterne libere."
       }
+    },
+    {
+      "id": "npc.hail_raider", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "slots": {"npc": "npc_name"},
+      "text": {
+        "en": "This is {npc}. Cut your engines and open your hold.",
+        "pt_PT": "Fala {npc}. Corte os motores e abra o porão.",
+        "it": "Qui {npc}. Spegnete i motori e aprite la stiva."
+      }
+    },
+    {
+      "id": "npc.taunt_raider", "role": "npc", "priority": 2, "max_age_ms": 6000,
+      "text": {
+        "en": "Nobody will hear you out here. Cut your engines.",
+        "pt_PT": "Aqui ninguém vos ouve. Cortem os motores.",
+        "it": "Quaggiù nessuno vi sente. Spegnete i motori."
+      }
+    },
+    {
+      "id": "npc.hail_hostile", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "slots": {"npc": "npc_name"},
+      "text": {
+        "en": "{npc} here. You have our attention. Make it short.",
+        "pt_PT": "Fala {npc}. Tem a nossa atenção. Seja breve.",
+        "it": "Qui {npc}. Avete la nostra attenzione. Fate presto."
+      }
+    },
+    {
+      "id": "npc.demand_heard", "role": "npc", "priority": 2, "max_age_ms": 6000,
+      "text": {
+        "en": "Your demand is heard. Stand by.",
+        "pt_PT": "A vossa exigência foi ouvida. Aguardem.",
+        "it": "Abbiamo sentito la vostra richiesta. Attendete."
+      }
+    },
+    {
+      "id": "npc.surrender", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "text": {
+        "en": "We surrender! Engines cold, guns safe. Do not fire.",
+        "pt_PT": "Rendemo-nos! Motores frios, armas desligadas. Não disparem.",
+        "it": "Ci arrendiamo! Motori spenti, armi in sicura. Non sparate."
+      }
+    },
+    {
+      "id": "npc.surrender_refused", "role": "npc", "priority": 2, "max_age_ms": 6000,
+      "text": {
+        "en": "Never. We will finish this.",
+        "pt_PT": "Nunca. Vamos acabar com isto.",
+        "it": "Mai. La finiamo qui."
+      }
+    },
+    {
+      "id": "npc.distress_escort", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "slots": {"npc": "npc_name"},
+      "text": {
+        "en": "This is {npc}. Drive dead, raiders closing. Cover us until we restart.",
+        "pt_PT": "Fala {npc}. Propulsor avariado, piratas a aproximar-se. Protejam-nos até reiniciarmos.",
+        "it": "Qui {npc}. Motore morto, predoni in avvicinamento. Copriteci finché non ripartiamo."
+      }
+    },
+    {
+      "id": "npc.salvage_offer", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "slots": {"npc": "npc_name"},
+      "text": {
+        "en": "This is {npc}. That freighter's cargo is going spare. Strip it before the raiders do.",
+        "pt_PT": "Fala {npc}. A carga daquele cargueiro está a perder-se. Levem-na antes dos piratas.",
+        "it": "Qui {npc}. Il carico di quel mercantile va perso. Prendetelo prima dei predoni."
+      }
+    },
+    {
+      "id": "npc.rescue_thanks", "role": "npc", "priority": 2, "max_age_ms": 8000,
+      "text": {
+        "en": "Raiders gone. We owe you our lives.",
+        "pt_PT": "Piratas afastados. Devemos-vos a vida.",
+        "it": "Predoni eliminati. Vi dobbiamo la vita."
+      }
+    },
+    {
+      "id": "npc.lane_warning", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
+      "text": {
+        "en": "Traffic control: debris reported on the lane back to Kestrel Yard. Clear it or go round.",
+        "pt_PT": "Controlo de tráfego: destroços na rota de regresso ao Estaleiro Kestrel. Limpem-na ou contornem.",
+        "it": "Controllo del traffico: detriti sulla rotta di ritorno al Cantiere Kestrel. Liberatela o aggirateli."
+      }
     }
   ]
 }

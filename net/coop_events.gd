@@ -16,8 +16,11 @@ const CHIP_EXPIRED: String = "chip_expired"
 const SHORTCUT_SHARED: String = "shortcut_shared"
 const MARK_USED: String = "mark_used"
 const PROBE_SCAN: String = "probe_scan"
-## Reserved for #10: a dialogue option a scan fact unlocked.
+## A dialogue option a scan fact unlocked and Comms chose (P14, #10).
 const SCAN_OPTION: String = "scan_option"
+## A debrief line, no cooperative event: Weapons destroyed a contact Comms had accepted the
+## surrender of (P9, rep.destroy_surrendered); the fields name the victim and the change.
+const SURRENDER_KILLED: String = "surrender_killed"
 ## The kinds that count as a cooperative event in the debrief.
 const COOPERATIVE: Array[String] = [
 	CHIP_ANSWERED, SHORTCUT_SHARED, MARK_USED, PROBE_SCAN, SCAN_OPTION
@@ -55,6 +58,22 @@ func record(kind: String, pair: String, ship: int, fields: Dictionary = {}) -> v
 		var line: Dictionary = {"coop": kind, "pair": pair, "ship": ship}
 		line.merge(fields)
 		session_log.event("coop", line)
+
+
+## The STORY events that are a pair's cooperative event or a debrief line (P5, P9, P14, P15):
+## a scan-unlocked option chosen, a lane Comms placed that Helm docked by, a mission Relay
+## marked, and a surrendered contact destroyed. NetCoop passes the sim events to it.
+func on_story_event(e: SimEvent) -> void:
+	match e.kind:
+		&"scan_option":
+			record(SCAN_OPTION, pair_of("science", "comms"), e.ship_id, {"fact": String(e.tag)})
+		&"dock_cleared":
+			record(MARK_USED, pair_of("helm", "comms"), e.ship_id, {"mark": "lane"})
+		&"mission_marked":
+			record(MARK_USED, pair_of("relay", "comms"), e.ship_id, {"mark": "mission"})
+		&"surrender_killed":
+			var fields: Dictionary = {"victim": e.other_id, "rep": snappedf(e.value, 0.1)}
+			record(SURRENDER_KILLED, pair_of("weapons", "comms"), e.ship_id, fields)
 
 
 ## pair -> kind -> count since the session (or the last reset) began.

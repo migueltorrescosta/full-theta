@@ -158,7 +158,7 @@ static func step(world: SimWorld) -> void:
 		var gain: float = mass[row] / tuning.velocity_time_constant
 		var force: Vector3
 		if stopping:
-			# FT-SIM-036: velocity relative to the site to zero.
+			# FT-SIM-036: velocity to zero.
 			force = -v_local * gain
 		elif approaching:
 			var v_des: Vector3 = q.inverse() * _approach_velocity(world, row, tuning, offset)
@@ -183,7 +183,7 @@ static func step(world: SimWorld) -> void:
 
 
 ## Whether the ship has a selected target it can fly to: a live ship its faction detects
-## (FT-ARC-013) or a point at its own site (ships at different sites never interact).
+## (FT-ARC-013), a point in the cube or a named site.
 static func has_target(world: SimWorld, row: int) -> bool:
 	return _targeted_offset(world, world.kin, world.helm, row).is_finite()
 
@@ -201,24 +201,28 @@ static func _targeted_offset(
 			and KnowledgeSystem.is_detected(world, kin.factions[row], other)
 		):
 			return kin.relative(row, other)
-	elif kind == HelmTable.Target.POINT and helm.target_site[row] == kin.site[row]:
+	elif kind == HelmTable.Target.POINT:
 		return kin.relative_to_point(
 			row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
 		)
+	elif kind == HelmTable.Target.SITE:
+		return SiteTable.offset_to(world, row, helm.target_site[row])
 	return Vector3.INF
 
 
-## Offset of the selected target from the ship (m, site frame), computed in 64-bit.
+## Offset of the selected target from the ship (m, world frame), computed in 64-bit.
 static func target_offset(world: SimWorld, row: int) -> Vector3:
 	var helm: HelmTable = world.helm
 	if helm.target_kind[row] == HelmTable.Target.SHIP:
 		return world.kin.relative(row, helm.target_ship[row])
+	if helm.target_kind[row] == HelmTable.Target.SITE:
+		return SiteTable.offset_to(world, row, helm.target_site[row])
 	return world.kin.relative_to_point(
 		row, helm.target_x[row], helm.target_y[row], helm.target_z[row]
 	)
 
 
-## Velocity of the selected target relative to the site (m/s); points are at rest.
+## Velocity of the selected target in the world frame (m/s); points are at rest.
 static func target_velocity(world: SimWorld, row: int) -> Vector3:
 	if world.helm.target_kind[row] == HelmTable.Target.SHIP:
 		return world.kin.vel[world.helm.target_ship[row]]
@@ -243,7 +247,7 @@ static func align_roll_error(local: Vector3) -> float:
 	return atan2(-d.x, d.y)
 
 
-## Angle (rad) still to go for an Align stage, for a target at site-frame offset `offset`.
+## Angle (rad) still to go for an Align stage, for a target at world-frame offset `offset`.
 static func _align_error(
 	kin: Kinematics,
 	row: int,
@@ -268,7 +272,7 @@ static func turn_rate_caps(kin: Kinematics, row: int, tuning: AssistDef) -> Vect
 	return Vector3(py, py, tuning.turn_rate_roll * kin.torque_scale[row])
 
 
-## Body-frame rate that turns the bow toward a site-frame direction at the real turn
+## Body-frame rate that turns the bow toward a world-frame direction at the real turn
 ## rate, braking in time to stop on it (D47).
 static func _face_rate(kin: Kinematics, row: int, direction: Vector3, tuning: AssistDef) -> Vector3:
 	return _face_rate_at(
@@ -309,7 +313,7 @@ static func _face_rate_at(
 
 
 ## Align (FT-HLM-007, D124): roll the selected target to 12 o'clock; at ROLL_AND_FACE
-## also turn the bow onto it. offset is the target's site-frame offset. With `bow` a mount's
+## also turn the bow onto it. offset is the target's world-frame offset. With `bow` a mount's
 ## rest direction (FT-JNT-005) there is no roll: that direction is turned onto the target.
 static func _align_rate(
 	kin: Kinematics,
@@ -339,10 +343,10 @@ static func _align_rate(
 	return w
 
 
-## Site-frame velocity that flies to the stand-off and matches the target
+## World-frame velocity that flies to the stand-off and matches the target
 ## (FT-SIM-037): target velocity plus a closing speed along the line of sight, on a
 ## braking curve far out and an exponential settle near the stand-off. rel is the
-## target's offset (m, site frame).
+## target's offset (m, world frame).
 static func _approach_velocity(
 	world: SimWorld, row: int, tuning: AssistDef, rel: Vector3
 ) -> Vector3:

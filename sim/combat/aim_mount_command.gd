@@ -1,7 +1,7 @@
 class_name AimMountCommand
 extends SimCommand
-## Sets a mount's aim point, a site-local 64-bit point (m, D104) the barrel slews
-## toward and holds while the ship turns (FT-WPN-009, FT-SIM-011). A point off the site's
+## Sets a mount's aim point, a 64-bit point (m, D104) the barrel slews
+## toward and holds while the ship turns (FT-WPN-009, FT-SIM-011). A point off the
 ## cube is wrapped onto it; a non-finite one is rejected (FT-SIM-035, D124).
 
 var mount_index: int = 0

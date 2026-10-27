@@ -17,6 +17,10 @@ var source: Source = Source.CREW
 ## Whether apply() accepted it; set when applied. The log keeps rejected crew commands
 ## too, so a replay re-emits their rejection events (e.g. &"repair_no_parts").
 var accepted: bool = false
+## The id of what an accepted command created (a ship, card, encounter or site), or -1: the
+## Scenario API's ApiHandle reads it. An output, not part of the command: it is not in
+## to_dict(), so not in the log or the state hash, and a replay needs none of it.
+var result_id: int = -1
 
 
 ## Stable name used in the command log; subclasses override.
@@ -38,7 +42,11 @@ func applies_to_destroyed() -> bool:
 func to_dict() -> Dictionary:
 	var d: Dictionary = {"kind": kind()}
 	for p: Dictionary in get_property_list():
-		if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE and p["name"] != "source":
+		if (
+			p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE
+			and p["name"] != "source"
+			and p["name"] != "result_id"
+		):
 			d[p["name"]] = get(p["name"])
 	return d
 

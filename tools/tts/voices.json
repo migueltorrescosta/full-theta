@@ -3,12 +3,12 @@
   "revision": "c10ece1aade47bb51c153c893d14e5bf8e5b7117",
   "release": [
     "en_GB-cori-medium",
-    "en_US-norman-medium",
+    "en_US-kristin-medium",
     "it_IT-serena-medium"
   ],
   "prerender": [
     "en_GB-cori-high",
-    "en_US-norman-medium",
+    "en_US-kristin-medium",
     "it_IT-serena-high"
   ],
   "voices": {
@@ -32,6 +32,17 @@
       },
       "en/en_GB/cori/medium/MODEL_CARD": {
         "sha256": "38d76dfde845837b184668f8bab1c6426ad740b1af0fcebc349037822739e536"
+      }
+    },
+    "en_US-kristin-medium": {
+      "en/en_US/kristin/medium/en_US-kristin-medium.onnx": {
+        "sha256": "5849957f929cbf720c258f8458692d6103fff2f0e3d3b19c8259474bb06a18d4"
+      },
+      "en/en_US/kristin/medium/en_US-kristin-medium.onnx.json": {
+        "sha256": "5681426d4aead22195de70531eeeeddb46493cfaffc5764b2ea3db73428b651c"
+      },
+      "en/en_US/kristin/medium/MODEL_CARD": {
+        "sha256": "8c181b1d5f7d8152b914faab941fcbe6b8f0495e63e5189d6f27b8c68c8393fc"
       }
     },
     "en_US-norman-medium": {

@@ -136,9 +136,14 @@ func test_remaining_crew_abandon_by_vote() -> void:
 	var sys: NetClient = crew[1]
 	var viewer: NetClient = crew[3]
 	var from: int = h.mark(tac)
+	# Outside a pause the vote is the run-abandon vote (D241); withdrawn, it counts for nothing.
 	tac.vote_abandon(PLAYER, true)
-	var early: Dictionary = await h.next_event(tac, NetProtocol.EVENT_REQUEST_REJECTED, from)
-	assert_str(early["payload"]["reason"]).is_equal(ServerSession.NOT_PAUSED)
+	tac.vote_abandon(PLAYER, false)
+	var cleared: Callable = func(e: Dictionary) -> bool: return e["payload"]["voters"] == []
+	(
+		assert_dict(await h.next_event(tac, NetProtocol.EVENT_ABANDON_VOTES, from, cleared))
+		. is_not_empty()
+	)
 	await _lose(server, crew[2], viewer)
 	from = h.mark(viewer)
 	tac.vote_abandon(PLAYER, true)

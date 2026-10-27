@@ -2,7 +2,9 @@
 # Local gate (FT-TST-002, FT-TST-005): imports the project, then runs tiers.
 #   tools/gate.sh [l0|l1|l2|l3|l4|l4load|l5|l6|ci|all]... [--update-baselines]   (default: ci)
 # ci = the tiers CI runs (l0 l1; l1 runs every test, tests/net included); all = every
-# implemented tier (l0 l1 l4 l4load l5 l6). l3 runs only the in-process network tests
+# implemented tier (l0 l1 l4 l4load l5 l6). l2 runs the sim-side suites only (tests/sim,
+# tests/pairs, tests/scenarios, tests/director; Q16, owner 2026-10-26): a quick check
+# while working on the simulation, already part of l1. l3 runs only the in-process network tests
 # (tests/net), pinned to 2 cores like a CI runner. l4 runs a server and 3 client processes
 # on 2 cores (tools/l4/run.sh). l4load is the 64-connection load gate, fugaku only: the
 # server on 2 cores, 64 clients on other cores (tools/l4/load.sh, about 2-3 minutes). l6
@@ -17,11 +19,10 @@ tiers=()
 l5_args=()
 for arg in "$@"; do
   case $arg in
-    l0 | l1 | l3 | l4 | l4load | l5 | l6) tiers+=("$arg") ;;
+    l0 | l1 | l2 | l3 | l4 | l4load | l5 | l6) tiers+=("$arg") ;;
     ci) tiers+=(l0 l1) ;;
     all) tiers+=(l0 l1 l4 l4load l5 l6) ;;
     --update-baselines) l5_args+=(--update-baselines) ;;
-    l2) echo "gate: tier $arg is not implemented yet" >&2; exit 2 ;;
     *) echo "gate: unknown tier $arg (use l0..l6, ci or all)" >&2; exit 2 ;;
   esac
 done
@@ -49,6 +50,14 @@ gdunit() {
 
 # L1: every test.
 l1() { gdunit res://tests; }
+
+# L2: the simulation-side suites (an alias for part of l1; Q16).
+l2() {
+  local dir
+  for dir in sim pairs scenarios director; do
+    gdunit "res://tests/$dir" || return 1
+  done
+}
 
 # L3: server and clients over loopback WebSocket in one process (tests/net), on 2 cores.
 l3() { gdunit res://tests/net taskset -c 0,1; }

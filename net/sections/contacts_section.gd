@@ -5,14 +5,13 @@ extends SnapshotSection
 ## knowledge). Lists the ships the faction detects (KnowledgeSystem.contacts) and its
 ## own live ships. Positions are dead reckoned (NetCodec.predict): a contact is sent
 ## again only when the extrapolation is off by more than the tolerance, as a
-## minimum-image residual, so crossing a site seam (D124) costs a residual too. A
+## minimum-image residual, so crossing the seam (D124) costs a residual too. A
 ## contact's info (callsign, identified, own faction) is sent when it changes.
 ##
 ## Delta: u16 n kinematic records (NetCodec.put_kin); u16 i info records (u16 id, u8
 ## flags: bit 0 identified, bit 1 own faction; u8 length + UTF-8 callsign); u16 g, g
 ## gone ids. Full: u16 n absolute records each with a u16 age in ticks; u16 i info
-## records. One site per world (M1), so no site field (provisional: see
-## docs/protocol.md, Rates and limits).
+## records. One cube per world (D229), so no site field.
 
 const FLAG_IDENTIFIED: int = 1
 const FLAG_OWN: int = 2

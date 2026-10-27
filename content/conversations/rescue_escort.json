@@ -1,0 +1,15 @@
+{
+  "_comment": "The escort branch of the rescue scenario (FT-MIS-004): cover the stranded freighter until the raiders are gone. Paid and rep-drawn when the scenario settles the card.",
+  "id": "conv.rescue_escort",
+  "npc_role": "npc",
+  "start": "n0",
+  "nodes": {
+    "n0": {
+      "line": "npc.distress_escort",
+      "options": [
+        {"id": "o1", "text": "comms.opt.escort_accept", "effects": [{"accept": true}]},
+        {"id": "o2", "text": "comms.opt.close"}
+      ]
+    }
+  }
+}

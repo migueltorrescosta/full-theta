@@ -143,7 +143,7 @@ func test_routes_and_hazard_zones() -> void:
 	assert_bool(p.handle_intent(_ev("route", s))).is_true()
 	var wp: Array = _sent(s, "route_add")[0]
 	assert_int(wp[0]).is_equal(0)
-	assert_vector(wp[2]).is_equal_approx(
+	assert_vector(wp[1]).is_equal_approx(
 		s.ctx.interp.contact_position(StationFixture.H2), Vector3.ONE * 0.5
 	)
 	p.handle_intent(_ev("route_clear", s))
@@ -162,7 +162,6 @@ func test_routes_and_hazard_zones() -> void:
 				{
 					"id": 4,
 					"kind": "hazard",
-					"site": 0,
 					"x": 500.0,
 					"y": 0.0,
 					"z": -2500.0,
@@ -172,7 +171,6 @@ func test_routes_and_hazard_zones() -> void:
 				{
 					"id": 5,
 					"kind": "scan",
-					"site": 0,
 					"x": -500.0,
 					"y": 100.0,
 					"z": -900.0,
@@ -197,11 +195,7 @@ func test_routes_and_hazard_zones() -> void:
 	s.ctx.crew.select("zone", 4)
 	assert_bool(p.handle_intent(_ev("mark_delete", s))).is_true()
 	assert_array(_sent(s, "hazard_delete")).is_equal([[4]])
-	_event(
-		s,
-		"routes",
-		{"ship": SHIP, "routes": [[{"site": 0, "x": 1.0, "y": 2.0, "z": 3.0}], [], [], []]}
-	)
+	_event(s, "routes", {"ship": SHIP, "routes": [[{"x": 1.0, "y": 2.0, "z": 3.0}], [], [], []]})
 	assert_int(s.ctx.crew.routes[0].size()).is_equal(1)
 
 
@@ -250,14 +244,7 @@ func test_inbox_accept_decline_and_send() -> void:
 	assert_bool(p.handle_intent(_ev("accept", s))).is_false()
 	assert_str(p.hud._mail.text).is_equal("No marks waiting")
 	var item: Dictionary = {
-		"id": 7,
-		"from_ship": ALLY,
-		"from": "Wren",
-		"name": "Rock",
-		"site": 0,
-		"x": 1.0,
-		"y": 2.0,
-		"z": 3.0
+		"id": 7, "from_ship": ALLY, "from": "Wren", "name": "Rock", "x": 1.0, "y": 2.0, "z": 3.0
 	}
 	_event(s, "inbox", {"ship": SHIP, "items": [item, item.merged({"id": 8})]})
 	assert_str(p.hud._mail.text).is_equal("Rock, from Wren +1")
@@ -274,7 +261,6 @@ func test_inbox_accept_decline_and_send() -> void:
 				"slot": k,
 				"name": "M%d" % k,
 				"contact": -1,
-				"site": 0,
 				"x": 10.0 * k,
 				"y": 0.0,
 				"z": 0.0,
@@ -338,23 +324,38 @@ func test_ship_log_lines() -> void:
 	I18n.apply("en")
 
 
+## The SITES section as the client decodes it: Kestrel Yard, site 0, at the origin.
+func _sites(s: StationScreen) -> void:
+	s.ctx.view.sites = [
+		{
+			"id": 0,
+			"name_key": "Kestrel Yard",
+			"kind": &"station",
+			"dockable": true,
+			"radius": 3000.0,
+			"pos": Vector3.ZERO,
+		}
+	]
+
+
 # FT: FT-SPA-027, FT-SPA-015
-# The scenario's site name is a callout layer on every station: a banner on the radar and
-# on Relay's map, selectable by click.
+# The scenario's site name is a callout layer on every station: a banner on the radar,
+# selectable by click. Relay's map draws none: the radar beside it is always shown.
 func test_site_names_show_on_every_station() -> void:
 	for entry: String in ["relay", "helm", "weapons", "viewer"]:
 		var s: StationScreen = await _screen(entry)
-		_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+		_sites(s)
 		assert_str(s.ctx.picture().site["label"]).is_equal("Kestrel Yard")
 		var box: Rect2 = SiteBanner.rect(s.radar.get_theme_default_font(), s.ctx.picture().site)
 		s.radar.set_picture(s.ctx.picture(), {})
 		assert_dict(s.radar.item_at(box.get_center())).is_equal({"kind": "site", "id": 0})
 	var s: StationScreen = await _screen()
-	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	_sites(s)
+	# Relay's map draws no second banner: the radar beside it carries the one.
 	var p: RelayPanel = _relay(s)
 	p.refresh()
 	var at: Vector2 = SiteBanner.rect(p.get_theme_default_font(), p.map.picture.site).get_center()
-	assert_dict(p.item_at(at)).is_equal({"kind": "site", "id": 0})
+	assert_dict(p.item_at(at)).is_not_equal({"kind": "site", "id": 0})
 	# Pinging it pulses the banner.
 	_event(
 		s,
@@ -362,8 +363,7 @@ func test_site_names_show_on_every_station() -> void:
 		{
 			"ship": SHIP,
 			"kind": "site",
-			"id": -1,
-			"site": 0,
+			"id": 0,
 			"x": 0.0,
 			"y": 0.0,
 			"z": 0.0,
@@ -392,7 +392,7 @@ func test_far_point_is_said_relative_to_a_mark_or_site() -> void:
 	# Bravo is the only reference: the point is 12 km dead ahead of it.
 	assert_str(p.map.say_point("Delta", far)).is_equal("Delta: Bravo, 12 level, 12 km")
 	# With the site named and nearer, the point is said from the site, whatever the words.
-	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	_sites(s)
 	p.refresh()
 	var said: String = p.map.say_point("Delta", far)
 	assert_str(said).starts_with("Delta: Kestrel Yard, ")
@@ -450,11 +450,9 @@ func test_forward_view_marks_attach_to_the_tapped_contact_or_none() -> void:
 		var p: ForwardPanel = s.panels[0]
 		p.item = {"kind": "contact", "id": StationFixture.H2}
 		s.dispatch(_ev("mark", s, IntentTable.PAD))
-		assert_array(_sent(s, "place_mark")[0]).is_equal(
-			[-1, "", StationFixture.H2, 0, Vector3.ZERO]
-		)
+		assert_array(_sent(s, "place_mark")[0]).is_equal([-1, "", StationFixture.H2, Vector3.ZERO])
 		for miss: Dictionary in [
-			{}, {"kind": "point", "site": 0, "pos": Vector3(1, 2, 3)}, {"kind": "mark", "id": 1}
+			{}, {"kind": "point", "pos": Vector3(1, 2, 3)}, {"kind": "mark", "id": 1}
 		]:
 			p.item = miss
 			s.dispatch(_ev("mark", s, IntentTable.PAD))
@@ -466,9 +464,7 @@ func test_forward_view_marks_attach_to_the_tapped_contact_or_none() -> void:
 		assert_int(_sent(s, "place_mark").size()).is_equal(1)
 		ctx.crew.select("contact", StationFixture.F4)
 		s.dispatch(_ev("mark", s, IntentTable.PAD))
-		assert_array(_sent(s, "place_mark")[1]).is_equal(
-			[-1, "", StationFixture.F4, 0, Vector3.ZERO]
-		)
+		assert_array(_sent(s, "place_mark")[1]).is_equal([-1, "", StationFixture.F4, Vector3.ZERO])
 	# Relay's map, which is not a forward view, still marks a map point.
 	assert_bool(auto_free(RelayPanel.new()).marks_attach_only()).is_false()
 
@@ -478,14 +474,14 @@ func test_forward_view_marks_attach_to_the_tapped_contact_or_none() -> void:
 # pulse, and the copier's name shows on the original ping (contact, mark or site).
 func test_a_copied_ping_shows_the_copier_on_the_original() -> void:
 	var s: StationScreen = await _screen()
-	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	_sites(s)
 	var chimes: Array = []
 	s.ctx.crew.pinged.connect(func(ping: Dictionary) -> void: chimes.append(ping["by"]))
 	var base: Dictionary = {"ship": SHIP, "x": 0.0, "y": 0.0, "z": 0.0}
 	for what: Array in [
-		["contact", StationFixture.H2, -1], ["mark", StationFixture.BRAVO_SLOT, -1], ["site", -1, 0]
+		["contact", StationFixture.H2], ["mark", StationFixture.BRAVO_SLOT], ["site", 0]
 	]:
-		var ping: Dictionary = base.merged({"kind": what[0], "id": what[1], "site": what[2]})
+		var ping: Dictionary = base.merged({"kind": what[0], "id": what[1]})
 		_event(s, "ping", ping.merged({"by": "Ana", "copy": ""}))
 		_event(s, "ping", ping.merged({"by": "Bo", "copy": "Ana"}))
 		_event(s, "ping", ping.merged({"by": "Cy", "copy": "Ana"}))
@@ -517,9 +513,7 @@ func test_map_draws_everything_and_probes_are_listed() -> void:
 	]
 	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(1, true, probes)
 	_event(
-		s,
-		"routes",
-		{"ship": SHIP, "routes": [[{"site": 0, "x": 0.0, "y": 0.0, "z": -4000.0}], [], [], []]}
+		s, "routes", {"ship": SHIP, "routes": [[{"x": 0.0, "y": 0.0, "z": -4000.0}], [], [], []]}
 	)
 	_event(
 		s,
@@ -531,7 +525,6 @@ func test_map_draws_everything_and_probes_are_listed() -> void:
 				{
 					"id": 1,
 					"kind": "hazard",
-					"site": 0,
 					"x": 900.0,
 					"y": 0.0,
 					"z": -2000.0,
@@ -541,7 +534,7 @@ func test_map_draws_everything_and_probes_are_listed() -> void:
 			]
 		}
 	)
-	_event(s, "sites", {"sites": [{"site": 0, "name": "Kestrel Yard"}]})
+	_sites(s)
 	p.refresh()
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -555,9 +548,7 @@ func test_map_draws_everything_and_probes_are_listed() -> void:
 	)
 	assert_float(zone_items[0]["radius"]).is_equal(1500.0)
 	s.ctx.mark_subsystem(-1, StationFixture.H2, 3)
-	assert_array(_sent(s, "place_mark")[0]).is_equal(
-		[-1, "", StationFixture.H2, 0, Vector3(4, 0, 0)]
-	)
+	assert_array(_sent(s, "place_mark")[0]).is_equal([-1, "", StationFixture.H2, Vector3(4, 0, 0)])
 
 
 # FT: FT-RLY-001

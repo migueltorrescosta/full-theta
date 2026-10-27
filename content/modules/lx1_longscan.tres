@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ModuleDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/module_def.gd" id="1_mod"]
+
+[resource]
+script = ExtResource("1_mod")
+id = &"lx1_longscan"
+name_key = "module.lx1_longscan"
+slot_type = &"utility"
+price = 600
+deltas = Dictionary[StringName, float]({
+&"reactor_output": -0.1,
+&"sensor_range": 0.3
+})

@@ -10,7 +10,7 @@ var mount_index: PackedInt32Array = PackedInt32Array()
 var barrel: PackedVector3Array = PackedVector3Array()
 ## 1 once an aim point has been set (AimMountCommand); until then the barrel rests.
 var aim_set: PackedByteArray = PackedByteArray()
-## Aim point, site-local 64-bit offsets (m, D104), held in world space while the ship
+## Aim point, 64-bit offsets (m, D104), held in world space while the ship
 ## turns (FT-WPN-009).
 var aim_x: PackedFloat64Array = PackedFloat64Array()
 var aim_y: PackedFloat64Array = PackedFloat64Array()
