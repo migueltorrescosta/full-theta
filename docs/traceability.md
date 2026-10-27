@@ -296,7 +296,7 @@ Tests: 368, manual: 13, pending: 20.
 | FT-MIS-013 | pending |  |
 | FT-MIS-014 | pending |  |
 | FT-MIS-015 | tests | `tests/sim/run/test_flee_abandon.gd` |
-| FT-MIS-016 | tests | `tests/sim/run/test_flee_abandon.gd` |
+| FT-MIS-016 | tests | `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_flee_abandon.gd` |
 | FT-MIS-017 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
 | FT-MIS-018 | tests | `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_reputation.gd` |
 | FT-MIS-019 | tests | `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/sim/economy/test_reputation.gd` |

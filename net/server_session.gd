@@ -24,6 +24,9 @@ const DEFAULT_BURST: float = 180.0
 ## Reasons of request_rejected (lobby, claim and pause requests) and picked events.
 const NOT_IMPLEMENTED: String = "not_implemented"
 const NOT_PAUSED: String = "not_paused"
+## Abandon outside a pause (D241): the ship is not in a started run, or the session is PvP.
+const NOT_IN_RUN: String = "not_in_run"
+const PVP_NO_ABANDON: String = "pvp_no_abandon"
 const NOT_HOST: String = "not_host"
 const NOT_CREW: String = "not_crew"
 const BAD_PICK: String = "bad_pick"
@@ -701,7 +704,13 @@ func _on_abandon(conn: int, msg: Dictionary, _now_us: int) -> void:
 		return
 	var ship: int = msg["ship"]
 	if not paused.has(ship):
-		request_rejected(s, NetProtocol.Type.ABANDON, NOT_PAUSED, {"ship": ship})
+		var why: String = _run_abandon_refusal(ship)
+		if why == "" and not s.is_host:
+			why = NOT_HOST
+		if why != "":
+			request_rejected(s, NetProtocol.Type.ABANDON, why, {"ship": ship})
+		else:
+			_abandon_run(ship, "host")
 	elif not s.is_host:
 		request_rejected(s, NetProtocol.Type.ABANDON, NOT_HOST, {"ship": ship})
 	else:
@@ -717,18 +726,22 @@ func _on_abandon_vote(conn: int, msg: Dictionary, _now_us: int) -> void:
 		return
 	var ship: int = msg["ship"]
 	var members: Array[int] = connected_crew(ship)
-	if not paused.has(ship):
-		request_rejected(s, NetProtocol.Type.ABANDON_VOTE, NOT_PAUSED, {"ship": ship})
-		return
-	if not members.has(s.id):
-		request_rejected(s, NetProtocol.Type.ABANDON_VOTE, NOT_CREW, {"ship": ship})
+	var in_pause: bool = paused.has(ship)
+	var why: String = "" if in_pause else _run_abandon_refusal(ship)
+	if why == "" and not members.has(s.id):
+		why = NOT_CREW
+	if why != "":
+		request_rejected(s, NetProtocol.Type.ABANDON_VOTE, why, {"ship": ship})
 		return
 	var vote: NetAbandonVote = votes.get_or_add(ship, NetAbandonVote.new())
 	vote.cast(s.id, s.name, msg["vote"])
 	vote.keep_only(members)
 	_send_votes(ship)
 	if vote.passes(members.size()):
-		_abandon(ship, "vote")
+		if in_pause:
+			_abandon(ship, "vote")
+		else:
+			_abandon_run(ship, "vote")
 	_publish()
 
 
@@ -851,6 +864,26 @@ func _restore(s: NetSession) -> void:
 				if claims.claim(s.ship, item, s.id):
 					_claim_changed(s.ship, item)
 	s.last_claims = []
+
+
+## Why the run cannot be abandoned outside a pause (D241, FT-MIS-016), or "": the ship must
+## be in a started run, and the session co-op (PvP: the spec gives no rule, so none).
+func _run_abandon_refusal(ship: int) -> String:
+	if not in_play(ship):
+		return NOT_IN_RUN
+	if host_pause.is_pvp():
+		return PVP_NO_ABANDON
+	return ""
+
+
+## The crew's vote passed or the host decided: the sim ends the co-op run with a logged
+## server command (every crewed ship ABANDONED, a LOSS each), so the debrief and the
+## "Run again" vote follow (NetRunReset).
+func _abandon_run(ship: int, by: String) -> void:
+	votes.clear()
+	world.submit(AbandonRunCommand.new())
+	_broadcast(NetProtocol.EVENT_ABANDONED, {"ship": ship, "by": by})
+	_send_votes(ship)
 
 
 ## Abandons a paused ship (FT-NET-041): out of play at once, so the pause can end, and

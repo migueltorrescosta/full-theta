@@ -13,6 +13,8 @@ extends PanelContainer
 signal closed
 signal leave_requested
 signal host_pause_requested
+## The abandon-run control was pressed (D241): the host abandons, a crew player votes.
+signal abandon_requested
 signal scale_changed
 ## "Set reference plane to my current deck": the shell stores the ship's orientation.
 signal reference_plane_requested
@@ -43,6 +45,8 @@ var _held: Array[String] = []
 var _in_session: bool = false
 ## The host's Pause control is offered (co-op host only, FT-MIS-040).
 var _pause_control: bool = false
+## The string key of the abandon-run control's label, "" when it isn't offered (D241).
+var _abandon_key: String = ""
 ## What _build fills: a notification may not change the children of its own node.
 var _root: VBoxContainer
 ## What `controls` shows, kept to refill it when the menu is rebuilt: [bindings,
@@ -78,6 +82,14 @@ func set_controls(bindings: Bindings, stations: Array, device: String, role: Str
 func set_pause_control(on: bool) -> void:
 	if on != _pause_control:
 		_pause_control = on
+		if _root != null:
+			_build()
+
+
+## Shows the abandon-run control under `key` (CrewState.abandon_control), "" hides it.
+func set_abandon_control(key: String) -> void:
+	if key != _abandon_key:
+		_abandon_key = key
 		if _root != null:
 			_build()
 
@@ -129,6 +141,15 @@ func _build() -> void:
 			tr("settings.pause"),
 			func() -> void:
 				host_pause_requested.emit()
+				close()
+		)
+	if _abandon_key != "":
+		_add_button(
+			top,
+			"Abandon",
+			tr(_abandon_key),
+			func() -> void:
+				abandon_requested.emit()
 				close()
 		)
 	if _in_session:

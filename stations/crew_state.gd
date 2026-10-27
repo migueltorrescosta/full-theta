@@ -209,6 +209,23 @@ func can_host_pause() -> bool:
 	return host and is_coop()
 
 
+## The menu's abandon-run control (D241, FT-MIS-016): "" none (PvP, not started, run over,
+## not crew), else the string key of its label.
+func abandon_control() -> String:
+	if not is_coop() or not started.has(ship) or run_over.has(ship) or abandoned.has(ship):
+		return ""
+	if host:
+		return "settings.abandon"
+	if not is_crew():
+		return ""
+	return "settings.abandon_unvote" if has_abandon_vote() else "settings.abandon_vote"
+
+
+## Whether this session's abandon vote for its ship stands.
+func has_abandon_vote() -> bool:
+	return session in votes.get(ship, {}).get("sessions", [])
+
+
 func ship_name(id: int = ship) -> String:
 	for s: Dictionary in catalogue.get("ships", []):
 		if int(s.get("id", -2)) == id:

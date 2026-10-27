@@ -227,11 +227,20 @@ func _build_overlays() -> void:
 	settings_screen.setup(ctx.settings, true)
 	settings_screen.leave_requested.connect(leave)
 	settings_screen.host_pause_requested.connect(func() -> void: ctx.intents.host_pause(true))
+	settings_screen.abandon_requested.connect(
+		func() -> void:
+			if ctx.crew.host:
+				ctx.intents.abandon(ctx.crew.ship)
+			else:
+				ctx.intents.vote_abandon(ctx.crew.ship, not ctx.crew.has_abandon_vote())
+	)
 	ctx.crew.changed.connect(
 		func(_what: StringName) -> void:
 			settings_screen.set_pause_control(ctx.crew.can_host_pause())
+			settings_screen.set_abandon_control(ctx.crew.abandon_control())
 	)
 	settings_screen.set_pause_control(ctx.crew.can_host_pause())
+	settings_screen.set_abandon_control(ctx.crew.abandon_control())
 	settings_screen.scale_changed.connect(apply_ui_scale)
 	settings_screen.closed.connect(
 		func() -> void: ctx.matcher.invert_pitch = ctx.settings.invert_pitch
