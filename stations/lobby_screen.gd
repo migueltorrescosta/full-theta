@@ -41,6 +41,8 @@ const LANDSCAPE_COLUMNS: int = 3
 ## A window shorter than this (a phone in landscape) merges the header rows and puts the
 ## difficulty line on the seat row, so Start stays on screen.
 const SHORT_HEIGHT: float = 500.0
+## A window narrower than this (a phone upright) shortens the mode button to the mode's name.
+const NARROW_WIDTH: float = 700.0
 ## Cell padding and the grid gap, in px at 100 % UI scale (a cell stays >= TOUCH_MIN tall).
 const CELL_INSET: int = 5
 const GRID_GAP: int = 4
@@ -206,9 +208,12 @@ func ship_label(row: Dictionary) -> String:
 	return text
 
 
-## The mode line: "Mode: Teams (first to finish)" (M4-Q6).
+## The mode button: "Mode: Teams (First to finish)" (M4-Q6); on a narrow or short screen
+## just the mode's name.
 func mode_text() -> String:
 	var name: String = tr("mode." + ctx.crew.mode())
+	if _short or size.x < NARROW_WIDTH:
+		return name
 	if ctx.crew.mode() == "teams":
 		name = (
 			tr("lobby.mode_rule")
@@ -424,7 +429,10 @@ func selection_text() -> Array[String]:
 ## The one-line legend under the grid: "Red: intense · Yellow: busy · Green: light", each
 ## part in its colour (D187).
 func _build_legend() -> void:
-	_clear(_legend)
+	for c: Node in _legend.get_children():
+		if c != _coverage:
+			_legend.remove_child(c)
+			c.queue_free()
 	for i: int in LOAD_TAGS.size():
 		if i > 0:
 			_legend.add_child(_label("·", "SmallLabel"))
@@ -559,6 +567,8 @@ func _apply_columns() -> void:
 		_grid.columns = columns_for(size)
 		if size.y > 0.0:
 			_arrange(size.y < SHORT_HEIGHT)
+			_mode_button.text = mode_text()
+			_customise.text = (preset_label(ctx.crew.toggles) if _short else tr("lobby.customise"))
 		if is_inside_tree():
 			_apply_targets(LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE)
 
@@ -584,9 +594,10 @@ func _apply_targets(phone: bool) -> void:
 	_phone = phone
 
 
-## Lays the rows out for the window: normal, or short (a phone in landscape), where the
-## ship buttons, the coverage and Back to ships join the title row and the difficulty
-## line joins the seat row.
+## Lays the rows out for the window: normal, or short (a phone in landscape, #28), where
+## the title row goes: the coverage joins the legend line, the team buttons and Back to
+## ships the seat row, and the mode, difficulty, How to join, Main menu and Start one
+## bottom row; the role summary hides (each cell shows its first sentence).
 func _arrange(short: bool) -> void:
 	if short == _short:
 		return
@@ -594,23 +605,23 @@ func _arrange(short: bool) -> void:
 	var pad: int = 6 if short else 12
 	for side: String in ["left", "right", "top", "bottom"]:
 		_margin.add_theme_constant_override("margin_" + side, pad)
-	_title.size_flags_horizontal = (
-		Control.SIZE_SHRINK_BEGIN if short else Control.SIZE_EXPAND_FILL
-	)
+	_head.visible = not short
+	_summary_role.visible = not short
+	_difficulty.visible = not short
 	_coverage.size_flags_horizontal = Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL
-	_coverage.horizontal_alignment = (
-		HORIZONTAL_ALIGNMENT_RIGHT if short else HORIZONTAL_ALIGNMENT_LEFT
-	)
 	if short:
-		_reparent(_coverage, _head, 1)
+		_reparent(_coverage, _legend, 0)
+		_reparent(_teams, _seat_row, -1)
+		_reparent(_leave, _seat_row, -1)
+		for c: Control in [_join_button, _menu, _start]:
+			_reparent(c, _diff_row, -1)
 	else:
 		_reparent(_coverage, _outer, _ships.get_index() + 1)
-	_diff_row.visible = not short
-	_difficulty.visible = not short
-	_reparent(_mode_button, _seat_row if short else _diff_row, -1 if short else 0)
-	_reparent(_difficulty, _seat_row if short else _diff_row, -1 if short else 1)
-	_reparent(_customise, _seat_row if short else _diff_row, -1 if short else 2)
-	_reparent(_start, _seat_row if short else _outer, -1)
+		_reparent(_teams, _ships, -1)
+		_reparent(_leave, _ships, -1)
+		_reparent(_join_button, _head, 1)
+		_reparent(_menu, _head, 2)
+		_reparent(_start, _outer, -1)
 	_start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
@@ -757,6 +768,8 @@ func _build() -> void:
 	_build_difficulty_row(_body)
 	_start = _button("Start", tr("lobby.start"), func() -> void: ctx.intents.start())
 	_start.theme_type_variation = "TouchButton"
+	_start.clip_text = true
+	_start.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	outer.add_child(_start)
 	_build_dialogs()
 
@@ -933,9 +946,12 @@ func _refresh_mode_dialog() -> void:
 
 
 func _open_mode() -> void:
-	_mode_grid.columns = 2 if get_viewport_rect().size.x < 600.0 else LANDSCAPE_COLUMNS
+	var narrow: bool = get_viewport_rect().size.x < 600.0
+	_mode_grid.columns = 2 if narrow else LANDSCAPE_COLUMNS
+	# An autowrapped label needs a width, or the dialog grows tall.
+	_mode_desc.custom_minimum_size.x = 300.0 if narrow else 480.0
 	_refresh_mode_dialog()
-	_mode_dialog.popup_centered_clamped(Vector2i(560, 300), 0.9)
+	_mode_dialog.popup_centered_clamped(Vector2i(560, 0), 0.9)
 
 
 func _open_difficulty() -> void:
@@ -975,9 +991,7 @@ func _refresh_data() -> void:
 	var toggles: DataToggles = ctx.crew.toggles
 	var editable: bool = can_edit_toggles()
 	_difficulty.text = tr("lobby.difficulty") % preset_label(toggles)
-	_customise.text = (
-		tr("lobby.difficulty") % preset_label(toggles) if _short else tr("lobby.customise")
-	)
+	_customise.text = preset_label(toggles) if _short else tr("lobby.customise")
 	_dialog.title = tr("lobby.data")
 	_preset_name.text = preset_label(toggles)
 	for preset: String in _preset_buttons:

@@ -239,14 +239,6 @@ func request_abandon() -> void:
 		ctx.intents.vote_abandon(ctx.crew.ship, not ctx.crew.has_abandon_vote())
 
 
-## A centred overlay panel of the shell.
-func _centred(c: Control) -> void:
-	c.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	c.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	c.grow_vertical = Control.GROW_DIRECTION_BOTH
-	add_child(c)
-
-
 func _build_fleet_overlays() -> void:
 	handover_notice = HandoverNotice.new()
 	handover_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -255,10 +247,10 @@ func _build_fleet_overlays() -> void:
 	add_child(handover_notice)
 	handover_notice.setup(ctx)
 	forfeit_prompt = VotePrompt.new()
-	_centred(forfeit_prompt)
+	add_child(forfeit_prompt)
 	forfeit_prompt.setup(ctx, VotePrompt.Kind.FORFEIT)
 	relaunch_prompt = VotePrompt.new()
-	_centred(relaunch_prompt)
+	add_child(relaunch_prompt)
 	relaunch_prompt.setup(ctx, VotePrompt.Kind.RELAUNCH)
 	confirm_abandon = ConfirmationDialog.new()
 	confirm_abandon.name = "ConfirmAbandon"

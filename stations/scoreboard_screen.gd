@@ -16,6 +16,8 @@ const KINDS: Array[StringName] = [
 const TEAM_LETTERS: Array[String] = ["A", "B"]
 
 var ctx: StationContext
+## The relaunch vote of the player's eliminated ship, above the rows (M4-Q2).
+var relaunch: VotePrompt
 
 var _title: Label
 var _sub: Label
@@ -58,14 +60,18 @@ func setup(context: StationContext) -> void:
 	_sub.theme_type_variation = "DimLabel"
 	_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(_sub)
+	relaunch = VotePrompt.new()
+	relaunch.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	col.add_child(relaunch)
+	relaunch.setup(ctx, VotePrompt.Kind.RELAUNCH, false)
+	# The rows scroll, both ways on a narrow screen, so the title row keeps its width.
 	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(scroll)
 	_table = GridContainer.new()
 	_table.name = "Table"
-	_table.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_table.add_theme_constant_override("h_separation", 24)
+	_table.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_table.add_theme_constant_override("h_separation", 32)
 	_table.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(_table)
 	ctx.crew.changed.connect(_on_crew_changed)

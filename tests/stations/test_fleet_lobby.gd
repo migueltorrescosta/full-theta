@@ -89,6 +89,8 @@ func test_crew_put_their_ship_on_a_team() -> void:
 # read-only.
 func test_host_picks_the_mode_and_team_win_rule() -> void:
 	var l: LobbyScreen = _lobby("coop", [], true)
+	l.size = Vector2(1280, 720)
+	l.refresh()
 	var mode: Button = _button(l, "ModeButton")
 	assert_str(mode.text).is_equal("Mode: Co-op")
 	mode.pressed.emit()
@@ -103,6 +105,10 @@ func test_host_picks_the_mode_and_team_win_rule() -> void:
 	_button(l, "Win_first_to_finish").pressed.emit()
 	assert_array(_sent(l, "set_mode")[-1][1]).is_equal(["teams", "first_to_finish", -1])
 	assert_str(mode.text).is_equal("Mode: Teams (Last team standing)")
+	# A phone shows just the mode's name.
+	l.size = Vector2(390, 844)
+	l.refresh()
+	assert_str(mode.text).is_equal("Teams")
 	StationFixture.fleet(l.ctx, "holdout", ["A", "B"], [0, 1])
 	assert_str((l.find_child("ModeDesc", true, false) as Label).text).contains("3 lives")
 	var guest: LobbyScreen = _lobby("race")
@@ -149,7 +155,7 @@ func test_a_refused_ship_add_says_why() -> void:
 
 
 # FT: FT-GEN-001
-# A phone in landscape (844 x 390, #28): the ship row keeps its own row, Start joins the seat
+# A phone in landscape (844 x 390, #28): the ship row keeps its own row, Start joins the bottom
 # row, everything fits on screen with every button at least 48 px tall.
 func test_phone_landscape_lobby_fits_with_48_px_targets() -> void:
 	var l: LobbyScreen = _lobby("teams", [0, 1, 1], true)
@@ -159,7 +165,7 @@ func test_phone_landscape_lobby_fits_with_48_px_targets() -> void:
 	l.size = Vector2(844, 390)
 	await get_tree().process_frame
 	await get_tree().process_frame
-	assert_object(_button(l, "Start").get_parent()).is_same(l.find_child("Seats", true, false))
+	assert_object(_button(l, "Start").get_parent()).is_same(l.find_child("Difficulty", true, false))
 	for b: Node in l.find_children("*", "BaseButton", true, false):
 		var button: BaseButton = b as BaseButton
 		if not button.is_visible_in_tree():

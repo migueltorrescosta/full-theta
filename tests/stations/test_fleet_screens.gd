@@ -147,14 +147,18 @@ func test_forfeit_prompt_shows_the_vote_outside_a_pause() -> void:
 # FT: FT-MIS-011
 # Relaunch (M4-Q2): an eliminated ship whose side has lives left offers its crew the
 # relaunch vote with the lives left; a side with none offers nothing; `relaunched` clears it.
+# On the scoreboard the vote sits in its layout; over a friendly ship's screen it floats.
 func test_relaunch_prompt_offers_the_vote_while_lives_last() -> void:
 	var ctx: StationContext = _ctx("holdout")
-	var p: VotePrompt = auto_free(VotePrompt.new())
-	p.setup(ctx, VotePrompt.Kind.RELAUNCH)
-	add_child(p)
+	var floating: VotePrompt = auto_free(VotePrompt.new())
+	floating.setup(ctx, VotePrompt.Kind.RELAUNCH)
+	add_child(floating)
+	var s: ScoreboardScreen = _scoreboard(ctx)
+	var p: VotePrompt = s.relaunch
 	_event(ctx, NetProtocol.EVENT_ELIMINATED, FleetMessages.eliminated(0, "destroyed", 2))
 	_event(ctx, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(0, FleetMessages.TO_SCOREBOARD))
 	assert_bool(p.visible).is_true()
+	assert_bool(floating.visible).is_false()
 	assert_str(_label(p, "Title").text).is_equal("Kestrel is out. 2 lives left.")
 	(p.find_child("Relaunch", true, false) as Button).pressed.emit()
 	assert_array(StationFixture.sent(ctx).of("vote_relaunch")[-1][1]).is_equal([0, true])
@@ -165,9 +169,11 @@ func test_relaunch_prompt_offers_the_vote_while_lives_last() -> void:
 	assert_bool(p.visible).is_false()
 	assert_bool(ctx.crew.handover.is_empty()).is_true()
 	_event(ctx, NetProtocol.EVENT_ELIMINATED, FleetMessages.eliminated(0, "destroyed", -1))
-	assert_str(_label(p, "Title").text).contains("as often as you like")
+	_event(ctx, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(0, 2))
+	assert_bool(floating.visible).is_true()
+	assert_str(_label(floating, "Title").text).contains("as often as you like")
 	_event(ctx, NetProtocol.EVENT_ELIMINATED, FleetMessages.eliminated(0, "destroyed", 0))
-	assert_bool(p.visible).is_false()
+	assert_bool(floating.visible).is_false()
 
 
 # FT: FT-NET-042

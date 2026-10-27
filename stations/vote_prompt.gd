@@ -22,17 +22,25 @@ const KINDS: Array[StringName] = [
 	&"started",
 ]
 
+## Distance from the top bar or the bottom edge, px.
+const EDGE_GAP: float = 64.0
+
 var ctx: StationContext
 var kind: Kind = Kind.FORFEIT
+
+var _floating: bool = true
 
 var _title: Label
 var _votes: Label
 var _buttons: HBoxContainer
 
 
-func setup(context: StationContext, prompt_kind: Kind) -> void:
+## `floating`: an overlay of the shell, placed clear of the view's centre; false for a
+## prompt inside a screen's layout (the scoreboard's relaunch vote).
+func setup(context: StationContext, prompt_kind: Kind, floating: bool = true) -> void:
 	ctx = context
 	kind = prompt_kind
+	_floating = floating
 	name = "ForfeitPrompt" if kind == Kind.FORFEIT else "RelaunchPrompt"
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 8)
@@ -53,6 +61,19 @@ func setup(context: StationContext, prompt_kind: Kind) -> void:
 	_buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	_buttons.add_theme_constant_override("separation", 8)
 	col.add_child(_buttons)
+	# Clear of the view's centre: the give-up vote under the top bar, the relaunch vote above
+	# the bottom edge (over the scoreboard's rows or a friendly ship's main screen).
+	var top: bool = kind == Kind.FORFEIT
+	if not floating:
+		ctx.crew.changed.connect(_on_crew_changed)
+		refresh()
+		return
+	set_anchors_and_offsets_preset(
+		Control.PRESET_CENTER_TOP if top else Control.PRESET_CENTER_BOTTOM
+	)
+	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	grow_vertical = Control.GROW_DIRECTION_END if top else Control.GROW_DIRECTION_BEGIN
+	position.y += EDGE_GAP if top else -EDGE_GAP
 	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
 
@@ -62,7 +83,8 @@ func setup(context: StationContext, prompt_kind: Kind) -> void:
 func wanted() -> bool:
 	var crew: CrewState = ctx.crew
 	if kind == Kind.RELAUNCH:
-		return crew.can_relaunch()
+		# On the scoreboard its own prompt holds the vote, in its layout.
+		return crew.can_relaunch() and crew.on_scoreboard() != _floating
 	var v: Array = crew.votes.get(crew.ship, {}).get("voters", [])
 	return (
 		crew.is_pvp()
