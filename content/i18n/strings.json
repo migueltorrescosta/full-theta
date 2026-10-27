@@ -531,6 +531,8 @@
     "topbar.sound_on": {"en": "Sound on", "pt_PT": "Som ligado", "it": "Audio acceso"},
     "topbar.sound_tap": {"en": "Tap for sound", "pt_PT": "Toca para ouvir", "it": "Tocca per l'audio"},
     "intent.training_next": {"en": "Next training step", "pt_PT": "Passo seguinte do ensaio", "it": "Passo successivo del collaudo"},
+    "touch.fullscreen": {"en": "Full screen", "pt_PT": "Ecrã inteiro", "it": "Schermo intero"},
+    "touch.rotate": {"en": "Turn sideways for the full view", "pt_PT": "Vira o telemóvel para ver tudo", "it": "Gira il telefono per la vista completa"},
     "train.ex.select": {"en": "Select the drone: point at it, press {binding:select}.", "pt_PT": "Selecionar o drone: aponta para ele, prime {binding:select}.", "it": "Seleziona il drone: puntalo, premi {binding:select}."},
     "train.ex.cycle_target": {"en": "Next target: press {binding:cycle_target} until the drone is chosen.", "pt_PT": "Alvo seguinte: prime {binding:cycle_target} até escolheres o drone.", "it": "Bersaglio successivo: premi {binding:cycle_target} finché scegli il drone."},
     "train.ex.select_pinged": {"en": "Last ping: when someone pings, press {binding:select_pinged}.", "pt_PT": "Último sinal: quando alguém enviar um, prime {binding:select_pinged}.", "it": "Ultimo ping: quando qualcuno ne manda uno, premi {binding:select_pinged}."},
