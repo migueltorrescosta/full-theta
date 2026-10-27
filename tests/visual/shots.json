@@ -136,6 +136,11 @@
     {"name": "l5_hd_forfeit", "scene": "res://tests/visual/m4_shot.tscn", "size": [1920, 1080], "set": {"view": "forfeit"}},
     {"name": "l5_phl_forfeit", "scene": "res://tests/visual/m4_shot.tscn", "size": [844, 390], "set": {"view": "forfeit", "insets": [47, 0, 47, 21]}},
     {"name": "l5_hd_takeover", "scene": "res://tests/visual/m4_shot.tscn", "size": [1920, 1080], "set": {"view": "takeover"}},
-    {"name": "l5_phl_takeover", "scene": "res://tests/visual/m4_shot.tscn", "size": [844, 390], "set": {"view": "takeover", "insets": [47, 0, 47, 21]}}
+    {"name": "l5_phl_takeover", "scene": "res://tests/visual/m4_shot.tscn", "size": [844, 390], "set": {"view": "takeover", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_helm", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "ping": 4, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_helm_shield", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "helm_tab": 1, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_helm_radar", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "radar_open": true, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_ph_helm_portrait", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "ping": 4, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_ph_helm_portrait_radar", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "radar_open": true, "stick_slides": true, "insets": [0, 47, 0, 34]}}
   ]
 }
