@@ -74,7 +74,7 @@ Tests: 368, manual: 10, pending: 23.
 | FT-NET-030 | tests | `tests/app/test_join_helpers.gd`, `tests/app/web/test_shell_html.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tools/tests/test_release.py` |
 | FT-NET-031 | tests | `tests/net/test_lan_no_internet.gd` |
 | FT-NET-032 | tests | `tests/stations/test_joint_views.gd`, `tests/stations/test_lobby_and_overlays.gd` |
-| FT-NET-033 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_resync.gd` |
+| FT-NET-033 | tests | `tests/net/test_host_pause_l3.gd`, `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_resync.gd` |
 | FT-NET-034 | tests | `tests/net/test_host_pause_l3.gd`, `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-035 | tests | `tests/net/test_net_pause_l3.gd` |
 | FT-NET-036 | tests | `tests/net/test_net_pause_l3.gd` |
@@ -319,7 +319,7 @@ Tests: 368, manual: 10, pending: 23.
 | FT-MIS-036 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_comms_trade.gd` |
 | FT-MIS-037 | pending |  |
 | FT-MIS-038 | tests | `tests/net/test_debrief_l3.gd` |
-| FT-MIS-039 | tests | `tests/input/test_binding_markers.gd`, `tests/net/test_training_next_gate.gd`, `tests/scenarios/test_shakedown.gd`, `tests/scenarios/test_shakedown_coverage.gd`, `tests/stations/test_training_banner.gd`, `tools/tests/test_dialogue_binding_slot.py` |
+| FT-MIS-039 | tests | `tests/input/test_binding_markers.gd`, `tests/net/test_training_captain_l3.gd`, `tests/net/test_training_next_gate.gd`, `tests/scenarios/test_shakedown.gd`, `tests/scenarios/test_shakedown_coverage.gd`, `tests/stations/test_training_banner.gd`, `tools/tests/test_dialogue_binding_slot.py` |
 | FT-MIS-040 | tests | `tests/net/test_host_pause_l3.gd`, `tests/stations/test_pause_overlay.gd` |
 | FT-MIS-041 | tests | `tests/scenarios/test_comms_beat_lint.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/sim/api/test_scenario_meta.gd` |
 | FT-MIS-042 | tests | `tests/net/test_contract_flags_l3.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_weapons_flags.gd` |
@@ -328,7 +328,7 @@ Tests: 368, manual: 10, pending: 23.
 | FT-AUD-003 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-AUD-004 | tests | `tests/audio/test_voice_player.gd`, `tests/stations/test_client_shell.gd` |
 | FT-AUD-005 | tests | `tests/net/voice/test_npc_routing_l3.gd` |
-| FT-AUD-006 | tests | `tests/director/test_director_pending_site.gd`, `tests/net/voice/test_npc_routing_l3.gd`, `tests/net/voice/test_server_voice.gd` |
+| FT-AUD-006 | tests | `tests/director/test_director_pending_site.gd`, `tests/net/test_training_captain_l3.gd`, `tests/net/voice/test_npc_routing_l3.gd`, `tests/net/voice/test_server_voice.gd` |
 | FT-AUD-007 | tests | `tests/audio/test_voice_bus.gd`, `tests/audio/test_voice_player.gd` |
 | FT-AUD-008 | tests | `tests/audio/test_voice_bus.gd` |
 | FT-AUD-009 | tests | `tests/stations/test_station_alerts.gd` |
