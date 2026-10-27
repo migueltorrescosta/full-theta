@@ -651,6 +651,7 @@ Conventions (D73–D75):
   - [ ] Allied ships share knowledge and callsigns but not marks (L3 test); eliminated crew become viewers or wait with a scoreboard (D91).
 - **Instructions:** Spec §1, §8; D21, D79, D82, D91.
 - **Tasks:** multi-ship lobby; allied faction sharing; per-ship run reset and elimination; viewer handover and scoreboard; per-ship director keying; load gate.
+- **Superseded in part (#11, D258-D271):** the lobby adds ships (D260) and starts together (D261); the run reset becomes a relaunch policy per scenario (D259); the director is keyed per crew faction as a fleet director, not per ship (D258); takeover is narrowed to allies, own Captain and viewers (D265); the scoreboard is fixed by D266 and the PvP forfeit by D267.
 
 #### E12 Epic: PvP scenario types (race, last standing, teams)
 - **Why:** FT-MIS-031–034.
@@ -659,6 +660,7 @@ Conventions (D73–D75):
   - [ ] Pair mechanics use only own-faction knowledge in PvP (FT-PAIR-016 test).
 - **Instructions:** Spec §8, D78.
 - **Tasks:** race; last ship standing; two-faction teams; PvP lobby options.
+- **Superseded in part (#11, D259, D262-D264, D267, D269-D271):** the race plays one seeded encounter list at per-ship site copies; last ship standing adds raider waves with no time limit; teams get a host-picked win rule and a team A or B split; a holdout mode and PvP start sites are added; PvP crews may forfeit.
 
 #### E13 Epic: browser stations over HTTP with touch layouts (moved to M2 by D94; delivered by #9)
 - **Why:** D8: tablets as stations after the first playable.

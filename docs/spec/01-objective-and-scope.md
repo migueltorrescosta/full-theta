@@ -4,8 +4,9 @@ Full Theta is a cross-platform, LAN, multi-crew 3D spaceship game loosely inspir
 
 ## 1.1 Session shape
 
-- A session hosts up to 6 player ships, in co-op or PvP (D11, D21).
+- A session hosts up to 6 player ships, added by any player in the lobby, in co-op or PvP; co-op ships form one fleet run, and the universe starts once every crewed ship has pressed Start (D11, D21, D258, D260, D261).
 - Each ship needs at least 3 crew players covering the 6 functional stations through stations and joint views (D19, D66, D67). Typical crews are 3–6 players; several players may share a station (D10, D18).
+- Phones are played landscape-first; portrait stays operable in a reduced layout (D272).
 - The Captain seat and main-screen viewers are optional extras (D15, D23, D54).
 - One session admits at most 64 connections in total: crew, Captains and viewers (D22).
 - A run lasts 20–40 minutes and holds 4 to 6 encounters (v0.3 §2, D31, D236). Nothing persists between runs (D32).
