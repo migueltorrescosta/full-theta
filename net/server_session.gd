@@ -883,7 +883,6 @@ func _run_abandon_refusal(ship: int) -> String:
 ## "Run again" vote follow (NetRunReset). In PvP it is that ship's forfeit (M4-Q10).
 func _abandon_run(ship: int, by: String) -> void:
 	if fleet.rules.is_pvp():
-		fleet.forfeits[ship] = true
 		_abandon(ship, by)
 		return
 	votes.clear()

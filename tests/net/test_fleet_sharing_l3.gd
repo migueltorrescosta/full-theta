@@ -38,19 +38,22 @@ func _server() -> NetServer:
 	return h.servers[0]
 
 
-## Spawns an NPC 3 km ahead of the yard and waits until both crew factions detect it.
-func _npc(server: NetServer) -> int:
+## Spawns an NPC 3 km from `near`'s start and waits until the factions of `seers` detect it.
+func _npc(server: NetServer, near: int = 0, seers: Array[int] = [0, 1]) -> int:
 	var c: SpawnShipCommand = SpawnShipCommand.new()
+	var at: Vector3 = server.world.ship_starts.get(near, Vector3.ZERO)
 	c.enemy_key = server.world.catalog.keys()[0]
 	c.faction = NPC_FACTION
-	c.x = 3000.0
+	c.x = at.x + 3000.0
+	c.y = at.y
+	c.z = at.z
 	server.world.submit(c)
 	assert_bool(await h.until(func() -> bool: return c.tick >= 0 and c.accepted)).is_true()
 	var w: SimWorld = server.world
 	var seen: Callable = func() -> bool:
-		return (
-			KnowledgeSystem.is_detected(w, w.faction_of(0), c.result_id)
-			and KnowledgeSystem.is_detected(w, w.faction_of(1), c.result_id)
+		return seers.all(
+			func(ship: int) -> bool:
+				return KnowledgeSystem.is_detected(w, w.faction_of(ship), c.result_id)
 		)
 	assert_bool(await h.until(seen)).is_true()
 	return c.result_id
@@ -154,18 +157,22 @@ func test_pvp_ships_use_only_their_own_knowledge_and_marks() -> void:
 	var server: NetServer = _server()
 	var w: SimWorld = server.world
 	assert_int(w.faction_of(0)).is_not_equal(w.faction_of(1))
-	var npc: int = await _npc(server)
+	# The sides start at separate sites (RunSetup.start_sites): one NPC near each, both
+	# flagged in ship 0's faction only.
+	var npc: int = await _npc(server, 0, [0])
+	var far: int = await _npc(server, 1, [1])
 	_flag(server, w.faction_of(0), npc)
+	_flag(server, w.faction_of(0), far)
 	for c: NetClient in [crews[2], crews[3]]:
 		assert_bool(await _granted(server, c)).is_true()
 	var row: Array = [{"contact": npc, "flag": KnowledgeTable.Flag.DISABLE}]
 	assert_bool(await h.until(func() -> bool: return _flags(crews[2]) == row)).is_true()
+	var known: Callable = func() -> bool: return crews[3].view.callsign(far) != ""
+	assert_bool(await h.until(known)).is_true()
 	await h.wait(300)
 	assert_array(_flags(crews[3])).is_empty()
-	for ship: int in 2:
-		var want: String = KnowledgeSystem.callsign(w, w.faction_of(ship), npc)
-		var got: Callable = func() -> bool: return crews[ship].view.callsign(npc) == want
-		assert_bool(await h.until(got)).is_true()
+	var want: String = KnowledgeSystem.callsign(w, w.faction_of(1), far)
+	assert_str(crews[3].view.callsign(far)).is_equal(want)
 	var from: int = h.mark(crews[0])
 	var slot: int = _slot_of(await _mark(crews[0], npc), npc)
 	assert_int(slot).is_greater_equal(0)

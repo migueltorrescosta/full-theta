@@ -199,8 +199,7 @@ func test_eliminated_crew_go_to_the_scoreboard() -> void:
 # FT: FT-MIS-030
 # A side whose policy allows it relaunches by its crew's vote (M4-Q2): the holdout's finite
 # side is eliminated with its lives left, votes, and the server sends RelaunchShipCommand;
-# once the sim accepts it the crew is back on its stations (`relaunched`). Co-op has no
-# relaunch (`no_relaunch`).
+# the sim accepts it and the crew is back on its stations (`relaunched`).
 func test_relaunch_by_vote() -> void:
 	var server: NetServer = _server(SessionRules.Mode.HOLDOUT, 2, [0, 1])
 	var alls: Array[NetClient] = await _alls(server, [0, 1])
@@ -224,16 +223,13 @@ func test_relaunch_by_vote() -> void:
 				return true
 		return false
 	assert_bool(await h.until(sent)).is_true()
-	var relaunch: RelaunchShipCommand = null
-	for c: SimCommand in server.world.command_log:
-		if c is RelaunchShipCommand:
-			relaunch = c
-	if relaunch.accepted:
-		var back: Dictionary = await _event(alls[1], NetProtocol.EVENT_RELAUNCHED, from, 1)
-		assert_int(back.get("lives", -2)).is_equal(SessionRules.HOLDOUT_LIVES - 1)
-		assert_int(h.session_of(server, alls[1]).ship).is_equal(1)
-	else:  # RelaunchShipCommand refused it: the ship stays out
-		assert_bool(server.session.fleet.eliminated.has(1)).is_true()
+	var back: Dictionary = await _event(alls[1], NetProtocol.EVENT_RELAUNCHED, from, 1)
+	assert_str(FleetMessages.check(NetProtocol.EVENT_RELAUNCHED, back)).is_empty()
+	assert_int(back.get("lives", -2)).is_equal(SessionRules.HOLDOUT_LIVES - 1)
+	var s: NetSession = h.session_of(server, alls[1])
+	assert_int(s.ship).is_equal(1)
+	assert_str(s.entry).is_equal(StationViews.ALL)
+	assert_bool(server.session.in_play(1)).is_true()
 
 
 # FT: FT-MIS-030

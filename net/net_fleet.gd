@@ -54,12 +54,6 @@ var rebuild: Callable
 var pressed: Dictionary[int, bool] = {}
 ## Eliminated ships -> the `eliminated` reason (FleetMessages.ELIMINATED_REASONS).
 var eliminated: Dictionary[int, String] = {}
-## Ships given up by the abandon vote or the host in PvP (M4-Q10).
-var forfeits: Dictionary[int, bool] = {}
-## Relaunches each ship has used (M4-Q2).
-var relaunches: Dictionary[int, int] = {}
-## Crewed enemy ships each ship destroyed (the scoreboard's PvP kills, M4-Q9).
-var kills: Dictionary[int, int] = {}
 ## The session's outcome once it is over, else null.
 var outcome: SessionOutcome
 ## The tick the universe started.
@@ -73,7 +67,6 @@ var _dirty: bool = true
 ## A lobby change not yet checked (publish).
 var _pending: bool = false
 var _fleet_tick: int = -FLEET_EVERY_TICKS
-var _finish_tick: Dictionary[int, int] = {}
 ## Eliminated ship -> [[session id, entry], ...]: who was on it, for the handover and a relaunch.
 var _crews: Dictionary[int, Array] = {}
 ## Eliminated ship -> the tick of its handover.
@@ -105,11 +98,7 @@ func start_slots() -> Array[ShipSlot]:
 func reset() -> void:
 	pressed.clear()
 	eliminated.clear()
-	forfeits.clear()
-	relaunches.clear()
-	kills.clear()
 	outcome = null
-	_finish_tick.clear()
 	_crews.clear()
 	_handover_at.clear()
 	_votes.clear()
@@ -250,13 +239,14 @@ func scoreboard_rows() -> Array:
 		var id: int = c["id"]
 		if not session.launched.has(id):
 			continue
-		var time_s: float = float(_finish_tick.get(id, world.tick) - start_tick) / SimWorld.HZ
+		var end: int = world.run.finish_tick[id] if world.run.finish_tick[id] >= 0 else world.tick
+		var time_s: float = float(end - start_tick) / SimWorld.HZ
 		var state: String = FleetMessages.IN_PLAY
 		if eliminated.has(id) or world.run.outcome[id] == RunTable.Outcome.LOSS:
 			state = FleetMessages.DESTROYED
 		elif world.run.outcome[id] == RunTable.Outcome.WIN:
 			state = FleetMessages.FINISHED
-		var k: int = kills.get(id, 0) if rules.is_pvp() else 0
+		var k: int = world.run.kills[id] if rules.is_pvp() else 0
 		var done: int = world.run.encounters_done[id]
 		rows.append(
 			FleetMessages.scoreboard_row(id, c["name"], team_of(id), state, done, time_s, k)
@@ -264,17 +254,13 @@ func scoreboard_rows() -> Array:
 	return rows
 
 
-## After the sim stepped (ServerSession.after_ticks): kills, the session's outcome,
-## eliminations, due handovers, applied relaunches and the scoreboard.
-func after_ticks(events: Array[SimEvent]) -> void:
+## After the sim stepped (ServerSession.after_ticks): the session's outcome, eliminations,
+## due handovers, applied relaunches and the scoreboard. They are read from the run state
+## (RunTable status, relaunches, kills, finish_tick; OutcomeSystem.session_outcome) rather than
+## the sim's `eliminated` and `session_over` events, which only a director run emits.
+func after_ticks(_events: Array[SimEvent]) -> void:
 	var world: SimWorld = session.world
-	for e: SimEvent in events:
-		if e.kind == &"destroyed" and _crewed_id(e.ship_id) and _crewed_id(e.other_id):
-			if world.team_of(e.ship_id) != world.team_of(e.other_id):
-				kills[e.other_id] = kills.get(e.other_id, 0) + 1
 	for ship: int in session.launched:
-		if world.run.outcome[ship] != RunTable.Outcome.NONE and not _finish_tick.has(ship):
-			_finish_tick[ship] = world.tick
 		if not eliminated.has(ship) and world.run.status[ship] != RunTable.Status.IN_PLAY:
 			_eliminate(ship)
 	if outcome == null and not session.launched.is_empty():
@@ -401,7 +387,7 @@ func _on_relaunch(conn: int, msg: Dictionary, _now_us: int) -> void:
 		not eliminated.has(ship)
 		or outcome != null
 		or _relaunching.has(ship)
-		or not _policy(ship).allows(relaunches.get(ship, 0))
+		or not _policy(ship).allows(session.world.run.relaunches[ship])
 	):
 		reason = FleetMessages.NO_RELAUNCH
 	elif not members.has(s.id):
@@ -503,11 +489,6 @@ func _crewed() -> Array[int]:
 	return out
 
 
-func _crewed_id(ship: int) -> bool:
-	var world: SimWorld = session.world
-	return ship >= 0 and ship < world.ship_count() and not world.ai.is_enabled(ship)
-
-
 func _send_catalogue() -> void:
 	var bytes: PackedByteArray = session.catalogue()
 	for s: NetSession in session.by_id.values():
@@ -520,14 +501,14 @@ func _policy(ship: int) -> RelaunchPolicy:
 
 
 func _lives_left(ship: int) -> int:
-	return _policy(ship).left(relaunches.get(ship, 0))
+	return _policy(ship).left(session.world.run.relaunches[ship])
 
 
 ## A crewed ship left play: everyone hears why; its sessions are handed over later.
 func _eliminate(ship: int) -> void:
 	var reason: String = "destroyed"
 	if session.world.run.status[ship] == RunTable.Status.ABANDONED or session.abandoned.has(ship):
-		reason = "forfeit" if forfeits.has(ship) else "abandoned"
+		reason = "forfeit" if rules.is_pvp() else "abandoned"  # as the sim tags it (M4-Q10)
 	eliminated[ship] = reason
 	var payload: Dictionary = FleetMessages.eliminated(ship, reason, _lives_left(ship))
 	session.broadcast(NetProtocol.EVENT_ELIMINATED, payload)
@@ -558,10 +539,7 @@ func _hand_over(ship: int) -> void:
 
 ## The sim accepted the relaunch: the ship is back in play and its crew on their stations.
 func _relaunched(ship: int) -> void:
-	relaunches[ship] = relaunches.get(ship, 0) + 1
 	eliminated.erase(ship)
-	forfeits.erase(ship)
-	_finish_tick.erase(ship)
 	_handover_at.erase(ship)
 	session.abandoned.erase(ship)
 	for pair: Array in _crews.get(ship, []):

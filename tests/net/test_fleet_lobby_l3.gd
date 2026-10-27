@@ -229,3 +229,18 @@ func test_session_over_relays_the_outcome() -> void:
 	assert_str(payload["reason"]).is_equal(SessionOutcome.REASON_NAMES[want.reason])
 	assert_array(payload["winners"]).is_equal(Array(want.winners))
 	assert_int(h.events_of(crews[0], NetProtocol.EVENT_SESSION_OVER).size()).is_equal(1)
+
+
+# FT: FT-MIS-014
+# Last ship standing ends when one ship is left: `session_over` names it the winner.
+func test_last_ship_standing_names_the_winner() -> void:
+	var server: NetServer = h.fleet_server(SessionRules.Mode.LAST_STANDING, 2, [], true)
+	var crews: Array[NetClient] = await _crews(server, [0, 1])
+	for c: NetClient in crews:
+		c.set_ready(true)
+	assert_bool(await _running(server)).is_true()
+	var from: int = h.mark(crews[0])
+	server.world.kin.alive[1] = 0
+	var e: Dictionary = await h.next_event(crews[0], NetProtocol.EVENT_SESSION_OVER, from)
+	assert_str(e["payload"]["reason"]).is_equal("last_standing")
+	assert_array(e["payload"]["winners"]).is_equal([0])
