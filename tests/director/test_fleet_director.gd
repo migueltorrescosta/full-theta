@@ -135,6 +135,14 @@ func test_race_plays_one_list_at_own_copies() -> void:
 	var again: FleetFixture = FleetFixture.make(SessionRules.Mode.RACE, 2).with_director()
 	again.step(1)
 	assert_array(Array(again.director.race_plan())).is_equal(Array(plan))
+	# Easy's budget fits fewer race encounters than a run needs: the plan still has enough.
+	var run: RunDef = f.setup.run_def
+	var easy: Director = Director.new(
+		run.director, &"easy", ScenarioCatalogue.load_for(run.scenarios), 1
+	)
+	var keys: PackedStringArray = PackedStringArray(["vesper_beacon"])
+	var limits: Vector2i = Vector2i(run.min_encounters, run.max_encounters)
+	assert_int(easy.plan_race(limits, keys).size()).is_equal(run.min_encounters)
 
 
 # FT: FT-MIS-033

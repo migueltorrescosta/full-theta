@@ -136,23 +136,37 @@ func set_race(plan: Array[Dictionary]) -> void:
 ## RACE (M4-Q5): one encounter list for every ship, drawn once with this director's seed: up to
 ## the most encounters a run allows, each fitting the preset's budget and leaving enough of it
 ## for the fewest still to play, like the picks of one ship that never adapts (no low-hull
-## swap), and each at a site of `site_keys`. Travel legs are left out, as they end at Kestrel
-## Yard rather than at a ship's own copy of it. Entries are {scenario, site} (ids and keys).
+## swap), and each at a site of `site_keys`; never fewer than the fewest a run needs. Travel
+## legs are left out, as they end at Kestrel Yard rather than at a ship's own copy of it.
+## Entries are {scenario, site} (ids and keys).
 func plan_race(limits: Vector2i, site_keys: PackedStringArray) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
+	var usable: Array[int] = []
+	var cheapest: int = -1
+	for i: int in _catalogue.size():
+		if _metas[i].travel_hazard == &"":
+			usable.append(i)
+			if cheapest < 0 or _cost_of(i) < _cost_of(cheapest):
+				cheapest = i
+	if cheapest < 0:
+		return out
 	var left: int = _budget(-1)
 	var last: StringName = &""
 	while out.size() < limits.y:
-		var reserve: int = maxi(0, limits.x - out.size() - 1) * _cheapest()
+		var reserve: int = maxi(0, limits.x - out.size() - 1) * _cost_of(cheapest)
 		var all: Array[int] = []
 		var fresh: Array[int] = []
-		for i: int in _catalogue.size():
-			if _metas[i].travel_hazard != &"" or _cost_of(i) > left - reserve:
+		for i: int in usable:
+			if _cost_of(i) > left - reserve:
 				continue
 			all.append(i)
 			if _metas[i].id != last:
 				fresh.append(i)
 		var fits: Array[int] = fresh if not fresh.is_empty() else all
+		# Below the fewest a run needs, the cheapest goes in even over the budget, so the race
+		# can always be finished.
+		if fits.is_empty() and out.size() < limits.x:
+			fits = [cheapest]
 		if fits.is_empty():
 			break
 		var index: int = fits[_rng.randi() % fits.size()]
