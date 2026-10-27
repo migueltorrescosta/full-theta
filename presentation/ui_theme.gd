@@ -13,9 +13,22 @@ extends RefCounted
 ##   targets at least TOUCH_MIN px tall at 100 %, for the touch layouts.
 ## - Button: LoadCell_intense, LoadCell_busy, LoadCell_light, LoadCell_none - the lobby's
 ##   station cells, bordered in the load colour.
+## - Button: RailButton, RailAccentButton, RailDangerButton - the thumb rails' primary
+##   targets (presentation/touch/, #28): narrow side padding, an accent or danger border.
+## - PanelContainer: OverlayRail (translucent, over a view), DockedRail (opaque), Drawer,
+##   Banner.
+##
+## Touch sizes (#28, amends D218): primary targets at least TOUCH_PRIMARY px with TOUCH_GAP
+## px between them; nothing tappable under TOUCH_MIN px.
 
 ## The smallest touch target, in px at 100 % UI scale.
 const TOUCH_MIN: int = 44
+## The smallest primary touch target (rail buttons, sticks, the throttle).
+const TOUCH_PRIMARY: int = 48
+## The least gap between two touch targets.
+const TOUCH_GAP: int = 8
+## How opaque an overlay rail's panel is over the view.
+const OVERLAY_ALPHA: float = 0.72
 const FONT_SIZE: int = 16
 const TITLE_SIZE: int = 32
 const HEADING_SIZE: int = 20
@@ -48,6 +61,7 @@ static func build(touch: bool = false) -> Theme:
 	_check(t, "CheckBox", "TouchCheckBox", TOUCH_PAD)
 	for tag: String in LOAD_VARIANTS:
 		_cell(t, tag)
+	_rails(t)
 	_panels(t)
 	_fields(t, TOUCH_PAD if touch else 6)
 	if touch:
@@ -153,6 +167,32 @@ static func _cell(t: Theme, tag: String) -> void:
 	t.set_stylebox("disabled", name, off)
 	t.set_stylebox("focus", name, ring(CELL_PAD, CELL_PAD))
 	t.set_color("font_disabled_color", name, Palette.color("text_dim"))
+
+
+## The rail buttons and the rail, drawer and banner panels (presentation/touch/).
+static func _rails(t: Theme) -> void:
+	_buttons(t, "Button", "RailButton", 6, TOUCH_PAD)
+	for role: String in ["accent", "danger"]:
+		var name: String = "Rail%sButton" % role.capitalize()
+		_buttons(t, "Button", name, 6, TOUCH_PAD)
+		var fill: Color = Palette.color("panel_focus")
+		if role == "danger":
+			fill = Palette.color("danger").darkened(0.55)
+		for state: String in ["normal", "hover", "pressed", "hover_pressed"]:
+			var s: StyleBoxFlat = box("panel_focus", role, 6, TOUCH_PAD)
+			s.bg_color = fill.lightened(0.12) if state != "normal" else fill
+			s.set_border_width_all(RING)
+			t.set_stylebox(state, name, s)
+	var overlay: StyleBoxFlat = box("panel", "", 4, 4)
+	overlay.bg_color = Color(Palette.color("panel"), OVERLAY_ALPHA)
+	t.set_type_variation("OverlayRail", "PanelContainer")
+	t.set_stylebox("panel", "OverlayRail", overlay)
+	t.set_type_variation("DockedRail", "PanelContainer")
+	t.set_stylebox("panel", "DockedRail", box("panel", "", 4, 4))
+	t.set_type_variation("Drawer", "PanelContainer")
+	t.set_stylebox("panel", "Drawer", box("panel", "line", 8, 8))
+	t.set_type_variation("Banner", "PanelContainer")
+	t.set_stylebox("panel", "Banner", box("panel_focus", "accent", 12, 2))
 
 
 static func _panels(t: Theme) -> void:
