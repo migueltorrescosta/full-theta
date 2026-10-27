@@ -377,7 +377,7 @@ Tests: 368, manual: 13, pending: 20.
 | FT-M1-019 | tests | `tests/presentation/test_controls_list.gd`, `tests/stations/test_first_visit_help.gd` |
 | FT-M1-020 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/run/test_precision.gd` |
 | FT-M1-021 | pending |  |
-| FT-TST-001 | tests | `tests/sim/test_sample.gd` |
+| FT-TST-001 | tests | `tests/sim/test_sample.gd`, `tools/tests/test_check_scripts.py` |
 | FT-TST-002 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
 | FT-TST-003 | tests | `tools/tests/test_l5.py` |
 | FT-TST-004 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
