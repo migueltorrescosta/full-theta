@@ -97,16 +97,75 @@ func build() -> SimWorld:
 		world.sites.load_map(world, run_def.map)
 	world.rules = rules
 	# Crew factions of different sides are hostile by SimWorld's default (PvP); allies share one.
+	var starts: PackedInt32Array = start_sites(world)
 	for i: int in crew_count():
 		var faction: int = slots[i].faction if not slots.is_empty() else PLAYER_FACTION
-		var id: int = world.spawn_ship(
-			run_def.player_ship, faction, Vector3(i * crew_spacing_m, 0.0, 0.0)
-		)
+		var site: int = starts[i]
+		var at: Vector3 = world.sites.point3(site) if site >= 0 else Vector3.ZERO
+		var offset: Vector3 = at + Vector3(i * crew_spacing_m, 0.0, 0.0)
+		var id: int = world.spawn_ship(run_def.player_ship, faction, offset)
 		if not slots.is_empty():
 			world.ship_teams[id] = slots[i].team
+		world.ship_starts[id] = offset
+		world.ship_start_site[id] = site
+		if site >= 0:
+			world.sites.reveal(site, faction)
 		# A ship reset sets credits to 0, so the run's starting purse is set here (FT-MIS-018).
 		Economy.add_credits(world, id, run_def.start_credits)
 	return world
+
+
+## The site each crewed ship starts at, by slot index (-1 with no sites). Co-op starts every
+## ship at Kestrel Yard (site 0, D205). PvP (#11, PROVISIONAL, open for the owner) starts
+## each side at its own site, as far apart as the map allows: the yard for the first side,
+## then for each next side the site farthest (by minimum image) from the ones taken; with
+## more sides than sites, the sites are used again in the same order. The ships of a site
+## stand crew_spacing_m apart by slot index, so they never overlap.
+func start_sites(world: SimWorld) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	var count: int = world.sites.size()
+	var by_side: Dictionary[int, int] = {}
+	var taken: PackedInt32Array = PackedInt32Array()
+	for i: int in crew_count():
+		if count == 0:
+			out.append(-1)
+			continue
+		var side: int = slots[i].team if not slots.is_empty() and rules.is_pvp() else 0
+		if not by_side.has(side):
+			var site: int = _farthest_site(world, taken)
+			by_side[side] = site
+			taken.append(site)
+		out.append(by_side[side])
+	return out
+
+
+## The site farthest from every taken one (the smallest gap to any, made as large as it can
+## be; the lowest id on a tie); site 0 when none is taken; the taken ones again, in order,
+## once every site is taken.
+static func _farthest_site(world: SimWorld, taken: PackedInt32Array) -> int:
+	var count: int = world.sites.size()
+	if taken.is_empty():
+		return 0
+	if taken.size() >= count:
+		return taken[taken.size() % count]
+	var kin: Kinematics = world.kin
+	var best: int = -1
+	var best_gap: float = -1.0
+	for s: int in count:
+		if taken.has(s):
+			continue
+		var a: PackedFloat64Array = world.sites.point(s)
+		var gap: float = INF
+		for t: int in taken:
+			var b: PackedFloat64Array = world.sites.point(t)
+			var d: Vector3 = Vector3(
+				kin.wrap(a[0] - b[0]), kin.wrap(a[1] - b[1]), kin.wrap(a[2] - b[2])
+			)
+			gap = minf(gap, d.length())
+		if gap > best_gap:
+			best_gap = gap
+			best = s
+	return best
 
 
 ## Crewed ships build() spawns: one per slot, or `crew_ships` without slots.

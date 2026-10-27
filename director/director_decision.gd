@@ -4,7 +4,8 @@ extends RefCounted
 ## budget before and after, and why. The reason is an i18n key "director.reason.<x>" with
 ## arguments, so the end-of-run debrief shows it in the player's language (FT-MIS-010).
 
-enum Kind { PICK_ENCOUNTER, OPEN_SITE, SKIP, END_RUN }
+## RAIDER_WAVE: a last-ship-standing raider wave at the ship (#11, M4-Q7, FleetDirector).
+enum Kind { PICK_ENCOUNTER, OPEN_SITE, SKIP, END_RUN, RAIDER_WAVE }
 
 var tick: int = 0
 var ship: int = -1

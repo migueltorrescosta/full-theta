@@ -56,6 +56,9 @@ var _root: VBoxContainer
 var _controls_args: Array = []
 var _rows: VBoxContainer
 var _scale_label: Label
+var _scale_slider: HSlider
+## The opaque panel; its margins keep the menu inside the safe area (#28).
+var _box: StyleBoxFlat
 
 
 func setup(p_settings: ClientSettings, in_session: bool) -> void:
@@ -67,6 +70,8 @@ func setup(p_settings: ClientSettings, in_session: bool) -> void:
 	box.bg_color = Palette.color("panel")
 	box.set_content_margin_all(16)
 	add_theme_stylebox_override("panel", box)
+	_box = box
+	_fit_safe_area()
 	_root = VBoxContainer.new()
 	add_child(_root)
 	_build()
@@ -122,6 +127,28 @@ func set_ui_scale(value: float) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and settings != null:
 		_build()
+	elif what == NOTIFICATION_ENTER_TREE:
+		if not get_viewport().size_changed.is_connected(_fit_safe_area):
+			get_viewport().size_changed.connect(_fit_safe_area)
+		_fit_safe_area.call_deferred()
+	elif what == NOTIFICATION_EXIT_TREE:
+		if get_viewport().size_changed.is_connected(_fit_safe_area):
+			get_viewport().size_changed.disconnect(_fit_safe_area)
+
+
+## Keeps the menu clear of notches and, on a phone, the gesture band (SafeArea, #28).
+func _fit_safe_area() -> void:
+	if _box == null or not is_inside_tree():
+		return
+	var m: Vector4 = SafeArea.margins(self)
+	_box.content_margin_left = 16.0 + m.x
+	_box.content_margin_top = 16.0 + m.y
+	_box.content_margin_right = 16.0 + m.z
+	_box.content_margin_bottom = 16.0 + maxf(m.w, SafeArea.tap_band(self))
+	# A finger needs the slider's full touch height (#28: nothing tappable under 44 px).
+	var touch: bool = LayoutMode.is_touch(LayoutMode.kind_of(self))
+	if _scale_slider != null:
+		_scale_slider.custom_minimum_size.y = UiTheme.TOUCH_MIN if touch else 0.0
 
 
 ## (Re)builds the tabs in the current language, keeping the tab showing.
@@ -184,6 +211,7 @@ func _build() -> void:
 	keys.add_child(_rows)
 	_build_bindings()
 	open_tab(keep)
+	_fit_safe_area()
 
 
 ## One scrolling tab named `node_name` titled `title` holding `content`.
@@ -363,6 +391,7 @@ func _build_general(col: VBoxContainer) -> void:
 	slider.custom_minimum_size = Vector2(240, 0)
 	slider.value_changed.connect(func(v: float) -> void: set_ui_scale(v / 100.0))
 	scale_row.add_child(slider)
+	_scale_slider = slider
 	_scale_label = _label("%d %%" % roundi(settings.ui_scale * 100.0))
 	scale_row.add_child(_scale_label)
 	_check(col, "InvertPitch", tr("settings.invert_pitch"), settings.invert_pitch).toggled.connect(
@@ -371,6 +400,11 @@ func _build_general(col: VBoxContainer) -> void:
 	_add_button(
 		col, "ResetTips", tr("settings.reset_tips"), func() -> void: settings.reset_tooltips()
 	)
+	# Android and iPad only: fullscreen and a landscape lock (#28).
+	var fullscreen: FullscreenButton = FullscreenButton.new()
+	fullscreen.name = "Fullscreen"
+	fullscreen.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	col.add_child(fullscreen)
 
 
 func _build_comfort(col: VBoxContainer) -> void:
