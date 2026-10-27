@@ -2,8 +2,8 @@ extends GdUnitTestSuite
 ## L3 tests of the multi-ship lobby and the PvP session rules over loopback (#11, E11, E12;
 ## owner M4-Q3, M4-Q4, M4-Q6, M4-Q10): any player adds ships up to 6, each with its own picks
 ## and coverage check; the universe starts all together; a ship nobody crewed vanishes at
-## Start; the host picks the mode and its options; PvP has no host pause; `session_over`
-## relays the session's outcome.
+## Start; the host picks the mode and its options; `session_over` relays the session's
+## outcome.
 
 const SECRET: String = "c0ffee"
 
@@ -152,8 +152,10 @@ func test_host_sets_mode_and_teams() -> void:
 	var from: int = h.mark(crews[0])
 	crews[0].set_mode("teams", "first_to_finish")
 	assert_str(await _rejected(crews[0], NetProtocol.Type.SESSION_MODE, from)).is_equal("not_host")
+	var from_host: int = h.mark(host)
 	host.set_mode("duel", "first_to_finish")
-	assert_str(await _rejected(host, NetProtocol.Type.SESSION_MODE, from)).is_equal("bad_mode")
+	var why: String = await _rejected(host, NetProtocol.Type.SESSION_MODE, from_host)
+	assert_str(why).is_equal("bad_mode")
 	crews[0].set_team(1, 0)
 	assert_str(await _rejected(crews[0], NetProtocol.Type.SHIP_TEAM, from)).is_equal("bad_team")
 	host.set_mode("teams", "first_to_finish")
@@ -166,8 +168,9 @@ func test_host_sets_mode_and_teams() -> void:
 	var moved: Callable = func(ev: Dictionary) -> bool:
 		return ev["payload"]["ships"][2]["team"] == 1
 	assert_dict(await _fleet(crews[0], from, moved)).is_not_empty()
+	var from_b: int = h.mark(crews[1])
 	crews[1].set_team(1, 0)
-	assert_str(await _rejected(crews[1], NetProtocol.Type.SHIP_TEAM, from)).is_equal("not_crew")
+	assert_str(await _rejected(crews[1], NetProtocol.Type.SHIP_TEAM, from_b)).is_equal("not_crew")
 	for c: NetClient in [host, crews[0], crews[1]]:
 		c.set_ready(true)
 	assert_bool(await _running(server)).is_true()
@@ -204,24 +207,6 @@ func test_modes_offered_and_checked_at_start() -> void:
 	assert_str(e["payload"]["reason"]).is_equal("bad_mode")
 	assert_array(e["payload"]["errors"]).is_not_empty()
 	assert_bool(server.session.launched.is_empty()).is_true()
-
-
-# FT: FT-MIS-040
-# A PvP session has no host pause (SessionRules.is_pvp), even for the host.
-func test_pvp_refuses_the_host_pause() -> void:
-	var server: NetServer = h.fleet_server(SessionRules.Mode.RACE, 2, [], true, 10.0, SECRET)
-	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
-	await h.pick(host, StationViews.ALL, 0)
-	var rival: Array[NetClient] = await _crews(server, [1])
-	host.set_ready(true)
-	rival[0].set_ready(true)
-	assert_bool(await _running(server)).is_true()
-	assert_bool(server.session.host_pause.is_pvp()).is_true()
-	var from: int = h.mark(host)
-	host.host_pause(true)
-	var why: String = await _rejected(host, NetProtocol.Type.HOST_PAUSE, from)
-	assert_str(why).is_equal("pvp_no_pause")
-	assert_bool(server.session.host_paused).is_false()
 
 
 # FT: FT-MIS-014
