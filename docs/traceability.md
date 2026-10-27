@@ -129,7 +129,7 @@ Tests: 376, manual: 13, pending: 12.
 | FT-STN-002 | tests | `tests/presentation/test_contact_picture.gd`, `tests/presentation/test_disc_radar.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-STN-003 | tests | `tests/presentation/test_disc_radar.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-STN-004 | tests | `tests/stations/test_relay_station.gd`, `tests/stations/test_station_alerts.gd` |
-| FT-STN-005 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_axes.gd`, `tests/presentation/test_layout_mode.gd`, `tests/presentation/test_safe_area.gd`, `tests/presentation/test_touch_widgets.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
+| FT-STN-005 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_axes.gd`, `tests/presentation/test_layout_mode.gd`, `tests/presentation/test_safe_area.gd`, `tests/presentation/test_touch_widgets.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-STN-006 | tests | `tests/presentation/test_top_bar.gd`, `tests/stations/test_helm_panel.gd`, `tools/tests/test_check_palette.py` |
 | FT-STN-007 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd` |
 | FT-STN-008 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_viewer_panel.gd` |
@@ -159,15 +159,15 @@ Tests: 376, manual: 13, pending: 12.
 | FT-HLM-015 | tests | `tests/stations/test_helm_controls.gd` |
 | FT-HLM-016 | tests | `tests/sim/flight/test_jump.gd`, `tests/sim/run/test_map_def.gd`, `tests/stations/test_helm_jump_dock.gd` |
 | FT-HLM-017 | tests | `tests/input/test_binding_table.gd`, `tests/stations/test_helm_controls.gd` |
-| FT-WPN-001 | tests | `tests/stations/test_weapons_panel.gd` |
-| FT-WPN-002 | tests | `tests/stations/test_weapons_panel.gd` |
-| FT-WPN-003 | tests | `tests/stations/test_weapons_panel.gd` |
-| FT-WPN-004 | tests | `tests/stations/test_weapons_panel.gd` |
-| FT-WPN-005 | tests | `tests/stations/test_weapons_panel.gd` |
-| FT-WPN-006 | tests | `tests/content/test_content_defs.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/stations/test_weapons_guided.gd`, `tests/stations/test_weapons_panel.gd` |
+| FT-WPN-001 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
+| FT-WPN-002 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
+| FT-WPN-003 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
+| FT-WPN-004 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
+| FT-WPN-005 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
+| FT-WPN-006 | tests | `tests/content/test_content_defs.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/stations/test_weapons_guided.gd`, `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-WPN-007 | tests | `tests/net/test_view_filter.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_data_shortcut_views.gd` |
-| FT-WPN-008 | tests | `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_weapons_guided.gd` |
-| FT-WPN-009 | tests | `tests/stations/test_weapons_panel.gd` |
+| FT-WPN-008 | tests | `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_weapons_guided.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
+| FT-WPN-009 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-ENG-001 | tests | `tests/stations/engineering/test_engineering_panel.gd` |
 | FT-ENG-002 | tests | `tests/stations/engineering/test_engineering_panel.gd` |
 | FT-ENG-003 | tests | `tests/stations/engineering/test_engineering_panel.gd` |
