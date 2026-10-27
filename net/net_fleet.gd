@@ -38,6 +38,8 @@ const OWN_EVENTS: Array[StringName] = [
 const HANDOVER_DELAY_TICKS: int = 2
 ## A scoreboard whose rows changed only in their times goes out at most once a second.
 const SCOREBOARD_EVERY_TICKS: int = 60
+## While the universe runs, the `fleet` event is checked at most every half second.
+const FLEET_EVERY_TICKS: int = 30
 
 var session: ServerSession:
 	get:
@@ -68,6 +70,9 @@ var _session: WeakRef
 ## the lobby world holds placeholders).
 var _world_current: bool = true
 var _dirty: bool = true
+## A lobby change not yet checked (publish).
+var _pending: bool = false
+var _fleet_tick: int = -FLEET_EVERY_TICKS
 var _finish_tick: Dictionary[int, int] = {}
 ## Eliminated ship -> [[session id, entry], ...]: who was on it, for the handover and a relaunch.
 var _crews: Dictionary[int, Array] = {}
@@ -110,6 +115,7 @@ func reset() -> void:
 	_votes.clear()
 	_relaunching.clear()
 	_board_sent = []
+	_fleet_tick = -FLEET_EVERY_TICKS
 	_dirty = true
 
 
@@ -292,11 +298,19 @@ func after_ticks(events: Array[SimEvent]) -> void:
 	_send_scoreboard()
 
 
-## Sends the `fleet` event when it changed (ServerSession._publish, on a lobby change).
+## Sends the `fleet` event when it changed (ServerSession._publish, on a lobby change). Once
+## the universe runs, a change the sim's events may have made is checked at most every
+## FLEET_EVERY_TICKS, so the load stays off the tick (the 64-connection gate, D161).
 func publish(lobby_dirty: bool) -> void:
-	if not lobby_dirty and not _dirty:
+	_pending = _pending or lobby_dirty
+	if not _dirty and not _pending:
+		return
+	var tick: int = session.world.tick
+	if not _dirty and not session.launched.is_empty() and tick < _fleet_tick + FLEET_EVERY_TICKS:
 		return
 	_dirty = false
+	_pending = false
+	_fleet_tick = tick
 	var payload: Dictionary = _fleet_payload()
 	if payload != _fleet_sent:
 		_fleet_sent = payload
