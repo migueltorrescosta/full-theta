@@ -223,3 +223,18 @@ func test_who_sees_the_scoreboard() -> void:
 	over["reason"] = "objective"
 	coop.handle_event({"type": "session_over", "payload": over}, 0)
 	assert_bool(coop.on_scoreboard()).is_false()
+
+
+# FT: FT-MIS-033
+# The debrief names a last-ship-standing raider wave (M4-Q7) with its number and size.
+func test_debrief_names_a_raider_wave() -> void:
+	var d: DirectorDecision = DirectorDecision.new()
+	d.tick = 7200
+	d.ship = 0
+	d.kind = DirectorDecision.Kind.RAIDER_WAVE
+	d.reason_key = "director.reason.raider_wave"
+	d.reason_args = {"wave": 2, "count": 3}
+	var line: String = DebriefCard._decision_line(d.to_dict())
+	assert_str(line).is_equal(
+		"2:00  Sent raiders: Raider wave 2: 3 raiders at every ship still flying"
+	)

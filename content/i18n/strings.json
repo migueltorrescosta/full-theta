@@ -273,6 +273,8 @@
     "debrief.kind.PARAMS": {"en": "Set parameters", "pt_PT": "Definiu parâmetros", "it": "Impostato parametri"},
     "debrief.kind.SKIP": {"en": "Skipped", "pt_PT": "Ignorou", "it": "Saltato"},
     "debrief.kind.END_RUN": {"en": "Ended the run", "pt_PT": "Terminou a missão", "it": "Terminata la missione"},
+    "director.reason.raider_wave": {"en": "Raider wave {wave}: {count} raiders at every ship still flying", "pt_PT": "Vaga de piratas {wave}: {count} piratas contra cada nave ainda a voar", "it": "Ondata di predoni {wave}: {count} predoni contro ogni nave ancora in volo"},
+    "debrief.kind.RAIDER_WAVE": {"en": "Sent raiders", "pt_PT": "Enviou piratas", "it": "Mandati predoni"},
     "debrief.station.helm": {"en": "Helm", "pt_PT": "Leme", "it": "Timone"},
     "debrief.station.weapons": {"en": "Weapons", "pt_PT": "Armas", "it": "Armi"},
     "debrief.station.engineering": {"en": "Engineering", "pt_PT": "Engenharia", "it": "Ingegneria"},

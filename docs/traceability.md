@@ -313,7 +313,7 @@ Tests: 379, manual: 13, pending: 9.
 | FT-MIS-030 | tests | `tests/stations/test_fleet_screens.gd` |
 | FT-MIS-031 | tests | `tests/stations/test_fleet_lobby.gd` |
 | FT-MIS-032 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd` |
-| FT-MIS-033 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd` |
+| FT-MIS-033 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd`, `tests/stations/test_fleet_screens.gd` |
 | FT-MIS-034 | tests | `tests/sim/run/test_session_modes.gd`, `tests/stations/test_fleet_lobby.gd` |
 | FT-MIS-035 | tests | `tests/sim/economy/test_modules.gd` |
 | FT-MIS-036 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_comms_trade.gd` |
