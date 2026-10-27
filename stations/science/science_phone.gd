@@ -47,6 +47,21 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
+## The form of the station screen `panel` is on, from the screen's own size: in the game
+## it fills the window (LayoutMode.form_of); tests lay a screen out at a set size inside
+## the tiny headless window, which alone would read as a phone.
+static func form_of_panel(panel: Control) -> LayoutMode.Form:
+	var n: Node = panel
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	if n == null:
+		return LayoutMode.form_of(panel)
+	var vp: Viewport = panel.get_viewport()
+	var factor: float = (vp as Window).content_scale_factor if vp is Window else 1.0
+	var dp: Vector2 = LayoutMode.dp_size((n as Control).size, factor, LayoutMode.density())
+	return LayoutMode.form_for(dp, LayoutMode.coarse_pointer())
+
+
 ## Moves the panel's parts in and builds the buttons for `phone_form`.
 func build(p: SciencePanel, phone_form: LayoutMode.Form) -> void:
 	panel = p

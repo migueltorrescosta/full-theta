@@ -168,7 +168,7 @@ func _on_resized() -> void:
 func _arrange() -> void:
 	var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
 	if is_inside_tree():
-		form = LayoutMode.form_of(self)
+		form = SciencePhone.form_of_panel(self)
 	var want: bool = radar != null and not docked and LayoutMode.is_phone(form)
 	if want and phone != null and phone.form == form:
 		return

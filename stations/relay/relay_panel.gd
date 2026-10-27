@@ -109,13 +109,13 @@ func full_screen() -> bool:
 func _wants_phone() -> bool:
 	if docked or not is_inside_tree() or ctx.crew.stations().size() > 1:
 		return false
-	return LayoutMode.is_phone(LayoutMode.form_of(self))
+	return LayoutMode.is_phone(RelayPhone.form_of_panel(self))
 
 
 ## Builds, rebuilds (a turned phone) or drops the phone arrangement.
 func _arrange() -> void:
 	var want: bool = _wants_phone()
-	var form: LayoutMode.Form = LayoutMode.form_of(self) if want else LayoutMode.Form.DESKTOP
+	var form: LayoutMode.Form = RelayPhone.form_of_panel(self) if want else LayoutMode.Form.DESKTOP
 	if want and phone != null and phone.form == form:
 		return
 	if not want and phone == null:
