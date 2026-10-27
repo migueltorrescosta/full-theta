@@ -4,15 +4,21 @@ extends PanelContainer
 ## uncovered stations. Crew of the paused ship get the abandon vote (cast or withdraw,
 ## with voters and votes needed); the host also gets Abandon (D127); the Captain and
 ## viewers of that ship may take over an uncovered station (FT-NET-042).
+##
+## Multi-ship sessions (#11, M4-Q8, D265 proposed): players of an allied ship may take over a
+## paused ship's uncovered station too ("Take Science on Heron"); there is no accept prompt,
+## the first claim wins, and the server refuses a takeover that would leave the taker's own
+## ship uncovered. An enemy ship's pause offers nothing. In PvP the vote is the give-up
+## (forfeit) vote (M4-Q10).
 
 ## The crew changes the overlay depends on.
-const KINDS: Array[StringName] = [&"pause", &"votes", &"picked", &"catalogue"]
+const KINDS: Array[StringName] = [&"pause", &"votes", &"picked", &"catalogue", &"fleet"]
 
 var ctx: StationContext
 
 var _text: Label
 var _votes: Label
-var _buttons: HBoxContainer
+var _buttons: HFlowContainer
 
 
 func setup(context: StationContext) -> void:
@@ -26,17 +32,30 @@ func setup(context: StationContext) -> void:
 	_votes = Label.new()
 	_votes.name = "Votes"
 	col.add_child(_votes)
-	_buttons = HBoxContainer.new()
+	_buttons = HFlowContainer.new()
+	_buttons.add_theme_constant_override("h_separation", 8)
+	_buttons.add_theme_constant_override("v_separation", 8)
 	col.add_child(_buttons)
 	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
 
 
-## The paused ship this client cares about: its own, else any.
+## The paused ship this client cares about: its own, else an allied one, else any.
 func paused_ship() -> int:
 	if ctx.crew.paused.has(ctx.crew.ship):
 		return ctx.crew.ship
+	for id: Variant in ctx.crew.paused:
+		if ctx.crew.allied(int(id), ctx.crew.ship):
+			return int(id)
 	return int(ctx.crew.paused.keys()[0]) if not ctx.crew.paused.is_empty() else -1
+
+
+## Whether this client may offer to take over a station on the paused `id` (M4-Q8): its own
+## ship's Captain and viewers, or any player of an allied ship; never an enemy.
+func may_take_over(id: int) -> bool:
+	if id == ctx.crew.ship:
+		return not ctx.crew.is_crew()
+	return ctx.crew.entry != "" and ctx.crew.allied(id, ctx.crew.ship)
 
 
 func refresh() -> void:
@@ -57,27 +76,36 @@ func refresh() -> void:
 	var names: PackedStringArray = []
 	for s: Variant in p.get("uncovered", []):
 		names.append(tr("station." + str(s)))
-	_text.text = tr("pause.waiting") % ", ".join(names)
+	var own: bool = id == ctx.crew.ship
+	if own:
+		_text.text = tr("pause.waiting") % ", ".join(names)
+	else:
+		_text.text = tr("pause.waiting_ship") % [ctx.crew.ship_name(id), ", ".join(names)]
+	var pvp: bool = ctx.crew.is_pvp()
 	var v: Dictionary = ctx.crew.votes.get(id, {"voters": [], "needed": 0})
 	var voters: Array = v.get("voters", [])
-	_votes.text = tr("pause.votes") % [voters.size(), int(v.get("needed", 0)), ", ".join(voters)]
-	_votes.visible = id == ctx.crew.ship
-	if id != ctx.crew.ship:
-		_resume_button()
-		return
-	if ctx.crew.is_crew():
+	_votes.text = (
+		tr("pause.forfeit_votes" if pvp else "pause.votes")
+		% [voters.size(), int(v.get("needed", 0)), ", ".join(voters)]
+	)
+	_votes.visible = own
+	if own and ctx.crew.is_crew():
 		var voted: bool = ctx.crew.session in v.get("sessions", [])
-		_button("Vote", tr("pause.unvote") if voted else tr("pause.vote")).pressed.connect(
+		var key: String = "pause.%s%s" % ["un" if voted else "", "forfeit" if pvp else "vote"]
+		_button("Vote", tr(key)).pressed.connect(
 			func() -> void: ctx.intents.vote_abandon(id, not voted)
 		)
-	else:
+	elif may_take_over(id):
 		for s: Variant in p.get("uncovered", []):
 			var st: String = str(s)
-			_button("Takeover_" + st, tr("pause.take") % tr("station." + st)).pressed.connect(
+			var text: String = tr("pause.take") % tr("station." + st)
+			if not own:
+				text = tr("pause.take_on") % [tr("station." + st), ctx.crew.ship_name(id)]
+			_button("Takeover_" + st, text).pressed.connect(
 				func() -> void: ctx.intents.takeover(id, st)
 			)
-	if ctx.crew.host:
-		_button("Abandon", tr("pause.abandon")).pressed.connect(
+	if own and ctx.crew.host:
+		_button("Abandon", tr("pause.forfeit_now" if pvp else "pause.abandon")).pressed.connect(
 			func() -> void: ctx.intents.abandon(id)
 		)
 	_resume_button()
@@ -95,6 +123,7 @@ func _button(node_name: String, text: String) -> Button:
 	var b: Button = Button.new()
 	b.name = node_name
 	b.text = text
+	b.custom_minimum_size = Vector2(0, 48)
 	_buttons.add_child(b)
 	return b
 
