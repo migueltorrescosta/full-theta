@@ -409,8 +409,11 @@ func _cell_label(node_name: String, text: String, variation: String) -> Label:
 	return l
 
 
-static func _fit_cell(cell: Button, box: Control) -> void:
-	if is_instance_valid(cell) and is_instance_valid(box):
+## Takes Variants: a deferred call can outlive the cell (a refresh rebuilds the grid).
+static func _fit_cell(cell_node: Variant, box_node: Variant) -> void:
+	if is_instance_valid(cell_node) and is_instance_valid(box_node):
+		var cell: Button = cell_node
+		var box: Control = box_node
 		var h: float = box.get_combined_minimum_size().y + 2.0 * CELL_INSET
 		cell.custom_minimum_size = Vector2(0.0, maxf(h, float(UiTheme.TOUCH_MIN)))
 

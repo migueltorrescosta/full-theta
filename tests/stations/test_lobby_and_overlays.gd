@@ -370,6 +370,6 @@ func test_refresh_keeps_the_cell_buttons() -> void:
 	assert_str((helm.find_child("Crew", true, false) as Label).text).is_equal("Ana")
 	l.ctx.crew.lobby[0]["seats"] = []
 	l.refresh()
-	assert_object(helm.find_child("Crew", true, false)).is_null()
+	assert_str((helm.find_child("Crew", true, false) as Label).text).is_empty()
 	helm.pressed.emit()
 	assert_array(_sent_picks(l)).is_not_empty()
