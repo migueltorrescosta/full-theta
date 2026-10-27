@@ -48,7 +48,10 @@ func step(api: ScenarioApi) -> void:
 	if _ship < 0 or api.tick() - _asked < ScenarioApi.HZ:
 		return
 	var ship: ShipView = api.ship(_ship)
-	var gone: bool = _drone < 0 or api.ship(_drone).status != 0
+	# A rejected spawn leaves the predicted id empty or on another ship (review 2, L5):
+	# the drone is gone unless that id is an in-play ship of the drone's faction.
+	var drone: ShipView = api.ship(_drone)
+	var gone: bool = _drone < 0 or not drone.in_play or drone.faction != DRONE_FACTION
 	if gone or (ship.nearest_site != _anchor and not ship.jumping):
 		_ask(api)
 

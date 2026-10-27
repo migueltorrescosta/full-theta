@@ -173,6 +173,90 @@ func test_every_pair_step_runs_and_the_shakedown_closes() -> void:
 		assert_array(rig.said(pair.line)).is_not_empty()
 
 
+func _run_pairs() -> void:
+	for guard: int in 60:
+		for step: TrainingStepDef in rig.driver.active_pairs():
+			rig.press_next(step.station)
+			rig.press_next(step.partner)
+		rig.tick(2)
+
+
+func _seat_captain(seated: int) -> void:
+	var flag: SetFlagCommand = SetFlagCommand.new()
+	flag.flag_name = TrainingDriver.CAPTAIN_SEATED
+	flag.value = seated
+	rig.world.submit(flag)
+	rig.tick(2)
+
+
+# FT: FT-MIS-039
+# Review 2, H2: the Comms hail step is done with the real HailCommand against the drone
+# (the server's hail map answers it), so a scripted crew reaches the end.
+func test_the_comms_hail_step_is_doable_against_the_drone() -> void:
+	rig.tick(30)
+	assert_bool(ServerMain.HAIL_CONVERSATIONS.has(&"drone")).is_true()
+	rig.finish(&"comms")
+	assert_bool(rig.driver.finished(&"comms")).is_true()
+	var hails: Array[SimCommand] = rig.world.command_log.filter(
+		func(c: SimCommand) -> bool: return c.kind() == &"comms_hail"
+	)
+	assert_array(hails).has_size(1)
+	assert_bool(hails[0].accepted).is_true()
+
+
+# FT: FT-MIS-039
+# Q20, owner 2026-10-26 (review 2, M1): with no Captain seated, the Shakedown closes when
+# every crew station and pair is done; the Captain's track does not hold it.
+func test_the_shakedown_closes_without_a_captain() -> void:
+	rig.tick(30)
+	for station: StringName in rig.driver.stations():
+		if station != TrainingDriver.CAPTAIN:
+			rig.finish(station)
+	_run_pairs()
+	assert_bool(rig.driver.finished(TrainingDriver.CAPTAIN)).is_false()
+	assert_array(rig.said("shakedown.all_done")).is_not_empty()
+
+
+# FT: FT-MIS-039
+# A seated Captain's track counts: the Shakedown closes only when the Captain has also
+# finished it.
+func test_a_seated_captain_must_finish_too() -> void:
+	rig.tick(30)
+	_seat_captain(1)
+	for station: StringName in rig.driver.stations():
+		if station != TrainingDriver.CAPTAIN:
+			rig.finish(station)
+	_run_pairs()
+	assert_array(rig.said("shakedown.all_done")).is_empty()
+	rig.finish(TrainingDriver.CAPTAIN)
+	rig.tick(3)
+	assert_array(rig.said("shakedown.all_done")).is_not_empty()
+
+
+# FT: FT-MIS-039
+# A Captain who sat and left no longer holds the end.
+func test_a_captain_who_left_no_longer_counts() -> void:
+	rig.tick(30)
+	_seat_captain(1)
+	_seat_captain(0)
+	for station: StringName in rig.driver.stations():
+		if station != TrainingDriver.CAPTAIN:
+			rig.finish(station)
+	_run_pairs()
+	assert_array(rig.said("shakedown.all_done")).is_not_empty()
+
+
+# FT: FT-MIS-039
+func test_a_missing_drone_is_asked_again() -> void:
+	rig.tick(5)
+	var before: int = rig.world.ship_count()
+	# The drone's id now names nothing (a rejected spawn would leave this): ask again.
+	var scenario: ShakedownScenario = rig.driver._scenario as ShakedownScenario
+	scenario._drone = before + 7
+	rig.tick(ScenarioApi.HZ * 2)
+	assert_int(rig.world.ship_count()).is_equal(before + 1)
+
+
 # FT: FT-MIS-039
 func test_next_is_logged_and_sets_the_station_flag() -> void:
 	rig.tick(2)

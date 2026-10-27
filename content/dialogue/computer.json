@@ -43,12 +43,6 @@
       "text": {"en": "Jump drive ready.", "pt_PT": "Motor de salto pronto.", "it": "Motore di salto pronto."}
     },
     {
-      "id": "computer.encounter_pending", "role": "computer", "priority": 1, "max_age_ms": 8000,
-      "coalesce": "encounter", "resume": false,
-      "slots": {"site": "site_name"},
-      "text": {"en": "Contact expected at {site}.", "pt_PT": "Contacto previsto em {site}.", "it": "Contatto previsto a {site}."}
-    },
-    {
       "id": "computer.shields_low_plain", "role": "computer", "priority": 1, "max_age_ms": 4000,
       "coalesce": "shields", "resume": false,
       "text": {"en": "Shields low.", "pt_PT": "Escudos fracos.", "it": "Scudi bassi."}

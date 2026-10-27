@@ -71,8 +71,9 @@ const LOAD_FLAGS: Array[String] = [
 ]
 const DEV_ENV: String = "FT_DEV"
 ## The enemies a crew can hail, and the conversation each answers with (STORY).
+## The Shakedown's drone answers a training hail so Comms can do that step (review 2, H2).
 const HAIL_CONVERSATIONS: Dictionary[StringName, StringName] = {
-	&"m1_raider": &"conv.surrender_demand"
+	&"m1_raider": &"conv.surrender_demand", &"drone": &"conv.training_hail"
 }
 ## The beacon's default server name (provisional: see docs/protocol.md, Rates and limits).
 const DEFAULT_NAME: String = "Full Theta server"

@@ -20,6 +20,10 @@ const REMIND_S: float = 45.0
 ## Dialogue lines for a finished track (per station) and a finished Shakedown.
 const LINE_TRACK_DONE: String = "shakedown.%s.track_done"
 const LINE_ALL_DONE: String = "shakedown.all_done"
+## The flag the server keeps at 1 while a Captain sits on the ship (Q20, owner 2026-10-26):
+## the Captain's track counts toward the end only then, other tracks always.
+const CAPTAIN_SEATED: StringName = &"train.captain.seated"
+const CAPTAIN: StringName = &"captain"
 
 var _scenario: Scenario
 var _def: TrainingStepsDef
@@ -69,7 +73,7 @@ func before_tick(api: ScenarioApi) -> void:
 	for station: StringName in _tracks:
 		_step_station(api, now, station, tags)
 	_step_pairs(api, now)
-	if not _closed and _all_finished():
+	if not _closed and _all_finished(api):
 		_closed = true
 		_say(api, LINE_ALL_DONE, stations())
 
@@ -164,8 +168,10 @@ func _free(station: StringName) -> bool:
 	return _tracks.has(station) and finished(station) and _in_pair[station] < 0
 
 
-func _all_finished() -> bool:
+func _all_finished(api: ScenarioApi) -> bool:
 	for station: StringName in _tracks:
+		if station == CAPTAIN and api.flag(CAPTAIN_SEATED) == 0:
+			continue
 		if not finished(station):
 			return false
 	for state: int in _pair_state:

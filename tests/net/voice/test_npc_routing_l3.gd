@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## E10 / #10: spoken lines from the sim (&"say" events) are routed: an NPC line to the
-## holder of that NPC's conversation claim only, a subtitle for every Comms holder while
-## nobody holds it (PROVISIONAL, Q8), a ship-computer line to the stations concerned.
+## holder of that NPC's conversation claim only, every Comms holder (voice and subtitle)
+## while nobody holds it (Q8, owner 2026-10-26), a ship-computer line to the stations concerned.
 ## A spy VoiceService records the calls; two Comms players share the player ship. The
 ## claim is a stub on NetClaims (the real "npc" claim kind and cards are in the server).
 
@@ -9,18 +9,14 @@ const PLAYER: int = NetHarness.PLAYER
 const NPC: String = "trader_1"
 
 
-## Records say() and say_subtitle() instead of synthesising.
+## Records say() instead of synthesising.
 class SpyService:
 	extends VoiceService
-	## [kind ("clip" or "subtitle"), line id, args, audience as an Array].
+	## ["clip", line id, args, audience as an Array].
 	var said: Array = []
 
 	func say(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
 		said.append(["clip", line_id, args, Array(audience)])
-		return said.size()
-
-	func say_subtitle(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
-		said.append(["subtitle", line_id, args, Array(audience)])
 		return said.size()
 
 
@@ -81,17 +77,17 @@ func _say(server: NetServer, line_id: String, args: Dictionary) -> void:
 
 
 # FT: FT-AUD-005, FT-COM-006, FT-AUD-010
-func test_npc_line_goes_to_the_claimer_only_and_unclaimed_is_subtitle_only() -> void:
+func test_npc_line_goes_to_the_claimer_only_and_unclaimed_to_every_comms_holder() -> void:
 	var setup: Array = await _crew()
 	var server: NetServer = setup[0]
 	var crew: Array[NetClient] = setup[1]
 	var first: int = crew[0].session_id
 	var second: int = crew[1].session_id
 	var args: Dictionary = {"args": {"npc": "Rosa"}}
-	# Nobody holds the claim: a subtitle for every Comms holder, no clip.
+	# Nobody holds the claim: every Comms holder hears it (voice and subtitle).
 	_say(server, "npc.hail_trader", args)
 	assert_array(_spy.said).has_size(1)
-	assert_str(_spy.said[0][0]).is_equal("subtitle")
+	assert_str(_spy.said[0][0]).is_equal("clip")
 	assert_array(_spy.said[0][3]).contains_exactly_in_any_order([first, second])
 	assert_dict(_spy.said[0][2]).is_equal({"npc": "Rosa"})
 	# The second player claims the NPC's card: only they get the clip.
@@ -99,11 +95,11 @@ func test_npc_line_goes_to_the_claimer_only_and_unclaimed_is_subtitle_only() -> 
 	assert_bool(server.session.claims.claim(PLAYER, "npc:0", second)).is_true()
 	_say(server, "npc.hail_trader", args)
 	assert_array(_spy.said).is_equal([["clip", "npc.hail_trader", {"npc": "Rosa"}, [second]]])
-	# Released again: back to subtitles for both.
+	# Released again: both hear it, and the Engineering player never does.
 	_spy.said.clear()
 	server.session.claims.release(PLAYER, "npc:0", second)
 	_say(server, "npc.hail_trader", args)
-	assert_str(_spy.said[0][0]).is_equal("subtitle")
+	assert_array(_spy.said[0][3]).contains_exactly_in_any_order([first, second])
 
 
 # FT: FT-AUD-006, FT-AUD-010

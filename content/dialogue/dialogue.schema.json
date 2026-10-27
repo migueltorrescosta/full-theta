@@ -13,7 +13,7 @@
   },
   "$defs": {
     "text": {"type": "string", "minLength": 1},
-    "slot_kind": {"enum": ["ship_name", "callsign", "npc_name", "site_name", "number", "binding"]},
+    "slot_kind": {"enum": ["ship_name", "callsign", "npc_name", "number", "binding"]},
     "line": {
       "type": "object",
       "additionalProperties": false,

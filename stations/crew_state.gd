@@ -248,6 +248,7 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 				paused[int(p["ship"])] = p
 			changed.emit(&"pause")
 		"resume":
+			# Each pause that lifts has its own resume; clear only the one it names.
 			if p.get("host", false):
 				host_paused = false
 			else:

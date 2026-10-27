@@ -29,6 +29,10 @@ func _init(crew: int = 1) -> void:
 	steps = load("res://content/training/steps.tres") as TrainingStepsDef
 	var setup: RunSetup = RunSetup.new(7, "test", defs.run(&"shakedown"), defs.enemies(), crew)
 	setup.science = defs.science()
+	# The server's own hail map and the real conversations: the Comms hail step must be
+	# doable against the training drone (review 2, H2).
+	setup.conversations = ConversationLibrary.load_dir()
+	setup.hail_conversations = ServerMain.HAIL_CONVERSATIONS
 	world = setup.build()
 	host = ScenarioHost.new(world)
 	driver = TrainingDriver.new(ShakedownScenario.new(), steps)
@@ -60,7 +64,11 @@ func press_next(station: StringName, ship: int = 0) -> void:
 func command_for(tag: StringName, ship: int = 0) -> SimCommand:
 	var kind: String = String(tag).get_slice(":", 0)
 	var cmd: SimCommand
-	if kind == "helm_input":
+	if kind == "comms_hail":
+		var hail: HailCommand = HailCommand.new()
+		hail.target = 1  # the training drone
+		cmd = hail
+	elif kind == "helm_input":
 		var h: HelmInputCommand = HelmInputCommand.new()
 		match String(tag).get_slice(":", 1):
 			"face":
@@ -88,7 +96,8 @@ func command_for(tag: StringName, ship: int = 0) -> SimCommand:
 	return cmd
 
 
-## Does the step as a player would; the driver sees it two ticks later.
+## Does the step as a player would; the driver sees it two ticks later. The hail is the
+## real command, which the sim may refuse (then the step does not end, as for a player).
 func use(step: TrainingStepDef) -> void:
 	if step.kind == TrainingStepDef.Kind.COMMAND:
 		world.submit(command_for(step.command))

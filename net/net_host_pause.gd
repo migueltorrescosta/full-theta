@@ -3,8 +3,10 @@ extends RefCounted
 ## The host pause (FT-MIS-040, D100, D127): in a co-op session the host pauses or resumes
 ## the whole universe through the pause events of the coverage pause (FT-NET-034), without
 ## an abandon vote. The flag is ServerSession.host_paused; it is independent of the
-## coverage pause, which a host pause leaves alone: the `resume` event goes out only when
-## neither pause is left. Message: HostPause{on}.
+## coverage pause: each pause that lifts sends its own `resume` (`host` true for this one),
+## and the sim runs only when neither holds (ServerSession.sim_running). A host who has
+## not returned within the reconnect grace ends the pause by itself (Q19, owner
+## 2026-10-26, D188). Message: HostPause{on}.
 
 ## request_rejected reason: any two crew factions are hostile, or the session has no host.
 const PVP_NO_PAUSE: String = "pvp_no_pause"
@@ -35,12 +37,15 @@ func on_host_pause(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if reason != "":
 		session.request_rejected(s, NetProtocol.Type.HOST_PAUSE, reason, {})
 		return
-	var on: bool = msg["on"]
+	set_paused(msg["on"])
+
+
+## Sets the host pause and tells every client; a no-op when it already is so. The `resume`
+## goes out even while a coverage pause holds: a client clears only the flag it names.
+func set_paused(on: bool) -> void:
 	if on == session.host_paused:
 		return
 	session.host_paused = on
-	if not on and not session.paused.is_empty():
-		return  # a coverage pause still holds the universe: no resume until it ends
 	var ids: PackedInt32Array = PackedInt32Array(session.by_id.keys())
 	var type: String = NetProtocol.EVENT_PAUSE if on else NetProtocol.EVENT_RESUME
 	var body: Dictionary = payload() if on else {"tick": session.world.tick, "host": true}

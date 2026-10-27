@@ -169,16 +169,3 @@ func test_run_reset_flushes_lines_and_rearms_the_hull_alert() -> void:
 	server.session.after_ticks([_event(server, &"hit", PLAYER)])
 	assert_str(_spy.said.back()[0]).is_equal("computer.hull_critical")
 	assert_int(_spy.said.size()).is_equal(3)
-
-
-# FT: FT-AUD-018
-# The map's sites join the closed set under their names in the session language, so a line
-# with a site_name slot (the pending-encounter line) can say them.
-func test_site_names_join_the_closed_set_in_the_session_language() -> void:
-	var run: RunDef = ApiFixture.run_def()
-	run.map = SiteFixture.map()
-	var sv: ServerVoice = ServerVoice.new(ApiFixture.world(1, run))
-	sv.voice = _spy
-	sv.start("pt_PT", [])
-	assert_array(_spy.starts[0][1]["site_names"]).contains(["Deriva Pálida"])
-	assert_str(sv.site_text("site.pale_drift")).is_equal("Deriva Pálida")

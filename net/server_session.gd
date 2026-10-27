@@ -263,7 +263,12 @@ func computer_audience(ship: int, stations: PackedStringArray) -> PackedInt32Arr
 	for s: NetSession in by_id.values():
 		if s.ship != ship:
 			continue
-		for station: String in StationViews.stations_of(s.entry):
+		# The Captain seat is its own entry with no crew station: its station name
+		# is "captain" (the Shakedown's Captain track, review 2, M1).
+		var names: Array[String] = StationViews.stations_of(s.entry)
+		if s.entry == StationViews.CAPTAIN:
+			names = [StationViews.CAPTAIN]
+		for station: String in names:
 			if stations.has(station):
 				out.append(s.id)
 				break
@@ -300,6 +305,7 @@ func restart(sim_world: SimWorld) -> void:
 	writers.clear()
 	_refresh_pause()
 	for ship: Dictionary in crew_ships():
+		_sync_captain_seat(ship["id"])
 		crew.reset(ship["id"])
 		chips.reset(ship["id"])
 		shares.reset(ship["id"])
@@ -776,6 +782,7 @@ func _crewable(ship: int) -> bool:
 ## and pause are settled again.
 func _set_pick(s: NetSession, ship: int, entry: String) -> void:
 	var old_ship: int = s.ship
+	var was_captain: bool = s.entry == StationViews.CAPTAIN
 	var keep: Array[String] = []
 	if ship == old_ship:
 		keep = StationViews.stations_of(entry)
@@ -791,7 +798,26 @@ func _set_pick(s: NetSession, ship: int, entry: String) -> void:
 	for each: int in [old_ship, ship]:
 		if _crewable(each):
 			_settle(each)
+			if was_captain or entry == StationViews.CAPTAIN:
+				_sync_captain_seat(each)
 	_refresh_pause()
+
+
+## Tells a training run whether a Captain sits on the ship, through a logged flag the
+## TrainingDriver reads: the Captain's track counts only when someone holds the seat
+## (Q20, owner 2026-10-26; review 2, M1). Other runs have no use for it.
+func _sync_captain_seat(ship: int) -> void:
+	if world.run_def == null or not world.run_def.training:
+		return
+	var seated: int = 0
+	for o: NetSession in by_id.values():
+		if o.ship == ship and o.entry == StationViews.CAPTAIN:
+			seated = 1
+	var c: SetFlagCommand = SetFlagCommand.new()
+	c.ship_id = ship
+	c.flag_name = TrainingDriver.CAPTAIN_SEATED
+	c.value = seated
+	world.submit(c)
 
 
 ## The grace ran out (FT-NET-033, FT-NET-024): pick and claims are released and
@@ -804,6 +830,8 @@ func _lapse(s: NetSession) -> void:
 	s.last_claims = claims.items_of(s.ship, s.id)
 	by_id.erase(s.id)
 	_set_pick(s, -1, "")
+	if s.is_host:
+		host_pause.set_paused(false)  # Q19: the host did not return within the grace
 	_refresh_pause(true)
 
 
@@ -861,9 +889,9 @@ func _refresh_pause(may_pause: bool = false) -> void:
 	paused = now
 	for ship: int in changed:
 		_broadcast(NetProtocol.EVENT_PAUSE, _pause_payload(ship))
-	# The universe resumes only when the host pause is off too (NetHostPause).
-	if was_paused and paused.is_empty() and not host_paused:
-		_broadcast(NetProtocol.EVENT_RESUME, {"tick": world.tick})
+	# The coverage pause's own resume, `host` false; a host pause has its own (NetHostPause).
+	if was_paused and paused.is_empty():
+		_broadcast(NetProtocol.EVENT_RESUME, {"tick": world.tick, "host": false})
 
 
 func _pause_payload(ship: int) -> Dictionary:

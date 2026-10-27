@@ -109,12 +109,8 @@ func test_pvp_refuses_the_host() -> void:
 	assert_bool(await _stepping(server)).is_true()
 
 
-# FT: FT-MIS-040, FT-NET-034
-# A host pause during a coverage pause leaves it in place when the host resumes, and
-# a joining client is told of the host pause.
-func test_host_pause_keeps_a_coverage_pause() -> void:
-	var server: NetServer = h.server(false, 0.4, SECRET)
-	var crew: Array[NetClient] = await _running(server)
+## A started ship whose Ops player has lapsed: a coverage pause holds, crew[2] is gone.
+func _coverage_paused(server: NetServer, crew: Array[NetClient]) -> void:
 	var gone: NetSession = h.session_of(server, crew[2])
 	await h.drop(server, crew[2])
 	await h.lapsed(gone)
@@ -122,14 +118,72 @@ func test_host_pause_keeps_a_coverage_pause() -> void:
 		assert_bool(await h.until(func() -> bool: return not server.session.paused.is_empty()))
 		. is_true()
 	)
+
+
+# FT: FT-MIS-040, FT-NET-034
+# H1 scenario A: the host pauses during a coverage pause and resumes first. Each lift
+# sends its own `resume` (host true, then host false), the sim runs only after both,
+# and the second names the coverage pause so a client keeps no stale flag.
+func test_host_resumes_before_the_coverage_pause_lifts() -> void:
+	var server: NetServer = h.server(false, 0.4, SECRET)
+	var crew: Array[NetClient] = await _running(server)
+	await _coverage_paused(server, crew)
 	crew[0].host_pause(true)
 	assert_bool(await h.until(func() -> bool: return server.session.host_paused)).is_true()
-	assert_bool(crew[0].is_welcomed()).is_true()
 	var from: int = h.mark(crew[1])
 	crew[0].host_pause(false)
-	assert_bool(await h.until(func() -> bool: return not server.session.host_paused)).is_true()
-	# No resume while the coverage pause still holds the universe.
-	assert_dict(await h.next_event(crew[1], NetProtocol.EVENT_RESUME, from)).is_empty()
-	assert_bool(server.session.paused.is_empty()).is_false()
+	var first: Dictionary = await h.next_event(crew[1], NetProtocol.EVENT_RESUME, from)
+	assert_bool(first["payload"]["host"]).is_true()
 	assert_bool(server.session.sim_running()).is_false()
 	assert_bool(await _frozen(server, 300)).is_true()
+	from = h.mark(crew[1])
+	var back: NetClient = await h.joined(server, "ops2", "ops")
+	var second: Dictionary = await h.next_event(crew[1], NetProtocol.EVENT_RESUME, from)
+	assert_bool(second["payload"]["host"]).is_false()
+	assert_bool(back.is_welcomed()).is_true()
+	assert_bool(await _stepping(server)).is_true()
+
+
+# FT: FT-MIS-040, FT-NET-034
+# H1 scenario B: the coverage pause lifts first while the host pause holds: the
+# `resume` (host false) goes out, the sim stays frozen until the host's own resume.
+func test_coverage_pause_lifts_before_the_host_resumes() -> void:
+	var server: NetServer = h.server(false, 0.4, SECRET)
+	var crew: Array[NetClient] = await _running(server)
+	await _coverage_paused(server, crew)
+	crew[0].host_pause(true)
+	assert_bool(await h.until(func() -> bool: return server.session.host_paused)).is_true()
+	var from: int = h.mark(crew[1])
+	await h.joined(server, "ops2", "ops")
+	var first: Dictionary = await h.next_event(crew[1], NetProtocol.EVENT_RESUME, from)
+	assert_bool(first["payload"]["host"]).is_false()
+	assert_bool(server.session.paused.is_empty()).is_true()
+	assert_bool(server.session.sim_running()).is_false()
+	assert_bool(await _frozen(server, 300)).is_true()
+	from = h.mark(crew[1])
+	crew[0].host_pause(false)
+	var second: Dictionary = await h.next_event(crew[1], NetProtocol.EVENT_RESUME, from)
+	assert_bool(second["payload"]["host"]).is_true()
+	assert_bool(await _stepping(server)).is_true()
+
+
+# FT: FT-MIS-040, FT-NET-033
+# Q19, owner 2026-10-26: a host who has not returned within the reconnect grace no
+# longer holds the universe; a host who returns within it still does.
+func test_host_pause_lifts_when_the_host_does_not_return() -> void:
+	var server: NetServer = h.server(false, 0.4, SECRET)
+	var crew: Array[NetClient] = await _running(server)
+	crew[0].host_pause(true)
+	assert_bool(await h.until(func() -> bool: return server.session.host_paused)).is_true()
+	var host_session: NetSession = h.session_of(server, crew[0])
+	var from: int = h.mark(crew[1])
+	await h.drop(server, crew[0])
+	assert_bool(server.session.host_paused).is_true()
+	await h.lapsed(host_session)
+	assert_bool(server.session.host_paused).is_false()
+	var resume: Dictionary = await h.next_event(crew[1], NetProtocol.EVENT_RESUME, from)
+	assert_bool(resume["payload"]["host"]).is_true()
+	# The host's pick lapsed too, so a coverage pause now holds the universe (Q19:
+	# coverage pause rules still apply).
+	assert_bool(server.session.paused.is_empty()).is_false()
+	assert_bool(server.session.sim_running()).is_false()

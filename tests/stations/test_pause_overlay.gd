@@ -57,6 +57,34 @@ func test_host_resume_keeps_the_coverage_pause() -> void:
 
 
 # FT: FT-MIS-040
+# H1: each resume clears only the pause it names, in either order, and the host's Resume
+# button works after a coverage pause lifted under a host pause.
+func test_each_resume_clears_only_its_own_pause() -> void:
+	var pause: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
+	var made: Array = _overlay(true)
+	var ctx: StationContext = made[0]
+	var o: PauseOverlay = made[1]
+	ctx.crew.handle_event({"type": "pause", "payload": HOST_PAUSE}, 0)
+	ctx.crew.handle_event({"type": "pause", "payload": pause}, 0)
+	ctx.crew.handle_event({"type": "resume", "payload": {"tick": 1, "host": false}}, 0)
+	assert_bool(ctx.crew.paused.is_empty()).is_true()
+	assert_bool(ctx.crew.host_paused).is_true()
+	assert_bool(o.visible).is_true()
+	var resume: Button = o.find_child("Resume", true, false)
+	resume.pressed.emit()
+	assert_array(StationFixture.sent(ctx).of("host_pause")[0][1]).is_equal([false])
+	ctx.crew.handle_event({"type": "resume", "payload": {"tick": 2, "host": true}}, 0)
+	assert_bool(o.visible).is_false()
+	ctx.crew.handle_event({"type": "pause", "payload": pause}, 0)
+	ctx.crew.handle_event({"type": "pause", "payload": HOST_PAUSE}, 0)
+	ctx.crew.handle_event({"type": "resume", "payload": {"tick": 3, "host": true}}, 0)
+	assert_bool(ctx.crew.host_paused).is_false()
+	assert_bool(o.visible).is_true()
+	ctx.crew.handle_event({"type": "resume", "payload": {"tick": 4, "host": false}}, 0)
+	assert_bool(o.visible).is_false()
+
+
+# FT: FT-MIS-040
 # The menu offers Pause to the co-op host only: not to a guest, not in PvP.
 func test_pause_control_is_host_and_coop_only() -> void:
 	var ctx: StationContext = StationFixture.context("tactical")

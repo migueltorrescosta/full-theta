@@ -89,7 +89,7 @@ func test_start_synthesises_the_closed_set_once_per_role() -> void:
 	var items: Array = ["Valiant", "Viper Three", "Ghost One", "Mara Quill"]
 	assert_int(_fx.log.size()).is_equal(8)
 	assert_array(_texts(_fx.log, "en_GB-cori-medium")).contains_exactly_in_any_order(items)
-	assert_array(_texts(_fx.log, "en_US-norman-medium")).contains_exactly_in_any_order(items)
+	assert_array(_texts(_fx.log, "en_US-kristin-medium")).contains_exactly_in_any_order(items)
 	for r: Dictionary in _fx.log:
 		if r["voice"] == "en_GB-cori-medium":
 			assert_dict(r["settings"]).is_equal(
@@ -288,7 +288,7 @@ func test_free_text_is_one_request_streamed_per_sentence() -> void:
 		"Hold position. We are coming about!", "npc", 2, PackedInt32Array([4])
 	)
 	assert_int(_fx.log.size()).is_equal(1)
-	assert_str(_fx.log[0]["voice"]).is_equal("en_US-norman-medium")
+	assert_str(_fx.log[0]["voice"]).is_equal("en_US-kristin-medium")
 	assert_int(_svc.free_queued()).is_equal(1)
 	_svc._process(0.0)
 	assert_array(Array(_net.order)).is_equal(["event", "voice", "voice"])
@@ -435,7 +435,7 @@ func test_a_dev_only_language_is_subtitles_only_in_releases() -> void:
 # A voice whose model is missing makes its role's lines that need it subtitles only; the
 # other role still speaks.
 func test_a_missing_voice_model_is_subtitles_only() -> void:
-	_fx.missing = ["en_US-norman-medium"]
+	_fx.missing = ["en_US-kristin-medium"]
 	_start()
 	assert_bool(_svc.has_voice("npc")).is_false()
 	_svc.say("npc.hail_trader", {"npc": "Mara Quill"}, PackedInt32Array([1]))

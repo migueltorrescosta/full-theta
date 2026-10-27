@@ -1,0 +1,14 @@
+{
+  "_comment": "The Shakedown's hail (H2, review 2): the training drone picks up so the Comms hail step can be done; it has nothing else to say and changes no intent.",
+  "id": "conv.training_hail",
+  "npc_role": "npc",
+  "start": "n0",
+  "nodes": {
+    "n0": {
+      "line": "npc.hail_hostile",
+      "options": [
+        {"id": "o1", "text": "comms.opt.close"}
+      ]
+    }
+  }
+}

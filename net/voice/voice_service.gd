@@ -125,7 +125,7 @@ func _init(net: NetTransport = null, factory: Callable = Callable()) -> void:
 ## synth per distinct runtime voice, and synthesises every closed-set name once per role
 ## in that role's voice and settings, or once for both roles when they share a voice and
 ## effective settings (FT-AUD-018); closed_set_ready follows. `closed_set`
-## holds "ship_names", "callsigns", "npc_names" and "site_names" (Arrays of String).
+## holds "ship_names", "callsigns" and "npc_names" (Arrays of String).
 func start_session(language: String, closed_set: Dictionary) -> void:
 	stop()
 	lang = language
@@ -172,7 +172,7 @@ func start_session(language: String, closed_set: Dictionary) -> void:
 					_name_role[role] = _name_role[roles[k]]
 					break
 	var items: PackedStringArray = PackedStringArray()
-	for group: String in ["ship_names", "callsigns", "npc_names", "site_names"]:
+	for group: String in ["ship_names", "callsigns", "npc_names"]:
 		for item: Variant in closed_set.get(group, []):
 			if not items.has(str(item)) and str(item) != "":
 				items.append(str(item))
@@ -228,33 +228,6 @@ func say(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
 			}
 		)
 		_flush_waiting()
-	return clip
-
-
-## Shows an authored line as a subtitle only, to `audience`: no clip, no VOICE message
-## (FT-AUD-010; an NPC line nobody has claimed, PROVISIONAL Q8).
-func say_subtitle(line_id: String, args: Dictionary, audience: PackedInt32Array) -> int:
-	var line: Dictionary = dialogue.line(line_id)
-	if line.is_empty():
-		push_error("VoiceService: unknown line %s" % line_id)
-		return -1
-	var clip: int = _new_id()
-	var template: String = str((line.get("text", {}) as Dictionary).get(lang, ""))
-	_post_event(
-		audience,
-		{
-			"clip": clip,
-			"line": line_id,
-			"text": DialogueLines.fill(line, template, args),
-			"role": str(line.get("role", "computer")),
-			"priority": int(line.get("priority", 1)),
-			"max_age_ms": int(line.get("max_age_ms", DEFAULT_FREE_MAX_AGE_MS)),
-			"coalesce": DialogueLines.fill(line, str(line.get("coalesce", "")), args),
-			"resume": bool(line.get("resume", false)),
-			"audio": false,
-			"local": false,
-		}
-	)
 	return clip
 
 
