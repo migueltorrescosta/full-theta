@@ -33,3 +33,7 @@ FT_UPDATE_GOLDEN=1 /path/to/godot --headless --path . -s res://addons/gdUnit4/bi
 The multi-process network tests are not gdUnit4 suites: `tools/gate.sh l4` runs the scenarios in `tools/l4/scenarios/`, each a shell script and one intent file per client (`tools/l4/README.md`). They verify FT-TST-011 and FT-TST-014 by a gate run rather than `# FT:` tags; record the passing commit in the PR body.
 
 `tools/gate.sh l2` runs the simulation-side suites only (`tests/sim`, `tests/pairs`, `tests/scenarios`, `tests/director`) for a quick check while working on the sim; `l1` already runs them. `l3` runs `tests/net` on 2 cores (D244).
+
+## Shards and run time
+
+`tools/gate.sh l1` runs the test files in `L1_SHARDS` gdUnit4 processes at once (default 3); CI runs one job per shard (`L1_SHARD=k/N`). `tools/l1_shards.py` splits every `.gd` file under `tests/` by the seconds per file in `tools/l1_times.json`, so a new test file joins a shard on its own; refresh the times after adding slow tests with `python3 tools/l1_shards.py --update build/reports/*/report_1/results.xml`. Each gdUnit4 run gets its own `user://` (under its report folder), so tests must not rely on files another suite left there, and a suite that writes `user://` files can't clash with a parallel shard.
