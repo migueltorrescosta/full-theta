@@ -11,8 +11,8 @@ var scenario: Scenario
 var api: ScenarioApi
 var encounter: int = -1
 var site: int = -1
-var _started: bool = false
 var strength: float = 1.0
+var _started: bool = false
 var _begin: ApiHandle
 
 

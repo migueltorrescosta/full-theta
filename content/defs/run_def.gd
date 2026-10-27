@@ -12,6 +12,7 @@ extends Resource
 ## Q4 owner 2026-10-26): it closes the run once the budget has no fit, or the most is reached,
 ## after at least the fewest. The run is won when the director closes it.
 @export var min_encounters: int = 4
+## The most encounters a ship goes through (count).
 @export var max_encounters: int = 6
 ## Scenario ids the director may pick.
 @export var scenarios: PackedStringArray = PackedStringArray()
