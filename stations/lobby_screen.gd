@@ -4,9 +4,11 @@ extends Control
 ## FT-JNT-006): the six crew stations as cells, 3 columns by 2 rows in landscape and 2 by
 ## 3 in portrait on every device, each with its name, its role description, the names of
 ## the crewmates who picked it and a border in its load colour; a one-line legend under
-## the grid. Tapping cells multi-selects up to two stations (two make the joint view of
-## that pair) and the pick goes to the server on each tap; with two picked the other
-## cells grey out; tapping a picked cell deselects it. Under the grid the selection's
+## the grid (compact, D257: about half the old height, a one-line role summary, no Take
+## button, the cell takes or leaves the seat). Tapping cells multi-selects up to two
+## stations (two make the joint view of that pair) and the pick goes to the server on
+## each tap; with two picked the other cells grey out; tapping a picked cell deselects
+## it. Under the grid the selection's
 ## name and summary show. Captain and Viewer are two buttons below (choosing one clears
 ## the station picks and vice versa). The host's difficulty is one line with Customise,
 ## which opens a dialog of the data-shortcut toggles (FT-PAIR-017, FT-STN-016; read-only
@@ -26,6 +28,12 @@ const GRID_STATIONS: Array[String] = ["helm", "weapons", "engineering", "science
 ## A player picks at most this many stations (a joint view covers two).
 const MAX_STATIONS: int = 2
 const LANDSCAPE_COLUMNS: int = 3
+## A window shorter than this (a phone in landscape) merges the header rows and puts the
+## difficulty line on the seat row, so Start stays on screen.
+const SHORT_HEIGHT: float = 500.0
+## Cell padding and the grid gap, in px at 100 % UI scale (a cell stays >= TOUCH_MIN tall).
+const CELL_INSET: int = 5
+const GRID_GAP: int = 4
 const PORTRAIT_COLUMNS: int = 2
 const CAPTAIN: String = "captain"
 const VIEWER: String = "viewer"
@@ -39,6 +47,12 @@ var ctx: StationContext
 var ship: int = -1
 
 var _ships: HBoxContainer
+var _head: HBoxContainer
+var _ship_row: HBoxContainer
+var _outer: VBoxContainer
+var _margin: MarginContainer
+var _diff_row: HBoxContainer
+var _short: bool = false
 var _grid: GridContainer
 var _coverage: Label
 var _legend: HBoxContainer
@@ -317,51 +331,72 @@ func _refresh_grid() -> void:
 		var id: String = str(b.name).trim_prefix("Entry_")
 		b.set_pressed_no_signal(dev or id in picks)
 		b.disabled = full and not id in picks
-		b.modulate = Color(1, 1, 1, 0.45) if b.disabled else Color.WHITE
+		# Fade the text but not the seat holders' names (they keep their contrast).
+		var fade: Color = Color(1, 1, 1, 0.45) if b.disabled else Color.WHITE
+		b.find_child("Name", true, false).self_modulate = fade
+		b.find_child("Role", true, false).self_modulate = fade
 		_set_crew(b, crew_at(id))
 	_apply_columns()
 
 
-## A station cell: a toggle button holding the name, the role and the crew's names,
-## centred; its minimum size follows the text so a small screen shows when it doesn't fit.
+## A station cell (D257): a toggle button, about half the old height: the name left and the
+## seat holders' names right on the first line, the role's first sentence on the second.
+## Tapping it takes the seat or leaves it. Its height follows the text, at least TOUCH_MIN.
 func _cell(id: String, tag: String) -> Button:
 	var b: Button = Button.new()
 	b.name = "Entry_" + id
 	b.toggle_mode = true
 	b.theme_type_variation = "LoadCell_" + (tag if tag in LOAD_TAGS else "none")
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	b.clip_contents = true
+	b.tooltip_text = tr("role." + id)
 	b.pressed.connect(tap_station.bind(id))
 	var box: VBoxContainer = VBoxContainer.new()
-	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	box.offset_left = UiTheme.CELL_PAD
-	box.offset_top = UiTheme.CELL_PAD
-	box.offset_right = -UiTheme.CELL_PAD
-	box.offset_bottom = -UiTheme.CELL_PAD
-	box.add_theme_constant_override("separation", 2)
+	box.offset_left = CELL_INSET
+	box.offset_top = CELL_INSET
+	box.offset_right = -CELL_INSET
+	box.offset_bottom = -CELL_INSET
+	box.add_theme_constant_override("separation", 0)
 	b.add_child(box)
-	box.add_child(_cell_label("Name", tr("station." + id), "HeadingLabel"))
-	box.add_child(_cell_label("Role", tr("role." + id), "CaptionLabel"))
+	var top: HBoxContainer = HBoxContainer.new()
+	top.name = "Top"
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(top)
+	var name_label: Label = _cell_label("Name", tr("station." + id), "HeadingLabel")
+	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(name_label)
+	var role: Label = _cell_label("Role", _first_sentence(tr("role." + id)), "CaptionLabel")
+	role.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	role.autowrap_mode = TextServer.AUTOWRAP_OFF
+	role.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	role.clip_text = true
+	role.custom_minimum_size = Vector2(10, 0)
+	box.add_child(role)
 	box.minimum_size_changed.connect(_fit_cell.bind(b, box))
 	_fit_cell.call_deferred(b, box)
 	return b
 
 
-## Shows the crew's names on a cell: a "Crew" label while someone sits there.
+## The first sentence of a role text: the one line a cell shows.
+static func _first_sentence(text: String) -> String:
+	var i: int = text.find(". ")
+	return text.left(i + 1) if i > 0 else text
+
+
+## Shows the seat holders' names on a cell, right of its name; empty while nobody sits there.
 func _set_crew(cell: Button, crew: PackedStringArray) -> void:
-	var box: Node = cell.get_child(0)
-	var label: Label = box.get_node_or_null("Crew") as Label
-	if crew.is_empty():
-		if label != null:
-			box.remove_child(label)
-			label.queue_free()
-		return
+	var label: Label = cell.find_child("Crew", true, false) as Label
 	if label == null:
 		label = _cell_label("Crew", "", "CrewLabel")
-		box.add_child(label)
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		label.size_flags_horizontal = Control.SIZE_SHRINK_END
+		cell.find_child("Top", true, false).add_child(label)
 	label.text = ", ".join(crew)
 
 
@@ -376,13 +411,49 @@ func _cell_label(node_name: String, text: String, variation: String) -> Label:
 
 static func _fit_cell(cell: Button, box: Control) -> void:
 	if is_instance_valid(cell) and is_instance_valid(box):
-		var pad: float = 2.0 * UiTheme.CELL_PAD
-		cell.custom_minimum_size = Vector2(0.0, box.get_combined_minimum_size().y + pad)
+		var h: float = box.get_combined_minimum_size().y + 2.0 * CELL_INSET
+		cell.custom_minimum_size = Vector2(0.0, maxf(h, float(UiTheme.TOUCH_MIN)))
 
 
 func _apply_columns() -> void:
 	if _grid != null:
 		_grid.columns = columns_for(size)
+		if size.y > 0.0:
+			_arrange(size.y < SHORT_HEIGHT)
+
+
+## Lays the rows out for the window: normal, or short (a phone in landscape), where the
+## ship buttons, the coverage and Back to ships join the title row and the difficulty
+## line joins the seat row.
+func _arrange(short: bool) -> void:
+	if short == _short:
+		return
+	_short = short
+	var pad: int = 6 if short else 12
+	for side: String in ["left", "right", "top", "bottom"]:
+		_margin.add_theme_constant_override("margin_" + side, pad)
+	_outer.add_theme_constant_override("separation", 3 if short else 6)
+	_title.size_flags_horizontal = (
+		Control.SIZE_SHRINK_BEGIN if short else Control.SIZE_EXPAND_FILL
+	)
+	_ship_row.visible = not short
+	_coverage.size_flags_horizontal = Control.SIZE_SHRINK_END if short else Control.SIZE_FILL
+	_reparent(_ships, _head if short else _ship_row, 1 if short else 0)
+	_reparent(_leave, _head if short else _ship_row, -1 if short else 1)
+	if short:
+		_reparent(_coverage, _head, 2)
+	else:
+		_reparent(_coverage, _outer, _ship_row.get_index() + 1)
+	_diff_row.visible = not short
+	_reparent(_difficulty, _seat_row if short else _diff_row, -1 if short else 0)
+	_reparent(_customise, _seat_row if short else _diff_row, -1 if short else 1)
+
+
+static func _reparent(node: Control, parent: Node, index: int) -> void:
+	if node.get_parent() != parent:
+		node.get_parent().remove_child(node)
+		parent.add_child(node)
+	parent.move_child(node, index)
 
 
 ## The Captain, Viewer and dev buttons: the pick's one is pressed; Captain is greyed out
@@ -462,6 +533,7 @@ func _build() -> void:
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	var margin: MarginContainer = MarginContainer.new()
+	_margin = margin
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side: String in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 12)
@@ -469,10 +541,12 @@ func _build() -> void:
 	# Nothing scrolls (D216): the grid takes the height the rows around it leave.
 	var outer: VBoxContainer = VBoxContainer.new()
 	outer.name = "Layout"
+	_outer = outer
 	outer.add_theme_constant_override("separation", 6)
 	margin.add_child(outer)
 	var head: HBoxContainer = HBoxContainer.new()
 	outer.add_child(head)
+	_head = head
 	_title = _label(tr("lobby.title"), "HeadingLabel")
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
@@ -483,6 +557,7 @@ func _build() -> void:
 	head.add_child(_menu)
 	var ship_row: HBoxContainer = HBoxContainer.new()
 	outer.add_child(ship_row)
+	_ship_row = ship_row
 	_ships = HBoxContainer.new()
 	_ships.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ship_row.add_child(_ships)
@@ -497,7 +572,9 @@ func _build() -> void:
 	outer.add_child(_body)
 	_grid = GridContainer.new()
 	_grid.name = "Grid"
-	_grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_grid.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_grid.add_theme_constant_override("h_separation", GRID_GAP)
+	_grid.add_theme_constant_override("v_separation", GRID_GAP)
 	_body.add_child(_grid)
 	_legend = HBoxContainer.new()
 	_legend.name = "Legend"
@@ -549,6 +626,7 @@ func _seat_button(id: String) -> Button:
 func _build_difficulty_row(parent: Container) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "Difficulty"
+	_diff_row = row
 	parent.add_child(row)
 	_difficulty = _label("")
 	_difficulty.name = "DifficultyLine"

@@ -73,6 +73,11 @@ func _ready() -> void:
 			_ctx.crew.lobby[0]["ready"] = false
 			_ctx.crew.lobby[0]["crew"] = 2
 			_ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
+			_ctx.crew.lobby[0]["seats"] = [
+				{"entry": "helm", "name": "Ana"},
+				{"entry": "weapons", "name": "Bo"},
+				{"entry": "systems", "name": "Cy"},
+			]
 			var l: LobbyScreen = LobbyScreen.new()
 			l.setup(_ctx)
 			add_child(l)

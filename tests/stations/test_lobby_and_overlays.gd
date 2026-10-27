@@ -54,12 +54,52 @@ func test_grid_cells_show_name_role_and_load_border() -> void:
 		assert_str((cell.find_child("Name", true, false) as Label).text).is_equal(
 			tr("station." + id)
 		)
-		assert_str((cell.find_child("Role", true, false) as Label).text).is_equal(tr("role." + id))
-		assert_int((cell.find_child("Name", true, false) as Label).horizontal_alignment).is_equal(
-			HORIZONTAL_ALIGNMENT_CENTER
+		# One line: the role's first sentence (D257).
+		assert_str((cell.find_child("Role", true, false) as Label).text).is_equal(
+			LobbyScreen._first_sentence(tr("role." + id))
 		)
+		assert_bool(cell.find_child("Take", true, false) == null).is_true()
 	assert_bool(_cell(l, "captain") is Button).is_true()
 	assert_bool(_cell(l, "viewer").button_pressed).is_true()
+
+
+# FT: FT-NET-015, FT-STN-015
+# D257: tapping a cell takes the seat and tapping it again leaves it, with no Take button;
+# a cell is at least 44 px tall; the holder's name uses a colour that keeps 4.5:1 on the
+# cell's fills.
+func test_cell_tap_takes_and_leaves_a_seat_in_a_compact_cell() -> void:
+	var l: LobbyScreen = _lobby("viewer")
+	l.ctx.crew.lobby[0]["seats"] = [{"entry": "relay", "name": "Ana"}]
+	l.refresh()
+	var cell: Button = _cell(l, "science")
+	await get_tree().process_frame
+	assert_float(cell.custom_minimum_size.y).is_greater_equal(float(UiTheme.TOUCH_MIN))
+	assert_float(cell.custom_minimum_size.y).is_less(80.0)
+	assert_str((_cell(l, "relay").find_child("Crew", true, false) as Label).text).is_equal("Ana")
+	cell.pressed.emit()
+	assert_array(_sent_picks(l)[-1][1]).is_equal([0, "science"])
+	_picked(l, "science")
+	assert_bool(cell.button_pressed).is_true()
+	cell.pressed.emit()
+	assert_int(StationFixture.sent(l.ctx).of("release_pick").size()).is_equal(1)
+	_picked(l, "")
+	assert_bool(cell.button_pressed).is_false()
+	var crew_colour: Color = UiTheme.build().get_color("font_color", "CrewLabel")
+	for fill: String in ["panel", "panel_focus", "background"]:
+		assert_float(_contrast(crew_colour, Palette.color(fill))).is_greater_equal(4.5)
+
+
+static func _contrast(a: Color, b: Color) -> float:
+	var la: float = _luminance(a)
+	var lb: float = _luminance(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+static func _luminance(c: Color) -> float:
+	var lin: Array[float] = []
+	for v: float in [c.r, c.g, c.b]:
+		lin.append(v / 12.92 if v <= 0.03928 else pow((v + 0.055) / 1.055, 2.4))
+	return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
 
 
 # FT: FT-STN-015
