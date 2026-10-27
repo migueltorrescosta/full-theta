@@ -310,7 +310,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-MIS-027 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pending_site.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd`, `tests/stations/test_comms_board.gd` |
 | FT-MIS-028 | tests | `tests/director/test_director_budget.gd` |
 | FT-MIS-029 | tests | `tests/director/test_director_budget.gd`, `tests/scenarios/test_enemy_wave.gd` |
-| FT-MIS-030 | tests | `tests/net/test_fleet_pause_l3.gd`, `tests/stations/test_fleet_screens.gd` |
+| FT-MIS-030 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/net/test_fleet_pause_l3.gd`, `tests/stations/test_fleet_screens.gd` |
 | FT-MIS-031 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/stations/test_fleet_lobby.gd` |
 | FT-MIS-032 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd` |
 | FT-MIS-033 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd`, `tests/stations/test_fleet_screens.gd` |

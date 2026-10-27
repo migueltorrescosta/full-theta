@@ -528,11 +528,9 @@ func _hand_over(ship: int) -> void:
 		var s: NetSession = session.by_id.get(pair[0])
 		if s == null or s.ship != ship:
 			continue
-		if to >= 0:
-			session.move(s, to, StationViews.VIEWER)
-		else:
-			session.move(s, -1, "")
+		# `handover` first, then the `picked` of the move (the client keys its view by ship).
 		session.notify(s, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(ship, to))
+		session.move(s, to, StationViews.VIEWER if to >= 0 else "")
 	_board_sent = []
 	_board_tick = -SCOREBOARD_EVERY_TICKS
 

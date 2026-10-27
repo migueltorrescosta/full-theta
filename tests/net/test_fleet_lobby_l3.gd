@@ -244,3 +244,51 @@ func test_last_ship_standing_names_the_winner() -> void:
 	var e: Dictionary = await h.next_event(crews[0], NetProtocol.EVENT_SESSION_OVER, from)
 	assert_str(e["payload"]["reason"]).is_equal("last_standing")
 	assert_array(e["payload"]["winners"]).is_equal([0])
+
+
+# FT: FT-GEN-001, FT-MIS-031, FT-MIS-030
+# The whole flow through NetClient: a player adds ships, the host picks teams, a crew moves
+# its ship, the crews start together, a destroyed ship's crew gets `handover` and then
+# `picked` as a viewer of its surviving teammate, and a lobby player gets the scoreboard.
+func test_whole_fleet_flow_through_the_client() -> void:
+	var server: NetServer = h.fleet_server(SessionRules.Mode.COOP, 1, [], true, 10.0, SECRET)
+	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
+	var watcher: NetClient = await h.welcomed(server, "watcher")
+	await h.pick(host, StationViews.ALL, 0)
+	host.add_ship("Wren")
+	host.add_ship("Lark")
+	var three: Callable = func() -> bool: return host.catalogue.get("ships", []).size() == 3
+	assert_bool(await h.until(three)).is_true()
+	host.set_mode("teams", "last_team_standing")
+	var crews: Array[NetClient] = await _crews(server, [1, 2])
+	var from: int = h.mark(watcher)
+	crews[1].set_team(2, 1)
+	var split: Callable = func(ev: Dictionary) -> bool:
+		var teams: Array = ev["payload"]["ships"].map(func(r: Dictionary) -> int: return r["team"])
+		return ev["payload"]["mode"] == "teams" and teams == [0, 1, 1]
+	assert_dict(await _fleet(watcher, from, split)).is_not_empty()
+	for c: NetClient in [host, crews[0], crews[1]]:
+		c.set_ready(true)
+	assert_bool(await _running(server)).is_true()
+	var started: Callable = func(ev: Dictionary) -> bool: return ev["payload"]["started"]
+	assert_dict(await _fleet(watcher, from, started)).is_not_empty()
+	from = h.mark(crews[1])
+	server.world.kin.alive[2] = 0
+	var gone: Dictionary = await h.next_event(crews[1], NetProtocol.EVENT_ELIMINATED, from)
+	assert_int(gone["payload"]["ship"]).is_equal(2)
+	var to: Dictionary = await h.next_event(crews[1], NetProtocol.EVENT_HANDOVER, from)
+	assert_int(to["payload"]["to_ship"]).is_equal(1)
+	var seen: Array[Dictionary] = []
+	for e: Dictionary in h.events_of(crews[1], NetProtocol.EVENT_HANDOVER):
+		seen.append(e)
+	var after: int = (h.events[crews[1]] as Array).find(seen[-1])
+	var moved: Dictionary = await h.next_event(crews[1], NetProtocol.EVENT_PICKED, after)
+	assert_int(moved["payload"]["ship"]).is_equal(1)
+	assert_str(moved["payload"]["entry"]).is_equal(StationViews.VIEWER)
+	var board: Dictionary = await h.next_event(watcher, NetProtocol.EVENT_SCOREBOARD, 0)
+	assert_dict(board).is_not_empty()
+	var row: Callable = func(ev: Dictionary) -> bool:
+		return (
+			ev["payload"]["rows"].size() == 3 and ev["payload"]["rows"][2]["state"] == "destroyed"
+		)
+	assert_dict(await h.next_event(watcher, NetProtocol.EVENT_SCOREBOARD, 0, row)).is_not_empty()
