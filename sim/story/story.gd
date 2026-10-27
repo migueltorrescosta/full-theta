@@ -77,13 +77,7 @@ static func audience_ship(world: SimWorld, card: int) -> int:
 ## (FT-MIS-042). Emits card_refused (tag the reason) when it can't.
 static func accept(world: SimWorld, ship: int, card: int) -> bool:
 	var t: StoryTable = world.story
-	var why: StringName = &""
-	if not visible_to(world, card, ship):
-		why = &"no_card"
-	elif t.state[card] != StoryTable.State.OPEN or t.kind[card] == StoryTable.Kind.HAIL:
-		why = &"not_open"
-	elif t.requires_docked[card] == 1 and not _docked_for(world, ship, card):
-		why = &"requires_docked"
+	var why: StringName = accept_refusal(world, ship, card)
 	if why != &"":
 		world.emit(&"card_refused", ship, card, 0.0, Vector3.ZERO, why)
 		return false
@@ -96,19 +90,44 @@ static func accept(world: SimWorld, ship: int, card: int) -> bool:
 	return true
 
 
+## Why the card can't be accepted by the ship now (the card_refused tag), or &"" when it can.
+## Changes nothing.
+static func accept_refusal(world: SimWorld, ship: int, card: int) -> StringName:
+	var t: StoryTable = world.story
+	if not visible_to(world, card, ship):
+		return &"no_card"
+	if t.state[card] != StoryTable.State.OPEN or t.kind[card] == StoryTable.Kind.HAIL:
+		return &"not_open"
+	# An information card names a place or a fact: there is nothing to accept (Q23).
+	if t.kind[card] == StoryTable.Kind.INFO:
+		return &"not_open"
+	if t.requires_docked[card] == 1 and not _docked_for(world, ship, card):
+		return &"requires_docked"
+	return &""
+
+
 ## Declines an OPEN card, or ends an answered hail (a live HAIL card becomes DONE, so
 ## the contact can be hailed again).
 static func decline(world: SimWorld, ship: int, card: int) -> bool:
 	var t: StoryTable = world.story
-	var seen: bool = visible_to(world, card, ship)
-	if seen and t.kind[card] == StoryTable.Kind.HAIL and is_live(world, card):
-		set_state(world, ship, card, StoryTable.State.DONE)
-		return true
-	if not seen or t.state[card] != StoryTable.State.OPEN:
+	if decline_refusal(world, ship, card) != &"":
 		world.emit(&"card_refused", ship, card, 0.0, Vector3.ZERO, &"not_open")
 		return false
-	set_state(world, ship, card, StoryTable.State.DECLINED)
+	if t.kind[card] == StoryTable.Kind.HAIL and is_live(world, card):
+		set_state(world, ship, card, StoryTable.State.DONE)
+	else:
+		set_state(world, ship, card, StoryTable.State.DECLINED)
 	return true
+
+
+## Why the card can't be declined by the ship now, or &"" when it can. Changes nothing.
+static func decline_refusal(world: SimWorld, ship: int, card: int) -> StringName:
+	var t: StoryTable = world.story
+	if not visible_to(world, card, ship):
+		return &"not_open"
+	if t.kind[card] == StoryTable.Kind.HAIL and is_live(world, card):
+		return &""
+	return &"" if t.state[card] == StoryTable.State.OPEN else &"not_open"
 
 
 static func _docked_for(world: SimWorld, ship: int, card: int) -> bool:
@@ -206,11 +225,18 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: i
 ## contract_flag (none|disable|protect), flag (story flag name, with value), rep (a
 ## RepDistDef id), say (a dialogue line id), verify (a scan fact to check, P14), surrender
 ## ({base, per_damage, cap}: StoryRules.roll_surrender, P9). A refused accept or decline
-## stops the option there (nothing is drawn, the node stays open) and returns false. A
+## applies none of the option (checked first, so no earlier effect has run; the node stays
+## open) and returns false. A
 ## rep draw happens once per card, or once per contact on a hail (a new hail of the same
 ## contact doesn't repeat it).
 static func apply_option(world: SimWorld, ship: int, card: int, option: Dictionary) -> bool:
 	var t: StoryTable = world.story
+	# Check the accept and decline first: a refused one must leave the other effects unapplied.
+	for effect: Dictionary in option.get("effects", []):
+		if effect.has("accept") and accept_refusal(world, ship, card) != &"":
+			return accept(world, ship, card)
+		if effect.has("decline") and decline_refusal(world, ship, card) != &"":
+			return decline(world, ship, card)
 	for effect: Dictionary in option.get("effects", []):
 		if effect.has("accept") and not accept(world, ship, card):
 			return false

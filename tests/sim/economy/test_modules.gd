@@ -216,12 +216,16 @@ func _speed_after(module: StringName, ticks: int) -> float:
 func test_module_deltas_reach_flight() -> void:
 	var w: SimWorld = _docked()[0]
 	var base_mass: float = w.kin.mass[0]
+	var base_inertia: Vector3 = w.kin.inertia[0]
 	var base_thrust: float = w.kin.max_thrust_pos[0].z
 	ModuleSystem.fit(w, 0, 0, _module(&"hx2_afterburner"))
 	assert_float(w.kin.max_thrust_pos[0].z).is_equal_approx(base_thrust * 1.25, 0.01)
 	ModuleSystem.fit(w, 0, 0, _module(&"bx3_reactor"))
 	assert_float(w.kin.mass[0]).is_equal_approx(base_mass * 1.1, 0.01)
+	# Inertia scales with the same mass delta (review 2 L4), so a heavy module slows turning.
+	assert_vector(w.kin.inertia[0]).is_equal_approx(base_inertia * 1.1, base_inertia * 0.001)
 	assert_float(w.kin.max_thrust_pos[0].z).is_equal_approx(base_thrust, 0.01)
 	ModuleSystem.fit(w, 0, 0, null)
 	assert_float(w.kin.mass[0]).is_equal(base_mass)
+	assert_vector(w.kin.inertia[0]).is_equal(base_inertia)
 	assert_float(_speed_after(&"hx2_afterburner", 30)).is_greater(_speed_after(&"", 30))

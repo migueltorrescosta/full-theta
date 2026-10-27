@@ -3,7 +3,8 @@ extends RefCounted
 ## What a scenario offers a ship (ScenarioApi.offer, FT-COM-001, FT-COM-008): an input
 ## copy the API turns into a card on the ship's Comms board. Holds plain values only.
 
-enum Kind { MISSION, CONTRACT, OFFER, HAIL }
+## INFO tells and cannot be accepted (Q23, owner 2026-10-26).
+enum Kind { MISSION, CONTRACT, OFFER, HAIL, INFO }
 
 var kind: Kind = Kind.MISSION
 var npc_id: StringName = &""

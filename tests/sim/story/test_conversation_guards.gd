@@ -184,3 +184,64 @@ func test_command_for_a_ship_spawned_this_tick_applies() -> void:
 	assert_bool(spawn.accepted).is_true()
 	assert_bool(w.command_log.has(help)).is_true()
 	assert_int(w.ship_count()).is_equal(id + 1)
+
+
+# FT: FT-COM-003, FT-COM-007
+# Review 2 L7: an option whose accept is refused applies none of its effects, also the ones
+# listed before the accept, and the scan_option event of its requirement is not counted.
+func test_a_refused_accept_applies_no_earlier_effect() -> void:
+	var w: SimWorld = StoryFixture.duel()
+	w.conversations[&"conv.effects_first"] = {
+		"id": "conv.effects_first",
+		"start": "n0",
+		"nodes":
+		{
+			"n0":
+			{
+				"line": "x",
+				"options":
+				[
+					{
+						"id": "o1",
+						"text": "t",
+						"requires": {},
+						"effects":
+						[
+							{"flag": "early", "value": 1},
+							{"intent": "neutral"},
+							{"rep": "rep.complete_mission"},
+							{"accept": true}
+						]
+					}
+				]
+			}
+		}
+	}
+	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"conv.effects_first")
+	spec.target = 1
+	spec.requires_docked = true
+	spec.site = SITE
+	var card: int = StoryFixture.post(w, 0, spec)
+	assert_bool(_answer(w, 0, card)).is_true()
+	assert_bool(_reply(w, 0, card, &"o1")).is_false()
+	assert_int(w.story_flags.get_flag(&"early")).is_equal(0)
+	assert_int(w.knowledge.intent[w.knowledge.row_for(BLUE, 1)]).is_equal(
+		KnowledgeTable.Intent.UNKNOWN
+	)
+	assert_int(w.reputation.row_for(BLUE, RED)).is_equal(-1)
+	assert_int(w.story.state[card]).is_equal(StoryTable.State.OPEN)
+	StoryFixture.dock(w, 0)
+	assert_bool(_reply(w, 0, card, &"o1")).is_true()
+	assert_int(w.story_flags.get_flag(&"early")).is_equal(1)
+
+
+# FT: FT-COM-003
+# Q23, owner 2026-10-26: an INFO card tells and can't be accepted; it stays on the board.
+func test_an_info_card_cannot_be_accepted() -> void:
+	var w: SimWorld = StoryFixture.duel()
+	var card: int = StoryFixture.post(w, 0, StoryFixture.card(StoryTable.Kind.INFO))
+	var accept: AcceptCardCommand = AcceptCardCommand.new()
+	accept.card = card
+	assert_bool(StoryFixture.run(w, 0, accept)).is_false()
+	assert_int(w.story.state[card]).is_equal(StoryTable.State.OPEN)
+	assert_int(StoryFixture.events(w, &"card_refused").size()).is_equal(1)

@@ -63,10 +63,11 @@ static func refit(world: SimWorld, ship: int) -> void:
 			_apply(def, stat, maxf(1.0 + sums[stat], MIN_FACTOR))
 	world.defs[ship] = def
 	# Flight reads the kinematics columns, copied from the definition at spawn: carry the
-	# module-scaled mass, thrust and torque there too.
+	# module-scaled mass, inertia, thrust and torque there too.
 	var kin: Kinematics = world.kin
 	if ship >= 0 and ship < kin.size():
 		kin.mass[ship] = def.mass
+		kin.inertia[ship] = def.inertia
 		kin.max_thrust_pos[ship] = def.max_thrust_pos
 		kin.max_thrust_neg[ship] = def.max_thrust_neg
 		kin.max_torque[ship] = def.max_torque
@@ -82,7 +83,9 @@ static func _apply(def: ShipDef, stat: StringName, factor: float) -> void:
 		&"torque":
 			def.max_torque *= factor
 		&"mass":
+			# Inertia grows with mass, so a heavy module slows turning as well (review 2 L4).
 			def.mass *= factor
+			def.inertia *= factor
 		&"sensor_range":
 			def.sensor_range *= factor
 			def.identify_range = minf(def.identify_range, def.sensor_range)

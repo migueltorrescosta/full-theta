@@ -6,7 +6,8 @@ extends SimTable
 ## settles it). Rows are added when a card is posted, in post order, and never removed, so
 ## a card's id is its row. Story flags and learned scan facts are StoryFlagTable's.
 
-enum Kind { MISSION, CONTRACT, OFFER, HAIL }
+## INFO: a card that only tells (Q23), nothing to accept.
+enum Kind { MISSION, CONTRACT, OFFER, HAIL, INFO }
 enum State { OPEN, ACCEPTED, DECLINED, DONE, FAILED, EXPIRED }
 
 ## State: &"" means none in the StringName columns.

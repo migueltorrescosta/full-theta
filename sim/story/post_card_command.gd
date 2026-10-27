@@ -34,7 +34,7 @@ func kind() -> StringName:
 
 
 func apply(world: SimWorld) -> bool:
-	if card_kind < 0 or card_kind > StoryTable.Kind.HAIL:
+	if card_kind < 0 or card_kind > StoryTable.Kind.INFO:
 		return false
 	if conversation_id != &"" and not world.conversations.has(conversation_id):
 		return false

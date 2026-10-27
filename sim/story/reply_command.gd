@@ -33,11 +33,11 @@ func apply(world: SimWorld) -> bool:
 		world.emit(&"reply_refused", ship_id, card, 0.0, Vector3.ZERO, why)
 		return false
 	world.emit(&"reply", ship_id, card, 0.0, Vector3.ZERO, option)
-	# (P14: an option a scan fact unlocked, counted for the debrief)
-	var req: Dictionary = chosen.get("requires", {})
-	if req.has("scan_fact"):
-		world.emit(&"scan_option", ship_id, card, 0.0, Vector3.ZERO, StringName(req["scan_fact"]))
 	if not Story.apply_option(world, ship_id, card, chosen):
 		world.emit(&"reply_refused", ship_id, card, 0.0, Vector3.ZERO, &"effect_refused")
 		return false
+	# (P14: an option a scan fact unlocked, counted for the debrief once it went through)
+	var req: Dictionary = chosen.get("requires", {})
+	if req.has("scan_fact"):
+		world.emit(&"scan_option", ship_id, card, 0.0, Vector3.ZERO, StringName(req["scan_fact"]))
 	return true
