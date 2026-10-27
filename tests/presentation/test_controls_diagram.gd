@@ -147,7 +147,45 @@ func test_callouts_neither_overlap_nor_leave_the_drawing() -> void:
 				for other: Rect2 in rects:
 					assert_bool(other.intersects(r)).override_failure_message(why).is_false()
 				rects.append(r)
-			assert_int(rects.size()).is_equal(d.model.callouts().size())
+			# Alternative keys ("S / W") get a callout each.
+			assert_int(rects.size()).is_greater_equal(d.model.callouts().size())
+
+
+func test_no_two_leader_lines_cross() -> void:
+	for stations: Array in [
+		["helm", "weapons"],
+		["helm"],
+		["weapons"],
+		["science"],
+		["comms"],
+		["captain"],
+		["engineering"],
+		["relay"],
+		["engineering", "relay"]
+	]:
+		for device: String in IntentTable.DEVICES:
+			var d: ControlsDiagram = _diagram(Bindings.new(), stations, device)
+			var segs: Array[Dictionary] = []
+			for ld: Dictionary in d.leaders():
+				var pts: PackedVector2Array = ld["points"]
+				for i: int in pts.size() - 1:
+					segs.append({"id": ld["id"], "a": pts[i], "b": pts[i + 1]})
+			for i: int in segs.size():
+				for j: int in range(i + 1, segs.size()):
+					if segs[i]["id"] == segs[j]["id"]:
+						continue
+					var why: String = (
+						"%s %s: %s x %s" % [stations, device, segs[i]["id"], segs[j]["id"]]
+					)
+					(
+						assert_bool(
+							ControlsDiagram.segments_cross(
+								segs[i]["a"], segs[i]["b"], segs[j]["a"], segs[j]["b"]
+							)
+						)
+						. override_failure_message(why)
+						. is_false()
+					)
 
 
 func test_a_phone_opens_on_the_list_and_the_rest_on_the_device_in_use() -> void:

@@ -20,6 +20,8 @@ extends StationPanel
 
 ## Under this width (a phone, D195) the HUD stacks around the map.
 const NARROW_W: float = 560.0
+## Under this height the HUD's bottom box is one row (a phone on its side).
+const SHORT_H: float = 480.0
 ## A press that moves less than this is a click (select), not a drag (px).
 const DRAG_PX: float = 6.0
 ## Controller cursor speed (px/s), depth speed (map spans/s), turn speed (px-equivalent/s).
@@ -64,7 +66,11 @@ func _setup() -> void:
 	hud = RelayHud.new()
 	add_child(hud)
 	hud.setup(ctx)
-	resized.connect(func() -> void: hud.set_narrow(size.x < NARROW_W))
+	resized.connect(
+		func() -> void:
+			hud.set_narrow(size.x < NARROW_W)
+			hud.set_short(size.x >= NARROW_W and size.y < SHORT_H)
+	)
 	hud.launch_pressed.connect(func() -> void: _arm("probe"))
 	hud.hazard_pressed.connect(func() -> void: _arm("hazard"))
 	hud.lanes_pressed.connect(_toggle_lanes)
@@ -84,8 +90,14 @@ func _setup() -> void:
 
 func _mode_changed() -> void:
 	map.chips = not docked
-	_hint.visible = not docked
+	_update_hint()
 	hud.set_docked(docked)
+
+
+## The hint sits top right over the map; a phone-wide HUD covers that corner, so there it
+## only shows while a probe or hazard is armed.
+func _update_hint() -> void:
+	_hint.visible = not docked and (armed != "" or size.x >= NARROW_W)
 
 
 func _process(delta: float) -> void:
@@ -114,6 +126,7 @@ func refresh() -> void:
 	map.queue_redraw()
 	hud.refresh()
 	_hint.text = tr("relay.armed_" + armed) if armed != "" else tr("relay.hint")
+	_update_hint()
 
 
 func handle_intent(ev: Dictionary) -> bool:

@@ -58,6 +58,7 @@ var _buttons: Dictionary = {}
 var _status: Label
 var _block_ref: Dictionary = {}
 var _stick_armed: bool = true
+var _list_h: float = 0.0
 
 
 func _setup() -> void:
@@ -128,7 +129,14 @@ func _tight(b: Button, name: String) -> StyleBox:
 	return box
 
 
+## Docked, the panel is as tall as its card list, so no row is cut off.
+func _get_minimum_size() -> Vector2:
+	return Vector2(0.0, _list_h if docked else 0.0)
+
+
 func _mode_changed() -> void:
+	_list_h = 0.0
+	update_minimum_size()
 	board.visible = not docked
 	_bar.visible = not docked
 	list.visible = docked
@@ -160,7 +168,11 @@ func refresh(force: bool = false) -> void:
 				overlay.close()
 			else:
 				_show_overlay(overlay.card_id)
+	list.set_heading(tr("station.comms"))
 	list.setup(CardList.rows(ctx.view))
+	if docked and not is_equal_approx(_list_h, list.custom_minimum_size.y):
+		_list_h = list.custom_minimum_size.y
+		update_minimum_size()
 	_refresh_buttons()
 
 

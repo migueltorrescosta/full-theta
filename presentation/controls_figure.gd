@@ -21,10 +21,12 @@ static var _cache: Dictionary = {}
 
 
 ## {"parts": Array[Dictionary], "body": Array[Dictionary], "size": Vector2} of `device`.
-static func get_figure(device: String) -> Dictionary:
-	if not _cache.has(device):
-		_cache[device] = _pad() if device == IntentTable.PAD else _kbm()
-	return _cache[device]
+## `dy` moves the mouse that far down (room for labels under the keyboard).
+static func get_figure(device: String, dy: float = 0.0) -> Dictionary:
+	var key: String = "%s:%d" % [device, roundi(dy)]
+	if not _cache.has(key):
+		_cache[key] = _pad() if device == IntentTable.PAD else _kbm(dy)
+	return _cache[key]
 
 
 ## The part ids a binding token can land on for `device`.
@@ -37,8 +39,8 @@ static func ids(device: String) -> Dictionary:
 
 
 ## The first part with `id`, or {}.
-static func part(device: String, id: String) -> Dictionary:
-	for p: Dictionary in get_figure(device)["parts"]:
+static func part(device: String, id: String, dy: float = 0.0) -> Dictionary:
+	for p: Dictionary in get_figure(device, dy)["parts"]:
 		if p["id"] == id:
 			return p
 	return {}
@@ -62,7 +64,7 @@ static func _tall(id: String, c: float, r: float, caption: String) -> Dictionary
 	return _part(id, Rect2(c * U, r * U, KEY, U + KEY), caption)
 
 
-static func _kbm() -> Dictionary:
+static func _kbm(dy: float) -> Dictionary:
 	var parts: Array[Dictionary] = []
 	# Function row.
 	parts.append(_key("Escape", 0, 0, 1, "Esc"))
@@ -135,7 +137,7 @@ static func _kbm() -> Dictionary:
 	]
 	# The mouse, below the keyboard, centred on the zone.
 	var mx: float = kb_w * 0.5 - 55.0
-	var my: float = kb_h + 30.0
+	var my: float = kb_h + 30.0 + dy
 	body.append({"shape": "round", "rect": Rect2(mx, my, 110, 170), "radius": 48.0})
 	parts.append(_part("LMB", Rect2(mx + 4, my + 4, 46, 76), "L", "round"))
 	parts.append(_part("RMB", Rect2(mx + 60, my + 4, 46, 76), "R", "round"))

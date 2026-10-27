@@ -22,8 +22,12 @@ const THRUST_LIT: float = 0.05
 ## The thrust cross: arm distance and arrow size (px).
 const CROSS_ARM: float = 24.0
 const CROSS_ARROW: float = 9.0
-## Narrower views move the thrust cross to the top left.
+## Narrower views move the thrust cross above the flight read-out.
 const NARROW_W: float = 640.0
+## A phone (portrait) keeps it top left.
+const PHONE_W: float = 420.0
+## The flight read-out's top edge, from the view's bottom.
+const READOUT_H: float = 168.0
 
 var panel: HelmPanel
 var compact: bool = false
@@ -239,9 +243,13 @@ func thrust_input() -> Vector3:
 
 ## The thrust cross's centre: beside the compass, clear of the ring.
 func thrust_centre() -> Vector2:
-	if size.x < NARROW_W:
+	if size.x < PHONE_W:
 		# A phone has no room beside the compass: top left, under the mode captions.
 		return Vector2(CROSS_ARM + 22.0, 92.0)
+	if size.x < NARROW_W:
+		# No room beside the compass: a fixed panel on the left, just above the read-out,
+		# where no contact marker or the ring sits.
+		return Vector2(CROSS_ARM + 22.0, size.y - READOUT_H - CROSS_ARM - 20.0)
 	var x: float = clampf(size.x / 2.0, 440.0, maxf(440.0, size.x - 360.0))
 	return Vector2(x, size.y - 72.0)
 
@@ -349,12 +357,18 @@ func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
 			tries.append(Rect2(Vector2(x, right.position.y), right.size))
 		for y: float in [a.position.y - h - 2.0, a.end.y + 2.0]:
 			tries.append(Rect2(Vector2(right.position.x, y), right.size))
+		# Beside a reserved box, nudged up or down off its neighbours.
+		for x: float in [a.position.x - w - 4.0, a.end.x + 4.0]:
+			for k: int in [-2, -1, 1, 2]:
+				tries.append(Rect2(Vector2(x, right.position.y + k * h), right.size))
 	var marker: Rect2 = Rect2(p - Vector2(r, r) * 1.3, Vector2(r, r) * 2.6)
 	var best: Rect2 = right
 	var best_d: float = INF
 	var inside: Rect2 = Rect2(Vector2.ZERO, size)
 	for t: Rect2 in tries:
 		if _hits(t, avoid) or t.intersects(marker) or not inside.encloses(t):
+			continue
+		if not _leader_clear(p, t, avoid):
 			continue
 		if t.get_center().distance_to(p) < best_d:
 			best_d = t.get_center().distance_to(p)
@@ -372,13 +386,39 @@ func reserved() -> Array[Rect2]:
 	out.append(Rect2(c - Vector2(2.0 * COMPASS_R, COMPASS_R), Vector2(4.0, 2.0) * COMPASS_R))
 	out[-1].size.y += 24.0
 	# The flight read-out: mode, speed, active modes and the three bars.
-	out.append(Rect2(Vector2(14.0, size.y - 168.0), Vector2(262.0, 130.0)))
+	out.append(Rect2(Vector2(14.0, size.y - READOUT_H), Vector2(262.0, 130.0)))
 	out.append(thrust_rect())
 	return out
 
 
 func _compass_centre() -> Vector2:
 	return Vector2(300.0, size.y - COMPASS_R - 40.0)
+
+
+## True when the leader from `p` to the label `box` crosses none of `avoid` (a box that
+## holds `p` itself doesn't count).
+static func _leader_clear(p: Vector2, box: Rect2, avoid: Array[Rect2]) -> bool:
+	var tip: Vector2 = Vector2(
+		clampf(p.x, box.position.x, box.end.x), clampf(p.y, box.position.y, box.end.y)
+	)
+	for a: Rect2 in avoid:
+		if a.has_point(p):
+			continue
+		if a.has_point(tip):
+			return false
+		var corners: Array[Vector2] = [
+			a.position,
+			Vector2(a.end.x, a.position.y),
+			a.end,
+			Vector2(a.position.x, a.end.y),
+		]
+		for i: int in 4:
+			if (
+				Geometry2D.segment_intersects_segment(p, tip, corners[i], corners[(i + 1) % 4])
+				!= null
+			):
+				return false
+	return true
 
 
 static func _hits(box: Rect2, others: Array[Rect2]) -> bool:

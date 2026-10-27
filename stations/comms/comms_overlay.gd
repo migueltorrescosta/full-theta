@@ -255,13 +255,26 @@ func _layout() -> void:
 	var body: Vector2 = font.get_multiline_string_size(
 		_body(), HORIZONTAL_ALIGNMENT_LEFT, w - 2.0 * PAD, FONT_SIZE
 	)
-	var h: float = PAD + 24.0 + body.y + 12.0 + _rows.size() * (ROW_H + 4.0) + 70.0
+	# A row that doesn't fit on a line wraps and grows (a phone's trade offer).
+	var heights: Array[float] = []
+	var rows_h: float = 0.0
+	for row: Dictionary in _rows:
+		var text_h: float = (
+			font
+			. get_multiline_string_size(
+				row_text(row), HORIZONTAL_ALIGNMENT_LEFT, w - 2.0 * PAD - 16.0, FONT_SIZE
+			)
+			. y
+		)
+		heights.append(maxf(ROW_H, text_h + 16.0))
+		rows_h += heights[-1] + 4.0
+	var h: float = PAD + 24.0 + body.y + 12.0 + rows_h + 70.0
 	h = minf(h, size.y - 16.0)
 	_box = Rect2((size.x - w) / 2.0, (size.y - h) / 2.0, w, h)
 	var y: float = _box.position.y + PAD + 24.0 + body.y + 12.0
 	for i: int in _rows.size():
-		_rects.append(Rect2(_box.position.x + PAD, y, w - 2.0 * PAD, ROW_H))
-		y += ROW_H + 4.0
+		_rects.append(Rect2(_box.position.x + PAD, y, w - 2.0 * PAD, heights[i]))
+		y += heights[i] + 4.0
 	queue_redraw()
 
 
@@ -365,14 +378,22 @@ func _draw_row(font: Font, i: int) -> void:
 	draw_rect(r, Palette.color("panel_focus") if i == focus else Palette.color("background"))
 	if i == focus:
 		draw_rect(r, Palette.color("accent"), false, 2.0)
-	draw_string(
+	var text: String = row_text(row)
+	var text_h: float = (
+		font
+		. get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 16.0, FONT_SIZE)
+		. y
+	)
+	draw_multiline_string(
 		font,
 		Vector2(
-			r.position.x + 8.0, r.position.y + (ROW_H + font.get_ascent(FONT_SIZE)) / 2.0 - 3.0
+			r.position.x + 8.0,
+			r.position.y + (r.size.y - text_h) / 2.0 + font.get_ascent(FONT_SIZE)
 		),
-		row_text(row),
-		0,
+		text,
+		HORIZONTAL_ALIGNMENT_LEFT,
 		r.size.x - 16.0,
 		FONT_SIZE,
+		-1,
 		Palette.color("text_dim") if off else Palette.color("text")
 	)

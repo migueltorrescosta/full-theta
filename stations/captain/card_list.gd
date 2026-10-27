@@ -20,8 +20,13 @@ const STATE_ACCEPTED: int = 1
 
 const ROW_HEIGHT: float = 46.0
 const HEADER_HEIGHT: float = 26.0
+const HEADING_H: float = 24.0
+## The rows stop this far from the right edge (a scrollbar can sit there).
+const MARGIN_R: float = 6.0
 const FONT_SIZE: int = 15
 
+## A station's name above the header ("Comms" in a joint view), "" for none.
+var heading: String = ""
 ## Card id shown pinged (the main screen's card); -1 for none.
 var highlight: int = -1
 
@@ -110,23 +115,58 @@ func setup(cards: Array[Dictionary]) -> void:
 	if cards == _cards:
 		return
 	_cards = cards
-	custom_minimum_size = Vector2(0, HEADER_HEIGHT + ROW_HEIGHT * maxi(_cards.size(), 1))
+	_fit()
 	queue_redraw()
+
+
+## Sets the heading, which sits above the header.
+func set_heading(text: String) -> void:
+	if text == heading:
+		return
+	heading = text
+	_fit()
+	queue_redraw()
+
+
+func _top() -> float:
+	return HEADING_H if heading != "" else 0.0
+
+
+func _fit() -> void:
+	custom_minimum_size = Vector2(0, _top() + HEADER_HEIGHT + ROW_HEIGHT * maxi(_cards.size(), 1))
 
 
 ## The id of the card whose row holds `pos` (local), or -1.
 func card_at(pos: Vector2) -> int:
-	var row: int = int(floorf((pos.y - HEADER_HEIGHT) / ROW_HEIGHT))
-	if pos.y < HEADER_HEIGHT or row < 0 or row >= _cards.size() or pos.x < 0.0 or pos.x > size.x:
+	var row: int = int(floorf((pos.y - _top() - HEADER_HEIGHT) / ROW_HEIGHT))
+	if (
+		pos.y < _top() + HEADER_HEIGHT
+		or row < 0
+		or row >= _cards.size()
+		or pos.x < 0.0
+		or pos.x > size.x
+	):
 		return -1
 	return int(_cards[row]["id"])
 
 
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
+	var top: float = _top()
+	var wide: float = size.x - (MARGIN_R if heading != "" else 0.0)
+	if heading != "":
+		draw_string(
+			font,
+			Vector2(0.0, font.get_ascent(FONT_SIZE) + 2.0),
+			heading,
+			0,
+			-1,
+			FONT_SIZE,
+			Palette.color("accent")
+		)
 	draw_string(
 		font,
-		Vector2(0.0, font.get_ascent(FONT_SIZE) + 2.0),
+		Vector2(0.0, top + font.get_ascent(FONT_SIZE) + 2.0),
 		TranslationServer.translate("captain.cards"),
 		0,
 		-1,
@@ -136,7 +176,7 @@ func _draw() -> void:
 	if _cards.is_empty():
 		draw_string(
 			font,
-			Vector2(8.0, HEADER_HEIGHT + font.get_ascent(FONT_SIZE) + 4.0),
+			Vector2(8.0, top + HEADER_HEIGHT + font.get_ascent(FONT_SIZE) + 4.0),
 			TranslationServer.translate("cards.none"),
 			0,
 			-1,
@@ -145,7 +185,7 @@ func _draw() -> void:
 		)
 	for i: int in _cards.size():
 		var c: Dictionary = _cards[i]
-		var r: Rect2 = Rect2(0.0, HEADER_HEIGHT + i * ROW_HEIGHT, size.x, ROW_HEIGHT - 4.0)
+		var r: Rect2 = Rect2(0.0, top + HEADER_HEIGHT + i * ROW_HEIGHT, wide, ROW_HEIGHT - 4.0)
 		if int(c["id"]) == highlight:
 			draw_rect(r, Palette.color("panel_focus"))
 			draw_rect(r, Palette.color("accent"), false, 2.0)
@@ -154,13 +194,13 @@ func _draw() -> void:
 		var base: float = r.position.y + 4.0 + font.get_ascent(FONT_SIZE)
 		var title: String = TranslationServer.translate(str(c["title"]))
 		draw_string(
-			font, Vector2(8.0, base), title, 0, size.x - 80.0, FONT_SIZE, Palette.color("text")
+			font, Vector2(8.0, base), title, 0, wide - 80.0, FONT_SIZE, Palette.color("text")
 		)
 		var time: String = clock(float(c["expires"]))
 		if time != "":
 			var w: float = font.get_string_size(time, 0, -1, FONT_SIZE).x
 			draw_string(
-				font, Vector2(size.x - 8.0 - w, base), time, 0, -1, FONT_SIZE, Palette.color("warn")
+				font, Vector2(wide - 8.0 - w, base), time, 0, -1, FONT_SIZE, Palette.color("warn")
 			)
 		draw_string(
 			font,

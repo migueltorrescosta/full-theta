@@ -17,6 +17,8 @@ signal send_pressed(ship: int)
 ## Contacts and log lines listed (the rest scroll off).
 const CONTACT_ROWS: int = 7
 const LOG_ROWS: int = 4
+## The box's top edge (from the bottom) when it is one row.
+const SHORT_BOX_TOP: float = -58.0
 ## Least width of the log column.
 const LOG_MIN_W: float = 60.0
 
@@ -31,6 +33,11 @@ var send_to: OptionButton
 
 var _left: PanelContainer
 var _narrow: bool = false
+var _short: bool = false
+var _log_col: VBoxContainer
+var _mail_box: BoxContainer
+var _inbox_heading: Label
+var _mail_buttons: HBoxContainer
 var _bottom_row: BoxContainer
 var _bottom: PanelContainer
 var _probes: Label
@@ -86,17 +93,24 @@ func setup(context: StationContext) -> void:
 	log_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# The inbox buttons take what they need; the log wraps in what is left.
 	log_col.custom_minimum_size.x = LOG_MIN_W
+	_log_col = log_col
 	log_col.add_child(_heading("relay.log"))
 	_log = VBoxContainer.new()
 	log_col.add_child(_log)
 	row.add_child(log_col)
-	var mail: VBoxContainer = VBoxContainer.new()
+	var mail: BoxContainer = BoxContainer.new()
+	mail.vertical = true
+	_mail_box = mail
 	mail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mail.add_child(_heading("relay.inbox"))
+	_inbox_heading = _heading("relay.inbox")
+	mail.add_child(_inbox_heading)
 	_mail = Label.new()
 	_mail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_mail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mail.add_child(_mail)
 	var buttons: HBoxContainer = HBoxContainer.new()
+	_mail_buttons = buttons
 	accept = _button(buttons, "Accept", "relay.accept", _on_accept)
 	decline = _button(buttons, "Decline", "relay.decline", _on_decline)
 	send_to = OptionButton.new()
@@ -158,9 +172,29 @@ func set_narrow(narrow: bool) -> void:
 	_place(_bottom, [0.0, 1.0, 1.0, 1.0])
 	_bottom.offset_left = 8.0 if narrow else 224.0
 	_bottom.offset_right = -8.0
-	_bottom.offset_top = -170.0 if narrow else -102.0
+	_bottom.offset_top = -170.0 if narrow else (SHORT_BOX_TOP if _short else -102.0)
 	_bottom.offset_bottom = -8.0
 	_narrow = narrow
+	_fit_left()
+
+
+## A short HUD (a phone on its side): the log goes and the inbox shrinks to one row, so
+## the box stops covering the map's lower part.
+func set_short(short: bool) -> void:
+	_short = short
+	_log_col.visible = not short
+	_inbox_heading.visible = not short
+	_mail_box.vertical = not short
+	_mail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if not short else TextServer.AUTOWRAP_OFF
+	_mail.clip_text = short
+	_mail.text_overrun_behavior = (
+		TextServer.OVERRUN_TRIM_ELLIPSIS if short else TextServer.OVERRUN_NO_TRIMMING
+	)
+	_mail.custom_minimum_size.x = 60.0 if short else 0.0
+	_show_mail()
+	_mail_buttons.size_flags_vertical = (Control.SIZE_SHRINK_CENTER if short else Control.SIZE_FILL)
+	if not _narrow:
+		_bottom.offset_top = SHORT_BOX_TOP if short else -102.0
 	_fit_left()
 
 
@@ -173,7 +207,7 @@ func bottom_top() -> float:
 ## its content (tap-sized buttons, a wrapped inbox), instead of lying over the contacts.
 func _fit_left() -> void:
 	if not _narrow:
-		_left.offset_bottom = -110.0
+		_left.offset_bottom = SHORT_BOX_TOP - 8.0 if _short else -110.0
 		return
 	# 24 px stay free for the map's span caption.
 	_left.offset_bottom = clampf(_bottom.position.y - 30.0, 64.0, 230.0)
@@ -277,6 +311,11 @@ func _fill_log() -> void:
 		_log.add_child(_wrapped(log_text(e)))
 
 
+## One row has no room for "No marks waiting": the disabled buttons say it.
+func _show_mail() -> void:
+	_mail.visible = not (_short and ctx != null and ctx.crew.inbox.is_empty())
+
+
 func _fill_inbox() -> void:
 	var item: Dictionary = {} if ctx.crew.inbox.is_empty() else ctx.crew.inbox[0]
 	if item.is_empty():
@@ -284,6 +323,7 @@ func _fill_inbox() -> void:
 	else:
 		var more: String = " +%d" % (ctx.crew.inbox.size() - 1) if ctx.crew.inbox.size() > 1 else ""
 		_mail.text = tr("relay.inbox_item") % [item["name"], item["from"]] + more
+	_show_mail()
 	accept.disabled = item.is_empty()
 	decline.disabled = item.is_empty()
 	var targets: Array = allies()

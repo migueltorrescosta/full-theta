@@ -10,9 +10,18 @@ extends HFlowContainer
 signal share_pressed(feature: StringName)
 
 const BUTTON_H: float = 44.0
+## A fine pointer needs less (a short window).
+const SHORT_H: float = 36.0
 
-## The least width of a button; a phone's narrow column wraps the label (D195).
-var min_width: float = 200.0:
+## The button height; a fine pointer's short window uses SHORT_H.
+var button_h: float = BUTTON_H:
+	set(value):
+		button_h = value
+		for b: Button in _buttons.values():
+			b.custom_minimum_size.y = value
+
+## The least width of a button: wide enough for the longest label on a line (D195).
+var min_width: float = 260.0:
 	set(value):
 		min_width = value
 		for b: Button in _buttons.values():
@@ -53,7 +62,7 @@ func show_features(shown: Array[StringName], left: Dictionary) -> void:
 		_buttons.clear()
 		for id: StringName in shown:
 			var b: Button = Button.new()
-			b.custom_minimum_size = Vector2(min_width, BUTTON_H)
+			b.custom_minimum_size = Vector2(min_width, button_h)
 			b.focus_mode = Control.FOCUS_NONE
 			b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			b.pressed.connect(func() -> void: share_pressed.emit(id))

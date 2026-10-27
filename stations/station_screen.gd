@@ -24,6 +24,12 @@ const UNBLOCKED: Array[String] = ["menu", "overlay"]
 ## Panel column width and radar size (before UI scale).
 const SIDE_WIDTH: float = 340.0
 const RADAR_HEIGHT: float = 300.0
+## A short or narrow viewport (a 720p window at 150 % UI scale is 853 x 480) gets a
+## smaller radar and a narrower column, so the share buttons fit under it and Relay's map
+## keeps its width.
+const SHORT_H: float = 560.0
+const SHORT_RADAR: float = 220.0
+const SHORT_SIDE_WIDTH: float = 280.0
 const TOP_BAR_HEIGHT: float = 40.0
 ## The bar of the touch layouts: tap-sized alert chip and sound button (D194).
 const TOUCH_BAR_HEIGHT: float = 52.0
@@ -37,6 +43,7 @@ const PHONE_SIDE_WIDTH: float = 180.0
 ## Least height of a docked panel: top bar, radar and one docked panel fit 720p at
 ## 150 % UI scale (480 px), so the screen never grows past the window.
 const DOCK_MIN_HEIGHT: float = 120.0
+const SCROLL_BAR_W: float = 14.0
 ## More panels than this (the dev seat's six) get a tab strip; Shift + 1..9 picks a panel
 ## (the bare digits and Alt + digit belong to the stations' own keys).
 const TABS_FROM: int = 3
@@ -532,6 +539,8 @@ func _build() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# A wide bar shows at a glance that the column scrolls.
+	scroll.get_v_scroll_bar().custom_minimum_size.x = SCROLL_BAR_W
 	_side.add_child(scroll)
 	_extras = VBoxContainer.new()
 	_extras.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -584,17 +593,23 @@ func _relayout() -> void:
 	top_bar.set_compact(two_rows, bar, phone)
 	top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0)
 	var disc: float = RADAR_HEIGHT
+	var short: bool = size_now.y < SHORT_H and not phone
 	if phone:
 		disc = PHONE_RADAR
+	elif short:
+		disc = SHORT_RADAR
 	_side.custom_minimum_size = Vector2.ZERO
 	if portrait:
 		radar.custom_minimum_size = Vector2(disc, disc)
 		_side.custom_minimum_size.y = disc
 	else:
 		var width: float = PHONE_SIDE_WIDTH if phone else SIDE_WIDTH
+		if short and size_now.x < COMPACT_WIDTH:
+			width = SHORT_SIDE_WIDTH
 		radar.custom_minimum_size = Vector2(width, disc if not phone else width)
 		_side.custom_minimum_size.x = width
-	share_bar.min_width = 110.0 if phone else 200.0
+	share_bar.min_width = 150.0 if phone else 260.0
+	share_bar.button_h = ShareBar.SHORT_H if short and not touch else ShareBar.BUTTON_H
 	var top: float = top_bar.custom_minimum_size.y + 8.0
 	toasts.offset_top = top
 	toasts.offset_bottom = top

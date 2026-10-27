@@ -76,13 +76,21 @@ func _section(key: String, ids: Array[String]) -> void:
 			"section": key, "id": id, "label": tr(IntentTable.label_key(id)), "keys": keys
 		}
 		_rows.append(row)
-		grid.add_child(_label(row["label"], "text", 0))
-		grid.add_child(_label(keys, "accent", 0))
+		grid.add_child(_wrapped(row["label"], "text"))
+		grid.add_child(_wrapped(keys, "accent"))
 	if grid.get_child_count() == 0:
 		grid.free()
 		return
 	_list.add_child(_label(tr(key), "text_dim", 0))
 	_list.add_child(grid)
+
+
+## A label that wraps in its column instead of widening the list (a phone).
+static func _wrapped(text: String, role: String) -> Label:
+	var l: Label = _label(text, role, 0)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return l
 
 
 static func _label(text: String, role: String, font_size: int) -> Label:
