@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## Encounter pacing (E07, FT-MIS-025, FT-MIS-027, D231): an encounter is PENDING until the
 ## ship arrives at its site or the arrival timeout passes, then ACTIVE; one encounter is
-## open per ship; the run is won after RunDef.encounters of them.
+## open per ship; the director closes the run after RunDef.min_encounters of them, and it is won.
 
 const TIMEOUT_S: float = 2.0
 
@@ -155,11 +155,20 @@ func test_a_destroyed_ship_loses_its_encounter() -> void:
 
 
 # FT: FT-MIS-001, FT-MIS-025
-func test_the_run_is_won_after_its_encounters() -> void:
-	var w: SimWorld = _world()
+# Q4, owner 2026-10-26: the run is won when the director closes it (CloseRunCommand), which
+# the sim accepts only after RunDef.min_encounters and which wins once the ship is in none.
+func test_the_run_is_won_when_the_director_closes_it_after_the_fewest_encounters() -> void:
+	var run: RunDef = ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), TIMEOUT_S, 1.0, 2, 3)
+	var w: SimWorld = ApiFixture.world(1, run)
 	for n: int in 2:
 		assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.NONE)
 		_begin(w, -1)
+		var close: CloseRunCommand = CloseRunCommand.new()
+		close.ship = 0
+		w.submit(close)
+		w.step()
+		# Closing needs the fewest encounters played, and an open encounter keeps the ship in.
+		assert_bool(close.accepted).is_false()
 		var end: EndEncounterCommand = EndEncounterCommand.new()
 		end.encounter = n
 		end.result = EncounterTable.Result.WON
@@ -167,7 +176,20 @@ func test_the_run_is_won_after_its_encounters() -> void:
 		w.step()
 	w.step()
 	assert_int(w.run.encounters_done[0]).is_equal(2)
+	assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.NONE)
+	var closing: CloseRunCommand = CloseRunCommand.new()
+	closing.ship = 0
+	w.submit(closing)
+	w.step()
+	w.step()
+	assert_bool(closing.accepted).is_true()
+	assert_int(w.run.closed[0]).is_equal(1)
 	assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.WIN)
+	var again: CloseRunCommand = CloseRunCommand.new()
+	again.ship = 0
+	w.submit(again)
+	w.step()
+	assert_bool(again.accepted).is_false()
 
 
 # FT: FT-MIS-025

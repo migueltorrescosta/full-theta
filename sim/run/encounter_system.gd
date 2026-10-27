@@ -6,15 +6,18 @@ extends RefCounted
 ## 1. A PENDING encounter turns ACTIVE when one of its ships is at the site (inside the
 ##    site's radius), or when the arrival timeout has passed since it opened (D231).
 ##    &"encounter_start" is emitted (ship_id the first ship, value the id, tag the scenario).
-## 2. In an ACTIVE encounter, a ship whose jump this tick (&"jump_arrive") took it out of
-##    the encounter's site while a live ship of a hostile faction detects it has fled
-##    (D233): its bit joins fled_mask, it leaves the encounter, and the flee cost is
-##    charged. A jump that leaves unseen is not fleeing and the ship stays in the encounter.
+## 2. In an ACTIVE encounter, a ship whose jump arrives this tick (&"jump_arrive") away from
+##    the encounter's site, and that a live ship of a hostile faction detected when the jump
+##    started (HelmTable.jump_seen_by), has fled (D233): its bit joins fled_mask, it leaves
+##    the encounter, and the flee cost is charged. Where the jump started doesn't matter,
+##    as fights happen at 9 to 12 km and the site is 3 to 5 km wide (review 2 M3). A jump
+##    that started unseen, or ends at the site, is not fleeing and the ship stays.
 ## 3. A ship destroyed or abandoned leaves the encounter as a loss. When every ship has
 ##    left (lost or fled) the encounter ends LOST, or FLED when none was lost.
 ## A scenario ends an encounter itself with EndEncounterCommand (finish()). The run is won
-## once a crewed ship has been through RunDef.encounters encounters and is in none
-## (run_complete(), read by OutcomeSystem).
+## once the director has closed it for a crewed ship (CloseRunCommand, after at least
+## RunDef.min_encounters) and the ship is in no encounter (run_complete(), read by
+## OutcomeSystem; Q4, owner 2026-10-26).
 
 
 static func step(world: SimWorld) -> void:
@@ -22,7 +25,7 @@ static func step(world: SimWorld) -> void:
 	var count: int = table.size()
 	if count == 0:
 		return
-	var jumped: Dictionary[int, int] = _jumped_this_tick(world)
+	var jumped: Dictionary[int, bool] = _jumped_this_tick(world)
 	for id: int in count:
 		var result: int = table.result[id]
 		if result > EncounterTable.Result.ACTIVE:
@@ -48,13 +51,9 @@ static func finish(world: SimWorld, id: int, result: EncounterTable.Result) -> v
 	world.emit(&"encounter_end", first, id, result, Vector3.ZERO, _scenario(world, id))
 
 
-## Whether the crewed ship has been through all of the run's encounters and is in none.
+## Whether the director has closed the crewed ship's run and the ship is in no encounter.
 static func run_complete(world: SimWorld, ship: int) -> bool:
-	return (
-		world.run_def != null
-		and world.run.encounter[ship] < 0
-		and world.run.encounters_done[ship] >= world.run_def.encounters
-	)
+	return world.run_def != null and world.run.encounter[ship] < 0 and world.run.closed[ship] == 1
 
 
 ## Charges a fled ship the FleeCostDef (D233): credits (all it has, when it holds less) and
@@ -94,7 +93,7 @@ static func _arrived(world: SimWorld, id: int) -> bool:
 	return false
 
 
-static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, int]) -> void:
+static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, bool]) -> void:
 	var table: EncounterTable = world.encounters
 	var site: int = table.site[id]
 	if site < 0 or jumped.is_empty():
@@ -102,12 +101,9 @@ static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, int]) 
 	for ship: int in _ships(table.ships_mask[id]):
 		if world.run.encounter[ship] != id or not jumped.has(ship):
 			continue
-		# Only a jump that starts at the encounter's site is leaving it.
-		if jumped[ship] != site:
-			continue
 		if SiteTable.at_site(world, ship) == site:
 			continue
-		var seen_by: int = _hostile_seeing(world, ship)
+		var seen_by: int = world.helm.jump_seen_by[ship]
 		if seen_by < 0:
 			continue
 		table.fled_mask[id] |= 1 << ship
@@ -142,7 +138,7 @@ static func _leave(world: SimWorld, ship: int) -> void:
 
 
 ## The id of a live ship of a faction hostile to the ship's that detects it, or -1.
-static func _hostile_seeing(world: SimWorld, ship: int) -> int:
+static func hostile_seeing(world: SimWorld, ship: int) -> int:
 	var faction: int = world.faction_of(ship)
 	for o: int in world.ship_count():
 		if o == ship or not world.kin.is_alive(o):
@@ -154,15 +150,14 @@ static func _hostile_seeing(world: SimWorld, ship: int) -> int:
 	return -1
 
 
-## Ships that emitted &"jump_arrive" during this tick (events of the tick being stepped),
-## each with the site id it jumped from (-1: none).
-static func _jumped_this_tick(world: SimWorld) -> Dictionary[int, int]:
-	var out: Dictionary[int, int] = {}
+## Ships that emitted &"jump_arrive" during this tick (events of the tick being stepped).
+static func _jumped_this_tick(world: SimWorld) -> Dictionary[int, bool]:
+	var out: Dictionary[int, bool] = {}
 	var events: Array[SimEvent] = world.events
 	var i: int = events.size() - 1
 	while i >= 0 and events[i].tick == world.tick:
 		if events[i].kind == &"jump_arrive":
-			out[events[i].ship_id] = String(events[i].tag).to_int()
+			out[events[i].ship_id] = true
 		i -= 1
 	return out
 

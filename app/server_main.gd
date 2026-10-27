@@ -348,7 +348,6 @@ func _director_factory(setup: RunSetup) -> Callable:
 			ScenarioCatalogue.load_for(setup.run_def.scenarios),
 			seed_value
 		)
-		d.encounters_per_run = setup.run_def.encounters
 		return d
 
 

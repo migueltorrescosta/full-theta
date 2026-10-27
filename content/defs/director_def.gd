@@ -6,6 +6,9 @@ extends Resource
 ## the budget numbers and the pacing are placeholders for #13 to tune. Read-only at
 ## runtime (FT-ARC-020). Units are SI (FT-DAT-013).
 
+## The one scenario that costs nothing (the Shakedown, FT-MIS-039).
+const TRAINING: StringName = &"shakedown"
+
 @export var id: StringName = &""
 ## Threat budget per crewed ship by preset name (threat-cost points, FT-MIS-029).
 @export var budget_per_ship: Dictionary[StringName, int] = {}
@@ -19,6 +22,10 @@ extends Resource
 @export var arrival_timeout_s: float = 0.0
 ## Scenario id -> threat cost override, for #13's tuning (points).
 @export var costs: Dictionary[StringName, int] = {}
+## Enemy strength by preset name: the multiplier a hostile scenario applies to its enemy count
+## (enemy_wave, rescue), rounded, at least 1 enemy. A preset missing here counts 1.0
+## (Q14, owner 2026-10-26; PROVISIONAL numbers for #13).
+@export var strength_per_preset: Dictionary[StringName, float] = {}
 
 
 func validate() -> Array[String]:
@@ -35,6 +42,11 @@ func validate() -> Array[String]:
 	if max_open_sites < 0:
 		errors.append("max_open_sites must be at least 0, got %d" % max_open_sites)
 	for scenario: StringName in costs:
-		if costs[scenario] < 0:
-			errors.append("costs[%s] must be at least 0" % scenario)
+		# Every scenario costs at least 1; only the training scenario is free (Q14).
+		var least: int = 0 if scenario == TRAINING else 1
+		if costs[scenario] < least:
+			errors.append("costs[%s] must be at least %d" % [scenario, least])
+	for preset: StringName in strength_per_preset:
+		if not strength_per_preset[preset] > 0.0:
+			errors.append("strength_per_preset[%s] must be > 0" % preset)
 	return errors

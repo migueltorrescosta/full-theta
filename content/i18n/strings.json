@@ -306,6 +306,7 @@
     "director.reason.periodic": {"en": "Opened {site} on schedule", "pt_PT": "Abriu {site} conforme o calendário", "it": "Aperto {site} come da programma"},
     "director.reason.rejected": {"en": "The encounter was refused, cost given back", "pt_PT": "O encontro foi recusado, custo devolvido", "it": "L'incontro è stato rifiutato, costo restituito"},
     "director.reason.run_length": {"en": "Run length reached after {encounters} encounters", "pt_PT": "Duração da missão atingida após {encounters} encontros", "it": "Durata della missione raggiunta dopo {encounters} incontri"},
+    "director.reason.budget_spent": {"en": "Threat budget spent after {encounters} encounters", "pt_PT": "Orçamento de ameaça gasto após {encounters} encontros", "it": "Budget di minaccia esaurito dopo {encounters} incontri"},
     "overlay.common": {"en": "Everywhere", "pt_PT": "Em todo o lado", "it": "Ovunque"},
     "overlay.title": {"en": "Controls", "pt_PT": "Controlos", "it": "Comandi"},
     "overlay.toggle": {"en": "(toggle)", "pt_PT": "(alternar)", "it": "(alterna)"},

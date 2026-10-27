@@ -60,6 +60,9 @@ var jump_target: PackedInt32Array = PackedInt32Array()
 var jump_x: PackedFloat64Array = PackedFloat64Array()
 var jump_y: PackedFloat64Array = PackedFloat64Array()
 var jump_z: PackedFloat64Array = PackedFloat64Array()
+## The ship of a hostile faction that detected this ship when its jump started, or -1: the
+## encounter system reads it at arrival to tell a flight from a hop (D233, review 2 M3).
+var jump_seen_by: PackedInt32Array = PackedInt32Array()
 ## Site id the ship is docked at, or -1 (FT-HLM-013).
 var docked_site: PackedInt32Array = PackedInt32Array()
 
@@ -88,6 +91,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	jump_x.append(0.0)
 	jump_y.append(0.0)
 	jump_z.append(0.0)
+	jump_seen_by.append(-1)
 	docked_site.append(-1)
 
 
@@ -121,6 +125,7 @@ func columns() -> Array:
 			["jump_x", jump_x],
 			["jump_y", jump_y],
 			["jump_z", jump_z],
+			["jump_seen_by", jump_seen_by],
 			["docked_site", docked_site],
 		]
 	)

@@ -9,7 +9,8 @@
 [resource]
 script = ExtResource("1_run")
 id = &"shakedown"
-encounters = 1
+min_encounters = 1
+max_encounters = 1
 scenarios = PackedStringArray("shakedown")
 map = ExtResource("5_map")
 director = ExtResource("2_director")

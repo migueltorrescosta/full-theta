@@ -27,6 +27,9 @@ var outcome: PackedByteArray = PackedByteArray()
 var encounters_done: PackedInt32Array = PackedInt32Array()
 var encounter: PackedInt32Array = PackedInt32Array()
 var fled_count: PackedInt32Array = PackedInt32Array()
+## 1 once the director has closed the ship's run (CloseRunCommand); it then wins when it is in
+## no encounter (EncounterSystem.run_complete, Q4).
+var closed: PackedByteArray = PackedByteArray()
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
@@ -36,6 +39,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	encounters_done.append(0)
 	encounter.append(-1)
 	fled_count.append(0)
+	closed.append(0)
 
 
 func columns() -> Array:
@@ -47,5 +51,6 @@ func columns() -> Array:
 			["encounters_done", encounters_done],
 			["encounter", encounter],
 			["fled_count", fled_count],
+			["closed", closed],
 		]
 	)

@@ -12,14 +12,13 @@ func _catalogue() -> Array[Scenario]:
 	]
 
 
-func _def() -> RunDef:
-	return ApiFixture.run_def(PackedStringArray(["s_a", "s_b", "s_c"]), 1.0, 1.0)
+func _def(fewest: int = 1, most: int = 9) -> RunDef:
+	return ApiFixture.run_def(PackedStringArray(["s_a", "s_b", "s_c"]), 1.0, 1.0, fewest, most)
 
 
-func _run(difficulty: StringName, crew: int = 1, per_run: int = 9) -> Array:
-	var w: SimWorld = ApiFixture.world(crew, _def())
+func _run(difficulty: StringName, crew: int = 1, per_run: int = 9, fewest: int = 1) -> Array:
+	var w: SimWorld = ApiFixture.world(crew, _def(fewest, per_run))
 	var d: Director = Director.new(w.run_def.director, difficulty, _catalogue(), 3)
-	d.encounters_per_run = per_run
 	var host: ScenarioHost = ScenarioHost.new(w)
 	for i: int in TICKS:
 		host.advance(SimWorld.DT * 1.001, d.before_tick)
@@ -67,15 +66,34 @@ func test_spending_never_passes_the_budget_and_a_bigger_budget_buys_more() -> vo
 	assert_int(results[&"hard"]).is_greater(results[&"easy"])
 
 
-# FT: FT-MIS-029
-func test_a_spent_budget_logs_one_skip() -> void:
+# FT: FT-MIS-029, FT-MIS-001
+# Q4, owner 2026-10-26: when nothing fits the budget after the fewest encounters, the
+# director closes the run, once, and the ship wins.
+func test_a_spent_budget_closes_the_run_once() -> void:
 	var out: Array = _run(&"easy")
+	var w: SimWorld = out[0]
 	var d: Director = out[1]
-	var skips: Array[DirectorDecision] = d.decisions().filter(
-		func(x: DirectorDecision) -> bool: return x.kind == DirectorDecision.Kind.SKIP
+	var ends: Array[DirectorDecision] = d.decisions().filter(
+		func(x: DirectorDecision) -> bool: return x.kind == DirectorDecision.Kind.END_RUN
 	)
-	assert_int(skips.size()).is_equal(1)
-	assert_str(skips[0].reason_key).is_equal("director.reason.no_fit")
+	assert_int(ends.size()).is_equal(1)
+	assert_str(ends[0].reason_key).is_equal("director.reason.budget_spent")
+	assert_int(w.run.closed[0]).is_equal(1)
+	assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.WIN)
+
+
+# FT: FT-MIS-029, FT-MIS-001
+# Each pick leaves the budget for the fewest encounters still to play: Easy (6) with costs of
+# 3 to 5 and a fewest of 2 can only pick the 3-point scenario twice, never a 4 then a stuck run.
+func test_picks_leave_budget_for_the_fewest_encounters() -> void:
+	var out: Array = _run(&"easy", 1, 9, 2)
+	var d: Director = out[1]
+	var picks: Array[DirectorDecision] = _picks(d, 0)
+	assert_int(picks.size()).is_equal(2)
+	for p: DirectorDecision in picks:
+		assert_str(String(p.scenario_id)).is_equal("s_b")
+	assert_int((out[0] as SimWorld).run.encounters_done[0]).is_equal(2)
+	assert_int((out[0] as SimWorld).run.outcome[0]).is_equal(RunTable.Outcome.WIN)
 
 
 # FT: FT-MIS-029, FT-MIS-028

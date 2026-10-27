@@ -33,8 +33,9 @@ func errors() -> Array[String]:
 	for t: String in tags:
 		if not TAGS.has(t):
 			out.append("unknown tag %s" % t)
-	if threat_cost < 0:
-		out.append("threat_cost must be at least 0, got %d" % threat_cost)
+	if threat_cost < (0 if training else 1):
+		# Every scenario costs at least 1, so a run's encounters are bounded by its budget (Q14).
+		out.append("threat_cost must be at least 1, got %d" % threat_cost)
 	if duration_s <= 0.0:
 		out.append("duration_s must be positive, got %s" % duration_s)
 	for s: String in stations:

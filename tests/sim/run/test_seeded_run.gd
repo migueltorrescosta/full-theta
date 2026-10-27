@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## The seeded run (L2, FT-MIS-001, FT-MIS-024 to FT-MIS-027): a bot crew plays the director's
-## run on the M3 map: five encounters at named sites of the one cube, reached by impulse flight
-## and by the jump drive, the same run for the same seed.
+## run on the M3 map: four to six encounters (Q4) at named sites of the one cube, reached by
+## impulse flight and by the jump drive, the same run for the same seed.
 
 
 func _won(defs: DefLibrary) -> Dictionary:
@@ -13,12 +13,13 @@ func _won(defs: DefLibrary) -> Dictionary:
 
 
 # FT: FT-MIS-001, FT-MIS-024, FT-MIS-025, FT-MIS-026, FT-MIS-027
-func test_five_encounters_at_named_sites_by_impulse_and_jump() -> void:
+func test_four_to_six_encounters_at_named_sites_by_impulse_and_jump() -> void:
 	var defs: DefLibrary = DefLibrary.new()
 	var r: Dictionary = _won(defs)
 	assert_bool(r.is_empty()).is_false()
 	var rows: Array = r["encounters"]
-	assert_int(rows.size()).is_equal(5)
+	# Q4, owner 2026-10-26: the director picks 4 to 6 encounters by pacing and budget.
+	assert_int(rows.size()).is_between(4, 6)
 	for e: Dictionary in rows:
 		assert_str(e["site_name_key"]).starts_with("site.")
 		assert_bool(e["lost"]).is_false()
@@ -30,7 +31,7 @@ func test_five_encounters_at_named_sites_by_impulse_and_jump() -> void:
 	for d: Dictionary in r["decisions"]:
 		picks += 1 if d["kind"] == "PICK_ENCOUNTER" else 0
 		assert_str(d["reason_key"]).starts_with("director.reason.")
-	assert_int(picks).is_equal(5)
+	assert_int(picks).is_equal(rows.size())
 
 
 # FT: FT-ARC-008

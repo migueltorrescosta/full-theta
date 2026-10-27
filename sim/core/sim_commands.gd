@@ -58,6 +58,7 @@ static var _classes: Dictionary[StringName, GDScript] = _by_kind(
 		BeginEncounterCommand,
 		EndEncounterCommand,
 		AbandonRunCommand,
+		CloseRunCommand,
 		TrainingNextCommand,
 		JumpCommand,
 		DockCommand,

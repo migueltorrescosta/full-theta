@@ -28,7 +28,6 @@ static func play(
 		ScenarioCatalogue.load_for(setup.run_def.scenarios),
 		seed_value
 	)
-	director.encounters_per_run = setup.run_def.encounters
 	var profile: BotProfiles.Profile = BotProfiles.named(profile_name)
 	if jump_share >= 0.0:
 		profile.jump_share = jump_share  # a test's choice of how the trips are flown

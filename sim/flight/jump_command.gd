@@ -47,6 +47,7 @@ func apply(world: SimWorld) -> bool:
 	helm.jump_x[ship_id] = at[0]
 	helm.jump_y[ship_id] = at[1]
 	helm.jump_z[ship_id] = at[2]
+	helm.jump_seen_by[ship_id] = EncounterSystem.hostile_seeing(world, ship_id)
 	var origin: StringName = StringName(str(SiteTable.at_site(world, ship_id)))
 	world.emit(&"jump_spool", ship_id, -1, float(site), Vector3.ZERO, origin)
 	return true

@@ -9,7 +9,8 @@
 [resource]
 script = ExtResource("1_run")
 id = &"m3_run"
-encounters = 5
+min_encounters = 4
+max_encounters = 6
 scenarios = PackedStringArray("enemy_wave", "rescue", "debris_leg")
 map = ExtResource("5_map")
 director = ExtResource("2_director")

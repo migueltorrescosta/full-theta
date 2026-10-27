@@ -16,7 +16,7 @@ const DRONE_HEIGHT: int = 1
 const DRONE_KEY: StringName = &"drone"
 
 var _ship: int = -1
-var _drone: int = -1
+var _drone: ApiHandle
 ## The site nearest the ship when the current drone appeared.
 var _anchor: int = -1
 ## The tick a drone was last asked for, so one spawn is not repeated while it applies.
@@ -48,10 +48,10 @@ func step(api: ScenarioApi) -> void:
 	if _ship < 0 or api.tick() - _asked < ScenarioApi.HZ:
 		return
 	var ship: ShipView = api.ship(_ship)
-	# A rejected spawn leaves the predicted id empty or on another ship (review 2, L5):
-	# the drone is gone unless that id is an in-play ship of the drone's faction.
-	var drone: ShipView = api.ship(_drone)
-	var gone: bool = _drone < 0 or not drone.in_play or drone.faction != DRONE_FACTION
+	# The handle names the real ship: a rejected spawn is gone (review 2 L5).
+	var gone: bool = _drone == null or _drone.rejected()
+	if not gone and not _drone.pending():
+		gone = api.ship(_drone.id()).status != 0
 	if gone or (ship.nearest_site != _anchor and not ship.jumping):
 		_ask(api)
 
