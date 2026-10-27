@@ -109,6 +109,8 @@ func refresh() -> void:
 	map.probes = blk.get("probes", [])
 	map.lanes_on = bool(blk.get("lanes", false))
 	map.routes = ctx.crew.routes
+	# Narrow, the log and inbox box covers the map's bottom edge: the span caption sits above it.
+	map.caption_bottom = hud.bottom_top() if hud.visible and size.x < NARROW_W else -1.0
 	map.queue_redraw()
 	hud.refresh()
 	_hint.text = tr("relay.armed_" + armed) if armed != "" else tr("relay.hint")

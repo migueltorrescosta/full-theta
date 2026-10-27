@@ -86,7 +86,10 @@ func _mode_changed() -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_WINDOW_FOCUS_OUT or what == NOTIFICATION_EXIT_TREE:
+	if (
+		what in [NOTIFICATION_WM_WINDOW_FOCUS_OUT, NOTIFICATION_APPLICATION_FOCUS_OUT]
+		or what == NOTIFICATION_EXIT_TREE
+	):
 		_captured = false
 		_apply_mouse_mode()
 	elif what == NOTIFICATION_ENTER_TREE:
@@ -100,12 +103,14 @@ func _notification(what: int) -> void:
 func _process(_delta: float) -> void:
 	if ctx == null:
 		return
-	# A pause or the end of the run (the outcome card, D178) frees the pointer.
-	# a host pause frees the pointer too
+	# A pause, the end of the run (the outcome card, D178) or anything blocking the
+	# screen (the menu on any tab, the alert picker) frees the pointer; only a new left
+	# click in the view takes it back (D183).
 	if (
 		ctx.crew.paused.has(ctx.crew.ship)
 		or ctx.crew.host_paused
 		or ctx.crew.run_over.has(ctx.crew.ship)
+		or _overlay_open()
 	):
 		_captured = false
 	_apply_mouse_mode()
@@ -410,18 +415,38 @@ func _free_pointer() -> void:
 	_captured = false
 
 
+## The screen is blocked by the menu (Controls, Settings, Rebind keys), the outcome card
+## or the alert picker.
+func _overlay_open() -> bool:
+	var node: Node = get_parent()
+	while node != null and not node is StationScreen:
+		node = node.get_parent()
+	return node != null and (node as StationScreen).blocked()
+
+
 ## A click in the view that selected nothing captures the pointer again.
 func _on_gui_input(event: InputEvent) -> void:
 	var mb: InputEventMouseButton = event as InputEventMouseButton
-	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT and focused:
+	if (
+		mb != null
+		and mb.pressed
+		and mb.button_index == MOUSE_BUTTON_LEFT
+		and focused
+		and not _overlay_open()
+	):
 		_captured = true
+
+
+## CAPTURED only while the mouse steers (KB/M); VISIBLE for everything else.
+func mouse_mode_wanted() -> Input.MouseMode:
+	if ctx != null and steering() and ctx.matcher.device == IntentTable.KBM:
+		return Input.MOUSE_MODE_CAPTURED
+	return Input.MOUSE_MODE_VISIBLE
 
 
 func _apply_mouse_mode() -> void:
 	if DisplayServer.get_name() == "headless" or not is_inside_tree():
 		return
-	var want: Input.MouseMode = Input.MOUSE_MODE_VISIBLE
-	if ctx != null and steering() and ctx.matcher.device == IntentTable.KBM:
-		want = Input.MOUSE_MODE_CAPTURED
+	var want: Input.MouseMode = mouse_mode_wanted()
 	if Input.mouse_mode != want:
 		Input.mouse_mode = want

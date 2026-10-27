@@ -17,6 +17,8 @@ signal send_pressed(ship: int)
 ## Contacts and log lines listed (the rest scroll off).
 const CONTACT_ROWS: int = 7
 const LOG_ROWS: int = 4
+## Least width of the log column.
+const LOG_MIN_W: float = 60.0
 
 var ctx: StationContext
 var launch: Button
@@ -28,6 +30,7 @@ var send: Button
 var send_to: OptionButton
 
 var _left: PanelContainer
+var _narrow: bool = false
 var _bottom_row: BoxContainer
 var _bottom: PanelContainer
 var _probes: Label
@@ -81,6 +84,8 @@ func setup(context: StationContext) -> void:
 	_bottom.add_child(row)
 	var log_col: VBoxContainer = VBoxContainer.new()
 	log_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# The inbox buttons take what they need; the log wraps in what is left.
+	log_col.custom_minimum_size.x = LOG_MIN_W
 	log_col.add_child(_heading("relay.log"))
 	_log = VBoxContainer.new()
 	log_col.add_child(_log)
@@ -100,6 +105,7 @@ func setup(context: StationContext) -> void:
 	send = _button(buttons, "Send", "relay.send", _on_send)
 	mail.add_child(buttons)
 	row.add_child(mail)
+	_bottom.resized.connect(_fit_left)
 	ctx.crew.changed.connect(func(_what: StringName) -> void: refresh())
 	refresh()
 
@@ -154,6 +160,23 @@ func set_narrow(narrow: bool) -> void:
 	_bottom.offset_right = -8.0
 	_bottom.offset_top = -170.0 if narrow else -102.0
 	_bottom.offset_bottom = -8.0
+	_narrow = narrow
+	_fit_left()
+
+
+## Top of the log and inbox box, in the HUD's coordinates (the map's caption sits above it).
+func bottom_top() -> float:
+	return _bottom.position.y
+
+
+## Narrow: the probe and contact column ends above the bottom box, which grows upward with
+## its content (tap-sized buttons, a wrapped inbox), instead of lying over the contacts.
+func _fit_left() -> void:
+	if not _narrow:
+		_left.offset_bottom = -110.0
+		return
+	# 24 px stay free for the map's span caption.
+	_left.offset_bottom = clampf(_bottom.position.y - 30.0, 64.0, 230.0)
 
 
 ## Whether the HUD is shown (not in the docked view).
@@ -249,9 +272,9 @@ func _fill_log() -> void:
 	_clear(_log)
 	var entries: Array = ctx.crew.relay_log.slice(-LOG_ROWS)
 	if entries.is_empty():
-		_log.add_child(_dim(tr("relay.log_empty")))
+		_log.add_child(_wrapped(tr("relay.log_empty")))
 	for e: Dictionary in entries:
-		_log.add_child(_dim(log_text(e)))
+		_log.add_child(_wrapped(log_text(e)))
 
 
 func _fill_inbox() -> void:
@@ -335,6 +358,14 @@ func _dim(text: String) -> Label:
 	l.text = text
 	l.add_theme_color_override("font_color", Palette.color("text_dim"))
 	l.clip_text = true
+	return l
+
+
+## A dim label that wraps in the column instead of clipping.
+func _wrapped(text: String) -> Label:
+	var l: Label = _dim(text)
+	l.clip_text = false
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
 

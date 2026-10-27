@@ -55,6 +55,8 @@ var preview: Dictionary = {}
 ## The controller cursor (px), drawn when cursor_on.
 var cursor: Vector2 = Vector2.ZERO
 var cursor_on: bool = false
+## The y the span caption sits above (the HUD's bottom box), or -1 for the panel's bottom.
+var caption_bottom: float = -1.0
 ## The ship's probes (the RELAY block's rows): {"serial", "deployed", "pos" (
 ## m), "range" (m)}.
 var probes: Array = []
@@ -211,7 +213,8 @@ func _draw() -> void:
 		draw_line(cursor - Vector2(10, 0), cursor + Vector2(10, 0), col, 1.5)
 		draw_line(cursor - Vector2(0, 10), cursor + Vector2(0, 10), col, 1.5)
 	var scale_text: String = tr("relay.span") % _km(span_m)
-	_draw_text(font, Vector2(8.0, size.y - 8.0 - font.get_height(FONT_SIZE)), scale_text, _dim())
+	var base: float = size.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0
+	_draw_text(font, Vector2(8.0, base - font.get_height(FONT_SIZE)), scale_text, _dim())
 
 
 ## Hazard bubbles: the sphere's silhouette is a circle of its radius; a sim plane front

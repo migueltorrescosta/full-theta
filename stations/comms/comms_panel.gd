@@ -22,6 +22,8 @@ extends StationPanel
 ## A stick must pass this to count as a move, and fall under RELEASE to re-arm.
 const STICK_MOVE: float = 0.6
 const STICK_RELEASE: float = 0.3
+## Panels narrower than this (a portrait phone) shrink the button bar.
+const NARROW_BAR: float = 420.0
 ## The reason words a refusal event may carry (comms.refused_<reason>).
 const REFUSALS: Array[String] = [
 	"no_target",
@@ -89,6 +91,7 @@ func _setup() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		_bar.add_child(b)
 		_buttons[spec[0]] = b
+	resized.connect(_fit_bar)
 	_status = Label.new()
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.add_theme_color_override("font_color", Palette.color("text_dim"))
@@ -101,6 +104,28 @@ func _setup() -> void:
 	add_child(overlay)
 	ctx.crew.sim_event.connect(_on_sim_event)
 	refresh(true)
+
+
+## A phone's width (under NARROW_BAR px) keeps the five buttons on one row: smaller text and
+## gaps, so Hold fire doesn't drop to a row of its own.
+func _fit_bar() -> void:
+	var narrow: bool = size.x < NARROW_BAR
+	_bar.add_theme_constant_override("h_separation", 3 if narrow else 6)
+	for b: Button in _buttons.values():
+		if narrow:
+			b.add_theme_font_size_override("font_size", 14)
+			b.add_theme_stylebox_override("normal", _tight(b, "normal"))
+		else:
+			b.remove_theme_font_size_override("font_size")
+			b.remove_theme_stylebox_override("normal")
+
+
+## The button's own style with 6 px side margins.
+func _tight(b: Button, name: String) -> StyleBox:
+	var box: StyleBox = b.get_theme_stylebox(name).duplicate()
+	box.content_margin_left = 6.0
+	box.content_margin_right = 6.0
+	return box
 
 
 func _mode_changed() -> void:

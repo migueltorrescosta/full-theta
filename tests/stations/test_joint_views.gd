@@ -457,3 +457,39 @@ func test_no_key_is_used_by_both_panels_of_any_view() -> void:
 							var msg: String = "%s %s %s: %s" % [entry, focused, device, i]
 							assert_str(target).override_failure_message(msg).is_equal(first)
 							owner_of[i] = target
+
+
+# FT: FT-JNT-001
+# The dev seat (all six stations) shows a tab per station, numbered for Shift + digit, and a
+# one-line hint until the first switch; a tab click or Shift + digit moves the focus.
+func test_the_dev_seat_has_numbered_station_tabs_and_a_hint() -> void:
+	var s: StationScreen = _screen(StationViews.ALL)
+	assert_array(s.panels).has_size(6)
+	var tab: Button = s.find_child("Tab3", true, false) as Button
+	assert_str(tab.text).is_equal("3 Engineering")
+	assert_bool((s.find_child("Tab1", true, false) as Button).button_pressed).is_true()
+	var hint: Label = null
+	for l: Node in s.find_children("*", "Label", true, false):
+		if (l as Label).text.begins_with("Click a tab"):
+			hint = l as Label
+	assert_bool(hint.visible).is_true()
+	assert_str(hint.text).contains("Shift+1 to Shift+6")
+	tab.pressed.emit()
+	assert_int(s.focus_index).is_equal(2)
+	assert_bool(tab.button_pressed).is_true()
+	assert_bool(hint.visible).is_false()
+	assert_bool(s.ctx.settings.tooltip_seen("dev_tabs")).is_true()
+	var k: InputEventKey = InputEventKey.new()
+	k.physical_keycode = KEY_5
+	k.pressed = true
+	k.shift_pressed = true
+	s.feed(k)
+	assert_str(s.focused_station()).is_equal("relay")
+	# Alt + digit stays Relay's main-view switch.
+	_key(s, "4", true, true)
+	assert_str(s.focused_station()).is_equal("relay")
+	# A bare digit stays the focused station's own key.
+	_key(s, "2")
+	assert_str(s.focused_station()).is_equal("relay")
+	# One- and two-panel screens have no strip.
+	assert_object(_screen("tactical").find_child("Tab1", true, false)).is_null()

@@ -37,6 +37,10 @@ const PHONE_SIDE_WIDTH: float = 180.0
 ## Least height of a docked panel: top bar, radar and one docked panel fit 720p at
 ## 150 % UI scale (480 px), so the screen never grows past the window.
 const DOCK_MIN_HEIGHT: float = 120.0
+## More panels than this (the dev seat's six) get a tab strip; Shift + 1..9 picks a panel
+## (the bare digits and Alt + digit belong to the stations' own keys).
+const TABS_FROM: int = 3
+const TAB_HINT_KEY: String = "dev_tabs"
 
 var ctx: StationContext
 ## Station ids of the panels, in order (F1, F2, ...).
@@ -64,6 +68,10 @@ var _side: BoxContainer
 var _body: BoxContainer
 var _extras: VBoxContainer
 var _blocked: bool = false
+## The dev seat's station tabs (one button per panel) and its one-line hint; null when the
+## screen holds one or two panels.
+var _tabs: HFlowContainer
+var _hint: Label
 
 
 ## Builds the screen for the current pick (ctx.crew.entry_def()). Entries without
@@ -96,6 +104,7 @@ func setup(context: StationContext) -> void:
 	add_child(training)
 	training.setup(ctx)
 	Input.joy_connection_changed.connect(_on_joy_changed)
+	_build_tabs()
 	focus(0)
 
 
@@ -138,7 +147,65 @@ func focus(i: int) -> void:
 		training.station = focused_station()
 	radar.orbitable = focused_panel().radar_orbitable()
 	_side.visible = not (panels.size() == 1 and focused_panel().full_screen())
+	if _tabs != null:
+		_show_tabs()
 	_open_first_visit_help()
+
+
+## The dev seat's station switcher: a tab per panel, numbered for Shift + digit, and until the
+## first switch a one-line hint (kept in the first-run tips).
+func _build_tabs() -> void:
+	if panels.size() < TABS_FROM:
+		return
+	_tabs = HFlowContainer.new()
+	_tabs.add_theme_constant_override("h_separation", 4)
+	_tabs.add_theme_constant_override("v_separation", 2)
+	top_bar.get_parent().add_child(_tabs)
+	top_bar.get_parent().move_child(_tabs, top_bar.get_index() + 1)
+	for i: int in panels.size():
+		var b: Button = Button.new()
+		b.name = "Tab%d" % (i + 1)
+		b.toggle_mode = true
+		b.text = "%d %s" % [i + 1, tr("station." + stations[i])]
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(focus.bind(i))
+		_tabs.add_child(b)
+	_hint = Label.new()
+	_hint.text = tr("screen.tabs_hint") % panels.size()
+	_hint.add_theme_color_override("font_color", Palette.color("text_dim"))
+	_hint.visible = not ctx.settings.tooltip_seen(TAB_HINT_KEY)
+	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_tabs.add_child(_hint)
+
+
+## Marks the focused tab; a switch after the first panel retires the hint.
+func _show_tabs() -> void:
+	for i: int in panels.size():
+		(_tabs.get_child(i) as Button).set_pressed_no_signal(i == focus_index)
+	if _hint.visible and focus_index != 0:
+		_hint.visible = false
+		ctx.settings.mark_tooltip_seen(TAB_HINT_KEY)
+		ctx.settings.save()
+
+
+## Shift + 1..N focuses panel N while the tab strip exists.
+func _tab_hotkey(event: InputEvent) -> bool:
+	var k: InputEventKey = event as InputEventKey
+	if (
+		_tabs == null
+		or k == null
+		or not k.pressed
+		or k.echo
+		or not k.shift_pressed
+		or k.alt_pressed
+		or k.ctrl_pressed
+	):
+		return false
+	var i: int = (k.physical_keycode if k.physical_keycode != KEY_NONE else k.keycode) - KEY_1
+	if i < 0 or i >= panels.size():
+		return false
+	focus(i)
+	return true
 
 
 ## Routes one intent event (InputMatcher's dictionary); true when something handled
@@ -156,6 +223,8 @@ func dispatch(ev: Dictionary) -> bool:
 ## also fire a panel binding (LMB is select and Weapons fire, provisional).
 func feed(event: InputEvent) -> void:
 	_update_block()
+	if not _blocked and _tab_hotkey(event):
+		return
 	if event is InputEventMouseMotion and not focused_panel().mouse_steers():
 		return
 	var batch: Array[Dictionary] = ctx.matcher.feed(event, ctx.now_ms())
