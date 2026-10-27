@@ -250,9 +250,9 @@ func test_a_captain_who_left_no_longer_counts() -> void:
 func test_a_missing_drone_is_asked_again() -> void:
 	rig.tick(5)
 	var before: int = rig.world.ship_count()
-	# The drone's id now names nothing (a rejected spawn would leave this): ask again.
+	# The drone's spawn was rejected (its handle says so, Q24): ask again.
 	var scenario: ShakedownScenario = rig.driver._scenario as ShakedownScenario
-	scenario._drone = before + 7
+	scenario._drone = rig.host.api().spawn_at_range(&"no_such_enemy", 2, 0, 1000.0, 12, 0)
 	rig.tick(ScenarioApi.HZ * 2)
 	assert_int(rig.world.ship_count()).is_equal(before + 1)
 
