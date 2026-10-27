@@ -26,6 +26,11 @@ var card: Dictionary = {}
 var hacks: Array = []
 
 
+## The height the card's rows need (a phone scrolls the card in its rail, #28).
+static func content_height() -> float:
+	return 24.0 + 60.0 + 6.0 * ROW_H
+
+
 func set_card(p_callsign: String, p_card: Dictionary, p_hacks: Array) -> void:
 	callsign = p_callsign
 	card = p_card

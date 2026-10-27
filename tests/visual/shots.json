@@ -114,6 +114,14 @@
     {"name": "l5_php_safe_helm", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "insets": [0, 47, 0, 34]}},
     {"name": "l5_phl_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "insets": [47, 0, 47, 21]}},
     {"name": "l5_phl_weapons_free", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "weapons", "insets": [47, 0, 47, 21]}},
-    {"name": "l5_php_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "insets": [0, 47, 0, 34]}}
+    {"name": "l5_php_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_phl_safe_science", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "science", "science": "cards", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_science_scan", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "science", "science": "scan", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_science_hack", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "science", "science": "hack", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_safe_relay", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"entry": "relay", "ping": 3, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_safe_science", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "science", "science": "cards", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_php_safe_science_scan", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "science", "science": "scan", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_php_safe_science_hack", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "science", "science": "hack", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_php_safe_relay", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "relay", "insets": [0, 47, 0, 34]}}
   ]
 }
