@@ -3,8 +3,9 @@
 ## of `entry`), "lobby", "menu" or "menu_web" (the main menu, with or without the Host
 ## section), or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
-## `overlay` (the menu on its Controls tab), `menu_tab` (the menu on that tab), `tooltip`
-## (the first visit: it opens by itself), `strip` (the radar's side strip) and
+## `overlay` (the menu on its Controls tab; `controls_view` picks its view, a ControlsPane.VIEW_),
+## `menu_tab` (the menu on that tab), `tooltip` (the first visit: it
+## opens by itself), `strip` (the radar's side strip) and
 ## `ui_scale` (the window's content scale, FT-STN-013; reset on exit), `claim` (a
 ## claim item the player holds, e.g. "mount:0") and `events` (sim events fed to the
 ## crew model 2 s before the shot, after the screen is built; a payload `vector` given
@@ -20,6 +21,7 @@ var entry: String = "science"
 var selected: int = StationFixture.H2
 var ping: int = -1
 var overlay: bool = false
+var controls_view: String = ""
 var tooltip: bool = false
 ## A menu tab to open (SettingsScreen.TAB_SETTINGS), "" for none.
 var menu_tab: String = ""
@@ -107,6 +109,8 @@ func _ready() -> void:
 			s.radar.side_strip = strip
 			if overlay:
 				s.help_requested.emit()
+				if controls_view != "":
+					menu.controls_pane.show_view(controls_view)
 			if menu_tab != "":
 				menu.open(menu_tab)
 			for e: Dictionary in events:

@@ -1,7 +1,7 @@
 class_name SettingsScreen
 extends PanelContainer
 ## The menu (per client, ClientSettings), one opaque screen with tabs: Controls (only in
-## a session: the live bindings under the seat's role summary, ControlsList; FT-STN-011,
+## a session: the live bindings under the seat's role summary, ControlsPane; FT-STN-011,
 ## FT-STN-012, D185), Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-run
 ## tips again, and comfort FT-STN-017: on/off, roll lock deck / target / reference plane,
 ## "set reference plane to my current deck", reduced field of view; the station cameras
@@ -36,8 +36,10 @@ var capturing: Array = []
 ## Why the last captured input was refused ("" when it wasn't).
 var warning: Label
 var tabs: TabContainer
-## The Controls tab's rows; null outside a session.
+## The Controls tab's text list; null outside a session.
 var controls: ControlsList
+## The Controls tab: the diagrams and the list (ControlsPane); null outside a session.
+var controls_pane: ControlsPane
 
 ## Modifier keys and pad buttons held during a capture, in press order.
 var _held: Array[String] = []
@@ -73,8 +75,8 @@ func setup(p_settings: ClientSettings, in_session: bool) -> void:
 ## Fills the Controls tab for `stations` on `device` under the role summary of `role`.
 func set_controls(bindings: Bindings, stations: Array, device: String, role: String) -> void:
 	_controls_args = [bindings, stations, device, role]
-	if controls != null:
-		controls.build(bindings, stations, device, role)
+	if controls_pane != null:
+		controls_pane.build(bindings, stations, device, role)
 
 
 ## Opens the menu on `tab` (a TAB_ name), or on the tab last used when empty.
@@ -158,11 +160,13 @@ func _build() -> void:
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(tabs)
 	controls = null
+	controls_pane = null
 	if _in_session:
-		controls = ControlsList.new()
-		_tab(TAB_CONTROLS, tr("overlay.title"), controls)
+		controls_pane = ControlsPane.new()
+		controls = controls_pane.list
+		_tab(TAB_CONTROLS, tr("overlay.title"), controls_pane)
 		if not _controls_args.is_empty():
-			controls.build(
+			controls_pane.build(
 				_controls_args[0], _controls_args[1], _controls_args[2], _controls_args[3]
 			)
 	var general: VBoxContainer = VBoxContainer.new()
