@@ -213,6 +213,12 @@ func test_the_npc_line_is_text() -> void:
 		. contains("…")
 		. not_contains("{")
 	)
+	var numbers: Dictionary = CommsData.trade_args(CommsFixture.block(), CommsFixture.OFFER)
+	assert_dict(numbers).is_equal({"count": 20, "price": 500})
+	assert_str(CommsData.line_text("npc.trade_offer", "Kappa", "Kestrel", numbers)).is_equal(
+		"I can let you have 20 spare parts for 500 credits."
+	)
+	assert_dict(CommsData.trade_args(CommsFixture.block(), CommsFixture.HAIL)).is_empty()
 	assert_str(CommsData.line_text("npc.no_such_line", "Kappa", "Kestrel")).is_equal(
 		"npc.no_such_line"
 	)

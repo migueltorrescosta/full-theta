@@ -186,3 +186,22 @@ func test_comfort_locks_the_cockpit_roll_and_narrows_the_view() -> void:
 	s.comfort = false
 	_frame()
 	assert_bool(cam.quaternion.is_equal_approx(own)).is_true()
+
+
+# FT: FT-HLM-004, FT-STN-006
+# A marker's label stays clear of the shield ring, its caption, the compass and the read-out
+# (the "Kappa 4.7 km" marker sat on the caption), wherever the marker is.
+func test_marker_labels_stay_clear_of_the_shield_ring() -> void:
+	_frame()
+	var font: Font = _panel.hud.get_theme_default_font()
+	var reserved: Array[Rect2] = _panel.hud.reserved()
+	var inside: Rect2 = Rect2(Vector2.ZERO, _panel.hud.size)
+	for text: String in ["Kappa 4.7 km", "U3 8.0 km"]:
+		for fx: float in [0.1, 0.35, 0.5, 0.65, 0.8, 0.95]:
+			for fy: float in [0.1, 0.3, 0.5, 0.7, 0.9]:
+				var p: Vector2 = _panel.hud.size * Vector2(fx, fy)
+				var box: Rect2 = _panel.hud.label_rect(font, text, p, 10.0)
+				# A marker so deep in a reserved area that no clear spot fits keeps the default.
+				if inside.encloses(box):
+					for area: Rect2 in reserved:
+						assert_bool(box.intersects(area)).is_false()

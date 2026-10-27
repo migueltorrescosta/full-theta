@@ -457,10 +457,17 @@ func _build() -> void:
 	_body.add_child(_side)
 	radar = DiscRadar.new()
 	_side.add_child(radar)
+	# The column scrolls instead of growing the screen past the viewport (150 % UI scale,
+	# a phone with four share buttons): the radar keeps its size, the rest is reachable.
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_side.add_child(scroll)
 	_extras = VBoxContainer.new()
 	_extras.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_extras.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_side.add_child(_extras)
+	scroll.add_child(_extras)
 	# The share buttons sit above the docked panels, not over them (D217).
 	share_bar = ShareBar.new()
 	share_bar.visible = false

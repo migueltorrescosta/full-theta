@@ -238,7 +238,8 @@ func _body() -> String:
 	var c: Dictionary = card()
 	var node: Dictionary = CommsData.node_of(data, card_id)
 	if not node.is_empty():
-		return CommsData.line_text(str(node["line"]), str(c.get("npc", "")), ship_name)
+		var numbers: Dictionary = CommsData.trade_args(data, card_id)
+		return CommsData.line_text(str(node["line"]), str(c.get("npc", "")), ship_name, numbers)
 	var text: String = TranslationServer.translate(str(c.get("detail", "")))
 	if bool(c.get("conv", false)) and CardList.is_live(c):
 		text += "\n" + TranslationServer.translate("comms.open_hint")

@@ -151,7 +151,7 @@ func _draw() -> void:
 			_draw_marker(font, e, e["selected"])
 		elif e["arrow"]:
 			_draw_arrow(font, e, e["selected"])
-	_draw_compass(font, Vector2(300.0, size.y - COMPASS_R - 40.0))
+	_draw_compass(font, _compass_centre())
 	_draw_readout(font, Vector2(16.0, size.y - 150.0), true)
 	if panel.chase:
 		_text(font, Vector2(16.0, 24.0), tr("helm.chase"), Palette.color("text_dim"))
@@ -204,7 +204,70 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 	if pulse > 0.0:
 		draw_arc(p, r + 10.0 * (1.0 - pulse) + 4.0, 0.0, TAU, 24, Color(col, pulse), 2.0)
 	var text: String = "%s %s" % [e["label"], _range(e["world"].length())]
-	_text(font, p + Vector2(r + 6.0, 5.0), text, col)
+	var at: Rect2 = label_rect(font, text, p, r)
+	if at.position.x != p.x + r + 6.0 or at.position.y != p.y + 5.0 - font.get_ascent(FONT_SIZE):
+		# Moved clear of something: a thin leader keeps it tied to its marker.
+		var tip: Vector2 = Vector2(
+			clampf(p.x, at.position.x, at.end.x), clampf(p.y, at.position.y, at.end.y)
+		)
+		draw_line(p, tip, Color(col, 0.5), 1.0)
+	_text(font, at.position + Vector2(0.0, font.get_ascent(FONT_SIZE)), text, col)
+
+
+## Where a marker's label goes (HUD coordinates): right of the marker, else the nearest spot
+## clear of the marker and of `reserved()`; a label that fits nowhere clear stays on the
+## right.
+func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+	var h: float = font.get_height(FONT_SIZE)
+	var right: Rect2 = Rect2(p + Vector2(r + 6.0, 5.0 - font.get_ascent(FONT_SIZE)), Vector2(w, h))
+	var avoid: Array[Rect2] = reserved()
+	if not _hits(right, avoid):
+		return right
+	var tries: Array[Rect2] = [
+		Rect2(right.position - Vector2(w + 2.0 * r + 12.0, 0.0), right.size),
+	]
+	for a: Rect2 in avoid:
+		for x: float in [a.position.x - w - 4.0, a.end.x + 4.0]:
+			tries.append(Rect2(Vector2(x, right.position.y), right.size))
+		for y: float in [a.position.y - h - 2.0, a.end.y + 2.0]:
+			tries.append(Rect2(Vector2(right.position.x, y), right.size))
+	var marker: Rect2 = Rect2(p - Vector2(r, r) * 1.3, Vector2(r, r) * 2.6)
+	var best: Rect2 = right
+	var best_d: float = INF
+	var inside: Rect2 = Rect2(Vector2.ZERO, size)
+	for t: Rect2 in tries:
+		if _hits(t, avoid) or t.intersects(marker) or not inside.encloses(t):
+			continue
+		if t.get_center().distance_to(p) < best_d:
+			best_d = t.get_center().distance_to(p)
+			best = t
+	return best
+
+
+## What marker labels keep clear of: the panel's shield ring (with its caption), the target
+## compass (with its chip) and the flight read-out.
+func reserved() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if panel != null and panel.ring != null and panel.ring.visible:
+		out.append(panel.ring.get_rect().grow(2.0))
+	var c: Vector2 = _compass_centre()
+	out.append(Rect2(c - Vector2(2.0 * COMPASS_R, COMPASS_R), Vector2(4.0, 2.0) * COMPASS_R))
+	out[-1].size.y += 24.0
+	# The flight read-out: mode, speed, active modes and the three bars.
+	out.append(Rect2(Vector2(14.0, size.y - 168.0), Vector2(262.0, 130.0)))
+	return out
+
+
+func _compass_centre() -> Vector2:
+	return Vector2(300.0, size.y - COMPASS_R - 40.0)
+
+
+static func _hits(box: Rect2, others: Array[Rect2]) -> bool:
+	for o: Rect2 in others:
+		if box.intersects(o):
+			return true
+	return false
 
 
 ## An arrow on the view's edge toward an item off screen or behind (FT-HLM-004).

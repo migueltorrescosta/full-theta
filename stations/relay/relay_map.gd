@@ -133,8 +133,6 @@ func from_own(rel: Vector3) -> Vector3:
 ## The item drawn under `pos` ({"kind", "id"}), or {}: the selected item first, then the
 ## nearest within HIT_PX, then a chip. Point pings are never picked.
 func item_at(pos: Vector2) -> Dictionary:
-	if SiteBanner.rect(get_theme_default_font(), picture.site).has_point(pos):
-		return _ref(picture.site)
 	var layout: Array[Dictionary] = _layout()
 	var best: Dictionary = {}
 	var best_d: float = HIT_PX
@@ -208,7 +206,6 @@ func _draw() -> void:
 			_draw_pulse(project(rel_of(it)), float(it.get("pulse", 0.0)))
 	_draw_probes(font)
 	_draw_preview(font)
-	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
 	if cursor_on:
 		var col: Color = Palette.color("accent")
 		draw_line(cursor - Vector2(10, 0), cursor + Vector2(10, 0), col, 1.5)

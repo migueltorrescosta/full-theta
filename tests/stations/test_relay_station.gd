@@ -339,8 +339,8 @@ func _sites(s: StationScreen) -> void:
 
 
 # FT: FT-SPA-027, FT-SPA-015
-# The scenario's site name is a callout layer on every station: a banner on the radar and
-# on Relay's map, selectable by click.
+# The scenario's site name is a callout layer on every station: a banner on the radar,
+# selectable by click. Relay's map draws none: the radar beside it is always shown.
 func test_site_names_show_on_every_station() -> void:
 	for entry: String in ["relay", "helm", "weapons", "viewer"]:
 		var s: StationScreen = await _screen(entry)
@@ -351,10 +351,11 @@ func test_site_names_show_on_every_station() -> void:
 		assert_dict(s.radar.item_at(box.get_center())).is_equal({"kind": "site", "id": 0})
 	var s: StationScreen = await _screen()
 	_sites(s)
+	# Relay's map draws no second banner: the radar beside it carries the one.
 	var p: RelayPanel = _relay(s)
 	p.refresh()
 	var at: Vector2 = SiteBanner.rect(p.get_theme_default_font(), p.map.picture.site).get_center()
-	assert_dict(p.item_at(at)).is_equal({"kind": "site", "id": 0})
+	assert_dict(p.item_at(at)).is_not_equal({"kind": "site", "id": 0})
 	# Pinging it pulses the banner.
 	_event(
 		s,

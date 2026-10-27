@@ -108,9 +108,23 @@ static func range_text(card_row: Dictionary) -> String:
 	)
 
 
+## The spare parts an offer card's market sells, as the NPC's "{count} for {price}" line
+## quotes them: the whole stock and its price (units times the unit price). {} when the
+## market has no parts row. Only a client that holds the COMMS offers can know the numbers
+## the host speaks (D2 leaves them "..." elsewhere).
+static func trade_args(blk: Dictionary, id: int) -> Dictionary:
+	for o: Dictionary in offers_of(blk, id):
+		if str(o["item"]) == "parts" and int(o["stock"]) > 0:
+			return {"count": int(o["stock"]), "price": int(o["stock"]) * int(o["price"])}
+	return {}
+
+
 ## The NPC's line as text in the session language, its slots filled with the NPC's name and
-## the ship's (other slots show "…"); the line id itself when the dialogue files don't have it.
-static func line_text(line_id: String, npc: String, ship: String) -> String:
+## the ship's and the numbers in `numbers` (other slots show "…"); the line id itself when
+## the dialogue files don't have it.
+static func line_text(
+	line_id: String, npc: String, ship: String, numbers: Dictionary = {}
+) -> String:
 	if _lines == null:
 		_lines = DialogueLines.load_dir()
 	var data: Dictionary = _lines.line(line_id)
@@ -118,8 +132,11 @@ static func line_text(line_id: String, npc: String, ship: String) -> String:
 		return line_id
 	var texts: Dictionary = data.get("text", {})
 	var template: String = str(texts.get(TranslationServer.get_locale(), texts.get("en", line_id)))
-	# Only the names are known here: a number the host fills in while speaking is "…".
+	# A number the host fills in while speaking, which the block doesn't carry, is "…".
 	for slot: String in DialogueLines.slot_order(template):
-		if slot != "npc" and slot != "ship":
+		if slot != "npc" and slot != "ship" and not numbers.has(slot):
 			template = template.replace("{%s}" % slot, "…")
-	return DialogueLines.fill(data, template, {"npc": npc, "ship": ship})
+	var args: Dictionary = numbers.duplicate()
+	args["npc"] = npc
+	args["ship"] = ship
+	return DialogueLines.fill(data, template, args)
