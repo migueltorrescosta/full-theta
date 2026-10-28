@@ -11,6 +11,13 @@ const ROW_GAP: float = 12.0
 ## The bar colour role of each health band (D193: split at 75, 50 and 25 %).
 const BAR_ROLES: Array[String] = ["ok", "warn", "warn", "danger"]
 
+## Space (px) kept free at the top: the phone's view-top row over the Captain's mirror.
+var top: float = 0.0:
+	set(value):
+		if value != top:
+			top = value
+			queue_redraw()
+
 var _model: Dictionary = {}
 
 
@@ -77,7 +84,7 @@ func _draw() -> void:
 		return
 	var font: Font = get_theme_default_font()
 	var x: float = 32.0
-	var y: float = 20.0
+	var y: float = 20.0 + top
 	var w: float = size.x * 0.5 - 2.0 * x
 	y = _bar(font, x, y, w, TranslationServer.translate("status.hull"), _model["hull"])
 	y = _bar(font, x, y, w, TranslationServer.translate("status.shields"), _model["shields"])
@@ -122,7 +129,7 @@ func _draw() -> void:
 		y += font.get_height(FONT_SIZE) + 4.0
 	# Subsystem health on the right.
 	var rx: float = size.x * 0.5 + x
-	var ry: float = 20.0
+	var ry: float = 20.0 + top
 	var sub_head: String = TranslationServer.translate("status.subsystems")
 	draw_string(
 		font,

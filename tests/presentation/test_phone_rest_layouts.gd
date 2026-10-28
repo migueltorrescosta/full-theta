@@ -163,17 +163,21 @@ func test_comms_overlay_pages_its_rows_on_a_phone() -> void:
 
 
 # FT: FT-CPT-001, FT-STN-005
+# The Captain's view buttons sit in the docked left rail (CaptainPhone, design 2.7) and send
+# the main view; the rail and the list panels end above the inset and the gesture band (the
+# mirror, in the phone frame, draws into the band, P28-Band).
 func test_captain_view_buttons_sit_in_the_left_rail() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "captain", LANDSCAPE)
 	var p: CaptainPanel = s.focused_panel()
-	assert_bool(p.touch_layout.left.is_ancestor_of(p.buttons[2])).is_true()
-	assert_bool(p.touch_layout.right.is_ancestor_of(p.cards)).is_true()
-	p.buttons[2].pressed.emit()
+	var tactical: RailButton = p.phone.buttons["view_2"]
+	assert_bool(p.phone.layout.left.is_ancestor_of(tactical)).is_true()
+	assert_bool(p.phone.card_box.is_ancestor_of(p.cards)).is_true()
+	tactical.pressed.emit()
 	assert_array(StationFixture.sent(s.ctx).of("set_main_view")).is_equal([["set_main_view", [2]]])
-	# The mirror (its radar strip and range label) and the lists end above the inset and
-	# the gesture band; the lists scroll instead of growing past it (#28).
+	p.pages.current = 2
+	await _frames(2)
 	var bottom: float = SafeArea.tap_bottom(s)
-	for c: Control in [p.mirror, p.touch_layout.right]:
+	for c: Control in [p.phone.layout.left, p.phone.card_box]:
 		assert_float(c.get_global_rect().end.y).is_less_equal(bottom)
 	_drop(s)
 

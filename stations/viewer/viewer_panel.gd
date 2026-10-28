@@ -17,6 +17,12 @@ extends StationPanel
 ## the screen), target (a camera on the selected contact, else the nearest) and status
 ## (StatusView: hull, shields, subsystems, objectives, alert). `ctx.crew.main_view` holds
 ## it. A card the Captain pinged shows over every view for CARD_MS (FT-CPT-005).
+##
+## On a phone the Viewer stays out of the phone frame (`in_frame` false, #28 follow-up,
+## design 2.8): it pings nothing (the server refuses a viewer's pings, FT-MSC-004), so it
+## gets no view-top row and no long-press. The Captain's mirror keeps its top read-outs (the
+## target caption, the pinged card, the status sheet) under `top_reserve`, which the
+## Captain sets to the part of the view-top row over it.
 
 ## Auto-chase thresholds (PROVISIONAL, approved by the owner in #7).
 const CHASE_ROLL_DEG_S: float = 45.0
@@ -157,6 +163,7 @@ func update_view(delta: float) -> void:
 	_items = ctx.picture().items
 	var ship: Basis = Basis(ctx.interp.own_rotation())
 	if view_id == MainScreen.View.STATUS:
+		status_view.top = top_reserve
 		var captain: Dictionary = ctx.view.blocks.get(StationViews.Section.CAPTAIN, {})
 		status_view.show_model(StatusView.model(status, captain, ctx.ship_def(), ctx.crew.alert))
 	elif view_id != MainScreen.View.TACTICAL:
@@ -322,7 +329,7 @@ func _draw_overlay() -> void:
 		var caption: String = TranslationServer.translate("view.no_target")
 		if not target.is_empty():
 			caption = ChipText.chip(target["label"], target["local"])
-		_text(font, Vector2(16.0, 12.0), caption, Palette.color("text"))
+		_text(font, Vector2(16.0, 12.0 + top_reserve), caption, Palette.color("text"))
 	for it: Dictionary in _items:
 		var world: Vector3 = it["world"]
 		if camera.is_position_behind(world):
@@ -353,7 +360,7 @@ func _draw_card() -> void:
 	if card.is_empty():
 		return
 	var w: float = size.x * CARD_SHARE
-	var rect: Rect2 = Rect2(size.x - w - 24.0, 24.0, w, CARD_FONT * 6.0)
+	var rect: Rect2 = Rect2(size.x - w - 24.0, 24.0 + top_reserve, w, CARD_FONT * 6.0)
 	CardList.draw_card(_card_layer, rect, card, CARD_FONT)
 
 
