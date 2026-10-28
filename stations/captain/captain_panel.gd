@@ -34,6 +34,8 @@ var _left: VBoxContainer
 var _row: Control
 var _cols: BoxContainer
 var _side: VBoxContainer
+## The right rail's lists scroll when they outgrow it (a phone on its side).
+var _lists: ScrollContainer
 
 
 func full_screen() -> bool:
@@ -116,6 +118,14 @@ func _arrange_rails() -> void:
 			add_child(touch_layout)
 			touch_layout.rail(SIDE_LEFT)
 			touch_layout.rail(SIDE_RIGHT).custom_minimum_size.x = PHONE_LISTS_W
+			_lists = ScrollContainer.new()
+			_lists.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+			_lists.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			touch_layout.right.add(_lists)
+			var box: VBoxContainer = VBoxContainer.new()
+			box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			box.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+			_lists.add_child(box)
 		touch_layout.visible = true
 		_scroll.visible = false
 		var gap: MarginContainer = MarginContainer.new()
@@ -127,9 +137,7 @@ func _arrange_rails() -> void:
 			b.reparent(touch_layout.left.box, false)
 			b.custom_minimum_size = Vector2(0, UiTheme.TOUCH_PRIMARY)
 		for c: Control in [chips, cards]:
-			c.reparent(touch_layout.right.box, false)
-		cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		chips.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			c.reparent(_lists.get_child(0), false)
 	else:
 		touch_layout.visible = false
 		_scroll.visible = true
@@ -143,7 +151,6 @@ func _arrange_rails() -> void:
 			b.custom_minimum_size = Vector2(88, 0)
 		for c: Control in [chips, cards]:
 			c.reparent(_side, false)
-		cards.size_flags_vertical = Control.SIZE_FILL
 
 
 ## Narrow: the mirror above the right column, scrolling; wide: side by side.
@@ -163,7 +170,9 @@ func _stack() -> void:
 			b.custom_minimum_size.y = UiTheme.TOUCH_PRIMARY if upright else 0.0
 	var narrow: bool = size.x < NARROW_W
 	_cols.vertical = narrow
-	mirror.custom_minimum_size.y = STACK_MIRROR_H if narrow else 0.0
+	# In the rails the mirror takes the height it gets: never past the bottom inset.
+	var rails: bool = touch_layout != null and touch_layout.visible
+	mirror.custom_minimum_size.y = STACK_MIRROR_H if narrow and not rails else 0.0
 	_side.custom_minimum_size = Vector2(0, STACK_SIDE_H) if narrow else Vector2(SIDE_WIDTH, 0)
 
 

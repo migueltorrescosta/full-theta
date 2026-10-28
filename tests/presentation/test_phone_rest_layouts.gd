@@ -168,6 +168,11 @@ func test_captain_view_buttons_sit_in_the_left_rail() -> void:
 	assert_bool(p.touch_layout.right.is_ancestor_of(p.cards)).is_true()
 	p.buttons[2].pressed.emit()
 	assert_array(StationFixture.sent(s.ctx).of("set_main_view")).is_equal([["set_main_view", [2]]])
+	# The mirror (its radar strip and range label) and the lists end above the inset and
+	# the gesture band; the lists scroll instead of growing past it (#28).
+	var bottom: float = SafeArea.tap_bottom(s)
+	for c: Control in [p.mirror, p.touch_layout.right]:
+		assert_float(c.get_global_rect().end.y).is_less_equal(bottom)
 	_drop(s)
 
 
