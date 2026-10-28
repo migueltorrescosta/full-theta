@@ -29,7 +29,7 @@ const PAGES: Array = [
 				"help.weapons.view",
 				"View: drag to aim, tap to select, hold to ping"
 			],
-			[Rect2(55, 232, 160, 126), "help.weapons.radar", "Radar: tap a blip to select it"],
+			[Rect2(55, 234, 168, 124), "help.weapons.radar", "Radar: tap a blip to select it"],
 			[Rect2(192, 64, 284, 48), "help.weapons.chip", "Target: ‹ › next, tap for more"],
 		],
 	],
@@ -37,7 +37,7 @@ const PAGES: Array = [
 		"page.mounts",
 		"Mounts",
 		[
-			[Rect2(223, 128, 294, 56), "help.weapons.row", "Mount: tap to look through it"],
+			[Rect2(231, 128, 286, 56), "help.weapons.row", "Mount: tap to look through it"],
 			[Rect2(525, 128, 88, 56), "help.weapons.row_claim", "Claim or release that mount"],
 			[Rect2(629, 262, 168, 104), "help.weapons.fire", "FIRE: hold to fire"],
 		],

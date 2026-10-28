@@ -22,9 +22,9 @@ enum Page { FIRE, MOUNTS, CREW }
 
 ## Rail width (px): 152 px of controls inside the rail's padding.
 const RAIL_W: float = 168.0
-## The radar inset (px).
-const RADAR_W: float = 160.0
-const RADAR_H: float = 126.0
+## The radar inset (px): as wide as the rail, so its chips fit beside their blips.
+const RADAR_W: float = 168.0
+const RADAR_H: float = 124.0
 ## The mount card shows two lines.
 const MOUNT_H: float = 64.0
 const FIRE_H: float = 104.0
@@ -281,6 +281,11 @@ func _make_overlays(with_radar: bool) -> void:
 		radar_box.theme_type_variation = "OverlayRail"
 		# A finger on the inset is the radar's (select, range), never the screen's fire.
 		radar_box.add_to_group(TouchInput.GROUP)
+		# The disc fills its panel (the rail's padding would shrink it to fewer chips).
+		var bg: StyleBoxFlat = StyleBoxFlat.new()
+		bg.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
+		bg.set_corner_radius_all(4)
+		radar_box.add_theme_stylebox_override("panel", bg)
 		radar = DiscRadar.new()
 		radar.gui_input.connect(_on_radar_input)
 		radar_box.add_child(radar)
