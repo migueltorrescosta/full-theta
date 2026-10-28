@@ -391,11 +391,14 @@ func _layout() -> Array[Dictionary]:
 			chip = it["label"] if it["kind"] != "contact" else ChipText.chip(it["label"], local)
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
 		if chip != "":
-			rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
-			# Too wide for a small radar (a phone's 180 px column): the label alone.
-			if rect.size.x > _view().size.x - 2.0 * CHIP_MARGIN:
-				chip = it["label"]
+			# A small radar (a phone's 180 px column) drops the range band, then the clock,
+			# until the chip fits beside its blip; the callsign alone may slide over it.
+			var parts: PackedStringArray = chip.split(ChipText.SEP)
+			for n: int in range(parts.size(), 0, -1):
+				chip = ChipText.SEP.join(parts.slice(0, n))
 				rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
+				if rect.position.x > pos.x + BLIP_R or rect.end.x < pos.x - BLIP_R:
+					break
 		(
 			out
 			. append(

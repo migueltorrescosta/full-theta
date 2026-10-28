@@ -182,12 +182,20 @@ func test_weapons_keeps_its_rail_radar_in_a_joint_view() -> void:
 
 
 # FT: FT-STN-002, FT-SPA-007, FT-STN-005
-# The phone's 180 px disc keeps every chip inside it: a chip that would cross the edge
-# moves to the blip's other side or slides in, and one too wide shows the callsign alone.
+# The phone's 180 px disc and Weapons' rail radar keep every chip inside: a chip that would
+# cross the edge moves to the blip's other side, drops its range band and then its clock
+# until it fits beside the blip; only a callsign alone may slide over it.
 func test_small_radar_keeps_chips_inside() -> void:
-	for c: Array in [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]:
-		var s: StationScreen = await _screen(c[0], "engineering", c[1])
+	var cases: Array = [
+		[Vector2i(844, 390), "engineering", LANDSCAPE],
+		[Vector2i(390, 844), "engineering", PORTRAIT],
+		[Vector2i(844, 390), "weapons", LANDSCAPE],
+	]
+	for c: Array in cases:
+		var s: StationScreen = await _screen(c[0], c[1], c[2])
 		var r: DiscRadar = s.radar
+		if c[1] == "weapons":
+			r = (s.focused_panel() as WeaponsPanel).touch().radar
 		assert_float(r.size.x).is_less_equal(StationScreen.PHONE_RADAR + 1.0)
 		var view: Rect2 = Rect2(Vector2.ZERO, r.size)
 		var chips: int = 0
@@ -195,19 +203,18 @@ func test_small_radar_keeps_chips_inside() -> void:
 			if e["chip"] == "":
 				continue
 			chips += 1
-			(
-				assert_bool(view.encloses(e["chip_rect"]))
-				. override_failure_message("%s at %s" % [e["chip"], e["chip_rect"]])
-				. is_true()
-			)
+			var box: Rect2 = e["chip_rect"]
+			var what: String = "%s %s at %s" % [c[1], e["chip"], box]
+			assert_bool(view.encloses(box)).override_failure_message(what).is_true()
+			if (e["chip"] as String).contains(ChipText.SEP):
+				var x: float = (e["pos"] as Vector2).x
+				(
+					assert_bool(box.position.x > x or box.end.x < x)
+					. override_failure_message(what + " covers its blip")
+					. is_true()
+				)
 		assert_int(chips).is_greater(2)
 		_drop(s)
-	# A chip too wide for the disc falls back to the callsign.
-	var radar: DiscRadar = auto_free(DiscRadar.new())
-	radar.size = Vector2(90, 90)
-	var font: Font = radar.get_theme_default_font()
-	var wide: Rect2 = radar._chip_rect(font, "U3 · 11 high · mid", Vector2(80, 40), false)
-	assert_float(wide.position.x).is_greater_equal(DiscRadar.CHIP_MARGIN)
 
 
 # FT: FT-ENG-002, FT-ENG-003, FT-STN-005
