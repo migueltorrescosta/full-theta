@@ -1,4 +1,4 @@
-"""Check every file under assets/ and addons/ against content/provenance.json.
+"""Check every file under assets/, addons/ and content/fonts/ against content/provenance.json.
 
 Fails on a file no manifest entry covers (entries match by path prefix, so
 "addons/gdUnit4/" covers the whole addon), on an entry missing name, source,
@@ -48,7 +48,7 @@ def run(root: Path) -> list[str]:
         if e.get("kind") in CC0_KINDS and e.get("licence") != "CC0-1.0":
             errors.append(f"{e.get('name')}: {e['kind']} must be CC0-1.0, not {e.get('licence')}")
     prefixes = [e["path"] for e in entries if e.get("path")]
-    for base in ("assets", "addons"):
+    for base in ("assets", "addons", "content/fonts"):  # bundled third-party fonts too
         for f in sorted((root / base).rglob("*")):
             rel = f.relative_to(root).as_posix()
             if f.is_file() and rel not in OWN and not any(rel.startswith(p) for p in prefixes):
