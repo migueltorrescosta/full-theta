@@ -383,6 +383,99 @@ func claim_text() -> String:
 	return TouchText.of("eng.touch.claim_crew", "Claim %s") % letter
 
 
+## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
+## the rail (first page only), the view-top row and each page's view.
+static func touch_help() -> Array:
+	var rail: Array = []
+	var what: Array = [
+		["pip_add", "One more pip on the picked part"],
+		["pip_remove", "One pip less"],
+		["tighter", "Focus the shields tighter"],
+		["wider", "Spread the shields wider"],
+		["boost", "Overcharge the engines for a while"],
+		["harden", "Harden the picked part (costs parts)"],
+		["repair", "Send the nearest crew to the picked part"],
+		["cause", "Pick the next cause of its fault"],
+		["probe", "Build a probe for Relay"],
+		["claim", "Take or free a crew"],
+	]
+	for i: int in TOUCH_ACTIONS.size():
+		var a: Array = TOUCH_ACTIONS[i]
+		var r: Rect2 = Rect2(51.0 + (i % 2) * 85.0, 76.0 + floori(i / 2.0) * 56.0, 76.0, 48.0)
+		(
+			rail
+			. append(
+				[
+					r,
+					TouchText.of(a[1], a[2]),
+					TouchText.of("help.eng." + str(what[i][0]), str(what[i][1])),
+				]
+			)
+		)
+	var view: Rect2 = Rect2(223.0, 124.0, 386.0, 236.0)
+	var chip: Array = [
+		Rect2(272.0, 64.0, 288.0, 48.0),
+		TouchText.of("help.chip", "Target"),
+		TouchText.of("help.chip_what", "‹ › change the target; tap it to ping or mark"),
+	]
+	var power: Array = rail.duplicate()
+	power.append(chip)
+	(
+		power
+		. append(
+			[
+				view,
+				TranslationServer.translate("eng.power"),
+				TouchText.of("help.eng.columns", "Tap a column to pick that part"),
+			]
+		)
+	)
+	return [
+		{"page": TranslationServer.translate("eng.power"), "boxes": power},
+		{
+			"page": TouchText.of("eng.touch.ship", "Ship"),
+			"boxes":
+			[
+				[
+					view,
+					TouchText.of("eng.touch.ship", "Ship"),
+					TouchText.of(
+						"help.eng.cutaway",
+						"Drag a crew onto a part to fix it; drag elsewhere to turn"
+					),
+				]
+			],
+		},
+		{
+			"page": TranslationServer.translate("eng.faults"),
+			"boxes":
+			[
+				[
+					view,
+					TranslationServer.translate("eng.faults"),
+					TouchText.of("help.eng.faults", "Faults, repairs and parts")
+				]
+			],
+		},
+		{
+			"page": TouchText.of("page.crew", "Crew"),
+			"boxes":
+			[
+				[
+					Rect2(223.0, 124.0, 189.0, 48.0),
+					TranslationServer.translate("intent.ping"),
+					TouchText.of("help.ping", "Ping the target for the crew"),
+				],
+				[
+					Rect2(420.0, 124.0, 189.0, 48.0),
+					TranslationServer.translate("intent.mark"),
+					TouchText.of("help.mark", "Mark the target"),
+				],
+			],
+		},
+	]
+
+
 ## A rail button's intent, sent as the keyboard or the pad sends it; Claim as the common
 ## claim (K, View+X) does.
 func press_touch(id: String) -> bool:
