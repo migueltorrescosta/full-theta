@@ -6,6 +6,12 @@ const PATH: String = "user://test_client_settings.cfg"
 
 func before() -> void:
 	I18n.apply("en")
+	# The Settings screen's Rebind keys tab: a phone (the headless window) has none.
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+
+
+func after() -> void:
+	LayoutMode.forced = -1
 
 
 func after_test() -> void:
