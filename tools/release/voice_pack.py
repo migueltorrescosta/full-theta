@@ -9,8 +9,9 @@ knows the session language (WebSession, audio/voice_pack.gd reads it). Format:
     {"language": "en", "clips": {"<line id>": [offset, size], ...}},
     then the Ogg files back to back; offsets count from the end of the header.
 
-All integers little-endian. The clips are stored as they are: Ogg Vorbis doesn't
-compress, so there is no .gz copy.
+All integers little-endian. The clips are stored as they are; the pack still
+compresses by a third (gzip or brotli, web_patch.py), as every clip repeats the
+voice's Vorbis setup header.
 """
 
 import json

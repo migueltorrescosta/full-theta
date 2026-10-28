@@ -44,7 +44,7 @@ GUARDED = (
     "ctx.audioWorklet.addModule(path):new Promise(function(){})"
 )
 # Compressed copies (.gz and .br) are written for these.
-GZIP_SUFFIXES = (".html", ".js", ".wasm", ".pck", ".svg", ".json")
+GZIP_SUFFIXES = (".html", ".js", ".wasm", ".pck", ".pack", ".svg", ".json")
 HASHED_SUFFIXES = (".wasm", ".pck", ".audio.worklet.js", ".audio.position.worklet.js")
 KEEPAWAKE = ("keepawake.webm", "keepawake.mp4")
 

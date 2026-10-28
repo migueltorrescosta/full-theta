@@ -128,6 +128,10 @@ def test_provenance_record_matches_the_spec_table():
     assert table("docs/provenance.md") == table("docs/spec/13-licensing-and-provenance.md")
 
 
+# No prerendered clips: a checkout's own audio/prerendered/ would make finish() slow.
+NO_CLIPS = ROOT / "tools/tests/no_such_dir"
+
+
 def make_web(folder, wasm=b"\0asm" * 100):
     (folder / "index.js").write_text("x" + web_patch.UNGUARDED)
     (folder / "index.wasm").write_bytes(wasm)
@@ -140,7 +144,7 @@ def make_web(folder, wasm=b"\0asm" * 100):
 # FT: FT-NET-030
 def test_web_patch_gzip_is_reproducible_and_names_carry_a_content_hash(tmp_path):
     make_web(tmp_path)
-    web_patch.finish(tmp_path)
+    web_patch.finish(tmp_path, NO_CLIPS)
     found = [p.name for p in tmp_path.glob("index.*.wasm.gz")]
     tag = re.fullmatch(r"index\.([0-9a-f]{10})\.wasm\.gz", found[0]) if found else None
     assert tag, sorted(p.name for p in tmp_path.iterdir())
@@ -154,12 +158,12 @@ def test_web_patch_gzip_is_reproducible_and_names_carry_a_content_hash(tmp_path)
     other = tmp_path.parent / (tmp_path.name + "-2")
     other.mkdir()
     make_web(other)
-    web_patch.finish(other)
+    web_patch.finish(other, NO_CLIPS)
     assert (other / f"{name}.gz").read_bytes() == first
     changed = tmp_path.parent / (tmp_path.name + "-3")
     changed.mkdir()
     make_web(changed, wasm=b"\0asm" * 101)
-    web_patch.finish(changed)
+    web_patch.finish(changed, NO_CLIPS)
     assert not (changed / name).exists()
     assert (tmp_path / "keepawake.webm").is_file() and (tmp_path / "keepawake.mp4").is_file()
     assert io.BytesIO(first).read(2) == b"\x1f\x8b"
@@ -288,8 +292,7 @@ def test_web_patch_writes_voice_packs_and_brotli_copies(tmp_path):
     assert voice_pack.read((web / "voice-en.pack").read_bytes()) == ("en", {"npc.hail": b"OggS-en"})
     assert voice_pack.read((web / "voice-it.pack").read_bytes())[0] == "it"
     assert not (web / "voice-scratch.pack").exists()
-    # Ogg doesn't compress: no copies of the packs.
-    assert not list(web.glob("voice-*.pack.*"))
+    assert (web / "voice-en.pack.gz").is_file() and (web / "voice-en.pack.br").is_file()
     for f in web.iterdir():
         if f.suffix in web_patch.GZIP_SUFFIXES:
             assert brotli.decompress(Path(f"{f}.br").read_bytes()) == f.read_bytes(), f.name
