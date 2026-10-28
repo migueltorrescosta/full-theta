@@ -12,7 +12,7 @@ The EE reference clone stays outside the repository (FT-LIC-003): never clone, v
 
 ## Fonts
 
-Godot's default font (Open Sans) lacks a few symbols the UI shows (☰ ▸ ▾ ⚡ ✓ ✕ ⇄), and a browser has no system font to fall back on. `assets/fonts/` holds subsets of Noto Sans Symbols 2 and Noto Sans Math (SIL OFL 1.1, text in `assets/fonts/OFL.txt`), set as fallbacks of the theme font (`UiTheme.font`). Recipe: `pyftsubset <font> --unicodes=<codepoints> --layout-features= --no-hinting`; the codepoints are in each manifest entry. `tests/presentation/test_font_coverage.gd` fails when a UI string uses a character no bundled font covers.
+Godot's default font (Open Sans) lacks a few symbols the UI shows (☰ ▸ ▾ ⚡ ✓ ✕ ⇄), and a browser has no system font to fall back on. `assets/fonts/` holds subsets of Noto Sans Symbols 2 and Noto Sans Math (SIL OFL 1.1, text in `assets/fonts/OFL.txt`), set as fallbacks of the theme font (`UiTheme.font`). Recipe: `pyftsubset <font> --unicodes=<codepoints> --layout-features= --no-hinting`, then the vertical metrics (hhea, OS/2) set to Open Sans's (ascent 1.069 em, descent 0.293 em) so a fallback never changes line heights, and the two small triangles (▸ ▾) scaled 1.7x; the codepoints are in each manifest entry. `tests/presentation/test_font_coverage.gd` fails when a UI string uses a character no bundled font covers.
 
 ## Runtime Piper (GPL aggregation)
 
