@@ -392,3 +392,40 @@ func test_science_and_relay_use_their_rails_in_a_joint_view() -> void:
 		var r: StationScreen = await _screen(c[0], "nav", c[1], 1)
 		assert_object((r.focused_panel() as RelayPanel).phone).is_not_null()
 		_drop(r)
+
+
+# FT: FT-STN-005
+## Weapons' chips stay whole in the view: a contact whose bracket is out of view shows no
+## chip cut at the edge, and a chip near the right edge goes left of its bracket.
+func test_weapons_chips_inside_the_view() -> void:
+	for size: Vector2i in [Vector2i(844, 390), Vector2i(390, 844)]:
+		var s: StationScreen = await _screen(size, "weapons", LANDSCAPE)
+		var w: WeaponsPanel = s.panels[0] as WeaponsPanel
+		w.step(0.016)
+		var view: Rect2 = Rect2(Vector2.ZERO, w._overlay.size)
+		assert_array(w.ctx.picture().items).is_not_empty()
+		for t: Dictionary in w._targets:
+			var r: Rect2 = t["rect"]
+			assert_bool(view.encloses(r)).override_failure_message(
+				"%s: chip %s outside %s" % [size, r, view]
+			).is_true()
+		_drop(s)
+
+
+# FT: FT-STN-005
+## Relay's map chips never cover each other.
+func test_relay_map_chips_do_not_overlap() -> void:
+	for size: Vector2i in [Vector2i(844, 390), Vector2i(390, 844)]:
+		var s: StationScreen = await _screen(size, "relay", LANDSCAPE)
+		var entries: Array[Dictionary] = (s.panels[0] as RelayPanel).map._layout()
+		var rects: Array[Rect2] = []
+		for e: Dictionary in entries:
+			if (e["chip"] as String) != "":
+				rects.append(e["chip_rect"])
+		assert_int(rects.size()).is_greater(1)
+		for i: int in rects.size():
+			for j: int in range(i + 1, rects.size()):
+				assert_bool(rects[i].intersects(rects[j])).override_failure_message(
+					"%s: chips %s and %s overlap" % [size, rects[i], rects[j]]
+				).is_false()
+		_drop(s)

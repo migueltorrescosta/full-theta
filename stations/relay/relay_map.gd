@@ -457,6 +457,16 @@ func _layout() -> Array[Dictionary]:
 			var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 			sz.y = font.get_height(FONT_SIZE)
 			rect = Rect2(Vector2(pos.x + 10.0, pos.y - sz.y / 2.0), sz)
+			# On a phone a chip that would cover an earlier one steps down a line.
+			for _try: int in range(out.size() if _phone() else 0):
+				var hit: bool = false
+				for o: Dictionary in out:
+					var other: Rect2 = o["chip_rect"]
+					if other.has_area() and other.intersects(rect):
+						rect.position.y = other.end.y
+						hit = true
+				if not hit:
+					break
 		(
 			out
 			. append(
@@ -471,6 +481,10 @@ func _layout() -> Array[Dictionary]:
 			)
 		)
 	return out
+
+
+func _phone() -> bool:
+	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 
 
 func _is_selected(it: Dictionary) -> bool:

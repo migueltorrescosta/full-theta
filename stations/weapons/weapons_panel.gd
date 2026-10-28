@@ -67,7 +67,7 @@ var _next_fire: Dictionary = {}
 var _firing: bool = false
 var _firing_all: bool = false
 ## Brackets in view this frame (step), for drawing and item_at: {"item" (ContactPicture's),
-## "pos", "chip", "rect" (bracket and chip)}.
+## "pos", "chip", "chip_at" (its top left), "rect" (bracket and chip)}.
 var _targets: Array[Dictionary] = []
 var _view: SubViewportContainer
 ## The turret camera's view, from the camera mount.
@@ -815,17 +815,27 @@ func _layout_targets() -> void:
 	var font: Font = get_theme_default_font()
 	var rot: Quaternion = ctx.interp.own_rotation()
 	var m: MountDef = ship_def.mounts[mount]
+	var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 	for it: Dictionary in ctx.picture().items:
 		if it["kind"] == "point":
 			continue
 		var p: Variant = project(rot * ((it["local"] as Vector3) - m.position).normalized())
 		if p == null:
 			continue
+		# On a phone a bracket outside the view is not drawn, so its chip never shows cut.
+		var view: Rect2 = Rect2(Vector2.ZERO, _overlay.size).grow(-BRACKET)
+		if phone and view.has_area() and not view.has_point(p as Vector2):
+			continue
 		var chip: String = target_chip(it)
 		var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 		var at: Vector2 = (p as Vector2) + Vector2(BRACKET + 6.0, 4.0 - FONT_SIZE)
+		# Too near the right edge for the chip: it goes to the left of the bracket.
+		if phone and at.x + sz.x > _overlay.size.x:
+			at.x = (p as Vector2).x - BRACKET - 6.0 - sz.x
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
-		_targets.append({"item": it, "pos": p, "chip": chip, "rect": r.merge(Rect2(at, sz))})
+		_targets.append(
+			{"item": it, "pos": p, "chip": chip, "chip_at": at, "rect": r.merge(Rect2(at, sz))}
+		)
 
 
 func _draw_overlay() -> void:
@@ -968,7 +978,7 @@ func _draw_item(font: Font, t: Dictionary) -> void:
 			var q: Vector2 = p + corner * BRACKET
 			_overlay.draw_line(q, q - Vector2(corner.x * 5.0, 0), col, 2.0 if sel else 1.5)
 			_overlay.draw_line(q, q - Vector2(0, corner.y * 5.0), col, 2.0 if sel else 1.5)
-	_text(font, p + Vector2(BRACKET + 6.0, 4.0), t["chip"], col)
+	_text(font, (t["chip_at"] as Vector2) + Vector2(0.0, FONT_SIZE), t["chip"], col)
 	var pulse: float = float(it.get("pulse", 0.0))
 	if pulse > 0.0:
 		var pc: Color = Palette.color("ping")
