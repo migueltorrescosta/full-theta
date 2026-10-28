@@ -4,8 +4,11 @@ extends RefCounted
 ## promoted from spike S3 (docs/spikes/S3.md). The server polls it once per frame
 ## after the tick and the WebSocket pump, with a 400 µs budget (D108).
 ##
-## GET and HEAD only, files from one flat folder. Prefers `<file>.gz` with
-## `Content-Encoding: gzip` when the request accepts gzip. Sends an ETag with
+## GET and HEAD only, files from one flat folder. Prefers `<file>.br` with
+## `Content-Encoding: br` when the request accepts brotli (browsers offer it over HTTPS
+## only), else `<file>.gz` with `Content-Encoding: gzip` when it accepts gzip. With `tls`
+## set it speaks HTTPS (D294): each connection's TLS handshake runs inside poll(), a few
+## steps per call, so one costs a few frames' budgets. Sends an ETag with
 ## `Cache-Control: no-cache`, so a reload revalidates and gets 304. No byte
 ## ranges (#9 re-adds them, and video/mp4, if Safari's keep-awake video needs
 ## them). Keeps connections alive. `poll()` does bounded work: it stops once
@@ -37,6 +40,10 @@ const MIME: Dictionary = {
 class Conn:
 	extends RefCounted
 	var tcp: StreamPeerTCP
+	## The TLS stream over tcp when the server has `tls`, else null.
+	var tls: StreamPeerTLS
+	## What the request is read from and the response written to: tls, or tcp.
+	var peer: StreamPeer
 	var inbuf: PackedByteArray = PackedByteArray()
 	## Bytes of inbuf already searched for the end of the head, so each poll scans
 	## only what arrived since (FT-NET-039: an 8 KiB peer can't cost 8 KiB a frame).
@@ -54,6 +61,10 @@ var root: String = ""
 var slice: int = 65536
 var requests: int = 0
 var gzip_responses: int = 0
+var brotli_responses: int = 0
+## Server certificate and key (TLSOptions.server) for HTTPS, or null for plain HTTP.
+## Set before connections arrive.
+var tls: TLSOptions
 var not_modified: int = 0
 ## 206 responses, and Range requests answered 416.
 var ranges: int = 0
@@ -99,7 +110,7 @@ func open_connections() -> int:
 
 func stop() -> void:
 	for c: Conn in _conns:
-		c.tcp.disconnect_from_host()
+		_close(c)
 	_conns.clear()
 	_tcp.stop()
 
@@ -112,6 +123,13 @@ func poll(budget_us: int) -> void:
 		var c: Conn = Conn.new()
 		c.tcp = _tcp.take_connection()
 		c.tcp.set_no_delay(true)
+		c.peer = c.tcp
+		if tls != null:
+			c.tls = StreamPeerTLS.new()
+			if c.tls.accept_stream(c.tcp, tls) != OK:
+				c.tcp.disconnect_from_host()
+				continue
+			c.peer = c.tls
 		c.last_us = start
 		_conns.append(c)
 	var n: int = _conns.size()
@@ -126,18 +144,24 @@ func poll(budget_us: int) -> void:
 		if not _service(c, start):
 			closed.append(c)
 	for c: Conn in closed:
-		c.tcp.disconnect_from_host()
+		_close(c)
 		_conns.erase(c)
+
+
+static func _close(c: Conn) -> void:
+	if c.tls != null:
+		c.tls.disconnect_from_stream()
+	c.tcp.disconnect_from_host()
 
 
 ## Returns false when the connection should close.
 func _service(c: Conn, now_us: int) -> bool:
-	c.tcp.poll()
-	if c.tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
-		return false
-	var avail: int = c.tcp.get_available_bytes()
+	var ready: int = _readiness(c)
+	if ready <= 0:
+		return ready == 0 and now_us - c.last_us < IDLE_US
+	var avail: int = c.peer.get_available_bytes()
 	if avail > 0:
-		var got: Array = c.tcp.get_partial_data(avail)
+		var got: Array = c.peer.get_partial_data(avail)
 		if got[0] != OK:
 			return false
 		c.inbuf.append_array(got[1])
@@ -162,6 +186,22 @@ func _service(c: Conn, now_us: int) -> bool:
 	return true
 
 
+## 1 when the connection can carry data, 0 while its TLS handshake runs, -1 once closed.
+static func _readiness(c: Conn) -> int:
+	c.tcp.poll()
+	if c.tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+		return -1
+	if c.tls == null:
+		return 1
+	c.tls.poll()
+	match c.tls.get_status():
+		StreamPeerTLS.STATUS_CONNECTED:
+			return 1
+		StreamPeerTLS.STATUS_HANDSHAKING:
+			return 0
+	return -1
+
+
 ## Writes up to `slice` bytes. Returns false when the connection should close.
 func _write(c: Conn) -> bool:
 	var budget: int = slice
@@ -176,7 +216,7 @@ func _write(c: Conn) -> bool:
 				c.writing = false
 				c.file = null
 				return c.keep_alive
-		var res: Array = c.tcp.put_partial_data(c.pending)
+		var res: Array = c.peer.put_partial_data(c.pending)
 		if res[0] != OK:
 			return false
 		var sent: int = res[1]
@@ -212,23 +252,27 @@ func _respond(c: Conn, req: Dictionary) -> void:
 	if name == "" or not FileAccess.file_exists(path):
 		_simple(c, 404, "Not Found", is_get)
 		return
-	var gz: bool = (
-		accepts_gzip(headers.get("accept-encoding", "")) and FileAccess.file_exists(path + ".gz")
-	)
+	var accept: String = headers.get("accept-encoding", "")
+	var encoding: String = ""
+	if accepts(accept, "br") and FileAccess.file_exists(path + ".br"):
+		encoding = "br"
+	elif accepts_gzip(accept) and FileAccess.file_exists(path + ".gz"):
+		encoding = "gzip"
 	var range_header: String = String(headers.get("range", ""))
 	# A byte range is always of the file itself; If-Range with another ETag means the
 	# client's copy is stale, so it gets the whole file.
 	var ranged: bool = range_header != ""
 	if ranged:
-		gz = false
-	var send_path: String = path + ".gz" if gz else path
+		encoding = ""
+	var suffix: String = {"br": ".br", "gzip": ".gz", "": ""}[encoding]
+	var send_path: String = path + suffix
 	var file: FileAccess = FileAccess.open(send_path, FileAccess.READ)
 	if file == null:
 		_simple(c, 404, "Not Found", is_get)
 		return
 	var size: int = file.get_length()
 	var etag: String = (
-		'"%x-%x%s"' % [size, FileAccess.get_modified_time(send_path), "-gz" if gz else ""]
+		'"%x-%x%s"' % [size, FileAccess.get_modified_time(send_path), suffix.replace(".", "-")]
 	)
 	var out: Array[String] = [
 		"Content-Type: " + mime_for(name),
@@ -246,9 +290,12 @@ func _respond(c: Conn, req: Dictionary) -> void:
 	if ranged:
 		_respond_range(c, file, size, out, range_header, is_get)
 		return
-	if gz:
+	if encoding == "gzip":
 		gzip_responses += 1
-		out.append("Content-Encoding: gzip")
+	elif encoding == "br":
+		brotli_responses += 1
+	if encoding != "":
+		out.append("Content-Encoding: " + encoding)
 	out.append("Content-Length: %d" % size)
 	_head(c, 200, "OK", out, size if is_get else 0)
 	if is_get and size > 0:
@@ -385,9 +432,14 @@ static func mime_for(name: String) -> String:
 
 ## True if an Accept-Encoding value accepts gzip (q=0 refuses it).
 static func accepts_gzip(value: String) -> bool:
+	return accepts(value, "gzip")
+
+
+## True if an Accept-Encoding value accepts `coding` (q=0 refuses it).
+static func accepts(value: String, coding: String) -> bool:
 	for item: String in value.to_lower().split(","):
 		var parts: PackedStringArray = item.strip_edges().split(";")
-		if parts[0].strip_edges() == "gzip":
+		if parts[0].strip_edges() == coding:
 			for p: String in parts.slice(1):
 				var kv: String = p.strip_edges().replace(" ", "")
 				if kv.begins_with("q=") and kv.substr(2).to_float() == 0.0:

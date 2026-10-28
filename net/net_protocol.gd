@@ -56,6 +56,8 @@ enum Type {
 	SHIP_TEAM = 42,
 	SESSION_MODE = 43,
 	RELAUNCH = 44,
+	# A client's frame over 500 ms and what ran in it, for the session log (#28).
+	CLIENT_FRAME = 45,
 }
 
 const PROTOCOL_VERSION: int = 8
@@ -69,6 +71,8 @@ const MAX_NAME_BYTES: int = 32
 ## ClientStats limits (D199, D207): pairs per report and bytes of the user agent.
 const MAX_STATS_PAIRS: int = 400
 const MAX_UA_BYTES: int = 200
+## ClientFrame's `what`, cut to this many bytes.
+const MAX_FRAME_WHAT_BYTES: int = 120
 
 ## HelloRejected reasons.
 const REJECT_VERSION: String = "version_mismatch"
@@ -215,6 +219,7 @@ const SCHEMAS: Dictionary = {
 	Type.SHIP_TEAM: {"ship": TYPE_INT, "team": TYPE_INT},
 	Type.SESSION_MODE: {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT},
 	Type.RELAUNCH: {"ship": TYPE_INT, "vote": TYPE_BOOL},
+	Type.CLIENT_FRAME: {"ms": TYPE_INT, "what": TYPE_STRING},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -247,6 +252,7 @@ const FROM_CLIENT: Array[int] = [
 	Type.SHIP_TEAM,
 	Type.SESSION_MODE,
 	Type.RELAUNCH,
+	Type.CLIENT_FRAME,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -276,6 +282,7 @@ const RATED_REQUESTS: Array[int] = [
 	Type.SHIP_TEAM,
 	Type.SESSION_MODE,
 	Type.RELAUNCH,
+	Type.CLIENT_FRAME,
 ]
 
 

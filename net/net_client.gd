@@ -84,10 +84,21 @@ func connect_to(server_url: String) -> Error:
 	_hello_sent = false
 	_arrivals.clear()
 	state = State.CONNECTING
-	var err: Error = _peer.connect_to_url(url)
+	var protocol: String = (
+		str(JavaScriptBridge.eval("location.protocol", true)) if OS.has_feature("web") else ""
+	)
+	var err: Error = _peer.connect_to_url(socket_url(url, protocol))
 	if err != OK:
 		state = State.CLOSED
 	return err
+
+
+## The URL the socket opens: a page served over HTTPS may not open ws://, so the same
+## address goes over wss:// (D294).
+static func socket_url(server_url: String, page_protocol: String) -> String:
+	if page_protocol == "https:" and server_url.begins_with("ws://"):
+		return "wss://" + server_url.trim_prefix("ws://")
+	return server_url
 
 
 ## Reconnects with the stored token: the server returns the same session, pick and
@@ -328,6 +339,13 @@ func answer_chip(id: int, accept: bool) -> void:
 ## with its partner for DataToggles.share_seconds().
 func share(feature: String) -> void:
 	_send(NetProtocol.Type.SHARE, {"feature": feature})
+
+
+## Reports a long frame (`ms`) and what ran in it to the server's session log (#28).
+func report_frame(ms: int, what: String) -> void:
+	if state == State.WELCOMED:
+		var text: String = NetProtocol.clip_utf8(what, NetProtocol.MAX_FRAME_WHAT_BYTES)
+		_send(NetProtocol.Type.CLIENT_FRAME, {"ms": ms, "what": text})
 
 
 ## Sends a raw, already-encoded message (tests: malformed or foreign messages).

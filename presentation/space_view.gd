@@ -5,9 +5,10 @@ extends Node3D
 ## SubViewport with its own world. The own ship sits at the origin with world axes; every
 ## other ship is drawn at its minimum-image offset (D124), so precision never depends on
 ## where the ship is in the cube. Ships are the approved procedural ship (D107), oriented
-## from NEAR when known (the last known orientation otherwise). All ships share one
-## template's meshes and materials, built on the first ship, so a view with no ships pays
-## no AO bake. Kept cheap for llvmpipe: no post-processing, the stars one point mesh.
+## from NEAR when known (the last known orientation otherwise). All ships share
+## ProceduralShip's meshes and materials, built once per process (ProceduralShip.warm),
+## through a template made on the first ship. Kept cheap for llvmpipe: no post-processing,
+## the stars one point mesh.
 
 const STARS: int = 700
 ## Star sphere radius (m). It follows the camera position, so stars never parallax.

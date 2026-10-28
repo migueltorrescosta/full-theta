@@ -17,13 +17,13 @@ A line's text may hold slots, `{name}`, declared in `slots` with a kind: `ship_n
 
 `uv run --project tools/tts python tools/tts/prerender.py [LANG...] [--out DIR] [--host-out DIR] [--dev]` reads only `content/dialogue/*.json` and `content/voices.json` and writes two packs per language (D152, D154). Both folders are gitignored; generated audio is never committed. A `dev_only` language (pt_PT until #16) is refused without `--dev`.
 
-- **Client pack**, `audio/prerendered/<lang>/`, in desktop and web exports: `<line id>.ogg`, Ogg Vorbis (about 53 kbps), one per line without slots (the role's prerender voice). Clients load them with `LocalLines` (`audio/local_lines.gd`).
+- **Client pack**, `audio/prerendered/<lang>/`, in desktop exports: `<line id>.ogg`, Ogg Vorbis (about 53 kbps), one per line without slots (the role's prerender voice). Clients load them with `LocalLines` (`audio/local_lines.gd`). The web export carries them as one `voice-<lang>.pack` per language next to the page instead (`tools/release/voice_pack.py`, D294); a browser station fetches its session language's pack once welcomed (`WebSession`) and `LocalLines.add_pack` plays from it (`VoicePack`, `audio/voice_pack.gd`).
 - **Host pack**, `audio/prerendered_host/<lang>/`, desktop exports only: per role `<role>.pcm`, one blob of 16-bit little-endian mono PCM, and `<role>.json`, `{"rate", "voice", "clips": {key: [first_sample, samples]}}`. Keys: `seg:<id>:<k>` (the k-th literal piece of a slotted line's text in that language, split at the slots; only pieces holding a letter are rendered) and `num:<key>` (numbers.json fragments, cut at the first 200 ms silence because voices babble after a single word), both in the role's runtime voice, trimmed and peak-normalised. The host loads them with `ClipLibrary` (`content/voice/clip_library.gd`), composed by `VoiceSetup`.
 - Each language folder of both packs gets `index.json`, `{"language", "clips": [files]}`, which the package inspection checks. The release build calls `tools/tts/prerender_release.py --out audio/prerendered LANG...` (packaging's hook).
 
 Computer clips are not filtered here: the robotic filter is an effect chain on the client's `VoiceComputer` bus (FT-AUD-004, D153), so it applies alike to local, stitched and synthesised clips and to either Piper build.
 
-Files read at runtime, which every export must include: `content/dialogue/*.json`, `content/voices.json`, `content/i18n/strings.json`, `audio/prerendered/**` (desktop and web) and `audio/prerendered_host/**` (desktop).
+Files read at runtime, which every export must include: `content/dialogue/*.json`, `content/voices.json`, `content/i18n/strings.json`, `audio/prerendered/**` and `audio/prerendered_host/**` (desktop; the web export gets the voice packs).
 
 ## Host: synthesis and streaming (`net/voice/`)
 

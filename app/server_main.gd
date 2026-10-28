@@ -19,6 +19,9 @@ extends RefCounted
 ##   --pid-file PATH      write the pid file there while running (FT-NET-003).
 ##   --http-root DIR      serve this web export (an absolute path) over HTTP at
 ##                        port - 1 (FT-NET-030, D108); off without it.
+##   --tls-cert PATH      with --tls-key: serve HTTPS and WSS instead of HTTP and ws://
+##   --tls-key PATH       (D294; PEM certificate chain and key, absolute paths, e.g.
+##                        from `tailscale cert`: docs/launch.md); plain by default.
 ##   --session-log PATH   write the session log (JSON Lines: snapshot-age summaries every
 ##                        10 s and a final summary, D199) there; "off" writes none
 ##                        [user://logs/session-<unix time>.jsonl].
@@ -88,6 +91,8 @@ var idle_exit_min: float = 0.0
 var pid_file: String = ""
 var run_for: float = 0.0
 var http_root: String = ""
+var tls_cert: String = ""
+var tls_key: String = ""
 var session_log_path: String = SessionLog.default_path()
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
@@ -138,7 +143,14 @@ func parse_args(args: PackedStringArray) -> bool:
 	if discovery_port <= 0 or discovery_port > 65535:
 		push_error("--discovery-port must be 1..65535")
 		return false
-	return _check_load_flags(args)
+	return _check_tls() and _check_load_flags(args)
+
+
+func _check_tls() -> bool:
+	if (tls_cert == "") != (tls_key == ""):
+		push_error("--tls-cert and --tls-key go together")
+		return false
+	return true
 
 
 ## The load gate's flags (D160, D161) are for dev and test builds only, and each needs
@@ -173,7 +185,20 @@ func _set_value(flag: String, value: String) -> bool:
 			return false
 		encounter_name = value
 		return true
+	if flag == "--tls-cert" or flag == "--tls-key":
+		return _set_tls(flag, value)
 	return _set_flag(flag, value)
+
+
+func _set_tls(flag: String, value: String) -> bool:
+	if not value.is_absolute_path():
+		push_error("%s needs an absolute path" % flag)
+		return false
+	if flag == "--tls-cert":
+		tls_cert = value
+	else:
+		tls_key = value
+	return true
 
 
 func _set_flag(flag: String, value: String) -> bool:
@@ -275,7 +300,13 @@ func make_server() -> NetServer:
 	encounter.science = defs.science()
 	if load_ships <= 0 and run == null:
 		encounter.hazards = defs.m1_hazards()
+	var tls: TLSOptions = null
+	if tls_cert != "":
+		tls = load_tls(tls_cert, tls_key)
+		if tls == null:
+			return null
 	var server: NetServer = NetServer.new()
+	server.transport.tls = tls
 	if run != null:
 		server.driver_factory = (
 			_training_factory() if encounter_name == "shakedown" else _director_factory(run)
@@ -305,11 +336,27 @@ func make_server() -> NetServer:
 			server.transport.stop()
 			server.free()
 			return null
+		server.http.tls = tls
 	if beacon and not is_loopback(bind_address):
 		server.start_beacon(server_name, discovery_port)
 	if session_log_path != "":
 		server.start_session_log(session_log_path)
 	return server
+
+
+## Server TLS options from a PEM certificate (chain) and key, or null (reported).
+static func load_tls(cert_path: String, key_path: String) -> TLSOptions:
+	var cert: X509Certificate = X509Certificate.new()
+	var err: Error = cert.load(cert_path)
+	if err != OK:
+		push_error("--tls-cert %s: %s" % [cert_path, error_string(err)])
+		return null
+	var key: CryptoKey = CryptoKey.new()
+	err = key.load(key_path)
+	if err != OK:
+		push_error("--tls-key %s: %s" % [key_path, error_string(err)])
+		return null
+	return TLSOptions.server(key, cert)
 
 
 ## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).

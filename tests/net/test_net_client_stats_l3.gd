@@ -74,3 +74,30 @@ func test_stats_report_is_clipped_capped_and_rate_limited() -> void:
 	assert_bool(await h.until(limited, 3000)).is_true()
 	server.session_log.close()
 	DirAccess.remove_absolute("user://logs_test/l3_cap.jsonl")
+
+
+# A client's long frame lands in the session log with whose it was; `what` is cut to
+# 120 bytes (#28, load fix 10).
+func test_long_frame_report_reaches_the_session_log() -> void:
+	var path: String = "user://logs_test/l3_frame.jsonl"
+	DirAccess.remove_absolute(path)
+	var server: NetServer = h.server()
+	assert_int(server.start_session_log(path)).is_equal(OK)
+	var c: NetClient = await h.joined(server, "tab", "tactical")
+	c.report_frame(812, "build station:0:helm" + "x".repeat(300))
+	var logged: Callable = func() -> bool:
+		return FileAccess.get_file_as_string(path).contains('"kind":"long_frame"')
+	assert_bool(await h.until(logged, 3000)).is_true()
+	server.session_log.close()
+	var line: Dictionary = {}
+	for row: String in FileAccess.get_file_as_string(path).split("\n", false):
+		var d: Dictionary = JSON.parse_string(row)
+		if d.get("kind", "") == "long_frame":
+			line = d
+	assert_int(int(line.get("ms", 0))).is_equal(812)
+	assert_str(str(line.get("name", ""))).is_equal("tab")
+	assert_str(str(line.get("what", ""))).starts_with("build station:0:helm")
+	assert_int(str(line.get("what", "")).to_utf8_buffer().size()).is_equal(
+		NetProtocol.MAX_FRAME_WHAT_BYTES
+	)
+	DirAccess.remove_absolute(path)
