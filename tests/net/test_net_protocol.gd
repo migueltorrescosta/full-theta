@@ -23,6 +23,7 @@ func _samples() -> Dictionary:
 			"dev_all": false,
 			"host": false,
 			"lang": "en",
+			"tls": false,
 		},
 		NetProtocol.Type.HELLO_REJECTED: {"v": 1, "reason": "session_full"},
 		NetProtocol.Type.CATALOGUE:

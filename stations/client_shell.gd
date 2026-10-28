@@ -185,6 +185,7 @@ func _on_welcome() -> void:
 	if not _welcome.is_empty() and int(w.get("session", -1)) != int(_welcome.get("session", -1)):
 		_drop_screens()
 	_welcome = w
+	ctx.host_tls = bool(w.get("tls", false))
 	ctx.crew.welcome(w)
 	var lang: String = str(w.get("lang", "en"))
 	if lang != _lang:

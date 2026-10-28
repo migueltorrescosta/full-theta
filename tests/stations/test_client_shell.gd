@@ -42,6 +42,20 @@ func _shell(lang: String) -> ClientShell:
 	return s
 
 
+# FT: FT-NET-013
+# The welcome's `tls` (the server serves HTTPS) reaches the context, for the lobby's join URL.
+func test_welcome_tls_reaches_the_context() -> void:
+	assert_bool(_shell("en").ctx.host_tls).is_false()
+	var c: FakeClient = FakeClient.new()
+	c.state = NetClient.State.WELCOMED
+	c.welcome = {"session": 7, "ship": 0, "entry": "", "host": true, "lang": "en", "tls": true}
+	c.catalogue = StationFixture.catalogue()
+	var s: ClientShell = auto_free(ClientShell.new())
+	s.setup(c, ClientSettings.new("user://test_client_shell_unit.cfg"))
+	add_child(s)
+	assert_bool(s.ctx.host_tls).is_true()
+
+
 # FT: FT-AUD-013, FT-AUD-010, FT-AUD-004
 func test_voice_lines_reach_the_player_and_language_applies() -> void:
 	var s: ClientShell = _shell("it")

@@ -324,6 +324,7 @@ func make_server() -> NetServer:
 		return null
 	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
 	server.session.language = language
+	server.session.tls = tls != null
 	if http_root != "":
 		err = server.start_http(http_root)
 		if err != OK:

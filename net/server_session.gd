@@ -47,6 +47,9 @@ var dev_all: bool = false
 var host_secret: String = ""
 ## The session's language, chosen by the host (--language), sent in Welcome (FT-AUD-013).
 var language: String = "en"
+## The server serves its page and WebSocket over TLS (--tls-cert, D294), sent in Welcome so
+## the host's lobby shows an https join URL.
+var tls: bool = false
 ## Most sessions connected at once (FT-NET-014; T046 owns the rule).
 var max_sessions: int = 64
 ## Per-session command rate limit (FT-NET-006; provisional: docs/protocol.md, Rates).
@@ -539,6 +542,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 		"dev_all": dev_all,
 		"host": session.is_host,
 		"lang": language,
+		"tls": tls,
 	}
 	transport.bind(conn, session.id, welcome, session.view_key(), not resumed)
 	if session_log != null:
