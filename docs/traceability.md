@@ -135,10 +135,10 @@ Tests: 381, manual: 13, pending: 7.
 | FT-STN-008 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-STN-009 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_binding_text.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-STN-010 | tests | `tests/net/test_net_chips_l3.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd`, `tests/stations/test_weapons_guided.gd` |
-| FT-STN-011 | tests | `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_station_screen.gd` |
-| FT-STN-012 | tests | `tests/content/test_i18n.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_first_visit_help.gd` |
+| FT-STN-011 | tests | `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_settings_menu.gd`, `tests/stations/test_station_screen.gd` |
+| FT-STN-012 | tests | `tests/content/test_i18n.gd`, `tests/presentation/test_controls_chip.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_first_visit_help.gd` |
 | FT-STN-013 | tests | `tests/app/test_main_menu.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_lobby_and_overlays.gd` |
-| FT-STN-014 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_station_screen.gd` |
+| FT-STN-014 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_settings_menu.gd`, `tests/stations/test_station_screen.gd` |
 | FT-STN-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-STN-016 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/stations/test_lobby_toggles.gd` |
 | FT-STN-017 | tests | `tests/stations/test_client_settings.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_viewer_panel.gd`, `tests/stations/test_weapons_panel.gd` |
@@ -296,7 +296,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-MIS-013 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd` |
 | FT-MIS-014 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/sim/run/test_relaunch.gd`, `tests/sim/run/test_session_modes.gd`, `tests/stations/test_fleet_screens.gd` |
 | FT-MIS-015 | tests | `tests/sim/run/test_flee_abandon.gd` |
-| FT-MIS-016 | tests | `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_flee_abandon.gd`, `tests/stations/test_fleet_screens.gd` |
+| FT-MIS-016 | tests | `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_flee_abandon.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_settings_menu.gd` |
 | FT-MIS-017 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
 | FT-MIS-018 | tests | `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_reputation.gd` |
 | FT-MIS-019 | tests | `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/sim/economy/test_reputation.gd` |
@@ -320,7 +320,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-MIS-037 | manual | [#13](https://github.com/migueltorrescosta/full-theta/issues/13) |
 | FT-MIS-038 | tests | `tests/net/test_debrief_l3.gd` |
 | FT-MIS-039 | tests | `tests/input/test_binding_markers.gd`, `tests/net/test_training_captain_l3.gd`, `tests/net/test_training_next_gate.gd`, `tests/scenarios/test_shakedown.gd`, `tests/scenarios/test_shakedown_coverage.gd`, `tests/stations/test_training_banner.gd`, `tools/tests/test_dialogue_binding_slot.py` |
-| FT-MIS-040 | tests | `tests/net/test_host_pause_l3.gd`, `tests/stations/test_pause_overlay.gd` |
+| FT-MIS-040 | tests | `tests/net/test_host_pause_l3.gd`, `tests/stations/test_pause_overlay.gd`, `tests/stations/test_settings_menu.gd` |
 | FT-MIS-041 | tests | `tests/scenarios/test_comms_beat_lint.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/sim/api/test_scenario_meta.gd` |
 | FT-MIS-042 | tests | `tests/net/test_contract_flags_l3.gd`, `tests/net/test_fleet_sharing_l3.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_weapons_flags.gd` |
 | FT-AUD-001 | tests | `tools/tests/test_prerender.py` |
