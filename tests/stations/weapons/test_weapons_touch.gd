@@ -120,7 +120,6 @@ func _assert_text_sizes(p: WeaponsPanel, what: String) -> void:
 		)
 	var t: WeaponsTouch = p.touch()
 	assert_int(t.mount_button.get_theme_font_size(&"font_size")).is_greater_equal(14)
-	assert_int(t.target_label.get_theme_font_size(&"font_size")).is_greater_equal(14)
 
 
 # FT: FT-STN-005, FT-WPN-001, FT-WPN-002, FT-WPN-004, FT-WPN-006
@@ -171,11 +170,10 @@ func test_phone_landscape_one_right_rail() -> void:
 	assert_str(t.mount_button.text).is_equal("1 bow · ready\nheat 15% · 380/400")
 	assert_str(t.claim_button.text).is_equal("Release")
 	assert_str(t.ammo_button.text).is_equal("Mass driver ▸")
-	assert_str(t.target_label.text).starts_with("Target U3")
-	# Read-outs under the view-top row (the selection chip shows U3).
+	# No target line on a phone: the selection chip shows U3, read-outs under its row.
+	assert_bool(t.target_label.visible).is_false()
 	assert_float(p.top_reserve).is_greater(0.0)
 	var top: float = (p.get_global_transform() * view.position).y + p.top_reserve
-	assert_float(t.target_label.get_global_rect().position.y).is_greater_equal(top)
 	assert_float(s.frame.selection_chip.get_global_rect().end.y).is_less_equal(top)
 	# The shares are on the Crew page: no Share opener on the screen.
 	assert_bool(p.shows_shares).is_true()
@@ -232,7 +230,7 @@ func test_touch_rules_on_every_page_both_ways() -> void:
 			assert_bool(t.fire_zone.is_visible_in_tree()).is_equal(i == WeaponsTouch.Page.FIRE)
 			assert_bool(t.mount_list.is_visible_in_tree()).is_equal(i == WeaponsTouch.Page.MOUNTS)
 			assert_bool(t.crew.is_visible_in_tree()).is_equal(i == WeaponsTouch.Page.CREW)
-			assert_bool(t.target_label.visible).is_equal(i != WeaponsTouch.Page.MOUNTS)
+			assert_bool(t.target_label.visible).is_false()
 			# FIRE and the radar never page away (FT-WPN-002).
 			assert_bool(t.fire_button.is_visible_in_tree()).is_true()
 			assert_bool(t.radar.is_visible_in_tree()).is_true()

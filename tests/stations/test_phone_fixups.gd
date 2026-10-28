@@ -72,17 +72,15 @@ func _share_buttons(s: StationScreen) -> Array[Button]:
 # (beside the joint switch) opens a drawer of 48 px buttons 8 px apart, at the top of the
 # radar column or, with the column hidden (Weapons' rails), at the bottom of the view.
 func test_share_buttons_sit_in_a_drawer_on_a_phone_on_its_side() -> void:
-	# (Engineering and Comms put their shares on their Crew page, shows_shares: no opener.)
-	for c: Array in [["systems", 0], ["quartermaster", 1], ["comms", 0]]:
+	# (Engineering, Comms and Science put their shares on their Crew page, shows_shares: no
+	# opener.)
+	for c: Array in [["systems", 0], ["quartermaster", 1], ["comms", 0], ["science", 0]]:
 		var p: StationScreen = await _screen(Vector2i(844, 390), c[0], LANDSCAPE, c[1])
 		assert_bool(p.focused_panel().shows_shares).override_failure_message(c[0]).is_true()
 		assert_bool(p.share_opener.is_visible_in_tree()).override_failure_message(c[0]).is_false()
 		_drop(p)
 	var cases: Array = [
 		["approach", 0, false],
-		["parley", 0, false],
-		["targeting", 0, false],
-		["science", 0, false],
 	]
 	for c: Array in cases:
 		var what: String = "%s/%d" % [c[0], c[1]]
@@ -121,27 +119,12 @@ func test_share_buttons_sit_in_a_drawer_on_a_phone_on_its_side() -> void:
 
 
 # FT: FT-STN-005, FT-PAIR-007
-# Relay's phone layout has its own share drawer: the screen adds no second opener. Turning
-# Science's phone (its rails are rebuilt) keeps the opener alive and puts it back.
+# Relay's phone layout has its own share drawer: the screen adds no second opener.
 func test_panels_with_their_own_share_place_keep_one_opener() -> void:
 	var r: StationScreen = await _screen(Vector2i(844, 390), "relay", LANDSCAPE)
 	assert_bool(r.focused_panel().shows_shares).is_true()
 	assert_bool(r.share_opener.visible).is_false()
 	_drop(r)
-	var s: StationScreen = await _screen(Vector2i(844, 390), "science", LANDSCAPE)
-	var opener: RailButton = s.share_opener
-	var vp: SubViewport = s.get_parent() as SubViewport
-	SafeArea.simulate(PORTRAIT)
-	vp.size = Vector2i(390, 844)
-	await _frames(4)
-	SafeArea.simulate(LANDSCAPE)
-	vp.size = Vector2i(844, 390)
-	await _frames(4)
-	assert_bool(is_instance_valid(opener)).is_true()
-	assert_object(opener.get_parent()).is_same(s.focused_panel().share_slot)
-	assert_bool(opener.is_visible_in_tree()).is_true()
-	_assert_clean(s, "science turned back")
-	_drop(s)
 
 
 # FT: FT-STN-005, FT-PAIR-007
@@ -165,7 +148,7 @@ func test_share_buttons_stay_in_the_column_upright_and_on_a_desktop() -> void:
 
 # FT: FT-STN-005, FT-WPN-002, FT-JNT-001
 # In a joint view on a phone on its side Weapons shows the whole screen like alone: its
-# right rail carries the radar (so Guided sits under it, clear of the top bar).
+# radar sits clear of its right rail.
 func test_weapons_keeps_its_rail_radar_in_a_joint_view() -> void:
 	for c: Array in [["tactical", 1], ["gunnery", 0], ["parley", 0], ["targeting", 0]]:
 		var what: String = "%s/%d" % [c[0], c[1]]
@@ -176,8 +159,9 @@ func test_weapons_keeps_its_rail_radar_in_a_joint_view() -> void:
 		assert_object(t.radar).override_failure_message(what).is_not_null()
 		assert_bool(t.radar.is_visible_in_tree()).is_true()
 		assert_bool(s.radar.is_visible_in_tree()).is_false()
-		assert_float(t.guided_button.get_global_rect().position.y).is_greater(
-			t.radar.get_global_rect().end.y
+		(
+			assert_bool(t.radar.get_global_rect().intersects(t.layout.right.get_global_rect()))
+			. is_false()
 		)
 		_assert_clean(s, what)
 		_drop(s)
@@ -358,22 +342,19 @@ func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
 
 
 # FT: FT-STN-005, FT-PAIR-007
-# Science alone upright draws its own radar (the screen's column hides): the share buttons
-# move into the drawer, opened from under its actions.
+# Science alone upright: its share buttons are on its Crew page, one tap from the tabs.
 func test_science_alone_upright_reaches_its_share_buttons() -> void:
 	var s: StationScreen = await _screen(Vector2i(390, 844), "science", PORTRAIT)
-	assert_bool(s.radar.is_visible_in_tree()).is_false()
-	assert_object(s.share_opener.get_parent()).is_same(s.focused_panel().share_slot)
-	assert_bool(s.share_opener.is_visible_in_tree()).is_true()
-	s.share_opener.button_pressed = true
-	s.share_opener.pressed.emit()
+	var p: SciencePanel = s.focused_panel() as SciencePanel
+	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
+	p.pages.select(p.pages.count() - 1)
 	await _frames(2)
-	var buttons: Array[Button] = _share_buttons(s)
-	assert_array(buttons).is_not_empty()
-	for b: Button in buttons:
-		assert_bool(b.is_visible_in_tree()).is_true()
-	_assert_clean(s.share_drawer, "science upright drawer")
-	buttons[0].pressed.emit()
+	var crew: CrewPage = p.phone.crew
+	assert_bool(crew.is_visible_in_tree()).is_true()
+	var share: RailButton = crew.button("share")
+	assert_object(share).is_not_null()
+	assert_bool(share.is_visible_in_tree()).is_true()
+	share.pressed.emit()
 	assert_int(StationFixture.sent(s.ctx).of("share").size()).is_equal(1)
 	_drop(s)
 

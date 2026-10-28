@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
 ## Page tabs size to their label (#28 follow-up, P28-Tabs): on a phone's side a tab is at
-## least TAB_W wide and never cuts its label ("Requests" stayed "Request" in a 64 px tab).
+## least TAB_W wide and never cuts its label ("Requests" stayed "Request" in a 64 px tab);
+## upright the tabs share the bottom bar.
 
 
 # FT: FT-STN-005
@@ -8,7 +9,7 @@ func test_a_tab_is_as_wide_as_its_label() -> void:
 	var host: PageHost = PageHost.new()
 	for t: String in ["Requests", "Contracts", "Rep"]:
 		host.add_page(t, [])
-	for upright: bool in [false, true]:
+	for upright: bool in [false]:
 		var tabs: PageTabs = auto_free(PageTabs.new())
 		tabs.upright = upright
 		add_child(tabs)

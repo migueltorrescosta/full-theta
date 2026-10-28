@@ -98,8 +98,9 @@ func _rebuild() -> void:
 			var b: RailButton = RailButton.make(host.title(i) + (" •" if host.badge(i) else ""))
 			b.name = "Tab%d" % (i + 1)
 			b.add_theme_font_size_override("font_size", FONT)
-			# A tab is as wide as its label, never cut ("Requests", "Contracts").
-			b.clip_text = false
+			# On its side a tab is as wide as its label, never cut ("Requests", "Mounts");
+			# upright the tabs share the bar.
+			b.clip_text = upright
 			b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 			b.custom_minimum_size = Vector2(0.0 if upright else w, UiTheme.TOUCH_PRIMARY)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL if upright else Control.SIZE_FILL

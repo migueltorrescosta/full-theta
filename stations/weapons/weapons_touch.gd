@@ -97,10 +97,9 @@ func _init(panel: WeaponsPanel, for_form: LayoutMode.Form, with_radar: bool) -> 
 	else:
 		_portrait()
 	add_child(overlays)
-	# The target line shows on Fire and Crew; the mount list takes its place on Mounts.
-	pages.add_page(TouchText.of("page.fire", "Fire"), [fire_zone, target_label])
+	pages.add_page(TouchText.of("page.fire", "Fire"), [fire_zone])
 	pages.add_page(TouchText.of("page.mounts", "Mounts"), [mount_list])
-	pages.add_page(TouchText.of("page.crew", "Crew"), [crew, target_label])
+	pages.add_page(TouchText.of("page.crew", "Crew"), [crew])
 	pages.page_changed.connect(func(_i: int) -> void: _panel.queue_redraw())
 
 
@@ -159,7 +158,8 @@ func refresh() -> void:
 	claim_button.text = _claim_text(p.mount)
 	claim_button.disabled = not p.is_usable(p.mount)
 	ammo_button.text = p.ammo_name() + " ▸"
-	target_label.text = p.target_text()
+	# (no target line on a phone: the frame's selection chip names the target)
+	target_label.text = ""
 	if radar != null:
 		radar.set_picture(p.ctx.picture(), p.ctx.crew.selection)
 	if mount_list.visible:
@@ -274,6 +274,7 @@ func _make_overlays(with_radar: bool) -> void:
 	target_label.add_theme_color_override("font_outline_color", Palette.color("background"))
 	target_label.add_theme_constant_override("outline_size", 4)
 	target_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target_label.visible = false
 	overlays.add_child(target_label)
 	if with_radar:
 		radar_box = PanelContainer.new()
