@@ -186,7 +186,7 @@ func _draw() -> void:
 	draw_multiline_string(
 		font,
 		Vector2(12, 22),
-		tr("eng.cutaway_hint"),
+		hint(),
 		HORIZONTAL_ALIGNMENT_LEFT,
 		size.x - 24,
 		fs - 2,
@@ -349,3 +349,10 @@ func _scale() -> float:
 	var hs: Vector3 = _hull_scale()
 	var extent: float = maxf(2.7 * hs.z, maxf(0.5 * hs.x, 0.28 * hs.y + 4.0))
 	return minf(size.x * 1.1, size.y * 0.8) / (2.0 * extent)
+
+
+## The hint over the cutaway; a phone has no right button (#28), so it names the drag only.
+func hint() -> String:
+	if LayoutMode.is_phone(LayoutMode.form_of(self)):
+		return TouchText.of("eng.cutaway_hint_touch", "Drag a crew onto a part to fix it.")
+	return tr("eng.cutaway_hint")

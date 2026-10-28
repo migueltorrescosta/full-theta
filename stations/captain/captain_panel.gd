@@ -15,6 +15,8 @@ const BUTTON_HEIGHT: float = 44.0
 const NARROW_W: float = 760.0
 const STACK_MIRROR_H: float = 320.0
 const STACK_SIDE_H: float = 520.0
+## A phone on its side: the width of the right rail with the chips and cards.
+const PHONE_LISTS_W: float = 220.0
 
 var mirror: ViewerPanel
 var chips: ChipList
@@ -22,6 +24,13 @@ var cards: CardList
 ## One button per MainScreen.View, in order.
 var buttons: Array[Button] = []
 
+## The phone-landscape arrangement (#28, docked rails like Weapons B): the view buttons in a
+## rail at the left edge, the mirror in the middle, the chips and cards in a rail at the
+## right edge. Made on first use.
+var touch_layout: RailLayout = null
+
+var _scroll: ScrollContainer
+var _left: VBoxContainer
 var _row: Control
 var _cols: BoxContainer
 var _side: VBoxContainer
@@ -48,12 +57,14 @@ func _setup() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(scroll)
+	_scroll = scroll
 	scroll.add_child(cols)
 	var left: VBoxContainer = VBoxContainer.new()
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_theme_constant_override("separation", 0)
 	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cols.add_child(left)
+	_left = left
 	mirror = ViewerPanel.new()
 	mirror.interactive = true
 	mirror.setup(ctx, StationViews.VIEWER)
@@ -87,8 +98,69 @@ func _setup() -> void:
 	_stack()
 
 
+## True when the panel takes the phone-landscape arrangement: a phone on its side.
+func phone_landscape() -> bool:
+	return is_inside_tree() and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
+
+
+## Moves the buttons, mirror and lists into the rails on a phone on its side, back elsewhere.
+func _arrange_rails() -> void:
+	var rails: bool = phone_landscape()
+	if rails == (touch_layout != null and touch_layout.visible):
+		return
+	if rails:
+		if touch_layout == null:
+			touch_layout = RailLayout.new()
+			touch_layout.docked = true
+			touch_layout.offset_top = UiTheme.TOUCH_GAP
+			add_child(touch_layout)
+			touch_layout.rail(SIDE_LEFT)
+			touch_layout.rail(SIDE_RIGHT).custom_minimum_size.x = PHONE_LISTS_W
+		touch_layout.visible = true
+		_scroll.visible = false
+		var gap: MarginContainer = MarginContainer.new()
+		for side: String in ["margin_left", "margin_right"]:
+			gap.add_theme_constant_override(side, UiTheme.TOUCH_GAP)
+		mirror.reparent(gap, false)
+		touch_layout.set_content(gap)
+		for b: Button in buttons:
+			b.reparent(touch_layout.left.box, false)
+			b.custom_minimum_size = Vector2(0, UiTheme.TOUCH_PRIMARY)
+		for c: Control in [chips, cards]:
+			c.reparent(touch_layout.right.box, false)
+		cards.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		chips.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	else:
+		touch_layout.visible = false
+		_scroll.visible = true
+		var gap: Control = mirror.get_parent()
+		mirror.reparent(_left, false)
+		_left.move_child(mirror, 0)
+		touch_layout.remove_child(gap)
+		gap.queue_free()
+		for b: Button in buttons:
+			b.reparent(_row, false)
+			b.custom_minimum_size = Vector2(88, 0)
+		for c: Control in [chips, cards]:
+			c.reparent(_side, false)
+		cards.size_flags_vertical = Control.SIZE_FILL
+
+
 ## Narrow: the mirror above the right column, scrolling; wide: side by side.
 func _stack() -> void:
+	_arrange_rails()
+	# A phone upright: touch-sized view buttons 8 px apart (#28).
+	var upright: bool = (
+		is_inside_tree() and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_PORTRAIT
+	)
+	for c: String in ["h_separation", "v_separation"]:
+		if upright:
+			_row.add_theme_constant_override(c, UiTheme.TOUCH_GAP)
+		else:
+			_row.remove_theme_constant_override(c)
+	if not (touch_layout != null and touch_layout.visible):
+		for b: Button in buttons:
+			b.custom_minimum_size.y = UiTheme.TOUCH_PRIMARY if upright else 0.0
 	var narrow: bool = size.x < NARROW_W
 	_cols.vertical = narrow
 	mirror.custom_minimum_size.y = STACK_MIRROR_H if narrow else 0.0
