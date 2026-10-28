@@ -6,7 +6,10 @@ extends Control
 ## modules it offers with the module a full slot gives up in the same trade and what that
 ## pays (FT-MIS-036, FT-COM-009), and the fitted modules to sell. Every line that does
 ## something is a row: a click or tap, or the focus plus a key, activates it. A click
-## outside the box or a swipe down closes the overlay.
+## outside the box or a swipe down closes the overlay. On a phone (#28 follow-up, design 2.6)
+## rows are 48 px in two columns, a list too long for the box pages with ‹ › buttons, and a
+## Close button closes; with `fill` set the box fills the overlay (a phone on its side, where
+## the overlay covers the board and the radar column).
 
 signal row_activated(row: Dictionary)
 signal closed
@@ -21,8 +24,10 @@ const SWIPE_PX: float = 60.0
 const MAX_REPLIES: int = 4
 ## A phone's rows (#28): touch-sized with 8 px gaps, in two columns when the box is this wide
 ## (a phone on its side), and no keyboard hint under them.
-const PHONE_ROW_H: float = 44.0
+const PHONE_ROW_H: float = 48.0
 const PHONE_TWO_COLS_W: float = 520.0
+## The Close button's width on a phone.
+const CLOSE_W: float = 112.0
 
 ## The COMMS block, the open card, and the focused row (index into `rows()`).
 var data: Dictionary = {}
@@ -38,6 +43,12 @@ var ship_name: String = ""
 ## Rows that don't fit show a page at a time (a phone's trade offer, #28): the first line
 ## of rows shown.
 var first_line: int = 0
+## The box fills the overlay (a phone on its side) instead of a centred box.
+var fill: bool = false
+## A phone's buttons: the previous and next page of rows, and Close.
+var prev_button: RailButton
+var next_button: RailButton
+var close_button: RailButton
 
 var _rows: Array[Dictionary] = []
 var _rects: Array[Rect2] = []
@@ -47,12 +58,26 @@ var _press: Vector2 = Vector2(-1.0, -1.0)
 var _line_of: Array[int] = []
 var _lines_shown: int = 0
 var _line_count: int = 0
+## One tap target per row shown on a phone, for TapAudit (the rows are drawn).
+var _hits: Array[Control] = []
 
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	visible = false
 	clip_contents = true
+	prev_button = _foot_button("Prev", "‹", func() -> void: page(false))
+	next_button = _foot_button("Next", "›", func() -> void: page(true))
+	close_button = _foot_button("Close", TouchText.of("comms.close", "Close"), close)
+
+
+func _foot_button(id: String, text: String, does: Callable) -> RailButton:
+	var b: RailButton = RailButton.make(text)
+	b.name = id
+	b.visible = false
+	b.pressed.connect(does)
+	add_child(b)
+	return b
 
 
 func _notification(what: int) -> void:
@@ -278,7 +303,16 @@ func _body() -> String:
 		return CommsData.line_text(str(node["line"]), str(c.get("npc", "")), ship_name, numbers)
 	var text: String = TranslationServer.translate(str(c.get("detail", "")))
 	if bool(c.get("conv", false)) and CardList.is_live(c):
-		text += "\n" + TranslationServer.translate("comms.open_hint")
+		# A phone opened it with the tap that shows it: no key to name (#28).
+		var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+		text += (
+			"\n"
+			+ (
+				TouchText.of("comms.opening", "Opening the channel…")
+				if phone
+				else TranslationServer.translate("comms.open_hint")
+			)
+		)
 	return text
 
 
@@ -288,7 +322,7 @@ func _layout() -> void:
 		return
 	var font: Font = get_theme_default_font()
 	var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
-	var w: float = minf(size.x - 24.0, MAX_W)
+	var w: float = size.x if fill else minf(size.x - 24.0, MAX_W)
 	var cols: int = 2 if phone and w >= PHONE_TWO_COLS_W else 1
 	var gap: float = float(UiTheme.TOUCH_GAP) if phone else 4.0
 	var row_min: float = PHONE_ROW_H if phone else ROW_H
@@ -318,9 +352,11 @@ func _layout() -> void:
 		rows_h += lh + gap
 	var foot: float = 70.0
 	if phone:
-		foot = PAD + 22.0
+		foot = PAD + UiTheme.TOUCH_PRIMARY + gap
 	var h: float = PAD + 24.0 + body.y + 12.0 + rows_h + foot
 	h = minf(h, size.y - (8.0 if phone else 16.0))
+	if fill:
+		h = size.y
 	_box = Rect2((size.x - w) / 2.0, (size.y - h) / 2.0, w, h)
 	var y: float = _box.position.y + PAD + 24.0 + body.y + 12.0
 	# The lines that fit above the foot; the rest wait for a swipe (page).
@@ -345,7 +381,39 @@ func _layout() -> void:
 		_rects.append(Rect2(x, y, row_w, lines[line]))
 		if i % cols == cols - 1 or i == _rows.size() - 1:
 			y += lines[line] + gap
+	_place_buttons(phone)
 	queue_redraw()
+
+
+## A phone's foot row (‹ › while the rows page, Close at the right) and the rows' targets.
+func _place_buttons(phone: bool) -> void:
+	var side: float = UiTheme.TOUCH_PRIMARY
+	var y: float = _box.end.y - PAD - side
+	var paged: bool = phone and _lines_shown < _line_count
+	prev_button.visible = paged
+	next_button.visible = paged
+	close_button.visible = phone
+	prev_button.disabled = first_line == 0
+	next_button.disabled = not more_below()
+	var x: float = _box.position.x + PAD
+	for b: RailButton in [prev_button, next_button]:
+		b.position = Vector2(x, y)
+		b.size = Vector2(side, side)
+		x += side + UiTheme.TOUCH_GAP
+	close_button.position = Vector2(_box.end.x - PAD - CLOSE_W, y)
+	close_button.size = Vector2(CLOSE_W, side)
+	while _hits.size() < _rects.size():
+		var hit: Control = Control.new()
+		hit.name = "Row%d" % _hits.size()
+		hit.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hit.set_meta("tap", true)
+		add_child(hit)
+		_hits.append(hit)
+	for i: int in _hits.size():
+		var r: Rect2 = _rects[i] if i < _rects.size() else Rect2()
+		_hits[i].visible = phone and r.size != Vector2.ZERO
+		_hits[i].position = r.position
+		_hits[i].size = r.size
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -434,9 +502,17 @@ func _draw() -> void:
 		_draw_row(font, i)
 	var foot_y: float = _box.end.y - PAD
 	var hint: String = TranslationServer.translate("comms.overlay_hint")
-	# A phone has no keys to hint at (#28); it says when more rows wait below.
-	if LayoutMode.is_phone(LayoutMode.form_of(self)):
-		hint = TouchText.of("comms.more_rows", "Swipe up for more") if more_below() else ""
+	var hint_w: float = _box.size.x - 2.0 * PAD
+	# A phone has no keys to hint at (#28): its foot row holds the buttons, and the status
+	# between them.
+	if close_button.visible:
+		hint = ""
+		var left: float = x
+		if next_button.visible:
+			left = next_button.position.x + next_button.size.x + UiTheme.TOUCH_GAP
+		hint_w = close_button.position.x - UiTheme.TOUCH_GAP - left
+		x = left
+		foot_y = close_button.position.y + (close_button.size.y + font.get_ascent(FONT_SIZE)) / 2.0
 	if status != "":
 		hint = status
 	draw_string(
@@ -444,7 +520,7 @@ func _draw() -> void:
 		Vector2(x, foot_y),
 		hint,
 		0,
-		_box.size.x - 2.0 * PAD,
+		hint_w,
 		FONT_SIZE - 1,
 		Palette.color("warn") if status != "" else Palette.color("text_dim")
 	)

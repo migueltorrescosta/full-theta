@@ -18,6 +18,14 @@ extends StationPanel
 ## decline, View+X claims, View+Y asks for hold fire. Touch: tap a card to open it, swipe to
 ## change column, tap a reply or a trade line, tap outside or swipe down to close, the
 ## buttons under the board for the rest.
+##
+## On a phone (#28 follow-up, D287, design 2.6) the five buttons are a persistent rail (on
+## its side a docked left rail, upright a row under the board) and the board's columns are
+## pages: Missions (rest), Contracts, Hails (a dot on the tab while a hail waits), Rep (the
+## docked site, credits, hull and reputation, off the board) and Crew. On its side the
+## conversation covers the board and the radar column, the rail staying live.
+
+enum Page { MISSIONS, CONTRACTS, HAILS, REP, CREW }
 
 ## A stick must pass this to count as a move, and fall under RELEASE to re-arm.
 const STICK_MOVE: float = 0.6
@@ -56,6 +64,9 @@ var list: CardList
 ## The phone-landscape arrangement (#28, docked rails like Weapons B): the five buttons in a
 ## docked rail at the screen's left edge, the board beside it. Made on first use.
 var touch_layout: RailLayout = null
+## A phone's Rep page (docked site, credits, hull, reputation) and Crew page.
+var rep_view: VBoxContainer
+var crew_page: CrewPage
 
 var _rows: VBoxContainer
 var _bar: HFlowContainer
@@ -64,20 +75,41 @@ var _status: Label
 var _block_ref: Dictionary = {}
 var _stick_armed: bool = true
 var _list_h: float = 0.0
+## A phone's spacers: under the view-top row, and above the gesture band.
+var _top_gap: Control
+var _foot_gap: Control
+var _rep_shown: Array = []
 
 
 func _setup() -> void:
 	clip_contents = true
+	in_frame = true
+	shows_shares = true
 	var rows: VBoxContainer = VBoxContainer.new()
 	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	rows.add_theme_constant_override("separation", 4)
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rows)
 	_rows = rows
+	_top_gap = Control.new()
+	_top_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_top_gap.visible = false
+	rows.add_child(_top_gap)
 	board = CommsBoard.new()
 	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	board.card_activated.connect(open_card)
+	board.card_selected.connect(_on_card_selected)
 	rows.add_child(board)
+	rep_view = VBoxContainer.new()
+	rep_view.name = "RepPage"
+	rep_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rep_view.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	rep_view.visible = false
+	rows.add_child(rep_view)
+	crew_page = CrewPage.new(self)
+	crew_page.name = "CrewPage"
+	crew_page.visible = false
+	rows.add_child(crew_page)
 	list = CardList.new()
 	list.visible = false
 	rows.add_child(list)
@@ -93,6 +125,7 @@ func _setup() -> void:
 		["hold_fire", "comms.hold_fire", send_request],
 	]:
 		var b: Button = Button.new()
+		b.name = "Comms_" + str(spec[0])
 		b.text = tr(spec[1])
 		b.pressed.connect(spec[2])
 		b.focus_mode = Control.FOCUS_NONE
@@ -105,18 +138,38 @@ func _setup() -> void:
 	_status.clip_text = true
 	_status.custom_minimum_size = Vector2(120, 0)
 	_bar.add_child(_status)
+	_foot_gap = Control.new()
+	_foot_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_foot_gap.visible = false
+	rows.add_child(_foot_gap)
 	overlay = CommsOverlay.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.row_activated.connect(_activate_row)
 	add_child(overlay)
+	pages = PageHost.new()
+	for t: String in page_titles():
+		pages.add_page(t, [])
+	pages.page_changed.connect(_on_page)
 	ctx.crew.sim_event.connect(_on_sim_event)
 	refresh(true)
+
+
+## The phone's tab titles, in Page order.
+static func page_titles() -> Array[String]:
+	return [
+		TouchText.of("comms.page.missions", "Tasks"),
+		TouchText.of("comms.page.contracts", "Deals"),
+		TouchText.of("comms.page.hails", "Hails"),
+		TouchText.of("comms.page.rep", "Rep"),
+		TouchText.of("page.crew", "Crew"),
+	]
 
 
 ## A phone's width (under NARROW_BAR px) keeps the five buttons on one row: smaller text and
 ## gaps, so Hold fire doesn't drop to a row of its own.
 func _fit_bar() -> void:
 	_arrange_rails()
+	_show_page()
 	var rails: bool = touch_layout != null and touch_layout.visible
 	# A phone upright (the reduced layout, #28): touch-sized buttons 8 px apart, on two rows.
 	var upright: bool = (
@@ -147,6 +200,92 @@ func phone_landscape() -> bool:
 		and not docked
 		and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
 	)
+
+
+## True when the panel shows its pages: its main view on a phone, either way up.
+func phone_pages() -> bool:
+	return is_inside_tree() and not docked and LayoutMode.is_phone(LayoutMode.form_of(self))
+
+
+## Shows the current page's part: the board (on its column), the Rep page or the Crew page;
+## off a phone the board as on a desktop.
+func _show_page() -> void:
+	var phone: bool = phone_pages()
+	var i: int = pages.current if phone else Page.MISSIONS
+	if not phone:
+		board.page_column = -1
+	elif i <= Page.HAILS:
+		board.page_column = i
+	board.visible = not docked and i <= Page.HAILS
+	rep_view.visible = phone and i == Page.REP
+	crew_page.visible = phone and i == Page.CREW
+	# The spacers show only on a phone (a hidden one adds no separation).
+	_top_gap.visible = phone
+	_foot_gap.visible = phone
+	if not phone:
+		_bar.visible = not docked
+
+
+## A tab: the board shows that column (its first card selected), or the Rep or Crew page;
+## an open conversation closes.
+func _on_page(i: int) -> void:
+	close_overlay()
+	if i <= Page.HAILS:
+		board.show_column(i)
+	_show_page()
+
+
+## Keys, a swipe or a tap moved the selection: a phone's page follows its column.
+func _on_card_selected(id: int) -> void:
+	var col: int = board.column_of(id)
+	if phone_pages() and pages.current <= Page.HAILS and col >= 0 and col != pages.current:
+		pages.current = col
+
+
+## Each frame on a phone: the spacers under the view-top row and above the gesture band,
+## and the conversation's place, a top-level control the panel doesn't clip: on its side
+## over the board and the radar column, the rail staying live; upright over the board, the
+## buttons and the radar column, down to the bottom tab bar (the buttons hide under it).
+func _place_phone() -> void:
+	var phone: bool = phone_pages()
+	var side: bool = phone_landscape()
+	var open: bool = overlay.card_id >= 0
+	if phone:
+		_top_gap.custom_minimum_size.y = top_reserve
+		# On its side the bar holds only the status line: shown while it says something.
+		_bar.visible = _status.text != "" if side else not open
+		var over: float = get_global_rect().end.y - SafeArea.tap_bottom(self)
+		_foot_gap.custom_minimum_size.y = maxf(0.0, over)
+	clip_contents = not phone
+	overlay.fill = side
+	if overlay.top_level != phone:
+		overlay.top_level = phone
+		if not phone:
+			overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	if not phone:
+		return
+	var gap: float = UiTheme.TOUCH_GAP
+	var safe: Rect2 = SafeArea.safe_rect(self)
+	var r: Rect2 = Rect2(_rows.global_position.x, global_position.y + gap, 0.0, 0.0)
+	r.end = Vector2(safe.end.x, SafeArea.tap_bottom(self))
+	if not side:
+		r.position = global_position + Vector2(0.0, top_reserve)
+		r.end = Vector2(get_global_rect().end.x, _upright_floor() - gap)
+	if overlay.global_position != r.position or overlay.size != r.size:
+		overlay.global_position = r.position
+		overlay.size = r.size
+
+
+## Upright, where the conversation ends: the top of the screen's bottom tab bar, else the
+## tap limit.
+func _upright_floor() -> float:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	var s: StationScreen = n as StationScreen
+	if s != null and s.frame.bottom_tabs.is_visible_in_tree():
+		return s.frame.bottom_tabs.get_global_rect().position.y
+	return SafeArea.tap_bottom(self)
 
 
 ## Moves the buttons to the rail on a phone on its side, back under the board elsewhere.
@@ -214,12 +353,15 @@ func _mode_changed() -> void:
 		_fit_bar()
 	if docked and overlay != null:
 		overlay.close()
+	if pages != null:
+		_show_page()
 
 
 func _process(delta: float) -> void:
 	if focused:
 		_poll_stick(delta)
 	refresh()
+	_place_phone()
 
 
 ## Pushes the COMMS block into the widgets: every frame when it changed (tests call it).
@@ -246,6 +388,40 @@ func refresh(force: bool = false) -> void:
 		_list_h = list.custom_minimum_size.y
 		update_minimum_size()
 	_refresh_buttons()
+	pages.set_badge(Page.HAILS, hail_waits(blk))
+	_refresh_rep(blk)
+
+
+## True while a hail waits for an answer (the dot on a phone's Hails tab).
+static func hail_waits(blk: Dictionary) -> bool:
+	for c: Dictionary in blk.get("cards", []):
+		if int(c["kind"]) == CardList.HAIL and int(c["state"]) == CardList.STATE_OPEN:
+			return true
+	return false
+
+
+## A phone's Rep page: where the ship is docked, hull and credits, then a line per faction
+## (FT-COM-005).
+func _refresh_rep(blk: Dictionary) -> void:
+	var lines: Array = [board.where_text(), board.status_text(), tr("comms.rep")]
+	for r: Dictionary in blk.get("rep", []):
+		lines.append(tr("comms.rep_row") % [int(r["faction"]), roundi(float(r["value"]))])
+	if lines == _rep_shown:
+		return
+	_rep_shown = lines
+	for c: Node in rep_view.get_children():
+		rep_view.remove_child(c)
+		c.queue_free()
+	for i: int in lines.size():
+		var l: Label = Label.new()
+		l.text = str(lines[i])
+		var pad: StyleBoxEmpty = StyleBoxEmpty.new()
+		pad.content_margin_left = UiTheme.TOUCH_GAP
+		l.add_theme_stylebox_override("normal", pad)
+		l.add_theme_font_size_override("font_size", CommsBoard.FONT_SIZE)
+		var dim: bool = i == 2
+		l.add_theme_color_override("font_color", Palette.color("text_dim" if dim else "text"))
+		rep_view.add_child(l)
 
 
 func _show_overlay(id: int) -> void:
@@ -277,6 +453,85 @@ func _refresh_buttons() -> void:
 	(_buttons["hold_fire"] as Button).disabled = request_chips().is_empty()
 
 
+## Controls help on touch (P28-Help): per page, the boxes of its controls in the 844x390
+## landscape frame (the rail's on the first page only) with a label and what each does.
+static func touch_help() -> Array:
+	var t: Array[String] = page_titles()
+	var rail: Array = []
+	var rows: Array = [
+		["hail", "comms.hail", "Hail the selected contact"],
+		["accept", "comms.accept", "Accept the card, or answer a hail"],
+		["decline", "comms.decline", "Decline the card"],
+		["claim", "comms.claim", "Take or release the card's conversation"],
+		["hold_fire", "comms.hold_fire", "Ask Weapons to hold fire on the contact"],
+	]
+	for i: int in rows.size():
+		var r: Array = rows[i]
+		(
+			rail
+			. append(
+				[
+					Rect2(47, 72 + 56 * i, 136, 48),
+					TranslationServer.translate(r[1]),
+					TouchText.of("help.comms." + r[0], r[2]),
+				]
+			)
+		)
+	var card: Rect2 = Rect2(195, 132, 414, 72)
+	var open: String = TouchText.of("help.comms.card", "Tap to open; long-press pings its contact")
+	rail.append([card, TouchText.of("help.comms.mission", "Mission card"), open])
+	return [
+		{"page": t[Page.MISSIONS], "boxes": rail},
+		{
+			"page": t[Page.CONTRACTS],
+			"boxes": [[card, TouchText.of("help.comms.contract", "Contract card"), open]],
+		},
+		{
+			"page": t[Page.HAILS],
+			"boxes":
+			[
+				[
+					card,
+					TouchText.of("help.comms.offer", "Offer or hail"),
+					TouchText.of("help.comms.talk", "Tap to talk, buy or sell"),
+				]
+			],
+		},
+		{
+			"page": t[Page.REP],
+			"boxes":
+			[
+				[
+					Rect2(191, 132, 422, 150),
+					TranslationServer.translate("comms.rep"),
+					TouchText.of("help.comms.rep", "Docked site, credits and standing per faction"),
+				]
+			],
+		},
+		{
+			"page": t[Page.CREW],
+			"boxes":
+			[
+				[
+					Rect2(191, 132, 207, 48),
+					TranslationServer.translate("comms.hold_fire"),
+					TouchText.of("help.comms.hold_fire", "Ask Weapons to hold fire on the contact"),
+				],
+				[
+					Rect2(406, 132, 207, 48),
+					TranslationServer.translate("intent.ping"),
+					TouchText.of("help.comms.ping", "Ping the selection for the crew"),
+				],
+				[
+					Rect2(191, 188, 207, 48),
+					TranslationServer.translate("intent.mark"),
+					TouchText.of("help.comms.mark", "Mark the selection"),
+				],
+			],
+		},
+	]
+
+
 # --- Reading. ---
 
 
@@ -301,6 +556,13 @@ func hail_target() -> int:
 
 func chip_arg(_chip: ChipDef) -> int:
 	return hail_target()
+
+
+## "Hold fire on H2": the chip names the contact it is about.
+func chip_label(chip: ChipDef) -> String:
+	var t: int = hail_target()
+	var who: String = ctx.view.callsign(t) if t >= 0 else ""
+	return ChipView.label({"chip": String(chip.id), "arg": t}, who)
 
 
 ## Hold fire needs a contact to name.

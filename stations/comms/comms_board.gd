@@ -7,7 +7,9 @@ extends Control
 ## (FT-COM-006, D18). It only draws and answers where things are; the panel decides what a
 ## card does. One card is selected (arrows, Tab, a click, a tap); `card_activated` fires for
 ## a click or tap on a card. A narrow board (a phone) shows one column at a time and a
-## horizontal swipe changes it.
+## horizontal swipe changes it. On a phone's pages (#28 follow-up, D287) the board shows the
+## page's column alone (`page_column`), without its header, footer and column title (the
+## Rep page and the tab show them), with taller cards.
 
 signal card_selected(id: int)
 signal card_activated(id: int)
@@ -23,6 +25,8 @@ const NARROW_W: float = 640.0
 ## A press that moves less than this is a tap (px); a sideways move of SWIPE_PX is a swipe.
 const TAP_PX: float = 12.0
 const SWIPE_PX: float = 60.0
+## A card's height on a phone's pages (design 2.6).
+const PHONE_CARD_H: float = 72.0
 
 ## The COMMS block (CommsView) the board draws.
 var data: Dictionary = {}
@@ -34,6 +38,13 @@ var claim_names: Dictionary = {}
 var site_name: String = ""
 ## The session's own name, for "you" in the claimer line.
 var own_name: String = ""
+## The column a phone's page shows (0 to 2), or -1 for the board as on a desktop.
+var page_column: int = -1:
+	set(value):
+		if value != page_column:
+			page_column = value
+			_fit()
+			queue_redraw()
 
 var _cols: Array = [[], [], []]
 ## First visible card of each column.
@@ -67,18 +78,34 @@ func set_data(blk: Dictionary) -> void:
 	queue_redraw()
 
 
-## The selected card's row, or {}.
+## The selected card's row, or {}; {} too while a phone's page shows a column without it.
 func selected_row() -> Dictionary:
+	if page_column >= 0 and _find(selected).x != page_column:
+		return {}
 	return CommsData.card(data, selected)
+
+
+## The column card `id` is in, or -1.
+func column_of(id: int) -> int:
+	return _find(id).x
+
+
+## Shows column `col` on a phone's page and selects its first card unless the selection is
+## already there.
+func show_column(col: int) -> void:
+	page_column = col
+	var rows: Array = _cols[col]
+	if _find(selected).x != col and not rows.is_empty():
+		select(int(rows[0]["id"]))
 
 
 func narrow() -> bool:
 	return size.x < NARROW_W
 
 
-## The column shown in a narrow board.
+## The column shown in a narrow board or on a phone's page.
 func column_shown() -> int:
-	return _col_shown
+	return page_column if page_column >= 0 else _col_shown
 
 
 ## Moves the selection: dx columns (skipping empty ones, wrapping), dy cards in the column.
@@ -138,9 +165,28 @@ func _find(id: int) -> Vector2i:
 ## The columns drawn: all three, or the one shown when narrow.
 func _drawn_columns() -> Array[int]:
 	var out: Array[int] = [0, 1, 2]
-	if narrow():
+	if page_column >= 0:
+		out = [page_column]
+	elif narrow():
 		out = [_col_shown]
 	return out
+
+
+## The header, column title, footer and card heights: none of the first three on a page.
+func _header_h() -> float:
+	return 0.0 if page_column >= 0 else HEADER_H
+
+
+func _title_h() -> float:
+	return 0.0 if page_column >= 0 else TITLE_H
+
+
+func _footer_h() -> float:
+	return 0.0 if page_column >= 0 else FOOTER_H
+
+
+func _card_h() -> float:
+	return PHONE_CARD_H if page_column >= 0 else CARD_H
 
 
 func _col_rect(col: int) -> Rect2:
@@ -149,12 +195,12 @@ func _col_rect(col: int) -> Rect2:
 	var at: int = shown.find(col)
 	if at < 0:
 		return Rect2()
-	return Rect2(at * w, HEADER_H, w, size.y - HEADER_H - FOOTER_H)
+	return Rect2(at * w, _header_h(), w, size.y - _header_h() - _footer_h())
 
 
 func _cards_per_column() -> int:
-	var h: float = size.y - HEADER_H - TITLE_H - FOOTER_H
-	return maxi(1, int(floorf((h + GAP) / (CARD_H + GAP))))
+	var h: float = size.y - _header_h() - _title_h() - _footer_h()
+	return maxi(1, int(floorf((h + GAP) / (_card_h() + GAP))))
 
 
 ## The rectangle of a card in the board, or an empty one when it is scrolled out or hidden.
@@ -170,9 +216,9 @@ func card_rect(id: int) -> Rect2:
 		return Rect2()
 	return Rect2(
 		col.position.x + 4.0,
-		col.position.y + TITLE_H + slot * (CARD_H + GAP),
+		col.position.y + _title_h() + slot * (_card_h() + GAP),
 		col.size.x - 8.0,
-		CARD_H
+		_card_h()
 	)
 
 
@@ -197,7 +243,8 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	var moved: Vector2 = event.position - _press
 	_press = Vector2(-1.0, -1.0)
-	if narrow() and absf(moved.x) >= SWIPE_PX and absf(moved.x) > absf(moved.y):
+	var one: bool = narrow() or page_column >= 0
+	if one and absf(moved.x) >= SWIPE_PX and absf(moved.x) > absf(moved.y):
 		_swipe(-1 if moved.x > 0.0 else 1)
 	elif moved.length() <= TAP_PX:
 		var id: int = card_at(event.position)
@@ -208,7 +255,7 @@ func _gui_input(event: InputEvent) -> void:
 
 ## Swipes to the next non-empty column (dx +1: the column to the right).
 func _swipe(dx: int) -> void:
-	var col: int = _col_shown
+	var col: int = column_shown()
 	for _i: int in CommsData.COLUMNS:
 		col = posmod(col + dx, CommsData.COLUMNS)
 		if not (_cols[col] as Array).is_empty():
@@ -224,22 +271,27 @@ func _swipe(dx: int) -> void:
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("background"))
-	_draw_header(font)
+	if page_column < 0:
+		_draw_header(font)
+		_draw_footer(font)
 	for i: int in _drawn_columns():
 		_draw_column(font, i)
-	_draw_footer(font)
 
 
 ## "COMMS   docked: Kappa", or the same with "not docked".
 func header_text() -> String:
-	var where: String = TranslationServer.translate("comms.undocked")
-	if bool(data.get("docked", false)):
-		where = (
-			TranslationServer.translate("comms.docked") % site_name
-			if site_name != ""
-			else TranslationServer.translate("comms.docked_unnamed")
-		)
-	return "%s   %s" % [TranslationServer.translate("station.comms"), where]
+	return "%s   %s" % [TranslationServer.translate("station.comms"), where_text()]
+
+
+## "docked: Kappa", "docked" or "not docked".
+func where_text() -> String:
+	if not bool(data.get("docked", false)):
+		return TranslationServer.translate("comms.undocked")
+	return (
+		TranslationServer.translate("comms.docked") % site_name
+		if site_name != ""
+		else TranslationServer.translate("comms.docked_unnamed")
+	)
 
 
 ## "hull ok   cr 1200": Comms' only view of condition, the hull band (FT-PAIR-010), and credits.
@@ -287,19 +339,22 @@ func _draw_column(font: Font, col: int) -> void:
 	var title: String = TranslationServer.translate(CommsData.COLUMN_KEYS[col])
 	if narrow():
 		title += "  (%d/%d)" % [col + 1, CommsData.COLUMNS]
-	draw_string(
-		font,
-		Vector2(rect.position.x + 8.0, rect.position.y + font.get_ascent(FONT_SIZE) + 2.0),
-		title,
-		0,
-		rect.size.x - 16.0,
-		FONT_SIZE,
-		Palette.color("text_dim")
-	)
+	if page_column < 0:
+		draw_string(
+			font,
+			Vector2(rect.position.x + 8.0, rect.position.y + font.get_ascent(FONT_SIZE) + 2.0),
+			title,
+			0,
+			rect.size.x - 16.0,
+			FONT_SIZE,
+			Palette.color("text_dim")
+		)
 	if rows.is_empty():
 		draw_string(
 			font,
-			Vector2(rect.position.x + 8.0, rect.position.y + TITLE_H + font.get_ascent(FONT_SIZE)),
+			Vector2(
+				rect.position.x + 8.0, rect.position.y + _title_h() + font.get_ascent(FONT_SIZE)
+			),
 			TranslationServer.translate("comms.empty"),
 			0,
 			rect.size.x - 16.0,
