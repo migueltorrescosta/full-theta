@@ -138,6 +138,11 @@ func _ready() -> void:
 		made.append(body)
 
 
+## True once the shared parts and `wear_of`'s materials are built.
+static func is_warm(wear_of: float) -> bool:
+	return not _parts.is_empty() and _materials_by_wear.has(wear_of)
+
+
 ## Builds the shared parts and `wear_of`'s materials until `budget_us` has passed (after
 ## at least one slice; a negative budget builds everything). True once both are built.
 static func warm(wear_of: float, budget_us: int) -> bool:

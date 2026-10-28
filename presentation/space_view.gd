@@ -14,6 +14,8 @@ const STARS: int = 700
 ## Star sphere radius (m). It follows the camera position, so stars never parallax.
 const STAR_R: float = 9000.0
 const CAMERA_FAR: float = 30000.0
+## Time the build of the shared ship model may take in one frame (µs).
+const WARM_BUDGET_US: int = 8000
 
 ## Scale of every ship model (ProceduralShip is about 5 m long).
 var ship_scale: float = 1.0
@@ -30,6 +32,9 @@ var ships: Dictionary = {}
 
 var _stars: MeshInstance3D
 var _template: ProceduralShip
+## Ships asked for before the shared model was built: empty nodes that `_process` fills
+## once it is, a slice of the build per frame, so a view opens without waiting for it.
+var _unfilled: Array = []
 
 
 func _init() -> void:
@@ -86,18 +91,33 @@ func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
 
 
 ## A new ship model (unscaled), sharing the template's meshes and materials. Needs the
-## view in the tree: the template builds when it enters.
+## view in the tree: the template builds when it enters. While the shared model is still
+## being built (ProceduralShip.warm) the node is empty and fills in on a later frame.
 func copy_ship() -> Node3D:
+	var n: Node3D = Node3D.new()
+	add_child(n)
+	_unfilled.append(n)
+	if ProceduralShip.is_warm(wear):
+		_fill_ships()
+	return n
+
+
+func _process(_delta: float) -> void:
+	if not _unfilled.is_empty() and ProceduralShip.warm(wear, WARM_BUDGET_US):
+		_fill_ships()
+
+
+func _fill_ships() -> void:
 	if _template == null:
 		_template = ProceduralShip.new()
 		_template.wear = wear
 		_template.visible = false
 		add_child(_template)
-	var n: Node3D = Node3D.new()
-	for c: Node in _template.get_children():
-		n.add_child(c.duplicate())
-	add_child(n)
-	return n
+	for n: Variant in _unfilled:
+		if is_instance_valid(n):
+			for c: Node in _template.get_children():
+				(n as Node3D).add_child(c.duplicate())
+	_unfilled.clear()
 
 
 ## Seeded points on a sphere, with a little brightness variation.
