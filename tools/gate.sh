@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Local gate (FT-TST-002, FT-TST-005): imports the project, then runs tiers.
 #   tools/gate.sh [l0|l1|l2|l3|l4|l4load|l5|l6|ci|all]... [--update-baselines]   (default: ci)
-# ci = the tiers CI runs (l0 l1; l1 runs every test, tests/net included); all = every
-# implemented tier (l0 l1 l4 l4load l5 l6). l2 runs the sim-side suites only (tests/sim,
+# ci = the tiers CI runs (l0 l1; l1 runs every test, tests/net included, in L1_SHARDS
+# processes at once); all = every implemented tier (l0 l1 l4 l4load l5 l6). l2 runs the sim-side suites only (tests/sim,
 # tests/pairs, tests/scenarios, tests/director; Q16, owner 2026-10-26): a quick check
 # while working on the simulation, already part of l1. l3 runs only the in-process network tests
 # (tests/net), pinned to 2 cores like a CI runner. l4 runs a server and 3 client processes
@@ -35,21 +35,53 @@ godot=$(tools/get-godot.sh) || exit 1
 
 l0() { tools/l0.sh; }
 
-# gdUnit4 over a test directory ($1), JUnit XML in build/reports/report_1/results.xml;
-# the rest of the arguments prefix the command (a CPU pin). --remote-debug to a closed
-# port keeps a script error from opening the interactive debugger (as in
-# addons/gdUnit4/runtest.sh).
+# gdUnit4 over test directories or files (one --add each), JUnit XML in
+# $reports/report_1/results.xml (reports defaults to build/reports); the rest of the
+# arguments after -- prefix the command (a CPU pin). --remote-debug to a closed port keeps
+# a script error from opening the interactive debugger (as in addons/gdUnit4/runtest.sh).
+# Each run gets its own user:// (XDG_DATA_HOME under $reports), so runs in parallel, or
+# in other worktrees, never share settings, pid or log files.
 gdunit() {
-  local dir=$1
-  shift
-  rm -rf build/reports
-  "$@" "$godot" --headless --path . -s -d --remote-debug tcp://127.0.0.1:0 \
-    res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
-    --add "$dir" --report-directory build/reports --ignoreHeadlessMode
+  local adds=() reports=${reports:-build/reports}
+  while (($#)) && [[ $1 != -- ]]; do adds+=(--add "$1"); shift; done
+  (($#)) && shift
+  rm -rf "$reports"
+  mkdir -p "$reports/data"
+  XDG_DATA_HOME=$root/$reports/data "$@" "$godot" --headless --path . -s -d \
+    --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
+    "${adds[@]}" --report-directory "$reports" --ignoreHeadlessMode
 }
 
-# L1: every test.
-l1() { gdunit res://tests; }
+# L1: every test, in L1_SHARDS gdUnit4 processes at once (default 3) over a split of the
+# test files of about equal run time (tools/l1_shards.py); each shard's output goes to
+# build/reports/l1-<k>/output.log and is printed when it fails. L1_SHARD=k/N runs only
+# shard k of N, in the foreground (one CI job per shard).
+l1() {
+  local n=${L1_SHARDS:-3} ks k i r files pids=() failed=0
+  if [[ -n ${L1_SHARD:-} ]]; then
+    n=${L1_SHARD#*/}
+    ks=("${L1_SHARD%/*}")
+  else
+    mapfile -t ks < <(seq 0 $((n - 1)))
+  fi
+  rm -rf build/reports
+  for k in "${ks[@]}"; do
+    mapfile -t files < <(python3 tools/l1_shards.py "$k" "$n")
+    if ((${#ks[@]} == 1)); then
+      reports=build/reports/l1-$k gdunit "${files[@]}"
+      return
+    fi
+    reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
+    pids+=($!)
+  done
+  for i in "${!ks[@]}"; do
+    k=${ks[$i]}
+    if wait "${pids[$i]}"; then r=pass; else r=FAIL; failed=1; cat "build/l1-$k.log"; fi
+    echo "l1: shard $k/$n $r: $(grep -a "Overall Summary" "build/l1-$k.log" | sed 's/\x1b\[[0-9;]*m//g')"
+    mv "build/l1-$k.log" "build/reports/l1-$k/output.log" 2>/dev/null
+  done
+  return "$failed"
+}
 
 # L2: the simulation-side suites (an alias for part of l1; Q16).
 l2() {
@@ -61,7 +93,7 @@ l2() {
 
 # L3: server and clients over loopback WebSocket in one process (tests/net), on 2 cores
 # (L3_CPUS, default 0,1, like L4_CPUS).
-l3() { gdunit res://tests/net taskset -c "${L3_CPUS:-0,1}"; }
+l3() { gdunit res://tests/net -- taskset -c "${L3_CPUS:-0,1}"; }
 
 # L4: a server and 3 headless client processes on 2 cores, driven by intent files;
 # logs in build/l4/<run>/ (tools/l4/run.sh); then the browser station on the same 2 cores

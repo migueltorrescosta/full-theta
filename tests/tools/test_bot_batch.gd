@@ -3,13 +3,17 @@ extends GdUnitTestSuite
 ## and no network writes a report with the loss rate, fled encounters apart and run length,
 ## and the same seeds give the same report.
 
+## Sim seconds per smoke run: the average crews finish their fourth encounter and the
+## batch plays 11 (the test needs 8) in half the time of a full run (#27).
+const CAP_S: float = 900.0
+
 
 func _batch() -> Array[Dictionary]:
 	var defs: DefLibrary = DefLibrary.new()
 	var out: Array[Dictionary] = []
 	for profile: String in BotProfiles.NAMES:
 		for n: int in 2:
-			out.append(BotRun.play(defs, profile, "easy", 1 + n, 1500.0))
+			out.append(BotRun.play(defs, profile, "easy", 1 + n, CAP_S))
 	return out
 
 

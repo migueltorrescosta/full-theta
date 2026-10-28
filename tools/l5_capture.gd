@@ -1,9 +1,11 @@
 ## L5 screenshot capture (FT-TST-003), run by tools/l5.py under Xvfb with llvmpipe:
 ##   godot --path . --rendering-driver opengl3 --resolution WxH -s res://tools/l5_capture.gd \
-##     -- --shots <shots.json> --out <dir>
+##     -- --shots <shots.json> --out <dir> [--part K/N]
 ## Renders each shot's scene in the root window at the shot's "size" (else the manifest's),
 ## waits a few frames, saves <name>.png
 ## and writes env.json (renderer, GL version, engine) and timings.json to <dir>.
+## With --part K/N it renders only the shots whose index modulo N is K, writes
+## timings.K.json, and only part 0 writes env.json: N processes share the shots.
 extends SceneTree
 
 const WARMUP_FRAMES := 5
@@ -26,9 +28,14 @@ func _run() -> void:
 		return
 	var manifest: Dictionary = parsed
 	var shots: Array = manifest.get("shots", [])
+	var part: PackedStringArray = _arg(args, "--part").split("/")
+	var k: int = int(part[0]) if part.size() == 2 else 0
+	var n: int = int(part[1]) if part.size() == 2 else 1
 	var timings: Dictionary = {}
-	for item: Variant in shots:
-		var shot: Dictionary = item
+	for index: int in shots.size():
+		if index % n != k:
+			continue
+		var shot: Dictionary = shots[index]
 		var name: String = shot["name"]
 		var start: int = Time.get_ticks_msec()
 		var size: Array = shot.get("size", manifest.get("size", []))
@@ -45,8 +52,9 @@ func _run() -> void:
 		"gl_version": RenderingServer.get_video_adapter_api_version(),
 		"godot": Engine.get_version_info()["string"],
 	}
-	_write_json(out_dir.path_join("env.json"), env)
-	_write_json(out_dir.path_join("timings.json"), timings)
+	if k == 0:
+		_write_json(out_dir.path_join("env.json"), env)
+	_write_json(out_dir.path_join("timings.json" if n == 1 else "timings.%d.json" % k), timings)
 	quit(0)
 
 
