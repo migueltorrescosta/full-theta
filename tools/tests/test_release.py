@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "tools/release"))
 import fetch  # noqa: E402
 import package  # noqa: E402
 import pck  # noqa: E402
+import voice_pack  # noqa: E402
 import web_patch  # noqa: E402
 
 
@@ -171,14 +172,15 @@ def test_every_pack_includes_the_build_info_clips_and_data_files():
     for name in ("Linux", "Windows", "macOS", "Web"):
         block = cfg[cfg.index(f'name="{name}"') :]
         include = block[block.index("include_filter=") :].split("\n")[0]
-        for pattern in ("build_info.json", f"{inspect_packages.PRERENDER_DIR}/*", *inspect_packages.DATA_GLOBS):
+        for pattern in ("build_info.json", *inspect_packages.DATA_GLOBS):
             assert pattern in include, f"{name} preset doesn't include {pattern}"
         exclude = block[block.index("exclude_filter=") :].split("\n")[0]
-        host = f"{inspect_packages.PRERENDER_HOST_DIR}/*"
-        if name == "Web":
-            assert host in exclude and host not in include
-        else:
-            assert host in include
+        # The web pack carries no clips: voice-<lang>.pack files sit next to it (D294).
+        for folder in (inspect_packages.PRERENDER_DIR, inspect_packages.PRERENDER_HOST_DIR):
+            if name == "Web":
+                assert f"{folder}/*" in exclude and f"{folder}/*" not in include
+            else:
+                assert f"{folder}/*" in include
 
 
 # FT: FT-LIC-005
@@ -247,3 +249,78 @@ def test_release_lists_agree_with_the_game_voice_table():
     assert set(pins["release"]) == voices("runtime")
     assert set(pins["prerender"]) == voices("prerender")
     assert package.release_languages() == sorted(shipped)
+
+
+def make_clips(folder: Path, lang: str, clips: dict[str, bytes]) -> Path:
+    d = folder / lang
+    d.mkdir(parents=True)
+    for name, data in clips.items():
+        (d / name).write_bytes(data)
+    (d / "index.json").write_text(json.dumps({"language": lang, "clips": list(clips)}))
+    return d
+
+
+# FT: FT-AUD-002, FT-AUD-013
+def test_voice_pack_round_trip_and_malformed_packs(tmp_path):
+    d = make_clips(tmp_path, "it", {"npc.hail.ogg": b"OggS-1", "computer.jump_ready.ogg": b"OggS-22"})
+    data = voice_pack.build("it", d)
+    lang, clips = voice_pack.read(data)
+    assert lang == "it"
+    assert clips == {"npc.hail": b"OggS-1", "computer.jump_ready": b"OggS-22"}
+    assert data[:4] == b"FTVP" and struct.unpack_from("<I", data, 4)[0] == 1
+    for bad in (b"", data[:8], b"XTVP" + data[4:], data[:-1]):
+        with pytest.raises(ValueError):
+            voice_pack.read(bad)
+
+
+# FT: FT-NET-030, FT-AUD-002
+def test_web_patch_writes_voice_packs_and_brotli_copies(tmp_path):
+    import brotli
+
+    web = tmp_path / "web"
+    web.mkdir()
+    make_web(web)
+    pre = tmp_path / "prerendered"
+    make_clips(pre, "en", {"npc.hail.ogg": b"OggS-en"})
+    make_clips(pre, "it", {"npc.hail.ogg": b"OggS-it"})
+    (pre / "scratch").mkdir()  # no index.json: not a language
+    web_patch.finish(web, pre)
+    assert voice_pack.read((web / "voice-en.pack").read_bytes()) == ("en", {"npc.hail": b"OggS-en"})
+    assert voice_pack.read((web / "voice-it.pack").read_bytes())[0] == "it"
+    assert not (web / "voice-scratch.pack").exists()
+    # Ogg doesn't compress: no copies of the packs.
+    assert not list(web.glob("voice-*.pack.*"))
+    for f in web.iterdir():
+        if f.suffix in web_patch.GZIP_SUFFIXES:
+            assert brotli.decompress(Path(f"{f}.br").read_bytes()) == f.read_bytes(), f.name
+    nothing = tmp_path / "web-2"
+    nothing.mkdir()
+    make_web(nothing)
+    web_patch.finish(nothing, tmp_path / "none")
+    assert not list(nothing.glob("voice-*"))
+
+
+# FT: FT-ARC-022
+def test_inspection_checks_each_languages_voice_pack(tmp_path):
+    import inspect_packages
+
+    class Folder:
+        def __init__(self, files):
+            self.files = files
+
+        def has(self, rel):
+            return rel in self.files
+
+        def read(self, rel):
+            return self.files[rel]
+
+    en = voice_pack.build("en", make_clips(tmp_path, "en", {"npc.hail.ogg": b"OggS-a"}))
+    it = voice_pack.build("it", make_clips(tmp_path, "it", {"npc.hail.ogg": b"OggS-b"}))
+    insp = inspect_packages.Inspector("v0.0.0", "abc")
+    insp.languages = ["en", "it"]
+    insp.client_clips = {"en": {"npc.hail.ogg"}, "it": {"npc.hail.ogg", "npc.bye.ogg"}}
+    insp.voice_packs(Folder({"web/voice-en.pack": en, "web/voice-it.pack": it}), "web", "pkg")
+    assert insp.errors == ["pkg: web/voice-it.pack lacks ['npc.bye']"]
+    insp.errors = []
+    insp.voice_packs(Folder({"web/voice-en.pack": it}), "web", "pkg")
+    assert insp.errors == ["pkg: web/voice-en.pack is for it", "pkg: no web/voice-it.pack"]

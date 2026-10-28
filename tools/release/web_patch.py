@@ -18,7 +18,10 @@
    "fileSizes", so the static server can send them as immutable and a returning
    browser reuses its cached copy without asking (D197, StaticServer.cache_control).
    index.js and index.html keep their names and are revalidated.
-4. Writes .gz copies the static server sends to clients that accept gzip.
+4. Writes a voice pack per prerendered language (voice_pack.py, D294): the web
+   pack carries no clips, so a browser station fetches only its session's.
+5. Writes .gz and .br copies; the static server sends .br to clients that accept
+   brotli (browsers offer it only over HTTPS), else .gz to those that accept gzip.
 """
 
 import gzip
@@ -26,7 +29,13 @@ import hashlib
 import re
 import shutil
 import sys
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+
+import brotli
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import voice_pack  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 UNGUARDED = "GodotAudio.audioPositionWorkletPromise=ctx.audioWorklet.addModule(path)"
@@ -34,6 +43,7 @@ GUARDED = (
     "GodotAudio.audioPositionWorkletPromise=ctx.audioWorklet?"
     "ctx.audioWorklet.addModule(path):new Promise(function(){})"
 )
+# Compressed copies (.gz and .br) are written for these.
 GZIP_SUFFIXES = (".html", ".js", ".wasm", ".pck", ".svg", ".json")
 HASHED_SUFFIXES = (".wasm", ".pck", ".audio.worklet.js", ".audio.position.worklet.js")
 KEEPAWAKE = ("keepawake.webm", "keepawake.mp4")
@@ -67,17 +77,25 @@ def hash_names(web: Path) -> str:
     return tag
 
 
-def finish(web: Path) -> None:
+def finish(web: Path, prerendered: Path = ROOT / "audio/prerendered") -> None:
     index_js = web / "index.js"
     index_js.write_text(patch_index_js(index_js.read_text(encoding="utf-8")), encoding="utf-8")
     for video in KEEPAWAKE:
         shutil.copy2(ROOT / "app/web" / video, web / video)
     hash_names(web)
-    for f in sorted(web.iterdir()):
-        if f.suffix in GZIP_SUFFIXES:
-            # mtime=0 keeps the .gz bytes reproducible.
-            with f.open("rb") as src, gzip.GzipFile(f"{f}.gz", "wb", 9, mtime=0) as dst:
-                shutil.copyfileobj(src, dst)
+    voice_pack.write_all(web, prerendered)
+    files = [f for f in sorted(web.iterdir()) if f.suffix in GZIP_SUFFIXES]
+    # The wasm's brotli copy takes about a minute; the files compress in parallel.
+    with ProcessPoolExecutor() as pool:
+        list(pool.map(compress, files))
+
+
+def compress(f: Path) -> None:
+    """Writes f.gz and f.br, both reproducible (mtime=0 in the gzip header)."""
+    with f.open("rb") as src, gzip.GzipFile(f"{f}.gz", "wb", 9, mtime=0) as dst:
+        shutil.copyfileobj(src, dst)
+    # A 16 MiB window (lgwin 24, the most browsers accept) saves 0.1 MB on the wasm.
+    Path(f"{f}.br").write_bytes(brotli.compress(f.read_bytes(), quality=11, lgwin=24))
 
 
 def main(argv: list[str]) -> int:
