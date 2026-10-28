@@ -338,7 +338,7 @@ Tests: 382, manual: 13, pending: 6.
 | FT-AUD-013 | tests | `tests/audio/test_voice_pack.gd`, `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tools/tests/test_release.py` |
 | FT-AUD-014 | tests | `tests/net/voice/test_voice_service.gd`, `tools/tests/test_licences.py`, `tools/tests/test_prerender.py` |
 | FT-AUD-015 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_service.gd`, [#10](https://github.com/migueltorrescosta/full-theta/issues/10) |
-| FT-AUD-016 | tests | `tests/presentation/test_procedural_ship_shared.gd` |
+| FT-AUD-016 | tests | `tests/presentation/test_procedural_ship_shared.gd`, `tests/presentation/test_space_view_deferred_ships.gd` |
 | FT-AUD-017 | tests | `tests/presentation/test_sound_toggle.gd` |
 | FT-AUD-018 | tests | `tests/net/voice/test_clip_library.gd`, `tests/net/voice/test_npc_routing_l3.gd`, `tests/net/voice/test_number_words.gd`, `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_server_voice.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd`, `tools/tests/test_prerender.py` |
 | FT-AUD-019 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd`, `tests/net/voice/test_voice_setup.gd` |
