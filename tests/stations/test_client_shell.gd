@@ -128,10 +128,10 @@ func test_escape_opens_the_menu() -> void:
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_GAME)
 	assert_bool(s.screen.blocked()).is_true()
-	menu.open(SettingsScreen.TAB_KEYS)
+	menu.open(SettingsScreen.TAB_TIPS)
 	menu.close()
 	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
-	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_KEYS)
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_TIPS)
 	menu.close()
 	assert_bool(s.screen.blocked()).is_false()
 
@@ -141,7 +141,7 @@ func test_escape_opens_the_menu() -> void:
 func test_help_key_opens_the_controls_tab() -> void:
 	var s: ClientShell = await _on_station(false)
 	var menu: SettingsScreen = s.settings_screen
-	menu.open(SettingsScreen.TAB_KEYS)
+	menu.open(SettingsScreen.TAB_SETTINGS)
 	s.screen.dispatch({"id": "overlay", "target": "screen", "pressed": true})
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)

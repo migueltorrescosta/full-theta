@@ -131,8 +131,9 @@ func test_host_abandon_confirms_and_a_vote_goes_at_once() -> void:
 
 
 # FT: FT-STN-011, FT-STN-014
-# A phone has no keys to rebind: its menu hides the Rebind keys tab.
-func test_a_phone_hides_the_rebind_keys_tab() -> void:
+# A phone has no keys to rebind: its menu has no Rebind keys tab (a hidden one would still
+# widen the tab bar past a phone's width), and a window that turns into one hides it.
+func test_a_phone_has_no_rebind_keys_tab() -> void:
 	var m: SettingsScreen = _menu()
 	var keys: int = m.tabs.get_node(SettingsScreen.TAB_KEYS).get_index()
 	assert_bool(m.tabs.is_tab_hidden(keys)).is_false()
@@ -141,3 +142,10 @@ func test_a_phone_hides_the_rebind_keys_tab() -> void:
 	m._fit_safe_area()
 	assert_bool(m.tabs.is_tab_hidden(keys)).is_true()
 	assert_str(m.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
+	var phone: SettingsScreen = auto_free(SettingsScreen.new())
+	add_child(phone)
+	phone.setup(ClientSettings.new(CFG), true)
+	assert_array(_tab_names(phone)).not_contains([SettingsScreen.TAB_KEYS])
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	phone._fit_safe_area()
+	assert_array(_tab_names(phone)).contains([SettingsScreen.TAB_KEYS])

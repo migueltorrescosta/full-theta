@@ -191,12 +191,15 @@ func _fit_safe_area() -> void:
 		_scale_slider.custom_minimum_size.y = (
 			UiTheme.TOUCH_MIN if LayoutMode.is_touch(kind) else 0.0
 		)
+	# A window that became a phone hides Rebind keys; one that stopped being one gets it.
 	var keys: Node = tabs.get_node_or_null(TAB_KEYS) if tabs != null else null
+	var phone: bool = kind == LayoutMode.Kind.PHONE
 	if keys != null:
-		var phone: bool = kind == LayoutMode.Kind.PHONE
 		if phone and tabs.get_current_tab_control() == keys:
 			open_tab(TAB_SETTINGS)
 		tabs.set_tab_hidden(keys.get_index(), phone)
+	elif tabs != null and not phone:
+		_build_keys()
 
 
 ## (Re)builds the tabs in the current language, keeping the tab showing.
@@ -235,6 +238,15 @@ func _build() -> void:
 	_tab(TAB_SETTINGS, tr("menu.settings"), general)
 	_build_general(general)
 	_build_comfort(general)
+	# A phone has no keys to rebind; a hidden tab would still widen the tab bar.
+	_rows = null
+	if not _phone():
+		_build_keys()
+	open_tab(keep)
+	_fit_safe_area()
+
+
+func _build_keys() -> void:
 	var keys: VBoxContainer = VBoxContainer.new()
 	_tab(TAB_KEYS, tr("settings.bindings"), keys)
 	warning = _label("")
@@ -245,8 +257,10 @@ func _build() -> void:
 	_rows = VBoxContainer.new()
 	keys.add_child(_rows)
 	_build_bindings()
-	open_tab(keep)
-	_fit_safe_area()
+
+
+func _phone() -> bool:
+	return is_inside_tree() and LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
 
 
 ## The Game tab: the ship, Sound, Full screen, the host's Pause, Abandon or Give up, Leave;
@@ -571,6 +585,8 @@ func _build_comfort(col: VBoxContainer) -> void:
 
 ## One row per intent: label, KB/M binding, controller binding, hold/toggle.
 func _build_bindings() -> void:
+	if _rows == null:
+		return
 	for c: Node in _rows.get_children():
 		_rows.remove_child(c)
 		c.queue_free()
