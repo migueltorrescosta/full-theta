@@ -184,7 +184,8 @@ func input(event: InputEvent) -> bool:
 	else:
 		return false
 	var starts: bool = touch != null and touch.pressed
-	if starts and band_guard.get_global_rect().has_point(pos):
+	# (not under the menu or a card: its tabs scroll from a swipe that starts down there)
+	if starts and not screen.blocked() and band_guard.get_global_rect().has_point(pos):
 		return true
 	var off: bool = not framed() or screen.blocked() or TouchInput.over(screen.get_tree(), pos)
 	if starts and (off or not _over_view(pos)):

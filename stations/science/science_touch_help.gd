@@ -89,7 +89,7 @@ func _draw() -> void:
 ## Draws `page_list` into `canvas` from its top: per page the title, the small phone with
 ## numbered boxes, then the legend.
 static func draw_pages(canvas: CanvasItem, page_list: Array) -> void:
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = UiTheme.font()
 	var y: float = 0.0
 	var line: Color = Palette.color("line")
 	var text: Color = Palette.color("text")

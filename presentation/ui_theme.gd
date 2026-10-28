@@ -48,6 +48,15 @@ const CHECK_ICON: int = 18
 const TOUCH_PAD: int = 12
 const CELL_PAD: int = 8
 const LOAD_VARIANTS: Array[String] = ["intense", "busy", "light", "none"]
+## Subsets of two Noto fonts (OFL-1.1) that cover the symbols the UI shows and Godot's
+## default font lacks: ☰ ▸ ▾ ⚡ ✓ ✕ and ⇄. A browser has no system fonts to fall back
+## on, so without them these draw as the missing-glyph box (content/provenance.json).
+const FALLBACK_FONTS: Array[String] = [
+	"res://content/fonts/NotoSansSymbols2-subset.ttf",
+	"res://content/fonts/NotoSansMath-subset.ttf",
+]
+
+static var _font: FontVariation = null
 
 
 ## A fresh theme. The result is a plain resource; `apply` puts it on a window. With
@@ -57,6 +66,7 @@ const LOAD_VARIANTS: Array[String] = ["intense", "busy", "light", "none"]
 static func build(touch: bool = false) -> Theme:
 	var t: Theme = Theme.new()
 	t.default_font_size = FONT_SIZE
+	t.default_font = font()
 	_labels(t)
 	_buttons(t, "Button", "", 16 if touch else 8, TOUCH_PAD if touch else 4)
 	_buttons(t, "Button", "TouchButton", 16, TOUCH_PAD)
@@ -78,6 +88,20 @@ static func build(touch: bool = false) -> Theme:
 	t.set_constant("h_separation", "GridContainer", SPACING)
 	t.set_constant("v_separation", "GridContainer", SPACING)
 	return t
+
+
+## The theme's font: Godot's default with the symbol subsets as fallbacks.
+static func font() -> Font:
+	if _font != null:
+		return _font
+	var f: FontVariation = FontVariation.new()
+	f.base_font = ThemeDB.fallback_font
+	var fallbacks: Array[Font] = []
+	for path: String in FALLBACK_FONTS:
+		fallbacks.append(load(path) as Font)
+	f.fallbacks = fallbacks
+	_font = f
+	return f
 
 
 ## A rounded box in the palette: fill and border roles, a content margin on each side.

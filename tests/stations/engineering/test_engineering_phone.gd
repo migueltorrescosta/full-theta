@@ -221,3 +221,22 @@ func test_shares_on_the_crew_page() -> void:
 ## The Crew page's first Share button of the focused Engineering panel.
 func _share_button(sc: StationScreen) -> BaseButton:
 	return (sc.focused_panel() as EngineeringPanel).crew_page.button("share")
+
+
+# FT: FT-STN-005
+func test_upright_ship_page_hides_the_radar_column() -> void:
+	var s: StationScreen = await _screen(Vector2i(390, 844), PORTRAIT)
+	var panel: EngineeringPanel = s.focused_panel() as EngineeringPanel
+	for page: int in [P.POWER, P.SHIP, P.FAULTS, P.CREW]:
+		panel.pages.current = page
+		await _frames(2)
+		assert_bool(s.radar.is_visible_in_tree()).override_failure_message(str(page)).is_equal(
+			page != P.SHIP
+		)
+	# On its side the column stays on the Ship page.
+	_drop(s)
+	var side: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
+	(side.focused_panel() as EngineeringPanel).pages.current = P.SHIP
+	await _frames(2)
+	assert_bool(side.radar.is_visible_in_tree()).is_true()
+	_drop(side)

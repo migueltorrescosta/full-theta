@@ -189,6 +189,25 @@ func _place_lists() -> void:
 	_from_phone()
 
 
+## True upright on the Ship page: the cutaway takes the width, so the screen's radar column
+## hides (Q-eng-radar); the other pages keep it.
+func full_screen() -> bool:
+	return (
+		pages != null
+		and is_inside_tree()
+		and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_PORTRAIT
+		and pages.current == Page.SHIP
+	)
+
+
+func _on_page(_index: int) -> void:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
+		(n as StationScreen).pages_changed()
+
+
 ## The phone's pages (built in _setup, so the screen binds them at once): Power (the board,
 ## scrolling only when the view-top row grows), Ship (the cutaway), Faults (the lists) and
 ## Crew. Only the page controls take part in the pages: the board, cutaway and lists move
@@ -226,6 +245,7 @@ func _build_pages() -> void:
 		area.add_child(page)
 		_page_ctl.append(page)
 		pages.add_page(titles[i], [page])
+	pages.page_changed.connect(_on_page)
 
 
 ## The rail on its side (rows of two) and the upright grid, each a full set of the buttons.

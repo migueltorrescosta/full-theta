@@ -62,7 +62,7 @@ static func clock(time_s: float) -> String:
 
 ## Draws one card in `rect` of `item`: kind and title, detail, time left.
 static func draw_card(item: CanvasItem, rect: Rect2, card: Dictionary, size_px: int) -> void:
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = UiTheme.font()
 	item.draw_rect(rect, Palette.color("panel"))
 	item.draw_rect(rect, Palette.color("accent"), false, 2.0)
 	var pad: float = size_px * 0.6
