@@ -99,13 +99,25 @@ func _rebuild() -> void:
 			b.name = "Tab%d" % (i + 1)
 			b.add_theme_font_size_override("font_size", FONT)
 			# On its side a tab is as wide as its label, never cut ("Requests", "Mounts");
-			# upright the tabs share the bar.
+			# upright the tabs share the bar by their labels' widths, so a longer label
+			# ("Contracts") takes more of it.
 			b.clip_text = upright
 			b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-			b.custom_minimum_size = Vector2(0.0 if upright else w, UiTheme.TOUCH_PRIMARY)
+			b.custom_minimum_size = Vector2(
+				UiTheme.TOUCH_PRIMARY if upright else w, UiTheme.TOUCH_PRIMARY
+			)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL if upright else Control.SIZE_FILL
 			b.pressed.connect(_on_tap.bind(i))
 			add_child(b)
+			var label_w: float = (
+				b
+				. get_theme_font("font")
+				. get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT)
+				. x
+			)
+			b.size_flags_stretch_ratio = (
+				label_w + b.get_theme_stylebox("normal").get_minimum_size().x
+			)
 			_buttons.append(b)
 	if lead != null:
 		lead.size_flags_horizontal = Control.SIZE_EXPAND_FILL if upright else Control.SIZE_FILL

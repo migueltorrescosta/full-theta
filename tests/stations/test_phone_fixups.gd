@@ -131,7 +131,7 @@ func test_panels_with_their_own_share_place_keep_one_opener() -> void:
 # Upright the share buttons stay in the column beside the radar, 48 px and 8 px apart; on a
 # desktop they keep their place and there is no opener.
 func test_share_buttons_stay_in_the_column_upright_and_on_a_desktop() -> void:
-	var up: StationScreen = await _screen(Vector2i(390, 844), "systems", PORTRAIT)
+	var up: StationScreen = await _screen(Vector2i(390, 844), "approach", PORTRAIT)
 	assert_bool(up.share_opener.visible).is_false()
 	assert_bool(up.share_bar.is_visible_in_tree()).is_true()
 	for b: Button in _share_buttons(up):
@@ -139,6 +139,10 @@ func test_share_buttons_stay_in_the_column_upright_and_on_a_desktop() -> void:
 	_assert_clean(up.share_bar, "upright")
 	_assert_clean(up, "upright screen")
 	_drop(up)
+	# Engineering keeps its shares on its Crew page: none beside the radar.
+	var eng: StationScreen = await _screen(Vector2i(390, 844), "systems", PORTRAIT)
+	assert_array(_share_buttons(eng).filter(func(b: Button) -> bool: return b.visible)).is_empty()
+	_drop(eng)
 	var desk: StationScreen = await _screen(Vector2i(1280, 720), "systems", [])
 	assert_bool(desk.share_opener.visible).is_false()
 	assert_bool(desk.share_bar.is_visible_in_tree()).is_true()

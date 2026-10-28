@@ -12,6 +12,7 @@ func before() -> void:
 
 
 func after_test() -> void:
+	LayoutMode.forced = -1
 	I18n.apply("en")
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
@@ -159,6 +160,8 @@ func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
 		var want: Array[StringName] = []
 		want.assign(c[2])
 		assert_array(s.shareable()).override_failure_message("%s %s" % [c[0], c[1]]).is_equal(want)
+	# (a desktop: on a phone Relay's shares are on its own pages)
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	var ctx: StationContext = _ctx("relay", "easy")
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)

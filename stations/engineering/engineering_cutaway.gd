@@ -285,7 +285,8 @@ func _draw_subsystem(i: int) -> void:
 
 
 ## Where each subsystem's label goes (rects in this control's space): below its disc,
-## else right, left or above, the first spot inside the cutaway that covers no disc,
+## else right, left, above, a diagonal, then the same a step further out: the first spot
+## inside the cutaway that covers no disc,
 ## crew token or label already placed, so the labels stay apart when the cutaway is
 ## small (150 % UI scale); below when nothing is free.
 func label_rects() -> Dictionary:
@@ -301,12 +302,25 @@ func label_rects() -> Dictionary:
 	for i: int in panel.count():
 		var c: Vector2 = subsystem_pos(i)
 		var sz: Vector2 = font.get_string_size(_label(i), HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-		var spots: Array[Vector2] = [
-			c + Vector2(-sz.x / 2.0, gap),
-			c + Vector2(gap, -sz.y / 2.0),
-			c + Vector2(-gap - sz.x, -sz.y / 2.0),
-			c + Vector2(-sz.x / 2.0, -gap - sz.y),
-		]
+		var spots: Array[Vector2] = []
+		# Beside the disc first, then on the diagonals, then a step further out.
+		for k: float in [1.0, 1.9]:
+			var g: float = gap * k
+			(
+				spots
+				. append_array(
+					[
+						c + Vector2(-sz.x / 2.0, g),
+						c + Vector2(g, -sz.y / 2.0),
+						c + Vector2(-g - sz.x, -sz.y / 2.0),
+						c + Vector2(-sz.x / 2.0, -g - sz.y),
+						c + Vector2(g * 0.7, g * 0.7 - sz.y / 2.0),
+						c + Vector2(-g * 0.7 - sz.x, g * 0.7 - sz.y / 2.0),
+						c + Vector2(g * 0.7, -g * 0.7 - sz.y / 2.0),
+						c + Vector2(-g * 0.7 - sz.x, -g * 0.7 - sz.y / 2.0),
+					]
+				)
+			)
 		out[i] = Rect2(spots[0], sz)
 		for at: Vector2 in spots:
 			var r: Rect2 = Rect2(at, sz)

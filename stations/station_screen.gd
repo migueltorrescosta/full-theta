@@ -446,7 +446,10 @@ func _process(delta: float) -> void:
 	var left: Dictionary = {}
 	for id: StringName in ctx.crew.shares:
 		left[id] = ctx.crew.share_left(id, now)
-	share_bar.show_features(shareable(), left)
+	# A phone panel with its shares on its Crew page shows no second set beside the radar.
+	var none: Array[StringName] = []
+	var own: bool = phone and focused_panel().shows_shares
+	share_bar.show_features(none if own else shareable(), left)
 	_sync_share()
 
 
