@@ -182,6 +182,8 @@ func _arrange() -> void:
 		phone = SciencePhone.new()
 		add_child(phone)
 		phone.build(self, form)
+	# The left rail's slot under the contacts, on a phone on its side (#28).
+	share_slot = phone.share_slot if phone != null else null
 	_rows.visible = phone == null
 	if phone == null:
 		_stack()
