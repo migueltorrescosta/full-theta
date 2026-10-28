@@ -13,7 +13,9 @@ extends StationPanel
 ## Rules live in sim/: this panel only turns intents into commands.
 ##
 ## On a phone (#28) HelmTouch lays the touch controls over the cockpit, landscape-first,
-## and the pointer never steers: the sticks do, and a tap selects under the finger.
+## and the pointer never steers: the sticks do, and a tap selects under the finger. With it
+## the panel is in the shared phone frame (in_frame): its pages are HelmTouch's, and the HUD
+## keeps its read-outs under the screen's view-top row.
 
 ## The controller Helm radial (hold View + right stick, FT-HLM-017): flick toward an
 ## item and let go.
@@ -100,32 +102,54 @@ func _apply_form() -> void:
 	var form: LayoutMode.Form = _form()
 	var want: bool = focused and LayoutMode.is_phone(form)
 	var portrait: bool = form == LayoutMode.Form.PHONE_PORTRAIT
+	var rebuilt: bool = false
 	if touch_ui != null and (not want or touch_ui.portrait != portrait):
-		if ring.get_parent() != self:
-			ring.reparent(self, false)
-			ring.size_flags_vertical = Control.SIZE_FILL
+		# The ring lives in the touch layout's page zone: take it back first.
+		ring.reparent(self, false)
+		ring.size_flags_vertical = Control.SIZE_FILL
+		ring.visible = true
+		ring.mouse_filter = Control.MOUSE_FILTER_STOP
+		hud.visible = true
 		_mode_changed_ring()
 		remove_child(touch_ui)
 		touch_ui.queue_free()
 		touch_ui = null
+		pages = null
+		rebuilt = true
 		ctx.matcher.release_all()
 	if want and touch_ui == null:
 		touch_ui = HelmTouch.new(self, _dispatch, portrait)
 		add_child(touch_ui)
+		pages = touch_ui.pages
+		rebuilt = true
 		_captured = false
 		var screen: StationScreen = _screen()
 		if screen != null and portrait:
 			screen.rotate_banner.label.text = TouchText.of(
 				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
 			)
+	# In the frame with the phone layout only. Upright, a joint view keeps its docked panels
+	# (the lead's call), which leave the cockpit too short for the view-top row: there Helm
+	# keeps the chip strip.
+	var screen_now: StationScreen = _screen()
+	var docked_upright: bool = portrait and screen_now != null and screen_now.panels.size() >= 2
+	in_frame = touch_ui != null and not docked_upright
 	var inset: float = touch_ui.view_bottom_inset() if touch_ui != null else 0.0
 	_container.offset_bottom = -inset
 	hud.offset_bottom = -inset
-	# A finger on the ring picks a sector only (the screen leaves the tap alone).
-	if touch_ui != null:
-		ring.add_to_group(TouchInput.GROUP)
-	elif ring.is_in_group(TouchInput.GROUP):
-		ring.remove_from_group(TouchInput.GROUP)
+	if rebuilt:
+		_show_pages()
+
+
+## The screen shows the tabs of the pages just built (it binds them on its own relayout,
+## which runs before a rotation rebuilds this layout).
+func _show_pages() -> void:
+	var screen: StationScreen = _screen()
+	if screen == null or not screen.is_inside_tree() or screen.focused_panel() != self:
+		return
+	var form_now: LayoutMode.Form = LayoutMode.form_of(screen)
+	var alone: bool = screen.panels.size() >= 2 and form_now == LayoutMode.Form.PHONE_LANDSCAPE
+	screen.frame.show_tabs(form_now, alone)
 
 
 ## The screen's form (LayoutMode.Form), measured on the screen's own size so a screen laid
@@ -456,7 +480,7 @@ func marks_attach_only() -> bool:
 	return focused
 
 
-## A phone drops the radar column: the radar sits in a drawer (#28).
+## A phone drops the radar column: the radar is a page (#28).
 func full_screen() -> bool:
 	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 
@@ -466,10 +490,19 @@ func full_screen() -> bool:
 func hud_area(control: Control) -> Rect2:
 	var r: Rect2 = Rect2(Vector2.ZERO, control.size)
 	if touch_ui != null and touch_ui.is_inside_tree():
-		r = touch_ui.content_rect_in(control).intersection(r)
+		# Under the screen's view-top row too (selection chip, request chips).
+		r = touch_ui.clear_view_in(control).intersection(r)
 	# Above the screen's joint switch (a joint view on a phone on its side).
 	r.size.y = maxf(r.size.y - bottom_reserve, 0.0)
 	return r
+
+
+## On a phone the view is the part the touch controls leave clear (the view-top row goes
+## at its top).
+func view_rect() -> Rect2:
+	if touch_ui != null and touch_ui.is_inside_tree():
+		return touch_ui.content_rect_in(self)
+	return super()
 
 
 func claim_item() -> String:
