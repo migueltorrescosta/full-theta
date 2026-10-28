@@ -35,9 +35,16 @@ const READOUT_H: float = 168.0
 ## Envelope bar length, and on a phone (narrower, so the compass fits beside the read-out).
 const BAR_W: float = 140.0
 const PHONE_BAR_W: float = 100.0
+## A label with no clear spot may cover up to this share of its area of something else.
+const SLIGHT: float = 0.1
 
 var panel: HelmPanel
 var compact: bool = false
+
+## This frame's markers and the labels placed so far: later labels keep clear of them.
+var _placed: Array[Rect2] = []
+## This frame's marker and velocity labels (tests check they keep clear).
+var _labels: Array[Rect2] = []
 
 
 func _init() -> void:
@@ -180,18 +187,29 @@ func _draw() -> void:
 		_draw_readout(font, Vector2(2.0 * COMPASS_R + 28.0, size.y / 2.0 - 24.0), false)
 		return
 	_draw_reticle()
+	var all: Array[Dictionary] = markers()
+	_placed.clear()
+	_labels.clear()
+	for e: Dictionary in all:
+		if e["on_screen"]:
+			_placed.append(_marker_box(e["pos"], 14.0 if e["selected"] else 10.0))
+		elif e["arrow"]:
+			_placed.append(_arrow_box(font, e))
+	for m: Dictionary in velocity_markers():
+		_placed.append(_marker_box(m["pos"], 14.0))
 	_draw_velocity(font)
 	_draw_thrust(font)
 	_draw_routes(font)
 	_draw_lanes(font)
-	for e: Dictionary in markers():
+	# The compass and read-out first: a marker passing behind them stays on top.
+	var a: Rect2 = area()
+	_draw_compass(font, _compass_centre())
+	_draw_readout(font, Vector2(a.position.x + 16.0, a.end.y - 150.0), true)
+	for e: Dictionary in all:
 		if e["on_screen"]:
 			_draw_marker(font, e, e["selected"])
 		elif e["arrow"]:
 			_draw_arrow(font, e, e["selected"])
-	var a: Rect2 = area()
-	_draw_compass(font, _compass_centre())
-	_draw_readout(font, Vector2(a.position.x + 16.0, a.end.y - 150.0), true)
 	if panel.chase:
 		_text(font, a.position + Vector2(16.0, 24.0), tr("helm.chase"), Palette.color("text_dim"))
 	if not panel.steering() and panel.ctx.matcher.device == IntentTable.KBM and not touch_layout():
@@ -257,6 +275,8 @@ func _draw_velocity(font: Font) -> void:
 			draw_line(s + Vector2(-6.0, 6.0), s + Vector2(6.0, -6.0), col, 1.5)
 		var text: String = tr("helm.prograde" if pro else "helm.retrograde")
 		var at: Rect2 = label_rect(font, text, s, 14.0)
+		_placed.append(at)
+		_labels.append(at)
 		_text(font, at.position + Vector2(0.0, font.get_ascent(FONT_SIZE)), text, col)
 
 
@@ -359,6 +379,8 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 		draw_arc(p, r + 10.0 * (1.0 - pulse) + 4.0, 0.0, TAU, 24, Color(col, pulse), 2.0)
 	var text: String = "%s %s" % [e["label"], _range(e["world"].length())]
 	var at: Rect2 = label_rect(font, text, p, r)
+	_placed.append(at)
+	_labels.append(at)
 	if at.position.x != p.x + r + 6.0 or at.position.y != p.y + 5.0 - font.get_ascent(FONT_SIZE):
 		# Moved clear of something: a thin leader keeps it tied to its marker.
 		var tip: Vector2 = Vector2(
@@ -369,66 +391,92 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 
 
 ## Where a marker's label goes (HUD coordinates): right of the marker, else the nearest spot
-## clear of the marker and of `reserved()`; a label that fits nowhere clear stays on the
-## right.
+## clear of the marker, of `reserved()` and of this frame's other markers and labels; a
+## label that fits nowhere clear stays on the right.
 func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 	var h: float = font.get_height(FONT_SIZE)
 	var right: Rect2 = Rect2(p + Vector2(r + 6.0, 5.0 - font.get_ascent(FONT_SIZE)), Vector2(w, h))
 	var avoid: Array[Rect2] = reserved()
-	if not _hits(right, avoid):
+	avoid.append_array(_placed)
+	var inside: Rect2 = area()
+	if not _hits(right, avoid) and inside.encloses(right):
 		return right
 	var tries: Array[Rect2] = [
 		Rect2(right.position - Vector2(w + 2.0 * r + 12.0, 0.0), right.size),
+		Rect2(Vector2(p.x - w / 2.0, p.y - 1.3 * r - h - 2.0), right.size),
+		Rect2(Vector2(p.x - w / 2.0, p.y + 1.3 * r + 2.0), right.size),
 	]
 	for a: Rect2 in avoid:
 		for x: float in [a.position.x - w - 4.0, a.end.x + 4.0]:
 			tries.append(Rect2(Vector2(x, right.position.y), right.size))
 		for y: float in [a.position.y - h - 2.0, a.end.y + 2.0]:
 			tries.append(Rect2(Vector2(right.position.x, y), right.size))
+			# Centred on the marker: under or over a box the marker sits in or beside.
+			tries.append(Rect2(Vector2(p.x - w / 2.0, y), right.size))
 		# Beside a reserved box, nudged up or down off its neighbours.
 		for x: float in [a.position.x - w - 4.0, a.end.x + 4.0]:
 			for k: int in [-2, -1, 1, 2]:
 				tries.append(Rect2(Vector2(x, right.position.y + k * h), right.size))
-	var marker: Rect2 = Rect2(p - Vector2(r, r) * 1.3, Vector2(r, r) * 2.6)
+	var marker: Rect2 = _marker_box(p, r)
 	var best: Rect2 = right
 	var best_d: float = INF
-	var inside: Rect2 = area()
+	# No clear spot (a crowded phone view): the spot overlapping least, if only slightly.
+	var least: Rect2 = right
+	var least_cover: float = SLIGHT * w * h
 	for t: Rect2 in tries:
-		if _hits(t, avoid) or t.intersects(marker) or not inside.encloses(t):
+		# Kept inside the view: a label near the edge slides in rather than giving up.
+		t.position = t.position.clamp(inside.position, (inside.end - t.size).max(inside.position))
+		if t.intersects(marker) or not inside.encloses(t) or not _leader_clear(p, t, avoid):
 			continue
-		if not _leader_clear(p, t, avoid):
+		var cover: float = 0.0
+		for a: Rect2 in avoid:
+			cover += t.intersection(a).get_area()
+		if cover > 0.0:
+			if cover < least_cover:
+				least_cover = cover
+				least = t
 			continue
 		if t.get_center().distance_to(p) < best_d:
 			best_d = t.get_center().distance_to(p)
 			best = t
-	return best
+	return best if best_d < INF else least
+
+
+## A marker's box at `p` for a bracket of radius `r`.
+static func _marker_box(p: Vector2, r: float) -> Rect2:
+	return Rect2(p - Vector2(r, r) * 1.3, Vector2(r, r) * 2.6)
 
 
 ## What marker labels keep clear of: the panel's shield ring (with its caption), the target
 ## compass (with its chip) and the flight read-out.
 func reserved() -> Array[Rect2]:
 	var out: Array[Rect2] = []
-	if (
-		panel != null
-		and panel.ring != null
-		and panel.ring.visible
-		and panel.ring.get_parent() == panel
-	):
-		out.append(panel.ring.get_rect().grow(2.0))
-	out.append(_compass_rect())
+	if _ring_rect().has_area():
+		out.append(_ring_rect().grow(2.0))
+	out.append_array(compass_boxes())
 	# The flight read-out: mode, speed, active modes and the three bars.
 	out.append(readout_rect())
 	out.append(thrust_rect())
 	return out
 
 
+## The shield ring's box in this HUD's coordinates while it sits on the view, else empty.
+func _ring_rect() -> Rect2:
+	if (
+		panel == null
+		or panel.ring == null
+		or not panel.ring.visible
+		or panel.ring.get_parent() != panel
+	):
+		return Rect2()
+	return get_global_transform().affine_inverse() * panel.ring.get_global_rect()
+
+
 ## The flight read-out's box: mode, speed, active modes and the three bars.
 func readout_rect() -> Rect2:
 	var a: Rect2 = area()
-	return Rect2(
-		Vector2(a.position.x + 14.0, a.end.y - READOUT_H), Vector2(_bar_w() + 122.0, 130.0)
-	)
+	return Rect2(Vector2(a.position.x + 14.0, a.end.y - READOUT_H), Vector2(_bar_w() + 90.0, 130.0))
 
 
 func _compass_centre() -> Vector2:
@@ -492,14 +540,15 @@ func _edge_point(dir: Vector2) -> Vector2:
 	return c + dir * minf(tx, ty)
 
 
-## An arrow tip moved off the read-outs, along the view's edge: the nearest spot on its
-## edge clear of them (above or below on a side edge, beside on the top or bottom edge);
-## where none is clear it stays.
+## An arrow tip moved off the read-outs and the shield ring, along the view's edge: the
+## nearest spot on its edge clear of them (above or below on a side edge, beside on the top
+## or bottom edge); where none is clear it stays. Used on a phone.
 func arrow_tip(tip: Vector2) -> Vector2:
 	var a: Rect2 = area().grow(-EDGE)
 	var keeps: Array[Rect2] = []
-	for r: Rect2 in [readout_rect(), _compass_rect(), thrust_rect()]:
-		keeps.append(r.grow(ARROW_CLEAR))
+	for r: Rect2 in [readout_rect(), thrust_rect(), _ring_rect()] + compass_boxes():
+		if r.has_area():
+			keeps.append(r.grow(ARROW_CLEAR))
 	if not keeps.any(func(k: Rect2) -> bool: return k.has_point(tip)):
 		return tip
 	var side: bool = is_equal_approx(tip.x, a.position.x) or is_equal_approx(tip.x, a.end.x)
@@ -523,22 +572,41 @@ func arrow_tip(tip: Vector2) -> Vector2:
 	return best
 
 
-func _compass_rect() -> Rect2:
+## The target compass's disc and the chip under it.
+func compass_boxes() -> Array[Rect2]:
 	var c: Vector2 = _compass_centre()
-	return Rect2(
-		c - Vector2(2.0 * COMPASS_R, COMPASS_R), Vector2(4.0 * COMPASS_R, 2.0 * COMPASS_R + 24.0)
-	)
+	return [
+		Rect2(c - Vector2(COMPASS_R, COMPASS_R), Vector2(2.0, 2.0) * COMPASS_R),
+		Rect2(c + Vector2(-2.0 * COMPASS_R, COMPASS_R), Vector2(4.0 * COMPASS_R, 24.0)),
+	]
 
 
-## An arrow on the view's edge toward an item off screen or behind (FT-HLM-004).
-func _draw_arrow(font: Font, e: Dictionary, selected: bool) -> void:
+## An off-screen item's arrow: its direction on the view and its tip on the edge.
+func _arrow(e: Dictionary) -> Array[Vector2]:
 	var cam: Camera3D = panel.view3d.camera
 	var d: Vector3 = cam.global_transform.basis.inverse() * (e["world"] as Vector3)
 	var dir: Vector2 = Vector2(d.x, -d.y)
 	dir = dir.normalized() if dir.length() >= 1e-3 else Vector2.DOWN
 	var tip: Vector2 = _edge_point(dir)
-	if touch_layout():
+	if touch_layout() or size.x < PHONE_W:
 		tip = arrow_tip(tip)
+	return [dir, tip]
+
+
+## The box an arrow and its label cover, for marker labels to keep clear of.
+func _arrow_box(font: Font, e: Dictionary) -> Rect2:
+	var a: Array[Vector2] = _arrow(e)
+	var at: Vector2 = a[1] - a[0] * 30.0 + Vector2(-10.0, 5.0 - font.get_ascent(FONT_SIZE))
+	var w: float = font.get_string_size(str(e["label"]), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+	var label: Rect2 = Rect2(at, Vector2(w, font.get_height(FONT_SIZE)))
+	return label.expand(a[1]).expand(a[1] - a[0] * 16.0).grow(2.0)
+
+
+## An arrow on the view's edge toward an item off screen or behind (FT-HLM-004).
+func _draw_arrow(font: Font, e: Dictionary, selected: bool) -> void:
+	var a: Array[Vector2] = _arrow(e)
+	var dir: Vector2 = a[0]
+	var tip: Vector2 = a[1]
 	var side: Vector2 = dir.orthogonal() * 8.0
 	var col: Color = Palette.item_color(e)
 	var pts: PackedVector2Array = PackedVector2Array(

@@ -168,6 +168,11 @@ func test_captain_view_buttons_sit_in_the_left_rail() -> void:
 	assert_bool(p.touch_layout.right.is_ancestor_of(p.cards)).is_true()
 	p.buttons[2].pressed.emit()
 	assert_array(StationFixture.sent(s.ctx).of("set_main_view")).is_equal([["set_main_view", [2]]])
+	# The mirror (its radar strip and range label) and the lists end above the inset and
+	# the gesture band; the lists scroll instead of growing past it (#28).
+	var bottom: float = SafeArea.tap_bottom(s)
+	for c: Control in [p.mirror, p.touch_layout.right]:
+		assert_float(c.get_global_rect().end.y).is_less_equal(bottom)
 	_drop(s)
 
 
@@ -193,6 +198,12 @@ func test_joint_view_on_a_phone_switches_instead_of_docking() -> void:
 	assert_bool(s.joint_switch.is_visible_in_tree()).is_true()
 	assert_float(s.joint_switch.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
 	assert_str(s.joint_switch.text).contains(tr("station.weapons"))
+	# Helm's read-out (Fuel at its foot) and compass stay above the switch (#28).
+	var hud: HelmHud = (s.focused_panel() as HelmPanel).hud
+	var sw: Rect2 = s.joint_switch.get_global_rect()
+	for r: Rect2 in [hud.readout_rect()] + hud.compass_boxes():
+		var g: Rect2 = hud.get_global_transform() * r
+		assert_bool(g.intersects(sw)).override_failure_message("%s over %s" % [g, sw]).is_false()
 	s.joint_switch.pressed.emit()
 	await _frames(2)
 	assert_int(s.focus_index).is_equal(1)

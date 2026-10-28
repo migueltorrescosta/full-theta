@@ -404,6 +404,9 @@ func _build_general(col: VBoxContainer) -> void:
 	var fullscreen: FullscreenButton = FullscreenButton.new()
 	fullscreen.name = "Fullscreen"
 	fullscreen.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	# Its full label here, not a rail button's trimmed one ("Full").
+	fullscreen.clip_text = false
+	fullscreen.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	col.add_child(fullscreen)
 
 

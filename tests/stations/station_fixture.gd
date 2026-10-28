@@ -257,8 +257,9 @@ static func view(seam: bool = false) -> NetViewState:
 		"alive": true,
 		"status": 0,
 		"outcome": 0,
-		"hull": 920.0,
-		"shields": 700.0,
+		# The server's units (m1_corvette: hull_max 1e8, shields 3e7): 92 % and 70 %.
+		"hull": 92_000_000.0,
+		"shields": 21_000_000.0,
 		"pips_used": 6,
 		"propellant": 8000.0,
 		"decoupled": false,
@@ -408,4 +409,12 @@ static func fleet(
 		"started": started,
 	}
 	ctx.crew.handle_event({"type": "fleet", "payload": p}, NOW_MS)
+	# The server's Catalogue lists every crewed ship (ServerSession.crew_ships), so a pick
+	# of another ship still finds its definition (the top bar's percentages).
+	var ships: Array = []
+	for i: int in names.size():
+		ships.append({"id": i, "def": "m1_corvette", "name": names[i], "faction": 0})
+	var cat: Dictionary = ctx.crew.catalogue.duplicate()
+	cat["ships"] = ships
+	ctx.crew.set_catalogue(cat)
 	return p

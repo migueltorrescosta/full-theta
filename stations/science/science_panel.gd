@@ -430,9 +430,13 @@ func _can_hack() -> bool:
 	return selected_contact() >= 0 and bool(card_of(selected_contact()).get("hack", false))
 
 
+## The subsystem button beside Hack: the target's name ("Engines"), or "No subsystem"
+## (disabled) with none to pick.
 func _sub_text() -> String:
 	var subs: Array[StringName] = subsystems()
-	return String(subs[_sub_index % subs.size()]) if not subs.is_empty() else "-"
+	if subs.is_empty():
+		return tr("sci.hack_sub_none")
+	return tr("eng.name." + String(subs[_sub_index % subs.size()]))
 
 
 # --- Commands (buttons, keys and the controller all end up here). ---

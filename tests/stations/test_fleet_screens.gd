@@ -238,3 +238,40 @@ func test_debrief_names_a_raider_wave() -> void:
 	assert_str(line).is_equal(
 		"2:00  Sent raiders: Raider wave 2: 3 raiders at every ship still flying"
 	)
+
+
+# FT: FT-MIS-030
+# On a phone upright the widest table (teams and kills) fits the screen: no sideways scroll
+# (l5_ph_scoreboard cut Kills and Time, #28).
+func test_scoreboard_fits_a_portrait_phone() -> void:
+	var ctx: StationContext = _ctx("teams")
+	_event(ctx, NetProtocol.EVENT_SCOREBOARD, FleetMessages.scoreboard(_rows()))
+	var vp: SubViewport = auto_free(SubViewport.new())
+	vp.size = Vector2i(390, 844)
+	add_child(vp)
+	var s: ScoreboardScreen = ScoreboardScreen.new()
+	s.setup(ctx)
+	vp.add_child(s)
+	for i: int in 3:
+		await get_tree().process_frame
+	assert_int(s.columns().size()).is_equal(6)
+	var table: Control = s.find_child("Table", true, false)
+	var scroll: ScrollContainer = table.get_parent()
+	assert_float(table.get_combined_minimum_size().x).is_less_equal(scroll.size.x)
+	assert_str(_label(s, "Head_encounters").text).is_equal("Enc.")
+
+
+# FT: FT-STN-008
+# On another ship of the fleet the top bar still shows hull and shields as percentages of
+# that ship's definition, not raw amounts ("Hull 920", #28).
+func test_top_bar_shows_percentages_on_a_picked_fleet_ship() -> void:
+	var ctx: StationContext = _ctx("teams")
+	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 2, "entry": "helm"}}, 0)
+	assert_int(ctx.crew.ship).is_equal(2)
+	assert_object(ctx.ship_def()).is_not_null()
+	var s: StationScreen = auto_free(StationScreen.new())
+	s.setup(ctx)
+	add_child(s)
+	await get_tree().process_frame
+	assert_str(s.top_bar._hull.text).is_equal("Hull 92%")
+	assert_str(s.top_bar._shields.text).is_equal("Shields 70%")

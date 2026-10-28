@@ -38,6 +38,11 @@ const BORDER: int = 1
 ## The focus ring's width.
 const RING: int = 2
 const SPACING: int = 8
+## An embedded dialog's title bar and the frame around the rest of it (px).
+const WINDOW_TITLE_H: float = 36.0
+const WINDOW_MARGIN: float = 8.0
+## A CheckBox's box (px).
+const CHECK_ICON: int = 18
 ## Vertical content margin of a touch control: with the font's line height it reaches
 ## TOUCH_MIN.
 const TOUCH_PAD: int = 12
@@ -144,6 +149,37 @@ static func _check(t: Theme, type: String, variation: String, pad_y: int) -> voi
 	t.set_stylebox("focus", name, ring(4, pad_y))
 	t.set_color("font_color", name, Palette.color("text"))
 	t.set_color("font_disabled_color", name, Palette.color("text_dim"))
+	# Godot's grey box hardly shows on the panels: a box in the text colour, filled with
+	# the accent and ticked when on (#28: a checkbox reads at 3:1 or more).
+	t.set_icon("unchecked", name, check_icon(false, "text"))
+	t.set_icon("checked", name, check_icon(true, "text"))
+	t.set_icon("unchecked_disabled", name, check_icon(false, "line"))
+	t.set_icon("checked_disabled", name, check_icon(true, "line"))
+
+
+## A CheckBox icon: a CHECK_ICON px box with a 2 px border in `edge`; `on` fills it with
+## the accent and draws a tick in the background colour.
+static func check_icon(on: bool, edge: String) -> ImageTexture:
+	var n: int = CHECK_ICON
+	var img: Image = Image.create_empty(n, n, false, Image.FORMAT_RGBA8)
+	var tick: Array[Vector2] = [Vector2(0.25, 0.52), Vector2(0.43, 0.7), Vector2(0.76, 0.32)]
+	for y: int in n:
+		for x: int in n:
+			var border: bool = mini(mini(x, y), mini(n - 1 - x, n - 1 - y)) < 2
+			var c: Color = Color(0, 0, 0, 0)
+			if border:
+				c = Palette.color(edge)
+			elif on:
+				c = Palette.color("accent")
+				var p: Vector2 = (Vector2(x, y) + Vector2(0.5, 0.5)) / float(n)
+				for i: int in 2:
+					var q: Vector2 = Geometry2D.get_closest_point_to_segment(
+						p, tick[i], tick[i + 1]
+					)
+					if p.distance_to(q) * n < 1.6:
+						c = Palette.color("background")
+			img.set_pixel(x, y, c)
+	return ImageTexture.create_from_image(img)
 
 
 ## A lobby station cell: a toggle button with a thick border in a load colour; the
@@ -225,8 +261,14 @@ static func _fields(t: Theme, pad_y: int) -> void:
 
 ## Dialogs and popup menus: the embedded window frame follows the palette.
 static func _popups(t: Theme) -> void:
-	t.set_stylebox("embedded_border", "Window", box("panel", "line", 12, 36))
-	t.set_stylebox("embedded_unfocused_border", "Window", box("panel", "line", 12, 36))
+	# The frame grows past the window by its title bar (above) and a margin (other sides),
+	# so the title and × sit on the panel, not on whatever is behind the dialog.
+	var frame: StyleBoxFlat = box("panel", "line", 12, 36)
+	frame.set_expand_margin_all(WINDOW_MARGIN)
+	frame.expand_margin_top = WINDOW_TITLE_H
+	t.set_constant("title_height", "Window", int(WINDOW_TITLE_H))
+	t.set_stylebox("embedded_border", "Window", frame)
+	t.set_stylebox("embedded_unfocused_border", "Window", frame)
 	t.set_color("title_color", "Window", Palette.color("text"))
 	t.set_font_size("title_font_size", "Window", HEADING_SIZE)
 	t.set_stylebox("panel", "AcceptDialog", box("panel", "line", 8, 8))

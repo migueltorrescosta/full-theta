@@ -464,9 +464,12 @@ func full_screen() -> bool:
 ## The part of the view the HUD may draw its read-outs in, in `control`'s coordinates:
 ## clear of the phone's rails and controls, else all of `control`.
 func hud_area(control: Control) -> Rect2:
+	var r: Rect2 = Rect2(Vector2.ZERO, control.size)
 	if touch_ui != null and touch_ui.is_inside_tree():
-		return touch_ui.content_rect_in(control).intersection(Rect2(Vector2.ZERO, control.size))
-	return Rect2(Vector2.ZERO, control.size)
+		r = touch_ui.content_rect_in(control).intersection(r)
+	# Above the screen's joint switch (a joint view on a phone on its side).
+	r.size.y = maxf(r.size.y - bottom_reserve, 0.0)
+	return r
 
 
 func claim_item() -> String:

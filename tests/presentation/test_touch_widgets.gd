@@ -270,3 +270,25 @@ func test_rotate_banner_only_upright_on_a_phone() -> void:
 	_vp.size = Vector2i(391, 844)
 	await get_tree().process_frame
 	assert_bool(banner.visible).is_false()
+
+
+# A radar under overlay rails keeps its range label and site banner off them (the
+# l5_phl_touch_kit radar showed "Kappa" and "10 km" through the throttle rail, #28).
+func test_overlay_rails_set_the_radar_view_rect() -> void:
+	SafeArea.simulate([47, 0, 47, 21])
+	var layout: RailLayout = RailLayout.new()
+	_holder().add_child(layout)
+	var radar: DiscRadar = DiscRadar.new()
+	layout.set_content(radar)
+	layout.rail(SIDE_LEFT).add(RailButton.make("All stop"))
+	layout.rail(SIDE_RIGHT).add(RailButton.make("Face"))
+	for i: int in 3:
+		await get_tree().process_frame
+	var free: Rect2 = layout.content_rect_in(radar)
+	assert_object(radar.view_rect).is_equal(free)
+	assert_bool(free.encloses(radar._range_rect())).is_true()
+	# Docked rails size the radar itself: no view_rect.
+	layout.docked = true
+	for i: int in 2:
+		await get_tree().process_frame
+	assert_object(radar.view_rect).is_equal(Rect2())

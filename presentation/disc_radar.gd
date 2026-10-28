@@ -33,6 +33,12 @@ const CHIP_MARGIN: float = 2.0
 ## item_at picks the nearest blip within this distance (px).
 const HIT_PX: float = 12.0
 const ORBIT_DEG_PER_PX: float = 0.4
+## Under this disc radius (px) the radar is small (a phone's side column, rail or flat
+## mirror strip, #28): chips
+## carry the callsign alone and take a free spot beside, above or below their blip, clear
+## of the clock numbers, the own ship, the other blips and each other, or are left out
+## (the selected item's never is).
+const SMALL_R: float = 80.0
 
 ## The items to draw (ContactPicture). "point" items (point pings) draw only their
 ## pulse and are never picked.
@@ -239,13 +245,22 @@ func _draw_disc(font: Font, c: Vector2, r: float) -> void:
 	for hour: int in 12:
 		var b: float = deg_to_rad(30.0 * hour)
 		var dir: Vector3 = Vector3(sin(b), 0.0, -cos(b))
-		var outer: Vector2 = _screen(dir * r)
-		draw_line(_screen(dir * r * 0.92), outer, Palette.color("text_dim"), 1.0, true)
-		if hour % 3 == 0:
-			var text: String = str(12 if hour == 0 else hour)
-			var out: Vector2 = (outer - c).normalized() * 12.0
-			var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
-			_draw_text(font, Rect2(outer + out - sz / 2.0, sz), text, Palette.color("text"))
+		draw_line(_screen(dir * r * 0.92), _screen(dir * r), Palette.color("text_dim"), 1.0, true)
+	var numerals: Dictionary = _numerals(font, c, r)
+	for text: String in numerals:
+		_draw_text(font, numerals[text], text, Palette.color("text"))
+
+
+## The clock numbers 12, 3, 6 and 9 and their boxes, just outside the rim.
+func _numerals(font: Font, c: Vector2, r: float) -> Dictionary:
+	var out: Dictionary = {}
+	for hour: int in [0, 3, 6, 9]:
+		var b: float = deg_to_rad(30.0 * hour)
+		var outer: Vector2 = _screen(Vector3(sin(b), 0.0, -cos(b)) * r)
+		var text: String = str(12 if hour == 0 else hour)
+		var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
+		out[text] = Rect2(outer + (outer - c).normalized() * 12.0 - sz / 2.0, sz)
+	return out
 
 
 ## The own ship: a chevron pointing at the bow, with a stem when off-centre.
@@ -389,8 +404,10 @@ func _layout() -> Array[Dictionary]:
 		var chip: String = ""
 		if chips:
 			chip = it["label"] if it["kind"] != "contact" else ChipText.chip(it["label"], local)
+		if small():
+			chip = it["label"] if chips else ""
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
-		if chip != "":
+		if chip != "" and not small():
 			# A small radar (a phone's 180 px column) drops the range band, then the clock,
 			# until the chip fits beside its blip; the callsign alone may slide over it.
 			var parts: PackedStringArray = chip.split(ChipText.SEP)
@@ -413,8 +430,65 @@ func _layout() -> Array[Dictionary]:
 				}
 			)
 		)
-	_declutter(out)
+	if small():
+		_place_small(out, font)
+	else:
+		_declutter(out)
 	return out
+
+
+## True when the disc is under SMALL_R in radius.
+func small() -> bool:
+	return disc_radius() < SMALL_R
+
+
+## Small radar: each chip (the selected item's first) takes the first free spot of right,
+## left, above and below its blip; a chip with no free spot is left out unless selected.
+func _place_small(entries: Array[Dictionary], font: Font) -> void:
+	var c: Vector2 = disc_centre()
+	var taken: Array[Rect2] = []
+	taken.append_array(_numerals(font, c, RANGES_M[range_index]).values())
+	taken.append_array([_range_rect(), _site_rect()])
+	taken.append(Rect2(_screen(picture.rel(Vector3.ZERO, centre)) - Vector2(8, 8), Vector2(16, 16)))
+	var half: Vector2 = Vector2(BLIP_R, BLIP_R) + Vector2(3, 3)
+	for e: Dictionary in entries:
+		taken.append(Rect2((e["pos"] as Vector2) - half, half * 2.0))
+	var order: Array[Dictionary] = entries.duplicate()
+	order.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			return _is_selected(a["item"]) and not _is_selected(b["item"])
+	)
+	var v: Rect2 = _view().grow(-CHIP_MARGIN)
+	for e: Dictionary in order:
+		if e["chip"] == "":
+			continue
+		var sz: Vector2 = Vector2(
+			font.get_string_size(e["chip"], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+			font.get_height(FONT_SIZE)
+		)
+		var p: Vector2 = e["pos"]
+		var spots: Array[Vector2] = [
+			Vector2(p.x + half.x + 1.0, p.y - sz.y / 2.0),
+			Vector2(p.x - half.x - 1.0 - sz.x, p.y - sz.y / 2.0),
+			Vector2(p.x - sz.x / 2.0, p.y - half.y - sz.y),
+			Vector2(p.x - sz.x / 2.0, p.y + half.y),
+		]
+		var pick: Rect2 = Rect2()
+		for at: Vector2 in spots:
+			var r: Rect2 = Rect2(at, sz)
+			if not v.encloses(r):
+				continue
+			if taken.all(func(o: Rect2) -> bool: return not o.intersects(r)):
+				pick = r
+				break
+		if not pick.has_area() and _is_selected(e["item"]):
+			pick = Rect2(spots[0].clamp(v.position, (v.end - sz).max(v.position)), sz)
+		if pick.has_area():
+			taken.append(pick)
+			e["chip_rect"] = pick
+		else:
+			e["chip"] = ""
+			e["chip_rect"] = Rect2(p, Vector2.ZERO)
 
 
 ## A chip's box: right of the blip at `pos`, left of it when `left` (an arrow on the right
