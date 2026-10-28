@@ -155,10 +155,12 @@ func test_pvp_vote_is_a_forfeit() -> void:
 # PvP (M4-F1): the host forfeits at once only its own ship; for another ship the request is
 # refused `not_your_ship` and that ship stays in play (its crew forfeits by vote).
 func test_pvp_host_forfeits_only_its_own_ship() -> void:
-	var server: NetServer = h.fleet_server(SessionRules.Mode.LAST_STANDING, 3, [], true)
+	var server: NetServer = h.fleet_server(SessionRules.Mode.LAST_STANDING, 3, [], true, 10.0, SECRET)
 	var crews: Array[NetClient] = []
 	for ship: int in 3:
-		crews.append(await h.joined(server, "all-%d" % ship, StationViews.ALL, ship))
+		var c: NetClient = await h.welcomed(server, "all-%d" % ship, "", SECRET if ship == 0 else "")
+		await h.pick(c, StationViews.ALL, ship)
+		crews.append(c)
 	for c: NetClient in crews:
 		c.set_ready(true)
 	assert_bool(await h.until(func() -> bool: return server.world.tick > 2)).is_true()
