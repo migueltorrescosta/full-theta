@@ -6,8 +6,8 @@ extends Control
 ## Landscape: docked rails (RailLayout), the view narrowed between them. The left rail
 ## holds the camera mount (tap: the next mount, `mount_next`), Claim or Release (the
 ## screen's `claim`), the ammunition (`ammo_next`) and the target line; the right rail a
-## 160 px disc radar when Weapons is alone on the screen (FT-WPN-002), Guided
-## (`fire_guided`) and a large FIRE at the thumb (held: `fire`). Upright, a reduced layout
+## 160 px disc radar when Weapons is alone on the screen or in a joint view (FT-WPN-002),
+## Guided (`fire_guided`) and a large FIRE at the thumb (held: `fire`). Upright, a reduced layout
 ## puts the same five buttons in two rows under the view; the screen keeps its own radar
 ## and shows the "turn sideways" banner. A finger dragged across the view aims, a tap
 ## selects (WeaponsAimPad).
@@ -35,7 +35,7 @@ var guided_button: RailButton
 var fire_button: RailButton
 ## The target line (landscape only; upright the overlay draws it).
 var target_label: Label = null
-## The rail's radar (landscape, Weapons alone on the screen), else null.
+## The rail's radar (landscape, Weapons alone or in a joint view), else null.
 var radar: DiscRadar = null
 ## The landscape rails, else null.
 var layout: RailLayout = null
