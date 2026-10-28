@@ -136,6 +136,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.CHIP: chips.on_chip,
 		NetProtocol.Type.SHARE: shares.on_share,
 		NetProtocol.Type.BYE: _on_bye,
+		NetProtocol.Type.CLIENT_FRAME: _on_client_frame,
 		NetTransport.CLOSED: _on_closed,
 	}
 	host_pause = NetHostPause.new(self)  # registers HostPause
@@ -782,6 +783,18 @@ func _on_takeover(conn: int, msg: Dictionary, _now_us: int) -> void:
 
 func _on_bye(conn: int, _msg: Dictionary, _now_us: int) -> void:
 	transport.close(conn, 1000, "bye")
+
+
+## A client's long frame (#28) goes to the session log, with whose it was.
+func _on_client_frame(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var s: NetSession = by_conn.get(conn)
+	if s == null or session_log == null:
+		return
+	var what: String = NetProtocol.clip_utf8(msg["what"], NetProtocol.MAX_FRAME_WHAT_BYTES)
+	var fields: Dictionary = {
+		"session": s.id, "name": s.name, "client": s.client_kind, "ms": msg["ms"], "what": what
+	}
+	session_log.event("long_frame", fields)
 
 
 func _on_closed(conn: int, _msg: Dictionary, now_us: int) -> void:

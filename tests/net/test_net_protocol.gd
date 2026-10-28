@@ -79,6 +79,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.SESSION_MODE:
 		{"mode": "teams", "team_win": "first_to_finish", "lives": -1},
 		NetProtocol.Type.RELAUNCH: {"ship": 1, "vote": true},
+		NetProtocol.Type.CLIENT_FRAME: {"ms": 812, "what": "build station:0:helm"},
 	}
 
 
