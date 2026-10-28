@@ -330,7 +330,7 @@ func test_hud_keeps_its_read_outs_and_arrows_clear_of_the_rails() -> void:
 	var left: Rect2 = _ui().layout.left.get_global_rect()
 	var right: Rect2 = _ui().layout.right.get_global_rect()
 	var to_global: Transform2D = hud.get_global_transform()
-	for r: Rect2 in [hud.readout_rect(), hud._compass_rect(), hud.thrust_rect()]:
+	for r: Rect2 in [hud.readout_rect(), hud.thrust_rect()] + hud.compass_boxes():
 		var g: Rect2 = to_global * r
 		(
 			assert_bool(g.intersects(left) or g.intersects(right))
@@ -378,3 +378,27 @@ func test_matcher_touch_intents_follow_focus_toggles_and_release() -> void:
 	m.release_all()
 	assert_bool(m.is_held("face")).is_false()
 	assert_float(m.axis("helm_yaw")).is_equal(0.0)
+
+
+# FT: FT-HLM-004, FT-STN-006
+# Upright (the l5_ph_helm_portrait fixture: H2 selected and pinged), marker and arrow labels
+# keep clear of each other, the shield ring, the compass and the read-outs (#28).
+func test_portrait_labels_do_not_collide() -> void:
+	await _open(Vector2i(390, 844), PORTRAIT)
+	_ctx().crew.select("contact", StationFixture.H2)
+	var p: Dictionary = {"ship": 0, "kind": "contact", "id": StationFixture.H2, "by": "Bo"}
+	_ctx().crew.handle_event({"type": "ping", "payload": p}, StationFixture.NOW_MS - 1000)
+	await _frames()
+	var hud: HelmHud = _panel.hud
+	assert_int(hud._labels.size()).is_greater(1)
+	for label: Rect2 in hud._labels:
+		for o: Rect2 in hud._placed:
+			if o != label:
+				(
+					assert_bool(label.intersects(o))
+					. override_failure_message("%s over %s" % [label, o])
+					. is_false()
+				)
+		for r: Rect2 in hud.reserved():
+			var cover: float = label.intersection(r).get_area()
+			assert_float(cover).is_less_equal(HelmHud.SLIGHT * label.get_area())
