@@ -259,3 +259,19 @@ func test_scoreboard_fits_a_portrait_phone() -> void:
 	var scroll: ScrollContainer = table.get_parent()
 	assert_float(table.get_combined_minimum_size().x).is_less_equal(scroll.size.x)
 	assert_str(_label(s, "Head_encounters").text).is_equal("Enc.")
+
+
+# FT: FT-STN-008
+# On another ship of the fleet the top bar still shows hull and shields as percentages of
+# that ship's definition, not raw amounts ("Hull 920", #28).
+func test_top_bar_shows_percentages_on_a_picked_fleet_ship() -> void:
+	var ctx: StationContext = _ctx("teams")
+	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 2, "entry": "helm"}}, 0)
+	assert_int(ctx.crew.ship).is_equal(2)
+	assert_object(ctx.ship_def()).is_not_null()
+	var s: StationScreen = auto_free(StationScreen.new())
+	s.setup(ctx)
+	add_child(s)
+	await get_tree().process_frame
+	assert_str(s.top_bar._hull.text).is_equal("Hull 92%")
+	assert_str(s.top_bar._shields.text).is_equal("Shields 70%")
