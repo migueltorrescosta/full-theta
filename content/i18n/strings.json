@@ -424,6 +424,7 @@
     "sci.mode_active": {"en": "Sensors: active", "pt_PT": "Sensores: ativos", "it": "Sensori: attivi"},
     "sci.scan": {"en": "Scan", "pt_PT": "Scan", "it": "Scan"},
     "sci.hack": {"en": "Hack", "pt_PT": "Hack", "it": "Hack"},
+    "sci.hack_sub_none": {"en": "No subsystem", "pt_PT": "Sem subsistema", "it": "Nessun sottosistema"},
     "sci.ping": {"en": "Ping", "pt_PT": "Ping", "it": "Ping"},
     "sci.scan_mark": {"en": "Scan mark", "pt_PT": "Marca de scan", "it": "Segnalino scan"},
     "sci.self_scan": {"en": "Scan own ship", "pt_PT": "Scan à nave", "it": "Scansiona nave"},

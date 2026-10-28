@@ -227,6 +227,11 @@ func test_controls_send_science_commands() -> void:
 	s.dispatch(_ev("sci_sub_next", "pad", s))
 	s.dispatch(_ev("sci_hack", "pad", s))
 	assert_str(_cmds(s, "science_hack")[1][1][0]["subsystem_id"]).is_equal(str(p.subsystems()[1]))
+	# The subsystem button names it in the session language, never the raw id (#28).
+	p.refresh()
+	var sub: Button = p._buttons["sub"]
+	assert_str(sub.text).is_equal(tr("eng.name." + str(p.subsystems()[1])))
+	assert_str(sub.text).is_not_equal(str(p.subsystems()[1]))
 	# The buttons reach them too, and a hack on a contact without access sends nothing.
 	(p._buttons["ping"] as Button).pressed.emit()
 	assert_int(_cmds(s, "science_ping").size()).is_equal(2)
@@ -234,6 +239,9 @@ func test_controls_send_science_commands() -> void:
 	p.refresh()
 	assert_bool((p._buttons["hack"] as Button).disabled).is_true()
 	assert_int(_cmds(s, "science_select").size()).is_equal(2)
+	# U3's class is unknown: no subsystem to pick, a plain disabled label.
+	assert_bool(sub.disabled).is_true()
+	assert_str(sub.text).is_equal(tr("sci.hack_sub_none"))
 
 
 # FT: FT-SCI-004, FT-SCI-013, FT-SCI-014
