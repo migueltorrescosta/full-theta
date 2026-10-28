@@ -138,10 +138,10 @@
     {"name": "l5_hd_takeover", "scene": "res://tests/visual/m4_shot.tscn", "size": [1920, 1080], "set": {"view": "takeover"}},
     {"name": "l5_phl_takeover", "scene": "res://tests/visual/m4_shot.tscn", "size": [844, 390], "set": {"view": "takeover", "insets": [47, 0, 47, 21]}},
     {"name": "l5_phl_helm", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "ping": 4, "insets": [47, 0, 47, 21]}},
-    {"name": "l5_phl_helm_shield", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "helm_tab": 1, "insets": [47, 0, 47, 21]}},
-    {"name": "l5_phl_helm_radar", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "radar_open": true, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_helm_shield", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "page": 1, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_helm_radar", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "page": 3, "insets": [47, 0, 47, 21]}},
     {"name": "l5_ph_helm_portrait", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "ping": 4, "insets": [0, 47, 0, 34]}},
-    {"name": "l5_ph_helm_portrait_radar", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "radar_open": true, "stick_slides": true, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_ph_helm_portrait_radar", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "page": 3, "stick_slides": true, "insets": [0, 47, 0, 34]}},
     {"name": "l5_phl_menu_safe", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "menu_web", "insets": [47, 0, 47, 21]}},
     {"name": "l5_phl_menu_host", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"view": "menu", "insets": [47, 0, 47, 21]}},
     {"name": "l5_ph_menu_safe", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"view": "menu_web", "insets": [0, 47, 0, 34]}},
@@ -166,6 +166,11 @@
     {"name": "l5_phl_frame_alert", "scene": "res://tests/visual/frame_shot.tscn", "size": [844, 390], "set": {"entry": "engineering", "page": 2, "sheet": "alert", "insets": [47, 0, 47, 21]}},
     {"name": "l5_phl_frame_tactical", "scene": "res://tests/visual/frame_shot.tscn", "size": [844, 390], "set": {"entry": "tactical", "focus": 1, "insets": [47, 0, 47, 21]}},
     {"name": "l5_phl_frame_dev", "scene": "res://tests/visual/frame_shot.tscn", "size": [844, 390], "set": {"entry": "all", "sheet": "stations", "insets": [47, 0, 47, 21]}},
-    {"name": "l5_php_frame", "scene": "res://tests/visual/frame_shot.tscn", "size": [390, 844], "set": {"entry": "engineering", "page": 2, "chip": true, "insets": [0, 47, 0, 34]}}
+    {"name": "l5_php_frame", "scene": "res://tests/visual/frame_shot.tscn", "size": [390, 844], "set": {"entry": "engineering", "page": 2, "chip": true, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_phl_helm_nav", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "page": 2, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_helm_crew", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "page": 4, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_helm_shield", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "page": 1, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_php_helm_nav", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "page": 2, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_php_helm_crew", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "page": 4, "insets": [0, 47, 0, 34]}}
   ]
 }

@@ -41,8 +41,9 @@ func show_state(helm: Dictionary, shield_power: float) -> void:
 	queue_redraw()
 
 
+## The ring's radius: the box less the caption's two lines when it has one.
 func radius() -> float:
-	return minf(size.x, size.y - FONT_SIZE * 2.0) / 2.0 - 2.0
+	return minf(size.x, size.y - (FONT_SIZE * 2.0 if label else 0.0)) / 2.0 - 2.0
 
 
 func centre() -> Vector2:
@@ -140,18 +141,24 @@ func _draw() -> void:
 	if not label:
 		return
 	var font: Font = get_theme_default_font()
-	var text: String = tr("helm.shield_label") % [roundi(power * 100.0), tightness]
+	var lines: PackedStringArray = [tr("helm.shield_label") % [roundi(power * 100.0), tightness]]
 	if tracking:
-		text += " · " + tr("helm.tracking")
-	draw_string(
-		font,
-		Vector2(0.0, 2.0 * r + 4.0 + FONT_SIZE),
-		text,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		size.x,
-		FONT_SIZE,
-		Palette.color("text_dim")
-	)
+		# "tracking" on a line of its own when the box is too narrow for one (a phone's rail).
+		var one: String = lines[0] + " · " + tr("helm.tracking")
+		if font.get_string_size(one, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x <= size.x:
+			lines[0] = one
+		else:
+			lines.append(tr("helm.tracking"))
+	for i: int in lines.size():
+		draw_string(
+			font,
+			Vector2(0.0, 2.0 * r + 4.0 + FONT_SIZE * (i + 1)),
+			lines[i],
+			HORIZONTAL_ALIGNMENT_CENTER,
+			size.x,
+			FONT_SIZE,
+			Palette.color("text_dim")
+		)
 
 
 ## One annular cell from radius r0 to r1 between angles a0 and a1 (screen radians).

@@ -16,6 +16,8 @@ const SMALL: int = 12
 const EDGE: float = 36.0
 ## On a phone an arrow keeps this far (px) from the read-outs (its label sits beside it).
 const ARROW_CLEAR: float = 14.0
+## The height an edge arrow needs between two read-outs it keeps clear of.
+const ARROW_ROOM: float = 2.0 * ARROW_CLEAR + 16.0
 const COMPASS_R: float = 46.0
 ## Envelope bars show 0..BAR_MAX of nominal; a tick marks nominal.
 const BAR_MAX: float = 1.5
@@ -311,10 +313,13 @@ func thrust_input() -> Vector3:
 func thrust_centre() -> Vector2:
 	var a: Rect2 = area()
 	if touch_layout():
-		# A phone's view: top left of the part clear of the rails; in a short view (a joint
-		# view's switch below) the bare cross at the top right, over the compass.
-		if cross_tight():
-			var reach: Vector2 = _cross_size(false) - Vector2(CROSS_ARM + 14.0, CROSS_ARM + 14.0)
+		# A phone's view: top left of the part clear of the rails; in a shorter view (under
+		# the screen's view-top row) at the top right, over the compass, so an edge arrow
+		# fits between it and the read-out; in a short one (a joint view's switch below) bare.
+		if _cross_right():
+			var reach: Vector2 = (
+				_cross_size(not cross_tight()) - Vector2(CROSS_ARM + 14.0, CROSS_ARM + 14.0)
+			)
 			return Vector2(a.end.x - reach.x - 4.0, a.position.y + CROSS_ARM + 20.0)
 		return a.position + Vector2(CROSS_ARM + 22.0, 52.0)
 	if size.x < PHONE_W:
@@ -381,6 +386,13 @@ func _cross_size(speeds: bool) -> Vector2:
 ## above the flight read-out: the cross goes bare to the top right instead (#28).
 func cross_tight() -> bool:
 	return touch_layout() and area().size.y < 52.0 + CROSS_ARM + 14.0 + READOUT_H
+
+
+## True on a phone whose view is too short for the thrust cross at the top left above the
+## flight read-out with room for an edge arrow between them: the cross goes to the top right.
+func _cross_right() -> bool:
+	var room: float = 52.0 + CROSS_ARM + 14.0 + READOUT_H + ARROW_ROOM
+	return touch_layout() and area().size.y < room
 
 
 ## `p` moved just outside the flight read-out when it falls on it (a phone: a marker there
