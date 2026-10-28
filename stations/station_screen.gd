@@ -213,11 +213,16 @@ func _show_side() -> void:
 		joint_switch.visible = joint_phone
 		var other: String = stations[1 - focus_index] if panels.size() == 2 else ""
 		joint_switch.text = "%s %s" % [JOINT_SWITCH_ARROW, tr("station." + other)]
-	var parent: Control = share_drawer.body if sideways else _extras
+	# Also in the drawer whenever a phone's radar column is hidden (Science alone upright).
+	var phone_form: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+	var in_drawer: bool = sideways or (phone_form and not _side.visible)
+	var parent: Control = share_drawer.body if in_drawer else _extras
 	if share_bar.get_parent() != parent:
 		share_bar.reparent(parent, false)
 		if parent == _extras:
 			_extras.move_child(share_bar, _extras_pad.get_index() + 1)
+	if in_drawer:
+		share_bar.min_width = TouchDrawer.WIDTH - 2.0 * UiTheme.TOUCH_GAP
 	_sync_share()
 	_place_phone_bar()
 
@@ -781,11 +786,9 @@ func _relayout() -> void:
 	share_bar.button_h = ShareBar.SHORT_H if short and not touch else ShareBar.BUTTON_H
 	share_bar.gap = ShareBar.GAP
 	if phone:
-		# 48 px with 8 px gaps (D274); on its side one a row in the share drawer.
+		# 48 px with 8 px gaps (D274); in the share drawer one a row (_show_side).
 		share_bar.button_h = UiTheme.TOUCH_PRIMARY
 		share_bar.gap = UiTheme.TOUCH_GAP
-		if not portrait:
-			share_bar.min_width = TouchDrawer.WIDTH - 2.0 * UiTheme.TOUCH_GAP
 	_extras_pad.visible = phone and portrait
 	var top: float = m.y + top_bar.custom_minimum_size.y + 8.0
 	toasts.offset_top = top

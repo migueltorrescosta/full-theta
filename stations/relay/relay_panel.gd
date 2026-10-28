@@ -17,9 +17,9 @@ extends StationPanel
 ## the selected mark, else it is refused with a toast (FT-SPA-022).
 ## Controller: the left stick moves a cursor, the triggers its depth, the right stick
 ## turns the map; A, R3 and hold R3 select, ping and mark at the cursor (§5.0).
-## Touch: the HUD's buttons and drags on the map; a lone Relay panel on a phone puts the
-## buttons in thumb rails over the full map instead (RelayPhone, #28) and drops the
-## screen's radar column.
+## Touch: the HUD's buttons and drags on the map; on a phone a lone or focused joint-view
+## Relay panel puts the buttons in thumb rails over the full map instead (RelayPhone, #28)
+## and drops the screen's radar column (on its side).
 
 ## Under this width (a phone, D195) the HUD stacks around the map.
 const NARROW_W: float = 560.0
@@ -101,15 +101,26 @@ func _mode_changed() -> void:
 	hud.set_docked(docked or phone != null)
 
 
-## A lone panel on a phone takes the whole screen in the phone arrangement (#28).
+## A lone panel on a phone takes the whole screen in the phone arrangement (#28), and so
+## does the focused one of a joint view on a phone on its side (the screen shows it alone).
 func full_screen() -> bool:
 	return _wants_phone()
 
 
+## The phone arrangement: alone or in a joint view (focused), on a phone either way up.
 func _wants_phone() -> bool:
-	if docked or not is_inside_tree() or ctx.crew.stations().size() > 1:
+	if docked or not is_inside_tree() or _screen_panels() > 2:
 		return false
 	return LayoutMode.is_phone(RelayPhone.form_of_panel(self))
+
+
+## How many panels the station screen holding this panel has (1 when none): the dev
+## seat's catalogue entry names no stations, so the screen is the one to ask.
+func _screen_panels() -> int:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	return (n as StationScreen).panels.size() if n != null else 1
 
 
 ## Builds, rebuilds (a turned phone) or drops the phone arrangement.
