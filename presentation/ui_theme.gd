@@ -56,6 +56,8 @@ const FALLBACK_FONTS: Array[String] = [
 	"res://assets/fonts/NotoSansMath-subset.ttf",
 ]
 
+static var _font: FontVariation = null
+
 
 ## A fresh theme. The result is a plain resource; `apply` puts it on a window. With
 ## `touch` every plain button, option button, check box and text field is tap-sized (the
@@ -90,12 +92,15 @@ static func build(touch: bool = false) -> Theme:
 
 ## The theme's font: Godot's default with the symbol subsets as fallbacks.
 static func font() -> Font:
+	if _font != null:
+		return _font
 	var f: FontVariation = FontVariation.new()
 	f.base_font = ThemeDB.fallback_font
 	var fallbacks: Array[Font] = []
 	for path: String in FALLBACK_FONTS:
 		fallbacks.append(load(path) as Font)
 	f.fallbacks = fallbacks
+	_font = f
 	return f
 
 

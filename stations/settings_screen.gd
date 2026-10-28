@@ -373,7 +373,7 @@ static func _row(b: Button) -> void:
 
 ## One scrolling tab named `node_name` titled `title` holding `content`.
 func _tab(node_name: String, title: String, content: Control) -> void:
-	var scroll: ScrollContainer = ScrollContainer.new()
+	var scroll: ScrollContainer = TouchScroll.new()
 	scroll.name = node_name
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 8)
