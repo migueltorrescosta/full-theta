@@ -217,7 +217,72 @@ func test_shares_on_the_crew_page() -> void:
 		{
 			"page": P.CREW,
 			"control":
+			## Engineering on a phone (#28 follow-up, design 2.3, D287): the persistent rail (a grid
+			## upright) with every board action and Claim, the pages Power, Ship, Faults and Crew, every
+			## action within 2 taps of rest (rail actions at 1), the touch rules on every page both ways
+			## up, and rail taps that send what the keys send.
+			# FT: FT-STN-005
+			## The design's reachability table (2.3): [action, page, control, taps, the send it makes].
+			## Rail actions are persistent, so 1 tap from rest; the page views are 1 tap.
+			## The kinds of what the screen sent since `from`: commands by their kind, else the method.
+			# FT: FT-STN-005, FT-STN-009, FT-ENG-002, FT-ENG-003, FT-ENG-004, FT-ENG-008, FT-NET-023
+			# Every action of the design's table is reached within its taps from rest, both ways up, and
+			# sends what it should; the Ship and Faults pages are one tab away.
+			# The rail stays: the persistent zone never pages away.
+			# FT: FT-STN-005, FT-ENG-002
+			# Selecting a subsystem is one tap on its column on the Power page (rest).
+			# FT: FT-STN-005
+			# Every page keeps the touch rules both ways up: 48 px rail buttons 8 px apart, nothing in
+			# the band or under an inset; the board stays under the view-top row.
+			# FT: FT-ENG-002, FT-ENG-003, FT-ENG-004, FT-ENG-008, FT-NET-023, FT-STN-005
+			# Each rail button, on its side and upright, sends exactly what its key sends (Claim: the
+			# common claim, K).
+			# FT: FT-STN-005, FT-NET-023
+			# The Claim button names the crew it takes, and Release once this player holds it.
+			# FT: FT-STN-005
+			# A tablet and a desktop keep their arrangement: no pages shown, no rail.
+			# FT: FT-STN-005, FT-PAIR-007, FT-JNT-001
+			# In Systems (Engineering with Science) on its side the share buttons are on Engineering's
+			# Crew page, 2 taps from rest; the screen shows no Share opener of its own.
 			func(sc: StationScreen) -> BaseButton:
+## Engineering on a phone (#28 follow-up, design 2.3, D287): the persistent rail (a grid
+## upright) with every board action and Claim, the pages Power, Ship, Faults and Crew, every
+## action within 2 taps of rest (rail actions at 1), the touch rules on every page both ways
+## up, and rail taps that send what the keys send.
+# FT: FT-STN-005
+
+## The design's reachability table (2.3): [action, page, control, taps, the send it makes].
+## Rail actions are persistent, so 1 tap from rest; the page views are 1 tap.
+
+## The kinds of what the screen sent since `from`: commands by their kind, else the method.
+
+# FT: FT-STN-005, FT-STN-009, FT-ENG-002, FT-ENG-003, FT-ENG-004, FT-ENG-008, FT-NET-023
+# Every action of the design's table is reached within its taps from rest, both ways up, and
+# sends what it should; the Ship and Faults pages are one tab away.
+
+				# The rail stays: the persistent zone never pages away.
+
+# FT: FT-STN-005, FT-ENG-002
+# Selecting a subsystem is one tap on its column on the Power page (rest).
+
+# FT: FT-STN-005
+# Every page keeps the touch rules both ways up: 48 px rail buttons 8 px apart, nothing in
+# the band or under an inset; the board stays under the view-top row.
+
+# FT: FT-ENG-002, FT-ENG-003, FT-ENG-004, FT-ENG-008, FT-NET-023, FT-STN-005
+# Each rail button, on its side and upright, sends exactly what its key sends (Claim: the
+# common claim, K).
+
+# FT: FT-STN-005, FT-NET-023
+# The Claim button names the crew it takes, and Release once this player holds it.
+
+# FT: FT-STN-005
+# A tablet and a desktop keep their arrangement: no pages shown, no rail.
+
+# FT: FT-STN-005, FT-PAIR-007, FT-JNT-001
+# In Systems (Engineering with Science) on its side the share buttons are on Engineering's
+# Crew page, 2 taps from rest; the screen shows no Share opener of its own.
+
 ## Engineering on a phone (#28 follow-up, design 2.3, D287): the persistent rail (a grid
 ## upright) with every board action and Claim, the pages Power, Ship, Faults and Crew, every
 ## action within 2 taps of rest (rail actions at 1), the touch rules on every page both ways

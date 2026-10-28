@@ -199,6 +199,9 @@ func _build_pages() -> void:
 	_pages_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pages_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_pages_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# (a hidden child until the phone arrangement takes it: never an orphan on a desktop)
+	_pages_box.visible = false
+	add_child(_pages_box)
 	var area: Control = Control.new()
 	area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pages_box.add_child(area)
@@ -214,22 +217,15 @@ func _build_pages() -> void:
 		TouchText.of("page.crew", "Crew"),
 	]
 	for i: int in titles.size():
-		var page: Control = crew_page if i == Page.CREW else Control.new()
-		if i == Page.POWER:
-			page = _board_page
+		var page: Control = crew_page if i == Page.CREW else _board_page
+		if i == Page.SHIP or i == Page.FAULTS:
+			page = Control.new()
 		page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		if page != crew_page and page != _board_page:
 			page.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		area.add_child(page)
 		_page_ctl.append(page)
 		pages.add_page(titles[i], [page])
-
-
-## The pages are built before the phone arrangement takes them: free them with the panel if
-## it never did (a desktop).
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE and _pages_box != null and _pages_box.get_parent() == null:
-		_pages_box.free()
 
 
 ## The rail on its side (rows of two) and the upright grid, each a full set of the buttons.
@@ -287,6 +283,7 @@ func _to_phone(sideways: bool) -> void:
 	touch_layout.visible = sideways
 	_upright.visible = not sideways
 	var home: Control = touch_layout if sideways else _upright
+	_pages_box.visible = true
 	if _pages_box.get_parent() != home:
 		if _pages_box.get_parent() != null:
 			_pages_box.get_parent().remove_child(_pages_box)
@@ -318,6 +315,7 @@ func _from_phone() -> void:
 	if touch_layout != null and (touch_layout.visible or _upright.visible):
 		touch_layout.visible = false
 		_upright.visible = false
+		_pages_box.visible = false
 		_scroll_all.visible = true
 		for c: Control in [cutaway, board, _side]:
 			c.get_parent().remove_child(c)
