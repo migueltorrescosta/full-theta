@@ -4,7 +4,6 @@ extends Node
 ## `--server` it starts the client's MainMenu (T049), driven by ClientAutopilot when
 ## its test flags are given.
 
-
 ## The server's script, loaded only by `--server`: naming ServerMain, NetServer or
 ## ServerLifecycle here would compile the whole server stack in every browser client, which
 ## never runs one (about 7 % of the start-up compile, #11 DC2).
