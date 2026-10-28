@@ -165,6 +165,8 @@ func test_phone_landscape_lobby_meets_the_touch_rules() -> void:
 	SafeArea.simulate([47, 0, 47, 21])
 	LayoutMode.apply(get_tree().root)
 	get_tree().root.size = Vector2i(844, 390)
+	# The suite's node sits outside the window's theme: give the lobby the phone's own.
+	l.theme = LayoutMode.theme_for(LayoutMode.Kind.PHONE)
 	l.size = Vector2(844, 390)
 	for i: int in 4:
 		await get_tree().process_frame

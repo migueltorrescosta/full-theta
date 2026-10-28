@@ -56,7 +56,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-NET-012 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_server.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_parse_address.gd`, `tests/net/test_lan_server.gd`, `tests/presentation/test_qr_code.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-014 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_net_load_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_server.gd`, `tools/tests/test_load_check.py` |
-| FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/stations/test_lobby_and_overlays.gd`, `tests/stations/test_lobby_join.gd` |
+| FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/stations/test_lobby_and_overlays.gd`, `tests/stations/test_lobby_join.gd`, `tests/stations/test_lobby_phone_text.gd` |
 | FT-NET-016 | tests | `tests/net/test_net_lobby_l3.gd` |
 | FT-NET-017 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-018 | tests | `tests/net/test_net_stations_defs.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_phone_fixups.gd` |
@@ -139,7 +139,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-STN-012 | tests | `tests/content/test_i18n.gd`, `tests/presentation/test_controls_chip.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_first_visit_help.gd` |
 | FT-STN-013 | tests | `tests/app/test_main_menu.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-STN-014 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_settings_menu.gd`, `tests/stations/test_station_screen.gd` |
-| FT-STN-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd` |
+| FT-STN-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_client_shell_l3.gd`, `tests/stations/test_lobby_and_overlays.gd`, `tests/stations/test_lobby_phone_text.gd` |
 | FT-STN-016 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/stations/test_lobby_toggles.gd` |
 | FT-STN-017 | tests | `tests/stations/test_client_settings.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_viewer_panel.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-HLM-001 | tests | `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd` |
@@ -374,7 +374,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-M1-016 | tests | `tests/app/test_client_autopilot.gd` |
 | FT-M1-017 | tests | `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-M1-018 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_client_shell_l3.gd` |
-| FT-M1-019 | tests | `tests/presentation/test_controls_list.gd`, `tests/stations/test_first_visit_help.gd` |
+| FT-M1-019 | tests | `tests/app/web/test_shell_html.gd`, `tests/presentation/test_controls_list.gd`, `tests/presentation/test_tips_view.gd`, `tests/stations/test_first_visit_help.gd`, `tools/tests/test_tips.py` |
 | FT-M1-020 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/run/test_precision.gd` |
 | FT-M1-021 | pending |  |
 | FT-TST-001 | tests | `tests/sim/test_sample.gd`, `tools/tests/test_check_scripts.py` |

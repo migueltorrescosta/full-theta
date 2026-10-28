@@ -157,6 +157,9 @@
     {"name": "l5_ph_safe_engineering", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "engineering", "insets": [0, 47, 0, 34]}},
     {"name": "l5_ph_safe_comms", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "comms", "insets": [0, 47, 0, 34]}},
     {"name": "l5_ph_safe_captain", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "captain", "insets": [0, 47, 0, 34]}},
-    {"name": "l5_ph_safe_viewer", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "viewer", "insets": [0, 47, 0, 34]}}
+    {"name": "l5_ph_safe_viewer", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "viewer", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_phl_tips", "scene": "res://tests/visual/tips_shot.tscn", "size": [844, 390], "set": {"insets": [47, 0, 47, 21]}},
+    {"name": "l5_ph_tips", "scene": "res://tests/visual/tips_shot.tscn", "size": [390, 844], "set": {"insets": [0, 47, 0, 34], "lang": "pt_PT", "topic": "engineering"}},
+    {"name": "l5_hd_tips", "scene": "res://tests/visual/tips_shot.tscn", "size": [1920, 1080], "set": {"lang": "it", "topic": "science", "progress": -1}}
   ]
 }

@@ -23,13 +23,33 @@ func test_the_overlay_is_removed_when_the_engine_starts() -> void:
 	)
 
 
-# FT: FT-NET-030
-# The tips scroll as a ticker of a doubled strip in a shuffled order, and rotate only
-# for reduced motion.
-func test_tips_scroll_as_a_shuffled_doubled_strip_with_a_reduced_motion_fallback() -> void:
+# FT: FT-NET-030, FT-M1-019
+# The loading screen (P28-Tips, P28-LoadBar): the tips are shuffled, each shows
+# max(5 s, characters / 15 + 1 s), a tap on either half goes back or forward, and the
+# bar under the tip follows the engine's real download progress.
+func test_tips_rotate_with_the_owners_timing_over_a_real_progress_bar() -> void:
 	var src: String = _source()
-	assert_str(src).contains("@keyframes ticker")
-	assert_str(src).contains("const tips = shuffled(LOADING_TIPS);")
-	assert_str(src).contains("strip.textContent = line + line;")
-	assert_str(src).contains("prefers-reduced-motion: reduce")
-	assert_str(src).contains("setInterval(showNextTip, 4000)")
+	assert_str(src).contains("const tips = shuffled(FT_TIPS.tips);")
+	assert_str(src).contains("Math.max(5, text.length / 15 + 1)")
+	assert_str(src).contains("e.clientX < box.left + box.width / 2 ? -1 : 1")
+	assert_str(src).contains("engine.startGame({ onProgress: setProgress })")
+	assert_str(src).contains("fillEl.style.width = pct + '%';")
+	assert_str(src).contains("env(safe-area-inset-bottom")
+	assert_str(src).not_contains("@keyframes ticker")
+
+
+# FT: FT-NET-030, FT-M1-019
+# The shell's copy of the tips is content/tips/tips.json, every tip in each language
+# (tools/tips_shell.py writes it; its --check runs in l0).
+func test_the_shells_tips_are_the_tips_file() -> void:
+	var src: String = _source()
+	var start: int = src.find("const FT_TIPS = ")
+	assert_int(start).is_greater(0)
+	var line: String = src.substr(start, src.find("\n", start) - start)
+	var copy: Dictionary = JSON.parse_string(line.trim_prefix("const FT_TIPS = ").trim_suffix(";"))
+	var data: Dictionary = TipsView.read()
+	assert_int((copy["tips"] as Array).size()).is_equal((data["tips"] as Array).size())
+	for i: int in (data["tips"] as Array).size():
+		var tip: Dictionary = data["tips"][i]
+		for lang: String in I18n.LANGUAGES:
+			assert_str(str(copy["tips"][i][lang])).is_equal(str(tip[lang]))

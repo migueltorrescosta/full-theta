@@ -309,11 +309,15 @@ func _add_fullscreen(col: VBoxContainer) -> void:
 	col.add_child(fullscreen)
 
 
-## The Tips tab. The lead swaps in TipsView (strand T) at merge.
+## The Tips tab (D291): every tip, browsed by tapping; it holds a tip until a tap.
 func _tips_view() -> Control:
-	var l: Label = _label(tr("menu.tab_tips"))
-	l.name = "TipsView"
-	return l
+	var v: TipsView = TipsView.new()
+	v.name = "TipsView"
+	v.opaque = false
+	v.autoplay = false
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.custom_minimum_size = Vector2(0, 160)
+	return v
 
 
 func _on_abandon() -> void:
