@@ -44,6 +44,19 @@ func test_the_page_shows_the_start_up_stages_in_order() -> void:
 	assert_str(src).contains("#bar.busy::after")
 
 
+# FT: FT-NET-030, FT-M1-019
+# #11 DC2: the start task blocks the page's script for seconds, so the next tips are CSS
+# animations the browser runs on its own; each shows for its usual time, and the one showing
+# when script runs again becomes the current tip.
+func test_the_tips_keep_rotating_while_the_engine_starts() -> void:
+	var src: String = _source()
+	assert_str(src).contains("function startCssTips()")
+	assert_str(src).contains("seconds.push(tipSeconds(textOf(tip)));")
+	assert_str(src).contains("animation: slide")
+	assert_str(src).contains("if (name === 'start') { startCssTips(); } else { stopCssTips(); }")
+	assert_str(src).contains("tipIndex = (tipIndex + shown) % tips.length;")
+
+
 # FT: FT-NET-030
 # The stages the game reports (WebLoadStage) are the ones the page knows, in its order.
 func test_the_games_stages_are_the_pages_stages() -> void:

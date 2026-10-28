@@ -33,8 +33,16 @@ body { color: white; background-color: black; overflow: hidden; touch-action: no
     radial-gradient(circle at 50px 180px, #e6edf390 1px, transparent 1.5px);
   background-size: 260px 220px; animation: drift 240s linear infinite; }
 @keyframes drift { from { background-position: 0 0; } to { background-position: -1040px 0; } }
-#tipcol { width: min(600px, 100%); display: flex; flex-direction: column; align-items: center;
-  text-align: center; }
+#tipcol { position: relative; width: min(600px, 100%); display: flex; flex-direction: column;
+  align-items: center; text-align: center; }
+/* While the engine's long start task runs no script can change the tip, so the page lays the
+   next few over it as CSS animations (see startCssTips). */
+#tipcol.css #topic, #tipcol.css #tip { visibility: hidden; }
+#slides { position: absolute; top: 0; left: 0; right: 0; }
+.slide { position: absolute; top: 0; left: 0; right: 0; opacity: 0; display: flex;
+  flex-direction: column; align-items: center; }
+.slide .s-topic { font-size: 12px; letter-spacing: 0.05em; color: #8b98a5; min-height: 16px; }
+.slide .s-tip { font-size: 20px; line-height: 1.5; color: #e6edf3; margin-top: 8px; }
 #topic { font-size: 12px; letter-spacing: 0.05em; color: #8b98a5; min-height: 16px; }
 #tip { font-size: 20px; line-height: 1.5; color: #e6edf3; margin-top: 8px; min-height: 4.5em;
   display: flex; align-items: center; justify-content: center; }
@@ -356,6 +364,7 @@ const topicEl = document.getElementById('topic');
 const tipEl = document.getElementById('tip');
 const fillEl = document.getElementById('fill');
 const barEl = document.getElementById('bar');
+const tipcolEl = document.getElementById('tipcol');
 var tipIndex = 0;
 var tipTimer = null;
 function showTip(step) {
@@ -368,6 +377,62 @@ function showTip(step) {
   tipTimer = setTimeout(function () { showTip(1); }, tipSeconds(text) * 1000);
 }
 function stopTips() { clearTimeout(tipTimer); tipTimer = null; }
+// The engine's start is one long task in which no timer or script runs, so the tips can't
+// rotate from script. Instead the page lays the next few tips over the current one as CSS
+// animations, which the browser runs off the main thread, each for its usual time; when script
+// runs again (stopCssTips) the one showing becomes the current tip and the timer takes over.
+var cssTips = null;
+function startCssTips() {
+  const picks = [], seconds = [];
+  for (let i = 0; i < 4; i++) {
+    const tip = tips[(tipIndex + i) % tips.length];
+    picks.push(tip);
+    seconds.push(tipSeconds(textOf(tip)));
+  }
+  const total = seconds.reduce(function (a, b) { return a + b; }, 0);
+  const sheet = document.createElement('style');
+  const holder = document.createElement('div');
+  holder.id = 'slides';
+  var at = 0, css = '';
+  picks.forEach(function (tip, i) {
+    const from = 100 * at / total, to = 100 * (at + seconds[i]) / total;
+    at += seconds[i];
+    css += '@keyframes slide' + i + ' { 0% { opacity: ' + (i === 0 ? 1 : 0) + '; } ' +
+      (i === 0 ? '' : from + '% { opacity: 0; } ' + (from + 0.5) + '% { opacity: 1; } ') +
+      to + '% { opacity: 1; } ' + (to + 0.5) + '% { opacity: 0; } 100% { opacity: 0; } }\n' +
+      '#slides .slide:nth-child(' + (i + 1) + ') { animation: slide' + i + ' ' + total +
+      's linear infinite; }\n';
+    const slide = document.createElement('div');
+    slide.className = 'slide';
+    const topic = document.createElement('div');
+    topic.className = 's-topic';
+    topic.textContent = textOf(FT_TIPS.topics[tip.topic] || {}).toUpperCase();
+    const body = document.createElement('div');
+    body.className = 's-tip';
+    body.textContent = textOf(tip);
+    slide.appendChild(topic);
+    slide.appendChild(body);
+    holder.appendChild(slide);
+  });
+  sheet.textContent = css;
+  stopTips();
+  tipcolEl.classList.add('css');
+  tipcolEl.appendChild(sheet);
+  tipcolEl.appendChild(holder);
+  cssTips = { since: performance.now(), seconds: seconds, total: total, sheet: sheet, holder: holder };
+}
+function stopCssTips() {
+  if (!cssTips) { return; }
+  const c = cssTips;
+  cssTips = null;
+  var at = ((performance.now() - c.since) / 1000) % c.total, shown = 0;
+  while (shown < c.seconds.length - 1 && at >= c.seconds[shown]) { at -= c.seconds[shown]; shown++; }
+  c.sheet.remove();
+  c.holder.remove();
+  tipcolEl.classList.remove('css');
+  tipIndex = (tipIndex + shown) % tips.length;
+  showTip(0);
+}
 statusEl.addEventListener('click', function (e) {
   const box = statusEl.getBoundingClientRect();
   showTip(e.clientX < box.left + box.width / 2 ? -1 : 1);
@@ -392,6 +457,7 @@ function setStage(name) {
   if (STAGES.indexOf(name) <= STAGES.indexOf(stage) && name !== 'download') { return; }
   stage = name;
   window.ft.stage = name;
+  if (name === 'start') { startCssTips(); } else { stopCssTips(); }
   if (name === 'ready') {
     stopTips();
     clearTimeout(failsafe);
@@ -436,10 +502,12 @@ if (missing.length !== 0) {
     return afterPaint().then(function () { return startEngine.apply(engine, args); });
   };
   engine.startGame({ onProgress: setProgress }).then(() => {
+    stopCssTips();
     // The game says "ready" itself; this is for a game that never does (an error before the
     // lobby), so the overlay can't hide its menu for good.
     failsafe = setTimeout(function () { setStage('ready'); }, 30000);
   }, (err) => {
+    stopCssTips();
     stopTips();
     progress.textContent = String(err);
   });
