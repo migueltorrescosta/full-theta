@@ -63,7 +63,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-NET-019 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-020 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd` |
 | FT-NET-021 | tests | `tests/net/test_net_lobby_l3.gd` |
-| FT-NET-022 | tests | `tests/net/test_net_claims_l3.gd`, `tests/net/test_net_claims_rules.gd`, `tests/net/test_net_relay_l3.gd`, `tests/net/test_net_science_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_science_panel.gd` |
+| FT-NET-022 | tests | `tests/net/test_net_claims_l3.gd`, `tests/net/test_net_claims_rules.gd`, `tests/net/test_net_relay_l3.gd`, `tests/net/test_net_science_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_science_panel.gd` |
 | FT-NET-023 | tests | `tests/net/test_net_claims_l3.gd`, `tests/net/test_net_claims_rules.gd`, `tests/net/test_net_science_l3.gd` |
 | FT-NET-024 | tests | `tests/net/test_net_claims_l3.gd`, `tests/net/test_net_claims_rules.gd` |
 | FT-NET-025 | tests | `tests/net/test_net_reconnect_l3.gd` |
@@ -126,15 +126,15 @@ Tests: 381, manual: 13, pending: 7.
 | FT-SIM-037 | tests | `tests/sim/flight/test_assist_modes.gd`, `tests/sim/run/test_site_wrap.gd` |
 | FT-SIM-038 | tests | `tests/sim/core/test_hot_path_equivalence.gd`, `tests/sim/core/test_integrator.gd` |
 | FT-STN-001 | tests | `tests/presentation/test_phone_frame.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_main_screen_views.gd`, `tests/stations/test_viewer_panel.gd` |
-| FT-STN-002 | tests | `tests/presentation/test_contact_picture.gd`, `tests/presentation/test_disc_radar.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_viewer_panel.gd` |
+| FT-STN-002 | tests | `tests/presentation/test_contact_picture.gd`, `tests/presentation/test_disc_radar.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_viewer_panel.gd` |
 | FT-STN-003 | tests | `tests/presentation/test_disc_radar.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-STN-004 | tests | `tests/stations/test_relay_station.gd`, `tests/stations/test_station_alerts.gd` |
 | FT-STN-005 | tests | `tests/app/test_main_menu.gd`, `tests/input/test_binding_table.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_axes.gd`, `tests/presentation/test_layout_mode.gd`, `tests/presentation/test_phone_frame.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/presentation/test_safe_area.gd`, `tests/presentation/test_touch_widgets.gd`, `tests/presentation/test_ui_theme.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-STN-006 | tests | `tests/presentation/test_top_bar.gd`, `tests/stations/helm/test_helm_touch.gd`, `tests/stations/test_helm_panel.gd`, `tools/tests/test_check_palette.py` |
 | FT-STN-007 | tests | `tests/input/test_bindings.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/stations/test_client_settings.gd` |
 | FT-STN-008 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_phone_frame.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_viewer_panel.gd` |
-| FT-STN-009 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_binding_text.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
-| FT-STN-010 | tests | `tests/net/test_net_chips_l3.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd`, `tests/stations/test_weapons_guided.gd` |
+| FT-STN-009 | tests | `tests/input/test_binding_table.gd`, `tests/input/test_binding_text.gd`, `tests/input/test_input_matcher.gd`, `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_station_screen.gd`, `tests/stations/test_weapons_panel.gd` |
+| FT-STN-010 | tests | `tests/net/test_net_chips_l3.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_request_chips.gd`, `tests/stations/test_weapons_guided.gd` |
 | FT-STN-011 | tests | `tests/input/test_input_matcher_release.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_settings_menu.gd`, `tests/stations/test_station_screen.gd` |
 | FT-STN-012 | tests | `tests/content/test_i18n.gd`, `tests/presentation/test_controls_chip.gd`, `tests/presentation/test_controls_diagram.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_first_visit_help.gd` |
 | FT-STN-013 | tests | `tests/app/test_main_menu.gd`, `tests/stations/test_client_settings.gd`, `tests/stations/test_lobby_and_overlays.gd` |
@@ -187,22 +187,22 @@ Tests: 381, manual: 13, pending: 7.
 | FT-SCI-009 | tests | `tests/net/test_net_coop_l3.gd`, `tests/sim/science/test_scan.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-010 | tests | `tests/sim/science/test_science_noise.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-011 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_scan.gd` |
-| FT-SCI-012 | tests | `tests/sim/science/test_minigame_timing.gd` |
+| FT-SCI-012 | tests | `tests/sim/science/test_minigame_timing.gd`, `tests/stations/science/test_science_phone.gd` |
 | FT-SCI-013 | tests | `tests/stations/test_science_panel.gd` |
 | FT-SCI-014 | tests | `tests/sim/science/test_scan.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-015 | tests | `tests/sim/science/test_scan.gd` |
 | FT-SCI-016 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_scan.gd` |
-| FT-RLY-001 | tests | `tests/net/test_hazard_view.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
+| FT-RLY-001 | tests | `tests/net/test_hazard_view.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-002 | tests | `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_panel.gd` |
-| FT-RLY-003 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
+| FT-RLY-003 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-RLY-004 | tests | `tests/content/test_content_defs.gd`, `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_station.gd` |
-| FT-RLY-005 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_helm_route_ribbon.gd`, `tests/stations/test_relay_station.gd` |
-| FT-RLY-006 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_relay_station.gd` |
+| FT-RLY-005 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_helm_route_ribbon.gd`, `tests/stations/test_relay_station.gd` |
+| FT-RLY-006 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-007 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-008 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-009 | tests | `tests/net/test_net_relay_l3.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_station.gd` |
-| FT-RLY-010 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/net/test_net_main_screen_rules.gd`, `tests/stations/test_main_screen_views.gd` |
-| FT-RLY-011 | tests | `tests/net/test_net_relay_l3.gd`, `tests/sim/relay/test_probes.gd`, `tests/stations/test_relay_station.gd` |
+| FT-RLY-010 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/net/test_net_main_screen_rules.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_main_screen_views.gd` |
+| FT-RLY-011 | tests | `tests/net/test_net_relay_l3.gd`, `tests/sim/relay/test_probes.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_station.gd` |
 | FT-COM-001 | tests | `tests/net/test_comms_view.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_comms_trade.gd` |
 | FT-COM-002 | tests | `tests/pairs/test_p15_relay_comms.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_comms_board.gd` |
 | FT-COM-003 | tests | `tests/director/test_director_pending_site.gd`, `tests/net/test_comms_claims_l3.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_comms_board.gd` |
@@ -241,9 +241,9 @@ Tests: 381, manual: 13, pending: 7.
 | FT-SPA-008 | tests | `tests/presentation/test_disc_radar.gd` |
 | FT-SPA-009 | tests | `tests/input/test_input_matcher.gd`, `tests/presentation/test_disc_radar.gd`, `tests/stations/test_station_screen.gd` |
 | FT-SPA-010 | tests | `tests/presentation/test_disc_radar.gd` |
-| FT-SPA-011 | tests | `tests/presentation/test_disc_radar.gd` |
+| FT-SPA-011 | tests | `tests/presentation/test_disc_radar.gd`, `tests/stations/science/test_science_phone.gd` |
 | FT-SPA-012 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/net/test_net_relay_l3.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
-| FT-SPA-013 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/test_captain_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd` |
+| FT-SPA-013 | tests | `tests/net/test_net_card_ping_l3.gd`, `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_captain_panel.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_station_screen.gd` |
 | FT-SPA-014 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-SPA-015 | tests | `tests/net/test_sites_section_l3.gd`, `tests/sim/run/test_map_def.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_helm_jump_dock.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-SPA-016 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_station_alerts.gd`, `tests/stations/test_station_screen.gd` |
