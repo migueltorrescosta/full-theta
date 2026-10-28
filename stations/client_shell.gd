@@ -12,8 +12,8 @@ extends Control
 ## Multi-ship sessions (#11): a session handed over to the scoreboard (no friendly ship
 ## left, D91) or in a PvP session that is over shows the ScoreboardScreen; a handover to a
 ## friendly ship's main screen shows the HandoverNotice over it; the give-up (forfeit) and
-## relaunch votes show as VotePrompts; the host's abandon or give-up from the menu asks
-## for a confirmation first, since it takes the ship out of play at once.
+## relaunch votes show as VotePrompts; the menu confirms the host's abandon or give-up in
+## place, since it takes the ship out of play at once.
 ##
 ## Load (#28, owner L-Keep): a station screen, once built, is kept (hidden, not processing,
 ## its alert tones detached) and shown again at once on the next visit of that pick; the
@@ -63,8 +63,6 @@ var scoreboard: ScoreboardScreen
 var handover_notice: HandoverNotice
 var forfeit_prompt: VotePrompt
 var relaunch_prompt: VotePrompt
-## The host's "abandon now" confirmation (the menu's abandon or give-up control).
-var confirm_abandon: ConfirmationDialog
 
 var _layer: Control
 var _banner: Label
@@ -433,16 +431,10 @@ func _toggle_help() -> void:
 
 
 ## The menu's abandon (co-op) or give-up (PvP) control: a crew player's vote, which they can
-## take back, goes at once; the host's, which ends the ship's run at once, asks first.
+## take back; the host's ends the ship's run at once (the menu has confirmed it).
 func request_abandon() -> void:
 	if ctx.crew.host:
-		confirm_abandon.dialog_text = (
-			tr("confirm.abandon" if ctx.crew.is_coop() else "confirm.forfeit")
-			% ctx.crew.ship_name()
-		)
-		confirm_abandon.ok_button_text = tr("confirm.yes")
-		confirm_abandon.cancel_button_text = tr("confirm.no")
-		confirm_abandon.popup_centered_clamped(Vector2i(420, 160), 0.9)
+		ctx.intents.abandon(ctx.crew.ship)
 	else:
 		ctx.intents.vote_abandon(ctx.crew.ship, not ctx.crew.has_abandon_vote())
 
@@ -460,10 +452,6 @@ func _build_fleet_overlays() -> void:
 	relaunch_prompt = VotePrompt.new()
 	add_child(relaunch_prompt)
 	relaunch_prompt.setup(ctx, VotePrompt.Kind.RELAUNCH)
-	confirm_abandon = ConfirmationDialog.new()
-	confirm_abandon.name = "ConfirmAbandon"
-	confirm_abandon.confirmed.connect(func() -> void: ctx.intents.abandon(ctx.crew.ship))
-	add_child(confirm_abandon)
 
 
 func _build_overlays() -> void:
@@ -507,9 +495,11 @@ func _build_overlays() -> void:
 		func(_what: StringName) -> void:
 			settings_screen.set_pause_control(ctx.crew.can_host_pause())
 			settings_screen.set_abandon_control(ctx.crew.abandon_control())
+			settings_screen.set_ship_name(ctx.crew.ship_name())
 	)
 	settings_screen.set_pause_control(ctx.crew.can_host_pause())
 	settings_screen.set_abandon_control(ctx.crew.abandon_control())
+	settings_screen.set_ship_name(ctx.crew.ship_name())
 	settings_screen.scale_changed.connect(apply_ui_scale)
 	settings_screen.closed.connect(
 		func() -> void: ctx.matcher.invert_pitch = ctx.settings.invert_pitch
