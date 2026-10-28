@@ -18,10 +18,14 @@ extends StationPanel
 ## claimed mount at the selected target (FT-JNT-008). Mount defs come from the ship's
 ## ShipDef in content/.
 ##
-## On a phone (#28, owner pick B) WeaponsTouch puts the view between docked thumb rails
-## (landscape) or above two rows of buttons (upright): a drag aims, FIRE holds `fire`, and
-## the mount, claim, ammo and Guided buttons send the same intents as the keys. Tablet
-## and desktop layouts don't change.
+## On a phone (#28 follow-up, D287, D289) WeaponsTouch puts one right rail over the full-width
+## view (landscape) or a controls block under it (upright), with the pages Fire, Mounts and
+## Crew: a drag aims, FIRE holds `fire`, and the buttons send the same intents as the keys.
+## The panel is in the phone frame (`in_frame`): its read-outs sit under the view-top row.
+## Tablet and desktop layouts don't change.
+
+## A touch control sent `id` (tests: taps send what the keys send).
+signal touch_intent(id: String)
 
 ## Vertical field of view (degrees).
 const FOV_DEG: float = 60.0
@@ -75,6 +79,9 @@ var _screen: StationScreen = null
 
 
 func _setup() -> void:
+	in_frame = true
+	# The Crew page shows the share buttons (CrewPage).
+	shows_shares = true
 	ship_def = ctx.ship_def()
 	_build_view()
 	_overlay = Control.new()
@@ -103,10 +110,14 @@ func _mode_changed() -> void:
 	_apply_form()
 
 
-## Alone and focused on a phone in landscape, the panel draws its radar in its rail and
-## takes the whole screen (#28).
+## Focused on a phone the panel draws its own radar inset and takes the whole screen (#28).
 func full_screen() -> bool:
-	return focused and mount_count() > 0 and phone_form() == LayoutMode.Form.PHONE_LANDSCAPE
+	return focused and mount_count() > 0 and phone_form() >= 0
+
+
+## The view's free part: beside the rail on its side, the view above the controls upright.
+func view_rect() -> Rect2:
+	return _touch.view_rect() if _touch != null else super()
 
 
 ## The phone form this panel lays out for, or -1 for the tablet and desktop arrangement.
@@ -137,13 +148,20 @@ func _apply_form() -> void:
 		_touch.queue_free()
 		remove_child(_touch)
 		_touch = null
+		pages = null
 	if want:
-		# Alone or in a joint view (which shows one panel on a phone) the screen's radar
-		# column gives way to the rail's radar.
-		var alone: bool = _screen == null or _screen.panels.size() <= 2
-		_touch = WeaponsTouch.new(self, form as LayoutMode.Form, alone)
+		# On its side the screen shows only the focused panel; upright a joint view keeps
+		# the screen's radar under its docked panels.
+		var own_radar: bool = (
+			form == LayoutMode.Form.PHONE_LANDSCAPE or _screen == null or _screen.panels.size() == 1
+		)
+		_touch = WeaponsTouch.new(self, form as LayoutMode.Form, own_radar)
 		add_child(_touch)
 		_touch.take_view(_view, _overlay)
+		if _screen != null:
+			_touch.pad.long_press = _screen.frame.long_press
+			_touch.pad.now_ms = ctx.now_ms
+		pages = _touch.pages
 		_touch.refresh()
 
 
@@ -157,16 +175,20 @@ func touch() -> WeaponsTouch:
 
 ## A rail button's press intent (`mount_next`, `ammo_next`, `fire_guided`).
 func touch_press(id: String) -> void:
+	touch_intent.emit(id)
 	handle_intent({"id": id, "pressed": true, "device": TOUCH})
 
 
 ## A held rail button (`fire`): pressed on the finger's down, released on its up.
 func touch_hold(down: bool, id: String) -> void:
+	if down:
+		touch_intent.emit(id)
 	handle_intent({"id": id, "pressed": down, "device": TOUCH})
 
 
 ## Claim or Release: the screen's common `claim` intent.
 func touch_claim() -> void:
+	touch_intent.emit("claim")
 	if _screen != null:
 		_screen.dispatch({"id": "claim", "target": "screen", "pressed": true, "device": TOUCH})
 
@@ -813,33 +835,24 @@ func _draw_overlay() -> void:
 		return
 	if focused:
 		_draw_turret(font)
-	# On a phone the rails show the camera mount, its ammo and its claim (WeaponsTouch).
+	if _touch != null:
+		_draw_phone_lines(font)
+		return
 	var rows: Array[String] = mount_rows()
 	var lines: Array[String] = []
-	var bright: int = mount
-	for i: int in rows.size():
-		if _touch == null or i != mount:
-			lines.append(rows[i])
-	if _touch != null:
-		bright = -1
+	lines.append_array(rows)
 	var target: String = _target_line()
-	if target != "" and (_touch == null or _touch.target_label == null):
+	if target != "":
 		lines.append(target)
 	if focused:
 		lines.append_array(feed_lines())
 	var arc: String = out_of_arc_text()
 	if focused:
-		if _touch == null:
-			lines.append(_ammo_text())
-			if _hint() != "":
-				lines.append(_hint())
+		lines.append(_ammo_text())
+		if _hint() != "":
+			lines.append(_hint())
 		if arc != "":
-			_text(
-				font,
-				arc_warning_rect(font, arc).position + Vector2(0, FONT_SIZE),
-				arc,
-				Palette.color("warn")
-			)
+			_draw_arc_warning(font, arc)
 	elif arc != "":
 		lines.append(arc)
 	var line_h: float = FONT_SIZE + 6.0
@@ -847,22 +860,61 @@ func _draw_overlay() -> void:
 		12.0 + FONT_SIZE if docked else _overlay.size.y - 12.0 - line_h * (lines.size() - 1)
 	)
 	for k: int in lines.size():
-		var col: Color = Palette.color("text") if k == bright else Palette.color("text_dim")
+		var col: Color = Palette.color("text") if k == mount else Palette.color("text_dim")
 		if lines[k] == arc:
 			col = Palette.color("warn")
 		_text(font, Vector2(12.0, y0 + k * line_h), lines[k], col)
 
 
-## Where the out-of-arc warning goes (FT-WPN-005): centred near the top of the view, moved
-## down past any bracket or chip it would cover (#28: it hid the U3 chip). The rectangle's
+## On a phone the rail and the overlays show the mounts, the ammunition, the claim and the
+## target (WeaponsTouch); the overlay adds the out-of-arc warning and the feeds under the
+## target line (not on the Mounts page, whose list covers them).
+func _draw_phone_lines(font: Font) -> void:
+	var arc: String = out_of_arc_text()
+	if arc != "":
+		_draw_arc_warning(font, arc)
+	if not _touch.shows_feeds():
+		return
+	var lines: Array[String] = feed_lines()
+	if lines.is_empty():
+		return
+	var line_h: float = FONT_SIZE + 6.0
+	var at: Vector2 = _touch.feeds_origin(_overlay, line_h * lines.size())
+	for k: int in lines.size():
+		_text(font, at + Vector2(0.0, FONT_SIZE + k * line_h), lines[k], Palette.color("text"))
+
+
+func _draw_arc_warning(font: Font, arc: String) -> void:
+	var r: Rect2 = arc_warning_rect(font, arc)
+	_text(font, r.position + Vector2(0, FONT_SIZE), arc, Palette.color("warn"))
+
+
+## Where the out-of-arc warning goes (FT-WPN-005): centred near the top of the view (on a
+## phone under the view-top row), moved down past any bracket or chip it would cover (#28:
+## it hid the U3 chip). The rectangle's
 ## top is the text's top; the baseline is FONT_SIZE lower.
 func arc_warning_rect(font: Font, arc: String) -> Rect2:
 	var sz: Vector2 = font.get_string_size(arc, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 	var r: Rect2 = Rect2((_overlay.size.x - sz.x) / 2.0, 48.0 - FONT_SIZE, sz.x, FONT_SIZE + 6.0)
-	for _pass: int in _targets.size():
+	if _touch != null:
+		# On a phone: centred in the view beside the rail, under the view-top row.
+		var view: Rect2 = (
+			_overlay.get_global_transform().affine_inverse()
+			* (get_global_transform() * view_rect())
+		)
+		r.position = Vector2(view.get_center().x - sz.x / 2.0, _touch.read_top(_overlay))
+	var keep_clear: Array[Rect2] = []
+	for t: Dictionary in _targets:
+		keep_clear.append(t["rect"])
+	if _touch != null and _touch.target_label.text != "":
+		# The target line over the view's left (WeaponsTouch).
+		var label: Label = _touch.target_label
+		keep_clear.append(
+			_overlay.get_global_transform().affine_inverse() * label.get_global_rect()
+		)
+	for _pass: int in keep_clear.size():
 		var clear: bool = true
-		for t: Dictionary in _targets:
-			var hit: Rect2 = t["rect"]
+		for hit: Rect2 in keep_clear:
 			if hit.intersects(r):
 				r.position.y = hit.end.y + 4.0
 				clear = false
