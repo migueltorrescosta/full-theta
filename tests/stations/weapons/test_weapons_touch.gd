@@ -493,3 +493,43 @@ func test_crew_page_requests_ping_and_mark() -> void:
 	var marks: Array = StationFixture.sent(s.ctx).of("place_mark")
 	assert_int(marks.size()).is_equal(1)
 	assert_int(int(marks[0][1][2])).is_equal(StationFixture.U3)
+
+
+# FT: FT-STN-012, FT-STN-005
+# The touch help picture (P28-Help) numbers the controls where they are: its Fire and Mounts
+# callouts sit on the real controls of the 844 x 390 phone (within a few px), and every
+# callout has a text.
+func test_touch_help_matches_the_layout() -> void:
+	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
+	var p: WeaponsPanel = _panel(s)
+	var t: WeaponsTouch = p.touch()
+	var fire: Array = WeaponsTouchHelp.callouts(WeaponsTouch.Page.FIRE)
+	var real: Array[Control] = [
+		t.mount_button, t.ammo_button, t.guided_button, t.fire_all_button, t.claim_button
+	]
+	real.append(t.fire_button)
+	for i: int in real.size():
+		var want: Rect2 = real[i].get_global_rect()
+		var got: Rect2 = fire[i][0]
+		var what: String = "%s: %s vs %s" % [fire[i][1], got, want]
+		(
+			assert_float(got.position.distance_to(want.position))
+			. override_failure_message(what)
+			. is_less(6.0)
+		)
+		assert_float(got.end.distance_to(want.end)).override_failure_message(what).is_less(6.0)
+	await _page(s, WeaponsTouch.Page.MOUNTS)
+	var rows: Array = WeaponsTouchHelp.callouts(WeaponsTouch.Page.MOUNTS)
+	for i: int in 2:
+		var want: Rect2 = (t.rows[0][i] as Control).get_global_rect()
+		var got: Rect2 = rows[i][0]
+		var what: String = "%s: %s vs %s" % [rows[i][1], got, want]
+		(
+			assert_float(got.position.distance_to(want.position))
+			. override_failure_message(what)
+			. is_less(6.0)
+		)
+		assert_float(got.end.distance_to(want.end)).override_failure_message(what).is_less(6.0)
+	for page: int in WeaponsTouchHelp.PAGES.size():
+		for c: Array in WeaponsTouchHelp.callouts(page):
+			assert_str(c[1]).is_not_empty()
