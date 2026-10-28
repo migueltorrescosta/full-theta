@@ -9,6 +9,8 @@
 extends SceneTree
 
 const WARMUP_FRAMES := 5
+## Most frames to wait for a 3D view to fill in its ships.
+const MAX_FILL_FRAMES := 600
 
 
 func _initialize() -> void:
@@ -74,6 +76,12 @@ func _capture(shot: Dictionary, size: Array) -> Image:
 	root.add_child(node)
 	for i: int in WARMUP_FRAMES:
 		await process_frame
+	# A 3D view fills its ships in a slice per frame (#27): wait until none is empty, so the
+	# shot does not depend on how fast the machine is.
+	for i: int in MAX_FILL_FRAMES:
+		if not _ships_unfilled(node):
+			break
+		await process_frame
 	await RenderingServer.frame_post_draw
 	var image: Image = root.get_texture().get_image()
 	image.convert(Image.FORMAT_RGB8)
@@ -81,6 +89,14 @@ func _capture(shot: Dictionary, size: Array) -> Image:
 	node.free()
 	await process_frame
 	return image
+
+
+## True while a SpaceView under `node` still has ships it has not filled in.
+func _ships_unfilled(node: Node) -> bool:
+	for v: Node in node.find_children("*", "SpaceView", true, false):
+		if not (v as SpaceView)._unfilled.is_empty():
+			return true
+	return false
 
 
 func _arg(args: PackedStringArray, flag: String) -> String:
