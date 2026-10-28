@@ -5,6 +5,12 @@ extends Node
 ## its test flags are given.
 
 
+## The server's script, loaded only by `--server`: naming ServerMain, NetServer or
+## ServerLifecycle here would compile the whole server stack in every browser client, which
+## never runs one (about 7 % of the start-up compile, #11 DC2).
+const SERVER_MAIN: String = "res://app/server_main.gd"
+
+
 func _ready() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	# Release checks (FT-TST-019): the build line, and `--tts-smoke` (ReleaseSmoke).
@@ -23,12 +29,13 @@ func _ready() -> void:
 			pilot.menu = menu
 			add_child(pilot)
 		return
-	var cli: ServerMain = ServerMain.new()
+	var server_main: GDScript = load(SERVER_MAIN)
+	var cli: Variant = server_main.new()
 	if not cli.parse_args(args):
 		get_tree().quit(2)
 		return
-	ServerMain.configure_engine()
-	var server: NetServer = cli.make_server()
+	server_main.call("configure_engine")
+	var server: Node = cli.make_server()
 	if server == null:
 		get_tree().quit(1)
 		return
