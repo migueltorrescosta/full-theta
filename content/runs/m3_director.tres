@@ -20,5 +20,5 @@ max_open_sites = 2
 gap_s = 180.0
 arrival_timeout_s = 180.0
 fleet_strength_per_ship = 0.5
-raider_wave_every_s = 90.0
+raider_wave_every_s = 120.0
 raider_wave_growth = 0.5
