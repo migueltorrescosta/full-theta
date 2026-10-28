@@ -22,6 +22,9 @@ const WIDTH: float = 308.0
 ## The scrim over the rest of the view.
 const SCRIM_ALPHA: float = 0.25
 const TITLE_FONT: int = 16
+## A finger that lands on the sheet and moves this far down (px), more down than sideways,
+## cancels it (design 1.4: swipe down cancels).
+const SWIPE_DOWN: float = 64.0
 
 ## SIDE_LEFT or SIDE_RIGHT on a phone on its side; upright the sheet is at the bottom.
 var side: Side = SIDE_RIGHT
@@ -39,6 +42,9 @@ var _grid: GridContainer = GridContainer.new()
 var _scroll: ScrollContainer = ScrollContainer.new()
 var _callback: Callable = Callable()
 var _buttons: Array[RailButton] = []
+## The finger that landed on the sheet's box (-1 none) and where.
+var _swipe_index: int = -1
+var _swipe_from: Vector2 = Vector2.ZERO
 
 
 func _init() -> void:
@@ -146,6 +152,30 @@ func _pick(index: int) -> void:
 func _close() -> void:
 	visible = false
 	_callback = Callable()
+	_swipe_index = -1
+
+
+## Swipe down on the sheet cancels it; seen before the buttons, so a swipe that starts on an
+## option works too (a tap still picks: a button fires on release, after a short move).
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	var t: InputEventScreenTouch = event as InputEventScreenTouch
+	if t != null:
+		if t.pressed and box.get_global_rect().has_point(t.position):
+			_swipe_index = t.index
+			_swipe_from = t.position
+		elif not t.pressed and t.index == _swipe_index:
+			_swipe_index = -1
+		return
+	var d: InputEventScreenDrag = event as InputEventScreenDrag
+	if d == null or d.index != _swipe_index:
+		return
+	var moved: Vector2 = d.position - _swipe_from
+	if moved.y >= SWIPE_DOWN and moved.y > absf(moved.x):
+		_swipe_index = -1
+		get_viewport().set_input_as_handled()
+		cancel()
 
 
 ## A tap on the scrim cancels (a finger, or a real mouse click: not both for one tap).

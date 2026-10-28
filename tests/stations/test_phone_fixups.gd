@@ -227,9 +227,8 @@ func test_engineering_columns_take_the_taps_on_a_phone() -> void:
 		var e: EngineeringPanel = s.focused_panel() as EngineeringPanel
 		var board: EngineeringBoard = e.board
 		assert_bool(board.phone()).is_true()
-		if e.touch_tabs != null:
-			e.touch_tabs.current = 0
-			await _frames(2)
+		e.pages.current = EngineeringPanel.Page.POWER
+		await _frames(2)
 		_assert_clean(s, "board %s" % c[0])
 		var taps: Array[Node] = board.find_children("ColumnTap*", "", false, false)
 		assert_int(taps.size()).is_equal(board.columns().size())
@@ -254,7 +253,7 @@ func test_engineering_columns_take_the_taps_on_a_phone() -> void:
 func test_engineering_cutaway_works_with_one_finger() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "engineering", LANDSCAPE)
 	var e: EngineeringPanel = s.focused_panel() as EngineeringPanel
-	e.touch_tabs.current = 1
+	e.pages.current = EngineeringPanel.Page.SHIP
 	await _frames(2)
 	var cut: EngineeringCutaway = e.cutaway
 	assert_bool(cut.phone()).is_true()

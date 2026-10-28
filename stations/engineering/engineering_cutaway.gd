@@ -23,6 +23,8 @@ const PITCH_LIMIT: float = 1.4
 const DRAG_TURN: float = 0.008
 ## A finger moving more than this (px) after it lands turns instead of tapping.
 const TURN_SLOP: float = 8.0
+## Under this height (px) the cutaway draws no hint.
+const HINT_MIN_H: float = 220.0
 
 var panel: EngineeringPanel
 ## View angles (rad): yaw about the ship's up axis, then pitch towards the viewer; the
@@ -221,6 +223,9 @@ func _draw() -> void:
 		draw_arc(cursor, 8.0, 0.0, TAU, 16, a, 1.5)
 		draw_line(cursor + Vector2(-12, 0), cursor + Vector2(12, 0), a, 1.0)
 		draw_line(cursor + Vector2(0, -12), cursor + Vector2(0, 12), a, 1.0)
+	# A short cutaway (a phone upright under the banner) keeps the hull clear of the hint.
+	if size.y < HINT_MIN_H:
+		return
 	var font: Font = get_theme_default_font()
 	var fs: int = get_theme_default_font_size()
 	draw_multiline_string(

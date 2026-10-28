@@ -59,9 +59,9 @@ func _screen(size: Vector2i, entry: String, insets: Array, framed: bool = true) 
 	if framed and entry in ["helm", "science"]:
 		s.panel_factory = func(_id: String) -> StationPanel: return FramePanel.new()
 	s.setup(ctx)
-	if framed:
-		for p: StationPanel in s.panels:
-			p.in_frame = true
+	# Wave 2's stations join the frame themselves; `framed` false keeps one out of it.
+	for p: StationPanel in s.panels:
+		p.in_frame = framed
 	vp.add_child(s)
 	await _frames(4)
 	return s

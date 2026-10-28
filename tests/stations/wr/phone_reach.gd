@@ -41,6 +41,9 @@ static func walk(s: StationScreen, row: Dictionary) -> Dictionary:
 			return {"taps": taps, "error": "tab %d not shown" % page}
 		tab.pressed.emit()
 		taps += 1
+		# A Crew page fills its buttons when it shows (it refreshes each frame).
+		for crew: Node in p.find_children("*", "CrewPage", true, false):
+			(crew as CrewPage).refresh()
 	var c: BaseButton = control(s, row["control"])
 	if c == null:
 		return {"taps": taps, "error": "%s not found" % str(row["control"])}

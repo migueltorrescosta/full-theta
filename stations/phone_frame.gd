@@ -30,7 +30,60 @@ var band_guard: Control = Control.new()
 ## The view-top row's layer over the main area.
 var view_top: Control = Control.new()
 
+## The feedback of an armed long-press: a ring under the finger that grows (P28-Common).
+var armed_ring: ArmedRing = ArmedRing.new()
+
 var _tabs_gap: Control = Control.new()
+
+
+## A ring under a held finger once the long-press arms: it grows from START_R to END_R over
+## GROW_MS, then stays until the finger lets go; it follows a mark drag.
+class ArmedRing:
+	extends Control
+
+	const START_R: float = 14.0
+	const END_R: float = 36.0
+	const GROW_MS: int = 200
+	const WIDTH: float = 3.0
+
+	## When the gesture armed (ms), -1 while hidden.
+	var since: int = -1
+	var now: int = 0
+
+	func _init() -> void:
+		name = "ArmedRing"
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		visible = false
+		size = Vector2.ONE * 2.0 * (END_R + WIDTH)
+
+	## Shows the ring centred on `at` (its parent's coordinates) from `now_ms`.
+	func show_at(at: Vector2, now_ms: int) -> void:
+		since = now_ms
+		now = now_ms
+		visible = true
+		move_to(at)
+
+	func move_to(at: Vector2) -> void:
+		position = at - size / 2.0
+
+	## The radius at `now`.
+	func radius() -> float:
+		var k: float = clampf(float(now - since) / GROW_MS, 0.0, 1.0)
+		return lerpf(START_R, END_R, k)
+
+	func tick(now_ms: int) -> void:
+		now = now_ms
+		queue_redraw()
+
+	func hide_ring() -> void:
+		since = -1
+		visible = false
+
+	func _draw() -> void:
+		var c: Vector2 = size / 2.0
+		var accent: Color = Palette.color("accent")
+		draw_circle(c, radius(), Color(accent, 0.2))
+		draw_arc(c, radius(), 0.0, TAU, 48, accent, WIDTH, true)
 
 
 ## Builds the widgets into the screen: the view-top row and `sheet` over `main`, the bottom
@@ -71,6 +124,8 @@ func build(owner_screen: StationScreen, main: Control, rows: VBoxContainer) -> v
 	screen.add_child(band_guard)
 	long_press.ping.connect(screen.ping_at)
 	long_press.mark.connect(screen.mark_at)
+	long_press.armed.connect(_on_armed)
+	view_top.add_child(armed_ring)
 	screen.top_bar.alert_sheet_requested.connect(open_alert_sheet)
 
 
@@ -131,7 +186,13 @@ func input(event: InputEvent) -> bool:
 	var off: bool = not framed() or screen.blocked() or TouchInput.over(screen.get_tree(), pos)
 	if starts and (off or not _over_view(pos)):
 		return false
-	return long_press.feed(event, screen.ctx.now_ms())
+	var used: bool = long_press.feed(event, screen.ctx.now_ms())
+	if armed_ring.visible:
+		if long_press.is_armed():
+			armed_ring.move_to(pos - view_top.global_position)
+		else:
+			armed_ring.hide_ring()
+	return used
 
 
 ## True when `pos` (viewport px) is over the view-top row's layer and no button takes it.
@@ -146,8 +207,14 @@ func _over_view(pos: Vector2) -> bool:
 func process(now: int) -> void:
 	view_top.visible = framed()
 	if not view_top.visible:
+		armed_ring.hide_ring()
 		return
 	long_press.update(now)
+	if armed_ring.visible:
+		if long_press.is_armed():
+			armed_ring.tick(now)
+		else:
+			armed_ring.hide_ring()
 	ping_toast.update(now)
 	var ctx: StationContext = screen.ctx
 	var crew: bool = ctx.crew.is_crew()
@@ -178,7 +245,9 @@ func _place_view_top() -> void:
 	var gap: float = UiTheme.TOUCH_GAP
 	var x0: float = r.position.x + gap
 	var x1: float = r.end.x - gap
-	var y: float = VIEW_TOP_Y
+	# The row sits at the top of the view, wherever the panel's view starts (Engineering
+	# upright: under its button grid).
+	var y: float = r.position.y + VIEW_TOP_Y
 	selection_chip.fit(x1 - x0)
 	var chip_w: float = selection_chip.get_combined_minimum_size().x
 	var col: Array[Control] = []
@@ -263,6 +332,12 @@ func open_alert_sheet() -> void:
 	for a: Dictionary in Palette.ALERTS:
 		labels.append("%s  %s" % [a["letter"], tr(a["key"])])
 	screen.sheet.open(tr("intent.alert_cycle"), labels, screen._set_alert)
+
+
+## A long-press armed at `at` (viewport px): the ring shows under the finger.
+func _on_armed(at: Vector2) -> void:
+	armed_ring.show_at(at - view_top.global_position, screen.ctx.now_ms())
+	view_top.move_child(armed_ring, -1)
 
 
 ## The station chip: a joint view flips the focus; the dev seat opens the six-station

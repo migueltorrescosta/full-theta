@@ -17,6 +17,9 @@ extends StationPanel
 ## Nothing here shows a threat position: Engineering's view has no NEAR or PROJECTILES
 ## section (FT-ENG-007).
 
+## The phone's pages, in tab order.
+enum Page { POWER, SHIP, FAULTS, CREW }
+
 const S = StationViews.Section
 const KIND = SubsystemDef.Kind
 
@@ -39,12 +42,12 @@ const NARROW: float = 760.0
 ## Under this width (a phone, D195) the cutaway, the board and the lists stack and scroll.
 const PHONE_W: float = 560.0
 const CREW_LETTERS: String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-## A phone on its side (#28, rails plus tabs like Helm C): a docked thumb rail of this width
-## at the screen's left edge with every board action as a button, two to a row; the
-## board, the cutaway and the lists on tabs beside it.
-const PHONE_RAIL_W: float = 176.0
-## [intent id, string key, English] of the rail's buttons, in rows of two; each sends its
-## intent through handle_intent, as a key or the pad does.
+## A phone (#28 follow-up, design 2.3, D287): a docked thumb rail of this width at the
+## screen's left edge (upright a grid above the pages) with every board action, two to a row;
+## the pages Power, Ship, Faults and Crew beside it; the screen's radar column stays (P28-E2).
+const PHONE_RAIL_W: float = 168.0
+## [intent id, string key, English] of the rail's buttons, in rows of two (design 2.3); each
+## sends its intent as a key or the pad does (Claim as the common claim).
 const TOUCH_ACTIONS: Array = [
 	["pip_add", "eng.touch.pip_add", "Power +"],
 	["pip_remove", "eng.touch.pip_remove", "Power -"],
@@ -52,10 +55,15 @@ const TOUCH_ACTIONS: Array = [
 	["shield_wider", "eng.touch.wider", "Wider"],
 	["boost", "eng.boost", "Boost"],
 	["harden", "eng.touch.harden", "Harden"],
-	["fabricate_probe", "eng.touch.probe", "Probe"],
+	["dispatch_nearest", "eng.touch.repair", "Repair"],
 	["cause_next", "eng.touch.cause", "Cause"],
-	["dispatch_nearest", "eng.touch.send_crew", "Send crew"],
+	["fabricate_probe", "eng.touch.probe", "Probe"],
+	["claim", "eng.touch.claim", "Claim"],
 ]
+## The rail buttons' text size on a phone (two to a row).
+const RAIL_FONT: int = 14
+## Upright, the rail's buttons in a grid of this many columns.
+const GRID_COLUMNS: int = 4
 
 var ship_def: ShipDef = null
 ## Index in ship_def.subsystems of the subsystem pips, dispatch and the cursor act on.
@@ -68,16 +76,24 @@ var hits: Array[Dictionary] = []
 var faults: Dictionary = {}
 var cutaway: EngineeringCutaway
 var board: EngineeringBoard
-## The phone-landscape arrangement (#28), made on first use; hidden elsewhere.
+## The phone arrangement on its side (#28 follow-up): the docked rail and the pages; hidden
+## elsewhere.
 var touch_layout: RailLayout = null
-var touch_tabs: TouchTabs = null
-## Intent id -> its rail button.
+## Intent id -> its rail button on a phone on its side.
 var touch_buttons: Dictionary = {}
+## Intent id -> its button in the upright grid.
+var grid_buttons: Dictionary = {}
+var crew_page: CrewPage = null
 
 var _row: BoxContainer
 var _scroll_all: ScrollContainer
+## The phone's pages: the box under the view-top row (its top margin follows top_reserve),
+## one full-size page control each (Power scrolls the board), and upright the button grid.
+var _pages_box: MarginContainer
+var _page_ctl: Array[Control] = []
 var _board_page: ScrollContainer
-var _portrait_grid: GridContainer
+var _upright: VBoxContainer
+var _grid: GridContainer
 var _left: VBoxContainer
 var _side: PanelContainer
 var _lists: VBoxContainer
@@ -136,6 +152,10 @@ func _setup() -> void:
 	scroll.add_child(_lists)
 	ctx.crew.sim_event.connect(_on_sim_event)
 	_refresh_lists()
+	in_frame = true
+	# The Crew page holds the share buttons (P28-Common): no Share opener on a phone.
+	shows_shares = true
+	_build_pages()
 
 
 func _mode_changed() -> void:
@@ -145,67 +165,164 @@ func _mode_changed() -> void:
 	_place_lists()
 
 
-## True when the panel takes the phone-landscape arrangement: focused on a phone on its side.
+## The phone form the panel takes: PHONE_LANDSCAPE or PHONE_PORTRAIT when it shows its main
+## view on a phone, else DESKTOP (a tablet, a desktop, or docked in a joint view).
+func phone_form() -> LayoutMode.Form:
+	if not is_inside_tree() or docked:
+		return LayoutMode.Form.DESKTOP
+	var f: LayoutMode.Form = LayoutMode.form_of(self)
+	return f if LayoutMode.is_phone(f) else LayoutMode.Form.DESKTOP
+
+
+## True when the panel takes the phone arrangement on its side.
 func phone_landscape() -> bool:
-	return (
-		is_inside_tree()
-		and not docked
-		and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
-	)
+	return phone_form() == LayoutMode.Form.PHONE_LANDSCAPE
 
 
 func _place_lists() -> void:
 	if ctx == null:
 		return
-	if phone_landscape():
-		_to_rails()
+	var f: LayoutMode.Form = phone_form()
+	if f != LayoutMode.Form.DESKTOP:
+		_to_phone(f == LayoutMode.Form.PHONE_LANDSCAPE)
 		return
-	_from_rails()
+	_from_phone()
 
 
-## Moves the board, cutaway and lists onto the phone tabs beside the action rail.
-func _to_rails() -> void:
+## The phone's pages (built in _setup, so the screen binds them at once): Power (the board,
+## scrolling only when the view-top row grows), Ship (the cutaway), Faults (the lists) and
+## Crew. Only the page controls take part in the pages: the board, cutaway and lists move
+## into them on a phone and back out elsewhere.
+func _build_pages() -> void:
+	_pages_box = MarginContainer.new()
+	_pages_box.name = "Pages"
+	_pages_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pages_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pages_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var area: Control = Control.new()
+	area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pages_box.add_child(area)
+	_board_page = ScrollContainer.new()
+	_board_page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	crew_page = CrewPage.new(self)
+	crew_page.name = "CrewPage"
+	pages = PageHost.new()
+	var titles: Array[String] = [
+		tr("eng.power"),
+		TouchText.of("eng.touch.ship", "Ship"),
+		tr("eng.faults"),
+		TouchText.of("page.crew", "Crew"),
+	]
+	for i: int in titles.size():
+		var page: Control = crew_page if i == Page.CREW else Control.new()
+		if i == Page.POWER:
+			page = _board_page
+		page.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		if page != crew_page and page != _board_page:
+			page.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		area.add_child(page)
+		_page_ctl.append(page)
+		pages.add_page(titles[i], [page])
+
+
+## The pages are built before the phone arrangement takes them: free them with the panel if
+## it never did (a desktop).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and _pages_box != null and _pages_box.get_parent() == null:
+		_pages_box.free()
+
+
+## The rail on its side (rows of two) and the upright grid, each a full set of the buttons.
+func _build_rails() -> void:
+	touch_layout = RailLayout.new()
+	touch_layout.name = "TouchLayout"
+	touch_layout.docked = true
+	# 8 px from the top bar and from the rail (UiTheme.TOUCH_GAP between targets).
+	touch_layout.offset_top = UiTheme.TOUCH_GAP
+	add_child(touch_layout)
+	var rail: TouchRail = touch_layout.rail(SIDE_LEFT)
+	rail.custom_minimum_size.x = PHONE_RAIL_W
+	var row: Array = []
+	for a: Array in TOUCH_ACTIONS:
+		var b: RailButton = _rail_button(a)
+		touch_buttons[a[0]] = b
+		row.append(b)
+		if row.size() == 2:
+			rail.add_row(row)
+			row = []
+	_upright = VBoxContainer.new()
+	_upright.name = "Upright"
+	_upright.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_upright.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	_upright.offset_top = UiTheme.TOUCH_GAP
+	_upright.visible = false
+	add_child(_upright)
+	_grid = GridContainer.new()
+	_grid.columns = GRID_COLUMNS
+	_grid.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
+	_grid.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
+	_upright.add_child(_grid)
+	for a: Array in TOUCH_ACTIONS:
+		var b: RailButton = _rail_button(a)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		grid_buttons[a[0]] = b
+		_grid.add_child(b)
+
+
+func _rail_button(a: Array) -> RailButton:
+	var b: RailButton = RailButton.make(TouchText.of(a[1], a[2]))
+	b.name = "Touch_" + str(a[0])
+	# Two to a 168 px rail: the longest label fits at 14 px.
+	b.add_theme_font_size_override("font_size", RAIL_FONT)
+	b.pressed.connect(press_touch.bind(str(a[0])))
+	return b
+
+
+## Moves the board, cutaway and lists onto the pages, beside the rail on its side or under
+## the grid upright.
+func _to_phone(sideways: bool) -> void:
 	if touch_layout == null:
 		_build_rails()
-	touch_layout.visible = true
 	_scroll_all.visible = false
-	board.custom_minimum_size = Vector2(0, 460)
-	cutaway.custom_minimum_size.y = 0.0
-	_side.custom_minimum_size = Vector2.ZERO
-	if touch_tabs.tab_count() == 0:
-		board.get_parent().remove_child(board)
-		_board_page.add_child(board)
-		touch_tabs.add_tab(tr("eng.power"), _board_page)
-		for pair: Array in [
-			[cutaway, TouchText.of("eng.touch.ship", "Ship")], [_side, tr("eng.faults")]
-		]:
-			var page: Control = pair[0]
-			page.get_parent().remove_child(page)
-			touch_tabs.add_tab(str(pair[1]), page)
-	for pair: Array in [[board, _board_page], [cutaway, touch_tabs], [_side, touch_tabs]]:
+	touch_layout.visible = sideways
+	_upright.visible = not sideways
+	var home: Control = touch_layout if sideways else _upright
+	if _pages_box.get_parent() != home:
+		if _pages_box.get_parent() != null:
+			_pages_box.get_parent().remove_child(_pages_box)
+		if sideways:
+			touch_layout.set_content(_pages_box)
+		else:
+			_upright.add_child(_pages_box)
+	_pages_box.add_theme_constant_override("margin_left", UiTheme.TOUCH_GAP if sideways else 0)
+	for pair: Array in [
+		[board, _board_page], [cutaway, _page_ctl[Page.SHIP]], [_side, _page_ctl[Page.FAULTS]]
+	]:
 		var c: Control = pair[0]
-		if c.get_parent() != pair[1]:
+		var page: Control = pair[1]
+		if c.get_parent() != page:
 			c.get_parent().remove_child(c)
-			(pair[1] as Control).add_child(c)
-	# The pages in tab order: Power, Ship, Faults.
-	touch_tabs.move_child(_board_page, 1)
-	touch_tabs.move_child(cutaway, 2)
-	touch_tabs.move_child(_side, 3)
-	var cur: int = touch_tabs.current
-	for i: int in 3:
-		touch_tabs.get_child(i + 1).visible = i == cur
-	for b: RailButton in touch_buttons.values():
-		b.disabled = ship_def == null
+			page.add_child(c)
+		c.visible = true
+		if page != _board_page:
+			c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	board.custom_minimum_size = Vector2(0.0, EngineeringBoard.PHONE_H)
+	board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cutaway.custom_minimum_size = Vector2.ZERO
+	_side.custom_minimum_size = Vector2.ZERO
+	_fit_pages()
 
 
 ## Puts the board, cutaway and lists back in the desktop and tablet arrangement.
-func _from_rails() -> void:
-	if touch_layout != null and touch_layout.visible:
+func _from_phone() -> void:
+	if touch_layout != null and (touch_layout.visible or _upright.visible):
 		touch_layout.visible = false
+		_upright.visible = false
 		_scroll_all.visible = true
 		for c: Control in [cutaway, board, _side]:
 			c.get_parent().remove_child(c)
 			c.visible = true
+			c.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		_left.add_child(cutaway)
 		_left.move_child(cutaway, 0)
 		_row.add_child(board)
@@ -216,7 +333,6 @@ func _from_rails() -> void:
 	var narrow: bool = size.x < NARROW
 	var phone: bool = size.x < PHONE_W
 	_row.vertical = phone
-	_show_portrait_grid()
 	cutaway.custom_minimum_size.y = 260.0 if phone else 0.0
 	board.custom_minimum_size = Vector2(0, 460) if phone else Vector2(270, 0)
 	_side.custom_minimum_size = Vector2(0, 220) if phone else Vector2(210, 0)
@@ -227,67 +343,64 @@ func _from_rails() -> void:
 		parent.add_child(_side)
 
 
-func _build_rails() -> void:
-	touch_layout = RailLayout.new()
-	touch_layout.docked = true
-	add_child(touch_layout)
-	touch_tabs = TouchTabs.new()
-	_board_page = ScrollContainer.new()
-	_board_page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	# 8 px from the top bar and from the rail (UiTheme.TOUCH_GAP between targets).
-	touch_layout.offset_top = UiTheme.TOUCH_GAP
-	var gap: MarginContainer = MarginContainer.new()
-	gap.add_theme_constant_override("margin_left", UiTheme.TOUCH_GAP)
-	gap.add_child(touch_tabs)
-	touch_layout.set_content(gap)
-	var rail: TouchRail = touch_layout.rail(SIDE_LEFT)
-	rail.custom_minimum_size.x = PHONE_RAIL_W
-	var row: Array = []
-	for a: Array in TOUCH_ACTIONS:
-		var b: RailButton = RailButton.make(TouchText.of(a[1], a[2]))
-		b.name = "Touch_" + str(a[0])
-		b.pressed.connect(press_touch.bind(str(a[0])))
-		touch_buttons[a[0]] = b
-		row.append(b)
-		if row.size() == 2:
-			rail.add_row(row)
-			row = []
-	if not row.is_empty():
-		rail.add_row(row)
+## The pages start under the view-top row (top_reserve) and end above the gesture band.
+func _fit_pages() -> void:
+	if _pages_box == null or not _pages_box.is_inside_tree():
+		return
+	var tap: Rect2 = SafeArea.to_local(self, SafeArea.tap_rect(self))
+	var band: float = maxf(size.y - tap.end.y, 0.0)
+	var top: int = roundi(top_reserve)
+	var bottom: int = roundi(band)
+	if _pages_box.get_theme_constant("margin_top") != top:
+		_pages_box.add_theme_constant_override("margin_top", top)
+	if _pages_box.get_theme_constant("margin_bottom") != bottom:
+		_pages_box.add_theme_constant_override("margin_bottom", bottom)
+	for b: Dictionary in [touch_buttons, grid_buttons]:
+		for id: String in b:
+			(b[id] as RailButton).disabled = ship_def == null
+	var claim: String = claim_text()
+	for b: Dictionary in [touch_buttons, grid_buttons]:
+		if b.has("claim") and (b["claim"] as RailButton).text != claim:
+			(b["claim"] as RailButton).text = claim
+			(b["claim"] as RailButton).disabled = crew_count() == 0
 
 
-## A phone held upright (the reduced layout, #28): the rail's buttons in a grid of three
-## above the cutaway, scrolling with the rest.
-func _show_portrait_grid() -> void:
-	var upright: bool = (
-		is_inside_tree()
-		and not docked
-		and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_PORTRAIT
-	)
-	if upright and _portrait_grid == null:
-		_portrait_grid = GridContainer.new()
-		_portrait_grid.name = "TouchGrid"
-		_portrait_grid.columns = 3
-		_portrait_grid.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
-		_portrait_grid.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
-		for a: Array in TOUCH_ACTIONS:
-			var b: RailButton = RailButton.make(TouchText.of(a[1], a[2]))
-			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b.pressed.connect(press_touch.bind(str(a[0])))
-			_portrait_grid.add_child(b)
-		# 8 px under the banner above the panel.
-		var box: MarginContainer = MarginContainer.new()
-		box.add_theme_constant_override("margin_top", UiTheme.TOUCH_GAP)
-		box.add_child(_portrait_grid)
-		_row.add_child(box)
-		_row.move_child(box, 0)
-	if _portrait_grid != null:
-		_portrait_grid.get_parent().visible = upright
+## The view the screen's view-top row covers on a phone: the pages.
+func view_rect() -> Rect2:
+	if _pages_box != null and _pages_box.is_visible_in_tree():
+		return Rect2(_pages_box.global_position - global_position, _pages_box.size)
+	return super()
 
 
-## A rail button's intent, sent as the keyboard or the pad sends it.
+## The Claim button's text: the crew it takes or releases (FT-NET-023).
+func claim_text() -> String:
+	if crew_count() == 0:
+		return TouchText.of("eng.touch.claim", "Claim")
+	var letter: String = crew_letter(crew_pick)
+	var item: String = "%s:%d" % [StationViews.CLAIM_CREW, crew_pick]
+	if int(ctx.crew.claims.get(item, {}).get("session", -1)) == ctx.crew.session:
+		return TouchText.of("eng.touch.release_crew", "Release %s") % letter
+	return TouchText.of("eng.touch.claim_crew", "Claim %s") % letter
+
+
+## A rail button's intent, sent as the keyboard or the pad sends it; Claim as the common
+## claim (K, View+X) does.
 func press_touch(id: String) -> bool:
+	if id == "claim":
+		return claim_crew()
 	return handle_intent({"id": id, "pressed": true, "device": "touch"})
+
+
+## Takes or releases the claim on the picked crew, as the common claim does on this panel.
+func claim_crew() -> bool:
+	var item: String = claim_item()
+	if item == "":
+		return false
+	if int(ctx.crew.claims.get(item, {}).get("session", -1)) == ctx.crew.session:
+		ctx.intents.release_claim(item)
+	else:
+		ctx.intents.claim(item)
+	return true
 
 
 func _process(delta: float) -> void:
@@ -296,6 +409,8 @@ func _process(delta: float) -> void:
 		hits.pop_front()
 	if focused:
 		_poll_pad(delta)
+	if _pages_box.is_visible_in_tree():
+		_fit_pages()
 	_refresh_lists()
 	cutaway.queue_redraw()
 	board.queue_redraw()

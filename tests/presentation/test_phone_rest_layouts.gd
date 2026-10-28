@@ -83,6 +83,8 @@ func test_portrait_panels_stay_operable() -> void:
 func test_engineering_rail_buttons_send_the_key_intents() -> void:
 	for a: Array in EngineeringPanel.TOUCH_ACTIONS:
 		var id: String = a[0]
+		if id == "claim":
+			continue  # the common claim: tests/stations/engineering/test_engineering_phone.gd
 		var touch: StationScreen = await _screen(Vector2i(844, 390), "engineering", LANDSCAPE)
 		var tp: EngineeringPanel = touch.focused_panel()
 		assert_object(tp.touch_layout).is_not_null()
