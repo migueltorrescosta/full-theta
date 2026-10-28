@@ -108,6 +108,8 @@ var loop_sleep_us: int = 1000
 ## snapshot's costs and the capture stamp it was built from, and once a second its loop
 ## costs and every connection's byte counters; read them with probe_dump() after stop().
 var probe: bool = false
+## Server certificate and key for WSS (D294), or null for plain ws://; set before start().
+var tls: TLSOptions
 
 var _tcp: TCPServer = TCPServer.new()
 var _thread: Thread
@@ -448,7 +450,15 @@ func _accept() -> void:
 		_next_conn += 1
 		c.opened_us = Time.get_ticks_usec()
 		c.peer = WebSocketPeer.new()
-		c.peer.accept_stream(tcp)
+		if tls != null:
+			# WebSocketPeer finishes the TLS handshake as it polls.
+			var stream: StreamPeerTLS = StreamPeerTLS.new()
+			if stream.accept_stream(tcp, tls) != OK:
+				tcp.disconnect_from_host()
+				continue
+			c.peer.accept_stream(stream)
+		else:
+			c.peer.accept_stream(tcp)
 		c.chunker.max_message_size = MAX_CLIENT_MESSAGE
 		c.queue = NetSendQueue.new(chunk_size, voice_per_pump)
 		c.resync = NetResync.new(lag_limit)

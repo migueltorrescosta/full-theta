@@ -26,6 +26,21 @@ build/linux/full-theta.x86_64 --headless -- --server --bind 192.168.1.20 --name 
 
 `--bind` is required: the one address to listen on, never every interface. The header of `app/server_main.gd` (`ServerMain`) lists every flag, among them `--port`, `--dev-all-stations`, `--language`, `--idle-exit-min`, `--http-root` (serve the web build for browser stations) and `--no-beacon`. The server prints `server: listening on ADDR:PORT` once it is ready; stop it with Ctrl+C.
 
+### HTTPS on a tailnet
+
+Browser stations load faster over HTTPS: browsers accept brotli only there, which saves about 2 MB of the download (D294). Give the server a certificate and key with `--tls-cert` and `--tls-key` (absolute paths, PEM); it then serves HTTPS and WSS on the same ports, and the page connects over `wss://` because it was loaded over `https://`. Without the flags it serves plain HTTP as before; a game hosted from the client menu is always plain. On a Tailscale tailnet with HTTPS certificates turned on (admin console, DNS), the machine's own certificate works on every device of the tailnet:
+
+```bash
+name=$(tailscale status --json | jq -r '.Self.DNSName | rtrimstr(".")')   # host.tailnet.ts.net
+sudo tailscale cert --cert-file ~/ft-tls/cert.pem --key-file ~/ft-tls/key.pem "$name"
+sudo chown "$USER" ~/ft-tls/*.pem
+# from the unpacked release package's folder:
+./full-theta.x86_64 --headless -- --server --bind "$(tailscale ip -4)" \
+  --http-root "$PWD/web" --tls-cert ~/ft-tls/cert.pem --tls-key ~/ft-tls/key.pem
+```
+
+Players open `https://host.tailnet.ts.net:47800/` (the certificate's name, not the IP address). The certificate lasts 90 days; run `tailscale cert` again to renew it, then restart the server. A self-signed certificate works for tests, but each browser must accept it first.
+
 ## Rejoin after a crash
 
 If the host's client dies, its server keeps running. On the next start the client asks about it (FT-NET-003): **Rejoin** reconnects as host to the same ship and pick, **End it** stops it, **Leave it running** keeps it. An abandoned server exits by itself after 10 minutes without players (`--idle-exit-min`). A joined player whose client dies presses **Rejoin last game** on the next start.
