@@ -335,7 +335,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-AUD-010 | tests | `tests/audio/test_subtitle_feed.gd`, `tests/audio/test_voice_player.gd`, `tests/input/test_binding_markers.gd`, `tests/net/voice/test_npc_routing_l3.gd`, `tests/net/voice/test_voice_service.gd`, `tests/stations/test_client_shell.gd`, `tools/tests/test_dialogue_binding_slot.py` |
 | FT-AUD-011 | tests | `tests/audio/test_voice_bus.gd`, `tests/audio/test_voice_player.gd` |
 | FT-AUD-012 | tests | `tests/content/test_i18n.gd` |
-| FT-AUD-013 | tests | `tests/app/web/test_web_session_voice.gd`, `tests/audio/test_voice_pack.gd`, `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tools/tests/test_release.py` |
+| FT-AUD-013 | tests | `tests/audio/test_voice_pack.gd`, `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tools/tests/test_release.py` |
 | FT-AUD-014 | tests | `tests/net/voice/test_voice_service.gd`, `tools/tests/test_licences.py`, `tools/tests/test_prerender.py` |
 | FT-AUD-015 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_service.gd`, [#10](https://github.com/migueltorrescosta/full-theta/issues/10) |
 | FT-AUD-016 | pending |  |

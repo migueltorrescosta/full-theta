@@ -14,9 +14,10 @@ var _wake_callback: JavaScriptObject
 var _awake: bool = false
 var _panel: String = ""
 var _layout: String = ""
-## The language whose voice pack was fetched or is being fetched.
+## The language whose voice pack was fetched or is being fetched, and whether the page's
+## fetch is still running.
 var _voice_lang: String = ""
-var _voice_request: HTTPRequest
+var _voice_pending: bool = false
 
 
 ## Adds a WebSession to `shell` in a browser build.
@@ -59,7 +60,9 @@ func _process(_delta: float) -> void:
 		_panel = panel
 		WebPage.set_panel(panel)
 	var lines: LocalLines = shell.voice.local_lines if shell.voice != null else null
-	if lines != null and lines.lang != _voice_lang and _voice_request == null:
+	if _voice_pending:
+		_take_voice()
+	elif lines != null and lines.lang != _voice_lang:
 		_fetch_voice(lines.lang)
 	var layout: String = LayoutMode.Kind.keys()[LayoutMode.kind_of(shell)].to_lower()
 	if layout != _layout:
@@ -67,39 +70,40 @@ func _process(_delta: float) -> void:
 		WebPage.set_layout(layout)
 
 
-## The voice pack's URL next to the page at `page_href` (query and fragment dropped).
-static func voice_pack_url(page_href: String, lang: String) -> String:
-	var base: String = page_href.get_slice("#", 0).get_slice("?", 0)
-	return base.substr(0, base.rfind("/") + 1) + "voice-%s.pack" % lang
-
-
-## Fetches `lang`'s voice pack once per page; on failure the lines stay subtitles only.
+## Fetches `lang`'s voice pack once per page, with the page's own fetch from next to the
+## page (the host that served it); on failure the lines stay subtitles only.
 func _fetch_voice(lang: String) -> void:
 	_voice_lang = lang
 	if LocalLines.has_pack(lang):
 		return
-	var href: String = str(JavaScriptBridge.eval("location.href", true))
-	_voice_request = HTTPRequest.new()
-	add_child(_voice_request)
-	_voice_request.request_completed.connect(
-		func(result: int, code: int, _h: PackedStringArray, body: PackedByteArray) -> void:
-			var pack: VoicePack = (
-				VoicePack.parse(body)
-				if result == HTTPRequest.RESULT_SUCCESS and code == 200
-				else null
+	_voice_pending = true
+	var url: String = JSON.stringify("voice-%s.pack" % lang)
+	JavaScriptBridge.eval(
+		(
+			(
+				"window.ftVoicePack = -1; fetch(%s).then(r => r.ok ? r.arrayBuffer() : null)"
+				+ ".then(b => { window.ftVoicePack = b ? new Uint8Array(b) : 0; },"
+				+ " () => { window.ftVoicePack = 0; });"
 			)
-			if pack != null and pack.language == lang:
-				LocalLines.add_pack(pack)
-			else:
-				push_warning(
-					"voice pack %s: not loaded (result %d, HTTP %d)" % [lang, result, code]
-				)
-			_voice_request.queue_free()
-			_voice_request = null
+			% url
+		),
+		true
 	)
-	if _voice_request.request(voice_pack_url(href, lang)) != OK:
-		_voice_request.queue_free()
-		_voice_request = null
+
+
+## Takes the fetched pack once the page has it (bytes; -1 while fetching, 0 on failure).
+func _take_voice() -> void:
+	var got: Variant = JavaScriptBridge.eval("window.ftVoicePack", true)
+	if (got is int or got is float) and int(got) == -1:
+		return
+	_voice_pending = false
+	JavaScriptBridge.eval("window.ftVoicePack = undefined;", true)
+	var pack: VoicePack = VoicePack.parse(got) if got is PackedByteArray else null
+	if pack != null and pack.language == _voice_lang:
+		LocalLines.add_pack(pack)
+		print("voice pack %s: %d lines" % [_voice_lang, pack.size()])
+	else:
+		push_warning("voice pack %s: not loaded" % _voice_lang)
 
 
 func _exit_tree() -> void:
