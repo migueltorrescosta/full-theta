@@ -238,3 +238,24 @@ func test_debrief_names_a_raider_wave() -> void:
 	assert_str(line).is_equal(
 		"2:00  Sent raiders: Raider wave 2: 3 raiders at every ship still flying"
 	)
+
+
+# FT: FT-MIS-030
+# On a phone upright the widest table (teams and kills) fits the screen: no sideways scroll
+# (l5_ph_scoreboard cut Kills and Time, #28).
+func test_scoreboard_fits_a_portrait_phone() -> void:
+	var ctx: StationContext = _ctx("teams")
+	_event(ctx, NetProtocol.EVENT_SCOREBOARD, FleetMessages.scoreboard(_rows()))
+	var vp: SubViewport = auto_free(SubViewport.new())
+	vp.size = Vector2i(390, 844)
+	add_child(vp)
+	var s: ScoreboardScreen = ScoreboardScreen.new()
+	s.setup(ctx)
+	vp.add_child(s)
+	for i: int in 3:
+		await get_tree().process_frame
+	assert_int(s.columns().size()).is_equal(6)
+	var table: Control = s.find_child("Table", true, false)
+	var scroll: ScrollContainer = table.get_parent()
+	assert_float(table.get_combined_minimum_size().x).is_less_equal(scroll.size.x)
+	assert_str(_label(s, "Head_encounters").text).is_equal("Enc.")

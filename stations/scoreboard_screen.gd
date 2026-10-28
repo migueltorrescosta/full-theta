@@ -14,6 +14,12 @@ const KINDS: Array[StringName] = [
 	&"scoreboard", &"session_over", &"handover", &"fleet", &"eliminated", &"relaunch"
 ]
 const TEAM_LETTERS: Array[String] = ["A", "B"]
+## Under this width (px, a phone upright) the columns sit closer and long headers shorten,
+## so the table fits without scrolling sideways (#28).
+const NARROW_W: float = 480.0
+const SHORT_HEADS: Array[String] = ["encounters", "kills"]
+const GAP: int = 32
+const NARROW_GAP: int = 12
 
 var ctx: StationContext
 ## The relaunch vote of the player's eliminated ship, above the rows (M4-Q2).
@@ -41,6 +47,7 @@ func setup(context: StationContext) -> void:
 	add_child(margin)
 	_margin = margin
 	resized.connect(_apply_safe_area)
+	resized.connect(_on_resized)
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
 	margin.add_child(col)
@@ -74,7 +81,7 @@ func setup(context: StationContext) -> void:
 	_table = GridContainer.new()
 	_table.name = "Table"
 	_table.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_table.add_theme_constant_override("h_separation", 32)
+	_table.add_theme_constant_override("h_separation", GAP)
 	_table.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(_table)
 	ctx.crew.changed.connect(_on_crew_changed)
@@ -165,8 +172,11 @@ func refresh() -> void:
 		c.queue_free()
 	var cols: Array[String] = columns()
 	_table.columns = cols.size()
+	var short: bool = narrow()
+	_table.add_theme_constant_override("h_separation", NARROW_GAP if short else GAP)
 	for c: String in cols:
-		var h: Label = _cell(tr("score.col." + c), "DimLabel")
+		var key: String = ("score.short." if short and c in SHORT_HEADS else "score.col.") + c
+		var h: Label = _cell(tr(key), "DimLabel")
 		h.name = "Head_" + c
 	var home: int = ctx.crew.home_ship()
 	for row: Dictionary in ctx.crew.scoreboard:
@@ -197,6 +207,17 @@ func _apply_safe_area() -> void:
 	_margin.offset_top = m.y
 	_margin.offset_right = -m.z
 	_margin.offset_bottom = -maxf(m.w, SafeArea.tap_band(self))
+
+
+## True on a narrow screen (a phone upright).
+func narrow() -> bool:
+	return size.x < NARROW_W
+
+
+func _on_resized() -> void:
+	var gap: int = NARROW_GAP if narrow() else GAP
+	if _table.get_theme_constant("h_separation") != gap:
+		refresh()
 
 
 func _on_crew_changed(what: StringName) -> void:
