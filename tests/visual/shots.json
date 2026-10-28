@@ -157,6 +157,12 @@
     {"name": "l5_ph_safe_engineering", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "engineering", "insets": [0, 47, 0, 34]}},
     {"name": "l5_ph_safe_comms", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "comms", "insets": [0, 47, 0, 34]}},
     {"name": "l5_ph_safe_captain", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "captain", "insets": [0, 47, 0, 34]}},
-    {"name": "l5_ph_safe_viewer", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "viewer", "insets": [0, 47, 0, 34]}}
+    {"name": "l5_ph_safe_viewer", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "viewer", "insets": [0, 47, 0, 34]}},
+    {"name": "l5_phl_frame", "scene": "res://tests/visual/frame_shot.tscn", "size": [844, 390], "set": {"entry": "engineering", "chip": true, "ping": 3, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_frame_sheet", "scene": "res://tests/visual/frame_shot.tscn", "size": [844, 390], "set": {"entry": "engineering", "sheet": "selection", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_frame_alert", "scene": "res://tests/visual/frame_shot.tscn", "size": [844, 390], "set": {"entry": "engineering", "page": 2, "sheet": "alert", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_frame_tactical", "scene": "res://tests/visual/frame_shot.tscn", "size": [844, 390], "set": {"entry": "tactical", "focus": 1, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_phl_frame_dev", "scene": "res://tests/visual/frame_shot.tscn", "size": [844, 390], "set": {"entry": "all", "sheet": "stations", "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_frame", "scene": "res://tests/visual/frame_shot.tscn", "size": [390, 844], "set": {"entry": "engineering", "page": 2, "chip": true, "insets": [0, 47, 0, 34]}}
   ]
 }
