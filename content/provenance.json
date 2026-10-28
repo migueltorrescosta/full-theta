@@ -214,6 +214,30 @@
       "source": "Own work: synthesised by tools/make_alert_tones.py",
       "licence": "CC0-1.0",
       "attribution": "Full Theta contributors, dedicated to the public domain (CC0 1.0)"
+    },
+    {
+      "name": "Noto Sans Symbols 2 (subset)",
+      "kind": "font",
+      "path": "assets/fonts/NotoSansSymbols2-subset.ttf",
+      "source": "https://github.com/notofonts/notofonts.github.io/raw/main/fonts/NotoSansSymbols2/hinted/ttf/NotoSansSymbols2-Regular.ttf",
+      "licence": "OFL-1.1",
+      "attribution": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols); licence text in assets/fonts/OFL.txt. Subset recipe: pyftsubset --unicodes=U+2630,U+25B8,U+25BE,U+26A1,U+2713,U+2715 --layout-features= --no-hinting."
+    },
+    {
+      "name": "Noto Sans Math (subset)",
+      "kind": "font",
+      "path": "assets/fonts/NotoSansMath-subset.ttf",
+      "source": "https://github.com/notofonts/notofonts.github.io/raw/main/fonts/NotoSansMath/hinted/ttf/NotoSansMath-Regular.ttf",
+      "licence": "OFL-1.1",
+      "attribution": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols); licence text in assets/fonts/OFL.txt. Subset recipe: pyftsubset --unicodes=U+21C4 --layout-features= --no-hinting."
+    },
+    {
+      "name": "SIL Open Font License 1.1 (text for the Noto subsets)",
+      "kind": "font",
+      "path": "assets/fonts/OFL.txt",
+      "source": "https://raw.githubusercontent.com/notofonts/symbols/main/OFL.txt",
+      "licence": "OFL-1.1",
+      "attribution": "Copyright 2022 The Noto Project Authors"
     }
   ]
 }
