@@ -193,6 +193,11 @@
     {"name": "l5_php_relay_crew", "scene": "res://tests/visual/science_relay_shot.tscn", "size": [390, 844], "set": {"entry": "relay", "insets": [0, 47, 0, 34], "relay_demo": true, "page": 4}},
     {"name": "l5_php_relay_send_sheet", "scene": "res://tests/visual/science_relay_shot.tscn", "size": [390, 844], "set": {"entry": "relay", "insets": [0, 47, 0, 34], "relay_demo": true, "mark_sel": 1, "sheet": "send"}},
     {"name": "l5_php_science_touch_help", "scene": "res://tests/visual/science_relay_shot.tscn", "size": [390, 844], "set": {"help": "science"}},
-    {"name": "l5_php_relay_touch_help", "scene": "res://tests/visual/science_relay_shot.tscn", "size": [390, 844], "set": {"help": "relay"}}
+    {"name": "l5_php_relay_touch_help", "scene": "res://tests/visual/science_relay_shot.tscn", "size": [390, 844], "set": {"help": "relay"}},
+    {"name": "l5_phl_weapons_mounts", "scene": "res://tests/stations/weapons/weapons_shot.tscn", "size": [844, 390], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "page": 1, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_weapons_mounts", "scene": "res://tests/stations/weapons/weapons_shot.tscn", "size": [390, 844], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "page": 1, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_phl_weapons_crew", "scene": "res://tests/stations/weapons/weapons_shot.tscn", "size": [844, 390], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "page": 2, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_weapons_crew", "scene": "res://tests/stations/weapons/weapons_shot.tscn", "size": [390, 844], "set": {"entry": "weapons", "selected": 3, "claim": "mount:0", "page": 2, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_weapons_touch_help", "scene": "res://tests/stations/weapons/weapons_shot.tscn", "size": [760, 560], "set": {"help": true}}
   ]
 }
