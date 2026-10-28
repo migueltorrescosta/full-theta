@@ -5,6 +5,9 @@ extends PanelContainer
 ## which ship is out, why, and which ship the player now watches. OK hides it; a later
 ## handover or a relaunch replaces it. A handover to the scoreboard shows the scoreboard
 ## instead (ScoreboardScreen).
+##
+## On a phone (#28 follow-up, design 2.13) the notice sits under the frame's view-top row
+## (VotePrompt.phone_top), with OK on the right (thumb side).
 
 const KINDS: Array[StringName] = [&"handover", &"eliminated", &"relaunch", &"picked"]
 
@@ -37,6 +40,28 @@ func setup(context: StationContext) -> void:
 	col.add_child(_ok)
 	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
+	_place()
+
+
+func _enter_tree() -> void:
+	if not get_viewport().size_changed.is_connected(_place):
+		get_viewport().size_changed.connect(_place)
+		minimum_size_changed.connect(_place, CONNECT_DEFERRED)
+	_place.call_deferred()
+
+
+## On a phone: centred under the view-top row, OK at the right; elsewhere where the shell
+## put it.
+func _place() -> void:
+	if not is_inside_tree() or _ok == null:
+		return
+	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	_ok.size_flags_horizontal = (Control.SIZE_SHRINK_END if phone else Control.SIZE_SHRINK_CENTER)
+	if phone:
+		reset_size()
+		set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+		grow_horizontal = Control.GROW_DIRECTION_BOTH
+		position.y = VotePrompt.phone_top(self)
 
 
 ## "Kestrel is out: destroyed. You're watching Heron now."
@@ -58,6 +83,7 @@ func refresh() -> void:
 	if visible:
 		_text.text = notice_text()
 		_ok.text = tr("handover.ok")
+		_place.call_deferred()
 
 
 func dismiss() -> void:

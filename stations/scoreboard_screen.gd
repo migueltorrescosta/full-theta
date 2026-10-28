@@ -5,6 +5,10 @@ extends Control
 ## over. One row per ship: its name, its team (TEAMS and HOLDOUT), in play / finished /
 ## out, encounters done, time and, in PvP, kills. No hull and no positions. The title says
 ## why the player is here: the session's result, or that their ship is out.
+##
+## On a phone (#28 follow-up, design 2.13) Main menu sits at the bottom right (thumb side)
+## above the gesture band, with the relaunch vote beside it on its side and above it
+## upright, so the rows keep the height between.
 
 ## The player wants out of the session (Main menu).
 signal menu_requested
@@ -30,6 +34,10 @@ var _title: Label
 var _sub: Label
 var _table: GridContainer
 var _menu: Button
+var _col: VBoxContainer
+var _head: HBoxContainer
+## The phone's bottom row: the relaunch vote (on its side) and Main menu.
+var _foot: HBoxContainer
 
 
 func setup(context: StationContext) -> void:
@@ -51,9 +59,11 @@ func setup(context: StationContext) -> void:
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 10)
 	margin.add_child(col)
+	_col = col
 	var head: HBoxContainer = HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
 	col.add_child(head)
+	_head = head
 	_title = Label.new()
 	_title.name = "Title"
 	_title.theme_type_variation = "TitleLabel"
@@ -84,6 +94,13 @@ func setup(context: StationContext) -> void:
 	_table.add_theme_constant_override("h_separation", GAP)
 	_table.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(_table)
+	_foot = HBoxContainer.new()
+	_foot.name = "Foot"
+	_foot.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	_foot.alignment = BoxContainer.ALIGNMENT_END
+	_foot.visible = false
+	col.add_child(_foot)
+	resized.connect(_arrange)
 	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
 
@@ -207,6 +224,31 @@ func _apply_safe_area() -> void:
 	_margin.offset_top = m.y
 	_margin.offset_right = -m.z
 	_margin.offset_bottom = -maxf(m.w, SafeArea.tap_band(self))
+
+
+## A phone's layout (Main menu bottom right) or the title row's; see the class comment.
+func _arrange() -> void:
+	if not is_inside_tree():
+		return
+	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var side: bool = phone and size.x > size.y
+	_foot.visible = phone
+	_move(_menu, _foot if phone else _head, -1)
+	_menu.size_flags_vertical = Control.SIZE_SHRINK_END if phone else Control.SIZE_FILL
+	if side:
+		_move(relaunch, _foot, 0)
+		relaunch.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	else:
+		_move(relaunch, _col, -1 if phone else 2)
+		_col.move_child(_foot, -1)
+		relaunch.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+
+static func _move(node: Control, parent: Node, index: int) -> void:
+	if node.get_parent() != parent:
+		node.get_parent().remove_child(node)
+		parent.add_child(node)
+	parent.move_child(node, index)
 
 
 ## True on a narrow screen (a phone upright).

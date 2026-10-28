@@ -10,6 +10,11 @@ extends PanelContainer
 ## the first claim wins, and the server refuses a takeover that would leave the taker's own
 ## ship uncovered. An enemy ship's pause offers nothing. In PvP the vote is the give-up
 ## (forfeit) vote (M4-Q10).
+##
+## On a phone (#28 follow-up, design 2.13) the overlay is a sheet over the safe area between
+## the station's top bar and the gesture band, 80 % opaque, its text at the top and its
+## buttons at the bottom right (thumb side); tablets and desktops keep the shell's centred
+## card.
 
 ## The crew changes the overlay depends on.
 const KINDS: Array[StringName] = [&"pause", &"votes", &"picked", &"catalogue", &"fleet"]
@@ -19,6 +24,8 @@ var ctx: StationContext
 var _text: Label
 var _votes: Label
 var _buttons: HFlowContainer
+var _spacer: Control
+var _phone: bool = false
 
 
 func setup(context: StationContext) -> void:
@@ -32,12 +39,68 @@ func setup(context: StationContext) -> void:
 	_votes = Label.new()
 	_votes.name = "Votes"
 	col.add_child(_votes)
+	_spacer = Control.new()
+	_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spacer.visible = false
+	col.add_child(_spacer)
 	_buttons = HFlowContainer.new()
+	_buttons.name = "Buttons"
 	_buttons.add_theme_constant_override("h_separation", 8)
 	_buttons.add_theme_constant_override("v_separation", 8)
 	col.add_child(_buttons)
 	ctx.crew.changed.connect(_on_crew_changed)
+	resized.connect(_place)
+	# (a label that starts to wrap shrinks the content after the size was set)
+	minimum_size_changed.connect(_place, CONNECT_DEFERRED)
 	refresh()
+
+
+func _enter_tree() -> void:
+	if not get_viewport().size_changed.is_connected(_place):
+		get_viewport().size_changed.connect(_place)
+	_place.call_deferred()
+
+
+## On a phone the sheet fills the main area above the band; elsewhere the shell's card.
+func _place() -> void:
+	if not is_inside_tree() or ctx == null:
+		return
+	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	if phone != _phone:
+		_set_phone(phone)
+	if not phone:
+		return
+	# Under the top bar, which stays live (☰ for Leave, the status and timer).
+	var r: Rect2 = SafeArea.tap_rect(self)
+	var top: float = maxf(r.position.y, VotePrompt.main_top(self))
+	r = Rect2(r.position.x, top, r.size.x, r.end.y - top)
+	var parent: Control = get_parent() as Control
+	if parent != null:
+		r = SafeArea.to_local(parent, r)
+	if position != r.position or size != r.size:
+		set_anchors_preset(Control.PRESET_TOP_LEFT)
+		custom_minimum_size = r.size
+		position = r.position
+		size = r.size
+
+
+func _set_phone(phone: bool) -> void:
+	_phone = phone
+	_spacer.visible = phone
+	_buttons.alignment = FlowContainer.ALIGNMENT_END if phone else FlowContainer.ALIGNMENT_BEGIN
+	for l: Label in [_text, _votes]:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
+	if phone:
+		var sheet: StyleBoxFlat = UiTheme.box("panel", "line", 16, 16)
+		sheet.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
+		add_theme_stylebox_override("panel", sheet)
+	else:
+		remove_theme_stylebox_override("panel")
+		custom_minimum_size = Vector2.ZERO
+		set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+		grow_horizontal = Control.GROW_DIRECTION_BOTH
+		grow_vertical = Control.GROW_DIRECTION_BOTH
 
 
 ## The paused ship this client cares about: its own, else an allied one, else any.

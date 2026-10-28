@@ -24,6 +24,8 @@ const KINDS: Array[StringName] = [
 
 ## Distance from the top bar or the bottom edge, px.
 const EDGE_GAP: float = 72.0
+## The phone frame's view-top row under the top bar (selection chip, request chips), px.
+const VIEW_TOP_ROW: float = 44.0
 
 var ctx: StationContext
 var kind: Kind = Kind.FORFEIT
@@ -63,19 +65,58 @@ func setup(context: StationContext, prompt_kind: Kind, floating: bool = true) ->
 	col.add_child(_buttons)
 	# Clear of the view's centre: the give-up vote under the top bar, the relaunch vote above
 	# the bottom edge (over the scoreboard's rows or a friendly ship's main screen).
-	var top: bool = kind == Kind.FORFEIT
-	if not floating:
-		ctx.crew.changed.connect(_on_crew_changed)
-		refresh()
+	ctx.crew.changed.connect(_on_crew_changed)
+	refresh()
+	_place()
+
+
+func _enter_tree() -> void:
+	if _floating and not get_viewport().size_changed.is_connected(_place):
+		get_viewport().size_changed.connect(_place)
+		minimum_size_changed.connect(_place, CONNECT_DEFERRED)
+
+
+## Where a floating prompt sits: clear of the view's centre, the give-up vote under the top
+## bar, the relaunch vote above the bottom edge (over the scoreboard's rows or a friendly
+## ship's main screen). On a phone (#28 follow-up, design 2.13) both float under the frame's
+## view-top row, never near the gesture band.
+func _place() -> void:
+	if not _floating or not is_inside_tree():
 		return
+	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var top: bool = kind == Kind.FORFEIT or phone
+	if phone:
+		# Back to the content's size (a wrapped title is taller before its first layout).
+		reset_size()
 	set_anchors_and_offsets_preset(
 		Control.PRESET_CENTER_TOP if top else Control.PRESET_CENTER_BOTTOM
 	)
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	grow_vertical = Control.GROW_DIRECTION_END if top else Control.GROW_DIRECTION_BEGIN
-	position.y += EDGE_GAP if top else -EDGE_GAP
-	ctx.crew.changed.connect(_on_crew_changed)
-	refresh()
+	if phone:
+		position.y = phone_top(self)
+	else:
+		position.y += EDGE_GAP if top else -EDGE_GAP
+
+
+## The top of a floating prompt on a phone, px in the parent: under the view-top row.
+static func phone_top(node: Control) -> float:
+	var top: float = main_top(node) + VIEW_TOP_ROW + UiTheme.TOUCH_GAP
+	if node.get_parent() is Control:
+		top -= (node.get_parent() as Control).get_global_rect().position.y
+	return top
+
+
+## Where a phone station's main area starts (its view-top row), viewport px: from the
+## station screen beside `node` (the client shell's layer), else under the top bar.
+static func main_top(node: Node) -> float:
+	var parent: Node = node.get_parent()
+	if parent != null:
+		for n: Node in parent.find_children("*", "StationScreen", true, false):
+			var s: StationScreen = n
+			if s.is_visible_in_tree() and s.frame != null and s.frame.view_top.is_inside_tree():
+				return s.frame.view_top.get_global_rect().position.y
+	return SafeArea.margins(node).y + StationScreen.PHONE_BAR_HEIGHT
 
 
 ## Whether the prompt shows: a standing give-up vote on this ship in play outside a pause
@@ -107,6 +148,7 @@ func refresh() -> void:
 		_refresh_relaunch()
 	else:
 		_refresh_forfeit()
+	_place.call_deferred()
 
 
 func _refresh_forfeit() -> void:
