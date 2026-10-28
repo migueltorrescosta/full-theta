@@ -38,8 +38,18 @@ body { color: white; background-color: black; overflow: hidden; touch-action: no
 #topic { font-size: 12px; letter-spacing: 0.05em; color: #8b98a5; min-height: 16px; }
 #tip { font-size: 20px; line-height: 1.5; color: #e6edf3; margin-top: 8px; min-height: 4.5em;
   display: flex; align-items: center; justify-content: center; }
-#bar { width: 100%; height: 4px; margin-top: 24px; background: rgba(255, 255, 255, 0.15); }
-#fill { width: 0; height: 100%; background: rgba(88, 166, 255, 0.7); }
+#bar { position: relative; overflow: hidden; width: 100%; height: 4px; margin-top: 24px;
+  background: rgba(255, 255, 255, 0.15); }
+/* The fill and the sweep move by transform: the browser animates them off the main
+   thread, so they keep going while the engine compiles the game's scripts (seconds on a
+   phone) and no timer or text update can run (#11, DC2). */
+#fill { width: 100%; height: 100%; background: rgba(88, 166, 255, 0.7); transform-origin: left;
+  transform: scaleX(0); transition: transform 0.3s ease-out; }
+#fill.creep { transition: transform 9s cubic-bezier(0.1, 0.6, 0.3, 1); }
+#bar.busy::after { content: ''; position: absolute; top: 0; left: 0; width: 30%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(230, 237, 243, 0.55), transparent);
+  animation: sweep 1.4s ease-in-out infinite; }
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
 #progress { font-size: 12px; color: #8b98a5; margin-top: 6px; }
 .arrow { flex: none; width: 48px; height: 48px; border-radius: 6px; border: 1px solid #3a4654;
   background: #151b23; color: #e6edf3; font-size: 24px; line-height: 1; padding: 0; }
@@ -49,7 +59,7 @@ body { color: white; background-color: black; overflow: hidden; touch-action: no
   #tipcol { order: -1; }
   #tip { min-height: 6em; }
 }
-@media (prefers-reduced-motion: reduce) { #status { animation: none; } }
+@media (prefers-reduced-motion: reduce) { #status, #bar.busy::after { animation: none; } }
 </style>
 $GODOT_HEAD_INCLUDE
 </head>
@@ -324,9 +334,12 @@ const LANG = (function () {
   return 'en';
 })();
 const WORDS = {
-  en: { loading: 'Loading', starting: 'Starting' },
-  pt_PT: { loading: 'A carregar', starting: 'A iniciar' },
-  it: { loading: 'Caricamento', starting: 'Avvio' },
+  en: { loading: 'Downloading', start: 'Starting the game', connect: 'Connecting',
+    lobby: 'Opening the lobby' },
+  pt_PT: { loading: 'A descarregar', start: 'A iniciar o jogo', connect: 'A ligar',
+    lobby: 'A abrir a sala de espera' },
+  it: { loading: 'Download', start: 'Avvio del gioco', connect: 'Connessione',
+    lobby: "Apertura della sala d'attesa" },
 }[LANG];
 function shuffled(list) {
   const out = list.slice();
@@ -342,6 +355,7 @@ const tips = shuffled(FT_TIPS.tips);
 const topicEl = document.getElementById('topic');
 const tipEl = document.getElementById('tip');
 const fillEl = document.getElementById('fill');
+const barEl = document.getElementById('bar');
 var tipIndex = 0;
 var tipTimer = null;
 function showTip(step) {
@@ -358,25 +372,73 @@ statusEl.addEventListener('click', function (e) {
   const box = statusEl.getBoundingClientRect();
   showTip(e.clientX < box.left + box.width / 2 ? -1 : 1);
 });
-// The bar shows the download (the engine's real progress); the engine then starts up.
+// The loading stages, in order (#11, DC2). The page shows the download from the engine's real
+// progress (onProgress); the game reports the later stages through ft.loadStage (app/web/
+// load_stage.gd): "connect" when it starts joining, "lobby" when the server welcomed it, and
+// "ready" when the lobby is up, which removes the overlay. "start" is set here before the
+// engine starts, and the browser gets a frame to draw it first: the engine then runs one
+// long task (starting, compiling the scripts, building the menu) in which no text can change.
+// The bar's share of each stage is a guess of its length; it never sits at its end.
+const STAGES = ['download', 'start', 'connect', 'lobby', 'ready'];
+const STAGE_BAR = { download: 0.5, start: 0.85, connect: 0.9, lobby: 0.96, ready: 1 };
+var stage = 'download';
+window.ft.stage = stage;
+function setBar(share, creep) {
+  fillEl.classList.toggle('creep', !!creep);
+  fillEl.style.transform = 'scaleX(' + share + ')';
+}
+function setStage(name) {
+  // A later stage never goes back (a reconnect would otherwise reopen the overlay's text).
+  if (STAGES.indexOf(name) <= STAGES.indexOf(stage) && name !== 'download') { return; }
+  stage = name;
+  window.ft.stage = name;
+  if (name === 'ready') {
+    stopTips();
+    clearTimeout(failsafe);
+    statusEl.remove(); // the whole overlay goes: it covers the canvas and would swallow every tap
+    return;
+  }
+  barEl.classList.toggle('busy', name !== 'download');
+  progress.textContent = WORDS[name === 'download' ? 'loading' : name];
+  setBar(STAGE_BAR[name], name === 'start');
+}
+window.ft.loadStage = setStage;
+// The download: the engine's real progress fills the first half of the bar.
 function setProgress(current, total) {
+  if (stage !== 'download') { return; }
   if (total > 0) {
     const pct = Math.min(100, Math.round(100 * current / total));
-    fillEl.style.width = pct + '%';
-    progress.textContent = pct < 100 ? WORDS.loading + ' \u00b7 ' + pct + ' %' : WORDS.starting;
+    setBar(STAGE_BAR.download * pct / 100, false);
+    progress.textContent = WORDS.loading + ' \u00b7 ' + pct + ' %';
   } else {
     progress.textContent = WORDS.loading;
   }
 }
+// A frame for the browser to draw the page before a long task (not in a hidden tab: no
+// frames come there).
+function afterPaint() {
+  return new Promise(function (resolve) {
+    const timer = setTimeout(resolve, 300);
+    requestAnimationFrame(function () { setTimeout(function () { clearTimeout(timer); resolve(); }, 0); });
+  });
+}
+var failsafe = null;
 if (missing.length !== 0) {
   progress.textContent = 'This browser is missing: ' + missing.join(', ');
 } else {
   showTip(0);
   setProgress(0, 0);
+  // startGame loads the files, then calls start(), which is where the long task begins.
+  const startEngine = engine.start;
+  engine.start = function () {
+    const args = arguments;
+    setStage('start');
+    return afterPaint().then(function () { return startEngine.apply(engine, args); });
+  };
   engine.startGame({ onProgress: setProgress }).then(() => {
-    stopTips();
-    // The whole overlay goes: it covers the canvas and would swallow every tap.
-    statusEl.remove();
+    // The game says "ready" itself; this is for a game that never does (an error before the
+    // lobby), so the overlay can't hide its menu for good.
+    failsafe = setTimeout(function () { setStage('ready'); }, 30000);
   }, (err) => {
     stopTips();
     progress.textContent = String(err);

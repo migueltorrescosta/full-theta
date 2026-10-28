@@ -59,6 +59,7 @@ func _process(_delta: float) -> void:
 	if panel != _panel:
 		_panel = panel
 		WebPage.set_panel(panel)
+		WebLoadStage.report(WebLoadStage.READY)
 	var lines: LocalLines = shell.voice.local_lines if shell.voice != null else null
 	if _voice_pending:
 		_take_voice()

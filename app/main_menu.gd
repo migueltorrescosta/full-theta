@@ -97,6 +97,7 @@ func _process(_delta: float) -> void:
 		elif joining.state in [NetClient.State.REJECTED, NetClient.State.CLOSED]:
 			_status.text = tr("menu.join_failed") % joining.reject_reason
 			joining = null
+			WebLoadStage.report(WebLoadStage.READY)
 
 
 func _notification(what: int) -> void:
@@ -139,6 +140,7 @@ func join(text: String) -> void:
 	var addr: LanBrowser.Address = LanBrowser.parse_address(text)
 	if not addr.ok:
 		_status.text = addr.error
+		WebLoadStage.report(WebLoadStage.READY)
 		return
 	settings.last_address = text
 	_connect(addr.url, "")
@@ -169,9 +171,11 @@ func _connect(url: String, token: String) -> void:
 	if OS.has_feature("web"):
 		joining.inbound_buffer_size = 1 << 20  # D108
 	joining.token = token
+	WebLoadStage.report(WebLoadStage.CONNECT)
 	if joining.connect_to(url) != OK:
 		_status.text = tr("menu.join_failed") % url
 		joining = null
+		WebLoadStage.report(WebLoadStage.READY)
 		return
 	_status.text = tr("menu.connecting")
 
@@ -183,6 +187,7 @@ func _save_token(c: NetClient) -> void:
 
 
 func _start_shell(client: NetClient) -> void:
+	WebLoadStage.report(WebLoadStage.LOBBY)
 	shell = ClientShell.new()
 	add_child(shell)
 	if host_session != null:
@@ -262,6 +267,8 @@ func _apply_web_join_config() -> void:
 	_address.text = cfg.address
 	if cfg.auto_join:
 		join(cfg.address)
+	else:
+		WebLoadStage.report(WebLoadStage.READY)
 
 
 # --- Layout. ---
