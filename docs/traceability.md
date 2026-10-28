@@ -71,7 +71,7 @@ Tests: 382, manual: 13, pending: 6.
 | FT-NET-027 | tests | `tests/net/test_net_reconnect_l3.gd` |
 | FT-NET-028 | tests | `tests/net/test_net_viewer_l3.gd` |
 | FT-NET-029 | tests | `tests/net/test_host_launcher.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_client_shell_l3.gd` |
-| FT-NET-030 | tests | `tests/app/test_join_helpers.gd`, `tests/app/web/test_shell_html.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_server_tls.gd`, `tools/tests/test_release.py` |
+| FT-NET-030 | tests | `tests/app/test_join_helpers.gd`, `tests/app/web/test_load_stage.gd`, `tests/app/web/test_shell_html.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_server_tls.gd`, `tools/tests/test_release.py` |
 | FT-NET-031 | tests | `tests/net/test_lan_no_internet.gd` |
 | FT-NET-032 | tests | `tests/stations/test_joint_views.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-033 | tests | `tests/net/test_host_pause_l3.gd`, `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_resync.gd` |
