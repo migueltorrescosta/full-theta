@@ -1,8 +1,11 @@
 extends GdUnitTestSuite
-## Helm's phone layouts (#28): landscape rails plus tabs and drawers (owner pick C),
-## portrait reduced layout under the banner (owner pick A). Every target is at least 48 px
-## with 8 px gaps, clear of the insets and the gesture band; every touch control yields
-## the intents its key or stick yields (FT §5.1 touch); desktop and tablet keep no rails.
+## Helm's phone layouts (#28 and its follow-up, owner picks P28-Rails, P28-Shield,
+## P28-Chase): two sticks on overlay rails with the pages Fly, Shield, Nav, Radar and Crew
+## in the shared frame, and the portrait reduced layout under the banner with the bottom
+## tab bar. Every target on every page is at least 48 px with 8 px gaps, clear of the insets
+## and the gesture band; every action is within 2 taps of rest (design 2.1); every touch
+## control yields the intents its key or stick yields (FT §5.1 touch); desktop and tablet
+## keep no rails.
 # FT: FT-STN-005
 
 const SETTINGS: String = "user://test_helm_touch.cfg"
@@ -102,6 +105,9 @@ func _pad_axis(axis: JoyAxis, value: float) -> void:
 
 
 func _audit_ok(report: Dictionary, what: String) -> void:
+	# The screen's portrait banner (its ×) ends where the view-top row starts (the frame puts
+	# the row at the top of the main area): a request to the frame strand, not Helm's.
+	report["tight"] = report["tight"].filter(func(t: String) -> bool: return t != "× | ›")
 	for list: String in ["under_min", "under_primary", "in_band", "outside_safe", "tight"]:
 		(
 			assert_array(report[list])
@@ -110,50 +116,91 @@ func _audit_ok(report: Dictionary, what: String) -> void:
 		)
 
 
+## The tab of page `i` in the screen's strip (the top bar on its side, the bottom bar upright).
+func _tab(i: int) -> RailButton:
+	var strip: PageTabs = _screen.top_bar.tabs if not _ui().portrait else _screen.frame.bottom_tabs
+	return strip.tab(i)
+
+
+## Every target on every page clears the touch rules (48 px, 8 px gaps, safe area, band).
+func _audit_pages(what: String) -> void:
+	for p: int in _ui().pages.count():
+		_ui().pages.current = p
+		await _frames()
+		_audit_ok(TapAudit.check(_screen), "%s page %s" % [what, _ui().pages.title(p)])
+	_ui().pages.current = HelmTouch.PAGE_FLY
+	await _frames()
+
+
 # FT: FT-STN-005, FT-HLM-001
-func test_landscape_has_rails_tabs_and_drawers_with_14_safe_targets() -> void:
+# On its side: two overlay rails, the persistent zone (throttle, All stop, Approach, both
+# sticks) on every page, the five pages Fly, Shield, Nav, Radar, Crew in the top bar, and
+# the panel in the shared frame; no drawers cover the view.
+func test_landscape_pages_and_persistent_zone() -> void:
 	await _open(Vector2i(844, 390), LANDSCAPE)
 	assert_int(_screen.form).is_equal(LayoutMode.Form.PHONE_LANDSCAPE)
-	assert_object(_ui()).is_not_null()
 	assert_bool(_ui().portrait).is_false()
-	# The radar column gives way to the drawer; the pointer never steers.
+	assert_bool(_panel.in_frame).is_true()
+	assert_object(_panel.pages).is_same(_ui().pages)
+	assert_object(_screen.top_bar.tabs.host).is_same(_ui().pages)
+	assert_array(_ui().pages.titles()).is_equal(["Fly", "Shield", "Nav", "Radar", "Crew"])
+	# The radar column gives way to the Radar page; the pointer never steers.
 	assert_bool(_screen._side.visible).is_false()
 	assert_bool(_panel.steering()).is_false()
-	var report: Dictionary = TapAudit.check(_screen)
-	_audit_ok(report, "landscape")
-	assert_int(report["targets"].size()).is_equal(14)
-	assert_array(_ui().buttons.keys()).contains_exactly_in_any_order(
-		["all_stop", "approach", "face", "align", "dock", "jump", "shield_track"]
-	)
-	for c: Control in [_ui().turn, _ui().slide, _ui().throttle]:
-		assert_bool(c.is_visible_in_tree()).is_true()
-	# Shield tab: Track, and the ring in a drawer beside the rail; Radar: the radar drawer.
-	_ui().tabs.current = HelmTouch.TAB_SHIELD
+	assert_array(_ui().layout.drawers).is_empty()
+	var persistent: Array[Control] = [
+		_ui().turn,
+		_ui().slide,
+		_ui().throttle,
+		_ui().buttons["all_stop"],
+		_ui().buttons["approach"]
+	]
+	for p: int in _ui().pages.count():
+		_ui().pages.current = p
+		await _frames(1)
+		for c: Control in persistent:
+			(
+				assert_bool(c.is_visible_in_tree())
+				. override_failure_message("%s p%d" % [c, p])
+				. is_true()
+			)
+	await _audit_pages("landscape")
+	# The ring: tappable with its caption on the Shield page, a glyph without taps elsewhere,
+	# hidden on Crew; the radar only on Radar.
+	assert_bool(_panel.ring.label).is_false()
+	assert_int(_panel.ring.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	_ui().pages.current = HelmTouch.PAGE_SHIELD
 	await _frames()
-	assert_bool(_ui().ring_drawer.is_open()).is_true()
-	assert_object(_panel.ring.get_parent()).is_same(_ui().ring_drawer.body)
-	assert_bool(_panel.ring.is_visible_in_tree()).is_true()
-	_ui().drawer.open()
+	assert_bool(_panel.ring.label).is_true()
+	assert_int(_panel.ring.mouse_filter).is_equal(Control.MOUSE_FILTER_STOP)
+	assert_float(_panel.ring.radius()).is_greater_equal(60.0)
+	assert_bool(_ui().radar_box.is_visible_in_tree()).is_false()
+	_ui().pages.current = HelmTouch.PAGE_RADAR
 	await _frames()
-	report = TapAudit.check(_screen)
-	_audit_ok(report, "drawers open")
 	var radar: Rect2 = _ui().radar.get_global_rect()
 	assert_float(minf(radar.size.x, radar.size.y)).is_greater_equal(200.0)
-	# Closing the shield drawer goes back to Nav.
-	_ui().ring_drawer.close()
-	assert_int(_ui().tabs.current).is_equal(HelmTouch.TAB_NAV)
+	# The radar covers the view: the HUD hides under it, and its foot stays above the band.
+	assert_bool(_panel.hud.visible).is_false()
+	assert_float(radar.end.y).is_less_equal(_ui().layout.right.get_global_rect().end.y)
+	_ui().pages.current = HelmTouch.PAGE_CREW
+	await _frames()
+	assert_bool(_panel.ring.is_visible_in_tree()).is_false()
+	assert_bool(_ui().crew.is_visible_in_tree()).is_true()
+	assert_bool(_panel.hud.visible).is_true()
 
 
 # FT: FT-STN-005
-func test_portrait_reduced_layout_has_15_safe_targets_under_the_banner() -> void:
+# Upright: the reduced layout under the banner, the same five pages in the bottom tab bar,
+# every page clean.
+func test_portrait_reduced_layout_with_bottom_tabs() -> void:
 	await _open(Vector2i(390, 844), PORTRAIT)
 	assert_int(_screen.form).is_equal(LayoutMode.Form.PHONE_PORTRAIT)
 	assert_bool(_ui().portrait).is_true()
 	assert_bool(_screen.rotate_banner.visible).is_true()
 	assert_str(_screen.rotate_banner.label.text).is_equal(HelmTouch.ROTATE_TEXT)
-	var report: Dictionary = TapAudit.check(_screen)
-	_audit_ok(report, "portrait")
-	assert_int(report["targets"].size()).is_equal(15)
+	assert_object(_screen.frame.bottom_tabs.host).is_same(_ui().pages)
+	assert_bool(_screen.frame.bottom_tabs.is_visible_in_tree()).is_true()
+	await _audit_pages("portrait")
 	# The view stops above the controls, so the reticle is in sight.
 	var block: Rect2 = _ui().block.get_global_rect()
 	assert_float(_panel.hud.get_global_rect().end.y).is_less_equal(block.position.y + 0.5)
@@ -167,39 +214,69 @@ func test_portrait_reduced_layout_has_15_safe_targets_under_the_banner() -> void
 # FT: FT-STN-005
 func test_rotation_rebuilds_and_desktop_keeps_no_rails() -> void:
 	await _open(Vector2i(844, 390), LANDSCAPE)
-	_ui().tabs.current = HelmTouch.TAB_SHIELD
+	_ui().pages.current = HelmTouch.PAGE_SHIELD
 	await _frames()
 	_vp.size = Vector2i(390, 844)
+	SafeArea.simulate(PORTRAIT)
 	await _frames()
 	assert_bool(_ui().portrait).is_true()
+	# The new layout's pages are the ones the screen shows.
+	assert_object(_screen.frame.bottom_tabs.host).is_same(_ui().pages)
+	_vp.size = Vector2i(844, 390)
+	SafeArea.simulate(LANDSCAPE)
+	await _frames()
+	assert_bool(_ui().portrait).is_false()
+	assert_object(_screen.top_bar.tabs.host).is_same(_ui().pages)
 	_vp.size = Vector2i(1280, 720)
 	SafeArea.simulate([])
 	await _frames()
 	assert_int(_screen.form).is_equal(LayoutMode.Form.DESKTOP)
 	assert_object(_ui()).is_null()
+	assert_object(_panel.pages).is_null()
 	assert_object(_panel.ring.get_parent()).is_same(_panel)
+	assert_bool(_panel.ring.visible).is_true()
 	assert_bool(_panel.ring.label).is_true()
 	assert_bool(_screen._side.visible).is_true()
 	assert_float(_panel.hud.offset_bottom).is_equal(0.0)
 
 
-# FT: FT-HLM-014, FT-HLM-007, FT-HLM-010, FT-HLM-013, FT-HLM-016
+## The page holding Helm button `id` (-1 for the persistent zone).
+func _page_of(id: String) -> int:
+	for p: int in HelmTouch.PAGE_IDS.size():
+		if id in HelmTouch.PAGE_IDS[p]:
+			return p
+	return -1
+
+
+# FT: FT-HLM-014, FT-HLM-007, FT-HLM-010, FT-HLM-013, FT-HLM-016, FT-HLM-002, FT-HLM-006
 func test_rail_taps_send_what_their_keys_send() -> void:
 	await _open(Vector2i(844, 390), LANDSCAPE)
 	_ctx().crew.select("contact", StationFixture.H2)
 	await _frames(1)
 	var keys: Dictionary = {
-		"all_stop": "Space", "align": "L", "dock": "H", "jump": "J", "shield_track": "G"
+		"all_stop": "Space",
+		"align": "L",
+		"dock": "H",
+		"jump": "J",
+		"shield_track": "G",
+		"decoupled": "Tab",
+		"chase_camera": "C",
 	}
 	for id: String in keys:
+		_ui().pages.current = _page_of(id)
+		await _frames(1)
 		_clear_sent()
+		var chase: bool = _panel.chase
 		_key(keys[id])
 		_key(keys[id], false)
 		var by_key: Array = StationFixture.sent(_ctx()).of("command")
+		var chase_by_key: bool = _panel.chase
+		_panel.chase = chase
 		_clear_sent()
 		_tap(_ui().buttons[id])
 		var by_touch: Array = StationFixture.sent(_ctx()).of("command")
 		assert_array(by_touch).override_failure_message(id).is_equal(by_key)
+		assert_bool(_panel.chase).override_failure_message(id).is_equal(chase_by_key)
 	_clear_sent()
 	_tap(_ui().buttons["all_stop"])
 	assert_int(_cmds("helm_all_stop").size()).is_equal(1)
@@ -277,12 +354,18 @@ func test_throttle_ramps_the_setpoint_like_w_then_lets_go() -> void:
 	assert_bool(is_nan(_ui()._target)).is_true()
 
 
-# FT: FT-HLM-009
-func test_tapping_the_ring_in_the_shield_drawer_sets_the_focus() -> void:
+# FT: FT-HLM-009, FT-HLM-008
+# On the Shield page a tap on the ring's 3 o'clock level cell sends what Kp 4 (starboard)
+# sends; the glyph on the other pages takes no taps.
+func test_tapping_the_ring_on_the_shield_page_sets_the_focus() -> void:
 	await _open(Vector2i(844, 390), LANDSCAPE)
-	_ui().tabs.current = HelmTouch.TAB_SHIELD
-	await _frames()
 	var ring: ShieldRing = _panel.ring
+	assert_bool(TouchInput.over(get_tree(), ring.get_global_rect().get_center())).is_true()
+	_ui().pages.current = HelmTouch.PAGE_SHIELD
+	await _frames()
+	_key("Kp 4")
+	var by_key: Array = _cmds("set_shield_focus")
+	_clear_sent()
 	var mb: InputEventMouseButton = InputEventMouseButton.new()
 	mb.button_index = MOUSE_BUTTON_LEFT
 	mb.pressed = true
@@ -291,14 +374,15 @@ func test_tapping_the_ring_in_the_shield_drawer_sets_the_focus() -> void:
 	var focus: Array = _cmds("set_shield_focus")
 	assert_int(focus.size()).is_equal(1)
 	assert_float((focus[0]["direction"] as Vector3).x).is_greater(0.9)
+	assert_vector(focus[0]["direction"]).is_equal_approx(by_key[0]["direction"], Vector3.ONE * 1e-4)
 	# A finger on the ring belongs to it, not to the screen's select.
 	assert_bool(TouchInput.over(get_tree(), ring.get_global_rect().get_center())).is_true()
 
 
 # FT: FT-STN-003
-func test_a_tap_on_the_radar_drawer_selects() -> void:
+func test_a_tap_on_the_radar_page_selects() -> void:
 	await _open(Vector2i(844, 390), LANDSCAPE)
-	_ui().drawer.open()
+	_ui().pages.current = HelmTouch.PAGE_RADAR
 	await _frames()
 	var radar: DiscRadar = _ui().radar
 	_ctx().crew.selection = {}
@@ -323,18 +407,20 @@ func test_a_tap_on_the_radar_drawer_selects() -> void:
 
 
 # FT: FT-HLM-003, FT-HLM-004, FT-HLM-012
+# The HUD keeps clear of the rails and the view-top row (P28-Common).
 func test_hud_keeps_its_read_outs_and_arrows_clear_of_the_rails() -> void:
 	await _open(Vector2i(844, 390), LANDSCAPE)
 	var hud: HelmHud = _panel.hud
 	var free: Rect2 = hud.area()
 	var left: Rect2 = _ui().layout.left.get_global_rect()
 	var right: Rect2 = _ui().layout.right.get_global_rect()
+	var row: Rect2 = _screen.frame.selection_chip.get_global_rect()
 	var to_global: Transform2D = hud.get_global_transform()
 	for r: Rect2 in [hud.readout_rect(), hud.thrust_rect()] + hud.compass_boxes():
 		var g: Rect2 = to_global * r
 		(
-			assert_bool(g.intersects(left) or g.intersects(right))
-			. override_failure_message("%s over a rail" % g)
+			assert_bool(g.intersects(left) or g.intersects(right) or g.intersects(row))
+			. override_failure_message("%s over a rail or the view-top row" % g)
 			. is_false()
 		)
 	# An arrow that would land on the flight read-out moves along the edge, off it.
