@@ -8,7 +8,8 @@ extends RefCounted
 ## connected crew); the host's vote resets at once. The reset calls `rebuild`
 ## (NetServer.restart_run): a world built from scratch, every ship back in the lobby
 ## with its picks, crew state cleared (ServerSession.restart); the crew presses Start
-## again. In M1 the reset is world-wide (one crewed ship); #11 decides it per ship.
+## again. The reset is world-wide, so with several ships it waits for the session's end; a
+## ship out of play before that is eliminated and may relaunch (NetFleet, #11).
 ## A voter who drops loses the vote, as in D128.
 
 const NOT_OVER: String = "not_over"
@@ -87,7 +88,9 @@ func _on_run_again(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
 	var members: Array[int] = session.connected_crew(ship)
 	var why: String = ""
-	if not over.has(ship):
+	# Several ships: the world-wide reset waits for the session's end (#11; a ship out of play
+	# meanwhile is eliminated or relaunched, NetFleet).
+	if not over.has(ship) or (session.crew_ships().size() > 1 and not session.fleet.is_over()):
 		why = NOT_OVER
 	elif not s.is_host and not members.has(s.id):
 		why = ServerSession.NOT_CREW

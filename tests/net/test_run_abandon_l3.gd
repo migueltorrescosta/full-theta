@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
 ## L3 tests of abandoning the run outside a pause (D241, Q13): the co-op host abandons at
 ## once, or the ship's connected crew vote by more than half; the run then ends with
-## `run_over` and the debrief. Refused when the ship is not in a run, and in PvP.
+## `run_over` and the debrief. Refused when the ship is not in a run. In PvP it is that ship's
+## forfeit (M4-Q10).
 
 const PLAYER: int = NetHarness.PLAYER
 const SECRET: String = "c0ffee"
@@ -125,16 +126,26 @@ func test_crew_cannot_abandon_alone() -> void:
 	assert_int(server.world.run.status[PLAYER]).is_equal(RunTable.Status.IN_PLAY)
 
 
-# FT: FT-MIS-016
-# PvP (two hostile crew factions): no abandon outside a pause, even for the host.
-func test_pvp_refuses() -> void:
-	var server: NetServer = h.server(false, 10.0, SECRET)
-	var crew: Array[NetClient] = await _running(server)
-	server.session._crew_ships = [
-		{"id": 0, "def": "a", "name": "A", "faction": 0},
-		{"id": 1, "def": "b", "name": "B", "faction": 1},
-	]
-	var from: int = h.mark(crew[0])
-	crew[0].abandon(PLAYER)
-	assert_str(await _rejected(crew[0], NetProtocol.Type.ABANDON, from)).is_equal("pvp_no_abandon")
-	assert_int(server.world.run.status[PLAYER]).is_equal(RunTable.Status.IN_PLAY)
+# FT: FT-MIS-016, FT-NET-041
+# PvP (last ship standing, M4-Q10): the crew's vote outside a pause is a forfeit; that ship
+# alone is eliminated (`eliminated` forfeit) and goes to the scoreboard, the rest plays on.
+func test_pvp_vote_is_a_forfeit() -> void:
+	var server: NetServer = h.fleet_server(SessionRules.Mode.LAST_STANDING, 3, [], true)
+	var crews: Array[NetClient] = []
+	for ship: int in 3:
+		crews.append(await h.joined(server, "all-%d" % ship, StationViews.ALL, ship))
+	for c: NetClient in crews:
+		c.set_ready(true)
+	assert_bool(await h.until(func() -> bool: return server.world.tick > 2)).is_true()
+	var from: int = h.mark(crews[1])
+	crews[1].vote_abandon(1, true)
+	var pred: Callable = func(ev: Dictionary) -> bool: return ev["payload"]["ship"] == 1
+	var gone: Dictionary = await h.next_event(crews[1], NetProtocol.EVENT_ELIMINATED, from, pred)
+	assert_str(gone["payload"]["reason"]).is_equal("forfeit")
+	var to: Dictionary = await h.next_event(crews[1], NetProtocol.EVENT_HANDOVER, from)
+	assert_int(to["payload"]["to_ship"]).is_equal(FleetMessages.TO_SCOREBOARD)
+	assert_int(server.world.run.status[1]).is_equal(RunTable.Status.ABANDONED)
+	for ship: int in [0, 2]:
+		assert_int(server.world.run.status[ship]).is_equal(RunTable.Status.IN_PLAY)
+	var tick: int = server.world.tick
+	assert_bool(await h.until(func() -> bool: return server.world.tick > tick + 3)).is_true()

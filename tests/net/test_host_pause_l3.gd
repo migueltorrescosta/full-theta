@@ -93,18 +93,19 @@ func test_dedicated_server_refuses() -> void:
 
 
 # FT: FT-MIS-040
-# Two hostile crew factions (PvP): even the host is refused.
+# A PvP session (a race of two ships) has no host pause, even for the host.
 func test_pvp_refuses_the_host() -> void:
-	var server: NetServer = h.server(false, 10.0, SECRET)
-	var crew: Array[NetClient] = await _running(server)
-	server.session._crew_ships = [
-		{"id": 0, "def": "a", "name": "A", "faction": 0},
-		{"id": 1, "def": "b", "name": "B", "faction": 1},
-	]
+	var server: NetServer = h.fleet_server(SessionRules.Mode.RACE, 2, [], true, 10.0, SECRET)
+	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
+	await h.pick(host, StationViews.ALL, 0)
+	var rival: NetClient = await h.joined(server, "rival", StationViews.ALL, 1)
+	host.set_ready(true)
+	rival.set_ready(true)
+	assert_bool(await _stepping(server)).is_true()
 	assert_bool(server.session.host_pause.is_pvp()).is_true()
-	var from: int = h.mark(crew[0])
-	crew[0].host_pause(true)
-	assert_str(await _rejected(crew[0], from)).is_equal("pvp_no_pause")
+	var from: int = h.mark(host)
+	host.host_pause(true)
+	assert_str(await _rejected(host, from)).is_equal("pvp_no_pause")
 	assert_bool(server.session.host_paused).is_false()
 	assert_bool(await _stepping(server)).is_true()
 
