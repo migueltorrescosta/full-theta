@@ -406,9 +406,11 @@ func test_weapons_chips_inside_the_view() -> void:
 		assert_array(w.ctx.picture().items).is_not_empty()
 		for t: Dictionary in w._targets:
 			var r: Rect2 = t["rect"]
-			assert_bool(view.encloses(r)).override_failure_message(
-				"%s: chip %s outside %s" % [size, r, view]
-			).is_true()
+			(
+				assert_bool(view.encloses(r))
+				. override_failure_message("%s: chip %s outside %s" % [size, r, view])
+				. is_true()
+			)
 		_drop(s)
 
 
@@ -425,7 +427,11 @@ func test_relay_map_chips_do_not_overlap() -> void:
 		assert_int(rects.size()).is_greater(1)
 		for i: int in rects.size():
 			for j: int in range(i + 1, rects.size()):
-				assert_bool(rects[i].intersects(rects[j])).override_failure_message(
-					"%s: chips %s and %s overlap" % [size, rects[i], rects[j]]
-				).is_false()
+				(
+					assert_bool(rects[i].intersects(rects[j]))
+					. override_failure_message(
+						"%s: chips %s and %s overlap" % [size, rects[i], rects[j]]
+					)
+					. is_false()
+				)
 		_drop(s)

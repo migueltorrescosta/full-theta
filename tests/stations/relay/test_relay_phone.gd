@@ -300,7 +300,7 @@ func test_map_gestures_depth_pinch_and_twist() -> void:
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
 	var p: RelayPanel = _relay(s)
 	s.ctx.crew.select("", -1)
-	var at: Vector2 = p.map.view_rect.get_center() + Vector2(30.0, 40.0)
+	var at: Vector2 = _empty_spot(p)
 	_mouse(p, at, true)
 	_mouse_move(p, Vector2(20.0, 0.0))
 	_touch(p, 0, at, true)
@@ -327,6 +327,18 @@ func test_map_gestures_depth_pinch_and_twist() -> void:
 	_touch(p, 0, a, false)
 	_mouse(p, a, false)
 	assert_int(StationFixture.sent(s.ctx).of("place_mark").size()).is_equal(1)
+
+
+## A spot on the map near its centre that no contact, mark or chip is on, with room for
+## the second finger below it.
+func _empty_spot(p: RelayPanel) -> Vector2:
+	var c: Vector2 = p.map.view_rect.get_center()
+	for dy: float in [40.0, 50.0, 60.0, 30.0, 20.0, 70.0]:
+		for dx: float in [30.0, -30.0, 60.0, -60.0, 90.0, -90.0]:
+			var at: Vector2 = c + Vector2(dx, dy)
+			if p.map.item_at(at).is_empty():
+				return at
+	return c
 
 
 func _touch(p: RelayPanel, index: int, at: Vector2, down: bool) -> void:
