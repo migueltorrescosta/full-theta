@@ -13,8 +13,8 @@ extends StationPanel
 ## Rules live in sim/: this panel only turns intents into commands.
 ##
 ## On a phone (#28) HelmTouch lays the touch controls over the cockpit, landscape-first,
-## and the pointer never steers: the sticks do, and a tap selects under the finger. The
-## panel is in the shared phone frame (in_frame): its pages are HelmTouch's, and the HUD
+## and the pointer never steers: the sticks do, and a tap selects under the finger. With it
+## the panel is in the shared phone frame (in_frame): its pages are HelmTouch's, and the HUD
 ## keeps its read-outs under the screen's view-top row.
 
 ## The controller Helm radial (hold View + right stick, FT-HLM-017): flick toward an
@@ -80,7 +80,6 @@ func _setup() -> void:
 	ring.sector_picked.connect(_set_focus.bind(-1))
 	add_child(ring)
 	gui_input.connect(_on_gui_input)
-	in_frame = true
 
 
 func _mode_changed() -> void:
@@ -129,10 +128,12 @@ func _apply_form() -> void:
 			screen.rotate_banner.label.text = TouchText.of(
 				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
 			)
-	# Upright, a joint view keeps its docked panels (the lead's call), which leave the cockpit
-	# too short for the view-top row: there Helm keeps the chip strip.
+	# In the frame with the phone layout only. Upright, a joint view keeps its docked panels
+	# (the lead's call), which leave the cockpit too short for the view-top row: there Helm
+	# keeps the chip strip.
 	var screen_now: StationScreen = _screen()
-	in_frame = not (portrait and screen_now != null and screen_now.panels.size() >= 2)
+	var docked_upright: bool = portrait and screen_now != null and screen_now.panels.size() >= 2
+	in_frame = touch_ui != null and not docked_upright
 	var inset: float = touch_ui.view_bottom_inset() if touch_ui != null else 0.0
 	_container.offset_bottom = -inset
 	hud.offset_bottom = -inset
