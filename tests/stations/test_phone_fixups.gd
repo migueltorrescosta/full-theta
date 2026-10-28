@@ -72,14 +72,16 @@ func _share_buttons(s: StationScreen) -> Array[Button]:
 # (beside the joint switch) opens a drawer of 48 px buttons 8 px apart, at the top of the
 # radar column or, with the column hidden (Weapons' rails), at the bottom of the view.
 func test_share_buttons_sit_in_a_drawer_on_a_phone_on_its_side() -> void:
+	# (Engineering and Comms put their shares on their Crew page, shows_shares: no opener.)
+	for c: Array in [["systems", 0], ["quartermaster", 1], ["comms", 0]]:
+		var p: StationScreen = await _screen(Vector2i(844, 390), c[0], LANDSCAPE, c[1])
+		assert_bool(p.focused_panel().shows_shares).override_failure_message(c[0]).is_true()
+		assert_bool(p.share_opener.is_visible_in_tree()).override_failure_message(c[0]).is_false()
+		_drop(p)
 	var cases: Array = [
-		["systems", 0, true],
-		["logistics", 0, true],
-		["quartermaster", 1, true],
 		["approach", 0, false],
 		["parley", 0, false],
 		["targeting", 0, false],
-		["comms", 0, true],
 		["science", 0, false],
 	]
 	for c: Array in cases:

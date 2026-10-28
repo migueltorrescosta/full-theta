@@ -213,10 +213,8 @@ func test_reachability_upright() -> void:
 
 
 # FT: FT-STN-005
-# Every page keeps the touch rules either way up; the rail never pages away. (Upright with
-# the "Turn sideways" banner dismissed: the frame's selection chip sits 4 px under its ×.)
+# Every page keeps the touch rules either way up; the rail never pages away.
 func test_every_page_keeps_the_touch_rules() -> void:
-	RotateBanner.dismissed_here = true
 	for c: Array in [[SIDEWAYS, LANDSCAPE], [UPRIGHT, PORTRAIT]]:
 		var s: StationScreen = await _screen(c[0], c[1])
 		var p: CommsPanel = s.focused_panel()

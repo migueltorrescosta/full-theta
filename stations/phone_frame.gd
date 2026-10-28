@@ -248,6 +248,11 @@ func _place_view_top() -> void:
 	# The row sits at the top of the view, wherever the panel's view starts (Engineering
 	# upright: under its button grid).
 	var y: float = r.position.y + VIEW_TOP_Y
+	# Upright, the row keeps 8 px under the "Turn sideways" banner's × (a tap target).
+	var banner: Control = screen.rotate_banner
+	if banner != null and banner.is_visible_in_tree():
+		var origin: float = (selection_chip.get_parent() as Control).get_global_rect().position.y
+		y = maxf(y, banner.get_global_rect().end.y - origin + gap)
 	selection_chip.fit(x1 - x0)
 	var chip_w: float = selection_chip.get_combined_minimum_size().x
 	var col: Array[Control] = []
@@ -271,6 +276,8 @@ func _place_view_top() -> void:
 		c.position = Vector2(roundf(x1 - col_w), cy)
 		cy += sz.y + gap
 	var reserve: float = row_h if side_by_side else maxf(row_h, cy - y)
+	if reserve > 0.0:
+		reserve += y - (r.position.y + VIEW_TOP_Y)
 	if p.top_reserve != reserve:
 		p.top_reserve = reserve
 		p.queue_redraw()

@@ -157,8 +157,8 @@ func _setup() -> void:
 ## The phone's tab titles, in Page order.
 static func page_titles() -> Array[String]:
 	return [
-		TouchText.of("comms.page.missions", "Tasks"),
-		TouchText.of("comms.page.contracts", "Deals"),
+		TouchText.of("comms.page.missions", "Missions"),
+		TouchText.of("comms.page.contracts", "Contracts"),
 		TouchText.of("comms.page.hails", "Hails"),
 		TouchText.of("comms.page.rep", "Rep"),
 		TouchText.of("page.crew", "Crew"),

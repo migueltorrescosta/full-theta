@@ -1,10 +1,10 @@
 class_name PageTabs
 extends HBoxContainer
 ## The tabs of a PageHost (#28 follow-up, P28-Tabs): in the phone's top bar on its side
-## (TAB_W wide, 13 px labels) or as the bottom tab bar upright (equal widths). The current
-## tab is the accent button. A `lead` button (a joint view's station chip, the dev seat's
-## station button) goes first; while the host has a session title, a label replaces the
-## tabs.
+## (at least TAB_W wide and as wide as the 13 px label) or as the bottom tab bar upright
+## (equal widths). The current tab is the accent button. A `lead` button (a joint view's
+## station chip, the dev seat's station button) goes first; while the host has a session
+## title, a label replaces the tabs.
 ##
 ##     var tabs := PageTabs.new()
 ##     tabs.bind(panel.pages)
@@ -98,6 +98,9 @@ func _rebuild() -> void:
 			var b: RailButton = RailButton.make(host.title(i) + (" •" if host.badge(i) else ""))
 			b.name = "Tab%d" % (i + 1)
 			b.add_theme_font_size_override("font_size", FONT)
+			# A tab is as wide as its label, never cut ("Requests", "Contracts").
+			b.clip_text = false
+			b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 			b.custom_minimum_size = Vector2(0.0 if upright else w, UiTheme.TOUCH_PRIMARY)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL if upright else Control.SIZE_FILL
 			b.pressed.connect(_on_tap.bind(i))
