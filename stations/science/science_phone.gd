@@ -32,8 +32,9 @@ var cancel: RailButton
 ## The status line over the bottom of the radar.
 var status: Label
 
-## Under the contacts in the left rail: the screen's Share opener (landscape, no minigame).
-var share_slot: VBoxContainer = null
+## The screen's Share opener while no minigame plays: under the contacts in the left rail,
+## or upright beside the last actions.
+var share_slot: BoxContainer = null
 var _info: Control
 var _action_box: Control
 var _scan_left: Control
@@ -113,7 +114,8 @@ func release() -> void:
 	# The screen's Share opener isn't ours to free: the screen puts it back.
 	if share_slot != null:
 		for c: Node in share_slot.get_children():
-			share_slot.remove_child(c)
+			if not actions.values().has(c):
+				share_slot.remove_child(c)
 	for g: Control in [panel.scan_game, panel.hack_game]:
 		g.footer = true
 		g.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -169,7 +171,7 @@ func _build_landscape() -> void:
 		axes.add_child(a)
 	_scan_left = left.add(axes)
 	left.add(_hack_hint)
-	share_slot = left.add(_column()) as VBoxContainer
+	share_slot = left.add(_column()) as BoxContainer
 	share_slot.name = "ShareSlot"
 	var right: TouchRail = layout.rail(SIDE_RIGHT)
 	right.custom_minimum_size.x = RIGHT_W
@@ -212,6 +214,8 @@ func _build_portrait() -> void:
 		acts.add_child(_row(row.map(func(k: String) -> RailButton: return actions[k])))
 	col.add_child(acts)
 	_action_box = acts
+	# The last row has room for a third button: the screen's Share opener.
+	share_slot = acts.get_child(-1) as HBoxContainer
 	_scan_left = _row(axis_buttons)
 	col.add_child(_scan_left)
 	col.add_child(_hack_hint)
@@ -229,6 +233,9 @@ func _place_view(rect: Rect2) -> void:
 	var r: Rect2 = rect
 	if layout != null:
 		r = layout.content_rect_in(panel._stage)
+		# A joint view's switch sits at the bottom centre: keep the view above it.
+		if not panel._alone():
+			r.size.y -= UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP
 		panel.radar.view_rect = r
 	for g: Control in [panel.scan_game, panel.hack_game]:
 		g.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -248,7 +255,7 @@ func update(session: int) -> void:
 	var playing: bool = session != SciencePanel.SESSION_NONE
 	var scan: bool = session == SciencePanel.SESSION_SCAN
 	_info.visible = not playing
-	if share_slot != null:
+	if layout != null and share_slot != null:
 		var shown: Array = share_slot.get_children().filter(
 			func(c: Node) -> bool: return (c as Control).visible
 		)

@@ -44,7 +44,8 @@ const SESSION_NONE: int = 0
 const SESSION_SCAN: int = 1
 const SESSION_HACK: int = 2
 
-## The panel's own radar when it is alone on the screen, else null (see full_screen).
+## The panel's own radar: made when the panel is alone, or the first time it takes the
+## phone arrangement in a joint view; it shows while own_radar() (#28), else null.
 var radar: DiscRadar
 var scan_game: ScanGame
 var hack_game: HackGame
@@ -91,10 +92,7 @@ func _setup() -> void:
 	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(_stage)
 	if _alone():
-		radar = DiscRadar.new()
-		radar.orbitable = true
-		radar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_stage.add_child(radar)
+		_make_radar()
 	scan_game = ScanGame.new()
 	scan_game.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scan_game.visible = false
@@ -109,7 +107,7 @@ func _setup() -> void:
 	_stage.add_child(hack_game)
 	card_view = ScienceCard.new()
 	card_view.custom_minimum_size = Vector2(CARD_W, 0)
-	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if radar == null else 0
+	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not own_radar() else 0
 	top.add_child(card_view)
 	_build_bar(rows)
 	resized.connect(_on_resized)
@@ -163,13 +161,17 @@ func _on_resized() -> void:
 		_stack()
 
 
-## A lone panel on a phone uses the phone arrangement for the form (rebuilt when the
-## phone turns); elsewhere, and docked, the wide one.
+## A lone panel on a phone, or the focused one of a joint view, uses the phone arrangement
+## for the form (rebuilt when the phone turns); elsewhere, and docked, the wide one.
 func _arrange() -> void:
 	var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
 	if is_inside_tree():
 		form = SciencePhone.form_of_panel(self)
-	var want: bool = radar != null and not docked and LayoutMode.is_phone(form)
+	var want: bool = (
+		(_alone() or _screen_panels() == 2) and not docked and LayoutMode.is_phone(form)
+	)
+	if want and radar == null:
+		_make_radar()
 	if want and phone != null and phone.form == form:
 		return
 	if not want and phone == null:
@@ -205,7 +207,7 @@ func _stack() -> void:
 	_top.vertical = narrow
 	_list.custom_minimum_size = Vector2(0, STACK_LIST_H) if narrow else Vector2(LIST_W, 0)
 	card_view.custom_minimum_size = Vector2(0, STACK_CARD_H) if narrow else Vector2(CARD_W, 0)
-	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if radar == null or narrow else 0
+	card_view.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if not own_radar() or narrow else 0)
 	_show_parts()
 
 
@@ -221,11 +223,43 @@ func _mode_changed() -> void:
 ## view the screen's one disc radar is the Science radar (orbitable while this panel has
 ## the focus, with `blip_scale`) and the main area holds the list, card and minigames.
 func full_screen() -> bool:
-	return radar != null
+	return own_radar()
+
+
+## True while the panel shows its own radar: alone on the screen, or focused in a joint
+## view on a phone on its side (the screen then shows it alone, #28). Upright a joint view
+## keeps the screen's radar.
+func own_radar() -> bool:
+	if _alone():
+		return true
+	return (
+		_screen_panels() == 2
+		and not docked
+		and is_inside_tree()
+		and SciencePhone.form_of_panel(self) == LayoutMode.Form.PHONE_LANDSCAPE
+	)
 
 
 func blip_scale() -> Dictionary:
 	return _blip_scale(block())
+
+
+func _make_radar() -> void:
+	radar = DiscRadar.new()
+	radar.orbitable = true
+	radar.chips = not docked
+	radar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_stage.add_child(radar)
+	_stage.move_child(radar, 0)
+
+
+## How many panels the station screen holding this panel has (1 when none): the dev
+## seat's catalogue entry names no stations, so the screen is the one to ask.
+func _screen_panels() -> int:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	return (n as StationScreen).panels.size() if n != null else 1
 
 
 func _alone() -> bool:
@@ -233,7 +267,7 @@ func _alone() -> bool:
 
 
 func radar_orbitable() -> bool:
-	return radar == null
+	return not own_radar()
 
 
 func claim_item() -> String:
@@ -281,12 +315,13 @@ func subsystems() -> Array[StringName]:
 func refresh() -> void:
 	var b: Dictionary = block()
 	var session: int = int(b.get("session", SESSION_NONE))
+	var own: bool = own_radar()
 	if radar != null:
 		radar.set_picture(ctx.picture(), ctx.crew.selection)
 		radar.blip_scale = _blip_scale(b)
-		radar.visible = session == SESSION_NONE
+		radar.visible = own and session == SESSION_NONE
 	_show_parts()
-	_stage.visible = radar != null or session != SESSION_NONE
+	_stage.visible = own or session != SESSION_NONE
 	scan_game.visible = session == SESSION_SCAN
 	hack_game.visible = session == SESSION_HACK
 	var age: float = maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / 60.0)
@@ -601,7 +636,7 @@ func _poll_axes(delta: float) -> void:
 	elif session == SESSION_HACK:
 		if m.device == IntentTable.PAD:
 			_stick_move(lx, ly)
-	elif m.device == IntentTable.PAD and radar != null:
+	elif m.device == IntentTable.PAD and own_radar() and radar != null:
 		_cursor = (cursor_pos() + Vector2(lx, ly) * PAD_CURSOR_PX_S * delta).clamp(
 			Vector2.ZERO, size
 		)
