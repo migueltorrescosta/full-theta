@@ -203,10 +203,10 @@ func focus(i: int) -> void:
 
 
 ## The radar column hides for a lone full-screen panel (which may depend on the form). A
-## joint view or the dev seat on a phone (#28) shows only the focused panel, which gets the
-## whole width when it draws its own rails and radar, and the station chip instead of the
-## docked panels (FT-JNT-001: tap to focus): in the top bar's tab strip on its side, in
-## the bottom tab bar upright. On a phone on its side the share buttons move into a drawer
+## joint view or the dev seat on a phone on its side (#28) shows only the focused panel,
+## which gets the whole width when it draws its own rails and radar, and the station chip
+## in the top bar's tab strip instead of the docked panels (FT-JNT-001: tap to focus). On
+## a phone on its side the share buttons move into a drawer
 ## (D274: 48 px with 8 px gaps don't fit under the disc); its opener sits at the top of the
 ## radar column or, with the column hidden, at the bottom centre of the main area (clear of
 ## the rails); a panel may take the opener into its rails (StationPanel.share_slot) or show
@@ -219,7 +219,9 @@ func _show_side() -> void:
 	)
 	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
 	var phone_form: bool = LayoutMode.is_phone(form_now)
-	var phone_alone: bool = panels.size() >= 2 and phone_form
+	# Upright a joint view keeps its docked panels until the stations' upright layouts
+	# leave room for the bottom tab bar (#28 follow-up, wave 2).
+	var phone_alone: bool = panels.size() >= 2 and sideways
 	var alone: bool = panels.size() == 1 or phone_alone
 	_side.visible = not (alone and focused_panel().full_screen())
 	_dock.visible = not phone_alone
@@ -582,13 +584,13 @@ func _select(device: String) -> bool:
 func _live(id: String) -> bool:
 	match id:
 		"alert_cycle":
-			set_alert((ctx.crew.alert + 1) % CrewState.ALERT_LEVELS)
+			_set_alert((ctx.crew.alert + 1) % CrewState.ALERT_LEVELS)
 		"alert_red":
-			set_alert(CrewState.ALERT_RED)
+			_set_alert(CrewState.ALERT_RED)
 		"alert_yellow":
-			set_alert(CrewState.ALERT_YELLOW)
+			_set_alert(CrewState.ALERT_YELLOW)
 		"alert_normal":
-			set_alert(CrewState.ALERT_NORMAL)
+			_set_alert(CrewState.ALERT_NORMAL)
 		"training_next":
 			return training.press()
 		"focus_1", "focus_2":
@@ -633,7 +635,7 @@ func contacts_by_range() -> Array:
 
 
 ## Crew only (FT-STN-008); the server refuses others too.
-func set_alert(level: int) -> void:
+func _set_alert(level: int) -> void:
 	if ctx.crew.is_crew():
 		ctx.intents.set_alert(level)
 
@@ -742,7 +744,7 @@ func _build() -> void:
 	_rows = rows
 	top_bar = TopBar.new()
 	top_bar.custom_minimum_size = Vector2(0, TOP_BAR_HEIGHT)
-	top_bar.alert_picked.connect(set_alert)
+	top_bar.alert_picked.connect(_set_alert)
 	rows.add_child(top_bar)
 	rotate_banner = RotateBanner.new()
 	rows.add_child(rotate_banner)

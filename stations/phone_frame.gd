@@ -262,7 +262,7 @@ func open_alert_sheet() -> void:
 	var labels: Array = []
 	for a: Dictionary in Palette.ALERTS:
 		labels.append("%s  %s" % [a["letter"], tr(a["key"])])
-	screen.sheet.open(tr("intent.alert_cycle"), labels, screen.set_alert)
+	screen.sheet.open(tr("intent.alert_cycle"), labels, screen._set_alert)
 
 
 ## The station chip: a joint view flips the focus; the dev seat opens the six-station
