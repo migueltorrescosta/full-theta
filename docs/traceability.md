@@ -43,7 +43,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-022 | tests | `tests/release/test_release_bundle.gd`, `tools/tests/test_release.py` |
 | FT-NET-001 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_net_server_main.gd` |
-| FT-NET-002 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_server_main.gd` |
+| FT-NET-002 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_server_main.gd`, `tests/net/test_server_tls.gd` |
 | FT-NET-003 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_idle_exit_timer.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_orphan_check.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_net_server_main.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-004 | tests | `tests/net/test_fleet_messages.gd`, `tests/net/test_net_codec.gd`, `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-005 | tests | `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
@@ -71,7 +71,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-NET-027 | tests | `tests/net/test_net_reconnect_l3.gd` |
 | FT-NET-028 | tests | `tests/net/test_net_viewer_l3.gd` |
 | FT-NET-029 | tests | `tests/net/test_host_launcher.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_client_shell_l3.gd` |
-| FT-NET-030 | tests | `tests/app/test_join_helpers.gd`, `tests/app/web/test_shell_html.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tools/tests/test_release.py` |
+| FT-NET-030 | tests | `tests/app/test_join_helpers.gd`, `tests/app/web/test_shell_html.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_host_static_server.gd`, `tests/net/test_server_tls.gd`, `tools/tests/test_release.py` |
 | FT-NET-031 | tests | `tests/net/test_lan_no_internet.gd` |
 | FT-NET-032 | tests | `tests/stations/test_joint_views.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-033 | tests | `tests/net/test_host_pause_l3.gd`, `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_resync.gd` |
@@ -324,7 +324,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-MIS-041 | tests | `tests/scenarios/test_comms_beat_lint.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/sim/api/test_scenario_meta.gd` |
 | FT-MIS-042 | tests | `tests/net/test_contract_flags_l3.gd`, `tests/net/test_fleet_sharing_l3.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/test_weapons_flags.gd` |
 | FT-AUD-001 | tests | `tools/tests/test_prerender.py` |
-| FT-AUD-002 | tests | `tools/tests/test_licences.py`, `tools/tests/test_prerender.py` |
+| FT-AUD-002 | tests | `tests/audio/test_voice_pack.gd`, `tools/tests/test_licences.py`, `tools/tests/test_prerender.py`, `tools/tests/test_release.py` |
 | FT-AUD-003 | tests | `tests/net/voice/test_piper_adapters.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-AUD-004 | tests | `tests/audio/test_voice_player.gd`, `tests/stations/test_client_shell.gd` |
 | FT-AUD-005 | tests | `tests/net/voice/test_npc_routing_l3.gd` |
@@ -335,7 +335,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-AUD-010 | tests | `tests/audio/test_subtitle_feed.gd`, `tests/audio/test_voice_player.gd`, `tests/input/test_binding_markers.gd`, `tests/net/voice/test_npc_routing_l3.gd`, `tests/net/voice/test_voice_service.gd`, `tests/stations/test_client_shell.gd`, `tools/tests/test_dialogue_binding_slot.py` |
 | FT-AUD-011 | tests | `tests/audio/test_voice_bus.gd`, `tests/audio/test_voice_player.gd` |
 | FT-AUD-012 | tests | `tests/content/test_i18n.gd` |
-| FT-AUD-013 | tests | `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd` |
+| FT-AUD-013 | tests | `tests/app/web/test_web_session_voice.gd`, `tests/audio/test_voice_pack.gd`, `tests/content/test_i18n.gd`, `tests/net/test_net_server_main.gd`, `tests/presentation/test_controls_list.gd`, `tests/stations/test_client_shell.gd`, `tools/tests/test_release.py` |
 | FT-AUD-014 | tests | `tests/net/voice/test_voice_service.gd`, `tools/tests/test_licences.py`, `tools/tests/test_prerender.py` |
 | FT-AUD-015 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_service.gd`, [#10](https://github.com/migueltorrescosta/full-theta/issues/10) |
 | FT-AUD-016 | pending |  |
