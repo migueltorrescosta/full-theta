@@ -118,15 +118,15 @@ func _labels(menu: SettingsScreen) -> Array[String]:
 
 
 # FT: FT-STN-011
-# Escape (the menu intent) opens the one menu on Settings, Escape again closes it, and
-# it comes back on the tab last used.
+# Escape (the menu intent) opens the one menu on Game at first, Escape again closes it,
+# and it comes back on the tab last used.
 func test_escape_opens_the_menu() -> void:
 	var s: ClientShell = await _on_station(false)
 	var menu: SettingsScreen = s.settings_screen
 	assert_bool(menu.visible).is_false()
 	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
 	assert_bool(menu.visible).is_true()
-	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_GAME)
 	assert_bool(s.screen.blocked()).is_true()
 	menu.open(SettingsScreen.TAB_KEYS)
 	menu.close()
@@ -174,4 +174,5 @@ func test_language_switch_retranslates_the_open_menu() -> void:
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
 	assert_array(_labels(menu)).contains([tr("settings.ui_scale")])
 	assert_array(_labels(menu)).not_contains(["UI scale"])
-	assert_str(menu.tabs.get_tab_title(0)).is_equal(tr("overlay.title"))
+	var controls: int = menu.tabs.get_node(SettingsScreen.TAB_CONTROLS).get_index()
+	assert_str(menu.tabs.get_tab_title(controls)).is_equal(tr("overlay.title"))
