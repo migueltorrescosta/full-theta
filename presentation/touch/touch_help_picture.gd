@@ -98,7 +98,9 @@ static func _helm() -> Array:
 	for pic: Array in help.pictures:
 		var boxes: Array = []
 		for c: Array in pic[1]:
-			boxes.append(_split(c[2], HelmHelp.text(c[1])))
+			# (the picture draws the page tabs itself)
+			if c[1] != "tabs":
+				boxes.append(_split(c[2], HelmHelp.text(c[1])))
 		out.append({"page": pic[0], "boxes": boxes})
 	help.free()
 	return out
@@ -158,7 +160,8 @@ func build(data: Array) -> void:
 			num.add_theme_color_override("font_color", Palette.color("accent"))
 			legend.add_child(num)
 			var what: Label = Label.new()
-			what.text = "%s: %s" % [str(b[1]), str(b[2])]
+			# (a bare name when the station gives no more: "All stop")
+			what.text = str(b[1]) if b[2] == b[1] else "%s: %s" % [str(b[1]), str(b[2])]
 			what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			legend.add_child(what)
@@ -243,9 +246,12 @@ class PageDrawing:
 				FONT,
 				Palette.color("background")
 			)
-			# The control's name beside its number, when the box has room.
+			# The control's name beside its number when it fits whole (else the number alone).
 			var room: float = r.size.x - 2.0 * NUMBER_R - 8.0
-			if room >= 24.0:
+			var name_w: float = (
+				font.get_string_size(str(b[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
+			)
+			if name_w <= room:
 				draw_string(
 					font,
 					Vector2(c.x + NUMBER_R + 4.0, c.y + 4.5),
