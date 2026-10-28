@@ -17,9 +17,10 @@ extends StationPanel
 ## the selected mark, else it is refused with a toast (FT-SPA-022).
 ## Controller: the left stick moves a cursor, the triggers its depth, the right stick
 ## turns the map; A, R3 and hold R3 select, ping and mark at the cursor (§5.0).
-## Touch: the HUD's buttons and drags on the map; on a phone a lone or focused joint-view
-## Relay panel puts the buttons in thumb rails over the full map instead (RelayPhone, #28)
-## and drops the screen's radar column (on its side).
+## Touch: the HUD's buttons and drags on the map; a second finger slides a dragged mark's
+## depth, a pinch zooms, two fingers turn the map (spec §5.5 touch). On a phone a lone or
+## focused joint-view Relay panel puts the buttons in thumb rails with pages over the full
+## map instead (RelayPhone, #28) and joins the phone frame.
 
 ## Under this width (a phone, D195) the HUD stacks around the map.
 const NARROW_W: float = 560.0
@@ -50,10 +51,20 @@ var _centred: bool = false
 var _cursor: Vector2 = Vector2(-1, -1)
 var _cursor_depth: float = 0.0
 var _rename_slot: int = -1
+## Fingers on the map: index -> position. With two down: "depth" while a drag places or
+## moves a mark (the second finger slides its depth), else "turn" (pinch zooms, twist and a
+## shared up-down move turn the map); "" with one or none.
+var _fingers: Dictionary = {}
+var _gesture: String = ""
 
 
 func _setup() -> void:
 	clip_contents = true
+	in_frame = true
+	selection_extras = [
+		[tr("intent.route"), func() -> void: handle_intent({"id": "route", "pressed": true})],
+		[tr("intent.mark_send"), open_send],
+	]
 	map = RelayMap.new()
 	map.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(map)
@@ -140,9 +151,51 @@ func _arrange() -> void:
 		add_child(phone)
 		move_child(phone, hud.get_index())
 		phone.build(self, form)
-	# The phone arrangement has its own share drawer.
+	# The phone's pages; its Crew page holds the share buttons (design 2.0).
 	shows_shares = phone != null
+	pages = phone.pages if phone != null else null
 	refresh()
+	_rebind_tabs()
+
+
+## The screen binds the focused panel's pages when it lays out; a panel that builds (or
+## drops) its phone pages after that has the screen bind them again.
+func _rebind_tabs() -> void:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
+		(n as StationScreen)._show_side()
+
+
+## A phone's Send ▸ (FT-RLY-008): the screen's choice sheet of the allied ships; a pick
+## sends the selected mark there. Without a sheet it sends to the HUD's chosen ship.
+func open_send() -> void:
+	var slot: int = _selected_mark()
+	if slot < 0:
+		ctx.crew.toast.emit("toast.select_first", {})
+		return
+	if sheet == null:
+		_send_selected(hud.send_target())
+		return
+	var allies: Array[Dictionary] = hud.allies()
+	var names: Array = allies.map(func(a: Dictionary) -> String: return str(a["name"]))
+	sheet.side = SIDE_RIGHT
+	sheet.open(
+		TouchText.of("relay.send_sheet", "Send %s to") % str(ctx.crew.mark_in_slot(slot)["name"]),
+		names,
+		func(i: int) -> void: _send_selected(int(allies[i]["id"]))
+	)
+
+
+## Takes the probe launcher, or lets it go when this seat holds it (K; a long press on a
+## phone's Launch probe).
+func toggle_probe_claim() -> void:
+	var holder: Dictionary = ctx.crew.claims.get(StationViews.CLAIM_PROBE, {})
+	if int(holder.get("session", -1)) == ctx.crew.session:
+		ctx.intents.release_claim(StationViews.CLAIM_PROBE)
+	else:
+		ctx.intents.claim(StationViews.CLAIM_PROBE)
 
 
 ## The hint sits top right over the map; a phone-wide HUD covers that corner, so there it
@@ -376,8 +429,15 @@ func _item_pos(s: Dictionary) -> Variant:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if _touch(event):
+		accept_event()
+		return
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	if mb != null:
+		if _gesture != "" and TouchInput.is_emulated(mb):
+			# The first finger of a two-finger gesture places nothing on release.
+			accept_event()
+			return
 		_on_button(mb)
 		return
 	var mm: InputEventMouseMotion = event as InputEventMouseMotion
@@ -402,6 +462,70 @@ func _gui_input(event: InputEvent) -> void:
 			}
 			map.queue_redraw()
 		accept_event()
+
+
+## Two fingers on the map (spec §5.5 touch): with a mark being dragged the second finger
+## slides its depth (up pushes it away, as Shift+drag); otherwise a pinch zooms, a twist
+## turns the map about its up axis and a shared up-down move tilts it. One finger is the
+## emulated mouse (drag places or moves a mark). True when the event was used.
+func _touch(event: InputEvent) -> bool:
+	var st: InputEventScreenTouch = event as InputEventScreenTouch
+	if st != null:
+		if st.pressed:
+			_fingers[st.index] = st.position
+			if _fingers.size() == 2:
+				# A mark already dragged out takes a depth; two fingers landing together turn.
+				var dragging: bool = not _drag.is_empty() and bool(_drag["moved"])
+				_gesture = "depth" if dragging and armed == "" else "turn"
+				if _gesture == "turn":
+					_drag = {}
+					map.preview = {}
+		else:
+			_fingers.erase(st.index)
+			if _fingers.is_empty():
+				var was: bool = _gesture != ""
+				_gesture = ""
+				return was and not _drag.is_empty() and _drop_depth()
+		return false
+	var sd: InputEventScreenDrag = event as InputEventScreenDrag
+	if sd == null or not _fingers.has(sd.index):
+		return false
+	var before: Dictionary = _fingers.duplicate()
+	_fingers[sd.index] = sd.position
+	if _gesture == "depth" and sd.index != _fingers.keys()[0]:
+		_drag["depth"] = float(_drag["depth"]) + sd.relative.y / map.ppm()
+		_drag["moved"] = true
+		_preview()
+		return true
+	if _gesture != "turn" or _fingers.size() != 2:
+		return false
+	var a: Array = before.values()
+	var b: Array = _fingers.values()
+	var was_v: Vector2 = (a[1] as Vector2) - (a[0] as Vector2)
+	var now_v: Vector2 = (b[1] as Vector2) - (b[0] as Vector2)
+	if was_v.length() > 1.0 and now_v.length() > 1.0:
+		map.zoom_by(was_v.length() / now_v.length())
+		var twist: float = wrapf(now_v.angle() - was_v.angle(), -PI, PI)
+		map.rotate_by(Vector2(-twist / RelayMap.ROTATE_RAD_PER_PX, sd.relative.y / 2.0))
+	return true
+
+
+## The depth gesture ended with its last finger: the dragged mark lands.
+func _drop_depth() -> bool:
+	if _drag["moved"]:
+		_drop()
+	_drag = {}
+	map.preview = {}
+	return true
+
+
+func _preview() -> void:
+	map.preview = {
+		"rel": map.unproject(_drag["plane"], _drag["depth"]),
+		"plane": map.unproject(_drag["plane"]),
+		"label": _preview_label(),
+	}
+	map.queue_redraw()
 
 
 func _on_button(mb: InputEventMouseButton) -> void:

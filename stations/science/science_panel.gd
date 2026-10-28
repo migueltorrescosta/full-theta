@@ -18,8 +18,10 @@ extends StationPanel
 ## orbit, RT scan, LT hack, d-pad up ping, down scan-position mark, left / right
 ## subsystem, LB sensors mode, LB + d-pad down own-ship scan; in a scan the sticks turn
 ## the open axes, X submits, Y cancels; in a hack the stick or d-pad moves the route.
-## Touch: the buttons and the minigames' tap and drag. A lone Science panel on a phone
-## moves its parts into thumb rails (SciencePhone, #28).
+## Touch: the buttons and the minigames' tap and drag, two fingers orbit the radar. On a
+## phone a lone or focused Science panel moves its parts into thumb rails with pages
+## (SciencePhone, #28) and joins the phone frame; its Hack opens the screen's choice sheet
+## of the target's subsystems (P28-L1, D289).
 
 ## Scan dial rate with a key or stick at full deflection (rad/s).
 const DIAL_RATE: float = 1.6
@@ -65,10 +67,15 @@ var _cursor: Vector2 = Vector2(-1, -1)
 var _stick_armed: bool = true
 var _last_sent: int = -2
 var _rows: VBoxContainer
+## The hack's subsystem was picked with the keys or the controller ([ ], d-pad) for the
+## selected contact: a phone's Hack then starts at once instead of opening the sheet.
+var _sub_picked: bool = false
 
 
 func _setup() -> void:
 	clip_contents = true
+	in_frame = true
+	selection_extras = [[tr("sci.scan"), _scan], [tr("sci.hack"), open_hack]]
 	var rows: VBoxContainer = VBoxContainer.new()
 	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	rows.add_theme_constant_override("separation", 4)
@@ -184,16 +191,30 @@ func _arrange() -> void:
 		phone = SciencePhone.new()
 		add_child(phone)
 		phone.build(self, form)
-	# The left rail's slot under the contacts, on a phone on its side (#28).
-	share_slot = phone.share_slot if phone != null else null
+	# The phone's pages; its Crew page holds the share buttons (design 2.0).
+	pages = phone.pages if phone != null else null
+	shows_shares = phone != null
 	_rows.visible = phone == null
 	if phone == null:
 		_stack()
 	refresh()
+	_rebind_tabs()
+
+
+## The screen binds the focused panel's pages when it lays out; a panel that builds (or
+## drops) its phone pages after that has the screen bind them again.
+func _rebind_tabs() -> void:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
+		(n as StationScreen)._show_side()
 
 
 ## The list and card show unless docked; a narrow panel gives a minigame their room.
 func _show_parts() -> void:
+	if phone != null:
+		return
 	var playing: bool = int(block().get("session", SESSION_NONE)) != SESSION_NONE
 	var show: bool = not docked and not (playing and size.x < NARROW_W)
 	_list.visible = show
@@ -474,6 +495,7 @@ func _cycle_subsystem(step: int) -> void:
 	var n: int = subsystems().size()
 	if n > 0:
 		_sub_index = posmod(_sub_index + step, n)
+		_sub_picked = true
 
 
 func _ping() -> void:
@@ -497,6 +519,83 @@ func _claim_scan() -> void:
 		ctx.intents.release_claim(StationViews.CLAIM_SCAN)
 	else:
 		ctx.intents.claim(StationViews.CLAIM_SCAN)
+
+
+## A phone's Hack (P28-L1, D289): the screen's choice sheet of the target's subsystems plus
+## Cancel, covering the right rail; a pick starts the hack. With no hackable contact
+## selected the nearest one is selected first. With the subsystem already picked by key or
+## controller (`_sub_picked`), or without a sheet, the hack starts at once.
+func open_hack() -> void:
+	if int(block().get("session", SESSION_NONE)) != SESSION_NONE:
+		return
+	if not _can_hack():
+		var near: int = _nearest_hackable()
+		if near < 0:
+			return
+		ctx.crew.select("contact", near)
+	if _sub_picked or sheet == null:
+		_hack()
+		return
+	var c: int = selected_contact()
+	var subs: Array[StringName] = subsystems()
+	var names: Array = []
+	for id: StringName in subs:
+		names.append(tr("eng.name." + String(id)))
+	sheet.side = SIDE_RIGHT
+	sheet.open(
+		TouchText.of("sci.hack_sheet", "Hack %s") % ctx.view.callsign(c),
+		names,
+		func(i: int) -> void: _hack_sub(c, subs[i])
+	)
+
+
+## True when a phone's Hack has something to open: no session and a hackable contact.
+func can_open_hack() -> bool:
+	return int(block().get("session", SESSION_NONE)) == SESSION_NONE and _nearest_hackable() >= 0
+
+
+## The hackable contact (its card says so) nearest the ship, or -1.
+func _nearest_hackable() -> int:
+	var best: int = -1
+	var best_d: float = INF
+	for it: Dictionary in ctx.picture().items:
+		if it["kind"] != "contact" or not bool(card_of(int(it["id"])).get("hack", false)):
+			continue
+		var d: float = (it["local"] as Vector3).length()
+		if d < best_d:
+			best_d = d
+			best = int(it["id"])
+	return best
+
+
+func _hack_sub(contact: int, sub: StringName) -> void:
+	if block().get("session", 0) != SESSION_NONE:
+		return
+	_status.text = ""
+	ctx.intents.command({"kind": "science_hack", "contact": contact, "subsystem_id": String(sub)})
+
+
+## The tab strip's title during a session (design 2.4): "Scan H2 · 12 s".
+func session_title() -> String:
+	var b: Dictionary = block()
+	var session: int = int(b.get("session", SESSION_NONE))
+	if session == SESSION_NONE:
+		return ""
+	var age: int = floori(maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / 60.0))
+	var who: String = ctx.view.callsign(int(b.get("session_target", -1)))
+	if session == SESSION_SCAN:
+		return TouchText.of("sci.session_scan", "Scan %s · %d s") % [who, age]
+	return TouchText.of("sci.session_hack", "Hack %s · %d s") % [who, age]
+
+
+## A phone upright has no rails: the view is the stage (the radar or a minigame).
+func view_rect() -> Rect2:
+	if phone != null and phone.layout == null:
+		var xf: Transform2D = (
+			get_global_transform().affine_inverse() * _stage.get_global_transform()
+		)
+		return xf * Rect2(Vector2.ZERO, _stage.size)
+	return super()
 
 
 func cancel_session() -> void:
@@ -524,6 +623,7 @@ func _on_crew_changed(what: StringName) -> void:
 	if c != _last_sent:
 		_last_sent = c
 		_sub_index = 0
+		_sub_picked = false
 		ctx.intents.command({"kind": "science_select", "contact": c})
 
 

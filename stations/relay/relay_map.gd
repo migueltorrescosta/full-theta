@@ -91,6 +91,13 @@ func zoom(step: int) -> void:
 	queue_redraw()
 
 
+## Zooms by `factor` (a pinch: under 1 zooms in), within the same limits as `zoom`.
+func zoom_by(factor: float) -> void:
+	var top: float = period_m() if period_m() > 0.0 else 1.0e6
+	span_m = clampf(span_m * factor, SPAN_MIN_M, top)
+	queue_redraw()
+
+
 ## Turns the camera about its own up and right axes (right-drag, right stick).
 func rotate_by(delta_px: Vector2) -> void:
 	var yaw: Basis = Basis(view.y.normalized(), -delta_px.x * ROTATE_RAD_PER_PX)

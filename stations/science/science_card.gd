@@ -9,6 +9,10 @@ extends Control
 const FONT_SIZE: int = 14
 const ROW_H: float = 46.0
 const BAR_H: float = 6.0
+## A phone's Card page shows the whole card without a scroll (#28 follow-up, design 2.4):
+## the callsign and confidence share one line, and each part's row is shorter.
+const COMPACT_HEAD_H: float = 40.0
+const COMPACT_ROW_H: float = 40.0
 ## Intent texts by the card's intent code: 0 unknown, 1 no pilot, 2 + AiTable.Mode.
 const INTENT_KEYS: Array[String] = [
 	"sci.intent_none",
@@ -24,10 +28,17 @@ var callsign: String = ""
 var card: Dictionary = {}
 ## Seconds left of a hack window on this contact: {"sub": index, "left": s} rows.
 var hacks: Array = []
+## The phone's compact layout (COMPACT_HEAD_H, COMPACT_ROW_H).
+var compact: bool = false:
+	set(value):
+		compact = value
+		queue_redraw()
 
 
-## The height the card's rows need (a phone scrolls the card in its rail, #28).
-static func content_height() -> float:
+## The height the card's rows need (compact: a phone's Card page, #28).
+static func content_height(is_compact: bool = false) -> float:
+	if is_compact:
+		return COMPACT_HEAD_H + 6.0 * COMPACT_ROW_H
 	return 24.0 + 60.0 + 6.0 * ROW_H
 
 
@@ -46,38 +57,45 @@ func _draw() -> void:
 		return
 	var scan: float = float(card.get("scan", 0.0))
 	var detect: float = float(card.get("detect", 0.0))
-	var y: float = 24.0
+	var y: float = 24.0 if not compact else 20.0
 	_text(font, Vector2(10, y), callsign, Palette.color("text"), FONT_SIZE + 3)
-	_bar(Vector2(10, y + 8.0), size.x - 20.0, scan, -1.0)
-	_text(
-		font,
-		Vector2(10, y + 32.0),
-		(
-			"%s %d%%   %s %d%%"
-			% [tr("sci.scan_conf"), roundi(scan * 100.0), tr("sci.detect"), roundi(detect * 100.0)]
-		),
-		Palette.color("text_dim"),
-		FONT_SIZE - 2
+	var conf: String = (
+		"%s %d%%   %s %d%%"
+		% [tr("sci.scan_conf"), roundi(scan * 100.0), tr("sci.detect"), roundi(detect * 100.0)]
 	)
-	y += 60.0
+	if compact:
+		var cw: float = (
+			font.get_string_size(callsign, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE + 3).x
+		)
+		_text(font, Vector2(22.0 + cw, y), conf, Palette.color("text_dim"), FONT_SIZE - 2)
+		_bar(Vector2(10, y + 8.0), size.x - 20.0, scan, -1.0)
+		y = COMPACT_HEAD_H
+	else:
+		_bar(Vector2(10, y + 8.0), size.x - 20.0, scan, -1.0)
+		_text(font, Vector2(10, y + 32.0), conf, Palette.color("text_dim"), FONT_SIZE - 2)
+		y += 60.0
 	for part: String in ["class", "identity", "intent", "weak_points", "resistances", "hack"]:
 		_row(font, part, y, scan)
-		y += ROW_H
+		y += COMPACT_ROW_H if compact else ROW_H
 
 
 func _row(font: Font, part: String, y: float, scan: float) -> void:
 	var need: float = ScienceLookup.threshold(StringName(part))
 	var shown: bool = scan >= need and scan > 0.0
-	_text(font, Vector2(10, y), tr("sci.part_" + part), Palette.color("text_dim"), FONT_SIZE - 2)
+	# Compact: label, value and bar 13, 30 and 33 px down a 40 px row.
+	var label_y: float = y + (13.0 if compact else 0.0)
+	_text(
+		font, Vector2(10, label_y), tr("sci.part_" + part), Palette.color("text_dim"), FONT_SIZE - 2
+	)
 	var value: String = _value(part) if shown else "??"
 	_text(
 		font,
-		Vector2(10, y + 18.0),
+		Vector2(10, y + (30.0 if compact else 18.0)),
 		value,
 		Palette.color("text") if shown else Palette.color("text_dim"),
 		FONT_SIZE
 	)
-	_bar(Vector2(10, y + 26.0), size.x - 20.0, scan, need)
+	_bar(Vector2(10, y + (33.0 if compact else 26.0)), size.x - 20.0, scan, need)
 
 
 func _value(part: String) -> String:
