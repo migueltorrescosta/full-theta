@@ -921,17 +921,16 @@ func _relayout() -> void:
 		form_changed.emit(form)
 
 
-## The first visit to a station asks for the menu's Controls tab, once per client and
-## station (FT-STN-012, D185); Settings re-enables it. The first station waits for the
-## screen to enter the tree, so the shell has connected `help_requested` by then.
+## The first visit to a station shows the Controls chip for a few seconds, once per client
+## and station (P28-Help, amends FT-STN-012 and D185); help never opens by itself, a tap on
+## the chip opens the menu's Controls tab. Settings re-enables it. The first station waits
+## for the screen to enter the tree, so the shell has connected `help_requested` by then.
 func _open_first_visit_help() -> void:
-	var station: String = focused_station()
-	if not is_inside_tree() or ctx.settings.tooltip_seen(station):
+	if not is_inside_tree():
 		return
-	ctx.settings.mark_tooltip_seen(station)
-	ctx.settings.save()
-	help_requested.emit()
-	_update_block()
+	var chip: ControlsChip = ControlsChip.show_once(self, ctx.settings, focused_station())
+	if chip != null:
+		chip.pressed.connect(func() -> void: help_requested.emit())
 
 
 func _on_toast(key: String, args: Dictionary) -> void:

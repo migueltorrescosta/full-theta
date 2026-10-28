@@ -118,20 +118,20 @@ func _labels(menu: SettingsScreen) -> Array[String]:
 
 
 # FT: FT-STN-011
-# Escape (the menu intent) opens the one menu on Settings, Escape again closes it, and
-# it comes back on the tab last used.
+# Escape (the menu intent) opens the one menu on Game at first, Escape again closes it,
+# and it comes back on the tab last used.
 func test_escape_opens_the_menu() -> void:
 	var s: ClientShell = await _on_station(false)
 	var menu: SettingsScreen = s.settings_screen
 	assert_bool(menu.visible).is_false()
 	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
 	assert_bool(menu.visible).is_true()
-	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_GAME)
 	assert_bool(s.screen.blocked()).is_true()
-	menu.open(SettingsScreen.TAB_KEYS)
+	menu.open(SettingsScreen.TAB_TIPS)
 	menu.close()
 	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
-	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_KEYS)
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_TIPS)
 	menu.close()
 	assert_bool(s.screen.blocked()).is_false()
 
@@ -141,7 +141,7 @@ func test_escape_opens_the_menu() -> void:
 func test_help_key_opens_the_controls_tab() -> void:
 	var s: ClientShell = await _on_station(false)
 	var menu: SettingsScreen = s.settings_screen
-	menu.open(SettingsScreen.TAB_KEYS)
+	menu.open(SettingsScreen.TAB_SETTINGS)
 	s.screen.dispatch({"id": "overlay", "target": "screen", "pressed": true})
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
@@ -151,11 +151,15 @@ func test_help_key_opens_the_controls_tab() -> void:
 
 
 # FT: FT-STN-012
-# The first visit opens the menu on Controls by itself, headed by the seat's role, and
-# the screen takes no game input meanwhile.
-func test_first_visit_opens_controls_with_the_role_heading() -> void:
+# The first visit shows the Controls chip, not the menu; tapping it opens Controls headed
+# by the seat's role.
+func test_first_visit_shows_the_controls_chip() -> void:
 	var s: ClientShell = await _on_station(true)
 	var menu: SettingsScreen = s.settings_screen
+	assert_bool(menu.visible).is_false()
+	var chip: ControlsChip = s.screen.find_child("ControlsChip", true, false)
+	assert_object(chip).is_not_null()
+	chip.pressed.emit()
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
 	assert_array(_labels(menu)).contains([tr("role.systems")])
@@ -174,4 +178,5 @@ func test_language_switch_retranslates_the_open_menu() -> void:
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
 	assert_array(_labels(menu)).contains([tr("settings.ui_scale")])
 	assert_array(_labels(menu)).not_contains(["UI scale"])
-	assert_str(menu.tabs.get_tab_title(0)).is_equal(tr("overlay.title"))
+	var controls: int = menu.tabs.get_node(SettingsScreen.TAB_CONTROLS).get_index()
+	assert_str(menu.tabs.get_tab_title(controls)).is_equal(tr("overlay.title"))
