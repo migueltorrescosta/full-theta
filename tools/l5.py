@@ -203,7 +203,7 @@ def check_render(png: Path, size: tuple[int, int]) -> str:
     return "blank image" if blank(rgb) else ""
 
 
-def capture(shots_file: Path, out: Path) -> list[str]:
+def capture(shots_file: Path, out: Path, max_parts: int = PARTS) -> list[str]:
     """Render every shot into out/ under Xvfb with llvmpipe; return errors."""
     manifest = json.loads(shots_file.read_text())
     sizes = {s["name"]: tuple(shot_size(manifest, s)) for s in manifest["shots"]}
@@ -230,9 +230,11 @@ def capture(shots_file: Path, out: Path) -> list[str]:
         "--resolution", f"{width}x{height}", "--position", "0,0",
         "-s", "res://tools/l5_capture.gd", "--", "--shots", str(shots_file), "--out", str(out),
     ]  # fmt: skip
-    # Up to PARTS Godot processes share one X server, each rendering every parts-th shot;
-    # each renders at least SHOTS_PER_PART shots, worth its start-up.
-    parts = max(1, min(PARTS, len(manifest["shots"]) // SHOTS_PER_PART))
+    # Up to max_parts Godot processes share one X server, each rendering every parts-th
+    # shot; each renders at least SHOTS_PER_PART shots, worth its start-up. A shot's pixels
+    # depend slightly on the shots its process rendered before it (all within MAX_FRACTION),
+    # so baselines always render in one part to stay byte-stable (#27).
+    parts = max(1, min(max_parts, len(manifest["shots"]) // SHOTS_PER_PART))
     if parts > 1:
         render = ["bash", "-c", PARALLEL, "l5", str(parts), *render]
     cmd = ["xvfb-run", "-a", f"--server-args=-screen 0 {width}x{height}x24", *render]
@@ -273,7 +275,7 @@ def main() -> int:
     names = [s["name"] for s in json.loads(shots_file.read_text())["shots"]]
 
     start = time.monotonic()
-    errors = capture(shots_file, out)
+    errors = capture(shots_file, out, 1 if args.update_baselines else PARTS)
     elapsed = time.monotonic() - start
     timings = json.loads((out / "timings.json").read_text()) if not errors else {}
     print(f"l5: rendered {len(names)} shots in {elapsed:.1f} s ({timings})")
