@@ -149,3 +149,26 @@ func test_pvp_vote_is_a_forfeit() -> void:
 		assert_int(server.world.run.status[ship]).is_equal(RunTable.Status.IN_PLAY)
 	var tick: int = server.world.tick
 	assert_bool(await h.until(func() -> bool: return server.world.tick > tick + 3)).is_true()
+
+
+# FT: FT-MIS-016, FT-NET-041
+# PvP (M4-F1): the host forfeits at once only its own ship; for another ship the request is
+# refused `not_your_ship` and that ship stays in play (its crew forfeits by vote).
+func test_pvp_host_forfeits_only_its_own_ship() -> void:
+	var server: NetServer = h.fleet_server(SessionRules.Mode.LAST_STANDING, 3, [], true)
+	var crews: Array[NetClient] = []
+	for ship: int in 3:
+		crews.append(await h.joined(server, "all-%d" % ship, StationViews.ALL, ship))
+	for c: NetClient in crews:
+		c.set_ready(true)
+	assert_bool(await h.until(func() -> bool: return server.world.tick > 2)).is_true()
+	var host: NetClient = crews[0]
+	var from: int = h.mark(host)
+	host.abandon(1)
+	assert_str(await _rejected(host, NetProtocol.Type.ABANDON, from)).is_equal("not_your_ship")
+	assert_int(server.world.run.status[1]).is_equal(RunTable.Status.IN_PLAY)
+	host.abandon(0)
+	var pred: Callable = func(ev: Dictionary) -> bool: return ev["payload"]["ship"] == 0
+	var gone: Dictionary = await h.next_event(host, NetProtocol.EVENT_ELIMINATED, from, pred)
+	assert_str(gone["payload"]["reason"]).is_equal("forfeit")
+	assert_int(server.world.run.status[0]).is_equal(RunTable.Status.ABANDONED)

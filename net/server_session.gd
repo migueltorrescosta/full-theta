@@ -28,6 +28,7 @@ const NOT_PAUSED: String = "not_paused"
 const NOT_IN_RUN: String = "not_in_run"
 const NOT_HOST: String = "not_host"
 const NOT_CREW: String = "not_crew"
+const NOT_YOUR_SHIP: String = "not_your_ship"
 const BAD_PICK: String = "bad_pick"
 const BAD_ITEM: String = "bad_item"
 const NOT_CLAIMED: String = "not_claimed"
@@ -709,12 +710,16 @@ func _on_command(conn: int, msg: Dictionary, now_us: int) -> void:
 	_pending.append([s.id, msg["seq"], result[0], world.tick])
 
 
-## The host abandons a paused ship alone (FT-NET-041, D96, D127).
+## The host abandons a paused ship alone (FT-NET-041, D96, D127); in PvP only its own ship.
 func _on_abandon(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = by_conn.get(conn)
 	if s == null:
 		return
 	var ship: int = msg["ship"]
+	if s.is_host and fleet.rules.is_pvp() and ship != s.ship:
+		# M4-F1: in PvP the host forfeits only its own ship; another crew forfeits by its vote.
+		request_rejected(s, NetProtocol.Type.ABANDON, NOT_YOUR_SHIP, {"ship": ship})
+		return
 	if not paused.has(ship):
 		var why: String = _run_abandon_refusal(ship)
 		if why == "" and not s.is_host:

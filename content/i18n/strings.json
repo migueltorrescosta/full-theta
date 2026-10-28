@@ -531,6 +531,7 @@
     "toast.guided_out_of_arc": {"en": "Target's out of arc.", "pt_PT": "O alvo está fora do arco.", "it": "Il bersaglio è fuori arco."},
     "toast.marks_full": {"en": "All 8 marks are in use.", "pt_PT": "As 8 marcas estão ocupadas.", "it": "Gli 8 segnalini sono tutti in uso."},
     "toast.not_allowed": {"en": "You can't do that from here.", "pt_PT": "Não podes fazer isso daqui.", "it": "Da qui non si può."},
+    "toast.not_your_ship": {"en": "You can only give up your own ship.", "pt_PT": "Só podes desistir da tua nave.", "it": "Puoi arrendere solo la tua nave."},
     "toast.not_crew": {"en": "Only crew can do that.", "pt_PT": "Só a tripulação pode fazer isso.", "it": "Solo l'equipaggio può farlo."},
     "toast.not_guided": {"en": "This ammo isn't guided.", "pt_PT": "Esta munição não é guiada.", "it": "Questa munizione non è guidata."},
     "toast.not_over": {"en": "The run isn't over yet.", "pt_PT": "A missão ainda não acabou.", "it": "La missione non è ancora finita."},
