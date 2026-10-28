@@ -4,6 +4,79 @@ extends GdUnitTestSuite
 ## bindings, the screen's stations highlighted.
 # FT: FT-STN-011, FT-STN-012
 
+## The six stations of the dev seat, the largest diagram.
+const SIX: Array = ["helm", "weapons", "engineering", "science", "relay", "comms"]
+
+
+## Runs the incremental _uncross and the old full recount on every column it orders, and
+## records any column they order differently.
+class RecountDiagram:
+	extends ControlsDiagram
+	var columns: int = 0
+	var mismatches: Array[String] = []
+
+	func _uncross(list: Array, ys: Array[float], elbow_x: float) -> void:
+		var ref: Array = list.duplicate()
+		_full_recount_uncross(ref, ys, elbow_x)
+		super._uncross(list, ys, elbow_x)
+		columns += 1
+		if ref != list:
+			mismatches.append(str(list.map(func(l: Dictionary) -> String: return l["id"])))
+
+	## The order before load fix 8: every trade recounted the whole column.
+	func _full_recount_uncross(list: Array, ys: Array[float], elbow_x: float) -> void:
+		var swapped: bool = true
+		var rounds: int = 0
+		while swapped and rounds < 300:
+			swapped = false
+			rounds += 1
+			for i: int in list.size():
+				for j: int in range(i + 1, list.size()):
+					if _labels_cross(list[i], ys[i], list[j], ys[j], elbow_x):
+						var t: Variant = list[i]
+						list[i] = list[j]
+						list[j] = t
+						swapped = true
+		var best: float = _full_cost(list, ys, elbow_x)
+		var improved: bool = true
+		var guard: int = 0
+		while improved and guard < 60:
+			improved = false
+			guard += 1
+			for i: int in list.size():
+				for j: int in range(i + 1, list.size()):
+					var tmp: Variant = list[i]
+					list[i] = list[j]
+					list[j] = tmp
+					var c: float = _full_cost(list, ys, elbow_x)
+					if c < best - 0.001:
+						best = c
+						improved = true
+					else:
+						list[j] = list[i]
+						list[i] = tmp
+
+	func _full_cost(list: Array, ys: Array[float], elbow_x: float) -> float:
+		var segs: Array = []
+		var length: float = 0.0
+		for i: int in list.size():
+			var e: Vector2 = Vector2(elbow_x, ys[i] + (LINE_H - 2.0) * 0.5)
+			for a: Vector2 in list[i]["lead"]:
+				segs.append([i, e, a])
+				length += e.distance_to(a)
+			var chain: Array = list[i]["anchors"]
+			for k: int in range(1, chain.size()):
+				segs.append([i, chain[k - 1], chain[k]])
+		var crossings: int = 0
+		for i: int in segs.size():
+			for j: int in range(i + 1, segs.size()):
+				if (
+					segs[i][0] != segs[j][0]
+					and segments_cross(segs[i][1], segs[i][2], segs[j][1], segs[j][2])
+				):
+					crossings += 1
+		return crossings * 1000000.0 + length
+
 
 func before() -> void:
 	I18n.apply("en")
@@ -11,6 +84,7 @@ func before() -> void:
 
 func after() -> void:
 	I18n.apply("en")
+	LayoutMode.forced = -1
 
 
 func _model(bindings: Bindings, stations: Array, device: String) -> ControlsModel:
@@ -207,6 +281,98 @@ func test_the_pane_keeps_the_list_and_the_role_summary() -> void:
 		func(l: Node) -> String: return (l as Label).text
 	)
 	assert_array(texts).contains([tr("role.helm")])
+
+
+# Load fix 8: the incremental trade gives the same order as the full recount it replaces.
+func test_the_incremental_uncross_orders_as_the_full_recount() -> void:
+	for stations: Array in [
+		["helm", "weapons"],
+		["helm"],
+		["weapons"],
+		["science"],
+		["comms"],
+		["captain"],
+		["engineering"],
+		["relay"],
+		["engineering", "relay"],
+		SIX
+	]:
+		for device: String in IntentTable.DEVICES:
+			ControlsDiagram.clear_cache()
+			var d: RecountDiagram = auto_free(RecountDiagram.new())
+			d.build(Bindings.new(), stations, device)
+			var why: String = "%s %s" % [stations, device]
+			assert_int(d.columns).override_failure_message(why).is_greater(0)
+			assert_array(d.mismatches).override_failure_message(why).is_empty()
+
+
+# Load fix 1: a second diagram with the same stations, device, bindings and language reuses
+# the layout; a rebind or another language lays it out again.
+func test_a_layout_is_reused_until_something_it_shows_changes() -> void:
+	ControlsDiagram.clear_cache()
+	var bindings: Bindings = Bindings.new()
+	var a: ControlsDiagram = _diagram(bindings, SIX, IntentTable.KBM)
+	var b: ControlsDiagram = _diagram(bindings, SIX, IntentTable.KBM)
+	assert_object(b.labels()).is_same(a.labels())
+	assert_float(b.design_height()).is_equal(a.design_height())
+	var before: Array[Dictionary] = b.labels()
+	bindings.rebind("face", IntentTable.KBM, PackedStringArray(["Shift+K"]))
+	assert_object(b.labels()).is_not_same(before)
+	assert_str(_label(b, "face")["keys"]).is_equal("Shift+K")
+	var c: ControlsDiagram = _diagram(Bindings.new(), SIX, IntentTable.KBM)
+	assert_str(_label(c, "face")["keys"]).is_equal(BindingText.describe("F"))
+
+
+# FT: FT-STN-011, FT-STN-012
+# Load fix 1: the pane builds a diagram only when it shows; the list is always there.
+func test_the_pane_builds_a_diagram_only_when_it_shows() -> void:
+	var pane: ControlsPane = auto_free(ControlsPane.new())
+	pane.build(Bindings.new(), ["helm"], IntentTable.KBM, "helm")
+	assert_array(pane.kbm.shown_args()).is_not_empty()
+	assert_array(pane.pad.shown_args()).is_empty()
+	pane.show_view(ControlsPane.VIEW_PAD)
+	assert_array(pane.pad.shown_args()).is_not_empty()
+
+
+# FT: FT-STN-011, FT-STN-012
+# A phone shows the list and never builds a diagram.
+func test_a_phone_never_builds_a_diagram() -> void:
+	LayoutMode.forced = LayoutMode.Kind.PHONE
+	var pane: ControlsPane = auto_free(ControlsPane.new())
+	add_child(pane)
+	pane.build(Bindings.new(), SIX, IntentTable.PAD, "all")
+	pane.show_view(ControlsPane.VIEW_PAD)
+	assert_str(pane.view).is_equal(ControlsPane.VIEW_LIST)
+	assert_bool(pane.list.visible).is_true()
+	assert_array(pane.kbm.shown_args()).is_empty()
+	assert_array(pane.pad.shown_args()).is_empty()
+	assert_bool((pane.find_child(ControlsPane.VIEW_KBM, true, false) as Control).visible).is_false()
+
+
+# FT: FT-STN-011, FT-STN-012
+# P28-Help: my stations by default, every station with the filter.
+func test_the_filter_shows_every_station() -> void:
+	var pane: ControlsPane = auto_free(ControlsPane.new())
+	pane.build(Bindings.new(), ["helm"], IntentTable.KBM, "helm")
+	var sections: Callable = func() -> Array:
+		return pane.list.rows().map(func(r: Dictionary) -> String: return r["section"])
+	assert_array(sections.call()).not_contains(["station.weapons"])
+	(
+		assert_array(
+			pane.kbm.model.callouts().map(func(e: Dictionary) -> String: return e["group"])
+		)
+		. not_contains(["weapons"])
+	)
+	pane.set_all_stations(true)
+	assert_array(sections.call()).contains(["station.helm", "station.weapons", "station.comms"])
+	(
+		assert_array(
+			pane.kbm.model.callouts().map(func(e: Dictionary) -> String: return e["group"])
+		)
+		. contains(["weapons"])
+	)
+	pane.set_all_stations(false)
+	assert_array(sections.call()).not_contains(["station.weapons"])
 
 
 func test_the_station_colours_exist_for_every_group() -> void:

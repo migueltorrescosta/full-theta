@@ -34,6 +34,11 @@ func build(bindings: Bindings, stations: Array, device: String, role: String = "
 	_rebuild()
 
 
+## What it shows: [bindings, stations, device], or [] before the first build.
+func shown_args() -> Array:
+	return [] if _bindings == null else [_bindings, _stations, _device]
+
+
 ## The rows shown, for tests: [{"section", "id", "label", "keys"}].
 func rows() -> Array[Dictionary]:
 	return _rows
