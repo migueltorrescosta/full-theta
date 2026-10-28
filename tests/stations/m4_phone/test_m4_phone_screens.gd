@@ -12,7 +12,7 @@ const CASES: Array = [
 	[Vector2i(390, 844), [0, 47, 0, 34]],
 ]
 const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
-const Shot: GDScript = preload("res://tests/stations/m4_phone/m4_phone_shot.gd")
+const Shot: GDScript = preload("res://tests/visual/m4_shot.gd")
 
 
 func before() -> void:

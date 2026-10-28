@@ -660,7 +660,8 @@ func _style_summary(short: bool, phone: bool) -> void:
 	for row: Control in [_seat_row, _diff_row]:
 		for c: Node in row.get_children():
 			if c is Button and (c as Button).size_flags_horizontal & Control.SIZE_EXPAND:
-				(c as Button).clip_text = small
+				# (upright the seats show whole: Capitão, Espectador)
+				(c as Button).clip_text = short if row == _seat_row else small
 				(c as Button).text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_weigh_buttons()
 	for pair: Array in [[_summary_name, SHORT_NAME_SIZE], [_summary_role, SHORT_ROLE_SIZE]]:
@@ -718,6 +719,8 @@ func _refresh_seats() -> void:
 		var b: Button = pair[0]
 		b.set_pressed_no_signal(mine == pair[1])
 		b.text = tr("station." + pair[1])
+	if _phone:
+		_dev_all.text = TouchText.of("lobby.dev_short", "All (dev)")
 	_captain.disabled = ctx.crew.captain_seated(ship) and mine != CAPTAIN
 	_dev_all.visible = not ctx.crew.def_of(DEV_ALL).is_empty()
 	_weigh_buttons()
