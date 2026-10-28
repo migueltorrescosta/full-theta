@@ -27,11 +27,13 @@ const TRAINING: StringName = &"shakedown"
 ## (Q14, owner 2026-10-26; PROVISIONAL numbers for #13).
 @export var strength_per_preset: Dictionary[StringName, float] = {}
 ## A fleet run's encounters grow by this much strength per crewed ship beyond the first
-## (multiplier points per ship, #11, FT-MIS-023, M4-Q1; 0: no scaling). PROVISIONAL for #13.
+## (dimensionless multiplier points per ship, #11, FT-MIS-023, M4-Q1; 0: no scaling).
+## PROVISIONAL for #13.
 @export var fleet_strength_per_ship: float = 0.0
 ## LAST_STANDING raider waves (#11, M4-Q7): a wave at every surviving ship this often (s, 0:
-## none), each wave's strength this much above the last (multiplier points). PROVISIONAL.
+## none). PROVISIONAL.
 @export var raider_wave_every_s: float = 0.0
+## Each raider wave's strength above the last (dimensionless multiplier points). PROVISIONAL.
 @export var raider_wave_growth: float = 0.0
 
 
