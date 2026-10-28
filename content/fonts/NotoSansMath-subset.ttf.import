@@ -3,12 +3,12 @@
 importer="font_data_dynamic"
 type="FontFile"
 uid="uid://ceo1olsna6588"
-path="res://.godot/imported/NotoSansMath-subset.ttf-d36b67159402c4aff344ff81bf31ecca.fontdata"
+path="res://.godot/imported/NotoSansMath-subset.ttf-f395bcc25809573592777fcd708faa0a.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/NotoSansMath-subset.ttf"
-dest_files=["res://.godot/imported/NotoSansMath-subset.ttf-d36b67159402c4aff344ff81bf31ecca.fontdata"]
+source_file="res://content/fonts/NotoSansMath-subset.ttf"
+dest_files=["res://.godot/imported/NotoSansMath-subset.ttf-f395bcc25809573592777fcd708faa0a.fontdata"]
 
 [params]
 

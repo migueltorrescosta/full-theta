@@ -218,23 +218,23 @@
     {
       "name": "Noto Sans Symbols 2 (subset)",
       "kind": "font",
-      "path": "assets/fonts/NotoSansSymbols2-subset.ttf",
+      "path": "content/fonts/NotoSansSymbols2-subset.ttf",
       "source": "https://github.com/notofonts/notofonts.github.io/raw/main/fonts/NotoSansSymbols2/hinted/ttf/NotoSansSymbols2-Regular.ttf",
       "licence": "OFL-1.1",
-      "attribution": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols); licence text in assets/fonts/OFL.txt. Subset recipe: pyftsubset --unicodes=U+2630,U+25B8,U+25BE,U+26A1,U+2713,U+2715 --layout-features= --no-hinting; then hhea and OS/2 vertical metrics set to Open Sans's (ascent 1.069 em, descent 0.293 em, no line gap) so the fallback does not change line heights; for Noto Sans Symbols 2 only, the glyphs U+25B8 and U+25BE scaled 1.7x about their centre and set on the text's mid-height (they are small in the original)."
+      "attribution": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols); licence text in content/fonts/OFL.txt. Subset recipe: pyftsubset --unicodes=U+2630,U+25B8,U+25BE,U+26A1,U+2713,U+2715 --layout-features= --no-hinting; then hhea and OS/2 vertical metrics set to Open Sans's (ascent 1.069 em, descent 0.293 em, no line gap) so the fallback does not change line heights; for Noto Sans Symbols 2 only, the glyphs U+25B8 and U+25BE scaled 1.7x about their centre and set on the text's mid-height (they are small in the original)."
     },
     {
       "name": "Noto Sans Math (subset)",
       "kind": "font",
-      "path": "assets/fonts/NotoSansMath-subset.ttf",
+      "path": "content/fonts/NotoSansMath-subset.ttf",
       "source": "https://github.com/notofonts/notofonts.github.io/raw/main/fonts/NotoSansMath/hinted/ttf/NotoSansMath-Regular.ttf",
       "licence": "OFL-1.1",
-      "attribution": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols); licence text in assets/fonts/OFL.txt. Subset recipe: pyftsubset --unicodes=U+21C4 --layout-features= --no-hinting; then hhea and OS/2 vertical metrics set to Open Sans's (ascent 1.069 em, descent 0.293 em, no line gap) so the fallback does not change line heights."
+      "attribution": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/symbols); licence text in content/fonts/OFL.txt. Subset recipe: pyftsubset --unicodes=U+21C4 --layout-features= --no-hinting; then hhea and OS/2 vertical metrics set to Open Sans's (ascent 1.069 em, descent 0.293 em, no line gap) so the fallback does not change line heights."
     },
     {
       "name": "SIL Open Font License 1.1 (text for the Noto subsets)",
       "kind": "font",
-      "path": "assets/fonts/OFL.txt",
+      "path": "content/fonts/OFL.txt",
       "source": "https://raw.githubusercontent.com/notofonts/symbols/main/OFL.txt",
       "licence": "OFL-1.1",
       "attribution": "Copyright 2022 The Noto Project Authors"

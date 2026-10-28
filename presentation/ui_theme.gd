@@ -52,8 +52,8 @@ const LOAD_VARIANTS: Array[String] = ["intense", "busy", "light", "none"]
 ## default font lacks: ☰ ▸ ▾ ⚡ ✓ ✕ and ⇄. A browser has no system fonts to fall back
 ## on, so without them these draw as the missing-glyph box (content/provenance.json).
 const FALLBACK_FONTS: Array[String] = [
-	"res://assets/fonts/NotoSansSymbols2-subset.ttf",
-	"res://assets/fonts/NotoSansMath-subset.ttf",
+	"res://content/fonts/NotoSansSymbols2-subset.ttf",
+	"res://content/fonts/NotoSansMath-subset.ttf",
 ]
 
 static var _font: FontVariation = null
