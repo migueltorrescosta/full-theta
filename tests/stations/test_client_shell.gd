@@ -213,7 +213,9 @@ func test_visited_screens_are_kept_and_shown_again() -> void:
 	assert_object(s.screen).is_null()
 	assert_str(s._loading_name.text).is_equal(tr("station.helm"))
 	assert_bool(await _until(func() -> bool: return s.screen != null)).is_true()
-	assert_bool(s._loading.visible).is_false()
+	# The overlay stays until the new screen has run a frame.
+	assert_bool(s._loading.visible).is_true()
+	assert_bool(await _until(func() -> bool: return not s._loading.visible)).is_true()
 	var helm: StationScreen = s.screen
 	await _pick(s, "")
 	assert_bool(helm.visible).is_false()

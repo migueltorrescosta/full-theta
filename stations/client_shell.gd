@@ -19,7 +19,8 @@ extends Control
 ## its alert tones detached) and shown again at once on the next visit of that pick; the
 ## least recently shown goes past MAX_SCREENS, and all go on a run reset, a language
 ## change, a new session or when the shell leaves. A first visit shows a loading overlay
-## for one frame before it builds, so it draws. A resume with the same pick keeps the
+## for one frame before it builds, so it draws, and keeps it until the new screen has run
+## its first frame. A resume with the same pick keeps the
 ## screen. While the lobby shows, the pick's panel scripts load (one a frame), then the
 ## shared ship model builds in slices (ProceduralShip.warm). Frames over LONG_FRAME_US go
 ## to the server's session log with what was running (NetClient.report_frame).
@@ -158,6 +159,9 @@ func _process(_delta: float) -> void:
 		ctx.interp.push(ctx.view, now)
 	ctx.interp.update(now)
 	_show_subtitles()
+	if _loading.visible and _pending == "":
+		# The new screen has run its first frame: it draws filled in.
+		_loading.visible = false
 	if _pending != "" and Engine.get_process_frames() > _pending_frame:
 		_build_pending()
 	elif lobby != null:
@@ -269,7 +273,6 @@ func _build_pending() -> void:
 	# `screen` first: entering the tree may ask for the first-visit help.
 	screen = s
 	_screens[key] = s
-	_loading.visible = false
 	_layer.add_child(s)
 	while _screens.size() > MAX_SCREENS:
 		_free_screen(_screens.keys()[0])
