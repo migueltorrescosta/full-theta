@@ -22,6 +22,9 @@ var shows_shares: bool = false
 ## Where the screen's Share opener goes on a phone on its side while the radar column is
 ## hidden (#28): a container in the panel's rails, or null for the bottom of the view.
 var share_slot: Container = null
+## Height (px) at the bottom of the panel that the screen's joint switch and Share opener
+## cover on a phone on its side (#28); a hand-drawn view keeps its read-outs above it.
+var bottom_reserve: float = 0.0
 
 var _chip_menu: ChipMenu = null
 

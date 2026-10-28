@@ -262,6 +262,13 @@ func _place_phone_bar() -> void:
 	)
 	_phone_bar.visible = shown
 	var in_side: bool = _side.visible
+	for p: StationPanel in panels:
+		var reserve: float = 0.0
+		if shown and not in_side and p == focused_panel():
+			reserve = UiTheme.TOUCH_PRIMARY + 2.0 * UiTheme.TOUCH_GAP
+		if p.bottom_reserve != reserve:
+			p.bottom_reserve = reserve
+			p.queue_redraw()
 	var parent: Control = _extras if in_side else _main
 	if _phone_bar.get_parent() != parent:
 		_phone_bar.reparent(parent, false)

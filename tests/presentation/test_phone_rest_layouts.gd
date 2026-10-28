@@ -198,6 +198,12 @@ func test_joint_view_on_a_phone_switches_instead_of_docking() -> void:
 	assert_bool(s.joint_switch.is_visible_in_tree()).is_true()
 	assert_float(s.joint_switch.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
 	assert_str(s.joint_switch.text).contains(tr("station.weapons"))
+	# Helm's read-out (Fuel at its foot) and compass stay above the switch (#28).
+	var hud: HelmHud = (s.focused_panel() as HelmPanel).hud
+	var sw: Rect2 = s.joint_switch.get_global_rect()
+	for r: Rect2 in [hud.readout_rect()] + hud.compass_boxes():
+		var g: Rect2 = hud.get_global_transform() * r
+		assert_bool(g.intersects(sw)).override_failure_message("%s over %s" % [g, sw]).is_false()
 	s.joint_switch.pressed.emit()
 	await _frames(2)
 	assert_int(s.focus_index).is_equal(1)
