@@ -263,3 +263,43 @@ func test_range_steps_rim_arrows_and_the_selected_stem_on_top() -> void:
 	assert_float((h2["pos"] as Vector2).x).is_equal_approx(c.x, 0.5)
 	assert_float((layout[0]["pos"] as Vector2).y).is_equal_approx(c.y, 0.5)
 	assert_float((layout[0]["pos"] as Vector2).x).is_greater(c.x)
+
+
+# FT: FT-STN-003
+# A phone's rail radar (160 px, #28): callsign-only chips clear of the clock numbers, the
+# range label, the own ship and each other; the selected item keeps its chip.
+func test_small_radar_chips_are_callsigns_clear_of_everything() -> void:
+	radar.size = Vector2(160, 110)
+	var items: Array[Dictionary] = [
+		_it("contact", 3, "U3", "U", Vector3(-400, 2500, -8000)),
+		_it("contact", 2, "H2", "H", Vector3(1500, 300, -1500)),
+		_it("contact", 4, "F4", "F", Vector3(2000, 0, 400)),
+		_it("mark", 1, "Bravo", "", Vector3(-1200, -200, 500)),
+	]
+	radar.set_picture(_pic(items), {"kind": "contact", "id": 2})
+	assert_bool(radar.small()).is_true()
+	var font: Font = radar.get_theme_default_font()
+	var blocked: Array = radar._numerals(font, radar.disc_centre(), 10000.0).values()
+	blocked.append(radar._range_rect())
+	var placed: Array[Rect2] = []
+	var selected_chip: String = ""
+	for e: Dictionary in radar._layout():
+		if e["chip"] == "":
+			continue
+		assert_str(e["chip"]).is_equal(e["item"]["label"])
+		var r: Rect2 = e["chip_rect"]
+		assert_bool(Rect2(Vector2.ZERO, radar.size).encloses(r)).is_true()
+		for o: Rect2 in blocked + placed:
+			assert_bool(o.intersects(r)).is_false()
+		placed.append(r)
+		if e["item"]["id"] == 2 and e["item"]["kind"] == "contact":
+			selected_chip = e["chip"]
+	assert_str(selected_chip).is_equal("H2")
+
+
+# FT: FT-STN-003
+# A tablet or desktop radar keeps its full chips (clock and range band).
+func test_large_radar_keeps_full_chips() -> void:
+	radar.set_picture(_pic([_it("contact", 2, "H2", "H", Vector3(1500, 300, -1500))]), {})
+	assert_bool(radar.small()).is_false()
+	assert_str(radar._layout()[0]["chip"]).contains(ChipText.SEP)
