@@ -334,3 +334,75 @@ func _move(c: Control, from: Vector2, to: Vector2) -> void:
 		mm.relative = (to - from) / 4.0
 		mm.button_mask = MOUSE_BUTTON_MASK_LEFT
 		c._gui_input(mm)
+
+
+# FT: FT-STN-005, FT-JNT-001, FT-NET-018
+# #28's touch rules hold on every joint view and every lone station on a phone, either way
+# up and with either panel focused: nothing tappable under 44 px, 8 px between targets,
+# none under an inset or in the gesture band.
+func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
+	var forms: Array = [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]
+	var bad: Array[String] = []
+	for f: Array in forms:
+		for entry: String in StationViews.ENTRIES:
+			var n: int = maxi(1, (StationViews.ENTRIES[entry][2] as Array).size())
+			for focus: int in n:
+				var s: StationScreen = await _screen(f[0], entry, f[1], focus)
+				var report: Dictionary = TapAudit.check(s)
+				for k: String in AUDIT:
+					if not report[k].is_empty():
+						bad.append("%s %s/%d %s: %s" % [f[0], entry, focus, k, report[k]])
+				_drop(s)
+	assert_array(bad).override_failure_message("\n".join(bad)).is_empty()
+
+
+# FT: FT-STN-005, FT-PAIR-007
+# Science alone upright draws its own radar (the screen's column hides): the share buttons
+# move into the drawer, opened from under its actions.
+func test_science_alone_upright_reaches_its_share_buttons() -> void:
+	var s: StationScreen = await _screen(Vector2i(390, 844), "science", PORTRAIT)
+	assert_bool(s.radar.is_visible_in_tree()).is_false()
+	assert_object(s.share_opener.get_parent()).is_same(s.focused_panel().share_slot)
+	assert_bool(s.share_opener.is_visible_in_tree()).is_true()
+	s.share_opener.button_pressed = true
+	s.share_opener.pressed.emit()
+	await _frames(2)
+	var buttons: Array[Button] = _share_buttons(s)
+	assert_array(buttons).is_not_empty()
+	for b: Button in buttons:
+		assert_bool(b.is_visible_in_tree()).is_true()
+	_assert_clean(s.share_drawer, "science upright drawer")
+	buttons[0].pressed.emit()
+	assert_int(StationFixture.sent(s.ctx).of("share").size()).is_equal(1)
+	_drop(s)
+
+
+# FT: FT-STN-005, FT-JNT-001, FT-SCI-001, FT-RLY-001
+# Focused in a joint view on a phone, Science and Relay use their phone rails: on its side
+# Science draws its own radar and the screen's column hides; upright and on a desktop the
+# screen's radar stays the Science radar.
+func test_science_and_relay_use_their_rails_in_a_joint_view() -> void:
+	var sci: StationScreen = await _screen(Vector2i(844, 390), "survey", LANDSCAPE, 1)
+	var sp: SciencePanel = sci.focused_panel() as SciencePanel
+	assert_object(sp.phone).is_not_null()
+	assert_bool(sp.own_radar()).is_true()
+	assert_bool(sp.radar.is_visible_in_tree()).is_true()
+	assert_bool(sci.radar.is_visible_in_tree()).is_false()
+	_drop(sci)
+	var up: StationScreen = await _screen(Vector2i(390, 844), "survey", PORTRAIT, 1)
+	var upp: SciencePanel = up.focused_panel() as SciencePanel
+	assert_object(upp.phone).is_not_null()
+	assert_bool(upp.own_radar()).is_false()
+	assert_bool(up.radar.is_visible_in_tree()).is_true()
+	_drop(up)
+	var desk: StationScreen = await _screen(Vector2i(1280, 720), "survey", [], 1)
+	var dp: SciencePanel = desk.focused_panel() as SciencePanel
+	assert_object(dp.phone).is_null()
+	assert_bool(dp.own_radar()).is_false()
+	assert_object(dp.radar).is_null()
+	assert_bool(desk.radar.is_visible_in_tree()).is_true()
+	_drop(desk)
+	for c: Array in [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]:
+		var r: StationScreen = await _screen(c[0], "nav", c[1], 1)
+		assert_object((r.focused_panel() as RelayPanel).phone).is_not_null()
+		_drop(r)

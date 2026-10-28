@@ -59,7 +59,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/stations/test_lobby_and_overlays.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-016 | tests | `tests/net/test_net_lobby_l3.gd` |
 | FT-NET-017 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_lobby_and_overlays.gd` |
-| FT-NET-018 | tests | `tests/net/test_net_stations_defs.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/stations/test_joint_views.gd` |
+| FT-NET-018 | tests | `tests/net/test_net_stations_defs.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_phone_fixups.gd` |
 | FT-NET-019 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-020 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_lobby_rules.gd` |
 | FT-NET-021 | tests | `tests/net/test_net_lobby_l3.gd` |
@@ -176,7 +176,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-ENG-006 | tests | `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/science/test_self_scan_faults.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd` |
 | FT-ENG-007 | tests | `tests/net/test_net_engineering_view_l3.gd` |
 | FT-ENG-008 | tests | `tests/net/test_hazard_view.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/test_data_shortcut_views.gd` |
-| FT-SCI-001 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
+| FT-SCI-001 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-002 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-003 | tests | `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_science_noise.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-004 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_minigame_timing.gd`, `tests/sim/science/test_scan.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
@@ -192,7 +192,7 @@ Tests: 381, manual: 13, pending: 7.
 | FT-SCI-014 | tests | `tests/sim/science/test_scan.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-015 | tests | `tests/sim/science/test_scan.gd` |
 | FT-SCI-016 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_scan.gd` |
-| FT-RLY-001 | tests | `tests/net/test_hazard_view.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
+| FT-RLY-001 | tests | `tests/net/test_hazard_view.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_relay_panel.gd`, `tests/stations/test_relay_station.gd` |
 | FT-RLY-002 | tests | `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-RLY-003 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_panel.gd` |
 | FT-RLY-004 | tests | `tests/content/test_content_defs.gd`, `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/relay/test_probes.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/relay/test_relay_phone.gd`, `tests/stations/test_relay_station.gd` |

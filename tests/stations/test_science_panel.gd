@@ -160,6 +160,7 @@ func test_joint_view_uses_the_screens_radar() -> void:
 	var s: StationScreen = await _screen({}, "sensors")
 	var p: SciencePanel = _sci(s)
 	assert_object(p.radar).is_null()
+	assert_bool(p.own_radar()).is_false()
 	assert_bool(p.full_screen()).is_false()
 	assert_bool(s.radar.orbitable).is_equal(s.focused_station() == "science")
 	if s.focused_station() != "science":
