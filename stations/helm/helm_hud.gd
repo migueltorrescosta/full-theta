@@ -35,6 +35,8 @@ const READOUT_H: float = 168.0
 ## Envelope bar length, and on a phone (narrower, so the compass fits beside the read-out).
 const BAR_W: float = 140.0
 const PHONE_BAR_W: float = 100.0
+## The shortest bars on a phone, so the read-out ends left of the reticle.
+const TIGHT_BAR_W: float = 60.0
 ## A label with no clear spot may cover up to this share of its area of something else.
 const SLIGHT: float = 0.1
 
@@ -64,8 +66,18 @@ func touch_layout() -> bool:
 	return panel != null and panel.touch_ui != null
 
 
+## Envelope bar length: on a phone short enough that the read-out ends left of the reticle
+## (when they share rows), down to TIGHT_BAR_W.
 func _bar_w() -> float:
-	return PHONE_BAR_W if touch_layout() else BAR_W
+	if not touch_layout():
+		return BAR_W
+	var a: Rect2 = area()
+	var top: float = a.end.y - READOUT_H
+	var ret: Rect2 = reticle_rect()
+	if ret.end.y < top or ret.position.y > top + 130.0:
+		return PHONE_BAR_W
+	var room: float = ret.position.x - 8.0 - (a.position.x + 14.0) - 90.0
+	return clampf(room, TIGHT_BAR_W, PHONE_BAR_W)
 
 
 ## The items on the view: ContactPicture's contacts, marks and named sites with their screen
@@ -86,6 +98,8 @@ func markers() -> Array[Dictionary]:
 		e["behind"] = cam.is_position_behind(world)
 		e["pos"] = Vector2.ZERO if e["behind"] else cam.unproject_position(world)
 		e["on_screen"] = not e["behind"] and rect.has_point(e["pos"])
+		if e["on_screen"]:
+			e["pos"] = clear_of_readout(e["pos"])
 		e["selected"] = panel.ctx.crew.is_selected(e["kind"], e["id"])
 		# Off-screen arrows for the selection and pinged items (FT-HLM-004).
 		e["arrow"] = not e["on_screen"] and (e["selected"] or float(e["pulse"]) > 0.0)
@@ -218,6 +232,11 @@ func _draw() -> void:
 		_draw_radial(font)
 
 
+## The reticle at the view's centre, for the read-outs to keep clear of.
+func reticle_rect() -> Rect2:
+	return Rect2(size / 2.0 - Vector2(22.0, 12.0), Vector2(44.0, 24.0))
+
+
 func _draw_reticle() -> void:
 	var c: Vector2 = size / 2.0
 	var col: Color = Color(Palette.color("text"), 0.7)
@@ -253,7 +272,9 @@ func velocity_markers() -> Array[Dictionary]:
 		if edge:
 			var d: Vector3 = cam.global_transform.basis.inverse() * world
 			at = _edge_point(Vector2(d.x, -d.y))
-		out.append({"kind": "pro" if pro else "retro", "pos": at, "edge": edge})
+		var clear: Vector2 = clear_of_readout(at)
+		edge = edge or clear != at
+		out.append({"kind": "pro" if pro else "retro", "pos": clear, "edge": edge})
 	return out
 
 
@@ -290,7 +311,11 @@ func thrust_input() -> Vector3:
 func thrust_centre() -> Vector2:
 	var a: Rect2 = area()
 	if touch_layout():
-		# A phone's view: top left of the part clear of the rails.
+		# A phone's view: top left of the part clear of the rails; in a short view (a joint
+		# view's switch below) the bare cross at the top right, over the compass.
+		if cross_tight():
+			var reach: Vector2 = _cross_size(false) - Vector2(CROSS_ARM + 14.0, CROSS_ARM + 14.0)
+			return Vector2(a.end.x - reach.x - 4.0, a.position.y + CROSS_ARM + 20.0)
 		return a.position + Vector2(CROSS_ARM + 22.0, 52.0)
 	if size.x < PHONE_W:
 		# A phone has no room beside the compass: top left, under the mode captions.
@@ -328,6 +353,8 @@ func _draw_thrust(font: Font) -> void:
 		else:
 			pts.append(pts[0])
 			draw_polyline(pts, col, 1.5)
+	if cross_tight():
+		return
 	var l: Vector3 = local_velocity()
 	var rows: Array = [
 		[tr("helm.vel_fwd"), -l.z], [tr("helm.vel_side"), l.x], [tr("helm.vel_up"), l.y]
@@ -341,9 +368,43 @@ func _draw_thrust(font: Font) -> void:
 ## The thrust cross and its read-outs, for the labels to keep clear of.
 func thrust_rect() -> Rect2:
 	var c: Vector2 = thrust_centre()
-	return Rect2(
-		c - Vector2(CROSS_ARM + 14.0, CROSS_ARM + 14.0), Vector2(250.0, 2.0 * CROSS_ARM + 28.0)
-	)
+	return Rect2(c - Vector2(CROSS_ARM + 14.0, CROSS_ARM + 14.0), _cross_size(not cross_tight()))
+
+
+## The thrust cross's box size: with the Fwd / Side / Up speeds beside it, or bare.
+func _cross_size(speeds: bool) -> Vector2:
+	var w: float = 250.0 if speeds else 2.0 * CROSS_ARM + 14.0 + 2.6 * CROSS_ARM + CROSS_ARROW
+	return Vector2(w, 2.0 * CROSS_ARM + 28.0)
+
+
+## True on a phone whose view is too short for the cross (with its speeds) at the top left
+## above the flight read-out: the cross goes bare to the top right instead (#28).
+func cross_tight() -> bool:
+	return touch_layout() and area().size.y < 52.0 + CROSS_ARM + 14.0 + READOUT_H
+
+
+## `p` moved just outside the flight read-out when it falls on it (a phone: a marker there
+## would hide the bars); elsewhere unchanged.
+func clear_of_readout(p: Vector2) -> Vector2:
+	if not (touch_layout() or size.x < PHONE_W):
+		return p
+	var r: Rect2 = readout_rect().grow(ARROW_CLEAR)
+	if not r.has_point(p):
+		return p
+	var spots: Array[Vector2] = [
+		Vector2(r.end.x, p.y),
+		Vector2(p.x, r.position.y),
+		Vector2(p.x, r.end.y),
+		Vector2(r.position.x, p.y)
+	]
+	var inside: Rect2 = area()
+	var best: Vector2 = p
+	var best_d: float = INF
+	for q: Vector2 in spots:
+		if inside.has_point(q) and q.distance_to(p) < best_d:
+			best_d = q.distance_to(p)
+			best = q
+	return best
 
 
 ## A triangle of CROSS_ARROW at `base` pointing along `dir`.

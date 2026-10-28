@@ -204,6 +204,18 @@ func test_joint_view_on_a_phone_switches_instead_of_docking() -> void:
 	for r: Rect2 in [hud.readout_rect()] + hud.compass_boxes():
 		var g: Rect2 = hud.get_global_transform() * r
 		assert_bool(g.intersects(sw)).override_failure_message("%s over %s" % [g, sw]).is_false()
+	# The short view: the read-out, the thrust cross, the compass and the reticle never meet.
+	assert_bool(hud.cross_tight()).is_true()
+	var boxes: Array[Rect2] = [hud.readout_rect(), hud.thrust_rect(), hud.reticle_rect()]
+	boxes.append_array(hud.compass_boxes())
+	for i: int in boxes.size():
+		assert_bool(hud.area().encloses(boxes[i]) or i == 2).is_true()
+		for j: int in range(i + 1, boxes.size()):
+			(
+				assert_bool(boxes[i].intersects(boxes[j]))
+				. override_failure_message("%s over %s" % [boxes[i], boxes[j]])
+				. is_false()
+			)
 	s.joint_switch.pressed.emit()
 	await _frames(2)
 	assert_int(s.focus_index).is_equal(1)
