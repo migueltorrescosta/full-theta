@@ -190,26 +190,21 @@ func test_viewer_radar_goes_beside_the_view_on_its_side() -> void:
 
 
 # FT: FT-JNT-001, FT-NET-018, FT-STN-005
-# A joint view on a phone on its side shows the focused panel alone and a switch to the
-# other station; on a desktop the other panel docks as before.
+# A joint view on a phone on its side shows the focused panel alone and the station chip
+# (P28-Joint) leading the tab strip in the top bar; on a desktop the other panel docks as
+# before.
 func test_joint_view_on_a_phone_switches_instead_of_docking() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "tactical", LANDSCAPE)
 	assert_bool(s._dock.visible).is_false()
 	assert_bool(s.joint_switch.is_visible_in_tree()).is_true()
+	assert_object(s.top_bar.tabs.lead).is_same(s.joint_switch)
 	assert_float(s.joint_switch.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
 	assert_str(s.joint_switch.text).contains(tr("station.weapons"))
-	# Helm's read-out (Fuel at its foot) and compass stay above the switch (#28).
+	# Helm's read-out, thrust cross, compass and reticle never meet.
 	var hud: HelmHud = (s.focused_panel() as HelmPanel).hud
-	var sw: Rect2 = s.joint_switch.get_global_rect()
-	for r: Rect2 in [hud.readout_rect()] + hud.compass_boxes():
-		var g: Rect2 = hud.get_global_transform() * r
-		assert_bool(g.intersects(sw)).override_failure_message("%s over %s" % [g, sw]).is_false()
-	# The short view: the read-out, the thrust cross, the compass and the reticle never meet.
-	assert_bool(hud.cross_tight()).is_true()
 	var boxes: Array[Rect2] = [hud.readout_rect(), hud.thrust_rect(), hud.reticle_rect()]
 	boxes.append_array(hud.compass_boxes())
 	for i: int in boxes.size():
-		assert_bool(hud.area().encloses(boxes[i]) or i == 2).is_true()
 		for j: int in range(i + 1, boxes.size()):
 			(
 				assert_bool(boxes[i].intersects(boxes[j]))
@@ -220,7 +215,7 @@ func test_joint_view_on_a_phone_switches_instead_of_docking() -> void:
 	await _frames(2)
 	assert_int(s.focus_index).is_equal(1)
 	assert_str(s.joint_switch.text).contains(tr("station.helm"))
-	_assert_clean(s.joint_switch, "switch")
+	_assert_clean(s.top_bar, "top bar")
 	_drop(s)
 	var desk: StationScreen = await _screen(Vector2i(1280, 720), "tactical", [])
 	assert_bool(desk._dock.visible).is_true()

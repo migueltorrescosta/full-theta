@@ -151,11 +151,15 @@ func test_help_key_opens_the_controls_tab() -> void:
 
 
 # FT: FT-STN-012
-# The first visit opens the menu on Controls by itself, headed by the seat's role, and
-# the screen takes no game input meanwhile.
-func test_first_visit_opens_controls_with_the_role_heading() -> void:
+# The first visit shows the Controls chip, not the menu; tapping it opens Controls headed
+# by the seat's role.
+func test_first_visit_shows_the_controls_chip() -> void:
 	var s: ClientShell = await _on_station(true)
 	var menu: SettingsScreen = s.settings_screen
+	assert_bool(menu.visible).is_false()
+	var chip: ControlsChip = s.screen.find_child("ControlsChip", true, false)
+	assert_object(chip).is_not_null()
+	chip.pressed.emit()
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
 	assert_array(_labels(menu)).contains([tr("role.systems")])
