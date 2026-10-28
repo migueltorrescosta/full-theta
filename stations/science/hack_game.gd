@@ -114,9 +114,10 @@ func _gui_input(event: InputEvent) -> void:
 
 func _grid_rect() -> Rect2:
 	if not footer:
-		# Room for the title above, and below for the goal's name and the trace bar.
+		# Room for the title above, and below for the goal's name and the trace bar (a
+		# phone, under the view-top row: 3 rows keep TOUCH_PRIMARY + TOUCH_GAP apart).
 		return Rect2(
-			Vector2(40.0, 64.0), Vector2(maxf(size.x - 80.0, 1.0), maxf(size.y - 140.0, 1.0))
+			Vector2(40.0, 52.0), Vector2(maxf(size.x - 80.0, 1.0), maxf(size.y - 116.0, 1.0))
 		)
 	return Rect2(Vector2(60.0, 80.0), Vector2(maxf(size.x - 120.0, 1.0), maxf(size.y - 200.0, 1.0)))
 

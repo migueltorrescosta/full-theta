@@ -12,6 +12,7 @@ extends Control
 ## the ship's axes (no world-fixed up, D124). Drawn in 2D with a fixed or orbitable
 ## camera angle (FT-SPA-011). Mouse: wheel zooms, a click on the range label steps the
 ## range, right-drag orbits when orbitable; other clicks pass to the screen (item_at).
+## Touch: a two-finger drag orbits when orbitable (spec §5.4 touch, #28).
 ##
 ## Projection: ship frame (-Z bow, +X starboard, +Y up) relative to the centre item,
 ## from the minimum image of the world-axes difference (D124, ContactPicture.rel); the
@@ -73,6 +74,8 @@ var touch_min: float = 0.0:
 		queue_redraw()
 
 var _orbiting: bool = false
+## Fingers down on the radar: index -> position (two orbit).
+var _fingers: Dictionary = {}
 var _taps: Array[Control] = []
 
 
@@ -165,6 +168,8 @@ func _get_tooltip(at_position: Vector2) -> String:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if _touch(event):
+		return
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	if mb != null:
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -190,6 +195,31 @@ func _gui_input(event: InputEvent) -> void:
 		tilt_deg = clampf(tilt_deg - mm.relative.y * ORBIT_DEG_PER_PX, TILT_MIN, TILT_MAX)
 		queue_redraw()
 		accept_event()
+
+
+## Two fingers orbit an orbitable radar: the yaw follows their mean sideways move, the tilt
+## their mean up-down move. One finger passes on (its emulated mouse taps and selects).
+## True when the event was used.
+func _touch(event: InputEvent) -> bool:
+	var st: InputEventScreenTouch = event as InputEventScreenTouch
+	if st != null:
+		if st.pressed:
+			_fingers[st.index] = st.position
+		else:
+			_fingers.erase(st.index)
+		return false
+	var sd: InputEventScreenDrag = event as InputEventScreenDrag
+	if sd == null:
+		return false
+	_fingers[sd.index] = sd.position
+	if not orbitable or _fingers.size() < 2:
+		return false
+	var step: Vector2 = sd.relative / float(_fingers.size())
+	yaw_deg = fposmod(yaw_deg + step.x * ORBIT_DEG_PER_PX, 360.0)
+	tilt_deg = clampf(tilt_deg - step.y * ORBIT_DEG_PER_PX, TILT_MIN, TILT_MAX)
+	queue_redraw()
+	accept_event()
+	return true
 
 
 func _draw() -> void:
