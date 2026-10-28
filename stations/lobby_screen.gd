@@ -4,11 +4,11 @@ extends Control
 ## FT-JNT-006): the six crew stations as cells, 3 columns by 2 rows in landscape and 2 by
 ## 3 in portrait on every device, each with its name, its role description, the names of
 ## the crewmates who picked it and a border in its load colour; a one-line legend under
-## the grid (compact, D257: about half the old height, a one-line role summary, no Take
-## button, the cell takes or leaves the seat). Tapping cells multi-selects up to two
-## stations (two make the joint view of that pair) and the pick goes to the server on
-## each tap; with two picked the other cells grey out; tapping a picked cell deselects
-## it. Under the grid the selection's
+## the grid (compact, D257: about half the old height, no Take button, the cell takes or
+## leaves the seat; the role summary wraps to ROLE_LINES lines, P28-Lobby). Tapping cells
+## multi-selects up to two stations (two make the joint view of that pair) and the pick
+## goes to the server on each tap; with two picked the other cells grey out; tapping a
+## picked cell deselects it. Under the grid the selection's
 ## name and summary show. Captain and Viewer are two buttons below (choosing one clears
 ## the station picks and vice versa). The host's difficulty is one line with Customise,
 ## which opens a dialog of the data-shortcut toggles (FT-PAIR-017, FT-STN-016; read-only
@@ -24,8 +24,11 @@ extends Control
 ## names the ships still to press it, since the universe starts all together.
 ##
 ## Phones (#28): in landscape (a short window) the ship row stays its own row and Start,
-## Mode and the difficulty join the seat row; every tap target is at least TOUCH_PRIMARY
-## px tall with TOUCH_GAP px between them.
+## Mode and the difficulty join the seat row; the legend and the selection (its name and
+## role on one line) sit together between the grid and the seat row. Upright, Start joins
+## the difficulty row and the selection's text is smaller. On a phone the wide buttons of
+## the seat and bottom rows trim their text rather than overflow. Every tap target is at least
+## TOUCH_PRIMARY px tall with TOUCH_GAP px between them.
 
 ## The player wants out of the session (Main menu): the shell leaves, and the host's
 ## menu also stops its server.
@@ -44,9 +47,19 @@ const SHORT_HEIGHT: float = 500.0
 ## A window narrower than this (a phone upright) shortens the mode button to the mode's name.
 const NARROW_WIDTH: float = 700.0
 ## Cell padding and the grid gap, in px at 100 % UI scale (a cell stays >= TOUCH_MIN tall).
-const CELL_INSET: int = 5
+const CELL_INSET: int = 4
 const GRID_GAP: int = 4
 const PORTRAIT_COLUMNS: int = 2
+## The lines a cell's role summary wraps to (P28-Lobby), in both orientations; the texts
+## are written to fit a phone's portrait cell.
+const ROLE_LINES: int = 2
+## Font sizes of the selection line on a short screen (its name, then its role).
+const SHORT_NAME_SIZE: int = 15
+const SHORT_ROLE_SIZE: int = 13
+## The top margin of a short screen, in px.
+const SHORT_TOP: int = 0
+## Added to each wide button's natural width when sharing a phone row (short names first).
+const WEIGH_SLACK: float = 12.0
 const CAPTAIN: String = "captain"
 const VIEWER: String = "viewer"
 ## The dev entry holding every station, offered by --dev-all-stations only.
@@ -89,6 +102,7 @@ var _phone: bool = false
 var _grid: GridContainer
 var _coverage: Label
 var _legend: HBoxContainer
+var _summary: BoxContainer
 var _summary_name: Label
 var _summary_role: Label
 var _start: Button
@@ -458,9 +472,10 @@ func _refresh_grid() -> void:
 	_apply_columns()
 
 
-## A station cell (D257): a toggle button, about half the old height: the name left and the
-## seat holders' names right on the first line, the role's first sentence on the second.
-## Tapping it takes the seat or leaves it. Its height follows the text, at least TOUCH_MIN.
+## A station cell (D257, P28-Lobby): a toggle button: the name left and the seat holders'
+## names right on the first line, the role summary wrapped under it (ROLE_LINES lines; the
+## texts are written to fit). Tapping it takes the seat or leaves it. Its height follows
+## the text, at least TOUCH_MIN.
 func _cell(id: String, tag: String) -> Button:
 	var b: Button = Button.new()
 	b.name = "Entry_" + id
@@ -489,22 +504,15 @@ func _cell(id: String, tag: String) -> Button:
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(name_label)
-	var role: Label = _cell_label("Role", _first_sentence(tr("role." + id)), "CaptionLabel")
+	var role: Label = _cell_label("Role", tr("role." + id), "CaptionLabel")
 	role.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	role.autowrap_mode = TextServer.AUTOWRAP_OFF
 	role.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	role.clip_text = true
+	role.max_lines_visible = ROLE_LINES
 	role.custom_minimum_size = Vector2(10, 0)
 	box.add_child(role)
 	box.minimum_size_changed.connect(_fit_cell.bind(b, box))
 	_fit_cell.call_deferred(b, box)
 	return b
-
-
-## The first sentence of a role text: the one line a cell shows.
-static func _first_sentence(text: String) -> String:
-	var i: int = text.find(". ")
-	return text.left(i + 1) if i > 0 else text
 
 
 ## Shows the seat holders' names on a cell, right of its name; empty while nobody sits there.
@@ -546,7 +554,6 @@ func _apply_columns() -> void:
 		if size.y > 0.0:
 			_arrange(size.y < SHORT_HEIGHT)
 			_mode_button.text = mode_text()
-			_customise.text = (preset_label(ctx.crew.toggles) if _short else tr("lobby.customise"))
 		if is_inside_tree():
 			_apply_targets(LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE)
 			_apply_safe_area()
@@ -581,12 +588,22 @@ func _apply_targets(phone: bool) -> void:
 		for cell: Node in _grid.get_children():
 			_fit_cell(cell, cell.get_child(0))
 	_phone = phone
+	_style_summary(_short, phone)
+	# A phone upright puts Start on the difficulty row, the preset's name on Customise.
+	if not _short:
+		_difficulty.visible = not phone
+		if phone:
+			_reparent(_start, _diff_row, -1)
+		else:
+			_reparent(_start, _outer, -1)
+	_customise.text = preset_label(ctx.crew.toggles) if _short or phone else tr("lobby.customise")
 
 
 ## Lays the rows out for the window: normal, or short (a phone in landscape, #28), where
 ## the title row goes: the coverage joins the legend line, the team buttons and Back to
 ## ships the seat row, and the mode, difficulty, How to join, Main menu and Start one
-## bottom row; the role summary hides (each cell shows its first sentence).
+## bottom row; the legend and the selection share one block, the selection's name and
+## role on one line (the role trimmed to fit).
 func _arrange(short: bool) -> void:
 	if short == _short:
 		return
@@ -594,17 +611,74 @@ func _arrange(short: bool) -> void:
 	var pad: int = 6 if short else 12
 	for side: String in ["left", "right", "top", "bottom"]:
 		_margin.add_theme_constant_override("margin_" + side, pad)
+	# A phone keeps a floor of safe margin on top already (SafeArea.FLOOR).
+	_margin.add_theme_constant_override("margin_top", SHORT_TOP if short else pad)
 	_head.visible = not short
-	_summary_role.visible = not short
 	_difficulty.visible = not short
+	_summary.vertical = not short
+	_coverage.theme_type_variation = "CaptionLabel" if short else "DimLabel"
+	_summary.add_theme_constant_override("separation", 6 if short else 0)
+	_summary_role.clip_text = short
+	_summary_role.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL)
+	_style_summary(short, _phone)
+
+
+## On a phone or a short screen, shares a row's room among its wide buttons by their
+## natural width (text and padding), so each shows whole while the row fits; elsewhere
+## they share it evenly.
+func _weigh_buttons() -> void:
+	for row: Control in [_seat_row, _diff_row]:
+		for c: Node in row.get_children():
+			var b: Button = c as Button
+			if b == null or not b.size_flags_horizontal & Control.SIZE_EXPAND:
+				continue
+			var w: float = 1.0
+			if _short or _phone:
+				var font_size: int = b.get_theme_font_size("font_size")
+				var text: Vector2 = b.get_theme_font("font").get_string_size(
+					b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size
+				)
+				w = text.x + b.get_theme_stylebox("normal").get_minimum_size().x + WEIGH_SLACK
+			b.size_flags_stretch_ratio = maxf(1.0, w)
+
+
+## The selection's name and role: on a short screen one line, the role trimmed; on a phone
+## upright smaller, the role at most ROLE_LINES lines; elsewhere the heading and the whole
+## role, centred. On a phone or a short screen the seat and bottom rows' wide buttons
+## (Captain, Viewer, the dev seat, Start) trim their text rather than push the row off
+## the screen (longer languages).
+func _style_summary(short: bool, phone: bool) -> void:
+	var small: bool = short or phone
+	for row: Control in [_seat_row, _diff_row]:
+		for c: Node in row.get_children():
+			if c is Button and (c as Button).size_flags_horizontal & Control.SIZE_EXPAND:
+				(c as Button).clip_text = small
+				(c as Button).text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_weigh_buttons()
+	for pair: Array in [[_summary_name, SHORT_NAME_SIZE], [_summary_role, SHORT_ROLE_SIZE]]:
+		var label: Label = pair[0]
+		if small:
+			label.add_theme_font_size_override("font_size", pair[1])
+		else:
+			label.remove_theme_font_size_override("font_size")
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF if short else TextServer.AUTOWRAP_WORD_SMART
+		label.horizontal_alignment = (
+			HORIZONTAL_ALIGNMENT_LEFT if short else HORIZONTAL_ALIGNMENT_CENTER
+		)
+	_summary_role.max_lines_visible = ROLE_LINES if phone and not short else -1
+	_summary_role.text_overrun_behavior = (
+		TextServer.OVERRUN_TRIM_ELLIPSIS if small else TextServer.OVERRUN_NO_TRIMMING
+	)
 	_coverage.size_flags_horizontal = Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL
 	if short:
+		_reparent(_legend, _body.get_node("Info"), 0)
 		_reparent(_coverage, _legend, 0)
 		_reparent(_teams, _seat_row, -1)
 		_reparent(_leave, _seat_row, -1)
 		for c: Control in [_join_button, _menu, _start]:
 			_reparent(c, _diff_row, -1)
 	else:
+		_reparent(_legend, _body, _grid.get_index() + 1)
 		_reparent(_coverage, _outer, _ships.get_index() + 1)
 		_reparent(_teams, _ships, -1)
 		_reparent(_leave, _ships, -1)
@@ -631,6 +705,7 @@ func _refresh_seats() -> void:
 		b.text = tr("station." + pair[1])
 	_captain.disabled = ctx.crew.captain_seated(ship) and mine != CAPTAIN
 	_dev_all.visible = not ctx.crew.def_of(DEV_ALL).is_empty()
+	_weigh_buttons()
 
 
 func _refresh_summary() -> void:
@@ -763,10 +838,18 @@ func _build() -> void:
 	_build_dialogs()
 
 
+## The selection's name and role, in the Info block (the legend joins it on a short
+## screen, with no gap between them).
 func _build_summary(parent: Container) -> void:
-	var box: VBoxContainer = VBoxContainer.new()
+	var info: VBoxContainer = VBoxContainer.new()
+	info.name = "Info"
+	info.add_theme_constant_override("separation", 0)
+	parent.add_child(info)
+	var box: BoxContainer = BoxContainer.new()
+	box.vertical = true
 	box.name = "Summary"
-	parent.add_child(box)
+	info.add_child(box)
+	_summary = box
 	_summary_name = _label("", "HeadingLabel")
 	_summary_name.name = "SummaryName"
 	_summary_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -908,7 +991,7 @@ func _refresh_data() -> void:
 	var toggles: DataToggles = ctx.crew.toggles
 	var editable: bool = can_edit_toggles()
 	_difficulty.text = tr("lobby.difficulty") % preset_label(toggles)
-	_customise.text = preset_label(toggles) if _short else tr("lobby.customise")
+	_customise.text = preset_label(toggles) if _short or _phone else tr("lobby.customise")
 	_dialog.title = tr("lobby.data")
 	_preset_name.text = preset_label(toggles)
 	for preset: String in _preset_buttons:
