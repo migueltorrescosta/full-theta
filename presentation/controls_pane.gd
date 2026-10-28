@@ -4,7 +4,8 @@ extends VBoxContainer
 ## summary over a filter (my stations, the default, or all stations) and three views of
 ## the same live bindings, picked with buttons: the keyboard-and-mouse diagram, the
 ## controller diagram and the text list (ControlsList), which stays the way in for a
-## screen reader. A phone shows only the list and never builds a diagram; others open on
+## screen reader. A phone shows the touch pictures of the shown stations' pages
+## (TouchHelpPicture, P28-Help) over the list and never builds a diagram; others open on
 ## the diagram of the device in use. A diagram is built the first time it shows, and
 ## ControlsDiagram keeps finished layouts, so the menu opens fast (load fix 1). Under a
 ## diagram, the screen's intents that are not bound on that device and the bindings it
@@ -21,6 +22,8 @@ var list: ControlsList = ControlsList.new()
 var kbm: ControlsDiagram = ControlsDiagram.new()
 var pad: ControlsDiagram = ControlsDiagram.new()
 var view: String = VIEW_LIST
+## A phone's touch pictures, one per shown station that has one, over the list.
+var touch: VBoxContainer = VBoxContainer.new()
 ## Every station shown, not only the screen's (the filter).
 var all_stations: bool = false
 
@@ -34,6 +37,8 @@ var _summary: Label = Label.new()
 var _buttons: HFlowContainer = HFlowContainer.new()
 var _filter: Button = Button.new()
 var _notes: Dictionary = {}
+## The stations the touch pictures show.
+var _touch_shown: Array = []
 
 
 func _init() -> void:
@@ -64,6 +69,10 @@ func _init() -> void:
 		note.add_theme_color_override("font_color", Palette.color("text_dim"))
 		box.add_child(note)
 		_notes[v] = note
+	touch.name = "TouchView"
+	touch.add_theme_constant_override("separation", 16)
+	touch.visible = false
+	add_child(touch)
 	list.name = VIEW_LIST + "View"
 	add_child(list)
 
@@ -119,9 +128,12 @@ func show_view(v: String) -> void:
 	get_node(VIEW_KBM + "View").visible = v == VIEW_KBM
 	get_node(VIEW_PAD + "View").visible = v == VIEW_PAD
 	list.visible = v == VIEW_LIST
+	touch.visible = _phone
 	if _bindings == null:
 		return
 	var stations: Array = shown_stations()
+	if _phone and _touch_shown != stations:
+		_build_touch(stations)
 	if list.shown_args() != [_bindings, stations, _device]:
 		list.build(_bindings, stations, _device, "")
 	if v == VIEW_LIST:
@@ -131,6 +143,23 @@ func show_view(v: String) -> void:
 	if d.shown_args() != [_bindings, stations, device]:
 		d.build(_bindings, stations, device)
 	_refresh_notes()
+
+
+## The touch pictures of `stations`, each under the station's name.
+func _build_touch(stations: Array) -> void:
+	_touch_shown = stations.duplicate()
+	for c: Node in touch.get_children():
+		touch.remove_child(c)
+		c.queue_free()
+	for st: String in stations:
+		var pic: TouchHelpPicture = TouchHelpPicture.make(st)
+		if pic == null:
+			continue
+		var head: Label = Label.new()
+		head.theme_type_variation = "HeadingLabel"
+		head.text = tr("station." + st)
+		touch.add_child(head)
+		touch.add_child(pic)
 
 
 ## The filter: every station's controls, or only the screen's.

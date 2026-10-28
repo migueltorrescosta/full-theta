@@ -13,6 +13,8 @@ extends VBoxContainer
 ##
 ##     var pic := TouchHelpPicture.make("engineering")
 ##     controls_tab.add_child(pic)
+##
+## PANELS names each station's panel script; `register` adds or replaces one at run time.
 
 ## The frame the boxes are drawn in.
 const FRAME: Vector2 = Vector2(844.0, 390.0)
@@ -21,6 +23,21 @@ const DRAW_W: float = 422.0
 const NUMBER_R: float = 9.0
 ## Text in the drawing: never under 12 px.
 const FONT: int = 12
+
+## Where each station's `touch_help()` lives: its panel script, loaded on first use. A
+## station without an entry, or whose script has no `touch_help()` yet, shows no picture.
+const PANELS: Dictionary = {
+	"helm": "res://stations/helm/helm_panel.gd",
+	"weapons": "res://stations/weapons/weapons_panel.gd",
+	"engineering": "res://stations/engineering/engineering_panel.gd",
+	"science": "res://stations/science/science_panel.gd",
+	"relay": "res://stations/relay/relay_panel.gd",
+	"comms": "res://stations/comms/comms_panel.gd",
+	"captain": "res://stations/captain/captain_panel.gd",
+}
+
+## Help data registered at run time (`register`), over PANELS.
+static var _registered: Dictionary = {}
 
 ## The pages as the station gave them.
 var pages: Array = []
@@ -37,19 +54,24 @@ static func make(station: String) -> TouchHelpPicture:
 	return pic
 
 
+## Registers `provider` (returns the help data) for `station`, over its PANELS entry.
+static func register(station: String, provider: Callable) -> void:
+	_registered[station] = provider
+
+
+## Drops a run-time registration: the station's PANELS entry shows again.
+static func unregister(station: String) -> void:
+	_registered.erase(station)
+
+
 ## A station's touch help data, [] when it has none.
 static func help_of(station: String) -> Array:
-	match station:
-		"engineering":
-			return EngineeringPanel.touch_help()
-		"comms":
-			return _of(load("res://stations/comms/comms_panel.gd"))
-		"captain":
-			return _of(load("res://stations/captain/captain_panel.gd"))
-	return []
-
-
-static func _of(script: Script) -> Array:
+	if _registered.has(station):
+		return (_registered[station] as Callable).call()
+	var path: String = PANELS.get(station, "")
+	if path == "" or not ResourceLoader.exists(path):
+		return []
+	var script: Script = load(path)
 	if script == null or not script.has_method("touch_help"):
 		return []
 	return script.call("touch_help")
@@ -137,18 +159,24 @@ class PageDrawing:
 		var font: Font = get_theme_default_font()
 		draw_rect(Rect2(Vector2.ZERO, FRAME * k), Palette.color("background"))
 		draw_rect(Rect2(Vector2.ZERO, FRAME * k), Palette.color("line"), false, 2.0)
-		# The top bar: the page tabs from x 251, 64 px each with 8 px gaps (design 1.2).
+		# The top bar: the page tabs from x 251, 8 px apart, each at least 64 px and, in the
+		# drawing, as wide as its 12 px label (PageTabs, design 1.2).
+		var x: float = 251.0 * k
 		for i: int in titles.size():
-			var r: Rect2 = Rect2(Vector2(251.0 + i * 72.0, 10.0), Vector2(64.0, 44.0))
+			var label_w: float = (
+				font.get_string_size(titles[i], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT).x
+			)
+			var r: Rect2 = Rect2(x, 10.0 * k, maxf(64.0 * k, label_w + 6.0), 44.0 * k)
+			x = r.end.x + 8.0 * k
 			var on: bool = i == current
 			var col: Color = Palette.color("accent" if on else "line")
-			draw_rect(_scaled(r, k), col, on, -1.0 if on else 1.0)
+			draw_rect(r, col, on, -1.0 if on else 1.0)
 			draw_string(
 				font,
-				_scaled(r, k).position + Vector2(3.0, r.size.y * k * 0.65),
+				r.position + Vector2(3.0, r.size.y * 0.5 + 4.5),
 				titles[i],
 				HORIZONTAL_ALIGNMENT_LEFT,
-				r.size.x * k - 6.0,
+				-1,
 				FONT,
 				Palette.color("background" if on else "text")
 			)
