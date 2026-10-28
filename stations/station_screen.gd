@@ -53,9 +53,8 @@ const SCROLL_BAR_W: float = 14.0
 ## (the bare digits and Alt + digit belong to the stations' own keys).
 const TABS_FROM: int = 3
 const TAB_HINT_KEY: String = "dev_tabs"
-## The joint-view switch on a phone on its side: width and arrow (#28).
-const JOINT_SWITCH_W: float = 160.0
-const JOINT_SWITCH_ARROW: String = "⇄"
+## The share opener at the bottom of the view on a phone on its side.
+const OPENER_W: float = 160.0
 
 var ctx: StationContext
 ## Station ids of the panels, in order (F1, F2, ...).
@@ -79,12 +78,21 @@ var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
 ## Show the "turn sideways" banner on a phone held upright (#28).
 var rotate_prompt: bool = true
 var rotate_banner: RotateBanner
-## A joint view's switch to its other station on a phone on its side (#28); null until then.
+## The station chip on a phone (#28 follow-up, P28-Joint, P28-Dev): a joint view's switch to
+## its other station ("⇄ Weapons"), the dev seat's station button ("Helm ▾") that opens the
+## six-station sheet. It leads the page tabs: in the top bar on its side, in the bottom tab
+## bar upright. Null until a phone shows one.
 var joint_switch: RailButton = null
 ## On a phone on its side the share buttons sit in this drawer over the main area, opened
 ## by `share_opener` (#28): the radar column has no room for 48 px buttons under the disc.
 var share_drawer: TouchDrawer
 var share_opener: RailButton
+## The phone frame (#28 follow-up, PhoneFrame): shown only on phones, so tablets and
+## desktops keep their layout. `phone` is set by _relayout.
+var phone: bool = false
+var frame: PhoneFrame = PhoneFrame.new()
+## One-level choices: the selection, alert and dev-station sheets, and the panels' (Hack).
+var sheet: ChoiceSheet
 
 var _rows: VBoxContainer
 var _main: Control
@@ -103,6 +111,10 @@ var _extras_pad: Control
 ## screen holds one or two panels.
 var _tabs: HFlowContainer
 var _hint: Label
+## The gesture band's height inside the main area on a phone on its side, where the view
+## draws into the band (0 elsewhere); the side column keeps its controls above it.
+var _band_h: float = 0.0
+var _side_band: Control
 
 
 ## Builds the screen for the current pick (ctx.crew.entry_def()). Entries without
@@ -121,11 +133,14 @@ func setup(context: StationContext) -> void:
 	_relayout()
 	for s: String in stations:
 		var p: StationPanel = panel_factory.call(s)
+		p.sheet = sheet
+		p.common_requested.connect(_on_panel_common)
 		p.setup(ctx, s)
 		p.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		p.gui_input.connect(_on_panel_input.bind(p))
 		panels.append(p)
 	ctx.crew.toast.connect(_on_toast)
+	ctx.crew.pinged.connect(frame.on_pinged)
 	alerts = StationAlerts.new()
 	add_child(alerts)
 	alerts.setup(ctx, stations, toasts, flash)
@@ -179,6 +194,8 @@ func focus(i: int) -> void:
 	if training != null:
 		training.station = focused_station()
 	radar.orbitable = focused_panel().radar_orbitable()
+	_raise_overlays()
+	_apply_band()
 	_show_side()
 	if _tabs != null:
 		_show_tabs()
@@ -186,35 +203,30 @@ func focus(i: int) -> void:
 
 
 ## The radar column hides for a lone full-screen panel (which may depend on the form). A
-## joint view on a phone on its side (#28) shows only the focused panel, which gets the
-## whole width when it draws its own rails and radar, and a switch to the other station
-## instead of the docked panel (FT-JNT-001: tap to focus). On a phone on its side the
-## share buttons move into a drawer (D274: 48 px with 8 px gaps don't fit under the disc).
-## The switch and the drawer's opener sit at the top of the radar column, or, with the
-## column hidden, at the bottom centre of the main area (clear of the rails); a panel may
-## take the opener into its rails (StationPanel.share_slot) or show the buttons itself.
+## joint view or the dev seat on a phone (#28) shows only the focused panel, which gets the
+## whole width when it draws its own rails and radar, and the station chip instead of the
+## docked panels (FT-JNT-001: tap to focus): in the top bar's tab strip on its side, in
+## the bottom tab bar upright. On a phone on its side the share buttons move into a drawer
+## (D274: 48 px with 8 px gaps don't fit under the disc); its opener sits at the top of the
+## radar column or, with the column hidden, at the bottom centre of the main area (clear of
+## the rails); a panel may take the opener into its rails (StationPanel.share_slot) or show
+## the buttons itself.
 func _show_side() -> void:
 	if panels.is_empty():
 		return
-	var sideways: bool = (
-		is_inside_tree() and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
+	var form_now: LayoutMode.Form = (
+		LayoutMode.form_of(self) if is_inside_tree() else LayoutMode.Form.DESKTOP
 	)
-	var joint_phone: bool = panels.size() == 2 and sideways
-	var alone: bool = panels.size() == 1 or joint_phone
+	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
+	var phone_form: bool = LayoutMode.is_phone(form_now)
+	var phone_alone: bool = panels.size() >= 2 and phone_form
+	var alone: bool = panels.size() == 1 or phone_alone
 	_side.visible = not (alone and focused_panel().full_screen())
-	_dock.visible = not joint_phone
-	if joint_phone and joint_switch == null:
-		joint_switch = RailButton.make("")
-		joint_switch.name = "JointSwitch"
-		joint_switch.pressed.connect(func() -> void: focus(1 - focus_index))
-		_phone_bar.add_child(joint_switch)
-		_phone_bar.move_child(joint_switch, 0)
-	if joint_switch != null:
-		joint_switch.visible = joint_phone
-		var other: String = stations[1 - focus_index] if panels.size() == 2 else ""
-		joint_switch.text = "%s %s" % [JOINT_SWITCH_ARROW, tr("station." + other)]
+	_dock.visible = not phone_alone
+	if _tabs != null:
+		_tabs.visible = not phone_form
+	frame.show_tabs(form_now, phone_alone)
 	# Also in the drawer whenever a phone's radar column is hidden (Science alone upright).
-	var phone_form: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 	var in_drawer: bool = sideways or (phone_form and not _side.visible)
 	var parent: Control = share_drawer.body if in_drawer else _extras
 	if share_bar.get_parent() != parent:
@@ -256,16 +268,13 @@ func _place_phone_bar() -> void:
 			share_opener.get_parent().remove_child(share_opener)
 		home.add_child(share_opener)
 	share_opener.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var shown: bool = (
-		(share_opener.visible and home == _phone_bar)
-		or (joint_switch != null and joint_switch.visible)
-	)
+	var shown: bool = share_opener.visible and home == _phone_bar
 	_phone_bar.visible = shown
 	var in_side: bool = _side.visible
 	for p: StationPanel in panels:
 		var reserve: float = 0.0
 		if shown and not in_side and p == focused_panel():
-			reserve = UiTheme.TOUCH_PRIMARY + 2.0 * UiTheme.TOUCH_GAP
+			reserve = UiTheme.TOUCH_PRIMARY + 2.0 * UiTheme.TOUCH_GAP + _band_h
 		if p.bottom_reserve != reserve:
 			p.bottom_reserve = reserve
 			p.queue_redraw()
@@ -273,19 +282,16 @@ func _place_phone_bar() -> void:
 	if _phone_bar.get_parent() != parent:
 		_phone_bar.reparent(parent, false)
 	_phone_bar.vertical = in_side
-	for b: Control in [joint_switch, share_opener]:
-		if b != null:
-			var w: float = JOINT_SWITCH_W if b.get_parent() == _phone_bar and not in_side else 0.0
-			b.custom_minimum_size = Vector2(w, UiTheme.TOUCH_PRIMARY)
+	var w: float = OPENER_W if share_opener.get_parent() == _phone_bar and not in_side else 0.0
+	share_opener.custom_minimum_size = Vector2(w, UiTheme.TOUCH_PRIMARY)
 	if in_side:
 		_extras.move_child(_phone_bar, 0)
 	else:
 		_phone_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 		_phone_bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
 		_phone_bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-		_phone_bar.offset_bottom = -UiTheme.TOUCH_GAP
-		_main.move_child(_phone_bar, -1)
-	# The drawer: beside the radar column, or centred above the bar.
+		_phone_bar.offset_bottom = -UiTheme.TOUCH_GAP - _band_h
+	# The drawer: beside the radar column, or centred above the bar; never in the band.
 	var half: float = TouchDrawer.WIDTH / 2.0
 	share_drawer.anchor_top = 0.0
 	share_drawer.anchor_bottom = 1.0
@@ -295,14 +301,22 @@ func _place_phone_bar() -> void:
 		share_drawer.anchor_right = 1.0
 		share_drawer.offset_right = -UiTheme.TOUCH_GAP
 		share_drawer.offset_left = -UiTheme.TOUCH_GAP - TouchDrawer.WIDTH
-		share_drawer.offset_bottom = 0.0
+		share_drawer.offset_bottom = -_band_h
 	else:
 		share_drawer.anchor_left = 0.5
 		share_drawer.anchor_right = 0.5
 		share_drawer.offset_left = -half
 		share_drawer.offset_right = half
-		share_drawer.offset_bottom = -UiTheme.TOUCH_PRIMARY - 2.0 * UiTheme.TOUCH_GAP
-	_main.move_child(share_drawer, -1)
+		share_drawer.offset_bottom = -UiTheme.TOUCH_PRIMARY - 2.0 * UiTheme.TOUCH_GAP - _band_h
+	_raise_overlays()
+
+
+## Keeps the main area's overlays over the focused panel, in order: the bottom bar, the
+## share drawer, the view-top row, the choice sheet on top.
+func _raise_overlays() -> void:
+	for c: Control in [_phone_bar, share_drawer, frame.view_top, sheet]:
+		if c != null and c.get_parent() == _main:
+			_main.move_child(c, -1)
 
 
 ## The dev seat's station switcher: a tab per panel, numbered for Shift + digit, and until the
@@ -385,6 +399,9 @@ func feed(event: InputEvent) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if phone and frame.input(event):
+		get_viewport().set_input_as_handled()
+		return
 	if _gui_owns(event):
 		return
 	feed(event)
@@ -410,9 +427,14 @@ func _process(delta: float) -> void:
 	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
 	flash.update(now)
-	chip_strip.show_chips(
-		ChipView.incoming(ctx.view, stations), ChipView.outgoing(ctx.view, stations), ctx.view
-	)
+	if phone:
+		frame.process(now)
+	if frame.framed():
+		chip_strip.visible = false
+	else:
+		chip_strip.show_chips(
+			ChipView.incoming(ctx.view, stations), ChipView.outgoing(ctx.view, stations), ctx.view
+		)
 	var left: Dictionary = {}
 	for id: StringName in ctx.crew.shares:
 		left[id] = ctx.crew.share_left(id, now)
@@ -512,8 +534,11 @@ func _common(ev: Dictionary) -> bool:
 			help_requested.emit()
 			_update_block()
 		"menu":
-			# Esc first closes what the focused panel has open on top (Comms' overlay).
-			if not focused_panel().close_overlay():
+			# Esc first closes an open choice sheet, then what the focused panel has open on
+			# top (Comms' overlay).
+			if sheet.is_open():
+				sheet.cancel()
+			elif not focused_panel().close_overlay():
 				menu_requested.emit()
 				_update_block()
 		_:
@@ -557,13 +582,13 @@ func _select(device: String) -> bool:
 func _live(id: String) -> bool:
 	match id:
 		"alert_cycle":
-			_set_alert((ctx.crew.alert + 1) % CrewState.ALERT_LEVELS)
+			set_alert((ctx.crew.alert + 1) % CrewState.ALERT_LEVELS)
 		"alert_red":
-			_set_alert(CrewState.ALERT_RED)
+			set_alert(CrewState.ALERT_RED)
 		"alert_yellow":
-			_set_alert(CrewState.ALERT_YELLOW)
+			set_alert(CrewState.ALERT_YELLOW)
 		"alert_normal":
-			_set_alert(CrewState.ALERT_NORMAL)
+			set_alert(CrewState.ALERT_NORMAL)
 		"training_next":
 			return training.press()
 		"focus_1", "focus_2":
@@ -584,12 +609,16 @@ func item_under_cursor(device: String) -> Dictionary:
 	var p: StationPanel = focused_panel()
 	if device == IntentTable.PAD:
 		return p.item_at(p.cursor_pos())
-	var mouse: Vector2 = get_global_mouse_position()
-	if radar.is_visible_in_tree() and radar.get_global_rect().has_point(mouse):
-		return radar.item_at(mouse - radar.global_position)
+	return item_at_point(get_global_mouse_position())
+
+
+## The item at a point of the viewport: the radar's if it is there, else a panel's.
+func item_at_point(at: Vector2) -> Dictionary:
+	if radar.is_visible_in_tree() and radar.get_global_rect().has_point(at):
+		return radar.item_at(at - radar.global_position)
 	for q: StationPanel in panels:
-		if q.is_visible_in_tree() and q.get_global_rect().has_point(mouse):
-			return q.item_at(mouse - q.global_position)
+		if q.is_visible_in_tree() and q.get_global_rect().has_point(at):
+			return q.item_at(at - q.global_position)
 	return {}
 
 
@@ -604,7 +633,7 @@ func contacts_by_range() -> Array:
 
 
 ## Crew only (FT-STN-008); the server refuses others too.
-func _set_alert(level: int) -> void:
+func set_alert(level: int) -> void:
 	if ctx.crew.is_crew():
 		ctx.intents.set_alert(level)
 
@@ -617,6 +646,15 @@ func _ping(device: String) -> void:
 	ctx.ping_item(item)
 
 
+## A long-press let go in place pings what is under the finger, else the selection.
+func ping_at(at: Vector2) -> void:
+	var item: Dictionary = item_at_point(at)
+	if item.is_empty():
+		item = ctx.crew.selection
+	if not item.is_empty():
+		ctx.ping_item(item)
+
+
 ## Mark at the cursor, or on the selection (FT-SPA-013, FT-SPA-022): refused with a
 ## toast when the ship has 8 marks, unless the focused panel replaces one (Relay). On a
 ## forward view only a contact takes a mark (FT-SPA-030).
@@ -626,7 +664,17 @@ func _mark(device: String) -> void:
 	var item: Dictionary = item_under_cursor(device)
 	if item.is_empty():
 		item = ctx.crew.selection
-	if item.is_empty():
+	mark_item(item)
+
+
+## A long-press dragged and let go marks where the finger ends (P28-Common).
+func mark_at(at: Vector2) -> void:
+	mark_item(item_at_point(at))
+
+
+## Marks `item` ({} does nothing): the rules of the common mark.
+func mark_item(item: Dictionary) -> void:
+	if ctx.crew.entry == StationViews.VIEWER or item.is_empty():
 		return
 	# A forward view marks only a contact (FT-SPA-030).
 	if focused_panel().marks_attach_only() and item.get("kind", "") != "contact":
@@ -650,6 +698,32 @@ func _claim() -> void:
 		ctx.intents.claim(item)
 
 
+# --- The phone frame (#28 follow-up, PhoneFrame). ---
+
+
+## True when the screen uses the phone frame: a phone-sized viewport (LayoutMode PHONE, as
+## the stations' phone layouts), either way up.
+func phone_frame() -> bool:
+	return is_inside_tree() and LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+
+
+## A panel's common action on the selection (its Crew page).
+func _on_panel_common(id: String) -> void:
+	match id:
+		"ping":
+			ping_at(Vector2(-1.0, -1.0))
+		"mark":
+			mark_item(ctx.crew.selection)
+
+
+## The menu button: the shell opens the menu, as Esc does.
+func _open_menu() -> void:
+	if sheet.is_open():
+		sheet.cancel()
+	menu_requested.emit()
+	_update_block()
+
+
 # --- Layout and widgets. ---
 
 
@@ -668,7 +742,7 @@ func _build() -> void:
 	_rows = rows
 	top_bar = TopBar.new()
 	top_bar.custom_minimum_size = Vector2(0, TOP_BAR_HEIGHT)
-	top_bar.alert_picked.connect(_set_alert)
+	top_bar.alert_picked.connect(set_alert)
 	rows.add_child(top_bar)
 	rotate_banner = RotateBanner.new()
 	rows.add_child(rotate_banner)
@@ -711,6 +785,10 @@ func _build() -> void:
 	_dock = VBoxContainer.new()
 	_dock.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_extras.add_child(_dock)
+	# On a phone on its side the column stops above the gesture band (P28-Band).
+	_side_band = Control.new()
+	_side_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_side.add_child(_side_band)
 	var share_text: String = TouchText.of("share.drawer", "Share")
 	share_drawer = TouchDrawer.new(share_text, SIDE_RIGHT)
 	share_drawer.name = "ShareDrawer"
@@ -741,6 +819,26 @@ func _build() -> void:
 	flash = AlertFlash.new()
 	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(flash)
+	sheet = ChoiceSheet.new()
+	sheet.name = "Sheet"
+	_main.add_child(sheet)
+	frame.build(self, _main, rows)
+	top_bar.menu_pressed.connect(_open_menu)
+
+
+## P28-Band: on a phone on its side a panel in the frame (StationPanel.in_frame) draws into
+## the bottom band; the band takes no taps (PhoneFrame.band_guard), and the side column,
+## the share opener and the sheet stay above it.
+func _apply_band() -> void:
+	if _body == null or not is_inside_tree() or panels.is_empty():
+		return
+	var bottom: float = maxf(SafeArea.margins(self).w, SafeArea.tap_band(self))
+	var sideways: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
+	var into: bool = phone and sideways and focused_panel().in_frame
+	_band_h = bottom if into else 0.0
+	_rows.offset_bottom = -bottom + _band_h
+	_side_band.custom_minimum_size.y = _band_h
+	sheet.offset_bottom = -_band_h
 
 
 ## Arranges the screen for the viewport (LayoutMode): the bar's height and rows, and the
@@ -751,7 +849,6 @@ func _relayout() -> void:
 		return
 	var size_now: Vector2 = get_viewport().get_visible_rect().size
 	var kind: LayoutMode.Kind = LayoutMode.kind_of(self)
-	var phone: bool = kind == LayoutMode.Kind.PHONE
 	# The safe area: on a phone also clear of the gesture band, so nothing on the screen
 	# can be tapped there (#28).
 	var m: Vector4 = SafeArea.margins(self)
@@ -763,6 +860,13 @@ func _relayout() -> void:
 	size_now -= Vector2(m.x + m.z, m.y + bottom)
 	var touch: bool = LayoutMode.is_touch(kind)
 	var portrait: bool = LayoutMode.portrait(size_now)
+	phone = phone_frame()
+	frame.band_guard.visible = phone
+	frame.band_guard.offset_top = -bottom
+	sheet.upright = portrait
+	if not phone:
+		sheet.cancel()
+	_apply_band()
 	_body.vertical = portrait
 	_side.vertical = not portrait
 	var bar: float = TOP_BAR_HEIGHT
@@ -771,7 +875,11 @@ func _relayout() -> void:
 	elif touch:
 		bar = TOUCH_BAR_HEIGHT
 	var two_rows: bool = size_now.x < (COMPACT_PHONE_WIDTH if phone else COMPACT_WIDTH)
+	if phone:
+		# The phone's one-row bar (design 1.2).
+		two_rows = false
 	top_bar.set_compact(two_rows, bar, phone)
+	top_bar.set_phone(phone, bar)
 	top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0)
 	var disc: float = RADAR_HEIGHT
 	var short: bool = size_now.y < SHORT_H and not phone
