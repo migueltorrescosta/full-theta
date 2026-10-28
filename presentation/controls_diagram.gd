@@ -189,7 +189,8 @@ func _layout() -> void:
 	for zone: String in [ZONE_LEFT, ZONE_NUMPAD]:
 		bottom = maxf(bottom, TOP + zones.get(zone, []).size() * LINE_H)
 	var spec: Dictionary = _zone_specs()
-	for zone: String in [ZONE_TOP, ZONE_LEFT, ZONE_RIGHT, ZONE_NUMPAD, ZONE_MOUSE]:
+	# The numpad column before the right half's tiers, which must stop short of it.
+	for zone: String in [ZONE_TOP, ZONE_LEFT, ZONE_NUMPAD, ZONE_RIGHT, ZONE_MOUSE]:
 		if not zones.has(zone):
 			continue
 		var list: Array = zones[zone]
@@ -527,9 +528,9 @@ func _place_vertical(list: Array, above: bool, y0: float) -> void:
 	for t: int in list.size():
 		var l: Dictionary = list[t]
 		var left: float = _min_x(l["anchors"])
-		_fit_label(l, DESIGN_W - 8.0 - left)
 		var tier: int = t if above else list.size() - 1 - t
 		var y: float = (TOP if above else y0) + tier * LINE_H
+		_fit_label(l, _room_right_of(left + 6.0, y) + 6.0)
 		var rect: Rect2 = Rect2(left + 6.0, y, l["w"], LINE_H - 2.0)
 		l["rect"] = rect
 		_labels.append(l)
@@ -538,6 +539,17 @@ func _place_vertical(list: Array, above: bool, y0: float) -> void:
 			if a.x >= rect.position.x:
 				from_y = rect.end.y + 1.0 if above else rect.position.y - 1.0
 			_add_leader(l, PackedVector2Array([Vector2(a.x, from_y), a]))
+
+
+## The room for a label from `x` on the row at `y`: to the drawing's edge, or to the first
+## label already placed on that row (a busy screen's right half reaches the numpad column).
+func _room_right_of(x: float, y: float) -> float:
+	var end: float = DESIGN_W - 8.0
+	for other: Dictionary in _labels:
+		var r: Rect2 = other["rect"]
+		if r.position.x > x and r.position.y < y + LINE_H - 2.0 and r.end.y > y:
+			end = minf(end, r.position.x - 6.0)
+	return end - x
 
 
 func _min_x(points: Array) -> float:
