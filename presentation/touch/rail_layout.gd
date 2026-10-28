@@ -8,7 +8,8 @@ extends Control
 ## `docked` rails sit beside the view, which narrows to the space between them (Weapons).
 ## Overlay rails float over a full-size view (Science, Relay, Helm); a hand-drawn view
 ## keeps its read-outs clear of them with `content_rect_in(view)`, the uncovered part in
-## the view's own coordinates, and redraws on `content_rect_changed`.
+## the view's own coordinates, and redraws on `content_rect_changed`; a view with a
+## `view_rect` property (DiscRadar) gets it set to that part.
 ##
 ##     var layout := RailLayout.new()
 ##     panel.add_child(layout)
@@ -148,6 +149,10 @@ func _sort() -> void:
 	_sorting = false
 	if r != _content_rect:
 		_content_rect = r
+		# A view that keeps its own controls to a `view_rect` (DiscRadar, RelayMap) keeps
+		# them off the overlay rails; a station may still set its own on the signal.
+		if content != null and content.get_parent() == self and "view_rect" in content:
+			content.set("view_rect", Rect2() if docked else content_rect_in(content))
 		content_rect_changed.emit(r)
 
 
