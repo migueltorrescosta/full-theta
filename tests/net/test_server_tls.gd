@@ -197,3 +197,15 @@ func test_loads_pem_files_and_reports_missing_ones() -> void:
 	assert_int(_key.save(key_path)).is_equal(OK)
 	assert_object(ServerMain.load_tls(cert_path, key_path)).is_not_null()
 	assert_object(ServerMain.load_tls(_dir.path_join("none.pem"), key_path)).is_null()
+
+
+# FT: FT-NET-030
+# An HTTPS page can't open ws:// (mixed content), so the client upgrades the socket URL
+# to wss:// on such a page; elsewhere the URL is unchanged.
+func test_socket_url_follows_the_page_scheme() -> void:
+	assert_str(NetClient.socket_url("ws://10.0.0.2:47821", "https:")).is_equal(
+		"wss://10.0.0.2:47821"
+	)
+	assert_str(NetClient.socket_url("ws://10.0.0.2:47821", "http:")).is_equal("ws://10.0.0.2:47821")
+	assert_str(NetClient.socket_url("ws://10.0.0.2:47821", "")).is_equal("ws://10.0.0.2:47821")
+	assert_str(NetClient.socket_url("wss://h:1", "https:")).is_equal("wss://h:1")

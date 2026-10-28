@@ -84,10 +84,21 @@ func connect_to(server_url: String) -> Error:
 	_hello_sent = false
 	_arrivals.clear()
 	state = State.CONNECTING
-	var err: Error = _peer.connect_to_url(url)
+	var protocol: String = (
+		str(JavaScriptBridge.eval("location.protocol", true)) if OS.has_feature("web") else ""
+	)
+	var err: Error = _peer.connect_to_url(socket_url(url, protocol))
 	if err != OK:
 		state = State.CLOSED
 	return err
+
+
+## The URL the socket opens: a page served over HTTPS may not open ws://, so the same
+## address goes over wss:// (D294).
+static func socket_url(server_url: String, page_protocol: String) -> String:
+	if page_protocol == "https:" and server_url.begins_with("ws://"):
+		return "wss://" + server_url.trim_prefix("ws://")
+	return server_url
 
 
 ## Reconnects with the stored token: the server returns the same session, pick and
