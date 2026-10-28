@@ -32,6 +32,8 @@ var cancel: RailButton
 ## The status line over the bottom of the radar.
 var status: Label
 
+## Under the contacts in the left rail: the screen's Share opener (landscape, no minigame).
+var share_slot: VBoxContainer = null
 var _info: Control
 var _action_box: Control
 var _scan_left: Control
@@ -108,6 +110,10 @@ func release() -> void:
 	status.queue_free()
 	panel.radar.view_rect = Rect2()
 	panel.radar.touch_min = 0.0
+	# The screen's Share opener isn't ours to free: the screen puts it back.
+	if share_slot != null:
+		for c: Node in share_slot.get_children():
+			share_slot.remove_child(c)
 	for g: Control in [panel.scan_game, panel.hack_game]:
 		g.footer = true
 		g.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -163,6 +169,8 @@ func _build_landscape() -> void:
 		axes.add_child(a)
 	_scan_left = left.add(axes)
 	left.add(_hack_hint)
+	share_slot = left.add(_column()) as VBoxContainer
+	share_slot.name = "ShareSlot"
 	var right: TouchRail = layout.rail(SIDE_RIGHT)
 	right.custom_minimum_size.x = RIGHT_W
 	var acts: VBoxContainer = _column()
@@ -240,6 +248,11 @@ func update(session: int) -> void:
 	var playing: bool = session != SciencePanel.SESSION_NONE
 	var scan: bool = session == SciencePanel.SESSION_SCAN
 	_info.visible = not playing
+	if share_slot != null:
+		var shown: Array = share_slot.get_children().filter(
+			func(c: Node) -> bool: return (c as Control).visible
+		)
+		share_slot.visible = not playing and not shown.is_empty()
 	_action_box.visible = not playing
 	_scan_left.visible = scan
 	_hack_hint.visible = session == SciencePanel.SESSION_HACK

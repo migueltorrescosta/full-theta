@@ -129,6 +129,8 @@ func _arrange() -> void:
 		add_child(phone)
 		move_child(phone, hud.get_index())
 		phone.build(self, form)
+	# The phone arrangement has its own share drawer.
+	shows_shares = phone != null
 	refresh()
 
 

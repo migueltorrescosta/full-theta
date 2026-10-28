@@ -138,7 +138,9 @@ func _apply_form() -> void:
 		remove_child(_touch)
 		_touch = null
 	if want:
-		var alone: bool = _screen == null or _screen.panels.size() == 1
+		# Alone or in a joint view (which shows one panel on a phone) the screen's radar
+		# column gives way to the rail's radar.
+		var alone: bool = _screen == null or _screen.panels.size() <= 2
 		_touch = WeaponsTouch.new(self, form as LayoutMode.Form, alone)
 		add_child(_touch)
 		_touch.take_view(_view, _overlay)

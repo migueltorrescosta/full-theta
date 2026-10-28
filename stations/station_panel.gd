@@ -16,6 +16,12 @@ var station: String = ""
 var ctx: StationContext = null
 var focused: bool = false
 var docked: bool = false
+## True while the panel shows the screen's share buttons itself (Relay's phone drawer):
+## the screen then shows no Share opener of its own (#28).
+var shows_shares: bool = false
+## Where the screen's Share opener goes on a phone on its side while the radar column is
+## hidden (#28): a container in the panel's rails, or null for the bottom of the view.
+var share_slot: Container = null
 
 var _chip_menu: ChipMenu = null
 

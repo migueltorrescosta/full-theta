@@ -363,8 +363,9 @@ func _build() -> void:
 ## Sizes the menu for the viewport (LayoutMode): wide fields and tight margins on a phone
 ## (D195), the fixed field widths of a desktop window otherwise. Runs on every resize.
 func _relayout() -> void:
-	# The game's root node is a plain Node, which stops the window's theme from reaching
-	# the menu: follow it here (LayoutMode.apply re-sets it first on a resize).
+	# The game's root is a full-rect Control, so the window's theme reaches the menu there;
+	# a menu outside it (a test's SubViewport, a plain Node) would lose it: follow the
+	# window's here (LayoutMode.apply re-sets it first on a resize).
 	theme = get_window().theme
 	_apply_scale()
 	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
