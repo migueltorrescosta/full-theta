@@ -310,6 +310,8 @@
 - D269 PvP start sites (#11, PROVISIONAL until the owner answers M4-H3): in PvP each side starts at its own site, the yard first, then each next side at the site farthest by minimum image (`RunSetup.start_sites`); co-op starts at the yard.
 - D270 Race copies (#11, from D262): a ship's copy of a site is the site shifted by the offset of the ship's start site from the yard, so every racer's legs are equally long; races leave out travel legs (PROVISIONAL until M4-R1), and a race plan never has fewer than the run's fewest encounters.
 - D271 Kills and finish time (#11, from D266): a kill is a crewed ship of another side destroyed by a ship's hit; a ship's finish time is the tick its outcome was set (RunTable `kills`, `finish_tick`, `relaunches`).
+- D279 Picked ships (#11, from D260): a ship counts as picked when it has a crew station pick; a ship with only a Captain or viewers vanishes at Start (PROVISIONAL until M4-C2), and those sessions return to the pick screen.
+- D280 Takeover target (#11, from D265): a takeover must claim a station that is still uncovered; a second claim on it is refused (`taken`).
 
 ## Phones landscape-first (#28)
 - D272 Phone landscape-first (owner, 2026-10-27, #28; extends D195 and D223): phones are laid out landscape-first; the layout is chosen from the physical size, the pointer kind and the orientation (`LayoutMode.Form`: desktop, tablet, phone portrait, phone landscape); portrait stays operable in a reduced layout under a dismissible "Turn sideways for the full view" banner, never a block (WCAG 1.3.4).
