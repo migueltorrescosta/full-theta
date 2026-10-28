@@ -80,6 +80,8 @@ static var _parts: Array = []
 static var _materials_by_wear: Dictionary = {}
 ## The parts `warm()` is baking, between calls (resources only, no nodes).
 static var _bake: Bake = null
+## Wear -> the plating textures `warm()` is making, between calls.
+static var _plates: Dictionary = {}
 
 var wear: float = 0.0
 var _materials: Dictionary[Role, StandardMaterial3D] = {}
@@ -109,6 +111,17 @@ class Bake:
 	var arrays: Array = []
 	var to_ship: Transform3D = Transform3D.IDENTITY
 	var colours: PackedColorArray = PackedColorArray()
+
+
+## The plating textures in progress (`_plating`): the steps, and what each hands the next.
+class Plate:
+	var step: int = 0
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	var tint: PackedFloat32Array = PackedFloat32Array()
+	var height: PackedFloat32Array = PackedFloat32Array()
+	var blotches: PackedFloat32Array = PackedFloat32Array()
+	var streaks: PackedFloat32Array = PackedFloat32Array()
+	var images: Array[Image] = []
 
 
 ## One part as the AO bake sees it: its shape, the transform from ship space to the part's
@@ -155,10 +168,15 @@ static func warm(wear_of: float, budget_us: int) -> bool:
 				_parts = _bake.parts
 				_bake = null
 		elif not _materials_by_wear.has(wear_of):
+			if not _plates.has(wear_of):
+				_plates[wear_of] = Plate.new()
 			var maker: ProceduralShip = ProceduralShip.new()
 			maker.wear = wear_of
-			maker._make_materials()
-			_materials_by_wear[wear_of] = maker._materials
+			var plate: Plate = _plates[wear_of]
+			if maker._plate_step(plate):
+				maker._make_materials(maker._plate_textures(plate))
+				_materials_by_wear[wear_of] = maker._materials
+				_plates.erase(wear_of)
 			maker.free()
 		else:
 			return true
@@ -487,8 +505,7 @@ func _add(mesh: Mesh, role: Role, at: Vector3, parent: Node3D = self) -> MeshIns
 	return body
 
 
-func _make_materials() -> void:
-	var textures: Array[ImageTexture] = _plating()
+func _make_materials(textures: Array[ImageTexture]) -> void:
 	for role: Role in COLOURS:
 		var m: StandardMaterial3D = StandardMaterial3D.new()
 		m.albedo_color = COLOURS[role]
@@ -517,17 +534,40 @@ func _make_materials() -> void:
 
 ## Plating textures: albedo tint, roughness and normal map. Panels in staggered rows with
 ## seams between them; `wear` varies the panel shades more and adds grime (blotches and
-## streaks) that darkens and roughens.
-func _plating() -> Array[ImageTexture]:
-	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = 11
+## streaks) that darkens and roughens. Made in three steps (`_plate_step`), a third of the
+## work each, so `warm()` can spread them over frames. This runs the next step (the panels,
+## the grime noise, the pixels); true once all are done.
+func _plate_step(p: Plate) -> bool:
+	var n: int = TEXTURE_SIZE
+	match p.step:
+		0:
+			p.rng.seed = 11
+			_plate_panels(p)
+		1:
+			p.blotches = _value_noise(n, 8, 8, p.rng)
+			p.streaks = _value_noise(n, 24, 3, p.rng)
+		2:
+			_plate_pixels(p)
+	p.step += 1
+	return p.step > 2
+
+
+## The three textures of a finished plate.
+func _plate_textures(p: Plate) -> Array[ImageTexture]:
+	var textures: Array[ImageTexture] = []
+	for image: Image in p.images:
+		image.generate_mipmaps()
+		textures.append(ImageTexture.create_from_image(image))
+	return textures
+
+
+func _plate_panels(p: Plate) -> void:
+	var rng: RandomNumberGenerator = p.rng
 	var n: int = TEXTURE_SIZE
 	var rows: int = 8
 	var row_h: int = n / rows
-	var tint: PackedFloat32Array = PackedFloat32Array()
-	tint.resize(n * n)
-	var height: PackedFloat32Array = PackedFloat32Array()
-	height.resize(n * n)
+	p.tint.resize(n * n)
+	p.height.resize(n * n)
 	for r: int in rows:
 		var x0: int = rng.randi_range(0, 63)
 		var cuts: Array[int] = []
@@ -548,31 +588,28 @@ func _plating() -> Array[ImageTexture]:
 						mini(py - r * row_h - 2, (r + 1) * row_h - 1 - py)
 					)
 					var ao: float = lerpf(SEAM_AO, 1.0, smoothstep(0.0, 4.0, float(edge)))
-					tint[i] = 0.72 if seam else shade * ao
-					height[i] = 0.0 if seam else 1.0
-	var blotches: PackedFloat32Array = _value_noise(n, 8, 8, rng)
-	var streaks: PackedFloat32Array = _value_noise(n, 24, 3, rng)
+					p.tint[i] = 0.72 if seam else shade * ao
+					p.height[i] = 0.0 if seam else 1.0
+
+
+func _plate_pixels(p: Plate) -> void:
+	var n: int = TEXTURE_SIZE
 	var albedo: PackedByteArray = PackedByteArray()
 	var rough: PackedByteArray = PackedByteArray()
 	var bump: PackedByteArray = PackedByteArray()
 	for i: int in n * n:
-		var dirt: float = wear * smoothstep(0.4, 0.95, 0.75 * blotches[i] + 0.25 * streaks[i])
-		var a: int = clampi(int(255.0 * tint[i] * (1.0 - 0.3 * dirt) / 1.06), 0, 255)
+		var dirt: float = wear * smoothstep(0.4, 0.95, 0.75 * p.blotches[i] + 0.25 * p.streaks[i])
+		var a: int = clampi(int(255.0 * p.tint[i] * (1.0 - 0.3 * dirt) / 1.06), 0, 255)
 		albedo.append_array([a, a, a])
-		rough.append(clampi(int(255.0 * (0.85 + 0.15 * dirt) * (2.0 - tint[i])), 0, 255))
-		bump.append(int(255.0 * height[i]))
-	var images: Array[Image] = [
+		rough.append(clampi(int(255.0 * (0.85 + 0.15 * dirt) * (2.0 - p.tint[i])), 0, 255))
+		bump.append(int(255.0 * p.height[i]))
+	p.images = [
 		Image.create_from_data(n, n, false, Image.FORMAT_RGB8, albedo),
 		Image.create_from_data(n, n, false, Image.FORMAT_L8, rough),
 		Image.create_from_data(n, n, false, Image.FORMAT_L8, bump),
 	]
-	images[2].convert(Image.FORMAT_RGBA8)
-	images[2].bump_map_to_normal_map(4.0)
-	var textures: Array[ImageTexture] = []
-	for image: Image in images:
-		image.generate_mipmaps()
-		textures.append(ImageTexture.create_from_image(image))
-	return textures
+	p.images[2].convert(Image.FORMAT_RGBA8)
+	p.images[2].bump_map_to_normal_map(4.0)
 
 
 ## Tileable value noise in [0, 1] on an n x n image: a random grid of cells_x by cells_y,
