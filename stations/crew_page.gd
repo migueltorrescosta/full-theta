@@ -67,7 +67,8 @@ func refresh() -> void:
 			var b: RailButton = RailButton.make(str(e[2]))
 			b.name = "%s_%s" % [e[0], e[1]] if e[1] != "" else str(e[0])
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			# (by words: a long word never splits, "countdo wns")
+			b.autowrap_mode = TextServer.AUTOWRAP_WORD
 			b.clip_text = false
 			b.add_theme_font_size_override("font_size", 13)
 			b.pressed.connect(_press.bind(e))

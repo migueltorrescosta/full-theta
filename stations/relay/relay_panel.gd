@@ -165,7 +165,7 @@ func _rebind_tabs() -> void:
 	while n != null and not n is StationScreen:
 		n = n.get_parent()
 	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
-		(n as StationScreen)._show_side()
+		(n as StationScreen).pages_changed()
 
 
 ## A phone's Send ▸ (FT-RLY-008): the screen's choice sheet of the allied ships; a pick

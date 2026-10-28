@@ -208,7 +208,7 @@ func _rebind_tabs() -> void:
 	while n != null and not n is StationScreen:
 		n = n.get_parent()
 	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
-		(n as StationScreen)._show_side()
+		(n as StationScreen).pages_changed()
 
 
 ## The list and card show unless docked; a narrow panel gives a minigame their room.

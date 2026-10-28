@@ -202,6 +202,13 @@ func focus(i: int) -> void:
 	_open_first_visit_help()
 
 
+
+## A panel built or dropped its phone pages after the screen laid out: binds the focused
+## panel's tabs again (PageHost, `pages`).
+func pages_changed() -> void:
+	_show_side()
+
+
 ## The radar column hides for a lone full-screen panel (which may depend on the form). A
 ## joint view or the dev seat on a phone on its side (#28) shows only the focused panel,
 ## which gets the whole width when it draws its own rails and radar, and the station chip

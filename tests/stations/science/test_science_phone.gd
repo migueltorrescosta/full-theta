@@ -65,11 +65,6 @@ func _cmds(s: StationScreen, kind: String) -> Array:
 func _assert_taps_ok(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).is_not_empty()
-	# Known frame issue (requested of strand F): upright, PhoneFrame puts the selection
-	# chip at the panel's top, not at view_rect()'s, so it touches the rotate banner's ×.
-	report["tight"] = report["tight"].filter(
-		func(t: Variant) -> bool: return not str(t).begins_with("× | ")
-	)
 	for rule: String in AUDIT:
 		(
 			assert_array(report[rule])

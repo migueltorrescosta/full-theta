@@ -14,7 +14,8 @@ extends VBoxContainer
 ##     var pic := TouchHelpPicture.make("engineering")
 ##     controls_tab.add_child(pic)
 ##
-## PANELS names each station's panel script; `register` adds or replaces one at run time.
+## PANELS names each station's panel script (PAGE_CLASSES a class with `pages()` for
+## Science and Relay); `register` adds or replaces one at run time.
 
 ## The frame the boxes are drawn in.
 const FRAME: Vector2 = Vector2(844.0, 390.0)
@@ -30,10 +31,14 @@ const PANELS: Dictionary = {
 	"helm": "res://stations/helm/helm_panel.gd",
 	"weapons": "res://stations/weapons/weapons_panel.gd",
 	"engineering": "res://stations/engineering/engineering_panel.gd",
-	"science": "res://stations/science/science_panel.gd",
-	"relay": "res://stations/relay/relay_panel.gd",
 	"comms": "res://stations/comms/comms_panel.gd",
 	"captain": "res://stations/captain/captain_panel.gd",
+}
+
+## Stations whose help lives in its own class, as {"title", "items"} pages.
+const PAGE_CLASSES: Dictionary = {
+	"science": "res://stations/science/science_touch_help.gd",
+	"relay": "res://stations/relay/relay_touch_help.gd",
 }
 
 ## Help data registered at run time (`register`), over PANELS.
@@ -68,6 +73,11 @@ static func unregister(station: String) -> void:
 static func help_of(station: String) -> Array:
 	if _registered.has(station):
 		return (_registered[station] as Callable).call()
+	if PAGE_CLASSES.has(station):
+		var out: Array = []
+		for p: Dictionary in (load(PAGE_CLASSES[station]) as Script).call("pages"):
+			out.append({"page": p["title"], "boxes": p["items"]})
+		return out
 	var path: String = PANELS.get(station, "")
 	if path == "" or not ResourceLoader.exists(path):
 		return []
