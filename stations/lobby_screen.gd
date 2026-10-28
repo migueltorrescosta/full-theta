@@ -83,6 +83,10 @@ var ship: int = -1
 ## The ship row: a button per ship, then New ship, the team buttons and Back to ships; it
 ## wraps on a narrow screen.
 var _ships: HFlowContainer
+## On a phone (#28 follow-up) the ship buttons and New ship scroll sideways in one row
+## (LobbyShipStrip) and upright the team buttons and Back to ships take the row under it.
+var _strip: LobbyShipStrip
+var _ship_tools: HFlowContainer
 var _new_ship: Button
 var _teams: HBoxContainer
 var _team_buttons: Array[Button] = []
@@ -116,7 +120,7 @@ var _viewer: Button
 var _dev_all: Button
 var _join_button: Button
 var _join_dialog: AcceptDialog
-var _join_panel: VBoxContainer
+var _join_panel: LobbyJoinPanel
 ## Difficulty (toggles): the one-line summary and its dialog.
 var _difficulty: Label
 var _customise: Button
@@ -161,21 +165,23 @@ func refresh() -> void:
 		ship = -1
 	elif ship < 0 or not ship in ship_ids:
 		ship = ctx.crew.ship if ctx.crew.ship in ship_ids else (ship_ids[0] if ships else -1)
+	var box: Container = _strip.row if _strip.visible else _ships
 	if ship_ids != _ship_ids:
 		_ship_ids = ship_ids
-		for c: Node in _ships.get_children():
+		for c: Node in box.get_children():
 			if str(c.name).begins_with("Ship_"):
-				_ships.remove_child(c)
+				box.remove_child(c)
 				c.queue_free()
 		for i: int in ships.size():
 			var b: Button = Button.new()
 			b.name = "Ship_%d" % int(ships[i]["ship"])
 			b.toggle_mode = true
 			b.pressed.connect(_choose_ship.bind(int(ships[i]["ship"])))
-			_ships.add_child(b)
-			_ships.move_child(b, i)
+			LobbyShipStrip.adopt(b, _strip.visible)
+			box.add_child(b)
+			box.move_child(b, i)
 	for i: int in ships.size():
-		var b: Button = _ships.get_child(i) as Button
+		var b: Button = box.get_child(i) as Button
 		b.text = ship_label(ships[i])
 		b.set_pressed_no_signal(int(ships[i]["ship"]) == ship)
 	var state: Dictionary = ctx.crew.ship_state(ship)
@@ -198,6 +204,7 @@ func refresh() -> void:
 	)
 	_body.visible = not _browsing
 	_leave.visible = not _browsing
+	_fit_strip.call_deferred()
 	_refresh_data()
 	if _refusal != "":
 		_summary_role.text = _refusal
@@ -573,10 +580,11 @@ func _apply_safe_area() -> void:
 ## elsewhere the theme's sizes and the compact gaps (D257).
 func _apply_targets(phone: bool) -> void:
 	var gap: int = PHONE_GAP if phone else GRID_GAP
-	for box: Control in [_grid, _ships]:
+	for box: Control in [_grid, _ships, _ship_tools]:
 		box.add_theme_constant_override("h_separation", gap)
 		box.add_theme_constant_override("v_separation", gap)
-	for box: Control in [_head, _seat_row, _diff_row, _teams, _body]:
+	_use_strip(phone)
+	for box: Control in [_head, _seat_row, _diff_row, _teams, _body, _strip.row]:
 		box.add_theme_constant_override("separation", gap if phone else 4)
 	_outer.add_theme_constant_override("separation", PHONE_GAP if phone else (3 if _short else 6))
 	for b: Node in find_children("*", "BaseButton", true, false):
@@ -670,6 +678,13 @@ func _style_summary(short: bool, phone: bool) -> void:
 		TextServer.OVERRUN_TRIM_ELLIPSIS if small else TextServer.OVERRUN_NO_TRIMMING
 	)
 	_coverage.size_flags_horizontal = Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL
+	# A long coverage line (pt_PT, it) wraps upright and trims on its side, never widening
+	# the lobby past a phone's screen.
+	_coverage.autowrap_mode = (
+		TextServer.AUTOWRAP_WORD_SMART if phone and not short else TextServer.AUTOWRAP_OFF
+	)
+	_coverage.clip_text = phone and short
+	_coverage.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	if short:
 		_reparent(_legend, _body.get_node("Info"), 0)
 		_reparent(_coverage, _legend, 0)
@@ -679,9 +694,9 @@ func _style_summary(short: bool, phone: bool) -> void:
 			_reparent(c, _diff_row, -1)
 	else:
 		_reparent(_legend, _body, _grid.get_index() + 1)
-		_reparent(_coverage, _outer, _ships.get_index() + 1)
-		_reparent(_teams, _ships, -1)
-		_reparent(_leave, _ships, -1)
+		_reparent(_coverage, _outer, _ship_tools.get_index() + 1)
+		_reparent(_teams, _ship_tools if _phone else _ships, -1)
+		_reparent(_leave, _ship_tools if _phone else _ships, -1)
 		_reparent(_join_button, _head, 1)
 		_reparent(_menu, _head, 2)
 		_reparent(_start, _outer, -1)
@@ -714,6 +729,23 @@ func _refresh_summary() -> void:
 	_summary_role.text = text[1]
 
 
+## The phone's ship strip (LobbyShipStrip) or the flow, and where the team buttons and Back
+## to ships go: the row under the strip upright, the flow off a phone.
+func _use_strip(phone: bool) -> void:
+	if _strip.visible != phone:
+		_strip.use(phone, _ships, _new_ship)
+		if not _short:
+			_reparent(_teams, _ship_tools if phone else _ships, -1)
+			_reparent(_leave, _ship_tools if phone else _ships, -1)
+		_fit_strip.call_deferred()
+	_ships.visible = not phone
+	_ship_tools.visible = phone and not _short
+
+
+func _fit_strip() -> void:
+	_strip.fit(_outer.size.x)
+
+
 func _choose_ship(id: int) -> void:
 	_browsing = false
 	ship = id
@@ -726,44 +758,6 @@ func _back_to_ships() -> void:
 	ctx.intents.release_pick()
 	_browsing = true
 	refresh()
-
-
-## The browser URL of the host's web stations: HTTP listens one port below the
-## WebSocket port (D108, docs/launch.md).
-static func join_url(bind: String, ws_port: int) -> String:
-	return "http://%s:%d/?join=1" % [bind, ws_port - 1]
-
-
-## True for an address only this computer can reach.
-static func is_local_only(bind: String) -> bool:
-	return bind.begins_with("127.") or bind == "::1" or bind == "localhost"
-
-
-## The host's "How to join" content: URL and QR code, the desktop address, or why nobody
-## else can join.
-func _build_join_panel(parent: Node) -> void:
-	var panel: VBoxContainer = VBoxContainer.new()
-	panel.name = "JoinPanel"
-	parent.add_child(panel)
-	_join_panel = panel
-	if is_local_only(ctx.host_bind):
-		var local: Label = _label(tr("lobby.join_local") % ctx.host_bind)
-		local.name = "JoinLocal"
-		local.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		local.custom_minimum_size = Vector2(320, 0)
-		panel.add_child(local)
-		return
-	var url: String = join_url(ctx.host_bind, ctx.host_port)
-	var browser: Label = _label(tr("lobby.join_browser") % url)
-	browser.name = "JoinUrl"
-	panel.add_child(browser)
-	var desktop: Label = _label(tr("lobby.join_desktop") % ctx.host_bind)
-	desktop.name = "JoinDesktop"
-	panel.add_child(desktop)
-	var qr: QrView = QrView.new()
-	qr.name = "JoinQr"
-	qr.set_text(url)
-	panel.add_child(qr)
 
 
 func _build() -> void:
@@ -810,6 +804,12 @@ func _build() -> void:
 		_team_buttons.append(b)
 	_leave = _button("BackToShips", tr("lobby.leave_pick"), _back_to_ships)
 	_ships.add_child(_leave)
+	_strip = LobbyShipStrip.new()
+	outer.add_child(_strip)
+	_ship_tools = HFlowContainer.new()
+	_ship_tools.name = "ShipTools"
+	_ship_tools.visible = false
+	outer.add_child(_ship_tools)
 	_coverage = _label("", "DimLabel")
 	_coverage.name = "Coverage"
 	outer.add_child(_coverage)
@@ -947,7 +947,8 @@ func _build_dialogs() -> void:
 	_join_dialog.ok_button_text = tr("lobby.done")
 	add_child(_join_dialog)
 	if ctx.host_bind != "":
-		_build_join_panel(_join_dialog)
+		_join_panel = LobbyJoinPanel.new(ctx)
+		_join_dialog.add_child(_join_panel)
 
 
 func _open_mode() -> void:
@@ -1072,7 +1073,8 @@ func _notification(what: int) -> void:
 		if _join_panel != null:
 			_join_dialog.remove_child(_join_panel)
 			_join_panel.queue_free()
-			_build_join_panel(_join_dialog)
+			_join_panel = LobbyJoinPanel.new(ctx)
+			_join_dialog.add_child(_join_panel)
 		refresh()
 
 

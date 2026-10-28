@@ -321,7 +321,19 @@ func _build() -> void:
 	var title: Label = Label.new()
 	title.text = "FULL THETA"
 	title.theme_type_variation = "TitleLabel"
-	_item(col, title, false)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# Full screen (D277, design 2.10) at the title's right where the browser offers it.
+	var title_row: HBoxContainer = HBoxContainer.new()
+	title_row.name = "TitleRow"
+	title_row.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	title_row.add_child(title)
+	var fullscreen: FullscreenButton = FullscreenButton.new()
+	fullscreen.name = "Fullscreen"
+	fullscreen.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	fullscreen.clip_text = false
+	fullscreen.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	title_row.add_child(fullscreen)
+	_item(col, title_row, false)
 	_name = LineEdit.new()
 	_name.name = "Name"
 	_name.placeholder_text = tr("menu.name")
