@@ -330,6 +330,13 @@ func share(feature: String) -> void:
 	_send(NetProtocol.Type.SHARE, {"feature": feature})
 
 
+## Reports a long frame (`ms`) and what ran in it to the server's session log (#28).
+func report_frame(ms: int, what: String) -> void:
+	if state == State.WELCOMED:
+		var text: String = NetProtocol.clip_utf8(what, NetProtocol.MAX_FRAME_WHAT_BYTES)
+		_send(NetProtocol.Type.CLIENT_FRAME, {"ms": ms, "what": text})
+
+
 ## Sends a raw, already-encoded message (tests: malformed or foreign messages).
 func send_raw(data: PackedByteArray) -> void:
 	_queue.push(NetChunker.STREAM_CONTROL, data)
