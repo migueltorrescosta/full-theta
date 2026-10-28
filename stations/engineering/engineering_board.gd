@@ -5,6 +5,9 @@ extends Control
 ## overcharge and build heat), the reactor cap, the boost, and the shields: strength,
 ## power (the shield column's pips), focus tightness (click a step) and a small ring
 ## mirroring Helm's focus. `compact` is the docked view: the columns and the cap only.
+## On a phone (#28, D274) a pip box (22 px) and a tightness step are too small to tap: a
+## tap anywhere in a column selects it, and the rail's Power +/- and Tighter/Wider set the
+## values; each column's tap area (a control with the `tap` meta) keeps 8 px from the next.
 
 const PAD: float = 16.0
 const GAP: float = 4.0
@@ -14,6 +17,8 @@ var compact: bool = false:
 	set(v):
 		compact = v
 		queue_redraw()
+
+var _taps: Array[Control] = []
 
 
 func _init() -> void:
@@ -69,7 +74,7 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if panel.ship_def == null or panel.docked:
 		return
-	var pip: Array = pip_at(mb.position)
+	var pip: Array = [] if phone() else pip_at(mb.position)
 	if not pip.is_empty():
 		panel.select(pip[0])
 		var n: int = pip[1] + 1
@@ -82,7 +87,7 @@ func _gui_input(event: InputEvent) -> void:
 		panel.select(col)
 		accept_event()
 		return
-	var t: float = tightness_at(mb.position)
+	var t: float = -1.0 if phone() else tightness_at(mb.position)
 	if t >= 0.0:
 		panel.set_tightness(t)
 		accept_event()
@@ -143,6 +148,38 @@ func _draw() -> void:
 	if not compact:
 		_draw_legend(fs)
 		_draw_shields(fs)
+	_sync_taps()
+
+
+## True on a phone, where only whole columns take taps.
+func phone() -> bool:
+	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+
+
+## Column k's tap area on a phone: the column less half a gap on each side.
+func column_tap_rect(k: int) -> Rect2:
+	var cw: float = _col_width(columns().size())
+	var top: float = _top() - GAP
+	var half: float = UiTheme.TOUCH_GAP / 2.0
+	return Rect2(PAD + k * cw + half, top, cw - 2.0 * half, _labels_y() + 8.0 - top)
+
+
+func _sync_taps() -> void:
+	var on: bool = phone() and not compact and panel != null and panel.ship_def != null
+	var n: int = columns().size() if on else 0
+	while _taps.size() < n:
+		var c: Control = Control.new()
+		c.name = "ColumnTap%d" % _taps.size()
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		c.set_meta("tap", true)
+		add_child(c)
+		_taps.append(c)
+	for k: int in _taps.size():
+		_taps[k].visible = k < n
+		if k < n:
+			var r: Rect2 = column_tap_rect(k)
+			_taps[k].position = r.position
+			_taps[k].size = r.size
 
 
 func _draw_cap(fs: int) -> void:
