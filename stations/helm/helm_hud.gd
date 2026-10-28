@@ -348,6 +348,8 @@ func _draw_thrust(font: Font) -> void:
 		[Vector2(2.6, -0.8), Vector2.UP, t.z],
 		[Vector2(2.6, 0.8), Vector2.DOWN, -t.z],
 	]
+	if not thrust_rect().has_area():
+		return
 	draw_rect(thrust_rect(), Color(Palette.color("background"), 0.5))
 	for a: Array in arrows:
 		var lit: bool = float(a[2]) > THRUST_LIT
@@ -373,7 +375,14 @@ func _draw_thrust(font: Font) -> void:
 ## The thrust cross and its read-outs, for the labels to keep clear of.
 func thrust_rect() -> Rect2:
 	var c: Vector2 = thrust_centre()
-	return Rect2(c - Vector2(CROSS_ARM + 14.0, CROSS_ARM + 14.0), _cross_size(not cross_tight()))
+	var r: Rect2 = Rect2(
+		c - Vector2(CROSS_ARM + 14.0, CROSS_ARM + 14.0), _cross_size(not cross_tight())
+	)
+	# A phone's view too short for it over the compass (a joint view under the view-top row
+	# and the partner card): no cross; the read-out still gives the speed.
+	if touch_layout() and _cross_right() and compass_boxes().any(r.intersects):
+		return Rect2()
+	return r
 
 
 ## The thrust cross's box size: with the Fwd / Side / Up speeds beside it, or bare.

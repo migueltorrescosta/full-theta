@@ -129,6 +129,10 @@ func _apply_form() -> void:
 			screen.rotate_banner.label.text = TouchText.of(
 				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
 			)
+	# Upright, a joint view keeps its docked panels (the lead's call), which leave the cockpit
+	# too short for the view-top row: there Helm keeps the chip strip.
+	var screen_now: StationScreen = _screen()
+	in_frame = not (portrait and screen_now != null and screen_now.panels.size() >= 2)
 	var inset: float = touch_ui.view_bottom_inset() if touch_ui != null else 0.0
 	_container.offset_bottom = -inset
 	hud.offset_bottom = -inset
