@@ -17,7 +17,9 @@ func after_test() -> void:
 func test_pictures_number_every_control() -> void:
 	# A view box may reach into the band (it is drawn there, P28-Band).
 	var safe: Rect2 = Rect2(47.0, 8.0, 750.0, 382.0)
-	for station: String in ["engineering", "comms", "captain", "science", "relay", "weapons"]:
+	for station: String in [
+		"engineering", "comms", "captain", "science", "relay", "weapons", "helm"
+	]:
 		var data: Array = TouchHelpPicture.help_of(station)
 		if data.is_empty() and station == "comms":
 			continue

@@ -144,6 +144,9 @@ func show_tabs(form_now: LayoutMode.Form, alone: bool) -> void:
 		s.joint_switch = RailButton.make("")
 		s.joint_switch.name = "JointSwitch"
 		s.joint_switch.add_theme_font_size_override("font_size", PageTabs.FONT)
+		# At least CHIP_W, wider for a longer name ("⇄ Weapons"): never cut.
+		s.joint_switch.clip_text = false
+		s.joint_switch.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		s.joint_switch.pressed.connect(_on_station_chip)
 	var chip: RailButton = s.joint_switch
 	if chip != null:

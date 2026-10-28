@@ -14,8 +14,9 @@ extends VBoxContainer
 ##     var pic := TouchHelpPicture.make("engineering")
 ##     controls_tab.add_child(pic)
 ##
-## PANELS names each station's panel script (PAGE_CLASSES a class with `pages()` for
-## Science and Relay; Weapons' WeaponsTouchHelp.PAGES); `register` adds or replaces one at run time.
+## PANELS names each station's panel script with a `touch_help()`; Science and Relay have
+## a class with `pages()` (PAGE_CLASSES), Weapons and Helm their own help classes
+## (WeaponsTouchHelp, HelmHelp); `register` adds or replaces one at run time.
 
 ## The frame the boxes are drawn in.
 const FRAME: Vector2 = Vector2(844.0, 390.0)
@@ -28,7 +29,6 @@ const FONT: int = 12
 ## Where each station's `touch_help()` lives: its panel script, loaded on first use. A
 ## station without an entry, or whose script has no `touch_help()` yet, shows no picture.
 const PANELS: Dictionary = {
-	"helm": "res://stations/helm/helm_panel.gd",
 	"engineering": "res://stations/engineering/engineering_panel.gd",
 	"comms": "res://stations/comms/comms_panel.gd",
 	"captain": "res://stations/captain/captain_panel.gd",
@@ -74,6 +74,8 @@ static func help_of(station: String) -> Array:
 		return (_registered[station] as Callable).call()
 	if station == "weapons":
 		return _weapons()
+	if station == "helm":
+		return _helm()
 	if PAGE_CLASSES.has(station):
 		var out: Array = []
 		for p: Dictionary in (load(PAGE_CLASSES[station]) as Script).call("pages"):
@@ -88,6 +90,26 @@ static func help_of(station: String) -> Array:
 	return script.call("touch_help")
 
 
+## Helm's pages (HelmHelp's pictures: callouts whose text is "Name: what", or an intent's
+## label).
+static func _helm() -> Array:
+	var help: HelmHelp = HelmHelp.new()
+	var out: Array = []
+	for pic: Array in help.pictures:
+		var boxes: Array = []
+		for c: Array in pic[1]:
+			boxes.append(_split(c[2], HelmHelp.text(c[1])))
+		out.append({"page": pic[0], "boxes": boxes})
+	help.free()
+	return out
+
+
+## A box from "Name: what it does" (or a bare name).
+static func _split(box: Rect2, text: String) -> Array:
+	var parts: PackedStringArray = text.split(": ", true, 1)
+	return [box, parts[0], parts[1] if parts.size() > 1 else parts[0]]
+
+
 ## Weapons' pages (WeaponsTouchHelp.PAGES: title, then boxes whose text is "Name: what").
 static func _weapons() -> Array:
 	var out: Array = []
@@ -95,8 +117,7 @@ static func _weapons() -> Array:
 		var page: Array = WeaponsTouchHelp.PAGES[i]
 		var boxes: Array = []
 		for c: Array in WeaponsTouchHelp.callouts(i):
-			var parts: PackedStringArray = str(c[1]).split(": ", true, 1)
-			boxes.append([c[0], parts[0], parts[1] if parts.size() > 1 else parts[0]])
+			boxes.append(_split(c[0], str(c[1])))
 		out.append({"page": TouchText.of(page[0], page[1]), "boxes": boxes})
 	return out
 

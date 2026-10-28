@@ -475,9 +475,17 @@ func small() -> bool:
 ## Small radar: each chip (the selected item's first) takes the first free spot of right,
 ## left, above and below its blip; a chip with no free spot is left out unless selected.
 func _place_small(entries: Array[Dictionary], font: Font) -> void:
+	var v: Rect2 = _view().grow(-CHIP_MARGIN)
+	if v.size.x <= 0.0 or v.size.y <= 0.0:
+		# (not laid out yet: no room for a chip)
+		for e: Dictionary in entries:
+			e["chip"] = ""
+			e["chip_rect"] = Rect2(e["pos"], Vector2.ZERO)
+		return
 	var c: Vector2 = disc_centre()
 	var taken: Array[Rect2] = []
-	taken.append_array(_numerals(font, c, RANGES_M[range_index]).values())
+	var numerals: Array = _numerals(font, c, RANGES_M[range_index]).values()
+	taken.append_array(numerals)
 	taken.append_array([_range_rect(), _site_rect()])
 	taken.append(Rect2(_screen(picture.rel(Vector3.ZERO, centre)) - Vector2(8, 8), Vector2(16, 16)))
 	var half: Vector2 = Vector2(BLIP_R, BLIP_R) + Vector2(3, 3)
@@ -488,7 +496,6 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 		func(a: Dictionary, b: Dictionary) -> bool:
 			return _is_selected(a["item"]) and not _is_selected(b["item"])
 	)
-	var v: Rect2 = _view().grow(-CHIP_MARGIN)
 	for e: Dictionary in order:
 		if e["chip"] == "":
 			continue
@@ -512,7 +519,15 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 				pick = r
 				break
 		if not pick.has_area() and _is_selected(e["item"]):
-			pick = Rect2(spots[0].clamp(v.position, (v.end - sz).max(v.position)), sz)
+			# The selection's chip always shows: the first spot, kept inside the view, that
+			# clears the range numerals.
+			for at: Vector2 in spots:
+				var r: Rect2 = Rect2(at.clamp(v.position, (v.end - sz).max(v.position)), sz)
+				if not pick.has_area():
+					pick = r
+				if numerals.all(func(o: Rect2) -> bool: return not o.intersects(r)):
+					pick = r
+					break
 		if pick.has_area():
 			taken.append(pick)
 			e["chip_rect"] = pick

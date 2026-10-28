@@ -105,9 +105,6 @@ func _pad_axis(axis: JoyAxis, value: float) -> void:
 
 
 func _audit_ok(report: Dictionary, what: String) -> void:
-	# The screen's portrait banner (its ×) ends where the view-top row starts (the frame puts
-	# the row at the top of the main area): a request to the frame strand, not Helm's.
-	report["tight"] = report["tight"].filter(func(t: String) -> bool: return t != "× | ›")
 	for list: String in ["under_min", "under_primary", "in_band", "outside_safe", "tight"]:
 		(
 			assert_array(report[list])

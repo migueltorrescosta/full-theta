@@ -202,7 +202,6 @@ func focus(i: int) -> void:
 	_open_first_visit_help()
 
 
-
 ## A panel built or dropped its phone pages after the screen laid out: binds the focused
 ## panel's tabs again (PageHost, `pages`).
 func pages_changed() -> void:
@@ -928,6 +927,8 @@ func _relayout() -> void:
 	if now != form:
 		form = now
 		form_changed.emit(form)
+		# (a panel that rebuilt its pages for the new form gets its tabs bound)
+		pages_changed()
 
 
 ## The first visit to a station shows the Controls chip for a few seconds, once per client

@@ -116,7 +116,8 @@ func _draw() -> void:
 		var pips: int = panel.pips_of(i)
 		if i == panel.selected and not compact:
 			var r: Rect2 = _pip_rect(k, power.max_pips_per_subsystem - 1)
-			r = r.merge(_pip_rect(k, 0)).grow(GAP + 2.0)
+			# (abs: a board squeezed to nothing gives pips of negative size)
+			r = r.abs().merge(_pip_rect(k, 0).abs()).grow(GAP + 2.0)
 			draw_rect(r, Palette.color("selected"), false, 1.5)
 		for j: int in power.max_pips_per_subsystem:
 			var over: bool = j >= sd.nominal_pips
