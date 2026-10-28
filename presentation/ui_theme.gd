@@ -28,7 +28,7 @@ const TOUCH_PRIMARY: int = 48
 ## The least gap between two touch targets.
 const TOUCH_GAP: int = 8
 ## How opaque an overlay rail's panel is over the view.
-const OVERLAY_ALPHA: float = 0.72
+const OVERLAY_ALPHA: float = 0.8
 const FONT_SIZE: int = 16
 const TITLE_SIZE: int = 32
 const HEADING_SIZE: int = 20
