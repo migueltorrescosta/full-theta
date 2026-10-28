@@ -171,6 +171,7 @@
     {"name": "l5_phl_helm_crew", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"entry": "helm", "page": 4, "insets": [47, 0, 47, 21]}},
     {"name": "l5_php_helm_shield", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "page": 1, "insets": [0, 47, 0, 34]}},
     {"name": "l5_php_helm_nav", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "page": 2, "insets": [0, 47, 0, 34]}},
-    {"name": "l5_php_helm_crew", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "page": 4, "insets": [0, 47, 0, 34]}}
+    {"name": "l5_php_helm_crew", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [390, 844], "set": {"entry": "helm", "page": 4, "insets": [0, 47, 0, 34]}},
+    {"name": "l5_php_helm_help", "scene": "res://tests/stations/helm/help_shot.tscn", "size": [390, 1400], "set": {}}
   ]
 }

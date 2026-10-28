@@ -12,7 +12,7 @@ extends Control
 ##   Shield: the shield ring filling the page zone (tap a cell: FT-HLM-009; its caption
 ##     gives power, focus tightness and tracking: FT-HLM-011).
 ##   Nav: Dock, Jump, Chase, Decoupled.
-##   Radar: the disc radar on the view (a tap selects), Range − and Range +.
+##   Radar: the disc radar over the view, the HUD hidden (a tap selects); Range −, Range +.
 ##   Crew: the screen's CrewPage (Boost request, Ping, Mark, Shares).
 ## Under the buttons of Fly, Nav and Radar the ring shows as a glyph that takes no taps, so
 ## the view keeps nothing but the HUD.
@@ -31,8 +31,6 @@ extends Control
 const LEFT_W: float = 168.0
 const RIGHT_W: float = 168.0
 const BLOCK_H: float = 300.0
-## The radar on the Radar page: its largest side.
-const RADAR_MAX: float = 340.0
 ## The least a button's text shrinks to so it fits (fit_text).
 const MIN_FONT: int = 12
 ## The throttle stops feeding helm_surge within this many m/s of its setpoint; the input is
@@ -381,17 +379,17 @@ func update(ring: ShieldRing) -> void:
 					b.role = role
 
 
-## The radar page: the radar's panel as large as the clear view allows above the bottom
-## band (its range label is a tap target), centred in it.
+## The Radar page: the radar's panel over the whole clear view above the bottom band (its
+## range label is a tap target); the HUD hides under it.
 func _place_radar() -> void:
 	var free: Rect2 = clear_view_in(self)
 	if layout != null:
 		var rail: Rect2 = layout.right.get_global_rect()
 		free.size.y = minf(free.size.y, rail.end.y - get_global_rect().position.y - free.position.y)
 	free = free.grow(-UiTheme.TOUCH_GAP)
-	var side: float = minf(minf(free.size.x, free.size.y), RADAR_MAX)
-	radar_box.size = Vector2(side, side)
-	radar_box.position = (free.get_center() - radar_box.size / 2.0).round()
+	radar_box.position = free.position.round()
+	radar_box.size = free.size.round()
+	panel.hud.visible = not radar_box.visible
 
 
 ## The ring: tappable with its caption on the Shield page, a glyph that takes no taps

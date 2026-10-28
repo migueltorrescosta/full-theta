@@ -110,6 +110,7 @@ func _apply_form() -> void:
 		ring.size_flags_vertical = Control.SIZE_FILL
 		ring.visible = true
 		ring.mouse_filter = Control.MOUSE_FILTER_STOP
+		hud.visible = true
 		_mode_changed_ring()
 		remove_child(touch_ui)
 		touch_ui.queue_free()

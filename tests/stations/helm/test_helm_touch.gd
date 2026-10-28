@@ -179,10 +179,14 @@ func test_landscape_pages_and_persistent_zone() -> void:
 	await _frames()
 	var radar: Rect2 = _ui().radar.get_global_rect()
 	assert_float(minf(radar.size.x, radar.size.y)).is_greater_equal(200.0)
+	# The radar covers the view: the HUD hides under it, and its foot stays above the band.
+	assert_bool(_panel.hud.visible).is_false()
+	assert_float(radar.end.y).is_less_equal(_ui().layout.right.get_global_rect().end.y)
 	_ui().pages.current = HelmTouch.PAGE_CREW
 	await _frames()
 	assert_bool(_panel.ring.is_visible_in_tree()).is_false()
 	assert_bool(_ui().crew.is_visible_in_tree()).is_true()
+	assert_bool(_panel.hud.visible).is_true()
 
 
 # FT: FT-STN-005
