@@ -83,10 +83,13 @@ func setup(
 	apply_ui_scale()
 
 
-## The UI scale setting (FT-STN-013) as the window's content scale.
+## The UI scale setting (FT-STN-013) as the window's content scale. A browser draws in
+## canvas pixels, devicePixelRatio (capped) per CSS pixel, so on the web the scale is
+## multiplied by it: a 48 px button stays 48 CSS px at dpr 2 (#28, MainMenu.content_scale).
 func apply_ui_scale() -> void:
 	if is_inside_tree():
-		get_tree().root.content_scale_factor = ctx.settings.ui_scale
+		var dpr: float = maxf(LayoutMode.density(), 1.0) if OS.has_feature("web") else 1.0
+		get_tree().root.content_scale_factor = ctx.settings.ui_scale * dpr
 
 
 func _ready() -> void:
