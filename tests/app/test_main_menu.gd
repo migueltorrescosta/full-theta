@@ -118,8 +118,23 @@ func test_web_content_scale_follows_the_device_pixel_ratio() -> void:
 
 
 # FT: FT-STN-005
-# The game's root is a plain Node, which stops the window's theme: the menu follows it.
-func test_menu_under_a_plain_node_gets_the_window_theme() -> void:
+# The game's root is a full-rect Control that lets clicks through, so the window's theme
+# (LayoutMode) reaches what the game puts under it, such as the shell; a menu outside it
+# (under a plain Node) still follows the window's theme.
+func test_the_window_theme_reaches_the_game_and_the_menu() -> void:
+	var root: Control = auto_free((load("res://app/main.tscn") as PackedScene).instantiate())
+	# The scene without main.gd (which would start a menu and a LAN browser of its own),
+	# straight under the window as the game runs it.
+	root.set_script(null)
+	get_tree().root.add_child(root)
+	LayoutMode.apply(get_tree().root)
+	assert_int(root.mouse_filter).is_equal(Control.MOUSE_FILTER_IGNORE)
+	assert_vector(root.size).is_equal(get_tree().root.get_visible_rect().size)
+	var field: LineEdit = LineEdit.new()
+	root.add_child(field)
+	assert_object(field.get_theme_stylebox("normal")).is_same(
+		get_tree().root.theme.get_stylebox("normal", "LineEdit")
+	)
 	var holder: Node = auto_free(Node.new())
 	add_child(holder)
 	var m: MainMenu = MainMenu.new()
