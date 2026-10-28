@@ -365,3 +365,14 @@ func _mouse_move(p: RelayPanel, rel: Vector2) -> void:
 	m.relative = rel
 	m.device = InputEvent.DEVICE_ID_EMULATION
 	p._gui_input(m)
+
+
+# FT: FT-STN-012
+# P28-Help: the touch picture of the pages, every box inside the phone's safe area.
+func test_touch_help_picture_has_its_pages() -> void:
+	var safe: Rect2 = Rect2(47.0, 0.0, 750.0, 366.0)
+	for p: Dictionary in RelayTouchHelp.pages():
+		for item: Array in p["items"]:
+			assert_bool(safe.encloses(item[0])).override_failure_message(str(item[1])).is_true()
+	var pic: RelayTouchHelp = auto_free(RelayTouchHelp.new())
+	assert_float(pic.custom_minimum_size.y).is_greater(0.0)
