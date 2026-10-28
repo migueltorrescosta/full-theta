@@ -28,6 +28,8 @@ const STRIP_W: float = 44.0
 ## Room around the disc for the clock numbers (px).
 const PAD: float = 24.0
 const BLIP_R: float = 6.0
+## Least space (px) between a chip and the edge of the view.
+const CHIP_MARGIN: float = 2.0
 ## item_at picks the nearest blip within this distance (px).
 const HIT_PX: float = 12.0
 const ORBIT_DEG_PER_PX: float = 0.4
@@ -389,12 +391,11 @@ func _layout() -> Array[Dictionary]:
 			chip = it["label"] if it["kind"] != "contact" else ChipText.chip(it["label"], local)
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
 		if chip != "":
-			var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
-			sz.y = font.get_height(FONT_SIZE)
-			# Right of the blip; arrows on the rim put it on the inner side.
-			var left: bool = beyond and pos.x > c.x
-			var x: float = pos.x - 10.0 - sz.x if left else pos.x + 10.0
-			rect = Rect2(Vector2(x, pos.y - sz.y / 2.0), sz)
+			rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
+			# Too wide for a small radar (a phone's 180 px column): the label alone.
+			if rect.size.x > _view().size.x - 2.0 * CHIP_MARGIN:
+				chip = it["label"]
+				rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
 		(
 			out
 			. append(
@@ -411,6 +412,25 @@ func _layout() -> Array[Dictionary]:
 		)
 	_declutter(out)
 	return out
+
+
+## A chip's box: right of the blip at `pos`, left of it when `left` (an arrow on the right
+## rim) or when only that side fits, then shifted to stay inside the view: a small radar
+## never clips a chip at its edge (#28).
+func _chip_rect(font: Font, chip: String, pos: Vector2, left: bool) -> Rect2:
+	var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
+	sz.y = font.get_height(FONT_SIZE)
+	var v: Rect2 = _view().grow(-CHIP_MARGIN)
+	var right_x: float = pos.x + 10.0
+	var left_x: float = pos.x - 10.0 - sz.x
+	var x: float = left_x if left else right_x
+	if not left and right_x + sz.x > v.end.x and left_x >= v.position.x:
+		x = left_x
+	elif left and left_x < v.position.x and right_x + sz.x <= v.end.x:
+		x = right_x
+	x = clampf(x, v.position.x, maxf(v.position.x, v.end.x - sz.x))
+	var y: float = clampf(pos.y - sz.y / 2.0, v.position.y, maxf(v.position.y, v.end.y - sz.y))
+	return Rect2(Vector2(x, y), sz)
 
 
 ## Moves overlapping chips apart: top to bottom, a chip that overlaps one already placed
