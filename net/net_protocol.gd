@@ -58,6 +58,9 @@ enum Type {
 	RELAUNCH = 44,
 	# A client's frame over 500 ms and what ran in it, for the session log (#28).
 	CLIENT_FRAME = 45,
+	# Solo training (D303): a client asks the server to run a station lesson for it, or the
+	# crew drill.
+	TRAINING = 46,
 }
 
 const PROTOCOL_VERSION: int = 8
@@ -221,6 +224,7 @@ const SCHEMAS: Dictionary = {
 	Type.SESSION_MODE: {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT},
 	Type.RELAUNCH: {"ship": TYPE_INT, "vote": TYPE_BOOL},
 	Type.CLIENT_FRAME: {"ms": TYPE_INT, "what": TYPE_STRING},
+	Type.TRAINING: {"station": TYPE_STRING},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -254,6 +258,7 @@ const FROM_CLIENT: Array[int] = [
 	Type.SESSION_MODE,
 	Type.RELAUNCH,
 	Type.CLIENT_FRAME,
+	Type.TRAINING,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -284,6 +289,7 @@ const RATED_REQUESTS: Array[int] = [
 	Type.SESSION_MODE,
 	Type.RELAUNCH,
 	Type.CLIENT_FRAME,
+	Type.TRAINING,
 ]
 
 
@@ -396,6 +402,10 @@ static func event(seq: int, tick: int, type: String, payload: Dictionary) -> Pac
 ## in holdout (-1: the mode's default).
 static func session_mode(mode: String, team_win: String, lives: int = -1) -> PackedByteArray:
 	return encode(Type.SESSION_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
+
+
+static func training(station: String) -> PackedByteArray:
+	return encode(Type.TRAINING, {"station": station})
 
 
 static func ship_add(name: String) -> PackedByteArray:

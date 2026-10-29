@@ -211,6 +211,13 @@ func takeover(ship: int, entry: String) -> void:
 ## adds a ship (M4-Q3); a crew puts its ship on a team (M4-Q6); the host sets the mode, the
 ## team win rule and the holdout lives (-1: the mode's default); an eliminated crew votes to
 ## relaunch (M4-Q2). Answers arrive as `fleet`, `relaunch_votes` and `request_rejected` events.
+## Solo training (D303, docs/protocol.md "Solo training"): asks the server to run a lesson for
+## this client: a station id (`helm` ... `captain`) alone with bots on the others, or "" for the
+## crew drill. Answered by `picked` and `started` events, or `request_rejected` `busy`.
+func start_training(station: String) -> void:
+	_send(NetProtocol.Type.TRAINING, {"station": station})
+
+
 func add_ship(ship_name: String) -> void:
 	_send(NetProtocol.Type.SHIP_ADD, {"name": ship_name})
 

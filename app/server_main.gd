@@ -37,6 +37,9 @@ extends RefCounted
 ##                        scenario (FT-MIS-039: RunSetup on content/runs/shakedown.tres, one
 ##                        ship, no director), or m1, the Milestone 1 encounter
 ##                        (the L4 encounter scenario and the golden tests).
+##   --solo STATION       a station lesson (D303): the joining host plays STATION alone
+##                        (helm ... comms, or captain), bots on the others; implies
+##                        --encounter shakedown.
 ##   --m1-player-hull-scale F
 ##                        test flag: the crewed ship's hull is F times its definition's
 ##                        (0 < F <= 1), so the L4 encounter (tools/l4) loses a fight in
@@ -106,6 +109,8 @@ var probe_warmup: float = 3.0
 var probe_window: float = 60.0
 var player_hull_scale: float = 1.0
 var encounter_name: String = "run"
+## The station a joining host plays alone (--solo, D303), or "".
+var solo_station: String = ""
 ## Whether test flags (--m1-player-hull-scale, LOAD_FLAGS) are accepted: a debug build (the editor
 ## binary that L3 and L4 run) or FT_DEV set.
 var dev_flags: bool = OS.is_debug_build() or OS.get_environment(DEV_ENV) != ""
@@ -184,6 +189,13 @@ func _set_value(flag: String, value: String) -> bool:
 			push_error("--encounter must be m1, run or shakedown")
 			return false
 		encounter_name = value
+		return true
+	if flag == "--solo":
+		if not StationViews.CREW.has(value) and value != StationViews.CAPTAIN:
+			push_error("--solo must be a station: %s or captain" % ", ".join(StationViews.CREW))
+			return false
+		solo_station = value
+		encounter_name = "shakedown"
 		return true
 	if flag == "--tls-cert" or flag == "--tls-key":
 		return _set_tls(flag, value)
@@ -311,6 +323,8 @@ func make_server() -> NetServer:
 		server.driver_factory = (
 			_training_factory() if encounter_name == "shakedown" else _director_factory(run)
 		)  # G2
+	server.training_setup = func() -> RunSetup: return run_setup(DefLibrary.new(), "shakedown")
+	server.training_driver = _training_factory
 	server.run_for = run_for
 	if probe_out != "":
 		server.probe = LoadProbe.new(probe_out)
@@ -322,6 +336,7 @@ func make_server() -> NetServer:
 		push_error("server failed to start on %s:%d: %s" % [bind_address, port, error_string(err)])
 		server.free()
 		return null
+	server.session.solo_on_join = solo_station
 	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
 	server.session.language = language
 	server.session.tls = tls != null
@@ -361,10 +376,10 @@ static func load_tls(cert_path: String, key_path: String) -> TLSOptions:
 
 
 ## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).
-func run_setup(defs: DefLibrary) -> RunSetup:
-	var run_def: RunDef = defs.run(&"shakedown" if encounter_name == "shakedown" else &"m3_run")
+func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
+	var run_def: RunDef = defs.run(&"shakedown" if which == "shakedown" else &"m3_run")
 	if run_def == null:
-		push_error("missing run definition for --encounter %s" % encounter_name)
+		push_error("missing run definition for --encounter %s" % which)
 		return null
 	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.enemies())
 	setup.science = defs.science()
@@ -402,13 +417,13 @@ func _director_factory(setup: RunSetup) -> Callable:
 
 ## The Shakedown's driver when the first tick steps (FT-MIS-039): its one scenario and the
 ## step list. The difficulty preset changes nothing in training.
-func _training_factory() -> Callable:
+func _training_factory(solo: StringName = &"") -> Callable:
 	return func(_difficulty: StringName) -> TrainingDriver:
 		var scenarios: Array[Scenario] = ScenarioCatalogue.load_for(
 			PackedStringArray(["shakedown"])
 		)
 		var steps: TrainingStepsDef = load("res://content/training/steps.tres") as TrainingStepsDef
-		return TrainingDriver.new(scenarios[0], steps)
+		return TrainingDriver.new(scenarios[0], steps, solo)
 
 
 ## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,

@@ -57,6 +57,8 @@ class Options:
 	## What the world holds (--encounter, PROVISIONAL Q17 A): "run", the director's run, or
 	## "shakedown", the training scenario (co-op, one ship). "" leaves the server's default.
 	var encounter: String = ""
+	## A station lesson (--solo, D303): the host plays this station alone, bots on the rest.
+	var solo: String = ""
 
 	func _init(bind_address: String = "") -> void:
 		bind = bind_address
