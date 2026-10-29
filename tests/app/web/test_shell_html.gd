@@ -42,7 +42,9 @@ func test_the_page_shows_the_start_up_stages_in_order() -> void:
 	# After the download a radar sweep turns in place (no bar filling up as if it were progress); it
 	# moves by transform and opacity, which the browser animates off the main thread.
 	assert_str(src).contains("fillEl.style.transform = 'scaleX('")
-	assert_str(src).contains("#bar.busy #radar .sweep { animation: radar-spin 5s linear infinite; }")
+	assert_str(src).contains(
+		"#bar.busy #radar .sweep { animation: radar-spin 5s linear infinite; }"
+	)
 	assert_str(src).contains("@keyframes radar-spin")
 	assert_str(src).contains("@keyframes radar-blip")
 	assert_str(src).not_contains("@keyframes breathe")
