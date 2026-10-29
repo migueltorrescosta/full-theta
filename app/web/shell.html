@@ -48,16 +48,23 @@ body { color: white; background-color: black; overflow: hidden; touch-action: no
   display: flex; align-items: center; justify-content: center; }
 #bar { position: relative; overflow: hidden; width: 100%; height: 4px; margin-top: 24px;
   background: rgba(255, 255, 255, 0.15); }
-/* The fill and the sweep move by transform: the browser animates them off the main
-   thread, so they keep going while the engine compiles the game's scripts (seconds on a
-   phone) and no timer or text update can run (#11, DC2). */
+/* The download fills the bar by transform (the real progress). After it the bar gives way to
+   one soft dot that breathes in place: it never travels, so it claims no progress. It moves by
+   transform and opacity only, which the browser animates off the main thread, so it keeps
+   going while the engine compiles the game's scripts (seconds on a phone) and no timer or
+   text update can run (#11, DC3). A 10 s cycle (4 s in, 6 s out) is about six breaths a minute. */
 #fill { width: 100%; height: 100%; background: rgba(88, 166, 255, 0.7); transform-origin: left;
   transform: scaleX(0); transition: transform 0.3s ease-out; }
-#fill.creep { transition: transform 9s cubic-bezier(0.1, 0.6, 0.3, 1); }
-#bar.busy::after { content: ''; position: absolute; top: 0; left: 0; width: 30%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(230, 237, 243, 0.55), transparent);
-  animation: sweep 1.4s ease-in-out infinite; }
-@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+#breath { display: none; position: absolute; left: 50%; top: 50%; width: 14px; height: 14px;
+  margin: -7px 0 0 -7px; border-radius: 50%; background: rgba(88, 166, 255, 0.85);
+  opacity: 0.35; transform: scale(0.6); }
+#bar.busy { overflow: visible; background: none; margin: 26px 0 14px; }
+#bar.busy #fill { display: none; }
+#bar.busy #breath { display: block; animation: breathe 10s ease-in-out infinite; }
+@keyframes breathe {
+  0%, 100% { transform: scale(0.6); opacity: 0.35; }
+  40% { transform: scale(1.2); opacity: 0.85; }
+}
 #progress { font-size: 12px; color: #8b98a5; margin-top: 6px; }
 .arrow { flex: none; width: 48px; height: 48px; border-radius: 6px; border: 1px solid #3a4654;
   background: #151b23; color: #e6edf3; font-size: 24px; line-height: 1; padding: 0; }
@@ -67,7 +74,11 @@ body { color: white; background-color: black; overflow: hidden; touch-action: no
   #tipcol { order: -1; }
   #tip { min-height: 6em; }
 }
-@media (prefers-reduced-motion: reduce) { #status, #bar.busy::after { animation: none; } }
+/* Reduced motion: the dot stays still at middle strength. */
+@media (prefers-reduced-motion: reduce) {
+  #status, #bar.busy #breath { animation: none; }
+  #bar.busy #breath { opacity: 0.6; transform: none; }
+}
 </style>
 $GODOT_HEAD_INCLUDE
 </head>
@@ -79,7 +90,7 @@ $GODOT_HEAD_INCLUDE
   <div id="tipcol">
     <div id="topic"></div>
     <div id="tip" aria-live="polite"></div>
-    <div id="bar"><div id="fill"></div></div>
+    <div id="bar"><div id="fill"></div><div id="breath"></div></div>
     <div id="progress">Loading</div>
   </div>
   <button class="arrow" id="tipNext" aria-label="Next tip">&rsaquo;</button>
@@ -443,13 +454,12 @@ statusEl.addEventListener('click', function (e) {
 // "ready" when the lobby is up, which removes the overlay. "start" is set here before the
 // engine starts, and the browser gets a frame to draw it first: the engine then runs one
 // long task (starting, compiling the scripts, building the menu) in which no text can change.
-// The bar's share of each stage is a guess of its length; it never sits at its end.
+// Only the download shows a bar; after it a breathing dot stands in, since the length of the
+// later stages is unknown and a bar filling up would only pretend to know it (DC3).
 const STAGES = ['download', 'start', 'connect', 'lobby', 'ready'];
-const STAGE_BAR = { download: 0.5, start: 0.85, connect: 0.9, lobby: 0.96, ready: 1 };
 var stage = 'download';
 window.ft.stage = stage;
-function setBar(share, creep) {
-  fillEl.classList.toggle('creep', !!creep);
+function setBar(share) {
   fillEl.style.transform = 'scaleX(' + share + ')';
 }
 function setStage(name) {
@@ -466,15 +476,14 @@ function setStage(name) {
   }
   barEl.classList.toggle('busy', name !== 'download');
   progress.textContent = WORDS[name === 'download' ? 'loading' : name];
-  setBar(STAGE_BAR[name], name === 'start');
 }
 window.ft.loadStage = setStage;
-// The download: the engine's real progress fills the first half of the bar.
+// The download: the engine's real progress fills the bar.
 function setProgress(current, total) {
   if (stage !== 'download') { return; }
   if (total > 0) {
     const pct = Math.min(100, Math.round(100 * current / total));
-    setBar(STAGE_BAR.download * pct / 100, false);
+    setBar(pct / 100);
     progress.textContent = WORDS.loading + ' \u00b7 ' + pct + ' %';
   } else {
     progress.textContent = WORDS.loading;

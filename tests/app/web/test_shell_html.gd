@@ -39,9 +39,17 @@ func test_the_page_shows_the_start_up_stages_in_order() -> void:
 	assert_str(src).contains("return afterPaint().then(")
 	for word: String in ["Starting the game", "Connecting", "Opening the lobby"]:
 		assert_str(src).contains(word)
-	# The fill and the sweep move by transform, which the browser animates off the main thread.
+	# After the download a dot breathes in place (no bar filling up as if it were progress); it
+	# moves by transform and opacity, which the browser animates off the main thread.
 	assert_str(src).contains("fillEl.style.transform = 'scaleX('")
-	assert_str(src).contains("#bar.busy::after")
+	assert_str(src).contains("#bar.busy #breath { display: block; animation: breathe 10s")
+	assert_str(src).contains("@keyframes breathe")
+	assert_str(src).not_contains("STAGE_BAR[")
+	assert_str(src).not_contains("creep")
+	assert_str(src).not_contains("@keyframes sweep")
+	var reduced: int = src.find("@media (prefers-reduced-motion: reduce)")
+	assert_int(reduced).is_greater(0)
+	assert_str(src.substr(reduced, 200)).contains("#bar.busy #breath { animation: none; }")
 
 
 # FT: FT-NET-030, FT-M1-019
@@ -80,7 +88,7 @@ func test_tips_rotate_with_the_owners_timing_over_a_real_progress_bar() -> void:
 	assert_str(src).contains("Math.max(5, text.length / 15 + 1)")
 	assert_str(src).contains("e.clientX < box.left + box.width / 2 ? -1 : 1")
 	assert_str(src).contains("engine.startGame({ onProgress: setProgress })")
-	assert_str(src).contains("setBar(STAGE_BAR.download * pct / 100, false);")
+	assert_str(src).contains("setBar(pct / 100);")
 	assert_str(src).contains("env(safe-area-inset-bottom")
 	assert_str(src).not_contains("@keyframes ticker")
 
