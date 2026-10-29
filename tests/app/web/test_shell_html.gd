@@ -51,7 +51,8 @@ func test_the_page_shows_the_start_up_stages_in_order() -> void:
 	assert_str(src).not_contains("@keyframes sweep")
 	var reduced: int = src.find("@media (prefers-reduced-motion: reduce)")
 	assert_int(reduced).is_greater(0)
-	assert_str(src.substr(reduced, 400)).contains("#bar.busy #radar .sweep, #bar.busy #radar .blip { animation: none; }")
+	var still: String = "#bar.busy #radar .sweep, #bar.busy #radar .blip { animation: none; }"
+	assert_str(src.substr(reduced, 400)).contains(still)
 
 
 # FT: FT-NET-030, FT-M1-019

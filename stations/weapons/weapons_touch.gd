@@ -288,6 +288,7 @@ func _make_overlays(with_radar: bool) -> void:
 		bg.border_color = Palette.color("line_strong")
 		bg.set_border_width_all(UiTheme.BORDER)
 		bg.set_corner_radius_all(4)
+		bg.set_content_margin_all(0.0)  # the border must not shrink the disc
 		radar_box.add_theme_stylebox_override("panel", bg)
 		radar = DiscRadar.new()
 		radar.gui_input.connect(_on_radar_input)
