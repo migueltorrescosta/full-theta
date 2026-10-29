@@ -69,7 +69,7 @@ func _ready() -> void:
 	if lesson:
 		_ctx.training[entry] = {
 			"line": "shakedown.%s.face" % entry,
-			"text": "Face the drone: hold {binding:face}.",
+			"text": "Face the drone.",
 			"example": "train.ex.face",
 			"done": false,
 		}

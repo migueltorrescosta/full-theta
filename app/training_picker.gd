@@ -202,7 +202,9 @@ func _card(station: String) -> Button:
 	head.add_child(_dot(station))
 	var name_label: Label = _label("Name", head, false)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_label("Tick", head, false).add_theme_color_override("font_color", Palette.color("ok"))
+	var tick: Label = _label("Tick", head, true)
+	tick.custom_minimum_size = Vector2(14, 0)
+	tick.add_theme_color_override("font_color", Palette.color("ok"))
 	_label("Blurb", col, false)
 	_label("Size", col, true).add_theme_color_override("font_color", Palette.color("text_dim"))
 	_label("State", col, true)
@@ -213,7 +215,11 @@ func _label(node_name: String, parent: Control, small: bool) -> Label:
 	var l: Label = Label.new()
 	l.name = node_name
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Only the blurb wraps; a name or tick that wrapped would stretch its row.
+	if node_name == "Blurb":
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	elif node_name == "Name":
+		l.clip_text = true
 	if small:
 		l.add_theme_font_size_override("font_size", UiTheme.SMALL_SIZE + 1)
 	parent.add_child(l)
