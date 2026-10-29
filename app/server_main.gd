@@ -191,15 +191,19 @@ func _set_value(flag: String, value: String) -> bool:
 		encounter_name = value
 		return true
 	if flag == "--solo":
-		if not StationViews.CREW.has(value) and value != StationViews.CAPTAIN:
-			push_error("--solo must be a station: %s or captain" % ", ".join(StationViews.CREW))
-			return false
-		solo_station = value
-		encounter_name = "shakedown"
-		return true
+		return _set_solo(value)
 	if flag == "--tls-cert" or flag == "--tls-key":
 		return _set_tls(flag, value)
 	return _set_flag(flag, value)
+
+
+func _set_solo(value: String) -> bool:
+	if not StationViews.CREW.has(value) and value != StationViews.CAPTAIN:
+		push_error("--solo must be a station: %s or captain" % ", ".join(StationViews.CREW))
+		return false
+	solo_station = value
+	encounter_name = "shakedown"
+	return true
 
 
 func _set_tls(flag: String, value: String) -> bool:
@@ -336,7 +340,7 @@ func make_server() -> NetServer:
 		push_error("server failed to start on %s:%d: %s" % [bind_address, port, error_string(err)])
 		server.free()
 		return null
-	server.session.solo_on_join = solo_station
+	server.session.training.solo_on_join = solo_station
 	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
 	server.session.language = language
 	server.session.tls = tls != null

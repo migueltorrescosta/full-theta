@@ -94,7 +94,7 @@ func start(
 	transport.probe = probe != null
 	run_reset = NetRunReset.new(session, restart_run)
 	run_reset.decisions = _director_decisions
-	session.training_hook = begin_training
+	session.training.hook = begin_training
 	_wire_fleet()
 	var err: Error = transport.start(port, address)
 	if err != OK:
@@ -120,7 +120,7 @@ func _wire_fleet() -> void:
 		session.fleet.rebuild = rebuild_fleet
 
 
-## A lesson for `s` (D303, ServerSession.training_hook; the caller checked that no other crew
+## A lesson for `s` (D303, NetTraining.hook; the caller checked that no other crew
 ## is on the server): the world becomes a fresh Shakedown with bots on every station but
 ## `station`, the session is picked at it and started. "" is the crew drill: a fresh Shakedown
 ## for whoever joins. The server goes back to its own encounter when the last pick is gone.
@@ -135,14 +135,13 @@ func begin_training(s: NetSession, station: String) -> void:
 		training_active = true
 	encounter = setup
 	driver_factory = training_driver.call(StringName(station))
-	session.training_solo = station
+	session.training.solo = station
 	_wire_fleet()
 	restart_run()
 	if station == "":
 		session.move(s, -1, "")
 		return
-	session.move(s, session.crew_ships()[0]["id"], station)
-	session.press_start(s)
+	session.training.seat_and_start(s, session.crew_ships()[0]["id"], station)
 
 
 ## Back to the server's own encounter after a lesson.
@@ -152,7 +151,7 @@ func end_training() -> void:
 	training_active = false
 	encounter = _home_encounter
 	driver_factory = _home_driver
-	session.training_solo = ""
+	session.training.solo = ""
 	_wire_fleet()
 	restart_run()
 

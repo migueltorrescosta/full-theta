@@ -50,6 +50,9 @@ var audit: String = ""
 ## The touch_kit view's rails are docked.
 var docked: bool = false
 
+## A Shakedown step on the focused station's banner (a solo lesson step, D303).
+var lesson: bool = false
+
 var _ctx: StationContext
 
 
@@ -63,6 +66,13 @@ func _ready() -> void:
 	get_tree().root.content_scale_factor = ui_scale
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
+	if lesson:
+		_ctx.training[entry] = {
+			"line": "shakedown.%s.face" % entry,
+			"text": "Face the drone: hold {binding:face}.",
+			"example": "train.ex.face",
+			"done": false,
+		}
 	if science != "":
 		_ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(science)
 	if comms != "off":
@@ -85,6 +95,16 @@ func _ready() -> void:
 			m.token_path = "user://l5_menu_none.token"
 			m.pid_path = "user://l5_menu_none.pid"
 			add_child(m)
+		"training":
+			var picker_menu: MainMenu = MainMenu.new()
+			picker_menu.web = true
+			picker_menu.settings = ClientSettings.new("user://l5_menu_training.cfg")
+			picker_menu.settings.player_name = "Ana"
+			picker_menu.settings.lessons_done = {"weapons": true, "science": true}
+			picker_menu.token_path = "user://l5_menu_none.token"
+			picker_menu.pid_path = "user://l5_menu_none.pid"
+			add_child(picker_menu)
+			picker_menu.open_training()
 		"lobby":
 			_ctx.crew.lobby[0]["started"] = false
 			_ctx.crew.lobby[0]["ready"] = false

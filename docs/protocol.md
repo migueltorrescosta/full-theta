@@ -80,6 +80,7 @@ Direction: C client to server, S server to client. Lane: H high, L low. "Task" i
 | 43 | SessionMode | C | `mode` String (`coop`, `race`, `last_standing`, `teams`, `holdout`), `team_win` String (`last_team_standing`, `first_to_finish`; read in teams), `lives` int (the finite side's relaunches in holdout, −1 the default) | H | The host sets the session's mode and options in the lobby (FT-MIS-031, M4-Q6); answered by `fleet`. Refusals: `not_host`, `bad_mode`, `lobby_closed`. | #11 C |
 | 44 | Relaunch | C | `ship` int, `vote` bool | H | An eliminated ship's connected crew vote to relaunch it when its side's relaunch policy allows (M4-Q2); a majority, as for RunAgain, relaunches it (`relaunched`). Answered by `relaunch_votes`. Refusals: `no_relaunch`, `not_crew`. | #11 C |
 | 45 | ClientFrame | C | `ms` int (the frame's length), `what` String (what ran in it: the shell's steps, the screen, the menu's tab; ≤ 120 bytes) | — | A client frame over 500 ms (`ClientShell.LONG_FRAME_US`), so a session log shows what each device was doing when it froze (#28, load fix 10). Rate limited like the other requests; the server cuts `what` to 120 bytes and logs `long_frame`; no answer. Added without a version bump: a server without it drops the type. | #28 |
+| 46 | Training | C | `station` String (`helm`, `weapons`, `engineering`, `science`, `relay`, `comms`, `captain`, or "" for the crew drill) | H | A client asks for a solo lesson (D303, FT-MIS-039; "Solo training"). Refusals: `request_rejected` `busy` (with `players`: other sessions hold a pick; nothing changes for them), `bad_station` (with `station`), `not_implemented` (a server that cannot teach). | #11 TU |
 
 ### Events
 
@@ -161,6 +162,10 @@ Version 8 (M4, #11; owner M4-Q1 to M4-Q10, 2026-10-28). Code: `net/net_fleet.gd`
 | `relaunch_votes` | `ship`, `voters` [name], `needed` | the ship's sessions |
 | `relaunched` | `ship`, `lives` | every session |
 | `session_over` | `reason`, `winners` [ship], `team` (−1 none), `held_s` (holdout score), `time_s` | every session |
+
+## Solo training
+
+D303, FT-MIS-039. `Training{station}` asks the server to run a lesson for the sender: that station's whole Shakedown track, played alone. The server accepts it only when no other session holds a pick (the sender's own pick does not count); otherwise it answers `request_rejected` `busy` with `players` and changes nothing. On acceptance the server builds a fresh Shakedown world (`restart_run`, picks kept), seats bots on every other crew station and presses Start for the sender, which `picked` (the station) and `started` events then announce. The bots are not sessions: `ServerSession.entries_of` lists their stations so coverage passes and the ship counts as crewed, and `TrainingPartners` presses Next for their half of each pair step four seconds after it starts, as a logged `training_next` command. With station "" the server only builds the fresh Shakedown (the crew drill), with no bots and no pick, and the lobby works as usual. When the last pick is gone and no client is connected the server goes back to the encounter it started with. A desktop host does not send the message: it starts its server child with `--solo STATION`, and the server starts the lesson for the host's first join.
 
 ## Station commands added in M3
 

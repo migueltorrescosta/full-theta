@@ -46,7 +46,7 @@ func test_a_lone_client_gets_a_started_lesson_at_its_station() -> void:
 	assert_str(picked["payload"]["entry"]).is_equal("weapons")
 	assert_str(picked["payload"]["reason"]).is_empty()
 	assert_bool(server.training_active).is_true()
-	assert_str(server.session.training_solo).is_equal("weapons")
+	assert_str(server.session.training.solo).is_equal("weapons")
 	assert_bool(server.world.run_def.training).is_true()
 	# Bots hold the other five stations, so the ship is crewed.
 	var entries: Array = server.session.entries_of(picked["payload"]["ship"])
@@ -69,7 +69,7 @@ func test_a_server_with_crew_says_busy_and_keeps_its_run() -> void:
 	assert_int(refused["payload"]["players"]).is_equal(3)
 	assert_int(refused["payload"]["request"]).is_equal(NetProtocol.Type.TRAINING)
 	assert_bool(server.training_active).is_false()
-	assert_str(server.session.training_solo).is_empty()
+	assert_str(server.session.training.solo).is_empty()
 	assert_array(_since(c, n, NetProtocol.EVENT_STARTED)).is_empty()
 
 
@@ -80,7 +80,7 @@ func test_a_bad_station_is_refused() -> void:
 	var n: int = h.mark(c)
 	c.start_training("galley")
 	var refused: Dictionary = await h.next_event(c, NetProtocol.EVENT_REQUEST_REJECTED, n)
-	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.BAD_STATION)
+	assert_str(refused["payload"]["reason"]).is_equal(NetTraining.BAD_STATION)
 	assert_bool(server.training_active).is_false()
 
 
@@ -96,7 +96,7 @@ func test_the_server_goes_back_when_the_player_leaves() -> void:
 	await h.lapsed(session)
 	assert_bool(await h.until(func() -> bool: return not server.training_active)).is_true()
 	assert_object(server.encounter).is_same(home)
-	assert_str(server.session.training_solo).is_empty()
+	assert_str(server.session.training.solo).is_empty()
 	# A crew can now take the run as before.
 	var crew: Array[NetClient] = await h.crew3(server)
 	assert_bool(await h.start(server, crew[0])).is_true()
@@ -108,8 +108,8 @@ func test_the_crew_drill_request_gives_a_fresh_shakedown_without_bots() -> void:
 	var c: NetClient = await h.welcomed(server, "ana")
 	c.start_training("")
 	assert_bool(await h.until(func() -> bool: return server.training_active)).is_true()
-	assert_str(server.session.training_solo).is_empty()
-	assert_array(server.session.bot_entries()).is_empty()
+	assert_str(server.session.training.solo).is_empty()
+	assert_array(server.session.training.bot_entries()).is_empty()
 	assert_bool(server.world.run_def.training).is_true()
 
 
@@ -117,11 +117,11 @@ func test_the_crew_drill_request_gives_a_fresh_shakedown_without_bots() -> void:
 func test_the_hosts_solo_flag_starts_a_lesson_on_join() -> void:
 	var server: NetServer = _teaching_server()
 	server.session.host_secret = "s3cret"
-	server.session.solo_on_join = "relay"
+	server.session.training.solo_on_join = "relay"
 	var c: NetClient = await h.welcomed(server, "host", "", "s3cret")
 	assert_bool(await h.until(func() -> bool: return server.session.launched.size() == 1)).is_true()
 	assert_str(h.session_of(server, c).entry).is_equal("relay")
-	assert_str(server.session.training_solo).is_equal("relay")
+	assert_str(server.session.training.solo).is_equal("relay")
 
 
 # FT: FT-MIS-039
@@ -148,9 +148,14 @@ func test_the_bots_press_next_for_their_half_of_a_pair_step() -> void:
 		guard += 1
 	assert_bool(driver.finished(&"helm")).is_true()
 	var flag: StringName = TrainingDriver.next_flag(&"engineering")
-	assert_bool(
-		await h.until(func() -> bool: return server.world.story_flags.get_flag(flag) == 1, 12000)
-	).is_true()
+	(
+		assert_bool(
+			await h.until(
+				func() -> bool: return server.world.story_flags.get_flag(flag) == 1, 12000
+			)
+		)
+		. is_true()
+	)
 
 
 # FT: FT-MIS-039
@@ -162,7 +167,9 @@ func test_the_solo_flag_reaches_the_server_child_and_its_command_line() -> void:
 	assert_int(args.find("--solo")).is_greater(0)
 	assert_str(args[args.find("--solo") + 1]).is_equal("comms")
 	var server_cli: ServerMain = ServerMain.new()
-	assert_bool(server_cli.parse_args(["--server", "--bind", "127.0.0.1", "--solo", "comms"])).is_true()
+	var good: PackedStringArray = ["--server", "--bind", "127.0.0.1", "--solo", "comms"]
+	assert_bool(server_cli.parse_args(good)).is_true()
 	assert_str(server_cli.solo_station).is_equal("comms")
 	assert_str(server_cli.encounter_name).is_equal("shakedown")
-	assert_bool(ServerMain.new().parse_args(["--server", "--bind", "127.0.0.1", "--solo", "x"])).is_false()
+	var bad: PackedStringArray = ["--server", "--bind", "127.0.0.1", "--solo", "x"]
+	assert_bool(ServerMain.new().parse_args(bad)).is_false()

@@ -15,6 +15,8 @@ const ALERT_SOUNDS: String = "res://assets/sounds/alerts"
 ## The Host form's scenarios: the --encounter each passes, and the label key of each.
 const SCENARIOS: Array[String] = ["run", "shakedown"]
 const SCENARIO_KEYS: Array[String] = ["train.mode_run", "train.mode_shakedown"]
+## How long a lesson's shell stays hidden while the server seats and starts it (ms).
+const LESSON_WAIT_MS: int = 8000
 
 var settings: ClientSettings = ClientSettings.new()
 ## Paths injectable for tests.
@@ -58,8 +60,17 @@ var _address: LineEdit
 var _status: Label
 var _rejoin: Button
 var _settings_screen: SettingsScreen
+var _training: Button
+var _picker: TrainingPicker
 var _orphan_dialog: ConfirmationDialog
 var _orphan_answer: HostSession.Answer = HostSession.Answer.LEAVE
+## The station lesson being started or played (D303): `_lesson_on` while there is one, `_lesson`
+## its station ("" is the crew drill), and what the picker should say when it comes back.
+var _lesson_on: bool = false
+var _lesson: String = ""
+var _lesson_note: String = ""
+## Until when a lesson's shell waits for the server to seat and start it (ms).
+var _lesson_deadline: int = 0
 
 
 func _ready() -> void:
@@ -88,6 +99,7 @@ func _process(_delta: float) -> void:
 			_status.text = tr("menu.host_failed") % host_session.error
 			host_session.stop()
 			host_session = null
+			_lesson_failed()
 	if joining != null:
 		joining.poll()
 		if joining.is_welcomed():
@@ -98,6 +110,9 @@ func _process(_delta: float) -> void:
 			_status.text = tr("menu.join_failed") % joining.reject_reason
 			joining = null
 			WebLoadStage.report(WebLoadStage.READY)
+			_lesson_failed()
+	if _lesson_on and shell != null and not shell.visible:
+		_reveal_lesson_if_started()
 
 
 func _notification(what: int) -> void:
@@ -117,20 +132,22 @@ static func bind_addresses() -> PackedStringArray:
 
 ## Host: spawns the server child and joins it as the host (FT-M1-002), bound to the
 ## chosen address, or to `bind` when given (ClientAutopilot).
-func host(bind: String = "") -> void:
+func host(bind: String = "", scenario: String = "", solo: String = "") -> void:
 	_remember_name()
 	if bind == "":
 		bind = bind_addresses()[_bind.selected]
 	var o: HostSession.Options = HostSession.Options.new(bind)
 	o.language = I18n.LANGUAGES[_lang.selected]
-	o.dev_all = _dev.button_pressed
-	o.encounter = SCENARIOS[_scenario.selected]
+	o.dev_all = _dev.button_pressed and solo == ""
+	o.encounter = scenario if scenario != "" else SCENARIOS[_scenario.selected]
+	o.solo = solo
 	host_session = HostSession.new(settings.player_name)
 	host_session.token_file = token_path
 	host_session.launcher.pid_file = pid_path
 	if host_session.host(o) != OK:
 		_status.text = tr("menu.host_failed") % host_session.error
 		host_session = null
+		_lesson_failed()
 		return
 	_status.text = tr("menu.starting")
 
@@ -198,6 +215,8 @@ func _start_shell(client: NetClient) -> void:
 	shell.left.connect(_on_left)
 	_menu.visible = false
 	_status.text = ""
+	if _lesson_on:
+		_begin_lesson(client)
 
 
 ## The player left the session: the host also ends its server (FT-NET-003); a joined
@@ -205,6 +224,8 @@ func _start_shell(client: NetClient) -> void:
 func _on_left() -> void:
 	shell.queue_free()
 	shell = null
+	var was_lesson: bool = _lesson_on
+	_lesson_on = false
 	if host_session != null:
 		_stop_host()
 	else:
@@ -212,6 +233,11 @@ func _on_left() -> void:
 	_menu.visible = true
 	_refresh_rejoin()
 	_apply_scale()
+	if was_lesson:
+		_picker.refresh()
+		_picker.show_note(_lesson_note)
+		_picker.visible = true
+		_lesson_note = ""
 
 
 func _stop_host() -> void:
@@ -224,6 +250,102 @@ func _remember_name() -> void:
 	var n: String = _name.text.strip_edges()
 	settings.player_name = n if n != "" else tr("menu.default_name")
 	settings.save()
+
+
+# --- Solo training (D303). ---
+
+
+## Opens the Training picker: the first of the two taps to any lesson.
+func open_training() -> void:
+	_picker.refresh()
+	_picker.show_note("")
+	_picker.visible = true
+
+
+## Starts the lesson of `station` ("" is the crew drill), the second tap. A desktop client
+## hosts a local server that seats it at once (--solo); a browser asks the server it joins,
+## which refuses when other players are on it.
+func start_lesson(station: String) -> void:
+	_remember_name()
+	_lesson_on = true
+	_lesson = station
+	_lesson_note = ""
+	_picker.show_note(tr("train.picker.starting"))
+	_picker.set_busy(true)
+	if web:
+		var addr: LanBrowser.Address = LanBrowser.parse_address(_address.text)
+		if not addr.ok:
+			_lesson_failed()
+			return
+		_connect(addr.url, "")
+	elif station == "":
+		host("", "shakedown")  # the crew drill on the Host form's address: others may join
+	else:
+		host(LOOPBACK, "shakedown", station)
+
+
+func _lesson_failed() -> void:
+	if not _lesson_on:
+		return
+	_lesson_on = false
+	_picker.show_note(tr("train.picker.failed"))
+
+
+## The shell of a lesson stays hidden until the server has seated and started it; a browser
+## asks for the lesson now that it is welcomed.
+func _begin_lesson(client: NetClient) -> void:
+	_lesson_deadline = Time.get_ticks_msec() + LESSON_WAIT_MS
+	shell.voice.subtitle.connect(_on_lesson_line)
+	if host_session != null and _lesson == "":
+		return  # the crew drill hosted here opens on its lobby as usual
+	shell.visible = false
+	if host_session == null:
+		client.event_received.connect(_on_lesson_event)
+		client.start_training(_lesson)
+
+
+func _on_lesson_event(e: Dictionary) -> void:
+	var payload: Dictionary = e.get("payload", {})
+	match str(e.get("type", "")):
+		NetProtocol.EVENT_REQUEST_REJECTED:
+			if int(payload.get("request", -1)) != NetProtocol.Type.TRAINING or shell == null:
+				return
+			if str(payload.get("reason", "")) == NetTraining.BUSY:
+				var players: int = int(payload.get("players", 0))
+				_lesson_note = (
+					tr("train.picker.busy_one" if players == 1 else "train.picker.busy_many")
+					% players
+				)
+			else:
+				_lesson_note = tr("train.picker.failed")
+			shell.leave()
+		NetProtocol.EVENT_PICKED:
+			if _lesson == "" and shell != null:
+				_reveal_lesson()
+
+
+## A station lesson shows once the crew state says the server seated and started it, or
+## after LESSON_WAIT_MS.
+func _reveal_lesson_if_started() -> void:
+	var crew: CrewState = shell.ctx.crew
+	var seated: bool = _lesson != "" and crew.entry == _lesson and crew.is_started()
+	if seated or Time.get_ticks_msec() > _lesson_deadline:
+		_reveal_lesson()
+
+
+func _reveal_lesson() -> void:
+	shell.visible = true
+	_picker.visible = false
+	_picker.show_note("")
+
+
+## The Shakedown's last line ends the lesson: its station gets its tick.
+func _on_lesson_line(entry: Dictionary) -> void:
+	if _lesson == "" or str(entry.get("line", "")) != "shakedown.all_done":
+		return
+	settings.mark_lesson_done(_lesson)
+	settings.save()
+	_picker.refresh()
 
 
 # --- Orphan server on start (FT-NET-003, TECH-8). ---
@@ -355,6 +477,7 @@ func _build() -> void:
 	var bottom: HFlowContainer = _bottom
 	# Two columns: with the Host form on the left, the buttons and status go under Join.
 	_item(col, bottom, not web)
+	_training = _button(bottom, "Training", tr("menu.training"), open_training)
 	_rejoin = _button(bottom, "Rejoin", tr("menu.rejoin"), rejoin)
 	_button(bottom, "Settings", tr("menu.settings"), func() -> void: _settings_screen.open())
 	_button(bottom, "Quit", tr("menu.quit"), quit)
@@ -366,6 +489,12 @@ func _build() -> void:
 	add_child(_settings_screen)
 	_settings_screen.setup(settings, false)
 	_settings_screen.scale_changed.connect(_apply_scale)
+	_picker = TrainingPicker.new()
+	_picker.visible = false
+	add_child(_picker)
+	_picker.setup(settings, load("res://content/training/steps.tres") as TrainingStepsDef)
+	_picker.closed.connect(func() -> void: _picker.visible = false)
+	_picker.chosen.connect(start_lesson)
 	_orphan_dialog = ConfirmationDialog.new()
 	_orphan_dialog.title = tr("menu.orphan_title")
 	_orphan_dialog.ok_button_text = tr("menu.orphan_rejoin")

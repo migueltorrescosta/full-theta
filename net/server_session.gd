@@ -35,8 +35,6 @@ const NOT_CLAIMED: String = "not_claimed"
 const CAPTAIN_TAKEN: String = "captain_taken"
 const NOT_COVERED: String = "coverage"
 const STARTED: String = "started"
-const BUSY: String = "busy"
-const BAD_STATION: String = "bad_station"
 const TOGGLES_LOCKED: String = "toggles_locked"
 const BAD_TOGGLES: String = "bad_toggles"
 
@@ -97,13 +95,7 @@ var shares: NetShares
 var host_pause: NetHostPause
 ## The multi-ship lobby and PvP rules (#11).
 var fleet: NetFleet
-## Solo training (D303): the station played alone, or "" for none. Bots hold every other
-## crew station of the ship (bot_entries), so coverage passes and the ship is crewed.
-var training_solo: String = ""
-## Switches the server to a lesson for a session: (session, station) -> void, set by NetServer.
-var training_hook: Callable
-## A station lesson to start for the host as soon as it joins (the --solo flag), or "".
-var solo_on_join: String = ""
+var training: NetTraining  # solo lessons (D303)
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -132,7 +124,6 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.PICK: _on_pick,
 		NetProtocol.Type.RELEASE: _on_release,
 		NetProtocol.Type.READY: _on_ready,
-		NetProtocol.Type.TRAINING: _on_training,
 		NetProtocol.Type.CLAIM: _on_claim,
 		NetProtocol.Type.RELEASE_CLAIM: _on_claim,
 		NetProtocol.Type.COMMAND: _on_command,
@@ -154,6 +145,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 	}
 	host_pause = NetHostPause.new(self)  # registers HostPause
 	fleet = NetFleet.new(self)  # registers ShipAdd, ShipTeam, SessionMode and Relaunch
+	training = NetTraining.new(self)  # registers Training
 
 
 ## Handles everything the transport received since the last call, lapses the sessions
@@ -406,34 +398,13 @@ func min_crew() -> int:
 	return 1 if dev_all else NetCoverage.MIN_CREW
 
 
-## The entries held on a ship by its live sessions (connected or within grace), and by the
-## bots of a solo lesson.
+## The entries held on a ship by its live sessions (connected or within grace).
 func entries_of(ship: int) -> Array:
-	var out: Array = bot_entries() if _crewable(ship) else []
+	var out: Array = training.bot_entries() if _crewable(ship) else []
 	for s: NetSession in by_id.values():
 		if s.ship == ship and s.entry != "":
 			out.append(s.entry)
 	return out
-
-
-## The crew stations the bots hold in a solo lesson (D303): all but the player's.
-func bot_entries() -> Array:
-	var out: Array = []
-	if training_solo == "":
-		return out
-	for station: String in StationViews.CREW:
-		if station != training_solo:
-			out.append(station)
-	return out
-
-
-## How many other sessions hold a pick: the crew a server must not disturb with a lesson.
-func crew_besides(s: NetSession) -> int:
-	var n: int = 0
-	for o: NetSession in by_id.values():
-		if o != s and o.has_pick():
-			n += 1
-	return n
 
 
 ## The lobby state of a ship, as sent in `lobby` events (FT-NET-021).
@@ -602,10 +573,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	if session.has_pick():
 		crew.send_to(session)
 	_publish()
-	if solo_on_join != "" and session.is_host and training_hook.is_valid():
-		var station: String = solo_on_join
-		solo_on_join = ""
-		training_hook.call(session, station)
+	training.on_join(session)
 
 
 func _refuse(conn: int, reason: String) -> void:
@@ -653,11 +621,6 @@ func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = by_conn.get(conn)
 	if s == null or not msg["ready"]:
 		return
-	press_start(s)
-
-
-## Start for a session's ship: the checks of Ready, then the fleet's all-together rule.
-func press_start(s: NetSession) -> void:
 	var reason: String = ""
 	var extra: Dictionary = {}
 	if not s.has_pick() or not StationViews.is_crew(s.entry):
@@ -680,24 +643,6 @@ func press_start(s: NetSession) -> void:
 	voice.toggles = toggles.encode()
 	voice.start(language, crew_ships().map(func(c: Dictionary) -> int: return c["faction"]))
 	_publish()
-
-
-## Training{station} (D303): a lesson for the sender, alone at `station` with bots on the
-## others, or "" for the crew drill. Only a server with no other crew runs one; the sender
-## is then picked, and started when it is a station lesson.
-func _on_training(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = by_conn.get(conn)
-	if s == null:
-		return
-	var station: String = msg["station"]
-	if station != "" and not StationViews.CREW.has(station) and station != StationViews.CAPTAIN:
-		request_rejected(s, NetProtocol.Type.TRAINING, BAD_STATION, {"station": station})
-	elif not training_hook.is_valid():
-		request_rejected(s, NetProtocol.Type.TRAINING, NOT_IMPLEMENTED, {})
-	elif crew_besides(s) > 0:
-		request_rejected(s, NetProtocol.Type.TRAINING, BUSY, {"players": crew_besides(s)})
-	else:
-		training_hook.call(s, station)
 
 
 ## Toggles{set} (FT-PAIR-017): the host sets the session's data-shortcut toggles from the

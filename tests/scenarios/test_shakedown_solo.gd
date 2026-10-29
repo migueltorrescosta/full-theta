@@ -84,8 +84,7 @@ func test_other_stations_are_silent_and_pairs_without_the_station_never_start() 
 	for other: StringName in STATIONS:
 		if other != &"helm":
 			var said: Array[SimEvent] = rig.world.events.filter(
-				func(e: SimEvent) -> bool:
-					return String(e.tag).begins_with("shakedown.%s." % other)
+				func(e: SimEvent) -> bool: return String(e.tag).begins_with("shakedown.%s." % other)
 			)
 			assert_array(said).override_failure_message(String(other)).is_empty()
 	for p: TrainingStepDef in rig.steps.pairs():
