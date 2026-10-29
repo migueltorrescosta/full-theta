@@ -70,6 +70,7 @@ func _section(key: String, ids: Array[String]) -> void:
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 24)
+	ListLines.attach(grid)
 	for id: String in ids:
 		var list: PackedStringArray = _bindings.bindings(id, _device)
 		if list.is_empty():

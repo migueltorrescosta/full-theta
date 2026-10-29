@@ -94,6 +94,7 @@ func setup(context: StationContext) -> void:
 	_table.add_theme_constant_override("h_separation", GAP)
 	_table.add_theme_constant_override("v_separation", 8)
 	scroll.add_child(_table)
+	ListLines.attach(_table)
 	_foot = HBoxContainer.new()
 	_foot.name = "Foot"
 	_foot.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)

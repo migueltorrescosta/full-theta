@@ -89,6 +89,7 @@ func _setup() -> void:
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows.add_child(top)
 	_list = ItemList.new()
+	ListLines.attach(_list)
 	_list.custom_minimum_size = Vector2(LIST_W, 0)
 	_list.item_selected.connect(_on_list_selected)
 	top.add_child(_list)

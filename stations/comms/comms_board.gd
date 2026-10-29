@@ -362,10 +362,14 @@ func _draw_column(font: Font, col: int) -> void:
 			Palette.color("text_dim")
 		)
 		return
+	var above: Rect2 = Rect2()
 	for j: int in rows.size():
 		var r: Rect2 = card_rect(int(rows[j]["id"]))
 		if r.size != Vector2.ZERO:
 			_draw_card(font, r, rows[j])
+			if above.size != Vector2.ZERO:
+				ListLines.between(self, above, r)
+			above = r
 
 
 func _draw_card(font: Font, r: Rect2, c: Dictionary) -> void:

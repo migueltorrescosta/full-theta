@@ -297,6 +297,7 @@ func _make_overlays(with_radar: bool) -> void:
 	mount_list.name = "MountList"
 	mount_list.theme_type_variation = "OverlayRail"
 	_list_box.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	ListLines.attach(_list_box)
 	_list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.add_child(_list_box)

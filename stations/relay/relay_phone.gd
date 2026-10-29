@@ -163,6 +163,8 @@ func _make_controls() -> void:
 	crew.name = "CrewPage"
 	_marks_box = _column()
 	_contacts_box = _column()
+	ListLines.attach(_marks_box)
+	ListLines.attach(_contacts_box)
 	log_text = Label.new()
 	log_text.name = "LogText"
 	log_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

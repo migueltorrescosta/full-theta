@@ -186,6 +186,10 @@ func _draw() -> void:
 	for i: int in _cards.size():
 		var c: Dictionary = _cards[i]
 		var r: Rect2 = Rect2(0.0, top + HEADER_HEIGHT + i * ROW_HEIGHT, wide, ROW_HEIGHT - 4.0)
+		if i > 0:
+			ListLines.between(
+				self, Rect2(0.0, r.position.y - ROW_HEIGHT, wide, ROW_HEIGHT - 4.0), r
+			)
 		if int(c["id"]) == highlight:
 			draw_rect(r, Palette.color("panel_focus"))
 			draw_rect(r, Palette.color("accent"), false, 2.0)

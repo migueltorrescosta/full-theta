@@ -78,6 +78,10 @@ func _draw() -> void:
 		return
 	for i: int in mini(rows.size(), MAX_ROWS):
 		var r: Rect2 = Rect2(0.0, HEADER_HEIGHT + i * ROW_HEIGHT, size.x, ROW_HEIGHT - 3.0)
+		if i > 0:
+			ListLines.between(
+				self, Rect2(0.0, r.position.y - ROW_HEIGHT, size.x, ROW_HEIGHT - 3.0), r
+			)
 		draw_rect(r, Palette.color("panel"))
 		var base: Vector2 = Vector2(8.0, r.position.y + 3.0 + font.get_ascent(FONT_SIZE))
 		draw_string(

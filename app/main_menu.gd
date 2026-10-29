@@ -610,6 +610,7 @@ func _build_join(col: VBoxContainer) -> void:
 	_item(col, _join_label, true)
 	_hosts = ItemList.new()
 	_hosts.name = "Hosts"
+	ListLines.attach(_hosts)
 	_hosts.item_activated.connect(
 		func(i: int) -> void: _connect(str(_hosts.get_item_metadata(i)), "")
 	)
