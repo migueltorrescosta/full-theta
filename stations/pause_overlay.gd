@@ -92,7 +92,7 @@ func _set_phone(phone: bool) -> void:
 	for l: Label in [_text, _votes]:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
 	if phone:
-		var sheet: StyleBoxFlat = UiTheme.box("panel", "line", 16, 16)
+		var sheet: StyleBoxFlat = UiTheme.box("panel", "line_strong", 16, 16)
 		sheet.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
 		add_theme_stylebox_override("panel", sheet)
 	else:

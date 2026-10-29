@@ -59,7 +59,7 @@ func _init() -> void:
 	add_child(scrim)
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
 	sb.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
-	sb.border_color = Palette.color("line")
+	sb.border_color = Palette.color("line_strong")
 	sb.set_border_width_all(UiTheme.BORDER)
 	sb.set_corner_radius_all(UiTheme.RADIUS)
 	sb.set_content_margin_all(UiTheme.TOUCH_GAP)

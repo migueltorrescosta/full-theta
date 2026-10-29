@@ -243,26 +243,26 @@ static func _rails(t: Theme) -> void:
 			s.bg_color = fill.lightened(0.12) if state != "normal" else fill
 			s.set_border_width_all(RING)
 			t.set_stylebox(state, name, s)
-	var overlay: StyleBoxFlat = box("panel", "", 4, 4)
+	var overlay: StyleBoxFlat = box("panel", "line_strong", 4, 4)
 	overlay.bg_color = Color(Palette.color("panel"), OVERLAY_ALPHA)
 	t.set_type_variation("OverlayRail", "PanelContainer")
 	t.set_stylebox("panel", "OverlayRail", overlay)
 	t.set_type_variation("DockedRail", "PanelContainer")
-	t.set_stylebox("panel", "DockedRail", box("panel", "", 4, 4))
+	t.set_stylebox("panel", "DockedRail", box("panel", "line_strong", 4, 4))
 	t.set_type_variation("Drawer", "PanelContainer")
-	t.set_stylebox("panel", "Drawer", box("panel", "line", 8, 8))
+	t.set_stylebox("panel", "Drawer", box("panel", "line_strong", 8, 8))
 	t.set_type_variation("Banner", "PanelContainer")
 	t.set_stylebox("panel", "Banner", box("panel_focus", "accent", 12, 2))
 
 
 static func _panels(t: Theme) -> void:
-	t.set_stylebox("panel", "PanelContainer", box("panel", "line", 12, 12))
-	t.set_stylebox("panel", "Panel", box("panel", "line", 0, 0))
-	t.set_stylebox("panel", "PopupPanel", box("panel", "line", 12, 12))
-	t.set_stylebox("panel", "TabContainer", box("panel", "line", 8, 8))
+	t.set_stylebox("panel", "PanelContainer", box("panel", "line_strong", 12, 12))
+	t.set_stylebox("panel", "Panel", box("panel", "line_strong", 0, 0))
+	t.set_stylebox("panel", "PopupPanel", box("panel", "line_strong", 12, 12))
+	t.set_stylebox("panel", "TabContainer", box("panel", "line_strong", 8, 8))
 	t.set_stylebox("tab_selected", "TabContainer", box("panel_focus", "accent", 12, 6))
-	t.set_stylebox("tab_unselected", "TabContainer", box("panel", "line", 12, 6))
-	t.set_stylebox("tab_hovered", "TabContainer", box("panel_focus", "line", 12, 6))
+	t.set_stylebox("tab_unselected", "TabContainer", box("panel", "line_strong", 12, 6))
+	t.set_stylebox("tab_hovered", "TabContainer", box("panel_focus", "line_strong", 12, 6))
 	t.set_stylebox("tab_focus", "TabContainer", ring(12, 6))
 	for c: String in ["font_selected_color", "font_unselected_color", "font_hovered_color"]:
 		t.set_color(c, "TabContainer", Palette.color("text"))
@@ -275,7 +275,7 @@ static func _fields(t: Theme, pad_y: int) -> void:
 	t.set_color("font_color", "LineEdit", Palette.color("text"))
 	t.set_color("font_placeholder_color", "LineEdit", Palette.color("text_dim"))
 	t.set_color("caret_color", "LineEdit", Palette.color("accent"))
-	t.set_stylebox("panel", "ItemList", box("background", "line", 6, 6))
+	t.set_stylebox("panel", "ItemList", box("background", "line_strong", 6, 6))
 	t.set_stylebox("focus", "ItemList", ring(6, 6))
 	t.set_stylebox("selected", "ItemList", box("panel_focus", "accent", 4, 2))
 	t.set_stylebox("selected_focus", "ItemList", box("panel_focus", "accent", 4, 2))
@@ -287,7 +287,7 @@ static func _fields(t: Theme, pad_y: int) -> void:
 static func _popups(t: Theme) -> void:
 	# The frame grows past the window by its title bar (above) and a margin (other sides),
 	# so the title and × sit on the panel, not on whatever is behind the dialog.
-	var frame: StyleBoxFlat = box("panel", "line", 12, 36)
+	var frame: StyleBoxFlat = box("panel", "line_strong", 12, 36)
 	frame.set_expand_margin_all(WINDOW_MARGIN)
 	frame.expand_margin_top = WINDOW_TITLE_H
 	t.set_constant("title_height", "Window", int(WINDOW_TITLE_H))
@@ -295,8 +295,8 @@ static func _popups(t: Theme) -> void:
 	t.set_stylebox("embedded_unfocused_border", "Window", frame)
 	t.set_color("title_color", "Window", Palette.color("text"))
 	t.set_font_size("title_font_size", "Window", HEADING_SIZE)
-	t.set_stylebox("panel", "AcceptDialog", box("panel", "line", 8, 8))
-	t.set_stylebox("panel", "PopupMenu", box("panel", "line", 4, 4))
+	t.set_stylebox("panel", "AcceptDialog", box("panel", "line_strong", 8, 8))
+	t.set_stylebox("panel", "PopupMenu", box("panel", "line_strong", 4, 4))
 	t.set_stylebox("hover", "PopupMenu", box("panel_focus", "accent", 4, 2))
 	t.set_color("font_color", "PopupMenu", Palette.color("text"))
 	t.set_color("font_hover_color", "PopupMenu", Palette.color("text"))

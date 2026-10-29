@@ -88,6 +88,8 @@ func setup(p_settings: ClientSettings, in_session: bool) -> void:
 	# Opaque: the station behind must not show through (D185).
 	var box: StyleBoxFlat = StyleBoxFlat.new()
 	box.bg_color = Palette.color("panel")
+	box.border_color = Palette.color("line_strong")
+	box.set_border_width_all(UiTheme.BORDER)
 	box.set_content_margin_all(16)
 	add_theme_stylebox_override("panel", box)
 	_box = box

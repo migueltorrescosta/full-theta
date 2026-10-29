@@ -39,17 +39,19 @@ func test_the_page_shows_the_start_up_stages_in_order() -> void:
 	assert_str(src).contains("return afterPaint().then(")
 	for word: String in ["Starting the game", "Connecting", "Opening the lobby"]:
 		assert_str(src).contains(word)
-	# After the download a dot breathes in place (no bar filling up as if it were progress); it
+	# After the download a radar sweep turns in place (no bar filling up as if it were progress); it
 	# moves by transform and opacity, which the browser animates off the main thread.
 	assert_str(src).contains("fillEl.style.transform = 'scaleX('")
-	assert_str(src).contains("#bar.busy #breath { display: block; animation: breathe 10s")
-	assert_str(src).contains("@keyframes breathe")
+	assert_str(src).contains("#bar.busy #radar .sweep { animation: radar-spin 5s linear infinite; }")
+	assert_str(src).contains("@keyframes radar-spin")
+	assert_str(src).contains("@keyframes radar-blip")
+	assert_str(src).not_contains("@keyframes breathe")
 	assert_str(src).not_contains("STAGE_BAR[")
 	assert_str(src).not_contains("creep")
 	assert_str(src).not_contains("@keyframes sweep")
 	var reduced: int = src.find("@media (prefers-reduced-motion: reduce)")
 	assert_int(reduced).is_greater(0)
-	assert_str(src.substr(reduced, 200)).contains("#bar.busy #breath { animation: none; }")
+	assert_str(src.substr(reduced, 400)).contains("#bar.busy #radar .sweep, #bar.busy #radar .blip { animation: none; }")
 
 
 # FT: FT-NET-030, FT-M1-019

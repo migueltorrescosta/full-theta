@@ -262,7 +262,7 @@ func open_alert_picker() -> void:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("panel"))
-	draw_line(Vector2(0, size.y - 0.5), Vector2(size.x, size.y - 0.5), Palette.color("line"))
+	draw_line(Vector2(0, size.y - 0.5), Vector2(size.x, size.y - 0.5), Palette.color("line_strong"))
 
 
 ## The chip's shape with its letter (colour is never the only code, FT-STN-006).

@@ -120,7 +120,7 @@ func _y_of(v: float) -> float:
 
 
 func _draw() -> void:
-	var sb: StyleBoxFlat = UiTheme.box("panel", "line", 0, 0)
+	var sb: StyleBoxFlat = UiTheme.box("panel", "line_strong", 0, 0)
 	sb.bg_color = Color(sb.bg_color, UiTheme.OVERLAY_ALPHA)
 	draw_style_box(sb, Rect2(Vector2.ZERO, size))
 	var t: Rect2 = track()

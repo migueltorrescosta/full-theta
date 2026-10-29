@@ -136,6 +136,9 @@ func _setup() -> void:
 	_side = PanelContainer.new()
 	var box: StyleBoxFlat = StyleBoxFlat.new()
 	box.bg_color = Palette.color("panel")
+	box.border_color = Palette.color("line_strong")
+	box.set_border_width_all(UiTheme.BORDER)
+	box.set_corner_radius_all(UiTheme.RADIUS)
 	box.set_content_margin_all(12)
 	_side.add_theme_stylebox_override("panel", box)
 	_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL

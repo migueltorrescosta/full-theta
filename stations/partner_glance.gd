@@ -81,6 +81,8 @@ var intent: String = ""
 func _init() -> void:
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
 	sb.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
+	sb.border_color = Palette.color("line_strong")
+	sb.set_border_width_all(UiTheme.BORDER)
 	sb.set_corner_radius_all(UiTheme.RADIUS)
 	sb.content_margin_left = UiTheme.TOUCH_GAP
 	sb.content_margin_right = 4.0

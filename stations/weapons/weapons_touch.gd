@@ -285,6 +285,8 @@ func _make_overlays(with_radar: bool) -> void:
 		# The disc fills its panel (the rail's padding would shrink it to fewer chips).
 		var bg: StyleBoxFlat = StyleBoxFlat.new()
 		bg.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
+		bg.border_color = Palette.color("line_strong")
+		bg.set_border_width_all(UiTheme.BORDER)
 		bg.set_corner_radius_all(4)
 		radar_box.add_theme_stylebox_override("panel", bg)
 		radar = DiscRadar.new()
