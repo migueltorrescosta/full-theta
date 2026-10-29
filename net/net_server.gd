@@ -206,7 +206,7 @@ func restart_run() -> void:
 	world = encounter.build()
 	host = ScenarioHost.new(world)
 	driver = null
-	partners = TrainingPartners.new()
+	partners = TrainingPartners.new(world.seed_value)
 	transport.reset_snapshots()
 	session.restart(world)
 	_next_snapshot_tick = world.tick

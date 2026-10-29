@@ -114,7 +114,7 @@ func test_the_partner_presses_next_after_the_delay_and_only_once() -> void:
 	var partner: StringName = first.partner if first.station == &"weapons" else first.station
 	var flag: StringName = TrainingDriver.next_flag(partner)
 	assert_int(rig.world.story_flags.get_flag(flag)).is_equal(0)
-	_tick(rig, partners, TrainingPartners.DELAY_TICKS + 4)
+	_tick(rig, partners, TrainingPartners.press_ticks(first, partner) + 4)
 	assert_int(rig.world.story_flags.get_flag(flag)).is_equal(1)
 	_tick(rig, partners, 600)
 	assert_int(rig.world.story_flags.get_flag(flag)).is_equal(1)
