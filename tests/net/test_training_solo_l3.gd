@@ -125,6 +125,26 @@ func test_the_hosts_solo_flag_starts_a_lesson_on_join() -> void:
 
 
 # FT: FT-MIS-039
+# The bots of a lesson on a server act for their own stations: their commands reach the world
+# through the server's tick, and none is the player's.
+func test_the_server_bots_submit_commands_for_their_own_stations_only() -> void:
+	var server: NetServer = _teaching_server()
+	var c: NetClient = await h.welcomed(server, "ana")
+	c.start_training("helm")
+	assert_bool(await h.until(func() -> bool: return server.driver is TrainingDriver)).is_true()
+	server.partners.crew.record = true
+	(
+		assert_bool(
+			await h.until(func() -> bool: return not server.partners.crew.sent.is_empty(), 12000)
+		)
+		. is_true()
+	)
+	for row: Array in server.partners.crew.sent:
+		assert_str(String(row[1])).is_not_equal("helm")
+		assert_str(StationViews.station_of_command(row[2])).is_equal(String(row[1]))
+
+
+# FT: FT-MIS-039
 # The server steps the bots with the driver: Helm's own track done, the partner presses for
 # the first pair step (Engineering) by itself.
 func test_the_bots_press_next_for_their_half_of_a_pair_step() -> void:
