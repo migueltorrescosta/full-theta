@@ -31,7 +31,10 @@ import subprocess
 import sys
 import time
 import zlib
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+
+import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 SHOTS = ROOT / "tests/visual/shots.json"
@@ -44,7 +47,13 @@ ENV_HINT = (
     " (compare the renders in build/l5/ with the baselines by eye before"
     " regenerating them with --update-baselines)"
 )
-CAPTURE_TIMEOUT = 600  # seconds for one Godot run over all shots
+CAPTURE_TIMEOUT = 600  # seconds for the Godot runs over all shots
+JOBS = len(os.sched_getaffinity(0))  # processes decoding and diffing PNGs
+PARTS = int(os.environ.get("L5_PARTS", "4"))  # Godot processes rendering the shots
+SHOTS_PER_PART = 10
+# Runs "$@" --part k/N for k in 0..N-1 at once ($1 = N); fails if any part fails.
+PARALLEL = 'n=$1; shift; for ((k = 0; k < n; k++)); do "$@" --part "$k/$n" & done; rc=0; '
+PARALLEL += "for ((k = 0; k < n; k++)); do wait -n || rc=1; done; exit $rc"
 
 
 def read_png(path: Path) -> tuple[int, int, bytes]:
@@ -52,43 +61,50 @@ def read_png(path: Path) -> tuple[int, int, bytes]:
     data = path.read_bytes()
     if data[:8] != b"\x89PNG\r\n\x1a\n":
         raise ValueError(f"{path}: not a PNG")
-    pos, idat = 8, b""
+    pos, idat = 8, []
     while pos < len(data):
         length, kind = struct.unpack(">I4s", data[pos : pos + 8])
         body = data[pos + 8 : pos + 8 + length]
         if kind == b"IHDR":
             width, height, depth, colour, _, _, interlace = struct.unpack(">IIBBBBB", body)
         elif kind == b"IDAT":
-            idat += body
+            idat.append(body)
         pos += 12 + length
     if depth != 8 or colour != 2 or interlace:
         raise ValueError(f"{path}: only 8-bit non-interlaced RGB PNGs are supported")
-    bpp = 3
-    stride = width * bpp
-    raw = zlib.decompress(idat)
-    out = bytearray(height * stride)
-    prev = bytearray(stride)
+    stride = width * 3
+    raw = np.frombuffer(zlib.decompress(b"".join(idat)), np.uint8).reshape(height, stride + 1)
+    out = np.empty((height, stride), np.uint8)
+    prev = np.zeros(stride, np.uint8)
     for y in range(height):
-        f = raw[y * (stride + 1)]
-        line = bytearray(raw[y * (stride + 1) + 1 : (y + 1) * (stride + 1)])
-        for x in range(stride):
-            a = line[x - bpp] if x >= bpp else 0
-            b = prev[x]
-            c = prev[x - bpp] if x >= bpp else 0
-            if f == 1:
-                line[x] = (line[x] + a) & 255
-            elif f == 2:
-                line[x] = (line[x] + b) & 255
-            elif f == 3:
-                line[x] = (line[x] + (a + b) // 2) & 255
-            elif f == 4:
-                p = a + b - c
-                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
-                pred = a if pa <= pb and pa <= pc else b if pb <= pc else c
-                line[x] = (line[x] + pred) & 255
-        out[y * stride : (y + 1) * stride] = line
-        prev = line
-    return width, height, bytes(out)
+        f, line = raw[y, 0], raw[y, 1:]
+        if f == 0:
+            out[y] = line
+        elif f == 1:  # Sub: a running sum along the row, per channel (uint8 wraps)
+            out[y] = np.cumsum(line.reshape(width, 3), axis=0, dtype=np.uint8).reshape(stride)
+        elif f == 2:  # Up
+            out[y] = line + prev
+        else:
+            out[y] = np.frombuffer(unfilter_sequential(f, line.tobytes(), prev.tobytes()), np.uint8)
+        prev = out[y]
+    return width, height, out.tobytes()
+
+
+def unfilter_sequential(f: int, line: bytes, prev: bytes) -> bytes:
+    """Undo an Average (3) or Paeth (4) row filter: each byte needs the one decoded before it."""
+    row = bytearray(line)
+    for x in range(3):  # no left neighbour: Average halves the byte above, Paeth picks it
+        row[x] = (row[x] + (prev[x] >> 1 if f == 3 else prev[x])) & 255
+    if f == 3:
+        for x in range(3, len(row)):
+            row[x] = (row[x] + ((row[x - 3] + prev[x]) >> 1)) & 255
+        return bytes(row)
+    for x in range(3, len(row)):
+        a, b, c = row[x - 3], prev[x], prev[x - 3]
+        p = a + b - c
+        pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+        row[x] = (row[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+    return bytes(row)
 
 
 def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
@@ -105,15 +121,13 @@ def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
 
 def diff(a: bytes, b: bytes) -> tuple[int, int, bytearray]:
     """Return (pixels over THRESHOLD, max channel difference, diff mask as RGB)."""
-    count, worst = 0, 0
-    mask = bytearray(len(a))
-    for i in range(0, len(a), 3):
-        d = max(abs(a[i] - b[i]), abs(a[i + 1] - b[i + 1]), abs(a[i + 2] - b[i + 2]))
-        worst = max(worst, d)
-        if d > THRESHOLD:
-            count += 1
-            mask[i] = 255
-    return count, worst, mask
+    pa = np.frombuffer(a, np.uint8).reshape(-1, 3).astype(np.int16)
+    pb = np.frombuffer(b, np.uint8).reshape(-1, 3).astype(np.int16)
+    d = np.abs(pa - pb).max(axis=1)
+    over = d > THRESHOLD
+    mask = np.zeros((len(d), 3), np.uint8)
+    mask[over, 0] = 255
+    return int(over.sum()), int(d.max(initial=0)), bytearray(mask.tobytes())
 
 
 def env_changes(baseline: dict, current: dict) -> list[str]:
@@ -134,27 +148,36 @@ def compare(baselines: Path, out: Path, names: list[str]) -> tuple[list[str], di
     if changed:
         return ["baseline environment changed: " + "; ".join(changed) + ENV_HINT], {}
     errors, stats = [], {}
-    for name in names:
-        base_png = baselines / f"{name}.png"
-        if not base_png.exists():
-            errors.append(f"{name}: no baseline; run with --update-baselines")
-            continue
-        bw, bh, base = read_png(base_png)
-        w, h, shot = read_png(out / f"{name}.png")
-        if (w, h) != (bw, bh):
-            errors.append(f"{name}: size {w}x{h}, baseline {bw}x{bh}")
-            continue
-        count, worst, mask = diff(base, shot)
-        fraction = count / (w * h)
-        stats[name] = {"differing": count, "fraction": fraction, "max_delta": worst}
-        if fraction > MAX_FRACTION:
-            write_png(out / f"{name}.diff.png", w, h, bytes(mask))
-            errors.append(
-                f"{name}: {count} pixels differ by more than {THRESHOLD} "
-                f"({fraction:.3%}, limit {MAX_FRACTION:.3%}), max difference {worst}; "
-                f"see {show(out / f'{name}.diff.png')}"
-            )
+    with ProcessPoolExecutor(JOBS) as pool:
+        results = pool.map(compare_shot, [baselines] * len(names), [out] * len(names), names)
+    for name, (error, stat) in zip(names, results):
+        if stat:
+            stats[name] = stat
+        if error:
+            errors.append(error)
     return errors, stats
+
+
+def compare_shot(baselines: Path, out: Path, name: str) -> tuple[str, dict]:
+    """Diff one shot against its baseline: (error or '', stats or {})."""
+    base_png = baselines / f"{name}.png"
+    if not base_png.exists():
+        return f"{name}: no baseline; run with --update-baselines", {}
+    bw, bh, base = read_png(base_png)
+    w, h, shot = read_png(out / f"{name}.png")
+    if (w, h) != (bw, bh):
+        return f"{name}: size {w}x{h}, baseline {bw}x{bh}", {}
+    count, worst, mask = diff(base, shot)
+    fraction = count / (w * h)
+    stat = {"differing": count, "fraction": fraction, "max_delta": worst}
+    if fraction <= MAX_FRACTION:
+        return "", stat
+    write_png(out / f"{name}.diff.png", w, h, bytes(mask))
+    return (
+        f"{name}: {count} pixels differ by more than {THRESHOLD} "
+        f"({fraction:.3%}, limit {MAX_FRACTION:.3%}), max difference {worst}; "
+        f"see {show(out / f'{name}.diff.png')}"
+    ), stat
 
 
 def show(path: Path) -> str:
@@ -172,7 +195,15 @@ def shot_size(manifest: dict, shot: dict) -> list[int]:
     return shot.get("size", manifest["size"])
 
 
-def capture(shots_file: Path, out: Path) -> list[str]:
+def check_render(png: Path, size: tuple[int, int]) -> str:
+    """'' when a render has its shot's size and is not blank, else the problem."""
+    w, h, rgb = read_png(png)
+    if (w, h) != size:
+        return f"rendered {w}x{h}, expected {size[0]}x{size[1]}"
+    return "blank image" if blank(rgb) else ""
+
+
+def capture(shots_file: Path, out: Path, max_parts: int = PARTS) -> list[str]:
     """Render every shot into out/ under Xvfb with llvmpipe; return errors."""
     manifest = json.loads(shots_file.read_text())
     sizes = {s["name"]: tuple(shot_size(manifest, s)) for s in manifest["shots"]}
@@ -184,6 +215,7 @@ def capture(shots_file: Path, out: Path) -> list[str]:
     out.mkdir(parents=True, exist_ok=True)
     stale = ["env.json", "timings.json"]
     stale += [f"{s['name']}{ext}" for s in manifest["shots"] for ext in (".png", ".diff.png")]
+    stale += [p.name for p in out.glob("timings.*.json")]
     for name in stale:
         (out / name).unlink(missing_ok=True)
     if not manifest["shots"]:
@@ -193,29 +225,41 @@ def capture(shots_file: Path, out: Path) -> list[str]:
         return [f"get-godot.sh failed: {got.stderr.strip()}"]
     godot = got.stdout.strip()
     env = dict(os.environ, LIBGL_ALWAYS_SOFTWARE="1", GALLIUM_DRIVER="llvmpipe")
-    cmd = [
-        "xvfb-run", "-a", f"--server-args=-screen 0 {width}x{height}x24",
+    render = [
         godot, "--path", str(ROOT), "--rendering-driver", "opengl3",
         "--resolution", f"{width}x{height}", "--position", "0,0",
         "-s", "res://tools/l5_capture.gd", "--", "--shots", str(shots_file), "--out", str(out),
     ]  # fmt: skip
+    # Up to max_parts Godot processes share one X server, each rendering every parts-th
+    # shot; each renders at least SHOTS_PER_PART shots, worth its start-up. A shot's pixels
+    # depend slightly on the shots its process rendered before it (all within MAX_FRACTION),
+    # so baselines always render in one part to stay byte-stable (#27).
+    parts = max(1, min(max_parts, len(manifest["shots"]) // SHOTS_PER_PART))
+    if parts > 1:
+        render = ["bash", "-c", PARALLEL, "l5", str(parts), *render]
+    cmd = ["xvfb-run", "-a", f"--server-args=-screen 0 {width}x{height}x24", *render]
     try:
         run = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=CAPTURE_TIMEOUT)
     except subprocess.TimeoutExpired:
         return [f"capture timed out after {CAPTURE_TIMEOUT} s"]
     if run.returncode != 0 or not (out / "env.json").exists():
         return [f"capture failed (exit {run.returncode}):\n{run.stdout}{run.stderr}"]
+    if parts > 1:
+        timings = {}
+        for k in range(parts):
+            part = out / f"timings.{k}.json"
+            timings.update(json.loads(part.read_text()))
+            part.unlink()
+        ordered = {s["name"]: timings[s["name"]] for s in manifest["shots"] if s["name"] in timings}
+        (out / "timings.json").write_text(json.dumps(ordered, indent=2) + "\n")
     errors = []
     renderer = json.loads((out / "env.json").read_text())["renderer"]
     if "llvmpipe" not in renderer:
         errors.append(f"renderer is {renderer!r}, not llvmpipe")
-    for shot in manifest["shots"]:
-        w, h, rgb = read_png(out / f"{shot['name']}.png")
-        want_w, want_h = sizes[shot["name"]]
-        if (w, h) != (want_w, want_h):
-            errors.append(f"{shot['name']}: rendered {w}x{h}, expected {want_w}x{want_h}")
-        elif blank(rgb):
-            errors.append(f"{shot['name']}: blank image")
+    names = [s["name"] for s in manifest["shots"]]
+    with ProcessPoolExecutor(JOBS) as pool:
+        checked = pool.map(check_render, [out / f"{n}.png" for n in names], [sizes[n] for n in names])
+    errors += [f"{name}: {e}" for name, e in zip(names, checked) if e]
     return errors
 
 
@@ -231,7 +275,7 @@ def main() -> int:
     names = [s["name"] for s in json.loads(shots_file.read_text())["shots"]]
 
     start = time.monotonic()
-    errors = capture(shots_file, out)
+    errors = capture(shots_file, out, 1 if args.update_baselines else PARTS)
     elapsed = time.monotonic() - start
     timings = json.loads((out / "timings.json").read_text()) if not errors else {}
     print(f"l5: rendered {len(names)} shots in {elapsed:.1f} s ({timings})")

@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 ## server (L3): outcome, card, Run again, back to the lobby, Start again.
 
 const SETTINGS: String = "user://test_outcome_card.cfg"
+const SLOW_MS: int = 30_000
 
 var _h: NetHarness
 
@@ -124,8 +125,10 @@ func test_shell_runs_again_after_a_win() -> void:
 	assert_bool(await _until(func() -> bool: return s.world.tick > 2)).is_true()
 
 
-## Polls only the shell's own client (the shell takes its events).
-func _until(cond: Callable, timeout_ms: int = NetHarness.TIMEOUT_MS) -> bool:
+## Polls only the shell's own client (the shell takes its events). The all-stations
+## screen takes 10-14 s to build headless (#27 profile), more on a loaded machine, so the
+## waits here allow 30 s rather than the harness's 8 s.
+func _until(cond: Callable, timeout_ms: int = SLOW_MS) -> bool:
 	var end: int = Time.get_ticks_msec() + timeout_ms
 	while not cond.call():
 		if Time.get_ticks_msec() >= end:

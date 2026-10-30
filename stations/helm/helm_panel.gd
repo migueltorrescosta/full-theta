@@ -11,6 +11,11 @@ extends StationPanel
 ## `helm_decoupled`, `set_shield_focus`, and `helm_jump`, `helm_dock` and `helm_undock`
 ## for the selected site or mark (FT-HLM-013, FT-HLM-016).
 ## Rules live in sim/: this panel only turns intents into commands.
+##
+## On a phone (#28) HelmTouch lays the touch controls over the cockpit, landscape-first,
+## and the pointer never steers: the sticks do, and a tap selects under the finger. With it
+## the panel is in the shared phone frame (in_frame): its pages are HelmTouch's, and the HUD
+## keeps its read-outs under the screen's view-top row.
 
 ## The controller Helm radial (hold View + right stick, FT-HLM-017): flick toward an
 ## item and let go.
@@ -42,6 +47,8 @@ var radial_pick: int = -1
 var view3d: HelmView
 var hud: HelmHud
 var ring: ShieldRing
+## The phone layout (HelmTouch) while the focused panel is on a phone, else null.
+var touch_ui: HelmTouch = null
 
 var _container: SubViewportContainer
 var _viewport: SubViewport
@@ -78,11 +85,102 @@ func _setup() -> void:
 func _mode_changed() -> void:
 	_container.visible = focused
 	hud.compact = not focused
+	_mode_changed_ring()
+	_captured = focused
+	_apply_form()
+
+
+func _mode_changed_ring() -> void:
 	# Room for the label under the ring when focused.
 	var side: float = 170.0 if focused else 100.0
 	ring.size = Vector2(side + (80.0 if focused else 0.0), side + 2.0 * ShieldRing.FONT_SIZE)
 	ring.label = focused
-	_captured = focused
+
+
+## Builds, rebuilds or drops the phone layout for the viewport's form (a rotation).
+func _apply_form() -> void:
+	var form: LayoutMode.Form = _form()
+	var want: bool = focused and LayoutMode.is_phone(form)
+	var portrait: bool = form == LayoutMode.Form.PHONE_PORTRAIT
+	var rebuilt: bool = false
+	if touch_ui != null and (not want or touch_ui.portrait != portrait):
+		# The ring lives in the touch layout's page zone: take it back first.
+		ring.reparent(self, false)
+		ring.size_flags_vertical = Control.SIZE_FILL
+		ring.visible = true
+		ring.mouse_filter = Control.MOUSE_FILTER_STOP
+		hud.visible = true
+		_mode_changed_ring()
+		remove_child(touch_ui)
+		touch_ui.queue_free()
+		touch_ui = null
+		pages = null
+		rebuilt = true
+		ctx.matcher.release_all()
+	if want and touch_ui == null:
+		touch_ui = HelmTouch.new(self, _dispatch, portrait)
+		add_child(touch_ui)
+		pages = touch_ui.pages
+		rebuilt = true
+		_captured = false
+		var screen: StationScreen = _screen()
+		if screen != null and portrait:
+			screen.rotate_banner.label.text = TouchText.of(
+				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
+			)
+	# In the frame with the phone layout only. Upright, a joint view keeps its docked panels
+	# (the lead's call), which leave the cockpit too short for the view-top row: there Helm
+	# keeps the chip strip.
+	var screen_now: StationScreen = _screen()
+	var docked_upright: bool = portrait and screen_now != null and screen_now.panels.size() >= 2
+	in_frame = touch_ui != null and not docked_upright
+	var inset: float = touch_ui.view_bottom_inset() if touch_ui != null else 0.0
+	_container.offset_bottom = -inset
+	hud.offset_bottom = -inset
+	if rebuilt:
+		_show_pages()
+
+
+## The screen shows the tabs of the pages just built (it binds them on its own relayout,
+## which runs before a rotation rebuilds this layout).
+func _show_pages() -> void:
+	var screen: StationScreen = _screen()
+	if screen == null or not screen.is_inside_tree() or screen.focused_panel() != self:
+		return
+	var form_now: LayoutMode.Form = LayoutMode.form_of(screen)
+	var alone: bool = screen.panels.size() >= 2 and form_now == LayoutMode.Form.PHONE_LANDSCAPE
+	screen.frame.show_tabs(form_now, alone)
+
+
+## The screen's form (LayoutMode.Form), measured on the screen's own size so a screen laid
+## out at a set size (tests, a dev seat) gets its layout; desktop outside a screen.
+func _form() -> LayoutMode.Form:
+	var screen: StationScreen = _screen()
+	if not is_inside_tree() or screen == null:
+		return LayoutMode.Form.DESKTOP
+	var ui_scale: float = 1.0
+	var window: Window = get_window()
+	if window != null:
+		ui_scale = window.content_scale_factor
+	var dp: Vector2 = LayoutMode.dp_size(screen.size, ui_scale, LayoutMode.density())
+	return LayoutMode.form_for(dp, LayoutMode.coarse_pointer())
+
+
+## The screen holding this panel, or null.
+func _screen() -> StationScreen:
+	var node: Node = get_parent()
+	while node != null and not node is StationScreen:
+		node = node.get_parent()
+	return node as StationScreen
+
+
+## Touch intent events go through the screen like a device's (StationScreen.dispatch).
+func _dispatch(ev: Dictionary) -> void:
+	var screen: StationScreen = _screen()
+	if screen != null:
+		screen.dispatch(ev)
+	else:
+		handle_intent(ev)
 
 
 func _notification(what: int) -> void:
@@ -93,11 +191,12 @@ func _notification(what: int) -> void:
 		_captured = false
 		_apply_mouse_mode()
 	elif what == NOTIFICATION_ENTER_TREE:
-		var screen: Node = get_parent()
-		while screen != null and not screen is StationScreen:
-			screen = screen.get_parent()
+		var screen: StationScreen = _screen()
 		if screen != null and not screen.menu_requested.is_connected(_free_pointer):
 			screen.menu_requested.connect(_free_pointer)
+		if screen != null and not screen.resized.is_connected(_apply_form):
+			screen.resized.connect(_apply_form)
+		_apply_form.call_deferred()
 
 
 func _process(_delta: float) -> void:
@@ -120,7 +219,11 @@ func _process(_delta: float) -> void:
 		var v: Vector2 = ctx.matcher.stick("RS")
 		if v.length() >= RADIAL_DEFLECT:
 			radial_pick = radial_index(v)
-	ring.position = Vector2(size.x - ring.size.x - 12.0, (size.y - ring.size.y) / 2.0)
+	if touch_ui != null:
+		_captured = false
+		touch_ui.update(ring)
+	else:
+		ring.position = Vector2(size.x - ring.size.x - 12.0, (size.y - ring.size.y) / 2.0)
 	ring.show_state(helm_block(), _shield_power())
 	if focused:
 		view3d.show_state(ctx, chase)
@@ -377,6 +480,31 @@ func marks_attach_only() -> bool:
 	return focused
 
 
+## A phone drops the radar column: the radar is a page (#28).
+func full_screen() -> bool:
+	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+
+
+## The part of the view the HUD may draw its read-outs in, in `control`'s coordinates:
+## clear of the phone's rails and controls, else all of `control`.
+func hud_area(control: Control) -> Rect2:
+	var r: Rect2 = Rect2(Vector2.ZERO, control.size)
+	if touch_ui != null and touch_ui.is_inside_tree():
+		# Under the screen's view-top row too (selection chip, request chips).
+		r = touch_ui.clear_view_in(control).intersection(r)
+	# Above the screen's joint switch (a joint view on a phone on its side).
+	r.size.y = maxf(r.size.y - bottom_reserve, 0.0)
+	return r
+
+
+## On a phone the view is the part the touch controls leave clear (the view-top row goes
+## at its top).
+func view_rect() -> Rect2:
+	if touch_ui != null and touch_ui.is_inside_tree():
+		return touch_ui.content_rect_in(self)
+	return super()
+
+
 func claim_item() -> String:
 	return StationViews.CLAIM_FLIGHT
 
@@ -418,10 +546,8 @@ func _free_pointer() -> void:
 ## The screen is blocked by the menu (Controls, Settings, Rebind keys), the outcome card
 ## or the alert picker.
 func _overlay_open() -> bool:
-	var node: Node = get_parent()
-	while node != null and not node is StationScreen:
-		node = node.get_parent()
-	return node != null and (node as StationScreen).blocked()
+	var screen: StationScreen = _screen()
+	return screen != null and screen.blocked()
 
 
 ## A click in the view that selected nothing captures the pointer again.
@@ -432,6 +558,7 @@ func _on_gui_input(event: InputEvent) -> void:
 		and mb.pressed
 		and mb.button_index == MOUSE_BUTTON_LEFT
 		and focused
+		and touch_ui == null
 		and not _overlay_open()
 	):
 		_captured = true

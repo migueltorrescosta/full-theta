@@ -453,7 +453,9 @@ func _science_scan_position(ship: int) -> void:
 
 func _ship_name(ship: int) -> String:
 	var world: SimWorld = session.world
-	return world.defs[ship].display_name if ship >= 0 and ship < world.ship_count() else ""
+	if ship < 0 or ship >= world.ship_count():
+		return ""
+	return session.fleet.name_of(ship, world.defs[ship].display_name)  # the lobby's name (#11)
 
 
 func _allied(a: int, b: int) -> bool:

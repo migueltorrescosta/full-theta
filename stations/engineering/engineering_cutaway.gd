@@ -7,6 +7,10 @@ extends Control
 ## tokens: drag one onto a subsystem to send it there, off the ship to call it back
 ## (right-click a token also calls it back). Drawn in 2D from an orthographic projection
 ## of the ship frame: cheap, and no world up (D124).
+##
+## On a phone (#28, D274) a finger has no right button: a drag that starts off the crew
+## tokens turns the cutaway and a tap selects; tokens and discs take a 44 px grab area
+## and tokens sit 52 px apart, each token's area a control with the `tap` meta (TapAudit).
 
 ## Hull outline from nose to tail, the approved ship's sections (ProceduralShip): z,
 ## half-width, half-height, centre height; stretched to enclose the subsystems.
@@ -17,6 +21,10 @@ const TOKEN_R: float = 12.0
 const PITCH_LIMIT: float = 1.4
 ## Mouse drag turn (rad per px).
 const DRAG_TURN: float = 0.008
+## A finger moving more than this (px) after it lands turns instead of tapping.
+const TURN_SLOP: float = 8.0
+## Under this height (px) the cutaway draws no hint.
+const HINT_MIN_H: float = 220.0
 
 var panel: EngineeringPanel
 ## View angles (rad): yaw about the ship's up axis, then pitch towards the viewer; the
@@ -32,6 +40,10 @@ var drag_pos: Vector2 = Vector2.ZERO
 
 var _rotating: bool = false
 var _rotated: bool = false
+## A phone's press off the tokens: a tap selects on release, a drag turns.
+var _finger_turn: bool = false
+var _press_at: Vector2 = Vector2.ZERO
+var _taps: Array[Control] = []
 
 
 func _init() -> void:
@@ -84,16 +96,34 @@ func token_pos(c: int) -> Vector2:
 	for o: int in c:
 		if panel.crew_job(o) == job:
 			k += 1
+	var touch: bool = phone()
 	if job >= 0:
-		return subsystem_pos(job) + Vector2(NODE_R + 6.0 + k * (TOKEN_R * 2.0 + 3.0), -NODE_R)
-	return Vector2(24.0 + k * (TOKEN_R * 2.0 + 6.0), size.y - 54.0)
+		var step: float = _token_step() if touch else TOKEN_R * 2.0 + 3.0
+		return subsystem_pos(job) + Vector2(NODE_R + 6.0 + k * step, -NODE_R)
+	var bay: float = _token_step() if touch else TOKEN_R * 2.0 + 6.0
+	return Vector2(24.0 + k * bay, size.y - 54.0)
 
 
 func crew_at(pos: Vector2) -> int:
 	for c: int in panel.crew_count():
-		if token_pos(c).distance_to(pos) <= TOKEN_R + 3.0:
+		if token_pos(c).distance_to(pos) <= grab_radius():
 			return c
 	return -1
+
+
+## True on a phone (either way up), where a finger turns the cutaway.
+func phone() -> bool:
+	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+
+
+## How far (px) from a token's centre a press grabs it: half a touch target on a phone.
+func grab_radius() -> float:
+	return UiTheme.TOUCH_MIN / 2.0 if phone() else TOKEN_R + 3.0
+
+
+## Centre to centre of two tokens on a phone: a grab area and a gap.
+func _token_step() -> float:
+	return UiTheme.TOUCH_MIN + UiTheme.TOUCH_GAP
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -112,6 +142,9 @@ func _gui_input(event: InputEvent) -> void:
 	elif _rotating:
 		_rotated = true
 		rotate_by(mm.relative * DRAG_TURN)
+	elif _finger_turn and (_rotated or mm.position.distance_to(_press_at) > TURN_SLOP):
+		_rotated = true
+		rotate_by(mm.relative * DRAG_TURN)
 	accept_event()
 
 
@@ -124,15 +157,23 @@ func _button(mb: InputEventMouseButton) -> void:
 					drag_crew = c
 					drag_pos = mb.position
 					panel.crew_pick = c
+				elif phone():
+					_finger_turn = true
+					_rotated = false
+					_press_at = mb.position
 				else:
 					panel.select(subsystem_at(mb.position))
 			elif drag_crew >= 0:
-				var i: int = subsystem_at(mb.position, NODE_R * 2.0)
+				var i: int = subsystem_at(mb.position, maxf(NODE_R * 2.0, grab_radius()))
 				if i >= 0:
 					panel.dispatch(drag_crew, i)
-				elif token_pos(drag_crew).distance_to(mb.position) > TOKEN_R * 2.0:
+				elif token_pos(drag_crew).distance_to(mb.position) > grab_radius() * 2.0:
 					panel.recall(drag_crew)
 				drag_crew = -1
+			elif _finger_turn:
+				_finger_turn = false
+				if not _rotated:
+					panel.select(subsystem_at(mb.position, UiTheme.TOUCH_MIN / 2.0))
 			accept_event()
 		MOUSE_BUTTON_RIGHT:
 			if mb.pressed:
@@ -176,17 +217,21 @@ func _draw() -> void:
 	for i: int in rects:
 		_draw_label(i, rects[i])
 	_draw_crews()
+	_sync_taps()
 	if cursor.x >= 0:
 		var a: Color = Palette.color("accent")
 		draw_arc(cursor, 8.0, 0.0, TAU, 16, a, 1.5)
 		draw_line(cursor + Vector2(-12, 0), cursor + Vector2(12, 0), a, 1.0)
 		draw_line(cursor + Vector2(0, -12), cursor + Vector2(0, 12), a, 1.0)
+	# A short cutaway (a phone upright under the banner) keeps the hull clear of the hint.
+	if size.y < HINT_MIN_H:
+		return
 	var font: Font = get_theme_default_font()
 	var fs: int = get_theme_default_font_size()
 	draw_multiline_string(
 		font,
 		Vector2(12, 22),
-		tr("eng.cutaway_hint"),
+		hint(),
 		HORIZONTAL_ALIGNMENT_LEFT,
 		size.x - 24,
 		fs - 2,
@@ -240,7 +285,8 @@ func _draw_subsystem(i: int) -> void:
 
 
 ## Where each subsystem's label goes (rects in this control's space): below its disc,
-## else right, left or above, the first spot inside the cutaway that covers no disc,
+## else right, left, above, a diagonal, then the same a step further out: the first spot
+## inside the cutaway that covers no disc,
 ## crew token or label already placed, so the labels stay apart when the cutaway is
 ## small (150 % UI scale); below when nothing is free.
 func label_rects() -> Dictionary:
@@ -256,12 +302,25 @@ func label_rects() -> Dictionary:
 	for i: int in panel.count():
 		var c: Vector2 = subsystem_pos(i)
 		var sz: Vector2 = font.get_string_size(_label(i), HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
-		var spots: Array[Vector2] = [
-			c + Vector2(-sz.x / 2.0, gap),
-			c + Vector2(gap, -sz.y / 2.0),
-			c + Vector2(-gap - sz.x, -sz.y / 2.0),
-			c + Vector2(-sz.x / 2.0, -gap - sz.y),
-		]
+		var spots: Array[Vector2] = []
+		# Beside the disc first, then on the diagonals, then a step further out.
+		for k: float in [1.0, 1.9]:
+			var g: float = gap * k
+			(
+				spots
+				. append_array(
+					[
+						c + Vector2(-sz.x / 2.0, g),
+						c + Vector2(g, -sz.y / 2.0),
+						c + Vector2(-g - sz.x, -sz.y / 2.0),
+						c + Vector2(-sz.x / 2.0, -g - sz.y),
+						c + Vector2(g * 0.7, g * 0.7 - sz.y / 2.0),
+						c + Vector2(-g * 0.7 - sz.x, g * 0.7 - sz.y / 2.0),
+						c + Vector2(g * 0.7, -g * 0.7 - sz.y / 2.0),
+						c + Vector2(-g * 0.7 - sz.x, -g * 0.7 - sz.y / 2.0),
+					]
+				)
+			)
 		out[i] = Rect2(spots[0], sz)
 		for at: Vector2 in spots:
 			var r: Rect2 = Rect2(at, sz)
@@ -349,3 +408,31 @@ func _scale() -> float:
 	var hs: Vector3 = _hull_scale()
 	var extent: float = maxf(2.7 * hs.z, maxf(0.5 * hs.x, 0.28 * hs.y + 4.0))
 	return minf(size.x * 1.1, size.y * 0.8) / (2.0 * extent)
+
+
+## The hint over the cutaway; a phone has no right button (#28): a finger turns it.
+func hint() -> String:
+	if phone():
+		return TouchText.of(
+			"eng.cutaway_hint_touch", "Drag a crew onto a part to fix it. Drag elsewhere to turn."
+		)
+	return tr("eng.cutaway_hint")
+
+
+## Each token's grab area on a phone, as a control TapAudit sees.
+func _sync_taps() -> void:
+	var n: int = panel.crew_count() if phone() else 0
+	while _taps.size() < n:
+		var c: Control = Control.new()
+		c.name = "CrewTap%d" % _taps.size()
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		c.set_meta("tap", true)
+		add_child(c)
+		_taps.append(c)
+	var r: float = grab_radius()
+	for c: int in _taps.size():
+		_taps[c].visible = c < n
+		if c < n:
+			var p: Vector2 = drag_pos if c == drag_crew else token_pos(c)
+			_taps[c].position = p - Vector2(r, r)
+			_taps[c].size = Vector2(r, r) * 2.0

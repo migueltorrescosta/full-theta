@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
-## The first visit to a station asks for the menu's Controls tab (FT-STN-012, D185); the
-## shell's tests cover the menu opening itself.
+## The first visit to a station shows the Controls chip (FT-STN-012, P28-Help), never the
+## menu; tapping the chip asks for the menu's Controls tab.
 
 const CFG: String = "user://test_first_visit_help.cfg"
 
@@ -9,12 +9,24 @@ func before() -> void:
 	I18n.apply("en")
 
 
-## A screen in the tree; `asked` counts its requests for the Controls tab.
+## A screen in the tree; `asked` counts the chips it showed, and tapping each asks for help.
 func _screen(ctx: StationContext, asked: Array[bool]) -> StationScreen:
 	var s: StationScreen = auto_free(StationScreen.new())
-	s.help_requested.connect(func() -> void: asked.append(true))
+	var helped: Array[bool] = []
+	s.help_requested.connect(func() -> void: helped.append(true))
+	s.child_entered_tree.connect(
+		func(n: Node) -> void:
+			if n is ControlsChip:
+				asked.append(true)
+	)
 	s.setup(ctx)
 	add_child(s)
+	# Help never opens by itself.
+	assert_array(helped).is_empty()
+	var chip: ControlsChip = s.find_child("ControlsChip", true, false) as ControlsChip
+	if chip != null:
+		chip.pressed.emit()
+		assert_array(helped).has_size(1)
 	return s
 
 
@@ -69,9 +81,9 @@ func test_a_joint_view_asks_for_each_station_on_its_first_focus() -> void:
 
 
 # FT: FT-STN-012, FT-TST-021
-# The browser test hooks (?pick=) switch the first-visit menu off, so it never covers the
+# The browser test hooks (?pick=) switch the first-visit chip off, so it never covers the
 # station the test photographs.
-func test_browser_test_hooks_skip_the_first_visit_menu() -> void:
+func test_browser_test_hooks_skip_the_first_visit_chip() -> void:
 	var ctx: StationContext = _fresh("helm")
 	ctx.settings.skip_first_visit_help = true
 	var asked: Array[bool] = []

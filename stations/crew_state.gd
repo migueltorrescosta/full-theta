@@ -12,7 +12,9 @@ extends RefCounted
 ## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
 ## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view";
 ## &"toggles" when the session's data-shortcut set changed, &"shares" when a
-## shortcut was shared or ran out, &"lanes" when the approach lanes changed (F).
+## shortcut was shared or ran out, &"lanes" when the approach lanes changed (F); and from
+## the multi-ship events (#11) &"fleet", &"scoreboard", &"eliminated", &"relaunch" (votes
+## or a relaunch), &"handover" and &"session_over".
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -103,6 +105,22 @@ var shares: Dictionary = {}
 ## "closes_ms" (client clock, ms), "by"}. Only while the lanes toggle lets them reach this
 ## station (Comms always, the others once Comms shared them).
 var lanes: Array[Dictionary] = []
+
+## Multi-ship sessions (#11, docs/protocol.md "Multi-ship sessions and PvP"). The `fleet`
+## payload: the lobby's ships, the host's mode and options, the ships still to press Start;
+## {} until the server sends one (then the catalogue's ships are the lobby).
+var fleet: Dictionary = {}
+## The live scoreboard's rows (M4-Q9): status and progress only.
+var scoreboard: Array = []
+## ship -> `eliminated` payload {ship, reason, lives}, until it is relaunched.
+var eliminated: Dictionary = {}
+## ship -> `relaunch_votes` payload {ship, voters, needed}.
+var relaunch_votes: Dictionary = {}
+## This session's latest `handover` {ship (its eliminated ship), to_ship (-1 the
+## scoreboard)}, {} when it was never handed over or its ship was relaunched.
+var handover: Dictionary = {}
+## The `session_over` payload, {} while the session goes on.
+var session_over: Dictionary = {}
 
 var _filter: ViewFilter = null
 var _filter_key: String = ""
@@ -195,9 +213,12 @@ func is_crew() -> bool:
 	return bool(entry_def().get("crew", false))
 
 
-## Co-op: every crew ship shares one faction (a client-side view of the server's rule,
-## which also checks relations); PvP sessions have no pause control (FT-MIS-040).
+## Co-op: the host's mode once the server sends `fleet`; before that, every crew ship
+## sharing one faction (a client-side view of the server's rule, which also checks
+## relations). PvP sessions have no pause control (FT-MIS-040).
 func is_coop() -> bool:
+	if not fleet.is_empty():
+		return mode() == "coop"
 	var factions: Dictionary = {}
 	for s: Dictionary in catalogue.get("ships", []):
 		factions[int(s.get("faction", 0))] = true
@@ -209,16 +230,20 @@ func can_host_pause() -> bool:
 	return host and is_coop()
 
 
-## The menu's abandon-run control (D241, FT-MIS-016): "" none (PvP, not started, run over,
-## not crew), else the string key of its label.
+## The menu's abandon-run control (D241, FT-MIS-016): "" none (not started, run over,
+## out of play, not crew), else the string key of its label. In PvP it is the give-up
+## (forfeit) vote, by the same majority (M4-Q10).
 func abandon_control() -> String:
-	if not is_coop() or not started.has(ship) or run_over.has(ship) or abandoned.has(ship):
+	if not started.has(ship) or run_over.has(ship) or abandoned.has(ship):
 		return ""
+	if eliminated.has(ship) or not session_over.is_empty():
+		return ""
+	var kind: String = "abandon" if is_coop() else "forfeit"
 	if host:
-		return "settings.abandon"
+		return "settings." + kind
 	if not is_crew():
 		return ""
-	return "settings.abandon_unvote" if has_abandon_vote() else "settings.abandon_vote"
+	return "settings.%s_%s" % [kind, "unvote" if has_abandon_vote() else "vote"]
 
 
 ## Whether this session's abandon vote for its ship stands.
@@ -230,11 +255,130 @@ func ship_name(id: int = ship) -> String:
 	for s: Dictionary in catalogue.get("ships", []):
 		if int(s.get("id", -2)) == id:
 			return str(s.get("name", ""))
-	return ""
+	return str(fleet_row(id).get("name", ""))
 
 
+## Whether the ship's run is under way; with `fleet`, only once the universe has started
+## (all ships together, M4-Q4).
 func is_started(id: int = ship) -> bool:
+	if not fleet.is_empty() and not bool(fleet.get("started", false)):
+		return false
 	return started.has(id) or bool(lobby.get(id, {}).get("started", false))
+
+
+# --- Multi-ship sessions (#11). ---
+
+
+## The host's mode (SessionRules.MODE_NAMES): "coop" until `fleet` says otherwise, or
+## "race" for a lobby of several crew factions with no `fleet`.
+func mode() -> String:
+	if fleet.is_empty():
+		return "coop" if is_coop() else "race"
+	return str(fleet.get("mode", "coop"))
+
+
+func is_pvp() -> bool:
+	return not is_coop()
+
+
+## TEAMS and HOLDOUT put ships on team 0 or 1 (M4-Q6).
+func has_teams() -> bool:
+	return mode() in ["teams", "holdout"]
+
+
+## The lobby's ships, each {ship, name, team, seats, crew, uncovered, ready, started}: the
+## `fleet` rows, or the catalogue's ships (team 0) before any.
+func fleet_ships() -> Array:
+	if not fleet.is_empty():
+		return fleet.get("ships", [])
+	var out: Array = []
+	for s: Dictionary in catalogue.get("ships", []):
+		out.append({"ship": int(s.get("id", -1)), "name": str(s.get("name", "")), "team": 0})
+	return out
+
+
+## The ship's `fleet` row, {} when there is none.
+func fleet_row(id: int) -> Dictionary:
+	for row: Dictionary in fleet.get("ships", []):
+		if int(row.get("ship", -2)) == id:
+			return row
+	return {}
+
+
+func team_of(id: int) -> int:
+	return int(fleet_row(id).get("team", 0))
+
+
+## Whether two ships are on the same side: every ship in co-op, the same team in TEAMS and
+## HOLDOUT, only itself in RACE and LAST_STANDING (SessionRules.faction_for).
+func allied(a: int, b: int) -> bool:
+	if a == b or is_coop():
+		return true
+	return has_teams() and team_of(a) == team_of(b)
+
+
+## The lobby state of a ship: its `lobby` payload, else its `fleet` row (seats, crew,
+## uncovered, ready, started); {} for neither.
+func ship_state(id: int) -> Dictionary:
+	if lobby.has(id):
+		return lobby[id]
+	return fleet_row(id)
+
+
+## Whether a player may add a ship now (M4-Q3): the server sent `fleet`, the universe hasn't
+## started and there is room.
+func can_add_ship() -> bool:
+	return (
+		not fleet.is_empty()
+		and not bool(fleet.get("started", false))
+		and fleet_ships().size() < int(fleet.get("max_ships", 6))
+	)
+
+
+## Whether this ship's crew pressed Start and waits for the others (M4-Q4).
+func waiting_for_others(id: int = ship) -> bool:
+	return (
+		not fleet.is_empty()
+		and not bool(fleet.get("started", false))
+		and bool(fleet_row(id).get("started", false))
+	)
+
+
+## The names of the crewed ships that haven't pressed Start yet.
+func waiting_names() -> PackedStringArray:
+	var names: PackedStringArray = []
+	for id: Variant in fleet.get("waiting", []):
+		names.append(ship_name(int(id)))
+	return names
+
+
+## The ship this session crewed: the eliminated one after a handover, else its pick's.
+func home_ship() -> int:
+	return int(handover["ship"]) if not handover.is_empty() else ship
+
+
+## Whether the session shows the scoreboard: handed over to it (no friendly ship left, D91),
+## or a PvP session that is over.
+func on_scoreboard() -> bool:
+	if not handover.is_empty() and int(handover.get("to_ship", 0)) == FleetMessages.TO_SCOREBOARD:
+		return true
+	return is_pvp() and not session_over.is_empty()
+
+
+## Relaunches left for the home ship's side after its elimination (-1 unlimited), 0 for
+## none or when it isn't eliminated.
+func lives_left() -> int:
+	return int(eliminated.get(home_ship(), {}).get("lives", 0))
+
+
+## Whether this session may vote to relaunch its eliminated ship (M4-Q2).
+func can_relaunch() -> bool:
+	return eliminated.has(home_ship()) and lives_left() != 0 and session_over.is_empty()
+
+
+## Whether this session's relaunch vote for its home ship stands.
+func has_relaunch_vote(player: String) -> bool:
+	return player in relaunch_votes.get(home_ship(), {}).get("voters", [])
 
 
 ## Mission time (s) at sim tick `tick`; 0 before Start.
@@ -320,6 +464,13 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 				for id: String in p.get("left", {}):
 					shares[StringName(id)] = now_ms + roundi(float(p["left"][id]) * 1000.0)
 				changed.emit(&"shares")
+		"fleet", "scoreboard", "eliminated", "relaunch_votes", "relaunched", "handover":
+			_on_fleet_event(str(e["type"]), p)
+		"session_over":
+			session_over = p
+			changed.emit(&"session_over")
+		"takeover":
+			_on_takeover(p)
 		"request_rejected", "command_rejected":
 			toast.emit("toast." + str(p.get("reason", "rejected")), p)
 		_:
@@ -434,6 +585,45 @@ func reset_run() -> void:
 	run_over.erase(ship)
 	debrief.erase(ship)
 	changed.emit(&"reset")
+
+
+## The multi-ship events that only update the model (FleetMessages).
+func _on_fleet_event(type: String, p: Dictionary) -> void:
+	match type:
+		"fleet":
+			fleet = p
+			changed.emit(&"fleet")
+		"scoreboard":
+			scoreboard = p.get("rows", [])
+			changed.emit(&"scoreboard")
+		"eliminated":
+			eliminated[int(p["ship"])] = p
+			changed.emit(&"eliminated")
+		"relaunch_votes":
+			relaunch_votes[int(p["ship"])] = p
+			changed.emit(&"relaunch")
+		"relaunched":
+			var id: int = int(p["ship"])
+			eliminated.erase(id)
+			relaunch_votes.erase(id)
+			if home_ship() == id:
+				handover = {}
+			changed.emit(&"relaunch")
+		"handover":
+			handover = p
+			changed.emit(&"handover")
+
+
+## A station of an allied ship was taken over in its pause (M4-Q8): a toast naming who took
+## what; the ship's side sees it.
+func _on_takeover(p: Dictionary) -> void:
+	var args: Dictionary = {
+		"by": str(p.get("by", "")),
+		"station": TranslationServer.translate("station." + str(p.get("entry", ""))),
+		"ship": ship_name(int(p.get("ship", -1))),
+	}
+	toast.emit("toast.takeover", args)
+	changed.emit(&"takeover")
 
 
 ## The Relay events (docs/protocol.md "Relay").
@@ -572,7 +762,12 @@ func _on_main_view(p: Dictionary) -> void:
 
 ## Whether this ship has a Captain pick (connected or in grace), from the lobby event.
 func captain_seated(id: int = ship) -> bool:
-	return str(lobby.get(id, {}).get("captain", "")) != ""
+	if lobby.has(id):
+		return str(lobby[id].get("captain", "")) != ""
+	for seat: Variant in fleet_row(id).get("seats", []):
+		if str((seat as Dictionary).get("entry", "")) == StationViews.CAPTAIN:
+			return true
+	return false
 
 
 ## Whether this pick may switch the main screen now (FT-MSC-005): the Captain, or Relay

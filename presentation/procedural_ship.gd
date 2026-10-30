@@ -4,7 +4,12 @@
 ## generated in code). Nose points along -Z.
 ## `wear` (0 clean, 1 weathered) is set before the node enters the tree.
 ## The Compatibility renderer has no SSAO, so a fake ambient occlusion is baked into vertex
-## colours once the parts are built (`_bake_ao`).
+## colours once the parts are built (`_bake_slices`).
+##
+## Built once per process (load fix 5, #28): the parts' meshes and their baked AO don't
+## depend on `wear`, so every ship shares one set; the materials are built once per wear.
+## A ship entering the tree only adds its MeshInstance3D nodes. `warm()` does the same work
+## a slice at a time, so the lobby can build it before a 3D view needs it (ClientShell).
 class_name ProceduralShip
 extends Node3D
 
@@ -66,9 +71,57 @@ const AO_FLOOR: float = 0.35
 const SEAM_AO: float = 0.88  # plating brightness right next to a seam
 const AO_CELL: float = 0.2  # grid cell (metres) used to find the parts near a vertex
 
+## Work between deadline checks in `warm()`: AO vertices per slice.
+const AO_SLICE: int = 64
+
+## The shared parts (Part), parents before children, once built.
+static var _parts: Array = []
+## Wear -> its materials (Dictionary[Role, StandardMaterial3D]), once built.
+static var _materials_by_wear: Dictionary = {}
+## The parts `warm()` is baking, between calls (resources only, no nodes).
+static var _bake: Bake = null
+## Wear -> the plating textures `warm()` is making, between calls.
+static var _plates: Dictionary = {}
+
 var wear: float = 0.0
 var _materials: Dictionary[Role, StandardMaterial3D] = {}
 var _hull_mesh: ArrayMesh = null
+## Each part's material role, while a scratch ship builds the parts.
+var _roles: Dictionary[MeshInstance3D, Role] = {}
+
+
+## One shared part: its parent's index in the list (-1 for the ship), its transform, mesh
+## and material role.
+class Part:
+	var parent: int = -1
+	var transform: Transform3D = Transform3D.IDENTITY
+	var mesh: Mesh
+	var role: Role = Role.HULL
+
+
+## The AO bake in progress: the parts, the ones it darkens (all but the glow) with their
+## AoPart, the grid of cells to the parts that reach them, and where it stopped.
+class Bake:
+	var parts: Array = []
+	var items: Array = []
+	var ao: Array[AoPart] = []
+	var grid: Dictionary[Vector3i, Array] = {}
+	var index: int = 0
+	var vertex: int = 0
+	var arrays: Array = []
+	var to_ship: Transform3D = Transform3D.IDENTITY
+	var colours: PackedColorArray = PackedColorArray()
+
+
+## The plating textures in progress (`_plating`): the steps, and what each hands the next.
+class Plate:
+	var step: int = 0
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	var tint: PackedFloat32Array = PackedFloat32Array()
+	var height: PackedFloat32Array = PackedFloat32Array()
+	var blotches: PackedFloat32Array = PackedFloat32Array()
+	var streaks: PackedFloat32Array = PackedFloat32Array()
+	var images: Array[Image] = []
 
 
 ## One part as the AO bake sees it: its shape, the transform from ship space to the part's
@@ -86,15 +139,102 @@ class AoPart:
 
 
 func _ready() -> void:
-	_make_materials()
-	_add(_hull(), Role.HULL, Vector3.ZERO)
-	_add_cockpit()
+	warm(wear, -1)
+	var materials: Dictionary = _materials_by_wear[wear]
+	var made: Array[MeshInstance3D] = []
+	for p: Part in _parts:
+		var body: MeshInstance3D = MeshInstance3D.new()
+		body.mesh = p.mesh
+		body.material_override = materials[p.role]
+		body.transform = p.transform
+		(self as Node3D if p.parent < 0 else made[p.parent]).add_child(body)
+		made.append(body)
+
+
+## True once the shared parts and `wear_of`'s materials are built.
+static func is_warm(wear_of: float) -> bool:
+	return not _parts.is_empty() and _materials_by_wear.has(wear_of)
+
+
+## Builds the shared parts and `wear_of`'s materials until `budget_us` has passed (after
+## at least one slice; a negative budget builds everything). True once both are built.
+static func warm(wear_of: float, budget_us: int) -> bool:
+	var deadline: int = Time.get_ticks_usec() + budget_us
+	while true:
+		if _parts.is_empty():
+			if _bake == null:
+				_bake = _start_bake()
+			elif _bake_slices(_bake, deadline if budget_us >= 0 else -1):
+				_parts = _bake.parts
+				_bake = null
+		elif not _materials_by_wear.has(wear_of):
+			if not _plates.has(wear_of):
+				_plates[wear_of] = Plate.new()
+			var maker: ProceduralShip = ProceduralShip.new()
+			maker.wear = wear_of
+			var plate: Plate = _plates[wear_of]
+			if maker._plate_step(plate):
+				maker._make_materials(maker._plate_textures(plate))
+				_materials_by_wear[wear_of] = maker._materials
+				_plates.erase(wear_of)
+			maker.free()
+		else:
+			return true
+		if budget_us >= 0 and Time.get_ticks_usec() >= deadline:
+			return not _parts.is_empty() and _materials_by_wear.has(wear_of)
+	return true
+
+
+## Builds every part in a scratch ship, describes them for the AO bake (`_bake_slices`)
+## and frees the scratch nodes.
+static func _start_bake() -> Bake:
+	var b: ProceduralShip = ProceduralShip.new()
+	b._add(b._hull(), Role.HULL, Vector3.ZERO)
+	b._add_cockpit()
 	for side: float in [-1.0, 1.0]:
-		_add_wing(side)
-		_add_nacelle(side)
-	_add_tail()
-	_add_greebles()
-	_bake_ao()
+		b._add_wing(side)
+		b._add_nacelle(side)
+	b._add_tail()
+	b._add_greebles()
+	var bake: Bake = Bake.new()
+	var part_of: Dictionary = {}
+	b._collect(b, -1, bake.parts, part_of)
+	for node: Node in b.find_children("*", "MeshInstance3D", true, false):
+		var body: MeshInstance3D = node as MeshInstance3D
+		if b._roles[body] != Role.GLOW:
+			bake.items.append(part_of[body])
+			bake.ao.append(b._ao_part(body))
+	# Cells reached from each part: a vertex can be darkened by parts within twice the
+	# longest sample distance.
+	for index: int in bake.ao.size():
+		var box: AABB = bake.ao[index].bounds.grow(AO_STEPS[-1] * 2.0)
+		bake.ao[index].reach = box
+		var lo: Vector3i = Vector3i((box.position / AO_CELL).floor())
+		var hi: Vector3i = Vector3i((box.end / AO_CELL).floor())
+		for x: int in range(lo.x, hi.x + 1):
+			for y: int in range(lo.y, hi.y + 1):
+				for z: int in range(lo.z, hi.z + 1):
+					var key: Vector3i = Vector3i(x, y, z)
+					if not bake.grid.has(key):
+						bake.grid[key] = []
+					bake.grid[key].append(index)
+	b.free()
+	return bake
+
+
+## The scratch ship's parts in tree order (parents first), with their roles; `part_of`
+## maps each node to its Part.
+func _collect(node: Node, parent: int, out: Array, part_of: Dictionary) -> void:
+	for c: Node in node.get_children():
+		var body: MeshInstance3D = c as MeshInstance3D
+		var p: Part = Part.new()
+		p.parent = parent
+		p.transform = body.transform
+		p.mesh = body.mesh
+		p.role = _roles[body]
+		out.append(p)
+		part_of[body] = p
+		_collect(body, out.size() - 1, out, part_of)
 
 
 func _add_cockpit() -> void:
@@ -191,50 +331,49 @@ func _add_greebles() -> void:
 ## vertex darkens it. This darkens the hull around greebles and vents, the feet of the
 ## greebles, and the joints between hull, wings, fins, pylons and nacelles. No randomness and
 ## no time dependence, so the result is the same on every run.
-func _bake_ao() -> void:
-	var nodes: Array[MeshInstance3D] = []
-	var parts: Array[AoPart] = []
-	for node: Node in find_children("*", "MeshInstance3D", true, false):
-		var body: MeshInstance3D = node as MeshInstance3D
-		if body.material_override != _materials[Role.GLOW]:
-			nodes.append(body)
-			parts.append(_ao_part(body))
-	# Cells reached from each part: a vertex can be darkened by parts within twice the
-	# longest sample distance.
-	var grid: Dictionary[Vector3i, Array] = {}
-	for index: int in parts.size():
-		var box: AABB = parts[index].bounds.grow(AO_STEPS[-1] * 2.0)
-		parts[index].reach = box
-		var lo: Vector3i = Vector3i((box.position / AO_CELL).floor())
-		var hi: Vector3i = Vector3i((box.end / AO_CELL).floor())
-		for x: int in range(lo.x, hi.x + 1):
-			for y: int in range(lo.y, hi.y + 1):
-				for z: int in range(lo.z, hi.z + 1):
-					var key: Vector3i = Vector3i(x, y, z)
-					if not grid.has(key):
-						grid[key] = []
-					grid[key].append(index)
-	for index: int in nodes.size():
-		var arrays: Array = nodes[index].mesh.surface_get_arrays(0)
-		var to_ship: Transform3D = parts[index].to_local.affine_inverse()
+## Bakes AO_SLICE vertices at a time until every part is done (true) or `deadline` (µs,
+## -1 for none) has passed. A part's mesh is replaced once all its vertices are baked.
+static func _bake_slices(bake: Bake, deadline: int) -> bool:
+	while bake.index < bake.items.size():
+		var index: int = bake.index
+		var item: Part = bake.items[index]
+		if bake.vertex == 0:
+			bake.arrays = item.mesh.surface_get_arrays(0)
+			bake.to_ship = bake.ao[index].to_local.affine_inverse()
+			bake.colours.resize((bake.arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+		var to_ship: Transform3D = bake.to_ship
 		var normal_basis: Basis = to_ship.basis.inverse().transposed()
-		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
-		var colours: PackedColorArray = PackedColorArray()
-		colours.resize(vertices.size())
-		for v: int in vertices.size():
+		var vertices: PackedVector3Array = bake.arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = bake.arrays[Mesh.ARRAY_NORMAL]
+		var grid: Dictionary[Vector3i, Array] = bake.grid
+		var parts: Array[AoPart] = bake.ao
+		# Taken out while written, so the packed array isn't copied.
+		var colours: PackedColorArray = bake.colours
+		bake.colours = PackedColorArray()
+		var end: int = mini(bake.vertex + AO_SLICE, vertices.size())
+		for v: int in range(bake.vertex, end):
 			var p: Vector3 = to_ship * vertices[v]
 			var near: Array = grid.get(Vector3i((p / AO_CELL).floor()), [])
 			var ao: float = _ao(p, (normal_basis * normals[v]).normalized(), index, near, parts)
 			colours[v] = Color(ao, ao, ao)
-		arrays[Mesh.ARRAY_COLOR] = colours
-		var mesh: ArrayMesh = ArrayMesh.new()
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		nodes[index].mesh = mesh
+		bake.colours = colours
+		bake.vertex = end
+		if end == vertices.size():
+			bake.arrays[Mesh.ARRAY_COLOR] = bake.colours
+			var mesh: ArrayMesh = ArrayMesh.new()
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, bake.arrays)
+			item.mesh = mesh
+			bake.colours = PackedColorArray()
+			bake.arrays = []
+			bake.vertex = 0
+			bake.index += 1
+		if deadline >= 0 and Time.get_ticks_usec() >= deadline:
+			return bake.index >= bake.items.size()
+	return true
 
 
 ## AO at ship-space point `p` with normal `n` on part `own`: 1 is unoccluded.
-func _ao(p: Vector3, n: Vector3, own: int, near: Array, parts: Array[AoPart]) -> float:
+static func _ao(p: Vector3, n: Vector3, own: int, near: Array, parts: Array[AoPart]) -> float:
 	# A sample at distance h from p is at least distance(p) - h from a part, so only parts
 	# closer than twice the longest step can darken p.
 	# A point at distance h from p is at least distance(p) - h from a part, so a part at
@@ -319,7 +458,7 @@ func _ao_part(body: MeshInstance3D) -> AoPart:
 
 
 ## Approximate signed distance from ship-space point `p` to a part (negative inside).
-func _distance(part: AoPart, p: Vector3) -> float:
+static func _distance(part: AoPart, p: Vector3) -> float:
 	var q: Vector3 = part.to_local * p
 	match part.shape:
 		Shape.BOX:
@@ -340,13 +479,13 @@ func _distance(part: AoPart, p: Vector3) -> float:
 
 
 ## Distance to a 2D shape (signed `across`) extruded to a half-height (signed `along`).
-func _extrude(across: float, along: float) -> float:
+static func _extrude(across: float, along: float) -> float:
 	return Vector2(maxf(across, 0.0), maxf(along, 0.0)).length() + minf(maxf(across, along), 0.0)
 
 
 ## Approximate signed distance to the hull: the superellipse section's level set, scaled by
 ## the half-width on the flanks and the half-height on top and bottom.
-func _hull_distance(p: Vector3) -> float:
+static func _hull_distance(p: Vector3) -> float:
 	var s: Vector4 = _section(p.z)
 	var e: float = 1.0 / SQUARENESS
 	var a: float = pow(absf(p.x) / maxf(s.y, 0.01), e)
@@ -360,14 +499,13 @@ func _hull_distance(p: Vector3) -> float:
 func _add(mesh: Mesh, role: Role, at: Vector3, parent: Node3D = self) -> MeshInstance3D:
 	var body: MeshInstance3D = MeshInstance3D.new()
 	body.mesh = mesh
-	body.material_override = _materials[role]
+	_roles[body] = role
 	body.position = at
 	parent.add_child(body)
 	return body
 
 
-func _make_materials() -> void:
-	var textures: Array[ImageTexture] = _plating()
+func _make_materials(textures: Array[ImageTexture]) -> void:
 	for role: Role in COLOURS:
 		var m: StandardMaterial3D = StandardMaterial3D.new()
 		m.albedo_color = COLOURS[role]
@@ -396,17 +534,40 @@ func _make_materials() -> void:
 
 ## Plating textures: albedo tint, roughness and normal map. Panels in staggered rows with
 ## seams between them; `wear` varies the panel shades more and adds grime (blotches and
-## streaks) that darkens and roughens.
-func _plating() -> Array[ImageTexture]:
-	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	rng.seed = 11
+## streaks) that darkens and roughens. Made in three steps (`_plate_step`), a third of the
+## work each, so `warm()` can spread them over frames. This runs the next step (the panels,
+## the grime noise, the pixels); true once all are done.
+func _plate_step(p: Plate) -> bool:
+	var n: int = TEXTURE_SIZE
+	match p.step:
+		0:
+			p.rng.seed = 11
+			_plate_panels(p)
+		1:
+			p.blotches = _value_noise(n, 8, 8, p.rng)
+			p.streaks = _value_noise(n, 24, 3, p.rng)
+		2:
+			_plate_pixels(p)
+	p.step += 1
+	return p.step > 2
+
+
+## The three textures of a finished plate.
+func _plate_textures(p: Plate) -> Array[ImageTexture]:
+	var textures: Array[ImageTexture] = []
+	for image: Image in p.images:
+		image.generate_mipmaps()
+		textures.append(ImageTexture.create_from_image(image))
+	return textures
+
+
+func _plate_panels(p: Plate) -> void:
+	var rng: RandomNumberGenerator = p.rng
 	var n: int = TEXTURE_SIZE
 	var rows: int = 8
 	var row_h: int = n / rows
-	var tint: PackedFloat32Array = PackedFloat32Array()
-	tint.resize(n * n)
-	var height: PackedFloat32Array = PackedFloat32Array()
-	height.resize(n * n)
+	p.tint.resize(n * n)
+	p.height.resize(n * n)
 	for r: int in rows:
 		var x0: int = rng.randi_range(0, 63)
 		var cuts: Array[int] = []
@@ -427,31 +588,28 @@ func _plating() -> Array[ImageTexture]:
 						mini(py - r * row_h - 2, (r + 1) * row_h - 1 - py)
 					)
 					var ao: float = lerpf(SEAM_AO, 1.0, smoothstep(0.0, 4.0, float(edge)))
-					tint[i] = 0.72 if seam else shade * ao
-					height[i] = 0.0 if seam else 1.0
-	var blotches: PackedFloat32Array = _value_noise(n, 8, 8, rng)
-	var streaks: PackedFloat32Array = _value_noise(n, 24, 3, rng)
+					p.tint[i] = 0.72 if seam else shade * ao
+					p.height[i] = 0.0 if seam else 1.0
+
+
+func _plate_pixels(p: Plate) -> void:
+	var n: int = TEXTURE_SIZE
 	var albedo: PackedByteArray = PackedByteArray()
 	var rough: PackedByteArray = PackedByteArray()
 	var bump: PackedByteArray = PackedByteArray()
 	for i: int in n * n:
-		var dirt: float = wear * smoothstep(0.4, 0.95, 0.75 * blotches[i] + 0.25 * streaks[i])
-		var a: int = clampi(int(255.0 * tint[i] * (1.0 - 0.3 * dirt) / 1.06), 0, 255)
+		var dirt: float = wear * smoothstep(0.4, 0.95, 0.75 * p.blotches[i] + 0.25 * p.streaks[i])
+		var a: int = clampi(int(255.0 * p.tint[i] * (1.0 - 0.3 * dirt) / 1.06), 0, 255)
 		albedo.append_array([a, a, a])
-		rough.append(clampi(int(255.0 * (0.85 + 0.15 * dirt) * (2.0 - tint[i])), 0, 255))
-		bump.append(int(255.0 * height[i]))
-	var images: Array[Image] = [
+		rough.append(clampi(int(255.0 * (0.85 + 0.15 * dirt) * (2.0 - p.tint[i])), 0, 255))
+		bump.append(int(255.0 * p.height[i]))
+	p.images = [
 		Image.create_from_data(n, n, false, Image.FORMAT_RGB8, albedo),
 		Image.create_from_data(n, n, false, Image.FORMAT_L8, rough),
 		Image.create_from_data(n, n, false, Image.FORMAT_L8, bump),
 	]
-	images[2].convert(Image.FORMAT_RGBA8)
-	images[2].bump_map_to_normal_map(4.0)
-	var textures: Array[ImageTexture] = []
-	for image: Image in images:
-		image.generate_mipmaps()
-		textures.append(ImageTexture.create_from_image(image))
-	return textures
+	p.images[2].convert(Image.FORMAT_RGBA8)
+	p.images[2].bump_map_to_normal_map(4.0)
 
 
 ## Tileable value noise in [0, 1] on an n x n image: a random grid of cells_x by cells_y,
@@ -580,7 +738,7 @@ func _mirror(outline: PackedVector2Array, side: float) -> PackedVector2Array:
 
 
 ## Hull section at z, interpolated: (z, half-width, half-height, centre height).
-func _section(z: float) -> Vector4:
+static func _section(z: float) -> Vector4:
 	for i: int in SECTIONS.size() - 1:
 		var a: Vector4 = SECTIONS[i]
 		var b: Vector4 = SECTIONS[i + 1]

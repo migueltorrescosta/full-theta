@@ -84,10 +84,21 @@ func connect_to(server_url: String) -> Error:
 	_hello_sent = false
 	_arrivals.clear()
 	state = State.CONNECTING
-	var err: Error = _peer.connect_to_url(url)
+	var protocol: String = (
+		str(JavaScriptBridge.eval("location.protocol", true)) if OS.has_feature("web") else ""
+	)
+	var err: Error = _peer.connect_to_url(socket_url(url, protocol))
 	if err != OK:
 		state = State.CLOSED
 	return err
+
+
+## The URL the socket opens: a page served over HTTPS may not open ws://, so the same
+## address goes over wss:// (D294).
+static func socket_url(server_url: String, page_protocol: String) -> String:
+	if page_protocol == "https:" and server_url.begins_with("ws://"):
+		return "wss://" + server_url.trim_prefix("ws://")
+	return server_url
 
 
 ## Reconnects with the stored token: the server returns the same session, pick and
@@ -194,6 +205,33 @@ func run_again(ship: int, vote: bool) -> void:
 
 func takeover(ship: int, entry: String) -> void:
 	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "entry": entry})
+
+
+## Multi-ship lobby and PvP (#11, docs/protocol.md "Multi-ship sessions and PvP"): any player
+## adds a ship (M4-Q3); a crew puts its ship on a team (M4-Q6); the host sets the mode, the
+## team win rule and the holdout lives (-1: the mode's default); an eliminated crew votes to
+## relaunch (M4-Q2). Answers arrive as `fleet`, `relaunch_votes` and `request_rejected` events.
+## Solo training (D303, docs/protocol.md "Solo training"): asks the server to run a lesson for
+## this client: a station id (`helm` ... `captain`) alone with bots on the others, or "" for the
+## crew drill. Answered by `picked` and `started` events, or `request_rejected` `busy`.
+func start_training(station: String) -> void:
+	_send(NetProtocol.Type.TRAINING, {"station": station})
+
+
+func add_ship(ship_name: String) -> void:
+	_send(NetProtocol.Type.SHIP_ADD, {"name": ship_name})
+
+
+func set_team(ship: int, team: int) -> void:
+	_send(NetProtocol.Type.SHIP_TEAM, {"ship": ship, "team": team})
+
+
+func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
+	_send(NetProtocol.Type.SESSION_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
+
+
+func vote_relaunch(ship: int, vote: bool) -> void:
+	_send(NetProtocol.Type.RELAUNCH, {"ship": ship, "vote": vote})
 
 
 ## Sends a crew command; returns its seq (`command_rejected` events name it).
@@ -308,6 +346,13 @@ func answer_chip(id: int, accept: bool) -> void:
 ## with its partner for DataToggles.share_seconds().
 func share(feature: String) -> void:
 	_send(NetProtocol.Type.SHARE, {"feature": feature})
+
+
+## Reports a long frame (`ms`) and what ran in it to the server's session log (#28).
+func report_frame(ms: int, what: String) -> void:
+	if state == State.WELCOMED:
+		var text: String = NetProtocol.clip_utf8(what, NetProtocol.MAX_FRAME_WHAT_BYTES)
+		_send(NetProtocol.Type.CLIENT_FRAME, {"ms": ms, "what": text})
 
 
 ## Sends a raw, already-encoded message (tests: malformed or foreign messages).

@@ -13,6 +13,12 @@ extends RefCounted
 ## of a pair have finished their tracks, the pair's step starts; it ends when both press
 ## Next. A station never sees another station's step. Nothing here is hashed: what it
 ## decides is in the command log (say, set_flag), so a run replays without it.
+##
+## Solo (D303): with a solo station the player's station runs its whole track alone. Every
+## other station counts as finished at once, and a pair step that has the solo station
+## starts as soon as it is free; the partner's half (its Next press) comes from outside, as
+## a command in the log (TrainingPartners), so the run still replays. Pair steps that do
+## not name the solo station never start. Captain coverage (D247) does not apply.
 
 ## A step is said again to a station that has not finished it after this long (s), so a
 ## player who joined late, or looked away, hears it.
@@ -44,11 +50,14 @@ var _in_pair: Dictionary[StringName, int] = {}
 ## Station -> pressed Next in its current pair step.
 var _pair_pressed: Dictionary[StringName, bool] = {}
 var _closed: bool = false
+## The one station played alone (D303), or &"" for the crew drill.
+var _solo: StringName = &""
 
 
-func _init(scenario: Scenario, steps: TrainingStepsDef) -> void:
+func _init(scenario: Scenario, steps: TrainingStepsDef, solo_station: StringName = &"") -> void:
 	_scenario = scenario
 	_def = steps
+	_solo = solo_station
 	for s: TrainingStepDef in steps.steps:
 		if not s.is_pair() and not _tracks.has(s.station):
 			_tracks[s.station] = steps.track(s.station)
@@ -59,6 +68,13 @@ func _init(scenario: Scenario, steps: TrainingStepsDef) -> void:
 	_pairs = steps.pairs()
 	_pair_state.resize(_pairs.size())
 	_pair_state.fill(0)
+	if _solo != &"":
+		for station: StringName in _tracks:
+			if station != _solo:
+				_index[station] = _tracks[station].size()
+		for i: int in _pairs.size():
+			if _pairs[i].station != _solo and _pairs[i].partner != _solo:
+				_pair_state[i] = 2
 
 
 ## Called by ScenarioHost before every tick.
@@ -75,7 +91,10 @@ func before_tick(api: ScenarioApi) -> void:
 	_step_pairs(api, now)
 	if not _closed and _all_finished(api):
 		_closed = true
-		_say(api, LINE_ALL_DONE, stations())
+		var who: Array[StringName] = stations()
+		if _solo != &"":
+			who = [_solo]
+		_say(api, LINE_ALL_DONE, who)
 
 
 ## The step a station is on, or null when its track is finished.
@@ -107,7 +126,8 @@ func _start(api: ScenarioApi) -> bool:
 	_started = true
 	_scenario.start(api, {"site": 0, "ships": crew})
 	for station: StringName in _tracks:
-		_announce(api, api.tick(), station)
+		if _solo == &"" or station == _solo:
+			_announce(api, api.tick(), station)
 	return true
 
 
@@ -170,7 +190,7 @@ func _free(station: StringName) -> bool:
 
 func _all_finished(api: ScenarioApi) -> bool:
 	for station: StringName in _tracks:
-		if station == CAPTAIN and api.flag(CAPTAIN_SEATED) == 0:
+		if station == CAPTAIN and _solo != CAPTAIN and api.flag(CAPTAIN_SEATED) == 0:
 			continue
 		if not finished(station):
 			return false
@@ -196,6 +216,16 @@ func _say(api: ScenarioApi, line: String, stations: Array[StringName]) -> void:
 	for station: StringName in stations:
 		names.append(String(station))
 	api.message(line, {}, SayTarget.computer(_ship, names))
+
+
+## The station played alone, or &"" in the crew drill.
+func solo_station() -> StringName:
+	return _solo
+
+
+## The crewed ship the driver has found (-1 before the first tick).
+func ship_id() -> int:
+	return _ship
 
 
 func stations() -> Array[StringName]:

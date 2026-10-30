@@ -6,6 +6,8 @@ extends Control
 ## revealed show "?" and their edges only appear once the route has stood on one end.
 ## The server checks every move (FT-SCI-011). Moves: arrows, d-pad or stick, or a tap on
 ## an adjacent node; a step onto a hidden node is allowed along a known node's edge.
+## On a phone (`footer` off) Cancel is a real Button in the panel's rail (SciencePanel,
+## #28), the grid takes the freed room and each node gets a `tap` control for TapAudit.
 
 signal moved(node: int)
 signal cancelled
@@ -33,6 +35,13 @@ var title: String = ""
 var target_text: String = ""
 var elapsed_s: float = 0.0
 var entry: int = -1
+## Draw the Cancel button (off on a phone, #28).
+var footer: bool = true:
+	set(value):
+		footer = value
+		queue_redraw()
+
+var _taps: Array[Control] = []
 
 
 func load_block(block: Dictionary) -> void:
@@ -92,7 +101,7 @@ func _gui_input(event: InputEvent) -> void:
 	if mb == null or mb.button_index != MOUSE_BUTTON_LEFT or not mb.pressed:
 		return
 	accept_event()
-	if _button_rect().has_point(mb.position):
+	if footer and _button_rect().has_point(mb.position):
 		cancelled.emit()
 		return
 	for n: int in cols * rows:
@@ -104,6 +113,12 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _grid_rect() -> Rect2:
+	if not footer:
+		# Room for the title above, and below for the goal's name and the trace bar (a
+		# phone, under the view-top row: 3 rows keep TOUCH_PRIMARY + TOUCH_GAP apart).
+		return Rect2(
+			Vector2(40.0, 52.0), Vector2(maxf(size.x - 80.0, 1.0), maxf(size.y - 116.0, 1.0))
+		)
 	return Rect2(Vector2(60.0, 80.0), Vector2(maxf(size.x - 120.0, 1.0), maxf(size.y - 200.0, 1.0)))
 
 
@@ -140,6 +155,24 @@ func _draw() -> void:
 	for n: int in cols * rows:
 		_draw_node(font, n, reach)
 	_draw_footer(font)
+	_sync_taps()
+
+
+## On a phone each node has a tap control (TOUCH_PRIMARY square on its centre).
+func _sync_taps() -> void:
+	var want: int = 0 if footer else cols * rows
+	while _taps.size() > want:
+		_taps.pop_back().queue_free()
+	while _taps.size() < want:
+		var c: Control = Control.new()
+		c.name = "Node%d" % _taps.size()
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		c.set_meta("tap", true)
+		c.size = Vector2(UiTheme.TOUCH_PRIMARY, UiTheme.TOUCH_PRIMARY)
+		add_child(c)
+		_taps.append(c)
+	for n: int in _taps.size():
+		_taps[n].position = node_centre(n) - _taps[n].size / 2.0
 
 
 func _draw_node(font: Font, n: int, reach: Array[int]) -> void:
@@ -181,7 +214,7 @@ func _draw_node(font: Font, n: int, reach: Array[int]) -> void:
 
 
 func _draw_footer(font: Font) -> void:
-	var y: float = size.y - BUTTON_H - 22.0
+	var y: float = size.y - BUTTON_H - 22.0 if footer else size.y - 18.0
 	var bar: Rect2 = Rect2(Vector2(12.0, y - 10.0), Vector2(size.x * 0.4, 14.0))
 	draw_rect(bar, Palette.color("background"))
 	var fill: Color = Palette.color("danger") if trace > 0.75 else Palette.color("warn")
@@ -196,6 +229,8 @@ func _draw_footer(font: Font) -> void:
 		FONT_SIZE,
 		Palette.color("text")
 	)
+	if not footer:
+		return
 	var r: Rect2 = _button_rect()
 	draw_rect(r, Palette.color("panel_focus"))
 	draw_rect(r, Palette.color("line"), false, 1.0)

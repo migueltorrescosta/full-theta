@@ -462,7 +462,8 @@ func test_lobby_requests_are_rate_limited() -> void:
 # FT: FT-NET-037
 # A client without a view key gets no snapshots, so no stall policy: when more than
 # QUEUED_LIMIT piles up for it, the server closes it at once (code 4004); its session
-# waits for a rejoin.
+# waits for a rejoin. The loopback sockets absorb a varying amount first (#27: 6 blobs
+# once stayed under the limit), so the test keeps queueing until the close, up to 16 MB.
 func test_queue_overflow_closes_a_client_without_a_view() -> void:
 	var server: NetServer = _server()
 	var c: NetClient = _client(server, "lobby")
@@ -471,16 +472,17 @@ func test_queue_overflow_closes_a_client_without_a_view() -> void:
 	var session: NetSession = server.session.by_id[c.session_id]
 	var blob: PackedByteArray = PackedByteArray()
 	blob.resize(64 * 1024)
-	for i: int in 6:
-		server.session.notify(session, "test_blob", {"blob": blob})
+	var sent: Array[int] = [0]
 	var code: Callable = func() -> int:
 		return _conn_of(server.transport.stats(), session.id).get("close_code", 0)
-	(
-		assert_bool(
-			await _until(func() -> bool: return code.call() == NetTransport.CLOSE_QUEUE_FULL)
-		)
-		. is_true()
-	)
+	var closed_by_overflow: Callable = func() -> bool:
+		if code.call() == NetTransport.CLOSE_QUEUE_FULL:
+			return true
+		if code.call() == 0 and sent[0] < 256:
+			server.session.notify(session, "test_blob", {"blob": blob})
+			sent[0] += 1
+		return false
+	assert_bool(await _until(closed_by_overflow)).is_true()
 	assert_bool(await _until(func() -> bool: return not session.connected(), 10_000)).is_true()
 	assert_bool(server.session.by_id.has(session.id)).is_true()
 

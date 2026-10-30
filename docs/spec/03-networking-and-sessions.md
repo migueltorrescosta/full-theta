@@ -10,10 +10,10 @@ Commands go up, each with a client sequence number. Down: per-station filtered s
 
 ## 3.3 Lobby, joint views and the coverage check
 
-1. A player joins a ship (or creates one, up to 6).
+1. A player joins a ship, or adds one in the lobby; any player may add a ship, up to 6, and a ship nobody picked vanishes at Start (D260).
 2. The player picks one entry from the catalogue: a single functional station, a joint view, the Captain seat, or Viewer (D10, D67).
 3. Several players may pick the same station or joint view; they share it through claims (§3.4).
-4. The ship's Ready/Start control becomes clickable only when the coverage check passes: at least 3 crew players, and every one of Helm, Weapons, Engineering, Science, Relay and Comms covered by at least one crew player's pick (D66, D67). Any crew player of the ship may then press Start; the simulation steps from the first Start (D129).
+4. The ship's Ready/Start control becomes clickable only when the coverage check passes: at least 3 crew players, and every one of Helm, Weapons, Engineering, Science, Relay and Comms covered by at least one crew player's pick (D66, D67). Any crew player of the ship may then press Start; the universe starts once every crewed ship has pressed Start, each passing its coverage check, and the world is built from the picked ships in lobby order (D129, D260, D261).
 
 Joint-view catalogue (D67, D76): every 2-station pair, 15 layouts, all offered in the lobby. Names are working titles; each view is named after the pair it serves (§7.3).
 
@@ -45,7 +45,7 @@ Claimable sub-controls (D18): weapon mounts; repair crews; the active scan or ha
 
 Each client holds a session token. A refresh or relaunch presents the token and receives a full snapshot, returning the player to the same ship, station and claims (D6).
 
-Mid-run disconnect (D83, D96): a dropped crew player's picks, settings and claims stay for a 10 s grace period. If the ship's coverage check then fails, the whole universe pauses, every ship included, until coverage is restored by the player rejoining, by another player taking the station over, or by the ship being abandoned. Captain and Viewer drops never pause the game (D19, D23).
+Mid-run disconnect (D83, D96): a dropped crew player's picks, settings and claims stay for a 10 s grace period. If the ship's coverage check then fails, the whole universe pauses, every ship included, until coverage is restored by the player rejoining, by an ally, the ship's own Captain or a viewer taking the station over, or by the ship being abandoned (D265). Captain and Viewer drops never pause the game (D19, D23).
 
 Coverage counts only ships still in play; a destroyed or abandoned ship leaves play (D96).
 
@@ -60,7 +60,7 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-007** A rejected command shall produce a `CommandRejected{reason}` event to the sender. (D70)
 - **FT-NET-008** The server shall send each client a snapshot filtered to the stations it holds, at 30 Hz. (D70)
 - **FT-NET-009** A snapshot shall contain no field the receiving station may not see at the session difficulty. (D14, D69)
-- **FT-NET-010** A client shall receive no knowledge belonging to another faction. (D21)
+- **FT-NET-010** A client shall receive no knowledge belonging to another faction. The live scoreboard shows per ship its name, team, state (in play, finished or destroyed), encounters done, elapsed time and, in PvP, kills, but no hull or positions. (D21, D266)
 - **FT-NET-011** Discrete changes shall be delivered as reliable ordered events stamped with the simulation tick. (D70)
 - **FT-NET-012** The server shall broadcast its presence on the LAN by UDP once a second. (D70)
 - **FT-NET-013** Clients shall join by discovered host, manual IP, or (browser) URL and QR code. (D70)
@@ -69,7 +69,7 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-016** The lobby shall let any number of players pick the same station or joint view, and at most one player per ship pick Captain. (D10, plan review CLASH-10)
 - **FT-NET-017** The lobby shall offer the joint views in the catalogue and no other station combinations. (D13, D67)
 - **FT-NET-018** A joint view shall keep every control of each station it contains. (D20)
-- **FT-NET-019** The Ready/Start control shall become clickable only when the coverage check passes for that ship. (D19, D66, D67, D129)
+- **FT-NET-019** The Ready/Start control shall become clickable only when the coverage check passes for that ship, and the universe shall start once every crewed ship has pressed Start. (D19, D66, D67, D129, D261)
 - **FT-NET-020** The coverage check shall ignore Captain and Viewer picks. (D19, D23)
 - **FT-NET-021** The lobby shall show which functional stations are still uncovered. (D67)
 - **FT-NET-022** Weapon mounts, repair crews, the active scan or hack, probes, NPC conversations, Helm flight control and Helm shield facing shall be claimable. (D18, plan review STN-3)
@@ -91,9 +91,9 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-038** Messages above a size limit, such as voice clips and full snapshots, shall be sent in chunks, with voice chunks at lower priority than snapshots. (plan review TECH-2)
 - **FT-NET-039** The static HTTP server shall never delay a simulation tick by more than 1 ms. (plan review TECH-3)
 - **FT-NET-040** The server shall encode each snapshot once per distinct view key (ship, catalogue entry, difficulty toggles) and send it to every client sharing that key, encoding and sending on a worker thread from a copy of the state so the sim tick holds only the sim. (plan review TECH-9, D111)
-- **FT-NET-041** During a pause, the remaining connected crew of a paused ship shall be able to abandon it by a majority vote (more than half of them; a vote may be withdrawn, and votes clear when the pause ends), and the host alone shall be able to abandon it; abandoning eliminates the ship and takes it out of play. The host is the client presenting the host secret its Host button passed to the child server; a dedicated server has no host. (D96, D127, D128)
-- **FT-NET-042** During a pause, players of other ships, Captains and viewers shall be able to take over an uncovered station, unless leaving would make their own ship fail the coverage check. (D96)
+- **FT-NET-041** During a pause, the remaining connected crew of a paused ship shall be able to abandon it by a majority vote (more than half of them; a vote may be withdrawn, and votes clear when the pause ends), and the host alone shall be able to abandon it; abandoning eliminates the ship and takes it out of play; in PvP the crew may also give up outside a pause by the same vote, or the host at once for the host's own ship only (the host's request for another ship is refused `not_your_ship`), and then goes to a friendly ship's viewer or the scoreboard (D267, M4-F1). The host is the client presenting the host secret its Host button passed to the child server; a dedicated server has no host. (D96, D127, D128)
+- **FT-NET-042** During a pause, players of allied ships and the paused ship's own Captain and viewers shall be able to take over an uncovered station, never an enemy; there is no accept prompt, the first claim wins and the ship's side sees who took it; a takeover that would make the taker's own ship fail the coverage check is refused. (D96, D265)
 - **FT-NET-043** Outside a pause, the server shall reject with `CommandRejected` any mid-run catalogue change that would make a ship fail the coverage check. (D96, plan review CLASH-1)
 - **FT-NET-044** A player alone on a station shall hold all its claims; controls that are not claimable shall be ship-wide, last writer wins, and show who changed them last. (plan review STN-3, D130)
 - **FT-NET-045** Dock, jump, Align and face shall belong to the Helm flight claim, ammo type to the mount claim, and a card's Accept to its conversation claim when one exists. (plan review STN-3, D124)
-- **FT-NET-046** A browser station shall keep the tablet awake while connected (a muted looping VP9 video started by the first tap, since Wake Lock needs a secure context; an H.264 MP4 only if iPads need it; documented Auto-Lock settings as the fallback), so an idle station doesn't drop and pause the universe; S3 and #4 check a 10 min idle. (plan review TECH-3, D108)
+- **FT-NET-046** A browser station shall keep the tablet or phone awake while connected (a muted looping VP9 video started by the first tap, since Wake Lock needs a secure context; an H.264 MP4 only if iPads need it; documented Auto-Lock settings as the fallback), so an idle station doesn't drop and pause the universe; S3 and #4 check a 10 min idle; the hidden-video keep-awake stays until #25 shows devices still sleeping. (plan review TECH-3, D108, D278)

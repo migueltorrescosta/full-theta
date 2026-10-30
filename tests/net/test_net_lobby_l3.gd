@@ -231,3 +231,15 @@ func test_mid_run_change_must_keep_coverage() -> void:
 	assert_str(h.session_of(server, extra).entry).is_equal("weapons")
 	assert_bool(await h.pick(crew[0], "helm")).is_true()
 	assert_bool(server.session.sim_running()).is_true()
+
+
+# FT: FT-NET-013, FT-NET-030
+# The welcome says whether the server serves HTTPS and WSS (D294), so the host's lobby shows
+# an https join URL.
+func test_welcome_says_whether_the_server_uses_tls() -> void:
+	var server: NetServer = h.server()
+	var plain: NetClient = await h.welcomed(server, "plain")
+	assert_bool(plain.welcome["tls"]).is_false()
+	server.session.tls = true
+	var secure: NetClient = await h.welcomed(server, "secure")
+	assert_bool(secure.welcome["tls"]).is_true()

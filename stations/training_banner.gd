@@ -30,6 +30,9 @@ func setup(context: StationContext) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
 	custom_minimum_size = Vector2(420.0, 0.0)
+	# It starts empty, so its offsets are those of an empty box: grow upward from the bottom
+	# edge when a step arrives, not off the screen (found with the L5 lesson shot, D303).
+	grow_vertical = Control.GROW_DIRECTION_BEGIN
 	var col: VBoxContainer = VBoxContainer.new()
 	col.add_theme_constant_override("separation", 6)
 	add_child(col)

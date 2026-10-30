@@ -13,6 +13,7 @@ func before() -> void:
 
 
 func after_test() -> void:
+	LayoutMode.forced = -1
 	I18n.apply("en")
 	if FileAccess.file_exists(SETTINGS):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
@@ -148,8 +149,10 @@ func _put_chip(s: StationScreen, id: int, chip: String, from: String, to: String
 
 # FT: FT-PAIR-013, FT-PAIR-021
 # A chip sent to this screen shows with its sender and time left, Enter answers the oldest
-# (Backspace declines), and a chip this screen sent shows as waiting.
+# (Backspace declines), and a chip this screen sent shows as waiting. (A desktop: on a phone
+# Engineering's chips are the frame's request chips, the strip hides.)
 func test_a_received_chip_is_shown_and_answered() -> void:
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	var s: StationScreen = await _screen("engineering")
 	_put_chip(s, 5, "boost", "helm", "engineering")
 	_put_chip(s, 6, "power", "weapons", "engineering")
@@ -181,6 +184,7 @@ func test_a_received_chip_is_shown_and_answered() -> void:
 # FT: FT-PAIR-013
 # The strip shows what a time-out takes away: when the chip leaves the view, so does its line.
 func test_an_expired_chip_leaves_the_strip_without_a_word() -> void:
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	var s: StationScreen = await _screen("engineering")
 	_put_chip(s, 5, "boost", "helm", "engineering")
 	s._process(0.016)

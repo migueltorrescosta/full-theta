@@ -35,6 +35,40 @@ func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = 
 	return s
 
 
+## A listening server whose world is a lobby-built session (#11): `n` crewed ships under
+## `mode`, on `teams` (FleetFixture.slots_for), ship ids 0 .. n - 1, on the M3 run without a
+## director; its NetFleet holds the same slots and rules. Not started: the lobby is open.
+func fleet_server(
+	mode: SessionRules.Mode,
+	n: int,
+	teams: Array[int] = [],
+	dev_all: bool = false,
+	grace_s: float = 10.0,
+	host_secret: String = ""
+) -> NetServer:
+	var f: FleetFixture = FleetFixture.make(mode, n, teams)
+	if f.world == null:
+		return null
+	var s: NetServer = NetServer.new()
+	if s.start(f.setup, 0, "127.0.0.1", dev_all, host_secret) != OK:
+		return null
+	s.session.sessions.grace_us = int(grace_s * 1_000_000.0)
+	s.session.fleet.rules = f.rules
+	s.session.fleet.slots = f.setup.slots
+	node.add_child(s)
+	servers.append(s)
+	return s
+
+
+## Three crew clients covering the six stations of `ship` (crew3 for any ship); their names
+## are "<entry>-<ship>".
+func crew_of(s: NetServer, ship: int) -> Array[NetClient]:
+	var out: Array[NetClient] = []
+	for entry: String in ["tactical", "systems", "ops"]:
+		out.append(await joined(s, "%s-%d" % [entry, ship], entry, ship))
+	return out
+
+
 ## A connecting client (token "" for a new session).
 func client(s: NetServer, name: String, token: String = "", secret: String = "") -> NetClient:
 	var c: NetClient = NetClient.new()

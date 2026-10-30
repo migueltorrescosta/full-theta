@@ -28,6 +28,12 @@ const ZONE_LEFT: String = "left"
 const ZONE_RIGHT: String = "right"
 const ZONE_NUMPAD: String = "numpad"
 const ZONE_MOUSE: String = "mouse"
+## Layouts kept (load fix 1): a menu rebuild or a second screen with the same stations,
+## device, bindings and language reuses the layout instead of placing every label again.
+const CACHE_MAX: int = 16
+
+## Finished layouts by _cache_key(): {"labels", "leaders", "height", "dy", "origin"}.
+static var _cache: Dictionary = {}
 
 var model: ControlsModel = ControlsModel.new()
 
@@ -58,6 +64,11 @@ func build(bindings: Bindings, stations: Array, device: String) -> void:
 	_device = device
 	_bindings.changed.connect(_rebuild)
 	_rebuild()
+
+
+## What it shows: [bindings, stations, device], or [] before the first build.
+func shown_args() -> Array:
+	return [] if _bindings == null else [_bindings, _stations, _device]
 
 
 ## The callout labels, in design pixels: [{"rect", "name", "keys", "id", "binding",
@@ -106,9 +117,45 @@ func _notification(what: int) -> void:
 
 func _rebuild() -> void:
 	model.build(_bindings, _stations, _device)
-	_layout()
+	var key: String = _cache_key()
+	var hit: Dictionary = _cache.get(key, {})
+	if hit.is_empty():
+		_layout()
+		if _cache.size() >= CACHE_MAX:
+			_cache.erase(_cache.keys()[0])
+		_cache[key] = {
+			"labels": _labels, "leaders": _leaders, "height": _height, "dy": _dy, "origin": _origin
+		}
+	else:
+		_labels = hit["labels"]
+		_leaders = hit["leaders"]
+		_height = hit["height"]
+		_dy = hit["dy"]
+		_origin = hit["origin"]
 	_fit()
 	queue_redraw()
+
+
+## What a layout depends on: the device, the stations, the bindings, the language and the
+## font the labels are measured in.
+func _cache_key() -> String:
+	return (
+		"|"
+		. join(
+			[
+				_device,
+				",".join(_stations),
+				JSON.stringify(_bindings.to_dict()),
+				TranslationServer.get_locale(),
+				str(get_theme_default_font().get_instance_id()),
+			]
+		)
+	)
+
+
+## Empties the layout cache (tests).
+static func clear_cache() -> void:
+	_cache.clear()
 
 
 ## Sizes the labels and puts each in its zone, ordered by its key's position so the
@@ -117,8 +164,9 @@ func _rebuild() -> void:
 ## numpad to its own column, the mouse buttons beside the mouse. The controller splits
 ## into a left and a right column by key position.
 func _layout() -> void:
-	_labels.clear()
-	_leaders.clear()
+	# New arrays: the cache holds the old ones.
+	_labels = []
+	_leaders = []
 	var fig: Dictionary = ControlsFigure.get_figure(_device, _dy)
 	var size: Vector2 = fig["size"]
 	var zones: Dictionary = {}
@@ -141,7 +189,8 @@ func _layout() -> void:
 	for zone: String in [ZONE_LEFT, ZONE_NUMPAD]:
 		bottom = maxf(bottom, TOP + zones.get(zone, []).size() * LINE_H)
 	var spec: Dictionary = _zone_specs()
-	for zone: String in [ZONE_TOP, ZONE_LEFT, ZONE_RIGHT, ZONE_NUMPAD, ZONE_MOUSE]:
+	# The numpad column before the right half's tiers, which must stop short of it.
+	for zone: String in [ZONE_TOP, ZONE_LEFT, ZONE_NUMPAD, ZONE_RIGHT, ZONE_MOUSE]:
 		if not zones.has(zone):
 			continue
 		var list: Array = zones[zone]
@@ -366,7 +415,10 @@ func _uncross(list: Array, ys: Array[float], elbow_x: float) -> void:
 					list[i] = list[j]
 					list[j] = t
 					swapped = true
-	var best: float = _cost(list, ys, elbow_x)
+	# Then trade any two rows while that lowers the cost (_cost_of_rows).
+	var segs: Array = []
+	for k: int in list.size():
+		segs.append(_segments_of(list[k], ys[k], elbow_x))
 	var improved: bool = true
 	var guard: int = 0
 	while improved and guard < 60:
@@ -374,19 +426,22 @@ func _uncross(list: Array, ys: Array[float], elbow_x: float) -> void:
 		guard += 1
 		for i: int in list.size():
 			for j: int in range(i + 1, list.size()):
-				var tmp: Variant = list[i]
-				list[i] = list[j]
-				list[j] = tmp
-				var c: float = _cost(list, ys, elbow_x)
-				if c < best - 0.001:
-					best = c
+				var before: float = _cost_of_rows(segs, i, j)
+				var was_i: Array = segs[i]
+				var was_j: Array = segs[j]
+				segs[i] = _segments_of(list[j], ys[i], elbow_x)
+				segs[j] = _segments_of(list[i], ys[j], elbow_x)
+				if _cost_of_rows(segs, i, j) - before < -0.001:
 					improved = true
+					var tmp: Variant = list[i]
+					list[i] = list[j]
+					list[j] = tmp
 				else:
-					list[j] = list[i]
-					list[i] = tmp
+					segs[i] = was_i
+					segs[j] = was_j
 
 
-## A million per pair of crossing leaders, plus the leaders' total length.
+## Whether the leaders of label `a` on row top `ya` and `b` on `yb` cross.
 func _labels_cross(a: Dictionary, ya: float, b: Dictionary, yb: float, elbow_x: float) -> bool:
 	var ea: Vector2 = Vector2(elbow_x, ya + (LINE_H - 2.0) * 0.5)
 	var eb: Vector2 = Vector2(elbow_x, yb + (LINE_H - 2.0) * 0.5)
@@ -397,26 +452,45 @@ func _labels_cross(a: Dictionary, ya: float, b: Dictionary, yb: float, elbow_x: 
 	return false
 
 
-func _cost(list: Array, ys: Array[float], elbow_x: float) -> float:
-	var segs: Array = []
-	var length: float = 0.0
-	for i: int in list.size():
-		var e: Vector2 = Vector2(elbow_x, ys[i] + (LINE_H - 2.0) * 0.5)
-		for a: Vector2 in list[i]["lead"]:
-			segs.append([i, e, a])
-			length += e.distance_to(a)
-		var chain: Array = list[i]["anchors"]
-		for k: int in range(1, chain.size()):
-			segs.append([i, chain[k - 1], chain[k]])
+## The cost of a column is a million per pair of crossing segments of different rows plus
+## the leaders' total length. This is the part rows `i` and `j` take part in: their
+## leaders' crossings with every other row's segments, and their leaders' length. Trading
+## the two rows moves only those leaders, so it changes the column's cost by exactly the
+## change of this (n times cheaper than recounting the column, load fix 8). `segs` holds
+## each row's _segments_of.
+static func _cost_of_rows(segs: Array, i: int, j: int) -> float:
 	var crossings: int = 0
-	for i: int in segs.size():
-		for j: int in range(i + 1, segs.size()):
-			if (
-				segs[i][0] != segs[j][0]
-				and segments_cross(segs[i][1], segs[i][2], segs[j][1], segs[j][2])
-			):
-				crossings += 1
+	var length: float = 0.0
+	for r: int in [i, j]:
+		for s: Array in segs[r]:
+			if not s[2]:
+				continue
+			length += (s[0] as Vector2).distance_to(s[1])
+			for k: int in segs.size():
+				if k == r:
+					continue
+				for t: Array in segs[k]:
+					if segments_cross(s[0], s[1], t[0], t[1]):
+						crossings += 1
+	# A crossing of i's and j's leaders was counted from both sides.
+	for s: Array in segs[i]:
+		for t: Array in segs[j]:
+			if s[2] and t[2] and segments_cross(s[0], s[1], t[0], t[1]):
+				crossings -= 1
 	return crossings * 1000000.0 + length
+
+
+## A label's segments on the row with top `y`: [from, to, is a leader from the elbow];
+## its leaders, then the hops between its keys.
+static func _segments_of(l: Dictionary, y: float, elbow_x: float) -> Array:
+	var out: Array = []
+	var e: Vector2 = Vector2(elbow_x, y + (LINE_H - 2.0) * 0.5)
+	for a: Vector2 in l["lead"]:
+		out.append([e, a, true])
+	var chain: Array = l["anchors"]
+	for c: int in range(1, chain.size()):
+		out.append([chain[c - 1], chain[c], false])
+	return out
 
 
 ## True when segments a1-a2 and b1-b2 cross at a point inside both.
@@ -454,9 +528,9 @@ func _place_vertical(list: Array, above: bool, y0: float) -> void:
 	for t: int in list.size():
 		var l: Dictionary = list[t]
 		var left: float = _min_x(l["anchors"])
-		_fit_label(l, DESIGN_W - 8.0 - left)
 		var tier: int = t if above else list.size() - 1 - t
 		var y: float = (TOP if above else y0) + tier * LINE_H
+		_fit_label(l, _room_right_of(left + 6.0, y) + 6.0)
 		var rect: Rect2 = Rect2(left + 6.0, y, l["w"], LINE_H - 2.0)
 		l["rect"] = rect
 		_labels.append(l)
@@ -465,6 +539,17 @@ func _place_vertical(list: Array, above: bool, y0: float) -> void:
 			if a.x >= rect.position.x:
 				from_y = rect.end.y + 1.0 if above else rect.position.y - 1.0
 			_add_leader(l, PackedVector2Array([Vector2(a.x, from_y), a]))
+
+
+## The room for a label from `x` on the row at `y`: to the drawing's edge, or to the first
+## label already placed on that row (a busy screen's right half reaches the numpad column).
+func _room_right_of(x: float, y: float) -> float:
+	var end: float = DESIGN_W - 8.0
+	for other: Dictionary in _labels:
+		var r: Rect2 = other["rect"]
+		if r.position.x > x and r.position.y < y + LINE_H - 2.0 and r.end.y > y:
+			end = minf(end, r.position.x - 6.0)
+	return end - x
 
 
 func _min_x(points: Array) -> float:

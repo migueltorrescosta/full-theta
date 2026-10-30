@@ -2,7 +2,7 @@
 
 Six functional stations plus the optional Captain seat and the shared main screen. Roles (owner, round 11): Helm = movement; Weapons = damage; Engineering = systems; Science = information gathering, scanning and hacking; Relay = tactical view of the universe; Comms = story of the universe; Captain = information only (D15, D23, D50–D54).
 
-Wireframes are 16:9 sketches. A requirement below that says "on Easy" for a data shortcut means "when that shortcut's toggle is on" (§7.2, D84). Controls are listed as KB/M, controller, touch. Touch layouts for Helm and Weapons come with browser stations after milestone 1 (D8).
+Wireframes are 16:9 sketches. A requirement below that says "on Easy" for a data shortcut means "when that shortcut's toggle is on" (§7.2, D84). Controls are listed as KB/M, controller, touch. Touch layouts for Helm and Weapons come with browser stations after milestone 1 (D8); phone layouts are landscape-first (D272, D276).
 
 ## 5.0 Common to every station
 
@@ -29,7 +29,7 @@ Always-live set (works whatever panel has focus, §5.9): alert (Alt+A cycles; ho
 - **FT-STN-002** Every station shall show the shared disc radar at some size. (D43)
 - **FT-STN-003** Every callsign chip and mark shall be selectable by click/tap and pingable by middle-click/long-press. (D44, D61)
 - **FT-STN-004** Every critical alert shall be both visual and audible on the affected stations. (v0.3 §5)
-- **FT-STN-005** Every station shall be usable with KB/M and a controller; touch layouts shall exist for every station once browser stations ship. (v0.3 §2, D8)
+- **FT-STN-005** Every station shall be usable with KB/M and a controller; touch layouts shall exist for every station once browser stations ship. Phones are laid out landscape-first, the layout chosen from physical size, pointer kind and orientation, with portrait operable in a reduced layout under a dismissible "Turn sideways for the full view" banner, never a block. Primary controls (rail buttons, sticks, throttle) are at least 48 px with 8 px between them, nothing tappable is under 44 px or in a phone's bottom 24 px, and controls stay inside `max(8px, env(safe-area-inset-*))` on phones. Primary controls sit in left and right rails under the thumbs and read-only information in the middle: Helm rails with tabs and drawers, Weapons docked rails, Science and Relay overlay rails. Android and iPad browsers get an optional Full screen button (Android also locks landscape; never on iPhone), and the shell caps the device pixel ratio at 2. (v0.3 §2, D8, D195, D218, D223, D272-D277)
 - **FT-STN-006** UI colours shall stay distinguishable under the common forms of colour blindness, and allegiance and alert level shall also be encoded by letter or shape; the three alert levels are Normal (green circle, N), Yellow (amber triangle, Y) and Red (red square, R). (station-ui §2, plan review UX-8, D170)
 - **FT-STN-007** Input bindings shall be rebindable and persisted per client. (v0.3 §2)
 - **FT-STN-008** Any crew station shall set the ship's alert level, Normal, Yellow or Red, from the top bar (KB/M: click the alert chip for a three-button picker, or Alt+A to cycle; controller: hold View and press d-pad up for Red, right for Yellow, down for Normal; touch: tap the alert chip); the Captain and viewers shall not. (D15, D89, D170)

@@ -37,6 +37,27 @@ func crew_ships() -> PackedInt32Array:
 	return out
 
 
+## Crewable ships in play of one faction: a fleet's ships for its director (#11, M4-Q1).
+func crew_ships_of(faction: int) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for id: int in crew_ships():
+		if _world.faction_of(id) == faction:
+			out.append(id)
+	return out
+
+
+## The session's mode, a SessionRules.Mode value (#11): the director keys on it.
+func session_mode() -> int:
+	return _world.rules.mode
+
+
+## A ship's side (SimWorld.team_of, #11).
+func team_of(id: int) -> int:
+	if id < 0 or id >= _world.ship_count():
+		return -1
+	return _world.team_of(id)
+
+
 func ship(id: int) -> ShipView:
 	var v: ShipView = ShipView.new()
 	if id < 0 or id >= _world.ship_count():
@@ -87,7 +108,7 @@ func spawnable_sites() -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	var taken: Array[StringName] = []
 	for c: SimCommand in _world.queued_commands():
-		if c is OpenSiteCommand:
+		if c is OpenSiteCommand and (c as OpenSiteCommand).for_ship < 0:
 			taken.append((c as OpenSiteCommand).site_key)
 	for key: String in _world.sites.closed_keys():
 		if not taken.has(StringName(key)):
@@ -250,6 +271,33 @@ func open_site(site_key: StringName) -> ApiHandle:
 	cmd.site_key = site_key
 	_world.submit(cmd)
 	return ApiHandle.new(cmd)
+
+
+## RACE (#11, M4-Q5): opens the ship's own copy of a map or pool site (SiteTable.open_copy);
+## returns a handle on its site id (resolved at once when the copy is open).
+func open_site_copy(site_key: StringName, ship_id: int) -> ApiHandle:
+	var cmd: OpenSiteCommand = OpenSiteCommand.new()
+	if ship_id < 0 or ship_id >= _world.ship_count():
+		cmd.tick = _world.tick  # refused at once: no such ship
+		return ApiHandle.new(cmd)
+	var copy: StringName = SiteTable.copy_key(_world, site_key, ship_id)
+	if _world.sites.has_key(copy):
+		return ApiHandle.new(null, _world.sites.id_of(copy))
+	cmd.site_key = site_key
+	cmd.for_ship = ship_id
+	_world.submit(cmd)
+	return ApiHandle.new(cmd)
+
+
+## Every site key of the map, open or not, in map order then pool order (a race draws its
+## sites from them, #11).
+func map_site_keys() -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	if _world.run_def == null or _world.run_def.map == null:
+		return out
+	for def: SiteDef in _world.run_def.map.all_sites():
+		out.append(def.id)
+	return out
 
 
 ## Posts a card on the ship's Comms board; returns a handle on the card id. A crew hail

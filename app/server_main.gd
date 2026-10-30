@@ -19,6 +19,9 @@ extends RefCounted
 ##   --pid-file PATH      write the pid file there while running (FT-NET-003).
 ##   --http-root DIR      serve this web export (an absolute path) over HTTP at
 ##                        port - 1 (FT-NET-030, D108); off without it.
+##   --tls-cert PATH      with --tls-key: serve HTTPS and WSS instead of HTTP and ws://
+##   --tls-key PATH       (D294; PEM certificate chain and key, absolute paths, e.g.
+##                        from `tailscale cert`: docs/launch.md); plain by default.
 ##   --session-log PATH   write the session log (JSON Lines: snapshot-age summaries every
 ##                        10 s and a final summary, D199) there; "off" writes none
 ##                        [user://logs/session-<unix time>.jsonl].
@@ -34,6 +37,9 @@ extends RefCounted
 ##                        scenario (FT-MIS-039: RunSetup on content/runs/shakedown.tres, one
 ##                        ship, no director), or m1, the Milestone 1 encounter
 ##                        (the L4 encounter scenario and the golden tests).
+##   --solo STATION       a station lesson (D303): the joining host plays STATION alone
+##                        (helm ... comms, or captain), bots on the others; implies
+##                        --encounter shakedown.
 ##   --m1-player-hull-scale F
 ##                        test flag: the crewed ship's hull is F times its definition's
 ##                        (0 < F <= 1), so the L4 encounter (tools/l4) loses a fight in
@@ -88,6 +94,8 @@ var idle_exit_min: float = 0.0
 var pid_file: String = ""
 var run_for: float = 0.0
 var http_root: String = ""
+var tls_cert: String = ""
+var tls_key: String = ""
 var session_log_path: String = SessionLog.default_path()
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
@@ -101,6 +109,8 @@ var probe_warmup: float = 3.0
 var probe_window: float = 60.0
 var player_hull_scale: float = 1.0
 var encounter_name: String = "run"
+## The station a joining host plays alone (--solo, D303), or "".
+var solo_station: String = ""
 ## Whether test flags (--m1-player-hull-scale, LOAD_FLAGS) are accepted: a debug build (the editor
 ## binary that L3 and L4 run) or FT_DEV set.
 var dev_flags: bool = OS.is_debug_build() or OS.get_environment(DEV_ENV) != ""
@@ -138,7 +148,14 @@ func parse_args(args: PackedStringArray) -> bool:
 	if discovery_port <= 0 or discovery_port > 65535:
 		push_error("--discovery-port must be 1..65535")
 		return false
-	return _check_load_flags(args)
+	return _check_tls() and _check_load_flags(args)
+
+
+func _check_tls() -> bool:
+	if (tls_cert == "") != (tls_key == ""):
+		push_error("--tls-cert and --tls-key go together")
+		return false
+	return true
 
 
 ## The load gate's flags (D160, D161) are for dev and test builds only, and each needs
@@ -173,7 +190,31 @@ func _set_value(flag: String, value: String) -> bool:
 			return false
 		encounter_name = value
 		return true
+	if flag == "--solo":
+		return _set_solo(value)
+	if flag == "--tls-cert" or flag == "--tls-key":
+		return _set_tls(flag, value)
 	return _set_flag(flag, value)
+
+
+func _set_solo(value: String) -> bool:
+	if not StationViews.CREW.has(value) and value != StationViews.CAPTAIN:
+		push_error("--solo must be a station: %s or captain" % ", ".join(StationViews.CREW))
+		return false
+	solo_station = value
+	encounter_name = "shakedown"
+	return true
+
+
+func _set_tls(flag: String, value: String) -> bool:
+	if not value.is_absolute_path():
+		push_error("%s needs an absolute path" % flag)
+		return false
+	if flag == "--tls-cert":
+		tls_cert = value
+	else:
+		tls_key = value
+	return true
 
 
 func _set_flag(flag: String, value: String) -> bool:
@@ -275,11 +316,19 @@ func make_server() -> NetServer:
 	encounter.science = defs.science()
 	if load_ships <= 0 and run == null:
 		encounter.hazards = defs.m1_hazards()
+	var tls: TLSOptions = null
+	if tls_cert != "":
+		tls = load_tls(tls_cert, tls_key)
+		if tls == null:
+			return null
 	var server: NetServer = NetServer.new()
+	server.transport.tls = tls
 	if run != null:
 		server.driver_factory = (
 			_training_factory() if encounter_name == "shakedown" else _director_factory(run)
 		)  # G2
+	server.training_setup = func() -> RunSetup: return run_setup(DefLibrary.new(), "shakedown")
+	server.training_driver = _training_factory
 	server.run_for = run_for
 	if probe_out != "":
 		server.probe = LoadProbe.new(probe_out)
@@ -291,8 +340,10 @@ func make_server() -> NetServer:
 		push_error("server failed to start on %s:%d: %s" % [bind_address, port, error_string(err)])
 		server.free()
 		return null
+	server.session.training.solo_on_join = solo_station
 	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
 	server.session.language = language
+	server.session.tls = tls != null
 	if http_root != "":
 		err = server.start_http(http_root)
 		if err != OK:
@@ -305,6 +356,7 @@ func make_server() -> NetServer:
 			server.transport.stop()
 			server.free()
 			return null
+		server.http.tls = tls
 	if beacon and not is_loopback(bind_address):
 		server.start_beacon(server_name, discovery_port)
 	if session_log_path != "":
@@ -312,11 +364,26 @@ func make_server() -> NetServer:
 	return server
 
 
+## Server TLS options from a PEM certificate (chain) and key, or null (reported).
+static func load_tls(cert_path: String, key_path: String) -> TLSOptions:
+	var cert: X509Certificate = X509Certificate.new()
+	var err: Error = cert.load(cert_path)
+	if err != OK:
+		push_error("--tls-cert %s: %s" % [cert_path, error_string(err)])
+		return null
+	var key: CryptoKey = CryptoKey.new()
+	err = key.load(key_path)
+	if err != OK:
+		push_error("--tls-key %s: %s" % [key_path, error_string(err)])
+		return null
+	return TLSOptions.server(key, cert)
+
+
 ## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).
-func run_setup(defs: DefLibrary) -> RunSetup:
-	var run_def: RunDef = defs.run(&"shakedown" if encounter_name == "shakedown" else &"m3_run")
+func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
+	var run_def: RunDef = defs.run(&"shakedown" if which == "shakedown" else &"m3_run")
 	if run_def == null:
-		push_error("missing run definition for --encounter %s" % encounter_name)
+		push_error("missing run definition for --encounter %s" % which)
 		return null
 	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.enemies())
 	setup.science = defs.science()
@@ -339,27 +406,28 @@ func run_setup(defs: DefLibrary) -> RunSetup:
 
 
 ## Makes the director for a run when the first tick steps: the lobby's difficulty preset
-## picks its budget, the catalogue is the scenarios the run lists (E07, D81).
+## picks its budget, the catalogue is the scenarios the run lists (E07, D81), and the
+## session's mode keys it per faction (FleetDirector, #11, M4-Q1).
 func _director_factory(setup: RunSetup) -> Callable:
-	return func(difficulty: StringName) -> Director:
-		var d: Director = Director.new(
+	return func(difficulty: StringName) -> FleetDirector:
+		return FleetDirector.new(
 			setup.run_def.director,
 			difficulty,
 			ScenarioCatalogue.load_for(setup.run_def.scenarios),
-			seed_value
+			seed_value,
+			setup.rules.mode
 		)
-		return d
 
 
 ## The Shakedown's driver when the first tick steps (FT-MIS-039): its one scenario and the
 ## step list. The difficulty preset changes nothing in training.
-func _training_factory() -> Callable:
+func _training_factory(solo: StringName = &"") -> Callable:
 	return func(_difficulty: StringName) -> TrainingDriver:
 		var scenarios: Array[Scenario] = ScenarioCatalogue.load_for(
 			PackedStringArray(["shakedown"])
 		)
 		var steps: TrainingStepsDef = load("res://content/training/steps.tres") as TrainingStepsDef
-		return TrainingDriver.new(scenarios[0], steps)
+		return TrainingDriver.new(scenarios[0], steps, solo)
 
 
 ## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,

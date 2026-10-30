@@ -7,6 +7,10 @@ extends Control
 
 ## The player picked an alert level from the chip's picker.
 signal alert_picked(level: int)
+## The phone's menu button was tapped: the screen asks the shell for the menu (#28).
+signal menu_pressed
+## A phone's alert chip was tapped by the crew: the screen opens the N/Y/R sheet.
+signal alert_sheet_requested
 
 ## Bar height before UI scale (px).
 const HEIGHT: float = 40.0
@@ -22,8 +26,18 @@ var alert_style: Dictionary = Palette.alert(0)
 var chip: Button = Button.new()
 var sound: SoundToggle = SoundToggle.new()
 var picker: PopupPanel = PopupPanel.new()
+## The phone's bar (#28 follow-up, design 1.2, set_phone): the menu button, the compact
+## status, the station's page tabs, the alert chip and the timer in one row; the ship name
+## and Sound move into the menu.
+var menu_button: RailButton = RailButton.make("☰")
+var glance: StatusGlance = StatusGlance.new()
+var tabs: PageTabs = PageTabs.new()
+var phone: bool = false
 
 var _row: HBoxContainer
+## The rows' box: 8 px in from each edge; a phone's row starts at the top edge, so its
+## 48 px targets keep UiTheme.TOUCH_GAP above the content under the bar.
+var _box: VBoxContainer
 ## The phone's second row: hull, shields and reactor (set_compact).
 var _row2: HBoxContainer = HBoxContainer.new()
 var _compact: bool = false
@@ -35,6 +49,8 @@ var _shields: Label = Label.new()
 var _pips: Label = Label.new()
 var _stations: Label = Label.new()
 var _timer: Label = Label.new()
+var _phone_row: HBoxContainer = HBoxContainer.new()
+var _phone_timer: Label = Label.new()
 ## The shape beside a banded hull, shields and reactor (BandBadge), by status key.
 var _badges: Dictionary = {}
 ## What show_state last showed, to skip unchanged frames.
@@ -47,6 +63,7 @@ func _init() -> void:
 	rows.set_anchors_and_offsets_preset(PRESET_FULL_RECT, PRESET_MODE_MINSIZE, 8)
 	rows.add_theme_constant_override("separation", 0)
 	add_child(rows)
+	_box = rows
 	var row: HBoxContainer = HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 	row.size_flags_vertical = SIZE_EXPAND_FILL
@@ -89,11 +106,56 @@ func _init() -> void:
 	picker.add_child(buttons)
 	add_child(picker)
 	can_set_alert = false
+	_phone_row.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	_phone_row.size_flags_vertical = SIZE_EXPAND_FILL
+	_phone_row.visible = false
+	rows.add_child(_phone_row)
+	menu_button.name = "MenuButton"
+	menu_button.add_theme_font_size_override("font_size", 20)
+	menu_button.tooltip_text = tr("intent.menu")
+	menu_button.pressed.connect(func() -> void: menu_pressed.emit())
+	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
+	_phone_timer.add_theme_font_size_override("font_size", 14)
+	_phone_timer.add_theme_color_override("font_color", Palette.color("text"))
+	_phone_timer.custom_minimum_size.x = 48.0
+	_phone_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	for c: Control in [menu_button, glance, tabs, _phone_timer]:
+		c.size_flags_vertical = SIZE_SHRINK_CENTER
+		_phone_row.add_child(c)
+
+
+## The phone's one-row bar (design 1.2): menu, status, tabs, alert chip, timer; `height`
+## is the bar's. Off, the bar is as before (set_compact still applies).
+func set_phone(on: bool, height: float = HEIGHT) -> void:
+	var size_now: Vector2 = Vector2(UiTheme.TOUCH_PRIMARY, height - 8.0)
+	menu_button.custom_minimum_size = size_now
+	if on:
+		chip.custom_minimum_size = size_now
+	if on == phone:
+		return
+	if on:
+		set_compact(false, height, true)
+	phone = on
+	_box.offset_top = 0.0 if on else 8.0
+	_row.visible = not on
+	_phone_row.visible = on
+	if on:
+		chip.reparent(_phone_row, false)
+		_phone_row.move_child(chip, _phone_row.get_child_count() - 2)
+		chip.custom_minimum_size = size_now
+		chip.text = ""
+	else:
+		chip.reparent(_row, false)
+		_row.move_child(chip, _order.find(chip))
+		_shown = []
+	chip.queue_redraw()
 
 
 ## The phone's top bar (D195): hull, shields and reactor move to a second row, and the
 ## chip and sound button are `height` tall (a tap target). `height` is one row's.
 func set_compact(compact: bool, height: float = HEIGHT, small: bool = false) -> void:
+	if phone:
+		return
 	chip.custom_minimum_size = Vector2(0.0, height - 8.0)
 	sound.custom_minimum_size = Vector2(0.0, height - 8.0) if height > HEIGHT else Vector2.ZERO
 	_row.add_theme_constant_override("separation", 10 if compact else 18)
@@ -155,7 +217,7 @@ func show_state(
 		if band >= 0:
 			(_badges[key] as BandBadge).set_band(band as HealthBand.Band)
 	alert_style = Palette.alert(alert)
-	chip.text = "       " + tr(alert_style["key"])
+	chip.text = "" if phone else "       " + tr(alert_style["key"])
 	chip.add_theme_color_override("font_color", Palette.color(alert_style["role"]))
 	chip.add_theme_color_override("font_hover_color", Palette.color(alert_style["role"]))
 	chip.queue_redraw()
@@ -166,6 +228,24 @@ func show_state(
 	_stations.text = " + ".join(names)
 	var secs: int = int(mission_s)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
+	_phone_timer.text = _timer.text
+	glance.set_values(
+		_fill(status, "hull", summaries, float(maxes.get("hull", 0.0))),
+		hull.trim_suffix("%"),
+		_fill(status, "shields", summaries, float(maxes.get("shields", 0.0))),
+		shields.trim_suffix("%"),
+		pips
+	)
+
+
+## A status value's share of its maximum for the phone's bars, or -1 (no maximum, or a
+## summary hides the value).
+static func _fill(
+	status: Dictionary, key: String, summaries: Dictionary, max_value: float
+) -> float:
+	if summaries.has(key) or max_value <= 0.0 or not status.has(key):
+		return -1.0
+	return float(status[key]) / max_value
 
 
 ## Opens the alert picker (Alt+A cycles instead; this is the chip click). Does nothing
@@ -173,18 +253,21 @@ func show_state(
 func open_alert_picker() -> void:
 	if not can_set_alert:
 		return
+	if phone:
+		alert_sheet_requested.emit()
+		return
 	var at: Vector2 = chip.get_screen_position() + Vector2(0.0, chip.size.y)
 	picker.popup(Rect2i(Vector2i(at), Vector2i.ZERO))
 
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("panel"))
-	draw_line(Vector2(0, size.y - 0.5), Vector2(size.x, size.y - 0.5), Palette.color("line"))
+	draw_line(Vector2(0, size.y - 0.5), Vector2(size.x, size.y - 0.5), Palette.color("line_strong"))
 
 
 ## The chip's shape with its letter (colour is never the only code, FT-STN-006).
 func _draw_chip() -> void:
-	var c: Vector2 = Vector2(16.0, chip.size.y / 2.0)
+	var c: Vector2 = Vector2(chip.size.x / 2.0 if phone else 16.0, chip.size.y / 2.0)
 	var shape: String = alert_style["shape"]
 	var pts: PackedVector2Array = Palette.shape_points(shape, c, 14.0)
 	chip.draw_colored_polygon(pts.slice(0, -1), Palette.color(alert_style["role"]))

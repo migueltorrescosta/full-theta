@@ -1,19 +1,24 @@
 class_name SettingsScreen
 extends PanelContainer
-## The menu (per client, ClientSettings), one opaque screen with tabs: Controls (only in
-## a session: the live bindings under the seat's role summary, ControlsPane; FT-STN-011,
-## FT-STN-012, D185), Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-run
-## tips again, and comfort FT-STN-017: on/off, roll lock deck / target / reference plane,
-## "set reference plane to my current deck", reduced field of view; the station cameras
-## apply them) and Rebind keys (bindings per intent and device with rebind, hold/toggle
-## and reset, FT-STN-007, FT-STN-014). Esc opens it on the tab last used (Settings at
-## first), `?` and the first visit to a seat open Controls. Saved on close; a language
-## switch retranslates it at once. In a session it also offers Leave.
+## The menu (per client, ClientSettings; FT-STN-011, D185, P28 menu), one opaque screen
+## with tabs. In a session: Game (the ship's name, Sound, Full screen where offered, the
+## host's Pause, Abandon or Give up, Leave; the final ones ask to confirm in place), Controls
+## (the live bindings under the seat's role summary, ControlsPane; FT-STN-012), Tips, then
+## Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-run tips again, and comfort
+## FT-STN-017: on/off, roll lock deck / target / reference plane, "set reference plane to
+## my current deck", reduced field of view; the station cameras apply them) and Rebind keys
+## (bindings per intent and device with rebind, hold/toggle and reset, FT-STN-007,
+## FT-STN-014; hidden on a phone, which has no keys). Esc opens it on the tab last used
+## (Game at first in a session, Settings outside one), `?` on Controls; help never opens
+## by itself (P28-Help, ControlsChip). Saved on close; a language switch retranslates it
+## at once. A change of the Pause or Abandon control updates its button in place, never
+## the whole menu (load fix 2).
 
 signal closed
 signal leave_requested
 signal host_pause_requested
-## The abandon-run control was pressed (D241): the host abandons, a crew player votes.
+## The abandon-run control was pressed (D241): the host abandons (after confirming here),
+## a crew player votes.
 signal abandon_requested
 signal scale_changed
 ## "Set reference plane to my current deck": the shell stores the ship's orientation.
@@ -24,9 +29,15 @@ const ALWAYS_BOUND: Array[String] = ["menu", "decline"]
 const MODIFIER_KEYS: Array[Key] = [KEY_SHIFT, KEY_ALT, KEY_CTRL]
 ## A trigger or stick past this deflection is captured.
 const CAPTURE_DEFLECT: float = 0.5
+## How long a final button waits for its second tap (ms).
+const CONFIRM_MS: int = 4000
+## The abandon-control keys that end the run at once (the host's), so they confirm first.
+const FINAL_ABANDON: Array[String] = ["settings.abandon", "settings.forfeit"]
 
 ## The tab names: the children of `tabs`.
+const TAB_GAME: String = "Game"
 const TAB_CONTROLS: String = "Controls"
+const TAB_TIPS: String = "Tips"
 const TAB_SETTINGS: String = "Settings"
 const TAB_KEYS: String = "Keys"
 
@@ -49,6 +60,7 @@ var _in_session: bool = false
 var _pause_control: bool = false
 ## The string key of the abandon-run control's label, "" when it isn't offered (D241).
 var _abandon_key: String = ""
+var _ship_name: String = ""
 ## What _build fills: a notification may not change the children of its own node.
 var _root: VBoxContainer
 ## What `controls` shows, kept to refill it when the menu is rebuilt: [bindings,
@@ -56,6 +68,17 @@ var _root: VBoxContainer
 var _controls_args: Array = []
 var _rows: VBoxContainer
 var _scale_label: Label
+var _scale_slider: HSlider
+## The Game tab's controls (null outside a session).
+var _ship_label: Label
+var _sound: SoundToggle
+var _pause_button: Button
+var _abandon_button: Button
+var _leave_button: Button
+## Final buttons waiting for their second tap: {button name: deadline in ms}.
+var _armed: Dictionary = {}
+## The opaque panel; its margins keep the menu inside the safe area (#28).
+var _box: StyleBoxFlat
 
 
 func setup(p_settings: ClientSettings, in_session: bool) -> void:
@@ -65,39 +88,61 @@ func setup(p_settings: ClientSettings, in_session: bool) -> void:
 	# Opaque: the station behind must not show through (D185).
 	var box: StyleBoxFlat = StyleBoxFlat.new()
 	box.bg_color = Palette.color("panel")
+	box.border_color = Palette.color("line_strong")
+	box.set_border_width_all(UiTheme.BORDER)
 	box.set_content_margin_all(16)
 	add_theme_stylebox_override("panel", box)
+	_box = box
 	_root = VBoxContainer.new()
 	add_child(_root)
 	_build()
 
 
 ## Fills the Controls tab for `stations` on `device` under the role summary of `role`.
+## Cheap: the pane builds a diagram only when it shows (load fix 1).
 func set_controls(bindings: Bindings, stations: Array, device: String, role: String) -> void:
 	_controls_args = [bindings, stations, device, role]
 	if controls_pane != null:
 		controls_pane.build(bindings, stations, device, role)
 
 
-## Opens the menu on `tab` (a TAB_ name), or on the tab last used when empty.
-## Shows or hides the host's Pause control (rebuilds the menu on a change).
+## Shows or hides the host's Pause control, in place.
 func set_pause_control(on: bool) -> void:
-	if on != _pause_control:
-		_pause_control = on
-		if _root != null:
-			_build()
+	_pause_control = on
+	if _pause_button != null:
+		_pause_button.visible = on
 
 
-## Shows the abandon-run control under `key` (CrewState.abandon_control), "" hides it.
+## Shows the abandon-run control under `key` (CrewState.abandon_control), "" hides it; in
+## place.
 func set_abandon_control(key: String) -> void:
-	if key != _abandon_key:
-		_abandon_key = key
-		if _root != null:
-			_build()
+	if key == _abandon_key:
+		return
+	_abandon_key = key
+	_armed.erase("Abandon")
+	_show_abandon()
 
 
+func _show_abandon() -> void:
+	if _abandon_button != null:
+		_abandon_button.visible = _abandon_key != ""
+		_abandon_button.text = tr(_abandon_key) if _abandon_key != "" else ""
+
+
+## The ship's name on the Game tab ("" hides it).
+func set_ship_name(text: String) -> void:
+	_ship_name = text
+	if _ship_label != null:
+		_ship_label.text = tr("menu.ship") % text
+		_ship_label.visible = text != ""
+
+
+## Opens the menu on `tab` (a TAB_ name), or on the tab last used when empty.
 func open(tab: String = "") -> void:
 	visible = true
+	if _sound != null:
+		# The top bar's toggle may have changed the sound since.
+		_sound.button_pressed = _sound.is_on()
 	open_tab(tab)
 
 
@@ -108,6 +153,7 @@ func current_tab_name() -> String:
 
 func close() -> void:
 	capturing = []
+	_disarm_all()
 	visible = false
 	settings.save()
 	closed.emit()
@@ -122,12 +168,49 @@ func set_ui_scale(value: float) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and settings != null:
 		_build()
+	elif what == NOTIFICATION_ENTER_TREE:
+		if not get_viewport().size_changed.is_connected(_fit_safe_area):
+			get_viewport().size_changed.connect(_fit_safe_area)
+		_fit_safe_area.call_deferred()
+	elif what == NOTIFICATION_EXIT_TREE:
+		if get_viewport().size_changed.is_connected(_fit_safe_area):
+			get_viewport().size_changed.disconnect(_fit_safe_area)
+
+
+## Keeps the menu clear of notches and, on a phone, the gesture band (SafeArea, #28); a
+## phone has no Rebind keys tab.
+func _fit_safe_area() -> void:
+	if _box == null or not is_inside_tree():
+		return
+	var m: Vector4 = SafeArea.margins(self)
+	_box.content_margin_left = 16.0 + m.x
+	_box.content_margin_top = 16.0 + m.y
+	_box.content_margin_right = 16.0 + m.z
+	_box.content_margin_bottom = 16.0 + maxf(m.w, SafeArea.tap_band(self))
+	var kind: LayoutMode.Kind = LayoutMode.kind_of(self)
+	# A finger needs the slider's full touch height (#28: nothing tappable under 44 px).
+	if _scale_slider != null:
+		_scale_slider.custom_minimum_size.y = (
+			UiTheme.TOUCH_MIN if LayoutMode.is_touch(kind) else 0.0
+		)
+	# A window that became a phone hides Rebind keys; one that stopped being one gets it.
+	var keys: Node = tabs.get_node_or_null(TAB_KEYS) if tabs != null else null
+	var phone: bool = kind == LayoutMode.Kind.PHONE
+	if keys != null:
+		if phone and tabs.get_current_tab_control() == keys:
+			open_tab(TAB_SETTINGS)
+		tabs.set_tab_hidden(keys.get_index(), phone)
+	elif tabs != null and not phone:
+		_build_keys()
 
 
 ## (Re)builds the tabs in the current language, keeping the tab showing.
 func _build() -> void:
-	var keep: String = current_tab_name() if tabs != null else TAB_SETTINGS
+	var keep: String = TAB_GAME if _in_session else TAB_SETTINGS
+	if tabs != null:
+		keep = current_tab_name()
 	capturing = []
+	_armed.clear()
 	for c: Node in _root.get_children():
 		_root.remove_child(c)
 		c.queue_free()
@@ -136,32 +219,15 @@ func _build() -> void:
 	var top: HBoxContainer = HBoxContainer.new()
 	col.add_child(top)
 	_add_button(top, "Close", tr("settings.close"), close)
-	if _pause_control:
-		_add_button(
-			top,
-			"HostPause",
-			tr("settings.pause"),
-			func() -> void:
-				host_pause_requested.emit()
-				close()
-		)
-	if _abandon_key != "":
-		_add_button(
-			top,
-			"Abandon",
-			tr(_abandon_key),
-			func() -> void:
-				abandon_requested.emit()
-				close()
-		)
-	if _in_session:
-		_add_button(top, "Leave", tr("settings.leave"), func() -> void: leave_requested.emit())
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(tabs)
 	controls = null
 	controls_pane = null
 	if _in_session:
+		var game: VBoxContainer = VBoxContainer.new()
+		_tab(TAB_GAME, tr("menu.tab_game"), game)
+		_build_game(game)
 		controls_pane = ControlsPane.new()
 		controls = controls_pane.list
 		_tab(TAB_CONTROLS, tr("overlay.title"), controls_pane)
@@ -169,10 +235,20 @@ func _build() -> void:
 			controls_pane.build(
 				_controls_args[0], _controls_args[1], _controls_args[2], _controls_args[3]
 			)
+		_tab(TAB_TIPS, tr("menu.tab_tips"), _tips_view())
 	var general: VBoxContainer = VBoxContainer.new()
 	_tab(TAB_SETTINGS, tr("menu.settings"), general)
 	_build_general(general)
 	_build_comfort(general)
+	# A phone has no keys to rebind; a hidden tab would still widen the tab bar.
+	_rows = null
+	if not _phone():
+		_build_keys()
+	open_tab(keep)
+	_fit_safe_area()
+
+
+func _build_keys() -> void:
 	var keys: VBoxContainer = VBoxContainer.new()
 	_tab(TAB_KEYS, tr("settings.bindings"), keys)
 	warning = _label("")
@@ -183,12 +259,123 @@ func _build() -> void:
 	_rows = VBoxContainer.new()
 	keys.add_child(_rows)
 	_build_bindings()
-	open_tab(keep)
+
+
+func _phone() -> bool:
+	return is_inside_tree() and LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+
+
+## The Game tab: the ship, Sound, Full screen, the host's Pause, Abandon or Give up, Leave;
+## 48 px rows a thumb can hit.
+func _build_game(col: VBoxContainer) -> void:
+	_ship_label = _label("", 20)
+	_ship_label.name = "ShipName"
+	col.add_child(_ship_label)
+	set_ship_name(_ship_name)
+	_sound = SoundToggle.new()
+	_sound.name = "Sound"
+	_sound.flat = false
+	_row(_sound)
+	col.add_child(_sound)
+	_add_fullscreen(col)
+	_pause_button = _add_button(
+		col,
+		"HostPause",
+		tr("settings.pause"),
+		func() -> void:
+			host_pause_requested.emit()
+			close()
+	)
+	_row(_pause_button)
+	_pause_button.visible = _pause_control
+	_abandon_button = _add_button(col, "Abandon", "", _on_abandon)
+	_row(_abandon_button)
+	_show_abandon()
+	_leave_button = _add_button(
+		col,
+		"Leave",
+		tr("settings.leave"),
+		func() -> void: _confirm(_leave_button, func() -> void: leave_requested.emit())
+	)
+	_row(_leave_button)
+
+
+## Android and iPad only: fullscreen and a landscape lock (#28, load fix 6).
+func _add_fullscreen(col: VBoxContainer) -> void:
+	var fullscreen: FullscreenButton = FullscreenButton.new()
+	fullscreen.name = "Fullscreen"
+	fullscreen.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	# Its full label here, not a rail button's trimmed one ("Full").
+	fullscreen.clip_text = false
+	fullscreen.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+	col.add_child(fullscreen)
+
+
+## The Tips tab (D291): every tip, browsed by tapping; it holds a tip until a tap.
+func _tips_view() -> Control:
+	var v: TipsView = TipsView.new()
+	v.name = "TipsView"
+	v.opaque = false
+	v.autoplay = false
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.custom_minimum_size = Vector2(0, 160)
+	return v
+
+
+func _on_abandon() -> void:
+	var act: Callable = func() -> void:
+		abandon_requested.emit()
+		close()
+	if _abandon_key in FINAL_ABANDON:
+		_confirm(_abandon_button, act)
+	else:
+		act.call()
+
+
+## A final button acts on its second tap within CONFIRM_MS; the first turns its label into
+## "Tap again", which reverts if no second tap comes.
+func _confirm(b: Button, act: Callable) -> void:
+	var now: int = Time.get_ticks_msec()
+	if int(_armed.get(b.name, -1)) >= now:
+		_armed.erase(b.name)
+		_restore(b)
+		act.call()
+		return
+	_armed[b.name] = now + CONFIRM_MS
+	b.text = tr("settings.confirm_leave" if b == _leave_button else "settings.confirm")
+	if is_inside_tree():
+		get_tree().create_timer(CONFIRM_MS / 1000.0).timeout.connect(
+			func() -> void:
+				if is_instance_valid(b) and int(_armed.get(b.name, -1)) < Time.get_ticks_msec():
+					_armed.erase(b.name)
+					_restore(b)
+		)
+
+
+## A final button's own label again.
+func _restore(b: Button) -> void:
+	if b == _leave_button:
+		b.text = tr("settings.leave")
+	elif b == _abandon_button and _abandon_key != "":
+		b.text = tr(_abandon_key)
+
+
+func _disarm_all() -> void:
+	_armed.clear()
+	for b: Button in [_leave_button, _abandon_button]:
+		if b != null and is_instance_valid(b):
+			_restore(b)
+
+
+## A Game tab row: 48 px tall, as wide as its label.
+static func _row(b: Button) -> void:
+	b.custom_minimum_size.y = UiTheme.TOUCH_PRIMARY
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 
 
 ## One scrolling tab named `node_name` titled `title` holding `content`.
 func _tab(node_name: String, title: String, content: Control) -> void:
-	var scroll: ScrollContainer = ScrollContainer.new()
+	var scroll: ScrollContainer = TouchScroll.new()
 	scroll.name = node_name
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 8)
@@ -363,6 +550,7 @@ func _build_general(col: VBoxContainer) -> void:
 	slider.custom_minimum_size = Vector2(240, 0)
 	slider.value_changed.connect(func(v: float) -> void: set_ui_scale(v / 100.0))
 	scale_row.add_child(slider)
+	_scale_slider = slider
 	_scale_label = _label("%d %%" % roundi(settings.ui_scale * 100.0))
 	scale_row.add_child(_scale_label)
 	_check(col, "InvertPitch", tr("settings.invert_pitch"), settings.invert_pitch).toggled.connect(
@@ -371,6 +559,9 @@ func _build_general(col: VBoxContainer) -> void:
 	_add_button(
 		col, "ResetTips", tr("settings.reset_tips"), func() -> void: settings.reset_tooltips()
 	)
+	# In a session it sits on the Game tab.
+	if not _in_session:
+		_add_fullscreen(col)
 
 
 func _build_comfort(col: VBoxContainer) -> void:
@@ -400,6 +591,8 @@ func _build_comfort(col: VBoxContainer) -> void:
 
 ## One row per intent: label, KB/M binding, controller binding, hold/toggle.
 func _build_bindings() -> void:
+	if _rows == null:
+		return
 	for c: Node in _rows.get_children():
 		_rows.remove_child(c)
 		c.queue_free()

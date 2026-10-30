@@ -17,6 +17,12 @@ extends StationPanel
 ## the screen), target (a camera on the selected contact, else the nearest) and status
 ## (StatusView: hull, shields, subsystems, objectives, alert). `ctx.crew.main_view` holds
 ## it. A card the Captain pinged shows over every view for CARD_MS (FT-CPT-005).
+##
+## On a phone the Viewer stays out of the phone frame (`in_frame` false, #28 follow-up,
+## design 2.8): it pings nothing (the server refuses a viewer's pings, FT-MSC-004), so it
+## gets no view-top row and no long-press. The Captain's mirror keeps its top read-outs (the
+## target caption, the pinged card, the status sheet) under `top_reserve`, which the
+## Captain sets to the part of the view-top row over it.
 
 ## Auto-chase thresholds (PROVISIONAL, approved by the owner in #7).
 const CHASE_ROLL_DEG_S: float = 45.0
@@ -31,6 +37,9 @@ const CHASE_LEVEL_RATE: float = 0.6
 const FOV_DEG: float = 70.0
 const RADAR_SHARE: float = 0.4
 const RAIL_HEIGHT: float = 30.0
+## A phone on its side puts the radar beside the view when the panel is this much wider than
+## tall (#28).
+const SIDE_RADAR_ASPECT: float = 1.6
 const FONT_SIZE: int = 15
 ## The target view's camera stands this far from the target, towards the own ship (m),
 ## or at half the range when closer.
@@ -67,6 +76,8 @@ var _space: SpaceView
 var _own: Node3D
 var _overlay: Control
 var _rail: Control
+var _cols: HBoxContainer
+var _rows: VBoxContainer
 var _items: Array[Dictionary] = []
 
 
@@ -80,11 +91,18 @@ func radar_orbitable() -> bool:
 
 func _setup() -> void:
 	clip_contents = true
+	# The radar sits under the view, or beside it on a wide phone on its side (#28).
+	_cols = HBoxContainer.new()
+	_cols.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cols.add_theme_constant_override("separation", 0)
+	_cols.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_cols)
 	var rows: VBoxContainer = VBoxContainer.new()
-	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_rows = rows
+	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override("separation", 0)
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(rows)
+	_cols.add_child(rows)
 	var view: SubViewportContainer = SubViewportContainer.new()
 	_view_box = view
 	view.stretch = true
@@ -125,6 +143,7 @@ func _setup() -> void:
 	_card_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_card_layer.draw.connect(_draw_card)
 	add_child(_card_layer)
+	resized.connect(_place_radar)
 
 
 func _process(_delta: float) -> void:
@@ -144,6 +163,7 @@ func update_view(delta: float) -> void:
 	_items = ctx.picture().items
 	var ship: Basis = Basis(ctx.interp.own_rotation())
 	if view_id == MainScreen.View.STATUS:
+		status_view.top = top_reserve
 		var captain: Dictionary = ctx.view.blocks.get(StationViews.Section.CAPTAIN, {})
 		status_view.show_model(StatusView.model(status, captain, ctx.ship_def(), ctx.crew.alert))
 	elif view_id != MainScreen.View.TACTICAL:
@@ -171,6 +191,30 @@ func _show_view(id: int) -> void:
 	_viewport.render_target_update_mode = (
 		SubViewport.UPDATE_ALWAYS if three_d else SubViewport.UPDATE_DISABLED
 	)
+	_place_radar()
+
+
+## True when the radar goes beside the view: a phone on its side, the panel much wider than
+## tall (the Viewer, not the Captain's mirror), and not the tactical view (radar only).
+func radar_beside() -> bool:
+	return (
+		is_inside_tree()
+		and view_id != MainScreen.View.TACTICAL
+		and size.x > SIDE_RADAR_ASPECT * size.y
+		and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
+	)
+
+
+## A short, wide main screen keeps a readable radar: a square beside the view (#28).
+func _place_radar() -> void:
+	if radar == null:
+		return
+	var beside: bool = radar_beside()
+	if beside and radar.get_parent() != _cols:
+		radar.reparent(_cols, false)
+	elif not beside and radar.get_parent() != _rows:
+		radar.reparent(_rows, false)
+	radar.custom_minimum_size.x = size.y if beside else 0.0
 
 
 ## The target view's camera (world axes centred on the own ship): TARGET_STANDOFF_M from
@@ -285,7 +329,7 @@ func _draw_overlay() -> void:
 		var caption: String = TranslationServer.translate("view.no_target")
 		if not target.is_empty():
 			caption = ChipText.chip(target["label"], target["local"])
-		_text(font, Vector2(16.0, 12.0), caption, Palette.color("text"))
+		_text(font, Vector2(16.0, 12.0 + top_reserve), caption, Palette.color("text"))
 	for it: Dictionary in _items:
 		var world: Vector3 = it["world"]
 		if camera.is_position_behind(world):
@@ -316,7 +360,7 @@ func _draw_card() -> void:
 	if card.is_empty():
 		return
 	var w: float = size.x * CARD_SHARE
-	var rect: Rect2 = Rect2(size.x - w - 24.0, 24.0, w, CARD_FONT * 6.0)
+	var rect: Rect2 = Rect2(size.x - w - 24.0, 24.0 + top_reserve, w, CARD_FONT * 6.0)
 	CardList.draw_card(_card_layer, rect, card, CARD_FONT)
 
 

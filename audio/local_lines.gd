@@ -8,15 +8,22 @@ extends RefCounted
 ## both are checked before they become a path: a line id must match the dialogue schema's
 ## id pattern and the language must be a launch language (I18n.LANGUAGES); anything else
 ## gives null too.
+##
+## A web export carries no clips (D294): the browser fetches its language's VoicePack
+## (WebSession) and add_pack() keeps it for the page's life, so every LocalLines of that
+## language, a reconnect's included, plays from it.
 
 ## PROVISIONAL: where the prerender writes the client's clips.
 const CLIP_DIR: String = "res://audio/prerendered"
 ## content/dialogue/dialogue.schema.json's line id pattern.
 const LINE_ID_PATTERN: String = "^[a-z][a-z0-9_]*(\\.[a-z0-9_]+)+$"
 
+## Language -> VoicePack fetched by this page (add_pack).
+static var _packs: Dictionary = {}
+
 var lang: String
 var dir: String
-var _cache: Dictionary = {}  # line id -> AudioStream (or null)
+var _cache: Dictionary = {}  # line id -> AudioStream found
 var _line_id: RegEx = RegEx.create_from_string(LINE_ID_PATTERN)
 
 
@@ -37,18 +44,39 @@ func valid(line_id: String) -> bool:
 	return m != null and m.get_string() == line_id  # `$` also matches before a final \n
 
 
-## The line's stream, or null when it has none (or its id or language is invalid).
+## Keeps `pack` for its language; every LocalLines of that language plays from it when
+## its own folder lacks a line.
+static func add_pack(pack: VoicePack) -> void:
+	_packs[pack.language] = pack
+
+
+static func has_pack(language: String) -> bool:
+	return _packs.has(language)
+
+
+## Drops every pack (tests).
+static func clear_packs() -> void:
+	_packs.clear()
+
+
+## The line's stream, or null when it has none (or its id or language is invalid). A
+## miss isn't cached: the language's pack may arrive later.
 func stream(line_id: String) -> AudioStream:
 	if not valid(line_id):
 		return null
 	if not _cache.has(line_id):
-		_cache[line_id] = _load(path(line_id))
+		var found: AudioStream = _load(line_id)
+		if found == null:
+			return null
+		_cache[line_id] = found
 	return _cache[line_id]
 
 
-func _load(file: String) -> AudioStream:
+func _load(line_id: String) -> AudioStream:
+	var file: String = path(line_id)
 	if ResourceLoader.exists(file):
 		return load(file) as AudioStream
 	if FileAccess.file_exists(file):
 		return AudioStreamOggVorbis.load_from_file(file)
-	return null
+	var pack: VoicePack = _packs.get(lang)
+	return pack.stream(line_id) if pack != null else null

@@ -2,26 +2,108 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
 <title>$GODOT_PROJECT_NAME</title>
 <style>
 html, body, #canvas { margin: 0; padding: 0; border: 0; }
+/* The page is the dynamic viewport (it tracks the browser's toolbars, #28); the canvas
+   fills it edge to edge and the game keeps its controls inside the safe area itself
+   (presentation/touch/safe_area.gd reads the insets through ft.safeArea). */
+html, body { height: 100vh; height: 100dvh; }
 body { color: white; background-color: black; overflow: hidden; touch-action: none; }
+/* Measures env(safe-area-inset-*): the notch, the home indicator. */
+#safe { position: fixed; visibility: hidden; pointer-events: none; top: 0; left: 0;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
 #canvas { display: block; }
 #canvas:focus { outline: none; }
-#status { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; font: 20px sans-serif; gap: 16px; }
-#tips { font: 14px sans-serif; opacity: 0.7; width: 80%; text-align: center; overflow: hidden; }
-#tips .strip { display: inline-block; white-space: nowrap; animation: ticker linear infinite; }
-@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* The loading screen (#28, P28-Tips, P28-LoadBar): tips are the main feature, a thin bar
+   of the real download progress under the tip; dark, inside the safe area. Colours are
+   presentation/palette.gd's background, text, text_dim and accent. */
+#status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  gap: 16px; box-sizing: border-box; font-family: sans-serif; user-select: none;
+  -webkit-user-select: none; cursor: default; background-color: #0b0f14;
+  padding: max(8px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px))
+    max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background-image: radial-gradient(circle at 20px 30px, #e6edf3b0 1px, transparent 1.5px),
+    radial-gradient(circle at 90px 140px, #e6edf370 1px, transparent 1.5px),
+    radial-gradient(circle at 170px 70px, #e6edf3c0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 230px 190px, #e6edf360 1px, transparent 1.5px),
+    radial-gradient(circle at 130px 20px, #e6edf380 1px, transparent 1.5px),
+    radial-gradient(circle at 50px 180px, #e6edf390 1px, transparent 1.5px);
+  background-size: 260px 220px; animation: drift 240s linear infinite; }
+@keyframes drift { from { background-position: 0 0; } to { background-position: -1040px 0; } }
+#tipcol { position: relative; width: min(600px, 100%); display: flex; flex-direction: column;
+  align-items: center; text-align: center; }
+/* While the engine's long start task runs no script can change the tip, so the page lays the
+   next few over it as CSS animations (see startCssTips). */
+#tipcol.css #topic, #tipcol.css #tip { visibility: hidden; }
+#slides { position: absolute; top: 0; left: 0; right: 0; }
+.slide { position: absolute; top: 0; left: 0; right: 0; opacity: 0; display: flex;
+  flex-direction: column; align-items: center; }
+.slide .s-topic { font-size: 12px; letter-spacing: 0.05em; color: #8b98a5; min-height: 16px; }
+.slide .s-tip { font-size: 20px; line-height: 1.5; color: #e6edf3; margin-top: 8px; }
+#topic { font-size: 12px; letter-spacing: 0.05em; color: #8b98a5; min-height: 16px; }
+#tip { font-size: 20px; line-height: 1.5; color: #e6edf3; margin-top: 8px; min-height: 4.5em;
+  display: flex; align-items: center; justify-content: center; }
+#bar { position: relative; overflow: hidden; width: 100%; height: 4px; margin-top: 24px;
+  background: rgba(255, 255, 255, 0.15); }
+/* The download fills the bar by transform (the real progress). After it the bar gives way to
+   a radar scope: a sweep turns once per 5 s and a blip fades in its wake. It stays in place,
+   so it claims no progress. It moves by transform and opacity only, which the browser
+   animates off the main thread, so it keeps going while the engine compiles the game's
+   scripts (seconds on a phone) and no timer or text update can run (#11, DC3, D305). */
+#fill { width: 100%; height: 100%; background: rgba(88, 166, 255, 0.7); transform-origin: left;
+  transform: scaleX(0); transition: transform 0.3s ease-out; }
+#radar { display: none; position: absolute; left: 50%; top: 50%; width: 64px; height: 64px;
+  margin: -32px 0 0 -32px; box-sizing: border-box; border-radius: 50%; overflow: hidden;
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  background: radial-gradient(circle, transparent 0 30%, rgba(88, 166, 255, 0.18) 30% calc(30% + 1px),
+    transparent calc(30% + 1px) 62%, rgba(88, 166, 255, 0.18) 62% calc(62% + 1px),
+    transparent calc(62% + 1px)); }
+#radar .sweep { position: absolute; inset: 0; border-radius: 50%; will-change: transform;
+  background: conic-gradient(from 0deg, rgba(88, 166, 255, 0) 0deg, rgba(88, 166, 255, 0) 250deg,
+    rgba(88, 166, 255, 0.5) 358deg, #58a6ff 360deg); }
+#radar .blip { position: absolute; left: 68%; top: 26%; width: 5px; height: 5px;
+  border-radius: 50%; background: #58a6ff; opacity: 0; will-change: opacity; }
+#bar.busy { overflow: visible; background: none; height: 64px; margin: 14px 0 6px; }
+#bar.busy #fill { display: none; }
+#bar.busy #radar { display: block; }
+#bar.busy #radar .sweep { animation: radar-spin 5s linear infinite; }
+#bar.busy #radar .blip { animation: radar-blip 5s linear infinite; }
+@keyframes radar-spin { to { transform: rotate(360deg); } }
+/* The sweep passes the blip at 20 % of the lap (upper right). */
+@keyframes radar-blip { 0%, 19% { opacity: 0; } 21% { opacity: 1; } 70%, 100% { opacity: 0; } }
+#progress { font-size: 12px; color: #8b98a5; margin-top: 6px; }
+.arrow { flex: none; width: 48px; height: 48px; border-radius: 6px; border: 1px solid #3a4654;
+  background: #151b23; color: #e6edf3; font-size: 24px; line-height: 1; padding: 0; }
+/* A phone upright: the arrows go under the column. */
+@media (max-width: 520px) {
+  #status { flex-wrap: wrap; align-content: center; }
+  #tipcol { order: -1; }
+  #tip { min-height: 6em; }
+}
+/* Reduced motion: a still frame, the sweep at 60 degrees and the blip at 0.7. */
+@media (prefers-reduced-motion: reduce) {
+  #status, #bar.busy #radar .sweep, #bar.busy #radar .blip { animation: none; }
+  #bar.busy #radar .sweep { transform: rotate(60deg); }
+  #bar.busy #radar .blip { opacity: 0.7; }
+}
 </style>
 $GODOT_HEAD_INCLUDE
 </head>
 <body>
 <canvas id="canvas">This browser has no canvas support.</canvas>
+<div id="safe"></div>
 <div id="status">
-  <span id="progress">Loading</span>
-  <span id="tips"></span>
+  <button class="arrow" id="tipBack" aria-label="Previous tip">&lsaquo;</button>
+  <div id="tipcol">
+    <div id="topic"></div>
+    <div id="tip" aria-live="polite"></div>
+    <div id="bar"><div id="fill"></div><div id="radar" role="img" aria-label="Loading"><div class="sweep"></div><div class="blip"></div></div></div>
+    <div id="progress">Loading</div>
+  </div>
+  <button class="arrow" id="tipNext" aria-label="Next tip">&rsaquo;</button>
 </div>
 <script src="$GODOT_URL"></script>
 <script>
@@ -42,8 +124,25 @@ window.ft = (function () {
     hiddenAt: 0,
     openedAt: 0,
     keepAwake: null,  // set by KeepAwake: {play: fn}; retried on every gesture until playing
+    actions: {},      // id -> {x, y, w, h, name} in canvas pixels: buttons whose tap needs a gesture
+    maxDpr: 2,        // the render scale cap (#28): a dpr-3 phone draws 4x, not 9x, the pixels
   };
   let el = null;
+
+  // Caps the device pixel ratio the engine sizes its canvas by (and LayoutMode reads):
+  // fill rate is a phone's main battery cost. Text is a little softer on a 3x screen.
+  (function capDpr() {
+    try {
+      const own = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio') ||
+        Object.getOwnPropertyDescriptor(Window.prototype, 'devicePixelRatio');
+      if (!own) { return; }
+      const read = own.get ? function () { return own.get.call(window); } : function () { return own.value; };
+      Object.defineProperty(window, 'devicePixelRatio', {
+        configurable: true,
+        get: function () { return Math.min(ft.maxDpr, read() || 1); },
+      });
+    } catch (e) { /* the engine uses the native ratio */ }
+  })();
 
   // The engine's audio object is private to its closure, so record the contexts it creates:
   // the first tap resumes them (FT-AUD-017), and the top bar shows their state.
@@ -130,6 +229,55 @@ window.ft = (function () {
     });
     note(id, { text: input.value, opened: true });
   }
+  // Registers (or moves) a button whose action needs the tap itself (fullscreen); rect in
+  // canvas pixels. The game draws the button; the shell acts inside the tap handler.
+  ft.setAction = function (id, x, y, w, h, name) {
+    ft.actions[id] = { x: x, y: y, w: w, h: h, name: name };
+  };
+  ft.clearAction = function (id) { delete ft.actions[id]; };
+
+  // The safe-area insets (notch, home indicator) in CSS pixels, as JSON {l, t, r, b}.
+  ft.safeArea = function () {
+    const probe = document.getElementById('safe');
+    if (!probe) { return '{"l":0,"t":0,"r":0,"b":0}'; }
+    const cs = getComputedStyle(probe);
+    const px = function (v) { return parseFloat(v) || 0; };
+    return JSON.stringify({ l: px(cs.paddingLeft), t: px(cs.paddingTop),
+      r: px(cs.paddingRight), b: px(cs.paddingBottom) });
+  };
+  // Canvas pixels per CSS pixel: the capped device pixel ratio the engine used.
+  ft.canvasScale = function () {
+    const box = canvas.getBoundingClientRect();
+    return box.width > 0 ? canvas.width / box.width : (window.devicePixelRatio || 1);
+  };
+
+  // Fullscreen and a landscape lock: offered on Android and iPad, never on iPhone, whose
+  // Safari has no element fullscreen (#28). The lock works on Android only, in fullscreen.
+  function fullscreenApi() {
+    const d = document.documentElement;
+    return d.requestFullscreen || d.webkitRequestFullscreen || null;
+  }
+  function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  ft.fullscreenOffered = function () {
+    const ua = navigator.userAgent;
+    const ipad = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    return !!fullscreenApi() && !/iPhone|iPod/.test(ua) && (/Android/.test(ua) || ipad) && !isFullscreen();
+  };
+  let fullscreenAt = 0;
+  function goFullscreen() {
+    // One tap fires pointerup, touchend and click: act on the first.
+    if (isFullscreen() || Date.now() - fullscreenAt < 1000) { return; }
+    fullscreenAt = Date.now();
+    try {
+      const done = fullscreenApi().call(document.documentElement);
+      Promise.resolve(done).then(function () {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(function () {});
+        }
+      }).catch(function () {});
+    } catch (e) { /* refused: the page stays as it is */ }
+  }
+
   // Sets (or with null removes) the function that gets a field's events as JSON.
   ft.listen = function (id, fn) {
     if (fn) { ft.listeners[id] = fn; } else { delete ft.listeners[id]; delete ft.texts[id]; }
@@ -151,6 +299,12 @@ window.ft = (function () {
       for (const id in ft.inputs) {
         const r = ft.inputs[id];
         if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) { open(id); break; }
+      }
+      for (const id in ft.actions) {
+        const a = ft.actions[id];
+        if (x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h && a.name === 'fullscreen') {
+          goFullscreen();
+        }
       }
     }
     // The first gesture unlocks audio (FT-AUD-017) and starts the keep-awake video.
@@ -191,22 +345,31 @@ const GODOT_CONFIG = $GODOT_CONFIG;
 const engine = new Engine(GODOT_CONFIG);
 const progress = document.getElementById('progress');
 const statusEl = document.getElementById('status');
-const tipsEl = document.getElementById('tips');
 const missing = Engine.getMissingFeatures({ threads: $GODOT_THREADS_ENABLED })
   .filter((m) => !m.startsWith('Secure Context'));
-const LOADING_TIPS = [
-  "Hold F to face your target.",
-  "Space is all-stop.",
-  "Say where things are like a clock: 12 is ahead, 3 is right.",
-  "Press ? for the controls.",
-  "Middle-click pings what's under the cursor.",
-  "Hold X to close in on your target.",
-  "Press T to cycle targets.",
-  "Shift+middle-click drops a mark."
-];
-// The tips scroll right to left like a news banner, in a random order (shuffled once
-// per page load). The strip holds the line twice and moves by half its width, so the
-// loop has no seam. With prefers-reduced-motion they rotate every 4 s instead.
+/* tips:begin (tools/tips_shell.py writes the next line from content/tips/tips.json) */
+const FT_TIPS = {"topics":{"lobby":{"en":"Lobby","pt_PT":"Sala de espera","it":"Sala d'attesa"},"setup":{"en":"Setting up","pt_PT":"Preparar o jogo","it":"Preparare la partita"},"novice":{"en":"First games","pt_PT":"Primeiros jogos","it":"Prime partite"},"talk":{"en":"Talking","pt_PT":"Falar","it":"Parlare"},"hard":{"en":"Hard","pt_PT":"Difícil","it":"Difficile"},"crews":{"en":"Crews","pt_PT":"Tripulações","it":"Equipaggi"},"modes":{"en":"Modes","pt_PT":"Modos","it":"Modalità"},"helm":{"en":"Helm","pt_PT":"Leme","it":"Timone"},"weapons":{"en":"Weapons","pt_PT":"Armas","it":"Armi"},"engineering":{"en":"Engineering","pt_PT":"Engenharia","it":"Ingegneria"},"science":{"en":"Science","pt_PT":"Ciência","it":"Scienza"},"relay":{"en":"Relay","pt_PT":"Retransmissão","it":"Collegamento"},"comms":{"en":"Comms","pt_PT":"Comunicações","it":"Comunicazioni"},"captain":{"en":"Captain","pt_PT":"Capitão","it":"Capitano"}},"tips":[{"topic":"lobby","en":"Tap a station to take it. Tap it again to leave it.","pt_PT":"Toca num posto para o ocupar. Toca outra vez para o largar.","it":"Tocca una postazione per prenderla. Toccala di nuovo per lasciarla."},{"topic":"lobby","en":"Pick two stations and you get their joint view: both stations on one screen.","pt_PT":"Escolhe dois postos e ficas com a vista conjunta: os dois num só ecrã.","it":"Scegli due postazioni e avrai la vista congiunta: entrambe in un solo schermo."},{"topic":"lobby","en":"A ship needs three crew and every station covered before it can start.","pt_PT":"Uma nave precisa de três tripulantes e de todos os postos cobertos para começar.","it":"Una nave ha bisogno di tre membri e di tutte le postazioni coperte per partire."},{"topic":"lobby","en":"The line under the ships says which stations are still open.","pt_PT":"A linha por baixo das naves diz que postos ainda estão livres.","it":"La riga sotto le navi dice quali postazioni sono ancora libere."},{"topic":"lobby","en":"Red cells are intense, yellow busy, green light. Pick green for a calm first game.","pt_PT":"Vermelho é intenso, amarelo ocupado, verde leve. Escolhe verde para um primeiro jogo calmo.","it":"Rosso è intenso, giallo impegnativo, verde leggero. Scegli verde per una prima partita tranquilla."},{"topic":"lobby","en":"Captain and Viewer don't count as crew: someone still has to cover every station.","pt_PT":"Capitão e Espectador não contam como tripulação: alguém tem de cobrir cada posto.","it":"Capitano e Spettatore non contano come equipaggio: qualcuno deve coprire ogni postazione."},{"topic":"lobby","en":"Only one Captain per ship. Any number of players can watch as Viewers.","pt_PT":"Só há um Capitão por nave. Podem ver como Espectadores quantos quiserem.","it":"Un solo Capitano per nave. Gli Spettatori possono essere quanti vuoi."},{"topic":"lobby","en":"The host's How to join shows a link and a QR code: scan it with a phone to join.","pt_PT":"O Como entrar do anfitrião mostra um link e um código QR: lê-o com o telemóvel para entrar.","it":"Il Come unirsi dell'ospite mostra un link e un codice QR: inquadralo col telefono per entrare."},{"topic":"lobby","en":"Two players can share a station. Talk about who does what.","pt_PT":"Dois jogadores podem partilhar um posto. Combinem quem faz o quê.","it":"Due giocatori possono condividere una postazione. Decidete chi fa cosa."},{"topic":"lobby","en":"Anyone can add a ship with New ship, up to six. Each ship needs its own crew.","pt_PT":"Qualquer um pode juntar uma nave com Nova nave, até seis. Cada nave precisa da sua tripulação.","it":"Chiunque può aggiungere una nave con Nuova nave, fino a sei. Ogni nave ha bisogno del suo equipaggio."},{"topic":"lobby","en":"Back to ships leaves your seat so you can join another ship's crew.","pt_PT":"Voltar às naves larga o teu lugar para te juntares a outra nave.","it":"Torna alle navi lascia il tuo posto per unirti a un'altra nave."},{"topic":"lobby","en":"Lost the connection? Open the same page again: you get your seat back if it's free.","pt_PT":"Perdeste a ligação? Abre a mesma página: recuperas o lugar se ainda estiver livre.","it":"Connessione persa? Riapri la stessa pagina: riavrai il tuo posto se è ancora libero."},{"topic":"lobby","en":"With several ships, each crew presses Start. The universe starts when all have.","pt_PT":"Com várias naves, cada tripulação carrega em Começar. O universo arranca quando todas o fizerem.","it":"Con più navi, ogni equipaggio preme Inizia. L'universo parte quando l'hanno fatto tutti."},{"topic":"setup","en":"The host picks one language for the session: every text and voice uses it.","pt_PT":"O anfitrião escolhe uma língua para a sessão: todos os textos e vozes a usam.","it":"L'ospite sceglie una lingua per la sessione: tutti i testi e le voci la usano."},{"topic":"setup","en":"Host on a network address, not This computer only, so others can join.","pt_PT":"Cria o jogo num endereço de rede, não em Só este computador, para outros entrarem.","it":"Ospita su un indirizzo di rete, non su Solo questo computer, così gli altri possono entrare."},{"topic":"setup","en":"New crew? Start with Shakedown: the ship's computer teaches every station step by step.","pt_PT":"Tripulação nova? Começa pelo Ensaio: o computador da nave ensina cada posto passo a passo.","it":"Equipaggio nuovo? Inizia dal Collaudo: il computer di bordo insegna ogni postazione passo per passo."},{"topic":"setup","en":"Difficulty sets which shortcuts pass data between stations. Easy shares the most.","pt_PT":"A dificuldade define que atalhos passam dados entre postos. Fácil partilha mais.","it":"La difficoltà decide quali scorciatoie passano dati tra postazioni. Facile ne condivide di più."},{"topic":"setup","en":"Customise lets the host turn single data shortcuts on or off before the run.","pt_PT":"Personalizar deixa o anfitrião ligar ou desligar cada atalho de dados antes da missão.","it":"Personalizza permette all'ospite di attivare o spegnere ogni scorciatoia dati prima della missione."},{"topic":"setup","en":"The difficulty locks once the run starts. Choose it together in the lobby.","pt_PT":"A dificuldade fica bloqueada quando a missão começa. Escolham-na juntos na sala.","it":"La difficoltà si blocca quando la missione parte. Sceglietela insieme in sala."},{"topic":"setup","en":"Phones and tablets join in the browser: no install, just the host's link.","pt_PT":"Telemóveis e tablets entram pelo navegador: sem instalar nada, só o link do anfitrião.","it":"Telefoni e tablet entrano dal browser: niente da installare, basta il link dell'ospite."},{"topic":"setup","en":"Turn the sound on: the ship's computer and other ships speak, with subtitles.","pt_PT":"Liga o som: o computador da nave e as outras naves falam, com legendas.","it":"Accendi l'audio: il computer di bordo e le altre navi parlano, con i sottotitoli."},{"topic":"setup","en":"Text too small? Change the UI scale in Settings, from 75 to 150 %.","pt_PT":"Texto pequeno? Muda a escala da interface nas Definições, de 75 a 150 %.","it":"Testo piccolo? Cambia la scala dell'interfaccia nelle Impostazioni, dal 75 al 150 %."},{"topic":"setup","en":"Feeling queasy on the views? Comfort mode in Settings locks the roll and narrows the view.","pt_PT":"Enjoo nas vistas? O modo conforto nas Definições trava o rolamento e estreita a vista.","it":"Nausea nelle viste? La modalità comfort nelle Impostazioni blocca il rollio e stringe la vista."},{"topic":"setup","en":"In co-op the host can pause the game for everyone.","pt_PT":"Em cooperativo o anfitrião pode pausar o jogo para todos.","it":"In cooperativa l'ospite può mettere in pausa il gioco per tutti."},{"topic":"novice","en":"Say what you see out loud. Your crew can't see your screen.","pt_PT":"Diz em voz alta o que vês. A tripulação não vê o teu ecrã.","it":"Di' ad alta voce cosa vedi. L'equipaggio non vede il tuo schermo."},{"topic":"novice","en":"Ping something to flash it on every screen of your ship for three seconds.","pt_PT":"Faz ping a algo para o fazer piscar em todos os ecrãs da nave durante três segundos.","it":"Fai un ping su qualcosa per farlo lampeggiare su tutti gli schermi della nave per tre secondi."},{"topic":"novice","en":"Ping first, talk second: \"that one\" is clear when it is flashing.","pt_PT":"Primeiro o ping, depois fala: \"aquele\" fica claro quando está a piscar.","it":"Prima il ping, poi parla: \"quello\" è chiaro quando lampeggia."},{"topic":"novice","en":"Ping what a crewmate just pinged to say \"copy\" without a word.","pt_PT":"Faz ping ao que um colega acabou de marcar para dizer \"entendido\" sem falar.","it":"Fai un ping su ciò che un compagno ha appena segnalato per dire \"ricevuto\" senza parlare."},{"topic":"novice","en":"Every hostile ship has a Comms side: a hail, a taunt or an offer to surrender.","pt_PT":"Cada nave hostil tem um lado de Comunicações: uma chamada, uma provocação ou uma rendição.","it":"Ogni nave ostile ha un lato Comunicazioni: una chiamata, una provocazione o una resa."},{"topic":"novice","en":"Shooting isn't the only answer: some ships surrender if Comms asks.","pt_PT":"Disparar não é a única resposta: algumas naves rendem-se se as Comunicações pedirem.","it":"Sparare non è l'unica risposta: alcune navi si arrendono se le Comunicazioni lo chiedono."},{"topic":"novice","en":"Shields take every hit first. Keep them up and facing the threat.","pt_PT":"Os escudos levam cada impacto primeiro. Mantém-nos ligados e virados para a ameaça.","it":"Gli scudi prendono ogni colpo per primi. Tienili alti e rivolti alla minaccia."},{"topic":"novice","en":"A hit damages the part of the ship nearest to it. Show the enemy your strong side.","pt_PT":"Um impacto danifica a parte da nave mais próxima. Mostra ao inimigo o teu lado forte.","it":"Un colpo danneggia la parte della nave più vicina. Mostra al nemico il tuo lato forte."},{"topic":"novice","en":"Nothing slows you down in space. To stop, you have to thrust the other way.","pt_PT":"No espaço nada te trava. Para parar tens de acelerar no sentido contrário.","it":"Nello spazio niente ti frena. Per fermarti devi spingere nella direzione opposta."},{"topic":"novice","en":"Coasting costs no fuel. Thrust and jumps do.","pt_PT":"Deslizar não gasta combustível. Acelerar e saltar gastam.","it":"Andare per inerzia non consuma carburante. Spinta e salti sì."},{"topic":"novice","en":"Collisions hurt both ships, friends included. Keep your distance.","pt_PT":"As colisões ferem as duas naves, amigas incluídas. Mantém a distância.","it":"Le collisioni danneggiano entrambe le navi, anche quelle amiche. Mantieni le distanze."},{"topic":"novice","en":"Callsigns keep their number: U2 becomes H2 once you know it is hostile.","pt_PT":"Os indicativos mantêm o número: U2 passa a H2 quando sabes que é hostil.","it":"I nominativi tengono il numero: U2 diventa H2 quando sai che è ostile."},{"topic":"novice","en":"H is hostile, F friendly, N neutral and U unknown.","pt_PT":"H é hostil, F amigo, N neutro e U desconhecido.","it":"H è ostile, F amico, N neutrale e U sconosciuto."},{"topic":"novice","en":"Any crew station can set the alert. Red alert tells everyone to get ready.","pt_PT":"Qualquer posto da tripulação pode mudar o alerta. Alerta vermelho diz a todos para se prepararem.","it":"Ogni postazione dell'equipaggio può cambiare l'allerta. L'allerta rossa dice a tutti di prepararsi."},{"topic":"novice","en":"Lost? Press ? on a keyboard to see your station's controls.","pt_PT":"Perdido? Carrega em ? no teclado para veres os controlos do teu posto.","it":"Ti sei perso? Premi ? sulla tastiera per vedere i comandi della tua postazione."},{"topic":"novice","en":"A run is four to six encounters. Save some fuel and parts for the last one.","pt_PT":"Uma missão tem quatro a seis encontros. Guarda combustível e peças para o último.","it":"Una missione ha da quattro a sei incontri. Tieni carburante e pezzi per l'ultimo."},{"topic":"novice","en":"After the run, the debrief shows what the director decided and why.","pt_PT":"No fim, o relatório mostra o que o diretor decidiu e porquê.","it":"Alla fine, il resoconto mostra cosa ha deciso il direttore e perché."},{"topic":"novice","en":"Lost the ship? Vote Run again on the outcome card: you keep your stations.","pt_PT":"Perderam a nave? Votem Repetir no cartão final: mantêm os postos.","it":"Nave persa? Votate Rigioca sulla scheda finale: tenete le postazioni."},{"topic":"talk","en":"Give directions like a clock: 12 is the bow, 3 is right, 6 behind, 9 left.","pt_PT":"Dá direções como um relógio: 12 é a proa, 3 a direita, 6 atrás, 9 a esquerda.","it":"Dai le direzioni come un orologio: 12 è la prua, 3 destra, 6 dietro, 9 sinistra."},{"topic":"talk","en":"Add high or low to the clock: \"3 high\" is to the right and above.","pt_PT":"Junta alto ou baixo ao relógio: \"3 alto\" é à direita e acima.","it":"Aggiungi alto o basso all'orologio: \"3 alto\" è a destra e sopra."},{"topic":"talk","en":"Straight above is overhead, straight below is under: no clock number needed.","pt_PT":"Mesmo acima é por cima, mesmo abaixo é por baixo: sem número do relógio.","it":"Proprio sopra si dice sopra, proprio sotto si dice sotto: senza numero dell'orologio."},{"topic":"talk","en":"Close is under 1 km, mid up to 10 km, far beyond that.","pt_PT":"Perto é menos de 1 km, médio até 10 km, longe para lá disso.","it":"Vicino è meno di 1 km, medio fino a 10 km, lontano oltre."},{"topic":"talk","en":"Names beat directions: \"Helm, approach Bravo\" is clearer than \"go left a bit\".","pt_PT":"Nomes valem mais que direções: \"Leme, aproxima-te de Bravo\" é mais claro que \"vai um pouco à esquerda\".","it":"I nomi battono le direzioni: \"Timone, avvicinati a Bravo\" è più chiaro di \"vai un po' a sinistra\"."},{"topic":"talk","en":"Say who, then what: \"Weapons, H2, fire when ready.\"","pt_PT":"Diz quem e depois o quê: \"Armas, H2, disparem quando prontos.\"","it":"Di' chi e poi cosa: \"Armi, H2, fuoco quando pronti.\""},{"topic":"talk","en":"Space has no up. Your clock turns with your ship, so name a mark for far places.","pt_PT":"No espaço não há cima. O teu relógio roda com a nave, por isso usa uma marca para sítios longe.","it":"Nello spazio non c'è un alto. L'orologio gira con la nave, quindi usa un segnaposto per i punti lontani."},{"topic":"talk","en":"On the radar a solid blip with its stem up is above you; hollow, stem down, is below.","pt_PT":"No radar um ponto cheio com a haste para cima está acima de ti; oco, haste para baixo, está abaixo.","it":"Sul radar un punto pieno con lo stelo in su è sopra di te; vuoto, stelo in giù, è sotto."},{"topic":"talk","en":"Request chips send a quick ask to another station, like Boost to Engineering.","pt_PT":"Os pedidos rápidos mandam um pedido a outro posto, como Impulso à Engenharia.","it":"Le richieste rapide mandano una domanda a un'altra postazione, come Spinta all'Ingegneria."},{"topic":"talk","en":"Got a request chip? Accept or decline it, so the sender knows. It expires in 20 s.","pt_PT":"Recebeste um pedido? Aceita ou recusa, para quem pediu saber. Expira em 20 s.","it":"Ti è arrivata una richiesta? Accetta o rifiuta, così chi l'ha mandata lo sa. Scade in 20 s."},{"topic":"talk","en":"Shared data lasts 30 seconds. Press Share again to keep it live.","pt_PT":"Os dados partilhados duram 30 segundos. Carrega outra vez em Partilhar para os manter.","it":"I dati condivisi durano 30 secondi. Premi di nuovo Condividi per tenerli attivi."},{"topic":"hard","en":"On Hard no data crosses between stations: only marks, pings and your voices.","pt_PT":"No Difícil nenhum dado passa entre postos: só marcas, pings e as vossas vozes.","it":"In Difficile nessun dato passa tra le postazioni: solo segnaposto, ping e le vostre voci."},{"topic":"hard","en":"On Hard there are no request chips. Ask out loud.","pt_PT":"No Difícil não há pedidos rápidos. Pede em voz alta.","it":"In Difficile non ci sono richieste rapide. Chiedi ad alta voce."},{"topic":"hard","en":"On Hard other stations' numbers are hidden. Engineering must call out the shields.","pt_PT":"No Difícil os números dos outros postos estão escondidos. A Engenharia tem de dizer os escudos.","it":"In Difficile i numeri delle altre postazioni sono nascosti. L'Ingegneria deve dire gli scudi."},{"topic":"hard","en":"On Hard Helm gets no route ribbon. Relay talks the pilot through the route.","pt_PT":"No Difícil o Leme não tem a fita da rota. A Retransmissão guia o piloto pela voz.","it":"In Difficile il Timone non ha il nastro della rotta. Il Collegamento guida il pilota a voce."},{"topic":"hard","en":"On Hard Weapons sees no weak points. Science has to say where to aim.","pt_PT":"No Difícil as Armas não veem pontos fracos. A Ciência tem de dizer onde apontar.","it":"In Difficile le Armi non vedono i punti deboli. La Scienza deve dire dove mirare."},{"topic":"hard","en":"On Hard a fault's cause isn't filled in. Science scans your own ship and says it.","pt_PT":"No Difícil a causa da avaria não vem preenchida. A Ciência analisa a nave e diz qual é.","it":"In Difficile la causa del guasto non è già inserita. La Scienza scansiona la nave e la dice."},{"topic":"hard","en":"On Hard the director sends stronger encounters. Fight less, talk more.","pt_PT":"No Difícil o diretor manda encontros mais fortes. Lutem menos, falem mais.","it":"In Difficile il direttore manda incontri più forti. Combattete meno, parlate di più."},{"topic":"hard","en":"Normal sits between: banded numbers, chips on, and some data said by voice.","pt_PT":"O Normal fica no meio: números em faixas, pedidos ligados e alguns dados ditos pela voz.","it":"Normale sta nel mezzo: numeri a fasce, richieste attive e alcuni dati detti a voce."},{"topic":"crews","en":"Three players? Try Tactical, Systems and Ops: every station covered.","pt_PT":"Três jogadores? Experimentem Tático, Sistemas e Operações: todos os postos cobertos.","it":"Tre giocatori? Provate Tattica, Sistemi e Operazioni: tutte le postazioni coperte."},{"topic":"crews","en":"Four players? Helm, Weapons, Systems and Ops covers the ship.","pt_PT":"Quatro jogadores? Leme, Armas, Sistemas e Operações cobrem a nave.","it":"Quattro giocatori? Timone, Armi, Sistemi e Operazioni coprono la nave."},{"topic":"crews","en":"Six players? One station each, and a seventh can be Captain.","pt_PT":"Seis jogadores? Um posto cada, e um sétimo pode ser Capitão.","it":"Sei giocatori? Una postazione a testa, e un settimo può fare il Capitano."},{"topic":"crews","en":"Systems (Engineering + Science) scans your own ship and fixes what it finds.","pt_PT":"Sistemas (Engenharia + Ciência) analisa a própria nave e repara o que encontra.","it":"Sistemi (Ingegneria + Scienza) scansiona la nave e ripara ciò che trova."},{"topic":"crews","en":"Tactical (Helm + Weapons) flies and shoots from one seat: give it to a confident player.","pt_PT":"Tático (Leme + Armas) pilota e dispara no mesmo lugar: dá-o a um jogador confiante.","it":"Tattica (Timone + Armi) pilota e spara da un solo posto: dalla a un giocatore sicuro."},{"topic":"crews","en":"Ops (Relay + Comms) is the lightest joint view: good for a new player.","pt_PT":"Operações (Retransmissão + Comunicações) é a vista conjunta mais leve: boa para quem começa.","it":"Operazioni (Collegamento + Comunicazioni) è la vista congiunta più leggera: ottima per chi inizia."},{"topic":"crews","en":"Drive (Helm + Engineering) is a pilot who also runs power: boost when you need it.","pt_PT":"Propulsão (Leme + Engenharia) é um piloto que também gere a energia: dá impulso quando precisas.","it":"Propulsione (Timone + Ingegneria) è un pilota che gestisce anche l'energia: spinta quando serve."},{"topic":"crews","en":"A joint view keeps every control of both stations. Its request chips act at once.","pt_PT":"Uma vista conjunta tem todos os controlos dos dois postos. Os pedidos rápidos agem logo.","it":"Una vista congiunta ha tutti i comandi delle due postazioni. Le sue richieste agiscono subito."},{"topic":"crews","en":"Engineering and Comms never share data: in Quartermaster one person sees both.","pt_PT":"Engenharia e Comunicações nunca partilham dados: em Intendência uma pessoa vê os dois.","it":"Ingegneria e Comunicazioni non condividono mai dati: in Quartiermastro una persona vede entrambe."},{"topic":"crews","en":"Targeting (Weapons + Science) scans a ship and shoots its weak point itself.","pt_PT":"Pontaria (Armas + Ciência) analisa uma nave e dispara no ponto fraco sozinha.","it":"Puntamento (Armi + Scienza) scansiona una nave e ne colpisce da sola il punto debole."},{"topic":"modes","en":"Co-op puts every ship on one side: one run, one goal.","pt_PT":"Cooperativo põe todas as naves do mesmo lado: uma missão, um objetivo.","it":"Cooperativa mette tutte le navi dalla stessa parte: una missione, un obiettivo."},{"topic":"modes","en":"Race: every ship flies the same encounters. First to finish wins, and shooting is allowed.","pt_PT":"Corrida: todas as naves fazem os mesmos encontros. Ganha quem acabar primeiro, e pode-se disparar.","it":"Gara: tutte le navi fanno gli stessi incontri. Vince chi finisce prima, e si può sparare."},{"topic":"modes","en":"Last ship standing: raider waves grow every two minutes. The last ship flying wins.","pt_PT":"Última nave de pé: as vagas de piratas crescem a cada dois minutos. Ganha a última nave a voar.","it":"Ultima nave in piedi: le ondate di predoni crescono ogni due minuti. Vince l'ultima nave in volo."},{"topic":"modes","en":"Teams: crews pick team A or B in the lobby, and the host picks how a team wins.","pt_PT":"Equipas: cada tripulação escolhe a equipa A ou B na sala, e o anfitrião escolhe como se ganha.","it":"Squadre: ogni equipaggio sceglie la squadra A o B in sala, e l'ospite sceglie come si vince."},{"topic":"modes","en":"Holdout: team A relaunches forever, team B has three lives. The score is how long B lasts.","pt_PT":"Resistência: a equipa A relança sempre, a B tem três vidas. A pontuação é quanto a B aguenta.","it":"Resistenza: la squadra A rinasce sempre, la B ha tre vite. Il punteggio è quanto resiste la B."},{"topic":"modes","en":"Every mode but co-op needs at least two ships.","pt_PT":"Todos os modos menos o cooperativo precisam de pelo menos duas naves.","it":"Tutte le modalità tranne la cooperativa richiedono almeno due navi."},{"topic":"modes","en":"Ship destroyed in co-op or Teams? You watch a friendly ship that's still flying.","pt_PT":"Nave destruída em cooperativo ou Equipas? Passas a ver uma nave amiga que ainda voa.","it":"Nave distrutta in cooperativa o Squadre? Guardi una nave amica ancora in volo."},{"topic":"modes","en":"The scoreboard shows encounters, time and kills, never hull or positions.","pt_PT":"O marcador mostra encontros, tempo e abates, nunca o casco nem posições.","it":"Il tabellone mostra incontri, tempo e abbattimenti, mai lo scafo o le posizioni."},{"topic":"modes","en":"In PvP there is no host pause. A crew can vote to give up its own ship.","pt_PT":"No JcJ não há pausa do anfitrião. Uma tripulação pode votar para desistir da sua nave.","it":"Nel PvP non c'è la pausa dell'ospite. Un equipaggio può votare per arrendere la propria nave."},{"topic":"helm","en":"Hold Approach to close on your target at a safe distance and match its speed.","pt_PT":"Mantém Aproximar carregado para chegar ao alvo a uma distância segura e igualar a velocidade.","it":"Tieni premuto Avvicina per raggiungere il bersaglio a distanza sicura e pareggiarne la velocità."},{"topic":"helm","en":"All stop brings the ship to a standstill using real thrust. Space on a keyboard.","pt_PT":"Parar imobiliza a nave com impulso real. Espaço no teclado.","it":"Ferma immobilizza la nave con spinta vera. Spazio sulla tastiera."},{"topic":"helm","en":"Hold Face (F) to turn the bow to whatever is selected: a contact, a mark or a site.","pt_PT":"Mantém Encarar (F) para apontar a proa ao que está selecionado: contacto, marca ou local.","it":"Tieni premuto Punta (F) per girare la prua verso ciò che è selezionato: contatto, segnaposto o sito."},{"topic":"helm","en":"To jump, select a site or mark and face it first. A jump spools for 8 s.","pt_PT":"Para saltar, seleciona um local ou marca e vira-te para ele. O salto carrega 8 s.","it":"Per saltare, seleziona un sito o un segnaposto e puntalo. Il salto si carica in 8 s."},{"topic":"helm","en":"A jump drops you 2 km short of the target, so you never land on top of it.","pt_PT":"Um salto deixa-te a 2 km do alvo, para nunca caíres em cima dele.","it":"Un salto ti lascia a 2 km dal bersaglio, così non ci finisci sopra."},{"topic":"helm","en":"Decoupled mode turns flight assist off: you keep drifting and spinning. Tab toggles it.","pt_PT":"O modo desacoplado desliga a assistência: continuas a deslizar e a rodar. Tab alterna.","it":"La modalità sganciata spegne l'assistenza: continui a scivolare e ruotare. Tab la alterna."},{"topic":"helm","en":"Weapons' guns point forward in a narrow cone. Put the bow on the target for them.","pt_PT":"As armas apontam para a frente num cone estreito. Põe a proa no alvo para elas.","it":"I cannoni puntano in avanti in un cono stretto. Metti la prua sul bersaglio per loro."},{"topic":"helm","en":"You aim the shields; Engineering powers them. Turn them to face the attack.","pt_PT":"Tu apontas os escudos; a Engenharia dá-lhes energia. Vira-os para o ataque.","it":"Tu punti gli scudi; l'Ingegneria li alimenta. Girali verso l'attacco."},{"topic":"helm","en":"Shield Track keeps the shields on the selected contact while you fly.","pt_PT":"Seguir nos escudos mantém-nos no contacto selecionado enquanto voas.","it":"Segui sugli scudi li tiene sul contatto selezionato mentre voli."},{"topic":"helm","en":"Align rolls the ship until the target sits at 12, above the bow.","pt_PT":"Alinhar roda a nave até o alvo ficar às 12, acima da proa.","it":"Allinea ruota la nave finché il bersaglio è a ore 12, sopra la prua."},{"topic":"helm","en":"Need speed? Send Boost to Engineering: engines and thrusters run hot for 8 s.","pt_PT":"Precisas de velocidade? Manda Impulso à Engenharia: motores e propulsores aquecem 8 s.","it":"Serve velocità? Manda Spinta all'Ingegneria: motori e propulsori vanno al massimo per 8 s."},{"topic":"helm","en":"To dock, select a dockable site, fly close and press Dock. Comms can then trade.","pt_PT":"Para atracar, seleciona um local, aproxima-te e carrega em Atracar. Depois as Comunicações negoceiam.","it":"Per attraccare, seleziona un sito, avvicinati e premi Attracca. Poi le Comunicazioni commerciano."},{"topic":"helm","en":"Jumping away while a hostile still sees you is fleeing: it costs credits and reputation.","pt_PT":"Saltar com um hostil a ver-te é fugir: custa créditos e reputação.","it":"Saltare via con un ostile che ti vede è fuga: costa crediti e reputazione."},{"topic":"weapons","en":"Call your target before you shoot: friendly fire is on.","pt_PT":"Diz o alvo antes de disparar: o fogo amigo está ligado.","it":"Di' il bersaglio prima di sparare: il fuoco amico è attivo."},{"topic":"weapons","en":"Aim at the lead reticle, not the ship: it shows where your shot will meet it.","pt_PT":"Aponta à mira de antecipação, não à nave: mostra onde o tiro a vai apanhar.","it":"Mira al reticolo d'anticipo, non alla nave: mostra dove il colpo la incontrerà."},{"topic":"weapons","en":"Out of arc? Tell Helm the clock direction, or send Bring mount to bear.","pt_PT":"Fora do arco? Diz ao Leme a direção no relógio, ou manda Pôr a arma em tiro.","it":"Fuori arco? Di' al Timone la direzione a orologio, o manda Porta in tiro l'arma."},{"topic":"weapons","en":"Q cycles ammo. Each type has its own range, reload time and stock.","pt_PT":"Q muda a munição. Cada tipo tem o seu alcance, recarga e stock.","it":"Q cambia munizione. Ogni tipo ha la sua portata, ricarica e scorta."},{"topic":"weapons","en":"Missiles and torpedoes are guided: select a tracked contact and fire guided (G).","pt_PT":"Mísseis e torpedos são guiados: seleciona um contacto seguido e dispara guiado (G).","it":"Missili e siluri sono guidati: seleziona un contatto tracciato e spara guidato (G)."},{"topic":"weapons","en":"The beam never runs out but heats up fast. Let it cool or the mount locks.","pt_PT":"O feixe nunca acaba mas aquece depressa. Deixa arrefecer ou a arma bloqueia.","it":"Il raggio non finisce mai ma si scalda in fretta. Lascialo raffreddare o l'arma si blocca."},{"topic":"weapons","en":"Short on reloads? Send Power to weapons to Engineering.","pt_PT":"Recargas lentas? Manda Energia para as armas à Engenharia.","it":"Ricariche lente? Manda Energia alle armi all'Ingegneria."},{"topic":"weapons","en":"Science's scan shows weak points. Hit those and the fight ends sooner.","pt_PT":"O scan da Ciência mostra os pontos fracos. Acerta neles e a luta acaba mais cedo.","it":"La scansione della Scienza mostra i punti deboli. Colpiscili e lo scontro finisce prima."},{"topic":"weapons","en":"When Science hacks a ship's shields down you get a few seconds: be ready to fire.","pt_PT":"Quando a Ciência desliga os escudos de uma nave tens poucos segundos: prepara-te para disparar.","it":"Quando la Scienza abbassa gli scudi di una nave hai pochi secondi: tieniti pronto a sparare."},{"topic":"weapons","en":"On debris lanes, shoot the debris in your path before it hits the hull.","pt_PT":"Nas rotas de destroços, dispara nos destroços à frente antes de atingirem o casco.","it":"Nelle rotte di detriti, spara ai detriti sulla tua strada prima che colpiscano lo scafo."},{"topic":"weapons","en":"Comms may say hold fire: a surrendered ship you destroy costs reputation.","pt_PT":"As Comunicações podem pedir cessar-fogo: destruir uma nave rendida custa reputação.","it":"Le Comunicazioni possono dire cessate il fuoco: distruggere una nave arresa costa reputazione."},{"topic":"engineering","en":"Every station runs on your power. Move pips to whatever needs it now.","pt_PT":"Todos os postos dependem da tua energia. Passa os pontos para o que precisa agora.","it":"Ogni postazione vive della tua energia. Sposta le tacche su ciò che serve ora."},{"topic":"engineering","en":"More than two pips overcharges a system: it works harder and heats up.","pt_PT":"Mais de dois pontos sobrecarregam um sistema: trabalha mais e aquece.","it":"Più di due tacche sovraccaricano un sistema: rende di più e si scalda."},{"topic":"engineering","en":"Watch the heat. An overheated system faults and takes damage.","pt_PT":"Vigia o calor. Um sistema sobreaquecido avaria e sofre danos.","it":"Controlla il calore. Un sistema surriscaldato si guasta e si danneggia."},{"topic":"engineering","en":"Drag a repair crew onto a damaged part to fix it. Each repair uses a spare part.","pt_PT":"Arrasta uma equipa de reparação para uma parte danificada. Cada reparação gasta uma peça.","it":"Trascina una squadra di riparazione su una parte danneggiata. Ogni riparazione usa un pezzo."},{"topic":"engineering","en":"A fault fixes fast once you pick its cause. Science can scan your ship to find it.","pt_PT":"Uma avaria repara-se depressa quando escolhes a causa. A Ciência pode analisar a nave para a achar.","it":"Un guasto si ripara in fretta se scegli la causa. La Scienza può scansionare la nave per trovarla."},{"topic":"engineering","en":"Tighter shields block more from one side and leave the rest open.","pt_PT":"Escudos mais apertados bloqueiam mais de um lado e deixam o resto aberto.","it":"Scudi più stretti bloccano di più da un lato e lasciano scoperto il resto."},{"topic":"engineering","en":"Say the shields out loud when they drop. Helm and Weapons may not see the number.","pt_PT":"Diz os escudos em voz alta quando descem. Leme e Armas podem não ver o número.","it":"Di' gli scudi ad alta voce quando scendono. Timone e Armi potrebbero non vedere il numero."},{"topic":"engineering","en":"Harden a system before a hazard front hits. Relay can warn you when it comes.","pt_PT":"Reforça um sistema antes de chegar uma frente de perigo. A Retransmissão pode avisar.","it":"Rinforza un sistema prima che arrivi un fronte di pericolo. Il Collegamento può avvisarti."},{"topic":"engineering","en":"Relay out of probes? You can build one from four spare parts in 30 s.","pt_PT":"A Retransmissão ficou sem sondas? Podes fazer uma com quatro peças em 30 s.","it":"Il Collegamento è senza sonde? Puoi costruirne una con quattro pezzi in 30 s."},{"topic":"engineering","en":"Spare parts run out. Use them where they matter and tell the crew when they're low.","pt_PT":"As peças acabam. Usa-as onde importa e avisa a tripulação quando forem poucas.","it":"I pezzi finiscono. Usali dove servono e avvisa l'equipaggio quando sono pochi."},{"topic":"engineering","en":"Comms never sees your numbers. Talk to them about what the ship needs.","pt_PT":"As Comunicações nunca veem os teus números. Diz-lhes o que a nave precisa.","it":"Le Comunicazioni non vedono mai i tuoi numeri. Di' loro cosa serve alla nave."},{"topic":"science","en":"Pick a contact, then scan it. Turn the frame until it matches the dots.","pt_PT":"Escolhe um contacto e faz-lhe um scan. Roda a moldura até coincidir com os pontos.","it":"Scegli un contatto e scansionalo. Ruota la struttura finché coincide con i punti."},{"topic":"science","en":"Scans are cleaner up close. Ask Helm to fly to your scan mark.","pt_PT":"Os scans são mais limpos de perto. Pede ao Leme para ir à tua marca de scan.","it":"Le scansioni sono più pulite da vicino. Chiedi al Timone di andare al tuo segnaposto di scansione."},{"topic":"science","en":"More sensor power means less noise. Ask Engineering for it.","pt_PT":"Mais energia nos sensores dá menos ruído. Pede-a à Engenharia.","it":"Più energia ai sensori vuol dire meno rumore. Chiedila all'Ingegneria."},{"topic":"science","en":"Active sensors see better but tell everyone where you are.","pt_PT":"Os sensores ativos veem melhor, mas mostram a todos onde estás.","it":"I sensori attivi vedono meglio, ma dicono a tutti dove sei."},{"topic":"science","en":"A hack needs a good scan first. Then reach the red node before the trace fills.","pt_PT":"Um hack precisa de um bom scan antes. Depois chega ao nó vermelho antes de o rasto encher.","it":"Un hack richiede prima una buona scansione. Poi raggiungi il nodo rosso prima che la traccia si riempia."},{"topic":"science","en":"Hacks are short: drop shields for 8 s or jam weapons for 10. Call it before you start.","pt_PT":"Os hacks são curtos: escudos em baixo 8 s ou armas bloqueadas 10. Avisa antes de começar.","it":"Gli hack durano poco: scudi giù per 8 s o armi bloccate per 10. Avvisa prima di iniziare."},{"topic":"science","en":"Something broke? Scan your own ship to find the cause for Engineering.","pt_PT":"Algo avariou? Analisa a tua própria nave para dar a causa à Engenharia.","it":"Qualcosa si è guastato? Scansiona la tua nave per dare la causa all'Ingegneria."},{"topic":"science","en":"Tell the crew what a ship is and what it's doing: attacking, holding or retreating.","pt_PT":"Diz à tripulação o que é uma nave e o que faz: a atacar, parada ou a fugir.","it":"Di' all'equipaggio cos'è una nave e cosa fa: attacca, resta ferma o si ritira."},{"topic":"science","en":"A class you fully scanned before starts half aligned next time.","pt_PT":"Uma classe que já analisaste por completo começa meio alinhada da próxima vez.","it":"Una classe già scansionata del tutto parte mezza allineata la volta dopo."},{"topic":"science","en":"Inside a Relay probe's bubble you can scan and hack as if you were there.","pt_PT":"Dentro da bolha de uma sonda da Retransmissão podes analisar e piratear como se lá estivesses.","it":"Dentro la bolla di una sonda del Collegamento puoi scansionare e hackerare come se fossi lì."},{"topic":"science","en":"A cargo scan can unlock a reply for Comms, like calling a bluff.","pt_PT":"Um scan à carga pode desbloquear uma resposta para as Comunicações, como desmascarar um bluff.","it":"Una scansione del carico può sbloccare una risposta per le Comunicazioni, come smascherare un bluff."},{"topic":"relay","en":"Drag on the map to drop a mark. Drop it on a contact and it follows that contact.","pt_PT":"Arrasta no mapa para pôr uma marca. Larga-a num contacto e ela segue-o.","it":"Trascina sulla mappa per mettere un segnaposto. Lascialo su un contatto e lo seguirà."},{"topic":"relay","en":"A ship has eight marks, Alpha to Hotel. Clear old ones so the crew isn't lost.","pt_PT":"Uma nave tem oito marcas, de Alpha a Hotel. Limpa as antigas para a tripulação não se perder.","it":"Una nave ha otto segnaposto, da Alpha a Hotel. Togli quelli vecchi così l'equipaggio non si perde."},{"topic":"relay","en":"Only Relay renames or deletes other people's marks. Keep the map tidy.","pt_PT":"Só a Retransmissão muda o nome ou apaga marcas dos outros. Mantém o mapa arrumado.","it":"Solo il Collegamento rinomina o cancella i segnaposto altrui. Tieni la mappa in ordine."},{"topic":"relay","en":"Launch a probe to see beyond your sensors. You start with three.","pt_PT":"Lança uma sonda para ver além dos sensores. Começas com três.","it":"Lancia una sonda per vedere oltre i sensori. Ne hai tre all'inizio."},{"topic":"relay","en":"Plan a route around hazards: Helm sees it as a ribbon when it's shared.","pt_PT":"Planeia uma rota à volta dos perigos: o Leme vê-a como uma fita quando a partilhas.","it":"Pianifica una rotta intorno ai pericoli: il Timone la vede come un nastro quando la condividi."},{"topic":"relay","en":"Mark hazard zones and warn Engineering before the front arrives.","pt_PT":"Marca as zonas de perigo e avisa a Engenharia antes de a frente chegar.","it":"Segna le zone di pericolo e avvisa l'Ingegneria prima che arrivi il fronte."},{"topic":"relay","en":"Flag firing lanes that cross friendly ships, and warn Weapons.","pt_PT":"Assinala as linhas de tiro que cruzam naves amigas e avisa as Armas.","it":"Segnala le linee di tiro che attraversano navi amiche e avvisa le Armi."},{"topic":"relay","en":"With no Captain on board, you choose what the main screen shows.","pt_PT":"Sem Capitão a bordo, és tu quem escolhe o que o ecrã principal mostra.","it":"Senza Capitano a bordo, scegli tu cosa mostra lo schermo principale."},{"topic":"relay","en":"Turn vague mission places into marks so Helm has something to fly to.","pt_PT":"Transforma os sítios vagos das missões em marcas para o Leme ter para onde voar.","it":"Trasforma i luoghi vaghi delle missioni in segnaposto così il Timone sa dove volare."},{"topic":"relay","en":"In a fleet, send a mark to an allied ship. Their Relay decides whether to accept it.","pt_PT":"Numa frota, manda uma marca a uma nave aliada. A Retransmissão deles decide se a aceita.","it":"In una flotta, manda un segnaposto a una nave alleata. Il loro Collegamento decide se accettarlo."},{"topic":"comms","en":"The board has missions, contracts, offers and hails. Open a card to talk.","pt_PT":"O painel tem missões, contratos, ofertas e chamadas. Abre uma carta para falar.","it":"La bacheca ha missioni, contratti, offerte e chiamate. Apri una carta per parlare."},{"topic":"comms","en":"Hail a ship before shooting starts: some talk, some bluff, some surrender.","pt_PT":"Chama uma nave antes do tiroteio: umas falam, outras fazem bluff, outras rendem-se.","it":"Chiama una nave prima che si spari: alcune parlano, altre bluffano, altre si arrendono."},{"topic":"comms","en":"Tell Weapons when a ship surrenders. Send Hold fire if you have to.","pt_PT":"Diz às Armas quando uma nave se rende. Manda Cessar fogo se for preciso.","it":"Di' alle Armi quando una nave si arrende. Manda Cessate il fuoco se serve."},{"topic":"comms","en":"Contracts can say disable, don't destroy. Make sure Weapons knows.","pt_PT":"Os contratos podem dizer desativar, não destruir. Garante que as Armas sabem.","it":"I contratti possono dire disattivare, non distruggere. Assicurati che le Armi lo sappiano."},{"topic":"comms","en":"Docked? You can buy and sell the ship's modules. They're fitted at once.","pt_PT":"Atracados? Podes comprar e vender módulos da nave. São montados logo.","it":"Attraccati? Puoi comprare e vendere i moduli della nave. Vengono montati subito."},{"topic":"comms","en":"Ask Engineering what the ship needs before you spend: you never see their numbers.","pt_PT":"Pergunta à Engenharia o que a nave precisa antes de gastar: nunca vês os números dela.","it":"Chiedi all'Ingegneria cosa serve prima di spendere: non vedi mai i suoi numeri."},{"topic":"comms","en":"Reputation is per faction. A good deal today may open better offers later.","pt_PT":"A reputação é por fação. Um bom negócio hoje pode abrir melhores ofertas depois.","it":"La reputazione è per fazione. Un buon affare oggi può aprire offerte migliori dopo."},{"topic":"comms","en":"Claim a conversation and only you hear that ship's voice.","pt_PT":"Reclama uma conversa e só tu ouves a voz dessa nave.","it":"Prendi una conversazione e solo tu senti la voce di quella nave."},{"topic":"comms","en":"Keep the crew posted: say what you agreed and what you're waiting for.","pt_PT":"Põe a tripulação a par: diz o que combinaste e de que estás à espera.","it":"Tieni informato l'equipaggio: di' cosa hai concordato e cosa aspetti."},{"topic":"comms","en":"Ask Science to scan a ship's cargo: it can unlock new replies.","pt_PT":"Pede à Ciência para analisar a carga de uma nave: pode desbloquear novas respostas.","it":"Chiedi alla Scienza di scansionare il carico di una nave: può sbloccare nuove risposte."},{"topic":"captain","en":"The Captain has no controls, only the big picture. Decide, then say it out loud.","pt_PT":"O Capitão não tem controlos, só a visão geral. Decide e diz em voz alta.","it":"Il Capitano non ha comandi, solo il quadro generale. Decidi e dillo ad alta voce."},{"topic":"captain","en":"As Captain you choose the main screen: forward, chase, tactical, target or status.","pt_PT":"Como Capitão escolhes o ecrã principal: frente, perseguição, tático, alvo ou estado.","it":"Da Capitano scegli lo schermo principale: avanti, inseguimento, tattica, bersaglio o stato."},{"topic":"captain","en":"Ping a mission card as Captain and the main screen shows it for ten seconds.","pt_PT":"Faz ping a uma carta de missão como Capitão e o ecrã principal mostra-a dez segundos.","it":"Fai un ping su una carta missione da Capitano e lo schermo principale la mostra per dieci secondi."},{"topic":"captain","en":"Watch Open requests: an unanswered chip means someone is stuck.","pt_PT":"Vigia os Pedidos em aberto: um pedido sem resposta quer dizer que alguém está encravado.","it":"Controlla le Richieste aperte: una richiesta senza risposta vuol dire che qualcuno è bloccato."}]};
+/* tips:end */
+// The tips rotate in a random order (shuffled once per page load), each for
+// max(5 s, characters / 15 + 1 s) (P28-Tips); a tap on the left half goes back, on the
+// right half forward. The language is the browser's (the session's isn't known yet).
+const LANG = (function () {
+  const langs = navigator.languages || [navigator.language || 'en'];
+  for (const l of langs) {
+    if (/^pt/i.test(l)) { return 'pt_PT'; }
+    if (/^it/i.test(l)) { return 'it'; }
+    if (/^en/i.test(l)) { return 'en'; }
+  }
+  return 'en';
+})();
+const WORDS = {
+  en: { loading: 'Downloading', start: 'Starting the game', connect: 'Connecting',
+    lobby: 'Opening the lobby' },
+  pt_PT: { loading: 'A descarregar', start: 'A iniciar o jogo', connect: 'A ligar',
+    lobby: 'A abrir a sala de espera' },
+  it: { loading: 'Download', start: 'Avvio del gioco', connect: 'Connessione',
+    lobby: "Apertura della sala d'attesa" },
+}[LANG];
 function shuffled(list) {
   const out = list.slice();
   for (let i = out.length - 1; i > 0; i--) {
@@ -215,44 +378,157 @@ function shuffled(list) {
   }
   return out;
 }
-const tips = shuffled(LOADING_TIPS);
+function textOf(entry) { return entry[LANG] || entry.en || ''; }
+function tipSeconds(text) { return Math.max(5, text.length / 15 + 1); }
+const tips = shuffled(FT_TIPS.tips);
+const topicEl = document.getElementById('topic');
+const tipEl = document.getElementById('tip');
+const fillEl = document.getElementById('fill');
+const barEl = document.getElementById('bar');
+const tipcolEl = document.getElementById('tipcol');
 var tipIndex = 0;
 var tipTimer = null;
-function showNextTip() {
-  tipsEl.textContent = tips[tipIndex];
-  tipIndex = (tipIndex + 1) % tips.length;
+function showTip(step) {
+  tipIndex = (tipIndex + step + tips.length) % tips.length;
+  const tip = tips[tipIndex];
+  const text = textOf(tip);
+  topicEl.textContent = textOf(FT_TIPS.topics[tip.topic] || {}).toUpperCase();
+  tipEl.textContent = text;
+  clearTimeout(tipTimer);
+  tipTimer = setTimeout(function () { showTip(1); }, tipSeconds(text) * 1000);
 }
-function startTips() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    showNextTip();
-    tipTimer = setInterval(showNextTip, 4000);
+function stopTips() { clearTimeout(tipTimer); tipTimer = null; }
+// The engine's start is one long task in which no timer or script runs, so the tips can't
+// rotate from script. Instead the page lays the next few tips over the current one as CSS
+// animations, which the browser runs off the main thread, each for its usual time; when script
+// runs again (stopCssTips) the one showing becomes the current tip and the timer takes over.
+var cssTips = null;
+function startCssTips() {
+  const picks = [], seconds = [];
+  for (let i = 0; i < 4; i++) {
+    const tip = tips[(tipIndex + i) % tips.length];
+    picks.push(tip);
+    seconds.push(tipSeconds(textOf(tip)));
+  }
+  const total = seconds.reduce(function (a, b) { return a + b; }, 0);
+  const sheet = document.createElement('style');
+  const holder = document.createElement('div');
+  holder.id = 'slides';
+  var at = 0, css = '';
+  picks.forEach(function (tip, i) {
+    const from = 100 * at / total, to = 100 * (at + seconds[i]) / total;
+    at += seconds[i];
+    css += '@keyframes slide' + i + ' { 0% { opacity: ' + (i === 0 ? 1 : 0) + '; } ' +
+      (i === 0 ? '' : from + '% { opacity: 0; } ' + (from + 0.5) + '% { opacity: 1; } ') +
+      to + '% { opacity: 1; } ' + (to + 0.5) + '% { opacity: 0; } 100% { opacity: 0; } }\n' +
+      '#slides .slide:nth-child(' + (i + 1) + ') { animation: slide' + i + ' ' + total +
+      's linear infinite; }\n';
+    const slide = document.createElement('div');
+    slide.className = 'slide';
+    const topic = document.createElement('div');
+    topic.className = 's-topic';
+    topic.textContent = textOf(FT_TIPS.topics[tip.topic] || {}).toUpperCase();
+    const body = document.createElement('div');
+    body.className = 's-tip';
+    body.textContent = textOf(tip);
+    slide.appendChild(topic);
+    slide.appendChild(body);
+    holder.appendChild(slide);
+  });
+  sheet.textContent = css;
+  stopTips();
+  tipcolEl.classList.add('css');
+  tipcolEl.appendChild(sheet);
+  tipcolEl.appendChild(holder);
+  cssTips = { since: performance.now(), seconds: seconds, total: total, sheet: sheet, holder: holder };
+}
+function stopCssTips() {
+  if (!cssTips) { return; }
+  const c = cssTips;
+  cssTips = null;
+  var at = ((performance.now() - c.since) / 1000) % c.total, shown = 0;
+  while (shown < c.seconds.length - 1 && at >= c.seconds[shown]) { at -= c.seconds[shown]; shown++; }
+  c.sheet.remove();
+  c.holder.remove();
+  tipcolEl.classList.remove('css');
+  tipIndex = (tipIndex + shown) % tips.length;
+  showTip(0);
+}
+statusEl.addEventListener('click', function (e) {
+  const box = statusEl.getBoundingClientRect();
+  showTip(e.clientX < box.left + box.width / 2 ? -1 : 1);
+});
+// The loading stages, in order (#11, DC2). The page shows the download from the engine's real
+// progress (onProgress); the game reports the later stages through ft.loadStage (app/web/
+// load_stage.gd): "connect" when it starts joining, "lobby" when the server welcomed it, and
+// "ready" when the lobby is up, which removes the overlay. "start" is set here before the
+// engine starts, and the browser gets a frame to draw it first: the engine then runs one
+// long task (starting, compiling the scripts, building the menu) in which no text can change.
+// Only the download shows a bar; after it a radar sweep stands in, since the length of the
+// later stages is unknown and a bar filling up would only pretend to know it (DC3).
+const STAGES = ['download', 'start', 'connect', 'lobby', 'ready'];
+var stage = 'download';
+window.ft.stage = stage;
+function setBar(share) {
+  fillEl.style.transform = 'scaleX(' + share + ')';
+}
+function setStage(name) {
+  // A later stage never goes back (a reconnect would otherwise reopen the overlay's text).
+  if (STAGES.indexOf(name) <= STAGES.indexOf(stage) && name !== 'download') { return; }
+  stage = name;
+  window.ft.stage = name;
+  if (name === 'start') { startCssTips(); } else { stopCssTips(); }
+  if (name === 'ready') {
+    stopTips();
+    clearTimeout(failsafe);
+    statusEl.remove(); // the whole overlay goes: it covers the canvas and would swallow every tap
     return;
   }
-  const line = tips.join(' \u2022 ') + ' \u2022 ';
-  const strip = document.createElement('span');
-  strip.className = 'strip';
-  strip.textContent = line + line;
-  tipsEl.appendChild(strip);
-  // About 80 px per second, whatever the text length.
-  strip.style.animationDuration = (strip.scrollWidth / 2 / 80) + 's';
+  barEl.classList.toggle('busy', name !== 'download');
+  progress.textContent = WORDS[name === 'download' ? 'loading' : name];
 }
+window.ft.loadStage = setStage;
+// The download: the engine's real progress fills the bar.
+function setProgress(current, total) {
+  if (stage !== 'download') { return; }
+  if (total > 0) {
+    const pct = Math.min(100, Math.round(100 * current / total));
+    setBar(pct / 100);
+    progress.textContent = WORDS.loading + ' \u00b7 ' + pct + ' %';
+  } else {
+    progress.textContent = WORDS.loading;
+  }
+}
+// A frame for the browser to draw the page before a long task (not in a hidden tab: no
+// frames come there).
+function afterPaint() {
+  return new Promise(function (resolve) {
+    const timer = setTimeout(resolve, 300);
+    requestAnimationFrame(function () { setTimeout(function () { clearTimeout(timer); resolve(); }, 0); });
+  });
+}
+var failsafe = null;
 if (missing.length !== 0) {
   progress.textContent = 'This browser is missing: ' + missing.join(', ');
-  tipsEl.remove();
 } else {
-  startTips();
-  engine.startGame({
-    onProgress: (current, total) => {
-      progress.textContent = total > 0 ? 'Loading ' + Math.round(100 * current / total) + ' %' : 'Loading';
-    },
-  }).then(() => {
-    if (tipTimer) { clearInterval(tipTimer); }
-    // The whole overlay goes: it covers the canvas and would swallow every tap.
-    statusEl.remove();
+  showTip(0);
+  setProgress(0, 0);
+  // startGame loads the files, then calls start(), which is where the long task begins.
+  const startEngine = engine.start;
+  engine.start = function () {
+    const args = arguments;
+    setStage('start');
+    return afterPaint().then(function () { return startEngine.apply(engine, args); });
+  };
+  engine.startGame({ onProgress: setProgress }).then(() => {
+    stopCssTips();
+    // The game says "ready" itself; this is for a game that never does (an error before the
+    // lobby), so the overlay can't hide its menu for good.
+    failsafe = setTimeout(function () { setStage('ready'); }, 30000);
   }, (err) => {
-    if (tipTimer) { clearInterval(tipTimer); }
+    stopCssTips();
+    stopTips();
     progress.textContent = String(err);
-    tipsEl.remove();
   });
 }
 </script>

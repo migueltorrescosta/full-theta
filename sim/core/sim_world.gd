@@ -79,6 +79,17 @@ var encounters: EncounterTable = EncounterTable.new()
 var catalog: Dictionary[StringName, EnemyDef] = {}
 var scenario_ids: PackedStringArray = PackedStringArray()
 var run_def: RunDef
+## The session's rules (#11, E11, E12): COOP with one slot unless RunSetup was given slots.
+## Fixed for the run, like run_def, so not in a table or the state hash.
+var rules: SessionRules = SessionRules.new()
+## Crewed ship id -> its team (ShipSlot.team), filled by RunSetup from its slots; read through
+## team_of().
+var ship_teams: Dictionary[int, int] = {}
+## Crewed ship id -> where it starts (an offset in the cube, m) and the site it starts at
+## (-1 with no map), filled by RunSetup: a relaunch puts the ship back there, and a race's
+## site copies are placed relative to it (#11). Fixed for the run, like ship_teams.
+var ship_starts: Dictionary[int, Vector3] = {}
+var ship_start_site: Dictionary[int, int] = {}
 ## The events and the first command-log entry of the latest step(), kept for the Scenario
 ## API (events(), commands_this_tick()) whichever way the caller drains the world.
 var step_events: Array[SimEvent] = []
@@ -228,6 +239,12 @@ func ship_count() -> int:
 
 func faction_of(ship_id: int) -> int:
 	return kin.factions[ship_id]
+
+
+## The ship's side (#11): its slot's team for a crewed ship of a lobby-built session, else
+## its faction (an NPC, or a world built without slots).
+func team_of(ship_id: int) -> int:
+	return ship_teams.get(ship_id, faction_of(ship_id))
 
 
 func set_relation(a: int, b: int, relation: Relation) -> void:

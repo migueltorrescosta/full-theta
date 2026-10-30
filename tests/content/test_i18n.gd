@@ -21,9 +21,18 @@ func test_every_launch_language_has_every_string() -> void:
 		var t: Translation = I18n.translation(lang)
 		assert_object(t).is_not_null()
 		assert_str(t.locale).is_equal(lang)
-		assert_array(Array(t.get_message_list())).contains_exactly_in_any_order(keys)
+		# Sorted equality is contains_exactly_in_any_order, and one assert over the mismatches
+		# checks every message: thousands of gdUnit4 asserts took 15 s (#27).
+		var got: Array = Array(t.get_message_list())
+		got.sort()
+		var want: Array = keys.duplicate()
+		want.sort()
+		assert_array(got).is_equal(want)
+		var wrong: Array[String] = []
 		for key: String in keys:
-			assert_str(String(t.get_message(key))).is_equal(data["strings"][key][lang])
+			if String(t.get_message(key)) != data["strings"][key][lang]:
+				wrong.append("%s: %s" % [lang, key])
+		assert_array(wrong).is_empty()
 
 
 # FT: FT-AUD-013

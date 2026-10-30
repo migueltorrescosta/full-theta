@@ -69,26 +69,19 @@ func act(world: SimWorld) -> void:
 
 ## The nearest hostile worth shooting that the crew's faction detects, or -1.
 func _pick_target(world: SimWorld) -> int:
-	var faction: int = world.faction_of(ship)
-	var best: int = -1
-	var best_d: float = INF
-	for id: int in world.ship_count():
-		if id == ship or not world.ai.is_enabled(id) or not world.kin.is_alive(id):
-			continue
-		if world.run.status[id] != RunTable.Status.IN_PLAY:
-			continue
-		if world.relation(faction, world.faction_of(id)) != SimWorld.Relation.HOSTILE:
-			continue
-		if not KnowledgeSystem.is_detected(world, faction, id):
-			continue
-		var d: float = world.kin.relative(ship, id).length()
-		var armed: bool = not world.defs[id].mounts.is_empty()
-		if d > (ENGAGE_M if armed else DEBRIS_M) or (not armed and not profile.shoots_debris):
-			continue
-		if d < best_d:
-			best = id
-			best_d = d
-	return best
+	var armed: int = CrewMoves.nearest_hostile(world, ship, ENGAGE_M, true)
+	if not profile.shoots_debris:
+		return armed
+	var any: int = CrewMoves.nearest_hostile(world, ship, DEBRIS_M)
+	if armed < 0:
+		return any
+	if any < 0:
+		return armed
+	return (
+		any
+		if world.kin.relative(ship, any).length() < world.kin.relative(ship, armed).length()
+		else armed
+	)
 
 
 func _fight(world: SimWorld, target: int) -> void:
@@ -116,20 +109,7 @@ func _fight(world: SimWorld, target: int) -> void:
 
 
 func _aim(world: SimWorld, target: int) -> void:
-	var kin: Kinematics = world.kin
-	var aim: Vector3 = EnemyAi.lead_aim(world, ship, 0, target, 0)
-	if not aim.is_finite():
-		aim = kin.relative(ship, target)
-	if profile.aim_error > 0.0:
-		var miss: Vector3 = Vector3(
-			_rng.randfn(0.0, 1.0), _rng.randfn(0.0, 1.0), _rng.randfn(0.0, 1.0)
-		)
-		aim += miss * (profile.aim_error * aim.length())
-	var c: AimMountCommand = AimMountCommand.new()
-	c.aim_x = kin.px[ship] + aim.x
-	c.aim_y = kin.py[ship] + aim.y
-	c.aim_z = kin.pz[ship] + aim.z
-	_submit(world, c)
+	_submit(world, CrewMoves.aim(world, ship, target, profile.aim_error, _rng))
 
 
 ## Lets go of the target: Face off, and stop if the crew has nothing else to fly to.
@@ -145,29 +125,11 @@ func _stand_down(world: SimWorld) -> void:
 # --- Engineering ---
 
 
-## Sends each idle repair crew to the most damaged subsystem no crew is working on.
+## Sends an idle repair crew to the most damaged subsystem no crew is working on.
 func _repair(world: SimWorld) -> void:
-	var def: ShipDef = world.defs[ship]
-	var table: DamageTable = world.damage
-	var busy: int = 0
-	var worst: StringName = &""
-	var worst_frac: float = 0.8
-	for sub: SubsystemDef in def.subsystems:
-		var row: int = table.find_subsystem(ship, sub.id)
-		busy |= table.crews[row]
-		var frac: float = table.health[row] / sub.health_max
-		if frac < worst_frac and table.crews[row] == 0:
-			worst = sub.id
-			worst_frac = frac
-	if worst == &"":
-		return
-	for crew: int in def.repair_crews:
-		if busy & (1 << crew) == 0:
-			var dispatch: DispatchRepairCommand = DispatchRepairCommand.new()
-			dispatch.crew = crew
-			dispatch.subsystem_id = worst
-			_submit(world, dispatch)
-			return
+	var dispatch: DispatchRepairCommand = CrewMoves.repair(world, ship)
+	if dispatch != null:
+		_submit(world, dispatch)
 
 
 # --- fleeing and travelling ---

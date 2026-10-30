@@ -24,11 +24,11 @@ const DEFAULT_BURST: float = 180.0
 ## Reasons of request_rejected (lobby, claim and pause requests) and picked events.
 const NOT_IMPLEMENTED: String = "not_implemented"
 const NOT_PAUSED: String = "not_paused"
-## Abandon outside a pause (D241): the ship is not in a started run, or the session is PvP.
+## Abandon outside a pause (D241): the ship is not in a started run.
 const NOT_IN_RUN: String = "not_in_run"
-const PVP_NO_ABANDON: String = "pvp_no_abandon"
 const NOT_HOST: String = "not_host"
 const NOT_CREW: String = "not_crew"
+const NOT_YOUR_SHIP: String = "not_your_ship"
 const BAD_PICK: String = "bad_pick"
 const BAD_ITEM: String = "bad_item"
 const NOT_CLAIMED: String = "not_claimed"
@@ -47,6 +47,9 @@ var dev_all: bool = false
 var host_secret: String = ""
 ## The session's language, chosen by the host (--language), sent in Welcome (FT-AUD-013).
 var language: String = "en"
+## The server serves its page and WebSocket over TLS (--tls-cert, D294), sent in Welcome so
+## the host's lobby shows an https join URL.
+var tls: bool = false
 ## Most sessions connected at once (FT-NET-014; T046 owns the rule).
 var max_sessions: int = 64
 ## Per-session command rate limit (FT-NET-006; provisional: docs/protocol.md, Rates).
@@ -90,6 +93,9 @@ var coop: NetCoop
 var first_use: FirstUse = FirstUse.new()
 var shares: NetShares
 var host_pause: NetHostPause
+## The multi-ship lobby and PvP rules (#11).
+var fleet: NetFleet
+var training: NetTraining  # solo lessons (D303)
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -134,9 +140,12 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.CHIP: chips.on_chip,
 		NetProtocol.Type.SHARE: shares.on_share,
 		NetProtocol.Type.BYE: _on_bye,
+		NetProtocol.Type.CLIENT_FRAME: _on_client_frame,
 		NetTransport.CLOSED: _on_closed,
 	}
 	host_pause = NetHostPause.new(self)  # registers HostPause
+	fleet = NetFleet.new(self)  # registers ShipAdd, ShipTeam, SessionMode and Relaunch
+	training = NetTraining.new(self)  # registers Training
 
 
 ## Handles everything the transport received since the last call, lapses the sessions
@@ -203,6 +212,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		left_play = left_play or e.kind == &"outcome" or e.kind == &"destroyed"
 	# A sim event may change a ship's run status (lobby_state in_play).
 	_lobby_dirty = _lobby_dirty or not events.is_empty()
+	fleet.after_ticks(events)
 	if left_play:
 		_refresh_pause()
 	_publish()
@@ -246,7 +256,7 @@ func event_audience(e: SimEvent) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	# A spoken line reaches only its conversation's claimer or Comms' subtitle, through
 	# ServerVoice (FT-COM-006): the raw event, whose tag is the line id, goes to nobody.
-	if e.faction < 0 or e.kind == &"say":
+	if e.faction < 0 or e.kind == &"say" or NetFleet.OWN_EVENTS.has(e.kind):
 		return out
 	for s: NetSession in by_id.values():
 		if not s.has_pick() or s.ship >= world.ship_count():
@@ -306,6 +316,8 @@ func restart(sim_world: SimWorld) -> void:
 	launched.clear()
 	abandoned.clear()
 	writers.clear()
+	_crew_ships.clear()
+	fleet.reset()
 	_refresh_pause()
 	for ship: Dictionary in crew_ships():
 		_sync_captain_seat(ship["id"])
@@ -336,7 +348,7 @@ func crew_ships() -> Array:
 				{
 					"id": id,
 					"def": String(def.id),
-					"name": def.display_name,
+					"name": fleet.name_of(id, def.display_name),
 					"faction": world.faction_of(id)
 				}
 			)
@@ -346,6 +358,23 @@ func crew_ships() -> Array:
 ## Sends a server event to one session.
 func notify(session: NetSession, type: String, payload: Dictionary) -> void:
 	transport.post_event(PackedInt32Array([session.id]), world.tick, type, payload)
+
+
+## The Catalogue message: the crewable ships and the entries (after Welcome, and again after
+## the multi-ship lobby rebuilt the world).
+func catalogue() -> PackedByteArray:
+	var body: Dictionary = {
+		"ships": crew_ships(),
+		"entries": StationViews.catalogue(dev_all),
+		"load_tags": StationViews.LOAD_TAGS.duplicate(),
+	}
+	return NetProtocol.encode(NetProtocol.Type.CATALOGUE, body)
+
+
+## Moves a session to (ship, entry) without the pick rules, as the server decides it (NetFleet:
+## a ship's new id at Start, a handover, a relaunch), with its `picked` event.
+func move(session: NetSession, ship: int, entry: String) -> void:
+	_answer_pick(session, ship, entry, "")
 
 
 ## Starts a ship's run (Start, or a test fixture): the sim steps from now on.
@@ -371,7 +400,7 @@ func min_crew() -> int:
 
 ## The entries held on a ship by its live sessions (connected or within grace).
 func entries_of(ship: int) -> Array:
-	var out: Array = []
+	var out: Array = training.bot_entries() if _crewable(ship) else []
 	for s: NetSession in by_id.values():
 		if s.ship == ship and s.entry != "":
 			out.append(s.entry)
@@ -515,6 +544,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 		"dev_all": dev_all,
 		"host": session.is_host,
 		"lang": language,
+		"tls": tls,
 	}
 	transport.bind(conn, session.id, welcome, session.view_key(), not resumed)
 	if session_log != null:
@@ -530,34 +560,20 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 				}
 			)
 		)
-	(
-		transport
-		. send(
-			conn,
-			(
-				NetProtocol
-				. encode(
-					NetProtocol.Type.CATALOGUE,
-					{
-						"ships": crew_ships(),
-						"entries": StationViews.catalogue(dev_all),
-						"load_tags": StationViews.LOAD_TAGS.duplicate(),
-					}
-				)
-			)
-		)
-	)
+	transport.send(conn, catalogue())
 	# The current lobby, pause and vote state, so a (re)joining client starts in sync.
 	for ship: Dictionary in crew_ships():
 		if _lobby_visible(session, ship["id"]):
 			notify(session, NetProtocol.EVENT_LOBBY, lobby_state(ship["id"]))
 	host_pause.send_to(session)
+	fleet.send_to(session)
 	for ship: int in paused:
 		notify(session, NetProtocol.EVENT_PAUSE, _pause_payload(ship))
 		_send_votes(ship, session)
 	if session.has_pick():
 		crew.send_to(session)
 	_publish()
+	training.on_join(session)
 
 
 func _refuse(conn: int, reason: String) -> void:
@@ -599,8 +615,8 @@ func _answer_pick(s: NetSession, ship: int, entry: String, reason: String) -> vo
 
 
 ## Start (FT-NET-019): Ready{true} from a crew player of a ship whose coverage check
-## passes starts that ship's run; the universe steps once a ship has started.
-## Ready{false} does nothing (a started run isn't stopped from the lobby).
+## passes; the universe starts once every crewed ship has pressed it (NetFleet.press_start,
+## M4-Q4). Ready{false} does nothing (a started run isn't stopped from the lobby).
 func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = by_conn.get(conn)
 	if s == null or not msg["ready"]:
@@ -617,8 +633,13 @@ func _on_ready(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if reason != "":
 		request_rejected(s, NetProtocol.Type.READY, reason, extra)
 		return
-	launch(s.ship)
-	_broadcast(NetProtocol.EVENT_STARTED, {"ship": s.ship, "tick": world.tick})
+	var ships: Array[int] = fleet.press_start(s)  # all together (M4-Q4)
+	for ship: int in ships:
+		launch(ship)
+		broadcast(NetProtocol.EVENT_STARTED, {"ship": ship, "tick": world.tick})
+	if ships.is_empty():
+		_publish()
+		return
 	voice.toggles = toggles.encode()
 	voice.start(language, crew_ships().map(func(c: Dictionary) -> int: return c["faction"]))
 	_publish()
@@ -697,12 +718,16 @@ func _on_command(conn: int, msg: Dictionary, now_us: int) -> void:
 	_pending.append([s.id, msg["seq"], result[0], world.tick])
 
 
-## The host abandons a paused ship alone (FT-NET-041, D96, D127).
+## The host abandons a paused ship alone (FT-NET-041, D96, D127); in PvP only its own ship.
 func _on_abandon(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = by_conn.get(conn)
 	if s == null:
 		return
 	var ship: int = msg["ship"]
+	if s.is_host and fleet.rules.is_pvp() and ship != s.ship:
+		# M4-F1: in PvP the host forfeits only its own ship; another crew forfeits by its vote.
+		request_rejected(s, NetProtocol.Type.ABANDON, NOT_YOUR_SHIP, {"ship": ship})
+		return
 	if not paused.has(ship):
 		var why: String = _run_abandon_refusal(ship)
 		if why == "" and not s.is_host:
@@ -745,8 +770,8 @@ func _on_abandon_vote(conn: int, msg: Dictionary, _now_us: int) -> void:
 	_publish()
 
 
-## During a pause, the Captain or a Viewer of the paused ship takes an uncovered
-## station (FT-NET-042). Players of other ships are #11 (CLASH-1 b); a crew player of
+## During a pause, the paused ship's Captain or a viewer, or a player of an allied ship,
+## takes an uncovered station (FT-NET-042, M4-Q8, NetFleet.takeover_rule); a crew player of
 ## the ship changes its pick with Pick.
 func _on_takeover(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = by_conn.get(conn)
@@ -754,23 +779,29 @@ func _on_takeover(conn: int, msg: Dictionary, _now_us: int) -> void:
 		return
 	var ship: int = msg["ship"]
 	var entry: String = msg["entry"]
-	var reason: String = ""
-	if not paused.has(ship):
-		reason = NOT_PAUSED
-	elif s.ship != ship:
-		reason = NOT_IMPLEMENTED
-	elif not (s.entry == StationViews.CAPTAIN or s.entry == StationViews.VIEWER):
-		reason = CommandGate.NOT_ALLOWED
-	elif not StationViews.is_entry(entry, dev_all) or not StationViews.is_crew(entry):
-		reason = BAD_PICK
+	var reason: String = fleet.takeover_rule(s, ship, entry) if paused.has(ship) else NOT_PAUSED
 	if reason != "":
 		request_rejected(s, NetProtocol.Type.TAKEOVER, reason, {"ship": ship, "entry": entry})
 		return
+	var from_ship: int = s.ship
 	_answer_pick(s, ship, entry, "")
+	fleet.took_over(s, ship, entry, from_ship)
 
 
 func _on_bye(conn: int, _msg: Dictionary, _now_us: int) -> void:
 	transport.close(conn, 1000, "bye")
+
+
+## A client's long frame (#28) goes to the session log, with whose it was.
+func _on_client_frame(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var s: NetSession = by_conn.get(conn)
+	if s == null or session_log == null:
+		return
+	var what: String = NetProtocol.clip_utf8(msg["what"], NetProtocol.MAX_FRAME_WHAT_BYTES)
+	var fields: Dictionary = {
+		"session": s.id, "name": s.name, "client": s.client_kind, "ms": msg["ms"], "what": what
+	}
+	session_log.event("long_frame", fields)
 
 
 func _on_closed(conn: int, _msg: Dictionary, now_us: int) -> void:
@@ -867,22 +898,21 @@ func _restore(s: NetSession) -> void:
 
 
 ## Why the run cannot be abandoned outside a pause (D241, FT-MIS-016), or "": the ship must
-## be in a started run, and the session co-op (PvP: the spec gives no rule, so none).
+## be in a started run.
 func _run_abandon_refusal(ship: int) -> String:
-	if not in_play(ship):
-		return NOT_IN_RUN
-	if host_pause.is_pvp():
-		return PVP_NO_ABANDON
-	return ""
+	return "" if in_play(ship) else NOT_IN_RUN
 
 
 ## The crew's vote passed or the host decided: the sim ends the co-op run with a logged
 ## server command (every crewed ship ABANDONED, a LOSS each), so the debrief and the
-## "Run again" vote follow (NetRunReset).
+## "Run again" vote follow (NetRunReset). In PvP it is that ship's forfeit (M4-Q10).
 func _abandon_run(ship: int, by: String) -> void:
+	if fleet.rules.is_pvp():
+		_abandon(ship, by)
+		return
 	votes.clear()
 	world.submit(AbandonRunCommand.new())
-	_broadcast(NetProtocol.EVENT_ABANDONED, {"ship": ship, "by": by})
+	broadcast(NetProtocol.EVENT_ABANDONED, {"ship": ship, "by": by})
 	_send_votes(ship)
 
 
@@ -894,7 +924,7 @@ func _abandon(ship: int, by: String) -> void:
 	var c: AbandonShipCommand = AbandonShipCommand.new()
 	c.ship_id = ship
 	world.submit(c)
-	_broadcast(NetProtocol.EVENT_ABANDONED, {"ship": ship, "by": by})
+	broadcast(NetProtocol.EVENT_ABANDONED, {"ship": ship, "by": by})
 	_refresh_pause()
 
 
@@ -921,10 +951,10 @@ func _refresh_pause(may_pause: bool = false) -> void:
 			votes.erase(ship)
 	paused = now
 	for ship: int in changed:
-		_broadcast(NetProtocol.EVENT_PAUSE, _pause_payload(ship))
+		broadcast(NetProtocol.EVENT_PAUSE, _pause_payload(ship))
 	# The coverage pause's own resume, `host` false; a host pause has its own (NetHostPause).
 	if was_paused and paused.is_empty():
-		_broadcast(NetProtocol.EVENT_RESUME, {"tick": world.tick, "host": false})
+		broadcast(NetProtocol.EVENT_RESUME, {"tick": world.tick, "host": false})
 
 
 func _pause_payload(ship: int) -> Dictionary:
@@ -1008,10 +1038,10 @@ func _send_votes(ship: int, to: NetSession = null) -> void:
 	if to != null:
 		notify(to, NetProtocol.EVENT_ABANDON_VOTES, payload)
 	else:
-		_broadcast(NetProtocol.EVENT_ABANDON_VOTES, payload)
+		broadcast(NetProtocol.EVENT_ABANDON_VOTES, payload)
 
 
-func _broadcast(type: String, payload: Dictionary) -> void:
+func broadcast(type: String, payload: Dictionary) -> void:
 	var ids: PackedInt32Array = PackedInt32Array()
 	for id: int in by_id:
 		ids.append(id)
@@ -1027,6 +1057,7 @@ func _lobby_visible(s: NetSession, ship: int) -> bool:
 ## Sends changed lobby states (checked only when something they depend on changed) and
 ## posts changed ownership tables.
 func _publish() -> void:
+	fleet.publish(_lobby_dirty)
 	if _lobby_dirty:
 		_lobby_dirty = false
 		for ship: Dictionary in crew_ships():

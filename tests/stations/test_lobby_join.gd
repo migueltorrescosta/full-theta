@@ -88,5 +88,27 @@ func test_a_joined_player_sees_no_join_panel() -> void:
 
 # FT: FT-NET-013
 func test_join_url_uses_the_http_port_below_the_websocket_port() -> void:
-	assert_str(LobbyScreen.join_url("10.0.0.5", 47801)).is_equal("http://10.0.0.5:47800/?join=1")
-	assert_str(LobbyScreen.join_url("10.0.0.5", 5001)).is_equal("http://10.0.0.5:5000/?join=1")
+	assert_str(LobbyJoinPanel.join_url("10.0.0.5", 47801)).is_equal("http://10.0.0.5:47800/?join=1")
+	assert_str(LobbyJoinPanel.join_url("10.0.0.5", 5001)).is_equal("http://10.0.0.5:5000/?join=1")
+
+
+# FT: FT-NET-013
+# A server with TLS serves the page over HTTPS: the URL and the QR code say https, on the same
+# port; a context without the flag stays http.
+func test_join_url_says_https_when_the_server_uses_tls() -> void:
+	assert_str(LobbyJoinPanel.join_url("10.0.0.5", 47801, true)).is_equal(
+		"https://10.0.0.5:47800/?join=1"
+	)
+	assert_bool(StationFixture.context("helm").host_tls).is_false()
+	var ctx: StationContext = StationFixture.context("helm")
+	ctx.host_tls = true
+	ctx.crew.lobby[0]["started"] = false
+	ctx.host_bind = "192.168.1.20"
+	ctx.host_port = 47801
+	var l: LobbyScreen = auto_free(LobbyScreen.new())
+	l.setup(ctx)
+	add_child(l)
+	var https: String = URL.replace("http://", "https://")
+	assert_str((l.find_child("JoinUrl", true, false) as Label).text).contains(https)
+	var qr: QrView = l.find_child("JoinQr", true, false)
+	assert_array(qr.modules).is_equal(QrCode.encode(https))

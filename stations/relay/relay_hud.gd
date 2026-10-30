@@ -70,6 +70,7 @@ func setup(context: StationContext) -> void:
 	_probes = Label.new()
 	col.add_child(_probes)
 	_probe_rows = VBoxContainer.new()
+	ListLines.attach(_probe_rows)
 	col.add_child(_probe_rows)
 	_fab = Label.new()
 	col.add_child(_fab)
@@ -78,6 +79,7 @@ func setup(context: StationContext) -> void:
 	lanes = _button(col, "Lanes", "relay.lanes_off", lanes_pressed.emit)
 	col.add_child(_heading("relay.contacts"))
 	_contacts = VBoxContainer.new()
+	ListLines.attach(_contacts)
 	col.add_child(_contacts)
 	col.add_child(_heading("relay.marks"))
 	_marks = HFlowContainer.new()
@@ -96,6 +98,7 @@ func setup(context: StationContext) -> void:
 	_log_col = log_col
 	log_col.add_child(_heading("relay.log"))
 	_log = VBoxContainer.new()
+	ListLines.attach(_log)
 	log_col.add_child(_log)
 	row.add_child(log_col)
 	var mail: BoxContainer = BoxContainer.new()
@@ -371,6 +374,9 @@ func _box(anchors: Array, offsets: Array) -> PanelContainer:
 	box.offset_bottom = offsets[3]
 	var style: StyleBoxFlat = StyleBoxFlat.new()
 	style.bg_color = Palette.color("panel") * Color(1, 1, 1, 0.85)
+	style.border_color = Palette.color("line_strong")
+	style.set_border_width_all(UiTheme.BORDER)
+	style.set_corner_radius_all(UiTheme.RADIUS)
 	style.set_content_margin_all(6.0)
 	box.add_theme_stylebox_override("panel", style)
 	add_child(box)

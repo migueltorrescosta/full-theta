@@ -47,6 +47,8 @@ const ROLES: Dictionary = {
 	"panel": Color("#151b23"),
 	"panel_focus": Color("#1f2a36"),
 	"line": Color("#3a4654"),
+	# Hairlines of panels, rails, sheets, cards, lists and tabs (D304): 3:1 on background and panel.
+	"line_strong": Color("#5b6b7d"),
 	"text": Color("#e6edf3"),
 	"text_dim": Color("#8b98a5"),
 	"accent": Color("#58a6ff"),
@@ -81,6 +83,12 @@ const CONTRAST: Array[Array] = [
 	["load_busy", "panel_focus"],
 	["load_light", "panel"],
 	["load_light", "panel_focus"],
+]
+## Non-text pairs (hairlines, WCAG 1.4.11, D304) that need only a 3:1 ratio, under each
+## simulated deficiency (tools/check_palette.py).
+const NON_TEXT_CONTRAST: Array[Array] = [
+	["line_strong", "background"],
+	["line_strong", "panel"],
 ]
 
 ## Allegiance letter -> blip shape (station-ui §1.5; marks are diamonds everywhere, D44).

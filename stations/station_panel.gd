@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name StationPanel
 extends Control
 ## Base of every station panel (FT-JNT-001). A StationScreen holds one panel for a
@@ -10,12 +11,47 @@ extends Control
 ## override the virtuals below. Read state through `ctx` (StationContext): ctx.view and
 ## ctx.interp for the snapshot, ctx.crew for selection, marks, pings, claims; send with
 ## ctx.intents. Never name sim/ (FT-ARC-011).
+##
+## On a phone (#28 follow-up, design "Shared frame") a panel may set `pages` (PageHost): the
+## screen shows its tabs in the top bar or the bottom tab bar. A panel that sets `in_frame`
+## gets the view-top row (selection chip, request chips, partner glance, ping toast) over
+## `top_reserve` px at the top of `view_rect()`; `sheet` is the screen's ChoiceSheet for
+## one-level choices.
+
+## The panel asks the screen for a common action on the selection: "ping", "mark" (a Crew
+## page's buttons, CrewPage).
+signal common_requested(id: String)
 
 ## The station this panel serves (IntentTable group).
 var station: String = ""
 var ctx: StationContext = null
 var focused: bool = false
 var docked: bool = false
+## True while the panel shows the screen's share buttons itself (Relay's phone drawer):
+## the screen then shows no Share opener of its own (#28).
+var shows_shares: bool = false
+## Where the screen's Share opener goes on a phone on its side while the radar column is
+## hidden (#28): a container in the panel's rails, or null for the bottom of the view.
+var share_slot: Container = null
+## Height (px) at the bottom of the panel that the screen's joint switch and Share opener
+## cover on a phone on its side (#28); a hand-drawn view keeps its read-outs above it.
+var bottom_reserve: float = 0.0
+## The panel's pages on a phone (null: one page, no tabs).
+var pages: PageHost = null
+## Height (px) at the top of view_rect() that the screen's view-top row covers on a phone; a
+## hand-drawn view keeps its read-outs under it.
+var top_reserve: float = 0.0
+## The screen's choice sheet (set by the screen before setup; null in bare tests).
+var sheet: ChoiceSheet = null
+## The panel is laid out for the phone frame (#28 follow-up): it keeps its read-outs under
+## `top_reserve` and every tap target out of the bottom gesture band (RailLayout's rails do;
+## a tappable range label at the view's foot doesn't). On a phone the screen then shows the
+## view-top row and long-press over it, and on its side lets its view draw into the band
+## (P28-Band). Panels not yet in the frame keep the chip strip and stop above the band.
+var in_frame: bool = false
+## Station extras for the phone's selection sheet after Ping, Mark here and Clear (Science's
+## Scan and Hack, Relay's Route and Send): [[label, Callable], ...].
+var selection_extras: Array = []
 
 var _chip_menu: ChipMenu = null
 
@@ -78,6 +114,16 @@ func take_select() -> bool:
 ## reticle at the centre unless the panel moves a cursor (Relay's map).
 func cursor_pos() -> Vector2:
 	return size / 2.0
+
+
+## The part of the panel its view shows through, in its coordinates: the free part of a
+## RailLayout in the panel (between overlay rails, or a docked layout's view), else the whole
+## panel. The screen puts its view-top row at the top of it.
+func view_rect() -> Rect2:
+	var layout: RailLayout = _rail_layout(self, 3)
+	if layout != null:
+		return layout.content_rect_in(self)
+	return Rect2(Vector2.ZERO, size)
 
 
 ## True when the panel draws its own radar and wants the whole screen when it is alone
@@ -183,6 +229,18 @@ func radar_orbitable() -> bool:
 ## focused (Science's detection confidence, FT-SCI-001); {} draws every blip alike.
 func blip_scale() -> Dictionary:
 	return {}
+
+
+## The first visible RailLayout under `node`, `depth` levels down at most.
+static func _rail_layout(node: Node, depth: int) -> RailLayout:
+	for c: Node in node.get_children():
+		if c is RailLayout and (c as RailLayout).is_visible_in_tree():
+			return c
+		if depth > 1:
+			var found: RailLayout = _rail_layout(c, depth - 1)
+			if found != null:
+				return found
+	return null
 
 
 ## Whether the chip's receiving station is on this screen too (a joint view).
