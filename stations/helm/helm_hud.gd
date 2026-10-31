@@ -228,7 +228,12 @@ func _draw() -> void:
 			_draw_arrow(font, e, e["selected"])
 	if panel.chase:
 		_text(font, a.position + Vector2(16.0, 24.0), tr("helm.chase"), Palette.color("text_dim"))
-	if not panel.steering() and panel.ctx.matcher.device == IntentTable.KBM and not touch_layout():
+	var tablet: bool = panel.tablet_ui != null
+	if (
+		not panel.steering()
+		and panel.ctx.matcher.device == IntentTable.KBM
+		and not (touch_layout() or tablet)
+	):
 		_text(font, Vector2(16.0, 44.0), tr("helm.pointer_free"), Palette.color("text_dim"))
 	if panel.ctx.matcher.is_held("helm_radial"):
 		_draw_radial(font)

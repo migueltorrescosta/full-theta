@@ -40,6 +40,8 @@ const TOUCH_BAR_HEIGHT: float = 52.0
 const PHONE_BAR_HEIGHT: float = 56.0
 ## Under this width the top bar takes two rows (a phone, a tablet upright).
 const COMPACT_WIDTH: float = 900.0
+## Between a tablet's side rails the top bar takes two rows under this width.
+const DOCK_COMPACT_WIDTH: float = 760.0
 ## A phone's smaller bar text fits one row down to this width.
 const COMPACT_PHONE_WIDTH: float = 480.0
 ## The phone's radar column: a smaller disc (D195).
@@ -910,6 +912,9 @@ func _relayout() -> void:
 	elif touch:
 		bar = TOUCH_BAR_HEIGHT
 	var two_rows: bool = size_now.x < (COMPACT_PHONE_WIDTH if phone else COMPACT_WIDTH)
+	if res.x > 0.0:
+		# Between a tablet's side rails (an iPad's 828 px fits one row, 672 px doesn't).
+		two_rows = size_now.x - 2.0 * res.x < DOCK_COMPACT_WIDTH
 	if phone:
 		# The phone's one-row bar (design 1.2).
 		two_rows = false
