@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## server (L3): outcome, card, Run again, back to the lobby, Start again.
 
 const SETTINGS: String = "user://test_outcome_card.cfg"
-const SLOW_MS: int = 30_000
+const SLOW_MS: int = 15_000
 
 var _h: NetHarness
 
@@ -126,8 +126,8 @@ func test_shell_runs_again_after_a_win() -> void:
 
 
 ## Polls only the shell's own client (the shell takes its events). The all-stations
-## screen takes 10-14 s to build headless (#27 profile), more on a loaded machine, so the
-## waits here allow 30 s rather than the harness's 8 s.
+## screen builds in well under a second headless (docs/research/devseat-profile.md), so
+## 15 s is room for a loaded machine, not a build time.
 func _until(cond: Callable, timeout_ms: int = SLOW_MS) -> bool:
 	var end: int = Time.get_ticks_msec() + timeout_ms
 	while not cond.call():
