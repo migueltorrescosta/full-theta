@@ -82,3 +82,10 @@ def test_hairline_needs_three_to_one():
     assert check_palette.check(text) == []
     weak = text.replace('"line_strong": Color("#5b6b7d")', '"line_strong": Color("#3a4654")')
     assert any("line_strong on panel" in e for e in check_palette.check(weak))
+
+
+def test_report_marks_ratios_under_body_text_contrast():
+    lines = {line.split()[0]: line for line in check_palette.report(check_palette.PALETTE.read_text(encoding="utf-8"))}
+    assert lines["text"].count("*") == 0
+    assert lines["danger"].count("*") >= 1  # 3.49 on panel: the gap docs/accessibility.md lists
+    assert "danger_fill" not in lines

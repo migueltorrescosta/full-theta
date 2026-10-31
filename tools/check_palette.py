@@ -15,7 +15,10 @@ the sRGB transfer both ways):
 - NON_TEXT_CONTRAST: the same for hairlines and other non-text parts, at least
   MIN_NON_TEXT (3.0, WCAG 1.4.11).
 
-Usage: check_palette.py [palette.gd]; exits 1 with one line per failure.
+Usage: check_palette.py [--report] [palette.gd]; exits 1 with one line per failure.
+--report prints the WCAG contrast of every colour role on each surface (the backgrounds,
+panels and the danger button's fill of presentation/ui_theme.gd), marking the ratios
+under MIN_CONTRAST; it is information for docs/accessibility.md and never fails.
 """
 
 import math
@@ -190,8 +193,35 @@ def check(text: str) -> list[str]:
     return errors
 
 
+SURFACES = ("background", "panel", "panel_focus", "danger_fill")
+
+
+def report(text: str) -> list[str]:
+    """One line per role: its contrast on each of SURFACES, `*` under MIN_CONTRAST.
+
+    danger_fill is the danger button's fill, `danger` darkened by 55 % (UiTheme._rails).
+    """
+    roles = dict(parse(text)[0])
+    roles["danger_fill"] = tuple(c * 0.45 for c in roles["danger"])
+    lines = ["%-15s" % "role" + "".join("%13s" % s for s in SURFACES)]
+    for name, rgb in roles.items():
+        if name in SURFACES:
+            continue
+        cells = []
+        for s in SURFACES:
+            r = contrast(rgb, roles[s])
+            cells.append("%12.2f%s" % (r, "*" if r < MIN_CONTRAST else " "))
+        lines.append("%-15s" % name + "".join(cells))
+    return lines
+
+
 def main() -> int:
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else PALETTE
+    args = sys.argv[1:]
+    if "--report" in args:
+        args.remove("--report")
+        print("\n".join(report(Path(args[0] if args else PALETTE).read_text(encoding="utf-8"))))
+        return 0
+    path = Path(args[0]) if args else PALETTE
     errors = check(path.read_text(encoding="utf-8"))
     for e in errors:
         print(f"palette: {e}", file=sys.stderr)
