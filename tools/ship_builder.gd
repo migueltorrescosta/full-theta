@@ -324,7 +324,9 @@ const GLYPHS: PackedInt32Array = [
 	0x00,
 	0x00,  #
 ]
-const TEXTURE_SIZE: int = 256
+const TEXTURE_SIZE: int = 256  # the shared roughness and normal maps (D317)
+const ALBEDO_SIZE: int = 128  # each look's own albedo map
+const SHARED_SEED: int = 4  # seeds the panel layout and the grime every look shares
 const TEXTURE_SPAN: float = 1.6  # metres covered by one tile of the plating texture
 ## Fake AO: distances along the vertex normal at which the other parts' distance field is
 ## sampled, the weight of each sample, the overall strength and the darkest allowed value.
@@ -340,7 +342,7 @@ const AO_CELL: float = 0.2  # grid cell (metres) used to find the parts near a v
 ## Work between deadline checks in `warm()`: AO vertices per slice.
 const AO_SLICE: int = 64
 
-## The look being built: its seed (greebles; the plating's is 4 more, so the generic look's
+## The look being built: its seed (greebles; the panel shades' is 4 more, so the generic look's
 ## 7 and 11 are the S8 ship's), the stripe's colour, the decal's text ("" for none) and the
 ## wear (0 clean, 1 weathered).
 var seed_value: int = 7
@@ -380,8 +382,9 @@ class Bake:
 class Plate:
 	var step: int = 0
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	var tint: PackedFloat32Array = PackedFloat32Array()
-	var height: PackedFloat32Array = PackedFloat32Array()
+	var panel: PackedInt32Array = PackedInt32Array()  # per pixel: its panel, -1 on a seam
+	var panels: int = 0
+	var edge_ao: PackedFloat32Array = PackedFloat32Array()  # per pixel: darkening near seams
 	var blotches: PackedFloat32Array = PackedFloat32Array()
 	var streaks: PackedFloat32Array = PackedFloat32Array()
 	var images: Array[Image] = []
@@ -401,10 +404,13 @@ class AoPart:
 	var reach: AABB = AABB()  # bounds grown by twice the longest AO step
 
 
-## Builds the ship of `look` ({name, seed, stripe, decal}) at `wear` and returns it packed:
+## Builds the ship of `look` ({name, seed, stripe, decal}) at `wear` and returns it packed
+## (with `shared` from `bake_shared`, its roughness and normal maps; else its own):
 ## a Node3D "Ship" with a MeshInstance3D per part, each with its baked-AO mesh and its
 ## material. The packed scene is what the game loads (ProceduralShip).
-static func bake(look: Dictionary, wear_of: float) -> PackedScene:
+static func bake(
+	look: Dictionary, wear_of: float, shared: Array[ImageTexture] = []
+) -> PackedScene:
 	var b: ShipBuilder = ShipBuilder.new()
 	b.wear = wear_of
 	b.seed_value = int(look["seed"])
@@ -415,7 +421,10 @@ static func bake(look: Dictionary, wear_of: float) -> PackedScene:
 	var plate: Plate = Plate.new()
 	while not b._plate_step(plate):
 		pass
-	b._make_materials(b._plate_textures(plate))
+	var textures: Array[ImageTexture] = b._plate_textures(plate)
+	if not shared.is_empty():
+		textures = [textures[0], shared[0], shared[1]]
+	b._make_materials(textures)
 	var root: Node3D = Node3D.new()
 	root.name = "Ship"
 	var made: Array[MeshInstance3D] = []
@@ -434,6 +443,18 @@ static func bake(look: Dictionary, wear_of: float) -> PackedScene:
 	scene.pack(root)
 	root.free()
 	return scene
+
+
+## The roughness and normal maps every look shares (D317), at `wear_of`: [roughness, normal].
+static func bake_shared(wear_of: float) -> Array[ImageTexture]:
+	var b: ShipBuilder = ShipBuilder.new()
+	b.wear = wear_of
+	var plate: Plate = Plate.new()
+	while not b._plate_step(plate):
+		pass
+	var textures: Array[ImageTexture] = b._plate_textures(plate)
+	b.free()
+	return [textures[1], textures[2]]
 
 
 ## Builds every part in this scratch ship and describes them for the AO bake
@@ -852,7 +873,7 @@ func _plate_step(p: Plate) -> bool:
 	var n: int = TEXTURE_SIZE
 	match p.step:
 		0:
-			p.rng.seed = seed_value + 4
+			p.rng.seed = SHARED_SEED
 			_plate_panels(p)
 		1:
 			p.blotches = _value_noise(n, 8, 8, p.rng)
@@ -877,8 +898,8 @@ func _plate_panels(p: Plate) -> void:
 	var n: int = TEXTURE_SIZE
 	var rows: int = 8
 	var row_h: int = n / rows
-	p.tint.resize(n * n)
-	p.height.resize(n * n)
+	p.panel.resize(n * n)
+	p.edge_ao.resize(n * n)
 	for r: int in rows:
 		var x0: int = rng.randi_range(0, 63)
 		var cuts: Array[int] = []
@@ -888,7 +909,6 @@ func _plate_panels(p: Plate) -> void:
 			x += rng.randi_range(40, 110)
 		cuts.append(x0 + n)
 		for c: int in cuts.size() - 1:
-			var shade: float = 1.0 + rng.randf_range(-1.0, 1.0) * (0.05 + 0.07 * wear)
 			for px: int in range(cuts[c], cuts[c + 1]):
 				for py: int in range(r * row_h, (r + 1) * row_h):
 					var seam: bool = px - cuts[c] < 2 or py - r * row_h < 2
@@ -898,27 +918,38 @@ func _plate_panels(p: Plate) -> void:
 						mini(px - cuts[c] - 2, cuts[c + 1] - 1 - px),
 						mini(py - r * row_h - 2, (r + 1) * row_h - 1 - py)
 					)
-					var ao: float = lerpf(SEAM_AO, 1.0, smoothstep(0.0, 4.0, float(edge)))
-					p.tint[i] = 0.72 if seam else shade * ao
-					p.height[i] = 0.0 if seam else 1.0
+					p.edge_ao[i] = lerpf(SEAM_AO, 1.0, smoothstep(0.0, 4.0, float(edge)))
+					p.panel[i] = -1 if seam else p.panels
+			p.panels += 1
 
 
+## The albedo (the look's panel shades, at ALBEDO_SIZE) and the shared roughness and normal
+## maps (neutral shades, at TEXTURE_SIZE). The panels and the grime are the same for every
+## look (SHARED_SEED), so the look's albedo lines up with the shared maps.
 func _plate_pixels(p: Plate) -> void:
 	var n: int = TEXTURE_SIZE
+	var shades: PackedFloat32Array = PackedFloat32Array()
+	var shade_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	shade_rng.seed = seed_value + 4
+	for k: int in p.panels:
+		shades.append(1.0 + shade_rng.randf_range(-1.0, 1.0) * (0.05 + 0.07 * wear))
 	var albedo: PackedByteArray = PackedByteArray()
 	var rough: PackedByteArray = PackedByteArray()
 	var bump: PackedByteArray = PackedByteArray()
 	for i: int in n * n:
+		var seam: bool = p.panel[i] < 0
+		var neutral: float = 0.72 if seam else p.edge_ao[i]
+		var tint: float = 0.72 if seam else shades[p.panel[i]] * p.edge_ao[i]
 		var dirt: float = wear * smoothstep(0.4, 0.95, 0.75 * p.blotches[i] + 0.25 * p.streaks[i])
-		var a: int = clampi(int(255.0 * p.tint[i] * (1.0 - 0.3 * dirt) / 1.06), 0, 255)
-		albedo.append_array([a, a, a])
-		rough.append(clampi(int(255.0 * (0.85 + 0.15 * dirt) * (2.0 - p.tint[i])), 0, 255))
-		bump.append(int(255.0 * p.height[i]))
+		albedo.append(clampi(int(255.0 * tint * (1.0 - 0.3 * dirt) / 1.06), 0, 255))
+		rough.append(clampi(int(255.0 * (0.85 + 0.15 * dirt) * (2.0 - neutral)), 0, 255))
+		bump.append(0 if seam else 255)
 	p.images = [
-		Image.create_from_data(n, n, false, Image.FORMAT_RGB8, albedo),
+		Image.create_from_data(n, n, false, Image.FORMAT_L8, albedo),
 		Image.create_from_data(n, n, false, Image.FORMAT_L8, rough),
 		Image.create_from_data(n, n, false, Image.FORMAT_L8, bump),
 	]
+	p.images[0].resize(ALBEDO_SIZE, ALBEDO_SIZE, Image.INTERPOLATE_LANCZOS)
 	p.images[2].convert(Image.FORMAT_RGBA8)
 	p.images[2].bump_map_to_normal_map(4.0)
 

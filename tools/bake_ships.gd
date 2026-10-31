@@ -3,7 +3,9 @@ extends SceneTree
 ## with meshes whose ambient occlusion is already in the vertex colours, saved to
 ## content/ships/baked/<look>.scn. content/ships/baked/manifest.json records, for each look,
 ## the hash of everything its bake depends on (tools/ship_builder.gd, the hull sections, the
-## look, the wear and the engine version).
+## look, the wear and the engine version). Every look shares one roughness and one normal
+## map (D317), saved once as shared_roughness.res and shared_normal.res; the manifest's
+## "shared" entry hashes their inputs.
 ##   godot --headless --path . -s res://tools/bake_ships.gd -- [--all | --check]
 ## Without a flag it bakes the stale looks, `--all` every look, `--check` bakes nothing and
 ## fails when a look is stale or a baked scene has no look (L0).
@@ -11,6 +13,9 @@ extends SceneTree
 
 const LOOKS: String = "res://content/ships/looks.json"
 const BUILDER: String = "res://tools/ship_builder.gd"
+
+const SHARED: String = "shared"
+const SHARED_FILES: PackedStringArray = ["shared_roughness.res", "shared_normal.res"]
 
 var _dir: String = ProceduralShip.BAKED_DIR
 
@@ -31,6 +36,12 @@ func _init() -> void:
 		want[key] = _hash(look, wear)
 		if manifest.get(key, "") != want[key] or not FileAccess.file_exists(_path(key)):
 			stale.append(key)
+	want[SHARED] = _shared_hash(wear)
+	var have: bool = true
+	for file: String in SHARED_FILES:
+		have = have and FileAccess.file_exists(_dir + file)
+	if manifest.get(SHARED, "") != want[SHARED] or not have:
+		stale.append(SHARED)
 	var orphans: PackedStringArray = []
 	for file: String in DirAccess.get_files_at(_dir):
 		if file.ends_with(".scn") and not want.has(file.get_basename()):
@@ -43,17 +54,33 @@ func _init() -> void:
 		print(
 			(
 				"bake_ships: %d look(s), %d stale, %d orphan(s)"
-				% [want.size(), stale.size(), orphans.size()]
+				% [want.size() - 1, stale.size(), orphans.size()]
 			)
 		)
 		quit(1 if stale.size() + orphans.size() > 0 else 0)
 		return
+	var shared: Array[ImageTexture] = []
+	if "--all" in args or SHARED in stale:
+		shared = ShipBuilder.bake_shared(wear)
+		for k: int in SHARED_FILES.size():
+			var err: Error = ResourceSaver.save(
+				shared[k], _dir + SHARED_FILES[k], ResourceSaver.FLAG_COMPRESS
+			)
+			if err != OK:
+				printerr("bake_ships: cannot save %s (%d)" % [SHARED_FILES[k], err])
+				quit(1)
+				return
+			shared[k].take_over_path(_dir + SHARED_FILES[k])
+		print("bake_ships: shared maps")
 	for look: Dictionary in spec["looks"]:
 		var key: String = str(look["name"]).to_lower()
-		if "--all" in args or key in stale:
+		if "--all" in args or key in stale or SHARED in stale:
+			if shared.is_empty():
+				for file: String in SHARED_FILES:
+					shared.append(load(_dir + file))
 			var start: int = Time.get_ticks_msec()
 			var err: Error = ResourceSaver.save(
-				ShipBuilder.bake(look, wear), _path(key), ResourceSaver.FLAG_COMPRESS
+				ShipBuilder.bake(look, wear, shared), _path(key), ResourceSaver.FLAG_COMPRESS
 			)
 			if err != OK:
 				printerr("bake_ships: cannot save %s (%d)" % [_path(key), err])
@@ -69,6 +96,14 @@ func _init() -> void:
 
 func _path(key: String) -> String:
 	return _dir + key + ".scn"
+
+
+## The hash of the shared maps' inputs: the builder, the wear and the engine version.
+func _shared_hash(wear: float) -> String:
+	var parts: PackedStringArray = [
+		FileAccess.get_file_as_string(BUILDER), str(wear), Engine.get_version_info()["string"]
+	]
+	return "\n".join(parts).sha256_text()
 
 
 func _manifest() -> Dictionary:
