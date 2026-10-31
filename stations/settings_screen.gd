@@ -567,7 +567,7 @@ func _build_general(col: VBoxContainer) -> void:
 		_add_fullscreen(col)
 
 
-## The Music row: a label, a 0-100 % slider and its value (#12, D308). Saved on close.
+## The Music row: a label, a 0-100 % slider and its value (#12, D3xx). Saved on close.
 func _build_music(col: VBoxContainer) -> void:
 	var row: HBoxContainer = HBoxContainer.new()
 	row.name = "MusicRow"

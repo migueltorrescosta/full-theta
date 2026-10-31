@@ -1,6 +1,6 @@
 class_name MusicPlayer
 extends Node
-## Low ambient music while a run is on (owner M5-Q4, D308, FT-AUD-021): CC0 tracks
+## Low ambient music while a run is on (owner M5-Q4, D3xx, FT-AUD-021): CC0 tracks
 ## (assets/music/, content/provenance.json) play one after the other on the `Music` bus,
 ## sent to Master. The bus ducks under voice: while a voice line or callout plays
 ## (`voice_active`) the music falls by DUCK_DB over ATTACK_S, and rises back over

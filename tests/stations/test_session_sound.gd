@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## SessionSound (#12, D308): sim events, refusals and button presses sound the right
+## SessionSound (#12, D3xx): sim events, refusals and button presses sound the right
 ## effects for the screen's stations, and the music follows the run and the setting.
 
 

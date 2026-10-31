@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## The ambient music's ducking and level (FT-AUD-021, D308): the bus level drops while a
+## The ambient music's ducking and level (FT-AUD-021, D3xx): the bus level drops while a
 ## voice line plays and recovers after it, and the setting scales it. No audio output
 ## is needed: the player's level is a pure function of its state.
 

@@ -22,7 +22,7 @@ var player_name: String = ""
 var last_address: String = ""
 var ui_scale: float = 1.0
 var invert_pitch: bool = false
-## Ambient music level, 0 (off) to 1 (#12, D308); the effects and voice have no slider.
+## Ambient music level, 0 (off) to 1 (#12, D3xx); the effects and voice have no slider.
 var music_volume: float = MUSIC_DEFAULT
 ## Station id -> true once its first-run tooltip was dismissed.
 var tooltips_seen: Dictionary = {}

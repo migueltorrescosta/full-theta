@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## The sound effects (FT-AUD-020, D308): which station hears which sim event, the clips
+## The sound effects (FT-AUD-020, D3xx): which station hears which sim event, the clips
 ## on their own Sfx bus, and the provenance of every shipped clip and track.
 
 const MANIFEST: String = "res://content/provenance.json"
