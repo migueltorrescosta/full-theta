@@ -13,6 +13,7 @@ extends SceneTree
 
 const LOOKS: String = "res://content/ships/looks.json"
 const BUILDER: String = "res://tools/ship_builder.gd"
+const FONT: String = "res://tools/ship_font.gd"
 
 const SHARED: String = "shared"
 const SHARED_FILES: PackedStringArray = ["shared_roughness.res", "shared_normal.res"]
@@ -101,7 +102,9 @@ func _path(key: String) -> String:
 ## The hash of the shared maps' inputs: the builder, the wear and the engine version.
 func _shared_hash(wear: float) -> String:
 	var parts: PackedStringArray = [
-		FileAccess.get_file_as_string(BUILDER), str(wear), Engine.get_version_info()["string"]
+		FileAccess.get_file_as_string(BUILDER),
+		str(wear),
+		Engine.get_version_info()["string"],
 	]
 	return "\n".join(parts).sha256_text()
 
@@ -118,6 +121,7 @@ func _manifest() -> Dictionary:
 func _hash(look: Dictionary, wear: float) -> String:
 	var parts: PackedStringArray = [
 		FileAccess.get_file_as_string(BUILDER),
+		FileAccess.get_file_as_string(FONT),
 		var_to_str(ProceduralShip.SECTIONS),
 		JSON.stringify(look, "", true),
 		str(wear),
