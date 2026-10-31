@@ -510,6 +510,7 @@
     "settings.set_reference": {"en": "Set reference plane to my current deck", "pt_PT": "Usar o convés atual como plano", "it": "Usa il ponte attuale come piano"},
     "settings.taken": {"en": "{intent} already uses that. Try another.", "pt_PT": "{intent} já usa essa. Experimenta outra.", "it": "{intent} lo usa già. Provane un altro."},
     "settings.toggle": {"en": "toggle", "pt_PT": "alternar", "it": "alterna"},
+    "settings.music": {"en": "Music", "pt_PT": "Música", "it": "Musica"},
     "settings.ui_scale": {"en": "UI scale", "pt_PT": "Escala da interface", "it": "Scala interfaccia"},
     "share.drawer": {"en": "Share", "pt_PT": "Partilhar", "it": "Condividi"},
     "shell.reconnecting": {"en": "Reconnecting...", "pt_PT": "A religar...", "it": "Riconnessione..."},
