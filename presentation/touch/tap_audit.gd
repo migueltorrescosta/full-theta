@@ -15,11 +15,12 @@ extends RefCounted
 const SLACK: float = 0.5
 
 
-## Every tap target under `root`: {kind, text, rect (viewport px), primary}.
-static func targets(root: Node) -> Array[Dictionary]:
+## Every tap target under `root`: {kind, text, rect (viewport px), primary}, leaving out
+## the subtree of `skip` (a card that looks for room beside the targets).
+static func targets(root: Node, skip: Node = null) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var vp: Rect2 = root.get_viewport().get_visible_rect()
-	_walk(root, out, vp)
+	_walk(root, out, vp, skip)
 	return out
 
 
@@ -69,7 +70,9 @@ static func gap(a: Rect2, b: Rect2) -> float:
 	return maxf(dx, dy)
 
 
-static func _walk(node: Node, out: Array[Dictionary], clip: Rect2) -> void:
+static func _walk(node: Node, out: Array[Dictionary], clip: Rect2, skip: Node = null) -> void:
+	if node == skip:
+		return
 	var c: Control = node as Control
 	var here: Rect2 = clip
 	if c != null:
@@ -90,7 +93,7 @@ static func _walk(node: Node, out: Array[Dictionary], clip: Rect2) -> void:
 	for ch: Node in node.get_children():
 		if ch is Window:
 			continue
-		_walk(ch, out, here)
+		_walk(ch, out, here, skip)
 
 
 static func _is_target(c: Control) -> bool:

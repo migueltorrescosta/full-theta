@@ -97,6 +97,7 @@ var _added: String = ""
 ## Why the server refused the last request, shown under the grid until the next change.
 var _refusal: String = ""
 var _head: HBoxContainer
+var _fullscreen: FullscreenToggle
 var _outer: VBoxContainer
 var _margin: MarginContainer
 var _diff_row: HBoxContainer
@@ -589,6 +590,8 @@ func _apply_targets(phone: bool) -> void:
 	_outer.add_theme_constant_override("separation", PHONE_GAP if phone else (3 if _short else 6))
 	for b: Node in find_children("*", "BaseButton", true, false):
 		var button: BaseButton = b as BaseButton
+		if button is FullscreenToggle:
+			continue
 		if not str(button.name).begins_with("Entry_") or button.get_parent() == _seat_row:
 			button.custom_minimum_size = Vector2.ONE * (PHONE_TARGET if phone else 0.0)
 	_grid.set_meta(&"phone", phone)
@@ -691,7 +694,7 @@ func _style_summary(short: bool, phone: bool) -> void:
 		_reparent(_coverage, _legend, 0)
 		_reparent(_teams, _seat_row, -1)
 		_reparent(_leave, _seat_row, -1)
-		for c: Control in [_join_button, _menu, _start]:
+		for c: Control in [_join_button, _menu, _start, _fullscreen]:
 			_reparent(c, _diff_row, -1)
 	else:
 		_reparent(_legend, _body, _grid.get_index() + 1)
@@ -700,6 +703,7 @@ func _style_summary(short: bool, phone: bool) -> void:
 		_reparent(_leave, _ship_tools if _phone else _ships, -1)
 		_reparent(_join_button, _head, 1)
 		_reparent(_menu, _head, 2)
+		_reparent(_fullscreen, _head, 3)
 		_reparent(_start, _outer, -1)
 	_start.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
@@ -792,6 +796,9 @@ func _build() -> void:
 	_join_button.visible = ctx.host_bind != ""
 	_menu = _button("MainMenu", tr("lobby.menu"), menu_requested.emit)
 	head.add_child(_menu)
+	# Full screen: an icon at the right of the title row, where the device offers it (D323).
+	_fullscreen = FullscreenToggle.new()
+	head.add_child(_fullscreen)
 	_ships = HFlowContainer.new()
 	_ships.name = "Ships"
 	outer.add_child(_ships)

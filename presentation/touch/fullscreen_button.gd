@@ -15,6 +15,9 @@ const POLL_FRAMES: int = 30
 ## Tests and L5 shots: 1 shows the button, 0 hides it, -1 asks the page.
 static var forced: int = -1
 
+## The page action a tap triggers: "fullscreen" enters; the top bar's toggle: "fullscreen_toggle".
+var action: String = "fullscreen"
+
 var _id: String = ""
 var _sent: Rect2 = Rect2()
 var _offered: bool = false
@@ -23,7 +26,7 @@ var _frames: int = 0
 
 func _init() -> void:
 	super()
-	text = TouchText.of(TEXT_KEY, TEXT)
+	text = _label()
 	_id = "fs%d" % get_instance_id()
 	visible = false
 
@@ -51,12 +54,17 @@ func _process(_delta: float) -> void:
 	var r: Rect2 = xf * Rect2(Vector2.ZERO, size)
 	if r != _sent:
 		_sent = r
-		TouchPage.set_action(_id, r, "fullscreen")
+		TouchPage.set_action(_id, r, action)
 
 
 func _refresh() -> void:
-	_offered = offered()
+	_offered = _is_offered()
 	visible = _offered
+
+
+## Whether this button is offered (a subclass offers itself by its own rule).
+func _is_offered() -> bool:
+	return offered()
 
 
 func _exit_tree() -> void:
@@ -72,4 +80,9 @@ func _clear() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED:
-		text = TouchText.of(TEXT_KEY, TEXT)
+		text = _label()
+
+
+## The button's text (an icon button has none).
+func _label() -> String:
+	return TouchText.of(TEXT_KEY, TEXT)

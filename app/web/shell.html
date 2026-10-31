@@ -263,7 +263,20 @@ window.ft = (function () {
     const ipad = /iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
     return !!fullscreenApi() && !/iPhone|iPod/.test(ua) && (/Android/.test(ua) || ipad) && !isFullscreen();
   };
+  // The top bar's toggle (D323): any browser with fullscreen but an iPhone's, in either state.
+  ft.fullscreenToggleOffered = function () {
+    return !!fullscreenApi() && !/iPhone|iPod/.test(navigator.userAgent);
+  };
+  ft.isFullscreen = isFullscreen;
   let fullscreenAt = 0;
+  function toggleFullscreen() {
+    if (!isFullscreen()) { goFullscreen(); return; }
+    if (Date.now() - fullscreenAt < 1000) { return; }
+    fullscreenAt = Date.now();
+    try {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } catch (e) { /* refused: the page stays as it is */ }
+  }
   function goFullscreen() {
     // One tap fires pointerup, touchend and click: act on the first.
     if (isFullscreen() || Date.now() - fullscreenAt < 1000) { return; }
@@ -302,8 +315,9 @@ window.ft = (function () {
       }
       for (const id in ft.actions) {
         const a = ft.actions[id];
-        if (x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h && a.name === 'fullscreen') {
-          goFullscreen();
+        if (x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h) {
+          if (a.name === 'fullscreen') { goFullscreen(); }
+          if (a.name === 'fullscreen_toggle') { toggleFullscreen(); }
         }
       }
     }

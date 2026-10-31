@@ -56,6 +56,8 @@ const TEXTS: Dictionary = {
 	"shield_track": "Track",
 	"range_in": "Range −",
 	"range_out": "Range +",
+	"roll_port": "‹ Roll",
+	"roll_starboard": "Roll ›",
 }
 ## The portrait banner's text (StationScreen.rotate_banner).
 const ROTATE_KEY: String = "touch.rotate_helm"
@@ -66,11 +68,12 @@ const PAGE_SHIELD: int = 1
 const PAGE_NAV: int = 2
 const PAGE_RADAR: int = 3
 const PAGE_CREW: int = 4
-## Each page's Helm buttons (intent ids; "range_in" and "range_out" step the radar).
+## Each page's Helm buttons (intent ids; "range_in" and "range_out" step the radar, the roll
+## buttons hold the roll axis).
 const PAGE_IDS: Array = [
 	["face", "align", "shield_track"],
 	[],
-	["dock", "jump", "chase_camera", "decoupled"],
+	["dock", "jump", "chase_camera", "decoupled", "roll_port", "roll_starboard"],
 	["range_in", "range_out"],
 	[],
 ]
@@ -146,6 +149,13 @@ func _button(id: String, role: RailButton.Role = RailButton.Role.PLAIN) -> RailB
 			b.pressed.connect(func() -> void: radar.zoom(-1))
 		"range_out":
 			b.pressed.connect(func() -> void: radar.zoom(1))
+		"roll_port", "roll_starboard":
+			# Roll has no stick on a phone: a held button drives the roll axis (D321).
+			b.hold = true
+			var sign_now: float = -1.0 if id == "roll_port" else 1.0
+			b.held.connect(
+				func(down: bool) -> void: touch.axis("helm_roll", sign_now if down else 0.0)
+			)
 		_:
 			touch.button(b, id)
 	if not buttons.has(id):

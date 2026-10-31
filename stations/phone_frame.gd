@@ -167,6 +167,8 @@ func show_tabs(form_now: LayoutMode.Form, alone: bool) -> void:
 		other.set_lead(null)
 	var lead: RailButton = chip if chip != null and alone and (sideways or upright) else null
 	strip.set_lead(lead)
+	# Upright the top strip is empty: it takes no room (the full-screen icon needs the width).
+	s.top_bar.tabs.visible = sideways or s.top_bar.tabs.has_content()
 	bottom_tabs.visible = upright and bottom_tabs.has_content()
 	_tabs_gap.visible = bottom_tabs.visible
 

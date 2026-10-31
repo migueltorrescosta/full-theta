@@ -1,0 +1,69 @@
+[gd_resource type="Resource" script_class="ShipDef" format=3]
+
+; The Shakedown's ship (D321): the corvette with four mounts, so every mount step of the
+; Weapons lesson has a mount to pick. The M3 run keeps the one-mount corvette.
+
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/assist.tres" id="1_w8xyr"]
+[ext_resource type="Script" path="res://content/defs/mount_def.gd" id="2_lvnny"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/mount_bow.tres" id="3_e8psk"]
+[ext_resource type="Resource" path="res://content/ships/shakedown_corvette/mount_port.tres" id="15_port"]
+[ext_resource type="Resource" path="res://content/ships/shakedown_corvette/mount_starboard.tres" id="16_stbd"]
+[ext_resource type="Resource" path="res://content/ships/shakedown_corvette/mount_dorsal.tres" id="17_dors"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/power.tres" id="4_uml83"]
+[ext_resource type="Script" path="res://content/defs/ship_def.gd" id="5_qfm7j"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/shields.tres" id="6_00f8f"]
+[ext_resource type="Script" path="res://content/defs/subsystem_def.gd" id="7_jt62l"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_engines.tres" id="8_bsty6"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_thrusters.tres" id="9_h4nev"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_weapons.tres" id="10_i8epu"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_shields.tres" id="11_x6suq"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_sensors.tres" id="12_blilf"]
+[ext_resource type="Resource" path="res://content/ships/m1_corvette/subsystem_reactor.tres" id="13_qwme3"]
+[ext_resource type="Script" path="res://content/defs/slot_def.gd" id="14_slot"]
+
+[sub_resource type="Resource" id="Resource_slot_engine"]
+script = ExtResource("14_slot")
+slot_type = &"engine"
+count = 1
+
+[sub_resource type="Resource" id="Resource_slot_utility"]
+script = ExtResource("14_slot")
+slot_type = &"utility"
+count = 1
+
+[resource]
+script = ExtResource("5_qfm7j")
+id = &"shakedown_corvette"
+display_name = "Corvette"
+mass = 50000.0
+inertia = Vector3(2000000, 2400000, 1200000)
+max_thrust_pos = Vector3(600000, 600000, 500000)
+max_thrust_neg = Vector3(600000, 600000, 1000000)
+max_torque = Vector3(3000000, 3600000, 3000000)
+propellant_capacity = 10000.0
+exhaust_velocity = 60000.0
+lever_arm = 10.0
+radius = 25.0
+hull_max = 100000000.0
+spare_parts = 20
+sensor_range = 20000.0
+identify_range = 8000.0
+repair_crews = 2
+probes = 3
+probe_speed = 500.0
+probe_range = 8000.0
+probe_parts = 4
+probe_fab_s = 30.0
+subsystem_damage_share = 0.5
+fault_hit_threshold = 1500000.0
+fault_hit_chance = 0.2
+jump_spool_s = 8.0
+jump_standoff_m = 2000.0
+jump_propellant_kg = 300.0
+jump_face_tolerance_rad = 0.1
+subsystems = Array[ExtResource("7_jt62l")]([ExtResource("8_bsty6"), ExtResource("9_h4nev"), ExtResource("10_i8epu"), ExtResource("11_x6suq"), ExtResource("12_blilf"), ExtResource("13_qwme3")])
+mounts = Array[ExtResource("2_lvnny")]([ExtResource("3_e8psk"), ExtResource("15_port"), ExtResource("16_stbd"), ExtResource("17_dors")])
+assist = ExtResource("1_w8xyr")
+power = ExtResource("4_uml83")
+shields = ExtResource("6_00f8f")
+slots = Array[ExtResource("14_slot")]([SubResource("Resource_slot_engine"), SubResource("Resource_slot_utility")])

@@ -33,6 +33,8 @@ var menu_button: RailButton = RailButton.make("☰")
 var glance: StatusGlance = StatusGlance.new()
 var tabs: PageTabs = PageTabs.new()
 var phone: bool = false
+## Full screen, an icon at the right of the bar (D323); shown where the device offers it.
+var fullscreen: FullscreenToggle = FullscreenToggle.new()
 
 var _row: HBoxContainer
 ## The rows' box: 8 px in from each edge; a phone's row starts at the top edge, so its
@@ -82,7 +84,9 @@ func _init() -> void:
 	var spacer: Control = Control.new()
 	spacer.size_flags_horizontal = SIZE_EXPAND_FILL
 	var keyed: Dictionary = {_hull: "hull", _shields: "shields", _pips: "pips_used"}
-	for c: Control in [_name, _hull, _shields, _pips, chip, _stations, spacer, _timer, sound]:
+	for c: Control in [
+		_name, _hull, _shields, _pips, chip, _stations, spacer, _timer, sound, fullscreen
+	]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
 		row.add_child(c)
 		_order.append(c)
@@ -117,11 +121,12 @@ func _init() -> void:
 	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
 	_phone_timer.add_theme_font_size_override("font_size", 14)
 	_phone_timer.add_theme_color_override("font_color", Palette.color("text"))
-	_phone_timer.custom_minimum_size.x = 48.0
+	_phone_timer.custom_minimum_size.x = 40.0
 	_phone_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	for c: Control in [menu_button, glance, tabs, _phone_timer]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
 		_phone_row.add_child(c)
+	fullscreen.name = "Fullscreen"
 
 
 ## The phone's one-row bar (design 1.2): menu, status, tabs, alert chip, timer; `height`
@@ -144,9 +149,12 @@ func set_phone(on: bool, height: float = HEIGHT) -> void:
 		_phone_row.move_child(chip, _phone_row.get_child_count() - 2)
 		chip.custom_minimum_size = size_now
 		chip.text = ""
+		fullscreen.reparent(_phone_row, false)
 	else:
 		chip.reparent(_row, false)
 		_row.move_child(chip, _order.find(chip))
+		fullscreen.reparent(_row, false)
+		_row.move_child(fullscreen, _order.find(fullscreen))
 		_shown = []
 	chip.queue_redraw()
 

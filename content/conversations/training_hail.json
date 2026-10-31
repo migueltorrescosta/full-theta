@@ -1,5 +1,5 @@
 {
-  "_comment": "The Shakedown's hail (H2, review 2): the training drone picks up so the Comms hail step can be done; it has nothing else to say and changes no intent.",
+  "_comment": "The Shakedown's hail (H2, review 2): the training drone picks up so the Comms hail and reply steps can be done; its four replies only talk (they come back to the hail), change no intent, and the last closes the channel.",
   "id": "conv.training_hail",
   "npc_role": "npc",
   "start": "n0",
@@ -7,7 +7,25 @@
     "n0": {
       "line": "npc.hail_hostile",
       "options": [
-        {"id": "o1", "text": "comms.opt.close"}
+        {
+          "id": "o1",
+          "text": "comms.opt.ask_cargo",
+          "next": "n0"
+        },
+        {
+          "id": "o2",
+          "text": "comms.opt.call_bluff",
+          "next": "n0"
+        },
+        {
+          "id": "o3",
+          "text": "comms.opt.demand_surrender",
+          "next": "n0"
+        },
+        {
+          "id": "o4",
+          "text": "comms.opt.close"
+        }
       ]
     }
   }

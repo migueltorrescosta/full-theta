@@ -27,6 +27,8 @@ const TEXTS: Dictionary = {
 	"radar": "Radar: tap a blip to select it",
 	"range": "Range − and +: zoom the radar",
 	"crew": "Requests, Ping, Mark and Share",
+	"roll_port": "Roll to port: hold",
+	"roll_starboard": "Roll to starboard: hold",
 }
 ## Callouts: [key, box in PHONE px, round]. A key with a HelmTouch button is the intent
 ## (its label is the intent's); others are TEXTS keys.
@@ -53,6 +55,8 @@ const PAGES: Array = [
 		["jump", Rect2(717, 64, 80, 48), false],
 		["chase_camera", Rect2(629, 120, 80, 48), false],
 		["decoupled", Rect2(717, 120, 80, 48), false],
+		["roll_port", Rect2(629, 176, 80, 48), false],
+		["roll_starboard", Rect2(717, 176, 80, 48), false],
 	],
 	[
 		["range", Rect2(629, 64, 168, 48), false],

@@ -22,6 +22,17 @@
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
 
+## The lesson step each station shows in a lesson shot: [intent, text].
+const LESSON_STEPS: Dictionary = {
+	"helm": ["face", "Face the drone."],
+	"weapons": ["fire", "Fire at the drone."],
+	"engineering": ["pip_add", "Add a power pip."],
+	"science": ["sci_scan", "Scan the drone."],
+	"relay": ["probe_launch", "Launch a probe."],
+	"comms": ["comms_hail", "Hail the drone."],
+	"captain": ["captain_view_2", "Show view 2 on the main screen."],
+}
+
 var view: String = "screen"
 var entry: String = "science"
 var selected: int = StationFixture.H2
@@ -67,10 +78,12 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
 	if lesson:
+		var step: Array = LESSON_STEPS.get(entry, ["face", "Face the drone."])
 		_ctx.training[entry] = {
-			"line": "shakedown.%s.face" % entry,
-			"text": "Face the drone.",
-			"example": "train.ex.face",
+			"line": "shakedown.%s.%s" % [entry, step[0]],
+			"intent": step[0],
+			"text": "%s {binding:%s}" % [step[1], step[0]],
+			"example": "train.ex." + step[0],
 			"done": false,
 		}
 	if science != "":

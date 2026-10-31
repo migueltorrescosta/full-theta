@@ -29,6 +29,21 @@ static func fullscreen_offered() -> bool:
 	return bool(JavaScriptBridge.eval("!!(window.ft && window.ft.fullscreenOffered())", true))
 
 
+## Whether the page offers the top bar's full-screen toggle: any browser with an element
+## fullscreen except an iPhone's (D323). False off the web.
+static func fullscreen_toggle_offered() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	return bool(JavaScriptBridge.eval("!!(window.ft && window.ft.fullscreenToggleOffered())", true))
+
+
+## Whether the page is fullscreen now. False off the web.
+static func is_fullscreen() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	return bool(JavaScriptBridge.eval("!!(window.ft && window.ft.isFullscreen())", true))
+
+
 ## Registers a button whose tap the page itself acts on, inside the tap's handler (the
 ## only place a browser allows fullscreen): `rect` in canvas pixels, `action` "fullscreen".
 static func set_action(id: String, rect: Rect2, action: String) -> void:

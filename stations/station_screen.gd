@@ -38,6 +38,8 @@ const TOP_BAR_HEIGHT: float = 40.0
 const TOUCH_BAR_HEIGHT: float = 52.0
 ## A phone's bar: the chip and sound button are primary targets (48 px, #28).
 const PHONE_BAR_HEIGHT: float = 56.0
+## The bar when it holds the full-screen icon (48 px and the bar's 8 px margins, D323).
+const FULLSCREEN_BAR_HEIGHT: float = 56.0
 ## Under this width the top bar takes two rows (a phone, a tablet upright).
 const COMPACT_WIDTH: float = 900.0
 ## A phone's smaller bar text fits one row down to this width.
@@ -754,6 +756,7 @@ func _build() -> void:
 	top_bar = TopBar.new()
 	top_bar.custom_minimum_size = Vector2(0, TOP_BAR_HEIGHT)
 	top_bar.alert_picked.connect(_set_alert)
+	top_bar.fullscreen.visibility_changed.connect(_relayout, CONNECT_DEFERRED)
 	rows.add_child(top_bar)
 	rotate_banner = RotateBanner.new()
 	rows.add_child(rotate_banner)
@@ -885,6 +888,9 @@ func _relayout() -> void:
 		bar = PHONE_BAR_HEIGHT
 	elif touch:
 		bar = TOUCH_BAR_HEIGHT
+	# The full-screen icon is 48 px tall: the bar makes room for it (D323).
+	if top_bar.fullscreen.visible:
+		bar = maxf(bar, FULLSCREEN_BAR_HEIGHT)
 	var two_rows: bool = size_now.x < (COMPACT_PHONE_WIDTH if phone else COMPACT_WIDTH)
 	if phone:
 		# The phone's one-row bar (design 1.2).
