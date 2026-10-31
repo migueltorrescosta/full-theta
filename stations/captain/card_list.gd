@@ -136,6 +136,17 @@ func _fit() -> void:
 	custom_minimum_size = Vector2(0, _top() + HEADER_HEIGHT + ROW_HEIGHT * maxi(_cards.size(), 1))
 
 
+## The bottom edges (local y) of the heading, the header and each row, for ScrollSnap.
+func row_bottoms() -> PackedFloat32Array:
+	var out: PackedFloat32Array = PackedFloat32Array()
+	if heading != "":
+		out.append(_top())
+	out.append(_top() + HEADER_HEIGHT)
+	for i: int in maxi(_cards.size(), 1):
+		out.append(_top() + HEADER_HEIGHT + ROW_HEIGHT * float(i + 1))
+	return out
+
+
 ## The id of the card whose row holds `pos` (local), or -1.
 func card_at(pos: Vector2) -> int:
 	var row: int = int(floorf((pos.y - _top() - HEADER_HEIGHT) / ROW_HEIGHT))

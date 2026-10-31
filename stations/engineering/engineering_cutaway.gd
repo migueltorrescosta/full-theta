@@ -29,6 +29,8 @@ const DRAG_TURN: float = 0.008
 const TURN_SLOP: float = 8.0
 ## Under this height (px) the cutaway draws no hint.
 const HINT_MIN_H: float = 220.0
+## A phone's cutaway at least this many times wider than tall puts its hint beside the hull.
+const HINT_SIDE_ASPECT: float = 1.3
 
 var panel: EngineeringPanel
 ## View angles (rad): yaw about the ship's up axis, then pitch towards the viewer; the
@@ -129,7 +131,8 @@ func token_pos(c: int) -> Vector2:
 	var touch: bool = phone()
 	if job >= 0:
 		var step: float = _token_step() if touch else TOKEN_R * 2.0 + 3.0
-		return subsystem_pos(job) + Vector2(node_r() + 6.0 + k * step, -node_r())
+		# Clear of the disc and its heat arc, rims and selection ring (up to node_r() + 8).
+		return subsystem_pos(job) + Vector2(node_r() + TOKEN_R + 8.0 + k * step, -node_r() * 0.6)
 	var bay: float = _token_step() if touch else TOKEN_R * 2.0 + 6.0
 	return Vector2(24.0 + k * bay, size.y - 54.0)
 
@@ -253,18 +256,19 @@ func _draw() -> void:
 		draw_arc(cursor, 8.0, 0.0, TAU, 16, a, 1.5)
 		draw_line(cursor + Vector2(-12, 0), cursor + Vector2(12, 0), a, 1.0)
 		draw_line(cursor + Vector2(0, -12), cursor + Vector2(0, 12), a, 1.0)
-	if hint_height() == 0.0:
+	if hint_height() == 0.0 and not hint_beside():
 		return
 	var font: Font = get_theme_default_font()
 	var fs: int = get_theme_default_font_size()
+	var box: Rect2 = hint_rect()
 	draw_multiline_string(
 		font,
-		Vector2(12, 22),
+		Vector2(12.0, 22.0) if not hint_beside() else box.position + Vector2(0.0, 14.0),
 		hint(),
 		HORIZONTAL_ALIGNMENT_LEFT,
-		size.x - 24,
+		box.size.x,
 		fs - 2,
-		3,
+		-1 if hint_beside() else 3,
 		Palette.color("text_dim")
 	)
 
@@ -331,6 +335,8 @@ func label_rects() -> Dictionary:
 	for c: int in panel.crew_count():
 		taken.append(_square(token_pos(c), TOKEN_R))
 	taken.append(_crews_rect())
+	if hint_beside():
+		taken.append(hint_rect().grow(4.0))
 	var out: Dictionary = {}
 	shortened.clear()
 	var gap: float = r + 6.0
@@ -473,13 +479,38 @@ func _scale() -> float:
 ## The room the hint takes at the top, 0 on a short cutaway (a phone upright under the
 ## banner); the hull is drawn below it, so the two never overlap (T2).
 func hint_height() -> float:
-	if size.y < HINT_MIN_H or panel == null:
+	if size.y < HINT_MIN_H or panel == null or hint_beside():
 		return 0.0
 	var fs: int = get_theme_default_font_size() - 2
 	var text: Vector2 = get_theme_default_font().get_multiline_string_size(
 		hint(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, fs, 3
 	)
 	return 16.0 + text.y + 6.0
+
+
+## True on a phone on its side, where the page is wide and short: the hint sits in the free
+## column left of the hull instead of over it, so the hull keeps the page's whole height
+## (at least MIN_SQUARE, D319).
+func hint_beside() -> bool:
+	return (
+		size.y >= HINT_MIN_H and panel != null and phone() and size.x >= HINT_SIDE_ASPECT * size.y
+	)
+
+
+## The hint's box: over the cutaway, or left of the hull when beside it.
+func hint_rect() -> Rect2:
+	var font: Font = get_theme_default_font()
+	var fs: int = get_theme_default_font_size() - 2
+	if hint_beside():
+		var w: float = maxf(size.x / 2.0 - size.y * 0.3 - 16.0, 96.0)
+		var text: Vector2 = font.get_multiline_string_size(
+			hint(), HORIZONTAL_ALIGNMENT_LEFT, w, fs, -1
+		)
+		return Rect2(Vector2(12.0, 10.0), Vector2(w, text.y))
+	var text: Vector2 = font.get_multiline_string_size(
+		hint(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24.0, fs, 3
+	)
+	return Rect2(Vector2(12.0, 10.0), Vector2(size.x - 24.0, text.y))
 
 
 ## The hint over the cutaway; a phone has no right button (#28): a finger turns it.

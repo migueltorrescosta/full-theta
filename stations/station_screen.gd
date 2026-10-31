@@ -105,6 +105,8 @@ var _dock: VBoxContainer
 var _side: BoxContainer
 var _body: BoxContainer
 var _extras: VBoxContainer
+var _side_margin: MarginContainer
+var _side_scroll: ScrollContainer
 var _blocked: bool = false
 ## The phone-landscape buttons (joint switch, share opener): at the top of the radar column
 ## or, with the column hidden, at the bottom centre of the main area.
@@ -249,6 +251,12 @@ func _show_side() -> void:
 	_sync_share()
 	_place_phone_bar()
 	_place_training(not phone_form and _side.visible)
+
+
+## The side column scrolls in whole rows: the room under the last row that fits is a margin.
+func _snap_side() -> void:
+	if _side_margin != null and is_inside_tree():
+		ScrollSnap.fit(_side_scroll, _side_margin, _extras)
 
 
 ## The Shakedown card sits at the top of the side column when there is one (it then covers
@@ -797,11 +805,19 @@ func _build() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# A wide bar shows at a glance that the column scrolls.
 	scroll.get_v_scroll_bar().custom_minimum_size.x = SCROLL_BAR_W
-	_side.add_child(scroll)
+	# The margin under the scroll makes its last visible row whole at rest (_snap_side).
+	_side_margin = MarginContainer.new()
+	_side_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_side_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_side_margin.add_child(scroll)
+	_side.add_child(_side_margin)
+	_side_scroll = scroll
 	_extras = VBoxContainer.new()
 	_extras.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_extras.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_extras)
+	scroll.resized.connect(_snap_side.call_deferred)
+	_extras.minimum_size_changed.connect(_snap_side.call_deferred)
 	# Upright on a phone the column sits under the panel's thumb controls: keep 8 px.
 	_extras_pad = Control.new()
 	_extras_pad.custom_minimum_size.y = UiTheme.TOUCH_GAP / 2.0

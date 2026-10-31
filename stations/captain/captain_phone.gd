@@ -73,6 +73,7 @@ func _init(owner_panel: CaptainPanel = null, is_upright: bool = false) -> void:
 		box.add_child(scroll)
 		stage.add_child(box)
 		SheetCover.register(box)
+		box.visibility_changed.connect(_sync_cover)
 	requests.name = "Requests"
 	card_box.name = "Cards"
 	card_box.gui_input.connect(_on_cards_input)
@@ -115,7 +116,12 @@ func place(reserve: float) -> void:
 		if box.position != r.position or box.size != r.size:
 			box.position = r.position
 			box.size = r.size
-	# A shown list covers the mirror's radar (its right side, or all of it upright): hide it.
+	_sync_cover()
+
+
+## A shown list covers the mirror's radar (its right side, or all of it upright): hide the
+## radar then, and only then (the Screen page shows it).
+func _sync_cover() -> void:
 	if panel != null and panel.mirror != null:
 		panel.mirror.radar_covered = requests.is_visible_in_tree() or card_box.is_visible_in_tree()
 

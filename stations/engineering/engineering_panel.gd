@@ -152,7 +152,7 @@ func _setup() -> void:
 	# Scrolls when the lists don't fit (they sit under the cutaway when narrow).
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	# The margin under the scroll makes its last visible row whole at rest (_snap_lists).
 	_lists_margin = MarginContainer.new()
 	_lists_margin.add_child(scroll)

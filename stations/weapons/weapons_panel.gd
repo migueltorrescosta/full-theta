@@ -919,6 +919,8 @@ func _draw_phone_lines(font: Font) -> void:
 
 func _draw_arc_warning(font: Font, arc: String) -> void:
 	var r: Rect2 = arc_warning_rect(font, arc)
+	# On a dim backing: a star in the narrow space after the colon read as "arc:·turn".
+	_overlay.draw_rect(r.grow(3.0), Color(Palette.color("background"), 0.8))
 	_text(font, r.position + Vector2(0, FONT_SIZE), arc, Palette.color("warn"))
 
 

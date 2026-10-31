@@ -37,8 +37,9 @@ const CHASE_LEVEL_RATE: float = 0.6
 const FOV_DEG: float = 70.0
 const RADAR_SHARE: float = 0.4
 const RAIL_HEIGHT: float = 30.0
-## Under this height (px) the radar under the view would be a strip: it hides (D319); the
-## tactical view keeps it, since the radar is the view.
+## Under this height (px) the radar under a viewer's view would be a strip: it hides (D319);
+## the tactical view keeps it, since the radar is the view, and so does the Captain's mirror,
+## whose radar strip is part of its Screen page.
 const RADAR_MIN_H: float = 180.0
 ## A phone on its side puts the radar beside the view when the panel is this much wider than
 ## tall (#28).
@@ -50,6 +51,13 @@ const TARGET_STANDOFF_M: float = 150.0
 ## Contact models in the target view are drawn at the ships' real size (Helm's scale), so
 ## the target fills a good part of the view; elsewhere the main screen draws them small.
 const TARGET_SCALE: float = 9.0
+## The fill light: dim in the forward and chase views; in the target view brighter, turned
+## with the camera.
+const RIM_ENERGY: float = 0.9
+const RIM_ROTATION: Vector3 = Vector3(30.0, 210.0, 0.0)
+const TARGET_RIM_ENERGY: float = 2.0
+## The baked ship's half length (m) at scale 1.
+const HULL_HALF_M: float = 2.7
 ## The pinged card's share of the screen width, and its font size.
 const CARD_SHARE: float = 0.38
 const CARD_FONT: int = 20
@@ -130,7 +138,7 @@ func _setup() -> void:
 	view.add_child(_viewport)
 	_space = SpaceView.new()
 	_space.near_only = true
-	_space.rim.light_energy = 0.9
+	_space.rim.light_energy = RIM_ENERGY
 	_viewport.add_child(_space)
 	camera = _space.camera
 	_overlay = Control.new()
@@ -180,6 +188,8 @@ func update_view(delta: float) -> void:
 		_space.show_id = -1
 		_space.ship_scale = 1.0
 		if view_id != MainScreen.View.TARGET or not _place_target_camera():
+			_space.rim.light_energy = RIM_ENERGY
+			_space.rim.rotation_degrees = RIM_ROTATION
 			_place_camera(ship, delta)
 		_space.sync_ships(ctx)
 	radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
@@ -227,7 +237,8 @@ func _place_radar() -> void:
 	radar.custom_minimum_size.x = size.y if beside else 0.0
 	var room: float = (size.y - RAIL_HEIGHT) * RADAR_SHARE
 	radar.visible = (
-		not radar_covered and (beside or view_id == MainScreen.View.TACTICAL or room >= RADAR_MIN_H)
+		not radar_covered
+		and (beside or interactive or view_id == MainScreen.View.TACTICAL or room >= RADAR_MIN_H)
 	)
 
 
@@ -248,6 +259,13 @@ func _place_target_camera() -> bool:
 	var up: Vector3 = Vector3.UP if absf(back.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
 	var look: Basis = Basis.looking_at((at - eye).normalized(), up)
 	_space.place_camera(Transform3D(look, eye), ComfortCamera.fov_deg(ctx.settings, FOV_DEG))
+	# The fill light follows the camera, from its upper left, so the face turned to the
+	# viewer is always the lit one (a fixed light left it dark for half the bearings).
+	_space.rim.light_energy = TARGET_RIM_ENERGY
+	_space.rim.transform = Transform3D(
+		look * Basis(Vector3.UP, deg_to_rad(-30.0)) * Basis(Vector3.RIGHT, deg_to_rad(-25.0)),
+		Vector3.ZERO
+	)
 	if _own != null:
 		_own.visible = false
 	return true
@@ -359,11 +377,18 @@ func _draw_overlay() -> void:
 			"contact":
 				_bracket(p, 14.0, col, ctx.crew.is_selected(it["kind"], it["id"]))
 				var chip: String = ChipText.chip(it["label"], it["local"])
-				_text(font, p + Vector2(18.0, -6.0), chip, col)
+				if view_id == MainScreen.View.TARGET and it["id"] == _target_item().get("id", -1):
+					# The target's hull fills the middle: its label sits under it.
+					var w: float = (
+						font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+					)
+					_text(font, p + Vector2(-w / 2.0, _hull_px() * 0.6 + 14.0), chip, col)
+				else:
+					_label(font, p, chip, col)
 			"mark":
 				var pts: PackedVector2Array = Palette.shape_points("diamond", p, 14.0)
 				_overlay.draw_polyline(pts, col, 3.0, true)
-				_text(font, p + Vector2(18.0, -6.0), it["label"], col)
+				_label(font, p, it["label"], col)
 		if pulse > 0.0:
 			var ping: Color = Palette.color("ping")
 			ping.a = pulse
@@ -378,6 +403,13 @@ func _draw_card() -> void:
 	var w: float = size.x * CARD_SHARE
 	var rect: Rect2 = Rect2(size.x - w - 24.0, 24.0 + top_reserve, w, CARD_FONT * 6.0)
 	CardList.draw_card(_card_layer, rect, card, CARD_FONT)
+
+
+## The target hull's half length on screen (px): TARGET_SCALE times the model's half length.
+func _hull_px() -> float:
+	var at: Vector3 = _target_item().get("world", Vector3.ZERO)
+	var side: Vector3 = camera.global_basis.x * (HULL_HALF_M * TARGET_SCALE)
+	return absf(camera.unproject_position(at + side).x - camera.unproject_position(at).x)
 
 
 func _bracket(p: Vector2, r: float, col: Color, selected: bool) -> void:
@@ -427,6 +459,19 @@ func _draw_rail() -> void:
 			_rail.draw_line(
 				Vector2(x - 14.0, 6.0), Vector2(x - 14.0, _rail.size.y - 6.0), Palette.color("line")
 			)
+
+
+## A marker's label: right of the marker, else left of it when an opaque list would cut the
+## right one (D319).
+func _label(font: Font, p: Vector2, text: String, col: Color) -> void:
+	var at: Vector2 = p + Vector2(18.0, -6.0)
+	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
+	var box: Rect2 = Rect2(at, Vector2(w, font.get_height(FONT_SIZE)))
+	if SheetCover.touches(box, SheetCover.over(_overlay)):
+		var left: Vector2 = Vector2(p.x - 18.0 - w, at.y)
+		if left.x >= 0.0:
+			at = left
+	_text(font, at, text, col)
 
 
 func _text(font: Font, at: Vector2, text: String, col: Color) -> void:

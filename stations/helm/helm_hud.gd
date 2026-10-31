@@ -41,7 +41,7 @@ const PHONE_BAR_W: float = 100.0
 const TIGHT_BAR_W: float = 60.0
 ## A label with no clear spot may cover up to this share of its area of something else.
 const SLIGHT: float = 0.1
-## A marker's label sits within this distance (px) of the marker (D319).
+## A marker's label sits within this distance (px on screen) of the marker (D319).
 const LABEL_REACH: float = 48.0
 
 var panel: HelmPanel
@@ -382,7 +382,7 @@ func thrust_rect() -> Rect2:
 	)
 	# A phone's view too short for it over the compass (a joint view under the view-top row
 	# and the partner card): no cross; the read-out still gives the speed.
-	if touch_layout() and _cross_right() and compass_boxes().any(r.intersects):
+	if touch_layout() and _cross_right() and compass_boxes()[0].intersects(r):
 		return Rect2()
 	return r
 
@@ -491,9 +491,9 @@ func _covers_something(box: Rect2) -> bool:
 ## within LABEL_REACH of it, clear of the marker, of `reserved()` and of this frame's other
 ## markers and labels; with none clear, the spot within reach that covers least. The label
 ## always stays inside the view.
-func label_rect(
-	font: Font, text: String, p: Vector2, r: float, reach: float = LABEL_REACH
-) -> Rect2:
+func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -1.0) -> Rect2:
+	if reach < 0.0:
+		reach = _label_reach()
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 	var h: float = font.get_height(FONT_SIZE)
 	var right: Rect2 = Rect2(p + Vector2(r + 6.0, 5.0 - font.get_ascent(FONT_SIZE)), Vector2(w, h))
@@ -570,6 +570,12 @@ func label_rect(
 			best_d = t.get_center().distance_to(p)
 			best = t
 	return best if best_d < INF else least
+
+
+## LABEL_REACH in this HUD's units: the screen px of the rule shrink with a UI scale.
+func _label_reach() -> float:
+	var scale: float = get_window().content_scale_factor if is_inside_tree() else 1.0
+	return LABEL_REACH / maxf(scale, 1.0)
 
 
 ## The distance (px) from `p` to the nearest point of `box`.
@@ -711,13 +717,24 @@ func arrow_tip(tip: Vector2) -> Vector2:
 	return best
 
 
-## The target compass's disc and the chip under it.
+## The target compass's disc and its chip, which on a phone sits on the side of the disc the
+## selection's dot is on, so the chip stays near the dot (D319).
 func compass_boxes() -> Array[Rect2]:
 	var c: Vector2 = _compass_centre()
+	var chip_y: float = -COMPASS_R - 24.0 if _chip_above() else COMPASS_R
 	return [
 		Rect2(c - Vector2(COMPASS_R, COMPASS_R), Vector2(2.0, 2.0) * COMPASS_R),
-		Rect2(c + Vector2(-2.0 * COMPASS_R, COMPASS_R), Vector2(4.0 * COMPASS_R, 24.0)),
+		Rect2(c + Vector2(-2.0 * COMPASS_R, chip_y), Vector2(4.0 * COMPASS_R, 24.0)),
 	]
+
+
+## True when, on a phone, the selection's compass dot is in the disc's upper half: its chip
+## goes above (the desktop has no room there: the reticle's caption).
+func _chip_above() -> bool:
+	if not touch_layout():
+		return false
+	var local: Variant = panel.ctx.selection_local()
+	return local is Vector3 and compass_point(local, COMPASS_R - 6.0).y < 0.0
 
 
 ## An off-screen item's arrow: its direction on the view and its tip on the edge.
@@ -778,10 +795,11 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 			draw_arc(p, 5.0, 0.0, TAU, 16, col, 2.0)
 		label = ChipText.chip(selection_label(), local)
 	var w: float = 4.0 * COMPASS_R
+	var chip_dy: float = -COMPASS_R - 8.0 if _chip_above() else COMPASS_R + 18.0
 	Palette.draw_outlined(
 		self,
 		font,
-		c + Vector2(-w / 2.0, COMPASS_R + 18.0),
+		c + Vector2(-w / 2.0, chip_dy),
 		label,
 		SMALL,
 		Palette.color("text"),

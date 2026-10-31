@@ -353,3 +353,216 @@ func test_a_short_viewer_hides_its_radar_strip() -> void:
 	viewer = short.focused_panel() as ViewerPanel
 	assert_bool(viewer.radar.visible).is_false()
 	_drop(short)
+
+
+## Round 5 fixes (full-theta #12): each rule below failed on a baseline of round 4.
+
+
+# FT: FT-STN-001
+func test_the_captain_phone_shows_its_radar_except_under_a_list() -> void:
+	for layout: Array in [LAYOUTS[5], LAYOUTS[6]]:
+		var s: StationScreen = await _screen(layout, "captain")
+		var cap: CaptainPanel = s.focused_panel() as CaptainPanel
+		var where: String = "%s captain" % [layout[0]]
+		(
+			assert_bool(cap.mirror.radar.is_visible_in_tree())
+			. override_failure_message(where + ": radar hidden on the Screen page")
+			. is_true()
+		)
+		for page: int in [1, 2]:
+			cap.pages.current = page
+			for i: int in 3:
+				await get_tree().process_frame
+			(
+				assert_bool(cap.mirror.radar.is_visible_in_tree())
+				. override_failure_message("%s page %d: radar under a list" % [where, page])
+				. is_false()
+			)
+		cap.pages.current = 0
+		for i: int in 3:
+			await get_tree().process_frame
+		(
+			assert_bool(cap.mirror.radar.is_visible_in_tree())
+			. override_failure_message(where + ": radar not back on the Screen page")
+			. is_true()
+		)
+		_drop(s)
+
+
+# FT: FT-STN-004
+func test_a_toast_leaves_the_bars_divider() -> void:
+	for layout: Array in [LAYOUTS[0], LAYOUTS[1], LAYOUTS[2]]:
+		var s: StationScreen = await _screen(layout, "engineering")
+		s.toasts.push("Weapons fault", "warn", s.ctx.now_ms())
+		for i: int in 3:
+			await get_tree().process_frame
+		var box: Rect2 = s.toasts.get_global_rect()
+		var bar: Rect2 = s.top_bar.get_global_rect()
+		(
+			assert_float(box.end.y)
+			. override_failure_message(
+				"%s: toast %s covers the divider of %s" % [layout[0], box, bar]
+			)
+			. is_less_equal(bar.end.y - 1.0)
+		)
+		_drop(s)
+
+
+# FT: FT-ENG-001
+func test_the_faults_scrollbar_shows_only_when_the_list_overflows() -> void:
+	var overflowed: int = 0
+	for layout: Array in [LAYOUTS[0], LAYOUTS[1], LAYOUTS[2]]:
+		for entry: String in ["engineering", "systems", "logistics"]:
+			var s: StationScreen = await _screen(layout, entry)
+			var panel: EngineeringPanel = s.panels[0] as EngineeringPanel
+			var scroll: ScrollContainer = panel._lists_scroll
+			var over: bool = panel._lists.get_combined_minimum_size().y > scroll.size.y
+			overflowed += int(over)
+			(
+				assert_bool(scroll.get_v_scroll_bar().visible)
+				. override_failure_message(
+					(
+						"%s %s: scrollbar %s with overflow %s"
+						% [layout[0], entry, scroll.get_v_scroll_bar().visible, over]
+					)
+				)
+				. is_equal(over)
+			)
+			_drop(s)
+	assert_int(overflowed).is_greater(0)
+
+
+# FT: FT-STN-002
+func test_relay_boxes_show_their_headings_and_cut_no_row_at_150_percent() -> void:
+	var s: StationScreen = await _screen(LAYOUTS[2], "relay")
+	var hud: RelayHud = (s.focused_panel() as RelayPanel).hud
+	assert_bool(hud._inbox_heading.is_visible_in_tree()).is_true()
+	assert_str(hud._inbox_heading.text).starts_with("INBOX")
+	var view: Rect2 = hud._left_scroll.get_global_rect()
+	for b: Node in hud._contacts.get_children() + hud._marks.get_children():
+		var r: Rect2 = (b as Control).get_global_rect()
+		if view.intersects(r):
+			(
+				assert_bool(view.grow(0.5).encloses(r))
+				. override_failure_message("row %s cut by the list view %s" % [r, view])
+				. is_true()
+			)
+	_drop(s)
+	# Ops: the side column ends under a whole row, at a station that scrolls it.
+	var o: StationScreen = await _screen(LAYOUTS[1], "ops")
+	var scroll: ScrollContainer = o._side_scroll
+	for c: Node in o._extras.find_children("*", "CardList", true, false):
+		var list: CardList = c as CardList
+		if list.is_visible_in_tree():
+			var top: float = list.get_global_rect().position.y
+			var view_end: float = scroll.get_global_rect().end.y
+			for edge: float in list.row_bottoms():
+				if top + edge > view_end and top + edge - view_end < 40.0:
+					(
+						assert_bool(top + edge <= view_end + 0.5)
+						. override_failure_message(
+							"a card row is cut by the column: %s past %s" % [top + edge, view_end]
+						)
+						. is_true()
+					)
+	_drop(o)
+
+
+# FT: FT-HLM-003
+func test_the_helm_site_label_and_the_phone_compass_chip_stay_near_their_marker() -> void:
+	var s: StationScreen = await _screen(LAYOUTS[2], "helm")
+	var hud: HelmHud = (s.focused_panel() as HelmPanel).hud
+	assert_float(hud._label_reach()).is_equal_approx(32.0, 0.01)
+	var font: Font = hud.get_theme_default_font()
+	var inside: Rect2 = Rect2(Vector2.ZERO, hud.size)
+	for fx: float in [0.1, 0.5, 0.9]:
+		for fy: float in [0.2, 0.5, 0.8]:
+			var at: Vector2 = hud.size * Vector2(fx, fy)
+			var box: Rect2 = hud.label_rect(font, "Kappa 4.7 km", at, 10.0)
+			if inside.encloses(box):
+				assert_float(HelmHud._gap(box, at)).is_less_equal(32.0 + 0.5)
+	_drop(s)
+	var p: StationScreen = await _screen(LAYOUTS[6], "helm")
+	var phud: HelmHud = (p.focused_panel() as HelmPanel).hud
+	var ids: Array = p.ctx.interp.contact_ids()
+	assert_bool(ids.is_empty()).is_false()
+	for id: int in ids:
+		p.ctx.crew.select("contact", id)
+		for i: int in 2:
+			await get_tree().process_frame
+		var local: Variant = p.ctx.selection_local()
+		if not local is Vector3:
+			continue
+		var dot: Vector2 = (
+			phud._compass_centre() + HelmHud.compass_point(local, HelmHud.COMPASS_R - 6.0)
+		)
+		var chip: Rect2 = phud.compass_boxes()[1]
+		(
+			assert_float(HelmHud._gap(chip, dot))
+			. override_failure_message(
+				"contact %d: compass chip %s far from its dot %s" % [id, chip, dot]
+			)
+			. is_less_equal(48.0)
+		)
+	_drop(p)
+
+
+# FT: FT-ENG-001
+func test_the_cutaway_keeps_200_px_and_no_crew_token_sits_on_a_disc() -> void:
+	for layout: Array in [LAYOUTS[1], LAYOUTS[2], LAYOUTS[5]]:
+		var s: StationScreen = await _screen(layout, "engineering")
+		var panel: EngineeringPanel = s.focused_panel() as EngineeringPanel
+		if LayoutMode.is_phone(s.form):
+			panel.pages.current = 1
+			for i: int in 3:
+				await get_tree().process_frame
+		var cut: EngineeringCutaway = panel.cutaway
+		var where: String = "%s" % [layout[0]]
+		var area: Vector2 = Vector2(cut.size.x, cut.size.y - cut.hint_height())
+		(
+			assert_bool(area.x >= 199.0 and area.y >= 199.0)
+			. override_failure_message("%s: area %s" % [where, area])
+			. is_true()
+		)
+		for c: int in panel.crew_count():
+			if panel.crew_job(c) < 0:
+				continue
+			for i: int in panel.count():
+				(
+					assert_float(cut.token_pos(c).distance_to(cut.subsystem_pos(i)))
+					. override_failure_message("%s: token %d on disc %d" % [where, c, i])
+					. is_greater_equal(cut.node_r() + EngineeringCutaway.TOKEN_R)
+				)
+		_drop(s)
+
+
+# FT: FT-STN-010
+func test_crew_page_words_fit_their_buttons_and_no_row_is_cut() -> void:
+	var s: StationScreen = await _screen(LAYOUTS[5], "relay")
+	var relay: RelayPanel = s.focused_panel() as RelayPanel
+	relay.pages.current = 4
+	for i: int in 4:
+		await get_tree().process_frame
+	var crew: CrewPage = relay.phone.crew
+	var font: Font = crew.get_theme_default_font()
+	var view: Rect2 = crew.get_global_rect()
+	for b: Node in crew.grid.get_children():
+		var button: RailButton = b as RailButton
+		var fs: int = button.get_theme_font_size("font_size")
+		var room: float = button.size.x - button.get_theme_stylebox("normal").get_minimum_size().x
+		for word: String in button.text.split(" ", false):
+			(
+				assert_float(font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+				. override_failure_message("'%s' wider than its button (%s)" % [word, room])
+				. is_less_equal(room)
+			)
+		var r: Rect2 = button.get_global_rect()
+		if view.intersects(r):
+			(
+				assert_bool(view.grow(0.5).encloses(r))
+				. override_failure_message(
+					"button '%s' %s cut by the page %s" % [button.text, r, view]
+				)
+				. is_true()
+			)
+	_drop(s)

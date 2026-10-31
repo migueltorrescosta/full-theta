@@ -250,15 +250,22 @@ static func _fill(
 
 ## The box (global coordinates) of the bar's status text, which a toast replaces: the
 ## phone's glance; else the ship name and the status up to the alert chip (the status row
-## alone when it sits on the second row). It holds no control.
+## alone when it sits on the second row), above the bar's divider line. It holds no control.
 func status_rect() -> Rect2:
+	var box: Rect2
 	if phone:
-		return glance.get_global_rect()
-	if _compact:
-		return _row2.get_global_rect()
-	var row: Rect2 = _row.get_global_rect()
-	var left: float = _name.get_global_rect().position.x
-	return Rect2(left, row.position.y, chip.get_global_rect().position.x - 8.0 - left, row.size.y)
+		box = glance.get_global_rect()
+	elif _compact:
+		box = _row2.get_global_rect()
+	else:
+		var row: Rect2 = _row.get_global_rect()
+		var left: float = _name.get_global_rect().position.x
+		box = Rect2(
+			left, row.position.y, chip.get_global_rect().position.x - 8.0 - left, row.size.y
+		)
+	# The bar keeps its divider line along the bottom edge.
+	var bottom: float = get_global_rect().end.y - 1.0
+	return box.intersection(Rect2(box.position, Vector2(box.size.x, bottom - box.position.y)))
 
 
 ## Opens the alert picker (Alt+A cycles instead; this is the chip click). Does nothing
