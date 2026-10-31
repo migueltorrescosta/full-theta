@@ -14,7 +14,8 @@ packages were made from). For each package the inspection checks:
   language's prerendered clips (client and host packs), the web pack none: the web
   export has a voice-<lang>.pack per release language instead (voice_pack.py, D294);
 - the patched web shell and index.js (D108), voice configs the bundled Piper
-  accepts (D144), the macOS helper's rpath (D140);
+  accepts (D144), the macOS helper's rpath (D140) and the ad-hoc signatures of the macOS app and
+  helper (D308);
 - the GPL-3.0 text, SOURCE.md naming the Piper and eSpeak NG versions, BUILD.json.
 
 Then it checks that DIR holds exactly the expected assets, each listed in
@@ -26,6 +27,7 @@ import argparse
 import hashlib
 import json
 import re
+import struct
 import sys
 import tarfile
 import zipfile
@@ -105,6 +107,31 @@ class Archive:
 
     def top_level(self) -> set[str]:
         return {m.split("/")[0] for m in self.members}
+
+
+LC_CODE_SIGNATURE = 0x1D
+
+
+def macho_signed(data: bytes) -> bool | None:
+    """Whether every slice of a Mach-O file has an LC_CODE_SIGNATURE load command
+    (readable without macOS); None when `data` is not a Mach-O file."""
+    if data[:4] == b"\xca\xfe\xba\xbe":  # fat: big-endian header, 20-byte arch entries
+        (n,) = struct.unpack(">I", data[4:8])
+        slices = [struct.unpack(">5I", data[8 + 20 * i : 28 + 20 * i])[2] for i in range(n)]
+        parts = [macho_signed(data[off:]) for off in slices]
+        return bool(parts) and all(parts)
+    if data[:4] not in (b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe"):  # little-endian 64/32-bit
+        return None
+    ncmds = struct.unpack("<I", data[16:20])[0]
+    pos = 32 if data[:4] == b"\xcf\xfa\xed\xfe" else 28
+    for _ in range(ncmds):
+        cmd, size = struct.unpack("<II", data[pos : pos + 8])
+        if cmd == LC_CODE_SIGNATURE:
+            return True
+        if size < 8:
+            return False
+        pos += size
+    return False
 
 
 def tree(folder: Path) -> set[str]:
@@ -295,6 +322,7 @@ class Inspector:
             | {f"{c}/Resources/piper/{f}" for f in espeak}
             | {f"{c}/Resources/piper/voices/{f}" for f in self.voice_files}
             | {f"{c}/Resources/web/{f}" for f in tree(exports / "web")}
+            | {f"{c}/_CodeSignature/CodeResources"}  # the ad-hoc seal (D308)
         )
         app = {m for m in a.members if m.startswith(f"{package.APP}/")}
         self.same(where, f"{package.APP}/", app, expected)
@@ -307,6 +335,10 @@ class Inspector:
         if a.has(helper):
             # D140: the helper finds its dylibs through an @executable_path rpath.
             self.check(b"@executable_path" in a.read(helper), where, "Piper helper has no rpath")
+        # D308, FT-ARC-017: the app and the Piper helper (its program and dylibs) are signed.
+        for rel in (f"{c}/MacOS/Full Theta", *(f"{c}/Helpers/piper/{f}" for f in ("piper", *package.MAC_LIBS))):
+            if a.has(rel):
+                self.check(macho_signed(a.read(rel)) is True, where, f"{rel} is not signed")
         self.voices_in(a, f"{c}/Resources/piper/voices", where)
         self.web(a, f"{c}/Resources/web", where, tree(exports / "web"))
         self.licences(a, where)

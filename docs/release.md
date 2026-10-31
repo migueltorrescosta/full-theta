@@ -5,19 +5,12 @@ A release is a set of packages for Linux, Windows and macOS, built from one tagg
 ## Cutting a release
 
 1. Pick the release commit on `main`. On fugaku, run `tools/gate.sh all` on it; `l6` must pass (FT-GEN-012, FT-TST-019). Record the output in the release PR or the owner issue.
-2. The owner approves in #13 (Windows smoke test, macOS signing). Only then:
+2. The owner approves in #13 (Windows and macOS smoke tests). Only then:
    ```bash
    git tag -a v0.1.0 -m "Full Theta v0.1.0" <commit> && git push origin v0.1.0
    ```
 3. The workflow's `package` job builds and inspects the packages with a read-only token. Its `draft` job, the only one that can write and which runs no repository code, drafts a GitHub release with the packages, `SHA256SUMS`, the source archives and notes filled from `.github/release-notes.md` (`tools/release/notes.py`). Nothing is public until the owner publishes the draft.
-4. The owner edits the draft's Changes section and ticks the checks. Next, the owner replaces the unsigned macOS zip with the signed one from #13 under the same name, and regenerates the checksums and the Downloads list:
-   ```bash
-   gh release download v0.1.0 -D rel && cp <signed zip> rel/full-theta-v0.1.0-macos.zip
-   (cd rel && sha256sum full-theta-* piper-* espeak-ng-* >SHA256SUMS)
-   gh release upload v0.1.0 rel/full-theta-v0.1.0-macos.zip rel/SHA256SUMS --clobber
-   uv run --project tools python tools/release/notes.py --version v0.1.0 --commit <commit> rel
-   ```
-   The last command prints the notes with the new Downloads list; paste that section into the draft. Then the owner publishes it.
+4. The owner edits the draft's Changes section and ticks the checks. Then the owner publishes it.
 
 A tag whose packages fail inspection fails the workflow. Delete the tag, fix, and tag again.
 
@@ -103,10 +96,10 @@ The 10 s join budget on a phone (S3 took 12.2 s, mostly engine start-up) is the 
 
 ## macOS
 
-The macOS package is unsigned (FT-ARC-017). The owner signs and notarises the app and its Piper helper in #13. `rhasspy/piper` 2023.11.14-2's macOS archives ship without their libraries, and both are x86_64. The package therefore takes `piper` from the x64 archive and the dylibs from `piper-phonemize` 2023.11.14-4, and adds an `@executable_path` rpath with `llvm-install-name-tool` (D140). On Apple silicon, Piper runs under Rosetta 2. Nothing on fugaku can run it, so the first check on a Mac (#13) must synthesise a line: `Contents/Helpers/piper/piper --model …/voices/en_GB-cori-medium/en_GB-cori-medium.onnx --espeak_data …/espeak-ng-data --output_file /tmp/a.wav <<< "Hello"`. For a local test before signing, `codesign --force --deep -s - "Full Theta.app"` ad-hoc signs the bundle.
+The macOS package is ad-hoc signed and not notarised, and the Windows package is unsigned (D308, FT-ARC-017). `package.py` signs inside out with `rcodesign sign` (apple-codesign, pinned in `tools/release/piper.json` and checked by SHA-256 like Piper): the helper's three dylibs and `piper` first, then `Full Theta.app`, so the bundle's seal covers them. It needs no Mac and no key. The inspection checks that the app, `piper` and the dylibs each carry an `LC_CODE_SIGNATURE`, and that `_CodeSignature/CodeResources` exists. Whether macOS accepts the signature is the owner's check on a Mac (#13). The release notes tell users to open the app with right-click, Open (or Privacy & Security, Open Anyway) and Windows users to take More info, Run anyway. Notarisation needs a paid Apple developer account and stays deferred; revisit it when there are users beyond the owner's group. `rhasspy/piper` 2023.11.14-2's macOS archives ship without their libraries, and both are x86_64. The package therefore takes `piper` from the x64 archive and the dylibs from `piper-phonemize` 2023.11.14-4, and adds an `@executable_path` rpath with `llvm-install-name-tool` (D140). On Apple silicon, Piper runs under Rosetta 2. Nothing on fugaku can run it, so the first check on a Mac (#13) must synthesise a line: `Contents/Helpers/piper/piper --model …/voices/en_GB-cori-medium/en_GB-cori-medium.onnx --espeak_data …/espeak-ng-data --output_file /tmp/a.wav <<< "Hello"`.
 
 ## Owner smoke tests (#13)
 
 - **Windows:** unzip on a Windows PC and run `full-theta.exe`. Host a session and open the host's address on a tablet; the page must load. One spoken line must play.
-- **macOS:** after signing, open the app and host a session. The tablet page must load, and the Piper helper must speak, through Rosetta on Apple silicon.
+- **macOS:** open the app with Open Anyway and host a session. The tablet page must load, and the Piper helper must speak, through Rosetta on Apple silicon.
 - **Linux:** L6 covers it on fugaku. An owner run on another distribution is welcome.

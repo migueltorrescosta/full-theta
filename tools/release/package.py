@@ -8,7 +8,8 @@ windows/full-theta.exe, macos/full-theta.zip and web/ (finished by
 web_patch.py). Each package gets the game, the web export, Piper with the
 release voices (tools/tts/voices.json "release") and the licence material:
 LICENSE (GPL-3.0), licenses/, SOURCE.md (source link and offer naming the
-Piper and eSpeak NG versions) and BUILD.json. The third-party sources go next
+Piper and eSpeak NG versions) and BUILD.json. The macOS app and its Piper helper are ad-hoc signed (D308); Windows and Linux
+are unsigned. The third-party sources go next
 to the packages as release assets, and SHA256SUMS lists every asset. Layout:
 docs/release.md; inspection: inspect_packages.py.
 """
@@ -283,6 +284,33 @@ class Writer:
         (self.zip or self.tar).close()
 
 
+class DirWriter:
+    """Writer's interface onto a folder, for a package that is signed before it
+    is zipped. Keeps exec bits."""
+
+    def __init__(self, root: Path):
+        self.root = root
+
+    def add_bytes(self, rel: str, data: bytes, mode: int = 0o644) -> None:
+        path = self.root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        path.chmod(mode & 0o777)
+
+    def add_file(self, rel: str, path: Path) -> None:
+        mode = 0o755 if path.stat().st_mode & 0o111 else 0o644
+        self.add_bytes(rel, path.read_bytes(), mode)
+
+    def add_tree(self, rel: str, folder: Path) -> None:
+        for p in sorted(folder.rglob("*")):
+            if p.is_file() or p.is_symlink():
+                self.add_file(f"{rel}/{p.relative_to(folder).as_posix()}", p)
+
+    def add_common(self, files: dict[str, bytes]) -> None:
+        for rel, data in files.items():
+            self.add_bytes(rel, data)
+
+
 def add_voices(w: Writer, rel: str) -> None:
     for name, path in voice_files().items():
         if name.endswith(".onnx.json"):
@@ -338,21 +366,56 @@ def mac_helper(tmp: Path) -> tuple[Path, Path]:
     return helper, tree / "espeak-ng-data"
 
 
+def rcodesign() -> Path:
+    """The pinned apple-codesign program (D308), extracted from its checked
+    archive. Ad-hoc signing needs no Mac, no key and no Apple account."""
+    archive = fetch.fetch_group("tools")["rcodesign"]
+    dest = archive.parent / archive.name.removesuffix(".tar.gz")
+    found = sorted(dest.glob("*/rcodesign"))
+    if not found:
+        with tarfile.open(archive) as t:
+            t.extractall(dest, filter="data")
+        found = sorted(dest.glob("*/rcodesign"))
+    if not found:
+        raise SystemExit(f"package: no rcodesign in {archive.name}")
+    found[0].chmod(0o755)
+    return found[0]
+
+
+def adhoc_sign(app: Path, helpers: list[Path]) -> None:
+    """Ad-hoc signs the Piper helper's Mach-O files, then the app bundle, inside
+    out (the bundle's seal covers what is already signed; FT-ARC-017, D308)."""
+    tool = str(rcodesign())
+    for path in [*helpers, app]:
+        subprocess.run([tool, "sign", str(path)], check=True)
+
+
 def package_macos(godot_zip: Path, web: Path, common: dict, out: Path, tmp: Path) -> Path:
     path = out / asset_names(common["_version"])["macos"]
-    w = Writer(path, "")
+    root = tmp / "macos_package"
+    w = DirWriter(root)
     with zipfile.ZipFile(godot_zip) as z:
         for info in z.infolist():
-            if not info.is_dir():
-                w.zip.writestr(info, z.read(info))
+            if info.is_dir():
+                continue
+            mode = info.external_attr >> 16
+            if (mode & 0o170000) == 0o120000:
+                raise SystemExit(f"package: {info.filename} in the macOS export is a link")
+            w.add_bytes(info.filename, z.read(info), mode & 0o777 or 0o644)
     contents = f"{APP}/Contents"
     helper, espeak = mac_helper(tmp)
     w.add_tree(f"{contents}/Helpers/piper", helper)
     w.add_tree(f"{contents}/Resources/piper/espeak-ng-data", espeak)
     add_voices(w, f"{contents}/Resources/piper")
     w.add_tree(f"{contents}/Resources/web", web)
+    # Dylibs first, then the helper that loads them, then the bundle.
+    helpers = [root / contents / "Helpers/piper" / n for n in (*MAC_LIBS, "piper")]
+    adhoc_sign(root / APP, helpers)
     w.add_common(common["files"])
-    w.close()
+    z = Writer(path, "")
+    for child in sorted(root.iterdir()):
+        z.add_tree(child.name, child) if child.is_dir() else z.add_file(child.name, child)
+    z.close()
     return path
 
 

@@ -327,3 +327,59 @@ def test_inspection_checks_each_languages_voice_pack(tmp_path):
     insp.errors = []
     insp.voice_packs(Folder({"web/voice-en.pack": it}), "web", "pkg")
     assert insp.errors == ["pkg: web/voice-en.pack is for it", "pkg: no web/voice-it.pack"]
+
+
+def macho(signed: bool, cputype: int = 0x01000007) -> bytes:
+    """A little-endian 64-bit Mach-O header with a load command or two."""
+    cmds = struct.pack("<II", 0x19, 8)  # LC_SEGMENT_64 stand-in
+    if signed:
+        cmds += struct.pack("<IIII", 0x1D, 16, 0, 0)
+    n = 2 if signed else 1
+    head = struct.pack("<IiiIIIII", 0xFEEDFACF, cputype, 3, 2, n, len(cmds), 0, 0)
+    return head + cmds
+
+
+def fat(*slices: bytes) -> bytes:
+    off = 8 + 20 * len(slices)
+    table, body = b"", b""
+    for s in slices:
+        table += struct.pack(">5I", 7, 3, off + len(body), len(s), 12)
+        body += s
+    return b"\xca\xfe\xba\xbe" + struct.pack(">I", len(slices)) + table + body
+
+
+# FT: FT-ARC-017
+def test_inspection_reads_the_code_signature_of_thin_and_fat_mach_o_files():
+    import inspect_packages
+
+    assert inspect_packages.macho_signed(macho(True)) is True
+    assert inspect_packages.macho_signed(macho(False)) is False
+    assert inspect_packages.macho_signed(fat(macho(True), macho(True))) is True
+    assert inspect_packages.macho_signed(fat(macho(True), macho(False))) is False
+    assert inspect_packages.macho_signed(b"#!/bin/sh\n") is None
+
+
+# FT: FT-ARC-017
+def test_macos_signing_goes_inside_out_with_the_pinned_tool(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(package, "rcodesign", lambda: Path("/x/rcodesign"))
+    monkeypatch.setattr(package.subprocess, "run", lambda cmd, check: calls.append(cmd))
+    helpers = [tmp_path / n for n in (*package.MAC_LIBS, "piper")]
+    package.adhoc_sign(tmp_path / package.APP, helpers)
+    assert [c[1] for c in calls] == ["sign"] * 5
+    assert [Path(c[2]).name for c in calls] == [*package.MAC_LIBS, "piper", package.APP]
+    pin = fetch.manifest()["tools"]["rcodesign"]
+    assert pin["url"].endswith("x86_64-unknown-linux-musl.tar.gz")
+    assert re.fullmatch(r"[0-9a-f]{64}", pin["sha256"])
+
+
+# FT: FT-ARC-017
+def test_release_notes_give_open_anyway_steps_for_macos_and_windows(tmp_path):
+    import notes
+
+    (tmp_path / "SHA256SUMS").write_text("0" * 64 + "  a.zip\n")
+    (tmp_path / "a.zip").write_bytes(b"x")
+    text = notes.notes("v1.2.3", "abc", tmp_path)
+    for step in ("Open Anyway", "right-click", "More info", "Run anyway", "SmartScreen"):
+        assert step.lower() in text.lower()
+    assert "{{" not in text
