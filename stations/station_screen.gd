@@ -34,6 +34,9 @@ const SHORT_H: float = 560.0
 const SHORT_RADAR: float = 220.0
 const SHORT_SIDE_WIDTH: float = 280.0
 const TOP_BAR_HEIGHT: float = 40.0
+## The least gap (px) between the rows and the screen's bottom edge: the last row of a
+## panel keeps its borders (#12).
+const EDGE_GAP: float = 6.0
 ## The bar of the touch layouts: tap-sized alert chip and sound button (D194).
 const TOUCH_BAR_HEIGHT: float = 52.0
 ## A phone's bar: the chip and sound button are primary targets (48 px, #28).
@@ -847,7 +850,9 @@ func _apply_band() -> void:
 	var sideways: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
 	var into: bool = phone and sideways and focused_panel().in_frame
 	_band_h = bottom if into else 0.0
-	_rows.offset_bottom = -bottom + _band_h
+	# (outside the band the rows keep EDGE_GAP above the screen's edge, so a bottom row
+	# never sits flush with it)
+	_rows.offset_bottom = -(0.0 if into else maxf(bottom, EDGE_GAP))
 	_side_band.custom_minimum_size.y = _band_h
 	sheet.offset_bottom = -_band_h
 
@@ -867,7 +872,7 @@ func _relayout() -> void:
 	_rows.offset_left = m.x
 	_rows.offset_top = m.y
 	_rows.offset_right = -m.z
-	_rows.offset_bottom = -bottom
+	_rows.offset_bottom = -maxf(bottom, EDGE_GAP)
 	size_now -= Vector2(m.x + m.z, m.y + bottom)
 	var touch: bool = LayoutMode.is_touch(kind)
 	var portrait: bool = LayoutMode.portrait(size_now)
@@ -919,8 +924,11 @@ func _relayout() -> void:
 	var top: float = m.y + top_bar.custom_minimum_size.y + 8.0
 	toasts.offset_top = top
 	toasts.offset_bottom = top
-	toasts.offset_left = -16.0 - m.z
-	toasts.offset_right = -16.0 - m.z
+	# Beside a side radar the toasts stack at the main area's right edge, off the radar's
+	# labels; over a radar below the main area they keep the screen's corner.
+	var toast_x: float = -16.0 - m.z - (0.0 if portrait else _side.custom_minimum_size.x)
+	toasts.offset_left = toast_x
+	toasts.offset_right = toast_x
 	chip_strip.position = Vector2(8.0 + m.x, top)
 	rotate_banner.visible = false
 	if rotate_prompt:

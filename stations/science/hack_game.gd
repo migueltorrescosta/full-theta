@@ -183,7 +183,8 @@ func _draw_node(font: Font, n: int, reach: Array[int]) -> void:
 		col = Palette.color("danger_text")
 	if n == node:
 		col = Palette.color("ok")
-	draw_circle(c, NODE_R, Palette.color("background"))
+	# The target node is filled in the danger role, its name in danger_text (D315).
+	draw_circle(c, NODE_R, Palette.color("danger" if n == goal else "background"))
 	draw_arc(c, NODE_R, 0.0, TAU, 24, col, 2.5 if n in reach or n == node else 1.5, true)
 	var label: String = ""
 	if n == goal:
@@ -234,12 +235,4 @@ func _draw_footer(font: Font) -> void:
 	var r: Rect2 = _button_rect()
 	draw_rect(r, Palette.color("panel_focus"))
 	draw_rect(r, Palette.color("line"), false, 1.0)
-	draw_string(
-		font,
-		r.position + Vector2(10.0, 23.0),
-		tr("sci.cancel"),
-		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
-		FONT_SIZE,
-		Palette.color("text")
-	)
+	Palette.draw_centred(self, font, r, tr("sci.cancel"), FONT_SIZE, Palette.color("text"))

@@ -43,8 +43,6 @@ const SMALL_R: float = 80.0
 ## A burst ring lasts this long (ms); most at once.
 const BURST_MS: int = 900
 const MAX_BURSTS: int = 6
-## Farthest (px) a chip slides sideways to clear a clock number; beyond it the chip drops.
-const SLIDE_MAX: float = 90.0
 
 ## The items to draw (ContactPicture). "point" items (point pings) draw only their
 ## pulse and are never picked.
@@ -519,13 +517,24 @@ func _layout() -> Array[Dictionary]:
 					"beyond": beyond,
 					"chip": chip,
 					"chip_rect": rect,
+					"selected": _is_selected(it),
 				}
 			)
 		)
 	if small():
 		_place_small(out, font)
 	else:
-		_declutter(out, _numerals(font, c, r).values(), _view())
+		var rim: float = disc_radius()
+		var tilt: float = sin(deg_to_rad(tilt_deg))
+		var fixed: Array = _numerals(font, c, r).values()
+		fixed.append_array([_range_rect(), _site_rect(), _own_box()])
+		_declutter(
+			out,
+			fixed,
+			_view().grow(-CHIP_MARGIN),
+			Rect2(c - Vector2(rim, rim * tilt), Vector2(rim, rim * tilt) * 2.0),
+			blip_r() + 3.0
+		)
 	return out
 
 
@@ -549,7 +558,7 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 	var numerals: Array = _numerals(font, c, RANGES_M[range_index]).values()
 	taken.append_array(numerals)
 	taken.append_array([_range_rect(), _site_rect()])
-	taken.append(Rect2(_screen(picture.rel(Vector3.ZERO, centre)) - Vector2(8, 8), Vector2(16, 16)))
+	taken.append(_own_box())
 	var half: Vector2 = Vector2(blip_r(), blip_r()) + Vector2(3, 3)
 	for e: Dictionary in entries:
 		taken.append(Rect2((e["pos"] as Vector2) - half, half * 2.0))
@@ -598,6 +607,11 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 			e["chip_rect"] = Rect2(p, Vector2.ZERO)
 
 
+## The own ship's box (px), which no chip covers.
+func _own_box() -> Rect2:
+	return Rect2(_screen(picture.rel(Vector3.ZERO, centre)) - Vector2(9, 9), Vector2(18, 18))
+
+
 ## A chip's box: right of the blip at `pos`, left of it when `left` (an arrow on the right
 ## rim) or when only that side fits, then shifted to stay inside the view: a small radar
 ## never clips a chip at its edge (#28).
@@ -617,44 +631,121 @@ func _chip_rect(font: Font, chip: String, pos: Vector2, left: bool) -> Rect2:
 	return Rect2(Vector2(x, y), sz)
 
 
-## Moves overlapping chips apart: top to bottom, a chip that overlaps one already placed
-## drops below it, so close blips don't print their callsigns over each other. `fixed`
-## are boxes no chip may cover (the clock numbers): a chip over one slides right, clear of
-## it, when that is under SLIDE_MAX and it still fits in `limit`, else it drops below like the rest.
+## Places each chip next to its own blip, then moves it by the least that clears what it
+## must not cover (spots tried: beside the default, right, left, above, below, a line off).
+## Hard obstacles: the clock numbers and other boxes in `fixed`, every blip's box (entries
+## with a "pos") and the chips already placed; a spot also has to keep inside `limit`. Soft
+## ones, charged as a cost: crossing a stem, crossing the rim of `disc` (the disc's
+## bounding box, a chip stays inside the ellipse where it can) and the distance moved.
+## Selected chips are placed first, then top to bottom. A chip with no free spot drops
+## below what it overlaps, as before.
 static func _declutter(
-	entries: Array[Dictionary], fixed: Array = [], limit: Rect2 = Rect2()
+	entries: Array[Dictionary],
+	fixed: Array = [],
+	limit: Rect2 = Rect2(),
+	disc: Rect2 = Rect2(),
+	blip: float = 9.0
 ) -> void:
+	var boxes: Array[Rect2] = []
+	var blocked: Array[Rect2] = []
+	var stems: Array[Rect2] = []
+	for f: Variant in fixed:
+		boxes.append(f as Rect2)
+	for e: Dictionary in entries:
+		if not e.has("pos"):
+			continue
+		var p: Vector2 = e["pos"]
+		blocked.append(Rect2(p - Vector2(blip, blip), Vector2(blip, blip) * 2.0))
+		if e.has("foot") and not e.get("beyond", false):
+			var f: Vector2 = e["foot"]
+			stems.append(Rect2(minf(f.x, p.x) - 1.0, minf(f.y, p.y), 2.0, absf(f.y - p.y)))
 	var order: Array[Dictionary] = entries.filter(
 		func(e: Dictionary) -> bool: return e["chip"] != ""
 	)
 	order.sort_custom(
 		func(a: Dictionary, b: Dictionary) -> bool:
+			if a.get("selected", false) != b.get("selected", false):
+				return a.get("selected", false)
 			return (a["chip_rect"] as Rect2).position.y < (b["chip_rect"] as Rect2).position.y
 	)
+	blocked.append_array(boxes)
 	var placed: Array[Rect2] = []
-	for f: Variant in fixed:
-		placed.append(f as Rect2)
 	for e: Dictionary in order:
-		var r: Rect2 = e["chip_rect"]
-		for f: Variant in fixed:
-			var box: Rect2 = f as Rect2
-			if not box.intersects(r) or not limit.has_area():
-				continue
-			if (
-				box.end.x + 2.0 - r.position.x <= SLIDE_MAX
-				and box.end.x + 2.0 + r.size.x <= limit.end.x
-			):
-				r.position.x = box.end.x + 2.0
-		for _pass: int in order.size() + fixed.size():
-			var hit: bool = false
-			for o: Rect2 in placed:
-				if o.intersects(r):
-					r.position.y = o.end.y
-					hit = true
-			if not hit:
+		var home: Rect2 = e["chip_rect"]
+		var pick: Rect2 = _best_spot(e, home, blocked, placed, stems, limit, disc, blip)
+		if not pick.has_area():
+			# No free spot: step down below the boxes and chips it overlaps.
+			pick = home
+			for _pass: int in order.size() + boxes.size():
+				var hit: bool = false
+				for o: Rect2 in boxes + placed:
+					if o.intersects(pick):
+						pick.position.y = o.end.y
+						hit = true
+				if not hit:
+					break
+		e["chip_rect"] = pick
+		placed.append(pick)
+
+
+## The spot for a chip whose default box is `home`: the cheapest free one, or an empty
+## Rect2.
+static func _best_spot(
+	e: Dictionary,
+	home: Rect2,
+	blocked: Array[Rect2],
+	placed: Array[Rect2],
+	stems: Array[Rect2],
+	limit: Rect2,
+	disc: Rect2,
+	blip: float
+) -> Rect2:
+	var sz: Vector2 = home.size
+	var spots: Array[Rect2] = [home]
+	if e.has("pos"):
+		var p: Vector2 = e["pos"]
+		var gap: float = blip + 1.0
+		var ys: Array[float] = [0.0, sz.y, -sz.y, sz.y * 2.0, -sz.y * 2.0]
+		for dy: float in ys:
+			spots.append(Rect2(Vector2(p.x + gap, p.y - sz.y / 2.0 + dy), sz))
+			spots.append(Rect2(Vector2(p.x - gap - sz.x, p.y - sz.y / 2.0 + dy), sz))
+		spots.append(Rect2(Vector2(p.x - sz.x / 2.0, p.y - gap - sz.y), sz))
+		spots.append(Rect2(Vector2(p.x - sz.x / 2.0, p.y + gap), sz))
+	var best: Rect2 = Rect2()
+	var best_cost: float = INF
+	for spot: Rect2 in spots:
+		if limit.has_area() and not limit.grow(0.5).encloses(spot):
+			continue
+		var free: bool = true
+		for o: Rect2 in blocked + placed:
+			if o.intersects(spot):
+				free = false
 				break
-		e["chip_rect"] = r
-		placed.append(r)
+		if not free:
+			continue
+		var cost: float = spot.get_center().distance_to(home.get_center())
+		for s: Rect2 in stems:
+			if s.intersects(spot):
+				cost += 8.0
+		if disc.has_area() and not _in_ellipse(disc, spot):
+			cost += 10.0
+		if cost < best_cost:
+			best_cost = cost
+			best = spot
+	return best
+
+
+## True when all four corners of `r` lie inside the ellipse inscribed in `box`.
+static func _in_ellipse(box: Rect2, r: Rect2) -> bool:
+	var c: Vector2 = box.get_center()
+	var h: Vector2 = box.size / 2.0
+	for corner: Vector2 in [
+		r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)
+	]:
+		var d: Vector2 = (corner - c) / h
+		if d.length_squared() > 1.0:
+			return false
+	return true
 
 
 ## Screen position of a ship-frame offset from the centre item (m).

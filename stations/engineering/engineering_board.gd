@@ -25,6 +25,9 @@ var compact: bool = false:
 		queue_redraw()
 
 var _taps: Array[Control] = []
+## Set by fit(): the window gives less than the whole board needs, so the shields take the
+## phone's lean arrangement and the legend one row (150 % UI scale, D316).
+var _tight: bool = false
 
 
 func _init() -> void:
@@ -37,7 +40,31 @@ func _init() -> void:
 func content_height() -> float:
 	if compact or panel == null or panel.ship_def == null:
 		return 0.0
-	return _shields_y() + 90.0 + 16.0 + PAD
+	return _height(_tight)
+
+
+## Gives the board `avail` px of height (the panel's): when the whole board needs more, it
+## takes the tight arrangement, which needs about 80 px less, so it rarely scrolls.
+func fit(avail: float) -> void:
+	if compact or panel == null or panel.ship_def == null:
+		return
+	var tight: bool = avail > 0.0 and avail < _height(false) and not phone()
+	if tight != _tight:
+		_tight = tight
+		queue_redraw()
+
+
+func _height(tight: bool) -> float:
+	var was: bool = _tight
+	_tight = tight
+	var h: float = _shields_y() + (76.0 if tight else 90.0 + 16.0) + PAD
+	_tight = was
+	return h
+
+
+## True when the shields take the lean arrangement: a phone's Power page or a tight board.
+func _lean_shields() -> bool:
+	return phone_layout() or _tight
 
 
 ## Subsystem indices with a pip column (the reactor supplies pips, D117).
@@ -221,11 +248,15 @@ func _draw_cap(fs: int) -> void:
 
 
 func _draw_legend(fs: int) -> void:
-	var y: float = _labels_y() + 88.0
+	var y: float = _cap_y() + 34.0 if _tight else _labels_y() + 88.0
 	draw_rect(Rect2(PAD, y - 10.0, 10.0, 10.0), Palette.color("warn"))
 	_text(Vector2(PAD + 16.0, y), tr("eng.overcharge"), "text_dim", fs - 2)
-	draw_rect(Rect2(PAD, y + 10.0, 10.0, 10.0), Palette.color("accent"))
-	_text(Vector2(PAD + 16.0, y + 20.0), tr("eng.boost"), "text_dim", fs - 2)
+	# (tight: the two entries share a row)
+	var font: Font = get_theme_default_font()
+	var x2: float = PAD + 16.0 + font.get_string_size(tr("eng.overcharge"), 0, -1, fs - 2).x + 16.0
+	var at: Vector2 = Vector2(x2, y) if _tight else Vector2(PAD, y + 20.0)
+	draw_rect(Rect2(at.x, at.y - 10.0, 10.0, 10.0), Palette.color("accent"))
+	_text(at + Vector2(16.0, 0.0), tr("eng.boost"), "text_dim", fs - 2)
 
 
 func _draw_shields(fs: int) -> void:
@@ -238,15 +269,16 @@ func _draw_shields(fs: int) -> void:
 		Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Palette.color("friendly")
 	)
 	var si: int = _shield_subsystem()
-	var lean: bool = phone_layout()
+	var lean: bool = _lean_shields()
 	if si >= 0:
 		var power: String = tr("eng.shield_power") % panel.pips_of(si)
-		if lean:
+		if lean and not _tight:
 			# Beside the strength, ending where the bar ends.
 			var pw: float = get_theme_default_font().get_string_size(power, 0, -1, fs - 2).x
 			_text(Vector2(bar.end.x - pw, y), power, "text", fs - 2)
 		else:
-			_text(Vector2(PAD, y + 42.0), power, "text", fs - 2)
+			# (tight: on the line under the bar)
+			_text(Vector2(PAD, y + (34.0 if _tight else 42.0)), power, "text", fs - 2)
 	var focus_y: float = _step_rect(0).end.y - 2.0 if lean else y + 66.0
 	_text(Vector2(PAD, focus_y), tr("eng.tightness"), "text", fs - 2)
 	var t: float = panel.tightness()
@@ -339,6 +371,8 @@ func _cap_y() -> float:
 
 
 func _shields_y() -> float:
+	if _tight:
+		return _cap_y() + 62.0
 	return _cap_y() + 38.0 if phone_layout() else _labels_y() + 150.0
 
 
@@ -348,9 +382,9 @@ func _steps() -> int:
 
 
 func _step_rect(k: int) -> Rect2:
-	if phone_layout():
+	if _lean_shields():
 		var x0: float = PAD + FOCUS_LABEL_W
 		var pw: float = (size.x - 2.0 * PAD - 80.0 - FOCUS_LABEL_W) / _steps()
-		return Rect2(x0 + k * pw, _shields_y() + 20.0, pw - GAP, 16.0)
+		return Rect2(x0 + k * pw, _shields_y() + (38.0 if _tight else 20.0), pw - GAP, 16.0)
 	var w: float = (size.x - 2.0 * PAD - 96.0) / _steps()
 	return Rect2(PAD + k * w, _shields_y() + 74.0, w - GAP, 16.0)

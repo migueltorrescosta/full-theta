@@ -93,7 +93,10 @@ func _mode_changed() -> void:
 func _mode_changed_ring() -> void:
 	# Room for the label under the ring when focused.
 	var side: float = 170.0 if focused else 100.0
-	ring.size = Vector2(side + (80.0 if focused else 0.0), side + 2.0 * ShieldRing.FONT_SIZE)
+	ring.size = Vector2(
+		side + (80.0 if focused else 0.0),
+		side + 2.0 * ShieldRing.FONT_SIZE + ShieldRing.CAPTION_GAP
+	)
 	ring.label = focused
 
 

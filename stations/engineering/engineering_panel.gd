@@ -355,6 +355,7 @@ func _from_phone() -> void:
 	var phone: bool = size.x < PHONE_W
 	_row.vertical = phone
 	cutaway.custom_minimum_size.y = 260.0 if phone else 0.0
+	board.fit(0.0 if phone or docked else size.y)
 	board.custom_minimum_size = (Vector2(0, 460) if phone else Vector2(270, board.content_height()))
 	_side.custom_minimum_size = Vector2(0, 220) if phone else Vector2(210, 0)
 	var parent: Control = _left if narrow else _row

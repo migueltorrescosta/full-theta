@@ -78,6 +78,7 @@ static func build(touch: bool = false) -> Theme:
 		_cell(t, tag)
 	_rails(t)
 	_panels(t)
+	_sliders(t)
 	_fields(t, TOUCH_PAD if touch else 6)
 	if touch:
 		# A list row is a tap target too.
@@ -253,6 +254,21 @@ static func _rails(t: Theme) -> void:
 	t.set_stylebox("panel", "Drawer", box("panel", "line_strong", 8, 8))
 	t.set_type_variation("Banner", "PanelContainer")
 	t.set_stylebox("panel", "Banner", box("panel_focus", "accent", 12, 2))
+
+
+## A slider's track in `line_strong` (3:1 on the panel), its filled part in the accent.
+static func _sliders(t: Theme) -> void:
+	for kind: String in ["HSlider", "VSlider"]:
+		var track: StyleBoxFlat = StyleBoxFlat.new()
+		track.bg_color = Palette.color("line_strong")
+		track.set_corner_radius_all(2)
+		track.content_margin_top = 4.0
+		track.content_margin_bottom = 4.0
+		t.set_stylebox("slider", kind, track)
+		var fill: StyleBoxFlat = track.duplicate()
+		fill.bg_color = Palette.color("accent")
+		t.set_stylebox("grabber_area", kind, fill)
+		t.set_stylebox("grabber_area_highlight", kind, fill)
 
 
 static func _panels(t: Theme) -> void:

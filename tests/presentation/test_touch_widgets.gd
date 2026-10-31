@@ -292,3 +292,11 @@ func test_overlay_rails_set_the_radar_view_rect() -> void:
 	for i: int in 2:
 		await get_tree().process_frame
 	assert_object(radar.view_rect).is_equal(Rect2())
+
+
+# FT: FT-STN-005
+# #12: a choice sheet is opaque, so text behind never shows through.
+func test_choice_sheet_is_opaque() -> void:
+	var sheet: ChoiceSheet = auto_free(ChoiceSheet.new())
+	var sb: StyleBoxFlat = sheet.box.get_theme_stylebox("panel") as StyleBoxFlat
+	assert_float(sb.bg_color.a).is_equal(1.0)

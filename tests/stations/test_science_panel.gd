@@ -366,7 +366,12 @@ func test_controller_cursor_snaps_to_the_nearest_contact() -> void:
 	# Put the cursor 40 px from H2's blip: within snap reach, not within a mouse's.
 	var layout: Array = p.radar._layout()
 	var h2: Dictionary = layout.filter(func(e: Dictionary) -> bool: return e["item"]["id"] == H2)[0]
-	var at: Vector2 = h2["pos"] + Vector2(0.0, 40.0)
+	# (a side with no chip or blip of another item, so only a snapping cursor reaches H2)
+	var at: Vector2 = h2["pos"]
+	for d: Vector2 in [Vector2(0, 40), Vector2(0, -40), Vector2(-40, 0), Vector2(40, 0)]:
+		at = h2["pos"] + d
+		if p.radar.item_at(at).is_empty() and p.radar.item_at(at + Vector2(0, 1)).is_empty():
+			break
 	var local: Vector2 = p.radar.get_global_transform() * at
 	p._cursor = p.get_global_transform().affine_inverse() * local
 	assert_dict(p.item_at(p._cursor)).is_equal({"kind": "contact", "id": H2})

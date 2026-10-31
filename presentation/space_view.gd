@@ -38,6 +38,8 @@ var ships: Dictionary = {}
 ## The effects (hits, shields, explosions, jumps) of the sim events of the bound context.
 var vfx: VfxLayer
 
+## The fill light behind the ships (see _init); a view raises light_energy.
+var rim: DirectionalLight3D
 var _stars: MeshInstance3D
 var _ctx: StationContext
 
@@ -54,6 +56,12 @@ func _init() -> void:
 	var sun: DirectionalLight3D = DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-40.0, 30.0, 0.0)
 	add_child(sun)
+	# A dim light from the other side (energy 0 unless a view asks), so a ship's shadow side
+	# keeps an edge against space (the main screen's target).
+	rim = DirectionalLight3D.new()
+	rim.rotation_degrees = Vector3(30.0, 210.0, 0.0)
+	rim.light_energy = 0.0
+	add_child(rim)
 	camera = Camera3D.new()
 	camera.near = 0.5
 	camera.far = CAMERA_FAR

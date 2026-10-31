@@ -23,9 +23,8 @@ func push(text: String, kind: String, now_ms: int) -> void:
 	)
 	label.add_theme_color_override("font_outline_color", Palette.color("background"))
 	label.add_theme_constant_override("outline_size", 4)
-	# A backing, so a toast over a radar label hides it rather than mixing with it (T2).
+	# An opaque backing, so a toast over text hides it rather than mixing with it (T2).
 	var backing: StyleBoxFlat = UiTheme.box("panel", "", 8, 2)
-	backing.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
 	label.add_theme_stylebox_override("normal", backing)
 	label.set_meta(&"until", now_ms + SHOW_MS)
 	add_child(label)

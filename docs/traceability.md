@@ -169,7 +169,7 @@ Tests: 389, manual: 12, pending: 6.
 | FT-WPN-008 | tests | `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_weapons_guided.gd`, `tests/stations/weapons/test_weapons_reach.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-WPN-009 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-ENG-001 | tests | `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/test_phone_fixups.gd` |
-| FT-ENG-002 | tests | `tests/presentation/test_phone_rest_layouts.gd`, `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/test_phone_fixups.gd` |
+| FT-ENG-002 | tests | `tests/presentation/test_phone_rest_layouts.gd`, `tests/presentation/test_safe_area.gd`, `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/test_phone_fixups.gd` |
 | FT-ENG-003 | tests | `tests/presentation/test_phone_rest_layouts.gd`, `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/test_phone_fixups.gd` |
 | FT-ENG-004 | tests | `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/test_phone_fixups.gd` |
 | FT-ENG-005 | tests | `tests/stations/engineering/test_engineering_panel.gd` |

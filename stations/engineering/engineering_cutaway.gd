@@ -293,12 +293,15 @@ func label_rects() -> Dictionary:
 	var font: Font = get_theme_default_font()
 	var fs: int = _label_size()
 	var taken: Array[Rect2] = []
+	# A disc with its heat arc and rims (up to NODE_R + 7), the crew tokens and the "Crews"
+	# caption: no label covers them.
 	for i: int in panel.count():
-		taken.append(_square(subsystem_pos(i), NODE_R + 3.0))
+		taken.append(_square(subsystem_pos(i), NODE_R + 6.0))
 	for c: int in panel.crew_count():
 		taken.append(_square(token_pos(c), TOKEN_R))
+	taken.append(_crews_rect())
 	var out: Dictionary = {}
-	var gap: float = NODE_R + 4.0
+	var gap: float = NODE_R + 8.0
 	for i: int in panel.count():
 		var c: Vector2 = subsystem_pos(i)
 		var sz: Vector2 = font.get_string_size(_label(i), HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
@@ -349,6 +352,14 @@ func _draw_label(i: int, rect: Rect2) -> void:
 	var label: String = _label(i)
 	var at: Vector2 = rect.position + Vector2(0.0, font.get_ascent(fs))
 	Palette.draw_outlined(self, font, at, label, fs, Palette.color("text"))
+
+
+## The "Crews" caption's box, above the crew bay.
+func _crews_rect() -> Rect2:
+	var font: Font = get_theme_default_font()
+	var fs: int = get_theme_default_font_size() - 2
+	var sz: Vector2 = font.get_string_size(tr("eng.crews"), HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	return Rect2(Vector2(12.0, size.y - 76.0 - font.get_ascent(fs)), sz)
 
 
 func _draw_crews() -> void:

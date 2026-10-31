@@ -724,14 +724,15 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 			draw_arc(p, 5.0, 0.0, TAU, 16, col, 2.0)
 		label = ChipText.chip(selection_label(), local)
 	var w: float = 4.0 * COMPASS_R
-	draw_string(
+	Palette.draw_outlined(
+		self,
 		font,
 		c + Vector2(-w / 2.0, COMPASS_R + 18.0),
 		label,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		w,
 		SMALL,
-		Palette.color("text")
+		Palette.color("text"),
+		w,
+		HORIZONTAL_ALIGNMENT_CENTER
 	)
 
 
@@ -869,4 +870,4 @@ static func _range(m: float) -> String:
 
 
 func _text(font: Font, at: Vector2, text: String, col: Color, fs: int = FONT_SIZE) -> void:
-	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+	Palette.draw_outlined(self, font, at, text, fs, col)

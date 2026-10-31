@@ -65,7 +65,8 @@ func _init(owner_panel: CaptainPanel = null, is_upright: bool = false) -> void:
 	else:
 		_build_side(views, ping, mark)
 	for box: PanelContainer in [requests, card_box]:
-		box.theme_type_variation = "OverlayRail"
+		# Opaque: radar labels must not show through the list.
+		box.theme_type_variation = "DockedRail"
 		box.mouse_filter = Control.MOUSE_FILTER_STOP
 		var scroll: ScrollContainer = ScrollContainer.new()
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

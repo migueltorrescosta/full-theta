@@ -121,6 +121,7 @@ func _setup() -> void:
 	view.add_child(_viewport)
 	_space = SpaceView.new()
 	_space.near_only = true
+	_space.rim.light_energy = 0.9
 	_viewport.add_child(_space)
 	camera = _space.camera
 	_overlay = Control.new()
