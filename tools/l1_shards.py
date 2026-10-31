@@ -2,7 +2,7 @@
 
   l1_shards.py K N             print shard K (0-based) of N: one res:// path per line
   l1_shards.py --limit K N     print the seconds shard K may run before the gate kills it:
-                               3x its recorded time, at least 120 (#33)
+                               3x its recorded time (more when the shards share fewer CPUs), at least 120 (#33)
   l1_shards.py --update XML... rewrite tools/l1_times.json from gdUnit4 JUnit reports
 
 Every .gd file under tests/ goes to exactly one shard, so a new test file is picked up
@@ -13,6 +13,7 @@ unbalance the shards; refresh them with --update after a full L1 run.
 """
 
 import json
+import os
 import statistics
 import sys
 import xml.etree.ElementTree as ET
@@ -61,7 +62,9 @@ def main(args: list[str]) -> int:
     if args and args[0] == "--limit":
         times = json.loads(TIMES.read_text()) if TIMES.exists() else {}
         mine = shards(test_files(), times, int(args[2]))[int(args[1])]
-        print(max(120, round(3 * sum(times.get(f, 0.0) for f in mine))))
+        # n shards share the CPUs this process may use, so each gets only a part of one.
+        share = max(1.0, int(args[2]) / len(os.sched_getaffinity(0)))
+        print(max(120, round(3 * share * sum(times.get(f, 0.0) for f in mine))))
         return 0
     if len(args) != 2 or not (0 <= int(args[0]) < int(args[1])):
         print(__doc__, file=sys.stderr)
