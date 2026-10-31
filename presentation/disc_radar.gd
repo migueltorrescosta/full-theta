@@ -93,6 +93,11 @@ func _init() -> void:
 	set_process(false)
 
 
+## The blip radius in px: BLIP_R, grown at UI scales under 100 % to stay that many physical px (C2).
+func blip_r() -> float:
+	return Palette.blip_radius(BLIP_R, self)
+
+
 ## Sets the picture and the selection; `ctx` (once is enough) lets the radar ring a destroyed
 ## contact and a hit on the own ship (#12), unless comfort is on.
 func set_picture(
@@ -143,7 +148,7 @@ func _draw_bursts() -> void:
 		var t: float = clampf(float(now - int(b["from"])) / float(BURST_MS), 0.0, 1.0)
 		var col: Color = Palette.color(str(b["role"]))
 		col.a = 1.0 - t
-		draw_arc(_screen(b["rel"]), BLIP_R + 4.0 + t * 30.0, 0.0, TAU, 32, col, 2.0, true)
+		draw_arc(_screen(b["rel"]), blip_r() + 4.0 + t * 30.0, 0.0, TAU, 32, col, 2.0, true)
 
 
 ## One range step in (-1) or out (+1).
@@ -389,7 +394,7 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
 		draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
 		var radius: float = (
-			BLIP_R * float(blip_scale.get(it["id"], 1.0)) if it["kind"] == "contact" else BLIP_R
+			blip_r() * float(blip_scale.get(it["id"], 1.0)) if it["kind"] == "contact" else blip_r()
 		)
 		_draw_shape(Palette.shape_points(Palette.item_shape(it), pos, radius), col, solid)
 	if it.get("zone", "") == "probe" and not e["beyond"]:
@@ -422,7 +427,7 @@ func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
-	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	draw_arc(pos, blip_r() + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
 	_draw_copies(pos, col, copies)
 
 
@@ -501,7 +506,7 @@ func _layout() -> Array[Dictionary]:
 			for n: int in range(parts.size(), 0, -1):
 				chip = ChipText.SEP.join(parts.slice(0, n))
 				rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
-				if rect.position.x > pos.x + BLIP_R or rect.end.x < pos.x - BLIP_R:
+				if rect.position.x > pos.x + blip_r() or rect.end.x < pos.x - blip_r():
 					break
 		(
 			out
@@ -545,7 +550,7 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 	taken.append_array(numerals)
 	taken.append_array([_range_rect(), _site_rect()])
 	taken.append(Rect2(_screen(picture.rel(Vector3.ZERO, centre)) - Vector2(8, 8), Vector2(16, 16)))
-	var half: Vector2 = Vector2(BLIP_R, BLIP_R) + Vector2(3, 3)
+	var half: Vector2 = Vector2(blip_r(), blip_r()) + Vector2(3, 3)
 	for e: Dictionary in entries:
 		taken.append(Rect2((e["pos"] as Vector2) - half, half * 2.0))
 	var order: Array[Dictionary] = entries.duplicate()

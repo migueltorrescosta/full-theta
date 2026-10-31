@@ -626,7 +626,6 @@ func _arrange(short: bool) -> void:
 	_summary.vertical = not short
 	_coverage.theme_type_variation = "CaptionLabel" if short else "DimLabel"
 	_summary.add_theme_constant_override("separation", 6 if short else 0)
-	_summary_role.clip_text = short
 	_summary_role.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL)
 	_style_summary(short, _phone)
 
@@ -670,11 +669,15 @@ func _style_summary(short: bool, phone: bool) -> void:
 			label.add_theme_font_size_override("font_size", pair[1])
 		else:
 			label.remove_theme_font_size_override("font_size")
-		label.autowrap_mode = TextServer.AUTOWRAP_OFF if short else TextServer.AUTOWRAP_WORD_SMART
+		# The name stays on one line; the role wraps, even on a short screen (T3, D293).
+		var one_line: bool = short and label == _summary_name
+		label.autowrap_mode = (
+			TextServer.AUTOWRAP_OFF if one_line else TextServer.AUTOWRAP_WORD_SMART
+		)
 		label.horizontal_alignment = (
 			HORIZONTAL_ALIGNMENT_LEFT if short else HORIZONTAL_ALIGNMENT_CENTER
 		)
-	_summary_role.max_lines_visible = ROLE_LINES if phone and not short else -1
+	_summary_role.max_lines_visible = ROLE_LINES if small else -1
 	_summary_role.text_overrun_behavior = (
 		TextServer.OVERRUN_TRIM_ELLIPSIS if small else TextServer.OVERRUN_NO_TRIMMING
 	)

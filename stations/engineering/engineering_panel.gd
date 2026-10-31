@@ -355,7 +355,9 @@ func _from_phone() -> void:
 	var phone: bool = size.x < PHONE_W
 	_row.vertical = phone
 	cutaway.custom_minimum_size.y = 260.0 if phone else 0.0
-	board.custom_minimum_size = Vector2(0, 460) if phone else Vector2(270, 0)
+	board.custom_minimum_size = (
+		Vector2(0, 460) if phone else Vector2(270, board.content_height())
+	)
 	_side.custom_minimum_size = Vector2(0, 220) if phone else Vector2(210, 0)
 	var parent: Control = _left if narrow else _row
 	_side.size_flags_stretch_ratio = 1.0 if narrow else 2.2
@@ -858,9 +860,9 @@ func fault_lines() -> Array:
 	for i: int in order:
 		var h: float = health_frac(i)
 		if h <= 0.0:
-			out.append([tr("eng.fault_down") % full_name(i), "danger"])
+			out.append([tr("eng.fault_down") % full_name(i), "danger_text"])
 		elif faults.has(i) and now - int(faults[i]) < FAULT_MS:
-			out.append([tr("eng.fault_heat") % [full_name(i), roundi(h * 100)], "danger"])
+			out.append([tr("eng.fault_heat") % [full_name(i), roundi(h * 100)], "danger_text"])
 		elif has_fault(i):
 			out.append(_fault_line(i, h))
 		elif h < 1.0:
@@ -880,10 +882,10 @@ func _fault_line(i: int, h: float) -> Array:
 	if known > 0:
 		if pick == known:
 			return [tr("eng.fault_right") % [name, pct, cause_name(i, known)], "warn"]
-		return [tr("eng.fault_diagnosed") % [name, pct, cause_name(i, known)], "danger"]
+		return [tr("eng.fault_diagnosed") % [name, pct, cause_name(i, known)], "danger_text"]
 	if pick > 0:
 		return [tr("eng.fault_guess") % [name, pct, cause_name(i, pick)], "warn"]
-	return [tr("eng.fault_unknown") % [name, pct], "danger"]
+	return [tr("eng.fault_unknown") % [name, pct], "danger_text"]
 
 
 ## The repair queue: damaged subsystems, most damaged first, with their crews.
@@ -935,7 +937,9 @@ func _refresh_lists() -> void:
 	lines.append([tr("eng.repairs"), "accent"])
 	lines.append_array(queue_lines())
 	lines.append(["", "text"])
-	lines.append([tr("eng.parts") % spare_parts(), "accent" if spare_parts() > 0 else "danger"])
+	lines.append(
+		[tr("eng.parts") % spare_parts(), "accent" if spare_parts() > 0 else "danger_text"]
+	)
 	# Relay's probe in the making, from the RELAY block (FT-ENG-008).
 	var fab: float = float(ctx.view.blocks.get(S.RELAY, {}).get("fab_left", 0.0))
 	if fab > 0.0:

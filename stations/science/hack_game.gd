@@ -180,7 +180,7 @@ func _draw_node(font: Font, n: int, reach: Array[int]) -> void:
 	var is_known: bool = (known >> n) & 1 == 1
 	var col: Color = Palette.color("text") if is_known else Palette.color("text_dim")
 	if n == goal:
-		col = Palette.color("danger")
+		col = Palette.color("danger_text")
 	if n == node:
 		col = Palette.color("ok")
 	draw_circle(c, NODE_R, Palette.color("background"))

@@ -195,6 +195,13 @@ func _fit_safe_area() -> void:
 		_scale_slider.custom_minimum_size.y = (
 			UiTheme.TOUCH_MIN if LayoutMode.is_touch(kind) else 0.0
 		)
+		# Touch and phone layouts start at 100 % (T5); the saved scale is kept for a desktop.
+		_scale_slider.set_block_signals(true)
+		_scale_slider.min_value = (
+			100.0 if LayoutMode.is_touch(kind) else ClientSettings.UI_SCALE_MIN * 100.0
+		)
+		_scale_slider.value = settings.effective_scale(LayoutMode.is_touch(kind)) * 100.0
+		_scale_slider.set_block_signals(false)
 	# A window that became a phone hides Rebind keys; one that stopped being one gets it.
 	var keys: Node = tabs.get_node_or_null(TAB_KEYS) if tabs != null else null
 	var phone: bool = kind == LayoutMode.Kind.PHONE
@@ -280,6 +287,7 @@ func _build_game(col: VBoxContainer) -> void:
 	_row(_sound)
 	col.add_child(_sound)
 	_build_music(col)
+	_build_subtitle_size(col)
 	_add_fullscreen(col)
 	_pause_button = _add_button(
 		col,
@@ -590,6 +598,23 @@ func _build_music(col: VBoxContainer) -> void:
 			settings.music_volume = v / 100.0
 			value.text = "%d %%" % roundi(v)
 	)
+
+
+func _build_subtitle_size(col: VBoxContainer) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "SubtitleRow"
+	col.add_child(row)
+	row.add_child(_label(tr("settings.subtitles")))
+	var pick: OptionButton = OptionButton.new()
+	pick.name = "SubtitleSize"
+	for s: String in ClientSettings.SUBTITLE_SIZES:
+		pick.add_item(tr("settings.subtitles_" + s))
+	pick.selected = ClientSettings.SUBTITLE_SIZES.keys().find(settings.subtitle_size)
+	pick.item_selected.connect(
+		func(i: int) -> void: settings.subtitle_size = ClientSettings.SUBTITLE_SIZES.keys()[i]
+	)
+	_row(pick)
+	row.add_child(pick)
 
 
 func _build_comfort(col: VBoxContainer) -> void:

@@ -183,7 +183,7 @@ func lane_marks() -> Array[Dictionary]:
 ## A ring and a countdown at each lane's site: amber while the window is ahead, green inside
 ## it, red once it has closed.
 func _draw_lanes(font: Font) -> void:
-	var colours: Dictionary[String, String] = {"wait": "warn", "open": "ok", "late": "danger"}
+	var colours: Dictionary[String, String] = {"wait": "warn", "open": "ok", "late": "danger_text"}
 	for lane: Dictionary in lane_marks():
 		var col: Color = Palette.color(colours[lane["state"]])
 		var at: Vector2 = lane["pos"]

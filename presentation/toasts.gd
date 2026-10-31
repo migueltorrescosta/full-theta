@@ -18,10 +18,15 @@ func push(text: String, kind: String, now_ms: int) -> void:
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	label.add_theme_color_override(
-		"font_color", Palette.color("accent" if kind == "info" else kind)
+		"font_color",
+		Palette.color("accent" if kind == "info" else "danger_text" if kind == "danger" else kind)
 	)
 	label.add_theme_color_override("font_outline_color", Palette.color("background"))
 	label.add_theme_constant_override("outline_size", 4)
+	# A backing, so a toast over a radar label hides it rather than mixing with it (T2).
+	var backing: StyleBoxFlat = UiTheme.box("panel", "", 8, 2)
+	backing.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
+	label.add_theme_stylebox_override("normal", backing)
 	label.set_meta(&"until", now_ms + SHOW_MS)
 	add_child(label)
 	move_child(label, 0)

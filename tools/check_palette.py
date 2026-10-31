@@ -32,6 +32,14 @@ PALETTE = ROOT / "presentation/palette.gd"
 MIN_DE00 = 10.0
 MIN_CONTRAST = 4.5
 MIN_NON_TEXT = 3.0
+# The smallest text is 12 px at 100 % UI scale (D316, accessibility T4).
+MIN_FONT = 12
+FONT_CONST = re.compile(
+    r"^\s*const\s+(\w*(?:FONT|LETTER_SIZE|TEXT_SIZE|LABEL_SIZE|NAME_SIZE|ROLE_SIZE)\w*|SMALL|SMALL_SIZE)"
+    r"\s*(?::\s*int\s*)?:?=\s*(\d+)\s*$",
+    re.M,
+)
+FONT_DIRS = ("presentation", "stations", "net", "input", "audio")
 
 # Machado et al. 2009, severity 1.0, linear RGB.
 MATRICES = {
@@ -193,6 +201,17 @@ def check(text: str) -> list[str]:
     return errors
 
 
+def check_fonts(root: Path = ROOT) -> list[str]:
+    """One message per font size constant under MIN_FONT, in the client's scripts."""
+    errors = []
+    for d in FONT_DIRS:
+        for path in sorted((root / d).rglob("*.gd")):
+            for m in FONT_CONST.finditer(path.read_text(encoding="utf-8")):
+                if int(m.group(2)) < MIN_FONT:
+                    errors.append(f"font: {path.relative_to(root)} {m.group(1)} = {m.group(2)} < {MIN_FONT}")
+    return errors
+
+
 SURFACES = ("background", "panel", "panel_focus", "danger_fill")
 
 
@@ -222,7 +241,7 @@ def main() -> int:
         print("\n".join(report(Path(args[0] if args else PALETTE).read_text(encoding="utf-8"))))
         return 0
     path = Path(args[0]) if args else PALETTE
-    errors = check(path.read_text(encoding="utf-8"))
+    errors = check(path.read_text(encoding="utf-8")) + check_fonts()
     for e in errors:
         print(f"palette: {e}", file=sys.stderr)
     return 1 if errors else 0
