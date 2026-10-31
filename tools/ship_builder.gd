@@ -138,9 +138,7 @@ class AoPart:
 ## (with `shared` from `bake_shared`, its roughness and normal maps; else its own):
 ## a Node3D "Ship" with a MeshInstance3D per part, each with its baked-AO mesh and its
 ## material. The packed scene is what the game loads (ProceduralShip).
-static func bake(
-	look: Dictionary, wear_of: float, shared: Array[ImageTexture] = []
-) -> PackedScene:
+static func bake(look: Dictionary, wear_of: float, shared: Array[ImageTexture] = []) -> PackedScene:
 	var b: ShipBuilder = ShipBuilder.new()
 	b.wear = wear_of
 	b.seed_value = int(look["seed"])
