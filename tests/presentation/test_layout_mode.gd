@@ -65,8 +65,7 @@ func _screen(size: Vector2i, entry: String) -> StationScreen:
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	vp.add_child(s)
-	await get_tree().process_frame
-	await get_tree().process_frame
+	await Frames.wait(get_tree(), 2, "station screen at %s" % size)
 	return s
 
 

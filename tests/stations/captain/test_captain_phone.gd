@@ -39,8 +39,7 @@ func _screen(size: Vector2i, insets: Array) -> StationScreen:
 
 
 func _frames(n: int) -> void:
-	for i: int in n:
-		await get_tree().process_frame
+	await Frames.wait(get_tree(), n, "%d frames" % n)
 
 
 func _drop(s: StationScreen) -> void:
