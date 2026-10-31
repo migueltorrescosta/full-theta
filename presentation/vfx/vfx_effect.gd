@@ -14,7 +14,7 @@ const SPEC: Dictionary = {
 	Kind.HIT:
 	{
 		"s": 0.45,
-		"size": 1.6,
+		"size": 4.0,
 		"tint": Color(1.0, 0.75, 0.35),
 		"spokes": 7.0,
 		"core": 1.0,
@@ -25,7 +25,7 @@ const SPEC: Dictionary = {
 	Kind.EXPLOSION:
 	{
 		"s": 1.4,
-		"size": 9.0,
+		"size": 11.0,
 		"tint": Color(1.0, 0.55, 0.2),
 		"spokes": 11.0,
 		"core": 1.3,

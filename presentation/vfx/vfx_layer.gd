@@ -89,7 +89,8 @@ func attach(
 	parent: Node3D, kind: VfxEffect.Kind, at: Vector3, direction: Vector3, scale_by: float = 1.0
 ) -> VfxEffect:
 	_trim()
-	var e: VfxEffect = VfxEffect.make(kind, comfort, direction, randf())
+	var e: VfxEffect = VfxEffect.make(kind, comfort, direction, float(_count % 7) / 7.0)
+	_count += 1
 	e.position = at
 	e.scale = Vector3.ONE * scale_by
 	parent.add_child(e)
