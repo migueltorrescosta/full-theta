@@ -14,7 +14,7 @@ signal alert_sheet_requested
 
 ## Bar height before UI scale (px).
 const HEIGHT: float = 40.0
-const CHIP_LETTER_SIZE: int = 11
+const CHIP_LETTER_SIZE: int = 12
 
 ## Crew only (FT-STN-008).
 var can_set_alert: bool = false:

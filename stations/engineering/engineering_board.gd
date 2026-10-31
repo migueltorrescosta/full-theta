@@ -31,6 +31,15 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 
+## The height the whole board needs (px at 100 %): the columns, the reactor and the shields
+## down to their last label; 0 while docked or before the ship is known. The panel's row
+## scrolls when the window gives less (T2, 150 % UI scale).
+func content_height() -> float:
+	if compact or panel == null or panel.ship_def == null:
+		return 0.0
+	return _shields_y() + 90.0 + 16.0 + PAD
+
+
 ## Subsystem indices with a pip column (the reactor supplies pips, D117).
 func columns() -> Array[int]:
 	var out: Array[int] = []

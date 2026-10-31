@@ -69,6 +69,11 @@ var routes: Array = []
 var lanes_on: bool = false
 
 
+## The blip radius in px: BLIP_R, grown at UI scales under 100 % to stay that many physical px (C2).
+func blip_r() -> float:
+	return Palette.blip_radius(BLIP_R, self)
+
+
 func _init() -> void:
 	mouse_filter = MOUSE_FILTER_IGNORE
 	clip_contents = true
@@ -270,7 +275,7 @@ func _draw_probes(font: Font) -> void:
 			var r_px: float = float(pr["range"]) * ppm()
 			draw_circle(p, r_px, col * Color(1, 1, 1, 0.08))
 			draw_arc(p, r_px, 0.0, TAU, 48, col * Color(1, 1, 1, 0.5), 1.0, true)
-		draw_arc(p, BLIP_R, 0.0, TAU, 20, col, 2.0, true)
+		draw_arc(p, blip_r(), 0.0, TAU, 20, col, 2.0, true)
 		draw_circle(p, 2.0, col if pr["deployed"] else Palette.color("background"))
 		_draw_text(font, p + Vector2(10.0, -8.0), "P%d" % (int(pr["serial"]) + 1), col)
 
@@ -309,7 +314,7 @@ func _draw_lanes(layout: Array[Dictionary], font: Font) -> void:
 		var f: Dictionary = by_id.get(lane["friend"], {})
 		if t.is_empty() or f.is_empty():
 			continue
-		var col: Color = Palette.color("danger")
+		var col: Color = Palette.color("danger_text")
 		draw_line(own, t["pos"], col, 2.0, true)
 		_draw_text(font, f["pos"] + Vector2(10.0, 8.0), tr("relay.lane") % lane["label"], col)
 
@@ -369,7 +374,7 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 	var stem: Color = Palette.color("selected") if is_sel else col * Color(1, 1, 1, 0.7)
 	draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
 	draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
-	var pts: PackedVector2Array = Palette.shape_points(Palette.item_shape(it), pos, BLIP_R)
+	var pts: PackedVector2Array = Palette.shape_points(Palette.item_shape(it), pos, blip_r())
 	if (e["rel"] as Vector3).y >= 0.0:
 		draw_colored_polygon(pts.slice(0, -1), col)
 	else:
@@ -387,7 +392,7 @@ func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
-	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	draw_arc(pos, blip_r() + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
 	if not copies.is_empty():
 		var text: String = "+ " + ", ".join(PackedStringArray(copies))
 		_draw_text(get_theme_default_font(), pos + Vector2(-8.0, 14.0), text, col)
@@ -403,7 +408,7 @@ func _draw_preview(font: Font) -> void:
 	var col: Color = Palette.color("mark")
 	draw_line(project(Vector3(rel.x, 0.0, rel.z)), p, col * Color(1, 1, 1, 0.7), 1.0, true)
 	draw_line(project(preview["plane"]), p, col * Color(1, 1, 1, 0.4), 1.0, true)
-	draw_polyline(Palette.shape_points("diamond", p, BLIP_R + 2.0), col, 2.0, true)
+	draw_polyline(Palette.shape_points("diamond", p, blip_r() + 2.0), col, 2.0, true)
 	var label: String = str(preview.get("label", ""))
 	_draw_text(font, p + Vector2(12.0, -8.0), say_point(label, rel), col)
 

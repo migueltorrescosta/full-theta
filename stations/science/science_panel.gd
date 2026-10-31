@@ -37,6 +37,9 @@ const LIST_W: float = 190.0
 const CARD_W: float = 250.0
 ## Under this width the list, stage and card stack (a phone, a tablet upright, D195).
 const NARROW_W: float = 900.0
+## A landscape panel at least this wide keeps the list, stage and card side by side even
+## under NARROW_W (150 % UI scale on a 1280 x 720 window, T1).
+const SIDE_BY_SIDE_W: float = 780.0
 const STACK_LIST_H: float = 110.0
 const STACK_CARD_H: float = 200.0
 ## Detection confidence 0..1 -> blip size factor.
@@ -222,10 +225,16 @@ func _show_parts() -> void:
 	card_view.visible = show
 
 
+## True when the list, stage and card stack: under NARROW_W wide, unless it is landscape and
+## wide enough for three columns (T1).
+func is_narrow() -> bool:
+	return size.x < NARROW_W and not (size.x >= SIDE_BY_SIDE_W and size.x > size.y)
+
+
 ## A narrow panel stacks the list above the stage and the card below it (the bar wraps by
 ## itself); a wide one puts them side by side.
 func _stack() -> void:
-	var narrow: bool = size.x < NARROW_W
+	var narrow: bool = is_narrow()
 	_top.vertical = narrow
 	_list.custom_minimum_size = Vector2(0, STACK_LIST_H) if narrow else Vector2(LIST_W, 0)
 	card_view.custom_minimum_size = Vector2(0, STACK_CARD_H) if narrow else Vector2(CARD_W, 0)

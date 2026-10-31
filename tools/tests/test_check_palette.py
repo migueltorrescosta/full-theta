@@ -89,3 +89,10 @@ def test_report_marks_ratios_under_body_text_contrast():
     assert lines["text"].count("*") == 0
     assert lines["danger"].count("*") >= 1  # 3.49 on panel: the gap docs/accessibility.md lists
     assert "danger_fill" not in lines
+
+
+def test_font_constants_stay_at_twelve_or_more(tmp_path):
+    assert check_palette.check_fonts() == []
+    (tmp_path / "presentation").mkdir()
+    (tmp_path / "presentation/x.gd").write_text("const CHIP_LETTER_SIZE: int = 11\nconst FONT: int = 12\n")
+    assert len(check_palette.check_fonts(tmp_path)) == 1

@@ -69,7 +69,8 @@ func move_cursor(d: Vector2) -> int:
 func project(p: Vector3) -> Vector3:
 	var q: Vector3 = _basis() * p
 	var flat: Vector2 = Vector2(q.x, -q.y).rotated(PI / 2.0) * _scale()
-	return Vector3(size.x / 2.0 + flat.x, size.y * 0.47 + flat.y, q.z)
+	var top: float = hint_height()
+	return Vector3(size.x / 2.0 + flat.x, top + (size.y - top) * 0.47 + flat.y, q.z)
 
 
 func subsystem_pos(i: int) -> Vector2:
@@ -223,8 +224,7 @@ func _draw() -> void:
 		draw_arc(cursor, 8.0, 0.0, TAU, 16, a, 1.5)
 		draw_line(cursor + Vector2(-12, 0), cursor + Vector2(12, 0), a, 1.0)
 		draw_line(cursor + Vector2(0, -12), cursor + Vector2(0, 12), a, 1.0)
-	# A short cutaway (a phone upright under the banner) keeps the hull clear of the hint.
-	if size.y < HINT_MIN_H:
+	if hint_height() == 0.0:
 		return
 	var font: Font = get_theme_default_font()
 	var fs: int = get_theme_default_font_size()
@@ -407,7 +407,19 @@ func _hull_scale() -> Vector3:
 func _scale() -> float:
 	var hs: Vector3 = _hull_scale()
 	var extent: float = maxf(2.7 * hs.z, maxf(0.5 * hs.x, 0.28 * hs.y + 4.0))
-	return minf(size.x * 1.1, size.y * 0.8) / (2.0 * extent)
+	return minf(size.x * 1.1, (size.y - hint_height()) * 0.8) / (2.0 * extent)
+
+
+## The room the hint takes at the top, 0 on a short cutaway (a phone upright under the
+## banner); the hull is drawn below it, so the two never overlap (T2).
+func hint_height() -> float:
+	if size.y < HINT_MIN_H or panel == null:
+		return 0.0
+	var fs: int = get_theme_default_font_size() - 2
+	var text: Vector2 = get_theme_default_font().get_multiline_string_size(
+		hint(), HORIZONTAL_ALIGNMENT_LEFT, size.x - 24, fs, 3
+	)
+	return 16.0 + text.y + 6.0
 
 
 ## The hint over the cutaway; a phone has no right button (#28): a finger turns it.

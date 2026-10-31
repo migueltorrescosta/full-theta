@@ -321,3 +321,16 @@ func test_a_chip_drops_below_a_clock_number() -> void:
 	DiscRadar._declutter(entries, [number], Rect2(0, 0, 300, 200))
 	assert_float((entries[0]["chip_rect"] as Rect2).position.x).is_equal(number.end.x + 2.0)
 	assert_float((entries[0]["chip_rect"] as Rect2).position.y).is_equal(18.0)
+
+
+# FT: FT-STN-013
+func test_blips_keep_six_physical_pixels_below_full_scale() -> void:
+	add_child(radar)
+	var win: Window = radar.get_window()
+	var was: float = win.content_scale_factor
+	win.content_scale_factor = 0.75
+	assert_float(radar.blip_r() * 0.75).is_equal_approx(DiscRadar.BLIP_R, 0.001)
+	win.content_scale_factor = 1.5
+	assert_float(radar.blip_r()).is_equal(DiscRadar.BLIP_R)
+	win.content_scale_factor = was
+	remove_child(radar)

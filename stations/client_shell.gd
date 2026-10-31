@@ -66,6 +66,7 @@ var relaunch_prompt: VotePrompt
 var _layer: Control
 var _banner: Label
 var _subtitles: Label
+var _subtitle_panel: PanelContainer
 var _last_seq: int = -1
 var _shown: String = ""
 var _resume_at: int = 0
@@ -131,7 +132,8 @@ func setup(
 func apply_ui_scale() -> void:
 	if is_inside_tree():
 		var dpr: float = maxf(LayoutMode.density(), 1.0) if OS.has_feature("web") else 1.0
-		get_tree().root.content_scale_factor = ctx.settings.ui_scale * dpr
+		var touch: bool = LayoutMode.is_touch(LayoutMode.kind_of(self))
+		get_tree().root.content_scale_factor = ctx.settings.effective_scale(touch) * dpr
 
 
 func _ready() -> void:
@@ -424,6 +426,10 @@ func _show_subtitles() -> void:
 		)
 		lines.append("%s: %s" % [tr(str(e["label_key"])), text])
 	_subtitles.text = "\n".join(lines)
+	_subtitles.add_theme_font_size_override(
+		"font_size", int(ClientSettings.SUBTITLE_SIZES[ctx.settings.subtitle_size])
+	)
+	_subtitle_panel.visible = not lines.is_empty()
 
 
 ## Keeps the Shakedown's latest step per station for the banner (TrainingBanner).
@@ -499,14 +505,22 @@ func _build_overlays() -> void:
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_banner)
+	# A Banner panel behind the lines (W3), shown only while a line is (FT-AUD-010).
+	_subtitle_panel = PanelContainer.new()
+	_subtitle_panel.name = "SubtitlePanel"
+	_subtitle_panel.theme_type_variation = "Banner"
+	_subtitle_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_subtitle_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_subtitle_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_subtitle_panel.position.y -= 24
+	_subtitle_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_subtitle_panel.visible = false
 	_subtitles = Label.new()
-	_subtitles.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	_subtitles.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_subtitles.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_subtitles.position.y -= 24
+	_subtitles.name = "Subtitles"
 	_subtitles.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitles.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_subtitles)
+	_subtitle_panel.add_child(_subtitles)
+	add_child(_subtitle_panel)
 	settings_screen = SettingsScreen.new()
 	settings_screen.visible = false
 	add_child(settings_screen)

@@ -398,3 +398,17 @@ func test_panel_start_sends_the_current_selection() -> void:
 	var sent: Array = _cmds(s, "science_select")
 	assert_int(sent.size()).is_equal(1)
 	assert_int(sent[0][1][0]["contact"]).is_equal(H2)
+
+
+# FT: FT-STN-013
+# T1: at 150 % on a 1280 x 720 window (853 x 480 logical) the list, radar and card sit side
+# by side, so the radar keeps its height.
+func test_list_stage_and_card_stay_side_by_side_at_853_wide() -> void:
+	var s: StationScreen = await _screen()
+	var sci: SciencePanel = s.panels[s.stations.find("science")] as SciencePanel
+	sci.size = Vector2(853, 360)
+	assert_bool(sci.is_narrow()).is_false()
+	sci.size = Vector2(853, 1100)
+	assert_bool(sci.is_narrow()).is_true()
+	sci.size = Vector2(700, 360)
+	assert_bool(sci.is_narrow()).is_true()
