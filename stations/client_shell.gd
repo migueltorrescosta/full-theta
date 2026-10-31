@@ -51,6 +51,8 @@ const TIPS_VIEW: String = "res://presentation/tips_view.gd"
 
 var ctx: StationContext = StationContext.new()
 var voice: VoicePlayer
+## Effects, button taps and the ambient music (#12).
+var sound: SessionSound
 var lobby: LobbyScreen
 var screen: StationScreen
 var pause_overlay: PauseOverlay
@@ -108,6 +110,11 @@ func setup(
 	add_child(voice)
 	voice.subtitle.connect(func(_entry: Dictionary) -> void: _show_subtitles())
 	voice.subtitle.connect(_note_training)
+	sound = SessionSound.new()
+	add_child(sound)
+	sound.setup(ctx)
+	sound.stations_of = func() -> Array: return screen.stations if screen != null else []
+	sound.voice_playing = func() -> bool: return voice.bus.playing_clip() >= 0
 	_layer = Control.new()
 	_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_layer)

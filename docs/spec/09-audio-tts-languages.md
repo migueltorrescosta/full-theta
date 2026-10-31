@@ -44,3 +44,9 @@ Semi-realistic science fiction with readable silhouettes: procedural geometry wi
 - **FT-AUD-020** Ships shall be baked at build time by a headless script into packed scenes with the ambient occlusion in vertex colours, which the game only loads; the gate shall fail when a baked ship is older than its inputs. (D308)
 - **FT-AUD-021** Every ship shall use the same hull with a seeded panel variation, its own accent stripe colour and its name as a decal; a name with no baked look shall use the generic look. (D309)
 - **FT-AUD-022** The space backdrop shall be a fixed far-off shell of stars, denser and brighter than 700 points, with a faint galaxy band, and shall not parallax. (D310)
+- **FT-AUD-023** Sound effects shall be CC0 clips on their own `Sfx` bus, one per event: weapon fire (Weapons), destruction, docking and undocking (Helm), jump spool and arrival, button press and refused command; each shall be listed in the provenance manifest. (D312)
+- **FT-AUD-024** Ambient music shall be low CC0 tracks on a `Music` bus with its own volume setting (0 to 100 %, saved per client); the bus shall duck by 14 dB while a voice line or callout plays and recover after it, and the tracks shall be listed in the provenance manifest. (D312, M5-Q4)
+
+## 9.7 Sound effects and music
+
+Effects and music are CC0 and listed in `content/provenance.json` with source, author, licence and sha256 (FT-LIC-006). The alert tones (FT-AUD-009) are our own synthesised work; the other effects are Kenney's CC0 packs, one clip per event, on an `Sfx` bus that voice never touches: a weapon firing (Weapons), a ship destroyed (every screen), docking and undocking (Helm), the jump drive spooling and the arrival (every screen), a button press and a refused command (every screen). Ambient music, three calm CC0 space tracks played one after the other on a `Music` bus, plays while a run is on and ducks under voice lines and callouts (D312).

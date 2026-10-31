@@ -65,6 +65,19 @@ func test_a_session_menu_has_the_game_tab_first() -> void:
 	)
 
 
+# FT: FT-AUD-024
+func test_the_music_slider_sits_in_the_game_tab_and_saves_on_close() -> void:
+	var m: SettingsScreen = _menu()
+	var slider: HSlider = m.tabs.get_node(SettingsScreen.TAB_GAME).find_child("Music", true, false)
+	assert_float(slider.value).is_equal(50.0)
+	slider.value = 25.0
+	assert_float(m.settings.music_volume).is_equal(0.25)
+	m.close()
+	var saved: ClientSettings = ClientSettings.new(CFG)
+	saved.load_file()
+	assert_float(saved.music_volume).is_equal(0.25)
+
+
 # FT: FT-STN-011, FT-MIS-040
 # A vote, a run start or an elimination changes one button; the tabs and the Controls
 # pane stay the same nodes.

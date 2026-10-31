@@ -72,6 +72,7 @@ var _scale_slider: HSlider
 ## The Game tab's controls (null outside a session).
 var _ship_label: Label
 var _sound: SoundToggle
+var _music_slider: HSlider
 var _pause_button: Button
 var _abandon_button: Button
 var _leave_button: Button
@@ -143,6 +144,7 @@ func open(tab: String = "") -> void:
 	if _sound != null:
 		# The top bar's toggle may have changed the sound since.
 		_sound.button_pressed = _sound.is_on()
+		_music_slider.value = settings.music_volume * 100.0
 	open_tab(tab)
 
 
@@ -277,6 +279,7 @@ func _build_game(col: VBoxContainer) -> void:
 	_sound.flat = false
 	_row(_sound)
 	col.add_child(_sound)
+	_build_music(col)
 	_add_fullscreen(col)
 	_pause_button = _add_button(
 		col,
@@ -562,6 +565,31 @@ func _build_general(col: VBoxContainer) -> void:
 	# In a session it sits on the Game tab.
 	if not _in_session:
 		_add_fullscreen(col)
+
+
+## The Music row: a label, a 0-100 % slider and its value (#12, D312). Saved on close.
+func _build_music(col: VBoxContainer) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "MusicRow"
+	row.custom_minimum_size.y = UiTheme.TOUCH_PRIMARY
+	col.add_child(row)
+	row.add_child(_label(tr("settings.music")))
+	_music_slider = HSlider.new()
+	_music_slider.name = "Music"
+	_music_slider.min_value = 0.0
+	_music_slider.max_value = 100.0
+	_music_slider.step = 5.0
+	_music_slider.value = settings.music_volume * 100.0
+	_music_slider.custom_minimum_size = Vector2(200, 48)
+	_music_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(_music_slider)
+	var value: Label = _label("%d %%" % roundi(settings.music_volume * 100.0))
+	row.add_child(value)
+	_music_slider.value_changed.connect(
+		func(v: float) -> void:
+			settings.music_volume = v / 100.0
+			value.text = "%d %%" % roundi(v)
+	)
 
 
 func _build_comfort(col: VBoxContainer) -> void:
