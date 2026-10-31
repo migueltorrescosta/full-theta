@@ -47,7 +47,7 @@ gdunit() {
   (($#)) && shift
   rm -rf "$reports"
   mkdir -p "$reports/data"
-  XDG_DATA_HOME=$root/$reports/data "$@" "$godot" --headless --path . -s -d \
+  XDG_DATA_HOME=$root/$reports/data ${limit:+timeout -k 10 "$limit"} "$@" "$godot" --headless --path . -s -d \
     --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
     "${adds[@]}" --report-directory "$reports" --ignoreHeadlessMode
 }
@@ -57,7 +57,7 @@ gdunit() {
 # build/reports/l1-<k>/output.log and is printed when it fails. L1_SHARD=k/N runs only
 # shard k of N, in the foreground (one CI job per shard).
 l1() {
-  local n=${L1_SHARDS:-3} ks k i r files pids=() failed=0
+  local n=${L1_SHARDS:-3} ks k i r rc limit files pids=() failed=0
   if [[ -n ${L1_SHARD:-} ]]; then
     n=${L1_SHARD#*/}
     ks=("${L1_SHARD%/*}")
@@ -67,16 +67,20 @@ l1() {
   rm -rf build/reports && mkdir -p build
   for k in "${ks[@]}"; do
     mapfile -t files < <(python3 tools/l1_shards.py "$k" "$n")
+    limit=$(python3 tools/l1_shards.py --limit "$k" "$n")
     if ((${#ks[@]} == 1)); then
-      reports=build/reports/l1-$k gdunit "${files[@]}"
+      limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}"
       return
     fi
-    reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
+    limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
     pids+=($!)
   done
   for i in "${!ks[@]}"; do
     k=${ks[$i]}
-    if wait "${pids[$i]}"; then r=pass; else r=FAIL; failed=1; cat "build/l1-$k.log"; fi
+    if wait "${pids[$i]}"; then r=pass; else
+      rc=$?; r=FAIL; failed=1; cat "build/l1-$k.log"
+      ((rc == 124 || rc == 137)) && echo "l1: shard $k hung past its time limit; last test started: $(sed 's/\x1b\[[0-9;]*m//g' "build/l1-$k.log" | grep -a ' STARTED$' | tail -1)"
+    fi
     echo "l1: shard $k/$n $r: $(grep -a "Overall Summary" "build/l1-$k.log" | sed 's/\x1b\[[0-9;]*m//g')"
     mv "build/l1-$k.log" "build/reports/l1-$k/output.log" 2>/dev/null
   done
