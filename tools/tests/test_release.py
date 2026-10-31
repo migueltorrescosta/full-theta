@@ -383,3 +383,41 @@ def test_release_notes_give_open_anyway_steps_for_macos_and_windows(tmp_path):
     for step in ("Open Anyway", "right-click", "More info", "Run anyway", "SmartScreen"):
         assert step.lower() in text.lower()
     assert "{{" not in text
+
+
+def mac_inputs(tmp_path, monkeypatch):
+    helper = tmp_path / "helper"
+    helper.mkdir()
+    for n in ("piper", *package.MAC_LIBS):
+        (helper / n).write_bytes(macho(False))
+    (tmp_path / "espeak").mkdir()
+    (tmp_path / "espeak/x").write_bytes(b"x")
+    (tmp_path / "web").mkdir()
+    (tmp_path / "web/index.html").write_bytes(b"<html>")
+    monkeypatch.setattr(package, "mac_helper", lambda tmp: (helper, tmp_path / "espeak"))
+    monkeypatch.setattr(package, "add_voices", lambda w, rel: None)
+    godot = tmp_path / "godot.zip"
+    with zipfile.ZipFile(godot, "w") as z:
+        z.writestr(f"{package.APP}/Contents/MacOS/Full Theta", macho(False))
+    (tmp_path / "out").mkdir()
+    (tmp_path / "t").mkdir()
+    return godot
+
+
+# FT: FT-ARC-017
+@pytest.mark.parametrize("sign", [False, True])
+def test_macos_signing_is_opt_in_and_unsigned_packaging_needs_no_tool(tmp_path, monkeypatch, sign):
+    godot = mac_inputs(tmp_path, monkeypatch)
+    signed = []
+
+    def no_tool():
+        raise AssertionError("unsigned packaging fetched rcodesign")
+
+    monkeypatch.setattr(package, "rcodesign", no_tool)
+    monkeypatch.setattr(package, "adhoc_sign", lambda app, helpers: signed.append(app))
+    common = {"_version": "v1.2.3", "sign": sign, "files": {"BUILD.json": b"{}"}}
+    path = package.package_macos(godot, tmp_path / "web", common, tmp_path / "out", tmp_path / "t")
+    assert bool(signed) is sign
+    names = zipfile.ZipFile(path).namelist()
+    assert f"{package.APP}/Contents/Helpers/piper/piper" in names and "BUILD.json" in names
+    assert package.common_files("v1.2.3", "abc", "o/r", sign)["BUILD.json"].count(b'"macos_signed": ' + (b"true" if sign else b"false")) == 1

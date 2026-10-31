@@ -8,7 +8,7 @@ windows/full-theta.exe, macos/full-theta.zip and web/ (finished by
 web_patch.py). Each package gets the game, the web export, Piper with the
 release voices (tools/tts/voices.json "release") and the licence material:
 LICENSE (GPL-3.0), licenses/, SOURCE.md (source link and offer naming the
-Piper and eSpeak NG versions) and BUILD.json. The macOS app and its Piper helper are ad-hoc signed (D308); Windows and Linux
+Piper and eSpeak NG versions) and BUILD.json. The macOS app and its Piper helper are ad-hoc signed with --sign (D3xx); Windows and Linux
 are unsigned. The third-party sources go next
 to the packages as release assets, and SHA256SUMS lists every asset. Layout:
 docs/release.md; inspection: inspect_packages.py.
@@ -18,6 +18,7 @@ import argparse
 import functools
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -147,7 +148,7 @@ def voices_md(changes: dict[str, list[str]] | None = None) -> str:
     return "\n".join(lines)
 
 
-def common_files(version: str, commit: str, repo: str) -> dict[str, bytes]:
+def common_files(version: str, commit: str, repo: str, sign: bool = False) -> dict[str, bytes]:
     """Package-relative path -> bytes, shared by every package."""
     files = {"LICENSE": (ROOT / "LICENSE").read_bytes()}
     for name, path in fetch.fetch_group("licences").items():
@@ -162,6 +163,7 @@ def common_files(version: str, commit: str, repo: str) -> dict[str, bytes]:
         "languages": release_languages(),
         "piper": m["piper"]["version"],
         "espeak_ng": m["espeak_ng"]["version"],
+        "macos_signed": sign,
     }
     files["BUILD.json"] = (json.dumps(info, indent=2) + "\n").encode()
     return files
@@ -367,7 +369,7 @@ def mac_helper(tmp: Path) -> tuple[Path, Path]:
 
 
 def rcodesign() -> Path:
-    """The pinned apple-codesign program (D308), extracted from its checked
+    """The pinned apple-codesign program (D3xx), extracted from its checked
     archive. Ad-hoc signing needs no Mac, no key and no Apple account."""
     archive = fetch.fetch_group("tools")["rcodesign"]
     dest = archive.parent / archive.name.removesuffix(".tar.gz")
@@ -384,7 +386,7 @@ def rcodesign() -> Path:
 
 def adhoc_sign(app: Path, helpers: list[Path]) -> None:
     """Ad-hoc signs the Piper helper's Mach-O files, then the app bundle, inside
-    out (the bundle's seal covers what is already signed; FT-ARC-017, D308)."""
+    out (the bundle's seal covers what is already signed; FT-ARC-017, D3xx)."""
     tool = str(rcodesign())
     for path in [*helpers, app]:
         subprocess.run([tool, "sign", str(path)], check=True)
@@ -410,7 +412,8 @@ def package_macos(godot_zip: Path, web: Path, common: dict, out: Path, tmp: Path
     w.add_tree(f"{contents}/Resources/web", web)
     # Dylibs first, then the helper that loads them, then the bundle.
     helpers = [root / contents / "Helpers/piper" / n for n in (*MAC_LIBS, "piper")]
-    adhoc_sign(root / APP, helpers)
+    if common["sign"]:
+        adhoc_sign(root / APP, helpers)
     w.add_common(common["files"])
     z = Writer(path, "")
     for child in sorted(root.iterdir()):
@@ -435,9 +438,16 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--exports", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--repo", default=DEFAULT_REPO)
+    ap.add_argument(
+        "--sign",
+        action="store_true",
+        default=os.environ.get("FT_SIGN") == "1",
+        help="ad-hoc sign the macOS app and Piper helper with rcodesign (or FT_SIGN=1)",
+    )
     a = ap.parse_args(argv)
     a.out.mkdir(parents=True, exist_ok=True)
-    common = {"_version": a.version, "files": common_files(a.version, a.commit, a.repo)}
+    common = {"_version": a.version, "files": common_files(a.version, a.commit, a.repo, a.sign),
+        "sign": a.sign}
     web = a.exports / "web"
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)

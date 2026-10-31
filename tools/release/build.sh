@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the release packages for one commit (FT-ARC-022, FT-GEN-012, FT-LIC-008):
-#   tools/release/build.sh VERSION OUT_DIR [--allow-dirty]
+#   tools/release/build.sh VERSION OUT_DIR [--allow-dirty] [--sign]
 # 1. writes build_info.json (version, commit), which every export carries;
 # 2. prerenders each release language's clips (prerender.sh);
 # 3. exports Linux, Windows, macOS and Web (export_presets.cfg) into OUT_DIR/exports;
@@ -12,18 +12,23 @@
 # release mode needs the slim web template (D211): export_web.sh fails without it;
 # docs/release.md describes the artefacts. VERSION is a tag name such as v1.2.3
 # or v1.2.3-rc.1. OUT_DIR must be new, empty or an earlier build's output.
+# --sign (or FT_SIGN=1) ad-hoc signs the macOS app and Piper helper with the pinned
+# rcodesign (D3xx); without it nothing is fetched or signed (local builds, L6).
 # --allow-dirty builds an uncommitted tree (the commit gets a -dirty suffix).
 set -euo pipefail
-usage="usage: build.sh VERSION OUT_DIR [--allow-dirty]"
+usage="usage: build.sh VERSION OUT_DIR [--allow-dirty] [--sign]"
 version=${1:?$usage}
 out=$(realpath -m -- "${2:?$usage}")
 shift 2
 root=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$root"
 allow_dirty=0
+sign=()
+[[ ${FT_SIGN:-} == 1 ]] && sign=(--sign)
 for arg in "$@"; do
   case $arg in
     --allow-dirty) allow_dirty=1 ;;
+    --sign) sign=(--sign) ;;
     *) echo "build.sh: unknown argument $arg" >&2; exit 2 ;;
   esac
 done
@@ -80,7 +85,7 @@ echo "build: package"
 git archive --format=tar.gz --prefix="full-theta-$version/" \
   -o "$out/full-theta-$version-source.tar.gz" HEAD
 py tools/release/package.py --version "$version" --commit "$commit" \
-  --exports "$out/exports" --out "$out" --repo "${GITHUB_REPOSITORY:-migueltorrescosta/full-theta}"
+  --exports "$out/exports" --out "$out" --repo "${GITHUB_REPOSITORY:-migueltorrescosta/full-theta}" ${sign[@]+"${sign[@]}"}
 
 echo "build: inspect"
 py tools/release/inspect_packages.py --version "$version" --commit "$commit" "$out"

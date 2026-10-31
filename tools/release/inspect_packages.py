@@ -15,7 +15,7 @@ packages were made from). For each package the inspection checks:
   export has a voice-<lang>.pack per release language instead (voice_pack.py, D294);
 - the patched web shell and index.js (D108), voice configs the bundled Piper
   accepts (D144), the macOS helper's rpath (D140) and the ad-hoc signatures of the macOS app and
-  helper (D308);
+  helper (D3xx);
 - the GPL-3.0 text, SOURCE.md naming the Piper and eSpeak NG versions, BUILD.json.
 
 Then it checks that DIR holds exactly the expected assets, each listed in
@@ -315,6 +315,8 @@ class Inspector:
         c = f"{package.APP}/Contents"
         with zipfile.ZipFile(exports / "macos/full-theta.zip") as z:
             exported = {i.filename for i in z.infolist() if not i.is_dir()}
+        build = self.json(where, a.read("BUILD.json"), "BUILD.json") if a.has("BUILD.json") else {}
+        signed = build.get("macos_signed") is True
         espeak = {f for f in package.upstream_files("macos") if f.startswith("espeak-ng-data/")}
         expected = (
             exported
@@ -322,7 +324,7 @@ class Inspector:
             | {f"{c}/Resources/piper/{f}" for f in espeak}
             | {f"{c}/Resources/piper/voices/{f}" for f in self.voice_files}
             | {f"{c}/Resources/web/{f}" for f in tree(exports / "web")}
-            | {f"{c}/_CodeSignature/CodeResources"}  # the ad-hoc seal (D308)
+            | ({f"{c}/_CodeSignature/CodeResources"} if signed else set())
         )
         app = {m for m in a.members if m.startswith(f"{package.APP}/")}
         self.same(where, f"{package.APP}/", app, expected)
@@ -335,9 +337,10 @@ class Inspector:
         if a.has(helper):
             # D140: the helper finds its dylibs through an @executable_path rpath.
             self.check(b"@executable_path" in a.read(helper), where, "Piper helper has no rpath")
-        # D308, FT-ARC-017: the app and the Piper helper (its program and dylibs) are signed.
+        # D3xx, FT-ARC-017: a package built with --sign (BUILD.json macos_signed) has its
+        # app and Piper helper (program and dylibs) signed; an unsigned build needs none.
         for rel in (f"{c}/MacOS/Full Theta", *(f"{c}/Helpers/piper/{f}" for f in ("piper", *package.MAC_LIBS))):
-            if a.has(rel):
+            if signed and a.has(rel):
                 self.check(macho_signed(a.read(rel)) is True, where, f"{rel} is not signed")
         self.voices_in(a, f"{c}/Resources/piper/voices", where)
         self.web(a, f"{c}/Resources/web", where, tree(exports / "web"))
