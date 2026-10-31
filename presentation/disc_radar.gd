@@ -31,6 +31,12 @@ const PAD: float = 24.0
 const BLIP_R: float = 6.0
 ## Least space (px) between a chip and the edge of the view.
 const CHIP_MARGIN: float = 2.0
+## A chip stays within this distance (px) of its own blip: when no spot is free that near,
+## the chip is shortened before it is moved farther (D319).
+const CHIP_REACH: float = 48.0
+## The nearer reach tried first (px): a shorter chip close to its blip reads better than
+## the full chip a line away.
+const CHIP_NEAR: float = 24.0
 ## item_at picks the nearest blip within this distance (px).
 const HIT_PX: float = 12.0
 const ORBIT_DEG_PER_PX: float = 0.4
@@ -287,6 +293,8 @@ func _draw() -> void:
 	var r: float = RANGES_M[range_index]
 	_draw_disc(font, c, r)
 	var layout: Array[Dictionary] = _layout()
+	var covers: Array[Rect2] = SheetCover.over(self)
+	hide_covered(layout, covers)
 	var sel: Dictionary = {}
 	for e: Dictionary in layout:
 		if _is_selected(e["item"]):
@@ -310,17 +318,19 @@ func _draw() -> void:
 			_draw_pulse(_screen(_rel_item(it)), float(it.get("pulse", 0.0)))
 	_draw_bursts()
 	var label: Rect2 = _range_rect()
-	draw_rect(label, Palette.color("panel_focus"))
-	draw_rect(label, Palette.color("line"), false, 1.0)
-	var text: String = _range_text()
-	var tsz: Vector2 = Vector2(
-		font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
-		font.get_height(FONT_SIZE)
-	)
-	_draw_text(font, Rect2(label.get_center() - tsz / 2.0, tsz), text, Palette.color("text"))
-	draw_set_transform(_view().position)
-	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
-	draw_set_transform(Vector2.ZERO)
+	if not SheetCover.touches(label, covers):
+		draw_rect(label, Palette.color("panel_focus"))
+		draw_rect(label, Palette.color("line"), false, 1.0)
+		var text: String = _range_text()
+		var tsz: Vector2 = Vector2(
+			font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+			font.get_height(FONT_SIZE)
+		)
+		_draw_text(font, Rect2(label.get_center() - tsz / 2.0, tsz), text, Palette.color("text"))
+	if not SheetCover.touches(_site_rect(), covers):
+		draw_set_transform(_view().position)
+		SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
+		draw_set_transform(Vector2.ZERO)
 	if side_strip:
 		_draw_strip(font)
 	_sync_taps()
@@ -497,6 +507,8 @@ func _layout() -> Array[Dictionary]:
 		if small():
 			chip = it["label"] if chips else ""
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
+		var variants: Array[String] = []
+		var sizes: Array[Vector2] = []
 		if chip != "" and not small():
 			# A small radar (a phone's 180 px column) drops the range band, then the clock,
 			# until the chip fits beside its blip; the callsign alone may slide over it.
@@ -506,6 +518,9 @@ func _layout() -> Array[Dictionary]:
 				rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
 				if rect.position.x > pos.x + blip_r() or rect.end.x < pos.x - blip_r():
 					break
+			var forms: Array = chip_forms(font, chip)
+			variants.assign(forms[0])
+			sizes.assign(forms[1])
 		(
 			out
 			. append(
@@ -517,6 +532,8 @@ func _layout() -> Array[Dictionary]:
 					"beyond": beyond,
 					"chip": chip,
 					"chip_rect": rect,
+					"variants": variants,
+					"sizes": sizes,
 					"selected": _is_selected(it),
 				}
 			)
@@ -536,6 +553,35 @@ func _layout() -> Array[Dictionary]:
 			blip_r() + 3.0
 		)
 	return out
+
+
+## A chip a sheet would cut in half is not drawn at all (D319): `layout`'s chips under
+## `covers` (SheetCover.over) are emptied.
+static func hide_covered(layout: Array[Dictionary], covers: Array[Rect2]) -> void:
+	if covers.is_empty():
+		return
+	for e: Dictionary in layout:
+		if e["chip"] != "" and SheetCover.touches(e["chip_rect"], covers):
+			e["chip"] = ""
+
+
+## A chip's shorter forms, longest first ("H2 · 4 high · mid", "H2 · 4 high", "H2"), with
+## their sizes (px): [Array[String], Array[Vector2]]. The placement falls back on them when
+## no spot near the blip is free (D319).
+static func chip_forms(font: Font, chip: String) -> Array:
+	var variants: Array[String] = []
+	var sizes: Array[Vector2] = []
+	var all: PackedStringArray = chip.split(ChipText.SEP)
+	for n: int in range(all.size(), 0, -1):
+		var form: String = ChipText.SEP.join(all.slice(0, n))
+		variants.append(form)
+		sizes.append(
+			Vector2(
+				font.get_string_size(form, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+				font.get_height(FONT_SIZE)
+			)
+		)
+	return [variants, sizes]
 
 
 ## True when the disc is under SMALL_R in radius.
@@ -634,11 +680,12 @@ func _chip_rect(font: Font, chip: String, pos: Vector2, left: bool) -> Rect2:
 ## Places each chip next to its own blip, then moves it by the least that clears what it
 ## must not cover (spots tried: beside the default, right, left, above, below, a line off).
 ## Hard obstacles: the clock numbers and other boxes in `fixed`, every blip's box (entries
-## with a "pos") and the chips already placed; a spot also has to keep inside `limit`. Soft
-## ones, charged as a cost: crossing a stem, crossing the rim of `disc` (the disc's
-## bounding box, a chip stays inside the ellipse where it can) and the distance moved.
-## Selected chips are placed first, then top to bottom. A chip with no free spot drops
-## below what it overlaps, as before.
+## with a "pos"), the chips already placed and the other items' stems; a spot also has to
+## keep inside `limit` and within CHIP_REACH of its own blip. When no spot is free, the
+## chip is shortened (its "variants", longest first, with their "sizes"), then may cross
+## other stems (soft, as is leaving `disc`'s ellipse, charged as a cost), then takes the
+## free spot nearest its blip with the callsign alone. Selected chips are placed first,
+## then top to bottom. Without a blip a chip with no free spot drops below what it overlaps.
 static func _declutter(
 	entries: Array[Dictionary],
 	fixed: Array = [],
@@ -648,7 +695,7 @@ static func _declutter(
 ) -> void:
 	var boxes: Array[Rect2] = []
 	var blocked: Array[Rect2] = []
-	var stems: Array[Rect2] = []
+	var stems: Array[Dictionary] = []
 	for f: Variant in fixed:
 		boxes.append(f as Rect2)
 	for e: Dictionary in entries:
@@ -658,7 +705,15 @@ static func _declutter(
 		blocked.append(Rect2(p - Vector2(blip, blip), Vector2(blip, blip) * 2.0))
 		if e.has("foot") and not e.get("beyond", false):
 			var f: Vector2 = e["foot"]
-			stems.append(Rect2(minf(f.x, p.x) - 1.0, minf(f.y, p.y), 2.0, absf(f.y - p.y)))
+			(
+				stems
+				. append(
+					{
+						"rect": Rect2(minf(f.x, p.x) - 1.0, minf(f.y, p.y), 2.0, absf(f.y - p.y)),
+						"owner": e,
+					}
+				)
+			)
 	var order: Array[Dictionary] = entries.filter(
 		func(e: Dictionary) -> bool: return e["chip"] != ""
 	)
@@ -672,9 +727,32 @@ static func _declutter(
 	var placed: Array[Rect2] = []
 	for e: Dictionary in order:
 		var home: Rect2 = e["chip_rect"]
-		var pick: Rect2 = _best_spot(e, home, blocked, placed, stems, limit, disc, blip)
-		if not pick.has_area():
-			# No free spot: step down below the boxes and chips it overlaps.
+		var variants: Array = e.get("variants", [])
+		var sizes: Array = e.get("sizes", [])
+		var n: int = maxi(variants.size(), 1)
+		var pick: Rect2 = Rect2()
+		var text: String = e["chip"]
+		# (near, then up to CHIP_REACH, with the other stems hard, then soft: every form, the
+		# longest first, at each step)
+		for step: Array in [
+			[CHIP_NEAR, true], [CHIP_REACH, true], [CHIP_NEAR, false], [CHIP_REACH, false]
+		]:
+			for k: int in n:
+				var h: Rect2 = home if k == 0 else _home_for(home, e["pos"], sizes[k])
+				pick = _best_spot(e, h, blocked, placed, stems, limit, disc, blip, step[1], step[0])
+				if pick.has_area():
+					text = variants[k] if k > 0 else text
+					break
+			if pick.has_area():
+				break
+		if pick.has_area():
+			e["chip"] = text
+		else:
+			# No free spot near the blip: the callsign alone, nearest to it that is free of
+			# the hard boxes, else stepped down below what it overlaps.
+			if n > 1:
+				e["chip"] = variants[n - 1]
+				home = _home_for(home, e["pos"], sizes[n - 1])
 			pick = home
 			for _pass: int in order.size() + boxes.size():
 				var hit: bool = false
@@ -688,17 +766,33 @@ static func _declutter(
 		placed.append(pick)
 
 
+## `home` resized to `size`, on the same side of the blip at `pos`.
+static func _home_for(home: Rect2, pos: Vector2, size: Vector2) -> Rect2:
+	var x: float = home.position.x if home.position.x >= pos.x else home.end.x - size.x
+	return Rect2(Vector2(x, home.get_center().y - size.y / 2.0), size)
+
+
+## The distance (px) from `p` to the nearest point of `r`.
+static func _gap_to(r: Rect2, p: Vector2) -> float:
+	var dx: float = maxf(maxf(r.position.x - p.x, p.x - r.end.x), 0.0)
+	var dy: float = maxf(maxf(r.position.y - p.y, p.y - r.end.y), 0.0)
+	return Vector2(dx, dy).length()
+
+
 ## The spot for a chip whose default box is `home`: the cheapest free one, or an empty
-## Rect2.
+## Rect2. With a blip, a spot is within CHIP_REACH of it; `hard_stems` makes the other
+## items' stems obstacles too.
 static func _best_spot(
 	e: Dictionary,
 	home: Rect2,
 	blocked: Array[Rect2],
 	placed: Array[Rect2],
-	stems: Array[Rect2],
+	stems: Array[Dictionary],
 	limit: Rect2,
 	disc: Rect2,
-	blip: float
+	blip: float,
+	hard_stems: bool,
+	reach: float = CHIP_REACH
 ) -> Rect2:
 	var sz: Vector2 = home.size
 	var spots: Array[Rect2] = [home]
@@ -711,10 +805,17 @@ static func _best_spot(
 			spots.append(Rect2(Vector2(p.x - gap - sz.x, p.y - sz.y / 2.0 + dy), sz))
 		spots.append(Rect2(Vector2(p.x - sz.x / 2.0, p.y - gap - sz.y), sz))
 		spots.append(Rect2(Vector2(p.x - sz.x / 2.0, p.y + gap), sz))
+		# (corners: above and below, flush with the blip's right or left side)
+		spots.append(Rect2(Vector2(p.x, p.y - gap - sz.y), sz))
+		spots.append(Rect2(Vector2(p.x - sz.x, p.y - gap - sz.y), sz))
+		spots.append(Rect2(Vector2(p.x, p.y + gap), sz))
+		spots.append(Rect2(Vector2(p.x - sz.x, p.y + gap), sz))
 	var best: Rect2 = Rect2()
 	var best_cost: float = INF
 	for spot: Rect2 in spots:
 		if limit.has_area() and not limit.grow(0.5).encloses(spot):
+			continue
+		if e.has("pos") and _gap_to(spot, e["pos"]) > reach:
 			continue
 		var free: bool = true
 		for o: Rect2 in blocked + placed:
@@ -724,15 +825,49 @@ static func _best_spot(
 		if not free:
 			continue
 		var cost: float = spot.get_center().distance_to(home.get_center())
-		for s: Rect2 in stems:
-			if s.intersects(spot):
+		for s: Dictionary in stems:
+			if (s["rect"] as Rect2).intersects(spot):
+				if hard_stems and s["owner"] != e:
+					free = false
+					break
 				cost += 8.0
-		if disc.has_area() and not _in_ellipse(disc, spot):
-			cost += 10.0
+		if not free:
+			continue
+		if disc.has_area():
+			if not _in_ellipse(disc, spot):
+				cost += 10.0
+			# (a ring's line through the text strikes it out)
+			var half: Rect2 = Rect2(disc.get_center() - disc.size / 4.0, disc.size / 2.0)
+			for ring: Rect2 in [disc, half]:
+				if _crosses_ellipse(ring, spot):
+					cost += 6.0
 		if cost < best_cost:
 			best_cost = cost
 			best = spot
 	return best
+
+
+## True when the outline of the ellipse inscribed in `box` passes through `r`: some of the
+## corners and edge midpoints of `r` lie inside it and some outside.
+static func _crosses_ellipse(box: Rect2, r: Rect2) -> bool:
+	var c: Vector2 = box.get_center()
+	var h: Vector2 = box.size / 2.0
+	var mid: Vector2 = r.get_center()
+	var inside: int = 0
+	var points: Array[Vector2] = [
+		r.position,
+		Vector2(r.end.x, r.position.y),
+		r.end,
+		Vector2(r.position.x, r.end.y),
+		Vector2(mid.x, r.position.y),
+		Vector2(mid.x, r.end.y),
+		Vector2(r.position.x, mid.y),
+		Vector2(r.end.x, mid.y),
+	]
+	for q: Vector2 in points:
+		if ((q - c) / h).length_squared() <= 1.0:
+			inside += 1
+	return inside > 0 and inside < points.size()
 
 
 ## True when all four corners of `r` lie inside the ellipse inscribed in `box`.

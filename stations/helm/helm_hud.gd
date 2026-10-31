@@ -41,6 +41,8 @@ const PHONE_BAR_W: float = 100.0
 const TIGHT_BAR_W: float = 60.0
 ## A label with no clear spot may cover up to this share of its area of something else.
 const SLIGHT: float = 0.1
+## A marker's label sits within this distance (px) of the marker (D319).
+const LABEL_REACH: float = 48.0
 
 var panel: HelmPanel
 var compact: bool = false
@@ -297,7 +299,7 @@ func _draw_velocity(font: Font) -> void:
 			draw_line(s + Vector2(-6.0, -6.0), s + Vector2(6.0, 6.0), col, 1.5)
 			draw_line(s + Vector2(-6.0, 6.0), s + Vector2(6.0, -6.0), col, 1.5)
 		var text: String = tr("helm.prograde" if pro else "helm.retrograde")
-		var at: Rect2 = label_rect(font, text, s, 14.0)
+		var at: Rect2 = label_rect(font, text, s, 14.0, INF)
 		_placed.append(at)
 		_labels.append(at)
 		_text(font, at.position + Vector2(0.0, font.get_ascent(FONT_SIZE)), text, col)
@@ -461,6 +463,12 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 		draw_arc(p, r + 10.0 * (1.0 - pulse) + 4.0, 0.0, TAU, 24, Color(col, pulse), 2.0)
 	var text: String = "%s %s" % [e["label"], _range(e["world"].length())]
 	var at: Rect2 = label_rect(font, text, p, r)
+	if _covers_something(at):
+		# No clear spot near the marker for the range too: the callsign alone.
+		var short: Rect2 = label_rect(font, str(e["label"]), p, r)
+		if not _covers_something(short):
+			text = str(e["label"])
+			at = short
 	_placed.append(at)
 	_labels.append(at)
 	if at.position.x != p.x + r + 6.0 or at.position.y != p.y + 5.0 - font.get_ascent(FONT_SIZE):
@@ -472,10 +480,20 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 	_text(font, at.position + Vector2(0.0, font.get_ascent(FONT_SIZE)), text, col)
 
 
+## True when `box` overlaps a reserved box or a label placed this frame.
+func _covers_something(box: Rect2) -> bool:
+	var avoid: Array[Rect2] = reserved()
+	avoid.append_array(_placed)
+	return _hits(box, avoid)
+
+
 ## Where a marker's label goes (HUD coordinates): right of the marker, else the nearest spot
-## clear of the marker, of `reserved()` and of this frame's other markers and labels; a
-## label that fits nowhere clear stays on the right.
-func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
+## within LABEL_REACH of it, clear of the marker, of `reserved()` and of this frame's other
+## markers and labels; with none clear, the spot within reach that covers least. The label
+## always stays inside the view.
+func label_rect(
+	font: Font, text: String, p: Vector2, r: float, reach: float = LABEL_REACH
+) -> Rect2:
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 	var h: float = font.get_height(FONT_SIZE)
 	var right: Rect2 = Rect2(p + Vector2(r + 6.0, 5.0 - font.get_ascent(FONT_SIZE)), Vector2(w, h))
@@ -484,11 +502,35 @@ func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
 	var inside: Rect2 = area()
 	if not _hits(right, avoid) and inside.encloses(right):
 		return right
+	# (a marker outside the view's clear area, under the view-top row, has no near spot)
+	if not inside.has_point(p):
+		reach = INF
 	var tries: Array[Rect2] = [
 		Rect2(right.position - Vector2(w + 2.0 * r + 12.0, 0.0), right.size),
 		Rect2(Vector2(p.x - w / 2.0, p.y - 1.3 * r - h - 2.0), right.size),
 		Rect2(Vector2(p.x - w / 2.0, p.y + 1.3 * r + 2.0), right.size),
 	]
+	# Round the marker: eight directions, up to three lines out, all within LABEL_REACH.
+	for step: int in 3:
+		var d: float = 1.3 * r + 2.0 + step * h
+		for dir: Vector2 in [
+			Vector2(1, 0),
+			Vector2(-1, 0),
+			Vector2(0, -1),
+			Vector2(0, 1),
+			Vector2(1, -1),
+			Vector2(-1, -1),
+			Vector2(1, 1),
+			Vector2(-1, 1),
+		]:
+			var corner: Vector2 = p + dir * d
+			var x0: float = (
+				corner.x if dir.x > 0.0 else (corner.x - w if dir.x < 0.0 else p.x - w / 2.0)
+			)
+			var y0: float = (
+				corner.y if dir.y > 0.0 else (corner.y - h if dir.y < 0.0 else p.y - h / 2.0)
+			)
+			tries.append(Rect2(Vector2(x0, y0), right.size))
 	for a: Rect2 in avoid:
 		for x: float in [a.position.x - w - 4.0, a.end.x + 4.0]:
 			tries.append(Rect2(Vector2(x, right.position.y), right.size))
@@ -504,12 +546,17 @@ func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
 	var best: Rect2 = right
 	var best_d: float = INF
 	# No clear spot (a crowded phone view): the spot overlapping least, if only slightly.
-	var least: Rect2 = right
-	var least_cover: float = SLIGHT * w * h
+	var least: Rect2 = Rect2(
+		right.position.clamp(inside.position, (inside.end - right.size).max(inside.position)),
+		right.size
+	)
+	var least_cover: float = INF
 	for t: Rect2 in tries:
 		# Kept inside the view: a label near the edge slides in rather than giving up.
 		t.position = t.position.clamp(inside.position, (inside.end - t.size).max(inside.position))
 		if t.intersects(marker) or not inside.encloses(t) or not _leader_clear(p, t, avoid):
+			continue
+		if _gap(t, p) > reach:
 			continue
 		var cover: float = 0.0
 		for a: Rect2 in avoid:
@@ -523,6 +570,13 @@ func label_rect(font: Font, text: String, p: Vector2, r: float) -> Rect2:
 			best_d = t.get_center().distance_to(p)
 			best = t
 	return best if best_d < INF else least
+
+
+## The distance (px) from `p` to the nearest point of `box`.
+static func _gap(box: Rect2, p: Vector2) -> float:
+	var dx: float = maxf(maxf(box.position.x - p.x, p.x - box.end.x), 0.0)
+	var dy: float = maxf(maxf(box.position.y - p.y, p.y - box.end.y), 0.0)
+	return Vector2(dx, dy).length()
 
 
 ## A marker's box at `p` for a bracket of radius `r`.

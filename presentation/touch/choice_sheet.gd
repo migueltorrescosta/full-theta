@@ -90,6 +90,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	resized.connect(_place)
+	SheetCover.register(box)
 	_place()
 
 

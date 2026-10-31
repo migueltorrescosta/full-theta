@@ -248,6 +248,21 @@ func _show_side() -> void:
 		share_bar.min_width = TouchDrawer.WIDTH - 2.0 * UiTheme.TOUCH_GAP
 	_sync_share()
 	_place_phone_bar()
+	_place_training(not phone_form and _side.visible)
+
+
+## The Shakedown card sits at the top of the side column when there is one (it then covers
+## no gauge), else floats over the screen.
+func _place_training(in_column: bool) -> void:
+	if training == null:
+		return
+	if in_column and training.get_parent() != _extras:
+		training.reparent(_extras, false)
+		_extras.move_child(training, 0)
+		training.dock(true)
+	elif not in_column and training.get_parent() != self:
+		training.reparent(self, false)
+		training.dock(false)
 
 
 ## The opener shows while the share buttons sit in the drawer and there is something to
@@ -437,6 +452,8 @@ func _process(delta: float) -> void:
 	radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
 	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
+	var spot: Rect2 = top_bar.status_rect().intersection(get_global_rect())
+	toasts.place(Rect2(spot.position - get_global_rect().position, spot.size))
 	flash.update(now)
 	if phone:
 		frame.process(now)
@@ -817,14 +834,6 @@ func _build() -> void:
 	_phone_bar.add_child(share_opener)
 	_extras.add_child(_phone_bar)
 	toasts = Toasts.new()
-	toasts.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	# Top-right of the screen (§5.0), over the radar's empty corner, not the panel.
-	toasts.offset_left = -16.0
-	toasts.offset_right = -16.0
-	toasts.offset_top = TOP_BAR_HEIGHT + 8.0
-	toasts.offset_bottom = TOP_BAR_HEIGHT + 8.0
-	toasts.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toasts)
 	chip_strip = ChipStrip.new()
 	chip_strip.position = Vector2(8.0, TOP_BAR_HEIGHT + 8.0)
@@ -922,13 +931,6 @@ func _relayout() -> void:
 		share_bar.gap = UiTheme.TOUCH_GAP
 	_extras_pad.visible = phone and portrait
 	var top: float = m.y + top_bar.custom_minimum_size.y + 8.0
-	toasts.offset_top = top
-	toasts.offset_bottom = top
-	# Beside a side radar the toasts stack at the main area's right edge, off the radar's
-	# labels; over a radar below the main area they keep the screen's corner.
-	var toast_x: float = -16.0 - m.z - (0.0 if portrait else _side.custom_minimum_size.x)
-	toasts.offset_left = toast_x
-	toasts.offset_right = toast_x
 	chip_strip.position = Vector2(8.0 + m.x, top)
 	rotate_banner.visible = false
 	if rotate_prompt:

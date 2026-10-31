@@ -27,6 +27,9 @@ class FrameDemo:
 
 	var upright: bool = false
 	var radar: DiscRadar = DiscRadar.new()
+	## Upright, what the demo draws below the frame's view-top row (top_reserve), like the
+	## stations (on its side 390 px cannot hold the chip, the card and the toast).
+	var _body: Control
 
 	func _setup() -> void:
 		in_frame = true
@@ -69,6 +72,7 @@ class FrameDemo:
 				left.add_child(b)
 			block.add_child(left)
 			block.add_child(zone)
+			_body = col
 			return
 		var layout: RailLayout = RailLayout.new()
 		add_child(layout)
@@ -78,6 +82,10 @@ class FrameDemo:
 		var right: TouchRail = layout.rail(SIDE_RIGHT)
 		right.custom_minimum_size.x = 168.0
 		right.add(zone)
+
+	func _process(_delta: float) -> void:
+		if _body != null:
+			_body.offset_top = top_reserve
 
 	## Upright the view is the radar above the controls block.
 	func view_rect() -> Rect2:

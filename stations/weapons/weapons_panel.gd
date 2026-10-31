@@ -826,12 +826,16 @@ func _layout_targets() -> void:
 		var view: Rect2 = Rect2(Vector2.ZERO, _overlay.size).grow(-BRACKET)
 		if phone and view.has_area() and not view.has_point(p as Vector2):
 			continue
+		# (a target whose centre is off the view has no bracket to hang a chip on)
+		if _overlay.size.x > 0.0 and not Rect2(Vector2.ZERO, _overlay.size).has_point(p as Vector2):
+			continue
 		var chip: String = target_chip(it)
 		var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 		var at: Vector2 = (p as Vector2) + Vector2(BRACKET + 6.0, 4.0 - FONT_SIZE)
 		# Too near the right edge for the chip: it goes to the left of the bracket.
 		if phone and at.x + sz.x > _overlay.size.x:
 			at.x = (p as Vector2).x - BRACKET - 6.0 - sz.x
+		at.x = maxf(at.x, 2.0)
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
 		_targets.append(
 			{"item": it, "pos": p, "chip": chip, "chip_at": at, "rect": r.merge(Rect2(at, sz))}
@@ -866,14 +870,33 @@ func _draw_overlay() -> void:
 	elif arc != "":
 		lines.append(arc)
 	var line_h: float = FONT_SIZE + 6.0
-	var y0: float = (
-		12.0 + FONT_SIZE if docked else _overlay.size.y - 12.0 - line_h * (lines.size() - 1)
-	)
+	# A line longer than the view wraps (the docked column is narrow), so none is cut at the
+	# screen's edge (D319).
+	var width: float = maxf(_overlay.size.x - 24.0, 40.0)
+	var counts: Array[int] = []
+	var total: int = 0
+	for text: String in lines:
+		var wrapped: float = (
+			font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE).y
+		)
+		var rows_n: int = maxi(roundi(wrapped / font.get_height(FONT_SIZE)), 1)
+		counts.append(rows_n)
+		total += rows_n
+	var y0: float = 12.0 + FONT_SIZE if docked else _overlay.size.y - 12.0 - line_h * (total - 1)
+	var y: float = y0
 	for k: int in lines.size():
 		var col: Color = Palette.color("text") if k == mount else Palette.color("text_dim")
 		if lines[k] == arc:
 			col = Palette.color("warn")
-		_text(font, Vector2(12.0, y0 + k * line_h), lines[k], col)
+		var bg: Color = Palette.color("background")
+		var at: Vector2 = Vector2(12.0, y)
+		_overlay.draw_multiline_string_outline(
+			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, 4, bg
+		)
+		_overlay.draw_multiline_string(
+			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, col
+		)
+		y += line_h * counts[k]
 
 
 ## On a phone the rail and the overlays show the mounts, the ammunition, the claim and the

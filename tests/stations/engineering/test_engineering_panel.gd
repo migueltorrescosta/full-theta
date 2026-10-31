@@ -327,6 +327,6 @@ func test_the_hull_clears_the_hint_and_the_board_scrolls() -> void:
 	var top: float = p.cutaway.hint_height()
 	assert_float(top).is_greater(20.0)
 	for i: int in p.count():
-		assert_float(p.cutaway.subsystem_pos(i).y - EngineeringCutaway.NODE_R).is_greater_equal(top)
+		assert_float(p.cutaway.subsystem_pos(i).y - p.cutaway.node_r()).is_greater_equal(top)
 	assert_float(p.board.custom_minimum_size.y).is_equal(p.board.content_height())
 	assert_float(p.board.content_height()).is_greater(300.0)

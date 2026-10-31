@@ -206,7 +206,19 @@ func bottom_top() -> float:
 	return _bottom.position.y
 
 
-## Narrow: the probe and contact column ends above the bottom box, which grows upward with
+## The part of the panel the HUD's boxes leave to the map (the panel's coordinates): right
+## of the probe column and above the log box, or between them when narrow. The map centres
+## and fits in it, so no item sits under an opaque box (D319).
+func free_rect() -> Rect2:
+	if not visible or _left == null or size.x <= 0.0:
+		return Rect2()
+	var top: float = _left.position.y + _left.size.y + 8.0 if _narrow else 0.0
+	var left: float = 0.0 if _narrow else _left.position.x + _left.size.x + 8.0
+	var bottom: float = _bottom.position.y - 8.0
+	return Rect2(left, top, size.x - left, maxf(bottom - top, 0.0))
+
+
+## Narrow: the probe column ends above the bottom box, which grows upward with
 ## its content (tap-sized buttons, a wrapped inbox), instead of lying over the contacts.
 func _fit_left() -> void:
 	if not _narrow:

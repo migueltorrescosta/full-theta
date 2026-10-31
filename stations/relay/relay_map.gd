@@ -217,8 +217,9 @@ func _draw() -> void:
 	_draw_own(picture.rel(Vector3.ZERO, centre))
 	if not sel.is_empty():
 		_draw_item(sel, true)
+	var covers: Array[Rect2] = SheetCover.over(self)
 	for e: Dictionary in layout:
-		if e["chip"] != "":
+		if e["chip"] != "" and not SheetCover.touches(e["chip_rect"], covers):
 			var col: Color = (
 				Palette.color("selected") if e == sel else Palette.item_color(e["item"])
 			)
@@ -235,7 +236,12 @@ func _draw() -> void:
 	var scale_text: String = tr("relay.span") % _km(span_m)
 	var base: float = _view().end.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0
 	var x: float = _view().position.x + 8.0
-	_draw_text(font, Vector2(x, base - font.get_height(FONT_SIZE)), scale_text, _dim())
+	var caption: Rect2 = Rect2(
+		Vector2(x, base - font.get_height(FONT_SIZE)),
+		font.get_string_size(scale_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE),
+	)
+	if not SheetCover.touches(caption, covers):
+		_draw_text(font, caption.position, scale_text, _dim())
 
 
 ## Hazard bubbles: the sphere's silhouette is a circle of its radius; a sim plane front
@@ -458,20 +464,15 @@ func _layout() -> Array[Dictionary]:
 		var pos: Vector2 = project(rel)
 		var chip: String = ChipText.chip(it["label"], it["local"]) if chips else ""
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
+		var variants: Array[String] = []
+		var sizes: Array[Vector2] = []
 		if chip != "":
 			var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 			sz.y = font.get_height(FONT_SIZE)
 			rect = Rect2(Vector2(pos.x + 10.0, pos.y - sz.y / 2.0), sz)
-			# On a phone a chip that would cover an earlier one steps down a line.
-			for _try: int in range(out.size() if _phone() else 0):
-				var hit: bool = false
-				for o: Dictionary in out:
-					var other: Rect2 = o["chip_rect"]
-					if other.has_area() and other.intersects(rect):
-						rect.position.y = other.end.y
-						hit = true
-				if not hit:
-					break
+			var forms: Array = DiscRadar.chip_forms(font, chip)
+			variants.assign(forms[0])
+			sizes.assign(forms[1])
 		(
 			out
 			. append(
@@ -482,14 +483,26 @@ func _layout() -> Array[Dictionary]:
 					"foot": project(Vector3(rel.x, 0.0, rel.z)),
 					"chip": chip,
 					"chip_rect": rect,
+					"variants": variants,
+					"sizes": sizes,
+					"selected": _is_selected(it),
 				}
 			)
 		)
+	# Each chip beside its own blip, clear of the other chips, the blips, their stems, the
+	# own ship and the span caption, inside the map's view (D319, as the disc radar).
+	var own: Vector2 = project(picture.rel(Vector3.ZERO, centre))
+	var caption: Vector2 = font.get_string_size(
+		tr("relay.span") % _km(span_m), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE
+	)
+	var v: Rect2 = _view()
+	var base: float = v.end.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0
+	var fixed: Array = [
+		Rect2(own - Vector2(9, 9), Vector2(18, 18)),
+		Rect2(Vector2(v.position.x + 8.0, base - font.get_height(FONT_SIZE)), caption),
+	]
+	DiscRadar._declutter(out, fixed, v.grow(-2.0), Rect2(), blip_r() + 3.0)
 	return out
-
-
-func _phone() -> bool:
-	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 
 
 func _is_selected(it: Dictionary) -> bool:

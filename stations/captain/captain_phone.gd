@@ -72,6 +72,7 @@ func _init(owner_panel: CaptainPanel = null, is_upright: bool = false) -> void:
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		box.add_child(scroll)
 		stage.add_child(box)
+		SheetCover.register(box)
 	requests.name = "Requests"
 	card_box.name = "Cards"
 	card_box.gui_input.connect(_on_cards_input)
@@ -114,6 +115,9 @@ func place(reserve: float) -> void:
 		if box.position != r.position or box.size != r.size:
 			box.position = r.position
 			box.size = r.size
+	# A shown list covers the mirror's radar (its right side, or all of it upright): hide it.
+	if panel != null and panel.mirror != null:
+		panel.mirror.radar_covered = requests.is_visible_in_tree() or card_box.is_visible_in_tree()
 
 
 ## The view buttons follow the main screen's view.

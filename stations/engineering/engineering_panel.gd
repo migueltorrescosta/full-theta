@@ -98,6 +98,8 @@ var _left: VBoxContainer
 var _side: PanelContainer
 var _lists: VBoxContainer
 var _lists_text: String = ""
+var _lists_margin: MarginContainer
+var _lists_scroll: ScrollContainer
 ## "pips:<i>" or "tightness" -> [value sent, at ms].
 var _pending: Dictionary = {}
 ## The last wheel event happened outside this panel (over the radar): its pip intent is
@@ -150,7 +152,13 @@ func _setup() -> void:
 	# Scrolls when the lists don't fit (they sit under the cutaway when narrow).
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_side.add_child(scroll)
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+	# The margin under the scroll makes its last visible row whole at rest (_snap_lists).
+	_lists_margin = MarginContainer.new()
+	_lists_margin.add_child(scroll)
+	_side.add_child(_lists_margin)
+	_lists_scroll = scroll
+	_side.resized.connect(_snap_lists.call_deferred)
 	_lists.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_lists)
 	ctx.crew.sim_event.connect(_on_sim_event)
@@ -956,6 +964,31 @@ func _refresh_lists() -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.add_theme_color_override("font_color", Palette.color(line[1]))
 		_lists.add_child(l)
+	_snap_lists.call_deferred()
+
+
+## Sizes the faults list's view to whole rows: with more lines than fit, the room below the
+## last whole row becomes a margin, so no row is cut at rest (D319).
+func _snap_lists() -> void:
+	if _lists_margin == null or not is_inside_tree():
+		return
+	var room: float = (
+		_lists_scroll.size.y + float(_lists_margin.get_theme_constant("margin_bottom"))
+	)
+	var content: float = _lists.get_combined_minimum_size().y
+	var keep: float = 0.0
+	if content > room:
+		var sep: float = float(_lists.get_theme_constant("separation"))
+		var y: float = 0.0
+		for row: Node in _lists.get_children():
+			var h: float = (row as Control).get_combined_minimum_size().y
+			if y + h > room:
+				break
+			y += h + sep
+			keep = y - sep
+		keep = room - keep if keep > 0.0 else 0.0
+	if int(keep) != _lists_margin.get_theme_constant("margin_bottom"):
+		_lists_margin.add_theme_constant_override("margin_bottom", int(keep))
 
 
 # --- Events and input. ---

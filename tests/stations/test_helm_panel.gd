@@ -319,7 +319,10 @@ func test_marker_labels_stay_clear_of_the_shield_ring() -> void:
 			for fy: float in [0.1, 0.3, 0.5, 0.7, 0.9]:
 				var p: Vector2 = _panel.hud.size * Vector2(fx, fy)
 				var box: Rect2 = _panel.hud.label_rect(font, text, p, 10.0)
-				# A marker so deep in a reserved area that no clear spot fits keeps the default.
 				if inside.encloses(box):
-					for area: Rect2 in reserved:
-						assert_bool(box.intersects(area)).is_false()
+					# The label stays within 48 px of its marker (D319), and clear of the
+					# reserved boxes unless the marker itself sits in one.
+					assert_float(HelmHud._gap(box, p)).is_less_equal(48.0)
+					if not reserved.any(func(area: Rect2) -> bool: return area.has_point(p)):
+						for area: Rect2 in reserved:
+							assert_bool(box.intersects(area)).is_false()

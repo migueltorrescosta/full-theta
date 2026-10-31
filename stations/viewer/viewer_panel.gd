@@ -37,6 +37,9 @@ const CHASE_LEVEL_RATE: float = 0.6
 const FOV_DEG: float = 70.0
 const RADAR_SHARE: float = 0.4
 const RAIL_HEIGHT: float = 30.0
+## Under this height (px) the radar under the view would be a strip: it hides (D319); the
+## tactical view keeps it, since the radar is the view.
+const RADAR_MIN_H: float = 180.0
 ## A phone on its side puts the radar beside the view when the panel is this much wider than
 ## tall (#28).
 const SIDE_RADAR_ASPECT: float = 1.6
@@ -57,6 +60,12 @@ const ITEM_REACH_PX: float = 28.0
 var chase: bool = false
 var camera: Camera3D
 var radar: DiscRadar
+## An opaque list covers the radar's side (the Captain's Requests and Cards on a phone):
+## the radar hides instead of peeking out from under it (D319).
+var radar_covered: bool = false:
+	set(value):
+		radar_covered = value
+		_place_radar()
 ## True on the Captain's mirror: the views take clicks (select, ping, mark); a plain
 ## viewer only watches.
 var interactive: bool = false
@@ -216,6 +225,10 @@ func _place_radar() -> void:
 	elif not beside and radar.get_parent() != _rows:
 		radar.reparent(_rows, false)
 	radar.custom_minimum_size.x = size.y if beside else 0.0
+	var room: float = (size.y - RAIL_HEIGHT) * RADAR_SHARE
+	radar.visible = (
+		not radar_covered and (beside or view_id == MainScreen.View.TACTICAL or room >= RADAR_MIN_H)
+	)
 
 
 ## The target view's camera (world axes centred on the own ship): TARGET_STANDOFF_M from
@@ -417,5 +430,15 @@ func _draw_rail() -> void:
 
 
 func _text(font: Font, at: Vector2, text: String, col: Color) -> void:
+	var box: Rect2 = Rect2(
+		at,
+		Vector2(
+			font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+			font.get_height(FONT_SIZE)
+		)
+	)
+	# A label an opaque list would cut in half is not drawn (D319).
+	if SheetCover.touches(box, SheetCover.over(_overlay)):
+		return
 	var base: Vector2 = at + Vector2(0.0, font.get_ascent(FONT_SIZE))
 	Palette.draw_outlined(_overlay, font, base, text, FONT_SIZE, col)

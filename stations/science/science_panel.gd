@@ -41,6 +41,8 @@ const NARROW_W: float = 900.0
 ## under NARROW_W (150 % UI scale on a 1280 x 720 window, T1).
 const SIDE_BY_SIDE_W: float = 780.0
 const STACK_LIST_H: float = 110.0
+## Stacked, the list shows this many whole rows (it scrolls past them), D319.
+const STACK_LIST_ROWS: int = 3
 const STACK_CARD_H: float = 200.0
 ## Detection confidence 0..1 -> blip size factor.
 const BLIP_MIN: float = 0.6
@@ -237,6 +239,7 @@ func _stack() -> void:
 	var narrow: bool = is_narrow()
 	_top.vertical = narrow
 	_list.custom_minimum_size = Vector2(0, STACK_LIST_H) if narrow else Vector2(LIST_W, 0)
+	_fit_list()
 	card_view.custom_minimum_size = Vector2(0, STACK_CARD_H) if narrow else Vector2(CARD_W, 0)
 	card_view.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if not own_radar() or narrow else 0)
 	_show_parts()
@@ -418,6 +421,20 @@ func _refresh_list() -> void:
 		_list.set_item_custom_fg_color(i, Palette.allegiance_color(items[i]["allegiance"]))
 		if ctx.crew.selection == {"kind": "contact", "id": items[i]["id"]}:
 			_list.select(i)
+	_fit_list()
+
+
+## Stacked, the list is as tall as its first STACK_LIST_ROWS rows, so no row shows cut at
+## rest; with fewer rows it keeps its minimum height.
+func _fit_list() -> void:
+	if _list == null or not is_narrow() or _list.item_count == 0:
+		return
+	_list.force_update_list_size()
+	var rows: int = mini(_list.item_count, STACK_LIST_ROWS)
+	var edge: float = _list.get_theme_stylebox("panel").get_minimum_size().y
+	var h: float = _list.get_item_rect(rows - 1).end.y + edge
+	if h > 0.0:
+		_list.custom_minimum_size.y = maxf(h, 0.0) if rows == STACK_LIST_ROWS else STACK_LIST_H
 
 
 func _before(a: Dictionary, b: Dictionary) -> bool:

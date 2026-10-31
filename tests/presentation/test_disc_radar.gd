@@ -329,7 +329,7 @@ func test_a_chip_moves_off_a_clock_number() -> void:
 
 
 # FT: FT-STN-003
-# Each chip stays beside its own blip (never farther than a line or two), clear of every
+# Each chip stays beside its own blip (within 48 px, D319), clear of every
 # blip, the own ship and the other chips, and inside the disc when a spot there is free
 # (the 150 % checkpoint: H2 and F4 crossed the rim, Bravo floated 60 px away).
 func test_chips_sit_next_to_their_blip_inside_the_disc() -> void:
@@ -347,7 +347,7 @@ func test_chips_sit_next_to_their_blip_inside_the_disc() -> void:
 	var layout: Array[Dictionary] = radar._layout()
 	for e: Dictionary in layout:
 		var r: Rect2 = e["chip_rect"]
-		assert_float(r.get_center().distance_to(e["pos"])).is_less(90.0)
+		assert_float(DiscRadar._gap_to(r, e["pos"])).is_less_equal(48.0)
 		assert_bool(r.intersects(radar._own_box())).is_false()
 		for o: Dictionary in layout:
 			var box: Rect2 = Rect2((o["pos"] as Vector2) - Vector2(6, 6), Vector2(12, 12))
