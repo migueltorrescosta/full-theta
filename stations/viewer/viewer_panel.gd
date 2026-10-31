@@ -73,7 +73,7 @@ var _card_layer: Control
 var _card_shown: int = -1
 ## The forward view; only contacts with a NEAR orientation (within 2 km) are drawn.
 var _space: SpaceView
-var _own: Node3D
+var _own: ProceduralShip
 var _overlay: Control
 var _rail: Control
 var _cols: HBoxContainer
@@ -314,9 +314,11 @@ func _place_camera(ship: Basis, delta: float) -> void:
 		var up: Vector3 = ComfortCamera.plane_up(ctx.settings, rot, ComfortCamera.target_rot(ctx))
 		_space.place_camera(Transform3D(ComfortCamera.look(fwd, up, ship.y), fwd * 3.0), fov)
 	if chase and _own == null:
-		# Built on the first chase (the first ship model bakes the AO).
 		_own = _space.copy_ship()
 	if _own != null:
+		var look: String = ProceduralShip.look_for(ctx.crew.ship_name())
+		if _own.look != look:
+			_own.set_look(look)
 		_own.visible = chase
 		_own.transform = Transform3D(ship, Vector3.ZERO)
 

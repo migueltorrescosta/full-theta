@@ -1,0 +1,59 @@
+{
+  "wear": 0.8,
+  "looks": [
+    {
+      "name": "generic",
+      "seed": 7,
+      "stripe": "#332e42",
+      "decal": false
+    },
+    {
+      "name": "Kestrel",
+      "seed": 101,
+      "stripe": "#c0785a",
+      "decal": true
+    },
+    {
+      "name": "Heron",
+      "seed": 202,
+      "stripe": "#5a8fb0",
+      "decal": true
+    },
+    {
+      "name": "Osprey",
+      "seed": 303,
+      "stripe": "#c8a24a",
+      "decal": true
+    },
+    {
+      "name": "Merlin",
+      "seed": 404,
+      "stripe": "#9a6ab8",
+      "decal": true
+    },
+    {
+      "name": "Petrel",
+      "seed": 505,
+      "stripe": "#c0566a",
+      "decal": true
+    },
+    {
+      "name": "Tern",
+      "seed": 606,
+      "stripe": "#d8d8d0",
+      "decal": true
+    },
+    {
+      "name": "Curlew",
+      "seed": 707,
+      "stripe": "#4fa890",
+      "decal": true
+    },
+    {
+      "name": "Swift",
+      "seed": 808,
+      "stripe": "#d9893a",
+      "decal": true
+    }
+  ]
+}

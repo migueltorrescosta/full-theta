@@ -23,7 +23,7 @@ bin=$(run python -c 'import os, sys; print(os.path.dirname(sys.executable))')
 chunked() { printf '%s\0' "${scripts[@]}" | xargs -0 -P "$jobs" -n $(((${#scripts[@]} + jobs - 1) / jobs)) "$@"; }
 
 checks=(tool-tests gdlint gdformat check-only definitions scenarios architecture traceability dialogue
-  palette licences)
+  palette licences ships)
 check() {
   case $1 in
     gdlint) chunked "$bin/gdlint" ;;
@@ -36,6 +36,8 @@ check() {
     traceability) run python tools/traceability.py --check ;;
     dialogue) run python tools/check_dialogue.py ;; # FT-DAT-003, FT-DAT-004, FT-DAT-011
     palette) run python tools/check_palette.py ;; # FT-STN-006
+    # A baked ship is as old as its inputs (D308).
+    ships) "$godot" --headless --path . -s res://tools/bake_ships.gd -- --check ;;
     licences) run python tools/check_licences.py ;;
     tool-tests) run pytest -q -p no:cacheprovider tools/tests ;;
   esac

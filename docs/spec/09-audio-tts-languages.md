@@ -18,7 +18,7 @@ English, Portuguese (pt_PT) and Italian at launch; one language per session (D40
 
 ## 9.5 Visual style
 
-Semi-realistic science fiction with readable silhouettes: procedural geometry with panel detail, PBR-style metallic and roughness materials, a desaturated mint and violet palette, and at most a thin outline (D107, amending the toon look of v0.3 §8 and D63).
+Semi-realistic science fiction with readable silhouettes: procedural geometry with panel detail, PBR-style metallic and roughness materials, a desaturated mint and violet palette, and at most a thin outline (D107, amending the toon look of v0.3 §8 and D63). Ships are baked at build time with their ambient occlusion, each with its own panel variation, accent stripe and name decal (D308, D309); the space backdrop is a fixed shell of stars with a faint galaxy band (D310).
 
 ## 9.6 Requirements
 
@@ -41,3 +41,6 @@ Semi-realistic science fiction with readable silhouettes: procedural geometry wi
 - **FT-AUD-017** Browser clients shall unlock audio with a user gesture on join. (D8)
 - **FT-AUD-018** The host server shall synthesise the session's closed set (ship names, callsigns, NPC names) at Start and cache it per language; numbers shall use prerendered fragments; runtime synthesis shall be used only for free text. (D85, D101)
 - **FT-AUD-019** Synthesis shall run on the host server in one persistent Piper process per voice off the sim thread, and the host shall stream each dynamic clip only to the client that plays it. (D85, D101, plan review TECH-5)
+- **FT-AUD-020** Ships shall be baked at build time by a headless script into packed scenes with the ambient occlusion in vertex colours, which the game only loads; the gate shall fail when a baked ship is older than its inputs. (D308)
+- **FT-AUD-021** Every ship shall use the same hull with a seeded panel variation, its own accent stripe colour and its name as a decal; a name with no baked look shall use the generic look. (D309)
+- **FT-AUD-022** The space backdrop shall be a fixed far-off shell of stars, denser and brighter than 700 points, with a faint galaxy band, and shall not parallax. (D310)
