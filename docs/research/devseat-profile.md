@@ -49,4 +49,4 @@ The fix was already in the branch's base: D294 (lazy, cached controls diagrams w
 
 This strand changes only: the profiler, this note, and `test_outcome_card.gd`'s now-stale "10-14 s" comment with its wait lowered from 30 s to 15 s (no assertion touched).
 
-A full `gate.sh l1` ran in 30 minutes once because one shard hung in `test_layout_mode.gd > test_screen_arranges_for_orientation_and_phone` (101 % CPU, an `await` that never returned); the same file passes in 0.4 s alone, so it is a load-dependent hang that is not about the dev seat. See the lead's report for the full L1 time.
+Full gates on commit 9ad7a3f (cores 0, 1, 8, 9, other strands running): `gate.sh l0 l1` passed, L0 85 s, L1 403 s (467 + 471 + 650 tests in three shards). A first L1 attempt hung for 30 minutes in shard 1, in `test_layout_mode.gd > test_screen_arranges_for_orientation_and_phone` (101 % CPU, an `await` that never returned); that file passes in 0.4 s alone and the rerun passed, so it is a rare load-dependent hang unrelated to the dev seat. L1 before this work was not rerun for the whole suite (the old tree needs the same 400 s plus the 20-35 s of dev-seat waiting measured above).
