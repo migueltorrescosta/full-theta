@@ -203,6 +203,12 @@ func test_a_touch_layout_gets_touch_words_and_a_desktop_gets_keys() -> void:
 	s.ctx.matcher.device = IntentTable.PAD
 	assert_bool(s.training.touch_wording()).is_equal(Input.get_connected_joypads().is_empty())
 	s.ctx.matcher.device = IntentTable.KBM
+	# A tablet shows the desktop panels: its card keeps clear of the controls, its words are keys.
+	var t: StationScreen = await _screen("helm", FORMS[2])
+	_show_step(t, "helm", "all_stop")
+	t.training.refresh()
+	assert_bool(t.training.touch_layout()).is_true()
+	assert_bool(t.training.touch_wording()).is_false()
 	SafeArea.simulate([])
 	var d: StationScreen = await _screen("helm", [Vector2i(1280, 720), [], false])
 	_show_step(d, "helm", "all_stop")
@@ -340,7 +346,7 @@ func test_the_icon_toggles_between_enter_and_exit() -> void:
 	assert_str(b.action).is_equal(FullscreenToggle.ACTION)
 	assert_str(b.text).is_empty()
 	# The menu's own entry keeps its text and its action.
-	assert_str(FullscreenButton.new().action).is_equal("fullscreen")
+	assert_str(auto_free(FullscreenButton.new()).action).is_equal("fullscreen")
 
 
 # FT: FT-STN-005

@@ -8,7 +8,7 @@ extends PanelContainer
 ## TrainingNextCommand; on a step that ends on a command it does nothing, and a player may
 ## press it anyway. Next has a key (the training_next intent), a pad chord and a tap.
 ##
-## The wording follows the player's device (D321): on a touch layout (phone, tablet) the
+## The wording follows the player's device (D321): on a phone (a tablet shows desktop panels) the
 ## step reads in touch words from `train.touch.<station>.<intent>` or `train.touch.<intent>`
 ## (control names in {t:key} are the translated labels of the controls themselves), with no
 ## key names and no key on Next; a pad in use (D321) gets the pad's buttons, and a keyboard
@@ -111,23 +111,24 @@ func refresh() -> void:
 	if not visible:
 		return
 	var device: String = ctx.matcher.device
-	var touch: bool = touch_wording()
+	var touch: bool = touch_layout()
+	var words: bool = touch_wording()
 	_title.text = tr("train.title")
 	_title.visible = not touch
 	var text: String = str(entry["text"])
 	var example: String = ""
-	if touch:
+	if words:
 		text = strip_markers(text)
 		example = touch_text(station, str(entry.get("intent", "")))
 	if example == "":
 		var key: String = str(entry.get("example", ""))
 		if key != "":
 			example = BindingText.fill_markers(tr(key), ctx.settings.bindings, device)
-	_text.text = text if touch else BindingText.fill_markers(text, ctx.settings.bindings, device)
+	_text.text = text if words else BindingText.fill_markers(text, ctx.settings.bindings, device)
 	_example.text = example
 	var done: bool = bool(entry.get("done", false))
 	_next.visible = not done
-	if touch:
+	if words:
 		_next.text = tr("train.next")
 	else:
 		_next.text = "%s  (%s)" % [tr("train.next"), _next_binding(device)]
@@ -150,9 +151,15 @@ func refresh() -> void:
 			place()
 
 
-## True when the step reads in touch words: a touch layout, unless a pad is in use.
+## True on a touch layout (a phone or a tablet): the card keeps clear of the controls.
+func touch_layout() -> bool:
+	return is_inside_tree() and LayoutMode.is_touch(LayoutMode.kind_of(self))
+
+
+## True when the step reads in touch words: a phone, whose stations have the rails, sticks and
+## tabs the words name (a tablet shows the desktop panels), unless a pad is in use.
 func touch_wording() -> bool:
-	if not is_inside_tree() or not LayoutMode.is_touch(LayoutMode.kind_of(self)):
+	if not is_inside_tree() or not LayoutMode.is_phone(LayoutMode.form_of(self)):
 		return false
 	return not (
 		ctx.matcher.device == IntentTable.PAD and not Input.get_connected_joypads().is_empty()

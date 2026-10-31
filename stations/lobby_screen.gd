@@ -1,3 +1,4 @@
+# gdlint: disable=max-file-lines
 class_name LobbyScreen
 extends Control
 ## The lobby as the station grid (D216, FT-NET-015, FT-NET-017, FT-NET-032, FT-STN-015,
