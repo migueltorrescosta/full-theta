@@ -22,6 +22,13 @@ extends Control
 ## the stick, and the page zone as a two-column grid; the screen's banner asks to turn
 ## sideways.
 ##
+## Tablet (#32, D308, D309): no pages and no overlays. A TabletDock (`dock`) of two opaque
+## rails at the screen's edges, the whole tablet screen between them. Left: All stop and
+## Approach above, the Turn stick at the lower corner with the throttle on its inner side.
+## Right: Face, Align, Track, Dock, Jump, Chase and Decoupled, the Slide stick at the lower
+## corner. Upright the two rails are one bottom bar. The radar column, the shield ring and
+## the HUD keep their tablet places.
+##
 ## The throttle sets the speed setpoint, as the spec's assist-only touch throttle: while the
 ## slider differs from the HELM block's setpoint, it feeds helm_surge (the S/W and trigger
 ## axis) until the setpoint gets there, then shows the setpoint again (All stop, Approach,
@@ -31,8 +38,6 @@ extends Control
 const LEFT_W: float = 168.0
 const RIGHT_W: float = 168.0
 const BLOCK_H: float = 300.0
-## The least a button's text shrinks to so it fits (fit_text).
-const MIN_FONT: int = 12
 ## The throttle stops feeding helm_surge within this many m/s of its setpoint; the input is
 ## the gap over GAIN_S seconds of full ramp.
 const SETPOINT_TOLERANCE: float = 1.0
@@ -79,6 +84,10 @@ const TOGGLES: Array = ["shield_track", "chase_camera", "decoupled"]
 
 var panel: HelmPanel
 var portrait: bool = false
+## A tablet's docked rails instead of the phone's overlays and pages.
+var tablet: bool = false
+## Tablet: the rails (the panel gives them to the screen).
+var dock: TabletDock
 var touch: TouchIntents
 ## The first button of each Helm intent: id -> RailButton (All stop, Approach and each
 ## page's buttons).
@@ -107,9 +116,10 @@ var block: PanelContainer
 var _target: float = NAN
 
 
-func _init(p_panel: HelmPanel, sink: Callable, is_portrait: bool) -> void:
+func _init(p_panel: HelmPanel, sink: Callable, is_portrait: bool, is_tablet: bool = false) -> void:
 	panel = p_panel
 	portrait = is_portrait
+	tablet = is_tablet
 	name = "HelmTouch"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -119,6 +129,9 @@ func _init(p_panel: HelmPanel, sink: Callable, is_portrait: bool) -> void:
 	var assist: AssistDef = _assist()
 	if assist != null and assist.speed_max > 0.0:
 		throttle.min_value = assist.speed_min / assist.speed_max
+	if tablet:
+		_build_tablet()
+		return
 	radar = DiscRadar.new()
 	radar.name = "Radar"
 	radar.gui_input.connect(_on_radar_input)
@@ -150,22 +163,8 @@ func _button(id: String, role: RailButton.Role = RailButton.Role.PLAIN) -> RailB
 			touch.button(b, id)
 	if not buttons.has(id):
 		buttons[id] = b
-	b.resized.connect(fit_text.bind(b))
+	b.resized.connect(RailButton.fit_text.bind(b))
 	return b
-
-
-## Shrinks `b`'s text, down to MIN_FONT, until it fits the button (a long word in a half
-## rail button, a longer language).
-static func fit_text(b: Button) -> void:
-	b.remove_theme_font_size_override("font_size")
-	var font: Font = b.get_theme_font("font")
-	var room: float = b.size.x - b.get_theme_stylebox("normal").get_minimum_size().x
-	var fs: int = b.get_theme_font_size("font_size")
-	while (
-		fs > MIN_FONT and font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room
-	):
-		fs -= 1
-	b.add_theme_font_size_override("font_size", fs)
 
 
 ## The page titles, in PAGE_* order.
@@ -208,6 +207,36 @@ func _build_landscape() -> void:
 	layout.content_rect_changed.connect(func(_r: Rect2) -> void: panel.hud.queue_redraw())
 
 
+## The tablet's two docked rails (the left rail's row: buttons and the Turn stick, then the
+## throttle on its inner side).
+func _build_tablet() -> void:
+	dock = TabletDock.new(portrait)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	col.add_child(_button("all_stop", RailButton.Role.DANGER))
+	col.add_child(_button("approach"))
+	var gap: Control = Control.new()
+	gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(gap)
+	# Beside the throttle a landscape rail has room for a 112 px stick.
+	turn = TabletDock.corner_stick(_stick("turn"), portrait, true, 136.0 if portrait else 112.0)
+	touch.stick(turn, "helm_yaw", "helm_pitch")
+	col.add_child(turn)
+	var row: HBoxContainer = dock.left.add_row([col, throttle])
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	col.size_flags_stretch_ratio = 2.0
+	throttle.size_flags_horizontal = Control.SIZE_FILL
+	var ids: Array = ["face", "align", "shield_track", "dock", "jump", "chase_camera", "decoupled"]
+	dock.right.add(_grid(ids, 4 if portrait else 2, PAGE_FLY))
+	dock.right.add_spacer()
+	slide = _stick("slide")
+	# Right stick: x strafes to starboard, up lifts (the pad's RS_X and -RS_Y).
+	touch.stick(slide, "helm_sway", "helm_heave", 1.0, -1.0)
+	dock.right.add(slide)
+	TabletDock.corner_stick(slide, portrait, false)
+
+
 func _build_portrait() -> void:
 	block = PanelContainer.new()
 	block.theme_type_variation = "DockedRail"
@@ -234,7 +263,7 @@ func _build_portrait() -> void:
 		b.toggle_mode = true
 		b.button_group = group
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.resized.connect(fit_text.bind(b))
+		b.resized.connect(RailButton.fit_text.bind(b))
 		modes.add_child(b)
 	mode_turn.name = "mode_turn"
 	mode_slide.name = "mode_slide"
@@ -358,10 +387,11 @@ func view_bottom_inset() -> float:
 ## Every frame: the throttle, the ring, the radar and the lit mode buttons.
 func update(ring: ShieldRing) -> void:
 	_drive_throttle()
-	_place_radar()
-	if radar_box.is_visible_in_tree():
-		radar.set_picture(panel.ctx.picture(), panel.ctx.crew.selection)
-	_place_ring(ring)
+	if not tablet:
+		_place_radar()
+		if radar_box.is_visible_in_tree():
+			radar.set_picture(panel.ctx.picture(), panel.ctx.crew.selection)
+		_place_ring(ring)
 	var h: Dictionary = panel.helm_block()
 	var on: Dictionary = {
 		"shield_track": int(h.get("shield_track", -1)) >= 0,

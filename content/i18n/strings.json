@@ -1275,6 +1275,8 @@
     "touch.helm.help.turn": {"en": "Turn stick: point the nose", "pt_PT": "Manche de rotação: aponta a proa", "it": "Stick di rotazione: punta il muso"},
     "touch.helm.range_in": {"en": "Range −", "pt_PT": "Alcance −", "it": "Portata −"},
     "touch.helm.range_out": {"en": "Range +", "pt_PT": "Alcance +", "it": "Portata +"},
-    "weapons.touch_fire_all": {"en": "Fire all", "pt_PT": "Disparar todas", "it": "Fuoco a tutte"}
+    "weapons.touch_fire_all": {"en": "Fire all", "pt_PT": "Disparar todas", "it": "Fuoco a tutte"},
+    "touch.weapons.mount": {"en": "Mount %d", "pt_PT": "Montagem %d", "it": "Torretta %d"},
+    "touch.weapons.aim": {"en": "Aim", "pt_PT": "Mirar", "it": "Mira"}
   }
 }

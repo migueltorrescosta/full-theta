@@ -1,0 +1,84 @@
+class_name TabletDock
+extends Control
+## Helm's and Weapons' touch controls on a tablet (#32, D308, D309): two opaque docked rails
+## at the edges of the screen with the whole tablet screen between them (top bar, HUD, radar
+## column and shield ring unobstructed; the rails shrink the screen, they never cover it).
+## Upright, both rails join one docked bar along the bottom, each taking half of its width,
+## sticks at the lower corners. The station fills `left` and `right` (TouchRail) and gives
+## the dock to the StationScreen (`set_tablet_dock`), which reserves its room and places it.
+##
+##     var dock := TabletDock.new(portrait)
+##     dock.left.add(...)
+##     screen.set_tablet_dock(dock)
+
+## A side rail's width (landscape), px: 176 px with its padding, as the owner's mockups.
+const RAIL_W: float = 176.0
+## The bottom bar's height (upright), px.
+const BAR_H: float = 300.0
+## A stick's side at a rail's lower corner, px.
+const STICK: float = 136.0
+
+## The least side (device-independent px) of a window that gets a dock; a headless run's
+## 64 px forced to a tablet gets none.
+const MIN_SIDE: float = 300.0
+
+var portrait: bool = false
+var left: TouchRail
+var right: TouchRail
+
+
+func _init(is_portrait: bool = false) -> void:
+	portrait = is_portrait
+	name = "TabletDock"
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	left = TouchRail.new(SIDE_LEFT, true)
+	right = TouchRail.new(SIDE_RIGHT, true)
+	left.name = "RailL"
+	right.name = "RailR"
+	for r: TouchRail in [left, right]:
+		r.custom_minimum_size.x = 0.0 if portrait else RAIL_W
+		add_child(r)
+
+
+## True when a window of `dp` device-independent px is big enough for a dock.
+static func fits(dp: Vector2) -> bool:
+	return minf(dp.x, dp.y) >= MIN_SIDE
+
+
+## The room the screen gives the dock: a column at each side (landscape, x each), or a bar
+## along the bottom (upright, y).
+func reserve() -> Vector2:
+	return Vector2(0.0, BAR_H) if portrait else Vector2(RAIL_W, 0.0)
+
+
+## Puts the rails in `area` (the screen's tap area, in the screen's coordinates).
+func place(area: Rect2) -> void:
+	if portrait:
+		var half: float = floorf(area.size.x / 2.0)
+		_put(left, Rect2(area.position.x, area.end.y - BAR_H, half, BAR_H))
+		_put(right, Rect2(area.position.x + half, area.end.y - BAR_H, area.size.x - half, BAR_H))
+	else:
+		_put(left, Rect2(area.position.x, area.position.y, RAIL_W, area.size.y))
+		_put(right, Rect2(area.end.x - RAIL_W, area.position.y, RAIL_W, area.size.y))
+
+
+func _put(r: TouchRail, rect: Rect2) -> void:
+	r.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	r.position = rect.position
+	r.size = rect.size
+
+
+## Makes `s` a stick of `side` px that sits at its rail's lower corner: at the bottom of a
+## landscape rail, at the outer end of an upright bar's rail (`outer_left`: the bar's left
+## end). Call it after the stick is added to its rail, which fills the rail's width.
+static func corner_stick(
+	s: VirtualStick, portrait_bar: bool, outer_left: bool, side: float = STICK
+) -> VirtualStick:
+	s.custom_minimum_size = Vector2(side, side)
+	s.size_flags_vertical = Control.SIZE_SHRINK_END
+	if portrait_bar:
+		s.size_flags_horizontal = (
+			Control.SIZE_SHRINK_BEGIN if outer_left else Control.SIZE_SHRINK_END
+		)
+	return s

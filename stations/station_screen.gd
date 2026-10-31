@@ -91,6 +91,9 @@ var share_opener: RailButton
 ## desktops keep their layout. `phone` is set by _relayout.
 var phone: bool = false
 var frame: PhoneFrame = PhoneFrame.new()
+## The focused panel's docked touch rails on a tablet (#32, TabletDock), or null. The panel
+## makes and frees it; the screen reserves its room and places it.
+var tablet_dock: TabletDock = null
 ## One-level choices: the selection, alert and dev-station sheets, and the panels' (Hack).
 var sheet: ChoiceSheet
 
@@ -206,6 +209,24 @@ func focus(i: int) -> void:
 ## panel's tabs again (PageHost, `pages`).
 func pages_changed() -> void:
 	_show_side()
+
+
+## Docks `dock` (a panel's tablet rails) over the screen's edges, or lets the old one go with
+## null. The rows shrink by what it reserves; the panel keeps ownership of the node.
+func set_tablet_dock(dock: TabletDock) -> void:
+	if dock == tablet_dock:
+		return
+	if tablet_dock != null and tablet_dock.get_parent() == self:
+		remove_child(tablet_dock)
+	tablet_dock = dock
+	if dock != null:
+		add_child(dock)
+	_relayout()
+
+
+## The room the tablet dock takes (x at each side, or y at the bottom); zero without one.
+func _dock_reserve() -> Vector2:
+	return tablet_dock.reserve() if tablet_dock != null else Vector2.ZERO
 
 
 ## The radar column hides for a lone full-screen panel (which may depend on the form). A
@@ -847,7 +868,7 @@ func _apply_band() -> void:
 	var sideways: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
 	var into: bool = phone and sideways and focused_panel().in_frame
 	_band_h = bottom if into else 0.0
-	_rows.offset_bottom = -bottom + _band_h
+	_rows.offset_bottom = -bottom + _band_h - _dock_reserve().y
 	_side_band.custom_minimum_size.y = _band_h
 	sheet.offset_bottom = -_band_h
 
@@ -864,11 +885,14 @@ func _relayout() -> void:
 	# can be tapped there (#28).
 	var m: Vector4 = SafeArea.margins(self)
 	var bottom: float = maxf(m.w, SafeArea.tap_band(self))
-	_rows.offset_left = m.x
+	var res: Vector2 = _dock_reserve()
+	_rows.offset_left = m.x + res.x
 	_rows.offset_top = m.y
-	_rows.offset_right = -m.z
-	_rows.offset_bottom = -bottom
+	_rows.offset_right = -m.z - res.x
+	_rows.offset_bottom = -bottom - res.y
 	size_now -= Vector2(m.x + m.z, m.y + bottom)
+	if tablet_dock != null:
+		tablet_dock.place(Rect2(m.x, m.y, size_now.x, size_now.y))
 	var touch: bool = LayoutMode.is_touch(kind)
 	var portrait: bool = LayoutMode.portrait(size_now)
 	phone = phone_frame()
@@ -919,9 +943,9 @@ func _relayout() -> void:
 	var top: float = m.y + top_bar.custom_minimum_size.y + 8.0
 	toasts.offset_top = top
 	toasts.offset_bottom = top
-	toasts.offset_left = -16.0 - m.z
-	toasts.offset_right = -16.0 - m.z
-	chip_strip.position = Vector2(8.0 + m.x, top)
+	toasts.offset_left = -16.0 - m.z - res.x
+	toasts.offset_right = -16.0 - m.z - res.x
+	chip_strip.position = Vector2(8.0 + m.x + res.x, top)
 	rotate_banner.visible = false
 	if rotate_prompt:
 		rotate_banner.refresh()
