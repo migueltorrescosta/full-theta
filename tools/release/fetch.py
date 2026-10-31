@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tts"))
 from fetch_voices import download, sha256  # noqa: E402, F401 (sha256 re-exported)
 
 MANIFEST = Path(__file__).with_name("piper.json")
-GROUPS = ("binaries", "licences", "sources")
+GROUPS = ("binaries", "tools", "licences", "sources")
 
 
 def manifest() -> dict:
@@ -30,7 +30,7 @@ def cache_dir() -> Path:
 def fetch_one(group: str, key: str) -> Path:
     """Download one pinned file (if missing or stale) and return its path."""
     meta = manifest()[group][key]
-    name = key if group != "binaries" else Path(meta["url"]).name
+    name = key if group not in ("binaries", "tools") else Path(meta["url"]).name
     return download(meta["url"], cache_dir() / group / name, meta["sha256"])
 
 
