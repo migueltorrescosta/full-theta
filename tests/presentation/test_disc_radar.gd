@@ -303,3 +303,21 @@ func test_large_radar_keeps_full_chips() -> void:
 	radar.set_picture(_pic([_it("contact", 2, "H2", "H", Vector3(1500, 300, -1500))]), {})
 	assert_bool(radar.small()).is_false()
 	assert_str(radar._layout()[0]["chip"]).contains(ChipText.SEP)
+
+
+# FT: FT-STN-002
+# A chip never sits over a clock number: it drops below the number's box.
+func test_a_chip_drops_below_a_clock_number() -> void:
+	var number: Rect2 = Rect2(Vector2(100, 20), Vector2(14, 14))
+	var entries: Array[Dictionary] = [
+		{"chip": "U3", "chip_rect": Rect2(Vector2(104, 18), Vector2(60, 16))}
+	]
+	DiscRadar._declutter(entries, [number])
+	var moved: Rect2 = entries[0]["chip_rect"]
+	assert_bool(moved.intersects(number)).is_false()
+	assert_float(moved.position.y).is_equal(number.end.y)
+	# With room at the side the chip slides there instead and keeps its height.
+	entries = [{"chip": "U3", "chip_rect": Rect2(Vector2(104, 18), Vector2(60, 16))}]
+	DiscRadar._declutter(entries, [number], Rect2(0, 0, 300, 200))
+	assert_float((entries[0]["chip_rect"] as Rect2).position.x).is_equal(number.end.x + 2.0)
+	assert_float((entries[0]["chip_rect"] as Rect2).position.y).is_equal(18.0)

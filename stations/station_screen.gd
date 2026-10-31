@@ -431,7 +431,7 @@ func _process(delta: float) -> void:
 		_maxes(),
 		ctx.crew.summaries(status, ctx.ship_def())
 	)
-	radar.set_picture(ctx.picture(), ctx.crew.selection)
+	radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
 	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
 	flash.update(now)

@@ -339,7 +339,7 @@ func refresh() -> void:
 	var session: int = int(b.get("session", SESSION_NONE))
 	var own: bool = own_radar()
 	if radar != null:
-		radar.set_picture(ctx.picture(), ctx.crew.selection)
+		radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
 		radar.blip_scale = _blip_scale(b)
 		radar.visible = own and session == SESSION_NONE
 	_show_parts()
