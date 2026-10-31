@@ -1,19 +1,18 @@
 class_name LobbyScreen
 extends Control
-## The lobby as the station grid (D216, FT-NET-015, FT-NET-017, FT-NET-032, FT-STN-015,
-## FT-JNT-006): the six crew stations as cells, 3 columns by 2 rows in landscape and 2 by
-## 3 in portrait on every device, each with its name, its role description, the names of
-## the crewmates who picked it and a border in its load colour; a one-line legend under
-## the grid (compact, D257: about half the old height, no Take button, the cell takes or
-## leaves the seat; the role summary wraps to ROLE_LINES lines, P28-Lobby). Tapping cells
-## multi-selects up to two stations (two make the joint view of that pair) and the pick
-## goes to the server on each tap; with two picked the other cells grey out; tapping a
-## picked cell deselects it. Under the grid the selection's name and summary show. Captain and Viewer are two buttons below (choosing one clears
-## the station picks and vice versa). The host's difficulty is one line with Customise,
-## which opens a dialog of the data-shortcut toggles (FT-PAIR-017, FT-STN-016; read-only
-## for the others); Start is the confirm. Nothing scrolls: the whole lobby fits the
-## screen. Picks go to the server (ShipIntents.pick); the screen shows what the events
-## say. The host's lobby also has a "How to join" dialog (FT-NET-013): the browser URL
+## The lobby as the station grid (D216, FT-NET-015, FT-NET-017, FT-NET-032, FT-STN-015, FT-
+## JNT-006): the six crew stations as cells, 3 columns by 2 rows in landscape and 2 by 3 in
+## portrait on every device, each with its name, its role description, the names of the crewmates
+## who picked it and a border in its load colour; a one-line legend under the grid (compact, D257:
+## about half the old height, no Take button, the cell takes or leaves the seat; the role summary
+## wraps to ROLE_LINES lines, P28-Lobby). Tapping cells multi-selects up to two stations (two make
+## the joint view of that pair) and the pick goes to the server on each tap; with two picked the
+## other cells grey out; tapping a picked cell deselects it. Under the grid the selection's name
+## and summary show. Captain and Viewer are two buttons below (each clears the picks). The host's
+## difficulty is one line with Customise, which opens a dialog of the data-shortcut toggles (FT-
+## PAIR-017, FT-STN-016; read-only for the others); Start is the confirm. Nothing scrolls: the
+## whole lobby fits the screen. Picks go to the server (ShipIntents.pick); the screen shows what
+## the events say. The host's lobby also has a "How to join" dialog (FT-NET-013): the browser URL
 ## with a QR code and the desktop address.
 ##
 ## Multi-ship sessions (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
