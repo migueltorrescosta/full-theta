@@ -40,3 +40,20 @@ func test_dialog_frame_covers_the_title_bar() -> void:
 		var frame: StyleBox = t.get_stylebox(name, "Window")
 		assert_float((frame as StyleBoxFlat).expand_margin_top).is_greater_equal(title)
 		assert_float((frame as StyleBoxFlat).expand_margin_left).is_greater(0.0)
+
+
+# FT: FT-STN-006
+# W2: the resting border of a control reads at 3:1 on the surface around it (WCAG 1.4.11).
+func test_control_borders_read_at_three_to_one() -> void:
+	var t: Theme = UiTheme.build(false)
+	for type: String in ["Button", "OptionButton", "LineEdit"]:
+		var box: StyleBoxFlat = t.get_stylebox("normal", type) as StyleBoxFlat
+		for bg: String in ["panel", "background"]:
+			(
+				assert_float(_contrast(box.border_color, Palette.color(bg)))
+				. override_failure_message("%s border on %s" % [type, bg])
+				. is_greater_equal(3.0)
+			)
+	for tag: String in UiTheme.LOAD_VARIANTS:
+		var cell: StyleBoxFlat = t.get_stylebox("normal", "LoadCell_" + tag) as StyleBoxFlat
+		assert_float(_contrast(cell.border_color, Palette.color("panel"))).is_greater_equal(3.0)

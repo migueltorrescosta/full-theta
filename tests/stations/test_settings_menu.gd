@@ -162,3 +162,35 @@ func test_a_phone_has_no_rebind_keys_tab() -> void:
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	phone._fit_safe_area()
 	assert_array(_tab_names(phone)).contains([SettingsScreen.TAB_KEYS])
+
+
+# FT: FT-AUD-010
+func test_the_subtitle_size_sits_in_the_game_tab_and_is_saved() -> void:
+	var m: SettingsScreen = _menu()
+	var pick: OptionButton = m.tabs.get_node(SettingsScreen.TAB_GAME).find_child(
+		"SubtitleSize", true, false
+	)
+	assert_int(pick.selected).is_equal(1)
+	pick.item_selected.emit(2)
+	assert_str(m.settings.subtitle_size).is_equal("large")
+	m.close()
+	var saved: ClientSettings = ClientSettings.new(CFG)
+	saved.load_file()
+	assert_str(saved.subtitle_size).is_equal("large")
+
+
+# FT: FT-STN-013
+# T5: a touch or phone layout's scale slider starts at 100 %; the saved scale is kept.
+func test_the_scale_slider_starts_at_100_percent_on_touch_layouts() -> void:
+	var m: SettingsScreen = _menu()
+	m.settings.set_ui_scale(0.75)
+	var slider: HSlider = m.find_child("UiScale", true, false) as HSlider
+	LayoutMode.forced = LayoutMode.Kind.TOUCH
+	m._fit_safe_area()
+	assert_float(slider.min_value).is_equal(100.0)
+	assert_float(slider.value).is_equal(100.0)
+	assert_float(m.settings.ui_scale).is_equal(0.75)
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	m._fit_safe_area()
+	assert_float(slider.min_value).is_equal(75.0)
+	assert_float(slider.value).is_equal(75.0)

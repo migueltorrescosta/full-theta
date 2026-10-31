@@ -8,8 +8,7 @@ extends Control
 ## leaves the seat; the role summary wraps to ROLE_LINES lines, P28-Lobby). Tapping cells
 ## multi-selects up to two stations (two make the joint view of that pair) and the pick
 ## goes to the server on each tap; with two picked the other cells grey out; tapping a
-## picked cell deselects it. Under the grid the selection's
-## name and summary show. Captain and Viewer are two buttons below (choosing one clears
+## picked cell deselects it. Under the grid the selection's name and summary show. Captain and Viewer are two buttons below (choosing one clears
 ## the station picks and vice versa). The host's difficulty is one line with Customise,
 ## which opens a dialog of the data-shortcut toggles (FT-PAIR-017, FT-STN-016; read-only
 ## for the others); Start is the confirm. Nothing scrolls: the whole lobby fits the
@@ -626,6 +625,7 @@ func _arrange(short: bool) -> void:
 	_summary.vertical = not short
 	_coverage.theme_type_variation = "CaptionLabel" if short else "DimLabel"
 	_summary.add_theme_constant_override("separation", 6 if short else 0)
+	_summary_role.clip_text = short and _phone
 	_summary_role.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL)
 	_style_summary(short, _phone)
 
@@ -669,11 +669,8 @@ func _style_summary(short: bool, phone: bool) -> void:
 			label.add_theme_font_size_override("font_size", pair[1])
 		else:
 			label.remove_theme_font_size_override("font_size")
-		# The name stays on one line; the role wraps, even on a short screen (T3, D293).
-		var one_line: bool = short and label == _summary_name
-		label.autowrap_mode = (
-			TextServer.AUTOWRAP_OFF if one_line else TextServer.AUTOWRAP_WORD_SMART
-		)
+		var one: bool = short and (phone or label == _summary_name)  # (T3: a short desktop wraps)
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF if one else TextServer.AUTOWRAP_WORD_SMART
 		label.horizontal_alignment = (
 			HORIZONTAL_ALIGNMENT_LEFT if short else HORIZONTAL_ALIGNMENT_CENTER
 		)

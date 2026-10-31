@@ -105,7 +105,24 @@ Gaps:
 
 Not assessed, because the spec has no requirement: screen-reader support (Godot's AccessKit), a high-contrast theme, remappable touch gestures. They are not gaps against the spec.
 
-## Questions for the owner
+## Status of the gaps (second phase, branch `m5-a11y-fix`)
+
+| # | Status |
+|---|---|
+| C1 | Accepted by the owner, 2026-10-31 (Q1): the seat load stays colour only |
+| C2 | Fixed, commit 10dc488 area (`Palette.blip_radius`: blips keep 6 physical px below 100 %) |
+| C3, I1 | None proposed |
+| W1 | Fixed: role `danger_text` (`#e56c7b`) for text, with contrast checks in `palette.gd` CONTRAST |
+| W2 | Fixed: resting borders of controls use `line_strong` (`test_control_borders_read_at_three_to_one`) |
+| W3, S1 | Fixed (Q2): Banner backing behind subtitles and a subtitle size setting (small, normal, large) in Settings > Game |
+| T1 | Fixed (Q5): Science keeps three columns in a landscape panel of 780 px or more |
+| T2 | Fixed (Q5): the hull is drawn below the hint, the board's height scrolls, toasts have a backing |
+| T3 | Fixed: the lobby role wraps to two lines on a short screen |
+| T4 | Fixed (Q4): chip letter 12 px; `check_palette.py` fails on a font constant under 12 |
+| T5 | Fixed (Q3): touch and phone layouts apply at least 100 % |
+| T6 | Radar and relay labels were already outlined by the effects strand (`Palette.draw_outlined`); the remaining ring overlap is covered by that outline, checked on the L5 images |
+
+## Questions for the owner (answered 2026-10-31: Q1 a leave as colour; Q2 b backing and size; Q3 a hide scales under 100 % on touch; Q4 a 12 px; Q5 a fix both layouts)
 
 Each has a recommendation; the first option is the recommended one.
 

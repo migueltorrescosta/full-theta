@@ -254,3 +254,33 @@ func test_fullscreen_button_keeps_its_label() -> void:
 	)
 	assert_float(b.get_combined_minimum_size().x).is_greater(w)
 	FullscreenButton.forced = -1
+
+
+# FT: FT-AUD-010, FT-STN-013
+func test_subtitle_size_round_trips_and_a_bad_value_is_normal() -> void:
+	var s: ClientSettings = ClientSettings.new(PATH)
+	assert_str(s.subtitle_size).is_equal("normal")
+	s.subtitle_size = "large"
+	s.save()
+	var back: ClientSettings = ClientSettings.new(PATH)
+	back.load_file()
+	assert_str(back.subtitle_size).is_equal("large")
+	var cfg: ConfigFile = ConfigFile.new()
+	cfg.set_value("ui", "subtitle_size", "huge")
+	cfg.save(PATH)
+	var bad: ClientSettings = ClientSettings.new(PATH)
+	bad.load_file()
+	assert_str(bad.subtitle_size).is_equal("normal")
+	for size: int in ClientSettings.SUBTITLE_SIZES.values():
+		assert_int(size).is_greater_equal(12)
+
+
+# FT: FT-STN-013
+# T5: touch and phone layouts never go under 100 %; a desktop keeps the saved scale.
+func test_touch_layouts_floor_the_ui_scale_at_100_percent() -> void:
+	var s: ClientSettings = ClientSettings.new(PATH)
+	s.set_ui_scale(0.75)
+	assert_float(s.effective_scale(true)).is_equal(1.0)
+	assert_float(s.effective_scale(false)).is_equal(0.75)
+	s.set_ui_scale(1.25)
+	assert_float(s.effective_scale(true)).is_equal(1.25)

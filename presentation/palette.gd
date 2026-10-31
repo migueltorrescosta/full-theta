@@ -54,7 +54,7 @@ const ROLES: Dictionary = {
 	"accent": Color("#58a6ff"),
 	"warn": Color("#e69f00"),
 	"danger": Color("#d7263d"),
-	# Danger as text (W1): 4.5:1 on background, panel and panel focus; `danger` stays for fills and strokes.
+	# Danger as text (W1): 4.5:1 on background and panel; `danger` stays for fills and strokes.
 	"danger_text": Color("#e56c7b"),
 	"ok": Color("#3fbf7f"),
 }

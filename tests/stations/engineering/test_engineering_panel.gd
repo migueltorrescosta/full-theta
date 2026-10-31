@@ -316,3 +316,17 @@ func test_a_ship_without_subsystems_ignores_selection_and_pips() -> void:
 	_press(s, "pip_add")
 	await await_idle_frame()
 	assert_array(_commands(s)).is_empty()
+
+
+# FT: FT-STN-013
+# T2: the hull is drawn below the hint, and the board's full height scrolls into view.
+func test_the_hull_clears_the_hint_and_the_board_scrolls() -> void:
+	var s: StationScreen = await _screen()
+	var p: EngineeringPanel = _panel(s)
+	p.cutaway.size = Vector2(300, 350)
+	var top: float = p.cutaway.hint_height()
+	assert_float(top).is_greater(20.0)
+	for i: int in p.count():
+		assert_float(p.cutaway.subsystem_pos(i).y - EngineeringCutaway.NODE_R).is_greater_equal(top)
+	assert_float(p.board.custom_minimum_size.y).is_equal(p.board.content_height())
+	assert_float(p.board.content_height()).is_greater(300.0)
