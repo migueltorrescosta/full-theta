@@ -52,6 +52,15 @@ gdunit() {
     "${adds[@]}" --report-directory "$reports" --ignoreHeadlessMode
 }
 
+# Fails (prints the suites) when tests/thread_guard_hook.gd found a suite that left a net
+# or voice thread running: such a thread hangs the engine at exit (#33).
+thread_leaks() {
+  [[ -s $1/thread-leaks.txt ]] || return 0
+  echo "l1: THREAD LEAK, a suite left a thread running (it hangs the engine at exit):"
+  cat "$1/thread-leaks.txt"
+  return 1
+}
+
 # L1: every test, in L1_SHARDS gdUnit4 processes at once (default 3) over a split of the
 # test files of about equal run time (tools/l1_shards.py); each shard's output goes to
 # build/reports/l1-<k>/output.log and is printed when it fails. L1_SHARD=k/N runs only
@@ -69,10 +78,11 @@ l1() {
     mapfile -t files < <(python3 tools/l1_shards.py "$k" "$n")
     limit=$(python3 tools/l1_shards.py --limit "$k" "$n")
     if ((${#ks[@]} == 1)); then
-      limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}"
+      limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}" || return
+      thread_leaks "build/reports/l1-$k"
       return
     fi
-    limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
+    RUN_LIMITED_LOG=build/l1-$k.log limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
     pids+=($!)
   done
   for i in "${!ks[@]}"; do
@@ -81,6 +91,8 @@ l1() {
       rc=$?; r=FAIL; failed=1; cat "build/l1-$k.log"
       ((rc == 124 || rc == 137)) && echo "l1: shard $k hung past its time limit (stack: build/reports/l1-$k/hang-stack.txt); last test started: $(sed 's/\x1b\[[0-9;]*m//g' "build/l1-$k.log" | grep -a ' STARTED$' | tail -1)"
     fi
+    grep -a "run_limited: WARNING" "build/l1-$k.log"
+    thread_leaks "build/reports/l1-$k" || { r=FAIL; failed=1; }
     echo "l1: shard $k/$n $r: $(grep -a "Overall Summary" "build/l1-$k.log" | sed 's/\x1b\[[0-9;]*m//g')"
     mv "build/l1-$k.log" "build/reports/l1-$k/output.log" 2>/dev/null
   done

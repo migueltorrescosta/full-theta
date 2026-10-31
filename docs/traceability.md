@@ -81,7 +81,7 @@ Tests: 382, manual: 13, pending: 6.
 | FT-NET-037 | tests | `tests/net/test_net_resync.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-038 | tests | `tests/net/test_net_chunking.gd`, `tests/net/test_net_server.gd`, `tests/net/voice/test_voice_l3.gd` |
 | FT-NET-039 | tests | `tests/net/test_host_static_server.gd` |
-| FT-NET-040 | tests | `tests/net/test_comms_view.gd`, `tests/net/test_net_server.gd`, `tests/net/test_net_sim_copy.gd`, `tests/net/test_net_snapshot.gd`, `tests/net/test_probe_layout.gd`, `tools/tests/test_load_check.py` |
+| FT-NET-040 | tests | `tests/net/test_comms_view.gd`, `tests/net/test_net_server.gd`, `tests/net/test_net_sim_copy.gd`, `tests/net/test_net_snapshot.gd`, `tests/net/test_probe_layout.gd`, `tests/net/test_thread_ownership.gd`, `tools/tests/test_load_check.py` |
 | FT-NET-041 | tests | `tests/net/test_fleet_pause_l3.gd`, `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_pause_rules.gd`, `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_outcome.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-042 | tests | `tests/net/test_fleet_pause_l3.gd`, `tests/net/test_net_pause_l3.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-043 | tests | `tests/net/test_net_lobby_l3.gd` |
