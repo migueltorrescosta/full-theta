@@ -110,7 +110,7 @@ Not assessed, because the spec has no requirement: screen-reader support (Godot'
 | # | Status |
 |---|---|
 | C1 | Accepted by the owner, 2026-10-31 (Q1): the seat load stays colour only |
-| C2 | Fixed, commit 10dc488 area (`Palette.blip_radius`: blips keep 6 physical px below 100 %) |
+| C2 | Fixed (`Palette.blip_radius`: blips keep 6 physical px below 100 %) |
 | C3, I1 | None proposed |
 | W1 | Fixed: role `danger_text` (`#e56c7b`) for text, with contrast checks in `palette.gd` CONTRAST |
 | W2 | Fixed: resting borders of controls use `line_strong` (`test_control_borders_read_at_three_to_one`) |
