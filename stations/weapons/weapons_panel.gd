@@ -854,7 +854,10 @@ func _layout_targets() -> void:
 	var font: Font = get_theme_default_font()
 	var rot: Quaternion = ctx.interp.own_rotation()
 	var m: MountDef = ship_def.mounts[mount]
-	var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+	# A phone's or a tablet's view with rails keeps its chips inside the view.
+	var phone: bool = (
+		_tablet != null or (is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self)))
+	)
 	for it: Dictionary in ctx.picture().items:
 		if it["kind"] == "point":
 			continue
@@ -870,7 +873,7 @@ func _layout_targets() -> void:
 		var at: Vector2 = (p as Vector2) + Vector2(BRACKET + 6.0, 4.0 - FONT_SIZE)
 		# Too near the right edge for the chip: it goes to the left of the bracket.
 		if phone and at.x + sz.x > _overlay.size.x:
-			at.x = (p as Vector2).x - BRACKET - 6.0 - sz.x
+			at.x = maxf((p as Vector2).x - BRACKET - 6.0 - sz.x, 0.0)
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
 		_targets.append(
 			{"item": it, "pos": p, "chip": chip, "chip_at": at, "rect": r.merge(Rect2(at, sz))}
@@ -1039,6 +1042,9 @@ func _hint() -> String:
 	if is_mine(mount):
 		return ""
 	if holder.is_empty():
+		if _tablet != null:
+			# Touch rails: the Claim button, not a key.
+			return tr("weapons.hint_claim_touch")
 		var keys: PackedStringArray = ctx.settings.bindings.bindings("claim", ctx.matcher.device)
 		return tr("weapons.hint_claim") % BindingText.describe_all(keys)
 	return tr("weapons.held_by") % str(holder.get("name", ""))

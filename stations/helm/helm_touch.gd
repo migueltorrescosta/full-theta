@@ -22,7 +22,7 @@ extends Control
 ## the stick, and the page zone as a two-column grid; the screen's banner asks to turn
 ## sideways.
 ##
-## Tablet (#32, D308, D309): no pages and no overlays. A TabletDock (`dock`) of two opaque
+## Tablet (#32, D3xx): no pages and no overlays. A TabletDock (`dock`) of two opaque
 ## rails at the screen's edges, the whole tablet screen between them. Left: All stop and
 ## Approach above, the Turn stick at the lower corner with the throttle on its inner side.
 ## Right: Face, Align, Track, Dock, Jump, Chase and Decoupled, the Slide stick at the lower

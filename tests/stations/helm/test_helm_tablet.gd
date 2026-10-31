@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Helm on a tablet (#32, D308, D309): two opaque docked rails at the screen's edges with the
+## Helm on a tablet (#32, D3xx): two opaque docked rails at the screen's edges with the
 ## whole tablet screen between them (upright: one bottom bar), no pages, no banner. Every
 ## control sends the intent its key or stick sends; every target clears the touch rules on
 ## an iPad (1180x820, 820x1180) and an Android tablet (1280x800).

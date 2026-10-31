@@ -1277,6 +1277,7 @@
     "touch.helm.range_out": {"en": "Range +", "pt_PT": "Alcance +", "it": "Portata +"},
     "weapons.touch_fire_all": {"en": "Fire all", "pt_PT": "Disparar todas", "it": "Fuoco a tutte"},
     "touch.weapons.mount": {"en": "Mount %d", "pt_PT": "Montagem %d", "it": "Torretta %d"},
+    "weapons.hint_claim_touch": {"en": "Tap Claim to take this mount.", "pt_PT": "Toca em Assumir para reservar esta montagem.", "it": "Tocca Prendi per prenotare questa torretta."},
     "touch.weapons.aim": {"en": "Aim", "pt_PT": "Mirar", "it": "Mira"}
   }
 }

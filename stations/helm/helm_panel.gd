@@ -56,6 +56,7 @@ var touch_ui: HelmTouch = null
 ## tablet, else null. The panel stays in its desktop arrangement.
 var tablet_ui: HelmTouch = null
 
+var _ring_compact: bool = false
 var _container: SubViewportContainer
 var _viewport: SubViewport
 ## The pointer is captured for steering (KB/M) until the menu, a pause, the end of
@@ -259,14 +260,32 @@ func _process(_delta: float) -> void:
 		_captured = false
 		touch_ui.update(ring)
 	else:
+		var compact: bool = false
 		if tablet_ui != null:
 			_captured = false
 			tablet_ui.update(ring)
-		ring.position = Vector2(size.x - ring.size.x - 12.0, (size.y - ring.size.y) / 2.0)
+			compact = hud.touch_layout()
+		_place_ring(compact)
 	ring.show_state(helm_block(), _shield_power())
 	if focused:
 		view3d.show_state(ctx, chase)
 	hud.queue_redraw()
+
+
+## The ring at the right of the view, centred. On a tablet view as small as a phone's
+## (HelmHud.touch_layout) a smaller one at the upper right, below the thrust cross when the
+## view is narrow, clear of the reticle and the compass.
+func _place_ring(compact: bool) -> void:
+	if compact != _ring_compact:
+		_ring_compact = compact
+		_mode_changed_ring()
+		if compact:
+			ring.size = Vector2(190.0, 110.0 + 2.0 * ShieldRing.FONT_SIZE)
+	if compact:
+		var top: float = hud.area().position.y + (90.0 if size.x < 520.0 else 8.0)
+		ring.position = Vector2(size.x - ring.size.x - 8.0, top)
+	else:
+		ring.position = Vector2(size.x - ring.size.x - 12.0, (size.y - ring.size.y) / 2.0)
 
 
 # --- Intents. ---

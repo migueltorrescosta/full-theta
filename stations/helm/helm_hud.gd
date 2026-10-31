@@ -32,6 +32,8 @@ const CROSS_ARROW: float = 9.0
 const NARROW_W: float = 640.0
 ## A phone (portrait) keeps it top left.
 const PHONE_W: float = 420.0
+## A tablet view under this height takes the phone layout.
+const TABLET_SHORT_H: float = 400.0
 ## The flight read-out's top edge, from the view's bottom.
 const READOUT_H: float = 168.0
 ## Envelope bar length, and on a phone (narrower, so the compass fits beside the read-out).
@@ -65,7 +67,13 @@ func area() -> Rect2:
 
 ## True with a phone's touch layout over the view.
 func touch_layout() -> bool:
-	return panel != null and panel.touch_ui != null
+	if panel == null:
+		return false
+	if panel.touch_ui != null:
+		return true
+	# A tablet's view between its rails is as small as a phone's on the classic iPad sizes
+	# (332 px wide on 1024x768, 366 px tall on 768x1024): it takes the phone's layout then.
+	return panel.tablet_ui != null and (size.x < PHONE_W or size.y < TABLET_SHORT_H)
 
 
 ## Envelope bar length: on a phone short enough that the read-out ends left of the reticle
@@ -77,7 +85,11 @@ func _bar_w() -> float:
 	var top: float = a.end.y - READOUT_H
 	var ret: Rect2 = reticle_rect()
 	if ret.end.y < top or ret.position.y > top + 130.0:
-		return PHONE_BAR_W
+		if panel.tablet_ui == null:
+			return PHONE_BAR_W
+		# A tablet's narrow view: the bars end left of the compass at the bottom right.
+		var left: float = a.end.x - 3.0 * COMPASS_R - 8.0
+		return clampf(left - (a.position.x + 14.0) - 90.0, TIGHT_BAR_W, PHONE_BAR_W)
 	var room: float = ret.position.x - 8.0 - (a.position.x + 14.0) - 90.0
 	return clampf(room, TIGHT_BAR_W, PHONE_BAR_W)
 

@@ -1,6 +1,6 @@
 class_name TabletDock
 extends Control
-## Helm's and Weapons' touch controls on a tablet (#32, D308, D309): two opaque docked rails
+## Helm's and Weapons' touch controls on a tablet (#32, D3xx): two opaque docked rails
 ## at the edges of the screen with the whole tablet screen between them (top bar, HUD, radar
 ## column and shield ring unobstructed; the rails shrink the screen, they never cover it).
 ## Upright, both rails join one docked bar along the bottom, each taking half of its width,

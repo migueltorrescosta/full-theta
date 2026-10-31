@@ -1,6 +1,6 @@
 class_name WeaponsTablet
 extends Control
-## Weapons on a tablet (#32, D308, D309): a TabletDock of two opaque rails at the screen's
+## Weapons on a tablet (#32, D3xx): a TabletDock of two opaque rails at the screen's
 ## edges, the whole tablet screen between them, and a WeaponsAimPad over the view, so a
 ## finger dragged across it still aims and a tap selects. Every control feeds the panel the
 ## intent its key or pad button feeds (FT-STN-005): the same calls the phone's rail makes.
