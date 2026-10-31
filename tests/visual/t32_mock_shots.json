@@ -1,0 +1,269 @@
+{
+ "size": [
+  1180,
+  820
+ ],
+ "shots": [
+  {
+   "name": "helm_A_land",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1180,
+    820
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "A",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_A_land.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "helm_A_port",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    820,
+    1180
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "A",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_A_port.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "helm_A_andl",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1280,
+    800
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "A",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_A_andl.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "helm_B_land",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1180,
+    820
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "B",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_B_land.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "helm_B_port",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    820,
+    1180
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "B",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_B_port.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "helm_B_andl",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1280,
+    800
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "B",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_B_andl.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "helm_C_land",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1180,
+    820
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "C",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_C_land.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "helm_C_port",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    820,
+    1180
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "C",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_C_port.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "helm_C_andl",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1280,
+    800
+   ],
+   "set": {
+    "entry": "helm",
+    "option": "C",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/helm_C_andl.audit.json",
+    "ping": 4
+   }
+  },
+  {
+   "name": "weapons_A_land",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1180,
+    820
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "A",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_A_land.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  },
+  {
+   "name": "weapons_A_port",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    820,
+    1180
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "A",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_A_port.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  },
+  {
+   "name": "weapons_A_andl",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1280,
+    800
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "A",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_A_andl.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  },
+  {
+   "name": "weapons_B_land",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1180,
+    820
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "B",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_B_land.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  },
+  {
+   "name": "weapons_B_port",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    820,
+    1180
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "B",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_B_port.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  },
+  {
+   "name": "weapons_B_andl",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1280,
+    800
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "B",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_B_andl.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  },
+  {
+   "name": "weapons_C_land",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1180,
+    820
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "C",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_C_land.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  },
+  {
+   "name": "weapons_C_port",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    820,
+    1180
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "C",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_C_port.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  },
+  {
+   "name": "weapons_C_andl",
+   "scene": "res://tests/visual/t32_mock.tscn",
+   "size": [
+    1280,
+    800
+   ],
+   "set": {
+    "entry": "weapons",
+    "option": "C",
+    "audit": "/home/caterina/.local/state/full-theta/t32/out/weapons_C_andl.audit.json",
+    "selected": 3,
+    "claim": "mount:0"
+   }
+  }
+ ]
+}

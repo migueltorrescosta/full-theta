@@ -38,6 +38,8 @@ var events: Array = []
 var focus: int = 0
 ## Force the touch layout (a tablet-sized shot has no touch screen under Xvfb).
 var touch: bool = false
+## Force the phone layout whatever the window size (the tablet mockups, #32).
+var phone: bool = false
 ## A SCIENCE block for the shot ("cards", "scan" or "hack", ScienceShotBlocks); "" none.
 var science: String = ""
 var comms: String = "board"
@@ -57,7 +59,7 @@ var _ctx: StationContext
 
 
 func _ready() -> void:
-	LayoutMode.forced = LayoutMode.Kind.TOUCH if touch else -1
+	LayoutMode.forced = LayoutMode.Kind.PHONE if phone else (LayoutMode.Kind.TOUCH if touch else -1)
 	SafeArea.simulate(insets)
 	FullscreenButton.forced = fullscreen
 	RotateBanner.dismissed_here = false
