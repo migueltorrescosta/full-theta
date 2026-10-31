@@ -64,7 +64,7 @@ l1() {
   else
     mapfile -t ks < <(seq 0 $((n - 1)))
   fi
-  rm -rf build/reports
+  rm -rf build/reports && mkdir -p build
   for k in "${ks[@]}"; do
     mapfile -t files < <(python3 tools/l1_shards.py "$k" "$n")
     if ((${#ks[@]} == 1)); then
