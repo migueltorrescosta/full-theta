@@ -35,7 +35,11 @@ var camera: Camera3D
 ## Contact id -> Node3D of each drawn contact.
 var ships: Dictionary = {}
 
+## The effects (hits, shields, explosions, jumps) of the sim events of the bound context.
+var vfx: VfxLayer
+
 var _stars: MeshInstance3D
+var _ctx: StationContext
 
 
 func _init() -> void:
@@ -58,11 +62,13 @@ func _init() -> void:
 	_stars = MeshInstance3D.new()
 	_stars.mesh = _star_mesh()
 	add_child(_stars)
+	vfx = VfxLayer.new(self)
+	add_child(vfx)
 
 
 ## Places the camera (own-ship-centred world axes) and the stars around it.
 func place_camera(xform: Transform3D, fov_deg: float) -> void:
-	camera.transform = xform
+	camera.transform = Transform3D(xform.basis * vfx.shake_basis(), xform.origin)
 	camera.fov = fov_deg
 	_stars.position = xform.origin
 
@@ -70,6 +76,7 @@ func place_camera(xform: Transform3D, fov_deg: float) -> void:
 ## Places every other ship at its minimum-image offset from the own ship, less `origin`
 ## (the camera's place on the own ship, e.g. a turret mount); frees ships that are gone.
 func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
+	_bind(ctx)
 	var seen: Dictionary = {}
 	for id: int in ctx.interp.contact_ids():
 		var near: bool = ctx.view.near.has(id)
@@ -91,6 +98,31 @@ func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
 		if not seen.has(id):
 			(ships[id] as Node3D).queue_free()
 			ships.erase(id)
+
+
+## The model effects follow for ship `id`: the drawn contact, the own ship's model when one
+## is drawn (Helm's chase view), else null.
+func model_of(id: int, mine: bool) -> Node3D:
+	if mine:
+		return own_model()
+	return ships.get(id)
+
+
+## The own ship's drawn model, or null when this view draws none.
+func own_model() -> Node3D:
+	return null
+
+
+func _bind(ctx: StationContext) -> void:
+	if _ctx == ctx:
+		return
+	_ctx = ctx
+	ctx.crew.sim_event.connect(_on_sim_event)
+
+
+func _on_sim_event(kind: StringName, p: Dictionary) -> void:
+	vfx.comfort = _ctx.settings.comfort
+	vfx.on_event(kind, p, _ctx.crew.ship, _ctx.interp.own_rotation())
 
 
 ## A new ship model of `look` (unscaled) in the view, sharing the baked meshes and

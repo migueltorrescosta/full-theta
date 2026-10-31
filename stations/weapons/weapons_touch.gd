@@ -161,7 +161,7 @@ func refresh() -> void:
 	# (no target line on a phone: the frame's selection chip names the target)
 	target_label.text = ""
 	if radar != null:
-		radar.set_picture(p.ctx.picture(), p.ctx.crew.selection)
+		radar.set_picture(p.ctx.picture(), p.ctx.crew.selection, p.ctx)
 	if mount_list.visible:
 		_refresh_rows()
 	_place()

@@ -26,6 +26,10 @@ func _ready() -> void:
 	_build_dust()
 
 
+func own_model() -> Node3D:
+	return own_ship if own_ship != null and own_ship.visible else null
+
+
 ## Places camera, ships and dust for the interpolated state. `chase` swaps the camera.
 func show_state(ctx: StationContext, chase: bool) -> void:
 	var interp: SnapshotInterpolator = ctx.interp

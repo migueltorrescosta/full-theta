@@ -627,6 +627,9 @@ func _edge_point(dir: Vector2) -> Vector2:
 ## or bottom edge); where none is clear it stays. Used on a phone.
 func arrow_tip(tip: Vector2) -> Vector2:
 	var a: Rect2 = area().grow(-EDGE)
+	# A view not yet laid out is narrower than two edges: nothing to move along.
+	if not a.has_area():
+		return tip
 	var keeps: Array[Rect2] = []
 	for r: Rect2 in [readout_rect(), thrust_rect(), _ring_rect()] + compass_boxes():
 		if r.has_area():

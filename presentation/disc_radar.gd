@@ -40,6 +40,11 @@ const ORBIT_DEG_PER_PX: float = 0.4
 ## of the clock numbers, the own ship, the other blips and each other, or are left out
 ## (the selected item's never is).
 const SMALL_R: float = 80.0
+## A burst ring lasts this long (ms); most at once.
+const BURST_MS: int = 900
+const MAX_BURSTS: int = 6
+## Farthest (px) a chip slides sideways to clear a clock number; beyond it the chip drops.
+const SLIDE_MAX: float = 90.0
 
 ## The items to draw (ContactPicture). "point" items (point pings) draw only their
 ## pulse and are never picked.
@@ -74,6 +79,9 @@ var touch_min: float = 0.0:
 		queue_redraw()
 
 var _orbiting: bool = false
+var _ctx: StationContext
+## Rings of the destroyed contacts and hits on the own ship: {rel, from (ms), role}.
+var _bursts: Array[Dictionary] = []
 ## Fingers down on the radar: index -> position (two orbit).
 var _fingers: Dictionary = {}
 var _taps: Array[Control] = []
@@ -82,12 +90,60 @@ var _taps: Array[Control] = []
 func _init() -> void:
 	mouse_filter = MOUSE_FILTER_PASS
 	clip_contents = true
+	set_process(false)
 
 
-func set_picture(p_picture: ContactPicture, p_selected: Dictionary) -> void:
+## Sets the picture and the selection; `ctx` (once is enough) lets the radar ring a destroyed
+## contact and a hit on the own ship (#12), unless comfort is on.
+func set_picture(
+	p_picture: ContactPicture, p_selected: Dictionary, ctx: StationContext = null
+) -> void:
 	picture = p_picture
 	selected = p_selected
+	if ctx != null and _ctx != ctx:
+		_ctx = ctx
+		ctx.crew.sim_event.connect(on_sim_event)
 	queue_redraw()
+
+
+## A sim event: a ring at a destroyed contact (red), or round the own ship when it is hit
+## (amber). Nothing with comfort on.
+func on_sim_event(kind: StringName, p: Dictionary) -> void:
+	if _ctx == null or _ctx.settings.comfort:
+		return
+	var id: int = int(p.get("ship", -1))
+	if kind == &"hit" and id == _ctx.crew.ship:
+		_add_burst(Vector3.ZERO, "warn")
+	elif kind == &"destroyed":
+		for it: Dictionary in picture.items:
+			if it["kind"] == "contact" and int(it["id"]) == id:
+				_add_burst(_rel_item(it), "danger")
+				return
+
+
+func _add_burst(rel: Vector3, role: String) -> void:
+	_bursts.append({"rel": rel, "from": Time.get_ticks_msec(), "role": role})
+	if _bursts.size() > MAX_BURSTS:
+		_bursts.pop_front()
+	set_process(true)
+
+
+func _process(_delta: float) -> void:
+	var now: int = Time.get_ticks_msec()
+	_bursts = _bursts.filter(func(b: Dictionary) -> bool: return now - int(b["from"]) < BURST_MS)
+	if _bursts.is_empty():
+		set_process(false)
+	queue_redraw()
+
+
+## Rings that grow and fade as a burst runs out.
+func _draw_bursts() -> void:
+	var now: int = Time.get_ticks_msec()
+	for b: Dictionary in _bursts:
+		var t: float = clampf(float(now - int(b["from"])) / float(BURST_MS), 0.0, 1.0)
+		var col: Color = Palette.color(str(b["role"]))
+		col.a = 1.0 - t
+		draw_arc(_screen(b["rel"]), BLIP_R + 4.0 + t * 30.0, 0.0, TAU, 32, col, 2.0, true)
 
 
 ## One range step in (-1) or out (+1).
@@ -249,6 +305,7 @@ func _draw() -> void:
 	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			_draw_pulse(_screen(_rel_item(it)), float(it.get("pulse", 0.0)))
+	_draw_bursts()
 	var label: Rect2 = _range_rect()
 	draw_rect(label, Palette.color("panel_focus"))
 	draw_rect(label, Palette.color("line"), false, 1.0)
@@ -463,7 +520,7 @@ func _layout() -> Array[Dictionary]:
 	if small():
 		_place_small(out, font)
 	else:
-		_declutter(out)
+		_declutter(out, _numerals(font, c, r).values(), _view())
 	return out
 
 
@@ -556,8 +613,12 @@ func _chip_rect(font: Font, chip: String, pos: Vector2, left: bool) -> Rect2:
 
 
 ## Moves overlapping chips apart: top to bottom, a chip that overlaps one already placed
-## drops below it, so close blips don't print their callsigns over each other.
-static func _declutter(entries: Array[Dictionary]) -> void:
+## drops below it, so close blips don't print their callsigns over each other. `fixed`
+## are boxes no chip may cover (the clock numbers): a chip over one slides right, clear of
+## it, when that is under SLIDE_MAX and it still fits in `limit`, else it drops below like the rest.
+static func _declutter(
+	entries: Array[Dictionary], fixed: Array = [], limit: Rect2 = Rect2()
+) -> void:
 	var order: Array[Dictionary] = entries.filter(
 		func(e: Dictionary) -> bool: return e["chip"] != ""
 	)
@@ -566,9 +627,20 @@ static func _declutter(entries: Array[Dictionary]) -> void:
 			return (a["chip_rect"] as Rect2).position.y < (b["chip_rect"] as Rect2).position.y
 	)
 	var placed: Array[Rect2] = []
+	for f: Variant in fixed:
+		placed.append(f as Rect2)
 	for e: Dictionary in order:
 		var r: Rect2 = e["chip_rect"]
-		for _pass: int in order.size():
+		for f: Variant in fixed:
+			var box: Rect2 = f as Rect2
+			if not box.intersects(r) or not limit.has_area():
+				continue
+			if (
+				box.end.x + 2.0 - r.position.x <= SLIDE_MAX
+				and box.end.x + 2.0 + r.size.x <= limit.end.x
+			):
+				r.position.x = box.end.x + 2.0
+		for _pass: int in order.size() + fixed.size():
 			var hit: bool = false
 			for o: Rect2 in placed:
 				if o.intersects(r):

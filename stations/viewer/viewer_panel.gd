@@ -172,7 +172,7 @@ func update_view(delta: float) -> void:
 		if view_id != MainScreen.View.TARGET or not _place_target_camera():
 			_place_camera(ship, delta)
 		_space.sync_ships(ctx)
-	radar.set_picture(ctx.picture(), ctx.crew.selection)
+	radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
 	_overlay.queue_redraw()
 	_rail.queue_redraw()
 	var card: int = ctx.crew.shown_card(now)
