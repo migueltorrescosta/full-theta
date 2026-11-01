@@ -303,8 +303,7 @@ func selection_text() -> String:
 		label = ctx.view.callsign(int(sel["id"]))
 	var local: Variant = ctx.selection_local()
 	if local is Vector3:
-		var v: Vector3 = local
-		label += " · %s · %s" % [Callout.clock_height(v), Callout.range_band(v.length())]
+		return ChipText.chip(label, local)
 	return label
 
 
