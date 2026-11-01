@@ -33,6 +33,9 @@ const MAX_PART_BYTES: int = 2_000_000
 const POLL_MS: int = 2
 const READ_CHUNK: int = 65536
 
+## Worker threads started and not yet joined, in the whole process (#33).
+static var _live: int = 0
+
 var niceness: int = NICENESS
 ## Voice sample rate, once ready.
 var rate: int = 0
@@ -65,7 +68,15 @@ var _timed_out: bool = false
 func start(defaults: Dictionary = {}) -> Error:
 	_defaults = defaults
 	_thread = Thread.new()
-	return _thread.start(_run)
+	var err: Error = _thread.start(_run)
+	if err == OK:
+		_live += 1
+	return err
+
+
+## Worker threads started and not yet stopped (all synths).
+static func live_threads() -> int:
+	return _live
 
 
 func request(id: int, text: String, settings: Dictionary = {}, whole: bool = false) -> void:
@@ -123,6 +134,7 @@ func stop() -> void:
 	_kill()
 	if _thread != null and _thread.is_started():
 		_thread.wait_to_finish()
+		_live -= 1
 	_thread = null
 	_close_process()
 

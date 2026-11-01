@@ -21,8 +21,15 @@ def main(argv: list[str]) -> int:
     parser.add_argument("langs", nargs="+", metavar="LANG")
     parser.add_argument("--out", type=Path, default=prerender.DEFAULT_OUT)
     parser.add_argument("--jobs", type=int, default=2)
+    parser.add_argument("--cache-dir", type=Path, default=None, help="cache directory for rendered clips")
+    parser.add_argument("--no-cache", action="store_true", help="disable the clip cache")
     args = parser.parse_args(argv)
-    return prerender.main([*args.langs, "--out", str(args.out), "--jobs", str(args.jobs)])
+    prerender_argv = [*args.langs, "--out", str(args.out), "--jobs", str(args.jobs)]
+    if args.cache_dir:
+        prerender_argv += ["--cache-dir", str(args.cache_dir)]
+    if args.no_cache:
+        prerender_argv += ["--no-cache"]
+    return prerender.main(prerender_argv)
 
 
 if __name__ == "__main__":

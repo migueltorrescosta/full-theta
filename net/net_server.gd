@@ -408,6 +408,13 @@ func _picks() -> int:
 	return n
 
 
+## A server freed without ever entering the tree never gets _exit_tree: its net thread
+## would run on and hang the engine at exit (#33).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		transport.stop()
+
+
 func _exit_tree() -> void:
 	transport.stop()
 	if session_log != null:
