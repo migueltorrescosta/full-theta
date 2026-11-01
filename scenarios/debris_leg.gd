@@ -92,11 +92,6 @@ func step(api: ScenarioApi) -> void:
 		_result = Result.WON
 	elif float(api.tick() - _started) / ScenarioApi.HZ >= MAX_S:
 		_result = Result.PARTIAL
-	else:
-		return
-	for c: CardView in api.cards_of(_ship):
-		if c.id == _card.id() and c.state == CardView.State.ACCEPTED:
-			api.settle_card(c.id, true, _result == Result.PARTIAL)
 
 
 func finished(_api: ScenarioApi) -> int:
