@@ -243,3 +243,23 @@ func test_welcome_says_whether_the_server_uses_tls() -> void:
 	server.session.tls = true
 	var secure: NetClient = await h.welcomed(server, "secure")
 	assert_bool(secure.welcome["tls"]).is_true()
+
+
+# FT: FT-NET-004, FT-NET-015
+# #35 A5: a player renames mid-session (a phone that joined by QR code with no name): the
+# lobby's seats show the new name, an empty name is ignored.
+func test_rename_changes_the_seat_name_in_the_lobby() -> void:
+	var server: NetServer = h.server()
+	var c: NetClient = await h.joined(server, "Player", "helm")
+	var other: NetClient = await h.joined(server, "bo", "weapons")
+	var seat_names: Callable = func() -> Array:
+		var lobby: Dictionary = h.last_event(other, NetProtocol.EVENT_LOBBY)
+		var seats: Array = lobby.get("payload", {}).get("seats", [])
+		return seats.map(func(s: Dictionary) -> String: return s["name"])
+	c.rename("  Ana  ")
+	assert_bool(await h.until(func() -> bool: return "Ana" in seat_names.call())).is_true()
+	assert_str(h.session_of(server, c).name).is_equal("Ana")
+	assert_str(c.name).is_equal("Ana")
+	c.rename("   ")
+	await h.wait(200)
+	assert_str(h.session_of(server, c).name).is_equal("Ana")

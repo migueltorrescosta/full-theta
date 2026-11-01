@@ -354,9 +354,11 @@ func needs_met(card: int) -> bool:
 
 
 ## Settles an accepted card (FT-MIS-021, FT-MIS-019): success pays its reward and draws its
-## reputation change, failure draws the "<interaction>.fail" change if there is one. The
-## command is the card's own ship's; nothing is queued for a card that doesn't exist.
-func settle_card(card: int, success: bool) -> void:
+## reputation change, failure draws the "<interaction>.fail" change if there is one; a
+## `partial` success (the time ran out) pays RunDef.partial_pay of the reward and changes
+## no standing. The command is the card's own ship's; nothing is queued for a card that
+## doesn't exist.
+func settle_card(card: int, success: bool, partial: bool = false) -> void:
 	if card < 0 or card >= _world.story.size():
 		return
 	var cmd: CardResultCommand = CardResultCommand.new()
@@ -364,6 +366,7 @@ func settle_card(card: int, success: bool) -> void:
 	cmd.ship_id = Story.audience_ship(_world, card)
 	cmd.card = card
 	cmd.success = success
+	cmd.partial = partial
 	_world.submit(cmd)
 
 

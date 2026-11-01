@@ -5,8 +5,9 @@ extends Scenario
 ## after a while, and the crew may demand their surrender over the hail card (P9, FT-PAIR-004;
 ## conv.surrender_demand rolls it). A yes is said as "we surrender" and the raiders' faction
 ## stands down; a no is said as a refusal and the fight goes on. Branches: the raiders are all
-## destroyed or have retreated, they surrendered, or the time ran out. Only the Scenario API
-## is used (FT-DAT-007), so a replay needs none of this (FT-ARC-008).
+## destroyed or have retreated, they surrendered (both won), or the time ran out (partial):
+## the encounter ends but the raiders still in the run stay hostile and keep after the ship.
+## Only the Scenario API is used (FT-DAT-007), so a replay needs none of this (FT-ARC-008).
 
 const ENEMY: StringName = &"m1_raider"
 const RAIDER_FACTION: int = 2
@@ -30,7 +31,7 @@ var _hail_offered: bool = false
 var _started: int = 0
 var _taunted: bool = false
 var _surrendered: bool = false
-var _done: bool = false
+var _result: int = Result.ACTIVE
 
 
 func meta() -> ScenarioMeta:
@@ -54,7 +55,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 
 
 func step(api: ScenarioApi) -> void:
-	if _done:
+	if _result != Result.ACTIVE:
 		return
 	var elapsed_s: float = float(api.tick() - _started) / ScenarioApi.HZ
 	_offer_hail(api)
@@ -74,12 +75,15 @@ func step(api: ScenarioApi) -> void:
 				api.set_relation(RAIDER_FACTION, _faction, Relation.NEUTRAL)
 			else:
 				api.message("npc.surrender_refused", {}, SayTarget.npc(NPC, _ship))
-	if _surrendered or (_raiders.size() == _count and api.all_gone(_raiders)) or elapsed_s >= MAX_S:
-		_done = true
+	if _surrendered or (_raiders.size() == _count and api.all_gone(_raiders)):
+		_result = Result.WON
+	elif elapsed_s >= MAX_S:
+		# The raiders are left as they are: hostile, in the run, still after the ship.
+		_result = Result.PARTIAL
 
 
 func finished(_api: ScenarioApi) -> int:
-	return Result.WON if _done else Result.ACTIVE
+	return _result
 
 
 ## A clock position near the bow (11, 12 or 1).

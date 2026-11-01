@@ -24,7 +24,7 @@ func after_test() -> void:
 func _screen(block: Dictionary = {}, entry: String = "science") -> StationScreen:
 	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
 	for s: String in StationViews.CREW:
-		ctx.settings.mark_tooltip_seen(s)
+		ctx.settings.mark_hint_seen(s)
 	ctx.view.blocks[S.SCIENCE] = _block(block)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
@@ -393,7 +393,7 @@ func _tap(c: Control, at: Vector2) -> void:
 # panel starts, so the server's science state follows the shared selection.
 func test_panel_start_sends_the_current_selection() -> void:
 	var ctx: StationContext = StationFixture.context("science", SETTINGS)
-	ctx.settings.mark_tooltip_seen("science")
+	ctx.settings.mark_hint_seen("science")
 	ctx.view.blocks[S.SCIENCE] = _block({})
 	ctx.crew.select("contact", H2)
 	var s: StationScreen = auto_free(StationScreen.new())

@@ -7,9 +7,10 @@ extends Scenario
 ## offers a docking clearance for the crossing (P5): accepted, it opens an approach lane to the
 ## yard (a window on Helm's route), and docking inside it pays the fee while docking before or
 ## after it costs standing (StoryRules.on_dock). The encounter is won on reaching the yard after
-## having been away from it, by impulse or by the jump drive (which flies past the debris), or
-## when the time runs out; a ship still at the yard when the encounter starts has not crossed
-## anything (review 2 M5). Only the Scenario API is used (FT-DAT-007).
+## having been away from it, by impulse or by the jump drive (which flies past the debris); a
+## ship still at the yard when the encounter starts has not crossed anything (review 2 M5). When
+## the time runs out first it ends as partial (#35 A3), and an undocked clearance lapses unpaid.
+## Only the Scenario API is used (FT-DAT-007).
 
 const DEBRIS_FACTION: int = 4
 const NPC: StringName = &"Traffic Control"
@@ -27,13 +28,15 @@ const LANE_S: float = 540.0
 ## The civil faction whose standing an uncleared approach costs (rescue's freighters, too).
 const CIVIL_FACTION: int = 3
 const MAX_S: float = 600.0
+## The fee card outlasts the encounter, so a timeout can still settle it.
+const CARD_S: float = MAX_S + 30.0
 
 var _ship: int = -1
 var _destination: int = -1
 var _started: int = 0
 ## Whether the ship has been away from the yard since the encounter started.
 var _left: bool = false
-var _done: bool = false
+var _result: int = Result.ACTIVE
 
 
 func meta() -> ScenarioMeta:
@@ -54,7 +57,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	api.set_relation(DEBRIS_FACTION, view.faction, Relation.HOSTILE)
 	_destination = HOME
 	if from == HOME:
-		_done = true
+		_result = Result.WON
 		return
 	# The map names the leg's debris (MapDef.legs): an enemy key and how many pieces.
 	for leg: Dictionary in api.legs():
@@ -81,15 +84,20 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 
 
 func step(api: ScenarioApi) -> void:
-	if _done:
+	if _result != Result.ACTIVE:
 		return
 	var at: int = api.ship(_ship).at_site
 	_left = _left or at != _destination
 	if _left and at == _destination:
-		_done = true
+		_result = Result.WON
 	elif float(api.tick() - _started) / ScenarioApi.HZ >= MAX_S:
-		_done = true
+		_result = Result.PARTIAL
+	else:
+		return
+	for c: CardView in api.cards_of(_ship):
+		if c.id == _card.id() and c.state == CardView.State.ACCEPTED:
+			api.settle_card(c.id, true, _result == Result.PARTIAL)
 
 
 func finished(_api: ScenarioApi) -> int:
-	return Result.WON if _done else Result.ACTIVE
+	return _result

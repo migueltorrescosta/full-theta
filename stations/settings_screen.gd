@@ -4,7 +4,7 @@ extends PanelContainer
 ## with tabs. In a session: Game (the ship's name, Sound, Full screen where offered, the
 ## host's Pause, Abandon or Give up, Leave; the final ones ask to confirm in place), Controls
 ## (the live bindings under the seat's role summary, ControlsPane; FT-STN-012), Tips, then
-## Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-run tips again, and comfort
+## Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-visit hints again, and comfort
 ## FT-STN-017: on/off, roll lock deck / target / reference plane, "set reference plane to
 ## my current deck", reduced field of view; the station cameras apply them) and Rebind keys
 ## (bindings per intent and device with rebind, hold/toggle and reset, FT-STN-007,
@@ -23,6 +23,9 @@ signal abandon_requested
 signal scale_changed
 ## "Set reference plane to my current deck": the shell stores the ship's orientation.
 signal reference_plane_requested
+## The player typed a new name on the Game tab (saved already); the shell renames the
+## session (#35 A5).
+signal name_changed(new_name: String)
 
 ## Intents that can't be left unbound: the way back to Settings, and the way to say no.
 const ALWAYS_BOUND: Array[String] = ["menu", "decline"]
@@ -281,6 +284,7 @@ func _build_game(col: VBoxContainer) -> void:
 	_ship_label.name = "ShipName"
 	col.add_child(_ship_label)
 	set_ship_name(_ship_name)
+	_build_name(col)
 	_sound = SoundToggle.new()
 	_sound.name = "Sound"
 	_sound.flat = false
@@ -309,6 +313,30 @@ func _build_game(col: VBoxContainer) -> void:
 		func() -> void: _confirm(_leave_button, func() -> void: leave_requested.emit())
 	)
 	_row(_leave_button)
+
+
+## The player's name (#35 A5): Enter or leaving the field saves a changed, non-empty name and
+## emits name_changed.
+func _build_name(col: VBoxContainer) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	col.add_child(row)
+	row.add_child(_label(tr("menu.name")))
+	var field: LineEdit = LineEdit.new()
+	field.name = "PlayerName"
+	field.text = settings.player_name
+	field.max_length = NetProtocol.MAX_NAME_BYTES
+	field.custom_minimum_size = Vector2(240, 0)
+	row.add_child(field)
+	var commit: Callable = func() -> void:
+		var n: String = field.text.strip_edges()
+		if n == "" or n == settings.player_name:
+			field.text = settings.player_name
+			return
+		settings.player_name = n
+		settings.save()
+		name_changed.emit(n)
+	field.text_submitted.connect(func(_t: String) -> void: commit.call())
+	field.focus_exited.connect(commit)
 
 
 ## Android and iPad only: fullscreen and a landscape lock (#28, load fix 6).
@@ -568,7 +596,7 @@ func _build_general(col: VBoxContainer) -> void:
 		func(on: bool) -> void: settings.invert_pitch = on
 	)
 	_add_button(
-		col, "ResetTips", tr("settings.reset_tips"), func() -> void: settings.reset_tooltips()
+		col, "ResetHints", tr("settings.reset_hints"), func() -> void: settings.reset_hints()
 	)
 	# In a session it sits on the Game tab.
 	if not _in_session:

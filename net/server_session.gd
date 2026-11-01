@@ -1,4 +1,4 @@
-# gdlint: disable=max-public-methods
+# gdlint: disable=max-public-methods, max-file-lines
 class_name ServerSession
 extends RefCounted
 ## Session logic on the server's main thread, fed with the decoded messages NetTransport
@@ -141,6 +141,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.SHARE: shares.on_share,
 		NetProtocol.Type.BYE: _on_bye,
 		NetProtocol.Type.CLIENT_FRAME: _on_client_frame,
+		NetProtocol.Type.RENAME: _on_rename,
 		NetTransport.CLOSED: _on_closed,
 	}
 	host_pause = NetHostPause.new(self)  # registers HostPause
@@ -447,8 +448,18 @@ func admit_rule() -> String:
 ## screen). One Captain per ship (FT-NET-016, CLASH-10, counting one within grace);
 ## on a ship in play that passes coverage and isn't paused, no change that would make
 ## it fail (FT-NET-043). During a pause the paused ship's crew may rearrange freely
-## (FT-NET-035).
+## (FT-NET-035). Once a run is going, a session that has held a ship picks only ships of
+## that ship's faction (ENEMY_SHIP, #35 A10): in PvP nobody, eliminated crews included,
+## takes a rival's station; a co-op fleet is one faction.
 func pick_rule(session: NetSession, ship: int, entry: String) -> String:
+	var home: int = session.ship if session.ship >= 0 else session.home_ship
+	if (
+		ship >= 0
+		and home >= 0
+		and not launched.is_empty()
+		and world.faction_of(home) != world.faction_of(ship)
+	):
+		return FleetMessages.ENEMY_SHIP
 	if entry == StationViews.CAPTAIN:
 		for o: NetSession in by_id.values():
 			if o != session and o.ship == ship and o.entry == StationViews.CAPTAIN:
@@ -792,6 +803,19 @@ func _on_bye(conn: int, _msg: Dictionary, _now_us: int) -> void:
 	transport.close(conn, 1000, "bye")
 
 
+## Rename{name} (#35 A5): the session takes the name (an empty one is ignored); the lobby's
+## seats and captain follow, and claims and votes name it from then on.
+func _on_rename(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var s: NetSession = by_conn.get(conn)
+	if s == null or str(msg["name"]) == "" or msg["name"] == s.name:
+		return
+	if session_log != null:
+		session_log.event("rename", {"session": s.id, "from": s.name, "to": msg["name"]})
+	s.name = msg["name"]
+	_lobby_dirty = true
+	_publish()
+
+
 ## A client's long frame (#28) goes to the session log, with whose it was.
 func _on_client_frame(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = by_conn.get(conn)
@@ -834,6 +858,8 @@ func _set_pick(s: NetSession, ship: int, entry: String) -> void:
 		_claim_changed(released[0], released[1])
 	s.ship = ship
 	s.entry = entry
+	if ship >= 0:
+		s.home_ship = ship
 	s.shares = shares.active_of(ship)
 	transport.set_view(s.id, s.view_key())
 	if votes.has(old_ship):

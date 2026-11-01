@@ -18,6 +18,8 @@
 ## mockups' iPhone: [47, 0, 47, 21] in landscape, [0, 47, 0, 34] upright) and draws them
 ## with the gesture band in translucent red; `fullscreen` forces the fullscreen button
 ## (1 shown, 0 hidden); `audit` writes TapAudit.check of the shot as JSON to that path.
+## The lobby's `host_bind` makes it the host's (its join strip and dialog, #35 A6), and
+## `player` sets the player's saved name ("" shows the name prompt, #35 A5).
 ## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
@@ -61,6 +63,14 @@ var audit: String = ""
 ## The touch_kit view's rails are docked.
 var docked: bool = false
 
+## The game was started with --dev (ClientSettings.dev_flag): the menu's Dev checkbox and the
+## lobby's dev seat show (#35 A7).
+var dev: bool = false
+## The host's bind address in the lobby ("" a joined player's lobby).
+var host_bind: String = ""
+## The player's saved name.
+var player: String = "Ana"
+
 ## A Shakedown step on the focused station's banner (a solo lesson step, D303).
 var lesson: bool = false
 
@@ -71,6 +81,7 @@ func _ready() -> void:
 	LayoutMode.forced = LayoutMode.Kind.TOUCH if touch else -1
 	SafeArea.simulate(insets)
 	FullscreenButton.forced = fullscreen
+	ClientSettings.dev_flag = dev
 	RotateBanner.dismissed_here = false
 	I18n.apply("en")
 	LayoutMode.apply(get_tree().root)
@@ -91,7 +102,7 @@ func _ready() -> void:
 	if comms != "off":
 		CommsFixture.install(_ctx)
 	if tooltip:
-		_ctx.settings.reset_tooltips()
+		_ctx.settings.reset_hints()
 	if claim != "":
 		_ctx.crew.claims[claim] = {"session": StationFixture.SESSION, "name": "Ana"}
 	if selected >= 0:
@@ -103,6 +114,7 @@ func _ready() -> void:
 		"menu", "menu_web":
 			var m: MainMenu = MainMenu.new()
 			m.web = view == "menu_web"
+			m.binds = MainMenu.order_binds(["192.168.1.20"])
 			m.settings = ClientSettings.new("user://l5_menu.cfg")
 			m.settings.player_name = "Ana"
 			m.token_path = "user://l5_menu_none.token"
@@ -128,6 +140,9 @@ func _ready() -> void:
 				{"entry": "weapons", "name": "Bo"},
 				{"entry": "systems", "name": "Cy"},
 			]
+			_ctx.host_bind = host_bind
+			_ctx.host_port = NetProtocol.DEFAULT_WS_PORT
+			_ctx.settings.player_name = player
 			var l: LobbyScreen = LobbyScreen.new()
 			l.setup(_ctx)
 			add_child(l)
@@ -281,6 +296,7 @@ class InsetShade:
 
 func _exit_tree() -> void:
 	SafeArea.simulate([])
+	ClientSettings.dev_flag = false
 	FullscreenButton.forced = -1
 	LayoutMode.forced = -1
 	get_tree().root.content_scale_factor = 1.0

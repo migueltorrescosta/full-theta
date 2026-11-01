@@ -123,6 +123,10 @@ func _setup() -> void:
 	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not own_radar() else 0
 	top.add_child(card_view)
 	_build_bar(rows)
+	# Alone on a desktop the screen's share buttons go under the bar (#35 A11).
+	share_home = VBoxContainer.new()
+	share_home.name = "ShareHome"
+	rows.add_child(share_home)
 	resized.connect(_on_resized)
 	_stack()
 	ctx.crew.changed.connect(_on_crew_changed)

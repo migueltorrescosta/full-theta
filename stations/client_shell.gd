@@ -528,6 +528,7 @@ func _build_overlays() -> void:
 	settings_screen.leave_requested.connect(leave)
 	settings_screen.host_pause_requested.connect(func() -> void: ctx.intents.host_pause(true))
 	settings_screen.abandon_requested.connect(request_abandon)
+	settings_screen.name_changed.connect(func(n: String) -> void: ctx.intents.rename(n))
 	ctx.crew.changed.connect(
 		func(_what: StringName) -> void:
 			settings_screen.set_pause_control(ctx.crew.can_host_pause())

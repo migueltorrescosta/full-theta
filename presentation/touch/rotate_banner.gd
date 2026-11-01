@@ -46,7 +46,7 @@ func _ready() -> void:
 
 ## True once the player closed it.
 func is_dismissed() -> bool:
-	return dismissed_here or (settings != null and settings.tooltip_seen(KEY))
+	return dismissed_here or (settings != null and settings.hint_seen(KEY))
 
 
 ## Shows the banner when the phone is upright and the player hasn't closed it.
@@ -59,7 +59,7 @@ func refresh() -> void:
 func dismiss() -> void:
 	dismissed_here = true
 	if settings != null:
-		settings.mark_tooltip_seen(KEY)
+		settings.mark_hint_seen(KEY)
 		settings.save()
 	visible = false
 	dismissed.emit()

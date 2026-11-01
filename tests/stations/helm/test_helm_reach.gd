@@ -58,7 +58,7 @@ func _open(size: Vector2i, insets: Array) -> void:
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("helm", SETTINGS)
-	ctx.settings.mark_tooltip_seen("helm")
+	ctx.settings.mark_hint_seen("helm")
 	_screen = StationScreen.new()
 	_screen.setup(ctx)
 	_vp.add_child(_screen)

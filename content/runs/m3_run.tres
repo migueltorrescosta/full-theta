@@ -17,3 +17,4 @@ director = ExtResource("2_director")
 flee_cost = ExtResource("3_flee")
 player_ship = ExtResource("4_ship")
 start_credits = 500
+partial_pay = 0.5

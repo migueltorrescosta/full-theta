@@ -1,9 +1,10 @@
 class_name MainMenu
 extends Control
 ## The client's main menu (T049, FT-NET-001, FT-NET-003, FT-NET-012/013):
-## Name (persisted), Host (bind "This computer only" or a LAN address, session language,
-## the dev "one client holds all stations" flag), Join (live LAN list, or a typed
-## address through LanBrowser.parse_address), Rejoin (stored token), Settings, Quit.
+## Name (persisted), Host (bind a LAN address or "This computer only", session language,
+## and, when started with --dev, the dev "one client holds all stations" flag), Join (live
+## LAN list, or a typed address through LanBrowser.parse_address), Rejoin (stored token),
+## Settings, Quit.
 ## On start it runs HostSession.check_orphan and asks about an orphaned server with a
 ## session (rejoin, terminate or leave it). Once a client is welcomed it hands it to the
 ## ClientShell (stations/) and comes back when the player leaves. In app/ because only
@@ -35,6 +36,8 @@ var browser: LanBrowser = LanBrowser.new(NetProtocol.PROTOCOL_VERSION)
 ## A browser client: no Host section, it joins the server that served the page. Tests
 ## and L5 shots set it to draw the browser's menu.
 var web: bool = OS.has_feature("web")
+## The Host form's bind choices (bind_addresses); L5 shots set a fixed list.
+var binds: PackedStringArray = bind_addresses()
 
 var _menu: MarginContainer
 ## The single column (desktop, tablet, phone upright) and the two columns of a phone on its
@@ -125,13 +128,25 @@ func _notification(what: int) -> void:
 		quit()
 
 
-## The bind choices: loopback ("This computer only") then this machine's IPv4 LAN
-## addresses (D108: never every interface by default).
+## The bind choices: this machine's IPv4 LAN addresses, the first one the default, then
+## loopback ("This computer only") last; loopback alone when there is no LAN address
+## (D108: never every interface by default).
 static func bind_addresses() -> PackedStringArray:
-	var out: PackedStringArray = [LOOPBACK]
-	for a: String in IP.get_local_addresses():
-		if a.is_valid_ip_address() and not a.contains(":") and not a.begins_with("127."):
+	return order_binds(IP.get_local_addresses())
+
+
+## `bind_addresses` over a given address list: its IPv4 non-loopback addresses, then loopback.
+static func order_binds(addresses: PackedStringArray) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for a: String in addresses:
+		if (
+			a.is_valid_ip_address()
+			and not a.contains(":")
+			and not a.begins_with("127.")
+			and a != "0.0.0.0"
+		):
 			out.append(a)
+	out.append(LOOPBACK)
 	return out
 
 
@@ -140,10 +155,10 @@ static func bind_addresses() -> PackedStringArray:
 func host(bind: String = "", scenario: String = "", solo: String = "") -> void:
 	_remember_name()
 	if bind == "":
-		bind = bind_addresses()[_bind.selected]
+		bind = binds[_bind.selected]
 	var o: HostSession.Options = HostSession.Options.new(bind)
 	o.language = I18n.LANGUAGES[_lang.selected]
-	o.dev_all = _dev.button_pressed and solo == ""
+	o.dev_all = ClientSettings.dev_flag and _dev.button_pressed and solo == ""
 	o.encounter = scenario if scenario != "" else SCENARIOS[_scenario.selected]
 	o.solo = solo
 	host_session = HostSession.new(settings.player_name)
@@ -236,6 +251,8 @@ func _on_left() -> void:
 	else:
 		SessionTokenFile.remove(token_path)
 	_menu.visible = true
+	# The lobby or the in-game menu may have renamed the player (#35 A5).
+	_name.text = settings.player_name
 	_refresh_rejoin()
 	_apply_scale()
 	if was_lesson:
@@ -588,7 +605,7 @@ func _build_host(col: VBoxContainer) -> void:
 	_item(col, row, false)
 	_bind = OptionButton.new()
 	_bind.name = "Bind"
-	for a: String in bind_addresses():
+	for a: String in binds:
 		_bind.add_item(tr("menu.this_computer") if a == LOOPBACK else a)
 	row.add_child(_bind)
 	_lang = OptionButton.new()
@@ -606,6 +623,7 @@ func _build_host(col: VBoxContainer) -> void:
 	_dev = CheckBox.new()
 	_dev.name = "DevAll"
 	_dev.text = tr("menu.dev_all")
+	_dev.visible = ClientSettings.dev_flag  # only with --dev (#35 A7)
 	row.add_child(_dev)
 	_button(row, "Host", tr("menu.host"), host)
 

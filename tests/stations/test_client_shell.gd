@@ -116,10 +116,10 @@ func test_lobby_main_menu_button_leaves() -> void:
 func _on_station(fresh: bool) -> ClientShell:
 	var s: ClientShell = _shell("en")
 	if fresh:
-		s.ctx.settings.reset_tooltips()
+		s.ctx.settings.reset_hints()
 	else:
-		s.ctx.settings.mark_tooltip_seen("engineering")
-		s.ctx.settings.mark_tooltip_seen("science")
+		s.ctx.settings.mark_hint_seen("engineering")
+		s.ctx.settings.mark_hint_seen("science")
 	var c: FakeClient = s.ctx.client as FakeClient
 	c.queued.append({"type": "picked", "payload": {"ship": 0, "entry": "systems", "reason": ""}})
 	c.queued.append({"type": "started", "payload": {"ship": 0, "tick": 10}})

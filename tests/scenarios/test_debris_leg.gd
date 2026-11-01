@@ -143,3 +143,19 @@ func test_an_uncleared_dock_at_the_yard_costs_standing() -> void:
 		assert_float(f.world.reputation.value_of(f.world.faction_of(0), DebrisLeg.CIVIL_FACTION))
 		. is_less(0.0)
 	)
+
+
+# FT: FT-MIS-041, FT-MIS-021
+# #35 A3: when the time runs out before the crossing the leg ends as partial; the P5
+# clearance pays only on a cleared dock, so an accepted clearance that never docked lapses
+# unpaid.
+func test_running_out_of_time_ends_the_leg_as_partial_and_the_clearance_lapses() -> void:
+	var legs: Array = _accepted_leg()
+	var f: ScenarioFixture = legs[0]
+	var card: int = legs[1]
+	f.world.damage.health[f.world.damage.hull_row(0)] = 1.0e15
+	var credits: int = Economy.credits(f.world, 0)
+	assert_int(f.run_until_end(60 * 610)).is_equal(Scenario.Result.PARTIAL)
+	f.run(3)
+	assert_int(f.card_state(card)).is_not_equal(CardView.State.DONE)
+	assert_int(Economy.credits(f.world, 0)).is_equal(credits)

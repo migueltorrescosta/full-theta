@@ -38,7 +38,7 @@ func _screen(size: Vector2i, insets: Array) -> StationScreen:
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("relay", SETTINGS)
 	for s: String in StationViews.CREW:
-		ctx.settings.mark_tooltip_seen(s)
+		ctx.settings.mark_hint_seen(s)
 	var ships: Array = ctx.crew.catalogue["ships"]
 	ships.append({"id": ALLY, "def": "m1_corvette", "name": "Wren", "faction": 0})
 	ctx.view.blocks[StationViews.Section.RELAY] = {

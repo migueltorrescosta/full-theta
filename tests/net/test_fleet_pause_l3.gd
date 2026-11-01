@@ -243,3 +243,46 @@ func test_coop_has_no_relaunch() -> void:
 	assert_dict(await _event(alls[0], NetProtocol.EVENT_ELIMINATED, from, 0)).is_not_empty()
 	alls[0].vote_relaunch(0, true)
 	assert_str(await _rejected(alls[0], NetProtocol.Type.RELAUNCH, from)).is_equal("no_relaunch")
+
+
+## The `picked` answer to `c` picking (ship, entry): its reason, "" when it was taken.
+func _pick_reason(c: NetClient, ship: int, entry: String) -> String:
+	var from: int = h.mark(c)
+	c.pick(ship, entry)
+	var e: Dictionary = await h.next_event(
+		c,
+		NetProtocol.EVENT_PICKED,
+		from,
+		func(ev: Dictionary) -> bool: return ev["payload"]["ship"] == ship
+	)
+	return "missing" if e.is_empty() else str(e["payload"]["reason"])
+
+
+# FT: FT-NET-015, FT-MIS-030
+# #35 A10: once the run is going a session picks only ships of its own ship's faction. In PvP
+# a viewer of ship 0, also after Back to ships, is refused ship 1 (enemy_ship); a session
+# that never held a ship has only the lobby rules. A co-op fleet is one faction: the same move
+# is allowed.
+func test_a_mid_run_pick_stays_inside_the_faction() -> void:
+	var pvp: NetServer = _server(SessionRules.Mode.LAST_STANDING, 2)
+	var alls: Array[NetClient] = await _alls(pvp, [0, 1])
+	var watcher: NetClient = await h.joined(pvp, "watcher", StationViews.VIEWER, 0)
+	assert_bool(await _start(pvp, alls)).is_true()
+	assert_int(pvp.world.faction_of(0)).is_not_equal(pvp.world.faction_of(1))
+	assert_str(await _pick_reason(watcher, 1, StationViews.VIEWER)).is_equal(
+		FleetMessages.ENEMY_SHIP
+	)
+	watcher.release_pick()
+	assert_bool(await h.until(func() -> bool: return h.session_of(pvp, watcher).ship < 0)).is_true()
+	assert_str(await _pick_reason(watcher, 1, StationViews.VIEWER)).is_equal(
+		FleetMessages.ENEMY_SHIP
+	)
+	assert_str(await _pick_reason(watcher, 0, StationViews.VIEWER)).is_empty()
+	var late: NetClient = await h.welcomed(pvp, "late")
+	assert_str(await _pick_reason(late, 1, StationViews.VIEWER)).is_empty()
+	var coop: NetServer = _server(SessionRules.Mode.COOP, 2)
+	var crews: Array[NetClient] = await _alls(coop, [0, 1])
+	var friend: NetClient = await h.joined(coop, "friend", StationViews.VIEWER, 0)
+	assert_bool(await _start(coop, crews)).is_true()
+	assert_int(coop.world.faction_of(0)).is_equal(coop.world.faction_of(1))
+	assert_str(await _pick_reason(friend, 1, StationViews.VIEWER)).is_empty()
