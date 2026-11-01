@@ -71,7 +71,7 @@
       "version": "1.64.1",
       "source": "https://github.com/microsoft/playwright",
       "licence": "Apache-2.0",
-      "attribution": "Copyright (c) Microsoft Corporation; used only by the S3 spike harness (spikes/s3/harness) and the L6 web-export load check (tools/l6)"
+      "attribution": "Copyright (c) Microsoft Corporation; used only by the L6 web-export load check (tools/l6)"
     },
     {
       "name": "Piper standalone (shipped in release packages)",

@@ -1,6 +1,6 @@
 # M0 spikes: summary
 
-Results of the M0 spikes (spec §2.4, #2 for S0 and S1, #3 for S2–S9), run on fugaku (i7-11800H, 16 threads, no GPU used) on 2026-10-19 with Godot 4.7.2-stable. Each spike's report has the method, commands and full numbers; this page gives pass or fail per criterion and, where the owner approved an outcome or a fallback in #4, the decision. Spike code is in `spikes/`, throwaway except the parts listed under "Promote".
+Results of the M0 spikes (spec §2.4, #2 for S0 and S1, #3 for S2–S9), run on fugaku (i7-11800H, 16 threads, no GPU used) on 2026-10-19 with Godot 4.7.2-stable. Each spike's report has the method, commands and full numbers; this page gives pass or fail per criterion and, where the owner approved an outcome or a fallback in #4, the decision. Spike code was throwaway except the parts listed under "Promote"; it was deleted from the tree and is at git tag `m0-spikes`.
 
 From S2 onwards, an unrelated, unpinned 12-worker job loaded fugaku (load average 4–16, some swapping), so timings in S3, S9, S7b and the S8 shots are pessimistic; each report says which runs were affected.
 
