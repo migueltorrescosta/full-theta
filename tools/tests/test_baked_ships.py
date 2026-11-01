@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-BUILD_ONLY = ("tools/", "tests/", "addons/", "docs/", "spikes/")
+BUILD_ONLY = ("tools/", "tests/", "addons/", "docs/")
 
 
 def test_the_game_never_builds_a_ship():

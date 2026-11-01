@@ -163,3 +163,20 @@ def test_capture_checks_each_shot_at_its_own_size(tmp_path, monkeypatch):
     render = [str(c) for c in calls[1]]
     assert f"--server-args=-screen 0 300x{H}x24" in render
     assert render[render.index("--resolution") + 1] == f"300x{H}"
+
+
+def test_update_keeps_baselines_that_still_pass(tmp_path):
+    new = image((15, 20, 30))  # 5 per channel: under THRESHOLD, so the old baseline stays
+    baselines, out = setup(tmp_path, image(), new)
+    old_bytes = (baselines / "a.png").read_bytes()
+    assert old_bytes != (out / "a.png").read_bytes()
+    assert l5.update_baselines(baselines, out, ["a"]) == ([], ["a"])
+    assert (baselines / "a.png").read_bytes() == old_bytes
+
+
+def test_update_rewrites_failing_and_new_shots(tmp_path):
+    baselines, out = setup(tmp_path, image(), image((200, 20, 30)))
+    l5.write_png(out / "b.png", W, H, bytes(image()))
+    assert l5.update_baselines(baselines, out, ["a", "b"]) == (["a", "b"], [])
+    assert (baselines / "a.png").read_bytes() == (out / "a.png").read_bytes()
+    assert (baselines / "b.png").exists()

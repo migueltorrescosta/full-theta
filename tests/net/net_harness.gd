@@ -3,7 +3,7 @@ extends RefCounted
 ## Shared helpers for the L3 network tests (and the L4 bots, T048): a NetServer on a
 ## free port in the test's scene tree, NetClients, and polling that never assumes a
 ## speed: every wait is "until a condition holds or a generous timeout passes", so the
-## suites hold on 2 loaded cores (tools/gate.sh l3 runs them under taskset -c 0,1).
+## suites hold on 2 loaded cores (L1 runs them with everything else).
 ## Each client's delivered events are collected in events[client] while polling.
 
 const PLAYER: int = M1Encounter.PLAYER_SHIP
