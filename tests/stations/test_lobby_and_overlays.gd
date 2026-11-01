@@ -206,9 +206,12 @@ func test_cells_name_the_crewmates_from_the_seats() -> void:
 
 
 # FT: FT-NET-017
-# The dev seat exists only when the server offers it (--dev-all-stations): picking it
-# shows all six cells selected; a tap on a cell, Captain or Viewer leaves it.
+# The dev seat exists only when the server offers it (--dev-all-stations) and this game was
+# started with --dev (#35 A7): picking it shows all six cells selected; a tap on a cell,
+# Captain or Viewer leaves it.
 func test_dev_all_stations_seat_only_with_the_flag() -> void:
+	assert_bool(_cell(_lobby("viewer"), "all").visible).is_false()
+	ClientSettings.dev_flag = true
 	var l: LobbyScreen = _lobby("viewer")
 	assert_bool(_cell(l, "all").visible).is_true()
 	var plain: StationContext = StationFixture.context("viewer")
@@ -230,6 +233,7 @@ func test_dev_all_stations_seat_only_with_the_flag() -> void:
 	_picked(l, "all")
 	_cell(l, "viewer").pressed.emit()
 	assert_array(_sent_picks(l)[-1][1]).is_equal([0, "viewer"])
+	ClientSettings.dev_flag = false
 
 
 # FT: FT-STN-013, FT-NET-015

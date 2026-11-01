@@ -64,7 +64,8 @@ const SHORT_TOP: int = 0
 const WEIGH_SLACK: float = 12.0
 const CAPTAIN: String = "captain"
 const VIEWER: String = "viewer"
-## The dev entry holding every station, offered by --dev-all-stations only.
+## The dev entry holding every station, offered by --dev-all-stations only, and shown only in a
+## game started with --dev (ClientSettings.dev_flag).
 const DEV_ALL: String = "all"
 ## The crew changes the lobby depends on.
 const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked", &"toggles", &"fleet"]
@@ -745,7 +746,8 @@ func _refresh_seats() -> void:
 	if _phone:
 		_dev_all.text = TouchText.of("lobby.dev_short", "All (dev)")
 	_captain.disabled = ctx.crew.captain_seated(ship) and mine != CAPTAIN
-	_dev_all.visible = not ctx.crew.def_of(DEV_ALL).is_empty()
+	# Only when this game was started with --dev and the server offers it (#35 A7).
+	_dev_all.visible = ClientSettings.dev_flag and not ctx.crew.def_of(DEV_ALL).is_empty()
 	_weigh_buttons()
 
 

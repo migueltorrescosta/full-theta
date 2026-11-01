@@ -18,6 +18,10 @@ const MUSIC_DEFAULT: float = 0.5
 const SUBTITLE_SIZES: Dictionary = {"small": 14, "normal": 18, "large": 26}
 const ROLL_LOCKS: Array[String] = ["deck", "target", "reference"]
 
+## The game was started with `--dev` (#35 A7, amends D174): only then do the menu's Dev
+## checkbox and the lobby's dev seat show. Not saved; tests and L5 shots set it.
+static var dev_flag: bool = OS.get_cmdline_user_args().has("--dev")
+
 var path: String = PATH
 var player_name: String = ""
 ## Last address typed in Join.

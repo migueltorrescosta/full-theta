@@ -38,6 +38,18 @@ func test_bind_choices_put_the_lan_first_and_loopback_last() -> void:
 	assert_array(Array(MainMenu.order_binds(["127.0.0.1", "::1"]))).is_equal(["127.0.0.1"])
 
 
+# FT: FT-NET-001
+# #35 A7: the Dev checkbox shows only in a game started with --dev, and only then does it
+# reach the host's options.
+func test_the_dev_checkbox_needs_the_dev_flag() -> void:
+	var m: MainMenu = _menu()
+	assert_bool((m.find_child("DevAll", true, false) as CheckBox).visible).is_false()
+	ClientSettings.dev_flag = true
+	var dev: MainMenu = _menu()
+	ClientSettings.dev_flag = false
+	assert_bool((dev.find_child("DevAll", true, false) as CheckBox).visible).is_true()
+
+
 # FT: FT-NET-013
 func test_a_bad_typed_address_says_why_and_a_good_one_connects() -> void:
 	var m: MainMenu = _menu()

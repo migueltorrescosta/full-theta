@@ -87,7 +87,7 @@
     {"name": "l5_hd_science_hack", "scene": "res://tests/visual/station_shot.tscn", "size": [1920, 1080], "set": {"entry": "science", "science": "hack"}},
     {"name": "l5_hd_lobby_picks", "scene": "res://tests/visual/station_shot.tscn", "size": [1920, 1080], "set": {"view": "lobby", "entry": "systems"}},
     {"name": "l5_hd_lobby_none", "scene": "res://tests/visual/station_shot.tscn", "size": [1920, 1080], "set": {"view": "lobby", "entry": ""}},
-    {"name": "l5_hd_lobby_dev", "scene": "res://tests/visual/station_shot.tscn", "size": [1920, 1080], "set": {"view": "lobby", "entry": "all"}},
+    {"name": "l5_hd_lobby_dev", "scene": "res://tests/visual/station_shot.tscn", "size": [1920, 1080], "set": {"view": "lobby", "entry": "all", "dev": true}},
     {"name": "l5_tl_helm", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"entry": "helm", "touch": true}},
     {"name": "l5_tl_weapons", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"entry": "weapons", "touch": true}},
     {"name": "l5_tl_engineering", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"entry": "engineering", "touch": true}},

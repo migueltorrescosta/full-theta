@@ -63,6 +63,9 @@ var audit: String = ""
 ## The touch_kit view's rails are docked.
 var docked: bool = false
 
+## The game was started with --dev (ClientSettings.dev_flag): the menu's Dev checkbox and the
+## lobby's dev seat show (#35 A7).
+var dev: bool = false
 ## The host's bind address in the lobby ("" a joined player's lobby).
 var host_bind: String = ""
 ## The player's saved name.
@@ -78,6 +81,7 @@ func _ready() -> void:
 	LayoutMode.forced = LayoutMode.Kind.TOUCH if touch else -1
 	SafeArea.simulate(insets)
 	FullscreenButton.forced = fullscreen
+	ClientSettings.dev_flag = dev
 	RotateBanner.dismissed_here = false
 	I18n.apply("en")
 	LayoutMode.apply(get_tree().root)
@@ -302,6 +306,7 @@ class InsetShade:
 
 func _exit_tree() -> void:
 	SafeArea.simulate([])
+	ClientSettings.dev_flag = false
 	FullscreenButton.forced = -1
 	LayoutMode.forced = -1
 	get_tree().root.content_scale_factor = 1.0

@@ -1,9 +1,10 @@
 class_name MainMenu
 extends Control
 ## The client's main menu (T049, FT-NET-001, FT-NET-003, FT-NET-012/013):
-## Name (persisted), Host (bind "This computer only" or a LAN address, session language,
-## the dev "one client holds all stations" flag), Join (live LAN list, or a typed
-## address through LanBrowser.parse_address), Rejoin (stored token), Settings, Quit.
+## Name (persisted), Host (bind a LAN address or "This computer only", session language,
+## and, when started with --dev, the dev "one client holds all stations" flag), Join (live
+## LAN list, or a typed address through LanBrowser.parse_address), Rejoin (stored token),
+## Settings, Quit.
 ## On start it runs HostSession.check_orphan and asks about an orphaned server with a
 ## session (rejoin, terminate or leave it). Once a client is welcomed it hands it to the
 ## ClientShell (stations/) and comes back when the player leaves. In app/ because only
@@ -157,7 +158,7 @@ func host(bind: String = "", scenario: String = "", solo: String = "") -> void:
 		bind = binds[_bind.selected]
 	var o: HostSession.Options = HostSession.Options.new(bind)
 	o.language = I18n.LANGUAGES[_lang.selected]
-	o.dev_all = _dev.button_pressed and solo == ""
+	o.dev_all = ClientSettings.dev_flag and _dev.button_pressed and solo == ""
 	o.encounter = scenario if scenario != "" else SCENARIOS[_scenario.selected]
 	o.solo = solo
 	host_session = HostSession.new(settings.player_name)
@@ -622,6 +623,7 @@ func _build_host(col: VBoxContainer) -> void:
 	_dev = CheckBox.new()
 	_dev.name = "DevAll"
 	_dev.text = tr("menu.dev_all")
+	_dev.visible = ClientSettings.dev_flag  # only with --dev (#35 A7)
 	row.add_child(_dev)
 	_button(row, "Host", tr("menu.host"), host)
 
