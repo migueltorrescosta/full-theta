@@ -103,6 +103,7 @@ func _ready() -> void:
 		"menu", "menu_web":
 			var m: MainMenu = MainMenu.new()
 			m.web = view == "menu_web"
+			m.binds = MainMenu.order_binds(["192.168.1.20"])
 			m.settings = ClientSettings.new("user://l5_menu.cfg")
 			m.settings.player_name = "Ana"
 			m.token_path = "user://l5_menu_none.token"
