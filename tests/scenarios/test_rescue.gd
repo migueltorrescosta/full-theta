@@ -123,8 +123,64 @@ func test_the_cards_outlast_a_long_rescue_and_the_escort_is_paid() -> void:
 	_accept(f, _card(f, "comms.card.escort"))
 	# Keep the ship out of harm: the raiders stay alive until the clock settles at 300 s.
 	f.world.damage.health[f.world.damage.hull_row(0)] = 1.0e15
+	f.world.damage.health[f.world.damage.find_subsystem(0, &"engines")] = 1.0e15
 	var freighter: int = f.ships_of(&"m3_stranded")[0]
 	f.world.damage.health[f.world.damage.hull_row(freighter)] = 1.0e15
 	assert_int(f.run_until_end(60 * 320)).is_equal(Scenario.Result.WON)
 	f.run(3)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits + 400)
+
+
+# FT: FT-PAIR-011, FT-MIS-019
+# P12: the escort carries terms (the engines at 2 pips or better) that Comms can read on the
+# card and Engineering's condition may defeat; with the engines wrecked the offer is still
+# accepted, the freighter survives, and the escort fails, costing standing and paying nothing.
+func test_an_escort_with_the_engines_down_is_accepted_and_fails() -> void:
+	var f: ScenarioFixture = _rescue()
+	var credits: int = Economy.credits(f.world, 0)
+	var card: int = _card(f, "comms.card.escort")
+	var view: Dictionary = CommsView.block(f.world, 0)["cards"][0]
+	assert_str(view["detail"]).is_equal("comms.card.escort_terms")
+	var need: Dictionary = StoryRules.need_of(f.world, card)
+	assert_str(String(need["subsystem"])).is_equal("engines")
+	assert_int(need["pips"]).is_equal(Rescue.ESCORT_NEED_PIPS)
+	assert_bool(f.api.needs_met(card)).is_true()
+	f.world.damage.health[f.world.damage.find_subsystem(0, &"engines")] = 0.0
+	assert_bool(f.api.needs_met(card)).is_false()
+	_accept(f, card)
+	assert_int(f.card_state(card)).is_equal(CardView.State.ACCEPTED)
+	for id: int in _raiders_arrive(f):
+		f.kill(id)
+	assert_int(f.run_until_end(30)).is_equal(Scenario.Result.WON)
+	f.run(3)
+	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
+	assert_float(_standing(f)).is_less(0.0)
+
+
+# FT: FT-PAIR-001, FT-PAIR-004, FT-COM-007
+# P14: the stranded freighter answers a hail with the trader conversation; "call the bluff"
+# stays locked until a cargo scan names the fact, then draws the reputation change.
+func test_hailing_the_freighter_offers_a_bluff_only_after_a_cargo_scan() -> void:
+	var f: ScenarioFixture = _rescue()
+	var freighter: int = f.ships_of(&"m3_stranded")[0]
+	f.run(60)
+	assert_bool(KnowledgeSystem.is_detected(f.world, f.world.faction_of(0), freighter)).is_true()
+	var hail: HailCommand = HailCommand.new()
+	hail.target = freighter
+	assert_bool(f.send(hail)).is_true()
+	var hailed: int = f.world.story.size() - 1
+	assert_str(String(f.world.story.conversation[hailed])).is_equal("conv.trader_bluff")
+	var bluff: Dictionary = {}
+	for o: Dictionary in Story.options(f.world, hailed, 0):
+		if o["id"] == "o3":
+			bluff = o
+	assert_bool(bluff["enabled"]).is_false()
+	Story.learn_fact(f.world, f.world.faction_of(0), freighter, "cargo")
+	for o: Dictionary in Story.options(f.world, hailed, 0):
+		if o["id"] == "o3":
+			assert_bool(o["enabled"]).is_true()
+	var reply: ReplyCommand = ReplyCommand.new()
+	reply.card = hailed
+	reply.option = &"o3"
+	assert_bool(f.send(reply)).is_true()

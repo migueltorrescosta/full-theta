@@ -13,7 +13,7 @@ extends RefCounted
 ## edited set as "<Preset> (custom)"; the threat budget follows the preset (D92).
 ## Instances are immutable; with_value() returns a changed copy.
 
-const PRESETS: Array[String] = ["easy", "normal", "hard"]
+const PRESETS: Array[String] = DataTogglesDef.PRESETS
 
 ## The toggle file, loaded once when the class loads (read-only after, so both threads read it).
 static var _def: DataTogglesDef = load("res://content/toggles/toggles.tres") as DataTogglesDef
@@ -65,7 +65,7 @@ static func toggle_def(id: StringName) -> DataToggleDef:
 ## An unedited preset; an unknown name gives the default preset.
 static func of_preset(name: String) -> DataToggles:
 	var out: DataToggles = DataToggles.new()
-	out.preset = name if PRESETS.has(name) else String(_def.default_preset)
+	out.preset = name if PRESETS.has(name) else StationViews.DEFAULT_TOGGLES
 	for t: DataToggleDef in _def.toggles:
 		out.values.append(t.value_of(StringName(out.preset)))
 	return out

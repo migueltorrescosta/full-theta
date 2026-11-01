@@ -17,7 +17,6 @@ func test_a_hostile_meta_without_a_beat_fails() -> void:
 	var m: ScenarioMeta = ScenarioMeta.new()
 	m.id = &"x"
 	m.threat_cost = 1
-	m.duration_s = 10.0
 	m.tags = PackedStringArray(["hostile"])
 	assert_array(m.errors()).is_not_empty()
 	m.comms_beats = PackedStringArray(["taunt"])

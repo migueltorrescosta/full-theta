@@ -42,10 +42,12 @@ func test_reset_restores_definitions_and_state() -> void:
 	var encounter: M1Encounter = _encounter(5)
 	var world: SimWorld = encounter.build()
 	var crew: ScriptedCrew = ScriptedCrew.new()
-	while OutcomeSystem.encounter_outcome(world) == RunTable.Outcome.NONE and world.tick < 120 * HZ:
+	while not OutcomeSystem.session_outcome(world).over() and world.tick < 120 * HZ:
 		crew.act(world)
 		world.step()
-	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.WIN)
+	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(
+		SessionOutcome.Reason.OBJECTIVE
+	)
 	assert_dict(TestDefs.hashes(defs)).is_equal(before)
 	var reset: SimWorld = encounter.build()
 	var fresh: SimWorld = _encounter(5).build()

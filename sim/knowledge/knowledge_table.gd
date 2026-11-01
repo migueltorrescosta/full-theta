@@ -35,7 +35,7 @@ var scan_conf: PackedFloat64Array = PackedFloat64Array()
 var flag: PackedByteArray = PackedByteArray()
 var intent: PackedByteArray = PackedByteArray()
 
-## Derived index, not state: row by faction * 65536 + contact id, filled in add_contact
+## Derived index, not state: row by SimTable.row_key(faction, contact id), filled in add_contact
 ## (rows never move or go away).
 var _rows: Dictionary[int, int] = {}
 
@@ -47,7 +47,7 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 
 ## Row of the faction's knowledge of the contact, or -1 if it never detected it.
 func row_for(faction: int, contact_id: int) -> int:
-	return _rows.get(faction * 65536 + contact_id, -1)
+	return _rows.get(SimTable.row_key(faction, contact_id), -1)
 
 
 ## Ships of other factions that the faction currently detects, in id order;
@@ -63,7 +63,7 @@ func detected_ships(faction: int, ship_factions: PackedInt32Array) -> PackedInt3
 ## The faction's rows of the ships detected_ships() lists, in the same order.
 func detected_rows(faction: int, ship_factions: PackedInt32Array) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
-	var base: int = faction * 65536
+	var base: int = SimTable.row_key(faction, 0)
 	var rows: Dictionary[int, int] = _rows
 	var det: PackedByteArray = detected
 	for id: int in ship_factions.size():
@@ -87,7 +87,7 @@ func add_contact(faction: int, contact_id: int) -> int:
 	scan_conf.append(0.0)
 	flag.append(Flag.NONE)
 	intent.append(Intent.UNKNOWN)
-	_rows[faction * 65536 + contact_id] = row
+	_rows[SimTable.row_key(faction, contact_id)] = row
 	return row
 
 

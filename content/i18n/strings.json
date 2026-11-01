@@ -340,6 +340,7 @@
     "comms.opt.salvage_accept": {"en": "Take the cargo", "pt_PT": "Ficar com a carga", "it": "Prendere il carico"},
     "comms.opt.accept_run": {"en": "Take the run home", "pt_PT": "Aceitar o regresso", "it": "Accettare il ritorno"},
     "comms.card.escort": {"en": "Escort the freighter", "pt_PT": "Escoltar o cargueiro", "it": "Scortare il mercantile"},
+    "comms.card.escort_terms": {"en": "Needs the engines at 2 pips or better to keep pace.", "pt_PT": "Exige os motores com 2 pips ou mais para acompanhar.", "it": "Servono i motori ad almeno 2 pip per tenere il passo."},
     "comms.card.salvage": {"en": "Salvage the cargo", "pt_PT": "Recuperar a carga", "it": "Recuperare il carico"},
     "comms.card.lane_run": {"en": "Fly the lane home", "pt_PT": "Voltar pela rota", "it": "Tornare per la rotta"},
     "director.reason.budget_fits": {"en": "Fits the threat budget: {cost} spent, {left} left", "pt_PT": "Cabe no orçamento de ameaça: {cost} gastos, {left} restantes", "it": "Rientra nel budget di minaccia: {cost} spesi, {left} rimasti"},

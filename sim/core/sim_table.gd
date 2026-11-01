@@ -6,8 +6,17 @@ extends RefCounted
 ## (FT-ARC-009). Tables with several rows per ship (mounts, subsystems) or per faction
 ## (knowledge) keep the same two key columns.
 
+## Ids below this share a key with the id above it: row_key packs two ids into one int.
+const KEY_STRIDE: int = 65536
+
 var ship_ids: PackedInt32Array = PackedInt32Array()
 var factions: PackedInt32Array = PackedInt32Array()
+
+
+## One int for an ordered pair of ids (faction and ship, or faction and faction), the key of
+## the derived row indexes and of the world's relation table.
+static func row_key(a: int, b: int) -> int:
+	return a * KEY_STRIDE + b
 
 
 func size() -> int:

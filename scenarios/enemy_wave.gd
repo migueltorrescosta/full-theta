@@ -38,14 +38,6 @@ func meta() -> ScenarioMeta:
 	m.id = &"enemy_wave"
 	m.tags = PackedStringArray(["hostile"])
 	m.threat_cost = 3
-	m.duration_s = MAX_S
-	m.stations = PackedStringArray(["helm", "weapons", "engineering", "comms"])
-	m.pairs = PackedStringArray(["p9"])
-	m.branches = [
-		{"id": "destroyed", "outcome": "won"},
-		{"id": "surrendered", "outcome": "won"},
-		{"id": "timeout", "outcome": "won"},
-	]
 	m.comms_beats = PackedStringArray(["hail", "taunt", "surrender"])
 	return m
 
@@ -82,7 +74,7 @@ func step(api: ScenarioApi) -> void:
 				api.set_relation(RAIDER_FACTION, _faction, Relation.NEUTRAL)
 			else:
 				api.message("npc.surrender_refused", {}, SayTarget.npc(NPC, _ship))
-	if _surrendered or (_raiders.size() == _count and _raiders_gone(api)) or elapsed_s >= MAX_S:
+	if _surrendered or (_raiders.size() == _count and api.all_gone(_raiders)) or elapsed_s >= MAX_S:
 		_done = true
 
 
@@ -110,15 +102,3 @@ func _offer_hail(api: ScenarioApi) -> void:
 	hail.conversation_id = &"conv.surrender_demand"
 	hail.target = _raiders[0].id()
 	api.offer(_ship, hail)
-
-
-## Whether no raider of the wave is still in the run (destroyed or retreated).
-func _raiders_gone(api: ScenarioApi) -> bool:
-	for raider: ApiHandle in _raiders:
-		# A spawn queued this tick has no ship yet: it is still to come. One that was
-		# rejected never comes.
-		if raider.pending():
-			return false
-		if not raider.rejected() and api.ship(raider.id()).in_play:
-			return false
-	return true

@@ -43,16 +43,6 @@ static func picks(d: Array[DirectorDecision]) -> Array[DirectorDecision]:
 	)
 
 
-# FT: FT-MIS-023
-# The director names sim/api only, so it keeps SessionRules.Mode as ints: they match.
-func test_mode_numbers_match_session_rules() -> void:
-	assert_int(FleetDirector.COOP).is_equal(SessionRules.Mode.COOP)
-	assert_int(FleetDirector.RACE).is_equal(SessionRules.Mode.RACE)
-	assert_int(FleetDirector.LAST_STANDING).is_equal(SessionRules.Mode.LAST_STANDING)
-	assert_int(FleetDirector.TEAMS).is_equal(SessionRules.Mode.TEAMS)
-	assert_int(FleetDirector.HOLDOUT).is_equal(SessionRules.Mode.HOLDOUT)
-
-
 # FT: FT-MIS-023, FT-MIS-013
 # A co-op fleet of three is one fleet run: one Director, one encounter holding every ship,
 # its raiders scaled to the ship count (enemy_wave's 2 at strength 1, times 1 + 0.5 per

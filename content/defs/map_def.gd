@@ -101,11 +101,14 @@ func period_errors(ships: Array[ShipDef]) -> Array[String]:
 ## Minimum-image distance (m) between two points of the cube.
 func _distance(a: Vector3, b: Vector3) -> float:
 	var d: Vector3 = b - a
-	return Vector3(_wrap(d.x), _wrap(d.y), _wrap(d.z)).length()
-
-
-func _wrap(v: float) -> float:
-	return fposmod(v + 0.5 * period_m, period_m) - 0.5 * period_m
+	return (
+		Vector3(
+			PeriodRules.wrap(d.x, period_m),
+			PeriodRules.wrap(d.y, period_m),
+			PeriodRules.wrap(d.z, period_m)
+		)
+		. length()
+	)
 
 
 static func _has(list: Array[SiteDef], key: StringName) -> bool:

@@ -107,9 +107,9 @@ func place(row: int, x: float, y: float, z: float) -> void:
 ## Moves a ship by a displacement given per axis in 64-bit (m), wrapping across the
 ## cube's faces (FT-SIM-035): the integrator and contact separation move ships this way.
 func translate(row: int, dx: float, dy: float, dz: float) -> void:
-	px[row] = _wrap(px[row] + dx, period)
-	py[row] = _wrap(py[row] + dy, period)
-	pz[row] = _wrap(pz[row] + dz, period)
+	px[row] = PeriodRules.wrap(px[row] + dx, period)
+	py[row] = PeriodRules.wrap(py[row] + dy, period)
+	pz[row] = PeriodRules.wrap(pz[row] + dz, period)
 
 
 ## A point (m) wrapped onto the cube, as [x, y, z] in 64-bit; empty
@@ -118,21 +118,21 @@ func translate(row: int, dx: float, dy: float, dz: float) -> void:
 func wrap_point(x: float, y: float, z: float) -> PackedFloat64Array:
 	if not (is_finite(x) and is_finite(y) and is_finite(z)):
 		return PackedFloat64Array()
-	# _wrap inlined for in-cube coordinates, the common case (hot path).
+	# PeriodRules.wrap inlined for in-cube coordinates, the common case (hot path).
 	var half: float = 0.5 * period
 	if not (x >= -half and x < half):
-		x = _wrap(x, period)
+		x = PeriodRules.wrap(x, period)
 	if not (y >= -half and y < half):
-		y = _wrap(y, period)
+		y = PeriodRules.wrap(y, period)
 	if not (z >= -half and z < half):
-		z = _wrap(z, period)
+		z = PeriodRules.wrap(z, period)
 	return PackedFloat64Array([x, y, z])
 
 
 ## One coordinate (m) wrapped into [-period / 2, period / 2); the caller
 ## ensures it is finite (FT-SIM-035). Allocation-free, for hot paths.
 func wrap(v: float) -> float:
-	return _wrap(v, period)
+	return PeriodRules.wrap(v, period)
 
 
 ## The point (m, [x, y, z], wrapped) at a world-frame offset from row's centre:
@@ -176,17 +176,17 @@ func can_reach(a: int, b: int) -> bool:
 ## Offset of row b from row a (m, float32) by minimum image, computed in 64-bit
 ## (FT-SIM-035).
 func relative(a: int, b: int) -> Vector3:
-	# _wrap inlined for in-cube differences, the common case (hot path).
+	# PeriodRules.wrap inlined for in-cube differences, the common case (hot path).
 	var half: float = 0.5 * period
 	var dx: float = px[b] - px[a]
 	var dy: float = py[b] - py[a]
 	var dz: float = pz[b] - pz[a]
 	if not (dx >= -half and dx < half):
-		dx = _wrap(dx, period)
+		dx = PeriodRules.wrap(dx, period)
 	if not (dy >= -half and dy < half):
-		dy = _wrap(dy, period)
+		dy = PeriodRules.wrap(dy, period)
 	if not (dz >= -half and dz < half):
-		dz = _wrap(dz, period)
+		dz = PeriodRules.wrap(dz, period)
 	return Vector3(dx, dy, dz)
 
 
@@ -207,11 +207,11 @@ func nearest(a: int, ids: PackedInt32Array) -> int:
 		var dy: float = ys[b] - ay
 		var dz: float = zs[b] - az
 		if not (dx >= -half and dx < half):
-			dx = _wrap(dx, period)
+			dx = PeriodRules.wrap(dx, period)
 		if not (dy >= -half and dy < half):
-			dy = _wrap(dy, period)
+			dy = PeriodRules.wrap(dy, period)
 		if not (dz >= -half and dz < half):
-			dz = _wrap(dz, period)
+			dz = PeriodRules.wrap(dz, period)
 		var dist: float = Vector3(dx, dy, dz).length()
 		if dist < best_dist:
 			best_dist = dist
@@ -227,11 +227,11 @@ func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:
 	var dy: float = y - py[a]
 	var dz: float = z - pz[a]
 	if not (dx >= -half and dx < half):
-		dx = _wrap(dx, period)
+		dx = PeriodRules.wrap(dx, period)
 	if not (dy >= -half and dy < half):
-		dy = _wrap(dy, period)
+		dy = PeriodRules.wrap(dy, period)
 	if not (dz >= -half and dz < half):
-		dz = _wrap(dz, period)
+		dz = PeriodRules.wrap(dz, period)
 	return Vector3(dx, dy, dz)
 
 
@@ -299,14 +299,3 @@ func columns() -> Array:
 			["half_length", half_length],
 		]
 	)
-
-
-## v wrapped into [-p / 2, p / 2) (m). Values already inside are returned unchanged, so
-## wrapping never rounds an in-cube offset (D104).
-static func _wrap(v: float, p: float) -> float:
-	var half: float = 0.5 * p
-	if v >= -half and v < half:
-		return v
-	var w: float = fposmod(v + half, p) - half
-	# fposmod can round up to p for a tiny negative remainder.
-	return w - p if w >= half else w

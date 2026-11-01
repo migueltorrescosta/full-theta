@@ -4,10 +4,12 @@ extends Scenario
 ## route to another named site and Weapons shoots them with the existing mounts as point
 ## defence; debris left in the way hurts through the collision rules (D119). The leg is the
 ## way home, from the encounter's site to Kestrel Yard: traffic control warns the crew and
-## offers a fee for the crossing. The encounter is won on reaching the yard after having been
-## away from it, by impulse or by the jump drive (which flies past the debris), or when the
-## time runs out; a ship still at the yard when the encounter starts has not crossed anything
-## (review 2 M5). Only the Scenario API is used (FT-DAT-007).
+## offers a docking clearance for the crossing (P5): accepted, it opens an approach lane to the
+## yard (a window on Helm's route), and docking inside it pays the fee while docking before or
+## after it costs standing (StoryRules.on_dock). The encounter is won on reaching the yard after
+## having been away from it, by impulse or by the jump drive (which flies past the debris), or
+## when the time runs out; a ship still at the yard when the encounter starts has not crossed
+## anything (review 2 M5). Only the Scenario API is used (FT-DAT-007).
 
 const DEBRIS_FACTION: int = 4
 const NPC: StringName = &"Traffic Control"
@@ -18,6 +20,12 @@ const FIRST_T: float = 0.15
 const LAST_T: float = 0.85
 const LATERAL_M: float = 150.0
 const FEE: int = 150
+## The clearance's lane opens this long after the card is accepted and stays open this long
+## (s); the card lapses at MAX_S.
+const LANE_OPEN_S: float = 30.0
+const LANE_S: float = 540.0
+## The civil faction whose standing an uncleared approach costs (rescue's freighters, too).
+const CIVIL_FACTION: int = 3
 const MAX_S: float = 600.0
 
 var _ship: int = -1
@@ -25,7 +33,6 @@ var _destination: int = -1
 var _started: int = 0
 ## Whether the ship has been away from the yard since the encounter started.
 var _left: bool = false
-var _card: ApiHandle
 var _done: bool = false
 
 
@@ -34,12 +41,6 @@ func meta() -> ScenarioMeta:
 	m.id = &"debris_leg"
 	m.tags = PackedStringArray(["travel"])
 	m.threat_cost = 1
-	m.duration_s = MAX_S
-	m.stations = PackedStringArray(["helm", "weapons"])
-	m.branches = [
-		{"id": "crossed", "outcome": "won"},
-		{"id": "timeout", "outcome": "won"},
-	]
 	m.travel_hazard = &"debris"
 	return m
 
@@ -66,13 +67,17 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 			api.spawn_on_leg(leg["debris"], DEBRIS_FACTION, from, _destination, t, lateral)
 	api.message("npc.lane_warning", {}, SayTarget.npc(NPC, _ship))
 	var run: CardSpec = CardSpec.new()
-	run.kind = CardSpec.Kind.MISSION
+	run.kind = CardSpec.Kind.CONTRACT
 	run.npc_id = NPC
 	run.title_key = &"comms.card.lane_run"
 	run.conversation_id = &"conv.lane_run"
 	run.reward_credits = FEE
 	run.expires_s = MAX_S
-	_card = api.offer(_ship, run)
+	run.site = HOME
+	run.lane_open_s = LANE_OPEN_S
+	run.lane_s = LANE_S
+	run.rep_faction = CIVIL_FACTION
+	api.offer(_ship, run)
 
 
 func step(api: ScenarioApi) -> void:
@@ -82,9 +87,6 @@ func step(api: ScenarioApi) -> void:
 	_left = _left or at != _destination
 	if _left and at == _destination:
 		_done = true
-		for c: CardView in api.cards_of(_ship):
-			if c.id == _card.id() and c.state == CardView.State.ACCEPTED:
-				api.settle_card(c.id, true)
 	elif float(api.tick() - _started) / ScenarioApi.HZ >= MAX_S:
 		_done = true
 

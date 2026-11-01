@@ -91,7 +91,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-NET-045 | tests | `tests/net/test_net_claims_l3.gd`, `tests/net/test_net_stations_defs.gd` |
 | FT-NET-046 | tests | `tests/net/test_host_static_server.gd`, `tests/net/test_net_client_stats_l3.gd`, `tests/net/test_snapshot_age_stats.gd` |
 | FT-SIM-001 | tests | `tests/sim/core/test_integrator.gd`, `tests/sim/core/test_sim_world.gd` |
-| FT-SIM-002 | tests | `tests/content/test_content_defs.gd`, `tests/content/test_def_gate.gd`, `tests/pairs/test_p2_helm_weapons.gd` |
+| FT-SIM-002 | tests | `tests/content/test_content_defs.gd`, `tests/content/test_def_gate.gd`, `tests/pairs/test_pair_gains.gd` |
 | FT-SIM-003 | tests | `tests/sim/core/test_integrator.gd`, `tests/sim/flight/test_assist_holds.gd` |
 | FT-SIM-004 | tests | `tests/sim/flight/test_assist_holds.gd`, `tests/sim/flight/test_assist_modes.gd`, `tests/stations/helm/test_helm_tablet.gd`, `tests/stations/helm/test_helm_touch.gd` |
 | FT-SIM-005 | tests | `tests/sim/flight/test_assist_holds.gd`, `tests/sim/flight/test_assist_modes.gd` |
@@ -167,7 +167,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-WPN-004 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_reach.gd`, `tests/stations/weapons/test_weapons_tablet.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-WPN-005 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-WPN-006 | tests | `tests/content/test_content_defs.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/sim/combat/test_ordnance.gd`, `tests/stations/test_weapons_guided.gd`, `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_reach.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
-| FT-WPN-007 | tests | `tests/net/test_view_filter.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_data_shortcut_views.gd` |
+| FT-WPN-007 | tests | `tests/net/test_view_filter.gd`, `tests/pairs/test_pair_gains.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-WPN-008 | tests | `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_weapons_guided.gd`, `tests/stations/weapons/test_weapons_reach.gd`, `tests/stations/weapons/test_weapons_tablet.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-WPN-009 | tests | `tests/stations/test_weapons_panel.gd`, `tests/stations/weapons/test_weapons_tablet.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-ENG-001 | tests | `tests/presentation/test_hud_rules.gd`, `tests/stations/engineering/test_engineering_panel.gd`, `tests/stations/test_phone_fixups.gd` |
@@ -211,7 +211,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-COM-004 | tests | `tests/net/test_comms_view.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/sim/economy/test_economy.gd`, `tests/stations/comms/test_comms_phone.gd`, `tests/stations/test_comms_trade.gd` |
 | FT-COM-005 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_reputation.gd`, `tests/stations/comms/test_comms_phone.gd`, `tests/stations/test_comms_board.gd` |
 | FT-COM-006 | tests | `tests/net/test_comms_claims_l3.gd`, `tests/net/voice/test_npc_routing_l3.gd`, `tests/stations/comms/test_comms_phone.gd`, `tests/stations/test_comms_board.gd` |
-| FT-COM-007 | tests | `tests/net/test_comms_view.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/comms/test_comms_phone.gd`, `tests/stations/test_comms_board.gd`, `tools/tests/test_conversations.py` |
+| FT-COM-007 | tests | `tests/net/test_comms_view.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/comms/test_comms_phone.gd`, `tests/stations/test_comms_board.gd`, `tools/tests/test_conversations.py` |
 | FT-COM-008 | tests | `tests/net/test_comms_view.gd`, `tests/sim/story/test_cards.gd`, `tests/stations/comms/test_comms_phone.gd`, `tests/stations/test_comms_board.gd` |
 | FT-COM-009 | tests | `tests/net/test_comms_view.gd`, `tests/sim/economy/test_modules.gd`, `tests/stations/test_comms_trade.gd` |
 | FT-CPT-001 | tests | `tests/net/test_net_main_screen_l3.gd`, `tests/net/test_net_main_screen_rules.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/stations/captain/test_captain_phone.gd`, `tests/stations/test_captain_panel.gd` |
@@ -263,20 +263,20 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-SPA-029 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/net/test_net_relay_l3.gd`, `tests/net/test_net_toggles_l3.gd` |
 | FT-SPA-030 | tests | `tests/stations/test_relay_station.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-SPA-031 | tests | `tests/net/test_net_marks_l3.gd`, `tests/net/test_net_marks_rules.gd`, `tests/stations/test_crew_state.gd`, `tests/stations/test_marks_pings_l3.gd`, `tests/stations/test_relay_station.gd` |
-| FT-PAIR-001 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p15_relay_comms.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/pairs/test_pair_roster.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_helm_lane.gd` |
-| FT-PAIR-002 | tests | `tests/pairs/test_pair_roster.gd` |
-| FT-PAIR-003 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_reveals.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd`, `tests/sim/science/test_self_scan_faults.gd` |
-| FT-PAIR-004 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p15_relay_comms.gd`, `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/pairs/test_pair_harness.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/knowledge/test_knowledge.gd` |
+| FT-PAIR-001 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p15_relay_comms.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/pairs/test_pair_gains.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_helm_lane.gd` |
+| FT-PAIR-002 | tests | `tests/pairs/test_pair_gains.gd` |
+| FT-PAIR-003 | tests | `tests/pairs/test_pair_gains.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_reveals.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd`, `tests/sim/science/test_self_scan_faults.gd` |
+| FT-PAIR-004 | tests | `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_pair_gains.gd`, `tests/pairs/test_pair_harness.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/knowledge/test_knowledge.gd` |
 | FT-PAIR-005 | tests | `tests/net/test_net_stations_filter.gd`, `tests/net/test_view_filter.gd` |
 | FT-PAIR-007 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/net/test_hazard_view.gd`, `tests/net/test_net_coop_l3.gd`, `tests/net/test_view_filter.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_helm_lane.gd`, `tests/stations/test_helm_route_ribbon.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_weapons_flags.gd` |
 | FT-PAIR-008 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd` |
 | FT-PAIR-009 | tests | `tests/net/test_net_chips_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-010 | tests | `tests/net/test_comms_view.gd`, `tests/net/test_eng_comms_l3.gd`, `tests/net/test_net_event_values_l3.gd`, `tests/net/test_view_filter.gd`, `tests/pairs/test_p12_engineering_comms.gd`, `tests/stations/test_data_shortcut_views.gd` |
-| FT-PAIR-011 | tests | `tests/net/test_eng_comms_l3.gd`, `tests/pairs/test_p12_engineering_comms.gd`, `tests/sim/story/test_cards.gd` |
+| FT-PAIR-011 | tests | `tests/net/test_eng_comms_l3.gd`, `tests/pairs/test_p12_engineering_comms.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/story/test_cards.gd` |
 | FT-PAIR-012 | tests | `tests/net/test_net_chips_l3.gd`, `tests/pairs/test_no_prompts_outside_training.gd`, `tests/scenarios/test_shakedown.gd`, `tests/stations/weapons/test_weapons_touch.gd` |
 | FT-PAIR-013 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/net/test_debrief_l3.gd`, `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_coop_l3.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-014 | tests | `tests/net/test_net_coop_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/pairs/test_p15_relay_comms.gd` |
-| FT-PAIR-015 | tests | `tests/net/test_hazard_view.gd`, `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p15_relay_comms.gd`, `tests/pairs/test_p1_engineering_helm.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/pairs/test_pair_harness.gd`, `tests/sim/hazard/test_hazards.gd` |
+| FT-PAIR-015 | tests | `tests/net/test_hazard_view.gd`, `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/pairs/test_pair_gains.gd`, `tests/pairs/test_pair_harness.gd`, `tests/sim/hazard/test_hazards.gd` |
 | FT-PAIR-016 | tests | `tests/net/test_fleet_sharing_l3.gd`, `tests/sim/pvp/test_pvp_own_knowledge.gd` |
 | FT-PAIR-017 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd`, `tests/stations/test_comms_board.gd`, `tests/stations/test_lobby_toggles.gd`, `tests/stations/test_request_chips.gd` |
 | FT-PAIR-018 | tests | `tests/net/test_data_toggles.gd`, `tests/net/test_net_chips_l3.gd` |
@@ -301,7 +301,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-016 | tests | `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_flee_abandon.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_settings_menu.gd` |
 | FT-MIS-017 | tests | `tests/sim/core/test_sim_world.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd` |
 | FT-MIS-018 | tests | `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_reputation.gd` |
-| FT-MIS-019 | tests | `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/sim/economy/test_reputation.gd` |
+| FT-MIS-019 | tests | `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_reputation.gd` |
 | FT-MIS-020 | tests | `tests/sim/economy/test_reputation.gd` |
 | FT-MIS-021 | tests | `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_economy.gd` |
 | FT-MIS-022 | tests | `tests/sim/economy/test_modules.gd` |
@@ -373,7 +373,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-M1-007 | tests | `tests/sim/ai/test_enemy_ai.gd` |
 | FT-M1-008 | tests | `tests/stations/test_weapons_panel.gd` |
 | FT-M1-009 | tests | `tests/sim/damage/test_damage.gd`, `tests/sim/damage/test_repair.gd` |
-| FT-M1-010 | tests | `tests/pairs/test_p1_engineering_helm.gd` |
+| FT-M1-010 | tests | `tests/pairs/test_pair_gains.gd` |
 | FT-M1-011 | tests | `tests/stations/test_station_alerts.gd` |
 | FT-M1-012 | tests | `tests/net/test_net_pause_l3.gd`, `tests/net/test_net_run_reset_l3.gd`, `tests/net/test_net_server_main.gd`, `tests/net/voice/test_server_voice.gd`, `tests/net/voice/test_voice_service.gd`, `tests/sim/run/test_outcome.gd`, `tests/sim/run/test_run_reset.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_helm_panel.gd`, `tests/stations/test_outcome_card.gd`, `tests/stations/test_station_screen.gd` |
 | FT-M1-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_net_reconnect_l3.gd` |
@@ -390,7 +390,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-TST-003 | tests | `tools/tests/test_l5.py` |
 | FT-TST-004 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
 | FT-TST-005 | manual | [#2](https://github.com/migueltorrescosta/full-theta/issues/2) |
-| FT-TST-006 | tests | `tests/pairs/test_p10_engineering_science.gd`, `tests/pairs/test_p11_engineering_relay.gd`, `tests/pairs/test_p13_science_relay.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p15_relay_comms.gd`, `tests/pairs/test_p2_helm_weapons.gd`, `tests/pairs/test_p3_helm_science.gd`, `tests/pairs/test_p4_helm_relay.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p7_weapons_science.gd`, `tests/pairs/test_p8_weapons_relay.gd`, `tests/pairs/test_p9_weapons_comms.gd` |
+| FT-TST-006 | tests | `tests/pairs/test_pair_gains.gd` |
 | FT-TST-007 | tests | `tests/sim/core/test_integrator.gd` |
 | FT-TST-008 | tests | `tests/sim/combat/test_weapons.gd` |
 | FT-TST-009 | tests | `tests/sim/pvp/test_pvp.gd`, `tests/sim/replay/test_command_log.gd`, `tests/sim/replay/test_golden_replay.gd`, `tests/sim/replay/test_replay_determinism.gd` |

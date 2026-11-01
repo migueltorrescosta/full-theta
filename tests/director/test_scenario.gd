@@ -28,7 +28,6 @@ func meta() -> ScenarioMeta:
 	var m: ScenarioMeta = ScenarioMeta.new()
 	m.id = _id
 	m.threat_cost = _cost
-	m.duration_s = 10.0
 	m.tags = PackedStringArray(["hostile"] if _hostile else ["rescue"])
 	m.comms_beats = PackedStringArray(["hail"] if _hostile else [])
 	return m

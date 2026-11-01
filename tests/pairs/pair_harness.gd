@@ -15,6 +15,11 @@ extends RefCounted
 ## Metric direction for check().
 enum Better { LOWER, HIGHER }
 
+## Least gain by which the co-op variant must beat the solo variant on each metric of a
+## pair test (dimensionless, FT-PAIR-015); P1 needs only 0.2 (D121).
+const MIN_GAIN: float = 0.25
+const MIN_GAIN_OVERRIDES: Dictionary[String, float] = {"p1": 0.2}
+
 
 ## One finished run.
 class Run:
@@ -86,6 +91,11 @@ static func helm_input(throttle: float, ship: int = 0) -> HelmInputCommand:
 	c.face = true
 	c.throttle = throttle
 	return c
+
+
+## The least gain of pair `id` ("p1" to "p15").
+static func min_gain(id: String) -> float:
+	return MIN_GAIN_OVERRIDES.get(id, MIN_GAIN)
 
 
 ## Gain of co-op over solo on one metric (dimensionless), the rule every pair test uses

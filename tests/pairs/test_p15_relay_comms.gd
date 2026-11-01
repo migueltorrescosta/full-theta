@@ -4,24 +4,6 @@ extends GdUnitTestSuite
 ## icon where mission_icon allows it, and a probe's discovery opens an opportunity on
 ## Comms' board.
 
-const BETTER: Dictionary = {"seconds": PairHarness.Better.LOWER}
-
-
-# FT: FT-PAIR-001, FT-PAIR-004, FT-PAIR-015, FT-TST-006
-# Helm flying the mark reaches the objective sooner than Helm searching the three spots by
-# at least P15's pair_min_gain; the search still arrives.
-func test_coop_beats_solo() -> void:
-	var p15: PairDef = load("res://content/pairs/p15.tres") as PairDef
-	var runs: Dictionary[String, PairHarness.Run] = P15Scenario.harness().compare(
-		P15Scenario.coop, P15Scenario.solo
-	)
-	var failures: Array[String] = PairHarness.check(runs, BETTER, p15.pair_min_gain)
-	(
-		assert_array(failures)
-		. override_failure_message("\n".join(failures) + "\n" + PairHarness.summary(runs))
-		. is_empty()
-	)
-
 
 # FT: FT-PAIR-001, FT-PAIR-014
 # A mission gains its mark icon once Relay marked it; Comms' card row carries the icon

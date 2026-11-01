@@ -21,6 +21,11 @@ const NPC: StringName = &"Calliope"
 const ESCORT_TITLE: StringName = &"comms.card.escort"
 const SALVAGE_TITLE: StringName = &"comms.card.salvage"
 const BROKER: StringName = &"Broker Vale"
+## Terms of the escort (P12, FT-PAIR-011): the engines must be able to supply this many pips
+## when the encounter settles, to keep pace with the freighter. Comms reads them on the
+## card and in the NPC's line; only Engineering knows if the ship can (D57, D68).
+const ESCORT_NEED: StringName = &"engines"
+const ESCORT_NEED_PIPS: int = 2
 const ESCORT_REWARD: int = 400
 const SALVAGE_REWARD: int = 700
 ## The freighter's distance from the ship, abeam of its course (m), when the raiders appear
@@ -56,15 +61,6 @@ func meta() -> ScenarioMeta:
 	m.id = &"rescue"
 	m.tags = PackedStringArray(["hostile", "rescue"])
 	m.threat_cost = 2
-	m.duration_s = MAX_S
-	m.stations = PackedStringArray(["helm", "weapons", "engineering", "comms"])
-	m.pairs = PackedStringArray([])
-	m.branches = [
-		{"id": "escort_done", "outcome": "won"},
-		{"id": "escort_failed", "outcome": "won"},
-		{"id": "salvage_done", "outcome": "won"},
-		{"id": "ignored", "outcome": "won"},
-	]
 	m.comms_beats = PackedStringArray(["distress"])
 	return m
 
@@ -106,6 +102,9 @@ func _offer_cards(api: ScenarioApi) -> void:
 	escort.npc_id = NPC
 	escort.title_key = ESCORT_TITLE
 	escort.conversation_id = &"conv.rescue_escort"
+	escort.detail_key = &"comms.card.escort_terms"
+	escort.needs_subsystem = ESCORT_NEED
+	escort.needs_pips = ESCORT_NEED_PIPS
 	escort.reward_credits = ESCORT_REWARD
 	escort.rep_interaction = &"rep.complete_mission"
 	escort.target = freighter
@@ -150,7 +149,7 @@ func step(api: ScenarioApi) -> void:
 	var salvaging: bool = _state(api, _salvage) == CardView.State.ACCEPTED
 	if salvaging and api.distance(_ship, _freighter.id()) <= SALVAGE_RANGE_M:
 		_near_ticks += 1
-	if _raiders_gone(api) or elapsed_s >= MAX_S:
+	if api.all_gone(_raiders) or elapsed_s >= MAX_S:
 		_settle(api)
 
 
@@ -162,7 +161,8 @@ func finished(_api: ScenarioApi) -> int:
 func _settle(api: ScenarioApi) -> void:
 	_done = true
 	if _state(api, _escort) == CardView.State.ACCEPTED:
-		var saved: bool = api.ship(_freighter.id()).in_play
+		# A freighter that survives still counts as lost if the engines could not keep pace.
+		var saved: bool = api.ship(_freighter.id()).in_play and api.needs_met(_escort.id())
 		api.settle_card(_escort.id(), saved)
 		if saved:
 			api.message("npc.rescue_thanks", {}, SayTarget.npc(NPC, _ship))
@@ -178,14 +178,3 @@ func _state(api: ScenarioApi, card: ApiHandle) -> int:
 		if c.id == card.id():
 			return c.state
 	return CardView.State.EXPIRED
-
-
-func _raiders_gone(api: ScenarioApi) -> bool:
-	for raider: ApiHandle in _raiders:
-		# A spawn queued this tick has no ship yet: it is still to come. One that was
-		# rejected never comes.
-		if raider.pending():
-			return false
-		if not raider.rejected() and api.ship(raider.id()).in_play:
-			return false
-	return true

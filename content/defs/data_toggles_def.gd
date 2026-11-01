@@ -1,14 +1,14 @@
 class_name DataTogglesDef
 extends Resource
 ## The lobby's data-shortcut toggles and presets (spec §7.2, D84, D90, D92, D193): the list
-## of toggles in display order, the preset a first launch starts on (FT-STN-016) and the
-## split points of the banded summaries. One definition for the whole game, read-only at
-## runtime (FT-ARC-020).
+## of toggles in display order and the split points of the banded summaries. One definition
+## for the whole game, read-only at runtime (FT-ARC-020).
+
+## The difficulty presets, in display order (every toggle has a value in each).
+const PRESETS: Array[String] = ["easy", "normal", "hard"]
 
 @export var id: StringName = &"toggles"
 @export var toggles: Array[DataToggleDef] = []
-## The preset a first launch starts on (FT-STN-016).
-@export var default_preset: StringName = &"easy"
 ## Share of the maximum at which a banded summary steps down from ok to scratched, from
 ## scratched to damaged and from damaged to critical (dimensionless, descending, D193).
 @export var band_edges: PackedFloat64Array = PackedFloat64Array()
@@ -32,8 +32,6 @@ func validate() -> Array[String]:
 		seen[t.id] = true
 		for e: String in t.validate():
 			errors.append("toggles[%d].%s" % [i, e])
-	if not [&"easy", &"normal", &"hard"].has(default_preset):
-		errors.append("default_preset: must be easy, normal or hard, got %s" % default_preset)
 	if band_edges.size() != 3:
 		errors.append("band_edges: need 3 values, got %d" % band_edges.size())
 	else:

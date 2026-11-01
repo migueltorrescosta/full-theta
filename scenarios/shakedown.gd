@@ -29,12 +29,6 @@ func meta() -> ScenarioMeta:
 	m.tags = PackedStringArray(["training"])
 	m.training = true
 	m.threat_cost = 0
-	m.duration_s = 3600.0
-	m.stations = PackedStringArray(ScenarioMeta.STATIONS)
-	var pairs: PackedStringArray = PackedStringArray()
-	for n: int in range(1, 16):
-		pairs.append("p%d" % n)
-	m.pairs = pairs
 	return m
 
 
