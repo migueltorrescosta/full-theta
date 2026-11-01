@@ -117,6 +117,11 @@ func pick(ship: int, entry: String) -> void:
 	_call(&"pick", [ship, entry])
 
 
+## Renames the player for the session (#35 A5).
+func rename(player_name: String) -> void:
+	_call(&"rename", [player_name])
+
+
 func release_pick() -> void:
 	_call(&"release_pick", [])
 

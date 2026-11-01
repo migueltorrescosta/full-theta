@@ -18,6 +18,8 @@
 ## mockups' iPhone: [47, 0, 47, 21] in landscape, [0, 47, 0, 34] upright) and draws them
 ## with the gesture band in translucent red; `fullscreen` forces the fullscreen button
 ## (1 shown, 0 hidden); `audit` writes TapAudit.check of the shot as JSON to that path.
+## The lobby's `host_bind` makes it the host's (its join strip and dialog, #35 A6), and
+## `player` sets the player's saved name ("" shows the name prompt, #35 A5).
 ## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
@@ -60,6 +62,11 @@ var fullscreen: int = 0
 var audit: String = ""
 ## The touch_kit view's rails are docked.
 var docked: bool = false
+
+## The host's bind address in the lobby ("" a joined player's lobby).
+var host_bind: String = ""
+## The player's saved name.
+var player: String = "Ana"
 
 ## A Shakedown step on the focused station's banner (a solo lesson step, D303).
 var lesson: bool = false
@@ -129,6 +136,9 @@ func _ready() -> void:
 				{"entry": "weapons", "name": "Bo"},
 				{"entry": "systems", "name": "Cy"},
 			]
+			_ctx.host_bind = host_bind
+			_ctx.host_port = NetProtocol.DEFAULT_WS_PORT
+			_ctx.settings.player_name = player
 			var l: LobbyScreen = LobbyScreen.new()
 			l.setup(_ctx)
 			add_child(l)

@@ -250,6 +250,8 @@ func _on_left() -> void:
 	else:
 		SessionTokenFile.remove(token_path)
 	_menu.visible = true
+	# The lobby or the in-game menu may have renamed the player (#35 A5).
+	_name.text = settings.player_name
 	_refresh_rejoin()
 	_apply_scale()
 	if was_lesson:

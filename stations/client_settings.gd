@@ -123,6 +123,16 @@ func effective_scale(touch: bool) -> float:
 	return maxf(ui_scale, 1.0) if touch else ui_scale
 
 
+## Whether the player chose a name: not empty, and not the menu's stand-in for an empty
+## field ("Player"), which a phone that joined by QR code gets (#35 A5).
+func has_name() -> bool:
+	return player_name != "" and player_name != _default_name()
+
+
+static func _default_name() -> String:
+	return String(TranslationServer.translate("menu.default_name"))
+
+
 func lesson_done(station: String) -> bool:
 	return lessons_done.has(station)
 

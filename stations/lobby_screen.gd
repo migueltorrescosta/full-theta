@@ -14,7 +14,8 @@ extends Control
 ## PAIR-017, FT-STN-016; read-only for the others); Start is the confirm. Nothing scrolls: the
 ## whole lobby fits the screen. Picks go to the server (ShipIntents.pick); the screen shows what
 ## the events say. The host's lobby also has a "How to join" dialog (FT-NET-013): the browser URL
-## with a QR code and the desktop address.
+## with a QR code and the desktop address. A player with no name of their own (a phone that
+## joined by QR code) gets a one-field name prompt at the top (#35 A5).
 ##
 ## Multi-ship sessions (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
 ## (with their team in TEAMS and HOLDOUT) and a New ship button while there is room (any
@@ -121,6 +122,9 @@ var _dev_all: Button
 var _join_button: Button
 var _join_dialog: AcceptDialog
 var _join_panel: LobbyJoinPanel
+## The name prompt (#35 A5) and its field.
+var _name_row: HBoxContainer
+var _name_field: LineEdit
 ## Difficulty (toggles): the one-line summary and its dialog.
 var _difficulty: Label
 var _customise: Button
@@ -594,6 +598,7 @@ func _apply_targets(phone: bool) -> void:
 		if not str(button.name).begins_with("Entry_") or button.get_parent() == _seat_row:
 			button.custom_minimum_size = Vector2.ONE * (PHONE_TARGET if phone else 0.0)
 	_grid.set_meta(&"phone", phone)
+	_name_field.custom_minimum_size.y = PHONE_TARGET if phone else 0.0
 	if phone != _phone:
 		for cell: Node in _grid.get_children():
 			_fit_cell(cell, cell.get_child(0))
@@ -799,6 +804,7 @@ func _build() -> void:
 	# Full screen: an icon at the right of the title row, where the device offers it (D323).
 	_fullscreen = FullscreenToggle.new()
 	head.add_child(_fullscreen)
+	_build_name_prompt(outer)
 	_ships = HFlowContainer.new()
 	_ships.name = "Ships"
 	outer.add_child(_ships)
@@ -846,6 +852,35 @@ func _build() -> void:
 	_start.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	outer.add_child(_start)
 	_build_dialogs()
+
+
+## The name prompt (#35 A5): a field and Done, shown while the player has no name of their own;
+## Done saves the name and renames the player on the server.
+func _build_name_prompt(parent: Container) -> void:
+	_name_row = HBoxContainer.new()
+	_name_row.name = "NamePrompt"
+	parent.add_child(_name_row)
+	_name_field = LineEdit.new()
+	_name_field.name = "NameField"
+	_name_field.placeholder_text = tr("menu.name")
+	_name_field.max_length = NetProtocol.MAX_NAME_BYTES
+	_name_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_name_field.text_submitted.connect(func(_t: String) -> void: submit_name())
+	_name_row.add_child(_name_field)
+	_name_row.add_child(_button("NameDone", tr("lobby.done"), submit_name))
+	_name_row.visible = ctx.settings != null and not ctx.settings.has_name()
+
+
+## Takes the prompt's name: saved, sent to the server, and the prompt goes. An empty field
+## keeps the prompt.
+func submit_name() -> void:
+	var n: String = _name_field.text.strip_edges()
+	if n == "":
+		return
+	ctx.settings.player_name = n
+	ctx.settings.save()
+	ctx.intents.rename(n)
+	_name_row.visible = false
 
 
 ## The selection's name and role, in the Info block (the legend joins it on a short
@@ -1077,6 +1112,7 @@ func _notification(what: int) -> void:
 		_menu.text = tr("lobby.menu")
 		_leave.text = tr("lobby.leave_pick")
 		_join_button.text = tr("lobby.join_title")
+		_name_field.placeholder_text = tr("menu.name")
 		_join_dialog.title = tr("lobby.join_title")
 		_join_dialog.ok_button_text = tr("lobby.done")
 		_dialog.ok_button_text = tr("lobby.done")

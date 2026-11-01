@@ -148,6 +148,9 @@ class RecordingClient:
 	func share(feature: String) -> void:
 		sent.append(["share", [feature]])
 
+	func rename(new_name: String) -> void:
+		sent.append(["rename", [new_name]])
+
 	## The sends of one method, newest last.
 	func of(method: String) -> Array:
 		return sent.filter(func(s: Array) -> bool: return s[0] == method)

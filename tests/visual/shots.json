@@ -123,6 +123,7 @@
     {"name": "l5_ph_controls", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "weapons", "overlay": true, "insets": [0, 0, 0, 0]}},
     {"name": "l5_ph_menu", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"view": "menu_web", "insets": [0, 0, 0, 0]}},
     {"name": "l5_ph_lobby", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"view": "lobby", "entry": "systems", "insets": [0, 0, 0, 0]}},
+    {"name": "l5_ph_lobby_name", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"view": "lobby", "entry": "", "player": "", "insets": [0, 47, 0, 34]}},
     {"name": "l5_ph_lobby_none", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"view": "lobby", "entry": "", "insets": [0, 0, 0, 0]}},
     {"name": "l5_ph_comms", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "comms", "insets": [0, 0, 0, 0]}},
     {"name": "l5_ph_comms_trade", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"entry": "comms", "comms": "trade", "insets": [0, 0, 0, 0]}},

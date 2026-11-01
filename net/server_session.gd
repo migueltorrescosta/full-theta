@@ -1,4 +1,4 @@
-# gdlint: disable=max-public-methods
+# gdlint: disable=max-public-methods, max-file-lines
 class_name ServerSession
 extends RefCounted
 ## Session logic on the server's main thread, fed with the decoded messages NetTransport
@@ -141,6 +141,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 		NetProtocol.Type.SHARE: shares.on_share,
 		NetProtocol.Type.BYE: _on_bye,
 		NetProtocol.Type.CLIENT_FRAME: _on_client_frame,
+		NetProtocol.Type.RENAME: _on_rename,
 		NetTransport.CLOSED: _on_closed,
 	}
 	host_pause = NetHostPause.new(self)  # registers HostPause
@@ -793,6 +794,19 @@ func _on_bye(conn: int, _msg: Dictionary, _now_us: int) -> void:
 
 
 ## A client's long frame (#28) goes to the session log, with whose it was.
+## Rename{name} (#35 A5): the session takes the name (an empty one is ignored); the lobby's
+## seats and captain follow, and claims and votes name it from then on.
+func _on_rename(conn: int, msg: Dictionary, _now_us: int) -> void:
+	var s: NetSession = by_conn.get(conn)
+	if s == null or str(msg["name"]) == "" or msg["name"] == s.name:
+		return
+	if session_log != null:
+		session_log.event("rename", {"session": s.id, "from": s.name, "to": msg["name"]})
+	s.name = msg["name"]
+	_lobby_dirty = true
+	_publish()
+
+
 func _on_client_frame(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = by_conn.get(conn)
 	if s == null or session_log == null:

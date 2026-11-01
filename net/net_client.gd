@@ -218,6 +218,13 @@ func start_training(station: String) -> void:
 	_send(NetProtocol.Type.TRAINING, {"station": station})
 
 
+## Renames this player for the rest of the session (#35 A5): the lobby and the crew list
+## show the new name; reconnects send it in Hello.
+func rename(new_name: String) -> void:
+	name = new_name.strip_edges()
+	_send(NetProtocol.Type.RENAME, {"name": name})
+
+
 func add_ship(ship_name: String) -> void:
 	_send(NetProtocol.Type.SHIP_ADD, {"name": ship_name})
 

@@ -194,3 +194,28 @@ func test_the_scale_slider_starts_at_100_percent_on_touch_layouts() -> void:
 	m._fit_safe_area()
 	assert_float(slider.min_value).is_equal(75.0)
 	assert_float(slider.value).is_equal(75.0)
+
+
+# FT: FT-STN-011
+# #35 A5: the Game tab has the player's name; Enter saves a changed, non-empty name and asks
+# the shell to rename the session; an empty one puts the old name back.
+func test_the_game_tab_renames_the_player() -> void:
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	var m: SettingsScreen = auto_free(SettingsScreen.new())
+	add_child(m)
+	var settings: ClientSettings = ClientSettings.new(CFG)
+	settings.player_name = "Ana"
+	m.setup(settings, true)
+	var field: LineEdit = m.find_child("PlayerName", true, false)
+	assert_str(field.text).is_equal("Ana")
+	var names: Array[String] = []
+	m.name_changed.connect(func(n: String) -> void: names.append(n))
+	field.text = "  "
+	field.text_submitted.emit(field.text)
+	assert_str(field.text).is_equal("Ana")
+	field.text = " Bea "
+	field.text_submitted.emit(field.text)
+	assert_array(names).is_equal(["Bea"])
+	assert_str(m.settings.player_name).is_equal("Bea")
+	if FileAccess.file_exists(CFG):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(CFG))
