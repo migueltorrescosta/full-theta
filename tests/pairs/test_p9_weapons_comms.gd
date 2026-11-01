@@ -55,6 +55,49 @@ func test_prior_engine_damage_raises_the_surrender_probability() -> void:
 	assert_int(_yes_of_hundred(P9Scenario.ENGINES_LEFT)).is_greater(_yes_of_hundred(1.0))
 
 
+## A world with the raider's engines at `left` of their health, hailed (card 0).
+func _hailed(left: float) -> SimWorld:
+	var w: SimWorld = P9Scenario.build()
+	P9Scenario.damage_engines(w, left / P9Scenario.ENGINES_LEFT)
+	w.step()
+	var hail: HailCommand = HailCommand.new()
+	hail.target = P9Scenario.RAIDER
+	StoryFixture.run(w, 0, hail)
+	return w
+
+
+func _demand_enabled(w: SimWorld) -> bool:
+	return bool(Story.options(w, 0, 0)[0]["enabled"])
+
+
+# FT: FT-PAIR-004
+# #35 A4: the demand is offered only once a fifth of the contact's engines is gone; a refusal
+# closes it for 25 s and halves the contact's next chance.
+func test_the_demand_needs_engine_damage_and_waits_after_a_refusal() -> void:
+	assert_bool(_demand_enabled(_hailed(1.0))).is_false()
+	var w: SimWorld = _hailed(P9Scenario.ENGINES_LEFT)
+	assert_bool(_demand_enabled(w)).is_true()
+	var params: Dictionary = _surrender_params().duplicate()
+	assert_float(float(params["retry_s"])).is_equal(25.0)
+	assert_float(float(params["refusal_factor"])).is_equal(0.5)
+	# A near-certain refusal, twice: the second chance is half the first.
+	params["base"] = 0.001
+	params["per_damage"] = 0.0
+	var chances: Array[float] = []
+	for i: int in 2:
+		StoryRules.ask_surrender(w, 0, 0, params)
+		chances.append(StoryFixture.events(w, &"surrender_roll")[-1].value)
+		assert_bool(_demand_enabled(w)).is_false()
+		var reply: ReplyCommand = ReplyCommand.new()
+		reply.card = 0
+		reply.option = &"o1"
+		StoryFixture.run(w, 0, reply)
+		assert_int(StoryFixture.events(w, &"surrender_roll").size()).is_equal(0)
+		SimFixture.run(w, 25 * SimWorld.HZ)
+		assert_bool(_demand_enabled(w)).is_true()
+	assert_float(chances[1]).is_equal_approx(chances[0] * 0.5, 1e-9)
+
+
 # FT: FT-PAIR-001, FT-MIS-019
 # Destroying a surrendered contact costs reputation with its faction by a draw inside
 # rep.destroy_surrendered's range, logs a debrief line and fails the "do not destroy"

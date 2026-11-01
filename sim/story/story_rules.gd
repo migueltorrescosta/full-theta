@@ -130,23 +130,56 @@ static func settle(
 # --- P9: surrender ---
 
 
-## The chance that a contact surrenders when asked: `base` plus `per_damage` times the
-## share of its engines' effectiveness that is gone, at most `cap` (all dimensionless).
-## Prior engine damage raises it (FT-PAIR-004 P9).
+## The share of a contact's engines' effectiveness that is gone (0 to 1).
+static func engine_damage(world: SimWorld, contact: int) -> float:
+	return 1.0 - DamageSystem.effectiveness(world, contact, &"engines")
+
+
+## The chance that a contact surrenders when asked: `base` plus `per_damage` times its
+## engine_damage, at most `cap` (all dimensionless). Prior engine damage raises it
+## (FT-PAIR-004 P9).
 static func surrender_chance(world: SimWorld, contact: int, params: Dictionary) -> float:
-	var damage: float = 1.0 - DamageSystem.effectiveness(world, contact, &"engines")
 	var chance: float = (
-		float(params.get("base", 0.0)) + float(params.get("per_damage", 0.0)) * damage
+		float(params.get("base", 0.0))
+		+ float(params.get("per_damage", 0.0)) * engine_damage(world, contact)
 	)
 	return clampf(chance, 0.0, float(params.get("cap", 1.0)))
 
 
-## A reply asked the card's contact to surrender: draws from the "surrender" stream and
-## sets the faction's intent for the contact to SURRENDERING, or HOSTILE when it refuses.
-## Emits surrender_roll (value the chance, tag &"yes" or &"no").
-static func roll_surrender(world: SimWorld, ship: int, card: int, params: Dictionary) -> void:
+## Comms asked the card's contact to surrender (the conversation's surrender effect, #35 A4):
+## rolls with the chance times `refusal_factor` (default 1) once for each earlier refusal of
+## this contact to the card's faction; a refusal counts one more and closes the ask for
+## `retry_s` seconds (default 0; the option's surrender_ready requirement).
+static func ask_surrender(world: SimWorld, ship: int, card: int, params: Dictionary) -> void:
 	var t: StoryTable = world.story
-	var chance: float = surrender_chance(world, t.target[card], params)
+	var refused_flag: StringName = _surrender_flag("refused", t.factions[card], t.target[card])
+	var refused: int = world.story_flags.get_flag(refused_flag)
+	var scale: float = pow(float(params.get("refusal_factor", 1.0)), refused)
+	if roll_surrender(world, ship, card, params, scale):
+		return
+	world.story_flags.set_flag(refused_flag, refused + 1)
+	var reopen: int = world.tick + ceili(float(params.get("retry_s", 0.0)) * SimWorld.HZ)
+	world.story_flags.set_flag(_surrender_flag("reopen", t.factions[card], t.target[card]), reopen)
+
+
+## Whether the faction may ask the contact to surrender again: no refusal in the last
+## retry_s seconds.
+static func surrender_ready(world: SimWorld, faction: int, contact: int) -> bool:
+	return world.tick >= world.story_flags.get_flag(_surrender_flag("reopen", faction, contact))
+
+
+static func _surrender_flag(what: String, faction: int, contact: int) -> StringName:
+	return StringName("surrender.%s.%d.%d" % [what, faction, contact])
+
+
+## Draws from the "surrender" stream with the chance (times `scale`) and sets the faction's
+## intent for the card's contact to SURRENDERING, or HOSTILE when it refuses. Emits
+## surrender_roll (value the chance, tag &"yes" or &"no"). Returns whether it said yes.
+static func roll_surrender(
+	world: SimWorld, ship: int, card: int, params: Dictionary, scale: float = 1.0
+) -> bool:
+	var t: StoryTable = world.story
+	var chance: float = surrender_chance(world, t.target[card], params) * scale
 	var yes: bool = world.rng.stream(&"surrender").randf() < chance
 	var row: int = world.knowledge.ensure_contact(t.factions[card], t.target[card])
 	world.knowledge.intent[row] = (
@@ -155,6 +188,7 @@ static func roll_surrender(world: SimWorld, ship: int, card: int, params: Dictio
 	world.emit(
 		&"surrender_roll", ship, t.target[card], chance, Vector3.ZERO, &"yes" if yes else &"no"
 	)
+	return yes
 
 
 ## A ship was destroyed by `source`: if the source's faction had the victim as surrendering,

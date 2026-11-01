@@ -202,7 +202,9 @@ static func options(world: SimWorld, card: int, ship: int) -> Array[Dictionary]:
 
 ## Whether an option's `requires` holds: scan_fact (the faction learned the fact about
 ## the card's contact), flag (a story flag at least `min`, default 1), docked (the replying
-## ship's own state, not the card's ship: a faction-wide card has none).
+## ship's own state, not the card's ship: a faction-wide card has none), engine_damage (the
+## card's contact has at least this share of its engines gone), surrender_ready (no refused
+## surrender ask of the contact within its retry_s, StoryRules.surrender_ready).
 static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: int) -> bool:
 	var t: StoryTable = world.story
 	if (
@@ -217,6 +219,16 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: i
 		return false
 	if req.has("docked") and bool(req["docked"]) != (docked_site(world, ship) >= 0):
 		return false
+	if (
+		req.has("engine_damage")
+		and StoryRules.engine_damage(world, t.target[card]) < float(req["engine_damage"])
+	):
+		return false
+	if (
+		req.has("surrender_ready")
+		and not StoryRules.surrender_ready(world, t.factions[card], t.target[card])
+	):
+		return false
 	return true
 
 
@@ -224,11 +236,10 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: i
 ## Effects (one key each): accept, decline, intent (unknown|hostile|neutral|surrendering|bluffing),
 ## contract_flag (none|disable|protect), flag (story flag name, with value), rep (a
 ## RepDistDef id), say (a dialogue line id), verify (a scan fact to check, P14), surrender
-## ({base, per_damage, cap}: StoryRules.roll_surrender, P9). A refused accept or decline
-## applies none of the option (checked first, so no earlier effect has run; the node stays
-## open) and returns false. A
-## rep draw happens once per card, or once per contact on a hail (a new hail of the same
-## contact doesn't repeat it).
+## ({base, per_damage, cap, retry_s, refusal_factor}: StoryRules.ask_surrender, P9). A
+## refused accept or decline applies none of the option (checked first, so no earlier effect
+## has run; the node stays open) and returns false. A rep draw happens once per card, or once
+## per contact on a hail (a new hail of the same contact doesn't repeat it).
 static func apply_option(world: SimWorld, ship: int, card: int, option: Dictionary) -> bool:
 	var t: StoryTable = world.story
 	# Check the accept and decline first: a refused one must leave the other effects unapplied.
@@ -266,7 +277,7 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 			t.verify[card] = StringName(effect["verify"])
 		# (P9: ask the contact to surrender)
 		if effect.has("surrender") and t.target[card] >= 0:
-			StoryRules.roll_surrender(world, ship, card, effect["surrender"])
+			StoryRules.ask_surrender(world, ship, card, effect["surrender"])
 	if not is_live(world, card):
 		return true
 	var nodes: Dictionary = conversation(world, card).get("nodes", {})
