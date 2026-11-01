@@ -345,6 +345,14 @@ func offer(ship_id: int, card: CardSpec) -> ApiHandle:
 	return ApiHandle.new(cmd)
 
 
+## Whether the card's ship can meet the card's terms now (P12: the power its subsystem must
+## supply); true for a card with no terms or one that doesn't exist.
+func needs_met(card: int) -> bool:
+	if card < 0 or card >= _world.story.size():
+		return true
+	return StoryRules.needs_met(_world, Story.audience_ship(_world, card), card)
+
+
 ## Settles an accepted card (FT-MIS-021, FT-MIS-019): success pays its reward and draws its
 ## reputation change, failure draws the "<interaction>.fail" change if there is one. The
 ## command is the card's own ship's; nothing is queued for a card that doesn't exist.
