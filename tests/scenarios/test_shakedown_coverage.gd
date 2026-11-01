@@ -98,13 +98,10 @@ func test_command_steps_name_a_command_of_their_station() -> void:
 func test_pair_steps_cover_the_fifteen_pairs() -> void:
 	var pairs: Array[TrainingStepDef] = steps.pairs()
 	assert_int(pairs.size()).is_equal(15)
-	var defs: DefLibrary = DefLibrary.new()
 	for i: int in pairs.size():
 		var p: StringName = StringName("p%d" % (i + 1))
 		assert_str(String(pairs[i].intent)).is_equal("pair_" + String(p))
-		var def: PairDef = defs.get_def(&"PairDef", p) as PairDef
-		assert_object(def).is_not_null()
-		var want: Array = [String(def.stations[0]), String(def.stations[1])]
+		var want: Array = CoopEvents.stations_of(String(p))
 		want.sort()
 		var got: Array = [String(pairs[i].station), String(pairs[i].partner)]
 		got.sort()

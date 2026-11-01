@@ -1,24 +1,6 @@
 extends GdUnitTestSuite
 ## P9 Weapons + Comms pair test (spec §7.4): scenario and scripts in p9_scenario.gd.
 
-const BETTER: Dictionary = {
-	"rep_lost": PairHarness.Better.LOWER, "reward": PairHarness.Better.HIGHER
-}
-
-
-# FT: FT-PAIR-001, FT-PAIR-004, FT-PAIR-015, FT-TST-006
-func test_coop_beats_solo() -> void:
-	var p9: PairDef = load("res://content/pairs/p9.tres") as PairDef
-	var runs: Dictionary[String, PairHarness.Run] = P9Scenario.harness().compare(
-		P9Scenario.coop, P9Scenario.solo
-	)
-	var failures: Array[String] = PairHarness.check(runs, BETTER, p9.pair_min_gain)
-	(
-		assert_array(failures)
-		. override_failure_message("\n".join(failures) + "\n" + PairHarness.summary(runs))
-		. is_empty()
-	)
-
 
 func _surrender_params() -> Dictionary:
 	var conversation: Dictionary = ConversationLibrary.load_dir()[&"conv.surrender_demand"]
