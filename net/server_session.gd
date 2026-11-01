@@ -448,8 +448,18 @@ func admit_rule() -> String:
 ## screen). One Captain per ship (FT-NET-016, CLASH-10, counting one within grace);
 ## on a ship in play that passes coverage and isn't paused, no change that would make
 ## it fail (FT-NET-043). During a pause the paused ship's crew may rearrange freely
-## (FT-NET-035).
+## (FT-NET-035). Once a run is going, a session that has held a ship picks only ships of
+## that ship's faction (ENEMY_SHIP, #35 A10): in PvP nobody, eliminated crews included,
+## takes a rival's station; a co-op fleet is one faction.
 func pick_rule(session: NetSession, ship: int, entry: String) -> String:
+	var home: int = session.ship if session.ship >= 0 else session.home_ship
+	if (
+		ship >= 0
+		and home >= 0
+		and not launched.is_empty()
+		and world.faction_of(home) != world.faction_of(ship)
+	):
+		return FleetMessages.ENEMY_SHIP
 	if entry == StationViews.CAPTAIN:
 		for o: NetSession in by_id.values():
 			if o != session and o.ship == ship and o.entry == StationViews.CAPTAIN:
@@ -848,6 +858,8 @@ func _set_pick(s: NetSession, ship: int, entry: String) -> void:
 		_claim_changed(released[0], released[1])
 	s.ship = ship
 	s.entry = entry
+	if ship >= 0:
+		s.home_ship = ship
 	s.shares = shares.active_of(ship)
 	transport.set_view(s.id, s.view_key())
 	if votes.has(old_ship):
