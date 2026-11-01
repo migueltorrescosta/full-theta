@@ -344,6 +344,24 @@ func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
 	assert_array(bad).override_failure_message("\n".join(bad)).is_empty()
 
 
+# FT: FT-PAIR-007, FT-SCI-001
+# #35 A11 (D217): Science alone on a desktop hides the radar column, so its share buttons
+# sit in the panel, under its action bar: on screen, no opener, and a press shares.
+func test_science_alone_on_a_desktop_shows_its_share_buttons() -> void:
+	var s: StationScreen = await _screen(Vector2i(1280, 720), "science", [])
+	var p: SciencePanel = s.focused_panel() as SciencePanel
+	assert_bool(p.full_screen()).is_true()
+	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
+	assert_object(s.share_bar.get_parent()).is_same(p.share_home)
+	assert_bool(s.share_bar.is_visible_in_tree()).is_true()
+	var buttons: Array[Button] = _share_buttons(s)
+	assert_array(buttons).is_not_empty()
+	assert_bool(s.get_viewport_rect().encloses(buttons[0].get_global_rect())).is_true()
+	buttons[0].pressed.emit()
+	assert_int(StationFixture.sent(s.ctx).of("share").size()).is_equal(1)
+	_drop(s)
+
+
 # FT: FT-STN-005, FT-PAIR-007
 # Science alone upright: its share buttons are on its Crew page, one tap from the tabs.
 func test_science_alone_upright_reaches_its_share_buttons() -> void:

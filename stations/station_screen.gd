@@ -246,7 +246,8 @@ func _dock_reserve() -> Vector2:
 ## (D274: 48 px with 8 px gaps don't fit under the disc); its opener sits at the top of the
 ## radar column or, with the column hidden, at the bottom centre of the main area (clear of
 ## the rails); a panel may take the opener into its rails (StationPanel.share_slot) or show
-## the buttons itself.
+## the buttons itself. Off a phone a full-screen panel hides the column and holds the buttons
+## in its StationPanel.share_home.
 func _show_side() -> void:
 	if panels.is_empty():
 		return
@@ -264,9 +265,12 @@ func _show_side() -> void:
 	if _tabs != null:
 		_tabs.visible = not phone_form
 	frame.show_tabs(form_now, phone_alone)
+	# Off a phone a full-screen panel (Science alone) holds the buttons in its share_home, so
+	# they stay on screen without the radar column (D217, #35 A11).
+	var home: Container = null if _side.visible or phone_form else focused_panel().share_home
 	# Also in the drawer whenever a phone's radar column is hidden (Science alone upright).
-	var in_drawer: bool = sideways or (phone_form and not _side.visible)
-	var parent: Control = share_drawer.body if in_drawer else _extras
+	var in_drawer: bool = sideways or (not _side.visible and home == null)
+	var parent: Control = share_drawer.body if in_drawer else (home if home != null else _extras)
 	if share_bar.get_parent() != parent:
 		share_bar.reparent(parent, false)
 		if parent == _extras:
