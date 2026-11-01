@@ -300,6 +300,7 @@
     "debrief.res.abandoned": {"en": "abandoned", "pt_PT": "abandonado", "it": "abbandonato"},
     "debrief.res.active": {"en": "unfinished", "pt_PT": "por terminar", "it": "non finito"},
     "debrief.res.pending": {"en": "never started", "pt_PT": "nunca começou", "it": "mai iniziato"},
+    "debrief.res.partial": {"en": "out of time", "pt_PT": "acabou o tempo", "it": "tempo scaduto"},
     "debrief.scenario.enemy_wave": {"en": "Raider wave", "pt_PT": "Vaga de piratas", "it": "Ondata di predoni"},
     "debrief.scenario.rescue": {"en": "Distress call", "pt_PT": "Pedido de socorro", "it": "Richiesta di soccorso"},
     "debrief.scenario.debris_leg": {"en": "Debris lane", "pt_PT": "Rota de destroços", "it": "Rotta di detriti"},

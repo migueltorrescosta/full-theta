@@ -83,3 +83,24 @@ func test_a_ship_at_the_yard_has_not_crossed_the_leg() -> void:
 	f.run(5)
 	f.world.kin.place(0, yard.x, yard.y, yard.z)
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
+
+
+# FT: FT-MIS-041, FT-MIS-021
+# #35 A3: when the time runs out before the crossing the leg ends as partial, and the
+# accepted fee card pays its partial share (m3_run partial_pay, half of 150).
+func test_running_out_of_time_ends_the_leg_as_partial_with_part_of_the_fee() -> void:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	f.begin(&"debris_leg", &"vesper_beacon")
+	f.run(3)
+	var card: int = -1
+	for c: CardView in f.api.cards_of(0):
+		if c.title_key == "comms.card.lane_run":
+			card = c.id
+	var accept: AcceptCardCommand = AcceptCardCommand.new()
+	accept.card = card
+	assert_bool(f.send(accept)).is_true()
+	f.world.damage.health[f.world.damage.hull_row(0)] = 1.0e15
+	var credits: int = Economy.credits(f.world, 0)
+	assert_int(f.run_until_end(60 * 610)).is_equal(Scenario.Result.PARTIAL)
+	f.run(3)
+	assert_int(Economy.credits(f.world, 0)).is_equal(credits + 75)

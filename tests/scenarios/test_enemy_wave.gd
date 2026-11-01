@@ -69,10 +69,22 @@ func test_a_surrender_the_crew_asked_for_ends_it() -> void:
 
 
 # FT: FT-MIS-004
-func test_the_clock_ends_it() -> void:
+# #35 A3: the clock ends it as partial, not won; the raiders stay in the run, hostile, and
+# keep after the ship once the encounter is over.
+func test_the_clock_ends_it_as_partial_and_the_raiders_stay() -> void:
 	var f: ScenarioFixture = _wave()
 	f.world.damage.health[f.world.damage.hull_row(0)] = 1.0e15
-	assert_int(f.run_until_end(60 * 250)).is_equal(Scenario.Result.WON)
+	var raiders: Array[int] = f.ships_of(&"m1_raider")
+	for id: int in raiders:
+		f.world.damage.health[f.world.damage.hull_row(id)] = 1.0e15
+	assert_int(f.run_until_end(60 * 250)).is_equal(Scenario.Result.PARTIAL)
+	f.run(60)
+	raiders = f.ships_of(&"m1_raider")
+	assert_int(raiders.size()).is_equal(2)
+	assert_int(f.world.relation(2, f.world.faction_of(0))).is_equal(Scenario.Relation.HOSTILE)
+	for id: int in raiders:
+		assert_int(f.world.run.status[id]).is_equal(RunTable.Status.IN_PLAY)
+		assert_int(f.world.ai.target[id]).is_equal(0)
 
 
 # FT: FT-ARC-016
@@ -81,6 +93,7 @@ func test_relation_enum_matches_the_sim() -> void:
 	assert_int(Scenario.Relation.NEUTRAL).is_equal(SimWorld.Relation.NEUTRAL)
 	assert_int(Scenario.Relation.HOSTILE).is_equal(SimWorld.Relation.HOSTILE)
 	assert_int(CardView.State.EXPIRED).is_equal(StoryTable.State.EXPIRED)
+	assert_array(Scenario.Result.keys()).is_equal(EncounterTable.Result.keys())
 
 
 ## The wave at a difficulty's enemy strength (Q14).

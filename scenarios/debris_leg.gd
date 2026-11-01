@@ -5,9 +5,10 @@ extends Scenario
 ## defence; debris left in the way hurts through the collision rules (D119). The leg is the
 ## way home, from the encounter's site to Kestrel Yard: traffic control warns the crew and
 ## offers a fee for the crossing. The encounter is won on reaching the yard after having been
-## away from it, by impulse or by the jump drive (which flies past the debris), or when the
-## time runs out; a ship still at the yard when the encounter starts has not crossed anything
-## (review 2 M5). Only the Scenario API is used (FT-DAT-007).
+## away from it, by impulse or by the jump drive (which flies past the debris); a ship still
+## at the yard when the encounter starts has not crossed anything (review 2 M5). When the time
+## runs out first the encounter ends as partial and an accepted fee card pays its partial
+## share (RunDef.partial_pay). Only the Scenario API is used (FT-DAT-007).
 
 const DEBRIS_FACTION: int = 4
 const NPC: StringName = &"Traffic Control"
@@ -19,6 +20,8 @@ const LAST_T: float = 0.85
 const LATERAL_M: float = 150.0
 const FEE: int = 150
 const MAX_S: float = 600.0
+## The fee card outlasts the encounter, so a timeout can still settle it.
+const CARD_S: float = MAX_S + 30.0
 
 var _ship: int = -1
 var _destination: int = -1
@@ -26,7 +29,7 @@ var _started: int = 0
 ## Whether the ship has been away from the yard since the encounter started.
 var _left: bool = false
 var _card: ApiHandle
-var _done: bool = false
+var _result: int = Result.ACTIVE
 
 
 func meta() -> ScenarioMeta:
@@ -38,7 +41,7 @@ func meta() -> ScenarioMeta:
 	m.stations = PackedStringArray(["helm", "weapons"])
 	m.branches = [
 		{"id": "crossed", "outcome": "won"},
-		{"id": "timeout", "outcome": "won"},
+		{"id": "timeout", "outcome": "partial"},
 	]
 	m.travel_hazard = &"debris"
 	return m
@@ -53,7 +56,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	api.set_relation(DEBRIS_FACTION, view.faction, Relation.HOSTILE)
 	_destination = HOME
 	if from == HOME:
-		_done = true
+		_result = Result.WON
 		return
 	# The map names the leg's debris (MapDef.legs): an enemy key and how many pieces.
 	for leg: Dictionary in api.legs():
@@ -71,23 +74,25 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	run.title_key = &"comms.card.lane_run"
 	run.conversation_id = &"conv.lane_run"
 	run.reward_credits = FEE
-	run.expires_s = MAX_S
+	run.expires_s = CARD_S
 	_card = api.offer(_ship, run)
 
 
 func step(api: ScenarioApi) -> void:
-	if _done:
+	if _result != Result.ACTIVE:
 		return
 	var at: int = api.ship(_ship).at_site
 	_left = _left or at != _destination
 	if _left and at == _destination:
-		_done = true
-		for c: CardView in api.cards_of(_ship):
-			if c.id == _card.id() and c.state == CardView.State.ACCEPTED:
-				api.settle_card(c.id, true)
+		_result = Result.WON
 	elif float(api.tick() - _started) / ScenarioApi.HZ >= MAX_S:
-		_done = true
+		_result = Result.PARTIAL
+	else:
+		return
+	for c: CardView in api.cards_of(_ship):
+		if c.id == _card.id() and c.state == CardView.State.ACCEPTED:
+			api.settle_card(c.id, true, _result == Result.PARTIAL)
 
 
 func finished(_api: ScenarioApi) -> int:
-	return Result.WON if _done else Result.ACTIVE
+	return _result

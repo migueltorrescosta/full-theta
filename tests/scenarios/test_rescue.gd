@@ -116,8 +116,9 @@ func test_a_ship_arriving_at_speed_does_not_hit_the_freighter() -> void:
 
 # FT: FT-MIS-004, FT-MIS-021
 # Review 2 M2: the cards outlast the encounter (it settles at MAX_S at the latest), so an
-# accepted escort is still ACCEPTED when it is settled, however long the rescue took.
-func test_the_cards_outlast_a_long_rescue_and_the_escort_is_paid() -> void:
+# accepted escort is still ACCEPTED when it is settled, however long the rescue took. #35 A3:
+# the time ran out with raiders left, so it ends as partial and pays half (m3_run partial_pay).
+func test_the_cards_outlast_a_long_rescue_and_the_escort_is_paid_in_part() -> void:
 	var f: ScenarioFixture = _rescue()
 	var credits: int = Economy.credits(f.world, 0)
 	_accept(f, _card(f, "comms.card.escort"))
@@ -125,6 +126,7 @@ func test_the_cards_outlast_a_long_rescue_and_the_escort_is_paid() -> void:
 	f.world.damage.health[f.world.damage.hull_row(0)] = 1.0e15
 	var freighter: int = f.ships_of(&"m3_stranded")[0]
 	f.world.damage.health[f.world.damage.hull_row(freighter)] = 1.0e15
-	assert_int(f.run_until_end(60 * 320)).is_equal(Scenario.Result.WON)
+	assert_int(f.run_until_end(60 * 320)).is_equal(Scenario.Result.PARTIAL)
 	f.run(3)
-	assert_int(Economy.credits(f.world, 0)).is_equal(credits + 400)
+	assert_float(f.world.run_def.partial_pay).is_equal(0.5)
+	assert_int(Economy.credits(f.world, 0)).is_equal(credits + 200)

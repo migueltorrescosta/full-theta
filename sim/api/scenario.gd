@@ -6,8 +6,9 @@ extends RefCounted
 ## and ends the encounter when finished() reports a result.
 
 ## The ending of an encounter, the same numbers as EncounterTable.Result (a test checks).
-## finished() returns ACTIVE while the scenario goes on.
-enum Result { PENDING, ACTIVE, WON, LOST, FLED, ABANDONED }
+## finished() returns ACTIVE while the scenario goes on. PARTIAL: the time ran out before
+## the objective was met; the encounter ends with lower pay.
+enum Result { PENDING, ACTIVE, WON, LOST, FLED, ABANDONED, PARTIAL }
 
 ## The relations set_relation takes, the same numbers as SimWorld.Relation (a test checks).
 enum Relation { FRIENDLY, NEUTRAL, HOSTILE }

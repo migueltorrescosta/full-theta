@@ -104,13 +104,21 @@ static func on_dock(world: SimWorld, ship: int, site: int) -> void:
 
 
 ## Settles an accepted card: success pays the reward and draws the card's reputation
-## change; failure draws "<interaction>.fail" if there is one (FT-COM-005, FT-MIS-021).
-static func settle(world: SimWorld, ship: int, card: int, success: bool) -> void:
+## change; failure draws "<interaction>.fail" if there is one (FT-COM-005, FT-MIS-021). A
+## partial success (the encounter's time ran out) pays RunDef.partial_pay of the reward,
+## rounded, and changes no standing.
+static func settle(
+	world: SimWorld, ship: int, card: int, success: bool, partial: bool = false
+) -> void:
 	var t: StoryTable = world.story
 	Story.set_state(
 		world, ship, card, StoryTable.State.DONE if success else StoryTable.State.FAILED
 	)
 	var dist: StringName = t.rep_interaction[card]
+	if success and partial:
+		var share: float = world.run_def.partial_pay if world.run_def != null else 1.0
+		Economy.add_credits(world, ship, roundi(t.reward[card] * share))
+		return
 	if success:
 		Economy.add_credits(world, ship, t.reward[card])
 	elif dist != &"":
