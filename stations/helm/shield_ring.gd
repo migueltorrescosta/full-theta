@@ -18,6 +18,8 @@ const LEVEL_HIGH: float = 0.74
 ## height-word range, Callout.LEVEL_DEG to POLE_DEG).
 const BAND_ELEVATIONS: Array[float] = [-37.5, 0.0, 37.5]
 const FONT_SIZE: int = 12
+## Space (px) between the ring's rim and its caption.
+const CAPTION_GAP: float = 4.0
 
 ## Focus direction (ship frame), tightness and power (1 nominal); the track's callsign.
 var focus: Vector3 = Vector3.FORWARD
@@ -43,7 +45,7 @@ func show_state(helm: Dictionary, shield_power: float) -> void:
 
 ## The ring's radius: the box less the caption's two lines when it has one.
 func radius() -> float:
-	return minf(size.x, size.y - (FONT_SIZE * 2.0 if label else 0.0)) / 2.0 - 2.0
+	return minf(size.x, size.y - (FONT_SIZE * 2.0 + CAPTION_GAP if label else 0.0)) / 2.0 - 2.0
 
 
 func centre() -> Vector2:
@@ -150,14 +152,15 @@ func _draw() -> void:
 		else:
 			lines.append(tr("helm.tracking"))
 	for i: int in lines.size():
-		draw_string(
+		Palette.draw_outlined(
+			self,
 			font,
-			Vector2(0.0, 2.0 * r + 4.0 + FONT_SIZE * (i + 1)),
+			Vector2(0.0, 2.0 * r + 4.0 + CAPTION_GAP + FONT_SIZE * (i + 1)),
 			lines[i],
-			HORIZONTAL_ALIGNMENT_CENTER,
-			size.x,
 			FONT_SIZE,
-			Palette.color("text_dim")
+			Palette.color("text_dim"),
+			size.x,
+			HORIZONTAL_ALIGNMENT_CENTER
 		)
 
 

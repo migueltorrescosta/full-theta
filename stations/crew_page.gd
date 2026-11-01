@@ -11,6 +11,8 @@ extends ScrollContainer
 ##     rail.add(crew)
 
 const COLUMNS: int = 2
+## The button text sizes (px), the largest in which the longest word fits the button.
+const FONT_SIZES: Array[int] = [13, 12, 11, 10]
 
 var panel: StationPanel
 var grid: GridContainer = GridContainer.new()
@@ -81,6 +83,56 @@ func refresh() -> void:
 			text = "%s · %d s" % [text, ceili(left)]
 		if _buttons[i].text != text:
 			_buttons[i].text = text
+	_fit_text()
+	_snap_rows()
+
+
+## Each button shows its text in the largest size where its longest word fits, so a long
+## word is never cut ("countdo"); the words wrap onto lines.
+func _fit_text() -> void:
+	var font: Font = get_theme_default_font()
+	for b: RailButton in _buttons:
+		var style: StyleBox = b.get_theme_stylebox("normal")
+		var room: float = b.size.x - style.get_minimum_size().x - 2.0
+		if room <= 0.0:
+			continue
+		var fit: int = FONT_SIZES[-1]
+		for fs: int in FONT_SIZES:
+			var widest: float = 0.0
+			for word: String in b.text.split(" ", false):
+				widest = maxf(
+					widest, font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				)
+			if widest <= room:
+				fit = fs
+				break
+		if b.get_theme_font_size("font_size") != fit:
+			b.add_theme_font_size_override("font_size", fit)
+
+
+## When the buttons scroll, the page ends under its last whole row, so no button is cut at
+## rest (D319): it shrinks to those rows, in the column it sits in, instead of filling it.
+func _snap_rows() -> void:
+	var column: BoxContainer = get_parent() as BoxContainer
+	if column == null or not column.vertical or grid.get_child_count() == 0:
+		return
+	var room: float = column.size.y
+	var gap: float = float(column.get_theme_constant("separation"))
+	for sibling: Node in column.get_children():
+		var c: Control = sibling as Control
+		if c != null and c != self and c.visible:
+			room -= c.get_combined_minimum_size().y + gap
+	var keep: float = 0.0
+	if grid.get_combined_minimum_size().y > room:
+		for b: Node in grid.get_children():
+			var bottom: float = (b as Control).get_rect().end.y
+			if bottom <= room:
+				keep = maxf(keep, bottom)
+	var want: int = SIZE_SHRINK_BEGIN if keep > 0.0 else SIZE_EXPAND_FILL
+	if size_flags_vertical != want:
+		size_flags_vertical = want
+	if int(custom_minimum_size.y) != int(keep):
+		custom_minimum_size.y = keep
 
 
 ## The button of entry kind `kind` (and id), or null (tests).

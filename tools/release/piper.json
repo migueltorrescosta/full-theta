@@ -40,6 +40,12 @@
       "sha256": "9ec6e300c0d012a663758bc45a097b47ee759761a3b91c7742de042af789d84b"
     }
   },
+  "tools": {
+    "rcodesign": {
+      "url": "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign/0.29.0/apple-codesign-0.29.0-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "dbe85cedd8ee4217b64e9a0e4c2aef92ab8bcaaa41f20bde99781ff02e600002"
+    }
+  },
   "licences": {
     "piper-LICENSE.md": {
       "url": "https://raw.githubusercontent.com/rhasspy/piper/2023.11.14-2/LICENSE.md",

@@ -12,6 +12,9 @@ extends StationPanel
 ## for the selected site or mark (FT-HLM-013, FT-HLM-016).
 ## Rules live in sim/: this panel only turns intents into commands.
 ##
+## On a tablet (#32) HelmTouch docks two rails at the screen's edges (TabletDock) and the
+## panel keeps its desktop arrangement between them; the pointer never steers there either.
+##
 ## On a phone (#28) HelmTouch lays the touch controls over the cockpit, landscape-first,
 ## and the pointer never steers: the sticks do, and a tap selects under the finger. With it
 ## the panel is in the shared phone frame (in_frame): its pages are HelmTouch's, and the HUD
@@ -49,7 +52,11 @@ var hud: HelmHud
 var ring: ShieldRing
 ## The phone layout (HelmTouch) while the focused panel is on a phone, else null.
 var touch_ui: HelmTouch = null
+## The tablet's docked rails (#32, HelmTouch in tablet mode) while the focused panel is on a
+## tablet, else null. The panel stays in its desktop arrangement.
+var tablet_ui: HelmTouch = null
 
+var _ring_compact: bool = false
 var _container: SubViewportContainer
 var _viewport: SubViewport
 ## The pointer is captured for steering (KB/M) until the menu, a pause, the end of
@@ -93,12 +100,16 @@ func _mode_changed() -> void:
 func _mode_changed_ring() -> void:
 	# Room for the label under the ring when focused.
 	var side: float = 170.0 if focused else 100.0
-	ring.size = Vector2(side + (80.0 if focused else 0.0), side + 2.0 * ShieldRing.FONT_SIZE)
+	ring.size = Vector2(
+		side + (80.0 if focused else 0.0),
+		side + 2.0 * ShieldRing.FONT_SIZE + ShieldRing.CAPTION_GAP
+	)
 	ring.label = focused
 
 
 ## Builds, rebuilds or drops the phone layout for the viewport's form (a rotation).
 func _apply_form() -> void:
+	_apply_tablet()
 	var form: LayoutMode.Form = _form()
 	var want: bool = focused and LayoutMode.is_phone(form)
 	var portrait: bool = form == LayoutMode.Form.PHONE_PORTRAIT
@@ -141,6 +152,28 @@ func _apply_form() -> void:
 		_show_pages()
 
 
+## Builds, rebuilds (a rotation) or drops the tablet's docked rails for the viewport's form.
+func _apply_tablet() -> void:
+	var screen: StationScreen = _screen()
+	var want: bool = (
+		focused and screen != null and _form() == LayoutMode.Form.TABLET and TabletDock.fits(_dp())
+	)
+	var portrait: bool = want and LayoutMode.portrait(screen.size)
+	if tablet_ui != null and (not want or tablet_ui.portrait != portrait):
+		if screen != null and screen.tablet_dock == tablet_ui.dock:
+			screen.set_tablet_dock(null)
+		tablet_ui.dock.queue_free()
+		remove_child(tablet_ui)
+		tablet_ui.queue_free()
+		tablet_ui = null
+		ctx.matcher.release_all()
+	if want and tablet_ui == null:
+		tablet_ui = HelmTouch.new(self, _dispatch, portrait, true)
+		add_child(tablet_ui)
+		_captured = false
+		screen.set_tablet_dock(tablet_ui.dock)
+
+
 ## The screen shows the tabs of the pages just built (it binds them on its own relayout,
 ## which runs before a rotation rebuilds this layout).
 func _show_pages() -> void:
@@ -158,12 +191,19 @@ func _form() -> LayoutMode.Form:
 	var screen: StationScreen = _screen()
 	if not is_inside_tree() or screen == null:
 		return LayoutMode.Form.DESKTOP
+	return LayoutMode.form_for(_dp(), LayoutMode.coarse_pointer())
+
+
+## The screen's size in device-independent pixels (zero outside a screen).
+func _dp() -> Vector2:
+	var screen: StationScreen = _screen()
+	if not is_inside_tree() or screen == null:
+		return Vector2.ZERO
 	var ui_scale: float = 1.0
 	var window: Window = get_window()
 	if window != null:
 		ui_scale = window.content_scale_factor
-	var dp: Vector2 = LayoutMode.dp_size(screen.size, ui_scale, LayoutMode.density())
-	return LayoutMode.form_for(dp, LayoutMode.coarse_pointer())
+	return LayoutMode.dp_size(screen.size, ui_scale, LayoutMode.density())
 
 
 ## The screen holding this panel, or null.
@@ -223,11 +263,32 @@ func _process(_delta: float) -> void:
 		_captured = false
 		touch_ui.update(ring)
 	else:
-		ring.position = Vector2(size.x - ring.size.x - 12.0, (size.y - ring.size.y) / 2.0)
+		var compact: bool = false
+		if tablet_ui != null:
+			_captured = false
+			tablet_ui.update(ring)
+			compact = hud.touch_layout()
+		_place_ring(compact)
 	ring.show_state(helm_block(), _shield_power())
 	if focused:
 		view3d.show_state(ctx, chase)
 	hud.queue_redraw()
+
+
+## The ring at the right of the view, centred. On a tablet view as small as a phone's
+## (HelmHud.touch_layout) a smaller one at the upper right, below the thrust cross when the
+## view is narrow, clear of the reticle and the compass.
+func _place_ring(compact: bool) -> void:
+	if compact != _ring_compact:
+		_ring_compact = compact
+		_mode_changed_ring()
+		if compact:
+			ring.size = Vector2(190.0, 110.0 + 2.0 * ShieldRing.FONT_SIZE)
+	if compact:
+		var top: float = hud.area().position.y + (90.0 if size.x < 520.0 else 8.0)
+		ring.position = Vector2(size.x - ring.size.x - 8.0, top)
+	else:
+		ring.position = Vector2(size.x - ring.size.x - 12.0, (size.y - ring.size.y) / 2.0)
 
 
 # --- Intents. ---
@@ -559,6 +620,7 @@ func _on_gui_input(event: InputEvent) -> void:
 		and mb.button_index == MOUSE_BUTTON_LEFT
 		and focused
 		and touch_ui == null
+		and tablet_ui == null
 		and not _overlay_open()
 	):
 		_captured = true

@@ -98,6 +98,8 @@ var _left: VBoxContainer
 var _side: PanelContainer
 var _lists: VBoxContainer
 var _lists_text: String = ""
+var _lists_margin: MarginContainer
+var _lists_scroll: ScrollContainer
 ## "pips:<i>" or "tightness" -> [value sent, at ms].
 var _pending: Dictionary = {}
 ## The last wheel event happened outside this panel (over the radar): its pip intent is
@@ -150,7 +152,13 @@ func _setup() -> void:
 	# Scrolls when the lists don't fit (they sit under the cutaway when narrow).
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_side.add_child(scroll)
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	# The margin under the scroll makes its last visible row whole at rest (_snap_lists).
+	_lists_margin = MarginContainer.new()
+	_lists_margin.add_child(scroll)
+	_side.add_child(_lists_margin)
+	_lists_scroll = scroll
+	_side.resized.connect(_snap_lists.call_deferred)
 	_lists.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_lists)
 	ctx.crew.sim_event.connect(_on_sim_event)
@@ -355,7 +363,8 @@ func _from_phone() -> void:
 	var phone: bool = size.x < PHONE_W
 	_row.vertical = phone
 	cutaway.custom_minimum_size.y = 260.0 if phone else 0.0
-	board.custom_minimum_size = Vector2(0, 460) if phone else Vector2(270, 0)
+	board.fit(0.0 if phone or docked else size.y)
+	board.custom_minimum_size = (Vector2(0, 460) if phone else Vector2(270, board.content_height()))
 	_side.custom_minimum_size = Vector2(0, 220) if phone else Vector2(210, 0)
 	var parent: Control = _left if narrow else _row
 	_side.size_flags_stretch_ratio = 1.0 if narrow else 2.2
@@ -858,9 +867,9 @@ func fault_lines() -> Array:
 	for i: int in order:
 		var h: float = health_frac(i)
 		if h <= 0.0:
-			out.append([tr("eng.fault_down") % full_name(i), "danger"])
+			out.append([tr("eng.fault_down") % full_name(i), "danger_text"])
 		elif faults.has(i) and now - int(faults[i]) < FAULT_MS:
-			out.append([tr("eng.fault_heat") % [full_name(i), roundi(h * 100)], "danger"])
+			out.append([tr("eng.fault_heat") % [full_name(i), roundi(h * 100)], "danger_text"])
 		elif has_fault(i):
 			out.append(_fault_line(i, h))
 		elif h < 1.0:
@@ -880,10 +889,10 @@ func _fault_line(i: int, h: float) -> Array:
 	if known > 0:
 		if pick == known:
 			return [tr("eng.fault_right") % [name, pct, cause_name(i, known)], "warn"]
-		return [tr("eng.fault_diagnosed") % [name, pct, cause_name(i, known)], "danger"]
+		return [tr("eng.fault_diagnosed") % [name, pct, cause_name(i, known)], "danger_text"]
 	if pick > 0:
 		return [tr("eng.fault_guess") % [name, pct, cause_name(i, pick)], "warn"]
-	return [tr("eng.fault_unknown") % [name, pct], "danger"]
+	return [tr("eng.fault_unknown") % [name, pct], "danger_text"]
 
 
 ## The repair queue: damaged subsystems, most damaged first, with their crews.
@@ -935,7 +944,9 @@ func _refresh_lists() -> void:
 	lines.append([tr("eng.repairs"), "accent"])
 	lines.append_array(queue_lines())
 	lines.append(["", "text"])
-	lines.append([tr("eng.parts") % spare_parts(), "accent" if spare_parts() > 0 else "danger"])
+	lines.append(
+		[tr("eng.parts") % spare_parts(), "accent" if spare_parts() > 0 else "danger_text"]
+	)
 	# Relay's probe in the making, from the RELAY block (FT-ENG-008).
 	var fab: float = float(ctx.view.blocks.get(S.RELAY, {}).get("fab_left", 0.0))
 	if fab > 0.0:
@@ -953,6 +964,31 @@ func _refresh_lists() -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.add_theme_color_override("font_color", Palette.color(line[1]))
 		_lists.add_child(l)
+	_snap_lists.call_deferred()
+
+
+## Sizes the faults list's view to whole rows: with more lines than fit, the room below the
+## last whole row becomes a margin, so no row is cut at rest (D319).
+func _snap_lists() -> void:
+	if _lists_margin == null or not is_inside_tree():
+		return
+	var room: float = (
+		_lists_scroll.size.y + float(_lists_margin.get_theme_constant("margin_bottom"))
+	)
+	var content: float = _lists.get_combined_minimum_size().y
+	var keep: float = 0.0
+	if content > room:
+		var sep: float = float(_lists.get_theme_constant("separation"))
+		var y: float = 0.0
+		for row: Node in _lists.get_children():
+			var h: float = (row as Control).get_combined_minimum_size().y
+			if y + h > room:
+				break
+			y += h + sep
+			keep = y - sep
+		keep = room - keep if keep > 0.0 else 0.0
+	if int(keep) != _lists_margin.get_theme_constant("margin_bottom"):
+		_lists_margin.add_theme_constant_override("margin_bottom", int(keep))
 
 
 # --- Events and input. ---

@@ -14,7 +14,7 @@ const CHASE_OFFSET: Vector3 = Vector3(0.0, 18.0, 70.0)
 ## Vertical field of view (degrees), before comfort narrows it.
 const FOV_DEG: float = 70.0
 
-var own_ship: Node3D
+var own_ship: ProceduralShip
 
 var _dust: MultiMesh
 var _dust_points: PackedVector3Array = PackedVector3Array()
@@ -22,9 +22,12 @@ var _dust_points: PackedVector3Array = PackedVector3Array()
 
 func _ready() -> void:
 	ship_scale = SHIP_SCALE
-	wear = 1.0
 	own_ship = copy_ship()
 	_build_dust()
+
+
+func own_model() -> Node3D:
+	return own_ship if own_ship != null and own_ship.visible else null
 
 
 ## Places camera, ships and dust for the interpolated state. `chase` swaps the camera.
@@ -38,6 +41,9 @@ func show_state(ctx: StationContext, chase: bool) -> void:
 		Transform3D(ComfortCamera.look(rot * Vector3.FORWARD, up, deck), origin),
 		ComfortCamera.fov_deg(ctx.settings, FOV_DEG)
 	)
+	var look: String = ProceduralShip.look_for(ctx.crew.ship_name())
+	if own_ship.look != look:
+		own_ship.set_look(look)
 	own_ship.visible = chase
 	own_ship.transform = Transform3D(Basis(rot).scaled(Vector3.ONE * SHIP_SCALE), Vector3.ZERO)
 	sync_ships(ctx)

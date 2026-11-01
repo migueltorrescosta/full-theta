@@ -4,6 +4,8 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks. 
 
 ## L5 screenshots
 
+`tools/bake_ships.gd` bakes the ships (`content/ships/looks.json` and `tools/ship_builder.gd` into `content/ships/baked/`, D308; the roughness and normal maps are shared by all looks, D317): run `godot --headless --path . -s res://tools/bake_ships.gd` after changing either and commit the result; L0's `ships` check (`-- --check`) fails when a baked ship is stale.
+
 `tools/gate.sh l5` renders the shots in `tests/visual/shots.json` under Xvfb with llvmpipe (`tools/l5.py`, `tools/l5_capture.gd`) and diffs them against `tests/visual/baselines/`; it needs the `xvfb` package and runs on fugaku only (FT-TST-003). A shot names a scene and, optionally, properties to set on its root before it enters the tree and its own `"size": [w, h]` (default the manifest's `size`). `tools/gate.sh l5 --update-baselines` regenerates every baseline and `baselines/env.json`. `tools/l5.py --capture-only DIR [--shots FILE]` renders without comparing. The tolerance and the "baseline environment changed" check are described in the docstring of `tools/l5.py`. Any PR may regenerate baselines: say why in the PR body and compare the old and new images by eye (failing shots leave `build/l5/<name>.diff.png`).
 
 ## L4 multi-process network test
@@ -15,6 +17,8 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks. 
 ## HTTP budget
 
 `tools/static_server_profile.gd` times the search for a request head's end over a whole 8 KiB headerless request, the most one `StaticServer` poll searches, against the 400 µs per-frame budget (FT-NET-039, D108). It is wall-clock, so a manual check on an idle host, not a gate test: the L3 test counts the bytes searched instead. Run `taskset -c 0,1 godot --headless --path . -s res://tools/static_server_profile.gd` and record the load average with the result.
+
+`tools/devseat_profile.gd` times each station panel, the all-stations `StationScreen` and the settings menu's Controls tab headless (#30; results in `docs/research/devseat-profile.md`). Wall-clock, so a manual check: run `taskset -c 0,1 godot --headless --path . -s res://tools/devseat_profile.gd` on a quiet host.
 
 ## Voice latency
 

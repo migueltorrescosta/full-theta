@@ -366,7 +366,12 @@ func test_controller_cursor_snaps_to_the_nearest_contact() -> void:
 	# Put the cursor 40 px from H2's blip: within snap reach, not within a mouse's.
 	var layout: Array = p.radar._layout()
 	var h2: Dictionary = layout.filter(func(e: Dictionary) -> bool: return e["item"]["id"] == H2)[0]
-	var at: Vector2 = h2["pos"] + Vector2(0.0, 40.0)
+	# (a side with no chip or blip of another item, so only a snapping cursor reaches H2)
+	var at: Vector2 = h2["pos"]
+	for d: Vector2 in [Vector2(0, 40), Vector2(0, -40), Vector2(-40, 0), Vector2(40, 0)]:
+		at = h2["pos"] + d
+		if p.radar.item_at(at).is_empty() and p.radar.item_at(at + Vector2(0, 1)).is_empty():
+			break
 	var local: Vector2 = p.radar.get_global_transform() * at
 	p._cursor = p.get_global_transform().affine_inverse() * local
 	assert_dict(p.item_at(p._cursor)).is_equal({"kind": "contact", "id": H2})
@@ -398,3 +403,17 @@ func test_panel_start_sends_the_current_selection() -> void:
 	var sent: Array = _cmds(s, "science_select")
 	assert_int(sent.size()).is_equal(1)
 	assert_int(sent[0][1][0]["contact"]).is_equal(H2)
+
+
+# FT: FT-STN-013
+# T1: at 150 % on a 1280 x 720 window (853 x 480 logical) the list, radar and card sit side
+# by side, so the radar keeps its height.
+func test_list_stage_and_card_stay_side_by_side_at_853_wide() -> void:
+	var s: StationScreen = await _screen()
+	var sci: SciencePanel = s.panels[s.stations.find("science")] as SciencePanel
+	sci.size = Vector2(853, 360)
+	assert_bool(sci.is_narrow()).is_false()
+	sci.size = Vector2(853, 1100)
+	assert_bool(sci.is_narrow()).is_true()
+	sci.size = Vector2(700, 360)
+	assert_bool(sci.is_narrow()).is_true()

@@ -57,3 +57,16 @@ func test_role_summaries_fit_their_lines_and_start_stays_on_screen() -> void:
 	get_tree().root.size = old
 	LayoutMode.apply(get_tree().root)
 	assert_array(failures).is_empty()
+
+
+# FT: FT-STN-013
+# T3: on a short screen (853 x 480 at 150 %) the role description wraps instead of being cut.
+func test_the_summary_role_wraps_on_a_short_desktop_screen() -> void:
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	var l: LobbyScreen = _lobby()
+	l._arrange(true)
+	var role: Label = l.find_child("SummaryRole", true, false) as Label
+	assert_bool(role.clip_text).is_false()
+	assert_int(role.autowrap_mode).is_equal(TextServer.AUTOWRAP_WORD_SMART)
+	assert_int(role.max_lines_visible).is_equal(LobbyScreen.ROLE_LINES)
+	LayoutMode.forced = -1

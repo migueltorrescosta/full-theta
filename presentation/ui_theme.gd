@@ -78,6 +78,7 @@ static func build(touch: bool = false) -> Theme:
 		_cell(t, tag)
 	_rails(t)
 	_panels(t)
+	_sliders(t)
 	_fields(t, TOUCH_PAD if touch else 6)
 	if touch:
 		# A list row is a tap target too.
@@ -148,7 +149,7 @@ static func _buttons(t: Theme, type: String, variation: String, pad_x: int, pad_
 	var name: String = type if variation == "" else variation
 	if variation != "":
 		t.set_type_variation(variation, type)
-	t.set_stylebox("normal", name, box("panel", "line", pad_x, pad_y))
+	t.set_stylebox("normal", name, box("panel", "line_strong", pad_x, pad_y))
 	t.set_stylebox("hover", name, box("panel_focus", "accent", pad_x, pad_y))
 	t.set_stylebox("pressed", name, box("panel_focus", "accent", pad_x, pad_y))
 	t.set_stylebox("hover_pressed", name, box("panel_focus", "accent", pad_x, pad_y))
@@ -211,7 +212,7 @@ static func check_icon(on: bool, edge: String) -> ImageTexture:
 static func _cell(t: Theme, tag: String) -> void:
 	var name: String = "LoadCell_" + tag
 	t.set_type_variation(name, "Button")
-	var line: String = "load_" + tag if tag != "none" else "line"
+	var line: String = "load_" + tag if tag != "none" else "line_strong"
 	var normal: StyleBoxFlat = box("panel", line, CELL_PAD, CELL_PAD)
 	normal.set_border_width_all(2)
 	var chosen: StyleBoxFlat = box("panel_focus", line, CELL_PAD, CELL_PAD)
@@ -255,6 +256,21 @@ static func _rails(t: Theme) -> void:
 	t.set_stylebox("panel", "Banner", box("panel_focus", "accent", 12, 2))
 
 
+## A slider's track in `line_strong` (3:1 on the panel), its filled part in the accent.
+static func _sliders(t: Theme) -> void:
+	for kind: String in ["HSlider", "VSlider"]:
+		var track: StyleBoxFlat = StyleBoxFlat.new()
+		track.bg_color = Palette.color("line_strong")
+		track.set_corner_radius_all(2)
+		track.content_margin_top = 4.0
+		track.content_margin_bottom = 4.0
+		t.set_stylebox("slider", kind, track)
+		var fill: StyleBoxFlat = track.duplicate()
+		fill.bg_color = Palette.color("accent")
+		t.set_stylebox("grabber_area", kind, fill)
+		t.set_stylebox("grabber_area_highlight", kind, fill)
+
+
 static func _panels(t: Theme) -> void:
 	t.set_stylebox("panel", "PanelContainer", box("panel", "line_strong", 12, 12))
 	t.set_stylebox("panel", "Panel", box("panel", "line_strong", 0, 0))
@@ -269,9 +285,9 @@ static func _panels(t: Theme) -> void:
 
 
 static func _fields(t: Theme, pad_y: int) -> void:
-	t.set_stylebox("normal", "LineEdit", box("background", "line", 8, pad_y))
+	t.set_stylebox("normal", "LineEdit", box("background", "line_strong", 8, pad_y))
 	t.set_stylebox("focus", "LineEdit", ring(8, pad_y))
-	t.set_stylebox("read_only", "LineEdit", box("panel", "line", 8, pad_y))
+	t.set_stylebox("read_only", "LineEdit", box("panel", "line_strong", 8, pad_y))
 	t.set_color("font_color", "LineEdit", Palette.color("text"))
 	t.set_color("font_placeholder_color", "LineEdit", Palette.color("text_dim"))
 	t.set_color("caret_color", "LineEdit", Palette.color("accent"))

@@ -375,6 +375,12 @@ func _exit_tree() -> void:
 	stop()
 
 
+## Freed without ever entering the tree: the synths' threads still stop (#33).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		stop()
+
+
 func _load_voices() -> void:
 	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(voices_path))
 	_voices = data if data is Dictionary else {}

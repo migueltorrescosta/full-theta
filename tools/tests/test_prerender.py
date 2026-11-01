@@ -36,6 +36,8 @@ def content_root(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     shutil.copytree(ROOT / "content/dialogue", root / "content/dialogue")
     shutil.copy(ROOT / "content/voices.json", root / "content/voices.json")
+    (root / "tools/tts").mkdir(parents=True)
+    shutil.copy(ROOT / "tools/tts/voices.json", root / "tools/tts/voices.json")
     return root
 
 
@@ -43,11 +45,12 @@ def host(out: Path) -> Path:
     return out.parent / "prerendered_host"
 
 
-def run(tmp_path: Path, langs=("en", "pt_PT", "it")) -> tuple[Path, Path, Spy, dict]:
+def run(tmp_path: Path, langs=("en", "pt_PT", "it"), cache=None) -> tuple[Path, Path, Spy, dict]:
     root = content_root(tmp_path)
     out = tmp_path / "out"
     spy = Spy()
-    return root, out, spy, prerender.prerender(root, out, list(langs), synth=spy)
+    indexes, _ = prerender.prerender(root, out, list(langs), synth=spy, cache=cache)
+    return root, out, spy, indexes
 
 
 def expected_keys(root: Path, lang: str) -> dict[str, set[str]]:
@@ -97,7 +100,7 @@ def test_new_lines_file_is_read_and_schemas_skipped(tmp_path):
         ]
     }
     (root / "content/dialogue/extra.json").write_text(json.dumps(extra))
-    indexes = prerender.prerender(root, tmp_path / "out", ["en"], synth=Spy())
+    indexes, _ = prerender.prerender(root, tmp_path / "out", ["en"], synth=Spy())
     clips = indexes[("en", "npc")]["clips"]
     # Pieces: "", ", then ", " again"; the empty piece 0 is counted but not rendered.
     assert {k for k in clips if k.startswith("seg:npc.extra:")} == {"seg:npc.extra:1", "seg:npc.extra:2"}
@@ -203,3 +206,204 @@ def test_dev_only_languages_are_refused_without_dev(capsys):
     assert "dev_only" in capsys.readouterr().err
     with pytest.raises(SystemExit):
         prerender.main(["pt_PT"])
+
+
+# FT: FT-AUD-002 cache tests
+def test_cache_hits_on_second_run(tmp_path):
+    """Second run with same inputs calls synth zero times and writes byte-identical packs."""
+    cache_dir = tmp_path / "cache"
+    # First run
+    root1, out1, spy1, indexes1 = run(tmp_path, ["en"], cache=cache_dir)
+    first_calls = len(spy1.calls)
+    assert first_calls > 0
+
+    # Second run with same cache
+    out2 = tmp_path / "out2"
+    spy2 = Spy()
+    indexes2, (rendered, hits) = prerender.prerender(root1, out2, ["en"], synth=spy2, cache=cache_dir)
+
+    # Synth should not be called at all
+    assert len(spy2.calls) == 0
+    assert rendered == 0
+    assert hits == first_calls
+
+    # Output packs must be byte-identical (PCM and JSON); Ogg files compared via decoded audio
+    import soundfile
+    for lang in ("en",):
+        for role in ("computer", "npc"):
+            pcm1 = (host(out1) / lang / f"{role}.pcm").read_bytes()
+            pcm2 = (host(out2) / lang / f"{role}.pcm").read_bytes()
+            assert pcm1 == pcm2, f"PCM differs for {lang}/{role}"
+            json1 = (host(out1) / lang / f"{role}.json").read_bytes()
+            json2 = (host(out2) / lang / f"{role}.json").read_bytes()
+            assert json1 == json2, f"JSON differs for {lang}/{role}"
+        # Client Ogg files - compare decoded audio since Vorbis encoding may not be byte-deterministic
+        for ogg1 in (out1 / lang).glob("*.ogg"):
+            ogg2 = out2 / lang / ogg1.name
+            pcm1, rate1 = soundfile.read(ogg1, dtype="int16")
+            pcm2, rate2 = soundfile.read(ogg2, dtype="int16")
+            assert rate1 == rate2
+            assert np.array_equal(pcm1, pcm2), f"Decoded Ogg differs for {ogg1.name}"
+
+
+def test_cache_invalidated_by_text_change(tmp_path):
+    """Changing one line's text re-renders only that line's clip."""
+    cache_dir = tmp_path / "cache"
+    # First run
+    root1, out1, spy1, _ = run(tmp_path, ["en"], cache=cache_dir)
+    first_calls = list(spy1.calls)  # list of (voice, text, settings)
+    first_call_count = len(first_calls)
+
+    # Modify one line's text in the dialogue JSON
+    dialogue_file = root1 / "content/dialogue" / "computer.json"
+    data = json.loads(dialogue_file.read_text())
+    for line in data["lines"]:
+        if line["id"] == "computer.hull_critical":
+            line["text"]["en"] = "Hull integrity critical."
+            break
+    dialogue_file.write_text(json.dumps(data, indent=1))
+
+    # Second run
+    out2 = tmp_path / "out2"
+    spy2 = Spy()
+    indexes2, (rendered, hits) = prerender.prerender(root1, out2, ["en"], synth=spy2, cache=cache_dir)
+
+    # Only the changed line should be re-rendered
+    second_calls = set((v, t) for v, t, _ in spy2.calls)
+    first_call_texts = set((v, t) for v, t, _ in first_calls)
+    new_calls = second_calls - first_call_texts
+    # The changed line uses the prerender voice
+    voices = json.loads((root1 / "content/voices.json").read_text())
+    expected_voice = voices["languages"]["en"]["computer"]["prerender"]
+    assert new_calls == {(expected_voice, "Hull integrity critical.")}
+    assert rendered == 1
+    assert hits == first_call_count - 1  # all but one clip were cached
+
+    # Unchanged clips should have identical output
+    pcm1 = (host(out1) / "en" / "computer.pcm").read_bytes()
+    pcm2 = (host(out2) / "en" / "computer.pcm").read_bytes()
+    # The PCM blob will differ because one clip changed, but the index should reflect only that change
+    index1 = json.loads((host(out1) / "en" / "computer.json").read_text())
+    index2 = json.loads((host(out2) / "en" / "computer.json").read_text())
+    # The clips dict should be the same except for the line: clip (which is not in host pack)
+    # Host pack only has seg: and num: clips, which are unchanged
+    assert index1["clips"] == index2["clips"]
+
+
+def test_cache_invalidated_by_role_settings_change(tmp_path):
+    """Changing one role's settings re-renders only that role's clips."""
+    cache_dir = tmp_path / "cache"
+    # First run
+    root1, out1, spy1, _ = run(tmp_path, ["en"], cache=cache_dir)
+    first_calls_by_role: dict[str, list[tuple[str, str, dict]]] = {}
+    for voice, text, settings in spy1.calls:
+        # Determine role from voice name
+        role = "computer" if "cori" in voice else "npc"
+        first_calls_by_role.setdefault(role, []).append((voice, text, settings))
+    first_computer_count = len(first_calls_by_role.get("computer", []))
+    first_npc_count = len(first_calls_by_role.get("npc", []))
+
+    # Modify computer's settings in voices.json
+    voices_file = root1 / "content/voices.json"
+    voices_data = json.loads(voices_file.read_text())
+    voices_data["roles"]["computer"]["length_scale"] = 1.5  # changed from 1.05
+    voices_file.write_text(json.dumps(voices_data, indent=1))
+
+    # Second run
+    out2 = tmp_path / "out2"
+    spy2 = Spy()
+    indexes2, (rendered, hits) = prerender.prerender(root1, out2, ["en"], synth=spy2, cache=cache_dir)
+
+    # Only computer's clips should be re-rendered
+    second_calls_by_role: dict[str, set[tuple[str, str]]] = {}
+    for voice, text, settings in spy2.calls:
+        role = "computer" if "cori" in voice else "npc"
+        second_calls_by_role.setdefault(role, set()).add((voice, text))
+
+    # npc should have zero new calls (all cached)
+    assert len(second_calls_by_role.get("npc", set())) == 0
+    # computer should have all its clips re-rendered
+    assert len(second_calls_by_role.get("computer", set())) > 0
+    assert rendered == first_computer_count
+    assert hits == first_npc_count
+
+
+def test_cache_invalidated_by_voice_hash_change(tmp_path):
+    """Changing a voice's pinned sha256 re-renders only that voice's clips."""
+    cache_dir = tmp_path / "cache"
+    # First run
+    root1, out1, spy1, _ = run(tmp_path, ["en"], cache=cache_dir)
+    first_calls_by_voice: dict[str, list[tuple[str, str, dict]]] = {}
+    first_unique_by_voice: dict[str, set[tuple[str, str]]] = {}
+    for voice, text, settings in spy1.calls:
+        first_calls_by_voice.setdefault(voice, []).append((voice, text, settings))
+        first_unique_by_voice.setdefault(voice, set()).add((voice, text))
+
+    # Modify one voice's hash in tools/tts/voices.json (computer uses cori-high for prerender)
+    voices_file = root1 / "tools/tts/voices.json"
+    voices_data = json.loads(voices_file.read_text())
+    # Change the hash for en_GB-cori-high
+    voices_data["voices"]["en_GB-cori-high"]["en/en_GB/cori/high/en_GB-cori-high.onnx"]["sha256"] = (
+        "0" * 64
+    )
+    voices_file.write_text(json.dumps(voices_data, indent=1))
+
+    # Second run
+    out2 = tmp_path / "out2"
+    spy2 = Spy()
+    indexes2, (rendered, hits) = prerender.prerender(root1, out2, ["en"], synth=spy2, cache=cache_dir)
+
+    # Only clips using the modified voice should be re-rendered
+    second_calls_by_voice: dict[str, set[tuple[str, str]]] = {}
+    for voice, text, settings in spy2.calls:
+        second_calls_by_voice.setdefault(voice, set()).add((voice, text))
+
+    # en_GB-cori-high is used for computer's prerender (line: clips)
+    # en_GB-cori-medium is used for computer's runtime (seg: clips) and npc's runtime
+    # en_US-kristin-medium is used for npc's prerender
+    modified_voice = "en_GB-cori-high"
+    assert modified_voice in second_calls_by_voice
+    # All unique clips for the modified voice should be re-rendered
+    assert second_calls_by_voice[modified_voice] == first_unique_by_voice[modified_voice]
+    # Other voices should be cached (no new calls)
+    for voice in first_calls_by_voice:
+        if voice != modified_voice:
+            assert voice not in second_calls_by_voice or second_calls_by_voice[voice] == set()
+    # Total rendered clips should equal all clips that used the modified voice
+    assert rendered == len(first_calls_by_voice[modified_voice])
+    assert hits == sum(len(v) for k, v in first_calls_by_voice.items() if k != modified_voice)
+
+
+def test_cache_none_disables_cache(tmp_path):
+    """cache=None renders everything each time."""
+    cache_dir = tmp_path / "cache"
+    # First run with cache
+    root1, out1, spy1, _ = run(tmp_path, ["en"], cache=cache_dir)
+    first_calls = len(spy1.calls)
+
+    # Second run with cache=None (disabled)
+    out2 = tmp_path / "out2"
+    spy2 = Spy()
+    indexes2, (rendered, hits) = prerender.prerender(root1, out2, ["en"], synth=spy2, cache=None)
+
+    # All clips should be re-rendered
+    assert len(spy2.calls) == first_calls
+    assert rendered == first_calls
+    assert hits == 0
+
+    # Output should still be byte-identical (PCM and JSON); Ogg files compared via decoded audio
+    import soundfile
+    for lang in ("en",):
+        for role in ("computer", "npc"):
+            pcm1 = (host(out1) / lang / f"{role}.pcm").read_bytes()
+            pcm2 = (host(out2) / lang / f"{role}.pcm").read_bytes()
+            assert pcm1 == pcm2
+            json1 = (host(out1) / lang / f"{role}.json").read_bytes()
+            json2 = (host(out2) / lang / f"{role}.json").read_bytes()
+            assert json1 == json2
+        for ogg1 in (out1 / lang).glob("*.ogg"):
+            ogg2 = out2 / lang / ogg1.name
+            pcm1, rate1 = soundfile.read(ogg1, dtype="int16")
+            pcm2, rate2 = soundfile.read(ogg2, dtype="int16")
+            assert rate1 == rate2
+            assert np.array_equal(pcm1, pcm2)

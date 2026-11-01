@@ -3,8 +3,9 @@ extends RefCounted
 ## Per-client settings, persisted in one ConfigFile under user:// (path injectable for
 ## tests): the player's name, bindings and hold-to-toggle choices (FT-STN-007,
 ## FT-STN-014), UI scale (FT-STN-013), first-run tooltips already seen (FT-STN-012),
-## invert pitch (S5) and the comfort options (FT-STN-017: the station cameras read
-## them; the cosmetic reference plane is never spoken or used by rules, D124).
+## invert pitch (S5), the music volume (#12) and the comfort options (FT-STN-017: the
+## station cameras read them; the cosmetic reference plane is never spoken or used by
+## rules, D124).
 
 const PATH: String = "user://client_settings.cfg"
 const UI_SCALE_MIN: float = 0.75
@@ -12,6 +13,9 @@ const UI_SCALE_MAX: float = 1.5
 const UI_SCALE_STEP: float = 0.05
 ## Comfort roll locks: the ship's deck plane, the selected target, or the player's
 ## cosmetic reference plane.
+const MUSIC_DEFAULT: float = 0.5
+## Subtitle sizes (W3/S1): name -> font size in px at 100 % (the smallest text is 12 px, D316).
+const SUBTITLE_SIZES: Dictionary = {"small": 14, "normal": 18, "large": 26}
 const ROLL_LOCKS: Array[String] = ["deck", "target", "reference"]
 
 var path: String = PATH
@@ -20,6 +24,10 @@ var player_name: String = ""
 var last_address: String = ""
 var ui_scale: float = 1.0
 var invert_pitch: bool = false
+## Subtitle size: a key of SUBTITLE_SIZES.
+var subtitle_size: String = "normal"
+## Ambient music level, 0 (off) to 1 (#12, D312); the effects and voice have no slider.
+var music_volume: float = MUSIC_DEFAULT
 ## Station id -> true once its first-run tooltip was dismissed.
 var tooltips_seen: Dictionary = {}
 ## Not saved: the browser test hooks (?pick=) set it so the first-visit Controls menu never
@@ -57,6 +65,11 @@ func load_file() -> Error:
 	var scale: float = _value(cfg, "ui", "scale", 1.0)
 	set_ui_scale(scale if scale >= UI_SCALE_MIN and scale <= UI_SCALE_MAX else 1.0)
 	invert_pitch = _value(cfg, "input", "invert_pitch", false)
+	# A non-finite or out-of-range level (a broken file) is the default.
+	var music: float = _value(cfg, "audio", "music_volume", MUSIC_DEFAULT)
+	music_volume = music if music >= 0.0 and music <= 1.0 else MUSIC_DEFAULT
+	var sub_size: String = _value(cfg, "ui", "subtitle_size", "normal")
+	subtitle_size = sub_size if SUBTITLE_SIZES.has(sub_size) else "normal"
 	bindings.from_dict(_value(cfg, "input", "bindings", {}))
 	tooltips_seen.clear()
 	for s: Variant in _value(cfg, "ui", "tooltips_seen", []):
@@ -79,8 +92,10 @@ func save() -> Error:
 	cfg.set_value("player", "name", player_name)
 	cfg.set_value("player", "last_address", last_address)
 	cfg.set_value("ui", "scale", ui_scale)
+	cfg.set_value("ui", "subtitle_size", subtitle_size)
 	cfg.set_value("ui", "tooltips_seen", tooltips_seen.keys())
 	cfg.set_value("input", "invert_pitch", invert_pitch)
+	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("input", "bindings", bindings.to_dict())
 	cfg.set_value("comfort", "on", comfort)
 	cfg.set_value("comfort", "roll_lock", roll_lock)
@@ -100,6 +115,12 @@ static func _value(cfg: ConfigFile, section: String, key: String, default: Varia
 ## 75-150 % in 5 % steps (FT-STN-013).
 func set_ui_scale(value: float) -> void:
 	ui_scale = clampf(snappedf(value, UI_SCALE_STEP), UI_SCALE_MIN, UI_SCALE_MAX)
+
+
+## The UI scale a layout applies: the touch and phone layouts never go under 100 %, so their
+## targets stay at least 44 px (T5, D218).
+func effective_scale(touch: bool) -> float:
+	return maxf(ui_scale, 1.0) if touch else ui_scale
 
 
 func lesson_done(station: String) -> bool:

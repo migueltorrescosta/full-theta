@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 extends GdUnitTestSuite
 ## DiscRadar (spec §6.2): projection, above/below, beyond-range arrows, centring with the
 ## ship's axes, hit-testing and hover text.
@@ -303,3 +304,70 @@ func test_large_radar_keeps_full_chips() -> void:
 	radar.set_picture(_pic([_it("contact", 2, "H2", "H", Vector3(1500, 300, -1500))]), {})
 	assert_bool(radar.small()).is_false()
 	assert_str(radar._layout()[0]["chip"]).contains(ChipText.SEP)
+
+
+# FT: FT-STN-002
+# A chip never sits over a clock number: it takes the nearest free spot beside its blip.
+func test_a_chip_moves_off_a_clock_number() -> void:
+	var number: Rect2 = Rect2(Vector2(100, 20), Vector2(14, 14))
+	var entries: Array[Dictionary] = [
+		{
+			"chip": "U3",
+			"chip_rect": Rect2(Vector2(104, 18), Vector2(60, 16)),
+			"pos": Vector2(94, 26),
+		}
+	]
+	DiscRadar._declutter(entries, [number], Rect2(0, 0, 300, 200))
+	var moved: Rect2 = entries[0]["chip_rect"]
+	assert_bool(moved.intersects(number)).is_false()
+	# Still beside the blip, not a line away.
+	assert_float(moved.get_center().distance_to(Vector2(94, 26))).is_less(80.0)
+	# Without a blip or a free spot it drops below the number.
+	entries = [{"chip": "U3", "chip_rect": Rect2(Vector2(104, 18), Vector2(60, 16))}]
+	DiscRadar._declutter(entries, [number])
+	assert_float((entries[0]["chip_rect"] as Rect2).position.y).is_equal(number.end.y)
+
+
+# FT: FT-STN-003
+# Each chip stays beside its own blip (within 48 px, D319), clear of every
+# blip, the own ship and the other chips, and inside the disc when a spot there is free
+# (the 150 % checkpoint: H2 and F4 crossed the rim, Bravo floated 60 px away).
+func test_chips_sit_next_to_their_blip_inside_the_disc() -> void:
+	radar.size = Vector2(900, 560)
+	var items: Array[Dictionary] = [
+		_it("contact", 2, "H2", "H", Vector3(0, 0, -3000)),
+		_it("contact", 4, "F4", "F", Vector3(60, 0, -3010)),
+		_it("mark", 1, "Bravo", "", Vector3(-60, 0, -2990)),
+		_it("contact", 3, "U3", "U", Vector3(-400, 2500, -8000)),
+	]
+	radar.set_picture(_pic(items), {})
+	var c: Vector2 = radar.disc_centre()
+	var rim: float = radar.disc_radius()
+	var ry: float = rim * sin(deg_to_rad(radar.tilt_deg))
+	var layout: Array[Dictionary] = radar._layout()
+	for e: Dictionary in layout:
+		var r: Rect2 = e["chip_rect"]
+		assert_float(DiscRadar._gap_to(r, e["pos"])).is_less_equal(48.0)
+		assert_bool(r.intersects(radar._own_box())).is_false()
+		for o: Dictionary in layout:
+			var box: Rect2 = Rect2((o["pos"] as Vector2) - Vector2(6, 6), Vector2(12, 12))
+			assert_bool(box.intersects(r)).is_false()
+		# (U3 floats above the disc, so its chip does too.)
+		if e["item"]["label"] != "U3":
+			var inside: bool = DiscRadar._in_ellipse(
+				Rect2(c - Vector2(rim, ry), Vector2(rim, ry) * 2.0), r
+			)
+			assert_bool(inside).is_true()
+
+
+# FT: FT-STN-013
+func test_blips_keep_six_physical_pixels_below_full_scale() -> void:
+	add_child(radar)
+	var win: Window = radar.get_window()
+	var was: float = win.content_scale_factor
+	win.content_scale_factor = 0.75
+	assert_float(radar.blip_r() * 0.75).is_equal_approx(DiscRadar.BLIP_R, 0.001)
+	win.content_scale_factor = 1.5
+	assert_float(radar.blip_r()).is_equal(DiscRadar.BLIP_R)
+	win.content_scale_factor = was
+	remove_child(radar)

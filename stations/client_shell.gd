@@ -22,7 +22,7 @@ extends Control
 ## for one frame before it builds, so it draws, and keeps it until the new screen has run
 ## its first frame. A resume with the same pick keeps the
 ## screen. While the lobby shows, the pick's panel scripts load (one a frame), then the
-## shared ship model builds in slices (ProceduralShip.warm). Frames over LONG_FRAME_US go
+## baked ships of the lobby's ships (ProceduralShip.scene). Frames over LONG_FRAME_US go
 ## to the server's session log with what was running (NetClient.report_frame).
 
 ## The player left (Settings > Leave); the menu takes over again.
@@ -46,15 +46,13 @@ const RESUME_MS: int = 2000
 const MAX_SCREENS: int = 4
 ## A frame longer than this (µs) is reported to the server.
 const LONG_FRAME_US: int = 500_000
-## Lobby warm-up per frame (µs) for the ship model.
-const WARM_BUDGET_US: int = 8000
-## The ship model's wears to warm: HelmView's, then SpaceView's.
-const SHIP_WEARS: Array[float] = [1.0, 0.6]
 ## Strand T's tips (shown on the loading overlay when the file exists).
 const TIPS_VIEW: String = "res://presentation/tips_view.gd"
 
 var ctx: StationContext = StationContext.new()
 var voice: VoicePlayer
+## Effects, button taps and the ambient music (#12).
+var sound: SessionSound
 var lobby: LobbyScreen
 var screen: StationScreen
 var pause_overlay: PauseOverlay
@@ -68,6 +66,7 @@ var relaunch_prompt: VotePrompt
 var _layer: Control
 var _banner: Label
 var _subtitles: Label
+var _subtitle_panel: PanelContainer
 var _last_seq: int = -1
 var _shown: String = ""
 var _resume_at: int = 0
@@ -112,6 +111,11 @@ func setup(
 	add_child(voice)
 	voice.subtitle.connect(func(_entry: Dictionary) -> void: _show_subtitles())
 	voice.subtitle.connect(_note_training)
+	sound = SessionSound.new()
+	add_child(sound)
+	sound.setup(ctx)
+	sound.stations_of = func() -> Array: return screen.stations if screen != null else []
+	sound.voice_playing = func() -> bool: return voice.bus.playing_clip() >= 0
 	_layer = Control.new()
 	_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_layer)
@@ -128,7 +132,8 @@ func setup(
 func apply_ui_scale() -> void:
 	if is_inside_tree():
 		var dpr: float = maxf(LayoutMode.density(), 1.0) if OS.has_feature("web") else 1.0
-		get_tree().root.content_scale_factor = ctx.settings.ui_scale * dpr
+		var touch: bool = LayoutMode.is_touch(LayoutMode.kind_of(self))
+		get_tree().root.content_scale_factor = ctx.settings.effective_scale(touch) * dpr
 
 
 func _ready() -> void:
@@ -331,8 +336,8 @@ func _drop_screens() -> void:
 		_shown = ""
 
 
-## One lobby frame's warm-up: the pick's next panel script, else a slice of the shared
-## ship model (load fix 7, #28).
+## One lobby frame's warm-up: the pick's next panel script, else the next baked ship look
+## a lobby ship shows (load fix 7, #28, D308).
 func _warm_step() -> void:
 	var stations: Array = ctx.crew.stations()
 	if stations.is_empty() and ctx.crew.entry != "":
@@ -343,10 +348,26 @@ func _warm_step() -> void:
 			_note("preload " + str(station))
 			_scripts[path] = load(path)
 			return
-	for wear: float in SHIP_WEARS:
-		if not ProceduralShip.warm(wear, WARM_BUDGET_US):
-			_note("warm ship")
+	for look: String in _ship_looks():
+		if not ProceduralShip.is_loaded(look):
+			_note("load ship")
+			ProceduralShip.scene(look)
 			return
+
+
+## The baked looks the lobby's ships (and this player's own) will show, the generic one last.
+func _ship_looks() -> Array[String]:
+	var out: Array[String] = []
+	var names: Array[String] = [ctx.crew.ship_name()]
+	for row: Dictionary in ctx.crew.fleet_ships():
+		names.append(str(row.get("name", "")))
+	for n: String in names:
+		var look: String = ProceduralShip.look_for(n)
+		if look not in out:
+			out.append(look)
+	if ProceduralShip.GENERIC not in out:
+		out.append(ProceduralShip.GENERIC)
+	return out
 
 
 ## Adds a step to what this frame did.
@@ -405,6 +426,10 @@ func _show_subtitles() -> void:
 		)
 		lines.append("%s: %s" % [tr(str(e["label_key"])), text])
 	_subtitles.text = "\n".join(lines)
+	_subtitles.add_theme_font_size_override(
+		"font_size", int(ClientSettings.SUBTITLE_SIZES[ctx.settings.subtitle_size])
+	)
+	_subtitle_panel.visible = not lines.is_empty()
 
 
 ## Keeps the Shakedown's latest step per station for the banner (TrainingBanner).
@@ -480,14 +505,22 @@ func _build_overlays() -> void:
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_banner)
+	# A Banner panel behind the lines (W3), shown only while a line is (FT-AUD-010).
+	_subtitle_panel = PanelContainer.new()
+	_subtitle_panel.name = "SubtitlePanel"
+	_subtitle_panel.theme_type_variation = "Banner"
+	_subtitle_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_subtitle_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_subtitle_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_subtitle_panel.position.y -= 24
+	_subtitle_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_subtitle_panel.visible = false
 	_subtitles = Label.new()
-	_subtitles.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	_subtitles.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_subtitles.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_subtitles.position.y -= 24
+	_subtitles.name = "Subtitles"
 	_subtitles.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_subtitles.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_subtitles)
+	_subtitle_panel.add_child(_subtitles)
+	add_child(_subtitle_panel)
 	settings_screen = SettingsScreen.new()
 	settings_screen.visible = false
 	add_child(settings_screen)

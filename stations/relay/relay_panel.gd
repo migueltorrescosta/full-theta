@@ -229,6 +229,8 @@ func refresh() -> void:
 	map.routes = ctx.crew.routes
 	# Narrow, the log and inbox box covers the map's bottom edge: the span caption sits above it.
 	map.caption_bottom = hud.bottom_top() if hud.visible and size.x < NARROW_W else -1.0
+	if phone == null:
+		map.view_rect = hud.free_rect()
 	map.queue_redraw()
 	hud.refresh()
 	if phone != null:
