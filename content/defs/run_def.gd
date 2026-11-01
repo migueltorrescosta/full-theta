@@ -1,6 +1,6 @@
 class_name RunDef
 extends Resource
-## One run of the campaign (E07, FT-MIS-001, FT-MIS-002): the map it plays on, how many
+## One run (E07, FT-MIS-001): the map it plays on, how many
 ## encounters it lasts, which scenarios the director may pick, and the numbers the run
 ## reads (director, flee cost, the crew's ship, starting credits). RunSetup builds the
 ## world from it. Read-only at runtime (FT-ARC-020).

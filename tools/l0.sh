@@ -22,7 +22,7 @@ bin=$(run python -c 'import os, sys; print(os.path.dirname(sys.executable))')
 # gdtoolkit over the scripts in $jobs chunks at once.
 chunked() { printf '%s\0' "${scripts[@]}" | xargs -0 -P "$jobs" -n $(((${#scripts[@]} + jobs - 1) / jobs)) "$@"; }
 
-checks=(tool-tests gdlint gdformat check-only definitions scenarios architecture traceability dialogue
+checks=(tool-tests gdlint gdformat check-only definitions scenarios architecture traceability spec-cites dialogue
   palette colourblind licences ships)
 check() {
   case $1 in
@@ -34,6 +34,8 @@ check() {
     scenarios) "$godot" --headless --path . -s res://tools/check_scenarios.gd ;; # FT-DAT-008, FT-MIS-041
     architecture) run python tools/lint_arch.py ;;
     traceability) run python tools/traceability.py --check ;;
+    # A spec line cites the decisions that name its FT id (D-number citation lint).
+    spec-cites) run python tools/lint_spec_cites.py ;;
     dialogue) run python tools/check_dialogue.py ;; # FT-DAT-003, FT-DAT-004, FT-DAT-011
     palette) run python tools/check_palette.py ;; # FT-STN-006
     colourblind) run python tools/check_colourblind.py ;; # FT-STN-006: letters, shapes
