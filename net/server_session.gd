@@ -793,7 +793,6 @@ func _on_bye(conn: int, _msg: Dictionary, _now_us: int) -> void:
 	transport.close(conn, 1000, "bye")
 
 
-## A client's long frame (#28) goes to the session log, with whose it was.
 ## Rename{name} (#35 A5): the session takes the name (an empty one is ignored); the lobby's
 ## seats and captain follow, and claims and votes name it from then on.
 func _on_rename(conn: int, msg: Dictionary, _now_us: int) -> void:
@@ -807,6 +806,7 @@ func _on_rename(conn: int, msg: Dictionary, _now_us: int) -> void:
 	_publish()
 
 
+## A client's long frame (#28) goes to the session log, with whose it was.
 func _on_client_frame(conn: int, msg: Dictionary, _now_us: int) -> void:
 	var s: NetSession = by_conn.get(conn)
 	if s == null or session_log == null:
