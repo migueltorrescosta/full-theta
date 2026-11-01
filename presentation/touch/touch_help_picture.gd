@@ -14,9 +14,8 @@ extends VBoxContainer
 ##     var pic := TouchHelpPicture.make("engineering")
 ##     controls_tab.add_child(pic)
 ##
-## PANELS names each station's panel script with a `touch_help()`; Science and Relay have
-## a class with `pages()` (PAGE_CLASSES), Weapons and Helm their own help classes
-## (WeaponsTouchHelp, HelmHelp); `register` adds or replaces one at run time.
+## PANELS names each station's script with a `touch_help()` (the panel; Weapons' phone).
+## Its texts are all translation keys (content/i18n/strings.json).
 
 ## The frame the boxes are drawn in.
 const FRAME: Vector2 = Vector2(844.0, 390.0)
@@ -32,16 +31,11 @@ const PANELS: Dictionary = {
 	"engineering": "res://stations/engineering/engineering_panel.gd",
 	"comms": "res://stations/comms/comms_panel.gd",
 	"captain": "res://stations/captain/captain_panel.gd",
+	"helm": "res://stations/helm/helm_panel.gd",
+	"weapons": "res://stations/weapons/weapons_touch.gd",
+	"science": "res://stations/science/science_panel.gd",
+	"relay": "res://stations/relay/relay_panel.gd",
 }
-
-## Stations whose help lives in its own class, as {"title", "items"} pages.
-const PAGE_CLASSES: Dictionary = {
-	"science": "res://stations/science/science_touch_help.gd",
-	"relay": "res://stations/relay/relay_touch_help.gd",
-}
-
-## Help data registered at run time (`register`), over PANELS.
-static var _registered: Dictionary = {}
 
 ## The pages as the station gave them.
 var pages: Array = []
@@ -58,29 +52,8 @@ static func make(station: String) -> TouchHelpPicture:
 	return pic
 
 
-## Registers `provider` (returns the help data) for `station`, over its PANELS entry.
-static func register(station: String, provider: Callable) -> void:
-	_registered[station] = provider
-
-
-## Drops a run-time registration: the station's PANELS entry shows again.
-static func unregister(station: String) -> void:
-	_registered.erase(station)
-
-
 ## A station's touch help data, [] when it has none.
 static func help_of(station: String) -> Array:
-	if _registered.has(station):
-		return (_registered[station] as Callable).call()
-	if station == "weapons":
-		return _weapons()
-	if station == "helm":
-		return _helm()
-	if PAGE_CLASSES.has(station):
-		var out: Array = []
-		for p: Dictionary in (load(PAGE_CLASSES[station]) as Script).call("pages"):
-			out.append({"page": p["title"], "boxes": p["items"]})
-		return out
 	var path: String = PANELS.get(station, "")
 	if path == "" or not ResourceLoader.exists(path):
 		return []
@@ -88,40 +61,6 @@ static func help_of(station: String) -> Array:
 	if script == null or not script.has_method("touch_help"):
 		return []
 	return script.call("touch_help")
-
-
-## Helm's pages (HelmHelp's pictures: callouts whose text is "Name: what", or an intent's
-## label).
-static func _helm() -> Array:
-	var help: HelmHelp = HelmHelp.new()
-	var out: Array = []
-	for pic: Array in help.pictures:
-		var boxes: Array = []
-		for c: Array in pic[1]:
-			# (the picture draws the page tabs itself)
-			if c[1] != "tabs":
-				boxes.append(_split(c[2], HelmHelp.text(c[1])))
-		out.append({"page": pic[0], "boxes": boxes})
-	help.free()
-	return out
-
-
-## A box from "Name: what it does" (or a bare name).
-static func _split(box: Rect2, text: String) -> Array:
-	var parts: PackedStringArray = text.split(": ", true, 1)
-	return [box, parts[0], parts[1] if parts.size() > 1 else parts[0]]
-
-
-## Weapons' pages (WeaponsTouchHelp.PAGES: title, then boxes whose text is "Name: what").
-static func _weapons() -> Array:
-	var out: Array = []
-	for i: int in WeaponsTouchHelp.PAGES.size():
-		var page: Array = WeaponsTouchHelp.PAGES[i]
-		var boxes: Array = []
-		for c: Array in WeaponsTouchHelp.callouts(i):
-			boxes.append(_split(c[0], str(c[1])))
-		out.append({"page": TouchText.of(page[0], page[1]), "boxes": boxes})
-	return out
 
 
 func _init() -> void:

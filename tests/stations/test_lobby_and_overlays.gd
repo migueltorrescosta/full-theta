@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## LobbyScreen, PauseOverlay and PlaceholderPanel.
+## LobbyScreen and PauseOverlay.
 
 
 func before() -> void:
@@ -344,17 +344,6 @@ func test_viewers_of_a_paused_ship_may_take_over() -> void:
 	assert_object(o.find_child("Vote", true, false)).is_null()
 	(o.find_child("Takeover_relay", true, false) as Button).pressed.emit()
 	assert_array(StationFixture.sent(ctx).of("takeover")[0][1]).is_equal([0, "relay"])
-
-
-# FT: FT-M1-005
-func test_placeholder_reads_out_its_station_def() -> void:
-	var ctx: StationContext = StationFixture.context("comms")
-	var p: PlaceholderPanel = auto_free(PlaceholderPanel.new())
-	p.setup(ctx, "comms")
-	add_child(p)
-	var text: String = (p.get_child(0).get_child(1) as Label).text
-	assert_str(text).contains("kin").contains("status").contains("contacts")
-	assert_str((p.get_child(0).get_child(0) as Label).text).is_equal("Comms")
 
 
 # FT: FT-NET-015

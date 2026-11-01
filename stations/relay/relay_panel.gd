@@ -122,7 +122,7 @@ func full_screen() -> bool:
 func _wants_phone() -> bool:
 	if docked or not is_inside_tree() or _screen_panels() > 2:
 		return false
-	return LayoutMode.is_phone(RelayPhone.form_of_panel(self))
+	return LayoutMode.is_phone(PhoneFrame.form_of_panel(self))
 
 
 ## How many panels the station screen holding this panel has (1 when none): the dev
@@ -137,7 +137,7 @@ func _screen_panels() -> int:
 ## Builds, rebuilds (a turned phone) or drops the phone arrangement.
 func _arrange() -> void:
 	var want: bool = _wants_phone()
-	var form: LayoutMode.Form = RelayPhone.form_of_panel(self) if want else LayoutMode.Form.DESKTOP
+	var form: LayoutMode.Form = PhoneFrame.form_of_panel(self) if want else LayoutMode.Form.DESKTOP
 	if want and phone != null and phone.form == form:
 		return
 	if not want and phone == null:
@@ -672,3 +672,38 @@ func _preview_label() -> String:
 		if ctx.crew.mark_in_slot(k).is_empty():
 			return CrewState.MARK_NAMES[k]
 	return ""
+
+
+## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
+## the rails as RelayPhone lays them out (left x 47, right x 629, 168 wide, rows from y 64 on
+## a 56 px pitch).
+static func touch_help() -> Array:
+	var t: Callable = TouchText.t
+	var left: Callable = func(row: int) -> Rect2: return Rect2(47, 64 + 56 * row, 168, 48)
+	var right: Callable = func(row: int) -> Rect2: return Rect2(629, 64 + 56 * row, 168, 48)
+	var map: Array = [
+		[left.call(0), t.call("relay.launch"), t.call("help.relay_launch")],
+		[left.call(1), t.call("relay.hazard"), t.call("intent.hazard_add")],
+		[left.call(2), t.call("intent.route"), t.call("intent.route")],
+		[left.call(3), t.call("relay.lanes_off"), t.call("intent.flag_lanes")],
+		[right.call(0), t.call("relay.accept"), t.call("relay.inbox")],
+		[right.call(1), t.call("relay.decline"), t.call("relay.inbox")],
+		[right.call(2), t.call("relay.send_to"), t.call("intent.mark_send")],
+		[right.call(3), t.call("relay.centre"), t.call("intent.map_centre")],
+		[Rect2(223, 120, 398, 230), t.call("page.map"), t.call("help.relay_map")],
+	]
+	var marks: Array = [
+		[Rect2(47, 64, 168, 230), t.call("relay.marks"), t.call("intent.select")],
+		[right.call(0), t.call("relay.rename"), t.call("intent.mark_rename")],
+		[right.call(1), t.call("relay.delete"), t.call("intent.mark_delete")],
+		[right.call(2), t.call("relay.attach"), t.call("intent.mark_attach")],
+	]
+	var log: Array = [
+		[Rect2(47, 64, 300, 280), t.call("relay.log"), t.call("relay.inbox")],
+		[Rect2(629, 64, 168, 272), t.call("view.forward") + " …", t.call("intent.main_view_1")],
+	]
+	return [
+		{"page": t.call("page.map"), "boxes": map},
+		{"page": t.call("relay.marks"), "boxes": marks},
+		{"page": t.call("relay.log"), "boxes": log},
+	]

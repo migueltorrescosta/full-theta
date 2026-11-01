@@ -53,12 +53,7 @@ var _last_ms: Dictionary = {}
 
 ## Creates the Sfx bus when the layout lacks it (sent to Master, never to Voice or Music).
 static func ensure_bus() -> void:
-	if AudioServer.get_bus_index(BUS) >= 0:
-		return
-	AudioServer.add_bus()
-	var index: int = AudioServer.bus_count - 1
-	AudioServer.set_bus_name(index, BUS)
-	AudioServer.set_bus_send(index, "Master")
+	SoundPlayers.ensure_bus(BUS)
 
 
 ## The clip a sim event makes for a screen holding `stations`, or &"" for none.
@@ -81,14 +76,7 @@ static func clip_for(kind: StringName, stations: Array, own: bool) -> StringName
 
 func _ready() -> void:
 	ensure_bus()
-	for c: StringName in CLIPS:
-		var p: AudioStreamPlayer = AudioStreamPlayer.new()
-		p.name = String(c)
-		p.bus = BUS
-		if sounds_dir != "":
-			p.stream = load(sounds_dir.path_join(String(c) + ".ogg")) as AudioStream
-		add_child(p)
-		_players[c] = p
+	_players = SoundPlayers.add_players(self, CLIPS, BUS, sounds_dir, ".ogg")
 
 
 ## Plays `clip` unless it played within its GAP_MS; true when it started.

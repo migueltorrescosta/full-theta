@@ -43,24 +43,12 @@ var _last_ms: Dictionary = {}
 
 ## Creates the Alerts bus when the layout lacks it (sent to Master, never to Voice).
 static func ensure_bus() -> void:
-	if AudioServer.get_bus_index(BUS) >= 0:
-		return
-	AudioServer.add_bus()
-	var index: int = AudioServer.bus_count - 1
-	AudioServer.set_bus_name(index, BUS)
-	AudioServer.set_bus_send(index, "Master")
+	SoundPlayers.ensure_bus(BUS)
 
 
 func _ready() -> void:
 	ensure_bus()
-	for t: StringName in TONES:
-		var p: AudioStreamPlayer = AudioStreamPlayer.new()
-		p.name = String(t)
-		p.bus = BUS
-		if sounds_dir != "":
-			p.stream = load(sounds_dir.path_join(String(t) + ".wav")) as AudioStream
-		add_child(p)
-		_players[t] = p
+	_players = SoundPlayers.add_players(self, TONES, BUS, sounds_dir, ".wav")
 
 
 ## Plays `tone` unless it played within its GAP_MS; true when it started.

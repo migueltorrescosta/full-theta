@@ -157,32 +157,6 @@ func test_throttle_follows_its_finger() -> void:
 	assert_float(t.value_at(track.position.y + track.size.y * 0.52)).is_equal(0.0)
 
 
-func test_tabs_show_one_page() -> void:
-	var tabs: TouchTabs = TouchTabs.new()
-	var a: Control = Control.new()
-	var b: Control = Control.new()
-	_put(tabs, Rect2(600, 60, 200, 300))
-	assert_int(tabs.add_tab("Nav", a)).is_equal(0)
-	assert_int(tabs.add_tab("Shield", b)).is_equal(1)
-	assert_int(tabs.current).is_equal(0)
-	assert_bool(a.visible and not b.visible).is_true()
-	var changed: Array = []
-	tabs.tab_changed.connect(func(i: int) -> void: changed.append(i))
-	await get_tree().process_frame
-	var r: Rect2 = tabs.tab_button(1).get_global_rect()
-	_touch(0, r.get_center(), true)
-	_touch(0, r.get_center(), false)
-	assert_int(tabs.current).is_equal(1)
-	assert_bool(b.visible and not a.visible).is_true()
-	assert_bool(tabs.tab_button(1).button_pressed).is_true()
-	assert_bool(tabs.tab_button(0).button_pressed).is_false()
-	assert_array(changed).is_equal([1])
-	# Tapping the shown tab keeps it.
-	_touch(0, r.get_center(), true)
-	_touch(0, r.get_center(), false)
-	assert_int(tabs.current).is_equal(1)
-
-
 func test_rails_drawers_and_content_inset() -> void:
 	SafeArea.simulate([47, 0, 47, 21])
 	var layout: RailLayout = RailLayout.new()

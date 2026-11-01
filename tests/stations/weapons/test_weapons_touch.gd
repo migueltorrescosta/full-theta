@@ -501,7 +501,7 @@ func test_touch_help_matches_the_layout() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	var p: WeaponsPanel = _panel(s)
 	var t: WeaponsTouch = p.touch()
-	var fire: Array = WeaponsTouchHelp.callouts(WeaponsTouch.Page.FIRE)
+	var fire: Array = WeaponsTouch.touch_help()[WeaponsTouch.Page.FIRE]["boxes"]
 	var real: Array[Control] = [
 		t.mount_button, t.ammo_button, t.guided_button, t.fire_all_button, t.claim_button
 	]
@@ -517,7 +517,7 @@ func test_touch_help_matches_the_layout() -> void:
 		)
 		assert_float(got.end.distance_to(want.end)).override_failure_message(what).is_less(6.0)
 	await _page(s, WeaponsTouch.Page.MOUNTS)
-	var rows: Array = WeaponsTouchHelp.callouts(WeaponsTouch.Page.MOUNTS)
+	var rows: Array = WeaponsTouch.touch_help()[WeaponsTouch.Page.MOUNTS]["boxes"]
 	for i: int in 2:
 		var want: Rect2 = (t.rows[0][i] as Control).get_global_rect()
 		var got: Rect2 = rows[i][0]
@@ -528,6 +528,6 @@ func test_touch_help_matches_the_layout() -> void:
 			. is_less(6.0)
 		)
 		assert_float(got.end.distance_to(want.end)).override_failure_message(what).is_less(6.0)
-	for page: int in WeaponsTouchHelp.PAGES.size():
-		for c: Array in WeaponsTouchHelp.callouts(page):
+	for page: Dictionary in WeaponsTouch.touch_help():
+		for c: Array in page["boxes"]:
 			assert_str(c[1]).is_not_empty()
