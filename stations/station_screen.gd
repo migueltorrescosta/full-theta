@@ -145,6 +145,9 @@ func setup(context: StationContext) -> void:
 	_relayout()
 	for s: String in stations:
 		var p: StationPanel = panel_factory.call(s)
+		if p == null:
+			# (an unknown id: StationRegistry.make has reported it; keep `panels` parallel to `stations`)
+			p = StationPanel.new()
 		p.sheet = sheet
 		p.common_requested.connect(_on_panel_common)
 		p.setup(ctx, s)

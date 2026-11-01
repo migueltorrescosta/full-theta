@@ -227,16 +227,6 @@ func _touch_kit() -> void:
 	drawer.bind_opener(opener)
 	drawer.open()
 	var right: TouchRail = layout.rail(SIDE_RIGHT)
-	var tabs: TouchTabs = TouchTabs.new()
-	var nav: GridContainer = GridContainer.new()
-	nav.columns = 2
-	for t: String in ["Face", "Align", "Dock", "Jump"]:
-		var b: RailButton = RailButton.make(t)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		nav.add_child(b)
-	tabs.add_tab("Nav", nav)
-	tabs.add_tab("Shield", Control.new())
-	right.add(tabs)
 	right.add(FullscreenButton.new())
 	right.add_spacer()
 	var stick: VirtualStick = VirtualStick.new()

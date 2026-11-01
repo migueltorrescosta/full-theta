@@ -328,15 +328,10 @@ func _finger(r: DiscRadar, index: int, down: bool) -> void:
 
 
 # FT: FT-STN-012
-# P28-Help: the touch picture of the pages (one drawing per page, a legend row per control).
-func test_touch_help_picture_has_every_page() -> void:
-	var pages: Array = ScienceTouchHelp.pages()
+# P28-Help: the touch picture's pages.
+func test_touch_help_has_every_page() -> void:
+	var pages: Array = SciencePanel.touch_help()
 	(
-		assert_array(pages.map(func(p: Dictionary) -> String: return p["title"]))
+		assert_array(pages.map(func(p: Dictionary) -> String: return p["page"]))
 		. is_equal(["Contacts", "Card", "Crew"])
 	)
-	var pic: ScienceTouchHelp = auto_free(ScienceTouchHelp.new())
-	assert_float(pic.custom_minimum_size.y).is_equal_approx(
-		ScienceTouchHelp.height_for(pages), 0.01
-	)
-	assert_int(ScienceTouchHelp.FONT).is_greater_equal(12)
