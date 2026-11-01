@@ -38,14 +38,6 @@ func meta() -> ScenarioMeta:
 	m.id = &"enemy_wave"
 	m.tags = PackedStringArray(["hostile"])
 	m.threat_cost = 3
-	m.duration_s = MAX_S
-	m.stations = PackedStringArray(["helm", "weapons", "engineering", "comms"])
-	m.pairs = PackedStringArray(["p9"])
-	m.branches = [
-		{"id": "destroyed", "outcome": "won"},
-		{"id": "surrendered", "outcome": "won"},
-		{"id": "timeout", "outcome": "won"},
-	]
 	m.comms_beats = PackedStringArray(["hail", "taunt", "surrender"])
 	return m
 

@@ -6,9 +6,6 @@ extends Resource
 ## the budget numbers and the pacing are placeholders for #13 to tune. Read-only at
 ## runtime (FT-ARC-020). Units are SI (FT-DAT-013).
 
-## The one scenario that costs nothing (the Shakedown, FT-MIS-039).
-const TRAINING: StringName = &"shakedown"
-
 @export var id: StringName = &""
 ## Threat budget per crewed ship by preset name (threat-cost points, FT-MIS-029).
 @export var budget_per_ship: Dictionary[StringName, int] = {}
@@ -20,8 +17,6 @@ const TRAINING: StringName = &"shakedown"
 @export var gap_s: float = 0.0
 ## An opened encounter starts this long after opening even if the crew has not arrived (s, D231).
 @export var arrival_timeout_s: float = 0.0
-## Scenario id -> threat cost override, for #13's tuning (points).
-@export var costs: Dictionary[StringName, int] = {}
 ## Enemy strength by preset name: the multiplier a hostile scenario applies to its enemy count
 ## (enemy_wave, rescue), rounded, at least 1 enemy. A preset missing here counts 1.0
 ## (Q14, owner 2026-10-26; PROVISIONAL numbers for #13).
@@ -50,11 +45,6 @@ func validate() -> Array[String]:
 	DefCheck.positive(errors, "arrival_timeout_s", arrival_timeout_s)
 	if max_open_sites < 0:
 		errors.append("max_open_sites must be at least 0, got %d" % max_open_sites)
-	for scenario: StringName in costs:
-		# Every scenario costs at least 1; only the training scenario is free (Q14).
-		var least: int = 0 if scenario == TRAINING else 1
-		if costs[scenario] < least:
-			errors.append("costs[%s] must be at least %d" % [scenario, least])
 	DefCheck.non_negative(errors, "fleet_strength_per_ship", fleet_strength_per_ship)
 	DefCheck.non_negative(errors, "raider_wave_every_s", raider_wave_every_s)
 	DefCheck.non_negative(errors, "raider_wave_growth", raider_wave_growth)

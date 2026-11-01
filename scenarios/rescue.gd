@@ -56,15 +56,6 @@ func meta() -> ScenarioMeta:
 	m.id = &"rescue"
 	m.tags = PackedStringArray(["hostile", "rescue"])
 	m.threat_cost = 2
-	m.duration_s = MAX_S
-	m.stations = PackedStringArray(["helm", "weapons", "engineering", "comms"])
-	m.pairs = PackedStringArray([])
-	m.branches = [
-		{"id": "escort_done", "outcome": "won"},
-		{"id": "escort_failed", "outcome": "won"},
-		{"id": "salvage_done", "outcome": "won"},
-		{"id": "ignored", "outcome": "won"},
-	]
 	m.comms_beats = PackedStringArray(["distress"])
 	return m
 

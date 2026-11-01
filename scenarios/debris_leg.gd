@@ -34,12 +34,6 @@ func meta() -> ScenarioMeta:
 	m.id = &"debris_leg"
 	m.tags = PackedStringArray(["travel"])
 	m.threat_cost = 1
-	m.duration_s = MAX_S
-	m.stations = PackedStringArray(["helm", "weapons"])
-	m.branches = [
-		{"id": "crossed", "outcome": "won"},
-		{"id": "timeout", "outcome": "won"},
-	]
 	m.travel_hazard = &"debris"
 	return m
 
