@@ -21,7 +21,7 @@ Timings were taken on fugaku with other strands running (load average 5-11), pin
 |---|---|---|
 | Panel scripts load and construct: helm / weapons / engineering / science / relay / comms | 138 / 73 / 54 / 74 / 78 / 56 (about 470) | about 60-90 each (about 350; the lobby preloads them in a session) |
 | `StationScreen.setup`, all six panels | 513-622 | 349-541 |
-| First frame (the shared ship model, built whole) | 697-988 | 79-86 (built in slices after the frame, D298) |
+| First frame (the shared ship model, built whole) | 697-988 | 79-86 (built in slices after the frame, D298; baked ships replaced this, D311) |
 | `ControlsPane.build` (all six stations, eager) | 8345-8855 | 73-79 (diagrams built when shown, cached, D294) |
 | Keyboard diagram shown, two frames | 25-48 (already built) | 78-92 (built here) |
 | **Screen total (setup + frame 1)** | **1210-1328** | **424-624** |
@@ -45,7 +45,7 @@ The range in "before" is two runs under different load. The after set has 18 mor
 
 ## Result
 
-The fix was already in the branch's base: D294 (lazy, cached controls diagrams with an incremental layout, never built on phones) and D298 (the shared ship model fills in after the first frame). No further code change was needed for the dev screen, which builds in 0.4-0.6 s headless here (criterion: under 2 s). The remaining cost is the six panels' script loading (about 0.35 s), which the lobby already warms in a session (D296).
+The fix was already in the branch's base: D294 (lazy, cached controls diagrams with an incremental layout, never built on phones) and D298 (the shared ship model filled in after the first frame; D311 replaced that with baked ships that load in one call). No further code change was needed for the dev screen, which builds in 0.4-0.6 s headless here (criterion: under 2 s). The remaining cost is the six panels' script loading (about 0.35 s), which the lobby already warms in a session (D296).
 
 This strand changes only: the profiler, this note, and `test_outcome_card.gd`'s now-stale "10-14 s" comment with its wait lowered from 30 s to 15 s (no assertion touched).
 

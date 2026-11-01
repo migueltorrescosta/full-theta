@@ -58,7 +58,7 @@ So `sim/` never names the director or scenarios, the director and scenarios see 
 - **FT-ARC-005** Clients shall not simulate gameplay; they shall send commands and render received state and events. (v0.3 §3, D70)
 - **FT-ARC-006** The simulation shall step at a fixed 60 Hz driven by its own accumulator, not by engine physics callbacks. (D70)
 - **FT-ARC-007** The simulation shall use a custom 6DOF integrator and shall not use Godot physics bodies. (D70)
-- **FT-ARC-008** Every random draw in the simulation shall come from a seeded RNG, so a seed plus a command log, which records each crew or server command (for example a ship reset), accepted or rejected, with the tick it was applied on and its result, in application order, reproduces a run on the same build and platform. (D70, plan review TECH-10, D122)
+- **FT-ARC-008** Every random draw in the simulation shall come from a seeded RNG, so a seed plus a command log, which records each crew or server command (for example a ship reset), accepted or rejected, with the tick it was applied on and its result, in application order, reproduces a run on the same build and platform. (D70, plan review TECH-10, D122, D253)
 - **FT-ARC-009** Simulation iteration order shall be stable (entities ordered by id). (D70)
 - **FT-ARC-010** Code under `sim/` and `director/` shall not extend Node, access the SceneTree or perform I/O, enforced by a lint gate that resolves `class_name` declarations to their folders and checks the §2.2 dependency rules. (D70, D103, plan review TECH-6)
 - **FT-ARC-011** Station code shall reach simulation state only through `net/`, including on the host machine. (D70)
@@ -66,13 +66,13 @@ So `sim/` never names the director or scenarios, the director and scenarios see 
 - **FT-ARC-013** Each faction shall hold its own contact knowledge (detection, scans, tracks). (D21)
 - **FT-ARC-014** Every station, including those without a finished UI, shall have a station definition (id, visible state fields, accepted commands) from milestone 1. (v0.3 §9)
 - **FT-ARC-015** Clients shall not use client-side prediction until a measured need is approved. (D70)
-- **FT-ARC-016** The director and scenarios shall act only through the public Scenario API, which passes them only ids and value copies and turns every write into a queued sim command, so they hold no write access to combat stats or physics. (v0.3 §5, D64, plan review TECH-7)
+- **FT-ARC-016** The director and scenarios shall act only through the public Scenario API, which passes them only ids and value copies and turns every write into a queued sim command, so they hold no write access to combat stats or physics. (v0.3 §5, D64, plan review TECH-7, D251)
 - **FT-ARC-017** macOS builds shall be produced, with the app and its bundled Piper helper ad-hoc signed, Windows unsigned, the release notes giving the "Open anyway" steps, and notarisation deferred. (D9, D313, plan review TECH-4)
 - **FT-ARC-018** Allied ships (every ship in a co-op session, every ship of one PvP team) shall belong to one faction sharing contact knowledge, callsigns and reputation; marks and pings stay per ship. (D21, D78, D82)
 - **FT-ARC-019** Runtime Piper synthesis shall run in the server process on the host, never on clients; the session's closed set (ship names, callsigns, NPC names) shall be synthesised and cached at Start, numbers shall use prerendered fragments, and runtime synthesis shall serve only free text. (D85, D101)
 - **FT-ARC-020** Definitions shall be read-only at runtime: mutable per-ship state is copied from them, and `sim/` receives them already loaded and never calls `load()`, `preload()` or `ResourceLoader`. (plan review TECH-6)
 - **FT-ARC-021** Pure helpers needed by both `sim/` and clients (spatial callouts, lead intercept, units) shall live in `shared/`, which depends on no other module and passes the `sim/` purity lint. (plan review TECH-6)
-- **FT-ARC-022** Each desktop release package shall contain the web export built from the same commit, and Piper with the approved voices and their licence files. (plan review TECH-4)
+- **FT-ARC-022** Each desktop release package shall contain the web export built from the same commit, and Piper with the approved voices and their licence files. (plan review TECH-4, D140)
 
 ## 2.4 Risks and spikes
 
@@ -91,7 +91,7 @@ From tech.md §9, updated for the decisions. Each spike is time-boxed and has a 
 | R8 | Runtime Piper latency on the host | S7b: one persistent Piper process per voice, fed over a pipe off the sim thread, clip streamed to one client, measured per line under combined host load (D85, D101); a standalone Piper runs on Windows | Line audible < 1 s after the event |
 | R9 | Information leaks across stations or factions | L3 tests from the first network PR | Snapshot schema tests pass |
 | R10 | LAN discovery blocked; Wi-Fi airtime | Part of S4 on the owner's network; in #4, snapshot age with 4–8 real devices on the owner's Wi-Fi | Join works by at least one route; p99 snapshot age < 150 ms |
-| R11 | Art without an artist | S8: procedural/CC0 ship via S2, toon in v1, semi-realistic in v2 | Owner approves a style (approved: S8 v2 worn with baked AO, D107) |
+| R11 | Art without an artist | S8: procedural/CC0 ship via S2, semi-realistic PBR art (D107) | Owner approves a style (approved: S8 v2 worn with baked AO, D107) |
 | R12 | Licence contamination (EE GPL-2.0-only, proprietary EE packs) | Provenance policy; review check | — |
 | R13 | 15 pair tests brittle | Pair harness built with P1 in milestone 1 | "co-op beats solo" in < 30 lines |
 | R14 | macOS untested | Owner step per release | — |

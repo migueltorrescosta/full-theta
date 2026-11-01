@@ -88,3 +88,24 @@ def test_check_fails_on_manual_id_without_link(tmp_path):
     assert traceability.run(root, check=True) == [
         "docs/traceability-manual.md: FT-AAA-005 has no issue link"
     ]
+
+
+# FT: FT-TST-015
+def test_open_questions_lists_unsettled_provisional_decisions(tmp_path):
+    root = fixture(tmp_path)
+    (root / "docs/decisions.md").write_text(
+        "- D1 Voices (owner; list provisional until #4): a.\n"
+        "- D2 Numbers (owner; ducking provisional): b.\n"
+        "- D3 Voices settled (owner, settles D1's provisional list): c.\n"
+        "- D4 Plain (owner): d.\n"
+    )
+    (root / "docs/spec/14-open-questions.md").write_text("")
+    assert traceability.run(root, check=False) == []
+    text = (root / "docs/spec/14-open-questions.md").read_text()
+    assert "- D2: Numbers (ducking provisional)" in text
+    assert "D1" not in text and "D3" not in text and "D4" not in text
+    assert traceability.run(root, check=True) == []
+    (root / "docs/decisions.md").write_text("- D5 New (owner, provisional): e.\n")
+    assert traceability.run(root, check=True) == [
+        "docs/spec/14-open-questions.md is stale: run tools/traceability.py"
+    ]
