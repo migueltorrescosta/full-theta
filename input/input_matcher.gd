@@ -23,6 +23,11 @@ extends RefCounted
 ##   waits for the timeout when a sequence starting with B is active.
 ## Analog: stick dead zone 0.2, trigger 0.1, rescaled to 0..1 beyond it (S5). The mouse
 ## virtual stick (MouseStick, S5) feeds "MouseX"/"MouseY".
+##
+## Touch (#28): on-screen controls have no bindings; they name the intent itself through
+## touch_press, touch_hold and touch_axis (TouchIntents wires the widgets), so a tap or a
+## drag yields the same intent events and axis values as a key or a stick. Their events
+## carry device IntentTable.TOUCH and reach the focused station (and the screen).
 
 const LONG_MS: int = 400
 const SEQUENCE_MS: int = 700
@@ -99,6 +104,8 @@ var _seq: Dictionary = {}
 var _holding: Dictionary = {}
 ## Hold intents toggled on (FT-STN-014): id -> device.
 var _toggled: Dictionary = {}
+## Touch axis values: id -> -1..1 (touch_axis).
+var _touch_axes: Dictionary = {}
 ## Physical key that produced the "?" currently down.
 var _question_key: String = ""
 ## Events waiting for the next feed() or update() (released by set_context).
@@ -198,9 +205,58 @@ func axis(id: String) -> float:
 				var v: float = _axis_value(e, dev)
 				if absf(v) > absf(best):
 					best = v
+	var t: float = float(_touch_axes.get(id, 0.0))
+	if absf(t) > absf(best) and _touch_active(id):
+		best = t
 	if invert_pitch and r.get("pitch", false):
 		best = -best
 	return clampf(best, -1.0, 1.0)
+
+
+## A touch control's axis value for `id` (-1..1, 0 to let go), read by axis() like a
+## stick's while the intent is active.
+func touch_axis(id: String, value: float) -> void:
+	if is_zero_approx(value):
+		_touch_axes.erase(id)
+	else:
+		_touch_axes[id] = clampf(value, -1.0, 1.0)
+
+
+## A tap on a touch control for `id`: a press intent fires once, a hold pulses (pressed then
+## released), or flips when the player made it a toggle (FT-STN-014). [] when the intent
+## isn't active.
+func touch_press(id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = _take_queue()
+	if _touch_active(id):
+		_tap({"id": id, "kind": IntentTable.row(id)["kind"]}, IntentTable.TOUCH, out)
+	return out
+
+
+## A touch control for the hold intent `id` went down or up: held while down, or a flip on
+## the press when it is a toggle (FT-STN-014). A press intent fires on the way down.
+func touch_hold(id: String, down: bool) -> Array[Dictionary]:
+	var out: Array[Dictionary] = _take_queue()
+	var input: String = "t:" + id
+	if not down:
+		if _holding.has(id) and input in _holding[id]["inputs"]:
+			_holding.erase(id)
+			out.append(_event(id, IntentTable.TOUCH, false))
+		return out
+	if _touch_active(id):
+		var e: Dictionary = {"id": id, "kind": IntentTable.row(id)["kind"], "main": input}
+		e["mods"] = [] as Array[String]
+		_fire(e, IntentTable.TOUCH, out)
+	return out
+
+
+## True when a touch control may drive `id` now: a known intent with a handler on this
+## screen (IntentTable.target for the touch device) and not left out by restrict().
+func _touch_active(id: String) -> bool:
+	if not IntentTable.has(id):
+		return false
+	if not _only.is_empty() and id not in _only:
+		return false
+	return IntentTable.target(id, IntentTable.TOUCH, _focused, _stations) != ""
 
 
 ## A pad stick's raw position ("LS", "RS"; x right, y down), for radial menus read
@@ -231,6 +287,7 @@ func release_all() -> Array[Dictionary]:
 	_spent.clear()
 	_seq = {}
 	_question_key = ""
+	_touch_axes.clear()
 	mouse_stick.value = Vector2.ZERO
 	return out
 

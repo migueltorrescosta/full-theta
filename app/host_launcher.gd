@@ -79,6 +79,8 @@ static func server_args(
 		args.append("--dev-all-stations")
 	if options.encounter != "":
 		args.append_array(["--encounter", options.encounter])
+	if options.solo != "":
+		args.append_array(["--solo", options.solo])
 	args.append_array(options.extra_args)
 	return args
 

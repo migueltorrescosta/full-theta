@@ -9,9 +9,10 @@ packages were made from). For each package the inspection checks:
 - its file list exactly: the game and web export as exported, Piper as the
   pinned upstream archive has it, exactly the release voices, the licence
   files, and nothing else (no member outside the package's top folder);
-- the web export and the game pack carry build_info.json of this commit, the
-  data files the game reads (DATA_GLOBS), and every release language's
-  prerendered clips (client pack in both, host pack in the game pack only);
+- the web export and the game pack carry build_info.json of this commit and the
+  data files the game reads (DATA_GLOBS); the game pack carries every release
+  language's prerendered clips (client and host packs), the web pack none: the web
+  export has a voice-<lang>.pack per release language instead (voice_pack.py, D294);
 - the patched web shell and index.js (D108), voice configs the bundled Piper
   accepts (D144), the macOS helper's rpath (D140);
 - the GPL-3.0 text, SOURCE.md naming the Piper and eSpeak NG versions, BUILD.json.
@@ -35,11 +36,12 @@ sys.path.insert(0, str(HERE))
 import fetch  # noqa: E402
 import package  # noqa: E402
 import pck  # noqa: E402
+import voice_pack  # noqa: E402
 import web_patch  # noqa: E402
 
 # Prerendered clips per language (D150-D154, tools/release/prerender.sh): the
-# client pack goes in every pack, the host pack in desktop packs only; each
-# language folder's index.json lists its files.
+# client and host packs go in desktop packs only, the client pack also into the web
+# export's voice packs (D294); each language folder's index.json lists its files.
 PRERENDER_DIR = "audio/prerendered"
 PRERENDER_HOST_DIR = "audio/prerendered_host"
 # Data files the game reads with FileAccess, which the export include filter
@@ -121,6 +123,8 @@ class Inspector:
             f"{v}/{f}" for v in self.voices for f in (f"{v}.onnx", f"{v}.onnx.json", "MODEL_CARD")
         }
         self.licence_files = {*self.manifest["licences"], "VOICES.md"}
+        # Client clip files per language, from the last game pack inspected.
+        self.client_clips: dict[str, set[str]] = {}
 
     def check(self, ok: bool, where: str, what: str) -> None:
         if not ok:
@@ -162,12 +166,17 @@ class Inspector:
             for f in sorted(package.ROOT.glob(pattern)):
                 rel = f.relative_to(package.ROOT).as_posix()
                 self.check(rel in p.files, where, f"no {rel} in the pack")
-        self.clips(p, where, PRERENDER_DIR)
         if desktop:
+            self.clips(p, where, PRERENDER_DIR)
             self.clips(p, where, PRERENDER_HOST_DIR)
+            for lang in self.languages:
+                index = f"{PRERENDER_DIR}/{lang}/index.json"
+                if index in p.files:
+                    listed = self.json(where, p.read(index), index).get("clips")
+                    self.client_clips[lang] = set(listed) if isinstance(listed, list) else set()
         else:
-            leaked = [f for f in p.files if f.startswith(f"{PRERENDER_HOST_DIR}/")]
-            self.check(not leaked, where, f"host pack in a web pack: {leaked[:3]}")
+            leaked = [f for f in p.files if f.startswith(("audio/prerendered/", f"{PRERENDER_HOST_DIR}/"))]
+            self.check(not leaked, where, f"prerendered clips in a web pack: {leaked[:3]}")
 
     def clips(self, p: "pck.Pack", where: str, folder: str) -> None:
         for lang in self.languages:
@@ -199,11 +208,29 @@ class Inspector:
         self.check(len(packs) == 1, where, f"expected one hashed index.<hash>.pck, found {packs}")
         if packs and a.has(f"{rel}/{packs[0]}"):
             self.pack(f"{where} web pack", a.read(f"{rel}/{packs[0]}"), desktop=False)
+        self.voice_packs(a, rel, where)
         self.check(
             f'"executable":"{packs[0][:-4]}"' in html if packs else False,
             where,
             "index.html does not name the hashed files",
         )
+
+    def voice_packs(self, a: Archive, rel: str, where: str) -> None:
+        """A voice pack per release language, holding the game pack's client clips."""
+        for lang in self.languages:
+            name = f"{rel}/{voice_pack.name(lang)}"
+            if not a.has(name):
+                self.check(False, where, f"no {name}")
+                continue
+            try:
+                got, clips = voice_pack.read(a.read(name))
+            except ValueError as e:
+                self.check(False, where, f"{name}: {e}")
+                continue
+            self.check(got == lang, where, f"{name} is for {got}")
+            self.check(all(c[:4] == b"OggS" for c in clips.values()), where, f"{name} holds non-Ogg clips")
+            expected = {c.removesuffix(".ogg") for c in self.client_clips.get(lang, set())}
+            self.same(where, name, set(clips), expected)
 
     def voices_in(self, a: Archive, rel: str, where: str) -> None:
         self.same(where, f"{rel}/", a.files_under(f"{rel}/"), self.voice_files)

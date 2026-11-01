@@ -12,6 +12,14 @@ signal share_pressed(feature: StringName)
 const BUTTON_H: float = 44.0
 ## A fine pointer needs less (a short window).
 const SHORT_H: float = 36.0
+const GAP: int = 6
+
+## The space (px) between buttons; a phone's is UiTheme.TOUCH_GAP (D274).
+var gap: int = GAP:
+	set(value):
+		gap = value
+		add_theme_constant_override("h_separation", value)
+		add_theme_constant_override("v_separation", value)
 
 ## The button height; a fine pointer's short window uses SHORT_H.
 var button_h: float = BUTTON_H:
@@ -33,8 +41,7 @@ var _buttons: Dictionary[StringName, Button] = {}
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_theme_constant_override("h_separation", 6)
-	add_theme_constant_override("v_separation", 6)
+	gap = GAP
 
 
 ## The shortcuts this screen's stations may share: toggle ids in file order.

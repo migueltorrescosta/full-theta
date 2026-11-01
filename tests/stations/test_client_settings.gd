@@ -6,6 +6,12 @@ const PATH: String = "user://test_client_settings.cfg"
 
 func before() -> void:
 	I18n.apply("en")
+	# The Settings screen's Rebind keys tab: a phone (the headless window) has none.
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+
+
+func after() -> void:
+	LayoutMode.forced = -1
 
 
 func after_test() -> void:
@@ -218,3 +224,20 @@ func test_menu_and_decline_stay_bound() -> void:
 	s._input(_k(KEY_ESCAPE, true))
 	assert_bool(s.visible).is_false()
 	assert_array(closed).is_equal([true])
+
+
+# FT: FT-STN-005
+# The settings' Full screen button shows its whole label (a rail button trims to "Full", #28).
+func test_fullscreen_button_keeps_its_label() -> void:
+	FullscreenButton.forced = 1
+	var screen: SettingsScreen = _capture_screen()
+	await get_tree().process_frame
+	var b: FullscreenButton = screen.find_child("Fullscreen", true, false)
+	var font: Font = b.get_theme_font("font")
+	var w: float = (
+		font
+		. get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, b.get_theme_font_size("font_size"))
+		. x
+	)
+	assert_float(b.get_combined_minimum_size().x).is_greater(w)
+	FullscreenButton.forced = -1

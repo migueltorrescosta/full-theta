@@ -54,10 +54,10 @@ func test_grid_cells_show_name_role_and_load_border() -> void:
 		assert_str((cell.find_child("Name", true, false) as Label).text).is_equal(
 			tr("station." + id)
 		)
-		# One line: the role's first sentence (D257).
-		assert_str((cell.find_child("Role", true, false) as Label).text).is_equal(
-			LobbyScreen._first_sentence(tr("role." + id))
-		)
+		# The whole role summary, wrapped to two lines (P28-Lobby).
+		var role: Label = cell.find_child("Role", true, false) as Label
+		assert_str(role.text).is_equal(tr("role." + id))
+		assert_int(role.max_lines_visible).is_equal(LobbyScreen.ROLE_LINES)
 		assert_bool(cell.find_child("Take", true, false) == null).is_true()
 	assert_bool(_cell(l, "captain") is Button).is_true()
 	assert_bool(_cell(l, "viewer").button_pressed).is_true()
@@ -74,7 +74,8 @@ func test_cell_tap_takes_and_leaves_a_seat_in_a_compact_cell() -> void:
 	var cell: Button = _cell(l, "science")
 	await get_tree().process_frame
 	assert_float(cell.custom_minimum_size.y).is_greater_equal(float(UiTheme.TOUCH_MIN))
-	assert_float(cell.custom_minimum_size.y).is_less(80.0)
+	# Compact: the name and two lines of role text (16 px text here, outside the theme).
+	assert_float(cell.custom_minimum_size.y).is_less_equal(80.0)
 	assert_str((_cell(l, "relay").find_child("Crew", true, false) as Label).text).is_equal("Ana")
 	cell.pressed.emit()
 	assert_array(_sent_picks(l)[-1][1]).is_equal([0, "science"])

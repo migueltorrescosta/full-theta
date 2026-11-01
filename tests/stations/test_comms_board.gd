@@ -21,11 +21,14 @@ func _screen(entry: String = "comms", code: String = "easy") -> StationScreen:
 	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
 	ctx.crew.toggles = DataToggles.parse(code)
 	CommsFixture.install(ctx)
+	# A desktop-sized viewport: a headless window is phone-sized, and a phone shows one
+	# column per page (#28 follow-up).
+	var vp: SubViewport = auto_free(SubViewport.new())
+	vp.size = Vector2i(1280, 720)
+	add_child(vp)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
-	add_child(s)
-	s.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	s.size = Vector2(1280, 720)
+	vp.add_child(s)
 	await get_tree().process_frame
 	await get_tree().process_frame
 	return s

@@ -5,15 +5,26 @@ extends Control
 ## overcharge and build heat), the reactor cap, the boost, and the shields: strength,
 ## power (the shield column's pips), focus tightness (click a step) and a small ring
 ## mirroring Helm's focus. `compact` is the docked view: the columns and the cap only.
+## On a phone (#28, D274) a pip box (22 px) and a tightness step are too small to tap: a
+## tap anywhere in a column selects it, and the rail's Power +/- and Tighter/Wider set the
+## values; each column's tap area (a control with the `tap` meta) keeps 8 px from the next.
 
 const PAD: float = 16.0
 const GAP: float = 4.0
+## The board's height on a phone's Power page (#28 follow-up, design 2.3): the columns, the
+## reactor and the shields without a scroll; no title (the tab names it), no number keys and
+## no legend.
+const PHONE_H: float = 228.0
+## On a phone the focus steps start after their label.
+const FOCUS_LABEL_W: float = 56.0
 
 var panel: EngineeringPanel
 var compact: bool = false:
 	set(v):
 		compact = v
 		queue_redraw()
+
+var _taps: Array[Control] = []
 
 
 func _init() -> void:
@@ -69,7 +80,7 @@ func _gui_input(event: InputEvent) -> void:
 		return
 	if panel.ship_def == null or panel.docked:
 		return
-	var pip: Array = pip_at(mb.position)
+	var pip: Array = [] if phone() else pip_at(mb.position)
 	if not pip.is_empty():
 		panel.select(pip[0])
 		var n: int = pip[1] + 1
@@ -82,7 +93,7 @@ func _gui_input(event: InputEvent) -> void:
 		panel.select(col)
 		accept_event()
 		return
-	var t: float = tightness_at(mb.position)
+	var t: float = -1.0 if phone() else tightness_at(mb.position)
 	if t >= 0.0:
 		panel.set_tightness(t)
 		accept_event()
@@ -94,7 +105,8 @@ func _draw() -> void:
 		return
 	var font: Font = get_theme_default_font()
 	var fs: int = get_theme_default_font_size() - (4 if compact else 0)
-	if not compact:
+	var lean: bool = phone_layout()
+	if not compact and not lean:
 		_text(Vector2(PAD, 26), tr("eng.power"), "accent", fs)
 	var cols: Array[int] = columns()
 	var power: PowerDef = panel.ship_def.power
@@ -104,7 +116,8 @@ func _draw() -> void:
 		var pips: int = panel.pips_of(i)
 		if i == panel.selected and not compact:
 			var r: Rect2 = _pip_rect(k, power.max_pips_per_subsystem - 1)
-			r = r.merge(_pip_rect(k, 0)).grow(GAP + 2.0)
+			# (abs: a board squeezed to nothing gives pips of negative size)
+			r = r.abs().merge(_pip_rect(k, 0).abs()).grow(GAP + 2.0)
 			draw_rect(r, Palette.color("selected"), false, 1.5)
 		for j: int in power.max_pips_per_subsystem:
 			var over: bool = j >= sd.nominal_pips
@@ -131,7 +144,7 @@ func _draw() -> void:
 		var w: float = font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		var cx: float = _pip_rect(k, 0).get_center().x
 		_text(Vector2(cx - w / 2.0, _labels_y()), label, "text", fs)
-		if not compact:
+		if not compact and not lean:
 			# The number key that selects it.
 			_text(Vector2(cx - 4.0, _top() - 8.0), str(i + 1), "text_dim", fs - 4)
 		# Health under the label, as a thin bar (FT-ENG-001's colours).
@@ -141,13 +154,51 @@ func _draw() -> void:
 		draw_rect(hb, EngineeringCutaway._health_color(panel.health_frac(i)))
 	_draw_cap(fs)
 	if not compact:
-		_draw_legend(fs)
+		if not lean:
+			_draw_legend(fs)
 		_draw_shields(fs)
+	_sync_taps()
+
+
+## True on a phone, where only whole columns take taps.
+func phone() -> bool:
+	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+
+
+## The phone's lean Power page (not docked): PHONE_H tall, no title, keys or legend.
+func phone_layout() -> bool:
+	return phone() and not compact
+
+
+## Column k's tap area on a phone: the column less half a gap on each side.
+func column_tap_rect(k: int) -> Rect2:
+	var cw: float = _col_width(columns().size())
+	var top: float = _top() - GAP
+	var half: float = UiTheme.TOUCH_GAP / 2.0
+	return Rect2(PAD + k * cw + half, top, cw - 2.0 * half, _labels_y() + 8.0 - top)
+
+
+func _sync_taps() -> void:
+	var on: bool = phone() and not compact and panel != null and panel.ship_def != null
+	var n: int = columns().size() if on else 0
+	while _taps.size() < n:
+		var c: Control = Control.new()
+		c.name = "ColumnTap%d" % _taps.size()
+		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		c.set_meta("tap", true)
+		add_child(c)
+		_taps.append(c)
+	for k: int in _taps.size():
+		_taps[k].visible = k < n
+		if k < n:
+			var r: Rect2 = column_tap_rect(k)
+			_taps[k].position = r.position
+			_taps[k].size = r.size
 
 
 func _draw_cap(fs: int) -> void:
 	var power: PowerDef = panel.ship_def.power
-	var y: float = _labels_y() + (22.0 if compact else 40.0)
+	var y: float = _cap_y()
 	var used: int = panel.pips_used()
 	var text: String = tr("eng.reactor") % [used, power.reactor_pips]
 	if panel.boosting():
@@ -178,9 +229,17 @@ func _draw_shields(fs: int) -> void:
 		Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), Palette.color("friendly")
 	)
 	var si: int = _shield_subsystem()
+	var lean: bool = phone_layout()
 	if si >= 0:
-		_text(Vector2(PAD, y + 42.0), tr("eng.shield_power") % panel.pips_of(si), "text", fs - 2)
-	_text(Vector2(PAD, y + 66.0), tr("eng.tightness"), "text", fs - 2)
+		var power: String = tr("eng.shield_power") % panel.pips_of(si)
+		if lean:
+			# Beside the strength, ending where the bar ends.
+			var pw: float = get_theme_default_font().get_string_size(power, 0, -1, fs - 2).x
+			_text(Vector2(bar.end.x - pw, y), power, "text", fs - 2)
+		else:
+			_text(Vector2(PAD, y + 42.0), power, "text", fs - 2)
+	var focus_y: float = _step_rect(0).end.y - 2.0 if lean else y + 66.0
+	_text(Vector2(PAD, focus_y), tr("eng.tightness"), "text", fs - 2)
 	var t: float = panel.tightness()
 	var def: ShieldDef = panel.ship_def.shields
 	for k: int in _steps():
@@ -191,11 +250,15 @@ func _draw_shields(fs: int) -> void:
 		)
 	var r0: Rect2 = _step_rect(0)
 	var r1: Rect2 = _step_rect(_steps() - 1)
-	_text(Vector2(r0.position.x, r0.end.y + 16.0), tr("eng.spread"), "text_dim", fs - 4)
+	var small: int = maxi(fs - 4, 12)
+	_text(Vector2(r0.position.x, r0.end.y + 16.0), tr("eng.spread"), "text_dim", small)
 	var tight: String = tr("eng.tight")
-	var tw: float = get_theme_default_font().get_string_size(tight, 0, -1, fs - 4).x
-	_text(Vector2(r1.end.x - tw, r1.end.y + 16.0), tight, "text_dim", fs - 4)
-	_draw_ring(Vector2(size.x - PAD - 40.0, y + 34.0), 32.0, t, def.tightness_max)
+	var tw: float = get_theme_default_font().get_string_size(tight, 0, -1, small).x
+	_text(Vector2(r1.end.x - tw, r1.end.y + 16.0), tight, "text_dim", small)
+	if lean:
+		_draw_ring(Vector2(size.x - PAD - 32.0, y + 22.0), 24.0, t, def.tightness_max)
+	else:
+		_draw_ring(Vector2(size.x - PAD - 40.0, y + 34.0), 32.0, t, def.tightness_max)
 
 
 ## Helm's shield ring, seen from above with the bow up: the lobe narrows as the focus
@@ -229,11 +292,15 @@ func _shield_subsystem() -> int:
 
 
 func _top() -> float:
+	if phone_layout():
+		return 8.0
 	return 10.0 if compact else 58.0
 
 
 func _pip_h() -> float:
-	return 9.0 if compact else 22.0
+	if compact:
+		return 9.0
+	return 16.0 if phone_layout() else 22.0
 
 
 func _col_width(n: int) -> float:
@@ -252,11 +319,18 @@ func _pip_rect(k: int, j: int) -> Rect2:
 
 func _labels_y() -> float:
 	var n: int = panel.ship_def.power.max_pips_per_subsystem
-	return _top() + n * (_pip_h() + GAP) + (12.0 if compact else 18.0)
+	return _top() + n * (_pip_h() + GAP) + (12.0 if compact else 16.0 if phone_layout() else 18.0)
+
+
+## The reactor line's baseline (its bar under it).
+func _cap_y() -> float:
+	if compact:
+		return _labels_y() + 22.0
+	return _labels_y() + (28.0 if phone_layout() else 40.0)
 
 
 func _shields_y() -> float:
-	return _labels_y() + 150.0
+	return _cap_y() + 38.0 if phone_layout() else _labels_y() + 150.0
 
 
 func _steps() -> int:
@@ -265,5 +339,9 @@ func _steps() -> int:
 
 
 func _step_rect(k: int) -> Rect2:
+	if phone_layout():
+		var x0: float = PAD + FOCUS_LABEL_W
+		var pw: float = (size.x - 2.0 * PAD - 80.0 - FOCUS_LABEL_W) / _steps()
+		return Rect2(x0 + k * pw, _shields_y() + 20.0, pw - GAP, 16.0)
 	var w: float = (size.x - 2.0 * PAD - 96.0) / _steps()
 	return Rect2(PAD + k * w, _shields_y() + 74.0, w - GAP, 16.0)

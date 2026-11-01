@@ -22,6 +22,9 @@ const GROUPS: Dictionary = {
 const CONTRAST: Array[Array] = [
 	["text", "background"],
 ]
+const NON_TEXT_CONTRAST: Array[Array] = [
+	["text", "background"],
+]
 """
 
 
@@ -72,3 +75,10 @@ def test_ciede2000_reference_pairs():
 def test_contrast_extremes():
     assert check_palette.contrast((1, 1, 1), (0, 0, 0)) == pytest.approx(21.0)
     assert check_palette.contrast((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)) == pytest.approx(1.0)
+
+
+def test_hairline_needs_three_to_one():
+    text = check_palette.PALETTE.read_text(encoding="utf-8")
+    assert check_palette.check(text) == []
+    weak = text.replace('"line_strong": Color("#5b6b7d")', '"line_strong": Color("#3a4654")')
+    assert any("line_strong on panel" in e for e in check_palette.check(weak))

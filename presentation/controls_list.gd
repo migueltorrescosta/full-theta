@@ -34,6 +34,11 @@ func build(bindings: Bindings, stations: Array, device: String, role: String = "
 	_rebuild()
 
 
+## What it shows: [bindings, stations, device], or [] before the first build.
+func shown_args() -> Array:
+	return [] if _bindings == null else [_bindings, _stations, _device]
+
+
 ## The rows shown, for tests: [{"section", "id", "label", "keys"}].
 func rows() -> Array[Dictionary]:
 	return _rows
@@ -65,6 +70,7 @@ func _section(key: String, ids: Array[String]) -> void:
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 24)
+	ListLines.attach(grid)
 	for id: String in ids:
 		var list: PackedStringArray = _bindings.bindings(id, _device)
 		if list.is_empty():

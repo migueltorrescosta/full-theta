@@ -12,6 +12,8 @@ the sRGB transfer both ways):
   shapes back it, FT-STN-006); this keeps it a useful one.
 - CONTRAST: each [foreground, background] pair must keep a WCAG 2 contrast
   ratio of at least MIN_CONTRAST (4.5, AA body text).
+- NON_TEXT_CONTRAST: the same for hairlines and other non-text parts, at least
+  MIN_NON_TEXT (3.0, WCAG 1.4.11).
 
 Usage: check_palette.py [palette.gd]; exits 1 with one line per failure.
 """
@@ -26,6 +28,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PALETTE = ROOT / "presentation/palette.gd"
 MIN_DE00 = 10.0
 MIN_CONTRAST = 4.5
+MIN_NON_TEXT = 3.0
 
 # Machado et al. 2009, severity 1.0, linear RGB.
 MATRICES = {
@@ -50,8 +53,10 @@ VISIONS = ("normal", *MATRICES)
 Rgb = tuple[float, float, float]
 
 
-def parse(text: str) -> tuple[dict[str, Rgb], dict[str, list[str]], list[tuple[str, str]]]:
-    """Return (roles as sRGB 0..1, groups, contrast pairs) from palette.gd source."""
+def parse(
+    text: str,
+) -> tuple[dict[str, Rgb], dict[str, list[str]], list[tuple[str, str]], list[tuple[str, str]]]:
+    """Return (roles as sRGB 0..1, groups, contrast pairs, non-text pairs) from palette.gd source."""
 
     def block(name: str) -> str:
         m = re.search(rf"^const {name}\b[^=]*=\s*[{{\[](.*?)^[}}\]]", text, re.S | re.M)
@@ -68,7 +73,10 @@ def parse(text: str) -> tuple[dict[str, Rgb], dict[str, list[str]], list[tuple[s
         for name, body in re.findall(r'"(\w+)":\s*\[([^\]]*)\]', block("GROUPS"))
     }
     pairs = [tuple(p) for p in re.findall(r'\[\s*"(\w+)",\s*"(\w+)"\s*\]', block("CONTRAST"))]
-    return roles, groups, pairs
+    non_text = [
+        tuple(p) for p in re.findall(r'\[\s*"(\w+)",\s*"(\w+)"\s*\]', block("NON_TEXT_CONTRAST"))
+    ]
+    return roles, groups, pairs, non_text
 
 
 def to_linear(c: float) -> float:
@@ -157,9 +165,9 @@ def contrast(fg: Rgb, bg: Rgb) -> float:
 
 def check(text: str) -> list[str]:
     """Return one message per failing pair (or unknown role)."""
-    roles, groups, pairs = parse(text)
+    roles, groups, pairs, non_text = parse(text)
     errors = []
-    for name in sorted({r for g in groups.values() for r in g} | {r for p in pairs for r in p}):
+    for name in sorted({r for g in groups.values() for r in g} | {r for p in pairs + non_text for r in p}):
         if name not in roles:
             errors.append(f"unknown role {name!r}")
     if errors:
@@ -175,6 +183,10 @@ def check(text: str) -> list[str]:
             r = contrast(seen[fg], seen[bg])
             if r < MIN_CONTRAST:
                 errors.append(f"contrast: {fg} on {bg} under {vision}: {r:.2f} < {MIN_CONTRAST}")
+        for fg, bg in non_text:
+            r = contrast(seen[fg], seen[bg])
+            if r < MIN_NON_TEXT:
+                errors.append(f"contrast: {fg} on {bg} under {vision}: {r:.2f} < {MIN_NON_TEXT}")
     return errors
 
 

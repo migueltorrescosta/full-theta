@@ -8,7 +8,7 @@ extends RefCounted
 ## not returned within the reconnect grace ends the pause by itself (Q19, owner
 ## 2026-10-26, D188). Message: HostPause{on}.
 
-## request_rejected reason: any two crew factions are hostile, or the session has no host.
+## request_rejected reason: the session's mode is PvP (FT-MIS-040), or it has no host.
 const PVP_NO_PAUSE: String = "pvp_no_pause"
 
 ## The owning session, held weakly (it owns this object).
@@ -52,17 +52,9 @@ func set_paused(on: bool) -> void:
 	session.transport.post_event(ids, session.world.tick, type, body)
 
 
-## Whether any two crew factions are hostile (PvP: no pause).
+## Whether the session's mode is PvP (SessionRules.is_pvp, NetFleet.rules): no host pause.
 func is_pvp() -> bool:
-	var ships: Array = session.crew_ships()
-	for i: int in ships.size():
-		for j: int in range(i + 1, ships.size()):
-			if (
-				session.world.relation(ships[i]["faction"], ships[j]["faction"])
-				== SimWorld.Relation.HOSTILE
-			):
-				return true
-	return false
+	return session.fleet.rules.is_pvp()
 
 
 ## The `pause` event of a host pause: no ship, nothing uncovered.

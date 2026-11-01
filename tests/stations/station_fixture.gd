@@ -133,6 +133,18 @@ class RecordingClient:
 	func answer_chip(id: int, accept: bool) -> void:
 		sent.append(["answer_chip", [id, accept]])
 
+	func add_ship(ship_name: String) -> void:
+		sent.append(["add_ship", [ship_name]])
+
+	func set_team(ship: int, team: int) -> void:
+		sent.append(["set_team", [ship, team]])
+
+	func set_mode(mode: String, team_win: String, lives: int) -> void:
+		sent.append(["set_mode", [mode, team_win, lives]])
+
+	func vote_relaunch(ship: int, vote: bool) -> void:
+		sent.append(["vote_relaunch", [ship, vote]])
+
 	func share(feature: String) -> void:
 		sent.append(["share", [feature]])
 
@@ -245,8 +257,9 @@ static func view(seam: bool = false) -> NetViewState:
 		"alive": true,
 		"status": 0,
 		"outcome": 0,
-		"hull": 920.0,
-		"shields": 700.0,
+		# The server's units (m1_corvette: hull_max 1e8, shields 3e7): 92 % and 70 %.
+		"hull": 92_000_000.0,
+		"shields": 21_000_000.0,
 		"pips_used": 6,
 		"propellant": 8000.0,
 		"decoupled": false,
@@ -367,3 +380,41 @@ static func _mark(slot: int, mark_name: String, pos: Vector3) -> Dictionary:
 
 static func _units(p: Vector3, p_units: int) -> Vector3i:
 	return NetCodec.quant_pos(p.x, p.y, p.z, p_units)
+
+
+## A multi-ship session (#11) on a fixture context: feeds the `fleet` event of `names` (lobby
+## ship ids 0..n-1, ship 0 the fixture's own) in `mode`, teams from `teams` (default 0),
+## each ship with one Helm seat, none started. Returns the payload (FleetMessages shape).
+static func fleet(
+	ctx: StationContext,
+	mode: String = "coop",
+	names: Array = [SHIP_NAME, "Heron", "Osprey"],
+	teams: Array = [],
+	started: bool = false
+) -> Dictionary:
+	var rows: Array = []
+	for i: int in names.size():
+		var team: int = int(teams[i]) if i < teams.size() else 0
+		var seats: Array = [{"name": "P%d" % i, "entry": "helm"}]
+		rows.append(
+			FleetMessages.fleet_ship(i, names[i], team, seats, 1, ["weapons"], false, started)
+		)
+	var p: Dictionary = {
+		"ships": rows,
+		"mode": mode,
+		"team_win": "last_team_standing",
+		"lives": 3,
+		"max_ships": 6,
+		"waiting": [],
+		"started": started,
+	}
+	ctx.crew.handle_event({"type": "fleet", "payload": p}, NOW_MS)
+	# The server's Catalogue lists every crewed ship (ServerSession.crew_ships), so a pick
+	# of another ship still finds its definition (the top bar's percentages).
+	var ships: Array = []
+	for i: int in names.size():
+		ships.append({"id": i, "def": "m1_corvette", "name": names[i], "faction": 0})
+	var cat: Dictionary = ctx.crew.catalogue.duplicate()
+	cat["ships"] = ships
+	ctx.crew.set_catalogue(cat)
+	return p

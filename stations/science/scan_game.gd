@@ -10,6 +10,8 @@ extends Control
 ## Turning: drag horizontally for the selected axis and vertically for the next open
 ## axis (KB/M and touch), tap an axis chip to select it, the keyboard or stick dials in
 ## `turn(index, delta)`. Enter / X submits, Backspace / Y cancels; both are also buttons.
+## On a phone (`footer` off) the chips and buttons are real Buttons in the panel's thumb
+## rails instead (SciencePanel, #28), and the cloud takes the freed room.
 
 signal submitted(angles: Vector3)
 signal cancelled
@@ -36,6 +38,11 @@ var selected: int = 0
 var title: String = ""
 var noise_text: String = ""
 var elapsed_s: float = 0.0
+## Draw the axis chips and the Submit and Cancel buttons (off on a phone, #28).
+var footer: bool = true:
+	set(value):
+		footer = value
+		queue_redraw()
 
 var _drag: bool = false
 var _start: int = -1
@@ -122,8 +129,17 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+## Picks the open axis number `index` for horizontal drags (an axis chip's tap).
+func select_axis(index: int) -> void:
+	if index >= 0 and index < open_axes().size():
+		selected = index
+		queue_redraw()
+
+
 ## Chips and buttons; true when the press hit one.
 func _press(at: Vector2) -> bool:
+	if not footer:
+		return false
 	var open: Array[int] = open_axes()
 	for i: int in open.size():
 		if _chip_rect(i).has_point(at):
@@ -142,6 +158,8 @@ func _press(at: Vector2) -> bool:
 ## Footer rows: the axis chips and the buttons share one, or the buttons take the row
 ## above on a narrow stage (a phone).
 func _rows() -> int:
+	if not footer:
+		return 0
 	var chips: float = 12.0 + open_axes().size() * (CHIP_W + 6.0)
 	return 1 if size.x >= chips + 2.0 * (BUTTON_W + 6.0) + 12.0 else 2
 
@@ -202,6 +220,8 @@ func _draw_footer(font: Font) -> void:
 		FONT_SIZE,
 		col
 	)
+	if not footer:
+		return
 	var open: Array[int] = open_axes()
 	for i: int in open.size():
 		var r: Rect2 = _chip_rect(i)

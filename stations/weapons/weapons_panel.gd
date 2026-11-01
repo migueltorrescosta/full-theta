@@ -17,6 +17,15 @@ extends StationPanel
 ## weapon's cooldown; docked in Tactical's cockpit, the KB/M fire holds fire every
 ## claimed mount at the selected target (FT-JNT-008). Mount defs come from the ship's
 ## ShipDef in content/.
+##
+## On a phone (#28 follow-up, D287, D289) WeaponsTouch puts one right rail over the full-width
+## view (landscape) or a controls block under it (upright), with the pages Fire, Mounts and
+## Crew: a drag aims, FIRE holds `fire`, and the buttons send the same intents as the keys.
+## The panel is in the phone frame (`in_frame`): its read-outs sit under the view-top row.
+## Tablet and desktop layouts don't change.
+
+## A touch control sent `id` (tests: taps send what the keys send).
+signal touch_intent(id: String)
 
 ## Vertical field of view (degrees).
 const FOV_DEG: float = 60.0
@@ -37,6 +46,10 @@ const SHIP_SCALE: float = 10.0
 const FONT_SIZE: int = 15
 const RETICLE_R: float = 18.0
 const BRACKET: float = 10.0
+## The device name the touch rails' intents carry.
+const TOUCH: String = "touch"
+## The least side (device-independent px) of a phone window; the smallest phones have 320.
+const PHONE_MIN_SIDE: float = 300.0
 
 ## Index of the camera mount in ShipDef.mounts.
 var mount: int = 0
@@ -54,15 +67,21 @@ var _next_fire: Dictionary = {}
 var _firing: bool = false
 var _firing_all: bool = false
 ## Brackets in view this frame (step), for drawing and item_at: {"item" (ContactPicture's),
-## "pos", "chip", "rect" (bracket and chip)}.
+## "pos", "chip", "chip_at" (its top left), "rect" (bracket and chip)}.
 var _targets: Array[Dictionary] = []
 var _view: SubViewportContainer
 ## The turret camera's view, from the camera mount.
 var _space: SpaceView
 var _overlay: Control
+## The phone arrangement while the form is a phone's and the panel is focused, else null.
+var _touch: WeaponsTouch = null
+var _screen: StationScreen = null
 
 
 func _setup() -> void:
+	in_frame = true
+	# The Crew page shows the share buttons (CrewPage).
+	shows_shares = true
 	ship_def = ctx.ship_def()
 	_build_view()
 	_overlay = Control.new()
@@ -73,11 +92,125 @@ func _setup() -> void:
 	mount = _first_mount()
 
 
+func _ready() -> void:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	_screen = n as StationScreen
+	if _screen != null:
+		_screen.form_changed.connect(func(_f: LayoutMode.Form) -> void: _apply_form())
+	_apply_form()
+
+
 func _mode_changed() -> void:
 	_view.visible = focused
 	if not focused:
 		_firing = false
 		_firing_all = false
+	_apply_form()
+
+
+## Focused on a phone the panel draws its own radar inset and takes the whole screen (#28).
+func full_screen() -> bool:
+	return focused and mount_count() > 0 and phone_form() >= 0
+
+
+## The view's free part: beside the rail on its side, the view above the controls upright.
+func view_rect() -> Rect2:
+	return _touch.view_rect() if _touch != null else super()
+
+
+## The phone form this panel lays out for, or -1 for the tablet and desktop arrangement.
+## A window with a side under PHONE_MIN_SIDE (a headless run's 64 px) is no phone.
+func phone_form() -> int:
+	if not is_inside_tree():
+		return -1
+	var form: LayoutMode.Form = LayoutMode.form_of(self)
+	var dp: Vector2 = LayoutMode.dp_size_of(get_viewport())
+	if not LayoutMode.is_phone(form) or minf(dp.x, dp.y) < PHONE_MIN_SIDE:
+		return -1
+	return form
+
+
+## Builds, swaps or removes the phone arrangement for the current form and focus.
+func _apply_form() -> void:
+	if _view == null or not is_inside_tree():
+		return
+	var form: int = phone_form()
+	var want: bool = focused and mount_count() > 0 and form >= 0
+	if _touch != null and want and _touch.form == form:
+		return
+	if _touch != null:
+		for c: Control in [_view, _overlay]:
+			c.reparent(self, false)
+			c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		move_child(_view, 0)
+		_touch.queue_free()
+		remove_child(_touch)
+		_touch = null
+		pages = null
+	if want:
+		# On its side the screen shows only the focused panel; upright a joint view keeps
+		# the screen's radar under its docked panels.
+		var own_radar: bool = (
+			form == LayoutMode.Form.PHONE_LANDSCAPE or _screen == null or _screen.panels.size() == 1
+		)
+		_touch = WeaponsTouch.new(self, form as LayoutMode.Form, own_radar)
+		add_child(_touch)
+		_touch.take_view(_view, _overlay)
+		if _screen != null:
+			_touch.pad.long_press = _screen.frame.long_press
+			_touch.pad.now_ms = ctx.now_ms
+		pages = _touch.pages
+		_touch.refresh()
+
+
+## The phone arrangement, or null (tests and shots).
+func touch() -> WeaponsTouch:
+	return _touch
+
+
+# --- Touch (#28): the rails send the same intents as the keys and the pad. ---
+
+
+## A rail button's press intent (`mount_next`, `ammo_next`, `fire_guided`).
+func touch_press(id: String) -> void:
+	touch_intent.emit(id)
+	handle_intent({"id": id, "pressed": true, "device": TOUCH})
+
+
+## A held rail button (`fire`): pressed on the finger's down, released on its up.
+func touch_hold(down: bool, id: String) -> void:
+	if down:
+		touch_intent.emit(id)
+	handle_intent({"id": id, "pressed": down, "device": TOUCH})
+
+
+## Claim or Release: the screen's common `claim` intent.
+func touch_claim() -> void:
+	touch_intent.emit("claim")
+	if _screen != null:
+		_screen.dispatch({"id": "claim", "target": "screen", "pressed": true, "device": TOUCH})
+
+
+## A finger dragged `relative` px across the view turns the camera mount's aim by the angle
+## it covers on screen (drag right: aim right). No aim assist (controller only, D25).
+func touch_aim(relative: Vector2) -> void:
+	if mount_count() == 0:
+		return
+	var f: float = _focal()
+	var yaw: float = relative.x / f
+	var pitch: float = relative.y / f * (-1.0 if ctx.matcher.invert_pitch else 1.0)
+	var dir: Vector3 = aim_dir(mount)
+	var basis: Basis = _look(dir)
+	_aim_within_arc(dir.rotated(basis.y, -yaw).rotated(basis.x, -pitch))
+
+
+## A tap on the view (`global_pos` in viewport px) selects the bracket under it.
+func touch_select(global_pos: Vector2) -> void:
+	var item: Dictionary = item_at(get_global_transform().affine_inverse() * global_pos)
+	if not item.is_empty():
+		ctx.crew.select(item["kind"], item["id"])
 
 
 func _process(delta: float) -> void:
@@ -105,6 +238,8 @@ func step(delta: float) -> void:
 	_update_camera()
 	_layout_targets()
 	_overlay.queue_redraw()
+	if _touch != null:
+		_touch.refresh()
 
 
 func handle_intent(ev: Dictionary) -> bool:
@@ -137,10 +272,20 @@ func handle_intent(ev: Dictionary) -> bool:
 func item_at(screen_pos: Vector2) -> Dictionary:
 	if not focused:
 		return {}
+	var global: Vector2 = get_global_transform() * screen_pos
+	var radar: DiscRadar = _touch.radar if _touch != null else null
+	if radar != null and radar.is_visible_in_tree() and radar.get_global_rect().has_point(global):
+		return radar.item_at(radar.get_global_transform().affine_inverse() * global)
+	var at: Vector2 = _overlay.get_global_transform().affine_inverse() * global
 	for t: Dictionary in _targets:
-		if (t["rect"] as Rect2).has_point(screen_pos):
+		if (t["rect"] as Rect2).has_point(at):
 			return {"kind": t["item"]["kind"], "id": t["item"]["id"]}
 	return {}
+
+
+## The reticle: the centre of the turret view, in the panel's coordinates.
+func cursor_pos() -> Vector2:
+	return get_global_transform().affine_inverse() * _overlay.get_global_rect().get_center()
 
 
 ## The cockpit and the turret look forward: a mark attaches to the tapped contact or none
@@ -419,6 +564,43 @@ func mount_rows() -> Array[String]:
 	return out
 
 
+## Mount i on two lines for the phone's mount button: "1 bow · ready", "heat 15% · 380/400".
+func mount_text(i: int) -> String:
+	if i < 0 or i >= mount_count():
+		return ""
+	var w: WeaponDef = weapon_of(i)
+	var row: Dictionary = _mount_row(i)
+	var ammo: int = int(row.get("ammo", w.ammo_capacity))
+	var heat: float = float(row.get("heat", 0.0)) / w.heat_limit
+	return (
+		"%d %s · %s\n%s · %s"
+		% [
+			i + 1,
+			ship_def.mounts[i].id,
+			tr("weapons." + _state(i)),
+			tr("weapons.heat") % roundi(heat * 100.0),
+			"∞" if ammo < 0 else "%d/%d" % [ammo, w.ammo_capacity],
+		]
+	)
+
+
+## The name of the player who holds mount i, or "".
+func holder_name(i: int) -> String:
+	return str(_holder(i).get("name", ""))
+
+
+## The camera mount's selected ammunition by name ("standard" for a mount with one).
+func ammo_name() -> String:
+	if mount_count() == 0 or ship_def.mounts[mount].alt_weapons.is_empty():
+		return tr("weapons.ammo_standard")
+	return weapon_of(mount).display_name
+
+
+## The target line ("Target H2 · 4 high · mid"), or "".
+func target_text() -> String:
+	return _target_line()
+
+
 ## What other stations' work says of the selected target (FT-WPN-007, P7, P8): its
 ## weak points by name, how the selected ammunition fares against its resistances, the open
 ## hack window and the track quality. Each line exists only while the server sends its feed,
@@ -529,7 +711,12 @@ func _turn_aim(delta: float) -> void:
 	dir = dir.rotated(basis.y, -x * rate * delta).rotated(basis.x, -y * rate * delta)
 	if lead != null:
 		dir = _turn_toward(dir, lead, ASSIST_PULL * Vector2(x, y).length() * delta)
-	# Input stops at the arc edge; a held aim the ship turns out of arc stays (FT-WPN-009).
+	_aim_within_arc(dir)
+
+
+## Aims the camera mount along `dir` (world), stopped at the arc edge: input stops there;
+## a held aim the ship turns out of arc stays (FT-WPN-009).
+func _aim_within_arc(dir: Vector3) -> void:
 	var m: MountDef = ship_def.mounts[mount]
 	var rot: Quaternion = ctx.interp.own_rotation()
 	var local: Vector3 = rot.inverse() * dir
@@ -582,13 +769,18 @@ func _update_camera() -> void:
 	_space.sync_ships(ctx, ctx.interp.own_rotation() * ship_def.mounts[mount].position)
 
 
-## Screen position of a world direction seen from the camera mount, or null behind it.
+## Position of a world direction seen from the camera mount, in the turret view's (the
+## overlay's) coordinates, or null behind it.
 func project(dir: Vector3) -> Variant:
 	var c: Vector3 = cam_basis.transposed() * dir
 	if c.z > -1e-4:
 		return null
-	var f: float = (size.y / 2.0) / tan(deg_to_rad(fov) / 2.0)
-	return size / 2.0 + Vector2(c.x, -c.y) * f / -c.z
+	return _overlay.size / 2.0 + Vector2(c.x, -c.y) * _focal() / -c.z
+
+
+## The turret view's focal length (px): its half height over tan(fov / 2).
+func _focal() -> float:
+	return maxf(_overlay.size.y / 2.0, 1.0) / tan(deg_to_rad(fov) / 2.0)
 
 
 func _build_view() -> void:
@@ -623,17 +815,27 @@ func _layout_targets() -> void:
 	var font: Font = get_theme_default_font()
 	var rot: Quaternion = ctx.interp.own_rotation()
 	var m: MountDef = ship_def.mounts[mount]
+	var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 	for it: Dictionary in ctx.picture().items:
 		if it["kind"] == "point":
 			continue
 		var p: Variant = project(rot * ((it["local"] as Vector3) - m.position).normalized())
 		if p == null:
 			continue
+		# On a phone a bracket outside the view is not drawn, so its chip never shows cut.
+		var view: Rect2 = Rect2(Vector2.ZERO, _overlay.size).grow(-BRACKET)
+		if phone and view.has_area() and not view.has_point(p as Vector2):
+			continue
 		var chip: String = target_chip(it)
 		var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 		var at: Vector2 = (p as Vector2) + Vector2(BRACKET + 6.0, 4.0 - FONT_SIZE)
+		# Too near the right edge for the chip: it goes to the left of the bracket.
+		if phone and at.x + sz.x > _overlay.size.x:
+			at.x = (p as Vector2).x - BRACKET - 6.0 - sz.x
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
-		_targets.append({"item": it, "pos": p, "chip": chip, "rect": r.merge(Rect2(at, sz))})
+		_targets.append(
+			{"item": it, "pos": p, "chip": chip, "chip_at": at, "rect": r.merge(Rect2(at, sz))}
+		)
 
 
 func _draw_overlay() -> void:
@@ -643,7 +845,12 @@ func _draw_overlay() -> void:
 		return
 	if focused:
 		_draw_turret(font)
-	var lines: Array[String] = mount_rows()
+	if _touch != null:
+		_draw_phone_lines(font)
+		return
+	var rows: Array[String] = mount_rows()
+	var lines: Array[String] = []
+	lines.append_array(rows)
 	var target: String = _target_line()
 	if target != "":
 		lines.append(target)
@@ -655,17 +862,75 @@ func _draw_overlay() -> void:
 		if _hint() != "":
 			lines.append(_hint())
 		if arc != "":
-			var sz: Vector2 = font.get_string_size(arc, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
-			_text(font, Vector2((size.x - sz.x) / 2.0, 48.0), arc, Palette.color("warn"))
+			_draw_arc_warning(font, arc)
 	elif arc != "":
 		lines.append(arc)
 	var line_h: float = FONT_SIZE + 6.0
-	var y0: float = 12.0 + FONT_SIZE if docked else size.y - 12.0 - line_h * (lines.size() - 1)
+	var y0: float = (
+		12.0 + FONT_SIZE if docked else _overlay.size.y - 12.0 - line_h * (lines.size() - 1)
+	)
 	for k: int in lines.size():
 		var col: Color = Palette.color("text") if k == mount else Palette.color("text_dim")
 		if lines[k] == arc:
 			col = Palette.color("warn")
 		_text(font, Vector2(12.0, y0 + k * line_h), lines[k], col)
+
+
+## On a phone the rail and the overlays show the mounts, the ammunition, the claim and the
+## target (WeaponsTouch); the overlay adds the out-of-arc warning and the feeds under the
+## target line (not on the Mounts page, whose list covers them).
+func _draw_phone_lines(font: Font) -> void:
+	var arc: String = out_of_arc_text()
+	if arc != "":
+		_draw_arc_warning(font, arc)
+	if not _touch.shows_feeds():
+		return
+	var lines: Array[String] = feed_lines()
+	if lines.is_empty():
+		return
+	var line_h: float = FONT_SIZE + 6.0
+	var at: Vector2 = _touch.feeds_origin(_overlay, line_h * lines.size())
+	for k: int in lines.size():
+		_text(font, at + Vector2(0.0, FONT_SIZE + k * line_h), lines[k], Palette.color("text"))
+
+
+func _draw_arc_warning(font: Font, arc: String) -> void:
+	var r: Rect2 = arc_warning_rect(font, arc)
+	_text(font, r.position + Vector2(0, FONT_SIZE), arc, Palette.color("warn"))
+
+
+## Where the out-of-arc warning goes (FT-WPN-005): centred near the top of the view (on a
+## phone under the view-top row), moved down past any bracket or chip it would cover (#28:
+## it hid the U3 chip). The rectangle's
+## top is the text's top; the baseline is FONT_SIZE lower.
+func arc_warning_rect(font: Font, arc: String) -> Rect2:
+	var sz: Vector2 = font.get_string_size(arc, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
+	var r: Rect2 = Rect2((_overlay.size.x - sz.x) / 2.0, 48.0 - FONT_SIZE, sz.x, FONT_SIZE + 6.0)
+	if _touch != null:
+		# On a phone: centred in the view beside the rail, under the view-top row.
+		var view: Rect2 = (
+			_overlay.get_global_transform().affine_inverse()
+			* (get_global_transform() * view_rect())
+		)
+		r.position = Vector2(view.get_center().x - sz.x / 2.0, _touch.read_top(_overlay))
+	var keep_clear: Array[Rect2] = []
+	for t: Dictionary in _targets:
+		keep_clear.append(t["rect"])
+	if _touch != null and _touch.target_label.text != "":
+		# The target line over the view's left (WeaponsTouch).
+		var label: Label = _touch.target_label
+		keep_clear.append(
+			_overlay.get_global_transform().affine_inverse() * label.get_global_rect()
+		)
+	for _pass: int in keep_clear.size():
+		var clear: bool = true
+		for hit: Rect2 in keep_clear:
+			if hit.intersects(r):
+				r.position.y = hit.end.y + 4.0
+				clear = false
+		if clear:
+			break
+	return r
 
 
 func _draw_turret(font: Font) -> void:
@@ -691,7 +956,7 @@ func _draw_turret(font: Font) -> void:
 	var bp: Variant = project(rot * _barrel(mount))
 	if bp != null:
 		_overlay.draw_arc(bp, 5.0, 0.0, TAU, 16, Palette.color("ok"), 2.0, true)
-	var c: Vector2 = size / 2.0
+	var c: Vector2 = _overlay.size / 2.0
 	var rc: Color = Palette.color("text")
 	_overlay.draw_arc(c, RETICLE_R, 0.0, TAU, 32, rc, 1.5, true)
 	for d: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
@@ -713,7 +978,7 @@ func _draw_item(font: Font, t: Dictionary) -> void:
 			var q: Vector2 = p + corner * BRACKET
 			_overlay.draw_line(q, q - Vector2(corner.x * 5.0, 0), col, 2.0 if sel else 1.5)
 			_overlay.draw_line(q, q - Vector2(0, corner.y * 5.0), col, 2.0 if sel else 1.5)
-	_text(font, p + Vector2(BRACKET + 6.0, 4.0), t["chip"], col)
+	_text(font, (t["chip_at"] as Vector2) + Vector2(0.0, FONT_SIZE), t["chip"], col)
 	var pulse: float = float(it.get("pulse", 0.0))
 	if pulse > 0.0:
 		var pc: Color = Palette.color("ping")

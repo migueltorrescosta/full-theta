@@ -43,7 +43,10 @@ func test_marks_and_pings_reach_every_station() -> void:
 	for entry: String in ENTRIES:
 		_shells[entry] = await _shell(server, entry)
 	_shell_of("helm").ctx.intents.start()
-	assert_bool(await _all(func(s: ClientShell) -> bool: return s.screen != null)).is_true()
+	# A first visit's screen draws once its own frame ran (the top bar holds the name).
+	var shown: Callable = func(s: ClientShell) -> bool:
+		return s.screen != null and s.screen.top_bar._name.text != ""
+	assert_bool(await _all(shown)).is_true()
 	var seen: Callable = func(s: ClientShell) -> bool: return ENEMY in s.ctx.interp.contact_ids()
 	assert_bool(await _all(seen)).is_true()
 	# Science and Comms have their panels, with the top bar (FT-M1-005).

@@ -15,6 +15,7 @@ const TICKS_PER_S: float = 60.0
 var ctx: StationContext
 
 var _body: Label
+var _title: Label
 
 
 func setup(context: StationContext) -> void:
@@ -22,11 +23,11 @@ func setup(context: StationContext) -> void:
 	custom_minimum_size = MIN_SIZE
 	var col: VBoxContainer = VBoxContainer.new()
 	add_child(col)
-	var title: Label = Label.new()
-	title.theme_type_variation = "TitleLabel"
-	title.text = _t("debrief.title")
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(title)
+	_title = Label.new()
+	_title.theme_type_variation = "TitleLabel"
+	_title.text = _t("debrief.title")
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(_title)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -38,6 +39,14 @@ func setup(context: StationContext) -> void:
 	scroll.add_child(_body)
 	ctx.crew.changed.connect(_on_crew_changed)
 	refresh()
+
+
+## On a phone (#28 follow-up) the debrief is the outcome card's Debrief tab: no least size,
+## no title (the tab names it), and it takes the card's height.
+func set_compact(on: bool) -> void:
+	custom_minimum_size = Vector2.ZERO if on else MIN_SIZE
+	_title.visible = not on
+	size_flags_vertical = Control.SIZE_EXPAND_FILL if on else Control.SIZE_FILL
 
 
 ## Whether the debrief of the own ship has arrived.

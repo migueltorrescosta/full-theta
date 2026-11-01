@@ -23,6 +23,7 @@ func _samples() -> Dictionary:
 			"dev_all": false,
 			"host": false,
 			"lang": "en",
+			"tls": false,
 		},
 		NetProtocol.Type.HELLO_REJECTED: {"v": 1, "reason": "session_full"},
 		NetProtocol.Type.CATALOGUE:
@@ -74,6 +75,13 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.CLIENT_STATS: {"sent_us": 5, "ua": "x", "pairs": PackedInt64Array([1, 2])},
 		NetProtocol.Type.SHARE: {"feature": "routes"},
 		NetProtocol.Type.HOST_PAUSE: {"on": true},
+		NetProtocol.Type.SHIP_ADD: {"name": "Kestrel II"},
+		NetProtocol.Type.SHIP_TEAM: {"ship": 2, "team": 1},
+		NetProtocol.Type.SESSION_MODE:
+		{"mode": "teams", "team_win": "first_to_finish", "lives": -1},
+		NetProtocol.Type.RELAUNCH: {"ship": 1, "vote": true},
+		NetProtocol.Type.CLIENT_FRAME: {"ms": 812, "what": "build station:0:helm"},
+		NetProtocol.Type.TRAINING: {"station": "helm"},
 	}
 
 

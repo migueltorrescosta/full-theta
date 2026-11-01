@@ -50,6 +50,13 @@ func get_session(token: String) -> NetSession:
 	return _by_token.get(token)
 
 
+## Every session the server issued a token to, lapsed ones included.
+func all() -> Array[NetSession]:
+	var out: Array[NetSession] = []
+	out.assign(_by_token.values())
+	return out
+
+
 ## Marks the sessions whose grace ran out as lapsed and returns them (each once).
 func expire(now_us: int) -> Array[NetSession]:
 	var gone: Array[NetSession] = []

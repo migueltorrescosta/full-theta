@@ -1,0 +1,437 @@
+extends GdUnitTestSuite
+## Phone fix-ups after the #28 station strands: the share buttons in a drawer on a phone on
+## its side, Weapons' rail radar in a joint view, radar chips inside a small disc,
+## Engineering's touch-sized columns, tokens and one-finger turn. Every screen is checked
+## with TapAudit at the mockups' iPhone insets.
+# FT: FT-STN-005
+
+const SETTINGS: String = "user://test_phone_fixups.cfg"
+const LANDSCAPE: Array = [47, 0, 47, 21]
+const PORTRAIT: Array = [0, 47, 0, 34]
+const AUDIT: Array[String] = ["under_min", "in_band", "outside_safe", "tight"]
+
+
+func before() -> void:
+	I18n.apply("en")
+
+
+func after_test() -> void:
+	SafeArea.simulate([])
+	RotateBanner.dismissed_here = false
+	if FileAccess.file_exists(SETTINGS):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
+
+
+func _screen(size: Vector2i, entry: String, insets: Array, focus: int = 0) -> StationScreen:
+	SafeArea.simulate(insets)
+	var vp: SubViewport = auto_free(SubViewport.new())
+	vp.size = size
+	add_child(vp)
+	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	CommsFixture.install(ctx)
+	var s: StationScreen = StationScreen.new()
+	s.setup(ctx)
+	vp.add_child(s)
+	await _frames(4)
+	if focus != 0:
+		s.focus(focus)
+		await _frames(3)
+	return s
+
+
+func _frames(n: int) -> void:
+	for i: int in n:
+		await get_tree().process_frame
+
+
+func _drop(s: StationScreen) -> void:
+	s.get_parent().remove_child(s)
+	s.free()
+
+
+func _assert_clean(root: Control, what: String) -> void:
+	var report: Dictionary = TapAudit.check(root)
+	assert_array(report["targets"]).override_failure_message(what + ": no targets").is_not_empty()
+	for k: String in AUDIT:
+		(
+			assert_array(report[k])
+			. override_failure_message("%s %s: %s" % [what, k, report[k]])
+			. is_empty()
+		)
+
+
+func _share_buttons(s: StationScreen) -> Array[Button]:
+	var out: Array[Button] = []
+	for b: Node in s.share_bar.get_children():
+		out.append(b as Button)
+	return out
+
+
+# FT: FT-STN-005, FT-PAIR-007, FT-JNT-001
+# On a phone on its side the share buttons don't fit under the 180 px disc: a Share opener
+# (beside the joint switch) opens a drawer of 48 px buttons 8 px apart, at the top of the
+# radar column or, with the column hidden (Weapons' rails), at the bottom of the view.
+func test_share_buttons_sit_in_a_drawer_on_a_phone_on_its_side() -> void:
+	# (Engineering, Comms and Science put their shares on their Crew page, shows_shares: no
+	# opener.)
+	for c: Array in [["systems", 0], ["quartermaster", 1], ["comms", 0], ["science", 0]]:
+		var p: StationScreen = await _screen(Vector2i(844, 390), c[0], LANDSCAPE, c[1])
+		assert_bool(p.focused_panel().shows_shares).override_failure_message(c[0]).is_true()
+		assert_bool(p.share_opener.is_visible_in_tree()).override_failure_message(c[0]).is_false()
+		_drop(p)
+	var cases: Array = [
+		["approach", 0, false],
+	]
+	for c: Array in cases:
+		var what: String = "%s/%d" % [c[0], c[1]]
+		var s: StationScreen = await _screen(Vector2i(844, 390), c[0], LANDSCAPE, c[1])
+		assert_bool(s.share_opener.is_visible_in_tree()).override_failure_message(what).is_true()
+		assert_bool(s.share_drawer.visible).is_false()
+		assert_bool(s.share_bar.is_visible_in_tree()).is_false()
+		# The opener sits in the radar column when it shows, else in the view or, for
+		# Science, under the contacts in its left rail.
+		assert_bool(s.radar.is_visible_in_tree()).override_failure_message(what).is_equal(c[2])
+		var slot: Container = s.focused_panel().share_slot
+		if slot != null:
+			assert_object(s.share_opener.get_parent()).is_same(slot)
+		_assert_clean(s, what)
+		s.share_opener.button_pressed = true
+		s.share_opener.pressed.emit()
+		await _frames(2)
+		assert_bool(s.share_drawer.is_open()).override_failure_message(what).is_true()
+		var buttons: Array[Button] = _share_buttons(s)
+		assert_array(buttons).override_failure_message(what).is_not_empty()
+		for b: Button in buttons:
+			assert_bool(b.is_visible_in_tree()).is_true()
+			assert_float(b.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
+		# The drawer covers the panel under it; its own targets keep the rules, and it keeps
+		# 8 px from the opener and the switch.
+		_assert_clean(s.share_drawer, what + " open")
+		var drawer: Rect2 = s.share_drawer.get_global_rect()
+		for b: Control in [s.share_opener, s.joint_switch]:
+			if b != null and b.is_visible_in_tree():
+				assert_float(TapAudit.gap(drawer, b.get_global_rect())).is_greater_equal(
+					UiTheme.TOUCH_GAP
+				)
+		buttons[0].pressed.emit()
+		assert_int(StationFixture.sent(s.ctx).of("share").size()).is_equal(1)
+		_drop(s)
+
+
+# FT: FT-STN-005, FT-PAIR-007
+# Relay's phone layout has its own share drawer: the screen adds no second opener.
+func test_panels_with_their_own_share_place_keep_one_opener() -> void:
+	var r: StationScreen = await _screen(Vector2i(844, 390), "relay", LANDSCAPE)
+	assert_bool(r.focused_panel().shows_shares).is_true()
+	assert_bool(r.share_opener.visible).is_false()
+	_drop(r)
+
+
+# FT: FT-STN-005, FT-PAIR-007
+# Upright the share buttons stay in the column beside the radar, 48 px and 8 px apart; on a
+# desktop they keep their place and there is no opener.
+func test_share_buttons_stay_in_the_column_upright_and_on_a_desktop() -> void:
+	var up: StationScreen = await _screen(Vector2i(390, 844), "approach", PORTRAIT)
+	assert_bool(up.share_opener.visible).is_false()
+	assert_bool(up.share_bar.is_visible_in_tree()).is_true()
+	for b: Button in _share_buttons(up):
+		assert_float(b.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
+	_assert_clean(up.share_bar, "upright")
+	_assert_clean(up, "upright screen")
+	_drop(up)
+	# Engineering keeps its shares on its Crew page: none beside the radar.
+	var eng: StationScreen = await _screen(Vector2i(390, 844), "systems", PORTRAIT)
+	assert_array(_share_buttons(eng).filter(func(b: Button) -> bool: return b.visible)).is_empty()
+	_drop(eng)
+	var desk: StationScreen = await _screen(Vector2i(1280, 720), "systems", [])
+	assert_bool(desk.share_opener.visible).is_false()
+	assert_bool(desk.share_bar.is_visible_in_tree()).is_true()
+	assert_float(_share_buttons(desk)[0].size.y).is_equal(ShareBar.BUTTON_H)
+	_drop(desk)
+
+
+# FT: FT-STN-005, FT-WPN-002, FT-JNT-001
+# In a joint view on a phone on its side Weapons shows the whole screen like alone: its
+# radar sits clear of its right rail.
+func test_weapons_keeps_its_rail_radar_in_a_joint_view() -> void:
+	for c: Array in [["tactical", 1], ["gunnery", 0], ["parley", 0], ["targeting", 0]]:
+		var what: String = "%s/%d" % [c[0], c[1]]
+		var s: StationScreen = await _screen(Vector2i(844, 390), c[0], LANDSCAPE, c[1])
+		var p: WeaponsPanel = s.focused_panel() as WeaponsPanel
+		assert_object(p).is_not_null()
+		var t: WeaponsTouch = p.touch()
+		assert_object(t.radar).override_failure_message(what).is_not_null()
+		assert_bool(t.radar.is_visible_in_tree()).is_true()
+		assert_bool(s.radar.is_visible_in_tree()).is_false()
+		(
+			assert_bool(t.radar.get_global_rect().intersects(t.layout.right.get_global_rect()))
+			. is_false()
+		)
+		_assert_clean(s, what)
+		_drop(s)
+
+
+# FT: FT-STN-002, FT-SPA-007, FT-STN-005
+# The phone's 180 px disc and Weapons' rail radar keep every chip inside: a chip that would
+# cross the edge moves to the blip's other side, drops its range band and then its clock
+# until it fits beside the blip; only a callsign alone may slide over it.
+func test_small_radar_keeps_chips_inside() -> void:
+	var cases: Array = [
+		[Vector2i(844, 390), "engineering", LANDSCAPE],
+		[Vector2i(390, 844), "engineering", PORTRAIT],
+		[Vector2i(844, 390), "weapons", LANDSCAPE],
+	]
+	for c: Array in cases:
+		var s: StationScreen = await _screen(c[0], c[1], c[2])
+		var r: DiscRadar = s.radar
+		if c[1] == "weapons":
+			r = (s.focused_panel() as WeaponsPanel).touch().radar
+		assert_float(r.size.x).is_less_equal(StationScreen.PHONE_RADAR + 1.0)
+		var view: Rect2 = Rect2(Vector2.ZERO, r.size)
+		var chips: int = 0
+		for e: Dictionary in r._layout():
+			if e["chip"] == "":
+				continue
+			chips += 1
+			var box: Rect2 = e["chip_rect"]
+			var what: String = "%s %s at %s" % [c[1], e["chip"], box]
+			assert_bool(view.encloses(box)).override_failure_message(what).is_true()
+			if (e["chip"] as String).contains(ChipText.SEP):
+				var x: float = (e["pos"] as Vector2).x
+				(
+					assert_bool(box.position.x > x or box.end.x < x)
+					. override_failure_message(what + " covers its blip")
+					. is_true()
+				)
+		assert_int(chips).is_greater(2)
+		_drop(s)
+
+
+# FT: FT-ENG-002, FT-ENG-003, FT-STN-005
+# On a phone a pip box (22 px) and a tightness step are no tap targets: a tap anywhere in a
+# column selects it (each column's area at least 44 px, 8 px from the next) and Power +/-
+# set the pips; the tightness steps ignore taps (Tighter and Wider set it).
+func test_engineering_columns_take_the_taps_on_a_phone() -> void:
+	for c: Array in [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]:
+		var s: StationScreen = await _screen(c[0], "engineering", c[1])
+		var e: EngineeringPanel = s.focused_panel() as EngineeringPanel
+		var board: EngineeringBoard = e.board
+		assert_bool(board.phone()).is_true()
+		e.pages.current = EngineeringPanel.Page.POWER
+		await _frames(2)
+		_assert_clean(s, "board %s" % c[0])
+		var taps: Array[Node] = board.find_children("ColumnTap*", "", false, false)
+		assert_int(taps.size()).is_equal(board.columns().size())
+		# A tap on column 2's top pip selects it and leaves its pips alone.
+		var k: int = 1
+		var i: int = board.columns()[k]
+		var pips: int = e.pips_of(i)
+		var top: Vector2 = board._pip_rect(k, 3).get_center()
+		_click(board, top)
+		assert_int(e.selected).is_equal(i)
+		assert_int(e.pips_of(i)).is_equal(pips)
+		assert_array(StationFixture.sent(s.ctx).of("command")).is_empty()
+		_click(board, board._step_rect(0).get_center())
+		assert_array(StationFixture.sent(s.ctx).of("command")).is_empty()
+		_drop(s)
+
+
+# FT: FT-ENG-001, FT-ENG-004, FT-STN-005
+# On a phone the crew tokens take a 44 px grab area (52 px apart) and a drag onto a part
+# still sends the crew; a finger dragged across empty cutaway space turns it, and a tap
+# there selects the part under it.
+func test_engineering_cutaway_works_with_one_finger() -> void:
+	var s: StationScreen = await _screen(Vector2i(844, 390), "engineering", LANDSCAPE)
+	var e: EngineeringPanel = s.focused_panel() as EngineeringPanel
+	e.pages.current = EngineeringPanel.Page.SHIP
+	await _frames(2)
+	var cut: EngineeringCutaway = e.cutaway
+	assert_bool(cut.phone()).is_true()
+	assert_float(cut.grab_radius() * 2.0).is_greater_equal(UiTheme.TOUCH_MIN)
+	assert_str(cut.hint()).contains(tr("eng.cutaway_hint_touch"))
+	_assert_clean(s, "cutaway")
+	var tokens: Array[Node] = cut.find_children("CrewTap*", "", false, false)
+	assert_int(tokens.size()).is_equal(e.crew_count())
+	# A drag from the edge of crew B's grab area onto weapons sends B.
+	var edge: Vector2 = cut.token_pos(1) + Vector2(cut.grab_radius() - 2.0, 0.0)
+	_click(cut, edge)
+	_move(cut, edge, cut.subsystem_pos(2))
+	_click(cut, cut.subsystem_pos(2), false)
+	var sent: Array = StationFixture.sent(s.ctx).of("command")
+	assert_dict(sent[-1][1][0]).is_equal(
+		{"kind": "dispatch_repair", "crew": 1, "subsystem_id": "weapons"}
+	)
+	# One finger on empty space turns the cutaway; no part is picked.
+	var empty: Vector2 = Vector2(cut.size.x - 16.0, 60.0)
+	assert_int(cut.subsystem_at(empty, UiTheme.TOUCH_MIN)).is_equal(-1)
+	assert_int(cut.crew_at(empty)).is_equal(-1)
+	var yaw: float = cut.yaw
+	var picked: int = e.selected
+	_click(cut, empty)
+	_move(cut, empty, empty + Vector2(-40.0, 10.0))
+	_click(cut, empty + Vector2(-40.0, 10.0), false)
+	assert_float(cut.yaw).is_not_equal(yaw)
+	assert_int(e.selected).is_equal(picked)
+	# A tap (no drag) on a part selects it on release.
+	var other: int = 3 if picked != 3 else 2
+	_click(cut, cut.subsystem_pos(other))
+	assert_int(e.selected).is_equal(picked)
+	_click(cut, cut.subsystem_pos(other), false)
+	assert_int(e.selected).is_equal(other)
+	_drop(s)
+
+
+# FT: FT-ENG-004
+# A desktop keeps the mouse: a left press selects at once and only right-drag turns.
+func test_engineering_cutaway_keeps_the_mouse_on_a_desktop() -> void:
+	var s: StationScreen = await _screen(Vector2i(1280, 720), "engineering", [])
+	var e: EngineeringPanel = s.focused_panel() as EngineeringPanel
+	var cut: EngineeringCutaway = e.cutaway
+	assert_bool(cut.phone()).is_false()
+	assert_float(cut.grab_radius()).is_equal(EngineeringCutaway.TOKEN_R + 3.0)
+	(
+		assert_array(
+			cut.find_children("CrewTap*", "", false, false).filter(
+				func(n: Node) -> bool: return (n as Control).visible
+			)
+		)
+		. is_empty()
+	)
+	var yaw: float = cut.yaw
+	var empty: Vector2 = Vector2(cut.size.x - 16.0, 60.0)
+	_click(cut, empty)
+	_move(cut, empty, empty + Vector2(-40.0, 10.0))
+	_click(cut, empty + Vector2(-40.0, 10.0), false)
+	assert_float(cut.yaw).is_equal(yaw)
+	_click(cut, cut.subsystem_pos(3))
+	assert_int(e.selected).is_equal(3)
+	_drop(s)
+
+
+func _click(c: Control, pos: Vector2, pressed: bool = true) -> void:
+	var mb: InputEventMouseButton = InputEventMouseButton.new()
+	mb.button_index = MOUSE_BUTTON_LEFT
+	mb.pressed = pressed
+	mb.position = pos
+	c._gui_input(mb)
+
+
+func _move(c: Control, from: Vector2, to: Vector2) -> void:
+	for k: int in 4:
+		var mm: InputEventMouseMotion = InputEventMouseMotion.new()
+		mm.position = from.lerp(to, (k + 1) / 4.0)
+		mm.relative = (to - from) / 4.0
+		mm.button_mask = MOUSE_BUTTON_MASK_LEFT
+		c._gui_input(mm)
+
+
+# FT: FT-STN-005, FT-JNT-001, FT-NET-018
+# #28's touch rules hold on every joint view and every lone station on a phone, either way
+# up and with either panel focused: nothing tappable under 44 px, 8 px between targets,
+# none under an inset or in the gesture band.
+func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
+	var forms: Array = [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]
+	var bad: Array[String] = []
+	for f: Array in forms:
+		for entry: String in StationViews.ENTRIES:
+			var n: int = maxi(1, (StationViews.ENTRIES[entry][2] as Array).size())
+			for focus: int in n:
+				var s: StationScreen = await _screen(f[0], entry, f[1], focus)
+				var report: Dictionary = TapAudit.check(s)
+				for k: String in AUDIT:
+					if not report[k].is_empty():
+						bad.append("%s %s/%d %s: %s" % [f[0], entry, focus, k, report[k]])
+				_drop(s)
+	assert_array(bad).override_failure_message("\n".join(bad)).is_empty()
+
+
+# FT: FT-STN-005, FT-PAIR-007
+# Science alone upright: its share buttons are on its Crew page, one tap from the tabs.
+func test_science_alone_upright_reaches_its_share_buttons() -> void:
+	var s: StationScreen = await _screen(Vector2i(390, 844), "science", PORTRAIT)
+	var p: SciencePanel = s.focused_panel() as SciencePanel
+	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
+	p.pages.select(p.pages.count() - 1)
+	await _frames(2)
+	var crew: CrewPage = p.phone.crew
+	assert_bool(crew.is_visible_in_tree()).is_true()
+	var share: RailButton = crew.button("share")
+	assert_object(share).is_not_null()
+	assert_bool(share.is_visible_in_tree()).is_true()
+	share.pressed.emit()
+	assert_int(StationFixture.sent(s.ctx).of("share").size()).is_equal(1)
+	_drop(s)
+
+
+# FT: FT-STN-005, FT-JNT-001, FT-SCI-001, FT-RLY-001
+# Focused in a joint view on a phone, Science and Relay use their phone rails: on its side
+# Science draws its own radar and the screen's column hides; upright and on a desktop the
+# screen's radar stays the Science radar.
+func test_science_and_relay_use_their_rails_in_a_joint_view() -> void:
+	var sci: StationScreen = await _screen(Vector2i(844, 390), "survey", LANDSCAPE, 1)
+	var sp: SciencePanel = sci.focused_panel() as SciencePanel
+	assert_object(sp.phone).is_not_null()
+	assert_bool(sp.own_radar()).is_true()
+	assert_bool(sp.radar.is_visible_in_tree()).is_true()
+	assert_bool(sci.radar.is_visible_in_tree()).is_false()
+	_drop(sci)
+	var up: StationScreen = await _screen(Vector2i(390, 844), "survey", PORTRAIT, 1)
+	var upp: SciencePanel = up.focused_panel() as SciencePanel
+	assert_object(upp.phone).is_not_null()
+	assert_bool(upp.own_radar()).is_false()
+	assert_bool(up.radar.is_visible_in_tree()).is_true()
+	_drop(up)
+	var desk: StationScreen = await _screen(Vector2i(1280, 720), "survey", [], 1)
+	var dp: SciencePanel = desk.focused_panel() as SciencePanel
+	assert_object(dp.phone).is_null()
+	assert_bool(dp.own_radar()).is_false()
+	assert_object(dp.radar).is_null()
+	assert_bool(desk.radar.is_visible_in_tree()).is_true()
+	_drop(desk)
+	for c: Array in [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]:
+		var r: StationScreen = await _screen(c[0], "nav", c[1], 1)
+		assert_object((r.focused_panel() as RelayPanel).phone).is_not_null()
+		_drop(r)
+
+
+# FT: FT-STN-005
+## Weapons' chips stay whole in the view: a contact whose bracket is out of view shows no
+## chip cut at the edge, and a chip near the right edge goes left of its bracket.
+func test_weapons_chips_inside_the_view() -> void:
+	for size: Vector2i in [Vector2i(844, 390), Vector2i(390, 844)]:
+		var s: StationScreen = await _screen(size, "weapons", LANDSCAPE)
+		var w: WeaponsPanel = s.panels[0] as WeaponsPanel
+		w.step(0.016)
+		var view: Rect2 = Rect2(Vector2.ZERO, w._overlay.size)
+		assert_array(w.ctx.picture().items).is_not_empty()
+		for t: Dictionary in w._targets:
+			var r: Rect2 = t["rect"]
+			(
+				assert_bool(view.encloses(r))
+				. override_failure_message("%s: chip %s outside %s" % [size, r, view])
+				. is_true()
+			)
+		_drop(s)
+
+
+# FT: FT-STN-005
+## Relay's map chips never cover each other.
+func test_relay_map_chips_do_not_overlap() -> void:
+	for size: Vector2i in [Vector2i(844, 390), Vector2i(390, 844)]:
+		var s: StationScreen = await _screen(size, "relay", LANDSCAPE)
+		var entries: Array[Dictionary] = (s.panels[0] as RelayPanel).map._layout()
+		var rects: Array[Rect2] = []
+		for e: Dictionary in entries:
+			if (e["chip"] as String) != "":
+				rects.append(e["chip_rect"])
+		assert_int(rects.size()).is_greater(1)
+		for i: int in rects.size():
+			for j: int in range(i + 1, rects.size()):
+				(
+					assert_bool(rects[i].intersects(rects[j]))
+					. override_failure_message(
+						"%s: chips %s and %s overlap" % [size, rects[i], rects[j]]
+					)
+					. is_false()
+				)
+		_drop(s)

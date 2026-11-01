@@ -9,6 +9,7 @@ dependencies = [
   "jsonschema==4.25.1",
   "numpy==2.5.4",
   "soundfile==0.13.1",
+  "brotli==1.1.0",
 ]
 
 [tool.uv]

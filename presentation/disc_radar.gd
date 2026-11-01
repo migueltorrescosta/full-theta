@@ -12,6 +12,7 @@ extends Control
 ## the ship's axes (no world-fixed up, D124). Drawn in 2D with a fixed or orbitable
 ## camera angle (FT-SPA-011). Mouse: wheel zooms, a click on the range label steps the
 ## range, right-drag orbits when orbitable; other clicks pass to the screen (item_at).
+## Touch: a two-finger drag orbits when orbitable (spec §5.4 touch, #28).
 ##
 ## Projection: ship frame (-Z bow, +X starboard, +Y up) relative to the centre item,
 ## from the minimum image of the world-axes difference (D124, ContactPicture.rel); the
@@ -28,9 +29,17 @@ const STRIP_W: float = 44.0
 ## Room around the disc for the clock numbers (px).
 const PAD: float = 24.0
 const BLIP_R: float = 6.0
+## Least space (px) between a chip and the edge of the view.
+const CHIP_MARGIN: float = 2.0
 ## item_at picks the nearest blip within this distance (px).
 const HIT_PX: float = 12.0
 const ORBIT_DEG_PER_PX: float = 0.4
+## Under this disc radius (px) the radar is small (a phone's side column, rail or flat
+## mirror strip, #28): chips
+## carry the callsign alone and take a free spot beside, above or below their blip, clear
+## of the clock numbers, the own ship, the other blips and each other, or are left out
+## (the selected item's never is).
+const SMALL_R: float = 80.0
 
 ## The items to draw (ContactPicture). "point" items (point pings) draw only their
 ## pulse and are never picked.
@@ -50,8 +59,24 @@ var chips: bool = true
 ## Contact id -> blip size factor (Science's detection confidence, FT-SCI-001); a contact
 ## not listed draws at the usual size.
 var blip_scale: Dictionary = {}
+## The part of the control the disc, the range label and the site banner keep to, in its
+## coordinates; empty for all of it. Overlay thumb rails cover the rest (#28).
+var view_rect: Rect2 = Rect2():
+	set(value):
+		view_rect = value
+		queue_redraw()
+## The least side (px) of the range label and of the site banner's tap area, 0 for the
+## text's size; above 0 each also gets a control with the `tap` meta, so TapAudit sees
+## them (a phone, #28).
+var touch_min: float = 0.0:
+	set(value):
+		touch_min = value
+		queue_redraw()
 
 var _orbiting: bool = false
+## Fingers down on the radar: index -> position (two orbit).
+var _fingers: Dictionary = {}
+var _taps: Array[Control] = []
 
 
 func _init() -> void:
@@ -80,7 +105,7 @@ func toggle_strip() -> void:
 ## then the nearest blip or mark within `reach` px (HIT_PX; a controller cursor snaps
 ## from farther), then a chip under the pointer.
 func item_at(local_pos: Vector2, reach: float = HIT_PX) -> Dictionary:
-	if SiteBanner.rect(get_theme_default_font(), picture.site).has_point(local_pos):
+	if _site_rect().has_point(local_pos):
 		return _ref(picture.site)
 	var layout: Array[Dictionary] = _layout()
 	for e: Dictionary in layout:
@@ -143,6 +168,8 @@ func _get_tooltip(at_position: Vector2) -> String:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if _touch(event):
+		return
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	if mb != null:
 		if mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
@@ -168,6 +195,31 @@ func _gui_input(event: InputEvent) -> void:
 		tilt_deg = clampf(tilt_deg - mm.relative.y * ORBIT_DEG_PER_PX, TILT_MIN, TILT_MAX)
 		queue_redraw()
 		accept_event()
+
+
+## Two fingers orbit an orbitable radar: the yaw follows their mean sideways move, the tilt
+## their mean up-down move. One finger passes on (its emulated mouse taps and selects).
+## True when the event was used.
+func _touch(event: InputEvent) -> bool:
+	var st: InputEventScreenTouch = event as InputEventScreenTouch
+	if st != null:
+		if st.pressed:
+			_fingers[st.index] = st.position
+		else:
+			_fingers.erase(st.index)
+		return false
+	var sd: InputEventScreenDrag = event as InputEventScreenDrag
+	if sd == null:
+		return false
+	_fingers[sd.index] = sd.position
+	if not orbitable or _fingers.size() < 2:
+		return false
+	var step: Vector2 = sd.relative / float(_fingers.size())
+	yaw_deg = fposmod(yaw_deg + step.x * ORBIT_DEG_PER_PX, 360.0)
+	tilt_deg = clampf(tilt_deg - step.y * ORBIT_DEG_PER_PX, TILT_MIN, TILT_MAX)
+	queue_redraw()
+	accept_event()
+	return true
 
 
 func _draw() -> void:
@@ -200,10 +252,18 @@ func _draw() -> void:
 	var label: Rect2 = _range_rect()
 	draw_rect(label, Palette.color("panel_focus"))
 	draw_rect(label, Palette.color("line"), false, 1.0)
-	_draw_text(font, label.grow(-4.0), _range_text(), Palette.color("text"))
+	var text: String = _range_text()
+	var tsz: Vector2 = Vector2(
+		font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+		font.get_height(FONT_SIZE)
+	)
+	_draw_text(font, Rect2(label.get_center() - tsz / 2.0, tsz), text, Palette.color("text"))
+	draw_set_transform(_view().position)
 	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
+	draw_set_transform(Vector2.ZERO)
 	if side_strip:
 		_draw_strip(font)
+	_sync_taps()
 
 
 ## The disc, half-range ring, clock ticks every 30° and the numbers 12, 3, 6, 9.
@@ -215,13 +275,22 @@ func _draw_disc(font: Font, c: Vector2, r: float) -> void:
 	for hour: int in 12:
 		var b: float = deg_to_rad(30.0 * hour)
 		var dir: Vector3 = Vector3(sin(b), 0.0, -cos(b))
-		var outer: Vector2 = _screen(dir * r)
-		draw_line(_screen(dir * r * 0.92), outer, Palette.color("text_dim"), 1.0, true)
-		if hour % 3 == 0:
-			var text: String = str(12 if hour == 0 else hour)
-			var out: Vector2 = (outer - c).normalized() * 12.0
-			var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
-			_draw_text(font, Rect2(outer + out - sz / 2.0, sz), text, Palette.color("text"))
+		draw_line(_screen(dir * r * 0.92), _screen(dir * r), Palette.color("text_dim"), 1.0, true)
+	var numerals: Dictionary = _numerals(font, c, r)
+	for text: String in numerals:
+		_draw_text(font, numerals[text], text, Palette.color("text"))
+
+
+## The clock numbers 12, 3, 6 and 9 and their boxes, just outside the rim.
+func _numerals(font: Font, c: Vector2, r: float) -> Dictionary:
+	var out: Dictionary = {}
+	for hour: int in [0, 3, 6, 9]:
+		var b: float = deg_to_rad(30.0 * hour)
+		var outer: Vector2 = _screen(Vector3(sin(b), 0.0, -cos(b)) * r)
+		var text: String = str(12 if hour == 0 else hour)
+		var sz: Vector2 = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
+		out[text] = Rect2(outer + (outer - c).normalized() * 12.0 - sz / 2.0, sz)
+	return out
 
 
 ## The own ship: a chevron pointing at the bow, with a stem when off-centre.
@@ -311,7 +380,7 @@ func _draw_copies(pos: Vector2, col: Color, copies: Array) -> void:
 
 ## FT-SPA-009: elevation -90..+90 of every item from the own ship, one tick each.
 func _draw_strip(font: Font) -> void:
-	var x0: float = size.x - STRIP_W
+	var x0: float = _view().end.x - STRIP_W
 	var top: float = PAD
 	var bottom: float = size.y - PAD
 	draw_rect(Rect2(x0, 0.0, STRIP_W, size.y), Palette.color("panel"))
@@ -365,14 +434,18 @@ func _layout() -> Array[Dictionary]:
 		var chip: String = ""
 		if chips:
 			chip = it["label"] if it["kind"] != "contact" else ChipText.chip(it["label"], local)
+		if small():
+			chip = it["label"] if chips else ""
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
-		if chip != "":
-			var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
-			sz.y = font.get_height(FONT_SIZE)
-			# Right of the blip; arrows on the rim put it on the inner side.
-			var left: bool = beyond and pos.x > c.x
-			var x: float = pos.x - 10.0 - sz.x if left else pos.x + 10.0
-			rect = Rect2(Vector2(x, pos.y - sz.y / 2.0), sz)
+		if chip != "" and not small():
+			# A small radar (a phone's 180 px column) drops the range band, then the clock,
+			# until the chip fits beside its blip; the callsign alone may slide over it.
+			var parts: PackedStringArray = chip.split(ChipText.SEP)
+			for n: int in range(parts.size(), 0, -1):
+				chip = ChipText.SEP.join(parts.slice(0, n))
+				rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
+				if rect.position.x > pos.x + BLIP_R or rect.end.x < pos.x - BLIP_R:
+					break
 		(
 			out
 			. append(
@@ -387,8 +460,99 @@ func _layout() -> Array[Dictionary]:
 				}
 			)
 		)
-	_declutter(out)
+	if small():
+		_place_small(out, font)
+	else:
+		_declutter(out)
 	return out
+
+
+## True when the disc is under SMALL_R in radius.
+func small() -> bool:
+	return disc_radius() < SMALL_R
+
+
+## Small radar: each chip (the selected item's first) takes the first free spot of right,
+## left, above and below its blip; a chip with no free spot is left out unless selected.
+func _place_small(entries: Array[Dictionary], font: Font) -> void:
+	var v: Rect2 = _view().grow(-CHIP_MARGIN)
+	if v.size.x <= 0.0 or v.size.y <= 0.0:
+		# (not laid out yet: no room for a chip)
+		for e: Dictionary in entries:
+			e["chip"] = ""
+			e["chip_rect"] = Rect2(e["pos"], Vector2.ZERO)
+		return
+	var c: Vector2 = disc_centre()
+	var taken: Array[Rect2] = []
+	var numerals: Array = _numerals(font, c, RANGES_M[range_index]).values()
+	taken.append_array(numerals)
+	taken.append_array([_range_rect(), _site_rect()])
+	taken.append(Rect2(_screen(picture.rel(Vector3.ZERO, centre)) - Vector2(8, 8), Vector2(16, 16)))
+	var half: Vector2 = Vector2(BLIP_R, BLIP_R) + Vector2(3, 3)
+	for e: Dictionary in entries:
+		taken.append(Rect2((e["pos"] as Vector2) - half, half * 2.0))
+	var order: Array[Dictionary] = entries.duplicate()
+	order.sort_custom(
+		func(a: Dictionary, b: Dictionary) -> bool:
+			return _is_selected(a["item"]) and not _is_selected(b["item"])
+	)
+	for e: Dictionary in order:
+		if e["chip"] == "":
+			continue
+		var sz: Vector2 = Vector2(
+			font.get_string_size(e["chip"], HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+			font.get_height(FONT_SIZE)
+		)
+		var p: Vector2 = e["pos"]
+		var spots: Array[Vector2] = [
+			Vector2(p.x + half.x + 1.0, p.y - sz.y / 2.0),
+			Vector2(p.x - half.x - 1.0 - sz.x, p.y - sz.y / 2.0),
+			Vector2(p.x - sz.x / 2.0, p.y - half.y - sz.y),
+			Vector2(p.x - sz.x / 2.0, p.y + half.y),
+		]
+		var pick: Rect2 = Rect2()
+		for at: Vector2 in spots:
+			var r: Rect2 = Rect2(at, sz)
+			if not v.encloses(r):
+				continue
+			if taken.all(func(o: Rect2) -> bool: return not o.intersects(r)):
+				pick = r
+				break
+		if not pick.has_area() and _is_selected(e["item"]):
+			# The selection's chip always shows: the first spot, kept inside the view, that
+			# clears the range numerals.
+			for at: Vector2 in spots:
+				var r: Rect2 = Rect2(at.clamp(v.position, (v.end - sz).max(v.position)), sz)
+				if not pick.has_area():
+					pick = r
+				if numerals.all(func(o: Rect2) -> bool: return not o.intersects(r)):
+					pick = r
+					break
+		if pick.has_area():
+			taken.append(pick)
+			e["chip_rect"] = pick
+		else:
+			e["chip"] = ""
+			e["chip_rect"] = Rect2(p, Vector2.ZERO)
+
+
+## A chip's box: right of the blip at `pos`, left of it when `left` (an arrow on the right
+## rim) or when only that side fits, then shifted to stay inside the view: a small radar
+## never clips a chip at its edge (#28).
+func _chip_rect(font: Font, chip: String, pos: Vector2, left: bool) -> Rect2:
+	var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
+	sz.y = font.get_height(FONT_SIZE)
+	var v: Rect2 = _view().grow(-CHIP_MARGIN)
+	var right_x: float = pos.x + 10.0
+	var left_x: float = pos.x - 10.0 - sz.x
+	var x: float = left_x if left else right_x
+	if not left and right_x + sz.x > v.end.x and left_x >= v.position.x:
+		x = left_x
+	elif left and left_x < v.position.x and right_x + sz.x <= v.end.x:
+		x = right_x
+	x = clampf(x, v.position.x, maxf(v.position.x, v.end.x - sz.x))
+	var y: float = clampf(pos.y - sz.y / 2.0, v.position.y, maxf(v.position.y, v.end.y - sz.y))
+	return Rect2(Vector2(x, y), sz)
 
 
 ## Moves overlapping chips apart: top to bottom, a chip that overlaps one already placed
@@ -447,15 +611,53 @@ func _rel_item(it: Dictionary) -> Vector3:
 	return picture.rel(it["world"], centre)
 
 
+## The rectangle the radar draws in: view_rect, or the whole control.
+func _view() -> Rect2:
+	return view_rect if view_rect.has_area() else Rect2(Vector2.ZERO, size)
+
+
 func _area() -> Rect2:
-	return Rect2(Vector2.ZERO, size - Vector2(STRIP_W if side_strip else 0.0, 0.0))
+	var v: Rect2 = _view()
+	return Rect2(v.position, v.size - Vector2(STRIP_W if side_strip else 0.0, 0.0))
 
 
+## The range label: bottom left of the view, at least touch_min on each side.
 func _range_rect() -> Rect2:
 	var font: Font = get_theme_default_font()
 	var sz: Vector2 = font.get_string_size(_range_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 	sz = Vector2(sz.x, font.get_height(FONT_SIZE)) + Vector2(8.0, 8.0)
-	return Rect2(Vector2(6.0, size.y - sz.y - 6.0), sz)
+	sz = sz.max(Vector2(touch_min, touch_min))
+	var v: Rect2 = _view()
+	return Rect2(Vector2(v.position.x + 6.0, v.end.y - sz.y - 6.0), sz)
+
+
+## Where a tap picks the site banner: its box, at least touch_min tall and wide.
+func _site_rect() -> Rect2:
+	var r: Rect2 = SiteBanner.rect(get_theme_default_font(), picture.site)
+	if not r.has_area():
+		return r
+	r.position += _view().position
+	r.size = r.size.max(Vector2(touch_min, touch_min))
+	return r
+
+
+## The range label's and site banner's tap controls follow them (only with touch_min).
+func _sync_taps() -> void:
+	if touch_min <= 0.0 and _taps.is_empty():
+		return
+	if _taps.is_empty():
+		for n: String in ["RangeTap", "SiteTap"]:
+			var c: Control = Control.new()
+			c.name = n
+			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			c.set_meta("tap", true)
+			add_child(c)
+			_taps.append(c)
+	var rects: Array[Rect2] = [_range_rect(), _site_rect()]
+	for i: int in _taps.size():
+		_taps[i].visible = touch_min > 0.0 and rects[i].has_area()
+		_taps[i].position = rects[i].position
+		_taps[i].size = rects[i].size
 
 
 func _range_text() -> String:

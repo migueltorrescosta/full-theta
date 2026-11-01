@@ -8,6 +8,12 @@ const SETTINGS: String = "user://test_viewer_panel.cfg"
 
 func before() -> void:
 	I18n.apply("en")
+	# gdUnit's 64 x 64 window is a phone on its side; these check the desktop layout (#28).
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+
+
+func after() -> void:
+	LayoutMode.forced = -1
 
 
 func after_test() -> void:

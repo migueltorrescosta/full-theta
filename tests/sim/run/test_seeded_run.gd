@@ -37,6 +37,7 @@ func test_four_to_six_encounters_at_named_sites_by_impulse_and_jump() -> void:
 # FT: FT-ARC-008
 func test_the_same_seed_plays_the_same_run() -> void:
 	var defs: DefLibrary = DefLibrary.new()
-	var a: Dictionary = BotRun.play(defs, "average", "easy", 3, 900.0)
-	var b: Dictionary = BotRun.play(defs, "average", "easy", 3, 900.0)
+	# 600 s of sim still covers two encounters, in two thirds of the time of 900 s (#27).
+	var a: Dictionary = BotRun.play(defs, "average", "easy", 3, 600.0)
+	var b: Dictionary = BotRun.play(defs, "average", "easy", 3, 600.0)
 	assert_str(JSON.stringify(a)).is_equal(JSON.stringify(b))

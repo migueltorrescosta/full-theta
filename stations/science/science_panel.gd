@@ -18,7 +18,10 @@ extends StationPanel
 ## orbit, RT scan, LT hack, d-pad up ping, down scan-position mark, left / right
 ## subsystem, LB sensors mode, LB + d-pad down own-ship scan; in a scan the sticks turn
 ## the open axes, X submits, Y cancels; in a hack the stick or d-pad moves the route.
-## Touch: the buttons and the minigames' tap and drag.
+## Touch: the buttons and the minigames' tap and drag, two fingers orbit the radar. On a
+## phone a lone or focused Science panel moves its parts into thumb rails with pages
+## (SciencePhone, #28) and joins the phone frame; its Hack opens the screen's choice sheet
+## of the target's subsystems (P28-L1, D289).
 
 ## Scan dial rate with a key or stick at full deflection (rad/s).
 const DIAL_RATE: float = 1.6
@@ -43,11 +46,14 @@ const SESSION_NONE: int = 0
 const SESSION_SCAN: int = 1
 const SESSION_HACK: int = 2
 
-## The panel's own radar when it is alone on the screen, else null (see full_screen).
+## The panel's own radar: made when the panel is alone, or the first time it takes the
+## phone arrangement in a joint view; it shows while own_radar() (#28), else null.
 var radar: DiscRadar
 var scan_game: ScanGame
 var hack_game: HackGame
 var card_view: ScienceCard
+## The phone arrangement (SciencePhone), null in the wide layout.
+var phone: SciencePhone
 
 var _list: ItemList
 var _list_key: Array = []
@@ -60,15 +66,22 @@ var _sub_index: int = 0
 var _cursor: Vector2 = Vector2(-1, -1)
 var _stick_armed: bool = true
 var _last_sent: int = -2
+var _rows: VBoxContainer
+## The hack's subsystem was picked with the keys or the controller ([ ], d-pad) for the
+## selected contact: a phone's Hack then starts at once instead of opening the sheet.
+var _sub_picked: bool = false
 
 
 func _setup() -> void:
 	clip_contents = true
+	in_frame = true
+	selection_extras = [[tr("sci.scan"), _scan], [tr("sci.hack"), open_hack]]
 	var rows: VBoxContainer = VBoxContainer.new()
 	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	rows.add_theme_constant_override("separation", 4)
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rows)
+	_rows = rows
 	var top: BoxContainer = BoxContainer.new()
 	_top = top
 	top.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -76,6 +89,7 @@ func _setup() -> void:
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows.add_child(top)
 	_list = ItemList.new()
+	ListLines.attach(_list)
 	_list.custom_minimum_size = Vector2(LIST_W, 0)
 	_list.item_selected.connect(_on_list_selected)
 	top.add_child(_list)
@@ -86,10 +100,7 @@ func _setup() -> void:
 	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(_stage)
 	if _alone():
-		radar = DiscRadar.new()
-		radar.orbitable = true
-		radar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_stage.add_child(radar)
+		_make_radar()
 	scan_game = ScanGame.new()
 	scan_game.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scan_game.visible = false
@@ -104,10 +115,10 @@ func _setup() -> void:
 	_stage.add_child(hack_game)
 	card_view = ScienceCard.new()
 	card_view.custom_minimum_size = Vector2(CARD_W, 0)
-	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if radar == null else 0
+	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not own_radar() else 0
 	top.add_child(card_view)
 	_build_bar(rows)
-	resized.connect(_stack)
+	resized.connect(_on_resized)
 	_stack()
 	ctx.crew.changed.connect(_on_crew_changed)
 	# A contact picked before this panel existed (late pick, reconnect) is still the
@@ -123,16 +134,7 @@ func _build_bar(rows: VBoxContainer) -> void:
 	_bar.add_theme_constant_override("h_separation", 6)
 	_bar.add_theme_constant_override("v_separation", 4)
 	rows.add_child(_bar)
-	for spec: Array in [
-		["mode", "sci.mode_passive", _toggle_mode],
-		["scan", "sci.scan", _scan],
-		["hack", "sci.hack", _hack],
-		["sub", "", _cycle_subsystem.bind(1)],
-		["ping", "sci.ping", _ping],
-		["mark", "sci.scan_mark", _scan_mark],
-		["self", "sci.self_scan", _self_scan],
-		["claim", "sci.claim", _claim_scan],
-	]:
+	for spec: Array in actions():
 		var b: Button = Button.new()
 		b.text = tr(spec[1]) if spec[1] != "" else ""
 		b.pressed.connect(spec[2])
@@ -147,8 +149,73 @@ func _build_bar(rows: VBoxContainer) -> void:
 	_bar.add_child(_status)
 
 
+## The eight actions as [key, label key, command]: the bar's buttons and a phone's rails.
+func actions() -> Array[Array]:
+	return [
+		["mode", "sci.mode_passive", _toggle_mode],
+		["scan", "sci.scan", _scan],
+		["hack", "sci.hack", _hack],
+		["sub", "", _cycle_subsystem.bind(1)],
+		["ping", "sci.ping", _ping],
+		["mark", "sci.scan_mark", _scan_mark],
+		["self", "sci.self_scan", _self_scan],
+		["claim", "sci.claim", _claim_scan],
+	]
+
+
+func _on_resized() -> void:
+	_arrange()
+	if phone == null:
+		_stack()
+
+
+## A lone panel on a phone, or the focused one of a joint view, uses the phone arrangement
+## for the form (rebuilt when the phone turns); elsewhere, and docked, the wide one.
+func _arrange() -> void:
+	var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
+	if is_inside_tree():
+		form = SciencePhone.form_of_panel(self)
+	var want: bool = (
+		(_alone() or _screen_panels() == 2) and not docked and LayoutMode.is_phone(form)
+	)
+	if want and radar == null:
+		_make_radar()
+	if want and phone != null and phone.form == form:
+		return
+	if not want and phone == null:
+		return
+	if phone != null:
+		phone.release()
+		phone.queue_free()
+		phone = null
+	if want:
+		phone = SciencePhone.new()
+		add_child(phone)
+		phone.build(self, form)
+	# The phone's pages; its Crew page holds the share buttons (design 2.0).
+	pages = phone.pages if phone != null else null
+	shows_shares = phone != null
+	_rows.visible = phone == null
+	if phone == null:
+		_stack()
+	refresh()
+	_rebind_tabs()
+
+
+## The screen binds the focused panel's pages when it lays out; a panel that builds (or
+## drops) its phone pages after that has the screen bind them again.
+func _rebind_tabs() -> void:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
+		(n as StationScreen).pages_changed()
+
+
 ## The list and card show unless docked; a narrow panel gives a minigame their room.
 func _show_parts() -> void:
+	if phone != null:
+		return
 	var playing: bool = int(block().get("session", SESSION_NONE)) != SESSION_NONE
 	var show: bool = not docked and not (playing and size.x < NARROW_W)
 	_list.visible = show
@@ -162,11 +229,12 @@ func _stack() -> void:
 	_top.vertical = narrow
 	_list.custom_minimum_size = Vector2(0, STACK_LIST_H) if narrow else Vector2(LIST_W, 0)
 	card_view.custom_minimum_size = Vector2(0, STACK_CARD_H) if narrow else Vector2(CARD_W, 0)
-	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if radar == null or narrow else 0
+	card_view.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if not own_radar() or narrow else 0)
 	_show_parts()
 
 
 func _mode_changed() -> void:
+	_arrange()
 	_show_parts()
 	_bar.visible = not docked
 	if radar != null:
@@ -177,11 +245,43 @@ func _mode_changed() -> void:
 ## view the screen's one disc radar is the Science radar (orbitable while this panel has
 ## the focus, with `blip_scale`) and the main area holds the list, card and minigames.
 func full_screen() -> bool:
-	return radar != null
+	return own_radar()
+
+
+## True while the panel shows its own radar: alone on the screen, or focused in a joint
+## view on a phone on its side (the screen then shows it alone, #28). Upright a joint view
+## keeps the screen's radar.
+func own_radar() -> bool:
+	if _alone():
+		return true
+	return (
+		_screen_panels() == 2
+		and not docked
+		and is_inside_tree()
+		and SciencePhone.form_of_panel(self) == LayoutMode.Form.PHONE_LANDSCAPE
+	)
 
 
 func blip_scale() -> Dictionary:
 	return _blip_scale(block())
+
+
+func _make_radar() -> void:
+	radar = DiscRadar.new()
+	radar.orbitable = true
+	radar.chips = not docked
+	radar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_stage.add_child(radar)
+	_stage.move_child(radar, 0)
+
+
+## How many panels the station screen holding this panel has (1 when none): the dev
+## seat's catalogue entry names no stations, so the screen is the one to ask.
+func _screen_panels() -> int:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	return (n as StationScreen).panels.size() if n != null else 1
 
 
 func _alone() -> bool:
@@ -189,7 +289,7 @@ func _alone() -> bool:
 
 
 func radar_orbitable() -> bool:
-	return radar == null
+	return not own_radar()
 
 
 func claim_item() -> String:
@@ -237,12 +337,13 @@ func subsystems() -> Array[StringName]:
 func refresh() -> void:
 	var b: Dictionary = block()
 	var session: int = int(b.get("session", SESSION_NONE))
+	var own: bool = own_radar()
 	if radar != null:
 		radar.set_picture(ctx.picture(), ctx.crew.selection)
 		radar.blip_scale = _blip_scale(b)
-		radar.visible = session == SESSION_NONE
+		radar.visible = own and session == SESSION_NONE
 	_show_parts()
-	_stage.visible = radar != null or session != SESSION_NONE
+	_stage.visible = own or session != SESSION_NONE
 	scan_game.visible = session == SESSION_SCAN
 	hack_game.visible = session == SESSION_HACK
 	var age: float = maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / 60.0)
@@ -262,6 +363,8 @@ func refresh() -> void:
 	card_view.set_card(ctx.view.callsign(sel) if sel >= 0 else "", card_of(sel), _hacks_on(sel))
 	_refresh_list()
 	_refresh_buttons(b, session)
+	if phone != null:
+		phone.update(session)
 
 
 func _blip_scale(b: Dictionary) -> Dictionary:
@@ -349,9 +452,13 @@ func _can_hack() -> bool:
 	return selected_contact() >= 0 and bool(card_of(selected_contact()).get("hack", false))
 
 
+## The subsystem button beside Hack: the target's name ("Engines"), or "No subsystem"
+## (disabled) with none to pick.
 func _sub_text() -> String:
 	var subs: Array[StringName] = subsystems()
-	return String(subs[_sub_index % subs.size()]) if not subs.is_empty() else "-"
+	if subs.is_empty():
+		return tr("sci.hack_sub_none")
+	return tr("eng.name." + String(subs[_sub_index % subs.size()]))
 
 
 # --- Commands (buttons, keys and the controller all end up here). ---
@@ -389,6 +496,7 @@ func _cycle_subsystem(step: int) -> void:
 	var n: int = subsystems().size()
 	if n > 0:
 		_sub_index = posmod(_sub_index + step, n)
+		_sub_picked = true
 
 
 func _ping() -> void:
@@ -412,6 +520,83 @@ func _claim_scan() -> void:
 		ctx.intents.release_claim(StationViews.CLAIM_SCAN)
 	else:
 		ctx.intents.claim(StationViews.CLAIM_SCAN)
+
+
+## A phone's Hack (P28-L1, D289): the screen's choice sheet of the target's subsystems plus
+## Cancel, covering the right rail; a pick starts the hack. With no hackable contact
+## selected the nearest one is selected first. With the subsystem already picked by key or
+## controller (`_sub_picked`), or without a sheet, the hack starts at once.
+func open_hack() -> void:
+	if int(block().get("session", SESSION_NONE)) != SESSION_NONE:
+		return
+	if not _can_hack():
+		var near: int = _nearest_hackable()
+		if near < 0:
+			return
+		ctx.crew.select("contact", near)
+	if _sub_picked or sheet == null:
+		_hack()
+		return
+	var c: int = selected_contact()
+	var subs: Array[StringName] = subsystems()
+	var names: Array = []
+	for id: StringName in subs:
+		names.append(tr("eng.name." + String(id)))
+	sheet.side = SIDE_RIGHT
+	sheet.open(
+		TouchText.of("sci.hack_sheet", "Hack %s") % ctx.view.callsign(c),
+		names,
+		func(i: int) -> void: _hack_sub(c, subs[i])
+	)
+
+
+## True when a phone's Hack has something to open: no session and a hackable contact.
+func can_open_hack() -> bool:
+	return int(block().get("session", SESSION_NONE)) == SESSION_NONE and _nearest_hackable() >= 0
+
+
+## The hackable contact (its card says so) nearest the ship, or -1.
+func _nearest_hackable() -> int:
+	var best: int = -1
+	var best_d: float = INF
+	for it: Dictionary in ctx.picture().items:
+		if it["kind"] != "contact" or not bool(card_of(int(it["id"])).get("hack", false)):
+			continue
+		var d: float = (it["local"] as Vector3).length()
+		if d < best_d:
+			best_d = d
+			best = int(it["id"])
+	return best
+
+
+func _hack_sub(contact: int, sub: StringName) -> void:
+	if block().get("session", 0) != SESSION_NONE:
+		return
+	_status.text = ""
+	ctx.intents.command({"kind": "science_hack", "contact": contact, "subsystem_id": String(sub)})
+
+
+## The tab strip's title during a session (design 2.4): "Scan H2 · 12 s".
+func session_title() -> String:
+	var b: Dictionary = block()
+	var session: int = int(b.get("session", SESSION_NONE))
+	if session == SESSION_NONE:
+		return ""
+	var age: int = floori(maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / 60.0))
+	var who: String = ctx.view.callsign(int(b.get("session_target", -1)))
+	if session == SESSION_SCAN:
+		return TouchText.of("sci.session_scan", "Scan %s · %d s") % [who, age]
+	return TouchText.of("sci.session_hack", "Hack %s · %d s") % [who, age]
+
+
+## A phone upright has no rails: the view is the stage (the radar or a minigame).
+func view_rect() -> Rect2:
+	if phone != null and phone.layout == null:
+		var xf: Transform2D = (
+			get_global_transform().affine_inverse() * _stage.get_global_transform()
+		)
+		return xf * Rect2(Vector2.ZERO, _stage.size)
+	return super()
 
 
 func cancel_session() -> void:
@@ -439,6 +624,7 @@ func _on_crew_changed(what: StringName) -> void:
 	if c != _last_sent:
 		_last_sent = c
 		_sub_index = 0
+		_sub_picked = false
 		ctx.intents.command({"kind": "science_select", "contact": c})
 
 
@@ -555,7 +741,7 @@ func _poll_axes(delta: float) -> void:
 	elif session == SESSION_HACK:
 		if m.device == IntentTable.PAD:
 			_stick_move(lx, ly)
-	elif m.device == IntentTable.PAD and radar != null:
+	elif m.device == IntentTable.PAD and own_radar() and radar != null:
 		_cursor = (cursor_pos() + Vector2(lx, ly) * PAD_CURSOR_PX_S * delta).clamp(
 			Vector2.ZERO, size
 		)

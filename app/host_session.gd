@@ -35,9 +35,9 @@ class Options:
 	## Required (D108: never every interface by default).
 	var bind: String = ""
 	## WebSocket port (--port); 0 picks a free one. HTTP uses port - 1 (D108).
-	var port: int = ServerMain.DEFAULT_PORT
+	var port: int = NetProtocol.DEFAULT_WS_PORT
 	## Reconnect grace in seconds (--grace-s, FT-NET-033).
-	var grace_s: float = ServerMain.DEFAULT_GRACE_S
+	var grace_s: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
 	## Minutes without connected players before the server exits (--idle-exit-min,
 	## FT-NET-003); 0 never.
 	var idle_exit_min: float = HostLauncher.DEFAULT_IDLE_EXIT_MIN
@@ -57,6 +57,8 @@ class Options:
 	## What the world holds (--encounter, PROVISIONAL Q17 A): "run", the director's run, or
 	## "shakedown", the training scenario (co-op, one ship). "" leaves the server's default.
 	var encounter: String = ""
+	## A station lesson (--solo, D303): the host plays this station alone, bots on the rest.
+	var solo: String = ""
 
 	func _init(bind_address: String = "") -> void:
 		bind = bind_address

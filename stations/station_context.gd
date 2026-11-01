@@ -17,6 +17,9 @@ var settings: ClientSettings = ClientSettings.new()
 ## lobby's join info; "" for a player who joined someone else's game.
 var host_bind: String = ""
 var host_port: int = 0
+## The connected server serves HTTPS and WSS (the welcome's `tls`, D294): the join URL says
+## https.
+var host_tls: bool = false
 var matcher: InputMatcher = InputMatcher.new()
 ## The Shakedown's latest step per station (TrainingBanner.note); empty outside training.
 var training: Dictionary = {}

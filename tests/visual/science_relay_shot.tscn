@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/visual/science_relay_shot.gd" id="1"]
+
+[node name="ScienceRelayShot" type="Control"]
+script = ExtResource("1")

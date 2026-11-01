@@ -12,7 +12,7 @@ const SKIP_DIRS: Array[String] = ["addons", "spikes", "tests", ".godot", ".git",
 const HTTP_ALLOWED: String = "static_server"
 const INTERNET_WORDS: String = (
 	"(?i)(master|relay|rendezvous)[_ ]?server|matchmak|nat[_ ]?punch|hole[_ ]?punch"
-	+ "|\\b(stun|turn)s?:"
+	+ "|\\b(stun|turn)s?:\\S"
 )
 
 

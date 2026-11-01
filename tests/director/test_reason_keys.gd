@@ -9,15 +9,19 @@ func _strings() -> Dictionary:
 
 # FT: FT-MIS-006
 func test_every_reason_key_the_director_can_log_resolves() -> void:
-	var source: String = FileAccess.get_file_as_string("res://director/director.gd")
+	var source: String = (
+		FileAccess.get_file_as_string("res://director/director.gd")
+		+ FileAccess.get_file_as_string("res://director/fleet_director.gd")
+	)
 	var pattern: String = (
 		'"reason": "([a-z_]+)"|reason: String = "([a-z_]+)"'
 		+ '|"(site_pool|periodic|rejected|run_length|budget_spent)"'
+		+ '|"director\\.reason\\.([a-z_]+)"'
 	)
 	var found: RegEx = RegEx.create_from_string(pattern)
 	var keys: Dictionary = {}
 	for m: RegExMatch in found.search_all(source):
-		for g: int in [1, 2, 3]:
+		for g: int in [1, 2, 3, 4]:
 			if m.get_string(g) != "":
 				keys["director.reason." + m.get_string(g)] = true
 	assert_int(keys.size()).is_greater_equal(6)

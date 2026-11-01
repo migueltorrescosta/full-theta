@@ -27,6 +27,17 @@ const browser = await chromium.launch({
 let code = 1;
 try {
   const page = await browser.newPage();
+  // The loading screen's stages (window.ft.stage, app/web/shell.html), as they change.
+  await page.addInitScript(() => {
+    window.__stages = [];
+    window.__radar = false; // the radar sweep showed after the download (#11, DC3)
+    setInterval(() => {
+      const dot = document.getElementById("radar");
+      if (dot && window.ft && window.ft.stage && window.ft.stage !== "download" && getComputedStyle(dot).display === "block" && getComputedStyle(dot.firstElementChild).animationName === "radar-spin") window.__radar = true;
+      const s = window.ft && window.ft.stage;
+      if (s && window.__stages[window.__stages.length - 1] !== s) window.__stages.push(s);
+    }, 20);
+  });
   const errors = [];
   const lines = [];
   page.on("pageerror", (e) => errors.push(String(e)));
@@ -42,12 +53,25 @@ try {
   await page.goto(url);
   const timer = new Promise((r) => setTimeout(r, Number(timeoutS) * 1000, "timeout"));
   const result = await Promise.race([printed.then(() => "ok"), timer]);
+  // The game reports "ready" once its lobby is up: the loading screen must be gone by then,
+  // after only stages in order (#11, DC2).
+  const order = ["download", "start", "connect", "lobby", "ready"];
+  let stageOk = false;
+  if (result === "ok") {
+    stageOk = await page
+      .waitForFunction(() => window.ft && window.ft.stage === "ready" && !document.getElementById("status"), null, { timeout: 30000 })
+      .then(() => true, () => false);
+  }
+  const stages = await page.evaluate(() => window.__stages);
+  const inOrder = stages.every((s, i) => i === 0 || order.indexOf(s) > order.indexOf(stages[i - 1]));
+  const radar = await page.evaluate(() => window.__radar);
   const secure = await page.evaluate(() => window.isSecureContext);
   const ms = Date.now() - start;
   console.log(`web_load: ${url} ${result} after ${ms} ms, secure context ${secure}`);
+  console.log(`web_load: loading stages seen: ${stages.join(" > ")}, ${stageOk ? "overlay gone at ready" : "NO ready stage"}, radar sweep ${radar ? "shown" : "NOT shown"}`);
   if (result !== "ok") console.log(`web_load: console was:\n  ${lines.join("\n  ")}`);
   for (const e of errors) console.log(`web_load: page error: ${e}`);
-  code = result === "ok" && !secure && errors.length === 0 ? 0 : 1;
+  code = result === "ok" && stageOk && inOrder && radar && !secure && errors.length === 0 ? 0 : 1;
 } finally {
   await browser.close();
 }

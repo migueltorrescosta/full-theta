@@ -10,6 +10,10 @@ The EE reference clone stays outside the repository (FT-LIC-003): never clone, v
 
 `content/provenance.json` lists every third-party asset, voice model and dependency with source, licence and attribution (FT-LIC-005). `tools/check_licences.py` (run by `gate.sh l0`) fails on a file under `assets/` or `addons/` that no entry covers by path prefix, and on art or sound that isn't CC0 (FT-LIC-006). The Python tools' transitive dependencies are pinned in `tools/uv.lock`; they run only at development time and never ship.
 
+## Fonts
+
+Godot's default font (Open Sans) lacks a few symbols the UI shows (☰ ▸ ▾ ⚡ ✓ ✕ ⇄), and a browser has no system font to fall back on. `content/fonts/` holds subsets of Noto Sans Symbols 2 and Noto Sans Math (SIL OFL 1.1, text in `content/fonts/OFL.txt`), set as fallbacks of the theme font (`UiTheme.font`). Recipe: `pyftsubset <font> --unicodes=<codepoints> --layout-features= --no-hinting`, then the vertical metrics (hhea, OS/2) set to Open Sans's (ascent 1.069 em, descent 0.293 em) so a fallback never changes line heights, and the two small triangles (▸ ▾) scaled 1.7x; the codepoints are in each manifest entry. `tests/presentation/test_font_coverage.gd` fails when a UI string uses a character no bundled font covers.
+
 ## Runtime Piper (GPL aggregation)
 
 The host server synthesises speech at runtime with Piper (GPL-3.0-or-later), which carries eSpeak NG (GPL-3.0-or-later) and ONNX Runtime (MIT) (D38, D85, FT-ARC-019). The game doesn't link them: it starts Piper as a separate process and exchanges only text and PCM with it over a pipe (S7b, `tools/tts/piper_stream.py`). Shipping that program next to the game in one package is aggregation. Even read as one combined work, every part is GPL-3.0-compatible, and Full Theta is GPL-3.0 itself, so the licences agree either way. A release that ships Piper must still meet its terms: include its licence text, name the Piper and eSpeak NG versions, and offer or link their exact source alongside the game's (FT-LIC-008, TECH-4). Voice models are data with their own licences (FT-LIC-007, `docs/spikes/S7.md`).

@@ -9,7 +9,8 @@
 #      headless Chromium loads it from a non-secure host name until the page
 #      prints the same build line (web_load.mjs): same commit, engine started;
 #   3. a headless server smoke run.
-# The macOS package is built and inspected but not run (no Mac; #13).
+# The macOS package is built and inspected but not run (no Mac; #13). The Linux and
+# Windows checks run at once; a rerun on the same clean commit reuses its packages.
 # Logs and the WAVs in build/l6/run/. Needs wine, node and the Playwright
 # Chromium headless shell (npm ci in tools/l6 the first time).
 set -uo pipefail
@@ -20,9 +21,16 @@ version=v0.0.0-l6
 line="Contact bearing three four two. Shields holding."
 export WINEPREFIX=${WINEPREFIX:-$HOME/.cache/full-theta/l6-wineprefix} WINEDEBUG=-all
 
-tools/release/build.sh "$version" "$out" --allow-dirty || exit 1
 commit=$(git rev-parse HEAD)
 [[ -z $(git status --porcelain) ]] || commit="$commit-dirty"
+# A clean commit's packages are built once: a rerun on the same commit reuses them.
+stamp=$out/.l6-built-commit
+if [[ $commit == *-dirty ]] || [[ $(cat "$stamp" 2>/dev/null) != "$commit" ]]; then
+  tools/release/build.sh "$version" "$out" --allow-dirty || exit 1
+  [[ $commit == *-dirty ]] || echo "$commit" >"$stamp"
+else
+  echo "l6: reusing the packages built for $commit in $out"
+fi
 expected="build: $version $commit"
 [[ -d tools/l6/node_modules ]] || (cd tools/l6 && npm ci --silent) || exit 1
 
@@ -31,10 +39,9 @@ rm -rf "$run"
 mkdir -p "$run"
 tar -xzf "$out/full-theta-$version-linux-x86_64.tar.gz" -C "$run"
 unzip -q "$out/full-theta-$version-windows-x86_64.zip" -d "$run"
-failed=0
 
-check() { # kind, port, path prefix for the game's own paths, launcher...
-  local kind=$1 port=$2 prefix=$3
+check() { # kind, port, path prefix for the game's own paths, launcher...; 1 on a failure
+  local kind=$1 port=$2 prefix=$3 failed=0
   shift 3
   # The game resolves relative paths against res://, so it gets absolute ones
   # (with a drive letter under Wine).
@@ -62,7 +69,8 @@ check() { # kind, port, path prefix for the game's own paths, launcher...
     --no-beacon --run-for 120 >"$log/server.log" 2>&1 &
   local pid=$!
   local waited=0
-  until grep -q "server: listening" "$log/server.log" || ((waited >= 90)); do
+  # The web port answers once the server listens (its log may be buffered until exit).
+  until (: </dev/tcp/127.0.0.1/$((port - 1))) 2>/dev/null || ((waited >= 90)); do
     sleep 1
     ((waited++))
   done
@@ -77,8 +85,15 @@ check() { # kind, port, path prefix for the game's own paths, launcher...
   echo "l6: $kind: headless server smoke run"
   timeout 120 "$@" --headless -- --server --bind 127.0.0.1 --port 0 --no-beacon --run-for 2 \
     >"$log/smoke.log" 2>&1 || { echo "l6: $kind: server smoke FAILED" >&2; failed=1; }
+  return "$failed"
 }
 
-check "full-theta-$version-linux-x86_64" 47911 "" "$run/full-theta-$version-linux-x86_64/full-theta.x86_64"
-check "full-theta-$version-windows-x86_64" 47921 Z: wine "$run/full-theta-$version-windows-x86_64/full-theta.exe"
+# The Linux and Windows packages are checked at once (their own ports and folders).
+check "full-theta-$version-linux-x86_64" 47911 "" "$run/full-theta-$version-linux-x86_64/full-theta.x86_64" &
+linux=$!
+check "full-theta-$version-windows-x86_64" 47921 Z: wine "$run/full-theta-$version-windows-x86_64/full-theta.exe" &
+windows=$!
+failed=0
+wait "$linux" || failed=1
+wait "$windows" || failed=1
 exit "$failed"

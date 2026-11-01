@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="MountDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/mount_def.gd" id="1_8m7hl"]
+[ext_resource type="Resource" path="res://content/weapons/m1_cannon.tres" id="2_7ghu4"]
+[ext_resource type="Script" path="res://content/defs/weapon_def.gd" id="3_wdef"]
+[ext_resource type="Resource" path="res://content/weapons/m2_missile.tres" id="4_miss"]
+[ext_resource type="Resource" path="res://content/weapons/m2_torpedo.tres" id="5_torp"]
+[ext_resource type="Resource" path="res://content/weapons/m2_beam.tres" id="6_beam"]
+
+[resource]
+script = ExtResource("1_8m7hl")
+id = &"starboard"
+position = Vector3(8, 0, -4)
+forward = Vector3(1, 0, 0)
+arc_half_angle = 0.5235987755982988
+traverse_rate = 0.5
+weapon = ExtResource("2_7ghu4")
+alt_weapons = Array[ExtResource("3_wdef")]([ExtResource("4_miss"), ExtResource("5_torp"), ExtResource("6_beam")])
+subsystem_id = &"weapons"

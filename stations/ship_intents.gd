@@ -148,6 +148,25 @@ func takeover(ship: int, entry: String) -> void:
 	_call(&"takeover", [ship, entry])
 
 
+## Multi-ship lobby and PvP (#11): any player adds a ship (M4-Q3); a crew puts its ship on
+## team 0 or 1 (M4-Q6); the host sets the mode, the team win rule and the holdout lives
+## (-1 the mode's default); an eliminated crew votes to relaunch (M4-Q2).
+func add_ship(ship_name: String) -> void:
+	_call(&"add_ship", [ship_name])
+
+
+func set_team(ship: int, team: int) -> void:
+	_call(&"set_team", [ship, team])
+
+
+func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
+	_call(&"set_mode", [mode, team_win, lives])
+
+
+func vote_relaunch(ship: int, vote: bool) -> void:
+	_call(&"vote_relaunch", [ship, vote])
+
+
 func _call(method: StringName, args: Array, fallback: Variant = null) -> Variant:
 	if client == null or not client.has_method(method):
 		return fallback

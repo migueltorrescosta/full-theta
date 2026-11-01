@@ -13,6 +13,7 @@ extends Node
 ## the sim stepped and the state copy was handed over, so the tick never waits on them;
 ## HTTP gets a 400 us budget per frame (FT-NET-039).
 ##
+## The multi-ship lobby (NetFleet, #11) rebuilds a RunSetup's world through rebuild_fleet().
 ## After an outcome the crew may vote to run again (NetRunReset, D178): restart_run()
 ## then swaps in a world built from scratch everywhere it is held (here, the session,
 ## the voice seam, the net thread's encoder), with a fresh command log.
@@ -54,6 +55,17 @@ var probe: LoadProbe
 var session_log: SessionLog
 var age_stats: SnapshotAgeStats = SnapshotAgeStats.new()
 
+## Solo training (D303), set by ServerMain: builds the Shakedown's RunSetup, and the driver
+## factory for a solo station (&"" for the crew drill). Unset on a server that cannot teach.
+var training_setup: Callable
+var training_driver: Callable
+## Whether the world is a lesson started on request, and the encounter and driver to go back to.
+var training_active: bool = false
+## The bots of a solo lesson, new with every world.
+var partners: TrainingPartners = TrainingPartners.new()
+var _home_encounter: M1Encounter
+var _home_driver: Callable
+
 var _next_snapshot_tick: int = 0
 var _next_stats_us: int = 0
 var _logged_counters: Dictionary = {}
@@ -82,12 +94,66 @@ func start(
 	transport.probe = probe != null
 	run_reset = NetRunReset.new(session, restart_run)
 	run_reset.decisions = _director_decisions
+	session.training.hook = begin_training
+	_wire_fleet()
 	var err: Error = transport.start(port, address)
 	if err != OK:
 		return err
 	_started_us = Time.get_ticks_usec()
 	_next_snapshot_tick = world.tick
 	return OK
+
+
+## The driver's turn before each tick; in a solo lesson the bots' presses come first.
+func _before_tick(api: ScenarioApi) -> void:
+	if driver is TrainingDriver:
+		partners.act(world, driver as TrainingDriver)
+	driver.call(&"before_tick", api)
+
+
+## Points the multi-ship lobby at the encounter when it is a RunSetup (#11).
+func _wire_fleet() -> void:
+	var setup: RunSetup = encounter as RunSetup
+	if setup != null:  # the multi-ship lobby rebuilds a RunSetup's world (#11)
+		session.fleet.rules = setup.rules
+		session.fleet.slots = setup.slots if not setup.slots.is_empty() else _default_slots(setup)
+		session.fleet.rebuild = rebuild_fleet
+
+
+## A lesson for `s` (D303, NetTraining.hook; the caller checked that no other crew
+## is on the server): the world becomes a fresh Shakedown with bots on every station but
+## `station`, the session is picked at it and started. "" is the crew drill: a fresh Shakedown
+## for whoever joins. The server goes back to its own encounter when the last pick is gone.
+func begin_training(s: NetSession, station: String) -> void:
+	var setup: RunSetup = training_setup.call() as RunSetup if training_setup.is_valid() else null
+	if setup == null or not training_driver.is_valid():
+		session.request_rejected(s, NetProtocol.Type.TRAINING, ServerSession.NOT_IMPLEMENTED, {})
+		return
+	if not training_active:
+		_home_encounter = encounter
+		_home_driver = driver_factory
+		training_active = true
+	encounter = setup
+	driver_factory = training_driver.call(StringName(station))
+	session.training.solo = station
+	_wire_fleet()
+	restart_run()
+	if station == "":
+		session.move(s, -1, "")
+		return
+	session.training.seat_and_start(s, session.crew_ships()[0]["id"], station)
+
+
+## Back to the server's own encounter after a lesson.
+func end_training() -> void:
+	if not training_active:
+		return
+	training_active = false
+	encounter = _home_encounter
+	driver_factory = _home_driver
+	session.training.solo = ""
+	_wire_fleet()
+	restart_run()
 
 
 func port() -> int:
@@ -140,14 +206,36 @@ func restart_run() -> void:
 	world = encounter.build()
 	host = ScenarioHost.new(world)
 	driver = null
+	partners = TrainingPartners.new(world.seed_value)
 	transport.reset_snapshots()
 	session.restart(world)
 	_next_snapshot_tick = world.tick
 	_idle_state_posted = false
 
 
+## The multi-ship lobby's rebuild (NetFleet.rebuild): the RunSetup's slots and rules, then
+## the run reset's fresh world (#11, M4-Q3).
+func rebuild_fleet(slots: Array[ShipSlot], rules: SessionRules) -> void:
+	var setup: RunSetup = encounter as RunSetup
+	setup.slots = slots.duplicate()
+	setup.rules = rules
+	restart_run()
+
+
+## The lobby's slots for a RunSetup built without any: its co-op ships, named after the ship.
+static func _default_slots(setup: RunSetup) -> Array[ShipSlot]:
+	var out: Array[ShipSlot] = []
+	var ship_name: String = setup.run_def.player_ship.display_name
+	for i: int in setup.crew_count():
+		var label: String = ship_name if setup.crew_count() == 1 else "%s %d" % [ship_name, i + 1]
+		out.append(ShipSlot.of(label, SessionRules.CREW_FACTIONS[0], 0))
+	return out
+
+
 ## The director's decisions so far for the debrief; none with another driver.
 func _director_decisions() -> Array:
+	if driver is FleetDirector:
+		return (driver as FleetDirector).decisions()
 	if driver is Director:
 		return (driver as Director).decisions()
 	return []
@@ -229,6 +317,8 @@ func _process(delta: float) -> void:
 	var t: PackedInt64Array = PackedInt64Array([now_us, 0, 0, 0, 0])
 	session.process(now_us)
 	run_reset.process()
+	if training_active and _picks() == 0 and players() == 0:
+		end_training()
 	t[1] = Time.get_ticks_usec()
 	var ticks: int = 0
 	# The sim steps only after a Start and outside a pause (FT-NET-034); snapshots keep
@@ -249,9 +339,7 @@ func _process(delta: float) -> void:
 			host = ScenarioHost.new(world)
 		if driver == null and driver_factory.is_valid():
 			driver = driver_factory.call(StringName(session.toggles.preset))
-		ticks = host.advance(
-			delta, Callable(driver, &"before_tick") if driver != null else Callable()
-		)
+		ticks = host.advance(delta, _before_tick if driver != null else Callable())
 		t[2] = Time.get_ticks_usec()
 		t[3] = t[2]
 		t[4] = t[2]

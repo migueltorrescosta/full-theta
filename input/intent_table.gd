@@ -32,6 +32,9 @@ extends RefCounted
 const KBM: String = "kbm"
 const PAD: String = "pad"
 const DEVICES: Array[String] = [KBM, PAD]
+## The device of intents from on-screen touch controls (InputMatcher.touch_press, #28). It
+## has no bindings and no always-live rows, so its intents reach the focused station only.
+const TOUCH: String = "touch"
 
 const PRESS: String = "press"
 const HOLD: String = "hold"

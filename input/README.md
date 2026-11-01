@@ -8,6 +8,7 @@ Devices to intents (FT-STN-005, D95). May name `stations/`, `presentation/`, `au
 - `bindings.gd`: `Bindings`, the player's rebinds and hold-to-toggle choices over the table's defaults (FT-STN-007, FT-STN-014), persisted through `to_dict`/`from_dict`.
 - `input_matcher.gd`: `InputMatcher`, which turns `InputEvent`s into intent events using the live `Bindings` and the screen's context. Pure logic; time is passed in.
 - `mouse_stick.gd`: `MouseStick`, Helm's mouse virtual stick (S5).
+- `touch_intents.gd`: `TouchIntents`, which wires on-screen touch controls (presentation/touch/) to intents (#28).
 - `binding_text.gd`: `BindingText`, the human text of a binding for the overlay, tooltips and Settings, through the `input.*` keys of `content/i18n/strings.json`.
 
 ## Binding grammar
@@ -47,3 +48,9 @@ Axes emit no events. A radial menu held on a chord that suppresses a stick reads
 1. A row in `IntentTable.INTENTS` with the station's group, its kind and bindings that avoid the common and always-live keys (FT-STN-009; `tests/input/test_binding_table.gd` checks the whole table).
 2. Its `intent.<id>` key in every language of `content/i18n/strings.json`.
 3. A handler in the panel of its group (`StationPanel.handle_intent`), or an `axis` poll in the panel's frame update.
+
+## Touch controls
+
+On-screen controls have no bindings: they name the intent. `InputMatcher.touch_press(id)` (a tap: a press fires, a hold pulses or flips when it is a toggle), `touch_hold(id, down)` and `touch_axis(id, value)` give the same events and axis values as a key or a stick; `axis()` reads touch values like a stick's, and `release_all` drops them. Events carry device `IntentTable.TOUCH`, which has no live rows, so they reach the screen and the focused station only.
+
+`TouchIntents.new(ctx.matcher, screen.dispatch)` wires widgets: `button(rail_button, id)` (a hold intent makes it a `hold` button), `stick(virtual_stick, x_id, y_id, x_sign, y_sign)`, `press(id)`, `hold(id, down)` and `axis(id, value)` for computed values (Helm's throttle feeds `helm_surge` toward a setpoint). Panels keep polling `axis` and `is_held`.

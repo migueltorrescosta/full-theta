@@ -11,25 +11,105 @@ func _source() -> String:
 
 # FT: FT-NET-030
 # The full-screen loading overlay sat over the canvas for good, so a tap never reached
-# the join field (no focus, no keyboard on an iPad, #22): it has to go once the engine
-# runs.
-func test_the_overlay_is_removed_when_the_engine_starts() -> void:
+# the join field (no focus, no keyboard on an iPad, #22): it has to go once the game says
+# its lobby (or, when joining failed, its menu) is up, and at the latest 30 s after the
+# engine started (#11, DC2).
+func test_the_overlay_is_removed_when_the_game_is_ready() -> void:
 	var src: String = _source()
 	assert_str(src).contains("const statusEl = document.getElementById('status');")
+	var ready: int = src.find("if (name === 'ready') {")
+	assert_int(ready).is_greater(0)
+	assert_str(src.substr(ready, src.find("return;", ready) - ready)).contains("statusEl.remove();")
 	var started: int = src.find(".then(() => {")
 	assert_int(started).is_greater(0)
 	assert_str(src.substr(started, src.find("}, (err)", started) - started)).contains(
-		"statusEl.remove();"
+		"setTimeout(function () { setStage('ready'); }, 30000)"
 	)
 
 
 # FT: FT-NET-030
-# The tips scroll as a ticker of a doubled strip in a shuffled order, and rotate only
-# for reduced motion.
-func test_tips_scroll_as_a_shuffled_doubled_strip_with_a_reduced_motion_fallback() -> void:
+# #11 DC2: after the download the page shows the stages the game reports, never goes back
+# to an earlier one, and draws "Starting the game" before the engine's long start task.
+func test_the_page_shows_the_start_up_stages_in_order() -> void:
 	var src: String = _source()
-	assert_str(src).contains("@keyframes ticker")
-	assert_str(src).contains("const tips = shuffled(LOADING_TIPS);")
-	assert_str(src).contains("strip.textContent = line + line;")
-	assert_str(src).contains("prefers-reduced-motion: reduce")
-	assert_str(src).contains("setInterval(showNextTip, 4000)")
+	assert_str(src).contains("const STAGES = ['download', 'start', 'connect', 'lobby', 'ready'];")
+	assert_str(src).contains("window.ft.loadStage = setStage;")
+	assert_str(src).contains("STAGES.indexOf(name) <= STAGES.indexOf(stage)")
+	assert_str(src).contains("engine.start = function ()")
+	assert_str(src).contains("return afterPaint().then(")
+	for word: String in ["Starting the game", "Connecting", "Opening the lobby"]:
+		assert_str(src).contains(word)
+	# After the download a radar sweep turns in place (no bar filling up as if it were progress); it
+	# moves by transform and opacity, which the browser animates off the main thread.
+	assert_str(src).contains("fillEl.style.transform = 'scaleX('")
+	assert_str(src).contains(
+		"#bar.busy #radar .sweep { animation: radar-spin 5s linear infinite; }"
+	)
+	assert_str(src).contains("@keyframes radar-spin")
+	assert_str(src).contains("@keyframes radar-blip")
+	assert_str(src).not_contains("@keyframes breathe")
+	assert_str(src).not_contains("STAGE_BAR[")
+	assert_str(src).not_contains("creep")
+	assert_str(src).not_contains("@keyframes sweep")
+	var reduced: int = src.find("@media (prefers-reduced-motion: reduce)")
+	assert_int(reduced).is_greater(0)
+	var still: String = "#bar.busy #radar .sweep, #bar.busy #radar .blip { animation: none; }"
+	assert_str(src.substr(reduced, 400)).contains(still)
+
+
+# FT: FT-NET-030, FT-M1-019
+# #11 DC2: the start task blocks the page's script for seconds, so the next tips are CSS
+# animations the browser runs on its own; each shows for its usual time, and the one showing
+# when script runs again becomes the current tip.
+func test_the_tips_keep_rotating_while_the_engine_starts() -> void:
+	var src: String = _source()
+	assert_str(src).contains("function startCssTips()")
+	assert_str(src).contains("seconds.push(tipSeconds(textOf(tip)));")
+	assert_str(src).contains("animation: slide")
+	assert_str(src).contains("if (name === 'start') { startCssTips(); } else { stopCssTips(); }")
+	assert_str(src).contains("tipIndex = (tipIndex + shown) % tips.length;")
+
+
+# FT: FT-NET-030
+# The stages the game reports (WebLoadStage) are the ones the page knows, in its order.
+func test_the_games_stages_are_the_pages_stages() -> void:
+	var src: String = _source()
+	var order: Array[String] = ["connect", "lobby", "ready"]
+	assert_array(WebLoadStage.STAGES).is_equal(order)
+	var last: int = src.find("const STAGES = ")
+	for stage: String in WebLoadStage.STAGES:
+		var at: int = src.find("'%s'" % stage, last)
+		assert_int(at).is_greater(last)
+		last = at
+
+
+# FT: FT-NET-030, FT-M1-019
+# The loading screen (P28-Tips, P28-LoadBar): the tips are shuffled, each shows
+# max(5 s, characters / 15 + 1 s), a tap on either half goes back or forward, and the
+# bar under the tip follows the engine's real download progress.
+func test_tips_rotate_with_the_owners_timing_over_a_real_progress_bar() -> void:
+	var src: String = _source()
+	assert_str(src).contains("const tips = shuffled(FT_TIPS.tips);")
+	assert_str(src).contains("Math.max(5, text.length / 15 + 1)")
+	assert_str(src).contains("e.clientX < box.left + box.width / 2 ? -1 : 1")
+	assert_str(src).contains("engine.startGame({ onProgress: setProgress })")
+	assert_str(src).contains("setBar(pct / 100);")
+	assert_str(src).contains("env(safe-area-inset-bottom")
+	assert_str(src).not_contains("@keyframes ticker")
+
+
+# FT: FT-NET-030, FT-M1-019
+# The shell's copy of the tips is content/tips/tips.json, every tip in each language
+# (tools/tips_shell.py writes it; its --check runs in l0).
+func test_the_shells_tips_are_the_tips_file() -> void:
+	var src: String = _source()
+	var start: int = src.find("const FT_TIPS = ")
+	assert_int(start).is_greater(0)
+	var line: String = src.substr(start, src.find("\n", start) - start)
+	var copy: Dictionary = JSON.parse_string(line.trim_prefix("const FT_TIPS = ").trim_suffix(";"))
+	var data: Dictionary = TipsView.read()
+	assert_int((copy["tips"] as Array).size()).is_equal((data["tips"] as Array).size())
+	for i: int in (data["tips"] as Array).size():
+		var tip: Dictionary = data["tips"][i]
+		for lang: String in I18n.LANGUAGES:
+			assert_str(str(copy["tips"][i][lang])).is_equal(str(tip[lang]))
