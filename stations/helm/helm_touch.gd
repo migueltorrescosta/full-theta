@@ -285,7 +285,8 @@ func _fill_pages(box: VBoxContainer) -> void:
 	ring.reparent(box, false)
 	ring.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ring.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	for p: int in [PAGE_FLY, PAGE_SHIELD, PAGE_NAV, PAGE_RADAR]:
+	# (Nav's six buttons leave the glyph no room.)
+	for p: int in [PAGE_FLY, PAGE_SHIELD, PAGE_RADAR]:
 		parts[p].append(ring)
 	parts[PAGE_RADAR].append(radar_box)
 	for p: int in titles.size():

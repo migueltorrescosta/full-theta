@@ -15,6 +15,9 @@ signal alert_sheet_requested
 ## Bar height before UI scale (px).
 const HEIGHT: float = 40.0
 const CHIP_LETTER_SIZE: int = 11
+## The phone timer's width, and its narrower one beside the full-screen icon (a 390 px bar).
+const TIMER_W: float = 48.0
+const TIMER_W_NARROW: float = 40.0
 
 ## Crew only (FT-STN-008).
 var can_set_alert: bool = false:
@@ -121,12 +124,17 @@ func _init() -> void:
 	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
 	_phone_timer.add_theme_font_size_override("font_size", 14)
 	_phone_timer.add_theme_color_override("font_color", Palette.color("text"))
-	_phone_timer.custom_minimum_size.x = 40.0
+	_phone_timer.custom_minimum_size.x = TIMER_W
 	_phone_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	for c: Control in [menu_button, glance, tabs, _phone_timer]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
 		_phone_row.add_child(c)
 	fullscreen.name = "Fullscreen"
+	fullscreen.visibility_changed.connect(_fit_timer)
+
+
+func _fit_timer() -> void:
+	_phone_timer.custom_minimum_size.x = TIMER_W_NARROW if fullscreen.visible else TIMER_W
 
 
 ## The phone's one-row bar (design 1.2): menu, status, tabs, alert chip, timer; `height`
