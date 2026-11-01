@@ -4,7 +4,7 @@ extends PanelContainer
 ## with tabs. In a session: Game (the ship's name, Sound, Full screen where offered, the
 ## host's Pause, Abandon or Give up, Leave; the final ones ask to confirm in place), Controls
 ## (the live bindings under the seat's role summary, ControlsPane; FT-STN-012), Tips, then
-## Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-run tips again, and comfort
+## Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-visit hints again, and comfort
 ## FT-STN-017: on/off, roll lock deck / target / reference plane, "set reference plane to
 ## my current deck", reduced field of view; the station cameras apply them) and Rebind keys
 ## (bindings per intent and device with rebind, hold/toggle and reset, FT-STN-007,
@@ -596,7 +596,7 @@ func _build_general(col: VBoxContainer) -> void:
 		func(on: bool) -> void: settings.invert_pitch = on
 	)
 	_add_button(
-		col, "ResetTips", tr("settings.reset_tips"), func() -> void: settings.reset_tooltips()
+		col, "ResetHints", tr("settings.reset_hints"), func() -> void: settings.reset_hints()
 	)
 	# In a session it sits on the Game tab.
 	if not _in_session:

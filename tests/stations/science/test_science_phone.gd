@@ -38,7 +38,7 @@ func _screen(size: Vector2i, insets: Array, kind: String = "cards") -> StationSc
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("science", SETTINGS)
 	for s: String in StationViews.CREW:
-		ctx.settings.mark_tooltip_seen(s)
+		ctx.settings.mark_hint_seen(s)
 	ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(kind)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)

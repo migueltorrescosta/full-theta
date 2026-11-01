@@ -401,7 +401,7 @@ func _build_tabs() -> void:
 	_hint = Label.new()
 	_hint.text = tr("screen.tabs_hint") % panels.size()
 	_hint.add_theme_color_override("font_color", Palette.color("text_dim"))
-	_hint.visible = not ctx.settings.tooltip_seen(TAB_HINT_KEY)
+	_hint.visible = not ctx.settings.hint_seen(TAB_HINT_KEY)
 	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_tabs.add_child(_hint)
 
@@ -412,7 +412,7 @@ func _show_tabs() -> void:
 		(_tabs.get_child(i) as Button).set_pressed_no_signal(i == focus_index)
 	if _hint.visible and focus_index != 0:
 		_hint.visible = false
-		ctx.settings.mark_tooltip_seen(TAB_HINT_KEY)
+		ctx.settings.mark_hint_seen(TAB_HINT_KEY)
 		ctx.settings.save()
 
 

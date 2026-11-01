@@ -24,7 +24,7 @@ func after_test() -> void:
 ## `roll_deg_s`: the own ship's roll rate (body z) from the start, before the first frame.
 func _screen(roll_deg_s: float = 0.0) -> StationScreen:
 	var ctx: StationContext = StationFixture.context("viewer", SETTINGS)
-	ctx.settings.mark_tooltip_seen("viewer")
+	ctx.settings.mark_hint_seen("viewer")
 	ctx.view.kin["ang"] = NetCodec.quant_ang(Vector3(0.0, 0.0, deg_to_rad(roll_deg_s)))
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)

@@ -182,7 +182,7 @@ static func context(
 	ctx.settings.player_name = rec.name
 	# The first-visit help (FT-STN-012) would open the menu and block input.
 	for station: String in StationViews.CREW + [StationViews.VIEWER, StationViews.CAPTAIN]:
-		ctx.settings.mark_tooltip_seen(station)
+		ctx.settings.mark_hint_seen(station)
 	ctx.matcher = InputMatcher.new(ctx.settings.bindings)
 	var crew: CrewState = ctx.crew
 	crew.welcome(

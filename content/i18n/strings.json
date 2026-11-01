@@ -505,7 +505,7 @@
     "settings.must_bind": {"en": "This one always needs a binding.", "pt_PT": "Este precisa sempre de uma tecla.", "it": "Questo comando deve restare assegnato."},
     "settings.reduced_fov": {"en": "Narrower view", "pt_PT": "Vista mais estreita", "it": "Visuale più stretta"},
     "settings.reset_bindings": {"en": "Reset all", "pt_PT": "Repor tudo", "it": "Ripristina tutto"},
-    "settings.reset_tips": {"en": "Show first-run tips again", "pt_PT": "Mostrar as dicas iniciais outra vez", "it": "Mostra di nuovo i suggerimenti iniziali"},
+    "settings.reset_hints": {"en": "Show first-visit hints again", "pt_PT": "Mostrar outra vez as ajudas da primeira visita", "it": "Mostra di nuovo gli aiuti della prima visita"},
     "settings.roll_deck": {"en": "Lock roll to the deck", "pt_PT": "Fixar o rolamento ao convés", "it": "Blocca il rollio sul ponte"},
     "settings.roll_reference": {"en": "Lock roll to my reference plane", "pt_PT": "Fixar o rolamento ao meu plano", "it": "Blocca il rollio sul mio piano"},
     "settings.roll_target": {"en": "Lock roll to the target", "pt_PT": "Fixar o rolamento ao alvo", "it": "Blocca il rollio sul bersaglio"},

@@ -102,7 +102,7 @@ func _ready() -> void:
 	if comms != "off":
 		CommsFixture.install(_ctx)
 	if tooltip:
-		_ctx.settings.reset_tooltips()
+		_ctx.settings.reset_hints()
 	if claim != "":
 		_ctx.crew.claims[claim] = {"session": StationFixture.SESSION, "name": "Ana"}
 	if selected >= 0:

@@ -25,7 +25,7 @@ Station UIs; they read snapshots and send intents, never sim/ (FT-ARC-011). The 
 | `lobby_screen.gd` | `LobbyScreen` (D216): the station grid (3 x 2 landscape, 2 x 3 portrait, `columns_for`), a cell per crew station with name, role, crewmates (`crew_at`, from the `lobby` event's `seats`) and a `LoadCell_<tag>` border; up to two stations picked by tap (`tap_station`, two make the joint view, `entry_for`), Captain, Viewer and, with `--dev-all-stations`, the dev All seat (`tap_seat`); legend, selection summary, one-line difficulty with a Customise dialog of toggles (read-only for guests), Start, and the host's How to join dialog. Nothing scrolls. |
 | `pause_overlay.gd` | `PauseOverlay`: the pause, abandon vote, host Abandon, Captain/Viewer takeover. |
 | `outcome_card.gd` | `OutcomeCard`: Victory or Ship lost, run time and hull on every station after the outcome; the crew's "Run again" vote, the host's "Run again now" (D178). |
-| `settings_screen.gd` | `SettingsScreen`: the menu, with tabs: Controls (`ControlsList`, in a session), Settings and Rebind keys; bindings (rebind per device, hold/toggle, reset), UI scale, first-run tips again, invert pitch, comfort. |
+| `settings_screen.gd` | `SettingsScreen`: the menu, with tabs: Controls (`ControlsList`, in a session), Settings and Rebind keys; bindings (rebind per device, hold/toggle, reset), UI scale, first-visit hints again, invert pitch, comfort. |
 | `client_settings.gd` | `ClientSettings`: per-client settings in one ConfigFile (`user://client_settings.cfg`, path injectable): name, bindings, UI scale, tips seen, invert pitch, comfort (roll lock deck / target / reference, reduced FOV, the cosmetic reference plane). |
 
 ## Adding a station panel

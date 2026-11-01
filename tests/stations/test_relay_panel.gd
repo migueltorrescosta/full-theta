@@ -19,7 +19,7 @@ func after_test() -> void:
 func _screen(entry: String = "relay", seam: bool = false) -> StationScreen:
 	var ctx: StationContext = StationFixture.context(entry, SETTINGS, seam)
 	for s: String in StationViews.CREW:
-		ctx.settings.mark_tooltip_seen(s)
+		ctx.settings.mark_hint_seen(s)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)

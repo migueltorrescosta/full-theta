@@ -20,7 +20,7 @@ func after_test() -> void:
 func _screen(entry: String = "relay") -> StationScreen:
 	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
 	for s: String in StationViews.CREW:
-		ctx.settings.mark_tooltip_seen(s)
+		ctx.settings.mark_hint_seen(s)
 	# One allied ship to send to, and the RELAY block with 2 probes in stock.
 	var ships: Array = ctx.crew.catalogue["ships"]
 	ships.append({"id": ALLY, "def": "m1_corvette", "name": "Wren", "faction": 0})
