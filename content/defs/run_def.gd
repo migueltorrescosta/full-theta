@@ -22,7 +22,7 @@ extends Resource
 ## Credits each crewed ship starts with (count).
 @export var start_credits: int = 0
 ## The share of a card's reward paid when its encounter's time runs out before the
-## objective is met (a PARTIAL result; dimensionless, 0 to 1).
+## objective is met, a PARTIAL result (dimensionless, 0 to 1).
 @export var partial_pay: float = 1.0
 ## A training run (the Shakedown, FT-MIS-039): a crewed ship at hull 0 is reset at the yard
 ## instead of eliminated. A rule of the training world, not a stat change (FT-SIM-029).
