@@ -44,10 +44,10 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-ARC-020 | tests | `tests/net/test_net_run_reset_l3.gd`, `tests/sim/run/test_run_reset.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-022 | tests | `tests/release/test_release_bundle.gd`, `tools/tests/test_release.py` |
-| FT-NET-001 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_net_server_main.gd` |
+| FT-NET-001 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_net_server_main.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-002 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_server_main.gd`, `tests/net/test_server_tls.gd` |
 | FT-NET-003 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_idle_exit_timer.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_orphan_check.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_host_server_services.gd`, `tests/net/test_net_server_main.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_lobby_join.gd` |
-| FT-NET-004 | tests | `tests/net/test_fleet_messages.gd`, `tests/net/test_net_codec.gd`, `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
+| FT-NET-004 | tests | `tests/net/test_fleet_messages.gd`, `tests/net/test_net_codec.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-005 | tests | `tests/net/test_net_protocol.gd`, `tests/net/test_net_server.gd` |
 | FT-NET-006 | tests | `tests/net/test_net_resync.gd`, `tests/net/test_net_science_l3.gd`, `tests/net/test_net_server.gd`, `tests/net/test_training_next_gate.gd` |
 | FT-NET-007 | tests | `tests/net/test_net_server.gd` |
@@ -58,7 +58,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-NET-012 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_server.gd`, `tests/net/test_net_server_main.gd` |
 | FT-NET-013 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_lan_discovery.gd`, `tests/net/test_lan_parse_address.gd`, `tests/net/test_lan_server.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/presentation/test_qr_code.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_client_shell.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-014 | tests | `tests/net/test_host_server_services.gd`, `tests/net/test_net_load_l3.gd`, `tests/net/test_net_reconnect_l3.gd`, `tests/net/test_net_server.gd`, `tools/tests/test_load_check.py` |
-| FT-NET-015 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/stations/test_lobby_and_overlays.gd`, `tests/stations/test_lobby_join.gd`, `tests/stations/test_lobby_many_ships.gd`, `tests/stations/test_lobby_phone_text.gd` |
+| FT-NET-015 | tests | `tests/net/test_fleet_pause_l3.gd`, `tests/net/test_net_lobby_l3.gd`, `tests/stations/test_lobby_and_overlays.gd`, `tests/stations/test_lobby_join.gd`, `tests/stations/test_lobby_many_ships.gd`, `tests/stations/test_lobby_phone_text.gd` |
 | FT-NET-016 | tests | `tests/net/test_net_lobby_l3.gd` |
 | FT-NET-017 | tests | `tests/net/test_net_lobby_l3.gd`, `tests/net/test_net_stations_defs.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_lobby_and_overlays.gd` |
 | FT-NET-018 | tests | `tests/net/test_net_stations_defs.gd`, `tests/presentation/test_phone_rest_layouts.gd`, `tests/stations/test_joint_views.gd`, `tests/stations/test_phone_fixups.gd` |
@@ -266,7 +266,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-PAIR-001 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p15_relay_comms.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/pairs/test_pair_gains.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_helm_lane.gd` |
 | FT-PAIR-002 | tests | `tests/pairs/test_pair_gains.gd` |
 | FT-PAIR-003 | tests | `tests/pairs/test_pair_gains.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_reveals.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd`, `tests/sim/science/test_self_scan_faults.gd` |
-| FT-PAIR-004 | tests | `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_pair_gains.gd`, `tests/pairs/test_pair_harness.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/knowledge/test_knowledge.gd` |
+| FT-PAIR-004 | tests | `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p6_weapons_engineering.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/pairs/test_pair_gains.gd`, `tests/pairs/test_pair_harness.gd`, `tests/scenarios/test_enemy_wave.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/knowledge/test_knowledge.gd` |
 | FT-PAIR-005 | tests | `tests/net/test_net_stations_filter.gd`, `tests/net/test_view_filter.gd` |
 | FT-PAIR-007 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/net/test_hazard_view.gd`, `tests/net/test_net_coop_l3.gd`, `tests/net/test_view_filter.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/presentation/test_phone_frame.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/test_data_shortcut_views.gd`, `tests/stations/test_helm_lane.gd`, `tests/stations/test_helm_route_ribbon.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_weapons_flags.gd` |
 | FT-PAIR-008 | tests | `tests/net/test_comms_pairs_l3.gd`, `tests/net/test_net_toggles_l3.gd`, `tests/net/test_view_filter.gd` |
@@ -289,7 +289,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-003 | tests | `tests/scenarios/test_enemy_wave.gd` |
 | FT-MIS-004 | tests | `tests/scenarios/test_enemy_wave.gd`, `tests/scenarios/test_rescue.gd` |
 | FT-MIS-005 | tests | `tests/director/test_director_no_write.gd` |
-| FT-MIS-006 | tests | `tests/director/test_director_no_write.gd`, `tests/director/test_reason_keys.gd`, `tests/net/test_debrief_l3.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd` |
+| FT-MIS-006 | tests | `tests/director/test_director_no_write.gd`, `tests/director/test_reason_keys.gd`, `tests/net/test_debrief_l3.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd` |
 | FT-MIS-008 | tests | `tests/director/test_director_budget.gd`, `tests/net/test_net_toggles_l3.gd` |
 | FT-MIS-009 | manual | [#13](https://github.com/migueltorrescosta/full-theta/issues/13) |
 | FT-MIS-010 | tests | `tests/net/test_debrief_l3.gd`, `tests/sim/run/test_encounter_fixes.gd` |
@@ -303,7 +303,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-018 | tests | `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_reputation.gd` |
 | FT-MIS-019 | tests | `tests/pairs/test_p12_engineering_comms.gd`, `tests/pairs/test_p14_science_comms.gd`, `tests/pairs/test_p5_helm_comms.gd`, `tests/pairs/test_p9_weapons_comms.gd`, `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_reputation.gd` |
 | FT-MIS-020 | tests | `tests/sim/economy/test_reputation.gd` |
-| FT-MIS-021 | tests | `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_economy.gd` |
+| FT-MIS-021 | tests | `tests/scenarios/test_debris_leg.gd`, `tests/scenarios/test_rescue.gd`, `tests/sim/economy/test_economy.gd` |
 | FT-MIS-022 | tests | `tests/sim/economy/test_modules.gd` |
 | FT-MIS-023 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_relaunch.gd` |
 | FT-MIS-024 | tests | `tests/sim/run/test_map_def.gd`, `tests/sim/run/test_run_setup_map.gd`, `tests/sim/run/test_seeded_run.gd` |
