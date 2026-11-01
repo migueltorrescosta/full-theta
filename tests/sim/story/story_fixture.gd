@@ -123,9 +123,17 @@ static func content() -> Dictionary:
 			var m: MarketDef = load(path) as MarketDef
 			markets[m.id] = m
 		_content = {
-			"conversations": ConversationLibrary.load_dir(),
+			"conversations": _conversations(),
 			"modules": modules,
 			"rep_dists": dists,
 			"markets": markets,
 		}
 	return _content
+
+
+## The shipped conversations plus the test-only ones (tests/fixtures/conversations: a trade
+## conversation no shipped scenario offers, owner 2026-11-01).
+static func _conversations() -> Dictionary[StringName, Dictionary]:
+	var out: Dictionary[StringName, Dictionary] = ConversationLibrary.load_dir()
+	out.merge(ConversationLibrary.load_dir("res://tests/fixtures/conversations"))
+	return out
