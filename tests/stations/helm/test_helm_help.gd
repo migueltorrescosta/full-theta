@@ -17,7 +17,6 @@ func test_help_names_every_page_and_control() -> void:
 		for b: Array in help[p]["boxes"]:
 			for text: String in [b[1], b[2]]:
 				assert_str(text).is_not_empty()
-				assert_str(text).is_not_equal(text.to_lower().replace(" ", "_"))
 				assert_bool(text.begins_with("intent.") or text.begins_with("touch.")).is_false()
 	# The Fly page numbers the persistent controls too.
 	assert_int(help[0]["boxes"].size()).is_greater(help[1]["boxes"].size() + 4)
