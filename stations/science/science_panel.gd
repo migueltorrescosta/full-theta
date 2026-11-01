@@ -37,7 +37,12 @@ const LIST_W: float = 190.0
 const CARD_W: float = 250.0
 ## Under this width the list, stage and card stack (a phone, a tablet upright, D195).
 const NARROW_W: float = 900.0
+## A landscape panel at least this wide keeps the list, stage and card side by side even
+## under NARROW_W (150 % UI scale on a 1280 x 720 window, T1).
+const SIDE_BY_SIDE_W: float = 780.0
 const STACK_LIST_H: float = 110.0
+## Stacked, the list shows this many whole rows (it scrolls past them), D319.
+const STACK_LIST_ROWS: int = 3
 const STACK_CARD_H: float = 200.0
 ## Detection confidence 0..1 -> blip size factor.
 const BLIP_MIN: float = 0.6
@@ -222,12 +227,19 @@ func _show_parts() -> void:
 	card_view.visible = show
 
 
+## True when the list, stage and card stack: under NARROW_W wide, unless it is landscape and
+## wide enough for three columns (T1).
+func is_narrow() -> bool:
+	return size.x < NARROW_W and not (size.x >= SIDE_BY_SIDE_W and size.x > size.y)
+
+
 ## A narrow panel stacks the list above the stage and the card below it (the bar wraps by
 ## itself); a wide one puts them side by side.
 func _stack() -> void:
-	var narrow: bool = size.x < NARROW_W
+	var narrow: bool = is_narrow()
 	_top.vertical = narrow
 	_list.custom_minimum_size = Vector2(0, STACK_LIST_H) if narrow else Vector2(LIST_W, 0)
+	_fit_list()
 	card_view.custom_minimum_size = Vector2(0, STACK_CARD_H) if narrow else Vector2(CARD_W, 0)
 	card_view.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if not own_radar() or narrow else 0)
 	_show_parts()
@@ -339,7 +351,7 @@ func refresh() -> void:
 	var session: int = int(b.get("session", SESSION_NONE))
 	var own: bool = own_radar()
 	if radar != null:
-		radar.set_picture(ctx.picture(), ctx.crew.selection)
+		radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
 		radar.blip_scale = _blip_scale(b)
 		radar.visible = own and session == SESSION_NONE
 	_show_parts()
@@ -409,6 +421,20 @@ func _refresh_list() -> void:
 		_list.set_item_custom_fg_color(i, Palette.allegiance_color(items[i]["allegiance"]))
 		if ctx.crew.selection == {"kind": "contact", "id": items[i]["id"]}:
 			_list.select(i)
+	_fit_list()
+
+
+## Stacked, the list is as tall as its first STACK_LIST_ROWS rows, so no row shows cut at
+## rest; with fewer rows it keeps its minimum height.
+func _fit_list() -> void:
+	if _list == null or not is_narrow() or _list.item_count == 0:
+		return
+	_list.force_update_list_size()
+	var rows: int = mini(_list.item_count, STACK_LIST_ROWS)
+	var edge: float = _list.get_theme_stylebox("panel").get_minimum_size().y
+	var h: float = _list.get_item_rect(rows - 1).end.y + edge
+	if h > 0.0:
+		_list.custom_minimum_size.y = maxf(h, 0.0) if rows == STACK_LIST_ROWS else STACK_LIST_H
 
 
 func _before(a: Dictionary, b: Dictionary) -> bool:

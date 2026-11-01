@@ -1,13 +1,19 @@
-## Ship view for the L5 harness (S8 v2): the semi-realistic ship at the origin, a camera orbiting
+## Ship view for the L5 harness (S8 v2): the baked semi-realistic ship (D308) at the origin, or
+## the baked looks named in `looks` side by side along X, a camera orbiting
 ## it by yaw and pitch (yaw 0 looks from behind, 90 from starboard), a key, fill and rim
 ## light fixed to the camera, a procedural sky for ambient light and reflections, and
 ## filmic tonemapping.
 extends Node3D
 
+const SPACING: float = 5.2
+
 var yaw_degrees: float = 145.0
 var pitch_degrees: float = 20.0
 var distance: float = 8.2
-var wear: float = 0.0
+## The baked look to show (a name in content/ships/looks.json, lower case).
+var look: String = ProceduralShip.GENERIC
+## Several looks in a row instead, 5.2 m apart and centred; the camera then looks at the middle.
+var looks: Array = []
 var tonemap: int = Environment.TONE_MAPPER_AGX
 var shadows: bool = true
 var _previous_msaa: Viewport.MSAA = Viewport.MSAA_DISABLED
@@ -52,9 +58,12 @@ func _ready() -> void:
 	_light(camera, Vector3(-10, 60, 0), Color(0.6, 0.7, 0.9), 0.45, false)  # fill
 	_light(camera, Vector3(-20, 160, 0), Color(0.75, 0.95, 0.88), 0.8, false)  # rim
 
-	var ship: ProceduralShip = ProceduralShip.new()
-	ship.wear = wear
-	add_child(ship)
+	var shown: Array = looks if not looks.is_empty() else [look]
+	for i: int in shown.size():
+		var ship: ProceduralShip = ProceduralShip.new()
+		ship.look = str(shown[i])
+		ship.position.x = (i - (shown.size() - 1) * 0.5) * SPACING
+		add_child(ship)
 
 
 func _light(

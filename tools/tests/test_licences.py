@@ -76,6 +76,41 @@ VOICES = {
 }
 
 
+# FT: FT-LIC-006
+def test_audio_under_a_non_audio_entry_fails(tmp_path):
+    root = fixture(tmp_path)
+    (root / "assets").mkdir(exist_ok=True)
+    (root / "assets/pack").mkdir(exist_ok=True)
+    (root / "assets/pack/boom.ogg").write_bytes(b"x")
+    data = json.loads((root / "content/provenance.json").read_text())
+    data["entries"].append(
+        {"name": "Boom", "kind": "tool", "path": "assets/pack/boom.ogg", "source": "s",
+         "licence": "MIT", "attribution": "a"}
+    )
+    (root / "content/provenance.json").write_text(json.dumps(data))
+    assert check_licences.run(root) == [
+        "assets/pack/boom.ogg: audio needs a CC0-1.0 art, sound or music entry in content/provenance.json"
+    ]
+
+
+# FT: FT-LIC-006
+def test_music_must_be_cc0_and_a_wrong_sha256_fails(tmp_path):
+    root = fixture(tmp_path)
+    (root / "assets/pack").mkdir(parents=True, exist_ok=True)
+    (root / "assets/pack/theme.ogg").write_bytes(b"x")
+    entry = {"name": "Theme", "kind": "music", "path": "assets/pack/theme.ogg", "source": "s",
+             "licence": "CC0-1.0", "attribution": "a", "sha256": "0" * 64}
+    data = json.loads((root / "content/provenance.json").read_text())
+    data["entries"].append(entry)
+    (root / "content/provenance.json").write_text(json.dumps(data))
+    assert check_licences.run(root) == [
+        "assets/pack/theme.ogg: sha256 differs from content/provenance.json"
+    ]
+    entry["licence"] = "CC-BY-4.0"
+    (root / "content/provenance.json").write_text(json.dumps(data))
+    assert "Theme: music must be CC0-1.0, not CC-BY-4.0" in check_licences.run(root)
+
+
 def with_voices(root: Path, statuses: dict) -> None:
     (root / "content/voices.json").write_text(json.dumps(VOICES))
     manifest = root / "content/provenance.json"

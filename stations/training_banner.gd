@@ -59,16 +59,14 @@ var _settle: int = 0
 var _key: Array = []
 ## The width the card is laid out for (touch layouts).
 var _width: float = 400.0
+## The card sits in a desktop screen's side column (dock).
+var _docked: bool = false
 
 
 func setup(context: StationContext) -> void:
 	ctx = context
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
-	custom_minimum_size = Vector2(420.0, 0.0)
-	# It starts empty, so its offsets are those of an empty box: grow upward from the bottom
-	# edge when a step arrives, not off the screen (found with the L5 lesson shot, D303).
-	grow_vertical = Control.GROW_DIRECTION_BEGIN
+	dock(false)
 	_col = VBoxContainer.new()
 	_col.add_theme_constant_override("separation", 6)
 	add_child(_col)
@@ -103,6 +101,38 @@ func setup(context: StationContext) -> void:
 func _process(_delta: float) -> void:
 	refresh()
 
+
+## Docked, the card sits at the top of the screen's side column, in the layout, so it covers
+## no gauge or control (D319); undocked (a phone, or no side column) it floats at the
+## bottom left of the screen.
+func dock(on: bool) -> void:
+	_docked = on
+	if on:
+		set_anchors_preset(Control.PRESET_TOP_LEFT)
+		custom_minimum_size = Vector2.ZERO
+		grow_vertical = Control.GROW_DIRECTION_END
+		return
+	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
+	custom_minimum_size = Vector2(420.0, 0.0)
+	# It starts empty, so its offsets are those of an empty box: grow upward from the bottom
+	# edge when a step arrives, not off the screen (found with the L5 lesson shot, D303).
+	grow_vertical = Control.GROW_DIRECTION_BEGIN
+
+
+## Docked, the card sits at the top of a desktop screen's side column, in the layout, so it
+## covers no gauge or control (D319); undocked (a touch layout, or no side column) it floats,
+## at the bottom left on a desktop and clear of the controls on touch (D322).
+func dock(on: bool) -> void:
+	if on:
+		set_anchors_preset(Control.PRESET_TOP_LEFT)
+		custom_minimum_size = Vector2.ZERO
+		grow_vertical = Control.GROW_DIRECTION_END
+		return
+	set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12)
+	custom_minimum_size = Vector2(420.0, 0.0)
+	# It starts empty, so its offsets are those of an empty box: grow upward from the bottom
+	# edge when a step arrives, not off the screen (found with the L5 lesson shot, D303).
+	grow_vertical = Control.GROW_DIRECTION_BEGIN
 
 ## Shows the focused station's latest step, or hides.
 func refresh() -> void:
@@ -228,7 +258,7 @@ func _set_touch_layout(touch: bool) -> void:
 				Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12
 			)
 		_next.custom_minimum_size = Vector2(0.0, 52.0)
-		custom_minimum_size.x = 420.0
+		custom_minimum_size.x = 0.0 if _docked else 420.0
 		if _next.get_parent() != _col:
 			_next.reparent(_col, false)
 		_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

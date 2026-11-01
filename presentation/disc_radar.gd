@@ -31,6 +31,12 @@ const PAD: float = 24.0
 const BLIP_R: float = 6.0
 ## Least space (px) between a chip and the edge of the view.
 const CHIP_MARGIN: float = 2.0
+## A chip stays within this distance (px) of its own blip: when no spot is free that near,
+## the chip is shortened before it is moved farther (D319).
+const CHIP_REACH: float = 48.0
+## The nearer reach tried first (px): a shorter chip close to its blip reads better than
+## the full chip a line away.
+const CHIP_NEAR: float = 24.0
 ## item_at picks the nearest blip within this distance (px).
 const HIT_PX: float = 12.0
 const ORBIT_DEG_PER_PX: float = 0.4
@@ -40,6 +46,9 @@ const ORBIT_DEG_PER_PX: float = 0.4
 ## of the clock numbers, the own ship, the other blips and each other, or are left out
 ## (the selected item's never is).
 const SMALL_R: float = 80.0
+## A burst ring lasts this long (ms); most at once.
+const BURST_MS: int = 900
+const MAX_BURSTS: int = 6
 
 ## The items to draw (ContactPicture). "point" items (point pings) draw only their
 ## pulse and are never picked.
@@ -74,6 +83,9 @@ var touch_min: float = 0.0:
 		queue_redraw()
 
 var _orbiting: bool = false
+var _ctx: StationContext
+## Rings of the destroyed contacts and hits on the own ship: {rel, from (ms), role}.
+var _bursts: Array[Dictionary] = []
 ## Fingers down on the radar: index -> position (two orbit).
 var _fingers: Dictionary = {}
 var _taps: Array[Control] = []
@@ -82,12 +94,65 @@ var _taps: Array[Control] = []
 func _init() -> void:
 	mouse_filter = MOUSE_FILTER_PASS
 	clip_contents = true
+	set_process(false)
 
 
-func set_picture(p_picture: ContactPicture, p_selected: Dictionary) -> void:
+## The blip radius in px: BLIP_R, grown at UI scales under 100 % to stay that many physical px (C2).
+func blip_r() -> float:
+	return Palette.blip_radius(BLIP_R, self)
+
+
+## Sets the picture and the selection; `ctx` (once is enough) lets the radar ring a destroyed
+## contact and a hit on the own ship (#12), unless comfort is on.
+func set_picture(
+	p_picture: ContactPicture, p_selected: Dictionary, ctx: StationContext = null
+) -> void:
 	picture = p_picture
 	selected = p_selected
+	if ctx != null and _ctx != ctx:
+		_ctx = ctx
+		ctx.crew.sim_event.connect(on_sim_event)
 	queue_redraw()
+
+
+## A sim event: a ring at a destroyed contact (red), or round the own ship when it is hit
+## (amber). Nothing with comfort on.
+func on_sim_event(kind: StringName, p: Dictionary) -> void:
+	if _ctx == null or _ctx.settings.comfort:
+		return
+	var id: int = int(p.get("ship", -1))
+	if kind == &"hit" and id == _ctx.crew.ship:
+		_add_burst(Vector3.ZERO, "warn")
+	elif kind == &"destroyed":
+		for it: Dictionary in picture.items:
+			if it["kind"] == "contact" and int(it["id"]) == id:
+				_add_burst(_rel_item(it), "danger")
+				return
+
+
+func _add_burst(rel: Vector3, role: String) -> void:
+	_bursts.append({"rel": rel, "from": Time.get_ticks_msec(), "role": role})
+	if _bursts.size() > MAX_BURSTS:
+		_bursts.pop_front()
+	set_process(true)
+
+
+func _process(_delta: float) -> void:
+	var now: int = Time.get_ticks_msec()
+	_bursts = _bursts.filter(func(b: Dictionary) -> bool: return now - int(b["from"]) < BURST_MS)
+	if _bursts.is_empty():
+		set_process(false)
+	queue_redraw()
+
+
+## Rings that grow and fade as a burst runs out.
+func _draw_bursts() -> void:
+	var now: int = Time.get_ticks_msec()
+	for b: Dictionary in _bursts:
+		var t: float = clampf(float(now - int(b["from"])) / float(BURST_MS), 0.0, 1.0)
+		var col: Color = Palette.color(str(b["role"]))
+		col.a = 1.0 - t
+		draw_arc(_screen(b["rel"]), blip_r() + 4.0 + t * 30.0, 0.0, TAU, 32, col, 2.0, true)
 
 
 ## One range step in (-1) or out (+1).
@@ -228,6 +293,8 @@ func _draw() -> void:
 	var r: float = RANGES_M[range_index]
 	_draw_disc(font, c, r)
 	var layout: Array[Dictionary] = _layout()
+	var covers: Array[Rect2] = SheetCover.over(self)
+	hide_covered(layout, covers)
 	var sel: Dictionary = {}
 	for e: Dictionary in layout:
 		if _is_selected(e["item"]):
@@ -249,18 +316,21 @@ func _draw() -> void:
 	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			_draw_pulse(_screen(_rel_item(it)), float(it.get("pulse", 0.0)))
+	_draw_bursts()
 	var label: Rect2 = _range_rect()
-	draw_rect(label, Palette.color("panel_focus"))
-	draw_rect(label, Palette.color("line"), false, 1.0)
-	var text: String = _range_text()
-	var tsz: Vector2 = Vector2(
-		font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
-		font.get_height(FONT_SIZE)
-	)
-	_draw_text(font, Rect2(label.get_center() - tsz / 2.0, tsz), text, Palette.color("text"))
-	draw_set_transform(_view().position)
-	SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
-	draw_set_transform(Vector2.ZERO)
+	if not SheetCover.touches(label, covers):
+		draw_rect(label, Palette.color("panel_focus"))
+		draw_rect(label, Palette.color("line"), false, 1.0)
+		var text: String = _range_text()
+		var tsz: Vector2 = Vector2(
+			font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+			font.get_height(FONT_SIZE)
+		)
+		_draw_text(font, Rect2(label.get_center() - tsz / 2.0, tsz), text, Palette.color("text"))
+	if not SheetCover.touches(_site_rect(), covers):
+		draw_set_transform(_view().position)
+		SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
+		draw_set_transform(Vector2.ZERO)
 	if side_strip:
 		_draw_strip(font)
 	_sync_taps()
@@ -332,7 +402,7 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 		draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
 		draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
 		var radius: float = (
-			BLIP_R * float(blip_scale.get(it["id"], 1.0)) if it["kind"] == "contact" else BLIP_R
+			blip_r() * float(blip_scale.get(it["id"], 1.0)) if it["kind"] == "contact" else blip_r()
 		)
 		_draw_shape(Palette.shape_points(Palette.item_shape(it), pos, radius), col, solid)
 	if it.get("zone", "") == "probe" and not e["beyond"]:
@@ -365,7 +435,7 @@ func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
-	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	draw_arc(pos, blip_r() + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
 	_draw_copies(pos, col, copies)
 
 
@@ -437,6 +507,8 @@ func _layout() -> Array[Dictionary]:
 		if small():
 			chip = it["label"] if chips else ""
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
+		var variants: Array[String] = []
+		var sizes: Array[Vector2] = []
 		if chip != "" and not small():
 			# A small radar (a phone's 180 px column) drops the range band, then the clock,
 			# until the chip fits beside its blip; the callsign alone may slide over it.
@@ -444,8 +516,11 @@ func _layout() -> Array[Dictionary]:
 			for n: int in range(parts.size(), 0, -1):
 				chip = ChipText.SEP.join(parts.slice(0, n))
 				rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
-				if rect.position.x > pos.x + BLIP_R or rect.end.x < pos.x - BLIP_R:
+				if rect.position.x > pos.x + blip_r() or rect.end.x < pos.x - blip_r():
 					break
+			var forms: Array = chip_forms(font, chip)
+			variants.assign(forms[0])
+			sizes.assign(forms[1])
 		(
 			out
 			. append(
@@ -457,14 +532,56 @@ func _layout() -> Array[Dictionary]:
 					"beyond": beyond,
 					"chip": chip,
 					"chip_rect": rect,
+					"variants": variants,
+					"sizes": sizes,
+					"selected": _is_selected(it),
 				}
 			)
 		)
 	if small():
 		_place_small(out, font)
 	else:
-		_declutter(out)
+		var rim: float = disc_radius()
+		var tilt: float = sin(deg_to_rad(tilt_deg))
+		var fixed: Array = _numerals(font, c, r).values()
+		fixed.append_array([_range_rect(), _site_rect(), _own_box()])
+		_declutter(
+			out,
+			fixed,
+			_view().grow(-CHIP_MARGIN),
+			Rect2(c - Vector2(rim, rim * tilt), Vector2(rim, rim * tilt) * 2.0),
+			blip_r() + 3.0
+		)
 	return out
+
+
+## A chip a sheet would cut in half is not drawn at all (D319): `layout`'s chips under
+## `covers` (SheetCover.over) are emptied.
+static func hide_covered(layout: Array[Dictionary], covers: Array[Rect2]) -> void:
+	if covers.is_empty():
+		return
+	for e: Dictionary in layout:
+		if e["chip"] != "" and SheetCover.touches(e["chip_rect"], covers):
+			e["chip"] = ""
+
+
+## A chip's shorter forms, longest first ("H2 · 4 high · mid", "H2 · 4 high", "H2"), with
+## their sizes (px): [Array[String], Array[Vector2]]. The placement falls back on them when
+## no spot near the blip is free (D319).
+static func chip_forms(font: Font, chip: String) -> Array:
+	var variants: Array[String] = []
+	var sizes: Array[Vector2] = []
+	var all: PackedStringArray = chip.split(ChipText.SEP)
+	for n: int in range(all.size(), 0, -1):
+		var form: String = ChipText.SEP.join(all.slice(0, n))
+		variants.append(form)
+		sizes.append(
+			Vector2(
+				font.get_string_size(form, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x,
+				font.get_height(FONT_SIZE)
+			)
+		)
+	return [variants, sizes]
 
 
 ## True when the disc is under SMALL_R in radius.
@@ -487,8 +604,8 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 	var numerals: Array = _numerals(font, c, RANGES_M[range_index]).values()
 	taken.append_array(numerals)
 	taken.append_array([_range_rect(), _site_rect()])
-	taken.append(Rect2(_screen(picture.rel(Vector3.ZERO, centre)) - Vector2(8, 8), Vector2(16, 16)))
-	var half: Vector2 = Vector2(BLIP_R, BLIP_R) + Vector2(3, 3)
+	taken.append(_own_box())
+	var half: Vector2 = Vector2(blip_r(), blip_r()) + Vector2(3, 3)
 	for e: Dictionary in entries:
 		taken.append(Rect2((e["pos"] as Vector2) - half, half * 2.0))
 	var order: Array[Dictionary] = entries.duplicate()
@@ -536,6 +653,11 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 			e["chip_rect"] = Rect2(p, Vector2.ZERO)
 
 
+## The own ship's box (px), which no chip covers.
+func _own_box() -> Rect2:
+	return Rect2(_screen(picture.rel(Vector3.ZERO, centre)) - Vector2(9, 9), Vector2(18, 18))
+
+
 ## A chip's box: right of the blip at `pos`, left of it when `left` (an arrow on the right
 ## rim) or when only that side fits, then shifted to stay inside the view: a small radar
 ## never clips a chip at its edge (#28).
@@ -555,29 +677,210 @@ func _chip_rect(font: Font, chip: String, pos: Vector2, left: bool) -> Rect2:
 	return Rect2(Vector2(x, y), sz)
 
 
-## Moves overlapping chips apart: top to bottom, a chip that overlaps one already placed
-## drops below it, so close blips don't print their callsigns over each other.
-static func _declutter(entries: Array[Dictionary]) -> void:
+## Places each chip next to its own blip, then moves it by the least that clears what it
+## must not cover (spots tried: beside the default, right, left, above, below, a line off).
+## Hard obstacles: the clock numbers and other boxes in `fixed`, every blip's box (entries
+## with a "pos"), the chips already placed and the other items' stems; a spot also has to
+## keep inside `limit` and within CHIP_REACH of its own blip. When no spot is free, the
+## chip is shortened (its "variants", longest first, with their "sizes"), then may cross
+## other stems (soft, as is leaving `disc`'s ellipse, charged as a cost), then takes the
+## free spot nearest its blip with the callsign alone. Selected chips are placed first,
+## then top to bottom. Without a blip a chip with no free spot drops below what it overlaps.
+static func _declutter(
+	entries: Array[Dictionary],
+	fixed: Array = [],
+	limit: Rect2 = Rect2(),
+	disc: Rect2 = Rect2(),
+	blip: float = 9.0
+) -> void:
+	var boxes: Array[Rect2] = []
+	var blocked: Array[Rect2] = []
+	var stems: Array[Dictionary] = []
+	for f: Variant in fixed:
+		boxes.append(f as Rect2)
+	for e: Dictionary in entries:
+		if not e.has("pos"):
+			continue
+		var p: Vector2 = e["pos"]
+		blocked.append(Rect2(p - Vector2(blip, blip), Vector2(blip, blip) * 2.0))
+		if e.has("foot") and not e.get("beyond", false):
+			var f: Vector2 = e["foot"]
+			(
+				stems
+				. append(
+					{
+						"rect": Rect2(minf(f.x, p.x) - 1.0, minf(f.y, p.y), 2.0, absf(f.y - p.y)),
+						"owner": e,
+					}
+				)
+			)
 	var order: Array[Dictionary] = entries.filter(
 		func(e: Dictionary) -> bool: return e["chip"] != ""
 	)
 	order.sort_custom(
 		func(a: Dictionary, b: Dictionary) -> bool:
+			if a.get("selected", false) != b.get("selected", false):
+				return a.get("selected", false)
 			return (a["chip_rect"] as Rect2).position.y < (b["chip_rect"] as Rect2).position.y
 	)
+	blocked.append_array(boxes)
 	var placed: Array[Rect2] = []
 	for e: Dictionary in order:
-		var r: Rect2 = e["chip_rect"]
-		for _pass: int in order.size():
-			var hit: bool = false
-			for o: Rect2 in placed:
-				if o.intersects(r):
-					r.position.y = o.end.y
-					hit = true
-			if not hit:
+		var home: Rect2 = e["chip_rect"]
+		var variants: Array = e.get("variants", [])
+		var sizes: Array = e.get("sizes", [])
+		var n: int = maxi(variants.size(), 1)
+		var pick: Rect2 = Rect2()
+		var text: String = e["chip"]
+		# (near, then up to CHIP_REACH, with the other stems hard, then soft: every form, the
+		# longest first, at each step)
+		for step: Array in [
+			[CHIP_NEAR, true], [CHIP_REACH, true], [CHIP_NEAR, false], [CHIP_REACH, false]
+		]:
+			for k: int in n:
+				var h: Rect2 = home if k == 0 else _home_for(home, e["pos"], sizes[k])
+				pick = _best_spot(e, h, blocked, placed, stems, limit, disc, blip, step[1], step[0])
+				if pick.has_area():
+					text = variants[k] if k > 0 else text
+					break
+			if pick.has_area():
 				break
-		e["chip_rect"] = r
-		placed.append(r)
+		if pick.has_area():
+			e["chip"] = text
+		else:
+			# No free spot near the blip: the callsign alone, nearest to it that is free of
+			# the hard boxes, else stepped down below what it overlaps.
+			if n > 1:
+				e["chip"] = variants[n - 1]
+				home = _home_for(home, e["pos"], sizes[n - 1])
+			pick = home
+			for _pass: int in order.size() + boxes.size():
+				var hit: bool = false
+				for o: Rect2 in boxes + placed:
+					if o.intersects(pick):
+						pick.position.y = o.end.y
+						hit = true
+				if not hit:
+					break
+		e["chip_rect"] = pick
+		placed.append(pick)
+
+
+## `home` resized to `size`, on the same side of the blip at `pos`.
+static func _home_for(home: Rect2, pos: Vector2, size: Vector2) -> Rect2:
+	var x: float = home.position.x if home.position.x >= pos.x else home.end.x - size.x
+	return Rect2(Vector2(x, home.get_center().y - size.y / 2.0), size)
+
+
+## The distance (px) from `p` to the nearest point of `r`.
+static func _gap_to(r: Rect2, p: Vector2) -> float:
+	var dx: float = maxf(maxf(r.position.x - p.x, p.x - r.end.x), 0.0)
+	var dy: float = maxf(maxf(r.position.y - p.y, p.y - r.end.y), 0.0)
+	return Vector2(dx, dy).length()
+
+
+## The spot for a chip whose default box is `home`: the cheapest free one, or an empty
+## Rect2. With a blip, a spot is within CHIP_REACH of it; `hard_stems` makes the other
+## items' stems obstacles too.
+static func _best_spot(
+	e: Dictionary,
+	home: Rect2,
+	blocked: Array[Rect2],
+	placed: Array[Rect2],
+	stems: Array[Dictionary],
+	limit: Rect2,
+	disc: Rect2,
+	blip: float,
+	hard_stems: bool,
+	reach: float = CHIP_REACH
+) -> Rect2:
+	var sz: Vector2 = home.size
+	var spots: Array[Rect2] = [home]
+	if e.has("pos"):
+		var p: Vector2 = e["pos"]
+		var gap: float = blip + 1.0
+		var ys: Array[float] = [0.0, sz.y, -sz.y, sz.y * 2.0, -sz.y * 2.0]
+		for dy: float in ys:
+			spots.append(Rect2(Vector2(p.x + gap, p.y - sz.y / 2.0 + dy), sz))
+			spots.append(Rect2(Vector2(p.x - gap - sz.x, p.y - sz.y / 2.0 + dy), sz))
+		spots.append(Rect2(Vector2(p.x - sz.x / 2.0, p.y - gap - sz.y), sz))
+		spots.append(Rect2(Vector2(p.x - sz.x / 2.0, p.y + gap), sz))
+		# (corners: above and below, flush with the blip's right or left side)
+		spots.append(Rect2(Vector2(p.x, p.y - gap - sz.y), sz))
+		spots.append(Rect2(Vector2(p.x - sz.x, p.y - gap - sz.y), sz))
+		spots.append(Rect2(Vector2(p.x, p.y + gap), sz))
+		spots.append(Rect2(Vector2(p.x - sz.x, p.y + gap), sz))
+	var best: Rect2 = Rect2()
+	var best_cost: float = INF
+	for spot: Rect2 in spots:
+		if limit.has_area() and not limit.grow(0.5).encloses(spot):
+			continue
+		if e.has("pos") and _gap_to(spot, e["pos"]) > reach:
+			continue
+		var free: bool = true
+		for o: Rect2 in blocked + placed:
+			if o.intersects(spot):
+				free = false
+				break
+		if not free:
+			continue
+		var cost: float = spot.get_center().distance_to(home.get_center())
+		for s: Dictionary in stems:
+			if (s["rect"] as Rect2).intersects(spot):
+				if hard_stems and s["owner"] != e:
+					free = false
+					break
+				cost += 8.0
+		if not free:
+			continue
+		if disc.has_area():
+			if not _in_ellipse(disc, spot):
+				cost += 10.0
+			# (a ring's line through the text strikes it out)
+			var half: Rect2 = Rect2(disc.get_center() - disc.size / 4.0, disc.size / 2.0)
+			for ring: Rect2 in [disc, half]:
+				if _crosses_ellipse(ring, spot):
+					cost += 6.0
+		if cost < best_cost:
+			best_cost = cost
+			best = spot
+	return best
+
+
+## True when the outline of the ellipse inscribed in `box` passes through `r`: some of the
+## corners and edge midpoints of `r` lie inside it and some outside.
+static func _crosses_ellipse(box: Rect2, r: Rect2) -> bool:
+	var c: Vector2 = box.get_center()
+	var h: Vector2 = box.size / 2.0
+	var mid: Vector2 = r.get_center()
+	var inside: int = 0
+	var points: Array[Vector2] = [
+		r.position,
+		Vector2(r.end.x, r.position.y),
+		r.end,
+		Vector2(r.position.x, r.end.y),
+		Vector2(mid.x, r.position.y),
+		Vector2(mid.x, r.end.y),
+		Vector2(r.position.x, mid.y),
+		Vector2(r.end.x, mid.y),
+	]
+	for q: Vector2 in points:
+		if ((q - c) / h).length_squared() <= 1.0:
+			inside += 1
+	return inside > 0 and inside < points.size()
+
+
+## True when all four corners of `r` lie inside the ellipse inscribed in `box`.
+static func _in_ellipse(box: Rect2, r: Rect2) -> bool:
+	var c: Vector2 = box.get_center()
+	var h: Vector2 = box.size / 2.0
+	for corner: Vector2 in [
+		r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)
+	]:
+		var d: Vector2 = (corner - c) / h
+		if d.length_squared() > 1.0:
+			return false
+	return true
 
 
 ## Screen position of a ship-frame offset from the centre item (m).

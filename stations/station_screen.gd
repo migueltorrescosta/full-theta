@@ -34,6 +34,9 @@ const SHORT_H: float = 560.0
 const SHORT_RADAR: float = 220.0
 const SHORT_SIDE_WIDTH: float = 280.0
 const TOP_BAR_HEIGHT: float = 40.0
+## The least gap (px) between the rows and the screen's bottom edge: the last row of a
+## panel keeps its borders (#12).
+const EDGE_GAP: float = 6.0
 ## The bar of the touch layouts: tap-sized alert chip and sound button (D194).
 const TOUCH_BAR_HEIGHT: float = 52.0
 ## A phone's bar: the chip and sound button are primary targets (48 px, #28).
@@ -104,6 +107,8 @@ var _dock: VBoxContainer
 var _side: BoxContainer
 var _body: BoxContainer
 var _extras: VBoxContainer
+var _side_margin: MarginContainer
+var _side_scroll: ScrollContainer
 var _blocked: bool = false
 ## The phone-landscape buttons (joint switch, share opener): at the top of the radar column
 ## or, with the column hidden, at the bottom centre of the main area.
@@ -247,6 +252,29 @@ func _show_side() -> void:
 		share_bar.min_width = TouchDrawer.WIDTH - 2.0 * UiTheme.TOUCH_GAP
 	_sync_share()
 	_place_phone_bar()
+	_place_training(
+		not phone_form and _side.visible and training != null and not training.touch_layout()
+	)
+
+
+## The side column scrolls in whole rows: the room under the last row that fits is a margin.
+func _snap_side() -> void:
+	if _side_margin != null and is_inside_tree():
+		ScrollSnap.fit(_side_scroll, _side_margin, _extras)
+
+
+## The Shakedown card sits at the top of the side column when there is one (it then covers
+## no gauge), else floats over the screen.
+func _place_training(in_column: bool) -> void:
+	if training == null:
+		return
+	if in_column and training.get_parent() != _extras:
+		training.reparent(_extras, false)
+		_extras.move_child(training, 0)
+		training.dock(true)
+	elif not in_column and training.get_parent() != self:
+		training.reparent(self, false)
+		training.dock(false)
 
 
 ## The opener shows while the share buttons sit in the drawer and there is something to
@@ -433,9 +461,11 @@ func _process(delta: float) -> void:
 		_maxes(),
 		ctx.crew.summaries(status, ctx.ship_def())
 	)
-	radar.set_picture(ctx.picture(), ctx.crew.selection)
+	radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
 	radar.blip_scale = focused_panel().blip_scale()
 	toasts.update(now)
+	var spot: Rect2 = top_bar.status_rect().intersection(get_global_rect())
+	toasts.place(Rect2(spot.position - get_global_rect().position, spot.size))
 	flash.update(now)
 	if phone:
 		frame.process(now)
@@ -780,11 +810,19 @@ func _build() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# A wide bar shows at a glance that the column scrolls.
 	scroll.get_v_scroll_bar().custom_minimum_size.x = SCROLL_BAR_W
-	_side.add_child(scroll)
+	# The margin under the scroll makes its last visible row whole at rest (_snap_side).
+	_side_margin = MarginContainer.new()
+	_side_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_side_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_side_margin.add_child(scroll)
+	_side.add_child(_side_margin)
+	_side_scroll = scroll
 	_extras = VBoxContainer.new()
 	_extras.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_extras.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_extras)
+	scroll.resized.connect(_snap_side.call_deferred)
+	_extras.minimum_size_changed.connect(_snap_side.call_deferred)
 	# Upright on a phone the column sits under the panel's thumb controls: keep 8 px.
 	_extras_pad = Control.new()
 	_extras_pad.custom_minimum_size.y = UiTheme.TOUCH_GAP / 2.0
@@ -817,14 +855,6 @@ func _build() -> void:
 	_phone_bar.add_child(share_opener)
 	_extras.add_child(_phone_bar)
 	toasts = Toasts.new()
-	toasts.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	# Top-right of the screen (§5.0), over the radar's empty corner, not the panel.
-	toasts.offset_left = -16.0
-	toasts.offset_right = -16.0
-	toasts.offset_top = TOP_BAR_HEIGHT + 8.0
-	toasts.offset_bottom = TOP_BAR_HEIGHT + 8.0
-	toasts.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toasts)
 	chip_strip = ChipStrip.new()
 	chip_strip.position = Vector2(8.0, TOP_BAR_HEIGHT + 8.0)
@@ -850,7 +880,9 @@ func _apply_band() -> void:
 	var sideways: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
 	var into: bool = phone and sideways and focused_panel().in_frame
 	_band_h = bottom if into else 0.0
-	_rows.offset_bottom = -bottom + _band_h
+	# (outside the band the rows keep EDGE_GAP above the screen's edge, so a bottom row
+	# never sits flush with it)
+	_rows.offset_bottom = -(0.0 if into else maxf(bottom, EDGE_GAP))
 	_side_band.custom_minimum_size.y = _band_h
 	sheet.offset_bottom = -_band_h
 
@@ -870,7 +902,7 @@ func _relayout() -> void:
 	_rows.offset_left = m.x
 	_rows.offset_top = m.y
 	_rows.offset_right = -m.z
-	_rows.offset_bottom = -bottom
+	_rows.offset_bottom = -maxf(bottom, EDGE_GAP)
 	size_now -= Vector2(m.x + m.z, m.y + bottom)
 	var touch: bool = LayoutMode.is_touch(kind)
 	var portrait: bool = LayoutMode.portrait(size_now)
@@ -923,10 +955,6 @@ func _relayout() -> void:
 		share_bar.gap = UiTheme.TOUCH_GAP
 	_extras_pad.visible = phone and portrait
 	var top: float = m.y + top_bar.custom_minimum_size.y + 8.0
-	toasts.offset_top = top
-	toasts.offset_bottom = top
-	toasts.offset_left = -16.0 - m.z
-	toasts.offset_right = -16.0 - m.z
 	chip_strip.position = Vector2(8.0 + m.x, top)
 	rotate_banner.visible = false
 	if rotate_prompt:

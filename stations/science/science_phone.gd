@@ -22,6 +22,8 @@ const CARD_W: float = 300.0
 ## page's is the whole card's).
 const STAGE_MIN_H: float = 160.0
 const ZONE_UP_H: float = 3.0 * (UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP)
+## How far (px) the status line sits above the stage's foot.
+const STATUS_LIFT: float = 8.0
 ## The action buttons' font: "Own ship" fits a half-width rail button.
 const ACTION_FONT: int = 14
 ## An ItemList row's extra height, so a row is a TOUCH_MIN tap.
@@ -305,7 +307,8 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 	# (P28-Band: drawn into, never tapped), clear of the disc's foot.
 	var x: float = r.position.x + 6.0 + RANGE_MIN + UiTheme.TOUCH_GAP
 	var foot: float = panel._stage.size.y - 2.0 if layout != null else r.end.y
-	status.position = Vector2(x, foot - 40.0)
+	# (8 px above the edge, so a second line keeps its descenders on screen)
+	status.position = Vector2(x, foot - 40.0 - STATUS_LIFT)
 	status.size = Vector2(maxf(r.end.x - x - 8.0, 1.0), 40.0)
 
 

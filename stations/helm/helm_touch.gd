@@ -371,7 +371,7 @@ func update(ring: ShieldRing) -> void:
 	_drive_throttle()
 	_place_radar()
 	if radar_box.is_visible_in_tree():
-		radar.set_picture(panel.ctx.picture(), panel.ctx.crew.selection)
+		radar.set_picture(panel.ctx.picture(), panel.ctx.crew.selection, panel.ctx)
 	_place_ring(ring)
 	var h: Dictionary = panel.helm_block()
 	var on: Dictionary = {
