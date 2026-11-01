@@ -1442,6 +1442,9 @@
     "touch.helm.help.roll_starboard": {"en": "Roll to starboard: hold", "pt_PT": "Rolar a estibordo: mantém premido", "it": "Rollio a tribordo: tieni premuto"},
     "touch.fullscreen_exit": {"en": "Exit full screen", "pt_PT": "Sair do ecrã inteiro", "it": "Esci dallo schermo intero"},
     "train.collapse": {"en": "Fold the card", "pt_PT": "Fechar o cartão", "it": "Chiudi la scheda"},
-    "train.expand": {"en": "Unfold the card", "pt_PT": "Abrir o cartão", "it": "Apri la scheda"}
+    "train.expand": {"en": "Unfold the card", "pt_PT": "Abrir o cartão", "it": "Apri la scheda"},
+    "touch.weapons.mount": {"en": "Mount %d", "pt_PT": "Montagem %d", "it": "Torretta %d"},
+    "weapons.hint_claim_touch": {"en": "Tap Claim to take this mount.", "pt_PT": "Toca em Assumir para reservar esta montagem.", "it": "Tocca Prendi per prenotare questa torretta."},
+    "touch.weapons.aim": {"en": "Aim", "pt_PT": "Mirar", "it": "Mira"}
   }
 }
