@@ -13,6 +13,11 @@ extends RefCounted
 
 ## Ticks per second, for scenarios and the director to turn seconds into ticks.
 const HZ: int = SimWorld.HZ
+## The session modes a director plans differently for (session_mode() returns a
+## SessionRules.Mode; the director sees only sim/api, so it reads them from here).
+const MODE_RACE: int = SessionRules.Mode.RACE
+const MODE_LAST_STANDING: int = SessionRules.Mode.LAST_STANDING
+const MODE_HOLDOUT: int = SessionRules.Mode.HOLDOUT
 
 var _world: SimWorld
 
@@ -22,6 +27,18 @@ func _init(world: SimWorld) -> void:
 
 
 # --- queries (value copies) ---
+
+
+## Whether none of the handles' ships is still in the run (destroyed or retreated).
+func all_gone(handles: Array[ApiHandle]) -> bool:
+	for handle: ApiHandle in handles:
+		# A spawn queued this tick has no ship yet: it is still to come. One that was
+		# rejected never comes.
+		if handle.pending():
+			return false
+		if not handle.rejected() and ship(handle.id()).in_play:
+			return false
+	return true
 
 
 func tick() -> int:

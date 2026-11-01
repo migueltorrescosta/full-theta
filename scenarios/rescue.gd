@@ -141,7 +141,7 @@ func step(api: ScenarioApi) -> void:
 	var salvaging: bool = _state(api, _salvage) == CardView.State.ACCEPTED
 	if salvaging and api.distance(_ship, _freighter.id()) <= SALVAGE_RANGE_M:
 		_near_ticks += 1
-	if _raiders_gone(api) or elapsed_s >= MAX_S:
+	if api.all_gone(_raiders) or elapsed_s >= MAX_S:
 		_settle(api)
 
 
@@ -169,14 +169,3 @@ func _state(api: ScenarioApi, card: ApiHandle) -> int:
 		if c.id == card.id():
 			return c.state
 	return CardView.State.EXPIRED
-
-
-func _raiders_gone(api: ScenarioApi) -> bool:
-	for raider: ApiHandle in _raiders:
-		# A spawn queued this tick has no ship yet: it is still to come. One that was
-		# rejected never comes.
-		if raider.pending():
-			return false
-		if not raider.rejected() and api.ship(raider.id()).in_play:
-			return false
-	return true

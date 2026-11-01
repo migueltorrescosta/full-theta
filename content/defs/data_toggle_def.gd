@@ -47,8 +47,8 @@ func max_value() -> int:
 func validate() -> Array[String]:
 	var errors: Array[String] = []
 	DefCheck.id(errors, "id", id)
-	for preset: StringName in [&"easy", &"normal", &"hard"]:
-		var v: int = value_of(preset)
+	for preset: String in DataTogglesDef.PRESETS:
+		var v: int = value_of(StringName(preset))
 		if v < 0 or v > max_value():
 			errors.append("%s: must be in 0..%d, got %d" % [preset, max_value(), v])
 	return errors

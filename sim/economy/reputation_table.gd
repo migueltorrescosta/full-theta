@@ -11,7 +11,7 @@ const MAX: float = 100.0
 
 var value: PackedFloat32Array = PackedFloat32Array()
 
-## Derived index, not state: row by faction * 65536 + other faction.
+## Derived index, not state: row by SimTable.row_key(faction, other faction).
 var _rows: Dictionary[int, int] = {}
 
 
@@ -21,7 +21,7 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 
 ## Row of the pair, or -1 when it was never touched.
 func row_for(faction: int, other: int) -> int:
-	return _rows.get(faction * 65536 + other, -1)
+	return _rows.get(SimTable.row_key(faction, other), -1)
 
 
 ## The standing of faction with other (0 when never touched).
@@ -36,7 +36,7 @@ func ensure(faction: int, other: int) -> int:
 	if r < 0:
 		r = add_key(other, faction)
 		value.append(0.0)
-		_rows[faction * 65536 + other] = r
+		_rows[SimTable.row_key(faction, other)] = r
 	return r
 
 
