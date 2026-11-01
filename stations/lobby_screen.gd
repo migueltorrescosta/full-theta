@@ -14,7 +14,9 @@ extends Control
 ## PAIR-017, FT-STN-016; read-only for the others); Start is the confirm. Nothing scrolls: the
 ## whole lobby fits the screen. Picks go to the server (ShipIntents.pick); the screen shows what
 ## the events say. The host's lobby also has a "How to join" dialog (FT-NET-013): the browser URL
-## with a QR code and the desktop address. A player with no name of their own (a phone that
+## with a QR code and the desktop address; while the ship's seats are open the QR code and the
+## address in large type also sit under the title row (#35 A6), smaller on a phone upright and
+## left to the dialog on a short screen. A player with no name of their own (a phone that
 ## joined by QR code) gets a one-field name prompt at the top (#35 A5).
 ##
 ## Multi-ship sessions (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
@@ -72,6 +74,11 @@ const NEW_SHIP_NAMES: Array[String] = [
 ]
 ## The team letters (team 0 is A).
 const TEAM_LETTERS: Array[String] = ["A", "B"]
+## The join strip's QR module size and address font size, in px, off a phone and on one.
+const JOIN_QR_PX: int = 4
+const JOIN_QR_PX_PHONE: int = 2
+const JOIN_ADDRESS_SIZE: int = 40
+const JOIN_ADDRESS_SIZE_PHONE: int = 22
 ## Phone tap targets (#28): primary targets at least this tall, this far apart.
 const PHONE_TARGET: int = UiTheme.TOUCH_PRIMARY
 const PHONE_GAP: int = UiTheme.TOUCH_GAP
@@ -122,6 +129,10 @@ var _dev_all: Button
 var _join_button: Button
 var _join_dialog: AcceptDialog
 var _join_panel: LobbyJoinPanel
+## The host's QR code and address while seats are open; null off the host or on loopback.
+var _join_strip: HBoxContainer
+var _join_qr: QrView
+var _join_address: Label
 ## The name prompt (#35 A5) and its field.
 var _name_row: HBoxContainer
 var _name_field: LineEdit
@@ -208,6 +219,7 @@ func refresh() -> void:
 	)
 	_body.visible = not _browsing
 	_leave.visible = not _browsing
+	_show_join_strip()
 	_fit_strip.call_deferred()
 	_refresh_data()
 	if _refusal != "":
@@ -600,6 +612,7 @@ func _apply_targets(phone: bool) -> void:
 	_grid.set_meta(&"phone", phone)
 	_name_field.custom_minimum_size.y = PHONE_TARGET if phone else 0.0
 	if phone != _phone:
+		_size_join_strip(phone)
 		for cell: Node in _grid.get_children():
 			_fit_cell(cell, cell.get_child(0))
 	_phone = phone
@@ -636,6 +649,7 @@ func _arrange(short: bool) -> void:
 	_summary_role.clip_text = short and _phone
 	_summary_role.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL)
 	_style_summary(short, _phone)
+	_show_join_strip()
 
 
 ## On a phone or a short screen, shares a row's room among its wide buttons by their
@@ -805,6 +819,7 @@ func _build() -> void:
 	_fullscreen = FullscreenToggle.new()
 	head.add_child(_fullscreen)
 	_build_name_prompt(outer)
+	_build_join_strip(outer)
 	_ships = HFlowContainer.new()
 	_ships.name = "Ships"
 	outer.add_child(_ships)
@@ -881,6 +896,52 @@ func submit_name() -> void:
 	ctx.settings.save()
 	ctx.intents.rename(n)
 	_name_row.visible = false
+
+
+## The host's join strip (#35 A6): the browser URL's QR code and the address beside it in
+## large type, under the title row; none on a loopback server (the dialog says why).
+func _build_join_strip(parent: Container) -> void:
+	if ctx.host_bind == "" or LobbyJoinPanel.is_local_only(ctx.host_bind):
+		return
+	_join_strip = HBoxContainer.new()
+	_join_strip.name = "JoinStrip"
+	_join_strip.alignment = BoxContainer.ALIGNMENT_CENTER
+	_join_strip.add_theme_constant_override("separation", 12)
+	parent.add_child(_join_strip)
+	_join_qr = QrView.new()
+	_join_qr.name = "JoinStripQr"
+	_join_qr.module_px = JOIN_QR_PX
+	_join_qr.set_text(LobbyJoinPanel.join_url(ctx.host_bind, ctx.host_port, ctx.host_tls))
+	_join_strip.add_child(_join_qr)
+	var col: VBoxContainer = VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	_join_strip.add_child(col)
+	var caption: Label = _label(tr("lobby.join_scan"), "DimLabel")
+	caption.name = "JoinStripCaption"
+	col.add_child(caption)
+	_join_address = _label(ctx.host_bind)
+	_join_address.name = "JoinStripAddress"
+	_join_address.add_theme_font_size_override("font_size", JOIN_ADDRESS_SIZE)
+	col.add_child(_join_address)
+
+
+## The join strip shows while the ship's seats are open (not started); a short screen (a phone
+## on its side) has no row to spare, and How to join holds it there.
+func _show_join_strip() -> void:
+	if _join_strip != null:
+		var started: bool = bool(ctx.crew.ship_state(ship).get("started", false))
+		_join_strip.visible = not _short and not started
+
+
+## The join strip's sizes: compact on a phone.
+func _size_join_strip(phone: bool) -> void:
+	if _join_strip == null:
+		return
+	_join_qr.module_px = JOIN_QR_PX_PHONE if phone else JOIN_QR_PX
+	_join_qr.set_text(LobbyJoinPanel.join_url(ctx.host_bind, ctx.host_port, ctx.host_tls))
+	_join_address.add_theme_font_size_override(
+		"font_size", JOIN_ADDRESS_SIZE_PHONE if phone else JOIN_ADDRESS_SIZE
+	)
 
 
 ## The selection's name and role, in the Info block (the legend joins it on a short
@@ -1113,6 +1174,10 @@ func _notification(what: int) -> void:
 		_leave.text = tr("lobby.leave_pick")
 		_join_button.text = tr("lobby.join_title")
 		_name_field.placeholder_text = tr("menu.name")
+		if _join_strip != null:
+			(_join_strip.find_child("JoinStripCaption", true, false) as Label).text = tr(
+				"lobby.join_scan"
+			)
 		_join_dialog.title = tr("lobby.join_title")
 		_join_dialog.ok_button_text = tr("lobby.done")
 		_dialog.ok_button_text = tr("lobby.done")
