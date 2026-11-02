@@ -191,6 +191,7 @@ func _retext() -> void:
 static func touchpad_hint(stations: Array, os_name: String = OS.get_name()) -> bool:
 	return os_name == "Linux" and stations.has("helm")
 
+
 ## The notes under the built diagrams: unbound intents of the screen, bindings off the
 ## picture.
 func _refresh_notes() -> void:
