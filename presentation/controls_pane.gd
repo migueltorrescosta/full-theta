@@ -107,8 +107,11 @@ static func default_view(phone: bool, device: String) -> String:
 
 ## The stations shown: the screen's, or every station's with the filter on.
 func shown_stations() -> Array:
-	if not all_stations:
-		return _stations
+	return every_station() if all_stations else _stations
+
+
+## Every station with intents of its own.
+static func every_station() -> Array:
 	var out: Array = []
 	for g: String in IntentTable.GROUPS:
 		if g not in [IntentTable.COMMON, IntentTable.LIVE]:
