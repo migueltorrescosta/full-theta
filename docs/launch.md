@@ -53,3 +53,7 @@ If the host's client dies, its server keeps running. On the next start the clien
 xvfb-run -a -s "-screen 0 1280x720x24" build/linux/full-theta.x86_64 \
   -- --auto-join 127.0.0.1 --screenshot /tmp/lobby.png --quit-after 15
 ```
+
+## Troubleshooting
+
+**Helm stops steering while you thrust (Linux laptop).** Linux pauses a laptop touchpad while a key is held ("Disable touchpad while typing"). Turn it off (GNOME: Settings > Mouse & Touchpad, or `gsettings set org.gnome.desktop.peripherals.touchpad disable-while-typing false`; KDE: System Settings > Touchpad) or use a mouse. The Controls page says so on Helm.

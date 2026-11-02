@@ -357,6 +357,7 @@
     "controls.view_pad": {"en": "Controller", "pt_PT": "Comando", "it": "Controller"},
     "controls.view_list": {"en": "List", "pt_PT": "Lista", "it": "Elenco"},
     "controls.other": {"en": "Other stations", "pt_PT": "Outros postos", "it": "Altre postazioni"},
+    "controls.touchpad_hint": {"en": "On a laptop touchpad, Linux may pause the touchpad while you hold a key. Turn off \"Disable touchpad while typing\" in your mouse settings, or use a mouse.", "pt_PT": "Num touchpad de portátil, o Linux pode pausar o touchpad enquanto seguras uma tecla. Desliga \"Desativar touchpad ao escrever\" nas definições do rato, ou usa um rato.", "it": "Su un touchpad, Linux può fermare il touchpad mentre tieni premuto un tasto. Disattiva \"Disattiva touchpad durante la digitazione\" nelle impostazioni del mouse, o usa un mouse."},
     "controls.unbound": {"en": "Not bound here: %s", "pt_PT": "Sem tecla aqui: %s", "it": "Non assegnato qui: %s"},
     "controls.off_diagram": {"en": "Not on the picture: %s", "pt_PT": "Fora da imagem: %s", "it": "Fuori dallo schema: %s"},
     "overlay.common": {"en": "Everywhere", "pt_PT": "Em todo o lado", "it": "Ovunque"},
