@@ -44,8 +44,12 @@ func test_destroying_the_raiders_wins_the_encounter() -> void:
 
 
 # FT: FT-MIS-004, FT-PAIR-004
+# The raider's engines are shot up (the demand needs some engine damage, #35 A4) and Comms
+# asks again each time a refusal's 25 s are over.
 func test_a_surrender_the_crew_asked_for_ends_it() -> void:
 	var f: ScenarioFixture = _wave()
+	var raider: int = f.ships_of(&"m1_raider")[0]
+	f.world.damage.health[f.world.damage.find_subsystem(raider, &"engines")] = 0.0
 	var card: int = -1
 	for c: CardView in f.api.cards_of(0):
 		card = c.id
@@ -53,15 +57,16 @@ func test_a_surrender_the_crew_asked_for_ends_it() -> void:
 	answer.card = card
 	assert_bool(f.send(answer)).is_true()
 	var result: int = Scenario.Result.ACTIVE
-	for i: int in 200:
+	for i: int in 8:
 		var reply: ReplyCommand = ReplyCommand.new()
 		reply.card = card
 		reply.option = &"o1"
-		f.send(reply)
+		assert_bool(f.send(reply)).is_true()
+		f.run(2)
 		result = f.api.encounter(f.encounter).result
 		if result != Scenario.Result.ACTIVE:
 			break
-		f.run(2)
+		f.run(60 * 25)
 	f.run(3)
 	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.WON)
 	assert_bool(_says(f, "npc.surrender")).is_true()
@@ -69,10 +74,22 @@ func test_a_surrender_the_crew_asked_for_ends_it() -> void:
 
 
 # FT: FT-MIS-004
-func test_the_clock_ends_it() -> void:
+# #35 A3: the clock ends it as partial, not won; the raiders stay in the run, hostile, and
+# keep after the ship once the encounter is over.
+func test_the_clock_ends_it_as_partial_and_the_raiders_stay() -> void:
 	var f: ScenarioFixture = _wave()
 	f.world.damage.health[f.world.damage.hull_row(0)] = 1.0e15
-	assert_int(f.run_until_end(60 * 250)).is_equal(Scenario.Result.WON)
+	var raiders: Array[int] = f.ships_of(&"m1_raider")
+	for id: int in raiders:
+		f.world.damage.health[f.world.damage.hull_row(id)] = 1.0e15
+	assert_int(f.run_until_end(60 * 250)).is_equal(Scenario.Result.PARTIAL)
+	f.run(60)
+	raiders = f.ships_of(&"m1_raider")
+	assert_int(raiders.size()).is_equal(2)
+	assert_int(f.world.relation(2, f.world.faction_of(0))).is_equal(Scenario.Relation.HOSTILE)
+	for id: int in raiders:
+		assert_int(f.world.run.status[id]).is_equal(RunTable.Status.IN_PLAY)
+		assert_int(f.world.ai.target[id]).is_equal(0)
 
 
 # FT: FT-ARC-016
@@ -81,6 +98,7 @@ func test_relation_enum_matches_the_sim() -> void:
 	assert_int(Scenario.Relation.NEUTRAL).is_equal(SimWorld.Relation.NEUTRAL)
 	assert_int(Scenario.Relation.HOSTILE).is_equal(SimWorld.Relation.HOSTILE)
 	assert_int(CardView.State.EXPIRED).is_equal(StoryTable.State.EXPIRED)
+	assert_array(Scenario.Result.keys()).is_equal(EncounterTable.Result.keys())
 
 
 ## The wave at a difficulty's enemy strength (Q14).
@@ -104,12 +122,13 @@ func test_the_wave_scales_with_the_difficulty_strength() -> void:
 
 # FT: FT-PAIR-004, FT-TST-022
 # Review 2 L2: an answered hail is ACCEPTED, not OPEN, and the bot crew still follows it with
-# the surrender demand; the demand sets the faction's intent for the raider (Q22: it was
-# UNKNOWN) and the roll is logged.
+# the surrender demand (once the raider's engines are shot up, #35 A4); the demand sets the
+# faction's intent for the raider (Q22: it was UNKNOWN) and the roll is logged.
 func test_the_bot_crew_demands_surrender_after_the_hail_is_answered() -> void:
 	var f: ScenarioFixture = _wave()
 	var crew: BotCrew = BotCrew.new(BotProfiles.average(), 0, 5)
 	var raider: int = f.ships_of(&"m1_raider")[0]
+	f.world.damage.health[f.world.damage.find_subsystem(raider, &"engines")] = 0.0
 	var row: int = f.world.knowledge.ensure_contact(1, raider)
 	assert_int(f.world.knowledge.intent[row]).is_equal(KnowledgeTable.Intent.UNKNOWN)
 	var replied: bool = false

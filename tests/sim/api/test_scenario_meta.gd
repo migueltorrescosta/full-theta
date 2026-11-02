@@ -7,10 +7,6 @@ func _valid() -> ScenarioMeta:
 	m.id = &"raid"
 	m.tags = PackedStringArray(["hostile"])
 	m.threat_cost = 3
-	m.duration_s = 240.0
-	m.stations = PackedStringArray(["helm", "weapons", "comms"])
-	m.pairs = PackedStringArray(["p5"])
-	m.branches = [{"id": "win", "outcome": "raiders destroyed"}]
 	m.comms_beats = PackedStringArray(["hail", "taunt"])
 	return m
 
@@ -27,11 +23,6 @@ func test_each_wrong_field_is_reported() -> void:
 		"unknown tag":
 		func(m: ScenarioMeta) -> void: m.tags = PackedStringArray(["hostile", "wat"]),
 		"threat_cost": func(m: ScenarioMeta) -> void: m.threat_cost = -1,
-		"duration_s": func(m: ScenarioMeta) -> void: m.duration_s = 0.0,
-		"unknown station":
-		func(m: ScenarioMeta) -> void: m.stations = PackedStringArray(["bridge"]),
-		"not pN": func(m: ScenarioMeta) -> void: m.pairs = PackedStringArray(["q5"]),
-		"needs an id and an outcome": func(m: ScenarioMeta) -> void: m.branches = [{"id": "win"}],
 		"unknown comms beat":
 		func(m: ScenarioMeta) -> void: m.comms_beats = PackedStringArray(["wave"]),
 		"training and the training tag": func(m: ScenarioMeta) -> void: m.training = true,

@@ -29,8 +29,10 @@ if [[ -f $template && -z ${FT_STOCK_WEB_TEMPLATE:-} ]]; then
   python3 - "$template" <<'PY'
 import re, sys
 text = open("export_presets.cfg").read()
-head, sep, body = text.partition("[preset.5.options]\n")
-assert sep, "Web preset not found"
+web = re.search(r'^\[preset\.(\d+)\]\n(?:(?!\[).*\n)*?name="Web"$', text, re.M)
+assert web, "Web preset not found"
+head, sep, body = text.partition(f"[preset.{web.group(1)}.options]\n")
+assert sep, "Web preset options not found"
 open("export_presets.cfg", "w").write(head + sep + f'custom_template/release="{sys.argv[1]}"\n' + body)
 PY
 else

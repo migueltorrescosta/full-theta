@@ -267,6 +267,26 @@ func test_upright_tabs_and_larger_screens_unchanged() -> void:
 		_drop(big)
 
 
+# FT: FT-STN-009, FT-SPA-016
+# The selection chip says direction and range in the session language, like every other
+# callout (ChipText): in pt_PT "H2 · 4 alto · médio", never the English words.
+func test_selection_chip_is_translated() -> void:
+	I18n.apply("pt_PT")
+	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
+	s.ctx.crew.select("contact", StationFixture.H2)
+	s._process(0.016)
+	var local: Vector3 = s.ctx.selection_local()
+	var text: String = s.frame.selection_chip.name_button.text
+	var band: String = Callout.range_band(local.length())
+	var band_pt: String = tr("callout." + band)
+	var english: String = "H2 · %s · %s" % [Callout.clock_height(local), band]
+	I18n.apply("en")
+	assert_str(band_pt).is_not_equal(band)
+	assert_str(text).starts_with("H2 · ")
+	assert_str(text).ends_with(" · " + band_pt)
+	assert_str(text).is_not_equal(english)
+
+
 # FT: FT-STN-009, FT-SPA-016, FT-STN-005
 # The selection chip: arrows cycle the target, its name opens the selection sheet (Ping,
 # Mark here, Clear and the station's extras).

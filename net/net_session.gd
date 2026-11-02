@@ -26,6 +26,9 @@ var shares: Array[StringName] = []
 var lapsed: bool = false
 var last_ship: int = -1
 var last_entry: String = ""
+## The last ship the session held a pick on, -1 before its first: its side in a run going on,
+## also after Back to ships (#35 A10, ServerSession.pick_rule).
+var home_ship: int = -1
 var last_claims: Array[String] = []
 ## Presented the server's host secret in Hello (D127): the host client.
 var is_host: bool = false

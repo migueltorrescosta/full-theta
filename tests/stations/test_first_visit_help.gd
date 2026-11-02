@@ -32,7 +32,7 @@ func _screen(ctx: StationContext, asked: Array[bool]) -> StationScreen:
 
 func _fresh(entry: String) -> StationContext:
 	var ctx: StationContext = StationFixture.context(entry, CFG)
-	ctx.settings.reset_tooltips()
+	ctx.settings.reset_hints()
 	return ctx
 
 
@@ -42,26 +42,26 @@ func test_asks_once_per_client_and_station() -> void:
 	var asked: Array[bool] = []
 	_screen(ctx, asked)
 	assert_array(asked).has_size(1)
-	assert_bool(ctx.settings.tooltip_seen("helm")).is_true()
+	assert_bool(ctx.settings.hint_seen("helm")).is_true()
 	# The visit is recorded, so a new screen stays quiet.
 	_screen(ctx, asked)
 	assert_array(asked).has_size(1)
 	var saved: ClientSettings = ClientSettings.new(CFG)
 	saved.load_file()
-	assert_bool(saved.tooltip_seen("helm")).is_true()
+	assert_bool(saved.hint_seen("helm")).is_true()
 	# Another station has its own first visit.
 	_screen(_fresh("weapons"), asked)
 	assert_array(asked).has_size(2)
 
 
 # FT: FT-STN-012
-func test_reset_tooltips_reenables_it() -> void:
+func test_reset_hints_reenables_it() -> void:
 	var ctx: StationContext = _fresh("helm")
 	var asked: Array[bool] = []
 	_screen(ctx, asked)
 	_screen(ctx, asked)
 	assert_array(asked).has_size(1)
-	ctx.settings.reset_tooltips()
+	ctx.settings.reset_hints()
 	_screen(ctx, asked)
 	assert_array(asked).has_size(2)
 
@@ -72,10 +72,10 @@ func test_a_joint_view_asks_for_each_station_on_its_first_focus() -> void:
 	var asked: Array[bool] = []
 	var s: StationScreen = _screen(ctx, asked)
 	assert_array(asked).has_size(1)
-	assert_bool(ctx.settings.tooltip_seen("weapons")).is_false()
+	assert_bool(ctx.settings.hint_seen("weapons")).is_false()
 	s.focus(1)
 	assert_array(asked).has_size(2)
-	assert_bool(ctx.settings.tooltip_seen("weapons")).is_true()
+	assert_bool(ctx.settings.hint_seen("weapons")).is_true()
 	s.focus(0)
 	assert_array(asked).has_size(2)
 

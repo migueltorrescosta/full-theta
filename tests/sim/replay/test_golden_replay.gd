@@ -19,10 +19,21 @@ const POSITION_TOLERANCE: float = 1.0
 const HULL_TOLERANCE: float = 0.01
 
 
+## The encounter outcome as a RunTable.Outcome, from the session outcome: WIN when the
+## objective is complete, LOSS when every crewed ship is lost.
+static func _outcome(world: SimWorld) -> int:
+	match OutcomeSystem.session_outcome(world).reason:
+		SessionOutcome.Reason.OBJECTIVE:
+			return RunTable.Outcome.WIN
+		SessionOutcome.Reason.ALL_LOST:
+			return RunTable.Outcome.LOSS
+	return RunTable.Outcome.NONE
+
+
 ## The readable final values: per ship position (m), hull fraction and alive, and the
 ## encounter outcome.
 static func readable(world: SimWorld) -> Dictionary:
-	var out: Dictionary = {"outcome": OutcomeSystem.encounter_outcome(world)}
+	var out: Dictionary = {"outcome": _outcome(world)}
 	for id: int in world.ship_count():
 		out["ship%d_position" % id] = [world.kin.px[id], world.kin.py[id], world.kin.pz[id]]
 		out["ship%d_hull" % id] = DamageSystem.hull_fraction(world, id)

@@ -22,7 +22,7 @@ var _panel: HelmPanel
 func before_test() -> void:
 	I18n.apply("en")
 	var ctx: StationContext = StationFixture.context("helm", "user://test_helm_panel.cfg")
-	ctx.settings.mark_tooltip_seen("helm")
+	ctx.settings.mark_hint_seen("helm")
 	_screen = auto_free(StationScreen.new())
 	_screen.setup(ctx)
 	add_child(_screen)

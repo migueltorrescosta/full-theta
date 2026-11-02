@@ -17,7 +17,7 @@ Every gate script first runs `godot --headless --import`.
 ## 12.2 Requirements
 
 - **FT-TST-001** Tests shall use gdUnit4, vendored at a pinned tag. (D70)
-- **FT-TST-002** L0–L3 shall run headless with no GPU. (D70)
+- **FT-TST-002** L0–L3 shall run headless with no GPU. (D70, D244)
 - **FT-TST-003** Screenshot tests shall run on fugaku with software GL (llvmpipe under Xvfb) and tolerant image diffs. (D70)
 - **FT-TST-004** CI shall run the full L0–L3 suite on every ready (non-draft) PR. (D70)
 - **FT-TST-005** L4–L6 shall run locally on fugaku, and the PR body shall record which commit passed which gate. (D70)
@@ -26,14 +26,14 @@ Every gate script first runs `godot --headless --import`.
 - **FT-TST-008** Weapon-arc tests shall be table-driven, including edge-of-arc cases. (v0.3 §11)
 - **FT-TST-009** Golden replays shall apply each command of a recorded log on its recorded tick and reproduce the final state within tolerance. (D70, plan review TECH-10)
 - **FT-TST-010** Network tests shall assert that no snapshot contains a field forbidden to its station, difficulty or faction. (D14, D21, D69)
-- **FT-TST-011** Network tests shall cover join, coverage check, claims, reconnect after disconnect, and the 64-connection limit. (D6, D18, D22, D67)
+- **FT-TST-011** Network tests shall cover join, coverage check, claims, reconnect after disconnect, and the 64-connection limit. (D6, D18, D22, D67, D160)
 - **FT-TST-012** A test shall assert the director cannot write combat stats or physics state. (v0.3 §5, D64)
 - **FT-TST-013** A 2-ship PvP simulation test shall assert per-faction knowledge separation and per-ship reset. (D21, D30, D72)
-- **FT-TST-014** Multi-process network tests shall run pinned to 2 cores. (workspace rule)
+- **FT-TST-014** Multi-process network tests shall run pinned to 2 cores. (workspace rule, D160)
 - **FT-TST-015** The repository shall keep `docs/traceability.md` mapping every FT requirement id to its tests or to "manual". (v0.3 §11)
 - **FT-TST-016** Each test shall name the FT ids it verifies. (v0.3 §11)
 - **FT-TST-017** Each implementation issue shall list the FT ids it delivers. (v0.3 §11)
-- **FT-TST-018** The planning agent shall produce a dependency-aware task DAG with explicit prerequisites, acceptance criteria and verification before broad implementation. (v0.3 §1, §11)
+- ~~**FT-TST-018**~~ Removed (D93): the task breakdown was aggregated into GitHub issues and deleted; the issue body is the checklist.
 - **FT-TST-019** L6 shall serve and load each desktop package's bundled web export, and synthesise one line with its bundled Piper from the exported Linux and Windows builds. (plan review TECH-4)
 - **FT-TST-020** Screenshot baselines shall record the Mesa and llvmpipe version, and L5 shall fail with "baseline environment changed" when it differs. (plan review TECH-11)
 - **FT-TST-021** A Playwright smoke check of the web build shall take one screenshot of a touch layout and check it is not blank and shows the expected panel. (plan review TECH-11)

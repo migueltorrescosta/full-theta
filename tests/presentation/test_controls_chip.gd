@@ -12,7 +12,7 @@ func before() -> void:
 
 func _settings() -> ClientSettings:
 	var s: ClientSettings = ClientSettings.new(CFG)
-	s.reset_tooltips()
+	s.reset_hints()
 	return s
 
 
@@ -28,12 +28,12 @@ func test_shows_once_per_client_and_station() -> void:
 	assert_object(ControlsChip.show_once(parent, s, "helm")).is_null()
 	var saved: ClientSettings = ClientSettings.new(CFG)
 	saved.load_file()
-	assert_bool(saved.tooltip_seen("helm")).is_true()
+	assert_bool(saved.hint_seen("helm")).is_true()
 	assert_object(ControlsChip.show_once(parent, s, "weapons")).is_not_null()
 	# "Show first-run tips again" brings it back; the browser test hooks skip it.
-	s.reset_tooltips()
+	s.reset_hints()
 	assert_object(ControlsChip.show_once(parent, s, "helm")).is_not_null()
-	s.reset_tooltips()
+	s.reset_hints()
 	s.skip_first_visit_help = true
 	assert_object(ControlsChip.show_once(parent, s, "helm")).is_null()
 

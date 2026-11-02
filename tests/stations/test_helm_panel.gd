@@ -141,6 +141,37 @@ func test_mouse_motion_steers_only_while_the_pointer_is_captured() -> void:
 	assert_bool(_ctx().matcher.mouse_stick.value.x > 0.0).is_true()
 
 
+# FT: FT-HLM-001
+# Owner playtest 2026-11-02: holding W and moving the mouse fly at once; the command
+# carries both the throttle and the turn.
+func test_held_thrust_and_mouse_steering_work_together() -> void:
+	var motion: InputEventMouseMotion = InputEventMouseMotion.new()
+	motion.relative = Vector2(40, 0)
+	_key("W")
+	_screen.feed(motion)
+	assert_bool(_panel.steering()).is_true()
+	assert_float(_ctx().matcher.axis("helm_surge")).is_equal(1.0)
+	assert_float(_ctx().matcher.axis("helm_yaw")).is_greater(0.0)
+	_frame()
+	var cmd: Dictionary = _cmds("helm_input").back()
+	assert_float(cmd["throttle"]).is_equal(1.0)
+	assert_float(cmd["rotation"].y).is_less(0.0)
+	# More motion while W stays down keeps both.
+	_screen.feed(motion)
+	assert_float(_ctx().matcher.axis("helm_surge")).is_equal(1.0)
+	assert_float(_ctx().matcher.axis("helm_yaw")).is_greater(0.0)
+	# A controller stick turns while W is held too.
+	_ctx().matcher.release_all()
+	_key("W")
+	var stick: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	stick.axis = JOY_AXIS_LEFT_X
+	stick.axis_value = -0.8
+	_screen.feed(stick)
+	assert_float(_ctx().matcher.axis("helm_surge")).is_equal(1.0)
+	assert_float(_ctx().matcher.axis("helm_yaw")).is_less(0.0)
+	_key("W", false)
+
+
 # FT: FT-HLM-001, FT-M1-012
 # The outcome card (the run is over, D178) frees the pointer, like a pause (D183).
 func test_the_end_of_the_run_frees_the_pointer() -> void:
@@ -162,9 +193,7 @@ func test_every_overlay_frees_the_pointer_until_a_new_click_in_the_view() -> voi
 	menu.visible = false
 	add_child(menu)
 	_screen.blockers = [menu]
-	for tab: String in [
-		SettingsScreen.TAB_CONTROLS, SettingsScreen.TAB_SETTINGS, SettingsScreen.TAB_KEYS
-	]:
+	for tab: String in [SettingsScreen.TAB_CONTROLS, SettingsScreen.TAB_SETTINGS]:
 		_panel._captured = true
 		menu.open(tab)
 		_frame()

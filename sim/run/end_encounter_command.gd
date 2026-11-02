@@ -4,7 +4,7 @@ extends ServerCommand
 ## end_encounter(), sent when a scenario reports it finished.
 
 var encounter: int = -1
-## An EncounterTable.Result of WON, LOST, FLED or ABANDONED.
+## An EncounterTable.Result of WON, LOST, FLED, ABANDONED or PARTIAL.
 var result: int = EncounterTable.Result.WON
 
 
@@ -16,7 +16,7 @@ func kind() -> StringName:
 func apply(world: SimWorld) -> bool:
 	if not world.encounters.is_open(encounter):
 		return false
-	if result < EncounterTable.Result.WON or result > EncounterTable.Result.ABANDONED:
+	if result < EncounterTable.Result.WON or result > EncounterTable.Result.PARTIAL:
 		return false
 	EncounterSystem.finish(world, encounter, result as EncounterTable.Result)
 	return true

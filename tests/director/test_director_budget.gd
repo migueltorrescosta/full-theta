@@ -148,13 +148,8 @@ func test_the_next_encounter_waits_a_quiet_gap_and_opens_a_site() -> void:
 
 
 # FT: FT-MIS-029
-# Q14: every scenario costs at least 1; only the training scenario may be free.
-func test_a_free_scenario_is_rejected_except_training() -> void:
-	var def: DirectorDef = _def().director
-	def.costs = {&"enemy_wave": 0}
-	assert_array(def.validate()).has_size(1)
-	def.costs = {&"shakedown": 0}
-	assert_array(def.validate()).is_empty()
+# Q14: a budget below the fewest encounters is rejected.
+func test_a_budget_below_the_fewest_encounters_is_rejected() -> void:
 	var run: RunDef = _def(7, 8)
 	(
 		assert_array(run.validate().filter(func(e: String) -> bool: return e.contains("budget")))

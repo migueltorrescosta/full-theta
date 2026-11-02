@@ -173,7 +173,9 @@ func test_remaining_crew_abandon_by_vote() -> void:
 	assert_dict(await h.next_event(sys, &"outcome", from, loss)).is_not_empty()
 	assert_int(server.world.run.status[PLAYER]).is_equal(RunTable.Status.ABANDONED)
 	assert_int(server.world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
-	assert_int(OutcomeSystem.encounter_outcome(server.world)).is_equal(RunTable.Outcome.LOSS)
+	assert_int(OutcomeSystem.session_outcome(server.world).reason).is_equal(
+		SessionOutcome.Reason.ALL_LOST
+	)
 	assert_bool(server.session.in_play(PLAYER)).is_false()
 	(
 		assert_bool(

@@ -107,8 +107,11 @@ static func default_view(phone: bool, device: String) -> String:
 
 ## The stations shown: the screen's, or every station's with the filter on.
 func shown_stations() -> Array:
-	if not all_stations:
-		return _stations
+	return every_station() if all_stations else _stations
+
+
+## Every station with intents of its own.
+static func every_station() -> Array:
 	var out: Array = []
 	for g: String in IntentTable.GROUPS:
 		if g not in [IntentTable.COMMON, IntentTable.LIVE]:
@@ -183,6 +186,12 @@ func _retext() -> void:
 	_filter.text = tr("controls.all_stations")
 
 
+## Helm on a Linux desktop: the touchpad may pause while a key is held (libinput's "disable
+## touchpad while typing"), so steering stops while thrusting (owner playtest, #35 A12).
+static func touchpad_hint(stations: Array, os_name: String = OS.get_name()) -> bool:
+	return os_name == "Linux" and stations.has("helm")
+
+
 ## The notes under the built diagrams: unbound intents of the screen, bindings off the
 ## picture.
 func _refresh_notes() -> void:
@@ -201,5 +210,7 @@ func _refresh_notes() -> void:
 			off.append("%s %s" % [e["label"], e["keys"]])
 		if not off.is_empty():
 			parts.append(tr("controls.off_diagram") % ", ".join(off))
+		if v == VIEW_KBM and touchpad_hint(shown_stations()):
+			parts.append(tr("controls.touchpad_hint"))
 		(_notes[v] as Label).text = "\n".join(parts)
 		(_notes[v] as Label).visible = not parts.is_empty()

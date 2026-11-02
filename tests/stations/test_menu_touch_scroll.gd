@@ -66,6 +66,6 @@ func test_a_touch_drag_scrolls_the_controls_tab() -> void:
 
 # FT: FT-STN-011
 func test_a_drag_that_starts_on_a_button_scrolls_the_settings_tab() -> void:
-	# (the Game and Tips tabs fit a landscape phone's menu; the finger starts on the full-width
+	# (the Game tab fits a landscape phone's menu; the finger starts on the full-width
 	# Reset tips button)
 	assert_int(await _swipe(SettingsScreen.TAB_SETTINGS, Vector2(400, 190))).is_greater(0)

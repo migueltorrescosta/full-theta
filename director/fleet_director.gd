@@ -15,12 +15,6 @@ extends RefCounted
 ## (FT-MIS-005). The server uses it as its driver: before_tick() and decisions(). The
 ## Directors are made on the first tick, one per crew faction in play, in ship id order.
 
-## SessionRules.Mode values (the director names sim/api only; a test checks they match).
-const COOP: int = 0
-const RACE: int = 1
-const LAST_STANDING: int = 2
-const TEAMS: int = 3
-const HOLDOUT: int = 4
 ## A raider wave (M4-Q7): this enemy, of this NPC faction, this far from each ship, this many
 ## at strength 1 (the preset's strength and wave_strength scale it, at least one).
 const RAIDER: StringName = &"m1_raider"
@@ -58,9 +52,9 @@ func _init(
 ## raider waves.
 func before_tick(api: ScenarioApi) -> void:
 	match _mode:
-		LAST_STANDING:
+		ScenarioApi.MODE_LAST_STANDING:
 			_maybe_wave(api)
-		HOLDOUT:
+		ScenarioApi.MODE_HOLDOUT:
 			pass
 		_:
 			_add_directors(api)
@@ -127,7 +121,7 @@ func _add_directors(api: ScenarioApi) -> void:
 			continue
 		var seed_value: int = _seed if _directors.is_empty() else hash([_seed, faction])
 		var d: Director = Director.new(_def, _difficulty, _catalogue, seed_value, faction)
-		if _mode == RACE:
+		if _mode == ScenarioApi.MODE_RACE:
 			if _race.is_empty():
 				var planner: Director = Director.new(_def, _difficulty, _catalogue, _seed)
 				_race = planner.plan_race(api.encounter_limits(), _race_site_keys(api))

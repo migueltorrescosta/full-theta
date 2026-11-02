@@ -25,11 +25,29 @@ func _menu() -> MainMenu:
 
 
 # FT: FT-NET-001
-# D108: "This computer only" first, then LAN addresses; never every interface.
-func test_bind_choices_start_with_loopback() -> void:
+# D108: LAN addresses first (the first one the default), "This computer only" last; never
+# every interface. With no LAN address loopback is the only choice.
+func test_bind_choices_put_the_lan_first_and_loopback_last() -> void:
 	var binds: PackedStringArray = MainMenu.bind_addresses()
-	assert_str(binds[0]).is_equal("127.0.0.1")
+	assert_str(binds[binds.size() - 1]).is_equal("127.0.0.1")
 	assert_bool(binds.has("0.0.0.0")).is_false()
+	var some: PackedStringArray = ["127.0.0.1", "fe80::1", "192.168.1.5", "0.0.0.0", "10.0.0.2"]
+	assert_array(Array(MainMenu.order_binds(some))).is_equal(
+		["192.168.1.5", "10.0.0.2", "127.0.0.1"]
+	)
+	assert_array(Array(MainMenu.order_binds(["127.0.0.1", "::1"]))).is_equal(["127.0.0.1"])
+
+
+# FT: FT-NET-001
+# #35 A7: the Dev checkbox shows only in a game started with --dev, and only then does it
+# reach the host's options.
+func test_the_dev_checkbox_needs_the_dev_flag() -> void:
+	var m: MainMenu = _menu()
+	assert_bool((m.find_child("DevAll", true, false) as CheckBox).visible).is_false()
+	ClientSettings.dev_flag = true
+	var dev: MainMenu = _menu()
+	ClientSettings.dev_flag = false
+	assert_bool((dev.find_child("DevAll", true, false) as CheckBox).visible).is_true()
 
 
 # FT: FT-NET-013

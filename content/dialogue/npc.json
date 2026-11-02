@@ -104,9 +104,9 @@
       "id": "npc.distress_escort", "role": "npc", "priority": 2, "max_age_ms": 8000, "resume": true,
       "slots": {"npc": "npc_name"},
       "text": {
-        "en": "This is {npc}. Drive dead, raiders closing. Cover us until we restart.",
-        "pt_PT": "Fala {npc}. Propulsor avariado, piratas a aproximar-se. Protejam-nos até reiniciarmos.",
-        "it": "Qui {npc}. Motore morto, predoni in avvicinamento. Copriteci finché non ripartiamo."
+        "en": "This is {npc}. Drive dead, raiders closing. Cover us until we restart. Keep your engines at 2 pips or better to stay with us.",
+        "pt_PT": "Fala {npc}. Propulsor avariado, piratas a aproximar-se. Protejam-nos até reiniciarmos. Mantenham os motores com 2 pips ou mais para nos acompanhar.",
+        "it": "Qui {npc}. Motore morto, predoni in avvicinamento. Copriteci finché non ripartiamo. Tenete i motori ad almeno 2 pip per restarci vicino."
       }
     },
     {

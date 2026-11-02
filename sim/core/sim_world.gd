@@ -396,4 +396,4 @@ func _relation_list() -> Array:
 
 
 static func _pair(a: int, b: int) -> int:
-	return a * 65536 + b
+	return SimTable.row_key(a, b)

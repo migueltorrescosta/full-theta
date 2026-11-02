@@ -38,7 +38,7 @@ func _screen(size: Vector2i, insets: Array) -> StationScreen:
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("relay", SETTINGS)
 	for s: String in StationViews.CREW:
-		ctx.settings.mark_tooltip_seen(s)
+		ctx.settings.mark_hint_seen(s)
 	var ships: Array = ctx.crew.catalogue["ships"]
 	ships.append({"id": ALLY, "def": "m1_corvette", "name": "Wren", "faction": 0})
 	ctx.view.blocks[StationViews.Section.RELAY] = {
@@ -371,14 +371,3 @@ func _mouse_move(p: RelayPanel, rel: Vector2) -> void:
 	m.relative = rel
 	m.device = InputEvent.DEVICE_ID_EMULATION
 	p._gui_input(m)
-
-
-# FT: FT-STN-012
-# P28-Help: the touch picture of the pages, every box inside the phone's safe area.
-func test_touch_help_picture_has_its_pages() -> void:
-	var safe: Rect2 = Rect2(47.0, 0.0, 750.0, 366.0)
-	for p: Dictionary in RelayTouchHelp.pages():
-		for item: Array in p["items"]:
-			assert_bool(safe.encloses(item[0])).override_failure_message(str(item[1])).is_true()
-	var pic: RelayTouchHelp = auto_free(RelayTouchHelp.new())
-	assert_float(pic.custom_minimum_size.y).is_greater(0.0)

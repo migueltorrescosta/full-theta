@@ -101,7 +101,7 @@ func test_phone_portrait_shows_the_dismissible_banner() -> void:
 	assert_float(minf(close.size.x, close.size.y)).is_greater_equal(UiTheme.TOUCH_PRIMARY)
 	s.rotate_banner.dismiss()
 	assert_bool(s.rotate_banner.visible).is_false()
-	assert_bool(s.ctx.settings.tooltip_seen(RotateBanner.KEY)).is_true()
+	assert_bool(s.ctx.settings.hint_seen(RotateBanner.KEY)).is_true()
 	# A later banner with these settings remembers it.
 	RotateBanner.dismissed_here = false
 	var again: RotateBanner = RotateBanner.new()

@@ -83,3 +83,79 @@ func test_a_ship_at_the_yard_has_not_crossed_the_leg() -> void:
 	f.run(5)
 	f.world.kin.place(0, yard.x, yard.y, yard.z)
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
+
+
+func _accepted_leg() -> Array:
+	var f: ScenarioFixture = ScenarioFixture.make()
+	f.begin(&"debris_leg", &"vesper_beacon")
+	f.run(3)
+	var card: int = f.api.cards_of(0)[0].id
+	var accept: AcceptCardCommand = AcceptCardCommand.new()
+	accept.card = card
+	assert_bool(f.send(accept)).is_true()
+	return [f, card]
+
+
+func _dock_at_yard(f: ScenarioFixture) -> void:
+	var yard: Vector3 = f.world.sites.point3(0)
+	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	f.world.kin.vel[0] = Vector3.ZERO
+	var dock: DockCommand = DockCommand.new()
+	dock.site_id = 0
+	assert_bool(f.send(dock)).is_true()
+	f.run(2)
+
+
+# FT: FT-PAIR-001, FT-MIS-019
+# P5: the traffic-control offer is a docking clearance for the yard. Accepted, it opens an
+# approach lane (30 s later, 540 s long); docking inside it pays the fee and keeps standing.
+func test_a_cleared_dock_at_the_yard_pays_the_fee() -> void:
+	var legs: Array = _accepted_leg()
+	var f: ScenarioFixture = legs[0]
+	var card: int = legs[1]
+	var window: Array[int] = StoryRules.lane_window(f.world, card)
+	assert_int(window[1] - window[0]).is_equal(roundi(DebrisLeg.LANE_S * SimWorld.HZ))
+	assert_int(window[0] - f.world.tick).is_between(
+		roundi(DebrisLeg.LANE_OPEN_S * SimWorld.HZ) - 3, roundi(DebrisLeg.LANE_OPEN_S * SimWorld.HZ)
+	)
+	var credits: int = Economy.credits(f.world, 0)
+	f.run(window[0] - f.world.tick + 1)
+	_dock_at_yard(f)
+	assert_int(f.card_state(card)).is_equal(CardView.State.DONE)
+	assert_int(Economy.credits(f.world, 0)).is_equal(credits + DebrisLeg.FEE)
+	(
+		assert_float(f.world.reputation.value_of(f.world.faction_of(0), DebrisLeg.CIVIL_FACTION))
+		. is_equal(0.0)
+	)
+
+
+# FT: FT-PAIR-001, FT-MIS-019
+# Rushing in before the lane opens fails the card and costs standing, and pays nothing.
+func test_an_uncleared_dock_at_the_yard_costs_standing() -> void:
+	var legs: Array = _accepted_leg()
+	var f: ScenarioFixture = legs[0]
+	var card: int = legs[1]
+	var credits: int = Economy.credits(f.world, 0)
+	_dock_at_yard(f)
+	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
+	(
+		assert_float(f.world.reputation.value_of(f.world.faction_of(0), DebrisLeg.CIVIL_FACTION))
+		. is_less(0.0)
+	)
+
+
+# FT: FT-MIS-041, FT-MIS-021
+# #35 A3: when the time runs out before the crossing the leg ends as partial; the P5
+# clearance pays only on a cleared dock, so an accepted clearance that never docked lapses
+# unpaid.
+func test_running_out_of_time_ends_the_leg_as_partial_and_the_clearance_lapses() -> void:
+	var legs: Array = _accepted_leg()
+	var f: ScenarioFixture = legs[0]
+	var card: int = legs[1]
+	f.world.damage.health[f.world.damage.hull_row(0)] = 1.0e15
+	var credits: int = Economy.credits(f.world, 0)
+	assert_int(f.run_until_end(60 * 610)).is_equal(Scenario.Result.PARTIAL)
+	f.run(3)
+	assert_int(f.card_state(card)).is_not_equal(CardView.State.DONE)
+	assert_int(Economy.credits(f.world, 0)).is_equal(credits)

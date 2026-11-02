@@ -148,6 +148,9 @@ class RecordingClient:
 	func share(feature: String) -> void:
 		sent.append(["share", [feature]])
 
+	func rename(new_name: String) -> void:
+		sent.append(["rename", [new_name]])
+
 	## The sends of one method, newest last.
 	func of(method: String) -> Array:
 		return sent.filter(func(s: Array) -> bool: return s[0] == method)
@@ -179,7 +182,7 @@ static func context(
 	ctx.settings.player_name = rec.name
 	# The first-visit help (FT-STN-012) would open the menu and block input.
 	for station: String in StationViews.CREW + [StationViews.VIEWER, StationViews.CAPTAIN]:
-		ctx.settings.mark_tooltip_seen(station)
+		ctx.settings.mark_hint_seen(station)
 	ctx.matcher = InputMatcher.new(ctx.settings.bindings)
 	var crew: CrewState = ctx.crew
 	crew.welcome(

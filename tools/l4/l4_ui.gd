@@ -22,7 +22,7 @@ func _init(root: Window, run_dir: String, player: String, token_path: String) ->
 	# Scripted clients skip the first-visit help overlay (FT-STN-012), which would block
 	# their input; tests/stations/test_first_visit_help.gd covers it.
 	for station: Variant in StationViews.STATIONS:
-		menu.settings.mark_tooltip_seen(str(station))
+		menu.settings.mark_hint_seen(str(station))
 	menu.settings.save()
 	menu.token_path = token_path
 	menu.pid_path = run_dir.path_join(player + ".pid.json")

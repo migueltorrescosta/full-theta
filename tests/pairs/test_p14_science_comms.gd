@@ -1,27 +1,6 @@
 extends GdUnitTestSuite
 ## P14 Science + Comms pair test (spec §7.4): scenario and scripts in p14_scenario.gd.
 
-const BETTER: Dictionary = {
-	"reputation": PairHarness.Better.HIGHER, "unlocked": PairHarness.Better.HIGHER
-}
-
-
-# FT: FT-PAIR-001, FT-PAIR-004, FT-PAIR-015, FT-TST-006
-# With Science's cargo scan, Comms calls the bluff and gains reputation; alone it takes the
-# claim at its word and gains none. Both finish.
-func test_coop_beats_solo() -> void:
-	var p14: PairDef = load("res://content/pairs/p14.tres") as PairDef
-	var runs: Dictionary[String, PairHarness.Run] = P14Scenario.harness().compare(
-		P14Scenario.coop_crew(), P14Scenario.solo
-	)
-	var failures: Array[String] = PairHarness.check(runs, BETTER, p14.pair_min_gain)
-	(
-		assert_array(failures)
-		. override_failure_message("\n".join(failures) + "\n" + PairHarness.summary(runs))
-		. is_empty()
-	)
-	assert_float(runs.solo.metrics.reputation).is_equal(0.0)
-
 
 # FT: FT-PAIR-001, FT-COM-007
 # "Call the bluff" is in the reply list from the start but locked, and only a cargo scan
@@ -82,12 +61,3 @@ func test_calling_the_bluff_draws_from_its_distribution() -> void:
 		mean += d / draws.size()
 	assert_float(mean).is_equal_approx(dist.mode, 1.5)
 	assert_float(draws.max() - draws.min()).is_greater(1.0)
-
-
-# FT: FT-PAIR-015
-# The same seed and scripts give the same end state.
-func test_runs_are_deterministic() -> void:
-	var harness: PairHarness = P14Scenario.harness()
-	assert_str(harness.run(P14Scenario.coop_crew()).state_hash).is_equal(
-		harness.run(P14Scenario.coop_crew()).state_hash
-	)

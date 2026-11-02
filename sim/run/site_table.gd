@@ -49,9 +49,9 @@ func add_site(
 	var id: int = add_key(-1, def.faction)
 	keys.append(key if key != &"" else def.id)
 	name_keys.append(def.name_key)
-	pos_x.append(_wrap(def.pos.x + offset.x, period))
-	pos_y.append(_wrap(def.pos.y + offset.y, period))
-	pos_z.append(_wrap(def.pos.z + offset.z, period))
+	pos_x.append(PeriodRules.wrap(def.pos.x + offset.x, period))
+	pos_y.append(PeriodRules.wrap(def.pos.y + offset.y, period))
+	pos_z.append(PeriodRules.wrap(def.pos.z + offset.z, period))
 	radius.append(def.radius_m)
 	known_mask.append(known)
 	opened_tick.append(tick)
@@ -235,7 +235,3 @@ func columns() -> Array:
 			["dock_max_speed", dock_max_speed],
 		]
 	)
-
-
-static func _wrap(v: float, period: float) -> float:
-	return fposmod(v + 0.5 * period, period) - 0.5 * period

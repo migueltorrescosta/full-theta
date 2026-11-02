@@ -30,12 +30,12 @@ func after_test() -> void:
 	get_tree().root.content_scale_factor = 1.0
 
 
-func _shell(lang: String) -> ClientShell:
+func _shell(lang: String, dev_all: bool = false) -> ClientShell:
 	var c: FakeClient = FakeClient.new()
 	c.state = NetClient.State.WELCOMED
-	c.welcome = {"session": 7, "ship": 0, "entry": "", "host": false, "dev_all": false}
+	c.welcome = {"session": 7, "ship": 0, "entry": "", "host": false, "dev_all": dev_all}
 	c.welcome["lang"] = lang
-	c.catalogue = StationFixture.catalogue()
+	c.catalogue = StationFixture.catalogue(dev_all)
 	var s: ClientShell = auto_free(ClientShell.new())
 	s.setup(c, ClientSettings.new("user://test_client_shell_unit.cfg"))
 	add_child(s)
@@ -116,10 +116,10 @@ func test_lobby_main_menu_button_leaves() -> void:
 func _on_station(fresh: bool) -> ClientShell:
 	var s: ClientShell = _shell("en")
 	if fresh:
-		s.ctx.settings.reset_tooltips()
+		s.ctx.settings.reset_hints()
 	else:
-		s.ctx.settings.mark_tooltip_seen("engineering")
-		s.ctx.settings.mark_tooltip_seen("science")
+		s.ctx.settings.mark_hint_seen("engineering")
+		s.ctx.settings.mark_hint_seen("science")
 	var c: FakeClient = s.ctx.client as FakeClient
 	c.queued.append({"type": "picked", "payload": {"ship": 0, "entry": "systems", "reason": ""}})
 	c.queued.append({"type": "started", "payload": {"ship": 0, "tick": 10}})
@@ -165,10 +165,10 @@ func test_escape_opens_the_menu() -> void:
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_GAME)
 	assert_bool(s.screen.blocked()).is_true()
-	menu.open(SettingsScreen.TAB_TIPS)
+	menu.open(SettingsScreen.TAB_SETTINGS)
 	menu.close()
 	s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
-	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_TIPS)
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
 	menu.close()
 	assert_bool(s.screen.blocked()).is_false()
 
@@ -201,6 +201,31 @@ func test_first_visit_shows_the_controls_chip() -> void:
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
 	assert_array(_labels(menu)).contains([tr("role.systems")])
 	assert_bool(s.screen.blocked()).is_true()
+
+
+# FT: FT-STN-011, FT-STN-012
+# The owner's A13 (playtest 2026-11-02): Esc, then the Controls tab, as a player opens
+# it, shows the seat's controls on every seat (the pane used to fill only from `?`).
+func test_the_controls_tab_has_content_however_the_menu_opens() -> void:
+	var s: ClientShell = _shell("en", true)
+	(s.ctx.client as FakeClient).queued.append(
+		{"type": "started", "payload": {"ship": 0, "tick": 10}}
+	)
+	var menu: SettingsScreen = s.settings_screen
+	for entry: String in ["helm", "engineering", "systems", StationViews.ALL]:
+		await _pick(s, entry)
+		s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
+		assert_bool(menu.visible).is_true()
+		menu.tabs.current_tab = menu.tabs.get_node(SettingsScreen.TAB_CONTROLS).get_index()
+		var sections: Array = menu.controls.rows().map(
+			func(r: Dictionary) -> String: return r["section"]
+		)
+		for st: String in s.screen.stations:
+			assert_array(sections).override_failure_message(entry + " " + st).contains(
+				["station." + st]
+			)
+		assert_array(_labels(menu)).contains([tr("role." + entry)])
+		menu.close()
 
 
 # FT: FT-STN-011, FT-AUD-013

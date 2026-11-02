@@ -62,23 +62,6 @@ static func step(world: SimWorld) -> void:
 			world.emit(SessionOutcome.EVENT_SESSION_OVER, -1, -1, now.reason)
 
 
-## The encounter's outcome over the crewed ships: WIN once any has won, LOSS once every
-## one has lost, else NONE (M1 has one crewed ship, so it is that ship's outcome).
-static func encounter_outcome(world: SimWorld) -> RunTable.Outcome:
-	var crewed: int = 0
-	var lost: int = 0
-	for id: int in world.ship_count():
-		if world.ai.is_enabled(id):
-			continue
-		crewed += 1
-		match world.run.outcome[id]:
-			RunTable.Outcome.WIN:
-				return RunTable.Outcome.WIN
-			RunTable.Outcome.LOSS:
-				lost += 1
-	return RunTable.Outcome.LOSS if crewed > 0 and lost == crewed else RunTable.Outcome.NONE
-
-
 ## The session's outcome under world.rules (#11): who won and why, derived from RunTable each
 ## time it is asked. A crewed ship still stands while it has no LOSS, or has one and its
 ## side's relaunch policy allows another relaunch (M4-Q2). COOP: OBJECTIVE with every
