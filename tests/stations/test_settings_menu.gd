@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
-## The in-game menu (FT-STN-011, P28 menu): Game, Controls, Tips, Settings and Rebind keys
+## The in-game menu (FT-STN-011, P28 menu): Game, Controls (with Change keys) and Settings
 ## tabs; the Pause and Abandon controls change in place, never rebuilding the menu (load
 ## fix 2); Leave and the host's Abandon or Give up ask to confirm in place; a phone has no
-## Rebind keys tab.
+## Change keys.
 
 const CFG: String = "user://test_settings_menu.cfg"
 
@@ -38,13 +38,7 @@ func _button(m: SettingsScreen, node_name: String) -> Button:
 func test_a_session_menu_has_the_game_tab_first() -> void:
 	var m: SettingsScreen = _menu()
 	assert_array(_tab_names(m)).is_equal(
-		[
-			SettingsScreen.TAB_GAME,
-			SettingsScreen.TAB_CONTROLS,
-			SettingsScreen.TAB_TIPS,
-			SettingsScreen.TAB_SETTINGS,
-			SettingsScreen.TAB_KEYS
-		]
+		[SettingsScreen.TAB_GAME, SettingsScreen.TAB_CONTROLS, SettingsScreen.TAB_SETTINGS]
 	)
 	assert_str(m.current_tab_name()).is_equal(SettingsScreen.TAB_GAME)
 	var game: Node = m.tabs.get_node(SettingsScreen.TAB_GAME)
@@ -54,9 +48,11 @@ func test_a_session_menu_has_the_game_tab_first() -> void:
 	var ship: Label = game.find_child("ShipName", true, false)
 	assert_bool(ship.visible).is_true()
 	assert_str(ship.text).contains("Kestrel")
-	# Outside a session: Settings (Full screen there) and Rebind keys only.
+	# Outside a session: Settings (Full screen there) and Controls, to change keys.
 	var main: SettingsScreen = _menu(false)
-	assert_array(_tab_names(main)).is_equal([SettingsScreen.TAB_SETTINGS, SettingsScreen.TAB_KEYS])
+	assert_array(_tab_names(main)).is_equal(
+		[SettingsScreen.TAB_SETTINGS, SettingsScreen.TAB_CONTROLS]
+	)
 	(
 		assert_object(
 			main.tabs.get_node(SettingsScreen.TAB_SETTINGS).find_child("Fullscreen", true, false)
@@ -144,24 +140,52 @@ func test_host_abandon_confirms_and_a_vote_goes_at_once() -> void:
 
 
 # FT: FT-STN-011, FT-STN-014
-# A phone has no keys to rebind: its menu has no Rebind keys tab (a hidden one would still
-# widen the tab bar past a phone's width), and a window that turns into one hides it.
-func test_a_phone_has_no_rebind_keys_tab() -> void:
+# A phone has no keys to change: the Controls tab hides Change keys, and outside a session
+# (where the tab is there for them) the menu has no Controls tab (a hidden one would still
+# widen the tab bar past a phone's width); a window that turns into one hides them.
+func test_a_phone_has_no_change_keys() -> void:
 	var m: SettingsScreen = _menu()
-	var keys: int = m.tabs.get_node(SettingsScreen.TAB_KEYS).get_index()
-	assert_bool(m.tabs.is_tab_hidden(keys)).is_false()
-	m.open(SettingsScreen.TAB_KEYS)
+	var keys: Control = m.find_child("ChangeKeys", true, false)
+	assert_bool(keys.visible).is_true()
 	LayoutMode.forced = LayoutMode.Kind.PHONE
 	m._fit_safe_area()
-	assert_bool(m.tabs.is_tab_hidden(keys)).is_true()
-	assert_str(m.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
+	assert_bool(keys.visible).is_false()
+	var main: SettingsScreen = _menu(false)
+	var tab: int = main.tabs.get_node(SettingsScreen.TAB_CONTROLS).get_index()
+	main.open(SettingsScreen.TAB_CONTROLS)
+	LayoutMode.forced = LayoutMode.Kind.PHONE
+	main._fit_safe_area()
+	assert_bool(main.tabs.is_tab_hidden(tab)).is_true()
+	assert_str(main.current_tab_name()).is_equal(SettingsScreen.TAB_SETTINGS)
 	var phone: SettingsScreen = auto_free(SettingsScreen.new())
 	add_child(phone)
-	phone.setup(ClientSettings.new(CFG), true)
-	assert_array(_tab_names(phone)).not_contains([SettingsScreen.TAB_KEYS])
+	phone.setup(ClientSettings.new(CFG), false)
+	assert_array(_tab_names(phone)).not_contains([SettingsScreen.TAB_CONTROLS])
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	phone._fit_safe_area()
-	assert_array(_tab_names(phone)).contains([SettingsScreen.TAB_KEYS])
+	assert_array(_tab_names(phone)).contains([SettingsScreen.TAB_CONTROLS])
+
+
+# FT: FT-STN-012, FT-STN-014
+# Owner A13/A14: the Controls tab shows content even before a seat is known (every
+# station), and Change keys sits under it with the seat's stations first, then the rest.
+func test_the_controls_tab_shows_controls_then_change_keys() -> void:
+	var m: SettingsScreen = _menu()
+	m.open(SettingsScreen.TAB_CONTROLS)
+	assert_array(m.controls.rows()).is_not_empty()
+	m.set_controls(m.settings.bindings, ["helm"], IntentTable.KBM, "helm")
+	var sections: Array = m.controls.rows().map(func(r: Dictionary) -> String: return r["section"])
+	assert_array(sections).contains(["station.helm"]).not_contains(["station.weapons"])
+	var keys: Control = m.controls_pane.find_child("ChangeKeys", true, false)
+	assert_object(keys).is_not_null()
+	var first: Label = keys.find_child("Row_*", true, false).get_parent().get_child(1)
+	assert_str(first.text).is_equal(tr("settings.group_helm"))
+	for id: String in ["cycle_target", "fire", "approach"]:
+		(
+			assert_object(keys.find_child("Row_" + id, true, false))
+			. override_failure_message(id)
+			. is_not_null()
+		)
 
 
 # FT: FT-AUD-010

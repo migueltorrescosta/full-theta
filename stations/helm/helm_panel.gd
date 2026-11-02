@@ -604,7 +604,7 @@ func _free_pointer() -> void:
 	_captured = false
 
 
-## The screen is blocked by the menu (Controls, Settings, Rebind keys), the outcome card
+## The screen is blocked by the menu (any tab), the outcome card
 ## or the alert picker.
 func _overlay_open() -> bool:
 	var screen: StationScreen = _screen()

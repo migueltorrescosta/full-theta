@@ -162,9 +162,7 @@ func test_every_overlay_frees_the_pointer_until_a_new_click_in_the_view() -> voi
 	menu.visible = false
 	add_child(menu)
 	_screen.blockers = [menu]
-	for tab: String in [
-		SettingsScreen.TAB_CONTROLS, SettingsScreen.TAB_SETTINGS, SettingsScreen.TAB_KEYS
-	]:
+	for tab: String in [SettingsScreen.TAB_CONTROLS, SettingsScreen.TAB_SETTINGS]:
 		_panel._captured = true
 		menu.open(tab)
 		_frame()

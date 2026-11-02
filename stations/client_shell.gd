@@ -274,7 +274,7 @@ func _build_pending() -> void:
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	s.blockers = [settings_screen, outcome_card]
-	s.menu_requested.connect(settings_screen.open)
+	s.menu_requested.connect(open_menu)
 	s.help_requested.connect(_toggle_help)
 	# `screen` first: entering the tree may ask for the first-visit help.
 	screen = s
@@ -455,8 +455,18 @@ func _toggle_help() -> void:
 	if menu.visible and menu.current_tab_name() == SettingsScreen.TAB_CONTROLS:
 		menu.close()
 		return
-	menu.set_controls(ctx.settings.bindings, screen.stations, ctx.matcher.device, ctx.crew.entry)
-	menu.open(SettingsScreen.TAB_CONTROLS)
+	open_menu(SettingsScreen.TAB_CONTROLS)
+
+
+## Opens the menu on `tab` (the tab last used when empty) with the Controls tab set for this
+## screen's stations, the device in use and the seat, however it was opened (owner A13: Esc
+## then Controls showed an empty page).
+func open_menu(tab: String = "") -> void:
+	if screen != null:
+		settings_screen.set_controls(
+			ctx.settings.bindings, screen.stations, ctx.matcher.device, ctx.crew.entry
+		)
+	settings_screen.open(tab)
 
 
 ## The menu's abandon (co-op) or give-up (PvP) control: a crew player's vote, which they can

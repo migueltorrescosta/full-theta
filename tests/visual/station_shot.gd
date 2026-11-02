@@ -184,6 +184,10 @@ func _ready() -> void:
 				if controls_view != "":
 					menu.controls_pane.show_view(controls_view)
 			if menu_tab != "":
+				# As ClientShell.open_menu: the Controls tab is set for the screen's seat.
+				menu.set_controls(
+					_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.entry
+				)
 				menu.open(menu_tab)
 			for e: Dictionary in events:
 				var p: Dictionary = e.get("payload", {})
