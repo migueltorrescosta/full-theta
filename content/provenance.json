@@ -238,6 +238,105 @@
       "source": "https://raw.githubusercontent.com/notofonts/symbols/main/OFL.txt",
       "licence": "OFL-1.1",
       "attribution": "Copyright 2022 The Noto Project Authors"
+    },
+    {
+      "name": "Sound effect fire (a weapon fires)",
+      "kind": "sound",
+      "path": "assets/sounds/sfx/fire.ogg",
+      "source": "https://kenney.nl/assets/sci-fi-sounds",
+      "licence": "CC0-1.0",
+      "attribution": "Kenney, Sci-Fi Sounds pack, file laserSmall_000.ogg, unmodified (CC0 1.0, no attribution required)",
+      "sha256": "72b589eadd41781257ac859e4f4d030222e623390e4a1a83f6d05329a6e026f1"
+    },
+    {
+      "name": "Sound effect explosion (a ship is destroyed)",
+      "kind": "sound",
+      "path": "assets/sounds/sfx/explosion.ogg",
+      "source": "https://kenney.nl/assets/sci-fi-sounds",
+      "licence": "CC0-1.0",
+      "attribution": "Kenney, Sci-Fi Sounds pack, file explosionCrunch_000.ogg, unmodified (CC0 1.0, no attribution required)",
+      "sha256": "4b597d658d0ae101f0a030fbeea5fc3a4292ab85f017470a8254a8e7959cbd69"
+    },
+    {
+      "name": "Sound effect dock (docking)",
+      "kind": "sound",
+      "path": "assets/sounds/sfx/dock.ogg",
+      "source": "https://kenney.nl/assets/sci-fi-sounds",
+      "licence": "CC0-1.0",
+      "attribution": "Kenney, Sci-Fi Sounds pack, file doorClose_000.ogg, unmodified (CC0 1.0, no attribution required)",
+      "sha256": "c9134651ebbd7c016f90393aee495ff8120bd343bb7569b689a7506987ebd6c2"
+    },
+    {
+      "name": "Sound effect undock (undocking)",
+      "kind": "sound",
+      "path": "assets/sounds/sfx/undock.ogg",
+      "source": "https://kenney.nl/assets/sci-fi-sounds",
+      "licence": "CC0-1.0",
+      "attribution": "Kenney, Sci-Fi Sounds pack, file doorOpen_000.ogg, unmodified (CC0 1.0, no attribution required)",
+      "sha256": "5b7e07eccd4413ad9ef3720c2d14f9cc699f4c50111e9b2f48bd60e6f1a164c3"
+    },
+    {
+      "name": "Sound effect jump_charge (the jump drive spools)",
+      "kind": "sound",
+      "path": "assets/sounds/sfx/jump_charge.ogg",
+      "source": "https://kenney.nl/assets/sci-fi-sounds",
+      "licence": "CC0-1.0",
+      "attribution": "Kenney, Sci-Fi Sounds pack, file forceField_000.ogg, unmodified (CC0 1.0, no attribution required)",
+      "sha256": "c2916f2a062c8ddd1aca2826d134fe90847037db31342726ffb0f9097afe339c"
+    },
+    {
+      "name": "Sound effect jump (a jump arrives)",
+      "kind": "sound",
+      "path": "assets/sounds/sfx/jump.ogg",
+      "source": "https://kenney.nl/assets/sci-fi-sounds",
+      "licence": "CC0-1.0",
+      "attribution": "Kenney, Sci-Fi Sounds pack, file lowFrequency_explosion_000.ogg, unmodified (CC0 1.0, no attribution required)",
+      "sha256": "3cb48d86dab63140cfb9aaeea4d4a6846abaca5831d157d8adbec0490da26343"
+    },
+    {
+      "name": "Sound effect ui_tap (a button is pressed)",
+      "kind": "sound",
+      "path": "assets/sounds/sfx/ui_tap.ogg",
+      "source": "https://kenney.nl/assets/interface-sounds",
+      "licence": "CC0-1.0",
+      "attribution": "Kenney, Interface Sounds pack, file toggle_001.ogg, unmodified (CC0 1.0, no attribution required)",
+      "sha256": "ca1d2dde5f0b286abac4f070e23edab8f30927c8a533665cdf2ac6492a415e49"
+    },
+    {
+      "name": "Sound effect ui_error (a command is refused)",
+      "kind": "sound",
+      "path": "assets/sounds/sfx/ui_error.ogg",
+      "source": "https://kenney.nl/assets/interface-sounds",
+      "licence": "CC0-1.0",
+      "attribution": "Kenney, Interface Sounds pack, file error_001.ogg, unmodified (CC0 1.0, no attribution required)",
+      "sha256": "46e67425d16339772e8d328fb36a49426c9467418686e11beeb71ff84b0f6433"
+    },
+    {
+      "name": "Ambient music: Deep Space Array",
+      "kind": "music",
+      "path": "assets/music/deep_space_array.ogg",
+      "source": "https://opengameart.org/content/deep-space-array",
+      "licence": "CC0-1.0",
+      "attribution": "Tozan on OpenGameArt (CC0 1.0 on the entry page, no attribution required, credited here anyway). Source file Spacearray_0.ogg (sha256 638f2526beb8d24ca0168a62c6043c19753576a6332ed01bb30fb6150fba568c); re-encoded to mono 22.05 kHz Ogg Vorbis 28 kbit/s, loudness-normalised, faded in and out (ffmpeg, see docs/spec/09-audio-tts-languages.md)",
+      "sha256": "809c11fcb898aa9215b09b8209d618998d612974ec824046ba6235401fdf693c"
+    },
+    {
+      "name": "Ambient music: Observing the Star",
+      "kind": "music",
+      "path": "assets/music/observing_the_star.ogg",
+      "source": "https://opengameart.org/content/another-space-background-track",
+      "licence": "CC0-1.0",
+      "attribution": "yd on OpenGameArt (CC0 1.0 on the entry page, no attribution required, credited here anyway). Source file ObservingTheStar.ogg (sha256 d208059cbe7b21154a9b7844d98ac9ad754617a5a321c5e507d203a907abe665); re-encoded to mono 22.05 kHz Ogg Vorbis 28 kbit/s, loudness-normalised, faded in and out (ffmpeg, see docs/spec/09-audio-tts-languages.md)",
+      "sha256": "18fc6c365cfc089fc86a42cc25d1f9c5e20f9ab584ffb3dd9f12c86a5290a0fa"
+    },
+    {
+      "name": "Ambient music: The Magnificent Cosmos",
+      "kind": "music",
+      "path": "assets/music/the_magnificent_cosmos.ogg",
+      "source": "https://opengameart.org/content/the-magnificent-cosmos",
+      "licence": "CC0-1.0",
+      "attribution": "Adiutorium on OpenGameArt (CC0 1.0 on the entry page, no attribution required, credited here anyway). Source file the_magnificent_cosmos.mp3 (sha256 51d53239f3dbc67576647fce65b0733abc92bbccd3a69909fec188128b22444a); re-encoded to mono 22.05 kHz Ogg Vorbis 28 kbit/s, loudness-normalised, faded in and out (ffmpeg, see docs/spec/09-audio-tts-languages.md)",
+      "sha256": "d8cba0c5b90eed5c7ffff13c97db0943db0b0aba424627e8f964323d59a8c895"
     }
   ]
 }

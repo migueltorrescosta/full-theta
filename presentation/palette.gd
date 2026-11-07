@@ -54,6 +54,8 @@ const ROLES: Dictionary = {
 	"accent": Color("#58a6ff"),
 	"warn": Color("#e69f00"),
 	"danger": Color("#d7263d"),
+	# Danger as text (W1): 4.5:1 on background and panel; `danger` stays for fills and strokes.
+	"danger_text": Color("#e56c7b"),
 	"ok": Color("#3fbf7f"),
 }
 
@@ -77,6 +79,8 @@ const CONTRAST: Array[Array] = [
 	["text_dim", "panel"],
 	["accent", "background"],
 	["accent", "panel"],
+	["danger_text", "background"],
+	["danger_text", "panel"],
 	["load_intense", "panel"],
 	["load_intense", "panel_focus"],
 	["load_busy", "panel"],
@@ -115,6 +119,13 @@ const ALERTS: Array[Dictionary] = [
 	{"role": "alert_yellow", "letter": "Y", "shape": "triangle", "key": "alert.yellow"},
 	{"role": "alert_red", "letter": "R", "shape": "square", "key": "alert.red"},
 ]
+
+
+## The radius of a blip drawn by `node`: `base` px, or more when the UI scale is under 100 %
+## so it stays `base` physical px (C2, FT-STN-013).
+static func blip_radius(base: float, node: Node) -> float:
+	var win: Window = node.get_window() if node.is_inside_tree() else null
+	return base / minf(1.0, win.content_scale_factor) if win != null else base
 
 
 static func color(role: String) -> Color:
@@ -185,8 +196,26 @@ static func item_shape(it: Dictionary) -> String:
 ## Text on `canvas` at baseline `base` with a background-coloured outline, readable over
 ## any view.
 static func draw_outlined(
-	canvas: CanvasItem, font: Font, base: Vector2, text: String, size: int, col: Color
+	canvas: CanvasItem,
+	font: Font,
+	base: Vector2,
+	text: String,
+	size: int,
+	col: Color,
+	width: float = -1.0,
+	align: HorizontalAlignment = HORIZONTAL_ALIGNMENT_LEFT
 ) -> void:
 	var bg: Color = color("background")
-	canvas.draw_string_outline(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 4, bg)
-	canvas.draw_string(font, base, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, col)
+	canvas.draw_string_outline(font, base, text, align, width, size, 4, bg)
+	canvas.draw_string(font, base, text, align, width, size, col)
+
+
+## Text centred in `rect` on `canvas` (a button drawn by hand).
+static func draw_centred(
+	canvas: CanvasItem, font: Font, rect: Rect2, text: String, size: int, col: Color
+) -> void:
+	var base: Vector2 = Vector2(
+		rect.position.x, rect.position.y + (rect.size.y - font.get_height(size)) / 2.0
+	)
+	base.y += font.get_ascent(size)
+	canvas.draw_string(font, base, text, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, size, col)

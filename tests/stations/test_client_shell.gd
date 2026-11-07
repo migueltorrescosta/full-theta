@@ -322,3 +322,31 @@ func test_lobby_preloads_the_pick_and_long_frames_are_reported() -> void:
 	assert_str(c.frames[0][1]).is_equal("build station:0:tactical on lobby")
 	s._check_frame()
 	assert_int(c.frames.size()).is_equal(1)
+
+
+# FT: FT-AUD-010
+# W3, S1: subtitles sit on a backing panel that shows with a line, in the chosen size.
+func test_subtitles_have_a_backing_panel_and_a_size() -> void:
+	var s: ClientShell = _shell("en")
+	assert_bool(s._subtitle_panel.visible).is_false()
+	s.ctx.settings.subtitle_size = "large"
+	var line: Dictionary = {
+		"clip": 1,
+		"line": "",
+		"text": "Hello.",
+		"role": "computer",
+		"priority": 1,
+		"max_age_ms": 4000,
+		"coalesce": "",
+		"resume": false,
+		"audio": false,
+		"local": false,
+	}
+	(s.ctx.client as FakeClient).queued.append(
+		{"seq": 1, "tick": 0, "type": VoiceService.EVENT_VOICE_LINE, "payload": line}
+	)
+	await get_tree().process_frame
+	assert_bool(s._subtitle_panel.visible).is_true()
+	assert_int(s._subtitles.get_theme_font_size("font_size")).is_equal(
+		ClientSettings.SUBTITLE_SIZES["large"]
+	)

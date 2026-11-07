@@ -251,7 +251,11 @@ func test_pause_and_takeover_sheet_keeps_buttons_bottom_right() -> void:
 			# The sheet spans the safe width down to the band, under the live top bar.
 			var sr: Rect2 = o.get_global_rect()
 			assert_float(sr.size.x).override_failure_message(what).is_equal(tap.size.x)
-			assert_float(sr.end.y).override_failure_message(what).is_equal(tap.end.y)
+			# ...and above the bottom tabs upright, which it must not cover (D319).
+			var floor_y: float = tap.end.y
+			if s.frame.bottom_tabs.is_visible_in_tree():
+				floor_y = s.frame.bottom_tabs.get_global_rect().position.y - UiTheme.TOUCH_GAP
+			assert_float(sr.end.y).override_failure_message(what).is_equal(floor_y)
 			assert_float(sr.position.y).override_failure_message(what).is_equal(
 				s.frame.view_top.get_global_rect().position.y
 			)
@@ -260,7 +264,7 @@ func test_pause_and_takeover_sheet_keeps_buttons_bottom_right() -> void:
 			var last: Control = buttons.get_child(buttons.get_child_count() - 1)
 			var lr: Rect2 = last.get_global_rect()
 			assert_float(lr.end.x).override_failure_message(what).is_greater(tap.end.x - 32.0)
-			assert_float(lr.end.y).override_failure_message(what).is_greater(tap.end.y - 32.0)
+			assert_float(lr.end.y).override_failure_message(what).is_greater(floor_y - 32.0)
 			_clean(o, what)
 			if takeover:
 				(o.find_child("Takeover_science", true, false) as Button).pressed.emit()

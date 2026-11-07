@@ -203,6 +203,10 @@ func free_all() -> void:
 	clients.clear()
 	events.clear()
 	for s: NetServer in servers:
+		# Out of the tree now, so _exit_tree stops the net thread before this returns:
+		# a suite's last after_test does not await this, and a thread still running at
+		# the end of the process hangs the engine's exit (#33).
+		node.remove_child(s)
 		s.queue_free()
 	servers.clear()
 	await node.get_tree().process_frame

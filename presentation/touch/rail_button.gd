@@ -13,6 +13,9 @@ signal held(down: bool)
 
 enum Role { PLAIN, ACCENT, DANGER }
 
+## The least a button's text shrinks to so it fits (fit_text).
+const MIN_FONT: int = 12
+
 var role: Role = Role.PLAIN:
 	set(value):
 		role = value
@@ -21,6 +24,20 @@ var role: Role = Role.PLAIN:
 var hold: bool = false
 
 var _touch: int = -1
+
+
+## Shrinks `b`'s text, down to MIN_FONT, until it fits the button (a long word in a half
+## rail button, a longer language).
+static func fit_text(b: Button) -> void:
+	b.remove_theme_font_size_override("font_size")
+	var font: Font = b.get_theme_font("font")
+	var room: float = b.size.x - b.get_theme_stylebox("normal").get_minimum_size().x
+	var fs: int = b.get_theme_font_size("font_size")
+	while (
+		fs > MIN_FONT and font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room
+	):
+		fs -= 1
+	b.add_theme_font_size_override("font_size", fs)
 
 
 ## A rail button with `text` and `role`.

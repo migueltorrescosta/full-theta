@@ -12,6 +12,9 @@ extends Control
 const LOOPBACK: String = "127.0.0.1"
 ## The alert tones (AlertTones.sounds_dir; audio/ may not name assets/, spec §2.2).
 const ALERT_SOUNDS: String = "res://assets/sounds/alerts"
+## The effects and the ambient music (GameSounds.sounds_dir, MusicPlayer.music_dir, #12).
+const SFX_SOUNDS: String = "res://assets/sounds/sfx"
+const MUSIC_TRACKS: String = "res://assets/music"
 ## The Host form's scenarios: the --encounter each passes, and the label key of each.
 const SCENARIOS: Array[String] = ["run", "shakedown"]
 const SCENARIO_KEYS: Array[String] = ["train.mode_run", "train.mode_shakedown"]
@@ -75,6 +78,8 @@ var _lesson_deadline: int = 0
 
 func _ready() -> void:
 	AlertTones.sounds_dir = ALERT_SOUNDS
+	GameSounds.sounds_dir = SFX_SOUNDS
+	MusicPlayer.music_dir = MUSIC_TRACKS
 	settings.load_file()
 	I18n.apply(I18n.LANGUAGES[0])
 	LayoutMode.apply(get_tree().root)

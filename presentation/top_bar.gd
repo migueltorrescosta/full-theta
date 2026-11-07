@@ -14,7 +14,7 @@ signal alert_sheet_requested
 
 ## Bar height before UI scale (px).
 const HEIGHT: float = 40.0
-const CHIP_LETTER_SIZE: int = 11
+const CHIP_LETTER_SIZE: int = 12
 ## The phone timer's width, and its narrower one beside the full-screen icon (a 390 px bar).
 const TIMER_W: float = 48.0
 const TIMER_W_NARROW: float = 40.0
@@ -262,6 +262,26 @@ static func _fill(
 	if summaries.has(key) or max_value <= 0.0 or not status.has(key):
 		return -1.0
 	return float(status[key]) / max_value
+
+
+## The box (global coordinates) of the bar's status text, which a toast replaces: the
+## phone's glance; else the ship name and the status up to the alert chip (the status row
+## alone when it sits on the second row), above the bar's divider line. It holds no control.
+func status_rect() -> Rect2:
+	var box: Rect2
+	if phone:
+		box = glance.get_global_rect()
+	elif _compact:
+		box = _row2.get_global_rect()
+	else:
+		var row: Rect2 = _row.get_global_rect()
+		var left: float = _name.get_global_rect().position.x
+		box = Rect2(
+			left, row.position.y, chip.get_global_rect().position.x - 8.0 - left, row.size.y
+		)
+	# The bar keeps its divider line along the bottom edge.
+	var bottom: float = get_global_rect().end.y - 1.0
+	return box.intersection(Rect2(box.position, Vector2(box.size.x, bottom - box.position.y)))
 
 
 ## Opens the alert picker (Alt+A cycles instead; this is the chip click). Does nothing

@@ -17,10 +17,19 @@ tablets and phones join from the host's address in a browser.
 {{ASSETS}}
 
 - **Linux:** extract, then run `full-theta.x86_64`.
-- **Windows:** extract, then run `full-theta.exe`.
-- **macOS:** not signed or notarised until the owner step in #13, so macOS
-  refuses to open it until then. The Piper helper is x86_64 and needs
-  Rosetta 2 on Apple silicon.
+- **Windows:** extract, then run `full-theta.exe`. See "Opening it" below.
+- **macOS:** extract, then open `Full Theta.app`. See "Opening it" below. The
+  Piper helper is x86_64 and needs Rosetta 2 on Apple silicon.
+
+## Opening it
+
+The app is not notarised and the Windows build is not signed, so both systems
+warn you the first time. The warning is expected. Do this once.
+
+- **macOS:** right-click `Full Theta.app` and choose Open, then Open again. Or
+  try to open it, then go to System Settings, Privacy & Security, and click
+  Open Anyway.
+- **Windows:** in the SmartScreen window click More info, then Run anyway.
 
 ## Voices
 
@@ -38,4 +47,4 @@ game's own source.
 
 - [ ] `tools/gate.sh l6` green on fugaku on `{{COMMIT}}` (Linux and Windows packages, FT-TST-019, FT-GEN-012)
 - [ ] Owner Windows smoke test (#13)
-- [ ] macOS app and Piper helper signed and notarised (#13)
+- [ ] Owner macOS smoke test: Open anyway works and the helper speaks (#13)

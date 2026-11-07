@@ -96,6 +96,10 @@ class Conn:
 	var stats: Dictionary = {"bytes": 0, "ws_messages": 0, "fulls": 0, "deltas": 0, "skipped": 0}
 
 
+## Net threads started and not yet joined, in the whole process: a test suite that
+## leaves one running hangs the engine at exit (#33); tests/thread_guard_hook.gd checks it.
+static var _live: int = 0
+
 ## Stall limit in unacknowledged snapshots (D106).
 var lag_limit: int = NetResync.LAG_LIMIT
 ## Chunk payload size (FT-NET-038); tests lower it to force chunking.
@@ -161,7 +165,13 @@ func start(port: int, bind_address: String) -> Error:
 	_running = true
 	_thread = Thread.new()
 	_thread.start(_run)
+	_live += 1
 	return OK
+
+
+## Net threads started and not yet stopped (all transports).
+static func live_threads() -> int:
+	return _live
 
 
 ## The bound WebSocket port.
@@ -178,6 +188,7 @@ func stop() -> void:
 	_mutex.unlock()
 	_thread.wait_to_finish()
 	_thread = null
+	_live -= 1
 	for c: Conn in _conns.values():
 		c.peer.close(1001, "server stopped")
 		c.peer.poll()

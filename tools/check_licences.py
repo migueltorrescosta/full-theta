@@ -12,6 +12,7 @@ package may appear among the dependencies (FT-GEN-008), and no audio file may be
 tracked outside assets/: generated voice audio is never committed (FT-AUD-002).
 """
 
+import hashlib
 import json
 import re
 import subprocess
@@ -19,7 +20,7 @@ import sys
 from pathlib import Path
 
 REQUIRED = ("name", "source", "licence", "attribution")
-CC0_KINDS = ("art", "sound")
+CC0_KINDS = ("art", "sound", "music")
 OWN = {"addons/VERSIONS.md"}  # our own pin record, not third-party
 VOICE_STATUSES = ("accept", "dev-only")
 # Speech-recognition engines and bindings (FT-GEN-008), matched between non-alphanumerics.
@@ -53,9 +54,28 @@ def run(root: Path) -> list[str]:
             rel = f.relative_to(root).as_posix()
             if f.is_file() and rel not in OWN and not any(rel.startswith(p) for p in prefixes):
                 errors.append(f"{rel}: not listed in content/provenance.json")
+    errors += check_audio_files(root, entries)
     errors += check_voices(root, entries)
     errors += check_no_speech_recognition(root)
     errors += check_no_tracked_audio(root)
+    return errors
+
+
+def check_audio_files(root: Path, entries: list[dict]) -> list[str]:
+    """Every audio file under assets/ is covered by a CC0 sound or music entry (FT-LIC-006,
+    FT-AUD-016), and an entry that records a sha256 for its file matches it."""
+    errors = []
+    for e in entries:
+        f = root / e["path"] if e.get("sha256") and e.get("path") else None
+        if f is not None and (not f.is_file() or hashlib.sha256(f.read_bytes()).hexdigest() != e["sha256"]):
+            errors.append(f"{e['path']}: sha256 differs from content/provenance.json")
+    for f in sorted((root / "assets").rglob("*")):
+        rel = f.relative_to(root).as_posix()
+        if not (f.is_file() and f.suffix in AUDIO):
+            continue
+        covering = [e for e in entries if e.get("path") and rel.startswith(e["path"])]
+        if not any(e.get("kind") in CC0_KINDS and e.get("licence") == "CC0-1.0" for e in covering):
+            errors.append(f"{rel}: audio needs a CC0-1.0 art, sound or music entry in content/provenance.json")
     return errors
 
 

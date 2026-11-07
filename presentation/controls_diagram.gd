@@ -586,7 +586,8 @@ func _draw() -> void:
 	if _bindings == null:
 		return
 	var ox: float = maxf(0.0, (size.x - DESIGN_W * _scale) * 0.5)
-	draw_set_transform(Vector2(ox, 0.0), 0.0, Vector2(_scale, _scale))
+	# The legend takes the first LEGEND_H of the height, so a scrolled pane shows it at rest.
+	draw_set_transform(Vector2(ox, LEGEND_H * _scale), 0.0, Vector2(_scale, _scale))
 	var fig: Dictionary = ControlsFigure.get_figure(_device, _dy)
 	for pass_index: int in 2:
 		for b: Dictionary in fig["body"]:
@@ -715,7 +716,7 @@ func _draw_labels() -> void:
 
 func _draw_legend() -> void:
 	var font: Font = get_theme_default_font()
-	var y: float = _height - LEGEND_H + 4.0
+	var y: float = 4.0 - LEGEND_H
 	var x: float = 0.0
 	var chips: Array[Dictionary] = []
 	for s: Variant in _stations:
@@ -753,7 +754,7 @@ func _draw_legend() -> void:
 
 func _get_tooltip(at_position: Vector2) -> String:
 	var ox: float = maxf(0.0, (size.x - DESIGN_W * _scale) * 0.5)
-	var p: Vector2 = Vector2((at_position.x - ox) / _scale, at_position.y / _scale)
+	var p: Vector2 = Vector2((at_position.x - ox) / _scale, at_position.y / _scale - LEGEND_H)
 	for part: Dictionary in ControlsFigure.get_figure(_device, _dy)["parts"]:
 		var r: Rect2 = Rect2(part["rect"].position + _origin, part["rect"].size)
 		if part["id"] == "" or not r.has_point(p):

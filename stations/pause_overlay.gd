@@ -11,10 +11,10 @@ extends PanelContainer
 ## ship uncovered. An enemy ship's pause offers nothing. In PvP the vote is the give-up
 ## (forfeit) vote (M4-Q10).
 ##
-## On a phone (#28 follow-up, design 2.13) the overlay is a sheet over the safe area between
-## the station's top bar and the gesture band, 80 % opaque, its text at the top and its
-## buttons at the bottom right (thumb side); tablets and desktops keep the shell's centred
-## card.
+## On a phone (#28 follow-up, design 2.13) the overlay is an opaque sheet over the safe area
+## between the station's top bar and its bottom tabs (or the gesture band), its text at the
+## top and its buttons at the bottom right (thumb side); tablets and desktops keep the
+## shell's centred card.
 
 ## The crew changes the overlay depends on.
 const KINDS: Array[StringName] = [&"pause", &"votes", &"picked", &"catalogue", &"fleet"]
@@ -74,7 +74,9 @@ func _place() -> void:
 	# Under the top bar, which stays live (☰ for Leave, the status and timer).
 	var r: Rect2 = SafeArea.tap_rect(self)
 	var top: float = maxf(r.position.y, VotePrompt.main_top(self))
-	r = Rect2(r.position.x, top, r.size.x, r.end.y - top)
+	# ...and above the station's bottom tabs (upright), which it must not cover (D319).
+	var bottom: float = minf(r.end.y, _tabs_top())
+	r = Rect2(r.position.x, top, r.size.x, maxf(bottom - top, 0.0))
 	var parent: Control = get_parent() as Control
 	if parent != null:
 		r = SafeArea.to_local(parent, r)
@@ -85,6 +87,21 @@ func _place() -> void:
 		size = r.size
 
 
+## The top of the station's bottom tab bar (viewport px) while it shows, else INF.
+func _tabs_top() -> float:
+	var parent: Node = get_parent()
+	if parent != null:
+		for n: Node in parent.find_children("*", "StationScreen", true, false):
+			var s: StationScreen = n
+			if (
+				s.is_visible_in_tree()
+				and s.frame != null
+				and s.frame.bottom_tabs.is_visible_in_tree()
+			):
+				return s.frame.bottom_tabs.get_global_rect().position.y - UiTheme.TOUCH_GAP
+	return INF
+
+
 func _set_phone(phone: bool) -> void:
 	_phone = phone
 	_spacer.visible = phone
@@ -93,7 +110,8 @@ func _set_phone(phone: bool) -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
 	if phone:
 		var sheet: StyleBoxFlat = UiTheme.box("panel", "line_strong", 16, 16)
-		sheet.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
+		# Opaque: it blocks the station under it, which a ghost of the HUD would only
+		# confuse (D319).
 		add_theme_stylebox_override("panel", sheet)
 	else:
 		remove_theme_stylebox_override("panel")

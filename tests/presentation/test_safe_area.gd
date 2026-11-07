@@ -114,5 +114,26 @@ func test_desktop_screen_is_unchanged() -> void:
 	var s: StationScreen = await _screen(Vector2i(1280, 720), "engineering", [])
 	assert_int(s.form).is_equal(LayoutMode.Form.DESKTOP)
 	assert_float(s._rows.offset_left).is_equal(0.0)
-	assert_float(s._rows.offset_bottom).is_equal(0.0)
+	# (only the edge gap at the bottom, #12)
+	assert_float(s._rows.offset_bottom).is_equal(-StationScreen.EDGE_GAP)
 	assert_bool(s.rotate_banner.visible).is_false()
+
+
+# FT: FT-STN-005
+# #12: toasts stack beside a side radar, off its labels; the last row keeps an edge gap.
+func test_toasts_stay_out_of_the_radar_rectangle() -> void:
+	var s: StationScreen = await _screen(Vector2i(1280, 720), "comms", [])
+	s.toasts.push("Hit, 6 level", "warn", 0)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_bool(s.radar.get_global_rect().intersects(s.toasts.get_global_rect())).is_false()
+	assert_float(s._rows.get_global_rect().end.y).is_less_equal(720.0 - StationScreen.EDGE_GAP)
+
+
+# FT: FT-ENG-002
+# #12 (D316): at 150 % UI scale (853 x 480) the power board fits the panel without a scroll.
+func test_engineering_board_fits_at_150_percent() -> void:
+	var s: StationScreen = await _screen(Vector2i(853, 480), "engineering", [])
+	var panel: EngineeringPanel = s.focused_panel() as EngineeringPanel
+	await get_tree().process_frame
+	assert_float(panel.board.content_height()).is_less_equal(panel.size.y)

@@ -27,11 +27,14 @@ is never committed (FT-AUD-002), so any other location inside the repo is refuse
 """
 
 import argparse
+import hashlib
 import json
 import io
+import os
 import re
 import shutil
 import sys
+import tempfile
 import time
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -56,6 +59,77 @@ FRAGMENT_GAP_S = 0.2
 VORBIS_LEVEL = 0.8
 PEAK = 0.9  # PROVISIONAL loudness: peak normalise each clip (S7 note; no LUFS yet)
 SYNTH_KEYS = ("length_scale", "noise_scale", "noise_w_scale", "speaker")
+CACHE_VERSION = 1  # bump to invalidate all cached clips
+
+
+def _default_cache_dir() -> Path:
+    """Default cache directory, never inside the repo."""
+    env = os.environ.get("FT_PRERENDER_CACHE")
+    if env:
+        return Path(env).expanduser().resolve()
+    return Path.home() / ".cache" / "full-theta" / "prerender"
+
+
+def _cache_key(
+    voice: str,
+    voice_hashes: dict[str, str],
+    text: str,
+    settings: dict,
+    fragment: bool,
+) -> str:
+    """SHA-256 over canonical JSON of all inputs that shape a clip."""
+    payload = {
+        "version": CACHE_VERSION,
+        "voice": voice,
+        "voice_hashes": voice_hashes,
+        "text": text,
+        "settings": {k: settings[k] for k in sorted(settings) if k in SYNTH_KEYS},
+        "fragment": fragment,
+        "constants": {
+            "THRESHOLD": THRESHOLD,
+            "PAD_S": PAD_S,
+            "FRAGMENT_GAP_S": FRAGMENT_GAP_S,
+            "PEAK": PEAK,
+        },
+    }
+    data = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(data).hexdigest()
+
+
+def _cache_path(cache_dir: Path, key: str) -> Path:
+    return cache_dir / key[:2] / f"{key}.npz"
+
+
+def _cache_get(cache_dir: Path, key: str) -> tuple[np.ndarray, int] | None:
+    """Load a cached clip if present, else None."""
+    final_path = _cache_path(cache_dir, key)
+    if not final_path.is_file():
+        return None
+    try:
+        with np.load(final_path) as data:
+            pcm = data["pcm"]
+            rate = int(data["rate"])
+        return pcm, rate
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def _cache_put(cache_dir: Path, key: str, pcm: np.ndarray, rate: int) -> None:
+    """Atomically store a clip in the cache."""
+    final_path = _cache_path(cache_dir, key)
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+    # np.savez_compressed needs a name ending in .npz
+    with tempfile.NamedTemporaryFile(
+        dir=final_path.parent, prefix=final_path.stem + ".", suffix=".npz", delete=False
+    ) as tf:
+        temp_path = Path(tf.name)
+    try:
+        np.savez_compressed(temp_path, pcm=pcm, rate=rate)
+        os.replace(temp_path, final_path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink(missing_ok=True)
+
 
 # synth(voice_name, text, settings) -> (int16 mono PCM, rate)
 Synth = Callable[[str, str, dict], tuple[np.ndarray, int]]
@@ -228,19 +302,25 @@ def prerender(
     jobs: int = 1,
     threads: int = 1,
     host_out: Path | None = None,
-) -> dict[tuple[str, str], dict]:
-    """Renders and writes both packs; returns the host indexes by (lang, role).
+    cache: Path | None = None,
+) -> tuple[dict[tuple[str, str], dict], tuple[int, int]]:
+    """Renders and writes both packs; returns the host indexes by (lang, role)
+    and a (rendered_count, cache_hits) tuple.
 
     Client pack, `out/<lang>/`: one Ogg Vorbis file per line without slots,
     `<line id>.ogg`. Host pack, `host_out/<lang>/` (default: out's sibling
     `prerendered_host`): per role a PCM blob and its index of the seg:* and num:*
     clips. Each folder gets an index.json listing its files. synth None uses Piper,
     one process per voice with `jobs` voices in parallel; a given synth (tests) runs
-    in this process."""
+    in this process. `cache` is the clip cache directory (#31); None renders every clip.
+    Only main() uses the default cache, so tests never touch it."""
     host_out = host_out if host_out is not None else out.parent / "prerendered_host"
     check_out(out, root)
     check_out(host_out, root)
     lines, numbers, voices = load_content(root)
+    # Load voice file hashes from tools/tts/voices.json (not content/voices.json)
+    tools_voices = json.loads((root / "tools/tts/voices.json").read_text(encoding="utf-8"))
+    voice_file_hashes = tools_voices.get("voices", {})
     by_voice: dict[str, list[tuple]] = {}
     plans = {lang: plan(lines, numbers, voices, lang) for lang in langs}
     for lang, roles in plans.items():
@@ -248,12 +328,51 @@ def prerender(
             settings = {k: v for k, v in voices["roles"][role].items() if k in SYNTH_KEYS}
             for key, voice, text in clips:
                 by_voice.setdefault(voice, []).append((lang, role, key, text, settings))
+
+    cache_dir, use_cache = cache, cache is not None
+
+    # Split items into cache hits and misses per voice
+    voice_hashes_map = {voice: voice_file_hashes.get(voice, {}) for voice in by_voice}
+    to_render: dict[str, list[tuple]] = {}
+    rendered: dict[tuple[str, str, str], tuple[np.ndarray, int]] = {}
+    # Track cache keys for storing later: (lang, role, key) -> cache_key
+    cache_keys: dict[tuple[str, str, str], str] = {}
+    rendered_count = 0
+    cache_hits = 0
+
+    for voice, items in by_voice.items():
+        voice_hashes = voice_hashes_map[voice]
+        misses = []
+        for lang, role, key, text, settings in items:
+            fragment = key.startswith("num:")
+            cache_key = _cache_key(voice, voice_hashes, text, settings, fragment)
+            if use_cache:
+                cached = _cache_get(cache_dir, cache_key)
+            else:
+                cached = None
+            if cached is not None:
+                rendered[(lang, role, key)] = cached
+                cache_hits += 1
+            else:
+                misses.append((lang, role, key, text, settings))
+                cache_keys[(lang, role, key)] = cache_key
+        if misses:
+            to_render[voice] = misses
+
+    # Render misses
     if synth is None:
         with ProcessPoolExecutor(max_workers=jobs, initializer=_init_worker, initargs=(threads,)) as pool:
-            results = list(pool.map(_render_voice_piper, by_voice, by_voice.values()))
+            results = list(pool.map(_render_voice_piper, to_render, to_render.values()))
     else:
-        results = [_render_voice(synth, voice, items) for voice, items in by_voice.items()]
-    rendered = {(lang, role, key): (pcm, rate) for res in results for lang, role, key, pcm, rate in res}
+        results = [_render_voice(synth, voice, items) for voice, items in to_render.items()]
+
+    for res in results:
+        for lang, role, key, pcm, rate in res:
+            rendered[(lang, role, key)] = (pcm, rate)
+            rendered_count += 1
+            if use_cache:
+                _cache_put(cache_dir, cache_keys[(lang, role, key)], pcm, rate)
+
     indexes: dict[tuple[str, str], dict] = {}
     for lang, roles in plans.items():
         for folder in (out / lang, host_out / lang):
@@ -281,7 +400,7 @@ def prerender(
             indexes[(lang, role)] = index
         write_index(out / lang, lang)
         write_index(host_out / lang, lang)
-    return indexes
+    return indexes, (rendered_count, cache_hits)
 
 
 def main(argv: list[str]) -> int:
@@ -294,6 +413,8 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--host-out", type=Path, default=None, help="host pack [OUT/../prerendered_host]")
     parser.add_argument("--jobs", type=int, default=1, help="voices rendered in parallel")
     parser.add_argument("--threads", type=int, default=1, help="onnxruntime threads per voice process")
+    parser.add_argument("--cache-dir", type=Path, default=None, help="cache directory for rendered clips")
+    parser.add_argument("--no-cache", action="store_true", help="disable the clip cache")
     args = parser.parse_args(argv)
     voices = json.loads((ROOT / "content/voices.json").read_text(encoding="utf-8"))["languages"]
     dev_only = [lang for lang in LANGS if voices[lang].get("dev_only")]
@@ -305,14 +426,17 @@ def main(argv: list[str]) -> int:
     start = time.perf_counter()
     out = args.out.resolve()
     host_out = args.host_out.resolve() if args.host_out else None
-    indexes = prerender(ROOT, out, langs, jobs=args.jobs, threads=args.threads, host_out=host_out)
+    cache = None if args.no_cache else (args.cache_dir or _default_cache_dir()).resolve()
+    indexes, (rendered_count, cache_hits) = prerender(
+        ROOT, out, langs, jobs=args.jobs, threads=args.threads, host_out=host_out, cache=cache
+    )
     for (lang, role), index in indexes.items():
         samples = sum(n for _, n in index["clips"].values())
         print(f"host {lang}/{role}: {len(index['clips'])} clips, {samples / index['rate']:.1f} s, {samples * 2} B")
     for lang in langs:
         files = list((out / lang).glob("*.ogg"))
         print(f"client {lang}: {len(files)} lines, {sum(f.stat().st_size for f in files)} B Ogg")
-    print(f"prerender: {time.perf_counter() - start:.1f} s")
+    print(f"prerender: {rendered_count} rendered, {cache_hits} from cache, {time.perf_counter() - start:.1f} s")
     return 0
 
 

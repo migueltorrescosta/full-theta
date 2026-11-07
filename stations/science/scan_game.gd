@@ -228,28 +228,13 @@ func _draw_footer(font: Font) -> void:
 		draw_rect(r, Palette.color("panel_focus") if i == selected else Palette.color("background"))
 		draw_rect(r, Palette.color("line"), false, 1.0)
 		var label: String = "%s %d" % ["XYZ"[open[i]], roundi(rad_to_deg(angles[open[i]]))]
-		draw_string(
-			font,
-			r.position + Vector2(6.0, 23.0),
-			label,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			FONT_SIZE - 1,
-			Palette.color("text")
-		)
+		Palette.draw_centred(self, font, r, label, FONT_SIZE - 1, Palette.color("text"))
 	for i: int in 2:
 		var r: Rect2 = _button_rect(i)
 		draw_rect(r, Palette.color("panel_focus"))
 		draw_rect(r, Palette.color("ok") if i == 0 else Palette.color("line"), false, 1.0)
-		draw_string(
-			font,
-			r.position + Vector2(10.0, 23.0),
-			tr("sci.submit") if i == 0 else tr("sci.cancel"),
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			FONT_SIZE,
-			Palette.color("text")
-		)
+		var text: String = tr("sci.submit") if i == 0 else tr("sci.cancel")
+		Palette.draw_centred(self, font, r, text, FONT_SIZE, Palette.color("text"))
 
 
 func _project(p: Vector3, mid: Vector2, scale: float) -> Vector2:

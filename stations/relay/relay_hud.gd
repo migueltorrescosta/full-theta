@@ -17,8 +17,8 @@ signal send_pressed(ship: int)
 ## Contacts and log lines listed (the rest scroll off).
 const CONTACT_ROWS: int = 7
 const LOG_ROWS: int = 4
-## The box's top edge (from the bottom) when it is one row.
-const SHORT_BOX_TOP: float = -58.0
+## The box's top edge (from the bottom) when it is a heading over one row of buttons.
+const SHORT_BOX_TOP: float = -82.0
 ## Least width of the log column.
 const LOG_MIN_W: float = 60.0
 
@@ -32,12 +32,13 @@ var send: Button
 var send_to: OptionButton
 
 var _left: PanelContainer
+var _left_margin: MarginContainer
+var _left_scroll: ScrollContainer
+var _col: VBoxContainer
 var _narrow: bool = false
 var _short: bool = false
 var _log_col: VBoxContainer
-var _mail_box: BoxContainer
 var _inbox_heading: Label
-var _mail_buttons: HBoxContainer
 var _bottom_row: BoxContainer
 var _bottom: PanelContainer
 var _probes: Label
@@ -65,7 +66,13 @@ func setup(context: StationContext) -> void:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_left.add_child(scroll)
+	# The margin under the scroll makes its last visible row whole at rest (_snap_left).
+	_left_margin = MarginContainer.new()
+	_left_margin.add_child(scroll)
+	_left.add_child(_left_margin)
+	_left_scroll = scroll
+	_col = col
+	_left.resized.connect(_snap_left.call_deferred)
 	scroll.add_child(col)
 	_probes = Label.new()
 	col.add_child(_probes)
@@ -103,7 +110,6 @@ func setup(context: StationContext) -> void:
 	row.add_child(log_col)
 	var mail: BoxContainer = BoxContainer.new()
 	mail.vertical = true
-	_mail_box = mail
 	mail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_inbox_heading = _heading("relay.inbox")
 	mail.add_child(_inbox_heading)
@@ -113,7 +119,6 @@ func setup(context: StationContext) -> void:
 	_mail.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mail.add_child(_mail)
 	var buttons: HBoxContainer = HBoxContainer.new()
-	_mail_buttons = buttons
 	accept = _button(buttons, "Accept", "relay.accept", _on_accept)
 	decline = _button(buttons, "Decline", "relay.decline", _on_decline)
 	send_to = OptionButton.new()
@@ -161,6 +166,12 @@ func refresh() -> void:
 	_fill_marks()
 	_fill_log()
 	_fill_inbox()
+	_snap_left.call_deferred()
+
+
+func _snap_left() -> void:
+	if _left_margin != null and is_inside_tree():
+		ScrollSnap.fit(_left_scroll, _left_margin, _col)
 
 
 ## A phone-wide HUD (D195): the probe and contact column spans the top, the log and inbox
@@ -181,21 +192,19 @@ func set_narrow(narrow: bool) -> void:
 	_fit_left()
 
 
-## A short HUD (a phone on its side): the log goes and the inbox shrinks to one row, so
-## the box stops covering the map's lower part.
+## A short HUD (a window about 480 px tall): the log goes and the inbox is its heading, with
+## the waiting mark after it, over one row of buttons, so the box stops covering the map's
+## lower part and still names itself.
 func set_short(short: bool) -> void:
 	_short = short
 	_log_col.visible = not short
-	_inbox_heading.visible = not short
-	_mail_box.vertical = not short
-	_mail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if not short else TextServer.AUTOWRAP_OFF
-	_mail.clip_text = short
-	_mail.text_overrun_behavior = (
+	_inbox_heading.clip_text = short
+	_inbox_heading.text_overrun_behavior = (
 		TextServer.OVERRUN_TRIM_ELLIPSIS if short else TextServer.OVERRUN_NO_TRIMMING
 	)
-	_mail.custom_minimum_size.x = 60.0 if short else 0.0
+	_inbox_heading.custom_minimum_size.x = 60.0 if short else 0.0
 	_show_mail()
-	_mail_buttons.size_flags_vertical = (Control.SIZE_SHRINK_CENTER if short else Control.SIZE_FILL)
+	_fill_inbox_heading()
 	if not _narrow:
 		_bottom.offset_top = SHORT_BOX_TOP if short else -102.0
 	_fit_left()
@@ -206,11 +215,23 @@ func bottom_top() -> float:
 	return _bottom.position.y
 
 
-## Narrow: the probe and contact column ends above the bottom box, which grows upward with
+## The part of the panel the HUD's boxes leave to the map (the panel's coordinates): right
+## of the probe column and above the log box, or between them when narrow. The map centres
+## and fits in it, so no item sits under an opaque box (D319).
+func free_rect() -> Rect2:
+	if not visible or _left == null or size.x <= 0.0:
+		return Rect2()
+	var top: float = _left.position.y + _left.size.y + 8.0 if _narrow else 0.0
+	var left: float = 0.0 if _narrow else _left.position.x + _left.size.x + 8.0
+	var bottom: float = _bottom.position.y - 8.0
+	return Rect2(left, top, size.x - left, maxf(bottom - top, 0.0))
+
+
+## Narrow: the probe column ends above the bottom box, which grows upward with
 ## its content (tap-sized buttons, a wrapped inbox), instead of lying over the contacts.
 func _fit_left() -> void:
 	if not _narrow:
-		_left.offset_bottom = SHORT_BOX_TOP - 8.0 if _short else -110.0
+		_left.offset_bottom = -8.0 if _short else -110.0
 		return
 	# 24 px stay free for the map's span caption.
 	_left.offset_bottom = clampf(_bottom.position.y - 30.0, 64.0, 230.0)
@@ -314,9 +335,17 @@ func _fill_log() -> void:
 		_log.add_child(_wrapped(log_text(e)))
 
 
-## One row has no room for "No marks waiting": the disabled buttons say it.
+## A short box has no room for a line under its heading: the heading carries the waiting
+## mark ("INBOX  Name from Ship +1"), and says nothing more when none waits.
 func _show_mail() -> void:
-	_mail.visible = not (_short and ctx != null and ctx.crew.inbox.is_empty())
+	_mail.visible = not _short
+
+
+func _fill_inbox_heading() -> void:
+	var text: String = tr("relay.inbox").to_upper()
+	if _short and ctx != null and not ctx.crew.inbox.is_empty():
+		text += "  " + _mail.text
+	_inbox_heading.text = text
 
 
 func _fill_inbox() -> void:
@@ -327,6 +356,7 @@ func _fill_inbox() -> void:
 		var more: String = " +%d" % (ctx.crew.inbox.size() - 1) if ctx.crew.inbox.size() > 1 else ""
 		_mail.text = tr("relay.inbox_item") % [item["name"], item["from"]] + more
 	_show_mail()
+	_fill_inbox_heading()
 	accept.disabled = item.is_empty()
 	decline.disabled = item.is_empty()
 	var targets: Array = allies()

@@ -22,7 +22,8 @@ extends StationPanel
 ## view (landscape) or a controls block under it (upright), with the pages Fire, Mounts and
 ## Crew: a drag aims, FIRE holds `fire`, and the buttons send the same intents as the keys.
 ## The panel is in the phone frame (`in_frame`): its read-outs sit under the view-top row.
-## Tablet and desktop layouts don't change.
+## On a tablet (#32) WeaponsTablet docks two rails at the screen's edges and puts an aim pad
+## over the view; the rest of the panel is the desktop arrangement.
 
 ## A touch control sent `id` (tests: taps send what the keys send).
 signal touch_intent(id: String)
@@ -75,6 +76,8 @@ var _space: SpaceView
 var _overlay: Control
 ## The phone arrangement while the form is a phone's and the panel is focused, else null.
 var _touch: WeaponsTouch = null
+## The tablet's docked rails and aim pad (#32) while the focused panel is on a tablet.
+var _tablet: WeaponsTablet = null
 var _screen: StationScreen = null
 
 
@@ -99,6 +102,8 @@ func _ready() -> void:
 	_screen = n as StationScreen
 	if _screen != null:
 		_screen.form_changed.connect(func(_f: LayoutMode.Form) -> void: _apply_form())
+		# A tablet keeps its form in a rotation: only its dock's arrangement changes.
+		_screen.resized.connect(_apply_tablet)
 	_apply_form()
 
 
@@ -136,6 +141,7 @@ func phone_form() -> int:
 func _apply_form() -> void:
 	if _view == null or not is_inside_tree():
 		return
+	_apply_tablet.call_deferred()
 	var form: int = phone_form()
 	var want: bool = focused and mount_count() > 0 and form >= 0
 	if _touch != null and want and _touch.form == form:
@@ -163,6 +169,37 @@ func _apply_form() -> void:
 			_touch.pad.now_ms = ctx.now_ms
 		pages = _touch.pages
 		_touch.refresh()
+
+
+## Builds, rebuilds (a rotation) or drops the tablet's docked rails for the focused panel.
+func _apply_tablet() -> void:
+	var dp: Vector2 = LayoutMode.dp_size_of(get_viewport())
+	var want: bool = (
+		focused
+		and _screen != null
+		and mount_count() > 0
+		and LayoutMode.form_of(self) == LayoutMode.Form.TABLET
+		and TabletDock.fits(dp)
+	)
+	var portrait: bool = want and LayoutMode.portrait(_screen.size)
+	if _tablet != null and (not want or _tablet.portrait != portrait):
+		if _screen != null and _screen.tablet_dock == _tablet.dock:
+			_screen.set_tablet_dock(null)
+		_tablet.dock.queue_free()
+		remove_child(_tablet)
+		_tablet.queue_free()
+		_tablet = null
+		ctx.matcher.release_all()
+	if want and _tablet == null:
+		_tablet = WeaponsTablet.new(self, portrait)
+		add_child(_tablet)
+		_screen.set_tablet_dock(_tablet.dock)
+		_tablet.refresh()
+
+
+## The tablet arrangement, or null (tests and shots).
+func tablet() -> WeaponsTablet:
+	return _tablet
 
 
 ## The phone arrangement, or null (tests and shots).
@@ -240,6 +277,8 @@ func step(delta: float) -> void:
 	_overlay.queue_redraw()
 	if _touch != null:
 		_touch.refresh()
+	if _tablet != null:
+		_tablet.refresh()
 
 
 func handle_intent(ev: Dictionary) -> bool:
@@ -815,7 +854,10 @@ func _layout_targets() -> void:
 	var font: Font = get_theme_default_font()
 	var rot: Quaternion = ctx.interp.own_rotation()
 	var m: MountDef = ship_def.mounts[mount]
-	var phone: bool = is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
+	# A phone's or a tablet's view with rails keeps its chips inside the view.
+	var phone: bool = (
+		_tablet != null or (is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self)))
+	)
 	for it: Dictionary in ctx.picture().items:
 		if it["kind"] == "point":
 			continue
@@ -826,12 +868,16 @@ func _layout_targets() -> void:
 		var view: Rect2 = Rect2(Vector2.ZERO, _overlay.size).grow(-BRACKET)
 		if phone and view.has_area() and not view.has_point(p as Vector2):
 			continue
+		# (a target whose centre is off the view has no bracket to hang a chip on)
+		if _overlay.size.x > 0.0 and not Rect2(Vector2.ZERO, _overlay.size).has_point(p as Vector2):
+			continue
 		var chip: String = target_chip(it)
 		var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 		var at: Vector2 = (p as Vector2) + Vector2(BRACKET + 6.0, 4.0 - FONT_SIZE)
 		# Too near the right edge for the chip: it goes to the left of the bracket.
 		if phone and at.x + sz.x > _overlay.size.x:
 			at.x = (p as Vector2).x - BRACKET - 6.0 - sz.x
+		at.x = maxf(at.x, 2.0)
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
 		_targets.append(
 			{"item": it, "pos": p, "chip": chip, "chip_at": at, "rect": r.merge(Rect2(at, sz))}
@@ -866,14 +912,33 @@ func _draw_overlay() -> void:
 	elif arc != "":
 		lines.append(arc)
 	var line_h: float = FONT_SIZE + 6.0
-	var y0: float = (
-		12.0 + FONT_SIZE if docked else _overlay.size.y - 12.0 - line_h * (lines.size() - 1)
-	)
+	# A line longer than the view wraps (the docked column is narrow), so none is cut at the
+	# screen's edge (D319).
+	var width: float = maxf(_overlay.size.x - 24.0, 40.0)
+	var counts: Array[int] = []
+	var total: int = 0
+	for text: String in lines:
+		var wrapped: float = (
+			font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE).y
+		)
+		var rows_n: int = maxi(roundi(wrapped / font.get_height(FONT_SIZE)), 1)
+		counts.append(rows_n)
+		total += rows_n
+	var y0: float = 12.0 + FONT_SIZE if docked else _overlay.size.y - 12.0 - line_h * (total - 1)
+	var y: float = y0
 	for k: int in lines.size():
 		var col: Color = Palette.color("text") if k == mount else Palette.color("text_dim")
 		if lines[k] == arc:
 			col = Palette.color("warn")
-		_text(font, Vector2(12.0, y0 + k * line_h), lines[k], col)
+		var bg: Color = Palette.color("background")
+		var at: Vector2 = Vector2(12.0, y)
+		_overlay.draw_multiline_string_outline(
+			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, 4, bg
+		)
+		_overlay.draw_multiline_string(
+			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, col
+		)
+		y += line_h * counts[k]
 
 
 ## On a phone the rail and the overlays show the mounts, the ammunition, the claim and the
@@ -896,6 +961,8 @@ func _draw_phone_lines(font: Font) -> void:
 
 func _draw_arc_warning(font: Font, arc: String) -> void:
 	var r: Rect2 = arc_warning_rect(font, arc)
+	# On a dim backing: a star in the narrow space after the colon read as "arc:·turn".
+	_overlay.draw_rect(r.grow(3.0), Color(Palette.color("background"), 0.8))
 	_text(font, r.position + Vector2(0, FONT_SIZE), arc, Palette.color("warn"))
 
 
@@ -1000,6 +1067,9 @@ func _hint() -> String:
 	if is_mine(mount):
 		return ""
 	if holder.is_empty():
+		if _tablet != null:
+			# Touch rails: the Claim button, not a key.
+			return tr("weapons.hint_claim_touch")
 		var keys: PackedStringArray = ctx.settings.bindings.bindings("claim", ctx.matcher.device)
 		return tr("weapons.hint_claim") % BindingText.describe_all(keys)
 	return tr("weapons.held_by") % str(holder.get("name", ""))

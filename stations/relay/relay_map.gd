@@ -69,6 +69,11 @@ var routes: Array = []
 var lanes_on: bool = false
 
 
+## The blip radius in px: BLIP_R, grown at UI scales under 100 % to stay that many physical px (C2).
+func blip_r() -> float:
+	return Palette.blip_radius(BLIP_R, self)
+
+
 func _init() -> void:
 	mouse_filter = MOUSE_FILTER_IGNORE
 	clip_contents = true
@@ -212,8 +217,9 @@ func _draw() -> void:
 	_draw_own(picture.rel(Vector3.ZERO, centre))
 	if not sel.is_empty():
 		_draw_item(sel, true)
+	var covers: Array[Rect2] = SheetCover.over(self)
 	for e: Dictionary in layout:
-		if e["chip"] != "":
+		if e["chip"] != "" and not SheetCover.touches(e["chip_rect"], covers):
 			var col: Color = (
 				Palette.color("selected") if e == sel else Palette.item_color(e["item"])
 			)
@@ -230,7 +236,12 @@ func _draw() -> void:
 	var scale_text: String = tr("relay.span") % _km(span_m)
 	var base: float = _view().end.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0
 	var x: float = _view().position.x + 8.0
-	_draw_text(font, Vector2(x, base - font.get_height(FONT_SIZE)), scale_text, _dim())
+	var caption: Rect2 = Rect2(
+		Vector2(x, base - font.get_height(FONT_SIZE)),
+		font.get_string_size(scale_text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE),
+	)
+	if not SheetCover.touches(caption, covers):
+		_draw_text(font, caption.position, scale_text, _dim())
 
 
 ## Hazard bubbles: the sphere's silhouette is a circle of its radius; a sim plane front
@@ -270,7 +281,7 @@ func _draw_probes(font: Font) -> void:
 			var r_px: float = float(pr["range"]) * ppm()
 			draw_circle(p, r_px, col * Color(1, 1, 1, 0.08))
 			draw_arc(p, r_px, 0.0, TAU, 48, col * Color(1, 1, 1, 0.5), 1.0, true)
-		draw_arc(p, BLIP_R, 0.0, TAU, 20, col, 2.0, true)
+		draw_arc(p, blip_r(), 0.0, TAU, 20, col, 2.0, true)
 		draw_circle(p, 2.0, col if pr["deployed"] else Palette.color("background"))
 		_draw_text(font, p + Vector2(10.0, -8.0), "P%d" % (int(pr["serial"]) + 1), col)
 
@@ -309,7 +320,7 @@ func _draw_lanes(layout: Array[Dictionary], font: Font) -> void:
 		var f: Dictionary = by_id.get(lane["friend"], {})
 		if t.is_empty() or f.is_empty():
 			continue
-		var col: Color = Palette.color("danger")
+		var col: Color = Palette.color("danger_text")
 		draw_line(own, t["pos"], col, 2.0, true)
 		_draw_text(font, f["pos"] + Vector2(10.0, 8.0), tr("relay.lane") % lane["label"], col)
 
@@ -369,7 +380,7 @@ func _draw_item(e: Dictionary, is_sel: bool) -> void:
 	var stem: Color = Palette.color("selected") if is_sel else col * Color(1, 1, 1, 0.7)
 	draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
 	draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
-	var pts: PackedVector2Array = Palette.shape_points(Palette.item_shape(it), pos, BLIP_R)
+	var pts: PackedVector2Array = Palette.shape_points(Palette.item_shape(it), pos, blip_r())
 	if (e["rel"] as Vector3).y >= 0.0:
 		draw_colored_polygon(pts.slice(0, -1), col)
 	else:
@@ -387,7 +398,7 @@ func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
 		return
 	var col: Color = Palette.color("ping")
 	col.a = pulse
-	draw_arc(pos, BLIP_R + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
+	draw_arc(pos, blip_r() + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
 	if not copies.is_empty():
 		var text: String = "+ " + ", ".join(PackedStringArray(copies))
 		_draw_text(get_theme_default_font(), pos + Vector2(-8.0, 14.0), text, col)
@@ -403,7 +414,7 @@ func _draw_preview(font: Font) -> void:
 	var col: Color = Palette.color("mark")
 	draw_line(project(Vector3(rel.x, 0.0, rel.z)), p, col * Color(1, 1, 1, 0.7), 1.0, true)
 	draw_line(project(preview["plane"]), p, col * Color(1, 1, 1, 0.4), 1.0, true)
-	draw_polyline(Palette.shape_points("diamond", p, BLIP_R + 2.0), col, 2.0, true)
+	draw_polyline(Palette.shape_points("diamond", p, blip_r() + 2.0), col, 2.0, true)
 	var label: String = str(preview.get("label", ""))
 	_draw_text(font, p + Vector2(12.0, -8.0), say_point(label, rel), col)
 
@@ -453,20 +464,15 @@ func _layout() -> Array[Dictionary]:
 		var pos: Vector2 = project(rel)
 		var chip: String = ChipText.chip(it["label"], it["local"]) if chips else ""
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
+		var variants: Array[String] = []
+		var sizes: Array[Vector2] = []
 		if chip != "":
 			var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 			sz.y = font.get_height(FONT_SIZE)
 			rect = Rect2(Vector2(pos.x + 10.0, pos.y - sz.y / 2.0), sz)
-			# On a phone a chip that would cover an earlier one steps down a line.
-			for _try: int in range(out.size() if _phone() else 0):
-				var hit: bool = false
-				for o: Dictionary in out:
-					var other: Rect2 = o["chip_rect"]
-					if other.has_area() and other.intersects(rect):
-						rect.position.y = other.end.y
-						hit = true
-				if not hit:
-					break
+			var forms: Array = DiscRadar.chip_forms(font, chip)
+			variants.assign(forms[0])
+			sizes.assign(forms[1])
 		(
 			out
 			. append(
@@ -477,14 +483,26 @@ func _layout() -> Array[Dictionary]:
 					"foot": project(Vector3(rel.x, 0.0, rel.z)),
 					"chip": chip,
 					"chip_rect": rect,
+					"variants": variants,
+					"sizes": sizes,
+					"selected": _is_selected(it),
 				}
 			)
 		)
+	# Each chip beside its own blip, clear of the other chips, the blips, their stems, the
+	# own ship and the span caption, inside the map's view (D319, as the disc radar).
+	var own: Vector2 = project(picture.rel(Vector3.ZERO, centre))
+	var caption: Vector2 = font.get_string_size(
+		tr("relay.span") % _km(span_m), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE
+	)
+	var v: Rect2 = _view()
+	var base: float = v.end.y - 8.0 if caption_bottom < 0.0 else caption_bottom - 4.0
+	var fixed: Array = [
+		Rect2(own - Vector2(9, 9), Vector2(18, 18)),
+		Rect2(Vector2(v.position.x + 8.0, base - font.get_height(FONT_SIZE)), caption),
+	]
+	DiscRadar._declutter(out, fixed, v.grow(-2.0), Rect2(), blip_r() + 3.0)
 	return out
-
-
-func _phone() -> bool:
-	return is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self))
 
 
 func _is_selected(it: Dictionary) -> bool:

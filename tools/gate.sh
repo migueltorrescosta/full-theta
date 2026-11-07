@@ -47,9 +47,18 @@ gdunit() {
   (($#)) && shift
   rm -rf "$reports"
   mkdir -p "$reports/data"
-  XDG_DATA_HOME=$root/$reports/data "$@" "$godot" --headless --path . -s -d \
+  XDG_DATA_HOME=$root/$reports/data ${limit:+tools/run_limited.sh "$limit" "$reports/hang-stack.txt"} "$@" "$godot" --headless --path . -s -d \
     --remote-debug tcp://127.0.0.1:0 res://addons/gdUnit4/bin/GdUnitCmdTool.gd \
     "${adds[@]}" --report-directory "$reports" --ignoreHeadlessMode
+}
+
+# Fails (prints the suites) when tests/thread_guard_hook.gd found a suite that left a net
+# or voice thread running: such a thread hangs the engine at exit (#33).
+thread_leaks() {
+  [[ -s $1/thread-leaks.txt ]] || return 0
+  echo "l1: THREAD LEAK, a suite left a thread running (it hangs the engine at exit):"
+  cat "$1/thread-leaks.txt"
+  return 1
 }
 
 # L1: every test, in L1_SHARDS gdUnit4 processes at once (default 3) over a split of the
@@ -57,26 +66,33 @@ gdunit() {
 # build/reports/l1-<k>/output.log and is printed when it fails. L1_SHARD=k/N runs only
 # shard k of N, in the foreground (one CI job per shard).
 l1() {
-  local n=${L1_SHARDS:-3} ks k i r files pids=() failed=0
+  local n=${L1_SHARDS:-3} ks k i r rc limit files pids=() failed=0
   if [[ -n ${L1_SHARD:-} ]]; then
     n=${L1_SHARD#*/}
     ks=("${L1_SHARD%/*}")
   else
     mapfile -t ks < <(seq 0 $((n - 1)))
   fi
-  rm -rf build/reports
+  rm -rf build/reports && mkdir -p build
   for k in "${ks[@]}"; do
     mapfile -t files < <(python3 tools/l1_shards.py "$k" "$n")
+    limit=$(python3 tools/l1_shards.py --limit "$k" "$n")
     if ((${#ks[@]} == 1)); then
-      reports=build/reports/l1-$k gdunit "${files[@]}"
+      limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}" || return
+      thread_leaks "build/reports/l1-$k"
       return
     fi
-    reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
+    RUN_LIMITED_LOG=build/l1-$k.log limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
     pids+=($!)
   done
   for i in "${!ks[@]}"; do
     k=${ks[$i]}
-    if wait "${pids[$i]}"; then r=pass; else r=FAIL; failed=1; cat "build/l1-$k.log"; fi
+    if wait "${pids[$i]}"; then r=pass; else
+      rc=$?; r=FAIL; failed=1; cat "build/l1-$k.log"
+      ((rc == 124 || rc == 137)) && echo "l1: shard $k hung past its time limit (stack: build/reports/l1-$k/hang-stack.txt); last test started: $(sed 's/\x1b\[[0-9;]*m//g' "build/l1-$k.log" | grep -a ' STARTED$' | tail -1)"
+    fi
+    grep -a "run_limited: WARNING" "build/l1-$k.log"
+    thread_leaks "build/reports/l1-$k" || { r=FAIL; failed=1; }
     echo "l1: shard $k/$n $r: $(grep -a "Overall Summary" "build/l1-$k.log" | sed 's/\x1b\[[0-9;]*m//g')"
     mv "build/l1-$k.log" "build/reports/l1-$k/output.log" 2>/dev/null
   done

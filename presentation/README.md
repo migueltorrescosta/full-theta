@@ -17,7 +17,7 @@ Rendering, cameras and shared widgets; never sim/ (FT-ARC-011). May name station
 - `toasts.gd` (`Toasts`): top-right lines that expire (`SHOW_MS`, `MAX`).
 - `alert_flash.gd` (`AlertFlash`): the screen-edge flash of an alert, fading over `FLASH_MS`.
 - `controls_list.gd` (`ControlsList`): the menu's Controls tab, generated from `Bindings` and `IntentTable` for the screen's stations and device; it follows rebinds (FT-STN-011).
-- `procedural_ship.gd` (`ProceduralShip`): the approved ship art (D107).
+- `procedural_ship.gd` (`ProceduralShip`): loads the approved ship art (D107), baked at build time (D308) in a look per ship name (D309). The builder is `tools/ship_builder.gd`; rebake with `tools/bake_ships.gd`.
 - `comfort_camera.gd` (`ComfortCamera`): the comfort toggle's camera roll (deck, target, reference plane) and field of view (FT-STN-017), for the cockpit, turret and main screen; `target_rot(ctx)` reads the selected ship's NEAR orientation.
 
 ## Using the radar on a station
