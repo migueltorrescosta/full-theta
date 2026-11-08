@@ -123,6 +123,7 @@ func _setup() -> void:
 	var view: SubViewportContainer = SubViewportContainer.new()
 	_view_box = view
 	view.stretch = true
+	RenderQuality.track(view)
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.size_flags_stretch_ratio = (1.0 - RADAR_SHARE) / RADAR_SHARE
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -138,7 +139,7 @@ func _setup() -> void:
 	view.add_child(_viewport)
 	_space = SpaceView.new()
 	_space.near_only = true
-	_space.rim.light_energy = RIM_ENERGY
+	_space.set_rim_energy(RIM_ENERGY)
 	_viewport.add_child(_space)
 	camera = _space.camera
 	_overlay = Control.new()
@@ -188,7 +189,7 @@ func update_view(delta: float) -> void:
 		_space.show_id = -1
 		_space.ship_scale = 1.0
 		if view_id != MainScreen.View.TARGET or not _place_target_camera():
-			_space.rim.light_energy = RIM_ENERGY
+			_space.set_rim_energy(RIM_ENERGY)
 			_space.rim.rotation_degrees = RIM_ROTATION
 			_place_camera(ship, delta)
 		_space.sync_ships(ctx)
@@ -261,7 +262,7 @@ func _place_target_camera() -> bool:
 	_space.place_camera(Transform3D(look, eye), ComfortCamera.fov_deg(ctx.settings, FOV_DEG))
 	# The fill light follows the camera, from its upper left, so the face turned to the
 	# viewer is always the lit one (a fixed light left it dark for half the bearings).
-	_space.rim.light_energy = TARGET_RIM_ENERGY
+	_space.set_rim_energy(TARGET_RIM_ENERGY)
 	_space.rim.transform = Transform3D(
 		look * Basis(Vector3.UP, deg_to_rad(-30.0)) * Basis(Vector3.RIGHT, deg_to_rad(-25.0)),
 		Vector3.ZERO
@@ -298,7 +299,7 @@ func item_at(pos: Vector2) -> Dictionary:
 		var world: Vector3 = it["world"]
 		if camera.is_position_behind(world) or str(it["kind"]) not in ["contact", "mark"]:
 			continue
-		var d: float = camera.unproject_position(world).distance_to(at)
+		var d: float = RenderQuality.unproject(camera, world).distance_to(at)
 		if d < best_d:
 			best_d = d
 			best = {"kind": it["kind"], "id": it["id"]}
@@ -368,7 +369,7 @@ func _draw_overlay() -> void:
 		var world: Vector3 = it["world"]
 		if camera.is_position_behind(world):
 			continue
-		var p: Vector2 = camera.unproject_position(world)
+		var p: Vector2 = RenderQuality.unproject(camera, world)
 		if not Rect2(Vector2.ZERO, _overlay.size).grow(40.0).has_point(p):
 			continue
 		var pulse: float = float(it.get("pulse", 0.0))
@@ -409,7 +410,8 @@ func _draw_card() -> void:
 func _hull_px() -> float:
 	var at: Vector3 = _target_item().get("world", Vector3.ZERO)
 	var side: Vector3 = camera.global_basis.x * (HULL_HALF_M * TARGET_SCALE)
-	return absf(camera.unproject_position(at + side).x - camera.unproject_position(at).x)
+	var edge: Vector2 = RenderQuality.unproject(camera, at + side)
+	return absf(edge.x - RenderQuality.unproject(camera, at).x)
 
 
 func _bracket(p: Vector2, r: float, col: Color, selected: bool) -> void:

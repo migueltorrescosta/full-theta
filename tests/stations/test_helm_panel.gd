@@ -266,6 +266,18 @@ func test_velocity_markers_sit_off_the_nose_by_the_drift_direction() -> void:
 	assert_array(_panel.hud.velocity_markers()).is_empty()
 
 
+# FT: FT-HLM-001, FT-STN-013
+# E2: at half resolution the 3D view is half the HUD's size, so a projected marker still sits
+# on the nose in HUD pixels.
+func test_markers_keep_their_place_at_half_resolution() -> void:
+	_panel._container.stretch_shrink = 2
+	await await_idle_frame()
+	_drift(Vector3(0.0, 0.0, -80.0))
+	var pro: Dictionary = _marker("pro")
+	assert_bool(pro["edge"]).is_false()
+	assert_float((pro["pos"] as Vector2).distance_to(_panel.hud.size / 2.0)).is_less(2.0)
+
+
 # FT: FT-HLM-001
 func test_speed_read_outs_are_per_axis_in_the_ship_frame() -> void:
 	_drift(Vector3(2.5, -12.0, -8.0))

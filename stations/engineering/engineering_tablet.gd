@@ -35,7 +35,7 @@ func _group(panel: EngineeringPanel, ids: Array[String]) -> Control:
 		for a: Array in EngineeringPanel.TOUCH_ACTIONS:
 			if a[0] != id:
 				continue
-			var b: RailButton = panel.rail_button(a)
+			var b: RailButton = EngineeringPhone.rail_button(panel, a)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			buttons[id] = b
 			grid.add_child(b)

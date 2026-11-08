@@ -9,7 +9,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_viewer_phone.cfg"
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 
 func before() -> void:
@@ -69,12 +68,7 @@ func test_one_page_menu_only_both_ways_up() -> void:
 		assert_float(view.position.y).is_greater_equal(s.top_bar.get_global_rect().end.y - 0.5)
 		assert_float(view.end.y).is_less_equal(SafeArea.tap_bottom(s) + 0.5)
 		var report: Dictionary = TapAudit.check(s)
-		for k: String in AUDIT:
-			(
-				assert_array(report[k])
-				. override_failure_message("%s %s: %s" % [what, k, report[k]])
-				. is_empty()
-			)
+		assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 		_drop(s)
 
 

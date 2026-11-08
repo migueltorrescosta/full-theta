@@ -350,6 +350,7 @@ func _build_game(col: VBoxContainer) -> void:
 	col.add_child(_sound)
 	_build_music(col)
 	_build_subtitle_size(col)
+	_build_graphics(col)
 	_add_fullscreen(col)
 	_pause_button = _add_button(
 		col,
@@ -669,8 +670,9 @@ func _build_general(col: VBoxContainer) -> void:
 	_add_button(
 		col, "ResetHints", tr("settings.reset_hints"), func() -> void: settings.reset_hints()
 	)
-	# In a session it sits on the Game tab.
+	# In a session they sit on the Game tab.
 	if not _in_session:
+		_build_graphics(col)
 		_add_fullscreen(col)
 
 
@@ -714,6 +716,37 @@ func _build_subtitle_size(col: VBoxContainer) -> void:
 	)
 	_row(pick)
 	row.add_child(pick)
+
+
+## The graphics options (E2): 3D resolution, the 30 fps cap and Low Graphics. Each applies at
+## once (scale_changed makes the shell apply them) and is saved on close.
+func _build_graphics(col: VBoxContainer) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "ResolutionRow"
+	col.add_child(row)
+	row.add_child(_label(tr("settings.render_3d")))
+	var pick: OptionButton = OptionButton.new()
+	pick.name = "Render3d"
+	for m: String in RenderQuality.MODES:
+		pick.add_item(tr("settings.render_" + m))
+	pick.selected = RenderQuality.MODES.find(settings.render_3d)
+	pick.item_selected.connect(
+		func(i: int) -> void:
+			settings.render_3d = RenderQuality.MODES[i]
+			scale_changed.emit()
+	)
+	_row(pick)
+	row.add_child(pick)
+	_check(col, "FpsCap", tr("settings.fps_cap"), settings.fps_cap).toggled.connect(
+		func(on: bool) -> void:
+			settings.fps_cap = on
+			scale_changed.emit()
+	)
+	_check(col, "LowGraphics", tr("settings.low_graphics"), settings.low_graphics).toggled.connect(
+		func(on: bool) -> void:
+			settings.low_graphics = on
+			scale_changed.emit()
+	)
 
 
 func _build_comfort(col: VBoxContainer) -> void:

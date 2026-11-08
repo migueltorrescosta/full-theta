@@ -105,12 +105,7 @@ func _pad_axis(axis: JoyAxis, value: float) -> void:
 
 
 func _audit_ok(report: Dictionary, what: String) -> void:
-	for list: String in ["under_min", "under_primary", "in_band", "outside_safe", "tight"]:
-		(
-			assert_array(report[list])
-			. override_failure_message("%s: %s %s" % [what, list, report[list]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 ## The tab of page `i` in the screen's strip (the top bar on its side, the bottom bar upright).

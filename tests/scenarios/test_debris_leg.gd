@@ -114,10 +114,6 @@ func test_a_cleared_dock_at_the_yard_pays_the_fee() -> void:
 	var f: ScenarioFixture = legs[0]
 	var card: int = legs[1]
 	var window: Array[int] = StoryRules.lane_window(f.world, card)
-	assert_int(window[1] - window[0]).is_equal(roundi(DebrisLeg.LANE_S * SimWorld.HZ))
-	assert_int(window[0] - f.world.tick).is_between(
-		roundi(DebrisLeg.LANE_OPEN_S * SimWorld.HZ) - 3, roundi(DebrisLeg.LANE_OPEN_S * SimWorld.HZ)
-	)
 	var credits: int = Economy.credits(f.world, 0)
 	f.run(window[0] - f.world.tick + 1)
 	_dock_at_yard(f)

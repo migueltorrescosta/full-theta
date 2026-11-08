@@ -103,6 +103,8 @@ func test_joint_views_are_unions_of_their_stations() -> void:
 				sections[k] = true
 			commands.append_array(sd.commands)
 			claims.append_array(sd.claims)
+			for c: Variant in sd.controls:
+				assert_bool(c in d.controls).override_failure_message(id).is_true()
 			for k: int in sd.fields:
 				assert_array(d.fields[k]).is_equal(sd.fields[k])
 		var want: Array = sections.keys()

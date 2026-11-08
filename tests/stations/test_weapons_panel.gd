@@ -88,13 +88,15 @@ func test_turret_mount_list_lead_and_ammo() -> void:
 	assert_bool(p.focused).is_true()
 	assert_bool(s.radar.is_visible_in_tree()).is_true()
 	assert_int(p.mount_count()).is_equal(1)
-	assert_array(p.mount_rows()).is_equal(["> 1 bow · ready · heat 15% · 380/400 · you"])
+	assert_array(WeaponsReadout.mount_rows(p)).is_equal(
+		["> 1 bow · ready · heat 15% · 380/400 · you"]
+	)
 	s.ctx.crew.claims["mount:0"] = {"session": 99, "name": "Bo"}
-	assert_str(p.mount_rows()[0]).ends_with("· Bo")
+	assert_str(WeaponsReadout.mount_rows(p)[0]).ends_with("· Bo")
 	s.ctx.crew.claims.erase("mount:0")
-	assert_str(p.mount_rows()[0]).ends_with("· free")
+	assert_str(WeaponsReadout.mount_rows(p)[0]).ends_with("· free")
 	(s.ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0] as Dictionary)["heat"] = 40.0
-	assert_str(p.mount_rows()[0]).contains("hot")
+	assert_str(WeaponsReadout.mount_rows(p)[0]).contains("hot")
 	# Lead: a contact crossing at 200 m/s, 2 km ahead.
 	var vel: Vector3 = StationFixture.own_rotation() * Vector3(200.0, 0.0, 0.0)
 	_place(s.ctx, StationFixture.H2, Vector3(0.0, 0.0, -2000.0), vel)
@@ -143,7 +145,7 @@ func test_swap_between_claimed_mounts_and_claim() -> void:
 	assert_int(p.mount).is_equal(2)
 	s.dispatch(_ev(s, "mount_1"))
 	assert_int(p.mount).is_equal(0)
-	assert_str(p.mount_rows()[1]).ends_with("· Bo")
+	assert_str(WeaponsReadout.mount_rows(p)[1]).ends_with("· Bo")
 	s.dispatch(_ev(s, "claim"))
 	assert_array(StationFixture.sent(s.ctx).of("release_claim")).is_equal(
 		[["release_claim", ["mount:0"]]]

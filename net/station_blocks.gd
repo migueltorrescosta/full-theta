@@ -83,6 +83,7 @@ static func _status(world: SimWorld, ship: int) -> Dictionary:
 		"hull": world.damage.health[hull_row],
 		"shields": world.shields.strength[ship],
 		"pips_used": pips,
+		"pip_cap": PowerSystem.pip_cap(world, ship),
 		"propellant": world.kin.propellant[ship],
 		"decoupled": world.helm.decoupled[ship] == 1,
 	}

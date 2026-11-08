@@ -9,7 +9,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_engineering_rail.cfg"
 const ENG: StationViews.Section = StationViews.Section.ENGINEERING
 const INSETS: Array = [0, 0, 0, 24]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 
@@ -56,13 +55,13 @@ func _refresh(s: StationScreen) -> void:
 func test_buttons_on_the_picked_part_name_it() -> void:
 	var s: StationScreen = await _open(Vector2i(844, 390))
 	var e: EngineeringPanel = _panel(s)
-	e.select(2)
+	e.model.select(2)
 	await _refresh(s)
 	assert_str((e.touch_buttons["pip_add"] as RailButton).text).is_equal("Power +\nWPN")
 	assert_str((e.touch_buttons["harden"] as RailButton).text).is_equal("Harden\nWPN")
 	# Not on a part: the plain label.
 	assert_str((e.touch_buttons["boost"] as RailButton).text).is_equal("Boost")
-	e.select(0)
+	e.model.select(0)
 	await _refresh(s)
 	assert_str((e.touch_buttons["pip_add"] as RailButton).text).is_equal("Power +\nENG")
 
@@ -72,7 +71,7 @@ func test_a_button_that_cannot_act_says_why() -> void:
 	var e: EngineeringPanel = _panel(s)
 	var blocks: Dictionary = s.ctx.view.blocks[ENG]
 	# Engines have no fault: Cause is greyed with its reason.
-	e.select(0)
+	e.model.select(0)
 	await _refresh(s)
 	var cause: RailButton = e.touch_buttons["cause_next"]
 	assert_bool(cause.disabled).is_true()
@@ -81,20 +80,20 @@ func test_a_button_that_cannot_act_says_why() -> void:
 	await _refresh(s)
 	assert_bool(cause.disabled).is_false()
 	# The reactor makes pips and takes none; an intact part needs no repair.
-	e.select(5)
+	e.model.select(5)
 	await _refresh(s)
 	assert_str(EngineeringRail.reason(e, "pip_add")).is_equal("reactor")
 	assert_str((e.touch_buttons["pip_remove"] as RailButton).text).is_equal("Power -\nreactor")
-	e.select(1)
+	e.model.select(1)
 	assert_str(EngineeringRail.reason(e, "dispatch_nearest")).is_equal("whole")
 	# Reactor cap: 10 of 12 pips used, two more fit and then none.
-	e.select(4)
+	e.model.select(4)
 	assert_str(EngineeringRail.reason(e, "pip_add")).is_empty()
 	blocks["subsystems"][4]["pips"] = 3
 	assert_str(EngineeringRail.reason(e, "pip_add")).is_equal("cap")
 	# No spare parts: Harden, Repair and Probe say so.
 	blocks["spare_parts"] = 0
-	e.select(0)
+	e.model.select(0)
 	for id: String in ["harden", "dispatch_nearest", "fabricate_probe"]:
 		var why: String = EngineeringRail.reason(e, id)
 		assert_str(why).override_failure_message(id).is_equal("no_parts")
@@ -115,12 +114,7 @@ func test_a_tablet_takes_the_rail_pattern() -> void:
 		assert_int(StationFixture.sent(s.ctx).sent.size()).is_greater(from)
 		assert_bool(s.tablet_dock.is_inside_tree()).is_true()
 		var report: Dictionary = TapAudit.check(s.tablet_dock)
-		for rule: String in AUDIT:
-			(
-				assert_array(report[rule])
-				. override_failure_message("%s: %s breaks %s" % [size, report[rule], rule])
-				. is_empty()
-			)
+		assert_array(StationFixture.rule_breaks(report, str(size))).is_empty()
 		s.queue_free()
 		await get_tree().process_frame
 

@@ -144,13 +144,14 @@ func test_a_fleet_has_one_budget() -> void:
 
 # FT: FT-MIS-008
 func test_the_same_seed_picks_the_same_runs() -> void:
-	var a: Array[Dictionary] = []
-	var b: Array[Dictionary] = []
+	Determinism.assert_deterministic(self, _normal_decisions)
+
+
+func _normal_decisions() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	for dec: DirectorDecision in (_run(&"normal")[1] as Director).decisions():
-		a.append(dec.to_dict())
-	for dec: DirectorDecision in (_run(&"normal")[1] as Director).decisions():
-		b.append(dec.to_dict())
-	assert_array(a).is_equal(b)
+		out.append(dec.to_dict())
+	return out
 
 
 # FT: FT-MIS-025, FT-MIS-027

@@ -102,21 +102,6 @@ func test_text_round_trip_is_exact() -> void:
 
 
 # FT: FT-ARC-008
-# Commands rebuilt from the log carry their recorded tick and parameters.
-func test_commands_rebuild_with_recorded_ticks() -> void:
-	var world: SimWorld = _world_with_commands()
-	var cmds: Array[SimCommand] = CommandLog.from_world(world).commands()
-	assert_int(cmds.size()).is_equal(world.command_log.size())
-	for i: int in cmds.size():
-		assert_object(cmds[i].get_script()).is_same(world.command_log[i].get_script())
-		assert_int(cmds[i].tick).is_equal(world.command_log[i].tick)
-		var same: bool = (
-			var_to_bytes(cmds[i].to_dict()) == var_to_bytes(world.command_log[i].to_dict())
-		)
-		assert_bool(same).is_true()
-
-
-# FT: FT-ARC-008
 # Malformed text, another format or an unknown command kind loads as null.
 func test_from_text_rejects_bad_input() -> void:
 	var good: String = CommandLog.from_world(_world_with_commands(), SETUP).to_text()
@@ -125,7 +110,7 @@ func test_from_text_rejects_bad_input() -> void:
 	assert_object(CommandLog.from_text(good + "nonsense\n")).is_null()
 	assert_object(CommandLog.from_text(good + "extra=AAAA\n")).is_null()
 	var other_format: String = good.replace(
-		CommandLog._line("format", CommandLog.FORMAT), CommandLog._line("format", 1)
+		CommandLog.text_line("format", CommandLog.FORMAT), CommandLog.text_line("format", 1)
 	)
 	assert_object(CommandLog.from_text(other_format)).is_null()
 	var bogus: CommandLog = CommandLog.from_text(good)

@@ -28,8 +28,10 @@ func test_fifteen_pairs_of_crew_stations() -> void:
 
 
 # FT: FT-PAIR-001, FT-PAIR-003, FT-PAIR-004, FT-PAIR-015, FT-TST-006, FT-WPN-007, FT-M1-010
+# FT: FT-SIM-002
 # Co-op beats solo by the pair's gain (PairHarness.min_gain) on each of its metrics, and both
-# complete; then the pair's own extra assertions.
+# complete; then the pair's own extra assertions. A second co-op run ends in the same state
+# (the same seed and scripts give the same end state).
 func test_coop_beats_solo(
 	id: String,
 	test_parameters := [
@@ -59,6 +61,15 @@ func test_coop_beats_solo(
 		. is_empty()
 	)
 	_extras(id, row, runs)
+	# A fresh row, so no crew script carries state from the first run.
+	Determinism.assert_replays(
+		self, runs.coop.state_hash, func() -> String: return _coop_hash(id), id
+	)
+
+
+func _coop_hash(id: String) -> String:
+	var row: Dictionary = PairCases.of(id)
+	return (row["harness"] as PairHarness).run(row["coop"]).state_hash
 
 
 # The assertions beyond the metrics' gain that a pair's test makes.
@@ -95,12 +106,3 @@ func _extras(id: String, row: Dictionary, runs: Dictionary[String, PairHarness.R
 			assert_float(runs.solo.metrics.scan_on_probe).is_equal(0.0)
 		"p14":
 			assert_float(runs.solo.metrics.reputation).is_equal(0.0)
-
-
-# FT: FT-PAIR-015, FT-SIM-002
-# The same seed and scripts give the same end state in every pair's co-op run.
-func test_runs_are_deterministic() -> void:
-	for id: String in PairCases.IDS:
-		var a: PairHarness.Run = PairCases.of(id)["harness"].run(PairCases.of(id)["coop"])
-		var b: PairHarness.Run = PairCases.of(id)["harness"].run(PairCases.of(id)["coop"])
-		assert_str(a.state_hash).override_failure_message(id).is_equal(b.state_hash)

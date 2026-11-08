@@ -9,7 +9,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_weapons_tablet.cfg"
 const INSETS: Array = [0, 0, 0, 24]
 const SIZES: Array = [Vector2i(1180, 820), Vector2i(820, 1180), Vector2i(1280, 800)]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 var _screen: StationScreen
@@ -92,12 +91,7 @@ func _tap(c: Control) -> void:
 
 
 func _audit_ok(report: Dictionary, what: String) -> void:
-	for rule: String in AUDIT:
-		(
-			assert_array(report[rule])
-			. override_failure_message("%s: %s breaks %s" % [what, report[rule], rule])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 # FT: FT-STN-005

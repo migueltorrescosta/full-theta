@@ -115,9 +115,9 @@ func test_ammo_select_cycles_the_types() -> void:
 	assert_int(_commands(second, "set_ammo_type")[0]["ammo_type"]).is_equal(0)
 	second.dispatch(_ev(second, "ammo_prev"))
 	assert_int(_commands(second, "set_ammo_type")[1]["ammo_type"]).is_equal(0)
-	assert_str(q._ammo_text()).is_equal("Ammo: Missile")
-	assert_str(p._ammo_text()).is_equal("Ammo: Mass driver")
-	assert_str(q.mount_rows()[0]).contains("/8")
+	assert_str(WeaponsReadout.ammo_text(q)).is_equal("Ammo: Missile")
+	assert_str(WeaponsReadout.ammo_text(p)).is_equal("Ammo: Mass driver")
+	assert_str(WeaponsReadout.mount_rows(q)[0]).contains("/8")
 
 
 # FT: FT-WPN-008, FT-STN-010
@@ -190,5 +190,5 @@ func test_locked_mount_shows_and_holds_fire() -> void:
 	var s: StationScreen = _screen()
 	var p: WeaponsPanel = _panel(s)
 	s.ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0]["locked"] = true
-	assert_str(p.mount_rows()[0]).contains("locked")
+	assert_str(WeaponsReadout.mount_rows(p)[0]).contains("locked")
 	assert_bool(p._try_fire(0, s.ctx.now_ms())).is_false()

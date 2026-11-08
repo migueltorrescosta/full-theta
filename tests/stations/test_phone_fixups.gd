@@ -51,12 +51,7 @@ func _drop(s: StationScreen) -> void:
 func _assert_clean(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).override_failure_message(what + ": no targets").is_not_empty()
-	for k: String in AUDIT:
-		(
-			assert_array(report[k])
-			. override_failure_message("%s %s: %s" % [what, k, report[k]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what, AUDIT)).is_empty()
 
 
 func _share_buttons(s: StationScreen) -> Array[Button]:
@@ -337,9 +332,9 @@ func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
 			for focus: int in n:
 				var s: StationScreen = await _screen(f[0], entry, f[1], focus)
 				var report: Dictionary = TapAudit.check(s)
-				for k: String in AUDIT:
-					if not report[k].is_empty():
-						bad.append("%s %s/%d %s: %s" % [f[0], entry, focus, k, report[k]])
+				bad.append_array(
+					StationFixture.rule_breaks(report, "%s %s/%d" % [f[0], entry, focus], AUDIT)
+				)
 				_drop(s)
 	assert_array(bad).override_failure_message("\n".join(bad)).is_empty()
 

@@ -10,7 +10,6 @@ const SETTINGS: String = "user://test_weapons_touch.cfg"
 ## The mockups' iPhone insets [left, top, right, bottom].
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 
@@ -94,12 +93,7 @@ func _tap(c: Control) -> void:
 func _assert_touch_rules(s: StationScreen, what: String) -> Dictionary:
 	var report: Dictionary = TapAudit.check(s)
 	assert_array(report["targets"]).is_not_empty()
-	for rule: String in AUDIT:
-		(
-			assert_array(report[rule])
-			. override_failure_message("%s: %s breaks %s" % [what, report[rule], rule])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 	return report
 
 
@@ -375,7 +369,7 @@ func test_drag_aims_and_tap_selects() -> void:
 	_touch(c + Vector2(40, 0), false)
 	var f: float = (t.stage.size.y / 2.0) / tan(deg_to_rad(p.fov) / 2.0)
 	assert_float(before.angle_to(p.aim_dir(0))).is_equal_approx(40.0 / f, 2e-3)
-	p._flush_aims(s.ctx.now_ms(), true)
+	p.aim.flush(s.ctx.now_ms(), true)
 	assert_int(_commands(s, "aim_mount").size()).is_greater(sent)
 	assert_array(StationFixture.sent(s.ctx).of("ping")).is_empty()
 	# A tap on the U3 bracket (no drag) selects it; nothing fires.
@@ -398,7 +392,7 @@ func _look_at(p: WeaponsPanel, id: int) -> void:
 
 ## The viewport position of contact `id`'s bracket.
 func _bracket(p: WeaponsPanel, id: int) -> Vector2:
-	for target: Dictionary in p._targets:
+	for target: Dictionary in p._overlay.targets:
 		if int(target["item"]["id"]) == id:
 			return p._overlay.get_global_transform() * (target["pos"] as Vector2)
 	return Vector2(-1, -1)
@@ -455,8 +449,8 @@ func test_out_of_arc_warning_clears_the_chips() -> void:
 		var p: WeaponsPanel = _panel(s)
 		var arc: String = p.out_of_arc_text()
 		assert_str(arc).starts_with("U3 out of arc")
-		var r: Rect2 = p.arc_warning_rect(p.get_theme_default_font(), arc)
-		for target: Dictionary in p._targets:
+		var r: Rect2 = p._overlay.arc_warning_rect(p.get_theme_default_font(), arc)
+		for target: Dictionary in p._overlay.targets:
 			assert_bool((target["rect"] as Rect2).intersects(r)).is_false()
 		var g: Rect2 = p._overlay.get_global_transform() * r
 		assert_bool(g.intersects(p.touch().target_label.get_global_rect())).is_false()

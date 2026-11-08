@@ -93,13 +93,13 @@ func test_cutaway_shows_health_heat_and_recent_hits_and_rotates() -> void:
 	var e: EngineeringPanel = _panel(s)
 	assert_object(e.ship_def).is_not_null()
 	assert_int(e.count()).is_equal(6)
-	assert_float(e.health_frac(0)).is_equal_approx(0.4, 1e-6)
-	assert_float(e.heat_frac(3)).is_equal_approx(80.0 / 95.0, 1e-6)
+	assert_float(e.model.health_frac(0)).is_equal_approx(0.4, 1e-6)
+	assert_float(e.model.heat_frac(3)).is_equal_approx(80.0 / 95.0, 1e-6)
 	# Hits on the own ship are kept with their ship-frame point; others' are not.
 	_hit(s, StationFixture.SHIP, Vector3(0, 1, 16))
 	_hit(s, 2, Vector3(0, 0, -10))
-	assert_int(e.hits.size()).is_equal(1)
-	assert_vector(e.hits[0]["pos"]).is_equal(Vector3(0, 1, 16))
+	assert_int(e.model.hits.size()).is_equal(1)
+	assert_vector(e.model.hits[0]["pos"]).is_equal(Vector3(0, 1, 16))
 	# Every subsystem disc is where the hit test finds it.
 	var cut: EngineeringCutaway = e.cutaway
 	assert_vector(cut.size).is_not_equal(Vector2.ZERO)
@@ -117,16 +117,34 @@ func test_cutaway_shows_health_heat_and_recent_hits_and_rotates() -> void:
 	cut.rotate_by(Vector2(0.5, 0.0))
 	assert_float(cut.yaw).is_not_equal(yaw)
 	# Hits fade out.
-	StationFixture.clock(s.ctx).ms += EngineeringPanel.HIT_MS + 1
+	StationFixture.clock(s.ctx).ms += EngineeringModel.HIT_MS + 1
 	e._process(0.016)
-	assert_array(e.hits).is_empty()
+	assert_array(e.model.hits).is_empty()
+
+
+# FT: FT-ENG-002
+# A damaged reactor lowers the pip cap the STATUS block carries: the board's reactor line
+# shows used/cap (review 2026-11-08, PowerSystem.pip_cap); a pip over it goes to the server,
+# whose refusal is the toast (F5, R12-7).
+func test_damaged_reactor_lowers_the_pip_cap_shown_and_enforced() -> void:
+	var s: StationScreen = await _screen()
+	var e: EngineeringPanel = _panel(s)
+	assert_int(s.ctx.pip_cap()).is_equal(12)
+	s.ctx.view.blocks[StationViews.Section.STATUS]["pip_cap"] = 10
+	assert_int(s.ctx.pip_cap()).is_equal(10)
+	assert_int(e.model.pips_used()).is_equal(10)
+	_press(s, "subsystem_2")
+	var n: int = _commands(s).size()
+	_press(s, "pip_add")
+	assert_int(_commands(s).size()).is_equal(n + 1)
+	assert_str(PartnerGlance.readout(s.ctx, "eng.reactor")).contains("10/10")
 
 
 # FT: FT-ENG-002
 func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
-	assert_int(e.pips_used()).is_equal(10)
+	assert_int(e.model.pips_used()).is_equal(10)
 	# KB/M: 2 selects thrusters, + adds a pip (above nominal 2: overcharge).
 	assert_bool(_press(s, "subsystem_2")).is_true()
 	assert_int(e.selected).is_equal(1)
@@ -142,15 +160,16 @@ func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 	var n: int = _commands(s).size()
 	_press(s, "pip_add")
 	assert_int(_commands(s).size()).is_equal(n)
-	# Controller: d-pad right to weapons, RT adds: over the reactor cap (12), refused here.
+	# Controller: d-pad right to weapons, RT adds: over the reactor cap (12) the server
+	# refuses it (F5), so the client sends it.
 	assert_bool(_press(s, "subsystem_next", "pad")).is_true()
 	assert_int(e.selected).is_equal(2)
 	_press(s, "pip_add", "pad")
-	assert_int(_commands(s).size()).is_equal(n)
-	assert_array(_toasts).contains(["toast.eng_cap"])
+	assert_int(_commands(s).size()).is_equal(n + 1)
+	# The sent pip shows as pending until the snapshot or PENDING_MS, so LT goes down from it.
 	_press(s, "pip_remove", "pad")
 	assert_dict(_commands(s)[-1]).is_equal(
-		{"kind": "set_pips", "subsystem_kind": KIND.WEAPONS, "pips": 1}
+		{"kind": "set_pips", "subsystem_kind": KIND.WEAPONS, "pips": 2}
 	)
 	# The reactor takes no pips.
 	_press(s, "subsystem_6")
@@ -168,13 +187,13 @@ func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 		{"kind": "set_pips", "subsystem_kind": KIND.SENSORS, "pips": 1}
 	)
 	# The sent value shows until the snapshot agrees or PENDING_MS passes.
-	StationFixture.clock(s.ctx).ms += EngineeringPanel.PENDING_MS + 1
+	StationFixture.clock(s.ctx).ms += EngineeringModel.PENDING_MS + 1
 	assert_int(e.pips_of(1)).is_equal(2)
 	# Boost (O / LB+RT), once at a time.
 	_press(s, "boost")
 	assert_dict(_commands(s)[-1]).is_equal({"kind": "boost"})
 	s.ctx.view.blocks[StationViews.Section.ENGINEERING]["boost_ticks"] = 300
-	assert_bool(e.is_boosted(0) and not e.is_boosted(2)).is_true()
+	assert_bool(e.model.is_boosted(0) and not e.model.is_boosted(2)).is_true()
 	_press(s, "boost", "pad")
 	assert_dict(_commands(s)[-1]).is_equal({"kind": "boost"})
 	assert_array(_toasts).contains(["toast.eng_boosting"])
@@ -184,7 +203,7 @@ func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 func test_shield_power_and_tightness() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
-	assert_float(e.shield_frac()).is_equal_approx(0.7, 1e-6)
+	assert_float(e.model.shield_frac()).is_equal_approx(0.7, 1e-6)
 	_press(s, "shield_tighter")
 	assert_dict(_commands(s)[-1]).is_equal({"kind": "set_shield", "power": -1, "tightness": 2.0})
 	_press(s, "shield_wider", "pad")
@@ -242,7 +261,7 @@ func test_drag_a_crew_to_a_subsystem_and_back_and_controller_dispatch() -> void:
 	assert_int(cut.move_cursor(Vector2(-18, 0))).is_equal(0)
 	# Crews another player holds are skipped; with none free, a toast.
 	s.ctx.view.ownership = {"claims": {"crew:1": [99, "Bo"]}, "writers": {}}
-	assert_bool(e.crew_taken(1)).is_true()
+	assert_bool(e.model.crew_taken(1)).is_true()
 	_press(s, "subsystem_3", "pad")
 	_press(s, "dispatch_nearest", "pad")
 	assert_dict(_commands(s)[-1]).is_equal(
@@ -260,14 +279,14 @@ func test_drag_a_crew_to_a_subsystem_and_back_and_controller_dispatch() -> void:
 func test_faults_repair_queue_and_spares_list() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
-	var faults: Array = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	var faults: Array = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(faults).is_equal(["Engines 40%", "Weapons 75%", "Shields running hot"])
 	# A heat fault event lists the subsystem as overheated for a while.
 	var p: Dictionary = {"ship": 0, "faction": 0, "other": -1, "value": 110.0, "tag": "weapons"}
 	s.ctx.crew.handle_event({"type": "fault", "payload": p}, s.ctx.now_ms())
 	# worst first: the overheated part (danger) leads the warnings
-	assert_str(e.fault_lines()[0][0]).is_equal("Weapons overheated (75%)")
-	var queue: Array = e.queue_lines().map(func(l: Array) -> String: return l[0])
+	assert_str(e.model.fault_lines()[0][0]).is_equal("Weapons overheated (75%)")
+	var queue: Array = e.model.queue_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(queue).is_equal(
 		["1. ENG 40%  A", "2. WPN 75%  waiting", "Crew A: ENG", "Crew B: idle"]
 	)

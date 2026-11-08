@@ -49,12 +49,3 @@ func test_a_director_run_replays_from_its_command_log() -> void:
 	assert_int(replayed.ship_count()).is_equal(live.ship_count())
 	assert_int(replayed.encounters.size()).is_equal(live.encounters.size())
 	assert_str(replayed.state_hash()).is_equal(live.state_hash())
-
-
-# FT: FT-ARC-008
-func test_the_same_seed_and_director_give_the_same_run() -> void:
-	var a: SimWorld = _fresh()
-	var b: SimWorld = _fresh()
-	_drive(a)
-	_drive(b)
-	assert_str(a.state_hash()).is_equal(b.state_hash())

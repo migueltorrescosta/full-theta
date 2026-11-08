@@ -80,7 +80,7 @@ var training: TrainingBanner
 var panel_factory: Callable = StationRegistry.make
 ## Controls of the shell that take the input while visible (Settings, the outcome card).
 var blockers: Array[Control] = []
-## The viewport's form (LayoutMode.Form), kept by _relayout; panels read it.
+## The viewport's form (LayoutMode.Form), kept by the layout; panels read it.
 var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
 ## Show the "turn sideways" banner on a phone held upright (#28).
 var rotate_prompt: bool = true
@@ -95,7 +95,7 @@ var joint_switch: RailButton = null
 var share_drawer: TouchDrawer
 var share_opener: RailButton
 ## The phone frame (#28 follow-up, PhoneFrame): shown only on phones, so tablets and
-## desktops keep their layout. `phone` is set by _relayout.
+## desktops keep their layout. `phone` is set by the layout.
 var phone: bool = false
 var frame: PhoneFrame = PhoneFrame.new()
 ## The focused panel's docked touch rails on a tablet (#32, TabletDock), or null. The panel
@@ -103,6 +103,10 @@ var frame: PhoneFrame = PhoneFrame.new()
 var tablet_dock: TabletDock = null
 ## One-level choices: the selection, alert and dev-station sheets, and the panels' (Hack).
 var sheet: ChoiceSheet
+
+## The layout half and the common crew actions (R13-1); both keep a pointer back to this screen.
+var layout: StationScreenLayout = StationScreenLayout.new(self)
+var common: StationCommonActions = StationCommonActions.new(self)
 
 var _rows: VBoxContainer
 var _main: Control
@@ -141,15 +145,15 @@ func setup(context: StationContext) -> void:
 		stations.append(str(s))
 	if stations.is_empty():
 		stations.append(ctx.crew.entry)
-	_build()
-	_relayout()
+	layout.build()
+	layout.relayout()
 	for s: String in stations:
 		var p: StationPanel = panel_factory.call(s)
 		if p == null:
 			# (an unknown id: StationRegistry.make has reported it; keep `panels` parallel to `stations`)
 			p = StationPanel.new()
 		p.sheet = sheet
-		p.common_requested.connect(_on_panel_common)
+		p.common_requested.connect(common.on_panel_common)
 		p.setup(ctx, s)
 		p.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		p.gui_input.connect(_on_panel_input.bind(p))
@@ -165,15 +169,15 @@ func setup(context: StationContext) -> void:
 	add_child(training)
 	training.setup(ctx)
 	Input.joy_connection_changed.connect(_on_joy_changed)
-	_build_tabs()
+	layout.build_tabs()
 	focus(0)
 	rotate_banner.settings = ctx.settings
 	rotate_banner.refresh()
 
 
 func _ready() -> void:
-	get_viewport().size_changed.connect(_relayout)
-	_relayout()
+	get_viewport().size_changed.connect(layout.relayout)
+	layout.relayout()
 	_open_first_visit_help()
 
 
@@ -209,18 +213,18 @@ func focus(i: int) -> void:
 	if training != null:
 		training.station = focused_station()
 	radar.orbitable = focused_panel().radar_orbitable()
-	_raise_overlays()
-	_apply_band()
-	_show_side()
+	layout.raise_overlays()
+	layout.apply_band()
+	layout.show_side()
 	if _tabs != null:
-		_show_tabs()
+		layout.show_tabs()
 	_open_first_visit_help()
 
 
 ## A panel built or dropped its phone pages after the screen laid out: binds the focused
 ## panel's tabs again (PageHost, `pages`).
 func pages_changed() -> void:
-	_show_side()
+	layout.show_side()
 
 
 ## Docks `dock` (a panel's tablet rails) over the screen's edges, or lets the old one go with
@@ -233,194 +237,7 @@ func set_tablet_dock(dock: TabletDock) -> void:
 	tablet_dock = dock
 	if dock != null:
 		add_child(dock)
-	_relayout()
-
-
-## The room the tablet dock takes (x at each side, or y at the bottom); zero without one.
-func _dock_reserve() -> Vector2:
-	return tablet_dock.reserve() if tablet_dock != null else Vector2.ZERO
-
-
-## The radar column hides for a lone full-screen panel (which may depend on the form). A
-## joint view or the dev seat on a phone on its side (#28) shows only the focused panel,
-## which gets the whole width when it draws its own rails and radar, and the station chip
-## in the top bar's tab strip instead of the docked panels (FT-JNT-001: tap to focus). On
-## a phone on its side the share buttons move into a drawer
-## (D274: 48 px with 8 px gaps don't fit under the disc); its opener sits at the top of the
-## radar column or, with the column hidden, at the bottom centre of the main area (clear of
-## the rails); a panel may take the opener into its rails (StationPanel.share_slot) or show
-## the buttons itself. Off a phone a full-screen panel hides the column and holds the buttons
-## in its StationPanel.share_home.
-func _show_side() -> void:
-	if panels.is_empty():
-		return
-	var form_now: LayoutMode.Form = (
-		LayoutMode.form_of(self) if is_inside_tree() else LayoutMode.Form.DESKTOP
-	)
-	var sideways: bool = form_now == LayoutMode.Form.PHONE_LANDSCAPE
-	var phone_form: bool = LayoutMode.is_phone(form_now)
-	# Upright a joint view keeps its docked panels until the stations' upright layouts
-	# leave room for the bottom tab bar (#28 follow-up, wave 2).
-	var phone_alone: bool = panels.size() >= 2 and sideways
-	var alone: bool = panels.size() == 1 or phone_alone
-	_side.visible = not (alone and focused_panel().full_screen())
-	_dock.visible = not phone_alone
-	if _tabs != null:
-		_tabs.visible = not phone_form
-	frame.show_tabs(form_now, phone_alone)
-	# Off a phone a full-screen panel (Science alone) holds the buttons in its share_home, so
-	# they stay on screen without the radar column (D217, #35 A11).
-	var home: Container = null if _side.visible or phone_form else focused_panel().share_home
-	# Also in the drawer whenever a phone's radar column is hidden (Science alone upright).
-	var in_drawer: bool = sideways or (not _side.visible and home == null)
-	var parent: Control = share_drawer.body if in_drawer else (home if home != null else _extras)
-	if share_bar.get_parent() != parent:
-		share_bar.reparent(parent, false)
-		if parent == _extras:
-			_extras.move_child(share_bar, _extras_pad.get_index() + 1)
-	if in_drawer:
-		share_bar.min_width = TouchDrawer.WIDTH - 2.0 * UiTheme.TOUCH_GAP
-	_sync_share()
-	_place_phone_bar()
-	_place_training(
-		not phone_form and _side.visible and training != null and not training.touch_layout()
-	)
-
-
-## The side column scrolls in whole rows: the room under the last row that fits is a margin.
-func _snap_side() -> void:
-	if _side_margin != null and is_inside_tree():
-		ScrollSnap.fit(_side_scroll, _side_margin, _extras)
-
-
-## The Shakedown card sits at the top of the side column when there is one (it then covers
-## no gauge), else floats over the screen.
-func _place_training(in_column: bool) -> void:
-	if training == null:
-		return
-	if in_column and training.get_parent() != _extras:
-		training.reparent(_extras, false)
-		_extras.move_child(training, 0)
-		training.dock(true)
-	elif not in_column and training.get_parent() != self:
-		training.reparent(self, false)
-		training.dock(false)
-
-
-## The opener shows while the share buttons sit in the drawer and there is something to
-## share; the drawer closes when there isn't.
-func _sync_share() -> void:
-	var want: bool = (
-		share_bar.get_parent() == share_drawer.body
-		and share_bar.visible
-		and not focused_panel().shows_shares
-	)
-	if not want:
-		share_drawer.close()
-	if share_opener.visible != want or share_opener.get_parent() != _opener_home():
-		share_opener.visible = want
-		_place_phone_bar()
-
-
-## The opener's container: the panel's slot in its rails while the radar column is hidden
-## (Science), else the bar with the joint switch.
-func _opener_home() -> Container:
-	var slot: Container = null if _side.visible else focused_panel().share_slot
-	return slot if slot != null else _phone_bar
-
-
-func _place_phone_bar() -> void:
-	var home: Container = _opener_home()
-	if share_opener.get_parent() != home:
-		if share_opener.get_parent() != null:
-			share_opener.get_parent().remove_child(share_opener)
-		home.add_child(share_opener)
-	share_opener.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var shown: bool = share_opener.visible and home == _phone_bar
-	_phone_bar.visible = shown
-	var in_side: bool = _side.visible
-	for p: StationPanel in panels:
-		var reserve: float = 0.0
-		if shown and not in_side and p == focused_panel():
-			reserve = UiTheme.TOUCH_PRIMARY + 2.0 * UiTheme.TOUCH_GAP + _band_h
-		if p.bottom_reserve != reserve:
-			p.bottom_reserve = reserve
-			p.queue_redraw()
-	var parent: Control = _extras if in_side else _main
-	if _phone_bar.get_parent() != parent:
-		_phone_bar.reparent(parent, false)
-	_phone_bar.vertical = in_side
-	var w: float = OPENER_W if share_opener.get_parent() == _phone_bar and not in_side else 0.0
-	share_opener.custom_minimum_size = Vector2(w, UiTheme.TOUCH_PRIMARY)
-	if in_side:
-		_extras.move_child(_phone_bar, 0)
-	else:
-		_phone_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-		_phone_bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		_phone_bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
-		_phone_bar.offset_bottom = -UiTheme.TOUCH_GAP - _band_h
-	# The drawer: beside the radar column, or centred above the bar; never in the band.
-	var half: float = TouchDrawer.WIDTH / 2.0
-	share_drawer.anchor_top = 0.0
-	share_drawer.anchor_bottom = 1.0
-	share_drawer.offset_top = UiTheme.TOUCH_GAP
-	if in_side:
-		share_drawer.anchor_left = 1.0
-		share_drawer.anchor_right = 1.0
-		share_drawer.offset_right = -UiTheme.TOUCH_GAP
-		share_drawer.offset_left = -UiTheme.TOUCH_GAP - TouchDrawer.WIDTH
-		share_drawer.offset_bottom = -_band_h
-	else:
-		share_drawer.anchor_left = 0.5
-		share_drawer.anchor_right = 0.5
-		share_drawer.offset_left = -half
-		share_drawer.offset_right = half
-		share_drawer.offset_bottom = -UiTheme.TOUCH_PRIMARY - 2.0 * UiTheme.TOUCH_GAP - _band_h
-	_raise_overlays()
-
-
-## Keeps the main area's overlays over the focused panel, in order: the bottom bar, the
-## share drawer, the view-top row, the choice sheet on top.
-func _raise_overlays() -> void:
-	for c: Control in [_phone_bar, share_drawer, frame.view_top, sheet]:
-		if c != null and c.get_parent() == _main:
-			_main.move_child(c, -1)
-
-
-## The dev seat's station switcher: a tab per panel, numbered for Shift + digit, and until the
-## first switch a one-line hint (kept in the first-run tips).
-func _build_tabs() -> void:
-	if panels.size() < TABS_FROM:
-		return
-	_tabs = HFlowContainer.new()
-	_tabs.add_theme_constant_override("h_separation", 4)
-	_tabs.add_theme_constant_override("v_separation", 2)
-	top_bar.get_parent().add_child(_tabs)
-	top_bar.get_parent().move_child(_tabs, top_bar.get_index() + 1)
-	for i: int in panels.size():
-		var b: Button = Button.new()
-		b.name = "Tab%d" % (i + 1)
-		b.toggle_mode = true
-		b.text = "%d %s" % [i + 1, tr("station." + stations[i])]
-		b.focus_mode = Control.FOCUS_NONE
-		b.pressed.connect(focus.bind(i))
-		_tabs.add_child(b)
-	_hint = Label.new()
-	_hint.text = tr("screen.tabs_hint") % panels.size()
-	_hint.add_theme_color_override("font_color", Palette.color("text_dim"))
-	_hint.visible = not ctx.settings.hint_seen(TAB_HINT_KEY)
-	_hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_tabs.add_child(_hint)
-
-
-## Marks the focused tab; a switch after the first panel retires the hint.
-func _show_tabs() -> void:
-	for i: int in panels.size():
-		(_tabs.get_child(i) as Button).set_pressed_no_signal(i == focus_index)
-	if _hint.visible and focus_index != 0:
-		_hint.visible = false
-		ctx.settings.mark_hint_seen(TAB_HINT_KEY)
-		ctx.settings.save()
+	layout.relayout()
 
 
 ## Shift + 1..N focuses panel N while the tab strip exists.
@@ -448,7 +265,7 @@ func _tab_hotkey(event: InputEvent) -> bool:
 func dispatch(ev: Dictionary) -> bool:
 	var target: String = str(ev.get("target", ""))
 	if target == "screen":
-		return _common(ev)
+		return common.run(ev)
 	var i: int = stations.find(target)
 	return i >= 0 and panels[i].handle_intent(ev)
 
@@ -517,8 +334,8 @@ func _process(delta: float) -> void:
 	# A phone panel with its shares on its Crew page shows no second set beside the radar.
 	var none: Array[StringName] = []
 	var own: bool = phone and focused_panel().shows_shares
-	share_bar.show_features(none if own else shareable(), left)
-	_sync_share()
+	share_bar.show_features(none if own else common.shareable(), left)
+	layout.sync_share()
 
 
 ## The own ship's hull and shield maxima (J), for the top bar's percentages.
@@ -575,210 +392,32 @@ func _dispatch_batch(batch: Array[Dictionary]) -> void:
 			consumed = true
 
 
-# --- Common actions (§5.0). ---
-
-
-func _common(ev: Dictionary) -> bool:
-	if not bool(ev.get("pressed", true)):
-		return false
-	var id: String = ev["id"]
-	var device: String = str(ev.get("device", IntentTable.KBM))
-	var handled: bool = true
-	match id:
-		"select":
-			handled = _select(device)
-		"cycle_target":
-			ctx.crew.cycle("contact", contacts_by_range())
-		"select_pinged":
-			handled = ctx.crew.select_pinged(ctx.now_ms())
-		"ping":
-			_ping(device)
-		"mark":
-			_mark(device)
-		"accept", "decline":
-			handled = focused_panel().handle_intent(ev) or _answer_chip(id == "accept")
-		"request":
-			handled = focused_panel().has_request_chip()
-			if handled:
-				focused_panel().send_request()
-		"radar_strip":
-			radar.toggle_strip()
-		"claim":
-			_claim()
-		"share":
-			handled = not shareable().is_empty()
-			for feature: StringName in shareable():
-				ctx.intents.share(String(feature))
-		"overlay":
-			# The Controls chip says this key opens the page, so it has done its job (D4).
-			var chip: Node = find_child("ControlsChip", false, false)
-			if chip != null:
-				chip.queue_free()
-			help_requested.emit()
-			_update_block()
-		"menu":
-			# Esc first closes an open choice sheet, then what the focused panel has open on
-			# top (Comms' overlay).
-			if sheet.is_open():
-				sheet.cancel()
-			elif not focused_panel().close_overlay():
-				menu_requested.emit()
-				_update_block()
-		_:
-			handled = _live(id)
-	return handled
+# --- Common actions (StationCommonActions, §5.0). ---
 
 
 ## The data shortcuts this screen's stations may share with their partners (D210).
 func shareable() -> Array[StringName]:
-	var out: Array[StringName] = []
-	if ctx.crew.is_crew():
-		out = ShareBar.features(stations, ctx.crew.toggles)
-	return out
+	return common.shareable()
 
 
-## Answers the oldest request chip sent to this screen, the focused station's first
-## (FT-PAIR-013); false when none is open.
-func _answer_chip(accept: bool) -> bool:
-	var open: Array[Dictionary] = ChipView.incoming(ctx.view, stations)
-	if open.is_empty():
-		return false
-	var mine: Array[Dictionary] = open.filter(
-		func(c: Dictionary) -> bool: return c["to"] == focused_station()
-	)
-	ctx.intents.answer_chip(int((mine if not mine.is_empty() else open)[0]["id"]), accept)
-	return true
-
-
-## Select under the pointer; false over nothing, so the click falls through to the
-## panel (owner decision in #7: LMB fires in the turret).
-func _select(device: String) -> bool:
-	if device == IntentTable.PAD and focused_panel().take_select():
-		return true
-	var item: Dictionary = item_under_cursor(device)
-	if item.is_empty() or item["kind"] == "point" or item["kind"] == "card":
-		return false
-	ctx.crew.select(item["kind"], item["id"])
-	return true
-
-
-func _live(id: String) -> bool:
-	match id:
-		"alert_cycle":
-			_set_alert((ctx.crew.alert + 1) % CrewState.ALERT_LEVELS)
-		"alert_red":
-			_set_alert(CrewState.ALERT_RED)
-		"alert_yellow":
-			_set_alert(CrewState.ALERT_YELLOW)
-		"alert_normal":
-			_set_alert(CrewState.ALERT_NORMAL)
-		"training_next":
-			return training.press()
-		"focus_1", "focus_2":
-			var n: int = panels.size()
-			if n <= 2:
-				focus(0 if id == "focus_1" else 1)
-			else:
-				focus((focus_index + (n - 1 if id == "focus_1" else 1)) % n)
-		_:
-			return false
-	return true
-
-
-## The item under the pointer (KB/M: the radar if the mouse is over it, else the focused
-## panel at the mouse) or, on a controller, under the focused panel's reticle (its
-## centre unless it says otherwise).
-func item_under_cursor(device: String) -> Dictionary:
-	var p: StationPanel = focused_panel()
-	if device == IntentTable.PAD:
-		return p.item_at(p.cursor_pos())
-	return item_at_point(get_global_mouse_position())
-
-
-## The item at a point of the viewport: the radar's if it is there, else a panel's.
-func item_at_point(at: Vector2) -> Dictionary:
-	if radar.is_visible_in_tree() and radar.get_global_rect().has_point(at):
-		return radar.item_at(at - radar.global_position)
-	for q: StationPanel in panels:
-		if q.is_visible_in_tree() and q.get_global_rect().has_point(at):
-			return q.item_at(at - q.global_position)
-	return {}
-
-
-## Contact ids but the own ship (snapshots list it too), nearest first (cycle target).
+## Contact ids but the own ship, nearest first (cycle target).
 func contacts_by_range() -> Array:
-	var ids: Array = Array(ctx.interp.contact_ids())
-	ids.erase(ctx.crew.ship)
-	var dist: Callable = func(id: int) -> float:
-		return ctx.interp.offset_to(ctx.interp.contact_position(id)).length()
-	ids.sort_custom(func(a: int, b: int) -> bool: return dist.call(a) < dist.call(b))
-	return ids
-
-
-## Crew only (FT-STN-008); the server refuses others too.
-func _set_alert(level: int) -> void:
-	if ctx.crew.is_crew():
-		ctx.intents.set_alert(level)
-
-
-## Ping under the cursor, else the selection (FT-SPA-016).
-func _ping(device: String) -> void:
-	var item: Dictionary = item_under_cursor(device)
-	if item.is_empty():
-		item = ctx.crew.selection
-	ctx.ping_item(item)
+	return common.contacts_by_range()
 
 
 ## A long-press let go in place pings what is under the finger, else the selection.
 func ping_at(at: Vector2) -> void:
-	var item: Dictionary = item_at_point(at)
-	if item.is_empty():
-		item = ctx.crew.selection
-	if not item.is_empty():
-		ctx.ping_item(item)
-
-
-## Mark at the cursor, or on the selection (FT-SPA-013, FT-SPA-022): refused with a
-## toast when the ship has 8 marks, unless the focused panel replaces one (Relay). On a
-## forward view only a contact takes a mark (FT-SPA-030).
-func _mark(device: String) -> void:
-	if ctx.crew.entry == StationViews.VIEWER:
-		return
-	var item: Dictionary = item_under_cursor(device)
-	if item.is_empty():
-		item = ctx.crew.selection
-	mark_item(item)
+	common.ping_at(at)
 
 
 ## A long-press dragged and let go marks where the finger ends (P28-Common).
 func mark_at(at: Vector2) -> void:
-	mark_item(item_at_point(at))
+	common.mark_at(at)
 
 
 ## Marks `item` ({} does nothing): the rules of the common mark.
 func mark_item(item: Dictionary) -> void:
-	if ctx.crew.entry == StationViews.VIEWER or item.is_empty():
-		return
-	# A forward view marks only a contact (FT-SPA-030).
-	if focused_panel().marks_attach_only() and item.get("kind", "") != "contact":
-		return
-	if ctx.crew.marks.size() >= CrewState.MAX_MARKS:
-		if not focused_panel().replace_mark(item):
-			_on_toast("toast.marks_full", {})
-		return
-	ctx.mark_item(-1, item)
-
-
-## Claim or release the focused panel's claim item.
-func _claim() -> void:
-	var item: String = focused_panel().claim_item()
-	if item == "":
-		return
-	var holder: Dictionary = ctx.crew.claims.get(item, {})
-	if int(holder.get("session", -1)) == ctx.crew.session:
-		ctx.intents.release_claim(item)
-	else:
-		ctx.intents.claim(item)
+	common.mark_item(item)
 
 
 # --- The phone frame (#28 follow-up, PhoneFrame). ---
@@ -790,228 +429,12 @@ func phone_frame() -> bool:
 	return is_inside_tree() and LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
 
 
-## A panel's common action on the selection (its Crew page).
-func _on_panel_common(id: String) -> void:
-	match id:
-		"ping":
-			ping_at(Vector2(-1.0, -1.0))
-		"mark":
-			mark_item(ctx.crew.selection)
-
-
 ## The menu button: the shell opens the menu, as Esc does.
 func _open_menu() -> void:
 	if sheet.is_open():
 		sheet.cancel()
 	menu_requested.emit()
 	_update_block()
-
-
-# --- Layout and widgets. ---
-
-
-func _build() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var bg: ColorRect = ColorRect.new()
-	bg.color = Palette.color("background")
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	# Everything but the background and the flash stays inside the safe area (#28).
-	var rows: VBoxContainer = VBoxContainer.new()
-	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	rows.add_theme_constant_override("separation", 0)
-	add_child(rows)
-	_rows = rows
-	top_bar = TopBar.new()
-	top_bar.custom_minimum_size = Vector2(0, TOP_BAR_HEIGHT)
-	top_bar.alert_picked.connect(_set_alert)
-	top_bar.fullscreen.visibility_changed.connect(_relayout, CONNECT_DEFERRED)
-	rows.add_child(top_bar)
-	rotate_banner = RotateBanner.new()
-	rows.add_child(rotate_banner)
-	_body = BoxContainer.new()
-	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	rows.add_child(_body)
-	_main = Control.new()
-	_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_main.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_main.clip_contents = true
-	_body.add_child(_main)
-	_side = BoxContainer.new()
-	_body.add_child(_side)
-	radar = DiscRadar.new()
-	_side.add_child(radar)
-	# The column scrolls instead of growing the screen past the viewport (150 % UI scale,
-	# a phone with four share buttons): the radar keeps its size, the rest is reachable.
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	# A wide bar shows at a glance that the column scrolls.
-	scroll.get_v_scroll_bar().custom_minimum_size.x = SCROLL_BAR_W
-	# The margin under the scroll makes its last visible row whole at rest (_snap_side).
-	_side_margin = MarginContainer.new()
-	_side_margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_side_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_side_margin.add_child(scroll)
-	_side.add_child(_side_margin)
-	_side_scroll = scroll
-	_extras = VBoxContainer.new()
-	_extras.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_extras.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_extras)
-	scroll.resized.connect(_snap_side.call_deferred)
-	_extras.minimum_size_changed.connect(_snap_side.call_deferred)
-	# Upright on a phone the column sits under the panel's thumb controls: keep 8 px.
-	_extras_pad = Control.new()
-	_extras_pad.custom_minimum_size.y = UiTheme.TOUCH_GAP / 2.0
-	_extras_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_extras_pad.visible = false
-	_extras.add_child(_extras_pad)
-	# The share buttons sit above the docked panels, not over them (D217).
-	share_bar = ShareBar.new()
-	share_bar.visible = false
-	share_bar.share_pressed.connect(func(id: StringName) -> void: ctx.intents.share(String(id)))
-	_extras.add_child(share_bar)
-	_dock = VBoxContainer.new()
-	_dock.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_extras.add_child(_dock)
-	# On a phone on its side the column stops above the gesture band (P28-Band).
-	_side_band = Control.new()
-	_side_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_side.add_child(_side_band)
-	var share_text: String = TouchText.of("share.drawer", "Share")
-	share_drawer = TouchDrawer.new(share_text, SIDE_RIGHT)
-	share_drawer.name = "ShareDrawer"
-	_main.add_child(share_drawer)
-	share_opener = RailButton.make(share_text + " ▸")
-	share_opener.name = "ShareOpener"
-	share_opener.visible = false
-	share_drawer.bind_opener(share_opener)
-	_phone_bar = BoxContainer.new()
-	_phone_bar.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	_phone_bar.visible = false
-	_phone_bar.add_child(share_opener)
-	_extras.add_child(_phone_bar)
-	toasts = Toasts.new()
-	add_child(toasts)
-	chip_strip = ChipStrip.new()
-	chip_strip.position = Vector2(8.0, TOP_BAR_HEIGHT + 8.0)
-	chip_strip.visible = false
-	add_child(chip_strip)
-	flash = AlertFlash.new()
-	flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(flash)
-	sheet = ChoiceSheet.new()
-	sheet.name = "Sheet"
-	_main.add_child(sheet)
-	frame.build(self, _main, rows)
-	top_bar.menu_pressed.connect(_open_menu)
-
-
-## P28-Band: on a phone on its side a panel in the frame (StationPanel.in_frame) draws into
-## the bottom band; the band takes no taps (PhoneFrame.band_guard), and the side column,
-## the share opener and the sheet stay above it.
-func _apply_band() -> void:
-	if _body == null or not is_inside_tree() or panels.is_empty():
-		return
-	var bottom: float = maxf(SafeArea.margins(self).w, SafeArea.tap_band(self))
-	var sideways: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
-	var into: bool = phone and sideways and focused_panel().in_frame
-	_band_h = bottom if into else 0.0
-	# (outside the band the rows keep EDGE_GAP above the screen's edge, so a bottom row
-	# never sits flush with it)
-	_rows.offset_bottom = -(0.0 if into else maxf(bottom, EDGE_GAP)) - _dock_reserve().y
-	_side_band.custom_minimum_size.y = _band_h
-	sheet.offset_bottom = -_band_h
-
-
-## Arranges the screen for the viewport (LayoutMode): the bar's height and rows, and the
-## radar column beside the main area (landscape) or below it (portrait), narrower or
-## shorter on a phone. Runs on every resize and rotation.
-func _relayout() -> void:
-	if _body == null or not is_inside_tree():
-		return
-	var size_now: Vector2 = get_viewport().get_visible_rect().size
-	var kind: LayoutMode.Kind = LayoutMode.kind_of(self)
-	# The safe area: on a phone also clear of the gesture band, so nothing on the screen
-	# can be tapped there (#28).
-	var m: Vector4 = SafeArea.margins(self)
-	var bottom: float = maxf(m.w, SafeArea.tap_band(self))
-	var res: Vector2 = _dock_reserve()
-	_rows.offset_left = m.x + res.x
-	_rows.offset_top = m.y
-	_rows.offset_right = -m.z - res.x
-	_rows.offset_bottom = -maxf(bottom, EDGE_GAP) - res.y
-	size_now -= Vector2(m.x + m.z, m.y + bottom)
-	if tablet_dock != null:
-		tablet_dock.place(Rect2(m.x, m.y, size_now.x, size_now.y))
-	var touch: bool = LayoutMode.is_touch(kind)
-	var portrait: bool = LayoutMode.portrait(size_now)
-	phone = phone_frame()
-	frame.band_guard.visible = phone
-	frame.band_guard.offset_top = -bottom
-	sheet.upright = portrait
-	if not phone:
-		sheet.cancel()
-	_apply_band()
-	_body.vertical = portrait
-	_side.vertical = not portrait
-	var bar: float = TOP_BAR_HEIGHT
-	if phone:
-		bar = PHONE_BAR_HEIGHT
-	elif touch:
-		bar = TOUCH_BAR_HEIGHT
-	# The full-screen icon is 48 px tall: the bar makes room for it (D323).
-	if top_bar.fullscreen.visible:
-		bar = maxf(bar, FULLSCREEN_BAR_HEIGHT)
-	var two_rows: bool = size_now.x < (COMPACT_PHONE_WIDTH if phone else COMPACT_WIDTH)
-	if res.x > 0.0:
-		# Between a tablet's side rails (an iPad's 828 px fits one row, 672 px doesn't).
-		two_rows = size_now.x - 2.0 * res.x < DOCK_COMPACT_WIDTH
-	if phone:
-		# The phone's one-row bar (design 1.2).
-		two_rows = false
-	top_bar.set_compact(two_rows, bar, phone)
-	top_bar.set_phone(phone, bar)
-	top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0) + top_bar.goal_height()
-	var disc: float = RADAR_HEIGHT
-	var short: bool = size_now.y < SHORT_H and not phone
-	if phone:
-		disc = PHONE_RADAR
-	elif short:
-		disc = SHORT_RADAR
-	_side.custom_minimum_size = Vector2.ZERO
-	if portrait:
-		radar.custom_minimum_size = Vector2(disc, disc)
-		_side.custom_minimum_size.y = disc
-	else:
-		var width: float = PHONE_SIDE_WIDTH if phone else SIDE_WIDTH
-		if short and size_now.x < COMPACT_WIDTH:
-			width = SHORT_SIDE_WIDTH
-		radar.custom_minimum_size = Vector2(width, disc if not phone else width)
-		_side.custom_minimum_size.x = width
-	share_bar.min_width = 150.0 if phone else 260.0
-	share_bar.button_h = ShareBar.SHORT_H if short and not touch else ShareBar.BUTTON_H
-	share_bar.gap = ShareBar.GAP
-	if phone:
-		# 48 px with 8 px gaps (D274); in the share drawer one a row (_show_side).
-		share_bar.button_h = UiTheme.TOUCH_PRIMARY
-		share_bar.gap = UiTheme.TOUCH_GAP
-	_extras_pad.visible = phone and portrait
-	var top: float = m.y + top_bar.custom_minimum_size.y + 8.0
-	chip_strip.position = Vector2(8.0 + m.x + res.x, top)
-	rotate_banner.visible = false
-	if rotate_prompt:
-		rotate_banner.refresh()
-	_show_side()
-	var now: LayoutMode.Form = LayoutMode.form_of(self)
-	if now != form:
-		form = now
-		form_changed.emit(form)
-		# (a panel that rebuilt its pages for the new form gets its tabs bound)
-		pages_changed()
 
 
 ## The first visit to a station shows the Controls chip for a few seconds, once per client

@@ -34,7 +34,17 @@ func test_a_smoke_batch_gives_a_deterministic_report() -> void:
 	assert_str(report).contains("lost runs")
 	assert_str(report).contains("encounters per run")
 	assert_str(report).contains("survive 60 %")
-	assert_str(BotReport.markdown(_batch())).is_equal(report)
+	# The same seed gives the same run: replay the batch's first run instead of the whole batch
+	# (the report is a pure function of the runs).
+	var first: Dictionary = results[0]
+	Determinism.assert_replays(
+		self,
+		JSON.stringify(first),
+		func() -> String:
+			return JSON.stringify(BotRun.play(DefLibrary.new(), first["profile"], "easy", 1, CAP_S)),
+		"report"
+	)
+	assert_str(BotReport.markdown(results)).is_equal(report)
 
 
 # FT: FT-TST-022

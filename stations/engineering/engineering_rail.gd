@@ -19,7 +19,7 @@ static func text(id: String) -> String:
 
 ## The rail buttons' texts and states, once a frame.
 static func update(p: EngineeringPanel) -> void:
-	var sets: Array[Dictionary] = [p.touch_buttons, p.grid_buttons]
+	var sets: Array[Dictionary] = [p.phone.touch_buttons, p.phone.grid_buttons]
 	if p.tablet_ui != null:
 		sets.append(p.tablet_ui.buttons)
 	for buttons: Dictionary in sets:
@@ -33,7 +33,7 @@ static func update(p: EngineeringPanel) -> void:
 			if why != "":
 				second = p.tr("eng.reason." + why)
 			elif id in ON_PART:
-				second = p.short_name(p.selected)
+				second = p.model.short_name(p.selected)
 			var base: String = p.claim_text() if id == "claim" else text(id)
 			var label: String = base if second == "" else "%s\n%s" % [base, second]
 			if b.text != label:
@@ -53,57 +53,61 @@ static func reason(p: EngineeringPanel, id: String) -> String:
 		"shield_tighter", "shield_wider":
 			return _tightness(p, id == "shield_tighter")
 		"boost":
-			return "boosting" if p.boosting() else ""
+			return "boosting" if p.model.boosting() else ""
 		"harden":
 			return _harden(p, sd)
 		"dispatch_nearest":
 			return _repair(p, sd)
 		"cause_next":
-			return "" if p.has_fault(p.selected) and not sd.fault_causes.is_empty() else "no_fault"
+			return (
+				""
+				if p.model.has_fault(p.selected) and not sd.fault_causes.is_empty()
+				else "no_fault"
+			)
 		"fabricate_probe":
-			return "no_parts" if p.spare_parts() < p.ship_def.probe_parts else ""
+			return "no_parts" if p.model.spare_parts() < p.ship_def.probe_parts else ""
 		"claim":
-			return "no_crew" if p.crew_count() == 0 else ""
+			return "no_crew" if p.model.crew_count() == 0 else ""
 	return ""
 
 
 static func _pips(p: EngineeringPanel, sd: SubsystemDef, add: bool) -> String:
 	if sd.kind == SubsystemDef.Kind.REACTOR:
 		return "reactor"
-	var pips: int = p.pips_of(p.selected)
+	var pips: int = p.model.pips_of(p.selected)
 	if not add:
 		return "no_pips" if pips <= 0 else ""
 	if pips >= p.ship_def.power.max_pips_per_subsystem:
 		return "max"
-	return "cap" if p.pips_used() >= p.ship_def.power.reactor_pips else ""
+	return "cap" if p.model.pips_used() >= p.ctx.pip_cap() else ""
 
 
 static func _tightness(p: EngineeringPanel, tighter: bool) -> String:
 	var def: ShieldDef = p.ship_def.shields
 	if def == null:
 		return "limit"
-	var t: float = p.tightness()
+	var t: float = p.model.tightness()
 	var at_end: bool = t >= def.tightness_max - 0.001 if tighter else t <= def.tightness_min + 0.001
 	return "limit" if at_end else ""
 
 
 static func _harden(p: EngineeringPanel, sd: SubsystemDef) -> String:
-	if p.hardened_ticks(p.selected) > 0:
+	if p.model.hardened_ticks(p.selected) > 0:
 		return "hardened"
-	return "no_parts" if p.spare_parts() < sd.harden_parts else ""
+	return "no_parts" if p.model.spare_parts() < sd.harden_parts else ""
 
 
 static func _repair(p: EngineeringPanel, sd: SubsystemDef) -> String:
-	if p.health_frac(p.selected) >= 1.0:
+	if p.model.health_frac(p.selected) >= 1.0:
 		return "whole"
 	if not _crew_free_for(p, p.selected):
 		return "no_crew"
-	return "no_parts" if p.spare_parts() < sd.parts_per_repair else ""
+	return "no_parts" if p.model.spare_parts() < sd.parts_per_repair else ""
 
 
 ## True when some crew another player doesn't hold could go to subsystem i.
 static func _crew_free_for(p: EngineeringPanel, i: int) -> bool:
-	for c: int in p.crew_count():
-		if not p.crew_taken(c) and p.crew_job(c) != i:
+	for c: int in p.model.crew_count():
+		if not p.model.crew_taken(c) and p.model.crew_job(c) != i:
 			return true
 	return false

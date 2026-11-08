@@ -1,7 +1,7 @@
 class_name ScienceLookup
 extends RefCounted
 ## What the Science card needs from content/ to read the section's hashed ids
-## (ScienceView.code): ship classes, damage types, the ScienceDef thresholds. Loaded once.
+## (BlockSchema.id_code): ship classes, damage types, the ScienceDef thresholds. Loaded once.
 
 const SHIPS_DIR: String = "res://content/ships/"
 const WEAPONS_DIR: String = "res://content/weapons/"

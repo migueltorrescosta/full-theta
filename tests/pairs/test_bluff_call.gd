@@ -5,16 +5,22 @@ extends GdUnitTestSuite
 const L = BluffScenario.Link
 
 
+func _play(removed: int) -> PairHarness.Run:
+	return BluffScenario.harness().run(BluffScenario.crew(removed))
+
+
 func _run(removed: int) -> Dictionary:
-	return BluffScenario.harness().run(BluffScenario.crew(removed)).metrics
+	return _play(removed).metrics
 
 
 # FT: FT-PAIR-022
 # The full chain (Comms hears the claim, Science scans the cargo, Comms calls the bluff,
 # Weapons acts on the new intent) is strictly better on reputation and on reward than the
-# chain with any one link removed, on the same seed (D201).
+# chain with any one link removed, on the same seed (D201); and the full chain played again
+# on that seed ends in the same state.
 func test_full_chain_beats_every_chain_with_one_link_removed() -> void:
-	var full: Dictionary = _run(-1)
+	var full_run: PairHarness.Run = _play(-1)
+	var full: Dictionary = full_run.metrics
 	assert_float(full.reward).is_equal(float(BluffScenario.REWARD))
 	var removed: Dictionary[String, Dictionary] = {
 		"Comms hears the claim": _run(L.HEAR_CLAIM),
@@ -39,11 +45,6 @@ func test_full_chain_beats_every_chain_with_one_link_removed() -> void:
 			. is_less(full.reward)
 		)
 
-
-# FT: FT-PAIR-022
-# The same seed and scripts give the same end state.
-func test_runs_are_deterministic() -> void:
-	var harness: PairHarness = BluffScenario.harness()
-	assert_str(harness.run(BluffScenario.crew()).state_hash).is_equal(
-		harness.run(BluffScenario.crew()).state_hash
+	Determinism.assert_replays(
+		self, full_run.state_hash, func() -> String: return _play(-1).state_hash
 	)

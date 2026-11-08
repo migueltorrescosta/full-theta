@@ -43,5 +43,9 @@ func test_full_chain_beats_every_chain_with_one_link_removed() -> void:
 func test_window_starts_where_the_plan_says() -> void:
 	var run: PairHarness.Run = HackAlphaScenario.harness().run(HackAlphaScenario.crew(-1))
 	assert_float(run.metrics.hack_done_tick).is_equal(float(HackAlphaScenario.window_start()))
-	var again: PairHarness.Run = HackAlphaScenario.harness().run(HackAlphaScenario.crew(-1))
-	assert_str(again.state_hash).is_equal(run.state_hash)
+	Determinism.assert_replays(
+		self,
+		run.state_hash,
+		func() -> String:
+			return HackAlphaScenario.harness().run(HackAlphaScenario.crew(-1)).state_hash
+	)

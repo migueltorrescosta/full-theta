@@ -14,7 +14,6 @@ const PORTRAIT: Array = [0, 47, 0, 34]
 const SIDEWAYS: Vector2i = Vector2i(844, 390)
 const UPRIGHT: Vector2i = Vector2i(390, 844)
 const H2: int = StationFixture.H2
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 
@@ -65,12 +64,7 @@ func _cmds(s: StationScreen, kind: String) -> Array:
 func _assert_taps_ok(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).is_not_empty()
-	for rule: String in AUDIT:
-		(
-			assert_array(report[rule])
-			. override_failure_message("%s %s: %s" % [what, rule, report[rule]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 ## The design's reachability table (2.4): [action, page, button, sheet option, taps, what
@@ -112,9 +106,12 @@ func test_every_action_is_within_two_taps_both_ways_up() -> void:
 		for row: Array in _table(p):
 			var what: String = "%s %s" % [row[0], c[0]]
 			var before: int = _sent(s, row[5])
-			var taps: int = await PhoneReach.tap_row(s, [row[1], row[2], row[3]])
+			var walked: Dictionary = PhoneReach.walk(
+				s, {"page": row[1], "control": row[2], "option": row[3], "taps": 2}
+			)
+			var taps: int = walked["taps"]
 			assert_int(taps).override_failure_message(what).is_equal(row[4])
-			assert_int(taps).override_failure_message(what).is_less_equal(2)
+			assert_str(walked["error"]).override_failure_message(what).is_empty()
 			assert_int(_sent(s, row[5])).override_failure_message(what).is_equal(before + 1)
 			await _frames(1)
 		# Read the full card: its tab (1 tap) shows the whole card, no scroll.

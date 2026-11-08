@@ -183,10 +183,8 @@ func _on_resized() -> void:
 func _arrange() -> void:
 	var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
 	if is_inside_tree():
-		form = PhoneFrame.form_of_panel(self)
-	var want: bool = (
-		(_alone() or _screen_panels() == 2) and not docked and LayoutMode.is_phone(form)
-	)
+		form = layout_form()
+	var want: bool = (_alone() or screen_panels() == 2) and not docked and LayoutMode.is_phone(form)
 	if want and radar == null:
 		_make_radar()
 	if want and phone != null and phone.form == form:
@@ -208,17 +206,7 @@ func _arrange() -> void:
 	if phone == null:
 		_stack()
 	refresh()
-	_rebind_tabs()
-
-
-## The screen binds the focused panel's pages when it lays out; a panel that builds (or
-## drops) its phone pages after that has the screen bind them again.
-func _rebind_tabs() -> void:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
-		(n as StationScreen).pages_changed()
+	rebind_tabs()
 
 
 ## The list and card show unless docked; a narrow panel gives a minigame their room.
@@ -271,10 +259,10 @@ func own_radar() -> bool:
 	if _alone():
 		return true
 	return (
-		_screen_panels() == 2
+		screen_panels() == 2
 		and not docked
 		and is_inside_tree()
-		and PhoneFrame.form_of_panel(self) == LayoutMode.Form.PHONE_LANDSCAPE
+		and layout_form() == LayoutMode.Form.PHONE_LANDSCAPE
 	)
 
 
@@ -289,15 +277,6 @@ func _make_radar() -> void:
 	radar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_stage.add_child(radar)
 	_stage.move_child(radar, 0)
-
-
-## How many panels the station screen holding this panel has (1 when none): the dev
-## seat's catalogue entry names no stations, so the screen is the one to ask.
-func _screen_panels() -> int:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	return (n as StationScreen).panels.size() if n != null else 1
 
 
 func _alone() -> bool:

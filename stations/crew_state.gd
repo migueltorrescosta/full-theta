@@ -156,7 +156,7 @@ func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
 	var maxima: Dictionary = {
 		"hull": def.hull_max,
 		"shields": def.shields.max_strength,
-		"pips_used": float(def.power.reactor_pips),
+		"pips_used": float(status.get("pip_cap", def.power.reactor_pips)),
 	}
 	for key: String in maxima:
 		# The hull is the ship's: exact unless the view holds Comms without Engineering,
