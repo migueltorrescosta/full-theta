@@ -1,7 +1,9 @@
 extends GdUnitTestSuite
-## The host pause in PauseOverlay and the menu's Pause control (FT-MIS-040).
+## PauseOverlay: the host pause and the menu's Pause control (FT-MIS-040), the coverage pause's
+## vote, abandon and takeover (FT-NET-041, FT-NET-042).
 
 const HOST_PAUSE: Dictionary = {"host": true, "ship": -1, "uncovered": [], "crew": 0}
+const COVERAGE_PAUSE: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
 
 
 func _heading(o: PauseOverlay) -> String:
@@ -46,8 +48,7 @@ func test_host_resume_keeps_the_coverage_pause() -> void:
 	var made: Array = _overlay(true)
 	var ctx: StationContext = made[0]
 	var o: PauseOverlay = made[1]
-	var pause: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
-	ctx.crew.handle_event({"type": "pause", "payload": pause}, 0)
+	ctx.crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
 	ctx.crew.handle_event({"type": "pause", "payload": HOST_PAUSE}, 0)
 	assert_object(o.find_child("Resume", true, false)).is_not_null()
 	ctx.crew.handle_event({"type": "resume", "payload": {"tick": 1, "host": true}}, 0)
@@ -60,12 +61,11 @@ func test_host_resume_keeps_the_coverage_pause() -> void:
 # H1: each resume clears only the pause it names, in either order, and the host's Resume
 # button works after a coverage pause lifted under a host pause.
 func test_each_resume_clears_only_its_own_pause() -> void:
-	var pause: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
 	var made: Array = _overlay(true)
 	var ctx: StationContext = made[0]
 	var o: PauseOverlay = made[1]
 	ctx.crew.handle_event({"type": "pause", "payload": HOST_PAUSE}, 0)
-	ctx.crew.handle_event({"type": "pause", "payload": pause}, 0)
+	ctx.crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
 	ctx.crew.handle_event({"type": "resume", "payload": {"tick": 1, "host": false}}, 0)
 	assert_bool(ctx.crew.paused.is_empty()).is_true()
 	assert_bool(ctx.crew.host_paused).is_true()
@@ -75,7 +75,7 @@ func test_each_resume_clears_only_its_own_pause() -> void:
 	assert_array(StationFixture.sent(ctx).of("host_pause")[0][1]).is_equal([false])
 	ctx.crew.handle_event({"type": "resume", "payload": {"tick": 2, "host": true}}, 0)
 	assert_bool(o.visible).is_false()
-	ctx.crew.handle_event({"type": "pause", "payload": pause}, 0)
+	ctx.crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
 	ctx.crew.handle_event({"type": "pause", "payload": HOST_PAUSE}, 0)
 	ctx.crew.handle_event({"type": "resume", "payload": {"tick": 3, "host": true}}, 0)
 	assert_bool(ctx.crew.host_paused).is_false()
@@ -113,3 +113,44 @@ func test_pause_control_is_host_and_coop_only() -> void:
 	# In place: the same button, hidden (load fix 2).
 	assert_object(menu.find_child("HostPause", true, false)).is_same(button)
 	assert_bool(button.visible).is_false()
+
+
+# FT: FT-NET-041
+func test_pause_overlay_vote_and_host_abandon() -> void:
+	var ctx: StationContext = StationFixture.context("tactical")
+	var o: PauseOverlay = auto_free(PauseOverlay.new())
+	o.setup(ctx)
+	add_child(o)
+	assert_bool(o.visible).is_false()
+	ctx.crew.host = true
+	ctx.crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
+	assert_bool(o.visible).is_true()
+	# Crew changes it doesn't show leave its buttons alone.
+	var vote: Button = o.find_child("Vote", true, false)
+	ctx.crew.changed.emit(&"alert")
+	ctx.crew.changed.emit(&"marks")
+	assert_object(o.find_child("Vote", true, false)).is_same(vote)
+	vote.pressed.emit()
+	(o.find_child("Abandon", true, false) as Button).pressed.emit()
+	var rec: StationFixture.RecordingClient = StationFixture.sent(ctx)
+	assert_array(rec.of("vote_abandon")[0][1]).is_equal([0, true])
+	assert_array(rec.of("abandon")[0][1]).is_equal([0])
+	var votes: Dictionary = {
+		"ship": 0, "voters": ["Ana"], "sessions": [StationFixture.SESSION], "needed": 2
+	}
+	ctx.crew.handle_event({"type": "abandon_votes", "payload": votes}, 0)
+	(o.find_child("Vote", true, false) as Button).pressed.emit()
+	assert_array(rec.of("vote_abandon")[1][1]).is_equal([0, false])
+	assert_str((o.find_child("Votes", true, false) as Label).text).contains("1/2")
+
+
+# FT: FT-NET-042
+func test_viewers_of_a_paused_ship_may_take_over() -> void:
+	var ctx: StationContext = StationFixture.context("viewer")
+	var o: PauseOverlay = auto_free(PauseOverlay.new())
+	o.setup(ctx)
+	add_child(o)
+	ctx.crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
+	assert_object(o.find_child("Vote", true, false)).is_null()
+	(o.find_child("Takeover_relay", true, false) as Button).pressed.emit()
+	assert_array(StationFixture.sent(ctx).of("takeover")[0][1]).is_equal([0, "relay"])

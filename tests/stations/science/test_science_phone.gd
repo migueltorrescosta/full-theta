@@ -14,7 +14,6 @@ const PORTRAIT: Array = [0, 47, 0, 34]
 const SIDEWAYS: Vector2i = Vector2i(844, 390)
 const UPRIGHT: Vector2i = Vector2i(390, 844)
 const H2: int = StationFixture.H2
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 
@@ -65,12 +64,7 @@ func _cmds(s: StationScreen, kind: String) -> Array:
 func _assert_taps_ok(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).is_not_empty()
-	for rule: String in AUDIT:
-		(
-			assert_array(report[rule])
-			. override_failure_message("%s %s: %s" % [what, rule, report[rule]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 ## The design's reachability table (2.4): [action, page, button, sheet option, taps, what

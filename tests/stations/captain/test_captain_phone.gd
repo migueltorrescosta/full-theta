@@ -8,7 +8,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_captain_phone.cfg"
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 
 func before() -> void:
@@ -199,12 +198,7 @@ func test_touch_rules_on_every_page() -> void:
 			await _frames(2)
 			var report: Dictionary = TapAudit.check(s)
 			assert_array(report["targets"]).is_not_empty()
-			for k: String in AUDIT:
-				(
-					assert_array(report[k])
-					. override_failure_message("%s page %d %s: %s" % [f[0], page, k, report[k]])
-					. is_empty()
-				)
+			assert_array(StationFixture.rule_breaks(report, "%s page %d" % [f[0], page])).is_empty()
 		_drop(s)
 
 

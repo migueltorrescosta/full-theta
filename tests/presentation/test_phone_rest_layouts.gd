@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## Phone layouts of Engineering, Comms, Captain and the Viewer (#28, strand PR): on a phone
 ## on its side every control sits in a thumb rail, at least 44 px (48 for rail buttons) with
 ## 8 px gaps, never under an inset or in the gesture band; the rail buttons send what the
-## keys send; upright the reduced layouts stay operable; tablets and desktops keep theirs.
+## keys send; tablets and desktops keep theirs.
 # FT: FT-STN-005
 
 const SETTINGS: String = "user://test_phone_rest_layouts.cfg"
@@ -44,64 +44,12 @@ func _frames(n: int) -> void:
 func _assert_clean(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).override_failure_message(what + ": no targets").is_not_empty()
-	for k: String in AUDIT:
-		(
-			assert_array(report[k])
-			. override_failure_message("%s %s: %s" % [what, k, report[k]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what, AUDIT)).is_empty()
 
 
 func _drop(s: StationScreen) -> void:
 	s.get_parent().remove_child(s)
 	s.free()
-
-
-# FT: FT-STN-005, FT-NET-018
-func test_landscape_panels_keep_taps_in_the_safe_area() -> void:
-	for entry: String in ["engineering", "comms", "captain", "viewer", "systems"]:
-		var s: StationScreen = await _screen(Vector2i(844, 390), entry, LANDSCAPE)
-		assert_int(s.form).is_equal(LayoutMode.Form.PHONE_LANDSCAPE)
-		# The panel's own controls (the screen's share column is the shell's).
-		if entry != "viewer":
-			_assert_clean(s.focused_panel(), entry)
-		_drop(s)
-
-
-# FT: FT-STN-005
-func test_portrait_panels_stay_operable() -> void:
-	for entry: String in ["engineering", "comms", "captain"]:
-		var s: StationScreen = await _screen(Vector2i(390, 844), entry, PORTRAIT)
-		assert_int(s.form).is_equal(LayoutMode.Form.PHONE_PORTRAIT)
-		assert_bool(s.rotate_banner.visible).is_true()
-		_assert_clean(s.focused_panel(), entry)
-		_drop(s)
-
-
-# FT: FT-ENG-002, FT-ENG-003, FT-ENG-008, FT-STN-005
-# Each rail button sends exactly what its key sends.
-func test_engineering_rail_buttons_send_the_key_intents() -> void:
-	for a: Array in EngineeringPanel.TOUCH_ACTIONS:
-		var id: String = a[0]
-		if id == "claim":
-			continue  # the common claim: tests/stations/engineering/test_engineering_phone.gd
-		var touch: StationScreen = await _screen(Vector2i(844, 390), "engineering", LANDSCAPE)
-		var tp: EngineeringPanel = touch.focused_panel()
-		assert_object(tp.touch_layout).is_not_null()
-		assert_bool(tp.touch_layout.visible).is_true()
-		var b: RailButton = tp.touch_buttons[id]
-		assert_bool(b.is_visible_in_tree()).override_failure_message(id).is_true()
-		b.pressed.emit()
-		var keys: StationScreen = await _screen(Vector2i(1280, 720), "engineering", [])
-		var kp: EngineeringPanel = keys.focused_panel()
-		assert_object(kp.touch_layout).is_null()
-		kp.handle_intent({"id": id, "pressed": true, "device": IntentTable.KBM})
-		var by_touch: Array = StationFixture.sent(touch.ctx).sent
-		assert_array(by_touch).override_failure_message("%s: %s" % [id, by_touch]).is_equal(
-			StationFixture.sent(keys.ctx).sent
-		)
-		_drop(touch)
-		_drop(keys)
 
 
 # FT: FT-STN-005

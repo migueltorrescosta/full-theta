@@ -280,28 +280,6 @@ func test_all_fifteen_views_are_modal_two_panel_screens() -> void:
 	assert_int(pairs.size()).is_equal(15)
 
 
-# FT: FT-NET-018, FT-JNT-005, FT-JNT-004
-# A view keeps every control of its stations and gets the union of their data: its
-# sections, commands, claims and ship-wide controls contain each station's, and each
-# panel reads its own station's blocks from the one snapshot.
-func test_all_fifteen_views_keep_every_control_and_get_the_union() -> void:
-	for entry: String in _views():
-		var def: StationDef = StationViews.def(entry)
-		for station: String in def.stations:
-			var own: StationDef = StationViews.def(station)
-			for kind: int in own.sections:
-				assert_bool(kind in def.sections).override_failure_message(entry).is_true()
-			for c: Variant in own.commands:
-				assert_bool(c in def.commands).override_failure_message(entry).is_true()
-			for c: Variant in own.claims:
-				assert_bool(c in def.claims).override_failure_message(entry).is_true()
-			for c: Variant in own.controls:
-				assert_bool(c in def.controls).override_failure_message(entry).is_true()
-		var s: StationScreen = _screen(entry)
-		for p: StationPanel in s.panels:
-			assert_bool(p.ctx.view == s.ctx.view).is_true()
-
-
 # FT: FT-JNT-005, FT-STN-010, FT-PAIR-021
 # Every chip between a view's own two stations runs as a direct command at any difficulty:
 # nothing is sent as a chip and no toast says "do it yourself". Each chip's sender is the

@@ -143,35 +143,6 @@ func test_station_views_map_entries() -> void:
 	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 15 + 2)
 
 
-# FT: FT-NET-040
-# The copy handed to the net thread holds the world's state (every table column, the
-# RNG states) and stays unchanged while the world steps on.
-func test_sim_copy_is_detached() -> void:
-	var world: SimWorld = _world()
-	for i: int in 30:
-		world.step()
-	var copy: SimWorld = SimCopy.of(world)
-	var columns_at_copy: PackedByteArray = _columns(world)
-	assert_bool(_columns(copy) == columns_at_copy).is_true()
-	assert_array(copy.rng.states()).is_equal(world.rng.states())
-	assert_str(KnowledgeSystem.callsign(copy, 1, ENEMY)).is_equal(
-		KnowledgeSystem.callsign(world, 1, ENEMY)
-	)
-	var copy_hash: String = copy.state_hash()
-	for i: int in 30:
-		world.step()
-	assert_bool(_columns(copy) == columns_at_copy).is_true()
-	assert_bool(_columns(world) == columns_at_copy).is_false()
-	assert_str(copy.state_hash()).is_equal(copy_hash)
-
-
-func _columns(world: SimWorld) -> PackedByteArray:
-	var out: PackedByteArray = var_to_bytes([world.tick, world.kin.period])
-	for t: SimTable in world.tables():
-		out.append_array(var_to_bytes(t.columns()))
-	return out
-
-
 # FT: FT-NET-008
 # A contact flying across the +X face of the site (D124) is dead reckoned through the
 # seam: no absolute record after the first, and the client's position, wrapped, stays

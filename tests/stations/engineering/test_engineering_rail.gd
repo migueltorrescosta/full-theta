@@ -9,7 +9,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_engineering_rail.cfg"
 const ENG: StationViews.Section = StationViews.Section.ENGINEERING
 const INSETS: Array = [0, 0, 0, 24]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 
@@ -115,12 +114,7 @@ func test_a_tablet_takes_the_rail_pattern() -> void:
 		assert_int(StationFixture.sent(s.ctx).sent.size()).is_greater(from)
 		assert_bool(s.tablet_dock.is_inside_tree()).is_true()
 		var report: Dictionary = TapAudit.check(s.tablet_dock)
-		for rule: String in AUDIT:
-			(
-				assert_array(report[rule])
-				. override_failure_message("%s: %s breaks %s" % [size, report[rule], rule])
-				. is_empty()
-			)
+		assert_array(StationFixture.rule_breaks(report, str(size))).is_empty()
 		s.queue_free()
 		await get_tree().process_frame
 

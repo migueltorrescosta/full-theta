@@ -38,6 +38,11 @@ const ECHO_SLOT: int = 4
 const SEAM_H5: Vector3 = Vector3(PERIOD_M / 2.0 - 400.0, 0.0, 0.0)
 const SEAM_H6: Vector3 = Vector3(-PERIOD_M / 2.0 + 3000.0, 0.0, 0.0)
 const SEAM_ECHO: Vector3 = Vector3(-PERIOD_M / 2.0 + 300.0, 0.0, 0.0)
+## The TapAudit rules every phone screen keeps (48 px targets, 8 px apart, none in the band
+## or outside the safe area).
+const TOUCH_RULES: Array[String] = [
+	"under_min", "under_primary", "in_band", "outside_safe", "tight"
+]
 
 
 ## Records every intent sent: [[method, args], ...].
@@ -218,6 +223,18 @@ static func context(
 	ctx.interp.push(ctx.view, NOW_MS)
 	ctx.interp.update(NOW_MS)
 	return ctx
+
+
+## What a TapAudit report breaks, one "what rule: items" line per broken rule (empty when
+## clean): `assert_array(StationFixture.rule_breaks(TapAudit.check(s), "page 2")).is_empty()`.
+static func rule_breaks(
+	report: Dictionary, what: String, rules: Array[String] = TOUCH_RULES
+) -> Array[String]:
+	var out: Array[String] = []
+	for rule: String in rules:
+		if not report[rule].is_empty():
+			out.append("%s %s: %s" % [what, rule, report[rule]])
+	return out
 
 
 ## The fixture's clock (move `ms` to advance time).

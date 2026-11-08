@@ -10,7 +10,6 @@ const SETTINGS: String = "user://test_weapons_touch.cfg"
 ## The mockups' iPhone insets [left, top, right, bottom].
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 
@@ -94,12 +93,7 @@ func _tap(c: Control) -> void:
 func _assert_touch_rules(s: StationScreen, what: String) -> Dictionary:
 	var report: Dictionary = TapAudit.check(s)
 	assert_array(report["targets"]).is_not_empty()
-	for rule: String in AUDIT:
-		(
-			assert_array(report[rule])
-			. override_failure_message("%s: %s breaks %s" % [what, report[rule], rule])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 	return report
 
 

@@ -9,7 +9,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_phone_frame.cfg"
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 
 ## A station panel in the frame with three pages: a persistent button, a part per page.
@@ -79,12 +78,7 @@ func _drop(s: StationScreen) -> void:
 
 func _assert_clean(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
-	for k: String in AUDIT:
-		(
-			assert_array(report[k])
-			. override_failure_message("%s %s: %s" % [what, k, report[k]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 func _sent(s: StationScreen, method: String) -> Array:

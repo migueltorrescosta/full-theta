@@ -5,13 +5,11 @@ extends GdUnitTestSuite
 ## conversation open, and the rail sends what the keys send.
 # FT: FT-STN-005, FT-COM-008
 
-
 const SETTINGS: String = "user://test_comms_phone.cfg"
 const SIDEWAYS: Vector2i = Vector2i(844, 390)
 const UPRIGHT: Vector2i = Vector2i(390, 844)
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 
 func before() -> void:
@@ -72,12 +70,7 @@ func _tap(c: Control, at: Vector2) -> void:
 func _assert_clean(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).override_failure_message(what + ": no targets").is_not_empty()
-	for k: String in AUDIT:
-		(
-			assert_array(report[k])
-			. override_failure_message("%s %s: %s" % [what, k, report[k]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 ## Taps card `id` on its page from rest: the tab when it is not the first page, then the

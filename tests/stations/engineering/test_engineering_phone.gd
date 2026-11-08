@@ -8,7 +8,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_engineering_phone.cfg"
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 const FORMS: Array = [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]
 const P = EngineeringPanel.Page
 
@@ -89,7 +88,9 @@ func test_every_action_within_two_taps() -> void:
 		await _frames(2)
 		for row: Array in TABLE:
 			var from: int = StationFixture.sent(s.ctx).sent.size()
-			var r: Dictionary = PhoneReach.walk(s, {"page": row[1], "control": row[2], "taps": row[3]})
+			var r: Dictionary = PhoneReach.walk(
+				s, {"page": row[1], "control": row[2], "taps": row[3]}
+			)
 			var what: String = "%s %s" % [row[0], f[0]]
 			assert_str(r["error"]).override_failure_message(what + " " + str(r["error"])).is_empty()
 			if row[4] != "":
@@ -133,12 +134,7 @@ func test_touch_rules_on_every_page() -> void:
 			e.pages.current = page
 			await _frames(3)
 			var report: Dictionary = TapAudit.check(s)
-			for k: String in AUDIT:
-				(
-					assert_array(report[k])
-					. override_failure_message("%s page %d %s: %s" % [f[0], page, k, report[k]])
-					. is_empty()
-				)
+			assert_array(StationFixture.rule_breaks(report, "%s page %d" % [f[0], page])).is_empty()
 			var view: Rect2 = e.view_rect()
 			var shown: Control = e.pages.parts(page)[0]
 			var top: float = shown.get_global_rect().position.y - e.global_position.y
