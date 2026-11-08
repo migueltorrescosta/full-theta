@@ -99,6 +99,29 @@ func test_a_button_that_cannot_act_says_why() -> void:
 		assert_str(why).override_failure_message(id).is_equal("no_parts")
 
 
+# P9: one rule: an action the rail greys refuses with the toast of the same reason, and the
+# reactor cap is a hint only (the server refuses it, D380).
+func test_the_actions_refuse_with_the_rails_reason() -> void:
+	var s: StationScreen = await _open(Vector2i(844, 390))
+	var e: EngineeringPanel = _panel(s)
+	var blocks: Dictionary = s.ctx.view.blocks[ENG]
+	var toasts: Array[String] = []
+	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
+	e.model.select(1)
+	assert_str(e.model.why_not("dispatch_nearest")).is_equal("whole")
+	assert_bool(e.model.dispatch_nearest()).is_false()
+	blocks["subsystems"][1]["hardened"] = 40
+	assert_str(e.model.why_not("harden")).is_equal("hardened")
+	assert_bool(e.model.harden(1)).is_false()
+	e.model.select(5)
+	assert_bool(e.model.set_pips(5, 2)).is_false()
+	assert_array(toasts).is_equal(["toast.eng_whole", "toast.eng_hardened", "toast.eng_reactor"])
+	e.model.select(4)
+	blocks["subsystems"][4]["pips"] = 3
+	assert_str(e.model.why_not("pip_add")).is_equal("cap")
+	assert_bool(e.model.set_pips(4, 4)).is_true()
+
+
 func test_a_tablet_takes_the_rail_pattern() -> void:
 	for size: Vector2i in [Vector2i(1180, 820), Vector2i(820, 1180)]:
 		var s: StationScreen = await _open(size, true)
