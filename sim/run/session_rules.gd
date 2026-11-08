@@ -29,7 +29,6 @@ enum Destination { FRIENDLY_VIEWER, SCOREBOARD }
 ## Wire and log names, in enum order.
 const MODE_NAMES: Array[String] = ["coop", "race", "last_standing", "teams", "holdout"]
 const TEAM_WIN_NAMES: Array[String] = ["last_team_standing", "first_to_finish"]
-const DESTINATION_NAMES: Array[String] = ["friendly_viewer", "scoreboard"]
 ## Most crewable ships in one session (FT-GEN-001, M4-Q3).
 const MAX_SHIPS: int = 6
 ## Crew factions by side: the first is the co-op faction (M1Encounter.PLAYER_FACTION); the
@@ -118,16 +117,3 @@ func slot_errors(slots: Array[ShipSlot]) -> Array[String]:
 	for team: int in relaunch:
 		out.append_array(relaunch[team].errors())
 	return out
-
-
-func to_dict() -> Dictionary:
-	var policies: Dictionary = {}
-	for team: int in relaunch:
-		policies[team] = relaunch[team].to_dict()
-	return {
-		"mode": MODE_NAMES[mode],
-		"team_win": TEAM_WIN_NAMES[team_win],
-		"eliminated_to": DESTINATION_NAMES[eliminated_to],
-		"relaunch": policies,
-		"default_relaunch": default_relaunch.to_dict(),
-	}

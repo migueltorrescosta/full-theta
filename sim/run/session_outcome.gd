@@ -36,12 +36,3 @@ var held_ticks: int = 0
 
 func over() -> bool:
 	return reason != Reason.NONE
-
-
-func to_dict() -> Dictionary:
-	return {
-		"reason": REASON_NAMES[reason],
-		"winners": Array(winners),
-		"team": team,
-		"held_ticks": held_ticks,
-	}
