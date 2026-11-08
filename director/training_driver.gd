@@ -9,7 +9,8 @@ extends RefCounted
 ## ScenarioApi.message (the ship computer's line, for that station only), and the station
 ## moves on when the step ends. A COMMAND step ends when ScenarioApi.commands_this_tick
 ## shows its command from the ship; a NEXT step ends when the station presses Next (the
-## flag train.<station>.next, TrainingNextCommand, counts the presses). Once both stations
+## flag train.<station>.next, TrainingNextCommand, counts the presses). Either kind also ends
+## when the station presses Skip (flag train.<station>.skip, D1). Once both stations
 ## of a pair have finished their tracks, the pair's step starts; it ends when both press
 ## Next. A station never sees another station's step. Nothing here is hashed: what it
 ## decides is in the command log (say, set_flag), so a run replays without it.
@@ -41,6 +42,8 @@ var _tracks: Dictionary[StringName, Array] = {}
 var _index: Dictionary[StringName, int] = {}
 ## Station -> Next presses already read, and the tick its step was last said.
 var _seen: Dictionary[StringName, int] = {}
+## Station -> Skip presses already read (TrainingNextCommand.skip).
+var _skips: Dictionary[StringName, int] = {}
 var _said: Dictionary[StringName, int] = {}
 var _pairs: Array[TrainingStepDef] = []
 ## Pair index -> 0 waiting, 1 on, 2 done.
@@ -63,6 +66,7 @@ func _init(scenario: Scenario, steps: TrainingStepsDef, solo_station: StringName
 			_tracks[s.station] = steps.track(s.station)
 			_index[s.station] = 0
 			_seen[s.station] = 0
+			_skips[s.station] = 0
 			_said[s.station] = -1000000
 			_in_pair[s.station] = -1
 	_pairs = steps.pairs()
@@ -137,17 +141,22 @@ func _step_station(
 	var presses: int = api.flag(next_flag(station))
 	var pressed: bool = presses > _seen[station]
 	_seen[station] = presses
+	var skips: int = api.flag(skip_flag(station))
+	var skipped: bool = skips > _skips[station]
+	_skips[station] = skips
 	if _in_pair[station] >= 0:
 		_pair_pressed[station] = _pair_pressed.get(station, false) or pressed
 		return
 	var step: TrainingStepDef = current(station)
 	if step == null:
 		return
-	var done: bool = false
+	# A skip ends any single-station step (D1): the Skip button is how a player leaves a
+	# command step they cannot do on their device.
+	var done: bool = skipped
 	if step.kind == TrainingStepDef.Kind.COMMAND:
-		done = tags.has(step.command)
+		done = done or tags.has(step.command)
 	else:
-		done = pressed
+		done = done or pressed
 	if done:
 		_index[station] += 1
 		_announce(api, now, station)
@@ -237,3 +246,8 @@ func stations() -> Array[StringName]:
 
 static func next_flag(station: StringName) -> StringName:
 	return StringName("train.%s.next" % station)
+
+
+## The flag a station's Skip presses are counted in (TrainingNextCommand.skip_flag_name).
+static func skip_flag(station: StringName) -> StringName:
+	return StringName("train.%s.skip" % station)

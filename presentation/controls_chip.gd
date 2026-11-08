@@ -16,16 +16,30 @@ const TOP: float = 64.0
 
 ## Seconds left on screen.
 var left_s: float = SHOW_S
+## The binding that opens the page on this device ("?", "View"), or "" for the ☰ route.
+var key_text: String = ""
 
 
 ## Adds the chip to `parent` on `station`'s first visit and records the visit; null when
 ## the visit was seen (or the browser test hooks skip it).
-static func show_once(parent: Control, settings: ClientSettings, station: String) -> ControlsChip:
+##
+## `device` (IntentTable.KBM or PAD) names the overlay intent's binding in the chip; "" or a
+## `touch` layout says the ☰ route.
+static func show_once(
+	parent: Control,
+	settings: ClientSettings,
+	station: String,
+	device: String = "",
+	touch: bool = false
+) -> ControlsChip:
 	if station == "" or settings.hint_seen(station):
 		return null
 	settings.mark_hint_seen(station)
 	settings.save()
 	var chip: ControlsChip = ControlsChip.new()
+	if device != "" and not touch:
+		chip.key_text = BindingText.describe_all(settings.bindings.bindings("overlay", device))
+		chip.text = chip._label()
 	parent.add_child(chip)
 	return chip
 
@@ -35,7 +49,7 @@ func _init() -> void:
 	focus_mode = Control.FOCUS_NONE
 	custom_minimum_size = Vector2(0.0, UiTheme.TOUCH_MIN)
 	theme_type_variation = "RailAccentButton"
-	text = tr("controls.chip")
+	text = _label()
 	set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	pressed.connect(queue_free)
@@ -55,4 +69,11 @@ func _process(delta: float) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED:
-		text = tr("controls.chip")
+		text = _label()
+
+
+## The chip's words.
+func _label() -> String:
+	if key_text != "":
+		return tr("controls.chip_key") % key_text
+	return tr("controls.chip")

@@ -7,6 +7,10 @@ extends Button
 ##
 ##     var b := RailButton.make("All stop", RailButton.Role.DANGER)
 ##     b.pressed.connect(_all_stop)
+##
+## Holding a button for HoldHelp.HOLD_S shows what it does (HoldHelp, D6) and the release then
+## is no tap; a mouse hover shows the same line as the tooltip. Hold buttons (`hold`) are
+## never explained this way: their press is already the action.
 
 ## True on the press, false on the release, of a `hold` button.
 signal held(down: bool)
@@ -24,6 +28,8 @@ var role: Role = Role.PLAIN:
 var hold: bool = false
 
 var _touch: int = -1
+## The finger's hold showed the explanation: its release is no tap.
+var _explained: bool = false
 
 
 ## Shrinks `b`'s text, down to MIN_FONT, until it fits the button (a long word in a half
@@ -70,12 +76,16 @@ func _gui_input(event: InputEvent) -> void:
 	accept_event()
 	if t.pressed and _touch < 0:
 		_touch = t.index
+		_explained = false
 		TouchInput.held += 1
 		_show_down(true)
 		_hold(true)
+		if not hold and is_inside_tree():
+			get_tree().create_timer(HoldHelp.HOLD_S).timeout.connect(_explain.bind(t.index))
 	elif not t.pressed and t.index == _touch:
+		var tapped: bool = Rect2(Vector2.ZERO, size).has_point(t.position) and not _explained
 		_release()
-		if Rect2(Vector2.ZERO, size).has_point(t.position):
+		if tapped:
 			_click()
 
 
@@ -87,6 +97,21 @@ func _notification(what: int) -> void:
 func _exit_tree() -> void:
 	if _touch >= 0:
 		_release()
+
+
+## The mouse hover's line: what the button does.
+func _get_tooltip(_at_position: Vector2) -> String:
+	return tooltip_text if tooltip_text != "" else HoldHelp.explain(text)
+
+
+## The finger `index` is still down after HoldHelp.HOLD_S: say what the button does.
+func _explain(index: int) -> void:
+	if _touch != index or hold or not is_inside_tree():
+		return
+	var line: String = HoldHelp.explain(text)
+	if line != "":
+		_explained = true
+		HoldHelp.bubble(self, line)
 
 
 func _release() -> void:

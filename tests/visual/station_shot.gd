@@ -73,6 +73,11 @@ var player: String = "Ana"
 
 ## A Shakedown step on the focused station's banner (a solo lesson step, D303).
 var lesson: bool = false
+## The intent of the lesson step ("" the station's default one), e.g. "align" (D1).
+var lesson_intent: String = ""
+## The device the player last used: "" the fixture's, "pad" or "kbm" (the banner and the chip
+## follow it, D1, D4).
+var device: String = ""
 
 var _ctx: StationContext
 
@@ -90,6 +95,8 @@ func _ready() -> void:
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
 	if lesson:
 		var step: Array = LESSON_STEPS.get(entry, ["face", "Face the drone."])
+		if lesson_intent != "":
+			step = [lesson_intent, "Align a mount to the target."]
 		_ctx.training[entry] = {
 			"line": "shakedown.%s.%s" % [entry, step[0]],
 			"intent": step[0],
@@ -97,6 +104,8 @@ func _ready() -> void:
 			"example": "train.ex." + step[0],
 			"done": false,
 		}
+	if device != "":
+		_ctx.matcher.device = device
 	if science != "":
 		_ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(science)
 	if comms != "off":
