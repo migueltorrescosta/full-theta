@@ -82,20 +82,20 @@ func test_a_button_that_cannot_act_says_why() -> void:
 	# The reactor makes pips and takes none; an intact part needs no repair.
 	e.model.select(5)
 	await _refresh(s)
-	assert_str(EngineeringRail.reason(e, "pip_add")).is_equal("reactor")
+	assert_str(e.model.why_not("pip_add")).is_equal("reactor")
 	assert_str((e.touch_buttons["pip_remove"] as RailButton).text).is_equal("Power -\nreactor")
 	e.model.select(1)
-	assert_str(EngineeringRail.reason(e, "dispatch_nearest")).is_equal("whole")
+	assert_str(e.model.why_not("dispatch_nearest")).is_equal("whole")
 	# Reactor cap: 10 of 12 pips used, two more fit and then none.
 	e.model.select(4)
-	assert_str(EngineeringRail.reason(e, "pip_add")).is_empty()
+	assert_str(e.model.why_not("pip_add")).is_empty()
 	blocks["subsystems"][4]["pips"] = 3
-	assert_str(EngineeringRail.reason(e, "pip_add")).is_equal("cap")
+	assert_str(e.model.why_not("pip_add")).is_equal("cap")
 	# No spare parts: Harden, Repair and Probe say so.
 	blocks["spare_parts"] = 0
 	e.model.select(0)
 	for id: String in ["harden", "dispatch_nearest", "fabricate_probe"]:
-		var why: String = EngineeringRail.reason(e, id)
+		var why: String = e.model.why_not(id)
 		assert_str(why).override_failure_message(id).is_equal("no_parts")
 
 
