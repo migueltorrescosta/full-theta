@@ -27,10 +27,10 @@ var encounter: M1Encounter
 var world: SimWorld
 ## Steps the world with the director's before_tick (E07); rebuilt with every new world.
 var host: ScenarioHost
-## The director (or Shakedown's training driver): anything with before_tick(api). Made on the
+## The run's driver (RunDriver: the director, or Shakedown's training driver). Made on the
 ## first step of a run from driver_factory(difficulty preset), so it sees the lobby's toggles;
 ## null with no factory (the M1 encounter).
-var driver: RefCounted
+var driver: RunDriver
 var driver_factory: Callable
 var transport: NetTransport = NetTransport.new()
 var session: ServerSession
@@ -107,9 +107,9 @@ func start(
 
 ## The driver's turn before each tick; in a solo lesson the bots' presses come first.
 func _before_tick(api: ScenarioApi) -> void:
-	if driver is TrainingDriver:
+	if driver.solo_station() != &"":
 		partners.act(world, driver as TrainingDriver)
-	driver.call(&"before_tick", api)
+	driver.before_tick(api)
 
 
 ## Points the multi-ship lobby at the encounter when it is a RunSetup (#11).
@@ -240,11 +240,7 @@ static func _default_slots(setup: RunSetup) -> Array[ShipSlot]:
 
 ## The director's decisions so far for the debrief; none with another driver.
 func _director_decisions() -> Array:
-	if driver is FleetDirector:
-		return (driver as FleetDirector).decisions()
-	if driver is Director:
-		return (driver as Director).decisions()
-	return []
+	return driver.decisions() if driver != null else []
 
 
 ## Serves the web export in `root` over plain HTTP on the bind address at port() - 1

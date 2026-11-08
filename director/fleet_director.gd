@@ -1,5 +1,5 @@
 class_name FleetDirector
-extends RefCounted
+extends RunDriver
 ## The director of a multi-ship session (#11, FT-MIS-023, FT-MIS-013, owner M4-Q1, M4-Q5,
 ## M4-Q7, 2026-10-28): one Director per crew faction, so allies share one fleet run and
 ## rivals each get their own, keyed by the session's mode (ScenarioApi.session_mode()):

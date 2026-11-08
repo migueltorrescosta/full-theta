@@ -1,5 +1,5 @@
 class_name Director
-extends RefCounted
+extends RunDriver
 ## The encounter director (E07, FT-MIS-005, FT-MIS-006, FT-MIS-008, FT-MIS-025, FT-MIS-027,
 ## FT-MIS-028, FT-MIS-029, D35, D80, D81, D92, D231). Before each tick it reads the world
 ## through the Scenario API and queues SERVER commands: it opens sites, picks the next
