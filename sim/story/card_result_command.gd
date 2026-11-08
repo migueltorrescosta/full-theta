@@ -1,10 +1,10 @@
 class_name CardResultCommand
 extends SimCommand
-## Server: settles an accepted card (an OPEN one is refused, R10-9) (FT-MIS-021, FT-MIS-019). Success pays the card's reward
-## to ship_id and draws the card's reputation change; failure draws the change named
-## "<rep_interaction>.fail" if there is one (FT-COM-005). Scenarios submit it when the
-## mission's objective is met or lost. A partial success (the time ran out) pays
-## RunDef.partial_pay of the reward and changes no standing.
+## Server: settles an accepted card (FT-MIS-021, FT-MIS-019); a card never accepted is refused
+## (R10-9). Success pays the card's reward to ship_id and draws the card's reputation change;
+## failure draws the change named "<rep_interaction>.fail" if there is one (FT-COM-005).
+## Scenarios submit it when the mission's objective is met or lost. A partial success (the
+## time ran out) pays RunDef.partial_pay of the reward and changes no standing.
 
 var card: int = -1
 var success: bool = true

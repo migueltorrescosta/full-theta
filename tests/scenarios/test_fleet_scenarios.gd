@@ -196,9 +196,7 @@ func test_the_raiders_always_fit_the_time_limit() -> void:
 			assert_int(count).is_between(1, Rescue.MAX_RAIDERS)
 			assert_float(Rescue.last_raider_s(count)).is_less(Rescue.MAX_S - 100.0)
 			var wave: int = Scenario.count_for(EnemyWave.COUNT, strength)
-			var last: float = (
-				EnemyWave.SECOND_AFTER_S + EnemyWave.NEXT_EVERY_S * maxi(wave - 2, 0)
-			)
+			var last: float = EnemyWave.SECOND_AFTER_S + EnemyWave.NEXT_EVERY_S * maxi(wave - 2, 0)
 			assert_float(last).is_less(EnemyWave.MAX_S - 40.0)
 
 
@@ -206,7 +204,9 @@ func test_the_raiders_always_fit_the_time_limit() -> void:
 # Hard with six ships: the rescue spawns every capped raider and killing them wins it.
 func test_a_hard_six_ship_rescue_can_be_won() -> void:
 	var def: DirectorDef = ScenarioFixture.make().world.run_def.director
-	var strength: float = float(def.strength_per_preset[&"hard"]) * Director.fleet_multiplier(def, 6)
+	var strength: float = (
+		float(def.strength_per_preset[&"hard"]) * Director.fleet_multiplier(def, 6)
+	)
 	var f: ScenarioFixture = _fleet(&"rescue", 6, strength)
 	var seen: Dictionary[int, bool] = {}
 	for i: int in 60 * 290:

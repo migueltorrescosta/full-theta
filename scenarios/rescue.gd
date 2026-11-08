@@ -155,7 +155,7 @@ func step(api: ScenarioApi) -> void:
 		_offer_cards(api)
 	if _offered:
 		_one_card_only(api)
-	var elapsed_s: float = float(api.tick() - _started) / ScenarioApi.HZ
+	var elapsed_s: float = Scenario.seconds_since(api, _started)
 	# The raiders come one after the other, RAIDER_GAP_S apart, once the freighter exists.
 	if (
 		_offered

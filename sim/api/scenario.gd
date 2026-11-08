@@ -60,3 +60,8 @@ static func fleet(api: ScenarioApi, ships: PackedInt32Array) -> PackedInt32Array
 ## encounter must be able to finish inside its time limit).
 static func count_for(base: int, strength: float, cap: int = 1 << 20) -> int:
 	return clampi(roundi(base * strength), 1, cap)
+
+
+## Seconds since tick `since`.
+static func seconds_since(api: ScenarioApi, since: int) -> float:
+	return float(api.tick() - since) / ScenarioApi.HZ

@@ -60,7 +60,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 func step(api: ScenarioApi) -> void:
 	if _result != Result.ACTIVE:
 		return
-	var elapsed_s: float = float(api.tick() - _started) / ScenarioApi.HZ
+	var elapsed_s: float = Scenario.seconds_since(api, _started)
 	_offer_hail(api)
 	if not _taunted and elapsed_s >= TAUNT_AFTER_S:
 		_taunted = true

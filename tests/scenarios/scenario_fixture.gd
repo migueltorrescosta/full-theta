@@ -12,11 +12,11 @@ var api: ScenarioApi
 var encounter: int = -1
 var site: int = -1
 var strength: float = 1.0
+## Ships the encounter holds (default: every crewed ship).
+var ships: PackedInt32Array = PackedInt32Array([0])
 var _started: bool = false
 var _ended: bool = false
 var _begin: ApiHandle
-## Ships the encounter holds (default: every crewed ship).
-var ships: PackedInt32Array = PackedInt32Array([0])
 
 
 ## A world at tick 0 with the ship waiting at the yard.

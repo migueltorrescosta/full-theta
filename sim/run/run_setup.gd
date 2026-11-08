@@ -8,6 +8,9 @@ extends M1Encounter
 ## M1Encounter only so NetServer takes it unchanged, as LoadEncounter does; M1Encounter
 ## itself stays for the golden, load and pair tests.
 
+## Gap between the crewed ships at the start (m), so they do not overlap at the yard.
+const CREW_SPACING_M: float = 100.0
+
 ## The run: map, numbers and scenario list.
 var run_def: RunDef
 ## Enemies SpawnShipCommand may spawn, by key (app/ fills it from DefLibrary).
@@ -22,8 +25,6 @@ var rep_dists: Dictionary[StringName, RepDistDef] = {}
 var markets: Dictionary[StringName, MarketDef] = {}
 var site_markets: Dictionary[int, StringName] = {}
 var hail_conversations: Dictionary[StringName, StringName] = {}
-## Gap between the crewed ships at the start (m), so they do not overlap at the yard.
-var crew_spacing_m: float = 100.0
 ## The session built from the multi-ship lobby (#11, FT-GEN-001, M4-Q3): one crewed ship per
 ## slot, in slot order, with the slot's faction and team. Empty: `crew_ships` ships of
 ## PLAYER_FACTION, as before M4.
@@ -102,7 +103,7 @@ func build() -> SimWorld:
 		var faction: int = slots[i].faction if not slots.is_empty() else PLAYER_FACTION
 		var site: int = starts[i]
 		var at: Vector3 = world.sites.point3(site) if site >= 0 else Vector3.ZERO
-		var offset: Vector3 = at + Vector3(i * crew_spacing_m, 0.0, 0.0)
+		var offset: Vector3 = at + Vector3(i * CREW_SPACING_M, 0.0, 0.0)
 		var id: int = world.spawn_ship(run_def.player_ship, faction, offset)
 		if not slots.is_empty():
 			world.ship_teams[id] = slots[i].team
@@ -120,7 +121,7 @@ func build() -> SimWorld:
 ## each side at its own site, as far apart as the map allows: the yard for the first side,
 ## then for each next side the site farthest (by minimum image) from the ones taken; with
 ## more sides than sites, the sites are used again in the same order. The ships of a site
-## stand crew_spacing_m apart by slot index, so they never overlap.
+## stand CREW_SPACING_M apart by slot index, so they never overlap.
 func start_sites(world: SimWorld) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	var count: int = world.sites.size()

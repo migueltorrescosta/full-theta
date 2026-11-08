@@ -28,7 +28,9 @@ func test_the_scenario_is_training_with_no_threat_and_no_director() -> void:
 	assert_int(meta.threat_cost).is_equal(0)
 	# The director would never pick it, and the driver opens no encounter and no site.
 	var def: DirectorDef = rig.world.run_def.director
-	var d: Director = Director.new(def, &"normal", [ShakedownScenario.new()], 1, M1Encounter.PLAYER_FACTION)
+	var d: Director = Director.new(
+		def, &"normal", [ShakedownScenario.new()], 1, M1Encounter.PLAYER_FACTION
+	)
 	assert_int(d.budget_left()).is_equal(9)
 	var sites: int = rig.world.sites.size()
 	rig.tick(600)

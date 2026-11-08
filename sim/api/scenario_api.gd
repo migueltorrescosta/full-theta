@@ -97,6 +97,13 @@ func faction_of(id: int) -> int:
 	return _world.faction_of(id)
 
 
+## The site a ship is within the radius of, else -1 (cheaper than ship(id).at_site).
+func at_site(id: int) -> int:
+	if id < 0 or id >= _world.ship_count():
+		return -1
+	return SiteTable.at_site(_world, id)
+
+
 func ship(id: int) -> ShipView:
 	var v: ShipView = ShipView.new()
 	if id < 0 or id >= _world.ship_count():
@@ -106,13 +113,13 @@ func ship(id: int) -> ShipView:
 	v.pos = _world.kin.point_at(id, Vector3.ZERO)
 	v.velocity = _world.kin.vel[id]
 	v.nearest_site = SiteTable.nearest(_world, id)
-	v.at_site = SiteTable.at_site(_world, id)
+	v.at_site = SiteTable.within_radius(_world, id, v.nearest_site)
 	v.hull_frac = DamageSystem.hull_fraction(_world, id)
 	v.status = _world.run.status[id]
 	v.in_play = v.status == RunTable.Status.IN_PLAY
 	v.outcome = _world.run.outcome[id]
-	v.docked_site = _helm(&"docked_site", id, -1) as int
-	v.jumping = (_helm(&"jump_left", id, 0.0) as float) > 0.0
+	v.docked_site = _world.helm.docked_site[id]
+	v.jumping = _world.helm.jump_left[id] > 0.0
 	return v
 
 
@@ -168,9 +175,6 @@ func encounter(id: int) -> EncounterView:
 		if EncounterTable.has_bit(t.ships_mask[id], ship_id):
 			v.ships.append(ship_id)
 	v.result = t.result[id]
-	v.start_tick = t.start_tick[id]
-	v.end_tick = t.end_tick[id]
-	v.cost = t.cost[id]
 	return v
 
 
@@ -534,9 +538,3 @@ static func _local_direction(clock: int, height: int) -> Vector3:
 static func _facing(dir: Vector3) -> Quaternion:
 	var up: Vector3 = Vector3.UP if absf(dir.normalized().y) < 0.99 else Vector3.RIGHT
 	return Basis.looking_at(dir.normalized(), up).get_rotation_quaternion()
-
-
-## A HelmTable column value for the ship, or `fallback` while the column does not exist.
-func _helm(column: StringName, id: int, fallback: Variant) -> Variant:
-	var col: Variant = _world.helm.get(column)
-	return col[id] if col != null else fallback

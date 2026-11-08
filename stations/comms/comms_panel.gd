@@ -54,6 +54,7 @@ const REFUSALS: Array[String] = [
 	"not_held",
 	"no_room",
 	"no_price",
+	"nothing_to_repair",
 	"requires_docked",
 ]
 

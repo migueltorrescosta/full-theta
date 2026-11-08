@@ -93,13 +93,13 @@ func step(api: ScenarioApi) -> void:
 	if _result != Result.ACTIVE:
 		return
 	for ship: int in Scenario.fleet(api, _ships):
-		var at: int = api.ship(ship).at_site
+		var at: int = api.at_site(ship)
 		if at != _destination:
 			_left[ship] = true
 		elif _left.has(ship):
 			_result = Result.WON
 			return
-	if float(api.tick() - _started) / ScenarioApi.HZ >= MAX_S:
+	if Scenario.seconds_since(api, _started) >= MAX_S:
 		_result = Result.PARTIAL
 
 
