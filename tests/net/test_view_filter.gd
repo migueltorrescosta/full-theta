@@ -371,3 +371,31 @@ func test_a_shortcut_needs_its_toggle_and_a_share() -> void:
 	assert_str(shared.signature(StationViews.Section.FEEDS)).is_not_equal(
 		ViewFilter.of("weapons", "easy").signature(StationViews.Section.FEEDS)
 	)
+
+
+# FT: FT-PAIR-007
+# E7: FEEDS and RELAY skip building the lists the filter blanks, with the same bytes as
+# building everything and blanking after: every entry, difficulty and shared shortcut.
+func test_skipping_blanked_lists_changes_no_bytes() -> void:
+	KnowledgeSystem.step(world)
+	var features: Array = [
+		ViewFilter.WEAK_POINTS, ViewFilter.TRACK_FEEDS, ViewFilter.HAZARD_COUNTDOWNS
+	]
+	var codes: Array[String] = ["easy", "normal", "hard"]
+	for shared: Array in [[], features]:
+		for code: String in codes:
+			for entry: String in [
+				"helm", "weapons", "tactical", "ops", "relay", "viewer", "captain"
+			]:
+				var filter: ViewFilter = ViewFilter.of(entry, ViewFilter.code_with(code, shared))
+				if filter == null:
+					continue
+				for kind: int in [StationViews.Section.FEEDS, StationViews.Section.RELAY]:
+					var values: Dictionary = StationViews._block_values(kind, world, ME)
+					filter.apply(kind, values, world, ME)
+					var want: PackedByteArray = NetBlock.encode(StationViews.BLOCKS[kind], values)
+					(
+						assert_array(StationViews.block_bytes(kind, world, ME, filter))
+						. override_failure_message("%s %s %s %d" % [entry, code, shared, kind])
+						. is_equal(want)
+					)

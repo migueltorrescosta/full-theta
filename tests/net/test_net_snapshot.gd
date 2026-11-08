@@ -265,3 +265,19 @@ func test_oversize_section_is_sent_with_a_long_length() -> void:
 	b.build(SimCopy.of(world), 2, [key])
 	assert_bool(st.apply(b.message(key, false))).is_true()
 	assert_int(st.rejected).is_equal(0)
+
+
+# FT: FT-NET-008
+# R19-5: a delta leaves out the CONTACTS section while nothing in it changed (no contact moved
+# out of tolerance, none appeared or left, no callsign or flag changed); a full one still has it.
+func test_an_unchanged_contacts_section_is_not_sent() -> void:
+	var world: SimWorld = _world()
+	var b: SnapshotBuilder = SnapshotBuilder.new()
+	var key: String = StationViews.key(PLAYER, "helm", StationViews.DEFAULT_TOGGLES)
+	b.build(SimCopy.of(world), 1, [key])
+	b.build(SimCopy.of(world), 2, [key])
+	var contacts: ContactsSection = b.section(
+		StationViews.Section.CONTACTS, world.faction_of(PLAYER)
+	)
+	assert_array(contacts.update(world)).is_empty()
+	assert_array(contacts.full()).is_not_empty()

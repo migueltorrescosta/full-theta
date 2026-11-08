@@ -895,13 +895,16 @@ static func _build(entry: String) -> StationDef:
 static func block_bytes(
 	kind: int, world: SimWorld, ship: int, filter: ViewFilter = null
 ) -> PackedByteArray:
-	var values: Dictionary = _block_values(kind, world, ship)
+	var values: Dictionary = _block_values(kind, world, ship, filter)
 	if filter != null:
 		filter.apply(kind, values, world, ship)
 	return NetBlock.encode(BLOCKS[kind], values)
 
 
-static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
+## `filter` lets a block skip the lists it would blank (ViewFilter.apply fixes the rest).
+static func _block_values(
+	kind: int, world: SimWorld, ship: int, filter: ViewFilter = null
+) -> Dictionary:
 	match kind:
 		Section.STATUS:
 			return _status(world, ship)
@@ -912,11 +915,11 @@ static func _block_values(kind: int, world: SimWorld, ship: int) -> Dictionary:
 		Section.SCIENCE:
 			return ScienceView.block(world, ship)
 		Section.RELAY:
-			return _relay(world, ship)
+			return _relay(world, ship, filter)
 		Section.CAPTAIN:
 			return _captain(world, ship)
 		Section.FEEDS:
-			return FeedsView.block(world, ship)
+			return FeedsView.block(world, ship, filter)
 		Section.COMMS:
 			return CommsView.block(world, ship)  # (the builder adds claims, filter)
 	return _mounts(world, ship)
@@ -999,7 +1002,7 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 
 
 ## Relay's block: at most the newest RELAY_PROBE_ROWS probes (a row count is one byte).
-static func _relay(world: SimWorld, ship: int) -> Dictionary:
+static func _relay(world: SimWorld, ship: int, filter: ViewFilter = null) -> Dictionary:
 	var r: RelayTable = world.relay
 	var t: ProbeTable = world.probes
 	var rows: PackedInt32Array = t.rows_of(ship)
@@ -1022,7 +1025,8 @@ static func _relay(world: SimWorld, ship: int) -> Dictionary:
 		"fab_left": r.fab_left[ship],
 		"lanes": r.lanes_flagged[ship] == 1,
 		"probes": probes,
-		"hazards": HazardView.rows(world, ship),
+		"hazards":
+		HazardView.rows(world, ship) if filter == null or filter.hazards_visible() else [],
 	}
 
 

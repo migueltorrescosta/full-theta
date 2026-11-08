@@ -92,6 +92,12 @@ func grants(feature: StringName) -> bool:
 	return toggles.on(feature)
 
 
+## Whether the view gets Relay's hazard zones: it holds Relay, or the countdown toggle gives
+## them (StationViews.block_bytes skips building them otherwise).
+func hazards_visible() -> bool:
+	return stations.has("relay") or grants(HAZARD_COUNTDOWNS)
+
+
 ## How an owner's summary reaches the view: 2 exact, 1 banded, 0 absent. The owners are the
 ## stations whose data it is; a view holding one of them sees it exactly.
 func summary_mode(owners: Array) -> int:
@@ -165,7 +171,7 @@ func apply(kind: int, values: Dictionary, world: SimWorld, ship: int) -> void:
 				values["lanes"] = false
 			values["fab_left"] = summarise(values["fab_left"], def.probe_fab_s, RELAY_ENG)
 			# The hazards Relay knows reach another station through the countdown toggle.
-			if not (stations.has("relay") or grants(HAZARD_COUNTDOWNS)):
+			if not hazards_visible():
 				values["hazards"] = []
 		StationViews.Section.FEEDS:
 			if not grants(WEAK_POINTS):
@@ -192,10 +198,13 @@ func signature(kind: int) -> String:
 		StationViews.Section.ENGINEERING:
 			out = "c%d.f%d" % [1 if grants(DIAGNOSED_CAUSES) else 0, summary_mode(HELM)]
 		StationViews.Section.RELAY:
-			var hazards: bool = stations.has("relay") or grants(HAZARD_COUNTDOWNS)
 			out = (
 				"p%dh%df%d"
-				% [summary_mode(RELAY_OWNER), 1 if hazards else 0, summary_mode(RELAY_ENG)]
+				% [
+					summary_mode(RELAY_OWNER),
+					1 if hazards_visible() else 0,
+					summary_mode(RELAY_ENG)
+				]
 			)
 		StationViews.Section.FEEDS:
 			out = (
