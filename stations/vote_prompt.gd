@@ -184,8 +184,7 @@ func _refresh_relaunch() -> void:
 	var voters: Array = v.get("voters", [])
 	_votes.text = tr("relaunch.votes") % [voters.size(), int(v.get("needed", 0)), ", ".join(voters)]
 	_votes.visible = not voters.is_empty()
-	var me: String = ctx.settings.player_name if ctx.settings != null else ""
-	var voted: bool = crew.has_relaunch_vote(me)
+	var voted: bool = crew.has_relaunch_vote()
 	_button("Relaunch", tr("relaunch.unvote") if voted else tr("relaunch.vote")).pressed.connect(
 		func() -> void: ctx.intents.vote_relaunch(id, not voted)
 	)

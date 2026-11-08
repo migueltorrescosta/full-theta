@@ -1,9 +1,11 @@
-class_name NetAbandonVote
+class_name NetVote
 extends RefCounted
-## The abandon vote of one paused ship (FT-NET-041, D128): each remaining connected
-## crew player may cast or withdraw a vote; the ship is abandoned when the votes exceed
-## half of that ship's remaining connected crew (2 of 2 in the 3-player case). Votes
-## clear when the pause ends (the caller drops this object). Pure.
+## A crew vote on one ship (D128, D178, M4-Q2): the abandon vote of a paused ship or a run
+## (FT-NET-041, D241), the "Run again" vote and the relaunch vote of an eliminated ship. Each
+## remaining connected crew player may cast or withdraw a vote, keyed by session id (two
+## players may share a name); the vote passes when the votes reach more than half of the
+## ship's connected crew (2 of 2 in the 3-player case). The caller drops the object when the
+## vote ends. Pure.
 
 ## Session id -> voter name.
 var voters: Dictionary[int, String] = {}
@@ -24,6 +26,13 @@ func keep_only(sessions: Array[int]) -> void:
 			voters.erase(id)
 
 
+## One session's cast or withdrawal among `members`: true when the vote passes now.
+func cast_from(session: NetSession, vote: bool, members: Array[int]) -> bool:
+	cast(session.id, session.name, vote)
+	keep_only(members)
+	return passes(members.size())
+
+
 ## Votes needed with n remaining connected crew: more than half.
 static func needed(n: int) -> int:
 	return n / 2 + 1
@@ -33,7 +42,7 @@ func passes(n: int) -> bool:
 	return n > 0 and voters.size() >= needed(n)
 
 
-## Voter names, sorted (the abandon_votes event).
+## Voter names, sorted.
 func names() -> Array[String]:
 	var out: Array[String] = []
 	out.assign(voters.values())
@@ -47,3 +56,9 @@ func sessions() -> Array[int]:
 	out.assign(voters.keys())
 	out.sort()
 	return out
+
+
+## The event payload of the vote of `ship` among n connected crew: {ship, voters, sessions,
+## needed} (abandon_votes, run_votes, relaunch_votes).
+func payload(ship: int, n: int) -> Dictionary:
+	return {"ship": ship, "voters": names(), "sessions": sessions(), "needed": needed(n)}

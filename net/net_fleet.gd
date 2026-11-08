@@ -52,7 +52,9 @@ var rules: SessionRules = SessionRules.new()
 var rebuild: Callable
 ## Ships whose crew pressed Start, waiting for the others (M4-Q4).
 var pressed: Dictionary[int, bool] = {}
-## Eliminated ships -> the `eliminated` reason (FleetMessages.ELIMINATED_REASONS).
+## Eliminated ships -> the `eliminated` reason: "destroyed" (the hull reached 0), "abandoned"
+## (the crew or host gave up in a pause, FT-NET-041) or "forfeit" (a PvP crew's abandon vote,
+## M4-Q10).
 var eliminated: Dictionary[int, String] = {}
 ## The session's outcome once it is over, else null.
 var outcome: SessionOutcome
@@ -71,7 +73,7 @@ var _fleet_tick: int = -FLEET_EVERY_TICKS
 var _crews: Dictionary[int, Array] = {}
 ## Eliminated ship -> the tick of its handover.
 var _handover_at: Dictionary[int, int] = {}
-var _votes: Dictionary[int, NetAbandonVote] = {}
+var _votes: Dictionary[int, NetVote] = {}
 var _relaunching: Dictionary[int, RelaunchShipCommand] = {}
 var _fleet_sent: Dictionary = {}
 var _board_sent: Array = []
@@ -324,8 +326,7 @@ func _on_ship_add(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if reason != "":
 		session.request_rejected(s, NetProtocol.Type.SHIP_ADD, reason, {"name": msg["name"]})
 		return
-	var ship_name: String = NetProtocol.clip_utf8(msg["name"], NetProtocol.MAX_NAME_BYTES)
-	ship_name = ship_name.strip_edges()
+	var ship_name: String = msg["name"]  # cleaned by NetProtocol.decode (NAMED)
 	if ship_name == "":
 		ship_name = "Ship %d" % (slots.size() + 1)
 	slots.append(ShipSlot.of(ship_name, SessionRules.CREW_FACTIONS[0], 0))
@@ -395,15 +396,12 @@ func _on_relaunch(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if reason != "":
 		session.request_rejected(s, NetProtocol.Type.RELAUNCH, reason, {"ship": ship})
 		return
-	var vote: NetAbandonVote = _votes.get_or_add(ship, NetAbandonVote.new())
-	vote.cast(s.id, s.name, msg["vote"])
-	vote.keep_only(members)
-	var payload: Dictionary = FleetMessages.relaunch_votes(
-		ship, vote.names(), NetAbandonVote.needed(members.size())
-	)
+	var vote: NetVote = _votes.get_or_add(ship, NetVote.new())
+	var passes: bool = vote.cast_from(s, msg["vote"], members)
 	var ids: PackedInt32Array = PackedInt32Array(members)
+	var payload: Dictionary = vote.payload(ship, members.size())
 	session.transport.post_event(ids, session.world.tick, NetProtocol.EVENT_RELAUNCH_VOTES, payload)
-	if vote.passes(members.size()):
+	if passes:
 		_votes.erase(ship)
 		var c: RelaunchShipCommand = RelaunchShipCommand.new()
 		c.ship = ship

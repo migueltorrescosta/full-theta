@@ -11,10 +11,6 @@ extends RefCounted
 const IN_PLAY: String = "in_play"
 const FINISHED: String = "finished"
 const DESTROYED: String = "destroyed"
-const STATES: Array[String] = [IN_PLAY, FINISHED, DESTROYED]
-## `eliminated` reasons: the hull reached 0, the crew or host abandoned it in a pause
-## (FT-NET-041), or a PvP crew gave up by the abandon vote (M4-Q10).
-const ELIMINATED_REASONS: Array[String] = ["destroyed", "abandoned", "forfeit"]
 ## `handover` to_ship when no friendly ship is left: the lobby scoreboard (D91).
 const TO_SCOREBOARD: int = -1
 ## request_rejected reasons for the new requests and the cross-ship takeover.
@@ -45,7 +41,8 @@ const PAYLOADS: Dictionary = {
 	NetProtocol.EVENT_HANDOVER: {"ship": TYPE_INT, "to_ship": TYPE_INT},
 	NetProtocol.EVENT_SCOREBOARD: {"rows": TYPE_ARRAY},
 	NetProtocol.EVENT_ELIMINATED: {"ship": TYPE_INT, "reason": TYPE_STRING, "lives": TYPE_INT},
-	NetProtocol.EVENT_RELAUNCH_VOTES: {"ship": TYPE_INT, "voters": TYPE_ARRAY, "needed": TYPE_INT},
+	NetProtocol.EVENT_RELAUNCH_VOTES:
+	{"ship": TYPE_INT, "voters": TYPE_ARRAY, "sessions": TYPE_ARRAY, "needed": TYPE_INT},
 	NetProtocol.EVENT_RELAUNCHED: {"ship": TYPE_INT, "lives": TYPE_INT},
 	NetProtocol.EVENT_SESSION_OVER:
 	{
@@ -152,8 +149,11 @@ static func eliminated(ship: int, reason: String, lives: int) -> Dictionary:
 	return {"ship": ship, "reason": reason, "lives": lives}
 
 
-static func relaunch_votes(ship: int, voters: Array, needed: int) -> Dictionary:
-	return {"ship": ship, "voters": voters, "needed": needed}
+## sessions: the voters' session ids, by which a client finds its own vote (NetVote.payload).
+static func relaunch_votes(
+	ship: int, voters: Array, needed: int, sessions: Array = []
+) -> Dictionary:
+	return {"ship": ship, "voters": voters, "sessions": sessions, "needed": needed}
 
 
 static func relaunched(ship: int, lives: int) -> Dictionary:

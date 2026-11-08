@@ -88,7 +88,7 @@ func _samples() -> Dictionary:
 
 # FT: FT-NET-004
 func test_every_control_message_round_trips() -> void:
-	assert_int(_samples().size()).is_equal(NetProtocol.SCHEMAS.size())
+	assert_int(_samples().size()).is_equal(NetProtocol.schemas.size())
 	var samples: Dictionary = _samples()
 	for type: int in samples:
 		var fields: Dictionary = samples[type]
@@ -188,3 +188,34 @@ func test_snapshot_header() -> void:
 	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
 	assert_bool(view.apply(bytes)).is_true()
 	assert_array(view.kinds).is_equal(StationViews.sections_of("helm"))
+
+
+# FT: FT-NET-004
+# G6: NetProtocol.MESSAGES is the one table; what a client may send and what takes a rate-limit
+# token derive from it. Hello, Ack, Bye and Command are sent but not rated, and every rated
+# type is sent.
+func test_the_sets_derive_from_one_table() -> void:
+	assert_int(NetProtocol.schemas.size()).is_equal(NetProtocol.MESSAGES.size())
+	for type: int in NetProtocol.rated_requests:
+		assert_bool(NetProtocol.from_client.has(type)).is_true()
+	for type: int in [NetProtocol.Type.HELLO, NetProtocol.Type.ACK, NetProtocol.Type.BYE]:
+		assert_bool(NetProtocol.from_client.has(type)).is_true()
+		assert_bool(NetProtocol.rated_requests.has(type)).is_false()
+	assert_bool(NetProtocol.from_client.has(NetProtocol.Type.COMMAND)).is_true()
+	assert_bool(NetProtocol.rated_requests.has(NetProtocol.Type.COMMAND)).is_false()
+	for type: int in [NetProtocol.Type.WELCOME, NetProtocol.Type.EVENT, NetProtocol.Type.CATALOGUE]:
+		assert_bool(NetProtocol.from_client.has(type)).is_false()
+	assert_bool(NetProtocol.rated_requests.has(NetProtocol.Type.RENAME)).is_true()
+
+
+# FT: FT-NET-004
+# G6: one clean_text cuts every player-chosen name (Hello, Rename and ShipAdd) the same way:
+# trimmed, cut to 32 bytes between characters, trimmed again.
+func test_names_are_cleaned_in_one_place() -> void:
+	assert_str(NetProtocol.clean_text("  Ana  ", 32)).is_equal("Ana")
+	assert_str(NetProtocol.clean_text("é".repeat(40), 32)).is_equal("é".repeat(16))
+	assert_str(NetProtocol.clean_text("a".repeat(31) + " b", 32)).is_equal("a".repeat(31))
+	for type: int in [NetProtocol.Type.RENAME, NetProtocol.Type.SHIP_ADD]:
+		var padded: String = "   " + "k".repeat(40)
+		var back: Dictionary = NetProtocol.decode(NetProtocol.encode(type, {"name": padded}))
+		assert_str(back["name"]).is_equal("k".repeat(32))

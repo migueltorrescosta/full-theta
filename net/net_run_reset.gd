@@ -4,7 +4,7 @@ extends RefCounted
 ## every session with a pick on that ship gets `run_over` (win or loss, run time, hull)
 ## and the current `run_votes`; a session that picks the ship or reconnects later gets
 ## them too. Each connected crew player of the ship casts or withdraws a "Run again"
-## vote (RunAgain), with the abandon vote's rule (NetAbandonVote: more than half of the
+## vote (RunAgain), with the abandon vote's rule (NetVote: more than half of the
 ## connected crew); the host's vote resets at once. The reset calls `rebuild`
 ## (NetServer.restart_run): a world built from scratch, every ship back in the lobby
 ## with its picks, crew state cleared (ServerSession.restart); the crew presses Start
@@ -18,7 +18,7 @@ var session: ServerSession
 ## Ship -> its `run_over` payload, from its outcome until the reset.
 var over: Dictionary[int, Dictionary] = {}
 ## Ship -> its "Run again" votes.
-var votes: Dictionary[int, NetAbandonVote] = {}
+var votes: Dictionary[int, NetVote] = {}
 
 ## The director's decisions so far (a Callable returning an Array of DirectorDecision), set
 ## by NetServer; none while no director runs.
@@ -56,7 +56,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			"time_s": e.tick * SimWorld.DT,
 			"hull": clampf(hull, 0.0, 1.0),
 		}
-		votes[e.ship_id] = NetAbandonVote.new()
+		votes[e.ship_id] = NetVote.new()
 		_outcome_tick[e.ship_id] = e.tick
 
 
@@ -100,11 +100,9 @@ func _on_run_again(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if s.is_host and msg["vote"]:
 		_reset()
 		return
-	var vote: NetAbandonVote = votes[ship]
-	vote.cast(s.id, s.name, msg["vote"])
-	vote.keep_only(members)
+	var passes: bool = votes[ship].cast_from(s, msg["vote"], members)
 	_send_votes(ship)
-	if vote.passes(members.size()):
+	if passes:
 		_reset()
 
 
@@ -120,12 +118,7 @@ func _reset() -> void:
 
 
 func _votes_payload(ship: int) -> Dictionary:
-	return {
-		"ship": ship,
-		"voters": votes[ship].names(),
-		"sessions": votes[ship].sessions(),
-		"needed": NetAbandonVote.needed(session.connected_crew(ship).size()),
-	}
+	return votes[ship].payload(ship, session.connected_crew(ship).size())
 
 
 func _send_votes(ship: int) -> void:

@@ -1,7 +1,7 @@
 class_name NetTokenBucket
 extends RefCounted
 ## Token-bucket rate limit for one client's requests (FT-NET-006): `rate` tokens a
-## second up to `burst`; each command and each NetProtocol.RATED_REQUESTS message takes
+## second up to `burst`; each command and each NetProtocol.rated_requests message takes
 ## one. Wall-clock microseconds come from the caller (the server's main thread), never
 ## from sim/.
 

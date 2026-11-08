@@ -114,7 +114,7 @@ var fleet: Dictionary = {}
 var scoreboard: Array = []
 ## ship -> `eliminated` payload {ship, reason, lives}, until it is relaunched.
 var eliminated: Dictionary = {}
-## ship -> `relaunch_votes` payload {ship, voters, needed}.
+## ship -> `relaunch_votes` payload {ship, voters, sessions, needed}.
 var relaunch_votes: Dictionary = {}
 ## This session's latest `handover` {ship (its eliminated ship), to_ship (-1 the
 ## scoreboard)}, {} when it was never handed over or its ship was relaunched.
@@ -377,8 +377,8 @@ func can_relaunch() -> bool:
 
 
 ## Whether this session's relaunch vote for its home ship stands.
-func has_relaunch_vote(player: String) -> bool:
-	return player in relaunch_votes.get(home_ship(), {}).get("voters", [])
+func has_relaunch_vote() -> bool:
+	return session in relaunch_votes.get(home_ship(), {}).get("sessions", [])
 
 
 ## Mission time (s) at sim tick `tick`; 0 before Start.
