@@ -295,3 +295,32 @@ func test_rotation_rebuilds_and_desktop_has_no_rails() -> void:
 	assert_object(_ui()).is_null()
 	assert_object(_screen.tablet_dock).is_null()
 	assert_float(_panel.get_global_rect().size.x).is_greater(width)
+
+
+# FT: FT-STN-005
+# w5: on every tablet size (the classic iPad's too) a phone-like view keeps the thrust cross
+# at the top left, and the flight read-out, the cross, the compass with its chip and the shield ring with its
+# caption keep apart.
+func test_hud_read_outs_keep_apart() -> void:
+	for size: Vector2i in SIZES + [Vector2i(768, 1024), Vector2i(1024, 768)]:
+		await _open(size)
+		var what: String = "%s" % size
+		var hud: HelmHud = _panel.hud
+		var area: Rect2 = hud.area()
+		if hud.touch_layout():
+			assert_float(hud.thrust_rect().get_center().x).override_failure_message(what).is_less(
+				area.get_center().x
+			)
+		var boxes: Array[Rect2] = [hud.readout_rect(), hud.thrust_rect(), hud._ring_rect()]
+		var compass: Array[Rect2] = hud.compass_boxes()
+		boxes.append(compass[0].grow(-2.0))
+		boxes.append(compass[1])
+		for i: int in boxes.size():
+			for j: int in range(i + 1, boxes.size()):
+				if i == 0 and j == 4:
+					continue  # the chip under the compass may share the read-out's rows
+				assert_bool(boxes[i].intersects(boxes[j])).override_failure_message(
+					"%s: %d and %d overlap" % [what, i, j]
+				).is_false()
+		_vp.queue_free()
+		_screen = null

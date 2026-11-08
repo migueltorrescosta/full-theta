@@ -6,6 +6,10 @@ const HOST_PAUSE: Dictionary = {"host": true, "ship": -1, "uncovered": [], "crew
 const COVERAGE_PAUSE: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
 
 
+func before() -> void:
+	I18n.apply("en")
+
+
 func _heading(o: PauseOverlay) -> String:
 	return ((o.get_child(0) as VBoxContainer).get_child(0) as Label).text
 
@@ -160,17 +164,18 @@ func test_viewers_of_a_paused_ship_may_take_over() -> void:
 # Every label and button the overlay shows is translated, in co-op and PvP, before and after
 # a vote, in each locale (a removed key showed "pause.vote" on the vote button).
 func test_every_pause_text_is_translated() -> void:
-	var coop: Dictionary = {"ships": [{"id": 0, "faction": 0}, {"id": 1, "faction": 0}]}
-	var pvp: Dictionary = {"ships": [{"id": 0, "faction": 0}, {"id": 1, "faction": 1}]}
-	var before: String = TranslationServer.get_locale()
-	for locale: String in ["en", "pt_PT", "it"]:
-		TranslationServer.set_locale(locale)
-		for catalogue: Dictionary in [coop, pvp]:
+	var coop: Array = [{"id": 0, "faction": 0}, {"id": 1, "faction": 0}]
+	var pvp: Array = [{"id": 0, "faction": 0}, {"id": 1, "faction": 1}]
+	for locale: String in I18n.LANGUAGES:
+		I18n.apply(locale)
+		for ships: Array in [coop, pvp]:
 			for voted: bool in [false, true]:
 				var made: Array = _overlay(true)
 				var ctx: StationContext = made[0]
 				var o: PauseOverlay = made[1]
-				ctx.crew.catalogue = catalogue
+				ctx.crew.catalogue = ctx.crew.catalogue.duplicate()
+				ctx.crew.catalogue["ships"] = ships
+				assert_bool(ctx.crew.is_pvp()).is_equal(ships == pvp)
 				ctx.crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
 				var sessions: Array = [StationFixture.SESSION] if voted else []
 				var votes: Dictionary = {
@@ -187,4 +192,4 @@ func test_every_pause_text_is_translated() -> void:
 					assert_str(text).override_failure_message(
 						"%s %s: raw key %s" % [locale, node.name, text]
 					).not_contains("pause.")
-	TranslationServer.set_locale(before)
+	I18n.apply("en")

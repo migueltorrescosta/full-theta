@@ -24,6 +24,8 @@ const ARROW_CLEAR: float = 14.0
 ## The height an edge arrow needs between two read-outs it keeps clear of.
 const ARROW_ROOM: float = 2.0 * ARROW_CLEAR + 16.0
 const COMPASS_R: float = 46.0
+## The least gap (px) between the flight read-out's percentages and the compass disc.
+const COMPASS_GAP: float = 12.0
 ## Envelope bars show 0..BAR_MAX of nominal; a tick marks nominal.
 const BAR_MAX: float = 1.5
 ## Speeds under this (m/s) show no velocity markers.
@@ -114,7 +116,9 @@ func _bar_extra() -> float:
 ## (when they share rows), down to TIGHT_BAR_W.
 func _bar_w() -> float:
 	if not touch_layout():
-		return BAR_W
+		# The read-out shares its rows with the compass: its percentages end clear of it (w5).
+		var room_x: float = _compass_centre().x - COMPASS_R - COMPASS_GAP - 14.0 - _bar_extra()
+		return clampf(room_x, TIGHT_BAR_W, BAR_W)
 	var a: Rect2 = area()
 	var top: float = a.end.y - READOUT_H
 	var ret: Rect2 = reticle_rect()
@@ -122,7 +126,7 @@ func _bar_w() -> float:
 		if panel.tablet_ui == null:
 			return PHONE_BAR_W
 		# A tablet's narrow view: the bars end left of the compass at the bottom right.
-		var left: float = a.end.x - 3.0 * COMPASS_R - 8.0
+		var left: float = a.end.x - 3.0 * COMPASS_R - 4.0 - COMPASS_GAP
 		return clampf(left - (a.position.x + 14.0) - _bar_extra(), TIGHT_BAR_W, PHONE_BAR_W)
 	var room: float = ret.position.x - 8.0 - (a.position.x + 14.0) - _bar_extra()
 	return clampf(room, TIGHT_BAR_W, PHONE_BAR_W)
@@ -450,9 +454,10 @@ func cross_tight() -> bool:
 
 ## True on a phone whose view is too short for the thrust cross at the top left above the
 ## flight read-out with room for an edge arrow between them: the cross goes to the top right.
+## A tablet keeps it top left: its shield ring and compass take the top right (w5).
 func _cross_right() -> bool:
 	var room: float = 52.0 + CROSS_ARM + 14.0 + READOUT_H + ARROW_ROOM
-	return touch_layout() and area().size.y < room
+	return panel.touch_ui != null and area().size.y < room
 
 
 ## `p` moved just outside the flight read-out when it falls on it (a phone: a marker there
@@ -744,12 +749,19 @@ func compass_boxes() -> Array[Rect2]:
 
 
 ## True when, on a phone, the selection's compass dot is in the disc's upper half: its chip
-## goes above (the desktop has no room there: the reticle's caption).
+## goes above (the desktop has no room there: the reticle's caption), unless the shield ring's
+## caption sits there (a short tablet view, w5).
 func _chip_above() -> bool:
 	if not touch_layout():
 		return false
 	var local: Variant = panel.ctx.selection_local()
-	return local is Vector3 and compass_point(local, COMPASS_R - 6.0).y < 0.0
+	if not (local is Vector3 and compass_point(local, COMPASS_R - 6.0).y < 0.0):
+		return false
+	var c: Vector2 = _compass_centre()
+	var above: Rect2 = Rect2(
+		c + Vector2(-2.0 * COMPASS_R, -COMPASS_R - 24.0), Vector2(4.0 * COMPASS_R, 24.0)
+	)
+	return not above.intersects(_ring_rect().grow(4.0))
 
 
 ## An off-screen item's arrow: its direction on the view and its tip on the edge.
