@@ -219,3 +219,83 @@ func _frames_until(cond: Callable) -> bool:
 			return true
 		await get_tree().process_frame
 	return cond.call()
+
+
+# FT: FT-NET-001
+# C3, R24-10: the host's language starts as the OS locale's, by language when the region differs.
+func test_the_language_defaults_to_the_os_locale() -> void:
+	assert_str(MainMenu.default_language("pt_PT")).is_equal("pt_PT")
+	assert_str(MainMenu.default_language("pt_BR")).is_equal("pt_PT")
+	assert_str(MainMenu.default_language("it-IT")).is_equal("it")
+	assert_str(MainMenu.default_language("en_US")).is_equal("en")
+	assert_str(MainMenu.default_language("ja_JP")).is_equal("en")
+	assert_str(MainMenu.default_language("")).is_equal("en")
+
+
+# FT: FT-NET-001
+# C13, R24-9: each address of the host's list names its interface; loopback says "This computer
+# only".
+func test_bind_addresses_are_named_by_interface() -> void:
+	var interfaces: Array = [
+		{"name": "wlp2s0", "friendly": "wlp2s0", "addresses": ["192.168.1.20", "fe80::1"]},
+		{"name": "docker0", "friendly": "", "addresses": ["172.17.0.1"]},
+	]
+	var binds: PackedStringArray = ["192.168.1.20", "172.17.0.1", "10.9.9.9", "127.0.0.1"]
+	(
+		assert_array(Array(MainMenu.bind_labels(binds, interfaces)))
+		. is_equal(
+			[
+				"192.168.1.20 (wlp2s0)",
+				"172.17.0.1 (docker0)",
+				"10.9.9.9",
+				TranslationServer.translate("menu.this_computer"),
+			]
+		)
+	)
+
+
+# FT: FT-NET-013
+# C13, R24-8: the browser's menu has no LAN list (it can't listen) and the desktop's one-click
+# joins the listed game.
+func test_a_browser_menu_has_no_lan_list_and_a_click_joins() -> void:
+	var desktop: MainMenu = _menu()
+	var hosts: ItemList = desktop.find_child("Hosts", true, false)
+	assert_bool(hosts.visible).is_true()
+	assert_bool((desktop.find_child("HostsHint", true, false) as Label).visible).is_true()
+	hosts.add_item("Bridge  127.0.0.1  1/3")
+	hosts.set_item_metadata(0, "ws://127.0.0.1:1")
+	hosts.item_selected.emit(0)
+	assert_str(desktop.joining.url).is_equal("ws://127.0.0.1:1")
+	var m: MainMenu = auto_free(MainMenu.new())
+	m.web = true
+	m.token_path = TOKEN
+	m.pid_path = PID
+	m.settings = ClientSettings.new(SETTINGS)
+	add_child(m)
+	assert_bool((m.find_child("Hosts", true, false) as Control).visible).is_false()
+	assert_bool((m.find_child("HostsHint", true, false) as Control).visible).is_false()
+	assert_bool(m.browser.is_listening()).is_false()
+
+
+# FT: FT-NET-003, FT-NET-025
+# C12 (D6, R24-4): a reloaded browser page joins the same host with its stored token; a desktop
+# client, another host, or a host's own token file never does.
+func test_a_web_reload_reuses_the_stored_token() -> void:
+	SessionTokenFile.make("tok123", "192.168.1.20", 47801).save(TOKEN)
+	var m: MainMenu = auto_free(MainMenu.new())
+	m.web = true
+	m.token_path = TOKEN
+	m.pid_path = PID
+	m.settings = ClientSettings.new(SETTINGS)
+	add_child(m)
+	m.join("192.168.1.20")
+	assert_str(m.joining.token).is_equal("tok123")
+	m.join("192.168.1.99")
+	assert_str(m.joining.token).is_empty()
+	SessionTokenFile.make("hosttok", "192.168.1.20", 47801, "secret").save(TOKEN)
+	m.join("192.168.1.20")
+	assert_str(m.joining.token).is_empty()
+	var desktop: MainMenu = _menu()
+	SessionTokenFile.make("tok123", "192.168.1.20", 47801).save(TOKEN)
+	desktop.join("192.168.1.20")
+	assert_str(desktop.joining.token).is_empty()

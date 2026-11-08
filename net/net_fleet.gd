@@ -538,6 +538,13 @@ func _relaunched(ship: int) -> void:
 	eliminated.erase(ship)
 	_handover_at.erase(ship)
 	session.abandoned.erase(ship)
+	# The fresh ship starts with fresh crew state, as after a run reset (R17-4): marks, pings,
+	# relay zones and routes, open chips, share timers and probe-scan flags of its old life go.
+	# (What a rival's KnowledgeTable holds of the ship is left alone: owner call, see the report.)
+	session.crew.reset(ship)
+	session.chips.reset(ship)
+	session.shares.reset(ship)
+	session.coop.reset_ship(ship)
 	for pair: Array in _crews.get(ship, []):
 		var s: NetSession = session.by_id.get(pair[0])
 		if s != null:

@@ -16,7 +16,17 @@ Start the client, type a name, pick where to serve (one of this machine's LAN ad
 
 ## Join a game
 
-Servers bound to a LAN address announce themselves, and **Games on this network** lists them live; double-click one to join. Only the first client on a computer can listen for them, so a second client on the same computer, or a server on another network, is joined by typing its address (`192.168.1.20` or `192.168.1.20:47801`) and pressing **Join**.
+Servers bound to a LAN address announce themselves, and **Games on this network** lists them live; click one to join. When the list stays empty the menu says so: ask the host for the address, or scan their QR code. Only the first client on a computer can listen for them, so a second client on the same computer, or a server on another network, is joined by typing its address (`192.168.1.20` or `192.168.1.20:47801`) and pressing **Join**. A browser can't listen for games, so the browser menu has no list: it joins the host that served the page.
+
+The host's **Network** list names each address with its interface (for example `192.168.1.20 (wlp2s0)`): pick the Wi-Fi or Ethernet one your friends share. Docker, VPN and tailnet addresses only reach people on those networks.
+
+### Join from a phone
+
+1. The host starts a game on a network address (not **This computer only**) and opens **How to join** in the lobby, or looks at the QR code under the lobby's title.
+2. On the phone, join the same Wi-Fi, open the camera and scan the QR code, or type the address shown beside it into the browser.
+3. The page joins by itself. Type your name when asked and tap **Done**.
+4. Tap a station. The host presses **Start** once the crew covers every station.
+5. If the page reloads or the phone sleeps, open the same link again: you return to your seat. If the game says it is open in another window, tap **Take back** there; if it says it can't reach the host, check the Wi-Fi and tap **Try again**, or **Leave**.
 
 ## Dedicated server
 

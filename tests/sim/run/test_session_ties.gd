@@ -73,6 +73,24 @@ func test_a_team_that_won_and_was_destroyed_does_not_stand() -> void:
 	assert_array(Array(out.winners)).is_equal([1, 3])
 
 
+# FT: FT-MIS-011
+# A ship that won and was then destroyed still emits &"eliminated" (R17-5), once, tagged destroyed;
+# its win stays.
+func test_a_ship_that_won_and_was_destroyed_is_eliminated() -> void:
+	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.COOP, 2)
+	_finish(f, 0)
+	f.step(2)
+	assert_int(f.world.run.outcome[0]).is_equal(RunTable.Outcome.WIN)
+	_destroy(f, 0)
+	var gone: Array[SimEvent] = f.step(2).filter(
+		func(e: SimEvent) -> bool: return e.kind == SessionOutcome.EVENT_ELIMINATED
+	)
+	assert_int(gone.size()).is_equal(1)
+	assert_int(gone[0].ship_id).is_equal(0)
+	assert_str(str(gone[0].tag)).is_equal("destroyed")
+	assert_int(f.world.run.outcome[0]).is_equal(RunTable.Outcome.WIN)
+
+
 func _holdout() -> FleetFixture:
 	var teams: Array[int] = [0, 1]
 	return FleetFixture.make(SessionRules.Mode.HOLDOUT, 2, teams)

@@ -46,7 +46,7 @@ const LANDSCAPE_COLUMNS: int = 3
 ## A window shorter than this (a phone in landscape) merges the header rows and puts the
 ## difficulty line on the seat row, so Start stays on screen.
 const SHORT_HEIGHT: float = 500.0
-## A window narrower than this (a phone upright) shortens the mode button to the mode's name.
+## A window narrower than this (a phone upright) shortens the mode button to "Mode: Teams".
 const NARROW_WIDTH: float = 700.0
 ## Cell padding and the grid gap, in px at 100 % UI scale (a cell stays >= TOUCH_MIN tall).
 const CELL_INSET: int = 4
@@ -122,6 +122,7 @@ var _start: Button
 var _title: Label
 var _leave: Button
 var _menu: Button
+var _end_dialog: ConfirmationDialog
 var _body: Control
 var _seat_row: HBoxContainer
 var _captain: Button
@@ -211,6 +212,9 @@ func refresh() -> void:
 		ctx.crew.is_crew() and ctx.crew.ship == ship and bool(state.get("ready", false))
 	)
 	_start.text = tr("lobby.start")
+	if _start.disabled:
+		# A greyed Start says what it waits for, on every form (R24-6, R26-3).
+		_start.text = start_blocker(state)
 	if ctx.crew.waiting_for_others(ship):
 		_start.disabled = true
 		_start.text = tr("lobby.waiting") % ", ".join(ctx.crew.waiting_names())
@@ -221,6 +225,7 @@ func refresh() -> void:
 	_body.visible = not _browsing
 	_leave.visible = not _browsing
 	_show_join_strip()
+	_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
 	_fit_strip.call_deferred()
 	_refresh_data()
 	if _refusal != "":
@@ -229,6 +234,25 @@ func refresh() -> void:
 		_summary_name.text = tr("lobby.pick_ship")
 		_summary_role.text = ""
 		_body.visible = false
+
+
+## Why Start is greyed on the shown ship: "Pick a station", "Need Relay, Comms" or
+## "Need 1 more player"; "Start" when nothing blocks it.
+func start_blocker(state: Dictionary) -> String:
+	if ctx.crew.ship != ship or not ctx.crew.is_crew():
+		return tr("lobby.need_seat")
+	if bool(state.get("ready", false)):
+		return tr("lobby.start")
+	var uncovered: Array = state.get("uncovered", [])
+	if not uncovered.is_empty():
+		var names: PackedStringArray = []
+		for st: Variant in uncovered:
+			names.append(tr("station." + str(st)))
+		return tr("lobby.need_stations") % ", ".join(names)
+	var missing: int = maxi(1, int(state.get("min_crew", 3)) - int(state.get("crew", 0)))
+	if missing == 1:
+		return tr("lobby.need_players_one")
+	return tr("lobby.need_players") % missing
 
 
 ## A ship button's text: its name, and its team in TEAMS and HOLDOUT ("Heron (B)").
@@ -244,7 +268,7 @@ func ship_label(row: Dictionary) -> String:
 func mode_text() -> String:
 	var name: String = tr("mode." + ctx.crew.mode())
 	if _short or size.x < NARROW_WIDTH:
-		return name
+		return tr("lobby.mode") % name  # still labelled: "Mode: Teams" (R24-5)
 	if ctx.crew.mode() == "teams":
 		name = (
 			tr("lobby.mode_rule")
@@ -618,14 +642,16 @@ func _apply_targets(phone: bool) -> void:
 			_fit_cell(cell, cell.get_child(0))
 	_phone = phone
 	_style_summary(_short, phone)
-	# A phone upright puts Start on the difficulty row, the preset's name on Customise.
+	# A phone upright shows the labelled mode and the preset on the difficulty row ("Mode:
+	# Teams", "Difficulty: Easy"), with Start under it on its own row (R24-5, R24-6).
 	if not _short:
 		_difficulty.visible = not phone
-		if phone:
-			_reparent(_start, _diff_row, -1)
-		else:
-			_reparent(_start, _outer, -1)
-	_customise.text = preset_label(ctx.crew.toggles) if _short or phone else tr("lobby.customise")
+		_reparent(_start, _outer, -1)
+	_customise.text = (
+		tr("lobby.difficulty") % preset_label(ctx.crew.toggles)
+		if _short or phone
+		else tr("lobby.customise")
+	)
 
 
 ## Lays the rows out for the window: normal, or short (a phone in landscape, #28), where
@@ -815,7 +841,7 @@ func _build() -> void:
 	_join_button = _button("JoinButton", tr("lobby.join_title"), _open_join)
 	head.add_child(_join_button)
 	_join_button.visible = ctx.host_bind != ""
-	_menu = _button("MainMenu", tr("lobby.menu"), menu_requested.emit)
+	_menu = _button("MainMenu", tr("lobby.menu"), _on_menu_pressed)
 	head.add_child(_menu)
 	# Full screen: an icon at the right of the title row, where the device offers it (D323).
 	_fullscreen = FullscreenToggle.new()
@@ -1049,6 +1075,14 @@ func _build_dialogs() -> void:
 	_mode_dialog = ModeDialog.new()
 	add_child(_mode_dialog)
 	_mode_dialog.setup(ctx)
+	_end_dialog = ConfirmationDialog.new()
+	_end_dialog.name = "EndDialog"
+	_end_dialog.title = tr("lobby.end_title")
+	_end_dialog.dialog_text = tr("lobby.end_text")
+	_end_dialog.ok_button_text = tr("lobby.end_game")
+	_end_dialog.cancel_button_text = tr("lobby.end_keep")
+	_end_dialog.confirmed.connect(menu_requested.emit)
+	add_child(_end_dialog)
 	_join_dialog = AcceptDialog.new()
 	_join_dialog.name = "JoinDialog"
 	_join_dialog.title = tr("lobby.join_title")
@@ -1057,6 +1091,14 @@ func _build_dialogs() -> void:
 	if ctx.host_bind != "":
 		_join_panel = LobbyJoinPanel.new(ctx)
 		_join_dialog.add_child(_join_panel)
+
+
+## Leave for a player; the host's button ends the game for everyone, so it asks first (R24-2).
+func _on_menu_pressed() -> void:
+	if ctx.crew.host:
+		_end_dialog.popup_centered()
+	else:
+		menu_requested.emit()
 
 
 func _open_mode() -> void:
@@ -1100,7 +1142,11 @@ func _refresh_data() -> void:
 	var toggles: DataToggles = ctx.crew.toggles
 	var editable: bool = can_edit_toggles()
 	_difficulty.text = tr("lobby.difficulty") % preset_label(toggles)
-	_customise.text = preset_label(toggles) if _short or _phone else tr("lobby.customise")
+	_customise.text = (
+		tr("lobby.difficulty") % preset_label(toggles)
+		if _short or _phone
+		else tr("lobby.customise")
+	)
 	_dialog.title = tr("lobby.data")
 	_preset_name.text = preset_label(toggles)
 	for preset: String in _preset_buttons:
@@ -1172,7 +1218,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and ctx != null:
 		_title.text = tr("lobby.title")
 		_start.text = tr("lobby.start")
-		_menu.text = tr("lobby.menu")
+		_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
+		_end_dialog.title = tr("lobby.end_title")
+		_end_dialog.dialog_text = tr("lobby.end_text")
+		_end_dialog.ok_button_text = tr("lobby.end_game")
+		_end_dialog.cancel_button_text = tr("lobby.end_keep")
 		_leave.text = tr("lobby.leave_pick")
 		_join_button.text = tr("lobby.join_title")
 		_name_field.placeholder_text = tr("menu.name")

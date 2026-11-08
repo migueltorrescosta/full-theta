@@ -31,6 +31,9 @@ var state: State = State.IDLE
 var token: String = ""
 var session_id: int = -1
 var reject_reason: String = ""
+## The close code the server (or the transport) ended the last connection with, -1 while open
+## or never closed (NetTransport.CLOSE_TAKEN_OVER: another connection took the session).
+var close_code: int = -1
 ## Welcome fields of the current connection.
 var welcome: Dictionary = {}
 var catalogue: Dictionary = {}
@@ -82,6 +85,7 @@ func connect_to(server_url: String) -> Error:
 	_queue = NetSendQueue.new()
 	welcome = {}
 	_hello_sent = false
+	close_code = -1
 	_arrivals.clear()
 	state = State.CONNECTING
 	var protocol: String = (
@@ -139,6 +143,7 @@ func poll() -> void:
 		for msg: Dictionary in _chunker.feed_packet(_peer.get_packet()):
 			_on_message(msg["stream"], msg["data"])
 	if ready_state == WebSocketPeer.STATE_CLOSED:
+		close_code = _peer.get_close_code()
 		if state != State.REJECTED:
 			state = State.CLOSED
 		return

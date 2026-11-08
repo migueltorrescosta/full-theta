@@ -205,6 +205,7 @@ func test_relaunch_by_vote() -> void:
 	var alls: Array[NetClient] = await _alls(server, [0, 1])
 	assert_bool(await _start(server, alls)).is_true()
 	var from: int = h.mark(alls[1])
+	server.session.crew.marks.set_alert(1, CrewMarks.Role.CREW, CrewMarks.ALERT_RED)
 	server.world.kin.alive[1] = 0
 	var gone: Dictionary = await _event(alls[1], NetProtocol.EVENT_ELIMINATED, from, 1)
 	assert_int(gone.get("lives", -2)).is_equal(SessionRules.HOLDOUT_LIVES)
@@ -226,6 +227,8 @@ func test_relaunch_by_vote() -> void:
 	var back: Dictionary = await _event(alls[1], NetProtocol.EVENT_RELAUNCHED, from, 1)
 	assert_str(FleetMessages.check(NetProtocol.EVENT_RELAUNCHED, back)).is_empty()
 	assert_int(back.get("lives", -2)).is_equal(SessionRules.HOLDOUT_LIVES - 1)
+	# R17-4: the relaunched ship's crew state is fresh (its red alert went with its old life).
+	assert_int(server.session.crew.marks.alert(1)).is_equal(CrewMarks.ALERT_NORMAL)
 	var s: NetSession = h.session_of(server, alls[1])
 	assert_int(s.ship).is_equal(1)
 	assert_str(s.entry).is_equal(StationViews.ALL)

@@ -110,16 +110,17 @@ const STATIONS: Dictionary = {
 	"comms": ["Comms", LIGHT],
 }
 
-## Sections per station or seat: every station has the top bar (STATUS) and the disc
-## radar (CONTACTS, FT-STN-001, FT-STN-002); the views that draw ship models and
-## tracers (Helm cockpit, Weapons turret, Captain and main screen) add NEAR and
-## PROJECTILES; the stations with claims or ship-wide controls add OWNERSHIP
+## Sections per station or seat: every station has the top bar (STATUS, and CAPTAIN for the
+## goal chip's open objectives) and the disc radar (CONTACTS, FT-STN-001, FT-STN-002); the
+## views that draw ship models and tracers (Helm cockpit, Weapons turret, Captain and main
+## screen) add NEAR and PROJECTILES; the stations with claims or ship-wide controls add OWNERSHIP
 ## (FT-NET-023, FT-NET-044).
 const STATION_SECTIONS: Dictionary = {
 	"helm":
 	[
 		Section.KIN,
 		Section.STATUS,
+		Section.CAPTAIN,
 		Section.HELM,
 		Section.CONTACTS,
 		Section.NEAR,
@@ -131,6 +132,7 @@ const STATION_SECTIONS: Dictionary = {
 	[
 		Section.KIN,
 		Section.STATUS,
+		Section.CAPTAIN,
 		Section.MOUNTS,
 		Section.CONTACTS,
 		Section.NEAR,
@@ -143,6 +145,7 @@ const STATION_SECTIONS: Dictionary = {
 	[
 		Section.KIN,
 		Section.STATUS,
+		Section.CAPTAIN,
 		Section.ENGINEERING,
 		Section.CONTACTS,
 		Section.RELAY,
@@ -153,6 +156,7 @@ const STATION_SECTIONS: Dictionary = {
 	[
 		Section.KIN,
 		Section.STATUS,
+		Section.CAPTAIN,
 		Section.SCIENCE,
 		Section.CONTACTS,
 		Section.RELAY,
@@ -163,12 +167,21 @@ const STATION_SECTIONS: Dictionary = {
 	[
 		Section.KIN,
 		Section.STATUS,
+		Section.CAPTAIN,
 		Section.CONTACTS,
 		Section.RELAY,
 		Section.OWNERSHIP,
 		Section.CHIPS,
 	],
-	"comms": [Section.KIN, Section.STATUS, Section.CONTACTS, Section.CHIPS, Section.COMMS],
+	"comms":
+	[
+		Section.KIN,
+		Section.STATUS,
+		Section.CAPTAIN,
+		Section.CONTACTS,
+		Section.CHIPS,
+		Section.COMMS,
+	],
 	"captain":
 	[
 		Section.KIN,

@@ -267,6 +267,11 @@ static func view(seam: bool = false) -> NetViewState:
 		"propellant": 8000.0,
 		"decoupled": false,
 	}
+	# The goal chip's objective (C2): two hostile ships still in play.
+	v.blocks[StationViews.Section.CAPTAIN] = {
+		"subsystems": [],
+		"objectives": [{"kind": StationViews.OBJECTIVE_DESTROY_HOSTILES, "left": 2}],
+	}
 	# Helm (#7 A): assist on at 80 m/s, H2 selected and shields tracking it.
 	v.blocks[StationViews.Section.HELM] = {
 		"decoupled": false,

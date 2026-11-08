@@ -245,7 +245,7 @@ func test_debrief_names_a_raider_wave() -> void:
 # #35 A3: an encounter whose time ran out reads as such in the debrief, not as won.
 func test_debrief_says_an_encounter_ran_out_of_time() -> void:
 	var row: Dictionary = {"scenario": "enemy_wave", "result": "partial", "s": 240.0}
-	assert_str(DebriefCard._encounter_line(1, row)).is_equal("1. Raider wave, -: out of time, 4:00")
+	assert_str(DebriefCard._encounter_line(1, row)).is_equal("1. Raider wave: out of time, 4:00")
 
 
 # FT: FT-MIS-030
@@ -267,6 +267,27 @@ func test_scoreboard_fits_a_portrait_phone() -> void:
 	var scroll: ScrollContainer = table.get_parent()
 	assert_float(table.get_combined_minimum_size().x).is_less_equal(scroll.size.x)
 	assert_str(_label(s, "Head_encounters").text).is_equal("Enc.")
+
+
+# FT: FT-MIS-030
+# R24-2: the scoreboard's button leaves for a player; the host's ends the game for everyone, so it
+# asks first.
+func test_the_scoreboard_asks_the_host_before_ending_the_game() -> void:
+	var guest: ScoreboardScreen = _scoreboard(_ctx("teams"))
+	var left: Array[int] = [0]
+	guest.menu_requested.connect(func() -> void: left[0] += 1)
+	assert_str((guest.find_child("MainMenu", true, false) as Button).text).is_equal("Leave")
+	(guest.find_child("MainMenu", true, false) as Button).pressed.emit()
+	assert_int(left[0]).is_equal(1)
+	var ctx: StationContext = _ctx("teams")
+	ctx.crew.host = true
+	var host: ScoreboardScreen = _scoreboard(ctx)
+	host.menu_requested.connect(func() -> void: left[0] += 1)
+	assert_str((host.find_child("MainMenu", true, false) as Button).text).is_equal("End game")
+	(host.find_child("MainMenu", true, false) as Button).pressed.emit()
+	assert_int(left[0]).is_equal(1)
+	(host.find_child("EndDialog", true, false) as ConfirmationDialog).confirmed.emit()
+	assert_int(left[0]).is_equal(2)
 
 
 # FT: FT-STN-008

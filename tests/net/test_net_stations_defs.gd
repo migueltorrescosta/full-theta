@@ -181,3 +181,14 @@ func test_event_kinds_per_station() -> void:
 	assert_bool(StationViews.sees_event("ops", &"fire_blocked")).is_false()
 	assert_bool(StationViews.sees_event(StationViews.ALL, &"ai_mode")).is_false()
 	assert_bool(StationViews.sees_event("viewer", &"hit")).is_true()
+
+
+# FT: FT-STN-001
+# C2: every station gets the CAPTAIN block (the open objectives), for the top bar's goal chip.
+func test_every_station_receives_the_open_objectives() -> void:
+	for station: String in StationViews.CREW + [StationViews.CAPTAIN, StationViews.VIEWER]:
+		(
+			assert_array(StationViews.STATION_SECTIONS[station])
+			. override_failure_message(station)
+			. contains([StationViews.Section.CAPTAIN])
+		)

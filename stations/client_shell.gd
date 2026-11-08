@@ -40,8 +40,6 @@ const SCREEN_KINDS: Array[StringName] = [
 	&"session_over",
 	&"relaunch",
 ]
-## Retry a dropped connection this often (ms).
-const RESUME_MS: int = 2000
 ## Station screens kept at most; the dev seat's holds all six panels.
 const MAX_SCREENS: int = 4
 ## A frame longer than this (µs) is reported to the server.
@@ -64,12 +62,18 @@ var forfeit_prompt: VotePrompt
 var relaunch_prompt: VotePrompt
 
 var _layer: Control
+## The connection banner: its line, and the Leave, Take back and Try again buttons.
+var _link_box: VBoxContainer
 var _banner: Label
+var _leave_button: Button
+var _take_back_button: Button
+var _try_again_button: Button
+## What the shell does about its connection (retry, give up, rejected, taken over).
+var _link: LinkWatch = LinkWatch.new()
 var _subtitles: Label
 var _subtitle_panel: PanelContainer
 var _last_seq: int = -1
 var _shown: String = ""
-var _resume_at: int = 0
 ## The Welcome dictionary last applied (NetClient makes a new one per Welcome).
 var _welcome: Dictionary = {}
 ## Built station screens by pick key ("station:<ship>:<entry>"), least recently shown first.
@@ -146,11 +150,9 @@ func _process(_delta: float) -> void:
 	var now: int = ctx.now_ms()
 	client.poll()
 	voice.pump(client)
-	if client.state == NetClient.State.CLOSED and now >= _resume_at:
-		_resume_at = now + RESUME_MS
+	if _link.update(client, now):
 		client.resume()
-	_banner.visible = client.state != NetClient.State.WELCOMED
-	_banner.text = tr("shell.reconnecting")
+	_show_link()
 	if client.is_welcomed() and not is_same(client.welcome, _welcome):
 		_on_welcome()
 	if not is_same(ctx.crew.catalogue, client.catalogue) and not client.catalogue.is_empty():
@@ -171,6 +173,39 @@ func _process(_delta: float) -> void:
 		_build_pending()
 	elif lobby != null:
 		_warm_step()
+
+
+## The connection banner (R24-3, R11-2): "Reconnecting..." while the shell retries; after
+## LinkWatch.GIVE_UP_MS, a rejection or a takeover it says why and offers Leave (and Take back
+## after a takeover, Try again after giving up).
+func _show_link() -> void:
+	var status: LinkWatch.Status = _link.status
+	_link_box.visible = status != LinkWatch.Status.OK
+	match status:
+		LinkWatch.Status.GAVE_UP:
+			_banner.text = JoinAdvice.gone()
+		LinkWatch.Status.REJECTED:
+			_banner.text = JoinAdvice.for_failure(ctx.client.reject_reason, ctx.client.url)
+		LinkWatch.Status.TAKEN_OVER:
+			_banner.text = tr("shell.taken_over")
+		_:
+			_banner.text = tr("shell.reconnecting")
+	var stuck: bool = status != LinkWatch.Status.OK and status != LinkWatch.Status.RETRYING
+	_leave_button.visible = stuck
+	_take_back_button.visible = status == LinkWatch.Status.TAKEN_OVER
+	_try_again_button.visible = status == LinkWatch.Status.GAVE_UP
+	if stuck:
+		# (the session language arrives after the banner is built)
+		_leave_button.text = tr("settings.leave")
+		_take_back_button.text = tr("shell.take_back")
+		_try_again_button.text = tr("shell.try_again")
+
+
+## Takes the session back after another window took it over (or tries again after giving
+## up): the connection resumes at once and the retry clock starts over.
+func take_back() -> void:
+	_link.restart(ctx.now_ms())
+	ctx.client.resume()
 
 
 ## Leaves the session: Bye, then `left`.
@@ -493,6 +528,41 @@ func _build_fleet_overlays() -> void:
 	relaunch_prompt.setup(ctx, VotePrompt.Kind.RELAUNCH)
 
 
+func _build_link_banner() -> void:
+	_link_box = VBoxContainer.new()
+	_link_box.name = "LinkBanner"
+	_link_box.anchor_left = 0.05
+	_link_box.anchor_right = 0.95
+	_link_box.offset_top = 80.0
+	_link_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_link_box.visible = false
+	add_child(_link_box)
+	_banner = Label.new()
+	_banner.name = "Banner"
+	_banner.theme_type_variation = "TitleLabel"
+	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_link_box.add_child(_banner)
+	var buttons: HBoxContainer = HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_link_box.add_child(buttons)
+	_take_back_button = _link_button(buttons, "TakeBack", take_back)
+	_try_again_button = _link_button(buttons, "TryAgain", take_back)
+	_leave_button = _link_button(buttons, "Leave", leave)
+
+
+func _link_button(parent: Node, node_name: String, on_press: Callable) -> Button:
+	var b: Button = Button.new()
+	b.name = node_name
+	b.visible = false
+	b.custom_minimum_size = Vector2(UiTheme.TOUCH_PRIMARY * 2.5, UiTheme.TOUCH_PRIMARY)
+	b.pressed.connect(on_press)
+	parent.add_child(b)
+	return b
+
+
 func _build_overlays() -> void:
 	pause_overlay = PauseOverlay.new()
 	pause_overlay.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
@@ -507,14 +577,7 @@ func _build_overlays() -> void:
 	add_child(outcome_card)
 	outcome_card.setup(ctx)
 	_build_fleet_overlays()
-	_banner = Label.new()
-	_banner.theme_type_variation = "TitleLabel"
-	_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_banner.position.y += 80
-	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_banner)
+	_build_link_banner()
 	# A Banner panel behind the lines (W3), shown only while a line is (FT-AUD-010).
 	_subtitle_panel = PanelContainer.new()
 	_subtitle_panel.name = "SubtitlePanel"

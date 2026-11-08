@@ -136,6 +136,10 @@ func test_a_token_takes_over_a_connected_session_cleanly() -> void:
 		. is_true()
 	)
 	assert_int(first._peer.get_close_code()).is_equal(NetTransport.CLOSE_TAKEN_OVER)
+	# R11-2: the client keeps the close code, so its shell stops resuming (LinkWatch).
+	first.poll()
+	assert_int(first.close_code).is_equal(NetTransport.CLOSE_TAKEN_OVER)
+	assert_int(first.state).is_equal(NetClient.State.CLOSED)
 	await h.wait(300)
 	assert_bool(session.connected()).is_true()
 	assert_object(server.session.by_conn.get(session.conn)).is_same(session)

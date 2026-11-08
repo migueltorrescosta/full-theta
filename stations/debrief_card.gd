@@ -110,15 +110,15 @@ static func _encounter_line(n: int, row: Dictionary) -> String:
 		how = "fled"
 	else:
 		how = str(row.get("result", "won"))
-	var site: String = (
-		_t(str(row.get("site_name_key", ""))) if row.get("site_name_key", "") != "" else "-"
-	)
+	var where: String = ""
+	if str(row.get("site_name_key", "")) != "":
+		where = ", " + _t(str(row["site_name_key"]))  # (no site: no placeholder dash)
 	return (
-		"%d. %s, %s: %s, %s"
+		"%d. %s%s: %s, %s"
 		% [
 			n,
 			_t("debrief.scenario.%s" % row.get("scenario", "")),
-			site,
+			where,
 			_t("debrief.res.%s" % how),
 			clock(float(row.get("s", 0.0))),
 		]
