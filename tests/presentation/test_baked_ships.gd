@@ -20,8 +20,12 @@ func _bodies(n: Node) -> Array[MeshInstance3D]:
 	return out
 
 
+func _hull(ship: Node3D) -> MeshInstance3D:
+	return ship.find_child("BodyHull", true, false) as MeshInstance3D
+
+
 func _albedo_hash(ship: Node3D) -> String:
-	var m: StandardMaterial3D = _bodies(ship)[0].material_override as StandardMaterial3D
+	var m: StandardMaterial3D = _hull(ship).material_override as StandardMaterial3D
 	return m.albedo_texture.get_image().get_data().hex_encode().sha256_text()
 
 
@@ -34,8 +38,9 @@ func test_every_look_is_baked_with_its_occlusion() -> void:
 		assert_bool(ResourceLoader.exists(ProceduralShip.BAKED_DIR + key + ".scn")).is_true()
 		var ship: Node3D = auto_free(ProceduralShip.instance(key))
 		var bodies: Array[MeshInstance3D] = _bodies(ship)
-		assert_int(bodies.size()).is_greater(80)
-		var hull: ArrayMesh = bodies[0].mesh as ArrayMesh
+		# E1: one mesh per material role, plus the greebles apart (was about 100 meshes).
+		assert_int(bodies.size()).is_between(8, 12)
+		var hull: ArrayMesh = _hull(ship).mesh as ArrayMesh
 		var colours: PackedColorArray = hull.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
 		assert_int(colours.size()).is_equal(
 			(hull.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
@@ -44,6 +49,41 @@ func test_every_look_is_baked_with_its_occlusion() -> void:
 		for c: Color in colours:
 			darkest = minf(darkest, c.r)
 		assert_float(darkest).is_less(0.95)
+
+
+# FT: FT-AUD-016
+# E1: the greebles are their own meshes, hidden beyond the detail range; the body meshes are
+# drawn at any distance.
+func test_greebles_drop_out_at_range_and_the_body_does_not() -> void:
+	var ship: ProceduralShip = auto_free(ProceduralShip.new())
+	ship.look = "kestrel"
+	add_child(ship)
+	var details: int = 0
+	for body: MeshInstance3D in _bodies(ship):
+		if body.is_in_group(ProceduralShip.DETAIL_GROUP):
+			details += 1
+			assert_float(body.visibility_range_end).is_equal(ProceduralShip.DETAIL_RANGE)
+		else:
+			assert_float(body.visibility_range_end).is_equal(0.0)
+	assert_int(details).is_between(2, 3)
+	# A ship drawn at 9x keeps its greebles 9x as far.
+	ship.set_detail_scale(9.0)
+	for body: MeshInstance3D in _bodies(ship):
+		if body.is_in_group(ProceduralShip.DETAIL_GROUP):
+			assert_float(body.visibility_range_end).is_equal(ProceduralShip.DETAIL_RANGE * 9.0)
+
+
+# FT: FT-AUD-016
+# E1: the merged ship covers the same space as the parts did: its box is the hull's box
+# grown by the wings, nacelles, tail and greebles, not a collapsed one.
+func test_merged_ship_keeps_its_extent() -> void:
+	var ship: Node3D = auto_free(ProceduralShip.instance("generic"))
+	var box: AABB = AABB()
+	for body: MeshInstance3D in _bodies(ship):
+		box = box.merge(body.mesh.get_aabb())
+	assert_float(box.size.z).is_between(5.0, 5.6)
+	assert_float(box.size.x).is_greater(1.5)
+	assert_float(_hull(ship).mesh.get_aabb().size.z).is_between(4.9, 5.2)
 
 
 # FT: FT-AUD-020
@@ -88,18 +128,22 @@ func test_two_seeds_give_different_panels_on_the_same_hull() -> void:
 	var bodies_a: Array[MeshInstance3D] = _bodies(ship_a)
 	var bodies_b: Array[MeshInstance3D] = _bodies(ship_b)
 	assert_int(bodies_b.size()).is_equal(bodies_a.size())
-	assert_object(bodies_b[0].mesh.get_aabb()).is_equal(bodies_a[0].mesh.get_aabb())
+	assert_object(_hull(ship_b).mesh.get_aabb()).is_equal(_hull(ship_a).mesh.get_aabb())
 	assert_str(_albedo_hash(ship_a)).is_not_equal(_albedo_hash(ship_b))
-	var moved: int = 0
-	for i: int in bodies_a.size():
-		if bodies_a[i].transform != bodies_b[i].transform:
-			moved += 1
-	assert_int(moved).is_greater(10)
+	var greebles_a: PackedVector3Array = _greebles(ship_a)
+	assert_bool(_greebles(ship_b) == greebles_a).is_false()
 	# Same seed, same ship.
 	var again: Node3D = auto_free(ShipBuilder.bake(a, 0.8).instantiate())
 	assert_str(_albedo_hash(again)).is_equal(_albedo_hash(ship_a))
-	for i: int in bodies_a.size():
-		assert_bool(_bodies(again)[i].transform == bodies_a[i].transform).is_true()
+	assert_bool(_greebles(again) == greebles_a).is_true()
+
+
+func _greebles(ship: Node3D) -> PackedVector3Array:
+	var out: PackedVector3Array = PackedVector3Array()
+	for body: MeshInstance3D in _bodies(ship):
+		if body.is_in_group(ProceduralShip.DETAIL_GROUP):
+			out.append_array(body.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX])
+	return out
 
 
 func _colours(ship: Node3D) -> Dictionary:
@@ -124,8 +168,9 @@ func test_a_look_has_its_own_stripe_and_a_decal_when_asked() -> void:
 	var named: Node3D = auto_free(ProceduralShip.instance("kestrel"))
 	var other: Node3D = auto_free(ProceduralShip.instance("heron"))
 	assert_int(_decals(plain)).is_equal(0)
-	assert_int(_decals(named)).is_equal(2)
-	assert_int(_bodies(named).size()).is_equal(_bodies(plain).size() + 2)
+	# Both wings' decals are one merged mesh.
+	assert_int(_decals(named)).is_equal(1)
+	assert_int(_bodies(named).size()).is_equal(_bodies(plain).size() + 1)
 	assert_bool(_colours(named).has(Color.from_string("#c0785a", Color.BLACK))).is_true()
 	assert_bool(_colours(other).has(Color.from_string("#c0785a", Color.BLACK))).is_false()
 	assert_bool(_colours(other).has(Color.from_string("#5a8fb0", Color.BLACK))).is_true()
@@ -162,12 +207,51 @@ func test_ships_of_a_look_share_resources_and_set_look_swaps() -> void:
 	var b: ProceduralShip = view.copy_ship("kestrel")
 	var bodies_a: Array[MeshInstance3D] = _bodies(a)
 	var bodies_b: Array[MeshInstance3D] = _bodies(b)
-	assert_int(bodies_a.size()).is_greater(80)
+	assert_int(bodies_a.size()).is_between(8, 12)
 	for i: int in bodies_a.size():
 		assert_object(bodies_b[i].mesh).is_same(bodies_a[i].mesh)
 		assert_object(bodies_b[i].material_override).is_same(bodies_a[i].material_override)
 	var before: int = bodies_a.size()
 	b.set_look("generic")
 	await get_tree().process_frame
-	assert_int(_bodies(b).size()).is_equal(before - 2)
+	assert_int(_bodies(b).size()).is_equal(before - 1)
 	assert_str(b.look).is_equal("generic")
+
+
+# FT: FT-AUD-016
+# E2: the Low Graphics tier draws the ship without triplanar plating and normal maps, sharing
+# one flat copy per baked material; the baked ones are untouched.
+func test_low_graphics_ships_have_flat_materials() -> void:
+	var baked: StandardMaterial3D = (
+		_hull(auto_free(ProceduralShip.instance("generic"))).material_override
+	)
+	assert_bool(baked.uv1_triplanar).is_true()
+	assert_bool(baked.normal_enabled).is_true()
+	ProceduralShip.low_graphics = true
+	var low: Node3D = ProceduralShip.instance("generic")
+	var low_b: Node3D = ProceduralShip.instance("generic")
+	ProceduralShip.low_graphics = false
+	auto_free(low)
+	auto_free(low_b)
+	var flat: StandardMaterial3D = _hull(low).material_override
+	assert_bool(flat.uv1_triplanar).is_false()
+	assert_bool(flat.normal_enabled).is_false()
+	assert_object(flat.albedo_texture).is_null()
+	assert_object(_hull(low_b).material_override).is_same(flat)
+	assert_bool(baked.uv1_triplanar).is_true()
+	assert_float(flat.albedo_color.r).is_equal(baked.albedo_color.r)
+
+
+# FT: FT-AUD-016
+# E2: a ship built before the Low Graphics setting changed is rebuilt by the view.
+func test_a_view_rebuilds_ships_when_low_graphics_changes() -> void:
+	var view: SpaceView = auto_free(SpaceView.new())
+	add_child(view)
+	var ship: ProceduralShip = view.copy_ship("kestrel")
+	assert_bool(ship.is_stale()).is_false()
+	ProceduralShip.low_graphics = true
+	assert_bool(ship.is_stale()).is_true()
+	view.refresh_ship(ship, "kestrel")
+	await get_tree().process_frame
+	ProceduralShip.low_graphics = false
+	assert_bool(_hull(ship).material_override.uv1_triplanar).is_false()
