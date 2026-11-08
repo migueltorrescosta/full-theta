@@ -61,7 +61,7 @@ func release_session(session: int, keep: Array[String] = []) -> Array:
 
 ## A session alone on a station holds every free item of it. covering: station ->
 ## session ids holding it on this ship; items: station -> the ship's items
-## (StationViews.claim_items). Returns [item, session] for each new claim.
+## (StationBlocks.claim_items). Returns [item, session] for each new claim.
 func settle(ship: int, covering: Dictionary, items: Dictionary) -> Array:
 	var out: Array = []
 	for station: String in items:

@@ -15,10 +15,11 @@ extends RefCounted
 ## Statuses and outcomes are final for the run; SimWorld.reset_ship (FT-MIS-017)
 ## restores a ship's row to IN_PLAY / NONE like every other table.
 ## Multi-ship sessions (#11): a crewed ship destroyed by a crewed ship of another side counts
-## a kill for that ship (RunTable.kills); each outcome stamps RunTable.finish_tick. In a
-## director run (run_def set), a crewed ship's LOSS also emits &"eliminated"
-## (SessionOutcome.EVENT_ELIMINATED, FT-MIS-011), and the first tick session_outcome() is
-## over emits &"session_over" (SessionOutcome.EVENT_SESSION_OVER).
+## a kill for that ship (RunTable.kills); each outcome stamps RunTable.finish_tick. A crewed
+## ship's LOSS also emits &"eliminated" (SessionOutcome.EVENT_ELIMINATED, FT-MIS-011) with the
+## reason and the lives left, which the server relays (NetFleet, F5); in a director run
+## (run_def set) the first tick session_outcome() is over emits &"session_over"
+## (SessionOutcome.EVENT_SESSION_OVER).
 
 
 static func step(world: SimWorld) -> void:
@@ -43,7 +44,7 @@ static func step(world: SimWorld) -> void:
 				_count_kill(world, id)
 				# A ship that won and was then destroyed is out of play too: it has no
 				# LOSS to emit the elimination from (R17-5).
-				if outcome[id] == RunTable.Outcome.WIN and world.run_def != null:
+				if outcome[id] == RunTable.Outcome.WIN:
 					_emit_eliminated(world, id)
 		elif enabled[id] == 1 and mode[id] == AiTable.Mode.RETREAT and _escaped(world, id):
 			status[id] = RunTable.Status.RETREATED
@@ -294,7 +295,7 @@ static func _set_outcome(world: SimWorld, id: int, outcome: RunTable.Outcome) ->
 	world.run.outcome[id] = outcome
 	world.run.finish_tick[id] = world.tick
 	world.emit(&"outcome", id, -1, outcome, Vector3.ZERO, RunTable.OUTCOME_NAMES[outcome])
-	if outcome == RunTable.Outcome.LOSS and world.run_def != null:
+	if outcome == RunTable.Outcome.LOSS:
 		_emit_eliminated(world, id)
 
 

@@ -83,7 +83,7 @@ func test_views_track_server_model() -> void:
 		for kind: int in StationViews.sections_of(entry):
 			if StationViews.BLOCKS.has(kind):
 				var truth: Dictionary = NetBlock.decode(
-					StationViews.BLOCKS[kind], StationViews.block_bytes(kind, copy, PLAYER)
+					StationViews.BLOCKS[kind], StationBlocks.block_bytes(kind, copy, PLAYER)
 				)
 				assert_dict(st.blocks[kind]).is_equal(truth)
 		if StationViews.sections_of(entry).has(StationViews.Section.NEAR):

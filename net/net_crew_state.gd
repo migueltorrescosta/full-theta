@@ -38,6 +38,12 @@ var _session: WeakRef
 
 func _init(server_session: ServerSession) -> void:
 	_session = weakref(server_session)
+	server_session.add_handler(NetProtocol.Type.ALERT, on_alert)
+	server_session.add_handler(NetProtocol.Type.MARK, on_mark)
+	server_session.add_handler(NetProtocol.Type.PING, on_ping)
+	server_session.add_handler(NetProtocol.Type.MAIN_VIEW, on_main_view)
+	server_session.add_handler(NetProtocol.Type.MARK_SEND, on_mark_send)
+	server_session.add_handler(NetProtocol.Type.MARK_ACCEPT, on_mark_accept)
 
 
 ## The current alert and marks of the session's ship, after a (re)join or a pick.
@@ -72,29 +78,21 @@ func reset(ship: int) -> void:
 
 
 ## Alert{level}: any crew pick sets its ship's alert level (FT-STN-008, D89).
-func on_alert(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_alert(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var level: int = msg["level"]
 	var why: String = marks.set_alert(s.ship, CrewMarks.role_of(s.entry), level)
-	if why != "":
-		session.request_rejected(s, NetProtocol.Type.ALERT, why, {"level": level})
+	if session.refuse(s, NetProtocol.Type.ALERT, why, {"level": level}):
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, s.name))
 
 
 ## MainView{view}: the Captain switches the ship's main screen; with no Captain seated
 ## (a Captain within reconnect grace is seated) Relay does (FT-MSC-005, FT-RLY-010, D88).
-func on_main_view(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_main_view(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var view: int = msg["view"]
 	var role: CrewMarks.Role = CrewMarks.role_of(s.entry) if s.has_pick() else CrewMarks.Role.NONE
 	var why: String = MainScreen.rule(role, view, captain_seated(s.ship))
-	if why != "":
-		session.request_rejected(s, NetProtocol.Type.MAIN_VIEW, why, {"view": view})
+	if session.refuse(s, NetProtocol.Type.MAIN_VIEW, why, {"view": view}):
 		return
 	main_views[s.ship] = view
 	_to_ship(s.ship, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, s.name))
@@ -109,10 +107,7 @@ func captain_seated(ship: int) -> bool:
 
 
 ## Mark{op, ...}: place, move, rename or delete one of the ship's marks (CrewMarks).
-func on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_mark(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var role: CrewMarks.Role = CrewMarks.role_of(s.entry)
 	var slot: int = msg["slot"]
 	var why: String = ""
@@ -134,8 +129,7 @@ func on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
 					return
 			_:
 				why = CrewMarks.BAD_MARK
-	if why != "":
-		session.request_rejected(s, NetProtocol.Type.MARK, why, {"op": msg["op"], "slot": slot})
+	if session.refuse(s, NetProtocol.Type.MARK, why, {"op": msg["op"], "slot": slot}):
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
 	# (FT-MIS-038: Relay's first mark)
@@ -150,10 +144,7 @@ func on_mark(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## faction; it waits in that ship's Relay inbox (FT-RLY-008, FT-SPA-021). An attached
 ## mark goes as the point where its contact is now, and is refused once the faction no
 ## longer detects the contact (D221, FT-RLY-009): the true position would leak.
-func on_mark_send(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_mark_send(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var to: int = msg["ship"]
 	var why: String = ""
 	if not s.has_pick() or CrewMarks.role_of(s.entry) != CrewMarks.Role.RELAY:
@@ -170,8 +161,7 @@ func on_mark_send(conn: int, msg: Dictionary, _now_us: int) -> void:
 			why = CrewMarks.BAD_MARK
 		else:
 			why = relay.send(to, s.ship, _ship_name(s.ship), mark)
-	if why != "":
-		session.request_rejected(s, NetProtocol.Type.MARK_SEND, why, {"slot": msg["slot"]})
+	if session.refuse(s, NetProtocol.Type.MARK_SEND, why, {"slot": msg["slot"]}):
 		return
 	_to_relay(to, NetProtocol.EVENT_INBOX, _inbox_payload(to))
 	_log(s.ship, "mark_sent", {"name": _resolved(s.ship, msg["slot"])["name"]})
@@ -181,10 +171,7 @@ func on_mark_send(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## MarkAccept{id, accept, slot}: the receiving Relay accepts the pending mark `id` as one
 ## of its ship's marks, or declines it (FT-RLY-009, FT-SPA-021). With 8 marks an accept
 ## must name the slot to replace, else it is refused (FT-SPA-022, D182).
-func on_mark_accept(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_mark_accept(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var why: String = ""
 	var pending: Dictionary = {}
 	if not s.has_pick() or CrewMarks.role_of(s.entry) != CrewMarks.Role.RELAY:
@@ -205,8 +192,7 @@ func on_mark_accept(conn: int, msg: Dictionary, _now_us: int) -> void:
 		why = marks.place(
 			s.ship, CrewMarks.Role.RELAY, s.id, s.name, msg["slot"], pending["name"], spot
 		)
-	if why != "":
-		session.request_rejected(s, NetProtocol.Type.MARK_ACCEPT, why, {"id": msg["id"]})
+	if session.refuse(s, NetProtocol.Type.MARK_ACCEPT, why, {"id": msg["id"]}):
 		return
 	relay.take(s.ship, msg["id"])
 	_to_relay(s.ship, NetProtocol.EVENT_INBOX, _inbox_payload(s.ship))
@@ -244,10 +230,7 @@ func on_sim_event(e: SimEvent) -> void:
 ## rate-limited per session
 ## (FT-SPA-017); a ping on an item another session pinged within 3 s is a copy naming
 ## that first pinger (FT-SPA-031).
-func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 	var kind: String = msg["kind"]
 	var payload: Dictionary = {"ship": s.ship, "kind": kind, "id": -1}
 	payload.merge({"x": 0.0, "y": 0.0, "z": 0.0})
@@ -298,8 +281,7 @@ func on_ping(conn: int, msg: Dictionary, now_us: int) -> void:
 					payload.merge({"x": at[0], "y": at[1], "z": at[2]}, true)
 			_:
 				why = CrewPings.BAD_PING
-	if why != "":
-		session.request_rejected(s, NetProtocol.Type.PING, why, {"kind": kind})
+	if session.refuse(s, NetProtocol.Type.PING, why, {"kind": kind}):
 		return
 	payload["by"] = s.name
 	payload["copy"] = pings.copy_of(s.ship, kind, payload["id"], s.id, s.name, now_us)
@@ -434,7 +416,10 @@ func _revealed(s: NetSession, contact: int, sub: int) -> bool:
 
 ## Science's scan-position mark (FT-SCI-010) becomes a scan position of the ship's zones
 ## (FT-SPA-028): one per ship, replacing the one Science made before; unchanged marks add
-## nothing.
+## nothing. The zone is the one owner of the scan position (F5, R12-1; D171 extended): every
+## reader (NetCoop's P3 check, the clients through `zones`) reads it, and the run reset and a
+## relaunch clear it with the ship's crew state. ScienceMarkCommand validates the contact and
+## computes the point; its ScienceTable columns are read here only, at the `scan_mark` event.
 func _science_scan_position(ship: int) -> void:
 	var world: SimWorld = session.world
 	var def: ScienceDef = world.science_def

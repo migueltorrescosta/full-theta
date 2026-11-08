@@ -164,7 +164,8 @@ func test_version_mismatch_is_rejected_with_a_reason() -> void:
 # Each invalid command produces CommandRejected{seq, reason} to its sender only, as an
 # event stamped with the tick: no pick, another station's command, an unknown kind, a
 # server-only command, another ship, a bad field, a non-finite value, and one the sim
-# rejects on apply (game rules). A valid command is not rejected.
+# rejects on apply (game rules; with the sim's own reason where it names one). A valid command
+# is not rejected.
 func test_invalid_commands_produce_command_rejected() -> void:
 	var server: NetServer = _server()
 	var eng: NetClient = _client(server, "eng")
@@ -181,7 +182,9 @@ func test_invalid_commands_produce_command_rejected() -> void:
 	expect[eng.command({"kind": "set_pips", "pipz": 2})] = CommandGate.BAD_FIELD
 	expect[eng.command({"kind": "set_pips", "pips": "2"})] = CommandGate.BAD_FIELD
 	expect[eng.command({"kind": "set_shield", "tightness": INF})] = CommandGate.BAD_VALUE
-	expect[eng.set_pips(SubsystemDef.Kind.ENGINES, 99)] = CommandGate.SIM_REJECTED
+	expect[eng.set_pips(99, 1)] = CommandGate.SIM_REJECTED
+	# A rejection the sim names reaches the client with that reason (F5, R12-7).
+	expect[eng.set_pips(SubsystemDef.Kind.ENGINES, 99)] = "chip_pips_max"
 	var ok_seq: int = eng.set_pips(SubsystemDef.Kind.ENGINES, 2)
 	var got: Dictionary = {}
 	var rejected: Array[Dictionary] = []
@@ -203,6 +206,29 @@ func test_invalid_commands_produce_command_rejected() -> void:
 		func(c: SimCommand) -> String: return c.kind()
 	)
 	assert_array(logged).contains([&"set_pips"])
+
+
+# FT: FT-ENG-002, FT-NET-007
+# The reactor cap is the sim's rule alone (F5, R12-7): pips over it come back as
+# CommandRejected{reason: eng_cap}, the reason the client's toast shows.
+func test_pips_over_the_reactor_cap_come_back_as_eng_cap() -> void:
+	var server: NetServer = _server()
+	var eng: NetClient = await _joined(server, "eng", "engineering")
+	var def: ShipDef = server.world.defs[PLAYER]
+	var seqs: Array[int] = []
+	var kinds: Dictionary = {}
+	for sub: SubsystemDef in def.subsystems:
+		if sub.kind != SubsystemDef.Kind.REACTOR and not kinds.has(sub.kind):
+			kinds[sub.kind] = true
+			seqs.append(eng.set_pips(sub.kind, def.power.max_pips_per_subsystem))
+	assert_int(seqs.size() * def.power.max_pips_per_subsystem).is_greater(def.power.reactor_pips)
+	var reasons: Array = []
+	var capped: Callable = func() -> bool:
+		for e: Dictionary in _events_of(eng.take_events(), NetProtocol.EVENT_COMMAND_REJECTED):
+			reasons.append(e["payload"]["reason"])
+		return reasons.has("eng_cap")
+	assert_bool(await _until(capped)).is_true()
+	assert_array(reasons).not_contains([CommandGate.SIM_REJECTED])
 
 
 # FT: FT-NET-006

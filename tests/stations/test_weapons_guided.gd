@@ -106,7 +106,7 @@ func test_ammo_select_cycles_the_types() -> void:
 		[{"kind": "set_ammo_type", "mount_index": 0, "ammo_type": 1}]
 	)
 	(
-		assert_str(StationViews.item_of(SimCommands.from_dict(_commands(s, "set_ammo_type")[0])))
+		assert_str(StationBlocks.item_of(SimCommands.from_dict(_commands(s, "set_ammo_type")[0])))
 		. is_equal("mount:0")
 	)
 	var second: StationScreen = _screen(1)
@@ -138,7 +138,7 @@ func test_guided_fire_at_a_mark_on_a_contact() -> void:
 	)
 	assert_array(_commands(s, "aim_mount")).is_not_empty()
 	var cmd: SimCommand = SimCommands.from_dict(fired[0])
-	assert_str(StationViews.item_of(cmd)).is_equal("mount:0")
+	assert_str(StationBlocks.item_of(cmd)).is_equal("mount:0")
 	assert_str(StationViews.station_of_command(cmd.kind())).is_equal("weapons")
 	# The selected contact works without a mark; the cooldown holds a second press.
 	s.ctx.crew.select("contact", StationFixture.H2)

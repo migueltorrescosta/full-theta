@@ -9,8 +9,8 @@ extends PanelContainer
 const MIN_SIZE: Vector2 = Vector2(720.0, 420.0)
 ## Director decisions shown at most; the session log holds all of them.
 const MAX_DECISIONS: int = 24
-## The sim's ticks per second (stations do not name the sim).
-const TICKS_PER_S: float = 60.0
+## The sim's ticks per second (SimRate, G8).
+const TICKS_PER_S: float = SimRate.HZ * 1.0
 
 var ctx: StationContext
 

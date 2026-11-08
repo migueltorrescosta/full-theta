@@ -14,13 +14,15 @@ extends RefCounted
 ##   (press_start, M4-Q4). The world is then built from start_slots(), the ships with a crew
 ##   pick in lobby order, with the mode's factions and teams; a ship nobody crewed vanishes and
 ##   its sessions are moved to the new ids (M4-Q3).
-## - Elimination: a crewed ship whose run status leaves IN_PLAY (destroyed, abandoned, or
-##   forfeited by the abandon vote in PvP, M4-Q10) is `eliminated`; HANDOVER_DELAY_TICKS later,
+## - Elimination: the sim's &"eliminated" event for a started ship (destroyed, abandoned, or
+##   forfeited by the abandon vote in PvP, M4-Q10; the event carries the reason and the lives
+##   left, F5) becomes the `eliminated` event; HANDOVER_DELAY_TICKS later,
 ##   unless the session is over, its sessions view a surviving friendly ship's main screen or
 ##   go to the scoreboard (destination_of, FT-MIS-030, D91).
-## - Relaunch: the eliminated ship's connected crew vote by majority, when its side's policy
-##   allows (M4-Q2); the vote sends RelaunchShipCommand, and once the sim accepts it the crew
-##   are back on their stations (`relaunched`).
+## - Relaunch: the eliminated ship's connected crew vote by majority while it has lives left
+##   (M4-Q2); the vote sends RelaunchShipCommand, the sim alone checks the side's policy, and its
+##   &"relaunched" event puts the crew back on their stations (`relaunched`); a rejected
+##   command is refused `no_relaunch` to the voters.
 ## - Takeover in a pause (takeover_rule, M4-Q8, FT-NET-042).
 ## - Scoreboard: rows to the sessions without a pick once the universe started (M4-Q9).
 ## A world NetServer can't rebuild (the M1 and load encounters) keeps its fixed ships: the
@@ -37,9 +39,9 @@ const OWN_EVENTS: Array[StringName] = [
 ## (its outcome comes from the same tick's run state) keeps its crews for the debrief.
 const HANDOVER_DELAY_TICKS: int = 2
 ## A scoreboard whose rows changed only in their times goes out at most once a second.
-const SCOREBOARD_EVERY_TICKS: int = 60
+const SCOREBOARD_EVERY_TICKS: int = SimRate.HZ
 ## While the universe runs, the `fleet` event is checked at most every half second.
-const FLEET_EVERY_TICKS: int = 30
+const FLEET_EVERY_TICKS: int = SimRate.HZ / 2
 
 var session: ServerSession:
 	get:
@@ -74,6 +76,9 @@ var _crews: Dictionary[int, Array] = {}
 ## Eliminated ship -> the tick of its handover.
 var _handover_at: Dictionary[int, int] = {}
 var _votes: Dictionary[int, NetVote] = {}
+## Eliminated ship -> the relaunches its side has left, as the sim's &"eliminated" or
+## &"relaunched" event said.
+var _lives: Dictionary[int, int] = {}
 var _relaunching: Dictionary[int, RelaunchShipCommand] = {}
 var _fleet_sent: Dictionary = {}
 var _board_sent: Array = []
@@ -104,6 +109,7 @@ func reset() -> void:
 	_crews.clear()
 	_handover_at.clear()
 	_votes.clear()
+	_lives.clear()
 	_relaunching.clear()
 	_board_sent = []
 	_fleet_tick = -FLEET_EVERY_TICKS
@@ -129,10 +135,13 @@ func is_over() -> bool:
 ## coverage check that fails again. Empty once the universe started.
 func waiting() -> Array[int]:
 	var out: Array[int] = []
-	if not session.launched.is_empty():
+	if session.lobby.any_launched():
 		return out
 	for id: int in _crewed():
-		if not (pressed.has(id) and NetCoverage.passes(session.entries_of(id), session.min_crew())):
+		if not (
+			pressed.has(id)
+			and NetCoverage.passes(session.lobby.entries_of(id), session.lobby.min_crew())
+		):
 			out.append(id)
 	return out
 
@@ -142,7 +151,7 @@ func waiting() -> Array[int]:
 ## errors (SessionRules.slot_errors) the press is refused `bad_mode` with the errors. On a
 ## fixed world a ship crewed after the universe started starts alone.
 func press_start(s: NetSession) -> Array[int]:
-	if not session.launched.is_empty():
+	if session.lobby.any_launched():
 		return [s.ship]
 	pressed[s.ship] = true
 	_dirty = true
@@ -153,7 +162,7 @@ func press_start(s: NetSession) -> Array[int]:
 		if not errors.is_empty():
 			pressed.erase(s.ship)
 			var extra: Dictionary = {"errors": Array(errors)}
-			session.request_rejected(s, NetProtocol.Type.READY, FleetMessages.BAD_MODE, extra)
+			session.refuse(s, NetProtocol.Type.READY, FleetMessages.BAD_MODE, extra)
 			return []
 		var kept: Array[int] = _kept()
 		if not _world_current or kept.size() < slots.size():
@@ -163,12 +172,12 @@ func press_start(s: NetSession) -> Array[int]:
 	return _crewed()
 
 
-## Why `s` may not take over `entry` on the paused `ship`, or "" (M4-Q8, FT-NET-042): the
-## ship's own Captain and viewers, and players of allied ships (same faction); enemies never
-## (ENEMY_SHIP); the entry must cover a station still uncovered (TAKEN: someone claimed it
-## first); a crew player may not leave if their own ship in play would fail coverage
-## (BREAKS_COVERAGE).
-func takeover_rule(s: NetSession, ship: int, entry: String) -> String:
+## Why `s` may not take over `entry` on the paused `ship`, whose open stations are `uncovered`,
+## or "" (M4-Q8, FT-NET-042): the ship's own Captain and viewers, and players of allied ships
+## (same faction); enemies never (ENEMY_SHIP); the entry must cover a station still uncovered
+## (TAKEN: someone claimed it first); a crew player may not leave if their own ship in play
+## would fail coverage (BREAKS_COVERAGE).
+func takeover_rule(s: NetSession, ship: int, entry: String, uncovered: Array) -> String:
 	var world: SimWorld = session.world
 	if not StationViews.is_entry(entry, session.dev_all) or not StationViews.is_crew(entry):
 		return ServerSession.BAD_PICK
@@ -179,10 +188,9 @@ func takeover_rule(s: NetSession, ship: int, entry: String) -> String:
 		return CommandGate.NOT_ALLOWED
 	elif world.faction_of(s.ship) != world.faction_of(ship):
 		return FleetMessages.ENEMY_SHIP
-	var open: Array = session.paused.get(ship, [])
 	var covers: bool = false
 	for station: String in StationViews.stations_of(entry):
-		covers = covers or open.has(station)
+		covers = covers or uncovered.has(station)
 	if not covers:
 		return FleetMessages.TAKEN
 	return _leave_rule(s, ship)
@@ -191,14 +199,14 @@ func takeover_rule(s: NetSession, ship: int, entry: String) -> String:
 ## BREAKS_COVERAGE when a crew player leaving their own ship in play for `ship` would make it
 ## fail the coverage check it passes now (FT-NET-042), else "".
 func _leave_rule(s: NetSession, ship: int) -> String:
-	if s.ship == ship or not StationViews.is_crew(s.entry) or not session.in_play(s.ship):
+	if s.ship == ship or not StationViews.is_crew(s.entry) or not session.lobby.in_play(s.ship):
 		return ""
-	var before: Array = session.entries_of(s.ship)
+	var before: Array = session.lobby.entries_of(s.ship)
 	var after: Array = before.duplicate()
 	after.erase(s.entry)
 	if (
-		NetCoverage.passes(before, session.min_crew())
-		and not NetCoverage.passes(after, session.min_crew())
+		NetCoverage.passes(before, session.lobby.min_crew())
+		and not NetCoverage.passes(after, session.lobby.min_crew())
 	):
 		return FleetMessages.BREAKS_COVERAGE
 	return ""
@@ -207,10 +215,10 @@ func _leave_rule(s: NetSession, ship: int) -> String:
 ## A takeover was applied: every session of the ship's side hears who took what (M4-Q8).
 func took_over(s: NetSession, ship: int, entry: String, from_ship: int) -> void:
 	var world: SimWorld = session.world
-	var ids: PackedInt32Array = PackedInt32Array()
-	for o: NetSession in session.by_id.values():
-		if o.ship >= 0 and world.faction_of(o.ship) == world.faction_of(ship):
-			ids.append(o.id)
+	var ids: PackedInt32Array = session.audience(
+		func(o: NetSession) -> bool:
+			return o.ship >= 0 and world.faction_of(o.ship) == world.faction_of(ship)
+	)
 	var payload: Dictionary = FleetMessages.takeover(ship, entry, s.name, from_ship)
 	session.transport.post_event(ids, world.tick, NetProtocol.EVENT_TAKEOVER, payload)
 
@@ -226,7 +234,7 @@ func destination_of(ship: int) -> int:
 		var other: int = c["id"]
 		if (
 			other != ship
-			and session.in_play(other)
+			and session.lobby.in_play(other)
 			and world.faction_of(other) == world.faction_of(ship)
 		):
 			return other
@@ -239,7 +247,7 @@ func scoreboard_rows() -> Array:
 	var rows: Array = []
 	for c: Dictionary in session.crew_ships():
 		var id: int = c["id"]
-		if not session.launched.has(id):
+		if not session.lobby.is_launched(id):
 			continue
 		var end: int = world.run.finish_tick[id] if world.run.finish_tick[id] >= 0 else world.tick
 		var time_s: float = float(end - start_tick) / SimWorld.HZ
@@ -256,21 +264,30 @@ func scoreboard_rows() -> Array:
 	return rows
 
 
-## After the sim stepped (ServerSession.after_ticks): the session's outcome, eliminations,
-## due handovers, applied relaunches and the scoreboard. They are read from the run state
-## (RunTable status, relaunches, kills, finish_tick; OutcomeSystem.session_outcome) rather than
-## the sim's `eliminated` and `session_over` events, which only a director run emits.
-func after_ticks(_events: Array[SimEvent]) -> void:
+## After the sim stepped (ServerSession.after_ticks): eliminations and relaunches from the
+## sim's events (F5: the sim owns the reason, the lives left and the relaunch rule), the
+## session's outcome, due handovers, refused relaunches and the scoreboard. The outcome is read
+## from the run state (OutcomeSystem.session_outcome) rather than the sim's `session_over`
+## event, which only a director run emits.
+func after_ticks(events: Array[SimEvent]) -> void:
 	var world: SimWorld = session.world
-	for ship: int in session.launched:
-		if not eliminated.has(ship) and world.run.status[ship] != RunTable.Status.IN_PLAY:
-			_eliminate(ship)
-	if outcome == null and not session.launched.is_empty():
+	for e: SimEvent in events:
+		if not session.lobby.is_launched(e.ship_id):
+			continue
+		if e.kind == SessionOutcome.EVENT_ELIMINATED and not eliminated.has(e.ship_id):
+			_eliminate(e.ship_id, String(e.tag), int(e.value))
+		elif e.kind == SessionOutcome.EVENT_RELAUNCHED:
+			_relaunched(e.ship_id, int(e.value))
+	if outcome == null and session.lobby.any_launched():
 		var o: SessionOutcome = OutcomeSystem.session_outcome(world)
 		if o.over():
 			outcome = o
 			var time_s: float = float(world.tick - start_tick) / SimWorld.HZ
-			var payload: Dictionary = FleetMessages.session_over(o, time_s)
+			var held_s: float = float(o.held_ticks) / SimRate.HZ
+			var reason: String = SessionOutcome.REASON_NAMES[o.reason]
+			var payload: Dictionary = FleetMessages.session_over(
+				reason, Array(o.winners), o.team, held_s, time_s
+			)
 			session.broadcast(NetProtocol.EVENT_SESSION_OVER, payload)
 	for ship: int in _handover_at.keys():
 		if world.tick >= _handover_at[ship]:
@@ -281,8 +298,8 @@ func after_ticks(_events: Array[SimEvent]) -> void:
 		var c: RelaunchShipCommand = _relaunching[ship]
 		if c.tick >= 0:
 			_relaunching.erase(ship)
-			if c.accepted:
-				_relaunched(ship)
+			if not c.accepted:
+				_refuse_relaunch(ship)
 	_send_scoreboard()
 
 
@@ -294,7 +311,7 @@ func publish(lobby_dirty: bool) -> void:
 	if not _dirty and not _pending:
 		return
 	var tick: int = session.world.tick
-	if not _dirty and not session.launched.is_empty() and tick < _fleet_tick + FLEET_EVERY_TICKS:
+	if not _dirty and session.lobby.any_launched() and tick < _fleet_tick + FLEET_EVERY_TICKS:
 		return
 	_dirty = false
 	_pending = false
@@ -308,7 +325,7 @@ func publish(lobby_dirty: bool) -> void:
 ## A (re)joining session starts in sync: the `fleet` event, and the scoreboard without a pick.
 func send_to(s: NetSession) -> void:
 	session.notify(s, NetProtocol.EVENT_FLEET, _fleet_payload())
-	if not session.launched.is_empty() and not s.has_pick():
+	if session.lobby.any_launched() and not s.has_pick():
 		var payload: Dictionary = FleetMessages.scoreboard(scoreboard_rows())
 		session.notify(s, NetProtocol.EVENT_SCOREBOARD, payload)
 
@@ -316,15 +333,11 @@ func send_to(s: NetSession) -> void:
 # --- Handlers. ---
 
 
-func _on_ship_add(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func _on_ship_add(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var reason: String = _lobby_refusal(s, false)
 	if reason == "" and slots.size() >= SessionRules.MAX_SHIPS:
 		reason = FleetMessages.FLEET_FULL
-	if reason != "":
-		session.request_rejected(s, NetProtocol.Type.SHIP_ADD, reason, {"name": msg["name"]})
+	if session.refuse(s, NetProtocol.Type.SHIP_ADD, reason, {"name": msg["name"]}):
 		return
 	var ship_name: String = msg["name"]  # cleaned by NetProtocol.decode (NAMED)
 	if ship_name == "":
@@ -333,10 +346,7 @@ func _on_ship_add(conn: int, msg: Dictionary, _now_us: int) -> void:
 	_apply(rules.has_teams())
 
 
-func _on_ship_team(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func _on_ship_team(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
 	var team: int = msg["team"]
 	var reason: String = _lobby_refusal(s, false)
@@ -344,29 +354,23 @@ func _on_ship_team(conn: int, msg: Dictionary, _now_us: int) -> void:
 		reason = ServerSession.NOT_CREW
 	elif reason == "" and (not rules.has_teams() or team < 0 or team > 1):
 		reason = FleetMessages.BAD_TEAM
-	if reason != "":
-		var extra: Dictionary = {"ship": ship, "team": team}
-		session.request_rejected(s, NetProtocol.Type.SHIP_TEAM, reason, extra)
+	if session.refuse(s, NetProtocol.Type.SHIP_TEAM, reason, {"ship": ship, "team": team}):
 		return
 	slots[ship].team = team
 	_apply(false)
 
 
 ## SessionMode{mode, team_win, lives}: lives -1 keeps the holdout default (HOLDOUT_LIVES).
-func _on_session_mode(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func _on_session_mode(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var mode: int = SessionRules.MODE_NAMES.find(msg["mode"])
 	var team_win: int = SessionRules.TEAM_WIN_NAMES.find(msg["team_win"])
 	var lives: int = msg["lives"]
 	var reason: String = _lobby_refusal(s, true)
 	if reason == "" and (mode < 0 or team_win < 0 or lives == 0 or lives < -1):
 		reason = FleetMessages.BAD_MODE
-	if reason != "":
-		var extra: Dictionary = msg.duplicate()
-		extra.erase("t")
-		session.request_rejected(s, NetProtocol.Type.SESSION_MODE, reason, extra)
+	var extra: Dictionary = msg.duplicate()
+	extra.erase("t")
+	if session.refuse(s, NetProtocol.Type.SESSION_MODE, reason, extra):
 		return
 	var had_teams: bool = rules.has_teams()
 	rules = SessionRules.of_mode(mode as SessionRules.Mode)
@@ -377,30 +381,26 @@ func _on_session_mode(conn: int, msg: Dictionary, _now_us: int) -> void:
 
 
 ## Relaunch{ship, vote} from the eliminated ship's connected crew (M4-Q2).
-func _on_relaunch(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func _on_relaunch(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
 	var members: Array[int] = _voters(ship)
 	var reason: String = ""
+	# Lives as the sim's events told them (F5): the sim checks the policy again on apply.
 	if (
 		not eliminated.has(ship)
 		or outcome != null
 		or _relaunching.has(ship)
-		or not _policy(ship).allows(session.world.run.relaunches[ship])
+		or _lives_left(ship) == 0
 	):
 		reason = FleetMessages.NO_RELAUNCH
 	elif not members.has(s.id):
 		reason = ServerSession.NOT_CREW
-	if reason != "":
-		session.request_rejected(s, NetProtocol.Type.RELAUNCH, reason, {"ship": ship})
+	if session.refuse(s, NetProtocol.Type.RELAUNCH, reason, {"ship": ship}):
 		return
 	var vote: NetVote = _votes.get_or_add(ship, NetVote.new())
 	var passes: bool = vote.cast_from(s, msg["vote"], members)
 	var ids: PackedInt32Array = PackedInt32Array(members)
-	var payload: Dictionary = vote.payload(ship, members.size())
-	session.transport.post_event(ids, session.world.tick, NetProtocol.EVENT_RELAUNCH_VOTES, payload)
+	session.send_votes(NetProtocol.EVENT_RELAUNCH_VOTES, ship, vote, members.size(), ids)
 	if passes:
 		_votes.erase(ship)
 		var c: RelaunchShipCommand = RelaunchShipCommand.new()
@@ -415,7 +415,7 @@ func _on_relaunch(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## Why the lobby can't change now, or "": a fixed world or a started universe (lobby_closed),
 ## and SessionMode from anyone but the host (not_host).
 func _lobby_refusal(s: NetSession, host_only: bool) -> String:
-	if not rebuild.is_valid() or not session.launched.is_empty():
+	if not rebuild.is_valid() or session.lobby.any_launched():
 		return FleetMessages.LOBBY_CLOSED
 	if host_only and not s.is_host:
 		return ServerSession.NOT_HOST
@@ -460,20 +460,20 @@ func _rebuild_for_start(kept: Array[int]) -> void:
 	for i: int in kept:
 		built.append(slots[i])
 	slots = built
-	session.claims = NetClaims.new()
+	session.reset_claims()
 	rebuild.call(slots, rules)
 	_world_current = true
 	_send_catalogue()
 	for m: Array in moves:
 		var ship: int = m[1]
-		session.move(m[0], ship, m[2] if ship >= 0 else "")
+		session.lobby.move(m[0], ship, m[2] if ship >= 0 else "")
 
 
 ## Lobby ids of the slots with a crew pick, ascending.
 func _kept() -> Array[int]:
 	var out: Array[int] = []
 	for i: int in slots.size():
-		if NetCoverage.crew_count(session.entries_of(i)) > 0:
+		if NetCoverage.crew_count(session.lobby.entries_of(i)) > 0:
 			out.append(i)
 	return out
 
@@ -482,7 +482,7 @@ func _kept() -> Array[int]:
 func _crewed() -> Array[int]:
 	var out: Array[int] = []
 	for c: Dictionary in session.crew_ships():
-		if NetCoverage.crew_count(session.entries_of(c["id"])) > 0:
+		if NetCoverage.crew_count(session.lobby.entries_of(c["id"])) > 0:
 			out.append(c["id"])
 	return out
 
@@ -494,21 +494,17 @@ func _send_catalogue() -> void:
 			session.transport.send(s.conn, bytes)
 
 
-func _policy(ship: int) -> RelaunchPolicy:
-	return rules.relaunch_for(session.world.team_of(ship))
-
-
+## The relaunches the eliminated ship's side has left, from the sim's last event for it.
 func _lives_left(ship: int) -> int:
-	return _policy(ship).left(session.world.run.relaunches[ship])
+	return _lives.get(ship, 0)
 
 
-## A crewed ship left play: everyone hears why; its sessions are handed over later.
-func _eliminate(ship: int) -> void:
-	var reason: String = "destroyed"
-	if session.world.run.status[ship] == RunTable.Status.ABANDONED or session.abandoned.has(ship):
-		reason = "forfeit" if rules.is_pvp() else "abandoned"  # as the sim tags it (M4-Q10)
+## A crewed ship left play, with the sim's reason ("destroyed", "abandoned" or "forfeit",
+## M4-Q10) and lives left: everyone hears why; its sessions are handed over later.
+func _eliminate(ship: int, reason: String, lives: int) -> void:
 	eliminated[ship] = reason
-	var payload: Dictionary = FleetMessages.eliminated(ship, reason, _lives_left(ship))
+	_lives[ship] = lives
+	var payload: Dictionary = FleetMessages.eliminated(ship, reason, lives)
 	session.broadcast(NetProtocol.EVENT_ELIMINATED, payload)
 	var crew: Array = []
 	for s: NetSession in session.by_id.values():
@@ -528,16 +524,18 @@ func _hand_over(ship: int) -> void:
 			continue
 		# `handover` first, then the `picked` of the move (the client keys its view by ship).
 		session.notify(s, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(ship, to))
-		session.move(s, to, StationViews.VIEWER if to >= 0 else "")
+		session.lobby.move(s, to, StationViews.VIEWER if to >= 0 else "")
 	_board_sent = []
 	_board_tick = -SCOREBOARD_EVERY_TICKS
 
 
-## The sim accepted the relaunch: the ship is back in play and its crew on their stations.
-func _relaunched(ship: int) -> void:
+## The sim relaunched the ship (its &"relaunched" event, with the lives left): the ship is back
+## in play and its crew on their stations.
+func _relaunched(ship: int, lives: int) -> void:
 	eliminated.erase(ship)
 	_handover_at.erase(ship)
-	session.abandoned.erase(ship)
+	_lives[ship] = lives
+	session.lobby.clear_abandoned(ship)
 	# The fresh ship starts with fresh crew state, as after a run reset (R17-4): marks, pings,
 	# relay zones and routes, open chips, share timers and probe-scan flags of its old life go.
 	# (What a rival's KnowledgeTable holds of the ship is left alone: owner call, see the report.)
@@ -548,11 +546,20 @@ func _relaunched(ship: int) -> void:
 	for pair: Array in _crews.get(ship, []):
 		var s: NetSession = session.by_id.get(pair[0])
 		if s != null:
-			session.move(s, ship, pair[1])
+			session.lobby.move(s, ship, pair[1])
 	_crews.erase(ship)
-	var payload: Dictionary = FleetMessages.relaunched(ship, _lives_left(ship))
+	var payload: Dictionary = FleetMessages.relaunched(ship, lives)
 	session.broadcast(NetProtocol.EVENT_RELAUNCHED, payload)
 	_dirty = true
+
+
+## The sim rejected the relaunch the vote sent: its voters hear `no_relaunch`.
+func _refuse_relaunch(ship: int) -> void:
+	for id: int in _voters(ship):
+		var extra: Dictionary = {"ship": ship}
+		session.request_rejected(
+			session.by_id[id], NetProtocol.Type.RELAUNCH, FleetMessages.NO_RELAUNCH, extra
+		)
 
 
 ## Connected crew of the eliminated ship as it was when eliminated: the relaunch voters.
@@ -569,7 +576,7 @@ func _fleet_payload() -> Dictionary:
 	var ships: Array = []
 	for c: Dictionary in session.crew_ships():
 		var id: int = c["id"]
-		var lobby: Dictionary = session.lobby_state(id)
+		var lobby: Dictionary = session.lobby.lobby_state(id)
 		ships.append(
 			FleetMessages.fleet_ship(
 				id,
@@ -579,23 +586,25 @@ func _fleet_payload() -> Dictionary:
 				lobby["crew"],
 				Array(lobby["uncovered"]),
 				lobby["ready"],
-				pressed.has(id) or session.launched.has(id)
+				pressed.has(id) or session.lobby.is_launched(id)
 			)
 		)
 	var lives: int = -1
 	if rules.mode == SessionRules.Mode.HOLDOUT:
 		lives = rules.relaunch_for(SessionRules.HOLDOUT_FINITE_TEAM).lives
-	var started: bool = not session.launched.is_empty()
-	return FleetMessages.fleet(ships, rules, lives, Array(waiting()), started)
+	var started: bool = session.lobby.any_launched()
+	var mode: String = SessionRules.MODE_NAMES[rules.mode]
+	var team_win: String = SessionRules.TEAM_WIN_NAMES[rules.team_win]
+	var max_ships: int = SessionRules.MAX_SHIPS
+	return FleetMessages.fleet(ships, mode, team_win, max_ships, lives, Array(waiting()), started)
 
 
 ## The scoreboard to the sessions without a pick: on a change of state or progress, and once a
 ## second while only the times move.
 func _send_scoreboard() -> void:
-	var ids: PackedInt32Array = PackedInt32Array()
-	for s: NetSession in session.by_id.values():
-		if not s.has_pick() and s.connected():
-			ids.append(s.id)
+	var ids: PackedInt32Array = session.audience(
+		func(s: NetSession) -> bool: return not s.has_pick() and s.connected()
+	)
 	if ids.is_empty():
 		return
 	var rows: Array = scoreboard_rows()

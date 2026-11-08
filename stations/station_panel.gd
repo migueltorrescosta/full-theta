@@ -211,7 +211,7 @@ func request_chips() -> Array[ChipDef]:
 	var out: Array[ChipDef] = []
 	if ctx == null:
 		return out
-	for c: ChipDef in NetChips.def().chips:
+	for c: ChipDef in ChipView.def().chips:
 		if String(c.from_station) != station:
 			continue
 		if _on_screen(c) or ctx.crew.toggles.on(ViewFilter.CHIPS):
@@ -315,18 +315,16 @@ func _more_pips(kind: SubsystemDef.Kind) -> void:
 	if def == null or def.power == null or rows.size() != def.subsystems.size():
 		return
 	var at: int = -1
-	var used: int = 0
 	for i: int in rows.size():
-		used += int(rows[i].get("pips", 0))
 		if at < 0 and def.subsystems[i].kind == kind:
 			at = i
 	if at < 0:
 		return
 	var pips: int = int(rows[at].get("pips", 0)) + 1
+	# The reactor cap is the sim's rule: over it, the server's command_rejected{eng_cap} is
+	# the toast (F5, R12-7).
 	if pips > def.power.max_pips_per_subsystem:
 		ctx.crew.toast.emit("toast.chip_pips_max", {})
-	elif used + 1 > ctx.pip_cap():
-		ctx.crew.toast.emit("toast.eng_cap", {})
 	else:
 		ctx.intents.command({"kind": "set_pips", "subsystem_kind": int(kind), "pips": pips})
 

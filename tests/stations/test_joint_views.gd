@@ -296,7 +296,7 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 	var seen: Dictionary = {}
 	for entry: String in _views():
 		var stations: Array = StationViews.stations_of(entry)
-		for chip: ChipDef in NetChips.def().chips:
+		for chip: ChipDef in ChipView.def().chips:
 			var from: String = String(chip.from_station)
 			# Hold fire has no direct action: Parley's one player says so (next test).
 			if chip.id == &"hold_fire":
@@ -333,7 +333,7 @@ func test_hold_fire_in_parley_is_a_toast() -> void:
 	var s: StationScreen = _screen("parley")
 	var toasts: Array[String] = []
 	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
-	var chip: ChipDef = NetChips.def().chips[NetChips.index_of("hold_fire")]
+	var chip: ChipDef = ChipView.def().chips[NetChips.index_of("hold_fire")]
 	s.focus(s.stations.find("comms"))
 	s.ctx.crew.select("contact", StationFixture.H2)
 	s.focused_panel().send_chip(chip)
@@ -349,7 +349,7 @@ func test_direct_bring_to_bear_names_the_requested_mount() -> void:
 	var weapons: WeaponsPanel = s.panels[s.stations.find("weapons")] as WeaponsPanel
 	weapons.mount = weapons.mount_count() - 1
 	var chip: ChipDef
-	for c: ChipDef in NetChips.def().chips:
+	for c: ChipDef in ChipView.def().chips:
 		if c.id == &"bring_to_bear":
 			chip = c
 	s.focus(s.stations.find("weapons"))
@@ -360,16 +360,16 @@ func test_direct_bring_to_bear_names_the_requested_mount() -> void:
 	assert_int(aligns[0]["mount_index"]).is_equal(weapons.mount)
 
 
-# FT: FT-JNT-005
-# The direct power chips respect the reactor: with the reactor full the request is refused
-# with the "take it from something else" toast, and at the per-subsystem maximum with the
-# "full power" toast; nothing is sent.
+# FT: FT-JNT-005, FT-ENG-002
+# The direct power chips respect the reactor: with the reactor full the request goes to the
+# server, whose refusal (command_rejected eng_cap, F5) is the "take it from something else"
+# toast; at the per-subsystem maximum the "full power" toast and nothing is sent.
 func test_direct_power_respects_the_reactor_and_the_maximum() -> void:
 	var s: StationScreen = _screen("gunnery")
 	var toasts: Array[String] = []
 	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
 	var power: ChipDef
-	for c: ChipDef in NetChips.def().chips:
+	for c: ChipDef in ChipView.def().chips:
 		if c.id == &"power":
 			power = c
 	var rows: Array = s.ctx.view.blocks[StationViews.Section.ENGINEERING]["subsystems"]
@@ -379,13 +379,16 @@ func test_direct_power_respects_the_reactor_and_the_maximum() -> void:
 	rows[0]["pips"] += s.ctx.ship_def().power.reactor_pips - used
 	s.focus(0)
 	s.panels[0].send_chip(power)
-	assert_array(_commands(s, "set_pips")).is_empty()
+	assert_int(_commands(s, "set_pips").size()).is_equal(1)
+	assert_array(toasts).is_empty()
+	var refused: Dictionary = {"reason": "eng_cap", "seq": 1}
+	s.ctx.crew.handle_event({"type": NetProtocol.EVENT_COMMAND_REJECTED, "payload": refused}, 0)
 	assert_array(toasts).is_equal(["toast.eng_cap"])
 	rows[0]["pips"] = 1
 	rows[2]["pips"] = s.ctx.ship_def().power.max_pips_per_subsystem
 	toasts.clear()
 	s.panels[0].send_chip(power)
-	assert_array(_commands(s, "set_pips")).is_empty()
+	assert_int(_commands(s, "set_pips").size()).is_equal(1)
 	assert_array(toasts).is_equal(["toast.chip_pips_max"])
 
 

@@ -1,5 +1,5 @@
 class_name TrainingDriver
-extends RefCounted
+extends RunDriver
 ## Steps the Shakedown (FT-MIS-039, D100, D235, FT-PAIR-012). It has the same
 ## before_tick(api) as the Director and makes no decisions: it never opens sites, picks
 ## scenarios or spends budget. It steps its one training Scenario and runs the stations'

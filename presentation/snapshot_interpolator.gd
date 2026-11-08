@@ -17,7 +17,7 @@ extends RefCounted
 ## sample holds its last position until then.
 
 ## Sim ticks per second.
-const TICK_HZ: float = 60.0
+const TICK_HZ: float = SimRate.HZ * 1.0
 ## Render delay behind the newest snapshot: 2 snapshot intervals at 30 Hz (PROVISIONAL).
 const DELAY_TICKS: float = 4.0
 ## Samples kept.

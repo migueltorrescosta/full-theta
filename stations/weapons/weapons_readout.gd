@@ -129,7 +129,7 @@ static func feed_lines(p: WeaponsPanel) -> Array[String]:
 		if p.mount_count() > 0:
 			var kind: StringName = p.weapon_of(p.mount).damage_type
 			for r: Dictionary in row["resist"]:
-				if r["type"] == ScienceView.code(kind):
+				if r["type"] == BlockSchema.id_code(kind):
 					out.append(p.tr("weapons.rating") % [String(kind), float(r["factor"])])
 	for w: Dictionary in feeds["windows"]:
 		if w["target"] == id:

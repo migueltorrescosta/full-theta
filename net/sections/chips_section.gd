@@ -8,7 +8,6 @@ extends SnapshotSection
 ## The ship's open chips as last posted (set by SnapshotBuilder before update()).
 var rows: Array = []
 var filter: ViewFilter = null
-var _last: PackedByteArray = PackedByteArray()
 
 
 func _init(section_kind: int, owner_id: int, view_filter: ViewFilter = null) -> void:
@@ -24,14 +23,7 @@ func update(_world: SimWorld) -> PackedByteArray:
 	var bytes: PackedByteArray = NetBlock.encode(
 		StationViews.BLOCKS[StationViews.Section.CHIPS], {"chips": mine}
 	)
-	if bytes == _last:
-		return PackedByteArray()
-	_last = bytes
-	return bytes
-
-
-func full() -> PackedByteArray:
-	return _last
+	return _changed(bytes)
 
 
 func _involves(row: Dictionary) -> bool:

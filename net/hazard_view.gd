@@ -8,7 +8,7 @@ extends RefCounted
 ## Row shapes (u8 on the wire).
 const ZONE: int = 0
 const SHELL: int = 1
-const PLANE: int = 2
+const PLANE: int = BlockSchema.HAZARD_PLANE
 
 ## Rows a block may hold (a row count is one byte).
 const MAX_ROWS: int = 32

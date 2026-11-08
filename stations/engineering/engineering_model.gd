@@ -156,9 +156,8 @@ func set_pips(i: int, n: int) -> bool:
 	var now: int = pips_of(i)
 	if p == now:
 		return false
-	if pips_used() - now + p > ctx.pip_cap():
-		_toast("toast.eng_cap")
-		return false
+	# Over the reactor cap the sim refuses, and the server's command_rejected{eng_cap} is the
+	# toast (F5, R12-7).
 	ctx.intents.command({"kind": "set_pips", "subsystem_kind": int(sd.kind), "pips": p})
 	_pending["pips:%d" % i] = [p, ctx.now_ms()]
 	return true

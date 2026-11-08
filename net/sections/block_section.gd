@@ -7,7 +7,6 @@ extends SnapshotSection
 ## What the section's view may carry of other stations' data, or null for everything
 ## (ViewFilter; sections of a filtered kind exist once per filter signature).
 var filter: ViewFilter = null
-var _last: PackedByteArray = PackedByteArray()
 
 
 func _init(section_kind: int, owner_id: int, view_filter: ViewFilter = null) -> void:
@@ -16,12 +15,5 @@ func _init(section_kind: int, owner_id: int, view_filter: ViewFilter = null) -> 
 
 
 func update(world: SimWorld) -> PackedByteArray:
-	var bytes: PackedByteArray = StationViews.block_bytes(kind, world, owner, filter)
-	if bytes == _last:
-		return PackedByteArray()
-	_last = bytes
-	return bytes
-
-
-func full() -> PackedByteArray:
-	return _last
+	var bytes: PackedByteArray = StationBlocks.block_bytes(kind, world, owner, filter)
+	return _changed(bytes)

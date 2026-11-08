@@ -47,7 +47,7 @@ const JOB_TIMEOUT_MS: int = 20000
 ## (FT-AUD-008). PROVISIONAL.
 const DEFAULT_MAX_AGE_MS: int = 6000
 const ROLES: PackedStringArray = ["computer", "npc"]
-const EVENT_VOICE_LINE: String = "voice_line"
+const EVENT_VOICE_LINE: String = NetProtocol.EVENT_VOICE_LINE
 const DEFAULT_VOICES: String = "res://content/voices.json"
 
 var transport: NetTransport

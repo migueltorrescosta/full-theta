@@ -23,7 +23,7 @@ const BAD_ARG: String = "chip_bad_arg"
 const BAD_ID: String = "chip_bad_id"
 
 ## The chip list, loaded once (read-only after).
-static var _def: ChipsDef = load("res://content/chips/chips.tres") as ChipsDef
+static var _def: ChipsDef = ChipView.def()
 
 ## The owning session, held weakly (it owns this object).
 var session: ServerSession:
@@ -40,31 +40,26 @@ var _next_id: int = 1
 
 func _init(server_session: ServerSession) -> void:
 	_session = weakref(server_session)
+	server_session.add_handler(NetProtocol.Type.CHIP, on_chip)
 
 
+## The chip list (ChipView.def, which the clients read too).
 static func def() -> ChipsDef:
 	return _def
 
 
-## The index of a chip id in the list, or -1.
+## The index of a chip id in the list, or -1 (ChipView.index_of).
 static func index_of(chip_id: String) -> int:
-	for i: int in _def.chips.size():
-		if String(_def.chips[i].id) == chip_id:
-			return i
-	return -1
+	return ChipView.index_of(chip_id)
 
 
-## What the chip's argument names (ChipDef.Arg), NONE for an unknown chip.
+## What the chip's argument names (ChipView.arg_kind).
 static func arg_kind(chip_id: String) -> ChipDef.Arg:
-	var at: int = index_of(chip_id)
-	return _def.chips[at].arg if at >= 0 else ChipDef.Arg.NONE
+	return ChipView.arg_kind(chip_id)
 
 
 ## Chip{op, ...}.
-func on_chip(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_chip(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var why: String
 	if msg["op"] == "send":
 		why = send(s, msg["chip"], msg["arg"])

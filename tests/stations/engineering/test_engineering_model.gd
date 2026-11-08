@@ -38,12 +38,13 @@ func test_pips_send_show_pending_and_respect_the_limits() -> void:
 	assert_int(m.pips_of(1)).is_equal(3)
 	StationFixture.clock(m.ctx).ms += EngineeringModel.PENDING_MS + 1
 	assert_int(m.pips_of(1)).is_equal(2)
-	# The reactor takes none; the cap refuses the rest, each with its toast.
+	# The reactor takes none, with its toast; over the cap the request goes to the server,
+	# whose refusal is the toast (F5, R12-7).
 	assert_bool(m.set_pips(5, 1)).is_false()
 	m.ctx.view.blocks[StationViews.Section.STATUS]["pip_cap"] = 10
-	assert_bool(m.set_pips(2, 3)).is_false()
-	assert_array(_toasts).is_equal(["toast.eng_reactor", "toast.eng_cap"])
-	assert_int(_commands(m).size()).is_equal(1)
+	assert_bool(m.set_pips(2, 3)).is_true()
+	assert_array(_toasts).is_equal(["toast.eng_reactor"])
+	assert_int(_commands(m).size()).is_equal(2)
 
 
 # FT: FT-ENG-003

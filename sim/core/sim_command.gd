@@ -21,6 +21,9 @@ var accepted: bool = false
 ## Scenario API's ApiHandle reads it. An output, not part of the command: it is not in
 ## to_dict(), so not in the log or the state hash, and a replay needs none of it.
 var result_id: int = -1
+## Why apply() rejected it, when the system names a reason the client shows (F5: PowerSystem's
+## reactor cap), else &"". An output like result_id: not in to_dict(), the log or the hash.
+var reject_reason: StringName = &""
 
 
 ## Stable name used in the command log; subclasses override.
@@ -46,6 +49,7 @@ func to_dict() -> Dictionary:
 			p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE
 			and p["name"] != "source"
 			and p["name"] != "result_id"
+			and p["name"] != "reject_reason"
 		):
 			d[p["name"]] = get(p["name"])
 	return d

@@ -6,10 +6,10 @@ extends CoopEvents
 ## the counts and the log lines are CoopEvents'. A joint view's own stations are no pair
 ## between players, so work inside one view counts nothing.
 
-## Ticks between two counts of the same mark used by the same player (60 Hz: 10 s).
-const REUSE_TICKS: int = 600
-## Ticks between two looks at whether a ship reached a scan position (60 Hz: 0.5 s).
-const SCAN_LOOK_TICKS: int = 30
+## Ticks between two counts of the same mark used by the same player (10 s).
+const REUSE_TICKS: int = 10 * SimRate.HZ
+## Ticks between two looks at whether a ship reached a scan position (0.5 s).
+const SCAN_LOOK_TICKS: int = SimRate.HZ / 2
 
 ## The owning session, held weakly (it owns this object).
 var session: ServerSession:
@@ -78,8 +78,8 @@ func step() -> void:
 	if world.tick - _looked_at < SCAN_LOOK_TICKS and world.tick >= _looked_at:
 		return
 	_looked_at = world.tick
-	for ship: int in session.launched:
-		if not session.in_play(ship):
+	for ship: int in session.lobby.launched_ships():
+		if not session.lobby.in_play(ship):
 			continue
 		for z: Dictionary in session.crew.relay.zones_of(ship):
 			var key: String = "%d|%d" % [ship, z["id"]]

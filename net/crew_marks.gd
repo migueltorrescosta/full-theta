@@ -31,8 +31,8 @@ const ALERT_NORMAL: int = 0
 const ALERT_YELLOW: int = 1
 const ALERT_RED: int = 2
 
-## Refusal reasons (request_rejected), besides ServerSession.NOT_CREW and
-## CommandGate.NOT_ALLOWED (the Captain moving, renaming or deleting).
+## Refusal reasons (request_rejected), besides NetProtocol.REASON_NOT_CREW and
+## NetProtocol.REASON_NOT_ALLOWED (the Captain moving, renaming or deleting).
 const MARKS_FULL: String = "marks_full"
 const SLOT_TAKEN: String = "slot_taken"
 const NOT_YOURS: String = "not_yours"
@@ -64,7 +64,7 @@ func alert(ship: int) -> int:
 ## Sets the alert level; returns why not, or "".
 func set_alert(ship: int, role: Role, level: int) -> String:
 	if role != Role.CREW and role != Role.RELAY:
-		return ServerSession.NOT_CREW
+		return NetProtocol.REASON_NOT_CREW
 	if level < ALERT_NORMAL or level > ALERT_RED:
 		return BAD_LEVEL
 	_alert[ship] = level
@@ -102,7 +102,7 @@ func place(
 	ship: int, role: Role, session: int, by: String, slot: int, name: String, spot: Dictionary
 ) -> String:
 	if role == Role.NONE:
-		return ServerSession.NOT_CREW
+		return NetProtocol.REASON_NOT_CREW
 	var slots: Array = _slots(ship)
 	if slot < -1 or slot >= SLOTS:
 		return BAD_MARK
@@ -171,11 +171,11 @@ func _slots(ship: int) -> Array:
 
 func _may_edit(ship: int, role: Role, session: int, slot: int) -> String:
 	if role == Role.NONE:
-		return ServerSession.NOT_CREW
+		return NetProtocol.REASON_NOT_CREW
 	if not has_mark(ship, slot):
 		return BAD_MARK
 	if role == Role.CAPTAIN:
-		return CommandGate.NOT_ALLOWED
+		return NetProtocol.REASON_NOT_ALLOWED
 	if role == Role.CREW and _slots(ship)[slot]["by_session"] != session:
 		return NOT_YOURS
 	return ""

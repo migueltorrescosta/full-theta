@@ -11,7 +11,7 @@ extends RefCounted
 const NO_PICK: String = "no_pick"
 const RATE_LIMITED: String = "rate_limited"
 const UNKNOWN_KIND: String = "unknown_kind"
-const NOT_ALLOWED: String = "not_allowed"
+const NOT_ALLOWED: String = NetProtocol.REASON_NOT_ALLOWED
 const NOT_YOUR_STATION: String = "not_your_station"
 const WRONG_SHIP: String = "wrong_ship"
 const BAD_FIELD: String = "bad_field"
@@ -28,6 +28,15 @@ const SHIP_ABANDONED: String = "ship_abandoned"
 ## The sim is stopped (lobby, coverage pause or host pause): a command would queue and all
 ## apply on resume (#45 A4). Only training_next is exempt.
 const PAUSED: String = "paused"
+
+## The sim's own rejection reasons (SimCommand.reject_reason) that reach the client as theirs:
+## the client's toast is "toast." + reason (F5, R12-7: the server's rejection, not a client copy
+## of the rule, drives the reactor-cap toast).
+const SIM_REASONS: Dictionary[StringName, String] = {
+	PowerSystem.REFUSE_CAP: "eng_cap",
+	PowerSystem.REFUSE_MAX: "chip_pips_max",
+	PowerSystem.REFUSE_KIND: "eng_reactor",
+}
 
 ## Fields the server sets, never the client (ship_id may be sent, if it is the sender's).
 const SERVER_FIELDS: Array[String] = ["kind", "ship_id", "tick", "accepted"]

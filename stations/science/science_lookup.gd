@@ -1,7 +1,7 @@
 class_name ScienceLookup
 extends RefCounted
 ## What the Science card needs from content/ to read the section's hashed ids
-## (ScienceView.code): ship classes, damage types, the ScienceDef thresholds. Loaded once.
+## (BlockSchema.id_code): ship classes, damage types, the ScienceDef thresholds. Loaded once.
 
 const SHIPS_DIR: String = "res://content/ships/"
 const WEAPONS_DIR: String = "res://content/weapons/"
@@ -16,9 +16,9 @@ static var _def: ScienceDef = null
 static func ship_class(code: int) -> ShipDef:
 	if _classes.is_empty():
 		for def: ShipDef in _load_all(SHIPS_DIR, ShipDef):
-			_classes[ScienceView.code(def.id)] = def
+			_classes[BlockSchema.id_code(def.id)] = def
 			for type: StringName in def.resistances:
-				_damage[ScienceView.code(type)] = String(type)
+				_damage[BlockSchema.id_code(type)] = String(type)
 	return _classes.get(code, null)
 
 
@@ -29,7 +29,7 @@ static func damage_name(code: int) -> String:
 		for w: Resource in _load_all(WEAPONS_DIR, Resource):
 			var type: Variant = w.get("damage_type")
 			if type != null:
-				_damage[ScienceView.code(StringName(type))] = String(type)
+				_damage[BlockSchema.id_code(StringName(type))] = String(type)
 	return _damage.get(code, "?")
 
 

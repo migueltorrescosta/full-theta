@@ -123,8 +123,9 @@ func test_cutaway_shows_health_heat_and_recent_hits_and_rotates() -> void:
 
 
 # FT: FT-ENG-002
-# A damaged reactor lowers the pip cap the STATUS block carries: the panel refuses a pip over
-# it, and the board's reactor line shows used/cap (review 2026-11-08, PowerSystem.pip_cap).
+# A damaged reactor lowers the pip cap the STATUS block carries: the board's reactor line
+# shows used/cap (review 2026-11-08, PowerSystem.pip_cap); a pip over it goes to the server,
+# whose refusal is the toast (F5, R12-7).
 func test_damaged_reactor_lowers_the_pip_cap_shown_and_enforced() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
@@ -135,8 +136,7 @@ func test_damaged_reactor_lowers_the_pip_cap_shown_and_enforced() -> void:
 	_press(s, "subsystem_2")
 	var n: int = _commands(s).size()
 	_press(s, "pip_add")
-	assert_int(_commands(s).size()).is_equal(n)
-	assert_array(_toasts).contains(["toast.eng_cap"])
+	assert_int(_commands(s).size()).is_equal(n + 1)
 	assert_str(PartnerGlance.readout(s.ctx, "eng.reactor")).contains("10/10")
 
 
@@ -160,15 +160,16 @@ func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 	var n: int = _commands(s).size()
 	_press(s, "pip_add")
 	assert_int(_commands(s).size()).is_equal(n)
-	# Controller: d-pad right to weapons, RT adds: over the reactor cap (12), refused here.
+	# Controller: d-pad right to weapons, RT adds: over the reactor cap (12) the server
+	# refuses it (F5), so the client sends it.
 	assert_bool(_press(s, "subsystem_next", "pad")).is_true()
 	assert_int(e.selected).is_equal(2)
 	_press(s, "pip_add", "pad")
-	assert_int(_commands(s).size()).is_equal(n)
-	assert_array(_toasts).contains(["toast.eng_cap"])
+	assert_int(_commands(s).size()).is_equal(n + 1)
+	# The sent pip shows as pending until the snapshot or PENDING_MS, so LT goes down from it.
 	_press(s, "pip_remove", "pad")
 	assert_dict(_commands(s)[-1]).is_equal(
-		{"kind": "set_pips", "subsystem_kind": KIND.WEAPONS, "pips": 1}
+		{"kind": "set_pips", "subsystem_kind": KIND.WEAPONS, "pips": 2}
 	)
 	# The reactor takes no pips.
 	_press(s, "subsystem_6")

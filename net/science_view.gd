@@ -26,7 +26,7 @@ const MAX_CARDS: int = 255
 ## The class id sent for a ship definition id (a stable hash; the client maps it back
 ## through its own definitions) and for a damage type.
 static func code(id: StringName) -> int:
-	return String(id).hash()
+	return BlockSchema.id_code(id)
 
 
 static func block(world: SimWorld, ship: int) -> Dictionary:
@@ -36,8 +36,6 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 	out["ping_left"] = t.ping_left[ship]
 	out["ping_cool"] = t.ping_cool[ship]
 	out["selected"] = t.selected[ship]
-	out["mark_contact"] = t.mark_contact[ship]
-	out["mark_pos"] = Vector3(t.mark_x[ship], t.mark_y[ship], t.mark_z[ship])
 	out["self_scanned"] = t.self_scanned[ship] >= 0
 	_preview(out, t.preview[ship])
 	if world.science_def != null:
@@ -58,8 +56,6 @@ static func _empty() -> Dictionary:
 		"noise_aspect": 0.0,
 		"noise_health": 0.0,
 		"noise_flags": 0,
-		"mark_contact": -1,
-		"mark_pos": Vector3.ZERO,
 		"self_scanned": false,
 		"session": 0,
 		"session_target": -1,
