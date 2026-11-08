@@ -55,3 +55,14 @@ func test_the_harness_stops_servers_before_free_all_returns_to_the_caller() -> v
 	h.free_all()
 	assert_int(ThreadGuardHook.live_threads()).is_equal(_base)
 	await get_tree().process_frame
+
+
+func test_the_hook_writes_a_done_marker_for_the_gate() -> void:
+	var dir: String = ProjectSettings.globalize_path("user://").path_join("done_marker_test")
+	DirAccess.make_dir_recursive_absolute(dir)
+	ThreadGuardHook.write_done(dir, true)
+	assert_str(FileAccess.get_file_as_string(dir.path_join("done.txt"))).is_equal("passed\n")
+	ThreadGuardHook.write_done(dir, false)
+	assert_str(FileAccess.get_file_as_string(dir.path_join("done.txt"))).is_equal("failed\n")
+	DirAccess.remove_absolute(dir.path_join("done.txt"))
+	DirAccess.remove_absolute(dir)

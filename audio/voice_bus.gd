@@ -81,7 +81,7 @@ class _Line:
 
 
 ## Queues the line of a voice_line payload. Returns false when it doesn't enter the bus
-## (audio false, D110); such a line still supersedes queued lines with its coalescing key.
+## (audio false); such a line still supersedes queued lines with its coalescing key.
 func offer(payload: Dictionary, now_ms: int) -> bool:
 	var key: String = str(payload.get("coalesce", ""))
 	if key != "":

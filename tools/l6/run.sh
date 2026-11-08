@@ -19,6 +19,8 @@ cd "$root" || exit 1
 out=build/l6
 version=v0.0.0-l6
 line="Contact bearing three four two. Shields holding."
+# shellcheck source=tools/lib.sh
+source "$root/tools/lib.sh"
 export WINEPREFIX=${WINEPREFIX:-$HOME/.cache/full-theta/l6-wineprefix} WINEDEBUG=-all
 
 commit=$(git rev-parse HEAD)
@@ -68,17 +70,20 @@ check() { # kind, port, path prefix for the game's own paths, launcher...; 1 on 
   "$@" --headless -- --server --bind 127.0.0.1 --port "$port" --http-root "$dir/web" \
     --no-beacon --run-for 120 >"$log/server.log" 2>&1 &
   local pid=$!
-  local waited=0
-  # The web port answers once the server listens (its log may be buffered until exit).
-  until (: </dev/tcp/127.0.0.1/$((port - 1))) 2>/dev/null || ((waited >= 90)); do
-    sleep 1
-    ((waited++))
-  done
-  if ! node tools/l6/web_load.mjs "http://ft-l6.lan:$((port - 1))/" "$expected" 90 \
-    | tee "$log/web.log" | sed "s/^/l6: $kind: /"; then
+  # Fixed ports, unlike the other tiers: a release build's stdout is block-buffered into a
+  # file, so the server's "ready" line (tools/lib.sh) is not there until exit; the web
+  # port answering is the signal instead.
+  web_up() { (: </dev/tcp/127.0.0.1/$((port - 1))) 2>/dev/null; }
+  if ft_wait_for "$kind web server on port $((port - 1))" 90 web_up; then
+    if ! node tools/l6/web_load.mjs "http://ft-l6.lan:$((port - 1))/" "$expected" 90 \
+      | tee "$log/web.log" | sed "s/^/l6: $kind: /"; then
+      failed=1
+    fi
+    grep -q "web_load: .* ok after" "$log/web.log" || failed=1
+  else
+    echo "l6: $kind: web server never answered (see $log/server.log)" >&2
     failed=1
   fi
-  grep -q "web_load: .* ok after" "$log/web.log" || failed=1
   kill "$pid" 2>/dev/null
   wait "$pid" 2>/dev/null
 

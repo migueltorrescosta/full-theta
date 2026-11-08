@@ -87,6 +87,7 @@ func start(
 	if world == null:
 		push_error("encounter does not validate: %s" % [encounter.validate()])
 		return ERR_INVALID_DATA
+	world.keep_command_log = false
 	host = ScenarioHost.new(world)
 	session = ServerSession.new(transport, world)
 	session.dev_all = dev_all
@@ -160,6 +161,11 @@ func port() -> int:
 	return transport.port()
 
 
+## The port the static HTTP server listens on, or 0 when it is off.
+func http_local_port() -> int:
+	return http.local_port() if http != null else 0
+
+
 ## Opens the session log at `path` (SessionLog.default_path() in a normal session): the
 ## snapshot-age summary every STATS_PERIOD_US and a final summary on exit (D199). Call
 ## after start().
@@ -204,6 +210,7 @@ func _on_client_stats(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## snapshot full for every client. NetRunReset calls it when the vote passes.
 func restart_run() -> void:
 	world = encounter.build()
+	world.keep_command_log = false
 	host = ScenarioHost.new(world)
 	driver = null
 	partners = TrainingPartners.new(world.seed_value)

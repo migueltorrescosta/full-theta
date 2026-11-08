@@ -316,3 +316,18 @@ func test_pending_commands_in_state_hash() -> void:
 		if w == a:
 			assert_str(a.state_hash()).is_not_equal(b.state_hash())
 	assert_str(a.state_hash()).is_equal(b.state_hash())
+
+
+# FT: FT-ARC-008
+func test_a_world_that_does_not_keep_its_log_holds_only_the_latest_tick() -> void:
+	var w: SimWorld = _world(11)
+	w.keep_command_log = false
+	for t: int in 5:
+		var k: KickCommand = KickCommand.new()
+		k.ship_id = 0
+		w.submit(k)
+		w.step()
+		assert_int(w.command_log.size()).is_equal(1)
+		assert_int(w.command_log[0].tick).is_equal(w.tick - 1)
+	w.step()
+	assert_array(w.command_log).is_empty()

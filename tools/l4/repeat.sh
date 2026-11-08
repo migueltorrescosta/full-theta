@@ -9,12 +9,14 @@ cd "$root" || exit 1
 n=${1:?usage: tools/l4/repeat.sh N [SCENARIO...]}
 shift
 godot=$(tools/get-godot.sh) || exit 1
-"$godot" --headless --path . --import >/dev/null 2>&1 || { echo "l4: import failed" >&2; exit 1; }
+mkdir -p build
+"$godot" --headless --path . --import >build/import.log 2>&1 \
+  || { tail -20 build/import.log >&2; echo "l4: import failed (build/import.log)" >&2; exit 1; }
 base=build/l4/repeat-$(date +%Y%m%d-%H%M%S)
 summary=build/l4/repeat-summary.txt
 mkdir -p "$base"
 {
-  echo "L4 repeat: $n runs, commit $(git rev-parse --short HEAD)$([[ -z $(git status --porcelain) ]] || echo ' (dirty)'), $(nproc) threads, cpus ${L4_CPUS:-0,1}, logs $base"
+  echo "L4 repeat: $n runs, commit $(git rev-parse --short HEAD)$([[ -z $(git status --porcelain) ]] || echo ' (dirty)'), $(nproc) threads, cpus ${L4_CPUS:-auto}, logs $base"
   echo "run  result  seconds  load(1/5/15)    scenarios (name result seconds)"
 } >"$summary"
 passed=0

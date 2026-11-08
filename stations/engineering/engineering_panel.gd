@@ -185,11 +185,6 @@ func phone_form() -> LayoutMode.Form:
 	return f if LayoutMode.is_phone(f) else LayoutMode.Form.DESKTOP
 
 
-## True when the panel takes the phone arrangement on its side.
-func phone_landscape() -> bool:
-	return phone_form() == LayoutMode.Form.PHONE_LANDSCAPE
-
-
 func _place_lists() -> void:
 	if ctx == null:
 		return

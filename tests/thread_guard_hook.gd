@@ -6,10 +6,14 @@ extends GdUnitTestSessionHook
 ## process spins for ever. The hook compares the live-thread counts before and after each
 ## suite and, at shutdown, writes thread-leaks.txt into the report directory (tools/gate.sh
 ## fails the shard when the file exists, and run_limited.sh names it in its warning).
+## It also writes done.txt there, "passed" or "failed", once the last suite ended:
+## tools/run_limited.sh reads that file to tell a hang at exit from a hang in a test,
+## instead of scraping gdUnit4's console text.
 
 var _session: GdUnitTestSession
 var _before: int = 0
 var _leaks: PackedStringArray = PackedStringArray()
+var _failed: bool = false
 
 
 func _init() -> void:
@@ -27,14 +31,22 @@ func startup(session: GdUnitTestSession) -> GdUnitResult:
 	return GdUnitResult.success()
 
 
+## Writes done.txt ("passed" or "failed") into `dir`.
+static func write_done(dir: String, passed: bool) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	var file: FileAccess = FileAccess.open(dir.path_join("done.txt"), FileAccess.WRITE)
+	if file != null:
+		file.store_string("passed\n" if passed else "failed\n")
+
+
 func shutdown(session: GdUnitTestSession) -> GdUnitResult:
+	# The report directory itself (tools/gate.sh --report-directory), not its report_N folder.
+	var dir: String = ProjectSettings.globalize_path(session.report_path).get_base_dir()
+	write_done(dir, _leaks.is_empty() and not _failed)
 	if _leaks.is_empty():
 		return GdUnitResult.success()
 	var text: String = "\n".join(_leaks)
-	var file: FileAccess = FileAccess.open(
-		ProjectSettings.globalize_path(session.report_path).path_join("thread-leaks.txt"),
-		FileAccess.WRITE
-	)
+	var file: FileAccess = FileAccess.open(dir.path_join("thread-leaks.txt"), FileAccess.WRITE)
 	if file != null:
 		file.store_string(text + "\n")
 	session.send_message("THREAD LEAK: " + text)
@@ -42,6 +54,8 @@ func shutdown(session: GdUnitTestSession) -> GdUnitResult:
 
 
 func _on_event(event: GdUnitEvent) -> void:
+	if event.is_failed() or event.is_error():
+		_failed = true
 	match event.type():
 		GdUnitEvent.TESTSUITE_BEFORE:
 			_before = live_threads()

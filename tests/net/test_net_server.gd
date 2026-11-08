@@ -26,6 +26,8 @@ func _server(
 	s.transport.chunk_size = chunk_size
 	var m1: M1Encounter = M1Encounter.new(5, "test", TestDefs.corvette(), TestDefs.raider_enemy())
 	assert_int(s.start(m1, 0, "127.0.0.1", true, host_secret)).is_equal(OK)
+	# A served world trims its command log; this suite reads the history.
+	s.world.keep_command_log = true
 	# These tests exercise the transport, not the lobby: start the run directly.
 	if launch:
 		s.session.launch(PLAYER)

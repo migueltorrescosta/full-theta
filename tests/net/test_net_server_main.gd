@@ -165,6 +165,7 @@ func test_makes_beacon_only_off_loopback_and_optional_http() -> void:
 	var server: NetServer = cli.make_server()
 	assert_object(server.beacon).is_null()
 	assert_object(server.http).is_null()
+	assert_int(server.http_local_port()).is_equal(0)
 	# What a LAN-bound server sends (its beacon started by hand here, on loopback).
 	assert_int(server.start_beacon("x", 9, ["127.0.0.1"])).is_equal(OK)
 	assert_int(server.beacon.ws_port).is_equal(server.port())

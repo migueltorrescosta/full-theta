@@ -2,7 +2,8 @@
 # Local gate (FT-TST-002, FT-TST-005): imports the project, then runs tiers.
 #   tools/gate.sh [l0|l1|l2|l4|l4load|l5|l6|ci|all]... [--update-baselines]   (default: ci)
 # ci = the tiers CI runs (l0 l1; l1 runs every test, tests/net included, in L1_SHARDS
-# processes at once); all = every implemented tier (l0 l1 l4 l4load l5 l6). l2 runs the sim-side suites only (tests/sim,
+# processes at once); all = every implemented tier (l0 l1 l4 l4load l5 l6). The tier table
+# (what, when, prerequisites) is in tools/README.md. l2 runs the sim-side suites only (tests/sim,
 # tests/pairs, tests/scenarios, tests/director; Q16, owner 2026-10-26): a quick check
 # while working on the simulation, already part of l1. l4 runs a server and 3 client processes
 # on 2 cores (tools/l4/run.sh). l4load is the 64-connection load gate, fugaku only: the
@@ -22,7 +23,7 @@ for arg in "$@"; do
     ci) tiers+=(l0 l1) ;;
     all) tiers+=(l0 l1 l4 l4load l5 l6) ;;
     --update-baselines) l5_args+=(--update-baselines) ;;
-    *) echo "gate: unknown tier $arg (use l0..l6, ci or all)" >&2; exit 2 ;;
+    *) echo "gate: unknown tier $arg (use l0, l1, l2, l4, l4load, l5, l6, ci or all)" >&2; exit 2 ;;
   esac
 done
 (( ${#tiers[@]} )) || tiers=(l0 l1)
@@ -81,7 +82,7 @@ l1() {
       thread_leaks "build/reports/l1-$k"
       return
     fi
-    RUN_LIMITED_LOG=build/l1-$k.log limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
+    limit=$limit reports=build/reports/l1-$k gdunit "${files[@]}" >"build/l1-$k.log" 2>&1 &
     pids+=($!)
   done
   for i in "${!ks[@]}"; do
@@ -98,12 +99,12 @@ l1() {
   return "$failed"
 }
 
-# L2: the simulation-side suites (an alias for part of l1; Q16).
+# L2: the simulation-side suites (an alias for part of l1; Q16), one gdUnit4 process with
+# the same hang limit and thread-leak check as an l1 shard.
 l2() {
-  local dir
-  for dir in sim pairs scenarios director; do
-    gdunit "res://tests/$dir" || return 1
-  done
+  limit=900 reports=build/reports/l2 gdunit res://tests/sim res://tests/pairs res://tests/scenarios res://tests/director \
+    || return
+  thread_leaks build/reports/l2
 }
 
 # L4: a server and 3 headless client processes on 2 cores, driven by intent files;
@@ -125,7 +126,9 @@ l5() { uv run --quiet --project tools python tools/l5.py "${l5_args[@]}"; }
 l6() { tools/l6/run.sh; }
 
 echo "gate: import"
-"$godot" --headless --path . --import >/dev/null 2>&1 || { echo "gate: import failed" >&2; exit 1; }
+mkdir -p build
+"$godot" --headless --path . --import >build/import.log 2>&1 \
+  || { tail -20 build/import.log >&2; echo "gate: import failed (build/import.log)" >&2; exit 1; }
 
 results=()
 failed=0

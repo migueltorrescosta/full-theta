@@ -158,7 +158,7 @@ func _say_shields_low(e: SimEvent) -> void:
 
 
 ## The run reset: the new world, every hull alert re-armed, and the old run's lines
-## still queued (stitched lines waiting for a name, free text being synthesised) dropped.
+## still queued (stitched lines waiting for a name) dropped.
 func restart(sim_world: SimWorld) -> void:
 	world = sim_world
 	_hull_warned.clear()

@@ -2,8 +2,8 @@
 # run_limited.sh SECONDS REPORT_FILE COMMAND...: runs COMMAND; past SECONDS it saves a
 # backtrace of every thread (gdb, through sudo when it is passwordless) to REPORT_FILE,
 # terminates it (SIGKILL 10 s later) and exits 124. Otherwise exits with COMMAND's status.
-# Exception: when RUN_LIMITED_LOG names COMMAND's output file and it already shows the
-# whole run finished ("Overall Summary" and "Exit code: 0"), the hang is at process exit,
+# Exception: when the REPORT_FILE's folder holds done.txt reading "passed" (written by
+# tests/thread_guard_hook.gd once the last suite ended and nothing failed), the hang is at process exit,
 # not in a test (a thread left running deadlocks the engine's teardown): it is killed the
 # same way, but the pass is kept (exit 0) with a loud warning on stderr.
 # Used by tools/gate.sh so a hung L1 shard fails in minutes with its stack (#33).
@@ -14,10 +14,7 @@ pid=$!
 # A run whose log shows every test finished gets EXIT_GRACE more seconds to exit.
 grace=${EXIT_GRACE:-30}
 done_log() {
-  [[ -n ${RUN_LIMITED_LOG:-} && -r $RUN_LIMITED_LOG ]] || return 1
-  local plain
-  plain=$(sed 's/\x1b\[[0-9;]*m//g' "$RUN_LIMITED_LOG")
-  grep -aq 'Overall Summary' <<<"$plain" && grep -aq '^Exit code: 0$' <<<"$plain"
+  [[ $(cat "$(dirname "$report")/done.txt" 2>/dev/null) == passed ]]
 }
 deadline=$((SECONDS + limit)) done_at= tick=0
 while kill -0 "$pid" 2>/dev/null && ((SECONDS < deadline)); do
