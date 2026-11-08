@@ -203,6 +203,20 @@ func test_first_visit_shows_the_controls_chip() -> void:
 	assert_bool(s.screen.blocked()).is_true()
 
 
+# FT: FT-STN-012
+# D369: a tap on the first visit's callout legend opens Controls on the callout card.
+func test_the_legend_chip_opens_the_callout_card() -> void:
+	var s: ClientShell = await _on_station(true)
+	var legend: ControlsChip = s.screen.find_child("ControlsLegendChip", true, false)
+	assert_object(legend).is_not_null()
+	legend.pressed.emit()
+	var menu: SettingsScreen = s.settings_screen
+	assert_bool(menu.visible).is_true()
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
+	assert_str(menu.controls_pane.view).is_equal(ControlsPane.VIEW_CARD)
+	assert_bool(menu.controls_pane.card.is_visible_in_tree()).is_true()
+
+
 # FT: FT-STN-011, FT-STN-012
 # The owner's A13 (playtest 2026-11-02): Esc, then the Controls tab, as a player opens
 # it, shows the seat's controls on every seat (the pane used to fill only from `?`).

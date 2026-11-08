@@ -20,6 +20,8 @@ signal menu_requested
 signal form_changed(form: LayoutMode.Form)
 ## `?` / View, or the first visit to a station: the shell opens the menu on Controls.
 signal help_requested
+## The callout legend chip's tap (D369): the shell opens the callout card on Controls.
+signal card_requested
 
 ## Intents that still reach the screen while it is blocked: they close what blocks it.
 const UNBLOCKED: Array[String] = ["menu", "overlay"]
@@ -316,11 +318,9 @@ func _process(delta: float) -> void:
 	var spot: Rect2 = top_bar.status_rect().intersection(get_global_rect())
 	toasts.place(Rect2(spot.position - get_global_rect().position, spot.size))
 	flash.update(now)
+	var left: Dictionary = ctx.crew.shares_left(now)
 	if phone:
-		frame.process(now)
-	var left: Dictionary = {}
-	for id: StringName in ctx.crew.shares:
-		left[id] = ctx.crew.share_left(id, now)
+		frame.process(now, left)
 	if frame.framed():
 		chip_strip.visible = false
 	else:
@@ -394,32 +394,6 @@ func _dispatch_batch(batch: Array[Dictionary]) -> void:
 
 # --- Common actions (StationCommonActions, §5.0). ---
 
-
-## The data shortcuts this screen's stations may share with their partners (D210).
-func shareable() -> Array[StringName]:
-	return common.shareable()
-
-
-## Contact ids but the own ship, nearest first (cycle target).
-func contacts_by_range() -> Array:
-	return common.contacts_by_range()
-
-
-## A long-press let go in place pings what is under the finger, else the selection.
-func ping_at(at: Vector2) -> void:
-	common.ping_at(at)
-
-
-## A long-press dragged and let go marks where the finger ends (P28-Common).
-func mark_at(at: Vector2) -> void:
-	common.mark_at(at)
-
-
-## Marks `item` ({} does nothing): the rules of the common mark.
-func mark_item(item: Dictionary) -> void:
-	common.mark_item(item)
-
-
 # --- The phone frame (#28 follow-up, PhoneFrame). ---
 
 
@@ -439,7 +413,8 @@ func _open_menu() -> void:
 
 ## The first visit to a station shows the Controls chip for a few seconds, once per client
 ## and station (P28-Help, amends FT-STN-012 and D185); help never opens by itself, a tap on
-## the chip opens the menu's Controls tab. Settings re-enables it. The first station waits
+## the chip opens the menu's Controls tab. With it, once per client, the callout legend, whose
+## tap opens the callout card (D369). Settings re-enables them. The first station waits
 ## for the screen to enter the tree, so the shell has connected `help_requested` by then.
 func _open_first_visit_help() -> void:
 	if not is_inside_tree():
@@ -450,7 +425,9 @@ func _open_first_visit_help() -> void:
 	)
 	if chip != null:
 		chip.pressed.connect(func() -> void: help_requested.emit())
-		ControlsLegendChip.show_legend(self, ctx.settings)
+		var legend: ControlsChip = ControlsChip.show_legend(self, ctx.settings)
+		if legend != null:
+			legend.pressed.connect(func() -> void: card_requested.emit())
 
 
 func _on_toast(key: String, args: Dictionary) -> void:

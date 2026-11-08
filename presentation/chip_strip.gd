@@ -13,6 +13,11 @@ func _init() -> void:
 	add_theme_constant_override("separation", 2)
 
 
+## An incoming chip as "Helm: Boost": the asking station and the chip.
+static func asker(c: Dictionary) -> String:
+	return "%s: %s" % [TranslationServer.translate("station." + str(c["from"])), ChipView.label(c)]
+
+
 ## Shows the chips (ChipView rows) at the view's tick; does nothing when nothing shown
 ## changed (seconds count down once a second). An incoming chip is followed by what accepting
 ## does, a chip that lapsed unanswered stays a few seconds as a note, and `notes` (data a
@@ -28,8 +33,7 @@ func show_chips(
 	var dim: Array[bool] = []
 	var open: Array = []
 	for c: Dictionary in incoming:
-		var who: String = "%s: %s" % [tr("station." + str(c["from"])), ChipView.label(c)]
-		open.append({"id": c["id"], "text": who, "left": ChipView.left_s(view, c)})
+		open.append({"id": c["id"], "text": asker(c), "left": ChipView.left_s(view, c)})
 		lines.append(
 			(
 				tr("chip.ask") % [tr("station." + str(c["from"])), ChipView.label(c)]

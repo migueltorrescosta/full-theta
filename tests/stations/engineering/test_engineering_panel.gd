@@ -92,7 +92,7 @@ func test_cutaway_shows_health_heat_and_recent_hits_and_rotates() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
 	assert_object(e.ship_def).is_not_null()
-	assert_int(e.count()).is_equal(6)
+	assert_int(e.model.count()).is_equal(6)
 	assert_float(e.model.health_frac(0)).is_equal_approx(0.4, 1e-6)
 	assert_float(e.model.heat_frac(3)).is_equal_approx(80.0 / 95.0, 1e-6)
 	# Hits on the own ship are kept with their ship-frame point; others' are not.
@@ -103,7 +103,7 @@ func test_cutaway_shows_health_heat_and_recent_hits_and_rotates() -> void:
 	# Every subsystem disc is where the hit test finds it.
 	var cut: EngineeringCutaway = e.cutaway
 	assert_vector(cut.size).is_not_equal(Vector2.ZERO)
-	for i: int in e.count():
+	for i: int in e.model.count():
 		assert_int(cut.subsystem_at(cut.subsystem_pos(i))).is_equal(i)
 	# Right-drag turns the cutaway; the right stick too.
 	var before: Vector2 = cut.subsystem_pos(0)
@@ -152,10 +152,10 @@ func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 	assert_dict(_commands(s)[-1]).is_equal(
 		{"kind": "set_pips", "subsystem_kind": KIND.THRUSTERS, "pips": 3}
 	)
-	assert_int(e.pips_of(1)).is_equal(3)
-	assert_bool(e.pips_of(1) > e.ship_def.subsystems[1].nominal_pips).is_true()
+	assert_int(e.model.pips_of(1)).is_equal(3)
+	assert_bool(e.model.pips_of(1) > e.ship_def.subsystems[1].nominal_pips).is_true()
 	_press(s, "pip_add")
-	assert_int(e.pips_of(1)).is_equal(4)
+	assert_int(e.model.pips_of(1)).is_equal(4)
 	# The per-subsystem maximum: nothing more is sent.
 	var n: int = _commands(s).size()
 	_press(s, "pip_add")
@@ -188,7 +188,7 @@ func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 	)
 	# The sent value shows until the snapshot agrees or PENDING_MS passes.
 	StationFixture.clock(s.ctx).ms += EngineeringModel.PENDING_MS + 1
-	assert_int(e.pips_of(1)).is_equal(2)
+	assert_int(e.model.pips_of(1)).is_equal(2)
 	# Boost (O / LB+RT), once at a time.
 	_press(s, "boost")
 	assert_dict(_commands(s)[-1]).is_equal({"kind": "boost"})
@@ -229,8 +229,8 @@ func test_drag_a_crew_to_a_subsystem_and_back_and_controller_dispatch() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
 	var cut: EngineeringCutaway = e.cutaway
-	assert_int(e.crew_job(0)).is_equal(0)
-	assert_int(e.crew_job(1)).is_equal(-1)
+	assert_int(e.model.crew_job(0)).is_equal(0)
+	assert_int(e.model.crew_job(1)).is_equal(-1)
 	# Crew B, idle in the bay, dragged onto weapons.
 	_drag(cut, cut.token_pos(1), cut.subsystem_pos(2))
 	assert_dict(_commands(s)[-1]).is_equal(
@@ -349,7 +349,7 @@ func test_the_hull_clears_the_hint_and_the_board_scrolls() -> void:
 	p.cutaway.size = Vector2(300, 350)
 	var top: float = p.cutaway.hint_height()
 	assert_float(top).is_greater(20.0)
-	for i: int in p.count():
+	for i: int in p.model.count():
 		assert_float(p.cutaway.subsystem_pos(i).y - p.cutaway.node_r()).is_greater_equal(top)
 	assert_float(p.board.custom_minimum_size.y).is_equal(p.board.content_height())
 	assert_float(p.board.content_height()).is_greater(300.0)

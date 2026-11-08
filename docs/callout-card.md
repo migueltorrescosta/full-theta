@@ -1,5 +1,7 @@
 # Callout card
 
+<!-- The game shows this card on its Controls page (presentation/callout_card.gd, strings card.* in content/i18n/strings.json); tests/presentation/test_callout_card.gd fails until both say the same. -->
+
 Print this page and keep it beside you. Rules: [spec §6.1](spec/06-spatial-language-and-radar.md), [§7.2–7.4](spec/07-cooperation-pairs.md).
 
 **Say it like this:** `<who>, <verb> <object> [<qualifier>]`. The listener answers **"copy"**.

@@ -1,8 +1,8 @@
 class_name EngineeringRail
 extends RefCounted
-## Why an Engineering rail button can't act now (C4): the suffix of its `eng.reason.*`
-## string, or "" when it can. It mirrors what the panel's actions refuse (whose toasts say
-## the same after the tap), so a greyed button names its reason before the tap.
+## Engineering's rail buttons (C4): their labels, and why one can't act now
+## (EngineeringModel.why_not, the rule the actions' toasts use), so a greyed button names its
+## reason before the tap.
 
 ## Rail buttons that act on the picked part: their second line names it (ENG), so the rail
 ## says what Harden or Repair will touch; a button that can't act shows its reason there.
@@ -28,7 +28,7 @@ static func update(p: EngineeringPanel) -> void:
 			if p.ship_def == null:
 				b.disabled = true
 				continue
-			var why: String = reason(p, id)
+			var why: String = p.model.why_not(id)
 			var second: String = ""
 			if why != "":
 				second = p.tr("eng.reason." + why)
@@ -39,75 +39,3 @@ static func update(p: EngineeringPanel) -> void:
 			if b.text != label:
 				b.text = label
 			b.disabled = why != ""
-
-
-static func reason(p: EngineeringPanel, id: String) -> String:
-	if p.ship_def == null:
-		return ""
-	var sd: SubsystemDef = p.ship_def.subsystems[p.selected]
-	match id:
-		"pip_add":
-			return _pips(p, sd, true)
-		"pip_remove":
-			return _pips(p, sd, false)
-		"shield_tighter", "shield_wider":
-			return _tightness(p, id == "shield_tighter")
-		"boost":
-			return "boosting" if p.model.boosting() else ""
-		"harden":
-			return _harden(p, sd)
-		"dispatch_nearest":
-			return _repair(p, sd)
-		"cause_next":
-			return (
-				""
-				if p.model.has_fault(p.selected) and not sd.fault_causes.is_empty()
-				else "no_fault"
-			)
-		"fabricate_probe":
-			return "no_parts" if p.model.spare_parts() < p.ship_def.probe_parts else ""
-		"claim":
-			return "no_crew" if p.model.crew_count() == 0 else ""
-	return ""
-
-
-static func _pips(p: EngineeringPanel, sd: SubsystemDef, add: bool) -> String:
-	if sd.kind == SubsystemDef.Kind.REACTOR:
-		return "reactor"
-	var pips: int = p.model.pips_of(p.selected)
-	if not add:
-		return "no_pips" if pips <= 0 else ""
-	if pips >= p.ship_def.power.max_pips_per_subsystem:
-		return "max"
-	return "cap" if p.model.pips_used() >= p.ctx.pip_cap() else ""
-
-
-static func _tightness(p: EngineeringPanel, tighter: bool) -> String:
-	var def: ShieldDef = p.ship_def.shields
-	if def == null:
-		return "limit"
-	var t: float = p.model.tightness()
-	var at_end: bool = t >= def.tightness_max - 0.001 if tighter else t <= def.tightness_min + 0.001
-	return "limit" if at_end else ""
-
-
-static func _harden(p: EngineeringPanel, sd: SubsystemDef) -> String:
-	if p.model.hardened_ticks(p.selected) > 0:
-		return "hardened"
-	return "no_parts" if p.model.spare_parts() < sd.harden_parts else ""
-
-
-static func _repair(p: EngineeringPanel, sd: SubsystemDef) -> String:
-	if p.model.health_frac(p.selected) >= 1.0:
-		return "whole"
-	if not _crew_free_for(p, p.selected):
-		return "no_crew"
-	return "no_parts" if p.model.spare_parts() < sd.parts_per_repair else ""
-
-
-## True when some crew another player doesn't hold could go to subsystem i.
-static func _crew_free_for(p: EngineeringPanel, i: int) -> bool:
-	for c: int in p.model.crew_count():
-		if not p.model.crew_taken(c) and p.model.crew_job(c) != i:
-			return true
-	return false

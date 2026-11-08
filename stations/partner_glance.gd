@@ -79,9 +79,8 @@ var intent: String = ""
 
 
 func _init() -> void:
-	var sb: StyleBoxFlat = UiTheme.box(
-		"panel", "line_strong", 4, 4, UiTheme.OVERLAY_ALPHA, UiTheme.TOUCH_GAP
-	)
+	var sb: StyleBoxFlat = UiTheme.box("panel", "line_strong", 4, 4, UiTheme.OVERLAY_ALPHA)
+	sb.content_margin_left = UiTheme.TOUCH_GAP
 	add_theme_stylebox_override("panel", sb)
 	custom_minimum_size.x = WIDTH
 	mouse_filter = Control.MOUSE_FILTER_IGNORE

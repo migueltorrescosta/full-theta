@@ -294,7 +294,7 @@ func test_long_press_on_a_card_pings_its_contact() -> void:
 	var p: CommsPanel = s.focused_panel()
 	s.ctx.crew.select("contact", StationFixture.U3)
 	var r: Rect2 = p.board.card_rect(CommsFixture.MISSION)
-	s.ping_at(p.board.get_global_transform() * r.get_center())
+	s.common.ping_at(p.board.get_global_transform() * r.get_center())
 	var pings: Array = StationFixture.sent(s.ctx).of("ping")
 	assert_int(pings.size()).is_equal(1)
 	assert_array([pings[0][1][0], pings[0][1][1]]).is_equal(["contact", StationFixture.H2])

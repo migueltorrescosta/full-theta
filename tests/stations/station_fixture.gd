@@ -189,7 +189,7 @@ static func context(
 	for station: String in StationViews.CREW + [StationViews.VIEWER, StationViews.CAPTAIN]:
 		ctx.settings.mark_hint_seen(station)
 	# The radar legend (C11) is first-visit too; the tests that look for it unmark it.
-	ctx.settings.mark_hint_seen(RadarLegend.KEY)
+	ctx.settings.mark_hint_seen(ControlsChip.RADAR_KEY)
 	ctx.matcher = InputMatcher.new(ctx.settings.bindings)
 	var crew: CrewState = ctx.crew
 	crew.welcome(

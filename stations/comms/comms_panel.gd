@@ -231,16 +231,14 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	refresh()
-	RadarLegend.show_once(self, ctx.settings)
+	ControlsChip.show_radar_legend(self, ctx.settings)
 	phone.place()
 
 
 ## Pushes the COMMS block into the widgets: every frame when it changed (tests call it).
 func refresh(force: bool = false) -> void:
 	var blk: Dictionary = CommsData.block(ctx.view)
-	var names: Dictionary = {}
-	for c: Dictionary in blk.get("cards", []):
-		names[int(c["id"])] = ctx.crew.claimer("%s:%d" % [StationViews.CLAIM_NPC, int(c["id"])])
+	var names: Dictionary = CommsData.claimers(ctx.crew, blk.get("cards", []))
 	var changed: bool = force or not is_same(blk, _block_ref) or names != board.claim_names
 	_block_ref = blk
 	if changed:

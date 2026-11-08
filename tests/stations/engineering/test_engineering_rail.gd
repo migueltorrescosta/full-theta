@@ -82,21 +82,44 @@ func test_a_button_that_cannot_act_says_why() -> void:
 	# The reactor makes pips and takes none; an intact part needs no repair.
 	e.model.select(5)
 	await _refresh(s)
-	assert_str(EngineeringRail.reason(e, "pip_add")).is_equal("reactor")
+	assert_str(e.model.why_not("pip_add")).is_equal("reactor")
 	assert_str((e.touch_buttons["pip_remove"] as RailButton).text).is_equal("Power -\nreactor")
 	e.model.select(1)
-	assert_str(EngineeringRail.reason(e, "dispatch_nearest")).is_equal("whole")
+	assert_str(e.model.why_not("dispatch_nearest")).is_equal("whole")
 	# Reactor cap: 10 of 12 pips used, two more fit and then none.
 	e.model.select(4)
-	assert_str(EngineeringRail.reason(e, "pip_add")).is_empty()
+	assert_str(e.model.why_not("pip_add")).is_empty()
 	blocks["subsystems"][4]["pips"] = 3
-	assert_str(EngineeringRail.reason(e, "pip_add")).is_equal("cap")
+	assert_str(e.model.why_not("pip_add")).is_equal("cap")
 	# No spare parts: Harden, Repair and Probe say so.
 	blocks["spare_parts"] = 0
 	e.model.select(0)
 	for id: String in ["harden", "dispatch_nearest", "fabricate_probe"]:
-		var why: String = EngineeringRail.reason(e, id)
+		var why: String = e.model.why_not(id)
 		assert_str(why).override_failure_message(id).is_equal("no_parts")
+
+
+# P9: one rule: an action the rail greys refuses with the toast of the same reason, and the
+# reactor cap is a hint only (the server refuses it, D380).
+func test_the_actions_refuse_with_the_rails_reason() -> void:
+	var s: StationScreen = await _open(Vector2i(844, 390))
+	var e: EngineeringPanel = _panel(s)
+	var blocks: Dictionary = s.ctx.view.blocks[ENG]
+	var toasts: Array[String] = []
+	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
+	e.model.select(1)
+	assert_str(e.model.why_not("dispatch_nearest")).is_equal("whole")
+	assert_bool(e.model.dispatch_nearest()).is_false()
+	blocks["subsystems"][1]["hardened"] = 40
+	assert_str(e.model.why_not("harden")).is_equal("hardened")
+	assert_bool(e.model.harden(1)).is_false()
+	e.model.select(5)
+	assert_bool(e.model.set_pips(5, 2)).is_false()
+	assert_array(toasts).is_equal(["toast.eng_whole", "toast.eng_hardened", "toast.eng_reactor"])
+	e.model.select(4)
+	blocks["subsystems"][4]["pips"] = 3
+	assert_str(e.model.why_not("pip_add")).is_equal("cap")
+	assert_bool(e.model.set_pips(4, 4)).is_true()
 
 
 func test_a_tablet_takes_the_rail_pattern() -> void:

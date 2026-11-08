@@ -194,7 +194,7 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	refresh()
-	RadarLegend.show_once(self, ctx.settings)
+	ControlsChip.show_radar_legend(self, ctx.settings)
 
 
 ## Pushes the current picture into the map (every frame; tests call it directly).

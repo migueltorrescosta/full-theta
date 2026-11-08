@@ -80,11 +80,11 @@ func test_start_stays_visible_with_many_ships() -> void:
 				for key: String in AUDIT_KEYS:
 					if not (report[key] as Array).is_empty():
 						failures.append("%s %s: %s" % [at, key, report[key]])
-				for id: String in LobbyScreen.GRID_STATIONS:
+				for id: String in LobbySeatGrid.GRID_STATIONS:
 					var role: Label = l.find_child("Entry_" + id, true, false).find_child(
 						"Role", true, false
 					)
-					if role.get_line_count() > LobbyScreen.ROLE_LINES:
+					if role.get_line_count() > LobbySeatGrid.ROLE_LINES:
 						failures.append("%s %s: %d lines" % [at, id, role.get_line_count()])
 				l.queue_free()
 	get_tree().root.size = old

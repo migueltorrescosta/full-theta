@@ -124,6 +124,44 @@ static func state_text(state: int) -> String:
 	return TranslationServer.translate("comms.state_" + STATE_KEYS[clampi(state, 0, 5)])
 
 
+## Card id -> the name of whoever holds the card's conversation ("" for nobody), for `cards`
+## (COMMS block rows).
+static func claimers(crew: CrewState, cards: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for c: Dictionary in cards:
+		out[int(c["id"])] = crew.claimer("%s:%d" % [StationViews.CLAIM_NPC, int(c["id"])])
+	return out
+
+
+## A card's stakes: its reward and its reputation range, each only when it has one.
+static func stakes(c: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	if int(c.get("reward", 0)) != 0:
+		out.append(TranslationServer.translate("comms.reward") % int(c["reward"]))
+	var rep: String = range_text(c)
+	if rep != "":
+		out.append(rep)
+	return out
+
+
+## "claimed by Bo" (or "you" when `holder` is `own_name`); with nobody holding it, "claimed
+## by free" when `free` (Captain's open card), else "".
+static func claimed_text(holder: String, own_name: String, free: bool = false) -> String:
+	if holder == "":
+		return (
+			(
+				TranslationServer.translate("comms.claimed_by")
+				% TranslationServer.translate("comms.free")
+			)
+			if free
+			else ""
+		)
+	return (
+		TranslationServer.translate("comms.claimed_by")
+		% (TranslationServer.translate("comms.you") if holder == own_name else holder)
+	)
+
+
 ## "+4 to +12" for the reputation a card's outcome may draw, "" when its range is hidden.
 static func range_text(card_row: Dictionary) -> String:
 	if not bool(card_row.get("rep_vis", false)):

@@ -447,7 +447,7 @@ func test_out_of_arc_warning_clears_the_chips() -> void:
 	for c: Array in [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]:
 		var s: StationScreen = await _screen(c[0], c[1])
 		var p: WeaponsPanel = _panel(s)
-		var arc: String = p.out_of_arc_text()
+		var arc: String = WeaponsReadout.out_of_arc_text(p)
 		assert_str(arc).starts_with("U3 out of arc")
 		var r: Rect2 = p._overlay.arc_warning_rect(p.get_theme_default_font(), arc)
 		for target: Dictionary in p._overlay.targets:

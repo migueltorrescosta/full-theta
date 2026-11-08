@@ -59,20 +59,22 @@ func test_control_borders_read_at_three_to_one() -> void:
 		assert_float(_contrast(cell.border_color, Palette.color("panel"))).is_greater_equal(3.0)
 
 
-# R05-8: an overlay box keeps the panel's colour at a lower alpha, and a row box may widen its
-# left margin alone (the others keep Godot's default, -1).
+# R05-8: an overlay box keeps the panel's colour at a lower alpha, and -1 margins keep
+# Godot's default.
 func test_box_alpha_and_left_margin() -> void:
 	var plain: StyleBoxFlat = UiTheme.box("panel", "line_strong", 6, 4)
 	assert_that(plain.bg_color).is_equal(Palette.color("panel"))
 	assert_float(plain.content_margin_left).is_equal(6.0)
 	assert_float(plain.content_margin_top).is_equal(4.0)
-	var overlay: StyleBoxFlat = UiTheme.box("panel", "accent", -1, -1, UiTheme.OVERLAY_ALPHA, 8)
+	var overlay: StyleBoxFlat = UiTheme.box("panel", "accent", -1, -1, UiTheme.OVERLAY_ALPHA)
 	assert_that(overlay.bg_color).is_equal(Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA))
 	assert_that(overlay.border_color).is_equal(Palette.color("accent"))
 	assert_int(overlay.corner_radius_top_left).is_equal(UiTheme.RADIUS)
-	assert_float(overlay.content_margin_left).is_equal(8.0)
 	for m: float in [
-		overlay.content_margin_right, overlay.content_margin_top, overlay.content_margin_bottom
+		overlay.content_margin_left,
+		overlay.content_margin_right,
+		overlay.content_margin_top,
+		overlay.content_margin_bottom
 	]:
 		assert_float(m).is_equal(-1.0)
 	var rail: StyleBoxFlat = UiTheme.build().get_stylebox("panel", "OverlayRail") as StyleBoxFlat

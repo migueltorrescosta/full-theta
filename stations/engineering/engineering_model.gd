@@ -136,6 +136,72 @@ static func crew_letter(c: int) -> String:
 # --- Actions (each checks what the sim would refuse and says why). ---
 
 
+## Why action `id` (an Engineering touch action) can't act on subsystem i now: the suffix of
+## its `eng.reason.*` string, or "" when it can (C4). The rail greys a button with it before
+## the tap and the actions refuse with the toast of the same name (`toast.eng_<reason>`).
+## Two reasons are hints only, left to the server (D380, FT-ENG-008): "cap" (the reactor's
+## pips now, STATUS.pip_cap, are all used) and Probe's "no_parts".
+func why_not(id: String, i: int = selected) -> String:
+	if ship_def == null or i < 0 or i >= count():
+		return ""
+	var sd: SubsystemDef = ship_def.subsystems[i]
+	var why: String = ""
+	match id:
+		"pip_add", "pip_remove":
+			why = _pip_reason(i, id == "pip_add")
+		"shield_tighter", "shield_wider":
+			why = _tightness_reason(id == "shield_tighter")
+		"boost":
+			why = "boosting" if boosting() else ""
+		"harden":
+			if hardened_ticks(i) > 0:
+				why = "hardened"
+			elif spare_parts() < sd.harden_parts:
+				why = "no_parts"
+		"dispatch_nearest":
+			if health_frac(i) >= 1.0:
+				why = "whole"
+			elif _free_crew_for(i) < 0:
+				why = "no_crew"
+			elif spare_parts() < sd.parts_per_repair:
+				why = "no_parts"
+		"cause_next":
+			why = "" if has_fault(i) and not sd.fault_causes.is_empty() else "no_fault"
+		"fabricate_probe":
+			why = "no_parts" if spare_parts() < ship_def.probe_parts else ""
+		"claim":
+			why = "no_crew" if crew_count() == 0 else ""
+	return why
+
+
+## Power + and - on subsystem i (why_not).
+func _pip_reason(i: int, add: bool) -> String:
+	if ship_def.subsystems[i].kind == KIND.REACTOR:
+		return "reactor"
+	if not add:
+		return "no_pips" if pips_of(i) <= 0 else ""
+	if pips_of(i) >= ship_def.power.max_pips_per_subsystem:
+		return "max"
+	return "cap" if pips_used() >= ctx.pip_cap() else ""
+
+
+## Tighter and Wider at the ship's focus range (why_not).
+func _tightness_reason(tighter: bool) -> String:
+	var def: ShieldDef = ship_def.shields
+	if def == null:
+		return "limit"
+	var t: float = tightness()
+	var at_end: bool = t >= def.tightness_max - 0.001 if tighter else t <= def.tightness_min + 0.001
+	return "limit" if at_end else ""
+
+
+## Shows the toast of refusal `why` (why_not's) and says whether there was one.
+func _refused(why: String) -> bool:
+	if why != "":
+		_toast("toast.eng_" + why)
+	return why != ""
+
+
 func select(i: int) -> bool:
 	if i < 0 or i >= count():
 		return false
@@ -149,8 +215,9 @@ func set_pips(i: int, n: int) -> bool:
 	if i < 0 or i >= count():
 		return false
 	var sd: SubsystemDef = ship_def.subsystems[i]
-	if sd.kind == KIND.REACTOR:
-		_toast("toast.eng_reactor")
+	# Only the reactor is refused here: the pip range is clamped, and over the reactor cap
+	# the server refuses (below).
+	if why_not("pip_add", i) == "reactor" and _refused("reactor"):
 		return false
 	var p: int = clampi(n, 0, ship_def.power.max_pips_per_subsystem)
 	var now: int = pips_of(i)
@@ -175,8 +242,7 @@ func set_tightness(t: float) -> bool:
 
 
 func boost() -> bool:
-	if boosting():
-		_toast("toast.eng_boosting")
+	if _refused(why_not("boost")):
 		return false
 	ctx.intents.command({"kind": "boost"})
 	return true
@@ -187,11 +253,9 @@ func dispatch(c: int, i: int) -> bool:
 	if c < 0 or c >= crew_count() or i < 0 or i >= count() or crew_job(c) == i:
 		return false
 	var sd: SubsystemDef = ship_def.subsystems[i]
-	if health_frac(i) >= 1.0:
-		_toast("toast.eng_whole")
-		return false
-	if spare_parts() < sd.parts_per_repair:
-		_toast("toast.eng_no_parts")
+	# Crew c is named, so "no crew free" is not this dispatch's to say.
+	var why: String = why_not("dispatch_nearest", i)
+	if why != "no_crew" and _refused(why):
 		return false
 	crew_pick = c
 	ctx.intents.command({"kind": "dispatch_repair", "crew": c, "subsystem_id": String(sd.id)})
@@ -209,29 +273,30 @@ func recall(c: int) -> bool:
 ## Controller B: an idle crew to the selected subsystem, else the first crew working
 ## elsewhere; crews another player holds are skipped.
 func dispatch_nearest() -> bool:
+	if _refused(why_not("dispatch_nearest")):
+		return false
+	return dispatch(_free_crew_for(selected), selected)
+
+
+## The crew dispatch_nearest sends to subsystem i: an idle one, else the first working
+## elsewhere, skipping crews another player holds; -1 for none.
+func _free_crew_for(i: int) -> int:
 	var other: int = -1
 	for c: int in crew_count():
-		if crew_taken(c) or crew_job(c) == selected:
+		if crew_taken(c) or crew_job(c) == i:
 			continue
 		if crew_job(c) < 0:
-			return dispatch(c, selected)
+			return c
 		if other < 0:
 			other = c
-	if other < 0:
-		_toast("toast.eng_no_crew")
-		return false
-	return dispatch(other, selected)
+	return other
 
 
 ## Pre-hardens subsystem i (FT-ENG-008): the sim takes its parts and refuses a repeat.
 func harden(i: int) -> bool:
 	if i < 0 or i >= count():
 		return false
-	if hardened_ticks(i) > 0:
-		_toast("toast.eng_hardened")
-		return false
-	if spare_parts() < ship_def.subsystems[i].harden_parts:
-		_toast("toast.eng_no_parts")
+	if _refused(why_not("harden", i)):
 		return false
 	ctx.intents.command({"kind": "harden", "subsystem_id": String(ship_def.subsystems[i].id)})
 	return true
@@ -271,8 +336,7 @@ func cycle_cause(i: int) -> bool:
 	if i < 0 or i >= count():
 		return false
 	var causes: Array[StringName] = ship_def.subsystems[i].fault_causes
-	if not has_fault(i) or causes.is_empty():
-		_toast("toast.eng_no_fault")
+	if _refused(why_not("cause_next", i)):
 		return false
 	var next: int = picked_cause(i) % causes.size() + 1
 	ctx.intents.command(

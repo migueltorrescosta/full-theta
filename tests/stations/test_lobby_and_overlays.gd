@@ -36,7 +36,7 @@ func test_grid_cells_show_name_role_and_load_border() -> void:
 	var ids: Array[String] = []
 	for c: Node in grid.get_children():
 		ids.append(c.name.trim_prefix("Entry_"))
-	assert_array(ids).is_equal(LobbyScreen.GRID_STATIONS)
+	assert_array(ids).is_equal(LobbySeatGrid.GRID_STATIONS)
 	var tags: Dictionary = {
 		"helm": "intense",
 		"weapons": "intense",
@@ -57,7 +57,7 @@ func test_grid_cells_show_name_role_and_load_border() -> void:
 		# The whole role summary, wrapped to two lines (P28-Lobby).
 		var role: Label = cell.find_child("Role", true, false) as Label
 		assert_str(role.text).is_equal(tr("role." + id))
-		assert_int(role.max_lines_visible).is_equal(LobbyScreen.ROLE_LINES)
+		assert_int(role.max_lines_visible).is_equal(LobbySeatGrid.ROLE_LINES)
 		assert_bool(cell.find_child("Take", true, false) == null).is_true()
 	assert_bool(_cell(l, "captain") is Button).is_true()
 	assert_bool(_cell(l, "viewer").button_pressed).is_true()
@@ -179,8 +179,8 @@ func test_a_quick_second_tap_adds_to_the_first() -> void:
 func test_every_pair_maps_to_its_joint_view() -> void:
 	var l: LobbyScreen = _lobby("viewer")
 	var seen: Dictionary = {}
-	for a: String in LobbyScreen.GRID_STATIONS:
-		for b: String in LobbyScreen.GRID_STATIONS:
+	for a: String in LobbySeatGrid.GRID_STATIONS:
+		for b: String in LobbySeatGrid.GRID_STATIONS:
 			if a < b:
 				var entry: String = l.entry_for([a, b] as Array[String])
 				assert_str(entry).is_not_empty()
@@ -223,7 +223,7 @@ func test_dev_all_stations_seat_only_with_the_flag() -> void:
 	_cell(l, "all").pressed.emit()
 	assert_array(_sent_picks(l)[-1][1]).is_equal([0, "all"])
 	_picked(l, "all")
-	for id: String in LobbyScreen.GRID_STATIONS:
+	for id: String in LobbySeatGrid.GRID_STATIONS:
 		assert_bool(_cell(l, id).button_pressed).is_true()
 		assert_bool(_cell(l, id).disabled).is_false()
 	_cell(l, "science").pressed.emit()

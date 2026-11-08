@@ -20,6 +20,7 @@
 ## (1 shown, 0 hidden); `audit` writes TapAudit.check of the shot as JSON to that path.
 ## The lobby's `host_bind` makes it the host's (its join strip and dialog, #35 A6), and
 ## `player` sets the player's saved name ("" shows the name prompt, #35 A5).
+## `render_3d` sets the 3D resolution setting (a RenderQuality mode, default "full").
 ## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
@@ -78,6 +79,7 @@ var lesson_intent: String = ""
 ## The device the player last used: "" the fixture's, "pad" or "kbm" (the banner and the chip
 ## follow it, D1, D4).
 var device: String = ""
+var render_3d: String = "full"
 
 var _ctx: StationContext
 
@@ -93,6 +95,8 @@ func _ready() -> void:
 	get_tree().root.content_scale_factor = ui_scale
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
+	_ctx.settings.render_3d = render_3d
+	RenderQuality.apply(_ctx.settings, LayoutMode.is_touch(LayoutMode.kind_of(self)), get_tree())
 	if lesson:
 		var step: Array = LESSON_STEPS.get(entry, ["face", "Face the drone."])
 		if lesson_intent != "":
@@ -184,6 +188,11 @@ func _ready() -> void:
 						_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.entry
 					)
 					menu.open(SettingsScreen.TAB_CONTROLS)
+			)
+			s.card_requested.connect(
+				func() -> void:
+					s.help_requested.emit()
+					menu.controls_pane.show_view(ControlsPane.VIEW_CARD)
 			)
 			add_child(menu)
 			menu.setup(_ctx.settings, true)

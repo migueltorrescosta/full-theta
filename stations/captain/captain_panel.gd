@@ -246,16 +246,11 @@ func _process(_delta: float) -> void:
 	if cards.highlight >= 0:
 		cards.expanded = cards.highlight
 	cards.own_name = ctx.settings.player_name
-	cards.claims = _claims()
+	# Card id -> the holder of its conversation, for the open card's "claimed" line.
+	cards.claims = CommsData.claimers(
+		ctx.crew, CardList.rows(ctx.view, [CardList.MISSION, CardList.CONTRACT])
+	)
 	cards.queue_redraw()
-
-
-## Card id -> the holder of its conversation, for the open card's "claimed" line.
-func _claims() -> Dictionary:
-	var out: Dictionary = {}
-	for c: Dictionary in CardList.rows(ctx.view, [CardList.MISSION, CardList.CONTRACT]):
-		out[int(c["id"])] = ctx.crew.claimer("%s:%d" % [StationViews.CLAIM_NPC, int(c["id"])])
-	return out
 
 
 ## Asks the server to switch the main screen's view (MainScreen.View).
