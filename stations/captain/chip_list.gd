@@ -32,6 +32,8 @@ static func open_rows(view: NetViewState) -> Array[Dictionary]:
 					"to": chip["to"],
 					"label": ChipView.label(chip, callsign),
 					"left_s": ChipView.left_s(view, chip),
+					"total_s":
+					maxf(float(int(chip["expires"]) - int(chip["sent"])) / ChipView.HZ, 1.0),
 				}
 			)
 		)
@@ -48,7 +50,11 @@ static func row_text(row: Dictionary) -> String:
 		]
 	)
 	var left: float = float(row.get("left_s", 0.0))
-	var time: String = "  %d s" % ceili(left) if left > 0.0 else ""
+	var time: String = (
+		"  %s" % (TranslationServer.translate("captain.waiting") % ceili(left))
+		if left > 0.0
+		else ""
+	)
 	return "%s  %s%s" % [path, row["label"], time]
 
 
@@ -87,3 +93,8 @@ func _draw() -> void:
 		draw_string(
 			font, base, row_text(rows[i]), 0, size.x - 16.0, FONT_SIZE, Palette.color("text")
 		)
+		# The time left as a thin bar along the row's foot: it runs out as the request lapses.
+		var share: float = clampf(
+			float(rows[i].get("left_s", 0.0)) / float(rows[i].get("total_s", 1.0)), 0.0, 1.0
+		)
+		draw_rect(Rect2(r.position.x, r.end.y - 3.0, r.size.x * share, 3.0), Palette.color("warn"))

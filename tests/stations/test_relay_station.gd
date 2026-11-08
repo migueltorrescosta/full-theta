@@ -247,7 +247,7 @@ func test_inbox_accept_decline_and_send() -> void:
 		"id": 7, "from_ship": ALLY, "from": "Wren", "name": "Rock", "x": 1.0, "y": 2.0, "z": 3.0
 	}
 	_event(s, "inbox", {"ship": SHIP, "items": [item, item.merged({"id": 8})]})
-	assert_str(p.hud._mail.text).is_equal("Rock, from Wren +1")
+	assert_str(p.hud._mail.text).is_equal("Incoming: Rock from Wren (Relay) +1")
 	assert_bool(p.hud.accept.disabled).is_false()
 	p.handle_intent(_ev("accept", s))
 	assert_array(_sent(s, "accept_mark")).is_equal([[7, -1]])

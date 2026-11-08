@@ -98,8 +98,8 @@ func test_header_footer_and_card_texts() -> void:
 	var s: StationScreen = await _screen()
 	var board: CommsBoard = _comms(s).board
 	assert_str(board.header_text()).is_equal("Comms   docked: Kappa")
-	assert_str(board.status_text()).is_equal("hull ok   cr 1200")
-	assert_str(board.rep_text()).is_equal("Reputation  F1 +12   F2 -2")
+	assert_str(board.status_text()).is_equal("hull ok   1200 credits")
+	assert_str(board.rep_text()).is_equal("Reputation  Your fleet +12   Raiders -2")
 	var mission: Dictionary = CommsData.card(CommsData.block(s.ctx.view), CommsFixture.MISSION)
 	assert_str(CommsData.range_text(mission)).is_equal("rep +4 to +12")
 	assert_str(CommsData.range_text(CommsData.card(CommsData.block(s.ctx.view), 1))).is_empty()
@@ -110,7 +110,7 @@ func test_header_footer_and_card_texts() -> void:
 	CommsFixture.install(s.ctx, blk)
 	_comms(s).refresh()
 	assert_str(board.header_text()).is_equal("Comms   not docked")
-	assert_str(board.status_text()).is_equal("hull damaged   cr 30")
+	assert_str(board.status_text()).is_equal("hull damaged   30 credits")
 
 
 # FT: FT-COM-008, FT-COM-006
@@ -162,7 +162,7 @@ func test_replies_by_key_and_by_pad() -> void:
 	var panel: CommsPanel = _comms(s)
 	panel.open_card(CommsFixture.OFFER)
 	var rows: Array[Dictionary] = panel.overlay.rows()
-	assert_str(panel.overlay.row_text(rows[1])).contains("Call the bluff").contains("[scan]")
+	assert_str(panel.overlay.row_text(rows[1])).contains("Call the bluff").contains("[scan")
 	s.dispatch(_ev("comms_reply_3", s))
 	assert_str(_commands(s, "comms_reply")[0]["option"]).is_equal("o4")
 	assert_int(_commands(s, "comms_reply")[0]["card"]).is_equal(CommsFixture.OFFER)
@@ -401,3 +401,14 @@ func test_the_lists_show_the_real_cards() -> void:
 		assert_int(CardList.rows(parley.ctx.view, [CardList.MISSION, CardList.CONTRACT]).size())
 		. is_equal(1)
 	)
+
+
+# FT: FT-COM-005
+# R23-10, R26-6 (C9): factions have names, an id with none reads "Faction N", and every page
+# has a one-line why (R26-7).
+func test_factions_have_names_and_pages_a_why_line() -> void:
+	assert_str(CommsData.faction_name(3)).is_equal("Freighters")
+	assert_str(CommsData.faction_name(12)).is_equal("Faction 12")
+	for key: String in CommsData.WHY_KEYS + [CommsData.WHY_REP_KEY]:
+		assert_str(tr(key)).is_not_equal(key)
+		assert_int(tr(key).length()).is_less(45)

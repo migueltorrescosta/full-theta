@@ -161,3 +161,10 @@ func test_viewers_only_watch() -> void:
 	s.dispatch(mark)
 	s.dispatch({"id": "alert_cycle", "target": "screen", "pressed": true, "device": "kbm"})
 	assert_array(StationFixture.sent(s.ctx).sent).is_empty()
+
+
+# FT: FT-MSC-004
+# R23-14 (C9 lows): a plain viewer's rail says who sets the view.
+func test_the_rail_says_the_captain_sets_the_view() -> void:
+	I18n.apply("en")
+	assert_str(tr("viewer.caption")).is_equal("The Captain sets this view")

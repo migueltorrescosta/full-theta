@@ -106,7 +106,11 @@ func _table(s: StationScreen, p: RelayPanel) -> Array:
 	var row_of: Callable = func(box_name: String) -> Callable:
 		return func() -> BaseButton:
 			var box: VBoxContainer = p.phone.get(box_name)
-			return box.get_child(0) as BaseButton if box.get_child_count() > 0 else null
+			# The first row to pick (the Marks page opens with the incoming mark's line).
+			for child: Node in box.get_children():
+				if child is BaseButton and (child as BaseButton).toggle_mode:
+					return child as BaseButton
+			return null
 	var centred: Callable = func() -> bool: return p._centred
 	var sel: Callable = func() -> String: return str(s.ctx.crew.selection)
 	var rows: Array = [
@@ -128,6 +132,26 @@ func _table(s: StationScreen, p: RelayPanel) -> Array:
 		["Send mark to an ally", 0, b.call("send"), 0, 2, "mark", _count(s, "send_mark")],
 		["Centre", 0, b.call("centre"), -1, 1, "contact", centred],
 		["Pick a mark", 1, row_of.call("_marks_box"), -1, 2, "none", sel],
+		[
+			"Accept inbox mark (Marks)",
+			1,
+			func() -> BaseButton:
+				return p.phone._marks_box.find_child("Relay_accept_incoming", true, false),
+			-1,
+			2,
+			"contact",
+			_count(s, "accept_mark")
+		],
+		[
+			"Decline inbox mark (Marks)",
+			1,
+			func() -> BaseButton:
+				return p.phone._marks_box.find_child("Relay_decline_incoming", true, false),
+			-1,
+			2,
+			"contact",
+			_count(s, "decline_mark")
+		],
 		["Rename", 1, b.call("rename"), -1, 2, "mark", func() -> bool: return p._rename.visible],
 		["Delete", 1, b.call("delete"), -1, 2, "mark", _count(s, "delete_mark")],
 		["Attach", 1, b.call("attach"), -1, 2, "mark", _count(s, "move_mark")],

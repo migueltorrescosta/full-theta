@@ -162,6 +162,9 @@ func _draw() -> void:
 		Palette.color("text_dim")
 	)
 	# Subsystem health on the right.
+	# (a heading with nothing under it reads as broken: the column waits for its rows)
+	if (_model["subsystems"] as Array).is_empty():
+		return
 	var rx: float = size.x * 0.5 + x
 	var ry: float = 20.0 + top
 	var sub_head: String = TranslationServer.translate("status.subsystems")

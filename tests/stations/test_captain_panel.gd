@@ -82,7 +82,9 @@ func test_mirror_buttons_chips_and_cards() -> void:
 	}
 	await get_tree().process_frame
 	assert_int(cap.chips.rows.size()).is_equal(1)
-	assert_str(ChipList.row_text(cap.chips.rows[0])).is_equal("Helm > Engineering  Boost  8 s")
+	assert_str(ChipList.row_text(cap.chips.rows[0])).is_equal(
+		"Helm > Engineering  Boost  waiting, 8 s left"
+	)
 	assert_array(StationViews.STATION_SECTIONS["captain"]).contains([StationViews.Section.CHIPS])
 
 
@@ -221,3 +223,42 @@ func test_a_card_ping_shows_the_card_for_ten_seconds() -> void:
 	assert_int(crew.shown_card(t0 + 7001)).is_equal(1)
 	assert_float(crew.pulse("card", 1, t0 + 7001)).is_equal(0.0)
 	assert_bool(s._select("kbm")).is_false()
+
+
+# FT: FT-CPT-004, FT-CPT-005
+# R23-12 (C10): a card shows its state in the list, and the card the Captain pinged opens
+# with its detail, reward and who holds it; the rows below it move down.
+func test_a_pinged_card_expands_in_the_list() -> void:
+	var s: StationScreen = await _screen()
+	var cap: CaptainPanel = _captain(s)
+	var list: CardList = cap.cards
+	var second_before: float = list.row_bottoms()[2]
+	assert_int(list.expanded).is_equal(-1)
+	(
+		s
+		. ctx
+		. crew
+		. handle_event(
+			{
+				"type": "ping",
+				"payload":
+				{
+					"ship": 0,
+					"kind": "card",
+					"id": CommsFixture.MISSION,
+					"by": "captain",
+					"copy": "",
+					"card": {"kind": 0, "title": "t", "detail": "", "expires": -1.0},
+				}
+			},
+			StationFixture.NOW_MS
+		)
+	)
+	s.ctx.clock = func() -> int: return StationFixture.NOW_MS + 1000
+	cap._process(0.016)
+	assert_int(list.expanded).is_equal(CommsFixture.MISSION)
+	assert_float(list.row_bottoms()[2]).is_equal(second_before + CardList.EXTRA_HEIGHT)
+	# A tap below the open card still finds the next card, shifted down.
+	assert_int(list.card_at(Vector2(10.0, second_before + CardList.EXTRA_HEIGHT - 5.0))).is_equal(
+		CommsFixture.CONTRACT
+	)

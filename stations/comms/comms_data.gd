@@ -8,6 +8,17 @@ extends RefCounted
 ## The columns: missions, contracts, offers with hails (§5.6).
 const COLUMNS: int = 3
 const COLUMN_KEYS: Array[String] = ["comms.col_missions", "comms.col_contracts", "comms.col_offers"]
+## One line per column and for the Rep page: what the page is for (R23-9, R26-7).
+const WHY_KEYS: Array[String] = ["comms.why.missions", "comms.why.contracts", "comms.why.offers"]
+const WHY_REP_KEY: String = "comms.why.rep"
+## Faction ids the scenarios use (sim/run/session_rules.gd CREW_FACTIONS, the NPC factions
+## 2 to 4); any other shows as "Faction N".
+const FACTION_KEYS: Dictionary = {
+	1: "comms.faction.crew",
+	2: "comms.faction.raiders",
+	3: "comms.faction.freighters",
+	4: "comms.faction.traffic"
+}
 ## CommsView's card states (StoryTable.State).
 const STATE_KEYS: Array[String] = ["open", "accepted", "declined", "done", "failed", "expired"]
 ## Units one buy or sell press moves, by item (default 1): fuel and ammunition come by the
@@ -20,6 +31,21 @@ static var _lines: DialogueLines = null
 ## The view's COMMS block, or {}.
 static func block(view: NetViewState) -> Dictionary:
 	return view.blocks.get(StationViews.Section.COMMS, {})
+
+
+## A faction's name for the Rep page ("Raiders"), or "Faction 7" for an id with none.
+static func faction_name(id: int) -> String:
+	if FACTION_KEYS.has(id):
+		return TranslationServer.translate(FACTION_KEYS[id])
+	return TranslationServer.translate("comms.faction.other") % id
+
+
+## One Rep row: "Raiders +12".
+static func rep_line(row: Dictionary) -> String:
+	return (
+		TranslationServer.translate("comms.rep_row")
+		% [faction_name(int(row["faction"])), roundi(float(row["value"]))]
+	)
 
 
 ## The column a card sits in.

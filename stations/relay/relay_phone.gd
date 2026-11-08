@@ -272,11 +272,12 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 	panel._hint.offset_right = -(panel.size.x - r.end.x) - 8.0
 	var y: float = r.position.y + 4.0
 	if probes.get_parent() == self:
-		var half: float = maxf(r.size.x / 2.0 - 12.0, 1.0)
+		# The inbox line is the longer ("Incoming: Rock from Wren (Relay)"): 60 % of the width.
+		var left_w: float = maxf(r.size.x * 0.4 - 12.0, 1.0)
 		probes.position = Vector2(r.position.x + 8.0, y)
-		mail.position = Vector2(r.get_center().x + 4.0, y)
-		for l: Label in [probes, mail]:
-			l.size = Vector2(half, l.get_combined_minimum_size().y)
+		mail.position = Vector2(r.position.x + r.size.x * 0.4 + 4.0, y)
+		probes.size = Vector2(left_w, probes.get_combined_minimum_size().y)
+		mail.size = Vector2(maxf(r.size.x * 0.6 - 12.0, 1.0), mail.get_combined_minimum_size().y)
 		y += LINE_H
 	panel._hint.offset_top = position.y + y
 	panel._rename.custom_minimum_size = Vector2(220, UiTheme.TOUCH_PRIMARY)
@@ -383,11 +384,12 @@ func _fill_contacts() -> void:
 ## The Marks page: the marks in use, each a tap to select (the selected one pressed).
 func _fill_marks() -> void:
 	var crew_state: CrewState = panel.ctx.crew
-	var key: Array = [crew_state.marks.duplicate(true), crew_state.selection]
+	var key: Array = [crew_state.marks.duplicate(true), crew_state.selection, crew_state.inbox]
 	if key == _mark_key:
 		return
 	_mark_key = key
 	_clear(_marks_box)
+	_fill_incoming()
 	if crew_state.marks.is_empty():
 		var none: Label = _label()
 		none.text = TouchText.of("relay.no_marks", "No marks yet: drag on the map.")
@@ -405,6 +407,22 @@ func _fill_marks() -> void:
 		b.set_pressed_no_signal(crew_state.is_selected("mark", slot))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_marks_box.add_child(b)
+
+
+## The Marks page's Accept and Decline for the mark waiting in the inbox (the line over the
+## map says which: "Incoming: Rock from Wren (Relay)").
+func _fill_incoming() -> void:
+	var inbox: Array[Dictionary] = panel.ctx.crew.inbox
+	if inbox.is_empty():
+		return
+	# The line over the map names the mark and who sent it; this row answers it.
+	var accept: RailButton = RailButton.make(tr("relay.accept"), RailButton.Role.ACCENT)
+	accept.name = "Relay_accept_incoming"
+	accept.pressed.connect(_intent.bind("accept"))
+	var decline: RailButton = RailButton.make(tr("relay.decline"))
+	decline.name = "Relay_decline_incoming"
+	decline.pressed.connect(_intent.bind("decline"))
+	_marks_box.add_child(PhoneFrame.row([accept, decline]))
 
 
 ## The Log page: the inbox, then the ship's log, newest last.

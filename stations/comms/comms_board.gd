@@ -16,6 +16,8 @@ signal card_activated(id: int)
 
 const HEADER_H: float = 34.0
 const TITLE_H: float = 26.0
+## A phone page's one-line "why" above its cards (R23-9, C9).
+const PAGE_WHY_H: float = 22.0
 const FOOTER_H: float = 34.0
 const CARD_H: float = 66.0
 const GAP: float = 6.0
@@ -178,7 +180,7 @@ func _header_h() -> float:
 
 
 func _title_h() -> float:
-	return 0.0 if page_column >= 0 else TITLE_H
+	return PAGE_WHY_H if page_column >= 0 else TITLE_H
 
 
 func _footer_h() -> float:
@@ -311,12 +313,7 @@ func status_text() -> String:
 func rep_text() -> String:
 	var parts: PackedStringArray = PackedStringArray()
 	for r: Dictionary in data.get("rep", []):
-		parts.append(
-			(
-				TranslationServer.translate("comms.rep_row")
-				% [int(r["faction"]), roundi(float(r["value"]))]
-			)
-		)
+		parts.append(CommsData.rep_line(r))
 	return TranslationServer.translate("comms.rep") + "  " + "   ".join(parts)
 
 
@@ -339,6 +336,7 @@ func _draw_column(font: Font, col: int) -> void:
 	var title: String = TranslationServer.translate(CommsData.COLUMN_KEYS[col])
 	if narrow():
 		title += "  (%d/%d)" % [col + 1, CommsData.COLUMNS]
+	var why_x: float = rect.position.x + 8.0
 	if page_column < 0:
 		draw_string(
 			font,
@@ -349,6 +347,16 @@ func _draw_column(font: Font, col: int) -> void:
 			FONT_SIZE,
 			Palette.color("text_dim")
 		)
+		why_x += font.get_string_size(title, 0, -1, FONT_SIZE).x + 16.0
+	draw_string(
+		font,
+		Vector2(why_x, rect.position.y + font.get_ascent(FONT_SIZE) + 2.0),
+		TranslationServer.translate(CommsData.WHY_KEYS[col]),
+		0,
+		maxf(rect.end.x - 8.0 - why_x, 1.0),
+		FONT_SIZE - 3,
+		Palette.color("text_dim")
+	)
 	if rows.is_empty():
 		draw_string(
 			font,

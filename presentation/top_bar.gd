@@ -259,6 +259,10 @@ func show_state(
 	_hull.text = tr("topbar.hull") % hull
 	_shields.text = tr("topbar.shields") % shields
 	_pips.text = tr("topbar.reactor") % pips
+	# A cell the station cannot see is left out, not shown as a dash that reads as zero.
+	var absent: String = tr("topbar.absent")
+	_shields.visible = shields != absent
+	_pips.visible = pips != absent
 	for key: String in _badges:
 		var band: int = summaries.get(key, {}).get("band", -1)
 		(_badges[key] as BandBadge).visible = band >= 0
@@ -282,7 +286,9 @@ func show_state(
 		hull.trim_suffix("%"),
 		_fill(status, "shields", summaries, float(maxes.get("shields", 0.0))),
 		shields.trim_suffix("%"),
-		pips
+		pips,
+		shields != absent,
+		pips != absent
 	)
 
 

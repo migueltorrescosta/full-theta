@@ -441,10 +441,26 @@ func _draw_rail() -> void:
 	var contacts: Array[Dictionary] = rail_items()
 	var x: float = 12.0
 	var y: float = (_rail.size.y - font.get_height(FONT_SIZE)) / 2.0
+	# A plain viewer only watches: a dim caption at the rail's right end says who sets the
+	# view, where the contacts leave room for it (R23-14).
+	var caption_w: float = 0.0
+	if not interactive:
+		var caption: String = tr("viewer.caption")
+		caption_w = font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
+		_rail.draw_string(
+			font,
+			Vector2(_rail.size.x - caption_w - 12.0, y + font.get_ascent(FONT_SIZE)),
+			caption,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			-1,
+			FONT_SIZE - 2,
+			Palette.color("text_dim")
+		)
+		caption_w += 24.0
 	for it: Dictionary in contacts:
 		var text: String = ChipText.chip(it["label"], it["local"])
 		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
-		if x + w > _rail.size.x:
+		if x + w > _rail.size.x - caption_w:
 			break
 		if float(it.get("pulse", 0.0)) > 0.0 or ctx.crew.is_selected(it["kind"], it["id"]):
 			_rail.draw_rect(

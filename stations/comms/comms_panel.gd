@@ -146,6 +146,7 @@ func _setup() -> void:
 	overlay = CommsOverlay.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.row_activated.connect(_activate_row)
+	overlay.trade_pressed.connect(_buy_sell)
 	add_child(overlay)
 	pages = PageHost.new()
 	for t: String in page_titles():
@@ -362,6 +363,7 @@ func _process(delta: float) -> void:
 	if focused:
 		_poll_stick(delta)
 	refresh()
+	RadarLegend.show_once(self, ctx.settings)
 	_place_phone()
 
 
@@ -404,9 +406,11 @@ static func hail_waits(blk: Dictionary) -> bool:
 ## A phone's Rep page: where the ship is docked, hull and credits, then a line per faction
 ## (FT-COM-005).
 func _refresh_rep(blk: Dictionary) -> void:
-	var lines: Array = [board.where_text(), board.status_text(), tr("comms.rep")]
+	var lines: Array = [
+		board.where_text(), board.status_text(), tr("comms.rep"), tr(CommsData.WHY_REP_KEY)
+	]
 	for r: Dictionary in blk.get("rep", []):
-		lines.append(tr("comms.rep_row") % [int(r["faction"]), roundi(float(r["value"]))])
+		lines.append(CommsData.rep_line(r))
 	if lines == _rep_shown:
 		return
 	_rep_shown = lines
@@ -419,8 +423,8 @@ func _refresh_rep(blk: Dictionary) -> void:
 		var pad: StyleBoxEmpty = StyleBoxEmpty.new()
 		pad.content_margin_left = UiTheme.TOUCH_GAP
 		l.add_theme_stylebox_override("normal", pad)
-		l.add_theme_font_size_override("font_size", CommsBoard.FONT_SIZE)
-		var dim: bool = i == 2
+		l.add_theme_font_size_override("font_size", CommsBoard.FONT_SIZE - (3 if i == 3 else 0))
+		var dim: bool = i == 2 or i == 3
 		l.add_theme_color_override("font_color", Palette.color("text_dim" if dim else "text"))
 		rep_view.add_child(l)
 
@@ -478,7 +482,7 @@ static func touch_help() -> Array:
 				]
 			)
 		)
-	var card: Rect2 = Rect2(195, 132, 414, 72)
+	var card: Rect2 = Rect2(195.0, 132.0 + CommsBoard.PAGE_WHY_H, 414, 72)
 	var open: String = TouchText.of("help.comms.card", "Tap to open; long-press pings its contact")
 	rail.append([card, TouchText.of("help.comms.mission", "Mission card"), open])
 	return [
@@ -503,7 +507,7 @@ static func touch_help() -> Array:
 			"boxes":
 			[
 				[
-					Rect2(191, 132, 422, 150),
+					Rect2(191, 132, 422, 180),
 					TranslationServer.translate("comms.rep"),
 					TouchText.of("help.comms.rep", "Docked site, credits and standing per faction"),
 				]

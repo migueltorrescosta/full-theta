@@ -96,3 +96,19 @@ func test_unchanged_state_is_skipped() -> void:
 	bar.show_state("Kestrel", status, 0, ["helm"], 126.0)
 	assert_str(bar._name.text).is_equal("Kestrel")
 	assert_str(bar._timer.text).is_equal("02:06")
+
+
+# FT: FT-STN-001
+# R23-10 (C9): a cell the station cannot see (a summary of "—") is left out of the bar, not
+# shown as a dash that reads as zero.
+func test_cells_the_station_cannot_see_are_hidden() -> void:
+	var absent: Dictionary = {"text": tr("topbar.absent"), "band": -1}
+	bar.show_state(
+		"Kestrel", {"hull": 1.0}, 0, [], 0.0, "", {}, {"shields": absent, "pips_used": absent}
+	)
+	assert_bool(bar._shields.visible).is_false()
+	assert_bool(bar._pips.visible).is_false()
+	assert_bool(bar._hull.visible).is_true()
+	bar.show_state("Kestrel", {"hull": 1.0, "shields": 2.0, "pips_used": 3}, 0, [], 1.0)
+	assert_bool(bar._shields.visible).is_true()
+	assert_bool(bar._pips.visible).is_true()

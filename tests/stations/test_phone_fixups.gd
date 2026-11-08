@@ -202,7 +202,7 @@ func test_small_radar_keeps_chips_inside() -> void:
 					. override_failure_message(what + " covers its blip")
 					. is_true()
 				)
-		assert_int(chips).is_greater(2)
+		assert_int(chips).override_failure_message(str(c)).is_greater(2)
 		_drop(s)
 
 

@@ -157,6 +157,8 @@ func test_hack_opens_a_sheet_of_the_targets_subsystems() -> void:
 	var subs: Array[StringName] = p.subsystems()
 	assert_int(s.sheet.option_count()).is_equal(subs.size())
 	assert_str(s.sheet.option(1).text).is_equal(tr("eng.name." + String(subs[1])))
+	# The weak point the card lists is named on the sheet (R23-1).
+	assert_str(s.sheet.option(0).text).contains(tr("sci.weak_mark") % "")
 	# It covers the right rail, not the list.
 	var box: Rect2 = s.sheet.box.get_global_rect()
 	assert_bool(box.encloses(p.phone.layout.right.get_global_rect().grow(-1.0))).is_true()
