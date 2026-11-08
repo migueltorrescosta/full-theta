@@ -8,10 +8,6 @@ extends RefCounted
 ## angles; the pose is Basis.from_euler(Vector3(ax, ay, az)) with the closed axes at 0.
 ## Everything derives from (def, seed, noise, mask), so the sim stores only those.
 
-const AXIS_X: int = 1
-const AXIS_Y: int = 2
-const AXIS_Z: int = 4
-
 
 ## Bit mask of the open axes: `count` of the three, picked by the seed.
 static func axes_mask(puzzle_seed: int, count: int) -> int:

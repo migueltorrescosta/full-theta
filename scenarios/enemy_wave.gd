@@ -12,13 +12,13 @@ extends Scenario
 ## in the fight; the raiders arrive from the ship that is first in the fight.
 ## Only the Scenario API is used (FT-DAT-007), so a replay needs none of this (FT-ARC-008).
 
-const ENEMY: StringName = &"m1_raider"
-const RAIDER_FACTION: int = 2
+const ENEMY: StringName = Factions.RAIDER_KEY
+const RAIDER_FACTION: int = Factions.RAIDER
 const NPC: StringName = &"Marauder Kass"
 ## Raiders in the wave at strength 1, how far out they appear (m) and the clock position of the
 ## first. The difficulty preset scales the count (Q14, owner 2026-10-26), at least one.
 const COUNT: int = 2
-const RANGE_M: float = 9000.0
+const RANGE_M: float = Factions.RAIDER_RANGE_M
 ## The second raider joins this long after the first (s), from behind the first's side, and
 ## each further one this long after the one before.
 const SECOND_AFTER_S: float = 45.0
@@ -109,7 +109,7 @@ func _say(api: ScenarioApi, line: String, args: Dictionary) -> void:
 
 ## A clock position near the bow (11, 12 or 1).
 func _clock(api: ScenarioApi) -> int:
-	return (10 + floori(api.rand(&"enemy_wave") * 3.0)) % 12 + 1
+	return Scenario.clock_slot(10 + floori(api.rand(&"enemy_wave") * 3.0))
 
 
 ## The raiders' hail card, once the first raider has its id (the spawn applies on the tick

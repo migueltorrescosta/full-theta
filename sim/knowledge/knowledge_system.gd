@@ -14,7 +14,21 @@ extends RefCounted
 ## - &"contact_lost": ship_id = the faction's lowest-id live ship (lowest-id ship if all
 ##   are destroyed), other_id = the contact, value and tag as above.
 
+## The subsystem id of a ship's sensors (the one name the sim uses for it).
 const SENSORS: StringName = &"sensors"
+
+
+## The share of its sensors a ship still has, 0..1: 0 for a destroyed ship or blinded sensors.
+static func sensor_scale(world: SimWorld, ship: int) -> float:
+	if not world.kin.is_alive(ship):
+		return 0.0
+	return DamageSystem.effectiveness(world, ship, SENSORS)
+
+
+## How far a ship detects (m): its sensor range scaled by its sensors' effectiveness; 0 for a
+## destroyed ship or blinded sensors. The one place the reach is computed (R04-1).
+static func sensor_reach(world: SimWorld, ship: int) -> float:
+	return world.defs[ship].sensor_range * sensor_scale(world, ship)
 
 
 static func step(world: SimWorld) -> void:
@@ -37,8 +51,8 @@ static func step(world: SimWorld) -> void:
 	var detected: PackedByteArray = table.detected
 	var defs: Array[ShipDef] = world.defs
 	for o: int in n:
-		var scale: float = DamageSystem.effectiveness(world, o, SENSORS)
-		var can_sense: bool = alive[o] == 1 and scale > 0.0
+		var scale: float = sensor_scale(world, o)
+		var can_sense: bool = scale > 0.0
 		sense[o] = defs[o].sensor_range * scale if can_sense else -1.0
 		identify[o] = defs[o].identify_range * scale if can_sense else -1.0
 		if not sense[o] < 0.0:
@@ -147,7 +161,7 @@ static func knows_weak_point(
 
 
 static func _subsystem_index(world: SimWorld, ship_id: int, subsystem_id: StringName) -> int:
-	if ship_id < 0 or ship_id >= world.ship_count():
+	if not world.has_ship(ship_id):
 		return -1
 	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
 	for i: int in mini(subs.size(), 31):

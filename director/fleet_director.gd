@@ -17,9 +17,9 @@ extends RefCounted
 
 ## A raider wave (M4-Q7): this enemy, of this NPC faction, this far from each ship, this many
 ## at strength 1 (the preset's strength and wave_strength scale it, at least one).
-const RAIDER: StringName = &"m1_raider"
-const RAIDER_FACTION: int = 2
-const RAIDER_RANGE_M: float = 9000.0
+const RAIDER: StringName = Factions.RAIDER_KEY
+const RAIDER_FACTION: int = Factions.RAIDER
+const RAIDER_RANGE_M: float = Factions.RAIDER_RANGE_M
 const RAIDERS_PER_WAVE: int = 1
 ## At most this many raiders of the waves alive at once per ship: a wave only fills up to it
 ## (D264, A11), so the sim carries a bounded number of AI ships however long the game lasts.
@@ -146,7 +146,7 @@ static func _race_site_keys(api: ScenarioApi) -> PackedStringArray:
 ## LAST_STANDING (M4-Q7): every raider_wave_every_s a wave at each crewed ship in play,
 ## wave_strength(wave) times the preset's strength, from its own bearing, so hiding loses.
 func _maybe_wave(api: ScenarioApi) -> void:
-	var every: int = ceili(_def.raider_wave_every_s * ScenarioApi.HZ)
+	var every: int = ScenarioApi.ticks(_def.raider_wave_every_s)
 	var now: int = api.tick()
 	if every <= 0 or now < every * (_waves + 1):
 		return
@@ -160,7 +160,7 @@ func _maybe_wave(api: ScenarioApi) -> void:
 			continue
 		var handles: Array = _sent.get(ship, [])
 		for k: int in count:
-			var clock: int = (floori(api.rand(&"raider_wave") * 12.0) + k * 4) % 12 + 1
+			var clock: int = Scenario.clock_slot(floori(api.rand(&"raider_wave") * 12.0) + k * 4)
 			handles.append(
 				api.spawn_at_range(RAIDER, RAIDER_FACTION, ship, RAIDER_RANGE_M, clock, 0)
 			)

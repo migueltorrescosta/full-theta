@@ -17,7 +17,7 @@ func apply(world: SimWorld) -> bool:
 	var faction: int = world.faction_of(ship_id)
 	var why: StringName = &""
 	var conv: StringName = &""
-	if target < 0 or target >= world.ship_count() or target == ship_id:
+	if not world.has_ship(target) or target == ship_id:
 		why = &"no_target"
 	elif not world.kin.is_alive(target) or not KnowledgeSystem.is_detected(world, faction, target):
 		why = &"not_detected"

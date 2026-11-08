@@ -14,7 +14,7 @@ const MIN_QUALITY: float = 0.05
 ## Whether the faction tracks the ship, so ordnance may be fired at it and keep
 ## following it: its own sensors, or a friendly probe's coverage (P8, FT-WPN-008).
 static func is_tracked(world: SimWorld, faction: int, ship_id: int) -> bool:
-	if ship_id < 0 or ship_id >= world.ship_count() or not world.kin.is_alive(ship_id):
+	if not world.has_ship(ship_id) or not world.kin.is_alive(ship_id):
 		return false
 	if KnowledgeSystem.is_detected(world, faction, ship_id):
 		return true
@@ -37,9 +37,7 @@ static func track_quality(world: SimWorld, faction: int, ship_id: int) -> float:
 	for o: int in world.ship_count():
 		if kin.factions[o] != faction or not kin.is_alive(o) or not kin.can_reach(o, ship_id):
 			continue
-		var reach: float = (
-			world.defs[o].sensor_range * DamageSystem.effectiveness(world, o, &"sensors")
-		)
+		var reach: float = KnowledgeSystem.sensor_reach(world, o)
 		if reach <= 0.0:
 			continue
 		var close: float = 1.0 - kin.relative(o, ship_id).length() / reach
@@ -48,16 +46,7 @@ static func track_quality(world: SimWorld, faction: int, ship_id: int) -> float:
 			noise = ScienceSystem.contact_noise(world, o, ship_id)
 		best = maxf(best, close * (1.0 - noise))
 	var p: PackedFloat64Array = kin.point_at(ship_id, Vector3.ZERO)
-	var probes: ProbeTable = world.probes
-	for r: int in probes.size():
-		if probes.factions[r] != faction or probes.deployed[r] == 0:
-			continue
-		var off: Vector3 = Vector3(
-			kin.wrap(p[0] - probes.at_x[r]),
-			kin.wrap(p[1] - probes.at_y[r]),
-			kin.wrap(p[2] - probes.at_z[r])
-		)
-		best = maxf(best, 1.0 - off.length() / world.defs[probes.ship_ids[r]].probe_range)
+	best = maxf(best, ProbeSystem.best_closeness(world, faction, Vector3(p[0], p[1], p[2])))
 	return clampf(best, MIN_QUALITY, 1.0)
 
 

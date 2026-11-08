@@ -18,9 +18,9 @@ extends Scenario
 ## Accepting one card withdraws the other. Only the Scenario API is used (FT-DAT-007).
 
 const FREIGHTER: StringName = &"stranded_freighter"
-const RAIDER: StringName = &"m1_raider"
-const RAIDER_FACTION: int = 2
-const FREIGHTER_FACTION: int = 3
+const RAIDER: StringName = Factions.RAIDER_KEY
+const RAIDER_FACTION: int = Factions.RAIDER
+const FREIGHTER_FACTION: int = Factions.CIVIL
 const NPC: StringName = &"Calliope"
 const ESCORT_TITLE: StringName = &"comms.card.escort"
 const SALVAGE_TITLE: StringName = &"comms.card.salvage"
@@ -36,7 +36,7 @@ const SALVAGE_REWARD: int = 700
 ## (s), how far from the freighter (m), how many of them at strength 1.
 const FREIGHTER_RANGE_M: float = 4000.0
 const RAIDERS_AFTER_S: float = 20.0
-const RAIDER_RANGE_M: float = 9000.0
+const RAIDER_RANGE_M: float = Factions.RAIDER_RANGE_M
 const RAIDERS: int = 2
 const RAIDER_GAP_S: float = 30.0
 ## At most this many raiders: the last one arrives at RAIDERS_AFTER_S + RAIDER_GAP_S * 5 =
@@ -226,7 +226,7 @@ func _settle(api: ScenarioApi, result: int) -> void:
 			for ship: int in Scenario.fleet(api, _ships):
 				api.message("npc.rescue_thanks", {}, SayTarget.npc(NPC, ship))
 	if _state(api, _salvage) == CardView.State.ACCEPTED:
-		var done: bool = _near_ticks >= ceili(SALVAGE_S * ScenarioApi.HZ)
+		var done: bool = _near_ticks >= ScenarioApi.ticks(SALVAGE_S)
 		api.settle_card(_salvage.id(), done, result == Result.PARTIAL)
 
 

@@ -8,8 +8,8 @@ extends RefCounted
 ## build() to start the run and again to reset it. Space wraps with period
 ## site_period (FT-SIM-035, D229), checked by validate(); build() refuses a bad one.
 
-const PLAYER_FACTION: int = 1
-const ENEMY_FACTION: int = 2
+const PLAYER_FACTION: int = Factions.CREW
+const ENEMY_FACTION: int = Factions.RAIDER
 ## Ship ids in the built world.
 const PLAYER_SHIP: int = 0
 const ENEMY_SHIP: int = 1

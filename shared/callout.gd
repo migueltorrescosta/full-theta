@@ -16,6 +16,10 @@ const POLE_DEG: float = 60.0
 const CLOSE_M: float = 1000.0
 const FAR_M: float = 10000.0
 
+## Elevations (degrees) of the heights -2 (under), -1 (low), 0 (level), 1 (high), 2 (overhead):
+## each inside its band of height_word, so clock_height(direction(c, h)) names c and h.
+const HEIGHT_DEG: Array[float] = [-75.0, -35.0, 0.0, 35.0, 75.0]
+
 
 ## Bearing 0..360, clockwise from the bow in the deck plane (ship frame).
 static func bearing_deg(local: Vector3) -> float:
@@ -32,6 +36,14 @@ static func elevation_deg(local: Vector3) -> float:
 static func clock(local: Vector3) -> int:
 	var c: int = roundi(bearing_deg(local) / 30.0) % 12
 	return 12 if c == 0 else c
+
+
+## The unit vector in the ship frame (-Z bow, +X starboard, +Y up) a clock position (1 to 12)
+## and a height (-2 to 2, as HEIGHT_DEG) point along: the inverse of clock and height_word.
+static func direction(clock_pos: int, height: int) -> Vector3:
+	var bearing: float = deg_to_rad(30.0 * (clock_pos % 12))
+	var elevation: float = deg_to_rad(HEIGHT_DEG[clampi(height, -2, 2) + 2])
+	return Vector3(sin(bearing) * cos(elevation), sin(elevation), -cos(bearing) * cos(elevation))
 
 
 ## level within ±15°, high/low to ±60°, overhead/under beyond (FT-SPA-004). Exactly 15°

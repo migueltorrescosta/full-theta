@@ -15,7 +15,7 @@ extends Scenario
 ## the lane is paid. A leg that ends by a flee or a loss fails its accepted clearance (A8).
 ## Only the Scenario API is used (FT-DAT-007).
 
-const DEBRIS_FACTION: int = 4
+const DEBRIS_FACTION: int = Factions.DEBRIS
 const NPC: StringName = &"Traffic Control"
 ## Site 0, Kestrel Yard, where every leg ends (D205).
 const HOME: int = 0
@@ -29,7 +29,7 @@ const FEE: int = 150
 const LANE_OPEN_S: float = 30.0
 const LANE_S: float = 540.0
 ## The civil faction whose standing an uncleared approach costs (rescue's freighters, too).
-const CIVIL_FACTION: int = 3
+const CIVIL_FACTION: int = Factions.CIVIL
 const MAX_S: float = 600.0
 ## The fee card outlasts the encounter, so a timeout can still settle it.
 const CARD_S: float = MAX_S + 30.0
@@ -99,7 +99,7 @@ func step(api: ScenarioApi) -> void:
 		elif _left.has(ship):
 			_result = Result.WON
 			return
-	if Scenario.seconds_since(api, _started) >= MAX_S:
+	if Scenario.timed_out(api, _started, MAX_S):
 		_result = Result.PARTIAL
 
 

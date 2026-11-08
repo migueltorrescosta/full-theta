@@ -62,6 +62,16 @@ static func count_for(base: int, strength: float, cap: int = 1 << 20) -> int:
 	return clampi(roundi(base * strength), 1, cap)
 
 
+## The clock position of slot `slot`, wrapping: slot 0 is 1 o'clock, 11 is 12 (the bow).
+static func clock_slot(slot: int) -> int:
+	return posmod(slot, 12) + 1
+
+
+## Whether `max_s` seconds have passed since tick `since`.
+static func timed_out(api: ScenarioApi, since: int, max_s: float) -> bool:
+	return seconds_since(api, since) >= max_s
+
+
 ## Seconds since tick `since`.
 static func seconds_since(api: ScenarioApi, since: int) -> float:
 	return float(api.tick() - since) / ScenarioApi.HZ

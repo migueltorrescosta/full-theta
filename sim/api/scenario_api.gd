@@ -22,6 +22,11 @@ const MODE_HOLDOUT: int = SessionRules.Mode.HOLDOUT
 var _world: SimWorld
 
 
+## Ticks in `seconds`, rounded up: SimWorld.ticks for the scenarios and the director.
+static func ticks(seconds: float) -> int:
+	return SimWorld.ticks(seconds)
+
+
 func _init(world: SimWorld) -> void:
 	_world = world
 
@@ -49,7 +54,7 @@ func tick() -> int:
 func crew_ships() -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	for id: int in _world.ship_count():
-		if not _world.ai.is_enabled(id) and _world.run.status[id] == RunTable.Status.IN_PLAY:
+		if _world.is_crew_in_play(id):
 			out.append(id)
 	return out
 
@@ -69,8 +74,7 @@ func engaged(ships: PackedInt32Array) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	for id: int in ships:
 		if (
-			id >= 0
-			and id < _world.ship_count()
+			_world.has_ship(id)
 			and _world.run.status[id] == RunTable.Status.IN_PLAY
 			and _world.run.encounter[id] >= 0
 		):
@@ -85,28 +89,28 @@ func session_mode() -> int:
 
 ## A ship's side (SimWorld.team_of, #11).
 func team_of(id: int) -> int:
-	if id < 0 or id >= _world.ship_count():
+	if not _world.has_ship(id):
 		return -1
 	return _world.team_of(id)
 
 
 ## A ship's faction, -1 for an id that is no ship (cheaper than ship(id).faction).
 func faction_of(id: int) -> int:
-	if id < 0 or id >= _world.ship_count():
+	if not _world.has_ship(id):
 		return -1
 	return _world.faction_of(id)
 
 
 ## The site a ship is within the radius of, else -1 (cheaper than ship(id).at_site).
 func at_site(id: int) -> int:
-	if id < 0 or id >= _world.ship_count():
+	if not _world.has_ship(id):
 		return -1
 	return SiteTable.at_site(_world, id)
 
 
 func ship(id: int) -> ShipView:
 	var v: ShipView = ShipView.new()
-	if id < 0 or id >= _world.ship_count():
+	if not _world.has_ship(id):
 		return v
 	v.id = id
 	v.faction = _world.faction_of(id)
@@ -189,7 +193,7 @@ func encounter_limits() -> Vector2i:
 func cards_of(ship_id: int) -> Array[CardView]:
 	var out: Array[CardView] = []
 	var story: StoryTable = _world.story
-	if ship_id < 0 or ship_id >= _world.ship_count():
+	if not _world.has_ship(ship_id):
 		return out
 	var faction: int = _world.faction_of(ship_id)
 	for row: int in story.size():
@@ -231,7 +235,7 @@ func events() -> Array[ApiEvent]:
 
 ## Straight-line distance between two ships (m), by the minimum image across the cube's seams.
 func distance(a: int, b: int) -> float:
-	if a < 0 or b < 0 or a >= _world.ship_count() or b >= _world.ship_count():
+	if not _world.has_ship(a) or not _world.has_ship(b):
 		return INF
 	return _world.kin.relative(a, b).length()
 
@@ -272,7 +276,7 @@ func rand(stream: StringName) -> float:
 func spawn_at_range(
 	enemy_key: StringName, faction: int, near: int, range_m: float, clock: int, height: int
 ) -> ApiHandle:
-	var world_dir: Vector3 = _world.kin.to_world(near, _local_direction(clock, height))
+	var world_dir: Vector3 = _world.kin.to_world(near, Callout.direction(clock, height))
 	var point: PackedFloat64Array = _world.kin.point_at(near, world_dir * range_m)
 	return _spawn(enemy_key, faction, point, _facing(-world_dir))
 
@@ -292,7 +296,7 @@ func spawn_on_leg(
 	var a: PackedFloat64Array = _world.sites.point(from_site)
 	var b: PackedFloat64Array = _world.sites.point(to_site)
 	var kin: Kinematics = _world.kin
-	var leg: Vector3 = Vector3(kin.wrap(b[0] - a[0]), kin.wrap(b[1] - a[1]), kin.wrap(b[2] - a[2]))
+	var leg: Vector3 = kin.delta(b[0], b[1], b[2], a[0], a[1], a[2])
 	var side: Vector3 = leg.cross(Vector3.UP)
 	if side.length_squared() < 1e-6:
 		side = leg.cross(Vector3.RIGHT)
@@ -320,7 +324,7 @@ func open_site(site_key: StringName) -> ApiHandle:
 ## returns a handle on its site id (resolved at once when the copy is open).
 func open_site_copy(site_key: StringName, ship_id: int) -> ApiHandle:
 	var cmd: OpenSiteCommand = OpenSiteCommand.new()
-	if ship_id < 0 or ship_id >= _world.ship_count():
+	if not _world.has_ship(ship_id):
 		cmd.tick = _world.tick  # refused at once: no such ship
 		return ApiHandle.new(cmd)
 	var copy: StringName = SiteTable.copy_key(_world, site_key, ship_id)
@@ -525,13 +529,6 @@ func _spawn(
 	cmd.rot = rot
 	_world.submit(cmd)
 	return ApiHandle.new(cmd)
-
-
-## Unit vector in the ship frame (-Z bow, +X starboard, +Y up) for a clock and height.
-static func _local_direction(clock: int, height: int) -> Vector3:
-	var bearing: float = deg_to_rad(30.0 * (clock % 12))
-	var elevation: float = deg_to_rad([-75.0, -35.0, 0.0, 35.0, 75.0][clampi(height, -2, 2) + 2])
-	return Vector3(sin(bearing) * cos(elevation), sin(elevation), -cos(bearing) * cos(elevation))
 
 
 ## A rotation whose bow (-Z) points along `dir`.
