@@ -63,6 +63,21 @@ func crew_ships_of(faction: int) -> PackedInt32Array:
 	return out
 
 
+## Of `ships`, those still in play and in an encounter: a ship that fled or was lost has left
+## it (A2: a scenario serves the ships that are still in the fight).
+func engaged(ships: PackedInt32Array) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for id: int in ships:
+		if (
+			id >= 0
+			and id < _world.ship_count()
+			and _world.run.status[id] == RunTable.Status.IN_PLAY
+			and _world.run.encounter[id] >= 0
+		):
+			out.append(id)
+	return out
+
+
 ## The session's mode, a SessionRules.Mode value (#11): the director keys on it.
 func session_mode() -> int:
 	return _world.rules.mode
@@ -374,6 +389,18 @@ func settle_card(card: int, success: bool, partial: bool = false) -> void:
 	cmd.card = card
 	cmd.success = success
 	cmd.partial = partial
+	_world.submit(cmd)
+
+
+## Withdraws an OPEN card, or ends a live hail (Story.decline); nothing is queued for a card
+## that doesn't exist.
+func decline_card(card: int) -> void:
+	if card < 0 or card >= _world.story.size():
+		return
+	var cmd: DeclineCardCommand = DeclineCardCommand.new()
+	cmd.source = SimCommand.Source.SERVER
+	cmd.ship_id = Story.audience_ship(_world, card)
+	cmd.card = card
 	_world.submit(cmd)
 
 

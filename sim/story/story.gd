@@ -15,6 +15,8 @@ const INTENTS: Dictionary[StringName, int] = {
 	&"surrendering": KnowledgeTable.Intent.SURRENDERING,
 	&"bluffing": KnowledgeTable.Intent.BLUFFING,
 }
+## The story flag naming the ship that accepted a card, plus one (0: none yet).
+const _CLAIMER: String = "claim.%d"
 const FLAGS: Dictionary[StringName, int] = {
 	&"none": KnowledgeTable.Flag.NONE,
 	&"disable": KnowledgeTable.Flag.DISABLE,
@@ -57,19 +59,35 @@ static func is_live(world: SimWorld, card: int) -> bool:
 ## Sets the card's state and tells the ship's Comms (event card_state: other_id the card,
 ## value the state). A card that is no longer live closes its conversation.
 static func set_state(world: SimWorld, ship: int, card: int, state: StoryTable.State) -> void:
+	if world.story.state[card] == StoryTable.State.ACCEPTED and state != StoryTable.State.ACCEPTED:
+		_clear_contract_flag(world, card)
 	world.story.state[card] = state
 	if state != StoryTable.State.OPEN and state != StoryTable.State.ACCEPTED:
 		world.story.node[card] = StoryTable.NO_TEXT
 	world.emit(&"card_state", ship, card, state)
 
 
-## A ship of the card's faction to address its events to: the card's own, or the first of a
-## faction-wide card's faction.
+## The ship a card's pay and events go to: the card's own, or for a faction-wide card the ship
+## that accepted it (the claimer, A2), else the first ship of its faction.
 static func audience_ship(world: SimWorld, card: int) -> int:
 	var s: int = world.story.ship_ids[card]
 	if s >= 0:
 		return s
+	var claimer: int = world.story_flags.get_flag(StringName(_CLAIMER % card)) - 1
+	if claimer >= 0:
+		return claimer
 	return world.kin.factions.find(world.story.factions[card])
+
+
+## The contract's flag on its target comes off the faction's KNOW once the card leaves
+## ACCEPTED (done, failed or expired), if the flag is still the card's own.
+static func _clear_contract_flag(world: SimWorld, card: int) -> void:
+	var t: StoryTable = world.story
+	if t.target_flag[card] == 0 or t.target[card] < 0:
+		return
+	var row: int = world.knowledge.row_for(t.factions[card], t.target[card])
+	if row >= 0 and world.knowledge.flag[row] == t.target_flag[card]:
+		world.knowledge.flag[row] = KnowledgeTable.Flag.NONE
 
 
 ## Accepts a card for the ship (FT-COM-003): only an OPEN mission, contract or offer, not
@@ -82,6 +100,7 @@ static func accept(world: SimWorld, ship: int, card: int) -> bool:
 		world.emit(&"card_refused", ship, card, 0.0, Vector3.ZERO, why)
 		return false
 	set_state(world, ship, card, StoryTable.State.ACCEPTED)
+	world.story_flags.set_flag(StringName(_CLAIMER % card), ship + 1)
 	StoryRules.on_accept(world, card)  # P5: a clearance starts its clock
 	if t.target_flag[card] != 0 and t.target[card] >= 0:
 		world.knowledge.flag[world.knowledge.ensure_contact(t.factions[card], t.target[card])] = (

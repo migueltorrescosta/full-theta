@@ -7,6 +7,9 @@ extends Scenario
 ## stands down; a no is said as a refusal and the fight goes on. Branches: the raiders are all
 ## destroyed or have retreated, they surrendered (both won), or the time ran out (partial):
 ## the encounter ends but the raiders still in the run stay hostile and keep after the ship.
+## The whole fleet is served (A2): the hail card is faction-wide, so any ship's Comms can
+## demand the surrender, a yes from any of them ends it, and the lines go to every ship still
+## in the fight; the raiders arrive from the ship that is first in the fight.
 ## Only the Scenario API is used (FT-DAT-007), so a replay needs none of this (FT-ARC-008).
 
 const ENEMY: StringName = &"m1_raider"
@@ -23,11 +26,12 @@ const NEXT_EVERY_S: float = 15.0
 const TAUNT_AFTER_S: float = 25.0
 const MAX_S: float = 240.0
 
-var _ship: int = -1
+var _ships: PackedInt32Array = PackedInt32Array()
 var _faction: int = -1
 var _raiders: Array[ApiHandle] = []
 var _count: int = COUNT
 var _hail_offered: bool = false
+var _hail: ApiHandle
 var _started: int = 0
 var _taunted: bool = false
 var _surrendered: bool = false
@@ -44,14 +48,13 @@ func meta() -> ScenarioMeta:
 
 
 func start(api: ScenarioApi, params: Dictionary) -> void:
-	var ships: PackedInt32Array = params["ships"]
-	_ship = ships[0]
-	_faction = api.ship(_ship).faction
+	_ships = params["ships"]
+	_faction = api.faction_of(_ships[0])
 	_started = api.tick()
-	_count = maxi(1, roundi(COUNT * float(params.get("strength", 1.0))))
+	_count = Scenario.count_for(COUNT, float(params.get("strength", 1.0)))
 	api.set_relation(RAIDER_FACTION, _faction, Relation.HOSTILE)
-	_raiders.append(api.spawn_at_range(ENEMY, RAIDER_FACTION, _ship, RANGE_M, _clock(api), 0))
-	api.message("npc.hail_raider", {"npc": NPC}, SayTarget.npc(NPC, _ship))
+	_raiders.append(_spawn(api))
+	_say(api, "npc.hail_raider", {"npc": NPC})
 
 
 func step(api: ScenarioApi) -> void:
@@ -61,20 +64,20 @@ func step(api: ScenarioApi) -> void:
 	_offer_hail(api)
 	if not _taunted and elapsed_s >= TAUNT_AFTER_S:
 		_taunted = true
-		api.message("npc.taunt_raider", {}, SayTarget.npc(NPC, _ship))
+		_say(api, "npc.taunt_raider", {})
 	if (
 		_raiders.size() < _count
 		and elapsed_s >= SECOND_AFTER_S + NEXT_EVERY_S * (_raiders.size() - 1)
 	):
-		_raiders.append(api.spawn_at_range(ENEMY, RAIDER_FACTION, _ship, RANGE_M, _clock(api), 0))
+		_raiders.append(_spawn(api))
 	for e: ApiEvent in api.events():
-		if e.kind == &"surrender_roll" and e.ship_id == _ship and not _surrendered:
+		if e.kind == &"surrender_roll" and _ships.has(e.ship_id) and not _surrendered:
 			if e.tag == &"yes":
 				_surrendered = true
-				api.message("npc.surrender", {}, SayTarget.npc(NPC, _ship))
+				_say(api, "npc.surrender", {})
 				api.set_relation(RAIDER_FACTION, _faction, Relation.NEUTRAL)
 			else:
-				api.message("npc.surrender_refused", {}, SayTarget.npc(NPC, _ship))
+				_say(api, "npc.surrender_refused", {})
 	if _surrendered or (_raiders.size() == _count and api.all_gone(_raiders)):
 		_result = Result.WON
 	elif elapsed_s >= MAX_S:
@@ -84,6 +87,24 @@ func step(api: ScenarioApi) -> void:
 
 func finished(_api: ScenarioApi) -> int:
 	return _result
+
+
+## However it ended (a flee or a loss included), the hail card does not linger.
+func end(api: ScenarioApi, _result_value: int) -> void:
+	if _hail != null:
+		api.decline_card(_hail.id())
+
+
+## A raider at range from the first ship still in the fight.
+func _spawn(api: ScenarioApi) -> ApiHandle:
+	var lead: int = Scenario.fleet(api, _ships)[0]
+	return api.spawn_at_range(ENEMY, RAIDER_FACTION, lead, RANGE_M, _clock(api), 0)
+
+
+## A line from the raiders to every ship still in the fight.
+func _say(api: ScenarioApi, line: String, args: Dictionary) -> void:
+	for ship: int in Scenario.fleet(api, _ships):
+		api.message(line, args, SayTarget.npc(NPC, ship))
 
 
 ## A clock position near the bow (11, 12 or 1).
@@ -105,4 +126,5 @@ func _offer_hail(api: ScenarioApi) -> void:
 	hail.title_key = &"comms.card.hail"
 	hail.conversation_id = &"conv.surrender_demand"
 	hail.target = _raiders[0].id()
-	api.offer(_ship, hail)
+	hail.faction_wide = true
+	_hail = api.offer(Scenario.fleet(api, _ships)[0], hail)

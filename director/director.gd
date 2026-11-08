@@ -258,6 +258,8 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 			run.encounter = run.handle.id()
 		var ev: EncounterView = api.encounter(run.encounter)
 		if ev.result > Scenario.Result.ACTIVE:
+			if run.started:
+				run.scenario.end(api, ev.result)
 			_finished(run, now)
 			continue
 		if ev.result == Scenario.Result.ACTIVE:
