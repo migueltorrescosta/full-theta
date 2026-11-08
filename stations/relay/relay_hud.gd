@@ -402,13 +402,7 @@ func _box(anchors: Array, offsets: Array) -> PanelContainer:
 	box.offset_top = offsets[1]
 	box.offset_right = offsets[2]
 	box.offset_bottom = offsets[3]
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Palette.color("panel") * Color(1, 1, 1, 0.85)
-	style.border_color = Palette.color("line_strong")
-	style.set_border_width_all(UiTheme.BORDER)
-	style.set_corner_radius_all(UiTheme.RADIUS)
-	style.set_content_margin_all(6.0)
-	box.add_theme_stylebox_override("panel", style)
+	box.add_theme_stylebox_override("panel", UiTheme.box("panel", "line_strong", 6, 6, 0.85))
 	add_child(box)
 	return box
 

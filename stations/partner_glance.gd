@@ -79,15 +79,9 @@ var intent: String = ""
 
 
 func _init() -> void:
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
-	sb.border_color = Palette.color("line_strong")
-	sb.set_border_width_all(UiTheme.BORDER)
-	sb.set_corner_radius_all(UiTheme.RADIUS)
-	sb.content_margin_left = UiTheme.TOUCH_GAP
-	sb.content_margin_right = 4.0
-	sb.content_margin_top = 4.0
-	sb.content_margin_bottom = 4.0
+	var sb: StyleBoxFlat = UiTheme.box(
+		"panel", "line_strong", 4, 4, UiTheme.OVERLAY_ALPHA, UiTheme.TOUCH_GAP
+	)
 	add_theme_stylebox_override("panel", sb)
 	custom_minimum_size.x = WIDTH
 	mouse_filter = Control.MOUSE_FILTER_IGNORE

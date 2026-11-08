@@ -94,8 +94,7 @@ func setup(context: StationContext) -> void:
 
 
 func _enter_tree() -> void:
-	if not get_viewport().size_changed.is_connected(_place):
-		get_viewport().size_changed.connect(_place)
+	PhoneSheet.follow_viewport(self, _place)
 	_place.call_deferred()
 
 
@@ -198,20 +197,12 @@ func _button(node_name: String, text: String) -> Button:
 func _place() -> void:
 	if not is_inside_tree() or ctx == null:
 		return
-	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var phone: bool = PhoneSheet.is_phone(self)
 	if phone != _phone:
 		_set_phone(phone)
 	if not phone:
 		return
-	var r: Rect2 = SafeArea.tap_rect(self)
-	var parent: Control = get_parent() as Control
-	if parent != null:
-		r = SafeArea.to_local(parent, r)
-	if position != r.position or size != r.size:
-		set_anchors_preset(Control.PRESET_TOP_LEFT)
-		custom_minimum_size = r.size
-		position = r.position
-		size = r.size
+	PhoneSheet.fit(self)
 
 
 ## Switches between the phone's full-screen card with tabs and the centred card.
@@ -248,10 +239,7 @@ func _set_phone(phone: bool) -> void:
 		_spacer.visible = false
 		_debrief.visible = false
 		_col.move_child(_debrief, -1)
-		custom_minimum_size = Vector2.ZERO
-		set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		grow_horizontal = Control.GROW_DIRECTION_BOTH
-		grow_vertical = Control.GROW_DIRECTION_BOTH
+		PhoneSheet.unfit(self)
 	refresh()
 
 

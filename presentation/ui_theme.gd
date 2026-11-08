@@ -106,14 +106,21 @@ static func font() -> Font:
 
 
 ## A rounded box in the palette: fill and border roles, a content margin on each side.
-static func box(fill: String, line: String, pad_x: int, pad_y: int) -> StyleBoxFlat:
+## `alpha` below 1 makes the fill translucent (OVERLAY_ALPHA for an overlay over a view);
+## `pad_left` at 0 or more replaces the left margin (a row with a wider left edge). A margin
+## of -1 leaves Godot's default (the border width).
+static func box(
+	fill: String, line: String, pad_x: int, pad_y: int, alpha: float = 1.0, pad_left: int = -1
+) -> StyleBoxFlat:
 	var s: StyleBoxFlat = StyleBoxFlat.new()
 	s.bg_color = Palette.color(fill)
+	if alpha < 1.0:
+		s.bg_color = Color(s.bg_color, alpha)
 	s.set_corner_radius_all(RADIUS)
 	if line != "":
 		s.border_color = Palette.color(line)
 		s.set_border_width_all(BORDER)
-	s.content_margin_left = pad_x
+	s.content_margin_left = pad_left if pad_left >= 0 else pad_x
 	s.content_margin_right = pad_x
 	s.content_margin_top = pad_y
 	s.content_margin_bottom = pad_y
@@ -247,10 +254,8 @@ static func _rails(t: Theme) -> void:
 			s.bg_color = fill.lightened(0.12) if state != "normal" else fill
 			s.set_border_width_all(RING)
 			t.set_stylebox(state, name, s)
-	var overlay: StyleBoxFlat = box("panel", "line_strong", 4, 4)
-	overlay.bg_color = Color(Palette.color("panel"), OVERLAY_ALPHA)
 	t.set_type_variation("OverlayRail", "PanelContainer")
-	t.set_stylebox("panel", "OverlayRail", overlay)
+	t.set_stylebox("panel", "OverlayRail", box("panel", "line_strong", 4, 4, OVERLAY_ALPHA))
 	t.set_type_variation("DockedRail", "PanelContainer")
 	t.set_stylebox("panel", "DockedRail", box("panel", "line_strong", 4, 4))
 	t.set_type_variation("Drawer", "PanelContainer")
