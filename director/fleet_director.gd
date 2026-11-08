@@ -31,6 +31,8 @@ var _catalogue: Array[Scenario] = []
 var _seed: int = 0
 ## Faction -> its Director, in the order they were made.
 var _directors: Dictionary[int, Director] = {}
+## Sites with an encounter of any Director: rival teams never share a site (A10).
+var _taken_sites: Dictionary[int, bool] = {}
 ## RACE: the plan every ship plays, [{scenario, site}].
 var _race: Array[Dictionary] = []
 ## LAST_STANDING: waves sent so far and the wave decisions, oldest first.
@@ -116,14 +118,15 @@ func wave_strength(wave: int) -> float:
 ## once, with the session seed, and every Director plays it.
 func _add_directors(api: ScenarioApi) -> void:
 	for id: int in api.crew_ships():
-		var faction: int = api.ship(id).faction
+		var faction: int = api.faction_of(id)
 		if _directors.has(faction):
 			continue
 		var seed_value: int = _seed if _directors.is_empty() else hash([_seed, faction])
 		var d: Director = Director.new(_def, _difficulty, _catalogue, seed_value, faction)
+		d.share_sites(_taken_sites)
 		if _mode == ScenarioApi.MODE_RACE:
 			if _race.is_empty():
-				var planner: Director = Director.new(_def, _difficulty, _catalogue, _seed)
+				var planner: Director = Director.new(_def, _difficulty, _catalogue, _seed, faction)
 				_race = planner.plan_race(api.encounter_limits(), _race_site_keys(api))
 			d.set_race(_race)
 		_directors[faction] = d

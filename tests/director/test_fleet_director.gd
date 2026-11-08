@@ -128,7 +128,7 @@ func test_race_plays_one_list_at_own_copies() -> void:
 	# Easy's budget fits fewer race encounters than a run needs: the plan still has enough.
 	var run: RunDef = f.setup.run_def
 	var easy: Director = Director.new(
-		run.director, &"easy", ScenarioCatalogue.load_for(run.scenarios), 1
+		run.director, &"easy", ScenarioCatalogue.load_for(run.scenarios), 1, M1Encounter.PLAYER_FACTION
 	)
 	var keys: PackedStringArray = PackedStringArray(["vesper_beacon"])
 	var limits: Vector2i = Vector2i(run.min_encounters, run.max_encounters)
@@ -171,7 +171,7 @@ func test_single_ship_coop_matches_m3() -> void:
 	var m3: FleetFixture = FleetFixture.make(SessionRules.Mode.COOP, 1)
 	var run: RunDef = m3.setup.run_def
 	var d: Director = Director.new(
-		run.director, &"normal", ScenarioCatalogue.load_for(run.scenarios), 1
+		run.director, &"normal", ScenarioCatalogue.load_for(run.scenarios), 1, M1Encounter.PLAYER_FACTION
 	)
 	for i: int in 400 * HZ:
 		fleet.step(1)

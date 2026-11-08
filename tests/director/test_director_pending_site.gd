@@ -13,7 +13,7 @@ func _catalogue() -> Array[Scenario]:
 func test_a_pending_encounter_is_named_by_an_information_card_only() -> void:
 	var run: RunDef = ApiFixture.run_def(PackedStringArray(["s_a"]), 30.0, 1.0)
 	var w: SimWorld = ApiFixture.world(1, run)
-	var d: Director = Director.new(run.director, &"easy", _catalogue(), 3)
+	var d: Director = Director.new(run.director, &"easy", _catalogue(), 3, M1Encounter.PLAYER_FACTION)
 	var host: ScenarioHost = ScenarioHost.new(w)
 	var says: Array[SimEvent] = []
 	for i: int in 600:

@@ -75,6 +75,13 @@ func team_of(id: int) -> int:
 	return _world.team_of(id)
 
 
+## A ship's faction, -1 for an id that is no ship (cheaper than ship(id).faction).
+func faction_of(id: int) -> int:
+	if id < 0 or id >= _world.ship_count():
+		return -1
+	return _world.faction_of(id)
+
+
 func ship(id: int) -> ShipView:
 	var v: ShipView = ShipView.new()
 	if id < 0 or id >= _world.ship_count():
