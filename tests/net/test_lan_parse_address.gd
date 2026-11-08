@@ -67,4 +67,7 @@ func test_rejected_addresses_have_a_reason() -> void:
 		var r: LanBrowser.Address = LanBrowser.parse_address(s)
 		assert_bool(r.ok).override_failure_message("accepted %s" % s).is_false()
 		assert_str(r.error).override_failure_message("no reason for %s" % s).is_not_empty()
+		# R11-7: the reason is a strings.json key, not English text.
+		assert_str(r.error).override_failure_message(s).starts_with("menu.addr_")
+		assert_str(I18n.translation("en").get_message(r.error)).is_not_empty()
 		assert_str(r.url).is_empty()
