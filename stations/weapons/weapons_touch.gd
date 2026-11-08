@@ -159,14 +159,7 @@ func refresh() -> void:
 	claim_button.text = WeaponsStatus.claim_text(p, p.mount)
 	claim_button.disabled = not p.is_usable(p.mount)
 	claim_button.role = RailButton.Role.ACCENT if p.is_mine(p.mount) else RailButton.Role.PLAIN
-	# FIRE says why it can't shoot, and greys then (a free mount fires, V29).
-	var fire_text: String = WeaponsStatus.fire_text(p, p.mount)
-	if fire_button.text != fire_text:
-		fire_button.text = fire_text
-	var blocked: bool = WeaponsStatus.fire_block(p, p.mount) != ""
-	var fire_role: RailButton.Role = RailButton.Role.PLAIN if blocked else RailButton.Role.DANGER
-	if fire_button.role != fire_role:
-		fire_button.role = fire_role
+	WeaponsStatus.show_fire(p, fire_button, p.mount)
 	ammo_button.text = p.ammo_name() + " ▸"
 	# (no target line on a phone: the frame's selection chip names the target)
 	target_label.text = ""

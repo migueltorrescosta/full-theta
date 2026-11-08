@@ -55,6 +55,19 @@ static func fire_text(p: WeaponsPanel, i: int) -> String:
 	return "%s\n%s" % [fire, p.tr(key)]
 
 
+## Sets the FIRE button's text and role for mount i: it says why it can't shoot and greys
+## then (a free mount fires, V29). Phone and tablet share it.
+static func show_fire(p: WeaponsPanel, button: RailButton, i: int) -> void:
+	var text: String = fire_text(p, i)
+	if button.text != text:
+		button.text = text
+	var role: RailButton.Role = (
+		RailButton.Role.PLAIN if fire_block(p, i) != "" else RailButton.Role.DANGER
+	)
+	if button.role != role:
+		button.role = role
+
+
 ## The Claim button's text for mount i: ticked while this client holds it, the holder's name
 ## while another does; one button in one place, whatever the state.
 static func claim_text(p: WeaponsPanel, i: int) -> String:

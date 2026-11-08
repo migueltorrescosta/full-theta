@@ -121,3 +121,4 @@ func refresh() -> void:
 	claim_button.text = WeaponsStatus.claim_text(p, p.mount)
 	claim_button.role = RailButton.Role.ACCENT if p.is_mine(p.mount) else RailButton.Role.PLAIN
 	claim_button.disabled = not p.is_usable(p.mount)
+	WeaponsStatus.show_fire(p, fire_button, p.mount)
