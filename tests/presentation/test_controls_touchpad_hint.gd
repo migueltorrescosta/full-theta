@@ -13,22 +13,11 @@ func test_the_touchpad_hint_shows_for_helm_on_linux_only() -> void:
 
 
 # FT: FT-STN-012
-# D4: a browser on Linux is a Linux desktop; Android's user agent also names Linux.
-func test_a_web_build_on_linux_gets_the_hint() -> void:
-	var firefox: String = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
-	var android: String = "Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/126.0 Mobile Safari/537.36"
-	var windows: String = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0 Safari/537.36"
-	assert_str(ControlsPane.os_of_agent(firefox, "Web")).is_equal("Linux")
-	assert_str(ControlsPane.os_of_agent(android, "Web")).is_equal("Android")
-	assert_str(ControlsPane.os_of_agent(windows, "Web")).is_equal("Web")
-	(
-		assert_bool(ControlsPane.touchpad_hint(["helm"], ControlsPane.os_of_agent(firefox, "Web")))
-		. is_true()
-	)
-	(
-		assert_bool(ControlsPane.touchpad_hint(["helm"], ControlsPane.os_of_agent(windows, "Web")))
-		. is_false()
-	)
+# D4: a desktop build names the engine's OS (the web build's Linux comes from Godot's
+# web_linuxbsd feature tag, which a desktop run never has).
+func test_a_desktop_build_names_the_engines_os() -> void:
+	assert_bool(OS.has_feature("web_linuxbsd")).is_false()
+	assert_str(ControlsPane.host_os()).is_equal(OS.get_name())
 
 
 # FT: FT-STN-012

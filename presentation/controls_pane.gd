@@ -217,22 +217,12 @@ static func touchpad_hint(stations: Array, os_name: String = host_os()) -> bool:
 	return os_name == "Linux" and stations.has("helm")
 
 
-## The operating system the player is on: the engine's name, or on the web build the one
-## the browser's user agent names ("Linux" for a desktop Linux browser, never Android).
+## The operating system the player is on: the engine's name, and "Linux" for the web build
+## in a desktop Linux browser (Godot's web_linuxbsd feature tag; Android sets web_android).
 static func host_os() -> String:
-	if OS.has_feature("web") and ClassDB.class_exists("JavaScriptBridge"):
-		var agent: Variant = JavaScriptBridge.eval("navigator.userAgent")
-		return os_of_agent(str(agent), OS.get_name())
-	return OS.get_name()
-
-
-## `engine_name`, or "Linux" when a web build's user agent is a desktop Linux browser.
-static func os_of_agent(agent: String, engine_name: String) -> String:
-	if "Android" in agent:
-		return "Android"
-	if "Linux" in agent or "X11" in agent:
+	if OS.has_feature("web_linuxbsd") and not OS.has_feature("web_android"):
 		return "Linux"
-	return engine_name
+	return OS.get_name()
 
 
 ## The notes under the built diagrams: unbound intents of the screen, bindings off the
