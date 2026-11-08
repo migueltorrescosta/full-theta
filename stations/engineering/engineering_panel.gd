@@ -319,6 +319,8 @@ func _build_rails() -> void:
 func rail_button(a: Array) -> RailButton:
 	var b: RailButton = RailButton.make(TouchText.of(a[1], a[2]))
 	b.name = "Touch_" + str(a[0])
+	# Two lines of text (the part or the reason under the label) in a 48 px row.
+	b.theme_type_variation = "RailCompactButton"
 	# Two to a 168 px rail: the longest label fits at 14 px.
 	b.add_theme_font_size_override("font_size", RAIL_FONT)
 	b.pressed.connect(press_touch.bind(str(a[0])))
