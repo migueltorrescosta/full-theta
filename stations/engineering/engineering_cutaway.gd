@@ -32,7 +32,7 @@ const HINT_MIN_H: float = 220.0
 ## A phone's cutaway at least this many times wider than tall puts its hint beside the hull.
 const HINT_SIDE_ASPECT: float = 1.3
 
-var panel: EngineeringPanel
+var model: EngineeringModel
 ## View angles (rad): yaw about the ship's up axis, then pitch towards the viewer; the
 ## picture is then turned a quarter so the bow points up and the ship's length uses the
 ## cutaway's height. The default is a three-quarter side view.
@@ -68,10 +68,10 @@ func _get_minimum_size() -> Vector2:
 ## The discs' radius: NODE_R, smaller when the projected parts are closer than two discs
 ## (a small cutaway at 150 % UI scale), so the discs never overlap.
 func node_r() -> float:
-	if panel == null or panel.ship_def == null:
+	if model == null or model.ship_def == null:
 		return NODE_R
 	var pts: Array[Vector2] = []
-	for i: int in panel.count():
+	for i: int in model.count():
 		pts.append(subsystem_pos(i))
 	var least: float = INF
 	for i: int in pts.size():
@@ -103,7 +103,7 @@ func project(p: Vector3) -> Vector3:
 
 
 func subsystem_pos(i: int) -> Vector2:
-	var p: Vector3 = project(panel.ship_def.subsystems[i].position)
+	var p: Vector3 = project(model.ship_def.subsystems[i].position)
 	return Vector2(p.x, p.y)
 
 
@@ -113,7 +113,7 @@ func subsystem_at(pos: Vector2, radius: float = -1.0) -> int:
 		radius = node_r() + 4.0
 	var best: int = -1
 	var best_d: float = radius
-	for i: int in panel.count():
+	for i: int in model.count():
 		var d: float = subsystem_pos(i).distance_to(pos)
 		if d <= best_d:
 			best = i
@@ -123,10 +123,10 @@ func subsystem_at(pos: Vector2, radius: float = -1.0) -> int:
 
 ## Where crew c's token sits: beside its job's disc, or in the crew bay.
 func token_pos(c: int) -> Vector2:
-	var job: int = panel.crew_job(c)
+	var job: int = model.crew_job(c)
 	var k: int = 0
 	for o: int in c:
-		if panel.crew_job(o) == job:
+		if model.crew_job(o) == job:
 			k += 1
 	var touch: bool = phone()
 	if job >= 0:
@@ -138,7 +138,7 @@ func token_pos(c: int) -> Vector2:
 
 
 func crew_at(pos: Vector2) -> int:
-	for c: int in panel.crew_count():
+	for c: int in model.crew_count():
 		if token_pos(c).distance_to(pos) <= grab_radius():
 			return c
 	return -1
@@ -160,7 +160,7 @@ func _token_step() -> float:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if panel == null or panel.ship_def == null:
+	if model == null or model.ship_def == null:
 		return
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	if mb != null:
@@ -189,24 +189,24 @@ func _button(mb: InputEventMouseButton) -> void:
 				if c >= 0:
 					drag_crew = c
 					drag_pos = mb.position
-					panel.crew_pick = c
+					model.crew_pick = c
 				elif phone():
 					_finger_turn = true
 					_rotated = false
 					_press_at = mb.position
 				else:
-					panel.select(subsystem_at(mb.position))
+					model.select(subsystem_at(mb.position))
 			elif drag_crew >= 0:
 				var i: int = subsystem_at(mb.position, maxf(node_r() * 2.0, grab_radius()))
 				if i >= 0:
-					panel.dispatch(drag_crew, i)
+					model.dispatch(drag_crew, i)
 				elif token_pos(drag_crew).distance_to(mb.position) > grab_radius() * 2.0:
-					panel.recall(drag_crew)
+					model.recall(drag_crew)
 				drag_crew = -1
 			elif _finger_turn:
 				_finger_turn = false
 				if not _rotated:
-					panel.select(subsystem_at(mb.position, UiTheme.TOUCH_MIN / 2.0))
+					model.select(subsystem_at(mb.position, UiTheme.TOUCH_MIN / 2.0))
 			accept_event()
 		MOUSE_BUTTON_RIGHT:
 			if mb.pressed:
@@ -216,31 +216,31 @@ func _button(mb: InputEventMouseButton) -> void:
 				_rotating = false
 				var c: int = crew_at(mb.position)
 				if not _rotated and c >= 0:
-					panel.recall(c)
+					model.recall(c)
 			accept_event()
 	queue_redraw()
 
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("background"))
-	if panel == null or panel.ship_def == null:
+	if model == null or model.ship_def == null:
 		return
 	_draw_hull()
-	var now: int = panel.ctx.now_ms()
-	for h: Dictionary in panel.hits:
-		var a: float = 1.0 - float(now - int(h["at_ms"])) / float(EngineeringPanel.HIT_MS)
+	var now: int = model.ctx.now_ms()
+	for h: Dictionary in model.hits:
+		var a: float = 1.0 - float(now - int(h["at_ms"])) / float(EngineeringModel.HIT_MS)
 		var p: Vector3 = project(h["pos"])
 		var col: Color = Palette.color("danger")
 		col.a = clampf(a, 0.15, 1.0)
 		var c: Vector2 = Vector2(p.x, p.y)
 		draw_line(c + Vector2(-6, -6), c + Vector2(6, 6), col, 2.5)
 		draw_line(c + Vector2(-6, 6), c + Vector2(6, -6), col, 2.5)
-	var order: Array = range(panel.count())
+	var order: Array = range(model.count())
 	order.sort_custom(
 		func(a: int, b: int) -> bool:
 			return (
-				project(panel.ship_def.subsystems[a].position).z
-				< project(panel.ship_def.subsystems[b].position).z
+				project(model.ship_def.subsystems[a].position).z
+				< project(model.ship_def.subsystems[b].position).z
 			)
 	)
 	for i: int in order:
@@ -296,24 +296,24 @@ func _draw_hull() -> void:
 
 func _draw_subsystem(i: int) -> void:
 	var c: Vector2 = subsystem_pos(i)
-	var h: float = panel.health_frac(i)
+	var h: float = model.health_frac(i)
 	var fill: Color = _health_color(h)
 	draw_circle(c, node_r(), Palette.color("panel"))
 	draw_circle(c, node_r() - 3.0, fill)
 	# Heat: an arc around the disc, a full ring at the fault threshold.
-	var heat: float = clampf(panel.heat_frac(i), 0.0, 1.0)
+	var heat: float = clampf(model.heat_frac(i), 0.0, 1.0)
 	if heat > 0.02:
-		var role: String = "danger" if heat >= EngineeringPanel.HOT else "warn"
+		var role: String = "danger" if heat >= EngineeringModel.HOT else "warn"
 		draw_arc(c, node_r() + 3.0, -PI / 2.0, -PI / 2.0 + TAU * heat, 24, Palette.color(role), 3.0)
 	# Hardened (FT-ENG-008): a blue rim; an unknown-cause fault (FT-SIM-025): a "?".
-	if panel.hardened_ticks(i) > 0:
+	if model.hardened_ticks(i) > 0:
 		draw_arc(c, node_r() + 5.5, 0.0, TAU, 32, Palette.color("accent"), 2.0)
-	if panel.has_fault(i):
+	if model.has_fault(i):
 		var font: Font = get_theme_default_font()
 		Palette.draw_outlined(
 			self, font, c + Vector2(node_r() * 0.7, -node_r() * 0.7), "?", 16, Palette.color("warn")
 		)
-	if i == panel.selected:
+	if i == model.selected:
 		draw_arc(c, node_r() + 8.0, 0.0, TAU, 32, Palette.color("selected"), 2.0)
 
 
@@ -330,9 +330,9 @@ func label_rects() -> Dictionary:
 	var r: float = node_r()
 	# A disc with its heat arc and rims (up to node_r() + 7), the crew tokens and the
 	# "Crews" caption: no label covers them.
-	for i: int in panel.count():
+	for i: int in model.count():
 		taken.append(_square(subsystem_pos(i), r + 6.0))
-	for c: int in panel.crew_count():
+	for c: int in model.crew_count():
 		taken.append(_square(token_pos(c), TOKEN_R))
 	taken.append(_crews_rect())
 	if hint_beside():
@@ -340,7 +340,7 @@ func label_rects() -> Dictionary:
 	var out: Dictionary = {}
 	shortened.clear()
 	var gap: float = r + 6.0
-	for i: int in panel.count():
+	for i: int in model.count():
 		var c: Vector2 = subsystem_pos(i)
 		var first: Rect2 = Rect2()
 		var chosen: Rect2 = Rect2()
@@ -389,8 +389,8 @@ func _label_spots(c: Vector2, sz: Vector2, gap: float) -> Array[Vector2]:
 
 func _label(i: int, short: bool = false) -> String:
 	if short:
-		return panel.short_name(i)
-	return "%s %d%%" % [panel.short_name(i), roundi(panel.health_frac(i) * 100)]
+		return model.short_name(i)
+	return "%s %d%%" % [model.short_name(i), roundi(model.health_frac(i) * 100)]
 
 
 func _label_size() -> int:
@@ -429,11 +429,11 @@ func _draw_crews() -> void:
 		fs,
 		Palette.color("text_dim")
 	)
-	for c: int in panel.crew_count():
+	for c: int in model.crew_count():
 		var p: Vector2 = drag_pos if c == drag_crew else token_pos(c)
-		var taken: bool = panel.crew_taken(c)
+		var taken: bool = model.crew_taken(c)
 		draw_circle(p, TOKEN_R, Palette.color("text_dim" if taken else "accent"))
-		var letter: String = EngineeringPanel.crew_letter(c)
+		var letter: String = EngineeringModel.crew_letter(c)
 		var sz: Vector2 = font.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 		draw_string(
 			font,
@@ -464,7 +464,7 @@ func _basis() -> Basis:
 ## section unit).
 func _hull_scale() -> Vector3:
 	var ext: Vector3 = Vector3(2.0, 2.0, 2.0)
-	for s: SubsystemDef in panel.ship_def.subsystems:
+	for s: SubsystemDef in model.ship_def.subsystems:
 		ext = ext.max(s.position.abs())
 	return Vector3((ext.x + 6.0) / 0.5, (ext.y + 3.0) / 0.28, (ext.z + 5.0) / 2.5)
 
@@ -479,7 +479,7 @@ func _scale() -> float:
 ## The room the hint takes at the top, 0 on a short cutaway (a phone upright under the
 ## banner); the hull is drawn below it, so the two never overlap (T2).
 func hint_height() -> float:
-	if size.y < HINT_MIN_H or panel == null or hint_beside():
+	if size.y < HINT_MIN_H or model == null or hint_beside():
 		return 0.0
 	var fs: int = get_theme_default_font_size() - 2
 	var text: Vector2 = get_theme_default_font().get_multiline_string_size(
@@ -493,7 +493,7 @@ func hint_height() -> float:
 ## (at least MIN_SQUARE, D319).
 func hint_beside() -> bool:
 	return (
-		size.y >= HINT_MIN_H and panel != null and phone() and size.x >= HINT_SIDE_ASPECT * size.y
+		size.y >= HINT_MIN_H and model != null and phone() and size.x >= HINT_SIDE_ASPECT * size.y
 	)
 
 
@@ -524,7 +524,7 @@ func hint() -> String:
 
 ## Each token's grab area on a phone, as a control TapAudit sees.
 func _sync_taps() -> void:
-	var n: int = panel.crew_count() if phone() else 0
+	var n: int = model.crew_count() if phone() else 0
 	while _taps.size() < n:
 		var c: Control = Control.new()
 		c.name = "CrewTap%d" % _taps.size()
