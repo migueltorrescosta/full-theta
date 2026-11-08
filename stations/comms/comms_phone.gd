@@ -152,10 +152,7 @@ func arrange_rails() -> void:
 ## Upright, where the conversation ends: the top of the screen's bottom tab bar, else the
 ## tap limit.
 func _upright_floor() -> float:
-	var n: Node = panel.get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	var s: StationScreen = n as StationScreen
+	var s: StationScreen = panel.screen()
 	if s != null and s.frame.bottom_tabs.is_visible_in_tree():
 		return s.frame.bottom_tabs.get_global_rect().position.y
 	return SafeArea.tap_bottom(panel)

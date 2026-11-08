@@ -142,7 +142,7 @@ func _setup() -> void:
 
 
 func _ready() -> void:
-	var screen: StationScreen = _find_screen()
+	var screen: StationScreen = self.screen()
 	if screen != null:
 		# A tablet keeps its form in a rotation: only its rails' arrangement changes.
 		screen.form_changed.connect(func(_f: LayoutMode.Form) -> void: _apply_tablet())
@@ -159,16 +159,9 @@ func _mode_changed() -> void:
 	_apply_tablet.call_deferred()
 
 
-func _find_screen() -> StationScreen:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	return n as StationScreen
-
-
 ## Builds, rebuilds (a rotation) or drops the tablet's docked rails (EngineeringTablet.sync).
 func _apply_tablet() -> void:
-	EngineeringTablet.sync(self, _find_screen())
+	EngineeringTablet.sync(self, screen())
 
 
 ## The phone form the panel takes: PHONE_LANDSCAPE or PHONE_PORTRAIT when it shows its main
@@ -192,11 +185,7 @@ func full_screen() -> bool:
 
 
 func _on_page(_index: int) -> void:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
-		(n as StationScreen).pages_changed()
+	rebind_tabs()
 
 
 ## The rail buttons' texts and states, once a frame (EngineeringRail.update).

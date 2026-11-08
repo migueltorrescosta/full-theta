@@ -84,10 +84,7 @@ func _setup() -> void:
 
 
 func _ready() -> void:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	_screen = n as StationScreen
+	_screen = screen()
 	if _screen != null:
 		_screen.form_changed.connect(func(_f: LayoutMode.Form) -> void: _apply_form())
 		# A tablet keeps its form in a rotation: only its dock's arrangement changes.
