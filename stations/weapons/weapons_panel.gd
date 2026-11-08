@@ -805,6 +805,7 @@ func _focal() -> float:
 func _build_view() -> void:
 	_view = SubViewportContainer.new()
 	_view.stretch = true
+	RenderQuality.track(_view)
 	_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_view)
