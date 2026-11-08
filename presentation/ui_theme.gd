@@ -106,11 +106,10 @@ static func font() -> Font:
 
 
 ## A rounded box in the palette: fill and border roles, a content margin on each side.
-## `alpha` below 1 makes the fill translucent (OVERLAY_ALPHA for an overlay over a view);
-## `pad_left` at 0 or more replaces the left margin (a row with a wider left edge). A margin
-## of -1 leaves Godot's default (the border width).
+## `alpha` below 1 makes the fill translucent (OVERLAY_ALPHA for an overlay over a view). A
+## margin of -1 leaves Godot's default (the border width).
 static func box(
-	fill: String, line: String, pad_x: int, pad_y: int, alpha: float = 1.0, pad_left: int = -1
+	fill: String, line: String, pad_x: int, pad_y: int, alpha: float = 1.0
 ) -> StyleBoxFlat:
 	var s: StyleBoxFlat = StyleBoxFlat.new()
 	s.bg_color = Palette.color(fill)
@@ -120,7 +119,7 @@ static func box(
 	if line != "":
 		s.border_color = Palette.color(line)
 		s.set_border_width_all(BORDER)
-	s.content_margin_left = pad_left if pad_left >= 0 else pad_x
+	s.content_margin_left = pad_x
 	s.content_margin_right = pad_x
 	s.content_margin_top = pad_y
 	s.content_margin_bottom = pad_y

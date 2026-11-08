@@ -86,7 +86,7 @@ func _init(player_name: String = "host") -> void:
 func host(options: Options) -> Error:
 	var err: Error = launcher.spawn(options, launcher.pid_file)
 	if err != OK:
-		_fail(_t("host.err.spawn") % error_string(err))
+		_fail(tr("host.err.spawn") % error_string(err))
 		return err
 	state = State.STARTING
 	_deadline_ms = Time.get_ticks_msec() + ready_timeout_ms
@@ -107,20 +107,20 @@ func poll() -> void:
 			if launcher.is_ready():
 				_connect()
 			elif not launcher.is_running():
-				_fail(_t("host.err.stopped"))
+				_fail(tr("host.err.stopped"))
 			elif Time.get_ticks_msec() > _deadline_ms:
-				_fail(_t("host.err.slow"))
+				_fail(tr("host.err.slow"))
 		State.CONNECTING:
 			client.poll()
 			if client.is_welcomed():
 				state = State.JOINED
 				_save_token()
 			elif client.state == NetClient.State.REJECTED:
-				_fail(_t("host.err.refused") % client.reject_reason)
+				_fail(tr("host.err.refused") % client.reject_reason)
 			elif client.state == NetClient.State.CLOSED:
-				_fail(_t("host.err.connect"))
+				_fail(tr("host.err.connect"))
 			elif Time.get_ticks_msec() > _deadline_ms:
-				_fail(_t("host.err.silent"))
+				_fail(tr("host.err.silent"))
 		State.JOINED:
 			client.poll()
 
@@ -185,7 +185,7 @@ func _connect() -> Error:
 	_deadline_ms = Time.get_ticks_msec() + join_timeout_ms
 	var err: Error = client.connect_to(LanBrowser.ws_url(join_address(), launcher.port))
 	if err != OK:
-		_fail(_t("host.err.connect_error") % error_string(err))
+		_fail(tr("host.err.connect_error") % error_string(err))
 	return err
 
 
@@ -196,10 +196,6 @@ func _save_token() -> void:
 	)
 	if t.save(token_file) != OK:
 		push_warning("can't store the session token in %s" % token_file)
-
-
-static func _t(key: String) -> String:
-	return TranslationServer.translate(key)
 
 
 func _fail(why: String) -> void:
