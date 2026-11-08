@@ -77,7 +77,8 @@ static func aim(
 		)
 		lead += miss * (aim_error * lead.length())
 	var c: AimMountCommand = AimMountCommand.new()
-	c.aim_x = kin.px[ship] + lead.x
-	c.aim_y = kin.py[ship] + lead.y
-	c.aim_z = kin.pz[ship] + lead.z
+	var at: PackedFloat64Array = kin.point_at(ship, lead)
+	c.aim_x = at[0]
+	c.aim_y = at[1]
+	c.aim_z = at[2]
 	return c

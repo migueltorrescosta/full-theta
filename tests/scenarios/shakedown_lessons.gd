@@ -27,7 +27,7 @@ static func tick(r: ShakedownRig, partners: TrainingPartners, n: int = 1) -> voi
 		r.host.advance(
 			SimWorld.DT * 1.001,
 			func(api: ScenarioApi) -> void:
-				partners.act(r.world, r.driver)
+				partners.act(api, r.driver)
 				r.driver.before_tick(api)
 		)
 

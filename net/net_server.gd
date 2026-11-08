@@ -47,6 +47,8 @@ var http: StaticServer
 var http_us_max: int = 0
 ## LAN discovery beacon, or null when off (start_beacon).
 var beacon: LanBeacon
+## Whether a failed beacon send was logged (once).
+var beacon_failure_logged: bool = false
 ## The load gate's probe (`--probe-out`, D161), or null; set before start().
 var probe: LoadProbe
 
@@ -108,7 +110,7 @@ func start(
 ## The driver's turn before each tick; in a solo lesson the bots' presses come first.
 func _before_tick(api: ScenarioApi) -> void:
 	if driver.solo_station() != &"":
-		partners.act(world, driver as TrainingDriver)
+		partners.act(api, driver as TrainingDriver)
 	driver.before_tick(api)
 
 
@@ -260,13 +262,14 @@ func start_http(root: String) -> Error:
 func start_beacon(
 	server_name: String,
 	discovery_port: int = LanBeacon.DISCOVERY_PORT,
-	destinations: PackedStringArray = [LanBeacon.BROADCAST_ADDRESS]
+	destinations: PackedStringArray = PackedStringArray()
 ) -> Error:
 	var http_port: int = http.local_port() if http != null else 0
 	beacon = LanBeacon.new(NetProtocol.PROTOCOL_VERSION, server_name, port(), http_port)
 	beacon.player_cap = session.max_sessions
 	var err: Error = beacon.start(discovery_port, destinations)
 	if err != OK:
+		push_warning("LAN beacon failed to start: %s" % error_string(err))
 		beacon = null
 	return err
 
@@ -399,6 +402,9 @@ func _poll_lan_services() -> void:
 		beacon.players = players()
 		beacon.session_running = session_active()
 		beacon.poll(Time.get_ticks_usec())
+		if beacon.last_error != OK and not beacon_failure_logged:
+			beacon_failure_logged = true
+			push_warning("LAN beacon cannot send: %s" % error_string(beacon.last_error))
 
 
 ## Sessions holding a pick (the probe waits for all of them).

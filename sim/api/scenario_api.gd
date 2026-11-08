@@ -20,6 +20,7 @@ const MODE_LAST_STANDING: int = SessionRules.Mode.LAST_STANDING
 const MODE_HOLDOUT: int = SessionRules.Mode.HOLDOUT
 
 var _world: SimWorld
+var _crew: ApiCrew
 
 
 ## Ticks in `seconds`, rounded up: SimWorld.ticks for the scenarios and the director.
@@ -29,6 +30,13 @@ static func ticks(seconds: float) -> int:
 
 func _init(world: SimWorld) -> void:
 	_world = world
+
+
+## The crew verbs the Shakedown's bots act through (F10).
+func crew() -> ApiCrew:
+	if _crew == null:
+		_crew = ApiCrew.new(_world)
+	return _crew
 
 
 # --- queries (value copies) ---
