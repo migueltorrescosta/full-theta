@@ -429,6 +429,12 @@ func rail_items() -> Array[Dictionary]:
 	return _picture.contacts_by_range()
 
 
+## True when an item `w` px wide starting at `x` fits a rail `rail_w` px wide: the contacts
+## first, then the viewer's caption in what they leave.
+static func rail_fits(x: float, w: float, rail_w: float) -> bool:
+	return x + w <= rail_w - 12.0
+
+
 ## The callsign rail: "H2 · 4 high · mid" per contact, pinged and selected ones lit.
 func _draw_rail() -> void:
 	var font: Font = get_theme_default_font()
@@ -436,26 +442,10 @@ func _draw_rail() -> void:
 	var contacts: Array[Dictionary] = rail_items()
 	var x: float = 12.0
 	var y: float = (_rail.size.y - font.get_height(FONT_SIZE)) / 2.0
-	# A plain viewer only watches: a dim caption at the rail's right end says who sets the
-	# view, where the contacts leave room for it (R23-14).
-	var caption_w: float = 0.0
-	if not interactive:
-		var caption: String = tr("viewer.caption")
-		caption_w = font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
-		_rail.draw_string(
-			font,
-			Vector2(_rail.size.x - caption_w - 12.0, y + font.get_ascent(FONT_SIZE)),
-			caption,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			FONT_SIZE - 2,
-			Palette.color("text_dim")
-		)
-		caption_w += 24.0
 	for it: Dictionary in contacts:
 		var text: String = ContactPicture.chip_of(it)
 		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
-		if x + w > _rail.size.x - caption_w:
+		if not rail_fits(x, w, _rail.size.x):
 			break
 		if float(it.get("pulse", 0.0)) > 0.0 or ctx.crew.is_selected(it["kind"], it["id"]):
 			_rail.draw_rect(
@@ -469,6 +459,23 @@ func _draw_rail() -> void:
 		if x < _rail.size.x:
 			_rail.draw_line(
 				Vector2(x - 14.0, 6.0), Vector2(x - 14.0, _rail.size.y - 6.0), Palette.color("line")
+			)
+	# A plain viewer only watches: a dim caption at the rail's right end says who sets the
+	# view, where the contacts leave room for it (R23-14); the contacts come first (w5).
+	if not interactive:
+		var caption: String = tr("viewer.caption")
+		var caption_w: float = (
+			font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
+		)
+		if rail_fits(x, caption_w, _rail.size.x):
+			_rail.draw_string(
+				font,
+				Vector2(_rail.size.x - caption_w - 12.0, y + font.get_ascent(FONT_SIZE)),
+				caption,
+				HORIZONTAL_ALIGNMENT_LEFT,
+				-1,
+				FONT_SIZE - 2,
+				Palette.color("text_dim")
 			)
 
 
