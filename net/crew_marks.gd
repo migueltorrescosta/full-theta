@@ -205,6 +205,5 @@ func _location(spot: Dictionary) -> Dictionary:
 func _name(slot: int, name: String) -> String:
 	if _unsafe == null:
 		_unsafe = RegEx.create_from_string(UNSAFE_CHARS)
-	var clean: String = _unsafe.sub(name, "", true).strip_edges()
-	var kept: String = NetProtocol.clip_utf8(clean, MAX_NAME_BYTES).strip_edges()
+	var kept: String = NetProtocol.clean_text(_unsafe.sub(name, "", true), MAX_NAME_BYTES)
 	return kept if kept != "" else DEFAULT_NAMES[slot]

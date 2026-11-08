@@ -3,7 +3,7 @@ extends SnapshotSection
 ## Live projectiles within range_m of one ship (Section.PROJECTILES, promoted from
 ## S9Proj), for the views that draw tracers. Projectiles fly straight, so each is sent
 ## once, when it enters the range, as a position and velocity at the snapshot's tick;
-## clients extrapolate it (NetCodec.predict with PROJ_PRED_DEN) and wrap it. Ids that
+## clients extrapolate it (NetCodec.predict) and wrap it. Ids that
 ## leave the range or die are listed as gone.
 ##
 ## ProjectileTable rows have no stable id, so the section names each projectile by its

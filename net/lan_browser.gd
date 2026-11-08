@@ -10,6 +10,9 @@ extends RefCounted
 ## fugaku). That client still joins by manual address (parse_address), e.g. the
 ## host's own client, which joins its server directly anyway (FT-NET-001).
 
+## Most hosts kept at once; datagrams of more are ignored.
+const MAX_HOSTS: int = 64
+
 
 ## One discovered server, keyed by sender address and WebSocket port.
 class Host:
@@ -129,6 +132,9 @@ func ingest(data: PackedByteArray, sender_ip: String, now_usec: int) -> bool:
 	h.compatible = h.protocol == protocol_version
 	h.last_seen_usec = now_usec
 	var old: Host = _hosts.get(h.key())
+	if old == null and _hosts.size() >= MAX_HOSTS:
+		ignored += 1  # forged datagrams from one machine could fill the list
+		return false
 	_hosts[h.key()] = h
 	return old == null or _summary(old) != _summary(h)
 

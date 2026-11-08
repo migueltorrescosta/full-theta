@@ -91,6 +91,8 @@ func update(world: SimWorld) -> PackedByteArray:
 	put_gone(buf, gone, model)
 	for id: int in gone:
 		info.erase(id)
+	if n == 0 and ni == 0 and gone.is_empty():
+		return PackedByteArray()  # nothing changed: a delta omits the section (R19-5)
 	var end: int = buf.get_position()
 	buf.seek(0)
 	buf.put_u16(n)

@@ -96,6 +96,18 @@ func test_encode_decode_round_trip_and_name_truncation() -> void:
 
 
 # FT: FT-NET-013
+# R11-10: forged datagrams from one machine (a new WebSocket port each) fill the list only up
+# to MAX_HOSTS; a host already listed still updates.
+func test_the_host_list_is_bounded() -> void:
+	_browser = LanBrowser.new(PROTO)
+	for port: int in range(1000, 1000 + 3 * LanBrowser.MAX_HOSTS):
+		_browser.ingest(LanBeacon.new(PROTO, "x", port).encode(), "10.0.0.9", 1)
+	assert_int(_browser.hosts().size()).is_equal(LanBrowser.MAX_HOSTS)
+	assert_bool(_browser.ingest(LanBeacon.new(PROTO, "y", 1000).encode(), "10.0.0.9", 2)).is_true()
+	assert_int(_browser.hosts().size()).is_equal(LanBrowser.MAX_HOSTS)
+
+
+# FT: FT-NET-013
 func test_malformed_and_wrong_magic_packets_are_ignored() -> void:
 	_browser = LanBrowser.new(PROTO)
 	var good: PackedByteArray = LanBeacon.new(PROTO, "ok", 47801).encode()

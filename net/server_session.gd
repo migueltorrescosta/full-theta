@@ -68,8 +68,8 @@ var abandoned: Dictionary[int, bool] = {}
 ## this is not empty (FT-NET-034).
 var paused: Dictionary[int, Array] = {}
 var host_paused: bool = false  # (FT-MIS-040), apart from the coverage pause
-## Ship -> NetAbandonVote, during a pause (D128).
-var votes: Dictionary[int, NetAbandonVote] = {}
+## Ship -> NetVote, during a pause (D128).
+var votes: Dictionary[int, NetVote] = {}
 ## Ship -> {control: [session id, name]}: last writers of ship-wide controls.
 var writers: Dictionary[int, Dictionary] = {}
 ## Marks, alert level and pings (D171).
@@ -156,14 +156,19 @@ func process(now_us: int) -> void:
 	for item: Array in transport.take_inbound():
 		var msg: Dictionary = item[1]
 		var from: NetSession = by_conn.get(item[0])
-		if from != null and msg["t"] in NetProtocol.RATED_REQUESTS and not from.bucket.take(now_us):
+		if from != null and msg["t"] in NetProtocol.rated_requests and not from.bucket.take(now_us):
 			rejections[CommandGate.RATE_LIMITED] = rejections.get(CommandGate.RATE_LIMITED, 0) + 1
+			# The client waits for an answer to its Pick, Claim or Ready (#45 B2, R11-4).
+			request_rejected(from, msg["t"], CommandGate.RATE_LIMITED, {})
 			continue
 		var handler: Callable = _handlers.get(msg["t"], Callable())
 		if handler.is_valid():
 			handler.call(item[0], msg, now_us)
 	for gone: NetSession in sessions.expire(now_us):
 		_lapse(gone)
+	for evicted: NetSession in sessions.evict(now_us):
+		transport.forget(evicted.id)
+		crew.pings.forget(evicted.id)
 	chips.step()
 	shares.step()
 	coop.step()
@@ -184,7 +189,11 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		var c: SimCommand = p[2]
 		if c.tick >= 0:
 			if not c.accepted:
-				_reject(p[0], p[1], CommandGate.SIM_REJECTED)
+				# The sim drops a command to a destroyed ship (it stamps the tick all the same).
+				var dead: bool = not world.kin.is_alive(c.ship_id) and not c.applies_to_destroyed()
+				_reject(
+					p[0], p[1], CommandGate.SHIP_DESTROYED if dead else CommandGate.SIM_REJECTED
+				)
 			else:
 				_wrote(p[0], c)
 		elif world.tick > int(p[3]):
@@ -535,6 +544,11 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	session.name = msg["name"]
 	session.client_kind = msg["kind"]
 	session.is_host = host_secret != "" and msg["host_secret"] == host_secret
+	if session.is_host:
+		# One host: a relaunch with a lost token file leaves the old session in its grace.
+		for other: NetSession in sessions.all():
+			if other != session:
+				other.is_host = false
 	session.conn = conn
 	session.toggles = toggles.encode()
 	by_conn[conn] = session
@@ -723,6 +737,11 @@ func _on_command(conn: int, msg: Dictionary, now_us: int) -> void:
 	if result[0] == null:
 		_reject(s.id, msg["seq"], result[1])
 		return
+	# A stopped sim would queue the command and run it on resume (#45 A4): refused once it is
+	# otherwise valid. Next (Shakedown) is the one command the lessons press while it is stopped.
+	if not sim_running() and not result[0] is TrainingNextCommand:
+		_reject(s.id, msg["seq"], CommandGate.PAUSED)
+		return
 	world.submit(result[0])
 	if session_log != null:
 		session_log.count("commands")
@@ -769,11 +788,9 @@ func _on_abandon_vote(conn: int, msg: Dictionary, _now_us: int) -> void:
 	if why != "":
 		request_rejected(s, NetProtocol.Type.ABANDON_VOTE, why, {"ship": ship})
 		return
-	var vote: NetAbandonVote = votes.get_or_add(ship, NetAbandonVote.new())
-	vote.cast(s.id, s.name, msg["vote"])
-	vote.keep_only(members)
+	var passes: bool = votes.get_or_add(ship, NetVote.new()).cast_from(s, msg["vote"], members)
 	_send_votes(ship)
-	if vote.passes(members.size()):
+	if passes:
 		if in_pause:
 			_abandon(ship, "vote")
 		else:
@@ -1054,13 +1071,8 @@ func connected_crew(ship: int) -> Array[int]:
 
 ## abandon_votes to every client, or to one (D128).
 func _send_votes(ship: int, to: NetSession = null) -> void:
-	var vote: NetAbandonVote = votes.get(ship, NetAbandonVote.new())
-	var payload: Dictionary = {
-		"ship": ship,
-		"voters": vote.names(),
-		"sessions": vote.sessions(),
-		"needed": NetAbandonVote.needed(connected_crew(ship).size()),
-	}
+	var vote: NetVote = votes.get(ship, NetVote.new())
+	var payload: Dictionary = vote.payload(ship, connected_crew(ship).size())
 	if to != null:
 		notify(to, NetProtocol.EVENT_ABANDON_VOTES, payload)
 	else:

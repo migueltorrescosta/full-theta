@@ -157,6 +157,7 @@ func test_a_relay_mark_on_a_missions_contact_marks_the_mission() -> void:
 # (P9) and no cooperative event.
 func test_comms_pair_events_are_counted() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
+	await _crew(server)
 	var w: SimWorld = StoryFixture.wire(server.world)
 	var coop: NetCoop = server.session.coop
 	_run(server, 3)
@@ -178,3 +179,24 @@ func test_comms_pair_events_are_counted() -> void:
 	assert_int(coop.count_of("p15", CoopEvents.MARK_USED)).is_equal(1)
 	assert_int(coop.count_of("p9", CoopEvents.SURRENDER_KILLED)).is_equal(1)
 	assert_int(coop.cooperative("p9")).is_equal(0)
+
+
+# FT: FT-PAIR-013
+# A12: the same events count nothing while one player holds both stations of the pair (a
+# joint view, or one player on Helm and Comms), and count once two different players hold them.
+func test_comms_pairs_need_two_players() -> void:
+	var server: NetServer = h.server(true, 10.0, SECRET)
+	var w: SimWorld = StoryFixture.wire(server.world)
+	var coop: NetCoop = server.session.coop
+	await h.joined(server, "all", "all")
+	w.emit(&"mission_marked", PLAYER, 0)
+	w.emit(&"dock_cleared", PLAYER, 0)
+	server.session.after_ticks(w.drain_events())
+	assert_int(coop.count_of("p15", CoopEvents.MARK_USED)).is_equal(0)
+	assert_int(coop.count_of("p5", CoopEvents.MARK_USED)).is_equal(0)
+	await h.joined(server, "ops", "ops")
+	w.emit(&"mission_marked", PLAYER, 0)
+	w.emit(&"dock_cleared", PLAYER, 0)
+	server.session.after_ticks(w.drain_events())
+	assert_int(coop.count_of("p15", CoopEvents.MARK_USED)).is_equal(1)
+	assert_int(coop.count_of("p5", CoopEvents.MARK_USED)).is_equal(1)

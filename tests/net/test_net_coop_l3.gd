@@ -280,6 +280,9 @@ func test_a_probe_enabled_scan_is_counted() -> void:
 	for code: String in ["easy", "hard"]:
 		var server: NetServer = h.server(false, 10.0, SECRET)
 		var host: NetClient = await h.welcomed(server, "host", "", SECRET)
+		# Science and Relay are held by two players (A12): the pair counts only between players.
+		await h.joined(server, "sys", "systems")
+		await h.joined(server, "ops", "ops")
 		host.set_toggles(code)
 		(
 			assert_bool(
