@@ -88,9 +88,3 @@ func test_readout_mount_list_and_state() -> void:
 	var free: WeaponsPanel = _panel(false)
 	assert_str(WeaponsReadout.mount_rows(free)[0]).ends_with("· free")
 	assert_str(WeaponsReadout.ammo_text(free)).starts_with("Ammo: ")
-
-
-# FT: FT-WPN-005
-func test_readout_clock_words() -> void:
-	assert_str(WeaponsReadout.clock_words(Vector3.FORWARD)).is_equal("12 level")
-	assert_str(WeaponsReadout.clock_words(Vector3(1, 1, 0))).is_equal("3 high")

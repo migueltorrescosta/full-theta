@@ -509,7 +509,7 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 	draw_polyline(Palette.shape_points(Palette.item_shape(e), p, r), col, 2.5 if selected else 1.2)
 	var pulse: float = float(e["pulse"])
 	if pulse > 0.0:
-		draw_arc(p, r + 10.0 * (1.0 - pulse) + 4.0, 0.0, TAU, 24, Color(col, pulse), 2.0)
+		ItemGlyph.ping_ring(self, p, r + 4.0, 10.0, pulse, col, 2.0, 24, false)
 	var text: String = "%s %s" % [e["label"], _range(e["world"].length())]
 	var at: Rect2 = label_rect(font, text, p, r)
 	if _covers_something(at):
@@ -533,7 +533,7 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 func _covers_something(box: Rect2) -> bool:
 	var avoid: Array[Rect2] = reserved()
 	avoid.append_array(_placed)
-	return _hits(box, avoid)
+	return ChipLayout.hits(box, avoid)
 
 
 ## Where a marker's label goes (HUD coordinates): right of the marker, else the nearest spot
@@ -549,7 +549,7 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 	var avoid: Array[Rect2] = reserved()
 	avoid.append_array(_placed)
 	var inside: Rect2 = area()
-	if not _hits(right, avoid) and inside.encloses(right):
+	if not ChipLayout.hits(right, avoid) and inside.encloses(right):
 		return right
 	# (a marker outside the view's clear area, under the view-top row, has no near spot)
 	if not inside.has_point(p):
@@ -603,9 +603,13 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 	for t: Rect2 in tries:
 		# Kept inside the view: a label near the edge slides in rather than giving up.
 		t.position = t.position.clamp(inside.position, (inside.end - t.size).max(inside.position))
-		if t.intersects(marker) or not inside.encloses(t) or not _leader_clear(p, t, avoid):
+		if (
+			t.intersects(marker)
+			or not inside.encloses(t)
+			or not ChipLayout.leader_clear(p, t, avoid)
+		):
 			continue
-		if _gap(t, p) > reach:
+		if ChipLayout.gap_to(t, p) > reach:
 			continue
 		var cover: float = 0.0
 		for a: Rect2 in avoid:
@@ -625,13 +629,6 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 func _label_reach() -> float:
 	var scale: float = get_window().content_scale_factor if is_inside_tree() else 1.0
 	return LABEL_REACH / maxf(scale, 1.0)
-
-
-## The distance (px) from `p` to the nearest point of `box`.
-static func _gap(box: Rect2, p: Vector2) -> float:
-	var dx: float = maxf(maxf(box.position.x - p.x, p.x - box.end.x), 0.0)
-	var dy: float = maxf(maxf(box.position.y - p.y, p.y - box.end.y), 0.0)
-	return Vector2(dx, dy).length()
 
 
 ## A marker's box at `p` for a bracket of radius `r`.
@@ -678,39 +675,6 @@ func _compass_centre() -> Vector2:
 		# Bottom right of the clear view, beside the read-out.
 		return Vector2(a.end.x - 2.0 * COMPASS_R - 4.0, a.end.y - COMPASS_R - 40.0)
 	return Vector2(300.0, size.y - COMPASS_R - 40.0)
-
-
-## True when the leader from `p` to the label `box` crosses none of `avoid` (a box that
-## holds `p` itself doesn't count).
-static func _leader_clear(p: Vector2, box: Rect2, avoid: Array[Rect2]) -> bool:
-	var tip: Vector2 = Vector2(
-		clampf(p.x, box.position.x, box.end.x), clampf(p.y, box.position.y, box.end.y)
-	)
-	for a: Rect2 in avoid:
-		if a.has_point(p):
-			continue
-		if a.has_point(tip):
-			return false
-		var corners: Array[Vector2] = [
-			a.position,
-			Vector2(a.end.x, a.position.y),
-			a.end,
-			Vector2(a.position.x, a.end.y),
-		]
-		for i: int in 4:
-			if (
-				Geometry2D.segment_intersects_segment(p, tip, corners[i], corners[(i + 1) % 4])
-				!= null
-			):
-				return false
-	return true
-
-
-static func _hits(box: Rect2, others: Array[Rect2]) -> bool:
-	for o: Rect2 in others:
-		if box.intersects(o):
-			return true
-	return false
 
 
 ## Where a ray from the view centre along `dir` (screen axes) meets the edge inset by EDGE

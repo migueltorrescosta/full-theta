@@ -161,15 +161,15 @@ func item_at(pos: Vector2) -> Dictionary:
 	for e: Dictionary in layout:
 		var d: float = (e["pos"] as Vector2).distance_to(pos)
 		if _is_selected(e["item"]) and d <= HIT_PX:
-			return _ref(e["item"])
+			return ItemGlyph.ref(e["item"])
 		if d <= best_d:
 			best_d = d
 			best = e["item"]
 	if not best.is_empty():
-		return _ref(best)
+		return ItemGlyph.ref(best)
 	for e: Dictionary in layout:
 		if (e["chip_rect"] as Rect2).has_point(pos):
-			return _ref(e["item"])
+			return ItemGlyph.ref(e["item"])
 	return {}
 
 
@@ -374,34 +374,15 @@ func _draw_own(rel: Vector3) -> void:
 
 func _draw_item(e: Dictionary, is_sel: bool) -> void:
 	var it: Dictionary = e["item"]
-	var col: Color = Palette.item_color(it)
-	var pos: Vector2 = e["pos"]
-	var foot: Vector2 = e["foot"]
-	var stem: Color = Palette.color("selected") if is_sel else col * Color(1, 1, 1, 0.7)
-	draw_line(foot, pos, stem, 2.0 if is_sel else 1.0, true)
-	draw_line(foot - Vector2(3, 0), foot + Vector2(3, 0), stem, 1.0, true)
-	var pts: PackedVector2Array = Palette.shape_points(Palette.item_shape(it), pos, blip_r())
-	if (e["rel"] as Vector3).y >= 0.0:
-		draw_colored_polygon(pts.slice(0, -1), col)
-	else:
-		draw_colored_polygon(pts.slice(0, -1), Palette.color("background"))
-		draw_polyline(pts, col, 1.5, true)
+	var pts: PackedVector2Array = Palette.shape_points(Palette.item_shape(it), e["pos"], blip_r())
+	ItemGlyph.draw_blip(self, e, is_sel, Palette.item_color(it), pts)
 	if is_sel:
-		draw_rect(
-			Rect2(pos - Vector2(9, 9), Vector2(18, 18)), Palette.color("selected"), false, 1.5
-		)
-	_draw_pulse(pos, float(it.get("pulse", 0.0)), it.get("copies", []))
+		ItemGlyph.draw_select_box(self, e["pos"])
+	_draw_pulse(e["pos"], float(it.get("pulse", 0.0)), it.get("copies", []))
 
 
 func _draw_pulse(pos: Vector2, pulse: float, copies: Array = []) -> void:
-	if pulse <= 0.0:
-		return
-	var col: Color = Palette.color("ping")
-	col.a = pulse
-	draw_arc(pos, blip_r() + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, col, 2.0, true)
-	if not copies.is_empty():
-		var text: String = "+ " + ", ".join(PackedStringArray(copies))
-		_draw_text(get_theme_default_font(), pos + Vector2(-8.0, 14.0), text, col)
+	ItemGlyph.draw_pulse(self, get_theme_default_font(), FONT_SIZE, pos, pulse, blip_r(), copies)
 
 
 ## The mark being placed: an outline diamond, its stem, a line back to the view plane
@@ -462,7 +443,7 @@ func _layout() -> Array[Dictionary]:
 			continue
 		var rel: Vector3 = rel_of(it)
 		var pos: Vector2 = project(rel)
-		var chip: String = ChipText.chip(it["label"], it["local"]) if chips else ""
+		var chip: String = ContactPicture.chip_of(it) if chips else ""
 		var rect: Rect2 = Rect2(pos, Vector2.ZERO)
 		var variants: Array[String] = []
 		var sizes: Array[Vector2] = []
@@ -470,7 +451,7 @@ func _layout() -> Array[Dictionary]:
 			var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 			sz.y = font.get_height(FONT_SIZE)
 			rect = Rect2(Vector2(pos.x + 10.0, pos.y - sz.y / 2.0), sz)
-			var forms: Array = DiscRadar.chip_forms(font, chip)
+			var forms: Array = ChipLayout.chip_forms(font, chip, FONT_SIZE)
 			variants.assign(forms[0])
 			sizes.assign(forms[1])
 		(
@@ -501,12 +482,12 @@ func _layout() -> Array[Dictionary]:
 		Rect2(own - Vector2(9, 9), Vector2(18, 18)),
 		Rect2(Vector2(v.position.x + 8.0, base - font.get_height(FONT_SIZE)), caption),
 	]
-	DiscRadar._declutter(out, fixed, v.grow(-2.0), Rect2(), blip_r() + 3.0)
+	ChipLayout.declutter(out, fixed, v.grow(-2.0), Rect2(), blip_r() + 3.0)
 	return out
 
 
 func _is_selected(it: Dictionary) -> bool:
-	return not selected.is_empty() and _ref(it) == _ref(selected)
+	return ItemGlyph.is_selected(selected, it)
 
 
 func _dim() -> Color:
@@ -515,7 +496,3 @@ func _dim() -> Color:
 
 static func _km(m: float) -> String:
 	return str(snappedf(m / 1000.0, 0.1)) if m < 10_000.0 else str(roundi(m / 1000.0))
-
-
-static func _ref(it: Dictionary) -> Dictionary:
-	return {"kind": it.get("kind", ""), "id": it.get("id", -1)}

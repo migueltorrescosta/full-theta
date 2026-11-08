@@ -239,16 +239,20 @@ func _draw_item(font: Font, t: Dictionary) -> void:
 	if it["kind"] == "mark":
 		draw_polyline(Palette.shape_points("diamond", p, BRACKET), col, 1.5, true)
 	else:
-		for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
-			var q: Vector2 = p + corner * BRACKET
-			draw_line(q, q - Vector2(corner.x * 5.0, 0), col, 2.0 if sel else 1.5)
-			draw_line(q, q - Vector2(0, corner.y * 5.0), col, 2.0 if sel else 1.5)
+		TargetBracket.draw(self, p, BRACKET, 5.0, col, 2.0 if sel else 1.5)
 	_text(font, (t["chip_at"] as Vector2) + Vector2(0.0, FONT_SIZE), t["chip"], col)
 	var pulse: float = float(it.get("pulse", 0.0))
 	if pulse > 0.0:
-		var pc: Color = Palette.color("ping")
-		pc.a = pulse
-		draw_arc(p, BRACKET + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, pc, 2.0, true)
+		ItemGlyph.ping_ring(
+			self,
+			p,
+			BRACKET + ItemGlyph.PING_GAP,
+			ItemGlyph.PING_SPAN,
+			pulse,
+			Palette.color("ping"),
+			2.0,
+			32
+		)
 
 
 func _text(font: Font, base: Vector2, text: String, col: Color) -> void:

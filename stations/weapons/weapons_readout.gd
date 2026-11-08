@@ -74,7 +74,7 @@ static func out_of_arc_text(p: WeaponsPanel) -> String:
 		return ""
 	var swing: Vector3 = Quaternion(m.forward, local.normalized()) * Vector3.FORWARD
 	return p.tr("weapons.out_of_arc").format(
-		{"target": p.ctx.view.callsign(id), "dir": clock_words(swing)}
+		{"target": p.ctx.view.callsign(id), "dir": ChipText.clock_words(swing)}
 	)
 
 
@@ -156,7 +156,7 @@ static func contract_flag(p: WeaponsPanel, contact: int) -> int:
 ## The chip text of an item: "H2 4 high 2.3km", and a contact a contract flags names its
 ## flag ("[disable]", "[protect]", P9).
 static func target_chip(p: WeaponsPanel, it: Dictionary) -> String:
-	var chip: String = ChipText.chip(it["label"], it["local"])
+	var chip: String = ContactPicture.chip_of(it)
 	var flag: int = contract_flag(p, int(it["id"])) if it["kind"] == "contact" else 0
 	if flag != 0:
 		chip += " [%s]" % p.tr("weapons.flag_%d" % flag)
@@ -178,10 +178,3 @@ static func hint(p: WeaponsPanel) -> String:
 		)
 		return p.tr("weapons.hint_claim") % BindingText.describe_all(keys)
 	return p.tr("weapons.held_by") % str(holder.get("name", ""))
-
-
-## "4 high" with its height word translated (ChipText's words).
-static func clock_words(local: Vector3) -> String:
-	var words: PackedStringArray = Callout.clock_height(local).split(" ")
-	words[-1] = String(TranslationServer.translate("callout." + words[-1]))
-	return " ".join(words)

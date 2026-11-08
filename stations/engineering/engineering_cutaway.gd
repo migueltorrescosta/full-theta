@@ -52,6 +52,20 @@ var _rotated: bool = false
 var _finger_turn: bool = false
 var _press_at: Vector2 = Vector2.ZERO
 var _taps: Array[Control] = []
+## The projection's cache (R20-6): the discs' screen positions and depths, their radius, the
+## draw order, the hull's lines and the hint's height. It changes only when the view turns,
+## the control resizes, the ship, the form or the language changes, not on every frame.
+var _geo_key: Array = []
+var _geo_serial: int = 0
+var _geo_pos: Array[Vector2] = []
+var _geo_depth: Array[float] = []
+var _geo_order: Array[int] = []
+var _geo_hull: Array[PackedVector2Array] = []
+var _geo_node_r: float = NODE_R
+var _geo_hint_h: float = 0.0
+## label_rects' cache: the geometry it was made for and the state it read.
+var _labels_key: Array = []
+var _labels_out: Dictionary = {}
 
 
 func _init() -> void:
@@ -70,14 +84,8 @@ func _get_minimum_size() -> Vector2:
 func node_r() -> float:
 	if model == null or model.ship_def == null:
 		return NODE_R
-	var pts: Array[Vector2] = []
-	for i: int in model.count():
-		pts.append(subsystem_pos(i))
-	var least: float = INF
-	for i: int in pts.size():
-		for j: int in range(i + 1, pts.size()):
-			least = minf(least, pts[i].distance_to(pts[j]))
-	return clampf((least - 3.0) / 2.0, NODE_R_MIN, NODE_R)
+	_ensure_geo()
+	return _geo_node_r
 
 
 func rotate_by(d: Vector2) -> void:
@@ -96,15 +104,58 @@ func move_cursor(d: Vector2) -> int:
 
 ## Screen position of a ship-frame point (m) and its depth (larger is nearer).
 func project(p: Vector3) -> Vector3:
+	if model != null and model.ship_def != null:
+		_ensure_geo()
+	return _project(p)
+
+
+## `project` with the cached hint height (the cache is current).
+func _project(p: Vector3) -> Vector3:
 	var q: Vector3 = _basis() * p
 	var flat: Vector2 = Vector2(q.x, -q.y).rotated(PI / 2.0) * _scale()
-	var top: float = hint_height()
+	var top: float = _geo_hint_h
 	return Vector3(size.x / 2.0 + flat.x, top + (size.y - top) * 0.47 + flat.y, q.z)
 
 
 func subsystem_pos(i: int) -> Vector2:
-	var p: Vector3 = project(model.ship_def.subsystems[i].position)
-	return Vector2(p.x, p.y)
+	_ensure_geo()
+	return _geo_pos[i]
+
+
+## Rebuilds the cached projection when what it depends on changed: the view angles, the
+## size, the ship, the form and the language (the hint's wording and height).
+func _ensure_geo() -> void:
+	var key: Array = [
+		yaw,
+		pitch,
+		size,
+		model.ship_def,
+		model.count(),
+		phone(),
+		TranslationServer.get_locale(),
+		get_theme_default_font_size(),
+	]
+	if key == _geo_key:
+		return
+	_geo_key = key
+	_geo_serial += 1
+	_geo_hint_h = _hint_height()
+	var subs: Array[SubsystemDef] = model.ship_def.subsystems
+	_geo_pos.clear()
+	_geo_depth.clear()
+	for i: int in model.count():
+		var p: Vector3 = _project(subs[i].position)
+		_geo_pos.append(Vector2(p.x, p.y))
+		_geo_depth.append(p.z)
+	_geo_order.clear()
+	_geo_order.assign(range(model.count()))
+	_geo_order.sort_custom(func(a: int, b: int) -> bool: return _geo_depth[a] < _geo_depth[b])
+	var least: float = INF
+	for i: int in _geo_pos.size():
+		for j: int in range(i + 1, _geo_pos.size()):
+			least = minf(least, _geo_pos[i].distance_to(_geo_pos[j]))
+	_geo_node_r = clampf((least - 3.0) / 2.0, NODE_R_MIN, NODE_R)
+	_geo_hull = _hull_lines()
 
 
 ## The subsystem whose disc is under pos (within radius px of its centre), or -1.
@@ -235,15 +286,8 @@ func _draw() -> void:
 		var c: Vector2 = Vector2(p.x, p.y)
 		draw_line(c + Vector2(-6, -6), c + Vector2(6, 6), col, 2.5)
 		draw_line(c + Vector2(-6, 6), c + Vector2(6, -6), col, 2.5)
-	var order: Array = range(model.count())
-	order.sort_custom(
-		func(a: int, b: int) -> bool:
-			return (
-				project(model.ship_def.subsystems[a].position).z
-				< project(model.ship_def.subsystems[b].position).z
-			)
-	)
-	for i: int in order:
+	_ensure_geo()
+	for i: int in _geo_order:
 		_draw_subsystem(i)
 	# Labels over every disc, outlined, so a near disc never hides a far one's name.
 	var rects: Dictionary = label_rects()
@@ -275,23 +319,33 @@ func _draw() -> void:
 
 func _draw_hull() -> void:
 	var line: Color = Palette.color("line")
+	for pts: PackedVector2Array in _geo_hull:
+		draw_polyline(pts, line, 1.0, true)
+
+
+## The hull's lines in this control's space: each section's closed ring, then the spines
+## along the hull (one per ring point).
+func _hull_lines() -> Array[PackedVector2Array]:
+	var out: Array[PackedVector2Array] = []
 	var rings: Array[PackedVector2Array] = []
+	var stretch: Vector3 = _hull_scale()
 	for sec: Vector4 in SECTIONS:
 		var ring: PackedVector2Array = []
 		for k: int in RING:
 			var t: float = TAU * k / RING
 			var p: Vector3 = Vector3(cos(t) * sec.y, sec.w + sin(t) * sec.z, sec.x)
-			var q: Vector3 = project(p * _hull_scale())
+			var q: Vector3 = _project(p * stretch)
 			ring.append(Vector2(q.x, q.y))
 		rings.append(ring)
 		var closed: PackedVector2Array = ring.duplicate()
 		closed.append(ring[0])
-		draw_polyline(closed, line, 1.0, true)
+		out.append(closed)
 	for k: int in RING:
 		var spine: PackedVector2Array = []
 		for ring: PackedVector2Array in rings:
 			spine.append(ring[k])
-		draw_polyline(spine, line, 1.0, true)
+		out.append(spine)
+	return out
 
 
 func _draw_subsystem(i: int) -> void:
@@ -324,6 +378,25 @@ func _draw_subsystem(i: int) -> void:
 ## label ("SNS 100%") finds no spot shows its short name alone ("SNS", see `shortened`);
 ## below the disc when nothing is free.
 func label_rects() -> Dictionary:
+	if model == null or model.ship_def == null:
+		return {}
+	_ensure_geo()
+	# The layout reads the geometry, the label texts (the health percentages) and where the
+	# crew sit: it is redone only when one of them changed (R20-6).
+	var texts: PackedStringArray = PackedStringArray()
+	for i: int in model.count():
+		texts.append(_label(i))
+	var jobs: PackedInt32Array = PackedInt32Array()
+	for c: int in model.crew_count():
+		jobs.append(model.crew_job(c))
+	var key: Array = [_geo_serial, texts, jobs]
+	if key != _labels_key:
+		_labels_key = key
+		_labels_out = _place_labels()
+	return _labels_out
+
+
+func _place_labels() -> Dictionary:
 	var font: Font = get_theme_default_font()
 	var fs: int = _label_size()
 	var taken: Array[Rect2] = []
@@ -446,14 +519,13 @@ func _draw_crews() -> void:
 		)
 
 
+## A subsystem's disc and health-bar colour: the shared health bands (HealthBand through
+## StatusView.bar_role, R05-2), so Engineering and the status view colour one health alike;
+## a destroyed part (0) is the plain line colour.
 static func _health_color(h: float) -> Color:
 	if h <= 0.0:
 		return Palette.color("line")
-	if h < 0.34:
-		return Palette.color("danger")
-	if h < 1.0:
-		return Palette.color("warn")
-	return Palette.color("ok")
+	return Palette.color(StatusView.bar_role(h))
 
 
 func _basis() -> Basis:
@@ -473,12 +545,19 @@ func _hull_scale() -> Vector3:
 func _scale() -> float:
 	var hs: Vector3 = _hull_scale()
 	var extent: float = maxf(2.7 * hs.z, maxf(0.5 * hs.x, 0.28 * hs.y + 4.0))
-	return minf(size.x * 1.1, (size.y - hint_height()) * 0.9) / (2.0 * extent)
+	return minf(size.x * 1.1, (size.y - _geo_hint_h) * 0.9) / (2.0 * extent)
 
 
 ## The room the hint takes at the top, 0 on a short cutaway (a phone upright under the
 ## banner); the hull is drawn below it, so the two never overlap (T2).
 func hint_height() -> float:
+	if model == null or model.ship_def == null:
+		return _hint_height()
+	_ensure_geo()
+	return _geo_hint_h
+
+
+func _hint_height() -> float:
 	if size.y < HINT_MIN_H or model == null or hint_beside():
 		return 0.0
 	var fs: int = get_theme_default_font_size() - 2

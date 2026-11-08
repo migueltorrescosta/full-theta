@@ -112,7 +112,7 @@ func _text(kind: StringName, p: Dictionary) -> String:
 	match kind:
 		&"hit":
 			var v: Vector3 = p.get("vector", Vector3.ZERO)
-			return tr("alerts.hit").format({"dir": _direction(v)})
+			return tr("alerts.hit").format({"dir": ChipText.clock_words(v)})
 		&"shield_low":
 			# An absent summary (Hard) arrives as 0: the alert without a number (D224).
 			var pct: int = roundi(float(p.get("value", 0)) * 100.0)
@@ -123,10 +123,3 @@ func _text(kind: StringName, p: Dictionary) -> String:
 			var tag: String = str(p.get("tag", ""))
 			return tr("alerts.fault." + tag if FAULT_KEYS.has(tag) else "alerts.fault")
 	return tr("alerts." + String(kind))
-
-
-## "4 high" in the session language (ship frame, FT-SPA-003).
-static func _direction(local: Vector3) -> String:
-	var words: PackedStringArray = Callout.clock_height(local).split(" ")
-	words[-1] = String(TranslationServer.translate("callout." + words[-1]))
-	return " ".join(words)

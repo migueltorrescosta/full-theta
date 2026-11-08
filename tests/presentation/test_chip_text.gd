@@ -50,3 +50,13 @@ func test_precise_bearing_and_mark() -> void:
 	assert_str(ChipText.precise(_dir(45.0, 12.0, 1000.0))).is_equal("brg 045 · mk +12")
 	assert_str(ChipText.precise(_dir(359.6, -7.0, 1000.0))).is_equal("brg 000 · mk -7")
 	assert_str(ChipText.precise(_dir(270.0, 0.0, 1000.0))).is_equal("brg 270 · mk +0")
+
+
+# FT: FT-WPN-005, FT-SPA-003
+func test_clock_words_translates_the_height_word_for_every_station() -> void:
+	assert_str(ChipText.clock_words(Vector3.FORWARD)).is_equal("12 level")
+	assert_str(ChipText.clock_words(Vector3(1, 1, 0))).is_equal("3 high")
+	assert_str(ChipText.clock_words(_dir(90.0, 70.0, 3000.0))).is_equal("overhead")
+	I18n.apply("it")
+	assert_str(ChipText.clock_words(_dir(120.0, 30.0, 4000.0))).is_equal("4 alto")
+	I18n.apply("en")

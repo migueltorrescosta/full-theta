@@ -363,7 +363,7 @@ func test_marker_labels_stay_clear_of_the_shield_ring() -> void:
 				if inside.encloses(box):
 					# The label stays within 48 px of its marker (D319), and clear of the
 					# reserved boxes unless the marker itself sits in one.
-					assert_float(HelmHud._gap(box, p)).is_less_equal(48.0)
+					assert_float(ChipLayout.gap_to(box, p)).is_less_equal(48.0)
 					if not reserved.any(func(area: Rect2) -> bool: return area.has_point(p)):
 						for area: Rect2 in reserved:
 							assert_bool(box.intersects(area)).is_false()
