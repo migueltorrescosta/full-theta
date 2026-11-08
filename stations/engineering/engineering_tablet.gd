@@ -44,28 +44,3 @@ func _group(panel: EngineeringPanel, ids: Array[String]) -> Control:
 			buttons[id] = b
 			grid.add_child(b)
 	return grid
-
-
-## Builds, rebuilds (a rotation) or drops `p`'s tablet rails for the viewport's form: only the
-## focused panel of a tablet, with a ship, gets them.
-static func sync(p: EngineeringPanel, screen: StationScreen) -> void:
-	if not p.is_inside_tree() or p.ship_def == null:
-		return
-	var want: bool = (
-		p.focused
-		and not p.docked
-		and screen != null
-		and LayoutMode.form_of(p) == LayoutMode.Form.TABLET
-		and TabletDock.fits(LayoutMode.dp_size_of(p.get_viewport()))
-	)
-	var portrait: bool = want and LayoutMode.portrait(screen.size)
-	var ui: EngineeringTablet = p.tablet_ui
-	if ui != null and (not want or ui.portrait != portrait):
-		if screen != null and screen.tablet_dock == ui.dock:
-			screen.set_tablet_dock(null)
-		ui.dock.queue_free()
-		p.tablet_ui = null
-	if want and p.tablet_ui == null:
-		p.tablet_ui = EngineeringTablet.new(p, portrait)
-		screen.set_tablet_dock(p.tablet_ui.dock)
-		p.update_rails()

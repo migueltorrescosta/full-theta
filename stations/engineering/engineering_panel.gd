@@ -159,9 +159,25 @@ func _mode_changed() -> void:
 	_apply_tablet.call_deferred()
 
 
-## Builds, rebuilds (a rotation) or drops the tablet's docked rails (EngineeringTablet.sync).
+## Builds, rebuilds (a rotation) or drops the tablet's docked rails (StationPanel.sync_tablet):
+## only the focused, undocked panel of a tablet, with a ship, gets them.
 func _apply_tablet() -> void:
-	EngineeringTablet.sync(self, screen())
+	if not is_inside_tree() or ship_def == null:
+		return
+	sync_tablet(
+		tablet_ui.dock if tablet_ui != null else null,
+		(
+			focused
+			and not docked
+			and LayoutMode.form_of(self) == LayoutMode.Form.TABLET
+			and TabletDock.fits(LayoutMode.dp_size_of(get_viewport()))
+		),
+		func() -> void: tablet_ui = null,
+		func(portrait: bool) -> TabletDock:
+			tablet_ui = EngineeringTablet.new(self, portrait)
+			update_rails()
+			return tablet_ui.dock
+	)
 
 
 ## The phone form the panel takes: PHONE_LANDSCAPE or PHONE_PORTRAIT when it shows its main

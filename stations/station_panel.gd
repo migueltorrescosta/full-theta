@@ -74,9 +74,46 @@ func screen_panels() -> int:
 	return s.panels.size() if s != null else 1
 
 
-## The form of the screen holding this panel (PhoneFrame.form_of_panel).
+## The form of the screen holding this panel, from the screen's own size (screen_dp): in the
+## game it fills the window; tests lay a screen out at a set size inside the tiny headless
+## window, which alone would read as a phone. Outside a screen, the viewport's form.
 func layout_form() -> LayoutMode.Form:
-	return PhoneFrame.form_of_panel(self)
+	if screen() == null:
+		return LayoutMode.form_of(self)
+	return LayoutMode.form_for(screen_dp(), LayoutMode.coarse_pointer())
+
+
+## Keeps the panel's tablet rails (#32, C4: Helm, Weapons, Engineering) in step with the
+## screen. `dock` is the rails' TabletDock, null for none. When the panel stops wanting rails
+## (`want`) or the screen turns, the dock leaves the screen and is freed, `drop` frees the
+## rest of the rails and held intents are let go; when it wants rails and has none,
+## `make(portrait)` builds them and returns their dock, which the screen then shows. Returns
+## the dock in use, or null.
+func sync_tablet(dock: TabletDock, want: bool, drop: Callable, make: Callable) -> TabletDock:
+	var s: StationScreen = screen()
+	want = want and s != null
+	var portrait: bool = want and LayoutMode.portrait(s.size)
+	if dock != null and (not want or dock.portrait != portrait):
+		if s != null and s.tablet_dock == dock:
+			s.set_tablet_dock(null)
+		dock.queue_free()
+		drop.call()
+		ctx.matcher.release_all()
+		dock = null
+	if want and dock == null:
+		dock = make.call(portrait)
+		s.set_tablet_dock(dock)
+	return dock
+
+
+## The screen's size in device-independent pixels (zero outside a screen).
+func screen_dp() -> Vector2:
+	var s: StationScreen = screen()
+	if s == null:
+		return Vector2.ZERO
+	var window: Window = get_window()
+	var factor: float = window.content_scale_factor if window != null else 1.0
+	return LayoutMode.dp_size(s.size, factor, LayoutMode.density())
 
 
 ## The screen binds the focused panel's pages when it lays out; a panel that builds (or

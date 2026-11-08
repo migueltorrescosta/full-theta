@@ -122,8 +122,8 @@ func build(owner_screen: StationScreen, main: Control, rows: VBoxContainer) -> v
 	band_guard.visible = false
 	band_guard.add_to_group(TouchInput.GROUP)
 	screen.add_child(band_guard)
-	long_press.ping.connect(screen.ping_at)
-	long_press.mark.connect(screen.mark_at)
+	long_press.ping.connect(screen.common.ping_at)
+	long_press.mark.connect(screen.common.mark_at)
 	long_press.armed.connect(_on_armed)
 	view_top.add_child(armed_ring)
 	screen.top_bar.alert_sheet_requested.connect(open_alert_sheet)
@@ -211,8 +211,9 @@ func _over_view(pos: Vector2) -> bool:
 	return not (hovered is BaseButton)
 
 
-## Each frame on a phone: the view-top row's contents and places (framed only).
-func process(now: int) -> void:
+## Each frame on a phone: the view-top row's contents and places (framed only); `left` is
+## every share's seconds left (CrewState.shares_left).
+func process(now: int, left: Dictionary) -> void:
 	view_top.visible = framed()
 	if not view_top.visible:
 		armed_ring.hide_ring()
@@ -232,21 +233,17 @@ func process(now: int) -> void:
 	var rows: Array = []
 	if crew:
 		for c: Dictionary in ChipView.incoming(ctx.view, screen.stations):
-			var text: String = "%s: %s" % [tr("station." + str(c["from"])), ChipView.label(c)]
 			(
 				rows
 				. append(
 					{
 						"id": c["id"],
-						"text": text,
+						"text": ChipStrip.asker(c),
 						"left": ChipView.left_s(ctx.view, c),
 						"effect": ChipLapse.effect(str(c["chip"])),
 					}
 				)
 			)
-	var left: Dictionary = {}
-	for id: StringName in ctx.crew.shares:
-		left[id] = ctx.crew.share_left(id, now)
 	request_chips.show_chips(rows, ShareBar.incoming_lines(screen.stations, left), now)
 	if screen.panels.size() == 2:
 		var other: String = screen.stations[1 - screen.focus_index]
@@ -403,21 +400,6 @@ func on_pinged(p: Dictionary) -> void:
 		label = ctx.view.callsign(int(item["id"]))
 	var text: String = TouchText.of("toast.pinged", "%s pinged %s") % [str(p.get("by", "")), label]
 	ping_toast.show_ping(text, ctx.now_ms())
-
-
-## The form of the station screen `panel` is on, from the screen's own size: in the game
-## it fills the window (LayoutMode.form_of); tests lay a screen out at a set size inside
-## the tiny headless window, which alone would read as a phone.
-static func form_of_panel(panel: Control) -> LayoutMode.Form:
-	var n: Node = panel
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	if n == null:
-		return LayoutMode.form_of(panel)
-	var vp: Viewport = panel.get_viewport()
-	var factor: float = (vp as Window).content_scale_factor if vp is Window else 1.0
-	var dp: Vector2 = LayoutMode.dp_size((n as Control).size, factor, LayoutMode.density())
-	return LayoutMode.form_for(dp, LayoutMode.coarse_pointer())
 
 
 ## A vertical stack of touch controls, UiTheme.TOUCH_GAP apart.

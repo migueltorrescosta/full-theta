@@ -155,24 +155,19 @@ func _apply_form() -> void:
 
 ## Builds, rebuilds (a rotation) or drops the tablet's docked rails for the viewport's form.
 func _apply_tablet() -> void:
-	var screen: StationScreen = self.screen()
-	var want: bool = (
-		focused and screen != null and _form() == LayoutMode.Form.TABLET and TabletDock.fits(_dp())
+	sync_tablet(
+		tablet_ui.dock if tablet_ui != null else null,
+		focused and _form() == LayoutMode.Form.TABLET and TabletDock.fits(screen_dp()),
+		func() -> void:
+			remove_child(tablet_ui)
+			tablet_ui.queue_free()
+			tablet_ui = null,
+		func(portrait: bool) -> TabletDock:
+			tablet_ui = HelmTouch.new(self, _dispatch, portrait, true)
+			add_child(tablet_ui)
+			_captured = false
+			return tablet_ui.dock
 	)
-	var portrait: bool = want and LayoutMode.portrait(screen.size)
-	if tablet_ui != null and (not want or tablet_ui.portrait != portrait):
-		if screen != null and screen.tablet_dock == tablet_ui.dock:
-			screen.set_tablet_dock(null)
-		tablet_ui.dock.queue_free()
-		remove_child(tablet_ui)
-		tablet_ui.queue_free()
-		tablet_ui = null
-		ctx.matcher.release_all()
-	if want and tablet_ui == null:
-		tablet_ui = HelmTouch.new(self, _dispatch, portrait, true)
-		add_child(tablet_ui)
-		_captured = false
-		screen.set_tablet_dock(tablet_ui.dock)
 
 
 ## The screen shows the tabs of the pages just built (it binds them on its own relayout,
@@ -186,25 +181,9 @@ func _show_pages() -> void:
 	screen.frame.show_tabs(form_now, alone)
 
 
-## The screen's form (LayoutMode.Form), measured on the screen's own size so a screen laid
-## out at a set size (tests, a dev seat) gets its layout; desktop outside a screen.
+## The screen's form (layout_form); desktop outside a screen.
 func _form() -> LayoutMode.Form:
-	var screen: StationScreen = self.screen()
-	if not is_inside_tree() or screen == null:
-		return LayoutMode.Form.DESKTOP
-	return LayoutMode.form_for(_dp(), LayoutMode.coarse_pointer())
-
-
-## The screen's size in device-independent pixels (zero outside a screen).
-func _dp() -> Vector2:
-	var screen: StationScreen = self.screen()
-	if not is_inside_tree() or screen == null:
-		return Vector2.ZERO
-	var ui_scale: float = 1.0
-	var window: Window = get_window()
-	if window != null:
-		ui_scale = window.content_scale_factor
-	return LayoutMode.dp_size(screen.size, ui_scale, LayoutMode.density())
+	return layout_form() if is_inside_tree() and screen() != null else LayoutMode.Form.DESKTOP
 
 
 ## Touch intent events go through the screen like a device's (StationScreen.dispatch).

@@ -416,7 +416,7 @@ func test_weapons_chips_inside_the_view() -> void:
 		w.step(0.016)
 		var view: Rect2 = Rect2(Vector2.ZERO, w._overlay.size)
 		assert_array(w.ctx.picture().items).is_not_empty()
-		for t: Dictionary in w._targets:
+		for t: Dictionary in w._overlay.targets:
 			var r: Rect2 = t["rect"]
 			(
 				assert_bool(view.encloses(r))
