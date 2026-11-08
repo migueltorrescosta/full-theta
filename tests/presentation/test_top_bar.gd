@@ -112,3 +112,24 @@ func test_cells_the_station_cannot_see_are_hidden() -> void:
 	bar.show_state("Kestrel", {"hull": 1.0, "shields": 2.0, "pips_used": 3}, 0, [], 1.0)
 	assert_bool(bar._shields.visible).is_true()
 	assert_bool(bar._pips.visible).is_true()
+
+
+# FT: FT-STN-001
+# w5: the phone timer's goal line ("2 foes") is never cut, beside the full-screen icon too.
+func test_phone_goal_line_fits_its_cell() -> void:
+	bar.set_phone(true)
+	bar.fullscreen.visible = true
+	for lang: String in I18n.LANGUAGES:
+		I18n.apply(lang)
+		var short: String = tr("goal.short_hostiles") % 2
+		bar.show_goal(tr("goal.hostiles") % 2, short)
+		bar.show_state("Kestrel", {"hull": 1.0}, 0, [], float(I18n.LANGUAGES.find(lang)))
+		var timer: Label = bar._phone_timer
+		var fs: int = timer.get_theme_font_size("font_size")
+		var need: float = timer.get_theme_font("font").get_string_size(
+			short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs
+		).x
+		assert_float(timer.custom_minimum_size.x).override_failure_message(lang).is_greater_equal(
+			need
+		)
+	I18n.apply("en")

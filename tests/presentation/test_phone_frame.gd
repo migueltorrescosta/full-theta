@@ -334,6 +334,13 @@ func test_request_chips_and_ping_toast() -> void:
 	await _frames(1)
 	assert_bool(s.frame.request_chips.is_visible_in_tree()).is_true()
 	assert_bool(s.chip_strip.visible).is_false()
+	# w5: under the selection chip, the chip column takes the view's width (its effect line
+	# wraps less and pushes the panel down less).
+	var chips: RequestChips = s.frame.request_chips
+	var sel: Control = s.frame.selection_chip
+	if chips.position.y >= sel.position.y + sel.size.y:
+		var view_w: float = s.focused_panel().view_rect().size.x - 2.0 * UiTheme.TOUCH_GAP
+		assert_float(chips.size.x).is_equal_approx(view_w, 1.0)
 	s.frame.request_chips.buttons(0)[0].pressed.emit()
 	assert_array(_sent(s, "answer_chip")).is_equal([["answer_chip", [5, true]]])
 	s.frame.request_chips.buttons(0)[1].pressed.emit()

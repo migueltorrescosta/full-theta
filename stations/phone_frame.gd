@@ -291,6 +291,10 @@ func _place_view_top() -> void:
 		selection_chip.size = selection_chip.get_combined_minimum_size()
 		row_h = selection_chip.size.y + gap
 	var cy: float = y if side_by_side else y + row_h
+	if not side_by_side:
+		# Under the chip the column takes the view's width: a chip's effect line wraps less
+		# and pushes the panel down less (w5).
+		col_w = x1 - x0
 	for c: Control in col:
 		var sz: Vector2 = c.get_combined_minimum_size()
 		c.size = Vector2(col_w, sz.y)

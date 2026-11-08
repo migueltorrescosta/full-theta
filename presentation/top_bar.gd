@@ -153,7 +153,13 @@ func _init() -> void:
 
 
 func _fit_timer() -> void:
-	_phone_timer.custom_minimum_size.x = TIMER_W_NARROW if fullscreen.visible else TIMER_W
+	var w: float = TIMER_W_NARROW if fullscreen.visible else TIMER_W
+	if _goal_short != "":
+		# The goal line ("2 foes") is never cut: the cell widens for it (w5).
+		var font: Font = _phone_timer.get_theme_font("font")
+		var fs: int = _phone_timer.get_theme_font_size("font_size")
+		w = maxf(w, ceilf(font.get_string_size(_goal_short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x))
+	_phone_timer.custom_minimum_size.x = w
 
 
 ## The bar's extra height for the goal row: none on a phone.
@@ -281,6 +287,7 @@ func show_state(
 	var secs: int = int(mission_s)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
 	_phone_timer.text = _timer.text if _goal_short == "" else "%s\n%s" % [_timer.text, _goal_short]
+	_fit_timer()
 	glance.set_values(
 		_fill(status, "hull", summaries, float(maxes.get("hull", 0.0))),
 		hull.trim_suffix("%"),
