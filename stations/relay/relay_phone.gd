@@ -272,11 +272,12 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 	panel._hint.offset_right = -(panel.size.x - r.end.x) - 8.0
 	var y: float = r.position.y + 4.0
 	if probes.get_parent() == self:
-		var half: float = maxf(r.size.x / 2.0 - 12.0, 1.0)
+		# The inbox line is the longer ("Incoming: Rock from Wren (Relay)"): 60 % of the width.
+		var left_w: float = maxf(r.size.x * 0.4 - 12.0, 1.0)
 		probes.position = Vector2(r.position.x + 8.0, y)
-		mail.position = Vector2(r.get_center().x + 4.0, y)
-		for l: Label in [probes, mail]:
-			l.size = Vector2(half, l.get_combined_minimum_size().y)
+		mail.position = Vector2(r.position.x + r.size.x * 0.4 + 4.0, y)
+		probes.size = Vector2(left_w, probes.get_combined_minimum_size().y)
+		mail.size = Vector2(maxf(r.size.x * 0.6 - 12.0, 1.0), mail.get_combined_minimum_size().y)
 		y += LINE_H
 	panel._hint.offset_top = position.y + y
 	panel._rename.custom_minimum_size = Vector2(220, UiTheme.TOUCH_PRIMARY)

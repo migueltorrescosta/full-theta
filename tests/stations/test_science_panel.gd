@@ -420,7 +420,7 @@ func test_list_stage_and_card_stay_side_by_side_at_853_wide() -> void:
 
 
 # FT: FT-SCI-006
-# R23-1 (C8): the subsystem the card lists as a weak point reads "(weak point)" in the Hack
+# R23-1 (C8): the subsystem the card lists as a weak point reads "(weak)" in the Hack
 # button and the phone's sheet; the others keep their plain names.
 func test_weak_point_is_marked_on_the_subsystem_choices() -> void:
 	var s: StationScreen = await _screen()
@@ -429,9 +429,9 @@ func test_weak_point_is_marked_on_the_subsystem_choices() -> void:
 	p.refresh()
 	var subs: Array[StringName] = p.subsystems()
 	assert_str(p._sub_label(subs, 0)).is_equal(tr("sci.weak_mark") % tr("eng.name." + str(subs[0])))
-	assert_str(p._sub_label(subs, 0)).contains("weak point")
+	assert_str(p._sub_label(subs, 0)).contains("(weak)")
 	assert_str(p._sub_label(subs, 1)).is_equal(tr("eng.name." + str(subs[1])))
-	assert_str((p._buttons["sub"] as Button).text).contains("weak point")
+	assert_str((p._buttons["sub"] as Button).text).contains("(weak)")
 
 
 # FT: FT-SCI-002
