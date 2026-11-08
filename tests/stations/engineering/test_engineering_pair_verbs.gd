@@ -113,7 +113,7 @@ func test_naming_the_cause_of_an_unknown_fault() -> void:
 	engines["fault_cause"] = 0
 	engines["fault_pick"] = 0
 	engines["health"] = 0.9 * 20_000_000.0
-	var lines: Array = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	var lines: Array = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(lines).contains(["Engines 90%: cause unknown. Pick one."])
 	_press(s, "cause_next")
 	_press(s, "cause_next")
@@ -129,8 +129,8 @@ func test_naming_the_cause_of_an_unknown_fault() -> void:
 	)
 	# The snapshot catches up with the pick.
 	engines["fault_pick"] = 2
-	e._pending.clear()
-	lines = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	e.model._pending.clear()
+	lines = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(lines).contains(["Engines 90%: trying Short circuit"])
 
 
@@ -145,10 +145,10 @@ func test_diagnosed_cause_is_shown() -> void:
 	engines["fault_cause"] = 3
 	engines["fault_pick"] = 0
 	engines["health"] = 0.9 * 20_000_000.0
-	var lines: Array = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	var lines: Array = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(lines).contains(["Engines 90%: Science found Software fault. Pick it."])
 	engines["fault_pick"] = 3
-	lines = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	lines = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(lines).contains(["Engines 90%: Software fault (diagnosed)"])
 
 
