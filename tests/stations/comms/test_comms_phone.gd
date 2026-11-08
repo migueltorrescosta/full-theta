@@ -198,7 +198,9 @@ func _walk_table(size: Vector2i, insets: Array) -> void:
 	var texts: PackedStringArray = PackedStringArray()
 	for l: Label in p.rep_view.get_children():
 		texts.append(l.text)
-	assert_str(" | ".join(texts)).contains("F1 +12").contains("F2 -2").contains("Kappa")
+	assert_str(" | ".join(texts)).contains("Your fleet +12").contains("Raiders -2").contains(
+		"Kappa"
+	)
 	_drop(s)
 
 

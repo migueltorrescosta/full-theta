@@ -94,6 +94,31 @@ func test_goods_are_bought_and_sold_by_key() -> void:
 	assert_str(_commands(s, "comms_trade")[3]["item"]).is_equal("repair:engines")
 
 
+# FT: FT-COM-004
+# R23-9 (C9): an offer card opens on its first trade row, not on "Go back", and shows Buy
+# and Sell buttons that do one step on the focused row; Sell is off where nothing buys back.
+func test_visible_buy_and_sell_buttons() -> void:
+	var s: StationScreen = await _screen()
+	var panel: CommsPanel = s.panels[0] as CommsPanel
+	var o: CommsOverlay = panel.overlay
+	assert_str(str(o.rows()[o.focus]["kind"])).is_not_equal("reply")
+	assert_bool(o.buy_button.visible).is_true()
+	assert_bool(o.sell_button.visible).is_true()
+	o.focus = _row(panel, "buy", "item", "parts")
+	assert_bool(o.buy_button.disabled).is_false()
+	assert_bool(o.sell_button.disabled).is_false()
+	o.buy_button.pressed.emit()
+	o.sell_button.pressed.emit()
+	var trades: Array = _commands(s, "comms_trade")
+	assert_array(trades).has_size(2)
+	assert_bool(trades[0]["buy"]).is_true()
+	assert_bool(trades[1]["buy"]).is_false()
+	o.focus = _row(panel, "buy", "item", "repair:engines")
+	assert_bool(o.sell_button.disabled).is_true()
+	o.focus = _row(panel, "reply", "n", 1)
+	assert_bool(o.buy_button.disabled).is_true()
+
+
 # FT: FT-MIS-036, FT-COM-009
 # The module's buy line names the module the full slot gives up and what the market pays for
 # it, and the net cost; buying sends the module and the slot, and the fitted module has a
