@@ -12,6 +12,16 @@
   columns touch them (FT-SIM-035, D124).
 - ScenarioApi keeps the world in `_world`, which GDScript can't hide: pure modules
   outside sim/api/ may not access `._world` (FT-ARC-016).
+- Every module is classified: a .gd file outside ALLOWED's modules and UNRESTRICTED is a
+  finding, so a new top-level folder can't name anything by default (F9, R14-2).
+- sim/ subpackages follow SIM_LAYERS: a file names only its own and lower layers; the
+  composition roots (SIM_ROOTS) name any, and SIM_BACK_EDGES lists the back-edges that
+  exist today, so no new one appears (F9, R14-3).
+- Pure modules name only content/ definitions, never its loader classes (a content/ file
+  that does I/O, loads resources or translates; F9, R14-5).
+- Clients name only the client-safe part of net/ (NET_CLIENT_SAFE: protocol, codec, view
+  keys and enums, readers), and those files name no sim/, director/ or server net/ class,
+  so a client never compiles the server (F4, R14-1, D103).
 
 A token scan over .gd files with comments and strings stripped; string contents are
 checked only for res:// paths. Prints file:line messages and exits 1 on any finding.
@@ -26,8 +36,10 @@ from pathlib import Path
 PURE = {"sim", "director", "scenarios", "shared"}
 CLIENTS = {"stations", "input", "presentation", "audio"}
 BASE = {"shared", "content"}
-# Folders each module may name (spec §2.2); modules not listed (app/, tests/, tools/)
-# may name anything. sim/api/ is the Scenario API, the only part of sim/ that
+# Modules that may name anything (spec §2.2): the app that composes everything, the tests,
+# the tools and the vendored addons. Every other .gd file's module must be in ALLOWED.
+UNRESTRICTED = {"app", "tests", "tools", "addons"}
+# Folders each module may name (spec §2.2). sim/api/ is the Scenario API, the only part of sim/ that
 # director/ and scenarios/ see (FT-ARC-016, FT-DAT-007).
 ALLOWED = {
     "sim": {"sim", "sim/api"} | BASE,
@@ -39,6 +51,59 @@ ALLOWED = {
     "net": {"net", "sim", "sim/api", "director"} | BASE,
     **{c: CLIENTS | {"net"} | BASE for c in CLIENTS},
 }
+# sim/ subpackages, lowest first (R14-3): core tables and helpers, then the systems, then
+# story and economy, the run, flight, hazards and the AI on top. A file names its own layer
+# and those below it.
+SIM_LAYERS = [
+    "core", "damage", "power", "knowledge", "combat", "relay", "shields", "science",
+    "story", "economy", "run", "flight", "hazard", "ai", "api",
+]
+# The world and the command registry put every subpackage together.
+SIM_ROOTS = {"sim/core/sim_world.gd", "sim/core/sim_commands.gd", "sim/core/hit_resolver.gd"}
+# Back-edges that exist today (file, class named): each is a cycle to untangle, none may be
+# added (R14-3; remove an entry when its edge goes).
+SIM_BACK_EDGES = {
+    ("sim/combat/guidance_system.gd", "ProbeSystem"),
+    ("sim/combat/guidance_system.gd", "ScienceSystem"),
+    ("sim/damage/damage_system.gd", "KnowledgeSystem"),
+    ("sim/damage/damage_table.gd", "PowerSystem"),
+    ("sim/knowledge/knowledge_system.gd", "ProbeSystem"),
+    ("sim/knowledge/knowledge_system.gd", "ScienceKnowledge"),
+    ("sim/run/m1_encounter.gd", "HazardSystem"),
+    ("sim/run/outcome_system.gd", "AiTable"),
+    ("sim/run/run_setup.gd", "HazardSystem"),
+    ("sim/science/science_knowledge.gd", "StoryRules"),
+    ("sim/story/story.gd", "Reputation"),
+    ("sim/story/story_rules.gd", "Economy"),
+    ("sim/story/story_rules.gd", "Reputation"),
+}
+# The net/ files clients may name (F4, R14-1): the wire protocol and codec, view keys and
+# enums, and the readers of snapshots and events. They name only each other, shared/ and
+# content/; every other net/ file is the server's.
+NET_CLIENT_SAFE = {
+    "net/block_schema.gd",
+    "net/chip_view.gd",
+    "net/crew_marks.gd",
+    "net/data_toggles.gd",
+    "net/fleet_messages.gd",
+    "net/load_probe.gd",
+    "net/main_screen.gd",
+    "net/net_block.gd",
+    "net/net_chunker.gd",
+    "net/net_client.gd",
+    "net/net_codec.gd",
+    "net/net_event_inbox.gd",
+    "net/net_protocol.gd",
+    "net/net_send_queue.gd",
+    "net/net_view_state.gd",
+    "net/snapshot_reader.gd",
+    "net/station_def.gd",
+    "net/station_views.gd",
+    "net/view_filter.gd",
+    "net/voice/dialogue_lines.gd",
+}
+# Tokens that make a content/ file a loader rather than a definition (R14-5).
+LOADER_TOKENS = {"FileAccess", "DirAccess", "ResourceLoader", "TranslationServer"}
 PURE_BASES = {"RefCounted", "Object", "Resource"}
 BANNED = {
     "scene tree access": {"SceneTree", "get_tree", "get_main_loop", "get_node"},
@@ -95,6 +160,19 @@ def may_name(module: str, target: str) -> bool:
     return target == module or target in ALLOWED.get(module, {target})
 
 
+def sim_layer(rel: str) -> str | None:
+    """The SIM_LAYERS entry of a file in a sim/ subpackage, or None (not in one)."""
+    parts = rel.split("/")
+    return parts[1] if parts[0] == "sim" and len(parts) > 2 and parts[1] in SIM_LAYERS else None
+
+
+def is_loader(code: str) -> bool:
+    """Whether a content/ file does I/O, loads resources or translates."""
+    words = set(re.findall(r"[A-Za-z_]\w*", code))
+    bare_load = re.search(r"(?<![.\w])(load|preload)\s*\(", code) is not None
+    return bool(words & LOADER_TOKENS) or bare_load
+
+
 def lint(root: Path) -> list[str]:
     files, errors = {}, []
     for path in sorted(root.rglob("*.gd")):
@@ -102,10 +180,13 @@ def lint(root: Path) -> list[str]:
         if any(p.startswith(".") for p in rel.split("/")) or rel.startswith(SKIP_PREFIX):
             continue
         files[rel] = strip(path.read_text(encoding="utf-8"))
-    classes = {}
+    classes, class_file, loaders = {}, {}, set()
     for rel, (code, _) in files.items():
         for m in re.finditer(r"\bclass_name\s+(\w+)", code):
             classes[m.group(1)] = module_of(rel)
+            class_file[m.group(1)] = rel
+            if module_of(rel) == "content" and is_loader(code):
+                loaders.add(m.group(1))
 
     for rel, (code, strings) in files.items():
         module = module_of(rel)
@@ -113,6 +194,12 @@ def lint(root: Path) -> list[str]:
 
         def report(pos: int, msg: str) -> None:
             errors.append((rel, bisect.bisect_left(lines, pos) + 1, msg))
+
+        if module not in ALLOWED and module not in UNRESTRICTED:
+            report(0, f"{module or 'the root'}/ is not a classified module: add it to "
+                   "tools/lint_arch.py ALLOWED or UNRESTRICTED (spec §2.2)")
+        layer = None if rel in SIM_ROOTS else sim_layer(rel)
+        client_safe = rel in NET_CLIENT_SAFE
 
         for pos, s in strings:
             for m in re.finditer(r"res://([^\"']+/)", s):
@@ -128,6 +215,27 @@ def lint(root: Path) -> list[str]:
             target = classes.get(word)
             if target is not None and not dotted and not may_name(module, target):
                 report(pos, f"{module}/ must not use {word} from {target}/ (spec §2.2)")
+            elif target is not None and not dotted:
+                where = class_file[word]
+                if module in CLIENTS and target == "net" and where not in NET_CLIENT_SAFE:
+                    report(pos, f"{module}/ must not use {word}: {where} is the server's; "
+                           "clients name only NET_CLIENT_SAFE (F4, D103)")
+                if client_safe and where != rel and (
+                    target in {"sim", "sim/api", "director"}
+                    or (target == "net" and where not in NET_CLIENT_SAFE)
+                ):
+                    report(pos, f"{word}: client-safe {rel} must not name {where} (F4, D103)")
+                to_layer = sim_layer(where)
+                if (
+                    layer is not None and to_layer is not None
+                    and SIM_LAYERS.index(to_layer) > SIM_LAYERS.index(layer)
+                    and (rel, word) not in SIM_BACK_EDGES
+                ):
+                    report(pos, f"sim/{layer}/ must not use {word} from the higher sim/{to_layer}/ "
+                           "(SIM_LAYERS, R14-3)")
+                if module.split("/")[0] in PURE and word in loaders:
+                    report(pos, f"{word}: {module}/ may name content/ definitions, not loaders "
+                           "(FT-ARC-020, R14-5)")
             if module.split("/")[0] not in PURE:
                 continue
             for what, names in BANNED.items():

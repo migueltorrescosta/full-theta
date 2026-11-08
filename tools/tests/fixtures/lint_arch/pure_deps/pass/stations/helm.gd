@@ -1,5 +1,5 @@
 class_name Helm
 extends Control
 
-var session: Session
+var protocol: Protocol
 var lead: Lead
