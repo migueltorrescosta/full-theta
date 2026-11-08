@@ -12,9 +12,12 @@ extends PanelContainer
 ## step reads in touch words from `train.touch.<station>.<intent>` or `train.touch.<intent>`
 ## (control names in {t:key} are the translated labels of the controls themselves), with no
 ## key names and no key on Next; a pad in use (D321) gets the pad's buttons, and a keyboard
-## the keys, as before. On a touch layout the card also keeps clear of the station's
-## controls (D322): it sits where no tap target is, as a card of the step, its how-to and
-## Next, or folded to one line, and moves when a page change takes its place.
+## the keys, as before. On a pad, a step whose control sits only in the Helm radial says the
+## radial route in its example (D1). A command step also has Skip (no key, so it is never
+## pressed by accident): a player who cannot do it on their device moves on. On a touch
+## layout the card also keeps clear of the station's controls (D322): it sits where no tap
+## target is, as a card of the step, its how-to and Next, or folded to one line, and moves
+## when a page change takes its place.
 
 const LINE_PREFIX: String = "shakedown."
 const PAIR_PREFIX: String = "pair_"
@@ -32,6 +35,9 @@ const STATIONS: Array[String] = [
 	"helm", "weapons", "engineering", "science", "relay", "comms", "captain"
 ]
 
+## The step list, loaded on first use (is_command_step).
+static var _steps: TrainingStepsDef
+
 var ctx: StationContext
 ## The station whose step shows (the screen's focused station).
 var station: String = ""
@@ -40,6 +46,7 @@ var _title: Label
 var _text: Label
 var _example: Label
 var _next: Button
+var _skip: Button
 var _col: VBoxContainer
 var _head: HBoxContainer
 var _fold: Button
@@ -95,6 +102,12 @@ func setup(context: StationContext) -> void:
 	_next.custom_minimum_size = Vector2(0.0, 52.0)
 	_next.pressed.connect(press)
 	_col.add_child(_next)
+	_skip = Button.new()
+	_skip.name = "Skip"
+	_skip.focus_mode = Control.FOCUS_NONE
+	_skip.custom_minimum_size = Vector2(0.0, 36.0)
+	_skip.pressed.connect(skip_step)
+	_col.add_child(_skip)
 	visible = false
 
 
@@ -131,14 +144,19 @@ func refresh() -> void:
 	_title.text = tr("train.title")
 	_title.visible = not touch
 	var text: String = str(entry["text"])
+	var intent: String = str(entry.get("intent", ""))
 	var example: String = ""
 	if words:
 		text = strip_markers(text)
-		example = touch_text(station, str(entry.get("intent", "")))
+		example = touch_text(station, intent)
 	if example == "":
 		var key: String = str(entry.get("example", ""))
 		if key != "":
 			example = BindingText.fill_markers(tr(key), ctx.settings.bindings, device)
+	if not words:
+		var route: String = BindingText.radial_route(intent, ctx.settings.bindings, device)
+		if route != "" and ctx.settings.bindings.bindings(intent, device).is_empty():
+			example = tr("train.ex.radial") % route
 	_text.text = text if words else BindingText.fill_markers(text, ctx.settings.bindings, device)
 	_example.text = example
 	var done: bool = bool(entry.get("done", false))
@@ -148,6 +166,8 @@ func refresh() -> void:
 	else:
 		_next.text = "%s  (%s)" % [tr("train.next"), _next_binding(device)]
 	_set_touch_layout(touch)
+	_skip.text = tr("train.skip")
+	_skip.visible = not done and is_command_step(station, intent) and not (touch and is_folded())
 	_example.visible = example != "" and not (touch and is_folded())
 	if touch:
 		var key: Array = _layout_key()
@@ -218,6 +238,7 @@ func _set_touch_layout(touch: bool) -> void:
 		_fold.text = "▸" if is_folded() else "▾"
 		_fold.tooltip_text = tr("train.expand") if is_folded() else tr("train.collapse")
 		_next.custom_minimum_size = Vector2(0.0, UiTheme.TOUCH_PRIMARY)
+		_skip.custom_minimum_size = Vector2(0.0, UiTheme.TOUCH_PRIMARY)
 		var width: float = card_width()
 		custom_minimum_size.x = width
 		# Folded, Next sits in the one line, left of the fold button.
@@ -243,6 +264,7 @@ func _set_touch_layout(touch: bool) -> void:
 				Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 12
 			)
 		_next.custom_minimum_size = Vector2(0.0, 52.0)
+		_skip.custom_minimum_size = Vector2(0.0, 36.0)
 		custom_minimum_size.x = 0.0 if _docked else 420.0
 		if _next.get_parent() != _col:
 			_next.reparent(_col, false)
@@ -344,6 +366,7 @@ func _layout_key() -> Array:
 func _arrange() -> Vector2:
 	_set_touch_layout(true)
 	_example.visible = _example.text != "" and not is_folded()
+	_skip.visible = _skip.visible and not is_folded()
 	reset_size()
 	return Vector2(card_width(), maxf(get_combined_minimum_size().y, 1.0))
 
@@ -381,6 +404,25 @@ func press() -> bool:
 		return false
 	ctx.intents.command({"kind": "training_next", "station": station})
 	return true
+
+
+## Skips the focused station's step (the Skip button): the server moves it past a step it
+## cannot finish. False when no step is showing.
+func skip_step() -> bool:
+	if not visible or station == "":
+		return false
+	ctx.intents.command({"kind": "training_next", "station": station, "skip": true})
+	return true
+
+
+## True when `intent`'s step of `for_station` ends on a sim command, not on Next.
+static func is_command_step(for_station: String, intent: String) -> bool:
+	if _steps == null:
+		_steps = load("res://content/training/steps.tres") as TrainingStepsDef
+	for s: TrainingStepDef in _steps.steps:
+		if s.station == StringName(for_station) and s.intent == StringName(intent):
+			return s.kind == TrainingStepDef.Kind.COMMAND
+	return false
 
 
 func _next_binding(device: String) -> String:
