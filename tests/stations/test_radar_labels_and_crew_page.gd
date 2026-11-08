@@ -91,9 +91,13 @@ func test_first_visit_chips_stack_without_overlap() -> void:
 		for i: int in 2:
 			var upper: Rect2 = chips[i].get_global_rect()
 			var lower: Rect2 = chips[i + 1].get_global_rect()
-			assert_float(lower.position.y).override_failure_message(
-				"%s: %s under %s" % [entry, chips[i + 1].name, chips[i].name]
-			).is_greater_equal(upper.end.y)
+			(
+				assert_float(lower.position.y)
+				. override_failure_message(
+					"%s: %s under %s" % [entry, chips[i + 1].name, chips[i].name]
+				)
+				. is_greater_equal(upper.end.y)
+			)
 		s.queue_free()
 		await get_tree().process_frame
 		if FileAccess.file_exists(SETTINGS):

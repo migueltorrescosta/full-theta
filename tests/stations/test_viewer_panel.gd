@@ -178,7 +178,9 @@ func test_the_caption_never_pushes_a_contact_off_the_rail() -> void:
 	var font: Font = ThemeDB.fallback_font
 	var x: float = 12.0
 	for text: String in ["F4 · 7 level · close", "H2 · 4 high · mid"]:
-		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, ViewerPanel.FONT_SIZE).x
+		var w: float = (
+			font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, ViewerPanel.FONT_SIZE).x
+		)
 		assert_bool(ViewerPanel.rail_fits(x, w, 374.0)).override_failure_message(text).is_true()
 		x += w + 28.0
 	var caption: float = (
