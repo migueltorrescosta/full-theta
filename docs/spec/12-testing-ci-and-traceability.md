@@ -12,14 +12,14 @@
 | L5 visual | Screenshots under Xvfb with llvmpipe, tolerant diffs, baselines tagged with the Mesa version | fugaku |
 | L6 export | Linux, Windows, macOS exports and smoke run, including the bundled web export and Piper | fugaku, tags |
 
-Every gate script first runs `godot --headless --import`.
+Every gate script first runs `godot --headless --import`. The gate tiers (`tools/gate.sh`, table in `tools/README.md`) map onto the layers: `l0` is L0, `l1` runs L1, L2 and L3 in shards, `l2` is a quick sim-only subset of `l1`, `l4` and `l4load` are L4, `l5` is L5 and `l6` is L6; with no argument the gate runs `l0 l1`, as CI does (D390).
 
 ## 12.2 Requirements
 
 - **FT-TST-001** Tests shall use gdUnit4, vendored at a pinned tag. (D70)
-- **FT-TST-002** L0–L3 shall run headless with no GPU. (D70, D244)
+- **FT-TST-002** L0–L3 (the `l0` and `l1` gate tiers) shall run headless with no GPU. (D70, D244, D390)
 - **FT-TST-003** Screenshot tests shall run on fugaku with software GL (llvmpipe under Xvfb) and tolerant image diffs. (D70)
-- **FT-TST-004** CI shall run the full L0–L3 suite on every ready (non-draft) PR. (D70)
+- **FT-TST-004** CI shall run the full L0–L3 suite, the `l0` and `l1` gate tiers, on every ready (non-draft) PR. (D70, D390)
 - **FT-TST-005** L4–L6 shall run locally on fugaku, and the PR body shall record which commit passed which gate. (D70)
 - **FT-TST-006** Tests shall cover simulation, weapon geometry, damage, networking, mission transitions, run resets and all 15 pairs. (v0.3 §11)
 - **FT-TST-007** Physics tests shall include analytic checks (constant thrust, momentum conservation, zero-input hold). (D24, D70)

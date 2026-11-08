@@ -34,7 +34,7 @@ The host's **Network** list names each address with its interface (for example `
 build/linux/full-theta.x86_64 --headless -- --server --bind 192.168.1.20 --name "Bridge night"
 ```
 
-`--bind` is required: the one address to listen on, never every interface. The header of `app/server_main.gd` (`ServerMain`) lists every flag, among them `--port`, `--dev-all-stations`, `--language`, `--idle-exit-min`, `--http-root` (serve the web build for browser stations) and `--no-beacon`. The server prints `server: listening on ADDR:PORT` once it is ready; stop it with Ctrl+C.
+`--bind` is required: the one address to listen on, never every interface. The header of `app/server_main.gd` (`ServerMain`) lists every flag, among them `--port`, `--dev-all-stations`, `--language`, `--idle-exit-min`, `--http-root` (serve the web build for browser stations) and `--no-beacon`. The server prints `server: listening on ADDR:PORT, protocol N` and then `ready ws=ADDR:PORT http=ADDR:PORT` (http 0 when it serves no web build) once it is ready; stop it with Ctrl+C.
 
 ### HTTPS on a tailnet
 

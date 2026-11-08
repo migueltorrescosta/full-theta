@@ -6,7 +6,7 @@ Wireframes are 16:9 sketches. A requirement below that says "on Easy" for a data
 
 ## 5.0 Common to every station
 
-Top bar: ship name, hull, shields, reactor, alert level, station name(s), mission timer. Any crew station sets the alert level from the top bar (D89). Toasts top-right. Colour-blind-safe palette. The shared disc radar (§6) appears on every station (D43). Every callsign chip is clickable (select) and pingable (D61).
+Top bar: ship name, hull, shields, reactor, alert level, station name(s), mission timer and the crew's goal with its progress (a Goal row on a desktop, the timer's second line on a phone; D354). Any crew station sets the alert level from the top bar (D89). Toasts top-right. Colour-blind-safe palette. The shared disc radar (§6) appears on every station (D43). Every callsign chip is clickable (select) and pingable (D61).
 
 Common actions have the same binding on every station (D95). Station-specific bindings below avoid these keys and the always-live keys. In cockpit and turret views, where the mouse or sticks steer, "under the cursor" means under the reticle, and a left click selects only when the pointer is over a chip, mark or radar item; elsewhere it fires (T and Y also select). The binding-table check exempts this pointer case (D176).
 
@@ -15,28 +15,28 @@ Common actions have the same binding on every station (D95). Station-specific bi
 | Select under the cursor | click | A | tap |
 | Cycle target | T | RB | swipe the target chip |
 | Select the last pinged item | Y | hold RB | tap the ping toast |
-| Ping | middle-click | R3 | long-press |
-| Place a mark at the cursor, or on the selection | Shift+middle-click | hold R3 | long-press, then drag |
+| Ping | middle-click or Shift+P | R3 | long-press |
+| Place a mark at the cursor, or on the selection | Shift+middle-click or Shift+M | hold R3 | long-press, then drag |
 | Accept / decline (oldest request, mark or selected card) | Enter / Backspace | X / Y | ACCEPT / DECLINE |
 | Send a request chip (§7.4) | B, then 1–2 if the station has several | View+Y, then d-pad | chip bar |
 | Claim / release | K | View+X | CLAIM |
 | Radar side strip (§6.2) | Z | View + d-pad left | — |
 | Controls overlay | ? | View (tap) | i |
 
-Always-live set (works whatever panel has focus, §5.9): alert (Alt+A cycles; hold View + d-pad up Red, right Yellow, down Normal), ping (as above), panel switch (F1/F2; hold View + LB/RB; tap the panel), Helm translation (WASD, R/V), face (hold F; hold L3) and all-stop (Space; View+B). On a controller the sticks belong to the focused panel, so Helm translation is KB/M only and flight assist holds the throttle setpoint (D97). No station binds an always-live key for anything else.
+Every Alt shortcut also has a plain key: Shift+Tab alert, Shift+B share, Shift+N the lesson's Next, Relay's 1–5 views (D372). Always-live set (works whatever panel has focus, §5.9): alert (Alt+A or Shift+Tab cycles; hold View + d-pad up Red, right Yellow, down Normal), ping (as above), panel switch (F1/F2; hold View + LB/RB; tap the panel), Helm translation (WASD, R/V), face (hold F; hold L3) and all-stop (Space; View+B). On a controller the sticks belong to the focused panel, so Helm translation is KB/M only and flight assist holds the throttle setpoint (D97). No station binds an always-live key for anything else.
 
-- **FT-STN-001** Every station shall show the common top bar. (station-ui §2)
+- **FT-STN-001** Every station shall show the common top bar, with the crew's goal and its progress. (station-ui §2, D354)
 - **FT-STN-002** Every station shall show the shared disc radar at some size. (D43)
 - **FT-STN-003** Every callsign chip and mark shall be selectable by click/tap and pingable by middle-click/long-press. (D44, D61)
 - **FT-STN-004** Every critical alert shall be both visual and audible on the affected stations. (v0.3 §5)
-- **FT-STN-005** Every station shall be usable with KB/M and a controller; touch layouts shall exist for every station once browser stations ship. Phones are laid out landscape-first, the layout chosen from physical size, pointer kind and orientation, with portrait operable in a reduced layout under a dismissible "Turn sideways for the full view" banner, never a block. Primary controls (rail buttons, sticks, throttle) are at least 48 px with 8 px between them, nothing tappable is under 44 px or in a phone's bottom 24 px, and controls stay inside `max(8px, env(safe-area-inset-*))` on phones. Primary controls sit in left and right rails under the thumbs and read-only information in the middle: Helm rails with tabs and drawers, Weapons docked rails, Science and Relay overlay rails. On a tablet (the touch form at a short side of at least 600 device-independent px, either orientation) Helm and Weapons dock two opaque rails at the screen's edges with the full tablet screen between them and no pages; upright the rails are one docked bottom bar, and no banner asks to turn the device (D324, D325). Android and iPad browsers get an optional Full screen button in the menu (Android also locks landscape; never on iPhone), a 48 px full-screen icon sits at the right of every station screen's top bar and the lobby in a browser on Android phones, tablets and desktops (never an iPhone), toggling in and out, and the shell caps the device pixel ratio at 2. (v0.3 §2, D8, D195, D218, D223, D272-D277, D323, D324, D325, D197)
+- **FT-STN-005** Every station shall be usable with KB/M and a controller; touch layouts shall exist for every station once browser stations ship. Phones are laid out landscape-first, the layout chosen from physical size, pointer kind and orientation, with portrait operable in a reduced layout under a dismissible "Turn sideways for the full view" banner, never a block. Primary controls (rail buttons, sticks, throttle) are at least 48 px with 8 px between them, nothing tappable is under 44 px or in a phone's bottom 24 px, and controls stay inside `max(8px, env(safe-area-inset-*))` on phones. Primary controls sit in left and right rails under the thumbs and read-only information in the middle: Helm rails with tabs and drawers, Weapons docked rails, Science and Relay overlay rails. On a tablet (the touch form at a short side of at least 600 device-independent px, either orientation) Helm and Weapons dock two opaque rails at the screen's edges with the full tablet screen between them and no pages; upright the rails are one docked bottom bar, and no banner asks to turn the device (D324, D325); Engineering docks rails the same way (D356). Settings offer a 3D resolution (Auto, half on a touch layout; Full; Half), a 30 fps cap and Low graphics (D375). Android and iPad browsers get an optional Full screen button in the menu (Android also locks landscape; never on iPhone), a 48 px full-screen icon sits at the right of every station screen's top bar and the lobby in a browser on Android phones, tablets and desktops (never an iPhone), toggling in and out, and the shell caps the device pixel ratio at 2. (v0.3 §2, D8, D195, D218, D223, D272-D277, D323, D324, D325, D197, D356, D375)
 - **FT-STN-006** UI colours shall stay distinguishable under the common forms of colour blindness, and allegiance and alert level shall also be encoded by letter or shape; the three alert levels are Normal (green circle, N), Yellow (amber triangle, Y) and Red (red square, R). (station-ui §2, plan review UX-8, D170)
-- **FT-STN-007** Input bindings shall be rebindable and persisted per client. (v0.3 §2)
-- **FT-STN-008** Any crew station shall set the ship's alert level, Normal, Yellow or Red, from the top bar (KB/M: click the alert chip for a three-button picker, or Alt+A to cycle; controller: hold View and press d-pad up for Red, right for Yellow, down for Normal; touch: tap the alert chip); the Captain and viewers shall not. (D15, D89, D170)
+- **FT-STN-007** Input bindings shall be rebindable and persisted per client; a rebind that duplicates a binding on the same station warns once and is then allowed. (v0.3 §2, D372)
+- **FT-STN-008** Any crew station shall set the ship's alert level, Normal, Yellow or Red, from the top bar (KB/M: click the alert chip for a three-button picker, or Alt+A or Shift+Tab to cycle; controller: hold View and press d-pad up for Red, right for Yellow, down for Normal; touch: tap the alert chip); the Captain and viewers shall not. (D15, D89, D170, D370)
 - **FT-STN-009** Every station shall bind the common actions of §5.0 identically, and no station-specific binding shall reuse a common or always-live key. (D95, plan review UX-5, D176, D181)
 - **FT-STN-010** Every crew station shall place a mark at its selection or cursor and send the request chips its pairs define, with one binding per device. (D44, §7.4, plan review STN-6)
 - **FT-STN-011** Settings and the controls shall be one opaque menu with tabs (Controls, Settings, Rebind keys). Escape shall open it on the tab last used; `?`, View or `i` shall open it on Controls. The Controls tab shall be generated from the live input map and translated, and the menu shall retranslate at once when the language changes. (D100, D185, plan review UX-1)
-- **FT-STN-012** The controls help shall never open by itself; a seat's first visit shall show a 6 s chip pointing to it, once per client and station, and a setting shall re-enable the chip. The help shall show a picture of the player's device, filtered to their own stations by default with a toggle for all. The Controls tab shall be headed by the seat's role summary (a short text of what the seat controls and what the crew expects, also shown on the seat's lobby entry), explain controls only and never tell a player to talk to another station. There is no separate first-run tooltip. (D100, D185, D292, FT-PAIR-012)
+- **FT-STN-012** The controls help shall never open by itself; a seat's first visit shall show a 6 s chip naming the Controls key of the device in use, and a 10 s chip reading a sample callout, once per client and station, and a setting shall re-enable the chip. The help shall show a picture of the player's device, filtered to their own stations by default with a toggle for all. The Controls tab shall be headed by the seat's role summary (a short text of what the seat controls and what the crew expects, also shown on the seat's lobby entry), explain controls only and never tell a player to talk to another station. There is no separate first-run tooltip. The Controls page links the callout card. (D100, D185, D292, FT-PAIR-012, D369, D371)
 - **FT-STN-013** Each client shall set a UI scale from 75 % to 150 %, persisted like bindings. (plan review UX-8)
 - **FT-STN-014** Every hold input shall be switchable to a toggle in the bindings. (plan review UX-8)
 - **FT-STN-015** The lobby catalogue shall show the load (intense, busy or light) of each station and joint view, read from its data definition (StationDef), as the colour of the name on its pick button (dark red, yellow, green), with a one-line legend above the list and no tag words: Helm and Weapons intense, Engineering and Science busy, Relay and Comms light; Tactical intense, Systems busy, Ops light; Captain light; Viewer uncoloured. (D99, D126, D187, D198, D257)
@@ -59,7 +59,7 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 +---------------------------------------'--6---'---------+
 ```
 
-- KB/M: WASD translate, R/V up/down, mouse pitch/yaw, Q/E roll, Space all-stop, hold X approach, Tab decoupled, hold F face, L align, C chase camera, H dock, J jump, numpad 1–6 shield faces, click shield-ring sector, G shield track selected, B boost request; T/Y select (§5.0).
+- KB/M: WASD translate, R/V up/down, mouse pitch/yaw, Q/E roll, Space all-stop, hold X approach, Tab decoupled, hold F face, L align, C chase camera, H dock, J jump, numpad 1–6 or Shift+1–6 shield faces, click shield-ring sector, G shield track selected, B boost request; T/Y select (§5.0).
 - Controller: left stick pitch/yaw (hold LB: left/right rolls), right stick strafe, triggers forward/back, hold L3 face, hold B approach, View+B all-stop, d-pad shield faces fore/aft/port/starboard, LB + d-pad up/down dorsal/ventral; hold View + right stick for a radial with dock, jump, ping, chase camera, Align, decoupled and shield track; A, RB and hold RB select (§5.0), View+Y boost request.
 - Touch (assist on only): left virtual stick attitude, right stick translate, throttle slider, ALL-STOP, hold APPROACH, FACE / ALIGN / SHIELD-TRACK / DOCK / JUMP buttons, tap shield-ring sectors. Tablet: docked left rail (ALL-STOP, APPROACH, throttle, Turn stick at the lower corner) and right rail (FACE, ALIGN, TRACK, DOCK, JUMP, CHASE, DECOUPLED, Slide stick at the lower corner), the shield ring and radar column in their desktop places (D324).
 
@@ -75,7 +75,7 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 - **FT-HLM-010** A shield-track toggle shall keep shield focus on the selected callsign as both ships move. (D48)
 - **FT-HLM-011** The shield ring shall show focus direction (Helm) and focus tightness and power (Engineering) in one widget. (D16, P1, D184)
 - **FT-HLM-012** Helm shall show the thrust envelope set by Engineering and the propellant remaining. (P1, D34)
-- **FT-HLM-013** Helm shall offer dock and jump controls. (D29, P5)
+- **FT-HLM-013** Helm shall offer dock and jump controls; a docked ship takes no collision or weapon damage. (D29, P5, D343)
 - **FT-HLM-014** All-stop shall bring the ship's velocity and rotation to zero through real thrust, from one input on every device. (D97, plan review NAV-2)
 - **FT-HLM-015** While hold-to-approach is held, flight assist shall face the selected item, fly to a data-defined stand-off and match its velocity, on every device. (D97, plan review NAV-2)
 - **FT-HLM-016** JUMP shall jump to the selected site or mark once Helm faces it; sites shall be selectable on Helm like marks (§6). (D98, plan review NAV-4)
@@ -128,12 +128,12 @@ Left: rotatable low-poly cutaway, subsystems coloured by health and heat, hit lo
 +-----------------------------------------------------+
 ```
 
-- KB/M: number keys select subsystem, +/- or scroll pips, drag crews, H harden selected subsystem, P fabricate probe, Semicolon cycle the cause picked for its unknown fault; Enter/Backspace accept/decline request, middle-click ping a subsystem (§5.0).
-- Controller: left stick cursor with snap to subsystems, d-pad left/right cycle subsystem, LT/RT remove/add pip, right stick rotate cutaway, B dispatch nearest crew, LB harden, d-pad up fabricate probe, d-pad down cycle the fault cause; A select, X/Y accept/decline (§5.0).
-- Touch: tap pips, drag crews, pinch-rotate cutaway, HARDEN and PROBE buttons.
+- KB/M: number keys select subsystem, +/- or scroll pips, drag crews, H harden selected subsystem, P fabricate probe, N dispatch nearest crew, Semicolon cycle the cause picked for its unknown fault; Enter/Backspace accept/decline request, middle-click ping a subsystem (§5.0).
+- Controller: left stick cursor with snap to subsystems, d-pad left/right cycle subsystem, LT/RT remove/add pip, right stick rotate cutaway, B dispatch nearest crew, LB harden, hold d-pad up 0.4 s fabricate probe, d-pad down cycle the fault cause; A select, X/Y accept/decline (§5.0).
+- Touch: tap pips, drag crews, pinch-rotate cutaway, HARDEN and PROBE buttons. Tablet: docked left rail (Power + and -, Tighter, Wider, Boost) and right rail (Harden, Repair, Cause, Probe, Claim) with the desktop arrangement between them (D356).
 
-- **FT-ENG-001** Engineering shall show a rotatable cutaway with subsystems coloured by health and heat and recent hit locations. (D50, D26)
-- **FT-ENG-002** Engineering shall set power pips per subsystem within the reactor cap, including overcharge. (D50)
+- **FT-ENG-001** Engineering shall show a rotatable cutaway with subsystems coloured by health and heat and recent hit locations; health takes the shared bands (green from 75 %, amber from 25 %, red below). (D50, D26, D384)
+- **FT-ENG-002** Engineering shall set power pips per subsystem within the reactor cap, including overcharge; the cap is the reactor's pips scaled by its health (a hack included), pips over a lowered cap scale down, and the server alone enforces it. (D50, D334, D380)
 - **FT-ENG-003** Engineering shall set total shield power and focus tightness. (D16, D50, D181)
 - **FT-ENG-004** Engineering shall dispatch repair crews by dragging them to a subsystem on the cutaway. (D27)
 - **FT-ENG-005** Engineering shall list faults, the repair queue and spare parts. (D27, D50)
@@ -218,8 +218,8 @@ Centre: the world map, a freely rotatable 3D map of the scenario's wrapping cube
 +-------------------------------------------------------+
 ```
 
-- KB/M: drag on the map to place a probe or mark, Shift+drag depth, right-drag rotate, scroll zoom, G route to selected, L flag lanes crossing friendlies, Del delete mark, N rename mark, X send selected mark to an allied ship, B fabricate-probe request, Alt+1–5 main-screen view (no Captain seated); Enter/Backspace accept/decline the oldest received mark (§5.0).
-- Controller: left stick cursor plus a radial menu on hold B (probe, mark, route, flag lanes, send mark, main-screen view), triggers move the cursor nearer/farther, right stick rotate; X/Y accept/decline received mark (§5.0).
+- KB/M: drag on the map to place a probe or mark, Shift+drag depth, right-drag rotate, scroll zoom, G route to selected, L flag lanes crossing friendlies, Del delete mark, N rename mark, X send selected mark to an allied ship, B fabricate-probe request, Alt+1–5 or 1–5 main-screen view (no Captain seated); Enter/Backspace accept/decline the oldest received mark (§5.0).
+- Controller: left stick cursor plus a radial menu on hold B (probe, mark, route, flag lanes, send mark, main-screen view), triggers move the cursor nearer/farther, right stick rotate, hold d-pad down 0.4 s delete mark; X/Y accept/decline received mark (§5.0).
 - Touch: drag to place, second finger slides depth, pinch zoom, two-finger rotate, SEND on a selected mark, ACCEPT/DECLINE in the inbox, main-screen view buttons.
 
 - **FT-RLY-001** Relay shall show a freely rotatable 3D map of the scenario's wrapping cube, centred on the ship or a selected mark, site or contact, with probe coverage, routes, hazards and marks, and no grid squares, altitude layers or world-fixed up. (D52, D124, D229)
@@ -275,7 +275,7 @@ Comms holds all NPC text and replies, contracts, priorities, missions, opportuni
 - **FT-COM-006** Each NPC conversation shall be claimable, and only its claimer shall hear that NPC's voice; while nobody holds the claim, every Comms holder of that ship shall hear its lines. (D18, D39, D238)
 - **FT-COM-007** Dialogue replies shall be structured choices; free text input shall not be required. (v0.3 §8)
 - **FT-COM-008** Comms shall show missions, contracts, offers and hails as cards on a board, and shall open a card's conversation as an overlay above the board. (D87)
-- **FT-COM-009** While the ship is docked, Comms shall buy and sell slot modules among the station's offers. (D86)
+- **FT-COM-009** While the ship is docked, Comms shall buy and sell slot modules among the station's offers; docking at a site with a market puts that market's offer card on the ship's own board until it undocks. (D86, D339)
 
 ## 5.7 Captain (C-B main-screen director; D54)
 

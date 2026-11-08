@@ -83,7 +83,7 @@ Allied ships share one faction, so they share callsigns and contact knowledge, b
 - **FT-SPA-025** The disc radar shall draw the selected contact's stem on top of all others. (plan review NAV-7)
 - **FT-SPA-026** Clock positions and the words level, high, low, overhead and under shall be ship frame on every station; no callout or rule shall use a world-fixed direction, and a point away from the own ship shall be said relative to a mark or site (`Bravo, 12 high, 3 km`). (D97, D124, plan review NAV-1, D113 retired by D124)
 - **FT-SPA-027** Each site shall have a shared name from scenario data, used by every station of every ship as a callout layer; a site is a named point with a radius on the scenario's one map. (D98, D229, plan review NAV-4)
-- **FT-SPA-028** Scan positions and hazard zones shall be MARK items outside the 8 named marks and shall remain at every difficulty, including Hard. (plan review COOP-6, D222)
+- **FT-SPA-028** Scan positions and hazard zones shall be MARK items outside the 8 named marks and shall remain at every difficulty, including Hard; Science's scan position is a zone of the ship's crew state, its one owner, cleared by a run reset or a relaunch. (plan review COOP-6, D222, D378)
 - **FT-SPA-029** "Marks" in FT-PAIR-008 and the difficulty presets shall mean every MARK item (§7.1) except routes and approach lanes. (D84, plan review COOP-6)
 - **FT-SPA-030** A mark placed on the forward view shall attach to the tapped contact; a tap that hits no contact shall place no mark. (plan review STN-5)
 - **FT-SPA-031** A ping on an item that another station is pinging shall count as a silent "copy" and show the acknowledging station on the original ping. (plan review COOP-8)

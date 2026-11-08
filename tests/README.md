@@ -19,6 +19,10 @@ A `# FT:` line at the top of a file tags the whole file. The same convention app
 
 Definitions are read-only (FT-ARC-020), in tests too: `load()` hands every test the same cached resource while anything holds it, so a change leaks into later tests. To vary one, copy what you change: `def.duplicate()` for the ship's own numbers, and copy a sub-resource from its own file (each subsystem, mount and weapon is one) before changing it, since `duplicate(true)` shares those. `TestDefs.all_defs()` and `TestDefs.hashes()` check that a run leaves every definition as it was.
 
+## Shared helpers
+
+`tests/sim/determinism.gd` (`Determinism`) asserts that two runs match; use it instead of replaying a scenario again. `tests/scenarios/shakedown_lessons.gd` (`ShakedownLessons`) plays each Shakedown lesson once per gdUnit process and caches it for every suite in that process. `tests/stations/phone_reach.gd` (`PhoneReach`) is the one phone tap walker (real touch events), and `StationFixture.rule_breaks` with `TOUCH_RULES` checks every page's touch rules (D388).
+
 ## Golden replays
 
 `tests/golden/` holds the golden replay of the M1 encounter (FT-TST-009): `m1_encounter.cmdlog` is a `CommandLog` text (`tests/sim/replay/command_log.gd`) and `m1_encounter.expected.cfg` the final tick, state hash, platform and readable values it must reach. `tests/sim/replay/test_golden_replay.gd` replays the log and compares; it never writes in a normal run. The state hash must match exactly only on the platform the golden was recorded on (same engine version, OS, CPU architecture and, on Linux, glibc version, since libm results differ between glibc versions); elsewhere the readable values are compared within tolerance. After an intended sim change, regenerate both files and commit them with that change:

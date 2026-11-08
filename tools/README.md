@@ -16,7 +16,7 @@ Scripts for the engine fetch, gates, lints, traceability and provenance checks. 
 | `l5` | screenshots diffed against `tests/visual/baselines/` | before a PR that changes a screen | `xvfb`, fugaku's renderer | several min |
 | `l6` | builds, inspects and runs the release packages (`tools/l6/run.sh`) | before a release | `wine`, `node`, Chromium | about 10 min |
 
-`all` runs every tier except `l2`. The shell tiers share `tools/lib.sh` (server-ready line, CPU picker, waits that fail loudly); they pick their own free ports and two allowed CPUs, and print them. Set `L4_CPUS` to pin them yourself. Other prerequisites: `python3`, `curl`, `unzip`, `nproc`; `gdb` with passwordless `sudo` for a hang's thread stacks; `systemd-run` for the bot batch. A hung L1 shard is stopped by `tools/run_limited.sh`, which reads `done.txt` written by `tests/thread_guard_hook.gd` to tell a hang at exit from a hang in a test.
+`all` runs every tier except `l2`. The shell tiers share `tools/lib.sh` (server-ready line, CPU picker, waits that fail loudly); the L4 tiers start the server on `--port 0` and read its `ready ws=... http=...` line, pick two allowed CPUs, and print both; L6 keeps fixed ports, since the release build buffers its output (D389). Set `L4_CPUS` to pin them yourself. Other prerequisites: `python3`, `curl`, `unzip`, `nproc`; `gdb` with passwordless `sudo` for a hang's thread stacks; `systemd-run` for the bot batch. A hung L1 shard is stopped by `tools/run_limited.sh`, which reads `done.txt` written by `tests/thread_guard_hook.gd` to tell a hang at exit from a hang in a test.
 
 ## L5 screenshots
 

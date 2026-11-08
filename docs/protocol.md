@@ -197,7 +197,7 @@ Fixed point (`NetCodec`): positions 1/16 m as int32 offsets in the scenario's cu
 | Kind | Section | Owner | Content |
 |---|---|---|---|
 | 1 | KIN | ship | Own ship every snapshot: position, velocity, orientation, angular velocity (25 B). |
-| 2 | STATUS | ship | Top bar block when it changes: alive, run status, outcome, hull, shields, pips used, propellant, decoupled (the main screen's auto-chase, FT-MSC-001). |
+| 2 | STATUS | ship | Top bar block when it changes: alive, run status, outcome, hull, shields, pips used, pip cap (`pip_cap`: the damaged reactor's cap for a viewer with exact Engineering data, else the nominal reactor pips, D336), propellant, decoupled (the main screen's auto-chase, FT-MSC-001). |
 | 3 | HELM | ship | Helm block: decoupled, throttle setpoint, face, approach, all-stop, Align stage, target (`target_kind`, `target_ship`, and `target_site`, the selected named site, −1 none), the jump drive (`jump_left`, spool ticks left, and `jump_target`, its site, −1 a free mark) and `docked_site` (−1 not docked), shield focus, track, tightness and power, thrust and torque scales. |
 | 4 | ENGINEERING | ship | Boost, weapon energy, hull, spare parts, shield strength, tightness and focus, per subsystem health, pips, heat, crews, fault armed, open unknown-cause fault with its cause once revealed and Engineering's pick, hardening ticks left. |
 | 5 | MOUNTS | ship | Per mount barrel, cooldown, ammo, heat, aim set, selected ammunition type, overheat lock. |

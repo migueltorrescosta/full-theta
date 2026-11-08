@@ -13,4 +13,4 @@
 - `sim/`, `director/`, `scenarios/` and `shared/` stay pure: no `extends Node`, SceneTree, I/O, `load()`, `preload()` or `ResourceLoader`, and `shared/` names no other module. `tools/lint_arch.py` enforces the rules (spec §2.2).
 - Tests name the FT ids they verify with `# FT:` tags (`tests/README.md`); rerun `tools/traceability.py` after changing tags or spec ids.
 - New files under `assets/` or `addons/` need an entry in `content/provenance.json` (`docs/provenance.md`).
-- Run `tools/gate.sh` before marking a PR ready and put its output in the PR body (`.github/pull_request_template.md`).
+- Run `tools/gate.sh` before marking a PR ready and put its output in the PR body (`.github/pull_request_template.md`). With no argument it runs `l0 l1`, the tiers CI runs (spec layers L0 to L3); `tools/README.md` has the table of every tier (D390).
