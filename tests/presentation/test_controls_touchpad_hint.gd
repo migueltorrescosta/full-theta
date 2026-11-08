@@ -34,19 +34,3 @@ func test_the_list_view_shows_the_note() -> void:
 	pane.build(Bindings.new(), ["engineering"], IntentTable.KBM)
 	pane.show_view(ControlsPane.VIEW_LIST)
 	assert_bool(note.visible).is_false()
-
-
-# FT: FT-STN-012
-# D2: the Controls page links the callout card.
-func test_the_page_links_the_callout_card() -> void:
-	I18n.apply("en")
-	var pane: ControlsPane = auto_free(ControlsPane.new())
-	add_child(pane)
-	pane.build(Bindings.new(), ["helm"], IntentTable.KBM)
-	var link: Button = pane.get_node("CalloutCard")
-	assert_str(link.text).is_equal("Callout card: how the crew names contacts")
-	# w5: it wraps, so it never widens a phone's page past the screen.
-	assert_int(link.autowrap_mode).is_not_equal(TextServer.AUTOWRAP_OFF)
-	assert_float(link.get_combined_minimum_size().x).is_less(200.0)
-	assert_str(ControlsPane.callout_card_url()).ends_with("docs/callout-card.md")
-	assert_bool(FileAccess.file_exists("res://docs/callout-card.md")).is_true()

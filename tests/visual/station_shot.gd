@@ -189,6 +189,11 @@ func _ready() -> void:
 					)
 					menu.open(SettingsScreen.TAB_CONTROLS)
 			)
+			s.card_requested.connect(
+				func() -> void:
+					s.help_requested.emit()
+					menu.controls_pane.show_view(ControlsPane.VIEW_CARD)
+			)
 			add_child(menu)
 			menu.setup(_ctx.settings, true)
 			add_child(s)

@@ -314,6 +314,7 @@ func _build_pending() -> void:
 	s.blockers = [settings_screen, outcome_card]
 	s.menu_requested.connect(open_menu)
 	s.help_requested.connect(_toggle_help)
+	s.card_requested.connect(open_card)
 	# `screen` first: entering the tree may ask for the first-visit help.
 	screen = s
 	_screens[key] = s
@@ -498,6 +499,13 @@ func _toggle_help() -> void:
 		menu.close()
 		return
 	open_menu(SettingsScreen.TAB_CONTROLS)
+
+
+## The callout legend chip's tap (D369): the menu on Controls, showing the callout card.
+func open_card() -> void:
+	open_menu(SettingsScreen.TAB_CONTROLS)
+	if settings_screen.controls_pane != null:
+		settings_screen.controls_pane.show_view(ControlsPane.VIEW_CARD)
 
 
 ## Opens the menu on `tab` (the tab last used when empty) with the Controls tab set for this

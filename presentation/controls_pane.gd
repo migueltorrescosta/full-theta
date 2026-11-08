@@ -4,16 +4,17 @@ extends VBoxContainer
 ## summary over a filter (my stations, the default, or all stations) and three views of
 ## the same live bindings, picked with buttons: the keyboard-and-mouse diagram, the
 ## controller diagram and the text list (ControlsList), which stays the way in for a
-## screen reader. A phone shows the touch pictures of the shown stations' pages
-## (TouchHelpPicture, P28-Help) over the list and never builds a diagram; others open on
-## the diagram of the device in use. A diagram is built the first time it shows, and
-## ControlsDiagram keeps finished layouts, so the menu opens fast (load fix 1). Under a
-## diagram, the screen's intents that are not bound on that device and the bindings it
-## can't draw.
+## screen reader; a fourth button shows the callout card (CalloutCard, D369). A phone
+## shows the touch pictures of the shown stations' pages (TouchHelpPicture, P28-Help) over
+## the list and never builds a diagram; others open on the diagram of the device in use. A
+## diagram is built the first time it shows, and ControlsDiagram keeps finished layouts, so
+## the menu opens fast (load fix 1). Under a diagram, the screen's intents that are not bound
+## on that device and the bindings it can't draw.
 
 const VIEW_KBM: String = "Keyboard"
 const VIEW_PAD: String = "Gamepad"
 const VIEW_LIST: String = "List"
+const VIEW_CARD: String = "Card"
 ## The filter button's node name.
 const ALL_STATIONS: String = "AllStations"
 
@@ -26,6 +27,8 @@ var view: String = VIEW_LIST
 var touch: VBoxContainer = VBoxContainer.new()
 ## Every station shown, not only the screen's (the filter).
 var all_stations: bool = false
+## The callout card, built the first time it shows.
+var card: CalloutCard = null
 
 var _role: String = ""
 var _device: String = IntentTable.KBM
@@ -39,9 +42,6 @@ var _filter: Button = Button.new()
 var _notes: Dictionary = {}
 ## The touchpad note under the List view, which has no diagram notes (D4).
 var _list_note: Label = Label.new()
-## A button like the page's others, its text wrapping on a phone (w5: a one-line link widened
-## the page past a 390 px screen).
-var _card_link: Button = Button.new()
 ## The stations the touch pictures show.
 var _touch_shown: Array = []
 
@@ -62,6 +62,11 @@ func _init() -> void:
 	_filter.toggle_mode = true
 	_filter.toggled.connect(set_all_stations)
 	_buttons.add_child(_filter)
+	var card_button: Button = Button.new()
+	card_button.name = VIEW_CARD
+	card_button.toggle_mode = true
+	card_button.pressed.connect(show_view.bind(VIEW_CARD))
+	_buttons.add_child(card_button)
 	for v: String in [VIEW_KBM, VIEW_PAD]:
 		var box: VBoxContainer = VBoxContainer.new()
 		box.name = v + "View"
@@ -84,13 +89,6 @@ func _init() -> void:
 	add_child(_list_note)
 	list.name = VIEW_LIST + "View"
 	add_child(list)
-	_card_link.name = "CalloutCard"
-	_card_link.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_card_link.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_card_link.size_flags_horizontal = Control.SIZE_FILL
-	_card_link.custom_minimum_size.y = UiTheme.TOUCH_MIN
-	_card_link.pressed.connect(func() -> void: OS.shell_open(callout_card_url()))
-	add_child(_card_link)
 
 
 ## Fills the pane for `stations` on `device` under the role summary of `role`; follows
@@ -135,16 +133,10 @@ static func every_station() -> Array:
 	return out
 
 
-## Where the callout card (docs/callout-card.md) is read, which the page links to (D2). The
-## address is a string of content/i18n/strings.json: the game itself has no internet code.
-static func callout_card_url() -> String:
-	return str(TranslationServer.translate("controls.callout_card_url"))
-
-
 ## Shows view `v`, building it for the stations shown when they changed. A phone shows
-## only the list.
+## only the list and the card.
 func show_view(v: String) -> void:
-	if _phone:
+	if _phone and v != VIEW_CARD:
 		v = VIEW_LIST
 	view = v
 	for b: Node in _buttons.get_children():
@@ -153,7 +145,14 @@ func show_view(v: String) -> void:
 	get_node(VIEW_KBM + "View").visible = v == VIEW_KBM
 	get_node(VIEW_PAD + "View").visible = v == VIEW_PAD
 	list.visible = v == VIEW_LIST
-	touch.visible = _phone
+	touch.visible = _phone and v != VIEW_CARD
+	if v == VIEW_CARD and card == null:
+		card = CalloutCard.new()
+		card.name = VIEW_CARD + "View"
+		add_child(card)
+		move_child(card, list.get_index() + 1)
+	if card != null:
+		card.visible = v == VIEW_CARD
 	if _bindings == null:
 		return
 	var stations: Array = shown_stations()
@@ -161,7 +160,7 @@ func show_view(v: String) -> void:
 		_build_touch(stations)
 	if list.shown_args() != [_bindings, stations, _device]:
 		list.build(_bindings, stations, _device, "")
-	if v == VIEW_LIST:
+	if v in [VIEW_LIST, VIEW_CARD]:
 		_refresh_notes()
 		return
 	var d: ControlsDiagram = kbm if v == VIEW_KBM else pad
@@ -207,7 +206,7 @@ func _retext() -> void:
 	(_buttons.get_node(VIEW_PAD) as Button).text = tr("controls.view_pad")
 	(_buttons.get_node(VIEW_LIST) as Button).text = tr("controls.view_list")
 	_filter.text = tr("controls.all_stations")
-	_card_link.text = tr("controls.callout_card")
+	(_buttons.get_node(VIEW_CARD) as Button).text = tr("controls.view_card")
 
 
 ## Helm on a Linux desktop: the touchpad may pause while a key is held (libinput's "disable
