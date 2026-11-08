@@ -109,7 +109,7 @@ func send(s: NetSession, chip_id: String, arg: int) -> String:
 ## An answered chip closes and is told to the sender; accepting counts as a cooperative
 ## event, declining does not.
 func answer(s: NetSession, id: int, accept: bool) -> String:
-	if not s.has_pick() or not StationViews.is_crew(s.entry):
+	if not s.is_crew():
 		return ServerSession.NOT_CREW
 	var open: Array = _open.get(s.ship, [])
 	for i: int in open.size():
@@ -177,7 +177,7 @@ static func arg_of(chip: ChipDef, arg: int) -> int:
 func _sender_rule(s: NetSession) -> String:
 	var why: String = ""
 	var picked: DataToggles = DataToggles.parse(s.toggles)
-	if not s.has_pick() or not StationViews.is_crew(s.entry):
+	if not s.is_crew():
 		why = ServerSession.NOT_CREW
 	elif picked == null or not picked.on(ViewFilter.CHIPS):
 		why = OFF

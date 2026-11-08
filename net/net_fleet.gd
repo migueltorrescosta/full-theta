@@ -508,7 +508,7 @@ func _eliminate(ship: int, reason: String, lives: int) -> void:
 	session.broadcast(NetProtocol.EVENT_ELIMINATED, payload)
 	var crew: Array = []
 	for s: NetSession in session.by_id.values():
-		if s.ship == ship and s.has_pick():
+		if s.on_ship(ship):
 			crew.append([s.id, s.entry])
 	_crews[ship] = crew
 	_handover_at[ship] = session.world.tick + HANDOVER_DELAY_TICKS
