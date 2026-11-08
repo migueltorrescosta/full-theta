@@ -210,6 +210,7 @@ func _process(delta: float) -> void:
 	if focused:
 		_poll_pad(delta)
 	refresh()
+	RadarLegend.show_once(self, ctx.settings)
 
 
 ## Pushes the current picture into the map (every frame; tests call it directly).

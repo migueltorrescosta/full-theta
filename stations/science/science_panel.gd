@@ -316,6 +316,7 @@ func _process(delta: float) -> void:
 	if focused:
 		_poll_axes(delta)
 	refresh()
+	RadarLegend.show_once(self, ctx.settings)
 
 
 # --- Reading. ---

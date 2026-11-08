@@ -363,6 +363,7 @@ func _process(delta: float) -> void:
 	if focused:
 		_poll_stick(delta)
 	refresh()
+	RadarLegend.show_once(self, ctx.settings)
 	_place_phone()
 
 

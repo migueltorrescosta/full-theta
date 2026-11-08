@@ -964,7 +964,7 @@ func _sync_taps() -> void:
 
 
 func _range_text() -> String:
-	return tr("radar.km") % str(int(RANGES_M[range_index] / 1000.0))
+	return tr("radar.range_km") % str(int(RANGES_M[range_index] / 1000.0))
 
 
 func _hits(e: Dictionary, p: Vector2) -> bool:
