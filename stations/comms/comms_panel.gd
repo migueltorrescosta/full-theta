@@ -481,7 +481,7 @@ static func touch_help() -> Array:
 				]
 			)
 		)
-	var card: Rect2 = Rect2(195, 132, 414, 72)
+	var card: Rect2 = Rect2(195.0, 132.0 + CommsBoard.PAGE_WHY_H, 414, 72)
 	var open: String = TouchText.of("help.comms.card", "Tap to open; long-press pings its contact")
 	rail.append([card, TouchText.of("help.comms.mission", "Mission card"), open])
 	return [
@@ -506,7 +506,7 @@ static func touch_help() -> Array:
 			"boxes":
 			[
 				[
-					Rect2(191, 132, 422, 150),
+					Rect2(191, 132, 422, 180),
 					TranslationServer.translate("comms.rep"),
 					TouchText.of("help.comms.rep", "Docked site, credits and standing per faction"),
 				]
