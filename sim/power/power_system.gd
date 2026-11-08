@@ -11,6 +11,12 @@ const WEAPON_HEALTH_FLOOR: float = 0.5
 ## A subsystem may fault again once its heat falls below this share of its threshold;
 ## the gap keeps a fault from re-firing while heat hovers at the threshold.
 const FAULT_REARM: float = 0.8
+## pips_refusal reasons: a kind the ship lacks, the reactor, over the per-subsystem maximum,
+## over the reactor cap (pip_cap).
+const REFUSE_NO_KIND: StringName = &"pips_no_kind"
+const REFUSE_KIND: StringName = &"pips_kind"
+const REFUSE_MAX: StringName = &"pips_max"
+const REFUSE_CAP: StringName = &"pips_cap"
 
 
 static func step(world: SimWorld) -> void:
@@ -141,21 +147,35 @@ static func draw_energy(world: SimWorld, ship_id: int, joules: float) -> bool:
 ## reactor, a missing kind, pips outside [0, max_pips_per_subsystem] and a total over
 ## pip_cap; nothing changes when rejected.
 static func set_pips(world: SimWorld, ship_id: int, kind: int, pips: int) -> bool:
+	if pips_refusal(world, ship_id, kind, pips) != &"":
+		return false
+	var def: ShipDef = world.defs[ship_id]
+	var d: DamageTable = world.damage
+	d.pips[d.subsystem_row(ship_id, subsystem_index(def, kind))] = pips
+	return true
+
+
+## Why set_pips would reject (kind, pips), or &"": REFUSE_NO_KIND (a kind the ship lacks),
+## REFUSE_KIND (the reactor), REFUSE_MAX (outside [0, max_pips_per_subsystem]) or REFUSE_CAP
+## (a total over pip_cap). The server sends the reason back, and the client's toast follows
+## it (F5, R12-7).
+static func pips_refusal(world: SimWorld, ship_id: int, kind: int, pips: int) -> StringName:
 	var def: ShipDef = world.defs[ship_id]
 	var i: int = subsystem_index(def, kind)
-	if i < 0 or kind == SubsystemDef.Kind.REACTOR:
-		return false
+	if i < 0:
+		return REFUSE_NO_KIND
+	if kind == SubsystemDef.Kind.REACTOR:
+		return REFUSE_KIND
 	if pips < 0 or pips > def.power.max_pips_per_subsystem:
-		return false
+		return REFUSE_MAX
 	var d: DamageTable = world.damage
 	var first: int = d.subsystem_row(ship_id, 0)
 	var total: int = 0
 	for r: int in range(first, first + def.subsystems.size()):
 		total += d.pips[r]
 	if total - d.pips[first + i] + pips > pip_cap(world, ship_id):
-		return false
-	d.pips[first + i] = pips
-	return true
+		return REFUSE_CAP
+	return &""
 
 
 ## Mean effectiveness of the ship's reactor subsystems (R09-1: its health and a hack

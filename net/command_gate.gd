@@ -29,6 +29,15 @@ const SHIP_ABANDONED: String = "ship_abandoned"
 ## apply on resume (#45 A4). Only training_next is exempt.
 const PAUSED: String = "paused"
 
+## The sim's own rejection reasons (SimCommand.reject_reason) that reach the client as theirs:
+## the client's toast is "toast." + reason (F5, R12-7: the server's rejection, not a client copy
+## of the rule, drives the reactor-cap toast).
+const SIM_REASONS: Dictionary[StringName, String] = {
+	PowerSystem.REFUSE_CAP: "eng_cap",
+	PowerSystem.REFUSE_MAX: "chip_pips_max",
+	PowerSystem.REFUSE_KIND: "eng_reactor",
+}
+
 ## Fields the server sets, never the client (ship_id may be sent, if it is the sender's).
 const SERVER_FIELDS: Array[String] = ["kind", "ship_id", "tick", "accepted"]
 

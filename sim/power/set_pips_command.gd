@@ -12,5 +12,7 @@ func kind() -> StringName:
 	return &"set_pips"
 
 
+## A rejection carries PowerSystem's reason (reject_reason), which the server sends back.
 func apply(world: SimWorld) -> bool:
-	return PowerSystem.set_pips(world, ship_id, subsystem_kind, pips)
+	reject_reason = PowerSystem.pips_refusal(world, ship_id, subsystem_kind, pips)
+	return reject_reason == &"" and PowerSystem.set_pips(world, ship_id, subsystem_kind, pips)
