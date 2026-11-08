@@ -49,6 +49,8 @@ const SMALL_R: float = 80.0
 ## A burst ring lasts this long (ms); most at once.
 const BURST_MS: int = 900
 const MAX_BURSTS: int = 6
+## Under this width the range box drops its "Range" word.
+const SMALL_RADAR_W: float = 360.0
 
 ## The items to draw (ContactPicture). "point" items (point pings) draw only their
 ## pulse and are never picked.
@@ -329,7 +331,7 @@ func _draw() -> void:
 		_draw_text(font, Rect2(label.get_center() - tsz / 2.0, tsz), text, Palette.color("text"))
 	if not SheetCover.touches(_site_rect(), covers):
 		draw_set_transform(_view().position)
-		SiteBanner.draw(self, font, picture.site, _is_selected(picture.site))
+		SiteBanner.draw(self, font, picture.site, _is_selected(picture.site), _roomy())
 		draw_set_transform(Vector2.ZERO)
 	if side_strip:
 		_draw_strip(font)
@@ -936,7 +938,7 @@ func _range_rect() -> Rect2:
 
 ## Where a tap picks the site banner: its box, at least touch_min tall and wide.
 func _site_rect() -> Rect2:
-	var r: Rect2 = SiteBanner.rect(get_theme_default_font(), picture.site)
+	var r: Rect2 = SiteBanner.rect(get_theme_default_font(), picture.site, _roomy())
 	if not r.has_area():
 		return r
 	r.position += _view().position
@@ -963,8 +965,15 @@ func _sync_taps() -> void:
 		_taps[i].size = rects[i].size
 
 
+## True when the radar has room for the words in its two boxes ("Range", "Zone:").
+func _roomy() -> bool:
+	return _view().size.x >= SMALL_RADAR_W
+
+
 func _range_text() -> String:
-	return tr("radar.range_km") % str(int(RANGES_M[range_index] / 1000.0))
+	# A small radar (a phone's 180 px column) keeps the short "10 km" so its chips have room.
+	var key: String = "radar.range_km" if _roomy() else "radar.km"
+	return tr(key) % str(int(RANGES_M[range_index] / 1000.0))
 
 
 func _hits(e: Dictionary, p: Vector2) -> bool:

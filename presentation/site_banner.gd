@@ -9,28 +9,34 @@ const PAD: float = 6.0
 
 
 ## The banner's text: "Zone: Kappa", so the box reads as the zone and not as a button.
-static func text(site: Dictionary) -> String:
+static func text(site: Dictionary, prefix: bool = true) -> String:
+	if not prefix:
+		return str(site["label"])
 	return TranslationServer.translate("radar.zone") % str(site["label"])
 
 
 ## The banner's box (px) in the canvas's coordinates; empty when the picture names no site.
-static func rect(font: Font, site: Dictionary) -> Rect2:
+static func rect(font: Font, site: Dictionary, prefix: bool = true) -> Rect2:
 	if site.is_empty():
 		return Rect2()
-	var sz: Vector2 = font.get_string_size(text(site), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
+	var sz: Vector2 = font.get_string_size(
+		text(site, prefix), HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE
+	)
 	return Rect2(Vector2(PAD, PAD), Vector2(sz.x, font.get_height(FONT_SIZE)) + Vector2(8.0, 6.0))
 
 
 ## Draws the banner; `selected` outlines it, a live ping pulses a ring around it.
-static func draw(canvas: CanvasItem, font: Font, site: Dictionary, selected: bool) -> void:
+static func draw(
+	canvas: CanvasItem, font: Font, site: Dictionary, selected: bool, prefix: bool = true
+) -> void:
 	if site.is_empty():
 		return
-	var box: Rect2 = rect(font, site)
+	var box: Rect2 = rect(font, site, prefix)
 	var col: Color = Palette.color("selected" if selected else "accent")
 	canvas.draw_rect(box, Palette.color("panel_focus") * Color(1, 1, 1, 0.8))
 	canvas.draw_rect(box, col, false, 1.5 if selected else 1.0)
 	var base: Vector2 = box.position + Vector2(4.0, 3.0 + font.get_ascent(FONT_SIZE))
-	Palette.draw_outlined(canvas, font, base, text(site), FONT_SIZE, col)
+	Palette.draw_outlined(canvas, font, base, text(site, prefix), FONT_SIZE, col)
 	var copies: Array = site.get("copies", [])
 	if not copies.is_empty():
 		var text: String = "+ " + ", ".join(PackedStringArray(copies))

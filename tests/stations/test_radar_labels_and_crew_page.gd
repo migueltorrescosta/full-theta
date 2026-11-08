@@ -29,6 +29,7 @@ func _screen(entry: String) -> StationScreen:
 # FT: FT-SPA-027
 func test_radar_boxes_are_labelled() -> void:
 	var radar: DiscRadar = auto_free(DiscRadar.new())
+	radar.size = Vector2(400, 400)
 	assert_str(radar._range_text()).is_equal("Range 10 km")
 	assert_str(SiteBanner.text({"label": "Kappa"})).is_equal("Zone: Kappa")
 
