@@ -604,6 +604,10 @@ func _common(ev: Dictionary) -> bool:
 			for feature: StringName in shareable():
 				ctx.intents.share(String(feature))
 		"overlay":
+			# The Controls chip says this key opens the page, so it has done its job (D4).
+			var chip: Node = find_child("ControlsChip", false, false)
+			if chip != null:
+				chip.queue_free()
 			help_requested.emit()
 			_update_block()
 		"menu":
@@ -1011,9 +1015,13 @@ func _relayout() -> void:
 func _open_first_visit_help() -> void:
 	if not is_inside_tree():
 		return
-	var chip: ControlsChip = ControlsChip.show_once(self, ctx.settings, focused_station())
+	var touch: bool = LayoutMode.is_touch(LayoutMode.kind_of(self))
+	var chip: ControlsChip = ControlsChip.show_once(
+		self, ctx.settings, focused_station(), ctx.matcher.device, touch
+	)
 	if chip != null:
 		chip.pressed.connect(func() -> void: help_requested.emit())
+		ControlsLegendChip.show_legend(self, ctx.settings)
 
 
 func _on_toast(key: String, args: Dictionary) -> void:

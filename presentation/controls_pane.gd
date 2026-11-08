@@ -16,6 +16,9 @@ const VIEW_PAD: String = "Gamepad"
 const VIEW_LIST: String = "List"
 ## The filter button's node name.
 const ALL_STATIONS: String = "AllStations"
+const REPO_URL: String = "https://github.com/migueltorrescosta/full-theta/"
+## The callout card (docs/callout-card.md), which the page links to (D2).
+const CALLOUT_CARD_URL: String = REPO_URL + "blob/main/docs/callout-card.md"
 
 ## The text list view; also what SettingsScreen.controls exposes.
 var list: ControlsList = ControlsList.new()
@@ -37,6 +40,9 @@ var _summary: Label = Label.new()
 var _buttons: HFlowContainer = HFlowContainer.new()
 var _filter: Button = Button.new()
 var _notes: Dictionary = {}
+## The touchpad note under the List view, which has no diagram notes (D4).
+var _list_note: Label = Label.new()
+var _card_link: LinkButton = LinkButton.new()
 ## The stations the touch pictures show.
 var _touch_shown: Array = []
 
@@ -73,8 +79,18 @@ func _init() -> void:
 	touch.add_theme_constant_override("separation", 16)
 	touch.visible = false
 	add_child(touch)
+	_list_note.name = "ListNote"
+	_list_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_list_note.add_theme_color_override("font_color", Palette.color("text_dim"))
+	add_child(_list_note)
 	list.name = VIEW_LIST + "View"
 	add_child(list)
+	_card_link.name = "CalloutCard"
+	_card_link.underline = LinkButton.UNDERLINE_MODE_ALWAYS
+	_card_link.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_card_link.custom_minimum_size.y = UiTheme.TOUCH_MIN
+	_card_link.pressed.connect(func() -> void: OS.shell_open(CALLOUT_CARD_URL))
+	add_child(_card_link)
 
 
 ## Fills the pane for `stations` on `device` under the role summary of `role`; follows
@@ -140,6 +156,7 @@ func show_view(v: String) -> void:
 	if list.shown_args() != [_bindings, stations, _device]:
 		list.build(_bindings, stations, _device, "")
 	if v == VIEW_LIST:
+		_refresh_notes()
 		return
 	var d: ControlsDiagram = kbm if v == VIEW_KBM else pad
 	var device: String = IntentTable.KBM if v == VIEW_KBM else IntentTable.PAD
@@ -184,12 +201,32 @@ func _retext() -> void:
 	(_buttons.get_node(VIEW_PAD) as Button).text = tr("controls.view_pad")
 	(_buttons.get_node(VIEW_LIST) as Button).text = tr("controls.view_list")
 	_filter.text = tr("controls.all_stations")
+	_card_link.text = tr("controls.callout_card")
 
 
 ## Helm on a Linux desktop: the touchpad may pause while a key is held (libinput's "disable
-## touchpad while typing"), so steering stops while thrusting (owner playtest, #35 A12).
-static func touchpad_hint(stations: Array, os_name: String = OS.get_name()) -> bool:
+## touchpad while typing"), so steering stops while thrusting (owner playtest, #35 A12). A
+## browser on Linux is the same desktop (D4).
+static func touchpad_hint(stations: Array, os_name: String = host_os()) -> bool:
 	return os_name == "Linux" and stations.has("helm")
+
+
+## The operating system the player is on: the engine's name, or on the web build the one
+## the browser's user agent names ("Linux" for a desktop Linux browser, never Android).
+static func host_os() -> String:
+	if OS.has_feature("web") and ClassDB.class_exists("JavaScriptBridge"):
+		var agent: Variant = JavaScriptBridge.eval("navigator.userAgent")
+		return os_of_agent(str(agent), OS.get_name())
+	return OS.get_name()
+
+
+## `engine_name`, or "Linux" when a web build's user agent is a desktop Linux browser.
+static func os_of_agent(agent: String, engine_name: String) -> String:
+	if "Android" in agent:
+		return "Android"
+	if "Linux" in agent or "X11" in agent:
+		return "Linux"
+	return engine_name
 
 
 ## The notes under the built diagrams: unbound intents of the screen, bindings off the
@@ -205,6 +242,14 @@ func _refresh_notes() -> void:
 			unbound.append(tr(IntentTable.label_key(id)))
 		if not unbound.is_empty():
 			parts.append(tr("controls.unbound") % ", ".join(unbound))
+		var radial: PackedStringArray = []
+		for id: String in d.model.radial_here():
+			radial.append(tr(IntentTable.label_key(id)))
+		if not radial.is_empty():
+			var hold: String = BindingText.describe_all(
+				_bindings.bindings("helm_radial", IntentTable.PAD)
+			)
+			parts.append(tr("controls.radial") % [hold, ", ".join(radial)])
 		var off: PackedStringArray = []
 		for e: Dictionary in d.model.unmapped():
 			off.append("%s %s" % [e["label"], e["keys"]])
@@ -214,3 +259,5 @@ func _refresh_notes() -> void:
 			parts.append(tr("controls.touchpad_hint"))
 		(_notes[v] as Label).text = "\n".join(parts)
 		(_notes[v] as Label).visible = not parts.is_empty()
+	_list_note.text = tr("controls.touchpad_hint")
+	_list_note.visible = view == VIEW_LIST and touchpad_hint(shown_stations())

@@ -161,6 +161,7 @@ var _cell_ids: Array[String] = []
 func setup(context: StationContext) -> void:
 	ctx = context
 	_build()
+	PadFocus.attach(self)
 	ctx.crew.changed.connect(_on_crew_changed)
 	ctx.crew.toast.connect(_on_refused)
 	resized.connect(_apply_columns)

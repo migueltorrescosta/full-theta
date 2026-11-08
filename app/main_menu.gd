@@ -443,6 +443,7 @@ func _build() -> void:
 	_menu = MarginContainer.new()
 	_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_menu)
+	PadFocus.attach(_menu)
 	# A short screen (a phone on its side) scrolls the menu.
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -510,11 +511,13 @@ func _build() -> void:
 	_settings_screen.visible = false
 	add_child(_settings_screen)
 	_settings_screen.setup(settings, false)
+	PadFocus.attach(_settings_screen)
 	_settings_screen.scale_changed.connect(_apply_scale)
 	_picker = TrainingPicker.new()
 	_picker.visible = false
 	add_child(_picker)
 	_picker.setup(settings, load("res://content/training/steps.tres") as TrainingStepsDef)
+	PadFocus.attach(_picker)
 	_picker.closed.connect(func() -> void: _picker.visible = false)
 	_picker.chosen.connect(start_lesson)
 	_orphan_dialog = ConfirmationDialog.new()
