@@ -199,9 +199,12 @@ func test_every_action_is_within_two_taps_both_ways_up() -> void:
 			p._rename.visible = false
 			await _frames(2)
 			var before: Variant = (row[6] as Callable).call()
-			var taps: int = await PhoneReach.tap_row(s, [row[1], row[2], row[3]])
+			var walked: Dictionary = PhoneReach.walk(
+				s, {"page": row[1], "control": row[2], "option": row[3], "taps": 2}
+			)
+			var taps: int = walked["taps"]
 			assert_int(taps).override_failure_message(what).is_equal(row[4])
-			assert_int(taps).override_failure_message(what).is_less_equal(2)
+			assert_str(walked["error"]).override_failure_message(what).is_empty()
 			var after: Variant = (row[6] as Callable).call()
 			assert_bool(after != before).override_failure_message(what).is_true()
 		# Read the ship's log: its tab (1 tap).

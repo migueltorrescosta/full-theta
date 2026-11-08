@@ -5,7 +5,6 @@ extends GdUnitTestSuite
 ## conversation open, and the rail sends what the keys send.
 # FT: FT-STN-005, FT-COM-008
 
-const Reach = preload("res://tests/stations/wr/phone_reach.gd")
 
 const SETTINGS: String = "user://test_comms_phone.cfg"
 const SIDEWAYS: Vector2i = Vector2i(844, 390)
@@ -85,11 +84,11 @@ func _assert_clean(root: Control, what: String) -> void:
 ## card. Returns the taps.
 func _open_from_rest(s: StationScreen, id: int) -> int:
 	var p: CommsPanel = s.focused_panel()
-	Reach.rest(s)
+	PhoneReach.rest(s)
 	var taps: int = 0
 	var col: int = p.board.column_of(id)
 	if col != CommsPanel.Page.MISSIONS:
-		Reach.strip(s).tab(col).pressed.emit()
+		PhoneReach.strip(s).tab(col).pressed.emit()
 		taps += 1
 	await _frames(2)
 	var r: Rect2 = p.board.card_rect(id)
@@ -140,7 +139,7 @@ func _walk_table(size: Vector2i, insets: Array) -> void:
 	]
 	for r: Array in rail:
 		log.sent.clear()
-		var got: Dictionary = Reach.walk(s, {"control": r[0], "taps": 1})
+		var got: Dictionary = PhoneReach.walk(s, {"control": r[0], "taps": 1})
 		assert_str(got["error"]).override_failure_message(what + " " + r[0]).is_empty()
 		var sent: Array = log.of(r[1])
 		(
@@ -151,8 +150,8 @@ func _walk_table(size: Vector2i, insets: Array) -> void:
 		if r[2] != "":
 			assert_str(sent[0][1][0]["kind"]).is_equal(r[2])
 	# Next column: the tab, 1 tap.
-	Reach.rest(s)
-	Reach.strip(s).tab(CommsPanel.Page.CONTRACTS).pressed.emit()
+	PhoneReach.rest(s)
+	PhoneReach.strip(s).tab(CommsPanel.Page.CONTRACTS).pressed.emit()
 	assert_int(p.board.column_shown()).is_equal(CommsPanel.Page.CONTRACTS)
 	assert_int(p.board.selected).is_equal(CommsFixture.CONTRACT)
 	# Open a card on its page: 1 tap on the first page, 2 on another.
@@ -179,7 +178,7 @@ func _walk_table(size: Vector2i, insets: Array) -> void:
 	p.overlay.close_button.pressed.emit()
 	# Ping on the Crew page: 2 taps.
 	log.sent.clear()
-	var ping: Dictionary = Reach.walk(
+	var ping: Dictionary = PhoneReach.walk(
 		s,
 		{
 			"page": CommsPanel.Page.CREW,
@@ -190,8 +189,8 @@ func _walk_table(size: Vector2i, insets: Array) -> void:
 	assert_int(ping["taps"]).is_equal(2)
 	assert_int(log.of("ping").size()).is_equal(1)
 	# Reputation: the Rep tab, 1 tap.
-	Reach.rest(s)
-	Reach.strip(s).tab(CommsPanel.Page.REP).pressed.emit()
+	PhoneReach.rest(s)
+	PhoneReach.strip(s).tab(CommsPanel.Page.REP).pressed.emit()
 	await _frames(2)
 	assert_bool(p.rep_view.is_visible_in_tree()).is_true()
 	assert_bool(p.board.is_visible_in_tree()).is_false()
@@ -322,7 +321,7 @@ func test_pages_follow_the_selection_and_badge_a_waiting_hail() -> void:
 	assert_int(p.pages.current).is_equal(CommsPanel.Page.HAILS)
 	# A tab closes an open conversation.
 	p.open_card(CommsFixture.OFFER)
-	Reach.strip(s).tab(CommsPanel.Page.MISSIONS).pressed.emit()
+	PhoneReach.strip(s).tab(CommsPanel.Page.MISSIONS).pressed.emit()
 	assert_int(p.overlay.card_id).is_equal(-1)
 	var blk: Dictionary = _block()
 	blk["cards"][CommsFixture.HAIL]["state"] = 1

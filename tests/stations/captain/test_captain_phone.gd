@@ -5,7 +5,6 @@ extends GdUnitTestSuite
 ## at the bottom. Tablets and desktops keep their columns.
 # FT: FT-STN-005
 
-const Reach = preload("res://tests/stations/wr/phone_reach.gd")
 const SETTINGS: String = "user://test_captain_phone.cfg"
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
@@ -93,26 +92,26 @@ func test_reachability_both_ways_up() -> void:
 		var p: CaptainPanel = _cap(s)
 		var what: String = str(f[0])
 		for i: int in MainScreen.NAMES.size():
-			var r: Dictionary = Reach.walk(s, {"control": "Captain_view_%d" % i, "taps": 1})
+			var r: Dictionary = PhoneReach.walk(s, {"control": "Captain_view_%d" % i, "taps": 1})
 			assert_str(r["error"]).override_failure_message("%s view %d" % [what, i]).is_empty()
 		var views: Array = _sent(s).of("set_main_view").map(func(e: Array) -> int: return e[1][0])
 		assert_array(views).override_failure_message(what).is_equal([0, 1, 2, 3, 4])
-		var r: Dictionary = Reach.walk(s, {"control": "Captain_ping", "taps": 1})
+		var r: Dictionary = PhoneReach.walk(s, {"control": "Captain_ping", "taps": 1})
 		assert_str(r["error"]).override_failure_message(what).is_empty()
 		assert_array(_sent(s).of("ping")[0][1].slice(0, 2)).is_equal(["contact", StationFixture.H2])
-		r = Reach.walk(s, {"control": "Captain_mark", "taps": 1})
+		r = PhoneReach.walk(s, {"control": "Captain_mark", "taps": 1})
 		assert_str(r["error"]).override_failure_message(what).is_empty()
 		assert_int(_sent(s).of("place_mark").size()).is_equal(1)
 		for page: int in [1, 2]:
-			Reach.rest(s)
-			var tab: RailButton = Reach.strip(s).tab(page)
+			PhoneReach.rest(s)
+			var tab: RailButton = PhoneReach.strip(s).tab(page)
 			assert_object(tab).override_failure_message("%s tab %d" % [what, page]).is_not_null()
 			tab.pressed.emit()
 			var box: PanelContainer = p.phone.requests if page == 1 else p.phone.card_box
 			assert_bool(box.is_visible_in_tree()).override_failure_message(what).is_true()
 			var other: PanelContainer = p.phone.card_box if page == 1 else p.phone.requests
 			assert_bool(other.is_visible_in_tree()).is_false()
-		Reach.rest(s)
+		PhoneReach.rest(s)
 		assert_bool(p.phone.requests.is_visible_in_tree()).is_false()
 		assert_bool(p.phone.card_box.is_visible_in_tree()).is_false()
 		_drop(s)
@@ -125,7 +124,7 @@ func test_reachability_both_ways_up() -> void:
 func test_tap_a_card_pings_it() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	var p: CaptainPanel = _cap(s)
-	Reach.strip(s).tab(2).pressed.emit()
+	PhoneReach.strip(s).tab(2).pressed.emit()
 	await _frames(2)
 	var box: PanelContainer = p.phone.card_box
 	var row: Vector2 = Vector2(30.0, CardList.HEADER_HEIGHT + CardList.ROW_HEIGHT * 1.0 + 5.0)
@@ -150,7 +149,7 @@ func test_tap_a_card_pings_it() -> void:
 	)
 	assert_dict(p.item_at(panel_low)).is_empty()
 	# Back on the Screen page the cards are gone and the mirror answers.
-	Reach.rest(s)
+	PhoneReach.rest(s)
 	await _frames(1)
 	assert_dict(p.item_at(panel_at)).is_not_equal({"kind": "card", "id": 1})
 	_drop(s)

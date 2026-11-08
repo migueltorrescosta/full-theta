@@ -112,9 +112,12 @@ func test_every_action_is_within_two_taps_both_ways_up() -> void:
 		for row: Array in _table(p):
 			var what: String = "%s %s" % [row[0], c[0]]
 			var before: int = _sent(s, row[5])
-			var taps: int = await PhoneReach.tap_row(s, [row[1], row[2], row[3]])
+			var walked: Dictionary = PhoneReach.walk(
+				s, {"page": row[1], "control": row[2], "option": row[3], "taps": 2}
+			)
+			var taps: int = walked["taps"]
 			assert_int(taps).override_failure_message(what).is_equal(row[4])
-			assert_int(taps).override_failure_message(what).is_less_equal(2)
+			assert_str(walked["error"]).override_failure_message(what).is_empty()
 			assert_int(_sent(s, row[5])).override_failure_message(what).is_equal(before + 1)
 			await _frames(1)
 		# Read the full card: its tab (1 tap) shows the whole card, no scroll.
