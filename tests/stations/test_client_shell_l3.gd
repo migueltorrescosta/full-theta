@@ -86,7 +86,7 @@ func test_lobby_grid_follows_the_catalogue_load_tags_and_joint_views() -> void:
 		return shell.lobby != null and shell.lobby.find_child("Entry_comms", true, false) != null
 	assert_bool(await _until(cells)).is_true()
 	assert_int(shell.ctx.crew.catalogue["entries"].size()).is_equal(23)
-	for id: String in LobbyScreen.GRID_STATIONS:
+	for id: String in LobbySeatGrid.GRID_STATIONS:
 		var cell: Button = shell.lobby.find_child("Entry_" + id, true, false)
 		var tag: String = StationViews.def(id).load_tag
 		assert_str(cell.theme_type_variation).is_equal("LoadCell_" + tag)
