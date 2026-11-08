@@ -19,8 +19,6 @@ extends RefCounted
 ## - &"scan_mark": the scan-position mark was placed, vector its offset from the contact.
 ## - &"active_ping", &"self_scan_started", &"self_scan_done".
 
-const SENSORS: StringName = KnowledgeSystem.SENSORS
-
 const REASON_NO_SCIENCE: StringName = &"no_science"
 const REASON_BUSY: StringName = &"busy"
 const REASON_BAD_CONTACT: StringName = &"bad_contact"
@@ -66,13 +64,13 @@ static func noise_parts(world: SimWorld, ship: int, contact: int) -> Dictionary:
 		dist = los.length()
 		if dist > 0.0:
 			aspect = absf(kin.forward(contact).dot(los / dist))
-	var eff: float = DamageSystem.effectiveness(world, ship, SENSORS)
+	var eff: float = DamageSystem.effectiveness(world, ship, KnowledgeSystem.SENSORS)
 	var pips: int = 0
 	var nominal: int = 0
-	var r: int = world.damage.find_subsystem(ship, SENSORS)
+	var r: int = world.damage.find_subsystem(ship, KnowledgeSystem.SENSORS)
 	if r >= 0:
 		pips = world.damage.pips[r]
-		nominal = world.defs[ship].subsystems[world.damage.index_of_row(ship, r)].nominal_pips
+		nominal = DamageSystem.sub_def(world, ship, r).nominal_pips
 	var is_active: bool = t.active[ship] == 1
 	var pinging: bool = t.ping_left[ship] > 0.0
 	var probe: bool = probe_covered(world, ship, contact)
@@ -220,12 +218,9 @@ static func start_hack(world: SimWorld, ship: int, contact: int, subsystem_id: S
 	var faction: int = world.faction_of(ship)
 	if not ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.HACK):
 		return _refuse(world, ship, contact, REASON_NO_ACCESS)
-	var index: int = -1
-	var subs: Array[SubsystemDef] = world.defs[contact].subsystems
-	for i: int in subs.size():
-		if subs[i].id == subsystem_id:
-			index = i
-	if index < 0:
+	var row: int = world.damage.find_subsystem(contact, subsystem_id)
+	var index: int = world.damage.index_of_row(contact, row)
+	if row < 0:
 		return _refuse(world, ship, contact, REASON_BAD_SUBSYSTEM)
 	var probe: bool = probe_covered(world, ship, contact)
 	var puzzle_seed: int = _draw_seed(world)
@@ -313,7 +308,7 @@ static func _step_session(world: SimWorld, def: ScienceDef, t: ScienceTable, shi
 		t.clear_session(ship)
 		return
 	if k == ScienceTable.Session.SELF:
-		if elapsed >= SimWorld.ticks(def.self_scan_s):
+		if elapsed >= SimRate.ticks(def.self_scan_s):
 			_finish_self_scan(world, t, ship)
 		return
 	var fail_kind: StringName = &"hack_failed" if k == ScienceTable.Session.HACK else &"scan_failed"
@@ -325,7 +320,7 @@ static func _step_session(world: SimWorld, def: ScienceDef, t: ScienceTable, shi
 	if not world.kin.is_alive(contact) or not seen:
 		_fail(world, t, ship, fail_kind, &"lost")
 	elif k == ScienceTable.Session.SCAN:
-		if elapsed >= SimWorld.ticks(def.scan_cap_s):
+		if elapsed >= SimRate.ticks(def.scan_cap_s):
 			_fail(world, t, ship, fail_kind, &"timeout")
 	else:
 		var speed: float = def.trace_rate * (1.0 + def.trace_noise_gain * t.noise[ship])
@@ -344,7 +339,7 @@ static func _finish_hack(world: SimWorld, def: ScienceDef, t: ScienceTable, ship
 	var window: float = 0.0
 	if effect != null:
 		window = effect.window_s
-		var until: int = world.tick + SimWorld.ticks(window)
+		var until: int = world.tick + SimRate.ticks(window)
 		world.hacks.open(contact, world.faction_of(ship), index, effect.factor, until, ship)
 	world.emit(&"hack_done", ship, contact, window, Vector3.ZERO, sub.id)
 	t.clear_session(ship)

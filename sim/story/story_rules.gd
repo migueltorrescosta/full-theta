@@ -37,8 +37,8 @@ static func set_lane(world: SimWorld, card: int, open_s: float, length_s: float)
 	if not length_s > 0.0:
 		return
 	var f: StoryFlagTable = world.story_flags
-	f.set_flag(StringName(_LANE_OPEN % card), maxi(0, SimWorld.ticks(open_s)))
-	f.set_flag(StringName(_LANE_LEN % card), SimWorld.ticks(length_s))
+	f.set_flag(StringName(_LANE_OPEN % card), maxi(0, SimRate.ticks(open_s)))
+	f.set_flag(StringName(_LANE_LEN % card), SimRate.ticks(length_s))
 
 
 static func is_lane(world: SimWorld, card: int) -> bool:
@@ -161,7 +161,7 @@ static func ask_surrender(world: SimWorld, ship: int, card: int, params: Diction
 	if roll_surrender(world, ship, card, params, scale):
 		return
 	world.story_flags.set_flag(refused_flag, refused + 1)
-	var reopen: int = world.tick + SimWorld.ticks(float(params.get("retry_s", 0.0)))
+	var reopen: int = world.tick + SimRate.ticks(float(params.get("retry_s", 0.0)))
 	world.story_flags.set_flag(_surrender_flag("reopen", t.factions[card], t.target[card]), reopen)
 
 

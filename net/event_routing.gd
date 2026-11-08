@@ -124,12 +124,6 @@ static func event_value(
 	if filter == null:
 		return 0.0
 	# A fault's heat is no summary at any setting: Engineering's alone.
-	var mode: int = filter.summary_mode(ViewFilter.ENG)
 	if kind == &"fault":
 		return value if filter.sees_all or filter.stations.has("engineering") else 0.0
-	match mode:
-		2:
-			return value
-		1:
-			return HealthBand.quantise(clampf(value, 0.0, 1.0), DataToggles.def().band_edges)
-	return 0.0
+	return filter.summarise(value, 1.0, ViewFilter.ENG)

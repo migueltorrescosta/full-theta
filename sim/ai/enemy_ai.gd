@@ -375,7 +375,7 @@ static func _shot_good(
 	var local: Vector3 = kin.to_local(id, aim_dir).normalized()
 	return (
 		KnowledgeSystem.is_identified(world, faction, target)
-		and world.ships_hostile(id, target)
+		and world.is_hostile(faction, world.faction_of(target))
 		and kin.forward(id).angle_to(aim_dir) <= world.ai.fire_cone[id]
 		and WeaponSystem.in_arc(mount, local)
 		and mounts.barrel[row].angle_to(local) <= AIM_TOLERANCE

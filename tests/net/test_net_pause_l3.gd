@@ -161,7 +161,7 @@ func test_remaining_crew_abandon_by_vote() -> void:
 	viewer.vote_abandon(PLAYER, true)
 	var refused: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_CREW)
-	assert_bool(server.session.paused.has(PLAYER)).is_true()
+	assert_bool(server.session.lobby.paused.has(PLAYER)).is_true()
 	from = h.mark(viewer)
 	tac.vote_abandon(PLAYER, true)
 	sys.vote_abandon(PLAYER, true)
@@ -216,7 +216,7 @@ func test_votes_clear_on_resume_and_a_dropped_voter_loses_its_vote() -> void:
 	from = h.mark(viewer)
 	var ops: NetClient = await h.welcomed(server, "ops'", token)
 	assert_dict(await h.next_event(viewer, NetProtocol.EVENT_RESUME, from)).is_not_empty()
-	assert_bool(server.session.votes.is_empty()).is_true()
+	assert_bool(server.session.lobby.votes.is_empty()).is_true()
 	# The next pause starts with no votes: Systems' vote is the only one.
 	await _lose(server, ops, viewer)
 	from = h.mark(viewer)
@@ -227,7 +227,7 @@ func test_votes_clear_on_resume_and_a_dropped_voter_loses_its_vote() -> void:
 		viewer, NetProtocol.EVENT_ABANDON_VOTES, from, sys_only
 	)
 	assert_int(votes["payload"]["needed"]).is_equal(2)
-	assert_bool(server.session.paused.has(PLAYER)).is_true()
+	assert_bool(server.session.lobby.paused.has(PLAYER)).is_true()
 	# Systems drops (within its grace): its vote no longer counts.
 	from = h.mark(viewer)
 	var sys_session: NetSession = h.session_of(server, sys)
@@ -235,8 +235,8 @@ func test_votes_clear_on_resume_and_a_dropped_voter_loses_its_vote() -> void:
 	var none: Callable = func(e: Dictionary) -> bool: return e["payload"]["voters"] == []
 	votes = await h.next_event(viewer, NetProtocol.EVENT_ABANDON_VOTES, from, none)
 	assert_int(votes["payload"]["needed"]).is_equal(1)
-	assert_bool(server.session.votes[PLAYER].voters.has(sys_session.id)).is_false()
-	assert_bool(server.session.abandoned.has(PLAYER)).is_false()
+	assert_bool(server.session.lobby.votes[PLAYER].voters.has(sys_session.id)).is_false()
+	assert_bool(server.session.lobby.abandoned.has(PLAYER)).is_false()
 
 
 # FT: FT-NET-041
@@ -254,7 +254,7 @@ func test_host_abandons_alone() -> void:
 	sys.abandon(PLAYER)
 	var refused: Dictionary = await h.next_event(sys, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_HOST)
-	assert_bool(server.session.paused.has(PLAYER)).is_true()
+	assert_bool(server.session.lobby.paused.has(PLAYER)).is_true()
 	host.abandon(PLAYER)
 	var gone: Dictionary = await h.next_event(sys, NetProtocol.EVENT_ABANDONED, from)
 	assert_str(gone["payload"]["by"]).is_equal("host")

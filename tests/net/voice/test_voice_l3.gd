@@ -49,7 +49,7 @@ func _client(name: String) -> NetClient:
 
 func _voice_lines(c: NetClient) -> Array[Dictionary]:
 	return c.take_events().filter(
-		func(e: Dictionary) -> bool: return e["type"] == VoiceService.EVENT_VOICE_LINE
+		func(e: Dictionary) -> bool: return e["type"] == NetProtocol.EVENT_VOICE_LINE
 	)
 
 

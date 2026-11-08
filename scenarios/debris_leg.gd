@@ -15,7 +15,6 @@ extends Scenario
 ## the lane is paid. A leg that ends by a flee or a loss fails its accepted clearance (A8).
 ## Only the Scenario API is used (FT-DAT-007).
 
-const DEBRIS_FACTION: int = Factions.DEBRIS
 const NPC: StringName = &"Traffic Control"
 ## Site 0, Kestrel Yard, where every leg ends (D205).
 const HOME: int = 0
@@ -29,7 +28,6 @@ const FEE: int = 150
 const LANE_OPEN_S: float = 30.0
 const LANE_S: float = 540.0
 ## The civil faction whose standing an uncleared approach costs (rescue's freighters, too).
-const CIVIL_FACTION: int = Factions.CIVIL
 const MAX_S: float = 600.0
 ## The fee card outlasts the encounter, so a timeout can still settle it.
 const CARD_S: float = MAX_S + 30.0
@@ -58,7 +56,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	_started = api.tick()
 	var view: ShipView = api.ship(lead)
 	var from: int = params.get("site", view.nearest_site)
-	api.set_relation(DEBRIS_FACTION, view.faction, Relation.HOSTILE)
+	api.set_relation(Factions.DEBRIS, view.faction, Relation.HOSTILE)
 	_destination = HOME
 	if from == HOME:
 		_result = Result.WON
@@ -71,7 +69,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 		for i: int in count:
 			var t: float = lerpf(FIRST_T, LAST_T, float(i) / maxi(count - 1, 1))
 			var lateral: float = (api.rand(&"debris_leg") * 2.0 - 1.0) * LATERAL_M
-			api.spawn_on_leg(leg["debris"], DEBRIS_FACTION, from, _destination, t, lateral)
+			api.spawn_on_leg(leg["debris"], Factions.DEBRIS, from, _destination, t, lateral)
 	for ship: int in Scenario.fleet(api, _ships):
 		api.message("npc.lane_warning", {}, SayTarget.npc(NPC, ship))
 	var run: CardSpec = CardSpec.new()
@@ -84,7 +82,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	run.site = HOME
 	run.lane_open_s = LANE_OPEN_S
 	run.lane_s = LANE_S
-	run.rep_faction = CIVIL_FACTION
+	run.rep_faction = Factions.CIVIL
 	run.faction_wide = true
 	_clearance = api.offer(lead, run)
 

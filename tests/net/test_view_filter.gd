@@ -359,7 +359,7 @@ func test_equal_filters_share_a_section() -> void:
 	# A malformed code in a key reads as the default set, never a crash.
 	var bad: String = StationViews.key(ME, "weapons", "extreme")
 	b.build(SimCopy.of(world), 2, [bad])
-	assert_bool(b.message(bad, true).size() > SnapshotBuilder.HEADER_BYTES).is_true()
+	assert_bool(b.message(bad, true).size() > SnapshotReader.HEADER_BYTES).is_true()
 
 
 # FT: FT-PAIR-007, FT-JNT-005

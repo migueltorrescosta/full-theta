@@ -18,16 +18,16 @@ extends RefCounted
 ## seeded phases, so the same lesson gives the same commands.
 
 ## Ticks between two looks of one bot (2 s).
-const LOOK_TICKS: int = 2 * ScenarioApi.HZ
+const LOOK_TICKS: int = 2 * SimRate.HZ
 ## Helm lets the ship drift below this speed (m/s).
 const REST_MS: float = 8.0
 ## Weapons and Science look this far for the drone (m).
 const SIGHT_M: float = 12000.0
 ## Science keeps a scan open this long, and waits this long before the next (ticks).
-const SCAN_HOLD_TICKS: int = 8 * ScenarioApi.HZ
-const SCAN_WAIT_TICKS: int = 40 * ScenarioApi.HZ
+const SCAN_HOLD_TICKS: int = 8 * SimRate.HZ
+const SCAN_WAIT_TICKS: int = 40 * SimRate.HZ
 ## Relay launches its probe this long after the lesson starts, and this far ahead (m).
-const PROBE_AFTER_TICKS: int = 30 * ScenarioApi.HZ
+const PROBE_AFTER_TICKS: int = 30 * SimRate.HZ
 const PROBE_AHEAD_M: float = 3000.0
 ## A subsystem above its nominal pips cools down at this share of its fault heat.
 const COOL_SHARE: float = 0.7
@@ -35,10 +35,6 @@ const COOL_SHARE: float = 0.7
 const STATIONS: Array[StringName] = [
 	&"helm", &"weapons", &"engineering", &"science", &"relay", &"comms"
 ]
-
-## Whether the verbs keep a record: [tick, station, kind] per command (ApiCrew.sent).
-var record: bool = false
-var sent: Array[Array] = []
 
 var _solo: StringName = &""
 var _phase: Dictionary[StringName, int] = {}
@@ -60,7 +56,7 @@ func _init(seed_value: int = 0) -> void:
 func act(api: ScenarioApi, driver: TrainingDriver, busy: Dictionary[StringName, bool]) -> void:
 	_solo = driver.solo_station()
 	var ship: int = driver.ship_id()
-	var hands: ApiCrew = _hands(api)
+	var hands: ApiCrew = api.crew()
 	if _solo == &"" or not hands.alive(ship):
 		return
 	if _started_tick < 0:
@@ -83,14 +79,6 @@ func act(api: ScenarioApi, driver: TrainingDriver, busy: Dictionary[StringName, 
 				_relay(api, hands, ship)
 			&"comms":
 				hands.answer_hail(ship)
-
-
-## The verbs of the API, set to keep the record when asked to.
-func _hands(api: ScenarioApi) -> ApiCrew:
-	var hands: ApiCrew = api.crew()
-	hands.record = record
-	sent = hands.sent
-	return hands
 
 
 # --- the bots ---
@@ -137,7 +125,7 @@ func _relay(api: ScenarioApi, hands: ApiCrew, ship: int) -> void:
 func half(api: ScenarioApi, ship: int, station: StringName, action: StringName) -> void:
 	if station == _solo:
 		return
-	var hands: ApiCrew = _hands(api)
+	var hands: ApiCrew = api.crew()
 	var target: int = hands.nearest_hostile(ship, SIGHT_M)
 	match action:
 		&"helm_speed":
@@ -147,9 +135,9 @@ func half(api: ScenarioApi, ship: int, station: StringName, action: StringName) 
 		&"eng_boost":
 			hands.boost(ship)
 		&"eng_weapons_pips":
-			hands.pip_up(ship, ApiCrew.PIPS_WEAPONS)
+			hands.pip_up(ship, SubsystemDef.Kind.WEAPONS)
 		&"eng_sensors_pips":
-			hands.pip_up(ship, ApiCrew.PIPS_SENSORS)
+			hands.pip_up(ship, SubsystemDef.Kind.SENSORS)
 		&"sci_scan":
 			if target >= 0:
 				_scan_at = api.tick()

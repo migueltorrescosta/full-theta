@@ -75,11 +75,6 @@ func client_model() -> Dictionary:
 	return out
 
 
-## Client side: SnapshotReader.apply_near.
-static func apply(into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int) -> void:
-	SnapshotReader.apply_near(into, buf, is_full, tick)
-
-
 ## One record from the model entry [bits, angular velocity, tick].
 func _put_rec(buf: StreamPeerBuffer, id: int, entry: Array) -> void:
 	buf.put_u16(id)

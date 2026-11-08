@@ -74,7 +74,7 @@ func test_voice_lines_reach_the_player_and_language_applies() -> void:
 		"audio": false,
 		"local": false,
 	}
-	c.queued.append({"seq": 1, "tick": 0, "type": VoiceService.EVENT_VOICE_LINE, "payload": line})
+	c.queued.append({"seq": 1, "tick": 0, "type": NetProtocol.EVENT_VOICE_LINE, "payload": line})
 	c.queued.append({"seq": 2, "tick": 0, "type": "alert", "payload": {"ship": 0, "level": 1}})
 	await get_tree().process_frame
 	assert_int(s.ctx.crew.alert).is_equal(1)
@@ -368,7 +368,7 @@ func test_subtitles_have_a_backing_panel_and_a_size() -> void:
 		"local": false,
 	}
 	(s.ctx.client as FakeClient).queued.append(
-		{"seq": 1, "tick": 0, "type": VoiceService.EVENT_VOICE_LINE, "payload": line}
+		{"seq": 1, "tick": 0, "type": NetProtocol.EVENT_VOICE_LINE, "payload": line}
 	)
 	await get_tree().process_frame
 	assert_bool(s._subtitle_panel.visible).is_true()

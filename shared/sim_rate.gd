@@ -5,3 +5,8 @@ extends RefCounted
 
 ## Simulation ticks per second.
 const HZ: int = 60
+
+
+## Ticks in `seconds`, rounded up.
+static func ticks(seconds: float) -> int:
+	return ceili(seconds * HZ)

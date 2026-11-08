@@ -36,7 +36,6 @@ run_dir=$(mkdir -p "$run_dir" && cd "$run_dir" && pwd)
 
 die() { echo "$*" >"$out/why"; exit 1; }
 
-alive() { ft_alive "$@"; }
 
 # why LOG: the reason a client gave on its last log line (or its first engine error).
 why() {
@@ -48,12 +47,12 @@ why() {
 check() {
   local name rc
   for name in "${!pids[@]}"; do
-    alive "${pids[$name]}" && continue
+    ft_alive "${pids[$name]}" && continue
     wait "${pids[$name]}"; rc=$?
     unset "pids[$name]"
     ((rc == 0)) || die "$name exited $rc: $(why "$out/$name.${launches[$name]}.jsonl")"
   done
-  if [[ -n ${server_pid:-} ]] && ! alive "$server_pid"; then die "server died"; fi
+  if [[ -n ${server_pid:-} ]] && ! ft_alive "$server_pid"; then die "server died"; fi
 }
 
 # server [flags]: the dedicated server on a free port; sets URL.

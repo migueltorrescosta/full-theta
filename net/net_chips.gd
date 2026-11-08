@@ -43,21 +43,6 @@ func _init(server_session: ServerSession) -> void:
 	server_session.add_handler(NetProtocol.Type.CHIP, on_chip)
 
 
-## The chip list (ChipView.def, which the clients read too).
-static func def() -> ChipsDef:
-	return _def
-
-
-## The index of a chip id in the list, or -1 (ChipView.index_of).
-static func index_of(chip_id: String) -> int:
-	return ChipView.index_of(chip_id)
-
-
-## What the chip's argument names (ChipView.arg_kind).
-static func arg_kind(chip_id: String) -> ChipDef.Arg:
-	return ChipView.arg_kind(chip_id)
-
-
 ## Chip{op, ...}.
 func on_chip(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var why: String
@@ -76,7 +61,7 @@ func on_chip(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 ## Opens a chip from the session's station to the chip's receiver; the reason it can't, or "".
 func send(s: NetSession, chip_id: String, arg: int) -> String:
 	var why: String = _sender_rule(s)
-	var at: int = index_of(chip_id)
+	var at: int = ChipView.index_of(chip_id)
 	if why == "" and at < 0:
 		why = BAD_CHIP
 	if why == "":

@@ -16,7 +16,7 @@ var kin: Dictionary = {}
 var blocks: Dictionary = {}
 ## {"model": id -> [pos, vel, tick], "info": id -> [flags, callsign]}.
 var contacts: Dictionary = {}
-## The named sites the faction knows (SitesSection.read), in site id order.
+## The named sites the faction knows (SnapshotReader.read_sites), in site id order.
 var sites: Array[Dictionary] = []
 ## id -> [packed quaternion, angular velocity, tick].
 var near: Dictionary = {}

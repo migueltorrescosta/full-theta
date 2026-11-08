@@ -322,10 +322,10 @@ func test_selection_chip_and_sheet() -> void:
 # the pinged item.
 func test_request_chips_and_ping_toast() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
-	var at: int = NetChips.def().chips.find(
-		NetChips.def().chips.filter(func(c: ChipDef) -> bool: return c.to_station == &"helm")[0]
+	var at: int = ChipView.def().chips.find(
+		ChipView.def().chips.filter(func(c: ChipDef) -> bool: return c.to_station == &"helm")[0]
 	)
-	var from: int = StationViews.CREW.find(String(NetChips.def().chips[at].from_station))
+	var from: int = StationViews.CREW.find(String(ChipView.def().chips[at].from_station))
 	var row: Dictionary = {
 		"id": 5, "chip": at, "arg": -1, "from": from, "to": 0, "sent": 3500, "expires": 4000
 	}

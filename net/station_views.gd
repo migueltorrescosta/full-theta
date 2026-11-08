@@ -511,12 +511,3 @@ static func _build(entry: String) -> StationDef:
 		if BLOCKS.has(kind):
 			d.fields[kind] = (BLOCKS[kind] as Array).map(func(f: Array) -> String: return f[0])
 	return d
-
-
-## Kept for the L3 tests that call it: the server's StationBlocks.block_bytes, loaded when
-## called so that this client-safe class names no server class (F4, D103).
-static func block_bytes(
-	kind: int, world: Object, ship: int, filter: ViewFilter = null
-) -> PackedByteArray:
-	var blocks: GDScript = load("res://net/station_blocks.gd")
-	return blocks.call(&"block_bytes", kind, world, ship, filter)

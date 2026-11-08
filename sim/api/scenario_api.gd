@@ -11,8 +11,6 @@ extends RefCounted
 ## an ApiHandle, which resolves to the real id once the command has applied (Q24); the API
 ## predicts no id.
 
-## Ticks per second, for scenarios and the director to turn seconds into ticks.
-const HZ: int = SimWorld.HZ
 ## The session modes a director plans differently for (session_mode() returns a
 ## SessionRules.Mode; the director sees only sim/api, so it reads them from here).
 const MODE_RACE: int = SessionRules.Mode.RACE
@@ -23,9 +21,13 @@ var _world: SimWorld
 var _crew: ApiCrew
 
 
-## Ticks in `seconds`, rounded up: SimWorld.ticks for the scenarios and the director.
-static func ticks(seconds: float) -> int:
-	return SimWorld.ticks(seconds)
+## The story flags a station's Next and Skip presses are counted in (TrainingNextCommand).
+static func next_flag(station: StringName) -> StringName:
+	return TrainingNextCommand.flag_name(station)
+
+
+static func skip_flag(station: StringName) -> StringName:
+	return TrainingNextCommand.skip_flag_name(station)
 
 
 func _init(world: SimWorld) -> void:

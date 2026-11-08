@@ -163,11 +163,9 @@ static func knows_weak_point(
 static func _subsystem_index(world: SimWorld, ship_id: int, subsystem_id: StringName) -> int:
 	if not world.has_ship(ship_id):
 		return -1
-	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
-	for i: int in mini(subs.size(), 31):
-		if subs[i].id == subsystem_id:
-			return i
-	return -1
+	var row: int = world.damage.find_subsystem(ship_id, subsystem_id)
+	var i: int = world.damage.index_of_row(ship_id, row) if row >= 0 else -1
+	return i if i < 31 else -1
 
 
 ## Factions that have at least one ship, ascending.

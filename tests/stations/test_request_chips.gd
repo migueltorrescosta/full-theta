@@ -135,7 +135,7 @@ func _put_chip(s: StationScreen, id: int, chip: String, from: String, to: String
 		. append(
 			{
 				"id": id,
-				"chip": NetChips.index_of(chip),
+				"chip": ChipView.index_of(chip),
 				"arg": -1,
 				"from": StationViews.CREW.find(from),
 				"to": StationViews.CREW.find(to),

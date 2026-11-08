@@ -193,16 +193,18 @@ func test_near_member_added_later_carries_its_age() -> void:
 	_step2(world)
 	var recorded_at: int = world.tick
 	orient.update(world, {ENEMY: true})
-	NearSection.apply(client, _buf(near.update_members(world, {})), false, world.tick)
+	SnapshotReader.apply_near(client, _buf(near.update_members(world, {})), false, world.tick)
 	for i: int in 10:
 		_step2(world)
 	# The shared model isn't refreshed (another ship of the faction keeps it): ENEMY joins
 	# this ship's set with the record from 20 ticks ago.
-	NearSection.apply(client, _buf(near.update_members(world, {ENEMY: true})), false, world.tick)
+	SnapshotReader.apply_near(
+		client, _buf(near.update_members(world, {ENEMY: true})), false, world.tick
+	)
 	assert_dict(client).is_equal(near.client_model())
 	assert_int(client[ENEMY][2]).is_equal(recorded_at)
 	var full: Dictionary = {}
-	NearSection.apply(full, _buf(near.full()), true, world.tick)
+	SnapshotReader.apply_near(full, _buf(near.full()), true, world.tick)
 	assert_dict(full).is_equal(client)
 
 
@@ -231,7 +233,7 @@ func test_oversize_section_is_sent_with_a_long_length() -> void:
 	assert_int(full.size()).is_greater(70_000)
 	assert_bool(st.apply(full)).is_true()
 	assert_array(st.kinds).is_equal(StationViews.sections_of("helm"))
-	assert_dict(st.kin).is_equal(KinSection.read(_buf(kin)))
+	assert_dict(st.kin).is_equal(SnapshotReader.read_kin(_buf(kin)))
 	_step2(world)
 	b.build(SimCopy.of(world), 2, [key])
 	assert_bool(st.apply(b.message(key, false))).is_true()

@@ -9,7 +9,6 @@ extends RefCounted
 ## the mission mark icon on cards from the mission_icon toggle (P15).
 
 ## The wire schema (BlockSchema.COMMS).
-const SCHEMA: Array = BlockSchema.COMMS
 ## Sim events only Comms gets: cards, replies, trades, modules and reputation.
 const EVENTS: Array[StringName] = [
 	&"card_posted",

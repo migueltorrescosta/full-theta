@@ -20,7 +20,6 @@ const MAX_ZONES: int = 16
 const MAX_ROUTES: int = 4
 const MAX_WAYPOINTS: int = 12
 const MAX_INBOX: int = 8
-const MAX_LOG: int = NetProtocol.RELAY_LOG_MAX
 ## Largest hazard radius (m).
 const MAX_RADIUS: float = 50_000.0
 
@@ -143,12 +142,12 @@ func log_of(ship: int) -> Array:
 	return (_log.get(ship, []) as Array).duplicate(true)
 
 
-## Appends a log entry (the newest MAX_LOG stay) and returns it.
+## Appends a log entry (the newest NetProtocol.RELAY_LOG_MAX stay) and returns it.
 func log_entry(ship: int, tick: int, key: String, args: Dictionary = {}) -> Dictionary:
 	var entries: Array = _log.get_or_add(ship, [])
 	var entry: Dictionary = {"tick": tick, "key": key, "args": args}
 	entries.append(entry)
-	if entries.size() > MAX_LOG:
+	if entries.size() > NetProtocol.RELAY_LOG_MAX:
 		entries.pop_front()
 	return entry
 

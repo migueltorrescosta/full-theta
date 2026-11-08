@@ -210,7 +210,6 @@ func test_an_ack_beyond_the_last_sent_snapshot_is_clamped() -> void:
 # R11-12: the default grace is the spec's 15 s.
 func test_default_grace_is_fifteen_seconds() -> void:
 	assert_int(NetSessions.DEFAULT_GRACE_US).is_equal(15_000_000)
-	assert_float(ServerMain.DEFAULT_GRACE_S).is_equal(15.0)
 
 
 # FT: FT-NET-026, FT-NET-033
@@ -219,7 +218,6 @@ func test_default_grace_is_fifteen_seconds() -> void:
 # restore keeps its token.
 func test_lapsed_sessions_without_a_pick_are_evicted() -> void:
 	var sessions: NetSessions = NetSessions.new(1_000_000)
-	sessions.evict_us = 60_000_000
 	var kept: NetSession = _session()
 	kept.last_entry = "helm"
 	for i: int in 1000:
@@ -232,8 +230,8 @@ func test_lapsed_sessions_without_a_pick_are_evicted() -> void:
 	assert_int(sessions.all().size()).is_equal(1001)
 	assert_int(sessions.expire(2_000_000).size()).is_equal(1001)
 	assert_int(sessions.evict(30_000_000).size()).is_equal(0)
-	var gone: Array[NetSession] = sessions.evict(61_000_000)
+	var gone: Array[NetSession] = sessions.evict(NetSessions.EVICT_US + 1_000_000)
 	assert_int(gone.size()).is_equal(1000)
 	assert_array(sessions.all()).is_equal([kept])
-	assert_object(sessions.resume(gone[0].token, 62_000_000)).is_null()
-	assert_object(sessions.resume(kept.token, 62_000_000)).is_same(kept)
+	assert_object(sessions.resume(gone[0].token, NetSessions.EVICT_US + 2_000_000)).is_null()
+	assert_object(sessions.resume(kept.token, NetSessions.EVICT_US + 2_000_000)).is_same(kept)

@@ -119,10 +119,7 @@ func test_a_cleared_dock_at_the_yard_pays_the_fee() -> void:
 	_dock_at_yard(f)
 	assert_int(f.card_state(card)).is_equal(CardView.State.DONE)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits + DebrisLeg.FEE)
-	(
-		assert_float(f.world.reputation.value_of(f.world.faction_of(0), DebrisLeg.CIVIL_FACTION))
-		. is_equal(0.0)
-	)
+	assert_float(f.world.reputation.value_of(f.world.faction_of(0), Factions.CIVIL)).is_equal(0.0)
 
 
 # FT: FT-PAIR-001, FT-MIS-019
@@ -135,10 +132,7 @@ func test_an_uncleared_dock_at_the_yard_costs_standing() -> void:
 	_dock_at_yard(f)
 	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
-	(
-		assert_float(f.world.reputation.value_of(f.world.faction_of(0), DebrisLeg.CIVIL_FACTION))
-		. is_less(0.0)
-	)
+	assert_float(f.world.reputation.value_of(f.world.faction_of(0), Factions.CIVIL)).is_less(0.0)
 
 
 # FT: FT-MIS-041, FT-MIS-021

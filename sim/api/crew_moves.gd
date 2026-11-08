@@ -40,8 +40,9 @@ static func repair(world: SimWorld, ship: int) -> DispatchRepairCommand:
 	var busy: int = 0
 	var worst: StringName = &""
 	var worst_frac: float = 0.8
-	for sub: SubsystemDef in def.subsystems:
-		var row: int = table.find_subsystem(ship, sub.id)
+	for i: int in def.subsystems.size():
+		var sub: SubsystemDef = def.subsystems[i]
+		var row: int = table.subsystem_row(ship, i)
 		busy |= table.crews[row]
 		var frac: float = table.health[row] / sub.health_max
 		if frac < worst_frac and table.crews[row] == 0:

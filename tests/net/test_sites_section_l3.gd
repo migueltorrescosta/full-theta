@@ -91,7 +91,7 @@ func test_sent_only_on_change_and_capped_at_32_rows() -> void:
 		w.add_site(_site("t%d" % i, Vector3(0, 0, 5000.0 * i)))
 	var many: PackedByteArray = section.update(w)
 	assert_int(many[0]).is_equal(SitesSection.MAX_ROWS)
-	assert_int(SitesSection.read(_buffer(many)).size()).is_equal(SitesSection.MAX_ROWS)
+	assert_int(SnapshotReader.read_sites(_buffer(many)).size()).is_equal(SitesSection.MAX_ROWS)
 	assert_array(section.update(w)).is_empty()
 	# Rows are small: 16 bytes plus the key, so 32 rows stay near 800 bytes.
 	assert_int(many.size()).is_less(1000)

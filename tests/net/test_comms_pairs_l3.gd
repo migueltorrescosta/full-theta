@@ -82,7 +82,7 @@ func test_comms_shortcuts_are_shared_by_a_press() -> void:
 	from = h.mark(approach)
 	approach.share("lanes")
 	assert_str(await _rejection(approach, from)).is_equal(NetShares.SAME_SCREEN)
-	server.session.toggles = DataToggles.of_preset("hard")
+	server.session.lobby.toggles = DataToggles.of_preset("hard")
 	from = h.mark(crew["comms"])
 	crew["comms"].share("lanes")
 	assert_str(await _rejection(crew["comms"], from)).is_equal(NetShares.OFF)

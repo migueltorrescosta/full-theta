@@ -18,9 +18,6 @@ extends Scenario
 ## Accepting one card withdraws the other. Only the Scenario API is used (FT-DAT-007).
 
 const FREIGHTER: StringName = &"stranded_freighter"
-const RAIDER: StringName = Factions.RAIDER_KEY
-const RAIDER_FACTION: int = Factions.RAIDER
-const FREIGHTER_FACTION: int = Factions.CIVIL
 const NPC: StringName = &"Calliope"
 const ESCORT_TITLE: StringName = &"comms.card.escort"
 const SALVAGE_TITLE: StringName = &"comms.card.salvage"
@@ -36,7 +33,6 @@ const SALVAGE_REWARD: int = 700
 ## (s), how far from the freighter (m), how many of them at strength 1.
 const FREIGHTER_RANGE_M: float = 4000.0
 const RAIDERS_AFTER_S: float = 20.0
-const RAIDER_RANGE_M: float = Factions.RAIDER_RANGE_M
 const RAIDERS: int = 2
 const RAIDER_GAP_S: float = 30.0
 ## At most this many raiders: the last one arrives at RAIDERS_AFTER_S + RAIDER_GAP_S * 5 =
@@ -80,11 +76,11 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	_faction = view.faction
 	_started = api.tick()
 	_raider_count = raider_count(float(params.get("strength", 1.0)))
-	api.set_relation(FREIGHTER_FACTION, _faction, Relation.FRIENDLY)
-	api.set_relation(FREIGHTER_FACTION, RAIDER_FACTION, Relation.HOSTILE)
-	api.set_relation(RAIDER_FACTION, _faction, Relation.HOSTILE)
+	api.set_relation(Factions.CIVIL, _faction, Relation.FRIENDLY)
+	api.set_relation(Factions.CIVIL, Factions.RAIDER, Relation.HOSTILE)
+	api.set_relation(Factions.RAIDER, _faction, Relation.HOSTILE)
 	_freighter = api.spawn_at_offset(
-		FREIGHTER, FREIGHTER_FACTION, lead, _abeam(view.velocity) * FREIGHTER_RANGE_M
+		FREIGHTER, Factions.CIVIL, lead, _abeam(view.velocity) * FREIGHTER_RANGE_M
 	)
 	for ship: int in Scenario.fleet(api, _ships):
 		api.message("npc.distress", {"npc": NPC}, SayTarget.npc(NPC, ship))
@@ -164,7 +160,14 @@ func step(api: ScenarioApi) -> void:
 	):
 		var clock: int = 10 + 2 * _raiders.size()
 		_raiders.append(
-			api.spawn_at_range(RAIDER, RAIDER_FACTION, _freighter.id(), RAIDER_RANGE_M, clock, 0)
+			api.spawn_at_range(
+				Factions.RAIDER_KEY,
+				Factions.RAIDER,
+				_freighter.id(),
+				Factions.RAIDER_RANGE_M,
+				clock,
+				0
+			)
 		)
 	if _raiders.size() < _raider_count:
 		if elapsed_s >= MAX_S:
@@ -226,7 +229,7 @@ func _settle(api: ScenarioApi, result: int) -> void:
 			for ship: int in Scenario.fleet(api, _ships):
 				api.message("npc.rescue_thanks", {}, SayTarget.npc(NPC, ship))
 	if _state(api, _salvage) == CardView.State.ACCEPTED:
-		var done: bool = _near_ticks >= ScenarioApi.ticks(SALVAGE_S)
+		var done: bool = _near_ticks >= SimRate.ticks(SALVAGE_S)
 		api.settle_card(_salvage.id(), done, result == Result.PARTIAL)
 
 

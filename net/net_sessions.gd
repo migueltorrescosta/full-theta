@@ -14,10 +14,9 @@ extends RefCounted
 
 const DEFAULT_GRACE_US: int = 15_000_000
 ## How long after its drop a lapsed session without a pick or claim is forgotten (us).
-const DEFAULT_EVICT_US: int = 600_000_000
+const EVICT_US: int = 600_000_000
 
 var grace_us: int = DEFAULT_GRACE_US
-var evict_us: int = DEFAULT_EVICT_US
 var _by_token: Dictionary[String, NetSession] = {}
 var _crypto: Crypto = Crypto.new()
 
@@ -72,7 +71,7 @@ func expire(now_us: int) -> Array[NetSession]:
 
 
 ## Forgets (token and all) the lapsed sessions that held no pick or claim and dropped more
-## than evict_us ago, and returns them: a connect/Hello/close loop leaves nothing behind.
+## than EVICT_US ago, and returns them: a connect/Hello/close loop leaves nothing behind.
 func evict(now_us: int) -> Array[NetSession]:
 	var gone: Array[NetSession] = []
 	for session: NetSession in _by_token.values():
@@ -80,7 +79,7 @@ func evict(now_us: int) -> Array[NetSession]:
 			session.lapsed
 			and session.last_entry == ""
 			and session.last_claims.is_empty()
-			and now_us - session.dropped_us > evict_us
+			and now_us - session.dropped_us > EVICT_US
 		):
 			_by_token.erase(session.token)
 			gone.append(session)

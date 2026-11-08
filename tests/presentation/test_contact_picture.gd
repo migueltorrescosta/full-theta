@@ -19,9 +19,9 @@ func _ctx() -> StationContext:
 		},
 		"info":
 		{
-			0: [ContactsSection.FLAG_OWN, "Kestrel"],
+			0: [SnapshotReader.FLAG_OWN, "Kestrel"],
 			1: [1, "H1"],
-			2: [ContactsSection.FLAG_OWN, "Osprey"],
+			2: [SnapshotReader.FLAG_OWN, "Osprey"],
 		},
 	}
 	ctx.view = v

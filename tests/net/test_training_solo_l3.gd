@@ -119,7 +119,10 @@ func test_the_hosts_solo_flag_starts_a_lesson_on_join() -> void:
 	server.session.host_secret = "s3cret"
 	server.session.training.solo_on_join = "relay"
 	var c: NetClient = await h.welcomed(server, "host", "", "s3cret")
-	assert_bool(await h.until(func() -> bool: return server.session.launched.size() == 1)).is_true()
+	(
+		assert_bool(await h.until(func() -> bool: return server.session.lobby.launched.size() == 1))
+		. is_true()
+	)
 	assert_str(h.session_of(server, c).entry).is_equal("relay")
 	assert_str(server.session.training.solo).is_equal("relay")
 
@@ -132,16 +135,11 @@ func test_the_server_bots_submit_commands_for_their_own_stations_only() -> void:
 	var c: NetClient = await h.welcomed(server, "ana")
 	c.start_training("helm")
 	assert_bool(await h.until(func() -> bool: return server.driver is TrainingDriver)).is_true()
-	server.partners.crew.record = true
-	(
-		assert_bool(
-			await h.until(func() -> bool: return not server.partners.crew.sent.is_empty(), 12000)
-		)
-		. is_true()
-	)
-	for row: Array in server.partners.crew.sent:
-		assert_str(String(row[1])).is_not_equal("helm")
-		assert_str(StationViews.station_of_command(row[2])).is_equal(String(row[1]))
+	var hands: ApiCrew = server.host.api().crew()
+	hands.record = true
+	assert_bool(await h.until(func() -> bool: return not hands.sent.is_empty(), 12000)).is_true()
+	for row: Array in hands.sent:
+		assert_str(StationViews.station_of_command(row[1])).is_not_equal("helm")
 
 
 # FT: FT-MIS-039
@@ -167,7 +165,7 @@ func test_the_bots_press_next_for_their_half_of_a_pair_step() -> void:
 		await h.until(func() -> bool: return driver.current(&"helm") != step)
 		guard += 1
 	assert_bool(driver.finished(&"helm")).is_true()
-	var flag: StringName = TrainingDriver.next_flag(&"engineering")
+	var flag: StringName = TrainingNextCommand.flag_name(&"engineering")
 	(
 		assert_bool(
 			await h.until(

@@ -74,4 +74,4 @@ static func timed_out(api: ScenarioApi, since: int, max_s: float) -> bool:
 
 ## Seconds since tick `since`.
 static func seconds_since(api: ScenarioApi, since: int) -> float:
-	return float(api.tick() - since) / ScenarioApi.HZ
+	return float(api.tick() - since) / SimRate.HZ

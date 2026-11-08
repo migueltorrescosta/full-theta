@@ -257,11 +257,6 @@ func is_hostile(faction: int, other: int) -> bool:
 	return relation(faction, other) == Relation.HOSTILE
 
 
-## Whether ship `i` is hostile to ship `j`.
-func ships_hostile(i: int, j: int) -> bool:
-	return is_hostile(faction_of(i), faction_of(j))
-
-
 ## Whether the ship is flown by a crew (not by the enemy AI).
 func is_crew(ship_id: int) -> bool:
 	return not ai.is_enabled(ship_id)
@@ -270,11 +265,6 @@ func is_crew(ship_id: int) -> bool:
 ## Whether the ship is crewed and still in the run.
 func is_crew_in_play(ship_id: int) -> bool:
 	return is_crew(ship_id) and run.status[ship_id] == RunTable.Status.IN_PLAY
-
-
-## Ticks in `seconds`, rounded up.
-static func ticks(seconds: float) -> int:
-	return ceili(seconds * HZ)
 
 
 ## The ship's side (#11): its slot's team for a crewed ship of a lobby-built session, else

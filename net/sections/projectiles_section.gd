@@ -87,11 +87,6 @@ func full() -> PackedByteArray:
 	return buf.data_array
 
 
-## Client side: SnapshotReader.apply_projectiles.
-static func apply(into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int) -> void:
-	SnapshotReader.apply_projectiles(into, buf, is_full, tick)
-
-
 ## Shooter (15 bits), expiry tick (32 bits) and order among same pairs (16 bits).
 static func _key(shooter: int, expiry: int, nth: int) -> int:
 	return shooter << 48 | (expiry & 0xFFFFFFFF) << 16 | nth

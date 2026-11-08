@@ -201,7 +201,7 @@ static func _holdout(
 		elif standing.has(id):
 			waiting = true
 	if in_play or waiting:
-		var cap: int = SimWorld.ticks(SessionRules.HOLDOUT_CAP_S)
+		var cap: int = SimRate.ticks(SessionRules.HOLDOUT_CAP_S)
 		if world.tick < cap:
 			return
 		out.reason = SessionOutcome.Reason.HOLDOUT_OVER

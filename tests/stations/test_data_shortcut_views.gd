@@ -111,9 +111,9 @@ func test_weapons_lists_the_feeds_of_the_selected_target() -> void:
 		[
 			{
 				"contact": StationFixture.H2,
-				"class_id": ScienceView.code(raider.id),
+				"class_id": BlockSchema.id_code(raider.id),
 				"weak_mask": 1,
-				"resist": [{"type": ScienceView.code(kind), "factor": 0.5}],
+				"resist": [{"type": BlockSchema.id_code(kind), "factor": 0.5}],
 			}
 		],
 		"windows": [{"target": StationFixture.H2, "sub": 0, "left": 6.2, "by": 0}],

@@ -68,8 +68,8 @@ func test_viewers_receive_only_main_screen_state_and_change_nothing() -> void:
 ## Section kinds of a snapshot message.
 static func _kinds(data: PackedByteArray) -> Array[int]:
 	var out: Array[int] = []
-	var at: int = SnapshotBuilder.HEADER_BYTES
-	for i: int in data[SnapshotBuilder.HEADER_BYTES - 1]:
+	var at: int = SnapshotReader.HEADER_BYTES
+	for i: int in data[SnapshotReader.HEADER_BYTES - 1]:
 		out.append(data[at])
 		at += 3 + data.decode_u16(at + 1)
 	return out

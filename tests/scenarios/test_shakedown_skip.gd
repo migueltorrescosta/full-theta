@@ -50,4 +50,3 @@ func test_a_skip_is_a_crew_command_that_replays() -> void:
 	assert_object(round).is_instanceof(TrainingNextCommand)
 	assert_bool((round as TrainingNextCommand).skip).is_true()
 	assert_str(String(TrainingNextCommand.skip_flag_name(&"helm"))).is_equal("train.helm.skip")
-	assert_str(String(TrainingDriver.skip_flag(&"helm"))).is_equal("train.helm.skip")

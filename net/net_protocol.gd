@@ -167,7 +167,7 @@ const EVENT_VOICE_LINE: String = "voice_line"
 ## transport accepts it (any other type from a client is dropped). RATED: a SEND that also
 ## takes a token from the session's rate limit in ServerSession (commands take theirs in
 ## CommandGate; Hello, Ack and Bye take none). NAMED: its `name` is a player's text, cleaned
-## by clean_text in decode. schemas, from_client and rated_requests derive from this table.
+## by clean_text in decode. from_client and rated_requests derive from this table.
 const SERVER: int = 0
 const SEND: int = 1
 const RATED: int = 3
@@ -283,8 +283,6 @@ const MESSAGES: Dictionary = {
 	Type.RENAME: [RATED | NAMED, {"name": TYPE_STRING}],
 }
 
-## Field name -> Variant type, per control message type.
-static var schemas: Dictionary = _schemas()
 ## Messages a client may send; the server drops any other type from a client.
 static var from_client: Array[int] = _types(SEND)
 ## Client requests that take a token from the session's rate limit in ServerSession.
@@ -309,7 +307,7 @@ static func type_of(data: PackedByteArray) -> int:
 ## kind must be one of CLIENT_KINDS; a NAMED message's name is cleaned by clean_text.
 static func decode(data: PackedByteArray) -> Dictionary:
 	var type: int = type_of(data)
-	if not schemas.has(type):
+	if not MESSAGES.has(type):
 		return {}
 	var body: Variant = bytes_to_var(data.slice(1))
 	if not body is Dictionary:
@@ -339,13 +337,6 @@ static func _types(mask: int) -> Array[int]:
 	return out
 
 
-static func _schemas() -> Dictionary:
-	var out: Dictionary = {}
-	for type: int in MESSAGES:
-		out[type] = MESSAGES[type][1]
-	return out
-
-
 ## The longest prefix of `text` that fits in max_bytes of UTF-8, cut between characters.
 static func clip_utf8(text: String, max_bytes: int) -> String:
 	var bytes: PackedByteArray = text.to_utf8_buffer()
@@ -359,9 +350,9 @@ static func clip_utf8(text: String, max_bytes: int) -> String:
 
 ## Why the fields don't match the type's schema, or "" if they do.
 static func check(type: int, fields: Dictionary) -> String:
-	var schema: Dictionary = schemas.get(type, {})
-	if not schemas.has(type):
+	if not MESSAGES.has(type):
 		return "unknown type %d" % type
+	var schema: Dictionary = MESSAGES[type][1]
 	if fields.size() != schema.size():
 		return "type %d: %d fields, expected %d" % [type, fields.size(), schema.size()]
 	for key: Variant in fields:

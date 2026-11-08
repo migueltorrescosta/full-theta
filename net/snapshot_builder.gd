@@ -14,9 +14,6 @@ extends RefCounted
 ## long to send. A delta omits the sections with nothing to say (unchanged blocks).
 
 ## The header and length escape, as the clients read them (SnapshotReader).
-const HEADER_BYTES: int = SnapshotReader.HEADER_BYTES
-const FLAG_FULL: int = SnapshotReader.FLAG_FULL
-const LONG_SECTION: int = SnapshotReader.LONG_SECTION
 
 var seq: int = 0
 var tick: int = 0
@@ -150,7 +147,7 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 	var k: Array = StationViews.parse_key(view_key)
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.put_u8(NetProtocol.Type.SNAPSHOT)
-	buf.put_u8(FLAG_FULL if is_full else 0)
+	buf.put_u8(SnapshotReader.FLAG_FULL if is_full else 0)
 	buf.put_u32(seq)
 	buf.put_u32(tick)
 	buf.put_u8(0)
@@ -172,7 +169,7 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 		buf.put_data(part)
 		n += 1
 	var out: PackedByteArray = buf.data_array
-	out[HEADER_BYTES - 1] = n
+	out[SnapshotReader.HEADER_BYTES - 1] = n
 	return out
 
 
@@ -200,23 +197,13 @@ func section(kind: int, owner: int, signature: String = "") -> SnapshotSection:
 	return _sections.get(_skey(kind, owner, signature))
 
 
-## Writes a section length (u16, or LONG_SECTION then a u32).
+## Writes a section length (u16, or SnapshotReader.LONG_SECTION then a u32).
 static func put_length(buf: StreamPeerBuffer, size: int) -> void:
-	if size < LONG_SECTION:
+	if size < SnapshotReader.LONG_SECTION:
 		buf.put_u16(size)
 	else:
-		buf.put_u16(LONG_SECTION)
+		buf.put_u16(SnapshotReader.LONG_SECTION)
 		buf.put_u32(size)
-
-
-## Reads a section length written by put_length() (SnapshotReader.get_length).
-static func get_length(buf: StreamPeerBuffer) -> int:
-	return SnapshotReader.get_length(buf)
-
-
-## [seq, full, tick] of a snapshot message (SnapshotReader.peek).
-static func peek(data: PackedByteArray) -> Array:
-	return SnapshotReader.peek(data)
 
 
 ## The sections of a view key as [kind, owner, section key], cached per key.

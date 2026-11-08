@@ -163,7 +163,7 @@ func test_slotted_lines_are_stitched_without_synthesis() -> void:
 	assert_array(Array(_net.order)).is_equal(["event", "voice"])
 	var e: Array = _net.events[0]
 	assert_array(Array(e[0])).is_equal([7])
-	assert_str(e[2]).is_equal(VoiceService.EVENT_VOICE_LINE)
+	assert_str(e[2]).is_equal(NetProtocol.EVENT_VOICE_LINE)
 	var p: Dictionary = e[3]
 	assert_int(p["clip"]).is_equal(clip)
 	assert_str(p["line"]).is_equal("computer.contact")

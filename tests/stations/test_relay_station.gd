@@ -570,7 +570,7 @@ func test_map_shows_the_sim_hazards() -> void:
 		},
 		{
 			"id": 1,
-			"shape": HazardView.PLANE,
+			"shape": BlockSchema.HAZARD_PLANE,
 			"pos": Vector3(0, 0, -3000),
 			"radius": 0.0,
 			"dir": Vector3(0, 0, 1),

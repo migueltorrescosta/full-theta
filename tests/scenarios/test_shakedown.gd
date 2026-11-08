@@ -49,7 +49,7 @@ func test_a_drone_without_weapons_is_the_target() -> void:
 	# Destroyed, it is replaced.
 	rig.world.kin.alive[1] = 0
 	rig.world.run.status[1] = RunTable.Status.DESTROYED
-	rig.tick(ScenarioApi.HZ * 2)
+	rig.tick(SimRate.HZ * 2)
 	assert_int(rig.world.ship_count()).is_equal(3)
 
 
@@ -249,7 +249,7 @@ func test_a_missing_drone_is_asked_again() -> void:
 	# The drone's spawn was rejected (its handle says so, Q24): ask again.
 	var scenario: ShakedownScenario = rig.driver._scenario as ShakedownScenario
 	scenario._drone = rig.host.api().spawn_at_range(&"no_such_enemy", 2, 0, 1000.0, 12, 0)
-	rig.tick(ScenarioApi.HZ * 2)
+	rig.tick(SimRate.HZ * 2)
 	assert_int(rig.world.ship_count()).is_equal(before + 1)
 
 

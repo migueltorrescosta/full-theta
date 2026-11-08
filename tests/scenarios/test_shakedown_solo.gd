@@ -74,7 +74,7 @@ func test_the_partner_presses_next_after_the_delay_and_only_once() -> void:
 	assert_int(pairs.size()).is_equal(1)
 	var first: TrainingStepDef = pairs[0]
 	var partner: StringName = first.partner if first.station == &"weapons" else first.station
-	var flag: StringName = TrainingDriver.next_flag(partner)
+	var flag: StringName = TrainingNextCommand.flag_name(partner)
 	assert_int(rig.world.story_flags.get_flag(flag)).is_equal(0)
 	_tick(rig, partners, TrainingPartners.press_ticks(first, partner) + 4)
 	assert_int(rig.world.story_flags.get_flag(flag)).is_equal(1)
@@ -93,4 +93,4 @@ func test_the_crew_drill_is_unchanged() -> void:
 	assert_array(rig.driver.active_pairs()).is_empty()
 	# No partner presses in the drill.
 	_tick(rig, partners, 600)
-	assert_int(rig.world.story_flags.get_flag(TrainingDriver.next_flag(&"helm"))).is_equal(0)
+	assert_int(rig.world.story_flags.get_flag(TrainingNextCommand.flag_name(&"helm"))).is_equal(0)

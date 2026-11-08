@@ -63,23 +63,14 @@ func _repair(world: SimWorld, m: MarketDef) -> bool:
 	if not buy or row < 0 or price < 1:
 		return Trade.refuse(world, ship_id, card, &"bad_item")
 	var d: DamageTable = world.damage
-	if d.fault_cause[row] == &"" and _is_healthy(world, row, sub):
+	var healthy: bool = d.health[row] >= DamageSystem.sub_def(world, ship_id, row).health_max
+	if d.fault_cause[row] == &"" and healthy:
 		return Trade.refuse(world, ship_id, card, &"nothing_to_repair")
 	if not Economy.add_credits(world, ship_id, -price):
 		return Trade.refuse(world, ship_id, card, &"no_credits")
-	for def: SubsystemDef in world.defs[ship_id].subsystems:
-		if def.id == sub:
-			d.health[row] = def.health_max
+	d.health[row] = DamageSystem.sub_def(world, ship_id, row).health_max
 	d.fault_cause[row] = &""
 	d.fault_known[row] = 0
 	d.fault_pick[row] = &""
 	world.emit(&"trade_done", ship_id, card, -price, Vector3.ZERO, item)
 	return true
-
-
-## Whether the subsystem is at full health.
-func _is_healthy(world: SimWorld, row: int, sub: StringName) -> bool:
-	for def: SubsystemDef in world.defs[ship_id].subsystems:
-		if def.id == sub:
-			return world.damage.health[row] >= def.health_max
-	return false

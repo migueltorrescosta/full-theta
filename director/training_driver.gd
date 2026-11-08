@@ -138,10 +138,10 @@ func _start(api: ScenarioApi) -> bool:
 func _step_station(
 	api: ScenarioApi, now: int, station: StringName, tags: Dictionary[StringName, bool]
 ) -> void:
-	var presses: int = api.flag(next_flag(station))
+	var presses: int = api.flag(ScenarioApi.next_flag(station))
 	var pressed: bool = presses > _seen[station]
 	_seen[station] = presses
-	var skips: int = api.flag(skip_flag(station))
+	var skips: int = api.flag(ScenarioApi.skip_flag(station))
 	var skipped: bool = skips > _skips[station]
 	_skips[station] = skips
 	if _in_pair[station] >= 0:
@@ -160,7 +160,7 @@ func _step_station(
 	if done:
 		_index[station] += 1
 		_announce(api, now, station)
-	elif now - _said[station] >= ScenarioApi.ticks(REMIND_S):
+	elif now - _said[station] >= SimRate.ticks(REMIND_S):
 		_announce(api, now, station)
 
 
@@ -186,7 +186,7 @@ func _step_pairs(api: ScenarioApi, now: int) -> void:
 					_pair_state[i] = 2
 					_in_pair[step.station] = -1
 					_in_pair[step.partner] = -1
-				elif now - _said[step.station] >= ScenarioApi.ticks(REMIND_S):
+				elif now - _said[step.station] >= SimRate.ticks(REMIND_S):
 					_say(api, step.line, [step.station, step.partner] as Array[StringName])
 					_said[step.station] = now
 					_said[step.partner] = now
@@ -242,12 +242,3 @@ func stations() -> Array[StringName]:
 	for station: StringName in _tracks:
 		out.append(station)
 	return out
-
-
-static func next_flag(station: StringName) -> StringName:
-	return StringName("train.%s.next" % station)
-
-
-## The flag a station's Skip presses are counted in (TrainingNextCommand.skip_flag_name).
-static func skip_flag(station: StringName) -> StringName:
-	return StringName("train.%s.skip" % station)

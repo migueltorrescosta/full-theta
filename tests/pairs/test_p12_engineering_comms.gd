@@ -84,7 +84,7 @@ func test_comms_sees_the_hull_band_and_nothing_of_condition() -> void:
 	var w: SimWorld = _ready_world()
 	var block: Dictionary = CommsView.block(w, 0)
 	var fields: Array[String] = []
-	for entry: Array in CommsView.SCHEMA:
+	for entry: Array in BlockSchema.COMMS:
 		fields.append(entry[0])
 	assert_array(block.keys()).contains_exactly_in_any_order(fields)
 	for banned: String in ["subsystems", "parts", "spares", "fault", "heat", "health"]:

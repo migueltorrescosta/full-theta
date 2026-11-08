@@ -46,7 +46,8 @@ func _payloads() -> Dictionary:
 			[FleetMessages.scoreboard_row(0, "Kestrel", 0, FleetMessages.DESTROYED, 2, 314.5, 1)]
 		),
 		NetProtocol.EVENT_ELIMINATED: FleetMessages.eliminated(0, "forfeit", 0),
-		NetProtocol.EVENT_RELAUNCH_VOTES: FleetMessages.relaunch_votes(0, ["Ana"], 2, [4]),
+		NetProtocol.EVENT_RELAUNCH_VOTES:
+		{"ship": 0, "voters": ["Ana"], "sessions": [4], "needed": 2},
 		NetProtocol.EVENT_RELAUNCHED: FleetMessages.relaunched(0, -1),
 		NetProtocol.EVENT_SESSION_OVER: FleetMessages.session_over(reason, [2], -1, 0.0, 600.0),
 	}

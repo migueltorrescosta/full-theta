@@ -11,10 +11,10 @@ extends RefCounted
 
 ## Ticks between a pair step starting and the partner's press when it has no scripted half
 ## (4 s).
-const DELAY_TICKS: int = 4 * ScenarioApi.HZ
+const DELAY_TICKS: int = 4 * SimRate.HZ
 ## Ticks to the scripted half (2 s), and from the half to the press (4 s).
-const HALF_TICKS: int = 2 * ScenarioApi.HZ
-const HALF_PRESS_TICKS: int = 4 * ScenarioApi.HZ
+const HALF_TICKS: int = 2 * SimRate.HZ
+const HALF_PRESS_TICKS: int = 4 * SimRate.HZ
 
 ## "pair step intent|partner station" -> [the action TrainingCrew.half does, the partner
 ## glance read-out (PartnerGlance.readout id) that shows it]. The glance card of the

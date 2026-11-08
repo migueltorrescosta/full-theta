@@ -201,14 +201,9 @@ func takeover_rule(s: NetSession, ship: int, entry: String, uncovered: Array) ->
 func _leave_rule(s: NetSession, ship: int) -> String:
 	if s.ship == ship or not StationViews.is_crew(s.entry) or not session.lobby.in_play(s.ship):
 		return ""
-	var before: Array = session.lobby.entries_of(s.ship)
-	var after: Array = before.duplicate()
-	after.erase(s.entry)
-	if (
-		NetCoverage.passes(before, session.lobby.min_crew())
-		and not NetCoverage.passes(after, session.lobby.min_crew())
-	):
-		return FleetMessages.BREAKS_COVERAGE
+	var entries: Array = session.lobby.entries_of(s.ship)
+	if NetCoverage.breaks(entries, session.lobby.min_crew(), s.entry):
+		return CommandGate.BREAKS_COVERAGE
 	return ""
 
 

@@ -49,18 +49,18 @@ func test_commands_are_refused_while_the_sim_is_stopped() -> void:
 	)
 	assert_str(await _reason(eng, seq, from)).is_empty()
 	# A host pause, then a coverage pause.
-	server.session.host_paused = true
+	server.session.host_pause.paused = true
 	from = h.mark(eng)
 	seq = eng.set_pips(SubsystemDef.Kind.ENGINES, 1)
 	assert_str(await _reason(eng, seq, from)).is_equal(CommandGate.PAUSED)
 	var next: int = eng.command({"kind": "training_next", "station": "engineering"})
 	assert_str(await _reason(eng, next, from)).is_not_equal(CommandGate.PAUSED)
-	server.session.host_paused = false
-	server.session.paused[PLAYER] = ["helm"]
+	server.session.host_pause.paused = false
+	server.session.lobby.paused[PLAYER] = ["helm"]
 	from = h.mark(eng)
 	seq = eng.set_pips(SubsystemDef.Kind.ENGINES, 1)
 	assert_str(await _reason(eng, seq, from)).is_equal(CommandGate.PAUSED)
-	server.session.paused.clear()
+	server.session.lobby.paused.clear()
 	assert_int(server.session.rejections.get(CommandGate.PAUSED, 0)).is_equal(3)
 
 

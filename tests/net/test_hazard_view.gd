@@ -46,7 +46,7 @@ func test_the_block_lists_known_hazards_with_their_geometry() -> void:
 	rows = _hazards("relay", "easy")
 	assert_int(rows.size()).is_equal(2)
 	var wave: Dictionary = rows[0]
-	assert_int(wave["shape"]).is_equal(HazardView.PLANE)
+	assert_int(wave["shape"]).is_equal(BlockSchema.HAZARD_PLANE)
 	assert_vector(wave["dir"]).is_equal(Vector3(0.0, 0.0, 1.0))
 	# The wave is at 200 m/s from 12 km: the block's forecast is the time left.
 	var left: float = 60.0 - world.tick * SimWorld.DT

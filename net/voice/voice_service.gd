@@ -47,7 +47,6 @@ const JOB_TIMEOUT_MS: int = 20000
 ## (FT-AUD-008). PROVISIONAL.
 const DEFAULT_MAX_AGE_MS: int = 6000
 const ROLES: PackedStringArray = ["computer", "npc"]
-const EVENT_VOICE_LINE: String = NetProtocol.EVENT_VOICE_LINE
 const DEFAULT_VOICES: String = "res://content/voices.json"
 
 var transport: NetTransport
@@ -442,7 +441,7 @@ func _post_event(audience: PackedInt32Array, payload: Dictionary) -> void:
 	if audience.is_empty():
 		return
 	var tick: int = int(tick_source.call()) if tick_source.is_valid() else 0
-	transport.post_event(audience, tick, EVENT_VOICE_LINE, payload)
+	transport.post_event(audience, tick, NetProtocol.EVENT_VOICE_LINE, payload)
 
 
 func _new_id() -> int:

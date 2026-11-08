@@ -13,6 +13,9 @@ const WEAPON_HEALTH_FLOOR: float = 0.5
 const FAULT_REARM: float = 0.8
 ## pips_refusal reasons: a kind the ship lacks, the reactor, over the per-subsystem maximum,
 ## over the reactor cap (pip_cap).
+## The reactor subsystem's id: its health and a hack scale the output and the usable pips
+## (R09-1; DamageSystem.effectiveness), 1 when a ship has none.
+const REACTOR_ID: StringName = &"reactor"
 const REFUSE_NO_KIND: StringName = &"pips_no_kind"
 const REFUSE_KIND: StringName = &"pips_kind"
 const REFUSE_MAX: StringName = &"pips_max"
@@ -117,7 +120,7 @@ static func step(world: SimWorld) -> void:
 		# The reactor's health scales its output and the weapons' health the charge (down to a floor).
 		var charge: float = (
 			pd.reactor_output
-			* reactor_effectiveness(world, s)
+			* DamageSystem.effectiveness(world, s, REACTOR_ID)
 			* (maxf(WEAPON_HEALTH_FLOOR, weapon_eff / weapon_n) if weapon_n > 0 else 1.0)
 			* weapon_pips
 			/ pd.reactor_pips
@@ -178,24 +181,10 @@ static func pips_refusal(world: SimWorld, ship_id: int, kind: int, pips: int) ->
 	return &""
 
 
-## Mean effectiveness of the ship's reactor subsystems (R09-1: its health and a hack
-## scale the output and the usable pips); 1 when it has none.
-static func reactor_effectiveness(world: SimWorld, ship_id: int) -> float:
-	var subs: Array[SubsystemDef] = world.defs[ship_id].subsystems
-	var first: int = world.damage.subsystem_row(ship_id, 0)
-	var total: float = 0.0
-	var n: int = 0
-	for i: int in subs.size():
-		if subs[i].kind == SubsystemDef.Kind.REACTOR:
-			total += world.damage.row_effectiveness(first + i, subs[i])
-			n += 1
-	return total / n if n > 0 else 1.0
-
-
 ## Pips the reactor can feed now: reactor_pips scaled by its effectiveness, rounded down.
 static func pip_cap(world: SimWorld, ship_id: int) -> int:
 	var cap: int = world.defs[ship_id].power.reactor_pips
-	var eff: float = reactor_effectiveness(world, ship_id)
+	var eff: float = DamageSystem.effectiveness(world, ship_id, REACTOR_ID)
 	return cap if eff >= 1.0 else floori(cap * eff)
 
 

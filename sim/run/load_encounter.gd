@@ -12,7 +12,6 @@ extends M1Encounter
 ## positions come from a RandomNumberGenerator seeded with the world seed, so a build is
 ## reproducible. It extends M1Encounter only so NetServer takes it unchanged.
 
-const CREW_FACTION: int = Factions.CREW
 const RAIDER_FACTIONS: Array[int] = [Factions.RAIDER, Factions.CIVIL]
 ## Side of the cube the ships start in (m); S6/S9 used a 4 km cube.
 const ARENA: float = 4000.0
@@ -57,11 +56,11 @@ func build() -> SimWorld:
 	world.set_relation(RAIDER_FACTIONS[0], RAIDER_FACTIONS[1], SimWorld.Relation.HOSTILE)
 	if not crew_hostile:
 		for f: int in RAIDER_FACTIONS:
-			world.set_relation(CREW_FACTION, f, SimWorld.Relation.NEUTRAL)
+			world.set_relation(Factions.CREW, f, SimWorld.Relation.NEUTRAL)
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = world_seed
 	for i: int in crew_ships:
-		world.spawn_ship(player, CREW_FACTION, _point(rng, CREW_SPREAD), _rotation(rng))
+		world.spawn_ship(player, Factions.CREW, _point(rng, CREW_SPREAD), _rotation(rng))
 	for i: int in world_ships - crew_ships:
 		var f: int = RAIDER_FACTIONS[i % RAIDER_FACTIONS.size()]
 		world.spawn_enemy(enemy, f, _point(rng, ARENA * 0.5), _rotation(rng))

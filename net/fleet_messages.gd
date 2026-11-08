@@ -20,7 +20,6 @@ const BAD_TEAM: String = "bad_team"
 const BAD_MODE: String = "bad_mode"
 const ENEMY_SHIP: String = "enemy_ship"
 const TAKEN: String = "taken"
-const BREAKS_COVERAGE: String = "breaks_coverage"
 const NO_RELAUNCH: String = "no_relaunch"
 
 ## Event type -> field -> Variant type. A row of `fleet.ships` follows FLEET_SHIP and of
@@ -172,13 +171,6 @@ static func scoreboard(rows: Array) -> Dictionary:
 ## lives: the relaunches the ship's side has left, -1 for unlimited.
 static func eliminated(ship: int, reason: String, lives: int) -> Dictionary:
 	return {"ship": ship, "reason": reason, "lives": lives}
-
-
-## sessions: the voters' session ids, by which a client finds its own vote (NetVote.payload).
-static func relaunch_votes(
-	ship: int, voters: Array, needed: int, sessions: Array = []
-) -> Dictionary:
-	return {"ship": ship, "voters": voters, "sessions": sessions, "needed": needed}
 
 
 static func relaunched(ship: int, lives: int) -> Dictionary:

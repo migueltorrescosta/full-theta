@@ -88,7 +88,7 @@ func _samples() -> Dictionary:
 
 # FT: FT-NET-004
 func test_every_control_message_round_trips() -> void:
-	assert_int(_samples().size()).is_equal(NetProtocol.schemas.size())
+	assert_int(_samples().size()).is_equal(NetProtocol.MESSAGES.size())
 	var samples: Dictionary = _samples()
 	for type: int in samples:
 		var fields: Dictionary = samples[type]
@@ -183,7 +183,7 @@ func test_snapshot_header() -> void:
 	b.build(SimCopy.of(world), 77, [key])
 	var bytes: PackedByteArray = b.message(key, true)
 	assert_int(NetProtocol.type_of(bytes)).is_equal(NetProtocol.Type.SNAPSHOT)
-	assert_array(SnapshotBuilder.peek(bytes)).is_equal([77, true, 1])
+	assert_array(SnapshotReader.peek(bytes)).is_equal([77, true, 1])
 	assert_dict(NetProtocol.decode(bytes)).is_empty()
 	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
 	assert_bool(view.apply(bytes)).is_true()
@@ -195,7 +195,6 @@ func test_snapshot_header() -> void:
 # token derive from it. Hello, Ack, Bye and Command are sent but not rated, and every rated
 # type is sent.
 func test_the_sets_derive_from_one_table() -> void:
-	assert_int(NetProtocol.schemas.size()).is_equal(NetProtocol.MESSAGES.size())
 	for type: int in NetProtocol.rated_requests:
 		assert_bool(NetProtocol.from_client.has(type)).is_true()
 	for type: int in [NetProtocol.Type.HELLO, NetProtocol.Type.ACK, NetProtocol.Type.BYE]:

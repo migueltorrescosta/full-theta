@@ -224,7 +224,7 @@ static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -
 			vs + dir * weapon.projectile_speed,
 			weapon.projectile_radius,
 			weapon.damage,
-			SimWorld.ticks(weapon.max_range / weapon.projectile_speed)
+			SimRate.ticks(weapon.max_range / weapon.projectile_speed)
 		)
 		if weapon.damage_type != &"kinetic" or weapon.is_guided():
 			world.projectiles.set_payload(

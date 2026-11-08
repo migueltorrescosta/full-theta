@@ -59,7 +59,7 @@ func _lapse(server: NetServer, c: NetClient, ship: int) -> bool:
 	var gone: NetSession = h.session_of(server, c)
 	await h.drop(server, c)
 	await h.lapsed(gone)
-	return await h.until(func() -> bool: return server.session.paused.has(ship))
+	return await h.until(func() -> bool: return server.session.lobby.paused.has(ship))
 
 
 func _event(c: NetClient, type: String, from: int, ship: int) -> Dictionary:
@@ -82,10 +82,13 @@ func test_out_of_play_ship_never_holds_a_pause() -> void:
 	assert_str(gone.get("reason", "")).is_equal("destroyed")
 	assert_dict(await _event(alls[0], NetProtocol.EVENT_HANDOVER, from, 0)).is_not_empty()
 	assert_bool(await _lapse(server, alls[1], 1)).is_true()
-	assert_array(server.session.paused.keys()).is_equal([1])
+	assert_array(server.session.lobby.paused.keys()).is_equal([1])
 	# The former crew of ship 0, now a viewer of ship 1, takes the uncovered stations over.
 	alls[0].takeover(1, StationViews.ALL)
-	assert_bool(await h.until(func() -> bool: return server.session.paused.is_empty())).is_true()
+	(
+		assert_bool(await h.until(func() -> bool: return server.session.lobby.paused.is_empty()))
+		. is_true()
+	)
 	assert_bool(await _stepping(server)).is_true()
 	assert_bool(server.session.in_play(0)).is_false()
 
@@ -104,7 +107,7 @@ func test_abandon_in_a_pause_eliminates_and_the_rest_resumes() -> void:
 	crew[1].vote_abandon(0, true)
 	var gone: Dictionary = await _event(crew[0], NetProtocol.EVENT_ELIMINATED, from, 0)
 	assert_str(gone.get("reason", "")).is_equal("abandoned")
-	assert_bool(server.session.paused.is_empty()).is_true()
+	assert_bool(server.session.lobby.paused.is_empty()).is_true()
 	assert_bool(await _stepping(server)).is_true()
 	assert_bool(server.session.in_play(1)).is_true()
 	var to: Dictionary = await _event(crew[0], NetProtocol.EVENT_HANDOVER, from, 0)
@@ -135,7 +138,10 @@ func test_ally_takes_over_an_uncovered_station() -> void:
 	assert_str(FleetMessages.check(NetProtocol.EVENT_TAKEOVER, took)).is_empty()
 	assert_dict(took).contains_key_value("by", "spare").contains_key_value("from_ship", 1)
 	assert_dict(await _event(ally, NetProtocol.EVENT_TAKEOVER, from_ally, 0)).is_not_empty()
-	assert_bool(await h.until(func() -> bool: return server.session.paused.is_empty())).is_true()
+	(
+		assert_bool(await h.until(func() -> bool: return server.session.lobby.paused.is_empty()))
+		. is_true()
+	)
 	assert_int(h.session_of(server, spare).ship).is_equal(0)
 	assert_bool(await _stepping(server)).is_true()
 
@@ -151,7 +157,7 @@ func test_enemy_never_takes_over() -> void:
 	var from: int = h.mark(spare)
 	spare.takeover(0, StationViews.ALL)
 	assert_str(await _rejected(spare, NetProtocol.Type.TAKEOVER, from)).is_equal("enemy_ship")
-	assert_bool(server.session.paused.has(0)).is_true()
+	assert_bool(server.session.lobby.paused.has(0)).is_true()
 
 
 # FT: FT-MIS-030

@@ -16,8 +16,3 @@ func update(world: SimWorld) -> PackedByteArray:
 	NetCodec.put3_8(buf, NetCodec.quant_ang(kin.ang_vel[owner]))
 	_last = buf.data_array
 	return _last
-
-
-## Client side: SnapshotReader.read_kin.
-static func read(buf: StreamPeerBuffer) -> Dictionary:
-	return SnapshotReader.read_kin(buf)

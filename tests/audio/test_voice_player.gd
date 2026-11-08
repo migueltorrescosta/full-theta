@@ -60,7 +60,7 @@ func _event(clip: int, priority: int, extra: Dictionary = {}) -> Dictionary:
 		"audio": true,
 	}
 	payload.merge(extra, true)
-	return {"seq": clip, "tick": 0, "type": VoiceService.EVENT_VOICE_LINE, "payload": payload}
+	return {"seq": clip, "tick": 0, "type": NetProtocol.EVENT_VOICE_LINE, "payload": payload}
 
 
 func _voice(clip: int, samples: int, part: int = 0, last: bool = true) -> Dictionary:

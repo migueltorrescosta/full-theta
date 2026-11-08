@@ -130,7 +130,7 @@ func test_a_share_press_is_counted() -> void:
 	from = h.mark(targeting)
 	targeting.share("weak_points")
 	assert_str(await rejected.call(targeting, from)).is_equal(NetShares.SAME_SCREEN)
-	server.session.toggles = DataToggles.of_preset("normal")
+	server.session.lobby.toggles = DataToggles.of_preset("normal")
 	from = h.mark(science)
 	science.share("weak_points")
 	assert_str(await rejected.call(science, from)).is_equal(NetShares.OFF)
@@ -175,7 +175,7 @@ func test_a_route_shared_to_helm_is_counted() -> void:
 	)
 	assert_dict(gone).is_not_empty()
 	# Hard: no press is possible.
-	server.session.toggles = DataToggles.of_preset("hard")
+	server.session.lobby.toggles = DataToggles.of_preset("hard")
 	from = h.mark(crew["helm"])
 	relay.share("routes")
 	await h.wait(200)
@@ -286,7 +286,7 @@ func test_a_probe_enabled_scan_is_counted() -> void:
 		host.set_toggles(code)
 		(
 			assert_bool(
-				await h.until(func() -> bool: return server.session.toggles.encode() == code)
+				await h.until(func() -> bool: return server.session.lobby.toggles.encode() == code)
 			)
 			. is_true()
 		)

@@ -333,7 +333,7 @@ func test_hold_fire_in_parley_is_a_toast() -> void:
 	var s: StationScreen = _screen("parley")
 	var toasts: Array[String] = []
 	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
-	var chip: ChipDef = ChipView.def().chips[NetChips.index_of("hold_fire")]
+	var chip: ChipDef = ChipView.def().chips[ChipView.index_of("hold_fire")]
 	s.focus(s.stations.find("comms"))
 	s.ctx.crew.select("contact", StationFixture.H2)
 	s.focused_panel().send_chip(chip)

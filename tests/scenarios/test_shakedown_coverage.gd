@@ -107,11 +107,3 @@ func test_pair_steps_cover_the_fifteen_pairs() -> void:
 		got.sort()
 		assert_array(got).is_equal(want)
 		assert_int(pairs[i].kind).is_equal(TrainingStepDef.Kind.NEXT)
-
-
-# FT: FT-MIS-039
-func test_the_driver_flag_names_match_the_command() -> void:
-	for station: String in STATIONS:
-		var flag: StringName = TrainingNextCommand.flag_name(StringName(station))
-		assert_str(String(flag)).is_equal("train.%s.next" % station)
-		assert_str(String(TrainingDriver.next_flag(StringName(station)))).is_equal(String(flag))

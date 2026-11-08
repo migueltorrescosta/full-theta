@@ -26,19 +26,17 @@ func _tick(rig: ShakedownRig, partners: TrainingPartners, n: int = 1) -> void:
 
 # FT: FT-MIS-039
 # A bot submits only commands of its own station, never the player's: across all seven
-# lessons every recorded command is of the station that sent it, and none is the player's.
+# lessons no recorded command is of the player's station.
 func test_bots_submit_only_commands_of_their_own_station() -> void:
 	var total: int = 0
 	var stations_seen: Dictionary[StringName, bool] = {}
 	for solo: StringName in STATIONS:
-		var partners: TrainingPartners = ShakedownLessons.lesson(solo)["partners"]
-		for row: Array in partners.crew.sent:
+		var rig: ShakedownRig = ShakedownLessons.lesson(solo)["rig"]
+		for row: Array in rig.host.api().crew().sent:
+			var station: String = StationViews.station_of_command(row[1])
 			total += 1
-			stations_seen[row[1]] = true
-			assert_str(String(row[1])).override_failure_message(String(solo)).is_not_equal(
-				String(solo)
-			)
-			assert_str(StationViews.station_of_command(row[2])).is_equal(String(row[1]))
+			stations_seen[StringName(station)] = true
+			assert_str(station).override_failure_message(String(solo)).is_not_equal(String(solo))
 	assert_int(total).is_greater(20)
 	# Every crew station but Comms acts in a plain lesson (nobody hails it).
 	for station: String in StationViews.CREW:
@@ -72,14 +70,14 @@ func test_the_comms_bot_answers_a_hail() -> void:
 func test_a_half_never_acts_at_the_players_station() -> void:
 	var rig: ShakedownRig = _rig(&"helm")
 	var partners: TrainingPartners = TrainingPartners.new(SEED)
-	partners.crew.record = true
-	_tick(rig, partners, 2)
 	var api: ScenarioApi = rig.host.api()
+	api.crew().record = true
+	_tick(rig, partners, 2)
 	partners.crew.half(api, 0, &"helm", &"helm_speed")
-	assert_array(partners.crew.sent).is_empty()
+	assert_array(api.crew().sent).is_empty()
 	partners.crew.half(api, 0, &"engineering", &"eng_boost")
-	assert_array(partners.crew.sent).has_size(1)
-	assert_str(StationViews.station_of_command(partners.crew.sent[0][2])).is_equal("engineering")
+	assert_array(api.crew().sent).has_size(1)
+	assert_str(StationViews.station_of_command(api.crew().sent[0][1])).is_equal("engineering")
 
 
 # FT: FT-MIS-039
@@ -87,7 +85,7 @@ func test_a_half_never_acts_at_the_players_station() -> void:
 func test_a_seed_fixes_the_bots_commands_and_the_world() -> void:
 	var a: Dictionary = ShakedownLessons.lesson(&"science")
 	var b: Dictionary = _replayed(&"science")
-	assert_array(a["partners"].crew.sent).is_equal(b["partners"].crew.sent)
+	assert_array(a["rig"].host.api().crew().sent).is_equal(b["rig"].host.api().crew().sent)
 	assert_str(a["rig"].world.state_hash()).is_equal(b["rig"].world.state_hash())
 	var other: TrainingCrew = TrainingCrew.new(SEED + 1)
 	assert_dict(other._phase).is_not_equal(a["partners"].crew._phase)
@@ -97,7 +95,7 @@ func test_a_seed_fixes_the_bots_commands_and_the_world() -> void:
 func _replayed(solo: StringName) -> Dictionary:
 	var rig: ShakedownRig = _rig(solo)
 	var partners: TrainingPartners = TrainingPartners.new(SEED)
-	partners.crew.record = true
+	rig.host.api().crew().record = true
 	ShakedownLessons.play(rig, partners, solo)
 	return {"rig": rig, "partners": partners}
 
@@ -170,6 +168,6 @@ func test_each_scripted_half_changes_the_partner_glance_card() -> void:
 		var after: String = _read(rig, readout)
 		assert_str(after).override_failure_message("%s: %s" % [key, before]).is_not_equal(before)
 		# The step still ends on the partner's Next, after the player's.
-		var flag: StringName = TrainingDriver.next_flag(partner)
+		var flag: StringName = TrainingNextCommand.flag_name(partner)
 		_tick(rig, partners, TrainingPartners.press_ticks(step, partner))
 		assert_int(rig.world.story_flags.get_flag(flag)).override_failure_message(key).is_greater(0)

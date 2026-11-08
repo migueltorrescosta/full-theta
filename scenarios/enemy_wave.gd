@@ -12,13 +12,10 @@ extends Scenario
 ## in the fight; the raiders arrive from the ship that is first in the fight.
 ## Only the Scenario API is used (FT-DAT-007), so a replay needs none of this (FT-ARC-008).
 
-const ENEMY: StringName = Factions.RAIDER_KEY
-const RAIDER_FACTION: int = Factions.RAIDER
 const NPC: StringName = &"Marauder Kass"
 ## Raiders in the wave at strength 1, how far out they appear (m) and the clock position of the
 ## first. The difficulty preset scales the count (Q14, owner 2026-10-26), at least one.
 const COUNT: int = 2
-const RANGE_M: float = Factions.RAIDER_RANGE_M
 ## The second raider joins this long after the first (s), from behind the first's side, and
 ## each further one this long after the one before.
 const SECOND_AFTER_S: float = 45.0
@@ -52,7 +49,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	_faction = api.faction_of(_ships[0])
 	_started = api.tick()
 	_count = Scenario.count_for(COUNT, float(params.get("strength", 1.0)))
-	api.set_relation(RAIDER_FACTION, _faction, Relation.HOSTILE)
+	api.set_relation(Factions.RAIDER, _faction, Relation.HOSTILE)
 	_raiders.append(_spawn(api))
 	_say(api, "npc.hail_raider", {"npc": NPC})
 
@@ -75,7 +72,7 @@ func step(api: ScenarioApi) -> void:
 			if e.tag == &"yes":
 				_surrendered = true
 				_say(api, "npc.surrender", {})
-				api.set_relation(RAIDER_FACTION, _faction, Relation.NEUTRAL)
+				api.set_relation(Factions.RAIDER, _faction, Relation.NEUTRAL)
 			else:
 				_say(api, "npc.surrender_refused", {})
 	if _surrendered or (_raiders.size() == _count and api.all_gone(_raiders)):
@@ -98,7 +95,9 @@ func end(api: ScenarioApi, _result_value: int) -> void:
 ## A raider at range from the first ship still in the fight.
 func _spawn(api: ScenarioApi) -> ApiHandle:
 	var lead: int = Scenario.fleet(api, _ships)[0]
-	return api.spawn_at_range(ENEMY, RAIDER_FACTION, lead, RANGE_M, _clock(api), 0)
+	return api.spawn_at_range(
+		Factions.RAIDER_KEY, Factions.RAIDER, lead, Factions.RAIDER_RANGE_M, _clock(api), 0
+	)
 
 
 ## A line from the raiders to every ship still in the fight.

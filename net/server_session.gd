@@ -91,31 +91,6 @@ var host_pause: NetHostPause
 var fleet: NetFleet
 var training: NetTraining  # solo lessons (D303)
 
-## The lobby's state, read by tests and the load gate (NetLobby holds it).
-var launched: Dictionary[int, bool]:
-	get:
-		return lobby.launched
-var abandoned: Dictionary[int, bool]:
-	get:
-		return lobby.abandoned
-var paused: Dictionary[int, Array]:
-	get:
-		return lobby.paused
-var votes: Dictionary[int, NetVote]:
-	get:
-		return lobby.votes
-var toggles: DataToggles:
-	get:
-		return lobby.toggles
-	set(value):
-		lobby.toggles = value
-## The host pause (FT-MIS-040), apart from the coverage pause: NetHostPause holds it.
-var host_paused: bool:
-	get:
-		return host_pause.paused
-	set(value):
-		host_pause.paused = value
-
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
 var _pending: Array = []
@@ -510,7 +485,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 			if other != s:
 				other.is_host = false
 	s.conn = conn
-	s.toggles = toggles.encode()
+	s.toggles = lobby.toggles.encode()
 	by_conn[conn] = s
 	if s.lapsed:
 		_restore(s)

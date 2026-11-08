@@ -41,7 +41,7 @@ func apply(world: SimWorld) -> bool:
 	var site: int = target_id if target_kind == HelmTable.JumpKind.SITE else -1
 	world.kin.propellant[ship_id] -= def.jump_propellant_kg
 	world.kin.propellant_used[ship_id] += def.jump_propellant_kg
-	helm.jump_left[ship_id] = SimWorld.ticks(def.jump_spool_s)
+	helm.jump_left[ship_id] = SimRate.ticks(def.jump_spool_s)
 	helm.jump_kind[ship_id] = target_kind
 	helm.jump_target[ship_id] = site
 	helm.jump_x[ship_id] = at[0]

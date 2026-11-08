@@ -84,8 +84,8 @@ func after_test() -> void:
 ## [kind, payload] of each section of a snapshot message, and its full flag.
 static func _sections(data: PackedByteArray) -> Array:
 	var out: Array = []
-	var n: int = data[SnapshotBuilder.HEADER_BYTES - 1]
-	var at: int = SnapshotBuilder.HEADER_BYTES
+	var n: int = data[SnapshotReader.HEADER_BYTES - 1]
+	var at: int = SnapshotReader.HEADER_BYTES
 	for i: int in n:
 		var kind: int = data[at]
 		var size: int = data.decode_u16(at + 1)
@@ -114,7 +114,7 @@ func _check_snapshots(c: NetClient, entry: String) -> int:
 				var block: Dictionary = NetBlock.decode(StationViews.BLOCKS[kind], part[1])
 				assert_array(block.keys()).is_equal(d.fields[kind])
 			if kind == StationViews.Section.OWNERSHIP:
-				var table: Dictionary = OwnershipSection.read(part[1])
+				var table: Dictionary = SnapshotReader.read_ownership(part[1])
 				assert_dict(table).is_not_empty()
 				for group: String in ["claims", "writers"]:
 					for item: String in table[group]:
@@ -123,7 +123,7 @@ func _check_snapshots(c: NetClient, entry: String) -> int:
 							. override_failure_message("%s saw %s" % [entry, item])
 							. contains([StationViews.station_of_item(item)])
 						)
-		if SnapshotBuilder.peek(data)[1]:
+		if SnapshotReader.peek(data)[1]:
 			assert_array(kinds).is_equal(d.sections)
 		checked += 1
 	return checked
@@ -232,7 +232,7 @@ func test_no_knowledge_of_another_faction() -> void:
 		assert_array(got).is_equal(known)
 		for id: int in known:
 			assert_str(c.view.callsign(id)).is_equal(KnowledgeSystem.callsign(world, faction, id))
-			var own: bool = c.view.contacts["info"][id][0] & ContactsSection.FLAG_OWN != 0
+			var own: bool = c.view.contacts["info"][id][0] & SnapshotReader.FLAG_OWN != 0
 			assert_bool(own).is_equal(world.faction_of(id) == faction)
 	var marks: Array = [h.mark(helm), h.mark(eng), h.mark(viewer), h.mark(foe)]
 	var made: Array[SimEvent] = [

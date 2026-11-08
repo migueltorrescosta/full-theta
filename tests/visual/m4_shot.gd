@@ -134,7 +134,7 @@ func _scoreboard() -> void:
 	s.setup(_ctx)
 	add_child(s)
 	if holdout:
-		_event("relaunch_votes", FleetMessages.relaunch_votes(0, ["Bo"], 2))
+		_event("relaunch_votes", {"ship": 0, "voters": ["Bo"], "sessions": [], "needed": 2})
 		var p: VotePrompt = VotePrompt.new()
 		add_child(p)
 		p.setup(_ctx, VotePrompt.Kind.RELAUNCH)

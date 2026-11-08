@@ -73,7 +73,7 @@ static func lesson(solo: StringName) -> Dictionary:
 	if not _lessons.has(solo):
 		var r: ShakedownRig = rig(solo)
 		var partners: TrainingPartners = TrainingPartners.new(SEED)
-		partners.crew.record = true
+		r.host.api().crew().record = true
 		var took: int = play(r, partners, solo)
 		_lessons[solo] = {"rig": r, "partners": partners, "took": took}
 	return _lessons[solo]

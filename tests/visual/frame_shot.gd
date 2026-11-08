@@ -139,7 +139,7 @@ func _demo() -> FrameDemo:
 
 ## An open Boost request from Helm to Engineering, or the first chip to the focused station.
 func _chip_row() -> Dictionary:
-	var chips: Array[ChipDef] = NetChips.def().chips
+	var chips: Array[ChipDef] = ChipView.def().chips
 	var to: String = _ctx.crew.stations()[focus] if not _ctx.crew.stations().is_empty() else "helm"
 	for i: int in chips.size():
 		if String(chips[i].to_station) == to:

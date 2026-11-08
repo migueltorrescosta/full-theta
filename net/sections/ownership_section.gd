@@ -27,8 +27,3 @@ func update(_world: SimWorld) -> PackedByteArray:
 ## The section bytes an entry sees.
 func for_entry(entry: String) -> PackedByteArray:
 	return var_to_bytes(StationViews.ownership_for(entry, _sent))
-
-
-## Client side: SnapshotReader.read_ownership.
-static func read(part: PackedByteArray) -> Dictionary:
-	return SnapshotReader.read_ownership(part)

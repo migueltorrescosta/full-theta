@@ -16,10 +16,10 @@ static func block(kind: String) -> Dictionary:
 			"contact": H2,
 			"detect": 0.9,
 			"scan": 0.9,
-			"class_id": ScienceView.code(&"m1_raider"),
+			"class_id": BlockSchema.id_code(&"m1_raider"),
 			"intent": 3,
 			"weak_mask": 1,
-			"resist": [{"type": ScienceView.code(&"kinetic"), "factor": 0.5}],
+			"resist": [{"type": BlockSchema.id_code(&"kinetic"), "factor": 0.5}],
 			"hack": true,
 		},
 		{

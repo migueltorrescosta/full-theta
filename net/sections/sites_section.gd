@@ -41,8 +41,3 @@ func update(world: SimWorld) -> PackedByteArray:
 	buf.put_u8(n)
 	var bytes: PackedByteArray = buf.data_array
 	return _changed(bytes)
-
-
-## Client side: SnapshotReader.read_sites.
-static func read(buf: StreamPeerBuffer) -> Array[Dictionary]:
-	return SnapshotReader.read_sites(buf)

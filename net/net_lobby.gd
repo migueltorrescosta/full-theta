@@ -144,15 +144,15 @@ func pick_rule(s: NetSession, ship: int, entry: String) -> String:
 		for o: NetSession in session.by_id.values():
 			if o != s and o.ship == ship and o.entry == StationViews.CAPTAIN:
 				return ServerSession.CAPTAIN_TAKEN
-	if s.has_pick() and in_play(s.ship) and not paused.has(s.ship):
-		var before: Array = entries_of(s.ship)
-		if NetCoverage.passes(before, min_crew()):
-			var after: Array = before.duplicate()
-			after.erase(s.entry)
-			if ship == s.ship and entry != "":
-				after.append(entry)
-			if not NetCoverage.passes(after, min_crew()):
-				return CommandGate.BREAKS_COVERAGE
+	if (
+		s.has_pick()
+		and in_play(s.ship)
+		and not paused.has(s.ship)
+		and NetCoverage.breaks(
+			entries_of(s.ship), min_crew(), s.entry, entry if ship == s.ship else ""
+		)
+	):
+		return CommandGate.BREAKS_COVERAGE
 	return ""
 
 

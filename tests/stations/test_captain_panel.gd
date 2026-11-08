@@ -62,7 +62,7 @@ func test_mirror_buttons_chips_and_cards() -> void:
 	s.ctx.view.blocks[StationViews.Section.CHIPS] = {}
 	await get_tree().process_frame
 	assert_int(cap.chips.rows.size()).is_equal(0)
-	var boost: int = NetChips.def().chips.find_custom(
+	var boost: int = ChipView.def().chips.find_custom(
 		func(c: ChipDef) -> bool: return c.id == &"boost"
 	)
 	var tick: int = s.ctx.view.tick

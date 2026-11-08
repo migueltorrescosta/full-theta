@@ -13,9 +13,6 @@ extends SnapshotSection
 ## gone ids. Full: u16 n absolute records each with a u16 age in ticks; u16 i info
 ## records. One cube per world (D229), so no site field.
 
-const FLAG_IDENTIFIED: int = SnapshotReader.FLAG_IDENTIFIED
-const FLAG_OWN: int = SnapshotReader.FLAG_OWN
-
 var tol_units: int = 8
 ## id -> [Vector3i position, Vector3i velocity, int tick]: what every client holds.
 var model: Dictionary = {}
@@ -75,9 +72,9 @@ func update(world: SimWorld) -> PackedByteArray:
 	buf.put_u16(0)
 	var ni: int = 0
 	for id: int in ids:
-		var flags: int = FLAG_OWN if world.faction_of(id) == owner else 0
+		var flags: int = SnapshotReader.FLAG_OWN if world.faction_of(id) == owner else 0
 		if KnowledgeSystem.is_identified(world, owner, id):
-			flags |= FLAG_IDENTIFIED
+			flags |= SnapshotReader.FLAG_IDENTIFIED
 		var now: Array = [flags, KnowledgeSystem.callsign(world, owner, id)]
 		if info.get(id, []) == now:
 			continue
@@ -115,23 +112,11 @@ func full() -> PackedByteArray:
 	return buf.data_array
 
 
-## Client side: SnapshotReader.apply_contacts (kept for the server's tests).
-static func apply(
-	into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int, p_units: int
-) -> bool:
-	return SnapshotReader.apply_contacts(into, buf, is_full, tick, p_units)
-
-
 static func put_gone(buf: StreamPeerBuffer, gone: PackedInt32Array, from: Dictionary) -> void:
 	buf.put_u16(gone.size())
 	for id: int in gone:
 		buf.put_u16(id)
 		from.erase(id)
-
-
-## Reads a gone list (SnapshotReader.get_gone).
-static func get_gone(buf: StreamPeerBuffer, from: Dictionary) -> PackedInt32Array:
-	return SnapshotReader.get_gone(buf, from)
 
 
 static func _put_info(buf: StreamPeerBuffer, id: int, value: Array) -> void:
