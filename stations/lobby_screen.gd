@@ -66,7 +66,6 @@ const TEAM_LETTERS: Array[String] = ["A", "B"]
 const PHONE_TARGET: int = UiTheme.TOUCH_PRIMARY
 const PHONE_GAP: int = UiTheme.TOUCH_GAP
 ## Forward for tools/l4/l4_ui.gd.
-const DEV_ALL: String = LobbySeatGrid.DEV_ALL
 
 var ctx: StationContext
 ## The ship whose stations are shown (the seat grid shows the same).

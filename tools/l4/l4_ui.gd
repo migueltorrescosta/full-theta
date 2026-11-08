@@ -63,7 +63,7 @@ func pick(entry: String) -> String:
 		return "no entry %s in the lobby" % entry
 	# The grid has the six stations; a joint view is a tap on each of its two.
 	var stations: Array = lobby.ctx.crew.def_of(entry).get("stations", [])
-	if stations.is_empty() or entry == LobbyScreen.DEV_ALL:
+	if stations.is_empty() or entry == LobbySeatGrid.DEV_ALL:
 		lobby.tap_seat(entry)
 	else:
 		for st: Variant in stations:
