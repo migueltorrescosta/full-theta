@@ -21,7 +21,3 @@ static func of(ship_name: String, ship_faction: int, ship_team: int) -> ShipSlot
 	s.faction = ship_faction
 	s.team = ship_team
 	return s
-
-
-func to_dict() -> Dictionary:
-	return {"name": name, "faction": faction, "team": team}

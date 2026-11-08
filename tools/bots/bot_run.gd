@@ -26,7 +26,8 @@ static func play(
 		setup.run_def.director,
 		StringName(difficulty),
 		ScenarioCatalogue.load_for(setup.run_def.scenarios),
-		seed_value
+		seed_value,
+		world.faction_of(0)
 	)
 	var profile: BotProfiles.Profile = BotProfiles.named(profile_name)
 	if jump_share >= 0.0:

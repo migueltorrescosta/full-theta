@@ -12,7 +12,10 @@ extends Scenario
 ## escort whose freighter is still there then pays its partial share (RunDef.partial_pay).
 ## The freighter lies abeam of the arriving ship's course, not ahead of it (review 2 H3), and
 ## the cards stay on the board until the encounter is over (review 2 M2). The difficulty
-## preset scales the raiders (Q14). Only the Scenario API is used (FT-DAT-007).
+## preset scales the raiders (Q14), at most MAX_RAIDERS so that the last arrives with time to
+## fight (R10-6). The whole fleet is served (A2): both cards are faction-wide, the ship that
+## accepts one is the one paid, and the freighter lies abeam of the ship first in the fight.
+## Accepting one card withdraws the other. Only the Scenario API is used (FT-DAT-007).
 
 const FREIGHTER: StringName = &"stranded_freighter"
 const RAIDER: StringName = &"m1_raider"
@@ -36,6 +39,10 @@ const RAIDERS_AFTER_S: float = 20.0
 const RAIDER_RANGE_M: float = 9000.0
 const RAIDERS: int = 2
 const RAIDER_GAP_S: float = 30.0
+## At most this many raiders: the last one arrives at RAIDERS_AFTER_S + RAIDER_GAP_S * 5 =
+## 170 s, which leaves 130 s of the 300 to destroy them. Hard with six ships (5.25 times the
+## strength at strength 1) would otherwise ask for 11, the last at 320 s, after the limit.
+const MAX_RAIDERS: int = 6
 ## Seconds a salvaging ship must spend within SALVAGE_RANGE_M of the freighter.
 const SALVAGE_S: float = 8.0
 const SALVAGE_RANGE_M: float = 1200.0
@@ -44,7 +51,7 @@ const MAX_S: float = 300.0
 ## would pay nothing (review 2 M2).
 const CARD_S: float = MAX_S + 30.0
 
-var _ship: int = -1
+var _ships: PackedInt32Array = PackedInt32Array()
 var _faction: int = -1
 var _freighter: ApiHandle
 var _escort: ApiHandle
@@ -67,19 +74,30 @@ func meta() -> ScenarioMeta:
 
 
 func start(api: ScenarioApi, params: Dictionary) -> void:
-	var ships: PackedInt32Array = params["ships"]
-	_ship = ships[0]
-	var view: ShipView = api.ship(_ship)
+	_ships = params["ships"]
+	var lead: int = Scenario.fleet(api, _ships)[0]
+	var view: ShipView = api.ship(lead)
 	_faction = view.faction
 	_started = api.tick()
-	_raider_count = maxi(1, roundi(RAIDERS * float(params.get("strength", 1.0))))
+	_raider_count = raider_count(float(params.get("strength", 1.0)))
 	api.set_relation(FREIGHTER_FACTION, _faction, Relation.FRIENDLY)
 	api.set_relation(FREIGHTER_FACTION, RAIDER_FACTION, Relation.HOSTILE)
 	api.set_relation(RAIDER_FACTION, _faction, Relation.HOSTILE)
 	_freighter = api.spawn_at_offset(
-		FREIGHTER, FREIGHTER_FACTION, _ship, _abeam(view.velocity) * FREIGHTER_RANGE_M
+		FREIGHTER, FREIGHTER_FACTION, lead, _abeam(view.velocity) * FREIGHTER_RANGE_M
 	)
-	api.message("npc.distress", {"npc": NPC}, SayTarget.npc(NPC, _ship))
+	for ship: int in Scenario.fleet(api, _ships):
+		api.message("npc.distress", {"npc": NPC}, SayTarget.npc(NPC, ship))
+
+
+## The raiders of the encounter at `strength`: RAIDERS scaled, at least 1, at most MAX_RAIDERS.
+static func raider_count(strength: float) -> int:
+	return Scenario.count_for(RAIDERS, strength, MAX_RAIDERS)
+
+
+## When the last of `count` raiders arrives (s).
+static func last_raider_s(count: int) -> float:
+	return RAIDERS_AFTER_S + RAIDER_GAP_S * (count - 1)
 
 
 ## The unit direction at right angles to the course (level with it), or +X for a ship at
@@ -111,7 +129,9 @@ func _offer_cards(api: ScenarioApi) -> void:
 	escort.target = freighter
 	escort.target_flag = 2
 	escort.expires_s = CARD_S
-	_escort = api.offer(_ship, escort)
+	escort.faction_wide = true
+	var to: int = Scenario.fleet(api, _ships)[0]
+	_escort = api.offer(to, escort)
 	var salvage: CardSpec = CardSpec.new()
 	salvage.kind = CardSpec.Kind.OFFER
 	salvage.npc_id = BROKER
@@ -121,7 +141,8 @@ func _offer_cards(api: ScenarioApi) -> void:
 	salvage.rep_interaction = &"rep.salvage_wreck"
 	salvage.target = freighter
 	salvage.expires_s = CARD_S
-	_salvage = api.offer(_ship, salvage)
+	salvage.faction_wide = true
+	_salvage = api.offer(to, salvage)
 
 
 func step(api: ScenarioApi) -> void:
@@ -132,7 +153,9 @@ func step(api: ScenarioApi) -> void:
 		return
 	if not _offered and not _freighter.pending():
 		_offer_cards(api)
-	var elapsed_s: float = float(api.tick() - _started) / ScenarioApi.HZ
+	if _offered:
+		_one_card_only(api)
+	var elapsed_s: float = Scenario.seconds_since(api, _started)
 	# The raiders come one after the other, RAIDER_GAP_S apart, once the freighter exists.
 	if (
 		_offered
@@ -148,7 +171,7 @@ func step(api: ScenarioApi) -> void:
 			_settle(api, Result.PARTIAL)
 		return
 	var salvaging: bool = _state(api, _salvage) == CardView.State.ACCEPTED
-	if salvaging and api.distance(_ship, _freighter.id()) <= SALVAGE_RANGE_M:
+	if salvaging and _nearest_to_freighter(api) <= SALVAGE_RANGE_M:
 		_near_ticks += 1
 	if api.all_gone(_raiders):
 		_settle(api, Result.WON)
@@ -160,6 +183,37 @@ func finished(_api: ScenarioApi) -> int:
 	return _result
 
 
+## However it ended, a card still open is withdrawn and an accepted one fails: a flee, a loss
+## or an abandon does not leave a contract to lapse unpaid and unpunished (A8).
+func end(api: ScenarioApi, result: int) -> void:
+	var ended_by_other: bool = _result == Result.ACTIVE
+	_result = result if ended_by_other else _result
+	for card: ApiHandle in [_escort, _salvage]:
+		var state: int = _state(api, card)
+		if state == CardView.State.ACCEPTED and ended_by_other:
+			api.settle_card(card.id(), false)
+		elif state == CardView.State.OPEN:
+			api.decline_card(card.id())
+
+
+## The crew's choice is one card: once one is accepted the other is withdrawn.
+func _one_card_only(api: ScenarioApi) -> void:
+	var escort: int = _state(api, _escort)
+	var salvage: int = _state(api, _salvage)
+	if escort == CardView.State.ACCEPTED and salvage == CardView.State.OPEN:
+		api.decline_card(_salvage.id())
+	elif salvage == CardView.State.ACCEPTED and escort == CardView.State.OPEN:
+		api.decline_card(_escort.id())
+
+
+## The distance from the freighter of the nearest ship still in the fight (m).
+func _nearest_to_freighter(api: ScenarioApi) -> float:
+	var nearest: float = INF
+	for ship: int in Scenario.fleet(api, _ships):
+		nearest = minf(nearest, api.distance(ship, _freighter.id()))
+	return nearest
+
+
 ## Pays out and ends with `result`: the accepted card is settled by how it went; an escort
 ## cut short by the time (PARTIAL) pays its partial share.
 func _settle(api: ScenarioApi, result: int) -> void:
@@ -169,16 +223,18 @@ func _settle(api: ScenarioApi, result: int) -> void:
 		var saved: bool = api.ship(_freighter.id()).in_play and api.needs_met(_escort.id())
 		api.settle_card(_escort.id(), saved, result == Result.PARTIAL)
 		if saved:
-			api.message("npc.rescue_thanks", {}, SayTarget.npc(NPC, _ship))
-	elif _state(api, _salvage) == CardView.State.ACCEPTED:
-		api.settle_card(_salvage.id(), _near_ticks >= ceili(SALVAGE_S * ScenarioApi.HZ))
+			for ship: int in Scenario.fleet(api, _ships):
+				api.message("npc.rescue_thanks", {}, SayTarget.npc(NPC, ship))
+	if _state(api, _salvage) == CardView.State.ACCEPTED:
+		var done: bool = _near_ticks >= ceili(SALVAGE_S * ScenarioApi.HZ)
+		api.settle_card(_salvage.id(), done, result == Result.PARTIAL)
 
 
 ## The state of the card a write posted, or EXPIRED while it isn't on the board.
 func _state(api: ScenarioApi, card: ApiHandle) -> int:
 	if card == null or card.id() < 0:
 		return CardView.State.EXPIRED
-	for c: CardView in api.cards_of(_ship):
+	for c: CardView in api.cards_of(Scenario.fleet(api, _ships)[0]):
 		if c.id == card.id():
 			return c.state
 	return CardView.State.EXPIRED

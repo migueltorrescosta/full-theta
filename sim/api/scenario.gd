@@ -39,3 +39,29 @@ func step(_api: ScenarioApi) -> void:
 ## Result.ACTIVE while going on, else the ending.
 func finished(_api: ScenarioApi) -> int:
 	return Result.ACTIVE
+
+
+## The encounter is over with `result` (every kind of ending, the scenario's own included):
+## the cards it posted must not be left to lapse (A8). Called once by the director, only for a
+## scenario that started; a scenario that settled itself has nothing left to do.
+func end(_api: ScenarioApi, _result: int) -> void:
+	pass
+
+
+## The ships a scenario serves: those of `ships` still in the fight, else all of them (a
+## scenario that ends the moment it starts has none left). The first is where its lines and
+## cards are addressed (A2).
+static func fleet(api: ScenarioApi, ships: PackedInt32Array) -> PackedInt32Array:
+	var engaged: PackedInt32Array = api.engaged(ships)
+	return engaged if not engaged.is_empty() else ships
+
+
+## The raider count of a wave of `base` at `strength`, at least one and at most `cap` (the
+## encounter must be able to finish inside its time limit).
+static func count_for(base: int, strength: float, cap: int = 1 << 20) -> int:
+	return clampi(roundi(base * strength), 1, cap)
+
+
+## Seconds since tick `since`.
+static func seconds_since(api: ScenarioApi, since: int) -> float:
+	return float(api.tick() - since) / ScenarioApi.HZ

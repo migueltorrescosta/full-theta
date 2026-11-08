@@ -10,6 +10,9 @@ extends Scenario
 ## having been away from it, by impulse or by the jump drive (which flies past the debris); a
 ## ship still at the yard when the encounter starts has not crossed anything (review 2 M5). When
 ## the time runs out first it ends as partial (#35 A3), and an undocked clearance lapses unpaid.
+## The whole fleet is served (A2): the clearance card is faction-wide and the leg is won when
+## any ship still in the fight reaches the yard after having left it; the ship that docks in
+## the lane is paid. A leg that ends by a flee or a loss fails its accepted clearance (A8).
 ## Only the Scenario API is used (FT-DAT-007).
 
 const DEBRIS_FACTION: int = 4
@@ -31,11 +34,12 @@ const MAX_S: float = 600.0
 ## The fee card outlasts the encounter, so a timeout can still settle it.
 const CARD_S: float = MAX_S + 30.0
 
-var _ship: int = -1
+var _ships: PackedInt32Array = PackedInt32Array()
 var _destination: int = -1
 var _started: int = 0
-## Whether the ship has been away from the yard since the encounter started.
-var _left: bool = false
+## The ships that have been away from the yard since the encounter started.
+var _left: Dictionary[int, bool] = {}
+var _clearance: ApiHandle
 var _result: int = Result.ACTIVE
 
 
@@ -49,10 +53,10 @@ func meta() -> ScenarioMeta:
 
 
 func start(api: ScenarioApi, params: Dictionary) -> void:
-	var ships: PackedInt32Array = params["ships"]
-	_ship = ships[0]
+	_ships = params["ships"]
+	var lead: int = Scenario.fleet(api, _ships)[0]
 	_started = api.tick()
-	var view: ShipView = api.ship(_ship)
+	var view: ShipView = api.ship(lead)
 	var from: int = params.get("site", view.nearest_site)
 	api.set_relation(DEBRIS_FACTION, view.faction, Relation.HOSTILE)
 	_destination = HOME
@@ -68,7 +72,8 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 			var t: float = lerpf(FIRST_T, LAST_T, float(i) / maxi(count - 1, 1))
 			var lateral: float = (api.rand(&"debris_leg") * 2.0 - 1.0) * LATERAL_M
 			api.spawn_on_leg(leg["debris"], DEBRIS_FACTION, from, _destination, t, lateral)
-	api.message("npc.lane_warning", {}, SayTarget.npc(NPC, _ship))
+	for ship: int in Scenario.fleet(api, _ships):
+		api.message("npc.lane_warning", {}, SayTarget.npc(NPC, ship))
 	var run: CardSpec = CardSpec.new()
 	run.kind = CardSpec.Kind.CONTRACT
 	run.npc_id = NPC
@@ -80,19 +85,40 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	run.lane_open_s = LANE_OPEN_S
 	run.lane_s = LANE_S
 	run.rep_faction = CIVIL_FACTION
-	api.offer(_ship, run)
+	run.faction_wide = true
+	_clearance = api.offer(lead, run)
 
 
 func step(api: ScenarioApi) -> void:
 	if _result != Result.ACTIVE:
 		return
-	var at: int = api.ship(_ship).at_site
-	_left = _left or at != _destination
-	if _left and at == _destination:
-		_result = Result.WON
-	elif float(api.tick() - _started) / ScenarioApi.HZ >= MAX_S:
+	for ship: int in Scenario.fleet(api, _ships):
+		var at: int = api.at_site(ship)
+		if at != _destination:
+			_left[ship] = true
+		elif _left.has(ship):
+			_result = Result.WON
+			return
+	if Scenario.seconds_since(api, _started) >= MAX_S:
 		_result = Result.PARTIAL
 
 
 func finished(_api: ScenarioApi) -> int:
 	return _result
+
+
+## A leg ended by a flee or a loss (not by itself) fails an accepted clearance, so a later dock
+## in its lane pays no fee, and withdraws one nobody accepted (A8).
+func end(api: ScenarioApi, result: int) -> void:
+	if _clearance == null or _clearance.id() < 0:
+		return
+	var state: int = CardView.State.EXPIRED
+	for c: CardView in api.cards_of(Scenario.fleet(api, _ships)[0]):
+		if c.id == _clearance.id():
+			state = c.state
+	if state == CardView.State.ACCEPTED and _result == Result.ACTIVE:
+		api.settle_card(_clearance.id(), false)
+	elif state == CardView.State.OPEN:
+		api.decline_card(_clearance.id())
+	if _result == Result.ACTIVE:
+		_result = result

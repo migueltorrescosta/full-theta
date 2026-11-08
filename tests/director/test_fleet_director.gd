@@ -50,8 +50,8 @@ static func picks(d: Array[DirectorDecision]) -> Array[DirectorDecision]:
 # once and the session is won with all three.
 func test_coop_fleet_run() -> void:
 	var f: FleetFixture = short_run(SessionRules.Mode.COOP, 3, 1)
-	assert_float(f.director.strength_for(3)).is_equal(2.0)
-	assert_float(f.director.strength_for(1)).is_equal(1.0)
+	assert_float(Director.fleet_multiplier(f.setup.run_def.director, 3)).is_equal(2.0)
+	assert_float(Director.fleet_multiplier(f.setup.run_def.director, 1)).is_equal(1.0)
 	var spawned: Array[int] = []
 	var events: Array[SimEvent] = []
 	while f.world.tick < 200 * HZ and not f.outcome().over():
@@ -90,6 +90,8 @@ func test_teams_get_a_director_each() -> void:
 		fleets.append(Array(f.api.encounter(e).ships))
 	fleets.sort()
 	assert_array(fleets).is_equal([[0, 2], [1, 3]])
+	# rival teams never share a site (A10, R10-4, R17-16)
+	assert_int(f.api.encounter(0).site).is_not_equal(f.api.encounter(1).site)
 
 
 # FT: FT-MIS-032, FT-MIS-023
@@ -128,7 +130,11 @@ func test_race_plays_one_list_at_own_copies() -> void:
 	# Easy's budget fits fewer race encounters than a run needs: the plan still has enough.
 	var run: RunDef = f.setup.run_def
 	var easy: Director = Director.new(
-		run.director, &"easy", ScenarioCatalogue.load_for(run.scenarios), 1
+		run.director,
+		&"easy",
+		ScenarioCatalogue.load_for(run.scenarios),
+		1,
+		M1Encounter.PLAYER_FACTION
 	)
 	var keys: PackedStringArray = PackedStringArray(["vesper_beacon"])
 	var limits: Vector2i = Vector2i(run.min_encounters, run.max_encounters)
@@ -171,7 +177,11 @@ func test_single_ship_coop_matches_m3() -> void:
 	var m3: FleetFixture = FleetFixture.make(SessionRules.Mode.COOP, 1)
 	var run: RunDef = m3.setup.run_def
 	var d: Director = Director.new(
-		run.director, &"normal", ScenarioCatalogue.load_for(run.scenarios), 1
+		run.director,
+		&"normal",
+		ScenarioCatalogue.load_for(run.scenarios),
+		1,
+		M1Encounter.PLAYER_FACTION
 	)
 	for i: int in 400 * HZ:
 		fleet.step(1)
@@ -184,6 +194,59 @@ func test_single_ship_coop_matches_m3() -> void:
 	var b: Array = d.decisions().map(func(x: DirectorDecision) -> Dictionary: return x.to_dict())
 	assert_array(a).is_not_empty()
 	assert_array(a).is_equal(b)
+
+
+# FT: FT-MIS-033
+# D264, A11: the waves fill each ship's raiders only up to MAX_ALIVE_PER_SHIP, however long the
+# game goes on. The raiders stay alive here (the ships are tough, nobody shoots).
+func test_last_standing_waves_cap_the_raiders_alive() -> void:
+	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.LAST_STANDING, 2)
+	var run: RunDef = f.setup.run_def.duplicate()
+	var director: DirectorDef = run.director.duplicate()
+	director.raider_wave_every_s = 1.0
+	run.director = director
+	f.setup.run_def = run
+	f.world.run_def = run
+	f.with_director()
+	for ship: int in 2:
+		f.world.damage.health[f.world.damage.hull_row(ship)] = 1.0e15
+	var most: int = 0
+	for i: int in 16 * HZ:
+		for id: int in f.world.ship_count():
+			if f.world.ai.is_enabled(id):
+				f.world.damage.health[f.world.damage.hull_row(id)] = 1.0e15
+		f.step(1)
+		most = maxi(most, _raiders(f.world))
+	assert_int(most).is_equal(2 * FleetDirector.MAX_ALIVE_PER_SHIP)
+	var waves: Array[DirectorDecision] = f.director.decisions().filter(
+		func(x: DirectorDecision) -> bool: return x.kind == DirectorDecision.Kind.RAIDER_WAVE
+	)
+	for w: DirectorDecision in waves:
+		assert_int(int(w.reason_args["count"])).is_between(1, FleetDirector.MAX_ALIVE_PER_SHIP)
+
+
+# FT: FT-MIS-011, FT-MIS-023
+# D259, A9 (R17-3): a relaunched ship is a fresh ship with a fresh run state, so the fleet's
+# plan starts over: a run the director had already closed is played again, from its full
+# budget, with the relaunched ship in it.
+func test_a_relaunch_restarts_the_fleet_plan() -> void:
+	var f: FleetFixture = short_run(SessionRules.Mode.COOP, 2, 1)
+	f.rules.default_relaunch = RelaunchPolicy.unlimited()
+	play(f, 200 * HZ, func() -> bool: return f.world.run.closed[0] == 1)
+	assert_int(picks(f.director.decisions()).size()).is_equal(1)
+	DamageSystem.damage_hull(f.world, 1, INF, -1)
+	f.step(2)
+	var back: RelaunchShipCommand = RelaunchShipCommand.new()
+	back.ship = 1
+	f.world.submit(back)
+	play(
+		f, f.world.tick + 60 * HZ, func() -> bool: return picks(f.director.decisions()).size() >= 2
+	)
+	assert_bool(back.accepted).is_true()
+	var all: Array[DirectorDecision] = picks(f.director.decisions())
+	assert_int(all.size()).is_greater_equal(2)
+	assert_int(all[1].budget_before).is_equal(all[0].budget_before)
+	assert_array(Array(f.api.encounter(1).ships)).is_equal([0, 1])
 
 
 static func _raiders(w: SimWorld) -> int:

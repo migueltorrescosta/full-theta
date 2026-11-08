@@ -64,15 +64,17 @@ static func step(world: SimWorld) -> void:
 
 ## The session's outcome under world.rules (#11): who won and why, derived from RunTable each
 ## time it is asked. A crewed ship still stands while it has no LOSS, or has one and its
-## side's relaunch policy allows another relaunch (M4-Q2). COOP: OBJECTIVE with every
+## side's relaunch policy allows another relaunch (M4-Q2); a ship out of play never stands
+## by an earlier win. COOP: OBJECTIVE with every
 ## crewed ship that won once the fleet run's final objective is complete (FT-MIS-013,
 ## M4-Q1). RACE: FIRST_TO_FINISH, the first ship to complete the final objective, by
 ## RunTable.finish_tick (FT-MIS-032). LAST_STANDING: LAST_STANDING, the one crewed ship left
 ## standing (FT-MIS-033). TEAMS: by rules.team_win, the first team to finish, or the last
 ## team with a ship standing (once no ship plays on and several teams stand, the first to
 ## finish), its ships the winners (FT-MIS-034, M4-Q6). HOLDOUT: HOLDOUT_OVER once the finite
-## side has no ship standing, held_ticks the tick its last ship left play (M4-Q2); no winner
-## is named. Every mode: ALL_LOST once no crewed ship stands and none won.
+## side has no ship standing, held_ticks the tick its last ship left play (M4-Q2), no winner
+## named; or, when the time cap runs out first, the finite side wins (A11). Every mode:
+## ALL_LOST once no crewed ship stands and none won.
 static func session_outcome(world: SimWorld) -> SessionOutcome:
 	var out: SessionOutcome = SessionOutcome.new()
 	var crew: PackedInt32Array = PackedInt32Array()
@@ -85,7 +87,8 @@ static func session_outcome(world: SimWorld) -> SessionOutcome:
 		crew.append(id)
 		var o: int = world.run.outcome[id]
 		won = won or o == RunTable.Outcome.WIN
-		if o != RunTable.Outcome.LOSS or _may_relaunch(world, id):
+		# in play counts, not "no loss": a ship that won and was then destroyed does not stand.
+		if world.run.status[id] == RunTable.Status.IN_PLAY or _may_relaunch(world, id):
 			standing.append(id)
 			playing = playing or o == RunTable.Outcome.NONE
 	if crew.is_empty():
@@ -172,23 +175,44 @@ static func _last_team(
 			out.winners.append(id)
 
 
-## HOLDOUT_OVER once no ship of the finite side stands; held_ticks the latest tick one of its
-## ships left play.
+## HOLDOUT_OVER once no ship of the finite side stands (no winner, held_ticks the latest tick
+## one of its ships left play). With one still standing, the session ends at
+## SessionRules.HOLDOUT_CAP_S: the finite side held if a ship of it is in play, and wins (team
+## and winners named, held_ticks the cap); one that only waits to relaunch has not held (no
+## winner, held_ticks as above).
 static func _holdout(
 	world: SimWorld, crew: PackedInt32Array, standing: PackedInt32Array, out: SessionOutcome
 ) -> void:
 	var finite: int = SessionRules.HOLDOUT_FINITE_TEAM
-	var held: int = -1
+	var latest: int = -1
+	var in_play: bool = false
+	var waiting: bool = false
 	for id: int in crew:
 		if world.team_of(id) != finite:
 			continue
-		if standing.has(id):
+		latest = maxi(latest, world.run.finish_tick[id])
+		if world.run.status[id] == RunTable.Status.IN_PLAY:
+			in_play = true
+		elif standing.has(id):
+			waiting = true
+	if in_play or waiting:
+		var cap: int = ceili(SessionRules.HOLDOUT_CAP_S * SimWorld.HZ)
+		if world.tick < cap:
 			return
-		held = maxi(held, world.run.finish_tick[id])
-	if held < 0:
+		out.reason = SessionOutcome.Reason.HOLDOUT_OVER
+		if not in_play:
+			out.held_ticks = latest
+			return
+		out.held_ticks = cap
+		out.team = finite
+		for id: int in crew:
+			if world.team_of(id) == finite:
+				out.winners.append(id)
+		return
+	if latest < 0:
 		return
 	out.reason = SessionOutcome.Reason.HOLDOUT_OVER
-	out.held_ticks = held
+	out.held_ticks = latest
 
 
 ## A crewed ship destroyed this tick by a crewed ship of another side: one kill for that ship

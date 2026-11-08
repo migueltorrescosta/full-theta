@@ -11,7 +11,9 @@ func _drive(w: SimWorld) -> Director:
 	var catalogue: Array[Scenario] = [
 		TestScenario.make(&"s_a", 2, true, 90), TestScenario.make(&"s_b", 3, true, 60)
 	]
-	var d: Director = Director.new(w.run_def.director, &"normal", catalogue, 11)
+	var d: Director = Director.new(
+		w.run_def.director, &"normal", catalogue, 11, M1Encounter.PLAYER_FACTION
+	)
 	var host: ScenarioHost = ScenarioHost.new(w)
 	for i: int in TICKS:
 		host.advance(SimWorld.DT * 1.001, d.before_tick)

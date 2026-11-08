@@ -1056,6 +1056,7 @@
     "comms.refused_not_held": {"en": "You do not hold that much.", "pt_PT": "Não tens tanto.", "it": "Non ne hai tanto."},
     "comms.refused_no_room": {"en": "No room aboard.", "pt_PT": "Sem espaço a bordo.", "it": "Nessuno spazio a bordo."},
     "comms.refused_no_price": {"en": "Not for sale.", "pt_PT": "Não está à venda.", "it": "Non in vendita."},
+    "comms.refused_nothing_to_repair": {"en": "Nothing to repair.", "pt_PT": "Nada para reparar.", "it": "Niente da riparare."},
     "comms.refused_requires_docked": {"en": "Accept this one while docked.", "pt_PT": "Aceita este acoplado.", "it": "Accetta questa da agganciato."},
     "toast.comms_card": {"en": "New card on the Comms board.", "pt_PT": "Novo cartão no painel de Comms.", "it": "Nuova scheda sulla bacheca Comms."},
     "weapons.flag_1": {"en": "disable", "pt_PT": "incapacitar", "it": "disabilita"},

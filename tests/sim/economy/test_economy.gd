@@ -182,6 +182,27 @@ func test_dock_repair() -> void:
 	assert_str(_why(w)).is_equal("bad_item")
 
 
+# FT: FT-MIS-018
+# R10-10: a repair of a healthy subsystem with no fault is refused and costs nothing.
+func test_repairing_a_healthy_subsystem_is_refused() -> void:
+	var d: Array = _docked()
+	var w: SimWorld = d[0]
+	assert_bool(_trade(w, d[1], &"repair:engines", 1)).is_false()
+	assert_str(_why(w)).is_equal("nothing_to_repair")
+	assert_int(w.economy.credits[0]).is_equal(5000)
+
+
+# FT: FT-MIS-018
+# R10-11: a sale price rounds down without losing a credit to floating point (0.7 * 90).
+func test_the_sale_price_rounds_down_exactly() -> void:
+	var m: MarketDef = MarketDef.new()
+	m.sell_ratio = 0.7
+	assert_int(Trade.sale_price(m, 90)).is_equal(63)
+	m.sell_ratio = 0.5
+	assert_int(Trade.sale_price(m, 25)).is_equal(12)
+	assert_int(Trade.sale_price(m, 1)).is_equal(0)
+
+
 # FT: FT-MIS-018, FT-DAT-002
 # The shipped markets and distributions pass their own validation, and a market prices
 # only what it caps.

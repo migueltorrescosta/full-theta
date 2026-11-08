@@ -16,7 +16,9 @@ func _catalogue() -> Array[Scenario]:
 func test_a_directed_run_says_no_shakedown_line() -> void:
 	var def: RunDef = ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), 1.0, 1.0)
 	var w: SimWorld = ApiFixture.world(1, def)
-	var d: Director = Director.new(def.director, &"normal", _catalogue(), 3)
+	var d: Director = Director.new(
+		def.director, &"normal", _catalogue(), 3, M1Encounter.PLAYER_FACTION
+	)
 	var host: ScenarioHost = ScenarioHost.new(w)
 	for i: int in TICKS:
 		host.advance(SimWorld.DT * 1.001, d.before_tick)

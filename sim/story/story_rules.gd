@@ -10,6 +10,8 @@ extends RefCounted
 ##   engine damage, and a reputation loss for destroying a surrendered contact.
 ## - P12 terms: an offer can need power on a subsystem, which the ship may not have.
 ## - P14 scan facts: a scan that reaches a fact's confidence teaches the faction the fact.
+## - Dock markets (D86, FT-MIS-036): a ship docking at a site with a market gets that market's
+##   OFFER card on its board, which lapses when it undocks.
 ## - P15 locating: Relay marks a mission, and a probe that finds a contact that can be
 ##   hailed opens an opportunity on Comms' board.
 
@@ -22,6 +24,7 @@ const _LANE_LEN: String = "lane.len.%d"
 const _LANE_T0: String = "lane.t0.%d"
 const _NEED: String = "need.%d."
 const _DOCKED: String = "docked.%d"
+const _DOCK_OFFER: String = "dockoffer.%d"
 const _OPPORTUNITY: String = "opp.%d.%d"
 const _MARKED: String = "marked.%d"
 
@@ -366,7 +369,7 @@ static func sync_docks(world: SimWorld) -> void:
 
 ## Remembers where each crewed ship is docked and calls on_dock when it arrives.
 static func _watch_docks(world: SimWorld) -> void:
-	if world.story.size() == 0:
+	if world.story.size() == 0 and world.site_markets.is_empty():
 		return
 	for ship: int in world.ship_count():
 		if world.ai.is_enabled(ship):
@@ -376,5 +379,33 @@ static func _watch_docks(world: SimWorld) -> void:
 		var before: int = world.story_flags.get_flag(flag) - 1
 		if site != before:
 			world.story_flags.set_flag(flag, site + 1)
+			if before >= 0:
+				_close_dock_offer(world, ship)
 			if site >= 0:
 				on_dock(world, ship, site)
+				_offer_market(world, ship, site)
+
+
+## A ship docked at a site with a market: its OFFER card for the site, which Trade.market needs
+## (D86: modules and goods are bought while docked, via Comms).
+static func _offer_market(world: SimWorld, ship: int, site: int) -> void:
+	if not world.site_markets.has(site) or world.ai.is_enabled(ship):
+		return
+	var t: StoryTable = world.story
+	var card: int = t.add_card(ship, world.faction_of(ship), StoryTable.Kind.OFFER)
+	t.title[card] = "comms.card.offer"
+	t.site[card] = site
+	t.requires_docked[card] = 1
+	world.story_flags.set_flag(StringName(_DOCK_OFFER % ship), card + 1)
+	world.emit(&"card_posted", ship, card, StoryTable.Kind.OFFER)
+
+
+## The ship undocked: its market card lapses.
+static func _close_dock_offer(world: SimWorld, ship: int) -> void:
+	var flag: StringName = StringName(_DOCK_OFFER % ship)
+	var card: int = world.story_flags.get_flag(flag) - 1
+	if card < 0:
+		return
+	world.story_flags.set_flag(flag, 0)
+	if Story.is_live(world, card):
+		Story.set_state(world, ship, card, StoryTable.State.EXPIRED)

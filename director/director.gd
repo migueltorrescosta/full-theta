@@ -23,11 +23,15 @@ extends RefCounted
 ## (fleet_multiplier), and one run closed for every ship at once. In a race it plays the
 ## seeded plan FleetDirector hands it (set_race) instead of picking, with no adaptation to
 ## the crew, each encounter at the ship's own copy of the site (ScenarioApi.open_site_copy).
-## Without a faction (the M3 behaviour, the bot batch) every crewed ship is planned alone.
+## A single crewed ship is a fleet of one.
 
 const LOW_HULL: float = 0.5
 ## Site 0 is the home station (Kestrel Yard, D205): no encounter is placed there.
 const HOME_SITE: int = 0
+
+## The event ScenarioApi.events() reports when RelaunchShipCommand puts a ship back in play
+## (SessionOutcome.EVENT_RELAUNCHED; the director names sim/api only).
+const RELAUNCHED: StringName = &"relaunched"
 
 ## The text of the Comms card that names a pending encounter's site (Q23).
 const PENDING_DETAIL: StringName = &"card.encounter_pending.detail"
@@ -49,13 +53,15 @@ var _awaiting: Dictionary[int, PendingOpen] = {}
 var _opened: int = 0
 var _last_open_tick: int = 0
 var _skip_logged: Dictionary[int, int] = {}
-## The crew faction planned as one fleet, or -1: each crewed ship on its own. Every map above
-## is keyed by the planning unit: the ship, or this faction for a fleet.
+## The crew faction planned as one fleet. Every map above is keyed by it, the planning unit.
 var _faction: int = -1
-## The fleet's lowest ship id in play, named in the log for the fleet.
+## The fleet's lowest ship id in play, named in the log.
 var _lead: int = -1
 ## RACE: the plan, [{scenario, site}] in order (set_race); empty otherwise.
 var _race: Array[Dictionary] = []
+## Sites with an encounter of some director of the session (FleetDirector shares one set
+## between its directors, so rival teams never share a site); a lone Director has its own.
+var _taken: Dictionary[int, bool] = {}
 
 
 class ActiveRun:
@@ -85,7 +91,7 @@ func _init(
 	difficulty: StringName,
 	catalogue: Array[Scenario],
 	seed_value: int,
-	faction: int = -1
+	faction: int
 ) -> void:
 	_def = def
 	_faction = faction
@@ -108,18 +114,33 @@ func before_tick(api: ScenarioApi) -> void:
 	var now: int = api.tick()
 	_resolve_opens(now)
 	_step_runs(api, now)
-	if _faction < 0:
-		var crew: PackedInt32Array = api.crew_ships()
-		_maybe_open_site(api, now)
-		for ship: int in crew:
-			_plan(api, now, ship)
-		return
+	_on_relaunches(api)
 	var fleet: PackedInt32Array = api.crew_ships_of(_faction)
 	if _race.is_empty():
 		_maybe_open_site(api, now)
 	if not fleet.is_empty():
 		_lead = fleet[0]
 		_plan(api, now, _faction)
+
+
+## A fleet ship relaunched (D259: a fresh ship with a fresh run state) must go through the
+## run's encounters itself, or CloseRunCommand would refuse it: the fleet's plan starts over,
+## its budget, count, quiet time and closed run forgotten.
+func _on_relaunches(api: ScenarioApi) -> void:
+	for e: ApiEvent in api.events():
+		if e.kind == RELAUNCHED and api.faction_of(e.ship_id) == _faction:
+			_spent.erase(_faction)
+			_done.erase(_faction)
+			_quiet_until.erase(_faction)
+			_last_pick.erase(_faction)
+			_ended_logged.erase(_faction)
+			_skip_logged.erase(_faction)
+
+
+## Makes this Director leave the sites in `taken` alone and record its own there (FleetDirector
+## shares one between its directors).
+func share_sites(taken: Dictionary[int, bool]) -> void:
+	_taken = taken
 
 
 ## The strength multiplier of an encounter holding `ships` crewed ships (FT-MIS-023, M4-Q1):
@@ -142,31 +163,15 @@ func set_race(plan: Array[Dictionary]) -> void:
 func plan_race(limits: Vector2i, site_keys: PackedStringArray) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var usable: Array[int] = []
-	var cheapest: int = -1
 	for i: int in _catalogue.size():
 		if _metas[i].travel_hazard == &"":
 			usable.append(i)
-			if cheapest < 0 or _cost_of(i) < _cost_of(cheapest):
-				cheapest = i
-	if cheapest < 0:
+	if usable.is_empty():
 		return out
 	var left: int = _budget()
 	var last: StringName = &""
 	while out.size() < limits.y:
-		var reserve: int = maxi(0, limits.x - out.size() - 1) * _cost_of(cheapest)
-		var all: Array[int] = []
-		var fresh: Array[int] = []
-		for i: int in usable:
-			if _cost_of(i) > left - reserve:
-				continue
-			all.append(i)
-			if _metas[i].id != last:
-				fresh.append(i)
-		var fits: Array[int] = fresh if not fresh.is_empty() else all
-		# Below the fewest a run needs, the cheapest goes in even over the budget, so the race
-		# can always be finished.
-		if fits.is_empty() and out.size() < limits.x:
-			fits = [cheapest]
+		var fits: Array[int] = _affordable(usable, left, out.size(), limits.x, last)
 		if fits.is_empty():
 			break
 		var index: int = fits[_rng.randi() % fits.size()]
@@ -184,9 +189,13 @@ func decisions() -> Array[DirectorDecision]:
 	return _decisions
 
 
-## Threat points left on the ship's budget.
-func budget_left(ship: int) -> int:
-	return _budget() - _spent.get(ship, 0)
+## Threat points left on the fleet's budget.
+func budget_left() -> int:
+	return _left(_faction)
+
+
+func _left(unit: int) -> int:
+	return _budget() - _spent.get(unit, 0)
 
 
 func _budget() -> int:
@@ -196,6 +205,41 @@ func _budget() -> int:
 func _cost_of(index: int) -> int:
 	var meta: ScenarioMeta = _metas[index]
 	return meta.threat_cost
+
+
+## The cheapest of the catalogue indexes `candidates` (at least 1: every scenario costs at
+## least 1, so the reserve always counts the encounters still to play), or -1 for none.
+func _cheapest_of(candidates: Array[int]) -> int:
+	var best: int = -1
+	for i: int in candidates:
+		if best < 0 or _cost_of(i) < _cost_of(best):
+			best = i
+	return best
+
+
+## The shared budget rule of a pick and of a race plan: the `candidates` that fit `left` and
+## leave enough of it for the fewest encounters still to play (each costs at least the
+## cheapest candidate), leaving out the last pick when another fits. With `done` below
+## `fewest` and nothing fitting, the cheapest goes in even over the budget, so a run can
+## always be finished (the empty result means nothing is playable, or enough has been).
+func _affordable(
+	candidates: Array[int], left: int, done: int, fewest: int, last: StringName
+) -> Array[int]:
+	var cheapest: int = _cheapest_of(candidates)
+	var all: Array[int] = []
+	var fresh: Array[int] = []
+	if cheapest >= 0:
+		var reserve: int = maxi(0, fewest - done - 1) * maxi(1, _cost_of(cheapest))
+		for i: int in candidates:
+			if _cost_of(i) > left - reserve:
+				continue
+			all.append(i)
+			if _metas[i].id != last:
+				fresh.append(i)
+	var fits: Array[int] = fresh if not fresh.is_empty() else all
+	if fits.is_empty() and cheapest >= 0 and done < fewest:
+		fits = [cheapest]
+	return fits
 
 
 ## Starts, steps and ends the active scenarios; learns when their encounters are over.
@@ -209,11 +253,13 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 				keep.append(run)
 				continue
 			if run.handle.rejected():
-				_refund(run, now, "rejected")
+				_refund(run, now)
 				continue
 			run.encounter = run.handle.id()
 		var ev: EncounterView = api.encounter(run.encounter)
 		if ev.result > Scenario.Result.ACTIVE:
+			if run.started:
+				run.scenario.end(api, ev.result)
 			_finished(run, now)
 			continue
 		if ev.result == Scenario.Result.ACTIVE:
@@ -241,14 +287,16 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 
 ## The encounter ended (by its scenario, a flee or a loss): the ship rests for a gap.
 func _finished(run: ActiveRun, now: int) -> void:
+	_taken.erase(run.site)
 	_done[run.ship] = _done.get(run.ship, 0) + 1
 	_quiet_until[run.ship] = now + ceili(_def.gap_s * ScenarioApi.HZ)
 
 
 ## A rejected begin gives its cost back and the ship may be planned again.
-func _refund(run: ActiveRun, now: int, reason: String) -> void:
-	var cost: int = _cost_of(_index_of(run.scenario))
-	var before: int = budget_left(run.ship)
+func _refund(run: ActiveRun, now: int) -> void:
+	_taken.erase(run.site)
+	var cost: int = _cost_of(_index_of_id(run.scenario.meta().id))
+	var before: int = _left(run.ship)
 	_spent[run.ship] = _spent.get(run.ship, 0) - cost
 	_quiet_until[run.ship] = now + ceili(_def.gap_s * ScenarioApi.HZ)
 	_log(
@@ -256,10 +304,10 @@ func _refund(run: ActiveRun, now: int, reason: String) -> void:
 		run.ship,
 		DirectorDecision.Kind.SKIP,
 		{
-			"scenario_id": _metas[_index_of(run.scenario)].id,
+			"scenario_id": run.scenario.meta().id,
 			"budget_before": before,
-			"budget_after": budget_left(run.ship),
-			"reason": reason,
+			"budget_after": _left(run.ship),
+			"reason": "rejected",
 		}
 	)
 
@@ -284,9 +332,14 @@ func _pick(api: ScenarioApi, now: int, ship: int, fewest: int) -> void:
 		_pick_race(api, now, ship)
 		return
 	var hull: float = 1.0
-	for s: int in _ships(api, ship):
+	for s: int in _ships(api):
 		hull = minf(hull, api.ship(s).hull_frac)
-	var fits: Array[int] = _fitting(ship, fewest)
+	var everything: Array[int] = []
+	for i: int in _catalogue.size():
+		everything.append(i)
+	var fits: Array[int] = _affordable(
+		everything, _left(ship), _done.get(ship, 0), fewest, _last_pick.get(ship, &"")
+	)
 	var reason: String = "budget_fits"
 	if hull < LOW_HULL:
 		var calm: Array[int] = []
@@ -295,7 +348,8 @@ func _pick(api: ScenarioApi, now: int, ship: int, fewest: int) -> void:
 			fits = calm
 			reason = "low_hull"
 	if fits.is_empty():
-		# Nothing fits the budget: the run ends once the fewest encounters are played.
+		# Nothing fits the budget: the run ends once the fewest encounters are played. An
+		# empty catalogue has nothing to play, which is logged once.
 		if _done.get(ship, 0) >= fewest:
 			_close_run(api, now, ship, "budget_spent")
 		else:
@@ -329,7 +383,7 @@ func _pick_race(api: ScenarioApi, now: int, unit: int) -> void:
 		_begin(api, now, unit, index, -1, "budget_fits")
 		return
 	var pending: PendingOpen = PendingOpen.new()
-	pending.handle = api.open_site_copy(entry["site"], _ship_of(unit))
+	pending.handle = api.open_site_copy(entry["site"], _lead)
 	pending.ship = unit
 	pending.index = index
 	pending.reason = "budget_fits"
@@ -358,47 +412,30 @@ func _busy(ship: int) -> bool:
 ## Closes the ship's run once (CloseRunCommand), for every ship of a fleet, and logs why.
 func _close_run(api: ScenarioApi, now: int, ship: int, reason: String) -> void:
 	_ended_logged[ship] = true
-	for s: int in _ships(api, ship):
+	for s: int in _ships(api):
 		api.close_run(s)
 	_log(
 		now,
 		ship,
 		DirectorDecision.Kind.END_RUN,
 		{
-			"budget_before": budget_left(ship),
-			"budget_after": budget_left(ship),
+			"budget_before": _left(ship),
+			"budget_after": _left(ship),
 			"reason": reason,
 			"args": {"encounters": _done.get(ship, 0)},
 		}
 	)
 
 
-## Catalogue indexes that fit the ship's budget and leave enough of it for the fewest
-## encounters still to play (each costs at least the cheapest scenario), leaving out the last
-## pick when another fits.
-func _fitting(ship: int, fewest: int) -> Array[int]:
-	var all: Array[int] = []
-	var fresh: Array[int] = []
-	var reserve: int = maxi(0, fewest - _done.get(ship, 0) - 1) * _cheapest()
-	for i: int in _catalogue.size():
-		if _cost_of(i) > budget_left(ship) - reserve:
-			continue
-		all.append(i)
-		if _metas[i].id != _last_pick.get(ship, &""):
-			fresh.append(i)
-	return fresh if not fresh.is_empty() else all
-
-
-func _cheapest() -> int:
-	var least: int = 1
-	for i: int in _catalogue.size():
-		least = _cost_of(i) if i == 0 else mini(least, _cost_of(i))
-	return maxi(1, least)
-
-
 ## The enemy-strength multiplier of the difficulty preset (Q14, DirectorDef).
 func _strength() -> float:
-	return _def.strength_per_preset.get(_preset, 1.0)
+	return preset_strength(_def, _preset)
+
+
+## The enemy-strength multiplier the toggles code's preset names (1.0 for a preset the def
+## doesn't list).
+static func preset_strength(def: DirectorDef, difficulty: StringName) -> float:
+	return def.strength_per_preset.get(preset_of(String(difficulty)), 1.0)
 
 
 ## Logs once per quiet period that nothing fits the budget.
@@ -411,21 +448,18 @@ func _skip(now: int, ship: int) -> void:
 		ship,
 		DirectorDecision.Kind.SKIP,
 		{
-			"budget_before": budget_left(ship),
-			"budget_after": budget_left(ship),
+			"budget_before": _left(ship),
+			"budget_after": _left(ship),
 			"reason": "no_fit",
 		}
 	)
 
 
-## An open site with no encounter of ours, or -1 when none is free.
+## An open site with no encounter of the session's directors, or -1 when none is free.
 func _free_site(api: ScenarioApi) -> int:
-	var taken: Dictionary[int, bool] = {}
-	for run: ActiveRun in _runs:
-		taken[run.site] = true
 	var free: Array[int] = []
 	for s: SiteView in api.sites():
-		if s.id != HOME_SITE and not taken.has(s.id):
+		if s.id != HOME_SITE and not _taken.has(s.id):
 			free.append(s.id)
 	return free[_rng.randi() % free.size()] if not free.is_empty() else -1
 
@@ -479,12 +513,14 @@ func _maybe_open_site(api: ScenarioApi, now: int) -> void:
 func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason: String) -> void:
 	var meta: ScenarioMeta = _metas[index]
 	var cost: int = _cost_of(index)
-	var before: int = budget_left(ship)
+	var before: int = _left(ship)
 	var run: ActiveRun = ActiveRun.new()
 	run.scenario = _catalogue[index].fresh()
 	run.ship = ship
 	run.site = site
-	var ships: PackedInt32Array = _ships(api, ship)
+	if site >= 0:
+		_taken[site] = true
+	var ships: PackedInt32Array = _ships(api)
 	run.handle = api.begin_encounter(meta.id, site, ships, cost)
 	_runs.append(run)
 	for s: int in ships:
@@ -500,9 +536,9 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 			"site": site,
 			"cost": cost,
 			"budget_before": before,
-			"budget_after": budget_left(ship),
+			"budget_after": _left(ship),
 			"reason": reason,
-			"args": {"cost": cost, "left": budget_left(ship)},
+			"args": {"cost": cost, "left": _left(ship)},
 		}
 	)
 
@@ -526,37 +562,23 @@ func _announce_site(api: ScenarioApi, ship: int, site: int) -> void:
 	api.offer(ship, card)
 
 
-## The crewed ships a planning unit stands for: the ship itself, or the fleet's ships in play.
-func _ships(api: ScenarioApi, unit: int) -> PackedInt32Array:
-	if _faction < 0:
-		return PackedInt32Array([unit])
+## The fleet's crewed ships in play.
+func _ships(api: ScenarioApi) -> PackedInt32Array:
 	return api.crew_ships_of(_faction)
-
-
-## The ship a planning unit names in the log: the ship, or the fleet's lead ship.
-func _ship_of(unit: int) -> int:
-	return _lead if _faction >= 0 and unit == _faction else unit
 
 
 func _index_of_id(id: StringName) -> int:
 	for i: int in _metas.size():
 		if _metas[i].id == id:
 			return i
-	return 0
-
-
-func _index_of(scenario: Scenario) -> int:
-	var id: StringName = scenario.meta().id
-	for i: int in _metas.size():
-		if _metas[i].id == id:
-			return i
+	assert(false, "scenario %s is not in the catalogue" % id)
 	return 0
 
 
 func _log(now: int, ship: int, kind: DirectorDecision.Kind, f: Dictionary) -> void:
 	var d: DirectorDecision = DirectorDecision.new()
 	d.tick = now
-	d.ship = _ship_of(ship)
+	d.ship = _lead if ship == _faction else ship
 	d.kind = kind
 	d.scenario_id = f.get("scenario_id", &"")
 	d.site = f.get("site", -1)
