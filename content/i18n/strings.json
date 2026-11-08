@@ -1256,7 +1256,7 @@
     "help.weapons.ammo": {"en": "Ammo: the next ammunition", "pt_PT": "Munição: a munição seguinte", "it": "Munizioni: le munizioni successive"},
     "help.weapons.guided": {"en": "Guided: fire at the selected mark", "pt_PT": "Guiado: dispara ao marcador selecionado", "it": "Guidato: spara al segnalino selezionato"},
     "help.weapons.fire_all": {"en": "Fire all: hold, every mount fires", "pt_PT": "Disparar tudo: mantém premido, todas as armas disparam", "it": "Fuoco totale: tieni premuto, tutte le torrette sparano"},
-    "help.weapons.claim": {"en": "Claim or Release this mount", "pt_PT": "Assumir ou Largar esta arma", "it": "Prendi o Rilascia questa torretta"},
+    "help.weapons.claim": {"en": "Claim: take this mount, tap again to let it go", "pt_PT": "Assumir: fica com esta arma, toca de novo para largar", "it": "Prendi: tieni questa torretta, tocca di nuovo per lasciarla"},
     "help.weapons.fire": {"en": "FIRE: hold to fire", "pt_PT": "FOGO: mantém premido para disparar", "it": "FUOCO: tieni premuto per sparare"},
     "help.weapons.view": {"en": "View: drag to aim, tap to select, hold to ping", "pt_PT": "Vista: arrasta para apontar, toca para selecionar, mantém para sinalizar", "it": "Vista: trascina per mirare, tocca per selezionare, tieni per un ping"},
     "help.weapons.radar": {"en": "Radar: tap a blip to select it", "pt_PT": "Radar: toca num ponto para o selecionar", "it": "Radar: tocca un punto per selezionarlo"},

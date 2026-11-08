@@ -7,7 +7,7 @@ extends Control
 ## page zone at the top and FIRE (held: `fire`) at the thumb, which never pages away. Pages
 ## (PageHost, tabs in the top bar): Fire, the resting page, with the camera mount card (tap:
 ## `mount_next`), the ammunition (`ammo_next`), Guided (`fire_guided`), Fire all (held:
-## `fire_all`) and Claim or Release (the screen's `claim`); Mounts, a list of every mount
+## `fire_all`) and Claim (the screen's `claim`, which toggles); Mounts, a list of every mount
 ## over the view (FT-WPN-004: tap a row to look through it, `mount_N`; its Claim claims it);
 ## Crew (CrewPage: request chips, Ping, Mark, shares). Over the view's left: the target line
 ## and the 160 px disc radar inset (FT-WPN-002) at the bottom; the panel draws the feeds
