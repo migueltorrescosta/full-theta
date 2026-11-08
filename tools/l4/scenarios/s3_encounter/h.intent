@@ -47,7 +47,8 @@ ui_release id=approach
 ui_release id=face
 ui_expect card=true run_over.outcome=loss run_over.hull=0
 barrier name=lost n=3 timeout=30
-# The host runs it again alone (D178).
+# The host runs it again alone (D178): the first tap names who is still deciding, the second runs it.
+ui_button name=RunAgain
 ui_button name=RunAgain
 ui_expect shown=lobby entry=tactical card=false timeout=30
 barrier name=lobby2 n=3 timeout=30
