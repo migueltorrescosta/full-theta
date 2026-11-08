@@ -18,6 +18,8 @@ const HEADER_H: float = 34.0
 const TITLE_H: float = 26.0
 ## A phone page's one-line "why" above its cards (R23-9, C9).
 const PAGE_WHY_H: float = 22.0
+## The hints' own line under the column titles, when one does not fit beside its title.
+const WHY_LINE_H: float = 16.0
 const FOOTER_H: float = 34.0
 const CARD_H: float = 66.0
 const GAP: float = 6.0
@@ -180,7 +182,27 @@ func _header_h() -> float:
 
 
 func _title_h() -> float:
-	return PAGE_WHY_H if page_column >= 0 else TITLE_H
+	if page_column >= 0:
+		return PAGE_WHY_H
+	return TITLE_H + (WHY_LINE_H if _why_below() else 0.0)
+
+
+## True when a column's hint does not fit beside its title: every hint then takes a line of
+## its own under the titles, never cut (w5).
+func _why_below() -> bool:
+	if page_column >= 0:
+		return false
+	var font: Font = get_theme_default_font()
+	for col: int in _drawn_columns():
+		var title: String = TranslationServer.translate(CommsData.COLUMN_KEYS[col])
+		if narrow():
+			title += "  (%d/%d)" % [col + 1, CommsData.COLUMNS]
+		var why: String = TranslationServer.translate(CommsData.WHY_KEYS[col])
+		var need: float = font.get_string_size(title, 0, -1, FONT_SIZE).x + 16.0
+		need += font.get_string_size(why, 0, -1, FONT_SIZE - 3).x + 16.0
+		if need > _col_rect(col).size.x:
+			return true
+	return false
 
 
 func _footer_h() -> float:
@@ -337,6 +359,10 @@ func _draw_column(font: Font, col: int) -> void:
 	if narrow():
 		title += "  (%d/%d)" % [col + 1, CommsData.COLUMNS]
 	var why_x: float = rect.position.x + 8.0
+	var why_y: float = rect.position.y + font.get_ascent(FONT_SIZE) + 2.0
+	var below: bool = _why_below()
+	if below:
+		why_y += WHY_LINE_H
 	if page_column < 0:
 		draw_string(
 			font,
@@ -347,10 +373,11 @@ func _draw_column(font: Font, col: int) -> void:
 			FONT_SIZE,
 			Palette.color("text_dim")
 		)
-		why_x += font.get_string_size(title, 0, -1, FONT_SIZE).x + 16.0
+		if not below:
+			why_x += font.get_string_size(title, 0, -1, FONT_SIZE).x + 16.0
 	draw_string(
 		font,
-		Vector2(why_x, rect.position.y + font.get_ascent(FONT_SIZE) + 2.0),
+		Vector2(why_x, why_y),
 		TranslationServer.translate(CommsData.WHY_KEYS[col]),
 		0,
 		maxf(rect.end.x - 8.0 - why_x, 1.0),

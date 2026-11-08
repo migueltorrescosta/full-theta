@@ -1045,7 +1045,7 @@
     "comms.faction.other": {"en": "Faction %d", "pt_PT": "Fação %d", "it": "Fazione %d"},
     "comms.why.missions": {"en": "Rescues and escorts pay credits.", "pt_PT": "Resgates e escoltas pagam créditos.", "it": "Soccorsi e scorte pagano crediti."},
     "comms.why.contracts": {"en": "Paid jobs: take what you can finish.", "pt_PT": "Trabalhos pagos: aceita o que consegues acabar.", "it": "Lavori pagati: prendi ciò che finisci."},
-    "comms.why.offers": {"en": "Trade spares to fix Engineering faults.", "pt_PT": "Troca peças para reparar avarias.", "it": "Scambia ricambi per le avarie."},
+    "comms.why.offers": {"en": "Trade spares to fix faults.", "pt_PT": "Troca peças para reparar avarias.", "it": "Scambia ricambi per le avarie."},
     "comms.why.rep": {"en": "Standing sets prices and offers.", "pt_PT": "A reputação define preços e ofertas.", "it": "La reputazione fissa prezzi e offerte."},
     "comms.hail": {"en": "Hail", "pt_PT": "Chamar", "it": "Chiama"},
     "comms.accept": {"en": "Accept", "pt_PT": "Aceitar", "it": "Accetta"},

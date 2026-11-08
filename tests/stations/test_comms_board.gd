@@ -412,3 +412,28 @@ func test_factions_have_names_and_pages_a_why_line() -> void:
 	for key: String in CommsData.WHY_KEYS + [CommsData.WHY_REP_KEY]:
 		assert_str(tr(key)).is_not_equal(key)
 		assert_int(tr(key).length()).is_less(45)
+
+
+# FT: FT-COM-005
+# w5: a column hint that does not fit beside its title moves, with the others, to a line of
+# its own under the titles, so none is cut; a wide board keeps them beside the titles.
+func test_column_hints_are_never_cut() -> void:
+	var s: StationScreen = await _screen()
+	var b: CommsBoard = _comms(s).board
+	var font: Font = b.get_theme_default_font()
+	for w: float in [1600.0, 680.0]:
+		b.size = Vector2(w, BOARD_SIZE.y)
+		var below: bool = b._why_below()
+		assert_float(b._title_h()).is_equal(
+			CommsBoard.TITLE_H + (CommsBoard.WHY_LINE_H if below else 0.0)
+		)
+		for col: int in b._drawn_columns():
+			var why: String = tr(CommsData.WHY_KEYS[col])
+			var need: float = font.get_string_size(why, 0, -1, CommsBoard.FONT_SIZE - 3).x + 16.0
+			if not below:
+				var title: String = tr(CommsData.COLUMN_KEYS[col])
+				need += font.get_string_size(title, 0, -1, CommsBoard.FONT_SIZE).x + 16.0
+			assert_float(need).override_failure_message("%s %d" % [w, col]).is_less_equal(
+				b._col_rect(col).size.x
+			)
+	assert_bool(b._why_below()).is_true()
