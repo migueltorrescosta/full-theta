@@ -92,12 +92,21 @@ func _small() -> int:
 	return PHONE_FONT if touch_layout() else SMALL
 
 
+## The label key of a bar: "Max thrust" and "Max turn" on a desktop; a phone's 16 sp text
+## leaves no room beside the compass for them, so it keeps the short "Thrust" and "Turn".
+func _bar_key(key: String) -> String:
+	if not touch_layout():
+		return key
+	return {"helm.max_thrust": "helm.thrust", "helm.max_turn": "helm.turn"}.get(key, key)
+
+
 ## The room (px) a bar's label before it and percentage after it take.
 func _bar_extra() -> float:
 	var font: Font = get_theme_default_font()
 	var w: float = 0.0
 	for key: String in ["helm.max_thrust", "helm.max_turn", "helm.propellant"]:
-		w = maxf(w, font.get_string_size(tr(key), HORIZONTAL_ALIGNMENT_LEFT, -1, _small()).x)
+		var name: String = tr(_bar_key(key))
+		w = maxf(w, font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, _small()).x)
 	return ceilf(w) + LABEL_GAP + PCT_W
 
 
@@ -899,9 +908,19 @@ func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 		return
 	var y: float = at.y + 62.0
 	var pitch: float = 20.0 if touch_layout() else 18.0
-	_bar(font, Vector2(at.x, y), tr("helm.max_thrust"), float(h.get("thrust_scale", 1.0)), true)
 	_bar(
-		font, Vector2(at.x, y + pitch), tr("helm.max_turn"), float(h.get("torque_scale", 1.0)), true
+		font,
+		Vector2(at.x, y),
+		tr(_bar_key("helm.max_thrust")),
+		float(h.get("thrust_scale", 1.0)),
+		true
+	)
+	_bar(
+		font,
+		Vector2(at.x, y + pitch),
+		tr(_bar_key("helm.max_turn")),
+		float(h.get("torque_scale", 1.0)),
+		true
 	)
 	_bar(
 		font, Vector2(at.x, y + 2.0 * pitch), tr("helm.propellant"), panel.propellant_share(), false

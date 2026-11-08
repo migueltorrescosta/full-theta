@@ -495,7 +495,7 @@ func test_a_phone_keeps_a_font_floor_and_the_bars_are_named() -> void:
 	var hud: HelmHud = _panel.hud
 	assert_int(hud._fs()).is_greater_equal(HelmHud.PHONE_FONT)
 	assert_int(hud._small()).is_greater_equal(HelmHud.PHONE_FONT)
-	assert_str(tr("helm.max_thrust")).is_equal("Max thrust")
+	assert_str(tr("helm.max_thrust")).is_equal("Max thrust")  # (a phone keeps "Thrust": no room)
 	assert_str(tr("helm.max_turn")).is_equal("Max turn")
 	assert_str(tr("helm.propellant")).is_equal("Fuel")
 	# The bars' labels and percentages fit the read-out's box.
