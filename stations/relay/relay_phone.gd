@@ -272,12 +272,14 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 	panel._hint.offset_right = -(panel.size.x - r.end.x) - 8.0
 	var y: float = r.position.y + 4.0
 	if probes.get_parent() == self:
-		# The inbox line is the longer ("Incoming: Rock from Wren (Relay)"): 60 % of the width.
-		var left_w: float = maxf(r.size.x * 0.4 - 12.0, 1.0)
+		# The width shared in proportion to the two texts (w5: a fixed 40/60 split cut the
+		# inbox line "Incoming: Rock from Wren (Relay)" while the probe line had room).
+		var share: float = _probe_share()
+		var left_w: float = maxf((r.size.x - 24.0) * share, 1.0)
 		probes.position = Vector2(r.position.x + 8.0, y)
-		mail.position = Vector2(r.position.x + r.size.x * 0.4 + 4.0, y)
+		mail.position = Vector2(r.position.x + 16.0 + left_w, y)
 		probes.size = Vector2(left_w, probes.get_combined_minimum_size().y)
-		mail.size = Vector2(maxf(r.size.x * 0.6 - 12.0, 1.0), mail.get_combined_minimum_size().y)
+		mail.size = Vector2(maxf(r.size.x - 24.0 - left_w, 1.0), mail.get_combined_minimum_size().y)
 		y += LINE_H
 	panel._hint.offset_top = position.y + y
 	panel._rename.custom_minimum_size = Vector2(220, UiTheme.TOUCH_PRIMARY)
@@ -295,8 +297,14 @@ func update() -> void:
 		panel.toggle_probe_claim()
 	var hud: RelayHud = panel.hud
 	var crew_state: CrewState = panel.ctx.crew
-	probes.text = hud._probes.text
-	mail.text = hud._mail.text
+	if probes.text != hud._probes.text or mail.text != hud._mail.text:
+		probes.text = hud._probes.text
+		mail.text = hud._mail.text
+		# Upright the row shares its width the same way, through the stretch ratios.
+		probes.size_flags_stretch_ratio = _probe_share()
+		mail.size_flags_stretch_ratio = 1.0 - probes.size_flags_stretch_ratio
+		if probes.get_parent() == self:
+			_place_view()
 	buttons["launch"].disabled = hud.launch.disabled
 	buttons["lanes"].text = hud.lanes.text
 	var holder: String = crew_state.claimer(StationViews.CLAIM_PROBE)
@@ -442,6 +450,16 @@ func _clear(box: Node) -> void:
 	for c: Node in box.get_children():
 		box.remove_child(c)
 		c.queue_free()
+
+
+## The probe line's share of the width the probe and inbox lines split: in proportion to
+## their texts, at least a quarter each.
+func _probe_share() -> float:
+	var font: Font = probes.get_theme_font("font")
+	var w: Array[float] = []
+	for l: Label in [probes, mail]:
+		w.append(font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 1.0)
+	return clampf(w[0] / (w[0] + w[1]), 0.25, 0.75)
 
 
 func _label() -> Label:

@@ -664,6 +664,11 @@ func _area() -> Rect2:
 	return Rect2(v.position, v.size - Vector2(STRIP_W if side_strip else 0.0, 0.0))
 
 
+## The range label's box, for text beside it to keep clear of (a phone's Science status).
+func range_rect() -> Rect2:
+	return _range_rect()
+
+
 ## The range label: bottom left of the view, at least touch_min on each side.
 func _range_rect() -> Rect2:
 	var font: Font = get_theme_default_font()

@@ -334,3 +334,28 @@ func test_touch_help_has_every_page() -> void:
 		assert_array(pages.map(func(p: Dictionary) -> String: return p["page"]))
 		. is_equal(["Contacts", "Card", "Crew"])
 	)
+
+
+# FT: FT-STN-005
+# w5: upright, the status line starts right of the wider "Range 10 km" box, and the hack's
+# grid starts under its title when the title wraps to two lines.
+func test_status_and_hack_title_keep_clear_upright() -> void:
+	var s: StationScreen = await _screen(UPRIGHT, PORTRAIT)
+	var p: SciencePanel = _sci(s)
+	var status: Label = p.phone.status
+	var box: Rect2 = p.radar.get_global_transform() * p.radar.range_rect()
+	assert_float(status.get_global_rect().position.x).is_greater_equal(box.end.x)
+	_vp.queue_free()
+	s = await _screen(UPRIGHT, PORTRAIT, "hack")
+	var g: HackGame = _sci(s).hack_game
+	var font: Font = g.get_theme_default_font()
+	var title_h: float = (
+		font
+		. get_multiline_string_size(
+			g.title, HORIZONTAL_ALIGNMENT_LEFT, g.size.x - 24.0, HackGame.FONT_SIZE, 2
+		)
+		. y
+	)
+	assert_float(title_h).is_greater(font.get_height(HackGame.FONT_SIZE))
+	# The top row's nodes sit under the title's foot (6 px above its first baseline).
+	assert_float(g.node_centre(0).y - HackGame.NODE_R).is_greater_equal(22.0 - 16.0 + title_h)

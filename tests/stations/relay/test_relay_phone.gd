@@ -392,3 +392,24 @@ func _mouse_move(p: RelayPanel, rel: Vector2) -> void:
 	m.relative = rel
 	m.device = InputEvent.DEVICE_ID_EMULATION
 	p._gui_input(m)
+
+
+# FT: FT-STN-005
+# w5: the probe and inbox lines share their width by their texts, so "Incoming: Rock from Wren
+# (Relay)" reads whole both ways up.
+func test_the_inbox_line_reads_whole_both_ways_up() -> void:
+	for form: Array in [[SIDEWAYS, LANDSCAPE], [UPRIGHT, PORTRAIT]]:
+		var s: StationScreen = await _screen(form[0], form[1])
+		_given(s, "contact")
+		await _frames(3)
+		var phone: RelayPhone = _relay(s).phone
+		assert_str(phone.mail.text).is_equal("Incoming: Rock from Wren (Relay)")
+		for l: Label in [phone.probes, phone.mail]:
+			var need: float = (
+				l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+			)
+			assert_float(l.size.x).override_failure_message(
+				"%s %s" % [form[0], l.text]
+			).is_greater_equal(need)
+		_vp.queue_free()
+		await _frames(1)

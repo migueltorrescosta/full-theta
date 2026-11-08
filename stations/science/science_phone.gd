@@ -290,7 +290,9 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 		g.size = r.size
 	# The status reads beside the range label, down into the gesture band on its side
 	# (P28-Band: drawn into, never tapped), clear of the disc's foot.
-	var x: float = r.position.x + 6.0 + RANGE_MIN + UiTheme.TOUCH_GAP
+	# (right of the range box, which "Range 10 km" makes wider than RANGE_MIN, w5)
+	var x: float = maxf(r.position.x + 6.0 + RANGE_MIN, panel.radar.range_rect().end.x)
+	x += UiTheme.TOUCH_GAP
 	var foot: float = panel._stage.size.y - 2.0 if layout != null else r.end.y
 	# (8 px above the edge, so a second line keeps its descenders on screen)
 	status.position = Vector2(x, foot - 40.0 - STATUS_LIFT)
