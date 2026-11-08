@@ -395,14 +395,19 @@ func _mouse_move(p: RelayPanel, rel: Vector2) -> void:
 
 
 # FT: FT-STN-005
-# w5: the probe and inbox lines share their width by their texts, so "Incoming: Rock from Wren
-# (Relay)" reads whole both ways up.
+# w5: the probe and inbox lines share their width by their texts, or stack where the view is
+# too narrow (the Log page), so "Incoming: Rock from Wren (Relay)" reads whole both ways up.
 func test_the_inbox_line_reads_whole_both_ways_up() -> void:
-	for form: Array in [[SIDEWAYS, LANDSCAPE], [UPRIGHT, PORTRAIT]]:
+	for form: Array in [
+		[SIDEWAYS, LANDSCAPE, RelayPhone.PAGE_MAP],
+		[SIDEWAYS, LANDSCAPE, RelayPhone.PAGE_LOG],
+		[UPRIGHT, PORTRAIT, RelayPhone.PAGE_MAP],
+	]:
 		var s: StationScreen = await _screen(form[0], form[1])
 		_given(s, "contact")
-		await _frames(3)
 		var phone: RelayPhone = _relay(s).phone
+		phone.pages.select(form[2])
+		await _frames(3)
 		assert_str(phone.mail.text).is_equal("Incoming: Rock from Wren (Relay)")
 		for l: Label in [phone.probes, phone.mail]:
 			var need: float = (

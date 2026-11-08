@@ -274,12 +274,20 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 	if probes.get_parent() == self:
 		# The width shared in proportion to the two texts (w5: a fixed 40/60 split cut the
 		# inbox line "Incoming: Rock from Wren (Relay)" while the probe line had room).
-		var share: float = _probe_share()
-		var left_w: float = maxf((r.size.x - 24.0) * share, 1.0)
+		# Too narrow for both (the Log page's wide left rail): the inbox line goes under.
+		var full: float = maxf(r.size.x - 16.0, 1.0)
+		var h: float = probes.get_combined_minimum_size().y
 		probes.position = Vector2(r.position.x + 8.0, y)
-		mail.position = Vector2(r.position.x + 16.0 + left_w, y)
-		probes.size = Vector2(left_w, probes.get_combined_minimum_size().y)
-		mail.size = Vector2(maxf(r.size.x - 24.0 - left_w, 1.0), mail.get_combined_minimum_size().y)
+		if _text_w(probes) + _text_w(mail) + 24.0 > r.size.x:
+			probes.size = Vector2(full, h)
+			mail.position = Vector2(r.position.x + 8.0, y + h)
+			mail.size = Vector2(full, mail.get_combined_minimum_size().y)
+			y += h
+		else:
+			var left_w: float = maxf((r.size.x - 24.0) * _probe_share(), 1.0)
+			probes.size = Vector2(left_w, h)
+			mail.position = Vector2(r.position.x + 16.0 + left_w, y)
+			mail.size = Vector2(full - 8.0 - left_w, mail.get_combined_minimum_size().y)
 		y += LINE_H
 	panel._hint.offset_top = position.y + y
 	panel._rename.custom_minimum_size = Vector2(220, UiTheme.TOUCH_PRIMARY)
@@ -455,11 +463,14 @@ func _clear(box: Node) -> void:
 ## The probe line's share of the width the probe and inbox lines split: in proportion to
 ## their texts, at least a quarter each.
 func _probe_share() -> float:
-	var font: Font = probes.get_theme_font("font")
-	var w: Array[float] = []
-	for l: Label in [probes, mail]:
-		w.append(font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 1.0)
-	return clampf(w[0] / (w[0] + w[1]), 0.25, 0.75)
+	var wp: float = _text_w(probes)
+	return clampf(wp / (wp + _text_w(mail)), 0.25, 0.75)
+
+
+## The width (px) of a line's text at its 13 px size.
+static func _text_w(l: Label) -> float:
+	var font: Font = l.get_theme_font("font")
+	return font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 1.0
 
 
 func _label() -> Label:
