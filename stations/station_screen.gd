@@ -20,6 +20,8 @@ signal menu_requested
 signal form_changed(form: LayoutMode.Form)
 ## `?` / View, or the first visit to a station: the shell opens the menu on Controls.
 signal help_requested
+## The callout legend chip's tap (D369): the shell opens the callout card on Controls.
+signal card_requested
 
 ## Intents that still reach the screen while it is blocked: they close what blocks it.
 const UNBLOCKED: Array[String] = ["menu", "overlay"]
@@ -411,7 +413,8 @@ func _open_menu() -> void:
 
 ## The first visit to a station shows the Controls chip for a few seconds, once per client
 ## and station (P28-Help, amends FT-STN-012 and D185); help never opens by itself, a tap on
-## the chip opens the menu's Controls tab. Settings re-enables it. The first station waits
+## the chip opens the menu's Controls tab. With it, once per client, the callout legend, whose
+## tap opens the callout card (D369). Settings re-enables them. The first station waits
 ## for the screen to enter the tree, so the shell has connected `help_requested` by then.
 func _open_first_visit_help() -> void:
 	if not is_inside_tree():
@@ -422,7 +425,9 @@ func _open_first_visit_help() -> void:
 	)
 	if chip != null:
 		chip.pressed.connect(func() -> void: help_requested.emit())
-		ControlsLegendChip.show_legend(self, ctx.settings)
+		var legend: ControlsChip = ControlsChip.show_legend(self, ctx.settings)
+		if legend != null:
+			legend.pressed.connect(func() -> void: card_requested.emit())
 
 
 func _on_toast(key: String, args: Dictionary) -> void:

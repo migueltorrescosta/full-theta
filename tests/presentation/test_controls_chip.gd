@@ -93,24 +93,36 @@ func test_the_overlay_intent_dismisses_the_chip() -> void:
 
 
 # FT: FT-STN-012
-# D2: the contact label legend shows once per client, below the Controls chip, and opens
-# the callout card.
+# D2, D369: the contact label legend shows once per client, below the Controls chip, never
+# wider than a phone, and its tap asks for the callout card.
 func test_the_legend_chip_shows_once_per_client() -> void:
 	var parent: Control = auto_free(Control.new())
 	add_child(parent)
 	var s: ClientSettings = _settings()
-	var legend: ControlsLegendChip = ControlsLegendChip.show_legend(parent, s)
+	var legend: ControlsChip = ControlsChip.show_legend(parent, s)
 	assert_object(legend).is_not_null()
 	assert_str(legend.text).contains("H2 · 4 high · mid")
-	assert_object(ControlsLegendChip.show_legend(parent, s)).is_null()
-	legend._process(ControlsLegendChip.SHOW_S + 0.1)
+	assert_str(legend.name).is_equal("ControlsLegendChip")
+	assert_object(ControlsChip.show_legend(parent, s)).is_null()
+	legend._process(ControlsChip.LEGEND_S + 0.1)
 	assert_bool(legend.is_queued_for_deletion()).is_true()
 	s.reset_hints()
-	assert_object(ControlsLegendChip.show_legend(parent, s)).is_not_null()
+	assert_object(ControlsChip.show_legend(parent, s)).is_not_null()
 	# The screen shows both on the first visit.
 	var ctx: StationContext = StationFixture.context("helm", CFG)
 	ctx.settings.reset_hints()
 	var screen: StationScreen = auto_free(StationScreen.new())
 	screen.setup(ctx)
 	add_child(screen)
-	assert_object(screen.find_child("ControlsLegendChip", true, false)).is_not_null()
+	var shown: ControlsChip = screen.find_child("ControlsLegendChip", true, false)
+	assert_object(shown).is_not_null()
+	var asked: Array[bool] = []
+	screen.card_requested.connect(func() -> void: asked.append(true))
+	shown.pressed.emit()
+	assert_array(asked).has_size(1)
+	# P4: on a 390 px phone the legend keeps 8 px clear of each side, as the radar legend does.
+	var phone: Control = auto_free(Control.new())
+	phone.size = Vector2(390, 844)
+	add_child(phone)
+	s.reset_hints()
+	assert_float(ControlsChip.show_legend(phone, s).custom_minimum_size.x).is_equal(374.0)

@@ -16,7 +16,8 @@ func _screen(ctx: StationContext, asked: Array[bool]) -> StationScreen:
 	s.help_requested.connect(func() -> void: helped.append(true))
 	s.child_entered_tree.connect(
 		func(n: Node) -> void:
-			if n is ControlsChip:
+			# The Controls chip, not the legends (which share its class, P4).
+			if n is ControlsChip and (n as ControlsChip).text_key == "":
 				asked.append(true)
 	)
 	s.setup(ctx)
