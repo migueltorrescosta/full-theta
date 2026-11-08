@@ -153,6 +153,8 @@ func step(api: ScenarioApi) -> void:
 		return
 	if not _offered and not _freighter.pending():
 		_offer_cards(api)
+	if _offered:
+		_one_card_only(api)
 	var elapsed_s: float = float(api.tick() - _started) / ScenarioApi.HZ
 	# The raiders come one after the other, RAIDER_GAP_S apart, once the freighter exists.
 	if (
@@ -168,7 +170,6 @@ func step(api: ScenarioApi) -> void:
 		if elapsed_s >= MAX_S:
 			_settle(api, Result.PARTIAL)
 		return
-	_one_card_only(api)
 	var salvaging: bool = _state(api, _salvage) == CardView.State.ACCEPTED
 	if salvaging and _nearest_to_freighter(api) <= SALVAGE_RANGE_M:
 		_near_ticks += 1
