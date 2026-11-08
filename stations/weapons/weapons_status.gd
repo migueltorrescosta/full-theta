@@ -90,7 +90,7 @@ static func mount_text(p: WeaponsPanel, i: int, wide: bool = false) -> String:
 		% [
 			i + 1,
 			p.ship_def.mounts[i].id,
-			p.tr("weapons." + p.mount_state(i)),
+			p.tr("weapons." + WeaponsReadout.mount_state(p, i)),
 			heat,
 			heat_word(p, i),
 			" · " if wide else "\n",
