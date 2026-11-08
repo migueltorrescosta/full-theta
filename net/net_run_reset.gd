@@ -70,7 +70,7 @@ func process() -> void:
 		if _votes_payload(ship) != _sent_votes.get(ship):
 			_send_votes(ship)
 		for s: NetSession in session.by_id.values():
-			if not (s.ship == ship and s.has_pick() and s.connected()):
+			if not (s.on_ship(ship) and s.connected()):
 				continue
 			var key: Vector2i = Vector2i(s.conn, ship)
 			if _told.get(s.id) != key:
@@ -121,9 +121,7 @@ func _votes_payload(ship: int) -> Dictionary:
 
 ## run_votes to every pick on the ship, through the shared vote path (ServerSession.send_votes).
 func _send_votes(ship: int) -> void:
-	var to: PackedInt32Array = session.audience(
-		func(s: NetSession) -> bool: return s.ship == ship and s.has_pick()
-	)
+	var to: PackedInt32Array = session.audience(func(s: NetSession) -> bool: return s.on_ship(ship))
 	var n: int = session.connected_crew(ship).size()
 	_sent_votes[ship] = session.send_votes(NetProtocol.EVENT_RUN_VOTES, ship, votes[ship], n, to)
 

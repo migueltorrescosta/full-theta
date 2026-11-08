@@ -448,7 +448,7 @@ func _refresh_lists() -> void:
 				[
 					(
 						tr("eng.hardened")
-						% [model.full_name(i), ceili(model.hardened_ticks(i) / 60.0)]
+						% [model.full_name(i), ceili(model.hardened_ticks(i) / CrewState.TICK_HZ)]
 					),
 					"accent"
 				]

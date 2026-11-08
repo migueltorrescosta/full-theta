@@ -229,6 +229,9 @@ static func touch_help() -> Array:
 
 
 func _process(_delta: float) -> void:
+	# Hidden (a station not shown on this phone): nothing to refresh until it shows (R20-5).
+	if not is_visible_in_tree():
+		return
 	var view: int = ctx.crew.main_view
 	for i: int in buttons.size():
 		buttons[i].set_pressed_no_signal(i == view)

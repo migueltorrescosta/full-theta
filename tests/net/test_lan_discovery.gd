@@ -73,6 +73,57 @@ func test_beacon_sends_once_a_second() -> void:
 
 
 # FT: FT-NET-012
+# R11-7: besides the limited broadcast, one destination per subnet broadcast of the host's
+# interfaces (a /24 assumed), once each; loopback, link-local and IPv6 addresses are skipped.
+func test_a_destination_per_interface_subnet() -> void:
+	var interfaces: Array = [
+		{"name": "wlan0", "addresses": ["192.168.1.20", "fe80::1"]},
+		{"name": "docker0", "addresses": ["172.17.0.1", "192.168.1.21"]},
+		{"name": "lo", "addresses": ["127.0.0.1", "::1"]},
+		{"name": "eth9", "addresses": ["169.254.3.4", "0.0.0.0"]},
+	]
+	assert_array(Array(LanBeacon.subnet_broadcasts(interfaces))).is_equal(
+		["192.168.1.255", "172.17.0.255"]
+	)
+	assert_str(LanBeacon.default_destinations()[0]).is_equal(LanBeacon.BROADCAST_ADDRESS)
+
+
+# FT: FT-NET-012
+# R11-7: one datagram goes to every destination, and start() reports what cannot work.
+func test_one_datagram_per_destination_and_start_reports_errors() -> void:
+	_beacon = LanBeacon.new(PROTO, "s", 40001)
+	assert_int(_beacon.start(9, PackedStringArray(["127.0.0.1", "127.0.0.2"]))).is_equal(OK)
+	assert_bool(_beacon.poll(1_000_000)).is_true()
+	assert_int(_beacon.last_error).is_equal(OK)
+	assert_int(_beacon.start(9, PackedStringArray(["not an address"]))).is_equal(
+		ERR_INVALID_PARAMETER
+	)
+	assert_bool(_beacon.is_running()).is_false()
+	assert_int(_beacon.last_error).is_equal(ERR_INVALID_PARAMETER)
+
+
+# FT: FT-NET-012
+# R11-7: a failing send sets last_error, and the server logs it once.
+func test_a_failing_send_is_kept_and_logged_once() -> void:
+	var cli: ServerMain = ServerMain.new()
+	assert_bool(cli.parse_args(["--bind", "127.0.0.1", "--port", "0"])).is_true()
+	var server: NetServer = cli.make_server()
+	_beacon = LanBeacon.new(PROTO, "s", 40001)
+	assert_int(_beacon.start(9, PackedStringArray([LanBeacon.BROADCAST_ADDRESS]))).is_equal(OK)
+	# The OS refuses a broadcast datagram on a socket that may not broadcast.
+	_beacon._peer.set_broadcast_enabled(false)
+	_beacon.poll(1_000_000)
+	assert_int(_beacon.last_error).is_not_equal(OK)
+	server.beacon = _beacon
+	assert_bool(server.beacon_failure_logged).is_false()
+	server._poll_lan_services()
+	assert_bool(server.beacon_failure_logged).is_true()
+	server.transport.stop()
+	server.beacon = null
+	server.free()
+
+
+# FT: FT-NET-012
 func test_encode_decode_round_trip_and_name_truncation() -> void:
 	var b: LanBeacon = LanBeacon.new(123456, "Ω".repeat(40), 47801, 47800)
 	b.players = 300  # clamped to a byte

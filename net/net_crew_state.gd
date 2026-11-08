@@ -56,7 +56,7 @@ func send_to(s: NetSession) -> void:
 	session.notify(s, NetProtocol.EVENT_LANES, _lanes_payload(s))
 	if _sees_routes(s):
 		session.notify(s, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
-	if _is_relay(s):
+	if s.is_relay():
 		session.notify(s, NetProtocol.EVENT_INBOX, _inbox_payload(s.ship))
 		session.notify(s, NetProtocol.EVENT_RELAY_LOG, _log_payload(s.ship, true))
 
@@ -147,7 +147,7 @@ func on_mark(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 func on_mark_send(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var to: int = msg["ship"]
 	var why: String = ""
-	if not s.has_pick() or CrewMarks.role_of(s.entry) != CrewMarks.Role.RELAY:
+	if not s.is_relay():
 		why = CrewRelay.NOT_RELAY
 	elif not marks.has_mark(s.ship, msg["slot"]):
 		why = CrewMarks.BAD_MARK
@@ -174,7 +174,7 @@ func on_mark_send(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 func on_mark_accept(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var why: String = ""
 	var pending: Dictionary = {}
-	if not s.has_pick() or CrewMarks.role_of(s.entry) != CrewMarks.Role.RELAY:
+	if not s.is_relay():
 		why = CrewRelay.NOT_RELAY
 	else:
 		for item: Dictionary in relay.inbox_of(s.ship):
@@ -541,10 +541,6 @@ func sync_routes(ship: int) -> bool:
 	return any
 
 
-func _is_relay(s: NetSession) -> bool:
-	return s.has_pick() and CrewMarks.role_of(s.entry) == CrewMarks.Role.RELAY
-
-
 ## Routes reach Relay always and the other stations while Relay shares them (the routes
 ## toggle is on and the press hasn't expired) or their view holds Relay (FT-SPA-029,
 ## FT-PAIR-008, FT-JNT-005, D210).
@@ -594,18 +590,16 @@ func _marks_payload(ship: int) -> Dictionary:
 
 ## An event to the ship's Relay picks only (the inbox and the log).
 func _to_relay(ship: int, type: String, payload: Dictionary) -> void:
-	var ids: PackedInt32Array = PackedInt32Array()
-	for s: NetSession in session.by_id.values():
-		if s.ship == ship and _is_relay(s):
-			ids.append(s.id)
+	var ids: PackedInt32Array = session.audience(
+		func(s: NetSession) -> bool: return s.on_ship(ship) and s.is_relay()
+	)
 	session.transport.post_event(ids, session.world.tick, type, payload)
 
 
 ## An event to every session with a pick on the ship, and no other ship (FT-SPA-016,
 ## FT-SPA-020).
 func _to_ship(ship: int, type: String, payload: Dictionary) -> void:
-	var ids: PackedInt32Array = PackedInt32Array()
-	for s: NetSession in session.by_id.values():
-		if s.ship == ship and s.has_pick():
-			ids.append(s.id)
+	var ids: PackedInt32Array = session.audience(
+		func(s: NetSession) -> bool: return s.on_ship(ship)
+	)
 	session.transport.post_event(ids, session.world.tick, type, payload)

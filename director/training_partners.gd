@@ -11,10 +11,10 @@ extends RefCounted
 
 ## Ticks between a pair step starting and the partner's press when it has no scripted half
 ## (4 s).
-const DELAY_TICKS: int = 4 * SimWorld.HZ
+const DELAY_TICKS: int = 4 * ScenarioApi.HZ
 ## Ticks to the scripted half (2 s), and from the half to the press (4 s).
-const HALF_TICKS: int = 2 * SimWorld.HZ
-const HALF_PRESS_TICKS: int = 4 * SimWorld.HZ
+const HALF_TICKS: int = 2 * ScenarioApi.HZ
+const HALF_PRESS_TICKS: int = 4 * ScenarioApi.HZ
 
 ## "pair step intent|partner station" -> [the action TrainingCrew.half does, the partner
 ## glance read-out (PartnerGlance.readout id) that shows it]. The glance card of the
@@ -59,7 +59,7 @@ static func press_ticks(step: TrainingStepDef, partner: StringName) -> int:
 	return DELAY_TICKS if half_of(step, partner).is_empty() else HALF_TICKS + HALF_PRESS_TICKS
 
 
-func act(world: SimWorld, driver: TrainingDriver) -> void:
+func act(api: ScenarioApi, driver: TrainingDriver) -> void:
 	var solo: StringName = driver.solo_station()
 	if solo == &"" or driver.ship_id() < 0:
 		return
@@ -70,16 +70,13 @@ func act(world: SimWorld, driver: TrainingDriver) -> void:
 			continue
 		busy[partner] = true
 		if not _seen.has(step.intent):
-			_seen[step.intent] = world.tick
-		var age: int = world.tick - _seen[step.intent]
+			_seen[step.intent] = api.tick()
+		var age: int = api.tick() - _seen[step.intent]
 		var half: Array = half_of(step, partner)
 		if not half.is_empty() and age >= HALF_TICKS and not _acted.has(step.intent):
 			_acted[step.intent] = true
-			crew.half(world, driver.ship_id(), partner, half[0])
+			crew.half(api, driver.ship_id(), partner, half[0])
 		if age >= press_ticks(step, partner):
 			_pressed[step.intent] = true
-			var press: TrainingNextCommand = TrainingNextCommand.new()
-			press.ship_id = driver.ship_id()
-			press.station = partner
-			world.submit(press)
-	crew.act(world, driver, busy)
+			api.crew().press_next(driver.ship_id(), partner)
+	crew.act(api, driver, busy)

@@ -213,7 +213,7 @@ func host(bind: String = "", scenario: String = "", solo: String = "") -> void:
 func join(text: String) -> void:
 	var addr: LanBrowser.Address = LanBrowser.parse_address(text)
 	if not addr.ok:
-		_status.text = addr.error
+		_status.text = tr(addr.error)
 		WebLoadStage.report(WebLoadStage.READY)
 		return
 	settings.last_address = text

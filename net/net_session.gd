@@ -54,6 +54,16 @@ func is_crew() -> bool:
 	return has_pick() and StationViews.is_crew(entry)
 
 
+## Holds the Relay seat (alone or with other stations).
+func is_relay() -> bool:
+	return has_pick() and CrewMarks.role_of(entry) == CrewMarks.Role.RELAY
+
+
+## Has a pick on `on_ship`: the audience of a ship's events (R06-9).
+func on_ship(on_ship_id: int) -> bool:
+	return ship == on_ship_id and has_pick()
+
+
 ## A connected crew player: a voter of D128 and D178.
 func is_live_crew() -> bool:
 	return connected() and is_crew()

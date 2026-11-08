@@ -67,15 +67,19 @@ func test_the_comms_bot_answers_a_hail() -> void:
 
 
 # FT: FT-MIS-039
-# A bot refuses a command of another station, and any command at the player's.
-func test_send_refuses_a_foreign_or_the_players_station() -> void:
-	var rig: ShakedownRig = _rig(&"weapons")
+# A bot never acts at the player's station: its scripted half sends nothing there, and sends
+# the real command at a station that is not the player's.
+func test_a_half_never_acts_at_the_players_station() -> void:
+	var rig: ShakedownRig = _rig(&"helm")
 	var partners: TrainingPartners = TrainingPartners.new(SEED)
+	partners.crew.record = true
 	_tick(rig, partners, 2)
-	var crew: TrainingCrew = partners.crew
-	assert_bool(crew.send(rig.world, 0, &"helm", FireCommand.new())).is_false()
-	assert_bool(crew.send(rig.world, 0, &"weapons", FireCommand.new())).is_false()
-	assert_bool(crew.send(rig.world, 0, &"helm", AllStopCommand.new())).is_true()
+	var api: ScenarioApi = rig.host.api()
+	partners.crew.half(api, 0, &"helm", &"helm_speed")
+	assert_array(partners.crew.sent).is_empty()
+	partners.crew.half(api, 0, &"engineering", &"eng_boost")
+	assert_array(partners.crew.sent).has_size(1)
+	assert_str(StationViews.station_of_command(partners.crew.sent[0][2])).is_equal("engineering")
 
 
 # FT: FT-MIS-039
