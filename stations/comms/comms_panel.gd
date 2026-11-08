@@ -227,6 +227,9 @@ func _mode_changed() -> void:
 func _process(delta: float) -> void:
 	if focused:
 		_poll_stick(delta)
+	# Hidden (a station not shown on this phone): nothing to refresh until it shows (R20-5).
+	if not is_visible_in_tree():
+		return
 	refresh()
 	RadarLegend.show_once(self, ctx.settings)
 	phone.place()
