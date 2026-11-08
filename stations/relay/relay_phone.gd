@@ -383,11 +383,12 @@ func _fill_contacts() -> void:
 ## The Marks page: the marks in use, each a tap to select (the selected one pressed).
 func _fill_marks() -> void:
 	var crew_state: CrewState = panel.ctx.crew
-	var key: Array = [crew_state.marks.duplicate(true), crew_state.selection]
+	var key: Array = [crew_state.marks.duplicate(true), crew_state.selection, crew_state.inbox]
 	if key == _mark_key:
 		return
 	_mark_key = key
 	_clear(_marks_box)
+	_fill_incoming()
 	if crew_state.marks.is_empty():
 		var none: Label = _label()
 		none.text = TouchText.of("relay.no_marks", "No marks yet: drag on the map.")
@@ -405,6 +406,22 @@ func _fill_marks() -> void:
 		b.set_pressed_no_signal(crew_state.is_selected("mark", slot))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_marks_box.add_child(b)
+
+
+## The Marks page's Accept and Decline for the mark waiting in the inbox (the line over the
+## map says which: "Incoming: Rock from Wren (Relay)").
+func _fill_incoming() -> void:
+	var inbox: Array[Dictionary] = panel.ctx.crew.inbox
+	if inbox.is_empty():
+		return
+	# The line over the map names the mark and who sent it; this row answers it.
+	var accept: RailButton = RailButton.make(tr("relay.accept"), RailButton.Role.ACCENT)
+	accept.name = "Relay_accept_incoming"
+	accept.pressed.connect(_intent.bind("accept"))
+	var decline: RailButton = RailButton.make(tr("relay.decline"))
+	decline.name = "Relay_decline_incoming"
+	decline.pressed.connect(_intent.bind("decline"))
+	_marks_box.add_child(PhoneFrame.row([accept, decline]))
 
 
 ## The Log page: the inbox, then the ship's log, newest last.
