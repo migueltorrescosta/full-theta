@@ -328,6 +328,10 @@ func _process(delta: float) -> void:
 	model.expire_hits()
 	if focused:
 		_poll_pad(delta)
+	# A hidden panel (a station not shown on this phone) redraws and refreshes nothing: its
+	# next shown frame does (R20-5; Godot draws no hidden item, this skips the rest).
+	if not is_visible_in_tree():
+		return
 	if phone.pages_box.is_visible_in_tree():
 		phone.fit_pages()
 	elif tablet_ui != null:
