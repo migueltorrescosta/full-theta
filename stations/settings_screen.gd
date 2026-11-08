@@ -58,6 +58,9 @@ var controls_pane: ControlsPane
 
 ## Modifier keys and pad buttons held during a capture, in press order.
 var _held: Array[String] = []
+## The capture (intent, device, binding) already warned about as a same-station duplicate; the
+## same capture again accepts it (D5).
+var _dup_warned: Array = []
 
 var _in_session: bool = false
 ## The host's Pause control is offered (co-op host only, FT-MIS-040).
@@ -599,6 +602,14 @@ func _bind(list: Array[String]) -> void:
 			warning.text = tr("settings.taken").format({"intent": tr(IntentTable.label_key(other))})
 			_held.clear()
 			return
+	for b: String in list:
+		var twin: String = same_station(settings.bindings, id, device, b)
+		if twin != "" and _dup_warned != [id, device, b]:
+			_dup_warned = [id, device, b]
+			warning.text = tr("settings.same_station") % tr(IntentTable.label_key(twin))
+			_held.clear()
+			return
+	_dup_warned = []
 	settings.bindings.rebind(id, device, PackedStringArray(list))
 	capturing = []
 	_build_bindings()
@@ -617,6 +628,22 @@ static func collision(bindings: Bindings, id: String, device: String, binding: S
 		for x: String in [id, other]:
 			if IntentTable.row(x)["group"] == IntentTable.COMMON or IntentTable.is_live(x, device):
 				return other
+	return ""
+
+
+## An intent of the same station as `id` that already has `binding` on `device`, or "" (D5):
+## both would fire from one press. The pointer case LMB select and fire is no duplicate
+## (D176), and a binding on a different station is not either: only one is in play.
+static func same_station(bindings: Bindings, id: String, device: String, binding: String) -> String:
+	var group: String = IntentTable.row(id)["group"]
+	if group in [IntentTable.COMMON, IntentTable.LIVE]:
+		return ""
+	for other: String in bindings.intents_bound_to(binding, device):
+		if other == id or IntentTable.row(other)["group"] != group:
+			continue
+		if binding == "LMB" and [id, other] in [["fire", "select"], ["select", "fire"]]:
+			continue
+		return other
 	return ""
 
 

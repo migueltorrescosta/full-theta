@@ -1438,6 +1438,15 @@
     "train.expand": {"en": "Unfold the card", "pt_PT": "Abrir o cartão", "it": "Apri la scheda"},
     "touch.weapons.mount": {"en": "Mount %d", "pt_PT": "Montagem %d", "it": "Torretta %d"},
     "weapons.hint_claim_touch": {"en": "Tap Claim to take this mount.", "pt_PT": "Toca em Assumir para reservar esta montagem.", "it": "Tocca Prendi per prenotare questa torretta."},
-    "touch.weapons.aim": {"en": "Aim", "pt_PT": "Mirar", "it": "Mira"}
+    "touch.weapons.aim": {"en": "Aim", "pt_PT": "Mirar", "it": "Mira"},
+    "input.radial_route": {"en": "hold %s, flick to %s", "pt_PT": "mantém %s, empurra para %s", "it": "tieni premuto %s, spingi verso %s"},
+    "train.skip": {"en": "Skip this step", "pt_PT": "Saltar este passo", "it": "Salta questo passo"},
+    "train.ex.radial": {"en": "Helm menu: %s, then let go.", "pt_PT": "Menu do leme: %s, depois larga.", "it": "Menu timone: %s, poi rilascia."},
+    "controls.chip_key": {"en": "Controls: press %s", "pt_PT": "Controlos: prime %s", "it": "Comandi: premi %s"},
+    "controls.legend_chip": {"en": "H2 · 4 high · mid: hostile 2, 4 o'clock, high, mid range. Tap for the card.", "pt_PT": "H2 · 4 alto · médio: hostil 2, 4 horas, alto, distância média. Toca para o cartão.", "it": "H2 · 4 alto · medio: ostile 2, ore 4, alto, distanza media. Tocca per la scheda."},
+    "controls.callout_card": {"en": "Callout card: how the crew names contacts", "pt_PT": "Cartão de chamadas: como a tripulação nomeia contactos", "it": "Scheda delle chiamate: come l'equipaggio nomina i contatti"},
+    "controls.radial": {"en": "In the Helm menu (%s): %s", "pt_PT": "No menu do leme (%s): %s", "it": "Nel menu timone (%s): %s"},
+    "settings.same_station": {"en": "%s already uses this on the same station. Press it again to use it for both.", "pt_PT": "%s já usa isto no mesmo posto. Prime outra vez para usar nos dois.", "it": "%s lo usa già nella stessa postazione. Premilo di nuovo per usarlo per entrambi."},
+    "input.radial_item": {"en": "Helm menu › %s", "pt_PT": "Menu do leme › %s", "it": "Menu timone › %s"}
   }
 }
