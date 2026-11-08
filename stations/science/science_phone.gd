@@ -158,7 +158,7 @@ func _make_controls() -> void:
 	_hack_hint = Label.new()
 	_hack_hint.text = TouchText.of("sci.hack_tap", "Tap a node next to the green one.")
 	_hack_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_hack_hint.add_theme_color_override("font_color", Palette.color("text_dim"))
+	_hack_hint.add_theme_color_override("font_color", Palette.color("text"))
 	status = Label.new()
 	status.name = "PhoneStatus"
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

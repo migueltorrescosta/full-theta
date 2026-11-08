@@ -488,7 +488,15 @@ func _sub_text() -> String:
 	var subs: Array[StringName] = subsystems()
 	if subs.is_empty():
 		return tr("sci.hack_sub_none")
-	return tr("eng.name." + String(subs[_sub_index % subs.size()]))
+	return _sub_label(subs, _sub_index % subs.size())
+
+
+## The subsystem's name, marked "(weak point)" when the selected contact's card (once
+## scanned enough to show it) lists it as one (R23-1: not colour-only).
+func _sub_label(subs: Array[StringName], index: int) -> String:
+	var name: String = tr("eng.name." + String(subs[index]))
+	var mask: int = int(card_of(selected_contact()).get("weak_mask", 0))
+	return tr("sci.weak_mark") % name if (mask >> index) & 1 == 1 else name
 
 
 # --- Commands (buttons, keys and the controller all end up here). ---
@@ -570,8 +578,8 @@ func open_hack() -> void:
 	var c: int = selected_contact()
 	var subs: Array[StringName] = subsystems()
 	var names: Array = []
-	for id: StringName in subs:
-		names.append(tr("eng.name." + String(id)))
+	for i: int in subs.size():
+		names.append(_sub_label(subs, i))
 	sheet.side = SIDE_RIGHT
 	sheet.open(
 		TouchText.of("sci.hack_sheet", "Hack %s") % ctx.view.callsign(c),

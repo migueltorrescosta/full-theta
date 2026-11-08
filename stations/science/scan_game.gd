@@ -179,13 +179,14 @@ func _button_rect(i: int) -> Rect2:
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("panel"))
-	draw_string(
+	draw_multiline_string(
 		font,
 		Vector2(12.0, 22.0),
 		title,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
+		size.x - 24.0,
 		FONT_SIZE,
+		2,
 		Palette.color("text")
 	)
 	var mid: Vector2 = Vector2(size.x / 2.0, size.y / 2.0 - 14.0)
@@ -214,7 +215,14 @@ func _draw_footer(font: Font) -> void:
 	draw_string(
 		font,
 		Vector2(12.0, y),
-		"%s %d%%   %s   %d s" % [tr("sci.match"), roundi(q * 100.0), noise_text, roundi(elapsed_s)],
+		(
+			"%s   %s   %s"
+			% [
+				tr("sci.match_goal") % [roundi(q * 100.0), roundi(lock * 100.0)],
+				noise_text,
+				tr("sci.so_far") % roundi(elapsed_s)
+			]
+		),
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		FONT_SIZE,

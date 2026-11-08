@@ -131,13 +131,14 @@ func _button_rect() -> Rect2:
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("panel"))
-	draw_string(
+	draw_multiline_string(
 		font,
 		Vector2(12.0, 22.0),
 		title,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
+		size.x - 24.0,
 		FONT_SIZE,
+		2,
 		Palette.color("text")
 	)
 	if cols <= 0 or rows <= 0:
@@ -224,7 +225,7 @@ func _draw_footer(font: Font) -> void:
 	draw_string(
 		font,
 		Vector2(bar.end.x + 10.0, y + 2.0),
-		"%s  %d s" % [tr("sci.trace"), roundi(elapsed_s)],
+		tr("sci.trace_full") % roundi(clampf(trace, 0.0, 1.0) * 100.0),
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		FONT_SIZE,
