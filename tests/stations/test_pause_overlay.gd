@@ -154,3 +154,37 @@ func test_viewers_of_a_paused_ship_may_take_over() -> void:
 	assert_object(o.find_child("Vote", true, false)).is_null()
 	(o.find_child("Takeover_relay", true, false) as Button).pressed.emit()
 	assert_array(StationFixture.sent(ctx).of("takeover")[0][1]).is_equal([0, "relay"])
+
+
+# FT: FT-NET-041
+# Every label and button the overlay shows is translated, in co-op and PvP, before and after
+# a vote, in each locale (a removed key showed "pause.vote" on the vote button).
+func test_every_pause_text_is_translated() -> void:
+	var coop: Dictionary = {"ships": [{"id": 0, "faction": 0}, {"id": 1, "faction": 0}]}
+	var pvp: Dictionary = {"ships": [{"id": 0, "faction": 0}, {"id": 1, "faction": 1}]}
+	var before: String = TranslationServer.get_locale()
+	for locale: String in ["en", "pt_PT", "it"]:
+		TranslationServer.set_locale(locale)
+		for catalogue: Dictionary in [coop, pvp]:
+			for voted: bool in [false, true]:
+				var made: Array = _overlay(true)
+				var ctx: StationContext = made[0]
+				var o: PauseOverlay = made[1]
+				ctx.crew.catalogue = catalogue
+				ctx.crew.handle_event({"type": "pause", "payload": COVERAGE_PAUSE}, 0)
+				var sessions: Array = [StationFixture.SESSION] if voted else []
+				var votes: Dictionary = {
+					"ship": 0, "voters": ["Ana"], "sessions": sessions, "needed": 2
+				}
+				ctx.crew.handle_event({"type": "abandon_votes", "payload": votes}, 0)
+				assert_object(o.find_child("Vote", true, false)).is_not_null()
+				for node: Node in o.find_children("*", "", true, false):
+					var text: String = ""
+					if node is Button:
+						text = (node as Button).text
+					elif node is Label:
+						text = (node as Label).text
+					assert_str(text).override_failure_message(
+						"%s %s: raw key %s" % [locale, node.name, text]
+					).not_contains("pause.")
+	TranslationServer.set_locale(before)

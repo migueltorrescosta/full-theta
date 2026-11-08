@@ -85,6 +85,12 @@ func test_mirror_buttons_chips_and_cards() -> void:
 	assert_str(ChipList.row_text(cap.chips.rows[0])).is_equal(
 		"Helm > Engineering  Boost  waiting, 8 s left"
 	)
+	# Two lines, the time under the request, so the bar under them crosses no text (w5).
+	assert_str(ChipList.head_text(cap.chips.rows[0])).is_equal("Helm > Engineering  Boost")
+	assert_str(ChipList.time_text(cap.chips.rows[0])).is_equal("waiting, 8 s left")
+	assert_float(cap.chips.custom_minimum_size.y).is_equal(
+		ChipList.HEADER_HEIGHT + ChipList.ROW_HEIGHT
+	)
 	assert_array(StationViews.STATION_SECTIONS["captain"]).contains([StationViews.Section.CHIPS])
 
 

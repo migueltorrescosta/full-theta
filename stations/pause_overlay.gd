@@ -157,7 +157,9 @@ func refresh() -> void:
 	_votes.visible = own
 	if own and ctx.crew.is_crew():
 		var voted: bool = ctx.crew.session in v.get("sessions", [])
-		var key: String = "pause.%s%s" % ["un" if voted else "", "forfeit" if pvp else "vote"]
+		var key: String = "pause.unvote" if voted else "pause.vote"
+		if pvp:
+			key = "pause.unforfeit" if voted else "pause.forfeit"
 		_button("Vote", tr(key)).pressed.connect(
 			func() -> void: ctx.intents.vote_abandon(id, not voted)
 		)
