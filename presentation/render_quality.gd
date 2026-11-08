@@ -33,3 +33,11 @@ static func apply(settings: ClientSettings, touch: bool, tree: SceneTree) -> voi
 	Engine.max_fps = FPS_CAP if settings.fps_cap else 0
 	for node: Node in tree.get_nodes_in_group(GROUP):
 		(node as SubViewportContainer).stretch_shrink = shrink
+
+
+## The screen position of `world` in the 2D overlay above a 3D view. `unproject_position`
+## answers in the SubViewport's pixels, which are `stretch_shrink` times smaller than the
+## container the overlay is drawn over, so it scales back up.
+static func unproject(cam: Camera3D, world: Vector3) -> Vector2:
+	var box: SubViewportContainer = cam.get_viewport().get_parent() as SubViewportContainer
+	return cam.unproject_position(world) * (float(box.stretch_shrink) if box != null else 1.0)

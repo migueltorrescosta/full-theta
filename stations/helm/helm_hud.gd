@@ -144,7 +144,7 @@ func markers() -> Array[Dictionary]:
 		var world: Vector3 = item["world"]
 		var e: Dictionary = item.duplicate()
 		e["behind"] = cam.is_position_behind(world)
-		e["pos"] = Vector2.ZERO if e["behind"] else cam.unproject_position(world)
+		e["pos"] = Vector2.ZERO if e["behind"] else RenderQuality.unproject(cam, world)
 		e["on_screen"] = not e["behind"] and rect.has_point(e["pos"])
 		if e["on_screen"]:
 			e["pos"] = clear_of_readout(e["pos"])
@@ -170,7 +170,7 @@ func route_points() -> Array:
 			var spot: Variant = null
 			var world: Vector3 = panel.ctx.interp.offset_to(w["pos"])
 			if not cam.is_position_behind(world):
-				spot = cam.unproject_position(world)
+				spot = RenderQuality.unproject(cam, world)
 			points.append(spot)
 		out.append(points)
 	return out
@@ -222,7 +222,7 @@ func lane_marks() -> Array[Dictionary]:
 		elif now >= int(lane["opens_ms"]):
 			state = "open"
 			left = (int(lane["closes_ms"]) - now) / 1000.0
-		out.append({"pos": cam.unproject_position(world), "state": state, "left_s": left})
+		out.append({"pos": RenderQuality.unproject(cam, world), "state": state, "left_s": left})
 	return out
 
 
@@ -320,7 +320,7 @@ func velocity_markers() -> Array[Dictionary]:
 		var dir: Vector3 = v.normalized() * (1.0 if pro else -1.0)
 		var world: Vector3 = dir * 5000.0
 		var behind: bool = cam.is_position_behind(world)
-		var at: Vector2 = Vector2.ZERO if behind else cam.unproject_position(world)
+		var at: Vector2 = Vector2.ZERO if behind else RenderQuality.unproject(cam, world)
 		var edge: bool = behind or not rect.has_point(at)
 		if edge:
 			var d: Vector3 = cam.global_transform.basis.inverse() * world

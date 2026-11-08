@@ -299,7 +299,7 @@ func item_at(pos: Vector2) -> Dictionary:
 		var world: Vector3 = it["world"]
 		if camera.is_position_behind(world) or str(it["kind"]) not in ["contact", "mark"]:
 			continue
-		var d: float = camera.unproject_position(world).distance_to(at)
+		var d: float = RenderQuality.unproject(camera, world).distance_to(at)
 		if d < best_d:
 			best_d = d
 			best = {"kind": it["kind"], "id": it["id"]}
@@ -369,7 +369,7 @@ func _draw_overlay() -> void:
 		var world: Vector3 = it["world"]
 		if camera.is_position_behind(world):
 			continue
-		var p: Vector2 = camera.unproject_position(world)
+		var p: Vector2 = RenderQuality.unproject(camera, world)
 		if not Rect2(Vector2.ZERO, _overlay.size).grow(40.0).has_point(p):
 			continue
 		var pulse: float = float(it.get("pulse", 0.0))
@@ -410,7 +410,8 @@ func _draw_card() -> void:
 func _hull_px() -> float:
 	var at: Vector3 = _target_item().get("world", Vector3.ZERO)
 	var side: Vector3 = camera.global_basis.x * (HULL_HALF_M * TARGET_SCALE)
-	return absf(camera.unproject_position(at + side).x - camera.unproject_position(at).x)
+	var edge: Vector2 = RenderQuality.unproject(camera, at + side)
+	return absf(edge.x - RenderQuality.unproject(camera, at).x)
 
 
 func _bracket(p: Vector2, r: float, col: Color, selected: bool) -> void:
