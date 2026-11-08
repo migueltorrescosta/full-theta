@@ -39,7 +39,9 @@ var _filter: Button = Button.new()
 var _notes: Dictionary = {}
 ## The touchpad note under the List view, which has no diagram notes (D4).
 var _list_note: Label = Label.new()
-var _card_link: LinkButton = LinkButton.new()
+## A button like the page's others, its text wrapping on a phone (w5: a one-line link widened
+## the page past a 390 px screen).
+var _card_link: Button = Button.new()
 ## The stations the touch pictures show.
 var _touch_shown: Array = []
 
@@ -83,8 +85,9 @@ func _init() -> void:
 	list.name = VIEW_LIST + "View"
 	add_child(list)
 	_card_link.name = "CalloutCard"
-	_card_link.underline = LinkButton.UNDERLINE_MODE_ALWAYS
-	_card_link.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_card_link.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_card_link.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_card_link.size_flags_horizontal = Control.SIZE_FILL
 	_card_link.custom_minimum_size.y = UiTheme.TOUCH_MIN
 	_card_link.pressed.connect(func() -> void: OS.shell_open(callout_card_url()))
 	add_child(_card_link)
