@@ -65,7 +65,7 @@ enum Type {
 	RENAME = 47,
 }
 
-const PROTOCOL_VERSION: int = 8
+const PROTOCOL_VERSION: int = 9
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
