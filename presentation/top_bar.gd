@@ -22,6 +22,10 @@ const CHIP_LETTER_SIZE: int = 12
 ## The phone timer's width, and its narrower one beside the full-screen icon (a 390 px bar).
 const TIMER_W: float = 48.0
 const TIMER_W_NARROW: float = 40.0
+## The phone timer cell's text size, and its smaller one beside the full-screen icon when the
+## goal line would not fit.
+const TIMER_SIZE: int = 14
+const TIMER_SIZE_NARROW: int = 12
 
 ## Crew only (FT-STN-008).
 var can_set_alert: bool = false:
@@ -139,7 +143,7 @@ func _init() -> void:
 	menu_button.tooltip_text = tr("intent.menu")
 	menu_button.pressed.connect(func() -> void: menu_pressed.emit())
 	tabs.size_flags_horizontal = SIZE_EXPAND_FILL
-	_phone_timer.add_theme_font_size_override("font_size", 14)
+	_phone_timer.add_theme_font_size_override("font_size", TIMER_SIZE)
 	_phone_timer.add_theme_color_override("font_color", Palette.color("text"))
 	_phone_timer.custom_minimum_size.x = TIMER_W
 	_phone_timer.clip_text = true
@@ -154,11 +158,17 @@ func _init() -> void:
 
 func _fit_timer() -> void:
 	var w: float = TIMER_W_NARROW if fullscreen.visible else TIMER_W
+	var fs: int = TIMER_SIZE
 	if _goal_short != "":
-		# The goal line ("2 foes") is never cut: the cell widens for it (w5).
+		# The goal line ("2 foes") is never cut (w5): beside the full-screen icon (a 390 px
+		# bar, no room to spare) the cell's text gets smaller first, then the cell widens.
 		var font: Font = _phone_timer.get_theme_font("font")
-		var fs: int = _phone_timer.get_theme_font_size("font_size")
-		w = maxf(w, ceilf(font.get_string_size(_goal_short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x))
+		var need: float = font.get_string_size(_goal_short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		if fullscreen.visible and need > w:
+			fs = TIMER_SIZE_NARROW
+			need = font.get_string_size(_goal_short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		w = maxf(w, ceilf(need))
+	_phone_timer.add_theme_font_size_override("font_size", fs)
 	_phone_timer.custom_minimum_size.x = w
 
 
