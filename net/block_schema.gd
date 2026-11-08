@@ -4,6 +4,12 @@ extends RefCounted
 ## builders (StationBlocks, ScienceView, FeedsView, CommsView) fill and the clients decode
 ## (NetViewState). It names no sim class, so clients may read it (D103).
 
+## Row schemas more than one block carries (R06-8): a damage type's resistance factors, and
+## an open hack window (SCIENCE's hacks, FEEDS' windows).
+const RESIST_ROWS: Array = ["rows", [["type", "u32"], ["factor", "f32"]]]
+const HACK_ROWS: Array = [
+	"rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]
+]
 ## Row kind of a hazard plane in a RELAY block's hazards (HazardView builds them).
 const HAZARD_PLANE: int = 2
 
@@ -213,12 +219,12 @@ const BLOCKS: Dictionary = {
 					["class_id", "u32"],
 					["intent", "u8"],
 					["weak_mask", "u32"],
-					["resist", ["rows", [["type", "u32"], ["factor", "f32"]]]],
+					["resist", RESIST_ROWS],
 					["hack", "bool"],
 				],
 			],
 		],
-		["hacks", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
+		["hacks", HACK_ROWS],
 	],
 	# Relay's probes: the stock, Engineering's build in progress, the lane switch and
 	# the ship's launched probes (position in m, bubble radius in m); then the
@@ -301,11 +307,11 @@ const BLOCKS: Dictionary = {
 					["contact", "s16"],
 					["class_id", "u32"],
 					["weak_mask", "u32"],
-					["resist", ["rows", [["type", "u32"], ["factor", "f32"]]]],
+					["resist", RESIST_ROWS],
 				],
 			],
 		],
-		["windows", ["rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]]],
+		["windows", HACK_ROWS],
 		["tracks", ["rows", [["contact", "s16"], ["quality", "f32"], ["probe", "bool"]]]],
 	],
 	# The ship's open request chips (ChipsSection; NetChips on the server): the

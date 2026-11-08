@@ -9,7 +9,6 @@ extends SnapshotSection
 ## before update()).
 var claims: Dictionary = {}
 var filter: ViewFilter = null
-var _last: PackedByteArray = PackedByteArray()
 
 
 func _init(section_kind: int, owner_id: int, view_filter: ViewFilter = null) -> void:
@@ -22,11 +21,4 @@ func update(world: SimWorld) -> PackedByteArray:
 		StationViews.BLOCKS[StationViews.Section.COMMS],
 		CommsView.block(world, owner, filter, claims)
 	)
-	if bytes == _last:
-		return PackedByteArray()
-	_last = bytes
-	return bytes
-
-
-func full() -> PackedByteArray:
-	return _last
+	return _changed(bytes)

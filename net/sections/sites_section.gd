@@ -12,8 +12,6 @@ extends SnapshotSection
 ## Most rows the section carries (D225: at most 32 rows).
 const MAX_ROWS: int = 32
 
-var _last: PackedByteArray = PackedByteArray()
-
 
 func _init(faction: int) -> void:
 	super(StationViews.Section.SITES, faction)
@@ -42,14 +40,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	buf.seek(0)
 	buf.put_u8(n)
 	var bytes: PackedByteArray = buf.data_array
-	if bytes == _last:
-		return PackedByteArray()
-	_last = bytes
-	return bytes
-
-
-func full() -> PackedByteArray:
-	return _last
+	return _changed(bytes)
 
 
 ## Client side: SnapshotReader.read_sites.

@@ -10,6 +10,8 @@ extends RefCounted
 
 var kind: int = 0
 var owner: int = 0
+## The last bytes sent, for the sections that send their whole state when it changes.
+var _last: PackedByteArray = PackedByteArray()
 
 
 func _init(section_kind: int, owner_id: int) -> void:
@@ -22,6 +24,15 @@ func update(_world: SimWorld) -> PackedByteArray:
 	return PackedByteArray()
 
 
-## The model as a full section at the last update's tick.
+## The model as a full section at the last update's tick: by default the last bytes sent.
 func full() -> PackedByteArray:
-	return PackedByteArray()
+	return _last
+
+
+## The dedupe tail of a whole-state section (R06-7): the bytes when they changed (and they
+## become the full section), else empty, which omits the section from the delta.
+func _changed(bytes: PackedByteArray) -> PackedByteArray:
+	if bytes == _last:
+		return PackedByteArray()
+	_last = bytes
+	return bytes
