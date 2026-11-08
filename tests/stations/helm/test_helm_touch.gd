@@ -485,3 +485,21 @@ func test_portrait_labels_do_not_collide() -> void:
 		for r: Rect2 in hud.reserved():
 			var cover: float = label.intersection(r).get_area()
 			assert_float(cover).is_less_equal(HelmHud.SLIGHT * label.get_area())
+
+
+# FT: FT-HLM-012
+# C7: a phone's read-outs keep a 16 sp floor and the bars say what they bound ("Max thrust",
+# "Max turn", "Fuel"); the desktop keeps its 14 / 12 sizes.
+func test_a_phone_keeps_a_font_floor_and_the_bars_are_named() -> void:
+	await _open(Vector2i(844, 390), LANDSCAPE)
+	var hud: HelmHud = _panel.hud
+	assert_int(hud._fs()).is_greater_equal(HelmHud.PHONE_FONT)
+	assert_int(hud._small()).is_greater_equal(HelmHud.PHONE_FONT)
+	assert_str(tr("helm.max_thrust")).is_equal("Max thrust")  # (a phone keeps "Thrust": no room)
+	assert_str(tr("helm.max_turn")).is_equal("Max turn")
+	assert_str(tr("helm.propellant")).is_equal("Fuel")
+	# The bars' labels and percentages fit the read-out's box.
+	assert_float(hud.readout_rect().size.x).is_greater(hud._bar_extra())
+	await _open(Vector2i(1280, 720), [])
+	assert_int(_panel.hud._fs()).is_equal(HelmHud.FONT_SIZE)
+	assert_int(_panel.hud._small()).is_equal(HelmHud.SMALL)

@@ -233,6 +233,9 @@ static func _cell(t: Theme, tag: String) -> void:
 ## The rail buttons and the rail, drawer and banner panels (presentation/touch/).
 static func _rails(t: Theme) -> void:
 	_buttons(t, "Button", "RailButton", 6, TOUCH_PAD)
+	# A rail button with two lines of text (Engineering's part or reason under the label)
+	# that still fits the 48 px row.
+	_buttons(t, "Button", "RailCompactButton", 6, 4)
 	for role: String in ["accent", "danger"]:
 		var name: String = "Rail%sButton" % role.capitalize()
 		_buttons(t, "Button", name, 6, TOUCH_PAD)

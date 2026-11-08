@@ -5,6 +5,7 @@ extends VBoxContainer
 ## this screen sent, waiting. An unanswered chip simply disappears when its time is up.
 
 var _shown: Array = []
+var _lapse: ChipLapse = ChipLapse.new()
 
 
 func _init() -> void:
@@ -13,20 +14,36 @@ func _init() -> void:
 
 
 ## Shows the chips (ChipView rows) at the view's tick; does nothing when nothing shown
-## changed (seconds count down once a second).
+## changed (seconds count down once a second). An incoming chip is followed by what accepting
+## does, a chip that lapsed unanswered stays a few seconds as a note, and `notes` (data a
+## partner shared, still live) come last (C5). `now_ms` is the lapsed notes' clock.
 func show_chips(
-	incoming: Array[Dictionary], outgoing: Array[Dictionary], view: NetViewState
+	incoming: Array[Dictionary],
+	outgoing: Array[Dictionary],
+	view: NetViewState,
+	notes: Array[String] = [],
+	now_ms: int = -1
 ) -> void:
 	var lines: Array[String] = []
+	var dim: Array[bool] = []
+	var open: Array = []
 	for c: Dictionary in incoming:
+		var who: String = "%s: %s" % [tr("station." + str(c["from"])), ChipView.label(c)]
+		open.append({"id": c["id"], "text": who, "left": ChipView.left_s(view, c)})
 		lines.append(
 			(
 				tr("chip.ask") % [tr("station." + str(c["from"])), ChipView.label(c)]
 				+ " · %d s" % ceili(ChipView.left_s(view, c))
 			)
 		)
+		dim.append(false)
+		var effect: String = ChipLapse.effect(str(c["chip"]))
+		if effect != "":
+			lines.append(effect)
+			dim.append(true)
 	if not incoming.is_empty():
 		lines.append(tr("chip.hint"))
+		dim.append(false)
 	for c: Dictionary in outgoing:
 		lines.append(
 			(
@@ -34,6 +51,11 @@ func show_chips(
 				+ " · %d s" % ceili(ChipView.left_s(view, c))
 			)
 		)
+		dim.append(true)
+	var now: int = Time.get_ticks_msec() if now_ms < 0 else now_ms
+	for n: String in _lapse.update(open, now) + notes:
+		lines.append(n)
+		dim.append(true)
 	if lines == _shown:
 		return
 	_shown = lines
@@ -43,7 +65,6 @@ func show_chips(
 	for i: int in lines.size():
 		var l: Label = Label.new()
 		l.text = lines[i]
-		var dim: bool = i >= incoming.size() + (1 if not incoming.is_empty() else 0)
-		l.add_theme_color_override("font_color", Palette.color("text_dim" if dim else "text"))
+		l.add_theme_color_override("font_color", Palette.color("text_dim" if dim[i] else "text"))
 		add_child(l)
 	visible = not lines.is_empty()

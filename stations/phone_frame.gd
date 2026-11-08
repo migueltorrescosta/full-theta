@@ -233,8 +233,21 @@ func process(now: int) -> void:
 	if crew:
 		for c: Dictionary in ChipView.incoming(ctx.view, screen.stations):
 			var text: String = "%s: %s" % [tr("station." + str(c["from"])), ChipView.label(c)]
-			rows.append({"id": c["id"], "text": text, "left": ChipView.left_s(ctx.view, c)})
-	request_chips.show_chips(rows)
+			(
+				rows
+				. append(
+					{
+						"id": c["id"],
+						"text": text,
+						"left": ChipView.left_s(ctx.view, c),
+						"effect": ChipLapse.effect(str(c["chip"])),
+					}
+				)
+			)
+	var left: Dictionary = {}
+	for id: StringName in ctx.crew.shares:
+		left[id] = ctx.crew.share_left(id, now)
+	request_chips.show_chips(rows, ShareBar.incoming_lines(screen.stations, left), now)
 	if screen.panels.size() == 2:
 		var other: String = screen.stations[1 - screen.focus_index]
 		glance.show_for(ctx, other, screen.focused_station())

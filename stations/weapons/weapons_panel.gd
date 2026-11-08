@@ -336,7 +336,7 @@ func marks_attach_only() -> bool:
 ## The weapon of mount i's selected ammunition type.
 func weapon_of(i: int) -> WeaponDef:
 	var types: Array[WeaponDef] = ship_def.mounts[i].ammo_types()
-	return types[clampi(int(_mount_row(i).get("ammo_type", 0)), 0, types.size() - 1)]
+	return types[clampi(int(mount_row(i).get("ammo_type", 0)), 0, types.size() - 1)]
 
 
 ## Switches the camera mount to the next (or previous) ammunition type it has; false, with
@@ -348,7 +348,7 @@ func cycle_ammo(direction: int) -> bool:
 	if n < 2:
 		ctx.crew.toast.emit("toast.one_ammo", {})
 		return false
-	var now: int = int(_mount_row(mount).get("ammo_type", 0))
+	var now: int = int(mount_row(mount).get("ammo_type", 0))
 	ctx.intents.command(
 		{"kind": "set_ammo_type", "mount_index": mount, "ammo_type": posmod(now + direction, n)}
 	)
@@ -389,13 +389,13 @@ func fire_guided(i: int) -> bool:
 		ctx.crew.toast.emit("toast.guided_no_mark", {})
 		return false
 	var now: int = ctx.now_ms()
-	var row: Dictionary = _mount_row(i)
+	var row: Dictionary = mount_row(i)
 	if now < int(_next_fire.get(i, 0)) or int(row.get("ammo", 1)) == 0:
 		return false
 	var at: Vector3 = ctx.interp.contact_position(int(goal["target"]))
 	_aims[i] = at
 	_dirty[i] = true
-	if not _in_arc(i, aim_dir(i)):
+	if not in_arc(i, aim_dir(i)):
 		ctx.crew.toast.emit("toast.guided_out_of_arc", {})
 		return false
 	_flush_aims(now, true)
@@ -421,7 +421,7 @@ func mount_count() -> int:
 
 
 ## The MOUNTS block row of mount i ({} before data).
-func _mount_row(i: int) -> Dictionary:
+func mount_row(i: int) -> Dictionary:
 	var rows: Array = ctx.view.blocks.get(StationViews.Section.MOUNTS, {}).get("mounts", [])
 	return rows[i] if i < rows.size() else {}
 
@@ -500,7 +500,7 @@ func aim_dir(i: int) -> Vector3:
 
 ## Mount i's barrel in the ship frame (the MOUNTS block; its rest direction before data).
 func _barrel(i: int) -> Vector3:
-	var b: Variant = _mount_row(i).get("barrel")
+	var b: Variant = mount_row(i).get("barrel")
 	return (b as Vector3).normalized() if b is Vector3 else ship_def.mounts[i].forward
 
 
@@ -538,7 +538,7 @@ func lead_dir(i: int, contact: int) -> Variant:
 
 
 ## True when a world direction from mount i lies in its arc (FT-SIM-011).
-func _in_arc(i: int, dir: Vector3) -> bool:
+func in_arc(i: int, dir: Vector3) -> bool:
 	var m: MountDef = ship_def.mounts[i]
 	return m.forward.angle_to(ctx.interp.own_rotation().inverse() * dir) <= m.arc_half_angle
 
@@ -572,7 +572,7 @@ func mount_rows() -> Array[String]:
 	var out: Array[String] = []
 	for i: int in mount_count():
 		var m: MountDef = ship_def.mounts[i]
-		var row: Dictionary = _mount_row(i)
+		var row: Dictionary = mount_row(i)
 		var w: WeaponDef = weapon_of(i)
 		var ammo: int = int(row.get("ammo", w.ammo_capacity))
 		var ammo_text: String = "∞" if ammo < 0 else "%d/%d" % [ammo, w.ammo_capacity]
@@ -592,7 +592,7 @@ func mount_rows() -> Array[String]:
 						"> " if i == mount else "  ",
 						i + 1,
 						m.id,
-						tr("weapons." + _state(i)),
+						tr("weapons." + mount_state(i)),
 						tr("weapons.heat") % roundi(heat * 100.0),
 						ammo_text,
 						who,
@@ -601,26 +601,6 @@ func mount_rows() -> Array[String]:
 			)
 		)
 	return out
-
-
-## Mount i on two lines for the phone's mount button: "1 bow · ready", "heat 15% · 380/400".
-func mount_text(i: int) -> String:
-	if i < 0 or i >= mount_count():
-		return ""
-	var w: WeaponDef = weapon_of(i)
-	var row: Dictionary = _mount_row(i)
-	var ammo: int = int(row.get("ammo", w.ammo_capacity))
-	var heat: float = float(row.get("heat", 0.0)) / w.heat_limit
-	return (
-		"%d %s · %s\n%s · %s"
-		% [
-			i + 1,
-			ship_def.mounts[i].id,
-			tr("weapons." + _state(i)),
-			tr("weapons.heat") % roundi(heat * 100.0),
-			"∞" if ammo < 0 else "%d/%d" % [ammo, w.ammo_capacity],
-		]
-	)
 
 
 ## The name of the player who holds mount i, or "".
@@ -714,8 +694,8 @@ func _first_mount() -> int:
 	return 0
 
 
-func _state(i: int) -> String:
-	var row: Dictionary = _mount_row(i)
+func mount_state(i: int) -> String:
+	var row: Dictionary = mount_row(i)
 	var w: WeaponDef = weapon_of(i)
 	if row.is_empty():
 		return "no_data"
@@ -780,8 +760,8 @@ func _flush_aims(now: int, force: bool) -> void:
 ## One shot from mount i when usable, in arc, loaded and cool, at most once per cooldown.
 func _try_fire(i: int, now: int) -> bool:
 	var w: WeaponDef = weapon_of(i)
-	var row: Dictionary = _mount_row(i)
-	if not is_usable(i) or now < int(_next_fire.get(i, 0)) or not _in_arc(i, aim_dir(i)):
+	var row: Dictionary = mount_row(i)
+	if not is_usable(i) or now < int(_next_fire.get(i, 0)) or not in_arc(i, aim_dir(i)):
 		return false
 	if int(row.get("ammo", 1)) == 0 or float(row.get("heat", 0.0)) >= w.heat_limit:
 		return false
@@ -1028,6 +1008,15 @@ func _draw_turret(font: Font) -> void:
 	_overlay.draw_arc(c, RETICLE_R, 0.0, TAU, 32, rc, 1.5, true)
 	for d: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
 		_overlay.draw_line(c + d * (RETICLE_R + 4.0), c + d * (RETICLE_R + 12.0), rc, 1.5, true)
+	# The target is out of the mount's arc: an arrow at the reticle toward where to turn (C6).
+	var turn: Vector2 = WeaponsStatus.arc_arrow_dir(self)
+	if turn != Vector2.ZERO:
+		var base: Vector2 = c + turn * (RETICLE_R + 26.0)
+		var side: Vector2 = turn.orthogonal()
+		var arrow: PackedVector2Array = PackedVector2Array(
+			[base + turn * 12.0, base - turn * 4.0 + side * 9.0, base - turn * 4.0 - side * 9.0]
+		)
+		_overlay.draw_colored_polygon(arrow, Palette.color("warn"))
 
 
 func _draw_item(font: Font, t: Dictionary) -> void:

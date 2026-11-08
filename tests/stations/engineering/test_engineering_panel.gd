@@ -265,14 +265,18 @@ func test_faults_repair_queue_and_spares_list() -> void:
 	# A heat fault event lists the subsystem as overheated for a while.
 	var p: Dictionary = {"ship": 0, "faction": 0, "other": -1, "value": 110.0, "tag": "weapons"}
 	s.ctx.crew.handle_event({"type": "fault", "payload": p}, s.ctx.now_ms())
-	assert_str(e.fault_lines()[1][0]).is_equal("Weapons overheated (75%)")
+	# worst first: the overheated part (danger) leads the warnings
+	assert_str(e.fault_lines()[0][0]).is_equal("Weapons overheated (75%)")
 	var queue: Array = e.queue_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(queue).is_equal(
 		["1. ENG 40%  A", "2. WPN 75%  waiting", "Crew A: ENG", "Crew B: idle"]
 	)
 	e._process(0.0)
 	var shown: Array = e._lists.get_children().map(func(l: Label) -> String: return l.text)
-	assert_array(shown).contains(["Faults", "Repairs", "Spare parts: 6", "Engines 40%"])
+	# (a glyph marks severity: "!!" danger, "!" warning, C4)
+	assert_array(shown).contains(
+		["Faults", "Repairs", "Spare parts: 6", "!! Weapons overheated (75%)", "! Engines 40%"]
+	)
 
 
 func test_claims_and_wheel_over_the_radar() -> void:

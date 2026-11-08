@@ -84,6 +84,8 @@ var touch_buttons: Dictionary = {}
 ## Intent id -> its button in the upright grid.
 var grid_buttons: Dictionary = {}
 var crew_page: CrewPage = null
+## The tablet's docked rails (C4), or null (EngineeringTablet).
+var tablet_ui: EngineeringTablet = null
 
 var _row: BoxContainer
 var _scroll_all: ScrollContainer
@@ -169,11 +171,34 @@ func _setup() -> void:
 	_build_pages()
 
 
+func _ready() -> void:
+	var screen: StationScreen = _find_screen()
+	if screen != null:
+		# A tablet keeps its form in a rotation: only its rails' arrangement changes.
+		screen.form_changed.connect(func(_f: LayoutMode.Form) -> void: _apply_tablet())
+		screen.resized.connect(_apply_tablet)
+	# (deferred: the screen is still adding its children)
+	_apply_tablet.call_deferred()
+
+
 func _mode_changed() -> void:
 	cutaway.visible = not docked
 	_side.visible = not docked
 	board.compact = docked
 	_place_lists()
+	_apply_tablet.call_deferred()
+
+
+func _find_screen() -> StationScreen:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	return n as StationScreen
+
+
+## Builds, rebuilds (a rotation) or drops the tablet's docked rails (EngineeringTablet.sync).
+func _apply_tablet() -> void:
+	EngineeringTablet.sync(self, _find_screen())
 
 
 ## The phone form the panel takes: PHONE_LANDSCAPE or PHONE_PORTRAIT when it shows its main
@@ -266,7 +291,7 @@ func _build_rails() -> void:
 	rail.custom_minimum_size.x = PHONE_RAIL_W
 	var row: Array = []
 	for a: Array in TOUCH_ACTIONS:
-		var b: RailButton = _rail_button(a)
+		var b: RailButton = rail_button(a)
 		touch_buttons[a[0]] = b
 		row.append(b)
 		if row.size() == 2:
@@ -285,15 +310,17 @@ func _build_rails() -> void:
 	_grid.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
 	_upright.add_child(_grid)
 	for a: Array in TOUCH_ACTIONS:
-		var b: RailButton = _rail_button(a)
+		var b: RailButton = rail_button(a)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		grid_buttons[a[0]] = b
 		_grid.add_child(b)
 
 
-func _rail_button(a: Array) -> RailButton:
+func rail_button(a: Array) -> RailButton:
 	var b: RailButton = RailButton.make(TouchText.of(a[1], a[2]))
 	b.name = "Touch_" + str(a[0])
+	# Two lines of text (the part or the reason under the label) in a 48 px row.
+	b.theme_type_variation = "RailCompactButton"
 	# Two to a 168 px rail: the longest label fits at 14 px.
 	b.add_theme_font_size_override("font_size", RAIL_FONT)
 	b.pressed.connect(press_touch.bind(str(a[0])))
@@ -380,14 +407,12 @@ func _fit_pages() -> void:
 		_pages_box.add_theme_constant_override("margin_top", top)
 	if _pages_box.get_theme_constant("margin_bottom") != bottom:
 		_pages_box.add_theme_constant_override("margin_bottom", bottom)
-	for b: Dictionary in [touch_buttons, grid_buttons]:
-		for id: String in b:
-			(b[id] as RailButton).disabled = ship_def == null
-	var claim: String = claim_text()
-	for b: Dictionary in [touch_buttons, grid_buttons]:
-		if b.has("claim") and (b["claim"] as RailButton).text != claim:
-			(b["claim"] as RailButton).text = claim
-			(b["claim"] as RailButton).disabled = crew_count() == 0
+	update_rails()
+
+
+## The rail buttons' texts and states, once a frame (EngineeringRail.update).
+func update_rails() -> void:
+	EngineeringRail.update(self)
 
 
 ## The view the screen's view-top row covers on a phone: the pages.
@@ -529,6 +554,8 @@ func _process(delta: float) -> void:
 		_poll_pad(delta)
 	if _pages_box.is_visible_in_tree():
 		_fit_pages()
+	elif tablet_ui != null:
+		update_rails()
 	_refresh_lists()
 	cutaway.queue_redraw()
 	board.queue_redraw()
@@ -853,7 +880,8 @@ func hazard_eta() -> float:
 	)
 
 
-## [text, palette role] lines of the faults list, worst first.
+## [text, palette role] lines of the faults list, worst first: the danger lines (a part down,
+## overheated, a fault to diagnose), then the warnings; the most damaged first in each.
 func fault_lines() -> Array:
 	var out: Array = []
 	var now: int = ctx.now_ms()
@@ -871,7 +899,15 @@ func fault_lines() -> Array:
 			out.append([tr("eng.fault_damaged") % [full_name(i), roundi(h * 100)], "warn"])
 		elif heat_frac(i) >= HOT:
 			out.append([tr("eng.fault_hot") % full_name(i), "warn"])
-	return out
+	var danger: Array = out.filter(func(l: Array) -> bool: return l[1] == "danger_text")
+	var warn: Array = out.filter(func(l: Array) -> bool: return l[1] != "danger_text")
+	return danger + warn
+
+
+## The glyph before a fault line by its role: "!!" danger, "!" warning (colour is not the
+## only signal, C4).
+static func severity_glyph(role: String) -> String:
+	return "!! " if role == "danger_text" else "! "
 
 
 ## The faults-list line of a subsystem with a fault of unknown cause: the cause is
@@ -926,7 +962,15 @@ func _refresh_lists() -> void:
 		return
 	var lines: Array = [[tr("eng.faults"), "accent"]]
 	var f: Array = fault_lines()
-	lines.append_array(f if not f.is_empty() else [[tr("eng.no_faults"), "ok"]])
+	if pages != null:
+		pages.set_badge(Page.FAULTS, not f.is_empty())
+	lines.append_array(
+		(
+			f.map(func(l: Array) -> Array: return [severity_glyph(l[1]) + l[0], l[1]])
+			if not f.is_empty()
+			else [[tr("eng.no_faults"), "ok"]]
+		)
+	)
 	for i: int in count():
 		if hardened_ticks(i) > 0:
 			lines.append(

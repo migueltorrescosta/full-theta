@@ -109,8 +109,8 @@ func _group(buttons: Array) -> Control:
 	return grid
 
 
-## Texts and states from the panel, once a frame: the lit mount, the ammunition, Claim or
-## Release, and no button for a mount the ship lacks.
+## Texts and states from the panel, once a frame: the lit mount, the ammunition, Claim
+## (ticked when held), and no button for a mount the ship lacks.
 func refresh() -> void:
 	var p: WeaponsPanel = _panel
 	for i: int in mount_buttons.size():
@@ -118,9 +118,6 @@ func refresh() -> void:
 		b.visible = i < p.mount_count()
 		b.role = RailButton.Role.ACCENT if i == p.mount else RailButton.Role.PLAIN
 	ammo_button.text = p.ammo_name() + " ▸"
-	claim_button.text = (
-		TouchText.of("weapons.touch_release", "Release")
-		if p.is_mine(p.mount)
-		else TouchText.of("weapons.touch_claim", "Claim")
-	)
+	claim_button.text = WeaponsStatus.claim_text(p, p.mount)
+	claim_button.role = RailButton.Role.ACCENT if p.is_mine(p.mount) else RailButton.Role.PLAIN
 	claim_button.disabled = not p.is_usable(p.mount)
