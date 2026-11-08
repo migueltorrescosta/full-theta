@@ -19,7 +19,7 @@ func kind() -> StringName:
 
 ## Rejects a ship that is not crewed, is still in play, or whose side has no relaunch left.
 func apply(world: SimWorld) -> bool:
-	if ship < 0 or ship >= world.ship_count() or world.ai.is_enabled(ship):
+	if not world.has_ship(ship) or not world.is_crew(ship):
 		return false
 	if world.run.status[ship] == RunTable.Status.IN_PLAY:
 		return false

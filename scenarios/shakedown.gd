@@ -7,7 +7,7 @@ extends Scenario
 ## drone near the ship, a new one when the drone is destroyed or the ship has jumped away.
 
 ## Faction of the drone (hostile to the crew by the default relation).
-const DRONE_FACTION: int = 2
+const DRONE_FACTION: int = Factions.RAIDER
 ## Where the drone appears from the ship (m), at the bow, a little high.
 const DRONE_RANGE_M: float = 1500.0
 const DRONE_CLOCK: int = 12

@@ -219,6 +219,16 @@ func nearest(a: int, ids: PackedInt32Array) -> int:
 	return best
 
 
+## The minimum-image vector from point b to point a (m): each coordinate difference wrapped
+## into [-period / 2, period / 2). The one hand-written form of the wrapped delta (R04-2).
+func delta(ax: float, ay: float, az: float, bx: float, by: float, bz: float) -> Vector3:
+	return Vector3(
+		PeriodRules.wrap(ax - bx, period),
+		PeriodRules.wrap(ay - by, period),
+		PeriodRules.wrap(az - bz, period)
+	)
+
+
 ## Offset of a point from row a (m, float32) by minimum image, computed in
 ## 64-bit; the point need not be wrapped (FT-SIM-035).
 func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:

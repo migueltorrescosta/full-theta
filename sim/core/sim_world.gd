@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name SimWorld
 extends RefCounted
 ## The authoritative simulation (FT-ARC-004): steps at a fixed 60 Hz from its own
@@ -9,7 +10,7 @@ extends RefCounted
 
 enum Relation { FRIENDLY, NEUTRAL, HOSTILE }
 
-const HZ: int = 60
+const HZ: int = SimRate.HZ
 const DT: float = 1.0 / HZ
 ## The cube's period must be at least this many times the longest sensor range
 ## (FT-SIM-035, D124, D229).
@@ -246,6 +247,36 @@ func faction_of(ship_id: int) -> int:
 	return kin.factions[ship_id]
 
 
+## Whether `ship_id` is a ship of this world.
+func has_ship(ship_id: int) -> bool:
+	return ship_id >= 0 and ship_id < defs.size()
+
+
+## Whether `faction` is hostile to `other` (a relation is set both ways).
+func is_hostile(faction: int, other: int) -> bool:
+	return relation(faction, other) == Relation.HOSTILE
+
+
+## Whether ship `i` is hostile to ship `j`.
+func ships_hostile(i: int, j: int) -> bool:
+	return is_hostile(faction_of(i), faction_of(j))
+
+
+## Whether the ship is flown by a crew (not by the enemy AI).
+func is_crew(ship_id: int) -> bool:
+	return not ai.is_enabled(ship_id)
+
+
+## Whether the ship is crewed and still in the run.
+func is_crew_in_play(ship_id: int) -> bool:
+	return is_crew(ship_id) and run.status[ship_id] == RunTable.Status.IN_PLAY
+
+
+## Ticks in `seconds`, rounded up.
+static func ticks(seconds: float) -> int:
+	return ceili(seconds * HZ)
+
+
 ## The ship's side (#11): its slot's team for a crewed ship of a lobby-built session, else
 ## its faction (an NPC, or a world built without slots).
 func team_of(ship_id: int) -> int:
@@ -335,7 +366,7 @@ func emit(
 	e.tick = tick
 	e.kind = kind
 	e.ship_id = ship_id
-	e.faction = faction_of(ship_id) if ship_id >= 0 and ship_id < defs.size() else -1
+	e.faction = faction_of(ship_id) if has_ship(ship_id) else -1
 	e.other_id = other_id
 	e.value = value
 	e.vector = vector
@@ -383,7 +414,7 @@ func _apply_commands() -> void:
 			c.accepted = c.apply(self)
 			command_log.append(c)
 			continue
-		if id < 0 or id >= defs.size() or not (kin.alive[id] == 1 or c.applies_to_destroyed()):
+		if not has_ship(id) or not (kin.alive[id] == 1 or c.applies_to_destroyed()):
 			# Dropped, not logged: marked rejected so an API handle waiting on it ends.
 			c.tick = tick
 			c.accepted = false

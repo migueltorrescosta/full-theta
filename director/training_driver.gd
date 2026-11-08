@@ -151,7 +151,7 @@ func _step_station(
 	if done:
 		_index[station] += 1
 		_announce(api, now, station)
-	elif now - _said[station] >= int(REMIND_S * ScenarioApi.HZ):
+	elif now - _said[station] >= ScenarioApi.ticks(REMIND_S):
 		_announce(api, now, station)
 
 
@@ -177,7 +177,7 @@ func _step_pairs(api: ScenarioApi, now: int) -> void:
 					_pair_state[i] = 2
 					_in_pair[step.station] = -1
 					_in_pair[step.partner] = -1
-				elif now - _said[step.station] >= int(REMIND_S * ScenarioApi.HZ):
+				elif now - _said[step.station] >= ScenarioApi.ticks(REMIND_S):
 					_say(api, step.line, [step.station, step.partner] as Array[StringName])
 					_said[step.station] = now
 					_said[step.partner] = now

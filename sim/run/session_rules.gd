@@ -34,7 +34,7 @@ const TEAM_WIN_NAMES: Array[String] = ["last_team_standing", "first_to_finish"]
 const MAX_SHIPS: int = 6
 ## Crew factions by side: the first is the co-op faction (M1Encounter.PLAYER_FACTION); the
 ## others stay clear of the NPC factions the scenarios use (2 to 4).
-const CREW_FACTIONS: Array[int] = [1, 11, 12, 13, 14, 15]
+const CREW_FACTIONS: Array[int] = [Factions.CREW, 11, 12, 13, 14, 15]
 ## HOLDOUT's sides: the small side relaunches without limit; the finite side has
 ## HOLDOUT_LIVES relaunches. PROVISIONAL (#13 tunes it).
 const HOLDOUT_SMALL_TEAM: int = 0

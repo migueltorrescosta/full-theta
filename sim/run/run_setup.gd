@@ -159,9 +159,7 @@ static func _farthest_site(world: SimWorld, taken: PackedInt32Array) -> int:
 		var gap: float = INF
 		for t: int in taken:
 			var b: PackedFloat64Array = world.sites.point(t)
-			var d: Vector3 = Vector3(
-				kin.wrap(a[0] - b[0]), kin.wrap(a[1] - b[1]), kin.wrap(a[2] - b[2])
-			)
+			var d: Vector3 = kin.delta(a[0], a[1], a[2], b[0], b[1], b[2])
 			gap = minf(gap, d.length())
 		if gap > best_gap:
 			best_gap = gap

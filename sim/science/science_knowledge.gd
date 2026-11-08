@@ -111,9 +111,7 @@ static func detection_confidence(world: SimWorld, faction: int, contact: int) ->
 	for o: int in world.ship_count():
 		if kin.factions[o] != faction or not kin.can_reach(o, contact) or not kin.is_alive(o):
 			continue
-		var reach: float = (
-			world.defs[o].sensor_range * DamageSystem.effectiveness(world, o, &"sensors")
-		)
+		var reach: float = KnowledgeSystem.sensor_reach(world, o)
 		if reach > 0.0:
 			best = maxf(best, 1.0 - kin.relative(o, contact).length() / reach)
 	return clampf(best, 0.05, 1.0)

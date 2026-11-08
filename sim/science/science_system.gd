@@ -19,7 +19,7 @@ extends RefCounted
 ## - &"scan_mark": the scan-position mark was placed, vector its offset from the contact.
 ## - &"active_ping", &"self_scan_started", &"self_scan_done".
 
-const SENSORS: StringName = &"sensors"
+const SENSORS: StringName = KnowledgeSystem.SENSORS
 
 const REASON_NO_SCIENCE: StringName = &"no_science"
 const REASON_BUSY: StringName = &"busy"
@@ -72,7 +72,7 @@ static func noise_parts(world: SimWorld, ship: int, contact: int) -> Dictionary:
 	var r: int = world.damage.find_subsystem(ship, SENSORS)
 	if r >= 0:
 		pips = world.damage.pips[r]
-		nominal = world.defs[ship].subsystems[r - world.damage.hull_row(ship) - 1].nominal_pips
+		nominal = world.defs[ship].subsystems[world.damage.index_of_row(ship, r)].nominal_pips
 	var is_active: bool = t.active[ship] == 1
 	var pinging: bool = t.ping_left[ship] > 0.0
 	var probe: bool = probe_covered(world, ship, contact)
@@ -137,7 +137,7 @@ static func ping(world: SimWorld, ship: int) -> bool:
 
 ## Selects the contact for the noise preview (-1 clears).
 static func select(world: SimWorld, ship: int, contact: int) -> bool:
-	if contact < -1 or contact >= world.ship_count():
+	if contact != -1 and not world.has_ship(contact):
 		return _refuse(world, ship, contact, REASON_BAD_CONTACT)
 	world.science.selected[ship] = contact
 	return true
@@ -313,7 +313,7 @@ static func _step_session(world: SimWorld, def: ScienceDef, t: ScienceTable, shi
 		t.clear_session(ship)
 		return
 	if k == ScienceTable.Session.SELF:
-		if elapsed >= ceili(def.self_scan_s * SimWorld.HZ):
+		if elapsed >= SimWorld.ticks(def.self_scan_s):
 			_finish_self_scan(world, t, ship)
 		return
 	var fail_kind: StringName = &"hack_failed" if k == ScienceTable.Session.HACK else &"scan_failed"
@@ -325,7 +325,7 @@ static func _step_session(world: SimWorld, def: ScienceDef, t: ScienceTable, shi
 	if not world.kin.is_alive(contact) or not seen:
 		_fail(world, t, ship, fail_kind, &"lost")
 	elif k == ScienceTable.Session.SCAN:
-		if elapsed >= ceili(def.scan_cap_s * SimWorld.HZ):
+		if elapsed >= SimWorld.ticks(def.scan_cap_s):
 			_fail(world, t, ship, fail_kind, &"timeout")
 	else:
 		var speed: float = def.trace_rate * (1.0 + def.trace_noise_gain * t.noise[ship])
@@ -344,7 +344,7 @@ static func _finish_hack(world: SimWorld, def: ScienceDef, t: ScienceTable, ship
 	var window: float = 0.0
 	if effect != null:
 		window = effect.window_s
-		var until: int = world.tick + ceili(window * SimWorld.HZ)
+		var until: int = world.tick + SimWorld.ticks(window)
 		world.hacks.open(contact, world.faction_of(ship), index, effect.factor, until, ship)
 	world.emit(&"hack_done", ship, contact, window, Vector3.ZERO, sub.id)
 	t.clear_session(ship)
@@ -400,8 +400,7 @@ static func _check_target(world: SimWorld, ship: int, contact: int, need_free: b
 		return REASON_BUSY
 	var kin: Kinematics = world.kin
 	if (
-		contact < 0
-		or contact >= world.ship_count()
+		not world.has_ship(contact)
 		or contact == ship
 		or world.faction_of(contact) == world.faction_of(ship)
 		or not kin.is_alive(contact)
@@ -411,11 +410,7 @@ static func _check_target(world: SimWorld, ship: int, contact: int, need_free: b
 	var row: int = world.knowledge.row_for(world.faction_of(ship), contact)
 	if row < 0 or world.knowledge.detected[row] == 0:
 		return REASON_NOT_DETECTED
-	var reach: float = (
-		world.defs[ship].sensor_range
-		* DamageSystem.effectiveness(world, ship, SENSORS)
-		* def.scan_range_factor
-	)
+	var reach: float = KnowledgeSystem.sensor_reach(world, ship) * def.scan_range_factor
 	if not probe and kin.relative(ship, contact).length() > reach:
 		return REASON_OUT_OF_RANGE
 	return &""

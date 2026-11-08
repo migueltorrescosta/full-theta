@@ -149,7 +149,7 @@ static func hostile_seeing(world: SimWorld, ship: int) -> int:
 		if o == ship or not world.kin.is_alive(o):
 			continue
 		var f: int = world.faction_of(o)
-		if world.relation(f, faction) == SimWorld.Relation.HOSTILE:
+		if world.is_hostile(faction, f):
 			if KnowledgeSystem.is_detected(world, f, ship):
 				return o
 	return -1
@@ -170,7 +170,7 @@ static func _jumped_this_tick(world: SimWorld) -> Dictionary[int, bool]:
 static func _timeout_ticks(world: SimWorld) -> int:
 	if world.run_def == null:
 		return 0
-	return ceili(world.run_def.director.arrival_timeout_s * SimWorld.HZ)
+	return SimWorld.ticks(world.run_def.director.arrival_timeout_s)
 
 
 static func _scenario(world: SimWorld, id: int) -> StringName:

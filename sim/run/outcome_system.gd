@@ -200,7 +200,7 @@ static func _holdout(
 		elif standing.has(id):
 			waiting = true
 	if in_play or waiting:
-		var cap: int = ceili(SessionRules.HOLDOUT_CAP_S * SimWorld.HZ)
+		var cap: int = SimWorld.ticks(SessionRules.HOLDOUT_CAP_S)
 		if world.tick < cap:
 			return
 		out.reason = SessionOutcome.Reason.HOLDOUT_OVER
@@ -230,9 +230,9 @@ static func _count_kill(world: SimWorld, id: int) -> void:
 		if e.kind != &"destroyed" or e.ship_id != id:
 			continue
 		var killer: int = e.other_id
-		if killer < 0 or killer == id or killer >= world.ship_count():
+		if killer == id or not world.has_ship(killer):
 			return
-		if world.ai.is_enabled(killer) or world.team_of(killer) == world.team_of(id):
+		if not world.is_crew(killer) or world.team_of(killer) == world.team_of(id):
 			return
 		world.run.kills[killer] += 1
 		return
@@ -247,7 +247,7 @@ static func _escaped(world: SimWorld, id: int) -> bool:
 		if not world.kin.is_alive(o):
 			continue
 		var f: int = world.faction_of(o)
-		if world.relation(faction, f) == SimWorld.Relation.HOSTILE:
+		if world.is_hostile(faction, f):
 			if KnowledgeSystem.is_detected(world, f, id):
 				return false
 	return true
@@ -264,7 +264,7 @@ static func _enemies_gone(world: SimWorld, id: int) -> bool:
 	for o: int in world.ship_count():
 		var f: int = factions[o]
 		if not hostile.has(f):
-			hostile[f] = world.relation(faction, f) == SimWorld.Relation.HOSTILE
+			hostile[f] = world.is_hostile(faction, f)
 		if not hostile[f]:
 			continue
 		if status[o] == RunTable.Status.IN_PLAY:

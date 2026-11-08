@@ -12,8 +12,8 @@ extends M1Encounter
 ## positions come from a RandomNumberGenerator seeded with the world seed, so a build is
 ## reproducible. It extends M1Encounter only so NetServer takes it unchanged.
 
-const CREW_FACTION: int = 1
-const RAIDER_FACTIONS: Array[int] = [2, 3]
+const CREW_FACTION: int = Factions.CREW
+const RAIDER_FACTIONS: Array[int] = [Factions.RAIDER, Factions.CIVIL]
 ## Side of the cube the ships start in (m); S6/S9 used a 4 km cube.
 const ARENA: float = 4000.0
 ## The crewed ships start within this distance of the middle on each axis (m).

@@ -24,20 +24,25 @@ static func step(world: SimWorld) -> void:
 	_warn_lanes(world)
 
 
-## Whether a deployed probe of the faction covers the point (m): the minimum
-## image distance to its position is within the launching ship's probe_range.
-static func coverage_at(world: SimWorld, faction: int, pos: Vector3) -> bool:
+## How close the point (m) is to the best deployed probe bubble of the faction: 1 at a probe,
+## 0 on the edge of its bubble (minimum image distance over the launching ship's probe_range),
+## negative outside; -INF when the faction has no deployed probe.
+static func best_closeness(world: SimWorld, faction: int, pos: Vector3) -> float:
 	var t: ProbeTable = world.probes
 	var kin: Kinematics = world.kin
+	var best: float = -INF
 	for r: int in t.size():
 		if t.factions[r] != faction or t.deployed[r] == 0:
 			continue
-		var d: Vector3 = Vector3(
-			kin.wrap(pos.x - t.at_x[r]), kin.wrap(pos.y - t.at_y[r]), kin.wrap(pos.z - t.at_z[r])
-		)
-		if d.length() <= world.defs[t.ship_ids[r]].probe_range:
-			return true
-	return false
+		var d: Vector3 = kin.delta(pos.x, pos.y, pos.z, t.at_x[r], t.at_y[r], t.at_z[r])
+		best = maxf(best, 1.0 - d.length() / world.defs[t.ship_ids[r]].probe_range)
+	return best
+
+
+## Whether a deployed probe of the faction covers the point (m): the minimum
+## image distance to its position is within the launching ship's probe_range.
+static func coverage_at(world: SimWorld, faction: int, pos: Vector3) -> bool:
+	return best_closeness(world, faction, pos) >= 0.0
 
 
 ## Whether a deployed probe of the ship's faction covers the contact (P13).
@@ -108,11 +113,7 @@ static func _fly(world: SimWorld) -> void:
 		if t.deployed[r] == 1:
 			continue
 		var speed: float = world.defs[t.ship_ids[r]].probe_speed
-		var d: Vector3 = Vector3(
-			kin.wrap(t.to_x[r] - t.at_x[r]),
-			kin.wrap(t.to_y[r] - t.at_y[r]),
-			kin.wrap(t.to_z[r] - t.at_z[r])
-		)
+		var d: Vector3 = kin.delta(t.to_x[r], t.to_y[r], t.to_z[r], t.at_x[r], t.at_y[r], t.at_z[r])
 		var step_m: float = speed * SimWorld.DT
 		if d.length() <= step_m:
 			t.at_x[r] = t.to_x[r]

@@ -138,3 +138,15 @@ func test_far_point_is_said_relative_to_a_mark_or_site() -> void:
 	var world: Vector3 = Vector3(0.0, 800.0, -2900.0)
 	var turned: Quaternion = Quaternion(Vector3.UP, PI / 2.0)
 	assert_str(Callout.relative("Bravo", turned.inverse() * world)).is_equal("Bravo, 3 high, 3 km")
+
+
+# FT: FT-SPA-004
+# direction() is the inverse of clock() and height_word(): every clock and height round-trips.
+func test_direction_round_trips_clock_and_height() -> void:
+	var words: Array[String] = ["under", "low", "level", "high", "overhead"]
+	for height: int in range(-2, 3):
+		for hour: int in range(1, 13):
+			var local: Vector3 = Callout.direction(hour, height)
+			assert_str(Callout.height_word(local)).is_equal(words[height + 2])
+			if absi(height) < 2:
+				assert_int(Callout.clock(local)).is_equal(hour)
