@@ -56,5 +56,5 @@ func test_the_page_links_the_callout_card() -> void:
 	pane.build(Bindings.new(), ["helm"], IntentTable.KBM)
 	var link: LinkButton = pane.get_node("CalloutCard")
 	assert_str(link.text).is_equal("Callout card: how the crew names contacts")
-	assert_str(ControlsPane.CALLOUT_CARD_URL).ends_with("docs/callout-card.md")
+	assert_str(ControlsPane.callout_card_url()).ends_with("docs/callout-card.md")
 	assert_bool(FileAccess.file_exists("res://docs/callout-card.md")).is_true()

@@ -2,7 +2,7 @@ class_name ControlsLegendChip
 extends Button
 ## The first-visit legend for the contact label grammar (D2): once per client, below the
 ## Controls chip, "H2 · 4 high · mid: hostile 2, 4 o'clock, high, mid range". A tap opens
-## the callout card (ControlsPane.CALLOUT_CARD_URL). The lesson that teaches the words is
+## the callout card (ControlsPane.callout_card_url()). The lesson that teaches the words is
 ## #37 C8; this chip only decodes the label a new player sees first.
 
 const HINT: String = "callout_legend"
@@ -35,7 +35,7 @@ func _init() -> void:
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	pressed.connect(
 		func() -> void:
-			OS.shell_open(ControlsPane.CALLOUT_CARD_URL)
+			OS.shell_open(ControlsPane.callout_card_url())
 			queue_free()
 	)
 

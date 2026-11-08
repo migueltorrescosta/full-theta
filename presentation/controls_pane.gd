@@ -16,9 +16,6 @@ const VIEW_PAD: String = "Gamepad"
 const VIEW_LIST: String = "List"
 ## The filter button's node name.
 const ALL_STATIONS: String = "AllStations"
-const REPO_URL: String = "https://github.com/migueltorrescosta/full-theta/"
-## The callout card (docs/callout-card.md), which the page links to (D2).
-const CALLOUT_CARD_URL: String = REPO_URL + "blob/main/docs/callout-card.md"
 
 ## The text list view; also what SettingsScreen.controls exposes.
 var list: ControlsList = ControlsList.new()
@@ -89,7 +86,7 @@ func _init() -> void:
 	_card_link.underline = LinkButton.UNDERLINE_MODE_ALWAYS
 	_card_link.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_card_link.custom_minimum_size.y = UiTheme.TOUCH_MIN
-	_card_link.pressed.connect(func() -> void: OS.shell_open(CALLOUT_CARD_URL))
+	_card_link.pressed.connect(func() -> void: OS.shell_open(callout_card_url()))
 	add_child(_card_link)
 
 
@@ -133,6 +130,12 @@ static func every_station() -> Array:
 		if g not in [IntentTable.COMMON, IntentTable.LIVE]:
 			out.append(g)
 	return out
+
+
+## Where the callout card (docs/callout-card.md) is read, which the page links to (D2). The
+## address is a string of content/i18n/strings.json: the game itself has no internet code.
+static func callout_card_url() -> String:
+	return str(TranslationServer.translate("controls.callout_card_url"))
 
 
 ## Shows view `v`, building it for the stations shown when they changed. A phone shows

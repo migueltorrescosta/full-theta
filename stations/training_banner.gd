@@ -13,8 +13,9 @@ extends PanelContainer
 ## (control names in {t:key} are the translated labels of the controls themselves), with no
 ## key names and no key on Next; a pad in use (D321) gets the pad's buttons, and a keyboard
 ## the keys, as before. On a pad, a step whose control sits only in the Helm radial says the
-## radial route in its example (D1). A command step also has Skip (no key, so it is never
-## pressed by accident): a player who cannot do it on their device moves on. On a touch
+## radial route in its example (D1). A command step also has Skip on a desktop screen (no
+## key, so it is never pressed by accident): a player who cannot do it on their device moves
+## on. A touch layout has no Skip: every control is a tap away and the card has no room. On a touch
 ## layout the card also keeps clear of the station's controls (D322): it sits where no tap
 ## target is, as a card of the step, its how-to and Next, or folded to one line, and moves
 ## when a page change takes its place.
@@ -167,7 +168,7 @@ func refresh() -> void:
 		_next.text = "%s  (%s)" % [tr("train.next"), _next_binding(device)]
 	_set_touch_layout(touch)
 	_skip.text = tr("train.skip")
-	_skip.visible = not done and is_command_step(station, intent) and not (touch and is_folded())
+	_skip.visible = not done and not touch and is_command_step(station, intent)
 	_example.visible = example != "" and not (touch and is_folded())
 	if touch:
 		var key: Array = _layout_key()
@@ -238,7 +239,6 @@ func _set_touch_layout(touch: bool) -> void:
 		_fold.text = "▸" if is_folded() else "▾"
 		_fold.tooltip_text = tr("train.expand") if is_folded() else tr("train.collapse")
 		_next.custom_minimum_size = Vector2(0.0, UiTheme.TOUCH_PRIMARY)
-		_skip.custom_minimum_size = Vector2(0.0, UiTheme.TOUCH_PRIMARY)
 		var width: float = card_width()
 		custom_minimum_size.x = width
 		# Folded, Next sits in the one line, left of the fold button.
@@ -366,7 +366,6 @@ func _layout_key() -> Array:
 func _arrange() -> Vector2:
 	_set_touch_layout(true)
 	_example.visible = _example.text != "" and not is_folded()
-	_skip.visible = _skip.visible and not is_folded()
 	reset_size()
 	return Vector2(card_width(), maxf(get_combined_minimum_size().y, 1.0))
 

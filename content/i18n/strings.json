@@ -1447,6 +1447,7 @@
     "controls.callout_card": {"en": "Callout card: how the crew names contacts", "pt_PT": "Cartão de chamadas: como a tripulação nomeia contactos", "it": "Scheda delle chiamate: come l'equipaggio nomina i contatti"},
     "controls.radial": {"en": "In the Helm menu (%s): %s", "pt_PT": "No menu do leme (%s): %s", "it": "Nel menu timone (%s): %s"},
     "settings.same_station": {"en": "%s already uses this on the same station. Press it again to use it for both.", "pt_PT": "%s já usa isto no mesmo posto. Prime outra vez para usar nos dois.", "it": "%s lo usa già nella stessa postazione. Premilo di nuovo per usarlo per entrambi."},
-    "input.radial_item": {"en": "Helm menu › %s", "pt_PT": "Menu do leme › %s", "it": "Menu timone › %s"}
+    "input.radial_item": {"en": "Helm menu › %s", "pt_PT": "Menu do leme › %s", "it": "Menu timone › %s"},
+    "controls.callout_card_url": {"en": "https://github.com/migueltorrescosta/full-theta/blob/main/docs/callout-card.md", "pt_PT": "https://github.com/migueltorrescosta/full-theta/blob/main/docs/callout-card.md", "it": "https://github.com/migueltorrescosta/full-theta/blob/main/docs/callout-card.md"}
   }
 }
