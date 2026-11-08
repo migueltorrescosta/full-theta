@@ -23,7 +23,7 @@ func test_reset_one_or_all() -> void:
 	assert_array(Array(b.bindings("cycle_target", "kbm"))).is_equal(["T"])
 	assert_array(Array(b.bindings("ping", "kbm"))).is_equal(["P"])
 	b.reset()
-	assert_array(Array(b.bindings("ping", "kbm"))).is_equal(["MMB"])
+	assert_array(Array(b.bindings("ping", "kbm"))).is_equal(["MMB", "Shift+P"])
 
 
 # FT: FT-STN-007, FT-STN-014
@@ -78,5 +78,5 @@ func test_wrongly_typed_data_is_dropped() -> void:
 		)
 	)
 	assert_array(b.overrides.keys()).is_equal(["claim"])
-	assert_array(Array(b.bindings("ping", "kbm"))).is_equal(["MMB"])
+	assert_array(Array(b.bindings("ping", "kbm"))).is_equal(["MMB", "Shift+P"])
 	assert_dict(b.toggles).is_empty()
