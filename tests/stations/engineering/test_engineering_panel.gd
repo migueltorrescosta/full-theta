@@ -94,7 +94,7 @@ func test_cutaway_shows_health_heat_and_recent_hits_and_rotates() -> void:
 	assert_object(e.ship_def).is_not_null()
 	assert_int(e.count()).is_equal(6)
 	assert_float(e.health_frac(0)).is_equal_approx(0.4, 1e-6)
-	assert_float(e.heat_frac(3)).is_equal_approx(0.8, 1e-6)
+	assert_float(e.heat_frac(3)).is_equal_approx(80.0 / 95.0, 1e-6)
 	# Hits on the own ship are kept with their ship-frame point; others' are not.
 	_hit(s, StationFixture.SHIP, Vector3(0, 1, 16))
 	_hit(s, 2, Vector3(0, 0, -10))

@@ -60,7 +60,9 @@ static func done(w: SimWorld) -> bool:
 
 static func measure(w: SimWorld) -> Dictionary:
 	var hull_lost: float = (1.0 - DamageSystem.hull_fraction(w, PLAYER)) * w.defs[0].hull_max
-	var is_fault: Callable = func(e: SimEvent) -> bool: return e.kind == &"fault"
+	# The player corvette's faults only: the raider's crew overcharges its own weapons.
+	var is_fault: Callable = func(e: SimEvent) -> bool:
+		return e.kind == &"fault" and e.ship_id == PLAYER
 	var faults: float = w.drain_events().filter(is_fault).size()
 	return {"time": w.tick * SimWorld.DT, "hull_lost": hull_lost, "heat_faults": faults}
 
@@ -100,7 +102,7 @@ static func engineering(w: SimWorld) -> void:
 		PairHarness.send(w, _pips(WPN, 0))
 		PairHarness.send(w, _pips(ENG, 4))
 		var shields: SetShieldCommand = SetShieldCommand.new()
-		shields.power = 4
+		shields.power = 3
 		shields.tightness = w.defs[PLAYER].shields.tightness_max
 		PairHarness.send(w, shields)
 	var engines: int = PowerSystem.subsystem_index(w.defs[PLAYER], ENG)

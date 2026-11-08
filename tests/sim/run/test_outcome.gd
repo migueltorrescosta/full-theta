@@ -42,7 +42,7 @@ func _destroy(world: SimWorld, ship: int, source: int) -> void:
 
 # FT: FT-M1-012, FT-MIS-017, FT-SIM-030
 # Fought out with the scripted crew (fire every 0.5 s on the lead point), the raider
-# is destroyed (measured: tick 3189, 53.1 s at seed 5; bound 120 s): it becomes
+# is destroyed (measured: tick 3581, 59.7 s at seed 5; bound 120 s): it becomes
 # DESTROYED and the corvette gets WIN on the same tick, with one &"outcome" keyed to
 # the corvette; 10 s more add no outcome event and change nothing.
 func test_win_when_enemy_destroyed() -> void:

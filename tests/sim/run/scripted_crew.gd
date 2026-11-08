@@ -39,8 +39,26 @@ func act(world: SimWorld) -> void:
 		_submit(world, helm)
 	if t >= 1 and t % AIM_EVERY == 0:
 		_aim(world)
+		_repair_weapons(world)
 	if t >= FIRST_FIRE and t % FIRE_EVERY == 0:
 		_submit(world, FireCommand.new())
+
+
+## Sends every idle crew to the weapons while they are damaged: a damaged weapons
+## subsystem recharges the store slower (R16-3), so a crew that does not repair loses the fight.
+func _repair_weapons(world: SimWorld) -> void:
+	var def: ShipDef = world.defs[ship]
+	var index: int = PowerSystem.subsystem_index(def, SubsystemDef.Kind.WEAPONS)
+	var row: int = world.damage.subsystem_row(ship, index)
+	if world.damage.health[row] >= def.subsystems[index].health_max:
+		return
+	for crew: int in def.repair_crews:
+		if world.damage.crews[row] & (1 << crew) != 0:
+			continue
+		var c: DispatchRepairCommand = DispatchRepairCommand.new()
+		c.crew = crew
+		c.subsystem_id = def.subsystems[index].id
+		_submit(world, c)
 
 
 func _aim(world: SimWorld) -> void:
