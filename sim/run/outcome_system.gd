@@ -41,6 +41,10 @@ static func step(world: SimWorld) -> void:
 			status[id] = RunTable.Status.DESTROYED
 			if enabled[id] == 0:
 				_count_kill(world, id)
+				# A ship that won and was then destroyed is out of play too: it has no
+				# LOSS to emit the elimination from (R17-5).
+				if outcome[id] == RunTable.Outcome.WIN and world.run_def != null:
+					_emit_eliminated(world, id)
 		elif enabled[id] == 1 and mode[id] == AiTable.Mode.RETREAT and _escaped(world, id):
 			status[id] = RunTable.Status.RETREATED
 			world.emit(&"retreated", id)
@@ -291,15 +295,20 @@ static func _set_outcome(world: SimWorld, id: int, outcome: RunTable.Outcome) ->
 	world.run.finish_tick[id] = world.tick
 	world.emit(&"outcome", id, -1, outcome, Vector3.ZERO, RunTable.OUTCOME_NAMES[outcome])
 	if outcome == RunTable.Outcome.LOSS and world.run_def != null:
-		var tag: StringName = &"destroyed"
-		if world.run.status[id] == RunTable.Status.ABANDONED:
-			tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
-		var policy: RelaunchPolicy = world.rules.relaunch_for(world.team_of(id))
-		world.emit(
-			SessionOutcome.EVENT_ELIMINATED,
-			id,
-			-1,
-			policy.left(world.run.relaunches[id]),
-			Vector3.ZERO,
-			tag
-		)
+		_emit_eliminated(world, id)
+
+
+## &"eliminated" for a crewed ship out of play: tagged destroyed, or abandoned / forfeit.
+static func _emit_eliminated(world: SimWorld, id: int) -> void:
+	var tag: StringName = &"destroyed"
+	if world.run.status[id] == RunTable.Status.ABANDONED:
+		tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
+	var policy: RelaunchPolicy = world.rules.relaunch_for(world.team_of(id))
+	world.emit(
+		SessionOutcome.EVENT_ELIMINATED,
+		id,
+		-1,
+		policy.left(world.run.relaunches[id]),
+		Vector3.ZERO,
+		tag
+	)
