@@ -733,15 +733,14 @@ func _on_command(conn: int, msg: Dictionary, now_us: int) -> void:
 	if s.has_pick() and abandoned.has(s.ship):
 		_reject(s.id, msg["seq"], CommandGate.SHIP_ABANDONED)
 		return
-	# A stopped sim would queue the command and run it on resume (#45 A4); Next
-	# (Shakedown) is the one command the lessons press while it is stopped.
-	var kind: String = str((msg["cmd"] as Dictionary).get("kind", ""))
-	if s.has_pick() and not sim_running() and kind != "training_next":
-		_reject(s.id, msg["seq"], CommandGate.PAUSED)
-		return
 	var result: Array = CommandGate.check(s, msg["cmd"], now_us, claim_rule)
 	if result[0] == null:
 		_reject(s.id, msg["seq"], result[1])
+		return
+	# A stopped sim would queue the command and run it on resume (#45 A4): refused once it is
+	# otherwise valid. Next (Shakedown) is the one command the lessons press while it is stopped.
+	if not sim_running() and not result[0] is TrainingNextCommand:
+		_reject(s.id, msg["seq"], CommandGate.PAUSED)
 		return
 	world.submit(result[0])
 	if session_log != null:
