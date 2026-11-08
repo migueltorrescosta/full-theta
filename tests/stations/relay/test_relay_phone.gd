@@ -406,10 +406,15 @@ func test_the_inbox_line_reads_whole_both_ways_up() -> void:
 		assert_str(phone.mail.text).is_equal("Incoming: Rock from Wren (Relay)")
 		for l: Label in [phone.probes, phone.mail]:
 			var need: float = (
-				l.get_theme_font("font").get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+				l
+				. get_theme_font("font")
+				. get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13)
+				. x
 			)
-			assert_float(l.size.x).override_failure_message(
-				"%s %s" % [form[0], l.text]
-			).is_greater_equal(need)
+			(
+				assert_float(l.size.x)
+				. override_failure_message("%s %s" % [form[0], l.text])
+				. is_greater_equal(need)
+			)
 		_vp.queue_free()
 		await _frames(1)

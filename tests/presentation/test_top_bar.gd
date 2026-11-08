@@ -126,9 +126,9 @@ func test_phone_goal_line_fits_its_cell() -> void:
 		bar.show_state("Kestrel", {"hull": 1.0}, 0, [], float(I18n.LANGUAGES.find(lang)))
 		var timer: Label = bar._phone_timer
 		var fs: int = timer.get_theme_font_size("font_size")
-		var need: float = timer.get_theme_font("font").get_string_size(
-			short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs
-		).x
+		var need: float = (
+			timer.get_theme_font("font").get_string_size(short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		)
 		assert_float(timer.custom_minimum_size.x).override_failure_message(lang).is_greater_equal(
 			need
 		)

@@ -189,7 +189,9 @@ func test_every_pause_text_is_translated() -> void:
 						text = (node as Button).text
 					elif node is Label:
 						text = (node as Label).text
-					assert_str(text).override_failure_message(
-						"%s %s: raw key %s" % [locale, node.name, text]
-					).not_contains("pause.")
+					(
+						assert_str(text)
+						. override_failure_message("%s %s: raw key %s" % [locale, node.name, text])
+						. not_contains("pause.")
+					)
 	I18n.apply("en")

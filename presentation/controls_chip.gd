@@ -13,6 +13,10 @@ extends Button
 const SHOW_S: float = 6.0
 ## Below the top bar.
 const TOP: float = 64.0
+## The first-visit chips (this chip, ControlsLegendChip, RadarLegend) and the "turn sideways"
+## banner: each chip sits under the members of a lower rank that show, never over them (w5).
+const STACK: StringName = &"first_visit_stack"
+const RANK: StringName = &"stack_rank"
 
 ## Seconds left on screen.
 var left_s: float = SHOW_S
@@ -46,6 +50,7 @@ static func show_once(
 
 func _init() -> void:
 	name = "ControlsChip"
+	join_stack(self, 1)
 	focus_mode = Control.FOCUS_NONE
 	custom_minimum_size = Vector2(0.0, UiTheme.TOUCH_MIN)
 	theme_type_variation = "RailAccentButton"
@@ -56,11 +61,11 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	offset_top = TOP + SafeArea.margins(self).y
-	offset_bottom = offset_top + UiTheme.TOUCH_MIN
+	place_in_stack(self, TOP + SafeArea.margins(self).y)
 
 
 func _process(delta: float) -> void:
+	place_in_stack(self, TOP + SafeArea.margins(self).y)
 	left_s -= delta
 	if left_s <= 0.0:
 		set_process(false)
@@ -77,3 +82,32 @@ func _label() -> String:
 	if key_text != "":
 		return tr("controls.chip_key") % key_text
 	return tr("controls.chip")
+
+
+## Puts `c` in the first-visit stack at `rank` (the banner 0, then the chips top down).
+static func join_stack(c: Control, rank: int) -> void:
+	c.set_meta(RANK, rank)
+	c.add_to_group(STACK)
+
+
+## Sets `c`'s top offset to `top` (its parent's coordinates), or lower: under every shown
+## member of the stack of a lower rank.
+static func place_in_stack(c: Control, top: float) -> void:
+	var parent: Control = c.get_parent() as Control
+	if parent != null and c.is_inside_tree():
+		var origin: float = parent.get_global_rect().position.y
+		var rank: int = int(c.get_meta(RANK, 0))
+		for n: Node in c.get_tree().get_nodes_in_group(STACK):
+			var o: Control = n as Control
+			if (
+				o == c
+				or int(o.get_meta(RANK, 0)) >= rank
+				or not o.is_visible_in_tree()
+				or o.is_queued_for_deletion()
+			):
+				continue
+			top = maxf(top, o.get_global_rect().end.y + 8.0 - origin)
+	if c.offset_top != top:
+		var h: float = maxf(c.offset_bottom - c.offset_top, c.get_combined_minimum_size().y)
+		c.offset_top = top
+		c.offset_bottom = top + h

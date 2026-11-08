@@ -26,6 +26,7 @@ static func show_legend(parent: Control, settings: ClientSettings) -> ControlsLe
 
 func _init() -> void:
 	name = "ControlsLegendChip"
+	ControlsChip.join_stack(self, 2)
 	focus_mode = Control.FOCUS_NONE
 	theme_type_variation = "RailButton"
 	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -41,12 +42,19 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	# Below the Controls chip and its gap.
-	offset_top = ControlsChip.TOP + SafeArea.margins(self).y + UiTheme.TOUCH_MIN + 8.0
-	offset_bottom = offset_top + UiTheme.TOUCH_MIN
+	_place()
+
+
+## Below the Controls chip and its gap, or under it wherever it went (ControlsChip.STACK).
+func _place() -> void:
+	var top: float = ControlsChip.TOP + SafeArea.margins(self).y + UiTheme.TOUCH_MIN + 8.0
+	if offset_bottom <= offset_top:
+		offset_bottom = offset_top + UiTheme.TOUCH_MIN
+	ControlsChip.place_in_stack(self, top)
 
 
 func _process(delta: float) -> void:
+	_place()
 	left_s -= delta
 	if left_s <= 0.0:
 		set_process(false)

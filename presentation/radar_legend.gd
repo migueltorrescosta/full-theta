@@ -31,6 +31,7 @@ static func show_once(parent: Control, settings: ClientSettings) -> RadarLegend:
 
 func _init() -> void:
 	name = "RadarLegend"
+	ControlsChip.join_stack(self, 3)
 	focus_mode = Control.FOCUS_NONE
 	theme_type_variation = "RailButton"
 	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -46,11 +47,16 @@ func _ready() -> void:
 	var parent: Control = get_parent() as Control
 	if parent != null:
 		custom_minimum_size.x = minf(MAX_W, parent.size.x - 16.0)
-	offset_top = TOP + SafeArea.margins(self).y
-	offset_bottom = offset_top + custom_minimum_size.y
+	_stack()
+
+
+## At TOP, or under the first-visit chips above it wherever they went (ControlsChip.STACK).
+func _stack() -> void:
+	ControlsChip.place_in_stack(self, TOP + SafeArea.margins(self).y)
 
 
 func _process(delta: float) -> void:
+	_stack()
 	left_s -= delta
 	if left_s <= 0.0:
 		set_process(false)

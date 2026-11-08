@@ -112,9 +112,16 @@ func test_a_tablet_takes_the_rail_pattern() -> void:
 		assert_vector(e.tablet_ui.dock.reserve()).is_equal(Vector2(0.0, EngineeringTablet.BAR_H))
 		var bar: Rect2 = e.tablet_ui.dock.left.get_global_rect()
 		for b: RailButton in e.tablet_ui.buttons.values():
-			assert_bool(
-				b.get_global_rect().end.y <= bar.end.y + 0.5 and b.get_global_rect().size.y > 0.0
-			).override_failure_message("%s %s" % [size, b.name]).is_true()
+			(
+				assert_bool(
+					(
+						b.get_global_rect().end.y <= bar.end.y + 0.5
+						and b.get_global_rect().size.y > 0.0
+					)
+				)
+				. override_failure_message("%s %s" % [size, b.name])
+				. is_true()
+			)
 		# Every button sends its intent like the phone's rail does.
 		await _refresh(s)
 		var from: int = StationFixture.sent(s.ctx).sent.size()

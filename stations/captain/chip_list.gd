@@ -1,7 +1,8 @@
 class_name ChipList
 extends Control
 ## The Captain's read-only list of open request chips (FT-CPT-004): each row reads
-## "Helm > Engineering  Boost", then "waiting, 6 s left" over a bar that runs out with it. It reads the CHIPS block through ChipView (`open_rows`) and answers no input.
+## "Helm > Engineering  Boost", then "waiting, 6 s left" over a bar that runs out with it.
+## It reads the CHIPS block through ChipView (`open_rows`) and answers no input.
 ##
 ## A row: {"from": station id, "to": station id, "label": text, "left_s": seconds left}.
 

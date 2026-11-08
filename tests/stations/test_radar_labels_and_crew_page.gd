@@ -67,3 +67,34 @@ func test_radar_legend_shows_once_and_a_tap_closes_it() -> void:
 	settings.reset_hints()
 	assert_object(RadarLegend.show_once(host, settings)).is_null()
 	assert_bool(settings.hint_seen(RadarLegend.KEY)).is_false()
+
+
+# FT: FT-STN-012
+# w5: on a first visit the controls chip, the contact-label legend and the radar legend
+# stack top down, none over another, for Science, Relay and Comms.
+func test_first_visit_chips_stack_without_overlap() -> void:
+	for entry: String in ["science", "relay", "comms"]:
+		var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+		ctx.settings.reset_hints()
+		var s: StationScreen = auto_free(StationScreen.new())
+		s.setup(ctx)
+		add_child(s)
+		s.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		s.size = Vector2(1280, 720)
+		for i: int in 4:
+			await get_tree().process_frame
+		var chips: Array[Control] = []
+		for n: String in ["ControlsChip", "ControlsLegendChip", "RadarLegend"]:
+			var c: Control = s.find_child(n, true, false)
+			assert_object(c).override_failure_message("%s %s" % [entry, n]).is_not_null()
+			chips.append(c)
+		for i: int in 2:
+			var upper: Rect2 = chips[i].get_global_rect()
+			var lower: Rect2 = chips[i + 1].get_global_rect()
+			assert_float(lower.position.y).override_failure_message(
+				"%s: %s under %s" % [entry, chips[i + 1].name, chips[i].name]
+			).is_greater_equal(upper.end.y)
+		s.queue_free()
+		await get_tree().process_frame
+		if FileAccess.file_exists(SETTINGS):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
