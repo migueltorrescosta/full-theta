@@ -358,7 +358,7 @@ func open_alert_sheet() -> void:
 	var labels: Array = []
 	for a: Dictionary in Palette.ALERTS:
 		labels.append("%s  %s" % [a["letter"], tr(a["key"])])
-	screen.sheet.open(tr("intent.alert_cycle"), labels, screen._set_alert)
+	screen.sheet.open(tr("intent.alert_cycle"), labels, screen.common.set_alert)
 
 
 ## A long-press armed at `at` (viewport px): the ring shows under the finger.
