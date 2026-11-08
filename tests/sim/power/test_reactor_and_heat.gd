@@ -66,11 +66,12 @@ func test_reactor_health_and_hack_scale_output_and_pip_cap() -> void:
 
 
 # FT: FT-SIM-012, FT-SIM-021
-# A destroyed weapons subsystem no longer recharges the store.
-func test_weapons_health_scales_the_charge() -> void:
+# A destroyed weapons subsystem still recharges the store at half rate (A1 floor).
+func test_weapons_health_scales_the_charge_down_to_a_floor() -> void:
+	var full: float = _recharge(_world())
 	var w: SimWorld = _world()
 	w.damage.health[_row(w, &"weapons")] = 0.0
-	assert_float(_recharge(w)).is_equal(0.0)
+	assert_float(_recharge(w)).is_equal_approx(0.5 * full, 1e3)
 
 
 # FT: FT-SIM-026

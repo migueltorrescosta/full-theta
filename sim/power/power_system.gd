@@ -5,6 +5,9 @@ extends RefCounted
 ## thrust envelope it writes to kin.thrust_scale / kin.torque_scale each tick
 ## (FT-SIM-006).
 
+## A wrecked weapons subsystem still charges the store at this share of the rate (A1).
+const WEAPON_HEALTH_FLOOR: float = 0.5
+
 ## A subsystem may fault again once its heat falls below this share of its threshold;
 ## the gap keeps a fault from re-firing while heat hovers at the threshold.
 const FAULT_REARM: float = 0.8
@@ -105,11 +108,11 @@ static func step(world: SimWorld) -> void:
 				thr_eff += d.row_effectiveness(first + i, sd)
 				thr_n += 1
 				thr_heat = maxf(thr_heat, heats[i] / sd.fault_heat_threshold)
-		# The reactor's health scales its output and the weapons' health the charge.
+		# The reactor's health scales its output and the weapons' health the charge (down to a floor).
 		var charge: float = (
 			pd.reactor_output
 			* reactor_effectiveness(world, s)
-			* (weapon_eff / weapon_n if weapon_n > 0 else 1.0)
+			* (maxf(WEAPON_HEALTH_FLOOR, weapon_eff / weapon_n) if weapon_n > 0 else 1.0)
 			* weapon_pips
 			/ pd.reactor_pips
 			* SimWorld.DT
