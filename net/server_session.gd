@@ -196,8 +196,6 @@ func after_ticks(events: Array[SimEvent]) -> void:
 				)
 			else:
 				_wrote(p[0], c)
-		elif world.tick > int(p[3]):
-			_reject(p[0], p[1], CommandGate.SHIP_DESTROYED)
 		else:
 			still.append(p)
 	_pending = still
@@ -745,7 +743,7 @@ func _on_command(conn: int, msg: Dictionary, now_us: int) -> void:
 	world.submit(result[0])
 	if session_log != null:
 		session_log.count("commands")
-	_pending.append([s.id, msg["seq"], result[0], world.tick])
+	_pending.append([s.id, msg["seq"], result[0]])
 
 
 ## The host abandons a paused ship alone (FT-NET-041, D96, D127); in PvP only its own ship.
