@@ -82,6 +82,8 @@ func test_every_action_within_two_taps() -> void:
 	for f: Array in FORMS:
 		var s: StationScreen = await _screen(f[0], f[1])
 		s.ctx.crew.select("contact", StationFixture.H2)
+		# A fault of unknown cause on the picked part, so Cause can act (C4: greyed otherwise).
+		s.ctx.view.blocks[StationViews.Section.ENGINEERING]["subsystems"][0]["fault"] = true
 		var e: EngineeringPanel = s.focused_panel()
 		assert_object(e.pages).is_not_null()
 		assert_array(e.pages.titles()).is_equal(["Power", "Ship", "Faults", "Crew"])
@@ -90,7 +92,7 @@ func test_every_action_within_two_taps() -> void:
 			var from: int = StationFixture.sent(s.ctx).sent.size()
 			var r: Dictionary = Reach.walk(s, {"page": row[1], "control": row[2], "taps": row[3]})
 			var what: String = "%s %s" % [row[0], f[0]]
-			assert_str(r["error"]).override_failure_message(what).is_empty()
+			assert_str(r["error"]).override_failure_message(what + " " + str(r["error"])).is_empty()
 			if row[4] != "":
 				assert_array(_kinds(s, from)).override_failure_message(what).contains([row[4]])
 			await _frames(1)

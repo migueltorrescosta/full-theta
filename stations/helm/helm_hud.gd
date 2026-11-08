@@ -12,6 +12,11 @@ extends Control
 
 const FONT_SIZE: int = 14
 const SMALL: int = 12
+## The least font size (sp) of a phone's read-outs (C7): the desktop sizes are too small there.
+const PHONE_FONT: int = 16
+## The envelope bars' percentage text and the gap before the bar need this much room (px).
+const PCT_W: float = 42.0
+const LABEL_GAP: float = 6.0
 ## Off-screen arrows sit this far inside the view's edge.
 const EDGE: float = 36.0
 ## On a phone an arrow keeps this far (px) from the read-outs (its label sits beside it).
@@ -78,6 +83,24 @@ func touch_layout() -> bool:
 	return panel.tablet_ui != null and (size.x < PHONE_W or size.y < TABLET_SHORT_H)
 
 
+## The font size (sp) of the read-outs: a phone's floor, else the desktop size.
+func _fs() -> int:
+	return maxi(FONT_SIZE, PHONE_FONT) if touch_layout() else FONT_SIZE
+
+
+func _small() -> int:
+	return PHONE_FONT if touch_layout() else SMALL
+
+
+## The room (px) a bar's label before it and percentage after it take.
+func _bar_extra() -> float:
+	var font: Font = get_theme_default_font()
+	var w: float = 0.0
+	for key: String in ["helm.max_thrust", "helm.max_turn", "helm.propellant"]:
+		w = maxf(w, font.get_string_size(tr(key), HORIZONTAL_ALIGNMENT_LEFT, -1, _small()).x)
+	return ceilf(w) + LABEL_GAP + PCT_W
+
+
 ## Envelope bar length: on a phone short enough that the read-out ends left of the reticle
 ## (when they share rows), down to TIGHT_BAR_W.
 func _bar_w() -> float:
@@ -91,8 +114,8 @@ func _bar_w() -> float:
 			return PHONE_BAR_W
 		# A tablet's narrow view: the bars end left of the compass at the bottom right.
 		var left: float = a.end.x - 3.0 * COMPASS_R - 8.0
-		return clampf(left - (a.position.x + 14.0) - 90.0, TIGHT_BAR_W, PHONE_BAR_W)
-	var room: float = ret.position.x - 8.0 - (a.position.x + 14.0) - 90.0
+		return clampf(left - (a.position.x + 14.0) - _bar_extra(), TIGHT_BAR_W, PHONE_BAR_W)
+	var room: float = ret.position.x - 8.0 - (a.position.x + 14.0) - _bar_extra()
 	return clampf(room, TIGHT_BAR_W, PHONE_BAR_W)
 
 
@@ -388,7 +411,7 @@ func _draw_thrust(font: Font) -> void:
 	for i: int in rows.size():
 		var text: String = "%s %s" % [rows[i][0], speed_text(float(rows[i][1]))]
 		var at: Vector2 = c + Vector2(CROSS_ARM * 3.6, -14.0 + 16.0 * i)
-		_text(font, at, text, Palette.color("text"), SMALL)
+		_text(font, at, text, Palette.color("text"), _small())
 
 
 ## The thrust cross and its read-outs, for the labels to keep clear of.
@@ -635,7 +658,9 @@ func _ring_rect() -> Rect2:
 ## The flight read-out's box: mode, speed, active modes and the three bars.
 func readout_rect() -> Rect2:
 	var a: Rect2 = area()
-	return Rect2(Vector2(a.position.x + 14.0, a.end.y - READOUT_H), Vector2(_bar_w() + 90.0, 130.0))
+	return Rect2(
+		Vector2(a.position.x + 14.0, a.end.y - READOUT_H), Vector2(_bar_w() + _bar_extra(), 130.0)
+	)
 
 
 func _compass_centre() -> Vector2:
@@ -818,7 +843,7 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 		font,
 		c + Vector2(-w / 2.0, chip_dy),
 		label,
-		SMALL,
+		_small(),
 		Palette.color("text"),
 		w,
 		HORIZONTAL_ALIGNMENT_CENTER
@@ -842,12 +867,20 @@ static func compass_filled(local: Vector3) -> bool:
 func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 	var h: Dictionary = panel.helm_block()
 	var decoupled: bool = bool(h.get("decoupled", false))
+	var fs: int = _fs()
 	var mode: String = tr("helm.decoupled_mode") if decoupled else tr("helm.assist")
-	_text(font, at, mode, Palette.color("warn") if decoupled else Palette.color("ok"))
+	if decoupled:
+		# A filled amber tag: the mode that turns the assists off is not missed (C7).
+		var tag: Vector2 = font.get_string_size(mode, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var top: float = at.y - font.get_ascent(fs) - 2.0
+		draw_rect(Rect2(at.x - 4.0, top, tag.x + 8.0, tag.y + 4.0), Palette.color("warn"))
+		_text(font, at, mode, Palette.color("background"), fs)
+	else:
+		_text(font, at, mode, Palette.color("ok"), fs)
 	var speed: String = tr("helm.speed") % roundi(velocity().length())
 	if not decoupled and full:
 		speed += "  " + tr("helm.setpoint") % roundi(float(h.get("throttle_setpoint", 0.0)))
-	_text(font, at + Vector2(0.0, 20.0), speed, Palette.color("text"))
+	_text(font, at + Vector2(0.0, 20.0), speed, Palette.color("text"), fs)
 	var modes: PackedStringArray = PackedStringArray()
 	for m: Array in [
 		["all_stop", "helm.all_stop"], ["approach", "helm.approach"], ["face", "helm.face"]
@@ -861,27 +894,37 @@ func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 	if int(h.get("docked_site", -1)) >= 0:
 		modes.append(tr("helm.docked"))
 	if not modes.is_empty():
-		_text(font, at + Vector2(0.0, 40.0), "  ".join(modes), Palette.color("accent"))
+		_text(font, at + Vector2(0.0, 40.0), "  ".join(modes), Palette.color("accent"), fs)
 	if not full:
 		return
 	var y: float = at.y + 62.0
-	_bar(font, Vector2(at.x, y), tr("helm.thrust"), float(h.get("thrust_scale", 1.0)), true)
-	_bar(font, Vector2(at.x, y + 18.0), tr("helm.turn"), float(h.get("torque_scale", 1.0)), true)
-	_bar(font, Vector2(at.x, y + 36.0), tr("helm.propellant"), panel.propellant_share(), false)
+	var pitch: float = 20.0 if touch_layout() else 18.0
+	_bar(font, Vector2(at.x, y), tr("helm.max_thrust"), float(h.get("thrust_scale", 1.0)), true)
+	_bar(
+		font, Vector2(at.x, y + pitch), tr("helm.max_turn"), float(h.get("torque_scale", 1.0)), true
+	)
+	_bar(
+		font, Vector2(at.x, y + 2.0 * pitch), tr("helm.propellant"), panel.propellant_share(), false
+	)
 
 
 ## A labelled bar: an envelope share (0..BAR_MAX, nominal ticked) or a 0..1 share;
-## nothing for a negative value (unknown).
+## nothing for a negative value (unknown). Fuel turns amber under a fifth and red under a
+## tenth, its percentage with it.
 func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) -> void:
 	if value < 0.0:
 		return
-	_text(font, at + Vector2(0.0, 10.0), label, Palette.color("text_dim"), SMALL)
-	var bar: Rect2 = Rect2(at + Vector2(48.0, 0.0), Vector2(_bar_w(), 10.0))
+	var fs: int = _small()
+	var label_w: float = _bar_extra() - PCT_W
+	_text(font, at + Vector2(0.0, 10.0 + (fs - SMALL) / 2.0), label, Palette.color("text_dim"), fs)
+	var bar: Rect2 = Rect2(at + Vector2(label_w, 0.0), Vector2(_bar_w(), 10.0))
 	var top: float = BAR_MAX if envelope else 1.0
 	draw_rect(bar, Color(Palette.color("background"), 0.6))
 	var fill: Rect2 = Rect2(bar.position, Vector2(bar.size.x * clampf(value / top, 0.0, 1.0), 10.0))
 	var low: bool = value < (0.75 if envelope else 0.2)
-	draw_rect(fill, Palette.color("warn") if low else Palette.color("ok"))
+	var critical: bool = not envelope and value < 0.1
+	var fill_role: String = "danger_text" if critical else ("warn" if low else "ok")
+	draw_rect(fill, Palette.color(fill_role))
 	draw_rect(bar, Palette.color("line"), false, 1.0)
 	if envelope:
 		var x: float = bar.position.x + bar.size.x / BAR_MAX
@@ -890,10 +933,10 @@ func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) 
 		)
 	_text(
 		font,
-		bar.position + Vector2(bar.size.x + 6.0, 10.0),
+		bar.position + Vector2(bar.size.x + 6.0, 10.0 + (fs - SMALL) / 2.0),
 		"%d%%" % roundi(value * 100.0),
-		Palette.color("text_dim"),
-		SMALL
+		Palette.color(fill_role) if low and not envelope else Palette.color("text_dim"),
+		fs
 	)
 
 

@@ -25,9 +25,9 @@ const RAIL_W: float = 168.0
 ## The radar inset (px): as wide as the rail, so its chips fit beside their blips.
 const RADAR_W: float = 168.0
 const RADAR_H: float = 124.0
-## The mount card shows two lines.
-const MOUNT_H: float = 64.0
-const FIRE_H: float = 104.0
+## The mount card shows three lines (state, heat, rounds).
+const MOUNT_H: float = 80.0
+const FIRE_H: float = 88.0
 ## Combat numbers (the mount card, the mount list) at 14 px; labels at 13 px.
 const FONT_NUM: int = 14
 const FONT_LABEL: int = 13
@@ -154,9 +154,19 @@ func read_top(overlay: Control) -> float:
 ## Texts, states and places from the panel, once a frame.
 func refresh() -> void:
 	var p: WeaponsPanel = _panel
-	mount_button.text = p.mount_text(p.mount)
-	claim_button.text = _claim_text(p.mount)
+	mount_button.text = WeaponsStatus.mount_text(p, p.mount)
+	_heat_colour(mount_button, WeaponsStatus.heat_role(p, p.mount))
+	claim_button.text = WeaponsStatus.claim_text(p, p.mount)
 	claim_button.disabled = not p.is_usable(p.mount)
+	claim_button.role = RailButton.Role.ACCENT if p.is_mine(p.mount) else RailButton.Role.PLAIN
+	# FIRE says why it can't shoot, and greys then (a free mount fires, V29).
+	var fire_text: String = WeaponsStatus.fire_text(p, p.mount)
+	if fire_button.text != fire_text:
+		fire_button.text = fire_text
+	var blocked: bool = WeaponsStatus.fire_block(p, p.mount) != ""
+	var fire_role: RailButton.Role = RailButton.Role.PLAIN if blocked else RailButton.Role.DANGER
+	if fire_button.role != fire_role:
+		fire_button.role = fire_role
 	ammo_button.text = p.ammo_name() + " ▸"
 	# (no target line on a phone: the frame's selection chip names the target)
 	target_label.text = ""
@@ -167,8 +177,19 @@ func refresh() -> void:
 	_place()
 
 
-## The mount list's rows from the panel: "1 bow · ready / heat 15% · 380/400", the camera
-## mount accented, and the claim button's Claim, Release or holder.
+## Colours the mount card's text by its heat role (warm amber, hot red), on every state.
+func _heat_colour(b: RailButton, role: String) -> void:
+	for state: String in [
+		"font_color", "font_hover_color", "font_pressed_color", "font_focus_color"
+	]:
+		if role == "text":
+			b.remove_theme_color_override(state)
+		else:
+			b.add_theme_color_override(state, Palette.color(role))
+
+
+## The mount list's rows from the panel ("1 bow · ready / heat 15% cool · 380/400 rounds"),
+## the camera mount accented, and the claim button's Claim (ticked when held) or holder.
 func _refresh_rows() -> void:
 	var p: WeaponsPanel = _panel
 	if rows.size() != p.mount_count():
@@ -199,19 +220,12 @@ func _refresh_rows() -> void:
 	for i: int in rows.size():
 		var look: RailButton = rows[i][0]
 		var claim: RailButton = rows[i][1]
-		look.text = p.mount_text(i)
+		look.text = WeaponsStatus.mount_text(p, i, true)
+		_heat_colour(look, WeaponsStatus.heat_role(p, i))
 		look.role = RailButton.Role.ACCENT if i == p.mount else RailButton.Role.PLAIN
 		look.disabled = not p.is_usable(i)
-		claim.text = _claim_text(i)
+		claim.text = WeaponsStatus.claim_text(p, i)
 		claim.disabled = not p.is_usable(i)
-
-
-func _claim_text(i: int) -> String:
-	if _panel.is_mine(i):
-		return TouchText.of("weapons.touch_release", "Release")
-	if _panel.is_usable(i):
-		return TouchText.of("weapons.touch_claim", "Claim")
-	return _panel.holder_name(i)
 
 
 ## Look through mount i (its key's intent: 1-4).
@@ -432,12 +446,12 @@ func _on_radar_input(event: InputEvent) -> void:
 ## one right rail over a full-width view; each box's text is "Name: what" (`help.weapons.*`).
 static func touch_help() -> Array:
 	var fire: Array = [
-		[Rect2(629, 64, 168, 64), "mount"],
-		[Rect2(629, 136, 80, 48), "ammo"],
-		[Rect2(717, 136, 80, 48), "guided"],
-		[Rect2(629, 192, 80, 48), "fire_all"],
-		[Rect2(717, 192, 80, 48), "claim"],
-		[Rect2(629, 262, 168, 104), "fire"],
+		[Rect2(629, 64, 168, 80), "mount"],
+		[Rect2(629, 152, 80, 48), "ammo"],
+		[Rect2(717, 152, 80, 48), "guided"],
+		[Rect2(629, 208, 80, 48), "fire_all"],
+		[Rect2(717, 208, 80, 48), "claim"],
+		[Rect2(629, 278, 168, 88), "fire"],
 		[Rect2(240, 150, 360, 150), "view"],
 		[Rect2(55, 234, 168, 124), "radar"],
 		[Rect2(192, 64, 284, 48), "chip"],
@@ -445,13 +459,13 @@ static func touch_help() -> Array:
 	var mounts: Array = [
 		[Rect2(231, 128, 286, 56), "row"],
 		[Rect2(525, 128, 88, 56), "row_claim"],
-		[Rect2(629, 262, 168, 104), "fire"],
+		[Rect2(629, 278, 168, 88), "fire"],
 	]
 	var crew: Array = [
 		[Rect2(629, 64, 168, 64), "requests"],
 		[Rect2(629, 136, 168, 48), "ping_mark"],
 		[Rect2(629, 192, 168, 48), "share"],
-		[Rect2(629, 262, 168, 104), "fire"],
+		[Rect2(629, 278, 168, 88), "fire"],
 	]
 	var out: Array = []
 	for page: Array in [["page.fire", fire], ["page.mounts", mounts], ["page.crew", crew]]:

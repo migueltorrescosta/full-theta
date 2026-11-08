@@ -223,7 +223,7 @@ func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
 	var helm: HelmPanel = s.panels[0]
 	var weapons: WeaponsPanel = s.panels[1]
 	assert_dict(helm.helm_block()).is_not_empty()
-	assert_dict(weapons._mount_row(0)).is_not_empty()
+	assert_dict(weapons.mount_row(0)).is_not_empty()
 	_tap(s, "Space")
 	weapons.ctx.crew.claims["mount:0"] = {"session": StationFixture.SESSION, "name": "Ana"}
 	_place(s.ctx, StationFixture.H2, Vector3(60.0, 40.0, -1500.0))

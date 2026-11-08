@@ -31,3 +31,16 @@ func test_focus_dot_sits_in_its_height_band() -> void:
 	# Beyond 60°: the overhead or under half of the centre.
 	assert_vector(_cell_of_focus(Vector3(0.1, 1.0, 0.0))).is_equal(Vector3.UP)
 	assert_vector(_cell_of_focus(Vector3(0.1, -1.0, 0.0))).is_equal(Vector3.DOWN)
+
+
+# FT: FT-HLM-011
+# C7: the weakest face is the hour farthest from the focus, found only when the shield is
+# focused (a spread shield covers every face alike), and its clock is read as 12 at the bow.
+func test_weakest_face_is_the_hour_opposite_the_focus() -> void:
+	ring.tightness = 2.0
+	ring.focus = ShieldRing.cell_direction(0, 1)
+	assert_int(ring.weakest_hour()).is_equal(6)
+	ring.focus = ShieldRing.cell_direction(3, 1)
+	assert_int(ring.weakest_hour()).is_equal(9)
+	ring.tightness = 0.0
+	assert_int(ring.weakest_hour()).is_equal(-1)

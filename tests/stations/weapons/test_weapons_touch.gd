@@ -167,8 +167,8 @@ func test_phone_landscape_one_right_rail() -> void:
 		assert_bool(b.is_visible_in_tree()).override_failure_message(b.name).is_true()
 		assert_bool(rail.encloses(b.get_global_rect())).is_true()
 	assert_bool(t.mount_list.is_visible_in_tree()).is_false()
-	assert_str(t.mount_button.text).is_equal("1 bow · ready\nheat 15% · 380/400")
-	assert_str(t.claim_button.text).is_equal("Release")
+	assert_str(t.mount_button.text).is_equal("1 bow · ready\nheat 15% cool\n380/400 rounds")
+	assert_str(t.claim_button.text).is_equal("✓ Claim")
 	assert_str(t.ammo_button.text).is_equal("Mass driver ▸")
 	# No target line on a phone: the selection chip shows U3, read-outs under its row.
 	assert_bool(t.target_label.visible).is_false()
@@ -342,7 +342,7 @@ func test_mount_list_looks_and_claims() -> void:
 	assert_int(t.rows.size()).is_equal(p.mount_count())
 	var look: RailButton = t.rows[0][0]
 	var claim: RailButton = t.rows[0][1]
-	assert_str(look.text).is_equal("1 bow · ready\nheat 15% · 380/400")
+	assert_str(look.text).is_equal("1 bow · ready\nheat 15% cool · 380/400 rounds")
 	assert_str(claim.text).is_equal("Claim")
 	_tap(look)
 	assert_array(heard).is_equal(["mount_1"])

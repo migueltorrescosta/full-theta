@@ -499,15 +499,19 @@ func _process(delta: float) -> void:
 	flash.update(now)
 	if phone:
 		frame.process(now)
+	var left: Dictionary = {}
+	for id: StringName in ctx.crew.shares:
+		left[id] = ctx.crew.share_left(id, now)
 	if frame.framed():
 		chip_strip.visible = false
 	else:
 		chip_strip.show_chips(
-			ChipView.incoming(ctx.view, stations), ChipView.outgoing(ctx.view, stations), ctx.view
+			ChipView.incoming(ctx.view, stations),
+			ChipView.outgoing(ctx.view, stations),
+			ctx.view,
+			ShareBar.incoming_lines(stations, left),
+			now
 		)
-	var left: Dictionary = {}
-	for id: StringName in ctx.crew.shares:
-		left[id] = ctx.crew.share_left(id, now)
 	# A phone panel with its shares on its Crew page shows no second set beside the radar.
 	var none: Array[StringName] = []
 	var own: bool = phone and focused_panel().shows_shares
