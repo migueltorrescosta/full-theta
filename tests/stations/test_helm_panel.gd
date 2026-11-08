@@ -267,11 +267,12 @@ func test_velocity_markers_sit_off_the_nose_by_the_drift_direction() -> void:
 
 
 # FT: FT-HLM-001, FT-STN-013
-# E2: at half resolution the 3D view is half the HUD's size, so a projected marker still sits
-# on the nose in HUD pixels.
+# E2: at half resolution the 3D view draws at half scale but keeps the HUD's size, so a
+# projected marker still sits on the nose in HUD pixels.
 func test_markers_keep_their_place_at_half_resolution() -> void:
-	_panel._container.stretch_shrink = 2
+	_panel._viewport.scaling_3d_scale = 0.5
 	await await_idle_frame()
+	assert_vector(Vector2(_panel._viewport.size)).is_equal(_panel.hud.size)
 	_drift(Vector3(0.0, 0.0, -80.0))
 	var pro: Dictionary = _marker("pro")
 	assert_bool(pro["edge"]).is_false()

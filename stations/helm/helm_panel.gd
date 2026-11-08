@@ -71,12 +71,12 @@ func _setup() -> void:
 	clip_contents = true
 	_container = SubViewportContainer.new()
 	_container.stretch = true
-	RenderQuality.track(_container)
 	_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_container)
 	_viewport = SubViewport.new()
 	_viewport.own_world_3d = true
+	RenderQuality.track(_viewport)
 	_container.add_child(_viewport)
 	view3d = HelmView.new()
 	_viewport.add_child(view3d)

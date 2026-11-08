@@ -5,39 +5,39 @@ extends GdUnitTestSuite
 func after_test() -> void:
 	ProceduralShip.low_graphics = false
 	Engine.max_fps = 0
-	RenderQuality.shrink = 1
+	RenderQuality.scale = 1.0
 
 
 # FT: FT-STN-013
-# Auto halves the 3D size on touch layouts only; Full and Half ignore the layout.
-func test_the_shrink_follows_the_mode_and_the_layout() -> void:
-	assert_int(RenderQuality.shrink_for("auto", true)).is_equal(2)
-	assert_int(RenderQuality.shrink_for("auto", false)).is_equal(1)
-	assert_int(RenderQuality.shrink_for("full", true)).is_equal(1)
-	assert_int(RenderQuality.shrink_for("half", false)).is_equal(2)
+# Auto halves the 3D scale on touch layouts only; Full and Half ignore the layout.
+func test_the_scale_follows_the_mode_and_the_layout() -> void:
+	assert_float(RenderQuality.scale_for("auto", true)).is_equal(0.5)
+	assert_float(RenderQuality.scale_for("auto", false)).is_equal(1.0)
+	assert_float(RenderQuality.scale_for("full", true)).is_equal(1.0)
+	assert_float(RenderQuality.scale_for("half", false)).is_equal(0.5)
 
 
 # FT: FT-STN-013
-# Apply reaches the tracked containers, the frame cap and the ships' tier; the default
+# Apply reaches the tracked views, the frame cap and the ships' tier; the default
 # settings leave a desktop as it was (full size, no cap, full graphics).
-func test_apply_sets_the_containers_the_cap_and_the_tier() -> void:
-	var box: SubViewportContainer = auto_free(SubViewportContainer.new())
+func test_apply_sets_the_views_the_cap_and_the_tier() -> void:
+	var box: SubViewport = auto_free(SubViewport.new())
 	add_child(box)
 	RenderQuality.track(box)
 	var s: ClientSettings = ClientSettings.new("user://test_render_quality.cfg")
 	RenderQuality.apply(s, false, get_tree())
-	assert_int(box.stretch_shrink).is_equal(1)
+	assert_float(box.scaling_3d_scale).is_equal(1.0)
 	assert_int(Engine.max_fps).is_equal(0)
 	assert_bool(ProceduralShip.low_graphics).is_false()
 	s.fps_cap = true
 	s.low_graphics = true
 	RenderQuality.apply(s, true, get_tree())
-	assert_int(box.stretch_shrink).is_equal(2)
+	assert_float(box.scaling_3d_scale).is_equal(0.5)
 	assert_int(Engine.max_fps).is_equal(RenderQuality.FPS_CAP)
 	assert_bool(ProceduralShip.low_graphics).is_true()
-	var later: SubViewportContainer = auto_free(SubViewportContainer.new())
+	var later: SubViewport = auto_free(SubViewport.new())
 	RenderQuality.track(later)
-	assert_int(later.stretch_shrink).is_equal(2)
+	assert_float(later.scaling_3d_scale).is_equal(0.5)
 
 
 # FT: FT-STN-013
