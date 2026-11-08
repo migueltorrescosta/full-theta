@@ -204,6 +204,29 @@ func test_the_subtitle_size_sits_in_the_game_tab_and_is_saved() -> void:
 
 
 # FT: FT-STN-013
+# E2: the Game tab has the 3D resolution, the 30 fps cap and Low graphics; each change tells
+# the shell to apply it (scale_changed) and is saved on close.
+func test_the_graphics_options_sit_in_the_game_tab_and_are_saved() -> void:
+	var m: SettingsScreen = _menu()
+	var game: Node = m.tabs.get_node(SettingsScreen.TAB_GAME)
+	var applied: Array[int] = [0]
+	m.scale_changed.connect(func() -> void: applied[0] += 1)
+	var pick: OptionButton = game.find_child("Render3d", true, false)
+	assert_int(pick.selected).is_equal(0)
+	pick.item_selected.emit(2)
+	(game.find_child("FpsCap", true, false) as CheckBox).toggled.emit(true)
+	(game.find_child("LowGraphics", true, false) as CheckBox).toggled.emit(true)
+	assert_int(applied[0]).is_equal(3)
+	assert_str(m.settings.render_3d).is_equal("half")
+	m.close()
+	var saved: ClientSettings = ClientSettings.new(CFG)
+	saved.load_file()
+	assert_str(saved.render_3d).is_equal("half")
+	assert_bool(saved.fps_cap).is_true()
+	assert_bool(saved.low_graphics).is_true()
+
+
+# FT: FT-STN-013
 # T5: a touch or phone layout's scale slider starts at 100 %; the saved scale is kept.
 func test_the_scale_slider_starts_at_100_percent_on_touch_layouts() -> void:
 	var m: SettingsScreen = _menu()

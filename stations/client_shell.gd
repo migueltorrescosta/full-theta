@@ -91,6 +91,8 @@ var _lang: String = ""
 var _locale: String = ""
 ## Panel scripts loaded in the lobby (kept, so they stay cached).
 var _scripts: Dictionary = {}
+## Whether the lobby has drawn the first-use materials off screen (GpuWarm).
+var _gpu_warmed: bool = false
 ## What this frame did (for a long frame's report), when the last frame started (µs), and
 ## whether the window lost focus since.
 var _doing: String = ""
@@ -138,6 +140,7 @@ func apply_ui_scale() -> void:
 		var dpr: float = maxf(LayoutMode.density(), 1.0) if OS.has_feature("web") else 1.0
 		var touch: bool = LayoutMode.is_touch(LayoutMode.kind_of(self))
 		get_tree().root.content_scale_factor = ctx.settings.effective_scale(touch) * dpr
+		RenderQuality.apply(ctx.settings, touch, get_tree())
 
 
 func _ready() -> void:
@@ -388,6 +391,10 @@ func _warm_step() -> void:
 			_note("load ship")
 			ProceduralShip.scene(look)
 			return
+	if not _gpu_warmed:
+		_gpu_warmed = true
+		_note("warm shaders")
+		add_child(GpuWarm.new(ProceduralShip.look_for(ctx.crew.ship_name())))
 
 
 ## The baked looks the lobby's ships (and this player's own) will show, the generic one last.

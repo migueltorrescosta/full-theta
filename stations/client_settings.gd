@@ -3,7 +3,8 @@ extends RefCounted
 ## Per-client settings, persisted in one ConfigFile under user:// (path injectable for
 ## tests): the player's name, bindings and hold-to-toggle choices (FT-STN-007,
 ## FT-STN-014), UI scale (FT-STN-013), first-visit hints already seen (FT-STN-012, D292),
-## invert pitch (S5), the music volume (#12) and the comfort options (FT-STN-017: the
+## invert pitch (S5), the music volume (#12), the graphics options (E2) and the comfort
+## options (FT-STN-017: the
 ## station cameras read them; the cosmetic reference plane is never spoken or used by
 ## rules, D124).
 
@@ -32,6 +33,12 @@ var invert_pitch: bool = false
 var subtitle_size: String = "normal"
 ## Ambient music level, 0 (off) to 1 (#12, D312); the effects and voice have no slider.
 var music_volume: float = MUSIC_DEFAULT
+## 3D resolution (E2): a RenderQuality mode, "auto" (half size on touch), "full" or "half".
+var render_3d: String = "auto"
+## Cap the frame rate at 30 fps (E2).
+var fps_cap: bool = false
+## Low Graphics tier (E2): ships drawn without the plating and normal maps.
+var low_graphics: bool = false
 ## Hint key -> true once its first-visit hint showed: a station's Controls chip (D292), the
 ## tab hint, the turn-sideways banner. Saved under the old key "tooltips_seen".
 var hints_seen: Dictionary = {}
@@ -75,6 +82,10 @@ func load_file() -> Error:
 	music_volume = music if music >= 0.0 and music <= 1.0 else MUSIC_DEFAULT
 	var sub_size: String = _value(cfg, "ui", "subtitle_size", "normal")
 	subtitle_size = sub_size if SUBTITLE_SIZES.has(sub_size) else "normal"
+	var res: String = _value(cfg, "graphics", "render_3d", "auto")
+	render_3d = res if res in RenderQuality.MODES else "auto"
+	fps_cap = _value(cfg, "graphics", "fps_cap", false)
+	low_graphics = _value(cfg, "graphics", "low_graphics", false)
 	bindings.from_dict(_value(cfg, "input", "bindings", {}))
 	hints_seen.clear()
 	for s: Variant in _value(cfg, "ui", "tooltips_seen", []):
@@ -99,6 +110,9 @@ func save() -> Error:
 	cfg.set_value("ui", "scale", ui_scale)
 	cfg.set_value("ui", "subtitle_size", subtitle_size)
 	cfg.set_value("ui", "tooltips_seen", hints_seen.keys())
+	cfg.set_value("graphics", "render_3d", render_3d)
+	cfg.set_value("graphics", "fps_cap", fps_cap)
+	cfg.set_value("graphics", "low_graphics", low_graphics)
 	cfg.set_value("input", "invert_pitch", invert_pitch)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("input", "bindings", bindings.to_dict())
