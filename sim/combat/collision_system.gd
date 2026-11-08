@@ -29,6 +29,9 @@ const WARNING_HORIZON: float = 5.0
 ## one fires on the tick motion brings the pair within reach; when a velocity change
 ## makes it warnable instead, it can wait up to this many ticks (stateless check).
 const WARNING_REPEAT_TICKS: int = 30
+## Most a ship takes from collisions in one tick, as a share of its hull_max (R16-4): a
+## ram hurts but does not out-damage a cannon volley at assist speed.
+const HULL_CAP_PER_TICK: float = 0.1
 
 
 static func step(world: SimWorld) -> void:
@@ -253,8 +256,18 @@ static func _collision_hit(
 	hit.kind = &"collision"
 	hit.point_local = world.kin.to_local(target, point)
 	hit.from_local = world.kin.to_local(target, toward).normalized()
-	hit.energy = energy
+	hit.energy = minf(energy, _cap_left(world, target))
 	world.hits.append(hit)
+
+
+## What a target may still take from collisions this tick (J): HULL_CAP_PER_TICK of its
+## hull_max less the collision hits already queued on it (R16-4, D119 revisited).
+static func _cap_left(world: SimWorld, target: int) -> float:
+	var left: float = HULL_CAP_PER_TICK * world.defs[target].hull_max
+	for queued: SimHit in world.hits:
+		if queued.target_id == target and queued.kind == &"collision":
+			left -= queued.energy
+	return maxf(left, 0.0)
 
 
 ## Moves every projectile one tick and sweeps it against the ships near its path,

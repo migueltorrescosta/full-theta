@@ -89,6 +89,34 @@ func test_beam_hits_at_once_within_range() -> void:
 	assert_int(_hits_on(far[0].drain_events(), far[2]).size()).is_equal(0)
 
 
+# FT: FT-SIM-013
+# Two ships in line: only the nearer takes the beam. A beam at nothing still spends its
+# energy and cooldown and creates no hit.
+func test_beam_hits_only_the_nearest_ship() -> void:
+	var beam: WeaponDef = _weapon(BEAM)
+	var d: Array = _duel(beam, 2000.0)
+	var world: SimWorld = d[0]
+	var behind: int = world.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -3000))
+	world.shields.strength[behind] = 0.0
+	var far_hull: float = _hull(world, behind)
+	_fire(world, d[1])
+	world.step()
+	var events: Array[SimEvent] = world.drain_events()
+	assert_int(_hits_on(events, d[2]).size()).is_equal(1)
+	assert_int(_hits_on(events, behind).size()).is_equal(0)
+	assert_float(_hull(world, behind)).is_equal(far_hull)
+	var empty: Array = _duel(beam, beam.max_range + 500.0)
+	var spent: SimWorld = empty[0]
+	var energy: float = spent.power.weapon_energy[empty[1]]
+	_fire(spent, empty[1])
+	spent.step()
+	events = spent.drain_events()
+	assert_int(SimFixture.of_kind(events, &"hit").size()).is_equal(0)
+	assert_int(SimFixture.of_kind(events, &"fired").size()).is_equal(1)
+	assert_float(spent.power.weapon_energy[empty[1]]).is_less(energy)
+	assert_float(spent.mounts.cooldown[0]).is_greater(0.0)
+
+
 # FT: FT-SIM-013, FT-SIM-022
 # Beam damage carries the weapon's damage type to the resistance step.
 func test_beam_hit_carries_its_damage_type() -> void:

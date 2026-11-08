@@ -281,3 +281,33 @@ func test_no_frequency_mechanic() -> void:
 	for o: Object in objects:
 		for p: Dictionary in o.get_property_list():
 			assert_str(String(p["name"]).to_lower()).not_contains("freq")
+
+
+# FT: FT-SIM-019
+# Regeneration is 5e5 J/s at nominal power: it scales with the shield pips, stops at 0
+# pips and with the subsystem destroyed, and never passes the maximum strength.
+func test_regen_scales_with_power_and_caps_at_max() -> void:
+	var w: SimWorld = _world()
+	w.shields.strength[0] = 0.0
+	for i: int in 60:
+		w.step()
+	assert_float(w.shields.strength[0]).is_equal_approx(5e5, 1e-3)
+	var off: SimWorld = _world()
+	assert_bool(ShieldSystem.set_power_and_tightness(off, 0, 0, -1.0)).is_true()
+	off.shields.strength[0] = 0.0
+	for i: int in 60:
+		off.step()
+	assert_float(off.shields.strength[0]).is_equal(0.0)
+	var dead: SimWorld = _world()
+	dead.damage.health[dead.damage.find_subsystem(0, &"shields")] = 0.0
+	dead.shields.strength[0] = 0.0
+	for i: int in 60:
+		dead.step()
+	assert_float(dead.shields.strength[0]).is_equal(0.0)
+	assert_float(ShieldSystem.absorb_fraction(dead, 0, Vector3.FORWARD)).is_equal(0.0)
+	var full: SimWorld = _world()
+	var top: float = full.defs[0].shields.max_strength
+	full.shields.strength[0] = top - 1e5
+	for i: int in 60:
+		full.step()
+	assert_float(full.shields.strength[0]).is_equal(top)

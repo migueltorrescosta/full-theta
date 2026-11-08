@@ -10,6 +10,9 @@ static func resolve(world: SimWorld) -> void:
 	for hit: SimHit in world.hits:
 		if not world.kin.is_alive(hit.target_id):
 			continue
+		# A docked ship takes no collision or weapon damage (R16-16).
+		if world.helm.docked_site[hit.target_id] >= 0:
+			continue
 		var resist: Dictionary[StringName, float] = world.defs[hit.target_id].resistances
 		if not resist.is_empty():
 			hit.energy *= resist.get(hit.damage_type, 1.0)
