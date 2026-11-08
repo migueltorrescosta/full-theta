@@ -217,7 +217,7 @@ Which entry sees which section, and the block field sets, are each entry's `Stat
 
 ## Discovery
 
-The LAN beacon (`net/lan_beacon.gd`, FT-NET-012) is one UDP datagram broadcast to 255.255.255.255:47790 once a second; `LanBrowser` lists a host until 3.5 s after its last datagram. A server bound to a loopback address sends none (no other machine could join it), and neither does one started with `--no-beacon`. Ports: WebSocket 47801, HTTP 47800 (WS − 1, D108), discovery 47790 (UDP).
+The LAN beacon (`net/lan_beacon.gd`, FT-NET-012) is one UDP datagram broadcast once a second to 255.255.255.255:47790 and to the subnet broadcast address (a.b.c.255, a /24 is assumed) of each local IPv4 interface, since the limited broadcast leaves by one interface only; a failure to open the socket or to send is logged once (`start_beacon` returns the error); `LanBrowser` lists a host until 3.5 s after its last datagram. A server bound to a loopback address sends none (no other machine could join it), and neither does one started with `--no-beacon`. Ports: WebSocket 47801, HTTP 47800 (WS − 1, D108), discovery 47790 (UDP).
 
 The datagram is little-endian and append-only: a newer format adds fields at the end, and a parser reads the fields it knows.
 
