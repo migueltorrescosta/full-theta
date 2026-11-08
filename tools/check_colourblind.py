@@ -45,6 +45,7 @@ CONFUSED_DE = 5.0  # ... and are confusable when a simulation brings them under 
 TEXT_CARRIERS = {
     "stations/science/science_panel.gd": "list rows tinted by allegiance; the row text starts with the callsign",
     "stations/station_screen.gd": "the alert flash; the top bar shows the letter and shape",
+    "stations/station_common_actions.gd": "the alert intents set a level; the top bar shows the letter and shape",
     "stations/station_alerts.gd": "the alert flash and tone; the top bar shows the letter and shape",
     "input/intent_table.gd": "intent ids only, no drawing",
     "audio/alert_tones.gd": "tone ids only, no drawing",

@@ -44,9 +44,7 @@ func setup(context: StationContext) -> void:
 
 
 func _enter_tree() -> void:
-	if not get_viewport().size_changed.is_connected(_place):
-		get_viewport().size_changed.connect(_place)
-		minimum_size_changed.connect(_place, CONNECT_DEFERRED)
+	PhoneSheet.follow_viewport(self, _place, true)
 	_place.call_deferred()
 
 
@@ -55,7 +53,7 @@ func _enter_tree() -> void:
 func _place() -> void:
 	if not is_inside_tree() or _ok == null:
 		return
-	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var phone: bool = PhoneSheet.is_phone(self)
 	_ok.size_flags_horizontal = (Control.SIZE_SHRINK_END if phone else Control.SIZE_SHRINK_CENTER)
 	if phone:
 		reset_size()

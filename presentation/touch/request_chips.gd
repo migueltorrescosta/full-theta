@@ -106,12 +106,10 @@ func _rebuild(chips: Array, notes: Array[String]) -> void:
 
 func _row(border: String) -> PanelContainer:
 	var row: PanelContainer = PanelContainer.new()
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
-	sb.border_color = Palette.color(border)
-	sb.set_border_width_all(UiTheme.BORDER)
-	sb.set_corner_radius_all(UiTheme.RADIUS)
-	sb.content_margin_left = UiTheme.TOUCH_GAP
+	# (only the left margin set: the others keep Godot's default)
+	var sb: StyleBoxFlat = UiTheme.box(
+		"panel", border, -1, -1, UiTheme.OVERLAY_ALPHA, UiTheme.TOUCH_GAP
+	)
 	row.add_theme_stylebox_override("panel", sb)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return row

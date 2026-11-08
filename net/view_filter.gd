@@ -144,6 +144,9 @@ func apply(kind: int, values: Dictionary, world: SimWorld, ship: int) -> void:
 			values["hull"] = hull(values["hull"], def.hull_max)
 			values["shields"] = summarise(values["shields"], def.shields.max_strength, ENG)
 			values["pips_used"] = summarise(values["pips_used"], def.power.reactor_pips, ENG)
+			# The reactor's health is Engineering's data: others see the nominal cap.
+			if summary_mode(ENG) < 2:
+				values["pip_cap"] = def.power.reactor_pips
 			values["propellant"] = summarise(
 				values["propellant"], def.propellant_capacity, HELM_ENG
 			)

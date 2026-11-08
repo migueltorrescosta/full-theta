@@ -348,7 +348,7 @@ func test_desktop_keeps_the_board() -> void:
 	assert_bool(p.rep_view.visible or p.crew_page.visible).is_false()
 	assert_bool(p._bar.is_visible_in_tree()).is_true()
 	assert_bool(p.overlay.top_level).is_false()
-	assert_bool(p._top_gap.visible or p._foot_gap.visible).is_false()
+	assert_bool(p.phone.top_gap.visible or p.phone.foot_gap.visible).is_false()
 	_drop(s)
 
 

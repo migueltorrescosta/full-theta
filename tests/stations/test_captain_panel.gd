@@ -130,7 +130,7 @@ func test_the_captain_sends_no_mechanics_command() -> void:
 			else str(row["group"])
 		)
 		s.dispatch({"id": id, "group": row["group"], "target": target, "pressed": true})
-	s._set_alert(2)
+	s.common.set_alert(2)
 	s.top_bar.open_alert_picker()
 	for sent: Array in rec.sent:
 		assert_array(ALLOWED).contains([sent[0]])
@@ -146,7 +146,7 @@ func test_marks_only_into_empty_slots() -> void:
 	var s: StationScreen = await _screen()
 	var rec: StationFixture.RecordingClient = StationFixture.sent(s.ctx)
 	s.ctx.crew.select("contact", StationFixture.H2)
-	s._mark(IntentTable.KBM)
+	s.common.mark(IntentTable.KBM)
 	assert_int(rec.of("place_mark").size()).is_equal(1)
 	assert_int(rec.of("place_mark")[0][1][0]).is_equal(-1)
 	var marks: Array = []
@@ -155,7 +155,7 @@ func test_marks_only_into_empty_slots() -> void:
 			{"slot": slot, "name": "M%d" % slot, "contact": -1, "x": 0, "y": 0, "z": 0, "by": "Ana"}
 		)
 	s.ctx.crew.handle_event({"type": "marks", "payload": {"ship": 0, "marks": marks}}, 1)
-	s._mark(IntentTable.KBM)
+	s.common.mark(IntentTable.KBM)
 	assert_int(rec.of("place_mark").size()).is_equal(1)
 	assert_array(rec.of("move_mark")).is_empty()
 	assert_array(rec.of("delete_mark")).is_empty()
@@ -222,7 +222,7 @@ func test_a_card_ping_shows_the_card_for_ten_seconds() -> void:
 	)
 	assert_int(crew.shown_card(t0 + 7001)).is_equal(1)
 	assert_float(crew.pulse("card", 1, t0 + 7001)).is_equal(0.0)
-	assert_bool(s._select("kbm")).is_false()
+	assert_bool(s.common.select("kbm")).is_false()
 
 
 # FT: FT-CPT-004, FT-CPT-005

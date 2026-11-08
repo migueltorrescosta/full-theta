@@ -71,9 +71,8 @@ func setup(context: StationContext, prompt_kind: Kind, floating: bool = true) ->
 
 
 func _enter_tree() -> void:
-	if _floating and not get_viewport().size_changed.is_connected(_place):
-		get_viewport().size_changed.connect(_place)
-		minimum_size_changed.connect(_place, CONNECT_DEFERRED)
+	if _floating:
+		PhoneSheet.follow_viewport(self, _place, true)
 
 
 ## Where a floating prompt sits: clear of the view's centre, the give-up vote under the top
@@ -83,7 +82,7 @@ func _enter_tree() -> void:
 func _place() -> void:
 	if not _floating or not is_inside_tree():
 		return
-	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var phone: bool = PhoneSheet.is_phone(self)
 	var top: bool = kind == Kind.FORFEIT or phone
 	if phone:
 		# Back to the content's size (a wrapped title is taller before its first layout).

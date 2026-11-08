@@ -430,6 +430,8 @@ const BLOCKS: Dictionary = {
 		["hull", "f32"],
 		["shields", "f32"],
 		["pips_used", "u8"],
+		# What the reactor can feed now (PowerSystem.pip_cap: lower while it is damaged).
+		["pip_cap", "u8"],
 		["propellant", "f32"],
 		# The main screen switches to chase while decoupled (FT-MSC-001).
 		["decoupled", "bool"],
@@ -950,6 +952,7 @@ static func _status(world: SimWorld, ship: int) -> Dictionary:
 		"hull": world.damage.health[hull_row],
 		"shields": world.shields.strength[ship],
 		"pips_used": pips,
+		"pip_cap": PowerSystem.pip_cap(world, ship),
 		"propellant": world.kin.propellant[ship],
 		"decoupled": world.helm.decoupled[ship] == 1,
 	}

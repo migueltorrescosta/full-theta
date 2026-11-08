@@ -210,7 +210,7 @@ func test_shares_on_the_crew_page() -> void:
 	await _frames(2)
 	assert_str(s.focused_station()).is_equal("engineering")
 	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
-	var crew: CrewPage = (s.focused_panel() as EngineeringPanel).crew_page
+	var crew: CrewPage = (s.focused_panel() as EngineeringPanel).phone.crew_page
 	crew.refresh()
 	var share: Array = crew.entries().filter(func(e: Array) -> bool: return e[0] == "share")
 	assert_array(share).is_not_empty()
@@ -222,7 +222,7 @@ func test_shares_on_the_crew_page() -> void:
 
 ## The Crew page's first Share button of the focused Engineering panel.
 func _share_button(sc: StationScreen) -> BaseButton:
-	return (sc.focused_panel() as EngineeringPanel).crew_page.button("share")
+	return (sc.focused_panel() as EngineeringPanel).phone.crew_page.button("share")
 
 
 # FT: FT-STN-005

@@ -59,6 +59,34 @@ var selection_extras: Array = []
 var _chip_menu: ChipMenu = null
 
 
+## The StationScreen holding this panel (the first one up the tree), or null.
+func screen() -> StationScreen:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	return n as StationScreen
+
+
+## How many panels the screen holding this panel has (1 when none): the dev seat's
+## catalogue entry names no stations, so the screen is the one to ask.
+func screen_panels() -> int:
+	var s: StationScreen = screen()
+	return s.panels.size() if s != null else 1
+
+
+## The form of the screen holding this panel (PhoneFrame.form_of_panel).
+func layout_form() -> LayoutMode.Form:
+	return PhoneFrame.form_of_panel(self)
+
+
+## The screen binds the focused panel's pages when it lays out; a panel that builds (or
+## drops) its phone pages after that has the screen bind them again.
+func rebind_tabs() -> void:
+	var s: StationScreen = screen()
+	if s != null and s.is_inside_tree() and s.focused_panel() == self:
+		s.pages_changed()
+
+
 ## Called once by the screen before the panel enters the tree.
 func setup(context: StationContext, station_id: String) -> void:
 	ctx = context
@@ -297,7 +325,7 @@ func _more_pips(kind: SubsystemDef.Kind) -> void:
 	var pips: int = int(rows[at].get("pips", 0)) + 1
 	if pips > def.power.max_pips_per_subsystem:
 		ctx.crew.toast.emit("toast.chip_pips_max", {})
-	elif used + 1 > def.power.reactor_pips:
+	elif used + 1 > ctx.pip_cap():
 		ctx.crew.toast.emit("toast.eng_cap", {})
 	else:
 		ctx.intents.command({"kind": "set_pips", "subsystem_kind": int(kind), "pips": pips})
