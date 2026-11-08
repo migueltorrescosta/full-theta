@@ -221,7 +221,8 @@ func test_phone_top_bar() -> void:
 	assert_bool(bar._name.is_visible_in_tree()).is_false()
 	assert_bool(bar.sound.is_visible_in_tree()).is_false()
 	assert_bool(bar.glance.is_visible_in_tree()).is_true()
-	assert_str(bar._phone_timer.text).is_equal("00:50")
+	# (the timer cell's second line is the goal chip's short count, C2)
+	assert_str(bar._phone_timer.text).is_equal("00:50\n2 foes")
 	assert_int(bar.tabs.tab_count()).is_equal(3)
 	var menus: Array[bool] = []
 	s.menu_requested.connect(func() -> void: menus.append(true))
