@@ -363,7 +363,7 @@ func refresh() -> void:
 	_stage.visible = own or session != SESSION_NONE
 	scan_game.visible = session == SESSION_SCAN
 	hack_game.visible = session == SESSION_HACK
-	var age: float = maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / 60.0)
+	var age: float = maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / SimRate.HZ)
 	if session == SESSION_SCAN:
 		scan_game.load_block(b)
 		scan_game.title = tr("sci.scan_title") % ctx.view.callsign(int(b.get("session_target", -1)))
@@ -621,7 +621,9 @@ func session_title() -> String:
 	var session: int = int(b.get("session", SESSION_NONE))
 	if session == SESSION_NONE:
 		return ""
-	var age: int = floori(maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / 60.0))
+	var age: int = floori(
+		maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / SimRate.HZ)
+	)
 	var who: String = ctx.view.callsign(int(b.get("session_target", -1)))
 	if session == SESSION_SCAN:
 		return TouchText.of("sci.session_scan", "Scan %s · %d s") % [who, age]
