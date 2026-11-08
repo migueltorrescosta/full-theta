@@ -301,25 +301,25 @@ func test_hard_leaks_only_marks_and_pings() -> void:
 	# Events: Science's work reaches Weapons and Engineering only through a toggle; scan
 	# positions are MARK items and reach Helm at every difficulty.
 	for code: String in ["normal", "hard"]:
-		assert_bool(StationViews.sees_event("weapons", &"hack_done", code)).is_false()
-		assert_bool(StationViews.sees_event("weapons", &"hack_window_end", code)).is_false()
-		assert_bool(StationViews.sees_event("engineering", &"self_scan_done", code)).is_false()
-		assert_bool(StationViews.sees_event("weapons", &"lane_warning", code)).is_false()
-		assert_bool(StationViews.sees_event("science", &"hack_done", code)).is_true()
-		assert_bool(StationViews.sees_event("relay", &"lane_warning", code)).is_true()
-		assert_bool(StationViews.sees_event("helm", &"scan_mark", code)).is_true()
+		assert_bool(EventRouting.sees_event("weapons", &"hack_done", code)).is_false()
+		assert_bool(EventRouting.sees_event("weapons", &"hack_window_end", code)).is_false()
+		assert_bool(EventRouting.sees_event("engineering", &"self_scan_done", code)).is_false()
+		assert_bool(EventRouting.sees_event("weapons", &"lane_warning", code)).is_false()
+		assert_bool(EventRouting.sees_event("science", &"hack_done", code)).is_true()
+		assert_bool(EventRouting.sees_event("relay", &"lane_warning", code)).is_true()
+		assert_bool(EventRouting.sees_event("helm", &"scan_mark", code)).is_true()
 	# Easy delivers them only while the source shares (D210).
-	assert_bool(StationViews.sees_event("weapons", &"hack_done", "easy")).is_false()
+	assert_bool(EventRouting.sees_event("weapons", &"hack_done", "easy")).is_false()
 	var weak: String = _shared("easy", [&"weak_points"])
-	assert_bool(StationViews.sees_event("weapons", &"hack_done", weak)).is_true()
-	assert_bool(StationViews.sees_event("weapons", &"lane_warning", weak)).is_false()
+	assert_bool(EventRouting.sees_event("weapons", &"hack_done", weak)).is_true()
+	assert_bool(EventRouting.sees_event("weapons", &"lane_warning", weak)).is_false()
 	var causes: String = _shared("easy", [&"diagnosed_causes"])
-	assert_bool(StationViews.sees_event("engineering", &"self_scan_done", causes)).is_true()
+	assert_bool(EventRouting.sees_event("engineering", &"self_scan_done", causes)).is_true()
 	var tracks: String = _shared("easy", [&"track_feeds"])
-	assert_bool(StationViews.sees_event("weapons", &"lane_warning", tracks)).is_true()
+	assert_bool(EventRouting.sees_event("weapons", &"lane_warning", tracks)).is_true()
 	# A joint view holding the source station gets them at any difficulty.
-	assert_bool(StationViews.sees_event("targeting", &"hack_done", "hard")).is_true()
-	assert_bool(StationViews.sees_event("systems", &"self_scan_done", "hard")).is_true()
+	assert_bool(EventRouting.sees_event("targeting", &"hack_done", "hard")).is_true()
+	assert_bool(EventRouting.sees_event("systems", &"self_scan_done", "hard")).is_true()
 
 
 # FT: FT-NET-009, FT-PAIR-005
@@ -391,11 +391,11 @@ func test_skipping_blanked_lists_changes_no_bytes() -> void:
 				if filter == null:
 					continue
 				for kind: int in [StationViews.Section.FEEDS, StationViews.Section.RELAY]:
-					var values: Dictionary = StationViews._block_values(kind, world, ME)
-					filter.apply(kind, values, world, ME)
+					var values: Dictionary = StationBlocks._block_values(kind, world, ME)
+					filter.apply(kind, values, world.defs[ME])
 					var want: PackedByteArray = NetBlock.encode(StationViews.BLOCKS[kind], values)
 					(
-						assert_array(StationViews.block_bytes(kind, world, ME, filter))
+						assert_array(StationBlocks.block_bytes(kind, world, ME, filter))
 						. override_failure_message("%s %s %s %d" % [entry, code, shared, kind])
 						. is_equal(want)
 					)

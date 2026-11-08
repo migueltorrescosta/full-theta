@@ -10,9 +10,9 @@ var p_units: int = 0
 var seq: int = -1
 var tick: int = 0
 var full_count: int = 0
-## KinSection.read() of the own ship, or {}.
+## SnapshotReader.read_kin() of the own ship, or {}.
 var kin: Dictionary = {}
-## Section kind -> decoded block (StationViews.BLOCKS fields).
+## Section kind -> decoded block (BlockSchema.BLOCKS fields).
 var blocks: Dictionary = {}
 ## {"model": id -> [pos, vel, tick], "info": id -> [flags, callsign]}.
 var contacts: Dictionary = {}
@@ -41,12 +41,12 @@ func _init(period_units: int = 0) -> void:
 ## Applies one snapshot message; false if it couldn't be applied: the view then needs
 ## a full snapshot (need_full) and refuses deltas until one arrives.
 func apply(data: PackedByteArray) -> bool:
-	if data.size() < SnapshotBuilder.HEADER_BYTES or data[0] != NetProtocol.Type.SNAPSHOT:
+	if data.size() < SnapshotReader.HEADER_BYTES or data[0] != NetProtocol.Type.SNAPSHOT:
 		return _reject()
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.data_array = data
 	buf.seek(1)
-	var is_full: bool = buf.get_u8() & SnapshotBuilder.FLAG_FULL != 0
+	var is_full: bool = buf.get_u8() & SnapshotReader.FLAG_FULL != 0
 	var new_seq: int = buf.get_u32()
 	if not is_full and (need_full or seq < 0 or new_seq != seq + 1):
 		return _reject()
@@ -64,7 +64,7 @@ func apply(data: PackedByteArray) -> bool:
 		full_count += 1
 	for i: int in range(n):
 		var kind: int = buf.get_u8()
-		var size: int = SnapshotBuilder.get_length(buf)
+		var size: int = SnapshotReader.get_length(buf)
 		var start: int = buf.get_position()
 		if start + size > data.size():
 			return _reject()
@@ -122,20 +122,20 @@ func _apply_section(
 ) -> bool:
 	match kind:
 		StationViews.Section.KIN:
-			kin = KinSection.read(buf)
+			kin = SnapshotReader.read_kin(buf)
 		StationViews.Section.CONTACTS:
-			return ContactsSection.apply(contacts, buf, is_full, at, p_units)
+			return SnapshotReader.apply_contacts(contacts, buf, is_full, at, p_units)
 		StationViews.Section.SITES:
-			sites = SitesSection.read(buf)
+			sites = SnapshotReader.read_sites(buf)
 		StationViews.Section.NEAR:
-			NearSection.apply(near, buf, is_full, at)
+			SnapshotReader.apply_near(near, buf, is_full, at)
 		StationViews.Section.PROJECTILES:
-			ProjectilesSection.apply(projectiles, buf, is_full, at)
+			SnapshotReader.apply_projectiles(projectiles, buf, is_full, at)
 		StationViews.Section.OWNERSHIP:
-			ownership = OwnershipSection.read(part)
+			ownership = SnapshotReader.read_ownership(part)
 			return not ownership.is_empty()
 		_:
-			if not StationViews.BLOCKS.has(kind):
+			if not BlockSchema.BLOCKS.has(kind):
 				return false
-			blocks[kind] = NetBlock.decode(StationViews.BLOCKS[kind], part)
+			blocks[kind] = NetBlock.decode(BlockSchema.BLOCKS[kind], part)
 	return true

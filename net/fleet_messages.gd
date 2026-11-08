@@ -118,15 +118,23 @@ static func fleet_ship(
 
 ## The multi-ship lobby: every ship, the host's mode and options, the crewed ships that have
 ## not pressed Start yet (waiting) and whether the universe has started (all together, M4-Q4).
+## `mode` and `team_win` are SessionRules' names; the server fills them, so this class names
+## no sim class and the clients may read it (F4).
 static func fleet(
-	ships: Array, rules: SessionRules, lives: int, waiting: Array, started: bool
+	ships: Array,
+	mode: String,
+	team_win: String,
+	max_ships: int,
+	lives: int,
+	waiting: Array,
+	started: bool
 ) -> Dictionary:
 	return {
 		"ships": ships,
-		"mode": SessionRules.MODE_NAMES[rules.mode],
-		"team_win": SessionRules.TEAM_WIN_NAMES[rules.team_win],
+		"mode": mode,
+		"team_win": team_win,
 		"lives": lives,
-		"max_ships": SessionRules.MAX_SHIPS,
+		"max_ships": max_ships,
 		"waiting": waiting,
 		"started": started,
 	}
@@ -177,13 +185,16 @@ static func relaunched(ship: int, lives: int) -> Dictionary:
 	return {"ship": ship, "lives": lives}
 
 
-## time_s: the session's length; held_s: HOLDOUT's score, how long the finite side lasted.
-static func session_over(outcome: SessionOutcome, time_s: float) -> Dictionary:
+## The session's outcome (SessionOutcome: its reason name, winners and team); time_s: the
+## session's length; held_s: HOLDOUT's score, how long the finite side lasted.
+static func session_over(
+	reason: String, winners: Array, team: int, held_s: float, time_s: float
+) -> Dictionary:
 	return {
-		"reason": SessionOutcome.REASON_NAMES[outcome.reason],
-		"winners": Array(outcome.winners),
-		"team": outcome.team,
-		"held_s": float(outcome.held_ticks) / SimWorld.HZ,
+		"reason": reason,
+		"winners": winners,
+		"team": team,
+		"held_s": held_s,
 		"time_s": time_s,
 	}
 

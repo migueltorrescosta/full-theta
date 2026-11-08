@@ -52,28 +52,6 @@ func full() -> PackedByteArray:
 	return _last
 
 
-## Client side: [{"id", "name_key", "kind" (StringName), "dockable", "radius" (m), "pos"
-## (Vector3, m in the cube)}] from a section's bytes.
+## Client side: SnapshotReader.read_sites.
 static func read(buf: StreamPeerBuffer) -> Array[Dictionary]:
-	var out: Array[Dictionary] = []
-	for i: int in range(buf.get_u8()):
-		var id: int = buf.get_u16()
-		var kind: int = buf.get_u8()
-		var dockable: bool = buf.get_u8() != 0
-		var radius: float = buf.get_float()
-		var pos: Vector3 = NetCodec.pos_of(NetCodec.get3_32(buf))
-		var name_key: String = buf.get_data(buf.get_u8())[1].get_string_from_utf8()
-		(
-			out
-			. append(
-				{
-					"id": id,
-					"name_key": name_key,
-					"kind": SiteDef.KINDS[clampi(kind, 0, SiteDef.KINDS.size() - 1)],
-					"dockable": dockable,
-					"radius": radius,
-					"pos": pos,
-				}
-			)
-		)
-	return out
+	return SnapshotReader.read_sites(buf)

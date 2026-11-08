@@ -16,7 +16,7 @@ func _init(section_kind: int, owner_id: int, view_filter: ViewFilter = null) -> 
 
 
 func update(world: SimWorld) -> PackedByteArray:
-	var bytes: PackedByteArray = StationViews.block_bytes(kind, world, owner, filter)
+	var bytes: PackedByteArray = StationBlocks.block_bytes(kind, world, owner, filter)
 	if bytes == _last:
 		return PackedByteArray()
 	_last = bytes

@@ -180,7 +180,7 @@ func _read(rig: ShakedownRig, readout: String) -> String:
 		StationViews.Section.COMMS
 	]:
 		_ctx.view.blocks[kind] = NetBlock.decode(
-			StationViews.BLOCKS[kind], StationViews.block_bytes(kind, rig.world, 0)
+			StationViews.BLOCKS[kind], StationBlocks.block_bytes(kind, rig.world, 0)
 		)
 	return PartnerGlance.readout(_ctx, readout)
 

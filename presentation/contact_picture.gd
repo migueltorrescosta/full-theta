@@ -36,7 +36,7 @@ static func build(ctx: StationContext) -> ContactPicture:
 		var callsign: String = ctx.view.callsign(id)
 		var letter: String = Palette.allegiance(callsign)
 		# Own-faction ships carry their ship name, no prefix: friendly.
-		if int(info.get(id, [0])[0]) & ContactsSection.FLAG_OWN:
+		if int(info.get(id, [0])[0]) & SnapshotReader.FLAG_OWN:
 			letter = "F"
 		var pulse: float = ctx.crew.pulse("contact", id, now)
 		pic._add("contact", id, callsign, letter, ctx.interp.contact_position(id), pulse)
@@ -57,7 +57,7 @@ static func build(ctx: StationContext) -> ContactPicture:
 	for h: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("hazards", []):
 		pic._add("zone", -1000 - int(h["id"]), hazard_label, "", h["pos"], 0.0)
 		pic.items[-1].merge({"zone": "hazard", "radius": h["radius"], "eta": h["eta"]})
-		if int(h["shape"]) == HazardView.PLANE:
+		if int(h["shape"]) == BlockSchema.HAZARD_PLANE:
 			pic.items[-1]["dir"] = pic.interp.local(h["dir"])
 	# Deployed probes with their bubbles (P13): Science and Relay see where coverage is.
 	var probe_label: String = String(TranslationServer.translate("zone.probe"))

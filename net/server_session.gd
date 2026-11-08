@@ -28,7 +28,7 @@ const NOT_PAUSED: String = "not_paused"
 ## Abandon outside a pause (D241): the ship is not in a started run.
 const NOT_IN_RUN: String = "not_in_run"
 const NOT_HOST: String = "not_host"
-const NOT_CREW: String = "not_crew"
+const NOT_CREW: String = NetProtocol.REASON_NOT_CREW
 const NOT_YOUR_SHIP: String = "not_your_ship"
 const BAD_PICK: String = "bad_pick"
 const BAD_ITEM: String = "bad_item"
@@ -256,7 +256,7 @@ func _verdict(c: SimCommand) -> String:
 ## Posts an event; an EXACT_EVENTS value goes to each session as its view may carry it, so
 ## the audience is split by that value (D224).
 func _post_event(audience: PackedInt32Array, e: SimEvent, payload: Dictionary) -> void:
-	if not StationViews.EXACT_EVENTS.has(e.kind):
+	if not EventRouting.EXACT_EVENTS.has(e.kind):
 		transport.post_event(audience, e.tick, String(e.kind), payload)
 		return
 	var groups: Dictionary = {}
@@ -264,7 +264,7 @@ func _post_event(audience: PackedInt32Array, e: SimEvent, payload: Dictionary) -
 		var s: NetSession = by_id.get(id)
 		if s == null:
 			continue
-		var v: float = StationViews.event_value(s.entry, e.kind, e.value, s.view_code())
+		var v: float = EventRouting.event_value(s.entry, e.kind, e.value, s.view_code())
 		var ids: PackedInt32Array = groups.get(v, PackedInt32Array())
 		ids.append(id)
 		groups[v] = ids
@@ -286,7 +286,7 @@ func _prefill_cause(e: SimEvent) -> void:
 
 ## Sessions that receive a sim event (FT-NET-009, FT-NET-010): those holding a pick on
 ## a ship of the event's faction whose entry sees the event kind
-## (StationViews.EVENT_STATIONS). Events of no ship go to nobody.
+## (EventRouting.EVENT_STATIONS). Events of no ship go to nobody.
 func event_audience(e: SimEvent) -> PackedInt32Array:
 	# A spoken line reaches only its conversation's claimer or Comms' subtitle, through
 	# ServerVoice (FT-COM-006): the raw event, whose tag is the line id, goes to nobody.
@@ -298,7 +298,7 @@ func event_audience(e: SimEvent) -> PackedInt32Array:
 				s.has_pick()
 				and s.ship < world.ship_count()
 				and world.faction_of(s.ship) == e.faction
-				and StationViews.sees_event(s.entry, e.kind, s.view_code())
+				and EventRouting.sees_event(s.entry, e.kind, s.view_code())
 			)
 	)
 
@@ -458,7 +458,7 @@ func admit_rule() -> String:
 ## claimer (FT-NET-023, FT-NET-045: Align and face are Helm flight, aim and fire the
 ## mount's).
 func claim_rule(s: NetSession, command: SimCommand) -> String:
-	var item: String = StationViews.item_of(command)
+	var item: String = StationBlocks.item_of(command)
 	if item == "" or not StationViews.is_claimable(item):
 		return ""
 	var holder: int = claims.holder(s.ship, item)
@@ -658,7 +658,7 @@ func settle(ship: int) -> void:
 			continue
 		for station: String in StationViews.stations_of(s.entry):
 			(covering.get_or_add(station, []) as Array).append(s.id)
-	for claimed: Array in claims.settle(ship, covering, StationViews.claim_items(world, ship)):
+	for claimed: Array in claims.settle(ship, covering, StationBlocks.claim_items(world, ship)):
 		_claim_changed(ship, claimed[0])
 
 
@@ -740,12 +740,12 @@ func _restore(s: NetSession) -> void:
 	s.last_claims = []
 
 
-## Every claimable item of a ship (StationViews.claim_items), flat.
+## Every claimable item of a ship (StationBlocks.claim_items), flat.
 func _items_of(ship: int) -> Array[String]:
 	var out: Array[String] = []
 	if not crewable(ship):
 		return out
-	var by_station: Dictionary = StationViews.claim_items(world, ship)
+	var by_station: Dictionary = StationBlocks.claim_items(world, ship)
 	for station: String in by_station:
 		out.append_array(by_station[station])
 	return out
@@ -768,7 +768,7 @@ func _claim_changed(ship: int, item: String) -> void:
 ## (FT-NET-044).
 func _wrote(session_id: int, c: SimCommand) -> void:
 	coop.on_command(session_id, c)
-	var item: String = StationViews.item_of(c)
+	var item: String = StationBlocks.item_of(c)
 	if item == "" or StationViews.is_claimable(item):
 		return
 	var who: NetSession = by_id.get(session_id)

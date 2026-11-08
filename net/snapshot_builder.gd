@@ -13,10 +13,10 @@ extends RefCounted
 ## 0xFFFF then a u32 for a section of 0xFFFF bytes or more, so no section is ever too
 ## long to send. A delta omits the sections with nothing to say (unchanged blocks).
 
-const HEADER_BYTES: int = 11
-const FLAG_FULL: int = 1
-## Section length escape: a u32 length follows.
-const LONG_SECTION: int = 0xFFFF
+## The header and length escape, as the clients read them (SnapshotReader).
+const HEADER_BYTES: int = SnapshotReader.HEADER_BYTES
+const FLAG_FULL: int = SnapshotReader.FLAG_FULL
+const LONG_SECTION: int = SnapshotReader.LONG_SECTION
 
 var seq: int = 0
 var tick: int = 0
@@ -209,15 +209,14 @@ static func put_length(buf: StreamPeerBuffer, size: int) -> void:
 		buf.put_u32(size)
 
 
-## Reads a section length written by put_length().
+## Reads a section length written by put_length() (SnapshotReader.get_length).
 static func get_length(buf: StreamPeerBuffer) -> int:
-	var size: int = buf.get_u16()
-	return buf.get_u32() if size == LONG_SECTION else size
+	return SnapshotReader.get_length(buf)
 
 
-## [seq, full, tick] of a snapshot message without decoding its sections.
+## [seq, full, tick] of a snapshot message (SnapshotReader.peek).
 static func peek(data: PackedByteArray) -> Array:
-	return [data.decode_u32(2), data[1] & FLAG_FULL == FLAG_FULL, data.decode_u32(6)]
+	return SnapshotReader.peek(data)
 
 
 ## The sections of a view key as [kind, owner, section key], cached per key.

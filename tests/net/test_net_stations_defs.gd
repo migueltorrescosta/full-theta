@@ -147,10 +147,10 @@ func test_command_items() -> void:
 		[SelectTargetCommand.new(), "target", false],
 	]
 	for row: Array in expect:
-		var item: String = StationViews.item_of(row[0])
+		var item: String = StationBlocks.item_of(row[0])
 		assert_str(item).is_equal(row[1])
 		assert_bool(StationViews.is_claimable(item)).is_equal(row[2])
-	assert_str(StationViews.item_of(ResetShipCommand.new())).is_equal("")
+	assert_str(StationBlocks.item_of(ResetShipCommand.new())).is_equal("")
 	assert_str(StationViews.station_of_item("mount:0")).is_equal("weapons")
 	assert_str(StationViews.station_of_item("crew:1")).is_equal("engineering")
 	assert_str(StationViews.station_of_item("flight")).is_equal("helm")
@@ -173,14 +173,14 @@ func test_command_items() -> void:
 # Events only some stations get: repair events go to Engineering, fire_blocked to
 # Weapons, the AI's own events to nobody; everything else to every station.
 func test_event_kinds_per_station() -> void:
-	assert_bool(StationViews.sees_event("engineering", &"repair_started")).is_true()
-	assert_bool(StationViews.sees_event("systems", &"repair_started")).is_true()
-	assert_bool(StationViews.sees_event("helm", &"repair_started")).is_false()
-	assert_bool(StationViews.sees_event("viewer", &"repair_started")).is_false()
-	assert_bool(StationViews.sees_event("tactical", &"fire_blocked")).is_true()
-	assert_bool(StationViews.sees_event("ops", &"fire_blocked")).is_false()
-	assert_bool(StationViews.sees_event(StationViews.ALL, &"ai_mode")).is_false()
-	assert_bool(StationViews.sees_event("viewer", &"hit")).is_true()
+	assert_bool(EventRouting.sees_event("engineering", &"repair_started")).is_true()
+	assert_bool(EventRouting.sees_event("systems", &"repair_started")).is_true()
+	assert_bool(EventRouting.sees_event("helm", &"repair_started")).is_false()
+	assert_bool(EventRouting.sees_event("viewer", &"repair_started")).is_false()
+	assert_bool(EventRouting.sees_event("tactical", &"fire_blocked")).is_true()
+	assert_bool(EventRouting.sees_event("ops", &"fire_blocked")).is_false()
+	assert_bool(EventRouting.sees_event(StationViews.ALL, &"ai_mode")).is_false()
+	assert_bool(EventRouting.sees_event("viewer", &"hit")).is_true()
 
 
 # FT: FT-STN-001

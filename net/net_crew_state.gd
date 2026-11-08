@@ -416,7 +416,10 @@ func _revealed(s: NetSession, contact: int, sub: int) -> bool:
 
 ## Science's scan-position mark (FT-SCI-010) becomes a scan position of the ship's zones
 ## (FT-SPA-028): one per ship, replacing the one Science made before; unchanged marks add
-## nothing.
+## nothing. The zone is the one owner of the scan position (F5, R12-1; D171 extended): every
+## reader (NetCoop's P3 check, the clients through `zones`) reads it, and the run reset and a
+## relaunch clear it with the ship's crew state. ScienceMarkCommand validates the contact and
+## computes the point; its ScienceTable columns are read here only, at the `scan_mark` event.
 func _science_scan_position(ship: int) -> void:
 	var world: SimWorld = session.world
 	var def: ScienceDef = world.science_def

@@ -79,6 +79,23 @@ const MAX_UA_BYTES: int = 200
 ## ClientFrame's `what`, cut to this many bytes.
 const MAX_FRAME_WHAT_BYTES: int = 120
 
+## Most bytes in one WebSocket message (a bundle of chunks): under the 64 KiB
+## WebSocketPeer buffers the server keeps at their defaults (D108).
+const BUNDLE_MAX: int = 48 * 1024
+## Close codes (docs/protocol.md); NetTransport closes with them, NetClient reads them.
+const CLOSE_REJECTED: int = 4000
+const CLOSE_TAKEN_OVER: int = 4001
+const CLOSE_SEND_FAILED: int = 4002
+const CLOSE_PROTOCOL: int = 4003
+## More than NetResync.QUEUED_LIMIT queued for a connection without a view key.
+const CLOSE_QUEUE_FULL: int = 4004
+## request_rejected and command_rejected reasons shared by several server parts and read by
+## the client's rules (MainScreen, CrewMarks).
+const REASON_NOT_CREW: String = "not_crew"
+const REASON_NOT_ALLOWED: String = "not_allowed"
+## Most lines a ship's relay log keeps (CrewRelay; the client shows as many).
+const RELAY_LOG_MAX: int = 60
+
 ## HelloRejected reasons.
 const REJECT_VERSION: String = "version_mismatch"
 const REJECT_FULL: String = "session_full"
@@ -142,6 +159,8 @@ const EVENT_ELIMINATED: String = "eliminated"
 const EVENT_RELAUNCH_VOTES: String = "relaunch_votes"
 const EVENT_RELAUNCHED: String = "relaunched"
 const EVENT_SESSION_OVER: String = "session_over"
+## A ship-computer or NPC line to play (VoiceService).
+const EVENT_VOICE_LINE: String = "voice_line"
 
 ## Every control message in one place: Type -> [flags, fields], fields being field name ->
 ## Variant type. SERVER: only the server sends it. SEND: a client may send it and the

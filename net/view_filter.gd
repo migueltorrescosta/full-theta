@@ -93,7 +93,7 @@ func grants(feature: StringName) -> bool:
 
 
 ## Whether the view gets Relay's hazard zones: it holds Relay, or the countdown toggle gives
-## them (StationViews.block_bytes skips building them otherwise).
+## them (StationBlocks.block_bytes skips building them otherwise).
 func hazards_visible() -> bool:
 	return stations.has("relay") or grants(HAZARD_COUNTDOWNS)
 
@@ -133,12 +133,12 @@ func hull(value: float, maximum: float) -> float:
 	return HealthBand.quantise(share, DataToggles.def().band_edges) * maximum
 
 
-## Applies the filter to a block's values (StationViews.block_bytes), changing the fields
-## that are other stations' data.
-func apply(kind: int, values: Dictionary, world: SimWorld, ship: int) -> void:
+## Applies the filter to a block's values (StationBlocks.block_bytes) for a ship of `def`,
+## changing the fields that are other stations' data. It reads no world, so clients may name
+## the class (F4).
+func apply(kind: int, values: Dictionary, def: ShipDef) -> void:
 	if sees_all:
 		return
-	var def: ShipDef = world.defs[ship]
 	match kind:
 		StationViews.Section.STATUS:
 			values["hull"] = hull(values["hull"], def.hull_max)

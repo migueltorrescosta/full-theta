@@ -36,8 +36,8 @@ const ALERT_NORMAL: int = CrewMarks.ALERT_NORMAL
 const ALERT_YELLOW: int = CrewMarks.ALERT_YELLOW
 const ALERT_RED: int = CrewMarks.ALERT_RED
 const ALERT_LEVELS: int = CrewMarks.ALERT_RED + 1
-## Most log entries kept (the server keeps CrewRelay.MAX_LOG).
-const MAX_LOG: int = CrewRelay.MAX_LOG
+## Most log entries kept (the server keeps NetProtocol.RELAY_LOG_MAX).
+const MAX_LOG: int = NetProtocol.RELAY_LOG_MAX
 ## Sim ticks per second (spec: 60 Hz), for the mission timer.
 const TICK_HZ: float = SimRate.HZ * 1.0
 

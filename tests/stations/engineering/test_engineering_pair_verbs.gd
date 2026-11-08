@@ -97,7 +97,7 @@ func test_harden_and_fabricate_probe() -> void:
 	assert_object(SimCommands.make(&"fabricate_probe")).is_instanceof(FabricateProbeCommand)
 	assert_bool(StationViews.def("engineering").sections.has(StationViews.Section.RELAY)).is_true()
 	assert_str(StationViews.station_of_command(&"pick_fault_cause")).is_equal("engineering")
-	assert_str(StationViews.item_of(HardenCommand.new())).is_equal("")
+	assert_str(StationBlocks.item_of(HardenCommand.new())).is_equal("")
 
 
 # FT: FT-ENG-006
@@ -124,7 +124,9 @@ func test_naming_the_cause_of_an_unknown_fault() -> void:
 	)
 	assert_array(picks).is_equal(["coolant_leak", "short", "software", "coolant_leak"])
 	(
-		assert_str(StationViews.item_of(SimCommands.from_dict(_commands(s, "pick_fault_cause")[0])))
+		assert_str(
+			StationBlocks.item_of(SimCommands.from_dict(_commands(s, "pick_fault_cause")[0]))
+		)
 		. is_equal("")
 	)
 	# The snapshot catches up with the pick.

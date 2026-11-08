@@ -87,18 +87,9 @@ func full() -> PackedByteArray:
 	return buf.data_array
 
 
-## Client side: id -> [Vector3i position, Vector3i velocity, int tick].
+## Client side: SnapshotReader.apply_projectiles.
 static func apply(into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int) -> void:
-	if is_full:
-		into.clear()
-	for i: int in range(buf.get_u16()):
-		var id: int = buf.get_u16()
-		var p: Vector3i = NetCodec.get3_32(buf)
-		var v: Vector3i = NetCodec.get3_16(buf)
-		var at: int = tick - buf.get_u16() if is_full else tick
-		into[id] = [p, v, at]
-	if not is_full:
-		ContactsSection.get_gone(buf, into)
+	SnapshotReader.apply_projectiles(into, buf, is_full, tick)
 
 
 ## Shooter (15 bits), expiry tick (32 bits) and order among same pairs (16 bits).

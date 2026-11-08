@@ -29,12 +29,6 @@ func for_entry(entry: String) -> PackedByteArray:
 	return var_to_bytes(StationViews.ownership_for(entry, _sent))
 
 
-## Client side: the decoded table, or {} if malformed.
+## Client side: SnapshotReader.read_ownership.
 static func read(part: PackedByteArray) -> Dictionary:
-	var v: Variant = bytes_to_var(part)
-	if not v is Dictionary:
-		return {}
-	var d: Dictionary = v
-	if not (d.get("claims") is Dictionary and d.get("writers") is Dictionary):
-		return {}
-	return d
+	return SnapshotReader.read_ownership(part)

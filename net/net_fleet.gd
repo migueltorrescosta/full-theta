@@ -283,7 +283,11 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		if o.over():
 			outcome = o
 			var time_s: float = float(world.tick - start_tick) / SimWorld.HZ
-			var payload: Dictionary = FleetMessages.session_over(o, time_s)
+			var held_s: float = float(o.held_ticks) / SimRate.HZ
+			var reason: String = SessionOutcome.REASON_NAMES[o.reason]
+			var payload: Dictionary = FleetMessages.session_over(
+				reason, Array(o.winners), o.team, held_s, time_s
+			)
 			session.broadcast(NetProtocol.EVENT_SESSION_OVER, payload)
 	for ship: int in _handover_at.keys():
 		if world.tick >= _handover_at[ship]:
@@ -589,7 +593,10 @@ func _fleet_payload() -> Dictionary:
 	if rules.mode == SessionRules.Mode.HOLDOUT:
 		lives = rules.relaunch_for(SessionRules.HOLDOUT_FINITE_TEAM).lives
 	var started: bool = session.lobby.any_launched()
-	return FleetMessages.fleet(ships, rules, lives, Array(waiting()), started)
+	var mode: String = SessionRules.MODE_NAMES[rules.mode]
+	var team_win: String = SessionRules.TEAM_WIN_NAMES[rules.team_win]
+	var max_ships: int = SessionRules.MAX_SHIPS
+	return FleetMessages.fleet(ships, mode, team_win, max_ships, lives, Array(waiting()), started)
 
 
 ## The scoreboard to the sessions without a pick: on a change of state or progress, and once a

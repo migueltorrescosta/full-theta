@@ -183,7 +183,7 @@ func request_chips() -> Array[ChipDef]:
 	var out: Array[ChipDef] = []
 	if ctx == null:
 		return out
-	for c: ChipDef in NetChips.def().chips:
+	for c: ChipDef in ChipView.def().chips:
 		if String(c.from_station) != station:
 			continue
 		if _on_screen(c) or ctx.crew.toggles.on(ViewFilter.CHIPS):

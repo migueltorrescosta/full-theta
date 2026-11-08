@@ -47,7 +47,7 @@ func _process(delta: float) -> void:
 
 ## Consumes a voice_line event ({"type", "payload", ...}); false for any other event.
 func handle_event(event: Dictionary) -> bool:
-	if event.get("type", "") != VoiceService.EVENT_VOICE_LINE:
+	if event.get("type", "") != NetProtocol.EVENT_VOICE_LINE:
 		return false
 	var payload: Dictionary = event.get("payload", {})
 	var now: int = _now()

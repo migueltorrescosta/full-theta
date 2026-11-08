@@ -75,16 +75,9 @@ func client_model() -> Dictionary:
 	return out
 
 
+## Client side: SnapshotReader.apply_near.
 static func apply(into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int) -> void:
-	if is_full:
-		into.clear()
-	for i: int in range(buf.get_u16()):
-		var id: int = buf.get_u16()
-		var bits: int = buf.get_u32()
-		var w: Vector3i = NetCodec.get3_8(buf)
-		into[id] = [bits, w, tick - buf.get_u16()]
-	if not is_full:
-		ContactsSection.get_gone(buf, into)
+	SnapshotReader.apply_near(into, buf, is_full, tick)
 
 
 ## One record from the model entry [bits, angular velocity, tick].

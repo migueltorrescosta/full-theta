@@ -20,7 +20,7 @@ const MAX_ZONES: int = 16
 const MAX_ROUTES: int = 4
 const MAX_WAYPOINTS: int = 12
 const MAX_INBOX: int = 8
-const MAX_LOG: int = 60
+const MAX_LOG: int = NetProtocol.RELAY_LOG_MAX
 ## Largest hazard radius (m).
 const MAX_RADIUS: float = 50_000.0
 

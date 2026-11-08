@@ -11,7 +11,7 @@ extends RefCounted
 const NO_PICK: String = "no_pick"
 const RATE_LIMITED: String = "rate_limited"
 const UNKNOWN_KIND: String = "unknown_kind"
-const NOT_ALLOWED: String = "not_allowed"
+const NOT_ALLOWED: String = NetProtocol.REASON_NOT_ALLOWED
 const NOT_YOUR_STATION: String = "not_your_station"
 const WRONG_SHIP: String = "wrong_ship"
 const BAD_FIELD: String = "bad_field"

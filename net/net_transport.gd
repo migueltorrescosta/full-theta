@@ -14,16 +14,13 @@ extends RefCounted
 const CLOSED: int = 0
 ## Snapshot capture stamps kept for the snapshot-age log (about 40 s at 30 Hz).
 const STAMP_KEEP: int = 1200
-## Most bytes in one WebSocket message (a bundle of chunks): under the 64 KiB
-## WebSocketPeer buffers the server keeps at their defaults (D108).
-const BUNDLE_MAX: int = 48 * 1024
-## Close codes (docs/protocol.md).
-const CLOSE_REJECTED: int = 4000
-const CLOSE_TAKEN_OVER: int = 4001
-const CLOSE_SEND_FAILED: int = 4002
-const CLOSE_PROTOCOL: int = 4003
-## More than NetResync.QUEUED_LIMIT queued for a connection without a view key.
-const CLOSE_QUEUE_FULL: int = 4004
+## The bundle size and close codes are the protocol's (NetProtocol), where the client reads them.
+const BUNDLE_MAX: int = NetProtocol.BUNDLE_MAX
+const CLOSE_REJECTED: int = NetProtocol.CLOSE_REJECTED
+const CLOSE_TAKEN_OVER: int = NetProtocol.CLOSE_TAKEN_OVER
+const CLOSE_SEND_FAILED: int = NetProtocol.CLOSE_SEND_FAILED
+const CLOSE_PROTOCOL: int = NetProtocol.CLOSE_PROTOCOL
+const CLOSE_QUEUE_FULL: int = NetProtocol.CLOSE_QUEUE_FULL
 ## How often the net thread publishes stats() (us).
 const STATS_INTERVAL_US: int = 20_000
 ## How long a closing connection waits for the client to close first (us).

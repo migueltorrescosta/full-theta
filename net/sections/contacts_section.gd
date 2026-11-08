@@ -13,8 +13,8 @@ extends SnapshotSection
 ## gone ids. Full: u16 n absolute records each with a u16 age in ticks; u16 i info
 ## records. One cube per world (D229), so no site field.
 
-const FLAG_IDENTIFIED: int = 1
-const FLAG_OWN: int = 2
+const FLAG_IDENTIFIED: int = SnapshotReader.FLAG_IDENTIFIED
+const FLAG_OWN: int = SnapshotReader.FLAG_OWN
 
 var tol_units: int = 8
 ## id -> [Vector3i position, Vector3i velocity, int tick]: what every client holds.
@@ -115,30 +115,11 @@ func full() -> PackedByteArray:
 	return buf.data_array
 
 
-## Client side: applies a section to {"model": {...}, "info": {...}} of the same
-## shapes; false on a corrupt stream (a residual for an unknown id).
+## Client side: SnapshotReader.apply_contacts (kept for the server's tests).
 static func apply(
 	into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int, p_units: int
 ) -> bool:
-	var m: Dictionary = into.get_or_add("model", {})
-	var inf: Dictionary = into.get_or_add("info", {})
-	if is_full:
-		m.clear()
-		inf.clear()
-	for i: int in range(buf.get_u16()):
-		var rec: Array = NetCodec.get_kin(buf, m, tick, p_units)
-		if rec.is_empty():
-			return false
-		var at: int = tick - buf.get_u16() if is_full else tick
-		m[rec[0]] = [rec[1], rec[2], at]
-	for i: int in range(buf.get_u16()):
-		var id: int = buf.get_u16()
-		var flags: int = buf.get_u8()
-		inf[id] = [flags, buf.get_data(buf.get_u8())[1].get_string_from_utf8()]
-	if not is_full:
-		for id: int in get_gone(buf, m):
-			inf.erase(id)
-	return true
+	return SnapshotReader.apply_contacts(into, buf, is_full, tick, p_units)
 
 
 static func put_gone(buf: StreamPeerBuffer, gone: PackedInt32Array, from: Dictionary) -> void:
@@ -148,14 +129,9 @@ static func put_gone(buf: StreamPeerBuffer, gone: PackedInt32Array, from: Dictio
 		from.erase(id)
 
 
-## Reads a gone list, erases the ids from `from` and returns them.
+## Reads a gone list (SnapshotReader.get_gone).
 static func get_gone(buf: StreamPeerBuffer, from: Dictionary) -> PackedInt32Array:
-	var out: PackedInt32Array = PackedInt32Array()
-	for i: int in range(buf.get_u16()):
-		var id: int = buf.get_u16()
-		from.erase(id)
-		out.append(id)
-	return out
+	return SnapshotReader.get_gone(buf, from)
 
 
 static func _put_info(buf: StreamPeerBuffer, id: int, value: Array) -> void:

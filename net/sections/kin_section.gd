@@ -24,12 +24,6 @@ func full() -> PackedByteArray:
 	return _last
 
 
-## Client side: {"pos" (Vector3i units), "vel" (Vector3i), "rot" (Quaternion),
-## "ang" (Vector3i)}.
+## Client side: SnapshotReader.read_kin.
 static func read(buf: StreamPeerBuffer) -> Dictionary:
-	return {
-		"pos": NetCodec.get3_32(buf),
-		"vel": NetCodec.get3_16(buf),
-		"rot": NetCodec.unpack_quat(buf.get_u32()),
-		"ang": NetCodec.get3_8(buf),
-	}
+	return SnapshotReader.read_kin(buf)

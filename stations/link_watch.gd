@@ -41,7 +41,7 @@ func update(client: NetClient, now: int) -> bool:
 func _closed(client: NetClient, now: int) -> bool:
 	if status == Status.TAKEN_OVER or status == Status.GAVE_UP:
 		return false
-	if client.close_code == NetTransport.CLOSE_TAKEN_OVER:
+	if client.close_code == NetProtocol.CLOSE_TAKEN_OVER:
 		status = Status.TAKEN_OVER
 		return false
 	_note_down(now)

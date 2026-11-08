@@ -1008,7 +1008,7 @@ func _selected_item() -> Dictionary:
 		return {"kind": "site", "allegiance": ""}
 	var info: Dictionary = panel.ctx.view.contacts.get("info", {})
 	var letter: String = Palette.allegiance(selection_label())
-	if int(info.get(int(s.get("id", -1)), [0])[0]) & ContactsSection.FLAG_OWN:
+	if int(info.get(int(s.get("id", -1)), [0])[0]) & SnapshotReader.FLAG_OWN:
 		letter = "F"
 	return {"kind": "contact", "allegiance": letter}
 

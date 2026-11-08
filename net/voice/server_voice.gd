@@ -149,7 +149,7 @@ func _say_shields_low(e: SimEvent) -> void:
 	var exact: int = roundi(e.value * 100.0)
 	var eng: PackedStringArray = PackedStringArray(["engineering"])
 	voice.say_computer(e.ship_id, eng, "computer.shields_low", {"pct": exact})
-	var seen: float = StationViews.event_value("helm", e.kind, e.value, toggles)
+	var seen: float = EventRouting.event_value("helm", e.kind, e.value, toggles)
 	if seen <= 0.0:
 		voice.say_computer(e.ship_id, PackedStringArray(["helm"]), "computer.shields_low_plain")
 	else:
