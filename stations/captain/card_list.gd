@@ -259,24 +259,10 @@ func _draw_open(font: Font, r: Rect2, c: Dictionary, from_y: float) -> void:
 	var detail: String = TranslationServer.translate(str(c.get("detail", "")))
 	if str(c.get("detail", "")) != "":
 		lines.append(detail)
-	var extra: PackedStringArray = PackedStringArray()
-	if int(c.get("reward", 0)) != 0:
-		extra.append(TranslationServer.translate("comms.reward") % int(c["reward"]))
-	var range_text: String = CommsData.range_text(c)
-	if range_text != "":
-		extra.append(range_text)
+	var extra: PackedStringArray = CommsData.stakes(c)
 	if not extra.is_empty():
 		lines.append(" · ".join(extra))
-	var holder: String = str(claims.get(int(c["id"]), ""))
-	var who: String = (
-		TranslationServer.translate("comms.you") if holder == own_name and holder != "" else holder
-	)
-	lines.append(
-		(
-			TranslationServer.translate("comms.claimed_by")
-			% (who if who != "" else TranslationServer.translate("comms.free"))
-		)
-	)
+	lines.append(CommsData.claimed_text(str(claims.get(int(c["id"]), "")), own_name, true))
 	var y: float = from_y
 	for line: String in lines:
 		y += FONT_SIZE + 1.0

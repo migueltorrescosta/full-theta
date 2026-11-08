@@ -439,20 +439,10 @@ func _draw_card(font: Font, r: Rect2, c: Dictionary) -> void:
 		line += " · " + str(c["npc"])
 	draw_string(font, Vector2(x, y), line, 0, r.size.x - 16.0, FONT_SIZE - 2, dim)
 	y += FONT_SIZE
-	var extra: PackedStringArray = PackedStringArray()
-	if int(c["reward"]) != 0:
-		extra.append(TranslationServer.translate("comms.reward") % int(c["reward"]))
-	var range_text: String = CommsData.range_text(c)
-	if range_text != "":
-		extra.append(range_text)
+	var extra: PackedStringArray = CommsData.stakes(c)
 	var holder: String = str(claim_names.get(int(c["id"]), ""))
 	if holder != "":
-		extra.append(
-			(
-				TranslationServer.translate("comms.claimed_by")
-				% (TranslationServer.translate("comms.you") if holder == own_name else holder)
-			)
-		)
+		extra.append(CommsData.claimed_text(holder, own_name))
 	draw_string(font, Vector2(x, y), " · ".join(extra), 0, r.size.x - 16.0, FONT_SIZE - 2, dim)
 
 
