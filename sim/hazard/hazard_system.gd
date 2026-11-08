@@ -132,7 +132,8 @@ static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -
 	var bit: int = 1 << i
 	if table.crossed[ship] & bit != 0:
 		return
-	if h.duration_s > 0.0 and t > h.start_s + h.duration_s:
+	# Before start_s the front does not exist yet; faded, it is gone (see is_live).
+	if not is_live(h, t):
 		return
 	var d: float = edge_distance(h, ship_offset(world, ship, h), t)
 	var first_look: bool = table.seen[ship] & bit == 0

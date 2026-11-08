@@ -173,6 +173,79 @@ func test_knowledge_by_sensors_and_probes() -> void:
 	assert_bool(HazardSystem.known_to(_world([late]), 1, 0)).is_false()
 
 
+# FT: FT-RLY-001
+# A front fades after duration_s: a ship it has not reached by then is never hit, and the
+# front is no longer live, known or coming; a ship reached before the fade is hit once.
+func test_front_fades_after_its_duration() -> void:
+	var slow: HazardDef = _plane(Vector3(0.0, 0.0, -600.0), 50.0)
+	slow.duration_s = 10.0
+	slow.detect_range = 5000.0
+	var w: SimWorld = _world([slow])
+	assert_bool(HazardSystem.known_to(w, 1, 0)).is_true()
+	var events: Array[SimEvent] = SimFixture.run(w, 11 * SimWorld.HZ)
+	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(0)
+	assert_bool(HazardSystem.is_live(slow, w.tick * SimWorld.DT)).is_false()
+	assert_bool(HazardSystem.known_to(w, 1, 0)).is_false()
+	assert_float(HazardSystem.eta(w, 0, 0)).is_equal(-1.0)
+	var quick: HazardDef = _plane(Vector3(0.0, 0.0, -600.0), 600.0 / 9.0)
+	quick.duration_s = 10.0
+	var hit: Array[SimEvent] = SimFixture.run(_world([quick]), 12 * SimWorld.HZ)
+	assert_int(SimFixture.of_kind(hit, &"hazard_hit").size()).is_equal(1)
+
+
+# FT: FT-RLY-001
+# Before start_s the front does not exist: a ship that flies through its start plane early
+# is not hit, then or later; once it has set off it is not live-yet-unknown either.
+func test_front_does_not_hit_before_it_starts() -> void:
+	var h: HazardDef = _plane(Vector3(0.0, 0.0, -100.0), 10.0)
+	h.start_s = 5.0
+	var w: SimWorld = _world([h], Vector3(0.0, 0.0, 100.0))
+	var coast: DecoupledCommand = DecoupledCommand.new()
+	coast.ship_id = 0
+	w.submit(coast)
+	w.step()
+	w.kin.vel[0] = Vector3(0.0, 0.0, -100.0)
+	var events: Array[SimEvent] = SimFixture.run(w, 10 * SimWorld.HZ)
+	# The ship crossed the start plane (z = -100) at about 3 s and is far behind it now.
+	assert_float(w.kin.relative_to_point(0, 0.0, 0.0, -100.0).z).is_greater(0.0)
+	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(0)
+	assert_int(w.hazard_state.seen[0]).is_equal(1)
+
+
+# FT: FT-RLY-001, FT-SIM-035
+# A zone straddling the wrap seam damages a ship on the far side of it, once per tick
+# inside, as one continuous volume.
+func test_zone_across_the_seam() -> void:
+	var half: float = 0.5 * SimWorld.new(1).kin.period
+	var zone: HazardDef = _zone(Vector3(half - 50.0, 0.0, 0.0), 200.0)
+	var w: SimWorld = _world([zone], Vector3(-half + 50.0, 0.0, 0.0))
+	var full: float = _hull(w)
+	w.step()
+	assert_float(full - _hull(w)).is_equal_approx(1e6 / SimWorld.HZ, 1.0)
+	var out: SimWorld = _world([zone], Vector3(-half + 400.0, 0.0, 0.0))
+	out.step()
+	assert_float(_hull(out)).is_equal(full)
+
+
+# FT: FT-RLY-001
+# Two fronts at once each hit the ship once, in their own tick, by their own id.
+func test_two_fronts_hit_once_each() -> void:
+	var a: HazardDef = _plane(Vector3(0.0, 0.0, -600.0), 100.0)
+	var b: HazardDef = _plane(Vector3(0.0, 0.0, -300.0), 100.0)
+	b.id = &"plane_b"
+	b.hit_j = 2e6
+	var w: SimWorld = _world([a, b])
+	var hits: Array[SimEvent] = SimFixture.of_kind(
+		SimFixture.run(w, 8 * SimWorld.HZ), &"hazard_hit"
+	)
+	assert_int(hits.size()).is_equal(2)
+	assert_str(String(hits[0].tag)).is_equal("plane_b")
+	assert_int(hits[0].tick).is_equal(180)
+	assert_str(String(hits[1].tag)).is_equal("plane")
+	assert_int(hits[1].tick).is_equal(360)
+	assert_int(w.hazard_state.crossed[0]).is_equal(3)
+
+
 # FT: FT-RLY-001, FT-ENG-008
 # The arrival forecast: a front 12 km out at 200 m/s is 60 s away; a ship flying into it
 # shortens that; a zone ahead counts to its edge; one behind the ship is not coming.
