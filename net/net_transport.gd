@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name NetTransport
 extends RefCounted
 ## The server's net thread (FT-NET-040, D111): it owns every socket (accept, poll,
@@ -218,6 +219,11 @@ func bind(
 	_post(["bind", conn, session, welcome, view_key, new_session])
 
 
+## Drops an evicted session's event outbox (NetSessions.evict): it has no connection.
+func forget(session: int) -> void:
+	_post(["forget", session])
+
+
 ## Sets the view key a session's snapshots use ("" for none); the next one is full.
 func set_view(session: int, view_key: String) -> void:
 	_post(["view", session, view_key])
@@ -369,6 +375,9 @@ func _apply(op: Array) -> void:
 				_close(c, op[2], op[3])
 		"bind":
 			_bind(op[1], op[2], op[3], op[4], op[5])
+		"forget":
+			if not _by_session.has(op[1]):
+				_outboxes.erase(op[1])
 		"view":
 			var c: Conn = _by_session.get(op[1])
 			if c != null and not c.closing:
@@ -522,7 +531,7 @@ func _read(c: Conn, packet: PackedByteArray, out: Array) -> void:
 
 func _receive(c: Conn, data: PackedByteArray, out: Array) -> void:
 	var type: int = NetProtocol.type_of(data)
-	if not NetProtocol.FROM_CLIENT.has(type):
+	if not NetProtocol.from_client.has(type):
 		c.errors += 1
 		_totals["errors"] += 1
 		return

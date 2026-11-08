@@ -25,6 +25,9 @@ const CLAIMED: String = "claimed"
 const BREAKS_COVERAGE: String = "breaks_coverage"
 ## The sender's ship was abandoned (FT-NET-041).
 const SHIP_ABANDONED: String = "ship_abandoned"
+## The sim is stopped (lobby, coverage pause or host pause): a command would queue and all
+## apply on resume (#45 A4). Only training_next is exempt.
+const PAUSED: String = "paused"
 
 ## Fields the server sets, never the client (ship_id may be sent, if it is the sender's).
 const SERVER_FIELDS: Array[String] = ["kind", "ship_id", "tick", "accepted"]

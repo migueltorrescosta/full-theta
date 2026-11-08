@@ -40,10 +40,9 @@ func on_sim_event(e: SimEvent) -> void:
 				and (session.world.science.probe[e.ship_id] == 1)
 			)
 		&"scan_done", &"hack_done":
-			if _probe_scans.get(e.ship_id, false):
-				record(
-					PROBE_SCAN, pair_of("science", "relay"), e.ship_id, {"event": String(e.kind)}
-				)
+			var pair: String = pair_of("science", "relay")
+			if _probe_scans.get(e.ship_id, false) and _apart(e.ship_id, pair):
+				record(PROBE_SCAN, pair, e.ship_id, {"event": String(e.kind)})
 			_probe_scans.erase(e.ship_id)
 		&"scan_failed", &"hack_failed", &"hack_traced", &"science_refused":
 			_probe_scans.erase(e.ship_id)
@@ -110,6 +109,21 @@ func _within(world: SimWorld, ship: int, z: Dictionary) -> bool:
 		kin.wrap(z["x"] - p[0]), kin.wrap(z["y"] - p[1]), kin.wrap(z["z"] - p[2])
 	)
 	return d.length() <= float(z["radius"])
+
+
+## Whether two different sessions of the ship hold the pair's stations, one each (A12): a
+## player holding both, or a joint view, is no pair between players.
+func _apart(ship: int, pair: String) -> bool:
+	var stations: Array = stations_of(pair)
+	if stations.size() != 2:
+		return false
+	for a: NetSession in session.by_id.values():
+		if a.ship != ship or not StationViews.stations_of(a.entry).has(stations[0]):
+			continue
+		for b: NetSession in session.by_id.values():
+			if b != a and b.ship == ship and StationViews.stations_of(b.entry).has(stations[1]):
+				return true
+	return false
 
 
 func _mark_used(user: NetSession, slot: int) -> void:

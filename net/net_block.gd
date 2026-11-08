@@ -3,7 +3,7 @@ extends RefCounted
 ## Schema-driven encoding of a block of named fields (station field sets,
 ## StationViews.BLOCKS). A schema is an Array of [name, type] pairs written in order;
 ## a type is one of the strings below, or ["rows", schema] for a list of rows (u8
-## count, then each row in the sub-schema). Values come as a Dictionary (rows as an
+## count of at most 255, then each row in the sub-schema). Values come as a Dictionary (rows as an
 ## Array of Dictionaries) and decode the same way, with floats where the type is one.
 ##
 ## Types: "bool" and "u8" (1 B), "u16", "s16" (2 B), "u32", "s32" (4 B), "f32"
@@ -11,6 +11,8 @@ extends RefCounted
 ## text of at most 255 bytes: u8 length, then the bytes; ids and i18n keys).
 
 const ROWS: String = "rows"
+## Most rows a list holds (its count is a u8).
+const MAX_ROWS: int = 255
 
 
 static func encode(schema: Array, values: Dictionary) -> PackedByteArray:
@@ -31,9 +33,13 @@ static func put(buf: StreamPeerBuffer, schema: Array, values: Dictionary) -> voi
 		var value: Variant = values.get(name)
 		if field[1] is Array:
 			var rows: Array = value if value is Array else []
-			buf.put_u8(rows.size())
-			for row: Dictionary in rows:
-				put(buf, field[1][1], row)
+			# A count is one byte: a longer list is cut, not wrapped (the reader would misparse).
+			var count: int = mini(rows.size(), MAX_ROWS)
+			if rows.size() > MAX_ROWS:
+				push_warning("NetBlock: %s has %d rows, cut to %d" % [name, rows.size(), MAX_ROWS])
+			buf.put_u8(count)
+			for i: int in count:
+				put(buf, field[1][1], rows[i])
 			continue
 		match field[1]:
 			"bool", "u8":
