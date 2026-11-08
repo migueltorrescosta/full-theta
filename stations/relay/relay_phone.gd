@@ -398,10 +398,7 @@ func _fill_marks() -> void:
 		_marks_box.add_child(none)
 	for m: Dictionary in crew_state.marks:
 		var slot: int = m["slot"]
-		var text: String = str(m["name"])
-		if int(m.get("contact", -1)) >= 0:
-			text += " · " + panel.ctx.view.callsign(int(m["contact"]))
-		var b: RailButton = RailButton.make(text)
+		var b: RailButton = RailButton.make(ChipText.mark_label(m, panel.ctx.view))
 		b.pressed.connect(crew_state.select.bind("mark", slot))
 		b.toggle_mode = true
 		b.set_pressed_no_signal(crew_state.is_selected("mark", slot))

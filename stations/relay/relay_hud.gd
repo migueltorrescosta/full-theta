@@ -278,11 +278,9 @@ func send_target() -> int:
 
 func _contact_rows() -> Array:
 	var rows: Array = []
-	for it: Dictionary in ctx.picture().items:
-		if it["kind"] == "contact":
-			rows.append([it["id"], it["label"], (it["local"] as Vector3).snappedf(50.0)])
-	rows.sort_custom(func(a: Array, b: Array) -> bool: return a[2].length() < b[2].length())
-	return rows.slice(0, CONTACT_ROWS)
+	for it: Dictionary in ctx.picture().contacts_by_range(CONTACT_ROWS):
+		rows.append([it["id"], it["label"], (it["local"] as Vector3).snappedf(50.0)])
+	return rows
 
 
 ## Buttons are kept while the same items are listed and only their text and state change,
@@ -322,7 +320,7 @@ func _fill_marks() -> void:
 	for i: int in ctx.crew.marks.size():
 		var m: Dictionary = ctx.crew.marks[i]
 		var b: Button = _marks.get_child(i) as Button
-		b.text = str(m["name"])
+		b.text = ChipText.mark_label(m, ctx.view)
 		b.set_pressed_no_signal(ctx.crew.is_selected("mark", m["slot"]))
 
 

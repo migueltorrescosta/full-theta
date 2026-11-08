@@ -140,12 +140,7 @@ func item_at_point(at: Vector2) -> Dictionary:
 
 ## Contact ids but the own ship (snapshots list it too), nearest first (cycle target).
 func contacts_by_range() -> Array:
-	var ids: Array = Array(s.ctx.interp.contact_ids())
-	ids.erase(s.ctx.crew.ship)
-	var dist: Callable = func(id: int) -> float:
-		return s.ctx.interp.offset_to(s.ctx.interp.contact_position(id)).length()
-	ids.sort_custom(func(a: int, b: int) -> bool: return dist.call(a) < dist.call(b))
-	return ids
+	return s.ctx.picture().contacts_by_range().map(func(it: Dictionary) -> int: return it["id"])
 
 
 ## Crew only (FT-STN-008); the server refuses others too.
