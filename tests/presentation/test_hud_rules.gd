@@ -144,7 +144,7 @@ func _check_chips(radar: DiscRadar, where: String) -> void:
 		var r: Rect2 = e["chip_rect"]
 		var name: String = "%s %s" % [where, e["item"]["label"]]
 		(
-			assert_float(DiscRadar._gap_to(r, e["pos"]))
+			assert_float(ChipLayout.gap_to(r, e["pos"]))
 			. override_failure_message("%s: chip %s is far from its blip %s" % [name, r, e["pos"]])
 			. is_less_equal(48.0)
 		)
@@ -266,7 +266,7 @@ func test_relay_map_chips_sit_next_to_their_blip_inside_the_free_part_of_the_map
 				continue
 			var r: Rect2 = e["chip_rect"]
 			(
-				assert_float(DiscRadar._gap_to(r, e["pos"]))
+				assert_float(ChipLayout.gap_to(r, e["pos"]))
 				. override_failure_message(name)
 				. is_less_equal(48.0)
 			)
@@ -480,7 +480,7 @@ func test_the_helm_site_label_and_the_phone_compass_chip_stay_near_their_marker(
 			var at: Vector2 = hud.size * Vector2(fx, fy)
 			var box: Rect2 = hud.label_rect(font, "Kappa 4.7 km", at, 10.0)
 			if inside.encloses(box):
-				assert_float(HelmHud._gap(box, at)).is_less_equal(32.0 + 0.5)
+				assert_float(ChipLayout.gap_to(box, at)).is_less_equal(32.0 + 0.5)
 	_drop(s)
 	var p: StationScreen = await _screen(LAYOUTS[6], "helm")
 	var phud: HelmHud = (p.focused_panel() as HelmPanel).hud
@@ -498,7 +498,7 @@ func test_the_helm_site_label_and_the_phone_compass_chip_stay_near_their_marker(
 		)
 		var chip: Rect2 = phud.compass_boxes()[1]
 		(
-			assert_float(HelmHud._gap(chip, dot))
+			assert_float(ChipLayout.gap_to(chip, dot))
 			. override_failure_message(
 				"contact %d: compass chip %s far from its dot %s" % [id, chip, dot]
 			)

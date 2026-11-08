@@ -317,14 +317,14 @@ func test_a_chip_moves_off_a_clock_number() -> void:
 			"pos": Vector2(94, 26),
 		}
 	]
-	DiscRadar._declutter(entries, [number], Rect2(0, 0, 300, 200))
+	ChipLayout.declutter(entries, [number], Rect2(0, 0, 300, 200))
 	var moved: Rect2 = entries[0]["chip_rect"]
 	assert_bool(moved.intersects(number)).is_false()
 	# Still beside the blip, not a line away.
 	assert_float(moved.get_center().distance_to(Vector2(94, 26))).is_less(80.0)
 	# Without a blip or a free spot it drops below the number.
 	entries = [{"chip": "U3", "chip_rect": Rect2(Vector2(104, 18), Vector2(60, 16))}]
-	DiscRadar._declutter(entries, [number])
+	ChipLayout.declutter(entries, [number])
 	assert_float((entries[0]["chip_rect"] as Rect2).position.y).is_equal(number.end.y)
 
 
@@ -347,14 +347,14 @@ func test_chips_sit_next_to_their_blip_inside_the_disc() -> void:
 	var layout: Array[Dictionary] = radar._layout()
 	for e: Dictionary in layout:
 		var r: Rect2 = e["chip_rect"]
-		assert_float(DiscRadar._gap_to(r, e["pos"])).is_less_equal(48.0)
+		assert_float(ChipLayout.gap_to(r, e["pos"])).is_less_equal(48.0)
 		assert_bool(r.intersects(radar._own_box())).is_false()
 		for o: Dictionary in layout:
 			var box: Rect2 = Rect2((o["pos"] as Vector2) - Vector2(6, 6), Vector2(12, 12))
 			assert_bool(box.intersects(r)).is_false()
 		# (U3 floats above the disc, so its chip does too.)
 		if e["item"]["label"] != "U3":
-			var inside: bool = DiscRadar._in_ellipse(
+			var inside: bool = ChipLayout.in_ellipse(
 				Rect2(c - Vector2(rim, ry), Vector2(rim, ry) * 2.0), r
 			)
 			assert_bool(inside).is_true()
