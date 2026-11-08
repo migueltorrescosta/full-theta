@@ -156,9 +156,7 @@ static func readout(ctx: StationContext, id: String) -> String:
 			var used: int = 0
 			for r: Dictionary in eng.get("subsystems", []):
 				used += int(r.get("pips", 0))
-			var def: ShipDef = ctx.ship_def()
-			var cap: int = def.power.reactor_pips if def != null and def.power != null else 0
-			return _t("glance.reactor", "Reactor %d/%d") % [used, cap]
+			return _t("glance.reactor", "Reactor %d/%d") % [used, ctx.pip_cap()]
 		"eng.boost":
 			var ticks: int = int(eng.get("boost_ticks", 0))
 			if ticks > 0:

@@ -123,6 +123,24 @@ func test_cutaway_shows_health_heat_and_recent_hits_and_rotates() -> void:
 
 
 # FT: FT-ENG-002
+# A damaged reactor lowers the pip cap the STATUS block carries: the panel refuses a pip over
+# it, and the board's reactor line shows used/cap (review 2026-11-08, PowerSystem.pip_cap).
+func test_damaged_reactor_lowers_the_pip_cap_shown_and_enforced() -> void:
+	var s: StationScreen = await _screen()
+	var e: EngineeringPanel = _panel(s)
+	assert_int(s.ctx.pip_cap()).is_equal(12)
+	s.ctx.view.blocks[StationViews.Section.STATUS]["pip_cap"] = 10
+	assert_int(s.ctx.pip_cap()).is_equal(10)
+	assert_int(e.pips_used()).is_equal(10)
+	_press(s, "subsystem_2")
+	var n: int = _commands(s).size()
+	_press(s, "pip_add")
+	assert_int(_commands(s).size()).is_equal(n)
+	assert_array(_toasts).contains(["toast.eng_cap"])
+	assert_str(PartnerGlance.readout(s.ctx, "eng.reactor")).contains("10/10")
+
+
+# FT: FT-ENG-002
 func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)

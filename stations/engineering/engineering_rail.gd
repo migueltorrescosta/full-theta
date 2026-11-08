@@ -75,7 +75,7 @@ static func _pips(p: EngineeringPanel, sd: SubsystemDef, add: bool) -> String:
 		return "no_pips" if pips <= 0 else ""
 	if pips >= p.ship_def.power.max_pips_per_subsystem:
 		return "max"
-	return "cap" if p.pips_used() >= p.ship_def.power.reactor_pips else ""
+	return "cap" if p.pips_used() >= p.ctx.pip_cap() else ""
 
 
 static func _tightness(p: EngineeringPanel, tighter: bool) -> String:

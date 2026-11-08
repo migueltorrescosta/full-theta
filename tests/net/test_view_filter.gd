@@ -68,6 +68,22 @@ func _banded(value: float, maximum: float) -> float:
 	return HealthBand.quantise(value / maximum, DataToggles.def().band_edges) * maximum
 
 
+# FT: FT-PAIR-019, FT-ENG-002
+# The STATUS block carries the pips the reactor can feed now (PowerSystem.pip_cap): a dead
+# reactor gives 0 to Engineering at every difficulty; other stations see it as they see
+# the pips, exact on Easy and the nominal cap otherwise.
+func test_status_carries_the_damaged_reactor_pip_cap() -> void:
+	var nominal: int = world.defs[ME].power.reactor_pips
+	assert_int(_status("engineering", "hard")["pip_cap"]).is_equal(nominal)
+	world.damage.health[world.damage.find_subsystem(ME, &"reactor")] = 0.0
+	assert_int(PowerSystem.pip_cap(world, ME)).is_equal(0)
+	for code: String in ["easy", "normal", "hard"]:
+		assert_int(_status("engineering", code)["pip_cap"]).is_equal(0)
+	assert_int(_status("helm", "easy")["pip_cap"]).is_equal(0)
+	assert_int(_status("helm", "normal")["pip_cap"]).is_equal(nominal)
+	assert_int(_status("helm", "hard")["pip_cap"]).is_equal(nominal)
+
+
 # FT: FT-PAIR-019, FT-PAIR-007
 # Summaries of other stations' data are exact on Easy, banded to the middle of one of four
 # bands on Normal, and absent on Hard (the top bar's shields, reactor and propellant); the

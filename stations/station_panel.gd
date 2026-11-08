@@ -297,7 +297,7 @@ func _more_pips(kind: SubsystemDef.Kind) -> void:
 	var pips: int = int(rows[at].get("pips", 0)) + 1
 	if pips > def.power.max_pips_per_subsystem:
 		ctx.crew.toast.emit("toast.chip_pips_max", {})
-	elif used + 1 > def.power.reactor_pips:
+	elif used + 1 > ctx.pip_cap():
 		ctx.crew.toast.emit("toast.eng_cap", {})
 	else:
 		ctx.intents.command({"kind": "set_pips", "subsystem_kind": int(kind), "pips": pips})

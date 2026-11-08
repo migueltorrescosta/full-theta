@@ -233,16 +233,16 @@ func _sync_taps() -> void:
 
 
 func _draw_cap(fs: int) -> void:
-	var power: PowerDef = panel.ship_def.power
+	var cap: int = panel.ctx.pip_cap()
 	var y: float = _cap_y()
 	var used: int = panel.pips_used()
-	var text: String = tr("eng.reactor") % [used, power.reactor_pips]
+	var text: String = tr("eng.reactor") % [used, cap]
 	if panel.boosting():
 		var left: float = float(panel.block().get("boost_ticks", 0)) / CrewState.TICK_HZ
 		text += "  " + tr("eng.boost_left") % ceili(left)
 	_text(Vector2(PAD, y), text, "accent" if panel.boosting() else "text", fs)
-	var w: float = (size.x - 2.0 * PAD) / power.reactor_pips
-	for k: int in power.reactor_pips:
+	var w: float = (size.x - 2.0 * PAD) / maxi(cap, 1)
+	for k: int in cap:
 		var r: Rect2 = Rect2(PAD + k * w, y + 6.0, w - 2.0, 8.0 if compact else 12.0)
 		draw_rect(r, Palette.color("ok" if k < used else "line"))
 

@@ -77,6 +77,16 @@ func ship_def() -> ShipDef:
 	return null
 
 
+## Pips the reactor can feed now: the STATUS block's pip_cap (lower while the reactor is
+## damaged), else the ship's nominal reactor_pips before the first snapshot; 0 without a ship.
+func pip_cap() -> int:
+	var status: Dictionary = view.blocks.get(StationViews.Section.STATUS, {})
+	if status.has("pip_cap"):
+		return int(status["pip_cap"])
+	var def: ShipDef = ship_def()
+	return def.power.reactor_pips if def != null and def.power != null else 0
+
+
 ## Places a new mark (slot -1: the first free one) or replaces `slot` on an item as
 ## item_at returns it: on a contact (attached) or a map point.
 func mark_item(slot: int, item: Dictionary) -> void:

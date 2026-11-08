@@ -728,7 +728,7 @@ func set_pips(i: int, n: int) -> bool:
 	var now: int = pips_of(i)
 	if p == now:
 		return false
-	if pips_used() - now + p > ship_def.power.reactor_pips:
+	if pips_used() - now + p > ctx.pip_cap():
 		_toast("toast.eng_cap")
 		return false
 	ctx.intents.command({"kind": "set_pips", "subsystem_kind": int(sd.kind), "pips": p})
