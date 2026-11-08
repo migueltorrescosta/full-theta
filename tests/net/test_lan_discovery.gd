@@ -109,8 +109,9 @@ func test_a_failing_send_is_kept_and_logged_once() -> void:
 	assert_bool(cli.parse_args(["--bind", "127.0.0.1", "--port", "0"])).is_true()
 	var server: NetServer = cli.make_server()
 	_beacon = LanBeacon.new(PROTO, "s", 40001)
-	assert_int(_beacon.start(9, PackedStringArray(["127.0.0.1"]))).is_equal(OK)
-	_beacon._peer.close()
+	assert_int(_beacon.start(9, PackedStringArray([LanBeacon.BROADCAST_ADDRESS]))).is_equal(OK)
+	# The OS refuses a broadcast datagram on a socket that may not broadcast.
+	_beacon._peer.set_broadcast_enabled(false)
 	_beacon.poll(1_000_000)
 	assert_int(_beacon.last_error).is_not_equal(OK)
 	server.beacon = _beacon
