@@ -429,7 +429,13 @@ func _close_run(api: ScenarioApi, now: int, ship: int, reason: String) -> void:
 
 ## The enemy-strength multiplier of the difficulty preset (Q14, DirectorDef).
 func _strength() -> float:
-	return _def.strength_per_preset.get(_preset, 1.0)
+	return preset_strength(_def, _preset)
+
+
+## The enemy-strength multiplier the toggles code's preset names (1.0 for a preset the def
+## doesn't list).
+static func preset_strength(def: DirectorDef, difficulty: StringName) -> float:
+	return def.strength_per_preset.get(preset_of(String(difficulty)), 1.0)
 
 
 ## Logs once per quiet period that nothing fits the budget.
