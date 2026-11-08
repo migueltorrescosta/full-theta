@@ -16,13 +16,11 @@ static func mount_rows(p: WeaponsPanel) -> Array[String]:
 		var w: WeaponDef = p.weapon_of(i)
 		var ammo: int = int(row.get("ammo", w.ammo_capacity))
 		var ammo_text: String = "∞" if ammo < 0 else "%d/%d" % [ammo, w.ammo_capacity]
-		var holder: Dictionary = p.holder(i)
 		var who: String = p.tr("weapons.free")
 		if p.is_mine(i):
 			who = p.tr("weapons.you")
-		elif not holder.is_empty():
-			who = str(holder.get("name", ""))
-		var heat: float = float(row.get("heat", 0.0)) / w.heat_limit
+		elif not p.holder(i).is_empty():
+			who = p.holder_name(i)
 		(
 			out
 			. append(
@@ -33,7 +31,7 @@ static func mount_rows(p: WeaponsPanel) -> Array[String]:
 						i + 1,
 						m.id,
 						p.tr("weapons." + mount_state(p, i)),
-						p.tr("weapons.heat") % roundi(heat * 100.0),
+						p.tr("weapons.heat") % roundi(WeaponsStatus.heat_share(p, i) * 100.0),
 						ammo_text,
 						who,
 					]
@@ -49,13 +47,13 @@ static func mount_state(p: WeaponsPanel, i: int) -> String:
 	var w: WeaponDef = p.weapon_of(i)
 	if row.is_empty():
 		return "no_data"
-	if int(row["ammo"]) == 0:
+	if int(row.get("ammo", 1)) == 0:
 		return "empty"
 	if bool(row.get("locked", false)):
 		return "locked"
-	if float(row["heat"]) >= w.heat_limit:
+	if float(row.get("heat", 0.0)) >= w.heat_limit:
 		return "hot"
-	if float(row["cooldown"]) > 0.0:
+	if float(row.get("cooldown", 0.0)) > 0.0:
 		return "reloading"
 	return "ready"
 
@@ -98,9 +96,7 @@ static func ammo_name(p: WeaponsPanel) -> String:
 
 ## The ammunition line (FT-WPN-006): the selected type, "standard" for a mount with one.
 static func ammo_text(p: WeaponsPanel) -> String:
-	if p.mount_count() == 0 or p.ship_def.mounts[p.mount].alt_weapons.is_empty():
-		return p.tr("weapons.ammo") % p.tr("weapons.ammo_standard")
-	return p.tr("weapons.ammo") % p.weapon_of(p.mount).display_name
+	return p.tr("weapons.ammo") % ammo_name(p)
 
 
 ## What other stations' work says of the selected target (FT-WPN-007, P7, P8): its
@@ -177,4 +173,4 @@ static func hint(p: WeaponsPanel) -> String:
 			"claim", p.ctx.matcher.device
 		)
 		return p.tr("weapons.hint_claim") % BindingText.describe_all(keys)
-	return p.tr("weapons.held_by") % str(holder.get("name", ""))
+	return p.tr("weapons.held_by") % p.holder_name(p.mount)

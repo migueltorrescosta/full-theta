@@ -394,32 +394,6 @@ func _dispatch_batch(batch: Array[Dictionary]) -> void:
 
 # --- Common actions (StationCommonActions, §5.0). ---
 
-
-## The data shortcuts this screen's stations may share with their partners (D210).
-func shareable() -> Array[StringName]:
-	return common.shareable()
-
-
-## Contact ids but the own ship, nearest first (cycle target).
-func contacts_by_range() -> Array:
-	return common.contacts_by_range()
-
-
-## A long-press let go in place pings what is under the finger, else the selection.
-func ping_at(at: Vector2) -> void:
-	common.ping_at(at)
-
-
-## A long-press dragged and let go marks where the finger ends (P28-Common).
-func mark_at(at: Vector2) -> void:
-	common.mark_at(at)
-
-
-## Marks `item` ({} does nothing): the rules of the common mark.
-func mark_item(item: Dictionary) -> void:
-	common.mark_item(item)
-
-
 # --- The phone frame (#28 follow-up, PhoneFrame). ---
 
 

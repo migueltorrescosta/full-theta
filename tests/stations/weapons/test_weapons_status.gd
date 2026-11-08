@@ -133,7 +133,7 @@ func test_an_arrow_at_the_reticle_points_to_the_out_of_arc_target() -> void:
 	var p: WeaponsPanel = s.panels[0] as WeaponsPanel
 	_frame(s)
 	# U3 sits out of the arc: the arrow points toward it, as a unit vector.
-	assert_str(p.out_of_arc_text()).is_not_empty()
+	assert_str(WeaponsReadout.out_of_arc_text(p)).is_not_empty()
 	assert_float(WeaponsStatus.arc_arrow_dir(p).length()).is_equal_approx(1.0, 0.001)
 	# No target, no arrow.
 	var none: StationScreen = await _screen(true, false)

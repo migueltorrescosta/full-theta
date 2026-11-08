@@ -160,15 +160,15 @@ func test_swap_between_claimed_mounts_and_claim() -> void:
 func test_out_of_arc_gives_the_turn_direction() -> void:
 	var s: StationScreen = _screen()
 	var p: WeaponsPanel = _panel(s)
-	assert_str(p.out_of_arc_text()).is_equal("")
+	assert_str(WeaponsReadout.out_of_arc_text(p)).is_equal("")
 	s.ctx.crew.select("contact", StationFixture.H2)
-	assert_str(p.out_of_arc_text()).is_equal("H2 out of arc: turn 4 high")
+	assert_str(WeaponsReadout.out_of_arc_text(p)).is_equal("H2 out of arc: turn 4 high")
 	s.ctx.crew.select("contact", StationFixture.U3)
-	assert_str(p.out_of_arc_text()).is_equal("U3 out of arc: turn 11 high")
+	assert_str(WeaponsReadout.out_of_arc_text(p)).is_equal("U3 out of arc: turn 11 high")
 	_place(s.ctx, StationFixture.U3, _bearing(-50.0, -10.0, 3000.0))
-	assert_str(p.out_of_arc_text()).is_equal("U3 out of arc: turn 10 level")
+	assert_str(WeaponsReadout.out_of_arc_text(p)).is_equal("U3 out of arc: turn 10 level")
 	_place(s.ctx, StationFixture.U3, _bearing(8.0, 5.0, 3000.0))
-	assert_str(p.out_of_arc_text()).is_equal("")
+	assert_str(WeaponsReadout.out_of_arc_text(p)).is_equal("")
 
 
 # FT: FT-WPN-009, FT-WPN-001, FT-M1-008

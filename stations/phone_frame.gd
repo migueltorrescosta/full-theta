@@ -326,7 +326,7 @@ func selection_text() -> String:
 
 ## The selection chip's arrows: the next (+1) or previous (-1) contact by range.
 func cycle_target(step: int) -> void:
-	var ids: Array = screen.contacts_by_range()
+	var ids: Array = screen.common.contacts_by_range()
 	if step < 0:
 		ids.reverse()
 	screen.ctx.crew.cycle("contact", ids)
@@ -342,8 +342,8 @@ func open_selection_sheet() -> void:
 		TouchText.of("sheet.clear", "Clear")
 	]
 	var acts: Array[Callable] = [
-		func() -> void: screen.ping_at(Vector2(-1.0, -1.0)),
-		func() -> void: screen.mark_item(ctx.crew.selection),
+		func() -> void: screen.common.ping_at(Vector2(-1.0, -1.0)),
+		func() -> void: screen.common.mark_item(ctx.crew.selection),
 		func() -> void: ctx.crew.select("", -1),
 	]
 	for e: Array in screen.focused_panel().selection_extras:

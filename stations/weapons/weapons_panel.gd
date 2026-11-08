@@ -57,10 +57,6 @@ var fov: float = FOV_DEG
 var aim: WeaponsAim = WeaponsAim.new(self)
 var _firing: bool = false
 var _firing_all: bool = false
-## Brackets in view this frame (WeaponsTurretOverlay.targets).
-var _targets: Array[Dictionary]:
-	get:
-		return _overlay.targets
 var _view: SubViewportContainer
 ## The turret camera's view, from the camera mount.
 var _space: SpaceView
@@ -301,7 +297,7 @@ func item_at(screen_pos: Vector2) -> Dictionary:
 	if radar != null and radar.is_visible_in_tree() and radar.get_global_rect().has_point(global):
 		return radar.item_at(radar.get_global_transform().affine_inverse() * global)
 	var at: Vector2 = _overlay.get_global_transform().affine_inverse() * global
-	for t: Dictionary in _targets:
+	for t: Dictionary in _overlay.targets:
 		if (t["rect"] as Rect2).has_point(at):
 			return {"kind": t["item"]["kind"], "id": t["item"]["id"]}
 	return {}
@@ -493,21 +489,6 @@ func selected_contact() -> int:
 	return int(s["id"]) if s.get("kind", "") == "contact" else -1
 
 
-## The out-of-arc line (FT-WPN-005), "" when in arc or none.
-func out_of_arc_text() -> String:
-	return WeaponsReadout.out_of_arc_text(self)
-
-
-## What other stations' work says of the selected target (FT-WPN-007).
-func feed_lines() -> Array[String]:
-	return WeaponsReadout.feed_lines(self)
-
-
-## The camera mount's selected ammunition by name ("standard" for a mount with one).
-func ammo_name() -> String:
-	return WeaponsReadout.ammo_name(self)
-
-
 ## The name of the player who holds mount i, or "".
 func holder_name(i: int) -> String:
 	return str(holder(i).get("name", ""))
@@ -594,12 +575,12 @@ func project(dir: Vector3) -> Variant:
 func _build_view() -> void:
 	_view = SubViewportContainer.new()
 	_view.stretch = true
-	RenderQuality.track(_view)
 	_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_view)
 	var vp: SubViewport = SubViewport.new()
 	vp.own_world_3d = true
+	RenderQuality.track(vp)
 	_view.add_child(vp)
 	_space = SpaceView.new()
 	_space.ship_scale = SHIP_SCALE

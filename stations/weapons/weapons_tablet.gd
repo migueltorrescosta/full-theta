@@ -117,7 +117,7 @@ func refresh() -> void:
 		var b: RailButton = mount_buttons[i]
 		b.visible = i < p.mount_count()
 		b.role = RailButton.Role.ACCENT if i == p.mount else RailButton.Role.PLAIN
-	ammo_button.text = p.ammo_name() + " ▸"
+	ammo_button.text = WeaponsReadout.ammo_name(p) + " ▸"
 	claim_button.text = WeaponsStatus.claim_text(p, p.mount)
 	claim_button.role = RailButton.Role.ACCENT if p.is_mine(p.mount) else RailButton.Role.PLAIN
 	claim_button.disabled = not p.is_usable(p.mount)

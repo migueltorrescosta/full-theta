@@ -220,8 +220,8 @@ func _check_cutaway(panel: EngineeringPanel, where: String) -> bool:
 		. is_true()
 	)
 	var r: float = cut.node_r()
-	for i: int in panel.count():
-		for j: int in range(i + 1, panel.count()):
+	for i: int in panel.model.count():
+		for j: int in range(i + 1, panel.model.count()):
 			(
 				assert_float(cut.subsystem_pos(i).distance_to(cut.subsystem_pos(j)))
 				. override_failure_message("%s: discs %d and %d overlap" % [where, i, j])
@@ -524,10 +524,10 @@ func test_the_cutaway_keeps_200_px_and_no_crew_token_sits_on_a_disc() -> void:
 			. override_failure_message("%s: area %s" % [where, area])
 			. is_true()
 		)
-		for c: int in panel.crew_count():
-			if panel.crew_job(c) < 0:
+		for c: int in panel.model.crew_count():
+			if panel.model.crew_job(c) < 0:
 				continue
-			for i: int in panel.count():
+			for i: int in panel.model.count():
 				(
 					assert_float(cut.token_pos(c).distance_to(cut.subsystem_pos(i)))
 					. override_failure_message("%s: token %d on disc %d" % [where, c, i])

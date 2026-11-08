@@ -35,13 +35,9 @@ static func fire_block(p: WeaponsPanel, i: int) -> String:
 		return ""
 	if not p.is_usable(i):
 		return "taken"
-	var row: Dictionary = p.mount_row(i)
-	if int(row.get("ammo", 1)) == 0:
-		return "empty"
-	if bool(row.get("locked", false)):
-		return "locked"
-	if float(row.get("heat", 0.0)) >= p.weapon_of(i).heat_limit:
-		return "hot"
+	var state: String = WeaponsReadout.mount_state(p, i)
+	if state in ["empty", "locked", "hot"]:
+		return state
 	return "" if p.in_arc(i, p.aim_dir(i)) else "arc"
 
 
@@ -81,7 +77,7 @@ static func claim_text(p: WeaponsPanel, i: int) -> String:
 ## The direction (screen, unit) the camera must turn toward the selected contact when it is
 ## out of the camera mount's arc, else ZERO: the arrow at the reticle.
 static func arc_arrow_dir(p: WeaponsPanel) -> Vector2:
-	if p.out_of_arc_text() == "":
+	if WeaponsReadout.out_of_arc_text(p) == "":
 		return Vector2.ZERO
 	var at: Vector3 = p.ctx.interp.contact_position(p.selected_contact())
 	var cam: Vector3 = p.cam_basis.transposed() * p.ctx.interp.offset_to(at).normalized()

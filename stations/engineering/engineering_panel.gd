@@ -403,29 +403,6 @@ func claim_item() -> String:
 	return "%s:%d" % [StationViews.CLAIM_CREW, model.crew_pick] if model.crew_count() > 0 else ""
 
 
-# --- Readers other stations' tests use (EngineeringModel). ---
-
-
-func count() -> int:
-	return model.count()
-
-
-func pips_of(i: int) -> int:
-	return model.pips_of(i)
-
-
-func crew_count() -> int:
-	return model.crew_count()
-
-
-func crew_job(c: int) -> int:
-	return model.crew_job(c)
-
-
-func hazard_eta() -> float:
-	return model.hazard_eta()
-
-
 func _refresh_lists() -> void:
 	if ship_def == null:
 		return

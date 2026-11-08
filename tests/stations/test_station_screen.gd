@@ -180,7 +180,7 @@ func test_cycle_target_skips_the_own_ship() -> void:
 	s.ctx.interp.push(v, StationFixture.NOW_MS)
 	s.ctx.interp.update(StationFixture.NOW_MS)
 	assert_array(s.ctx.interp.contact_ids()).contains([s.ctx.crew.ship])
-	assert_array(s.contacts_by_range()).is_equal(
+	assert_array(s.common.contacts_by_range()).is_equal(
 		[StationFixture.F4, StationFixture.H2, StationFixture.U3]
 	)
 

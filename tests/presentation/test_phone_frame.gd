@@ -291,7 +291,7 @@ func test_selection_chip_and_sheet() -> void:
 	s._process(0.016)
 	assert_bool(s.frame.selection_chip.is_visible_in_tree()).is_true()
 	assert_str(s.frame.selection_chip.name_button.text).starts_with("H2 · ")
-	var order: Array = s.contacts_by_range()
+	var order: Array = s.common.contacts_by_range()
 	s.frame.selection_chip.next_button.pressed.emit()
 	assert_int(int(s.ctx.crew.selection["id"])).is_equal(
 		int(order[(order.find(StationFixture.H2) + 1) % order.size()])
@@ -477,7 +477,7 @@ func test_crew_page_buttons_send() -> void:
 	if not chips.is_empty():
 		page.button("chip", String(chips[0].id)).pressed.emit()
 		assert_int(_sent(s, "send_chip").size() + _sent(s, "command").size()).is_greater(0)
-	for id: StringName in s.shareable():
+	for id: StringName in s.common.shareable():
 		page.button("share", String(id)).pressed.emit()
-	assert_int(_sent(s, "share").size()).is_equal(s.shareable().size())
+	assert_int(_sent(s, "share").size()).is_equal(s.common.shareable().size())
 	_drop(s)
