@@ -53,15 +53,15 @@ func test_armed_long_press_shows_a_growing_ring() -> void:
 	var at: Vector2 = s.frame.view_top.get_global_rect().get_center() + Vector2(0, 60)
 	var t0: int = StationFixture.NOW_MS
 	_touch(s, at, true, t0)
-	s.frame.process(t0 + 100)
+	s.frame.process(t0 + 100, {})
 	assert_bool(ring.visible).is_false()
 	StationFixture.clock(s.ctx).ms = t0 + LongPress.HOLD_MS
-	s.frame.process(t0 + LongPress.HOLD_MS)
+	s.frame.process(t0 + LongPress.HOLD_MS, {})
 	assert_bool(ring.visible).is_true()
 	var centre: Vector2 = ring.get_global_rect().get_center()
 	assert_float(centre.distance_to(at)).is_less(1.0)
 	var r0: float = ring.radius()
-	s.frame.process(t0 + LongPress.HOLD_MS + PhoneFrame.ArmedRing.GROW_MS)
+	s.frame.process(t0 + LongPress.HOLD_MS + PhoneFrame.ArmedRing.GROW_MS, {})
 	assert_float(ring.radius()).is_greater(r0)
 	assert_float(ring.radius()).is_equal(PhoneFrame.ArmedRing.END_R)
 	_drag(s, at + Vector2(50, 0))

@@ -144,6 +144,14 @@ func share_left(feature: StringName, now_ms: int) -> float:
 	)
 
 
+## Every share's seconds left at `now_ms`: {feature: seconds}.
+func shares_left(now_ms: int) -> Dictionary:
+	var left: Dictionary = {}
+	for id: StringName in shares:
+		left[id] = share_left(id, now_ms)
+	return left
+
+
 ## How the top bar shows the STATUS values that are another station's data at the session's
 ## toggles (FT-PAIR-019, D193): {key: {"text": word or dash, "band": HealthBand.Band or -1}}
 ## for the keys that aren't exact numbers; the keys whose numbers show stay out. `def` is the

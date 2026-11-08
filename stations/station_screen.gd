@@ -316,11 +316,9 @@ func _process(delta: float) -> void:
 	var spot: Rect2 = top_bar.status_rect().intersection(get_global_rect())
 	toasts.place(Rect2(spot.position - get_global_rect().position, spot.size))
 	flash.update(now)
+	var left: Dictionary = ctx.crew.shares_left(now)
 	if phone:
-		frame.process(now)
-	var left: Dictionary = {}
-	for id: StringName in ctx.crew.shares:
-		left[id] = ctx.crew.share_left(id, now)
+		frame.process(now, left)
 	if frame.framed():
 		chip_strip.visible = false
 	else:
