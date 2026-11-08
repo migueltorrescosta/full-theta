@@ -24,6 +24,9 @@ const HAZE_SEGMENTS: int = 96
 const HAZE_ROWS: int = 8
 const HAZE_PEAK: float = 0.2  # haze brightness on the band's centre line
 
+## The one backdrop mesh every SpaceView shares (E4, R20-10), built on first use.
+static var _star_cache: ArrayMesh
+
 ## Scale of every ship model (ProceduralShip is about 5 m long).
 var ship_scale: float = 1.0
 ## Draw only contacts with a NEAR orientation (within 2 km), as the main screen does.
@@ -61,6 +64,7 @@ func _init() -> void:
 	rim = DirectionalLight3D.new()
 	rim.rotation_degrees = Vector3(30.0, 210.0, 0.0)
 	rim.light_energy = 0.0
+	rim.visible = false
 	add_child(rim)
 	camera = Camera3D.new()
 	camera.near = 0.5
@@ -68,7 +72,7 @@ func _init() -> void:
 	camera.current = true
 	add_child(camera)
 	_stars = MeshInstance3D.new()
-	_stars.mesh = _star_mesh()
+	_stars.mesh = star_mesh()
 	add_child(_stars)
 	vfx = VfxLayer.new(self)
 	add_child(vfx)
@@ -95,8 +99,7 @@ func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
 		if not ships.has(id):
 			ships[id] = copy_ship(look)
 		var node: ProceduralShip = ships[id]
-		if node.look != look:
-			node.set_look(look)
+		refresh_ship(node, look)
 		if near:
 			var q: Quaternion = NetCodec.unpack_quat(int(ctx.view.near[id][0]))
 			node.basis = Basis(q).scaled(Vector3.ONE * ship_scale)
@@ -106,6 +109,15 @@ func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
 		if not seen.has(id):
 			(ships[id] as Node3D).queue_free()
 			ships.erase(id)
+
+
+## Shows `look` on `node` (a ship of this view) when it is not already, or when it was built
+## under another Low Graphics setting (E2).
+func refresh_ship(node: ProceduralShip, look: String) -> void:
+	if node.detail_scale != ship_scale:
+		node.set_detail_scale(ship_scale)
+	if node.look != look or node.is_stale():
+		node.set_look(look)
 
 
 ## The model effects follow for ship `id`: the drawn contact, the own ship's model when one
@@ -138,8 +150,22 @@ func _on_sim_event(kind: StringName, p: Dictionary) -> void:
 func copy_ship(look: String = ProceduralShip.GENERIC) -> ProceduralShip:
 	var n: ProceduralShip = ProceduralShip.new()
 	n.look = look
+	n.detail_scale = ship_scale
 	add_child(n)
 	return n
+
+
+## The shared backdrop, built on first use.
+static func star_mesh() -> ArrayMesh:
+	if _star_cache == null:
+		_star_cache = _star_mesh()
+	return _star_cache
+
+
+## Sets the rim light's energy; at 0 the light is off, so no pixel evaluates it (E4, R20-8).
+func set_rim_energy(energy: float) -> void:
+	rim.light_energy = energy
+	rim.visible = energy > 0.0
 
 
 ## The backdrop, one mesh of four surfaces on a sphere of STAR_R: a field of stars, a few
