@@ -48,6 +48,8 @@ const PORTRAIT_COLUMNS: int = 2
 ## Font sizes of the selection line on a short screen (its name, then its role).
 const SHORT_NAME_SIZE: int = 15
 const SHORT_ROLE_SIZE: int = 13
+## The Start text's size when it wraps to two lines in a 48 px row.
+const START_WRAP_SIZE: int = 13
 ## The top margin of a short screen, in px.
 const SHORT_TOP: int = 0
 ## Added to each wide button's natural width when sharing a phone row (short names first).
@@ -194,6 +196,7 @@ func refresh() -> void:
 	if ctx.crew.waiting_for_others(ship):
 		_start.disabled = true
 		_start.text = tr("lobby.waiting") % ", ".join(ctx.crew.waiting_names())
+	_fit_start()
 	_start.visible = (
 		not _browsing
 		and (not bool(state.get("started", false)) or ctx.crew.waiting_for_others(ship))
@@ -210,6 +213,20 @@ func refresh() -> void:
 		_summary_name.text = tr("lobby.pick_ship")
 		_summary_role.text = ""
 		_body.visible = false
+
+
+## A Start text too long for one line ("Falta: Retransmissão, Comunicações" in a phone's
+## row) wraps to two lines in a smaller font, so it is never cut and the row keeps its height.
+func _fit_start() -> void:
+	_start.remove_theme_font_size_override("font_size")
+	var font: Font = _start.get_theme_font("font")
+	var fs: int = _start.get_theme_font_size("font_size")
+	var room: float = _start.size.x - _start.get_theme_stylebox("normal").get_minimum_size().x
+	var wide: float = font.get_string_size(_start.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var long: bool = room > 0.0 and wide > room
+	_start.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if long else TextServer.AUTOWRAP_OFF
+	if long:
+		_start.add_theme_font_size_override("font_size", START_WRAP_SIZE)
 
 
 ## Why Start is greyed on the shown ship: "Pick a station", "Need Relay, Comms" or
@@ -590,6 +607,7 @@ func _build() -> void:
 	_start.theme_type_variation = "TouchButton"
 	_start.clip_text = true
 	_start.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_start.resized.connect(_fit_start)
 	outer.add_child(_start)
 	_build_dialogs()
 

@@ -204,6 +204,14 @@ func test_a_greyed_start_names_what_it_waits_for() -> void:
 	l.refresh()
 	assert_bool(start.disabled).is_true()
 	assert_str(start.text).is_equal("Need Relay")
+	# w5: a text too long for the button wraps in a smaller font, never cut.
+	start.size = Vector2(200.0, start.size.y)
+	l.ctx.crew.lobby[l.ship].merge({"uncovered": ["relay", "comms", "science"]}, true)
+	l.refresh()
+	assert_int(start.autowrap_mode).is_not_equal(TextServer.AUTOWRAP_OFF)
+	assert_int(start.get_theme_font_size("font_size")).is_equal(LobbyScreen.START_WRAP_SIZE)
+	start.size = Vector2(1200.0, start.size.y)
+	assert_int(start.autowrap_mode).is_equal(TextServer.AUTOWRAP_OFF)
 
 
 # FT: FT-NET-003

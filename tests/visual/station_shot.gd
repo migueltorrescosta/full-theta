@@ -149,7 +149,13 @@ func _ready() -> void:
 				{"entry": "weapons", "name": "Bo"},
 				{"entry": "systems", "name": "Cy"},
 			]
+			if entry == StationViews.ALL:
+				# The dev seat covers every station and needs no other crew (FT-NET-029).
+				_ctx.crew.lobby[0]["uncovered"] = []
+				_ctx.crew.lobby[0]["ready"] = true
 			_ctx.host_bind = host_bind
+			# The host's lobby: its join strip and its End game button (C1, D353).
+			_ctx.crew.host = host_bind != ""
 			_ctx.host_port = NetProtocol.DEFAULT_WS_PORT
 			_ctx.settings.player_name = player
 			var l: LobbyScreen = LobbyScreen.new()
