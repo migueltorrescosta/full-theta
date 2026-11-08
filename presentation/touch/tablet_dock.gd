@@ -6,6 +6,8 @@ extends Control
 ## Upright, both rails join one docked bar along the bottom, each taking half of its width,
 ## sticks at the lower corners. The station fills `left` and `right` (TouchRail) and gives
 ## the dock to the StationScreen (`set_tablet_dock`), which reserves its room and places it.
+## A station with buttons only (Engineering) asks for a compact bar of `bar` px instead, in
+## either orientation: one row of buttons per half.
 ##
 ##     var dock := TabletDock.new(portrait)
 ##     dock.left.add(...)
@@ -23,12 +25,15 @@ const STICK: float = 136.0
 const MIN_SIDE: float = 300.0
 
 var portrait: bool = false
+## The bottom bar's height, px, or 0 for side rails (landscape Helm and Weapons).
+var bar_h: float = 0.0
 var left: TouchRail
 var right: TouchRail
 
 
-func _init(is_portrait: bool = false) -> void:
+func _init(is_portrait: bool = false, bar: float = 0.0) -> void:
 	portrait = is_portrait
+	bar_h = bar if bar > 0.0 else (BAR_H if portrait else 0.0)
 	name = "TabletDock"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -37,7 +42,7 @@ func _init(is_portrait: bool = false) -> void:
 	left.name = "RailL"
 	right.name = "RailR"
 	for r: TouchRail in [left, right]:
-		r.custom_minimum_size.x = 0.0 if portrait else RAIL_W
+		r.custom_minimum_size.x = 0.0 if bar_h > 0.0 else RAIL_W
 		add_child(r)
 
 
@@ -47,17 +52,18 @@ static func fits(dp: Vector2) -> bool:
 
 
 ## The room the screen gives the dock: a column at each side (landscape, x each), or a bar
-## along the bottom (upright, y).
+## along the bottom (upright or compact, y).
 func reserve() -> Vector2:
-	return Vector2(0.0, BAR_H) if portrait else Vector2(RAIL_W, 0.0)
+	return Vector2(0.0, bar_h) if bar_h > 0.0 else Vector2(RAIL_W, 0.0)
 
 
 ## Puts the rails in `area` (the screen's tap area, in the screen's coordinates).
 func place(area: Rect2) -> void:
-	if portrait:
+	if bar_h > 0.0:
 		var half: float = floorf(area.size.x / 2.0)
-		_put(left, Rect2(area.position.x, area.end.y - BAR_H, half, BAR_H))
-		_put(right, Rect2(area.position.x + half, area.end.y - BAR_H, area.size.x - half, BAR_H))
+		var y: float = area.end.y - bar_h
+		_put(left, Rect2(area.position.x, y, half, bar_h))
+		_put(right, Rect2(area.position.x + half, y, area.size.x - half, bar_h))
 	else:
 		_put(left, Rect2(area.position.x, area.position.y, RAIL_W, area.size.y))
 		_put(right, Rect2(area.end.x - RAIL_W, area.position.y, RAIL_W, area.size.y))
