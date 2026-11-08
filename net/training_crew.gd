@@ -226,7 +226,7 @@ func _pip(world: SimWorld, ship: int, station: StringName, kind: int) -> void:
 		want.pips = cur - 1
 	else:
 		want.pips = cur + 1
-		if used + 1 > def.power.reactor_pips:
+		if used + 1 > PowerSystem.pip_cap(world, ship):
 			var give: SetPipsCommand = SetPipsCommand.new()
 			give.subsystem_kind = SubsystemDef.Kind.ENGINES
 			give.pips = maxi(0, engines - 1)
