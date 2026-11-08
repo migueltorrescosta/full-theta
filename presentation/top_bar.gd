@@ -14,6 +14,10 @@ signal alert_sheet_requested
 
 ## Bar height before UI scale (px).
 const HEIGHT: float = 40.0
+## The goal chip's row under the bar's rows (px): what the crew is trying to do, with progress.
+## A phone's bar has no room for the row: its goal is the second line of the timer's cell.
+const GOAL_H: float = 20.0
+const GOAL_SIZE: int = 13
 const CHIP_LETTER_SIZE: int = 12
 ## The phone timer's width, and its narrower one beside the full-screen icon (a 390 px bar).
 const TIMER_W: float = 48.0
@@ -48,6 +52,9 @@ var _row2: HBoxContainer = HBoxContainer.new()
 var _compact: bool = false
 ## Every control of the row in order, to put them back after the compact row.
 var _order: Array[Control] = []
+var _goal: Label = Label.new()
+## The phone's short goal ("2 foes"), the timer cell's second line.
+var _goal_short: String = ""
 var _name: Label = Label.new()
 var _hull: Label = Label.new()
 var _shields: Label = Label.new()
@@ -117,6 +124,16 @@ func _init() -> void:
 	_phone_row.size_flags_vertical = SIZE_EXPAND_FILL
 	_phone_row.visible = false
 	rows.add_child(_phone_row)
+	# The goal chip (C2): one thin line under every form of the bar.
+	_goal.name = "Goal"
+	_goal.add_theme_font_size_override("font_size", GOAL_SIZE)
+	_goal.add_theme_color_override("font_color", Palette.color("text"))
+	_goal.custom_minimum_size.y = GOAL_H
+	_goal.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_goal.clip_text = true
+	_goal.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_goal.mouse_filter = MOUSE_FILTER_IGNORE
+	rows.add_child(_goal)
 	menu_button.name = "MenuButton"
 	menu_button.add_theme_font_size_override("font_size", 20)
 	menu_button.tooltip_text = tr("intent.menu")
@@ -125,6 +142,8 @@ func _init() -> void:
 	_phone_timer.add_theme_font_size_override("font_size", 14)
 	_phone_timer.add_theme_color_override("font_color", Palette.color("text"))
 	_phone_timer.custom_minimum_size.x = TIMER_W
+	_phone_timer.clip_text = true
+	_phone_timer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_phone_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	for c: Control in [menu_button, glance, tabs, _phone_timer]:
 		c.size_flags_vertical = SIZE_SHRINK_CENTER
@@ -135,6 +154,18 @@ func _init() -> void:
 
 func _fit_timer() -> void:
 	_phone_timer.custom_minimum_size.x = TIMER_W_NARROW if fullscreen.visible else TIMER_W
+
+
+## The bar's extra height for the goal row: none on a phone.
+func goal_height() -> float:
+	return 0.0 if phone else GOAL_H
+
+
+## Shows the goal chip: `text` ("Goal: stop the hostiles (2 left)") in its row, `short` ("2 foes")
+## under a phone's timer; "" leaves them blank.
+func show_goal(text: String, short: String = "") -> void:
+	_goal.text = text
+	_goal_short = short
 
 
 ## The phone's one-row bar (design 1.2): menu, status, tabs, alert chip, timer; `height`
@@ -151,6 +182,7 @@ func set_phone(on: bool, height: float = HEIGHT) -> void:
 	phone = on
 	_box.offset_top = 0.0 if on else 8.0
 	_row.visible = not on
+	_goal.visible = not on
 	_phone_row.visible = on
 	if on:
 		chip.reparent(_phone_row, false)
@@ -219,7 +251,7 @@ func show_state(
 	var state: Array = [ship_name, hull, shields, pips, alert, stations.duplicate()]
 	for key: String in _badges:
 		state.append(summaries.get(key, {}).get("band", -1))
-	state.append_array([int(mission_s), focused])
+	state.append_array([int(mission_s), focused, _goal_short])
 	if state == _shown:
 		return
 	_shown = state
@@ -244,7 +276,7 @@ func show_state(
 	_stations.text = " + ".join(names)
 	var secs: int = int(mission_s)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
-	_phone_timer.text = _timer.text
+	_phone_timer.text = _timer.text if _goal_short == "" else "%s\n%s" % [_timer.text, _goal_short]
 	glance.set_values(
 		_fill(status, "hull", summaries, float(maxes.get("hull", 0.0))),
 		hull.trim_suffix("%"),

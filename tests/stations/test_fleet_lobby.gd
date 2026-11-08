@@ -105,10 +105,10 @@ func test_host_picks_the_mode_and_team_win_rule() -> void:
 	_button(l, "Win_first_to_finish").pressed.emit()
 	assert_array(_sent(l, "set_mode")[-1][1]).is_equal(["teams", "first_to_finish", -1])
 	assert_str(mode.text).is_equal("Mode: Teams (Last team standing)")
-	# A phone shows just the mode's name.
+	# A phone drops the rule but keeps the label (R24-5).
 	l.size = Vector2(390, 844)
 	l.refresh()
-	assert_str(mode.text).is_equal("Teams")
+	assert_str(mode.text).is_equal("Mode: Teams")
 	StationFixture.fleet(l.ctx, "holdout", ["A", "B"], [0, 1])
 	assert_str((l.find_child("ModeDesc", true, false) as Label).text).contains("3 lives")
 	var guest: LobbyScreen = _lobby("race")
@@ -184,3 +184,44 @@ func test_phone_landscape_lobby_meets_the_touch_rules() -> void:
 		assert_float(minf(r.size.x, r.size.y)).override_failure_message(t["text"]).is_greater_equal(
 			48.0
 		)
+
+
+# FT: FT-NET-021
+# C3, R24-6: a greyed Start says what it waits for, on the button, whatever the form.
+func test_a_greyed_start_names_what_it_waits_for() -> void:
+	var l: LobbyScreen = _lobby()
+	var start: Button = _button(l, "Start")
+	var state: Dictionary = l.ctx.crew.ship_state(l.ship).duplicate()
+	state.merge({"ready": false, "uncovered": ["relay", "comms"], "crew": 2, "min_crew": 3}, true)
+	assert_str(l.start_blocker(state)).is_equal("Need Relay, Comms")
+	state["uncovered"] = []
+	assert_str(l.start_blocker(state)).is_equal("Need 1 more player")
+	state["crew"] = 1
+	assert_str(l.start_blocker(state)).is_equal("Need 2 more players")
+	state["ready"] = true
+	assert_str(l.start_blocker(state)).is_equal("Start")
+	l.ctx.crew.lobby[l.ship].merge({"ready": false, "uncovered": ["relay"], "crew": 2}, true)
+	l.refresh()
+	assert_bool(start.disabled).is_true()
+	assert_str(start.text).is_equal("Need Relay")
+
+
+# FT: FT-NET-003
+# C1, R24-2: a player's lobby button reads Leave and leaves; the host's reads End game and asks
+# before it ends the game for everyone.
+func test_the_hosts_lobby_button_ends_the_game_after_a_confirm() -> void:
+	var guest: LobbyScreen = _lobby()
+	var left: Array[int] = [0]
+	guest.menu_requested.connect(func() -> void: left[0] += 1)
+	assert_str(_button(guest, "MainMenu").text).is_equal("Leave")
+	_button(guest, "MainMenu").pressed.emit()
+	assert_int(left[0]).is_equal(1)
+	var host: LobbyScreen = _lobby("coop", [], true)
+	host.menu_requested.connect(func() -> void: left[0] += 1)
+	var dialog: ConfirmationDialog = host.find_child("EndDialog", true, false)
+	assert_str(_button(host, "MainMenu").text).is_equal("End game")
+	_button(host, "MainMenu").pressed.emit()
+	assert_int(left[0]).is_equal(1)
+	assert_bool(dialog.visible).is_true()
+	dialog.confirmed.emit()
+	assert_int(left[0]).is_equal(2)

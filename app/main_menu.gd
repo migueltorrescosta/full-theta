@@ -62,6 +62,7 @@ var _lang: OptionButton
 var _dev: CheckBox
 var _scenario: OptionButton
 var _hosts: ItemList
+var _hosts_hint: Label
 var _address: LineEdit
 var _status: Label
 var _rejoin: Button
@@ -84,13 +85,15 @@ func _ready() -> void:
 	GameSounds.sounds_dir = SFX_SOUNDS
 	MusicPlayer.music_dir = MUSIC_TRACKS
 	settings.load_file()
-	I18n.apply(I18n.LANGUAGES[0])
+	I18n.apply(default_language(OS.get_locale()))
 	LayoutMode.apply(get_tree().root)
 	_apply_scale()
 	_build()
 	_relayout()
 	get_viewport().size_changed.connect(_relayout)
-	browser.start()
+	# A browser has no UDP: the LAN list stays empty there, so it never listens (R24-8).
+	if not web:
+		browser.start()
 	_check_orphan.call_deferred()
 	_apply_web_join_config()
 
@@ -115,7 +118,7 @@ func _process(_delta: float) -> void:
 			_start_shell(joining)
 			joining = null
 		elif joining.state in [NetClient.State.REJECTED, NetClient.State.CLOSED]:
-			_status.text = tr("menu.join_failed") % joining.reject_reason
+			_status.text = JoinAdvice.for_failure(joining.reject_reason, joining.url)
 			joining = null
 			WebLoadStage.report(WebLoadStage.READY)
 			_lesson_failed()
@@ -150,6 +153,40 @@ static func order_binds(addresses: PackedStringArray) -> PackedStringArray:
 	return out
 
 
+## The session language a host starts with: the OS locale's (exact, else by its language, so
+## "pt_BR" gets pt_PT), else English (C3).
+static func default_language(os_locale: String) -> String:
+	var locale: String = os_locale.replace("-", "_")
+	if locale in I18n.LANGUAGES:
+		return locale
+	var lang: String = locale.get_slice("_", 0)
+	for l: String in I18n.LANGUAGES:
+		if l.get_slice("_", 0) == lang:
+			return l
+	return I18n.LANGUAGES[0]
+
+
+## The Host form's text for each bind address: the address with its interface's name, so a
+## host with Wi-Fi, Docker and a VPN can tell them apart (R24-9); "This computer only" for
+## loopback. `interfaces` is IP.get_local_interfaces() ({name, friendly, addresses}).
+static func bind_labels(addresses: PackedStringArray, interfaces: Array) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for a: String in addresses:
+		if a == LOOPBACK:
+			out.append(TranslationServer.translate("menu.this_computer"))
+			continue
+		var label: String = a
+		for i: Dictionary in interfaces:
+			if a in (i.get("addresses", []) as Array):
+				var named: String = str(i.get("friendly", ""))
+				named = named if named != "" else str(i.get("name", ""))
+				if named != "":
+					label = "%s (%s)" % [a, named]
+				break
+		out.append(label)
+	return out
+
+
 ## Host: spawns the server child and joins it as the host (FT-M1-002), bound to the
 ## chosen address, or to `bind` when given (ClientAutopilot).
 func host(bind: String = "", scenario: String = "", solo: String = "") -> void:
@@ -180,7 +217,19 @@ func join(text: String) -> void:
 		WebLoadStage.report(WebLoadStage.READY)
 		return
 	settings.last_address = text
-	_connect(addr.url, "")
+	_connect(addr.url, _web_token_for(addr))
+
+
+## The stored session token when this is a browser reloading its page on the same host, else
+## "" (D6, R24-4): the page rejoins its seat instead of joining as a new player. A desktop
+## client rejoins through the Rejoin button instead.
+func _web_token_for(addr: LanBrowser.Address) -> String:
+	if not web:
+		return ""
+	var t: SessionTokenFile = SessionTokenFile.load_from(token_path)
+	if t == null or t.host_secret != "" or t.host != addr.host or t.port != addr.port:
+		return ""
+	return t.token
 
 
 ## Rejoin with the stored token after a relaunch (FT-NET-003, FT-NET-025).
@@ -210,7 +259,7 @@ func _connect(url: String, token: String) -> void:
 	joining.token = token
 	WebLoadStage.report(WebLoadStage.CONNECT)
 	if joining.connect_to(url) != OK:
-		_status.text = tr("menu.join_failed") % url
+		_status.text = JoinAdvice.for_failure("", url)
 		joining = null
 		WebLoadStage.report(WebLoadStage.READY)
 		return
@@ -603,15 +652,18 @@ func _build_host(col: VBoxContainer) -> void:
 	row.add_theme_constant_override("h_separation", 8)
 	_host_row = row
 	_item(col, row, false)
+	row.add_child(_label(tr("menu.bind_label")))
 	_bind = OptionButton.new()
 	_bind.name = "Bind"
-	for a: String in binds:
-		_bind.add_item(tr("menu.this_computer") if a == LOOPBACK else a)
+	for text: String in bind_labels(binds, IP.get_local_interfaces()):
+		_bind.add_item(text)
 	row.add_child(_bind)
+	row.add_child(_label(tr("menu.lang_label")))
 	_lang = OptionButton.new()
 	_lang.name = "Language"
 	for l: String in I18n.LANGUAGES:
 		_lang.add_item(tr("language." + l))
+	_lang.selected = maxi(0, I18n.LANGUAGES.find(default_language(OS.get_locale())))
 	row.add_child(_lang)
 	# the scenario the server holds: the run, or the Shakedown (Q17 A).
 	_scenario = OptionButton.new()
@@ -634,10 +686,22 @@ func _build_join(col: VBoxContainer) -> void:
 	_hosts = ItemList.new()
 	_hosts.name = "Hosts"
 	ListLines.attach(_hosts)
-	_hosts.item_activated.connect(
-		func(i: int) -> void: _connect(str(_hosts.get_item_metadata(i)), "")
+	# One click joins the listed game (R24-7): there is no Join button for a list.
+	_hosts.item_selected.connect(
+		func(i: int) -> void:
+			if joining == null:
+				_connect(str(_hosts.get_item_metadata(i)), "")
 	)
 	_item(col, _hosts, true)
+	_hosts_hint = _label(tr("menu.lan_empty"))
+	_hosts_hint.name = "HostsHint"
+	_hosts_hint.theme_type_variation = "DimLabel"
+	_hosts_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_item(col, _hosts_hint, true)
+	# A browser can't see the LAN: it joins the host that served the page (R24-8).
+	_join_label.visible = not web
+	_hosts.visible = not web
+	_hosts_hint.visible = not web
 	var row: HBoxContainer = HBoxContainer.new()
 	_join_row = row
 	_item(col, row, true)
@@ -662,6 +726,7 @@ func _refresh_hosts() -> void:
 		var i: int = _hosts.add_item(text)
 		_hosts.set_item_metadata(i, h.url())
 		_hosts.set_item_disabled(i, not h.compatible)
+	_hosts_hint.visible = not web and _hosts.item_count == 0
 
 
 func _refresh_rejoin() -> void:

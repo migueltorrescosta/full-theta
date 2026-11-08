@@ -49,6 +49,29 @@ static func model(status: Dictionary, captain: Dictionary, def: ShipDef, alert: 
 	}
 
 
+## The top bar's goal chip from the CAPTAIN block: the first open objective with its progress,
+## else what the run still needs; "" before the first snapshot or once the ship has an outcome
+## (the outcome card says what happened).
+static func goal_text(captain: Dictionary, status: Dictionary) -> String:
+	if captain.is_empty() or int(status.get("outcome", 0)) != 0:
+		return ""
+	for o: Dictionary in captain.get("objectives", []):
+		if int(o["kind"]) == StationViews.OBJECTIVE_DESTROY_HOSTILES:
+			return TranslationServer.translate("goal.hostiles") % int(o["left"])
+	return TranslationServer.translate("goal.survive")
+
+
+## The goal chip on a phone, where the bar has room for a few letters: "2 foes"; "" when the
+## goal has no count.
+static func goal_short(captain: Dictionary, status: Dictionary) -> String:
+	if int(status.get("outcome", 0)) != 0:
+		return ""
+	for o: Dictionary in captain.get("objectives", []):
+		if int(o["kind"]) == StationViews.OBJECTIVE_DESTROY_HOSTILES:
+			return TranslationServer.translate("goal.short_hostiles") % int(o["left"])
+	return ""
+
+
 ## The line for an objective of the CAPTAIN block (StationViews.OBJECTIVE_*), `left` to do.
 static func objective_text(kind: int, left: int) -> String:
 	match kind:
@@ -127,6 +150,17 @@ func _draw() -> void:
 			Palette.color("text")
 		)
 		y += font.get_height(FONT_SIZE) + 4.0
+	# what ends the run, under the objectives (R17-8)
+	draw_multiline_string(
+		font,
+		Vector2(x + 12.0, y + font.get_ascent(FONT_SIZE)),
+		TranslationServer.translate("status.run_ends"),
+		HORIZONTAL_ALIGNMENT_LEFT,
+		w,
+		FONT_SIZE,
+		-1,
+		Palette.color("text_dim")
+	)
 	# Subsystem health on the right.
 	var rx: float = size.x * 0.5 + x
 	var ry: float = 20.0 + top

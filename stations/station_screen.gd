@@ -481,6 +481,8 @@ func _process(delta: float) -> void:
 	var now: int = ctx.now_ms()
 	top_bar.can_set_alert = ctx.crew.is_crew()
 	var status: Dictionary = ctx.view.blocks.get(StationViews.Section.STATUS, {})
+	var captain: Dictionary = ctx.view.blocks.get(StationViews.Section.CAPTAIN, {})
+	top_bar.show_goal(StatusView.goal_text(captain, status), StatusView.goal_short(captain, status))
 	top_bar.show_state(
 		ctx.crew.ship_name(),
 		status,
@@ -965,7 +967,7 @@ func _relayout() -> void:
 		two_rows = false
 	top_bar.set_compact(two_rows, bar, phone)
 	top_bar.set_phone(phone, bar)
-	top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0)
+	top_bar.custom_minimum_size.y = bar * (2.0 if two_rows else 1.0) + top_bar.goal_height()
 	var disc: float = RADAR_HEIGHT
 	var short: bool = size_now.y < SHORT_H and not phone
 	if phone:
