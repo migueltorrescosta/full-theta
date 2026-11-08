@@ -1,3 +1,4 @@
+# gdlint: disable=unused-argument
 extends GdUnitTestSuite
 ## T035: enemy AI scenarios (FT-SIM-027, FT-SIM-028, FT-M1-007). One M1 corvette
 ## (faction 1, at the origin, no helm input) and the M1 raider enemy (faction 2) a few
@@ -99,16 +100,25 @@ func test_closes_and_fires() -> void:
 	assert_array(tags).is_equal([&"attack", &"keep_range"])
 	assert_int(world.ai.target[1]).is_equal(0)
 	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.POINT)
-	print("first hit at %.2f s" % (hit_tick / float(HZ)))
 
 
 # FT: FT-SIM-027, FT-M1-007
-# Stationary target: after 60 s to settle, the distance stays inside [800, 3000] m for
-# 30 s (it settles on the 1900 m middle; measured within 1 m of it) while the raider
-# keeps firing.
-func test_holds_range_band_stationary_target() -> void:
-	var world: SimWorld = SimWorld.new(11)
-	_scenario(world, 5000.0)
+# After 60 s to settle, the distance stays inside [800, 3000] m for 30 s while the raider keeps
+# firing. Stationary target: it settles on the 1900 m middle (measured within 1 m of it).
+# Slowly moving target: the corvette drifts decoupled at 20 m/s across the line of sight and
+# the raider follows.
+func test_holds_range_band(
+	world_seed: int,
+	distance: float,
+	drift: Vector3,
+	min_fired: int,
+	test_parameters := [
+		[11, 5000.0, Vector3.ZERO, 10],
+		[13, 4000.0, Vector3(20.0, 0.0, 0.0), 5],
+	]
+) -> void:
+	var world: SimWorld = SimWorld.new(world_seed)
+	_scenario(world, distance, drift)
 	SimFixture.run(world, 60 * HZ)
 	var fired: int = 0
 	for i: int in 30 * HZ:
@@ -118,28 +128,12 @@ func test_holds_range_band_stationary_target() -> void:
 		assert_bool(d >= 800.0 and d <= 3000.0).override_failure_message("left band: %s" % d)
 		if is_failure():
 			return
-	assert_float(_distance(world)).is_equal_approx(1900.0, 50.0)
-	assert_int(fired).is_greater(10)
-	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.KEEP_RANGE)
-
-
-# FT: FT-SIM-027, FT-M1-007
-# Slowly moving target: the corvette drifts decoupled at 20 m/s across the line of
-# sight; after 60 s the distance stays inside the band for 30 s while the raider follows.
-func test_holds_range_band_moving_target() -> void:
-	var world: SimWorld = SimWorld.new(13)
-	_scenario(world, 4000.0, Vector3(20.0, 0.0, 0.0))
-	SimFixture.run(world, 60 * HZ)
-	var fired: int = 0
-	for i: int in 30 * HZ:
-		world.step()
-		fired += _count(world.drain_events(), &"fired", 1)
-		var d: float = _distance(world)
-		assert_bool(d >= 800.0 and d <= 3000.0).override_failure_message("left band: %s" % d)
-		if is_failure():
-			return
-	assert_float(world.kin.vel[0].x).is_equal_approx(20.0, 0.01)
-	assert_int(fired).is_greater(5)
+	assert_int(fired).is_greater(min_fired)
+	if drift == Vector3.ZERO:
+		assert_float(_distance(world)).is_equal_approx(1900.0, 50.0)
+		assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.KEEP_RANGE)
+	else:
+		assert_float(world.kin.vel[0].x).is_equal_approx(20.0, 0.01)
 
 
 # FT: FT-SIM-027, FT-M1-007
@@ -248,8 +242,8 @@ func test_undetected_target_is_ignored_until_detected() -> void:
 
 
 # FT: FT-SIM-027, FT-ARC-008
-# Every command the AI submits is a class registered in SimCommands, round-trips
-# through to_dict()/from_dict() and carries Source.AI; none reaches the command log.
+# Every command the AI submits is a class registered in SimCommands and carries Source.AI;
+# none reaches the command log (the round trip is test_command_log.gd's).
 func test_ai_uses_the_player_commands() -> void:
 	var world: RecordingWorld = RecordingWorld.new(29)
 	_scenario(world, 4000.0)
@@ -263,8 +257,6 @@ func test_ai_uses_the_player_commands() -> void:
 		var made: SimCommand = SimCommands.make(c.kind())
 		assert_object(made).is_not_null()
 		assert_object(made.get_script()).is_same(c.get_script())
-		var back: SimCommand = SimCommands.from_dict(c.to_dict())
-		assert_dict(back.to_dict()).is_equal(c.to_dict())
 		kinds[c.kind()] = kinds.get(c.kind(), 0) + 1
 	for k: StringName in [&"helm_input", &"helm_select_target", &"aim_mount", &"fire"]:
 		assert_bool(kinds.has(k)).override_failure_message("no %s" % k).is_true()

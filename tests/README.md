@@ -7,8 +7,8 @@ gdUnit4 tests; each names the FT ids it verifies (FT-TST-016).
 Put a `# FT:` comment line directly above each test function, listing the ids it verifies, comma-separated:
 
 ```gdscript
-# FT: FT-TST-001
-func test_runner_works() -> void:
+# FT: FT-PAIR-001
+func test_fifteen_pairs_of_crew_stations() -> void:
 ```
 
 A `# FT:` line at the top of a file tags the whole file. The same convention applies to the Python tool tests in `tools/tests/`. FT ids elsewhere in comments or names don't count.
