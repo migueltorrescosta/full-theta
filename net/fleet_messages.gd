@@ -74,6 +74,23 @@ const SCOREBOARD_ROW: Dictionary = {
 }
 
 
+## The `pause` event body (R06-10, one builder for both pauses): a coverage pause of `ship`,
+## or the host pause (ship -1, nothing uncovered, crew 0); `host` is always there.
+static func pause(ship: int, uncovered: Array, crew: int, min_crew: int, host: bool) -> Dictionary:
+	return {
+		"ship": ship,
+		"uncovered": uncovered.duplicate(),
+		"crew": crew,
+		"min_crew": min_crew,
+		"host": host,
+	}
+
+
+## The `resume` event body of the coverage pause (host false) or the host pause (true).
+static func resume(tick: int, host: bool) -> Dictionary:
+	return {"tick": tick, "host": host}
+
+
 ## One ship of the multi-ship lobby (M4-Q3, M4-Q4): seats [{name, entry}] as in `lobby`,
 ## crew and uncovered from NetCoverage, ready when it passes coverage, started when its crew
 ## pressed Start.

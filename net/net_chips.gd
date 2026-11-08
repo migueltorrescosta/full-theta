@@ -40,6 +40,7 @@ var _next_id: int = 1
 
 func _init(server_session: ServerSession) -> void:
 	_session = weakref(server_session)
+	server_session.add_handler(NetProtocol.Type.CHIP, on_chip)
 
 
 static func def() -> ChipsDef:
@@ -61,10 +62,7 @@ static func arg_kind(chip_id: String) -> ChipDef.Arg:
 
 
 ## Chip{op, ...}.
-func on_chip(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_chip(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var why: String
 	if msg["op"] == "send":
 		why = send(s, msg["chip"], msg["arg"])

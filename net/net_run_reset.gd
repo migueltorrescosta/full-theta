@@ -70,21 +70,20 @@ func process() -> void:
 		if _votes_payload(ship) != _sent_votes.get(ship):
 			_send_votes(ship)
 		for s: NetSession in session.by_id.values():
+			if not (s.ship == ship and s.has_pick() and s.connected()):
+				continue
 			var key: Vector2i = Vector2i(s.conn, ship)
-			if s.ship == ship and s.has_pick() and s.connected() and _told.get(s.id) != key:
+			if _told.get(s.id) != key:
 				_told[s.id] = key
 				session.notify(s, NetProtocol.EVENT_RUN_OVER, over[ship])
 				session.notify(s, NetProtocol.EVENT_RUN_VOTES, _votes_payload(ship))
-			if debriefs.has(ship) and s.ship == ship and s.has_pick() and s.connected():
+			if debriefs.has(ship):
 				if _told_debrief.get(s.id) != key:
 					_told_debrief[s.id] = key
 					session.notify(s, NetProtocol.EVENT_DEBRIEF, debriefs[ship])
 
 
-func _on_run_again(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func _on_run_again(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
 	var members: Array[int] = session.connected_crew(ship)
 	var why: String = ""
@@ -94,8 +93,7 @@ func _on_run_again(conn: int, msg: Dictionary, _now_us: int) -> void:
 		why = NOT_OVER
 	elif not s.is_host and not members.has(s.id):
 		why = ServerSession.NOT_CREW
-	if why != "":
-		session.request_rejected(s, NetProtocol.Type.RUN_AGAIN, why, {"ship": ship})
+	if session.refuse(s, NetProtocol.Type.RUN_AGAIN, why, {"ship": ship}):
 		return
 	if s.is_host and msg["vote"]:
 		_reset()
@@ -121,11 +119,13 @@ func _votes_payload(ship: int) -> Dictionary:
 	return votes[ship].payload(ship, session.connected_crew(ship).size())
 
 
+## run_votes to every pick on the ship, through the shared vote path (ServerSession.send_votes).
 func _send_votes(ship: int) -> void:
-	_sent_votes[ship] = _votes_payload(ship)
-	for s: NetSession in session.by_id.values():
-		if s.ship == ship and s.has_pick():
-			session.notify(s, NetProtocol.EVENT_RUN_VOTES, _sent_votes[ship])
+	var to: PackedInt32Array = session.audience(
+		func(s: NetSession) -> bool: return s.ship == ship and s.has_pick()
+	)
+	var n: int = session.connected_crew(ship).size()
+	_sent_votes[ship] = session.send_votes(NetProtocol.EVENT_RUN_VOTES, ship, votes[ship], n, to)
 
 
 ## Builds the ship's debrief once two ticks have passed since its outcome (EncounterSystem
