@@ -223,7 +223,30 @@ func _draw_turret(font: Font) -> void:
 		var arrow: PackedVector2Array = PackedVector2Array(
 			[base + turn * 12.0, base - turn * 4.0 + side * 9.0, base - turn * 4.0 - side * 9.0]
 		)
-		draw_colored_polygon(arrow, Palette.color("warn"))
+		draw_colored_polygon(clear_of(arrow, _mount_list_rect()), Palette.color("warn"))
+
+
+## `arrow` moved down under `cover` when the cover would hide it (the phone's mount list,
+## w5); unchanged otherwise.
+static func clear_of(arrow: PackedVector2Array, cover: Rect2) -> PackedVector2Array:
+	var box: Rect2 = Rect2(arrow[0], Vector2.ZERO)
+	for p: Vector2 in arrow:
+		box = box.expand(p)
+	box = box.grow(2.0)
+	if not cover.has_area() or not box.intersects(cover):
+		return arrow
+	var out: PackedVector2Array = arrow.duplicate()
+	for i: int in out.size():
+		out[i] += Vector2(0.0, cover.end.y - box.position.y)
+	return out
+
+
+## The phone's mount list (Mounts page) in this overlay's coordinates, else an empty rect.
+func _mount_list_rect() -> Rect2:
+	var t: WeaponsTouch = _p.touch()
+	if t == null or not t.mount_list.is_visible_in_tree():
+		return Rect2()
+	return get_global_transform().affine_inverse() * t.mount_list.get_global_rect()
 
 
 func _draw_item(font: Font, t: Dictionary) -> void:

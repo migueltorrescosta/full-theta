@@ -140,3 +140,19 @@ func test_an_arrow_at_the_reticle_points_to_the_out_of_arc_target() -> void:
 	assert_vector(WeaponsStatus.arc_arrow_dir(none.panels[0] as WeaponsPanel)).is_equal(
 		Vector2.ZERO
 	)
+
+
+# FT: FT-WPN-005
+# w5: the arc arrow moves under the phone's mount list when the list would hide it, and
+# stays put otherwise.
+func test_the_arc_arrow_keeps_clear_of_the_mount_list() -> void:
+	var arrow: PackedVector2Array = PackedVector2Array(
+		[Vector2(380, 196), Vector2(392, 206), Vector2(384, 212)]
+	)
+	var cover: Rect2 = Rect2(230, 128, 380, 72)
+	var moved: PackedVector2Array = WeaponsTurretOverlay.clear_of(arrow, cover)
+	for p: Vector2 in moved:
+		assert_float(p.y).is_greater(cover.end.y)
+	assert_array(Array(WeaponsTurretOverlay.clear_of(arrow, Rect2()))).is_equal(Array(arrow))
+	var away: Rect2 = Rect2(0, 0, 50, 50)
+	assert_array(Array(WeaponsTurretOverlay.clear_of(arrow, away))).is_equal(Array(arrow))
