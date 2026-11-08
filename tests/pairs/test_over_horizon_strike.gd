@@ -41,4 +41,6 @@ func test_full_chain_beats_every_chain_with_a_link_removed() -> void:
 			. is_less(run.metrics.time)
 		)
 	# The same seed twice gives the same run.
-	assert_str(_run(harness, true, true, true).state_hash).is_equal(full.state_hash)
+	Determinism.assert_replays(
+		self, full.state_hash, func() -> String: return _run(harness, true, true, true).state_hash
+	)

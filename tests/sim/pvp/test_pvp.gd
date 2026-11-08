@@ -319,26 +319,7 @@ func scenario(world_seed: int, hashes: PackedStringArray) -> Array:
 	return [w, events]
 
 
-## The scenario's state hashes after the fight, after the reset tick and at the end,
-## and the end tick.
-func scenario_hashes(world_seed: int) -> PackedStringArray:
-	var out: PackedStringArray = PackedStringArray()
-	var w: SimWorld = scenario(world_seed, out)[0]
-	out.append(w.state_hash())
-	out.append(str(w.tick))
-	return out
-
-
-# FT: FT-TST-013, FT-M1-014
-# The PvP scenario (fight to BLUE's destruction in combat, reset, more fire) run twice
-# with the same seed ends the fight with the outcomes of check_outcomes and gives equal
-# state hashes at every checkpoint.
-func test_pvp_scenario_deterministic() -> void:
-	var first: PackedStringArray = scenario_hashes(SEED)
-	assert_array(Array(scenario_hashes(SEED))).is_equal(Array(first))
-
-
-# FT: FT-ARC-008, FT-TST-009, FT-TST-013, FT-GEN-002
+# FT: FT-ARC-008, FT-TST-009, FT-TST-013, FT-GEN-002, FT-M1-014
 # The server's mid-run reset is logged with the crews' commands: the PvP scenario's log,
 # written to text and read back, replays on a fresh world (crews not acting) to the same
 # tick, state hash and event stream, the reset applied on its recorded tick.

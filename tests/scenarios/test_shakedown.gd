@@ -163,13 +163,7 @@ func test_every_pair_step_runs_and_the_shakedown_closes() -> void:
 	rig.tick(3)
 	for station: StringName in rig.driver.stations():
 		rig.finish(station)
-	var guard: int = 0
-	while guard < 60:
-		guard += 1
-		for step: TrainingStepDef in rig.driver.active_pairs():
-			rig.press_next(step.station)
-			rig.press_next(step.partner)
-		rig.tick(2)
+	_run_pairs()
 	assert_array(rig.said("shakedown.all_done")).is_not_empty()
 	for pair: TrainingStepDef in rig.steps.pairs():
 		assert_array(rig.said(pair.line)).is_not_empty()

@@ -54,12 +54,12 @@ func commands() -> Array[SimCommand]:
 
 func to_text() -> String:
 	var lines: PackedStringArray = PackedStringArray([HEADER])
-	lines.append(_line("format", FORMAT))
-	lines.append(_line("seed", seed_value))
-	lines.append(_line("build", build_id))
-	lines.append(_line("setup", setup))
+	lines.append(text_line("format", FORMAT))
+	lines.append(text_line("seed", seed_value))
+	lines.append(text_line("build", build_id))
+	lines.append(text_line("setup", setup))
 	for d: Dictionary in entries:
-		lines.append(_line("command", d))
+		lines.append(text_line("command", d))
 	return "\n".join(lines) + "\n"
 
 
@@ -133,7 +133,7 @@ func _set_item(key: String, value: Variant) -> bool:
 	return true
 
 
-static func _line(key: String, value: Variant) -> String:
+static func text_line(key: String, value: Variant) -> String:
 	var echo: String = var_to_str(value).replace("\n", " ")
 	return "%s=%s # %s" % [key, Marshalls.raw_to_base64(var_to_bytes(value)), echo]
 
