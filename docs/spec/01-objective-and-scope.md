@@ -15,9 +15,9 @@ Full Theta is a cross-platform, LAN, multi-crew 3D spaceship game loosely inspir
 
 ## 1.2 Requirements
 
-- **FT-GEN-001** The game shall support up to 6 player ships in one session. (D11)
+- **FT-GEN-001** The game shall support up to 6 player ships in one session. (D11, D260)
 - **FT-GEN-002** The game shall support co-op and PvP sessions from the first architecture onward. (D21)
-- **FT-GEN-003** A session shall admit at most 64 connections, counting crew, Captains and viewers. (D22)
+- **FT-GEN-003** A session shall admit at most 64 connections, counting crew, Captains and viewers. (D22, D160)
 - **FT-GEN-004** A ship shall not launch with fewer than 3 crew players (Captain and viewers excluded). (D66)
 - **FT-GEN-005** A ship shall not launch until its crew covers all 6 functional stations. (D19, D67)
 - **FT-GEN-006** The Captain seat shall never be required to launch or to play. (D19, D23)
@@ -25,7 +25,7 @@ Full Theta is a cross-platform, LAN, multi-crew 3D spaceship game loosely inspir
 - **FT-GEN-008** The game shall not use speech recognition. (v0.3 §2)
 - **FT-GEN-009** The game shall not require a human game master. (v0.3 §2)
 - **FT-GEN-010** Nothing shall persist between runs. (D32)
-- **FT-GEN-011** A typical run shall last 20–40 minutes. (v0.3 §2)
+- **FT-GEN-011** A typical run shall last 20–40 minutes. (v0.3 §2, D236, D252)
 - **FT-GEN-012** Desktop builds shall target Linux, Windows and macOS. (D9)
 - **FT-GEN-013** Play shall be LAN only. (D70)
 - **FT-GEN-014** The repository shall be public at migueltorrescosta/full-theta under GPL-3.0. (D1, D2, D4)

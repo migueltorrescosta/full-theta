@@ -17,7 +17,7 @@ One ship, three networked clients covering all six functional stations through j
 11. Refresh-to-rejoin.
 12. State keyed by ship and faction; a 2-ship PvP simulation test.
 13. Dev flag letting one client hold all stations.
-14. Controls overlay and per-station first-run tooltips (D100).
+14. Controls overlay ~~and per-station first-run tooltips~~ (D100; tooltips struck by D185, D292).
 15. Automated tests and documented launch instructions.
 16. A playtest that rotates every player through Tactical, Systems and Ops (D99).
 
@@ -36,13 +36,13 @@ Desktop clients only; browser stations come later (D8).
 - **FT-M1-009** Milestone 1 shall include one subsystem damaged by hit location and repaired by a repair crew using spare parts. (D26, D27)
 - **FT-M1-010** Milestone 1 shall include the P1 Engineering + Helm loop with its automated pair test. (D72)
 - **FT-M1-011** Milestone 1 shall show immediate event notifications and keep station state synchronised. (v0.3 §9)
-- **FT-M1-012** Milestone 1 shall end the encounter with a clear win or loss, shown on every station's outcome card, and reset the run completely (world rebuilt, marks and alert cleared, picks kept, back to the lobby) once the "Run again" votes exceed half of the ship's connected crew, or at once when the host decides. (v0.3 §9, D30, D178)
+- **FT-M1-012** Milestone 1 shall end the encounter with a clear win or loss, shown on every station's outcome card, and reset the run completely (world rebuilt, marks and alert cleared, picks kept, back to the lobby) once the "Run again" votes exceed half of the ship's connected crew, or at once when the host decides. (v0.3 §9, D30, D178, D120)
 - **FT-M1-013** Milestone 1 shall support refresh-to-rejoin with a session token. (D6, D72)
 - **FT-M1-014** Milestone 1 shall key all state by ship and faction and include a headless 2-ship PvP simulation test. (D21, D72)
 - **FT-M1-015** Milestone 1 shall include the dev flag that lets one client hold all stations. (D72)
-- **FT-M1-016** Milestone 1 shall document launch instructions for host, client and dedicated server. (v0.3 §9)
+- **FT-M1-016** Milestone 1 shall document launch instructions for host, client and dedicated server. (v0.3 §9, D174)
 - **FT-M1-017** Milestone 1 shall include marks, pings and Relay's map read-out (FT-RLY-001 to FT-RLY-003, FT-SPA-006, FT-SPA-012 to FT-SPA-015). (D99)
-- **FT-M1-018** Milestone 1's lobby shall show a load tag (light, busy, intense) per station and joint view. (D99)
-- **FT-M1-019** Milestone 1 shall include the controls overlay generated from the input map and per-station first-run tooltips. (D100)
+- **FT-M1-018** Milestone 1's lobby shall show a load tag (light, busy, intense) per station and joint view. (D99, D126)
+- **FT-M1-019** Milestone 1 shall include the controls overlay generated from the input map. ~~and per-station first-run tooltips~~ (D100; the tooltips are struck by D185 and D292, which replace them with a 6 s chip on a first visit)
 - **FT-M1-020** Milestone 1 shall store positions as a site id plus a local offset (FT-SIM-035); M3 drops the site id for offsets in one cube. (D98, D230)
 - **FT-M1-021** The milestone 1 playtest shall rotate every player through Tactical, Systems and Ops. (D99)

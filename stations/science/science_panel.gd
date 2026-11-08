@@ -123,6 +123,10 @@ func _setup() -> void:
 	card_view.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not own_radar() else 0
 	top.add_child(card_view)
 	_build_bar(rows)
+	# Alone on a desktop the screen's share buttons go under the bar (#35 A11).
+	share_home = VBoxContainer.new()
+	share_home.name = "ShareHome"
+	rows.add_child(share_home)
 	resized.connect(_on_resized)
 	_stack()
 	ctx.crew.changed.connect(_on_crew_changed)
@@ -179,7 +183,7 @@ func _on_resized() -> void:
 func _arrange() -> void:
 	var form: LayoutMode.Form = LayoutMode.Form.DESKTOP
 	if is_inside_tree():
-		form = SciencePhone.form_of_panel(self)
+		form = PhoneFrame.form_of_panel(self)
 	var want: bool = (
 		(_alone() or _screen_panels() == 2) and not docked and LayoutMode.is_phone(form)
 	)
@@ -270,7 +274,7 @@ func own_radar() -> bool:
 		_screen_panels() == 2
 		and not docked
 		and is_inside_tree()
-		and SciencePhone.form_of_panel(self) == LayoutMode.Form.PHONE_LANDSCAPE
+		and PhoneFrame.form_of_panel(self) == LayoutMode.Form.PHONE_LANDSCAPE
 	)
 
 
@@ -791,3 +795,33 @@ func _stick_move(x: float, y: float) -> void:
 			hack_game.step(HackGame.RIGHT if x > 0.0 else HackGame.LEFT)
 		else:
 			hack_game.step(HackGame.DOWN if y > 0.0 else HackGame.UP)
+
+
+## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
+## the rails as SciencePhone lays them out (design 2.4): left x 47-215, right x 629-797,
+## rows from y 64 on a 56 px pitch.
+static func touch_help() -> Array:
+	var t: Callable = TouchText.t
+	var r: Callable = func(col: int, row: int, wide: bool = false) -> Rect2:
+		return Rect2(629.0 + 88.0 * col, 64.0 + 56.0 * row, 168.0 if wide else 80.0, 48.0)
+	var contacts: Array = [
+		[Rect2(47, 64, 168, 230), t.call("page.contacts"), t.call("intent.select")],
+		[r.call(0, 0), t.call("sci.scan"), t.call("intent.sci_scan")],
+		[r.call(1, 0), t.call("sci.hack"), t.call("help.sci_hack")],
+		[r.call(0, 1), t.call("sci.ping"), t.call("intent.sci_ping")],
+		[r.call(1, 1), t.call("sci.short_mark"), t.call("intent.sci_scan_mark")],
+		[r.call(0, 2), t.call("sci.short_passive"), t.call("intent.sci_mode")],
+		[r.call(1, 2), t.call("sci.short_self"), t.call("intent.sci_self_scan")],
+		[r.call(0, 3, true), t.call("sci.claim"), t.call("intent.claim")],
+	]
+	var card: Array = [[Rect2(47, 64, 300, 280), t.call("page.card"), t.call("help.sci_card")]]
+	var crew: Array = [
+		[Rect2(47, 64, 80, 48), t.call("intent.request"), t.call("intent.request")],
+		[Rect2(135, 64, 80, 48), t.call("intent.ping"), t.call("intent.ping")],
+		[Rect2(47, 120, 168, 104), t.call("intent.mark"), t.call("help.shares")],
+	]
+	return [
+		{"page": t.call("page.contacts"), "boxes": contacts},
+		{"page": t.call("page.card"), "boxes": card},
+		{"page": t.call("page.crew"), "boxes": crew},
+	]

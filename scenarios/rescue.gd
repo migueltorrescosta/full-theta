@@ -8,10 +8,11 @@ extends Scenario
 ## - SALVAGE: strip the freighter's cargo, staying near it for a while. Pays more (700) and
 ##   costs standing with its faction (rep.salvage_wreck).
 ## Accept neither and the raiders still come, with nothing paid. Whichever is chosen, the
-## encounter ends when the raiders are gone. The freighter lies abeam of the arriving ship's
-## course, not ahead of it (review 2 H3), and the cards stay on the board until the
-## encounter is over (review 2 M2). The difficulty preset scales the raiders (Q14). Only the
-## Scenario API is used (FT-DAT-007).
+## encounter ends when the raiders are gone, or as partial when the time runs out first: an
+## escort whose freighter is still there then pays its partial share (RunDef.partial_pay).
+## The freighter lies abeam of the arriving ship's course, not ahead of it (review 2 H3), and
+## the cards stay on the board until the encounter is over (review 2 M2). The difficulty
+## preset scales the raiders (Q14). Only the Scenario API is used (FT-DAT-007).
 
 const FREIGHTER: StringName = &"stranded_freighter"
 const RAIDER: StringName = &"m1_raider"
@@ -21,6 +22,11 @@ const NPC: StringName = &"Calliope"
 const ESCORT_TITLE: StringName = &"comms.card.escort"
 const SALVAGE_TITLE: StringName = &"comms.card.salvage"
 const BROKER: StringName = &"Broker Vale"
+## Terms of the escort (P12, FT-PAIR-011): the engines must be able to supply this many pips
+## when the encounter settles, to keep pace with the freighter. Comms reads them on the
+## card and in the NPC's line; only Engineering knows if the ship can (D57, D68).
+const ESCORT_NEED: StringName = &"engines"
+const ESCORT_NEED_PIPS: int = 2
 const ESCORT_REWARD: int = 400
 const SALVAGE_REWARD: int = 700
 ## The freighter's distance from the ship, abeam of its course (m), when the raiders appear
@@ -48,7 +54,7 @@ var _raider_count: int = RAIDERS
 var _offered: bool = false
 var _started: int = 0
 var _near_ticks: int = 0
-var _done: bool = false
+var _result: int = Result.ACTIVE
 
 
 func meta() -> ScenarioMeta:
@@ -56,15 +62,6 @@ func meta() -> ScenarioMeta:
 	m.id = &"rescue"
 	m.tags = PackedStringArray(["hostile", "rescue"])
 	m.threat_cost = 2
-	m.duration_s = MAX_S
-	m.stations = PackedStringArray(["helm", "weapons", "engineering", "comms"])
-	m.pairs = PackedStringArray([])
-	m.branches = [
-		{"id": "escort_done", "outcome": "won"},
-		{"id": "escort_failed", "outcome": "won"},
-		{"id": "salvage_done", "outcome": "won"},
-		{"id": "ignored", "outcome": "won"},
-	]
 	m.comms_beats = PackedStringArray(["distress"])
 	return m
 
@@ -106,6 +103,9 @@ func _offer_cards(api: ScenarioApi) -> void:
 	escort.npc_id = NPC
 	escort.title_key = ESCORT_TITLE
 	escort.conversation_id = &"conv.rescue_escort"
+	escort.detail_key = &"comms.card.escort_terms"
+	escort.needs_subsystem = ESCORT_NEED
+	escort.needs_pips = ESCORT_NEED_PIPS
 	escort.reward_credits = ESCORT_REWARD
 	escort.rep_interaction = &"rep.complete_mission"
 	escort.target = freighter
@@ -125,10 +125,10 @@ func _offer_cards(api: ScenarioApi) -> void:
 
 
 func step(api: ScenarioApi) -> void:
-	if _done:
+	if _result != Result.ACTIVE:
 		return
 	if _freighter.rejected():
-		_done = true
+		_result = Result.WON
 		return
 	if not _offered and not _freighter.pending():
 		_offer_cards(api)
@@ -145,25 +145,29 @@ func step(api: ScenarioApi) -> void:
 		)
 	if _raiders.size() < _raider_count:
 		if elapsed_s >= MAX_S:
-			_settle(api)
+			_settle(api, Result.PARTIAL)
 		return
 	var salvaging: bool = _state(api, _salvage) == CardView.State.ACCEPTED
 	if salvaging and api.distance(_ship, _freighter.id()) <= SALVAGE_RANGE_M:
 		_near_ticks += 1
-	if _raiders_gone(api) or elapsed_s >= MAX_S:
-		_settle(api)
+	if api.all_gone(_raiders):
+		_settle(api, Result.WON)
+	elif elapsed_s >= MAX_S:
+		_settle(api, Result.PARTIAL)
 
 
 func finished(_api: ScenarioApi) -> int:
-	return Result.WON if _done else Result.ACTIVE
+	return _result
 
 
-## Pays out and ends: the accepted card is settled by how it went.
-func _settle(api: ScenarioApi) -> void:
-	_done = true
+## Pays out and ends with `result`: the accepted card is settled by how it went; an escort
+## cut short by the time (PARTIAL) pays its partial share.
+func _settle(api: ScenarioApi, result: int) -> void:
+	_result = result
 	if _state(api, _escort) == CardView.State.ACCEPTED:
-		var saved: bool = api.ship(_freighter.id()).in_play
-		api.settle_card(_escort.id(), saved)
+		# A freighter that survives still counts as lost if the engines could not keep pace.
+		var saved: bool = api.ship(_freighter.id()).in_play and api.needs_met(_escort.id())
+		api.settle_card(_escort.id(), saved, result == Result.PARTIAL)
 		if saved:
 			api.message("npc.rescue_thanks", {}, SayTarget.npc(NPC, _ship))
 	elif _state(api, _salvage) == CardView.State.ACCEPTED:
@@ -178,14 +182,3 @@ func _state(api: ScenarioApi, card: ApiHandle) -> int:
 		if c.id == card.id():
 			return c.state
 	return CardView.State.EXPIRED
-
-
-func _raiders_gone(api: ScenarioApi) -> bool:
-	for raider: ApiHandle in _raiders:
-		# A spawn queued this tick has no ship yet: it is still to come. One that was
-		# rejected never comes.
-		if raider.pending():
-			return false
-		if not raider.rejected() and api.ship(raider.id()).in_play:
-			return false
-	return true

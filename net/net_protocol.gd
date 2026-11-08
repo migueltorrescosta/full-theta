@@ -61,6 +61,8 @@ enum Type {
 	# Solo training (D303): a client asks the server to run a station lesson for it, or the
 	# crew drill.
 	TRAINING = 46,
+	# A player changes their name mid-session (#35 A5).
+	RENAME = 47,
 }
 
 const PROTOCOL_VERSION: int = 8
@@ -225,6 +227,7 @@ const SCHEMAS: Dictionary = {
 	Type.RELAUNCH: {"ship": TYPE_INT, "vote": TYPE_BOOL},
 	Type.CLIENT_FRAME: {"ms": TYPE_INT, "what": TYPE_STRING},
 	Type.TRAINING: {"station": TYPE_STRING},
+	Type.RENAME: {"name": TYPE_STRING},
 }
 
 ## Messages a client may send; the server drops any other type from a client.
@@ -259,6 +262,7 @@ const FROM_CLIENT: Array[int] = [
 	Type.RELAUNCH,
 	Type.CLIENT_FRAME,
 	Type.TRAINING,
+	Type.RENAME,
 ]
 
 ## Client requests that take a token from the session's rate limit in ServerSession
@@ -290,6 +294,7 @@ const RATED_REQUESTS: Array[int] = [
 	Type.RELAUNCH,
 	Type.CLIENT_FRAME,
 	Type.TRAINING,
+	Type.RENAME,
 ]
 
 
@@ -308,7 +313,8 @@ static func type_of(data: PackedByteArray) -> int:
 
 ## Decodes a control message into its fields plus "t" (the type), or {} when the bytes
 ## are not a known control type holding a Dictionary that passes check(). A Hello's
-## kind must be one of CLIENT_KINDS; its name is trimmed and cut to MAX_NAME_BYTES.
+## kind must be one of CLIENT_KINDS; its name, and a Rename's, is trimmed and cut to
+## MAX_NAME_BYTES.
 static func decode(data: PackedByteArray) -> Dictionary:
 	var type: int = type_of(data)
 	if not SCHEMAS.has(type):
@@ -319,9 +325,9 @@ static func decode(data: PackedByteArray) -> Dictionary:
 	var fields: Dictionary = body
 	if check(type, fields) != "":
 		return {}
-	if type == Type.HELLO:
-		if not CLIENT_KINDS.has(fields["kind"]):
-			return {}
+	if type == Type.HELLO and not CLIENT_KINDS.has(fields["kind"]):
+		return {}
+	if type in [Type.HELLO, Type.RENAME]:
 		var name: String = (fields["name"] as String).strip_edges()
 		fields["name"] = clip_utf8(name, MAX_NAME_BYTES).strip_edges()
 	fields["t"] = type

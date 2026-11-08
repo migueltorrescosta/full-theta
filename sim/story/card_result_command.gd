@@ -3,10 +3,12 @@ extends SimCommand
 ## Server: settles an accepted card (FT-MIS-021, FT-MIS-019). Success pays the card's reward
 ## to ship_id and draws the card's reputation change; failure draws the change named
 ## "<rep_interaction>.fail" if there is one (FT-COM-005). Scenarios submit it when the
-## mission's objective is met or lost.
+## mission's objective is met or lost. A partial success (the time ran out) pays
+## RunDef.partial_pay of the reward and changes no standing.
 
 var card: int = -1
 var success: bool = true
+var partial: bool = false
 
 
 func kind() -> StringName:
@@ -16,5 +18,5 @@ func kind() -> StringName:
 func apply(world: SimWorld) -> bool:
 	if not Story.visible_to(world, card, ship_id) or not Story.is_live(world, card):
 		return false
-	StoryRules.settle(world, ship_id, card, success)  # the shared settlement
+	StoryRules.settle(world, ship_id, card, success, partial)  # the shared settlement
 	return true

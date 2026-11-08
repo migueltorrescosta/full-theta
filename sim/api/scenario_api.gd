@@ -13,6 +13,11 @@ extends RefCounted
 
 ## Ticks per second, for scenarios and the director to turn seconds into ticks.
 const HZ: int = SimWorld.HZ
+## The session modes a director plans differently for (session_mode() returns a
+## SessionRules.Mode; the director sees only sim/api, so it reads them from here).
+const MODE_RACE: int = SessionRules.Mode.RACE
+const MODE_LAST_STANDING: int = SessionRules.Mode.LAST_STANDING
+const MODE_HOLDOUT: int = SessionRules.Mode.HOLDOUT
 
 var _world: SimWorld
 
@@ -22,6 +27,18 @@ func _init(world: SimWorld) -> void:
 
 
 # --- queries (value copies) ---
+
+
+## Whether none of the handles' ships is still in the run (destroyed or retreated).
+func all_gone(handles: Array[ApiHandle]) -> bool:
+	for handle: ApiHandle in handles:
+		# A spawn queued this tick has no ship yet: it is still to come. One that was
+		# rejected never comes.
+		if handle.pending():
+			return false
+		if not handle.rejected() and ship(handle.id()).in_play:
+			return false
+	return true
 
 
 func tick() -> int:
@@ -328,10 +345,20 @@ func offer(ship_id: int, card: CardSpec) -> ApiHandle:
 	return ApiHandle.new(cmd)
 
 
+## Whether the card's ship can meet the card's terms now (P12: the power its subsystem must
+## supply); true for a card with no terms or one that doesn't exist.
+func needs_met(card: int) -> bool:
+	if card < 0 or card >= _world.story.size():
+		return true
+	return StoryRules.needs_met(_world, Story.audience_ship(_world, card), card)
+
+
 ## Settles an accepted card (FT-MIS-021, FT-MIS-019): success pays its reward and draws its
-## reputation change, failure draws the "<interaction>.fail" change if there is one. The
-## command is the card's own ship's; nothing is queued for a card that doesn't exist.
-func settle_card(card: int, success: bool) -> void:
+## reputation change, failure draws the "<interaction>.fail" change if there is one; a
+## `partial` success (the time ran out) pays RunDef.partial_pay of the reward and changes
+## no standing. The command is the card's own ship's; nothing is queued for a card that
+## doesn't exist.
+func settle_card(card: int, success: bool, partial: bool = false) -> void:
 	if card < 0 or card >= _world.story.size():
 		return
 	var cmd: CardResultCommand = CardResultCommand.new()
@@ -339,6 +366,7 @@ func settle_card(card: int, success: bool) -> void:
 	cmd.ship_id = Story.audience_ship(_world, card)
 	cmd.card = card
 	cmd.success = success
+	cmd.partial = partial
 	_world.submit(cmd)
 
 

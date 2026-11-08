@@ -45,7 +45,7 @@ func _open(size: Vector2i, kind: int = LayoutMode.Kind.TOUCH) -> void:
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("helm", SETTINGS)
-	ctx.settings.mark_tooltip_seen("helm")
+	ctx.settings.mark_hint_seen("helm")
 	_screen = StationScreen.new()
 	_screen.setup(ctx)
 	_screen.theme = LayoutMode.theme_for(LayoutMode.Kind.TOUCH)

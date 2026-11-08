@@ -123,28 +123,28 @@ def with_voices(root: Path, statuses: dict) -> None:
     manifest.write_text(json.dumps(data))
 
 
-# FT: FT-AUD-014
+# FT: FT-AUD-014, FT-LIC-007
 def test_listed_voices_pass(tmp_path):
     root = fixture(tmp_path)
     with_voices(root, {"a-medium": "accept", "a-high": "accept", "b": "accept", "c": "dev-only"})
     assert check_licences.run(root) == []
 
 
-# FT: FT-AUD-014
+# FT: FT-AUD-014, FT-LIC-007
 def test_unlisted_voice_fails(tmp_path):
     root = fixture(tmp_path)
     with_voices(root, {"a-medium": "accept", "a-high": "accept", "c": "dev-only"})
     assert check_licences.run(root) == ["b: voice (en npc) not listed in content/provenance.json"]
 
 
-# FT: FT-AUD-014
+# FT: FT-AUD-014, FT-LIC-007
 def test_shipped_language_with_dev_only_voice_fails(tmp_path):
     root = fixture(tmp_path)
     with_voices(root, {"a-medium": "dev-only", "a-high": "accept", "b": "accept", "c": "dev-only"})
     assert check_licences.run(root) == ["a-medium: en ships, so its voice must have status accept"]
 
 
-# FT: FT-AUD-014
+# FT: FT-AUD-014, FT-LIC-007
 def test_unknown_voice_status_fails(tmp_path):
     root = fixture(tmp_path)
     with_voices(root, {"a-medium": "accept", "a-high": "accept", "b": "accept", "c": "unclear"})
@@ -182,7 +182,7 @@ def test_committed_audio_fails(tmp_path):
     ]
 
 
-# FT: FT-AUD-014
+# FT: FT-AUD-014, FT-LIC-007
 def test_duplicate_voice_entry_fails(tmp_path):
     root = fixture(tmp_path)
     with_voices(root, {"a-medium": "accept", "a-high": "accept", "b": "accept", "c": "dev-only"})

@@ -72,21 +72,6 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## The form of the station screen `panel` is on, from the screen's own size: in the game
-## it fills the window (LayoutMode.form_of); tests lay a screen out at a set size inside
-## the tiny headless window, which alone would read as a phone.
-static func form_of_panel(panel: Control) -> LayoutMode.Form:
-	var n: Node = panel
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	if n == null:
-		return LayoutMode.form_of(panel)
-	var vp: Viewport = panel.get_viewport()
-	var factor: float = (vp as Window).content_scale_factor if vp is Window else 1.0
-	var dp: Vector2 = LayoutMode.dp_size((n as Control).size, factor, LayoutMode.density())
-	return LayoutMode.form_for(dp, LayoutMode.coarse_pointer())
-
-
 ## Moves the panel's parts in and builds the buttons and pages for `phone_form`.
 func build(p: SciencePanel, phone_form: LayoutMode.Form) -> void:
 	panel = p
@@ -191,25 +176,25 @@ func _build_landscape() -> void:
 	layout.set_content(panel._stage)
 	var left: TouchRail = layout.rail(SIDE_LEFT)
 	left.custom_minimum_size.x = LEFT_W
-	var zone: VBoxContainer = _column()
+	var zone: VBoxContainer = PhoneFrame.column()
 	zone.name = "PageZone"
 	zone.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	panel._list.reparent(zone, false)
 	panel.card_view.reparent(zone, false)
 	zone.add_child(crew)
 	_zone = left.add(zone)
-	var axes: VBoxContainer = _column()
+	var axes: VBoxContainer = PhoneFrame.column()
 	for a: RailButton in axis_buttons:
 		axes.add_child(a)
 	_scan_left = left.add(axes)
 	left.add(_hack_hint)
 	var right: TouchRail = layout.rail(SIDE_RIGHT)
 	right.custom_minimum_size.x = RIGHT_W
-	var acts: VBoxContainer = _column()
+	var acts: VBoxContainer = PhoneFrame.column()
 	for row: Array in ROWS_SIDE:
-		acts.add_child(_row(row.map(func(k: String) -> RailButton: return actions[k])))
+		acts.add_child(PhoneFrame.row(row.map(func(k: String) -> RailButton: return actions[k])))
 	_action_box = right.add(acts)
-	var game: VBoxContainer = _column()
+	var game: VBoxContainer = PhoneFrame.column()
 	game.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var push: Control = Control.new()
 	push.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -224,7 +209,7 @@ func _build_landscape() -> void:
 
 ## Upright: the stage, the page zone, then the actions (or the minigame's buttons).
 func _build_portrait() -> void:
-	var col: VBoxContainer = _column()
+	var col: VBoxContainer = PhoneFrame.column()
 	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(col)
 	_top_pad = Control.new()
@@ -233,7 +218,7 @@ func _build_portrait() -> void:
 	panel._stage.reparent(col, false)
 	panel._stage.custom_minimum_size.y = STAGE_MIN_H
 	panel._stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	var zone: VBoxContainer = _column()
+	var zone: VBoxContainer = PhoneFrame.column()
 	zone.name = "PageZone"
 	zone.custom_minimum_size.y = ZONE_UP_H
 	panel._list.reparent(zone, false)
@@ -241,15 +226,15 @@ func _build_portrait() -> void:
 	zone.add_child(crew)
 	col.add_child(zone)
 	_zone = zone
-	var acts: VBoxContainer = _column()
+	var acts: VBoxContainer = PhoneFrame.column()
 	for row: Array in ROWS_UP:
-		acts.add_child(_row(row.map(func(k: String) -> RailButton: return actions[k])))
+		acts.add_child(PhoneFrame.row(row.map(func(k: String) -> RailButton: return actions[k])))
 	col.add_child(acts)
 	_action_box = acts
-	_scan_left = _row(axis_buttons)
+	_scan_left = PhoneFrame.row(axis_buttons)
 	col.add_child(_scan_left)
 	col.add_child(_hack_hint)
-	_game_right = _row([cancel, submit])
+	_game_right = PhoneFrame.row([cancel, submit])
 	col.add_child(_game_right)
 	panel._stage.resized.connect(_on_stage_resized)
 
@@ -365,18 +350,3 @@ func _short(key: String, text: String) -> String:
 				return TouchText.of("sci.short_active", "Active")
 			return TouchText.of("sci.short_passive", "Passive")
 	return text
-
-
-func _column() -> VBoxContainer:
-	var c: VBoxContainer = VBoxContainer.new()
-	c.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	return c
-
-
-func _row(controls: Array) -> HBoxContainer:
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	for c: Control in controls:
-		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(c)
-	return row

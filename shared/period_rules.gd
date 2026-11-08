@@ -15,6 +15,17 @@ const PERIOD_PER_SENSOR_RANGE: int = 4
 const MAX_CELLS_PER_AXIS: int = 1 << 20
 
 
+## A coordinate (m) wrapped into [-period / 2, period / 2). Values already inside are
+## returned unchanged, so wrapping never rounds an in-cube offset (D104).
+static func wrap(v: float, period: float) -> float:
+	var half: float = 0.5 * period
+	if v >= -half and v < half:
+		return v
+	var w: float = fposmod(v + half, period) - half
+	# fposmod can round up to the period for a tiny negative remainder.
+	return w - period if w >= half else w
+
+
 ## Why a period (m) doesn't suit ships whose longest sensor range is `longest` (m), or []:
 ## finite and positive, a whole number of both broadphase cells and at most
 ## MAX_CELLS_PER_AXIS of either, and at least PERIOD_PER_SENSOR_RANGE times the longest

@@ -150,7 +150,7 @@ func plan_race(limits: Vector2i, site_keys: PackedStringArray) -> Array[Dictiona
 				cheapest = i
 	if cheapest < 0:
 		return out
-	var left: int = _budget(-1)
+	var left: int = _budget()
 	var last: StringName = &""
 	while out.size() < limits.y:
 		var reserve: int = maxi(0, limits.x - out.size() - 1) * _cost_of(cheapest)
@@ -186,16 +186,16 @@ func decisions() -> Array[DirectorDecision]:
 
 ## Threat points left on the ship's budget.
 func budget_left(ship: int) -> int:
-	return _budget(ship) - _spent.get(ship, 0)
+	return _budget() - _spent.get(ship, 0)
 
 
-func _budget(_ship: int) -> int:
+func _budget() -> int:
 	return _def.budget_per_ship.get(_preset, 0)
 
 
 func _cost_of(index: int) -> int:
 	var meta: ScenarioMeta = _metas[index]
-	return _def.costs.get(meta.id, meta.threat_cost)
+	return meta.threat_cost
 
 
 ## Starts, steps and ends the active scenarios; learns when their encounters are over.

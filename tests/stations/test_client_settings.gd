@@ -6,7 +6,7 @@ const PATH: String = "user://test_client_settings.cfg"
 
 func before() -> void:
 	I18n.apply("en")
-	# The Settings screen's Rebind keys tab: a phone (the headless window) has none.
+	# Change keys: a phone (the headless window) has none.
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 
 
@@ -28,7 +28,7 @@ func test_settings_round_trip_through_the_file() -> void:
 	a.music_volume = 0.25
 	a.bindings.rebind("cycle_target", "kbm", PackedStringArray(["U"]))
 	a.bindings.set_toggle("face", true)
-	a.mark_tooltip_seen("helm")
+	a.mark_hint_seen("helm")
 	a.comfort = true
 	a.roll_lock = "reference"
 	a.reference_plane = Quaternion(Vector3.RIGHT, 0.5)
@@ -42,12 +42,12 @@ func test_settings_round_trip_through_the_file() -> void:
 	assert_array(Array(b.bindings.bindings("cycle_target", "kbm"))).is_equal(["U"])
 	assert_array(Array(b.bindings.bindings("cycle_target", "pad"))).is_equal(["RB"])
 	assert_bool(b.bindings.is_toggle("face")).is_true()
-	assert_bool(b.tooltip_seen("helm")).is_true()
-	assert_bool(b.tooltip_seen("weapons")).is_false()
+	assert_bool(b.hint_seen("helm")).is_true()
+	assert_bool(b.hint_seen("weapons")).is_false()
 	assert_str(b.roll_lock).is_equal("reference")
 	assert_bool(b.reference_plane.is_equal_approx(Quaternion(Vector3.RIGHT, 0.5))).is_true()
-	b.reset_tooltips()
-	assert_bool(b.tooltip_seen("helm")).is_false()
+	b.reset_hints()
+	assert_bool(b.hint_seen("helm")).is_false()
 
 
 # FT: FT-AUD-024
@@ -90,7 +90,7 @@ func test_bad_values_in_the_file_fall_back_to_defaults() -> void:
 		assert_float(s.ui_scale).is_equal(1.0)
 		assert_str(s.player_name).is_equal("")
 		assert_bool(s.invert_pitch or s.comfort).is_false()
-		assert_dict(s.tooltips_seen).is_empty()
+		assert_dict(s.hints_seen).is_empty()
 		assert_str(s.roll_lock).is_equal("deck")
 		assert_bool(s.reference_plane == Quaternion.IDENTITY).is_true()
 

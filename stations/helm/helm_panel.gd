@@ -604,7 +604,7 @@ func _free_pointer() -> void:
 	_captured = false
 
 
-## The screen is blocked by the menu (Controls, Settings, Rebind keys), the outcome card
+## The screen is blocked by the menu (any tab), the outcome card
 ## or the alert picker.
 func _overlay_open() -> bool:
 	var screen: StationScreen = _screen()
@@ -639,3 +639,65 @@ func _apply_mouse_mode() -> void:
 	var want: Input.MouseMode = mouse_mode_wanted()
 	if Input.mouse_mode != want:
 		Input.mouse_mode = want
+
+
+## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
+## the Fly page also numbers the persistent controls. A box is an intent's label or a
+## "Name: what" text (`touch.helm.help.*`).
+static func touch_help() -> Array:
+	var texts: Array[String] = [
+		"throttle",
+		"turn",
+		"slide",
+		"chip",
+		"hold",
+		"glyph",
+		"ring",
+		"radar",
+		"range",
+		"crew",
+		"roll_port",
+		"roll_starboard",
+	]
+	var persistent: Array = [
+		["throttle", Rect2(51, 64, 48, 294)],
+		["all_stop", Rect2(107, 64, 108, 48)],
+		["approach", Rect2(107, 120, 108, 48)],
+		["turn", Rect2(107, 242, 108, 108)],
+		["slide", Rect2(659, 242, 108, 108)],
+		["chip", Rect2(280, 64, 284, 44)],
+		["hold", Rect2(380, 180, 80, 80)],
+	]
+	var pages: Array = [
+		[
+			["face", Rect2(629, 64, 80, 48)],
+			["align", Rect2(717, 64, 80, 48)],
+			["shield_track", Rect2(629, 120, 80, 48)],
+			["glyph", Rect2(683, 176, 60, 60)],
+		],
+		[["ring", Rect2(638, 64, 150, 150)]],
+		[
+			["dock", Rect2(629, 64, 80, 48)],
+			["jump", Rect2(717, 64, 80, 48)],
+			["chase_camera", Rect2(629, 120, 80, 48)],
+			["decoupled", Rect2(717, 120, 80, 48)],
+			["roll_port", Rect2(629, 176, 80, 48)],
+			["roll_starboard", Rect2(717, 176, 80, 48)],
+		],
+		[["range", Rect2(629, 64, 168, 48)], ["radar", Rect2(231, 116, 382, 242)]],
+		[["crew", Rect2(629, 64, 168, 160)]],
+	]
+	var titles: Array[String] = HelmTouch.page_titles()
+	var out: Array = []
+	for p: int in pages.size():
+		var boxes: Array = []
+		for c: Array in (persistent if p == HelmTouch.PAGE_FLY else []) + pages[p]:
+			var key: String = c[0]
+			var text: String = (
+				TouchText.t("touch.helm.help." + key)
+				if key in texts
+				else TouchText.t(IntentTable.label_key(key))
+			)
+			boxes.append(TouchText.named(c[1], text))
+		out.append({"page": titles[p], "boxes": boxes})
+	return out

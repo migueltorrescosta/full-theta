@@ -2,7 +2,7 @@ class_name ClientSettings
 extends RefCounted
 ## Per-client settings, persisted in one ConfigFile under user:// (path injectable for
 ## tests): the player's name, bindings and hold-to-toggle choices (FT-STN-007,
-## FT-STN-014), UI scale (FT-STN-013), first-run tooltips already seen (FT-STN-012),
+## FT-STN-014), UI scale (FT-STN-013), first-visit hints already seen (FT-STN-012, D292),
 ## invert pitch (S5), the music volume (#12) and the comfort options (FT-STN-017: the
 ## station cameras read them; the cosmetic reference plane is never spoken or used by
 ## rules, D124).
@@ -18,6 +18,10 @@ const MUSIC_DEFAULT: float = 0.5
 const SUBTITLE_SIZES: Dictionary = {"small": 14, "normal": 18, "large": 26}
 const ROLL_LOCKS: Array[String] = ["deck", "target", "reference"]
 
+## The game was started with `--dev` (#35 A7, amends D174): only then do the menu's Dev
+## checkbox and the lobby's dev seat show. Not saved; tests and L5 shots set it.
+static var dev_flag: bool = OS.get_cmdline_user_args().has("--dev")
+
 var path: String = PATH
 var player_name: String = ""
 ## Last address typed in Join.
@@ -28,8 +32,9 @@ var invert_pitch: bool = false
 var subtitle_size: String = "normal"
 ## Ambient music level, 0 (off) to 1 (#12, D312); the effects and voice have no slider.
 var music_volume: float = MUSIC_DEFAULT
-## Station id -> true once its first-run tooltip was dismissed.
-var tooltips_seen: Dictionary = {}
+## Hint key -> true once its first-visit hint showed: a station's Controls chip (D292), the
+## tab hint, the turn-sideways banner. Saved under the old key "tooltips_seen".
+var hints_seen: Dictionary = {}
 ## Not saved: the browser test hooks (?pick=) set it so the first-visit Controls menu never
 ## covers the station under test.
 var skip_first_visit_help: bool = false
@@ -71,9 +76,9 @@ func load_file() -> Error:
 	var sub_size: String = _value(cfg, "ui", "subtitle_size", "normal")
 	subtitle_size = sub_size if SUBTITLE_SIZES.has(sub_size) else "normal"
 	bindings.from_dict(_value(cfg, "input", "bindings", {}))
-	tooltips_seen.clear()
+	hints_seen.clear()
 	for s: Variant in _value(cfg, "ui", "tooltips_seen", []):
-		tooltips_seen[str(s)] = true
+		hints_seen[str(s)] = true
 	comfort = _value(cfg, "comfort", "on", false)
 	var lock: String = _value(cfg, "comfort", "roll_lock", "deck")
 	roll_lock = lock if lock in ROLL_LOCKS else "deck"
@@ -93,7 +98,7 @@ func save() -> Error:
 	cfg.set_value("player", "last_address", last_address)
 	cfg.set_value("ui", "scale", ui_scale)
 	cfg.set_value("ui", "subtitle_size", subtitle_size)
-	cfg.set_value("ui", "tooltips_seen", tooltips_seen.keys())
+	cfg.set_value("ui", "tooltips_seen", hints_seen.keys())
 	cfg.set_value("input", "invert_pitch", invert_pitch)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("input", "bindings", bindings.to_dict())
@@ -123,6 +128,16 @@ func effective_scale(touch: bool) -> float:
 	return maxf(ui_scale, 1.0) if touch else ui_scale
 
 
+## Whether the player chose a name: not empty, and not the menu's stand-in for an empty
+## field ("Player"), which a phone that joined by QR code gets (#35 A5).
+func has_name() -> bool:
+	return player_name != "" and player_name != _default_name()
+
+
+static func _default_name() -> String:
+	return String(TranslationServer.translate("menu.default_name"))
+
+
 func lesson_done(station: String) -> bool:
 	return lessons_done.has(station)
 
@@ -131,14 +146,14 @@ func mark_lesson_done(station: String) -> void:
 	lessons_done[station] = true
 
 
-func tooltip_seen(station: String) -> bool:
-	return skip_first_visit_help or tooltips_seen.has(station)
+func hint_seen(station: String) -> bool:
+	return skip_first_visit_help or hints_seen.has(station)
 
 
-func mark_tooltip_seen(station: String) -> void:
-	tooltips_seen[station] = true
+func mark_hint_seen(station: String) -> void:
+	hints_seen[station] = true
 
 
-## Settings: "Show first-run tips again" (FT-STN-012).
-func reset_tooltips() -> void:
-	tooltips_seen.clear()
+## Settings: "Show first-visit hints again" (FT-STN-012, D292; #35 A8).
+func reset_hints() -> void:
+	hints_seen.clear()

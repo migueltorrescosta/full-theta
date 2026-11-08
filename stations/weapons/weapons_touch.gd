@@ -426,3 +426,37 @@ func _on_radar_input(event: InputEvent) -> void:
 	var item: Dictionary = radar.item_at(t.position, RADAR_REACH)
 	if not item.is_empty() and item["kind"] != "point":
 		_panel.ctx.crew.select(item["kind"], item["id"])
+
+
+## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
+## one right rail over a full-width view; each box's text is "Name: what" (`help.weapons.*`).
+static func touch_help() -> Array:
+	var fire: Array = [
+		[Rect2(629, 64, 168, 64), "mount"],
+		[Rect2(629, 136, 80, 48), "ammo"],
+		[Rect2(717, 136, 80, 48), "guided"],
+		[Rect2(629, 192, 80, 48), "fire_all"],
+		[Rect2(717, 192, 80, 48), "claim"],
+		[Rect2(629, 262, 168, 104), "fire"],
+		[Rect2(240, 150, 360, 150), "view"],
+		[Rect2(55, 234, 168, 124), "radar"],
+		[Rect2(192, 64, 284, 48), "chip"],
+	]
+	var mounts: Array = [
+		[Rect2(231, 128, 286, 56), "row"],
+		[Rect2(525, 128, 88, 56), "row_claim"],
+		[Rect2(629, 262, 168, 104), "fire"],
+	]
+	var crew: Array = [
+		[Rect2(629, 64, 168, 64), "requests"],
+		[Rect2(629, 136, 168, 48), "ping_mark"],
+		[Rect2(629, 192, 168, 48), "share"],
+		[Rect2(629, 262, 168, 104), "fire"],
+	]
+	var out: Array = []
+	for page: Array in [["page.fire", fire], ["page.mounts", mounts], ["page.crew", crew]]:
+		var boxes: Array = []
+		for c: Array in page[1]:
+			boxes.append(TouchText.named(c[0], TouchText.t("help.weapons." + str(c[1]))))
+		out.append({"page": TouchText.t(page[0]), "boxes": boxes})
+	return out

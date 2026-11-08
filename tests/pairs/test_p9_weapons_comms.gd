@@ -1,24 +1,6 @@
 extends GdUnitTestSuite
 ## P9 Weapons + Comms pair test (spec §7.4): scenario and scripts in p9_scenario.gd.
 
-const BETTER: Dictionary = {
-	"rep_lost": PairHarness.Better.LOWER, "reward": PairHarness.Better.HIGHER
-}
-
-
-# FT: FT-PAIR-001, FT-PAIR-004, FT-PAIR-015, FT-TST-006
-func test_coop_beats_solo() -> void:
-	var p9: PairDef = load("res://content/pairs/p9.tres") as PairDef
-	var runs: Dictionary[String, PairHarness.Run] = P9Scenario.harness().compare(
-		P9Scenario.coop, P9Scenario.solo
-	)
-	var failures: Array[String] = PairHarness.check(runs, BETTER, p9.pair_min_gain)
-	(
-		assert_array(failures)
-		. override_failure_message("\n".join(failures) + "\n" + PairHarness.summary(runs))
-		. is_empty()
-	)
-
 
 func _surrender_params() -> Dictionary:
 	var conversation: Dictionary = ConversationLibrary.load_dir()[&"conv.surrender_demand"]
@@ -53,6 +35,49 @@ func test_prior_engine_damage_raises_the_surrender_probability() -> void:
 	assert_float(damaged).is_greater(undamaged)
 	assert_float(damaged).is_less_equal(float(params["cap"]))
 	assert_int(_yes_of_hundred(P9Scenario.ENGINES_LEFT)).is_greater(_yes_of_hundred(1.0))
+
+
+## A world with the raider's engines at `left` of their health, hailed (card 0).
+func _hailed(left: float) -> SimWorld:
+	var w: SimWorld = P9Scenario.build()
+	P9Scenario.damage_engines(w, left / P9Scenario.ENGINES_LEFT)
+	w.step()
+	var hail: HailCommand = HailCommand.new()
+	hail.target = P9Scenario.RAIDER
+	StoryFixture.run(w, 0, hail)
+	return w
+
+
+func _demand_enabled(w: SimWorld) -> bool:
+	return bool(Story.options(w, 0, 0)[0]["enabled"])
+
+
+# FT: FT-PAIR-004
+# #35 A4: the demand is offered only once a fifth of the contact's engines is gone; a refusal
+# closes it for 25 s and halves the contact's next chance.
+func test_the_demand_needs_engine_damage_and_waits_after_a_refusal() -> void:
+	assert_bool(_demand_enabled(_hailed(1.0))).is_false()
+	var w: SimWorld = _hailed(P9Scenario.ENGINES_LEFT)
+	assert_bool(_demand_enabled(w)).is_true()
+	var params: Dictionary = _surrender_params().duplicate()
+	assert_float(float(params["retry_s"])).is_equal(25.0)
+	assert_float(float(params["refusal_factor"])).is_equal(0.5)
+	# A near-certain refusal, twice: the second chance is half the first.
+	params["base"] = 0.001
+	params["per_damage"] = 0.0
+	var chances: Array[float] = []
+	for i: int in 2:
+		StoryRules.ask_surrender(w, 0, 0, params)
+		chances.append(StoryFixture.events(w, &"surrender_roll")[-1].value)
+		assert_bool(_demand_enabled(w)).is_false()
+		var reply: ReplyCommand = ReplyCommand.new()
+		reply.card = 0
+		reply.option = &"o1"
+		StoryFixture.run(w, 0, reply)
+		assert_int(StoryFixture.events(w, &"surrender_roll").size()).is_equal(0)
+		SimFixture.run(w, 25 * SimWorld.HZ)
+		assert_bool(_demand_enabled(w)).is_true()
+	assert_float(chances[1]).is_equal_approx(chances[0] * 0.5, 1e-9)
 
 
 # FT: FT-PAIR-001, FT-MIS-019

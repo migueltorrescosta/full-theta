@@ -3,8 +3,8 @@ extends Button
 ## The first-visit hint (P28-Help, amends FT-STN-012 and D185): on a station's first visit
 ## to this client, a chip "Controls: ☰ › Controls" shows at the top of the view for
 ## SHOW_S seconds, then goes. Help never opens by itself any more; tapping the chip opens
-## it (`pressed`). Once per client and station, re-enabled by the menu's "Show first-run
-## tips again" (ClientSettings.reset_tooltips).
+## it (`pressed`). Once per client and station, re-enabled by the menu's "Show
+## first-visit hints again" (ClientSettings.reset_hints).
 ##
 ##     var chip: ControlsChip = ControlsChip.show_once(self, ctx.settings, station)
 ##     if chip != null:
@@ -21,9 +21,9 @@ var left_s: float = SHOW_S
 ## Adds the chip to `parent` on `station`'s first visit and records the visit; null when
 ## the visit was seen (or the browser test hooks skip it).
 static func show_once(parent: Control, settings: ClientSettings, station: String) -> ControlsChip:
-	if station == "" or settings.tooltip_seen(station):
+	if station == "" or settings.hint_seen(station):
 		return null
-	settings.mark_tooltip_seen(station)
+	settings.mark_hint_seen(station)
 	settings.save()
 	var chip: ControlsChip = ControlsChip.new()
 	parent.add_child(chip)

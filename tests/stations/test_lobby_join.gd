@@ -1,16 +1,23 @@
 extends GdUnitTestSuite
-## The lobby's way out and the host's join info: "Back to ships", "Main menu" and the
-## "How to join" panel with the QR code.
+## The lobby's way out and the host's join info: "Back to ships", "Main menu", the
+## "How to join" panel with the QR code, the join strip, and the name prompt.
 
 const URL: String = "http://192.168.1.20:47800/?join=1"
+const SETTINGS: String = "user://test_lobby_join.cfg"
 
 
 func before() -> void:
 	I18n.apply("en")
 
 
-func _lobby(bind: String = "", port: int = 47801) -> LobbyScreen:
-	var ctx: StationContext = StationFixture.context("helm")
+func after_test() -> void:
+	if FileAccess.file_exists(SETTINGS):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
+
+
+func _lobby(bind: String = "", port: int = 47801, player: String = "Ana") -> LobbyScreen:
+	var ctx: StationContext = StationFixture.context("helm", SETTINGS)
+	ctx.settings.player_name = player
 	ctx.crew.lobby[0]["started"] = false
 	ctx.host_bind = bind
 	ctx.host_port = port
@@ -112,3 +119,56 @@ func test_join_url_says_https_when_the_server_uses_tls() -> void:
 	assert_str((l.find_child("JoinUrl", true, false) as Label).text).contains(https)
 	var qr: QrView = l.find_child("JoinQr", true, false)
 	assert_array(qr.modules).is_equal(QrCode.encode(https))
+
+
+# FT: FT-NET-013
+# #35 A6: while the seats are open the host's lobby shows the QR code itself, with the address
+# in large type beside it; once the ship has started it goes. A loopback host has no strip.
+func test_host_lobby_shows_the_qr_and_address_while_seats_are_open() -> void:
+	var vp: SubViewport = auto_free(SubViewport.new())
+	vp.size = Vector2i(1280, 720)
+	add_child(vp)
+	var l: LobbyScreen = _lobby("192.168.1.20")
+	l.reparent(vp)
+	await get_tree().process_frame
+	var strip: Control = l.find_child("JoinStrip", true, false)
+	assert_bool(strip.visible).is_true()
+	var qr: QrView = l.find_child("JoinStripQr", true, false)
+	assert_array(qr.modules).is_equal(QrCode.encode(URL))
+	var address: Label = l.find_child("JoinStripAddress", true, false)
+	assert_str(address.text).is_equal("192.168.1.20")
+	assert_int(address.get_theme_font_size("font_size")).is_greater_equal(
+		LobbyScreen.JOIN_ADDRESS_SIZE_PHONE
+	)
+	l.ctx.crew.lobby[0]["started"] = true
+	l.refresh()
+	assert_bool(strip.visible).is_false()
+	# A short screen (a phone on its side) leaves it to How to join.
+	l.ctx.crew.lobby[0]["started"] = false
+	vp.size = Vector2i(844, 390)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_bool(strip.visible).is_false()
+	assert_object(_lobby("127.0.0.1").find_child("JoinStrip", true, false)).is_null()
+	assert_object(_lobby().find_child("JoinStrip", true, false)).is_null()
+
+
+# FT: FT-NET-001
+# #35 A5: a player with no name of their own (a phone from the QR code: "" or the menu's
+# "Player") gets a one-field prompt; Done saves the name and renames the session. A named
+# player sees no prompt.
+func test_a_player_without_a_name_is_asked_for_one() -> void:
+	assert_bool((_lobby().find_child("NamePrompt", true, false) as Control).visible).is_false()
+	for unnamed: String in ["", "Player"]:
+		var l: LobbyScreen = _lobby("", 47801, unnamed)
+		var prompt: Control = l.find_child("NamePrompt", true, false)
+		assert_bool(prompt.visible).is_true()
+		_button(l, "NameDone").pressed.emit()
+		assert_bool(prompt.visible).is_true()
+		(l.find_child("NameField", true, false) as LineEdit).text = "  Bea "
+		_button(l, "NameDone").pressed.emit()
+		assert_bool(prompt.visible).is_false()
+		assert_array(StationFixture.sent(l.ctx).of("rename")).is_equal([["rename", ["Bea"]]])
+		var saved: ClientSettings = ClientSettings.new(SETTINGS)
+		saved.load_file()
+		assert_str(saved.player_name).is_equal("Bea")

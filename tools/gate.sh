@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # Local gate (FT-TST-002, FT-TST-005): imports the project, then runs tiers.
-#   tools/gate.sh [l0|l1|l2|l3|l4|l4load|l5|l6|ci|all]... [--update-baselines]   (default: ci)
+#   tools/gate.sh [l0|l1|l2|l4|l4load|l5|l6|ci|all]... [--update-baselines]   (default: ci)
 # ci = the tiers CI runs (l0 l1; l1 runs every test, tests/net included, in L1_SHARDS
 # processes at once); all = every implemented tier (l0 l1 l4 l4load l5 l6). l2 runs the sim-side suites only (tests/sim,
 # tests/pairs, tests/scenarios, tests/director; Q16, owner 2026-10-26): a quick check
-# while working on the simulation, already part of l1. l3 runs only the in-process network tests
-# (tests/net), pinned to 2 cores like a CI runner. l4 runs a server and 3 client processes
+# while working on the simulation, already part of l1. l4 runs a server and 3 client processes
 # on 2 cores (tools/l4/run.sh). l4load is the 64-connection load gate, fugaku only: the
 # server on 2 cores, 64 clients on other cores (tools/l4/load.sh, about 2-3 minutes). l6
 # builds the release packages and runs them (tools/l6/run.sh).
@@ -19,7 +18,7 @@ tiers=()
 l5_args=()
 for arg in "$@"; do
   case $arg in
-    l0 | l1 | l2 | l3 | l4 | l4load | l5 | l6) tiers+=("$arg") ;;
+    l0 | l1 | l2 | l4 | l4load | l5 | l6) tiers+=("$arg") ;;
     ci) tiers+=(l0 l1) ;;
     all) tiers+=(l0 l1 l4 l4load l5 l6) ;;
     --update-baselines) l5_args+=(--update-baselines) ;;
@@ -106,10 +105,6 @@ l2() {
     gdunit "res://tests/$dir" || return 1
   done
 }
-
-# L3: server and clients over loopback WebSocket in one process (tests/net), on 2 cores
-# (L3_CPUS, default 0,1, like L4_CPUS).
-l3() { gdunit res://tests/net -- taskset -c "${L3_CPUS:-0,1}"; }
 
 # L4: a server and 3 headless client processes on 2 cores, driven by intent files;
 # logs in build/l4/<run>/ (tools/l4/run.sh); then the browser station on the same 2 cores

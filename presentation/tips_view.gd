@@ -8,7 +8,7 @@ extends Control
 ## tip has no text in it); `prefer()` puts the player's stations and mode first.
 ##
 ## Used as the screen shown while a station's first visit builds (stations/client_shell.gd)
-## and as the menu's Tips tab. Opaque by default (`opaque`): it draws the background and
+## (the loading screen). Opaque by default (`opaque`): it draws the background and
 ## a still starfield, so it can cover a screen while that screen builds. It keeps its
 ## content inside the safe area.
 

@@ -1,10 +1,9 @@
 class_name StationRegistry
 extends RefCounted
 ## Station id -> the StationPanel script that draws it. A new station adds one line
-## each; a station missing here gets PlaceholderPanel
-## (any unknown id). Paths, loaded on first use, not class names: naming
-## the panel classes here would load every station (and its art) whenever the shell
-## loads, which costs a client over a second of start-up on two busy cores.
+## each; an unknown id is an error (`make` returns null). Paths, loaded on first use, not
+## class names: naming the panel classes here would load every station (and its art)
+## whenever the shell loads, which costs a client over a second of start-up on two busy cores.
 
 const PANELS: Dictionary = {
 	"helm": "res://stations/helm/helm_panel.gd",
@@ -18,7 +17,7 @@ const PANELS: Dictionary = {
 }
 
 
-## A new panel for `station` (not set up yet).
+## A new panel for `station` (not set up yet); null, with an error, for an unknown id.
 static func make(station: String) -> StationPanel:
 	if PANELS.has(station):
 		var script: Script = load(PANELS[station])
@@ -27,4 +26,6 @@ static func make(station: String) -> StationPanel:
 			if panel is StationPanel:
 				return panel
 			push_error("%s is not a StationPanel" % PANELS[station])
-	return PlaceholderPanel.new()
+	else:
+		push_error("no panel for station '%s'" % station)
+	return null

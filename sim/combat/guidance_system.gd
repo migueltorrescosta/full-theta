@@ -75,7 +75,7 @@ static func step(world: SimWorld) -> void:
 		if target >= 0:
 			if is_tracked(world, proj.factions[k], target):
 				want = proj.offset_to_ship(k, kin, target)
-				var key: int = proj.factions[k] * 65536 + target
+				var key: int = SimTable.row_key(proj.factions[k], target)
 				if not quality.has(key):
 					quality[key] = track_quality(world, proj.factions[k], target)
 				rate *= lerpf(proj.track_floor[k], 1.0, quality[key])

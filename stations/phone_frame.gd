@@ -303,8 +303,7 @@ func selection_text() -> String:
 		label = ctx.view.callsign(int(sel["id"]))
 	var local: Variant = ctx.selection_local()
 	if local is Vector3:
-		var v: Vector3 = local
-		label += " · %s · %s" % [Callout.clock_height(v), Callout.range_band(v.length())]
+		return ChipText.chip(label, local)
 	return label
 
 
@@ -387,3 +386,35 @@ func on_pinged(p: Dictionary) -> void:
 		label = ctx.view.callsign(int(item["id"]))
 	var text: String = TouchText.of("toast.pinged", "%s pinged %s") % [str(p.get("by", "")), label]
 	ping_toast.show_ping(text, ctx.now_ms())
+
+
+## The form of the station screen `panel` is on, from the screen's own size: in the game
+## it fills the window (LayoutMode.form_of); tests lay a screen out at a set size inside
+## the tiny headless window, which alone would read as a phone.
+static func form_of_panel(panel: Control) -> LayoutMode.Form:
+	var n: Node = panel
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	if n == null:
+		return LayoutMode.form_of(panel)
+	var vp: Viewport = panel.get_viewport()
+	var factor: float = (vp as Window).content_scale_factor if vp is Window else 1.0
+	var dp: Vector2 = LayoutMode.dp_size((n as Control).size, factor, LayoutMode.density())
+	return LayoutMode.form_for(dp, LayoutMode.coarse_pointer())
+
+
+## A vertical stack of touch controls, UiTheme.TOUCH_GAP apart.
+static func column() -> VBoxContainer:
+	var c: VBoxContainer = VBoxContainer.new()
+	c.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	return c
+
+
+## `controls` side by side, equally wide, UiTheme.TOUCH_GAP apart.
+static func row(controls: Array) -> HBoxContainer:
+	var r: HBoxContainer = HBoxContainer.new()
+	r.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	for c: Control in controls:
+		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		r.add_child(c)
+	return r

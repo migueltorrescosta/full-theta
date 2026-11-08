@@ -17,17 +17,15 @@ func _world(world_seed: int) -> SimWorld:
 ## came within max_ticks. Returns every event.
 func _run_to_outcome(world: SimWorld, crew: ScriptedCrew, max_ticks: int) -> Array[SimEvent]:
 	var events: Array[SimEvent] = []
-	while (
-		OutcomeSystem.encounter_outcome(world) == RunTable.Outcome.NONE and world.tick < max_ticks
-	):
+	while not OutcomeSystem.session_outcome(world).over() and world.tick < max_ticks:
 		if crew != null:
 			crew.act(world)
 		world.step()
 		events.append_array(world.drain_events())
 	(
-		assert_int(OutcomeSystem.encounter_outcome(world))
+		assert_bool(OutcomeSystem.session_outcome(world).over())
 		. override_failure_message("no outcome within %d ticks" % max_ticks)
-		. is_not_equal(RunTable.Outcome.NONE)
+		. is_true()
 	)
 	return events
 
@@ -109,7 +107,7 @@ func test_win_when_enemy_retreats() -> void:
 func test_loss_when_own_ship_destroyed() -> void:
 	var world: SimWorld = _world(11)
 	var events: Array[SimEvent] = SimFixture.run(world, 10 * HZ)
-	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.NONE)
+	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(SessionOutcome.Reason.NONE)
 	assert_array(SimFixture.of_kind(events, &"outcome")).is_empty()
 	var tick: int = world.tick
 	_destroy(world, PLAYER, ENEMY)
@@ -122,7 +120,7 @@ func test_loss_when_own_ship_destroyed() -> void:
 	assert_int(outcomes[0].tick).is_equal(tick)
 	assert_str(String(outcomes[0].tag)).is_equal("loss")
 	assert_int(int(outcomes[0].value)).is_equal(RunTable.Outcome.LOSS)
-	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.LOSS)
+	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(SessionOutcome.Reason.ALL_LOST)
 	assert_int(world.run.status[PLAYER]).is_equal(RunTable.Status.DESTROYED)
 	assert_int(world.run.status[ENEMY]).is_equal(RunTable.Status.IN_PLAY)
 	assert_int(world.run.outcome[ENEMY]).is_equal(RunTable.Outcome.NONE)
@@ -142,16 +140,18 @@ func test_per_ship_elimination_and_no_enemy() -> void:
 	SimFixture.run(world, 2)
 	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
 	assert_int(world.run.outcome[wing]).is_equal(RunTable.Outcome.NONE)
-	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.NONE)
+	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(SessionOutcome.Reason.NONE)
 	_destroy(world, ENEMY, wing)
 	SimFixture.run(world, 1)
 	assert_int(world.run.outcome[wing]).is_equal(RunTable.Outcome.WIN)
 	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
-	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.WIN)
+	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(
+		SessionOutcome.Reason.OBJECTIVE
+	)
 	var alone: SimWorld = SimWorld.new(1)
 	alone.spawn_ship(TestDefs.corvette(), 1)
 	assert_array(SimFixture.of_kind(SimFixture.run(alone, 60), &"outcome")).is_empty()
-	assert_int(OutcomeSystem.encounter_outcome(alone)).is_equal(RunTable.Outcome.NONE)
+	assert_int(OutcomeSystem.session_outcome(alone).reason).is_equal(SessionOutcome.Reason.NONE)
 
 
 # FT: FT-NET-041, FT-M1-012, FT-ARC-008
@@ -174,7 +174,7 @@ func test_abandon_ends_the_encounter_as_a_loss() -> void:
 	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
 	assert_int(outcomes.size()).is_equal(1)
 	assert_str(String(outcomes[0].tag)).is_equal("loss")
-	assert_int(OutcomeSystem.encounter_outcome(world)).is_equal(RunTable.Outcome.LOSS)
+	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(SessionOutcome.Reason.ALL_LOST)
 	var again: AbandonShipCommand = AbandonShipCommand.new()
 	again.ship_id = PLAYER
 	world.submit(again)

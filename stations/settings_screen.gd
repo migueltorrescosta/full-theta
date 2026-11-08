@@ -3,16 +3,18 @@ extends PanelContainer
 ## The menu (per client, ClientSettings; FT-STN-011, D185, P28 menu), one opaque screen
 ## with tabs. In a session: Game (the ship's name, Sound, Full screen where offered, the
 ## host's Pause, Abandon or Give up, Leave; the final ones ask to confirm in place), Controls
-## (the live bindings under the seat's role summary, ControlsPane; FT-STN-012), Tips, then
-## Settings (UI scale 75-150 % FT-STN-013, invert pitch, first-run tips again, and comfort
-## FT-STN-017: on/off, roll lock deck / target / reference plane, "set reference plane to
-## my current deck", reduced field of view; the station cameras apply them) and Rebind keys
-## (bindings per intent and device with rebind, hold/toggle and reset, FT-STN-007,
-## FT-STN-014; hidden on a phone, which has no keys). Esc opens it on the tab last used
-## (Game at first in a session, Settings outside one), `?` on Controls; help never opens
-## by itself (P28-Help, ControlsChip). Saved on close; a language switch retranslates it
-## at once. A change of the Pause or Abandon control updates its button in place, never
-## the whole menu (load fix 2).
+## (the live bindings under the seat's role summary, ControlsPane; FT-STN-012; then, off a
+## phone, Change keys: every intent per device with rebind, hold/toggle and reset, the
+## seat's stations first, FT-STN-007, FT-STN-014; owner A14) and Settings (UI scale 75-150 %
+## FT-STN-013, invert pitch, first-visit hints again, and comfort FT-STN-017: on/off, roll
+## lock deck / target / reference plane, "set reference plane to my current deck", reduced
+## field of view; the station cameras apply them). Outside a session: Settings, then
+## Controls for every station (not on a phone, which has no keys). The Controls tab is
+## filled when it shows, for the seat set_controls named, else every station (owner A13).
+## Esc opens it on the tab last used (Game at first in a session, Settings outside one),
+## `?` on Controls; help never opens by itself (P28-Help, ControlsChip). Saved on close; a
+## language switch retranslates it at once. A change of the Pause or Abandon control
+## updates its button in place, never the whole menu (load fix 2).
 
 signal closed
 signal leave_requested
@@ -23,6 +25,9 @@ signal abandon_requested
 signal scale_changed
 ## "Set reference plane to my current deck": the shell stores the ship's orientation.
 signal reference_plane_requested
+## The player typed a new name on the Game tab (saved already); the shell renames the
+## session (#35 A5).
+signal name_changed(new_name: String)
 
 ## Intents that can't be left unbound: the way back to Settings, and the way to say no.
 const ALWAYS_BOUND: Array[String] = ["menu", "decline"]
@@ -37,9 +42,7 @@ const FINAL_ABANDON: Array[String] = ["settings.abandon", "settings.forfeit"]
 ## The tab names: the children of `tabs`.
 const TAB_GAME: String = "Game"
 const TAB_CONTROLS: String = "Controls"
-const TAB_TIPS: String = "Tips"
 const TAB_SETTINGS: String = "Settings"
-const TAB_KEYS: String = "Keys"
 
 var settings: ClientSettings
 ## Waiting for an input to bind: [intent id, device], or [].
@@ -47,9 +50,10 @@ var capturing: Array = []
 ## Why the last captured input was refused ("" when it wasn't).
 var warning: Label
 var tabs: TabContainer
-## The Controls tab's text list; null outside a session.
+## The Controls tab's text list; null while the menu has no Controls tab.
 var controls: ControlsList
-## The Controls tab: the diagrams and the list (ControlsPane); null outside a session.
+## The Controls tab: the diagrams and the list (ControlsPane), then Change keys; null
+## outside a session on a phone.
 var controls_pane: ControlsPane
 
 ## Modifier keys and pad buttons held during a capture, in press order.
@@ -63,10 +67,16 @@ var _abandon_key: String = ""
 var _ship_name: String = ""
 ## What _build fills: a notification may not change the children of its own node.
 var _root: VBoxContainer
-## What `controls` shows, kept to refill it when the menu is rebuilt: [bindings,
-## stations, device, role] or [].
+## What the Controls tab is to show: [bindings, stations, device, role], or [] for every
+## station on the keyboard.
 var _controls_args: Array = []
+## What the pane was last built with, [] before it first showed.
+var _built_args: Array = []
+## The Change keys section under the pane (null on a phone outside a session).
+var _keys: VBoxContainer
 var _rows: VBoxContainer
+## The stations the Change keys rows put first.
+var _rows_for: Array = []
 var _scale_label: Label
 var _scale_slider: HSlider
 ## The Game tab's controls (null outside a session).
@@ -100,11 +110,33 @@ func setup(p_settings: ClientSettings, in_session: bool) -> void:
 
 
 ## Fills the Controls tab for `stations` on `device` under the role summary of `role`.
-## Cheap: the pane builds a diagram only when it shows (load fix 1).
+## Cheap: the pane is built when the tab shows, a diagram only when it shows (load fix 1).
 func set_controls(bindings: Bindings, stations: Array, device: String, role: String) -> void:
 	_controls_args = [bindings, stations, device, role]
-	if controls_pane != null:
-		controls_pane.build(bindings, stations, device, role)
+	_fill_controls()
+
+
+## What the Controls tab shows: the seat set_controls named, else every station.
+func controls_args() -> Array:
+	if not _controls_args.is_empty():
+		return _controls_args
+	return [settings.bindings, ControlsPane.every_station(), IntentTable.KBM, ""]
+
+
+## Builds the pane when the Controls tab shows and what it is to show changed; the Change
+## keys rows follow the seat's stations.
+func _fill_controls() -> void:
+	if controls_pane == null or tabs.get_current_tab_control() == null:
+		return
+	if current_tab_name() != TAB_CONTROLS:
+		return
+	var args: Array = controls_args()
+	if args == _built_args:
+		return
+	_built_args = args
+	controls_pane.build(args[0], args[1], args[2], args[3])
+	if not _controls_args.is_empty() and _controls_args[1] != _rows_for:
+		_build_bindings()
 
 
 ## Shows or hides the host's Pause control, in place.
@@ -146,6 +178,7 @@ func open(tab: String = "") -> void:
 		_sound.button_pressed = _sound.is_on()
 		_music_slider.value = settings.music_volume * 100.0
 	open_tab(tab)
+	_fill_controls()
 
 
 ## The name of the tab showing.
@@ -180,7 +213,7 @@ func _notification(what: int) -> void:
 
 
 ## Keeps the menu clear of notches and, on a phone, the gesture band (SafeArea, #28); a
-## phone has no Rebind keys tab.
+## phone has no keys to change.
 func _fit_safe_area() -> void:
 	if _box == null or not is_inside_tree():
 		return
@@ -202,15 +235,24 @@ func _fit_safe_area() -> void:
 		)
 		_scale_slider.value = settings.effective_scale(LayoutMode.is_touch(kind)) * 100.0
 		_scale_slider.set_block_signals(false)
-	# A window that became a phone hides Rebind keys; one that stopped being one gets it.
-	var keys: Node = tabs.get_node_or_null(TAB_KEYS) if tabs != null else null
+	if tabs == null:
+		return
+	# A window that became a phone hides Change keys (and, outside a session, the Controls
+	# tab, which is there for them); one that stopped being one gets them.
 	var phone: bool = kind == LayoutMode.Kind.PHONE
-	if keys != null:
-		if phone and tabs.get_current_tab_control() == keys:
+	if _keys != null:
+		if phone:
+			capturing = []
+		_keys.visible = not phone
+	var pane: Node = tabs.get_node_or_null(TAB_CONTROLS)
+	if _in_session:
+		return
+	if pane != null:
+		if phone and tabs.get_current_tab_control() == pane:
 			open_tab(TAB_SETTINGS)
-		tabs.set_tab_hidden(keys.get_index(), phone)
-	elif tabs != null and not phone:
-		_build_keys()
+		tabs.set_tab_hidden(pane.get_index(), phone)
+	elif not phone:
+		_build_controls()
 
 
 ## (Re)builds the tabs in the current language, keeping the tab showing.
@@ -231,42 +273,58 @@ func _build() -> void:
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(tabs)
+	tabs.tab_changed.connect(func(_i: int) -> void: _fill_controls())
 	controls = null
 	controls_pane = null
+	_keys = null
+	_rows = null
+	_built_args = []
 	if _in_session:
 		var game: VBoxContainer = VBoxContainer.new()
 		_tab(TAB_GAME, tr("menu.tab_game"), game)
 		_build_game(game)
-		controls_pane = ControlsPane.new()
-		controls = controls_pane.list
-		_tab(TAB_CONTROLS, tr("overlay.title"), controls_pane)
-		if not _controls_args.is_empty():
-			controls_pane.build(
-				_controls_args[0], _controls_args[1], _controls_args[2], _controls_args[3]
-			)
-		_tab(TAB_TIPS, tr("menu.tab_tips"), _tips_view())
+		_build_controls()
 	var general: VBoxContainer = VBoxContainer.new()
 	_tab(TAB_SETTINGS, tr("menu.settings"), general)
 	_build_general(general)
 	_build_comfort(general)
-	# A phone has no keys to rebind; a hidden tab would still widen the tab bar.
-	_rows = null
-	if not _phone():
-		_build_keys()
+	# Outside a session the Controls tab is for changing keys, which a phone hasn't; a
+	# hidden tab would still widen the tab bar.
+	if not _in_session and not _phone():
+		_build_controls()
 	open_tab(keep)
+	_fill_controls()
 	_fit_safe_area()
 
 
-func _build_keys() -> void:
-	var keys: VBoxContainer = VBoxContainer.new()
-	_tab(TAB_KEYS, tr("settings.bindings"), keys)
+## The Controls tab: the pane, then Change keys (owner A14), which a phone hides. The pane
+## and the rows are filled when the tab shows (_fill_controls).
+func _build_controls() -> void:
+	controls_pane = ControlsPane.new()
+	controls = controls_pane.list
+	_tab(TAB_CONTROLS, tr("overlay.title"), controls_pane)
+	_keys = VBoxContainer.new()
+	_keys.name = "ChangeKeys"
+	_keys.add_theme_constant_override("separation", 6)
+	controls_pane.add_child(_keys)
+	var head: Label = _label(tr("settings.bindings"))
+	head.theme_type_variation = "HeadingLabel"
+	_keys.add_child(head)
+	var hint: Label = _label(tr("settings.bindings_hint"))
+	hint.add_theme_color_override("font_color", Palette.color("text_dim"))
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_keys.add_child(hint)
 	warning = _label("")
 	warning.name = "Warning"
 	warning.add_theme_color_override("font_color", Palette.color("warn"))
-	_add_button(keys, "ResetBindings", tr("settings.reset_bindings"), _reset_bindings)
-	keys.add_child(warning)
+	var reset: Button = _add_button(
+		_keys, "ResetBindings", tr("settings.reset_bindings"), _reset_bindings
+	)
+	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_keys.add_child(warning)
 	_rows = VBoxContainer.new()
-	keys.add_child(_rows)
+	_keys.add_child(_rows)
+	_keys.visible = not _phone()
 	_build_bindings()
 
 
@@ -281,6 +339,7 @@ func _build_game(col: VBoxContainer) -> void:
 	_ship_label.name = "ShipName"
 	col.add_child(_ship_label)
 	set_ship_name(_ship_name)
+	_build_name(col)
 	_sound = SoundToggle.new()
 	_sound.name = "Sound"
 	_sound.flat = false
@@ -311,6 +370,30 @@ func _build_game(col: VBoxContainer) -> void:
 	_row(_leave_button)
 
 
+## The player's name (#35 A5): Enter or leaving the field saves a changed, non-empty name and
+## emits name_changed.
+func _build_name(col: VBoxContainer) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	col.add_child(row)
+	row.add_child(_label(tr("menu.name")))
+	var field: LineEdit = LineEdit.new()
+	field.name = "PlayerName"
+	field.text = settings.player_name
+	field.max_length = NetProtocol.MAX_NAME_BYTES
+	field.custom_minimum_size = Vector2(240, 0)
+	row.add_child(field)
+	var commit: Callable = func() -> void:
+		var n: String = field.text.strip_edges()
+		if n == "" or n == settings.player_name:
+			field.text = settings.player_name
+			return
+		settings.player_name = n
+		settings.save()
+		name_changed.emit(n)
+	field.text_submitted.connect(func(_t: String) -> void: commit.call())
+	field.focus_exited.connect(commit)
+
+
 ## Android and iPad only: fullscreen and a landscape lock (#28, load fix 6).
 func _add_fullscreen(col: VBoxContainer) -> void:
 	var fullscreen: FullscreenButton = FullscreenButton.new()
@@ -320,17 +403,6 @@ func _add_fullscreen(col: VBoxContainer) -> void:
 	fullscreen.clip_text = false
 	fullscreen.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	col.add_child(fullscreen)
-
-
-## The Tips tab (D291): every tip, browsed by tapping; it holds a tip until a tap.
-func _tips_view() -> Control:
-	var v: TipsView = TipsView.new()
-	v.name = "TipsView"
-	v.opaque = false
-	v.autoplay = false
-	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	v.custom_minimum_size = Vector2(0, 160)
-	return v
 
 
 func _on_abandon() -> void:
@@ -568,7 +640,7 @@ func _build_general(col: VBoxContainer) -> void:
 		func(on: bool) -> void: settings.invert_pitch = on
 	)
 	_add_button(
-		col, "ResetTips", tr("settings.reset_tips"), func() -> void: settings.reset_tooltips()
+		col, "ResetHints", tr("settings.reset_hints"), func() -> void: settings.reset_hints()
 	)
 	# In a session it sits on the Game tab.
 	if not _in_session:
@@ -642,35 +714,63 @@ func _build_comfort(col: VBoxContainer) -> void:
 	)
 
 
-## One row per intent: label, KB/M binding, controller binding, hold/toggle.
+## Change keys: one row per intent (label, KB/M binding, controller binding, hold/toggle),
+## under a heading per group; the Controls tab's stations first, then the common and
+## always-live ones, then the other stations.
 func _build_bindings() -> void:
 	if _rows == null:
 		return
 	for c: Node in _rows.get_children():
 		_rows.remove_child(c)
 		c.queue_free()
-	var group: String = ""
-	for r: Dictionary in IntentTable.INTENTS:
-		var id: String = r["id"]
-		if r["group"] != group:
-			group = r["group"]
-			_rows.add_child(_label(tr("settings.group_" + group), 18))
-		var row: HBoxContainer = HBoxContainer.new()
-		row.name = "Row_" + id
-		_rows.add_child(row)
-		var name_label: Label = _label(tr(IntentTable.label_key(id)))
-		name_label.custom_minimum_size = Vector2(260, 0)
-		row.add_child(name_label)
-		for device: String in IntentTable.DEVICES:
-			var text: String = BindingText.describe_all(settings.bindings.bindings(id, device))
-			var b: Button = _add_button(
-				row, device, text if text != "" else "-", start_capture.bind(id, device)
-			)
-			b.custom_minimum_size = Vector2(170, 0)
-		if r["kind"] == IntentTable.HOLD:
-			_check(row, "Toggle", tr("settings.toggle"), settings.bindings.is_toggle(id)).toggled.connect(
-				func(on: bool) -> void: settings.bindings.set_toggle(id, on)
-			)
+	var mine: Array = _controls_args[1] if not _controls_args.is_empty() else []
+	_rows_for = mine
+	var order: Array[String] = []
+	for g: String in mine:
+		if g in IntentTable.GROUPS and g not in order:
+			order.append(g)
+	for g: String in IntentTable.GROUPS:
+		if g not in order:
+			order.append(g)
+	var head: HBoxContainer = HBoxContainer.new()
+	head.name = "Devices"
+	_rows.add_child(head)
+	var gap: Label = _label("")
+	gap.custom_minimum_size = Vector2(260, 0)
+	head.add_child(gap)
+	for key: String in ["controls.view_kbm", "controls.view_pad"]:
+		var l: Label = _label(tr(key))
+		l.custom_minimum_size = Vector2(170, 0)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.add_theme_color_override("font_color", Palette.color("text_dim"))
+		head.add_child(l)
+	for group: String in order:
+		var ids: Array[String] = IntentTable.ids_of(group)
+		if ids.is_empty():
+			continue
+		_rows.add_child(_label(tr("settings.group_" + group), 18))
+		for id: String in ids:
+			_binding_row(id)
+
+
+func _binding_row(id: String) -> void:
+	var r: Dictionary = IntentTable.row(id)
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "Row_" + id
+	_rows.add_child(row)
+	var name_label: Label = _label(tr(IntentTable.label_key(id)))
+	name_label.custom_minimum_size = Vector2(260, 0)
+	row.add_child(name_label)
+	for device: String in IntentTable.DEVICES:
+		var text: String = BindingText.describe_all(settings.bindings.bindings(id, device))
+		var b: Button = _add_button(
+			row, device, text if text != "" else "-", start_capture.bind(id, device)
+		)
+		b.custom_minimum_size = Vector2(170, 0)
+	if r["kind"] == IntentTable.HOLD:
+		_check(row, "Toggle", tr("settings.toggle"), settings.bindings.is_toggle(id)).toggled.connect(
+			func(on: bool) -> void: settings.bindings.set_toggle(id, on)
+		)
 
 
 func _reset_bindings() -> void:

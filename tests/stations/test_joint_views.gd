@@ -17,7 +17,7 @@ func before() -> void:
 func _screen(entry: String) -> StationScreen:
 	var ctx: StationContext = StationFixture.context(entry, "user://test_joint_views.cfg")
 	for s: String in StationViews.CREW:
-		ctx.settings.mark_tooltip_seen(s)
+		ctx.settings.mark_hint_seen(s)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -478,7 +478,7 @@ func test_the_dev_seat_has_numbered_station_tabs_and_a_hint() -> void:
 	assert_int(s.focus_index).is_equal(2)
 	assert_bool(tab.button_pressed).is_true()
 	assert_bool(hint.visible).is_false()
-	assert_bool(s.ctx.settings.tooltip_seen("dev_tabs")).is_true()
+	assert_bool(s.ctx.settings.hint_seen("dev_tabs")).is_true()
 	var k: InputEventKey = InputEventKey.new()
 	k.physical_keycode = KEY_5
 	k.pressed = true

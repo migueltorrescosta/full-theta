@@ -1,13 +1,13 @@
 # FT: FT-NET-031, FT-GEN-013
 extends GdUnitTestSuite
 ## T047: LAN only, no internet play, relay or master server (FT-NET-031,
-## FT-GEN-013). A static scan of the project's GDScript (addons/, spikes/, tests/
+## FT-GEN-013). A static scan of the project's GDScript (addons/, tests/
 ## and .godot/ excluded) with comments stripped. It is a tripwire, not a proof:
 ## - HTTPClient or HTTPRequest (outgoing HTTP) only in the static HTTP server;
 ## - no string URL (scheme://host) or IPv4 literal naming a public host;
 ## - no relay, master-server, matchmaking, NAT punch-through or STUN/TURN code.
 
-const SKIP_DIRS: Array[String] = ["addons", "spikes", "tests", ".godot", ".git", "build"]
+const SKIP_DIRS: Array[String] = ["addons", "tests", ".godot", ".git", "build"]
 ## The static HTTP server may name HTTPClient for its status constants.
 const HTTP_ALLOWED: String = "static_server"
 const INTERNET_WORDS: String = (

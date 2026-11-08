@@ -240,6 +240,13 @@ func test_debrief_names_a_raider_wave() -> void:
 	)
 
 
+# FT: FT-MIS-006
+# #35 A3: an encounter whose time ran out reads as such in the debrief, not as won.
+func test_debrief_says_an_encounter_ran_out_of_time() -> void:
+	var row: Dictionary = {"scenario": "enemy_wave", "result": "partial", "s": 240.0}
+	assert_str(DebriefCard._encounter_line(1, row)).is_equal("1. Raider wave, -: out of time, 4:00")
+
+
 # FT: FT-MIS-030
 # On a phone upright the widest table (teams and kills) fits the screen: no sideways scroll
 # (l5_ph_scoreboard cut Kills and Time, #28).

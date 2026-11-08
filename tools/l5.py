@@ -15,7 +15,8 @@ before any pixel diff (FT-TST-020): regenerate only after checking the diffs.
 
 Usage (tools/gate.sh l5 [--update-baselines] runs the first two):
   l5.py                       check the shots against the baselines
-  l5.py --update-baselines    regenerate tests/visual/baselines/
+  l5.py --update-baselines    regenerate tests/visual/baselines/; a baseline whose new
+                              render passes the comparison above is left byte-identical
   l5.py --capture-only DIR    render into DIR, compare nothing
   --shots FILE                another shot manifest (default tests/visual/shots.json)
 
@@ -180,6 +181,22 @@ def compare_shot(baselines: Path, out: Path, name: str) -> tuple[str, dict]:
     ), stat
 
 
+def update_baselines(baselines: Path, out: Path, names: list[str]) -> tuple[list[str], list[str]]:
+    """Copy out/ shots into baselines/, except those that still pass; return (written, kept)."""
+    written, kept = [], []
+    for name in names:
+        old, new = baselines / f"{name}.png", out / f"{name}.png"
+        if old.exists():
+            error, _ = compare_shot(baselines, out, name)
+            (out / f"{name}.diff.png").unlink(missing_ok=True)
+            if not error:
+                kept.append(name)
+                continue
+        shutil.copy(new, old)
+        written.append(name)
+    return written, kept
+
+
 def show(path: Path) -> str:
     """Path relative to the repo root when inside it."""
     return str(path.relative_to(ROOT)) if path.is_relative_to(ROOT) else str(path)
@@ -281,10 +298,11 @@ def main() -> int:
     print(f"l5: rendered {len(names)} shots in {elapsed:.1f} s ({timings})")
     if not errors and args.update_baselines:
         BASELINES.mkdir(parents=True, exist_ok=True)
-        for name in names:
-            shutil.copy(out / f"{name}.png", BASELINES / f"{name}.png")
+        written, kept = update_baselines(BASELINES, out, names)
         shutil.copy(out / "env.json", BASELINES / "env.json")
-        print(f"l5: wrote {len(names)} baselines and env.json to {show(BASELINES)}")
+        print(f"l5: wrote {len(written)} baselines and env.json to {show(BASELINES)}, kept {len(kept)} unchanged")
+        for name in written:
+            print(f"l5: wrote {name}.png")
         for stale in sorted(set(p.stem for p in BASELINES.glob("*.png")) - set(names)):
             print(f"l5: {stale}.png is not in the manifest; delete it if the shot is gone")
     elif not errors and not args.capture_only:

@@ -142,7 +142,7 @@ func _shell(server: NetServer, entry: String) -> ClientShell:
 	assert_bool(await _until(welcomed)).is_true()
 	var settings: ClientSettings = ClientSettings.new(_settings_path(entry))
 	for s: String in StationViews.CREW + ["viewer", "captain"]:
-		settings.mark_tooltip_seen(s)
+		settings.mark_hint_seen(s)
 	var shell: ClientShell = ClientShell.new()
 	shell.setup(c, settings)
 	add_child(shell)

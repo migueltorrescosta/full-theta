@@ -78,7 +78,7 @@ def test_dangling_references_fail(tmp_path):
 # FT: FT-DAT-003
 def test_id_and_start_must_match(tmp_path):
     root = repo_copy(tmp_path)
-    edit(root, "escort_contract.json", lambda d: d.update(id="conv.other", start="nowhere"))
+    edit(root, "lane_run.json", lambda d: d.update(id="conv.other", start="nowhere"))
     errors = check_dialogue.run(root)
-    assert f"{CONV}/escort_contract.json: id conv.other must be conv.escort_contract" in errors
-    assert f"{CONV}/escort_contract.json: start names no node: nowhere" in errors
+    assert f"{CONV}/lane_run.json: id conv.other must be conv.lane_run" in errors
+    assert f"{CONV}/lane_run.json: start names no node: nowhere" in errors

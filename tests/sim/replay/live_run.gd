@@ -40,7 +40,7 @@ func run_frames(frame_seed: int, min_delta: float, max_delta: float, end_tick: i
 
 ## Fixed steps until the encounter has an outcome or the world reaches end_tick.
 func run_steps(end_tick: int) -> void:
-	while world.tick < end_tick and OutcomeSystem.encounter_outcome(world) == RunTable.Outcome.NONE:
+	while world.tick < end_tick and not OutcomeSystem.session_outcome(world).over():
 		_act()
 		world.step()
 		events.append_array(world.drain_events())

@@ -7,8 +7,8 @@ extends SimTable
 ## command log rebuilds it. A ship reset leaves it alone: encounters are run history.
 
 ## PENDING: opened, waiting for the ship to arrive at the site or for the arrival timeout.
-## ACTIVE: running. WON, LOST, FLED and ABANDONED end it.
-enum Result { PENDING, ACTIVE, WON, LOST, FLED, ABANDONED }
+## ACTIVE: running. WON, LOST, FLED, ABANDONED and PARTIAL (the scenario's time ran out) end it.
+enum Result { PENDING, ACTIVE, WON, LOST, FLED, ABANDONED, PARTIAL }
 
 ## Most ship bits a mask holds (an int64 mask; crewed ships take the first ids).
 const MAX_SHIP_BITS: int = 62

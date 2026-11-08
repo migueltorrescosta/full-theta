@@ -60,18 +60,6 @@ func test_engineering_rail_boxes_match_the_rail() -> void:
 		assert_int((pages[p]["boxes"] as Array).size()).is_less(5)
 
 
-# FT: FT-STN-012
-# A station registers its picture at run time (TouchHelpPicture.register), over its panel's.
-func test_a_registered_station_shows_its_picture() -> void:
-	assert_object(TouchHelpPicture.make("viewer")).is_null()
-	var help: Array = [{"page": "Fly", "boxes": [[Rect2(60, 80, 100, 48), "Go", "Go there"]]}]
-	TouchHelpPicture.register("viewer", func() -> Array: return help)
-	var pic: TouchHelpPicture = auto_free(TouchHelpPicture.make("viewer"))
-	TouchHelpPicture.unregister("viewer")
-	assert_int(pic.count()).is_equal(1)
-	assert_object(TouchHelpPicture.make("viewer")).is_null()
-
-
 # FT: FT-STN-011, FT-STN-012
 # On a phone the Controls tab shows the touch picture of each shown station that has one,
 # over the list; the filter adds every station's.

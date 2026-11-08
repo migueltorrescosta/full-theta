@@ -65,21 +65,6 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## The form of the station screen `panel` is on, from the screen's own size: in the game
-## it fills the window (LayoutMode.form_of); tests lay a screen out at a set size inside
-## the tiny headless window, which alone would read as a phone.
-static func form_of_panel(panel: Control) -> LayoutMode.Form:
-	var n: Node = panel
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	if n == null:
-		return LayoutMode.form_of(panel)
-	var vp: Viewport = panel.get_viewport()
-	var factor: float = (vp as Window).content_scale_factor if vp is Window else 1.0
-	var dp: Vector2 = LayoutMode.dp_size((n as Control).size, factor, LayoutMode.density())
-	return LayoutMode.form_for(dp, LayoutMode.coarse_pointer())
-
-
 ## Hides the HUD and builds the pages for `phone_form` around the map.
 func build(p: RelayPanel, phone_form: LayoutMode.Form) -> void:
 	panel = p
@@ -161,8 +146,8 @@ func _make_controls() -> void:
 	buttons["launch"].held.connect(_on_launch_held)
 	crew = CrewPage.new(panel)
 	crew.name = "CrewPage"
-	_marks_box = _column()
-	_contacts_box = _column()
+	_marks_box = PhoneFrame.column()
+	_contacts_box = PhoneFrame.column()
 	ListLines.attach(_marks_box)
 	ListLines.attach(_contacts_box)
 	log_text = Label.new()
@@ -195,7 +180,7 @@ func _build_landscape(page_parts: Array, titles: Array[String]) -> void:
 	for i: int in page_parts.size():
 		var parts: Array = []
 		for side: int in 2:
-			var col: VBoxContainer = _column()
+			var col: VBoxContainer = PhoneFrame.column()
 			col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			for c: Control in page_parts[i][side]:
 				col.add_child(c)
@@ -215,15 +200,15 @@ func _build_landscape(page_parts: Array, titles: Array[String]) -> void:
 
 ## Upright: the map on top, the probe and inbox lines, then the page's part in rows.
 func _build_portrait(page_parts: Array, titles: Array[String]) -> void:
-	var col: VBoxContainer = _column()
+	var col: VBoxContainer = PhoneFrame.column()
 	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(col)
 	layout.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(layout)
 	layout.set_content(panel.map)
-	col.add_child(_row([probes, mail]))
+	col.add_child(PhoneFrame.row([probes, mail]))
 	for i: int in page_parts.size():
-		var zone: VBoxContainer = _column()
+		var zone: VBoxContainer = PhoneFrame.column()
 		zone.custom_minimum_size.y = ZONE_H
 		var lists: Array = []
 		var row_buttons: Array = []
@@ -237,7 +222,7 @@ func _build_portrait(page_parts: Array, titles: Array[String]) -> void:
 			zone.add_child(c)
 		var per_row: int = 2 if lists.is_empty() else 3
 		for k: int in range(0, row_buttons.size(), per_row):
-			zone.add_child(_row(row_buttons.slice(k, k + per_row)))
+			zone.add_child(PhoneFrame.row(row_buttons.slice(k, k + per_row)))
 		col.add_child(zone)
 		pages.add_page(titles[i], [zone])
 
@@ -462,18 +447,3 @@ func _scrolled(box: VBoxContainer) -> ScrollContainer:
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(box)
 	return scroll
-
-
-func _column() -> VBoxContainer:
-	var c: VBoxContainer = VBoxContainer.new()
-	c.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	return c
-
-
-func _row(controls: Array) -> HBoxContainer:
-	var row: HBoxContainer = HBoxContainer.new()
-	row.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	for c: Control in controls:
-		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(c)
-	return row
