@@ -1,4 +1,4 @@
-Closes migueltorrescosta/full-theta#
+Beads: w-
 
 ## FT ids
 
