@@ -8,6 +8,17 @@ extends RefCounted
 ## The columns: missions, contracts, offers with hails (§5.6).
 const COLUMNS: int = 3
 const COLUMN_KEYS: Array[String] = ["comms.col_missions", "comms.col_contracts", "comms.col_offers"]
+## One line per column and for the Rep page: what the page is for (R23-9, R26-7).
+const WHY_KEYS: Array[String] = ["comms.why.missions", "comms.why.contracts", "comms.why.offers"]
+const WHY_REP_KEY: String = "comms.why.rep"
+## Faction ids the scenarios use (sim/run/session_rules.gd CREW_FACTIONS, the NPC factions
+## 2 to 4); any other shows as "Faction N".
+const FACTION_KEYS: Dictionary = {
+	1: "comms.faction.crew",
+	2: "comms.faction.raiders",
+	3: "comms.faction.freighters",
+	4: "comms.faction.traffic"
+}
 ## CommsView's card states (StoryTable.State).
 const STATE_KEYS: Array[String] = ["open", "accepted", "declined", "done", "failed", "expired"]
 ## Units one buy or sell press moves, by item (default 1): fuel and ammunition come by the
@@ -20,6 +31,21 @@ static var _lines: DialogueLines = null
 ## The view's COMMS block, or {}.
 static func block(view: NetViewState) -> Dictionary:
 	return view.blocks.get(StationViews.Section.COMMS, {})
+
+
+## A faction's name for the Rep page ("Raiders"), or "Faction 7" for an id with none.
+static func faction_name(id: int) -> String:
+	if FACTION_KEYS.has(id):
+		return TranslationServer.translate(FACTION_KEYS[id])
+	return TranslationServer.translate("comms.faction.other") % id
+
+
+## One Rep row: "Raiders +12".
+static func rep_line(row: Dictionary) -> String:
+	return (
+		TranslationServer.translate("comms.rep_row")
+		% [faction_name(int(row["faction"])), roundi(float(row["value"]))]
+	)
 
 
 ## The column a card sits in.
@@ -96,6 +122,44 @@ static func module_text(key: String) -> String:
 ## The card's state word, translated.
 static func state_text(state: int) -> String:
 	return TranslationServer.translate("comms.state_" + STATE_KEYS[clampi(state, 0, 5)])
+
+
+## Card id -> the name of whoever holds the card's conversation ("" for nobody), for `cards`
+## (COMMS block rows).
+static func claimers(crew: CrewState, cards: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for c: Dictionary in cards:
+		out[int(c["id"])] = crew.claimer("%s:%d" % [StationViews.CLAIM_NPC, int(c["id"])])
+	return out
+
+
+## A card's stakes: its reward and its reputation range, each only when it has one.
+static func stakes(c: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	if int(c.get("reward", 0)) != 0:
+		out.append(TranslationServer.translate("comms.reward") % int(c["reward"]))
+	var rep: String = range_text(c)
+	if rep != "":
+		out.append(rep)
+	return out
+
+
+## "claimed by Bo" (or "you" when `holder` is `own_name`); with nobody holding it, "claimed
+## by free" when `free` (Captain's open card), else "".
+static func claimed_text(holder: String, own_name: String, free: bool = false) -> String:
+	if holder == "":
+		return (
+			(
+				TranslationServer.translate("comms.claimed_by")
+				% TranslationServer.translate("comms.free")
+			)
+			if free
+			else ""
+		)
+	return (
+		TranslationServer.translate("comms.claimed_by")
+		% (TranslationServer.translate("comms.you") if holder == own_name else holder)
+	)
 
 
 ## "+4 to +12" for the reputation a card's outcome may draw, "" when its range is hidden.

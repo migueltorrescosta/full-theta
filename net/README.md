@@ -1,6 +1,6 @@
 # net/
 
-Protocol, server session and client transport over WebSocket (FT-NET-004). The wire format is in `docs/protocol.md`. `net/` may name `sim/`, `sim/api/`, `director/`, `shared/` and content; clients (#7) name only `net/`.
+Protocol, server session and client transport over WebSocket (FT-NET-004). The wire format is in `docs/protocol.md`. `net/` may name `sim/`, `sim/api/`, `director/`, `shared/` and content; clients (#7) name only the client-safe part of `net/` (`NET_CLIENT_SAFE` in `tools/lint_arch.py`: protocol, codec, view keys and enums, block schemas, readers), which names no `sim/`, `director/` or server `net/` class, so a client compiles none of the sim (D377).
 
 ## Files
 
@@ -9,6 +9,7 @@ Protocol, server session and client transport over WebSocket (FT-NET-004). The w
 | `net_protocol.gd` | Message types, schemas, control-message codec, `PROTOCOL_VERSION`. |
 | `net_codec.gd` | Fixed point, integer dead reckoning, wrap-aware residuals, quaternions (from S9). |
 | `net_block.gd` | Schema-driven field blocks for the station field sets. |
+| `block_schema.gd`, `station_blocks.gd`, `event_routing.gd`, `snapshot_reader.gd` | The F4 split of the station views (D377): `BlockSchema` the block sections' wire schema (client-safe), `StationBlocks` the server's block builders and claim items, `EventRouting` which sessions a sim event reaches, `SnapshotReader` the client's decoder of the snapshot header and non-block sections. |
 | `station_views.gd`, `station_def.gd` | **The one data-driven place**: the tables every `StationDef` is built from (catalogue entries and load tags, sections per station, block field sets and their getters, command kinds, claimable items and ship-wide controls, which sim events each station gets), view keys and difficulty-toggle sets. |
 | `sections/` | One class per snapshot section, each extending `SnapshotSection` (`snapshot_section.gd`): `kin_section.gd` (`KinSection`), `block_section.gd` (`BlockSection`), `contacts_section.gd` (`ContactsSection`), `near_section.gd` (`NearSection`) with the faction's `orient_model.gd` (`OrientModel`), `projectiles_section.gd` (`ProjectilesSection`), `ownership_section.gd` (`OwnershipSection`). |
 | `snapshot_builder.gd` | Advances the sections a snapshot needs; assembles, chunks and caches one message per view key. |
@@ -18,8 +19,8 @@ Protocol, server session and client transport over WebSocket (FT-NET-004). The w
 | `net_sessions.gd`, `net_session.gd`, `net_token_bucket.gd` | Tokens, the session record, the rate limit for commands and requests. |
 | `session_token_file.gd` | `SessionTokenFile`: the client's stored token (and host secret), saved 0600, for a rejoin after a relaunch. |
 | `net_transport.gd` | The net thread: sockets, queues, encoder. |
-| `server_session.gd` | Main-thread session logic: handshake, lobby and Start, picks, claims, grace, pause, abandon, takeover. |
-| `net_coverage.gd`, `net_claims.gd`, `net_abandon_vote.gd` | The pure rules: coverage check, claims, abandon vote (also the "Run again" vote). |
+| `server_session.gd`, `net_lobby.gd`, `net_host_pause.gd` | Main-thread session logic: `ServerSession` keeps the handshake, the session maps, claims and event routing, and refuses crew commands `paused` while the sim is stopped (D340); `NetLobby` owns picks, Start, the toggles, the coverage pause, the abandon vote and takeovers; `NetHostPause` the host pause. |
+| `net_coverage.gd`, `net_claims.gd`, `net_vote.gd` | The pure rules: coverage check, claims, and `NetVote`, the give-up, "Run again" and relaunch votes keyed by session (D383). |
 | `net_run_reset.gd` | `NetRunReset`: the run reset (D178): outcome card, "Run again" vote, and the call to `NetServer.restart_run()`. |
 | `net_crew_state.gd`, `crew_marks.gd`, `crew_pings.gd` | Per-ship crew state outside the sim (D171): `NetCrewState` answers Alert, Mark and Ping for `ServerSession`; the pure rules `CrewMarks` (8 marks, alert level) and `CrewPings` (ping rate limit, copy). |
 | `crew_relay.gd` | `CrewRelay`: Relay's per-ship crew state outside the sim: hazard zones and scan positions, routes, the mark inbox, the ship's log; `NetCrewState` answers MarkSend, MarkAccept and the Mark route/hazard ops. |
@@ -55,12 +56,12 @@ Who owns what: the main thread owns sessions (`NetSession`, `NetSessions`), pick
 
 ## Session rules
 
-`ServerSession` keeps every rule in one place; the lobby, claims, pause and rejoin semantics are in `docs/protocol.md` ("Lobby, claims and the pause"):
+`ServerSession` and its `NetLobby` keep the session rules; the lobby, claims, pause and rejoin semantics are in `docs/protocol.md` ("Lobby, claims and the pause"):
 
 - **Stations** (T042): `StationViews.def(entry)` (`StationDef`), `stations_of(entry)` (the def's own array: read-only), `is_crew(entry)`, `event_audience()` with `StationViews.EVENT_STATIONS`, the session's data-shortcut toggles in `ServerSession.toggles` (`DataToggles`; the host sets them with Toggles until a ship starts, and every `NetSession.toggles` code, part of the view key, follows); sections in `StationViews.FILTERED` are encoded once per `ViewFilter.signature`, and `sees_event()` takes the toggle code for the events in `EVENT_SHORTCUTS`.
-- **Lobby** (T043): `pick_rule()` (one Captain per ship, no mid-run change that breaks coverage), `_on_ready` (Start), `NetCoverage`, `lobby_state()` (the `lobby` event), `launch()`. `_publish()` recomputes lobby states only when `_lobby_dirty` is set (picks, pause changes, Start, Hello, sim events); `crew_ships()` is cached (read-only).
+- **Lobby** (T043, in `NetLobby`): `pick_rule()` (one Captain per ship, no mid-run change that breaks coverage), `_on_ready` (Start), `NetCoverage`, `lobby_state()` (the `lobby` event), `launch()`. `_publish()` recomputes lobby states only when `_lobby_dirty` is set (picks, pause changes, Start, Hello, sim events); `crew_ships()` is cached (read-only).
 - **Claims** (T044): `claim_rule(session, command)`, which `CommandGate.check` calls for every command; `_on_claim`; `NetClaims` (`settle()`: alone on a station holds its claims); `StationViews.item_of()`; `_wrote()` (last writers); `_publish()` posts the OWNERSHIP tables.
-- **Grace, pause, abandon, takeover** (T045): `NetSessions.expire()` lapses sessions on the wall clock; `_lapse()`, `_restore()` (rejoin), `_refresh_pause()`, `sim_running()` (which `NetServer` checks before stepping), `_on_abandon`, `_on_abandon_vote` (`NetAbandonVote`), `_on_takeover`, `_abandon()` (submits the logged `AbandonShipCommand`).
+- **Grace, pause, abandon, takeover** (T045): `NetSessions.expire()` lapses sessions on the wall clock; `_lapse()`, `_restore()` (rejoin), `_refresh_pause()`, `sim_running()` (which `NetServer` checks before stepping), `NetLobby._on_abandon`, `_on_abandon_vote` (`NetVote`), `_on_takeover`, `_abandon()` (submits the logged `AbandonShipCommand`).
 - **Marks, pings, alert** (#7): `crew` (`NetCrewState`): `on_alert`, `on_mark`, `on_ping` (registered in `_handlers`) with `CrewMarks` and `CrewPings`, contacts and sites checked against what the sender's faction detects and the world's named sites; `to_ship()` sends to every pick on the ship only; `crew.send_to()` after Welcome and each pick; `crew.reset(ship)` for the run reset.
 - **Run reset** (T058, D178): `NetRunReset` (owned by `NetServer`, its handler added with `ServerSession.add_handler`) sends `run_over` and `run_votes` after a crewed ship's outcome and counts RunAgain votes; when they pass, `NetServer.restart_run()` builds a new world from the encounter (fresh command log), `NetTransport.reset_snapshots()` restarts the encoder (next snapshot full) and `ServerSession.restart()` swaps the world, clears launched, abandoned, pending commands and last writers, drops queued voice lines (`ServerVoice.restart()`), calls `crew.reset()` per ship and republishes lobby and ownership.
 - **Voice** (E10): `voice` (`ServerVoice`) calls `VoiceService.start_session()` at the first Start and says ship-computer alert lines from the tick's events; `computer_audience()` is `VoiceService.computer_audience`. `ServerMain.make_voice()` wires both; without it nothing is said.
@@ -69,7 +70,7 @@ Who owns what: the main thread owns sessions (`NetSession`, `NetSessions`), pick
 
 ## How to add …
 
-- **A message**: add the type to `NetProtocol.Type`, its schema to `SCHEMAS`, add it to `FROM_CLIENT` if clients send it, add a sample to `tests/net/test_net_protocol.gd`, a handler to `ServerSession._handlers`, an intent method to `NetClient`, and a row to `docs/protocol.md`. Bump `PROTOCOL_VERSION` if old peers would misread it.
+- **A message**: add the type to `NetProtocol.Type`, its row (flags, fields) to `NetProtocol.MESSAGES` (`SEND` or `RATED` if clients send it; `schemas`, `from_client` and `rated_requests` derive from it), add a sample to `tests/net/test_net_protocol.gd`, a handler to `ServerSession._handlers`, an intent method to `NetClient`, and a row to `docs/protocol.md`. Bump `PROTOCOL_VERSION` if old peers would misread it.
 - **A field of a block section** (status, Helm, Engineering, mounts): one `[name, type]` entry in `StationViews.BLOCKS[kind]` and one line in the matching getter (`_status`, `_helm`, …). Encoding, change detection and the client decode follow; `test_net_codec.gd` round-trips every block.
 - **A section**: a value in `StationViews.Section`, a class under `sections/` (extend `SnapshotSection`: `update()` returns the delta, `full()` the model; a static `apply()` for the client), a case in `SnapshotBuilder._make()` and `NetViewState._apply_section()`, and the kind in `STATION_SECTIONS` for the stations that see it. Faction-owned sections also need `SnapshotBuilder._owner()`.
 - **A station or catalogue entry**: `StationViews.STATIONS` (or `ENTRIES` for a joint view or seat, with its load tag and stations), `STATION_SECTIONS`, `STATION_COMMANDS`, `STATION_CLAIMS`, `STATION_CONTROLS`; the `StationDef` follows (joint views take the union of their stations).

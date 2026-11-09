@@ -79,15 +79,8 @@ var intent: String = ""
 
 
 func _init() -> void:
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
-	sb.border_color = Palette.color("line_strong")
-	sb.set_border_width_all(UiTheme.BORDER)
-	sb.set_corner_radius_all(UiTheme.RADIUS)
+	var sb: StyleBoxFlat = UiTheme.box("panel", "line_strong", 4, 4, UiTheme.OVERLAY_ALPHA)
 	sb.content_margin_left = UiTheme.TOUCH_GAP
-	sb.content_margin_right = 4.0
-	sb.content_margin_top = 4.0
-	sb.content_margin_bottom = 4.0
 	add_theme_stylebox_override("panel", sb)
 	custom_minimum_size.x = WIDTH
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -156,9 +149,7 @@ static func readout(ctx: StationContext, id: String) -> String:
 			var used: int = 0
 			for r: Dictionary in eng.get("subsystems", []):
 				used += int(r.get("pips", 0))
-			var def: ShipDef = ctx.ship_def()
-			var cap: int = def.power.reactor_pips if def != null and def.power != null else 0
-			return _t("glance.reactor", "Reactor %d/%d") % [used, cap]
+			return _t("glance.reactor", "Reactor %d/%d") % [used, ctx.pip_cap()]
 		"eng.boost":
 			var ticks: int = int(eng.get("boost_ticks", 0))
 			if ticks > 0:

@@ -119,3 +119,19 @@ func _sample(type: Variant) -> Variant:
 		"str": "npc.hail_trader",
 	}
 	return samples[type]
+
+
+# FT: FT-NET-004
+# B2: a list of more than 255 rows is cut to 255, not wrapped (its count is one byte), so the
+# reader keeps the fields that follow.
+func test_rows_over_255_are_cut_not_wrapped() -> void:
+	var schema: Array = [["rows", ["rows", [["id", "u16"]]]], ["after", "u8"]]
+	var rows: Array[Dictionary] = []
+	for i: int in 300:
+		rows.append({"id": i})
+	var back: Dictionary = NetBlock.decode(
+		schema, NetBlock.encode(schema, {"rows": rows, "after": 9})
+	)
+	assert_int((back["rows"] as Array).size()).is_equal(NetBlock.MAX_ROWS)
+	assert_int(back["rows"][254]["id"]).is_equal(254)
+	assert_int(back["after"]).is_equal(9)

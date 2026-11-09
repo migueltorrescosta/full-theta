@@ -74,7 +74,7 @@ func test_voice_lines_reach_the_player_and_language_applies() -> void:
 		"audio": false,
 		"local": false,
 	}
-	c.queued.append({"seq": 1, "tick": 0, "type": VoiceService.EVENT_VOICE_LINE, "payload": line})
+	c.queued.append({"seq": 1, "tick": 0, "type": NetProtocol.EVENT_VOICE_LINE, "payload": line})
 	c.queued.append({"seq": 2, "tick": 0, "type": "alert", "payload": {"ship": 0, "level": 1}})
 	await get_tree().process_frame
 	assert_int(s.ctx.crew.alert).is_equal(1)
@@ -201,6 +201,20 @@ func test_first_visit_shows_the_controls_chip() -> void:
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
 	assert_array(_labels(menu)).contains([tr("role.systems")])
 	assert_bool(s.screen.blocked()).is_true()
+
+
+# FT: FT-STN-012
+# D369: a tap on the first visit's callout legend opens Controls on the callout card.
+func test_the_legend_chip_opens_the_callout_card() -> void:
+	var s: ClientShell = await _on_station(true)
+	var legend: ControlsChip = s.screen.find_child("ControlsLegendChip", true, false)
+	assert_object(legend).is_not_null()
+	legend.pressed.emit()
+	var menu: SettingsScreen = s.settings_screen
+	assert_bool(menu.visible).is_true()
+	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
+	assert_str(menu.controls_pane.view).is_equal(ControlsPane.VIEW_CARD)
+	assert_bool(menu.controls_pane.card.is_visible_in_tree()).is_true()
 
 
 # FT: FT-STN-011, FT-STN-012
@@ -368,7 +382,7 @@ func test_subtitles_have_a_backing_panel_and_a_size() -> void:
 		"local": false,
 	}
 	(s.ctx.client as FakeClient).queued.append(
-		{"seq": 1, "tick": 0, "type": VoiceService.EVENT_VOICE_LINE, "payload": line}
+		{"seq": 1, "tick": 0, "type": NetProtocol.EVENT_VOICE_LINE, "payload": line}
 	)
 	await get_tree().process_frame
 	assert_bool(s._subtitle_panel.visible).is_true()

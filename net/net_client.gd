@@ -31,6 +31,9 @@ var state: State = State.IDLE
 var token: String = ""
 var session_id: int = -1
 var reject_reason: String = ""
+## The close code the server (or the transport) ended the last connection with, -1 while open
+## or never closed (NetProtocol.CLOSE_TAKEN_OVER: another connection took the session).
+var close_code: int = -1
 ## Welcome fields of the current connection.
 var welcome: Dictionary = {}
 var catalogue: Dictionary = {}
@@ -82,6 +85,7 @@ func connect_to(server_url: String) -> Error:
 	_queue = NetSendQueue.new()
 	welcome = {}
 	_hello_sent = false
+	close_code = -1
 	_arrivals.clear()
 	state = State.CONNECTING
 	var protocol: String = (
@@ -139,6 +143,7 @@ func poll() -> void:
 		for msg: Dictionary in _chunker.feed_packet(_peer.get_packet()):
 			_on_message(msg["stream"], msg["data"])
 	if ready_state == WebSocketPeer.STATE_CLOSED:
+		close_code = _peer.get_close_code()
 		if state != State.REJECTED:
 			state = State.CLOSED
 		return
@@ -390,7 +395,7 @@ func _flush() -> void:
 		return
 	_queue.begin_pump()
 	while _queue.peek_size() > 0:
-		_peer.send(_queue.take_bundle(NetTransport.BUNDLE_MAX))
+		_peer.send(_queue.take_bundle(NetProtocol.BUNDLE_MAX))
 
 
 func _on_message(stream: int, data: PackedByteArray) -> void:
@@ -398,7 +403,7 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 	var type: int = NetProtocol.type_of(data)
 	if type == NetProtocol.Type.SNAPSHOT:
 		if keep_raw:
-			raw_snapshots[SnapshotBuilder.peek(data)[0]] = data
+			raw_snapshots[SnapshotReader.peek(data)[0]] = data
 		var got_us: int = LoadProbe.unix_us() if (log_snapshots or report_stats) else 0
 		if view.apply(data):
 			stats["snapshots"] += 1
@@ -412,7 +417,7 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 			if log_snapshots:
 				snapshot_log.append(view.seq)
 				snapshot_log.append(got_us)
-			if SnapshotBuilder.peek(data)[1]:
+			if SnapshotReader.peek(data)[1]:
 				stats["fulls"] += 1
 				_force_ack = true
 		else:

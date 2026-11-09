@@ -1,23 +1,22 @@
-# gdlint: disable=max-file-lines
 class_name LobbyScreen
 extends Control
-## The lobby as the station grid (D216, FT-NET-015, FT-NET-017, FT-NET-032, FT-STN-015, FT-
-## JNT-006): the six crew stations as cells, 3 columns by 2 rows in landscape and 2 by 3 in
-## portrait on every device, each with its name, its role description, the names of the crewmates
-## who picked it and a border in its load colour; a one-line legend under the grid (compact, D257:
-## about half the old height, no Take button, the cell takes or leaves the seat; the role summary
-## wraps to ROLE_LINES lines, P28-Lobby). Tapping cells multi-selects up to two stations (two make
-## the joint view of that pair) and the pick goes to the server on each tap; with two picked the
-## other cells grey out; tapping a picked cell deselects it. Under the grid the selection's name
+## The lobby as the station grid (D216, FT-NET-015, FT-NET-017, FT-NET-032, FT-STN-015, FT-JNT-006):
+## the six crew stations as cells, 3 columns by 2 rows in landscape and 2 by 3 in portrait on every
+## device, each with its name, its role description, the names of the crewmates who picked it and a
+## border in its load colour; a one-line legend under the grid (compact, D257: about half the old
+## height, no Take button, the cell takes or leaves the seat; the role summary wraps to
+## LobbySeatGrid.ROLE_LINES lines, P28-Lobby). Tapping cells multi-selects up to two stations (two
+## make the joint view of that pair) and the pick goes to the server on each tap; with two picked
+## the other cells grey out; tapping a picked cell deselects it. Under the grid the selection's name
 ## and summary show. Captain and Viewer are two buttons below (each clears the picks). The host's
-## difficulty is one line with Customise, which opens a dialog of the data-shortcut toggles (FT-
-## PAIR-017, FT-STN-016; read-only for the others); Start is the confirm. Nothing scrolls: the
-## whole lobby fits the screen. Picks go to the server (ShipIntents.pick); the screen shows what
-## the events say. The host's lobby also has a "How to join" dialog (FT-NET-013): the browser URL
-## with a QR code and the desktop address; while the ship's seats are open the QR code and the
-## address in large type also sit under the title row (#35 A6), smaller on a phone upright and
-## left to the dialog on a short screen. A player with no name of their own (a phone that
-## joined by QR code) gets a one-field name prompt at the top (#35 A5).
+## difficulty is one line with Customise, which opens a dialog of the data-shortcut toggles
+## (FT-PAIR-017, FT-STN-016; read-only for the others); Start is the confirm. Nothing scrolls: the
+## whole lobby fits the screen. Picks go to the server (ShipIntents.pick); the screen shows what the
+## events say. The host's lobby also has a "How to join" dialog (FT-NET-013): the browser URL with a
+## QR code and the desktop address; while the ship's seats are open the QR code and the address in
+## large type also sit under the title row (#35 A6), smaller on a phone upright and left to the
+## dialog on a short screen. A player with no name of their own (a phone that joined by QR code)
+## gets a one-field name prompt at the top (#35 A5).
 ##
 ## Multi-ship sessions (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
 ## (with their team in TEAMS and HOLDOUT) and a New ship button while there is room (any
@@ -31,42 +30,30 @@ extends Control
 ## the difficulty row and the selection's text is smaller. On a phone the wide buttons of
 ## the seat and bottom rows trim their text rather than overflow. Every tap target is at least
 ## TOUCH_PRIMARY px tall with TOUCH_GAP px between them.
+##
+## The seats are LobbySeatGrid, the mode and difficulty LobbyGameSetup, and the join strip and
+## name prompt live in LobbyJoinPanel; this screen places them, lays them out and refreshes them.
 
 ## The player wants out of the session (Main menu): the shell leaves, and the host's
 ## menu also stops its server.
 signal menu_requested
 
-## The load tags, in legend order, and the colour word the legend names them with.
-const LOAD_TAGS: Array[String] = ["intense", "busy", "light"]
-## The crew stations in grid order (row by row in landscape).
-const GRID_STATIONS: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
-## A player picks at most this many stations (a joint view covers two).
-const MAX_STATIONS: int = 2
 const LANDSCAPE_COLUMNS: int = 3
 ## A window shorter than this (a phone in landscape) merges the header rows and puts the
 ## difficulty line on the seat row, so Start stays on screen.
 const SHORT_HEIGHT: float = 500.0
-## A window narrower than this (a phone upright) shortens the mode button to the mode's name.
+## A window narrower than this (a phone upright) shortens the mode button to "Mode: Teams".
 const NARROW_WIDTH: float = 700.0
-## Cell padding and the grid gap, in px at 100 % UI scale (a cell stays >= TOUCH_MIN tall).
-const CELL_INSET: int = 4
-const GRID_GAP: int = 4
 const PORTRAIT_COLUMNS: int = 2
-## The lines a cell's role summary wraps to (P28-Lobby), in both orientations; the texts
-## are written to fit a phone's portrait cell.
-const ROLE_LINES: int = 2
 ## Font sizes of the selection line on a short screen (its name, then its role).
 const SHORT_NAME_SIZE: int = 15
 const SHORT_ROLE_SIZE: int = 13
+## The Start text's size when it wraps to two lines in a 48 px row.
+const START_WRAP_SIZE: int = 13
 ## The top margin of a short screen, in px.
 const SHORT_TOP: int = 0
 ## Added to each wide button's natural width when sharing a phone row (short names first).
 const WEIGH_SLACK: float = 12.0
-const CAPTAIN: String = "captain"
-const VIEWER: String = "viewer"
-## The dev entry holding every station, offered by --dev-all-stations only, and shown only in a
-## game started with --dev (ClientSettings.dev_flag).
-const DEV_ALL: String = "all"
 ## The crew changes the lobby depends on.
 const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked", &"toggles", &"fleet"]
 ## The names a new ship takes, the first one not in use (M4-Q3).
@@ -75,18 +62,18 @@ const NEW_SHIP_NAMES: Array[String] = [
 ]
 ## The team letters (team 0 is A).
 const TEAM_LETTERS: Array[String] = ["A", "B"]
-## The join strip's QR module size and address font size, in px, off a phone and on one.
-const JOIN_QR_PX: int = 4
-const JOIN_QR_PX_PHONE: int = 2
-const JOIN_ADDRESS_SIZE: int = 40
-const JOIN_ADDRESS_SIZE_PHONE: int = 22
 ## Phone tap targets (#28): primary targets at least this tall, this far apart.
 const PHONE_TARGET: int = UiTheme.TOUCH_PRIMARY
 const PHONE_GAP: int = UiTheme.TOUCH_GAP
+## Forward for tools/l4/l4_ui.gd.
 
 var ctx: StationContext
-## The ship whose stations are shown.
-var ship: int = -1
+## The ship whose stations are shown (the seat grid shows the same).
+var ship: int = -1:
+	set(value):
+		ship = value
+		if _seats != null:
+			_seats.ship = value
 
 ## The ship row: a button per ship, then New ship, the team buttons and Back to ships; it
 ## wraps on a narrow screen.
@@ -98,8 +85,10 @@ var _ship_tools: HFlowContainer
 var _new_ship: Button
 var _teams: HBoxContainer
 var _team_buttons: Array[Button] = []
-var _mode_button: Button
-var _mode_dialog: ModeDialog
+## The seat grid (LobbySeatGrid) and the game setup (LobbyGameSetup); the nodes below of
+## theirs that the layout moves and styles are theirs too.
+var _seats: LobbySeatGrid
+var _game_setup: LobbyGameSetup
 ## The name of the ship this player just added: chosen once the `fleet` event lists it.
 var _added: String = ""
 ## Why the server refused the last request, shown under the grid until the next change.
@@ -108,59 +97,33 @@ var _head: HBoxContainer
 var _fullscreen: FullscreenToggle
 var _outer: VBoxContainer
 var _margin: MarginContainer
-var _diff_row: HBoxContainer
 var _short: bool = false
 ## The lobby is on a phone (LayoutMode PHONE): cells and buttons take phone sizes.
 var _phone: bool = false
-var _grid: GridContainer
-var _coverage: Label
-var _legend: HBoxContainer
-var _summary: BoxContainer
-var _summary_name: Label
-var _summary_role: Label
 var _start: Button
 var _title: Label
 var _leave: Button
 var _menu: Button
+var _end_dialog: ConfirmationDialog
 var _body: Control
-var _seat_row: HBoxContainer
-var _captain: Button
-var _viewer: Button
-var _dev_all: Button
 var _join_button: Button
 var _join_dialog: AcceptDialog
 var _join_panel: LobbyJoinPanel
 ## The host's QR code and address while seats are open; null off the host or on loopback.
-var _join_strip: HBoxContainer
-var _join_qr: QrView
-var _join_address: Label
+var _join_strip: LobbyJoinPanel.Strip
 ## The name prompt (#35 A5) and its field.
-var _name_row: HBoxContainer
+var _name_row: LobbyJoinPanel.NamePrompt
 var _name_field: LineEdit
-## Difficulty (toggles): the one-line summary and its dialog.
-var _difficulty: Label
-var _customise: Button
-var _dialog: AcceptDialog
-var _preset_buttons: Dictionary = {}
-var _preset_name: Label
-var _toggle_rows: VBoxContainer
-var _toggle_note: Label
-## The host's saved set was sent to the server for this connection.
-var _pushed: bool = false
 ## After "Back to ships": no ship is chosen until the player picks one.
 var _browsing: bool = false
-## The stations tapped since the server last answered a pick: a second tap before the
-## answer to the first must still add to it. Empty of meaning while `_tapped` is false.
-var _local: Array[String] = []
-var _tapped: bool = false
-## The ship ids and station ids whose buttons exist; a refresh rebuilds only when they change.
+## The ship ids whose buttons exist; a refresh rebuilds only when they change.
 var _ship_ids: Array = []
-var _cell_ids: Array[String] = []
 
 
 func setup(context: StationContext) -> void:
 	ctx = context
 	_build()
+	PadFocus.attach(self)
 	ctx.crew.changed.connect(_on_crew_changed)
 	ctx.crew.toast.connect(_on_refused)
 	resized.connect(_apply_columns)
@@ -201,19 +164,23 @@ func refresh() -> void:
 		b.text = ship_label(ships[i])
 		b.set_pressed_no_signal(int(ships[i]["ship"]) == ship)
 	var state: Dictionary = ctx.crew.ship_state(ship)
-	_coverage.text = coverage_text(state)
-	_build_legend()
-	_refresh_grid()
-	_refresh_seats()
-	_refresh_summary()
+	_seats.refresh_cells(state)
+	_apply_columns()
+	_seats.refresh_seats(_phone)
+	_weigh_buttons()
+	_seats.refresh_summary()
 	_refresh_fleet()
 	_start.disabled = not (
 		ctx.crew.is_crew() and ctx.crew.ship == ship and bool(state.get("ready", false))
 	)
 	_start.text = tr("lobby.start")
+	if _start.disabled:
+		# A greyed Start says what it waits for, on every form (R24-6, R26-3).
+		_start.text = start_blocker(state)
 	if ctx.crew.waiting_for_others(ship):
 		_start.disabled = true
 		_start.text = tr("lobby.waiting") % ", ".join(ctx.crew.waiting_names())
+	_fit_start()
 	_start.visible = (
 		not _browsing
 		and (not bool(state.get("started", false)) or ctx.crew.waiting_for_others(ship))
@@ -221,14 +188,48 @@ func refresh() -> void:
 	_body.visible = not _browsing
 	_leave.visible = not _browsing
 	_show_join_strip()
+	_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
 	_fit_strip.call_deferred()
 	_refresh_data()
 	if _refusal != "":
-		_summary_role.text = _refusal
+		_seats.summary_role.text = _refusal
 	if _browsing:
-		_summary_name.text = tr("lobby.pick_ship")
-		_summary_role.text = ""
+		_seats.summary_name.text = tr("lobby.pick_ship")
+		_seats.summary_role.text = ""
 		_body.visible = false
+
+
+## A Start text too long for one line ("Falta: Retransmissão, Comunicações" in a phone's
+## row) wraps to two lines in a smaller font, so it is never cut and the row keeps its height.
+func _fit_start() -> void:
+	_start.remove_theme_font_size_override("font_size")
+	var font: Font = _start.get_theme_font("font")
+	var fs: int = _start.get_theme_font_size("font_size")
+	var room: float = _start.size.x - _start.get_theme_stylebox("normal").get_minimum_size().x
+	var wide: float = font.get_string_size(_start.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var long: bool = room > 0.0 and wide > room
+	_start.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if long else TextServer.AUTOWRAP_OFF
+	if long:
+		_start.add_theme_font_size_override("font_size", START_WRAP_SIZE)
+
+
+## Why Start is greyed on the shown ship: "Pick a station", "Need Relay, Comms" or
+## "Need 1 more player"; "Start" when nothing blocks it.
+func start_blocker(state: Dictionary) -> String:
+	if ctx.crew.ship != ship or not ctx.crew.is_crew():
+		return tr("lobby.need_seat")
+	if bool(state.get("ready", false)):
+		return tr("lobby.start")
+	var uncovered: Array = state.get("uncovered", [])
+	if not uncovered.is_empty():
+		var names: PackedStringArray = []
+		for st: Variant in uncovered:
+			names.append(tr("station." + str(st)))
+		return tr("lobby.need_stations") % ", ".join(names)
+	var missing: int = maxi(1, int(state.get("min_crew", 3)) - int(state.get("crew", 0)))
+	if missing == 1:
+		return tr("lobby.need_players_one")
+	return tr("lobby.need_players") % missing
 
 
 ## A ship button's text: its name, and its team in TEAMS and HOLDOUT ("Heron (B)").
@@ -239,18 +240,10 @@ func ship_label(row: Dictionary) -> String:
 	return text
 
 
-## The mode button: "Mode: Teams (First to finish)" (M4-Q6); on a narrow or short screen
-## just the mode's name.
+## The mode button's text (LobbyGameSetup.mode_text): just the mode's name on a narrow or
+## short screen.
 func mode_text() -> String:
-	var name: String = tr("mode." + ctx.crew.mode())
-	if _short or size.x < NARROW_WIDTH:
-		return name
-	if ctx.crew.mode() == "teams":
-		name = (
-			tr("lobby.mode_rule")
-			% [name, tr("mode.win." + str(ctx.crew.fleet.get("team_win", "")))]
-		)
-	return tr("lobby.mode") % name
+	return _game_setup.mode_text(_short or size.x < NARROW_WIDTH)
 
 
 ## The first name of NEW_SHIP_NAMES no ship has, or "Ship 7" past the list.
@@ -287,65 +280,7 @@ func _refresh_fleet() -> void:
 		b.text = tr("lobby.team") % TEAM_LETTERS[t]
 		b.set_pressed_no_signal(ctx.crew.team_of(ship) == t)
 		b.disabled = not mine
-	_mode_button.text = mode_text()
-	_mode_button.visible = not ctx.crew.fleet.is_empty()
-	if _mode_dialog != null:
-		_mode_dialog.refresh()
-
-
-## "Easy", or "Easy (custom)" for a set with a toggle changed (FT-PAIR-017, D92).
-static func preset_label(toggles: DataToggles) -> String:
-	var name: String = TranslationServer.translate("lobby.preset_" + toggles.preset)
-	if toggles.is_custom():
-		return TranslationServer.translate("lobby.preset_custom") % name
-	return name
-
-
-## Whether a run has started on any ship: the toggles are locked from then on.
-func toggles_locked() -> bool:
-	for state: Dictionary in ctx.crew.lobby.values():
-		if bool(state.get("started", false)):
-			return true
-	return false
-
-
-## Only the host changes the toggles, and only before a run starts.
-func can_edit_toggles() -> bool:
-	return ctx.crew.host and not toggles_locked()
-
-
-## "Crew 2/3 · uncovered: Science, Comms" (FT-NET-021).
-func coverage_text(state: Dictionary) -> String:
-	if state.is_empty():
-		return ""
-	var crew: String = tr("lobby.crew") % [int(state.get("crew", 0)), int(state.get("min_crew", 3))]
-	var uncovered: Array = state.get("uncovered", [])
-	if uncovered.is_empty():
-		return "%s · %s" % [crew, tr("lobby.covered")]
-	var names: PackedStringArray = []
-	for s: Variant in uncovered:
-		names.append(tr("station." + str(s)))
-	return "%s · %s" % [crew, tr("lobby.uncovered") % ", ".join(names)]
-
-
-## The hint of a joint view naming the pair it makes solo (FT-JNT-006); "" otherwise.
-static func joint_hint(def: Dictionary) -> String:
-	var st: Array = def.get("stations", [])
-	if st.size() != 2:
-		return ""
-	return (
-		TranslationServer.translate("lobby.joint_pair")
-		% [
-			TranslationServer.translate("station." + str(st[0])),
-			TranslationServer.translate("station." + str(st[1])),
-		]
-	)
-
-
-## The colour of a seat's load tag (intense, busy, light); the normal text colour for
-## no tag (the Viewer).
-static func load_color(tag: String) -> Color:
-	return Palette.color("load_" + tag if tag in LOAD_TAGS else "text")
+	_game_setup.refresh_mode(mode_text())
 
 
 ## The columns of the grid for a lobby of this size: 3 in landscape, 2 in portrait.
@@ -353,110 +288,19 @@ static func columns_for(size: Vector2) -> int:
 	return PORTRAIT_COLUMNS if size.x < size.y else LANDSCAPE_COLUMNS
 
 
-## The stations the player has picked on the shown ship (none for Captain, Viewer and
-## the dev entry).
-func selected_stations() -> Array[String]:
-	var out: Array[String] = []
-	if _tapped:
-		out.assign(_local)
-		return out
-	if ctx.crew.ship != ship or ctx.crew.entry in [DEV_ALL, ""]:
-		return out
-	for st: Variant in ctx.crew.stations():
-		out.append(str(st))
-	return out
-
-
-## The catalogue entry covering exactly these stations: the station itself for one, the
-## joint view of the pair for two; "" when there is none.
+## The catalogue entry covering exactly these stations (LobbySeatGrid.entry_for).
 func entry_for(stations: Array[String]) -> String:
-	for def: Dictionary in ctx.crew.catalogue.get("entries", []):
-		var st: Array = def.get("stations", [])
-		if st.size() != stations.size() or stations.is_empty():
-			continue
-		var same: bool = true
-		for s: String in stations:
-			same = same and s in st
-		if same:
-			return str(def["id"])
-	return ""
+	return _seats.entry_for(stations)
 
 
-## The names of the crewmates who picked a station (a joint view covers both of its
-## stations), from the `lobby` event's seats.
-func crew_at(station: String) -> PackedStringArray:
-	var names: PackedStringArray = []
-	for seat: Variant in ctx.crew.ship_state(ship).get("seats", []):
-		var covered: Array = ctx.crew.def_of(str(seat["entry"])).get("stations", [])
-		if station in covered:
-			names.append(str(seat["name"]))
-	return names
-
-
-## A tap on a station cell: adds it to the picks (up to two), or takes it out; the pick
-## goes to the server at once.
+## A tap on a station cell (LobbySeatGrid.tap_station).
 func tap_station(id: String) -> void:
-	var picks: Array[String] = selected_stations()
-	if id in picks:
-		picks.erase(id)
-	elif picks.size() < MAX_STATIONS:
-		picks.append(id)
-	else:
-		refresh()
-		return
-	if picks.is_empty():
-		ctx.intents.release_pick()
-	else:
-		var entry: String = entry_for(picks)
-		if entry == "":
-			refresh()
-			return
-		ctx.intents.pick(ship, entry)
-	_local = picks
-	_tapped = true
-	refresh()
+	_seats.tap_station(id)
 
 
-## A tap on Captain, Viewer or the dev entry: picks it, or gives it up when it is the
-## pick.
+## A tap on Captain, Viewer or the dev entry (LobbySeatGrid.tap_seat).
 func tap_seat(id: String) -> void:
-	_tapped = true
-	_local = []
-	if ctx.crew.ship == ship and ctx.crew.entry == id:
-		ctx.intents.release_pick()
-	else:
-		ctx.intents.pick(ship, id)
-	refresh()
-
-
-## The title and summary under the grid for the current pick: a station's name and
-## role, or a joint view's name, its pair and its role.
-func selection_text() -> Array[String]:
-	var entry: String = ctx.crew.entry if ctx.crew.ship == ship else ""
-	if entry == "":
-		return [tr("lobby.no_pick"), ""]
-	var name: String = tr("station." + entry)
-	var pair: String = joint_hint(ctx.crew.def_of(entry))
-	if pair != "":
-		name += " (%s)" % pair
-	return [name, tr("role." + entry)]
-
-
-## The one-line legend under the grid: "Red: intense · Yellow: busy · Green: light", each
-## part in its colour (D187).
-func _build_legend() -> void:
-	for c: Node in _legend.get_children():
-		if c != _coverage:
-			_legend.remove_child(c)
-			c.queue_free()
-	for i: int in LOAD_TAGS.size():
-		if i > 0:
-			_legend.add_child(_label("·", "SmallLabel"))
-		var tag: String = LOAD_TAGS[i]
-		var item: Label = _label(tr("lobby.legend_" + tag), "SmallLabel")
-		item.name = "Legend_" + tag
-		item.add_theme_color_override("font_color", load_color(tag))
-		_legend.add_child(item)
+	_seats.tap_seat(id)
 
 
 static func _label(text: String, variation: String = "") -> Label:
@@ -466,118 +310,12 @@ static func _label(text: String, variation: String = "") -> Label:
 	return l
 
 
-## Cells are kept while the same stations are listed; a refresh only updates their state
-## and crew names, so a tap that lands during a refresh is not lost.
-func _refresh_grid() -> void:
-	var picks: Array[String] = selected_stations()
-	var full: bool = picks.size() >= MAX_STATIONS
-	# The dev entry holds every station: all six cells show as selected and locked; a tap
-	# on one leaves it for that station alone.
-	var dev: bool = ctx.crew.ship == ship and ctx.crew.entry == DEV_ALL
-	var listed: Array[String] = []
-	for id: String in GRID_STATIONS:
-		if not ctx.crew.def_of(id).is_empty():
-			listed.append(id)
-	if listed != _cell_ids:
-		_cell_ids = listed
-		_clear(_grid)
-		for id: String in listed:
-			_grid.add_child(_cell(id, str(ctx.crew.def_of(id).get("load_tag", ""))))
-	for cell: Node in _grid.get_children():
-		var b: Button = cell as Button
-		var id: String = str(b.name).trim_prefix("Entry_")
-		b.set_pressed_no_signal(dev or id in picks)
-		b.disabled = full and not id in picks
-		# Fade the text but not the seat holders' names (they keep their contrast).
-		var fade: Color = Color(1, 1, 1, 0.45) if b.disabled else Color.WHITE
-		b.find_child("Name", true, false).self_modulate = fade
-		b.find_child("Role", true, false).self_modulate = fade
-		_set_crew(b, crew_at(id))
-	_apply_columns()
-
-
-## A station cell (D257, P28-Lobby): a toggle button: the name left and the seat holders'
-## names right on the first line, the role summary wrapped under it (ROLE_LINES lines; the
-## texts are written to fit). Tapping it takes the seat or leaves it. Its height follows
-## the text, at least TOUCH_MIN.
-func _cell(id: String, tag: String) -> Button:
-	var b: Button = Button.new()
-	b.name = "Entry_" + id
-	b.toggle_mode = true
-	b.theme_type_variation = "LoadCell_" + (tag if tag in LOAD_TAGS else "none")
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.clip_contents = true
-	b.tooltip_text = tr("role." + id)
-	b.pressed.connect(tap_station.bind(id))
-	var box: VBoxContainer = VBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	box.offset_left = CELL_INSET
-	box.offset_top = CELL_INSET
-	box.offset_right = -CELL_INSET
-	box.offset_bottom = -CELL_INSET
-	box.add_theme_constant_override("separation", 0)
-	b.add_child(box)
-	var top: HBoxContainer = HBoxContainer.new()
-	top.name = "Top"
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(top)
-	var name_label: Label = _cell_label("Name", tr("station." + id), "HeadingLabel")
-	name_label.add_theme_font_size_override("font_size", 15)
-	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(name_label)
-	var role: Label = _cell_label("Role", tr("role." + id), "CaptionLabel")
-	role.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	role.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	role.max_lines_visible = ROLE_LINES
-	role.custom_minimum_size = Vector2(10, 0)
-	box.add_child(role)
-	box.minimum_size_changed.connect(_fit_cell.bind(b, box))
-	_fit_cell.call_deferred(b, box)
-	return b
-
-
-## Shows the seat holders' names on a cell, right of its name; empty while nobody sits there.
-func _set_crew(cell: Button, crew: PackedStringArray) -> void:
-	var label: Label = cell.find_child("Crew", true, false) as Label
-	if label == null:
-		label = _cell_label("Crew", "", "CrewLabel")
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		label.autowrap_mode = TextServer.AUTOWRAP_OFF
-		label.size_flags_horizontal = Control.SIZE_SHRINK_END
-		cell.find_child("Top", true, false).add_child(label)
-	label.text = ", ".join(crew)
-
-
-func _cell_label(node_name: String, text: String, variation: String) -> Label:
-	var l: Label = _label(text, variation)
-	l.name = node_name
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return l
-
-
-## Takes Variants: a deferred call can outlive the cell (a refresh rebuilds the grid).
-static func _fit_cell(cell_node: Variant, box_node: Variant) -> void:
-	if is_instance_valid(cell_node) and is_instance_valid(box_node):
-		var cell: Button = cell_node
-		var box: Control = box_node
-		var h: float = box.get_combined_minimum_size().y + 2.0 * CELL_INSET
-		var least: int = UiTheme.TOUCH_MIN
-		if cell.get_parent() != null and cell.get_parent().get_meta(&"phone", false):
-			least = PHONE_TARGET
-		cell.custom_minimum_size = Vector2(0.0, maxf(h, float(least)))
-
-
 func _apply_columns() -> void:
-	if _grid != null:
-		_grid.columns = columns_for(size)
+	if _seats != null:
+		_seats.grid.columns = columns_for(size)
 		if size.y > 0.0:
 			_arrange(size.y < SHORT_HEIGHT)
-			_mode_button.text = mode_text()
+			_game_setup.mode_button.text = mode_text()
 		if is_inside_tree():
 			_apply_targets(LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE)
 			_apply_safe_area()
@@ -596,36 +334,34 @@ func _apply_safe_area() -> void:
 ## Phones (#28): every button at least PHONE_TARGET px tall and PHONE_GAP px from the next;
 ## elsewhere the theme's sizes and the compact gaps (D257).
 func _apply_targets(phone: bool) -> void:
-	var gap: int = PHONE_GAP if phone else GRID_GAP
-	for box: Control in [_grid, _ships, _ship_tools]:
+	var gap: int = PHONE_GAP if phone else LobbySeatGrid.GRID_GAP
+	for box: Control in [_seats.grid, _ships, _ship_tools]:
 		box.add_theme_constant_override("h_separation", gap)
 		box.add_theme_constant_override("v_separation", gap)
 	_use_strip(phone)
-	for box: Control in [_head, _seat_row, _diff_row, _teams, _body, _strip.row]:
+	for box: Control in [_head, _seats.seat_row, _game_setup.row, _teams, _body, _strip.row]:
 		box.add_theme_constant_override("separation", gap if phone else 4)
 	_outer.add_theme_constant_override("separation", PHONE_GAP if phone else (3 if _short else 6))
 	for b: Node in find_children("*", "BaseButton", true, false):
 		var button: BaseButton = b as BaseButton
 		if button is FullscreenToggle:
 			continue
-		if not str(button.name).begins_with("Entry_") or button.get_parent() == _seat_row:
+		if not str(button.name).begins_with("Entry_") or button.get_parent() == _seats.seat_row:
 			button.custom_minimum_size = Vector2.ONE * (PHONE_TARGET if phone else 0.0)
-	_grid.set_meta(&"phone", phone)
+	_seats.grid.set_meta(&"phone", phone)
 	_name_field.custom_minimum_size.y = PHONE_TARGET if phone else 0.0
 	if phone != _phone:
-		_size_join_strip(phone)
-		for cell: Node in _grid.get_children():
-			_fit_cell(cell, cell.get_child(0))
+		if _join_strip != null:
+			_join_strip.fit(phone)
+		_seats.fit_cells()
 	_phone = phone
 	_style_summary(_short, phone)
-	# A phone upright puts Start on the difficulty row, the preset's name on Customise.
+	# A phone upright shows the labelled mode and the preset on the difficulty row ("Mode:
+	# Teams", "Difficulty: Easy"), with Start under it on its own row (R24-5, R24-6).
 	if not _short:
-		_difficulty.visible = not phone
-		if phone:
-			_reparent(_start, _diff_row, -1)
-		else:
-			_reparent(_start, _outer, -1)
-	_customise.text = preset_label(ctx.crew.toggles) if _short or phone else tr("lobby.customise")
+		_game_setup.difficulty.visible = not phone
+		_reparent(_start, _outer, -1)
+	_game_setup.label_customise(_short or phone)
 
 
 ## Lays the rows out for the window: normal, or short (a phone in landscape, #28), where
@@ -643,12 +379,14 @@ func _arrange(short: bool) -> void:
 	# A phone keeps a floor of safe margin on top already (SafeArea.FLOOR).
 	_margin.add_theme_constant_override("margin_top", SHORT_TOP if short else pad)
 	_head.visible = not short
-	_difficulty.visible = not short
-	_summary.vertical = not short
-	_coverage.theme_type_variation = "CaptionLabel" if short else "DimLabel"
-	_summary.add_theme_constant_override("separation", 6 if short else 0)
-	_summary_role.clip_text = short and _phone
-	_summary_role.size_flags_horizontal = (Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL)
+	_game_setup.difficulty.visible = not short
+	_seats.summary.vertical = not short
+	_seats.coverage.theme_type_variation = "CaptionLabel" if short else "DimLabel"
+	_seats.summary.add_theme_constant_override("separation", 6 if short else 0)
+	_seats.summary_role.clip_text = short and _phone
+	_seats.summary_role.size_flags_horizontal = (
+		Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL
+	)
 	_style_summary(short, _phone)
 	_show_join_strip()
 
@@ -657,7 +395,7 @@ func _arrange(short: bool) -> void:
 ## natural width (text and padding), so each shows whole while the row fits; elsewhere
 ## they share it evenly.
 func _weigh_buttons() -> void:
-	for row: Control in [_seat_row, _diff_row]:
+	for row: Control in [_seats.seat_row, _game_setup.row]:
 		for c: Node in row.get_children():
 			var b: Button = c as Button
 			if b == null or not b.size_flags_horizontal & Control.SIZE_EXPAND:
@@ -673,52 +411,54 @@ func _weigh_buttons() -> void:
 
 
 ## The selection's name and role: on a short screen one line, the role trimmed; on a phone
-## upright smaller, the role at most ROLE_LINES lines; elsewhere the heading and the whole
-## role, centred. On a phone or a short screen the seat and bottom rows' wide buttons
+## upright smaller, the role at most LobbySeatGrid.ROLE_LINES lines; elsewhere the heading and
+## the whole role, centred. On a phone or a short screen the seat and bottom rows' wide buttons
 ## (Captain, Viewer, the dev seat, Start) trim their text rather than push the row off
 ## the screen (longer languages).
 func _style_summary(short: bool, phone: bool) -> void:
 	var small: bool = short or phone
-	for row: Control in [_seat_row, _diff_row]:
+	for row: Control in [_seats.seat_row, _game_setup.row]:
 		for c: Node in row.get_children():
 			if c is Button and (c as Button).size_flags_horizontal & Control.SIZE_EXPAND:
 				# (upright the seats show whole: Capitão, Espectador)
-				(c as Button).clip_text = short if row == _seat_row else small
+				(c as Button).clip_text = short if row == _seats.seat_row else small
 				(c as Button).text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_weigh_buttons()
-	for pair: Array in [[_summary_name, SHORT_NAME_SIZE], [_summary_role, SHORT_ROLE_SIZE]]:
+	for pair: Array in [
+		[_seats.summary_name, SHORT_NAME_SIZE], [_seats.summary_role, SHORT_ROLE_SIZE]
+	]:
 		var label: Label = pair[0]
 		if small:
 			label.add_theme_font_size_override("font_size", pair[1])
 		else:
 			label.remove_theme_font_size_override("font_size")
-		var one: bool = short and (phone or label == _summary_name)  # (T3: a short desktop wraps)
+		var one: bool = short and (phone or label == _seats.summary_name)  # (T3: a short desktop wraps)
 		label.autowrap_mode = TextServer.AUTOWRAP_OFF if one else TextServer.AUTOWRAP_WORD_SMART
 		label.horizontal_alignment = (
 			HORIZONTAL_ALIGNMENT_LEFT if short else HORIZONTAL_ALIGNMENT_CENTER
 		)
-	_summary_role.max_lines_visible = ROLE_LINES if small else -1
-	_summary_role.text_overrun_behavior = (
+	_seats.summary_role.max_lines_visible = LobbySeatGrid.ROLE_LINES if small else -1
+	_seats.summary_role.text_overrun_behavior = (
 		TextServer.OVERRUN_TRIM_ELLIPSIS if small else TextServer.OVERRUN_NO_TRIMMING
 	)
-	_coverage.size_flags_horizontal = Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL
+	_seats.coverage.size_flags_horizontal = Control.SIZE_EXPAND_FILL if short else Control.SIZE_FILL
 	# A long coverage line (pt_PT, it) wraps upright and trims on its side, never widening
 	# the lobby past a phone's screen.
-	_coverage.autowrap_mode = (
+	_seats.coverage.autowrap_mode = (
 		TextServer.AUTOWRAP_WORD_SMART if phone and not short else TextServer.AUTOWRAP_OFF
 	)
-	_coverage.clip_text = phone and short
-	_coverage.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_seats.coverage.clip_text = phone and short
+	_seats.coverage.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	if short:
-		_reparent(_legend, _body.get_node("Info"), 0)
-		_reparent(_coverage, _legend, 0)
-		_reparent(_teams, _seat_row, -1)
-		_reparent(_leave, _seat_row, -1)
+		_reparent(_seats.legend, _body.get_node("Info"), 0)
+		_reparent(_seats.coverage, _seats.legend, 0)
+		_reparent(_teams, _seats.seat_row, -1)
+		_reparent(_leave, _seats.seat_row, -1)
 		for c: Control in [_join_button, _menu, _start, _fullscreen]:
-			_reparent(c, _diff_row, -1)
+			_reparent(c, _game_setup.row, -1)
 	else:
-		_reparent(_legend, _body, _grid.get_index() + 1)
-		_reparent(_coverage, _outer, _ship_tools.get_index() + 1)
+		_reparent(_seats.legend, _body, _seats.grid.get_index() + 1)
+		_reparent(_seats.coverage, _outer, _ship_tools.get_index() + 1)
 		_reparent(_teams, _ship_tools if _phone else _ships, -1)
 		_reparent(_leave, _ship_tools if _phone else _ships, -1)
 		_reparent(_join_button, _head, 1)
@@ -733,28 +473,6 @@ static func _reparent(node: Control, parent: Node, index: int) -> void:
 		node.get_parent().remove_child(node)
 		parent.add_child(node)
 	parent.move_child(node, index)
-
-
-## The Captain, Viewer and dev buttons: the pick's one is pressed; Captain is greyed out
-## while another player holds it.
-func _refresh_seats() -> void:
-	var mine: String = ctx.crew.entry if ctx.crew.ship == ship else ""
-	for pair: Array in [[_captain, CAPTAIN], [_viewer, VIEWER], [_dev_all, DEV_ALL]]:
-		var b: Button = pair[0]
-		b.set_pressed_no_signal(mine == pair[1])
-		b.text = tr("station." + pair[1])
-	if _phone:
-		_dev_all.text = TouchText.of("lobby.dev_short", "All (dev)")
-	_captain.disabled = ctx.crew.captain_seated(ship) and mine != CAPTAIN
-	# Only when this game was started with --dev and the server offers it (#35 A7).
-	_dev_all.visible = ClientSettings.dev_flag and not ctx.crew.def_of(DEV_ALL).is_empty()
-	_weigh_buttons()
-
-
-func _refresh_summary() -> void:
-	var text: Array[String] = selection_text()
-	_summary_name.text = text[0]
-	_summary_role.text = text[1]
 
 
 ## The phone's ship strip (LobbyShipStrip) or the flow, and where the team buttons and Back
@@ -815,13 +533,17 @@ func _build() -> void:
 	_join_button = _button("JoinButton", tr("lobby.join_title"), _open_join)
 	head.add_child(_join_button)
 	_join_button.visible = ctx.host_bind != ""
-	_menu = _button("MainMenu", tr("lobby.menu"), menu_requested.emit)
+	_menu = _button("MainMenu", tr("lobby.menu"), _on_menu_pressed)
 	head.add_child(_menu)
 	# Full screen: an icon at the right of the title row, where the device offers it (D323).
 	_fullscreen = FullscreenToggle.new()
 	head.add_child(_fullscreen)
-	_build_name_prompt(outer)
-	_build_join_strip(outer)
+	_name_row = LobbyJoinPanel.NamePrompt.new(ctx)
+	_name_field = _name_row.field
+	outer.add_child(_name_row)
+	_join_strip = LobbyJoinPanel.Strip.for_host(ctx)
+	if _join_strip != null:
+		outer.add_child(_join_strip)
 	_ships = HFlowContainer.new()
 	_ships.name = "Ships"
 	outer.add_child(_ships)
@@ -843,88 +565,28 @@ func _build() -> void:
 	_ship_tools.name = "ShipTools"
 	_ship_tools.visible = false
 	outer.add_child(_ship_tools)
-	_coverage = _label("", "DimLabel")
-	_coverage.name = "Coverage"
-	outer.add_child(_coverage)
+	_seats = LobbySeatGrid.new(ctx)
+	_seats.ship = ship
+	_seats.changed.connect(refresh)
+	outer.add_child(_seats.coverage)
 	_body = VBoxContainer.new()
 	_body.name = "Body"
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	outer.add_child(_body)
-	_grid = GridContainer.new()
-	_grid.name = "Grid"
-	_grid.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	_grid.add_theme_constant_override("h_separation", GRID_GAP)
-	_grid.add_theme_constant_override("v_separation", GRID_GAP)
-	_body.add_child(_grid)
-	_legend = HBoxContainer.new()
-	_legend.name = "Legend"
-	_legend.alignment = BoxContainer.ALIGNMENT_CENTER
-	_body.add_child(_legend)
-	_build_summary(_body)
-	_build_seats(_body)
-	_build_difficulty_row(_body)
+	_body.add_child(_seats.grid)
+	_body.add_child(_seats.legend)
+	_body.add_child(_seats.info)
+	_body.add_child(_seats.seat_row)
+	_game_setup = LobbyGameSetup.new(ctx)
+	_game_setup.refresh_needed.connect(_refresh_data)
+	_body.add_child(_game_setup.row)
 	_start = _button("Start", tr("lobby.start"), func() -> void: ctx.intents.start())
 	_start.theme_type_variation = "TouchButton"
 	_start.clip_text = true
 	_start.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_start.resized.connect(_fit_start)
 	outer.add_child(_start)
 	_build_dialogs()
-
-
-## The name prompt (#35 A5): a field and Done, shown while the player has no name of their own;
-## Done saves the name and renames the player on the server.
-func _build_name_prompt(parent: Container) -> void:
-	_name_row = HBoxContainer.new()
-	_name_row.name = "NamePrompt"
-	parent.add_child(_name_row)
-	_name_field = LineEdit.new()
-	_name_field.name = "NameField"
-	_name_field.placeholder_text = tr("menu.name")
-	_name_field.max_length = NetProtocol.MAX_NAME_BYTES
-	_name_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_name_field.text_submitted.connect(func(_t: String) -> void: submit_name())
-	_name_row.add_child(_name_field)
-	_name_row.add_child(_button("NameDone", tr("lobby.done"), submit_name))
-	_name_row.visible = ctx.settings != null and not ctx.settings.has_name()
-
-
-## Takes the prompt's name: saved, sent to the server, and the prompt goes. An empty field
-## keeps the prompt.
-func submit_name() -> void:
-	var n: String = _name_field.text.strip_edges()
-	if n == "":
-		return
-	ctx.settings.player_name = n
-	ctx.settings.save()
-	ctx.intents.rename(n)
-	_name_row.visible = false
-
-
-## The host's join strip (#35 A6): the browser URL's QR code and the address beside it in
-## large type, under the title row; none on a loopback server (the dialog says why).
-func _build_join_strip(parent: Container) -> void:
-	if ctx.host_bind == "" or LobbyJoinPanel.is_local_only(ctx.host_bind):
-		return
-	_join_strip = HBoxContainer.new()
-	_join_strip.name = "JoinStrip"
-	_join_strip.alignment = BoxContainer.ALIGNMENT_CENTER
-	_join_strip.add_theme_constant_override("separation", 12)
-	parent.add_child(_join_strip)
-	_join_qr = QrView.new()
-	_join_qr.name = "JoinStripQr"
-	_join_qr.module_px = JOIN_QR_PX
-	_join_qr.set_text(LobbyJoinPanel.join_url(ctx.host_bind, ctx.host_port, ctx.host_tls))
-	_join_strip.add_child(_join_qr)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	_join_strip.add_child(col)
-	var caption: Label = _label(tr("lobby.join_scan"), "DimLabel")
-	caption.name = "JoinStripCaption"
-	col.add_child(caption)
-	_join_address = _label(ctx.host_bind)
-	_join_address.name = "JoinStripAddress"
-	_join_address.add_theme_font_size_override("font_size", JOIN_ADDRESS_SIZE)
-	col.add_child(_join_address)
 
 
 ## The join strip shows while the ship's seats are open (not started); a short screen (a phone
@@ -935,74 +597,6 @@ func _show_join_strip() -> void:
 		_join_strip.visible = not _short and not started
 
 
-## The join strip's sizes: compact on a phone.
-func _size_join_strip(phone: bool) -> void:
-	if _join_strip == null:
-		return
-	_join_qr.module_px = JOIN_QR_PX_PHONE if phone else JOIN_QR_PX
-	_join_qr.set_text(LobbyJoinPanel.join_url(ctx.host_bind, ctx.host_port, ctx.host_tls))
-	_join_address.add_theme_font_size_override(
-		"font_size", JOIN_ADDRESS_SIZE_PHONE if phone else JOIN_ADDRESS_SIZE
-	)
-
-
-## The selection's name and role, in the Info block (the legend joins it on a short
-## screen, with no gap between them).
-func _build_summary(parent: Container) -> void:
-	var info: VBoxContainer = VBoxContainer.new()
-	info.name = "Info"
-	info.add_theme_constant_override("separation", 0)
-	parent.add_child(info)
-	var box: BoxContainer = BoxContainer.new()
-	box.vertical = true
-	box.name = "Summary"
-	info.add_child(box)
-	_summary = box
-	_summary_name = _label("", "HeadingLabel")
-	_summary_name.name = "SummaryName"
-	_summary_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_summary_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_summary_name)
-	_summary_role = _label("", "DimLabel")
-	_summary_role.name = "SummaryRole"
-	_summary_role.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_summary_role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_summary_role)
-
-
-func _build_seats(parent: Container) -> void:
-	_seat_row = HBoxContainer.new()
-	_seat_row.name = "Seats"
-	parent.add_child(_seat_row)
-	_captain = _seat_button(CAPTAIN)
-	_viewer = _seat_button(VIEWER)
-	_dev_all = _seat_button(DEV_ALL)
-
-
-func _seat_button(id: String) -> Button:
-	var b: Button = _button("Entry_" + id, "", tap_seat.bind(id))
-	b.toggle_mode = true
-	b.theme_type_variation = "TouchButton"
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_seat_row.add_child(b)
-	return b
-
-
-func _build_difficulty_row(parent: Container) -> void:
-	var row: HBoxContainer = HBoxContainer.new()
-	row.name = "Difficulty"
-	_diff_row = row
-	parent.add_child(row)
-	_mode_button = _button("ModeButton", "", _open_mode)
-	row.add_child(_mode_button)
-	_difficulty = _label("")
-	_difficulty.name = "DifficultyLine"
-	_difficulty.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(_difficulty)
-	_customise = _button("Customise", tr("lobby.customise"), _open_difficulty)
-	row.add_child(_customise)
-
-
 func _button(node_name: String, text: String, handler: Callable) -> Button:
 	var b: Button = Button.new()
 	b.name = node_name
@@ -1011,44 +605,18 @@ func _button(node_name: String, text: String, handler: Callable) -> Button:
 	return b
 
 
-## The dialogs: the difficulty toggles and, on the host, how to join.
+## The dialogs: the difficulty toggles and the mode, the end of the game and, on the host,
+## how to join.
 func _build_dialogs() -> void:
-	_dialog = AcceptDialog.new()
-	_dialog.name = "DifficultyDialog"
-	_dialog.title = tr("lobby.data")
-	_dialog.ok_button_text = tr("lobby.done")
-	add_child(_dialog)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.custom_minimum_size = Vector2(300, 0)
-	_dialog.add_child(col)
-	var row: HBoxContainer = HBoxContainer.new()
-	row.name = "Presets"
-	col.add_child(row)
-	for preset: String in DataToggles.PRESETS:
-		var b: Button = _button("Preset_" + preset, "", _choose_preset.bind(preset))
-		b.toggle_mode = true
-		_preset_buttons[preset] = b
-		row.add_child(b)
-	_preset_name = _label("", "DimLabel")
-	_preset_name.name = "PresetName"
-	row.add_child(_preset_name)
-	_toggle_note = _label("", "DimLabel")
-	_toggle_note.name = "ToggleNote"
-	col.add_child(_toggle_note)
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.custom_minimum_size = Vector2(0, 240)
-	col.add_child(scroll)
-	_toggle_rows = VBoxContainer.new()
-	_toggle_rows.name = "Toggles"
-	_toggle_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_toggle_rows)
-	for def: DataToggleDef in DataToggles.def().toggles:
-		_toggle_rows.add_child(_toggle_row(def))
-	_mode_dialog = ModeDialog.new()
-	add_child(_mode_dialog)
-	_mode_dialog.setup(ctx)
+	_game_setup.add_dialogs(self)
+	_end_dialog = ConfirmationDialog.new()
+	_end_dialog.name = "EndDialog"
+	_end_dialog.title = tr("lobby.end_title")
+	_end_dialog.dialog_text = tr("lobby.end_text")
+	_end_dialog.ok_button_text = tr("lobby.end_game")
+	_end_dialog.cancel_button_text = tr("lobby.end_keep")
+	_end_dialog.confirmed.connect(menu_requested.emit)
+	add_child(_end_dialog)
 	_join_dialog = AcceptDialog.new()
 	_join_dialog.name = "JoinDialog"
 	_join_dialog.title = tr("lobby.join_title")
@@ -1059,112 +627,21 @@ func _build_dialogs() -> void:
 		_join_dialog.add_child(_join_panel)
 
 
-func _open_mode() -> void:
-	_mode_dialog.open(get_viewport_rect().size.x < 600.0)
-
-
-func _open_difficulty() -> void:
-	_dialog.popup_centered_clamped(Vector2i(520, 480), 0.9)
+## Leave for a player; the host's button ends the game for everyone, so it asks first (R24-2).
+func _on_menu_pressed() -> void:
+	if ctx.crew.host:
+		_end_dialog.popup_centered()
+	else:
+		menu_requested.emit()
 
 
 func _open_join() -> void:
 	_join_dialog.popup_centered_clamped(Vector2i(360, 320), 0.9)
 
 
-## One toggle: its name, its value and a one-line description naming both stations.
-func _toggle_row(def: DataToggleDef) -> Control:
-	var row: VBoxContainer = VBoxContainer.new()
-	row.name = "Toggle_" + String(def.id)
-	var line: HBoxContainer = HBoxContainer.new()
-	line.name = "Line"
-	row.add_child(line)
-	var name: Label = Label.new()
-	name.name = "Name"
-	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	line.add_child(name)
-	var value: OptionButton = OptionButton.new()
-	value.name = "Value"
-	value.item_selected.connect(func(i: int) -> void: _set_value(def.id, value.get_item_id(i)))
-	line.add_child(value)
-	var desc: Label = _label("", "CaptionLabel")
-	desc.name = "Desc"
-	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	row.add_child(desc)
-	return row
-
-
-## Shows the session's set: the difficulty line, the pressed preset, every toggle's text
-## and value, and whether the host can still change them.
+## The game setup's difficulty line and dialog (LobbyGameSetup.refresh).
 func _refresh_data() -> void:
-	var toggles: DataToggles = ctx.crew.toggles
-	var editable: bool = can_edit_toggles()
-	_difficulty.text = tr("lobby.difficulty") % preset_label(toggles)
-	_customise.text = preset_label(toggles) if _short or _phone else tr("lobby.customise")
-	_dialog.title = tr("lobby.data")
-	_preset_name.text = preset_label(toggles)
-	for preset: String in _preset_buttons:
-		var b: Button = _preset_buttons[preset]
-		b.text = tr("lobby.preset_" + preset)
-		b.button_pressed = preset == toggles.preset and not toggles.is_custom()
-		b.disabled = not editable
-	var note: String = ""
-	if toggles_locked():
-		note = tr("lobby.toggles_locked")
-	elif not ctx.crew.host:
-		note = tr("lobby.toggles_host_only")
-	_toggle_note.text = note
-	for def: DataToggleDef in DataToggles.def().toggles:
-		var row: Control = _toggle_rows.get_node("Toggle_" + String(def.id))
-		row.get_node("Line/Name").text = tr("lobby.toggle." + String(def.id))
-		row.get_node("Desc").text = tr("lobby.toggle.%s.desc" % def.id)
-		var value: OptionButton = row.get_node("Line/Value")
-		value.clear()
-		var summary: bool = def.kind == DataToggleDef.Kind.SUMMARY
-		var names: Array[String] = ["off", "on"]
-		if summary:
-			names = ["absent", "banded", "exact"]
-		for v: int in range(names.size() - 1, -1, -1):
-			value.add_item(tr("lobby.v_" + names[v]), v)
-		value.select(value.get_item_index(toggles.value(def.id)))
-		value.disabled = not editable
-
-
-func _choose_preset(preset: String) -> void:
-	if can_edit_toggles():
-		_apply_toggles(DataToggles.of_preset(preset))
-	else:
-		_refresh_data()
-
-
-func _set_value(id: StringName, v: int) -> void:
-	if can_edit_toggles():
-		_apply_toggles(ctx.crew.toggles.with_value(id, v))
-	else:
-		_refresh_data()
-
-
-## Sends the host's choice and remembers it for the next lobby (FT-STN-016).
-func _apply_toggles(toggles: DataToggles) -> void:
-	var code: String = toggles.encode()
-	ctx.settings.host_toggles = code
-	ctx.settings.save()
-	ctx.intents.set_toggles(code)
-
-
-## The host's lobby starts from its saved set: sent once per connection, before any run.
-func _push_saved_toggles() -> void:
-	if _pushed or not ctx.crew.host or toggles_locked():
-		return
-	_pushed = true
-	if ctx.settings.host_toggles != ctx.crew.toggles.encode():
-		ctx.intents.set_toggles(ctx.settings.host_toggles)
-
-
-static func _clear(box: Container) -> void:
-	for c: Node in box.get_children():
-		box.remove_child(c)
-		c.queue_free()
+	_game_setup.refresh(_short or _phone)
 
 
 ## A language switch retranslates the whole lobby.
@@ -1172,7 +649,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and ctx != null:
 		_title.text = tr("lobby.title")
 		_start.text = tr("lobby.start")
-		_menu.text = tr("lobby.menu")
+		_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
+		_end_dialog.title = tr("lobby.end_title")
+		_end_dialog.dialog_text = tr("lobby.end_text")
+		_end_dialog.ok_button_text = tr("lobby.end_game")
+		_end_dialog.cancel_button_text = tr("lobby.end_keep")
 		_leave.text = tr("lobby.leave_pick")
 		_join_button.text = tr("lobby.join_title")
 		_name_field.placeholder_text = tr("menu.name")
@@ -1182,7 +663,7 @@ func _notification(what: int) -> void:
 			)
 		_join_dialog.title = tr("lobby.join_title")
 		_join_dialog.ok_button_text = tr("lobby.done")
-		_dialog.ok_button_text = tr("lobby.done")
+		_game_setup.retranslate()
 		if _join_panel != null:
 			_join_dialog.remove_child(_join_panel)
 			_join_panel.queue_free()
@@ -1194,17 +675,17 @@ func _notification(what: int) -> void:
 ## The server refused a request: the screen goes back to what the server holds, and a
 ## refused lobby request (a full fleet, a closed lobby, a bad team) says why under the grid.
 func _on_refused(key: String, args: Dictionary) -> void:
-	_tapped = false
+	_seats.answered()
 	_refusal = tr(key).format(args) if TranslationServer.translate(key) != key else ""
 	refresh()
 
 
 func _on_crew_changed(what: StringName) -> void:
 	if what == &"picked":
-		_tapped = false
+		_seats.answered()
 	if what in [&"picked", &"fleet"]:
 		_refusal = ""
 	if what == &"lobby":
-		_push_saved_toggles()
+		_game_setup.push_saved_toggles()
 	if what in KINDS or what == &"toggles":
 		refresh()

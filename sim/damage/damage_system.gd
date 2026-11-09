@@ -153,7 +153,7 @@ static func effectiveness(world: SimWorld, ship_id: int, subsystem_id: StringNam
 	var r: int = t.find_subsystem(ship_id, subsystem_id)
 	if r < 0:
 		return 1.0
-	return t.row_effectiveness(r, world.defs[ship_id].subsystems[r - t.hull_row(ship_id) - 1])
+	return t.row_effectiveness(r, sub_def(world, ship_id, r))
 
 
 ## Hull left as a share of hull_max, 0..1.
@@ -192,13 +192,13 @@ static func inflict_fault(
 ) -> bool:
 	var t: DamageTable = world.damage
 	var r: int = t.find_subsystem(ship_id, subsystem_id)
-	if r < 0 or not (energy > 0.0) or not _sub_def(world, ship_id, r).fault_causes.has(cause):
+	if r < 0 or not (energy > 0.0) or not sub_def(world, ship_id, r).fault_causes.has(cause):
 		return false
 	_clear_fault(t, r)
 	t.fault_cause[r] = cause
-	_damage_row(world, ship_id, r - t.hull_row(ship_id) - 1, energy, -1)
+	_damage_row(world, ship_id, t.index_of_row(ship_id, r), energy, -1)
 	world.emit(
-		&"fault_inflicted", ship_id, -1, 0.0, _sub_def(world, ship_id, r).position, subsystem_id
+		&"fault_inflicted", ship_id, -1, 0.0, sub_def(world, ship_id, r).position, subsystem_id
 	)
 	return true
 
@@ -212,7 +212,7 @@ static func reveal_fault_cause(world: SimWorld, ship_id: int, subsystem_id: Stri
 	if r < 0 or t.fault_cause[r] == &"":
 		return false
 	t.fault_known[r] = 1
-	var s: SubsystemDef = _sub_def(world, ship_id, r)
+	var s: SubsystemDef = sub_def(world, ship_id, r)
 	world.emit(
 		&"fault_cause_revealed",
 		ship_id,
@@ -234,7 +234,7 @@ static func pick_fault_cause(
 	var r: int = t.find_subsystem(ship_id, subsystem_id)
 	if r < 0 or t.fault_cause[r] == &"":
 		return false
-	var s: SubsystemDef = _sub_def(world, ship_id, r)
+	var s: SubsystemDef = sub_def(world, ship_id, r)
 	var at: int = s.fault_causes.find(cause)
 	if at < 0:
 		return false
@@ -264,13 +264,13 @@ static func harden(world: SimWorld, ship_id: int, subsystem_id: StringName) -> b
 	var r: int = t.find_subsystem(ship_id, subsystem_id)
 	if r < 0 or t.hardened_ticks[r] > 0:
 		return false
-	var s: SubsystemDef = _sub_def(world, ship_id, r)
+	var s: SubsystemDef = sub_def(world, ship_id, r)
 	var h: int = t.hull_row(ship_id)
 	if t.spare_parts[h] < s.harden_parts:
 		world.emit(&"harden_no_parts", ship_id, -1, 0.0, s.position, s.id)
 		return false
 	t.spare_parts[h] -= s.harden_parts
-	t.hardened_ticks[r] = ceili(s.harden_duration * SimWorld.HZ)
+	t.hardened_ticks[r] = SimRate.ticks(s.harden_duration)
 	world.emit(&"hardened", ship_id, -1, s.harden_duration, s.position, s.id)
 	return true
 
@@ -287,7 +287,7 @@ static func dispatch(world: SimWorld, ship_id: int, crew: int, subsystem_id: Str
 	if crew < 0 or crew >= def.repair_crews or r < 0:
 		return false
 	var h: int = t.hull_row(ship_id)
-	var s: SubsystemDef = _sub_def(world, ship_id, r)
+	var s: SubsystemDef = sub_def(world, ship_id, r)
 	if t.crews[r] & (1 << crew) or t.health[r] >= s.health_max:
 		return false
 	if t.spare_parts[h] < s.parts_per_repair:
@@ -305,7 +305,7 @@ static func recall(world: SimWorld, ship_id: int, crew: int) -> bool:
 	var r: int = _unassign(world, ship_id, crew)
 	if r < 0:
 		return false
-	var s: SubsystemDef = _sub_def(world, ship_id, r)
+	var s: SubsystemDef = sub_def(world, ship_id, r)
 	world.emit(&"repair_recalled", ship_id, -1, crew, s.position, s.id)
 	return true
 
@@ -363,8 +363,8 @@ static func _clear_fault(t: DamageTable, r: int) -> void:
 
 
 ## The definition of the subsystem on a damage table row.
-static func _sub_def(world: SimWorld, ship_id: int, row: int) -> SubsystemDef:
-	return world.defs[ship_id].subsystems[row - world.damage.hull_row(ship_id) - 1]
+static func sub_def(world: SimWorld, ship_id: int, row: int) -> SubsystemDef:
+	return world.defs[ship_id].subsystems[world.damage.index_of_row(ship_id, row)]
 
 
 ## Clears the crew from whichever subsystem it works on; returns that row or -1.

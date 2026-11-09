@@ -26,13 +26,6 @@ static func on_wake(on_wake_fn: Callable) -> JavaScriptObject:
 	return cb
 
 
-## "running", "suspended" (waiting for a tap) or "" before the engine's audio started.
-static func audio_state() -> String:
-	if not OS.has_feature("web"):
-		return "running"
-	return str(JavaScriptBridge.eval("window.ft ? window.ft.audioState() : ''", true))
-
-
 ## Tells the page which panel the player is on, for the browser smoke test
 ## (tools/l4/web.sh reads window.ftPanel). No effect off the web.
 static func set_panel(entry: String) -> void:

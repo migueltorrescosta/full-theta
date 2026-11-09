@@ -10,6 +10,9 @@ extends RefCounted
 ## fugaku). That client still joins by manual address (parse_address), e.g. the
 ## host's own client, which joins its server directly anyway (FT-NET-001).
 
+## Most hosts kept at once; datagrams of more are ignored.
+const MAX_HOSTS: int = 64
+
 
 ## One discovered server, keyed by sender address and WebSocket port.
 class Host:
@@ -34,8 +37,8 @@ class Host:
 		return LanBrowser.ws_url(address, ws_port)
 
 
-## A typed address (parse_address): ok with host, port and url, or not ok with a
-## reason for the player.
+## A typed address (parse_address): ok with host, port and url, or not ok with the
+## strings.json key of the reason (ERR_*).
 class Address:
 	extends RefCounted
 	var ok: bool = false
@@ -54,6 +57,18 @@ class Address:
 const EXPIRY_USEC: int = 3_500_000
 const MAX_PACKETS_PER_POLL: int = 64
 const MAX_HOST_LENGTH: int = 253
+## Why parse_address refused a typed address: strings.json keys the menu translates.
+const ERR_EMPTY: String = "menu.addr_empty"
+const ERR_SCHEME: String = "menu.addr_scheme"
+const ERR_NOT_HOST: String = "menu.addr_not_host"
+const ERR_IPV6_CLOSE: String = "menu.addr_ipv6_close"
+const ERR_IPV6_TAIL: String = "menu.addr_ipv6_tail"
+const ERR_IPV6: String = "menu.addr_ipv6"
+const ERR_PORT: String = "menu.addr_port"
+const ERR_NO_HOST: String = "menu.addr_no_host"
+const ERR_IPV4: String = "menu.addr_ipv4"
+const ERR_TOO_LONG: String = "menu.addr_too_long"
+const ERR_BAD_NAME: String = "menu.addr_bad_name"
 
 var protocol_version: int
 ## Datagrams ignored as malformed or with the wrong magic, for diagnostics.
@@ -129,6 +144,9 @@ func ingest(data: PackedByteArray, sender_ip: String, now_usec: int) -> bool:
 	h.compatible = h.protocol == protocol_version
 	h.last_seen_usec = now_usec
 	var old: Host = _hosts.get(h.key())
+	if old == null and _hosts.size() >= MAX_HOSTS:
+		ignored += 1  # forged datagrams from one machine could fill the list
+		return false
 	_hosts[h.key()] = h
 	return old == null or _summary(old) != _summary(h)
 
@@ -165,46 +183,46 @@ static func parse_address(text: String, default_port: int = NetProtocol.DEFAULT_
 	var r: Address = Address.new()
 	var s: String = text.strip_edges()
 	if s.is_empty():
-		return r.fail("Enter the host's address, for example 192.168.1.20.")
+		return r.fail(ERR_EMPTY)
 	var scheme_at: int = s.find("://")
 	if scheme_at >= 0:
 		if s.substr(0, scheme_at).to_lower() != "ws":
-			return r.fail("Enter the host's address or a ws:// address, not a web link.")
+			return r.fail(ERR_SCHEME)
 		s = s.substr(scheme_at + 3)
 		if s.ends_with("/"):
 			s = s.substr(0, s.length() - 1)
 	if s.contains("/") or s.contains(" ") or s.contains("@"):
-		return r.fail("That isn't a host address.")
+		return r.fail(ERR_NOT_HOST)
 	var h: String = s
 	var port_text: String = ""
 	if s.begins_with("["):
 		var close: int = s.find("]")
 		if close < 0:
-			return r.fail("Missing ] after the IPv6 address.")
+			return r.fail(ERR_IPV6_CLOSE)
 		h = s.substr(1, close - 1)
 		var rest: String = s.substr(close + 1)
 		if not rest.is_empty():
 			if not rest.begins_with(":"):
-				return r.fail("Unexpected text after the IPv6 address.")
+				return r.fail(ERR_IPV6_TAIL)
 			port_text = rest.substr(1)
 		if not (h.contains(":") and h.is_valid_ip_address()):
-			return r.fail("That isn't a valid IPv6 address.")
+			return r.fail(ERR_IPV6)
 	elif s.count(":") == 1:
 		h = s.get_slice(":", 0)
 		port_text = s.get_slice(":", 1)
 	elif s.count(":") > 1:
 		if not s.is_valid_ip_address():
-			return r.fail("That isn't a valid IPv6 address.")
+			return r.fail(ERR_IPV6)
 	var reason: String = _host_problem(h)
 	if not reason.is_empty():
 		return r.fail(reason)
 	var p: int = default_port
 	if port_text != "" or s.ends_with(":"):
 		if not port_text.is_valid_int() or port_text.begins_with("+"):
-			return r.fail("The port must be a number from 1 to 65535.")
+			return r.fail(ERR_PORT)
 		p = port_text.to_int()
 	if p < 1 or p > 65535:
-		return r.fail("The port must be a number from 1 to 65535.")
+		return r.fail(ERR_PORT)
 	r.ok = true
 	r.host = h
 	r.port = p
@@ -222,9 +240,9 @@ static func ws_url(p_host: String, p_port: int) -> String:
 ## "" if h is an IP literal or a well-formed host name, else the reason.
 static func _host_problem(h: String) -> String:
 	if h.is_empty():
-		return "Enter the host's address before the port."
+		return ERR_NO_HOST
 	if h.contains(":"):
-		return "" if h.is_valid_ip_address() else "That isn't a valid IPv6 address."
+		return "" if h.is_valid_ip_address() else ERR_IPV6
 	var dotted_digits: bool = true
 	for c: String in h:
 		if not (c == "." or c.is_valid_int()):
@@ -233,15 +251,15 @@ static func _host_problem(h: String) -> String:
 	if dotted_digits:
 		if h.is_valid_ip_address() and h.count(".") == 3:
 			return ""
-		return "That isn't a valid IPv4 address."
+		return ERR_IPV4
 	if h.length() > MAX_HOST_LENGTH:
-		return "That host name is too long."
+		return ERR_TOO_LONG
 	for label: String in h.split("."):
 		if label.is_empty() or label.length() > 63:
-			return "That isn't a valid host name."
+			return ERR_BAD_NAME
 		if label.begins_with("-") or label.ends_with("-"):
-			return "That isn't a valid host name."
+			return ERR_BAD_NAME
 		for c: String in label:
 			if not (c == "-" or c.is_valid_int() or (c.to_lower() >= "a" and c.to_lower() <= "z")):
-				return "That isn't a valid host name."
+				return ERR_BAD_NAME
 	return ""

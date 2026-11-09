@@ -113,13 +113,32 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _grid_rect() -> Rect2:
+	# A title that wraps to a second line (a phone) pushes the grid down by it (w5).
+	var more: float = _title_lines_h() - get_theme_default_font().get_height(FONT_SIZE)
+	more = maxf(more, 0.0)
 	if not footer:
 		# Room for the title above, and below for the goal's name and the trace bar (a
 		# phone, under the view-top row: 3 rows keep TOUCH_PRIMARY + TOUCH_GAP apart).
 		return Rect2(
-			Vector2(40.0, 52.0), Vector2(maxf(size.x - 80.0, 1.0), maxf(size.y - 116.0, 1.0))
+			Vector2(40.0, 52.0 + more),
+			Vector2(maxf(size.x - 80.0, 1.0), maxf(size.y - 116.0 - more, 1.0))
 		)
-	return Rect2(Vector2(60.0, 80.0), Vector2(maxf(size.x - 120.0, 1.0), maxf(size.y - 200.0, 1.0)))
+	return Rect2(
+		Vector2(60.0, 80.0 + more),
+		Vector2(maxf(size.x - 120.0, 1.0), maxf(size.y - 200.0 - more, 1.0))
+	)
+
+
+## The title's height over its (up to two) lines.
+func _title_lines_h() -> float:
+	var font: Font = get_theme_default_font()
+	return (
+		font
+		. get_multiline_string_size(
+			title, HORIZONTAL_ALIGNMENT_LEFT, maxf(size.x - 24.0, 1.0), FONT_SIZE, 2
+		)
+		. y
+	)
 
 
 func _button_rect() -> Rect2:
@@ -131,13 +150,14 @@ func _button_rect() -> Rect2:
 func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("panel"))
-	draw_string(
+	draw_multiline_string(
 		font,
 		Vector2(12.0, 22.0),
 		title,
 		HORIZONTAL_ALIGNMENT_LEFT,
-		-1,
+		size.x - 24.0,
 		FONT_SIZE,
+		2,
 		Palette.color("text")
 	)
 	if cols <= 0 or rows <= 0:
@@ -224,7 +244,7 @@ func _draw_footer(font: Font) -> void:
 	draw_string(
 		font,
 		Vector2(bar.end.x + 10.0, y + 2.0),
-		"%s  %d s" % [tr("sci.trace"), roundi(elapsed_s)],
+		tr("sci.trace_full") % roundi(clampf(trace, 0.0, 1.0) * 100.0),
 		HORIZONTAL_ALIGNMENT_LEFT,
 		-1,
 		FONT_SIZE,

@@ -45,6 +45,9 @@ const RETREAT_REAIM: float = 0.1
 const RETREAT_POINT_TOLERANCE: float = 10.0
 ## Throttle input differences below this are not worth a new HelmInputCommand.
 const INPUT_EPS: float = 1e-4
+## A face point or mount aim is sent again only when the wanted point is off the latched
+## one by more than this angle seen from the ship (rad), a fifth of AIM_TOLERANCE (R18-1).
+const RESEND_ANGLE: float = 0.001
 
 
 static func step(world: SimWorld) -> void:
@@ -82,7 +85,7 @@ static func _candidates(world: SimWorld, faction: int) -> PackedInt32Array:
 		if identified[r] == 1:
 			var f: int = factions[c]
 			if not hostile.has(f):
-				hostile[f] = world.relation(faction, f) == SimWorld.Relation.HOSTILE
+				hostile[f] = world.is_hostile(faction, f)
 			if not hostile[f]:
 				continue
 		out.append(c)
@@ -174,13 +177,25 @@ static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void
 			continue
 		# The ship moves two ticks before WeaponSystem reads the point (it applies next
 		# tick, and the weapons run after the integrator), so the point moves with it.
-		var c: AimMountCommand = AimMountCommand.new()
-		c.mount_index = m
-		var p: PackedFloat64Array = kin.point_at(id, aim + own_vel * (2.0 * SimWorld.DT))
-		c.aim_x = p[0]
-		c.aim_y = p[1]
-		c.aim_z = p[2]
-		_submit(world, id, c)
+		var wanted: Vector3 = aim + own_vel * (2.0 * SimWorld.DT)
+		var row: int = world.mounts.row_for(id, m)
+		var latched: bool = row >= 0 and world.mounts.aim_set[row] == 1
+		if (
+			not latched
+			or _off(
+				kin.relative_to_point(
+					id, world.mounts.aim_x[row], world.mounts.aim_y[row], world.mounts.aim_z[row]
+				),
+				wanted
+			)
+		):
+			var c: AimMountCommand = AimMountCommand.new()
+			c.mount_index = m
+			var p: PackedFloat64Array = kin.point_at(id, wanted)
+			c.aim_x = p[0]
+			c.aim_y = p[1]
+			c.aim_z = p[2]
+			_submit(world, id, c)
 		var shot: Vector3 = aim - muzzles[m]
 		if _shot_good(world, id, m, target, dist, shot, shot.length()):
 			var fire: FireCommand = FireCommand.new()
@@ -196,12 +211,26 @@ static func _select_face_point(world: SimWorld, id: int, target: int, aim: Vecto
 	var helm: HelmTable = world.helm
 	var select: SelectTargetCommand = SelectTargetCommand.new()
 	if aim.is_finite():
+		if (
+			helm.target_kind[id] == HelmTable.Target.POINT
+			and not _off(
+				kin.relative_to_point(id, helm.target_x[id], helm.target_y[id], helm.target_z[id]),
+				aim
+			)
+		):
+			return
 		_set_point(select, kin, id, aim)
 	elif helm.target_kind[id] == HelmTable.Target.SHIP and helm.target_ship[id] == target:
 		return
 	else:
 		select.target_ship = target
 	_submit(world, id, select)
+
+
+## Whether the wanted offset is off the latched one (both from the ship, m) by more than
+## RESEND_ANGLE as seen from the ship.
+static func _off(latched: Vector3, wanted: Vector3) -> bool:
+	return latched.distance_to(wanted) > RESEND_ANGLE * maxf(wanted.length(), 1.0)
 
 
 ## RETREAT: face a point RETREAT_POINT_DISTANCE straight away from the threat (on along
@@ -346,7 +375,7 @@ static func _shot_good(
 	var local: Vector3 = kin.to_local(id, aim_dir).normalized()
 	return (
 		KnowledgeSystem.is_identified(world, faction, target)
-		and world.relation(faction, world.faction_of(target)) == SimWorld.Relation.HOSTILE
+		and world.is_hostile(faction, world.faction_of(target))
 		and kin.forward(id).angle_to(aim_dir) <= world.ai.fire_cone[id]
 		and WeaponSystem.in_arc(mount, local)
 		and mounts.barrel[row].angle_to(local) <= AIM_TOLERANCE

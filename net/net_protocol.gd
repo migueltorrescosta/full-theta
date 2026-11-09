@@ -5,7 +5,7 @@ extends RefCounted
 ## with a u8 type. Snapshots (Type.SNAPSHOT) are packed binary (SnapshotBuilder,
 ## NetViewState). Every other message is the type byte followed by `var_to_bytes` of a
 ## Dictionary, decoded with `bytes_to_var` (which never builds objects) and checked
-## against SCHEMAS: every field present with its type, no other field.
+## against schemas: every field present with its type, no other field.
 ##
 ## Bump PROTOCOL_VERSION on any incompatible change; Hello's fields never change, so a
 ## client of any version gets a readable HelloRejected (FT-NET-005).
@@ -65,7 +65,7 @@ enum Type {
 	RENAME = 47,
 }
 
-const PROTOCOL_VERSION: int = 8
+const PROTOCOL_VERSION: int = 9
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -78,6 +78,23 @@ const MAX_STATS_PAIRS: int = 400
 const MAX_UA_BYTES: int = 200
 ## ClientFrame's `what`, cut to this many bytes.
 const MAX_FRAME_WHAT_BYTES: int = 120
+
+## Most bytes in one WebSocket message (a bundle of chunks): under the 64 KiB
+## WebSocketPeer buffers the server keeps at their defaults (D108).
+const BUNDLE_MAX: int = 48 * 1024
+## Close codes (docs/protocol.md); NetTransport closes with them, NetClient reads them.
+const CLOSE_REJECTED: int = 4000
+const CLOSE_TAKEN_OVER: int = 4001
+const CLOSE_SEND_FAILED: int = 4002
+const CLOSE_PROTOCOL: int = 4003
+## More than NetResync.QUEUED_LIMIT queued for a connection without a view key.
+const CLOSE_QUEUE_FULL: int = 4004
+## request_rejected and command_rejected reasons shared by several server parts and read by
+## the client's rules (MainScreen, CrewMarks).
+const REASON_NOT_CREW: String = "not_crew"
+const REASON_NOT_ALLOWED: String = "not_allowed"
+## Most lines a ship's relay log keeps (CrewRelay; the client shows as many).
+const RELAY_LOG_MAX: int = 60
 
 ## HelloRejected reasons.
 const REJECT_VERSION: String = "version_mismatch"
@@ -142,160 +159,134 @@ const EVENT_ELIMINATED: String = "eliminated"
 const EVENT_RELAUNCH_VOTES: String = "relaunch_votes"
 const EVENT_RELAUNCHED: String = "relaunched"
 const EVENT_SESSION_OVER: String = "session_over"
+## A ship-computer or NPC line to play (VoiceService).
+const EVENT_VOICE_LINE: String = "voice_line"
 
-## Field name -> Variant type, per control message type.
-const SCHEMAS: Dictionary = {
+## Every control message in one place: Type -> [flags, fields], fields being field name ->
+## Variant type. SERVER: only the server sends it. SEND: a client may send it and the
+## transport accepts it (any other type from a client is dropped). RATED: a SEND that also
+## takes a token from the session's rate limit in ServerSession (commands take theirs in
+## CommandGate; Hello, Ack and Bye take none). NAMED: its `name` is a player's text, cleaned
+## by clean_text in decode. from_client and rated_requests derive from this table.
+const SERVER: int = 0
+const SEND: int = 1
+const RATED: int = 3
+const NAMED: int = 4
+const MESSAGES: Dictionary = {
 	Type.HELLO:
-	{
-		"v": TYPE_INT,
-		"token": TYPE_STRING,
-		"name": TYPE_STRING,
-		"kind": TYPE_STRING,
-		"host_secret": TYPE_STRING,
-	},
+	[
+		SEND | NAMED,
+		{
+			"v": TYPE_INT,
+			"token": TYPE_STRING,
+			"name": TYPE_STRING,
+			"kind": TYPE_STRING,
+			"host_secret": TYPE_STRING,
+		}
+	],
 	Type.WELCOME:
-	{
-		"v": TYPE_INT,
-		"token": TYPE_STRING,
-		"session": TYPE_INT,
-		"resumed": TYPE_BOOL,
-		"tick": TYPE_INT,
-		"period": TYPE_FLOAT,
-		"ev_from": TYPE_INT,
-		"ship": TYPE_INT,
-		"entry": TYPE_STRING,
-		"dev_all": TYPE_BOOL,
-		"host": TYPE_BOOL,
-		"lang": TYPE_STRING,
-		"tls": TYPE_BOOL,
-	},
-	Type.HELLO_REJECTED: {"v": TYPE_INT, "reason": TYPE_STRING},
-	Type.CATALOGUE: {"ships": TYPE_ARRAY, "entries": TYPE_ARRAY, "load_tags": TYPE_ARRAY},
-	Type.PICK: {"ship": TYPE_INT, "entry": TYPE_STRING},
-	Type.RELEASE: {},
-	Type.READY: {"ready": TYPE_BOOL},
-	Type.CLAIM: {"item": TYPE_STRING},
-	Type.RELEASE_CLAIM: {"item": TYPE_STRING},
-	Type.COMMAND: {"seq": TYPE_INT, "cmd": TYPE_DICTIONARY},
-	Type.ACK: {"snap": TYPE_INT, "ev": TYPE_INT},
+	[
+		SERVER,
+		{
+			"v": TYPE_INT,
+			"token": TYPE_STRING,
+			"session": TYPE_INT,
+			"resumed": TYPE_BOOL,
+			"tick": TYPE_INT,
+			"period": TYPE_FLOAT,
+			"ev_from": TYPE_INT,
+			"ship": TYPE_INT,
+			"entry": TYPE_STRING,
+			"dev_all": TYPE_BOOL,
+			"host": TYPE_BOOL,
+			"lang": TYPE_STRING,
+			"tls": TYPE_BOOL,
+		}
+	],
+	Type.HELLO_REJECTED: [SERVER, {"v": TYPE_INT, "reason": TYPE_STRING}],
+	Type.CATALOGUE: [SERVER, {"ships": TYPE_ARRAY, "entries": TYPE_ARRAY, "load_tags": TYPE_ARRAY}],
+	Type.PICK: [RATED, {"ship": TYPE_INT, "entry": TYPE_STRING}],
+	Type.RELEASE: [RATED, {}],
+	Type.READY: [RATED, {"ready": TYPE_BOOL}],
+	Type.CLAIM: [RATED, {"item": TYPE_STRING}],
+	Type.RELEASE_CLAIM: [RATED, {"item": TYPE_STRING}],
+	Type.COMMAND: [SEND, {"seq": TYPE_INT, "cmd": TYPE_DICTIONARY}],
+	Type.ACK: [SEND, {"snap": TYPE_INT, "ev": TYPE_INT}],
 	Type.EVENT:
-	{"seq": TYPE_INT, "tick": TYPE_INT, "type": TYPE_STRING, "payload": TYPE_DICTIONARY},
-	Type.ABANDON: {"ship": TYPE_INT},
-	Type.HOST_PAUSE: {"on": TYPE_BOOL},
-	Type.TAKEOVER: {"ship": TYPE_INT, "entry": TYPE_STRING},
-	Type.BYE: {"reason": TYPE_STRING},
+	[SERVER, {"seq": TYPE_INT, "tick": TYPE_INT, "type": TYPE_STRING, "payload": TYPE_DICTIONARY}],
+	Type.ABANDON: [RATED, {"ship": TYPE_INT}],
+	Type.HOST_PAUSE: [RATED, {"on": TYPE_BOOL}],
+	Type.TAKEOVER: [RATED, {"ship": TYPE_INT, "entry": TYPE_STRING}],
+	Type.BYE: [SEND, {"reason": TYPE_STRING}],
 	Type.VOICE:
-	{
-		"clip": TYPE_INT,
-		"rate": TYPE_INT,
-		"pcm": TYPE_PACKED_BYTE_ARRAY,
-		"part": TYPE_INT,
-		"last": TYPE_BOOL,
-	},
-	Type.ABANDON_VOTE: {"ship": TYPE_INT, "vote": TYPE_BOOL},
-	Type.ALERT: {"level": TYPE_INT},
+	[
+		SERVER,
+		{
+			"clip": TYPE_INT,
+			"rate": TYPE_INT,
+			"pcm": TYPE_PACKED_BYTE_ARRAY,
+			"part": TYPE_INT,
+			"last": TYPE_BOOL,
+		}
+	],
+	Type.ABANDON_VOTE: [RATED, {"ship": TYPE_INT, "vote": TYPE_BOOL}],
+	Type.ALERT: [RATED, {"level": TYPE_INT}],
 	Type.MARK:
-	{
-		"op": TYPE_STRING,
-		"slot": TYPE_INT,
-		"name": TYPE_STRING,
-		"contact": TYPE_INT,
-		"x": TYPE_FLOAT,
-		"y": TYPE_FLOAT,
-		"z": TYPE_FLOAT,
-	},
+	[
+		RATED,
+		{
+			"op": TYPE_STRING,
+			"slot": TYPE_INT,
+			"name": TYPE_STRING,
+			"contact": TYPE_INT,
+			"x": TYPE_FLOAT,
+			"y": TYPE_FLOAT,
+			"z": TYPE_FLOAT,
+		}
+	],
 	Type.PING:
-	{
-		"kind": TYPE_STRING,
-		"id": TYPE_INT,
-		"x": TYPE_FLOAT,
-		"y": TYPE_FLOAT,
-		"z": TYPE_FLOAT,
-	},
-	Type.RUN_AGAIN: {"ship": TYPE_INT, "vote": TYPE_BOOL},
-	Type.MAIN_VIEW: {"view": TYPE_INT},
-	Type.MARK_SEND: {"slot": TYPE_INT, "ship": TYPE_INT},
-	Type.MARK_ACCEPT: {"id": TYPE_INT, "accept": TYPE_BOOL, "slot": TYPE_INT},
-	Type.TOGGLES: {"set": TYPE_STRING},
+	[
+		RATED,
+		{
+			"kind": TYPE_STRING,
+			"id": TYPE_INT,
+			"x": TYPE_FLOAT,
+			"y": TYPE_FLOAT,
+			"z": TYPE_FLOAT,
+		}
+	],
+	Type.RUN_AGAIN: [RATED, {"ship": TYPE_INT, "vote": TYPE_BOOL}],
+	Type.MAIN_VIEW: [RATED, {"view": TYPE_INT}],
+	Type.MARK_SEND: [RATED, {"slot": TYPE_INT, "ship": TYPE_INT}],
+	Type.MARK_ACCEPT: [RATED, {"id": TYPE_INT, "accept": TYPE_BOOL, "slot": TYPE_INT}],
+	Type.TOGGLES: [RATED, {"set": TYPE_STRING}],
 	Type.CHIP:
-	{"op": TYPE_STRING, "chip": TYPE_STRING, "arg": TYPE_INT, "id": TYPE_INT, "accept": TYPE_BOOL},
-	Type.SHARE: {"feature": TYPE_STRING},
-	Type.CLIENT_STATS: {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY},
-	Type.SHIP_ADD: {"name": TYPE_STRING},
-	Type.SHIP_TEAM: {"ship": TYPE_INT, "team": TYPE_INT},
-	Type.SESSION_MODE: {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT},
-	Type.RELAUNCH: {"ship": TYPE_INT, "vote": TYPE_BOOL},
-	Type.CLIENT_FRAME: {"ms": TYPE_INT, "what": TYPE_STRING},
-	Type.TRAINING: {"station": TYPE_STRING},
-	Type.RENAME: {"name": TYPE_STRING},
+	[
+		RATED,
+		{
+			"op": TYPE_STRING,
+			"chip": TYPE_STRING,
+			"arg": TYPE_INT,
+			"id": TYPE_INT,
+			"accept": TYPE_BOOL
+		}
+	],
+	Type.SHARE: [RATED, {"feature": TYPE_STRING}],
+	Type.CLIENT_STATS:
+	[RATED, {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY}],
+	Type.SHIP_ADD: [RATED | NAMED, {"name": TYPE_STRING}],
+	Type.SHIP_TEAM: [RATED, {"ship": TYPE_INT, "team": TYPE_INT}],
+	Type.SESSION_MODE: [RATED, {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT}],
+	Type.RELAUNCH: [RATED, {"ship": TYPE_INT, "vote": TYPE_BOOL}],
+	Type.CLIENT_FRAME: [RATED, {"ms": TYPE_INT, "what": TYPE_STRING}],
+	Type.TRAINING: [RATED, {"station": TYPE_STRING}],
+	Type.RENAME: [RATED | NAMED, {"name": TYPE_STRING}],
 }
 
 ## Messages a client may send; the server drops any other type from a client.
-const FROM_CLIENT: Array[int] = [
-	Type.HELLO,
-	Type.PICK,
-	Type.RELEASE,
-	Type.READY,
-	Type.CLAIM,
-	Type.RELEASE_CLAIM,
-	Type.COMMAND,
-	Type.ACK,
-	Type.ABANDON,
-	Type.TAKEOVER,
-	Type.BYE,
-	Type.ABANDON_VOTE,
-	Type.ALERT,
-	Type.MARK,
-	Type.PING,
-	Type.RUN_AGAIN,
-	Type.MAIN_VIEW,
-	Type.MARK_SEND,
-	Type.MARK_ACCEPT,
-	Type.TOGGLES,
-	Type.CHIP,
-	Type.SHARE,
-	Type.CLIENT_STATS,
-	Type.HOST_PAUSE,
-	Type.SHIP_ADD,
-	Type.SHIP_TEAM,
-	Type.SESSION_MODE,
-	Type.RELAUNCH,
-	Type.CLIENT_FRAME,
-	Type.TRAINING,
-	Type.RENAME,
-]
-
-## Client requests that take a token from the session's rate limit in ServerSession
-## (commands take theirs in CommandGate; Hello, Ack and Bye take none).
-const RATED_REQUESTS: Array[int] = [
-	Type.PICK,
-	Type.RELEASE,
-	Type.READY,
-	Type.CLAIM,
-	Type.RELEASE_CLAIM,
-	Type.ABANDON,
-	Type.TAKEOVER,
-	Type.ABANDON_VOTE,
-	Type.ALERT,
-	Type.MARK,
-	Type.PING,
-	Type.RUN_AGAIN,
-	Type.MAIN_VIEW,
-	Type.MARK_SEND,
-	Type.MARK_ACCEPT,
-	Type.TOGGLES,
-	Type.CHIP,
-	Type.SHARE,
-	Type.CLIENT_STATS,
-	Type.HOST_PAUSE,
-	Type.SHIP_ADD,
-	Type.SHIP_TEAM,
-	Type.SESSION_MODE,
-	Type.RELAUNCH,
-	Type.CLIENT_FRAME,
-	Type.TRAINING,
-	Type.RENAME,
-]
+static var from_client: Array[int] = _types(SEND)
+## Client requests that take a token from the session's rate limit in ServerSession.
+static var rated_requests: Array[int] = _types(RATED)
 
 
 ## Encodes a control message (not a snapshot): the type byte then the fields. The
@@ -313,11 +304,10 @@ static func type_of(data: PackedByteArray) -> int:
 
 ## Decodes a control message into its fields plus "t" (the type), or {} when the bytes
 ## are not a known control type holding a Dictionary that passes check(). A Hello's
-## kind must be one of CLIENT_KINDS; its name, and a Rename's, is trimmed and cut to
-## MAX_NAME_BYTES.
+## kind must be one of CLIENT_KINDS; a NAMED message's name is cleaned by clean_text.
 static func decode(data: PackedByteArray) -> Dictionary:
 	var type: int = type_of(data)
-	if not SCHEMAS.has(type):
+	if not MESSAGES.has(type):
 		return {}
 	var body: Variant = bytes_to_var(data.slice(1))
 	if not body is Dictionary:
@@ -327,11 +317,24 @@ static func decode(data: PackedByteArray) -> Dictionary:
 		return {}
 	if type == Type.HELLO and not CLIENT_KINDS.has(fields["kind"]):
 		return {}
-	if type in [Type.HELLO, Type.RENAME]:
-		var name: String = (fields["name"] as String).strip_edges()
-		fields["name"] = clip_utf8(name, MAX_NAME_BYTES).strip_edges()
+	if (MESSAGES[type][0] as int) & NAMED:
+		fields["name"] = clean_text(fields["name"], MAX_NAME_BYTES)
 	fields["t"] = type
 	return fields
+
+
+## A player's text: trimmed, cut to max_bytes of UTF-8 between characters, trimmed again.
+static func clean_text(text: String, max_bytes: int) -> String:
+	return clip_utf8(text.strip_edges(), max_bytes).strip_edges()
+
+
+## The types whose flags hold all of `mask`.
+static func _types(mask: int) -> Array[int]:
+	var out: Array[int] = []
+	for type: int in MESSAGES:
+		if (MESSAGES[type][0] as int) & mask == mask:
+			out.append(type)
+	return out
 
 
 ## The longest prefix of `text` that fits in max_bytes of UTF-8, cut between characters.
@@ -347,9 +350,9 @@ static func clip_utf8(text: String, max_bytes: int) -> String:
 
 ## Why the fields don't match the type's schema, or "" if they do.
 static func check(type: int, fields: Dictionary) -> String:
-	var schema: Dictionary = SCHEMAS.get(type, {})
-	if not SCHEMAS.has(type):
+	if not MESSAGES.has(type):
 		return "unknown type %d" % type
+	var schema: Dictionary = MESSAGES[type][1]
 	if fields.size() != schema.size():
 		return "type %d: %d fields, expected %d" % [type, fields.size(), schema.size()]
 	for key: Variant in fields:
@@ -395,32 +398,5 @@ static func ack(snap: int, ev: int) -> PackedByteArray:
 	return encode(Type.ACK, {"snap": snap, "ev": ev})
 
 
-static func command(seq: int, cmd: Dictionary) -> PackedByteArray:
-	return encode(Type.COMMAND, {"seq": seq, "cmd": cmd})
-
-
 static func event(seq: int, tick: int, type: String, payload: Dictionary) -> PackedByteArray:
 	return encode(Type.EVENT, {"seq": seq, "tick": tick, "type": type, "payload": payload})
-
-
-## SessionMode{mode, team_win, lives} (host only, in the lobby): mode a SessionRules.MODE_NAMES
-## entry, team_win a TEAM_WIN_NAMES entry (read in teams), lives the finite side's relaunches
-## in holdout (-1: the mode's default).
-static func session_mode(mode: String, team_win: String, lives: int = -1) -> PackedByteArray:
-	return encode(Type.SESSION_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
-
-
-static func training(station: String) -> PackedByteArray:
-	return encode(Type.TRAINING, {"station": station})
-
-
-static func ship_add(name: String) -> PackedByteArray:
-	return encode(Type.SHIP_ADD, {"name": name})
-
-
-static func ship_team(ship: int, team: int) -> PackedByteArray:
-	return encode(Type.SHIP_TEAM, {"ship": ship, "team": team})
-
-
-static func relaunch(ship: int, vote: bool) -> PackedByteArray:
-	return encode(Type.RELAUNCH, {"ship": ship, "vote": vote})

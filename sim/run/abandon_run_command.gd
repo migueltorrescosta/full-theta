@@ -15,7 +15,7 @@ func kind() -> StringName:
 func apply(world: SimWorld) -> bool:
 	var any: bool = false
 	for id: int in world.ship_count():
-		if world.ai.is_enabled(id) or world.run.status[id] != RunTable.Status.IN_PLAY:
+		if not world.is_crew_in_play(id):
 			continue
 		world.run.status[id] = RunTable.Status.ABANDONED
 		any = true

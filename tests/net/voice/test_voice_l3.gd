@@ -49,7 +49,7 @@ func _client(name: String) -> NetClient:
 
 func _voice_lines(c: NetClient) -> Array[Dictionary]:
 	return c.take_events().filter(
-		func(e: Dictionary) -> bool: return e["type"] == VoiceService.EVENT_VOICE_LINE
+		func(e: Dictionary) -> bool: return e["type"] == NetProtocol.EVENT_VOICE_LINE
 	)
 
 
@@ -92,34 +92,30 @@ func test_voice_goes_to_the_target_client_only() -> void:
 		"computer.contact",
 		{"callsign": "Viper Three", "bearing": 342, "range": 18}
 	)
-	var free: int = _svc.say_npc_free("trader_1", "Hold position. We are coming about!")
 	_svc.say_npc("trader_1", "npc.distress", {"npc": "Mara Quill"})
 	_svc.say_computer(0, PackedStringArray(["comms"]), "computer.hull_critical")
-	assert_bool(await _until(func() -> bool: return target.stats["voice"] >= 4)).is_true()
+	assert_bool(await _until(func() -> bool: return target.stats["voice"] >= 2)).is_true()
 	# Let anything stray arrive.
 	await _until(func() -> bool: return false, 300)
-	# One synthesis request: the free text (FT-ARC-019).
-	assert_int(_fx.log.size()).is_equal(1)
+	# No synthesis: the stitched names are all in the closed set.
+	assert_int(_fx.log.size()).is_equal(0)
 	var lines: Array[Dictionary] = _voice_lines(target)
-	assert_int(lines.size()).is_equal(4)
+	assert_int(lines.size()).is_equal(3)
 	var clips: Array = lines.map(func(e: Dictionary) -> int: return e["payload"]["clip"])
 	assert_int(clips[0]).is_equal(stitched)
-	assert_int(clips[1]).is_equal(free)
-	assert_bool(lines[3]["payload"]["local"]).is_true()
+	assert_bool(lines[2]["payload"]["local"]).is_true()
 	# Event before its audio, parts in order, on the voice stream.
 	var order: PackedByteArray = target.arrivals.slice(before)
 	assert_int(order[0]).is_equal(NetChunker.STREAM_CONTROL)
 	var voice: Array = target.voice_clips.map(
 		func(v: Dictionary) -> Array: return [v["clip"], v["part"], v["last"]]
 	)
-	var free_parts: Array = voice.filter(func(v: Array) -> bool: return v[0] == free)
-	assert_array(free_parts).is_equal([[free, 0, false], [free, 1, true]])
 	assert_int(voice.filter(func(v: Array) -> bool: return v[0] == stitched).size()).is_equal(1)
-	assert_int(voice.size()).is_equal(4)
-	assert_int(order.count(NetChunker.STREAM_VOICE)).is_equal(4)
+	assert_int(voice.size()).is_equal(2)
+	assert_int(order.count(NetChunker.STREAM_VOICE)).is_equal(2)
 	var first_voice: int = order.find(NetChunker.STREAM_VOICE)
-	# The four events (high lane) went before any voice chunk (low lane).
-	assert_int(order.slice(0, first_voice).count(NetChunker.STREAM_CONTROL)).is_equal(4)
+	# The three events (high lane) went before any voice chunk (low lane).
+	assert_int(order.slice(0, first_voice).count(NetChunker.STREAM_CONTROL)).is_equal(3)
 	for v: Dictionary in target.voice_clips:
 		var e: int = clips.find(v["clip"])
 		assert_int(e).is_greater_equal(0)

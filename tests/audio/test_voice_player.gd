@@ -60,7 +60,7 @@ func _event(clip: int, priority: int, extra: Dictionary = {}) -> Dictionary:
 		"audio": true,
 	}
 	payload.merge(extra, true)
-	return {"seq": clip, "tick": 0, "type": VoiceService.EVENT_VOICE_LINE, "payload": payload}
+	return {"seq": clip, "tick": 0, "type": NetProtocol.EVENT_VOICE_LINE, "payload": payload}
 
 
 func _voice(clip: int, samples: int, part: int = 0, last: bool = true) -> Dictionary:
@@ -109,7 +109,7 @@ func test_every_line_is_subtitled_whatever_happens_to_its_audio() -> void:
 	vp.handle_voice(_voice(1, 1000))
 	vp.handle_event(_event(2, 2, {"coalesce": "k"}))  # coalesced
 	vp.handle_event(_event(3, 2, {"coalesce": "k", "max_age_ms": 10}))  # expires
-	vp.handle_event(_event(4, 1, {"audio": false}))  # subtitles only (D110)
+	vp.handle_event(_event(4, 1, {"audio": false}))  # subtitles only
 	vp.handle_event(_event(5, 1, {"local": true, "line": "computer.missing"}))  # no clip
 	vp.handle_event(_event(6, 0))  # preempts 1
 	vp.handle_voice(_voice(6, 100))

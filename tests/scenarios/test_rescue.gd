@@ -161,9 +161,9 @@ func test_an_escort_with_the_engines_down_is_accepted_and_fails() -> void:
 
 
 # FT: FT-PAIR-001, FT-PAIR-004, FT-COM-007
-# P14: the stranded freighter answers a hail with the trader conversation; "call the bluff"
-# stays locked until a cargo scan names the fact, then draws the reputation change.
-func test_hailing_the_freighter_offers_a_bluff_only_after_a_cargo_scan() -> void:
+# P14: the stranded freighter answers a hail with the trader conversation; the bluff option's
+# gating is in tests/pairs/test_p14_science_comms.gd.
+func test_hailing_the_freighter_opens_the_trader_conversation() -> void:
 	var f: ScenarioFixture = _rescue()
 	var freighter: int = f.ships_of(&"m3_stranded")[0]
 	f.run(60)
@@ -173,16 +173,3 @@ func test_hailing_the_freighter_offers_a_bluff_only_after_a_cargo_scan() -> void
 	assert_bool(f.send(hail)).is_true()
 	var hailed: int = f.world.story.size() - 1
 	assert_str(String(f.world.story.conversation[hailed])).is_equal("conv.trader_bluff")
-	var bluff: Dictionary = {}
-	for o: Dictionary in Story.options(f.world, hailed, 0):
-		if o["id"] == "o3":
-			bluff = o
-	assert_bool(bluff["enabled"]).is_false()
-	Story.learn_fact(f.world, f.world.faction_of(0), freighter, "cargo")
-	for o: Dictionary in Story.options(f.world, hailed, 0):
-		if o["id"] == "o3":
-			assert_bool(o["enabled"]).is_true()
-	var reply: ReplyCommand = ReplyCommand.new()
-	reply.card = hailed
-	reply.option = &"o3"
-	assert_bool(f.send(reply)).is_true()

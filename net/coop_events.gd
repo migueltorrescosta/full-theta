@@ -64,16 +64,31 @@ func record(kind: String, pair: String, ship: int, fields: Dictionary = {}) -> v
 ## a scan-unlocked option chosen, a lane Comms placed that Helm docked by, a mission Relay
 ## marked, and a surrendered contact destroyed. NetCoop passes the sim events to it.
 func on_story_event(e: SimEvent) -> void:
+	var pair: String = ""
 	match e.kind:
 		&"scan_option":
-			record(SCAN_OPTION, pair_of("science", "comms"), e.ship_id, {"fact": String(e.tag)})
+			pair = pair_of("science", "comms")
+			if _apart(e.ship_id, pair):
+				record(SCAN_OPTION, pair, e.ship_id, {"fact": String(e.tag)})
 		&"dock_cleared":
-			record(MARK_USED, pair_of("helm", "comms"), e.ship_id, {"mark": "lane"})
+			pair = pair_of("helm", "comms")
+			if _apart(e.ship_id, pair):
+				record(MARK_USED, pair, e.ship_id, {"mark": "lane"})
 		&"mission_marked":
-			record(MARK_USED, pair_of("relay", "comms"), e.ship_id, {"mark": "mission"})
+			pair = pair_of("relay", "comms")
+			if _apart(e.ship_id, pair):
+				record(MARK_USED, pair, e.ship_id, {"mark": "mission"})
 		&"surrender_killed":
-			var fields: Dictionary = {"victim": e.other_id, "rep": snappedf(e.value, 0.1)}
-			record(SURRENDER_KILLED, pair_of("weapons", "comms"), e.ship_id, fields)
+			pair = pair_of("weapons", "comms")
+			if _apart(e.ship_id, pair):
+				var fields: Dictionary = {"victim": e.other_id, "rep": snappedf(e.value, 0.1)}
+				record(SURRENDER_KILLED, pair, e.ship_id, fields)
+
+
+## Whether the two stations of a pair are held by different players on the ship, the rule of
+## a cooperative event (FT-PAIR-013). Here always, for a log with no sessions; NetCoop checks.
+func _apart(_ship: int, _pair: String) -> bool:
+	return true
 
 
 ## pair -> kind -> count since the session (or the last reset) began.

@@ -23,7 +23,7 @@ const BAD_ARG: String = "chip_bad_arg"
 const BAD_ID: String = "chip_bad_id"
 
 ## The chip list, loaded once (read-only after).
-static var _def: ChipsDef = load("res://content/chips/chips.tres") as ChipsDef
+static var _def: ChipsDef = ChipView.def()
 
 ## The owning session, held weakly (it owns this object).
 var session: ServerSession:
@@ -40,31 +40,11 @@ var _next_id: int = 1
 
 func _init(server_session: ServerSession) -> void:
 	_session = weakref(server_session)
-
-
-static func def() -> ChipsDef:
-	return _def
-
-
-## The index of a chip id in the list, or -1.
-static func index_of(chip_id: String) -> int:
-	for i: int in _def.chips.size():
-		if String(_def.chips[i].id) == chip_id:
-			return i
-	return -1
-
-
-## What the chip's argument names (ChipDef.Arg), NONE for an unknown chip.
-static func arg_kind(chip_id: String) -> ChipDef.Arg:
-	var at: int = index_of(chip_id)
-	return _def.chips[at].arg if at >= 0 else ChipDef.Arg.NONE
+	server_session.add_handler(NetProtocol.Type.CHIP, on_chip)
 
 
 ## Chip{op, ...}.
-func on_chip(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_chip(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var why: String
 	if msg["op"] == "send":
 		why = send(s, msg["chip"], msg["arg"])
@@ -81,7 +61,7 @@ func on_chip(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## Opens a chip from the session's station to the chip's receiver; the reason it can't, or "".
 func send(s: NetSession, chip_id: String, arg: int) -> String:
 	var why: String = _sender_rule(s)
-	var at: int = index_of(chip_id)
+	var at: int = ChipView.index_of(chip_id)
 	if why == "" and at < 0:
 		why = BAD_CHIP
 	if why == "":
@@ -114,7 +94,7 @@ func send(s: NetSession, chip_id: String, arg: int) -> String:
 ## An answered chip closes and is told to the sender; accepting counts as a cooperative
 ## event, declining does not.
 func answer(s: NetSession, id: int, accept: bool) -> String:
-	if not s.has_pick() or not StationViews.is_crew(s.entry):
+	if not s.is_crew():
 		return ServerSession.NOT_CREW
 	var open: Array = _open.get(s.ship, [])
 	for i: int in open.size():
@@ -182,7 +162,7 @@ static func arg_of(chip: ChipDef, arg: int) -> int:
 func _sender_rule(s: NetSession) -> String:
 	var why: String = ""
 	var picked: DataToggles = DataToggles.parse(s.toggles)
-	if not s.has_pick() or not StationViews.is_crew(s.entry):
+	if not s.is_crew():
 		why = ServerSession.NOT_CREW
 	elif picked == null or not picked.on(ViewFilter.CHIPS):
 		why = OFF

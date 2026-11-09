@@ -18,6 +18,8 @@ const LEVEL_HIGH: float = 0.74
 ## height-word range, Callout.LEVEL_DEG to POLE_DEG).
 const BAND_ELEVATIONS: Array[float] = [-37.5, 0.0, 37.5]
 const FONT_SIZE: int = 12
+## The coverage gap between the best and the worst face under which no face is called weak.
+const WEAK_EPS: float = 0.05
 ## Space (px) between the ring's rim and its caption.
 const CAPTION_GAP: float = 4.0
 
@@ -95,6 +97,21 @@ func focus_point() -> Vector2:
 			return c + Vector2(sin(b), -cos(b)) * float(bands[word]) * r
 
 
+## The weakest face as a clock hour (0 = 12 at the bow, level band), or -1 when the shield
+## covers every face alike (spread wide).
+func weakest_hour() -> int:
+	var low: float = INF
+	var high: float = -INF
+	var at: int = -1
+	for hour: int in 12:
+		var cov: float = coverage(cell_direction(hour, 1))
+		if cov < low:
+			low = cov
+			at = hour
+		high = maxf(high, cov)
+	return at if high - low > WEAK_EPS else -1
+
+
 ## Coverage of direction `dir` relative to its peak (ShieldSystem's lobe k e^(k cos) /
 ## sinh k divided by its value at the focus): 1 at the focus, everywhere 1 when spread.
 func coverage(dir: Vector3) -> float:
@@ -140,17 +157,33 @@ func _draw() -> void:
 		draw_line(c + dir * radii[0], c + dir * r, line, 1.0)
 	draw_line(c - Vector2(radii[0], 0.0), c + Vector2(radii[0], 0.0), line, 1.0)
 	draw_circle(focus_point(), 4.0, Palette.color("text"))
+	var weak: int = weakest_hour()
+	if weak >= 0:
+		# The weakest face outlined in amber: a shape, not only a shade (C7).
+		var a0: float = deg_to_rad(weak * 30.0 - 15.0) - PI / 2.0
+		var a1: float = a0 + deg_to_rad(30.0)
+		var warn: Color = Palette.color("warn")
+		draw_arc(c, r, a0, a1, 8, warn, 3.0)
+		for a: float in [a0, a1]:
+			var dir: Vector2 = Vector2(cos(a), sin(a))
+			draw_line(c + dir * radii[0], c + dir * r, warn, 2.0)
 	if not label:
 		return
 	var font: Font = get_theme_default_font()
 	var lines: PackedStringArray = [tr("helm.shield_label") % [roundi(power * 100.0), tightness]]
+	var extras: PackedStringArray = PackedStringArray()
+	if weak >= 0:
+		extras.append(tr("helm.weak_face") % (12 if weak == 0 else weak))
 	if tracking:
-		# "tracking" on a line of its own when the box is too narrow for one (a phone's rail).
+		# "tracking" on the line of the power when the box fits it, else with the weak face
+		# on a line of its own (a phone's rail).
 		var one: String = lines[0] + " · " + tr("helm.tracking")
 		if font.get_string_size(one, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x <= size.x:
 			lines[0] = one
 		else:
-			lines.append(tr("helm.tracking"))
+			extras.append(tr("helm.tracking"))
+	if not extras.is_empty():
+		lines.append(" · ".join(extras))
 	for i: int in lines.size():
 		Palette.draw_outlined(
 			self,

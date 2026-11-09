@@ -191,3 +191,47 @@ func test_token_bucket_limits_rate() -> void:
 			taken += 1
 	assert_int(taken).is_equal(5)
 	assert_bool(b.take(500_000)).is_false()
+
+
+# FT: FT-NET-037
+# R11-9: an Ack of a snapshot never sent is clamped, so lag() stays right and the stall policy
+# still fires for that connection.
+func test_an_ack_beyond_the_last_sent_snapshot_is_clamped() -> void:
+	var r: NetResync = NetResync.new()
+	r.on_sent(10, false)
+	r.on_ack(1_000_000)
+	assert_int(r.acked_seq).is_equal(10)
+	assert_int(r.lag()).is_equal(0)
+	r.on_sent(20, false)
+	assert_int(r.lag()).is_equal(10)
+
+
+# FT: FT-NET-033
+# R11-12: the default grace is the spec's 15 s.
+func test_default_grace_is_fifteen_seconds() -> void:
+	assert_int(NetSessions.DEFAULT_GRACE_US).is_equal(15_000_000)
+
+
+# FT: FT-NET-026, FT-NET-033
+# R11-3: a lapsed session that held no pick or claim is forgotten (token and all) after the
+# evict delay, so a connect/Hello/close loop does not grow the table; one with a pick to
+# restore keeps its token.
+func test_lapsed_sessions_without_a_pick_are_evicted() -> void:
+	var sessions: NetSessions = NetSessions.new(1_000_000)
+	var kept: NetSession = _session()
+	kept.last_entry = "helm"
+	for i: int in 1000:
+		var s: NetSession = NetSession.new(i + 10, 60.0, 120.0)
+		sessions.issue(s)
+		s.conn = i
+		sessions.drop(s, 0)
+	sessions.issue(kept)
+	sessions.drop(kept, 0)
+	assert_int(sessions.all().size()).is_equal(1001)
+	assert_int(sessions.expire(2_000_000).size()).is_equal(1001)
+	assert_int(sessions.evict(30_000_000).size()).is_equal(0)
+	var gone: Array[NetSession] = sessions.evict(NetSessions.EVICT_US + 1_000_000)
+	assert_int(gone.size()).is_equal(1000)
+	assert_array(sessions.all()).is_equal([kept])
+	assert_object(sessions.resume(gone[0].token, NetSessions.EVICT_US + 2_000_000)).is_null()
+	assert_object(sessions.resume(kept.token, NetSessions.EVICT_US + 2_000_000)).is_same(kept)

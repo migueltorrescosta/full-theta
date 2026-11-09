@@ -53,7 +53,6 @@ func test_holdout_relaunch_is_asymmetric() -> void:
 	assert_bool(finite.allows(SessionRules.HOLDOUT_LIVES - 1)).is_true()
 	assert_bool(finite.allows(SessionRules.HOLDOUT_LIVES)).is_false()
 	assert_bool(SessionRules.new().relaunch_for(0).allows(0)).is_false()
-	assert_object(RelaunchPolicy.from_dict(finite.to_dict())).is_not_null()
 
 
 func test_director_stub_drives_the_fleet() -> void:

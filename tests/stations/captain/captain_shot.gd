@@ -5,7 +5,7 @@ extends "res://tests/stations/wr/page_shot.gd"
 
 
 func _chip_row(_s: StationScreen) -> Dictionary:
-	var chips: Array[ChipDef] = NetChips.def().chips
+	var chips: Array[ChipDef] = ChipView.def().chips
 	var boost: int = chips.find_custom(func(c: ChipDef) -> bool: return c.id == &"boost")
 	return {
 		"id": 5,

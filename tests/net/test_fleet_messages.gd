@@ -5,18 +5,27 @@ extends GdUnitTestSuite
 
 
 # FT: FT-NET-004
-func test_client_builders_decode() -> void:
-	var sent: Array[PackedByteArray] = [
-		NetProtocol.ship_add("Kestrel II"),
-		NetProtocol.ship_team(1, 0),
-		NetProtocol.session_mode("holdout", "last_team_standing", 3),
-		NetProtocol.relaunch(0, true),
-	]
-	for bytes: PackedByteArray in sent:
-		var back: Dictionary = NetProtocol.decode(bytes)
-		assert_bool(back.is_empty()).is_false()
-		assert_bool(NetProtocol.FROM_CLIENT.has(back["t"])).is_true()
-		assert_bool(NetProtocol.RATED_REQUESTS.has(back["t"])).is_true()
+# The fleet intents of NetClient encode what the schemas accept, as the real client sends them
+# (the table NetProtocol.MESSAGES says a client may send them, each rated).
+func test_client_intents_decode() -> void:
+	var c: NetClient = NetClient.new()
+	c.add_ship("Kestrel II")
+	c.set_team(1, 0)
+	c.set_mode("holdout", "last_team_standing", 3)
+	c.vote_relaunch(0, true)
+	var queue: NetSendQueue = c._queue
+	var back: Array[Dictionary] = []
+	var chunker: NetChunker = NetChunker.new()
+	queue.begin_pump()
+	while queue.peek_size() > 0:
+		var msg: Dictionary = chunker.feed(queue.next_chunk())
+		back.append(NetProtocol.decode(msg["data"]))
+	assert_int(back.size()).is_equal(4)
+	for fields: Dictionary in back:
+		assert_bool(fields.is_empty()).is_false()
+		assert_bool(NetProtocol.from_client.has(fields["t"])).is_true()
+		assert_bool(NetProtocol.rated_requests.has(fields["t"])).is_true()
+	assert_str(back[0]["name"]).is_equal("Kestrel II")
 
 
 ## One payload per FleetMessages event.
@@ -24,12 +33,12 @@ func _payloads() -> Dictionary:
 	var row: Dictionary = FleetMessages.fleet_ship(
 		1, "Kestrel II", 0, [{"name": "Ana", "entry": "tactical"}], 1, ["helm"], false, false
 	)
-	var outcome: SessionOutcome = SessionOutcome.new()
-	outcome.reason = SessionOutcome.Reason.LAST_STANDING
-	outcome.winners = PackedInt32Array([2])
+	var reason: String = SessionOutcome.REASON_NAMES[SessionOutcome.Reason.LAST_STANDING]
+	var teams: String = SessionRules.MODE_NAMES[SessionRules.Mode.TEAMS]
+	var team_win: String = SessionRules.TEAM_WIN_NAMES[0]
 	return {
 		NetProtocol.EVENT_FLEET:
-		FleetMessages.fleet([row], SessionRules.of_mode(SessionRules.Mode.TEAMS), -1, [1], false),
+		FleetMessages.fleet([row], teams, team_win, SessionRules.MAX_SHIPS, -1, [1], false),
 		NetProtocol.EVENT_TAKEOVER: FleetMessages.takeover(0, "helm", "Ana", 1),
 		NetProtocol.EVENT_HANDOVER: FleetMessages.handover(0, FleetMessages.TO_SCOREBOARD),
 		NetProtocol.EVENT_SCOREBOARD:
@@ -37,9 +46,10 @@ func _payloads() -> Dictionary:
 			[FleetMessages.scoreboard_row(0, "Kestrel", 0, FleetMessages.DESTROYED, 2, 314.5, 1)]
 		),
 		NetProtocol.EVENT_ELIMINATED: FleetMessages.eliminated(0, "forfeit", 0),
-		NetProtocol.EVENT_RELAUNCH_VOTES: FleetMessages.relaunch_votes(0, ["Ana"], 2),
+		NetProtocol.EVENT_RELAUNCH_VOTES:
+		{"ship": 0, "voters": ["Ana"], "sessions": [4], "needed": 2},
 		NetProtocol.EVENT_RELAUNCHED: FleetMessages.relaunched(0, -1),
-		NetProtocol.EVENT_SESSION_OVER: FleetMessages.session_over(outcome, 600.0),
+		NetProtocol.EVENT_SESSION_OVER: FleetMessages.session_over(reason, [2], -1, 0.0, 600.0),
 	}
 
 

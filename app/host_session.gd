@@ -86,7 +86,7 @@ func _init(player_name: String = "host") -> void:
 func host(options: Options) -> Error:
 	var err: Error = launcher.spawn(options, launcher.pid_file)
 	if err != OK:
-		_fail("can't start the server: %s" % error_string(err))
+		_fail(tr("host.err.spawn") % error_string(err))
 		return err
 	state = State.STARTING
 	_deadline_ms = Time.get_ticks_msec() + ready_timeout_ms
@@ -107,20 +107,20 @@ func poll() -> void:
 			if launcher.is_ready():
 				_connect()
 			elif not launcher.is_running():
-				_fail("the server stopped during start-up")
+				_fail(tr("host.err.stopped"))
 			elif Time.get_ticks_msec() > _deadline_ms:
-				_fail("the server didn't start in time")
+				_fail(tr("host.err.slow"))
 		State.CONNECTING:
 			client.poll()
 			if client.is_welcomed():
 				state = State.JOINED
 				_save_token()
 			elif client.state == NetClient.State.REJECTED:
-				_fail("the server refused the host: %s" % client.reject_reason)
+				_fail(tr("host.err.refused") % client.reject_reason)
 			elif client.state == NetClient.State.CLOSED:
-				_fail("can't connect to the server")
+				_fail(tr("host.err.connect"))
 			elif Time.get_ticks_msec() > _deadline_ms:
-				_fail("the server didn't answer in time")
+				_fail(tr("host.err.silent"))
 		State.JOINED:
 			client.poll()
 
@@ -185,7 +185,7 @@ func _connect() -> Error:
 	_deadline_ms = Time.get_ticks_msec() + join_timeout_ms
 	var err: Error = client.connect_to(LanBrowser.ws_url(join_address(), launcher.port))
 	if err != OK:
-		_fail("can't connect to the server: %s" % error_string(err))
+		_fail(tr("host.err.connect_error") % error_string(err))
 	return err
 
 

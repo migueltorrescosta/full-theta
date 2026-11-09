@@ -27,10 +27,10 @@ var encounter: M1Encounter
 var world: SimWorld
 ## Steps the world with the director's before_tick (E07); rebuilt with every new world.
 var host: ScenarioHost
-## The director (or Shakedown's training driver): anything with before_tick(api). Made on the
+## The run's driver (RunDriver: the director, or Shakedown's training driver). Made on the
 ## first step of a run from driver_factory(difficulty preset), so it sees the lobby's toggles;
 ## null with no factory (the M1 encounter).
-var driver: RefCounted
+var driver: RunDriver
 var driver_factory: Callable
 var transport: NetTransport = NetTransport.new()
 var session: ServerSession
@@ -47,6 +47,8 @@ var http: StaticServer
 var http_us_max: int = 0
 ## LAN discovery beacon, or null when off (start_beacon).
 var beacon: LanBeacon
+## Whether a failed beacon send was logged (once).
+var beacon_failure_logged: bool = false
 ## The load gate's probe (`--probe-out`, D161), or null; set before start().
 var probe: LoadProbe
 
@@ -87,6 +89,7 @@ func start(
 	if world == null:
 		push_error("encounter does not validate: %s" % [encounter.validate()])
 		return ERR_INVALID_DATA
+	world.keep_command_log = false
 	host = ScenarioHost.new(world)
 	session = ServerSession.new(transport, world)
 	session.dev_all = dev_all
@@ -106,9 +109,9 @@ func start(
 
 ## The driver's turn before each tick; in a solo lesson the bots' presses come first.
 func _before_tick(api: ScenarioApi) -> void:
-	if driver is TrainingDriver:
-		partners.act(world, driver as TrainingDriver)
-	driver.call(&"before_tick", api)
+	if driver.solo_station() != &"":
+		partners.act(api, driver as TrainingDriver)
+	driver.before_tick(api)
 
 
 ## Points the multi-ship lobby at the encounter when it is a RunSetup (#11).
@@ -139,7 +142,7 @@ func begin_training(s: NetSession, station: String) -> void:
 	_wire_fleet()
 	restart_run()
 	if station == "":
-		session.move(s, -1, "")
+		session.lobby.move(s, -1, "")
 		return
 	session.training.seat_and_start(s, session.crew_ships()[0]["id"], station)
 
@@ -158,6 +161,11 @@ func end_training() -> void:
 
 func port() -> int:
 	return transport.port()
+
+
+## The port the static HTTP server listens on, or 0 when it is off.
+func http_local_port() -> int:
+	return http.local_port() if http != null else 0
 
 
 ## Opens the session log at `path` (SessionLog.default_path() in a normal session): the
@@ -189,10 +197,9 @@ func _add_resyncs(window: Dictionary) -> void:
 
 
 ## A client's report of snapshot arrival times (D199).
-func _on_client_stats(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var from: NetSession = session.by_conn.get(conn)
+func _on_client_stats(from: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var pairs: PackedInt64Array = msg["pairs"]
-	if from == null or pairs.size() > 2 * NetProtocol.MAX_STATS_PAIRS:
+	if pairs.size() > 2 * NetProtocol.MAX_STATS_PAIRS:
 		return
 	var c: SnapshotAgeStats.Client = age_stats.client_for(from.id, from.name, from.client_kind)
 	c.user_agent = NetProtocol.clip_utf8(msg["ua"], NetProtocol.MAX_UA_BYTES)
@@ -204,6 +211,7 @@ func _on_client_stats(conn: int, msg: Dictionary, _now_us: int) -> void:
 ## snapshot full for every client. NetRunReset calls it when the vote passes.
 func restart_run() -> void:
 	world = encounter.build()
+	world.keep_command_log = false
 	host = ScenarioHost.new(world)
 	driver = null
 	partners = TrainingPartners.new(world.seed_value)
@@ -234,11 +242,7 @@ static func _default_slots(setup: RunSetup) -> Array[ShipSlot]:
 
 ## The director's decisions so far for the debrief; none with another driver.
 func _director_decisions() -> Array:
-	if driver is FleetDirector:
-		return (driver as FleetDirector).decisions()
-	if driver is Director:
-		return (driver as Director).decisions()
-	return []
+	return driver.decisions() if driver != null else []
 
 
 ## Serves the web export in `root` over plain HTTP on the bind address at port() - 1
@@ -258,13 +262,14 @@ func start_http(root: String) -> Error:
 func start_beacon(
 	server_name: String,
 	discovery_port: int = LanBeacon.DISCOVERY_PORT,
-	destinations: PackedStringArray = [LanBeacon.BROADCAST_ADDRESS]
+	destinations: PackedStringArray = PackedStringArray()
 ) -> Error:
 	var http_port: int = http.local_port() if http != null else 0
 	beacon = LanBeacon.new(NetProtocol.PROTOCOL_VERSION, server_name, port(), http_port)
 	beacon.player_cap = session.max_sessions
 	var err: Error = beacon.start(discovery_port, destinations)
 	if err != OK:
+		push_warning("LAN beacon failed to start: %s" % error_string(err))
 		beacon = null
 	return err
 
@@ -332,13 +337,13 @@ func _process(delta: float) -> void:
 			else:
 				_post_state()
 				_idle_state_posted = true
-			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / 60
+			_next_idle_post_us = now_us + SNAPSHOT_TICKS * 1_000_000 / SimRate.HZ
 	else:
 		_idle_state_posted = false
 		if not host.holds(world):  # a test swapped the world
 			host = ScenarioHost.new(world)
 		if driver == null and driver_factory.is_valid():
-			driver = driver_factory.call(StringName(session.toggles.preset))
+			driver = driver_factory.call(StringName(session.lobby.toggles.preset))
 		ticks = host.advance(delta, _before_tick if driver != null else Callable())
 		t[2] = Time.get_ticks_usec()
 		t[3] = t[2]
@@ -360,9 +365,9 @@ func _process(delta: float) -> void:
 		var all_in: bool = (
 			probe.phase == LoadProbe.Phase.WAITING
 			and _picks() >= probe.expect_picks
-			and session.launched.size() >= session.crew_ships().size()
+			and session.lobby.launched_ships().size() >= session.crew_ships().size()
 		)
-		if probe.update(all_in, session.launched.size()):
+		if probe.update(all_in, session.lobby.launched_ships().size()):
 			get_tree().quit(0)
 	_poll_lan_services()
 	if session_log != null and now_us >= _next_stats_us:
@@ -397,6 +402,9 @@ func _poll_lan_services() -> void:
 		beacon.players = players()
 		beacon.session_running = session_active()
 		beacon.poll(Time.get_ticks_usec())
+		if beacon.last_error != OK and not beacon_failure_logged:
+			beacon_failure_logged = true
+			push_warning("LAN beacon cannot send: %s" % error_string(beacon.last_error))
 
 
 ## Sessions holding a pick (the probe waits for all of them).

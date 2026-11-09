@@ -34,6 +34,7 @@ var _title: Label
 var _sub: Label
 var _table: GridContainer
 var _menu: Button
+var _end_dialog: ConfirmationDialog
 var _col: VBoxContainer
 var _head: HBoxContainer
 ## The phone's bottom row: the relaunch vote (on its side) and Main menu.
@@ -73,8 +74,12 @@ func setup(context: StationContext) -> void:
 	_menu = Button.new()
 	_menu.name = "MainMenu"
 	_menu.custom_minimum_size = Vector2(0, UiTheme.TOUCH_PRIMARY)
-	_menu.pressed.connect(menu_requested.emit)
+	_menu.pressed.connect(_on_menu_pressed)
 	head.add_child(_menu)
+	_end_dialog = ConfirmationDialog.new()
+	_end_dialog.name = "EndDialog"
+	_end_dialog.confirmed.connect(menu_requested.emit)
+	add_child(_end_dialog)
 	_sub = Label.new()
 	_sub.name = "Sub"
 	_sub.theme_type_variation = "DimLabel"
@@ -180,11 +185,23 @@ func row_cells(row: Dictionary) -> Array[String]:
 	return out
 
 
+## Leave for a player; the host's button ends the game for everyone, so it asks first (R24-2).
+func _on_menu_pressed() -> void:
+	if ctx.crew.host:
+		_end_dialog.popup_centered()
+	else:
+		menu_requested.emit()
+
+
 func refresh() -> void:
 	_title.text = title_text()
 	_sub.text = sub_text()
 	_sub.visible = _sub.text != ""
-	_menu.text = tr("lobby.menu")
+	_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
+	_end_dialog.title = tr("lobby.end_title")
+	_end_dialog.dialog_text = tr("lobby.end_text")
+	_end_dialog.ok_button_text = tr("lobby.end_game")
+	_end_dialog.cancel_button_text = tr("lobby.end_keep")
 	for c: Node in _table.get_children():
 		_table.remove_child(c)
 		c.queue_free()

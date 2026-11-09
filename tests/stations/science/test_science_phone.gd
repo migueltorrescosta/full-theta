@@ -14,7 +14,6 @@ const PORTRAIT: Array = [0, 47, 0, 34]
 const SIDEWAYS: Vector2i = Vector2i(844, 390)
 const UPRIGHT: Vector2i = Vector2i(390, 844)
 const H2: int = StationFixture.H2
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 
@@ -65,12 +64,7 @@ func _cmds(s: StationScreen, kind: String) -> Array:
 func _assert_taps_ok(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).is_not_empty()
-	for rule: String in AUDIT:
-		(
-			assert_array(report[rule])
-			. override_failure_message("%s %s: %s" % [what, rule, report[rule]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 ## The design's reachability table (2.4): [action, page, button, sheet option, taps, what
@@ -112,9 +106,12 @@ func test_every_action_is_within_two_taps_both_ways_up() -> void:
 		for row: Array in _table(p):
 			var what: String = "%s %s" % [row[0], c[0]]
 			var before: int = _sent(s, row[5])
-			var taps: int = await PhoneReach.tap_row(s, [row[1], row[2], row[3]])
+			var walked: Dictionary = PhoneReach.walk(
+				s, {"page": row[1], "control": row[2], "option": row[3], "taps": 2}
+			)
+			var taps: int = walked["taps"]
 			assert_int(taps).override_failure_message(what).is_equal(row[4])
-			assert_int(taps).override_failure_message(what).is_less_equal(2)
+			assert_str(walked["error"]).override_failure_message(what).is_empty()
 			assert_int(_sent(s, row[5])).override_failure_message(what).is_equal(before + 1)
 			await _frames(1)
 		# Read the full card: its tab (1 tap) shows the whole card, no scroll.
@@ -157,6 +154,8 @@ func test_hack_opens_a_sheet_of_the_targets_subsystems() -> void:
 	var subs: Array[StringName] = p.subsystems()
 	assert_int(s.sheet.option_count()).is_equal(subs.size())
 	assert_str(s.sheet.option(1).text).is_equal(tr("eng.name." + String(subs[1])))
+	# The weak point the card lists is named on the sheet (R23-1).
+	assert_str(s.sheet.option(0).text).contains(tr("sci.weak_mark") % "")
 	# It covers the right rail, not the list.
 	var box: Rect2 = s.sheet.box.get_global_rect()
 	assert_bool(box.encloses(p.phone.layout.right.get_global_rect().grow(-1.0))).is_true()
@@ -335,3 +334,28 @@ func test_touch_help_has_every_page() -> void:
 		assert_array(pages.map(func(p: Dictionary) -> String: return p["page"]))
 		. is_equal(["Contacts", "Card", "Crew"])
 	)
+
+
+# FT: FT-STN-005
+# w5: upright, the status line starts right of the wider "Range 10 km" box, and the hack's
+# grid starts under its title when the title wraps to two lines.
+func test_status_and_hack_title_keep_clear_upright() -> void:
+	var s: StationScreen = await _screen(UPRIGHT, PORTRAIT)
+	var p: SciencePanel = _sci(s)
+	var status: Label = p.phone.status
+	var box: Rect2 = p.radar.get_global_transform() * p.radar.range_rect()
+	assert_float(status.get_global_rect().position.x).is_greater_equal(box.end.x)
+	_vp.queue_free()
+	s = await _screen(UPRIGHT, PORTRAIT, "hack")
+	var g: HackGame = _sci(s).hack_game
+	var font: Font = g.get_theme_default_font()
+	var title_h: float = (
+		font
+		. get_multiline_string_size(
+			g.title, HORIZONTAL_ALIGNMENT_LEFT, g.size.x - 24.0, HackGame.FONT_SIZE, 2
+		)
+		. y
+	)
+	assert_float(title_h).is_greater(font.get_height(HackGame.FONT_SIZE))
+	# The top row's nodes sit under the title's foot (6 px above its first baseline).
+	assert_float(g.node_centre(0).y - HackGame.NODE_R).is_greater_equal(22.0 - 16.0 + title_h)

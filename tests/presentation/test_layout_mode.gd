@@ -80,4 +80,7 @@ func test_screen_arranges_for_orientation_and_phone() -> void:
 	var wide: StationScreen = await _screen(Vector2i(1280, 720), "engineering")
 	assert_bool(wide._body.vertical).is_false()
 	assert_float(wide.radar.custom_minimum_size.x).is_equal(StationScreen.SIDE_WIDTH)
-	assert_float(wide.top_bar.custom_minimum_size.y).is_equal(StationScreen.TOP_BAR_HEIGHT)
+	# (the goal chip's row sits under the bar off a phone, C2)
+	assert_float(wide.top_bar.custom_minimum_size.y).is_equal(
+		StationScreen.TOP_BAR_HEIGHT + TopBar.GOAL_H
+	)

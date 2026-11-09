@@ -103,11 +103,39 @@ func unmapped() -> Array[Dictionary]:
 	return entries.filter(func(e: Dictionary) -> bool: return e["parts"].is_empty())
 
 
-## Ids of the screen's stations' and the common intents that have no binding here.
+## Ids of the screen's stations' and the common intents that have no binding here and no
+## other route either (a radial item or the alert chords are routes, `radial_here`).
 func unbound_here() -> Array[String]:
 	return unbound.filter(
-		func(id: String) -> bool: return emphasis_of(IntentTable.row(id)["group"]) != OTHER
+		func(id: String) -> bool:
+			return emphasis_of(IntentTable.row(id)["group"]) != OTHER and not covered(id)
 	)
+
+
+## True when a controller reaches the unbound intent `id` another way (D1, R25-12): it is an
+## item of the Helm radial, or the alert cycle, which View+d-pad sets level by level.
+func covered(id: String) -> bool:
+	if device != IntentTable.PAD or id not in unbound:
+		return false
+	if id in HelmPanel.RADIAL:
+		return "helm_radial" not in unbound
+	if id != "alert_cycle":
+		return false
+	# The chords View+Up, Right and Down set the alert level by level.
+	for r: Dictionary in IntentTable.INTENTS:
+		var other: String = r["id"]
+		if other.begins_with("alert_") and other != id and other not in unbound:
+			return true
+	return false
+
+
+## The screen's unbound intents that sit in the Helm radial, in the radial's order.
+func radial_here() -> Array[String]:
+	var out: Array[String] = []
+	for id: String in HelmPanel.RADIAL:
+		if id in unbound and covered(id) and emphasis_of("helm") != OTHER:
+			out.append(id)
+	return out
 
 
 ## The intents with a callout: the screen's stations and the common ones, on a drawn part.

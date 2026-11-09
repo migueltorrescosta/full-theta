@@ -58,6 +58,23 @@ static func features(stations: Array[String], toggles: DataToggles) -> Array[Str
 	return out
 
 
+## The banner lines of the receiving side (C5): data another station of this ship shared
+## here and that is still live, "Routes on Helm from Relay · 12 s". `left` is feature ->
+## seconds left (ClientState shares); a joint view holding the source sees the data anyway.
+static func incoming_lines(stations: Array[String], left: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	for id: StringName in left:
+		var seconds: int = ceili(float(left[id]))
+		var def: DataToggleDef = DataToggles.toggle_def(id)
+		if seconds <= 0 or def == null:
+			continue
+		if stations.has(String(def.target)) and not stations.has(String(def.source)):
+			var what: String = TranslationServer.translate("lobby.toggle." + String(id))
+			var from: String = TranslationServer.translate("station." + String(def.source))
+			out.append(TranslationServer.translate("share.incoming") % [what, from, seconds])
+	return out
+
+
 ## Shows the buttons for `shown` (features()), each with the seconds `left` of its share
 ## (feature -> seconds, 0 when not shared). Rebuilds only when the set changes.
 func show_features(shown: Array[StringName], left: Dictionary) -> void:
@@ -77,6 +94,12 @@ func show_features(shown: Array[StringName], left: Dictionary) -> void:
 			_buttons[id] = b
 	for id: StringName in shown:
 		var seconds: int = ceili(float(left.get(id, 0.0)))
-		var text: String = tr("share.button") % tr("lobby.toggle." + String(id))
-		_buttons[id].text = text if seconds <= 0 else "%s · %d s" % [text, seconds]
+		var what: String = tr("lobby.toggle." + String(id))
+		# A live share reads as sent and is lit; idle it invites the press (C5).
+		_buttons[id].text = (
+			tr("share.button") % what if seconds <= 0 else tr("share.sent") % [what, seconds]
+		)
+		var variation: String = "" if seconds <= 0 else "RailAccentButton"
+		if _buttons[id].theme_type_variation != variation:
+			_buttons[id].theme_type_variation = variation
 	visible = not shown.is_empty()

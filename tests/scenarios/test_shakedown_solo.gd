@@ -3,56 +3,19 @@ extends GdUnitTestSuite
 ## every other track counts as done, and the scripted partner (TrainingPartners) presses Next
 ## for its half of each pair step, so the lesson reaches its end by itself.
 
-const STATIONS: Array[StringName] = [
-	&"helm", &"weapons", &"engineering", &"science", &"relay", &"comms", &"captain"
-]
+const STATIONS: Array[StringName] = ShakedownLessons.STATIONS
 
 
 func _rig(solo: StringName) -> ShakedownRig:
-	var rig: ShakedownRig = ShakedownRig.new()
-	rig.driver = TrainingDriver.new(ShakedownScenario.new(), rig.steps, solo)
-	return rig
+	return ShakedownLessons.rig(solo)
 
 
-## Steps n ticks with the partners ahead of the driver, as the server does.
 func _tick(rig: ShakedownRig, partners: TrainingPartners, n: int = 1) -> void:
-	for i: int in n:
-		rig.host.advance(
-			SimWorld.DT * 1.001,
-			func(api: ScenarioApi) -> void:
-				partners.act(rig.world, rig.driver)
-				rig.driver.before_tick(api)
-		)
+	ShakedownLessons.tick(rig, partners, n)
 
 
 func _press(rig: ShakedownRig, partners: TrainingPartners, station: StringName) -> void:
-	var cmd: TrainingNextCommand = TrainingNextCommand.new()
-	cmd.ship_id = 0
-	cmd.station = station
-	rig.world.submit(cmd)
-	_tick(rig, partners, 2)
-
-
-## Plays the lesson as a player does: each step of the track, then Next in every pair step,
-## until the driver says all_done. Returns the ticks it took (-1: it never ended).
-func _play(rig: ShakedownRig, partners: TrainingPartners, solo: StringName) -> int:
-	var start: int = rig.world.tick
-	_tick(rig, partners, 2)
-	for guard: int in 4000:
-		if not rig.said("shakedown.all_done").is_empty():
-			return rig.world.tick - start
-		var step: TrainingStepDef = rig.driver.current(solo)
-		if step != null:
-			if step.kind == TrainingStepDef.Kind.COMMAND:
-				rig.world.submit(rig.command_for(step.command))
-				_tick(rig, partners, 2)
-			else:
-				_press(rig, partners, solo)
-		elif not rig.driver.active_pairs().is_empty():
-			_press(rig, partners, solo)
-		else:
-			_tick(rig, partners, 30)
-	return -1
+	ShakedownLessons.press(rig, partners, station)
 
 
 ## The pair steps that name the station.
@@ -65,10 +28,9 @@ func _pairs_of(rig: ShakedownRig, station: StringName) -> Array[TrainingStepDef]
 # FT: FT-MIS-039
 func test_every_station_plays_its_whole_track_alone_to_the_end() -> void:
 	for solo: StringName in STATIONS:
-		var rig: ShakedownRig = _rig(solo)
-		var partners: TrainingPartners = TrainingPartners.new()
-		var took: int = _play(rig, partners, solo)
-		assert_int(took).override_failure_message(String(solo)).is_greater(0)
+		var lesson: Dictionary = ShakedownLessons.lesson(solo)
+		var rig: ShakedownRig = lesson["rig"]
+		assert_int(lesson["took"]).override_failure_message(String(solo)).is_greater(0)
 		assert_bool(rig.driver.finished(solo)).is_true()
 		# Its own track was said step by step, and every pair step that names it was said.
 		assert_array(rig.said("shakedown.%s.track_done" % solo)).is_not_empty()
@@ -78,9 +40,9 @@ func test_every_station_plays_its_whole_track_alone_to_the_end() -> void:
 
 # FT: FT-MIS-039
 func test_other_stations_are_silent_and_pairs_without_the_station_never_start() -> void:
-	var rig: ShakedownRig = _rig(&"helm")
-	var partners: TrainingPartners = TrainingPartners.new()
-	assert_int(_play(rig, partners, &"helm")).is_greater(0)
+	var lesson: Dictionary = ShakedownLessons.lesson(&"helm")
+	var rig: ShakedownRig = lesson["rig"]
+	assert_int(lesson["took"]).is_greater(0)
 	for other: StringName in STATIONS:
 		if other != &"helm":
 			var said: Array[SimEvent] = rig.world.events.filter(
@@ -112,7 +74,7 @@ func test_the_partner_presses_next_after_the_delay_and_only_once() -> void:
 	assert_int(pairs.size()).is_equal(1)
 	var first: TrainingStepDef = pairs[0]
 	var partner: StringName = first.partner if first.station == &"weapons" else first.station
-	var flag: StringName = TrainingDriver.next_flag(partner)
+	var flag: StringName = TrainingNextCommand.flag_name(partner)
 	assert_int(rig.world.story_flags.get_flag(flag)).is_equal(0)
 	_tick(rig, partners, TrainingPartners.press_ticks(first, partner) + 4)
 	assert_int(rig.world.story_flags.get_flag(flag)).is_equal(1)
@@ -131,4 +93,4 @@ func test_the_crew_drill_is_unchanged() -> void:
 	assert_array(rig.driver.active_pairs()).is_empty()
 	# No partner presses in the drill.
 	_tick(rig, partners, 600)
-	assert_int(rig.world.story_flags.get_flag(TrainingDriver.next_flag(&"helm"))).is_equal(0)
+	assert_int(rig.world.story_flags.get_flag(TrainingNextCommand.flag_name(&"helm"))).is_equal(0)

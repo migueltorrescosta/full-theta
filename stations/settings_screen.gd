@@ -58,6 +58,9 @@ var controls_pane: ControlsPane
 
 ## Modifier keys and pad buttons held during a capture, in press order.
 var _held: Array[String] = []
+## The capture (intent, device, binding) already warned about as a same-station duplicate; the
+## same capture again accepts it (D5).
+var _dup_warned: Array = []
 
 var _in_session: bool = false
 ## The host's Pause control is offered (co-op host only, FT-MIS-040).
@@ -347,6 +350,7 @@ func _build_game(col: VBoxContainer) -> void:
 	col.add_child(_sound)
 	_build_music(col)
 	_build_subtitle_size(col)
+	_build_graphics(col)
 	_add_fullscreen(col)
 	_pause_button = _add_button(
 		col,
@@ -599,6 +603,14 @@ func _bind(list: Array[String]) -> void:
 			warning.text = tr("settings.taken").format({"intent": tr(IntentTable.label_key(other))})
 			_held.clear()
 			return
+	for b: String in list:
+		var twin: String = same_station(settings.bindings, id, device, b)
+		if twin != "" and _dup_warned != [id, device, b]:
+			_dup_warned = [id, device, b]
+			warning.text = tr("settings.same_station") % tr(IntentTable.label_key(twin))
+			_held.clear()
+			return
+	_dup_warned = []
 	settings.bindings.rebind(id, device, PackedStringArray(list))
 	capturing = []
 	_build_bindings()
@@ -617,6 +629,22 @@ static func collision(bindings: Bindings, id: String, device: String, binding: S
 		for x: String in [id, other]:
 			if IntentTable.row(x)["group"] == IntentTable.COMMON or IntentTable.is_live(x, device):
 				return other
+	return ""
+
+
+## An intent of the same station as `id` that already has `binding` on `device`, or "" (D5):
+## both would fire from one press. The pointer case LMB select and fire is no duplicate
+## (D176), and a binding on a different station is not either: only one is in play.
+static func same_station(bindings: Bindings, id: String, device: String, binding: String) -> String:
+	var group: String = IntentTable.row(id)["group"]
+	if group in [IntentTable.COMMON, IntentTable.LIVE]:
+		return ""
+	for other: String in bindings.intents_bound_to(binding, device):
+		if other == id or IntentTable.row(other)["group"] != group:
+			continue
+		if binding == "LMB" and [id, other] in [["fire", "select"], ["select", "fire"]]:
+			continue
+		return other
 	return ""
 
 
@@ -642,8 +670,9 @@ func _build_general(col: VBoxContainer) -> void:
 	_add_button(
 		col, "ResetHints", tr("settings.reset_hints"), func() -> void: settings.reset_hints()
 	)
-	# In a session it sits on the Game tab.
+	# In a session they sit on the Game tab.
 	if not _in_session:
+		_build_graphics(col)
 		_add_fullscreen(col)
 
 
@@ -687,6 +716,37 @@ func _build_subtitle_size(col: VBoxContainer) -> void:
 	)
 	_row(pick)
 	row.add_child(pick)
+
+
+## The graphics options (E2): 3D resolution, the 30 fps cap and Low Graphics. Each applies at
+## once (scale_changed makes the shell apply them) and is saved on close.
+func _build_graphics(col: VBoxContainer) -> void:
+	var row: HBoxContainer = HBoxContainer.new()
+	row.name = "ResolutionRow"
+	col.add_child(row)
+	row.add_child(_label(tr("settings.render_3d")))
+	var pick: OptionButton = OptionButton.new()
+	pick.name = "Render3d"
+	for m: String in RenderQuality.MODES:
+		pick.add_item(tr("settings.render_" + m))
+	pick.selected = RenderQuality.MODES.find(settings.render_3d)
+	pick.item_selected.connect(
+		func(i: int) -> void:
+			settings.render_3d = RenderQuality.MODES[i]
+			scale_changed.emit()
+	)
+	_row(pick)
+	row.add_child(pick)
+	_check(col, "FpsCap", tr("settings.fps_cap"), settings.fps_cap).toggled.connect(
+		func(on: bool) -> void:
+			settings.fps_cap = on
+			scale_changed.emit()
+	)
+	_check(col, "LowGraphics", tr("settings.low_graphics"), settings.low_graphics).toggled.connect(
+		func(on: bool) -> void:
+			settings.low_graphics = on
+			scale_changed.emit()
+	)
 
 
 func _build_comfort(col: VBoxContainer) -> void:

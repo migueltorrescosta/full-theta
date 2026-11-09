@@ -44,6 +44,14 @@ FAILS = {
         "sim/combat/hits.gd:7",
         "sim/combat/hits.gd:8",
     ],
+    # Clients name only NET_CLIENT_SAFE, which names no sim/ or server net/ class (F4, R14-1).
+    "net_client": ["net/net_protocol.gd:4", "net/net_protocol.gd:5", "stations/hud.gd:4"],
+    # A sim/ subpackage names only its own and lower SIM_LAYERS (F9, R14-3).
+    "sim_layers": ["sim/damage/damage_system.gd:4"],
+    # Pure modules name content/ definitions, not content/ loaders (F9, R14-5).
+    "loaders": ["sim/world.gd:5"],
+    # Every module is classified (F9, R14-2).
+    "unclassified": ["gizmos/thing.gd:1"],
 }
 
 

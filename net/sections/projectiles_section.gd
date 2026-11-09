@@ -3,7 +3,7 @@ extends SnapshotSection
 ## Live projectiles within range_m of one ship (Section.PROJECTILES, promoted from
 ## S9Proj), for the views that draw tracers. Projectiles fly straight, so each is sent
 ## once, when it enters the range, as a position and velocity at the snapshot's tick;
-## clients extrapolate it (NetCodec.predict with PROJ_PRED_DEN) and wrap it. Ids that
+## clients extrapolate it (NetCodec.predict) and wrap it. Ids that
 ## leave the range or die are listed as gone.
 ##
 ## ProjectileTable rows have no stable id, so the section names each projectile by its
@@ -85,20 +85,6 @@ func full() -> PackedByteArray:
 		_put_rec(buf, id, entry[0], entry[1])
 		buf.put_u16(_tick - int(entry[2]))
 	return buf.data_array
-
-
-## Client side: id -> [Vector3i position, Vector3i velocity, int tick].
-static func apply(into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int) -> void:
-	if is_full:
-		into.clear()
-	for i: int in range(buf.get_u16()):
-		var id: int = buf.get_u16()
-		var p: Vector3i = NetCodec.get3_32(buf)
-		var v: Vector3i = NetCodec.get3_16(buf)
-		var at: int = tick - buf.get_u16() if is_full else tick
-		into[id] = [p, v, at]
-	if not is_full:
-		ContactsSection.get_gone(buf, into)
 
 
 ## Shooter (15 bits), expiry tick (32 bits) and order among same pairs (16 bits).

@@ -52,21 +52,33 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "select", "group": COMMON, "kind": PRESS, "kbm": ["LMB"], "pad": ["A"]},
 	{"id": "cycle_target", "group": COMMON, "kind": PRESS, "kbm": ["T"], "pad": ["RB"]},
 	{"id": "select_pinged", "group": COMMON, "kind": PRESS, "kbm": ["Y"], "pad": ["long RB"]},
-	{"id": "mark", "group": COMMON, "kind": PRESS, "kbm": ["Shift+MMB"], "pad": ["long R3"]},
+	{
+		"id": "mark",
+		"group": COMMON,
+		"kind": PRESS,
+		"kbm": ["Shift+MMB", "Shift+M"],
+		"pad": ["long R3"]
+	},
 	{"id": "accept", "group": COMMON, "kind": PRESS, "kbm": ["Enter"], "pad": ["X"]},
 	{"id": "decline", "group": COMMON, "kind": PRESS, "kbm": ["Backspace"], "pad": ["Y"]},
 	# A request chip (§7.4).
 	{"id": "request", "group": COMMON, "kind": PRESS, "kbm": ["B"], "pad": ["View+Y"]},
 	# Share the screen's data shortcuts with their partner stations (§7.2, D210).
-	{"id": "share", "group": COMMON, "kind": PRESS, "kbm": ["Alt+S"], "pad": ["View+RT"]},
+	{
+		"id": "share",
+		"group": COMMON,
+		"kind": PRESS,
+		"kbm": ["Alt+S", "Shift+B"],
+		"pad": ["View+RT"]
+	},
 	# The radar's elevation side strip (FT-SPA-009; off B, owner decision in #7).
 	{"id": "radar_strip", "group": COMMON, "kind": PRESS, "kbm": ["Z"], "pad": ["View+Left"]},
 	{"id": "claim", "group": COMMON, "kind": PRESS, "kbm": ["K"], "pad": ["View+X"]},
 	{"id": "overlay", "group": COMMON, "kind": PRESS, "kbm": ["?"], "pad": ["View"]},
 	{"id": "menu", "group": COMMON, "kind": PRESS, "kbm": ["Escape"], "pad": ["Menu"]},
 	# Always-live set (§5.0, FT-JNT-007).
-	{"id": "ping", "group": LIVE, "kind": PRESS, "kbm": ["MMB"], "pad": ["R3"]},
-	{"id": "alert_cycle", "group": LIVE, "kind": PRESS, "kbm": ["Alt+A"], "pad": []},
+	{"id": "ping", "group": LIVE, "kind": PRESS, "kbm": ["MMB", "Shift+P"], "pad": ["R3"]},
+	{"id": "alert_cycle", "group": LIVE, "kind": PRESS, "kbm": ["Alt+A", "Shift+Tab"], "pad": []},
 	{"id": "alert_red", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Up"]},
 	{"id": "alert_yellow", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Right"]},
 	{"id": "alert_normal", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Down"]},
@@ -74,7 +86,13 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "focus_1", "group": LIVE, "kind": PRESS, "kbm": ["F1"], "pad": ["View+LB"]},
 	{"id": "focus_2", "group": LIVE, "kind": PRESS, "kbm": ["F2"], "pad": ["View+RB"]},
 	# The Shakedown's Next button (FT-MIS-039, D235): live on every station, ignored outside training.
-	{"id": "training_next", "group": LIVE, "kind": PRESS, "kbm": ["Alt+N"], "pad": ["View+LT"]},
+	{
+		"id": "training_next",
+		"group": LIVE,
+		"kind": PRESS,
+		"kbm": ["Alt+N", "Shift+N"],
+		"pad": ["View+LT"]
+	},
 	# Helm (§5.1). Translation is live on KB/M only; face and all-stop on both.
 	{
 		"id": "helm_surge",
@@ -131,12 +149,48 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "helm_radial", "group": "helm", "kind": HOLD, "kbm": [], "pad": ["View+RS"]},
 	# While held, the mouse stops steering and shows the pointer (shield ring, radar).
 	{"id": "helm_pointer", "group": "helm", "kind": HOLD, "kbm": ["Ctrl"], "pad": []},
-	{"id": "shield_fore", "group": "helm", "kind": PRESS, "kbm": ["Kp 1"], "pad": ["Up"]},
-	{"id": "shield_aft", "group": "helm", "kind": PRESS, "kbm": ["Kp 2"], "pad": ["Down"]},
-	{"id": "shield_port", "group": "helm", "kind": PRESS, "kbm": ["Kp 3"], "pad": ["Left"]},
-	{"id": "shield_starboard", "group": "helm", "kind": PRESS, "kbm": ["Kp 4"], "pad": ["Right"]},
-	{"id": "shield_dorsal", "group": "helm", "kind": PRESS, "kbm": ["Kp 5"], "pad": ["LB+Up"]},
-	{"id": "shield_ventral", "group": "helm", "kind": PRESS, "kbm": ["Kp 6"], "pad": ["LB+Down"]},
+	{
+		"id": "shield_fore",
+		"group": "helm",
+		"kind": PRESS,
+		"kbm": ["Kp 1", "Shift+1"],
+		"pad": ["Up"]
+	},
+	{
+		"id": "shield_aft",
+		"group": "helm",
+		"kind": PRESS,
+		"kbm": ["Kp 2", "Shift+2"],
+		"pad": ["Down"]
+	},
+	{
+		"id": "shield_port",
+		"group": "helm",
+		"kind": PRESS,
+		"kbm": ["Kp 3", "Shift+3"],
+		"pad": ["Left"]
+	},
+	{
+		"id": "shield_starboard",
+		"group": "helm",
+		"kind": PRESS,
+		"kbm": ["Kp 4", "Shift+4"],
+		"pad": ["Right"]
+	},
+	{
+		"id": "shield_dorsal",
+		"group": "helm",
+		"kind": PRESS,
+		"kbm": ["Kp 5", "Shift+5"],
+		"pad": ["LB+Up"]
+	},
+	{
+		"id": "shield_ventral",
+		"group": "helm",
+		"kind": PRESS,
+		"kbm": ["Kp 6", "Shift+6"],
+		"pad": ["LB+Down"]
+	},
 	# Weapons (§5.2).
 	{
 		"id": "fire",
@@ -196,8 +250,14 @@ const INTENTS: Array[Dictionary] = [
 		"pad": ["LT"]
 	},
 	{"id": "harden", "group": "engineering", "kind": PRESS, "kbm": ["H"], "pad": ["LB"]},
-	{"id": "fabricate_probe", "group": "engineering", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
-	{"id": "dispatch_nearest", "group": "engineering", "kind": PRESS, "kbm": [], "pad": ["B"]},
+	{
+		"id": "fabricate_probe",
+		"group": "engineering",
+		"kind": PRESS,
+		"kbm": ["P"],
+		"pad": ["long Up"]
+	},
+	{"id": "dispatch_nearest", "group": "engineering", "kind": PRESS, "kbm": ["N"], "pad": ["B"]},
 	# Cycle the cause picked for the selected subsystem's unknown fault (FT-ENG-006).
 	{
 		"id": "cause_next",
@@ -266,7 +326,7 @@ const INTENTS: Array[Dictionary] = [
 	# the map places them.
 	{"id": "probe_launch", "group": "relay", "kind": PRESS, "kbm": ["P"], "pad": ["Right"]},
 	{"id": "hazard_add", "group": "relay", "kind": PRESS, "kbm": ["H"], "pad": ["LB+Right"]},
-	{"id": "mark_delete", "group": "relay", "kind": PRESS, "kbm": ["Delete"], "pad": ["Down"]},
+	{"id": "mark_delete", "group": "relay", "kind": PRESS, "kbm": ["Delete"], "pad": ["long Down"]},
 	{"id": "mark_rename", "group": "relay", "kind": PRESS, "kbm": ["N"], "pad": []},
 	# Attach the selected mark to the nearest contact, or free it where it is.
 	{"id": "mark_attach", "group": "relay", "kind": PRESS, "kbm": ["M"], "pad": ["Up"]},
@@ -279,11 +339,11 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "relay_depth", "group": "relay", "kind": AXIS, "kbm": [], "pad": ["LT/RT"]},
 	{"id": "relay_rotate_x", "group": "relay", "kind": AXIS, "kbm": [], "pad": ["RS_X"]},
 	{"id": "relay_rotate_y", "group": "relay", "kind": AXIS, "kbm": [], "pad": ["RS_Y"]},
-	{"id": "main_view_1", "group": "relay", "kind": PRESS, "kbm": ["Alt+1"], "pad": []},
-	{"id": "main_view_2", "group": "relay", "kind": PRESS, "kbm": ["Alt+2"], "pad": []},
-	{"id": "main_view_3", "group": "relay", "kind": PRESS, "kbm": ["Alt+3"], "pad": []},
-	{"id": "main_view_4", "group": "relay", "kind": PRESS, "kbm": ["Alt+4"], "pad": []},
-	{"id": "main_view_5", "group": "relay", "kind": PRESS, "kbm": ["Alt+5"], "pad": []},
+	{"id": "main_view_1", "group": "relay", "kind": PRESS, "kbm": ["Alt+1", "1"], "pad": []},
+	{"id": "main_view_2", "group": "relay", "kind": PRESS, "kbm": ["Alt+2", "2"], "pad": []},
+	{"id": "main_view_3", "group": "relay", "kind": PRESS, "kbm": ["Alt+3", "3"], "pad": []},
+	{"id": "main_view_4", "group": "relay", "kind": PRESS, "kbm": ["Alt+4", "4"], "pad": []},
+	{"id": "main_view_5", "group": "relay", "kind": PRESS, "kbm": ["Alt+5", "5"], "pad": []},
 	# Captain (§5.7): the main screen's view, 1 to 5 or the d-pad.
 	{"id": "captain_view_1", "group": "captain", "kind": PRESS, "kbm": ["1"], "pad": []},
 	{"id": "captain_view_2", "group": "captain", "kind": PRESS, "kbm": ["2"], "pad": []},

@@ -12,6 +12,11 @@ extends Control
 
 const FONT_SIZE: int = 14
 const SMALL: int = 12
+## The least font size (sp) of a phone's read-outs (C7): the desktop sizes are too small there.
+const PHONE_FONT: int = 16
+## The envelope bars' percentage text and the gap before the bar need this much room (px).
+const PCT_W: float = 42.0
+const LABEL_GAP: float = 6.0
 ## Off-screen arrows sit this far inside the view's edge.
 const EDGE: float = 36.0
 ## On a phone an arrow keeps this far (px) from the read-outs (its label sits beside it).
@@ -19,6 +24,8 @@ const ARROW_CLEAR: float = 14.0
 ## The height an edge arrow needs between two read-outs it keeps clear of.
 const ARROW_ROOM: float = 2.0 * ARROW_CLEAR + 16.0
 const COMPASS_R: float = 46.0
+## The least gap (px) between the flight read-out's percentages and the compass disc.
+const COMPASS_GAP: float = 12.0
 ## Envelope bars show 0..BAR_MAX of nominal; a tick marks nominal.
 const BAR_MAX: float = 1.5
 ## Speeds under this (m/s) show no velocity markers.
@@ -78,11 +85,40 @@ func touch_layout() -> bool:
 	return panel.tablet_ui != null and (size.x < PHONE_W or size.y < TABLET_SHORT_H)
 
 
+## The font size (sp) of the read-outs: a phone's floor, else the desktop size.
+func _fs() -> int:
+	return maxi(FONT_SIZE, PHONE_FONT) if touch_layout() else FONT_SIZE
+
+
+func _small() -> int:
+	return PHONE_FONT if touch_layout() else SMALL
+
+
+## The label key of a bar: "Max thrust" and "Max turn" on a desktop; a phone's 16 sp text
+## leaves no room beside the compass for them, so it keeps the short "Thrust" and "Turn".
+func _bar_key(key: String) -> String:
+	if not touch_layout():
+		return key
+	return {"helm.max_thrust": "helm.thrust", "helm.max_turn": "helm.turn"}.get(key, key)
+
+
+## The room (px) a bar's label before it and percentage after it take.
+func _bar_extra() -> float:
+	var font: Font = get_theme_default_font()
+	var w: float = 0.0
+	for key: String in ["helm.max_thrust", "helm.max_turn", "helm.propellant"]:
+		var name: String = tr(_bar_key(key))
+		w = maxf(w, font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, _small()).x)
+	return ceilf(w) + LABEL_GAP + PCT_W
+
+
 ## Envelope bar length: on a phone short enough that the read-out ends left of the reticle
 ## (when they share rows), down to TIGHT_BAR_W.
 func _bar_w() -> float:
 	if not touch_layout():
-		return BAR_W
+		# The read-out shares its rows with the compass: its percentages end clear of it (w5).
+		var room_x: float = _compass_centre().x - COMPASS_R - COMPASS_GAP - 14.0 - _bar_extra()
+		return clampf(room_x, TIGHT_BAR_W, BAR_W)
 	var a: Rect2 = area()
 	var top: float = a.end.y - READOUT_H
 	var ret: Rect2 = reticle_rect()
@@ -90,9 +126,9 @@ func _bar_w() -> float:
 		if panel.tablet_ui == null:
 			return PHONE_BAR_W
 		# A tablet's narrow view: the bars end left of the compass at the bottom right.
-		var left: float = a.end.x - 3.0 * COMPASS_R - 8.0
-		return clampf(left - (a.position.x + 14.0) - 90.0, TIGHT_BAR_W, PHONE_BAR_W)
-	var room: float = ret.position.x - 8.0 - (a.position.x + 14.0) - 90.0
+		var left: float = a.end.x - 3.0 * COMPASS_R - 4.0 - COMPASS_GAP
+		return clampf(left - (a.position.x + 14.0) - _bar_extra(), TIGHT_BAR_W, PHONE_BAR_W)
+	var room: float = ret.position.x - 8.0 - (a.position.x + 14.0) - _bar_extra()
 	return clampf(room, TIGHT_BAR_W, PHONE_BAR_W)
 
 
@@ -388,7 +424,7 @@ func _draw_thrust(font: Font) -> void:
 	for i: int in rows.size():
 		var text: String = "%s %s" % [rows[i][0], speed_text(float(rows[i][1]))]
 		var at: Vector2 = c + Vector2(CROSS_ARM * 3.6, -14.0 + 16.0 * i)
-		_text(font, at, text, Palette.color("text"), SMALL)
+		_text(font, at, text, Palette.color("text"), _small())
 
 
 ## The thrust cross and its read-outs, for the labels to keep clear of.
@@ -418,9 +454,10 @@ func cross_tight() -> bool:
 
 ## True on a phone whose view is too short for the thrust cross at the top left above the
 ## flight read-out with room for an edge arrow between them: the cross goes to the top right.
+## A tablet keeps it top left: its shield ring and compass take the top right (w5).
 func _cross_right() -> bool:
 	var room: float = 52.0 + CROSS_ARM + 14.0 + READOUT_H + ARROW_ROOM
-	return touch_layout() and area().size.y < room
+	return panel.touch_ui != null and area().size.y < room
 
 
 ## `p` moved just outside the flight read-out when it falls on it (a phone: a marker there
@@ -477,7 +514,7 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 	draw_polyline(Palette.shape_points(Palette.item_shape(e), p, r), col, 2.5 if selected else 1.2)
 	var pulse: float = float(e["pulse"])
 	if pulse > 0.0:
-		draw_arc(p, r + 10.0 * (1.0 - pulse) + 4.0, 0.0, TAU, 24, Color(col, pulse), 2.0)
+		ItemGlyph.ping_ring(self, p, r + 4.0, 10.0, pulse, col, 2.0, 24, false)
 	var text: String = "%s %s" % [e["label"], _range(e["world"].length())]
 	var at: Rect2 = label_rect(font, text, p, r)
 	if _covers_something(at):
@@ -501,7 +538,7 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 func _covers_something(box: Rect2) -> bool:
 	var avoid: Array[Rect2] = reserved()
 	avoid.append_array(_placed)
-	return _hits(box, avoid)
+	return ChipLayout.hits(box, avoid)
 
 
 ## Where a marker's label goes (HUD coordinates): right of the marker, else the nearest spot
@@ -517,7 +554,7 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 	var avoid: Array[Rect2] = reserved()
 	avoid.append_array(_placed)
 	var inside: Rect2 = area()
-	if not _hits(right, avoid) and inside.encloses(right):
+	if not ChipLayout.hits(right, avoid) and inside.encloses(right):
 		return right
 	# (a marker outside the view's clear area, under the view-top row, has no near spot)
 	if not inside.has_point(p):
@@ -571,9 +608,13 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 	for t: Rect2 in tries:
 		# Kept inside the view: a label near the edge slides in rather than giving up.
 		t.position = t.position.clamp(inside.position, (inside.end - t.size).max(inside.position))
-		if t.intersects(marker) or not inside.encloses(t) or not _leader_clear(p, t, avoid):
+		if (
+			t.intersects(marker)
+			or not inside.encloses(t)
+			or not ChipLayout.leader_clear(p, t, avoid)
+		):
 			continue
-		if _gap(t, p) > reach:
+		if ChipLayout.gap_to(t, p) > reach:
 			continue
 		var cover: float = 0.0
 		for a: Rect2 in avoid:
@@ -593,13 +634,6 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 func _label_reach() -> float:
 	var scale: float = get_window().content_scale_factor if is_inside_tree() else 1.0
 	return LABEL_REACH / maxf(scale, 1.0)
-
-
-## The distance (px) from `p` to the nearest point of `box`.
-static func _gap(box: Rect2, p: Vector2) -> float:
-	var dx: float = maxf(maxf(box.position.x - p.x, p.x - box.end.x), 0.0)
-	var dy: float = maxf(maxf(box.position.y - p.y, p.y - box.end.y), 0.0)
-	return Vector2(dx, dy).length()
 
 
 ## A marker's box at `p` for a bracket of radius `r`.
@@ -635,7 +669,9 @@ func _ring_rect() -> Rect2:
 ## The flight read-out's box: mode, speed, active modes and the three bars.
 func readout_rect() -> Rect2:
 	var a: Rect2 = area()
-	return Rect2(Vector2(a.position.x + 14.0, a.end.y - READOUT_H), Vector2(_bar_w() + 90.0, 130.0))
+	return Rect2(
+		Vector2(a.position.x + 14.0, a.end.y - READOUT_H), Vector2(_bar_w() + _bar_extra(), 130.0)
+	)
 
 
 func _compass_centre() -> Vector2:
@@ -644,39 +680,6 @@ func _compass_centre() -> Vector2:
 		# Bottom right of the clear view, beside the read-out.
 		return Vector2(a.end.x - 2.0 * COMPASS_R - 4.0, a.end.y - COMPASS_R - 40.0)
 	return Vector2(300.0, size.y - COMPASS_R - 40.0)
-
-
-## True when the leader from `p` to the label `box` crosses none of `avoid` (a box that
-## holds `p` itself doesn't count).
-static func _leader_clear(p: Vector2, box: Rect2, avoid: Array[Rect2]) -> bool:
-	var tip: Vector2 = Vector2(
-		clampf(p.x, box.position.x, box.end.x), clampf(p.y, box.position.y, box.end.y)
-	)
-	for a: Rect2 in avoid:
-		if a.has_point(p):
-			continue
-		if a.has_point(tip):
-			return false
-		var corners: Array[Vector2] = [
-			a.position,
-			Vector2(a.end.x, a.position.y),
-			a.end,
-			Vector2(a.position.x, a.end.y),
-		]
-		for i: int in 4:
-			if (
-				Geometry2D.segment_intersects_segment(p, tip, corners[i], corners[(i + 1) % 4])
-				!= null
-			):
-				return false
-	return true
-
-
-static func _hits(box: Rect2, others: Array[Rect2]) -> bool:
-	for o: Rect2 in others:
-		if box.intersects(o):
-			return true
-	return false
 
 
 ## Where a ray from the view centre along `dir` (screen axes) meets the edge inset by EDGE
@@ -746,12 +749,19 @@ func compass_boxes() -> Array[Rect2]:
 
 
 ## True when, on a phone, the selection's compass dot is in the disc's upper half: its chip
-## goes above (the desktop has no room there: the reticle's caption).
+## goes above (the desktop has no room there: the reticle's caption), unless the shield ring's
+## caption sits there (a short tablet view, w5).
 func _chip_above() -> bool:
 	if not touch_layout():
 		return false
 	var local: Variant = panel.ctx.selection_local()
-	return local is Vector3 and compass_point(local, COMPASS_R - 6.0).y < 0.0
+	if not (local is Vector3 and compass_point(local, COMPASS_R - 6.0).y < 0.0):
+		return false
+	var c: Vector2 = _compass_centre()
+	var above: Rect2 = Rect2(
+		c + Vector2(-2.0 * COMPASS_R, -COMPASS_R - 24.0), Vector2(4.0 * COMPASS_R, 24.0)
+	)
+	return not above.intersects(_ring_rect().grow(4.0))
 
 
 ## An off-screen item's arrow: its direction on the view and its tip on the edge.
@@ -818,7 +828,7 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 		font,
 		c + Vector2(-w / 2.0, chip_dy),
 		label,
-		SMALL,
+		_small(),
 		Palette.color("text"),
 		w,
 		HORIZONTAL_ALIGNMENT_CENTER
@@ -842,12 +852,20 @@ static func compass_filled(local: Vector3) -> bool:
 func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 	var h: Dictionary = panel.helm_block()
 	var decoupled: bool = bool(h.get("decoupled", false))
+	var fs: int = _fs()
 	var mode: String = tr("helm.decoupled_mode") if decoupled else tr("helm.assist")
-	_text(font, at, mode, Palette.color("warn") if decoupled else Palette.color("ok"))
+	if decoupled:
+		# A filled amber tag: the mode that turns the assists off is not missed (C7).
+		var tag: Vector2 = font.get_string_size(mode, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+		var top: float = at.y - font.get_ascent(fs) - 2.0
+		draw_rect(Rect2(at.x - 4.0, top, tag.x + 8.0, tag.y + 4.0), Palette.color("warn"))
+		_text(font, at, mode, Palette.color("background"), fs)
+	else:
+		_text(font, at, mode, Palette.color("ok"), fs)
 	var speed: String = tr("helm.speed") % roundi(velocity().length())
 	if not decoupled and full:
 		speed += "  " + tr("helm.setpoint") % roundi(float(h.get("throttle_setpoint", 0.0)))
-	_text(font, at + Vector2(0.0, 20.0), speed, Palette.color("text"))
+	_text(font, at + Vector2(0.0, 20.0), speed, Palette.color("text"), fs)
 	var modes: PackedStringArray = PackedStringArray()
 	for m: Array in [
 		["all_stop", "helm.all_stop"], ["approach", "helm.approach"], ["face", "helm.face"]
@@ -861,27 +879,47 @@ func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 	if int(h.get("docked_site", -1)) >= 0:
 		modes.append(tr("helm.docked"))
 	if not modes.is_empty():
-		_text(font, at + Vector2(0.0, 40.0), "  ".join(modes), Palette.color("accent"))
+		_text(font, at + Vector2(0.0, 40.0), "  ".join(modes), Palette.color("accent"), fs)
 	if not full:
 		return
 	var y: float = at.y + 62.0
-	_bar(font, Vector2(at.x, y), tr("helm.thrust"), float(h.get("thrust_scale", 1.0)), true)
-	_bar(font, Vector2(at.x, y + 18.0), tr("helm.turn"), float(h.get("torque_scale", 1.0)), true)
-	_bar(font, Vector2(at.x, y + 36.0), tr("helm.propellant"), panel.propellant_share(), false)
+	var pitch: float = 20.0 if touch_layout() else 18.0
+	_bar(
+		font,
+		Vector2(at.x, y),
+		tr(_bar_key("helm.max_thrust")),
+		float(h.get("thrust_scale", 1.0)),
+		true
+	)
+	_bar(
+		font,
+		Vector2(at.x, y + pitch),
+		tr(_bar_key("helm.max_turn")),
+		float(h.get("torque_scale", 1.0)),
+		true
+	)
+	_bar(
+		font, Vector2(at.x, y + 2.0 * pitch), tr("helm.propellant"), panel.propellant_share(), false
+	)
 
 
 ## A labelled bar: an envelope share (0..BAR_MAX, nominal ticked) or a 0..1 share;
-## nothing for a negative value (unknown).
+## nothing for a negative value (unknown). Fuel turns amber under a fifth and red under a
+## tenth, its percentage with it.
 func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) -> void:
 	if value < 0.0:
 		return
-	_text(font, at + Vector2(0.0, 10.0), label, Palette.color("text_dim"), SMALL)
-	var bar: Rect2 = Rect2(at + Vector2(48.0, 0.0), Vector2(_bar_w(), 10.0))
+	var fs: int = _small()
+	var label_w: float = _bar_extra() - PCT_W
+	_text(font, at + Vector2(0.0, 10.0 + (fs - SMALL) / 2.0), label, Palette.color("text_dim"), fs)
+	var bar: Rect2 = Rect2(at + Vector2(label_w, 0.0), Vector2(_bar_w(), 10.0))
 	var top: float = BAR_MAX if envelope else 1.0
 	draw_rect(bar, Color(Palette.color("background"), 0.6))
 	var fill: Rect2 = Rect2(bar.position, Vector2(bar.size.x * clampf(value / top, 0.0, 1.0), 10.0))
 	var low: bool = value < (0.75 if envelope else 0.2)
-	draw_rect(fill, Palette.color("warn") if low else Palette.color("ok"))
+	var critical: bool = not envelope and value < 0.1
+	var fill_role: String = "danger_text" if critical else ("warn" if low else "ok")
+	draw_rect(fill, Palette.color(fill_role))
 	draw_rect(bar, Palette.color("line"), false, 1.0)
 	if envelope:
 		var x: float = bar.position.x + bar.size.x / BAR_MAX
@@ -890,10 +928,10 @@ func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) 
 		)
 	_text(
 		font,
-		bar.position + Vector2(bar.size.x + 6.0, 10.0),
+		bar.position + Vector2(bar.size.x + 6.0, 10.0 + (fs - SMALL) / 2.0),
 		"%d%%" % roundi(value * 100.0),
-		Palette.color("text_dim"),
-		SMALL
+		Palette.color(fill_role) if low and not envelope else Palette.color("text_dim"),
+		fs
 	)
 
 
@@ -946,7 +984,7 @@ func _selected_item() -> Dictionary:
 		return {"kind": "site", "allegiance": ""}
 	var info: Dictionary = panel.ctx.view.contacts.get("info", {})
 	var letter: String = Palette.allegiance(selection_label())
-	if int(info.get(int(s.get("id", -1)), [0])[0]) & ContactsSection.FLAG_OWN:
+	if int(info.get(int(s.get("id", -1)), [0])[0]) & SnapshotReader.FLAG_OWN:
 		letter = "F"
 	return {"kind": "contact", "allegiance": letter}
 

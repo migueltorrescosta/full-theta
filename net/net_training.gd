@@ -5,7 +5,7 @@ extends RefCounted
 ## crew drill ("" = the Shakedown with a crew); a server with no other crew switches to a
 ## fresh Shakedown and seats and starts the sender, otherwise it answers `busy` and nothing
 ## changes for the players already on it. The bots take no session: they are entries that
-## count for coverage (ServerSession.entries_of) and press Next for their half of a pair
+## count for coverage (NetLobby.entries_of) and press Next for their half of a pair
 ## step (TrainingPartners). docs/protocol.md, "Solo training".
 
 const BUSY: String = "busy"
@@ -55,14 +55,11 @@ func on_join(s: NetSession) -> void:
 ## Seats the session at `entry` of the ship and presses Start for it (the coverage check
 ## passes through the bots).
 func seat_and_start(s: NetSession, ship: int, entry: String) -> void:
-	session.move(s, ship, entry)
-	session._on_ready(s.conn, {"ready": true}, 0)
+	session.lobby.move(s, ship, entry)
+	session.lobby.mark_ready(s)
 
 
-func _on_training(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func _on_training(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var station: String = msg["station"]
 	var reason: String = ""
 	var extra: Dictionary = {}
@@ -74,7 +71,6 @@ func _on_training(conn: int, msg: Dictionary, _now_us: int) -> void:
 	elif crew_besides(s) > 0:
 		reason = BUSY
 		extra = {"players": crew_besides(s)}
-	if reason != "":
-		session.request_rejected(s, NetProtocol.Type.TRAINING, reason, extra)
+	if session.refuse(s, NetProtocol.Type.TRAINING, reason, extra):
 		return
 	hook.call(s, station)

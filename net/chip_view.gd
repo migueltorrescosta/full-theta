@@ -5,7 +5,28 @@ extends RefCounted
 ## Captain's chip list and every station's chip strip read the chips through open_chips().
 
 ## Sim ticks per second, for the time a chip has left.
-const HZ: int = SimWorld.HZ
+const HZ: int = SimRate.HZ
+
+## The chip list (content/chips/chips.tres), loaded once; NetChips reads the same.
+static var _def: ChipsDef = load("res://content/chips/chips.tres") as ChipsDef
+
+
+static func def() -> ChipsDef:
+	return _def
+
+
+## The index of a chip id in the list, or -1.
+static func index_of(chip_id: String) -> int:
+	for i: int in _def.chips.size():
+		if String(_def.chips[i].id) == chip_id:
+			return i
+	return -1
+
+
+## What the chip's argument names (ChipDef.Arg), NONE for an unknown chip.
+static func arg_kind(chip_id: String) -> ChipDef.Arg:
+	var at: int = index_of(chip_id)
+	return _def.chips[at].arg if at >= 0 else ChipDef.Arg.NONE
 
 
 ## Every chip the view lists, oldest first: {id: int, chip: String (chips.tres id), arg: int
@@ -14,7 +35,7 @@ const HZ: int = SimWorld.HZ
 ## the Captain, the Viewer and the dev entry all of the ship's.
 static func open_chips(view: NetViewState) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	var def: ChipsDef = NetChips.def()
+	var def: ChipsDef = _def
 	for row: Dictionary in view.blocks.get(StationViews.Section.CHIPS, {}).get("chips", []):
 		var at: int = row["chip"]
 		if at < 0 or at >= def.chips.size():
@@ -57,7 +78,7 @@ static func left_s(view: NetViewState, chip: Dictionary) -> float:
 ## contact of a chip that carries one.
 static func label(chip: Dictionary, callsign: String = "") -> String:
 	var text: String = TranslationServer.translate("chip." + str(chip["chip"]))
-	match NetChips.arg_kind(str(chip["chip"])):
+	match arg_kind(str(chip["chip"])):
 		ChipDef.Arg.MOUNT:
 			return text % (int(chip["arg"]) + 1)
 		ChipDef.Arg.CONTACT:

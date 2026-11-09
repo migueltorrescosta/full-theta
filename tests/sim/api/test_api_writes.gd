@@ -167,7 +167,7 @@ func test_a_rejected_write_has_a_rejected_handle_and_shifts_no_other() -> void:
 func test_message_without_a_listener_queues_nothing() -> void:
 	var w: SimWorld = ApiFixture.world()
 	w.run.status[0] = RunTable.Status.ABANDONED
-	_api(w).message("npc.hello", {}, SayTarget.npc(&"rosa"))
+	_api(w).message("npc.hello", {}, SayTarget.npc(&"rosa", -1))
 	assert_int(w.queued_commands().size()).is_equal(0)
 
 

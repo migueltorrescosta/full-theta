@@ -73,17 +73,17 @@ static func known_to(world: SimWorld, faction: int, i: int) -> bool:
 	for s: int in world.ship_count():
 		if kin.factions[s] != faction or not kin.is_alive(s):
 			continue
-		var reach: float = h.detect_range * DamageSystem.effectiveness(world, s, &"sensors")
+		var reach: float = (
+			h.detect_range * DamageSystem.effectiveness(world, s, KnowledgeSystem.SENSORS)
+		)
 		if _gap(h, ship_offset(world, s, h), t) <= reach:
 			return true
 	var probes: ProbeTable = world.probes
 	for p: int in probes.size():
 		if probes.factions[p] != faction or probes.deployed[p] == 0:
 			continue
-		var at: Vector3 = Vector3(
-			kin.wrap(probes.at_x[p] - h.center.x),
-			kin.wrap(probes.at_y[p] - h.center.y),
-			kin.wrap(probes.at_z[p] - h.center.z)
+		var at: Vector3 = kin.delta(
+			probes.at_x[p], probes.at_y[p], probes.at_z[p], h.center.x, h.center.y, h.center.z
 		)
 		if _gap(h, at, t) <= world.defs[probes.ship_ids[p]].probe_range:
 			return true
@@ -132,7 +132,8 @@ static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -
 	var bit: int = 1 << i
 	if table.crossed[ship] & bit != 0:
 		return
-	if h.duration_s > 0.0 and t > h.start_s + h.duration_s:
+	# Before start_s the front does not exist yet; faded, it is gone (see is_live).
+	if not is_live(h, t):
 		return
 	var d: float = edge_distance(h, ship_offset(world, ship, h), t)
 	var first_look: bool = table.seen[ship] & bit == 0

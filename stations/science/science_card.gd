@@ -60,8 +60,14 @@ func _draw() -> void:
 	var y: float = 24.0 if not compact else 20.0
 	_text(font, Vector2(10, y), callsign, Palette.color("text"), FONT_SIZE + 3)
 	var conf: String = (
-		"%s %d%%   %s %d%%"
-		% [tr("sci.scan_conf"), roundi(scan * 100.0), tr("sci.detect"), roundi(detect * 100.0)]
+		"%s %d%% (%s)   %s %d%%"
+		% [
+			tr("sci.scan_conf"),
+			roundi(scan * 100.0),
+			confidence_word(scan),
+			tr("sci.detect"),
+			roundi(detect * 100.0)
+		]
 	)
 	if compact:
 		var cw: float = (
@@ -77,6 +83,13 @@ func _draw() -> void:
 	for part: String in ["class", "identity", "intent", "weak_points", "resistances", "hack"]:
 		_row(font, part, y, scan)
 		y += COMPACT_ROW_H if compact else ROW_H
+
+
+## The scan confidence in a word: "sure" from 85 %, "likely" from 50 %, else "a guess".
+static func confidence_word(scan: float) -> String:
+	if scan >= 0.85:
+		return TranslationServer.translate("sci.conf_sure")
+	return TranslationServer.translate("sci.conf_likely" if scan >= 0.5 else "sci.conf_guess")
 
 
 func _row(font: Font, part: String, y: float, scan: float) -> void:

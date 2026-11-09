@@ -103,11 +103,11 @@ func test_ships_start_all_together() -> void:
 	var fleet: Dictionary = await _fleet(crews[1], from, one)
 	assert_bool(fleet["ships"][0]["started"]).is_true()
 	await h.wait(200)
-	assert_bool(server.session.launched.is_empty()).is_true()
+	assert_bool(server.session.lobby.launched.is_empty()).is_true()
 	assert_int(server.world.tick).is_equal(0)
 	crews[1].set_ready(true)
 	assert_bool(await _running(server)).is_true()
-	assert_int(server.session.launched.size()).is_equal(2)
+	assert_int(server.session.lobby.launched.size()).is_equal(2)
 	var started: Callable = func(ev: Dictionary) -> bool: return ev["payload"]["started"]
 	fleet = await _fleet(crews[1], from, started)
 	assert_array(fleet["waiting"]).is_empty()
@@ -206,7 +206,7 @@ func test_modes_offered_and_checked_at_start() -> void:
 	var e: Dictionary = await h.next_event(host, NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(e["payload"]["reason"]).is_equal("bad_mode")
 	assert_array(e["payload"]["errors"]).is_not_empty()
-	assert_bool(server.session.launched.is_empty()).is_true()
+	assert_bool(server.session.lobby.launched.is_empty()).is_true()
 
 
 # FT: FT-MIS-014

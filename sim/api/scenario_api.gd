@@ -11,8 +11,6 @@ extends RefCounted
 ## an ApiHandle, which resolves to the real id once the command has applied (Q24); the API
 ## predicts no id.
 
-## Ticks per second, for scenarios and the director to turn seconds into ticks.
-const HZ: int = SimWorld.HZ
 ## The session modes a director plans differently for (session_mode() returns a
 ## SessionRules.Mode; the director sees only sim/api, so it reads them from here).
 const MODE_RACE: int = SessionRules.Mode.RACE
@@ -20,10 +18,27 @@ const MODE_LAST_STANDING: int = SessionRules.Mode.LAST_STANDING
 const MODE_HOLDOUT: int = SessionRules.Mode.HOLDOUT
 
 var _world: SimWorld
+var _crew: ApiCrew
+
+
+## The story flags a station's Next and Skip presses are counted in (TrainingNextCommand).
+static func next_flag(station: StringName) -> StringName:
+	return TrainingNextCommand.flag_name(station)
+
+
+static func skip_flag(station: StringName) -> StringName:
+	return TrainingNextCommand.skip_flag_name(station)
 
 
 func _init(world: SimWorld) -> void:
 	_world = world
+
+
+## The crew verbs the Shakedown's bots act through (F10).
+func crew() -> ApiCrew:
+	if _crew == null:
+		_crew = ApiCrew.new(_world)
+	return _crew
 
 
 # --- queries (value copies) ---
@@ -49,7 +64,7 @@ func tick() -> int:
 func crew_ships() -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	for id: int in _world.ship_count():
-		if not _world.ai.is_enabled(id) and _world.run.status[id] == RunTable.Status.IN_PLAY:
+		if _world.is_crew_in_play(id):
 			out.append(id)
 	return out
 
@@ -63,6 +78,20 @@ func crew_ships_of(faction: int) -> PackedInt32Array:
 	return out
 
 
+## Of `ships`, those still in play and in an encounter: a ship that fled or was lost has left
+## it (A2: a scenario serves the ships that are still in the fight).
+func engaged(ships: PackedInt32Array) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for id: int in ships:
+		if (
+			_world.has_ship(id)
+			and _world.run.status[id] == RunTable.Status.IN_PLAY
+			and _world.run.encounter[id] >= 0
+		):
+			out.append(id)
+	return out
+
+
 ## The session's mode, a SessionRules.Mode value (#11): the director keys on it.
 func session_mode() -> int:
 	return _world.rules.mode
@@ -70,27 +99,41 @@ func session_mode() -> int:
 
 ## A ship's side (SimWorld.team_of, #11).
 func team_of(id: int) -> int:
-	if id < 0 or id >= _world.ship_count():
+	if not _world.has_ship(id):
 		return -1
 	return _world.team_of(id)
 
 
+## A ship's faction, -1 for an id that is no ship (cheaper than ship(id).faction).
+func faction_of(id: int) -> int:
+	if not _world.has_ship(id):
+		return -1
+	return _world.faction_of(id)
+
+
+## The site a ship is within the radius of, else -1 (cheaper than ship(id).at_site).
+func at_site(id: int) -> int:
+	if not _world.has_ship(id):
+		return -1
+	return SiteTable.at_site(_world, id)
+
+
 func ship(id: int) -> ShipView:
 	var v: ShipView = ShipView.new()
-	if id < 0 or id >= _world.ship_count():
+	if not _world.has_ship(id):
 		return v
 	v.id = id
 	v.faction = _world.faction_of(id)
 	v.pos = _world.kin.point_at(id, Vector3.ZERO)
 	v.velocity = _world.kin.vel[id]
 	v.nearest_site = SiteTable.nearest(_world, id)
-	v.at_site = SiteTable.at_site(_world, id)
+	v.at_site = SiteTable.within_radius(_world, id, v.nearest_site)
 	v.hull_frac = DamageSystem.hull_fraction(_world, id)
 	v.status = _world.run.status[id]
 	v.in_play = v.status == RunTable.Status.IN_PLAY
 	v.outcome = _world.run.outcome[id]
-	v.docked_site = _helm(&"docked_site", id, -1) as int
-	v.jumping = (_helm(&"jump_left", id, 0.0) as float) > 0.0
+	v.docked_site = _world.helm.docked_site[id]
+	v.jumping = _world.helm.jump_left[id] > 0.0
 	return v
 
 
@@ -146,9 +189,6 @@ func encounter(id: int) -> EncounterView:
 		if EncounterTable.has_bit(t.ships_mask[id], ship_id):
 			v.ships.append(ship_id)
 	v.result = t.result[id]
-	v.start_tick = t.start_tick[id]
-	v.end_tick = t.end_tick[id]
-	v.cost = t.cost[id]
 	return v
 
 
@@ -163,7 +203,7 @@ func encounter_limits() -> Vector2i:
 func cards_of(ship_id: int) -> Array[CardView]:
 	var out: Array[CardView] = []
 	var story: StoryTable = _world.story
-	if ship_id < 0 or ship_id >= _world.ship_count():
+	if not _world.has_ship(ship_id):
 		return out
 	var faction: int = _world.faction_of(ship_id)
 	for row: int in story.size():
@@ -205,7 +245,7 @@ func events() -> Array[ApiEvent]:
 
 ## Straight-line distance between two ships (m), by the minimum image across the cube's seams.
 func distance(a: int, b: int) -> float:
-	if a < 0 or b < 0 or a >= _world.ship_count() or b >= _world.ship_count():
+	if not _world.has_ship(a) or not _world.has_ship(b):
 		return INF
 	return _world.kin.relative(a, b).length()
 
@@ -246,7 +286,7 @@ func rand(stream: StringName) -> float:
 func spawn_at_range(
 	enemy_key: StringName, faction: int, near: int, range_m: float, clock: int, height: int
 ) -> ApiHandle:
-	var world_dir: Vector3 = _world.kin.to_world(near, _local_direction(clock, height))
+	var world_dir: Vector3 = _world.kin.to_world(near, Callout.direction(clock, height))
 	var point: PackedFloat64Array = _world.kin.point_at(near, world_dir * range_m)
 	return _spawn(enemy_key, faction, point, _facing(-world_dir))
 
@@ -266,7 +306,7 @@ func spawn_on_leg(
 	var a: PackedFloat64Array = _world.sites.point(from_site)
 	var b: PackedFloat64Array = _world.sites.point(to_site)
 	var kin: Kinematics = _world.kin
-	var leg: Vector3 = Vector3(kin.wrap(b[0] - a[0]), kin.wrap(b[1] - a[1]), kin.wrap(b[2] - a[2]))
+	var leg: Vector3 = kin.delta(b[0], b[1], b[2], a[0], a[1], a[2])
 	var side: Vector3 = leg.cross(Vector3.UP)
 	if side.length_squared() < 1e-6:
 		side = leg.cross(Vector3.RIGHT)
@@ -294,7 +334,7 @@ func open_site(site_key: StringName) -> ApiHandle:
 ## returns a handle on its site id (resolved at once when the copy is open).
 func open_site_copy(site_key: StringName, ship_id: int) -> ApiHandle:
 	var cmd: OpenSiteCommand = OpenSiteCommand.new()
-	if ship_id < 0 or ship_id >= _world.ship_count():
+	if not _world.has_ship(ship_id):
 		cmd.tick = _world.tick  # refused at once: no such ship
 		return ApiHandle.new(cmd)
 	var copy: StringName = SiteTable.copy_key(_world, site_key, ship_id)
@@ -367,6 +407,18 @@ func settle_card(card: int, success: bool, partial: bool = false) -> void:
 	cmd.card = card
 	cmd.success = success
 	cmd.partial = partial
+	_world.submit(cmd)
+
+
+## Withdraws an OPEN card, or ends a live hail (Story.decline); nothing is queued for a card
+## that doesn't exist.
+func decline_card(card: int) -> void:
+	if card < 0 or card >= _world.story.size():
+		return
+	var cmd: DeclineCardCommand = DeclineCardCommand.new()
+	cmd.source = SimCommand.Source.SERVER
+	cmd.ship_id = Story.audience_ship(_world, card)
+	cmd.card = card
 	_world.submit(cmd)
 
 
@@ -489,20 +541,7 @@ func _spawn(
 	return ApiHandle.new(cmd)
 
 
-## Unit vector in the ship frame (-Z bow, +X starboard, +Y up) for a clock and height.
-static func _local_direction(clock: int, height: int) -> Vector3:
-	var bearing: float = deg_to_rad(30.0 * (clock % 12))
-	var elevation: float = deg_to_rad([-75.0, -35.0, 0.0, 35.0, 75.0][clampi(height, -2, 2) + 2])
-	return Vector3(sin(bearing) * cos(elevation), sin(elevation), -cos(bearing) * cos(elevation))
-
-
 ## A rotation whose bow (-Z) points along `dir`.
 static func _facing(dir: Vector3) -> Quaternion:
 	var up: Vector3 = Vector3.UP if absf(dir.normalized().y) < 0.99 else Vector3.RIGHT
 	return Basis.looking_at(dir.normalized(), up).get_rotation_quaternion()
-
-
-## A HelmTable column value for the ship, or `fallback` while the column does not exist.
-func _helm(column: StringName, id: int, fallback: Variant) -> Variant:
-	var col: Variant = _world.helm.get(column)
-	return col[id] if col != null else fallback

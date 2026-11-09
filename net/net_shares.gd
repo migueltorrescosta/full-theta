@@ -28,13 +28,11 @@ var _until: Dictionary[int, Dictionary] = {}
 
 func _init(server_session: ServerSession) -> void:
 	_session = weakref(server_session)
+	server_session.add_handler(NetProtocol.Type.SHARE, on_share)
 
 
 ## Share{feature}.
-func on_share(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func on_share(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var why: String = share(s, msg["feature"])
 	if why != "":
 		session.request_rejected(s, NetProtocol.Type.SHARE, why, {"feature": msg["feature"]})
@@ -49,7 +47,7 @@ func share(s: NetSession, feature: String) -> String:
 		why = BAD_FEATURE
 	elif not s.has_pick():
 		why = NOT_SOURCE
-	elif not session.toggles.on(id):
+	elif not session.lobby.toggles.on(id):
 		why = OFF
 	else:
 		var stations: Array[String] = StationViews.stations_of(s.entry)

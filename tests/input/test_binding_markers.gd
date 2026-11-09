@@ -34,5 +34,5 @@ func test_the_client_fills_the_marker_with_the_current_binding() -> void:
 	b.rebind("face", IntentTable.KBM, PackedStringArray(["Alt+A"]))
 	assert_str(BindingText.fill_markers(text, b, IntentTable.KBM)).is_equal("Face the drone. Alt+A")
 	# No binding on the device: a dash, not a gap.
-	assert_str(BindingText.fill_markers("{binding:decoupled}", b, IntentTable.PAD)).is_equal("-")
+	assert_str(BindingText.fill_markers("{binding:mark_rename}", b, IntentTable.PAD)).is_equal("-")
 	assert_str(BindingText.fill_markers("no marker", b, IntentTable.KBM)).is_equal("no marker")

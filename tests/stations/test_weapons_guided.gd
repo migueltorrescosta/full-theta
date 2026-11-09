@@ -106,7 +106,7 @@ func test_ammo_select_cycles_the_types() -> void:
 		[{"kind": "set_ammo_type", "mount_index": 0, "ammo_type": 1}]
 	)
 	(
-		assert_str(StationViews.item_of(SimCommands.from_dict(_commands(s, "set_ammo_type")[0])))
+		assert_str(StationBlocks.item_of(SimCommands.from_dict(_commands(s, "set_ammo_type")[0])))
 		. is_equal("mount:0")
 	)
 	var second: StationScreen = _screen(1)
@@ -115,9 +115,9 @@ func test_ammo_select_cycles_the_types() -> void:
 	assert_int(_commands(second, "set_ammo_type")[0]["ammo_type"]).is_equal(0)
 	second.dispatch(_ev(second, "ammo_prev"))
 	assert_int(_commands(second, "set_ammo_type")[1]["ammo_type"]).is_equal(0)
-	assert_str(q._ammo_text()).is_equal("Ammo: Missile")
-	assert_str(p._ammo_text()).is_equal("Ammo: Mass driver")
-	assert_str(q.mount_rows()[0]).contains("/8")
+	assert_str(WeaponsReadout.ammo_text(q)).is_equal("Ammo: Missile")
+	assert_str(WeaponsReadout.ammo_text(p)).is_equal("Ammo: Mass driver")
+	assert_str(WeaponsReadout.mount_rows(q)[0]).contains("/8")
 
 
 # FT: FT-WPN-008, FT-STN-010
@@ -138,7 +138,7 @@ func test_guided_fire_at_a_mark_on_a_contact() -> void:
 	)
 	assert_array(_commands(s, "aim_mount")).is_not_empty()
 	var cmd: SimCommand = SimCommands.from_dict(fired[0])
-	assert_str(StationViews.item_of(cmd)).is_equal("mount:0")
+	assert_str(StationBlocks.item_of(cmd)).is_equal("mount:0")
 	assert_str(StationViews.station_of_command(cmd.kind())).is_equal("weapons")
 	# The selected contact works without a mark; the cooldown holds a second press.
 	s.ctx.crew.select("contact", StationFixture.H2)
@@ -190,5 +190,5 @@ func test_locked_mount_shows_and_holds_fire() -> void:
 	var s: StationScreen = _screen()
 	var p: WeaponsPanel = _panel(s)
 	s.ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0]["locked"] = true
-	assert_str(p.mount_rows()[0]).contains("locked")
+	assert_str(WeaponsReadout.mount_rows(p)[0]).contains("locked")
 	assert_bool(p._try_fire(0, s.ctx.now_ms())).is_false()

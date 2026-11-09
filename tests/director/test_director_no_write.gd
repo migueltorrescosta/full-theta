@@ -26,7 +26,9 @@ func _director() -> Director:
 	var catalogue: Array[Scenario] = [
 		TestScenario.make(&"s_a", 2, true), TestScenario.make(&"s_b", 3)
 	]
-	return Director.new(ApiFixture.run_def().director, &"normal", catalogue, 5)
+	return Director.new(
+		ApiFixture.run_def().director, &"normal", catalogue, 5, M1Encounter.PLAYER_FACTION
+	)
 
 
 # FT: FT-SIM-029, FT-MIS-005, FT-TST-012

@@ -27,4 +27,4 @@ static func rule(role: CrewMarks.Role, view: int, captain_seated: bool) -> Strin
 			return ""
 		CrewMarks.Role.RELAY:
 			return CAPTAIN_SEATED if captain_seated else ""
-	return CommandGate.NOT_ALLOWED
+	return NetProtocol.REASON_NOT_ALLOWED

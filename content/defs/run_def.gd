@@ -5,6 +5,10 @@ extends Resource
 ## reads (director, flee cost, the crew's ship, starting credits). RunSetup builds the
 ## world from it. Read-only at runtime (FT-ARC-020).
 
+## The difficulty presets the lobby offers; a run's director budgets every one (a missing one
+## would leave the director with no budget).
+const PRESETS: Array[StringName] = [&"easy", &"normal", &"hard"]
+
 @export var id: StringName = &""
 ## The one wrapping cube with its named sites (D229). Set once the map exists.
 @export var map: MapDef
@@ -49,6 +53,9 @@ func validate() -> Array[String]:
 	if DefCheck.required(errors, "director", director) and not training:
 		# Every scenario costs at least 1, so a budget below the fewest encounters can't
 		# reach them (Q14).
+		for preset: StringName in PRESETS:
+			if not director.budget_per_ship.has(preset):
+				errors.append("director.budget_per_ship needs the %s preset" % preset)
 		for preset: StringName in director.budget_per_ship:
 			if director.budget_per_ship[preset] < min_encounters:
 				errors.append(

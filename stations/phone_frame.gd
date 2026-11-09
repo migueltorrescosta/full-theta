@@ -122,8 +122,8 @@ func build(owner_screen: StationScreen, main: Control, rows: VBoxContainer) -> v
 	band_guard.visible = false
 	band_guard.add_to_group(TouchInput.GROUP)
 	screen.add_child(band_guard)
-	long_press.ping.connect(screen.ping_at)
-	long_press.mark.connect(screen.mark_at)
+	long_press.ping.connect(screen.common.ping_at)
+	long_press.mark.connect(screen.common.mark_at)
 	long_press.armed.connect(_on_armed)
 	view_top.add_child(armed_ring)
 	screen.top_bar.alert_sheet_requested.connect(open_alert_sheet)
@@ -211,8 +211,9 @@ func _over_view(pos: Vector2) -> bool:
 	return not (hovered is BaseButton)
 
 
-## Each frame on a phone: the view-top row's contents and places (framed only).
-func process(now: int) -> void:
+## Each frame on a phone: the view-top row's contents and places (framed only); `left` is
+## every share's seconds left (CrewState.shares_left).
+func process(now: int, left: Dictionary) -> void:
 	view_top.visible = framed()
 	if not view_top.visible:
 		armed_ring.hide_ring()
@@ -232,9 +233,18 @@ func process(now: int) -> void:
 	var rows: Array = []
 	if crew:
 		for c: Dictionary in ChipView.incoming(ctx.view, screen.stations):
-			var text: String = "%s: %s" % [tr("station." + str(c["from"])), ChipView.label(c)]
-			rows.append({"id": c["id"], "text": text, "left": ChipView.left_s(ctx.view, c)})
-	request_chips.show_chips(rows)
+			(
+				rows
+				. append(
+					{
+						"id": c["id"],
+						"text": ChipStrip.asker(c),
+						"left": ChipView.left_s(ctx.view, c),
+						"effect": ChipLapse.effect(str(c["chip"])),
+					}
+				)
+			)
+	request_chips.show_chips(rows, ShareBar.incoming_lines(screen.stations, left), now)
 	if screen.panels.size() == 2:
 		var other: String = screen.stations[1 - screen.focus_index]
 		glance.show_for(ctx, other, screen.focused_station())
@@ -278,6 +288,10 @@ func _place_view_top() -> void:
 		selection_chip.size = selection_chip.get_combined_minimum_size()
 		row_h = selection_chip.size.y + gap
 	var cy: float = y if side_by_side else y + row_h
+	if not side_by_side:
+		# Under the chip the column takes the view's width: a chip's effect line wraps less
+		# and pushes the panel down less (w5).
+		col_w = x1 - x0
 	for c: Control in col:
 		var sz: Vector2 = c.get_combined_minimum_size()
 		c.size = Vector2(col_w, sz.y)
@@ -309,7 +323,7 @@ func selection_text() -> String:
 
 ## The selection chip's arrows: the next (+1) or previous (-1) contact by range.
 func cycle_target(step: int) -> void:
-	var ids: Array = screen.contacts_by_range()
+	var ids: Array = screen.common.contacts_by_range()
 	if step < 0:
 		ids.reverse()
 	screen.ctx.crew.cycle("contact", ids)
@@ -325,8 +339,8 @@ func open_selection_sheet() -> void:
 		TouchText.of("sheet.clear", "Clear")
 	]
 	var acts: Array[Callable] = [
-		func() -> void: screen.ping_at(Vector2(-1.0, -1.0)),
-		func() -> void: screen.mark_item(ctx.crew.selection),
+		func() -> void: screen.common.ping_at(Vector2(-1.0, -1.0)),
+		func() -> void: screen.common.mark_item(ctx.crew.selection),
 		func() -> void: ctx.crew.select("", -1),
 	]
 	for e: Array in screen.focused_panel().selection_extras:
@@ -345,7 +359,7 @@ func open_alert_sheet() -> void:
 	var labels: Array = []
 	for a: Dictionary in Palette.ALERTS:
 		labels.append("%s  %s" % [a["letter"], tr(a["key"])])
-	screen.sheet.open(tr("intent.alert_cycle"), labels, screen._set_alert)
+	screen.sheet.open(tr("intent.alert_cycle"), labels, screen.common.set_alert)
 
 
 ## A long-press armed at `at` (viewport px): the ring shows under the finger.
@@ -386,21 +400,6 @@ func on_pinged(p: Dictionary) -> void:
 		label = ctx.view.callsign(int(item["id"]))
 	var text: String = TouchText.of("toast.pinged", "%s pinged %s") % [str(p.get("by", "")), label]
 	ping_toast.show_ping(text, ctx.now_ms())
-
-
-## The form of the station screen `panel` is on, from the screen's own size: in the game
-## it fills the window (LayoutMode.form_of); tests lay a screen out at a set size inside
-## the tiny headless window, which alone would read as a phone.
-static func form_of_panel(panel: Control) -> LayoutMode.Form:
-	var n: Node = panel
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	if n == null:
-		return LayoutMode.form_of(panel)
-	var vp: Viewport = panel.get_viewport()
-	var factor: float = (vp as Window).content_scale_factor if vp is Window else 1.0
-	var dp: Vector2 = LayoutMode.dp_size((n as Control).size, factor, LayoutMode.density())
-	return LayoutMode.form_for(dp, LayoutMode.coarse_pointer())
 
 
 ## A vertical stack of touch controls, UiTheme.TOUCH_GAP apart.

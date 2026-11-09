@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## T030: power pips within the reactor cap, overcharge heat and faults, the boost, the
 ## weapons energy store and the thrust envelope (L2). Numbers come from the M1 corvette
 ## content: 12 reactor pips, 4 per subsystem, 2 nominal on engines, thrusters, weapons,
-## shields and sensors, 5 K/s per overcharged pip, dissipation 0.05/s, fault at 100 K,
+## shields and sensors, 5 K/s per overcharged pip, dissipation 0.05/s, fault at 95 K,
 ## envelope (0, 0.25) (1, 1) (2, 1.5), heat derate (0, 1) (1, 1) (2, 0.5), 8 s boost,
 ## 20 MW reactor, 5 MJ weapons store.
 
@@ -52,9 +52,9 @@ func test_pips_within_cap() -> void:
 
 
 # FT: FT-SIM-026
-# Overcharge builds heat as dT/dt = 5 K/s * 2 pips - 0.05/s * T; heat passes 100 K at
-# t = ln 2 / 0.05 = 13.86 s (tick 831), where exactly one fault fires; after cooling
-# below 80 K a new overcharge can fault again. Nominal pips never heat.
+# Overcharge builds heat as dT/dt = 5 K/s * 2 pips - 0.05/s * T; heat passes the 95 K threshold at
+# t = ln(200 / 105) / 0.05 = 12.9 s (tick 773), where exactly one fault fires; after cooling
+# below 76 K a new overcharge can fault again. Nominal pips never heat.
 func test_overcharge_heat_creates_one_fault() -> void:
 	var w: SimWorld = _world()
 	_steps(w, 600)
@@ -70,13 +70,13 @@ func test_overcharge_heat_creates_one_fault() -> void:
 	_steps(w, 1200)
 	var faults: Array[SimEvent] = SimFixture.of_kind(w.drain_events(), &"fault")
 	assert_int(faults.size()).is_equal(1)
-	assert_int(faults[0].tick - start).is_equal(831)
+	assert_int(faults[0].tick - start).is_equal(773)
 	assert_str(String(faults[0].tag)).is_equal("engines")
 	assert_int(faults[0].other_id).is_equal(-1)
-	assert_float(faults[0].value).is_greater(100.0)
+	assert_float(faults[0].value).is_greater(95.0)
 	assert_bool(_pips(w, ENG, 2)).is_true()
 	_steps(w, 60 * 20)
-	assert_float(w.damage.heat[w.damage.subsystem_row(0, 0)]).is_less(80.0)
+	assert_float(w.damage.heat[w.damage.subsystem_row(0, 0)]).is_less(76.0)
 	assert_int(SimFixture.of_kind(w.drain_events(), &"fault").size()).is_equal(0)
 	assert_bool(_pips(w, ENG, 4)).is_true()
 	_steps(w, 60 * 20)

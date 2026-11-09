@@ -16,9 +16,9 @@ func kind() -> StringName:
 
 
 func apply(world: SimWorld) -> bool:
-	if world.run_def == null or ship < 0 or ship >= world.ship_count():
+	if world.run_def == null or not world.has_ship(ship):
 		return false
-	if world.ai.is_enabled(ship) or world.run.status[ship] != RunTable.Status.IN_PLAY:
+	if not world.is_crew_in_play(ship):
 		return false
 	if world.run.closed[ship] == 1:
 		return false

@@ -88,7 +88,7 @@ func test_view_filter_grants_the_flags() -> void:
 	var signatures: Dictionary = {}
 	for c: Array in cases:
 		var f: ViewFilter = ViewFilter.of(c[0], c[1])
-		var bytes: PackedByteArray = StationViews.block_bytes(S.FEEDS, w, 0, f)
+		var bytes: PackedByteArray = StationBlocks.block_bytes(S.FEEDS, w, 0, f)
 		var got: Array = NetBlock.decode(StationViews.BLOCKS[S.FEEDS], bytes)["flags"]
 		if c[2]:
 			assert_array(got).override_failure_message(str(c)).is_equal(want)

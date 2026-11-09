@@ -5,15 +5,28 @@ extends RefCounted
 ## thrust envelope it writes to kin.thrust_scale / kin.torque_scale each tick
 ## (FT-SIM-006).
 
+## A wrecked weapons subsystem still charges the store at this share of the rate (A1).
+const WEAPON_HEALTH_FLOOR: float = 0.5
+
 ## A subsystem may fault again once its heat falls below this share of its threshold;
 ## the gap keeps a fault from re-firing while heat hovers at the threshold.
 const FAULT_REARM: float = 0.8
+## pips_refusal reasons: a kind the ship lacks, the reactor, over the per-subsystem maximum,
+## over the reactor cap (pip_cap).
+## The reactor subsystem's id: its health and a hack scale the output and the usable pips
+## (R09-1; DamageSystem.effectiveness), 1 when a ship has none.
+const REACTOR_ID: StringName = &"reactor"
+const REFUSE_NO_KIND: StringName = &"pips_no_kind"
+const REFUSE_KIND: StringName = &"pips_kind"
+const REFUSE_MAX: StringName = &"pips_max"
+const REFUSE_CAP: StringName = &"pips_cap"
 
 
 static func step(world: SimWorld) -> void:
 	var t: PowerTable = world.power
 	var kin: Kinematics = world.kin
 	var d: DamageTable = world.damage
+	_clamp_pips(world)
 	# Effective pips and heat of the ship being stepped (reused buffers).
 	var eff_pips: PackedInt32Array = PackedInt32Array()
 	var heats: PackedFloat64Array = PackedFloat64Array()
@@ -73,6 +86,8 @@ static func step(world: SimWorld) -> void:
 		# effectiveness (1 with no such subsystem) and the highest heat over threshold,
 		# summed in subsystem order; and the weapons' effective pips.
 		var weapon_pips: int = 0
+		var weapon_eff: float = 0.0
+		var weapon_n: int = 0
 		var eng_pips: int = 0
 		var eng_nominal: int = 0
 		var eng_eff: float = 0.0
@@ -88,6 +103,8 @@ static func step(world: SimWorld) -> void:
 			var kind: int = sd.kind
 			if kind == SubsystemDef.Kind.WEAPONS:
 				weapon_pips += eff_pips[i]
+				weapon_eff += d.row_effectiveness(first + i, sd)
+				weapon_n += 1
 			elif kind == SubsystemDef.Kind.ENGINES:
 				eng_pips += eff_pips[i]
 				eng_nominal += sd.nominal_pips
@@ -100,7 +117,15 @@ static func step(world: SimWorld) -> void:
 				thr_eff += d.row_effectiveness(first + i, sd)
 				thr_n += 1
 				thr_heat = maxf(thr_heat, heats[i] / sd.fault_heat_threshold)
-		var charge: float = pd.reactor_output * weapon_pips / pd.reactor_pips * SimWorld.DT
+		# The reactor's health scales its output and the weapons' health the charge (down to a floor).
+		var charge: float = (
+			pd.reactor_output
+			* DamageSystem.effectiveness(world, s, REACTOR_ID)
+			* (maxf(WEAPON_HEALTH_FLOOR, weapon_eff / weapon_n) if weapon_n > 0 else 1.0)
+			* weapon_pips
+			/ pd.reactor_pips
+			* SimWorld.DT
+		)
 		t.weapon_energy[s] = minf(t.weapon_energy[s] + charge, pd.weapons_capacity)
 		kin.thrust_scale[s] = t.envelope_of(
 			s, 0, pd, _ratio(eng_pips, eng_nominal), eng_eff / eng_n if eng_n > 0 else 1.0, eng_heat
@@ -123,23 +148,62 @@ static func draw_energy(world: SimWorld, ship_id: int, joules: float) -> bool:
 
 ## Sets the pips of the ship's first subsystem of a kind (FT-ENG-002). Rejects the
 ## reactor, a missing kind, pips outside [0, max_pips_per_subsystem] and a total over
-## reactor_pips; nothing changes when rejected.
+## pip_cap; nothing changes when rejected.
 static func set_pips(world: SimWorld, ship_id: int, kind: int, pips: int) -> bool:
+	if pips_refusal(world, ship_id, kind, pips) != &"":
+		return false
+	var def: ShipDef = world.defs[ship_id]
+	var d: DamageTable = world.damage
+	d.pips[d.subsystem_row(ship_id, subsystem_index(def, kind))] = pips
+	return true
+
+
+## Why set_pips would reject (kind, pips), or &"": REFUSE_NO_KIND (a kind the ship lacks),
+## REFUSE_KIND (the reactor), REFUSE_MAX (outside [0, max_pips_per_subsystem]) or REFUSE_CAP
+## (a total over pip_cap). The server sends the reason back, and the client's toast follows
+## it (F5, R12-7).
+static func pips_refusal(world: SimWorld, ship_id: int, kind: int, pips: int) -> StringName:
 	var def: ShipDef = world.defs[ship_id]
 	var i: int = subsystem_index(def, kind)
-	if i < 0 or kind == SubsystemDef.Kind.REACTOR:
-		return false
+	if i < 0:
+		return REFUSE_NO_KIND
+	if kind == SubsystemDef.Kind.REACTOR:
+		return REFUSE_KIND
 	if pips < 0 or pips > def.power.max_pips_per_subsystem:
-		return false
+		return REFUSE_MAX
 	var d: DamageTable = world.damage
 	var first: int = d.subsystem_row(ship_id, 0)
 	var total: int = 0
 	for r: int in range(first, first + def.subsystems.size()):
 		total += d.pips[r]
-	if total - d.pips[first + i] + pips > def.power.reactor_pips:
-		return false
-	d.pips[first + i] = pips
-	return true
+	if total - d.pips[first + i] + pips > pip_cap(world, ship_id):
+		return REFUSE_CAP
+	return &""
+
+
+## Pips the reactor can feed now: reactor_pips scaled by its effectiveness, rounded down.
+static func pip_cap(world: SimWorld, ship_id: int) -> int:
+	var cap: int = world.defs[ship_id].power.reactor_pips
+	var eff: float = DamageSystem.effectiveness(world, ship_id, REACTOR_ID)
+	return cap if eff >= 1.0 else floori(cap * eff)
+
+
+## Scales the pips of any ship whose total is over its pip_cap (a damaged or hacked
+## reactor) down in proportion, rounding down; repair does not give them back.
+static func _clamp_pips(world: SimWorld) -> void:
+	var d: DamageTable = world.damage
+	for s: int in world.power.size():
+		if world.kin.alive[s] != 1:
+			continue
+		var n: int = world.defs[s].subsystems.size()
+		var first: int = d.subsystem_row(s, 0)
+		var total: int = 0
+		for r: int in range(first, first + n):
+			total += d.pips[r]
+		var cap: int = pip_cap(world, s)
+		if total > cap:
+			for r: int in range(first, first + n):
+				d.pips[r] = d.pips[r] * cap / total
 
 
 ## Starts a boost: engines and thrusters run at max_pips_per_subsystem for

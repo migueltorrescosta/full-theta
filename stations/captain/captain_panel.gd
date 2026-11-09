@@ -229,6 +229,9 @@ static func touch_help() -> Array:
 
 
 func _process(_delta: float) -> void:
+	# Hidden (a station not shown on this phone): nothing to refresh until it shows (R20-5).
+	if not is_visible_in_tree():
+		return
 	var view: int = ctx.crew.main_view
 	for i: int in buttons.size():
 		buttons[i].set_pressed_no_signal(i == view)
@@ -239,6 +242,14 @@ func _process(_delta: float) -> void:
 	chips.show_rows(ChipList.open_rows(ctx.view))
 	cards.setup(CardList.rows(ctx.view, [CardList.MISSION, CardList.CONTRACT]))
 	cards.highlight = ctx.crew.shown_card(ctx.now_ms())
+	# The card the Captain pinged opens in the list, and stays open until another is pinged.
+	if cards.highlight >= 0:
+		cards.expanded = cards.highlight
+	cards.own_name = ctx.settings.player_name
+	# Card id -> the holder of its conversation, for the open card's "claimed" line.
+	cards.claims = CommsData.claimers(
+		ctx.crew, CardList.rows(ctx.view, [CardList.MISSION, CardList.CONTRACT])
+	)
 	cards.queue_redraw()
 
 

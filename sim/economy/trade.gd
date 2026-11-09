@@ -28,8 +28,10 @@ static func market(world: SimWorld, ship: int, card: int, why: Array[StringName]
 
 
 ## What the market pays for a module or an item priced at `price`.
+## Rounded down, with a hair of slack so that a ratio like 0.7 does not lose a credit to
+## floating point (0.7 * 90 is 62.99999999999999).
 static func sale_price(m: MarketDef, price: int) -> int:
-	return floori(price * m.sell_ratio)
+	return floori(price * m.sell_ratio + 1e-6)
 
 
 static func refuse(world: SimWorld, ship: int, card: int, why: StringName) -> bool:

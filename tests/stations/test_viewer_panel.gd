@@ -161,3 +161,30 @@ func test_viewers_only_watch() -> void:
 	s.dispatch(mark)
 	s.dispatch({"id": "alert_cycle", "target": "screen", "pressed": true, "device": "kbm"})
 	assert_array(StationFixture.sent(s.ctx).sent).is_empty()
+
+
+# FT: FT-MSC-004
+# R23-14 (C9 lows): a plain viewer's rail says who sets the view.
+func test_the_rail_says_the_captain_sets_the_view() -> void:
+	I18n.apply("en")
+	assert_str(tr("viewer.caption")).is_equal("The Captain sets this view")
+
+
+# FT: FT-MSC-004
+# w5: the rail's contacts come first; the caption takes only the room they leave, so a
+# phone's rail keeps F4 and H2 and drops the caption.
+func test_the_caption_never_pushes_a_contact_off_the_rail() -> void:
+	I18n.apply("en")
+	var font: Font = ThemeDB.fallback_font
+	var x: float = 12.0
+	for text: String in ["F4 · 7 level · close", "H2 · 4 high · mid"]:
+		var w: float = (
+			font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, ViewerPanel.FONT_SIZE).x
+		)
+		assert_bool(ViewerPanel.rail_fits(x, w, 374.0)).override_failure_message(text).is_true()
+		x += w + 28.0
+	var caption: float = (
+		font.get_string_size(tr("viewer.caption"), 0, -1, ViewerPanel.FONT_SIZE - 2).x
+	)
+	assert_bool(ViewerPanel.rail_fits(x, caption, 374.0)).is_false()
+	assert_bool(ViewerPanel.rail_fits(12.0, caption, 374.0)).is_true()

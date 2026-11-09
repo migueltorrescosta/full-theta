@@ -163,7 +163,7 @@ func test_slotted_lines_are_stitched_without_synthesis() -> void:
 	assert_array(Array(_net.order)).is_equal(["event", "voice"])
 	var e: Array = _net.events[0]
 	assert_array(Array(e[0])).is_equal([7])
-	assert_str(e[2]).is_equal(VoiceService.EVENT_VOICE_LINE)
+	assert_str(e[2]).is_equal(NetProtocol.EVENT_VOICE_LINE)
 	var p: Dictionary = e[3]
 	assert_int(p["clip"]).is_equal(clip)
 	assert_str(p["line"]).is_equal("computer.contact")
@@ -278,112 +278,42 @@ func test_local_lines_send_the_event_only() -> void:
 	assert_int(p["priority"]).is_equal(0)
 
 
-# FT: FT-AUD-003, FT-ARC-019, FT-AUD-019
-# Free text makes exactly one synthesis request, streamed as one VOICE part per sentence
-# after the event; the last part ends the clip.
-func test_free_text_is_one_request_streamed_per_sentence() -> void:
-	_start()
-	_fx.log.clear()
-	var clip: int = _svc.say_free(
-		"Hold position. We are coming about!", "npc", 2, PackedInt32Array([4])
-	)
-	assert_int(_fx.log.size()).is_equal(1)
-	assert_str(_fx.log[0]["voice"]).is_equal("en_US-kristin-medium")
-	assert_int(_svc.free_queued()).is_equal(1)
-	_svc._process(0.0)
-	assert_array(Array(_net.order)).is_equal(["event", "voice", "voice"])
-	var p: Dictionary = _net.events[0][3]
-	assert_int(p["clip"]).is_equal(clip)
-	assert_str(p["line"]).is_empty()
-	assert_bool(p["audio"]).is_true()
-	assert_bool(p["local"]).is_false()
-	assert_int(p["max_age_ms"]).is_equal(VoiceService.DEFAULT_FREE_MAX_AGE_MS)
-	var parts: Array = _net.voice.map(func(v: Array) -> Array: return [v[1]["part"], v[1]["last"]])
-	assert_array(parts).is_equal([[0, false], [1, true]])
-	assert_int(_svc.free_queued()).is_equal(0)
-
-
-# FT: FT-AUD-015
-# D110: with more than 4 free-text lines queued for synthesis, a new one is subtitles
-# only (its event says audio false, nothing is requested); once the queue drains, audio
-# comes back.
-func test_more_than_four_queued_free_lines_are_subtitles_only() -> void:
-	_fx.hold = true
-	_start_held()
-	_fx.log.clear()
-	var audio: Array = []
-	for i: int in 6:
-		_svc.say_free("Line %d." % i, "computer", 1, PackedInt32Array([1]))
-		audio.append(_net.events[i][3]["audio"])
-	assert_array(audio).is_equal([true, true, true, true, true, false])
-	assert_int(_fx.log.size()).is_equal(5)
-	assert_int(_svc.stats["free_subtitles_only"]).is_equal(1)
-	(_fx.spies["en_GB-cori-medium"] as SpyVoiceSynth).release()
-	_svc._process(0.0)
-	assert_int(_svc.free_queued()).is_equal(0)
-	_svc.say_free("Again.", "computer", 1, PackedInt32Array([1]))
-	assert_bool(_net.events[6][3]["audio"]).is_true()
-
-
-# FT: FT-AUD-015, FT-AUD-018
+# FT: FT-AUD-018
 # A synth that hands over nothing for job_timeout_ms fails its jobs: the closed set
-# completes without the names, a free line's clip ends with an empty last part, and the
-# D110 count drops.
+# completes without the names.
 func test_stalled_jobs_time_out() -> void:
 	_fx.hold = true
 	_svc.job_timeout_ms = 50
 	_svc.start_session("en", CLOSED)
-	_svc.say_free("Hold position. Now.", "npc", 2, PackedInt32Array([4]))
 	_svc._process(0.0)
 	assert_bool(_svc.closed_set_done()).is_false()
-	assert_int(_svc.free_queued()).is_equal(1)
 	OS.delay_msec(120)
 	_svc._process(0.0)
 	assert_bool(_svc.closed_set_done()).is_true()
-	assert_int(_svc.free_queued()).is_equal(0)
 	assert_int(_svc.name_clip("npc", "Mara Quill").size()).is_equal(0)
-	assert_int(_net.voice.size()).is_equal(1)
-	var v: Dictionary = _net.voice[0][1]
-	assert_bool(v["last"]).is_true()
-	assert_int((v["pcm"] as PackedByteArray).size()).is_equal(0)
-	assert_int(_svc.stats["synth_errors"]).is_equal(9)
+	assert_int(_svc.stats["synth_errors"]).is_equal(8)
 	# Late parts of a timed-out job are ignored.
 	for spy: SpyVoiceSynth in _fx.spies.values():
 		spy.release()
 	_svc._process(0.0)
-	assert_int(_net.voice.size()).is_equal(1)
+	assert_int(_net.voice.size()).is_equal(0)
 
 
-# FT: FT-AUD-015, FT-M1-012
-# A run reset flushes the lines not sent yet: free text being synthesised sends no VOICE
-# afterwards and the D110 count is back to 0; the synths and the closed set stay.
-func test_flush_drops_queued_lines_and_keeps_the_session() -> void:
+# FT: FT-M1-012
+# A run reset flushes the lines not sent yet: a stitched line waiting for a name sends no
+# VOICE afterwards; the synths and the closed set stay.
+func test_flush_drops_waiting_lines_and_keeps_the_session() -> void:
 	_fx.hold = true
 	_start_held()
-	_svc.say_free("Old run. Line one.", "computer", 1, PackedInt32Array([1]))
-	_svc.say_free("Old run. Line two.", "npc", 1, PackedInt32Array([1]))
-	assert_int(_svc.free_queued()).is_equal(2)
+	var args: Dictionary = {"callsign": "Nomad Six", "bearing": 5, "range": 7}
+	_svc.say("computer.contact", args, PackedInt32Array([1]))
 	_svc.flush_lines()
-	assert_int(_svc.free_queued()).is_equal(0)
 	for spy: SpyVoiceSynth in _fx.spies.values():
 		spy.release()
 	_svc._process(0.0)
 	assert_array(_net.voice).is_empty()
 	assert_bool(_svc.has_voice("computer")).is_true()
 	assert_bool(_svc.closed_set_done()).is_true()
-
-
-# FT: FT-AUD-003, FT-AUD-015
-# Free text is cut to MAX_FREE_CHARS at a space for synthesis; the subtitle keeps it all.
-func test_long_free_text_is_cut_for_synthesis() -> void:
-	_start()
-	_fx.log.clear()
-	var text: String = "word ".repeat(100) + "end."
-	_svc.say_free(text, "npc", 2, PackedInt32Array([4]))
-	var spoken: String = _fx.log[0]["text"]
-	assert_int(spoken.length()).is_less_equal(VoiceService.MAX_FREE_CHARS)
-	assert_bool(spoken.ends_with("word")).is_true()
-	assert_str(_net.events[0][3]["text"]).is_equal(text)
 
 
 # FT: FT-AUD-018
@@ -419,9 +349,8 @@ func test_a_dev_only_language_is_subtitles_only_in_releases() -> void:
 	assert_int(_fx.spies.size()).is_equal(0)
 	_svc.say("computer.hull_critical", {}, PackedInt32Array([1]))
 	_svc.say("computer.contact", CONTACT, PackedInt32Array([1]))
-	_svc.say_free("Olá.", "npc", 2, PackedInt32Array([1]))
 	_svc._process(0.0)
-	assert_int(_net.events.size()).is_equal(3)
+	assert_int(_net.events.size()).is_equal(2)
 	for e: Array in _net.events:
 		assert_bool(e[3]["audio"]).is_false()
 	assert_str(_net.events[1][3]["text"]).is_equal(
@@ -439,12 +368,10 @@ func test_a_missing_voice_model_is_subtitles_only() -> void:
 	_start()
 	assert_bool(_svc.has_voice("npc")).is_false()
 	_svc.say("npc.hail_trader", {"npc": "Mara Quill"}, PackedInt32Array([1]))
-	_svc.say_free("Hello.", "npc", 2, PackedInt32Array([1]))
 	_svc.say("computer.shields_low", {"pct": 40}, PackedInt32Array([1]))
 	_svc._process(0.0)
 	assert_bool(_net.events[0][3]["audio"]).is_false()
-	assert_bool(_net.events[1][3]["audio"]).is_false()
-	assert_bool(_net.events[2][3]["audio"]).is_true()
+	assert_bool(_net.events[1][3]["audio"]).is_true()
 	assert_int(_net.voice.size()).is_equal(1)
 
 
@@ -452,7 +379,7 @@ func test_a_missing_voice_model_is_subtitles_only() -> void:
 func test_routing_hooks_choose_the_audience() -> void:
 	_start()
 	_svc.say_npc("trader_1", "npc.hail_trader", {"npc": "Mara Quill"})
-	_svc.say_computer_free(0, PackedStringArray(["helm"]), "Course laid in.")
+	_svc.say_computer(0, PackedStringArray(["helm"]), "computer.jump_ready")
 	assert_int(_net.events.size()).is_equal(0)
 	_svc.npc_audience = func(npc_id: String) -> PackedInt32Array:
 		return PackedInt32Array([5]) if npc_id == "trader_1" else PackedInt32Array()
@@ -461,7 +388,7 @@ func test_routing_hooks_choose_the_audience() -> void:
 	_svc.tick_source = func() -> int: return 77
 	_svc.say_npc("trader_1", "npc.hail_trader", {"npc": "Mara Quill"})
 	_svc.say_computer(1, PackedStringArray(["helm"]), "computer.jump_ready")
-	_svc.say_computer_free(2, PackedStringArray(["helm"]), "Course laid in.")
+	_svc.say_computer(2, PackedStringArray(["helm"]), "computer.jump_ready")
 	_svc._process(0.0)
 	var to: Array = _net.events.map(func(e: Array) -> Array: return Array(e[0]))
 	assert_array(to).is_equal([[5], [11], [12]])

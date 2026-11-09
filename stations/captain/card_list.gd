@@ -19,6 +19,8 @@ const STATE_OPEN: int = 0
 const STATE_ACCEPTED: int = 1
 
 const ROW_HEIGHT: float = 46.0
+## The extra height of the expanded card: its detail, reward and standing, who holds it.
+const EXTRA_HEIGHT: float = 58.0
 const HEADER_HEIGHT: float = 26.0
 const HEADING_H: float = 24.0
 ## The rows stop this far from the right edge (a scrollbar can sit there).
@@ -29,6 +31,17 @@ const FONT_SIZE: int = 15
 var heading: String = ""
 ## Card id shown pinged (the main screen's card); -1 for none.
 var highlight: int = -1
+## Card id shown open (detail, reward, who holds it); -1 for none. The panel opens the card
+## the Captain pinged (R23-12).
+var expanded: int = -1:
+	set(value):
+		if value != expanded:
+			expanded = value
+			_fit()
+			queue_redraw()
+## Card id -> the session holding its conversation, "" for free, and the session's own name.
+var claims: Dictionary = {}
+var own_name: String = ""
 
 var _cards: Array[Dictionary] = []
 
@@ -133,7 +146,20 @@ func _top() -> float:
 
 
 func _fit() -> void:
-	custom_minimum_size = Vector2(0, _top() + HEADER_HEIGHT + ROW_HEIGHT * maxi(_cards.size(), 1))
+	custom_minimum_size = Vector2(0, _row_top(maxi(_cards.size(), 1)))
+
+
+## The top (local y) of row `i`, as an expanded card above it pushes the rows down.
+func _row_top(i: int) -> float:
+	var y: float = _top() + HEADER_HEIGHT + ROW_HEIGHT * i
+	for k: int in mini(i, _cards.size()):
+		if int(_cards[k]["id"]) == expanded:
+			y += EXTRA_HEIGHT
+	return y
+
+
+func _row_height(i: int) -> float:
+	return ROW_HEIGHT + (EXTRA_HEIGHT if int(_cards[i]["id"]) == expanded else 0.0)
 
 
 ## The bottom edges (local y) of the heading, the header and each row, for ScrollSnap.
@@ -143,22 +169,18 @@ func row_bottoms() -> PackedFloat32Array:
 		out.append(_top())
 	out.append(_top() + HEADER_HEIGHT)
 	for i: int in maxi(_cards.size(), 1):
-		out.append(_top() + HEADER_HEIGHT + ROW_HEIGHT * float(i + 1))
+		out.append(_row_top(i) + (_row_height(i) if i < _cards.size() else ROW_HEIGHT))
 	return out
 
 
 ## The id of the card whose row holds `pos` (local), or -1.
 func card_at(pos: Vector2) -> int:
-	var row: int = int(floorf((pos.y - _top() - HEADER_HEIGHT) / ROW_HEIGHT))
-	if (
-		pos.y < _top() + HEADER_HEIGHT
-		or row < 0
-		or row >= _cards.size()
-		or pos.x < 0.0
-		or pos.x > size.x
-	):
+	if pos.y < _top() + HEADER_HEIGHT or pos.x < 0.0 or pos.x > size.x:
 		return -1
-	return int(_cards[row]["id"])
+	for i: int in _cards.size():
+		if pos.y < _row_top(i) + _row_height(i):
+			return int(_cards[i]["id"])
+	return -1
 
 
 func _draw() -> void:
@@ -196,11 +218,10 @@ func _draw() -> void:
 		)
 	for i: int in _cards.size():
 		var c: Dictionary = _cards[i]
-		var r: Rect2 = Rect2(0.0, top + HEADER_HEIGHT + i * ROW_HEIGHT, wide, ROW_HEIGHT - 4.0)
+		var r: Rect2 = Rect2(0.0, _row_top(i), wide, _row_height(i) - 4.0)
 		if i > 0:
-			ListLines.between(
-				self, Rect2(0.0, r.position.y - ROW_HEIGHT, wide, ROW_HEIGHT - 4.0), r
-			)
+			var up: Rect2 = Rect2(0.0, _row_top(i - 1), wide, _row_height(i - 1) - 4.0)
+			ListLines.between(self, up, r)
 		if int(c["id"]) == highlight:
 			draw_rect(r, Palette.color("panel_focus"))
 			draw_rect(r, Palette.color("accent"), false, 2.0)
@@ -217,12 +238,34 @@ func _draw() -> void:
 			draw_string(
 				font, Vector2(wide - 8.0 - w, base), time, 0, -1, FONT_SIZE, Palette.color("warn")
 			)
+		var state: String = CommsData.state_text(int(c["state"]))
 		draw_string(
 			font,
 			Vector2(8.0, base + 18.0),
-			kind_text(c),
+			"%s · %s" % [kind_text(c), state],
 			0,
-			-1,
+			wide - 16.0,
 			FONT_SIZE - 2,
 			Palette.color("text_dim")
+		)
+		if int(c["id"]) == expanded:
+			_draw_open(font, r, c, base + 18.0)
+
+
+## The expanded card's lines under its kind: the detail, the reward and standing, who holds
+## the conversation.
+func _draw_open(font: Font, r: Rect2, c: Dictionary, from_y: float) -> void:
+	var lines: PackedStringArray = PackedStringArray()
+	var detail: String = TranslationServer.translate(str(c.get("detail", "")))
+	if str(c.get("detail", "")) != "":
+		lines.append(detail)
+	var extra: PackedStringArray = CommsData.stakes(c)
+	if not extra.is_empty():
+		lines.append(" · ".join(extra))
+	lines.append(CommsData.claimed_text(str(claims.get(int(c["id"]), "")), own_name, true))
+	var y: float = from_y
+	for line: String in lines:
+		y += FONT_SIZE + 1.0
+		draw_string(
+			font, Vector2(8.0, y), line, 0, r.size.x - 16.0, FONT_SIZE - 2, Palette.color("text")
 		)

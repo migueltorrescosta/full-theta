@@ -2,6 +2,22 @@
 
 Scripts for the engine fetch, gates, lints, traceability and provenance checks. The Python tools (`tools/pyproject.toml`, `tools/tts/pyproject.toml`) need Python 3.12 or later (`requires-python`, set by numpy 2.5).
 
+## Running the gates
+
+`tools/gate.sh [TIER...]` imports the project and runs the tiers; with no argument it runs `ci` (`l0 l1`), the tiers CI runs. It prints the commit and one result per tier for the PR body.
+
+| Tier | What | When | Needs | Time |
+|---|---|---|---|---|
+| `l0` | formatting, lint, architecture, definitions, traceability, dialogue, palette, licences, the tools' own tests (`tools/l0.sh`, 13 checks in parallel) | CI and before every PR | `uv`, `git`, Godot (fetched) | about 1 min |
+| `l1` | every gdUnit4 suite, `tests/net` included, in `L1_SHARDS` processes (default 3) split by recorded time (`tools/l1_shards.py`, `tools/l1_times.json`); this covers what the spec calls L1 to L3 | CI and before every PR | the above | about 4 min |
+| `l2` | the simulation-side suites only (`tests/sim`, `pairs`, `scenarios`, `director`) in one gdUnit4 process: a quick check while changing the sim, a subset of `l1` | while working | the above | 1 to 2 min |
+| `l4` | a server and 3 client processes on 2 cores (`tools/l4/run.sh`), then the browser station (`tools/l4/web.sh`) | before a PR that touches the net or the web build | `node`, `npm`, Chromium (via `tools/l6`), export templates (1.3 GB, fetched) | about 6 min |
+| `l4load` | 64 connections against a server on 2 cores (`tools/l4/load.sh`) | owner-run, fugaku | at least 8 CPUs | 2 to 3 min |
+| `l5` | screenshots diffed against `tests/visual/baselines/` | before a PR that changes a screen | `xvfb`, fugaku's renderer | several min |
+| `l6` | builds, inspects and runs the release packages (`tools/l6/run.sh`) | before a release | `wine`, `node`, Chromium | about 10 min |
+
+`all` runs every tier except `l2`. The shell tiers share `tools/lib.sh` (server-ready line, CPU picker, waits that fail loudly); the L4 tiers start the server on `--port 0` and read its `ready ws=... http=...` line, pick two allowed CPUs, and print both; L6 keeps fixed ports, since the release build buffers its output (D389). Set `L4_CPUS` to pin them yourself. Other prerequisites: `python3`, `curl`, `unzip`, `nproc`; `gdb` with passwordless `sudo` for a hang's thread stacks; `systemd-run` for the bot batch. A hung L1 shard is stopped by `tools/run_limited.sh`, which reads `done.txt` written by `tests/thread_guard_hook.gd` to tell a hang at exit from a hang in a test.
+
 ## L5 screenshots
 
 `tools/bake_ships.gd` bakes the ships (`content/ships/looks.json` and `tools/ship_builder.gd` into `content/ships/baked/`, D308; the roughness and normal maps are shared by all looks, D317): run `godot --headless --path . -s res://tools/bake_ships.gd` after changing either and commit the result; L0's `ships` check (`-- --check`) fails when a baked ship is stale.

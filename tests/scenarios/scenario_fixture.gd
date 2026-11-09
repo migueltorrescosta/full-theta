@@ -12,17 +12,23 @@ var api: ScenarioApi
 var encounter: int = -1
 var site: int = -1
 var strength: float = 1.0
+## Ships the encounter holds (default: every crewed ship).
+var ships: PackedInt32Array = PackedInt32Array([0])
 var _started: bool = false
+var _ended: bool = false
 var _begin: ApiHandle
 
 
 ## A world at tick 0 with the ship waiting at the yard.
-static func make(seed_value: int = 1) -> ScenarioFixture:
+static func make(seed_value: int = 1, crew: int = 1) -> ScenarioFixture:
 	var f: ScenarioFixture = ScenarioFixture.new()
 	var main: ServerMain = ServerMain.new()
 	main.seed_value = seed_value
-	f.world = main.run_setup(_defs).build()
+	var setup: RunSetup = main.run_setup(_defs)
+	setup.crew_ships = crew
+	f.world = setup.build()
 	f.api = ScenarioApi.new(f.world)
+	f.ships = PackedInt32Array(range(crew))
 	return f
 
 
@@ -31,8 +37,9 @@ func begin(scenario_id: StringName, site_key: StringName) -> void:
 	scenario = ScenarioCatalogue.load_for(PackedStringArray([String(scenario_id)]))[0].fresh()
 	site = world.sites.open(world, site_key)
 	var p: Vector3 = world.sites.point3(site)
-	world.kin.place(0, p.x, p.y, p.z)
-	_begin = api.begin_encounter(scenario_id, site, PackedInt32Array([0]), 0)
+	for ship: int in ships:
+		world.kin.place(ship, p.x + 100.0 * ship, p.y, p.z)
+	_begin = api.begin_encounter(scenario_id, site, ships, 0)
 	world.step()
 	encounter = _begin.id()
 
@@ -42,6 +49,9 @@ func tick() -> void:
 	world.step()
 	world.drain_events()
 	var view: EncounterView = api.encounter(encounter)
+	if view.result > Scenario.Result.ACTIVE and _started and not _ended:
+		_ended = true
+		scenario.end(api, view.result)
 	if view.result == Scenario.Result.ACTIVE:
 		if not _started:
 			_started = true
@@ -85,9 +95,14 @@ func card_state(card: int) -> int:
 	return world.story.state[card]
 
 
-## Submits a crew command for the ship and steps one tick.
+## Submits a crew command for ship 0 and steps one tick.
 func send(c: SimCommand) -> bool:
-	c.ship_id = 0
+	return send_as(0, c)
+
+
+## Submits a crew command for `ship` and steps one tick.
+func send_as(ship: int, c: SimCommand) -> bool:
+	c.ship_id = ship
 	world.submit(c)
 	tick()
 	return c.accepted

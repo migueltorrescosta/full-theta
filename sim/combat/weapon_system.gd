@@ -139,7 +139,7 @@ static func path_crosses(world: SimWorld, row: int) -> int:
 	for j: int in kin.size():
 		if j == ship_id or not kin.is_alive(j):
 			continue
-		if world.relation(faction, world.faction_of(j)) == SimWorld.Relation.HOSTILE:
+		if world.is_hostile(faction, world.faction_of(j)):
 			continue
 		if not KnowledgeSystem.is_detected(world, faction, j):
 			continue
@@ -224,7 +224,7 @@ static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -
 			vs + dir * weapon.projectile_speed,
 			weapon.projectile_radius,
 			weapon.damage,
-			ceili(weapon.max_range / weapon.projectile_speed * SimWorld.HZ)
+			SimRate.ticks(weapon.max_range / weapon.projectile_speed)
 		)
 		if weapon.damage_type != &"kinetic" or weapon.is_guided():
 			world.projectiles.set_payload(

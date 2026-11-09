@@ -138,7 +138,7 @@ func test_host_lobby_shows_the_qr_and_address_while_seats_are_open() -> void:
 	var address: Label = l.find_child("JoinStripAddress", true, false)
 	assert_str(address.text).is_equal("192.168.1.20")
 	assert_int(address.get_theme_font_size("font_size")).is_greater_equal(
-		LobbyScreen.JOIN_ADDRESS_SIZE_PHONE
+		LobbyJoinPanel.Strip.ADDRESS_SIZE_PHONE
 	)
 	l.ctx.crew.lobby[0]["started"] = true
 	l.refresh()

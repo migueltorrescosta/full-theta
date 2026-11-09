@@ -180,7 +180,7 @@ func test_rejoined_client_converges_within_one_snapshot() -> void:
 	seqs.sort()
 	var full_seq: int = -1
 	for seq: int in seqs:
-		if SnapshotBuilder.peek(c.raw_snapshots[seq])[1]:
+		if SnapshotReader.peek(c.raw_snapshots[seq])[1]:
 			full_seq = seq
 			break
 	assert_int(full_seq).is_greater(0)
@@ -205,7 +205,7 @@ func _model(world: SimWorld) -> Dictionary:
 	# The dev entry holds every station, not the Captain's or the main screen's block.
 	for kind: int in StationViews.BLOCKS:
 		if StationViews.sections_of(StationViews.ALL).has(kind):
-			blocks[kind] = StationViews.block_bytes(kind, world, PLAYER)
+			blocks[kind] = StationBlocks.block_bytes(kind, world, PLAYER)
 	var contacts: Dictionary = {}
 	for id: int in ContactsSection.known(world, world.faction_of(PLAYER)):
 		var p: PackedFloat64Array = world.kin.point_at(id, Vector3.ZERO)
@@ -216,7 +216,7 @@ func _model(world: SimWorld) -> Dictionary:
 func _assert_converged(view: NetViewState, model: Dictionary) -> void:
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.data_array = model["kin"]
-	assert_dict(view.kin).is_equal(KinSection.read(buf))
+	assert_dict(view.kin).is_equal(SnapshotReader.read_kin(buf))
 	for kind: int in model["blocks"]:
 		var truth: Dictionary = NetBlock.decode(StationViews.BLOCKS[kind], model["blocks"][kind])
 		assert_dict(view.blocks[kind]).is_equal(truth)

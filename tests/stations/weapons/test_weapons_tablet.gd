@@ -9,7 +9,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_weapons_tablet.cfg"
 const INSETS: Array = [0, 0, 0, 24]
 const SIZES: Array = [Vector2i(1180, 820), Vector2i(820, 1180), Vector2i(1280, 800)]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 var _screen: StationScreen
@@ -92,12 +91,7 @@ func _tap(c: Control) -> void:
 
 
 func _audit_ok(report: Dictionary, what: String) -> void:
-	for rule: String in AUDIT:
-		(
-			assert_array(report[rule])
-			. override_failure_message("%s: %s breaks %s" % [what, report[rule], rule])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 # FT: FT-STN-005
@@ -248,3 +242,22 @@ func test_rotation_rebuilds_and_desktop_has_no_rails() -> void:
 	await _frames(3)
 	assert_object(_ui()).is_null()
 	assert_object(_screen.tablet_dock).is_null()
+
+
+# FT: FT-STN-005
+# FIRE says why it can't shoot, as on the phone, and greys then (a free mount fires, V29).
+func test_fire_says_why_it_cannot_shoot() -> void:
+	await _open(SIZES[0])
+	var fire: RailButton = _ui().fire_button
+	_panel().step(0.016)
+	assert_str(fire.text).is_equal("FIRE")
+	assert_int(fire.role).is_equal(RailButton.Role.DANGER)
+	var mount: Dictionary = _screen.ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0]
+	mount["heat"] = 40.0
+	_panel().step(0.016)
+	assert_str(fire.text).is_equal("FIRE\nhot")
+	assert_int(fire.role).is_equal(RailButton.Role.PLAIN)
+	mount["heat"] = 0.0
+	mount["ammo"] = 0
+	_panel().step(0.016)
+	assert_str(fire.text).is_equal("FIRE\nempty")

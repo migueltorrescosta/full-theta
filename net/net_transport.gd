@@ -1,3 +1,4 @@
+# gdlint: disable=max-public-methods
 class_name NetTransport
 extends RefCounted
 ## The server's net thread (FT-NET-040, D111): it owns every socket (accept, poll,
@@ -13,16 +14,13 @@ extends RefCounted
 const CLOSED: int = 0
 ## Snapshot capture stamps kept for the snapshot-age log (about 40 s at 30 Hz).
 const STAMP_KEEP: int = 1200
-## Most bytes in one WebSocket message (a bundle of chunks): under the 64 KiB
-## WebSocketPeer buffers the server keeps at their defaults (D108).
-const BUNDLE_MAX: int = 48 * 1024
-## Close codes (docs/protocol.md).
-const CLOSE_REJECTED: int = 4000
-const CLOSE_TAKEN_OVER: int = 4001
-const CLOSE_SEND_FAILED: int = 4002
-const CLOSE_PROTOCOL: int = 4003
-## More than NetResync.QUEUED_LIMIT queued for a connection without a view key.
-const CLOSE_QUEUE_FULL: int = 4004
+## The bundle size and close codes are the protocol's (NetProtocol), where the client reads them.
+const BUNDLE_MAX: int = NetProtocol.BUNDLE_MAX
+const CLOSE_REJECTED: int = NetProtocol.CLOSE_REJECTED
+const CLOSE_TAKEN_OVER: int = NetProtocol.CLOSE_TAKEN_OVER
+const CLOSE_SEND_FAILED: int = NetProtocol.CLOSE_SEND_FAILED
+const CLOSE_PROTOCOL: int = NetProtocol.CLOSE_PROTOCOL
+const CLOSE_QUEUE_FULL: int = NetProtocol.CLOSE_QUEUE_FULL
 ## How often the net thread publishes stats() (us).
 const STATS_INTERVAL_US: int = 20_000
 ## How long a closing connection waits for the client to close first (us).
@@ -218,6 +216,11 @@ func bind(
 	_post(["bind", conn, session, welcome, view_key, new_session])
 
 
+## Drops an evicted session's event outbox (NetSessions.evict): it has no connection.
+func forget(session: int) -> void:
+	_post(["forget", session])
+
+
 ## Sets the view key a session's snapshots use ("" for none); the next one is full.
 func set_view(session: int, view_key: String) -> void:
 	_post(["view", session, view_key])
@@ -369,6 +372,9 @@ func _apply(op: Array) -> void:
 				_close(c, op[2], op[3])
 		"bind":
 			_bind(op[1], op[2], op[3], op[4], op[5])
+		"forget":
+			if not _by_session.has(op[1]):
+				_outboxes.erase(op[1])
 		"view":
 			var c: Conn = _by_session.get(op[1])
 			if c != null and not c.closing:
@@ -522,7 +528,7 @@ func _read(c: Conn, packet: PackedByteArray, out: Array) -> void:
 
 func _receive(c: Conn, data: PackedByteArray, out: Array) -> void:
 	var type: int = NetProtocol.type_of(data)
-	if not NetProtocol.FROM_CLIENT.has(type):
+	if not NetProtocol.from_client.has(type):
 		c.errors += 1
 		_totals["errors"] += 1
 		return

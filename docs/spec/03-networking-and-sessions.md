@@ -43,7 +43,7 @@ Claimable sub-controls (D18): weapon mounts; repair crews; the active scan or ha
 
 ## 3.5 Reconnect
 
-Each client holds a session token. A refresh or relaunch presents the token and receives a full snapshot, returning the player to the same ship, station and claims (D6).
+Each client holds a session token. A refresh or relaunch presents the token and receives a full snapshot, returning the player to the same ship, station and claims (D6, D365). A session that lapsed with no pick and no claim is forgotten 10 minutes after its drop (D376). A client that loses the host retries every 2 s for 20 s, then offers Leave and Try again; in the lobby the host's button is End game, with a confirmation, and everyone else's is Leave (D353).
 
 Mid-run disconnect (D83, D96): a dropped crew player's picks, settings and claims stay for a 15 s grace period (FT-NET-033, D188). If the ship's coverage check then fails, the whole universe pauses, every ship included, until coverage is restored by the player rejoining, by an ally, the ship's own Captain or a viewer taking the station over, or by the ship being abandoned (D265). Captain and Viewer drops never pause the game (D19, D23).
 
@@ -56,14 +56,14 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-003** The host client shall terminate its server child process on exit; on start it shall offer to rejoin an orphaned server from this install with its stored token, and a server shall exit by itself after N minutes with no connections. (D7, D96, plan review TECH-8)
 - **FT-NET-004** Every client shall connect over WebSocket using the custom protocol, so browser stations reuse the desktop code path. (D8, D70)
 - **FT-NET-005** The protocol handshake shall carry a protocol version and reject mismatched clients with a reason. (D70)
-- **FT-NET-006** Clients shall send only commands; the server shall validate each command against station holding, claims, rate limits and game rules. (v0.3 §3, D18)
+- **FT-NET-006** Clients shall send only commands; the server shall validate each command against station holding, claims, rate limits and game rules, and while a ship's simulation is stopped (lobby or pause) it shall refuse every crew command `paused` except the lesson's Next, so none applies on resume. (v0.3 §3, D18, D340)
 - **FT-NET-007** A rejected command shall produce a `CommandRejected{reason}` event to the sender. (D70)
 - **FT-NET-008** The server shall send each client a snapshot filtered to the stations it holds, at 30 Hz. (D70)
 - **FT-NET-009** A snapshot shall contain no field the receiving station may not see at the session difficulty. (D14, D69)
 - **FT-NET-010** A client shall receive no knowledge belonging to another faction. The live scoreboard shows per ship its name, team, state (in play, finished or destroyed), encounters done, elapsed time and, in PvP, kills, but no hull or positions. (D21, D266)
 - **FT-NET-011** Discrete changes shall be delivered as reliable ordered events stamped with the simulation tick. (D70)
 - **FT-NET-012** The server shall broadcast its presence on the LAN by UDP once a second. (D70)
-- **FT-NET-013** Clients shall join by discovered host, manual IP, or (browser) URL and QR code. (D70, D196)
+- **FT-NET-013** Clients shall join by discovered host (one click), manual IP, or (browser) URL and QR code; a browser shows no list of discovered hosts and joins the host that served it, and a refused join shows advice for its reason. (D70, D196, D353, D366)
 - **FT-NET-014** The server shall refuse connection 65 and above with a "session full" reason. (D22)
 - **FT-NET-015** A player shall pick exactly one catalogue entry: a functional station, a joint view, Captain or Viewer. (D10, D67, D216, D257)
 - **FT-NET-016** The lobby shall let any number of players pick the same station or joint view, and at most one player per ship pick Captain. (D10, plan review CLASH-10)
@@ -75,7 +75,7 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-022** Weapon mounts, repair crews, the active scan or hack, probes, NPC conversations, Helm flight control and Helm shield facing shall be claimable. (D18, plan review STN-3)
 - **FT-NET-023** A claimed item shall accept commands only from its claimer and shall show the claimer's name to others at that station. (D18)
 - **FT-NET-024** A claim shall be released explicitly, on station change, or when the claimer's reconnect grace period ends. (D6, D18)
-- **FT-NET-025** Each client shall hold a session token that survives a browser refresh or desktop relaunch. (D6)
+- **FT-NET-025** Each client shall hold a session token that survives a browser refresh or desktop relaunch; a browser reload presents it, and a client whose session another window took over (close 4001) stops resuming and offers to take it back. (D6, D365)
 - **FT-NET-026** A client presenting a valid token shall receive a full snapshot and return to the same ship, catalogue entry and claims if they are still free, else to that ship's pick screen. (D6, D96)
 - **FT-NET-027** A rejoined client's state shall converge to the server state within one snapshot interval of the full snapshot. (D6)
 - **FT-NET-028** Viewers shall receive only their ship's main-screen state. (D10, D21)

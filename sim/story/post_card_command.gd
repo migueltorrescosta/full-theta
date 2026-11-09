@@ -53,7 +53,7 @@ func apply(world: SimWorld) -> bool:
 	t.title[card] = String(title_key)
 	t.detail[card] = String(detail_key)
 	t.conversation[card] = conversation_id
-	t.expires_tick[card] = world.tick + ceili(expires_s * SimWorld.HZ) if expires_s > 0.0 else -1
+	t.expires_tick[card] = world.tick + SimRate.ticks(expires_s) if expires_s > 0.0 else -1
 	t.reward[card] = reward_credits
 	t.rep_interaction[card] = rep_interaction
 	t.target[card] = target

@@ -158,7 +158,7 @@ func _make_controls() -> void:
 	_hack_hint = Label.new()
 	_hack_hint.text = TouchText.of("sci.hack_tap", "Tap a node next to the green one.")
 	_hack_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_hack_hint.add_theme_color_override("font_color", Palette.color("text_dim"))
+	_hack_hint.add_theme_color_override("font_color", Palette.color("text"))
 	status = Label.new()
 	status.name = "PhoneStatus"
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -290,7 +290,9 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 		g.size = r.size
 	# The status reads beside the range label, down into the gesture band on its side
 	# (P28-Band: drawn into, never tapped), clear of the disc's foot.
-	var x: float = r.position.x + 6.0 + RANGE_MIN + UiTheme.TOUCH_GAP
+	# (right of the range box, which "Range 10 km" makes wider than RANGE_MIN, w5)
+	var x: float = maxf(r.position.x + 6.0 + RANGE_MIN, panel.radar.range_rect().end.x)
+	x += UiTheme.TOUCH_GAP
 	var foot: float = panel._stage.size.y - 2.0 if layout != null else r.end.y
 	# (8 px above the edge, so a second line keeps its descenders on screen)
 	status.position = Vector2(x, foot - 40.0 - STATUS_LIFT)

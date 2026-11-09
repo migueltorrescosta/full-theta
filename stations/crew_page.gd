@@ -1,9 +1,10 @@
 class_name CrewPage
 extends ScrollContainer
 ## The Crew page of a phone station (#28 follow-up, P28-Common, design 2.0): the station's
-## request chips (FT-STN-010; a joint view's own pair acts directly, FT-JNT-005), Ping and
-## Mark on the selection, and one Share button per data shortcut this screen may share
-## (D210), as half-width rail buttons, scrolling past six. A chip waiting for an answer shows
+## Ping and Mark on the selection (always first, the same on every station), the station's
+## request chips (FT-STN-010; a joint view's own pair acts directly, FT-JNT-005), and one
+## Share button per data shortcut this screen may share (D210), as half-width rail buttons,
+## scrolling past six. A chip waiting for an answer shows
 ## its seconds left; a share shows its seconds left. Add it as a station's last page:
 ##
 ##     var crew := CrewPage.new(self)
@@ -38,16 +39,18 @@ func _process(_delta: float) -> void:
 		refresh()
 
 
-## The buttons' entries: [kind, id, label] for each chip, Ping, Mark and share.
+## The buttons' entries: [kind, id, label] for Ping, Mark, each chip and each share.
 func entries() -> Array:
 	var out: Array = []
 	if panel == null or panel.ctx == null:
 		return out
-	for c: ChipDef in panel.request_chips():
-		out.append(["chip", String(c.id), panel.chip_label(c)])
+	# Ping and Mark come first, so they sit in the same place on every station's page
+	# (R22-10); then the station's own requests, then the shares.
 	out.append(["ping", "", tr("intent.ping")])
 	if panel.ctx.crew.entry != StationViews.VIEWER:
 		out.append(["mark", "", tr("intent.mark")])
+	for c: ChipDef in panel.request_chips():
+		out.append(["chip", String(c.id), panel.chip_label(c)])
 	var stations: Array[String] = []
 	stations.assign(panel.ctx.crew.stations())
 	if panel.ctx.crew.is_crew():

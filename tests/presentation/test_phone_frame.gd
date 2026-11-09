@@ -9,7 +9,6 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_phone_frame.cfg"
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 
 ## A station panel in the frame with three pages: a persistent button, a part per page.
@@ -79,12 +78,7 @@ func _drop(s: StationScreen) -> void:
 
 func _assert_clean(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
-	for k: String in AUDIT:
-		(
-			assert_array(report[k])
-			. override_failure_message("%s %s: %s" % [what, k, report[k]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 func _sent(s: StationScreen, method: String) -> Array:
@@ -221,7 +215,8 @@ func test_phone_top_bar() -> void:
 	assert_bool(bar._name.is_visible_in_tree()).is_false()
 	assert_bool(bar.sound.is_visible_in_tree()).is_false()
 	assert_bool(bar.glance.is_visible_in_tree()).is_true()
-	assert_str(bar._phone_timer.text).is_equal("00:50")
+	# (the timer cell's second line is the goal chip's short count, C2)
+	assert_str(bar._phone_timer.text).is_equal("00:50\n2 foes")
 	assert_int(bar.tabs.tab_count()).is_equal(3)
 	var menus: Array[bool] = []
 	s.menu_requested.connect(func() -> void: menus.append(true))
@@ -296,7 +291,7 @@ func test_selection_chip_and_sheet() -> void:
 	s._process(0.016)
 	assert_bool(s.frame.selection_chip.is_visible_in_tree()).is_true()
 	assert_str(s.frame.selection_chip.name_button.text).starts_with("H2 · ")
-	var order: Array = s.contacts_by_range()
+	var order: Array = s.common.contacts_by_range()
 	s.frame.selection_chip.next_button.pressed.emit()
 	assert_int(int(s.ctx.crew.selection["id"])).is_equal(
 		int(order[(order.find(StationFixture.H2) + 1) % order.size()])
@@ -327,10 +322,10 @@ func test_selection_chip_and_sheet() -> void:
 # the pinged item.
 func test_request_chips_and_ping_toast() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
-	var at: int = NetChips.def().chips.find(
-		NetChips.def().chips.filter(func(c: ChipDef) -> bool: return c.to_station == &"helm")[0]
+	var at: int = ChipView.def().chips.find(
+		ChipView.def().chips.filter(func(c: ChipDef) -> bool: return c.to_station == &"helm")[0]
 	)
-	var from: int = StationViews.CREW.find(String(NetChips.def().chips[at].from_station))
+	var from: int = StationViews.CREW.find(String(ChipView.def().chips[at].from_station))
 	var row: Dictionary = {
 		"id": 5, "chip": at, "arg": -1, "from": from, "to": 0, "sent": 3500, "expires": 4000
 	}
@@ -339,6 +334,13 @@ func test_request_chips_and_ping_toast() -> void:
 	await _frames(1)
 	assert_bool(s.frame.request_chips.is_visible_in_tree()).is_true()
 	assert_bool(s.chip_strip.visible).is_false()
+	# w5: under the selection chip, the chip column takes the view's width (its effect line
+	# wraps less and pushes the panel down less).
+	var chips: RequestChips = s.frame.request_chips
+	var sel: Control = s.frame.selection_chip
+	if chips.position.y >= sel.position.y + sel.size.y:
+		var view_w: float = s.focused_panel().view_rect().size.x - 2.0 * UiTheme.TOUCH_GAP
+		assert_float(chips.size.x).is_equal_approx(view_w, 1.0)
 	s.frame.request_chips.buttons(0)[0].pressed.emit()
 	assert_array(_sent(s, "answer_chip")).is_equal([["answer_chip", [5, true]]])
 	s.frame.request_chips.buttons(0)[1].pressed.emit()
@@ -475,7 +477,7 @@ func test_crew_page_buttons_send() -> void:
 	if not chips.is_empty():
 		page.button("chip", String(chips[0].id)).pressed.emit()
 		assert_int(_sent(s, "send_chip").size() + _sent(s, "command").size()).is_greater(0)
-	for id: StringName in s.shareable():
+	for id: StringName in s.common.shareable():
 		page.button("share", String(id)).pressed.emit()
-	assert_int(_sent(s, "share").size()).is_equal(s.shareable().size())
+	assert_int(_sent(s, "share").size()).is_equal(s.common.shareable().size())
 	_drop(s)

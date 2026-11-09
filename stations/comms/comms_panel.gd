@@ -54,6 +54,7 @@ const REFUSALS: Array[String] = [
 	"not_held",
 	"no_room",
 	"no_price",
+	"nothing_to_repair",
 	"requires_docked",
 ]
 
@@ -61,9 +62,12 @@ var board: CommsBoard
 var overlay: CommsOverlay
 var list: CardList
 
-## The phone-landscape arrangement (#28, docked rails like Weapons B): the five buttons in a
-## docked rail at the screen's left edge, the board beside it. Made on first use.
-var touch_layout: RailLayout = null
+## The phone arrangement (CommsPhone): the rail, the spacers and the conversation's place.
+var phone: CommsPhone = null
+## The phone-landscape rail (CommsPhone.layout); null until first used.
+var touch_layout: RailLayout:
+	get:
+		return phone.layout if phone != null else null
 ## A phone's Rep page (docked site, credits, hull, reputation) and Crew page.
 var rep_view: VBoxContainer
 var crew_page: CrewPage
@@ -75,14 +79,12 @@ var _status: Label
 var _block_ref: Dictionary = {}
 var _stick_armed: bool = true
 var _list_h: float = 0.0
-## A phone's spacers: under the view-top row, and above the gesture band.
-var _top_gap: Control
-var _foot_gap: Control
 var _rep_shown: Array = []
 
 
 func _setup() -> void:
 	clip_contents = true
+	phone = CommsPhone.new(self)
 	in_frame = true
 	shows_shares = true
 	var rows: VBoxContainer = VBoxContainer.new()
@@ -91,10 +93,7 @@ func _setup() -> void:
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(rows)
 	_rows = rows
-	_top_gap = Control.new()
-	_top_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_top_gap.visible = false
-	rows.add_child(_top_gap)
+	rows.add_child(phone.top_gap)
 	board = CommsBoard.new()
 	board.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	board.card_activated.connect(open_card)
@@ -138,13 +137,11 @@ func _setup() -> void:
 	_status.clip_text = true
 	_status.custom_minimum_size = Vector2(120, 0)
 	_bar.add_child(_status)
-	_foot_gap = Control.new()
-	_foot_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_foot_gap.visible = false
-	rows.add_child(_foot_gap)
+	rows.add_child(phone.foot_gap)
 	overlay = CommsOverlay.new()
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.row_activated.connect(_activate_row)
+	overlay.trade_pressed.connect(_buy_sell)
 	add_child(overlay)
 	pages = PageHost.new()
 	for t: String in page_titles():
@@ -165,64 +162,30 @@ static func page_titles() -> Array[String]:
 	]
 
 
-## A phone's width (under NARROW_BAR px) keeps the five buttons on one row: smaller text and
-## gaps, so Hold fire doesn't drop to a row of its own.
+## Lays the buttons out for the form: the rail on a phone on its side (CommsPhone), the
+## page's part, then the bar's sizes.
 func _fit_bar() -> void:
-	_arrange_rails()
+	phone.arrange_rails()
 	_show_page()
-	var rails: bool = touch_layout != null and touch_layout.visible
-	# A phone upright (the reduced layout, #28): touch-sized buttons 8 px apart, on two rows.
-	var upright: bool = (
-		is_inside_tree() and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_PORTRAIT
-	)
-	var narrow: bool = size.x < NARROW_BAR and not rails and not upright
-	_bar.add_theme_constant_override(
-		"h_separation", UiTheme.TOUCH_GAP if upright else (3 if narrow else 6)
-	)
-	_bar.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP if upright else 4)
-	for b: Button in _buttons.values():
-		if not rails:
-			b.custom_minimum_size = (
-				Vector2(UiTheme.TOUCH_PRIMARY, UiTheme.TOUCH_PRIMARY) if upright else Vector2.ZERO
-			)
-		if narrow:
-			b.add_theme_font_size_override("font_size", 14)
-			b.add_theme_stylebox_override("normal", _tight(b, "normal"))
-		else:
-			b.remove_theme_font_size_override("font_size")
-			b.remove_theme_stylebox_override("normal")
-
-
-## True when the panel takes the phone-landscape arrangement: focused on a phone on its side.
-func phone_landscape() -> bool:
-	return (
-		is_inside_tree()
-		and not docked
-		and LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
-	)
-
-
-## True when the panel shows its pages: its main view on a phone, either way up.
-func phone_pages() -> bool:
-	return is_inside_tree() and not docked and LayoutMode.is_phone(LayoutMode.form_of(self))
+	phone.fit_bar()
 
 
 ## Shows the current page's part: the board (on its column), the Rep page or the Crew page;
 ## off a phone the board as on a desktop.
 func _show_page() -> void:
-	var phone: bool = phone_pages()
-	var i: int = pages.current if phone else Page.MISSIONS
-	if not phone:
+	var on_phone: bool = phone.paged()
+	var i: int = pages.current if on_phone else Page.MISSIONS
+	if not on_phone:
 		board.page_column = -1
 	elif i <= Page.HAILS:
 		board.page_column = i
 	board.visible = not docked and i <= Page.HAILS
-	rep_view.visible = phone and i == Page.REP
-	crew_page.visible = phone and i == Page.CREW
+	rep_view.visible = on_phone and i == Page.REP
+	crew_page.visible = on_phone and i == Page.CREW
 	# The spacers show only on a phone (a hidden one adds no separation).
-	_top_gap.visible = phone
-	_foot_gap.visible = phone
-	if not phone:
+	phone.top_gap.visible = on_phone
+	phone.foot_gap.visible = on_phone
+	if not on_phone:
 		_bar.visible = not docked
 
 
@@ -238,104 +201,8 @@ func _on_page(i: int) -> void:
 ## Keys, a swipe or a tap moved the selection: a phone's page follows its column.
 func _on_card_selected(id: int) -> void:
 	var col: int = board.column_of(id)
-	if phone_pages() and pages.current <= Page.HAILS and col >= 0 and col != pages.current:
+	if phone.paged() and pages.current <= Page.HAILS and col >= 0 and col != pages.current:
 		pages.current = col
-
-
-## Each frame on a phone: the spacers under the view-top row and above the gesture band,
-## and the conversation's place, a top-level control the panel doesn't clip: on its side
-## over the board and the radar column, the rail staying live; upright over the board, the
-## buttons and the radar column, down to the bottom tab bar (the buttons hide under it).
-func _place_phone() -> void:
-	var phone: bool = phone_pages()
-	var side: bool = phone_landscape()
-	var open: bool = overlay.card_id >= 0
-	if phone:
-		_top_gap.custom_minimum_size.y = top_reserve
-		# On its side the bar holds only the status line: shown while it says something.
-		_bar.visible = _status.text != "" if side else not open
-		var over: float = get_global_rect().end.y - SafeArea.tap_bottom(self)
-		_foot_gap.custom_minimum_size.y = maxf(0.0, over)
-	clip_contents = not phone
-	overlay.fill = side
-	if overlay.top_level != phone:
-		overlay.top_level = phone
-		if not phone:
-			overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	if not phone:
-		return
-	var gap: float = UiTheme.TOUCH_GAP
-	var safe: Rect2 = SafeArea.safe_rect(self)
-	var r: Rect2 = Rect2(_rows.global_position.x, global_position.y + gap, 0.0, 0.0)
-	r.end = Vector2(safe.end.x, SafeArea.tap_bottom(self))
-	if not side:
-		r.position = global_position + Vector2(0.0, top_reserve)
-		r.end = Vector2(get_global_rect().end.x, _upright_floor() - gap)
-	if overlay.global_position != r.position or overlay.size != r.size:
-		overlay.global_position = r.position
-		overlay.size = r.size
-
-
-## Upright, where the conversation ends: the top of the screen's bottom tab bar, else the
-## tap limit.
-func _upright_floor() -> float:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	var s: StationScreen = n as StationScreen
-	if s != null and s.frame.bottom_tabs.is_visible_in_tree():
-		return s.frame.bottom_tabs.get_global_rect().position.y
-	return SafeArea.tap_bottom(self)
-
-
-## Moves the buttons to the rail on a phone on its side, back under the board elsewhere.
-func _arrange_rails() -> void:
-	var rails: bool = phone_landscape()
-	if rails == (touch_layout != null and touch_layout.visible):
-		return
-	var order: Array[String] = ["hail", "accept", "decline", "claim", "hold_fire"]
-	if rails:
-		if touch_layout == null:
-			touch_layout = RailLayout.new()
-			touch_layout.docked = true
-			touch_layout.offset_top = UiTheme.TOUCH_GAP
-			add_child(touch_layout)
-			touch_layout.rail(SIDE_LEFT)
-		touch_layout.visible = true
-		var gap: MarginContainer = MarginContainer.new()
-		gap.add_theme_constant_override("margin_left", UiTheme.TOUCH_GAP)
-		_rows.reparent(gap, false)
-		_rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		touch_layout.set_content(gap)
-		for id: String in order:
-			var b: Button = _buttons[id]
-			b.reparent(touch_layout.left.box, false)
-			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			b.custom_minimum_size.y = UiTheme.TOUCH_PRIMARY
-	else:
-		touch_layout.visible = false
-		var gap: Control = _rows.get_parent()
-		_rows.reparent(self, false)
-		move_child(_rows, 0)
-		_rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		touch_layout.remove_child(gap)
-		gap.queue_free()
-		for id: String in order:
-			var b: Button = _buttons[id]
-			b.reparent(_bar, false)
-			b.size_flags_horizontal = Control.SIZE_FILL
-			b.custom_minimum_size.y = 0.0
-			_bar.move_child(b, order.find(id))
-	if overlay != null:
-		move_child(overlay, -1)
-
-
-## The button's own style with 6 px side margins.
-func _tight(b: Button, name: String) -> StyleBox:
-	var box: StyleBox = b.get_theme_stylebox(name).duplicate()
-	box.content_margin_left = 6.0
-	box.content_margin_right = 6.0
-	return box
 
 
 ## Docked, the panel is as tall as its card list, so no row is cut off.
@@ -360,16 +227,18 @@ func _mode_changed() -> void:
 func _process(delta: float) -> void:
 	if focused:
 		_poll_stick(delta)
+	# Hidden (a station not shown on this phone): nothing to refresh until it shows (R20-5).
+	if not is_visible_in_tree():
+		return
 	refresh()
-	_place_phone()
+	ControlsChip.show_radar_legend(self, ctx.settings)
+	phone.place()
 
 
 ## Pushes the COMMS block into the widgets: every frame when it changed (tests call it).
 func refresh(force: bool = false) -> void:
 	var blk: Dictionary = CommsData.block(ctx.view)
-	var names: Dictionary = {}
-	for c: Dictionary in blk.get("cards", []):
-		names[int(c["id"])] = ctx.crew.claimer("%s:%d" % [StationViews.CLAIM_NPC, int(c["id"])])
+	var names: Dictionary = CommsData.claimers(ctx.crew, blk.get("cards", []))
 	var changed: bool = force or not is_same(blk, _block_ref) or names != board.claim_names
 	_block_ref = blk
 	if changed:
@@ -403,9 +272,11 @@ static func hail_waits(blk: Dictionary) -> bool:
 ## A phone's Rep page: where the ship is docked, hull and credits, then a line per faction
 ## (FT-COM-005).
 func _refresh_rep(blk: Dictionary) -> void:
-	var lines: Array = [board.where_text(), board.status_text(), tr("comms.rep")]
+	var lines: Array = [
+		board.where_text(), board.status_text(), tr("comms.rep"), tr(CommsData.WHY_REP_KEY)
+	]
 	for r: Dictionary in blk.get("rep", []):
-		lines.append(tr("comms.rep_row") % [int(r["faction"]), roundi(float(r["value"]))])
+		lines.append(CommsData.rep_line(r))
 	if lines == _rep_shown:
 		return
 	_rep_shown = lines
@@ -418,8 +289,8 @@ func _refresh_rep(blk: Dictionary) -> void:
 		var pad: StyleBoxEmpty = StyleBoxEmpty.new()
 		pad.content_margin_left = UiTheme.TOUCH_GAP
 		l.add_theme_stylebox_override("normal", pad)
-		l.add_theme_font_size_override("font_size", CommsBoard.FONT_SIZE)
-		var dim: bool = i == 2
+		l.add_theme_font_size_override("font_size", CommsBoard.FONT_SIZE - (3 if i == 3 else 0))
+		var dim: bool = i == 2 or i == 3
 		l.add_theme_color_override("font_color", Palette.color("text_dim" if dim else "text"))
 		rep_view.add_child(l)
 
@@ -477,7 +348,7 @@ static func touch_help() -> Array:
 				]
 			)
 		)
-	var card: Rect2 = Rect2(195, 132, 414, 72)
+	var card: Rect2 = Rect2(195.0, 132.0 + CommsBoard.PAGE_WHY_H, 414, 72)
 	var open: String = TouchText.of("help.comms.card", "Tap to open; long-press pings its contact")
 	rail.append([card, TouchText.of("help.comms.mission", "Mission card"), open])
 	return [
@@ -502,7 +373,7 @@ static func touch_help() -> Array:
 			"boxes":
 			[
 				[
-					Rect2(191, 132, 422, 150),
+					Rect2(191, 132, 422, 180),
 					TranslationServer.translate("comms.rep"),
 					TouchText.of("help.comms.rep", "Docked site, credits and standing per faction"),
 				]

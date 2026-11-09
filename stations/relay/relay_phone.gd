@@ -272,11 +272,22 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 	panel._hint.offset_right = -(panel.size.x - r.end.x) - 8.0
 	var y: float = r.position.y + 4.0
 	if probes.get_parent() == self:
-		var half: float = maxf(r.size.x / 2.0 - 12.0, 1.0)
+		# The width shared in proportion to the two texts (w5: a fixed 40/60 split cut the
+		# inbox line "Incoming: Rock from Wren (Relay)" while the probe line had room).
+		# Too narrow for both (the Log page's wide left rail): the inbox line goes under.
+		var full: float = maxf(r.size.x - 16.0, 1.0)
+		var h: float = probes.get_combined_minimum_size().y
 		probes.position = Vector2(r.position.x + 8.0, y)
-		mail.position = Vector2(r.get_center().x + 4.0, y)
-		for l: Label in [probes, mail]:
-			l.size = Vector2(half, l.get_combined_minimum_size().y)
+		if _text_w(probes) + _text_w(mail) + 24.0 > r.size.x:
+			probes.size = Vector2(full, h)
+			mail.position = Vector2(r.position.x + 8.0, y + h)
+			mail.size = Vector2(full, mail.get_combined_minimum_size().y)
+			y += h
+		else:
+			var left_w: float = maxf((r.size.x - 24.0) * _probe_share(), 1.0)
+			probes.size = Vector2(left_w, h)
+			mail.position = Vector2(r.position.x + 16.0 + left_w, y)
+			mail.size = Vector2(full - 8.0 - left_w, mail.get_combined_minimum_size().y)
 		y += LINE_H
 	panel._hint.offset_top = position.y + y
 	panel._rename.custom_minimum_size = Vector2(220, UiTheme.TOUCH_PRIMARY)
@@ -294,8 +305,14 @@ func update() -> void:
 		panel.toggle_probe_claim()
 	var hud: RelayHud = panel.hud
 	var crew_state: CrewState = panel.ctx.crew
-	probes.text = hud._probes.text
-	mail.text = hud._mail.text
+	if probes.text != hud._probes.text or mail.text != hud._mail.text:
+		probes.text = hud._probes.text
+		mail.text = hud._mail.text
+		# Upright the row shares its width the same way, through the stretch ratios.
+		probes.size_flags_stretch_ratio = _probe_share()
+		mail.size_flags_stretch_ratio = 1.0 - probes.size_flags_stretch_ratio
+		if probes.get_parent() == self:
+			_place_view()
 	buttons["launch"].disabled = hud.launch.disabled
 	buttons["lanes"].text = hud.lanes.text
 	var holder: String = crew_state.claimer(StationViews.CLAIM_PROBE)
@@ -383,11 +400,12 @@ func _fill_contacts() -> void:
 ## The Marks page: the marks in use, each a tap to select (the selected one pressed).
 func _fill_marks() -> void:
 	var crew_state: CrewState = panel.ctx.crew
-	var key: Array = [crew_state.marks.duplicate(true), crew_state.selection]
+	var key: Array = [crew_state.marks.duplicate(true), crew_state.selection, crew_state.inbox]
 	if key == _mark_key:
 		return
 	_mark_key = key
 	_clear(_marks_box)
+	_fill_incoming()
 	if crew_state.marks.is_empty():
 		var none: Label = _label()
 		none.text = TouchText.of("relay.no_marks", "No marks yet: drag on the map.")
@@ -396,15 +414,28 @@ func _fill_marks() -> void:
 		_marks_box.add_child(none)
 	for m: Dictionary in crew_state.marks:
 		var slot: int = m["slot"]
-		var text: String = str(m["name"])
-		if int(m.get("contact", -1)) >= 0:
-			text += " · " + panel.ctx.view.callsign(int(m["contact"]))
-		var b: RailButton = RailButton.make(text)
+		var b: RailButton = RailButton.make(ChipText.mark_label(m, panel.ctx.view))
 		b.pressed.connect(crew_state.select.bind("mark", slot))
 		b.toggle_mode = true
 		b.set_pressed_no_signal(crew_state.is_selected("mark", slot))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		_marks_box.add_child(b)
+
+
+## The Marks page's Accept and Decline for the mark waiting in the inbox (the line over the
+## map says which: "Incoming: Rock from Wren (Relay)").
+func _fill_incoming() -> void:
+	var inbox: Array[Dictionary] = panel.ctx.crew.inbox
+	if inbox.is_empty():
+		return
+	# The line over the map names the mark and who sent it; this row answers it.
+	var accept: RailButton = RailButton.make(tr("relay.accept"), RailButton.Role.ACCENT)
+	accept.name = "Relay_accept_incoming"
+	accept.pressed.connect(_intent.bind("accept"))
+	var decline: RailButton = RailButton.make(tr("relay.decline"))
+	decline.name = "Relay_decline_incoming"
+	decline.pressed.connect(_intent.bind("decline"))
+	_marks_box.add_child(PhoneFrame.row([accept, decline]))
 
 
 ## The Log page: the inbox, then the ship's log, newest last.
@@ -427,6 +458,19 @@ func _clear(box: Node) -> void:
 	for c: Node in box.get_children():
 		box.remove_child(c)
 		c.queue_free()
+
+
+## The probe line's share of the width the probe and inbox lines split: in proportion to
+## their texts, at least a quarter each.
+func _probe_share() -> float:
+	var wp: float = _text_w(probes)
+	return clampf(wp / (wp + _text_w(mail)), 0.25, 0.75)
+
+
+## The width (px) of a line's text at its 13 px size.
+static func _text_w(l: Label) -> float:
+	var font: Font = l.get_theme_font("font")
+	return font.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 1.0
 
 
 func _label() -> Label:

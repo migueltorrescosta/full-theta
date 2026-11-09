@@ -37,8 +37,8 @@ func test_engineering_gets_no_near_or_projectiles_and_only_radar_contacts() -> v
 	assert_int(eng.raw_snapshots.size()).is_greater(3)
 	for seq: int in eng.raw_snapshots:
 		var data: PackedByteArray = eng.raw_snapshots[seq]
-		var n: int = data[SnapshotBuilder.HEADER_BYTES - 1]
-		var at: int = SnapshotBuilder.HEADER_BYTES
+		var n: int = data[SnapshotReader.HEADER_BYTES - 1]
+		var at: int = SnapshotReader.HEADER_BYTES
 		for i: int in n:
 			assert_array([S.NEAR, S.PROJECTILES]).not_contains([int(data[at])])
 			at += 3 + data.decode_u16(at + 1)

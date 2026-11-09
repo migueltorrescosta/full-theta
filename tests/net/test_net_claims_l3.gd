@@ -66,7 +66,7 @@ func test_only_the_claimer_commands_a_claimed_item() -> void:
 		CommandGate.CLAIMED
 	)
 	assert_str(await _verdict(server, w2, aim)).is_equal(CommandGate.CLAIMED)
-	assert_bool(server.session.launched.is_empty()).is_true()
+	assert_bool(server.session.lobby.launched.is_empty()).is_true()
 	server.session.launch(PLAYER)
 	assert_str(await _verdict(server, w1, aim)).is_equal("")
 	# Bo (Tactical) held Helm alone until Cy joined: he keeps flight and shield facing.

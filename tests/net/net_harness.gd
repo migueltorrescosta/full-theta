@@ -30,6 +30,8 @@ func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = 
 	if s.start(m1, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
 	s.session.sessions.grace_us = int(grace_s * 1_000_000.0)
+	# A served world trims its command log; tests read the history of the run.
+	s.world.keep_command_log = true
 	node.add_child(s)
 	servers.append(s)
 	return s
@@ -55,6 +57,7 @@ func fleet_server(
 	s.session.sessions.grace_us = int(grace_s * 1_000_000.0)
 	s.session.fleet.rules = f.rules
 	s.session.fleet.slots = f.setup.slots
+	s.world.keep_command_log = true
 	node.add_child(s)
 	servers.append(s)
 	return s

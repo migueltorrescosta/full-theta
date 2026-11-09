@@ -13,9 +13,6 @@ extends SnapshotSection
 ## gone ids. Full: u16 n absolute records each with a u16 age in ticks; u16 i info
 ## records. One cube per world (D229), so no site field.
 
-const FLAG_IDENTIFIED: int = 1
-const FLAG_OWN: int = 2
-
 var tol_units: int = 8
 ## id -> [Vector3i position, Vector3i velocity, int tick]: what every client holds.
 var model: Dictionary = {}
@@ -75,9 +72,9 @@ func update(world: SimWorld) -> PackedByteArray:
 	buf.put_u16(0)
 	var ni: int = 0
 	for id: int in ids:
-		var flags: int = FLAG_OWN if world.faction_of(id) == owner else 0
+		var flags: int = SnapshotReader.FLAG_OWN if world.faction_of(id) == owner else 0
 		if KnowledgeSystem.is_identified(world, owner, id):
-			flags |= FLAG_IDENTIFIED
+			flags |= SnapshotReader.FLAG_IDENTIFIED
 		var now: Array = [flags, KnowledgeSystem.callsign(world, owner, id)]
 		if info.get(id, []) == now:
 			continue
@@ -91,6 +88,8 @@ func update(world: SimWorld) -> PackedByteArray:
 	put_gone(buf, gone, model)
 	for id: int in gone:
 		info.erase(id)
+	if n == 0 and ni == 0 and gone.is_empty():
+		return PackedByteArray()  # nothing changed: a delta omits the section (R19-5)
 	var end: int = buf.get_position()
 	buf.seek(0)
 	buf.put_u16(n)
@@ -113,47 +112,11 @@ func full() -> PackedByteArray:
 	return buf.data_array
 
 
-## Client side: applies a section to {"model": {...}, "info": {...}} of the same
-## shapes; false on a corrupt stream (a residual for an unknown id).
-static func apply(
-	into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int, p_units: int
-) -> bool:
-	var m: Dictionary = into.get_or_add("model", {})
-	var inf: Dictionary = into.get_or_add("info", {})
-	if is_full:
-		m.clear()
-		inf.clear()
-	for i: int in range(buf.get_u16()):
-		var rec: Array = NetCodec.get_kin(buf, m, tick, p_units)
-		if rec.is_empty():
-			return false
-		var at: int = tick - buf.get_u16() if is_full else tick
-		m[rec[0]] = [rec[1], rec[2], at]
-	for i: int in range(buf.get_u16()):
-		var id: int = buf.get_u16()
-		var flags: int = buf.get_u8()
-		inf[id] = [flags, buf.get_data(buf.get_u8())[1].get_string_from_utf8()]
-	if not is_full:
-		for id: int in get_gone(buf, m):
-			inf.erase(id)
-	return true
-
-
 static func put_gone(buf: StreamPeerBuffer, gone: PackedInt32Array, from: Dictionary) -> void:
 	buf.put_u16(gone.size())
 	for id: int in gone:
 		buf.put_u16(id)
 		from.erase(id)
-
-
-## Reads a gone list, erases the ids from `from` and returns them.
-static func get_gone(buf: StreamPeerBuffer, from: Dictionary) -> PackedInt32Array:
-	var out: PackedInt32Array = PackedInt32Array()
-	for i: int in range(buf.get_u16()):
-		var id: int = buf.get_u16()
-		from.erase(id)
-		out.append(id)
-	return out
 
 
 static func _put_info(buf: StreamPeerBuffer, id: int, value: Array) -> void:

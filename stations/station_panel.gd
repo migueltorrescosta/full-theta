@@ -59,6 +59,71 @@ var selection_extras: Array = []
 var _chip_menu: ChipMenu = null
 
 
+## The StationScreen holding this panel (the first one up the tree), or null.
+func screen() -> StationScreen:
+	var n: Node = get_parent()
+	while n != null and not n is StationScreen:
+		n = n.get_parent()
+	return n as StationScreen
+
+
+## How many panels the screen holding this panel has (1 when none): the dev seat's
+## catalogue entry names no stations, so the screen is the one to ask.
+func screen_panels() -> int:
+	var s: StationScreen = screen()
+	return s.panels.size() if s != null else 1
+
+
+## The form of the screen holding this panel, from the screen's own size (screen_dp): in the
+## game it fills the window; tests lay a screen out at a set size inside the tiny headless
+## window, which alone would read as a phone. Outside a screen, the viewport's form.
+func layout_form() -> LayoutMode.Form:
+	if screen() == null:
+		return LayoutMode.form_of(self)
+	return LayoutMode.form_for(screen_dp(), LayoutMode.coarse_pointer())
+
+
+## Keeps the panel's tablet rails (#32, C4: Helm, Weapons, Engineering) in step with the
+## screen. `dock` is the rails' TabletDock, null for none. When the panel stops wanting rails
+## (`want`) or the screen turns, the dock leaves the screen and is freed, `drop` frees the
+## rest of the rails and held intents are let go; when it wants rails and has none,
+## `make(portrait)` builds them and returns their dock, which the screen then shows. Returns
+## the dock in use, or null.
+func sync_tablet(dock: TabletDock, want: bool, drop: Callable, make: Callable) -> TabletDock:
+	var s: StationScreen = screen()
+	want = want and s != null
+	var portrait: bool = want and LayoutMode.portrait(s.size)
+	if dock != null and (not want or dock.portrait != portrait):
+		if s != null and s.tablet_dock == dock:
+			s.set_tablet_dock(null)
+		dock.queue_free()
+		drop.call()
+		ctx.matcher.release_all()
+		dock = null
+	if want and dock == null:
+		dock = make.call(portrait)
+		s.set_tablet_dock(dock)
+	return dock
+
+
+## The screen's size in device-independent pixels (zero outside a screen).
+func screen_dp() -> Vector2:
+	var s: StationScreen = screen()
+	if s == null:
+		return Vector2.ZERO
+	var window: Window = get_window()
+	var factor: float = window.content_scale_factor if window != null else 1.0
+	return LayoutMode.dp_size(s.size, factor, LayoutMode.density())
+
+
+## The screen binds the focused panel's pages when it lays out; a panel that builds (or
+## drops) its phone pages after that has the screen bind them again.
+func rebind_tabs() -> void:
+	var s: StationScreen = screen()
+	if s != null and s.is_inside_tree() and s.focused_panel() == self:
+		s.pages_changed()
+
+
 ## Called once by the screen before the panel enters the tree.
 func setup(context: StationContext, station_id: String) -> void:
 	ctx = context
@@ -183,7 +248,7 @@ func request_chips() -> Array[ChipDef]:
 	var out: Array[ChipDef] = []
 	if ctx == null:
 		return out
-	for c: ChipDef in NetChips.def().chips:
+	for c: ChipDef in ChipView.def().chips:
 		if String(c.from_station) != station:
 			continue
 		if _on_screen(c) or ctx.crew.toggles.on(ViewFilter.CHIPS):
@@ -287,18 +352,16 @@ func _more_pips(kind: SubsystemDef.Kind) -> void:
 	if def == null or def.power == null or rows.size() != def.subsystems.size():
 		return
 	var at: int = -1
-	var used: int = 0
 	for i: int in rows.size():
-		used += int(rows[i].get("pips", 0))
 		if at < 0 and def.subsystems[i].kind == kind:
 			at = i
 	if at < 0:
 		return
 	var pips: int = int(rows[at].get("pips", 0)) + 1
+	# The reactor cap is the sim's rule: over it, the server's command_rejected{eng_cap} is
+	# the toast (F5, R12-7).
 	if pips > def.power.max_pips_per_subsystem:
 		ctx.crew.toast.emit("toast.chip_pips_max", {})
-	elif used + 1 > def.power.reactor_pips:
-		ctx.crew.toast.emit("toast.eng_cap", {})
 	else:
 		ctx.intents.command({"kind": "set_pips", "subsystem_kind": int(kind), "pips": pips})
 

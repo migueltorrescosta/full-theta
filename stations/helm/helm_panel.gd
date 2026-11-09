@@ -76,6 +76,7 @@ func _setup() -> void:
 	add_child(_container)
 	_viewport = SubViewport.new()
 	_viewport.own_world_3d = true
+	RenderQuality.track(_viewport)
 	_container.add_child(_viewport)
 	view3d = HelmView.new()
 	_viewport.add_child(view3d)
@@ -134,7 +135,7 @@ func _apply_form() -> void:
 		pages = touch_ui.pages
 		rebuilt = true
 		_captured = false
-		var screen: StationScreen = _screen()
+		var screen: StationScreen = self.screen()
 		if screen != null and portrait:
 			screen.rotate_banner.label.text = TouchText.of(
 				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
@@ -142,7 +143,7 @@ func _apply_form() -> void:
 	# In the frame with the phone layout only. Upright, a joint view keeps its docked panels
 	# (the lead's call), which leave the cockpit too short for the view-top row: there Helm
 	# keeps the chip strip.
-	var screen_now: StationScreen = _screen()
+	var screen_now: StationScreen = screen()
 	var docked_upright: bool = portrait and screen_now != null and screen_now.panels.size() >= 2
 	in_frame = touch_ui != null and not docked_upright
 	var inset: float = touch_ui.view_bottom_inset() if touch_ui != null else 0.0
@@ -154,30 +155,25 @@ func _apply_form() -> void:
 
 ## Builds, rebuilds (a rotation) or drops the tablet's docked rails for the viewport's form.
 func _apply_tablet() -> void:
-	var screen: StationScreen = _screen()
-	var want: bool = (
-		focused and screen != null and _form() == LayoutMode.Form.TABLET and TabletDock.fits(_dp())
+	sync_tablet(
+		tablet_ui.dock if tablet_ui != null else null,
+		focused and _form() == LayoutMode.Form.TABLET and TabletDock.fits(screen_dp()),
+		func() -> void:
+			remove_child(tablet_ui)
+			tablet_ui.queue_free()
+			tablet_ui = null,
+		func(portrait: bool) -> TabletDock:
+			tablet_ui = HelmTouch.new(self, _dispatch, portrait, true)
+			add_child(tablet_ui)
+			_captured = false
+			return tablet_ui.dock
 	)
-	var portrait: bool = want and LayoutMode.portrait(screen.size)
-	if tablet_ui != null and (not want or tablet_ui.portrait != portrait):
-		if screen != null and screen.tablet_dock == tablet_ui.dock:
-			screen.set_tablet_dock(null)
-		tablet_ui.dock.queue_free()
-		remove_child(tablet_ui)
-		tablet_ui.queue_free()
-		tablet_ui = null
-		ctx.matcher.release_all()
-	if want and tablet_ui == null:
-		tablet_ui = HelmTouch.new(self, _dispatch, portrait, true)
-		add_child(tablet_ui)
-		_captured = false
-		screen.set_tablet_dock(tablet_ui.dock)
 
 
 ## The screen shows the tabs of the pages just built (it binds them on its own relayout,
 ## which runs before a rotation rebuilds this layout).
 func _show_pages() -> void:
-	var screen: StationScreen = _screen()
+	var screen: StationScreen = self.screen()
 	if screen == null or not screen.is_inside_tree() or screen.focused_panel() != self:
 		return
 	var form_now: LayoutMode.Form = LayoutMode.form_of(screen)
@@ -185,38 +181,14 @@ func _show_pages() -> void:
 	screen.frame.show_tabs(form_now, alone)
 
 
-## The screen's form (LayoutMode.Form), measured on the screen's own size so a screen laid
-## out at a set size (tests, a dev seat) gets its layout; desktop outside a screen.
+## The screen's form (layout_form); desktop outside a screen.
 func _form() -> LayoutMode.Form:
-	var screen: StationScreen = _screen()
-	if not is_inside_tree() or screen == null:
-		return LayoutMode.Form.DESKTOP
-	return LayoutMode.form_for(_dp(), LayoutMode.coarse_pointer())
-
-
-## The screen's size in device-independent pixels (zero outside a screen).
-func _dp() -> Vector2:
-	var screen: StationScreen = _screen()
-	if not is_inside_tree() or screen == null:
-		return Vector2.ZERO
-	var ui_scale: float = 1.0
-	var window: Window = get_window()
-	if window != null:
-		ui_scale = window.content_scale_factor
-	return LayoutMode.dp_size(screen.size, ui_scale, LayoutMode.density())
-
-
-## The screen holding this panel, or null.
-func _screen() -> StationScreen:
-	var node: Node = get_parent()
-	while node != null and not node is StationScreen:
-		node = node.get_parent()
-	return node as StationScreen
+	return layout_form() if is_inside_tree() and screen() != null else LayoutMode.Form.DESKTOP
 
 
 ## Touch intent events go through the screen like a device's (StationScreen.dispatch).
 func _dispatch(ev: Dictionary) -> void:
-	var screen: StationScreen = _screen()
+	var screen: StationScreen = self.screen()
 	if screen != null:
 		screen.dispatch(ev)
 	else:
@@ -231,7 +203,7 @@ func _notification(what: int) -> void:
 		_captured = false
 		_apply_mouse_mode()
 	elif what == NOTIFICATION_ENTER_TREE:
-		var screen: StationScreen = _screen()
+		var screen: StationScreen = self.screen()
 		if screen != null and not screen.menu_requested.is_connected(_free_pointer):
 			screen.menu_requested.connect(_free_pointer)
 		if screen != null and not screen.resized.is_connected(_apply_form):
@@ -607,7 +579,7 @@ func _free_pointer() -> void:
 ## The screen is blocked by the menu (any tab), the outcome card
 ## or the alert picker.
 func _overlay_open() -> bool:
-	var screen: StationScreen = _screen()
+	var screen: StationScreen = self.screen()
 	return screen != null and screen.blocked()
 
 

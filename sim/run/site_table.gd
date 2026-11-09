@@ -198,7 +198,11 @@ static func nearest(world: SimWorld, ship: int) -> int:
 
 ## The site the ship is within the radius of (the nearest one), else -1.
 static func at_site(world: SimWorld, ship: int) -> int:
-	var s: int = nearest(world, ship)
+	return within_radius(world, ship, nearest(world, ship))
+
+
+## `site` if the ship is within its radius, else -1 (`site` the ship's nearest, already known).
+static func within_radius(world: SimWorld, ship: int, s: int) -> int:
 	if s < 0:
 		return -1
 	var sites: SiteTable = world.sites

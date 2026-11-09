@@ -35,6 +35,9 @@ def shards(files: list[str], times: dict[str, float], n: int) -> list[list[str]]
     def weight(f: str) -> float:
         return times.get(f, default if f.rsplit("/", 1)[-1].startswith("test_") else 0.0)
 
+    missing = [f for f in files if f.rsplit("/", 1)[-1].startswith("test_") and f not in times]
+    if missing:
+        print(f"l1_shards: {len(missing)} suites missing from tools/l1_times.json (counted as the median; see --update)", file=sys.stderr)
     loads, out = [0.0] * n, [[] for _ in range(n)]
     for f in sorted(files, key=lambda f: (-weight(f), f)):
         k = loads.index(min(loads))

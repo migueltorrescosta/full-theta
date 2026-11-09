@@ -18,11 +18,11 @@ const POS_Q: float = 16.0
 const VEL_Q: float = 16.0
 const ANG_Q: float = 50.0
 const PROJ_VEL_Q: float = 8.0
-const TICK_HZ: int = 60
-## Velocity units times ticks over this gives position units: VEL_Q * TICK_HZ / POS_Q.
-const PRED_DEN: int = 60
-## Projectile velocity units times ticks over this gives position units.
-const PROJ_PRED_DEN: int = 30
+## The sim's tick rate (G8): SimRate.HZ, the one place it is written.
+const TICK_HZ: int = SimRate.HZ
+## Velocity units times ticks over this gives position units: VEL_Q * TICK_HZ / POS_Q, which
+## is TICK_HZ while VEL_Q equals POS_Q.
+const PRED_DEN: int = TICK_HZ
 ## Most ticks a dead-reckoned record may age before it is refreshed (10 s).
 const MAX_AGE: int = 600
 const SQRT1_2: float = 0.7071067811865476

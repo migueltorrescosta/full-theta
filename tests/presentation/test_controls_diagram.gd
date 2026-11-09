@@ -186,7 +186,7 @@ func test_the_current_stations_keys_are_highlighted_and_the_rest_dimmed() -> voi
 	assert_str(weapons.part_emphasis("F13")).is_equal("")
 	var helm: ControlsDiagram = _diagram(bindings, ["helm"], IntentTable.KBM)
 	assert_str(helm.part_emphasis("Space")).is_equal("station")
-	assert_str(helm.part_emphasis("1")).is_equal("other")
+	assert_str(helm.part_emphasis("O")).is_equal("other")
 	# Only the station's and the common intents have callouts.
 	var groups: Array = helm.labels().map(func(l: Dictionary) -> String: return l["group"])
 	assert_array(groups).not_contains(["weapons", "engineering", "science"])

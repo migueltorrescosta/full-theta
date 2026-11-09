@@ -41,8 +41,8 @@ func test_role_summaries_fit_their_lines_and_start_stays_on_screen() -> void:
 			l.size = Vector2(size)
 			for i: int in 6:
 				await get_tree().process_frame
-			var lines: int = LobbyScreen.ROLE_LINES
-			for id: String in LobbyScreen.GRID_STATIONS:
+			var lines: int = LobbySeatGrid.ROLE_LINES
+			for id: String in LobbySeatGrid.GRID_STATIONS:
 				var cell: Node = l.find_child("Entry_" + id, true, false)
 				var role: Label = cell.find_child("Role", true, false) as Label
 				if role.max_lines_visible != lines or role.get_line_count() > lines:
@@ -68,5 +68,5 @@ func test_the_summary_role_wraps_on_a_short_desktop_screen() -> void:
 	var role: Label = l.find_child("SummaryRole", true, false) as Label
 	assert_bool(role.clip_text).is_false()
 	assert_int(role.autowrap_mode).is_equal(TextServer.AUTOWRAP_WORD_SMART)
-	assert_int(role.max_lines_visible).is_equal(LobbyScreen.ROLE_LINES)
+	assert_int(role.max_lines_visible).is_equal(LobbySeatGrid.ROLE_LINES)
 	LayoutMode.forced = -1

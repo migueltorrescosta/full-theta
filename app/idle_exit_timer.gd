@@ -1,18 +1,23 @@
 class_name IdleExitTimer
 extends RefCounted
 ## "No connections for N minutes, then exit" for the server (FT-NET-003,
-## TECH-8), so orphaned servers don't pile up. Runs on wall clock passed in by
-## the caller (`Time.get_unix_time_from_system()`), since the sim may be
-## paused. A limit of 0 or less never expires (a dedicated server may want
+## TECH-8), so orphaned servers don't pile up. Runs on the clock passed in by the caller
+## (`now_s()`, monotonic: a clock step by NTP or a sleep can't end it early or never), since
+## the sim may be paused. A limit of 0 or less never expires (a dedicated server may want
 ## that).
 
 var limit_s: float = 0.0
-## Unix time the server last became empty, or -1 while someone is connected.
+## Time (now_s) the server last became empty, or -1 while someone is connected.
 var _idle_since: float = -1.0
 
 
 func _init(minutes: float) -> void:
 	limit_s = minutes * 60.0
+
+
+## Seconds on the monotonic clock: what the caller passes to update().
+static func now_s() -> float:
+	return Time.get_ticks_msec() / 1000.0
 
 
 ## Call once per frame (or less often) with the open connection count. Returns

@@ -34,7 +34,7 @@ func _chips(panel: WeaponsPanel) -> Dictionary:
 	var out: Dictionary = {}
 	for it: Dictionary in panel.ctx.picture().items:
 		if it["kind"] == "contact":
-			out[int(it["id"])] = panel.target_chip(it)
+			out[int(it["id"])] = WeaponsReadout.target_chip(panel, it)
 	return out
 
 
@@ -48,18 +48,18 @@ func test_flagged_contacts_show_their_flag() -> void:
 		]
 	)
 	var panel: WeaponsPanel = s.focused_panel() as WeaponsPanel
-	assert_int(panel.contract_flag(StationFixture.H2)).is_equal(1)
-	assert_int(panel.contract_flag(StationFixture.F4)).is_equal(2)
-	assert_int(panel.contract_flag(StationFixture.U3)).is_equal(0)
+	assert_int(WeaponsReadout.contract_flag(panel, StationFixture.H2)).is_equal(1)
+	assert_int(WeaponsReadout.contract_flag(panel, StationFixture.F4)).is_equal(2)
+	assert_int(WeaponsReadout.contract_flag(panel, StationFixture.U3)).is_equal(0)
 	var chips: Dictionary = _chips(panel)
 	assert_str(chips[StationFixture.H2]).ends_with("[disable]")
 	assert_str(chips[StationFixture.F4]).ends_with("[protect]")
 	assert_str(chips[StationFixture.U3]).not_contains("[")
 	# Selected, the contract is spelled out among the feed lines.
 	s.ctx.crew.select("contact", StationFixture.H2)
-	assert_array(panel.feed_lines()).contains(["Contract: disable, do not destroy"])
+	assert_array(WeaponsReadout.feed_lines(panel)).contains(["Contract: disable, do not destroy"])
 	s.ctx.crew.select("contact", StationFixture.F4)
-	assert_array(panel.feed_lines()).contains(["Contract: protect"])
+	assert_array(WeaponsReadout.feed_lines(panel)).contains(["Contract: protect"])
 
 
 # FT: FT-MIS-042, FT-PAIR-007
@@ -70,4 +70,4 @@ func test_no_rows_no_flags() -> void:
 	for chip: String in _chips(panel).values():
 		assert_str(chip).not_contains("[")
 	s.ctx.crew.select("contact", StationFixture.H2)
-	assert_array(panel.feed_lines()).is_empty()
+	assert_array(WeaponsReadout.feed_lines(panel)).is_empty()

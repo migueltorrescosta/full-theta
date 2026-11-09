@@ -4,8 +4,6 @@ extends SnapshotSection
 ## 3 x s32 (1/16 m, wrapped), velocity 3 x s16, orientation u32 (smallest three),
 ## angular velocity 3 x s8. Camera, radar centre and the frame for NEAR/PROJECTILES.
 
-var _last: PackedByteArray = PackedByteArray()
-
 
 func update(world: SimWorld) -> PackedByteArray:
 	var kin: Kinematics = world.kin
@@ -18,18 +16,3 @@ func update(world: SimWorld) -> PackedByteArray:
 	NetCodec.put3_8(buf, NetCodec.quant_ang(kin.ang_vel[owner]))
 	_last = buf.data_array
 	return _last
-
-
-func full() -> PackedByteArray:
-	return _last
-
-
-## Client side: {"pos" (Vector3i units), "vel" (Vector3i), "rot" (Quaternion),
-## "ang" (Vector3i)}.
-static func read(buf: StreamPeerBuffer) -> Dictionary:
-	return {
-		"pos": NetCodec.get3_32(buf),
-		"vel": NetCodec.get3_16(buf),
-		"rot": NetCodec.unpack_quat(buf.get_u32()),
-		"ang": NetCodec.get3_8(buf),
-	}

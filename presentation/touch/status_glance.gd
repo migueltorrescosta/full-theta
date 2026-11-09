@@ -16,6 +16,9 @@ const BAR_H: float = 6.0
 var rows: Array = [["Hull", -1.0, "-", "ok"], ["Sh", -1.0, "-", "accent"]]
 ## The pips text ("6").
 var pips: String = "-"
+## False for a cell the station cannot see: it is left out, not drawn as a dash.
+var show_shields: bool = true
+var show_pips: bool = true
 
 
 func _init() -> void:
@@ -27,12 +30,20 @@ func _init() -> void:
 
 ## Sets the values; redraws only on a change.
 func set_values(
-	hull: float, hull_text: String, shields: float, shields_text: String, p: String
+	hull: float,
+	hull_text: String,
+	shields: float,
+	shields_text: String,
+	p: String,
+	with_shields: bool = true,
+	with_pips: bool = true
 ) -> void:
-	var now: Array = [hull, hull_text, shields, shields_text, p]
-	var was: Array = [rows[0][1], rows[0][2], rows[1][1], rows[1][2], pips]
+	var now: Array = [hull, hull_text, shields, shields_text, p, with_shields, with_pips]
+	var was: Array = [rows[0][1], rows[0][2], rows[1][1], rows[1][2], pips, show_shields, show_pips]
 	if now == was:
 		return
+	show_shields = with_shields
+	show_pips = with_pips
 	rows[0][1] = hull
 	rows[0][2] = hull_text
 	rows[1][1] = shields
@@ -45,6 +56,8 @@ func _draw() -> void:
 	var font: Font = get_theme_default_font()
 	var top: float = (size.y - 36.0) / 2.0
 	for i: int in rows.size():
+		if i == 1 and not show_shields:
+			continue
 		var r: Array = rows[i]
 		var y: float = top + i * 18.0
 		draw_string(
@@ -73,6 +86,8 @@ func _draw() -> void:
 			VALUE_FONT,
 			Palette.color("text")
 		)
+	if not show_pips:
+		return
 	draw_string(
 		font,
 		Vector2(size.x - 24.0, top + 25.0),

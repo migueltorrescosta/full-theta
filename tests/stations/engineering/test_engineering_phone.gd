@@ -5,11 +5,9 @@ extends GdUnitTestSuite
 ## up, and rail taps that send what the keys send.
 # FT: FT-STN-005
 
-const Reach = preload("res://tests/stations/wr/phone_reach.gd")
 const SETTINGS: String = "user://test_engineering_phone.cfg"
 const LANDSCAPE: Array = [47, 0, 47, 21]
 const PORTRAIT: Array = [0, 47, 0, 34]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 const FORMS: Array = [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]
 const P = EngineeringPanel.Page
 
@@ -82,25 +80,29 @@ func test_every_action_within_two_taps() -> void:
 	for f: Array in FORMS:
 		var s: StationScreen = await _screen(f[0], f[1])
 		s.ctx.crew.select("contact", StationFixture.H2)
+		# A fault of unknown cause on the picked part, so Cause can act (C4: greyed otherwise).
+		s.ctx.view.blocks[StationViews.Section.ENGINEERING]["subsystems"][0]["fault"] = true
 		var e: EngineeringPanel = s.focused_panel()
 		assert_object(e.pages).is_not_null()
 		assert_array(e.pages.titles()).is_equal(["Power", "Ship", "Faults", "Crew"])
 		await _frames(2)
 		for row: Array in TABLE:
 			var from: int = StationFixture.sent(s.ctx).sent.size()
-			var r: Dictionary = Reach.walk(s, {"page": row[1], "control": row[2], "taps": row[3]})
+			var r: Dictionary = PhoneReach.walk(
+				s, {"page": row[1], "control": row[2], "taps": row[3]}
+			)
 			var what: String = "%s %s" % [row[0], f[0]]
-			assert_str(r["error"]).override_failure_message(what).is_empty()
+			assert_str(r["error"]).override_failure_message(what + " " + str(r["error"])).is_empty()
 			if row[4] != "":
 				assert_array(_kinds(s, from)).override_failure_message(what).contains([row[4]])
 			await _frames(1)
 		for page: int in [P.SHIP, P.FAULTS]:
-			Reach.rest(s)
-			Reach.strip(s).tab(page).pressed.emit()
+			PhoneReach.rest(s)
+			PhoneReach.strip(s).tab(page).pressed.emit()
 			assert_bool(e.pages.parts(page)[0].is_visible_in_tree()).is_true()
 			assert_bool(e.pages.parts(P.POWER)[0].is_visible_in_tree()).is_false()
 			# The rail stays: the persistent zone never pages away.
-			assert_bool(Reach.control(s, "Touch_pip_add").is_visible_in_tree()).is_true()
+			assert_bool(PhoneReach.control(s, "Touch_pip_add").is_visible_in_tree()).is_true()
 		_drop(s)
 
 
@@ -132,12 +134,7 @@ func test_touch_rules_on_every_page() -> void:
 			e.pages.current = page
 			await _frames(3)
 			var report: Dictionary = TapAudit.check(s)
-			for k: String in AUDIT:
-				(
-					assert_array(report[k])
-					. override_failure_message("%s page %d %s: %s" % [f[0], page, k, report[k]])
-					. is_empty()
-				)
+			assert_array(StationFixture.rule_breaks(report, "%s page %d" % [f[0], page])).is_empty()
 			var view: Rect2 = e.view_rect()
 			var shown: Control = e.pages.parts(page)[0]
 			var top: float = shown.get_global_rect().position.y - e.global_position.y
@@ -153,7 +150,7 @@ func test_rail_taps_send_the_key_intents() -> void:
 		var id: String = a[0]
 		for f: Array in FORMS:
 			var touch: StationScreen = await _screen(f[0], f[1])
-			var b: BaseButton = Reach.control(touch, "Touch_" + id)
+			var b: BaseButton = PhoneReach.control(touch, "Touch_" + id)
 			assert_bool(b.is_visible_in_tree()).override_failure_message(id).is_true()
 			b.pressed.emit()
 			SafeArea.simulate([])
@@ -208,11 +205,11 @@ func test_shares_on_the_crew_page() -> void:
 	await _frames(2)
 	assert_str(s.focused_station()).is_equal("engineering")
 	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
-	var crew: CrewPage = (s.focused_panel() as EngineeringPanel).crew_page
+	var crew: CrewPage = (s.focused_panel() as EngineeringPanel).phone.crew_page
 	crew.refresh()
 	var share: Array = crew.entries().filter(func(e: Array) -> bool: return e[0] == "share")
 	assert_array(share).is_not_empty()
-	var r: Dictionary = Reach.walk(s, {"page": P.CREW, "control": _share_button})
+	var r: Dictionary = PhoneReach.walk(s, {"page": P.CREW, "control": _share_button})
 	assert_str(r["error"]).is_empty()
 	assert_int(StationFixture.sent(s.ctx).of("share").size()).is_equal(1)
 	_drop(s)
@@ -220,7 +217,7 @@ func test_shares_on_the_crew_page() -> void:
 
 ## The Crew page's first Share button of the focused Engineering panel.
 func _share_button(sc: StationScreen) -> BaseButton:
-	return (sc.focused_panel() as EngineeringPanel).crew_page.button("share")
+	return (sc.focused_panel() as EngineeringPanel).phone.crew_page.button("share")
 
 
 # FT: FT-STN-005

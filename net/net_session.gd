@@ -49,6 +49,26 @@ func has_pick() -> bool:
 	return ship >= 0 and entry != ""
 
 
+## Holds a crew pick: a station, not the Captain seat or a viewer (R06-11).
+func is_crew() -> bool:
+	return has_pick() and StationViews.is_crew(entry)
+
+
+## Holds the Relay seat (alone or with other stations).
+func is_relay() -> bool:
+	return has_pick() and CrewMarks.role_of(entry) == CrewMarks.Role.RELAY
+
+
+## Has a pick on `on_ship`: the audience of a ship's events (R06-9).
+func on_ship(on_ship_id: int) -> bool:
+	return ship == on_ship_id and has_pick()
+
+
+## A connected crew player: a voter of D128 and D178.
+func is_live_crew() -> bool:
+	return connected() and is_crew()
+
+
 ## The view key the snapshot builder encodes for this session, or "" without a pick.
 func view_key() -> String:
 	return StationViews.key(ship, entry, view_code()) if has_pick() else ""

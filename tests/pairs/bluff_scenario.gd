@@ -56,6 +56,11 @@ static func environment(w: SimWorld) -> void:
 		c.reward_credits = REWARD
 		c.rep_interaction = &"rep.complete_mission"
 		PairHarness.send(w, c)
+	elif w.tick == 1:
+		# a bounty is settled once accepted (CardResultCommand refuses an open card)
+		var accept: AcceptCardCommand = AcceptCardCommand.new()
+		accept.card = 0
+		PairHarness.send(w, accept)
 	elif w.story.size() > 0 and Story.is_live(w, 0) and not w.kin.is_alive(TRADER):
 		var r: CardResultCommand = CardResultCommand.new()
 		r.card = 0

@@ -209,6 +209,9 @@ func test_capture_refuses_collisions_with_common_and_live_keys() -> void:
 	assert_str(s.warning.text).contains(tr("intent.face"))
 	assert_array(s.capturing).is_equal(["cycle_target", "kbm"])
 	assert_array(_capture(s, "approach", "kbm", [_k(KEY_T, true)])).is_equal(["X"])
+	# H is Helm's dock too: the first capture warns (D5), the same one again binds both.
+	assert_array(_capture(s, "approach", "kbm", [_k(KEY_H, true)])).is_equal(["X"])
+	assert_str(s.warning.text).contains(tr("intent.dock"))
 	assert_array(_capture(s, "approach", "kbm", [_k(KEY_H, true)])).is_equal(["H"])
 	assert_str(s.warning.text).is_empty()
 	var lmb: InputEventMouseButton = InputEventMouseButton.new()
@@ -229,7 +232,7 @@ func test_menu_and_decline_stay_bound() -> void:
 	assert_array(_capture(s, "menu", "kbm", [_k(KEY_ESCAPE, true)])).is_equal(["Escape"])
 	assert_array(_capture(s, "decline", "pad", [_k(KEY_BACKSPACE, true)])).is_equal(["Y"])
 	assert_array(_capture(s, "decline", "kbm", [_k(KEY_BACKSPACE, true)])).is_equal(["Backspace"])
-	assert_array(_capture(s, "ping", "kbm", [_k(KEY_ESCAPE, true)])).is_equal(["MMB"])
+	assert_array(_capture(s, "ping", "kbm", [_k(KEY_ESCAPE, true)])).is_equal(["MMB", "Shift+P"])
 	assert_array(s.capturing).is_empty()
 	assert_array(_capture(s, "ping", "kbm", [_k(KEY_BACKSPACE, true)])).is_empty()
 	var closed: Array = []

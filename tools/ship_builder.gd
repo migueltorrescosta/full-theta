@@ -83,6 +83,10 @@ var _materials: Dictionary[Role, StandardMaterial3D] = {}
 var _hull_mesh: ArrayMesh = null
 ## Each part's material role, while the scratch ship builds the parts.
 var _roles: Dictionary[MeshInstance3D, Role] = {}
+## The small detail parts (greebles, vents, reaction-control blocks, the antenna), which a
+## far view drops (E1).
+var _greeble_parts: Dictionary[MeshInstance3D, bool] = {}
+var _adding_greebles: bool = false
 
 
 ## One shared part: its parent's index in the list (-1 for the ship), its transform, mesh
@@ -92,6 +96,7 @@ class Part:
 	var transform: Transform3D = Transform3D.IDENTITY
 	var mesh: Mesh
 	var role: Role = Role.HULL
+	var greeble: bool = false
 
 
 ## The AO bake in progress: the parts, the ones it darkens (all but the glow) with their
@@ -155,17 +160,17 @@ static func bake(look: Dictionary, wear_of: float, shared: Array[ImageTexture] =
 	b._make_materials(textures)
 	var root: Node3D = Node3D.new()
 	root.name = "Ship"
-	var made: Array[MeshInstance3D] = []
-	for i: int in bake_state.parts.size():
-		var p: Part = bake_state.parts[i]
+	for group: Dictionary in _merge(bake_state.parts):
+		var role: Role = group["role"]
 		var body: MeshInstance3D = MeshInstance3D.new()
-		body.name = "P%d" % i
-		body.mesh = p.mesh
-		body.material_override = b._materials[p.role]
-		body.transform = p.transform
-		(root if p.parent < 0 else made[p.parent]).add_child(body)
+		body.name = ("Detail" if group["greeble"] else "Body") + Role.keys()[role].capitalize()
+		body.mesh = group["mesh"]
+		body.material_override = b._materials[role]
+		if group["greeble"]:
+			body.visibility_range_end = ProceduralShip.DETAIL_RANGE
+			body.add_to_group(ProceduralShip.DETAIL_GROUP, true)
+		root.add_child(body)
 		body.owner = root
-		made.append(body)
 	b.free()
 	var scene: PackedScene = PackedScene.new()
 	scene.pack(root)
@@ -183,6 +188,83 @@ static func bake_shared(wear_of: float) -> Array[ImageTexture]:
 	var textures: Array[ImageTexture] = b._plate_textures(plate)
 	b.free()
 	return [textures[1], textures[2]]
+
+
+## The parts merged into one mesh per material role (E1: a ship was about 100 draw calls),
+## the greebles apart so that a far view can drop them: [{role, greeble, mesh}] in role order.
+## Each part's mesh (its AO already in the vertex colours) moves to ship space; only the decal
+## keeps its texture coordinates (the plating is triplanar).
+static func _merge(parts: Array) -> Array[Dictionary]:
+	var world: Array[Transform3D] = []
+	for p: Part in parts:
+		world.append(p.transform if p.parent < 0 else world[p.parent] * p.transform)
+	var out: Array[Dictionary] = []
+	for greeble: bool in [false, true]:
+		for role: Role in Role.values():
+			var arrays: Array = []
+			arrays.resize(Mesh.ARRAY_MAX)
+			var verts: PackedVector3Array = PackedVector3Array()
+			var normals: PackedVector3Array = PackedVector3Array()
+			var colours: PackedColorArray = PackedColorArray()
+			var uvs: PackedVector2Array = PackedVector2Array()
+			var indices: PackedInt32Array = PackedInt32Array()
+			for i: int in parts.size():
+				var p: Part = parts[i]
+				if p.role == role and p.greeble == greeble:
+					_append(p.mesh, world[i], verts, normals, colours, uvs, indices)
+			if verts.is_empty():
+				continue
+			arrays[Mesh.ARRAY_VERTEX] = verts
+			arrays[Mesh.ARRAY_NORMAL] = normals
+			arrays[Mesh.ARRAY_COLOR] = colours
+			if role == Role.DECAL:
+				arrays[Mesh.ARRAY_TEX_UV] = uvs
+			arrays[Mesh.ARRAY_INDEX] = indices
+			var mesh: ArrayMesh = ArrayMesh.new()
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			out.append({"role": role, "greeble": greeble, "mesh": mesh})
+	return out
+
+
+## Appends `mesh` (its first surface) moved by `xform` to the merged arrays; a part without
+## colours is white, without texture coordinates (0, 0).
+static func _append(
+	mesh: Mesh,
+	xform: Transform3D,
+	verts: PackedVector3Array,
+	normals: PackedVector3Array,
+	colours: PackedColorArray,
+	uvs: PackedVector2Array,
+	indices: PackedInt32Array
+) -> void:
+	var arrays: Array = mesh.surface_get_arrays(0)
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var n: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var c: PackedColorArray = (
+		arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
+	)
+	var uv: PackedVector2Array = (
+		arrays[Mesh.ARRAY_TEX_UV] if arrays[Mesh.ARRAY_TEX_UV] != null else PackedVector2Array()
+	)
+	var normal_basis: Basis = xform.basis.inverse().transposed()
+	var base: int = verts.size()
+	for k: int in v.size():
+		verts.append(xform * v[k])
+		normals.append((normal_basis * n[k]).normalized())
+		colours.append(c[k] if k < c.size() else Color.WHITE)
+		uvs.append(uv[k] if k < uv.size() else Vector2.ZERO)
+	var idx: PackedInt32Array = PackedInt32Array()
+	if arrays[Mesh.ARRAY_INDEX] != null:
+		idx = arrays[Mesh.ARRAY_INDEX]
+	else:
+		idx.resize(v.size())
+		for k: int in v.size():
+			idx[k] = k
+	var flip: bool = xform.basis.determinant() < 0.0
+	for t: int in range(0, idx.size(), 3):
+		indices.append(base + idx[t])
+		indices.append(base + idx[t + 2 if flip else t + 1])
+		indices.append(base + idx[t + 1 if flip else t + 2])
 
 
 ## Builds every part in this scratch ship and describes them for the AO bake
@@ -231,6 +313,7 @@ func _collect(node: Node, parent: int, out: Array, part_of: Dictionary) -> void:
 		p.transform = body.transform
 		p.mesh = body.mesh
 		p.role = _roles[body]
+		p.greeble = _greeble_parts.has(body)
 		out.append(p)
 		part_of[body] = p
 		_collect(body, out.size() - 1, out, part_of)
@@ -304,6 +387,7 @@ func _add_tail() -> void:
 
 ## Small boxes on the hull's upper surface and vents on its flanks, from a fixed seed.
 func _add_greebles() -> void:
+	_adding_greebles = true
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = seed_value
 	for i: int in 26:
@@ -324,6 +408,7 @@ func _add_greebles() -> void:
 		_add(_box(Vector3(0.08, 0.08, 0.12)), Role.METAL, Vector3(side * 0.3, 0.02, -1.75))
 	# Antenna on the spine.
 	_add(_cylinder(0.008, 0.008, 0.4), Role.METAL, Vector3(0, _top(1.0) + 0.24, 1.0))
+	_adding_greebles = false
 
 
 ## Fake ambient occlusion, baked into vertex colours that the materials multiply into the
@@ -501,6 +586,8 @@ func _add(mesh: Mesh, role: Role, at: Vector3, parent: Node3D = self) -> MeshIns
 	var body: MeshInstance3D = MeshInstance3D.new()
 	body.mesh = mesh
 	_roles[body] = role
+	if _adding_greebles:
+		_greeble_parts[body] = true
 	body.position = at
 	parent.add_child(body)
 	return body

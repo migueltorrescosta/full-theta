@@ -25,11 +25,17 @@ var _col: VBoxContainer
 var _info: VBoxContainer
 var _spacer: Control
 var _title: Label
+var _why: Label
 var _stats: Label
 var _votes: Label
+var _note: Label
 var _buttons: HBoxContainer
 var _debrief: DebriefCard
 var _phone: bool = false
+## The host tapped Run again once with players still deciding: the next tap runs it anyway,
+## as long as the same players are still deciding (C14).
+var _force: bool = false
+var _force_for: PackedStringArray = PackedStringArray()
 
 
 func setup(context: StationContext) -> void:
@@ -46,6 +52,11 @@ func setup(context: StationContext) -> void:
 	_title.theme_type_variation = "TitleLabel"
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info.add_child(_title)
+	_why = Label.new()
+	_why.name = "Why"
+	_why.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_info.add_child(_why)
 	_stats = Label.new()
 	_stats.name = "Stats"
 	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -53,6 +64,12 @@ func setup(context: StationContext) -> void:
 	_votes = Label.new()
 	_votes.name = "Votes"
 	_info.add_child(_votes)
+	_note = Label.new()
+	_note.name = "Note"
+	_note.theme_type_variation = "DimLabel"
+	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_info.add_child(_note)
 	_spacer = Control.new()
 	_spacer.name = "Spacer"
 	_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -77,8 +94,7 @@ func setup(context: StationContext) -> void:
 
 
 func _enter_tree() -> void:
-	if not get_viewport().size_changed.is_connected(_place):
-		get_viewport().size_changed.connect(_place)
+	PhoneSheet.follow_viewport(self, _place)
 	_place.call_deferred()
 
 
@@ -89,6 +105,7 @@ func refresh() -> void:
 		return
 	_place()
 	_title.text = tr("outcome.win" if card.get("outcome", "") == "win" else "outcome.loss")
+	_why.text = why_text(card)
 	var secs: int = int(card.get("time_s", 0.0))
 	var hull: int = roundi(float(card.get("hull", 0.0)) * 100.0)
 	_stats.text = tr("outcome.stats") % ["%d:%02d" % [secs / 60, secs % 60], hull]
@@ -110,15 +127,59 @@ func refresh() -> void:
 		)
 	else:
 		_debrief.visible = false
+	_note.text = ""
 	if ctx.crew.host:
-		_button("RunAgain", tr("outcome.restart")).pressed.connect(
-			func() -> void: ctx.intents.run_again(ship, true)
-		)
+		var waiting: PackedStringArray = waiting_names(card)
+		if waiting != _force_for:
+			_force = false
+		var run: Button = _button("RunAgain", tr("outcome.restart"))
+		if _force:
+			run.text = tr("outcome.force") % ", ".join(waiting)
+		run.pressed.connect(_host_run_again.bind(run))
 	elif ctx.crew.is_crew():
 		var voted: bool = ctx.crew.session in card.get("sessions", [])
 		_button("Vote", tr("outcome.unvote") if voted else tr("outcome.vote")).pressed.connect(
 			func() -> void: ctx.intents.run_again(ship, not voted)
 		)
+	else:
+		_note.text = tr("outcome.watch")
+
+
+## Why the run ended, in one line: the win rule, or how the ship was lost.
+static func why_text(card: Dictionary) -> String:
+	if card.get("outcome", "") == "win":
+		return TranslationServer.translate("outcome.why_win")
+	if float(card.get("hull", 0.0)) <= 0.0:
+		return TranslationServer.translate("outcome.why_destroyed")
+	return TranslationServer.translate("outcome.why_gave_up")
+
+
+## The crew who haven't voted to run again yet, apart from the host: the ship's crew seats
+## (the `lobby` payload) minus this card's voters.
+func waiting_names(card: Dictionary) -> PackedStringArray:
+	var voters: Array = card.get("voters", [])
+	var out: PackedStringArray = PackedStringArray()
+	for seat: Dictionary in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
+		var who: String = str(seat.get("name", ""))
+		if StationViews.is_crew(str(seat.get("entry", ""))) and who != ctx.settings.player_name:
+			if not voters.has(who) and not out.has(who):
+				out.append(who)
+	return out
+
+
+## The host's Run again: at once when every crew player voted (the vote would pass anyway) or
+## nobody is left to wait for; else the first tap names who is still deciding and the second
+## runs it anyway.
+func _host_run_again(button: Button) -> void:
+	var card: Dictionary = ctx.crew.run_over.get(ctx.crew.ship, {})
+	var waiting: PackedStringArray = waiting_names(card)
+	if waiting.is_empty() or _force:
+		_force = false
+		ctx.intents.run_again(ctx.crew.ship, true)
+		return
+	_force = true
+	_force_for = waiting
+	button.text = tr("outcome.force") % ", ".join(waiting)
 
 
 func _button(node_name: String, text: String) -> Button:
@@ -136,20 +197,12 @@ func _button(node_name: String, text: String) -> Button:
 func _place() -> void:
 	if not is_inside_tree() or ctx == null:
 		return
-	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var phone: bool = PhoneSheet.is_phone(self)
 	if phone != _phone:
 		_set_phone(phone)
 	if not phone:
 		return
-	var r: Rect2 = SafeArea.tap_rect(self)
-	var parent: Control = get_parent() as Control
-	if parent != null:
-		r = SafeArea.to_local(parent, r)
-	if position != r.position or size != r.size:
-		set_anchors_preset(Control.PRESET_TOP_LEFT)
-		custom_minimum_size = r.size
-		position = r.position
-		size = r.size
+	PhoneSheet.fit(self)
 
 
 ## Switches between the phone's full-screen card with tabs and the centred card.
@@ -186,10 +239,7 @@ func _set_phone(phone: bool) -> void:
 		_spacer.visible = false
 		_debrief.visible = false
 		_col.move_child(_debrief, -1)
-		custom_minimum_size = Vector2.ZERO
-		set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		grow_horizontal = Control.GROW_DIRECTION_BOTH
-		grow_vertical = Control.GROW_DIRECTION_BOTH
+		PhoneSheet.unfit(self)
 	refresh()
 
 

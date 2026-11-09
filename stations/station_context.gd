@@ -39,16 +39,17 @@ func now_ms() -> int:
 
 
 ## The radar picture (ContactPicture) for this frame: rebuilt when the frame, the clock,
-## the interpolated state, the marks or the pings changed.
+## the interpolated state, the marks, the pings, the zones or the sites changed. The key
+## holds their content hashes, not copies (R20-4): a call that hits the cache copies nothing.
 func picture() -> ContactPicture:
 	var key: Array = [
 		Engine.get_process_frames(),
 		now_ms(),
 		interp.revision,
-		crew.marks.duplicate(true),
-		crew.pings.duplicate(true),
-		crew.zones.duplicate(true),
-		view.sites.duplicate(true),
+		crew.marks.hash(),
+		crew.pings.hash(),
+		crew.zones.hash(),
+		view.sites.hash(),
 	]
 	if _picture == null or _picture.interp != interp or key != _picture_key:
 		_picture = ContactPicture.build(self)
@@ -75,6 +76,16 @@ func ship_def() -> ShipDef:
 			_ship_def = load(path) as ShipDef if ResourceLoader.exists(path) else null
 		return _ship_def
 	return null
+
+
+## Pips the reactor can feed now: the STATUS block's pip_cap (lower while the reactor is
+## damaged), else the ship's nominal reactor_pips before the first snapshot; 0 without a ship.
+func pip_cap() -> int:
+	var status: Dictionary = view.blocks.get(StationViews.Section.STATUS, {})
+	if status.has("pip_cap"):
+		return int(status["pip_cap"])
+	var def: ShipDef = ship_def()
+	return def.power.reactor_pips if def != null and def.power != null else 0
 
 
 ## Places a new mark (slot -1: the first free one) or replaces `slot` on an item as

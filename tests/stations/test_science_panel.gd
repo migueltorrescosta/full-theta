@@ -43,10 +43,10 @@ func _block(over: Dictionary) -> Dictionary:
 			"contact": H2,
 			"detect": 0.9,
 			"scan": 0.9,
-			"class_id": ScienceView.code(&"m1_raider"),
+			"class_id": BlockSchema.id_code(&"m1_raider"),
 			"intent": 3,
 			"weak_mask": 1,
-			"resist": [{"type": ScienceView.code(&"kinetic"), "factor": 0.5}],
+			"resist": [{"type": BlockSchema.id_code(&"kinetic"), "factor": 0.5}],
 			"hack": true,
 		},
 		{
@@ -417,3 +417,26 @@ func test_list_stage_and_card_stay_side_by_side_at_853_wide() -> void:
 	assert_bool(sci.is_narrow()).is_true()
 	sci.size = Vector2(700, 360)
 	assert_bool(sci.is_narrow()).is_true()
+
+
+# FT: FT-SCI-006
+# R23-1 (C8): the subsystem the card lists as a weak point reads "(weak)" in the Hack
+# button and the phone's sheet; the others keep their plain names.
+func test_weak_point_is_marked_on_the_subsystem_choices() -> void:
+	var s: StationScreen = await _screen()
+	var p: SciencePanel = _sci(s)
+	s.ctx.crew.select("contact", H2)
+	p.refresh()
+	var subs: Array[StringName] = p.subsystems()
+	assert_str(p._sub_label(subs, 0)).is_equal(tr("sci.weak_mark") % tr("eng.name." + str(subs[0])))
+	assert_str(p._sub_label(subs, 0)).contains("(weak)")
+	assert_str(p._sub_label(subs, 1)).is_equal(tr("eng.name." + str(subs[1])))
+	assert_str((p._buttons["sub"] as Button).text).contains("(weak)")
+
+
+# FT: FT-SCI-002
+# R23-6 (C8): the scan confidence is also a word.
+func test_card_confidence_in_words() -> void:
+	assert_str(ScienceCard.confidence_word(0.9)).is_equal(tr("sci.conf_sure"))
+	assert_str(ScienceCard.confidence_word(0.6)).is_equal(tr("sci.conf_likely"))
+	assert_str(ScienceCard.confidence_word(0.1)).is_equal(tr("sci.conf_guess"))

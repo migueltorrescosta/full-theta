@@ -135,7 +135,7 @@ func _put_chip(s: StationScreen, id: int, chip: String, from: String, to: String
 		. append(
 			{
 				"id": id,
-				"chip": NetChips.index_of(chip),
+				"chip": ChipView.index_of(chip),
 				"arg": -1,
 				"from": StationViews.CREW.find(from),
 				"to": StationViews.CREW.find(to),
@@ -161,8 +161,10 @@ func test_a_received_chip_is_shown_and_answered() -> void:
 	assert_bool(strip.visible).is_true()
 	var texts: Array = strip.get_children().map(func(l: Label) -> String: return l.text)
 	assert_str(texts[0]).is_equal("Helm asks: Boost · 14 s")
-	assert_str(texts[1]).is_equal("Weapons asks: Power to weapons · 14 s")
-	assert_str(texts[2]).is_equal("Enter accepts · Backspace declines")
+	# (the Boost chip says what it does: Weapons' chip has no effect line)
+	assert_str(texts[1]).is_equal("Engines to full pips for a while. Heats up.")
+	assert_str(texts[2]).is_equal("Weapons asks: Power to weapons · 14 s")
+	assert_str(texts[3]).is_equal("Enter accepts · Backspace declines")
 	assert_bool(s.dispatch(_ev("accept", s))).is_true()
 	assert_array(_sent(s, "answer_chip")[0][1]).is_equal([5, true])
 	assert_bool(s.dispatch(_ev("decline", s))).is_true()

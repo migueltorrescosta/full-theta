@@ -18,7 +18,9 @@ func _def(fewest: int = 1, most: int = 9) -> RunDef:
 
 func _run(difficulty: StringName, crew: int = 1, per_run: int = 9, fewest: int = 1) -> Array:
 	var w: SimWorld = ApiFixture.world(crew, _def(fewest, per_run))
-	var d: Director = Director.new(w.run_def.director, difficulty, _catalogue(), 3)
+	var d: Director = Director.new(
+		w.run_def.director, difficulty, _catalogue(), 3, M1Encounter.PLAYER_FACTION
+	)
 	var host: ScenarioHost = ScenarioHost.new(w)
 	for i: int in TICKS:
 		host.advance(SimWorld.DT * 1.001, d.before_tick)
@@ -37,12 +39,41 @@ func _picks(d: Director, ship: int) -> Array[DirectorDecision]:
 func test_the_budget_follows_the_preset_and_a_custom_set_keeps_it() -> void:
 	var def: DirectorDef = _def().director
 	var catalogue: Array[Scenario] = _catalogue()
-	assert_int(Director.new(def, &"easy", catalogue, 1).budget_left(0)).is_equal(6)
-	assert_int(Director.new(def, &"normal", catalogue, 1).budget_left(0)).is_equal(9)
-	assert_int(Director.new(def, &"hard", catalogue, 1).budget_left(0)).is_equal(12)
+	(
+		assert_int(
+			Director.new(def, &"easy", catalogue, 1, M1Encounter.PLAYER_FACTION).budget_left()
+		)
+		. is_equal(6)
+	)
+	(
+		assert_int(
+			Director.new(def, &"normal", catalogue, 1, M1Encounter.PLAYER_FACTION).budget_left()
+		)
+		. is_equal(9)
+	)
+	(
+		assert_int(
+			Director.new(def, &"hard", catalogue, 1, M1Encounter.PLAYER_FACTION).budget_left()
+		)
+		. is_equal(12)
+	)
 	# "Normal (custom)": the toggles code "normal:1011000" keeps Normal's budget (D92).
-	assert_int(Director.new(def, &"normal:1011000", catalogue, 1).budget_left(0)).is_equal(9)
-	assert_int(Director.new(def, &"Hard:0101", catalogue, 1).budget_left(0)).is_equal(12)
+	(
+		assert_int(
+			(
+				Director
+				. new(def, &"normal:1011000", catalogue, 1, M1Encounter.PLAYER_FACTION)
+				. budget_left()
+			)
+		)
+		. is_equal(9)
+	)
+	(
+		assert_int(
+			Director.new(def, &"Hard:0101", catalogue, 1, M1Encounter.PLAYER_FACTION).budget_left()
+		)
+		. is_equal(12)
+	)
 	assert_str(String(Director.preset_of("easy:101"))).is_equal("easy")
 
 
@@ -60,7 +91,7 @@ func test_spending_never_passes_the_budget_and_a_bigger_budget_buys_more() -> vo
 			assert_int(dec.budget_after).is_greater_equal(0)
 			left = dec.budget_after
 			spent += dec.cost
-		assert_int(d.budget_left(0)).is_equal(left)
+		assert_int(d.budget_left()).is_equal(left)
 		assert_int(spent).is_less_equal(_def().director.budget_per_ship[preset])
 		results[preset] = spent
 	assert_int(results[&"hard"]).is_greater(results[&"easy"])
@@ -97,28 +128,30 @@ func test_picks_leave_budget_for_the_fewest_encounters() -> void:
 
 
 # FT: FT-MIS-029, FT-MIS-028
-func test_each_ship_has_its_own_budget() -> void:
+# Two allied ships are one fleet with one budget, logged under the lead ship.
+func test_a_fleet_has_one_budget() -> void:
 	var out: Array = _run(&"normal", 2)
 	var d: Director = out[1]
-	for ship: int in 2:
-		var picks: Array[DirectorDecision] = _picks(d, ship)
-		assert_int(picks.size()).is_greater_equal(1)
-		assert_int(picks[0].budget_before).is_equal(9)
-		var cost: int = 0
-		for p: DirectorDecision in picks:
-			cost += p.cost
-		assert_int(d.budget_left(ship)).is_equal(9 - cost)
+	var picks: Array[DirectorDecision] = _picks(d, 0)
+	assert_int(picks.size()).is_greater_equal(1)
+	assert_int(picks[0].budget_before).is_equal(9)
+	assert_int(_picks(d, 1).size()).is_equal(0)
+	var cost: int = 0
+	for p: DirectorDecision in picks:
+		cost += p.cost
+	assert_int(d.budget_left()).is_equal(9 - cost)
 
 
 # FT: FT-MIS-008
 func test_the_same_seed_picks_the_same_runs() -> void:
-	var a: Array[Dictionary] = []
-	var b: Array[Dictionary] = []
+	Determinism.assert_deterministic(self, _normal_decisions)
+
+
+func _normal_decisions() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
 	for dec: DirectorDecision in (_run(&"normal")[1] as Director).decisions():
-		a.append(dec.to_dict())
-	for dec: DirectorDecision in (_run(&"normal")[1] as Director).decisions():
-		b.append(dec.to_dict())
-	assert_array(a).is_equal(b)
+		out.append(dec.to_dict())
+	return out
 
 
 # FT: FT-MIS-025, FT-MIS-027
@@ -166,7 +199,9 @@ func test_a_rejected_begin_does_not_block_the_ship_for_the_run() -> void:
 	# Someone else's begin takes the ship's encounter slot in the same tick, so the director's
 	# own begin is rejected; its predicted id would have named the other's encounter.
 	api.begin_encounter(&"s_a", 1, PackedInt32Array([0]), 1)
-	var d: Director = Director.new(w.run_def.director, &"hard", _catalogue(), 3)
+	var d: Director = Director.new(
+		w.run_def.director, &"hard", _catalogue(), 3, M1Encounter.PLAYER_FACTION
+	)
 	var host: ScenarioHost = ScenarioHost.new(w)
 	for i: int in 400:
 		host.advance(SimWorld.DT * 1.001, d.before_tick)

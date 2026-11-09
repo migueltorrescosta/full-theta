@@ -28,8 +28,10 @@ func test_the_scenario_is_training_with_no_threat_and_no_director() -> void:
 	assert_int(meta.threat_cost).is_equal(0)
 	# The director would never pick it, and the driver opens no encounter and no site.
 	var def: DirectorDef = rig.world.run_def.director
-	var d: Director = Director.new(def, &"normal", [ShakedownScenario.new()], 1)
-	assert_int(d.budget_left(0)).is_equal(9)
+	var d: Director = Director.new(
+		def, &"normal", [ShakedownScenario.new()], 1, M1Encounter.PLAYER_FACTION
+	)
+	assert_int(d.budget_left()).is_equal(9)
 	var sites: int = rig.world.sites.size()
 	rig.tick(600)
 	assert_int(rig.world.encounters.size()).is_equal(0)
@@ -47,7 +49,7 @@ func test_a_drone_without_weapons_is_the_target() -> void:
 	# Destroyed, it is replaced.
 	rig.world.kin.alive[1] = 0
 	rig.world.run.status[1] = RunTable.Status.DESTROYED
-	rig.tick(ScenarioApi.HZ * 2)
+	rig.tick(SimRate.HZ * 2)
 	assert_int(rig.world.ship_count()).is_equal(3)
 
 
@@ -161,13 +163,7 @@ func test_every_pair_step_runs_and_the_shakedown_closes() -> void:
 	rig.tick(3)
 	for station: StringName in rig.driver.stations():
 		rig.finish(station)
-	var guard: int = 0
-	while guard < 60:
-		guard += 1
-		for step: TrainingStepDef in rig.driver.active_pairs():
-			rig.press_next(step.station)
-			rig.press_next(step.partner)
-		rig.tick(2)
+	_run_pairs()
 	assert_array(rig.said("shakedown.all_done")).is_not_empty()
 	for pair: TrainingStepDef in rig.steps.pairs():
 		assert_array(rig.said(pair.line)).is_not_empty()
@@ -253,7 +249,7 @@ func test_a_missing_drone_is_asked_again() -> void:
 	# The drone's spawn was rejected (its handle says so, Q24): ask again.
 	var scenario: ShakedownScenario = rig.driver._scenario as ShakedownScenario
 	scenario._drone = rig.host.api().spawn_at_range(&"no_such_enemy", 2, 0, 1000.0, 12, 0)
-	rig.tick(ScenarioApi.HZ * 2)
+	rig.tick(SimRate.HZ * 2)
 	assert_int(rig.world.ship_count()).is_equal(before + 1)
 
 

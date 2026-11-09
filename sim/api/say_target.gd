@@ -12,7 +12,7 @@ var stations: PackedStringArray = PackedStringArray()
 
 
 ## An NPC's line, heard on `ship`.
-static func npc(npc_name: StringName, to_ship: int = -1) -> SayTarget:
+static func npc(npc_name: StringName, to_ship: int) -> SayTarget:
 	var t: SayTarget = SayTarget.new()
 	t.npc_id = npc_name
 	t.ship = to_ship

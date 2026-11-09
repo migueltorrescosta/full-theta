@@ -57,8 +57,7 @@ func setup(context: StationContext) -> void:
 
 
 func _enter_tree() -> void:
-	if not get_viewport().size_changed.is_connected(_place):
-		get_viewport().size_changed.connect(_place)
+	PhoneSheet.follow_viewport(self, _place)
 	_place.call_deferred()
 
 
@@ -66,25 +65,14 @@ func _enter_tree() -> void:
 func _place() -> void:
 	if not is_inside_tree() or ctx == null:
 		return
-	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var phone: bool = PhoneSheet.is_phone(self)
 	if phone != _phone:
 		_set_phone(phone)
 	if not phone:
 		return
-	# Under the top bar, which stays live (☰ for Leave, the status and timer).
-	var r: Rect2 = SafeArea.tap_rect(self)
-	var top: float = maxf(r.position.y, VotePrompt.main_top(self))
-	# ...and above the station's bottom tabs (upright), which it must not cover (D319).
-	var bottom: float = minf(r.end.y, _tabs_top())
-	r = Rect2(r.position.x, top, r.size.x, maxf(bottom - top, 0.0))
-	var parent: Control = get_parent() as Control
-	if parent != null:
-		r = SafeArea.to_local(parent, r)
-	if position != r.position or size != r.size:
-		set_anchors_preset(Control.PRESET_TOP_LEFT)
-		custom_minimum_size = r.size
-		position = r.position
-		size = r.size
+	# Under the top bar, which stays live (☰ for Leave, the status and timer), and above the
+	# station's bottom tabs (upright), which it must not cover (D319).
+	PhoneSheet.fit(self, VotePrompt.main_top(self), _tabs_top())
 
 
 ## The top of the station's bottom tab bar (viewport px) while it shows, else INF.
@@ -115,10 +103,7 @@ func _set_phone(phone: bool) -> void:
 		add_theme_stylebox_override("panel", sheet)
 	else:
 		remove_theme_stylebox_override("panel")
-		custom_minimum_size = Vector2.ZERO
-		set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		grow_horizontal = Control.GROW_DIRECTION_BOTH
-		grow_vertical = Control.GROW_DIRECTION_BOTH
+		PhoneSheet.unfit(self)
 
 
 ## The paused ship this client cares about: its own, else an allied one, else any.
@@ -172,7 +157,9 @@ func refresh() -> void:
 	_votes.visible = own
 	if own and ctx.crew.is_crew():
 		var voted: bool = ctx.crew.session in v.get("sessions", [])
-		var key: String = "pause.%s%s" % ["un" if voted else "", "forfeit" if pvp else "vote"]
+		var key: String = "pause.unvote" if voted else "pause.vote"
+		if pvp:
+			key = "pause.unforfeit" if voted else "pause.forfeit"
 		_button("Vote", tr(key)).pressed.connect(
 			func() -> void: ctx.intents.vote_abandon(id, not voted)
 		)

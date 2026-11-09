@@ -1,5 +1,5 @@
 class_name TrainingDriver
-extends RefCounted
+extends RunDriver
 ## Steps the Shakedown (FT-MIS-039, D100, D235, FT-PAIR-012). It has the same
 ## before_tick(api) as the Director and makes no decisions: it never opens sites, picks
 ## scenarios or spends budget. It steps its one training Scenario and runs the stations'
@@ -9,7 +9,8 @@ extends RefCounted
 ## ScenarioApi.message (the ship computer's line, for that station only), and the station
 ## moves on when the step ends. A COMMAND step ends when ScenarioApi.commands_this_tick
 ## shows its command from the ship; a NEXT step ends when the station presses Next (the
-## flag train.<station>.next, TrainingNextCommand, counts the presses). Once both stations
+## flag train.<station>.next, TrainingNextCommand, counts the presses). Either kind also ends
+## when the station presses Skip (flag train.<station>.skip, D1). Once both stations
 ## of a pair have finished their tracks, the pair's step starts; it ends when both press
 ## Next. A station never sees another station's step. Nothing here is hashed: what it
 ## decides is in the command log (say, set_flag), so a run replays without it.
@@ -41,6 +42,8 @@ var _tracks: Dictionary[StringName, Array] = {}
 var _index: Dictionary[StringName, int] = {}
 ## Station -> Next presses already read, and the tick its step was last said.
 var _seen: Dictionary[StringName, int] = {}
+## Station -> Skip presses already read (TrainingNextCommand.skip).
+var _skips: Dictionary[StringName, int] = {}
 var _said: Dictionary[StringName, int] = {}
 var _pairs: Array[TrainingStepDef] = []
 ## Pair index -> 0 waiting, 1 on, 2 done.
@@ -63,6 +66,7 @@ func _init(scenario: Scenario, steps: TrainingStepsDef, solo_station: StringName
 			_tracks[s.station] = steps.track(s.station)
 			_index[s.station] = 0
 			_seen[s.station] = 0
+			_skips[s.station] = 0
 			_said[s.station] = -1000000
 			_in_pair[s.station] = -1
 	_pairs = steps.pairs()
@@ -134,24 +138,29 @@ func _start(api: ScenarioApi) -> bool:
 func _step_station(
 	api: ScenarioApi, now: int, station: StringName, tags: Dictionary[StringName, bool]
 ) -> void:
-	var presses: int = api.flag(next_flag(station))
+	var presses: int = api.flag(ScenarioApi.next_flag(station))
 	var pressed: bool = presses > _seen[station]
 	_seen[station] = presses
+	var skips: int = api.flag(ScenarioApi.skip_flag(station))
+	var skipped: bool = skips > _skips[station]
+	_skips[station] = skips
 	if _in_pair[station] >= 0:
 		_pair_pressed[station] = _pair_pressed.get(station, false) or pressed
 		return
 	var step: TrainingStepDef = current(station)
 	if step == null:
 		return
-	var done: bool = false
+	# A skip ends any single-station step (D1): the Skip button is how a player leaves a
+	# command step they cannot do on their device.
+	var done: bool = skipped
 	if step.kind == TrainingStepDef.Kind.COMMAND:
-		done = tags.has(step.command)
+		done = done or tags.has(step.command)
 	else:
-		done = pressed
+		done = done or pressed
 	if done:
 		_index[station] += 1
 		_announce(api, now, station)
-	elif now - _said[station] >= int(REMIND_S * ScenarioApi.HZ):
+	elif now - _said[station] >= SimRate.ticks(REMIND_S):
 		_announce(api, now, station)
 
 
@@ -177,7 +186,7 @@ func _step_pairs(api: ScenarioApi, now: int) -> void:
 					_pair_state[i] = 2
 					_in_pair[step.station] = -1
 					_in_pair[step.partner] = -1
-				elif now - _said[step.station] >= int(REMIND_S * ScenarioApi.HZ):
+				elif now - _said[step.station] >= SimRate.ticks(REMIND_S):
 					_say(api, step.line, [step.station, step.partner] as Array[StringName])
 					_said[step.station] = now
 					_said[step.partner] = now
@@ -233,7 +242,3 @@ func stations() -> Array[StringName]:
 	for station: StringName in _tracks:
 		out.append(station)
 	return out
-
-
-static func next_flag(station: StringName) -> StringName:
-	return StringName("train.%s.next" % station)

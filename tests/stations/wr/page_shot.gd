@@ -32,7 +32,7 @@ func _set_page() -> void:
 
 ## An open request chip from another station to the focused one.
 func _chip_row(s: StationScreen) -> Dictionary:
-	var chips: Array[ChipDef] = NetChips.def().chips
+	var chips: Array[ChipDef] = ChipView.def().chips
 	var to: String = s.focused_station()
 	for i: int in chips.size():
 		if String(chips[i].to_station) == to:

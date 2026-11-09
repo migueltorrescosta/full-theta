@@ -30,7 +30,7 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 - **FT-SIM-006** The current thrust envelope shall depend on Engineering's power to engines and thrusters, their health and heat. (P1, D50, D117)
 - **FT-SIM-007** Thrust, including assist and face-assist thrust, shall consume propellant in proportion to impulse; coasting shall consume none. (D34)
 - ~~**FT-SIM-008**~~ Removed (D77): superseded by FT-SIM-034; there are no per-encounter maps.
-- **FT-SIM-009** Collisions between ships, asteroids and projectiles shall be detected (projectiles as swept spheres) and shall cause impulse and damage. (D37, D119)
+- **FT-SIM-009** Collisions between ships, asteroids and projectiles shall be detected (projectiles as swept spheres) and shall cause impulse and damage; a ship shall take at most a data-defined share of its maximum hull from collisions in one tick (10 %), and a docked ship none. (D37, D119, D342, D343)
 - **FT-SIM-010** Collisions shall be on for all ships, including friendly ships, with a proximity warning before impact. (D37, D119)
 - **FT-SIM-011** Each weapon mount shall have a hull position, orientation, firing arc and range, and shall fire only when the aim lies inside its arc. (v0.3 §5)
 - **FT-SIM-012** Firing shall respect cooldown, ammunition, energy, heat and mount subsystem condition. (v0.3 §5)
@@ -47,7 +47,7 @@ Basic, testable behaviours first: attack, keep range, retreat at low hull. Later
 - **FT-SIM-023** Contacts shall have weak points that, when hit, damage a named subsystem. (D28, P7, D206)
 - **FT-SIM-024** Engineering shall repair subsystems by dispatching repair crews to them; each repair shall take its spare parts when dispatched, and a dispatch without enough parts shall be refused. (D27, D115)
 - **FT-SIM-025** Faults of unknown cause shall repair slowly by default and quickly when the repair names the correct cause. (P10, D206)
-- **FT-SIM-026** Overcharging a subsystem shall build heat, and heat past a data-defined threshold shall create a fault. (P1, P6)
+- **FT-SIM-026** Overcharging a subsystem shall build heat, and heat past a data-defined threshold shall create a fault, once per heating episode; the threshold sits below the heat one overcharge pip settles at, so no overcharge is free for ever. (P1, P6, D341)
 - **FT-SIM-027** Enemy AI shall support attack, keep range and retreat at low hull in milestone 1. (v0.3 §5, D72, D120)
 - **FT-SIM-028** Enemy AI shall act only on its faction's knowledge. (v0.3 §5, D21)
 - **FT-SIM-029** Damage, physics and enemy stats shall never be altered to force an outcome. (v0.3 §5)

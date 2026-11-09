@@ -19,9 +19,9 @@ func _ctx() -> StationContext:
 		},
 		"info":
 		{
-			0: [ContactsSection.FLAG_OWN, "Kestrel"],
+			0: [SnapshotReader.FLAG_OWN, "Kestrel"],
 			1: [1, "H1"],
-			2: [ContactsSection.FLAG_OWN, "Osprey"],
+			2: [SnapshotReader.FLAG_OWN, "Osprey"],
 		},
 	}
 	ctx.view = v
@@ -104,3 +104,70 @@ func test_deployed_probes_show_their_bubble() -> void:
 	assert_int(zones.size()).is_equal(1)
 	assert_str(zones[0]["zone"]).is_equal("probe")
 	assert_float(zones[0]["radius"]).is_equal(8000.0)
+
+
+# FT: FT-STN-002
+func test_contacts_by_range_sorts_once_and_copies() -> void:
+	var pic: ContactPicture = ContactPicture.build(_ctx())
+	var near: Array[Dictionary] = pic.contacts_by_range()
+	(
+		assert_array(near.map(func(it: Dictionary) -> String: return it["label"]))
+		. is_equal(["Osprey", "H1"])
+	)
+	# The first call fills the cache; later calls and limits read it.
+	(
+		assert_array(pic.contacts_by_range(1).map(func(it: Dictionary) -> int: return it["id"]))
+		. is_equal([2])
+	)
+	assert_array(pic.contacts_by_range(9)).has_size(2)
+	# A caller reordering its copy leaves the picture's order alone.
+	near.reverse()
+	assert_int(pic.contacts_by_range()[0]["id"]).is_equal(2)
+	# Marks and points are not contacts.
+	var items: Array[Dictionary] = pic.items
+	items.append({"kind": "mark", "id": 0, "label": "A", "local": Vector3.ZERO})
+	assert_array(pic.contacts_by_range()).has_size(2)
+
+
+# FT: FT-SPA-003
+func test_chip_of_is_composed_once_and_follows_a_moved_item() -> void:
+	var pic: ContactPicture = ContactPicture.build(_ctx())
+	var it: Dictionary = pic.items[0]
+	var chip: String = ContactPicture.chip_of(it)
+	assert_str(chip).is_equal(ChipText.chip(it["label"], it["local"]))
+	assert_str(it["chip_text"]).is_equal(chip)
+	# Planted text is what the cache answers while the item is unchanged ...
+	it["chip_text"] = "cached"
+	assert_str(ContactPicture.chip_of(it)).is_equal("cached")
+	# ... and a new offset or label composes it again.
+	it["local"] = Vector3(0, 0, -9000)
+	assert_str(ContactPicture.chip_of(it)).is_equal(ChipText.chip(it["label"], it["local"]))
+
+
+# FT: FT-STN-002
+func test_the_picture_cache_sees_a_mark_edited_in_place_but_copies_nothing() -> void:
+	var ctx: StationContext = _ctx()
+	var marks: Array = [{"slot": 0, "name": "Alpha", "x": 0, "y": 0, "z": 500}]
+	ctx.crew.handle_event({"type": "marks", "payload": {"ship": 0, "marks": marks}}, 1000)
+	var first: ContactPicture = ctx.picture()
+	assert_object(ctx.picture()).is_same(first)
+	# The key holds hashes, not copies of the model.
+	for part: Variant in ctx._picture_key:
+		assert_bool(part is Array or part is Dictionary).is_false()
+	ctx.crew.marks[0]["name"] = "Alfa"
+	var second: ContactPicture = ctx.picture()
+	assert_object(second).is_not_same(first)
+	(
+		assert_bool(second.items.any(func(it: Dictionary) -> bool: return it["label"] == "Alfa"))
+		. is_true()
+	)
+
+
+# FT: FT-RLY-001
+func test_mark_label_names_the_contact_a_mark_is_attached_to() -> void:
+	var ctx: StationContext = _ctx()
+	assert_str(ChipText.mark_label({"name": "Alpha", "contact": -1}, ctx.view)).is_equal("Alpha")
+	assert_str(ChipText.mark_label({"name": "Alpha"}, ctx.view)).is_equal("Alpha")
+	assert_str(ChipText.mark_label({"name": "Bravo", "contact": 1}, ctx.view)).is_equal(
+		"Bravo · H1"
+	)

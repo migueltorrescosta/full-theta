@@ -36,10 +36,10 @@ const ALERT_NORMAL: int = CrewMarks.ALERT_NORMAL
 const ALERT_YELLOW: int = CrewMarks.ALERT_YELLOW
 const ALERT_RED: int = CrewMarks.ALERT_RED
 const ALERT_LEVELS: int = CrewMarks.ALERT_RED + 1
-## Most log entries kept (the server keeps CrewRelay.MAX_LOG).
-const MAX_LOG: int = CrewRelay.MAX_LOG
+## Most log entries kept (the server keeps NetProtocol.RELAY_LOG_MAX).
+const MAX_LOG: int = NetProtocol.RELAY_LOG_MAX
 ## Sim ticks per second (spec: 60 Hz), for the mission timer.
-const TICK_HZ: float = 60.0
+const TICK_HZ: float = SimRate.HZ * 1.0
 
 var session: int = -1
 var ship: int = -1
@@ -114,7 +114,7 @@ var fleet: Dictionary = {}
 var scoreboard: Array = []
 ## ship -> `eliminated` payload {ship, reason, lives}, until it is relaunched.
 var eliminated: Dictionary = {}
-## ship -> `relaunch_votes` payload {ship, voters, needed}.
+## ship -> `relaunch_votes` payload {ship, voters, sessions, needed}.
 var relaunch_votes: Dictionary = {}
 ## This session's latest `handover` {ship (its eliminated ship), to_ship (-1 the
 ## scoreboard)}, {} when it was never handed over or its ship was relaunched.
@@ -144,6 +144,14 @@ func share_left(feature: StringName, now_ms: int) -> float:
 	)
 
 
+## Every share's seconds left at `now_ms`: {feature: seconds}.
+func shares_left(now_ms: int) -> Dictionary:
+	var left: Dictionary = {}
+	for id: StringName in shares:
+		left[id] = share_left(id, now_ms)
+	return left
+
+
 ## How the top bar shows the STATUS values that are another station's data at the session's
 ## toggles (FT-PAIR-019, D193): {key: {"text": word or dash, "band": HealthBand.Band or -1}}
 ## for the keys that aren't exact numbers; the keys whose numbers show stay out. `def` is the
@@ -156,7 +164,7 @@ func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
 	var maxima: Dictionary = {
 		"hull": def.hull_max,
 		"shields": def.shields.max_strength,
-		"pips_used": float(def.power.reactor_pips),
+		"pips_used": float(status.get("pip_cap", def.power.reactor_pips)),
 	}
 	for key: String in maxima:
 		# The hull is the ship's: exact unless the view holds Comms without Engineering,
@@ -377,8 +385,8 @@ func can_relaunch() -> bool:
 
 
 ## Whether this session's relaunch vote for its home ship stands.
-func has_relaunch_vote(player: String) -> bool:
-	return player in relaunch_votes.get(home_ship(), {}).get("voters", [])
+func has_relaunch_vote() -> bool:
+	return session in relaunch_votes.get(home_ship(), {}).get("sessions", [])
 
 
 ## Mission time (s) at sim tick `tick`; 0 before Start.
@@ -393,22 +401,22 @@ func mission_seconds(tick: int) -> float:
 func handle_event(e: Dictionary, now_ms: int) -> bool:
 	var p: Dictionary = e.get("payload", {})
 	match str(e.get("type", "")):
-		"picked":
+		NetProtocol.EVENT_PICKED:
 			return _on_picked(p)
-		"lobby":
+		NetProtocol.EVENT_LOBBY:
 			_on_lobby(p)
-		"started":
+		NetProtocol.EVENT_STARTED:
 			started[int(p["ship"])] = int(p.get("tick", 0))
 			changed.emit(&"started")
-		"claim":
+		NetProtocol.EVENT_CLAIM:
 			_on_claim(p)
-		"pause":
+		NetProtocol.EVENT_PAUSE:
 			if p.get("host", false):
 				host_paused = true
 			else:
 				paused[int(p["ship"])] = p
 			changed.emit(&"pause")
-		"resume":
+		NetProtocol.EVENT_RESUME:
 			# Each pause that lifts has its own resume; clear only the one it names.
 			if p.get("host", false):
 				host_paused = false
@@ -416,32 +424,34 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 				paused.clear()
 				votes.clear()
 			changed.emit(&"pause")
-		"abandon_votes":
+		NetProtocol.EVENT_ABANDON_VOTES:
 			votes[int(p["ship"])] = p
 			changed.emit(&"votes")
-		"abandoned":
+		NetProtocol.EVENT_ABANDONED:
 			abandoned[int(p["ship"])] = str(p.get("by", ""))
 			changed.emit(&"abandoned")
-		"run_over", "run_votes":
+		NetProtocol.EVENT_RUN_OVER, NetProtocol.EVENT_RUN_VOTES:
 			var card: Dictionary = run_over.get_or_add(int(p["ship"]), {})
 			card.merge(p, true)
 			changed.emit(&"run_over")
-		"debrief":
+		NetProtocol.EVENT_DEBRIEF:
 			debrief[int(p["ship"])] = p
 			changed.emit(&"debrief")
-		"alert":
+		NetProtocol.EVENT_ALERT:
 			_on_alert(p)
-		"main_view":
+		NetProtocol.EVENT_MAIN_VIEW:
 			_on_main_view(p)
-		"marks":
+		NetProtocol.EVENT_MARKS:
 			_on_marks(p)
-		"ping":
+		NetProtocol.EVENT_PING:
 			_on_ping(p, now_ms)
-		"zones", "routes", "inbox", "relay_log":
+		NetProtocol.EVENT_ZONES, NetProtocol.EVENT_ROUTES:
 			_on_relay(str(e["type"]), p)
-		"chip_answer":
+		NetProtocol.EVENT_INBOX, NetProtocol.EVENT_RELAY_LOG:
+			_on_relay(str(e["type"]), p)
+		NetProtocol.EVENT_CHIP_ANSWER:
 			_on_chip_answer(p)
-		"lanes":
+		NetProtocol.EVENT_LANES:
 			if _mine(p):
 				lanes.clear()
 				for l: Dictionary in p.get("lanes", []):
@@ -458,20 +468,22 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 						)
 					)
 				changed.emit(&"lanes")
-		"shares":
+		NetProtocol.EVENT_SHARES:
 			if _mine(p):
 				shares.clear()
 				for id: String in p.get("left", {}):
 					shares[StringName(id)] = now_ms + roundi(float(p["left"][id]) * 1000.0)
 				changed.emit(&"shares")
-		"fleet", "scoreboard", "eliminated", "relaunch_votes", "relaunched", "handover":
+		NetProtocol.EVENT_FLEET, NetProtocol.EVENT_SCOREBOARD, NetProtocol.EVENT_ELIMINATED:
 			_on_fleet_event(str(e["type"]), p)
-		"session_over":
+		NetProtocol.EVENT_RELAUNCH_VOTES, NetProtocol.EVENT_RELAUNCHED, NetProtocol.EVENT_HANDOVER:
+			_on_fleet_event(str(e["type"]), p)
+		NetProtocol.EVENT_SESSION_OVER:
 			session_over = p
 			changed.emit(&"session_over")
-		"takeover":
+		NetProtocol.EVENT_TAKEOVER:
 			_on_takeover(p)
-		"request_rejected", "command_rejected":
+		NetProtocol.EVENT_REQUEST_REJECTED, NetProtocol.EVENT_COMMAND_REJECTED:
 			toast.emit("toast." + str(p.get("reason", "rejected")), p)
 		_:
 			sim_event.emit(StringName(str(e.get("type", ""))), p)
@@ -590,26 +602,26 @@ func reset_run() -> void:
 ## The multi-ship events that only update the model (FleetMessages).
 func _on_fleet_event(type: String, p: Dictionary) -> void:
 	match type:
-		"fleet":
+		NetProtocol.EVENT_FLEET:
 			fleet = p
 			changed.emit(&"fleet")
-		"scoreboard":
+		NetProtocol.EVENT_SCOREBOARD:
 			scoreboard = p.get("rows", [])
 			changed.emit(&"scoreboard")
-		"eliminated":
+		NetProtocol.EVENT_ELIMINATED:
 			eliminated[int(p["ship"])] = p
 			changed.emit(&"eliminated")
-		"relaunch_votes":
+		NetProtocol.EVENT_RELAUNCH_VOTES:
 			relaunch_votes[int(p["ship"])] = p
 			changed.emit(&"relaunch")
-		"relaunched":
+		NetProtocol.EVENT_RELAUNCHED:
 			var id: int = int(p["ship"])
 			eliminated.erase(id)
 			relaunch_votes.erase(id)
 			if home_ship() == id:
 				handover = {}
 			changed.emit(&"relaunch")
-		"handover":
+		NetProtocol.EVENT_HANDOVER:
 			handover = p
 			changed.emit(&"handover")
 
@@ -631,7 +643,7 @@ func _on_relay(type: String, p: Dictionary) -> void:
 	if not _mine(p):
 		return
 	match type:
-		"zones":
+		NetProtocol.EVENT_ZONES:
 			zones.clear()
 			for z: Dictionary in p.get("zones", []):
 				(
@@ -655,7 +667,7 @@ func _on_relay(type: String, p: Dictionary) -> void:
 			):
 				selection = {}
 				changed.emit(&"selection")
-		"routes":
+		NetProtocol.EVENT_ROUTES:
 			routes.clear()
 			for route: Array in p.get("routes", []):
 				var points: Array = []
@@ -669,7 +681,7 @@ func _on_relay(type: String, p: Dictionary) -> void:
 						)
 					)
 				routes.append(points)
-		"inbox":
+		NetProtocol.EVENT_INBOX:
 			inbox.clear()
 			for m: Dictionary in p.get("items", []):
 				(

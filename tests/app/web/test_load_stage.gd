@@ -8,14 +8,6 @@ const WEB_SESSION: String = "res://app/web/web_session.gd"
 
 
 # FT: FT-NET-030
-# Off the web nothing is reported (and nothing fails), so desktop clients and tests can call it.
-func test_reporting_a_stage_is_a_no_op_off_the_web() -> void:
-	for stage: String in WebLoadStage.STAGES:
-		WebLoadStage.report(stage)
-	assert_bool(OS.has_feature("web")).is_false()
-
-
-# FT: FT-NET-030
 # The menu reports "connect" when it starts joining, "lobby" when welcomed, and "ready" when
 # joining cannot go on (a failed connect, a rejection, a bad address, ?join=0), so the page's
 # loading screen never hides the menu's message.

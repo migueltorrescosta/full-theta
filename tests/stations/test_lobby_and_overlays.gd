@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## LobbyScreen and PauseOverlay.
+## LobbyScreen (the pause overlay is in test_pause_overlay.gd).
 
 
 func before() -> void:
@@ -36,7 +36,7 @@ func test_grid_cells_show_name_role_and_load_border() -> void:
 	var ids: Array[String] = []
 	for c: Node in grid.get_children():
 		ids.append(c.name.trim_prefix("Entry_"))
-	assert_array(ids).is_equal(LobbyScreen.GRID_STATIONS)
+	assert_array(ids).is_equal(LobbySeatGrid.GRID_STATIONS)
 	var tags: Dictionary = {
 		"helm": "intense",
 		"weapons": "intense",
@@ -57,7 +57,7 @@ func test_grid_cells_show_name_role_and_load_border() -> void:
 		# The whole role summary, wrapped to two lines (P28-Lobby).
 		var role: Label = cell.find_child("Role", true, false) as Label
 		assert_str(role.text).is_equal(tr("role." + id))
-		assert_int(role.max_lines_visible).is_equal(LobbyScreen.ROLE_LINES)
+		assert_int(role.max_lines_visible).is_equal(LobbySeatGrid.ROLE_LINES)
 		assert_bool(cell.find_child("Take", true, false) == null).is_true()
 	assert_bool(_cell(l, "captain") is Button).is_true()
 	assert_bool(_cell(l, "viewer").button_pressed).is_true()
@@ -179,8 +179,8 @@ func test_a_quick_second_tap_adds_to_the_first() -> void:
 func test_every_pair_maps_to_its_joint_view() -> void:
 	var l: LobbyScreen = _lobby("viewer")
 	var seen: Dictionary = {}
-	for a: String in LobbyScreen.GRID_STATIONS:
-		for b: String in LobbyScreen.GRID_STATIONS:
+	for a: String in LobbySeatGrid.GRID_STATIONS:
+		for b: String in LobbySeatGrid.GRID_STATIONS:
 			if a < b:
 				var entry: String = l.entry_for([a, b] as Array[String])
 				assert_str(entry).is_not_empty()
@@ -223,7 +223,7 @@ func test_dev_all_stations_seat_only_with_the_flag() -> void:
 	_cell(l, "all").pressed.emit()
 	assert_array(_sent_picks(l)[-1][1]).is_equal([0, "all"])
 	_picked(l, "all")
-	for id: String in LobbyScreen.GRID_STATIONS:
+	for id: String in LobbySeatGrid.GRID_STATIONS:
 		assert_bool(_cell(l, id).button_pressed).is_true()
 		assert_bool(_cell(l, id).disabled).is_false()
 	_cell(l, "science").pressed.emit()
@@ -305,49 +305,6 @@ func test_start_is_for_crew_of_a_covered_ship() -> void:
 	assert_bool(start.disabled).is_true()
 	assert_str((l.find_child("Coverage", true, false) as Label).text).contains("Comms")
 	assert_bool((_lobby("viewer").find_child("Start", true, false) as Button).disabled).is_true()
-
-
-# FT: FT-NET-041
-func test_pause_overlay_vote_and_host_abandon() -> void:
-	var ctx: StationContext = StationFixture.context("tactical")
-	var o: PauseOverlay = auto_free(PauseOverlay.new())
-	o.setup(ctx)
-	add_child(o)
-	assert_bool(o.visible).is_false()
-	ctx.crew.host = true
-	var pause: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
-	ctx.crew.handle_event({"type": "pause", "payload": pause}, 0)
-	assert_bool(o.visible).is_true()
-	# Crew changes it doesn't show leave its buttons alone.
-	var vote: Button = o.find_child("Vote", true, false)
-	ctx.crew.changed.emit(&"alert")
-	ctx.crew.changed.emit(&"marks")
-	assert_object(o.find_child("Vote", true, false)).is_same(vote)
-	vote.pressed.emit()
-	(o.find_child("Abandon", true, false) as Button).pressed.emit()
-	var rec: StationFixture.RecordingClient = StationFixture.sent(ctx)
-	assert_array(rec.of("vote_abandon")[0][1]).is_equal([0, true])
-	assert_array(rec.of("abandon")[0][1]).is_equal([0])
-	var votes: Dictionary = {
-		"ship": 0, "voters": ["Ana"], "sessions": [StationFixture.SESSION], "needed": 2
-	}
-	ctx.crew.handle_event({"type": "abandon_votes", "payload": votes}, 0)
-	(o.find_child("Vote", true, false) as Button).pressed.emit()
-	assert_array(rec.of("vote_abandon")[1][1]).is_equal([0, false])
-	assert_str((o.find_child("Votes", true, false) as Label).text).contains("1/2")
-
-
-# FT: FT-NET-042
-func test_viewers_of_a_paused_ship_may_take_over() -> void:
-	var ctx: StationContext = StationFixture.context("viewer")
-	var o: PauseOverlay = auto_free(PauseOverlay.new())
-	o.setup(ctx)
-	add_child(o)
-	var pause: Dictionary = {"ship": 0, "uncovered": ["relay"], "crew": 2, "min_crew": 3}
-	ctx.crew.handle_event({"type": "pause", "payload": pause}, 0)
-	assert_object(o.find_child("Vote", true, false)).is_null()
-	(o.find_child("Takeover_relay", true, false) as Button).pressed.emit()
-	assert_array(StationFixture.sent(ctx).of("takeover")[0][1]).is_equal([0, "relay"])
 
 
 # FT: FT-NET-015

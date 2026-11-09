@@ -8,7 +8,6 @@ extends RefCounted
 ## Row shapes (u8 on the wire).
 const ZONE: int = 0
 const SHELL: int = 1
-const PLANE: int = 2
 
 ## Rows a block may hold (a row count is one byte).
 const MAX_ROWS: int = 32
@@ -34,7 +33,12 @@ static func rows(world: SimWorld, ship: int) -> Array:
 			var gap: float = HazardSystem.edge_distance(
 				h, HazardSystem.ship_offset(world, ship, h), t
 			)
-			row.merge({"shape": PLANE, "pos": _ship_at(world, ship) - h.direction * gap})
+			row.merge(
+				{
+					"shape": BlockSchema.HAZARD_PLANE,
+					"pos": _ship_at(world, ship) - h.direction * gap
+				}
+			)
 			row.merge({"radius": 0.0, "dir": h.direction})
 		else:
 			var r: float = h.radius + (h.speed * since if h.is_front() else 0.0)

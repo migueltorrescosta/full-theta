@@ -132,6 +132,11 @@ func subsystem_row(ship_id: int, index: int) -> int:
 	return hull_row(ship_id) + 1 + index
 
 
+## The index into ShipDef.subsystems of the subsystem at `row`: the inverse of subsystem_row.
+func index_of_row(ship_id: int, row: int) -> int:
+	return row - hull_row(ship_id) - 1
+
+
 ## Row of the ship's subsystem with that id, or -1 (never the hull row).
 func find_subsystem(ship_id: int, subsystem_id: StringName) -> int:
 	var h: int = hull_row(ship_id)

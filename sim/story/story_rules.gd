@@ -10,6 +10,8 @@ extends RefCounted
 ##   engine damage, and a reputation loss for destroying a surrendered contact.
 ## - P12 terms: an offer can need power on a subsystem, which the ship may not have.
 ## - P14 scan facts: a scan that reaches a fact's confidence teaches the faction the fact.
+## - Dock markets (D86, FT-MIS-036): a ship docking at a site with a market gets that market's
+##   OFFER card on its board, which lapses when it undocks.
 ## - P15 locating: Relay marks a mission, and a probe that finds a contact that can be
 ##   hailed opens an opportunity on Comms' board.
 
@@ -22,6 +24,7 @@ const _LANE_LEN: String = "lane.len.%d"
 const _LANE_T0: String = "lane.t0.%d"
 const _NEED: String = "need.%d."
 const _DOCKED: String = "docked.%d"
+const _DOCK_OFFER: String = "dockoffer.%d"
 const _OPPORTUNITY: String = "opp.%d.%d"
 const _MARKED: String = "marked.%d"
 
@@ -34,8 +37,8 @@ static func set_lane(world: SimWorld, card: int, open_s: float, length_s: float)
 	if not length_s > 0.0:
 		return
 	var f: StoryFlagTable = world.story_flags
-	f.set_flag(StringName(_LANE_OPEN % card), maxi(0, ceili(open_s * SimWorld.HZ)))
-	f.set_flag(StringName(_LANE_LEN % card), ceili(length_s * SimWorld.HZ))
+	f.set_flag(StringName(_LANE_OPEN % card), maxi(0, SimRate.ticks(open_s)))
+	f.set_flag(StringName(_LANE_LEN % card), SimRate.ticks(length_s))
 
 
 static func is_lane(world: SimWorld, card: int) -> bool:
@@ -158,7 +161,7 @@ static func ask_surrender(world: SimWorld, ship: int, card: int, params: Diction
 	if roll_surrender(world, ship, card, params, scale):
 		return
 	world.story_flags.set_flag(refused_flag, refused + 1)
-	var reopen: int = world.tick + ceili(float(params.get("retry_s", 0.0)) * SimWorld.HZ)
+	var reopen: int = world.tick + SimRate.ticks(float(params.get("retry_s", 0.0)))
 	world.story_flags.set_flag(_surrender_flag("reopen", t.factions[card], t.target[card]), reopen)
 
 
@@ -196,7 +199,7 @@ static func roll_surrender(
 ## debrief gets a line (event surrender_killed, tag debrief.surrender_killed, value the
 ## change). An accepted "disable, do not destroy" contract on the victim fails.
 static func on_destroyed(world: SimWorld, victim: int, source: int) -> void:
-	if source >= 0 and source < world.ship_count():
+	if world.has_ship(source):
 		var fs: int = world.faction_of(source)
 		var row: int = world.knowledge.row_for(fs, victim)
 		if row >= 0 and world.knowledge.intent[row] == KnowledgeTable.Intent.SURRENDERING:
@@ -322,12 +325,10 @@ static func on_discovery(world: SimWorld, ship: int, contact: int) -> void:
 ## Whether a live ship of the faction has the contact inside its own sensor range.
 static func _senses(world: SimWorld, faction: int, contact: int) -> bool:
 	for o: int in world.ship_count():
-		if world.faction_of(o) != faction or not world.kin.is_alive(o):
+		if world.faction_of(o) != faction:
 			continue
-		var reach: float = (
-			world.defs[o].sensor_range * DamageSystem.effectiveness(world, o, &"sensors")
-		)
-		if world.kin.relative(o, contact).length() <= reach:
+		var reach: float = KnowledgeSystem.sensor_reach(world, o)
+		if reach > 0.0 and world.kin.relative(o, contact).length() <= reach:
 			return true
 	return false
 
@@ -366,7 +367,7 @@ static func sync_docks(world: SimWorld) -> void:
 
 ## Remembers where each crewed ship is docked and calls on_dock when it arrives.
 static func _watch_docks(world: SimWorld) -> void:
-	if world.story.size() == 0:
+	if world.story.size() == 0 and world.site_markets.is_empty():
 		return
 	for ship: int in world.ship_count():
 		if world.ai.is_enabled(ship):
@@ -376,5 +377,33 @@ static func _watch_docks(world: SimWorld) -> void:
 		var before: int = world.story_flags.get_flag(flag) - 1
 		if site != before:
 			world.story_flags.set_flag(flag, site + 1)
+			if before >= 0:
+				_close_dock_offer(world, ship)
 			if site >= 0:
 				on_dock(world, ship, site)
+				_offer_market(world, ship, site)
+
+
+## A ship docked at a site with a market: its OFFER card for the site, which Trade.market needs
+## (D86: modules and goods are bought while docked, via Comms).
+static func _offer_market(world: SimWorld, ship: int, site: int) -> void:
+	if not world.site_markets.has(site) or world.ai.is_enabled(ship):
+		return
+	var t: StoryTable = world.story
+	var card: int = t.add_card(ship, world.faction_of(ship), StoryTable.Kind.OFFER)
+	t.title[card] = "comms.card.offer"
+	t.site[card] = site
+	t.requires_docked[card] = 1
+	world.story_flags.set_flag(StringName(_DOCK_OFFER % ship), card + 1)
+	world.emit(&"card_posted", ship, card, StoryTable.Kind.OFFER)
+
+
+## The ship undocked: its market card lapses.
+static func _close_dock_offer(world: SimWorld, ship: int) -> void:
+	var flag: StringName = StringName(_DOCK_OFFER % ship)
+	var card: int = world.story_flags.get_flag(flag) - 1
+	if card < 0:
+		return
+	world.story_flags.set_flag(flag, 0)
+	if Story.is_live(world, card):
+		Story.set_state(world, ship, card, StoryTable.State.EXPIRED)

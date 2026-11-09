@@ -51,12 +51,7 @@ func _drop(s: StationScreen) -> void:
 func _assert_clean(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).override_failure_message(what + ": no targets").is_not_empty()
-	for k: String in AUDIT:
-		(
-			assert_array(report[k])
-			. override_failure_message("%s %s: %s" % [what, k, report[k]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what, AUDIT)).is_empty()
 
 
 func _share_buttons(s: StationScreen) -> Array[Button]:
@@ -202,7 +197,7 @@ func test_small_radar_keeps_chips_inside() -> void:
 					. override_failure_message(what + " covers its blip")
 					. is_true()
 				)
-		assert_int(chips).is_greater(2)
+		assert_int(chips).override_failure_message(str(c)).is_greater(2)
 		_drop(s)
 
 
@@ -224,11 +219,11 @@ func test_engineering_columns_take_the_taps_on_a_phone() -> void:
 		# A tap on column 2's top pip selects it and leaves its pips alone.
 		var k: int = 1
 		var i: int = board.columns()[k]
-		var pips: int = e.pips_of(i)
+		var pips: int = e.model.pips_of(i)
 		var top: Vector2 = board._pip_rect(k, 3).get_center()
 		_click(board, top)
 		assert_int(e.selected).is_equal(i)
-		assert_int(e.pips_of(i)).is_equal(pips)
+		assert_int(e.model.pips_of(i)).is_equal(pips)
 		assert_array(StationFixture.sent(s.ctx).of("command")).is_empty()
 		_click(board, board._step_rect(0).get_center())
 		assert_array(StationFixture.sent(s.ctx).of("command")).is_empty()
@@ -250,7 +245,7 @@ func test_engineering_cutaway_works_with_one_finger() -> void:
 	assert_str(cut.hint()).contains(tr("eng.cutaway_hint_touch"))
 	_assert_clean(s, "cutaway")
 	var tokens: Array[Node] = cut.find_children("CrewTap*", "", false, false)
-	assert_int(tokens.size()).is_equal(e.crew_count())
+	assert_int(tokens.size()).is_equal(e.model.crew_count())
 	# A drag from the edge of crew B's grab area onto weapons sends B.
 	var edge: Vector2 = cut.token_pos(1) + Vector2(cut.grab_radius() - 2.0, 0.0)
 	_click(cut, edge)
@@ -337,9 +332,9 @@ func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
 			for focus: int in n:
 				var s: StationScreen = await _screen(f[0], entry, f[1], focus)
 				var report: Dictionary = TapAudit.check(s)
-				for k: String in AUDIT:
-					if not report[k].is_empty():
-						bad.append("%s %s/%d %s: %s" % [f[0], entry, focus, k, report[k]])
+				bad.append_array(
+					StationFixture.rule_breaks(report, "%s %s/%d" % [f[0], entry, focus], AUDIT)
+				)
 				_drop(s)
 	assert_array(bad).override_failure_message("\n".join(bad)).is_empty()
 
@@ -421,7 +416,7 @@ func test_weapons_chips_inside_the_view() -> void:
 		w.step(0.016)
 		var view: Rect2 = Rect2(Vector2.ZERO, w._overlay.size)
 		assert_array(w.ctx.picture().items).is_not_empty()
-		for t: Dictionary in w._targets:
+		for t: Dictionary in w._overlay.targets:
 			var r: Rect2 = t["rect"]
 			(
 				assert_bool(view.encloses(r))

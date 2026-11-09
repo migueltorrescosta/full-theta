@@ -11,7 +11,6 @@ const CASES: Array = [
 	[Vector2i(844, 390), [47, 0, 47, 21]],
 	[Vector2i(390, 844), [0, 47, 0, 34]],
 ]
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 const Shot: GDScript = preload("res://tests/visual/m4_shot.gd")
 
 
@@ -75,12 +74,7 @@ func _frames(n: int = 6) -> void:
 func _clean(node: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(node)
 	assert_array(report["targets"]).override_failure_message(what).is_not_empty()
-	for k: String in AUDIT:
-		(
-			assert_array(report[k])
-			. override_failure_message("%s %s: %s" % [what, k, report[k]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 ## The lowest top of a floating prompt: under the frame's view-top row.

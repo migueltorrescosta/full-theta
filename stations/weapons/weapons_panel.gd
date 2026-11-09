@@ -32,9 +32,6 @@ signal touch_intent(id: String)
 const FOV_DEG: float = 60.0
 ## Aim turn rate at full deflection (rad/s, PROVISIONAL).
 const AIM_RATE: float = 0.8
-## Aim points go out at most this often (ms), when they moved more than AIM_SEND_M (m).
-const AIM_SEND_MS: int = 50
-const AIM_SEND_M: float = 1.0
 ## Controller aim assist (FT-SIM-015, PROVISIONAL, asked of the owner): within
 ## ASSIST_CONE (rad) of the selected contact's lead point, while the stick moves, the
 ## turn rate drops to ASSIST_SLOW and the aim drifts to the lead at up to ASSIST_PULL
@@ -44,9 +41,6 @@ const ASSIST_SLOW: float = 0.6
 const ASSIST_PULL: float = 0.1
 ## Contact ship models: ProceduralShip is about 5 units long; ships are about 50 m.
 const SHIP_SCALE: float = 10.0
-const FONT_SIZE: int = 15
-const RETICLE_R: float = 18.0
-const BRACKET: float = 10.0
 ## The device name the touch rails' intents carry.
 const TOUCH: String = "touch"
 ## The least side (device-independent px) of a phone window; the smallest phones have 320.
@@ -59,21 +53,14 @@ var ship_def: ShipDef = null
 var cam_basis: Basis = Basis.IDENTITY
 var fov: float = FOV_DEG
 
-## Mount index -> aim point (m); a mount without one rests on its barrel.
-var _aims: Dictionary = {}
-var _sent: Dictionary = {}
-var _dirty: Dictionary = {}
-var _next_aim_ms: int = 0
-var _next_fire: Dictionary = {}
+## The mounts' aim points and fire times (WeaponsAim).
+var aim: WeaponsAim = WeaponsAim.new(self)
 var _firing: bool = false
 var _firing_all: bool = false
-## Brackets in view this frame (step), for drawing and item_at: {"item" (ContactPicture's),
-## "pos", "chip", "chip_at" (its top left), "rect" (bracket and chip)}.
-var _targets: Array[Dictionary] = []
 var _view: SubViewportContainer
 ## The turret camera's view, from the camera mount.
 var _space: SpaceView
-var _overlay: Control
+var _overlay: WeaponsTurretOverlay
 ## The phone arrangement while the form is a phone's and the panel is focused, else null.
 var _touch: WeaponsTouch = null
 ## The tablet's docked rails and aim pad (#32) while the focused panel is on a tablet.
@@ -87,19 +74,13 @@ func _setup() -> void:
 	shows_shares = true
 	ship_def = ctx.ship_def()
 	_build_view()
-	_overlay = Control.new()
-	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_overlay.draw.connect(_draw_overlay)
+	_overlay = WeaponsTurretOverlay.new(self)
 	add_child(_overlay)
 	mount = _first_mount()
 
 
 func _ready() -> void:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	_screen = n as StationScreen
+	_screen = screen()
 	if _screen != null:
 		_screen.form_changed.connect(func(_f: LayoutMode.Form) -> void: _apply_form())
 		# A tablet keeps its form in a rotation: only its dock's arrangement changes.
@@ -173,27 +154,25 @@ func _apply_form() -> void:
 
 ## Builds, rebuilds (a rotation) or drops the tablet's docked rails for the focused panel.
 func _apply_tablet() -> void:
-	var dp: Vector2 = LayoutMode.dp_size_of(get_viewport())
-	var want: bool = (
-		focused
-		and _screen != null
-		and mount_count() > 0
-		and LayoutMode.form_of(self) == LayoutMode.Form.TABLET
-		and TabletDock.fits(dp)
+	var dock: TabletDock = sync_tablet(
+		_tablet.dock if _tablet != null else null,
+		(
+			focused
+			and _screen != null
+			and mount_count() > 0
+			and LayoutMode.form_of(self) == LayoutMode.Form.TABLET
+			and TabletDock.fits(LayoutMode.dp_size_of(get_viewport()))
+		),
+		func() -> void:
+			remove_child(_tablet)
+			_tablet.queue_free()
+			_tablet = null,
+		func(portrait: bool) -> TabletDock:
+			_tablet = WeaponsTablet.new(self, portrait)
+			add_child(_tablet)
+			return _tablet.dock
 	)
-	var portrait: bool = want and LayoutMode.portrait(_screen.size)
-	if _tablet != null and (not want or _tablet.portrait != portrait):
-		if _screen != null and _screen.tablet_dock == _tablet.dock:
-			_screen.set_tablet_dock(null)
-		_tablet.dock.queue_free()
-		remove_child(_tablet)
-		_tablet.queue_free()
-		_tablet = null
-		ctx.matcher.release_all()
-	if want and _tablet == null:
-		_tablet = WeaponsTablet.new(self, portrait)
-		add_child(_tablet)
-		_screen.set_tablet_dock(_tablet.dock)
+	if dock != null:
 		_tablet.refresh()
 
 
@@ -235,12 +214,12 @@ func touch_claim() -> void:
 func touch_aim(relative: Vector2) -> void:
 	if mount_count() == 0:
 		return
-	var f: float = _focal()
+	var f: float = _overlay.focal()
 	var yaw: float = relative.x / f
 	var pitch: float = relative.y / f * (-1.0 if ctx.matcher.invert_pitch else 1.0)
 	var dir: Vector3 = aim_dir(mount)
 	var basis: Basis = _look(dir)
-	_aim_within_arc(dir.rotated(basis.y, -yaw).rotated(basis.x, -pitch))
+	aim.aim_within_arc(mount, dir.rotated(basis.y, -yaw).rotated(basis.x, -pitch))
 
 
 ## A tap on the view (`global_pos` in viewport px) selects the bracket under it.
@@ -262,7 +241,7 @@ func step(delta: float) -> void:
 		return
 	var now: int = ctx.now_ms()
 	_turn_aim(delta)
-	_flush_aims(now, false)
+	aim.flush(now, false)
 	if not focused and (_firing or _firing_all):
 		# Tactical's cockpit (FT-JNT-008): the KB/M fire buttons fire every claimed mount
 		# at the selected target.
@@ -273,7 +252,7 @@ func step(delta: float) -> void:
 		if _firing_all:
 			fire_claimed_at(selected_contact(), mount)
 	_update_camera()
-	_layout_targets()
+	_overlay.layout_targets()
 	_overlay.queue_redraw()
 	if _touch != null:
 		_touch.refresh()
@@ -316,7 +295,7 @@ func item_at(screen_pos: Vector2) -> Dictionary:
 	if radar != null and radar.is_visible_in_tree() and radar.get_global_rect().has_point(global):
 		return radar.item_at(radar.get_global_transform().affine_inverse() * global)
 	var at: Vector2 = _overlay.get_global_transform().affine_inverse() * global
-	for t: Dictionary in _targets:
+	for t: Dictionary in _overlay.targets:
 		if (t["rect"] as Rect2).has_point(at):
 			return {"kind": t["item"]["kind"], "id": t["item"]["id"]}
 	return {}
@@ -336,7 +315,7 @@ func marks_attach_only() -> bool:
 ## The weapon of mount i's selected ammunition type.
 func weapon_of(i: int) -> WeaponDef:
 	var types: Array[WeaponDef] = ship_def.mounts[i].ammo_types()
-	return types[clampi(int(_mount_row(i).get("ammo_type", 0)), 0, types.size() - 1)]
+	return types[clampi(int(mount_row(i).get("ammo_type", 0)), 0, types.size() - 1)]
 
 
 ## Switches the camera mount to the next (or previous) ammunition type it has; false, with
@@ -348,7 +327,7 @@ func cycle_ammo(direction: int) -> bool:
 	if n < 2:
 		ctx.crew.toast.emit("toast.one_ammo", {})
 		return false
-	var now: int = int(_mount_row(mount).get("ammo_type", 0))
+	var now: int = int(mount_row(mount).get("ammo_type", 0))
 	ctx.intents.command(
 		{"kind": "set_ammo_type", "mount_index": mount, "ammo_type": posmod(now + direction, n)}
 	)
@@ -389,18 +368,18 @@ func fire_guided(i: int) -> bool:
 		ctx.crew.toast.emit("toast.guided_no_mark", {})
 		return false
 	var now: int = ctx.now_ms()
-	var row: Dictionary = _mount_row(i)
-	if now < int(_next_fire.get(i, 0)) or int(row.get("ammo", 1)) == 0:
+	var row: Dictionary = mount_row(i)
+	if now < int(aim.next_fire.get(i, 0)) or int(row.get("ammo", 1)) == 0:
 		return false
 	var at: Vector3 = ctx.interp.contact_position(int(goal["target"]))
-	_aims[i] = at
-	_dirty[i] = true
-	if not _in_arc(i, aim_dir(i)):
+	aim.aims[i] = at
+	aim.dirty[i] = true
+	if not in_arc(i, aim_dir(i)):
 		ctx.crew.toast.emit("toast.guided_out_of_arc", {})
 		return false
-	_flush_aims(now, true)
+	aim.flush(now, true)
 	ctx.intents.command({"kind": "fire_guided", "mount_index": i, "target": int(goal["target"])})
-	_next_fire[i] = now + roundi(w.cooldown * 1000.0)
+	aim.next_fire[i] = now + roundi(w.cooldown * 1000.0)
 	return true
 
 
@@ -421,18 +400,18 @@ func mount_count() -> int:
 
 
 ## The MOUNTS block row of mount i ({} before data).
-func _mount_row(i: int) -> Dictionary:
+func mount_row(i: int) -> Dictionary:
 	var rows: Array = ctx.view.blocks.get(StationViews.Section.MOUNTS, {}).get("mounts", [])
 	return rows[i] if i < rows.size() else {}
 
 
 func is_mine(i: int) -> bool:
-	return int(_holder(i).get("session", -1)) == ctx.crew.session
+	return int(holder(i).get("session", -1)) == ctx.crew.session
 
 
 ## Free or mine: this client may aim and fire it.
 func is_usable(i: int) -> bool:
-	return _holder(i).is_empty() or is_mine(i)
+	return holder(i).is_empty() or is_mine(i)
 
 
 ## Camera on mount i, if this client may use it.
@@ -480,67 +459,27 @@ func fire_claimed_at(contact: int, keep_aim: int = -1) -> int:
 	return fired
 
 
-# --- Aim. ---
-
-
-## The position of mount i (m).
-func _mount_position(i: int) -> Vector3:
-	return ctx.interp.own_position() + ctx.interp.own_rotation() * ship_def.mounts[i].position
+# --- Aim (WeaponsAim) and read-outs (WeaponsReadout). ---
 
 
 ## Where mount i aims (world unit vector from the mount): its aim point, else its barrel.
 func aim_dir(i: int) -> Vector3:
-	var rot: Quaternion = ctx.interp.own_rotation()
-	if _aims.has(i):
-		var to: Vector3 = ctx.interp.offset_to(_aims[i]) - rot * ship_def.mounts[i].position
-		if to.length_squared() > 1e-6:
-			return to.normalized()
-	return rot * _barrel(i)
-
-
-## Mount i's barrel in the ship frame (the MOUNTS block; its rest direction before data).
-func _barrel(i: int) -> Vector3:
-	var b: Variant = _mount_row(i).get("barrel")
-	return (b as Vector3).normalized() if b is Vector3 else ship_def.mounts[i].forward
+	return aim.aim_dir(i)
 
 
 ## Aims mount i along `dir` (world unit vector): a point at the weapon's range.
 func set_aim_dir(i: int, dir: Vector3) -> void:
-	var p: Vector3 = _mount_position(i) + dir * weapon_of(i).max_range
-	_aims[i] = p
-	if not _sent.has(i) or (_sent[i] as Vector3).distance_to(p) > AIM_SEND_M:
-		_dirty[i] = true
+	aim.set_aim_dir(i, dir)
 
 
-## The aim direction from mount i (world unit) that leads `contact`, or null when it is
-## unknown or out of reach (Lead.intercept_time, FT-SIM-014).
+## The aim direction from mount i (world unit) that leads `contact`, or null.
 func lead_dir(i: int, contact: int) -> Variant:
-	if contact not in ctx.interp.contact_ids():
-		return null
-	var rot: Quaternion = ctx.interp.own_rotation()
-	var rel: Vector3 = (
-		ctx.interp.offset_to(ctx.interp.contact_position(contact))
-		- rot * ship_def.mounts[i].position
-	)
-	var model: Dictionary = ctx.view.contacts.get("model", {})
-	var vel: Vector3i = model[contact][1] if model.has(contact) else Vector3i.ZERO
-	var own: Vector3i = ctx.view.kin.get("vel", Vector3i.ZERO)
-	var rel_vel: Vector3 = Vector3(vel - own) / NetCodec.VEL_Q
-	var speed: float = weapon_of(i).projectile_speed
-	if speed <= 0.0:
-		# A beam arrives at once: aim straight at the contact.
-		return rel.normalized() if rel.length_squared() > 1e-6 else null
-	var t: float = Lead.intercept_time(rel, rel_vel, speed)
-	if t < 0.0:
-		return null
-	var aim: Vector3 = Lead.aim_point(rel, rel_vel, t)
-	return aim.normalized() if aim.length_squared() > 1e-6 else null
+	return aim.lead_dir(i, contact)
 
 
 ## True when a world direction from mount i lies in its arc (FT-SIM-011).
-func _in_arc(i: int, dir: Vector3) -> bool:
-	var m: MountDef = ship_def.mounts[i]
-	return m.forward.angle_to(ctx.interp.own_rotation().inverse() * dir) <= m.arc_half_angle
+func in_arc(i: int, dir: Vector3) -> bool:
+	return aim.in_arc(i, dir)
 
 
 func selected_contact() -> int:
@@ -548,159 +487,16 @@ func selected_contact() -> int:
 	return int(s["id"]) if s.get("kind", "") == "contact" else -1
 
 
-## The out-of-arc line (FT-WPN-005): "H2 out of arc: turn 4 high", the bow direction that
-## brings the selected contact onto the mount's rest direction; "" when in arc or none.
-func out_of_arc_text() -> String:
-	var id: int = selected_contact()
-	if mount_count() == 0 or id not in ctx.interp.contact_ids():
-		return ""
-	var m: MountDef = ship_def.mounts[mount]
-	var local: Vector3 = (
-		ctx.interp.local(ctx.interp.offset_to(ctx.interp.contact_position(id))) - m.position
-	)
-	if local.length_squared() < 1e-6 or m.forward.angle_to(local) <= m.arc_half_angle:
-		return ""
-	var swing: Vector3 = Quaternion(m.forward, local.normalized()) * Vector3.FORWARD
-	return tr("weapons.out_of_arc").format(
-		{"target": ctx.view.callsign(id), "dir": _clock_words(swing)}
-	)
-
-
-## One line per mount (FT-WPN-004): number, id, state, heat, ammo, claimer; the camera
-## mount marked.
-func mount_rows() -> Array[String]:
-	var out: Array[String] = []
-	for i: int in mount_count():
-		var m: MountDef = ship_def.mounts[i]
-		var row: Dictionary = _mount_row(i)
-		var w: WeaponDef = weapon_of(i)
-		var ammo: int = int(row.get("ammo", w.ammo_capacity))
-		var ammo_text: String = "∞" if ammo < 0 else "%d/%d" % [ammo, w.ammo_capacity]
-		var holder: Dictionary = _holder(i)
-		var who: String = tr("weapons.free")
-		if is_mine(i):
-			who = tr("weapons.you")
-		elif not holder.is_empty():
-			who = str(holder.get("name", ""))
-		var heat: float = float(row.get("heat", 0.0)) / w.heat_limit
-		(
-			out
-			. append(
-				(
-					"%s%d %s · %s · %s · %s · %s"
-					% [
-						"> " if i == mount else "  ",
-						i + 1,
-						m.id,
-						tr("weapons." + _state(i)),
-						tr("weapons.heat") % roundi(heat * 100.0),
-						ammo_text,
-						who,
-					]
-				)
-			)
-		)
-	return out
-
-
-## Mount i on two lines for the phone's mount button: "1 bow · ready", "heat 15% · 380/400".
-func mount_text(i: int) -> String:
-	if i < 0 or i >= mount_count():
-		return ""
-	var w: WeaponDef = weapon_of(i)
-	var row: Dictionary = _mount_row(i)
-	var ammo: int = int(row.get("ammo", w.ammo_capacity))
-	var heat: float = float(row.get("heat", 0.0)) / w.heat_limit
-	return (
-		"%d %s · %s\n%s · %s"
-		% [
-			i + 1,
-			ship_def.mounts[i].id,
-			tr("weapons." + _state(i)),
-			tr("weapons.heat") % roundi(heat * 100.0),
-			"∞" if ammo < 0 else "%d/%d" % [ammo, w.ammo_capacity],
-		]
-	)
-
-
 ## The name of the player who holds mount i, or "".
 func holder_name(i: int) -> String:
-	return str(_holder(i).get("name", ""))
-
-
-## The camera mount's selected ammunition by name ("standard" for a mount with one).
-func ammo_name() -> String:
-	if mount_count() == 0 or ship_def.mounts[mount].alt_weapons.is_empty():
-		return tr("weapons.ammo_standard")
-	return weapon_of(mount).display_name
-
-
-## The target line ("Target H2 · 4 high · mid"), or "".
-func target_text() -> String:
-	return _target_line()
-
-
-## What other stations' work says of the selected target (FT-WPN-007, P7, P8): its
-## weak points by name, how the selected ammunition fares against its resistances, the open
-## hack window and the track quality. Each line exists only while the server sends its feed,
-## that is while its toggle is on or Science and Relay share this view.
-func feed_lines() -> Array[String]:
-	var out: Array[String] = []
-	var id: int = selected_contact()
-	var feeds: Dictionary = ctx.view.blocks.get(StationViews.Section.FEEDS, {})
-	if id < 0 or feeds.is_empty():
-		return out
-	var flag: int = contract_flag(id)
-	if flag != 0:
-		out.append(tr("weapons.flag_line_%d" % flag))
-	for row: Dictionary in feeds["weak"]:
-		if row["contact"] != id:
-			continue
-		var def: ShipDef = ScienceLookup.ship_class(row["class_id"])
-		var names: PackedStringArray = PackedStringArray()
-		for i: int in 32:
-			if (int(row["weak_mask"]) >> i) & 1 == 1 and def != null and i < def.subsystems.size():
-				names.append(String(def.subsystems[i].id))
-		if not names.is_empty():
-			out.append(tr("weapons.weak") % ", ".join(names))
-		if mount_count() > 0:
-			var kind: StringName = weapon_of(mount).damage_type
-			for r: Dictionary in row["resist"]:
-				if r["type"] == ScienceView.code(kind):
-					out.append(tr("weapons.rating") % [String(kind), float(r["factor"])])
-	for w: Dictionary in feeds["windows"]:
-		if w["target"] == id:
-			out.append(tr("weapons.window") % ceili(float(w["left"])))
-	for t: Dictionary in feeds["tracks"]:
-		if t["contact"] == id:
-			var q: float = clampf(float(t["quality"]), 0.0, 1.0)
-			var bar: String = "#".repeat(roundi(q * 8.0)) + "-".repeat(8 - roundi(q * 8.0))
-			out.append(tr("weapons.track") % [roundi(q * 100.0), bar])
-	return out
-
-
-## The contract flag a contact carries (P9, FT-MIS-042): 1 disable ("do not destroy"), 2
-## protect, 0 none. The FEEDS block holds the rows only while the contract flags are shared
-## with this view (the P9 toggle, or Comms on this screen).
-func contract_flag(contact: int) -> int:
-	var feeds: Dictionary = ctx.view.blocks.get(StationViews.Section.FEEDS, {})
-	for row: Dictionary in feeds.get("flags", []):
-		if int(row["contact"]) == contact:
-			return int(row["flag"])
-	return 0
-
-
-## The ammunition line (FT-WPN-006): the selected type, "standard" for a mount with one.
-func _ammo_text() -> String:
-	if mount_count() == 0 or ship_def.mounts[mount].alt_weapons.is_empty():
-		return tr("weapons.ammo") % tr("weapons.ammo_standard")
-	return tr("weapons.ammo") % weapon_of(mount).display_name
+	return str(holder(i).get("name", ""))
 
 
 # --- Internals. ---
 
 
-func _holder(i: int) -> Dictionary:
+## The claim on mount i ({"session", "name"}), {} while free.
+func holder(i: int) -> Dictionary:
 	return ctx.crew.claims.get("%s:%d" % [StationViews.CLAIM_MOUNT, i], {})
 
 
@@ -712,22 +508,6 @@ func _first_mount() -> int:
 		if is_usable(i):
 			return i
 	return 0
-
-
-func _state(i: int) -> String:
-	var row: Dictionary = _mount_row(i)
-	var w: WeaponDef = weapon_of(i)
-	if row.is_empty():
-		return "no_data"
-	if int(row["ammo"]) == 0:
-		return "empty"
-	if bool(row.get("locked", false)):
-		return "locked"
-	if float(row["heat"]) >= w.heat_limit:
-		return "hot"
-	if float(row["cooldown"]) > 0.0:
-		return "reloading"
-	return "ready"
 
 
 ## Turns the camera mount's aim by the aim axes (with controller assist).
@@ -742,54 +522,30 @@ func _turn_aim(delta: float) -> void:
 	var lead: Variant = null
 	# FT-SIM-015: assist on controller aiming only (D25).
 	if ctx.matcher.device == IntentTable.PAD:
-		lead = lead_dir(mount, selected_contact())
+		lead = aim.lead_dir(mount, selected_contact())
 		if lead != null and dir.angle_to(lead) > ASSIST_CONE:
 			lead = null
 	if lead != null:
 		rate *= ASSIST_SLOW
 	dir = dir.rotated(basis.y, -x * rate * delta).rotated(basis.x, -y * rate * delta)
 	if lead != null:
-		dir = _turn_toward(dir, lead, ASSIST_PULL * Vector2(x, y).length() * delta)
-	_aim_within_arc(dir)
-
-
-## Aims the camera mount along `dir` (world), stopped at the arc edge: input stops there;
-## a held aim the ship turns out of arc stays (FT-WPN-009).
-func _aim_within_arc(dir: Vector3) -> void:
-	var m: MountDef = ship_def.mounts[mount]
-	var rot: Quaternion = ctx.interp.own_rotation()
-	var local: Vector3 = rot.inverse() * dir
-	if m.forward.angle_to(local) > m.arc_half_angle:
-		dir = rot * _turn_toward(m.forward, local, m.arc_half_angle)
-	set_aim_dir(mount, dir.normalized())
-
-
-func _flush_aims(now: int, force: bool) -> void:
-	if _dirty.is_empty() or (now < _next_aim_ms and not force):
-		return
-	for i: int in _dirty:
-		var p: Vector3 = _aims[i]
-		ctx.intents.command(
-			{"kind": "aim_mount", "mount_index": i, "aim_x": p.x, "aim_y": p.y, "aim_z": p.z}
-		)
-		_sent[i] = p
-	_dirty.clear()
-	_next_aim_ms = now + AIM_SEND_MS
+		dir = WeaponsAim.turn_toward(dir, lead, ASSIST_PULL * Vector2(x, y).length() * delta)
+	aim.aim_within_arc(mount, dir)
 
 
 ## One shot from mount i when usable, in arc, loaded and cool, at most once per cooldown.
 func _try_fire(i: int, now: int) -> bool:
 	var w: WeaponDef = weapon_of(i)
-	var row: Dictionary = _mount_row(i)
-	if not is_usable(i) or now < int(_next_fire.get(i, 0)) or not _in_arc(i, aim_dir(i)):
+	var row: Dictionary = mount_row(i)
+	if not is_usable(i) or now < int(aim.next_fire.get(i, 0)) or not in_arc(i, aim_dir(i)):
 		return false
 	if int(row.get("ammo", 1)) == 0 or float(row.get("heat", 0.0)) >= w.heat_limit:
 		return false
 	if bool(row.get("locked", false)):
 		return false
-	_flush_aims(now, true)
+	aim.flush(now, true)
 	ctx.intents.command({"kind": "fire", "mount_index": i})
-	_next_fire[i] = now + roundi(w.cooldown * 1000.0)
+	aim.next_fire[i] = now + roundi(w.cooldown * 1000.0)
 	return true
 
 
@@ -808,18 +564,10 @@ func _update_camera() -> void:
 	_space.sync_ships(ctx, ctx.interp.own_rotation() * ship_def.mounts[mount].position)
 
 
-## Position of a world direction seen from the camera mount, in the turret view's (the
-## overlay's) coordinates, or null behind it.
+## Position of a world direction seen from the camera mount, in the turret view's
+## coordinates, or null behind it (WeaponsTurretOverlay).
 func project(dir: Vector3) -> Variant:
-	var c: Vector3 = cam_basis.transposed() * dir
-	if c.z > -1e-4:
-		return null
-	return _overlay.size / 2.0 + Vector2(c.x, -c.y) * _focal() / -c.z
-
-
-## The turret view's focal length (px): its half height over tan(fov / 2).
-func _focal() -> float:
-	return maxf(_overlay.size.y / 2.0, 1.0) / tan(deg_to_rad(fov) / 2.0)
+	return _overlay.project(dir)
 
 
 func _build_view() -> void:
@@ -830,267 +578,8 @@ func _build_view() -> void:
 	add_child(_view)
 	var vp: SubViewport = SubViewport.new()
 	vp.own_world_3d = true
+	RenderQuality.track(vp)
 	_view.add_child(vp)
 	_space = SpaceView.new()
 	_space.ship_scale = SHIP_SCALE
 	vp.add_child(_space)
-
-
-## The chip text of an item: "H2 4 high 2.3km", and a contact a contract flags names its
-## flag ("[disable]", "[protect]", P9).
-func target_chip(it: Dictionary) -> String:
-	var chip: String = ChipText.chip(it["label"], it["local"])
-	var flag: int = contract_flag(int(it["id"])) if it["kind"] == "contact" else 0
-	if flag != 0:
-		chip += " [%s]" % tr("weapons.flag_%d" % flag)
-	return chip
-
-
-## Brackets of the contacts and marks in view, with their chips and hit rectangles.
-func _layout_targets() -> void:
-	_targets.clear()
-	if not focused:
-		return
-	var font: Font = get_theme_default_font()
-	var rot: Quaternion = ctx.interp.own_rotation()
-	var m: MountDef = ship_def.mounts[mount]
-	# A phone's or a tablet's view with rails keeps its chips inside the view.
-	var phone: bool = (
-		_tablet != null or (is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(self)))
-	)
-	for it: Dictionary in ctx.picture().items:
-		if it["kind"] == "point":
-			continue
-		var p: Variant = project(rot * ((it["local"] as Vector3) - m.position).normalized())
-		if p == null:
-			continue
-		# On a phone a bracket outside the view is not drawn, so its chip never shows cut.
-		var view: Rect2 = Rect2(Vector2.ZERO, _overlay.size).grow(-BRACKET)
-		if phone and view.has_area() and not view.has_point(p as Vector2):
-			continue
-		# (a target whose centre is off the view has no bracket to hang a chip on)
-		if _overlay.size.x > 0.0 and not Rect2(Vector2.ZERO, _overlay.size).has_point(p as Vector2):
-			continue
-		var chip: String = target_chip(it)
-		var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
-		var at: Vector2 = (p as Vector2) + Vector2(BRACKET + 6.0, 4.0 - FONT_SIZE)
-		# Too near the right edge for the chip: it goes to the left of the bracket.
-		if phone and at.x + sz.x > _overlay.size.x:
-			at.x = (p as Vector2).x - BRACKET - 6.0 - sz.x
-		at.x = maxf(at.x, 2.0)
-		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
-		_targets.append(
-			{"item": it, "pos": p, "chip": chip, "chip_at": at, "rect": r.merge(Rect2(at, sz))}
-		)
-
-
-func _draw_overlay() -> void:
-	var font: Font = get_theme_default_font()
-	if mount_count() == 0:
-		_text(font, Vector2(16, 28), tr("weapons.no_mounts"), Palette.color("text_dim"))
-		return
-	if focused:
-		_draw_turret(font)
-	if _touch != null:
-		_draw_phone_lines(font)
-		return
-	var rows: Array[String] = mount_rows()
-	var lines: Array[String] = []
-	lines.append_array(rows)
-	var target: String = _target_line()
-	if target != "":
-		lines.append(target)
-	if focused:
-		lines.append_array(feed_lines())
-	var arc: String = out_of_arc_text()
-	if focused:
-		lines.append(_ammo_text())
-		if _hint() != "":
-			lines.append(_hint())
-		if arc != "":
-			_draw_arc_warning(font, arc)
-	elif arc != "":
-		lines.append(arc)
-	var line_h: float = FONT_SIZE + 6.0
-	# A line longer than the view wraps (the docked column is narrow), so none is cut at the
-	# screen's edge (D319).
-	var width: float = maxf(_overlay.size.x - 24.0, 40.0)
-	var counts: Array[int] = []
-	var total: int = 0
-	for text: String in lines:
-		var wrapped: float = (
-			font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE).y
-		)
-		var rows_n: int = maxi(roundi(wrapped / font.get_height(FONT_SIZE)), 1)
-		counts.append(rows_n)
-		total += rows_n
-	var y0: float = 12.0 + FONT_SIZE if docked else _overlay.size.y - 12.0 - line_h * (total - 1)
-	var y: float = y0
-	for k: int in lines.size():
-		var col: Color = Palette.color("text") if k == mount else Palette.color("text_dim")
-		if lines[k] == arc:
-			col = Palette.color("warn")
-		var bg: Color = Palette.color("background")
-		var at: Vector2 = Vector2(12.0, y)
-		_overlay.draw_multiline_string_outline(
-			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, 4, bg
-		)
-		_overlay.draw_multiline_string(
-			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, col
-		)
-		y += line_h * counts[k]
-
-
-## On a phone the rail and the overlays show the mounts, the ammunition, the claim and the
-## target (WeaponsTouch); the overlay adds the out-of-arc warning and the feeds under the
-## target line (not on the Mounts page, whose list covers them).
-func _draw_phone_lines(font: Font) -> void:
-	var arc: String = out_of_arc_text()
-	if arc != "":
-		_draw_arc_warning(font, arc)
-	if not _touch.shows_feeds():
-		return
-	var lines: Array[String] = feed_lines()
-	if lines.is_empty():
-		return
-	var line_h: float = FONT_SIZE + 6.0
-	var at: Vector2 = _touch.feeds_origin(_overlay, line_h * lines.size())
-	for k: int in lines.size():
-		_text(font, at + Vector2(0.0, FONT_SIZE + k * line_h), lines[k], Palette.color("text"))
-
-
-func _draw_arc_warning(font: Font, arc: String) -> void:
-	var r: Rect2 = arc_warning_rect(font, arc)
-	# On a dim backing: a star in the narrow space after the colon read as "arc:·turn".
-	_overlay.draw_rect(r.grow(3.0), Color(Palette.color("background"), 0.8))
-	_text(font, r.position + Vector2(0, FONT_SIZE), arc, Palette.color("warn"))
-
-
-## Where the out-of-arc warning goes (FT-WPN-005): centred near the top of the view (on a
-## phone under the view-top row), moved down past any bracket or chip it would cover (#28:
-## it hid the U3 chip). The rectangle's
-## top is the text's top; the baseline is FONT_SIZE lower.
-func arc_warning_rect(font: Font, arc: String) -> Rect2:
-	var sz: Vector2 = font.get_string_size(arc, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
-	var r: Rect2 = Rect2((_overlay.size.x - sz.x) / 2.0, 48.0 - FONT_SIZE, sz.x, FONT_SIZE + 6.0)
-	if _touch != null:
-		# On a phone: centred in the view beside the rail, under the view-top row.
-		var view: Rect2 = (
-			_overlay.get_global_transform().affine_inverse()
-			* (get_global_transform() * view_rect())
-		)
-		r.position = Vector2(view.get_center().x - sz.x / 2.0, _touch.read_top(_overlay))
-	var keep_clear: Array[Rect2] = []
-	for t: Dictionary in _targets:
-		keep_clear.append(t["rect"])
-	if _touch != null and _touch.target_label.text != "":
-		# The target line over the view's left (WeaponsTouch).
-		var label: Label = _touch.target_label
-		keep_clear.append(
-			_overlay.get_global_transform().affine_inverse() * label.get_global_rect()
-		)
-	for _pass: int in keep_clear.size():
-		var clear: bool = true
-		for hit: Rect2 in keep_clear:
-			if hit.intersects(r):
-				r.position.y = hit.end.y + 4.0
-				clear = false
-		if clear:
-			break
-	return r
-
-
-func _draw_turret(font: Font) -> void:
-	var rot: Quaternion = ctx.interp.own_rotation()
-	var m: MountDef = ship_def.mounts[mount]
-	# The arc edge: the cone of half-angle arc_half_angle around the rest direction.
-	var axis: Vector3 = m.forward.cross(Vector3.UP if absf(m.forward.y) < 0.9 else Vector3.RIGHT)
-	var edge: Vector3 = m.forward.rotated(axis.normalized(), m.arc_half_angle)
-	var prev: Variant = null
-	for k: int in 65:
-		var p: Variant = project(rot * edge.rotated(m.forward, TAU * k / 64.0))
-		if p != null and prev != null:
-			_overlay.draw_line(prev, p, Palette.color("accent") * Color(1, 1, 1, 0.7), 1.5, true)
-		prev = p
-	for t: Dictionary in _targets:
-		_draw_item(font, t)
-	var lead: Variant = lead_dir(mount, selected_contact())
-	if lead != null:
-		var p: Variant = project(lead)
-		if p != null:
-			var col: Color = Palette.color("selected")
-			_overlay.draw_polyline(Palette.shape_points("diamond", p, 7.0), col, 2.0, true)
-	var bp: Variant = project(rot * _barrel(mount))
-	if bp != null:
-		_overlay.draw_arc(bp, 5.0, 0.0, TAU, 16, Palette.color("ok"), 2.0, true)
-	var c: Vector2 = _overlay.size / 2.0
-	var rc: Color = Palette.color("text")
-	_overlay.draw_arc(c, RETICLE_R, 0.0, TAU, 32, rc, 1.5, true)
-	for d: Vector2 in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
-		_overlay.draw_line(c + d * (RETICLE_R + 4.0), c + d * (RETICLE_R + 12.0), rc, 1.5, true)
-
-
-func _draw_item(font: Font, t: Dictionary) -> void:
-	var it: Dictionary = t["item"]
-	var p: Vector2 = t["pos"]
-	var sel: bool = ctx.crew.is_selected(it["kind"], it["id"])
-	var col: Color = Palette.color("selected") if sel else Palette.item_color(it)
-	var flag: int = contract_flag(int(it["id"])) if it["kind"] == "contact" else 0
-	if flag != 0 and not sel:
-		col = Palette.color("warn") if flag == 1 else Palette.color("ok")
-	if it["kind"] == "mark":
-		_overlay.draw_polyline(Palette.shape_points("diamond", p, BRACKET), col, 1.5, true)
-	else:
-		for corner: Vector2 in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
-			var q: Vector2 = p + corner * BRACKET
-			_overlay.draw_line(q, q - Vector2(corner.x * 5.0, 0), col, 2.0 if sel else 1.5)
-			_overlay.draw_line(q, q - Vector2(0, corner.y * 5.0), col, 2.0 if sel else 1.5)
-	_text(font, (t["chip_at"] as Vector2) + Vector2(0.0, FONT_SIZE), t["chip"], col)
-	var pulse: float = float(it.get("pulse", 0.0))
-	if pulse > 0.0:
-		var pc: Color = Palette.color("ping")
-		pc.a = pulse
-		_overlay.draw_arc(p, BRACKET + 4.0 + (1.0 - pulse) * 22.0, 0.0, TAU, 32, pc, 2.0, true)
-
-
-## "Target H2 · 4 high · mid", or "".
-func _target_line() -> String:
-	var id: int = selected_contact()
-	if id not in ctx.interp.contact_ids():
-		return ""
-	var local: Vector3 = ctx.interp.local(ctx.interp.offset_to(ctx.interp.contact_position(id)))
-	return tr("weapons.target") % ChipText.chip(ctx.view.callsign(id), local)
-
-
-func _hint() -> String:
-	var holder: Dictionary = _holder(mount)
-	if is_mine(mount):
-		return ""
-	if holder.is_empty():
-		if _tablet != null:
-			# Touch rails: the Claim button, not a key.
-			return tr("weapons.hint_claim_touch")
-		var keys: PackedStringArray = ctx.settings.bindings.bindings("claim", ctx.matcher.device)
-		return tr("weapons.hint_claim") % BindingText.describe_all(keys)
-	return tr("weapons.held_by") % str(holder.get("name", ""))
-
-
-func _text(font: Font, base: Vector2, text: String, col: Color) -> void:
-	Palette.draw_outlined(_overlay, font, base, text, FONT_SIZE, col)
-
-
-## "4 high" with its height word translated (ChipText's words).
-static func _clock_words(local: Vector3) -> String:
-	var words: PackedStringArray = Callout.clock_height(local).split(" ")
-	words[-1] = String(TranslationServer.translate("callout." + words[-1]))
-	return " ".join(words)
-
-
-static func _turn_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3:
-	var angle: float = from.angle_to(to)
-	if angle <= max_angle:
-		return to
-	var axis: Vector3 = from.cross(to)
-	if axis.length_squared() < 1e-12:
-		axis = from.cross(Vector3.UP if absf(from.y) < 0.9 else Vector3.RIGHT)
-	return from.rotated(axis.normalized(), max_angle).normalized()

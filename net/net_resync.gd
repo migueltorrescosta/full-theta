@@ -39,7 +39,8 @@ func on_ack(seq: int) -> void:
 	if seq < 0:
 		need_full = true
 		return
-	acked_seq = maxi(acked_seq, seq)
+	# A snap above the last one sent is a forged or buggy Ack: it would make lag() negative.
+	acked_seq = maxi(acked_seq, mini(seq, last_sent_seq))
 
 
 ## Records a failed send as a stall. The caller must also close the connection:

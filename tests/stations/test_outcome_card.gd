@@ -86,6 +86,55 @@ func test_viewer_sees_the_card_and_host_restarts() -> void:
 
 
 # FT: FT-M1-012
+# C2: the card says why the run ended: the win rule, the ship destroyed, or the crew gave up.
+func test_the_card_says_why_you_won_or_lost() -> void:
+	var o: OutcomeCard = _card("tactical")
+	_over(o, "win")
+	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_win"))
+	var lost: Dictionary = {"ship": 0, "outcome": "loss", "time_s": 90.0, "hull": 0.0}
+	o.ctx.crew.handle_event({"type": "run_over", "payload": lost}, 0)
+	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_destroyed"))
+	lost["hull"] = 0.4  # a loss with hull left: the crew gave up
+	o.ctx.crew.handle_event({"type": "run_over", "payload": lost}, 0)
+	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_gave_up"))
+
+
+# FT: FT-M1-012
+# C14: a captain or viewer gets no button but is told who starts the next run.
+func test_a_viewer_is_told_who_runs_it_again() -> void:
+	var v: OutcomeCard = _card("viewer")
+	_over(v, "win")
+	assert_str(_text(v, "Note")).is_equal(tr("outcome.watch"))
+	var crew: OutcomeCard = _card("tactical")
+	_over(crew, "win")
+	assert_str(_text(crew, "Note")).is_empty()
+
+
+# FT: FT-M1-012
+# C14: the host's Run again waits for crew who haven't voted: the first tap names them, the
+# second runs it anyway; with nobody left to wait for it runs at once.
+func test_the_hosts_run_again_waits_for_the_crew_with_one_confirm() -> void:
+	var h: OutcomeCard = _card("viewer", true)
+	h.ctx.crew.lobby[0]["seats"] = [
+		{"name": h.ctx.settings.player_name, "entry": "viewer"},
+		{"name": "Bo", "entry": "tactical"},
+		{"name": "Cy", "entry": "tactical"},
+	]
+	_over(h, "win")
+	var rec: StationFixture.RecordingClient = StationFixture.sent(h.ctx)
+	(h.find_child("RunAgain", true, false) as Button).pressed.emit()
+	assert_array(rec.of("run_again")).is_empty()
+	assert_str((h.find_child("RunAgain", true, false) as Button).text).contains("Bo, Cy")
+	(h.find_child("RunAgain", true, false) as Button).pressed.emit()
+	assert_array(rec.of("run_again")[0][1]).is_equal([0, true])
+	# Everyone voted: one tap.
+	var all: Dictionary = {"ship": 0, "voters": ["Bo", "Cy"], "sessions": [1, 2], "needed": 2}
+	h.ctx.crew.handle_event({"type": "run_votes", "payload": all}, 0)
+	(h.find_child("RunAgain", true, false) as Button).pressed.emit()
+	assert_int(rec.of("run_again").size()).is_equal(2)
+
+
+# FT: FT-M1-012
 # Through the shell: the dev entry starts, the enemy is destroyed, the card shows
 # Victory, its Run again button (1 of 1 crew) resets the run, the shell is back in the
 # lobby, and Start brings the station screen up on the new world.

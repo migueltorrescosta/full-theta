@@ -4,7 +4,7 @@ extends RefCounted
 ## every session with a pick on that ship gets `run_over` (win or loss, run time, hull)
 ## and the current `run_votes`; a session that picks the ship or reconnects later gets
 ## them too. Each connected crew player of the ship casts or withdraws a "Run again"
-## vote (RunAgain), with the abandon vote's rule (NetAbandonVote: more than half of the
+## vote (RunAgain), with the abandon vote's rule (NetVote: more than half of the
 ## connected crew); the host's vote resets at once. The reset calls `rebuild`
 ## (NetServer.restart_run): a world built from scratch, every ship back in the lobby
 ## with its picks, crew state cleared (ServerSession.restart); the crew presses Start
@@ -18,7 +18,7 @@ var session: ServerSession
 ## Ship -> its `run_over` payload, from its outcome until the reset.
 var over: Dictionary[int, Dictionary] = {}
 ## Ship -> its "Run again" votes.
-var votes: Dictionary[int, NetAbandonVote] = {}
+var votes: Dictionary[int, NetVote] = {}
 
 ## The director's decisions so far (a Callable returning an Array of DirectorDecision), set
 ## by NetServer; none while no director runs.
@@ -56,7 +56,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			"time_s": e.tick * SimWorld.DT,
 			"hull": clampf(hull, 0.0, 1.0),
 		}
-		votes[e.ship_id] = NetAbandonVote.new()
+		votes[e.ship_id] = NetVote.new()
 		_outcome_tick[e.ship_id] = e.tick
 
 
@@ -70,21 +70,20 @@ func process() -> void:
 		if _votes_payload(ship) != _sent_votes.get(ship):
 			_send_votes(ship)
 		for s: NetSession in session.by_id.values():
+			if not (s.on_ship(ship) and s.connected()):
+				continue
 			var key: Vector2i = Vector2i(s.conn, ship)
-			if s.ship == ship and s.has_pick() and s.connected() and _told.get(s.id) != key:
+			if _told.get(s.id) != key:
 				_told[s.id] = key
 				session.notify(s, NetProtocol.EVENT_RUN_OVER, over[ship])
 				session.notify(s, NetProtocol.EVENT_RUN_VOTES, _votes_payload(ship))
-			if debriefs.has(ship) and s.ship == ship and s.has_pick() and s.connected():
+			if debriefs.has(ship):
 				if _told_debrief.get(s.id) != key:
 					_told_debrief[s.id] = key
 					session.notify(s, NetProtocol.EVENT_DEBRIEF, debriefs[ship])
 
 
-func _on_run_again(conn: int, msg: Dictionary, _now_us: int) -> void:
-	var s: NetSession = session.by_conn.get(conn)
-	if s == null:
-		return
+func _on_run_again(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
 	var members: Array[int] = session.connected_crew(ship)
 	var why: String = ""
@@ -94,17 +93,14 @@ func _on_run_again(conn: int, msg: Dictionary, _now_us: int) -> void:
 		why = NOT_OVER
 	elif not s.is_host and not members.has(s.id):
 		why = ServerSession.NOT_CREW
-	if why != "":
-		session.request_rejected(s, NetProtocol.Type.RUN_AGAIN, why, {"ship": ship})
+	if session.refuse(s, NetProtocol.Type.RUN_AGAIN, why, {"ship": ship}):
 		return
 	if s.is_host and msg["vote"]:
 		_reset()
 		return
-	var vote: NetAbandonVote = votes[ship]
-	vote.cast(s.id, s.name, msg["vote"])
-	vote.keep_only(members)
+	var passes: bool = votes[ship].cast_from(s, msg["vote"], members)
 	_send_votes(ship)
-	if vote.passes(members.size()):
+	if passes:
 		_reset()
 
 
@@ -120,19 +116,14 @@ func _reset() -> void:
 
 
 func _votes_payload(ship: int) -> Dictionary:
-	return {
-		"ship": ship,
-		"voters": votes[ship].names(),
-		"sessions": votes[ship].sessions(),
-		"needed": NetAbandonVote.needed(session.connected_crew(ship).size()),
-	}
+	return votes[ship].payload(ship, session.connected_crew(ship).size())
 
 
+## run_votes to every pick on the ship, through the shared vote path (ServerSession.send_votes).
 func _send_votes(ship: int) -> void:
-	_sent_votes[ship] = _votes_payload(ship)
-	for s: NetSession in session.by_id.values():
-		if s.ship == ship and s.has_pick():
-			session.notify(s, NetProtocol.EVENT_RUN_VOTES, _sent_votes[ship])
+	var to: PackedInt32Array = session.audience(func(s: NetSession) -> bool: return s.on_ship(ship))
+	var n: int = session.connected_crew(ship).size()
+	_sent_votes[ship] = session.send_votes(NetProtocol.EVENT_RUN_VOTES, ship, votes[ship], n, to)
 
 
 ## Builds the ship's debrief once two ticks have passed since its outcome (EncounterSystem

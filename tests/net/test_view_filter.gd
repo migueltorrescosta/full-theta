@@ -68,6 +68,22 @@ func _banded(value: float, maximum: float) -> float:
 	return HealthBand.quantise(value / maximum, DataToggles.def().band_edges) * maximum
 
 
+# FT: FT-PAIR-019, FT-ENG-002
+# The STATUS block carries the pips the reactor can feed now (PowerSystem.pip_cap): a dead
+# reactor gives 0 to Engineering at every difficulty; other stations see it as they see
+# the pips, exact on Easy and the nominal cap otherwise.
+func test_status_carries_the_damaged_reactor_pip_cap() -> void:
+	var nominal: int = world.defs[ME].power.reactor_pips
+	assert_int(_status("engineering", "hard")["pip_cap"]).is_equal(nominal)
+	world.damage.health[world.damage.find_subsystem(ME, &"reactor")] = 0.0
+	assert_int(PowerSystem.pip_cap(world, ME)).is_equal(0)
+	for code: String in ["easy", "normal", "hard"]:
+		assert_int(_status("engineering", code)["pip_cap"]).is_equal(0)
+	assert_int(_status("helm", "easy")["pip_cap"]).is_equal(0)
+	assert_int(_status("helm", "normal")["pip_cap"]).is_equal(nominal)
+	assert_int(_status("helm", "hard")["pip_cap"]).is_equal(nominal)
+
+
 # FT: FT-PAIR-019, FT-PAIR-007
 # Summaries of other stations' data are exact on Easy, banded to the middle of one of four
 # bands on Normal, and absent on Hard (the top bar's shields, reactor and propellant); the
@@ -301,25 +317,25 @@ func test_hard_leaks_only_marks_and_pings() -> void:
 	# Events: Science's work reaches Weapons and Engineering only through a toggle; scan
 	# positions are MARK items and reach Helm at every difficulty.
 	for code: String in ["normal", "hard"]:
-		assert_bool(StationViews.sees_event("weapons", &"hack_done", code)).is_false()
-		assert_bool(StationViews.sees_event("weapons", &"hack_window_end", code)).is_false()
-		assert_bool(StationViews.sees_event("engineering", &"self_scan_done", code)).is_false()
-		assert_bool(StationViews.sees_event("weapons", &"lane_warning", code)).is_false()
-		assert_bool(StationViews.sees_event("science", &"hack_done", code)).is_true()
-		assert_bool(StationViews.sees_event("relay", &"lane_warning", code)).is_true()
-		assert_bool(StationViews.sees_event("helm", &"scan_mark", code)).is_true()
+		assert_bool(EventRouting.sees_event("weapons", &"hack_done", code)).is_false()
+		assert_bool(EventRouting.sees_event("weapons", &"hack_window_end", code)).is_false()
+		assert_bool(EventRouting.sees_event("engineering", &"self_scan_done", code)).is_false()
+		assert_bool(EventRouting.sees_event("weapons", &"lane_warning", code)).is_false()
+		assert_bool(EventRouting.sees_event("science", &"hack_done", code)).is_true()
+		assert_bool(EventRouting.sees_event("relay", &"lane_warning", code)).is_true()
+		assert_bool(EventRouting.sees_event("helm", &"scan_mark", code)).is_true()
 	# Easy delivers them only while the source shares (D210).
-	assert_bool(StationViews.sees_event("weapons", &"hack_done", "easy")).is_false()
+	assert_bool(EventRouting.sees_event("weapons", &"hack_done", "easy")).is_false()
 	var weak: String = _shared("easy", [&"weak_points"])
-	assert_bool(StationViews.sees_event("weapons", &"hack_done", weak)).is_true()
-	assert_bool(StationViews.sees_event("weapons", &"lane_warning", weak)).is_false()
+	assert_bool(EventRouting.sees_event("weapons", &"hack_done", weak)).is_true()
+	assert_bool(EventRouting.sees_event("weapons", &"lane_warning", weak)).is_false()
 	var causes: String = _shared("easy", [&"diagnosed_causes"])
-	assert_bool(StationViews.sees_event("engineering", &"self_scan_done", causes)).is_true()
+	assert_bool(EventRouting.sees_event("engineering", &"self_scan_done", causes)).is_true()
 	var tracks: String = _shared("easy", [&"track_feeds"])
-	assert_bool(StationViews.sees_event("weapons", &"lane_warning", tracks)).is_true()
+	assert_bool(EventRouting.sees_event("weapons", &"lane_warning", tracks)).is_true()
 	# A joint view holding the source station gets them at any difficulty.
-	assert_bool(StationViews.sees_event("targeting", &"hack_done", "hard")).is_true()
-	assert_bool(StationViews.sees_event("systems", &"self_scan_done", "hard")).is_true()
+	assert_bool(EventRouting.sees_event("targeting", &"hack_done", "hard")).is_true()
+	assert_bool(EventRouting.sees_event("systems", &"self_scan_done", "hard")).is_true()
 
 
 # FT: FT-NET-009, FT-PAIR-005
@@ -343,7 +359,7 @@ func test_equal_filters_share_a_section() -> void:
 	# A malformed code in a key reads as the default set, never a crash.
 	var bad: String = StationViews.key(ME, "weapons", "extreme")
 	b.build(SimCopy.of(world), 2, [bad])
-	assert_bool(b.message(bad, true).size() > SnapshotBuilder.HEADER_BYTES).is_true()
+	assert_bool(b.message(bad, true).size() > SnapshotReader.HEADER_BYTES).is_true()
 
 
 # FT: FT-PAIR-007, FT-JNT-005
@@ -371,3 +387,31 @@ func test_a_shortcut_needs_its_toggle_and_a_share() -> void:
 	assert_str(shared.signature(StationViews.Section.FEEDS)).is_not_equal(
 		ViewFilter.of("weapons", "easy").signature(StationViews.Section.FEEDS)
 	)
+
+
+# FT: FT-PAIR-007
+# E7: FEEDS and RELAY skip building the lists the filter blanks, with the same bytes as
+# building everything and blanking after: every entry, difficulty and shared shortcut.
+func test_skipping_blanked_lists_changes_no_bytes() -> void:
+	KnowledgeSystem.step(world)
+	var features: Array = [
+		ViewFilter.WEAK_POINTS, ViewFilter.TRACK_FEEDS, ViewFilter.HAZARD_COUNTDOWNS
+	]
+	var codes: Array[String] = ["easy", "normal", "hard"]
+	for shared: Array in [[], features]:
+		for code: String in codes:
+			for entry: String in [
+				"helm", "weapons", "tactical", "ops", "relay", "viewer", "captain"
+			]:
+				var filter: ViewFilter = ViewFilter.of(entry, ViewFilter.code_with(code, shared))
+				if filter == null:
+					continue
+				for kind: int in [StationViews.Section.FEEDS, StationViews.Section.RELAY]:
+					var values: Dictionary = StationBlocks._block_values(kind, world, ME)
+					filter.apply(kind, values, world.defs[ME])
+					var want: PackedByteArray = NetBlock.encode(StationViews.BLOCKS[kind], values)
+					(
+						assert_array(StationBlocks.block_bytes(kind, world, ME, filter))
+						. override_failure_message("%s %s %s %d" % [entry, code, shared, kind])
+						. is_equal(want)
+					)

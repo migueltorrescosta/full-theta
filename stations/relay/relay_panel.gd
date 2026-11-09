@@ -120,24 +120,15 @@ func full_screen() -> bool:
 
 ## The phone arrangement: alone or in a joint view (focused), on a phone either way up.
 func _wants_phone() -> bool:
-	if docked or not is_inside_tree() or _screen_panels() > 2:
+	if docked or not is_inside_tree() or screen_panels() > 2:
 		return false
-	return LayoutMode.is_phone(PhoneFrame.form_of_panel(self))
-
-
-## How many panels the station screen holding this panel has (1 when none): the dev
-## seat's catalogue entry names no stations, so the screen is the one to ask.
-func _screen_panels() -> int:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	return (n as StationScreen).panels.size() if n != null else 1
+	return LayoutMode.is_phone(layout_form())
 
 
 ## Builds, rebuilds (a turned phone) or drops the phone arrangement.
 func _arrange() -> void:
 	var want: bool = _wants_phone()
-	var form: LayoutMode.Form = PhoneFrame.form_of_panel(self) if want else LayoutMode.Form.DESKTOP
+	var form: LayoutMode.Form = layout_form() if want else LayoutMode.Form.DESKTOP
 	if want and phone != null and phone.form == form:
 		return
 	if not want and phone == null:
@@ -155,17 +146,7 @@ func _arrange() -> void:
 	shows_shares = phone != null
 	pages = phone.pages if phone != null else null
 	refresh()
-	_rebind_tabs()
-
-
-## The screen binds the focused panel's pages when it lays out; a panel that builds (or
-## drops) its phone pages after that has the screen bind them again.
-func _rebind_tabs() -> void:
-	var n: Node = get_parent()
-	while n != null and not n is StationScreen:
-		n = n.get_parent()
-	if n != null and n.is_inside_tree() and (n as StationScreen).focused_panel() == self:
-		(n as StationScreen).pages_changed()
+	rebind_tabs()
 
 
 ## A phone's Send ▸ (FT-RLY-008): the screen's choice sheet of the allied ships; a pick
@@ -209,7 +190,11 @@ func _update_hint() -> void:
 func _process(delta: float) -> void:
 	if focused:
 		_poll_pad(delta)
+	# Hidden (a station not shown on this phone): nothing to refresh until it shows (R20-5).
+	if not is_visible_in_tree():
+		return
 	refresh()
+	ControlsChip.show_radar_legend(self, ctx.settings)
 
 
 ## Pushes the current picture into the map (every frame; tests call it directly).

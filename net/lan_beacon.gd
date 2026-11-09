@@ -28,8 +28,9 @@ const FORMAT: int = 1
 const HEADER_BYTES: int = 17
 const MAX_NAME_BYTES: int = 63
 const FLAG_RUNNING: int = 1
-## The limited broadcast address. A multi-homed host may need subnet
-## broadcast addresses too (IP.get_local_interfaces()); destinations is overridable.
+## The limited broadcast address. It leaves by one interface only, so a multi-homed host
+## (Wi-Fi plus Docker or Tailscale) also sends to each interface's subnet broadcast address
+## (subnet_broadcasts, R11-7); destinations is overridable.
 const BROADCAST_ADDRESS: String = "255.255.255.255"
 
 var server_name: String
@@ -60,18 +61,57 @@ func _init(
 	http_port = p_http_port
 
 
-## Opens the sending socket. Tests pass a loopback destination and their own port.
+## Opens the sending socket; the error when the destinations are not addresses or the socket
+## cannot open (last_error holds it too). With no `destinations` it sends to the limited
+## broadcast address and the subnet broadcast of every local interface (default_destinations).
+## Tests pass a loopback destination and their own port.
 func start(
-	port: int = DISCOVERY_PORT, destinations: PackedStringArray = [BROADCAST_ADDRESS]
+	port: int = DISCOVERY_PORT, destinations: PackedStringArray = PackedStringArray()
 ) -> Error:
 	stop()
 	_port = port
-	_destinations = destinations
+	_destinations = destinations if not destinations.is_empty() else default_destinations()
+	for dest: String in _destinations:
+		if not dest.is_valid_ip_address():
+			last_error = ERR_INVALID_PARAMETER
+			return last_error
 	_peer = PacketPeerUDP.new()
+	var err: Error = _peer.bind(0) as Error
+	if err != OK:
+		_peer = null
+		last_error = err
+		return err
 	_peer.set_broadcast_enabled(true)
 	_next_usec = -1
 	sent = 0
+	last_error = OK
 	return OK
+
+
+## The limited broadcast address and the subnet broadcast address of each local interface.
+static func default_destinations() -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray([BROADCAST_ADDRESS])
+	out.append_array(subnet_broadcasts(IP.get_local_interfaces()))
+	return out
+
+
+## The subnet broadcast address (a.b.c.255) of every usable IPv4 address in `interfaces`
+## (IP.get_local_interfaces(): {name, addresses}), once each. Godot gives no netmask, so a
+## /24 is assumed, the usual home or office LAN; loopback, link-local and unspecified
+## addresses are skipped.
+static func subnet_broadcasts(interfaces: Array) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	for iface: Dictionary in interfaces:
+		for address: String in iface.get("addresses", []):
+			var parts: PackedStringArray = address.split(".")
+			if address.contains(":") or parts.size() != 4 or not address.is_valid_ip_address():
+				continue
+			if parts[0] in ["0", "127"] or (parts[0] == "169" and parts[1] == "254"):
+				continue
+			var broadcast: String = "%s.%s.%s.255" % [parts[0], parts[1], parts[2]]
+			if broadcast not in out:
+				out.append(broadcast)
+	return out
 
 
 func stop() -> void:

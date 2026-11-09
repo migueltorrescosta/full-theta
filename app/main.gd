@@ -47,3 +47,10 @@ func _ready() -> void:
 			% [cli.bind_address, server.port(), NetProtocol.PROTOCOL_VERSION]
 		)
 	)
+	# The one line the gate scripts parse (tools/lib.sh wait_ready); http is 0 when off.
+	print(
+		(
+			"ready ws=%s:%d http=%s:%d"
+			% [cli.bind_address, server.port(), cli.bind_address, server.http_local_port()]
+		)
+	)

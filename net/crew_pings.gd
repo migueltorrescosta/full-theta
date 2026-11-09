@@ -27,6 +27,11 @@ func take(session: int, now_us: int) -> bool:
 	return _buckets.get_or_add(session, NetTokenBucket.new(RATE, BURST)).take(now_us)
 
 
+## Forgets a session's limit (it was evicted, NetSessions.evict).
+func forget(session: int) -> void:
+	_buckets.erase(session)
+
+
 ## Records a ping on the item and returns the original pinger's name when it is a copy,
 ## else "" (and this ping becomes the item's original).
 func copy_of(ship: int, kind: String, id: int, session: int, name: String, now_us: int) -> String:

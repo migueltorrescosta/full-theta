@@ -12,6 +12,8 @@ extends Control
 ## the overlay covers the board and the radar column).
 
 signal row_activated(row: Dictionary)
+## The visible Buy or Sell button was pressed: one step on the focused row (R23-9).
+signal trade_pressed(buy: bool)
 signal closed
 
 const FONT_SIZE: int = 15
@@ -28,11 +30,21 @@ const PHONE_ROW_H: float = 48.0
 const PHONE_TWO_COLS_W: float = 520.0
 ## The Close button's width on a phone.
 const CLOSE_W: float = 112.0
+## The Buy and Sell buttons, drawn while the card trades (R23-9): size, and the room a
+## desktop box keeps for them above its hint line.
+const TRADE_W: float = 96.0
+const TRADE_H: float = 40.0
+const TRADE_FOOT: float = 48.0
+## The page counter's width ("1/2") beside the ‹ › buttons.
+const COUNTER_W: float = 44.0
 
 ## The COMMS block, the open card, and the focused row (index into `rows()`).
 var data: Dictionary = {}
 var card_id: int = -1
-var focus: int = 0
+var focus: int = 0:
+	set(value):
+		focus = value
+		_sync_trade_buttons()
 ## The last result (a refusal or a trade), shown under the rows.
 var status: String = ""
 ## Who holds the card's conversation ("" for free) and the session's own name.
@@ -49,6 +61,9 @@ var fill: bool = false
 var prev_button: RailButton
 var next_button: RailButton
 var close_button: RailButton
+## The visible Buy and Sell buttons of a card that trades (hidden otherwise).
+var buy_button: RailButton
+var sell_button: RailButton
 
 var _rows: Array[Dictionary] = []
 var _rects: Array[Rect2] = []
@@ -60,6 +75,8 @@ var _lines_shown: int = 0
 var _line_count: int = 0
 ## One tap target per row shown on a phone, for TapAudit (the rows are drawn).
 var _hits: Array[Control] = []
+## Buy and Sell sit on their own row (a narrow phone).
+var _stacked: bool = false
 
 
 func _init() -> void:
@@ -69,6 +86,12 @@ func _init() -> void:
 	prev_button = _foot_button("Prev", "‹", func() -> void: page(false))
 	next_button = _foot_button("Next", "›", func() -> void: page(true))
 	close_button = _foot_button("Close", TouchText.of("comms.close", "Close"), close)
+	buy_button = _foot_button(
+		"Buy", TranslationServer.translate("comms.buy"), func() -> void: trade_pressed.emit(true)
+	)
+	sell_button = _foot_button(
+		"Sell", TranslationServer.translate("comms.sell"), func() -> void: trade_pressed.emit(false)
+	)
 
 
 func _foot_button(id: String, text: String, does: Callable) -> RailButton:
@@ -96,6 +119,12 @@ func show_card(blk: Dictionary, id: int) -> void:
 		status = ""
 	_rows = _make_rows()
 	focus = clampi(focus, 0, maxi(0, _rows.size() - 1))
+	if fresh:
+		# A card that trades opens on its first trade row, so Enter does not pick "Go back".
+		for i: int in _rows.size():
+			if _rows[i]["kind"] != "reply":
+				focus = i
+				break
 	visible = true
 	_layout()
 
@@ -204,6 +233,33 @@ func move_focus(step: int) -> void:
 			first_line = line - _lines_shown + 1
 		_layout()
 	queue_redraw()
+
+
+## True when a row of the card trades (the Buy and Sell buttons show).
+func trades() -> bool:
+	for row: Dictionary in _rows:
+		if row["kind"] != "reply" and row["kind"] != "text":
+			return true
+	return false
+
+
+## "1/2" while the rows page, else "".
+func page_text() -> String:
+	if _lines_shown <= 0 or _lines_shown >= _line_count:
+		return ""
+	var pages: int = ceili(float(_line_count) / _lines_shown)
+	return "%d/%d" % [mini(first_line / _lines_shown + 1, pages), pages]
+
+
+func _sync_trade_buttons() -> void:
+	if buy_button == null:
+		return
+	var row: Dictionary = _rows[focus] if focus >= 0 and focus < _rows.size() else {}
+	var kind: String = str(row.get("kind", ""))
+	buy_button.disabled = kind != "buy" and kind != "module"
+	sell_button.disabled = not (
+		kind == "sell_module" or (kind == "buy" and int(row.get("sell", 0)) > 0)
+	)
 
 
 ## True when rows below the page shown don't fit.
@@ -350,9 +406,14 @@ func _layout() -> void:
 		lines[-1] = maxf(lines[-1], heights[i])
 	for lh: float in lines:
 		rows_h += lh + gap
-	var foot: float = 70.0
+	var trade: bool = trades()
+	# A phone too narrow for one foot row puts Buy and Sell on a row of their own.
+	_stacked = phone and trade and w < PHONE_TWO_COLS_W
+	var foot: float = 70.0 + (TRADE_FOOT if trade else 0.0)
 	if phone:
 		foot = PAD + UiTheme.TOUCH_PRIMARY + gap
+		if _stacked:
+			foot += UiTheme.TOUCH_PRIMARY + gap
 	var h: float = PAD + 24.0 + body.y + 12.0 + rows_h + foot
 	h = minf(h, size.y - (8.0 if phone else 16.0))
 	if fill:
@@ -385,6 +446,40 @@ func _layout() -> void:
 	queue_redraw()
 
 
+## Buy and Sell: on a phone after the ‹ › buttons (page counter in between), or on a row of
+## their own above the foot row when narrow; on a desktop in the room above the hint line.
+func _place_trade_buttons(phone: bool, foot_y: float, side: float) -> void:
+	var show: bool = trades()
+	buy_button.visible = show
+	sell_button.visible = show
+	if not show:
+		return
+	var at: Vector2 = Vector2(_foot_text_x(), foot_y)
+	var h: float = side
+	if _stacked:
+		at = Vector2(_box.position.x + PAD, foot_y - side - UiTheme.TOUCH_GAP)
+	elif not phone:
+		h = TRADE_H
+		at = Vector2(_box.position.x + PAD, _box.end.y - 70.0 - TRADE_H - 4.0)
+	buy_button.position = at
+	sell_button.position = at + Vector2(TRADE_W + UiTheme.TOUCH_GAP, 0.0)
+	for b: RailButton in [buy_button, sell_button]:
+		b.size = Vector2(TRADE_W, h)
+		b.custom_minimum_size = Vector2(TRADE_W, h)
+
+
+## Where a phone's foot row continues after the ‹ › buttons and the page counter.
+func _foot_text_x() -> float:
+	var x: float = _box.position.x + PAD
+	if _paged():
+		x += 2.0 * (UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP) + COUNTER_W
+	return x
+
+
+func _paged() -> bool:
+	return _lines_shown < _line_count
+
+
 ## A phone's foot row (‹ › while the rows page, Close at the right) and the rows' targets.
 func _place_buttons(phone: bool) -> void:
 	var side: float = UiTheme.TOUCH_PRIMARY
@@ -400,6 +495,7 @@ func _place_buttons(phone: bool) -> void:
 		b.position = Vector2(x, y)
 		b.size = Vector2(side, side)
 		x += side + UiTheme.TOUCH_GAP
+	_place_trade_buttons(phone, y, side)
 	close_button.position = Vector2(_box.end.x - PAD - CLOSE_W, y)
 	close_button.size = Vector2(CLOSE_W, side)
 	while _hits.size() < _rects.size():
@@ -508,11 +604,25 @@ func _draw() -> void:
 	if close_button.visible:
 		hint = ""
 		var left: float = x
+		foot_y = close_button.position.y + (close_button.size.y + font.get_ascent(FONT_SIZE)) / 2.0
 		if next_button.visible:
 			left = next_button.position.x + next_button.size.x + UiTheme.TOUCH_GAP
+			draw_string(
+				font,
+				Vector2(left, foot_y),
+				page_text(),
+				0,
+				COUNTER_W,
+				FONT_SIZE,
+				Palette.color("text")
+			)
+			left += COUNTER_W
+		if buy_button.visible and not _stacked:
+			left = sell_button.position.x + TRADE_W + UiTheme.TOUCH_GAP
 		hint_w = close_button.position.x - UiTheme.TOUCH_GAP - left
 		x = left
-		foot_y = close_button.position.y + (close_button.size.y + font.get_ascent(FONT_SIZE)) / 2.0
+	elif page_text() != "":
+		hint = "%s   %s" % [page_text(), hint]
 	if status != "":
 		hint = status
 	draw_string(

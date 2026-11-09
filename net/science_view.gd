@@ -23,12 +23,6 @@ extends RefCounted
 const MAX_CARDS: int = 255
 
 
-## The class id sent for a ship definition id (a stable hash; the client maps it back
-## through its own definitions) and for a damage type.
-static func code(id: StringName) -> int:
-	return String(id).hash()
-
-
 static func block(world: SimWorld, ship: int) -> Dictionary:
 	var t: ScienceTable = world.science
 	var out: Dictionary = _empty()
@@ -36,8 +30,6 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 	out["ping_left"] = t.ping_left[ship]
 	out["ping_cool"] = t.ping_cool[ship]
 	out["selected"] = t.selected[ship]
-	out["mark_contact"] = t.mark_contact[ship]
-	out["mark_pos"] = Vector3(t.mark_x[ship], t.mark_y[ship], t.mark_z[ship])
 	out["self_scanned"] = t.self_scanned[ship] >= 0
 	_preview(out, t.preview[ship])
 	if world.science_def != null:
@@ -58,8 +50,6 @@ static func _empty() -> Dictionary:
 		"noise_aspect": 0.0,
 		"noise_health": 0.0,
 		"noise_flags": 0,
-		"mark_contact": -1,
-		"mark_pos": Vector3.ZERO,
 		"self_scanned": false,
 		"session": 0,
 		"session_target": -1,
@@ -160,7 +150,7 @@ static func _cards(world: SimWorld, ship: int) -> Array:
 			"hack": ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.HACK),
 		}
 		if ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.CLASS):
-			card["class_id"] = code(world.defs[contact].id)
+			card["class_id"] = BlockSchema.id_code(world.defs[contact].id)
 		if ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.INTENT):
 			card["intent"] = 1 + world.ai.mode[contact] if world.ai.enabled[contact] == 1 else 1
 		card.merge(revealed_traits(world, faction, contact), true)
@@ -179,7 +169,7 @@ static func revealed_traits(world: SimWorld, faction: int, contact: int) -> Dict
 		world, faction, contact
 	)
 	for type: StringName in factors:
-		resist.append({"type": code(type), "factor": factors[type]})
+		resist.append({"type": BlockSchema.id_code(type), "factor": factors[type]})
 	return {"weak_mask": mask, "resist": resist}
 
 

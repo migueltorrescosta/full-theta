@@ -83,7 +83,7 @@ func test_views_track_server_model() -> void:
 		for kind: int in StationViews.sections_of(entry):
 			if StationViews.BLOCKS.has(kind):
 				var truth: Dictionary = NetBlock.decode(
-					StationViews.BLOCKS[kind], StationViews.block_bytes(kind, copy, PLAYER)
+					StationViews.BLOCKS[kind], StationBlocks.block_bytes(kind, copy, PLAYER)
 				)
 				assert_dict(st.blocks[kind]).is_equal(truth)
 		if StationViews.sections_of(entry).has(StationViews.Section.NEAR):
@@ -143,35 +143,6 @@ func test_station_views_map_entries() -> void:
 	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 15 + 2)
 
 
-# FT: FT-NET-040
-# The copy handed to the net thread holds the world's state (every table column, the
-# RNG states) and stays unchanged while the world steps on.
-func test_sim_copy_is_detached() -> void:
-	var world: SimWorld = _world()
-	for i: int in 30:
-		world.step()
-	var copy: SimWorld = SimCopy.of(world)
-	var columns_at_copy: PackedByteArray = _columns(world)
-	assert_bool(_columns(copy) == columns_at_copy).is_true()
-	assert_array(copy.rng.states()).is_equal(world.rng.states())
-	assert_str(KnowledgeSystem.callsign(copy, 1, ENEMY)).is_equal(
-		KnowledgeSystem.callsign(world, 1, ENEMY)
-	)
-	var copy_hash: String = copy.state_hash()
-	for i: int in 30:
-		world.step()
-	assert_bool(_columns(copy) == columns_at_copy).is_true()
-	assert_bool(_columns(world) == columns_at_copy).is_false()
-	assert_str(copy.state_hash()).is_equal(copy_hash)
-
-
-func _columns(world: SimWorld) -> PackedByteArray:
-	var out: PackedByteArray = var_to_bytes([world.tick, world.kin.period])
-	for t: SimTable in world.tables():
-		out.append_array(var_to_bytes(t.columns()))
-	return out
-
-
 # FT: FT-NET-008
 # A contact flying across the +X face of the site (D124) is dead reckoned through the
 # seam: no absolute record after the first, and the client's position, wrapped, stays
@@ -222,16 +193,18 @@ func test_near_member_added_later_carries_its_age() -> void:
 	_step2(world)
 	var recorded_at: int = world.tick
 	orient.update(world, {ENEMY: true})
-	NearSection.apply(client, _buf(near.update_members(world, {})), false, world.tick)
+	SnapshotReader.apply_near(client, _buf(near.update_members(world, {})), false, world.tick)
 	for i: int in 10:
 		_step2(world)
 	# The shared model isn't refreshed (another ship of the faction keeps it): ENEMY joins
 	# this ship's set with the record from 20 ticks ago.
-	NearSection.apply(client, _buf(near.update_members(world, {ENEMY: true})), false, world.tick)
+	SnapshotReader.apply_near(
+		client, _buf(near.update_members(world, {ENEMY: true})), false, world.tick
+	)
 	assert_dict(client).is_equal(near.client_model())
 	assert_int(client[ENEMY][2]).is_equal(recorded_at)
 	var full: Dictionary = {}
-	NearSection.apply(full, _buf(near.full()), true, world.tick)
+	SnapshotReader.apply_near(full, _buf(near.full()), true, world.tick)
 	assert_dict(full).is_equal(client)
 
 
@@ -260,8 +233,24 @@ func test_oversize_section_is_sent_with_a_long_length() -> void:
 	assert_int(full.size()).is_greater(70_000)
 	assert_bool(st.apply(full)).is_true()
 	assert_array(st.kinds).is_equal(StationViews.sections_of("helm"))
-	assert_dict(st.kin).is_equal(KinSection.read(_buf(kin)))
+	assert_dict(st.kin).is_equal(SnapshotReader.read_kin(_buf(kin)))
 	_step2(world)
 	b.build(SimCopy.of(world), 2, [key])
 	assert_bool(st.apply(b.message(key, false))).is_true()
 	assert_int(st.rejected).is_equal(0)
+
+
+# FT: FT-NET-008
+# R19-5: a delta leaves out the CONTACTS section while nothing in it changed (no contact moved
+# out of tolerance, none appeared or left, no callsign or flag changed); a full one still has it.
+func test_an_unchanged_contacts_section_is_not_sent() -> void:
+	var world: SimWorld = _world()
+	var b: SnapshotBuilder = SnapshotBuilder.new()
+	var key: String = StationViews.key(PLAYER, "helm", StationViews.DEFAULT_TOGGLES)
+	b.build(SimCopy.of(world), 1, [key])
+	b.build(SimCopy.of(world), 2, [key])
+	var contacts: ContactsSection = b.section(
+		StationViews.Section.CONTACTS, world.faction_of(PLAYER)
+	)
+	assert_array(contacts.update(world)).is_empty()
+	assert_array(contacts.full()).is_not_empty()

@@ -57,12 +57,7 @@ func _init() -> void:
 	scrim.gui_input.connect(_on_scrim)
 	scrim.add_to_group(TouchInput.GROUP)
 	add_child(scrim)
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = Palette.color("panel")
-	sb.border_color = Palette.color("line_strong")
-	sb.set_border_width_all(UiTheme.BORDER)
-	sb.set_corner_radius_all(UiTheme.RADIUS)
-	sb.set_content_margin_all(UiTheme.TOUCH_GAP)
+	var sb: StyleBoxFlat = UiTheme.box("panel", "line_strong", UiTheme.TOUCH_GAP, UiTheme.TOUCH_GAP)
 	box.add_theme_stylebox_override("panel", sb)
 	box.mouse_filter = Control.MOUSE_FILTER_STOP
 	box.add_to_group(TouchInput.GROUP)

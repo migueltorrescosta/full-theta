@@ -34,3 +34,15 @@ static func crew_count(entries: Array) -> int:
 
 static func passes(entries: Array, min_crew: int = MIN_CREW) -> bool:
 	return crew_count(entries) >= min_crew and uncovered(entries).is_empty()
+
+
+## Whether entries that pass now would fail once `leaving` goes and `joining` (if not "")
+## arrives (FT-NET-042, FT-NET-043).
+static func breaks(entries: Array, min_crew: int, leaving: String, joining: String = "") -> bool:
+	if not passes(entries, min_crew):
+		return false
+	var after: Array = entries.duplicate()
+	after.erase(leaving)
+	if joining != "":
+		after.append(joining)
+	return not passes(after, min_crew)

@@ -7,7 +7,6 @@ extends Scenario
 ## drone near the ship, a new one when the drone is destroyed or the ship has jumped away.
 
 ## Faction of the drone (hostile to the crew by the default relation).
-const DRONE_FACTION: int = 2
 ## Where the drone appears from the ship (m), at the bow, a little high.
 const DRONE_RANGE_M: float = 1500.0
 const DRONE_CLOCK: int = 12
@@ -39,7 +38,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 
 
 func step(api: ScenarioApi) -> void:
-	if _ship < 0 or api.tick() - _asked < ScenarioApi.HZ:
+	if _ship < 0 or api.tick() - _asked < SimRate.HZ:
 		return
 	var ship: ShipView = api.ship(_ship)
 	# The handle names the real ship: a rejected spawn is gone (review 2 L5).
@@ -55,7 +54,7 @@ func _ask(api: ScenarioApi) -> void:
 	if _ship < 0:
 		return
 	_drone = api.spawn_at_range(
-		DRONE_KEY, DRONE_FACTION, _ship, DRONE_RANGE_M, DRONE_CLOCK, DRONE_HEIGHT
+		DRONE_KEY, Factions.RAIDER, _ship, DRONE_RANGE_M, DRONE_CLOCK, DRONE_HEIGHT
 	)
 	_anchor = api.ship(_ship).nearest_site
 	_asked = api.tick()

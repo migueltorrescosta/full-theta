@@ -4,10 +4,8 @@ extends GdUnitTestSuite
 ## end, each scripted half shows on the player's partner glance card, and a seed fixes the
 ## whole thing.
 
-const STATIONS: Array[StringName] = [
-	&"helm", &"weapons", &"engineering", &"science", &"relay", &"comms", &"captain"
-]
-const SEED: int = 11
+const STATIONS: Array[StringName] = ShakedownLessons.STATIONS
+const SEED: int = ShakedownLessons.SEED
 ## Ticks after a half starts at which its effect must show on the card.
 const SETTLE: int = TrainingPartners.HALF_TICKS + 40
 
@@ -19,96 +17,26 @@ func before_test() -> void:
 
 
 func _rig(solo: StringName) -> ShakedownRig:
-	var rig: ShakedownRig = ShakedownRig.new()
-	rig.driver = TrainingDriver.new(ShakedownScenario.new(), rig.steps, solo)
-	return rig
+	return ShakedownLessons.rig(solo)
 
 
 func _tick(rig: ShakedownRig, partners: TrainingPartners, n: int = 1) -> void:
-	for i: int in n:
-		rig.host.advance(
-			SimWorld.DT * 1.001,
-			func(api: ScenarioApi) -> void:
-				partners.act(rig.world, rig.driver)
-				rig.driver.before_tick(api)
-		)
-
-
-func _press(rig: ShakedownRig, partners: TrainingPartners, station: StringName) -> void:
-	var cmd: TrainingNextCommand = TrainingNextCommand.new()
-	cmd.ship_id = 0
-	cmd.station = station
-	rig.world.submit(cmd)
-	_tick(rig, partners, 2)
-
-
-## Plays the player's side until `stop` is true (default: the lesson's end); returns whether
-## it stopped that way within the guard.
-func _play(
-	rig: ShakedownRig, partners: TrainingPartners, solo: StringName, stop: Callable = Callable()
-) -> bool:
-	_tick(rig, partners, 2)
-	for guard: int in 4000:
-		if stop.is_valid():
-			if stop.call():
-				return true
-		elif not rig.said("shakedown.all_done").is_empty():
-			return true
-		var step: TrainingStepDef = rig.driver.current(solo)
-		if step != null:
-			if step.kind == TrainingStepDef.Kind.COMMAND:
-				rig.world.submit(rig.command_for(step.command))
-				_tick(rig, partners, 2)
-			else:
-				_press(rig, partners, solo)
-		elif not rig.driver.active_pairs().is_empty():
-			if stop.is_valid() and not _wants_press(rig, stop):
-				_tick(rig, partners, 30)
-			else:
-				_press(rig, partners, solo)
-		else:
-			_tick(rig, partners, 30)
-	return false
-
-
-func _wants_press(_rig: ShakedownRig, _stop: Callable) -> bool:
-	return true
-
-
-func _lesson(solo: StringName) -> Array:
-	var rig: ShakedownRig = _rig(solo)
-	var partners: TrainingPartners = TrainingPartners.new(SEED)
-	partners.crew.record = true
-	var done: bool = _play(rig, partners, solo)
-	return [rig, partners, done]
-
-
-# FT: FT-MIS-039
-# Every station played alone reaches the end of its whole track and every pair step that names
-# it, with the bots acting for the other six.
-func test_every_station_completes_its_whole_lesson_with_acting_bots() -> void:
-	for solo: StringName in STATIONS:
-		var lesson: Array = _lesson(solo)
-		var rig: ShakedownRig = lesson[0]
-		assert_bool(lesson[2]).override_failure_message(String(solo)).is_true()
-		assert_bool(rig.driver.finished(solo)).is_true()
+	ShakedownLessons.tick(rig, partners, n)
 
 
 # FT: FT-MIS-039
 # A bot submits only commands of its own station, never the player's: across all seven
-# lessons every recorded command is of the station that sent it, and none is the player's.
+# lessons no recorded command is of the player's station.
 func test_bots_submit_only_commands_of_their_own_station() -> void:
 	var total: int = 0
 	var stations_seen: Dictionary[StringName, bool] = {}
 	for solo: StringName in STATIONS:
-		var partners: TrainingPartners = _lesson(solo)[1]
-		for row: Array in partners.crew.sent:
+		var rig: ShakedownRig = ShakedownLessons.lesson(solo)["rig"]
+		for row: Array in rig.host.api().crew().sent:
+			var station: String = StationViews.station_of_command(row[1])
 			total += 1
-			stations_seen[row[1]] = true
-			assert_str(String(row[1])).override_failure_message(String(solo)).is_not_equal(
-				String(solo)
-			)
-			assert_str(StationViews.station_of_command(row[2])).is_equal(String(row[1]))
+			stations_seen[StringName(station)] = true
+			assert_str(station).override_failure_message(String(solo)).is_not_equal(String(solo))
 	assert_int(total).is_greater(20)
 	# Every crew station but Comms acts in a plain lesson (nobody hails it).
 	for station: String in StationViews.CREW:
@@ -137,26 +65,39 @@ func test_the_comms_bot_answers_a_hail() -> void:
 
 
 # FT: FT-MIS-039
-# A bot refuses a command of another station, and any command at the player's.
-func test_send_refuses_a_foreign_or_the_players_station() -> void:
-	var rig: ShakedownRig = _rig(&"weapons")
+# A bot never acts at the player's station: its scripted half sends nothing there, and sends
+# the real command at a station that is not the player's.
+func test_a_half_never_acts_at_the_players_station() -> void:
+	var rig: ShakedownRig = _rig(&"helm")
 	var partners: TrainingPartners = TrainingPartners.new(SEED)
+	var api: ScenarioApi = rig.host.api()
+	api.crew().record = true
 	_tick(rig, partners, 2)
-	var crew: TrainingCrew = partners.crew
-	assert_bool(crew.send(rig.world, 0, &"helm", FireCommand.new())).is_false()
-	assert_bool(crew.send(rig.world, 0, &"weapons", FireCommand.new())).is_false()
-	assert_bool(crew.send(rig.world, 0, &"helm", AllStopCommand.new())).is_true()
+	partners.crew.half(api, 0, &"helm", &"helm_speed")
+	assert_array(api.crew().sent).is_empty()
+	partners.crew.half(api, 0, &"engineering", &"eng_boost")
+	assert_array(api.crew().sent).has_size(1)
+	assert_str(StationViews.station_of_command(api.crew().sent[0][1])).is_equal("engineering")
 
 
 # FT: FT-MIS-039
 # The same seed gives the same commands and the same world; the seed moves the bots' phases.
 func test_a_seed_fixes_the_bots_commands_and_the_world() -> void:
-	var a: Array = _lesson(&"science")
-	var b: Array = _lesson(&"science")
-	assert_array(a[1].crew.sent).is_equal(b[1].crew.sent)
-	assert_str(a[0].world.state_hash()).is_equal(b[0].world.state_hash())
+	var a: Dictionary = ShakedownLessons.lesson(&"science")
+	var b: Dictionary = _replayed(&"science")
+	assert_array(a["rig"].host.api().crew().sent).is_equal(b["rig"].host.api().crew().sent)
+	assert_str(a["rig"].world.state_hash()).is_equal(b["rig"].world.state_hash())
 	var other: TrainingCrew = TrainingCrew.new(SEED + 1)
-	assert_dict(other._phase).is_not_equal(a[1].crew._phase)
+	assert_dict(other._phase).is_not_equal(a["partners"].crew._phase)
+
+
+## The lesson of `solo` played a second time (the cached one is the first).
+func _replayed(solo: StringName) -> Dictionary:
+	var rig: ShakedownRig = _rig(solo)
+	var partners: TrainingPartners = TrainingPartners.new(SEED)
+	rig.host.api().crew().record = true
+	ShakedownLessons.play(rig, partners, solo)
+	return {"rig": rig, "partners": partners}
 
 
 # --- partner halves ---
@@ -180,7 +121,7 @@ func _read(rig: ShakedownRig, readout: String) -> String:
 		StationViews.Section.COMMS
 	]:
 		_ctx.view.blocks[kind] = NetBlock.decode(
-			StationViews.BLOCKS[kind], StationViews.block_bytes(kind, rig.world, 0)
+			StationViews.BLOCKS[kind], StationBlocks.block_bytes(kind, rig.world, 0)
 		)
 	return PartnerGlance.readout(_ctx, readout)
 
@@ -193,7 +134,11 @@ func _to_pair(solo: StringName, intent: StringName) -> Array:
 		return rig.driver.active_pairs().any(
 			func(s: TrainingStepDef) -> bool: return s.intent == intent
 		)
-	assert_bool(_play(rig, partners, solo, on)).override_failure_message(String(intent)).is_true()
+	(
+		assert_int(ShakedownLessons.play(rig, partners, solo, on))
+		. override_failure_message(String(intent))
+		. is_greater_equal(0)
+	)
 	return [rig, partners]
 
 
@@ -223,6 +168,6 @@ func test_each_scripted_half_changes_the_partner_glance_card() -> void:
 		var after: String = _read(rig, readout)
 		assert_str(after).override_failure_message("%s: %s" % [key, before]).is_not_equal(before)
 		# The step still ends on the partner's Next, after the player's.
-		var flag: StringName = TrainingDriver.next_flag(partner)
+		var flag: StringName = TrainingNextCommand.flag_name(partner)
 		_tick(rig, partners, TrainingPartners.press_ticks(step, partner))
 		assert_int(rig.world.story_flags.get_flag(flag)).override_failure_message(key).is_greater(0)

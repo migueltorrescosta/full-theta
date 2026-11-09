@@ -266,6 +266,19 @@ func test_velocity_markers_sit_off_the_nose_by_the_drift_direction() -> void:
 	assert_array(_panel.hud.velocity_markers()).is_empty()
 
 
+# FT: FT-HLM-001, FT-STN-013
+# E2: at half resolution the 3D view draws at half scale but keeps the HUD's size, so a
+# projected marker still sits on the nose in HUD pixels.
+func test_markers_keep_their_place_at_half_resolution() -> void:
+	_panel._viewport.scaling_3d_scale = 0.5
+	await await_idle_frame()
+	assert_vector(Vector2(_panel._viewport.size)).is_equal(_panel.hud.size)
+	_drift(Vector3(0.0, 0.0, -80.0))
+	var pro: Dictionary = _marker("pro")
+	assert_bool(pro["edge"]).is_false()
+	assert_float((pro["pos"] as Vector2).distance_to(_panel.hud.size / 2.0)).is_less(2.0)
+
+
 # FT: FT-HLM-001
 func test_speed_read_outs_are_per_axis_in_the_ship_frame() -> void:
 	_drift(Vector3(2.5, -12.0, -8.0))
@@ -351,7 +364,7 @@ func test_marker_labels_stay_clear_of_the_shield_ring() -> void:
 				if inside.encloses(box):
 					# The label stays within 48 px of its marker (D319), and clear of the
 					# reserved boxes unless the marker itself sits in one.
-					assert_float(HelmHud._gap(box, p)).is_less_equal(48.0)
+					assert_float(ChipLayout.gap_to(box, p)).is_less_equal(48.0)
 					if not reserved.any(func(area: Rect2) -> bool: return area.has_point(p)):
 						for area: Rect2 in reserved:
 							assert_bool(box.intersects(area)).is_false()

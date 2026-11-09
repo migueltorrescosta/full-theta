@@ -165,7 +165,7 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_CREW)
 	await h.wait(300)
 	assert_int(server.world.tick).is_equal(tick)
-	assert_bool(server.session.launched.is_empty()).is_true()
+	assert_bool(server.session.lobby.launched.is_empty()).is_true()
 	var ops: NetClient = await h.joined(server, "ops", "ops")
 	var ready_ok: Callable = func(e: Dictionary) -> bool: return e["payload"]["ready"]
 	lobby = await h.next_event(sys, NetProtocol.EVENT_LOBBY, 0, ready_ok)

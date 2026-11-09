@@ -13,10 +13,7 @@ extends RefCounted
 ## 0xFFFF then a u32 for a section of 0xFFFF bytes or more, so no section is ever too
 ## long to send. A delta omits the sections with nothing to say (unchanged blocks).
 
-const HEADER_BYTES: int = 11
-const FLAG_FULL: int = 1
-## Section length escape: a u32 length follows.
-const LONG_SECTION: int = 0xFFFF
+## The header and length escape, as the clients read them (SnapshotReader).
 
 var seq: int = 0
 var tick: int = 0
@@ -41,8 +38,14 @@ var _sections: Dictionary = {}
 var _orient: Dictionary = {}
 ## "kind:owner" -> delta bytes of this snapshot.
 var _deltas: Dictionary = {}
-## "view_key|full" -> chunks of this snapshot.
-var _cache: Dictionary = {}
+## View key -> its chunks of this snapshot, delta and full.
+var _cache_delta: Dictionary = {}
+var _cache_full: Dictionary = {}
+## View key -> [[kind, owner, skey]] of its sections, derived once per key (the strings
+## and filter signatures cost more than the sections' own work); dropped when the ship
+## count changes.
+var _lists: Dictionary = {}
+var _lists_ships: int = -1
 ## Ship -> ownership table posted by the main thread (OwnershipSection).
 var _ownership: Dictionary = {}
 ## Faction -> the ship ids it knows (ContactsSection.known), computed once per build.
@@ -65,8 +68,12 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 	seq = snapshot_seq
 	tick = world.tick
 	_deltas.clear()
-	_cache.clear()
+	_cache_delta.clear()
+	_cache_full.clear()
 	_known.clear()
+	if world.ship_count() != _lists_ships:
+		_lists.clear()
+		_lists_ships = world.ship_count()
 	var needed: Dictionary = {}
 	var near_ships: Dictionary = {}
 	for view_key: String in view_keys:
@@ -75,10 +82,9 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 		if ship < 0 or ship >= world.ship_count():
 			continue
 		var filter: ViewFilter = _filter_of(view_key)
-		for kind: int in StationViews.sections_of(k[1]):
-			var skey: String = _skey(kind, _owner(kind, ship), _signature(kind, filter))
-			needed[skey] = [kind, _owner(kind, ship), filter]
-			if kind == StationViews.Section.NEAR:
+		for item: Array in _list_of(view_key):
+			needed[item[2]] = [item[0], item[1], filter]
+			if item[0] == StationViews.Section.NEAR:
 				near_ships[ship] = true
 	for skey: String in _sections.keys():
 		if not needed.has(skey):
@@ -125,13 +131,13 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 
 ## The chunks of a view key's message at the current snapshot, built once and shared.
 func chunks(view_key: String, is_full: bool) -> Array[PackedByteArray]:
-	var ck: String = "%s|%d" % [view_key, 1 if is_full else 0]
-	if _cache.has(ck):
-		return _cache[ck]
+	var cache: Dictionary = _cache_full if is_full else _cache_delta
+	if cache.has(view_key):
+		return cache[view_key]
 	var out: Array[PackedByteArray] = NetChunker.split(
 		NetChunker.STREAM_SNAPSHOT, seq, message(view_key, is_full), chunk_size
 	)
-	_cache[ck] = out
+	cache[view_key] = out
 	counts["full_messages" if is_full else "delta_messages"] += 1
 	return out
 
@@ -139,17 +145,16 @@ func chunks(view_key: String, is_full: bool) -> Array[PackedByteArray]:
 ## A view key's message at the current snapshot (not cached; chunks() caches).
 func message(view_key: String, is_full: bool) -> PackedByteArray:
 	var k: Array = StationViews.parse_key(view_key)
-	var ship: int = k[0]
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.put_u8(NetProtocol.Type.SNAPSHOT)
-	buf.put_u8(FLAG_FULL if is_full else 0)
+	buf.put_u8(SnapshotReader.FLAG_FULL if is_full else 0)
 	buf.put_u32(seq)
 	buf.put_u32(tick)
 	buf.put_u8(0)
 	var n: int = 0
-	var filter: ViewFilter = _filter_of(view_key)
-	for kind: int in StationViews.sections_of(k[1]):
-		var skey: String = _skey(kind, _owner(kind, ship), _signature(kind, filter))
+	for item: Array in _list_of(view_key):
+		var kind: int = item[0]
+		var skey: String = item[2]
 		if not _sections.has(skey):
 			continue
 		var part: PackedByteArray = (
@@ -164,7 +169,7 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 		buf.put_data(part)
 		n += 1
 	var out: PackedByteArray = buf.data_array
-	out[HEADER_BYTES - 1] = n
+	out[SnapshotReader.HEADER_BYTES - 1] = n
 	return out
 
 
@@ -192,24 +197,27 @@ func section(kind: int, owner: int, signature: String = "") -> SnapshotSection:
 	return _sections.get(_skey(kind, owner, signature))
 
 
-## Writes a section length (u16, or LONG_SECTION then a u32).
+## Writes a section length (u16, or SnapshotReader.LONG_SECTION then a u32).
 static func put_length(buf: StreamPeerBuffer, size: int) -> void:
-	if size < LONG_SECTION:
+	if size < SnapshotReader.LONG_SECTION:
 		buf.put_u16(size)
 	else:
-		buf.put_u16(LONG_SECTION)
+		buf.put_u16(SnapshotReader.LONG_SECTION)
 		buf.put_u32(size)
 
 
-## Reads a section length written by put_length().
-static func get_length(buf: StreamPeerBuffer) -> int:
-	var size: int = buf.get_u16()
-	return buf.get_u32() if size == LONG_SECTION else size
-
-
-## [seq, full, tick] of a snapshot message without decoding its sections.
-static func peek(data: PackedByteArray) -> Array:
-	return [data.decode_u32(2), data[1] & FLAG_FULL == FLAG_FULL, data.decode_u32(6)]
+## The sections of a view key as [kind, owner, section key], cached per key.
+func _list_of(view_key: String) -> Array:
+	if _lists.has(view_key):
+		return _lists[view_key]
+	var k: Array = StationViews.parse_key(view_key)
+	var filter: ViewFilter = _filter_of(view_key)
+	var out: Array = []
+	for kind: int in StationViews.sections_of(k[1]):
+		var owner: int = _owner(kind, k[0])
+		out.append([kind, owner, _skey(kind, owner, _signature(kind, filter))])
+	_lists[view_key] = out
+	return out
 
 
 func _owner(kind: int, ship: int) -> int:

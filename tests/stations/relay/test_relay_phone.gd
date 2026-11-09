@@ -14,7 +14,6 @@ const SIDEWAYS: Vector2i = Vector2i(844, 390)
 const UPRIGHT: Vector2i = Vector2i(390, 844)
 const H2: int = StationFixture.H2
 const ALLY: int = 3
-const AUDIT: Array[String] = ["under_min", "under_primary", "in_band", "outside_safe", "tight"]
 
 var _vp: SubViewport
 
@@ -62,12 +61,7 @@ func _relay(s: StationScreen) -> RelayPanel:
 func _assert_taps_ok(root: Control, what: String) -> void:
 	var report: Dictionary = TapAudit.check(root)
 	assert_array(report["targets"]).is_not_empty()
-	for rule: String in AUDIT:
-		(
-			assert_array(report[rule])
-			. override_failure_message("%s %s: %s" % [what, rule, report[rule]])
-			. is_empty()
-		)
+	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
 func _count(s: StationScreen, call: String, kind: String = "") -> Callable:
@@ -106,7 +100,11 @@ func _table(s: StationScreen, p: RelayPanel) -> Array:
 	var row_of: Callable = func(box_name: String) -> Callable:
 		return func() -> BaseButton:
 			var box: VBoxContainer = p.phone.get(box_name)
-			return box.get_child(0) as BaseButton if box.get_child_count() > 0 else null
+			# The first row to pick (the Marks page opens with the incoming mark's line).
+			for child: Node in box.get_children():
+				if child is BaseButton and (child as BaseButton).toggle_mode:
+					return child as BaseButton
+			return null
 	var centred: Callable = func() -> bool: return p._centred
 	var sel: Callable = func() -> String: return str(s.ctx.crew.selection)
 	var rows: Array = [
@@ -128,6 +126,26 @@ func _table(s: StationScreen, p: RelayPanel) -> Array:
 		["Send mark to an ally", 0, b.call("send"), 0, 2, "mark", _count(s, "send_mark")],
 		["Centre", 0, b.call("centre"), -1, 1, "contact", centred],
 		["Pick a mark", 1, row_of.call("_marks_box"), -1, 2, "none", sel],
+		[
+			"Accept inbox mark (Marks)",
+			1,
+			func() -> BaseButton:
+				return p.phone._marks_box.find_child("Relay_accept_incoming", true, false),
+			-1,
+			2,
+			"contact",
+			_count(s, "accept_mark")
+		],
+		[
+			"Decline inbox mark (Marks)",
+			1,
+			func() -> BaseButton:
+				return p.phone._marks_box.find_child("Relay_decline_incoming", true, false),
+			-1,
+			2,
+			"contact",
+			_count(s, "decline_mark")
+		],
 		["Rename", 1, b.call("rename"), -1, 2, "mark", func() -> bool: return p._rename.visible],
 		["Delete", 1, b.call("delete"), -1, 2, "mark", _count(s, "delete_mark")],
 		["Attach", 1, b.call("attach"), -1, 2, "mark", _count(s, "move_mark")],
@@ -175,9 +193,12 @@ func test_every_action_is_within_two_taps_both_ways_up() -> void:
 			p._rename.visible = false
 			await _frames(2)
 			var before: Variant = (row[6] as Callable).call()
-			var taps: int = await PhoneReach.tap_row(s, [row[1], row[2], row[3]])
+			var walked: Dictionary = PhoneReach.walk(
+				s, {"page": row[1], "control": row[2], "option": row[3], "taps": 2}
+			)
+			var taps: int = walked["taps"]
 			assert_int(taps).override_failure_message(what).is_equal(row[4])
-			assert_int(taps).override_failure_message(what).is_less_equal(2)
+			assert_str(walked["error"]).override_failure_message(what).is_empty()
 			var after: Variant = (row[6] as Callable).call()
 			assert_bool(after != before).override_failure_message(what).is_true()
 		# Read the ship's log: its tab (1 tap).
@@ -371,3 +392,34 @@ func _mouse_move(p: RelayPanel, rel: Vector2) -> void:
 	m.relative = rel
 	m.device = InputEvent.DEVICE_ID_EMULATION
 	p._gui_input(m)
+
+
+# FT: FT-STN-005
+# w5: the probe and inbox lines share their width by their texts, or stack where the view is
+# too narrow (the Log page), so "Incoming: Rock from Wren (Relay)" reads whole both ways up.
+func test_the_inbox_line_reads_whole_both_ways_up() -> void:
+	for form: Array in [
+		[SIDEWAYS, LANDSCAPE, RelayPhone.PAGE_MAP],
+		[SIDEWAYS, LANDSCAPE, RelayPhone.PAGE_LOG],
+		[UPRIGHT, PORTRAIT, RelayPhone.PAGE_MAP],
+	]:
+		var s: StationScreen = await _screen(form[0], form[1])
+		_given(s, "contact")
+		var phone: RelayPhone = _relay(s).phone
+		phone.pages.select(form[2])
+		await _frames(3)
+		assert_str(phone.mail.text).is_equal("Incoming: Rock from Wren (Relay)")
+		for l: Label in [phone.probes, phone.mail]:
+			var need: float = (
+				l
+				. get_theme_font("font")
+				. get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 13)
+				. x
+			)
+			(
+				assert_float(l.size.x)
+				. override_failure_message("%s %s" % [form[0], l.text])
+				. is_greater_equal(need)
+			)
+		_vp.queue_free()
+		await _frames(1)

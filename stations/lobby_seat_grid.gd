@@ -1,0 +1,407 @@
+class_name LobbySeatGrid
+extends RefCounted
+## The lobby's seats (D216, D257, FT-NET-015, FT-JNT-006): the station grid, its legend and
+## the coverage line, the selection's name and role, and the Captain, Viewer and dev buttons,
+## with the pick rules (up to MAX_STATIONS stations, two make the joint view of the pair).
+## It builds and fills its nodes; LobbyScreen places them and lays them out. A tap sends the
+## pick to the server and emits `changed`, and the screen refreshes.
+
+## A tap changed the picks: the lobby refreshes.
+signal changed
+
+## The load tags, in legend order, and the colour word the legend names them with.
+const LOAD_TAGS: Array[String] = ["intense", "busy", "light"]
+## The crew stations in grid order (row by row in landscape).
+const GRID_STATIONS: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
+## A player picks at most this many stations (a joint view covers two).
+const MAX_STATIONS: int = 2
+## Cell padding and the grid gap, in px at 100 % UI scale (a cell stays >= TOUCH_MIN tall).
+const CELL_INSET: int = 4
+const GRID_GAP: int = 4
+## The lines a cell's role summary wraps to (P28-Lobby), in both orientations; the texts
+## are written to fit a phone's portrait cell.
+const ROLE_LINES: int = 2
+const CAPTAIN: String = "captain"
+const VIEWER: String = "viewer"
+## The dev entry holding every station, offered by --dev-all-stations only, and shown only in a
+## game started with --dev (ClientSettings.dev_flag).
+const DEV_ALL: String = "all"
+
+## The ship whose stations are shown (LobbyScreen.ship).
+var ship: int = -1
+## The nodes, placed by LobbyScreen: the coverage line, the grid, the legend, the Info block
+## (the selection's name and role) and the seat row.
+var coverage: Label
+var grid: GridContainer
+var legend: HBoxContainer
+var info: VBoxContainer
+var summary: BoxContainer
+var summary_name: Label
+var summary_role: Label
+var seat_row: HBoxContainer
+var _ctx: StationContext
+var _captain: Button
+var _viewer: Button
+var _dev_all: Button
+## The stations tapped since the server last answered a pick: a second tap before the
+## answer to the first must still add to it. Empty of meaning while `_tapped` is false.
+var _local: Array[String] = []
+var _tapped: bool = false
+## The station ids whose cells exist; a refresh rebuilds only when they change.
+var _cell_ids: Array[String] = []
+
+
+func _init(context: StationContext) -> void:
+	_ctx = context
+	coverage = _label("", "DimLabel")
+	coverage.name = "Coverage"
+	grid = GridContainer.new()
+	grid.name = "Grid"
+	grid.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	grid.add_theme_constant_override("h_separation", GRID_GAP)
+	grid.add_theme_constant_override("v_separation", GRID_GAP)
+	legend = HBoxContainer.new()
+	legend.name = "Legend"
+	legend.alignment = BoxContainer.ALIGNMENT_CENTER
+	_build_summary()
+	_build_seats()
+
+
+## The coverage line, the legend and the cells, for the shown ship's `lobby` state.
+func refresh_cells(state: Dictionary) -> void:
+	coverage.text = coverage_text(state)
+	_build_legend()
+	_refresh_grid()
+
+
+## The server answered the pick (or refused it): the picks are the server's again.
+func answered() -> void:
+	_tapped = false
+
+
+## "Crew 2/3 · uncovered: Science, Comms" (FT-NET-021).
+func coverage_text(state: Dictionary) -> String:
+	if state.is_empty():
+		return ""
+	var crew: String = tr("lobby.crew") % [int(state.get("crew", 0)), int(state.get("min_crew", 3))]
+	var uncovered: Array = state.get("uncovered", [])
+	if uncovered.is_empty():
+		return "%s · %s" % [crew, tr("lobby.covered")]
+	var names: PackedStringArray = []
+	for s: Variant in uncovered:
+		names.append(tr("station." + str(s)))
+	return "%s · %s" % [crew, tr("lobby.uncovered") % ", ".join(names)]
+
+
+## The hint of a joint view naming the pair it makes solo (FT-JNT-006); "" otherwise.
+static func joint_hint(def: Dictionary) -> String:
+	var st: Array = def.get("stations", [])
+	if st.size() != 2:
+		return ""
+	return (
+		TranslationServer.translate("lobby.joint_pair")
+		% [
+			TranslationServer.translate("station." + str(st[0])),
+			TranslationServer.translate("station." + str(st[1])),
+		]
+	)
+
+
+## The colour of a seat's load tag (intense, busy, light); the normal text colour for
+## no tag (the Viewer).
+static func load_color(tag: String) -> Color:
+	return Palette.color("load_" + tag if tag in LOAD_TAGS else "text")
+
+
+## The stations the player has picked on the shown ship (none for Captain, Viewer and
+## the dev entry).
+func selected_stations() -> Array[String]:
+	var out: Array[String] = []
+	if _tapped:
+		out.assign(_local)
+		return out
+	if _ctx.crew.ship != ship or _ctx.crew.entry in [DEV_ALL, ""]:
+		return out
+	for st: Variant in _ctx.crew.stations():
+		out.append(str(st))
+	return out
+
+
+## The catalogue entry covering exactly these stations: the station itself for one, the
+## joint view of the pair for two; "" when there is none.
+func entry_for(stations: Array[String]) -> String:
+	for def: Dictionary in _ctx.crew.catalogue.get("entries", []):
+		var st: Array = def.get("stations", [])
+		if st.size() != stations.size() or stations.is_empty():
+			continue
+		var same: bool = true
+		for s: String in stations:
+			same = same and s in st
+		if same:
+			return str(def["id"])
+	return ""
+
+
+## The names of the crewmates who picked a station (a joint view covers both of its
+## stations), from the `lobby` event's seats.
+func crew_at(station: String) -> PackedStringArray:
+	var names: PackedStringArray = []
+	for seat: Variant in _ctx.crew.ship_state(ship).get("seats", []):
+		var covered: Array = _ctx.crew.def_of(str(seat["entry"])).get("stations", [])
+		if station in covered:
+			names.append(str(seat["name"]))
+	return names
+
+
+## A tap on a station cell: adds it to the picks (up to two), or takes it out; the pick
+## goes to the server at once.
+func tap_station(id: String) -> void:
+	var picks: Array[String] = selected_stations()
+	if id in picks:
+		picks.erase(id)
+	elif picks.size() < MAX_STATIONS:
+		picks.append(id)
+	else:
+		changed.emit()
+		return
+	if picks.is_empty():
+		_ctx.intents.release_pick()
+	else:
+		var entry: String = entry_for(picks)
+		if entry == "":
+			changed.emit()
+			return
+		_ctx.intents.pick(ship, entry)
+	_local = picks
+	_tapped = true
+	changed.emit()
+
+
+## A tap on Captain, Viewer or the dev entry: picks it, or gives it up when it is the
+## pick.
+func tap_seat(id: String) -> void:
+	_tapped = true
+	_local = []
+	if _ctx.crew.ship == ship and _ctx.crew.entry == id:
+		_ctx.intents.release_pick()
+	else:
+		_ctx.intents.pick(ship, id)
+	changed.emit()
+
+
+## The title and summary under the grid for the current pick: a station's name and
+## role, or a joint view's name, its pair and its role.
+func selection_text() -> Array[String]:
+	var entry: String = _ctx.crew.entry if _ctx.crew.ship == ship else ""
+	if entry == "":
+		return [tr("lobby.no_pick"), ""]
+	var name: String = tr("station." + entry)
+	var pair: String = joint_hint(_ctx.crew.def_of(entry))
+	if pair != "":
+		name += " (%s)" % pair
+	return [name, tr("role." + entry)]
+
+
+## The one-line legend under the grid: "Red: intense · Yellow: busy · Green: light", each
+## part in its colour (D187).
+func _build_legend() -> void:
+	for c: Node in legend.get_children():
+		if c != coverage:
+			legend.remove_child(c)
+			c.queue_free()
+	for i: int in LOAD_TAGS.size():
+		if i > 0:
+			legend.add_child(_label("·", "SmallLabel"))
+		var tag: String = LOAD_TAGS[i]
+		var item: Label = _label(tr("lobby.legend_" + tag), "SmallLabel")
+		item.name = "Legend_" + tag
+		item.add_theme_color_override("font_color", load_color(tag))
+		legend.add_child(item)
+
+
+static func _label(text: String, variation: String = "") -> Label:
+	var l: Label = Label.new()
+	l.text = text
+	l.theme_type_variation = variation
+	return l
+
+
+## Cells are kept while the same stations are listed; a refresh only updates their state
+## and crew names, so a tap that lands during a refresh is not lost.
+func _refresh_grid() -> void:
+	var picks: Array[String] = selected_stations()
+	var full: bool = picks.size() >= MAX_STATIONS
+	# The dev entry holds every station: all six cells show as selected and locked; a tap
+	# on one leaves it for that station alone.
+	var dev: bool = _ctx.crew.ship == ship and _ctx.crew.entry == DEV_ALL
+	var listed: Array[String] = []
+	for id: String in GRID_STATIONS:
+		if not _ctx.crew.def_of(id).is_empty():
+			listed.append(id)
+	if listed != _cell_ids:
+		_cell_ids = listed
+		_clear(grid)
+		for id: String in listed:
+			grid.add_child(_cell(id, str(_ctx.crew.def_of(id).get("load_tag", ""))))
+	for cell: Node in grid.get_children():
+		var b: Button = cell as Button
+		var id: String = str(b.name).trim_prefix("Entry_")
+		b.set_pressed_no_signal(dev or id in picks)
+		b.disabled = full and not id in picks
+		# Fade the text but not the seat holders' names (they keep their contrast).
+		var fade: Color = Color(1, 1, 1, 0.45) if b.disabled else Color.WHITE
+		b.find_child("Name", true, false).self_modulate = fade
+		b.find_child("Role", true, false).self_modulate = fade
+		_set_crew(b, crew_at(id))
+
+
+## A station cell (D257, P28-Lobby): a toggle button: the name left and the seat holders'
+## names right on the first line, the role summary wrapped under it (ROLE_LINES lines; the
+## texts are written to fit). Tapping it takes the seat or leaves it. Its height follows
+## the text, at least TOUCH_MIN.
+func _cell(id: String, tag: String) -> Button:
+	var b: Button = Button.new()
+	b.name = "Entry_" + id
+	b.toggle_mode = true
+	b.theme_type_variation = "LoadCell_" + (tag if tag in LOAD_TAGS else "none")
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.clip_contents = true
+	b.tooltip_text = tr("role." + id)
+	b.pressed.connect(tap_station.bind(id))
+	var box: VBoxContainer = VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	box.offset_left = CELL_INSET
+	box.offset_top = CELL_INSET
+	box.offset_right = -CELL_INSET
+	box.offset_bottom = -CELL_INSET
+	box.add_theme_constant_override("separation", 0)
+	b.add_child(box)
+	var top: HBoxContainer = HBoxContainer.new()
+	top.name = "Top"
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(top)
+	var name_label: Label = _cell_label("Name", tr("station." + id), "HeadingLabel")
+	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(name_label)
+	var role: Label = _cell_label("Role", tr("role." + id), "CaptionLabel")
+	role.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	role.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	role.max_lines_visible = ROLE_LINES
+	role.custom_minimum_size = Vector2(10, 0)
+	box.add_child(role)
+	box.minimum_size_changed.connect(_fit_cell.bind(b, box))
+	_fit_cell.call_deferred(b, box)
+	return b
+
+
+## Shows the seat holders' names on a cell, right of its name; empty while nobody sits there.
+func _set_crew(cell: Button, crew: PackedStringArray) -> void:
+	var label: Label = cell.find_child("Crew", true, false) as Label
+	if label == null:
+		label = _cell_label("Crew", "", "CrewLabel")
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		label.size_flags_horizontal = Control.SIZE_SHRINK_END
+		cell.find_child("Top", true, false).add_child(label)
+	label.text = ", ".join(crew)
+
+
+func _cell_label(node_name: String, text: String, variation: String) -> Label:
+	var l: Label = _label(text, variation)
+	l.name = node_name
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l
+
+
+## Re-fits every cell's height, after the grid's phone flag changed.
+func fit_cells() -> void:
+	for cell: Node in grid.get_children():
+		_fit_cell(cell, cell.get_child(0))
+
+
+## Takes Variants: a deferred call can outlive the cell (a refresh rebuilds the grid).
+static func _fit_cell(cell_node: Variant, box_node: Variant) -> void:
+	if is_instance_valid(cell_node) and is_instance_valid(box_node):
+		var cell: Button = cell_node
+		var box: Control = box_node
+		var h: float = box.get_combined_minimum_size().y + 2.0 * CELL_INSET
+		var least: int = UiTheme.TOUCH_MIN
+		if cell.get_parent() != null and cell.get_parent().get_meta(&"phone", false):
+			least = UiTheme.TOUCH_PRIMARY
+		cell.custom_minimum_size = Vector2(0.0, maxf(h, float(least)))
+
+
+## The Captain, Viewer and dev buttons: the pick's one is pressed; Captain is greyed out
+## while another player holds it.
+func refresh_seats(phone: bool) -> void:
+	var mine: String = _ctx.crew.entry if _ctx.crew.ship == ship else ""
+	for pair: Array in [[_captain, CAPTAIN], [_viewer, VIEWER], [_dev_all, DEV_ALL]]:
+		var b: Button = pair[0]
+		b.set_pressed_no_signal(mine == pair[1])
+		b.text = tr("station." + pair[1])
+	if phone:
+		_dev_all.text = TouchText.of("lobby.dev_short", "All (dev)")
+	_captain.disabled = _ctx.crew.captain_seated(ship) and mine != CAPTAIN
+	# Only when this game was started with --dev and the server offers it (#35 A7).
+	_dev_all.visible = ClientSettings.dev_flag and not _ctx.crew.def_of(DEV_ALL).is_empty()
+
+
+func refresh_summary() -> void:
+	var text: Array[String] = selection_text()
+	summary_name.text = text[0]
+	summary_role.text = text[1]
+
+
+## The selection's name and role, in the Info block (the legend joins it on a short
+## screen, with no gap between them).
+func _build_summary() -> void:
+	info = VBoxContainer.new()
+	info.name = "Info"
+	info.add_theme_constant_override("separation", 0)
+	var box: BoxContainer = BoxContainer.new()
+	box.vertical = true
+	box.name = "Summary"
+	info.add_child(box)
+	summary = box
+	summary_name = _label("", "HeadingLabel")
+	summary_name.name = "SummaryName"
+	summary_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	summary_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(summary_name)
+	summary_role = _label("", "DimLabel")
+	summary_role.name = "SummaryRole"
+	summary_role.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	summary_role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(summary_role)
+
+
+func _build_seats() -> void:
+	seat_row = HBoxContainer.new()
+	seat_row.name = "Seats"
+	_captain = _seat_button(CAPTAIN)
+	_viewer = _seat_button(VIEWER)
+	_dev_all = _seat_button(DEV_ALL)
+
+
+func _seat_button(id: String) -> Button:
+	var b: Button = Button.new()
+	b.name = "Entry_" + id
+	b.text = ""
+	b.pressed.connect(tap_seat.bind(id))
+	b.toggle_mode = true
+	b.theme_type_variation = "TouchButton"
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	seat_row.add_child(b)
+	return b
+
+
+static func _clear(box: Container) -> void:
+	for c: Node in box.get_children():
+		box.remove_child(c)
+		c.queue_free()

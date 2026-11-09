@@ -247,7 +247,7 @@ func test_inbox_accept_decline_and_send() -> void:
 		"id": 7, "from_ship": ALLY, "from": "Wren", "name": "Rock", "x": 1.0, "y": 2.0, "z": 3.0
 	}
 	_event(s, "inbox", {"ship": SHIP, "items": [item, item.merged({"id": 8})]})
-	assert_str(p.hud._mail.text).is_equal("Rock, from Wren +1")
+	assert_str(p.hud._mail.text).is_equal("Incoming: Rock from Wren (Relay) +1")
 	assert_bool(p.hud.accept.disabled).is_false()
 	p.handle_intent(_ev("accept", s))
 	assert_array(_sent(s, "accept_mark")).is_equal([[7, -1]])
@@ -570,7 +570,7 @@ func test_map_shows_the_sim_hazards() -> void:
 		},
 		{
 			"id": 1,
-			"shape": HazardView.PLANE,
+			"shape": BlockSchema.HAZARD_PLANE,
 			"pos": Vector3(0, 0, -3000),
 			"radius": 0.0,
 			"dir": Vector3(0, 0, 1),

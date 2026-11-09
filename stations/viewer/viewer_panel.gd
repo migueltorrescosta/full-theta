@@ -96,6 +96,10 @@ var _rail: Control
 var _cols: HBoxContainer
 var _rows: VBoxContainer
 var _items: Array[Dictionary] = []
+## This frame's picture (update_view): the rail and the target read its contacts, sorted once.
+var _picture: ContactPicture = ContactPicture.new()
+## The opaque boxes over the overlay, read once per draw (SheetCover.over walks the tree).
+var _covers: Array[Rect2] = []
 
 
 func full_screen() -> bool:
@@ -135,10 +139,11 @@ func _setup() -> void:
 	_viewport = SubViewport.new()
 	_viewport.own_world_3d = true
 	_viewport.msaa_3d = Viewport.MSAA_DISABLED
+	RenderQuality.track(_viewport)
 	view.add_child(_viewport)
 	_space = SpaceView.new()
 	_space.near_only = true
-	_space.rim.light_energy = RIM_ENERGY
+	_space.set_rim_energy(RIM_ENERGY)
 	_viewport.add_child(_space)
 	camera = _space.camera
 	_overlay = Control.new()
@@ -178,7 +183,8 @@ func update_view(delta: float) -> void:
 		_calm_since = -1
 	else:
 		update_mode(bool(status.get("decoupled", false)), roll_rate_deg_s(), now)
-	_items = ctx.picture().items
+	_picture = ctx.picture()
+	_items = _picture.items
 	var ship: Basis = Basis(ctx.interp.own_rotation())
 	if view_id == MainScreen.View.STATUS:
 		status_view.top = top_reserve
@@ -188,7 +194,7 @@ func update_view(delta: float) -> void:
 		_space.show_id = -1
 		_space.ship_scale = 1.0
 		if view_id != MainScreen.View.TARGET or not _place_target_camera():
-			_space.rim.light_energy = RIM_ENERGY
+			_space.set_rim_energy(RIM_ENERGY)
 			_space.rim.rotation_degrees = RIM_ROTATION
 			_place_camera(ship, delta)
 		_space.sync_ships(ctx)
@@ -261,7 +267,7 @@ func _place_target_camera() -> bool:
 	_space.place_camera(Transform3D(look, eye), ComfortCamera.fov_deg(ctx.settings, FOV_DEG))
 	# The fill light follows the camera, from its upper left, so the face turned to the
 	# viewer is always the lit one (a fixed light left it dark for half the bearings).
-	_space.rim.light_energy = TARGET_RIM_ENERGY
+	_space.set_rim_energy(TARGET_RIM_ENERGY)
 	_space.rim.transform = Transform3D(
 		look * Basis(Vector3.UP, deg_to_rad(-30.0)) * Basis(Vector3.RIGHT, deg_to_rad(-25.0)),
 		Vector3.ZERO
@@ -277,7 +283,7 @@ func _target_item() -> Dictionary:
 	for it: Dictionary in _items:
 		if it["kind"] == "contact" and sel.get("kind", "") == "contact" and it["id"] == sel["id"]:
 			return it
-	var near: Array[Dictionary] = rail_items()
+	var near: Array[Dictionary] = _picture.contacts_by_range(1)
 	return near[0] if not near.is_empty() else {}
 
 
@@ -358,11 +364,13 @@ func _place_camera(ship: Basis, delta: float) -> void:
 ## Brackets and chips on contacts, big diamonds on marks, big rings on pings (FT-MSC-003).
 func _draw_overlay() -> void:
 	var font: Font = get_theme_default_font()
+	_covers = SheetCover.over(_overlay)
+	# The target view's contact, found once for the whole overlay (R20-3).
+	var target: Dictionary = _target_item() if view_id == MainScreen.View.TARGET else {}
 	if view_id == MainScreen.View.TARGET:
-		var target: Dictionary = _target_item()
 		var caption: String = TranslationServer.translate("view.no_target")
 		if not target.is_empty():
-			caption = ChipText.chip(target["label"], target["local"])
+			caption = ContactPicture.chip_of(target)
 		_text(font, Vector2(16.0, 12.0 + top_reserve), caption, Palette.color("text"))
 	for it: Dictionary in _items:
 		var world: Vector3 = it["world"]
@@ -376,13 +384,13 @@ func _draw_overlay() -> void:
 		match str(it["kind"]):
 			"contact":
 				_bracket(p, 14.0, col, ctx.crew.is_selected(it["kind"], it["id"]))
-				var chip: String = ChipText.chip(it["label"], it["local"])
-				if view_id == MainScreen.View.TARGET and it["id"] == _target_item().get("id", -1):
+				var chip: String = ContactPicture.chip_of(it)
+				if view_id == MainScreen.View.TARGET and it["id"] == target.get("id", -1):
 					# The target's hull fills the middle: its label sits under it.
 					var w: float = (
 						font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 					)
-					_text(font, p + Vector2(-w / 2.0, _hull_px() * 0.6 + 14.0), chip, col)
+					_text(font, p + Vector2(-w / 2.0, _hull_px(target) * 0.6 + 14.0), chip, col)
 				else:
 					_label(font, p, chip, col)
 			"mark":
@@ -390,9 +398,7 @@ func _draw_overlay() -> void:
 				_overlay.draw_polyline(pts, col, 3.0, true)
 				_label(font, p, it["label"], col)
 		if pulse > 0.0:
-			var ping: Color = Palette.color("ping")
-			ping.a = pulse
-			_overlay.draw_arc(p, 20.0 + (1.0 - pulse) * 60.0, 0.0, TAU, 48, ping, 4.0, true)
+			ItemGlyph.ping_ring(_overlay, p, 20.0, 60.0, pulse, Palette.color("ping"), 4.0, 48)
 
 
 ## The Captain's pinged card over the view (FT-CPT-005).
@@ -406,32 +412,26 @@ func _draw_card() -> void:
 
 
 ## The target hull's half length on screen (px): TARGET_SCALE times the model's half length.
-func _hull_px() -> float:
-	var at: Vector3 = _target_item().get("world", Vector3.ZERO)
+func _hull_px(target: Dictionary) -> float:
+	var at: Vector3 = target.get("world", Vector3.ZERO)
 	var side: Vector3 = camera.global_basis.x * (HULL_HALF_M * TARGET_SCALE)
 	return absf(camera.unproject_position(at + side).x - camera.unproject_position(at).x)
 
 
 func _bracket(p: Vector2, r: float, col: Color, selected: bool) -> void:
-	var w: float = 3.0 if selected else 2.0
 	var c: Color = Palette.color("selected") if selected else col
-	for sx: float in [-1.0, 1.0]:
-		for sy: float in [-1.0, 1.0]:
-			var corner: Vector2 = p + Vector2(sx, sy) * r
-			_overlay.draw_line(corner, corner - Vector2(sx * r * 0.5, 0.0), c, w)
-			_overlay.draw_line(corner, corner - Vector2(0.0, sy * r * 0.5), c, w)
+	TargetBracket.draw(_overlay, p, r, r * 0.5, c, 3.0 if selected else 2.0)
 
 
 ## The callsign rail's contacts, nearest first.
 func rail_items() -> Array[Dictionary]:
-	var contacts: Array[Dictionary] = _items.filter(
-		func(it: Dictionary) -> bool: return it["kind"] == "contact"
-	)
-	contacts.sort_custom(
-		func(a: Dictionary, b: Dictionary) -> bool:
-			return (a["local"] as Vector3).length() < (b["local"] as Vector3).length()
-	)
-	return contacts
+	return _picture.contacts_by_range()
+
+
+## True when an item `w` px wide starting at `x` fits a rail `rail_w` px wide: the contacts
+## first, then the viewer's caption in what they leave.
+static func rail_fits(x: float, w: float, rail_w: float) -> bool:
+	return x + w <= rail_w - 12.0
 
 
 ## The callsign rail: "H2 · 4 high · mid" per contact, pinged and selected ones lit.
@@ -442,9 +442,9 @@ func _draw_rail() -> void:
 	var x: float = 12.0
 	var y: float = (_rail.size.y - font.get_height(FONT_SIZE)) / 2.0
 	for it: Dictionary in contacts:
-		var text: String = ChipText.chip(it["label"], it["local"])
+		var text: String = ContactPicture.chip_of(it)
 		var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
-		if x + w > _rail.size.x:
+		if not rail_fits(x, w, _rail.size.x):
 			break
 		if float(it.get("pulse", 0.0)) > 0.0 or ctx.crew.is_selected(it["kind"], it["id"]):
 			_rail.draw_rect(
@@ -459,6 +459,23 @@ func _draw_rail() -> void:
 			_rail.draw_line(
 				Vector2(x - 14.0, 6.0), Vector2(x - 14.0, _rail.size.y - 6.0), Palette.color("line")
 			)
+	# A plain viewer only watches: a dim caption at the rail's right end says who sets the
+	# view, where the contacts leave room for it (R23-14); the contacts come first (w5).
+	if not interactive:
+		var caption: String = tr("viewer.caption")
+		var caption_w: float = (
+			font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x
+		)
+		if rail_fits(x, caption_w, _rail.size.x):
+			_rail.draw_string(
+				font,
+				Vector2(_rail.size.x - caption_w - 12.0, y + font.get_ascent(FONT_SIZE)),
+				caption,
+				HORIZONTAL_ALIGNMENT_LEFT,
+				-1,
+				FONT_SIZE - 2,
+				Palette.color("text_dim")
+			)
 
 
 ## A marker's label: right of the marker, else left of it when an opaque list would cut the
@@ -467,7 +484,7 @@ func _label(font: Font, p: Vector2, text: String, col: Color) -> void:
 	var at: Vector2 = p + Vector2(18.0, -6.0)
 	var w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 	var box: Rect2 = Rect2(at, Vector2(w, font.get_height(FONT_SIZE)))
-	if SheetCover.touches(box, SheetCover.over(_overlay)):
+	if SheetCover.touches(box, _covers):
 		var left: Vector2 = Vector2(p.x - 18.0 - w, at.y)
 		if left.x >= 0.0:
 			at = left
@@ -483,7 +500,7 @@ func _text(font: Font, at: Vector2, text: String, col: Color) -> void:
 		)
 	)
 	# A label an opaque list would cut in half is not drawn (D319).
-	if SheetCover.touches(box, SheetCover.over(_overlay)):
+	if SheetCover.touches(box, _covers):
 		return
 	var base: Vector2 = at + Vector2(0.0, font.get_ascent(FONT_SIZE))
 	Palette.draw_outlined(_overlay, font, base, text, FONT_SIZE, col)

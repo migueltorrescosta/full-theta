@@ -97,7 +97,7 @@ func test_harden_and_fabricate_probe() -> void:
 	assert_object(SimCommands.make(&"fabricate_probe")).is_instanceof(FabricateProbeCommand)
 	assert_bool(StationViews.def("engineering").sections.has(StationViews.Section.RELAY)).is_true()
 	assert_str(StationViews.station_of_command(&"pick_fault_cause")).is_equal("engineering")
-	assert_str(StationViews.item_of(HardenCommand.new())).is_equal("")
+	assert_str(StationBlocks.item_of(HardenCommand.new())).is_equal("")
 
 
 # FT: FT-ENG-006
@@ -113,7 +113,7 @@ func test_naming_the_cause_of_an_unknown_fault() -> void:
 	engines["fault_cause"] = 0
 	engines["fault_pick"] = 0
 	engines["health"] = 0.9 * 20_000_000.0
-	var lines: Array = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	var lines: Array = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(lines).contains(["Engines 90%: cause unknown. Pick one."])
 	_press(s, "cause_next")
 	_press(s, "cause_next")
@@ -124,13 +124,15 @@ func test_naming_the_cause_of_an_unknown_fault() -> void:
 	)
 	assert_array(picks).is_equal(["coolant_leak", "short", "software", "coolant_leak"])
 	(
-		assert_str(StationViews.item_of(SimCommands.from_dict(_commands(s, "pick_fault_cause")[0])))
+		assert_str(
+			StationBlocks.item_of(SimCommands.from_dict(_commands(s, "pick_fault_cause")[0]))
+		)
 		. is_equal("")
 	)
 	# The snapshot catches up with the pick.
 	engines["fault_pick"] = 2
-	e._pending.clear()
-	lines = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	e.model._pending.clear()
+	lines = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(lines).contains(["Engines 90%: trying Short circuit"])
 
 
@@ -145,10 +147,10 @@ func test_diagnosed_cause_is_shown() -> void:
 	engines["fault_cause"] = 3
 	engines["fault_pick"] = 0
 	engines["health"] = 0.9 * 20_000_000.0
-	var lines: Array = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	var lines: Array = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(lines).contains(["Engines 90%: Science found Software fault. Pick it."])
 	engines["fault_pick"] = 3
-	lines = e.fault_lines().map(func(l: Array) -> String: return l[0])
+	lines = e.model.fault_lines().map(func(l: Array) -> String: return l[0])
 	assert_array(lines).contains(["Engines 90%: Software fault (diagnosed)"])
 
 

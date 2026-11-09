@@ -2,7 +2,7 @@
 
 ## 9.1 Voices
 
-Piper voices speak NPC radio, ship-computer announcements and alerts (D38). Authored lines are prerendered at build time. The session's closed set (ship names, callsigns, NPC names) is synthesised at Start and cached per language; numbers are stitched from prerendered fragments; only free text is synthesised at runtime, which GPL-3.0 allows (D2, D38, D101). The ship computer uses Piper with a robotic/radio filter; there is no second engine (D71). Runtime and closed-set synthesis use medium-quality voices; high-quality voices only for prerendered lines (D105). Synthesis runs on the host server in one persistent Piper process per voice off the sim thread; each stitched or synthesised clip is streamed only to the client that plays it, so browser stations need no local Piper (D85, D101). Clients play authored lines without slots from their own export, as Ogg Vorbis; the host keeps the segments and number fragments it stitches from (D152, D154). The robotic filter is an effect chain on the client's ship-computer audio bus (D153).
+Piper voices speak NPC radio, ship-computer announcements and alerts (D38). Authored lines are prerendered at build time. The session's closed set (ship names, callsigns, NPC names) is synthesised at Start and cached per language; numbers are stitched from prerendered fragments; every spoken line is authored, so the only runtime synthesis is a closed-set name missing from the cache, which GPL-3.0 allows (D2, D38, D101, D387). The ship computer uses Piper with a robotic/radio filter; there is no second engine (D71). Runtime and closed-set synthesis use medium-quality voices; high-quality voices only for prerendered lines (D105). Synthesis runs on the host server in one persistent Piper process per voice off the sim thread; each stitched or synthesised clip is streamed only to the client that plays it, so browser stations need no local Piper (D85, D101). Clients play authored lines without slots from their own export, as Ogg Vorbis; the host keeps the segments and number fragments it stitches from (D152, D154). The robotic filter is an effect chain on the client's ship-computer audio bus (D153).
 
 ## 9.2 Routing
 
@@ -24,7 +24,7 @@ Semi-realistic science fiction with readable silhouettes: procedural geometry wi
 
 - **FT-AUD-001** NPC radio, ship-computer announcements and alerts shall use offline Piper voices. (D38)
 - **FT-AUD-002** Authored lines shall be prerendered at build time per language; generated audio shall not be committed. (D38)
-- **FT-AUD-003** Dynamic lines (names, numbers, free text) shall be voiced with Piper as in FT-AUD-018 and FT-AUD-019. (D38, D101)
+- **FT-AUD-003** Dynamic lines (names and numbers) shall be voiced with Piper as in FT-AUD-018 and FT-AUD-019; there are no free-text lines. (D38, D101, D387)
 - **FT-AUD-004** The ship computer shall use a Piper voice with a robotic/radio filter. (D71)
 - **FT-AUD-005** An NPC line shall play only on the client holding that NPC's conversation claim; while the conversation is unclaimed it shall play on every client holding Comms of that ship. (D39, D238)
 - **FT-AUD-006** A ship-computer line shall play only on clients holding the stations it concerns. (D39, D177)
@@ -36,10 +36,10 @@ Semi-realistic science fiction with readable silhouettes: procedural geometry wi
 - **FT-AUD-012** The game shall launch with English, Portuguese (pt_PT) and Italian. (D40, D189, D243)
 - **FT-AUD-013** A session shall use one language for all text and voice, chosen by the host. (D41)
 - **FT-AUD-014** Every shipped Piper voice shall have a licence compatible with redistribution, recorded in the provenance manifest. (D2, D63)
-- **FT-AUD-015** Runtime synthesis shall make a free-text line audible within 1 s of its event on the target client (verified by spike S7b); when more than 4 free-text lines are queued for synthesis, further lines shall show subtitles only, with no audio. (D38, D39, D101, D110)
+- **FT-AUD-015** Runtime synthesis shall make a line audible within 1 s of its event on the target client (verified by spike S7b). (D38, D39, D101, D387)
 - **FT-AUD-016** Art shall use procedural or primitive meshes and CC0 packs with semi-realistic PBR-style materials in the Compatibility renderer; sounds shall be CC0. (D63, D107)
 - **FT-AUD-017** Browser clients shall unlock audio with a user gesture on join. (D8, D200)
-- **FT-AUD-018** The host server shall synthesise the session's closed set (ship names, callsigns, NPC names) at Start and cache it per language; numbers shall use prerendered fragments; runtime synthesis shall be used only for free text. (D85, D101)
+- **FT-AUD-018** The host server shall synthesise the session's closed set (ship names, callsigns, NPC names) at Start and cache it per language; numbers shall use prerendered fragments; runtime synthesis shall be used only for a closed-set name missing from the cache. (D85, D101, D387)
 - **FT-AUD-019** Synthesis shall run on the host server in one persistent Piper process per voice off the sim thread, and the host shall stream each dynamic clip only to the client that plays it. (D85, D101, plan review TECH-5)
 - **FT-AUD-020** Ships shall be baked at build time by a headless script into packed scenes with the ambient occlusion in vertex colours, which the game only loads; the gate shall fail when a baked ship, or the shared maps every look references, is older than its inputs. (D308, D317)
 - **FT-AUD-021** Every ship shall use the same hull, with one roughness map and one normal map shared by every look and its own small albedo map for the seeded panel shades, its own accent stripe colour and its name as a decal; a name with no baked look shall use the generic look. (D309, D317)

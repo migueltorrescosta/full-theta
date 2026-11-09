@@ -5,13 +5,16 @@ extends RefCounted
 ## returns the same NetSession: connected (a takeover: the old socket may not have
 ## closed yet), within the grace period after a drop (pick and claims kept), or after
 ## it (the session lapsed: ServerSession released its pick and claims and restores
-## what is still free). Tokens live as long as the server (provisional: see
-## docs/protocol.md, Rates and limits).
+## what is still free). A lapsed session that held no pick or claim has nothing to restore
+## and is forgotten EVICT_US after its drop (evict, R11-3); the others keep their token for
+## the server's lifetime (provisional: see docs/protocol.md, Rates and limits).
 ##
 ## Times are wall-clock microseconds supplied by the caller, outside sim/, so the grace
 ## runs while the sim is paused.
 
 const DEFAULT_GRACE_US: int = 15_000_000
+## How long after its drop a lapsed session without a pick or claim is forgotten (us).
+const EVICT_US: int = 600_000_000
 
 var grace_us: int = DEFAULT_GRACE_US
 var _by_token: Dictionary[String, NetSession] = {}
@@ -63,6 +66,22 @@ func expire(now_us: int) -> Array[NetSession]:
 	for session: NetSession in _by_token.values():
 		if _expired(session, now_us):
 			session.lapsed = true
+			gone.append(session)
+	return gone
+
+
+## Forgets (token and all) the lapsed sessions that held no pick or claim and dropped more
+## than EVICT_US ago, and returns them: a connect/Hello/close loop leaves nothing behind.
+func evict(now_us: int) -> Array[NetSession]:
+	var gone: Array[NetSession] = []
+	for session: NetSession in _by_token.values():
+		if (
+			session.lapsed
+			and session.last_entry == ""
+			and session.last_claims.is_empty()
+			and now_us - session.dropped_us > EVICT_US
+		):
+			_by_token.erase(session.token)
 			gone.append(session)
 	return gone
 

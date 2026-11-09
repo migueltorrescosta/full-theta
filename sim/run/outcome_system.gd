@@ -15,10 +15,11 @@ extends RefCounted
 ## Statuses and outcomes are final for the run; SimWorld.reset_ship (FT-MIS-017)
 ## restores a ship's row to IN_PLAY / NONE like every other table.
 ## Multi-ship sessions (#11): a crewed ship destroyed by a crewed ship of another side counts
-## a kill for that ship (RunTable.kills); each outcome stamps RunTable.finish_tick. In a
-## director run (run_def set), a crewed ship's LOSS also emits &"eliminated"
-## (SessionOutcome.EVENT_ELIMINATED, FT-MIS-011), and the first tick session_outcome() is
-## over emits &"session_over" (SessionOutcome.EVENT_SESSION_OVER).
+## a kill for that ship (RunTable.kills); each outcome stamps RunTable.finish_tick. A crewed
+## ship's LOSS also emits &"eliminated" (SessionOutcome.EVENT_ELIMINATED, FT-MIS-011) with the
+## reason and the lives left, which the server relays (NetFleet, F5); in a director run
+## (run_def set) the first tick session_outcome() is over emits &"session_over"
+## (SessionOutcome.EVENT_SESSION_OVER).
 
 
 static func step(world: SimWorld) -> void:
@@ -41,6 +42,10 @@ static func step(world: SimWorld) -> void:
 			status[id] = RunTable.Status.DESTROYED
 			if enabled[id] == 0:
 				_count_kill(world, id)
+				# A ship that won and was then destroyed is out of play too: it has no
+				# LOSS to emit the elimination from (R17-5).
+				if outcome[id] == RunTable.Outcome.WIN:
+					_emit_eliminated(world, id)
 		elif enabled[id] == 1 and mode[id] == AiTable.Mode.RETREAT and _escaped(world, id):
 			status[id] = RunTable.Status.RETREATED
 			world.emit(&"retreated", id)
@@ -64,15 +69,17 @@ static func step(world: SimWorld) -> void:
 
 ## The session's outcome under world.rules (#11): who won and why, derived from RunTable each
 ## time it is asked. A crewed ship still stands while it has no LOSS, or has one and its
-## side's relaunch policy allows another relaunch (M4-Q2). COOP: OBJECTIVE with every
+## side's relaunch policy allows another relaunch (M4-Q2); a ship out of play never stands
+## by an earlier win. COOP: OBJECTIVE with every
 ## crewed ship that won once the fleet run's final objective is complete (FT-MIS-013,
 ## M4-Q1). RACE: FIRST_TO_FINISH, the first ship to complete the final objective, by
 ## RunTable.finish_tick (FT-MIS-032). LAST_STANDING: LAST_STANDING, the one crewed ship left
 ## standing (FT-MIS-033). TEAMS: by rules.team_win, the first team to finish, or the last
 ## team with a ship standing (once no ship plays on and several teams stand, the first to
 ## finish), its ships the winners (FT-MIS-034, M4-Q6). HOLDOUT: HOLDOUT_OVER once the finite
-## side has no ship standing, held_ticks the tick its last ship left play (M4-Q2); no winner
-## is named. Every mode: ALL_LOST once no crewed ship stands and none won.
+## side has no ship standing, held_ticks the tick its last ship left play (M4-Q2), no winner
+## named; or, when the time cap runs out first, the finite side wins (A11). Every mode:
+## ALL_LOST once no crewed ship stands and none won.
 static func session_outcome(world: SimWorld) -> SessionOutcome:
 	var out: SessionOutcome = SessionOutcome.new()
 	var crew: PackedInt32Array = PackedInt32Array()
@@ -85,7 +92,8 @@ static func session_outcome(world: SimWorld) -> SessionOutcome:
 		crew.append(id)
 		var o: int = world.run.outcome[id]
 		won = won or o == RunTable.Outcome.WIN
-		if o != RunTable.Outcome.LOSS or _may_relaunch(world, id):
+		# in play counts, not "no loss": a ship that won and was then destroyed does not stand.
+		if world.run.status[id] == RunTable.Status.IN_PLAY or _may_relaunch(world, id):
 			standing.append(id)
 			playing = playing or o == RunTable.Outcome.NONE
 	if crew.is_empty():
@@ -172,23 +180,44 @@ static func _last_team(
 			out.winners.append(id)
 
 
-## HOLDOUT_OVER once no ship of the finite side stands; held_ticks the latest tick one of its
-## ships left play.
+## HOLDOUT_OVER once no ship of the finite side stands (no winner, held_ticks the latest tick
+## one of its ships left play). With one still standing, the session ends at
+## SessionRules.HOLDOUT_CAP_S: the finite side held if a ship of it is in play, and wins (team
+## and winners named, held_ticks the cap); one that only waits to relaunch has not held (no
+## winner, held_ticks as above).
 static func _holdout(
 	world: SimWorld, crew: PackedInt32Array, standing: PackedInt32Array, out: SessionOutcome
 ) -> void:
 	var finite: int = SessionRules.HOLDOUT_FINITE_TEAM
-	var held: int = -1
+	var latest: int = -1
+	var in_play: bool = false
+	var waiting: bool = false
 	for id: int in crew:
 		if world.team_of(id) != finite:
 			continue
-		if standing.has(id):
+		latest = maxi(latest, world.run.finish_tick[id])
+		if world.run.status[id] == RunTable.Status.IN_PLAY:
+			in_play = true
+		elif standing.has(id):
+			waiting = true
+	if in_play or waiting:
+		var cap: int = SimRate.ticks(SessionRules.HOLDOUT_CAP_S)
+		if world.tick < cap:
 			return
-		held = maxi(held, world.run.finish_tick[id])
-	if held < 0:
+		out.reason = SessionOutcome.Reason.HOLDOUT_OVER
+		if not in_play:
+			out.held_ticks = latest
+			return
+		out.held_ticks = cap
+		out.team = finite
+		for id: int in crew:
+			if world.team_of(id) == finite:
+				out.winners.append(id)
+		return
+	if latest < 0:
 		return
 	out.reason = SessionOutcome.Reason.HOLDOUT_OVER
-	out.held_ticks = held
+	out.held_ticks = latest
 
 
 ## A crewed ship destroyed this tick by a crewed ship of another side: one kill for that ship
@@ -202,9 +231,9 @@ static func _count_kill(world: SimWorld, id: int) -> void:
 		if e.kind != &"destroyed" or e.ship_id != id:
 			continue
 		var killer: int = e.other_id
-		if killer < 0 or killer == id or killer >= world.ship_count():
+		if killer == id or not world.has_ship(killer):
 			return
-		if world.ai.is_enabled(killer) or world.team_of(killer) == world.team_of(id):
+		if not world.is_crew(killer) or world.team_of(killer) == world.team_of(id):
 			return
 		world.run.kills[killer] += 1
 		return
@@ -219,7 +248,7 @@ static func _escaped(world: SimWorld, id: int) -> bool:
 		if not world.kin.is_alive(o):
 			continue
 		var f: int = world.faction_of(o)
-		if world.relation(faction, f) == SimWorld.Relation.HOSTILE:
+		if world.is_hostile(faction, f):
 			if KnowledgeSystem.is_detected(world, f, id):
 				return false
 	return true
@@ -236,7 +265,7 @@ static func _enemies_gone(world: SimWorld, id: int) -> bool:
 	for o: int in world.ship_count():
 		var f: int = factions[o]
 		if not hostile.has(f):
-			hostile[f] = world.relation(faction, f) == SimWorld.Relation.HOSTILE
+			hostile[f] = world.is_hostile(faction, f)
 		if not hostile[f]:
 			continue
 		if status[o] == RunTable.Status.IN_PLAY:
@@ -266,16 +295,21 @@ static func _set_outcome(world: SimWorld, id: int, outcome: RunTable.Outcome) ->
 	world.run.outcome[id] = outcome
 	world.run.finish_tick[id] = world.tick
 	world.emit(&"outcome", id, -1, outcome, Vector3.ZERO, RunTable.OUTCOME_NAMES[outcome])
-	if outcome == RunTable.Outcome.LOSS and world.run_def != null:
-		var tag: StringName = &"destroyed"
-		if world.run.status[id] == RunTable.Status.ABANDONED:
-			tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
-		var policy: RelaunchPolicy = world.rules.relaunch_for(world.team_of(id))
-		world.emit(
-			SessionOutcome.EVENT_ELIMINATED,
-			id,
-			-1,
-			policy.left(world.run.relaunches[id]),
-			Vector3.ZERO,
-			tag
-		)
+	if outcome == RunTable.Outcome.LOSS:
+		_emit_eliminated(world, id)
+
+
+## &"eliminated" for a crewed ship out of play: tagged destroyed, or abandoned / forfeit.
+static func _emit_eliminated(world: SimWorld, id: int) -> void:
+	var tag: StringName = &"destroyed"
+	if world.run.status[id] == RunTable.Status.ABANDONED:
+		tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
+	var policy: RelaunchPolicy = world.rules.relaunch_for(world.team_of(id))
+	world.emit(
+		SessionOutcome.EVENT_ELIMINATED,
+		id,
+		-1,
+		policy.left(world.run.relaunches[id]),
+		Vector3.ZERO,
+		tag
+	)

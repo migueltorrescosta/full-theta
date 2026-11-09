@@ -31,7 +31,7 @@ func test_encounter_places_hazards_and_caps_them() -> void:
 
 # FT: FT-MIS-017, FT-ARC-020, FT-GEN-010, FT-M1-012
 # A full encounter fought to its outcome with the scripted crew (a win by destruction
-# at tick 3189) leaves every definition's hash unchanged; the reset world (build()
+# at tick 3581) leaves every definition's hash unchanged; the reset world (build()
 # again) has the state hash of a freshly built one, not the ended world's: tick 0,
 # every ship in play, no outcome, no events, no command log, and the two run the next
 # 600 ticks to the same hash.

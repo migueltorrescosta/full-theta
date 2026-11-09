@@ -103,7 +103,7 @@ func test_weapons_lists_the_feeds_of_the_selected_target() -> void:
 	await get_tree().process_frame
 	var panel: WeaponsPanel = s.panels[0] as WeaponsPanel
 	ctx.crew.select("contact", StationFixture.H2)
-	assert_array(panel.feed_lines()).is_empty()
+	assert_array(WeaponsReadout.feed_lines(panel)).is_empty()
 	var raider: ShipDef = TestDefs.raider()
 	var kind: StringName = panel.weapon_of(panel.mount).damage_type
 	ctx.view.blocks[StationViews.Section.FEEDS] = {
@@ -111,22 +111,22 @@ func test_weapons_lists_the_feeds_of_the_selected_target() -> void:
 		[
 			{
 				"contact": StationFixture.H2,
-				"class_id": ScienceView.code(raider.id),
+				"class_id": BlockSchema.id_code(raider.id),
 				"weak_mask": 1,
-				"resist": [{"type": ScienceView.code(kind), "factor": 0.5}],
+				"resist": [{"type": BlockSchema.id_code(kind), "factor": 0.5}],
 			}
 		],
 		"windows": [{"target": StationFixture.H2, "sub": 0, "left": 6.2, "by": 0}],
 		"tracks": [{"contact": StationFixture.H2, "quality": 0.5, "probe": false}],
 	}
-	var lines: Array[String] = panel.feed_lines()
+	var lines: Array[String] = WeaponsReadout.feed_lines(panel)
 	assert_str(lines[0]).is_equal("Weak: %s" % String(raider.subsystems[0].id))
 	assert_str(lines[1]).is_equal("Ammo vs %s: x0.50" % kind)
 	assert_str(lines[2]).is_equal("Hack window: 7 s")
 	assert_str(lines[3]).is_equal("Track 50% [####----]")
 	# Another contact is selected: nothing about H2.
 	ctx.crew.select("contact", StationFixture.U3)
-	assert_array(panel.feed_lines()).is_empty()
+	assert_array(WeaponsReadout.feed_lines(panel)).is_empty()
 
 
 # FT: FT-PAIR-007, FT-JNT-005
@@ -159,7 +159,11 @@ func test_share_buttons_follow_the_toggles_and_the_stations() -> void:
 		add_child(s)
 		var want: Array[StringName] = []
 		want.assign(c[2])
-		assert_array(s.shareable()).override_failure_message("%s %s" % [c[0], c[1]]).is_equal(want)
+		(
+			assert_array(s.common.shareable())
+			. override_failure_message("%s %s" % [c[0], c[1]])
+			. is_equal(want)
+		)
 	# (a desktop: on a phone Relay's shares are on its own pages)
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	var ctx: StationContext = _ctx("relay", "easy")
@@ -200,11 +204,11 @@ func test_engineering_countdown_uses_the_sim_hazard_forecast() -> void:
 		add_child(s)
 		var eng: EngineeringPanel = s.panels[0] as EngineeringPanel
 		# Without a share the toggle alone delivers nothing.
-		assert_float(eng.hazard_eta()).is_equal(-1.0)
+		assert_float(eng.model.hazard_eta()).is_equal(-1.0)
 		ctx.crew.handle_event(
 			{"type": "shares", "payload": {"ship": 0, "left": {"hazard_countdowns": 20.0}}},
 			ctx.now_ms()
 		)
-		etas[code] = eng.hazard_eta()
+		etas[code] = eng.model.hazard_eta()
 	assert_float(etas["easy"]).is_equal(7.5)
 	assert_float(etas["hard"]).is_equal(-1.0)

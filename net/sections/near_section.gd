@@ -75,18 +75,6 @@ func client_model() -> Dictionary:
 	return out
 
 
-static func apply(into: Dictionary, buf: StreamPeerBuffer, is_full: bool, tick: int) -> void:
-	if is_full:
-		into.clear()
-	for i: int in range(buf.get_u16()):
-		var id: int = buf.get_u16()
-		var bits: int = buf.get_u32()
-		var w: Vector3i = NetCodec.get3_8(buf)
-		into[id] = [bits, w, tick - buf.get_u16()]
-	if not is_full:
-		ContactsSection.get_gone(buf, into)
-
-
 ## One record from the model entry [bits, angular velocity, tick].
 func _put_rec(buf: StreamPeerBuffer, id: int, entry: Array) -> void:
 	buf.put_u16(id)

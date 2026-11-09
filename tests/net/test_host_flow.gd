@@ -102,11 +102,7 @@ func test_host_spawns_a_headless_child_and_stop_kills_it() -> void:
 	assert_str(h.error).is_empty()
 	assert_int(h.state).is_equal(HostSession.State.JOINED)
 	var pid: int = h.launcher.pid
-	if OS.get_name() == "Linux":
-		var args: PackedStringArray = OrphanCheck.read_cmdline(pid)
-		assert_str(args[0]).is_equal(OS.get_executable_path())
-		assert_bool(args.has("--headless")).is_true()
-		assert_str(args[args.find("--bind") + 1]).is_equal("127.0.0.1")
+	# The child's command line is checked in test_host_launcher.gd.
 	var info: ServerPidFile = ServerPidFile.load_from(_pid_file)
 	assert_int(info.pid).is_equal(pid)
 	assert_int(info.port).is_equal(h.launcher.port)
