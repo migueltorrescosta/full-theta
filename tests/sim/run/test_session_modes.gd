@@ -139,7 +139,7 @@ func test_teams_last_team_standing() -> void:
 	f.step(1)
 	var out: SessionOutcome = f.outcome()
 	assert_int(out.reason).is_equal(SessionOutcome.Reason.LAST_STANDING)
-	assert_int(out.team).is_equal(0)
+	assert_int(out.winner_faction).is_equal(w.faction_of(0))
 	assert_array(Array(out.winners)).is_equal([0, 2])
 
 
@@ -158,7 +158,7 @@ func test_teams_first_to_finish() -> void:
 	f.step(1)
 	var out: SessionOutcome = f.outcome()
 	assert_int(out.reason).is_equal(SessionOutcome.Reason.FIRST_TO_FINISH)
-	assert_int(out.team).is_equal(1)
+	assert_int(out.winner_faction).is_equal(f.world.faction_of(1))
 	assert_array(Array(out.winners)).is_equal([1, 3])
 
 

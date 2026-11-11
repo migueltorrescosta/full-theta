@@ -128,11 +128,11 @@ static func session_outcome(world: SimWorld) -> SessionOutcome:
 
 ## Whether a crewed ship that lost may still relaunch under its side's policy.
 static func _may_relaunch(world: SimWorld, id: int) -> bool:
-	return world.rules.relaunch_for(world.team_of(id)).allows(world.run.relaunches[id])
+	return world.rules.relaunch_for(world.faction_of(id)).allows(world.run.relaunches[id])
 
 
 ## FIRST_TO_FINISH: the crewed ships that won on the earliest finish tick; with teams, every
-## ship of the first of their teams.
+## ship of the first one's faction.
 static func _first_to_finish(
 	world: SimWorld, crew: PackedInt32Array, out: SessionOutcome, teams: bool
 ) -> void:
@@ -155,45 +155,45 @@ static func _first_to_finish(
 			):
 				out.winners.append(id)
 		return
-	out.team = world.team_of(first)
+	out.winner_faction = world.faction_of(first)
 	for id: int in crew:
-		if world.team_of(id) == out.team:
+		if world.faction_of(id) == out.winner_faction:
 			out.winners.append(id)
 
 
-## LAST_TEAM_STANDING: the one team with a ship standing, all its ships the winners.
+## LAST_TEAM_STANDING: the one faction with a ship standing, all its ships the winners.
 static func _last_team(
 	world: SimWorld, crew: PackedInt32Array, standing: PackedInt32Array, out: SessionOutcome
 ) -> void:
-	var teams: Dictionary[int, bool] = {}
+	var sides: Dictionary[int, bool] = {}
 	for id: int in crew:
-		teams[world.team_of(id)] = true
+		sides[world.faction_of(id)] = true
 	var left: Dictionary[int, bool] = {}
 	for id: int in standing:
-		left[world.team_of(id)] = true
-	if left.size() != 1 or teams.size() < 2:
+		left[world.faction_of(id)] = true
+	if left.size() != 1 or sides.size() < 2:
 		return
 	out.reason = SessionOutcome.Reason.LAST_STANDING
-	out.team = left.keys()[0]
+	out.winner_faction = left.keys()[0]
 	for id: int in crew:
-		if world.team_of(id) == out.team:
+		if world.faction_of(id) == out.winner_faction:
 			out.winners.append(id)
 
 
 ## HOLDOUT_OVER once no ship of the finite side stands (no winner, held_ticks the latest tick
 ## one of its ships left play). With one still standing, the session ends at
-## SessionRules.HOLDOUT_CAP_S: the finite side held if a ship of it is in play, and wins (team
+## SessionRules.HOLDOUT_CAP_S: the finite side held if a ship of it is in play, and wins (faction
 ## and winners named, held_ticks the cap); one that only waits to relaunch has not held (no
 ## winner, held_ticks as above).
 static func _holdout(
 	world: SimWorld, crew: PackedInt32Array, standing: PackedInt32Array, out: SessionOutcome
 ) -> void:
-	var finite: int = SessionRules.HOLDOUT_FINITE_TEAM
+	var finite: int = world.rules.holdout_finite_faction()
 	var latest: int = -1
 	var in_play: bool = false
 	var waiting: bool = false
 	for id: int in crew:
-		if world.team_of(id) != finite:
+		if world.faction_of(id) != finite:
 			continue
 		latest = maxi(latest, world.run.finish_tick[id])
 		if world.run.status[id] == RunTable.Status.IN_PLAY:
@@ -209,9 +209,9 @@ static func _holdout(
 			out.held_ticks = latest
 			return
 		out.held_ticks = cap
-		out.team = finite
+		out.winner_faction = finite
 		for id: int in crew:
-			if world.team_of(id) == finite:
+			if world.faction_of(id) == finite:
 				out.winners.append(id)
 		return
 	if latest < 0:
@@ -233,7 +233,7 @@ static func _count_kill(world: SimWorld, id: int) -> void:
 		var killer: int = e.other_id
 		if killer == id or not world.has_ship(killer):
 			return
-		if not world.is_crew(killer) or world.team_of(killer) == world.team_of(id):
+		if not world.is_crew(killer) or world.faction_of(killer) == world.faction_of(id):
 			return
 		world.run.kills[killer] += 1
 		return
@@ -304,7 +304,7 @@ static func _emit_eliminated(world: SimWorld, id: int) -> void:
 	var tag: StringName = &"destroyed"
 	if world.run.status[id] == RunTable.Status.ABANDONED:
 		tag = &"forfeit" if world.rules.is_pvp() else &"abandoned"
-	var policy: RelaunchPolicy = world.rules.relaunch_for(world.team_of(id))
+	var policy: RelaunchPolicy = world.rules.relaunch_for(world.faction_of(id))
 	world.emit(
 		SessionOutcome.EVENT_ELIMINATED,
 		id,

@@ -16,7 +16,8 @@ var director: FleetDirector
 
 
 ## Slots for `n` ships under `r`: named "Ship 1" ..., on teams[i] (default: 0 in COOP, i % 2
-## with teams, i in RACE and LAST_STANDING), with the faction r.faction_for gives.
+## with teams, i in RACE and LAST_STANDING); RunSetup gives each the faction r.faction_for
+## maps its team to.
 static func slots_for(r: SessionRules, n: int, teams: Array[int] = []) -> Array[ShipSlot]:
 	var out: Array[ShipSlot] = []
 	for i: int in n:
@@ -27,7 +28,7 @@ static func slots_for(r: SessionRules, n: int, teams: Array[int] = []) -> Array[
 			team = i % 2
 		elif r.mode != SessionRules.Mode.COOP:
 			team = i
-		out.append(ShipSlot.of("Ship %d" % (i + 1), r.faction_for(i, team), team))
+		out.append(ShipSlot.of("Ship %d" % (i + 1), team))
 	return out
 
 

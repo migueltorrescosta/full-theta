@@ -1,9 +1,9 @@
 class_name RelaunchPolicy
 extends RefCounted
-## Whether a destroyed or forfeited ship's crew may relaunch, per side (team) of a session
+## Whether a destroyed or forfeited ship's crew may relaunch, per side (faction) of a session
 ## (#11, owner M4-Q2, 2026-10-28): none, a number of lives, or unlimited. The session's
-## SessionRules holds one per team; a relaunch spawns a fresh ship of the same slot at the
-## side's start point with a fresh run state (RelaunchShipCommand). Pure value.
+## SessionRules holds one per crew faction; a relaunch spawns a fresh ship of the same slot at the
+## slot's start point with a fresh run state (RelaunchShipCommand). Pure value.
 
 ## NONE: out until the session ends (D91). LIVES: up to `lives` relaunches. UNLIMITED: always.
 enum Kind { NONE, LIVES, UNLIMITED }

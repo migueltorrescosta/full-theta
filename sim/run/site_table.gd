@@ -115,12 +115,12 @@ func open_copy(world: SimWorld, key: StringName, ship: int) -> int:
 	return -1
 
 
-## The key of the ship's copy of a site: "<key>@<team>", or the key itself when the ship
+## The key of the ship's copy of a site: "<key>@<faction>", or the key itself when the ship
 ## starts at site 0.
 static func copy_key(world: SimWorld, key: StringName, ship: int) -> StringName:
 	if copy_offset(world, ship) == Vector3.ZERO:
 		return key
-	return StringName("%s@%d" % [key, world.team_of(ship)])
+	return StringName("%s@%d" % [key, world.faction_of(ship)])
 
 
 ## The offset of the ship's start site from site 0 (m), zero for a ship starting there.

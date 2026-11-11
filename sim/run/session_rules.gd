@@ -1,7 +1,7 @@
 class_name SessionRules
 extends RefCounted
 ## The rules of one multi-ship session (#11, E11, E12; owner M4-Q1 to M4-Q10, 2026-10-28):
-## the scenario mode the host picks in the lobby, the team win rule, each side's relaunch
+## the scenario mode the host picks in the lobby, the team win rule, each faction's relaunch
 ## policy and where eliminated crew go. RunSetup hands it to the world (SimWorld.rules);
 ## OutcomeSystem.session_outcome reads it, the director keys on it and the server sends it
 ## in the lobby. Pure value: no defs, no I/O. A single-ship run is COOP with one slot.
@@ -33,10 +33,18 @@ const TEAM_WIN_NAMES: Array[String] = ["last_team_standing", "first_to_finish"]
 ## Most crewable ships in one session (FT-GEN-001, M4-Q3).
 const MAX_SHIPS: int = 6
 ## Crew factions by side: the first is the co-op faction (M1Encounter.PLAYER_FACTION); the
-## others stay clear of the NPC factions the scenarios use (2 to 4).
-const CREW_FACTIONS: Array[int] = [Factions.CREW, 11, 12, 13, 14, 15]
-## HOLDOUT's sides: the small side relaunches without limit; the finite side has
-## HOLDOUT_LIVES relaunches. PROVISIONAL (#13 tunes it).
+## others (Factions.CREW_SIDES) stay clear of the NPC factions the scenarios use (2 to 4).
+const CREW_FACTIONS: Array[int] = [
+	Factions.CREW,
+	Factions.CREW_SIDES[0],
+	Factions.CREW_SIDES[1],
+	Factions.CREW_SIDES[2],
+	Factions.CREW_SIDES[3],
+	Factions.CREW_SIDES[4],
+]
+## HOLDOUT's lobby teams: the small side relaunches without limit; the finite side has
+## HOLDOUT_LIVES relaunches. PROVISIONAL (#13 tunes it). The sim keys both by their faction
+## (holdout_finite_faction()).
 const HOLDOUT_SMALL_TEAM: int = 0
 const HOLDOUT_FINITE_TEAM: int = 1
 const HOLDOUT_LIVES: int = 3
@@ -48,7 +56,7 @@ var mode: Mode = Mode.COOP
 ## Read in TEAMS only.
 var team_win: TeamWin = TeamWin.LAST_TEAM_STANDING
 var eliminated_to: Destination = Destination.FRIENDLY_VIEWER
-## Team -> its relaunch policy; a team missing here uses default_relaunch.
+## Faction -> its relaunch policy; a faction missing here uses default_relaunch.
 var relaunch: Dictionary[int, RelaunchPolicy] = {}
 var default_relaunch: RelaunchPolicy = RelaunchPolicy.none()
 
@@ -62,8 +70,8 @@ static func of_mode(m: Mode) -> SessionRules:
 		Mode.RACE, Mode.LAST_STANDING:
 			r.eliminated_to = Destination.SCOREBOARD
 		Mode.HOLDOUT:
-			r.relaunch[HOLDOUT_SMALL_TEAM] = RelaunchPolicy.unlimited()
-			r.relaunch[HOLDOUT_FINITE_TEAM] = RelaunchPolicy.of_lives(HOLDOUT_LIVES)
+			r.relaunch[r.faction_for(0, HOLDOUT_SMALL_TEAM)] = RelaunchPolicy.unlimited()
+			r.relaunch[r.holdout_finite_faction()] = RelaunchPolicy.of_lives(HOLDOUT_LIVES)
 	return r
 
 
@@ -78,12 +86,19 @@ func has_teams() -> bool:
 	return mode == Mode.TEAMS or mode == Mode.HOLDOUT
 
 
-func relaunch_for(team: int) -> RelaunchPolicy:
-	return relaunch.get(team, default_relaunch)
+## The relaunch policy of a crew faction's ships.
+func relaunch_for(faction: int) -> RelaunchPolicy:
+	return relaunch.get(faction, default_relaunch)
 
 
-## The faction of the slot at `index` on `team`: one faction in COOP, one per team in TEAMS
-## and HOLDOUT, one per ship in RACE and LAST_STANDING. Allies share it (FT-ARC-018).
+## The faction of HOLDOUT's finite side (HOLDOUT_FINITE_TEAM), which OutcomeSystem scores.
+func holdout_finite_faction() -> int:
+	return faction_for(0, HOLDOUT_FINITE_TEAM)
+
+
+## The faction of the slot at `index` on lobby team `team`: one faction in COOP, one per team
+## in TEAMS and HOLDOUT, one per ship in RACE and LAST_STANDING. Allies share it
+## (FT-ARC-018). The only team -> faction map: RunSetup applies it once per slot (B5).
 func faction_for(index: int, team: int) -> int:
 	match mode:
 		Mode.COOP:
@@ -94,7 +109,7 @@ func faction_for(index: int, team: int) -> int:
 
 
 ## Why the slots can't start under these rules, or []: 1 to MAX_SHIPS slots; with teams,
-## teams 0 and 1 only and at least one ship a side (M4-Q6); the factions faction_for gives.
+## teams 0 and 1 only and at least one ship a side (M4-Q6).
 func slot_errors(slots: Array[ShipSlot]) -> Array[String]:
 	var out: Array[String] = []
 	if slots.is_empty() or slots.size() > MAX_SHIPS:
@@ -110,14 +125,6 @@ func slot_errors(slots: Array[ShipSlot]) -> Array[String]:
 			out.append("each team needs at least one ship")
 	elif mode != Mode.COOP and slots.size() < 2:
 		out.append("%s needs at least 2 ships" % MODE_NAMES[mode])
-	for i: int in slots.size():
-		if slots[i].faction != faction_for(i, slots[i].team):
-			out.append(
-				(
-					"ship %s has faction %d, expected %d"
-					% [slots[i].name, slots[i].faction, faction_for(i, slots[i].team)]
-				)
-			)
 	for team: int in relaunch:
 		out.append_array(relaunch[team].errors())
 	return out

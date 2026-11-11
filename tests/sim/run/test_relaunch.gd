@@ -100,8 +100,8 @@ func test_relaunch_refusals() -> void:
 func test_holdout_is_asymmetric_and_scored_by_time() -> void:
 	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.HOLDOUT, 2)
 	var w: SimWorld = f.world
-	assert_int(w.team_of(0)).is_equal(SessionRules.HOLDOUT_SMALL_TEAM)
-	assert_int(w.team_of(1)).is_equal(SessionRules.HOLDOUT_FINITE_TEAM)
+	assert_int(w.faction_of(0)).is_equal(f.rules.faction_for(0, SessionRules.HOLDOUT_SMALL_TEAM))
+	assert_int(w.faction_of(1)).is_equal(f.rules.holdout_finite_faction())
 	for i: int in 5:
 		destroy(f, 0)
 		var gone: Array[SimEvent] = of_kind(f.step(1), SessionOutcome.EVENT_ELIMINATED)

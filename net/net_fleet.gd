@@ -126,6 +126,23 @@ func team_of(ship: int) -> int:
 	return slots[ship].team if ship >= 0 and ship < slots.size() else 0
 
 
+## The lobby team whose ships have `faction` (SessionOutcome.winner_faction mapped back for
+## the wire, FleetMessages.session_over): -1 for -1 or a faction no slot has. The inverse of
+## the team -> faction map RunSetup applies (SessionRules.faction_for), so the wire keeps teams.
+func team_of_faction(faction: int) -> int:
+	return team_for_faction(slots, rules, faction)
+
+
+## team_of_faction on the given slots (ship id = slot index) and rules.
+static func team_for_faction(on: Array[ShipSlot], under: SessionRules, faction: int) -> int:
+	if faction < 0:
+		return -1
+	for i: int in on.size():
+		if under.faction_for(i, on[i].team) == faction:
+			return on[i].team
+	return -1
+
+
 ## Whether the session is over (SessionOutcome), so the world-wide "Run again" may follow.
 func is_over() -> bool:
 	return outcome != null
@@ -281,7 +298,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			var held_s: float = float(o.held_ticks) / SimRate.HZ
 			var reason: String = SessionOutcome.REASON_NAMES[o.reason]
 			var payload: Dictionary = FleetMessages.session_over(
-				reason, Array(o.winners), o.team, held_s, time_s
+				reason, Array(o.winners), team_of_faction(o.winner_faction), held_s, time_s
 			)
 			session.broadcast(NetProtocol.EVENT_SESSION_OVER, payload)
 	for ship: int in _handover_at.keys():
@@ -337,7 +354,7 @@ func _on_ship_add(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship_name: String = msg["name"]  # cleaned by NetProtocol.decode (NAMED)
 	if ship_name == "":
 		ship_name = "Ship %d" % (slots.size() + 1)
-	slots.append(ShipSlot.of(ship_name, SessionRules.CREW_FACTIONS[0], 0))
+	slots.append(ShipSlot.of(ship_name, 0))
 	_apply(rules.has_teams())
 
 
@@ -371,7 +388,7 @@ func _on_session_mode(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	rules = SessionRules.of_mode(mode as SessionRules.Mode)
 	rules.team_win = team_win as SessionRules.TeamWin
 	if mode == SessionRules.Mode.HOLDOUT and lives > 0:
-		rules.relaunch[SessionRules.HOLDOUT_FINITE_TEAM] = RelaunchPolicy.of_lives(lives)
+		rules.relaunch[rules.holdout_finite_faction()] = RelaunchPolicy.of_lives(lives)
 	_apply(rules.has_teams() and not had_teams)
 
 
@@ -417,7 +434,7 @@ func _lobby_refusal(s: NetSession, host_only: bool) -> String:
 	return ""
 
 
-## After a lobby change: each slot's team and faction follow the mode (one side in co-op,
+## After a lobby change: each slot's team follows the mode (one side in co-op,
 ## one per ship in race and last ship standing, 0 and 1 in teams and holdout, alternating
 ## when `split` is set), and the lobby world is rebuilt with allied placeholder ships.
 func _apply(split: bool) -> void:
@@ -428,10 +445,9 @@ func _apply(split: bool) -> void:
 		elif rules.mode != SessionRules.Mode.COOP:
 			team = i
 		slots[i].team = team
-		slots[i].faction = rules.faction_for(i, team)
 	var placeholders: Array[ShipSlot] = []
 	for s: ShipSlot in slots:
-		placeholders.append(ShipSlot.of(s.name, SessionRules.CREW_FACTIONS[0], 0))
+		placeholders.append(ShipSlot.of(s.name, 0))
 	pressed.clear()
 	rebuild.call(placeholders, SessionRules.new())
 	_world_current = false
@@ -586,7 +602,7 @@ func _fleet_payload() -> Dictionary:
 		)
 	var lives: int = -1
 	if rules.mode == SessionRules.Mode.HOLDOUT:
-		lives = rules.relaunch_for(SessionRules.HOLDOUT_FINITE_TEAM).lives
+		lives = rules.relaunch_for(rules.holdout_finite_faction()).lives
 	var started: bool = session.lobby.any_launched()
 	var mode: String = SessionRules.MODE_NAMES[rules.mode]
 	var team_win: String = SessionRules.TEAM_WIN_NAMES[rules.team_win]

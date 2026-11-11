@@ -177,8 +177,9 @@ static func relaunched(ship: int, lives: int) -> Dictionary:
 	return {"ship": ship, "lives": lives}
 
 
-## The session's outcome (SessionOutcome: its reason name, winners and team); time_s: the
-## session's length; held_s: HOLDOUT's score, how long the finite side lasted.
+## The session's outcome (SessionOutcome: its reason name, winners and the lobby team of its
+## winner_faction, NetFleet.team_of_faction); time_s: the session's length; held_s: HOLDOUT's
+## score, how long the finite side lasted.
 static func session_over(
 	reason: String, winners: Array, team: int, held_s: float, time_s: float
 ) -> Dictionary:

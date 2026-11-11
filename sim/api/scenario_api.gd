@@ -97,13 +97,6 @@ func session_mode() -> int:
 	return _world.rules.mode
 
 
-## A ship's side (SimWorld.team_of, #11).
-func team_of(id: int) -> int:
-	if not _world.has_ship(id):
-		return -1
-	return _world.team_of(id)
-
-
 ## A ship's faction, -1 for an id that is no ship (cheaper than ship(id).faction).
 func faction_of(id: int) -> int:
 	if not _world.has_ship(id):

@@ -28,8 +28,8 @@ var reason: Reason = Reason.NONE
 ## The winning ships, ascending; empty with no winner (ALL_LOST, and HOLDOUT, which scores
 ## time rather than naming a winner).
 var winners: PackedInt32Array = PackedInt32Array()
-## The winning team in TEAMS and HOLDOUT, else -1.
-var team: int = -1
+## The winning side's faction in TEAMS and HOLDOUT, else -1 (NetFleet sends its lobby team).
+var winner_faction: int = -1
 ## Ticks the finite side lasted (HOLDOUT, its score), else 0.
 var held_ticks: int = 0
 
