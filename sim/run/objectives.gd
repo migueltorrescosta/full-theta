@@ -24,7 +24,7 @@ static func of_ship(world: SimWorld, ship: int) -> Array[Dictionary]:
 	for o: int in world.ship_count():
 		if world.run.status[o] != RunTable.Status.IN_PLAY:
 			continue
-		if world.is_hostile(faction, world.kin.factions[o]):
+		if world.is_hostile(faction, world.kin.owner_faction[o]):
 			left += 1
 	if left > 0:
 		out.append({"kind": Kind.DESTROY_HOSTILES, "left": mini(left, 65535)})

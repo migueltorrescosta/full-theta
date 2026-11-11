@@ -198,7 +198,7 @@ static func _targeted_offset(
 		var other: int = helm.target_ship[row]
 		if (
 			kin.can_reach(row, other)
-			and KnowledgeSystem.is_detected(world, kin.factions[row], other)
+			and KnowledgeSystem.is_detected(world, kin.owner_faction[row], other)
 		):
 			return kin.relative(row, other)
 	elif kind == HelmTable.Target.POINT:

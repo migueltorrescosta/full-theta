@@ -257,13 +257,13 @@ static func _escaped(world: SimWorld, id: int) -> bool:
 ## Every ship of a faction hostile to the ship's is out of play, and there is one.
 static func _enemies_gone(world: SimWorld, id: int) -> bool:
 	var faction: int = world.faction_of(id)
-	var factions: PackedInt32Array = world.kin.factions
+	var owner_faction: PackedInt32Array = world.kin.owner_faction
 	var status: PackedByteArray = world.run.status
 	# Relation to each faction, looked up once.
 	var hostile: Dictionary[int, bool] = {}
 	var enemies: int = 0
 	for o: int in world.ship_count():
-		var f: int = factions[o]
+		var f: int = owner_faction[o]
 		if not hostile.has(f):
 			hostile[f] = world.is_hostile(faction, f)
 		if not hostile[f]:

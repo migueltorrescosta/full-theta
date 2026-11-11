@@ -243,7 +243,7 @@ func ship_count() -> int:
 
 
 func faction_of(ship_id: int) -> int:
-	return kin.factions[ship_id]
+	return kin.owner_faction[ship_id]
 
 
 ## Whether `ship_id` is a ship of this world.

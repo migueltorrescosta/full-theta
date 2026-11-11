@@ -20,7 +20,7 @@ static func step(world: SimWorld) -> void:
 	var mounts: MountTable = world.mounts
 	var kin: Kinematics = world.kin
 	var dt: float = SimWorld.DT
-	var ship_ids: PackedInt32Array = mounts.ship_ids
+	var owner_ship: PackedInt32Array = mounts.owner_ship
 	var mount_index: PackedInt32Array = mounts.mount_index
 	var alive: PackedByteArray = kin.alive
 	var fire_requested: PackedByteArray = mounts.fire_requested
@@ -29,8 +29,8 @@ static func step(world: SimWorld) -> void:
 	var barrel: PackedVector3Array = mounts.barrel
 	var aim_set: PackedByteArray = mounts.aim_set
 	var defs: Array[ShipDef] = world.defs
-	for row: int in ship_ids.size():
-		var ship: int = ship_ids[row]
+	for row: int in owner_ship.size():
+		var ship: int = owner_ship[row]
 		if alive[ship] != 1:
 			fire_requested[row] = 0
 			continue
@@ -71,7 +71,7 @@ static func weapon_of(world: SimWorld, row: int) -> WeaponDef:
 
 ## The read-only definition of a mount row.
 static func mount_def(world: SimWorld, row: int) -> MountDef:
-	return world.defs[world.mounts.ship_ids[row]].mounts[world.mounts.mount_index[row]]
+	return world.defs[world.mounts.owner_ship[row]].mounts[world.mounts.mount_index[row]]
 
 
 ## Direction from the mount to its aim point in the ship frame (unit); the rest
@@ -81,7 +81,7 @@ static func aim_direction(world: SimWorld, row: int) -> Vector3:
 	var def: MountDef = mount_def(world, row)
 	if mounts.aim_set[row] == 0:
 		return def.forward
-	var ship: int = mounts.ship_ids[row]
+	var ship: int = mounts.owner_ship[row]
 	var kin: Kinematics = world.kin
 	var to_aim: Vector3 = kin.relative_to_point(
 		ship, mounts.aim_x[row], mounts.aim_y[row], mounts.aim_z[row]
@@ -108,7 +108,7 @@ static func clamp_to_arc(def: MountDef, dir: Vector3) -> Vector3:
 ## its velocity, or -1. Only ships the shooter's faction detects count (FT-ARC-013; its
 ## own ships always do). A warning only: friendly fire still happens.
 static func path_crosses(world: SimWorld, row: int) -> int:
-	var ship_id: int = world.mounts.ship_ids[row]
+	var ship_id: int = world.mounts.owner_ship[row]
 	var kin: Kinematics = world.kin
 	var def: MountDef = mount_def(world, row)
 	var weapon: WeaponDef = weapon_of(world, row)
@@ -167,7 +167,7 @@ static func block_reason(world: SimWorld, row: int, eff: float, aim: Vector3) ->
 
 
 static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float, aim: Vector3) -> void:
-	var ship: int = world.mounts.ship_ids[row]
+	var ship: int = world.mounts.owner_ship[row]
 	var index: int = world.mounts.mount_index[row]
 	var reason: StringName = block_reason(world, row, eff, aim)
 	var weapon: WeaponDef = weapon_of(world, row)
@@ -190,7 +190,7 @@ static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float, aim:
 static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -> void:
 	var mounts: MountTable = world.mounts
 	var kin: Kinematics = world.kin
-	var ship: int = mounts.ship_ids[row]
+	var ship: int = mounts.owner_ship[row]
 	if mounts.ammo[row] > 0:
 		mounts.ammo[row] -= 1
 	mounts.cooldown[row] = weapon.cooldown
@@ -233,7 +233,7 @@ static func _beam_hit(
 	world: SimWorld, row: int, def: MountDef, weapon: WeaponDef, dir: Vector3
 ) -> void:
 	var kin: Kinematics = world.kin
-	var shooter: int = world.mounts.ship_ids[row]
+	var shooter: int = world.mounts.owner_ship[row]
 	var muzzle: Vector3 = kin.to_world(shooter, def.position)
 	var reach: Vector3 = dir * weapon.max_range
 	var best: int = -1

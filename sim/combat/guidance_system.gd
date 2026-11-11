@@ -35,7 +35,7 @@ static func track_quality(world: SimWorld, faction: int, ship_id: int) -> float:
 	var kin: Kinematics = world.kin
 	var best: float = 0.0
 	for o: int in world.ship_count():
-		if kin.factions[o] != faction or not kin.is_alive(o) or not kin.can_reach(o, ship_id):
+		if kin.owner_faction[o] != faction or not kin.is_alive(o) or not kin.can_reach(o, ship_id):
 			continue
 		var reach: float = KnowledgeSystem.sensor_reach(world, o)
 		if reach <= 0.0:
@@ -62,14 +62,14 @@ static func step(world: SimWorld) -> void:
 		var rate: float = proj.turn_rate[k]
 		var target: int = proj.guide_target[k]
 		if target >= 0:
-			if is_tracked(world, proj.factions[k], target):
+			if is_tracked(world, proj.owner_faction[k], target):
 				want = proj.offset_to_ship(k, kin, target)
-				var key: int = SimTable.row_key(proj.factions[k], target)
+				var key: int = SimTable.row_key(proj.owner_faction[k], target)
 				if not quality.has(key):
-					quality[key] = track_quality(world, proj.factions[k], target)
+					quality[key] = track_quality(world, proj.owner_faction[k], target)
 				rate *= lerpf(proj.track_floor[k], 1.0, quality[key])
 			else:
-				world.emit(&"guidance_lost", proj.ship_ids[k], target)
+				world.emit(&"guidance_lost", proj.owner_ship[k], target)
 				proj.guide_target[k] = -1
 		if want == null:
 			continue

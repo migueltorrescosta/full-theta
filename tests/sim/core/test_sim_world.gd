@@ -86,10 +86,10 @@ func test_rng_streams_independent() -> void:
 func test_iteration_order_by_id() -> void:
 	var w: SimWorld = _world(1)
 	for t: SimTable in w.tables():
-		var ids: PackedInt32Array = t.ship_ids
+		var ids: PackedInt32Array = t.owner_ship
 		for r: int in range(1, ids.size()):
 			assert_bool(ids[r] >= ids[r - 1]).is_true()
-	assert_array(Array(w.kin.ship_ids)).is_equal([0, 1, 2])
+	assert_array(Array(w.kin.owner_ship)).is_equal([0, 1, 2])
 
 
 # FT: FT-ARC-012, FT-M1-014
@@ -114,8 +114,8 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 	for t: SimTable in w.tables():
 		var name: String = t.get_script().get_global_name()
 		var cols: Array = t.columns()
-		assert_str(cols[0][0]).is_equal("ship_ids")
-		assert_str(cols[1][0]).is_equal("factions")
+		assert_str(cols[0][0]).is_equal("owner_ship")
+		assert_str(cols[1][0]).is_equal("owner_faction")
 		for col: Array in cols:
 			(
 				assert_int((col[1] as Variant).size())
@@ -135,12 +135,12 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 			# Hack windows come and go: keyed by the hacked ship and the HACKER's faction.
 			continue
 		for r: int in t.size():
-			assert_int(t.ship_ids[r]).is_between(0, w.ship_count() - 1)
-			var own: int = w.faction_of(t.ship_ids[r])
+			assert_int(t.owner_ship[r]).is_between(0, w.ship_count() - 1)
+			var own: int = w.faction_of(t.owner_ship[r])
 			if t == w.knowledge:
-				assert_int(t.factions[r]).is_not_equal(own)
+				assert_int(t.owner_faction[r]).is_not_equal(own)
 			else:
-				assert_int(t.factions[r]).override_failure_message(name).is_equal(own)
+				assert_int(t.owner_faction[r]).override_failure_message(name).is_equal(own)
 		# Probes are rows added by launching: none before Relay launches one.
 		if t == w.probes:
 			continue
@@ -149,7 +149,7 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 			continue
 		for ship: int in [0, 1]:
 			assert_int(t.rows_of(ship).size()).override_failure_message(name).is_greater(0)
-	assert_array(Array(w.kin.factions)).is_equal([1, 2, 1])
+	assert_array(Array(w.kin.owner_faction)).is_equal([1, 2, 1])
 	assert_int(w.knowledge.row_for(1, 1)).is_greater_equal(0)
 	assert_int(w.knowledge.row_for(2, 0)).is_greater_equal(0)
 
@@ -173,7 +173,7 @@ func test_registry_covers_every_column_array() -> void:
 		assert_array(t.variables()).override_failure_message(name).contains_exactly_in_any_order(
 			declared
 		)
-		assert_array(cols.slice(0, 2)).is_equal(["ship_ids", "factions"])
+		assert_array(cols.slice(0, 2)).is_equal(["owner_ship", "owner_faction"])
 		for skip: StringName in t.not_columns():
 			assert_array(declared).override_failure_message(name).contains([skip])
 		for v: StringName in declared:

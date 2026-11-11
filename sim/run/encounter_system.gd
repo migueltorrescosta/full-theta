@@ -52,7 +52,7 @@ static func finish(world: SimWorld, id: int, result: EncounterTable.Result) -> v
 	for ship: int in _ships(table.ships_mask[id]):
 		if world.run.encounter[ship] == id:
 			_leave(world, ship)
-	var first: int = table.ship_ids[id]
+	var first: int = table.owner_ship[id]
 	world.emit(&"encounter_end", first, id, result, Vector3.ZERO, _scenario(world, id))
 
 
@@ -81,7 +81,7 @@ static func _activate(world: SimWorld, id: int) -> void:
 	var table: EncounterTable = world.encounters
 	table.result[id] = EncounterTable.Result.ACTIVE
 	table.start_tick[id] = world.tick
-	world.emit(&"encounter_start", table.ship_ids[id], -1, id, Vector3.ZERO, _scenario(world, id))
+	world.emit(&"encounter_start", table.owner_ship[id], -1, id, Vector3.ZERO, _scenario(world, id))
 
 
 static func _arrived(world: SimWorld, id: int) -> bool:

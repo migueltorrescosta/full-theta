@@ -95,8 +95,8 @@ static func class_fully_scanned(world: SimWorld, faction: int, contact: int) -> 
 	var id: StringName = world.defs[contact].id
 	var k: KnowledgeTable = world.knowledge
 	for r: int in k.size():
-		if k.factions[r] == faction and k.scan_conf[r] >= world.science_def.full_scan_conf:
-			if world.defs[k.ship_ids[r]].id == id:
+		if k.owner_faction[r] == faction and k.scan_conf[r] >= world.science_def.full_scan_conf:
+			if world.defs[k.owner_ship[r]].id == id:
 				return true
 	return false
 
@@ -112,7 +112,7 @@ static func detection_confidence(world: SimWorld, faction: int, contact: int) ->
 	var best: float = 0.0
 	var kin: Kinematics = world.kin
 	for o: int in world.ship_count():
-		if kin.factions[o] != faction or not kin.can_reach(o, contact) or not kin.is_alive(o):
+		if kin.owner_faction[o] != faction or not kin.can_reach(o, contact) or not kin.is_alive(o):
 			continue
 		var reach: float = KnowledgeSystem.sensor_reach(world, o)
 		if reach > 0.0:

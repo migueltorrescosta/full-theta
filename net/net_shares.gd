@@ -142,7 +142,7 @@ func prefill_cause(ship: int, subsystem: StringName) -> void:
 func prefill_causes(ship: int) -> void:
 	var t: DamageTable = session.world.damage
 	var r: int = t.hull_row(ship) + 1
-	while r > 0 and r < t.size() and t.ship_ids[r] == ship:
+	while r > 0 and r < t.size() and t.owner_ship[r] == ship:
 		if t.fault_known[r] == 1:
 			prefill_cause(ship, t.part_ids[r])
 		r += 1

@@ -46,7 +46,7 @@ static func step(world: SimWorld) -> void:
 	var sensing: Array[PackedInt32Array] = []
 	for f: int in observing.size():
 		sensing.append(PackedInt32Array())
-	var factions: PackedInt32Array = kin.factions
+	var owner_faction: PackedInt32Array = kin.owner_faction
 	var alive: PackedByteArray = kin.alive
 	var detected: PackedByteArray = table.detected
 	var defs: Array[ShipDef] = world.defs
@@ -56,9 +56,9 @@ static func step(world: SimWorld) -> void:
 		sense[o] = defs[o].sensor_range * scale if can_sense else -1.0
 		identify[o] = defs[o].identify_range * scale if can_sense else -1.0
 		if not sense[o] < 0.0:
-			sensing[observing.bsearch(factions[o])].append(o)
+			sensing[observing.bsearch(owner_faction[o])].append(o)
 	for contact: int in n:
-		var own: int = factions[contact]
+		var own: int = owner_faction[contact]
 		var live: bool = alive[contact] == 1
 		for fi: int in observing.size():
 			var faction: int = observing[fi]
@@ -118,7 +118,7 @@ static func is_identified(world: SimWorld, faction: int, ship_id: int) -> bool:
 
 ## Ships the faction currently detects, other than its own, in id order.
 static func contacts(world: SimWorld, faction: int) -> PackedInt32Array:
-	return world.knowledge.detected_ships(faction, world.kin.factions)
+	return world.knowledge.detected_ships(faction, world.kin.owner_faction)
 
 
 ## The callsign the faction uses for the ship, for example "H2" (FT-SPA-001,

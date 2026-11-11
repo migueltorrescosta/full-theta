@@ -99,5 +99,5 @@ static func restore(state: Array) -> SimWorld:
 static func _index_knowledge(table: KnowledgeTable) -> void:
 	var rows: Dictionary[int, int] = {}
 	for r: int in table.size():
-		rows[table.factions[r] * 65536 + table.ship_ids[r]] = r
+		rows[table.owner_faction[r] * 65536 + table.owner_ship[r]] = r
 	table.set("_rows", rows)

@@ -286,7 +286,7 @@ static func _projectiles(world: SimWorld) -> void:
 	var box: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0])
 	var near: PackedInt32Array = PackedInt32Array()
 	var ttl: PackedInt32Array = proj.ttl
-	var shooters: PackedInt32Array = proj.ship_ids
+	var shooters: PackedInt32Array = proj.owner_ship
 	var radius: PackedFloat64Array = proj.radius
 	var pvel: PackedVector3Array = proj.vel
 	for k: int in shooters.size():
@@ -343,7 +343,7 @@ static func _projectile_hit(world: SimWorld, k: int, target: int, start: Vector3
 	var rel_vel: Vector3 = proj.vel[k] - kin.vel[target]
 	var hit: SimHit = SimHit.new()
 	hit.target_id = target
-	hit.source_id = proj.ship_ids[k]
+	hit.source_id = proj.owner_ship[k]
 	hit.kind = &"projectile"
 	hit.point_local = kin.to_local(target, start + rel_vel * (SimWorld.DT * t))
 	hit.from_local = kin.to_local(target, -rel_vel).normalized()

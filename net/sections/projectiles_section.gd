@@ -42,7 +42,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	var seen: Dictionary = {}
 	var ordinal: Dictionary = {}
 	for k: int in proj.size():
-		var pair: int = _key(proj.ship_ids[k], _tick + proj.ttl[k], 0)
+		var pair: int = _key(proj.owner_ship[k], _tick + proj.ttl[k], 0)
 		var nth: int = ordinal.get(pair, 0)
 		ordinal[pair] = nth + 1
 		var rel: Vector3 = proj.relative_start(k, kin, owner, 0.0)

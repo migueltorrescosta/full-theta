@@ -22,7 +22,7 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 ## Opens a window, or renews the same hacker faction's window on that subsystem.
 func open(ship_id: int, faction: int, sub_index: int, eff: float, until: int, hacker: int) -> void:
 	for r: int in size():
-		if ship_ids[r] == ship_id and factions[r] == faction and subsystem[r] == sub_index:
+		if owner_ship[r] == ship_id and owner_faction[r] == faction and subsystem[r] == sub_index:
 			factor[r] = eff
 			until_tick[r] = until
 			by[r] = hacker
@@ -35,8 +35,8 @@ func open(ship_id: int, faction: int, sub_index: int, eff: float, until: int, ha
 
 
 func remove_row(r: int) -> void:
-	ship_ids.remove_at(r)
-	factions.remove_at(r)
+	owner_ship.remove_at(r)
+	owner_faction.remove_at(r)
 	subsystem.remove_at(r)
 	factor.remove_at(r)
 	until_tick.remove_at(r)
@@ -47,6 +47,6 @@ func remove_row(r: int) -> void:
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	var r: int = size() - 1
 	while r >= 0:
-		if ship_ids[r] == ship_id or by[r] == ship_id:
+		if owner_ship[r] == ship_id or by[r] == ship_id:
 			remove_row(r)
 		r -= 1

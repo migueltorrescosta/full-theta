@@ -61,12 +61,12 @@ func row_for(faction: int, contact_id: int) -> int:
 
 
 ## Ships of other factions that the faction currently detects, in id order;
-## ship_factions is every ship's faction by id (Kinematics.factions). One loop here
+## ship_factions is every ship's faction by id (Kinematics.owner_faction). One loop here
 ## instead of a KnowledgeSystem.is_detected call per ship (hot path).
 func detected_ships(faction: int, ship_factions: PackedInt32Array) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	for r: int in detected_rows(faction, ship_factions):
-		out.append(ship_ids[r])
+		out.append(owner_ship[r])
 	return out
 
 
@@ -87,8 +87,8 @@ func detected_rows(faction: int, ship_factions: PackedInt32Array) -> PackedInt32
 ## Adds the faction's row for a newly detected contact with the next callsign number.
 func add_contact(faction: int, contact_id: int) -> int:
 	var number: int = 1
-	for r: int in factions.size():
-		if factions[r] == faction:
+	for r: int in owner_faction.size():
+		if owner_faction[r] == faction:
 			number += 1
 	var row: int = add_key(contact_id, faction)
 	detected.append(0)
@@ -117,6 +117,6 @@ func ensure_contact(faction: int, contact_id: int) -> int:
 ## detection starts afresh next tick, but they keep their callsign number and known
 ## allegiance (FT-SPA-001). Its faction's knowledge of others is faction state, kept.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
-	for r: int in ship_ids.size():
-		if ship_ids[r] == ship_id:
+	for r: int in owner_ship.size():
+		if owner_ship[r] == ship_id:
 			detected[r] = 0

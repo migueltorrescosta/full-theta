@@ -113,8 +113,8 @@ func cell_box(k: int, dt: float, reach: float, cell: float, out: PackedInt32Arra
 func remove_rows(rows: PackedInt32Array) -> void:
 	for i: int in range(rows.size() - 1, -1, -1):
 		var r: int = rows[i]
-		ship_ids.remove_at(r)
-		factions.remove_at(r)
+		owner_ship.remove_at(r)
+		owner_faction.remove_at(r)
 		px.remove_at(r)
 		py.remove_at(r)
 		pz.remove_at(r)

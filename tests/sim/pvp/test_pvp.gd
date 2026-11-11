@@ -105,7 +105,7 @@ static func rows(t: SimTable, keep: Callable) -> Array:
 static func not_blue(w: SimWorld) -> Array:
 	var out: Array = []
 	for t: SimTable in w.tables():
-		out.append(rows(t, func(tt: SimTable, r: int) -> bool: return tt.ship_ids[r] != BLUE))
+		out.append(rows(t, func(tt: SimTable, r: int) -> bool: return tt.owner_ship[r] != BLUE))
 	return out
 
 
@@ -114,7 +114,7 @@ static func blue_rows(w: SimWorld) -> Array:
 	var out: Array = []
 	for t: SimTable in w.tables():
 		if t != w.knowledge:
-			out.append(rows(t, func(tt: SimTable, r: int) -> bool: return tt.ship_ids[r] == BLUE))
+			out.append(rows(t, func(tt: SimTable, r: int) -> bool: return tt.owner_ship[r] == BLUE))
 	return out
 
 
@@ -127,7 +127,7 @@ static func relations_of(w: SimWorld) -> Array:
 
 
 static func numbers_of(w: SimWorld, faction: int) -> Array:
-	var keep: Callable = func(t: SimTable, r: int) -> bool: return t.factions[r] == faction
+	var keep: Callable = func(t: SimTable, r: int) -> bool: return t.owner_faction[r] == faction
 	return rows(w.knowledge, keep)
 
 
@@ -151,7 +151,7 @@ func test_knowledge_stays_separate_per_faction() -> void:
 	# Rows: (observer, contact) pairs; a faction never has rows for its own ships.
 	var pairs: Array = []
 	for r: int in w.knowledge.size():
-		pairs.append([w.knowledge.factions[r], w.knowledge.ship_ids[r]])
+		pairs.append([w.knowledge.owner_faction[r], w.knowledge.owner_ship[r]])
 	pairs.sort()
 	(
 		assert_array(pairs)
@@ -215,7 +215,7 @@ func test_callsigns_independent_per_faction() -> void:
 ## - Everything else is unchanged: every row of RED and the neutrals, RED's projectiles
 ##   in flight, RED's WIN, the tick, the RNG states and the relations.
 func reset_blue_and_check(w: SimWorld) -> void:
-	var is_blue: Callable = func(t: SimTable, r: int) -> bool: return t.ship_ids[r] == BLUE
+	var is_blue: Callable = func(t: SimTable, r: int) -> bool: return t.owner_ship[r] == BLUE
 	var others: Array = not_blue(w)
 	var about_blue: Array = rows(w.knowledge, is_blue)
 	var tick: int = w.tick
