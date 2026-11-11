@@ -19,13 +19,9 @@ extends VoiceSink
 
 ## PROVISIONAL: generator buffer; covers frame hitches.
 const BUFFER_S: float = 0.25
-## Metadata key under which a generator playback holds its generator. Godot 4.7's
-## AudioStreamGeneratorPlayback keeps only a raw pointer to its generator (fixed in 4.8,
-## godotengine/godot#124816), and the AudioServer mixes a stopped playback once more to
-## fade it out. A generator freed in that window (a new stream on the player, or the player
-## freed) leaves the audio thread reading a freed mix rate: a garbage rate makes the
-## resampler loop for hours with the driver lock held, and the engine hangs (w-kuo). With
-## the reference the generator lives exactly as long as its playback.
+## A generator playback holds its generator under this metadata key: Godot 4.7's playback
+## keeps only a raw pointer to it (godotengine/godot#124816, fixed in 4.8) and is mixed once
+## more after a stop, so a generator freed first hangs the audio thread (w-kuo).
 const _KEEP_GENERATOR: StringName = &"_ft_keep_generator"
 
 ## Bus name -> _Channel.

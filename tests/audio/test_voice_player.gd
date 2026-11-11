@@ -273,16 +273,10 @@ func test_a_finished_line_tail_plays_out_before_the_next_on_its_bus() -> void:
 
 # FT: FT-AUD-011
 func test_a_replaced_generator_lives_as_long_as_its_playback() -> void:
-	# Godot 4.7's generator playback points at its generator without a reference, and the
-	# AudioServer still mixes a stopped playback to fade it out: a generator freed first
-	# leaves the audio thread on freed memory, which hung L1 shards (w-kuo).
+	# VoiceStreamSink._KEEP_GENERATOR: freeing it first hung L1 shards (w-kuo).
 	var on_voice: AudioStreamPlayer = AudioStreamPlayer.new()
-	var on_computer: AudioStreamPlayer = AudioStreamPlayer.new()
 	add_child(on_voice)
-	add_child(on_computer)
-	var sink: VoiceStreamSink = VoiceStreamSink.new(
-		{VoiceBuses.VOICE: on_voice, VoiceBuses.COMPUTER: on_computer}
-	)
+	var sink: VoiceStreamSink = VoiceStreamSink.new({VoiceBuses.VOICE: on_voice})
 	var pcm: PackedByteArray = PackedByteArray()
 	pcm.resize(2 * 100)
 	sink.begin(1, "npc", 1000)
@@ -302,7 +296,6 @@ func test_a_replaced_generator_lives_as_long_as_its_playback() -> void:
 		await await_idle_frame()
 	assert_bool(old.get_ref() == null).is_true()
 	on_voice.queue_free()
-	on_computer.queue_free()
 
 
 # FT: FT-AUD-010
