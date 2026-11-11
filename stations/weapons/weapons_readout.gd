@@ -68,7 +68,7 @@ static func out_of_arc_text(p: WeaponsPanel) -> String:
 	var local: Vector3 = (
 		p.ctx.interp.local(p.ctx.interp.offset_to(p.ctx.interp.contact_position(id))) - m.position
 	)
-	if local.length_squared() < 1e-6 or m.forward.angle_to(local) <= m.arc_half_angle:
+	if local.length_squared() < 1e-6 or MountArc.in_arc(m.forward, m.arc_half_angle, local):
 		return ""
 	var swing: Vector3 = Quaternion(m.forward, local.normalized()) * Vector3.FORWARD
 	return p.tr("weapons.out_of_arc").format(

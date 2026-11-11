@@ -78,6 +78,4 @@ static func step(world: SimWorld) -> void:
 		var speed: float = v.length()
 		if to.length_squared() < 1e-12 or speed < 1e-9:
 			continue
-		proj.vel[k] = (
-			WeaponSystem.turn_toward(v / speed, to.normalized(), rate * SimWorld.DT) * speed
-		)
+		proj.vel[k] = (MountArc.turn_toward(v / speed, to.normalized(), rate * SimWorld.DT) * speed)

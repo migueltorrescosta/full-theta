@@ -53,7 +53,7 @@ static func step(world: SimWorld) -> void:
 			var local: Vector3 = kin.rot[ship].inverse() * to_aim - def.position
 			aim = barrel[row] if local.length_squared() < 1e-12 else local.normalized()
 		var target: Vector3 = clamp_to_arc(def, aim)
-		barrel[row] = turn_toward(
+		barrel[row] = MountArc.turn_toward(
 			barrel[row], target, def.traverse_rate * clampf(eff, 0.0, 1.0) * dt
 		)
 		if fire_requested[row] == 1:
@@ -93,27 +93,14 @@ static func aim_direction(world: SimWorld, row: int) -> Vector3:
 
 
 ## FT-SIM-011: a direction (ship frame) is inside the arc when its angle to the rest
-## direction is at most arc_half_angle.
+## direction is at most arc_half_angle (MountArc, shared with the Weapons station).
 static func in_arc(def: MountDef, dir: Vector3) -> bool:
-	return def.forward.angle_to(dir) <= def.arc_half_angle
+	return MountArc.in_arc(def.forward, def.arc_half_angle, dir)
 
 
 ## The direction itself when inside the arc, else the nearest direction on its edge.
 static func clamp_to_arc(def: MountDef, dir: Vector3) -> Vector3:
-	if in_arc(def, dir):
-		return dir
-	return turn_toward(def.forward, dir, def.arc_half_angle)
-
-
-## Turns from toward to by at most max_angle (rad); both unit vectors.
-static func turn_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3:
-	var angle: float = from.angle_to(to)
-	if angle <= max_angle:
-		return to
-	var axis: Vector3 = from.cross(to)
-	if axis.length_squared() < 1e-12:
-		axis = from.cross(Vector3.UP if absf(from.y) < 0.9 else Vector3.RIGHT)
-	return from.rotated(axis.normalized(), max_angle).normalized()
+	return MountArc.clamp_to_arc(def.forward, def.arc_half_angle, dir)
 
 
 ## FT-SIM-016: the first friendly or neutral ship (world.relation not HOSTILE) the
