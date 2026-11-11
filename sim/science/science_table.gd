@@ -2,7 +2,7 @@ class_name ScienceTable
 extends SimTable
 ## Science state, one row per ship keyed by ship id and faction (E01, FT-SCI-003,
 ## FT-SCI-004 to FT-SCI-011): the sensor mode and active ping, the selected contact, the
-## scan-position mark (kept outside the eight crew marks, FT-SCI-010), the one open
+## scan point (the sim's copy of the crew-state scan position, FT-SCI-010), the one open
 ## minigame session and the own-ship scan. What each faction has learned of a contact is
 ## in KnowledgeTable.scan_conf; hack windows on the target are in HackTable. A session
 ## stores only its puzzle_seed and numbers: the puzzle is regenerated from them (ScanPuzzle,
@@ -10,6 +10,9 @@ extends SimTable
 
 ## What the ship's open session is.
 enum Session { NONE, SCAN, HACK, SELF }
+
+## scan_x while the ship has no scan point.
+const NO_POINT: float = INF
 
 ## 1 while the sensors are in active mode (FT-SCI-003).
 var active: PackedByteArray = PackedByteArray()
@@ -19,12 +22,13 @@ var ping_left: PackedFloat64Array = PackedFloat64Array()
 var ping_cool: PackedFloat64Array = PackedFloat64Array()
 ## Contact the Science panel has selected (noise preview), or -1.
 var selected: PackedInt32Array = PackedInt32Array()
-## Contact the scan-position mark was placed for, or -1 for none (FT-SCI-010).
-var mark_contact: PackedInt32Array = PackedInt32Array()
-## Position of the mark (m, 64-bit like Kinematics).
-var mark_x: PackedFloat64Array = PackedFloat64Array()
-var mark_y: PackedFloat64Array = PackedFloat64Array()
-var mark_z: PackedFloat64Array = PackedFloat64Array()
+## The scan point (m, 64-bit like Kinematics; scan_x NO_POINT for none): where the ship's
+## scans get mark_factor (P3). ScienceMarkCommand sets it, and the server keeps it on the
+## crew-state scan position with ScienceScanPointCommand (D378, 12r-27; the sim never
+## reads crew state, D171).
+var scan_x: PackedFloat64Array = PackedFloat64Array()
+var scan_y: PackedFloat64Array = PackedFloat64Array()
+var scan_z: PackedFloat64Array = PackedFloat64Array()
 ## Session kind (enum Session).
 var kind: PackedByteArray = PackedByteArray()
 ## Ship id of the session's contact (or -1).
@@ -61,10 +65,9 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	ping_left.append(0.0)
 	ping_cool.append(0.0)
 	selected.append(-1)
-	mark_contact.append(-1)
-	mark_x.append(0.0)
-	mark_y.append(0.0)
-	mark_z.append(0.0)
+	scan_x.append(NO_POINT)
+	scan_y.append(0.0)
+	scan_z.append(0.0)
 	kind.append(Session.NONE)
 	target.append(-1)
 	puzzle_seed.append(0)
@@ -88,10 +91,9 @@ func columns() -> Array:
 			["ping_left", ping_left],
 			["ping_cool", ping_cool],
 			["selected", selected],
-			["mark_contact", mark_contact],
-			["mark_x", mark_x],
-			["mark_y", mark_y],
-			["mark_z", mark_z],
+			["scan_x", scan_x],
+			["scan_y", scan_y],
+			["scan_z", scan_z],
 			["kind", kind],
 			["target", target],
 			["puzzle_seed", puzzle_seed],
@@ -106,6 +108,19 @@ func columns() -> Array:
 			["self_scanned", self_scanned],
 		]
 	)
+
+
+## Whether the ship has a scan point.
+func has_scan_point(ship: int) -> bool:
+	return is_finite(scan_x[ship])
+
+
+## Sets the ship's scan point (m), or clears it when `at` is empty.
+func set_scan_point(ship: int, at: PackedFloat64Array) -> void:
+	var none: bool = at.size() != 3
+	scan_x[ship] = NO_POINT if none else at[0]
+	scan_y[ship] = 0.0 if none else at[1]
+	scan_z[ship] = 0.0 if none else at[2]
 
 
 ## Closes the ship's session.

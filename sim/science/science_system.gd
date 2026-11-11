@@ -74,7 +74,7 @@ static func noise_parts(world: SimWorld, ship: int, contact: int) -> Dictionary:
 	var is_active: bool = t.active[ship] == 1
 	var pinging: bool = t.ping_left[ship] > 0.0
 	var probe: bool = probe_covered(world, ship, contact)
-	var at_mark: bool = at_scan_mark(world, ship, contact)
+	var at_mark: bool = at_scan_point(world, ship)
 	var total: float = ScienceNoise.compute(
 		def, dist, aspect, eff, pips, nominal, is_active, pinging, probe, at_mark
 	)
@@ -101,16 +101,27 @@ static func probe_covered(world: SimWorld, ship: int, contact: int) -> bool:
 	return ProbeSystem.covers_contact(world, ship, contact)
 
 
-## Whether the ship is within mark_radius of its scan-position mark for that contact
-## (P3).
-static func at_scan_mark(world: SimWorld, ship: int, contact: int) -> bool:
+## Whether the ship is within mark_radius of its scan point (P3), whatever it scans: the
+## point is the crew's scan position, which Relay can change (D378).
+static func at_scan_point(world: SimWorld, ship: int) -> bool:
 	var t: ScienceTable = world.science
-	if t.mark_contact[ship] != contact:
+	if not t.has_scan_point(ship):
 		return false
 	var off: Vector3 = world.kin.relative_to_point(
-		ship, t.mark_x[ship], t.mark_y[ship], t.mark_z[ship]
+		ship, t.scan_x[ship], t.scan_y[ship], t.scan_z[ship]
 	)
 	return off.length() <= world.science_def.mark_radius
+
+
+## The server moved or cleared the ship's crew-state scan position (D378): the sim's scan
+## point follows. A non-finite point is refused; others wrap into the cube.
+static func set_scan_point(world: SimWorld, ship: int, at: PackedFloat64Array) -> bool:
+	if at.size() == 3:
+		at = world.kin.wrap_point(at[0], at[1], at[2])
+		if at.is_empty():
+			return false
+	world.science.set_scan_point(ship, at)
+	return true
 
 
 ## Sensors to active (true) or passive (false) mode (FT-SCI-003).
@@ -142,7 +153,8 @@ static func select(world: SimWorld, ship: int, contact: int) -> bool:
 
 
 ## Places the scan-position mark for the contact (FT-SCI-010, P3): broadside to the
-## contact, mark_distance away, on the side the ship is on. Replaces the old mark.
+## contact, mark_distance away, on the side the ship is on: the ship's scan point, which
+## the server turns into the crew-state scan position (D378). Replaces the old one.
 static func place_mark(world: SimWorld, ship: int, contact: int) -> bool:
 	var reason: StringName = _check_target(world, ship, contact, false)
 	if reason != &"" and reason != REASON_OUT_OF_RANGE:
@@ -156,10 +168,7 @@ static func place_mark(world: SimWorld, ship: int, contact: int) -> bool:
 	var offset: Vector3 = side.normalized() * world.science_def.mark_distance
 	var t: ScienceTable = world.science
 	var at: PackedFloat64Array = kin.point_at(contact, offset)
-	t.mark_contact[ship] = contact
-	t.mark_x[ship] = at[0]
-	t.mark_y[ship] = at[1]
-	t.mark_z[ship] = at[2]
+	t.set_scan_point(ship, at)
 	world.emit(&"scan_mark", ship, contact, 0.0, offset)
 	return true
 

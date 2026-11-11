@@ -187,7 +187,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-SCI-007 | tests | `tests/sim/science/test_hack.gd` |
 | FT-SCI-008 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd` |
 | FT-SCI-009 | tests | `tests/net/test_net_coop_l3.gd`, `tests/sim/science/test_scan.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
-| FT-SCI-010 | tests | `tests/sim/science/test_science_noise.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
+| FT-SCI-010 | tests | `tests/net/test_net_relay_l3.gd`, `tests/sim/science/test_science_noise.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-011 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_hack.gd`, `tests/sim/science/test_scan.gd` |
 | FT-SCI-012 | tests | `tests/sim/science/test_minigame_timing.gd`, `tests/stations/science/test_science_phone.gd` |
 | FT-SCI-013 | tests | `tests/stations/test_science_panel.gd` |

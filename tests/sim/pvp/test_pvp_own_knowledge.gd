@@ -46,6 +46,6 @@ func test_rivals_use_only_their_own_knowledge_and_marks() -> void:
 	assert_bool(picks[1].accepted).is_false()
 	assert_bool(marks[0].accepted).is_true()
 	assert_bool(marks[1].accepted).is_false()
-	assert_int(w.science.mark_contact[0]).is_equal(contact)
-	assert_int(w.science.mark_contact[1]).is_equal(-1)
+	assert_bool(w.science.has_scan_point(0)).is_true()
+	assert_bool(w.science.has_scan_point(1)).is_false()
 	assert_int(w.helm.target_ship[1]).is_equal(-1)

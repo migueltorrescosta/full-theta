@@ -301,6 +301,26 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	await h.until(func() -> bool: return server.session.crew.relay.routes_of(PLAYER)[0].is_empty())
 
 
+# FT: FT-SPA-028, FT-SCI-010
+# D378 (12r-27): when a Relay op removes Science's scan position, the server clears the
+# sim's scan point with one ScienceScanPointCommand.
+func test_removing_the_scan_position_clears_the_sim_point() -> void:
+	var server: NetServer = h.server()
+	var relay: NetClient = await h.joined(server, "relay", "ops")
+	server.world.science_def = ScienceFixture.science()
+	KnowledgeSystem.step(server.world)
+	var crew: NetCrewState = server.session.crew
+	assert_bool(ScienceSystem.place_mark(server.world, PLAYER, NetHarness.ENEMY)).is_true()
+	for e: SimEvent in server.world.drain_events():
+		crew.on_sim_event(e)
+	var zones: Array = crew.relay.zones_of(PLAYER)
+	assert_int(zones.size()).is_equal(1)
+	assert_bool(server.world.science.has_scan_point(PLAYER)).is_true()
+	relay.hazard_delete(zones[0]["id"])
+	await h.until(func() -> bool: return not server.world.science.has_scan_point(PLAYER))
+	assert_int(crew.relay.zones_of(PLAYER).size()).is_equal(0)
+
+
 # FT: FT-SPA-014
 # A mark attaches to a contact's subsystem only once its weak point is revealed (D202);
 # the mark then rides on the subsystem's place in the contact's frame.
@@ -462,7 +482,7 @@ func test_science_scan_mark_makes_a_scan_position() -> void:
 	assert_int(zones.size()).is_equal(1)
 	assert_str(zones[0]["kind"]).is_equal("scan")
 	assert_float(zones[0]["radius"]).is_equal(server.world.science_def.mark_radius)
-	assert_float(zones[0]["x"]).is_equal_approx(server.world.science.mark_x[PLAYER], 0.001)
+	assert_float(zones[0]["x"]).is_equal_approx(server.world.science.scan_x[PLAYER], 0.001)
 	assert_int(crew.marks.marks_of(PLAYER).size()).is_equal(0)
 	var again: SimEvent = SimEvent.new()
 	again.kind = &"scan_mark"

@@ -34,6 +34,7 @@ static var _classes: Dictionary[StringName, GDScript] = _by_kind(
 		ScienceSensorModeCommand,
 		SciencePingCommand,
 		ScienceMarkCommand,
+		ScienceScanPointCommand,
 		ScienceSelectCommand,
 		LaunchProbeCommand,
 		FabricateProbeCommand,

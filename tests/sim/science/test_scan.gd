@@ -131,7 +131,7 @@ func test_scan_at_the_mark_is_cleaner() -> void:
 	mark.contact = FOE
 	ScienceFixture.do(at, mark)
 	var t: ScienceTable = at.science
-	at.kin.place(ME, t.mark_x[ME], t.mark_y[ME], t.mark_z[ME])
+	at.kin.place(ME, t.scan_x[ME], t.scan_y[ME], t.scan_z[ME])
 	ScienceFixture.do(at, ScienceFixture.scan_cmd())
 	assert_float(t.noise[ME]).is_less(off_noise)
 	var def: ScienceDef = at.science_def
