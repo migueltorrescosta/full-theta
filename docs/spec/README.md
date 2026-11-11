@@ -34,30 +34,65 @@ Later decisions supersede earlier ones: `../decisions.md` is the log, and git hi
 
 ## Glossary
 
+One meaning per term; code, wire, docs and player text use these words (D392 to D407). Words marked "not" are retired in that sense.
+
 | Term | Meaning |
 |---|---|
-| Functional station | One of Helm, Weapons, Engineering, Science, Relay, Comms. All six must be covered to launch. |
+| Station | One of the six crew (functional) stations: Helm, Weapons, Engineering, Science, Relay, Comms. All six must be covered to launch. Not a seat (D395). |
+| Seat | What a player picks in the lobby: a station, a joint view, Captain or Viewer (`SeatDef`, wire field `seat`, keys `seat.<id>`; D395). |
+| Pick | To choose a seat, and the `Pick` message that does it; what is picked is the seat (D407). |
 | Captain | Optional, information-only seat that directs the main screen and places pings and marks. Never counts for coverage. |
-| Viewer | A read-only main-screen connection. Counts toward the 64-connection cap. |
-| Catalogue | The lobby list a player picks from: single stations, joint views, Captain, Viewer. |
-| Joint view | A layout combining two functional stations on one screen, every control reachable, one panel focused at a time (for example Tactical = Helm + Weapons); one per pair, 15 in all (D76, D95). |
-| Coverage | The condition that a ship's crew picks include every functional station, with at least 3 crew players. Enables Ready/Start. |
+| Viewer | A read-only main-screen seat. Its connection counts toward the 64-connection cap. |
+| Catalogue | The lobby list of seats: single stations, joint views, Captain, Viewer (`StationCatalogue`; D398). |
+| Joint view | A seat combining two stations on one screen, every control reachable, one panel focused at a time (for example Tactical = Helm + Weapons); one per pair, 15 in all (D76, D95). |
+| View | A main-screen mode (`MainScreen.View`: status, close-up, ...) or a joint view; nothing else. The snapshot stream says section, reader and stream key (D398). |
+| Close-up view | The main-screen mode with the camera on the selection (was the "target" view; D397). |
+| Coverage | The condition that a ship's crew seats include every station, with at least 3 crew players. Enables Ready/Start. |
 | Claim | A lock a player takes on a sub-control of a shared station (weapon mount, repair crew, probe, NPC conversation, scan/hack slot, Helm flight, Helm shield facing). |
+| Session | One player's connection to the server (`NetSession`, its token and its pick); never the whole game (D392). |
+| Game | One hosted game from the lobby to its end, served by `NetGame`, with its `GameRules`, `GameMode` (co-op, race, teams, ...) and result `GameOutcome` (`game_over`; D392). |
+| Minigame | Science's scan or hack interaction (`ScienceTable.Minigame`, SCIENCE fields `minigame_*`; D392). |
+| Scenario | The encounter script (D64): a typed class on the Scenario API that sets up and runs encounters; the Shakedown is one. Not the map (D393). |
+| Map | The one cube a game plays in, wrapping on all three axes with period `map_period` (`MapDef`); no per-encounter maps (D77, D229, D230, D393). |
+| Cube point | A position on the map: three 64-bit floats wrapped into [−P/2, P/2) (D104, D230); one `PackedFloat64Array` at every API, columns `<role>_x`, `<role>_y`, `<role>_z` in tables (D401). |
+| Site | A named point with a radius on the map where an encounter happens; seeded by the scenario or spawned by the director (D80, D229). Site names are a callout layer outside the 8 marks (D98, D230). |
+| Run | The fleet's playthrough of 4 to 6 encounters in 20–40 minutes; nothing persists after it (D394). |
+| Ship outcome | One ship's result in the run: `ShipOutcome` (WIN or LOSS) in `ShipStateTable` (`world.ships`), sent as the `ship_outcome` event (D394). |
+| Encounter | A self-contained situation (hostile wave, rescue, derelict, negotiation...) the director places or activates at a site, with its own triggers and outcome (D77). |
+| Director | Server component that chooses and parameterises scenario components; never changes rules; logs every decision. |
+| Faction | Owner of knowledge, callsigns and reputation, and the only side the sim knows; allied ships share one faction, marks stay per ship (D82); crew faction ids are `Factions.CREW_SIDES`, 11 to 15 (D396). |
+| Team | A lobby label for a group of ships in a teams game, mapped to a faction once in `RunSetup`; the sim never sees it (D396). |
+| owner_ship, owner_faction | The key columns of every sim table row: the ship and the faction the row belongs to (D404). |
+| subject_ship, subject_faction | The ship or faction a row is about, where it is not the owner (`KnowledgeTable`, `ReputationTable`, `HackTable`; D404). |
+| NPC | A ship or object the sim runs without a crew: raiders, freighters, debris (`NpcDef`, `spawn_npc`, `content/npcs/`; D399). |
+| Hostile | A relation between factions, not a kind of NPC; player text says "hostile ship" (D399). |
+| Contact | Anything a ship's sensors track, as its faction knows it; it has a callsign (D397). |
+| Selection | The contact, site or point a station has selected (Helm's `HelmSelectCommand`, `sel_*` columns); the close-up view follows it (D397). |
+| Target | Only what weapons fire at, what an AI attacks or what guidance steers to (D397). |
+| Subject | The contact a Comms card is about (`CardSpec.subject`; D397). |
+| Card | A Comms card on the card board; the Controls reference is always the "callout card" (D369, D407). |
+| Callout card | The bundled Controls reference card (D369); never just "card". |
 | Callsign | Per-faction short name for a contact: allegiance letter (H, U, F, N) plus a number that never changes. |
 | Clock / height / range | Spoken ship-relative direction: clock position in the deck plane, height word, range band (`H2 · 4 high · mid`; D114). |
+| Callout | A spoken or printed position in clock / height / range words, and the label drawn by a blip (`CalloutText`, `CalloutLayout`; D399). |
 | Mark | One of up to 8 named world-anchored points per ship (Alpha–Hotel), free or attached to a contact. |
-| Ping | A rate-limited 3 s pulse plus chime on every screen of the ship, pointing at an item. |
+| Ping | The crew's rate-limited 3 s pulse plus chime on every screen of the ship, pointing at an item. Not Science's sensor sweep. |
+| Sensor sweep | Science's one-shot active sensor pulse, with a cooldown (intent `sci_sweep`; D399). |
 | Disc radar | Elite-style radar: deck-plane disc with elevation stems, range ring at the selected contact, optional side strip. |
 | Ship frame | Orientation relative to the ship: deck plane, bow at 12. Every radar and callout uses it; Relay, Captain maps and the tactical view may centre it on a selected mark, site or contact. Space has no world-fixed up (D124). |
-| Request chip | A player-initiated typed request shown on another station; a shortcut toggle, off in the Hard preset. |
-| Data shortcut | A share button or data link that puts one station's data on another station's screen; each is a toggle set before start, preset by difficulty (D84). |
-| Pair (P1–P15) | One of the 15 pairs of functional stations and its cooperative mechanic. |
+| Request chip | A player-initiated typed request shown on another station; a shortcut toggle, off in the Hard preset. "Chip" means only this (D399). |
+| Data shortcut | A share button or data link that puts one station's data on another station's screen; each is a toggle set before start, preset by difficulty (D84). Hints say "share with your partner" (D399). |
+| Repair crew | One of Engineering's crews dispatched to repair a part (`eng.crew`, "Crew %s"); never a team (D399). |
+| Section, reader | A server-side `net/` builder of one snapshot block is a `*Section`, assembled by `SnapshotWriter`; a client decoder is a `*Reader`, and the decoded state is `SnapshotState`; data shortcuts are applied by `ShortcutFilter` (D398). |
+| Pair (P1–P15) | One of the 15 pairs of stations and its cooperative mechanic. |
 | PWR, COND, KNOW, MARK, STORY, CUE | The shared simulation systems that carry the pair mechanics. |
-| Director | Server component that chooses and parameterises scenario components; never changes rules; logs every decision. |
-| Run | One 20–40 minute playthrough of 4 to 6 encounters; nothing persists after it. |
-| Encounter | A self-contained situation (enemy wave, rescue, derelict, negotiation...) the director places or activates at a site, with its own triggers and outcome (D77). |
-| Scenario map | The single global open 3D map of a scenario; no per-encounter maps (D77). |
-| Site | A named point with a radius on the scenario map where an encounter happens; seeded by the scenario or spawned by the director (D80). The whole map is one cube that wraps on all three axes with period P; positions are offsets in it, and site names are a callout layer outside the 8 marks (D98, D229, D230). |
+| Story flag | A scenario's named integer in `StoryFlagTable`; card, ship and contact state have typed columns instead (D402). |
+| Shakedown | The training scenario: no director, no elimination, a drone target (FT-MIS-039); played as lessons and the crew drill. |
+| Lesson | One station's Training track in the Shakedown (D303). |
+| Crew drill | The Shakedown's shared track for the whole crew (D303). |
+| Step | One item of a lesson or the crew drill. |
+| Tip | One short line of advice on the loading screen and in the Tips menu (`content/tips/tips.json`; D291). |
+| Give up | The player text for ending a run early by vote; in code `abandon` (co-op) or `forfeit` (PvP) (D267, D367, D407). |
+| Units | SI quantities have no suffix in defs, `.tres` keys, the wire and the sim; only non-SI units keep one: `_ticks`, `_ms`, `_us`, `_km`, `_deg`, `_px`, `_db`, `_min` (D403). |
 | Slot module | An upgrade fitted to a ship slot, with a trade-off; bought while docked via Comms (D86). |
-| Faction | Owner of knowledge, callsigns and reputation; all state is keyed by ship and faction. Allied ships share one faction; marks stay per ship (D82). |
 | EE | EmptyEpsilon, the reference game (GPL-2.0-only; ideas only). |
