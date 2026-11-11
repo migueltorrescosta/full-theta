@@ -174,7 +174,7 @@ func test_host_sets_mode_and_teams() -> void:
 	for c: NetClient in [host, crews[0], crews[1]]:
 		c.set_ready(true)
 	assert_bool(await _running(server)).is_true()
-	assert_int(server.world.team_of(2)).is_equal(1)
+	assert_int(server.session.fleet.team_of(2)).is_equal(1)
 	assert_int(server.world.faction_of(1)).is_equal(server.world.faction_of(2))
 	assert_int(server.world.faction_of(0)).is_not_equal(server.world.faction_of(1))
 	from = h.mark(host)
@@ -196,9 +196,8 @@ func test_modes_offered_and_checked_at_start() -> void:
 		host.set_mode(mode, "last_team_standing", 5)
 		var named: Callable = func(ev: Dictionary) -> bool: return ev["payload"]["mode"] == mode
 		assert_dict(await _fleet(host, 0, named)).override_failure_message(mode).is_not_empty()
-	var finite: RelaunchPolicy = server.session.fleet.rules.relaunch_for(
-		SessionRules.HOLDOUT_FINITE_TEAM
-	)
+	var rules: SessionRules = server.session.fleet.rules
+	var finite: RelaunchPolicy = rules.relaunch_for(rules.holdout_finite_faction())
 	assert_int(finite.lives).is_equal(5)
 	host.set_mode("race", "last_team_standing")
 	from = h.mark(host)
@@ -228,6 +227,7 @@ func test_session_over_relays_the_outcome() -> void:
 	var want: SessionOutcome = OutcomeSystem.session_outcome(server.world)
 	assert_str(payload["reason"]).is_equal(SessionOutcome.REASON_NAMES[want.reason])
 	assert_array(payload["winners"]).is_equal(Array(want.winners))
+	assert_int(payload["team"]).is_equal(-1)
 	assert_int(h.events_of(crews[0], NetProtocol.EVENT_SESSION_OVER).size()).is_equal(1)
 
 

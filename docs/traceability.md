@@ -39,7 +39,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-ARC-015 | tests | `tests/presentation/test_snapshot_interpolator.gd` |
 | FT-ARC-016 | tests | `tests/scenarios/test_enemy_wave.gd`, `tests/sim/api/test_api_values.gd`, `tests/sim/api/test_api_writes.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-017 | tests | `tools/tests/test_release.py`, [#13](https://github.com/migueltorrescosta/full-theta/issues/13) |
-| FT-ARC-018 | tests | `tests/net/test_fleet_sharing_l3.gd` |
+| FT-ARC-018 | tests | `tests/net/test_fleet_sharing_l3.gd`, `tests/sim/run/test_crew_factions.gd` |
 | FT-ARC-019 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-ARC-020 | tests | `tests/net/test_net_run_reset_l3.gd`, `tests/sim/run/test_run_reset.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tools/tests/test_lint_arch.py` |
@@ -295,7 +295,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-010 | tests | `tests/net/test_debrief_l3.gd`, `tests/sim/run/test_encounter_fixes.gd` |
 | FT-MIS-011 | tests | `tests/director/test_fleet_director.gd`, `tests/net/test_fleet_sim_events.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_relaunch.gd`, `tests/sim/run/test_session_modes.gd`, `tests/sim/run/test_session_ties.gd`, `tests/stations/test_fleet_screens.gd` |
 | FT-MIS-012 | tests | `tests/sim/run/test_relaunch.gd`, `tests/sim/run/test_session_modes.gd` |
-| FT-MIS-013 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd` |
+| FT-MIS-013 | tests | `tests/director/test_fleet_director.gd`, `tests/net/test_net_fleet_teams.gd`, `tests/sim/run/test_session_modes.gd` |
 | FT-MIS-014 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/sim/run/test_relaunch.gd`, `tests/sim/run/test_session_modes.gd`, `tests/sim/run/test_session_ties.gd`, `tests/stations/test_fleet_screens.gd` |
 | FT-MIS-015 | tests | `tests/sim/run/test_flee_abandon.gd` |
 | FT-MIS-016 | tests | `tests/net/test_run_abandon_l3.gd`, `tests/sim/run/test_flee_abandon.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_settings_menu.gd` |
@@ -314,9 +314,9 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-029 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_picks.gd`, `tests/scenarios/test_enemy_wave.gd` |
 | FT-MIS-030 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/net/test_fleet_pause_l3.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd` |
 | FT-MIS-031 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/stations/test_fleet_lobby.gd` |
-| FT-MIS-032 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd`, `tests/sim/run/test_session_ties.gd` |
-| FT-MIS-033 | tests | `tests/director/test_fleet_director.gd`, `tests/sim/run/test_session_modes.gd`, `tests/sim/run/test_session_ties.gd`, `tests/stations/test_fleet_screens.gd` |
-| FT-MIS-034 | tests | `tests/sim/run/test_session_modes.gd`, `tests/sim/run/test_session_ties.gd`, `tests/stations/test_fleet_lobby.gd` |
+| FT-MIS-032 | tests | `tests/director/test_fleet_director.gd`, `tests/net/test_net_fleet_teams.gd`, `tests/sim/run/test_crew_factions.gd`, `tests/sim/run/test_session_modes.gd`, `tests/sim/run/test_session_ties.gd` |
+| FT-MIS-033 | tests | `tests/director/test_fleet_director.gd`, `tests/net/test_net_fleet_teams.gd`, `tests/sim/run/test_session_modes.gd`, `tests/sim/run/test_session_ties.gd`, `tests/stations/test_fleet_screens.gd` |
+| FT-MIS-034 | tests | `tests/net/test_net_fleet_teams.gd`, `tests/sim/run/test_session_modes.gd`, `tests/sim/run/test_session_ties.gd`, `tests/stations/test_fleet_lobby.gd` |
 | FT-MIS-035 | tests | `tests/sim/economy/test_modules.gd` |
 | FT-MIS-036 | tests | `tests/net/test_comms_view.gd`, `tests/scenarios/test_dock_market.gd`, `tests/sim/economy/test_economy.gd`, `tests/sim/economy/test_modules.gd`, `tests/sim/story/test_cards.gd`, `tests/sim/story/test_conversation_guards.gd`, `tests/stations/test_comms_trade.gd` |
 | FT-MIS-037 | manual | [#13](https://github.com/migueltorrescosta/full-theta/issues/13) |

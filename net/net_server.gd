@@ -236,7 +236,7 @@ static func _default_slots(setup: RunSetup) -> Array[ShipSlot]:
 	var ship_name: String = setup.run_def.player_ship.display_name
 	for i: int in setup.crew_count():
 		var label: String = ship_name if setup.crew_count() == 1 else "%s %d" % [ship_name, i + 1]
-		out.append(ShipSlot.of(label, SessionRules.CREW_FACTIONS[0], 0))
+		out.append(ShipSlot.of(label, 0))
 	return out
 
 

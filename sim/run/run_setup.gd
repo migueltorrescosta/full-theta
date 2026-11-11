@@ -26,8 +26,8 @@ var markets: Dictionary[StringName, MarketDef] = {}
 var site_markets: Dictionary[int, StringName] = {}
 var hail_conversations: Dictionary[StringName, StringName] = {}
 ## The session built from the multi-ship lobby (#11, FT-GEN-001, M4-Q3): one crewed ship per
-## slot, in slot order, with the slot's faction and team. Empty: `crew_ships` ships of
-## PLAYER_FACTION, as before M4.
+## slot, in slot order, of the faction rules.faction_for gives its team (faction_of_slot):
+## the sim never sees a team (B5). Empty: `crew_ships` ships of PLAYER_FACTION, as before M4.
 var slots: Array[ShipSlot] = []
 ## The session's rules (mode, team win rule, relaunch policies); build() hands them to the
 ## world. Defaults to COOP.
@@ -100,13 +100,11 @@ func build() -> SimWorld:
 	# Crew factions of different sides are hostile by SimWorld's default (PvP); allies share one.
 	var starts: PackedInt32Array = start_sites(world)
 	for i: int in crew_count():
-		var faction: int = slots[i].faction if not slots.is_empty() else PLAYER_FACTION
+		var faction: int = faction_of_slot(i)
 		var site: int = starts[i]
 		var at: Vector3 = world.sites.point3(site) if site >= 0 else Vector3.ZERO
 		var offset: Vector3 = at + Vector3(i * CREW_SPACING_M, 0.0, 0.0)
 		var id: int = world.spawn_ship(run_def.player_ship, faction, offset)
-		if not slots.is_empty():
-			world.ship_teams[id] = slots[i].team
 		world.ship_starts[id] = offset
 		world.ship_start_site[id] = site
 		if site >= 0:
@@ -116,27 +114,33 @@ func build() -> SimWorld:
 	return world
 
 
+## The faction of the crewed ship of slot `i`: its team mapped by rules.faction_for, the
+## one place a lobby team becomes a faction (B5); PLAYER_FACTION without slots.
+func faction_of_slot(i: int) -> int:
+	return rules.faction_for(i, slots[i].team) if not slots.is_empty() else PLAYER_FACTION
+
+
 ## The site each crewed ship starts at, by slot index (-1 with no sites). Co-op starts every
 ## ship at Kestrel Yard (site 0, D205). PvP (#11, PROVISIONAL, open for the owner) starts
-## each side at its own site, as far apart as the map allows: the yard for the first side,
-## then for each next side the site farthest (by minimum image) from the ones taken; with
-## more sides than sites, the sites are used again in the same order. The ships of a site
+## each faction at its own site, as far apart as the map allows: the yard for the first faction,
+## then for each next faction the site farthest (by minimum image) from the ones taken; with
+## more factions than sites, the sites are used again in the same order. The ships of a site
 ## stand CREW_SPACING_M apart by slot index, so they never overlap.
 func start_sites(world: SimWorld) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	var count: int = world.sites.size()
-	var by_side: Dictionary[int, int] = {}
+	var by_faction: Dictionary[int, int] = {}
 	var taken: PackedInt32Array = PackedInt32Array()
 	for i: int in crew_count():
 		if count == 0:
 			out.append(-1)
 			continue
-		var side: int = slots[i].team if not slots.is_empty() and rules.is_pvp() else 0
-		if not by_side.has(side):
+		var faction: int = faction_of_slot(i)
+		if not by_faction.has(faction):
 			var site: int = _farthest_site(world, taken)
-			by_side[side] = site
+			by_faction[faction] = site
 			taken.append(site)
-		out.append(by_side[side])
+		out.append(by_faction[faction])
 	return out
 
 

@@ -69,7 +69,7 @@ func test_a_team_that_won_and_was_destroyed_does_not_stand() -> void:
 	f.step(1)
 	var out: SessionOutcome = f.outcome()
 	assert_int(out.reason).is_equal(SessionOutcome.Reason.LAST_STANDING)
-	assert_int(out.team).is_equal(1)
+	assert_int(out.winner_faction).is_equal(f.rules.faction_for(0, 1))
 	assert_array(Array(out.winners)).is_equal([1, 3])
 
 
@@ -108,7 +108,7 @@ func test_the_holdout_side_wins_when_the_timer_runs_out() -> void:
 	f.step(3)
 	var out: SessionOutcome = f.outcome()
 	assert_int(out.reason).is_equal(SessionOutcome.Reason.HOLDOUT_OVER)
-	assert_int(out.team).is_equal(SessionRules.HOLDOUT_FINITE_TEAM)
+	assert_int(out.winner_faction).is_equal(f.rules.holdout_finite_faction())
 	assert_array(Array(out.winners)).is_equal([1])
 	assert_int(out.held_ticks).is_equal(cap)
 
