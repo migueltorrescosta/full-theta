@@ -18,8 +18,8 @@ const KEY_STRIDE: int = 65536
 static var _registry: Dictionary = {}
 static var _registry_lock: Mutex = Mutex.new()
 
-var ship_ids: PackedInt32Array = PackedInt32Array()
-var factions: PackedInt32Array = PackedInt32Array()
+var owner_ship: PackedInt32Array = PackedInt32Array()
+var owner_faction: PackedInt32Array = PackedInt32Array()
 
 
 ## One int for an ordered pair of ids (faction and ship, or faction and faction), the key of
@@ -29,26 +29,26 @@ static func row_key(a: int, b: int) -> int:
 
 
 func size() -> int:
-	return ship_ids.size()
+	return owner_ship.size()
 
 
 ## Appends the key of a new row; subclasses append their own columns after it.
 func add_key(ship_id: int, faction: int) -> int:
-	ship_ids.append(ship_id)
-	factions.append(faction)
-	return ship_ids.size() - 1
+	owner_ship.append(ship_id)
+	owner_faction.append(faction)
+	return owner_ship.size() - 1
 
 
 ## First row of the ship, or -1.
 func row_of(ship_id: int) -> int:
-	return ship_ids.find(ship_id)
+	return owner_ship.find(ship_id)
 
 
 ## Rows of the ship, in order.
 func rows_of(ship_id: int) -> PackedInt32Array:
 	var rows: PackedInt32Array = PackedInt32Array()
-	for r: int in ship_ids.size():
-		if ship_ids[r] == ship_id:
+	for r: int in owner_ship.size():
+		if owner_ship[r] == ship_id:
 			rows.append(r)
 	return rows
 
@@ -115,7 +115,7 @@ func reset_ship(ship_id: int, def: ShipDef) -> void:
 	if rows.is_empty():
 		return
 	var fresh: SimTable = (get_script() as GDScript).new()
-	fresh.add_ship(ship_id, factions[rows[0]], def)
+	fresh.add_ship(ship_id, owner_faction[rows[0]], def)
 	assert(fresh.size() == rows.size(), "reset_ship: row count changed")
 	for col: Array in fresh.columns():
 		var name: String = col[0]

@@ -225,7 +225,7 @@ func test_faction_wide_cards() -> void:
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION)
 	spec.faction_wide = true
 	var card: int = StoryFixture.post(w, 0, spec)
-	assert_int(w.story.ship_ids[card]).is_equal(-1)
+	assert_int(w.story.owner_ship[card]).is_equal(-1)
 	assert_bool(Story.visible_to(w, card, 0)).is_true()
 	assert_bool(Story.visible_to(w, card, mate)).is_true()
 	assert_bool(Story.visible_to(w, card, 1)).is_false()

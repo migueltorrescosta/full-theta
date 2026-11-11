@@ -301,7 +301,7 @@ func test_reset_ship_drops_its_projectiles() -> void:
 		world.projectiles.spawn(a, 1, 0.0, 0.0, -k, Vector3.FORWARD, 0.5, 1.0, 100)
 		world.projectiles.spawn(b, 2, 5000.0, 0.0, -k, Vector3.FORWARD, 0.5, 1.0, 100)
 	world.reset_ship(a)
-	assert_array(Array(world.projectiles.ship_ids)).is_equal([b, b, b])
+	assert_array(Array(world.projectiles.owner_ship)).is_equal([b, b, b])
 	assert_array(Array(world.projectiles.pz)).is_equal([0.0, -1.0, -2.0])
 	for col: Array in world.projectiles.columns():
 		assert_int(col[1].size()).is_equal(3)

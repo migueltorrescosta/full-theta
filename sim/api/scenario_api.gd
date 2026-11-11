@@ -200,8 +200,8 @@ func cards_of(ship_id: int) -> Array[CardView]:
 		return out
 	var faction: int = _world.faction_of(ship_id)
 	for row: int in story.size():
-		var owner: int = story.ship_ids[row]
-		if owner != ship_id and not (owner == -1 and story.factions[row] == faction):
+		var owner: int = story.owner_ship[row]
+		if owner != ship_id and not (owner == -1 and story.owner_faction[row] == faction):
 			continue
 		var v: CardView = CardView.new()
 		v.id = row

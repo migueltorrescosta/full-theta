@@ -71,7 +71,7 @@ static func known_to(world: SimWorld, faction: int, i: int) -> bool:
 		return false
 	var kin: Kinematics = world.kin
 	for s: int in world.ship_count():
-		if kin.factions[s] != faction or not kin.is_alive(s):
+		if kin.owner_faction[s] != faction or not kin.is_alive(s):
 			continue
 		var reach: float = (
 			h.detect_range * DamageSystem.effectiveness(world, s, KnowledgeSystem.SENSORS)
@@ -80,12 +80,12 @@ static func known_to(world: SimWorld, faction: int, i: int) -> bool:
 			return true
 	var probes: ProbeTable = world.probes
 	for p: int in probes.size():
-		if probes.factions[p] != faction or probes.deployed[p] == 0:
+		if probes.owner_faction[p] != faction or probes.deployed[p] == 0:
 			continue
 		var at: Vector3 = kin.delta(
 			probes.at_x[p], probes.at_y[p], probes.at_z[p], h.center.x, h.center.y, h.center.z
 		)
-		if _gap(h, at, t) <= world.defs[probes.ship_ids[p]].probe_range:
+		if _gap(h, at, t) <= world.defs[probes.owner_ship[p]].probe_range:
 			return true
 	return false
 

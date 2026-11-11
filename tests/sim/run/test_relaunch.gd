@@ -29,7 +29,7 @@ static func others(w: SimWorld, ship: int) -> Array:
 		for col: Array in t.columns():
 			var values: Array = []
 			for r: int in t.size():
-				if t.ship_ids[r] != ship:
+				if t.owner_ship[r] != ship:
 					values.append(col[1][r])
 			out.append([col[0], values])
 	return out

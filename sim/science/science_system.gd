@@ -384,7 +384,7 @@ static func _apply_hacks(world: SimWorld) -> void:
 		r -= 1
 	d.hack_scale.fill(1.0)
 	for i: int in hacks.size():
-		var row: int = d.subsystem_row(hacks.ship_ids[i], hacks.subsystem[i])
+		var row: int = d.subsystem_row(hacks.owner_ship[i], hacks.subsystem[i])
 		d.hack_scale[row] *= hacks.factor[i]
 	d.hack_dirty = hacks.size() > 0
 

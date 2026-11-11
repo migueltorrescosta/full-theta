@@ -134,11 +134,11 @@ static func _cards(world: SimWorld, ship: int) -> Array:
 	var k: KnowledgeTable = world.knowledge
 	var rows: Array = []
 	for r: int in k.size():
-		if k.factions[r] != faction or not (k.detected[r] == 1 or k.scan_conf[r] > 0.0):
+		if k.owner_faction[r] != faction or not (k.detected[r] == 1 or k.scan_conf[r] > 0.0):
 			continue
 		if rows.size() >= MAX_CARDS:
 			break
-		var contact: int = k.ship_ids[r]
+		var contact: int = k.owner_ship[r]
 		var card: Dictionary = {
 			"contact": contact,
 			"detect": ScienceKnowledge.detection_confidence(world, faction, contact),
@@ -188,12 +188,12 @@ static func hacks(world: SimWorld, faction: int) -> Array:
 	var h: HackTable = world.hacks
 	var rows: Array = []
 	for r: int in h.size():
-		if h.factions[r] == faction and rows.size() < MAX_CARDS:
+		if h.owner_faction[r] == faction and rows.size() < MAX_CARDS:
 			(
 				rows
 				. append(
 					{
-						"target": h.ship_ids[r],
+						"target": h.owner_ship[r],
 						"sub": h.subsystem[r],
 						"left": maxf(0.0, (h.until_tick[r] - world.tick) * SimWorld.DT),
 						"by": h.by[r],

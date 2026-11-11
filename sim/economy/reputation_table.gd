@@ -44,8 +44,8 @@ func ensure(faction: int, other: int) -> int:
 func others_of(faction: int) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	for r: int in size():
-		if factions[r] == faction:
-			out.append(ship_ids[r])
+		if owner_faction[r] == faction:
+			out.append(owner_ship[r])
 	return out
 
 

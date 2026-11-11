@@ -1,7 +1,7 @@
 class_name StoryTable
 extends SimTable
 ## STORY, the cards on Comms' board (FT-COM-001 to FT-COM-008, FT-PAIR-003). One row per
-## card, keyed by the ship it was posted to and that ship's faction; ship_ids is -1 for a
+## card, keyed by the ship it was posted to and that ship's faction; owner_ship is -1 for a
 ## faction-wide card (D82: every ship of the faction sees it, the first to act on it
 ## settles it). Rows are added when a card is posted, in post order, and never removed, so
 ## a card's id is its row. Each ship's dock watch is StoryShipTable's, what a faction learned

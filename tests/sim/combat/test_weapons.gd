@@ -190,8 +190,8 @@ func test_shot_spawns_projectile_from_mount() -> void:
 	assert_str(fired[0].tag).is_equal(String(weapon.id))
 	var p: ProjectileTable = world.projectiles
 	assert_int(p.size()).is_equal(1)
-	assert_int(p.ship_ids[0]).is_equal(ship)
-	assert_int(p.factions[0]).is_equal(1)
+	assert_int(p.owner_ship[0]).is_equal(ship)
+	assert_int(p.owner_faction[0]).is_equal(1)
 	assert_vector(p.vel[0]).is_equal(Vector3(0, 0, -100 - weapon.projectile_speed))
 	# Left the muzzle (-22 m) at the start of the tick, then flew one tick.
 	assert_float(p.pz[0]).is_equal_approx(-22.0 - (100.0 + weapon.projectile_speed) / 60.0, 1e-3)

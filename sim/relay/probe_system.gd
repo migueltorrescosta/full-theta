@@ -32,10 +32,10 @@ static func best_closeness(world: SimWorld, faction: int, pos: Vector3) -> float
 	var kin: Kinematics = world.kin
 	var best: float = -INF
 	for r: int in t.size():
-		if t.factions[r] != faction or t.deployed[r] == 0:
+		if t.owner_faction[r] != faction or t.deployed[r] == 0:
 			continue
 		var d: Vector3 = kin.delta(pos.x, pos.y, pos.z, t.at_x[r], t.at_y[r], t.at_z[r])
-		best = maxf(best, 1.0 - d.length() / world.defs[t.ship_ids[r]].probe_range)
+		best = maxf(best, 1.0 - d.length() / world.defs[t.owner_ship[r]].probe_range)
 	return best
 
 
@@ -112,7 +112,7 @@ static func _fly(world: SimWorld) -> void:
 	for r: int in t.size():
 		if t.deployed[r] == 1:
 			continue
-		var speed: float = world.defs[t.ship_ids[r]].probe_speed
+		var speed: float = world.defs[t.owner_ship[r]].probe_speed
 		var d: Vector3 = kin.delta(t.to_x[r], t.to_y[r], t.to_z[r], t.at_x[r], t.at_y[r], t.at_z[r])
 		var step_m: float = speed * SimWorld.DT
 		if d.length() <= step_m:
@@ -120,7 +120,7 @@ static func _fly(world: SimWorld) -> void:
 			t.at_y[r] = t.to_y[r]
 			t.at_z[r] = t.to_z[r]
 			t.deployed[r] = 1
-			world.emit(&"probe_deployed", t.ship_ids[r], -1, t.serial[r])
+			world.emit(&"probe_deployed", t.owner_ship[r], -1, t.serial[r])
 			continue
 		var m: Vector3 = d.normalized() * step_m
 		t.at_x[r] = kin.wrap(t.at_x[r] + m.x)

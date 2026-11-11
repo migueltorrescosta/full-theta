@@ -42,7 +42,7 @@ func launch(ship_id: int, faction: int, serial_no: int, from: Vector3, to: Vecto
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	var keep: PackedInt32Array = PackedInt32Array()
 	for r: int in size():
-		if ship_ids[r] != ship_id:
+		if owner_ship[r] != ship_id:
 			keep.append(r)
 	for col: Array in columns():
 		var name: String = col[0]

@@ -95,7 +95,7 @@ static func on_dock(world: SimWorld, ship: int, site: int) -> void:
 	var delta: float = 0.0
 	if world.story.rep_faction[card] >= 0:
 		delta = Reputation.change(
-			world, ship, world.story.factions[card], world.story.rep_faction[card], UNCLEARED
+			world, ship, world.story.owner_faction[card], world.story.rep_faction[card], UNCLEARED
 		)
 	world.emit(&"dock_uncleared", ship, card, delta)
 
@@ -124,7 +124,7 @@ static func settle(
 	elif dist != &"":
 		dist = StringName(String(dist) + ".fail")
 	if dist != &"" and t.rep_faction[card] >= 0:
-		Reputation.change(world, ship, t.factions[card], t.rep_faction[card], dist)
+		Reputation.change(world, ship, t.owner_faction[card], t.rep_faction[card], dist)
 
 
 # --- P9: surrender ---
@@ -153,7 +153,7 @@ static func surrender_chance(world: SimWorld, contact: int, params: Dictionary) 
 static func ask_surrender(world: SimWorld, ship: int, card: int, params: Dictionary) -> void:
 	var t: StoryTable = world.story
 	var k: KnowledgeTable = world.knowledge
-	var row: int = k.ensure_contact(t.factions[card], t.target[card])
+	var row: int = k.ensure_contact(t.owner_faction[card], t.target[card])
 	var scale: float = pow(float(params.get("refusal_factor", 1.0)), k.surrender_refusals[row])
 	if roll_surrender(world, ship, card, params, scale):
 		return
@@ -177,7 +177,7 @@ static func roll_surrender(
 	var t: StoryTable = world.story
 	var chance: float = surrender_chance(world, t.target[card], params) * scale
 	var yes: bool = world.rng.stream(&"surrender").randf() < chance
-	var row: int = world.knowledge.ensure_contact(t.factions[card], t.target[card])
+	var row: int = world.knowledge.ensure_contact(t.owner_faction[card], t.target[card])
 	world.knowledge.intent[row] = (
 		KnowledgeTable.Intent.SURRENDERING if yes else KnowledgeTable.Intent.HOSTILE
 	)

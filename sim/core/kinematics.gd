@@ -95,7 +95,7 @@ func set_angular_velocity(row: int, w_body: Vector3) -> void:
 func place(row: int, x: float, y: float, z: float) -> void:
 	var p: PackedFloat64Array = wrap_point(x, y, z)
 	if p.is_empty():
-		var msg: String = "non-finite offset for ship %d: (%f, %f, %f)" % [ship_ids[row], x, y, z]
+		var msg: String = "non-finite offset for ship %d: (%f, %f, %f)" % [owner_ship[row], x, y, z]
 		push_error(msg)
 		assert(false, msg)
 		return

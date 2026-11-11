@@ -24,4 +24,4 @@ func slot_row(ship_id: int, slot: int) -> int:
 	if first < 0 or slot < 0:
 		return -1
 	var r: int = first + slot
-	return r if r < size() and ship_ids[r] == ship_id else -1
+	return r if r < size() and owner_ship[r] == ship_id else -1

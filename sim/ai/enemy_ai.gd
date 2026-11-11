@@ -58,7 +58,7 @@ static func step(world: SimWorld) -> void:
 	var candidates: Dictionary[int, PackedInt32Array] = {}
 	for id: int in ai.size():
 		if ai.enabled[id] == 1 and kin.alive[id] == 1:
-			var faction: int = kin.factions[id]
+			var faction: int = kin.owner_faction[id]
 			if not candidates.has(faction):
 				candidates[faction] = _candidates(world, faction)
 			_think(world, id, candidates[faction])
@@ -71,19 +71,19 @@ static func _candidates(world: SimWorld, faction: int) -> PackedInt32Array:
 	var kin: Kinematics = world.kin
 	var knowledge: KnowledgeTable = world.knowledge
 	var alive: PackedByteArray = kin.alive
-	var factions: PackedInt32Array = kin.factions
-	var contact_ids: PackedInt32Array = knowledge.ship_ids
+	var owner_faction: PackedInt32Array = kin.owner_faction
+	var contact_ids: PackedInt32Array = knowledge.owner_ship
 	var identified: PackedByteArray = knowledge.identified
 	var out: PackedInt32Array = PackedInt32Array()
 	# Skips the contacts known not to be hostile: identified, and not hostile by
 	# relation (looked up once per faction).
 	var hostile: Dictionary[int, bool] = {}
-	for r: int in knowledge.detected_rows(faction, factions):
+	for r: int in knowledge.detected_rows(faction, owner_faction):
 		var c: int = contact_ids[r]
 		if alive[c] != 1:
 			continue
 		if identified[r] == 1:
-			var f: int = factions[c]
+			var f: int = owner_faction[c]
 			if not hostile.has(f):
 				hostile[f] = world.is_hostile(faction, f)
 			if not hostile[f]:

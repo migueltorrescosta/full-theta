@@ -22,7 +22,7 @@ func _allies() -> Array:
 	var server: NetServer = h.server()
 	var w: SimWorld = server.world
 	w.ai.enabled[ALLY] = 0
-	w.kin.factions[ALLY] = w.faction_of(PLAYER)
+	w.kin.owner_faction[ALLY] = w.faction_of(PLAYER)
 	var sender: NetClient = await h.joined(server, "sender", "ops", PLAYER)
 	var receiver: NetClient = await h.joined(server, "receiver", "ops", ALLY)
 	var bystander: NetClient = await h.joined(server, "bystander", "tactical", ALLY)
@@ -148,12 +148,12 @@ func test_accepting_at_eight_marks_replaces_and_send_rules() -> void:
 	sender.send_mark(0, PLAYER)
 	why = await _rejected(sender, NetProtocol.Type.MARK_SEND, from)
 	assert_str(why.get("reason", "")).is_equal(CrewRelay.BAD_TARGET)
-	server.world.kin.factions[ALLY] = 9
+	server.world.kin.owner_faction[ALLY] = 9
 	from = h.mark(sender)
 	sender.send_mark(0, ALLY)
 	why = await _rejected(sender, NetProtocol.Type.MARK_SEND, from)
 	assert_str(why.get("reason", "")).is_equal(CrewRelay.BAD_TARGET)
-	server.world.kin.factions[ALLY] = server.world.faction_of(PLAYER)
+	server.world.kin.owner_faction[ALLY] = server.world.faction_of(PLAYER)
 	from = h.mark(sender)
 	sender.send_mark(5, ALLY)
 	why = await _rejected(sender, NetProtocol.Type.MARK_SEND, from)
@@ -398,7 +398,7 @@ func test_probe_launch_log_and_lane_warning_events() -> void:
 	# Lane flagging and its warning: a friendly in the bow mount's line.
 	var w: SimWorld = server.world
 	w.ai.enabled[NetHarness.ENEMY] = 0
-	w.kin.factions[NetHarness.ENEMY] = w.faction_of(PLAYER)
+	w.kin.owner_faction[NetHarness.ENEMY] = w.faction_of(PLAYER)
 	# The warning is a track-feed shortcut: it reaches Weapons once Relay shares (D210).
 	relay.share("track_feeds")
 	var tac_session: NetSession = h.session_of(server, tac)

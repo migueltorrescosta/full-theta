@@ -124,7 +124,7 @@ func find_subsystem(ship_id: int, subsystem_id: StringName) -> int:
 	if h < 0 or subsystem_id == HULL:
 		return -1
 	var r: int = h + 1
-	while r < size() and ship_ids[r] == ship_id:
+	while r < size() and owner_ship[r] == ship_id:
 		if part_ids[r] == subsystem_id:
 			return r
 		r += 1
