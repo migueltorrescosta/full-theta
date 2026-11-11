@@ -71,7 +71,7 @@ So `sim/` never names the director or scenarios, the director and scenarios see 
 - **FT-ARC-018** Allied ships (every ship in a co-op session, every ship of one PvP team) shall belong to one faction sharing contact knowledge, callsigns and reputation; marks and pings stay per ship. (D21, D78, D82)
 - **FT-ARC-019** Runtime Piper synthesis shall run in the server process on the host, never on clients; the session's closed set (ship names, callsigns, NPC names) shall be synthesised and cached at Start, numbers shall use prerendered fragments, and runtime synthesis shall serve only a closed-set name missing from the cache. (D85, D101, D387)
 - **FT-ARC-020** Definitions shall be read-only at runtime: mutable per-ship state is copied from them, and `sim/` receives them already loaded and never calls `load()`, `preload()` or `ResourceLoader`. (plan review TECH-6)
-- **FT-ARC-021** Pure helpers needed by both `sim/` and clients (spatial callouts, lead intercept, units) shall live in `shared/`, which depends on no other module and passes the `sim/` purity lint. (plan review TECH-6)
+- **FT-ARC-021** Pure helpers needed by both `sim/` and clients (spatial callouts, lead intercept, mount arcs, units) shall live in `shared/`, which depends on no other module and passes the `sim/` purity lint. (plan review TECH-6)
 - **FT-ARC-022** Each desktop release package shall contain the web export built from the same commit, and Piper with the approved voices and their licence files. (plan review TECH-4, D140)
 
 ## 2.4 Risks and spikes

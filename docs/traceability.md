@@ -42,7 +42,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-ARC-018 | tests | `tests/net/test_fleet_sharing_l3.gd` |
 | FT-ARC-019 | tests | `tests/net/voice/test_piper_process.gd`, `tests/net/voice/test_voice_l3.gd`, `tests/net/voice/test_voice_service.gd` |
 | FT-ARC-020 | tests | `tests/net/test_net_run_reset_l3.gd`, `tests/sim/run/test_run_reset.gd`, `tools/tests/test_lint_arch.py` |
-| FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tools/tests/test_lint_arch.py` |
+| FT-ARC-021 | tests | `tests/shared/test_callout.gd`, `tests/shared/test_lead.gd`, `tests/shared/test_mount_arc.gd`, `tools/tests/test_lint_arch.py` |
 | FT-ARC-022 | tests | `tests/release/test_release_bundle.gd`, `tools/tests/test_release.py` |
 | FT-NET-001 | tests | `tests/app/test_main_menu.gd`, `tests/net/test_host_flow.gd`, `tests/net/test_host_launcher.gd`, `tests/net/test_host_pid_file.gd`, `tests/net/test_net_server_main.gd`, `tests/stations/test_lobby_join.gd` |
 | FT-NET-002 | tests | `tests/net/test_net_server.gd`, `tests/net/test_net_server_main.gd`, `tests/net/test_server_tls.gd` |
@@ -99,7 +99,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-SIM-007 | tests | `tests/sim/core/test_edge_paths.gd`, `tests/sim/core/test_integrator.gd`, `tests/sim/flight/test_assist_holds.gd` |
 | FT-SIM-009 | tests | `tests/sim/combat/test_collisions.gd`, `tests/sim/combat/test_ram_and_dock.gd`, `tests/sim/run/test_site_wrap.gd` |
 | FT-SIM-010 | tests | `tests/sim/combat/test_collisions.gd`, `tests/sim/run/test_site_wrap.gd` |
-| FT-SIM-011 | tests | `tests/sim/combat/test_weapons.gd`, `tests/stations/weapons/test_weapons_aim.gd` |
+| FT-SIM-011 | tests | `tests/shared/test_mount_arc.gd`, `tests/sim/combat/test_weapons.gd`, `tests/stations/weapons/test_weapons_aim.gd` |
 | FT-SIM-012 | tests | `tests/sim/combat/test_weapons.gd`, `tests/sim/power/test_power.gd`, `tests/sim/power/test_reactor_and_heat.gd`, `tests/stations/test_weapons_panel.gd` |
 | FT-SIM-013 | tests | `tests/sim/combat/test_ordnance.gd`, `tests/sim/combat/test_track_quality.gd`, `tests/stations/test_weapons_guided.gd` |
 | FT-SIM-014 | tests | `tests/shared/test_lead.gd`, `tests/sim/combat/test_weapons.gd`, `tests/stations/test_weapons_panel.gd` |

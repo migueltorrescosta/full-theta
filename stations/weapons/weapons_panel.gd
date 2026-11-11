@@ -529,7 +529,7 @@ func _turn_aim(delta: float) -> void:
 		rate *= ASSIST_SLOW
 	dir = dir.rotated(basis.y, -x * rate * delta).rotated(basis.x, -y * rate * delta)
 	if lead != null:
-		dir = WeaponsAim.turn_toward(dir, lead, ASSIST_PULL * Vector2(x, y).length() * delta)
+		dir = MountArc.turn_toward(dir, lead, ASSIST_PULL * Vector2(x, y).length() * delta)
 	aim.aim_within_arc(mount, dir)
 
 
