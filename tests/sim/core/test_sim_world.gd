@@ -96,8 +96,9 @@ func test_iteration_order_by_id() -> void:
 # Enumerates every state container: each is a SimTable whose rows carry a ship id and
 # faction, and whose columns all have one entry per row. Mid-fight (ships 0 and 1, of
 # hostile factions, firing at each other with shots in flight) every container holds
-# rows of both, each keyed by the ship's own faction, except knowledge rows: keyed by
-# the contact's id and the observing faction, so each side's row about the other exists.
+# rows of both, each keyed by the ship's own faction, except knowledge rows: owned by the
+# observing faction (owner_ship -1) and about the contact (subject_ship), so each side's
+# row about the other exists (D404).
 func test_every_container_keyed_by_ship_and_faction() -> void:
 	var w: SimWorld = _world(3)
 	var crews: Array[ScriptedCrew] = [ScriptedCrew.new(0, 1), ScriptedCrew.new(1, 0)]
@@ -132,15 +133,19 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 			# Named sites are rows of the map, keyed by no ship.
 			continue
 		if t == w.hacks:
-			# Hack windows come and go: keyed by the hacked ship and the HACKER's faction.
+			# Hack windows come and go: owned by the hacker, about the hacked ship.
+			continue
+		if t == w.knowledge:
+			for r: int in t.size():
+				assert_int(t.owner_ship[r]).is_equal(-1)
+				var contact: int = w.knowledge.subject_ship[r]
+				assert_int(contact).is_between(0, w.ship_count() - 1)
+				assert_int(t.owner_faction[r]).is_not_equal(w.faction_of(contact))
 			continue
 		for r: int in t.size():
 			assert_int(t.owner_ship[r]).is_between(0, w.ship_count() - 1)
 			var own: int = w.faction_of(t.owner_ship[r])
-			if t == w.knowledge:
-				assert_int(t.owner_faction[r]).is_not_equal(own)
-			else:
-				assert_int(t.owner_faction[r]).override_failure_message(name).is_equal(own)
+			assert_int(t.owner_faction[r]).override_failure_message(name).is_equal(own)
 		# Probes are rows added by launching: none before Relay launches one.
 		if t == w.probes:
 			continue

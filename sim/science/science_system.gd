@@ -380,11 +380,11 @@ static func _apply_hacks(world: SimWorld) -> void:
 	var r: int = hacks.size() - 1
 	while r >= 0:
 		if world.tick >= hacks.until_tick[r]:
-			hacks.remove_row(r)
+			hacks.remove_rows(PackedInt32Array([r]))
 		r -= 1
 	d.hack_scale.fill(1.0)
 	for i: int in hacks.size():
-		var row: int = d.subsystem_row(hacks.owner_ship[i], hacks.subsystem[i])
+		var row: int = d.subsystem_row(hacks.subject_ship[i], hacks.subsystem[i])
 		d.hack_scale[row] *= hacks.factor[i]
 	d.hack_dirty = hacks.size() > 0
 

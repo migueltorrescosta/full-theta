@@ -107,6 +107,20 @@ func _registered() -> Array:
 	return entry
 
 
+## Removes the given rows (ascending row numbers) from every column of the registry; the
+## rest keep their order. For tables whose rows come and go (projectiles, hack windows).
+func remove_rows(rows: PackedInt32Array) -> void:
+	if rows.is_empty():
+		return
+	for name: String in _registered()[1]:
+		var values: Variant = get(name)
+		# Drop the table's reference first, so remove_at does not copy the array.
+		set(name, values.slice(0, 0))
+		for i: int in range(rows.size() - 1, -1, -1):
+			values.remove_at(rows[i])
+		set(name, values)
+
+
 ## Restores the ship's rows to their spawn values from the definition (per-ship run
 ## reset, FT-MIS-017), leaving other ships' rows alone. Works for tables whose
 ## add_ship() appends the same rows whatever else is in the table; others override.

@@ -3,10 +3,10 @@ extends SimTable
 ## Per-faction contact knowledge (FT-ARC-013, T034). One row per (observing faction,
 ## contact ship) pair, added the first time any ship of that faction detects the contact
 ## and never removed, so a callsign number survives loss and re-detection (FT-SPA-001).
-## Key columns: `ship_ids` holds the CONTACT ship id and `factions` the OBSERVING faction
-## (not the contact's own faction). Allied ships share one faction and so share these
-## rows and callsigns (FT-ARC-018, FT-SPA-023); a faction never has rows for its own
-## ships. Rows are appended in detection order (tick, then contact id, then faction), so
+## The rows are the observing faction's: `owner_faction` is that faction and `owner_ship`
+## is -1 (no one ship owns them); `subject_ship` is the contact (D404). Allied ships share
+## one faction and so share these rows and callsigns (FT-ARC-018, FT-SPA-023); a faction
+## never has rows for its own ships. Rows are appended in detection order (tick, then contact id, then faction), so
 ## they are deterministic but not one per ship: reset_ship is overridden.
 
 ## A contract's target flag on the contact (FT-MIS-042, D82): DISABLE (do not destroy) or
@@ -18,6 +18,8 @@ enum Flag { NONE, DISABLE, PROTECT }
 ## or a surrender roll sets it (Q22, owner 2026-10-26).
 enum Intent { UNKNOWN, HOSTILE, NEUTRAL, SURRENDERING, BLUFFING }
 
+## The contact ship the row is about.
+var subject_ship: PackedInt32Array = PackedInt32Array()
 ## 1 while the observing faction currently detects the contact.
 var detected: PackedByteArray = PackedByteArray()
 ## 1 once the faction knows the contact's allegiance; it stays known (FT-SPA-001).
@@ -66,7 +68,7 @@ func row_for(faction: int, contact_id: int) -> int:
 func detected_ships(faction: int, ship_factions: PackedInt32Array) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	for r: int in detected_rows(faction, ship_factions):
-		out.append(owner_ship[r])
+		out.append(subject_ship[r])
 	return out
 
 
@@ -90,7 +92,8 @@ func add_contact(faction: int, contact_id: int) -> int:
 	for r: int in owner_faction.size():
 		if owner_faction[r] == faction:
 			number += 1
-	var row: int = add_key(contact_id, faction)
+	var row: int = add_key(-1, faction)
+	subject_ship.append(contact_id)
 	detected.append(0)
 	identified.append(0)
 	numbers.append(number)
@@ -117,6 +120,6 @@ func ensure_contact(faction: int, contact_id: int) -> int:
 ## detection starts afresh next tick, but they keep their callsign number and known
 ## allegiance (FT-SPA-001). Its faction's knowledge of others is faction state, kept.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
-	for r: int in owner_ship.size():
-		if owner_ship[r] == ship_id:
+	for r: int in subject_ship.size():
+		if subject_ship[r] == ship_id:
 			detected[r] = 0

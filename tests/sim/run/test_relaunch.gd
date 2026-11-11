@@ -29,7 +29,12 @@ static func others(w: SimWorld, ship: int) -> Array:
 		for col: Array in t.columns():
 			var values: Array = []
 			for r: int in t.size():
-				if t.owner_ship[r] != ship:
+				var about: int = (
+					(t as KnowledgeTable).subject_ship[r]
+					if t is KnowledgeTable
+					else t.owner_ship[r]
+				)
+				if about != ship:
 					values.append(col[1][r])
 			out.append([col[0], values])
 	return out
