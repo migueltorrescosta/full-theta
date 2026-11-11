@@ -271,6 +271,40 @@ func test_a_finished_line_tail_plays_out_before_the_next_on_its_bus() -> void:
 	on_computer.queue_free()
 
 
+# FT: FT-AUD-011
+func test_a_replaced_generator_lives_as_long_as_its_playback() -> void:
+	# Godot 4.7's generator playback points at its generator without a reference, and the
+	# AudioServer still mixes a stopped playback to fade it out: a generator freed first
+	# leaves the audio thread on freed memory, which hung L1 shards (w-kuo).
+	var on_voice: AudioStreamPlayer = AudioStreamPlayer.new()
+	var on_computer: AudioStreamPlayer = AudioStreamPlayer.new()
+	add_child(on_voice)
+	add_child(on_computer)
+	var sink: VoiceStreamSink = VoiceStreamSink.new(
+		{VoiceBuses.VOICE: on_voice, VoiceBuses.COMPUTER: on_computer}
+	)
+	var pcm: PackedByteArray = PackedByteArray()
+	pcm.resize(2 * 100)
+	sink.begin(1, "npc", 1000)
+	sink.push(1, pcm, 1000, 0)
+	var old: WeakRef = weakref(on_voice.stream)
+	var old_playback: AudioStreamPlayback = on_voice.get_stream_playback()
+	# A line at another rate replaces the generator while the old playback lives on.
+	sink.begin(2, "npc", 2000)
+	sink.push(2, pcm, 2000, 0)
+	# (Booleans, not the generator itself: an assert keeps its value alive.)
+	assert_bool(on_voice.stream == old.get_ref()).is_false()
+	assert_bool(old.get_ref() != null).is_true()
+	# Once the AudioServer lets the old playback go, its generator goes too.
+	old_playback = null
+	var until: int = Time.get_ticks_msec() + 5000
+	while old.get_ref() != null and Time.get_ticks_msec() < until:
+		await await_idle_frame()
+	assert_bool(old.get_ref() == null).is_true()
+	on_voice.queue_free()
+	on_computer.queue_free()
+
+
 # FT: FT-AUD-010
 func test_local_line_without_a_file_is_subtitled_only() -> void:
 	var lines: LocalLines = LocalLines.new("en", "res://tests/audio/no_such_dir")
