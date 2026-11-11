@@ -138,7 +138,7 @@ static func _cards(world: SimWorld, ship: int) -> Array:
 			continue
 		if rows.size() >= MAX_CARDS:
 			break
-		var contact: int = k.owner_ship[r]
+		var contact: int = k.subject_ship[r]
 		var card: Dictionary = {
 			"contact": contact,
 			"detect": ScienceKnowledge.detection_confidence(world, faction, contact),
@@ -193,10 +193,10 @@ static func hacks(world: SimWorld, faction: int) -> Array:
 				rows
 				. append(
 					{
-						"target": h.owner_ship[r],
+						"target": h.subject_ship[r],
 						"sub": h.subsystem[r],
 						"left": maxf(0.0, (h.until_tick[r] - world.tick) * SimWorld.DT),
-						"by": h.by[r],
+						"by": h.owner_ship[r],
 					}
 				)
 			)

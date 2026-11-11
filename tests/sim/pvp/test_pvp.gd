@@ -100,16 +100,21 @@ static func rows(t: SimTable, keep: Callable) -> Array:
 	return out
 
 
+## The ship a row is about: its owner, but a knowledge row's subject (the contact).
+static func ship_of(t: SimTable, r: int) -> int:
+	return (t as KnowledgeTable).subject_ship[r] if t is KnowledgeTable else t.owner_ship[r]
+
+
 ## Every table's rows that are not BLUE's own run state: all rows of other ships, all
 ## knowledge rows except other factions' rows about BLUE as a contact.
 static func not_blue(w: SimWorld) -> Array:
 	var out: Array = []
 	for t: SimTable in w.tables():
-		out.append(rows(t, func(tt: SimTable, r: int) -> bool: return tt.owner_ship[r] != BLUE))
+		out.append(rows(t, func(tt: SimTable, r: int) -> bool: return ship_of(tt, r) != BLUE))
 	return out
 
 
-## BLUE's rows in every table but knowledge (whose ship_ids are contacts).
+## BLUE's rows in every table but knowledge (whose rows are its faction's).
 static func blue_rows(w: SimWorld) -> Array:
 	var out: Array = []
 	for t: SimTable in w.tables():
@@ -151,7 +156,7 @@ func test_knowledge_stays_separate_per_faction() -> void:
 	# Rows: (observer, contact) pairs; a faction never has rows for its own ships.
 	var pairs: Array = []
 	for r: int in w.knowledge.size():
-		pairs.append([w.knowledge.owner_faction[r], w.knowledge.owner_ship[r]])
+		pairs.append([w.knowledge.owner_faction[r], w.knowledge.subject_ship[r]])
 	pairs.sort()
 	(
 		assert_array(pairs)
@@ -197,8 +202,8 @@ func test_callsigns_independent_per_faction() -> void:
 	assert_str(KnowledgeSystem.callsign(w, BLUE_FACTION, FAR)).is_equal("U3")
 	assert_str(KnowledgeSystem.callsign(w, RED_FACTION, FAR)).is_equal("U1")
 	var red_after: Array = numbers_of(w, RED_FACTION)
-	# Only RED's "detected" flag for FAR changed (column 2: detected).
-	var detected_before: Array = red_before[2][1]
+	# Only RED's "detected" flag for FAR changed (column 3: detected).
+	var detected_before: Array = red_before[3][1]
 	detected_before[0] = 0
 	assert_array(red_after).is_equal(red_before)
 
@@ -215,7 +220,7 @@ func test_callsigns_independent_per_faction() -> void:
 ## - Everything else is unchanged: every row of RED and the neutrals, RED's projectiles
 ##   in flight, RED's WIN, the tick, the RNG states and the relations.
 func reset_blue_and_check(w: SimWorld) -> void:
-	var is_blue: Callable = func(t: SimTable, r: int) -> bool: return t.owner_ship[r] == BLUE
+	var is_blue: Callable = func(t: SimTable, r: int) -> bool: return ship_of(t, r) == BLUE
 	var others: Array = not_blue(w)
 	var about_blue: Array = rows(w.knowledge, is_blue)
 	var tick: int = w.tick
@@ -226,8 +231,8 @@ func reset_blue_and_check(w: SimWorld) -> void:
 	assert_array(blue_rows(w)).is_equal(blue_rows(build()))
 	assert_int(w.projectiles.rows_of(BLUE).size()).is_equal(0)
 	assert_array(not_blue(w)).is_equal(others)
-	# Knowledge about BLUE: [ship_ids, factions, detected, identified, numbers].
-	(about_blue[2][1] as Array).fill(0)
+	# Knowledge about BLUE: [owner_ship, owner_faction, subject_ship, detected, ...].
+	(about_blue[3][1] as Array).fill(0)
 	assert_array(rows(w.knowledge, is_blue)).is_equal(about_blue)
 	assert_int(w.tick).is_equal(tick)
 	assert_array(w.rng.states()).is_equal(rng_states)

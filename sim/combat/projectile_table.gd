@@ -109,25 +109,6 @@ func cell_box(k: int, dt: float, reach: float, cell: float, out: PackedInt32Arra
 	out[5] = floori((maxf(pz[k], ez) + reach) / cell)
 
 
-## Removes the given rows (ascending row numbers); the rest keep their order.
-func remove_rows(rows: PackedInt32Array) -> void:
-	for i: int in range(rows.size() - 1, -1, -1):
-		var r: int = rows[i]
-		owner_ship.remove_at(r)
-		owner_faction.remove_at(r)
-		px.remove_at(r)
-		py.remove_at(r)
-		pz.remove_at(r)
-		vel.remove_at(r)
-		radius.remove_at(r)
-		energy.remove_at(r)
-		ttl.remove_at(r)
-		damage_type.remove_at(r)
-		turn_rate.remove_at(r)
-		guide_target.remove_at(r)
-		track_floor.remove_at(r)
-
-
 ## A ship's run reset drops its projectiles (FT-MIS-017); add_ship adds none.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	remove_rows(rows_of(ship_id))

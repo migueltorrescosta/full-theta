@@ -26,7 +26,7 @@ static func block(world: SimWorld, ship: int, filter: ViewFilter = null) -> Dict
 	for r: int in k.size():
 		if k.owner_faction[r] != faction:
 			continue
-		var contact: int = k.owner_ship[r]
+		var contact: int = k.subject_ship[r]
 		if want_tracks and k.detected[r] == 1 and (out["tracks"] as Array).size() < MAX_ROWS:
 			(
 				(out["tracks"] as Array)

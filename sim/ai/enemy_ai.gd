@@ -72,7 +72,7 @@ static func _candidates(world: SimWorld, faction: int) -> PackedInt32Array:
 	var knowledge: KnowledgeTable = world.knowledge
 	var alive: PackedByteArray = kin.alive
 	var owner_faction: PackedInt32Array = kin.owner_faction
-	var contact_ids: PackedInt32Array = knowledge.owner_ship
+	var contact_ids: PackedInt32Array = knowledge.subject_ship
 	var identified: PackedByteArray = knowledge.identified
 	var out: PackedInt32Array = PackedInt32Array()
 	# Skips the contacts known not to be hostile: identified, and not hostile by

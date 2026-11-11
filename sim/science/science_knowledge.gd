@@ -96,7 +96,7 @@ static func class_fully_scanned(world: SimWorld, faction: int, contact: int) -> 
 	var k: KnowledgeTable = world.knowledge
 	for r: int in k.size():
 		if k.owner_faction[r] == faction and k.scan_conf[r] >= world.science_def.full_scan_conf:
-			if world.defs[k.owner_ship[r]].id == id:
+			if world.defs[k.subject_ship[r]].id == id:
 				return true
 	return false
 
