@@ -447,10 +447,11 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	if by_conn.has(conn):
 		transport.close(conn, NetTransport.CLOSE_PROTOCOL, "second hello")
 		return
-	if msg.get("invalid", false):
-		var reason: String = NetProtocol.REJECT_BAD_HELLO
-		if msg.get("v", -1) != NetProtocol.PROTOCOL_VERSION:
-			reason = NetProtocol.REJECT_VERSION
+	var version_ok: bool = msg.get("v", -1) == NetProtocol.PROTOCOL_VERSION
+	if msg.get("invalid", false) or not version_ok:
+		var reason: String = (
+			NetProtocol.REJECT_BAD_HELLO if version_ok else NetProtocol.REJECT_VERSION
+		)
 		_refuse(conn, reason)
 		return
 	var s: NetSession = null
