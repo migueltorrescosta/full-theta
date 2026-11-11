@@ -342,6 +342,7 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 	else:
 		_to_ship(s.ship, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
 		_log(s.ship, "hazard_" + op.trim_prefix("hazard_"))
+		_sync_scan_point(s.ship)
 	return ""
 
 
@@ -419,21 +420,60 @@ func _revealed(s: NetSession, contact: int, sub: int) -> bool:
 ## nothing. The zone is the one owner of the scan position (F5, R12-1; D171 extended): every
 ## reader (NetCoop's P3 check, the clients through `zones`) reads it, and the run reset and a
 ## relaunch clear it with the ship's crew state. ScienceMarkCommand validates the contact and
-## computes the point; its ScienceTable columns are read here only, at the `scan_mark` event.
+## sets the sim's scan point (ScienceTable.scan_x), read here at the `scan_mark` event.
 func _science_scan_position(ship: int) -> void:
 	var world: SimWorld = session.world
 	var def: ScienceDef = world.science_def
 	if def == null or ship < 0 or ship >= world.science.size():
 		return
 	var t: ScienceTable = world.science
-	var at: Vector3 = Vector3(t.mark_x[ship], t.mark_y[ship], t.mark_z[ship])
-	for z: Dictionary in relay.zones_of(ship):
-		if z["kind"] != CrewRelay.KIND_SCAN or z["by"] != SCIENCE_BY:
-			continue
-		if Vector3(z["x"], z["y"], z["z"]) == at:
+	if not t.has_scan_point(ship):
+		return
+	var at: Vector3 = Vector3(t.scan_x[ship], t.scan_y[ship], t.scan_z[ship])
+	var zone: Dictionary = _science_zone(ship)
+	if not zone.is_empty():
+		if Vector3(zone["x"], zone["y"], zone["z"]) == at:
 			return
-		relay.delete_zone(ship, z["id"])
+		relay.delete_zone(ship, zone["id"])
 	add_scan_position(ship, at, def.mark_radius, SCIENCE_BY)
+
+
+## The ship's scan position Science placed, or {}.
+func _science_zone(ship: int) -> Dictionary:
+	for z: Dictionary in relay.zones_of(ship):
+		if z["kind"] == CrewRelay.KIND_SCAN and z["by"] == SCIENCE_BY:
+			return z
+	return {}
+
+
+## Keeps the sim's scan point on the crew-state scan position (D378, 12r-27): after a Relay
+## zone op that moved or removed it, one ScienceScanPointCommand (once per op, never per
+## drag frame), so the sim's noise step never reads crew state (D171).
+func _sync_scan_point(ship: int) -> void:
+	var world: SimWorld = session.world
+	if ship < 0 or ship >= world.science.size():
+		return
+	var t: ScienceTable = world.science
+	var zone: Dictionary = _science_zone(ship)
+	var c: ScienceScanPointCommand = ScienceScanPointCommand.new()
+	c.ship_id = ship
+	if zone.is_empty():
+		if not t.has_scan_point(ship):
+			return
+		c.clear = true
+	else:
+		c.scan_x = zone["x"]
+		c.scan_y = zone["y"]
+		c.scan_z = zone["z"]
+		if (
+			t.has_scan_point(ship)
+			and (
+				Vector3(c.scan_x, c.scan_y, c.scan_z)
+				== Vector3(t.scan_x[ship], t.scan_y[ship], t.scan_z[ship])
+			)
+		):
+			return
+	world.submit(c)
 
 
 func _ship_name(ship: int) -> String:

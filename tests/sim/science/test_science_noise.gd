@@ -103,10 +103,41 @@ func test_scan_position_mark_lowers_noise() -> void:
 	mark.contact = FOE
 	var events: Array[SimEvent] = ScienceFixture.do(w, mark)
 	assert_int(SimFixture.of_kind(events, &"scan_mark").size()).is_equal(1)
-	assert_bool(ScienceSystem.at_scan_mark(w, ME, FOE)).is_false()
+	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_false()
 	var t: ScienceTable = w.science
-	assert_int(t.mark_contact[ME]).is_equal(FOE)
+	assert_bool(t.has_scan_point(ME)).is_true()
 	# Fly there: the mark is broadside to the raider, which faces the corvette.
-	w.kin.place(ME, t.mark_x[ME], t.mark_y[ME], t.mark_z[ME])
-	assert_bool(ScienceSystem.at_scan_mark(w, ME, FOE)).is_true()
+	w.kin.place(ME, t.scan_x[ME], t.scan_y[ME], t.scan_z[ME])
+	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_true()
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(before)
+
+
+# FT: FT-SCI-010
+# D378 (12r-27): the server moves or clears the sim's scan point with
+# ScienceScanPointCommand when the crew-state scan position changes; the noise follows.
+func test_scan_point_command_moves_and_clears_it() -> void:
+	var w: SimWorld = ScienceFixture.world(6000.0, false)
+	var t: ScienceTable = w.science
+	assert_bool(t.has_scan_point(ME)).is_false()
+	var move: ScienceScanPointCommand = ScienceScanPointCommand.new()
+	var here: PackedFloat64Array = w.kin.point_at(ME, Vector3.ZERO)
+	move.scan_x = here[0]
+	move.scan_y = here[1]
+	move.scan_z = here[2]
+	ScienceFixture.do(w, move)
+	assert_bool(move.accepted).is_true()
+	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_true()
+	assert_bool(ScienceSystem.noise_parts(w, ME, FOE)["mark"]).is_true()
+	var clear: ScienceScanPointCommand = ScienceScanPointCommand.new()
+	clear.clear = true
+	ScienceFixture.do(w, clear)
+	assert_bool(t.has_scan_point(ME)).is_false()
+	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_false()
+	var bad: ScienceScanPointCommand = ScienceScanPointCommand.new()
+	bad.scan_x = NAN
+	ScienceFixture.do(w, bad)
+	assert_bool(bad.accepted).is_false()
+	# The command log round-trips it (FT-ARC-008).
+	var back: SimCommand = SimCommands.from_dict(move.to_dict())
+	assert_bool(back is ScienceScanPointCommand).is_true()
+	assert_float((back as ScienceScanPointCommand).scan_x).is_equal(here[0])
