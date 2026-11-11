@@ -62,7 +62,7 @@ One meaning per term; code, wire, docs and player text use these words (D392 to 
 | Director | Server component that chooses and parameterises scenario components; never changes rules; logs every decision. |
 | Faction | Owner of knowledge, callsigns and reputation, and the only side the sim knows; allied ships share one faction, marks stay per ship (D82); crew faction ids are `Factions.CREW_SIDES`, 11 to 15 (D396). |
 | Team | A lobby label for a group of ships in a teams game, mapped to a faction once in `RunSetup`; the sim never sees it (D396). |
-| owner_ship, owner_faction | The key columns of every sim table row: the ship and the faction the row belongs to (D404). |
+| owner_ship, owner_faction | The key columns of every sim table row: the ship and the faction the row belongs to; `owner_ship` is -1 for rows a faction owns (knowledge, reputation, faction-wide cards) (D404). |
 | subject_ship, subject_faction | The ship or faction a row is about, where it is not the owner (`KnowledgeTable`, `ReputationTable`, `HackTable`; D404). |
 | NPC | A ship or object the sim runs without a crew: raiders, freighters, debris (`NpcDef`, `spawn_npc`, `content/npcs/`; D399). |
 | Hostile | A relation between factions, not a kind of NPC; player text says "hostile ship" (D399). |

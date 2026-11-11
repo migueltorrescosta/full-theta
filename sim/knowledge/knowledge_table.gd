@@ -6,8 +6,9 @@ extends SimTable
 ## The rows are the observing faction's: `owner_faction` is that faction and `owner_ship`
 ## is -1 (no one ship owns them); `subject_ship` is the contact (D404). Allied ships share
 ## one faction and so share these rows and callsigns (FT-ARC-018, FT-SPA-023); a faction
-## never has rows for its own ships. Rows are appended in detection order (tick, then contact id, then faction), so
-## they are deterministic but not one per ship: reset_ship is overridden.
+## never has rows for its own ships. Rows are appended in detection order (tick, then
+## contact id, then faction), so they are deterministic but not one per ship: reset_ship
+## is overridden.
 
 ## A contract's target flag on the contact (FT-MIS-042, D82): DISABLE (do not destroy) or
 ## PROTECT, held in the faction's knowledge so its allied Weapons stations can show it
