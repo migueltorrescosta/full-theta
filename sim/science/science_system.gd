@@ -14,10 +14,11 @@ extends RefCounted
 ## - &"scan_failed", &"hack_failed": tag &"timeout", &"lost" (contact gone) or
 ##   &"cancelled".
 ## - &"hack_started": value noise; &"hack_traced": the trace bar filled.
-## - &"hack_done": value window (s), tag the subsystem id. &"hack_window_end": the
-##   window closed; other_id the hacked ship, tag the subsystem id.
+## - &"hack_done": value window (s), tag the subsystem id.
 ## - &"scan_mark": the scan-position mark was placed, vector its offset from the contact.
-## - &"active_ping", &"self_scan_started", &"self_scan_done".
+## - &"self_scan_done".
+## scan_started and hack_started stay on the server (NetCoop's probe-scan stat); a ping,
+## an own-ship scan's start and a hack window's end emit nothing (R02-7: no reader).
 
 const REASON_NO_SCIENCE: StringName = &"no_science"
 const REASON_BUSY: StringName = &"busy"
@@ -140,7 +141,6 @@ static func ping(world: SimWorld, ship: int) -> bool:
 		return _refuse(world, ship, -1, REASON_COOLING)
 	t.ping_left[ship] = def.ping_duration_s
 	t.ping_cool[ship] = def.ping_cooldown_s
-	world.emit(&"active_ping", ship, -1, def.ping_duration_s)
 	return true
 
 
@@ -306,7 +306,6 @@ static func start_self_scan(world: SimWorld, ship: int) -> bool:
 	t.kind[ship] = ScienceTable.Session.SELF
 	t.target[ship] = ship
 	t.start_tick[ship] = world.tick
-	world.emit(&"self_scan_started", ship, ship, def.self_scan_s)
 	return true
 
 
@@ -381,9 +380,6 @@ static func _apply_hacks(world: SimWorld) -> void:
 	var r: int = hacks.size() - 1
 	while r >= 0:
 		if world.tick >= hacks.until_tick[r]:
-			var ship: int = hacks.ship_ids[r]
-			var sub: SubsystemDef = world.defs[ship].subsystems[hacks.subsystem[r]]
-			world.emit(&"hack_window_end", hacks.by[r], ship, 0.0, Vector3.ZERO, sub.id)
 			hacks.remove_row(r)
 		r -= 1
 	d.hack_scale.fill(1.0)

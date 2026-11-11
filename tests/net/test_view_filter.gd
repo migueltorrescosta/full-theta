@@ -318,7 +318,6 @@ func test_hard_leaks_only_marks_and_pings() -> void:
 	# positions are MARK items and reach Helm at every difficulty.
 	for code: String in ["normal", "hard"]:
 		assert_bool(EventRouting.sees_event("weapons", &"hack_done", code)).is_false()
-		assert_bool(EventRouting.sees_event("weapons", &"hack_window_end", code)).is_false()
 		assert_bool(EventRouting.sees_event("engineering", &"self_scan_done", code)).is_false()
 		assert_bool(EventRouting.sees_event("weapons", &"lane_warning", code)).is_false()
 		assert_bool(EventRouting.sees_event("science", &"hack_done", code)).is_true()

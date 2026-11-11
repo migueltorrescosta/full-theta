@@ -83,7 +83,7 @@ func test_sensor_mode_and_ping() -> void:
 	var active: float = ScienceSystem.contact_noise(w, ME, FOE)
 	assert_float(active).is_less(passive)
 	var events: Array[SimEvent] = ScienceFixture.do(w, SciencePingCommand.new())
-	assert_int(SimFixture.of_kind(events, &"active_ping").size()).is_equal(1)
+	assert_array(SimFixture.of_kind(events, &"science_refused")).is_empty()
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(active)
 	events = ScienceFixture.do(w, SciencePingCommand.new())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("cooling")
@@ -91,7 +91,8 @@ func test_sensor_mode_and_ping() -> void:
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_equal(active)
 	SimFixture.run(w, int(w.science_def.ping_cooldown_s * 60.0))
 	events = ScienceFixture.do(w, SciencePingCommand.new())
-	assert_int(SimFixture.of_kind(events, &"active_ping").size()).is_equal(1)
+	assert_array(SimFixture.of_kind(events, &"science_refused")).is_empty()
+	assert_float(w.science.ping_left[ME]).is_greater(0.0)
 
 
 # FT: FT-SCI-010, FT-PAIR-003

@@ -31,18 +31,16 @@ const EVENT_STATIONS: Dictionary = {
 	&"harden_no_parts": ["engineering"],
 	&"ai_mode": [],
 	&"science_refused": ["science"],
-	&"scan_started": ["science"],
+	# Server-only (NetCoop's probe-scan stat, R02-7): no client reads them.
+	&"scan_started": [],
 	&"scan_done": ["science"],
 	&"scan_failed": ["science"],
 	&"scan_mark": ["science", "helm"],
-	&"hack_started": ["science"],
+	&"hack_started": [],
 	&"hack_traced": ["science"],
 	&"hack_failed": ["science"],
 	&"hack_done": ["science", "weapons"],
-	&"hack_window_end": ["science", "weapons"],
-	&"self_scan_started": ["science"],
 	&"self_scan_done": ["science", "engineering"],
-	&"active_ping": ["science"],
 	# Relay's probes and lanes; fabrication also tells Engineering.
 	&"probe_launched": ["relay"],
 	&"probe_deployed": ["relay"],
@@ -77,7 +75,6 @@ const EXACT_EVENTS: Array[StringName] = [
 ## on Weapons (P8). Scan-position marks are MARK items and reach Helm at every difficulty.
 const EVENT_SHORTCUTS: Dictionary = {
 	&"hack_done": [&"weak_points", "science"],
-	&"hack_window_end": [&"weak_points", "science"],
 	&"self_scan_done": [&"diagnosed_causes", "science"],
 	&"fault_cause_revealed": [&"diagnosed_causes", "science"],
 	&"lane_warning": [&"track_feeds", "relay"],
