@@ -255,7 +255,10 @@ static func needs_met(world: SimWorld, ship: int, card: int) -> bool:
 ## The scan facts of a contact the faction's best scan confidence `conf` has reached, as
 ## ScienceDef gives them: each is learned once (Story.learn_fact).
 static func learn_scan_facts(world: SimWorld, faction: int, contact: int, conf: float) -> void:
-	if world.science_def != null and conf >= world.science_def.reveal_cargo:
+	if (
+		world.science_def != null
+		and (conf >= ScienceKnowledge.threshold(world.science_def, ScienceKnowledge.CARGO))
+	):
 		Story.learn_fact(world, faction, contact, "cargo")
 
 
