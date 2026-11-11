@@ -49,9 +49,5 @@ func others_of(faction: int) -> PackedInt32Array:
 	return out
 
 
-func columns() -> Array:
-	return super() + [["value", value]]
-
-
 func reset_ship(_ship_id: int, _def: ShipDef) -> void:
 	pass

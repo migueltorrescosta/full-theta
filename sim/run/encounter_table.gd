@@ -63,24 +63,6 @@ static func has_bit(mask: int, ship: int) -> bool:
 	return ship >= 0 and ship < MAX_SHIP_BITS and (mask >> ship) & 1 == 1
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["scenario_ix", scenario_ix],
-			["site", site],
-			["ships_mask", ships_mask],
-			["result", result],
-			["open_tick", open_tick],
-			["start_tick", start_tick],
-			["end_tick", end_tick],
-			["cost", cost],
-			["losses_mask", losses_mask],
-			["fled_mask", fled_mask],
-		]
-	)
-
-
 ## Encounters are run history, like cards: a ship reset leaves them alone.
 func reset_ship(_ship_id: int, _def: ShipDef) -> void:
 	pass

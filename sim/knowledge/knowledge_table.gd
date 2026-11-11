@@ -113,25 +113,6 @@ func ensure_contact(faction: int, contact_id: int) -> int:
 	return r if r >= 0 else add_contact(faction, contact_id)
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["detected", detected],
-			["identified", identified],
-			["numbers", numbers],
-			["scan_conf", scan_conf],
-			["flag", flag],
-			["intent", intent],
-			["hail_opened", hail_opened],
-			["surrender_refusals", surrender_refusals],
-			["surrender_reopen", surrender_reopen],
-			["facts", facts],
-			["rep_drawn", rep_drawn],
-		]
-	)
-
-
 ## Per-ship run reset (FT-MIS-017): the ship's rows as a contact drop to undetected, so
 ## detection starts afresh next tick, but they keep their callsign number and known
 ## allegiance (FT-SPA-001). Its faction's knowledge of others is faction state, kept.

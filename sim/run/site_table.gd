@@ -223,19 +223,6 @@ static func offset_to(world: SimWorld, ship: int, site: int) -> Vector3:
 	)
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["pos_x", pos_x],
-			["pos_y", pos_y],
-			["pos_z", pos_z],
-			["radius", radius],
-			["known_mask", known_mask],
-			["opened_tick", opened_tick],
-			["kind_ix", kind_ix],
-			["dockable", dockable],
-			["dock_range", dock_range],
-			["dock_max_speed", dock_max_speed],
-		]
-	)
+## Site data (keys, name_keys, pool, map_sites): read-only like defs, not hashed.
+func not_columns() -> Array[StringName]:
+	return [&"keys", &"name_keys", &"pool", &"map_sites"]

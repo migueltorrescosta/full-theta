@@ -30,9 +30,5 @@ func set_flag(name: StringName, value: int) -> void:
 		values[r] = value
 
 
-func columns() -> Array:
-	return super() + [["names", names], ["values", values]]
-
-
 func reset_ship(_ship_id: int, _def: ShipDef) -> void:
 	pass

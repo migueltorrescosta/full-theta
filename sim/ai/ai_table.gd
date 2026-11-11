@@ -58,18 +58,3 @@ func is_enabled(ship_id: int) -> bool:
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	mode[ship_id] = Mode.HOLD
 	target[ship_id] = -1
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["enabled", enabled],
-			["engage_range_min", engage_range_min],
-			["engage_range_max", engage_range_max],
-			["retreat_hull_fraction", retreat_hull_fraction],
-			["fire_cone", fire_cone],
-			["mode", mode],
-			["target", target],
-		]
-	)

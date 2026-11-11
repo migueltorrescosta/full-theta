@@ -25,16 +25,3 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	launched.append(0)
 	lanes_flagged.append(0)
 	lane_warned.append(-1)
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["stock", stock],
-			["fab_left", fab_left],
-			["launched", launched],
-			["lanes_flagged", lanes_flagged],
-			["lane_warned", lane_warned],
-		]
-	)

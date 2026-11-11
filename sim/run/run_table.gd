@@ -53,23 +53,6 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	finish_tick.append(-1)
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["status", status],
-			["outcome", outcome],
-			["encounters_done", encounters_done],
-			["encounter", encounter],
-			["fled_count", fled_count],
-			["closed", closed],
-			["relaunches", relaunches],
-			["kills", kills],
-			["finish_tick", finish_tick],
-		]
-	)
-
-
 ## A ship reset (a relaunch or a training reset, FT-MIS-011, FT-MIS-017) restores the ship's
 ## run progress but keeps its session counters, relaunches and kills.
 func reset_ship(ship_id: int, def: ShipDef) -> void:

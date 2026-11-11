@@ -16,10 +16,6 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	dock_offer.append(-1)
 
 
-func columns() -> Array:
-	return super() + [["seen_dock", seen_dock], ["dock_offer", dock_offer]]
-
-
 ## Story state outlives a ship reset, like the cards.
 func reset_ship(_ship_id: int, _def: ShipDef) -> void:
 	pass

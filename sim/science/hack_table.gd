@@ -19,18 +19,6 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 	pass
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["subsystem", subsystem],
-			["factor", factor],
-			["until_tick", until_tick],
-			["by", by],
-		]
-	)
-
-
 ## Opens a window, or renews the same hacker faction's window on that subsystem.
 func open(ship_id: int, faction: int, sub_index: int, eff: float, until: int, hacker: int) -> void:
 	for r: int in size():
