@@ -462,7 +462,7 @@ func _refresh_buttons(b: Dictionary, session: int) -> void:
 
 
 func _can_hack() -> bool:
-	return selected_contact() >= 0 and bool(card_of(selected_contact()).get("hack", false))
+	return selected_contact() >= 0 and ScienceCard.is_revealed(card_of(selected_contact()), &"hack")
 
 
 ## The subsystem button beside Hack: the target's name ("Engines"), or "No subsystem"
@@ -581,7 +581,7 @@ func _nearest_hackable() -> int:
 	var best: int = -1
 	var best_d: float = INF
 	for it: Dictionary in ctx.picture().items:
-		if it["kind"] != "contact" or not bool(card_of(int(it["id"])).get("hack", false)):
+		if it["kind"] != "contact" or not ScienceCard.is_revealed(card_of(int(it["id"])), &"hack"):
 			continue
 		var d: float = (it["local"] as Vector3).length()
 		if d < best_d:

@@ -126,9 +126,9 @@ static func _points(points: PackedVector3Array) -> Array:
 
 
 ## One card per contact the faction detects or has scanned (FT-SCI-001, FT-SCI-002):
-## detection confidence for the icon size, the scan confidence, and each part only once
-## its threshold is reached (class id, intent as AI mode + 1, weak-point subsystem mask,
-## resistances), 0 or empty before.
+## detection confidence for the icon size, the scan confidence, the revealed-parts mask
+## (BlockSchema.SCIENCE_REVEALED) and each part's value only once revealed (class id,
+## intent as AI mode + 1, weak-point subsystem mask, resistances), 0 or empty before.
 static func _cards(world: SimWorld, ship: int) -> Array:
 	var faction: int = world.faction_of(ship)
 	var k: KnowledgeTable = world.knowledge
@@ -143,11 +143,11 @@ static func _cards(world: SimWorld, ship: int) -> Array:
 			"contact": contact,
 			"detect": ScienceKnowledge.detection_confidence(world, faction, contact),
 			"scan": k.scan_conf[r],
+			"revealed": revealed_mask(world, faction, contact),
 			"class_id": 0,
 			"intent": 0,
 			"weak_mask": 0,
 			"resist": [],
-			"hack": ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.HACK),
 		}
 		if ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.CLASS):
 			card["class_id"] = BlockSchema.id_code(world.defs[contact].id)
@@ -156,6 +156,16 @@ static func _cards(world: SimWorld, ship: int) -> Array:
 		card.merge(revealed_traits(world, faction, contact), true)
 		rows.append(card)
 	return rows
+
+
+## The parts of the contact revealed to the faction: bit i for
+## BlockSchema.SCIENCE_REVEALED[i] (ScienceKnowledge.revealed, own ships included).
+static func revealed_mask(world: SimWorld, faction: int, contact: int) -> int:
+	var mask: int = 0
+	for i: int in BlockSchema.SCIENCE_REVEALED.size():
+		if ScienceKnowledge.revealed(world, faction, contact, BlockSchema.SCIENCE_REVEALED[i]):
+			mask |= 1 << i
+	return mask
 
 
 ## The contact's weak-point subsystem mask and resistances (`weak_mask`, `resist`: rows of
