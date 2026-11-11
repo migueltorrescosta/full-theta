@@ -56,6 +56,7 @@ var hazards: Array[HazardDef] = []
 var hazard_state: HazardTable = HazardTable.new()
 ## STORY and the economy (#10, FT-COM-001 to FT-COM-009, FT-MIS-018 to FT-MIS-022).
 var story: StoryTable = StoryTable.new()
+var story_ships: StoryShipTable = StoryShipTable.new()
 var story_flags: StoryFlagTable = StoryFlagTable.new()
 var economy: EconomyTable = EconomyTable.new()
 var reputation: ReputationTable = ReputationTable.new()
@@ -163,6 +164,7 @@ func tables() -> Array[SimTable]:
 		probes,
 		hazard_state,
 		story,
+		story_ships,
 		story_flags,
 		economy,
 		reputation,

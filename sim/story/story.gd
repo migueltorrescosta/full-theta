@@ -1,6 +1,6 @@
 class_name Story
 extends RefCounted
-## Helpers over the cards, conversations and story flags (FT-COM-001 to FT-COM-008,
+## Helpers over the cards, conversations and scenario flags (FT-COM-001 to FT-COM-008,
 ## FT-MIS-036, FT-MIS-042): what the Comms commands share. Conversations are plain data
 ## parsed from content/conversations/*.json by app/ into SimWorld.conversations (the sim
 ## never reads JSON): {id, npc_role, start, nodes: {node: {line, options: [{id, text,
@@ -15,8 +15,6 @@ const INTENTS: Dictionary[StringName, int] = {
 	&"surrendering": KnowledgeTable.Intent.SURRENDERING,
 	&"bluffing": KnowledgeTable.Intent.BLUFFING,
 }
-## The story flag naming the ship that accepted a card, plus one (0: none yet).
-const _CLAIMER: String = "claim.%d"
 const FLAGS: Dictionary[StringName, int] = {
 	&"none": KnowledgeTable.Flag.NONE,
 	&"disable": KnowledgeTable.Flag.DISABLE,
@@ -73,7 +71,7 @@ static func audience_ship(world: SimWorld, card: int) -> int:
 	var s: int = world.story.ship_ids[card]
 	if s >= 0:
 		return s
-	var claimer: int = world.story_flags.get_flag(StringName(_CLAIMER % card)) - 1
+	var claimer: int = world.story.claim[card] - 1
 	if claimer >= 0:
 		return claimer
 	return world.kin.factions.find(world.story.factions[card])
@@ -100,7 +98,7 @@ static func accept(world: SimWorld, ship: int, card: int) -> bool:
 		world.emit(&"card_refused", ship, card, 0.0, Vector3.ZERO, why)
 		return false
 	set_state(world, ship, card, StoryTable.State.ACCEPTED)
-	world.story_flags.set_flag(StringName(_CLAIMER % card), ship + 1)
+	t.claim[card] = ship + 1
 	StoryRules.on_accept(world, card)  # P5: a clearance starts its clock
 	if t.target_flag[card] != 0 and t.target[card] >= 0:
 		world.knowledge.flag[world.knowledge.ensure_contact(t.factions[card], t.target[card])] = (
@@ -220,7 +218,7 @@ static func options(world: SimWorld, card: int, ship: int) -> Array[Dictionary]:
 
 
 ## Whether an option's `requires` holds: scan_fact (the faction learned the fact about
-## the card's contact), flag (a story flag at least `min`, default 1), docked (the replying
+## the card's contact), flag (a scenario flag at least `min`, default 1), docked (the replying
 ## ship's own state, not the card's ship: a faction-wide card has none), engine_damage (the
 ## card's contact has at least this share of its engines gone), surrender_ready (no refused
 ## surrender ask of the contact within its retry_s, StoryRules.surrender_ready).
@@ -253,7 +251,7 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: i
 
 ## Applies one option's effects in order, then follows `next` or ends the conversation.
 ## Effects (one key each): accept, decline, intent (unknown|hostile|neutral|surrendering|bluffing),
-## contract_flag (none|disable|protect), flag (story flag name, with value), rep (a
+## contract_flag (none|disable|protect), flag (scenario flag name, with value), rep (a
 ## RepDistDef id), say (a dialogue line id), verify (a scan fact to check, P14), surrender
 ## ({base, per_damage, cap, retry_s, refusal_factor}: StoryRules.ask_surrender, P9). A
 ## refused accept or decline applies none of the option (checked first, so no earlier effect
@@ -310,30 +308,42 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 
 
 ## Whether this reputation draw has not been made yet for the card (a hail: for its
-## contact), and marks it made.
+## contact, in the faction's knowledge of it), and marks it made.
 static func _first_draw(world: SimWorld, card: int, dist: String) -> bool:
 	var t: StoryTable = world.story
-	var who: String = "c%d" % card
 	if t.kind[card] == StoryTable.Kind.HAIL and t.target[card] >= 0:
-		who = "t%d.%d" % [t.factions[card], t.target[card]]
-	var flag: StringName = StringName("repdraw.%s.%s" % [who, dist])
-	if world.story_flags.get_flag(flag) == 1:
+		var k: KnowledgeTable = world.knowledge
+		var row: int = k.ensure_contact(t.factions[card], t.target[card])
+		if k.rep_drawn[row].has(dist):
+			return false
+		k.rep_drawn[row] = _with(k.rep_drawn[row], dist)
+		return true
+	if t.rep_drawn[card].has(dist):
 		return false
-	world.story_flags.set_flag(flag, 1)
+	t.rep_drawn[card] = _with(t.rep_drawn[card], dist)
 	return true
+
+
+## A new list: `list` and then `item` (the string-list columns are replaced, not changed, so a
+## SimCopy capture shares none of them).
+static func _with(list: PackedStringArray, item: String) -> PackedStringArray:
+	var out: PackedStringArray = list.duplicate()
+	out.append(item)
+	return out
 
 
 # --- scan facts (P14) ---
 
 
-static func _fact_flag(faction: int, contact: int, fact: String) -> StringName:
-	return StringName("fact.%d.%d.%s" % [faction, contact, fact])
-
-
-## Records that the faction learned a fact about a contact (Science's scan, F's rule).
+## Records that the faction learned a fact about a contact (Science's scan, F's rule), in
+## KnowledgeTable.facts.
 static func learn_fact(world: SimWorld, faction: int, contact: int, fact: String) -> void:
-	world.story_flags.set_flag(_fact_flag(faction, contact, fact), 1)
+	var k: KnowledgeTable = world.knowledge
+	var row: int = k.ensure_contact(faction, contact)
+	if not k.facts[row].has(fact):
+		k.facts[row] = _with(k.facts[row], fact)
 
 
 static func knows_fact(world: SimWorld, faction: int, contact: int, fact: String) -> bool:
-	return world.story_flags.get_flag(_fact_flag(faction, contact, fact)) == 1
+	var row: int = world.knowledge.row_for(faction, contact)
+	return row >= 0 and world.knowledge.facts[row].has(fact)

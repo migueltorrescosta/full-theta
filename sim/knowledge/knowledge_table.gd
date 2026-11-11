@@ -34,6 +34,16 @@ var scan_conf: PackedFloat64Array = PackedFloat64Array()
 ## (Flag, Intent above).
 var flag: PackedByteArray = PackedByteArray()
 var intent: PackedByteArray = PackedByteArray()
+## Story state about the contact (#10): 1 once a probe's discovery of it opened a hail
+## card (P15, StoryRules.on_discovery); the faction's refused surrender asks of it and the
+## tick it may ask again (P9, StoryRules.ask_surrender; 0: any time); the scan facts the
+## faction learned of it (P14, Story.learn_fact); and the RepDistDef ids its hails already
+## drew (Story._first_draw). The string lists are replaced whole, never changed in place.
+var hail_opened: PackedByteArray = PackedByteArray()
+var surrender_refusals: PackedInt32Array = PackedInt32Array()
+var surrender_reopen: PackedInt32Array = PackedInt32Array()
+var facts: Array[PackedStringArray] = []
+var rep_drawn: Array[PackedStringArray] = []
 
 ## Derived index, not state: row by SimTable.row_key(faction, contact id), filled in add_contact
 ## (rows never move or go away).
@@ -87,6 +97,11 @@ func add_contact(faction: int, contact_id: int) -> int:
 	scan_conf.append(0.0)
 	flag.append(Flag.NONE)
 	intent.append(Intent.UNKNOWN)
+	hail_opened.append(0)
+	surrender_refusals.append(0)
+	surrender_reopen.append(0)
+	facts.append(PackedStringArray())
+	rep_drawn.append(PackedStringArray())
 	_rows[SimTable.row_key(faction, contact_id)] = row
 	return row
 
@@ -108,6 +123,11 @@ func columns() -> Array:
 			["scan_conf", scan_conf],
 			["flag", flag],
 			["intent", intent],
+			["hail_opened", hail_opened],
+			["surrender_refusals", surrender_refusals],
+			["surrender_reopen", surrender_reopen],
+			["facts", facts],
+			["rep_drawn", rep_drawn],
 		]
 	)
 
