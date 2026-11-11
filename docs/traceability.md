@@ -179,7 +179,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 46, FT-SIM 37, FT-STN 17, FT-H
 | FT-ENG-007 | tests | `tests/net/test_net_engineering_view_l3.gd` |
 | FT-ENG-008 | tests | `tests/net/test_hazard_view.gd`, `tests/sim/damage/test_faults.gd`, `tests/sim/hazard/test_hazards.gd`, `tests/stations/engineering/test_engineering_pair_verbs.gd`, `tests/stations/engineering/test_engineering_phone.gd`, `tests/stations/engineering/test_engineering_rail.gd`, `tests/stations/test_data_shortcut_views.gd` |
 | FT-SCI-001 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_phone_fixups.gd`, `tests/stations/test_science_panel.gd` |
-| FT-SCI-002 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/test_science_panel.gd` |
+| FT-SCI-002 | tests | `tests/net/test_net_science_l3.gd`, `tests/net/test_science_view.gd`, `tests/sim/science/test_reveals.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-003 | tests | `tests/sim/damage/test_damage_types.gd`, `tests/sim/science/test_science_noise.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-004 | tests | `tests/net/test_net_science_l3.gd`, `tests/sim/science/test_minigame_timing.gd`, `tests/sim/science/test_scan.gd`, `tests/stations/science/test_science_phone.gd`, `tests/stations/test_science_panel.gd` |
 | FT-SCI-005 | tests | `tests/net/test_net_relay_l3.gd`, `tests/presentation/test_contact_picture.gd`, `tests/sim/relay/test_probe_science_seam.gd`, `tests/sim/science/test_scan.gd`, `tests/sim/science/test_science_noise.gd` |

@@ -2,7 +2,7 @@ class_name ScienceKnowledge
 extends RefCounted
 ## What a faction has learned of a contact by Science scans, in KnowledgeTable.scan_conf
 ## (E01, FT-SCI-002, D28): class, identity, intent, weak points, resistances and hack
-## access, each revealed once the scan confidence reaches its ScienceDef threshold. A
+## access and cargo, each revealed once the scan confidence reaches its ScienceDef threshold. A
 ## faction always knows its own ships. Weapons aiming at a weak point and damage with
 ## resistances call weak_points_known and resistances_known; the Science card is built
 ## from card().
@@ -13,6 +13,7 @@ const INTENT: StringName = &"intent"
 const WEAK_POINTS: StringName = &"weak_points"
 const RESISTANCES: StringName = &"resistances"
 const HACK: StringName = &"hack"
+const CARGO: StringName = &"cargo"
 
 
 ## The faction's best scan confidence of the contact, 0..1 (1 for its own ships).
@@ -38,6 +39,8 @@ static func threshold(def: ScienceDef, part: StringName) -> float:
 			return def.reveal_resistances
 		HACK:
 			return def.reveal_hack
+		CARGO:
+			return def.reveal_cargo
 	return 2.0
 
 

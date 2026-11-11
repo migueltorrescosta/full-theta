@@ -16,21 +16,21 @@ static func block(kind: String) -> Dictionary:
 			"contact": H2,
 			"detect": 0.9,
 			"scan": 0.9,
+			"revealed": 0x7F,
 			"class_id": BlockSchema.id_code(&"m1_raider"),
 			"intent": 3,
 			"weak_mask": 1,
 			"resist": [{"type": BlockSchema.id_code(&"kinetic"), "factor": 0.5}],
-			"hack": true,
 		},
 		{
 			"contact": U3,
 			"detect": 0.2,
 			"scan": 0.0,
+			"revealed": 0,
 			"class_id": 0,
 			"intent": 0,
 			"weak_mask": 0,
 			"resist": [],
-			"hack": false,
 		},
 	]
 	if kind == "scan":

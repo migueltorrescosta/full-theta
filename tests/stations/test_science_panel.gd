@@ -43,21 +43,21 @@ func _block(over: Dictionary) -> Dictionary:
 			"contact": H2,
 			"detect": 0.9,
 			"scan": 0.9,
+			"revealed": 0x7F,
 			"class_id": BlockSchema.id_code(&"m1_raider"),
 			"intent": 3,
 			"weak_mask": 1,
 			"resist": [{"type": BlockSchema.id_code(&"kinetic"), "factor": 0.5}],
-			"hack": true,
 		},
 		{
 			"contact": U3,
 			"detect": 0.2,
 			"scan": 0.0,
+			"revealed": 0,
 			"class_id": 0,
 			"intent": 0,
 			"weak_mask": 0,
 			"resist": [],
-			"hack": false,
 		},
 	]
 	b.merge(over, true)
@@ -193,7 +193,7 @@ func test_list_selects_and_card_shows_parts_by_confidence() -> void:
 	s.ctx.crew.select("contact", U3)
 	p.refresh()
 	assert_float(float(p.card_view.card["scan"])).is_equal(0.0)
-	assert_bool(bool(p.card_view.card["hack"])).is_false()
+	assert_bool(ScienceCard.is_revealed(p.card_view.card, &"hack")).is_false()
 	assert_array(p.subsystems()).is_empty()
 
 

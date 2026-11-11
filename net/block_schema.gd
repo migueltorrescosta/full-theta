@@ -12,6 +12,12 @@ const HACK_ROWS: Array = [
 ]
 ## Row kind of a hazard plane in a RELAY block's hazards (HazardView builds them).
 const HAZARD_PLANE: int = 2
+## The SCIENCE card's `revealed` bits (u8), pinned: bit i is set once ScienceKnowledge
+## reveals part i to the viewing faction (its own ships: every bit). The server sets them
+## (ScienceView); the client reads them and never re-derives a threshold (12r-23).
+const SCIENCE_REVEALED: Array[StringName] = [
+	&"class", &"identity", &"intent", &"weak_points", &"resistances", &"hack", &"cargo"
+]
 
 ## Section.COMMS (CommsView builds it): the ship's docked site
 ## and credits, the hull band (Comms' only view of condition, FT-PAIR-010), reputation per
@@ -216,11 +222,12 @@ const BLOCKS: Dictionary = {
 					["contact", "s16"],
 					["detect", "f32"],
 					["scan", "f32"],
+					# Revealed parts, bit i = SCIENCE_REVEALED[i].
+					["revealed", "u8"],
 					["class_id", "u32"],
 					["intent", "u8"],
 					["weak_mask", "u32"],
 					["resist", RESIST_ROWS],
-					["hack", "bool"],
 				],
 			],
 		],
