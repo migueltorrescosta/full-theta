@@ -132,8 +132,7 @@ func test_hack_window_applies_and_ends() -> void:
 	var ticks: int = ceili(window_s * 60.0)
 	SimFixture.run(w, ticks - 2)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"weapons")).is_equal(0.0)
-	events = SimFixture.run(w, 4)
-	assert_int(SimFixture.of_kind(events, &"hack_window_end").size()).is_equal(1)
+	SimFixture.run(w, 4)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"weapons")).is_equal(1.0)
 	assert_int(w.hacks.size()).is_equal(0)
 

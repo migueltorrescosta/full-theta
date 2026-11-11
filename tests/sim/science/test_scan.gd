@@ -189,7 +189,7 @@ func test_own_ship_scan() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	assert_bool(w.science.self_scanned[ME] >= 0).is_false()
 	var events: Array[SimEvent] = ScienceFixture.do(w, ScienceSelfScanCommand.new())
-	assert_int(SimFixture.of_kind(events, &"self_scan_started").size()).is_equal(1)
+	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.SELF)
 	events = ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("busy")
 	events = SimFixture.run(w, int(w.science_def.self_scan_s * 60.0) + 2)
