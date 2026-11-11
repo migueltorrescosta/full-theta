@@ -1,8 +1,10 @@
 class_name StoryFlagTable
 extends SimTable
-## Story flags (FT-PAIR-003): named integers scenarios set and read, and the scan facts
-## the crew learned (Story.learn_fact stores them as flags named fact.<faction>.<contact>.
-## <fact>). One row per name in the order first set; keys are -1 (world state).
+## Scenario flags (FT-PAIR-003): named integers scenarios set and read (SetFlagCommand,
+## ScenarioApi.flag, a conversation's flag effect and requirement, Training's
+## train.<station>.next and .skip). Card, dock and contact state has typed columns
+## (StoryTable, StoryShipTable, KnowledgeTable), not flags. One row per name in the order
+## first set; keys are -1 (world state).
 
 var names: Array[StringName] = []
 var values: PackedInt32Array = PackedInt32Array()

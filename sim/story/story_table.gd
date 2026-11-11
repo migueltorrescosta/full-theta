@@ -4,7 +4,8 @@ extends SimTable
 ## card, keyed by the ship it was posted to and that ship's faction; ship_ids is -1 for a
 ## faction-wide card (D82: every ship of the faction sees it, the first to act on it
 ## settles it). Rows are added when a card is posted, in post order, and never removed, so
-## a card's id is its row. Story flags and learned scan facts are StoryFlagTable's.
+## a card's id is its row. Each ship's dock watch is StoryShipTable's, what a faction learned
+## of a contact is KnowledgeTable's, and StoryFlagTable holds the scenarios' own flags.
 
 ## INFO: a card that only tells (Q23), nothing to accept.
 enum Kind { MISSION, CONTRACT, OFFER, HAIL, INFO }
@@ -41,6 +42,22 @@ var requires_docked: PackedByteArray = PackedByteArray()
 var site: PackedInt32Array = PackedInt32Array()
 ## The scan fact a conversation asked the crew to verify (P14), or none.
 var verify: Array[StringName] = []
+## The ship that accepted the card, plus one (0: none yet; Story.audience_ship).
+var claim: PackedInt32Array = PackedInt32Array()
+## A clearance's approach lane (P5, StoryRules.set_lane): the lane opens lane_open ticks
+## after the accept and stays open lane_len ticks (0: not a clearance); lane_t0 is the
+## accept tick plus one (0: not accepted yet).
+var lane_open: PackedInt32Array = PackedInt32Array()
+var lane_len: PackedInt32Array = PackedInt32Array()
+var lane_t0: PackedInt32Array = PackedInt32Array()
+## The offer's terms (P12, StoryRules.set_need): pips of power on a subsystem (0: none).
+var need_subsystem: Array[StringName] = []
+var need_pips: PackedInt32Array = PackedInt32Array()
+## 1 once Relay marked the mission's place (P15).
+var marked: PackedByteArray = PackedByteArray()
+## The RepDistDef ids already drawn for the card (Story._first_draw; a hail draws per
+## contact, in KnowledgeTable.rep_drawn). Replaced whole, never changed in place.
+var rep_drawn: Array[PackedStringArray] = []
 
 
 func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
@@ -66,6 +83,14 @@ func add_card(ship: int, faction: int, card_kind: Kind) -> int:
 	requires_docked.append(0)
 	site.append(-1)
 	verify.append(NO_TEXT)
+	claim.append(0)
+	lane_open.append(0)
+	lane_len.append(0)
+	lane_t0.append(0)
+	need_subsystem.append(NO_TEXT)
+	need_pips.append(0)
+	marked.append(0)
+	rep_drawn.append(PackedStringArray())
 	return row
 
 
@@ -89,6 +114,14 @@ func columns() -> Array:
 			["requires_docked", requires_docked],
 			["site", site],
 			["verify", verify],
+			["claim", claim],
+			["lane_open", lane_open],
+			["lane_len", lane_len],
+			["lane_t0", lane_t0],
+			["need_subsystem", need_subsystem],
+			["need_pips", need_pips],
+			["marked", marked],
+			["rep_drawn", rep_drawn],
 		]
 	)
 

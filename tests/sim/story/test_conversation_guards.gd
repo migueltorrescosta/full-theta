@@ -245,3 +245,29 @@ func test_an_info_card_cannot_be_accepted() -> void:
 	assert_bool(StoryFixture.run(w, 0, accept)).is_false()
 	assert_int(w.story.state[card]).is_equal(StoryTable.State.OPEN)
 	assert_int(StoryFixture.events(w, &"card_refused").size()).is_equal(1)
+
+
+# FT: FT-PAIR-001, FT-PAIR-003, FT-COM-003
+# Card, dock and contact state lives in typed columns, so a clearance that is accepted,
+# marked and settled, with power terms and a learned scan fact, sets no scenario flag.
+func test_card_and_contact_state_set_no_flags() -> void:
+	var w: SimWorld = StoryFixture.duel()
+	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER, &"", SITE)
+	spec.lane_open_s = 1.0
+	spec.lane_s = 5.0
+	spec.needs_subsystem = &"engines"
+	spec.needs_pips = 2
+	var card: int = StoryFixture.post(w, 0, spec)
+	assert_bool(Story.accept(w, 0, card)).is_true()
+	assert_int(w.story.claim[card]).is_equal(1)
+	assert_int(w.story.lane_t0[card]).is_equal(w.tick + 1)
+	assert_int(w.story.lane_len[card]).is_equal(SimRate.ticks(5.0))
+	assert_dict(StoryRules.need_of(w, card)).is_equal({"subsystem": &"engines", "pips": 2})
+	assert_bool(StoryRules.mark_mission(w, 0, card)).is_true()
+	Story.learn_fact(w, BLUE, 1, "cargo")
+	assert_bool(Story.knows_fact(w, BLUE, 1, "cargo")).is_true()
+	assert_bool(Story.knows_fact(w, RED, 0, "cargo")).is_false()
+	StoryFixture.dock(w, 0)
+	SimFixture.run(w, 2)
+	assert_int(w.story_ships.seen_dock[0]).is_equal(SITE)
+	assert_int(w.story_flags.size()).is_equal(0)
