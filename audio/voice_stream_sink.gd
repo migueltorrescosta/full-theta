@@ -19,6 +19,10 @@ extends VoiceSink
 
 ## PROVISIONAL: generator buffer; covers frame hitches.
 const BUFFER_S: float = 0.25
+## A generator playback holds its generator under this metadata key: Godot 4.7's playback
+## keeps only a raw pointer to it (godotengine/godot#124816, fixed in 4.8) and is mixed once
+## more after a stop, so a generator freed first hangs the audio thread (w-kuo).
+const _KEEP_GENERATOR: StringName = &"_ft_keep_generator"
 
 ## Bus name -> _Channel.
 var _channels: Dictionary = {}
@@ -110,6 +114,8 @@ func push(clip: int, pcm: PackedByteArray, rate: int, from_sample: int) -> void:
 		ch.clip_start_frame = 0
 	if not ch.player.playing:
 		ch.player.play()
+		if ch.player.has_stream_playback():
+			ch.player.get_stream_playback().set_meta(_KEEP_GENERATOR, gen)
 		# A new, empty playback: count from it.
 		ch.clip_start_frame -= ch.frames_pushed
 		ch.frames_pushed = 0
