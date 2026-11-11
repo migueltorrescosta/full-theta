@@ -154,6 +154,38 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 	assert_int(w.knowledge.row_for(2, 0)).is_greater_equal(0)
 
 
+# FT: FT-ARC-008, FT-ARC-012
+# R04-14: each table's column registry is the one list of its state. Every array the
+# table holds is a registered column unless it is derived (`_` name) or listed in
+# not_columns(); every not_columns() name is a variable the table declares; the key
+# columns come first; and variables(), what SimCopy copies, is every script variable.
+func test_registry_covers_every_column_array() -> void:
+	var w: SimWorld = _world(3)
+	for i: int in 5:
+		w.step()
+	for t: SimTable in w.tables():
+		var name: String = t.get_script().get_global_name()
+		var cols: Array = t.columns().map(func(c: Array) -> String: return c[0])
+		var declared: Array[StringName] = []
+		for p: Dictionary in t.get_property_list():
+			if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				declared.append(StringName(p["name"]))
+		assert_array(t.variables()).override_failure_message(name).contains_exactly_in_any_order(
+			declared
+		)
+		assert_array(cols.slice(0, 2)).is_equal(["ship_ids", "factions"])
+		for skip: StringName in t.not_columns():
+			assert_array(declared).override_failure_message(name).contains([skip])
+		for v: StringName in declared:
+			var value: Variant = t.get(v)
+			var is_array: bool = (
+				typeof(value) == TYPE_ARRAY or typeof(value) >= TYPE_PACKED_BYTE_ARRAY
+			)
+			if not is_array or String(v).begins_with("_") or t.not_columns().has(v):
+				continue
+			assert_array(cols).override_failure_message("%s.%s" % [name, v]).contains([String(v)])
+
+
 # FT: FT-ARC-006
 # The world's own accumulator turns frame time into whole 60 Hz ticks.
 func test_accumulator_steps_fixed_ticks() -> void:

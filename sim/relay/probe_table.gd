@@ -52,19 +52,3 @@ func reset_ship(ship_id: int, _def: ShipDef) -> void:
 		for i: int in keep.size():
 			fresh[i] = old[keep[i]]
 		set(name, fresh)
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["serial", serial],
-			["at_x", at_x],
-			["at_y", at_y],
-			["at_z", at_z],
-			["to_x", to_x],
-			["to_y", to_y],
-			["to_z", to_z],
-			["deployed", deployed],
-		]
-	)

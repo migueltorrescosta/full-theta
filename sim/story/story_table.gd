@@ -94,38 +94,6 @@ func add_card(ship: int, faction: int, card_kind: Kind) -> int:
 	return row
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["kind", kind],
-			["state", state],
-			["npc", npc],
-			["title", title],
-			["detail", detail],
-			["conversation", conversation],
-			["node", node],
-			["expires_tick", expires_tick],
-			["reward", reward],
-			["rep_interaction", rep_interaction],
-			["rep_faction", rep_faction],
-			["target", target],
-			["target_flag", target_flag],
-			["requires_docked", requires_docked],
-			["site", site],
-			["verify", verify],
-			["claim", claim],
-			["lane_open", lane_open],
-			["lane_len", lane_len],
-			["lane_t0", lane_t0],
-			["need_subsystem", need_subsystem],
-			["need_pips", need_pips],
-			["marked", marked],
-			["rep_drawn", rep_drawn],
-		]
-	)
-
-
 ## Cards are faction state like knowledge: a ship reset leaves its rows alone.
 func reset_ship(_ship_id: int, _def: ShipDef) -> void:
 	pass

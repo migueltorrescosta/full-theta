@@ -9,6 +9,15 @@ extends RefCounted
 ## Ids below this share a key with the id above it: row_key packs two ids into one int.
 const KEY_STRIDE: int = 65536
 
+## The column registry (R04-14): every script variable the table declares, base class
+## first and then in declaration order, is a state column unless its name starts with `_`
+## (a derived index or cache) or not_columns() names it. So declaring a column is the one
+## edit that puts it in state_hash(), reset_ship() and SimCopy; its spawn value is still
+## appended in add_ship(). Per table script, script -> [all variables, column names],
+## filled once under the mutex (any thread may hash or capture a world).
+static var _registry: Dictionary = {}
+static var _registry_lock: Mutex = Mutex.new()
+
 var ship_ids: PackedInt32Array = PackedInt32Array()
 var factions: PackedInt32Array = PackedInt32Array()
 
@@ -50,10 +59,52 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 	pass
 
 
-## The state, as ordered [name, value] pairs, for hashing, copies and tests. Each name
-## is the property holding the column; subclasses append their columns to the keys.
+## The state columns, as ordered [name, value] pairs, for hashing, copies and tests: the
+## registry's columns, the two key columns first. The order is the hash order (D404).
 func columns() -> Array:
-	return [["ship_ids", ship_ids], ["factions", factions]]
+	var out: Array = []
+	for name: String in _registered()[1]:
+		out.append([name, get(name)])
+	return out
+
+
+## Every script variable of the table, columns, derived state and the not_columns() alike
+## (SimCopy copies them all), in registry order.
+func variables() -> Array[StringName]:
+	return _registered()[0]
+
+
+## Public script variables that are not row columns (run data, flags, derived caches other
+## code reads); subclasses that have any override this.
+func not_columns() -> Array[StringName]:
+	return []
+
+
+func _registered() -> Array:
+	var script: Script = get_script()
+	_registry_lock.lock()
+	var entry: Array = _registry.get(script, [])
+	if entry.is_empty():
+		# The list holds one group per script, the table's own first, each after a
+		# category entry: reversed, the base class's variables come first.
+		var groups: Array = []
+		for p: Dictionary in script.get_script_property_list():
+			if p["usage"] & PROPERTY_USAGE_CATEGORY:
+				groups.push_front([])
+			elif p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				groups[0].append(StringName(p["name"]))
+		var vars: Array[StringName] = []
+		var cols: Array[String] = []
+		var skip: Array[StringName] = not_columns()
+		for group: Array in groups:
+			for name: StringName in group:
+				vars.append(name)
+				if not String(name).begins_with("_") and not skip.has(name):
+					cols.append(String(name))
+		entry = [vars, cols]
+		_registry[script] = entry
+	_registry_lock.unlock()
+	return entry
 
 
 ## Restores the ship's rows to their spawn values from the definition (per-ship run

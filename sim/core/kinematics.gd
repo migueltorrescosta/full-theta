@@ -280,32 +280,6 @@ func clamp_torque(row: int, torque: Vector3) -> Vector3:
 	return torque.clamp(-torque_limit(row), torque_limit(row))
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["px", px],
-			["py", py],
-			["pz", pz],
-			["vel", vel],
-			["rot", rot],
-			["ang_mom", ang_mom],
-			["ang_vel", ang_vel],
-			["force_cmd", force_cmd],
-			["torque_cmd", torque_cmd],
-			["thrust_scale", thrust_scale],
-			["torque_scale", torque_scale],
-			["propellant", propellant],
-			["propellant_used", propellant_used],
-			["alive", alive],
-			["mass", mass],
-			["inertia", inertia],
-			["max_thrust_pos", max_thrust_pos],
-			["max_thrust_neg", max_thrust_neg],
-			["max_torque", max_torque],
-			["exhaust_velocity", exhaust_velocity],
-			["lever_arm", lever_arm],
-			["radius", radius],
-			["half_length", half_length],
-		]
-	)
+## period is one value, not a row column: state_hash() hashes it on its own.
+func not_columns() -> Array[StringName]:
+	return [&"period"]

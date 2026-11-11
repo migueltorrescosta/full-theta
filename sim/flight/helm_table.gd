@@ -97,35 +97,3 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 
 func is_decoupled(row: int) -> bool:
 	return decoupled[row] == 1
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["decoupled", decoupled],
-			["throttle_setpoint", throttle_setpoint],
-			["input_rotation", input_rotation],
-			["input_translation", input_translation],
-			["face_held", face_held],
-			["approach_held", approach_held],
-			["all_stop", all_stop],
-			["align", align],
-			["align_bow", align_bow],
-			["align_mount", align_mount],
-			["target_kind", target_kind],
-			["target_ship", target_ship],
-			["target_x", target_x],
-			["target_y", target_y],
-			["target_z", target_z],
-			["target_site", target_site],
-			["jump_left", jump_left],
-			["jump_kind", jump_kind],
-			["jump_target", jump_target],
-			["jump_x", jump_x],
-			["jump_y", jump_y],
-			["jump_z", jump_z],
-			["jump_seen_by", jump_seen_by],
-			["docked_site", docked_site],
-		]
-	)

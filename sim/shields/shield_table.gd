@@ -23,16 +23,3 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	focus.append(Vector3.FORWARD)
 	track_id.append(-1)
 	low_armed.append(1)
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["strength", strength],
-			["tightness", tightness],
-			["focus", focus],
-			["track_id", track_id],
-			["low_armed", low_armed],
-		]
-	)

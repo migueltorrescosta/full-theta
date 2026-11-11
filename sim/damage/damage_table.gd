@@ -92,25 +92,6 @@ func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 		hack_scale.append(1.0)
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["part_ids", part_ids],
-			["health", health],
-			["spare_parts", spare_parts],
-			["crews", crews],
-			["pips", pips],
-			["heat", heat],
-			["fault_armed", fault_armed],
-			["fault_cause", fault_cause],
-			["fault_known", fault_known],
-			["fault_pick", fault_pick],
-			["hardened_ticks", hardened_ticks],
-		]
-	)
-
-
 ## Effectiveness of subsystem row r with definition s (FT-SIM-021): its curve at the
 ## row's health fraction, cached per row by health (the curve is the row's own, fixed).
 func row_effectiveness(r: int, s: SubsystemDef) -> float:
@@ -148,3 +129,8 @@ func find_subsystem(ship_id: int, subsystem_id: StringName) -> int:
 			return r
 		r += 1
 	return -1
+
+
+## The hack cache (hack_scale, hack_dirty): derived from HackTable, not state.
+func not_columns() -> Array[StringName]:
+	return [&"hack_scale", &"hack_dirty"]

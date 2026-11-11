@@ -83,33 +83,6 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	preview.append({})
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["active", active],
-			["ping_left", ping_left],
-			["ping_cool", ping_cool],
-			["selected", selected],
-			["scan_x", scan_x],
-			["scan_y", scan_y],
-			["scan_z", scan_z],
-			["kind", kind],
-			["target", target],
-			["puzzle_seed", puzzle_seed],
-			["noise", noise],
-			["start_tick", start_tick],
-			["subsystem", subsystem],
-			["axes", axes],
-			["trace", trace],
-			["node", node],
-			["known", known],
-			["probe", probe],
-			["self_scanned", self_scanned],
-		]
-	)
-
-
 ## Whether the ship has a scan point.
 func has_scan_point(ship: int) -> bool:
 	return is_finite(scan_x[ship])
@@ -133,3 +106,8 @@ func clear_session(ship: int) -> void:
 	node[ship] = -1
 	known[ship] = 0
 	probe[ship] = 0
+
+
+## The preview cache: derived, not state.
+func not_columns() -> Array[StringName]:
+	return [&"preview"]

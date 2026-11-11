@@ -131,22 +131,3 @@ func remove_rows(rows: PackedInt32Array) -> void:
 ## A ship's run reset drops its projectiles (FT-MIS-017); add_ship adds none.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	remove_rows(rows_of(ship_id))
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["px", px],
-			["py", py],
-			["pz", pz],
-			["vel", vel],
-			["radius", radius],
-			["energy", energy],
-			["ttl", ttl],
-			["damage_type", damage_type],
-			["turn_rate", turn_rate],
-			["guide_target", guide_target],
-			["track_floor", track_floor],
-		]
-	)
