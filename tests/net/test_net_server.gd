@@ -160,6 +160,35 @@ func test_version_mismatch_is_rejected_with_a_reason() -> void:
 	assert_int(server.session.by_id.size()).is_equal(0)
 
 
+# FT: FT-NET-005
+# A well-formed Hello of another protocol version is rejected with version_mismatch.
+func test_well_formed_hello_of_another_version_is_rejected() -> void:
+	var server: NetServer = _server()
+	var old: NetClient = _client(server, "old")
+	old._hello_sent = true
+	assert_bool(await _until(func() -> bool: return old._peer.get_ready_state() == 1)).is_true()
+	old.send_raw(
+		NetProtocol.encode(
+			NetProtocol.Type.HELLO,
+			{
+				"v": NetProtocol.PROTOCOL_VERSION - 1,
+				"token": "",
+				"name": "old",
+				"kind": "bot",
+				"host_secret": ""
+			}
+		)
+	)
+	var r1: bool = await _until(func() -> bool: return old.state == NetClient.State.REJECTED)
+	assert_bool(r1).is_true()
+	assert_str(old.reject_reason).is_equal(NetProtocol.REJECT_VERSION)
+	assert_bool(await _until(func() -> bool: return old._peer.get_ready_state() == 3)).is_true()
+	assert_int(server.session.by_id.size()).is_equal(0)
+	var cur: NetClient = _client(server, "cur")
+	assert_bool(await _until(cur.is_welcomed)).is_true()
+	assert_int(server.session.by_id.size()).is_equal(1)
+
+
 # FT: FT-NET-006, FT-NET-007, FT-NET-011
 # Each invalid command produces CommandRejected{seq, reason} to its sender only, as an
 # event stamped with the tick: no pick, another station's command, an unknown kind, a
