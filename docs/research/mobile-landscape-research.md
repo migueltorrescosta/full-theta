@@ -1,5 +1,7 @@
 # Mobile landscape layout for browser games: research for Full Theta
 
+Historical research note (2026-10-27); not maintained; paths may be stale.
+
 Date: 2026-10-27. Web search only (snippets, not full-page reads); items marked (unverified) rest on one secondary source or my own knowledge. Search coverage was thin for Godot-specific safe-area behaviour and for Poki/itch.io guidance.
 
 ## 1. Orientation
