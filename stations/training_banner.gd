@@ -26,6 +26,8 @@ const PAIR_PREFIX: String = "pair_"
 ## Seconds between two looks for room on a touch layout, and the step of the look (px).
 const LOOK_S: float = 0.3
 const STEP_PX: float = 8.0
+## Where no spot is free, covering a button costs this many times covering a picture.
+const BUTTON_COST: float = 8.0
 const SETTLE_FRAMES: int = 4
 ## A radar under this share of the window is a picture the card keeps clear of.
 const INSET_SHARE: float = 0.2
@@ -277,13 +279,31 @@ func _set_touch_layout(touch: bool) -> void:
 				_head.move_child(_next, _fold.get_index())
 			else:
 				_col.move_child(_next, _col.get_child_count() - 1)
-		_text.autowrap_mode = (
-			TextServer.AUTOWRAP_OFF if is_folded() else TextServer.AUTOWRAP_WORD_SMART
-		)
-		_text.clip_text = is_folded()
-		_text.custom_minimum_size.x = (
-			96.0 if is_folded() else width - 24.0 - UiTheme.TOUCH_PRIMARY - 8.0
-		)
+		# Folded, the step still reads whole: it wraps onto up to three lines beside Next (a
+		# one-line cut "pick a subsyste" hid the step itself).
+		_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_text.max_lines_visible = 3 if is_folded() else -1
+		_text.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		_text.clip_text = false
+		var beside: float = UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP
+		if is_folded():
+			beside += _next.get_combined_minimum_size().x + UiTheme.TOUCH_GAP
+		_text.custom_minimum_size.x = maxf(width - 24.0 - beside, 96.0)
+		# Folded, its wrapped height at that width (a Label sizes a wrapped text for the width it
+		# has, which the one-line row doesn't give it yet).
+		if is_folded():
+			var font: Font = _text.get_theme_font("font")
+			var fs: int = _text.get_theme_font_size("font_size")
+			var h: float = (
+				font
+				. get_multiline_string_size(
+					_text.text, HORIZONTAL_ALIGNMENT_LEFT, _text.custom_minimum_size.x, fs, 3
+				)
+				. y
+			)
+			_text.custom_minimum_size.y = h
+		else:
+			_text.custom_minimum_size.y = 0.0
 	else:
 		if _moved:
 			_moved = false
@@ -296,6 +316,9 @@ func _set_touch_layout(touch: bool) -> void:
 		if _next.get_parent() != _col:
 			_next.reparent(_col, false)
 		_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_text.max_lines_visible = -1
+		_text.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+		_text.custom_minimum_size.y = 0.0
 		_text.clip_text = false
 
 
@@ -326,10 +349,14 @@ func place() -> Rect2:
 	var taken: Array[Rect2] = []
 	for t: Dictionary in TapAudit.targets(screen, self):
 		taken.append((t["rect"] as Rect2).grow(UiTheme.TOUCH_GAP))
+	# The rotate banner and the top bar (ship, alert, the goal line) are never covered.
+	for name: String in ["rotate_banner", "top_bar"]:
+		var c: Variant = screen.get(name)
+		if c is Control and (c as Control).is_visible_in_tree():
+			taken.append((c as Control).get_global_rect())
+	# The buttons and the banner come first: covering them costs more than a picture.
+	var buttons: int = taken.size()
 	_add_pickers(screen, taken)
-	var banner: Variant = screen.get("rotate_banner")
-	if banner is Control and (banner as Control).is_visible_in_tree():
-		taken.append((banner as Control).get_global_rect())
 	var size_now: Vector2 = Vector2.ZERO
 	var spot: Variant = null
 	# The whole card first, at the widest width that finds room; else one line.
@@ -345,7 +372,7 @@ func place() -> Rect2:
 				break
 		if spot != null:
 			break
-	var at: Vector2 = spot if spot != null else Vector2(room.position.x, room.end.y - size_now.y)
+	var at: Vector2 = spot if spot != null else _least_covered(room, taken, buttons, size_now)
 	_moved = true
 	size = size_now
 	global_position = at
@@ -416,6 +443,29 @@ func _free_spot(room: Rect2, taken: Array[Rect2], size_now: Vector2) -> Variant:
 				return Vector2(x, y)
 		y += STEP_PX
 	return null
+
+
+## Where no spot is free: the spot of `size_now` inside `room` that covers the least of
+## `taken`, its first `buttons` rectangles (buttons, tabs, the banner) weighing BUTTON_COST
+## times a picture's (a radar the lesson doesn't use).
+func _least_covered(room: Rect2, taken: Array[Rect2], buttons: int, size_now: Vector2) -> Vector2:
+	var best: Vector2 = Vector2(room.position.x, room.end.y - size_now.y)
+	var least: float = INF
+	var y: float = room.position.y
+	while y + size_now.y <= room.end.y + 0.5:
+		var x: float = room.position.x + UiTheme.TOUCH_GAP
+		while x + size_now.x <= room.end.x - UiTheme.TOUCH_GAP + 0.5:
+			var r: Rect2 = Rect2(x, y, size_now.x, size_now.y)
+			var covered: float = 0.0
+			for i: int in taken.size():
+				var cost: float = BUTTON_COST if i < buttons else 1.0
+				covered += cost * r.intersection(taken[i]).get_area()
+			if covered < least:
+				least = covered
+				best = r.position
+			x += STEP_PX
+		y += STEP_PX
+	return best
 
 
 static func _clear(r: Rect2, taken: Array[Rect2]) -> bool:
