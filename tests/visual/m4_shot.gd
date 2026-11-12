@@ -11,8 +11,10 @@
 ##   highlights, or its Details (the full debrief, ux-20);
 ## - "pause": the host's own ship paused under a host pause (`host` false: a crew player's);
 ## - "menu_web": the web main menu;
-## - "bots": Helm with stand-in and fill bots on the ship, named in the top bar (#40 D1).
-## `gp` (lobby, mode) adds the gameplay options (#40 D1, D2, D10, gp-11): the host's two
+## - "bots": Helm with stand-in and fill bots on the ship, named in the top bar (#40 D1);
+## - "guest_relay": a guest of Heron seated at its Relay, with Back to watching (#40 D10).
+## `gp` on "handover" makes the player a guest of Heron with its Help out bar (#40 D10); on
+## lobby and mode it adds the gameplay options (#40 D1, D2, D10, gp-11): the host's two
 ## options on and a run modifier in the sheet, a stand-in bot, a fill bot and a guest in the
 ## cells.
 ## `insets` simulates a phone's safe-area insets [left, top, right, bottom] in device-
@@ -42,8 +44,9 @@ func _ready() -> void:
 	I18n.apply(lang)
 	LayoutMode.apply(get_tree().root)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var seat: String = {"handover": "viewer", "lobby": "systems", "mode": "systems"}.get(
-		view, "helm"
+	var seat: String = (
+		{"handover": "viewer", "lobby": "systems", "mode": "systems", "guest_relay": "relay"}
+		. get(view, "helm")
 	)
 	_ctx = StationFixture.context(seat, "user://l5_m4_shot.cfg")
 	CommsFixture.install(_ctx)
@@ -66,6 +69,8 @@ func _ready() -> void:
 			n.position.y += 64
 			add_child(n)
 			n.setup(_ctx)
+			if gp:
+				_guest("viewer")
 		"forfeit":
 			_fleet("race", true)
 			_event("abandon_votes", {"ship": 0, "voters": ["Bo"], "sessions": [9], "needed": 2})
@@ -83,6 +88,13 @@ func _ready() -> void:
 			o.setup(_ctx)
 		"outcome", "debrief", "pause", "menu_web":
 			_own_view()
+		"guest_relay":
+			_fleet("teams", true)
+			_event("picked", {"ship": 1, "seat": "relay"})
+			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 0))
+			_event("handover", FleetMessages.handover(0, 1))
+			_station()
+			_guest("relay")
 		"bots":
 			_fleet("coop", true)
 			_ctx.crew.lobby[0]["bots"] = [
@@ -154,6 +166,21 @@ func _gameplay_options() -> void:
 		ModePanel.modifier_defs[id] = def
 	_ctx.crew.fleet.merge({"drop_pause": true, "fill_bots": true, "modifier": "ion_storm"}, true)
 	_ctx.crew.changed.emit(&"fleet")
+
+
+## The player a guest of Heron at `seat`, Bo on its Tactical and a fill bot on Comms, with the
+## client shell's GuestBar.
+func _guest(seat: String) -> void:
+	var guest: Dictionary = {
+		"seat": seat, "name": "Cy", "session": StationFixture.SESSION, "ready": true, "guest": true
+	}
+	var state: Dictionary = {"ship": 1, "started": true, "covered": true, "crew": 1}
+	state["seats"] = [guest, {"seat": "tactical", "name": "Bo", "session": 8, "ready": true}]
+	state["bots"] = [{"seat": "comms", "for": ""}, {"seat": "science", "for": "Di"}]
+	_event("lobby", state)
+	var bar: GuestBar = GuestBar.new()
+	add_child(bar)
+	bar.setup(_ctx)
 
 
 func _scoreboard() -> void:

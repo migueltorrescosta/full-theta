@@ -1179,6 +1179,8 @@
     "relaunch.vote": {"en": "Relaunch", "pt_PT": "Voltar ao jogo", "it": "Rientra"},
     "relaunch.unvote": {"en": "Take back my vote", "pt_PT": "Retirar o meu voto", "it": "Ritira il mio voto"},
     "handover.text": {"en": "%s is out: %s. You're watching %s now.", "pt_PT": "A %s está fora: %s. Agora estás a ver a %s.", "it": "%s è fuori: %s. Ora guardi %s."},
+    "guest.help_out": {"en": "Help out:", "pt_PT": "Ajudar:", "it": "Dai una mano:"},
+    "guest.back": {"en": "Back to watching", "pt_PT": "Voltar a ver", "it": "Torna a guardare"},
     "out.destroyed": {"en": "destroyed", "pt_PT": "destruída", "it": "distrutta"},
     "out.abandoned": {"en": "abandoned", "pt_PT": "abandonada", "it": "abbandonata"},
     "out.forfeit": {"en": "gave up", "pt_PT": "desistiu", "it": "si è arresa"},

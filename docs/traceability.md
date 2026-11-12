@@ -92,7 +92,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 50, FT-SIM 37, FT-STN 17, FT-H
 | FT-NET-046 | tests | `tests/net/test_host_static_server.gd`, `tests/net/test_net_client_stats_l3.gd`, `tests/net/test_snapshot_age_stats.gd` |
 | FT-NET-047 | tests | `tests/director/test_stand_in_crew.gd`, `tests/net/test_fleet_guests_l3.gd`, `tests/net/test_stand_in_l3.gd`, `tests/stations/test_lobby_gameplay.gd` |
 | FT-NET-048 | tests | `tests/net/test_fleet_guests_l3.gd`, `tests/net/test_stand_in_l3.gd`, `tests/stations/test_lobby_gameplay.gd` |
-| FT-NET-049 | tests | `tests/net/test_fleet_guests_l3.gd`, `tests/stations/test_lobby_gameplay.gd` |
+| FT-NET-049 | tests | `tests/net/test_fleet_guests_l3.gd`, `tests/stations/test_guest_bar.gd`, `tests/stations/test_lobby_gameplay.gd` |
 | FT-NET-050 | tests | `tests/net/test_fleet_guests_l3.gd`, `tests/stations/test_lobby_gameplay.gd` |
 | FT-SIM-001 | tests | `tests/sim/core/test_integrator.gd`, `tests/sim/core/test_sim_world.gd` |
 | FT-SIM-002 | tests | `tests/content/test_content_defs.gd`, `tests/content/test_def_gate.gd`, `tests/pairs/test_pair_gains.gd` |
