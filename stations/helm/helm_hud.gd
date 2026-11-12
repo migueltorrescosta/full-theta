@@ -665,7 +665,7 @@ func reserved() -> Array[Rect2]:
 	out.append_array(compass_boxes())
 	# The flight read-out, line by line: a label may sit in the gap under the speed line
 	# while no assist mode is on (w-dcc: "Kappa 4.7 km" kept its range there).
-	out.append_array(readout_lines())
+	out.append_array(_readout_lines())
 	out.append(thrust_rect())
 	return out
 
@@ -692,7 +692,7 @@ func _ring_rect() -> Rect2:
 
 ## The flight read-out's drawn lines (mode, speed, the active modes when any, the bars), each
 ## as wide as its text, inside readout_rect().
-func readout_lines() -> Array[Rect2]:
+func _readout_lines() -> Array[Rect2]:
 	var font: Font = get_theme_default_font()
 	var a: Rect2 = area()
 	var at: Vector2 = Vector2(a.position.x + 16.0, a.end.y - 150.0)
@@ -807,7 +807,7 @@ func compass_boxes() -> Array[Rect2]:
 	# (the chip is centred under the disc: its box is as wide as its text, w-dcc)
 	var font: Font = get_theme_default_font()
 	var w: float = minf(
-		font.get_string_size(compass_label(), HORIZONTAL_ALIGNMENT_LEFT, -1, _small()).x + 8.0,
+		font.get_string_size(_compass_label(), HORIZONTAL_ALIGNMENT_LEFT, -1, _small()).x + 8.0,
 		4.0 * COMPASS_R
 	)
 	return [
@@ -817,7 +817,7 @@ func compass_boxes() -> Array[Rect2]:
 
 
 ## The compass chip's text: the selection's callout, or "Nothing selected".
-func compass_label() -> String:
+func _compass_label() -> String:
 	if panel == null or panel.ctx == null:
 		return tr("helm.no_selection")
 	var local: Variant = panel.ctx.selection_local()
@@ -890,7 +890,7 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 	draw_line(c - Vector2(5.0, 0.0), c + Vector2(5.0, 0.0), dim)
 	draw_line(c - Vector2(0.0, 5.0), c + Vector2(0.0, 5.0), dim)
 	var local: Variant = panel.ctx.selection_local()
-	var label: String = compass_label()
+	var label: String = _compass_label()
 	if local is Vector3:
 		var p: Vector2 = c + compass_point(local, COMPASS_R - 6.0)
 		var col: Color = Palette.item_color(_selected_item())
