@@ -16,9 +16,9 @@ const ALERT_SOUNDS: String = "res://assets/sounds/alerts"
 ## The effects and the ambient music (GameSounds.sounds_dir, MusicPlayer.music_dir, #12).
 const SFX_SOUNDS: String = "res://assets/sounds/sfx"
 const MUSIC_TRACKS: String = "res://assets/music"
-## The Host form's scenarios: the --encounter each passes, and the label key of each.
-const SCENARIOS: Array[String] = ["run", "shakedown"]
-const SCENARIO_KEYS: Array[String] = ["train.mode_run", "train.mode_shakedown"]
+## What Host starts: always a run (D245 reversed, ux-05); the Shakedown with a crew is
+## Training > Crew drill.
+const RUN: String = "run"
 ## How long a lesson's shell stays hidden while the server seats and starts it (ms).
 const LESSON_WAIT_MS: int = 8000
 
@@ -60,7 +60,6 @@ var _name: LineEdit
 var _bind: OptionButton
 var _lang: OptionButton
 var _dev: CheckBox
-var _scenario: OptionButton
 var _hosts: ItemList
 var _hosts_hint: Label
 var _address: LineEdit
@@ -69,6 +68,7 @@ var _rejoin: Button
 var _settings_screen: SettingsScreen
 var _training: Button
 var _picker: TrainingPicker
+var _quiz: CalloutsQuiz
 var _orphan_dialog: ConfirmationDialog
 var _orphan_answer: HostSession.Answer = HostSession.Answer.LEAVE
 ## The station lesson being started or played (D303): `_lesson_on` while there is one, `_lesson`
@@ -76,6 +76,8 @@ var _orphan_answer: HostSession.Answer = HostSession.Answer.LEAVE
 var _lesson_on: bool = false
 var _lesson: String = ""
 var _lesson_note: String = ""
+## The Callouts quiz has been opened once (the first opening shows the first sample).
+var _quiz_opened: bool = false
 ## Until when a lesson's shell waits for the server to seat and start it (ms).
 var _lesson_deadline: int = 0
 
@@ -196,7 +198,7 @@ func host(bind: String = "", scenario: String = "", solo: String = "") -> void:
 	var o: HostSession.Options = HostSession.Options.new(bind)
 	o.language = I18n.LANGUAGES[_lang.selected]
 	o.dev_all = ClientSettings.dev_flag and _dev.button_pressed and solo == ""
-	o.encounter = scenario if scenario != "" else SCENARIOS[_scenario.selected]
+	o.encounter = scenario if scenario != "" else RUN
 	o.solo = solo
 	host_session = HostSession.new(settings.player_name)
 	host_session.token_file = token_path
@@ -333,10 +335,28 @@ func open_training() -> void:
 	_picker.visible = true
 
 
-## Starts the lesson of `station` ("" is the crew drill), the second tap. A desktop client
+## Opens the Callouts quiz (ux-11) over the picker: client-only, no server.
+func open_callouts() -> void:
+	_quiz.open(not _quiz_opened)
+	_quiz_opened = true
+	_quiz.visible = true
+
+
+## The quiz's last answer: the Callouts lesson gets its tick.
+func _on_quiz_finished() -> void:
+	settings.mark_lesson_done(TrainingPicker.CALLOUTS)
+	settings.save()
+	_picker.refresh()
+
+
+## Starts the lesson of `station` ("" is the crew drill), the second tap; the Callouts card
+## opens its quiz instead. A desktop client
 ## hosts a local server that seats it at once (--solo); a browser asks the server it joins,
 ## which refuses when other players are on it.
 func start_lesson(station: String) -> void:
+	if station == TrainingPicker.CALLOUTS:
+		open_callouts()
+		return
 	_remember_name()
 	_lesson_on = true
 	_lesson = station
@@ -569,6 +589,13 @@ func _build() -> void:
 	PadFocus.attach(_picker)
 	_picker.closed.connect(func() -> void: _picker.visible = false)
 	_picker.chosen.connect(start_lesson)
+	_quiz = CalloutsQuiz.new()
+	_quiz.name = "CalloutsQuiz"
+	_quiz.visible = false
+	add_child(_quiz)
+	PadFocus.attach(_quiz)
+	_quiz.closed.connect(func() -> void: _quiz.visible = false)
+	_quiz.finished.connect(_on_quiz_finished)
 	_orphan_dialog = ConfirmationDialog.new()
 	_orphan_dialog.title = tr("menu.orphan_title")
 	_orphan_dialog.ok_button_text = tr("menu.orphan_rejoin")
@@ -668,13 +695,6 @@ func _build_host(col: VBoxContainer) -> void:
 		_lang.add_item(tr("language." + l))
 	_lang.selected = maxi(0, I18n.LANGUAGES.find(default_language(OS.get_locale())))
 	row.add_child(_lang)
-	# the scenario the server holds: the run, or the Shakedown (Q17 A).
-	_scenario = OptionButton.new()
-	_scenario.name = "Scenario"
-	_scenario.tooltip_text = tr("train.mode")
-	for key: String in SCENARIO_KEYS:
-		_scenario.add_item(tr(key))
-	row.add_child(_scenario)
 	_dev = CheckBox.new()
 	_dev.name = "DevAll"
 	_dev.text = tr("menu.dev_all")

@@ -107,37 +107,7 @@
       "id": "shakedown.helm.shield_fore", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "shield_fore"}},
-      "text": {"en": "Point the shields forward. {binding}", "pt_PT": "Aponta os escudos para a frente. {binding}", "it": "Punta gli scudi avanti. {binding}"}
-    },
-    {
-      "id": "shakedown.helm.shield_aft", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "shield_aft"}},
-      "text": {"en": "Point the shields aft. {binding}", "pt_PT": "Aponta os escudos para trás. {binding}", "it": "Punta gli scudi indietro. {binding}"}
-    },
-    {
-      "id": "shakedown.helm.shield_port", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "shield_port"}},
-      "text": {"en": "Point the shields to port. {binding}", "pt_PT": "Aponta os escudos a bombordo. {binding}", "it": "Punta gli scudi a babordo. {binding}"}
-    },
-    {
-      "id": "shakedown.helm.shield_starboard", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "shield_starboard"}},
-      "text": {"en": "Point the shields to starboard. {binding}", "pt_PT": "Aponta os escudos a estibordo. {binding}", "it": "Punta gli scudi a tribordo. {binding}"}
-    },
-    {
-      "id": "shakedown.helm.shield_dorsal", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "shield_dorsal"}},
-      "text": {"en": "Point the shields up. {binding}", "pt_PT": "Aponta os escudos para cima. {binding}", "it": "Punta gli scudi in alto. {binding}"}
-    },
-    {
-      "id": "shakedown.helm.shield_ventral", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "shield_ventral"}},
-      "text": {"en": "Point the shields down. {binding}", "pt_PT": "Aponta os escudos para baixo. {binding}", "it": "Punta gli scudi in basso. {binding}"}
+      "text": {"en": "Point the shields at each face. {binding}", "pt_PT": "Aponta os escudos para cada face. {binding}", "it": "Punta gli scudi su ogni lato. {binding}"}
     },
     {
       "id": "shakedown.helm.select", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -227,31 +197,13 @@
       "id": "shakedown.helm.alert_red", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "alert_red"}},
-      "text": {"en": "Set red alert. {binding}", "pt_PT": "Põe o alerta vermelho. {binding}", "it": "Metti l'allerta rossa. {binding}"}
-    },
-    {
-      "id": "shakedown.helm.alert_yellow", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_yellow"}},
-      "text": {"en": "Set yellow alert. {binding}", "pt_PT": "Põe o alerta amarelo. {binding}", "it": "Metti l'allerta gialla. {binding}"}
-    },
-    {
-      "id": "shakedown.helm.alert_normal", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_normal"}},
-      "text": {"en": "Set normal alert. {binding}", "pt_PT": "Põe o alerta normal. {binding}", "it": "Metti l'allerta normale. {binding}"}
+      "text": {"en": "Set each alert level. {binding}", "pt_PT": "Põe cada nível de alerta. {binding}", "it": "Metti ogni livello di allerta. {binding}"}
     },
     {
       "id": "shakedown.helm.focus_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "focus_1"}},
-      "text": {"en": "Focus the first panel. {binding}", "pt_PT": "Foca o primeiro painel. {binding}", "it": "Metti a fuoco il primo pannello. {binding}"}
-    },
-    {
-      "id": "shakedown.helm.focus_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "focus_2"}},
-      "text": {"en": "Focus the second panel. {binding}", "pt_PT": "Foca o segundo painel. {binding}", "it": "Metti a fuoco il secondo pannello. {binding}"}
+      "text": {"en": "Switch between the two panels. {binding}", "pt_PT": "Alterna entre os dois painéis. {binding}", "it": "Passa da un pannello all'altro. {binding}"}
     },
     {
       "id": "shakedown.helm.track_done", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -292,37 +244,7 @@
       "id": "shakedown.weapons.mount_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "mount_1"}},
-      "text": {"en": "Pick mount 1. {binding}", "pt_PT": "Escolhe a arma 1. {binding}", "it": "Scegli l'arma 1. {binding}"}
-    },
-    {
-      "id": "shakedown.weapons.mount_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "mount_2"}},
-      "text": {"en": "Pick mount 2. {binding}", "pt_PT": "Escolhe a arma 2. {binding}", "it": "Scegli l'arma 2. {binding}"}
-    },
-    {
-      "id": "shakedown.weapons.mount_3", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "mount_3"}},
-      "text": {"en": "Pick mount 3. {binding}", "pt_PT": "Escolhe a arma 3. {binding}", "it": "Scegli l'arma 3. {binding}"}
-    },
-    {
-      "id": "shakedown.weapons.mount_4", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "mount_4"}},
-      "text": {"en": "Pick mount 4. {binding}", "pt_PT": "Escolhe a arma 4. {binding}", "it": "Scegli l'arma 4. {binding}"}
-    },
-    {
-      "id": "shakedown.weapons.mount_prev", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "mount_prev"}},
-      "text": {"en": "Pick the previous mount. {binding}", "pt_PT": "Escolhe a arma anterior. {binding}", "it": "Scegli l'arma precedente. {binding}"}
-    },
-    {
-      "id": "shakedown.weapons.mount_next", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "mount_next"}},
-      "text": {"en": "Pick the next mount. {binding}", "pt_PT": "Escolhe a arma seguinte. {binding}", "it": "Scegli l'arma successiva. {binding}"}
+      "text": {"en": "Pick each mount, and step through them. {binding}", "pt_PT": "Escolhe cada arma e percorre-as. {binding}", "it": "Scegli ogni arma e scorrile. {binding}"}
     },
     {
       "id": "shakedown.weapons.ammo_prev", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -424,31 +346,13 @@
       "id": "shakedown.weapons.alert_red", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "alert_red"}},
-      "text": {"en": "Set red alert. {binding}", "pt_PT": "Põe o alerta vermelho. {binding}", "it": "Metti l'allerta rossa. {binding}"}
-    },
-    {
-      "id": "shakedown.weapons.alert_yellow", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_yellow"}},
-      "text": {"en": "Set yellow alert. {binding}", "pt_PT": "Põe o alerta amarelo. {binding}", "it": "Metti l'allerta gialla. {binding}"}
-    },
-    {
-      "id": "shakedown.weapons.alert_normal", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_normal"}},
-      "text": {"en": "Set normal alert. {binding}", "pt_PT": "Põe o alerta normal. {binding}", "it": "Metti l'allerta normale. {binding}"}
+      "text": {"en": "Set each alert level. {binding}", "pt_PT": "Põe cada nível de alerta. {binding}", "it": "Metti ogni livello di allerta. {binding}"}
     },
     {
       "id": "shakedown.weapons.focus_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "focus_1"}},
-      "text": {"en": "Focus the first panel. {binding}", "pt_PT": "Foca o primeiro painel. {binding}", "it": "Metti a fuoco il primo pannello. {binding}"}
-    },
-    {
-      "id": "shakedown.weapons.focus_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "focus_2"}},
-      "text": {"en": "Focus the second panel. {binding}", "pt_PT": "Foca o segundo painel. {binding}", "it": "Metti a fuoco il secondo pannello. {binding}"}
+      "text": {"en": "Switch between the two panels. {binding}", "pt_PT": "Alterna entre os dois painéis. {binding}", "it": "Passa da un pannello all'altro. {binding}"}
     },
     {
       "id": "shakedown.weapons.track_done", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -477,49 +381,7 @@
       "id": "shakedown.engineering.subsystem_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "subsystem_1"}},
-      "text": {"en": "Pick subsystem 1. {binding}", "pt_PT": "Escolhe o subsistema 1. {binding}", "it": "Scegli il sottosistema 1. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.subsystem_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "subsystem_2"}},
-      "text": {"en": "Pick subsystem 2. {binding}", "pt_PT": "Escolhe o subsistema 2. {binding}", "it": "Scegli il sottosistema 2. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.subsystem_3", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "subsystem_3"}},
-      "text": {"en": "Pick subsystem 3. {binding}", "pt_PT": "Escolhe o subsistema 3. {binding}", "it": "Scegli il sottosistema 3. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.subsystem_4", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "subsystem_4"}},
-      "text": {"en": "Pick subsystem 4. {binding}", "pt_PT": "Escolhe o subsistema 4. {binding}", "it": "Scegli il sottosistema 4. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.subsystem_5", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "subsystem_5"}},
-      "text": {"en": "Pick subsystem 5. {binding}", "pt_PT": "Escolhe o subsistema 5. {binding}", "it": "Scegli il sottosistema 5. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.subsystem_6", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "subsystem_6"}},
-      "text": {"en": "Pick subsystem 6. {binding}", "pt_PT": "Escolhe o subsistema 6. {binding}", "it": "Scegli il sottosistema 6. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.subsystem_prev", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "subsystem_prev"}},
-      "text": {"en": "Pick the previous subsystem. {binding}", "pt_PT": "Escolhe o subsistema anterior. {binding}", "it": "Scegli il sottosistema precedente. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.subsystem_next", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "subsystem_next"}},
-      "text": {"en": "Pick the next subsystem. {binding}", "pt_PT": "Escolhe o subsistema seguinte. {binding}", "it": "Scegli il sottosistema successivo. {binding}"}
+      "text": {"en": "Pick each subsystem, and step through them. {binding}", "pt_PT": "Escolhe cada subsistema e percorre-os. {binding}", "it": "Scegli ogni sottosistema e scorrili. {binding}"}
     },
     {
       "id": "shakedown.engineering.pip_remove", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -669,31 +531,13 @@
       "id": "shakedown.engineering.alert_red", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "alert_red"}},
-      "text": {"en": "Set red alert. {binding}", "pt_PT": "Põe o alerta vermelho. {binding}", "it": "Metti l'allerta rossa. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.alert_yellow", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_yellow"}},
-      "text": {"en": "Set yellow alert. {binding}", "pt_PT": "Põe o alerta amarelo. {binding}", "it": "Metti l'allerta gialla. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.alert_normal", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_normal"}},
-      "text": {"en": "Set normal alert. {binding}", "pt_PT": "Põe o alerta normal. {binding}", "it": "Metti l'allerta normale. {binding}"}
+      "text": {"en": "Set each alert level. {binding}", "pt_PT": "Põe cada nível de alerta. {binding}", "it": "Metti ogni livello di allerta. {binding}"}
     },
     {
       "id": "shakedown.engineering.focus_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "focus_1"}},
-      "text": {"en": "Focus the first panel. {binding}", "pt_PT": "Foca o primeiro painel. {binding}", "it": "Metti a fuoco il primo pannello. {binding}"}
-    },
-    {
-      "id": "shakedown.engineering.focus_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "focus_2"}},
-      "text": {"en": "Focus the second panel. {binding}", "pt_PT": "Foca o segundo painel. {binding}", "it": "Metti a fuoco il secondo pannello. {binding}"}
+      "text": {"en": "Switch between the two panels. {binding}", "pt_PT": "Alterna entre os dois painéis. {binding}", "it": "Passa da un pannello all'altro. {binding}"}
     },
     {
       "id": "shakedown.engineering.track_done", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -740,55 +584,19 @@
       "id": "shakedown.science.sci_sub_prev", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "sci_sub_prev"}},
-      "text": {"en": "Pick the previous subsystem. {binding}", "pt_PT": "Escolhe o subsistema anterior. {binding}", "it": "Scegli il sottosistema precedente. {binding}"}
-    },
-    {
-      "id": "shakedown.science.sci_sub_next", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "sci_sub_next"}},
-      "text": {"en": "Pick the next subsystem. {binding}", "pt_PT": "Escolhe o subsistema seguinte. {binding}", "it": "Scegli il sottosistema successivo. {binding}"}
+      "text": {"en": "Step through the subsystems. {binding}", "pt_PT": "Percorre os subsistemas. {binding}", "it": "Scorri i sottosistemi. {binding}"}
     },
     {
       "id": "shakedown.science.sci_up", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "sci_up"}},
-      "text": {"en": "Move the hack route up. {binding}", "pt_PT": "Move o caminho do hack para cima. {binding}", "it": "Muovi il percorso dell'hack in alto. {binding}"}
-    },
-    {
-      "id": "shakedown.science.sci_down", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "sci_down"}},
-      "text": {"en": "Move the hack route down. {binding}", "pt_PT": "Move o caminho do hack para baixo. {binding}", "it": "Muovi il percorso dell'hack in basso. {binding}"}
-    },
-    {
-      "id": "shakedown.science.sci_left", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "sci_left"}},
-      "text": {"en": "Move the hack route left. {binding}", "pt_PT": "Move o caminho do hack para a esquerda. {binding}", "it": "Muovi il percorso dell'hack a sinistra. {binding}"}
-    },
-    {
-      "id": "shakedown.science.sci_right", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "sci_right"}},
-      "text": {"en": "Move the hack route right. {binding}", "pt_PT": "Move o caminho do hack para a direita. {binding}", "it": "Muovi il percorso dell'hack a destra. {binding}"}
+      "text": {"en": "Move the hack route up, down, left and right. {binding}", "pt_PT": "Move o caminho do hack para cima, baixo, esquerda e direita. {binding}", "it": "Muovi il percorso dell'hack in alto, in basso, a sinistra e a destra. {binding}"}
     },
     {
       "id": "shakedown.science.sci_dial_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "sci_dial_1"}},
-      "text": {"en": "Turn scan dial 1. {binding}", "pt_PT": "Roda o seletor de análise 1. {binding}", "it": "Gira il quadrante di scansione 1. {binding}"}
-    },
-    {
-      "id": "shakedown.science.sci_dial_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "sci_dial_2"}},
-      "text": {"en": "Turn scan dial 2. {binding}", "pt_PT": "Roda o seletor de análise 2. {binding}", "it": "Gira il quadrante di scansione 2. {binding}"}
-    },
-    {
-      "id": "shakedown.science.sci_dial_3", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "sci_dial_3"}},
-      "text": {"en": "Turn scan dial 3. {binding}", "pt_PT": "Roda o seletor de análise 3. {binding}", "it": "Gira il quadrante di scansione 3. {binding}"}
+      "text": {"en": "Turn each scan dial. {binding}", "pt_PT": "Roda cada seletor de análise. {binding}", "it": "Gira ogni quadrante di scansione. {binding}"}
     },
     {
       "id": "shakedown.science.sci_orbit_y", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -884,31 +692,13 @@
       "id": "shakedown.science.alert_red", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "alert_red"}},
-      "text": {"en": "Set red alert. {binding}", "pt_PT": "Põe o alerta vermelho. {binding}", "it": "Metti l'allerta rossa. {binding}"}
-    },
-    {
-      "id": "shakedown.science.alert_yellow", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_yellow"}},
-      "text": {"en": "Set yellow alert. {binding}", "pt_PT": "Põe o alerta amarelo. {binding}", "it": "Metti l'allerta gialla. {binding}"}
-    },
-    {
-      "id": "shakedown.science.alert_normal", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_normal"}},
-      "text": {"en": "Set normal alert. {binding}", "pt_PT": "Põe o alerta normal. {binding}", "it": "Metti l'allerta normale. {binding}"}
+      "text": {"en": "Set each alert level. {binding}", "pt_PT": "Põe cada nível de alerta. {binding}", "it": "Metti ogni livello di allerta. {binding}"}
     },
     {
       "id": "shakedown.science.focus_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "focus_1"}},
-      "text": {"en": "Focus the first panel. {binding}", "pt_PT": "Foca o primeiro painel. {binding}", "it": "Metti a fuoco il primo pannello. {binding}"}
-    },
-    {
-      "id": "shakedown.science.focus_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "focus_2"}},
-      "text": {"en": "Focus the second panel. {binding}", "pt_PT": "Foca o segundo painel. {binding}", "it": "Metti a fuoco il secondo pannello. {binding}"}
+      "text": {"en": "Switch between the two panels. {binding}", "pt_PT": "Alterna entre os dois painéis. {binding}", "it": "Passa da un pannello all'altro. {binding}"}
     },
     {
       "id": "shakedown.science.track_done", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1021,31 +811,7 @@
       "id": "shakedown.relay.main_view_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "main_view_1"}},
-      "text": {"en": "Show view 1 on the main screen. {binding}", "pt_PT": "Mostra a vista 1 no ecrã principal. {binding}", "it": "Mostra la vista 1 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.relay.main_view_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "main_view_2"}},
-      "text": {"en": "Show view 2 on the main screen. {binding}", "pt_PT": "Mostra a vista 2 no ecrã principal. {binding}", "it": "Mostra la vista 2 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.relay.main_view_3", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "main_view_3"}},
-      "text": {"en": "Show view 3 on the main screen. {binding}", "pt_PT": "Mostra a vista 3 no ecrã principal. {binding}", "it": "Mostra la vista 3 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.relay.main_view_4", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "main_view_4"}},
-      "text": {"en": "Show view 4 on the main screen. {binding}", "pt_PT": "Mostra a vista 4 no ecrã principal. {binding}", "it": "Mostra la vista 4 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.relay.main_view_5", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "main_view_5"}},
-      "text": {"en": "Show view 5 on the main screen. {binding}", "pt_PT": "Mostra a vista 5 no ecrã principal. {binding}", "it": "Mostra la vista 5 sullo schermo principale. {binding}"}
+      "text": {"en": "Show each view on the main screen. {binding}", "pt_PT": "Mostra cada vista no ecrã principal. {binding}", "it": "Mostra ogni vista sullo schermo principale. {binding}"}
     },
     {
       "id": "shakedown.relay.select", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1129,31 +895,13 @@
       "id": "shakedown.relay.alert_red", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "alert_red"}},
-      "text": {"en": "Set red alert. {binding}", "pt_PT": "Põe o alerta vermelho. {binding}", "it": "Metti l'allerta rossa. {binding}"}
-    },
-    {
-      "id": "shakedown.relay.alert_yellow", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_yellow"}},
-      "text": {"en": "Set yellow alert. {binding}", "pt_PT": "Põe o alerta amarelo. {binding}", "it": "Metti l'allerta gialla. {binding}"}
-    },
-    {
-      "id": "shakedown.relay.alert_normal", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_normal"}},
-      "text": {"en": "Set normal alert. {binding}", "pt_PT": "Põe o alerta normal. {binding}", "it": "Metti l'allerta normale. {binding}"}
+      "text": {"en": "Set each alert level. {binding}", "pt_PT": "Põe cada nível de alerta. {binding}", "it": "Metti ogni livello di allerta. {binding}"}
     },
     {
       "id": "shakedown.relay.focus_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "focus_1"}},
-      "text": {"en": "Focus the first panel. {binding}", "pt_PT": "Foca o primeiro painel. {binding}", "it": "Metti a fuoco il primo pannello. {binding}"}
-    },
-    {
-      "id": "shakedown.relay.focus_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "focus_2"}},
-      "text": {"en": "Focus the second panel. {binding}", "pt_PT": "Foca o segundo painel. {binding}", "it": "Metti a fuoco il secondo pannello. {binding}"}
+      "text": {"en": "Switch between the two panels. {binding}", "pt_PT": "Alterna entre os dois painéis. {binding}", "it": "Passa da un pannello all'altro. {binding}"}
     },
     {
       "id": "shakedown.relay.track_done", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1170,7 +918,7 @@
       "id": "shakedown.comms.comms_reply_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "comms_reply_1"}},
-      "text": {"en": "Pick reply 1. {binding}", "pt_PT": "Escolhe a resposta 1. {binding}", "it": "Scegli la risposta 1. {binding}"}
+      "text": {"en": "Pick a reply. {binding}", "pt_PT": "Escolhe uma resposta. {binding}", "it": "Scegli una risposta. {binding}"}
     },
     {
       "id": "shakedown.comms.accept", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1194,25 +942,7 @@
       "id": "shakedown.comms.comms_up", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "comms_up"}},
-      "text": {"en": "Move up on the board. {binding}", "pt_PT": "Move-te para cima no painel. {binding}", "it": "Muoviti in alto sulla bacheca. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.comms_down", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "comms_down"}},
-      "text": {"en": "Move down on the board. {binding}", "pt_PT": "Move-te para baixo no painel. {binding}", "it": "Muoviti in basso sulla bacheca. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.comms_left", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "comms_left"}},
-      "text": {"en": "Move left on the board. {binding}", "pt_PT": "Move-te para a esquerda no painel. {binding}", "it": "Muoviti a sinistra sulla bacheca. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.comms_right", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "comms_right"}},
-      "text": {"en": "Move right on the board. {binding}", "pt_PT": "Move-te para a direita no painel. {binding}", "it": "Muoviti a destra sulla bacheca. {binding}"}
+      "text": {"en": "Move around the board. {binding}", "pt_PT": "Move-te pelo painel. {binding}", "it": "Muoviti sulla bacheca. {binding}"}
     },
     {
       "id": "shakedown.comms.comms_next_column", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1225,24 +955,6 @@
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "comms_hail"}},
       "text": {"en": "Hail the drone. {binding}", "pt_PT": "Chama o drone. {binding}", "it": "Chiama il drone. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.comms_reply_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "comms_reply_2"}},
-      "text": {"en": "Pick reply 2. {binding}", "pt_PT": "Escolhe a resposta 2. {binding}", "it": "Scegli la risposta 2. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.comms_reply_3", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "comms_reply_3"}},
-      "text": {"en": "Pick reply 3. {binding}", "pt_PT": "Escolhe a resposta 3. {binding}", "it": "Scegli la risposta 3. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.comms_reply_4", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "comms_reply_4"}},
-      "text": {"en": "Pick reply 4. {binding}", "pt_PT": "Escolhe a resposta 4. {binding}", "it": "Scegli la risposta 4. {binding}"}
     },
     {
       "id": "shakedown.comms.comms_sell", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1344,31 +1056,13 @@
       "id": "shakedown.comms.alert_red", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "alert_red"}},
-      "text": {"en": "Set red alert. {binding}", "pt_PT": "Põe o alerta vermelho. {binding}", "it": "Metti l'allerta rossa. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.alert_yellow", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_yellow"}},
-      "text": {"en": "Set yellow alert. {binding}", "pt_PT": "Põe o alerta amarelo. {binding}", "it": "Metti l'allerta gialla. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.alert_normal", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_normal"}},
-      "text": {"en": "Set normal alert. {binding}", "pt_PT": "Põe o alerta normal. {binding}", "it": "Metti l'allerta normale. {binding}"}
+      "text": {"en": "Set each alert level. {binding}", "pt_PT": "Põe cada nível de alerta. {binding}", "it": "Metti ogni livello di allerta. {binding}"}
     },
     {
       "id": "shakedown.comms.focus_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "focus_1"}},
-      "text": {"en": "Focus the first panel. {binding}", "pt_PT": "Foca o primeiro painel. {binding}", "it": "Metti a fuoco il primo pannello. {binding}"}
-    },
-    {
-      "id": "shakedown.comms.focus_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "focus_2"}},
-      "text": {"en": "Focus the second panel. {binding}", "pt_PT": "Foca o segundo painel. {binding}", "it": "Metti a fuoco il secondo pannello. {binding}"}
+      "text": {"en": "Switch between the two panels. {binding}", "pt_PT": "Alterna entre os dois painéis. {binding}", "it": "Passa da un pannello all'altro. {binding}"}
     },
     {
       "id": "shakedown.comms.track_done", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1379,43 +1073,7 @@
       "id": "shakedown.captain.captain_view_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "captain_view_1"}},
-      "text": {"en": "Show view 1 on the main screen. {binding}", "pt_PT": "Mostra a vista 1 no ecrã principal. {binding}", "it": "Mostra la vista 1 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.captain_view_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "captain_view_2"}},
-      "text": {"en": "Show view 2 on the main screen. {binding}", "pt_PT": "Mostra a vista 2 no ecrã principal. {binding}", "it": "Mostra la vista 2 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.captain_view_3", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "captain_view_3"}},
-      "text": {"en": "Show view 3 on the main screen. {binding}", "pt_PT": "Mostra a vista 3 no ecrã principal. {binding}", "it": "Mostra la vista 3 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.captain_view_4", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "captain_view_4"}},
-      "text": {"en": "Show view 4 on the main screen. {binding}", "pt_PT": "Mostra a vista 4 no ecrã principal. {binding}", "it": "Mostra la vista 4 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.captain_view_5", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "captain_view_5"}},
-      "text": {"en": "Show view 5 on the main screen. {binding}", "pt_PT": "Mostra a vista 5 no ecrã principal. {binding}", "it": "Mostra la vista 5 sullo schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.captain_view_next", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "captain_view_next"}},
-      "text": {"en": "Show the next main screen view. {binding}", "pt_PT": "Mostra a vista seguinte do ecrã principal. {binding}", "it": "Mostra la vista successiva dello schermo principale. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.captain_view_prev", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "captain_view_prev"}},
-      "text": {"en": "Show the previous main screen view. {binding}", "pt_PT": "Mostra a vista anterior do ecrã principal. {binding}", "it": "Mostra la vista precedente dello schermo principale. {binding}"}
+      "text": {"en": "Show each view on the main screen. {binding}", "pt_PT": "Mostra cada vista no ecrã principal. {binding}", "it": "Mostra ogni vista sullo schermo principale. {binding}"}
     },
     {
       "id": "shakedown.captain.select", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1505,31 +1163,13 @@
       "id": "shakedown.captain.alert_red", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "alert_red"}},
-      "text": {"en": "Set red alert. {binding}", "pt_PT": "Põe o alerta vermelho. {binding}", "it": "Metti l'allerta rossa. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.alert_yellow", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_yellow"}},
-      "text": {"en": "Set yellow alert. {binding}", "pt_PT": "Põe o alerta amarelo. {binding}", "it": "Metti l'allerta gialla. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.alert_normal", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "alert_normal"}},
-      "text": {"en": "Set normal alert. {binding}", "pt_PT": "Põe o alerta normal. {binding}", "it": "Metti l'allerta normale. {binding}"}
+      "text": {"en": "Set each alert level. {binding}", "pt_PT": "Põe cada nível de alerta. {binding}", "it": "Metti ogni livello di allerta. {binding}"}
     },
     {
       "id": "shakedown.captain.focus_1", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "focus_1"}},
-      "text": {"en": "Focus the first panel. {binding}", "pt_PT": "Foca o primeiro painel. {binding}", "it": "Metti a fuoco il primo pannello. {binding}"}
-    },
-    {
-      "id": "shakedown.captain.focus_2", "role": "computer", "priority": 1, "max_age_ms": 15000,
-      "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "focus_2"}},
-      "text": {"en": "Focus the second panel. {binding}", "pt_PT": "Foca o segundo painel. {binding}", "it": "Metti a fuoco il secondo pannello. {binding}"}
+      "text": {"en": "Switch between the two panels. {binding}", "pt_PT": "Alterna entre os dois painéis. {binding}", "it": "Passa da un pannello all'altro. {binding}"}
     },
     {
       "id": "shakedown.captain.track_done", "role": "computer", "priority": 1, "max_age_ms": 15000,
