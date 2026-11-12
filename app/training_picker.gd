@@ -350,11 +350,8 @@ func _fill(card_button: Button, station: String, done: bool) -> void:
 	(col.get_node("Head/Name") as Label).text = title
 	(col.get_node("Head/Tick") as Label).text = "✓" if done else ""
 	(col.get_node("Blurb") as Label).text = tr(words[1])
-	var size_text: String = tr(words[2])
-	if "%d" in size_text:
-		var n: int = CalloutsQuiz.QUESTIONS if station == CALLOUTS else steps.get(station, 0)
-		size_text = size_text % n
-	(col.get_node("Size") as Label).text = size_text
+	var n: int = CalloutsQuiz.QUESTIONS if station == CALLOUTS else steps.get(station, 0)
+	(col.get_node("Size") as Label).text = tr(words[2]) % n
 	var state: Label = col.get_node("State")
 	state.text = tr("train.picker.again") if done else tr("train.picker.start")
 	if station == FIRST and not done:
