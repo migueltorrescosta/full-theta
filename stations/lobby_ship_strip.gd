@@ -28,13 +28,13 @@ func _init() -> void:
 	add_child(row)
 
 
-## Moves the ship buttons and `new_ship` between the lobby's `flow` and the strip.
-func use(phone: bool, flow: Container, new_ship: Button) -> void:
+## Moves the ship buttons between the lobby's `flow` and the strip.
+func use(phone: bool, flow: Container) -> void:
 	var from: Container = flow if phone else row
 	var to: Container = row if phone else flow
 	var moving: Array[Button] = []
 	for c: Node in from.get_children():
-		if str(c.name).begins_with("Ship_") or c == new_ship:
+		if str(c.name).begins_with("Ship_"):
 			moving.append(c as Button)
 	for i: int in moving.size():
 		from.remove_child(moving[i])

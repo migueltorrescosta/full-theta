@@ -31,7 +31,8 @@ var _ctx: StationContext
 var _sheet: AcceptDialog
 var _tabs: TabContainer
 var _mode: ModePanel
-var _headings: Dictionary = {}
+## The difficulty tab's heading over the data shortcuts.
+var _data_heading: Label
 var _ships: GridContainer
 var _add_ship: Button
 var _preset_buttons: Dictionary = {}
@@ -106,13 +107,6 @@ func _button(node_name: String, text: String, handler: Callable) -> Button:
 	return b
 
 
-func _heading(key: String, col: VBoxContainer) -> void:
-	var l: Label = _label(tr(key), "HeadingLabel")
-	l.name = "Heading_" + key.trim_prefix("lobby.")
-	_headings[key] = l
-	col.add_child(l)
-
-
 ## The Game setup sheet, added to `host`: three tabs, the mode, the ships and their teams
 ## (shown only when there are teams or room for another ship), and the difficulty with its
 ## data shortcuts. Each tab fits a phone held sideways; only the shortcut list scrolls.
@@ -160,7 +154,9 @@ func add_dialogs(host: Node) -> void:
 	_toggle_note = _label("", "DimLabel")
 	_toggle_note.name = "ToggleNote"
 	level_tab.add_child(_toggle_note)
-	_heading("lobby.data", level_tab)
+	_data_heading = _label(tr("lobby.data"), "HeadingLabel")
+	_data_heading.name = "Heading_data"
+	level_tab.add_child(_data_heading)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	scroll.name = "ToggleScroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -195,8 +191,7 @@ func retranslate() -> void:
 	_sheet.title = tr("lobby.setup")
 	_sheet.ok_button_text = tr("lobby.done")
 	setup_button.text = tr("lobby.setup")
-	for key: String in _headings:
-		(_headings[key] as Label).text = tr(key)
+	_data_heading.text = tr("lobby.data")
 	_add_ship.text = tr("lobby.add_ship")
 
 

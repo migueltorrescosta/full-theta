@@ -334,16 +334,15 @@ func place_load(inline: bool) -> void:
 
 ## Gives each grid row up to MAX_GROW px of the room `free` (px) the lobby has to spare (the
 ## room a hidden ship row leaves), so the grid fills the screen rather than leaving an empty
-## band; returns whether the height changed.
-func grow(free: float) -> bool:
+## band.
+func grow(free: float) -> void:
 	var rows: int = ceili(float(grid.get_child_count()) / maxf(1.0, float(grid.columns)))
 	var now: float = grid.get_meta(&"extra", 0.0)
 	var want: float = clampf(floorf(now + free / maxf(1.0, float(rows))), 0.0, MAX_GROW)
 	if absf(want - now) < 1.0:
-		return false
+		return
 	grid.set_meta(&"extra", want)
 	fit_cells()
-	return true
 
 
 ## Re-fits every cell's height, after the grid's phone flag changed.
