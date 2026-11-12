@@ -7,8 +7,8 @@
 ## - "handover": the viewer of a friendly ship with the handover notice;
 ## - "forfeit": Helm in a race with a crewmate's give-up vote;
 ## - "takeover": Helm of Osprey over its ally Kestrel's pause, offering Kestrel's stations.
-## - "outcome", "debrief": Helm with the outcome card of a won run, on its Outcome or Debrief
-##   tab (a phone's two tabs, #28);
+## - "outcome", "debrief": Helm with the end card of a won run, its summary with three
+##   highlights, or its Details (the full debrief, ux-20);
 ## - "pause": the host's own ship paused under a host pause;
 ## - "menu_web": the web main menu.
 ## `insets` simulates a phone's safe-area insets [left, top, right, bottom] in device-
@@ -183,7 +183,7 @@ func _own_view() -> void:
 			_event("run_votes", {"ship": 0, "voters": ["Bo"], "needed": 2})
 			_event("debrief", debrief_record())
 			if view == "debrief":
-				card.pages.select(1)
+				card.show_details(true)
 
 
 ## A debrief long enough to scroll.
@@ -216,4 +216,10 @@ static func debrief_record() -> Dictionary:
 		"decisions": decisions,
 		"first_use": {"helm": {"face": 12.0, "jump": -1.0}, "weapons": {"fire": 31.0}},
 		"coop": [{"stations": ["helm", "weapons"], "events": 4}],
+		"highlights":
+		{
+			"best_pair": {"pair": "p2", "stations": ["helm", "weapons"], "events": 4},
+			"closest_call": {"hull": 0.12, "time": 271.0},
+			"top_kill": {"name": "Raider", "class": "m1_raider", "time": 302.0},
+		},
 	}

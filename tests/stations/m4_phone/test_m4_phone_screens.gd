@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## The outcome card, the debrief and the M4 screens against the phone frame (#28 follow-up,
-## design 2.9, 2.10, 2.13), in both orientations: the outcome card fills the safe area with
-## Outcome and Debrief tabs; the floating votes (give up, relaunch) and the handover notice
+## design 2.9, 2.10, 2.13), in both orientations: the end card fills the safe area, its
+## Details in place of tabs (ux-20); the floating votes (give up, relaunch) and the handover notice
 ## sit under the frame's view-top row; the pause and takeover sheet and the scoreboard keep
 ## their buttons at the bottom right above the gesture band; the main menu offers Full
 ## screen at the top right. Every tap target passes TapAudit.
@@ -89,10 +89,10 @@ func _drop(root: Control) -> void:
 
 
 # FT: FT-M1-012, FT-MIS-006
-# On a phone the outcome card fills the safe area above the band, its Outcome and Debrief
-# tabs switch the page, the debrief scrolls, and Run again (host) or Vote (crew) at the
-# bottom right sends the run-again intent.
-func test_outcome_card_fills_the_phone_with_two_tabs() -> void:
+# On a phone the end card fills the safe area above the band with no tabs (ux-20): Details
+# swaps the summary for the debrief, which scrolls, and Back swaps it back; Run again (host) or
+# Vote (crew) at the bottom right sends the run-again intent.
+func test_outcome_card_fills_the_phone_with_details_not_tabs() -> void:
 	for case: Array in CASES:
 		for host: bool in [true, false]:
 			var root: Control = _root(case)
@@ -110,13 +110,12 @@ func test_outcome_card_fills_the_phone_with_two_tabs() -> void:
 			var tap: Rect2 = SafeArea.tap_rect(card)
 			assert_vector(card.get_global_rect().position).is_equal(tap.position)
 			assert_vector(card.get_global_rect().size).is_equal(tap.size)
-			assert_object(card.find_child("OpenDebrief", true, false)).is_null()
-			assert_int(card.tabs.tab_count()).is_equal(2)
+			assert_array(card.find_children("*", "PageTabs", true, false)).is_empty()
 			var outcome: Control = card.find_child("Outcome", true, false)
 			var debrief: DebriefCard = card.find_child("Debrief", true, false)
 			assert_bool(outcome.visible and not debrief.visible).is_true()
 			_clean(card, what + " outcome")
-			card.tabs.tab(1).pressed.emit()
+			(card.find_child("Details", true, false) as Button).pressed.emit()
 			await _frames(2)
 			assert_bool(debrief.visible and not outcome.visible).is_true()
 			var scroll: ScrollContainer = (
@@ -129,13 +128,13 @@ func test_outcome_card_fills_the_phone_with_two_tabs() -> void:
 			assert_float(button.get_global_rect().end.y).is_greater(tap.end.y - 32.0)
 			button.pressed.emit()
 			assert_array(StationFixture.sent(ctx).of("run_again")[-1][1]).is_equal([0, true])
-			card.tabs.tab(0).pressed.emit()
+			(card.find_child("Details", true, false) as Button).pressed.emit()
 			assert_bool(outcome.visible and not debrief.visible).is_true()
 			_drop(root)
 
 
 # FT: FT-M1-012
-# A tablet or desktop keeps the centred card with its Open debrief button and no tabs.
+# A tablet or desktop keeps the centred card, with the same Details button and no tabs.
 func test_outcome_card_off_a_phone_keeps_the_button() -> void:
 	var root: Control = _root([Vector2i(1280, 800), []])
 	var ctx: StationContext = StationFixture.context("helm", SETTINGS)
@@ -145,10 +144,11 @@ func test_outcome_card_off_a_phone_keeps_the_button() -> void:
 	_event(ctx, "ship_outcome", {"ship": 0, "outcome": "loss", "time": 60.0, "hull": 0.0})
 	_event(ctx, "debrief", Shot.debrief_record())
 	await _frames()
-	assert_object(card.tabs).is_null()
-	var open: Button = card.find_child("OpenDebrief", true, false)
+	assert_array(card.find_children("*", "PageTabs", true, false)).is_empty()
+	var open: Button = card.find_child("Details", true, false)
 	open.pressed.emit()
 	assert_bool((card.find_child("Debrief", true, false) as Control).visible).is_true()
+	assert_bool((card.find_child("Outcome", true, false) as Control).visible).is_false()
 	_drop(root)
 
 

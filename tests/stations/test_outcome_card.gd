@@ -134,6 +134,116 @@ func test_the_hosts_run_again_waits_for_the_crew_with_one_confirm() -> void:
 	assert_int(rec.of("run_again").size()).is_equal(2)
 
 
+# FT: FT-M1-012, FT-MIS-006
+# ux-20: the card shows the debrief's highlights in a fixed order (best pair, closest call,
+# top kill), each only when there is data; Details opens the full debrief in place of the
+# summary and Back returns.
+func test_the_card_shows_the_highlights_and_details_opens_the_debrief() -> void:
+	var o: OutcomeCard = _card("tactical")
+	_over(o, "win")
+	assert_object(o.find_child("Details", true, false)).is_null()
+	var hl: Control = o.find_child("Highlights", true, false)
+	assert_bool(hl.visible).is_false()
+	var record: Dictionary = {
+		"ship": 0,
+		"result": "win",
+		"highlights":
+		{
+			"top_kill": {"name": "Raider", "class": "m1_raider", "time": 302.0},
+			"closest_call": {"hull": 0.12, "time": 271.0},
+			"best_pair": {"pair": "p2", "stations": ["helm", "weapons"], "events": 4},
+		},
+	}
+	o.ctx.crew.handle_event({"type": "debrief", "payload": record}, 0)
+	var lines: Array = hl.get_children().map(func(l: Label) -> String: return l.text)
+	(
+		assert_array(lines)
+		. is_equal(
+			[
+				"Best pair: Helm + Weapons, 4 moves together",
+				"Closest call: hull 12% at 4:31",
+				"Top kill: Raider at 5:02",
+			]
+		)
+	)
+	var details: Button = o.find_child("Details", true, false)
+	assert_str(details.text).is_equal(tr("outcome.details"))
+	details.pressed.emit()
+	assert_bool(o.details_open()).is_true()
+	assert_bool((o.find_child("Debrief", true, false) as Control).visible).is_true()
+	assert_bool((o.find_child("Outcome", true, false) as Control).visible).is_false()
+	# The vote stays reachable from the details.
+	assert_object(o.find_child("Vote", true, false)).is_not_null()
+	(o.find_child("Details", true, false) as Button).pressed.emit()
+	assert_bool((o.find_child("Outcome", true, false) as Control).visible).is_true()
+
+
+# FT: FT-MIS-006
+# ux-20: a highlight with no data is left out, never shown as "none"; one move reads singular.
+func test_a_highlight_without_data_is_left_out() -> void:
+	assert_array(Array(OutcomeCard.highlight_lines({}))).is_empty()
+	var one: Dictionary = {"best_pair": {"stations": ["engineering", "helm"], "events": 1}}
+	assert_array(Array(OutcomeCard.highlight_lines(one))).is_equal(
+		["Best pair: Engineering + Helm, 1 move together"]
+	)
+	var kill: Dictionary = {"top_kill": {"name": "Drone", "time": 61.0}}
+	assert_array(Array(OutcomeCard.highlight_lines(kill))).is_equal(["Top kill: Drone at 1:01"])
+
+
+# FT: FT-MIS-006
+# The fixed rules (RunHighlights): the closest call is the lowest hull a crewed ship reached in
+# play and when, left out when the hull never dropped or the ship was destroyed; the top kill
+# is the largest hull of another faction this ship destroyed; the best pair is the pair with
+# the most cooperative events, the first in pair order on a tie.
+func test_the_highlight_rules() -> void:
+	var w: SimWorld = (
+		M1Encounter.new(1, "test", TestDefs.corvette(), TestDefs.raider_enemy()).build()
+	)
+	var hl: RunHighlights = RunHighlights.new()
+	var none: Array[SimEvent] = []
+	hl.sample(w, none, {})
+	assert_dict(hl.for_ship(0, [], false)).is_empty()
+	# The hull drops to 40 %, then is repaired to 70 %: the closest call stays at 40 %.
+	var row: int = w.damage.hull_row(0)
+	var full: float = w.defs[0].hull_max
+	w.tick = 600
+	w.damage.health[row] = 0.4 * full
+	hl.sample(w, none, {})
+	w.tick = 900
+	w.damage.health[row] = 0.7 * full
+	hl.sample(w, none, {})
+	var close: Dictionary = hl.for_ship(0, [], false)["closest_call"]
+	assert_float(close["hull"]).is_equal_approx(0.4, 0.001)
+	assert_float(close["time"]).is_equal_approx(600 * SimWorld.DT, 0.001)
+	assert_bool(hl.for_ship(0, [], true).has("closest_call")).is_false()
+	# A ship whose run is over is not sampled.
+	w.damage.health[row] = 0.1 * full
+	hl.sample(w, none, {0: {}})
+	assert_float(hl.for_ship(0, [], false)["closest_call"]["hull"]).is_equal_approx(0.4, 0.001)
+	# Kills: the larger hull wins, a kill by another ship or of a friend does not count.
+	var enemy: int = M1Encounter.ENEMY_SHIP
+	assert_int(w.faction_of(enemy)).is_not_equal(w.faction_of(0))
+	var kill: SimEvent = SimEvent.new()
+	kill.kind = &"destroyed"
+	kill.ship_id = enemy
+	kill.other_id = 0
+	kill.tick = 1200
+	hl.sample(w, [kill] as Array[SimEvent], {})
+	var top: Dictionary = hl.for_ship(0, [], false)["top_kill"]
+	assert_str(top["name"]).is_equal(w.defs[enemy].display_name)
+	assert_float(top["time"]).is_equal_approx(1200 * SimWorld.DT, 0.001)
+	assert_bool(hl.for_ship(enemy, [], false).has("top_kill")).is_false()
+	# Best pair: most events, the first on a tie, none without events.
+	var rows: Array = [
+		{"pair": "p1", "stations": ["engineering", "helm"], "events": 2},
+		{"pair": "p2", "stations": ["helm", "weapons"], "events": 3},
+		{"pair": "p3", "stations": ["helm", "science"], "events": 3},
+	]
+	assert_str(hl.for_ship(0, rows, false)["best_pair"]["pair"]).is_equal("p2")
+	var idle: Array = [{"pair": "p1", "stations": ["engineering", "helm"], "events": 0}]
+	assert_bool(hl.for_ship(0, idle, false).has("best_pair")).is_false()
+
+
 # FT: FT-M1-012
 # Through the shell: the dev seat starts, the enemy is destroyed, the card shows
 # Victory, its Run again button (1 of 1 crew) resets the run, the shell is back in the

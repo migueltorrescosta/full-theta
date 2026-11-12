@@ -1,7 +1,7 @@
 class_name DebriefCard
 extends PanelContainer
-## The end-of-run debrief (FT-MIS-006, FT-MIS-010, FT-MIS-038, FT-PAIR-013, D35), opened
-## from the OutcomeCard: the encounters with ship losses and fled encounters told apart, the
+## The end-of-run debrief (FT-MIS-006, FT-MIS-010, FT-MIS-038, FT-PAIR-013, D35), the end
+## card's Details (OutcomeCard, ux-20): the encounters with ship losses and fled encounters told apart, the
 ## director's decisions with their reasons, when each station first used each core action,
 ## and the cooperative events per pair. The record is RunDebrief.for_ship, sent with
 ## `ship_outcome`; text() turns it into the lines shown, in the session language.
@@ -41,8 +41,8 @@ func setup(context: StationContext) -> void:
 	refresh()
 
 
-## On a phone (#28 follow-up) the debrief is the outcome card's Debrief tab: no least size,
-## no title (the tab names it), and it takes the card's height.
+## On a phone (#28 follow-up) the debrief fills the end card's Details: no least size, no
+## title (room is short), and it takes the card's height.
 func set_compact(on: bool) -> void:
 	custom_minimum_size = Vector2.ZERO if on else MIN_SIZE
 	_title.visible = not on
