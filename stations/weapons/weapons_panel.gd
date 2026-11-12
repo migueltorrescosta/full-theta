@@ -138,12 +138,7 @@ func _apply_form() -> void:
 		_touch = null
 		pages = null
 	if want:
-		# On its side the screen shows only the focused panel; upright a joint view keeps
-		# the screen's radar under its docked panels.
-		var own_radar: bool = (
-			form == LayoutMode.Form.PHONE_LANDSCAPE or _screen == null or _screen.panels.size() == 1
-		)
-		_touch = WeaponsTouch.new(self, form as LayoutMode.Form, own_radar)
+		_touch = WeaponsTouch.new(self, form as LayoutMode.Form)
 		add_child(_touch)
 		_touch.take_view(_view, _overlay)
 		if _screen != null:

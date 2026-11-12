@@ -56,9 +56,9 @@ var fire_all_button: RailButton
 var fire_button: RailButton
 ## The target line over the view.
 var target_label: Label = Label.new()
-## The disc radar inset, or null upright in a joint view (the screen's radar shows there).
+## The disc radar inset.
 var radar: DiscRadar = null
-## The radar's backing panel (the radar's place), or null.
+## The radar's backing panel (the radar's place).
 var radar_box: RadarInset = null
 ## The landscape rail, else null.
 var layout: RailLayout = null
@@ -80,7 +80,7 @@ var _list_box: GridContainer = GridContainer.new()
 var _scroll: ScrollContainer = ScrollContainer.new()
 
 
-func _init(panel: WeaponsPanel, for_form: LayoutMode.Form, with_radar: bool) -> void:
+func _init(panel: WeaponsPanel, for_form: LayoutMode.Form) -> void:
 	_panel = panel
 	form = for_form
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -94,7 +94,7 @@ func _init(panel: WeaponsPanel, for_form: LayoutMode.Form, with_radar: bool) -> 
 	overlays.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlays.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_make_buttons()
-	_make_overlays(with_radar)
+	_make_overlays()
 	crew = CrewPage.new(panel)
 	if form == LayoutMode.Form.PHONE_LANDSCAPE:
 		_landscape()
@@ -141,8 +141,7 @@ func feeds_origin(overlay: Control, height: float) -> Vector2:
 	var top: float = target_label.position.y + target_label.size.y + gap / 2.0
 	if not target_label.visible or target_label.text == "":
 		top = _top()
-	var floor_y: float = radar_box.position.y - gap if radar_box != null else _area().end.y
-	if top + height <= floor_y or radar_box == null:
+	if top + height <= radar_box.position.y - gap:
 		return to_overlay * Vector2(x, top)
 	return (
 		to_overlay * Vector2(radar_box.position.x + radar_box.size.x + gap, _area().end.y - height)
@@ -172,8 +171,7 @@ func refresh() -> void:
 	ammo_button.text = WeaponsReadout.ammo_name(p) + " ▸"
 	# (no target line on a phone: the frame's selection bar names the target)
 	target_label.text = ""
-	if radar_box != null:
-		radar_box.refresh()
+	radar_box.refresh()
 	if mount_list.visible:
 		_refresh_rows()
 	_place()
@@ -293,7 +291,7 @@ func _make_buttons() -> void:
 
 
 ## The target line, the radar inset in its panel and the mount list, over the view.
-func _make_overlays(with_radar: bool) -> void:
+func _make_overlays() -> void:
 	target_label.name = "Target"
 	target_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	target_label.add_theme_font_size_override("font_size", FONT_NUM)
@@ -303,11 +301,10 @@ func _make_overlays(with_radar: bool) -> void:
 	target_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	target_label.visible = false
 	overlays.add_child(target_label)
-	if with_radar:
-		# A finger on the inset is the radar's (select, range), never the screen's fire.
-		radar_box = RadarInset.new(_panel.ctx)
-		radar = radar_box.radar
-		overlays.add_child(radar_box)
+	# A finger on the inset is the radar's (select, range), never the screen's fire.
+	radar_box = RadarInset.new(_panel.ctx)
+	radar = radar_box.radar
+	overlays.add_child(radar_box)
 	mount_list.name = "MountList"
 	mount_list.theme_type_variation = "OverlayRail"
 	_list_box.columns = LIST_COLUMNS
@@ -418,16 +415,15 @@ func _place() -> void:
 	target_label.size = Vector2(w, 0.0)
 	target_label.size = Vector2(w, target_label.get_combined_minimum_size().y)
 	var list: Rect2 = Rect2(x, top, area.end.x - gap - x, area.end.y - gap - top)
-	if radar_box != null:
-		var r: Rect2 = Rect2(x, area.end.y - gap - RADAR_H, RADAR_W, RADAR_H)
-		if radar_box.position != r.position or radar_box.size != r.size:
-			radar_box.position = r.position
-			radar_box.size = r.size
-		if area.end.x - gap - (r.end.x + gap) >= LIST_W * 0.75:
-			list.position.x = r.end.x + gap
-			list.size.x = area.end.x - gap - list.position.x
-		else:
-			list.size.y = r.position.y - gap - top
+	var r: Rect2 = Rect2(x, area.end.y - gap - RADAR_H, RADAR_W, RADAR_H)
+	if radar_box.position != r.position or radar_box.size != r.size:
+		radar_box.position = r.position
+		radar_box.size = r.size
+	if area.end.x - gap - (r.end.x + gap) >= LIST_W * 0.75:
+		list.position.x = r.end.x + gap
+		list.size.x = area.end.x - gap - list.position.x
+	else:
+		list.size.y = r.position.y - gap - top
 	var need: float = maxf(ROW_H, _list_box.get_combined_minimum_size().y) + 2.0 * gap
 	mount_list.position = list.position
 	mount_list.size = Vector2(minf(LIST_W, list.size.x), minf(list.size.y, need))

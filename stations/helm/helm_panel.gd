@@ -140,12 +140,10 @@ func _apply_form() -> void:
 			screen.rotate_banner.label.text = TouchText.of(
 				HelmTouch.ROTATE_KEY, HelmTouch.ROTATE_TEXT
 			)
-	# In the frame with the phone layout only. Upright, a joint view keeps its docked panels
-	# (the lead's call), which leave the cockpit too short for the view-top row: there Helm
-	# keeps the chip strip.
-	var screen_now: StationScreen = screen()
-	var docked_upright: bool = portrait and screen_now != null and screen_now.panels.size() >= 2
-	in_frame = touch_ui != null and not docked_upright
+	# In the frame with the phone layout only, its Crew page holding the share buttons
+	# (w-yk5: no second set behind the share opener).
+	in_frame = touch_ui != null
+	shows_shares = touch_ui != null
 	var inset: float = touch_ui.view_bottom_inset() if touch_ui != null else 0.0
 	_container.offset_bottom = -inset
 	hud.offset_bottom = -inset
@@ -181,7 +179,7 @@ func _show_pages() -> void:
 	if screen == null or not screen.is_inside_tree() or screen.focused_panel() != self:
 		return
 	var form_now: LayoutMode.Form = LayoutMode.form_of(screen)
-	var alone: bool = screen.panels.size() >= 2 and form_now == LayoutMode.Form.PHONE_LANDSCAPE
+	var alone: bool = screen.panels.size() >= 2 and LayoutMode.is_phone(form_now)
 	screen.frame.show_tabs(form_now, alone)
 
 

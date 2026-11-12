@@ -255,8 +255,7 @@ func full_screen() -> bool:
 
 
 ## True while the panel shows its own radar: alone on the screen, or focused in a joint
-## view on a phone on its side (the screen then shows it alone, #28). Upright a joint view
-## keeps the screen's radar.
+## view on a phone (the screen then shows it alone, #28, w-yk5).
 func own_radar() -> bool:
 	if _alone():
 		return true
@@ -264,7 +263,7 @@ func own_radar() -> bool:
 		screen_panels() == 2
 		and not docked
 		and is_inside_tree()
-		and layout_form() == LayoutMode.Form.PHONE_LANDSCAPE
+		and LayoutMode.is_phone(layout_form())
 	)
 
 
