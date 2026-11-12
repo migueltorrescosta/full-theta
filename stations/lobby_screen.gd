@@ -58,8 +58,6 @@ const START_WRAP_SIZE: int = 13
 const SHORT_TOP: int = 0
 ## Added to each wide button's natural width when sharing a phone row (short names first).
 const WEIGH_SLACK: float = 12.0
-## The setup summary's share of a phone row, against its natural width (it trims first).
-const SUMMARY_WEIGHT: float = 0.5
 ## The crew changes the lobby depends on.
 const KINDS: Array[StringName] = [&"catalogue", &"lobby", &"picked", &"toggles", &"fleet"]
 ## The names a new ship takes, the first one not in use (M4-Q3).
@@ -133,6 +131,7 @@ func setup(context: StationContext) -> void:
 	ctx.crew.changed.connect(_on_crew_changed)
 	ctx.crew.toast.connect(_on_refused)
 	resized.connect(_apply_columns)
+	resized.connect(_grow_cells, CONNECT_DEFERRED)
 	refresh()
 
 
@@ -182,6 +181,7 @@ func refresh() -> void:
 	_show_join_strip()
 	_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
 	_fit_strip.call_deferred()
+	_grow_cells.call_deferred()
 	_refresh_data()
 	if _refusal != "":
 		_seats.summary_role.text = _refusal
@@ -416,8 +416,6 @@ func _weigh_buttons() -> void:
 				w = text.x + WEIGH_SLACK
 				if b is Button:
 					w += b.get_theme_stylebox("normal").get_minimum_size().x
-				else:
-					w *= SUMMARY_WEIGHT  # the buttons' text first; the summary trims
 			b.size_flags_stretch_ratio = maxf(1.0, w)
 
 
@@ -467,7 +465,7 @@ func _style_summary(short: bool, phone: bool) -> void:
 		for c: Control in [_join_button, _menu, _ready, _start, _fullscreen]:
 			_reparent(c, _game_setup.row, -1)
 	else:
-		_reparent(_seats.coverage, _outer, _ship_tools.get_index() + 1)
+		_reparent(_seats.coverage, _body, 0)
 		_reparent(_leave, _ship_tools if _phone else _ships, -1)
 		_reparent(_join_button, _head, 1)
 		_reparent(_menu, _head, 2)
@@ -494,6 +492,20 @@ func _use_strip(phone: bool) -> void:
 			_reparent(_leave, _ship_tools if phone else _ships, -1)
 		_fit_strip.call_deferred()
 	_show_ship_row()
+
+
+## The grid takes the spare height of the body (a hidden ship row, a tall window), up to
+## LobbySeatGrid.MAX_GROW a row; what is left centres the body (#37 C1 review).
+func _grow_cells() -> void:
+	if size.y <= 0.0 or not _body.visible:
+		return
+	# The room inside the margins, read from this screen's own size (the containers sort
+	# later), less what the rows need now.
+	var pad: float = (
+		_margin.get_theme_constant("margin_top") + _margin.get_theme_constant("margin_bottom")
+	)
+	var room: float = size.y + _margin.offset_bottom - _margin.offset_top - pad
+	_seats.grow(room - _outer.get_combined_minimum_size().y)
 
 
 func _fit_strip() -> void:
@@ -566,11 +578,12 @@ func _build() -> void:
 	_seats = LobbySeatGrid.new(ctx)
 	_seats.ship = ship
 	_seats.changed.connect(refresh)
-	outer.add_child(_seats.coverage)
 	_body = VBoxContainer.new()
 	_body.name = "Body"
+	_body.alignment = BoxContainer.ALIGNMENT_CENTER
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	outer.add_child(_body)
+	_body.add_child(_seats.coverage)
 	_body.add_child(_seats.grid)
 	_body.add_child(_seats.info)
 	_body.add_child(_seats.seat_row)

@@ -27,6 +27,8 @@ const KINDS: Array[StringName] = [&"pause", &"votes", &"picked", &"catalogue", &
 var ctx: StationContext
 
 var _text: Label
+## What the crew of the paused ship can do, under the heading.
+var _hint: Label
 var _buttons: HFlowContainer
 var _end_dialog: ConfirmationDialog
 var _spacer: Control
@@ -41,6 +43,10 @@ func setup(context: StationContext) -> void:
 	_text = Label.new()
 	_text.theme_type_variation = "HeadingLabel"
 	col.add_child(_text)
+	_hint = Label.new()
+	_hint.name = "Hint"
+	_hint.theme_type_variation = "DimLabel"
+	col.add_child(_hint)
 	_spacer = Control.new()
 	_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -100,7 +106,8 @@ func _set_phone(phone: bool) -> void:
 	_phone = phone
 	_spacer.visible = phone
 	_buttons.alignment = FlowContainer.ALIGNMENT_END if phone else FlowContainer.ALIGNMENT_BEGIN
-	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
+	for l: Label in [_text, _hint]:
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
 	if phone:
 		var sheet: StyleBoxFlat = UiTheme.box("panel", "line_strong", 16, 16)
 		# Opaque: it blocks the station under it, which a ghost of the HUD would only
@@ -137,6 +144,7 @@ func refresh() -> void:
 	for c: Node in _buttons.get_children():
 		_buttons.remove_child(c)
 		c.queue_free()
+	_hint.visible = false
 	if id < 0:
 		# A host pause alone (FT-MIS-040): no uncovered list, no vote.
 		_text.text = tr("pause.host")
@@ -153,6 +161,8 @@ func refresh() -> void:
 	else:
 		_text.text = tr("pause.waiting_ship") % [ctx.crew.ship_name(id), ", ".join(names)]
 	if own and ctx.crew.is_crew():
+		_hint.text = tr("pause.hint")
+		_hint.visible = true
 		_vote_button(id)
 	elif may_take_over(id):
 		for s: Variant in p.get("uncovered", []):

@@ -14,6 +14,8 @@ signal changed
 const LOAD_TAGS: Array[String] = ["intense", "busy", "light"]
 ## The crew stations in grid order (row by row in landscape).
 const GRID_STATIONS: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
+## Most px a grid row grows by into the lobby's spare room (grow).
+const MAX_GROW: float = 64.0
 ## A player picks at most this many stations (a joint view covers two).
 const MAX_STATIONS: int = 2
 ## Cell padding and the grid gap, in px at 100 % UI scale (a cell stays >= TOUCH_MIN tall).
@@ -228,13 +230,11 @@ func _refresh_grid() -> void:
 		var id: String = str(b.name).trim_prefix("Seat_")
 		b.set_pressed_no_signal(dev or id in picks)
 		b.disabled = full and not id in picks
-		# Fade the text but not the seat holders' names (they keep their contrast).
+		# Fade the text but not the seat holders' names or the load word (they keep their
+		# contrast).
 		var fade: Color = Color(1, 1, 1, 0.45) if b.disabled else Color.WHITE
 		b.find_child("Name", true, false).self_modulate = fade
 		b.find_child("Role", true, false).self_modulate = fade
-		var load: Node = b.find_child("Load", true, false)
-		if load != null:
-			load.self_modulate = fade
 		_set_crew(b, crew_at(id))
 
 
@@ -260,6 +260,7 @@ func _cell(id: String, tag: String) -> Button:
 	box.offset_right = -CELL_INSET
 	box.offset_bottom = -CELL_INSET
 	box.add_theme_constant_override("separation", 0)
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	b.add_child(box)
 	var top: HBoxContainer = HBoxContainer.new()
 	top.name = "Top"
@@ -331,6 +332,20 @@ func place_load(inline: bool) -> void:
 			want.move_child(load, 1)
 
 
+## Gives each grid row up to MAX_GROW px of the room `free` (px) the lobby has to spare (the
+## room a hidden ship row leaves), so the grid fills the screen rather than leaving an empty
+## band; returns whether the height changed.
+func grow(free: float) -> bool:
+	var rows: int = ceili(float(grid.get_child_count()) / maxf(1.0, float(grid.columns)))
+	var now: float = grid.get_meta(&"extra", 0.0)
+	var want: float = clampf(floorf(now + free / maxf(1.0, float(rows))), 0.0, MAX_GROW)
+	if absf(want - now) < 1.0:
+		return false
+	grid.set_meta(&"extra", want)
+	fit_cells()
+	return true
+
+
 ## Re-fits every cell's height, after the grid's phone flag changed.
 func fit_cells() -> void:
 	for cell: Node in grid.get_children():
@@ -344,9 +359,12 @@ static func _fit_cell(cell_node: Variant, box_node: Variant) -> void:
 		var box: Control = box_node
 		var h: float = box.get_combined_minimum_size().y + 2.0 * CELL_INSET
 		var least: int = UiTheme.TOUCH_MIN
-		if cell.get_parent() != null and cell.get_parent().get_meta(&"phone", false):
-			least = UiTheme.TOUCH_PRIMARY
-		cell.custom_minimum_size = Vector2(0.0, maxf(h, float(least)))
+		var extra: float = 0.0
+		if cell.get_parent() != null:
+			if cell.get_parent().get_meta(&"phone", false):
+				least = UiTheme.TOUCH_PRIMARY
+			extra = cell.get_parent().get_meta(&"extra", 0.0)
+		cell.custom_minimum_size = Vector2(0.0, maxf(h, float(least)) + extra)
 
 
 ## The Captain, Viewer and dev buttons: the pick's one is pressed; Captain is greyed out

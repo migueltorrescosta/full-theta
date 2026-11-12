@@ -1,7 +1,8 @@
 extends GdUnitTestSuite
 ## The lobby's data-shortcut section (LobbyScreen, FT-STN-016, FT-PAIR-017): Easy on a first
 ## launch and persisted per host, the toggles in the host's Game setup sheet with a one-line
-## description naming both stations, the "<Preset> (custom)" name, and the lock at Start.
+## description naming both stations, the summary's count of changed toggles, and the lock at
+## Start.
 
 const PATH: String = "user://test_lobby_toggles.cfg"
 
@@ -50,7 +51,6 @@ func test_the_lobby_defaults_to_easy_and_remembers_the_host() -> void:
 	assert_int(fresh.load_file()).is_equal(OK)
 	assert_str(fresh.host_toggles).is_equal("easy")
 	var l: LobbyScreen = _lobby()
-	assert_str((l.find_child("PresetName", true, false) as Label).text).is_equal("Easy")
 	assert_str((l.find_child("SetupSummary", true, false) as Label).text).is_equal("Co-op · Easy")
 	(l.find_child("Preset_hard", true, false) as Button).pressed.emit()
 	assert_array(_sent(l)[-1][1]).is_equal(["hard"])
@@ -122,12 +122,12 @@ func test_each_toggle_has_a_description_naming_both_stations() -> void:
 
 
 # FT: FT-PAIR-017
-# Changing one toggle sends the edited set and the lobby then names it "<Preset> (custom)";
+# Changing one toggle sends the edited set and the summary then counts it ("Normal +1");
 # another preset replaces the edits.
 func test_an_edited_set_is_named_custom() -> void:
 	var l: LobbyScreen = _lobby()
 	_lobby_event(l, "normal")
-	assert_str((l.find_child("PresetName", true, false) as Label).text).is_equal("Normal")
+	assert_str((l.find_child("SetupSummary", true, false) as Label).text).is_equal("Co-op · Normal")
 	var pressed: Button = l.find_child("Preset_normal", true, false)
 	assert_bool(pressed.button_pressed).is_true()
 	var weak: OptionButton = _row(l, "weak_points").get_node("Line/Value")
@@ -137,7 +137,9 @@ func test_an_edited_set_is_named_custom() -> void:
 	var want: String = DataToggles.of_preset("normal").with_value(&"weak_points", 1).encode()
 	assert_array(_sent(l)[-1][1]).is_equal([want])
 	_lobby_event(l, want)
-	assert_str((l.find_child("PresetName", true, false) as Label).text).is_equal("Normal (custom)")
+	assert_str((l.find_child("SetupSummary", true, false) as Label).text).is_equal(
+		"Co-op · Normal +1"
+	)
 	assert_bool(pressed.button_pressed).is_false()
 	(
 		assert_int(
@@ -146,8 +148,8 @@ func test_an_edited_set_is_named_custom() -> void:
 		. is_equal(1)
 	)
 	I18n.apply("pt_PT")
-	assert_str((l.find_child("PresetName", true, false) as Label).text).is_equal(
-		"Normal (personalizado)"
+	assert_str((l.find_child("SetupSummary", true, false) as Label).text).is_equal(
+		"Cooperativo · Normal +1"
 	)
 
 
