@@ -76,13 +76,6 @@ static func incoming(stations: Array[String], left: Dictionary) -> Dictionary[St
 	return out
 
 
-## incoming()'s lines, in `left`'s order.
-static func incoming_lines(stations: Array[String], left: Dictionary) -> Array[String]:
-	var out: Array[String] = []
-	out.assign(incoming(stations, left).values())
-	return out
-
-
 ## Shows the buttons for `shown` (features()), each with the seconds `left` of its share
 ## (feature -> seconds, 0 when not shared). Rebuilds only when the set changes.
 func show_features(shown: Array[StringName], left: Dictionary) -> void:

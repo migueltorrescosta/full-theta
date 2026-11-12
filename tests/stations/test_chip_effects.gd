@@ -70,9 +70,11 @@ func test_the_receiver_sees_a_line_while_shared_data_is_live() -> void:
 	var left: Dictionary = {&"routes": 12.0}
 	var helm: Array[String] = ["helm"]
 	var relay: Array[String] = ["relay"]
-	assert_array(ShareBar.incoming_lines(helm, left)).is_equal(["Routes on Helm from Relay · 12 s"])
-	assert_array(ShareBar.incoming_lines(relay, left)).is_empty()
-	assert_array(ShareBar.incoming_lines(helm, {&"routes": 0.0})).is_empty()
+	assert_dict(ShareBar.incoming(helm, left)).is_equal(
+		{&"routes": "Routes on Helm from Relay · 12 s"}
+	)
+	assert_dict(ShareBar.incoming(relay, left)).is_empty()
+	assert_dict(ShareBar.incoming(helm, {&"routes": 0.0})).is_empty()
 
 
 func test_a_live_share_lights_the_senders_button() -> void:
