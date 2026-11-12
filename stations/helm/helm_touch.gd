@@ -139,16 +139,26 @@ func _init(p_panel: HelmPanel, sink: Callable, is_portrait: bool, is_tablet: boo
 	# A finger on the radar selects there (the screen leaves it alone).
 	radar_box = RadarInset.new(panel.ctx)
 	radar = radar_box.radar
-	add_child(radar_box)
 	if tablet:
+		# Under the HUD: the markers and their labels draw over the translucent inset, so a
+		# target behind it stays in sight (C14). HelmTouch fills the panel: same coordinates.
+		panel.add_child(radar_box)
+		panel.move_child(radar_box, panel.hud.get_index())
 		_build_tablet()
 		return
+	add_child(radar_box)
 	crew = CrewPage.new(panel)
 	if portrait:
 		_build_portrait()
 	else:
 		_build_landscape()
 	pages.page_changed.connect(func(_i: int) -> void: panel.hud.queue_redraw())
+
+
+func _exit_tree() -> void:
+	# (a tablet's inset lives in the panel, under the HUD)
+	if tablet and is_instance_valid(radar_box) and radar_box.get_parent() == panel:
+		radar_box.queue_free()
 
 
 ## A rail button for a Helm intent (or a radar step), wired to it.

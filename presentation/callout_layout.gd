@@ -48,13 +48,13 @@ static func callout_forms(font: Font, callout: String, font_size: int = 13) -> A
 ## Places each callout next to its own blip, then moves it by the least that clears what it
 ## must not cover (spots tried: beside the default, right, left, above, below, a line off).
 ## Hard obstacles: the clock numbers and other boxes in `fixed`, every blip's box (entries
-## with a "pos"), the callouts already placed, the other items' stems and the lines of
-## `disc`'s rim and half-range ring and of the other `rings` (ellipses' boxes: the selection's
-## range ring; w-dcc: a line through the text strikes it out); a spot
-## also has to keep inside `limit` and within CALLOUT_REACH of its own blip. When no spot is
-## free, the callout is shortened (its "variants", longest first, with their "sizes"), then
-## may cross other stems, then, as the callsign alone, the rings' lines (soft, as is leaving
-## `disc`'s ellipse, charged as a cost), then takes the free spot nearest its blip with the
+## with a "pos"), the callouts already placed and the other items' stems; a spot also has to
+## keep inside `limit` and within CALLOUT_REACH of its own blip. Crossing the line of `disc`'s
+## rim, its half-range ring or one of `rings` (the selection's range ring) only costs, as
+## leaving `disc`'s ellipse does: a callout never moves away or shortens for a line (D319). When
+## no spot is free, the callout is shortened (its "variants", longest first, with their
+## "sizes"), then may cross other stems (soft), then takes the free spot nearest its blip with
+## the
 ## callsign alone. Selected callouts are placed first,
 ## then top to bottom. Without a blip a callout with no free spot drops below what it overlaps.
 static func declutter(
@@ -109,23 +109,17 @@ static func declutter(
 		# (the spots no box covers do not depend on the step: found once per form)
 		var homes: Dictionary = {}
 		var frees: Dictionary = {}
-		# ([reach, stems hard, ring lines hard])
 		for step: Array in [
-			[CALLOUT_NEAR, true, true],
-			[CALLOUT_REACH, true, true],
-			[CALLOUT_NEAR, false, true],
-			[CALLOUT_REACH, false, true],
-			[CALLOUT_NEAR, false, false],
-			[CALLOUT_REACH, false, false]
+			[CALLOUT_NEAR, true],
+			[CALLOUT_REACH, true],
+			[CALLOUT_NEAR, false],
+			[CALLOUT_REACH, false]
 		]:
-			# (a callout that must cross a ring's line crosses it with the callsign alone)
-			for k: int in range(0 if step[2] else n - 1, n):
+			for k: int in n:
 				if not homes.has(k):
 					homes[k] = home if k == 0 else _home_for(home, e["pos"], sizes[k])
 					frees[k] = _free_spots(e, homes[k], blocked, placed, limit, blip)
-				pick = _best_spot(
-					e, homes[k], frees[k], stems, disc, step[1], step[0], step[2], rings
-				)
+				pick = _best_spot(e, homes[k], frees[k], stems, disc, step[1], step[0], rings)
 				if pick.has_area():
 					text = variants[k] if k > 0 else text
 					break
@@ -214,7 +208,8 @@ static func _free_spots(
 
 ## The cheapest of the free `spots` for a callout whose default box is `home`, or an empty
 ## Rect2. With a blip, a spot is within `reach` of it; `hard_stems` makes the other items'
-## stems obstacles too, `hard_rings` the lines of the disc's rim and half-range ring.
+## stems obstacles too. Crossing a line of the disc's rim, its half-range ring or `rings` is a
+## cost, never a reason to move the callout away or shorten it (D319: near and whole first).
 static func _best_spot(
 	e: Dictionary,
 	home: Rect2,
@@ -223,7 +218,6 @@ static func _best_spot(
 	disc: Rect2,
 	hard_stems: bool,
 	reach: float = CALLOUT_REACH,
-	hard_rings: bool = false,
 	rings: Array[Rect2] = []
 ) -> Rect2:
 	var best: Rect2 = Rect2()
@@ -254,8 +248,6 @@ static func _best_spot(
 			for ring: Rect2 in [disc, half] + rings:
 				# (the text box has room above and below its letters: a line through that room is clear)
 				crosses += int(_crosses_ellipse(ring, spot.grow_individual(0.0, -2.0, 0.0, -2.0)))
-			if crosses > 0 and hard_rings:
-				continue
 			if not in_ellipse(disc, spot):
 				cost += 10.0
 			cost += 6.0 * crosses

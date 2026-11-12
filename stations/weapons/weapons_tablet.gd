@@ -5,11 +5,12 @@ extends Control
 ## finger dragged across it still aims and a tap selects. Every control feeds the panel the
 ## intent its key or pad button feeds (FT-STN-005): the same calls the phone's rail makes.
 ##
-## Left rail: Mount 1-4 (look through a mount, `mount_N`), the Aim stick at the lower corner
-## (`aim_x`, `aim_y`). Right rail: Ammo (`ammo_next`), Guided (`fire_guided`), Fire all
-## (held: `fire_all`), Claim or Release (the screen's `claim`), FIRE (held: `fire`) at the
-## lower corner. Upright the rails are one bottom bar and the Mount and right-rail buttons
-## sit in a grid. The panel keeps its own target line, mount line and the screen's radar.
+## Left rail: View mount 1-4 (look through a mount, `mount_N`; only with two or more), Ammo
+## (`ammo_next`), Fire at mark (`fire_guided`), the Aim stick at the lower corner (`aim_x`,
+## `aim_y`). Right rail: Fire all (held: `fire_all`), Claim or Release (the screen's `claim`,
+## only with 2+ players at Weapons), FIRE (held: `fire`) at the lower corner. Upright the rails
+## are one bottom bar, the Mount buttons and the right half's (with Ammo and Fire at mark) in
+## grids. The panel keeps its own target line and mount line; the radar is an inset (C14).
 
 ## FIRE's least size in the bottom bar, px.
 const FIRE_W: float = 200.0
@@ -65,6 +66,14 @@ func _build_left() -> void:
 		mount_buttons.append(b)
 		mounts.append(b)
 	dock.left.add(_group(mounts))
+	# Ammo and Fire at mark under the left thumb's buttons (a ship with one mount has no Mount
+	# buttons, so the left rail isn't bare, C3); Fire all and Claim stay by FIRE.
+	ammo_button = _button("Ammo", "")
+	ammo_button.pressed.connect(_panel.touch_press.bind("ammo_next"))
+	guided_button = _button("Guided", TouchText.of("weapons.touch_guided", "Fire at mark"))
+	guided_button.pressed.connect(_panel.touch_press.bind("fire_guided"))
+	if not portrait:
+		dock.left.add(_group([ammo_button, guided_button]))
 	dock.left.add_spacer()
 	aim.label = TouchText.of("touch.weapons.aim", "Aim")
 	aim.name = "Aim"
@@ -74,16 +83,16 @@ func _build_left() -> void:
 
 
 func _build_right() -> void:
-	ammo_button = _button("Ammo", "")
-	ammo_button.pressed.connect(_panel.touch_press.bind("ammo_next"))
-	guided_button = _button("Guided", TouchText.of("weapons.touch_guided", "Fire at mark"))
-	guided_button.pressed.connect(_panel.touch_press.bind("fire_guided"))
 	fire_all_button = _button("FireAll", TouchText.of("weapons.touch_fire_all", "Fire all"))
 	fire_all_button.hold = true
 	fire_all_button.held.connect(_panel.touch_hold.bind("fire_all"))
 	claim_button = _button("Claim", "")
 	claim_button.pressed.connect(_panel.touch_claim)
-	dock.right.add(_group([ammo_button, guided_button, fire_all_button, claim_button]))
+	# (upright the bar's halves are short: Ammo and Fire at mark join the right half's grid)
+	var group: Array = [fire_all_button, claim_button]
+	if portrait:
+		group = [ammo_button, guided_button] + group
+	dock.right.add(_group(group))
 	share_home.name = "ShareHome"
 	dock.right.add(share_home)
 	dock.right.add_spacer()

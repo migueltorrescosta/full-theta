@@ -99,7 +99,7 @@ Full-screen view from one claimed mount with lead reticle, arc edge and radar in
 
 - KB/M: mouse aims, LMB fire, RMB fire all claimed mounts in arc, 1–4 swap to claimed mount, Q ammo type, G fire guided ordnance at the selected attached mark, B request (a numbered list: power or bring mount to bear, §5.0); K claim, T/Y select (§5.0).
 - Controller: right stick aim (light assist), RT fire, LT fire all claimed mounts in arc, d-pad left/right swap mount, d-pad up/down ammo type, LB fire guided; View+X claim, RB and hold RB select (§5.0).
-- Touch: drag to aim (stronger assist), fire and GUIDED buttons, tap mount list to claim or swap, tap target to select. Tablet: docked left rail (View mount 1-4 when the ship has two or more, Aim stick at the lower corner) and right rail (Ammo, Fire at mark, Fire all, Claim mount only while two or more players sit at Weapons, held FIRE at the lower corner), dragging the view still aims; no radar column: the radar is a translucent inset at the view's top right (D324, D422).
+- Touch: drag to aim (stronger assist), fire and GUIDED buttons, tap mount list to claim or swap, tap target to select. Tablet: docked left rail (View mount 1-4 when the ship has two or more, Ammo, Fire at mark, Aim stick at the lower corner) and right rail (Fire all, Claim mount only while two or more players sit at Weapons, held FIRE at the lower corner), dragging the view still aims; no radar column: the radar is a translucent inset at the view's top right (D324, D422).
 
 - **FT-WPN-001** Weapons shall render a full-screen turret camera from one claimed mount, with lead reticle and arc edge. (D49)
 - **FT-WPN-002** Weapons shall show a disc radar inset. (D49)
