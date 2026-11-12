@@ -228,15 +228,8 @@ func touch_wording() -> bool:
 ## True when the touch words of the step name a phone page ("Open Ship", "on the Power
 ## page"), which a tablet doesn't have.
 static func names_page(for_station: String, intent: String) -> bool:
-	for key: String in ["train.touch.%s.%s" % [for_station, intent], "train.touch.%s" % intent]:
-		var t: String = TranslationServer.translate(key)
-		if t != key:
-			return (
-				t.contains("{t:page.")
-				or t.contains("{t:eng.touch.ship}")
-				or t.contains("{t:eng.power}")
-			)
-	return false
+	var t: String = _touch_raw(for_station, intent)
+	return t.contains("{t:page.") or t.contains("{t:eng.touch.ship}") or t.contains("{t:eng.power}")
 
 
 ## `text` without its `{binding:...}` markers (a touch layout has no binding to show).
@@ -272,10 +265,15 @@ static func drop_unbound(text: String, bindings: Bindings, device: String) -> St
 ## The touch how-to of a step: `train.touch.<station>.<intent>`, else `train.touch.<intent>`,
 ## its `{t:key}` names translated; "" when the step has none (a pair step, a finished track).
 static func touch_text(for_station: String, intent: String) -> String:
+	return fill_names(_touch_raw(for_station, intent))
+
+
+## touch_text before its `{t:key}` names are filled in, or "".
+static func _touch_raw(for_station: String, intent: String) -> String:
 	for key: String in ["train.touch.%s.%s" % [for_station, intent], "train.touch.%s" % intent]:
 		var t: String = TranslationServer.translate(key)
 		if t != key:
-			return fill_names(t)
+			return t
 	return ""
 
 
