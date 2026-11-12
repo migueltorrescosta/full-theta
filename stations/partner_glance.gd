@@ -117,7 +117,7 @@ func show_for(ctx: StationContext, partner_id: String, focused: String) -> void:
 	var parts: PackedStringArray = PackedStringArray()
 	for id: String in card[0]:
 		parts.append(readout(ctx, id))
-	var t: String = "%s  %s\n%s" % [tr("station." + partner_id), parts[0], parts[1]]
+	var t: String = "%s  %s\n%s" % [tr(StationCatalogue.name_key(partner_id)), parts[0], parts[1]]
 	if text.text != t:
 		text.text = t
 	action.visible = intent != ""

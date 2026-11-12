@@ -141,7 +141,7 @@ func refresh() -> void:
 	var p: Dictionary = ctx.crew.paused[id]
 	var names: PackedStringArray = []
 	for s: Variant in p.get("uncovered", []):
-		names.append(tr("station." + str(s)))
+		names.append(tr(StationCatalogue.name_key(str(s))))
 	var own: bool = id == ctx.crew.ship
 	if own:
 		_text.text = tr("pause.waiting") % ", ".join(names)
@@ -166,9 +166,12 @@ func refresh() -> void:
 	elif may_take_over(id):
 		for s: Variant in p.get("uncovered", []):
 			var st: String = str(s)
-			var text: String = tr("pause.take") % tr("station." + st)
+			var text: String = tr("pause.take") % tr(StationCatalogue.name_key(st))
 			if not own:
-				text = tr("pause.take_on") % [tr("station." + st), ctx.crew.ship_name(id)]
+				text = (
+					tr("pause.take_on")
+					% [tr(StationCatalogue.name_key(st)), ctx.crew.ship_name(id)]
+				)
 			_button("Takeover_" + st, text).pressed.connect(
 				func() -> void: ctx.intents.takeover(id, st)
 			)

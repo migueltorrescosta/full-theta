@@ -89,7 +89,7 @@ func coverage_text(state: Dictionary) -> String:
 		return "%s · %s" % [crew, tr("lobby.covered")]
 	var names: PackedStringArray = []
 	for s: Variant in uncovered:
-		names.append(tr("station." + str(s)))
+		names.append(tr(StationCatalogue.name_key(str(s))))
 	return "%s · %s" % [crew, tr("lobby.uncovered") % ", ".join(names)]
 
 
@@ -281,7 +281,7 @@ func _cell(id: String, tag: String) -> Button:
 	top.name = "Top"
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(top)
-	var name_label: Label = _cell_label("Name", tr("station." + id), "HeadingLabel")
+	var name_label: Label = _cell_label("Name", tr(StationCatalogue.name_key(id)), "HeadingLabel")
 	name_label.add_theme_font_size_override("font_size", 15)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -344,7 +344,7 @@ func refresh_seats(phone: bool) -> void:
 	for pair: Array in [[_captain, CAPTAIN], [_viewer, VIEWER], [_dev_all, DEV_ALL]]:
 		var b: Button = pair[0]
 		b.set_pressed_no_signal(mine == pair[1])
-		b.text = tr("station." + pair[1])
+		b.text = tr(StationCatalogue.name_key(pair[1]))
 	if phone:
 		_dev_all.text = TouchText.of("lobby.dev_short", "All (dev)")
 	_captain.disabled = _ctx.crew.captain_seated(ship) and mine != CAPTAIN

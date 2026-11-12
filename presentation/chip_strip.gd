@@ -38,7 +38,10 @@ func show_chips(
 		open.append({"id": c["id"], "text": asker(c), "left": ChipsReader.left_s(snap, c)})
 		lines.append(
 			(
-				tr("chip.ask") % [tr("station." + str(c["from"])), ChipsReader.label(c)]
+				(
+					tr("chip.ask")
+					% [tr(StationCatalogue.name_key(str(c["from"]))), ChipsReader.label(c)]
+				)
 				+ " · %d s" % ceili(ChipsReader.left_s(snap, c))
 			)
 		)
@@ -53,7 +56,10 @@ func show_chips(
 	for c: Dictionary in outgoing:
 		lines.append(
 			(
-				tr("chip.sent") % [tr("station." + str(c["to"])), ChipsReader.label(c)]
+				(
+					tr("chip.sent")
+					% [tr(StationCatalogue.name_key(str(c["to"]))), ChipsReader.label(c)]
+				)
 				+ " · %d s" % ceili(ChipsReader.left_s(snap, c))
 			)
 		)

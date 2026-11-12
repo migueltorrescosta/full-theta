@@ -224,7 +224,7 @@ func start_blocker(state: Dictionary) -> String:
 	if not uncovered.is_empty():
 		var names: PackedStringArray = []
 		for st: Variant in uncovered:
-			names.append(tr("station." + str(st)))
+			names.append(tr(StationCatalogue.name_key(str(st))))
 		return tr("lobby.need_stations") % ", ".join(names)
 	var missing: int = maxi(1, int(state.get("min_crew", 3)) - int(state.get("crew", 0)))
 	if missing == 1:

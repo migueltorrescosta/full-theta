@@ -99,7 +99,13 @@ func _build() -> void:
 					_body.add_child(grid)
 				var who: String = tr(part[1])
 				if kind == "pair":
-					who = tr("card.pair") % [tr("station." + part[1]), tr("station." + part[2])]
+					who = (
+						tr("card.pair")
+						% [
+							tr(StationCatalogue.name_key(part[1])),
+							tr(StationCatalogue.name_key(part[2]))
+						]
+					)
 				grid.add_child(_text(who, "accent"))
 				grid.add_child(_text(tr(part[-1]), "text"))
 
