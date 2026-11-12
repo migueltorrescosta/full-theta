@@ -149,6 +149,8 @@ func test_shell_runs_again_after_a_win() -> void:
 	assert_bool(await _until(func() -> bool: return not crew.catalogue.is_empty())).is_true()
 	shell.ctx.intents.pick(NetHarness.PLAYER, StationCatalogue.ALL)
 	assert_bool(await _until(func() -> bool: return crew.lobby.has(NetHarness.PLAYER))).is_true()
+	# Ready, then Start: no host here, so the Ready crew player starts (#37 C1).
+	shell.ctx.intents.set_ready(true)
 	shell.ctx.intents.start()
 	assert_bool(await _until(func() -> bool: return shell.screen != null)).is_true()
 	var old_world: SimWorld = s.world
@@ -169,6 +171,8 @@ func test_shell_runs_again_after_a_win() -> void:
 	assert_bool(await _until(func() -> bool: return shell.lobby != null)).is_true()
 	assert_object(s.world).is_not_same(old_world)
 	assert_bool(shell.outcome_card.visible).is_false()
+	# Ready, then Start: no host here, so the Ready crew player starts (#37 C1).
+	shell.ctx.intents.set_ready(true)
 	shell.ctx.intents.start()
 	assert_bool(await _until(func() -> bool: return shell.screen != null)).is_true()
 	assert_bool(await _until(func() -> bool: return s.world.tick > 2)).is_true()
