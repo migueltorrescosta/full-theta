@@ -422,6 +422,9 @@ func mount_row(i: int) -> Dictionary:
 ## stations include Weapons): only then can a mount be someone else's, so Claim shows (C3;
 ## a free mount fires without a claim, V29).
 func shared() -> bool:
+	if lesson_wants("claim"):
+		# (the Shakedown's claim step names the button)
+		return true
 	var n: int = 0
 	for seat: Variant in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
 		if station in StationCatalogue.stations_of(str((seat as Dictionary).get("seat", ""))):

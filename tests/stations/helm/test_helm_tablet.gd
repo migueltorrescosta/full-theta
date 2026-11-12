@@ -421,3 +421,20 @@ func test_dock_and_jump_show_only_when_they_can_work() -> void:
 	assert_array(order).is_equal(
 		["face", "align", "shield_track", "dock", "jump", "chase_camera", "decoupled"]
 	)
+
+
+# FT: FT-STN-005
+# C3: a Shakedown step that names Dock or Jump shows the button even where it can't work yet,
+# so a lesson never names a hidden control.
+func test_a_lesson_step_shows_its_rare_button() -> void:
+	await _open(SIZES[0])
+	_screen.ctx.crew.select("contact", StationFixture.H2)
+	for id: String in ["dock", "jump"]:
+		_screen.ctx.training["helm"] = {
+			"line": "", "intent": id, "text": "", "example": "train.ex." + id, "done": false
+		}
+		await _frames(1)
+		assert_bool(_ui().buttons[id].visible).override_failure_message(id).is_true()
+	_screen.ctx.training.erase("helm")
+	await _frames(1)
+	assert_bool(_ui().buttons["dock"].visible).is_false()

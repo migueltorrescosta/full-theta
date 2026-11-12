@@ -471,8 +471,8 @@ func _place_radar() -> void:
 func _show_rare() -> void:
 	var docked: bool = panel.at_dock()
 	var dock_text: String = text("undock" if docked else "dock")
-	var can_dock: bool = docked or panel.near_dock() >= 0
-	var can_jump: bool = panel.has_jump_target()
+	var can_dock: bool = docked or panel.near_dock() >= 0 or panel.lesson_wants("dock")
+	var can_jump: bool = panel.has_jump_target() or panel.lesson_wants("jump")
 	for page: Dictionary in page_buttons:
 		if page.has("dock"):
 			var b: RailButton = page["dock"]

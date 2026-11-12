@@ -33,6 +33,11 @@ const NOT_BUTTONS: Array[String] = [
 	"intent.route_clear",
 	"sci.short_active",
 	"touch.fullscreen_exit",
+	# Shown only while they can work or their own step is on (C3, StationPanel.lesson_wants;
+	# tests/stations/helm/test_helm_tablet.gd checks that the step shows them).
+	"touch.helm.dock",
+	"touch.helm.jump",
+	"weapons.touch_claim",
 ]
 
 var _vp: SubViewport

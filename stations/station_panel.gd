@@ -198,6 +198,12 @@ func view_rect() -> Rect2:
 	return Rect2(Vector2.ZERO, size)
 
 
+## True while this station's Shakedown step asks for `intent` (ctx.training): a control
+## that hides while it can't work (C3) shows then, so the lesson never names a hidden button.
+func lesson_wants(intent: String) -> bool:
+	return ctx != null and str(ctx.training.get(station, {}).get("intent", "")) == intent
+
+
 ## True when the docked panel shows something of its own: a visible control that is no bare
 ## container. A docked panel with nothing to show (Science in a joint view: the screen's radar
 ## is its radar) keeps no least height in the side column, so the column doesn't scroll to a
