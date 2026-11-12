@@ -300,12 +300,21 @@ func test_the_card_folds_to_one_line_and_back() -> void:
 	var tall: float = card.size.y
 	card._fold.pressed.emit()
 	await _frames(6)
-	# Folded, the step still reads whole beside Next: up to three wrapped lines, never cut.
-	assert_int(card._text.max_lines_visible).is_equal(3)
-	assert_int(card._text.get_line_count()).is_less_equal(3)
+	# Folded, the step reads in up to two wrapped lines beside Next.
+	assert_int(card._text.max_lines_visible).is_equal(2)
 	assert_float(card.size.y).is_less(tall)
 	assert_bool(card._next.visible).is_true()
 	assert_bool(card._next.is_visible_in_tree()).is_true()
+	# A step that needs more than the folded row never folds by itself, so it is never cut.
+	card._folded = false
+	card._text.text = "Tap a part's column, then Add power, then tap Next to go on."
+	card._width = TrainingBanner.WIDTHS[-1]
+	card._squeezed = true
+	assert_bool(card._folded_fits()).is_false()
+	card._text.text = "Tap Next."
+	assert_bool(card._folded_fits()).is_true()
+	card._squeezed = false
+	card._folded = true
 	card._fold.pressed.emit()
 	await _frames(6)
 	assert_int(card._text.max_lines_visible).is_equal(-1)
