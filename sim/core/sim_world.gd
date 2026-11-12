@@ -75,6 +75,8 @@ var module_defs: Array[ModuleDef] = []
 var rep_dists: Dictionary[StringName, RepDistDef] = {}
 ## The run's encounters and story flags (E07, FT-MIS-025).
 var encounters: EncounterTable = EncounterTable.new()
+## Comms' calls for help and the patrols they bring (gp-14).
+var help: HelpTable = HelpTable.new()
 ## Read-only run data like defs (FT-ARC-020), filled by RunSetup: the NPCs SpawnShipCommand
 ## can spawn by key, the scenario ids an encounter's scenario_ix indexes, and the run's
 ## numbers. null run_def: not a director run (the M1 encounter, tests).
@@ -168,6 +170,7 @@ func tables() -> Array[SimTable]:
 		modules,
 		encounters,
 		sites,
+		help,
 	]
 
 
@@ -329,6 +332,7 @@ func step() -> void:
 	DamageSystem.step(self)
 	StorySystem.step(self)
 	EncounterSystem.step(self)
+	CallHelp.step(self)
 	# Last: statuses and outcomes see this tick's destructions and knowledge (T036).
 	OutcomeSystem.step(self)
 	step_events = events.slice(events_from)

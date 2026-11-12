@@ -158,9 +158,9 @@ func test_tap_audit_passes_in_both_orientations() -> void:
 	for size: Vector2i in SIZES:
 		await _open(size)
 		_audit_ok(TapAudit.check(_screen.tablet_dock), "rails %s" % size)
-		# Ammo, Fire at mark, Fire all, Claim, FIRE and the Aim stick (one mount: no Mount
-		# buttons, C3).
-		assert_int(TapAudit.targets(_screen.tablet_dock).size()).is_equal(6)
+		# Ammo, Fire at mark, Fire all, Claim, FIRE, the Aim stick and the corvette's three
+		# Mount buttons (gp-12).
+		assert_int(TapAudit.targets(_screen.tablet_dock).size()).is_equal(9)
 		_audit_ok(TapAudit.check(_screen), "screen %s" % size)
 		_vp.queue_free()
 
@@ -174,9 +174,9 @@ func test_button_taps_send_what_their_keys_send() -> void:
 		_tap(_ui().guided_button)
 		_tap(_ui().claim_button)
 		assert_array(_heard).is_equal(["ammo_next", "fire_guided", "claim"])
-		# One mount: no Mount button at all (there is nothing to switch to, C3).
+		# The corvette's three mounts (gp-12): a Mount button each, none for a fourth.
 		for i: int in range(4):
-			assert_bool(_ui().mount_buttons[i].visible).is_false()
+			assert_bool(_ui().mount_buttons[i].visible).is_equal(i < 3)
 		_vp.queue_free()
 
 

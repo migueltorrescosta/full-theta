@@ -50,6 +50,13 @@ extends Resource
 @export var probe_parts: int = 0
 ## Time to fabricate one probe (s).
 @export var probe_fab_time: float = 0.0
+## Relay's decoy (gp-13): one probe from stock that hostile NPC AI near it targets instead of
+## the ship, for this long (s); 0: the ship has no decoy.
+@export var decoy_time: float = 0.0
+## How near the decoy a hostile NPC must be to go for it (m).
+@export var decoy_range: float = 0.0
+## How far out from the ship the decoy flies, square to the line to the nearest hostile (m).
+@export var decoy_offset: float = 0.0
 ## Share of a hit's energy past the shields that the subsystem nearest the impact takes;
 ## the hull takes the rest (dimensionless, 0..1, FT-SIM-020).
 @export var subsystem_damage_share: float = 0.0
@@ -150,6 +157,10 @@ func _validate_probes(errors: Array[String]) -> void:
 	DefCheck.non_negative(errors, "probe_range", probe_range)
 	DefCheck.non_negative(errors, "probe_parts", probe_parts)
 	DefCheck.non_negative(errors, "probe_fab_time", probe_fab_time)
+	DefCheck.non_negative(errors, "decoy_time", decoy_time)
+	if decoy_time > 0.0:
+		DefCheck.positive(errors, "decoy_range", decoy_range)
+		DefCheck.positive(errors, "decoy_offset", decoy_offset)
 	if probes > 0 or probe_parts > 0:
 		DefCheck.positive(errors, "probe_speed", probe_speed)
 		DefCheck.positive(errors, "probe_range", probe_range)

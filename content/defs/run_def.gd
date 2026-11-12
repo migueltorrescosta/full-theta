@@ -22,6 +22,8 @@ const PRESETS: Array[StringName] = [&"easy", &"normal", &"hard"]
 @export var scenarios: PackedStringArray = PackedStringArray()
 @export var director: DirectorDef
 @export var flee_cost: FleeCostDef
+## Comms' call for help (gp-14); null: the run has none.
+@export var call_help: CallHelpDef
 @export var player_ship: ShipDef
 ## Credits each crewed ship starts with (count).
 @export var start_credits: int = 0

@@ -2,7 +2,8 @@ class_name P2Scenario
 extends RefCounted
 ## P2 Helm + Weapons pair scenario (spec §7.4, FT-PAIR-015): a raider crosses the bow
 ## 1.5 km to port, 1 km ahead at the start, at 30 m/s, and Weapons must put DAMAGE_GOAL
-## joules into it. The corvette's one mass driver has a 15 degree half-arc.
+## joules into it. The corvette's bow mass driver alone (the run's corvette has side mounts
+## too, gp-12, which would bear on the raider unturned) has a 15 degree half-arc.
 ## - Weapons (both variants): the gunner aims at the raider's lead point and fires
 ##   whenever the mount is ready and the raider is inside its arc (Gunnery.gun).
 ## - Helm (co-op only): selects the raider and holds Face, so the bow follows it and
@@ -28,7 +29,7 @@ static func harness() -> PairHarness:
 static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p2")
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
-	w.spawn_ship(TestDefs.corvette(), 1)
+	w.spawn_ship(Gunnery.gunship(1), 1)
 	var raider: int = w.spawn_ship(
 		Gunnery.raider_with_shields(0.0), 2, CubePoint.of(START), Quaternion.IDENTITY, VELOCITY
 	)

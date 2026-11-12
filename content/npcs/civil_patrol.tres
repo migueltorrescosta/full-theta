@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="NpcDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/npc_def.gd" id="1_npc"]
+[ext_resource type="Resource" path="res://content/ships/civil_patrol.tres" id="2_ship"]
+
+[resource]
+script = ExtResource("1_npc")
+id = &"civil_patrol"
+display_name = "Patrol"
+ship = ExtResource("2_ship")
+engage_range_min = 800.0
+engage_range_max = 3000.0
+retreat_hull_fraction = 0.25
+fire_cone = 0.05

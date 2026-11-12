@@ -247,7 +247,7 @@ const STATION_COMMANDS: Dictionary = {
 		&"science_scan_mark",
 		&"science_select",
 	],
-	"relay": [&"launch_probe", &"flag_lanes"],
+	"relay": [&"launch_probe", &"launch_decoy", &"flag_lanes"],
 	# Trading is Comms' alone (FT-PAIR-011, D68); accepting and declining need no claim
 	# (FT-COM-003).
 	"comms":
@@ -260,6 +260,8 @@ const STATION_COMMANDS: Dictionary = {
 		&"comms_trade",
 		&"comms_buy_module",
 		&"comms_sell_module",
+		# The call for help (gp-14) acts for the whole ship: no claim.
+		&"comms_call_help",
 	],
 	# Next (Shakedown, D235) is sent by every crew station and the Captain.
 	"captain": [&"training_next"],
@@ -346,6 +348,7 @@ const COMMAND_ITEMS: Dictionary = {
 	&"science_cancel": [CLAIM_SCAN, ""],
 	&"science_self_scan": [CLAIM_SCAN, ""],
 	&"launch_probe": [CLAIM_PROBE, ""],
+	&"launch_decoy": [CLAIM_PROBE, ""],
 	# A reply or an opening acts on one conversation; accepting, declining and
 	# trading are Comms' alone and need no claim (FT-COM-003).
 	&"comms_answer": [CLAIM_NPC, "card"],

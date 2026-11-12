@@ -316,7 +316,7 @@ func test_commands_reject_missing_mount() -> void:
 	var ship: int = world.spawn_ship(TestDefs.corvette(), 1)
 	var c: FireCommand = FireCommand.new()
 	c.ship_id = ship
-	c.mount_index = 1
+	c.mount_index = 3
 	assert_bool(c.apply(world)).is_false()
 	c.mount_index = 0
 	assert_bool(c.apply(world)).is_true()

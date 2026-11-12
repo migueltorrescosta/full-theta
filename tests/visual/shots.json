@@ -324,6 +324,18 @@
     {"name": "l5_phl_first_seat", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"seat": "helm", "insets": [47, 0, 47, 21], "tooltip": true}},
     {"name": "l5_php_first_seat", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "engineering", "insets": [0, 47, 0, 34], "tooltip": true}},
     {"name": "l5_hd_captain_requests", "scene": "res://tests/stations/captain/captain_shot.tscn", "size": [1920, 1080], "set": {"seat": "captain", "chip": true, "states": true}},
-    {"name": "l5_phl_captain_request_states", "scene": "res://tests/stations/captain/captain_shot.tscn", "size": [844, 390], "set": {"seat": "captain", "insets": [47, 0, 47, 21], "page": 1, "chip": true, "states": true}}
+    {"name": "l5_phl_captain_request_states", "scene": "res://tests/stations/captain/captain_shot.tscn", "size": [844, 390], "set": {"seat": "captain", "insets": [47, 0, 47, 21], "page": 1, "chip": true, "states": true}},
+    {"name": "station_relay_decoy", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "relay", "decoy": true}},
+    {"name": "l5_tl_relay_decoy", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "relay", "touch": true, "decoy": true}},
+    {"name": "l5_phl_relay_decoy", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"seat": "relay", "decoy": true, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_relay_decoy", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "relay", "decoy": true, "insets": [0, 47, 0, 34]}},
+    {"name": "station_comms_help", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "comms", "help": 1}},
+    {"name": "station_comms_help_coming", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "comms", "help": 2, "help_eta": 42.0}},
+    {"name": "l5_tl_comms_help", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "comms", "touch": true, "help": 1}},
+    {"name": "l5_phl_comms_help", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"seat": "comms", "help": 1, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_comms_help_coming", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "comms", "help": 2, "help_eta": 42.0, "insets": [0, 47, 0, 34]}},
+    {"name": "station_weapons_three_mounts", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "weapons", "selected": 3, "claim": "mount:1"}},
+    {"name": "l5_tl_weapons_three_mounts", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "weapons", "touch": true, "claim": "mount:1"}},
+    {"name": "l5_phl_weapons_three_mounts", "scene": "res://tests/stations/weapons/weapons_shot.tscn", "size": [844, 390], "set": {"seat": "weapons", "selected": 3, "claim": "mount:1", "page": 1, "insets": [47, 0, 47, 21]}}
   ]
 }

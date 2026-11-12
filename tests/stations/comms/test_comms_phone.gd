@@ -227,6 +227,8 @@ func test_every_page_keeps_the_touch_rules() -> void:
 			for b: Button in p._buttons.values():
 				if b == p._buttons["claim"] and p.claim_item() == "":
 					continue
+				if b == p._buttons["help"]:  # (only in a fight, gp-14)
+					continue
 				assert_bool(b.is_visible_in_tree()).override_failure_message(what).is_true()
 				assert_float(b.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
 		_drop(s)

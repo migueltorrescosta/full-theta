@@ -8,8 +8,10 @@ const LANGS: Array[String] = ["en", "pt_PT", "it"]
 const STATIONS: Array[String] = [
 	"helm", "weapons", "engineering", "science", "relay", "comms", "captain"
 ]
-## The Next control itself is not a step.
-const NOT_TAUGHT: Array[String] = ["training_next"]
+## The Next control itself is not a step; nor are the fight-only controls the Shakedown has
+## no fight for (the decoy and the call for help show only with a hostile in play, gp-13,
+## gp-14).
+const NOT_TAUGHT: Array[String] = ["training_next", "decoy_launch", "comms_call_help"]
 
 var steps: TrainingStepsDef
 var lines: DialogueLines
@@ -34,7 +36,9 @@ func _steps_of(station: String, intent: String) -> Array[TrainingStepDef]:
 
 ## The intents a station's track must teach: its group, the common rows, the always-live set.
 func _wanted(station: String) -> Array[String]:
-	var out: Array[String] = IntentTable.ids_of(station)
+	var out: Array[String] = IntentTable.ids_of(station).filter(
+		func(id: String) -> bool: return not NOT_TAUGHT.has(id)
+	)
 	out.append_array(IntentTable.ids_of(IntentTable.COMMON))
 	for id: String in IntentTable.ids_of(IntentTable.LIVE):
 		if not NOT_TAUGHT.has(id):
