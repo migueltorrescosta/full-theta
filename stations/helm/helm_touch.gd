@@ -315,6 +315,13 @@ func _build_portrait() -> void:
 func _fill_pages(box: VBoxContainer) -> void:
 	var titles: Array[String] = page_titles()
 	var parts: Array[Array] = []
+	# The ring's row: on Fly, Track beside the glyph (the glyph keeps its size under the two
+	# wrapped buttons, C3); on Shield and Radar the ring alone fills it.
+	var ring_row: HBoxContainer = HBoxContainer.new()
+	ring_row.name = "RingRow"
+	ring_row.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	ring_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var beside: RailButton = null
 	for p: int in titles.size():
 		parts.append([])
 		var ids: Array = PAGE_IDS[p]
@@ -327,21 +334,28 @@ func _fill_pages(box: VBoxContainer) -> void:
 		parts[p].append(grid)
 		if odd:
 			var last: RailButton = _button(ids[-1])
-			last.autowrap_mode = TextServer.AUTOWRAP_OFF
 			last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			page_buttons[p][ids[-1]] = last
-			box.add_child(last)
 			parts[p].append(last)
+			if p == PAGE_FLY:
+				last.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+				beside = last
+			else:
+				last.autowrap_mode = TextServer.AUTOWRAP_OFF
+				box.add_child(last)
 	crew.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_child(crew)
 	parts[PAGE_CREW].append(crew)
 	var ring: ShieldRing = panel.ring
-	ring.reparent(box, false)
+	box.add_child(ring_row)
+	if beside != null:
+		ring_row.add_child(beside)
+	ring.reparent(ring_row, false)
 	ring.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ring.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# (Nav's six buttons leave the glyph no room.)
 	for p: int in [PAGE_FLY, PAGE_SHIELD, PAGE_RADAR]:
-		parts[p].append(ring)
+		parts[p].append(ring_row)
 	# Under the Shield page's caption a little room, so its last line's descenders keep the
 	# rail's 8 px gap to the Slide stick (w-dcc).
 	var pad: Control = Control.new()
