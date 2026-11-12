@@ -25,6 +25,8 @@ var rep_dists: Dictionary[StringName, RepDistDef] = {}
 var markets: Dictionary[StringName, MarketDef] = {}
 var site_markets: Dictionary[int, StringName] = {}
 var hail_conversations: Dictionary[StringName, StringName] = {}
+## Scenario ids beyond the run's own: the content packs' encounters (FT-DAT-015).
+var extra_scenarios: PackedStringArray = PackedStringArray()
 ## The session built from the multi-ship lobby (#11, FT-GEN-001, M4-Q3): one crewed ship per
 ## slot, in slot order, of the faction rules.faction_for gives its team (faction_of_slot):
 ## the sim never sees a team (B5). Empty: `crew_ships` ships of PLAYER_FACTION, as before M4.
@@ -86,7 +88,7 @@ func build() -> SimWorld:
 	world.science_def = science
 	world.hazards = hazards.duplicate()
 	world.catalog = catalog
-	world.scenario_ids = run_def.scenarios
+	world.scenario_ids = run_def.scenarios + extra_scenarios
 	world.run_def = run_def
 	world.conversations = conversations
 	world.module_defs = module_defs

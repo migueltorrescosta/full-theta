@@ -73,6 +73,7 @@ So `sim/` never names the director or scenarios, the director and scenarios see 
 - **FT-ARC-020** Definitions shall be read-only at runtime: mutable per-ship state is copied from them, and `sim/` receives them already loaded and never calls `load()`, `preload()` or `ResourceLoader`. (plan review TECH-6)
 - **FT-ARC-021** Pure helpers needed by both `sim/` and clients (spatial callouts, lead intercept, mount arcs, units) shall live in `shared/`, which depends on no other module and passes the `sim/` purity lint. (plan review TECH-6)
 - **FT-ARC-022** Each desktop release package shall contain the web export built from the same commit, and Piper with the approved voices and their licence files. (plan review TECH-4, D140)
+- **FT-ARC-023** A published release shall be uploaded to itch.io (Linux, Windows and macOS channels) by a workflow that holds no secret in the repository and does nothing until the owner sets the key and the game in the repository settings; Flathub waits until Piper builds from source. (D475)
 
 ## 2.4 Risks and spikes
 
