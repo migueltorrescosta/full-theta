@@ -244,8 +244,23 @@ func set_team(ship: int, team: int) -> void:
 	_send(NetProtocol.Type.SHIP_TEAM, {"ship": ship, "team": team})
 
 
-func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
-	_send(NetProtocol.Type.GAME_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
+## GameMode with the host's two options (#40 D1, D2): pause when someone drops, fill light
+## stations with bots.
+func set_mode(
+	mode: String,
+	team_win: String,
+	lives: int = -1,
+	drop_pause: bool = false,
+	fill_bots: bool = false
+) -> void:
+	var msg: Dictionary = {"mode": mode, "team_win": team_win, "lives": lives}
+	msg.merge({"drop_pause": drop_pause, "fill_bots": fill_bots})
+	_send(NetProtocol.Type.GAME_MODE, msg)
+
+
+## The host rolls another run modifier (gp-11).
+func reroll_modifier() -> void:
+	_send(NetProtocol.Type.REROLL_MODIFIER, {})
 
 
 func vote_relaunch(ship: int, vote: bool) -> void:

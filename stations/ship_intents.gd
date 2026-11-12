@@ -174,8 +174,20 @@ func set_team(ship: int, team: int) -> void:
 	_call(&"set_team", [ship, team])
 
 
-func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
-	_call(&"set_mode", [mode, team_win, lives])
+## The host's mode and options (#40 D1, D2): pause when someone drops, fill light stations.
+func set_mode(
+	mode: String,
+	team_win: String,
+	lives: int = -1,
+	drop_pause: bool = false,
+	fill_bots: bool = false
+) -> void:
+	_call(&"set_mode", [mode, team_win, lives, drop_pause, fill_bots])
+
+
+## The host rolls another run modifier (gp-11).
+func reroll_modifier() -> void:
+	_call(&"reroll_modifier", [])
 
 
 func vote_relaunch(ship: int, vote: bool) -> void:

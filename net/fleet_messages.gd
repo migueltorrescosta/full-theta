@@ -21,6 +21,8 @@ const BAD_MODE: String = "bad_mode"
 const ENEMY_SHIP: String = "enemy_ship"
 const TAKEN: String = "taken"
 const NO_RELAUNCH: String = "no_relaunch"
+## RerollModifier with fewer than two run modifiers to choose from (gp-11).
+const NO_REROLL: String = "no_reroll"
 
 ## Event type -> field -> Variant type. A row of `fleet.ships` follows FLEET_SHIP and of
 ## `scoreboard.rows` SCOREBOARD_ROW.
@@ -35,6 +37,9 @@ const PAYLOADS: Dictionary = {
 		"waiting": TYPE_ARRAY,
 		"started": TYPE_BOOL,
 		"host": TYPE_BOOL,
+		"modifier": TYPE_STRING,
+		"drop_pause": TYPE_BOOL,
+		"fill_bots": TYPE_BOOL,
 	},
 	NetProtocol.EVENT_TAKEOVER:
 	{"ship": TYPE_INT, "seat": TYPE_STRING, "by": TYPE_STRING, "from_ship": TYPE_INT},
@@ -119,7 +124,9 @@ static func fleet_ship(
 ## The multi-ship lobby: every ship, the host's mode and options, the crewed ships not yet
 ## ready to start (waiting: coverage fails or a crew player isn't Ready, #37 C1), whether the
 ## universe has started (all together, M4-Q4) and whether a host is connected (`host`: without
-## one any Ready crew player may Start).
+## one any Ready crew player may Start). `options` adds the host's options (#40 D1, D2,
+## gp-11): `modifier` (a RunModifierDef id, "" for none), `drop_pause` and `fill_bots`; each
+## missing one is its default.
 ## `mode` and `team_win` are GameRules' names; the server fills them, so this class names
 ## no sim class and the clients may read it (F4).
 static func fleet(
@@ -130,9 +137,13 @@ static func fleet(
 	lives: int,
 	waiting: Array,
 	started: bool,
-	host: bool
+	host: bool,
+	options: Dictionary = {}
 ) -> Dictionary:
 	return {
+		"modifier": str(options.get("modifier", "")),
+		"drop_pause": bool(options.get("drop_pause", false)),
+		"fill_bots": bool(options.get("fill_bots", false)),
 		"ships": ships,
 		"mode": mode,
 		"team_win": team_win,

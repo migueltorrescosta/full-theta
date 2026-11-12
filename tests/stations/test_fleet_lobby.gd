@@ -101,12 +101,16 @@ func test_host_picks_the_mode_and_team_win_rule() -> void:
 		assert_bool(_button(l, "Mode_" + m).disabled).is_false()
 	assert_str(_button(l, "Mode_last_standing").text).is_equal("Last ship standing")
 	_button(l, "Mode_teams").pressed.emit()
-	assert_array(_sent(l, "set_mode")[-1][1]).is_equal(["teams", "last_team_standing", -1])
+	assert_array(_sent(l, "set_mode")[-1][1]).is_equal(
+		["teams", "last_team_standing", -1, false, false]
+	)
 	var p: Dictionary = StationFixture.fleet(l.ctx, "teams", ["A", "B"], [0, 1])
 	assert_str(FleetMessages.check(NetProtocol.EVENT_FLEET, p)).is_empty()
 	assert_bool((l.find_child("TeamWin", true, false) as Control).visible).is_true()
 	_button(l, "Win_first_to_finish").pressed.emit()
-	assert_array(_sent(l, "set_mode")[-1][1]).is_equal(["teams", "first_to_finish", -1])
+	assert_array(_sent(l, "set_mode")[-1][1]).is_equal(
+		["teams", "first_to_finish", -1, false, false]
+	)
 	assert_str(summary.text).is_equal("Teams · Easy")
 	StationFixture.fleet(l.ctx, "holdout", ["A", "B"], [0, 1])
 	assert_str((l.find_child("ModeDesc", true, false) as Label).text).contains("3 lives")

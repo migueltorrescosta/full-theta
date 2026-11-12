@@ -61,6 +61,10 @@ var eliminated: Dictionary[int, String] = {}
 var outcome: GameOutcome
 ## The tick the universe started.
 var start_tick: int = 0
+## The run modifiers the lobby rolls from (RunModifierDef ids, gp-11): roll_modifiers sets
+## them; the host's Reroll picks another (REROLL_MODIFIER).
+var modifiers: Array[StringName] = []
+var _modifier_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _game: WeakRef
 ## Whether the world was built from the current slots and rules (false after a lobby change:
@@ -90,6 +94,20 @@ func _init(net_game: NetGame) -> void:
 	net_game.add_handler(NetProtocol.Type.SHIP_TEAM, _on_ship_team)
 	net_game.add_handler(NetProtocol.Type.GAME_MODE, _on_game_mode)
 	net_game.add_handler(NetProtocol.Type.RELAUNCH, _on_relaunch)
+	net_game.add_handler(NetProtocol.Type.REROLL_MODIFIER, _on_reroll_modifier)
+
+
+## The lobby's run modifier (gp-11): one of `ids` at random from the server seed, or none
+## without any; only for a lobby the server rebuilds (a fixed world has no setup to apply it).
+## The world is built again at Start with it (GameRules.modifier_id).
+func roll_modifiers(ids: Array[StringName], seed_value: int) -> void:
+	if not rebuild.is_valid() or ids.is_empty():
+		return
+	modifiers = ids.duplicate()
+	_modifier_rng.seed = seed_value
+	rules.modifier_id = modifiers[_modifier_rng.randi_range(0, modifiers.size() - 1)]
+	_world_current = false
+	_dirty = true
 
 
 ## The slots RunSetup builds at Start: those with a crew pick, in lobby order (M4-Q3).
@@ -361,7 +379,8 @@ func _on_ship_team(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	_apply(false)
 
 
-## GameMode{mode, team_win, lives}: lives -1 keeps the holdout default (HOLDOUT_LIVES).
+## GameMode{mode, team_win, lives, drop_pause, fill_bots}: lives -1 keeps the holdout default
+## (HOLDOUT_LIVES); the two host options (#40 D1, D2) go to the lobby.
 func _on_game_mode(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var mode: int = GameRules.MODE_NAMES.find(msg["mode"])
 	var team_win: int = GameRules.TEAM_WIN_NAMES.find(msg["team_win"])
@@ -374,8 +393,13 @@ func _on_game_mode(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	if game.refuse(s, NetProtocol.Type.GAME_MODE, reason, extra):
 		return
 	var had_teams: bool = rules.has_teams()
+	var modifier: StringName = rules.modifier_id
 	rules = GameRules.of_mode(mode as GameRules.Mode)
+	rules.modifier_id = modifier
 	rules.team_win = team_win as GameRules.TeamWin
+	game.lobby.drop_pause = msg["drop_pause"]
+	game.lobby.fill_bots = msg["fill_bots"]
+	game.lobby.mark_dirty()
 	if mode == GameRules.Mode.HOLDOUT and lives > 0:
 		rules.relaunch[rules.holdout_finite_faction()] = RelaunchPolicy.of_lives(lives)
 	_apply(rules.has_teams() and not had_teams)
@@ -408,6 +432,23 @@ func _on_relaunch(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 		c.ship = ship
 		game.world.submit(c)
 		_relaunching[ship] = c
+
+
+## RerollModifier{} (gp-11): the host, before the start, swaps the run modifier for another
+## one; refused `no_reroll` with fewer than two.
+func _on_reroll_modifier(s: NetSession, _msg: Dictionary, _now_us: int) -> void:
+	var reason: String = _lobby_refusal(s, true)
+	if reason == "" and modifiers.size() < 2:
+		reason = FleetMessages.NO_REROLL
+	if game.refuse(s, NetProtocol.Type.REROLL_MODIFIER, reason, {}):
+		return
+	var others: Array[StringName] = modifiers.filter(
+		func(id: StringName) -> bool: return id != rules.modifier_id
+	)
+	rules.modifier_id = others[_modifier_rng.randi_range(0, others.size() - 1)]
+	_world_current = false
+	_dirty = true
+	game.publish()
 
 
 # --- Internals. ---
@@ -523,6 +564,10 @@ func _hand_over(ship: int) -> void:
 			continue
 		# `handover` first, then the `picked` of the move (the client keys its view by ship).
 		game.notify(s, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(ship, to))
+		# In co-op and TEAMS the crew are guests there: they may take free light stations
+		# (#40 D10, gp-04).
+		if to >= 0 and rules.mode in [GameRules.Mode.COOP, GameRules.Mode.TEAMS]:
+			s.guest_from = ship
 		game.lobby.move(s, to, StationCatalogue.VIEWER if to >= 0 else "")
 	_board_sent = []
 	_board_tick = -SCOREBOARD_EVERY_TICKS
@@ -545,6 +590,7 @@ func _relaunched(ship: int, lives: int) -> void:
 	for pair: Array in _crews.get(ship, []):
 		var s: NetSession = game.by_id.get(pair[0])
 		if s != null:
+			s.guest_from = -1  # a guest goes home (gp-04)
 			game.lobby.move(s, ship, pair[1])
 	_crews.erase(ship)
 	var payload: Dictionary = FleetMessages.relaunched(ship, lives)
@@ -596,8 +642,13 @@ func _fleet_payload() -> Dictionary:
 	var team_win: String = GameRules.TEAM_WIN_NAMES[rules.team_win]
 	var max_ships: int = GameRules.MAX_SHIPS
 	var host: bool = game.lobby.host_here()
+	var options: Dictionary = {
+		"modifier": String(rules.modifier_id),
+		"drop_pause": game.lobby.drop_pause,
+		"fill_bots": game.lobby.fill_bots,
+	}
 	return FleetMessages.fleet(
-		ships, mode, team_win, max_ships, lives, Array(waiting()), started, host
+		ships, mode, team_win, max_ships, lives, Array(waiting()), started, host, options
 	)
 
 

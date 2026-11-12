@@ -325,6 +325,9 @@ func make_server() -> NetServer:
 			return null
 	var server: NetServer = NetServer.new()
 	server.transport.tls = tls
+	var stand_in: StandInDef = defs.get_def(&"StandInDef", &"stand_in") as StandInDef
+	if stand_in != null:
+		server.stand_in_def = stand_in
 	if run != null:
 		server.driver_factory = (
 			_training_factory() if encounter_name == "shakedown" else _director_factory(run)
@@ -343,6 +346,10 @@ func make_server() -> NetServer:
 		server.free()
 		return null
 	server.game.training.solo_on_join = solo_station
+	var modifiers: Array[StringName] = []
+	for m: RunModifierDef in defs.run_modifiers():
+		modifiers.append(m.id)
+	server.game.fleet.roll_modifiers(modifiers, seed_value)
 	server.game.sessions.grace_us = int(grace_s * 1_000_000.0)
 	server.game.language = language
 	server.game.tls = tls != null

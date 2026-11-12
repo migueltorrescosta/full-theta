@@ -13,6 +13,7 @@ func test_client_intents_decode() -> void:
 	c.set_team(1, 0)
 	c.set_mode("holdout", "last_team_standing", 3)
 	c.vote_relaunch(0, true)
+	c.reroll_modifier()
 	var queue: NetSendQueue = c._queue
 	var back: Array[Dictionary] = []
 	var chunker: NetChunker = NetChunker.new()
@@ -20,12 +21,15 @@ func test_client_intents_decode() -> void:
 	while queue.peek_size() > 0:
 		var msg: Dictionary = chunker.feed(queue.next_chunk())
 		back.append(NetProtocol.decode(msg["data"]))
-	assert_int(back.size()).is_equal(4)
+	assert_int(back.size()).is_equal(5)
 	for fields: Dictionary in back:
 		assert_bool(fields.is_empty()).is_false()
 		assert_bool(NetProtocol.from_client.has(fields["t"])).is_true()
 		assert_bool(NetProtocol.rated_requests.has(fields["t"])).is_true()
 	assert_str(back[0]["name"]).is_equal("Kestrel II")
+	# The host's options ride on GameMode (#40 D1, D2); Reroll has no fields (gp-11).
+	assert_bool(back[2]["fill_bots"]).is_false()
+	assert_int(back[4]["t"]).is_equal(NetProtocol.Type.REROLL_MODIFIER)
 
 
 ## One payload per FleetMessages event.
