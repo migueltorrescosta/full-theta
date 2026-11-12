@@ -49,6 +49,26 @@ const NOT_BUTTONS: Array[String] = [
 	"eng.touch.claim",
 	"touch.helm.jump",
 	"weapons.touch_claim",
+	# (test_a_step_shows_the_hidden_control_it_names checks these.)
+	"comms.claim",
+	"sci.claim",
+	"sci.hack",
+	"relay.launch",
+	"relay.accept",
+	"relay.decline",
+	"relay.send_to",
+]
+## [station, intent, the control's name key] of the controls that hide while they can't act
+## (C3) and that a Shakedown step names: the step shows them.
+const LESSON_SHOWS: Array = [
+	["comms", "claim", "comms.claim"],
+	["science", "claim", "sci.claim"],
+	["science", "sci_hack", "sci.hack"],
+	["relay", "claim", "relay.launch"],
+	["relay", "probe_launch", "relay.launch"],
+	["relay", "accept", "relay.accept"],
+	["relay", "decline", "relay.decline"],
+	["relay", "mark_send", "relay.send_to"],
 ]
 
 var _vp: SubViewport
@@ -194,6 +214,42 @@ func test_every_control_a_step_names_is_on_the_stations_phone_screen() -> void:
 		assert_array(absent)
 		. override_failure_message("controls not on screen: %s" % [absent])
 		. is_empty()
+	)
+
+
+# FT: FT-STN-005
+# C3: a control hidden while it can't act (Claim with one player, Hack without access, Launch
+# with no probe, Accept and Decline with nothing waiting, Send with no ally) shows while a
+# Shakedown step names it, on a phone either way up and on a tablet, and hides again after.
+func test_a_step_shows_the_hidden_control_it_names() -> void:
+	var missing: Array[String] = []
+	for c: Array in LESSON_SHOWS:
+		for form: Array in FORMS:
+			var s: StationScreen = await _screen(c[0], form)
+			var here: String = "%s %s %s" % [c[0], c[1], form[0]]
+			# (a tablet's HUD says "Send >" where a phone says "Send ▸")
+			var label: String = tr(c[2]).trim_suffix(" ▸")
+			if _shown(s, label):
+				missing.append(here + ": shown before the step")
+			s.ctx.training[c[0]] = {
+				"line": "", "intent": c[1], "text": "", "example": "", "done": false
+			}
+			await _frames(3)
+			if not _shown(s, label):
+				missing.append(here + ": hidden during the step")
+			s.ctx.training.erase(c[0])
+			await _frames(3)
+			if _shown(s, label):
+				missing.append(here + ": still shown after the step")
+			s.queue_free()
+			_vp.queue_free()
+	assert_array(missing).override_failure_message("%s" % [missing]).is_empty()
+
+
+## Whether a visible tap target of the screen's current page starts with `label`.
+func _shown(s: StationScreen, label: String) -> bool:
+	return TapAudit.targets(s).any(
+		func(t: Dictionary) -> bool: return str(t["text"]).begins_with(label)
 	)
 
 

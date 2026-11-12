@@ -480,16 +480,15 @@ func _paged() -> bool:
 	return _lines_shown < _line_count
 
 
-## A phone's foot row (‹ › while the rows page, Close at the right) and the rows' targets.
+## A phone's foot row (‹ while a page is above, › while one is below, Close at the right)
+## and the rows' targets. Each arrow keeps its slot while hidden, so the row doesn't jump.
 func _place_buttons(phone: bool) -> void:
 	var side: float = UiTheme.TOUCH_PRIMARY
 	var y: float = _box.end.y - PAD - side
 	var paged: bool = phone and _lines_shown < _line_count
-	prev_button.visible = paged
-	next_button.visible = paged
+	prev_button.visible = paged and first_line > 0
+	next_button.visible = paged and more_below()
 	close_button.visible = phone
-	prev_button.disabled = first_line == 0
-	next_button.disabled = not more_below()
 	var x: float = _box.position.x + PAD
 	for b: RailButton in [prev_button, next_button]:
 		b.position = Vector2(x, y)
@@ -605,7 +604,7 @@ func _draw() -> void:
 		hint = ""
 		var left: float = x
 		foot_y = close_button.position.y + (close_button.size.y + font.get_ascent(FONT_SIZE)) / 2.0
-		if next_button.visible:
+		if _paged():
 			left = next_button.position.x + next_button.size.x + UiTheme.TOUCH_GAP
 			draw_string(
 				font,

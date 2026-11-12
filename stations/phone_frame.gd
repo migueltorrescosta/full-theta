@@ -471,3 +471,12 @@ static func row(controls: Array) -> HBoxContainer:
 		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		r.add_child(c)
 	return r
+
+
+## Hides each row (a `row` holding one of `controls`) whose controls all hide, so a hidden
+## button leaves no empty row and gap behind (C3).
+static func hide_empty_rows(controls: Array) -> void:
+	for c: Control in controls:
+		var r: HBoxContainer = c.get_parent() as HBoxContainer
+		if r != null:
+			r.visible = r.get_children().any(func(k: Node) -> bool: return (k as Control).visible)

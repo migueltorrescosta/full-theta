@@ -417,3 +417,50 @@ func test_the_inbox_line_reads_whole_both_ways_up() -> void:
 			)
 		_vp.queue_free()
 		await _frames(1)
+
+
+# FT: FT-STN-005
+# C3: no dead button. Launch probe hides with no probe in stock (the line says "0 left"),
+# Accept and Decline with no mark waiting, Send ▸ with no mark selected; upright a row left
+# empty goes. A Shakedown step naming one shows it.
+func test_buttons_hide_while_they_cannot_act() -> void:
+	for c: Array in [[SIDEWAYS, LANDSCAPE], [UPRIGHT, PORTRAIT]]:
+		var s: StationScreen = await _screen(c[0], c[1])
+		var p: RelayPanel = _relay(s)
+		var b: Dictionary = p.phone.buttons
+		s.ctx.snap.blocks[StationCatalogue.Section.RELAY]["stock"] = 0
+		s.ctx.crew.select("contact", H2)
+		await _frames(2)
+		var what: String = "%s" % c[0]
+		for k: String in ["launch", "accept", "decline", "send"]:
+			assert_bool(b[k].visible).override_failure_message(what + " " + k).is_false()
+		for k: String in ["hazard", "route", "lanes", "centre"]:
+			(
+				assert_bool(b[k].is_visible_in_tree())
+				. override_failure_message(what + " " + k)
+				. is_true()
+			)
+		assert_str(p.phone.probes.text).contains("0 left")
+		if c[0] == UPRIGHT:
+			assert_bool(b["accept"].get_parent().visible).is_false()
+		for step: Array in [
+			["probe_launch", "launch"],
+			["claim", "launch"],
+			["accept", "accept"],
+			["decline", "decline"],
+			["mark_send", "send"]
+		]:
+			s.ctx.training["relay"] = {"line": "", "intent": step[0], "text": "", "done": false}
+			await _frames(2)
+			(
+				assert_bool(b[step[1]].is_visible_in_tree())
+				. override_failure_message("%s %s" % [what, step[0]])
+				. is_true()
+			)
+		s.ctx.training.erase("relay")
+		s.ctx.snap.blocks[StationCatalogue.Section.RELAY]["stock"] = 2
+		s.ctx.crew.select("mark", StationFixture.BRAVO_SLOT)
+		await _frames(2)
+		for k: String in ["launch", "send", "send_mark"]:
+			assert_bool(b[k].visible).override_failure_message(what + " " + k).is_true()
+		_vp.queue_free()
