@@ -211,20 +211,28 @@ func _over_view(pos: Vector2) -> bool:
 	return not (hovered is BaseButton)
 
 
-## Each frame on a phone: the view-top row's contents and places. A panel outside the frame
-## (Comms) keeps only the request chips there: on a phone they show nowhere else (ux-13).
+## Each frame on a phone: the view-top row's contents and places (framed only). Its request
+## chips are the only ones a phone shows (ux-13): Comms, the Captain and the Viewer, outside
+## the frame, receive none.
 func process(now: int) -> void:
-	var whole: bool = framed()
-	if not whole:
+	view_top.visible = framed()
+	if not view_top.visible:
 		armed_ring.hide_ring()
-		selection_bar.visible = false
-		glance.visible = false
-		ping_toast.visible = false
-	else:
-		_process_framed(now)
+		return
+	long_press.update(now)
+	if armed_ring.visible:
+		if long_press.is_armed():
+			armed_ring.tick(now)
+		else:
+			armed_ring.hide_ring()
+	ping_toast.update(now)
 	var ctx: StationContext = screen.ctx
+	var crew: bool = ctx.crew.is_crew()
+	selection_bar.visible = crew
+	if crew:
+		selection_bar.show_text(selection_text())
 	var rows: Array = []
-	if ctx.crew.is_crew():
+	if crew:
 		for c: Dictionary in ChipsReader.incoming(ctx.snap, screen.stations):
 			(
 				rows
@@ -238,30 +246,12 @@ func process(now: int) -> void:
 				)
 			)
 	request_chips.show_chips(rows)
-	view_top.visible = whole or not rows.is_empty()
-	if not view_top.visible:
-		return
-	if whole and screen.panels.size() == 2:
+	if screen.panels.size() == 2:
 		var other: String = screen.stations[1 - screen.focus_index]
 		glance.show_for(ctx, other, screen.focused_station())
 	else:
 		glance.visible = false
 	_place_view_top()
-
-
-## The framed panel's own parts of the view-top row: long-press, the ping toast, the selection.
-func _process_framed(now: int) -> void:
-	long_press.update(now)
-	if armed_ring.visible:
-		if long_press.is_armed():
-			armed_ring.tick(now)
-		else:
-			armed_ring.hide_ring()
-	ping_toast.update(now)
-	var crew: bool = screen.ctx.crew.is_crew()
-	selection_bar.visible = crew
-	if crew:
-		selection_bar.show_text(selection_text())
 
 
 ## The view-top row (design 1.3) at the top of the focused panel's view: the selection

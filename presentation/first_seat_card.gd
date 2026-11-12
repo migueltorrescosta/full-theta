@@ -180,3 +180,7 @@ func _place() -> void:
 	if custom_minimum_size.x != w:
 		custom_minimum_size.x = w
 	ControlsHint.place_in_stack(self, ControlsHint.TOP + SafeArea.margins(self).y)
+	# As tall as its text: wrapped lines settle after the first frames.
+	var h: float = get_combined_minimum_size().y
+	if offset_bottom - offset_top != h:
+		offset_bottom = offset_top + h

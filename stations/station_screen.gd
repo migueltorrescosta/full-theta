@@ -327,8 +327,11 @@ func _process(delta: float) -> void:
 	flash.update(now)
 	critical.update(now)
 	if critical.visible:
-		var area: Rect2 = _main.get_global_rect()
-		critical.place(Rect2(area.position - get_global_rect().position, area.size))
+		# Over the focused panel's view, clear of its rails (a phone's, a tablet's).
+		var p: StationPanel = focused_panel()
+		var area: Rect2 = p.view_rect()
+		area.position += p.global_position - global_position
+		critical.place(area)
 	var left: Dictionary = ctx.crew.shares_left(now)
 	# A phone shows request chips only at the top of the view (ux-13); elsewhere, the strip.
 	if phone:
