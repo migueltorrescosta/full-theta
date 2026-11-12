@@ -9,7 +9,7 @@ extends Control
 ## (`ammo_next`), Fire at mark (`fire_guided`), the Aim stick at the lower corner (`aim_x`,
 ## `aim_y`). Right rail: Fire all (held: `fire_all`), Claim or Release (the screen's `claim`,
 ## only with 2+ players at Weapons), FIRE (held: `fire`) at the lower corner. Upright the rails
-## are one bottom bar, the Mount buttons and the right half's (with Ammo and Fire at mark) in
+## are one bottom bar, the Mount buttons, Ammo and Fire at mark and the right half's buttons in
 ## grids. The panel keeps its own target line and mount line; the radar is an inset (C14).
 
 ## FIRE's least size in the bottom bar, px.
@@ -72,8 +72,7 @@ func _build_left() -> void:
 	ammo_button.pressed.connect(_panel.touch_press.bind("ammo_next"))
 	guided_button = _button("Guided", TouchText.of("weapons.touch_guided", "Fire at mark"))
 	guided_button.pressed.connect(_panel.touch_press.bind("fire_guided"))
-	if not portrait:
-		dock.left.add(_group([ammo_button, guided_button]))
+	dock.left.add(_group([ammo_button, guided_button]))
 	dock.left.add_spacer()
 	aim.label = TouchText.of("touch.weapons.aim", "Aim")
 	aim.name = "Aim"
@@ -88,11 +87,7 @@ func _build_right() -> void:
 	fire_all_button.held.connect(_panel.touch_hold.bind("fire_all"))
 	claim_button = _button("Claim", "")
 	claim_button.pressed.connect(_panel.touch_claim)
-	# (upright the bar's halves are short: Ammo and Fire at mark join the right half's grid)
-	var group: Array = [fire_all_button, claim_button]
-	if portrait:
-		group = [ammo_button, guided_button] + group
-	dock.right.add(_group(group))
+	dock.right.add(_group([fire_all_button, claim_button]))
 	share_home.name = "ShareHome"
 	dock.right.add(share_home)
 	dock.right.add_spacer()

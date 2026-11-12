@@ -327,8 +327,9 @@ func _fill_pages(box: VBoxContainer) -> void:
 		var ids: Array = PAGE_IDS[p]
 		if ids.is_empty():
 			continue
-		# An odd last button takes the whole row: its label fits on one line (C3).
-		var odd: bool = ids.size() % 2 == 1
+		# On its side an odd last button goes beside the glyph (Fly) or takes the whole row: its
+		# label fits (C3); upright the zone is wide and short, the old grid keeps the big glyph.
+		var odd: bool = ids.size() % 2 == 1 and not portrait
 		var grid: GridContainer = _grid(ids.slice(0, ids.size() - 1) if odd else ids, 2, p)
 		box.add_child(grid)
 		parts[p].append(grid)
