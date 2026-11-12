@@ -37,7 +37,7 @@ var alert_style: Dictionary = Palette.alert(0)
 var chip: Button = Button.new()
 var sound: SoundToggle = SoundToggle.new()
 var picker: PopupPanel = PopupPanel.new()
-## The phone's bar (#28 follow-up, design 1.2, set_phone): the menu button, the compact
+## The phone's bar (#28 follow-up, design 1.2, apply): the menu button, the compact
 ## status, the station's page tabs, the alert chip and the timer in one row; the ship name
 ## and Sound move into the menu.
 var menu_button: RailButton = RailButton.make("☰")
@@ -46,12 +46,20 @@ var tabs: PageTabs = PageTabs.new()
 var phone: bool = false
 ## Full screen, an icon at the right of the bar (D323); shown where the device offers it.
 var fullscreen: FullscreenToggle = FullscreenToggle.new()
+## The ship this player watches after a handover (its crew's ship is out, D91), or "": the
+## bar names it (R24-18): "Watching Heron" in place of the ship name, and on a phone (whose
+## bar has no name) the ship in place of the goal under the timer.
+var watching: String = "":
+	set(value):
+		watching = value
+		_raw = []
+		_shown = []
 
 var _row: HBoxContainer
 ## The rows' box: 8 px in from each edge; a phone's row starts at the top edge, so its
 ## 48 px targets keep UiTheme.TOUCH_GAP above the content under the bar.
 var _box: VBoxContainer
-## The phone's second row: hull, shields and reactor (set_compact).
+## The second row of a narrow bar: hull, shields and reactor (apply).
 var _row2: HBoxContainer = HBoxContainer.new()
 var _compact: bool = false
 ## Every control of the row in order, to put them back after the compact row.
@@ -69,7 +77,8 @@ var _phone_row: HBoxContainer = HBoxContainer.new()
 var _phone_timer: Label = Label.new()
 ## The shape beside a banded hull, shields and reactor (BandBadge), by status key.
 var _badges: Dictionary = {}
-## What show_state last showed, to skip unchanged frames.
+## What show_state last got and last showed, to skip unchanged frames.
+var _raw: Array = []
 var _shown: Array = []
 
 
@@ -159,17 +168,23 @@ func _init() -> void:
 func _fit_timer() -> void:
 	var w: float = TIMER_W_NARROW if fullscreen.visible else TIMER_W
 	var fs: int = TIMER_SIZE
-	if _goal_short != "":
+	var second: String = _second_line()
+	if second != "":
 		# The goal line ("2 foes") is never cut (w5): beside the full-screen icon (a 390 px
 		# bar, no room to spare) the cell's text gets smaller first, then the cell widens.
 		var font: Font = _phone_timer.get_theme_font("font")
-		var need: float = font.get_string_size(_goal_short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var need: float = font.get_string_size(second, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		if fullscreen.visible and need > w:
 			fs = TIMER_SIZE_NARROW
-			need = font.get_string_size(_goal_short, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			need = font.get_string_size(second, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		w = maxf(w, ceilf(need))
 	_phone_timer.add_theme_font_size_override("font_size", fs)
 	_phone_timer.custom_minimum_size.x = w
+
+
+## The phone timer cell's second line: the watched ship (R24-18), else the short goal.
+func _second_line() -> String:
+	return watching if watching != "" else _goal_short
 
 
 ## The bar's extra height for the goal row: none on a phone.
@@ -184,17 +199,24 @@ func show_goal(text: String, short: String = "") -> void:
 	_goal_short = short
 
 
-## The phone's one-row bar (design 1.2): menu, status, tabs, alert chip, timer; `height`
-## is the bar's. Off, the bar is as before (set_compact still applies).
-func set_phone(on: bool, height: float = HEIGHT) -> void:
+## Lays the bar out for the screen's form (R13-15, one call in place of two order-dependent
+## setters): a phone's one row (design 1.2: menu, status, tabs, alert chip, timer; the ship
+## name and Sound move into the menu, the labels read at 13 px), else one row, or `two_rows`
+## with hull, shields and reactor on the second (D195). `height` is one row's; at more than
+## HEIGHT the chip and Sound are that tall (tap targets).
+func apply(form: LayoutMode.Form, two_rows: bool, height: float = HEIGHT) -> void:
+	var on_phone: bool = LayoutMode.is_phone(form)
+	_rows_for(two_rows and not on_phone, height, on_phone)
+	_phone_for(on_phone, height)
+
+
+func _phone_for(on: bool, height: float) -> void:
 	var size_now: Vector2 = Vector2(UiTheme.TOUCH_PRIMARY, height - 8.0)
 	menu_button.custom_minimum_size = size_now
 	if on:
 		chip.custom_minimum_size = size_now
 	if on == phone:
 		return
-	if on:
-		set_compact(false, height, true)
 	phone = on
 	_box.offset_top = 0.0 if on else 8.0
 	_row.visible = not on
@@ -203,7 +225,6 @@ func set_phone(on: bool, height: float = HEIGHT) -> void:
 	if on:
 		chip.reparent(_phone_row, false)
 		_phone_row.move_child(chip, _phone_row.get_child_count() - 2)
-		chip.custom_minimum_size = size_now
 		chip.text = ""
 		fullscreen.reparent(_phone_row, false)
 	else:
@@ -211,19 +232,15 @@ func set_phone(on: bool, height: float = HEIGHT) -> void:
 		_row.move_child(chip, _order.find(chip))
 		fullscreen.reparent(_row, false)
 		_row.move_child(fullscreen, _order.find(fullscreen))
-		_shown = []
+	_raw = []
+	_shown = []
 	chip.queue_redraw()
 
 
-## The phone's top bar (D195): hull, shields and reactor move to a second row, and the
-## chip and sound button are `height` tall (a tap target). `height` is one row's.
-func set_compact(compact: bool, height: float = HEIGHT, small: bool = false) -> void:
-	if phone:
-		return
+func _rows_for(compact: bool, height: float, small: bool) -> void:
 	chip.custom_minimum_size = Vector2(0.0, height - 8.0)
 	sound.custom_minimum_size = Vector2(0.0, height - 8.0) if height > HEIGHT else Vector2.ZERO
 	_row.add_theme_constant_override("separation", 10 if compact else 18)
-	# A phone's bar reads at 13 px so a row holds its labels.
 	_stations.visible = not small
 	for l: Label in [_name, _hull, _shields, _pips, _stations, _timer]:
 		if small:
@@ -261,17 +278,33 @@ func show_state(
 	maxes: Dictionary = {},
 	summaries: Dictionary = {}
 ) -> void:
+	# The raw inputs first: between two snapshots nothing is formatted or translated (R20-13).
+	var raw: Array = [
+		ship_name, status, alert, stations, int(mission_s), focused, maxes, summaries, _goal_short
+	]
+	if raw == _raw:
+		return
+	_raw = [
+		ship_name,
+		status.duplicate(true),
+		alert,
+		stations.duplicate(),
+		int(mission_s),
+		focused,
+		maxes.duplicate(),
+		summaries.duplicate(true),
+		_goal_short
+	]
 	var hull: String = _text(status, "hull", summaries, float(maxes.get("hull", 0.0)))
 	var shields: String = _text(status, "shields", summaries, float(maxes.get("shields", 0.0)))
 	var pips: String = _text(status, "pips_used", summaries)
-	var state: Array = [ship_name, hull, shields, pips, alert, stations.duplicate()]
-	for key: String in _badges:
-		state.append(summaries.get(key, {}).get("band", -1))
-	state.append_array([int(mission_s), focused, _goal_short])
+	# Then what shows: a hull that moved less than the bar's rounding changes no label.
+	var state: Array = [ship_name, hull, shields, pips, alert, raw[3], raw[7], raw[4], focused]
+	state.append(_goal_short)
 	if state == _shown:
 		return
 	_shown = state
-	_name.text = ship_name
+	_name.text = ship_name if watching == "" else tr("topbar.watching") % watching
 	_hull.text = tr("topbar.hull") % hull
 	_shields.text = tr("topbar.shields") % shields
 	_pips.text = tr("topbar.reactor") % pips
@@ -296,7 +329,8 @@ func show_state(
 	_stations.text = " + ".join(names)
 	var secs: int = int(mission_s)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
-	_phone_timer.text = _timer.text if _goal_short == "" else "%s\n%s" % [_timer.text, _goal_short]
+	var second: String = _second_line()
+	_phone_timer.text = _timer.text if second == "" else "%s\n%s" % [_timer.text, second]
 	_fit_timer()
 	glance.set_values(
 		_fill(status, "hull", summaries, float(maxes.get("hull", 0.0))),

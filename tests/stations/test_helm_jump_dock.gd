@@ -137,7 +137,7 @@ func test_h_docks_and_undocks() -> void:
 	var toasts: Array = _toasts()
 	_tap_key("H")
 	assert_array(_cmds("helm_dock")).is_empty()
-	assert_array(toasts).contains(["toast.dock_select"])
+	assert_array(toasts).contains(["toast.dock_none"])
 	_ctx().crew.select("site", ASIDE)
 	_tap_key("H")
 	assert_array(_cmds("helm_dock")).is_empty()

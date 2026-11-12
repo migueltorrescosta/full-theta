@@ -88,9 +88,7 @@ func test_turret_mount_list_lead_and_ammo() -> void:
 	assert_bool(p.focused).is_true()
 	assert_bool(s.radar.is_visible_in_tree()).is_true()
 	assert_int(p.mount_count()).is_equal(1)
-	assert_array(WeaponsReadout.mount_rows(p)).is_equal(
-		["> 1 bow · ready · heat 15% · 380/400 · you"]
-	)
+	assert_array(WeaponsReadout.mount_rows(p)).is_equal(["1 bow · ready · heat 15% · 380/400"])
 	s.ctx.crew.claims["mount:0"] = {"session": 99, "name": "Bo"}
 	assert_str(WeaponsReadout.mount_rows(p)[0]).ends_with("· Bo")
 	s.ctx.crew.claims.erase("mount:0")

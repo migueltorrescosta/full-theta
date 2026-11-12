@@ -33,17 +33,32 @@ var _explained: bool = false
 
 
 ## Shrinks `b`'s text, down to MIN_FONT, until it fits the button (a long word in a half
-## rail button, a longer language).
+## rail button, a longer language); a button that wraps its text fits its longest word.
 static func fit_text(b: Button) -> void:
 	b.remove_theme_font_size_override("font_size")
 	var font: Font = b.get_theme_font("font")
 	var room: float = b.size.x - b.get_theme_stylebox("normal").get_minimum_size().x
 	var fs: int = b.get_theme_font_size("font_size")
-	while (
-		fs > MIN_FONT and font.get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room
-	):
+	var parts: PackedStringArray = [b.text]
+	if b.autowrap_mode != TextServer.AUTOWRAP_OFF:
+		parts = b.text.split(" ", false)
+	while fs > MIN_FONT and _widest(font, parts, fs) > room:
 		fs -= 1
 	b.add_theme_font_size_override("font_size", fs)
+
+
+static func _widest(font: Font, parts: PackedStringArray, fs: int) -> float:
+	var w: float = 0.0
+	for part: String in parts:
+		w = maxf(w, font.get_string_size(part, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+	return w
+
+
+## Lets `b`'s text take two lines where one doesn't fit (a verb and its object in a half rail
+## button, C3); fit_text then fits its longest word.
+static func wrap(b: Button) -> void:
+	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	b.clip_text = false
 
 
 ## A rail button with `text` and `role`.

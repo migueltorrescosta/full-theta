@@ -52,13 +52,14 @@ const TEXTS: Dictionary = {
 	"shield": "Shield",
 	"nav": "Nav",
 	"radar_title": "Radar",
-	"face": "Face",
-	"align": "Align",
-	"dock": "Dock",
-	"jump": "Jump",
+	"face": "Face target",
+	"align": "Roll to target",
+	"dock": "Dock here",
+	"undock": "Leave dock",
+	"jump": "Jump to target",
 	"chase_camera": "Chase",
 	"decoupled": "Decoupled",
-	"shield_track": "Track",
+	"shield_track": "Track target",
 	"range_in": "Range −",
 	"range_out": "Range +",
 	"roll_port": "‹ Roll",
@@ -109,11 +110,14 @@ var mode_slide: RailButton
 var pages: PageHost = PageHost.new()
 var crew: CrewPage
 var radar: DiscRadar
-## The Radar page's panel behind the radar (the overlay alpha, UiTheme.OVERLAY_ALPHA).
-var radar_box: PanelContainer
+## The radar's translucent panel (RadarInset): the Radar page on a phone, the corner inset
+## on a tablet while the screen's radar column is hidden (C14).
+var radar_box: RadarInset
 var layout: RailLayout
 ## Portrait: the block of controls under the view.
 var block: PanelContainer
+## Tablet: where the screen's share buttons go in the right rail (StationPanel.share_home).
+var share_home: VBoxContainer = null
 
 ## The setpoint the throttle asks for (share of speed_max), NAN while it shows the setpoint.
 var _target: float = NAN
@@ -132,19 +136,13 @@ func _init(p_panel: HelmPanel, sink: Callable, is_portrait: bool, is_tablet: boo
 	var assist: AssistDef = _assist()
 	if assist != null and assist.speed_max > 0.0:
 		throttle.min_value = assist.speed_min / assist.speed_max
+	# A finger on the radar selects there (the screen leaves it alone).
+	radar_box = RadarInset.new(panel.ctx)
+	radar = radar_box.radar
+	add_child(radar_box)
 	if tablet:
 		_build_tablet()
 		return
-	radar = DiscRadar.new()
-	radar.name = "Radar"
-	radar.gui_input.connect(_on_radar_input)
-	radar_box = PanelContainer.new()
-	radar_box.name = "RadarBox"
-	radar_box.theme_type_variation = "OverlayRail"
-	# A finger on the radar selects there (the screen leaves it alone).
-	radar_box.add_to_group(TouchInput.GROUP)
-	radar_box.add_child(radar)
-	add_child(radar_box)
 	crew = CrewPage.new(panel)
 	if portrait:
 		_build_portrait()
@@ -173,6 +171,8 @@ func _button(id: String, role: RailButton.Role = RailButton.Role.PLAIN) -> RailB
 			touch.button(b, id)
 	if not buttons.has(id):
 		buttons[id] = b
+	if id in ["face", "align", "shield_track", "dock", "jump"]:
+		RailButton.wrap(b)
 	b.resized.connect(RailButton.fit_text.bind(b))
 	return b
 
@@ -239,6 +239,10 @@ func _build_tablet() -> void:
 	throttle.size_flags_horizontal = Control.SIZE_FILL
 	var ids: Array = ["face", "align", "shield_track", "dock", "jump", "chase_camera", "decoupled"]
 	dock.right.add(_grid(ids, 4 if portrait else 2, PAGE_FLY))
+	# The screen's share buttons while its radar column is hidden (C14).
+	share_home = VBoxContainer.new()
+	share_home.name = "ShareHome"
+	dock.right.add(share_home)
 	dock.right.add_spacer()
 	slide = _stick("slide")
 	# Right stick: x strafes to starboard, up lifts (the pad's RS_X and -RS_Y).
@@ -303,10 +307,21 @@ func _fill_pages(box: VBoxContainer) -> void:
 	var parts: Array[Array] = []
 	for p: int in titles.size():
 		parts.append([])
-		if not (PAGE_IDS[p] as Array).is_empty():
-			var grid: GridContainer = _grid(PAGE_IDS[p], 2, p)
-			box.add_child(grid)
-			parts[p].append(grid)
+		var ids: Array = PAGE_IDS[p]
+		if ids.is_empty():
+			continue
+		# An odd last button takes the whole row: its label fits on one line (C3).
+		var odd: bool = ids.size() % 2 == 1
+		var grid: GridContainer = _grid(ids.slice(0, ids.size() - 1) if odd else ids, 2, p)
+		box.add_child(grid)
+		parts[p].append(grid)
+		if odd:
+			var last: RailButton = _button(ids[-1])
+			last.autowrap_mode = TextServer.AUTOWRAP_OFF
+			last.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			page_buttons[p][ids[-1]] = last
+			box.add_child(last)
+			parts[p].append(last)
 	crew.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_child(crew)
 	parts[PAGE_CREW].append(crew)
@@ -317,6 +332,22 @@ func _fill_pages(box: VBoxContainer) -> void:
 	# (Nav's six buttons leave the glyph no room.)
 	for p: int in [PAGE_FLY, PAGE_SHIELD, PAGE_RADAR]:
 		parts[p].append(ring)
+	# Under the Shield page's caption a little room, so its last line's descenders keep the
+	# rail's 8 px gap to the Slide stick (w-dcc).
+	var pad: Control = Control.new()
+	pad.name = "CaptionPad"
+	pad.custom_minimum_size.y = ShieldRing.CAPTION_GAP
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(pad)
+	parts[PAGE_SHIELD].append(pad)
+	# Nav has no glyph to fill the zone: a spacer keeps the Slide stick at the thumb (its
+	# rare buttons hide, C3).
+	var rest: Control = Control.new()
+	rest.name = "NavRest"
+	rest.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	rest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(rest)
+	parts[PAGE_NAV].append(rest)
 	parts[PAGE_RADAR].append(radar_box)
 	for p: int in titles.size():
 		pages.add_page(titles[p], parts[p])
@@ -398,11 +429,13 @@ func view_bottom_inset() -> float:
 ## Every frame: the throttle, the ring, the radar and the lit mode buttons.
 func update(ring: ShieldRing) -> void:
 	_drive_throttle()
-	if not tablet:
+	if tablet:
+		_place_corner_radar()
+	else:
 		_place_radar()
-		if radar_box.is_visible_in_tree():
-			radar.set_picture(panel.ctx.picture(), panel.ctx.crew.selection, panel.ctx)
 		_place_ring(ring)
+	radar_box.refresh()
+	_show_rare()
 	var h: Dictionary = panel.helm_block()
 	var on: Dictionary = {
 		"shield_track": int(h.get("shield_track", -1)) >= 0,
@@ -431,6 +464,32 @@ func _place_radar() -> void:
 	radar_box.position = free.position.round()
 	radar_box.size = free.size.round()
 	panel.hud.visible = not radar_box.visible
+
+
+## The rare actions show only when they can work (C3, ux-07; the rest keep their places):
+## Dock near a dock (Leave dock while docked), Jump with a jump target selected.
+func _show_rare() -> void:
+	var docked: bool = panel.at_dock()
+	var dock_text: String = text("undock" if docked else "dock")
+	var can_dock: bool = docked or panel.near_dock() >= 0 or panel.lesson_wants("dock")
+	var can_jump: bool = panel.has_jump_target() or panel.lesson_wants("jump")
+	for page: Dictionary in page_buttons:
+		if page.has("dock"):
+			var b: RailButton = page["dock"]
+			b.visible = can_dock
+			if b.text != dock_text:
+				b.text = dock_text
+		if page.has("jump"):
+			(page["jump"] as RailButton).visible = can_jump
+
+
+## A tablet: the radar in the view's top right corner while the screen hides its radar column
+## (Helm alone, C14); a joint view keeps the column and no inset.
+func _place_corner_radar() -> void:
+	var s: StationScreen = panel.screen()
+	radar_box.visible = s != null and not s.layout.side_shown()
+	if radar_box.visible:
+		radar_box.place(RadarInset.corner_rect(Rect2(Vector2.ZERO, size)))
 
 
 ## The ring: tappable with its caption on the Shield page, a glyph that takes no taps
@@ -472,14 +531,3 @@ func _drive_throttle() -> void:
 		touch.axis("helm_surge", 0.0)
 		_target = NAN
 	throttle.value = setpoint / assist.speed_max
-
-
-## Radar taps select (the screen leaves taps on the radar to it).
-func _on_radar_input(event: InputEvent) -> void:
-	var mb: InputEventMouseButton = event as InputEventMouseButton
-	if mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
-		return
-	var item: Dictionary = radar.item_at(mb.position)
-	if not item.is_empty() and item["kind"] != "point":
-		panel.ctx.crew.select(item["kind"], item["id"])
-		radar.accept_event()

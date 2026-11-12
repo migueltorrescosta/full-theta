@@ -519,8 +519,26 @@ func _layout() -> Array[Dictionary]:
 			fixed,
 			_view().grow(-CHIP_MARGIN),
 			Rect2(c - Vector2(rim, rim * tilt), Vector2(rim, rim * tilt) * 2.0),
-			blip_r() + 3.0
+			blip_r() + 3.0,
+			selection_rings(out)
 		)
+	return out
+
+
+## The box of the selection's range ring (FT-SPA-008) in `layout`, for the chips to keep off
+## its line; none without a selection.
+func selection_rings(layout: Array[Dictionary]) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	for e: Dictionary in layout:
+		if e["selected"]:
+			var rel: Vector3 = e["rel"]
+			var px: float = (
+				minf(Vector2(rel.x, rel.z).length(), RANGES_M[range_index])
+				* disc_radius()
+				/ RANGES_M[range_index]
+			)
+			var h: Vector2 = Vector2(px, px * sin(deg_to_rad(tilt_deg)))
+			out.append(Rect2(disc_centre() - h, h * 2.0))
 	return out
 
 
@@ -540,7 +558,11 @@ func small() -> bool:
 
 
 ## Small radar: each chip (the selected item's first) takes the first free spot of right,
-## left, above and below its blip; a chip with no free spot is left out unless selected.
+## left, above, below and the four corners of its blip, clear of the clock numbers, the range
+## and site boxes, the own ship, every blip, the other items' stems and the chips placed
+## before it; a chip with no
+## free spot is left out unless selected, which then takes the spot covering only other chips,
+## else only blips, else the first (w-dcc).
 func _place_small(entries: Array[Dictionary], font: Font) -> void:
 	var v: Rect2 = _view().grow(-CHIP_MARGIN)
 	if v.size.x <= 0.0 or v.size.y <= 0.0:
@@ -550,14 +572,18 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 			e["callout_rect"] = Rect2(e["pos"], Vector2.ZERO)
 		return
 	var c: Vector2 = disc_centre()
-	var taken: Array[Rect2] = []
-	var numerals: Array = _numerals(font, c, RANGES_M[range_index]).values()
-	taken.append_array(numerals)
-	taken.append_array([_range_rect(), _site_rect()])
-	taken.append(_own_box())
+	var fixed: Array[Rect2] = []
+	fixed.assign(_numerals(font, c, RANGES_M[range_index]).values())
+	fixed.append_array([_range_rect(), _site_rect(), _own_box()])
 	var half: Vector2 = Vector2(blip_r(), blip_r()) + Vector2(3, 3)
+	var blips: Array[Rect2] = []
 	for e: Dictionary in entries:
-		taken.append(Rect2((e["pos"] as Vector2) - half, half * 2.0))
+		var p: Vector2 = e["pos"]
+		blips.append(Rect2(p - half, half * 2.0))
+		if not e["beyond"]:
+			var f: Vector2 = e["foot"]
+			e["stem"] = Rect2(minf(f.x, p.x) - 1.0, minf(f.y, p.y), 2.0, absf(f.y - p.y))
+	var chips_at: Array[Rect2] = []
 	var order: Array[Dictionary] = entries.duplicate()
 	order.sort_custom(
 		func(a: Dictionary, b: Dictionary) -> bool:
@@ -568,36 +594,58 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 			continue
 		var sz: Vector2 = CalloutLayout.text_size(font, e["callout"], FONT_SIZE)
 		var p: Vector2 = e["pos"]
-		var spots: Array[Vector2] = [
-			Vector2(p.x + half.x + 1.0, p.y - sz.y / 2.0),
-			Vector2(p.x - half.x - 1.0 - sz.x, p.y - sz.y / 2.0),
-			Vector2(p.x - sz.x / 2.0, p.y - half.y - sz.y),
-			Vector2(p.x - sz.x / 2.0, p.y + half.y),
-		]
-		var pick: Rect2 = Rect2()
-		for at: Vector2 in spots:
-			var r: Rect2 = Rect2(at, sz)
-			if not v.encloses(r):
-				continue
-			if taken.all(func(o: Rect2) -> bool: return not o.intersects(r)):
-				pick = r
-				break
+		var gap: Vector2 = half + Vector2.ONE
+		var spots: Array[Rect2] = []
+		for at: Vector2 in [
+			Vector2(p.x + gap.x, p.y - sz.y / 2.0),
+			Vector2(p.x - gap.x - sz.x, p.y - sz.y / 2.0),
+			Vector2(p.x - sz.x / 2.0, p.y - gap.y - sz.y),
+			Vector2(p.x - sz.x / 2.0, p.y + gap.y),
+			Vector2(p.x + gap.x, p.y - gap.y - sz.y),
+			Vector2(p.x - gap.x - sz.x, p.y - gap.y - sz.y),
+			Vector2(p.x + gap.x, p.y + gap.y),
+			Vector2(p.x - gap.x - sz.x, p.y + gap.y),
+		]:
+			spots.append(Rect2(at, sz))
+		var others: Array[Rect2] = []
+		for o: Dictionary in entries:
+			if not is_same(o, e) and o.has("stem"):
+				others.append(o["stem"])
+		var pick: Rect2 = _first_clear(spots, v, [fixed, blips, others, chips_at])
 		if not pick.has_area() and _is_selected(e["item"]):
-			# The selection's chip always shows: the first spot, kept inside the view, that
-			# clears the range numerals.
-			for at: Vector2 in spots:
-				var r: Rect2 = Rect2(at.clamp(v.position, (v.end - sz).max(v.position)), sz)
-				if not pick.has_area():
-					pick = r
-				if numerals.all(func(o: Rect2) -> bool: return not o.intersects(r)):
-					pick = r
-					break
+			# The selection's chip always shows: kept inside the view, over as little as can be.
+			var inside: Array[Rect2] = []
+			for r: Rect2 in spots:
+				inside.append(Rect2(r.position.clamp(v.position, (v.end - sz).max(v.position)), sz))
+			pick = _first_clear(inside, v, [fixed, blips])
+			if not pick.has_area():
+				pick = _first_clear(inside, v, [fixed])
+			if not pick.has_area():
+				pick = inside[0]
 		if pick.has_area():
-			taken.append(pick)
+			chips_at.append(pick)
 			e["callout_rect"] = pick
 		else:
 			e["callout"] = ""
 			e["callout_rect"] = Rect2(p, Vector2.ZERO)
+
+
+## The first of `spots` inside `v` that overlaps no box of `groups`, or an empty Rect2.
+static func _first_clear(spots: Array[Rect2], v: Rect2, groups: Array) -> Rect2:
+	for r: Rect2 in spots:
+		if not v.encloses(r):
+			continue
+		var clear: bool = true
+		for group: Array[Rect2] in groups:
+			for o: Rect2 in group:
+				if o.intersects(r):
+					clear = false
+					break
+			if not clear:
+				break
+		if clear:
+			return r
+	return Rect2()
 
 
 ## The own ship's box (px), which no chip covers.

@@ -31,8 +31,6 @@ const FIRE_H: float = 88.0
 ## Combat numbers (the mount card, the mount list) at 14 px; labels at 13 px.
 const FONT_NUM: int = 14
 const FONT_LABEL: int = 13
-## How far (px) a tap on the radar reaches for a blip.
-const RADAR_REACH: float = 24.0
 ## A mount list row and its Claim button (px).
 const ROW_H: float = 56.0
 const ROW_CLAIM_W: float = 88.0
@@ -55,7 +53,7 @@ var target_label: Label = Label.new()
 ## The disc radar inset, or null upright in a joint view (the screen's radar shows there).
 var radar: DiscRadar = null
 ## The radar's backing panel (the radar's place), or null.
-var radar_box: PanelContainer = null
+var radar_box: RadarInset = null
 ## The landscape rail, else null.
 var layout: RailLayout = null
 ## The pages (also the panel's `pages`).
@@ -154,8 +152,13 @@ func read_top(overlay: Control) -> float:
 ## Texts, states and places from the panel, once a frame.
 func refresh() -> void:
 	var p: WeaponsPanel = _panel
+	# Upright the mount card stays under the thumb except on Mounts, whose list has the same
+	# card (w-dcc).
+	mount_button.visible = layout != null or pages.current != Page.MOUNTS
 	mount_button.text = WeaponsStatus.mount_text(p, p.mount)
 	_heat_colour(mount_button, WeaponsStatus.heat_role(p, p.mount))
+	# Claim only while another player sits at Weapons too (C3).
+	claim_button.visible = p.shared()
 	claim_button.text = WeaponsStatus.claim_text(p, p.mount)
 	claim_button.disabled = not p.is_usable(p.mount)
 	claim_button.role = RailButton.Role.ACCENT if p.is_mine(p.mount) else RailButton.Role.PLAIN
@@ -163,8 +166,8 @@ func refresh() -> void:
 	ammo_button.text = WeaponsReadout.ammo_name(p) + " ▸"
 	# (no target line on a phone: the frame's selection bar names the target)
 	target_label.text = ""
-	if radar != null:
-		radar.set_picture(p.ctx.picture(), p.ctx.crew.selection, p.ctx)
+	if radar_box != null:
+		radar_box.refresh()
 	if mount_list.visible:
 		_refresh_rows()
 	_place()
@@ -201,6 +204,7 @@ func _refresh_rows() -> void:
 			var claim: RailButton = RailButton.make("")
 			claim.name = "Claim%d" % (i + 1)
 			claim.custom_minimum_size = Vector2(ROW_CLAIM_W, ROW_H)
+			RailButton.wrap(claim)
 			claim.add_theme_font_size_override("font_size", FONT_LABEL)
 			claim.pressed.connect(_claim_row.bind(i))
 			var row: HBoxContainer = HBoxContainer.new()
@@ -217,6 +221,7 @@ func _refresh_rows() -> void:
 		_heat_colour(look, WeaponsStatus.heat_role(p, i))
 		look.role = RailButton.Role.ACCENT if i == p.mount else RailButton.Role.PLAIN
 		look.disabled = not p.is_usable(i)
+		claim.visible = p.shared()
 		claim.text = WeaponsStatus.claim_text(p, i)
 		claim.disabled = not p.is_usable(i)
 
@@ -246,14 +251,18 @@ func _make_buttons() -> void:
 	mount_button.pressed.connect(_panel.touch_press.bind("mount_next"))
 	claim_button = RailButton.make("")
 	claim_button.name = "Claim"
+	# ("Claim mount", "Release mount": a verb and its object on two lines, C3)
+	RailButton.wrap(claim_button)
 	claim_button.pressed.connect(_panel.touch_claim)
 	ammo_button = RailButton.make("")
 	ammo_button.name = "Ammo"
 	ammo_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ammo_button.clip_text = false
 	ammo_button.pressed.connect(_panel.touch_press.bind("ammo_next"))
-	guided_button = RailButton.make(TouchText.of("weapons.touch_guided", "Guided"))
+	guided_button = RailButton.make(TouchText.of("weapons.touch_guided", "Fire at mark"))
 	guided_button.name = "Guided"
+	guided_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	guided_button.clip_text = false
 	guided_button.pressed.connect(_panel.touch_press.bind("fire_guided"))
 	fire_all_button = RailButton.make(TouchText.of("weapons.touch_fire_all", "Fire all"))
 	fire_all_button.name = "FireAll"
@@ -284,22 +293,9 @@ func _make_overlays(with_radar: bool) -> void:
 	target_label.visible = false
 	overlays.add_child(target_label)
 	if with_radar:
-		radar_box = PanelContainer.new()
-		radar_box.name = "RadarInset"
-		radar_box.theme_type_variation = "OverlayRail"
 		# A finger on the inset is the radar's (select, range), never the screen's fire.
-		radar_box.add_to_group(TouchInput.GROUP)
-		# The disc fills its panel (the rail's padding would shrink it to fewer chips).
-		var bg: StyleBoxFlat = StyleBoxFlat.new()
-		bg.bg_color = Color(Palette.color("panel"), UiTheme.OVERLAY_ALPHA)
-		bg.border_color = Palette.color("line_strong")
-		bg.set_border_width_all(UiTheme.BORDER)
-		bg.set_corner_radius_all(4)
-		bg.set_content_margin_all(0.0)  # the border must not shrink the disc
-		radar_box.add_theme_stylebox_override("panel", bg)
-		radar = DiscRadar.new()
-		radar.gui_input.connect(_on_radar_input)
-		radar_box.add_child(radar)
+		radar_box = RadarInset.new(_panel.ctx)
+		radar = radar_box.radar
 		overlays.add_child(radar_box)
 	mount_list.name = "MountList"
 	mount_list.theme_type_variation = "OverlayRail"
@@ -424,17 +420,6 @@ func _place() -> void:
 	mount_list.size = Vector2(minf(LIST_W, list.size.x), minf(list.size.y, need))
 
 
-## A finger on the radar inset selects the nearest blip (the screen never sees taps on it);
-## the range label still steps the range through the emulated mouse.
-func _on_radar_input(event: InputEvent) -> void:
-	var t: InputEventScreenTouch = event as InputEventScreenTouch
-	if t == null or t.pressed:
-		return
-	var item: Dictionary = radar.item_at(t.position, RADAR_REACH)
-	if not item.is_empty() and item["kind"] != "point":
-		_panel.ctx.crew.select(item["kind"], item["id"])
-
-
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
 ## one right rail over a full-width view; each box's text is "Name: what" (`help.weapons.*`).
 static func touch_help() -> Array:
@@ -464,6 +449,8 @@ static func touch_help() -> Array:
 	for page: Array in [["page.fire", fire], ["page.mounts", mounts], ["page.crew", crew]]:
 		var boxes: Array = []
 		for c: Array in page[1]:
-			boxes.append(TouchText.named(c[0], TouchText.t("help.weapons." + str(c[1]))))
+			# (the radar's text is Helm's too, R05-13)
+			var key: String = "help.radar" if c[1] == "radar" else "help.weapons." + str(c[1])
+			boxes.append(TouchText.named(c[0], TouchText.t(key)))
 		out.append({"page": TouchText.t(page[0]), "boxes": boxes})
 	return out

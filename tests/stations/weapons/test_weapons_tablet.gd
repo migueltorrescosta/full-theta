@@ -34,6 +34,10 @@ func _open(size: Vector2i, kind: int = LayoutMode.Kind.TOUCH) -> void:
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("weapons", SETTINGS)
+	# Two players at Weapons: Claim shows (C3).
+	ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+		{"name": "Ana", "seat": "weapons"}, {"name": "Bo", "seat": "weapons"}
+	]
 	ctx.crew.claims["mount:0"] = {"session": StationFixture.SESSION, "name": "Ana"}
 	ctx.crew.select("contact", StationFixture.U3)
 	_screen = auto_free(StationScreen.new())
@@ -94,9 +98,10 @@ func _audit_ok(report: Dictionary, what: String) -> void:
 	assert_array(StationFixture.rule_breaks(report, what)).is_empty()
 
 
-# FT: FT-STN-005
-# The dock: two opaque docked rails, no pages, no banner, no phone frame; the top bar and
-# the screen's radar stay clear of them, in both orientations; the aim pad covers the view.
+# FT: FT-STN-005, FT-WPN-002
+# The dock: two opaque docked rails, no pages, no banner, no phone frame; the top bar stays
+# clear of them, in both orientations; the aim pad covers the view. No radar column (C14): the
+# radar is an inset at the view's top right, over the aim pad.
 func test_rails_dock_and_leave_the_screen_unobstructed() -> void:
 	for size: Vector2i in SIZES:
 		await _open(size)
@@ -113,11 +118,19 @@ func test_rails_dock_and_leave_the_screen_unobstructed() -> void:
 		for r: TouchRail in [dock.left, dock.right]:
 			var rect: Rect2 = r.get_global_rect()
 			assert_bool(rect.intersects(_screen.top_bar.get_global_rect())).is_false()
-			assert_bool(rect.intersects(_screen.radar.get_global_rect())).is_false()
 			assert_bool(rect.intersects(_panel().get_global_rect())).is_false()
-		assert_bool(_screen.radar.is_visible_in_tree()).is_true()
+		assert_bool(_screen.radar.is_visible_in_tree()).override_failure_message(what).is_false()
 		assert_bool(_ui().pad.is_visible_in_tree()).is_true()
-		assert_bool(_panel().get_global_rect().encloses(_ui().pad.get_global_rect())).is_true()
+		var view: Rect2 = _panel().get_global_rect()
+		assert_bool(view.encloses(_ui().pad.get_global_rect())).is_true()
+		var inset: RadarInset = _ui().radar_box
+		assert_bool(inset.is_visible_in_tree()).override_failure_message(what).is_true()
+		var box: Rect2 = inset.get_global_rect()
+		assert_bool(view.encloses(box)).override_failure_message(what).is_true()
+		assert_float(view.end.x - box.end.x).is_less_equal(UiTheme.TOUCH_GAP + 1.0)
+		assert_float(box.position.y - view.position.y).is_less_equal(UiTheme.TOUCH_GAP + 1.0)
+		assert_bool(inset.get_index() > _ui().pad.get_index()).is_true()
+		assert_object(_panel().radar_inset()).is_same(inset)
 		_vp.queue_free()
 
 
@@ -145,8 +158,9 @@ func test_tap_audit_passes_in_both_orientations() -> void:
 	for size: Vector2i in SIZES:
 		await _open(size)
 		_audit_ok(TapAudit.check(_screen.tablet_dock), "rails %s" % size)
-		# Mount 1 (one mount), Ammo, Guided, Fire all, Claim, FIRE and the Aim stick.
-		assert_int(TapAudit.targets(_screen.tablet_dock).size()).is_equal(7)
+		# Ammo, Fire at mark, Fire all, Claim, FIRE and the Aim stick (one mount: no Mount
+		# buttons, C3).
+		assert_int(TapAudit.targets(_screen.tablet_dock).size()).is_equal(6)
 		_audit_ok(TapAudit.check(_screen), "screen %s" % size)
 		_vp.queue_free()
 
@@ -156,14 +170,29 @@ func test_button_taps_send_what_their_keys_send() -> void:
 	for size: Vector2i in [SIZES[0], SIZES[1]]:
 		await _open(size)
 		_heard.clear()
-		_tap(_ui().mount_buttons[0])
 		_tap(_ui().ammo_button)
 		_tap(_ui().guided_button)
 		_tap(_ui().claim_button)
-		assert_array(_heard).is_equal(["mount_1", "ammo_next", "fire_guided", "claim"])
-		# One mount: Mount 2 to 4 have no button.
-		for i: int in range(1, 4):
+		assert_array(_heard).is_equal(["ammo_next", "fire_guided", "claim"])
+		# One mount: no Mount button at all (there is nothing to switch to, C3).
+		for i: int in range(4):
 			assert_bool(_ui().mount_buttons[i].visible).is_false()
+		_vp.queue_free()
+
+
+# FT: FT-STN-005
+# C3: Claim shows only while 2+ players sit at Weapons (alone, a free mount fires unclaimed),
+# and then the read-out's hint names it.
+func test_claim_shows_only_with_two_players_at_weapons() -> void:
+	for size: Vector2i in [SIZES[0], SIZES[1]]:
+		await _open(size)
+		assert_bool(_ui().claim_button.is_visible_in_tree()).is_true()
+		_screen.ctx.crew.claims.clear()
+		assert_str(WeaponsReadout.hint(_panel())).is_not_empty()
+		_screen.ctx.crew.lobby[StationFixture.SHIP]["seats"] = [{"name": "Ana", "seat": "weapons"}]
+		_panel().step(0.0)
+		assert_bool(_ui().claim_button.is_visible_in_tree()).is_false()
+		assert_str(WeaponsReadout.hint(_panel())).is_empty()
 		_vp.queue_free()
 
 
