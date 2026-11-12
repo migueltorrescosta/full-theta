@@ -24,7 +24,7 @@ func test_shows_every_field() -> void:
 	assert_str(bar._name.text).is_equal("Kestrel")
 	assert_str(bar._hull.text).is_equal("Hull 813")
 	assert_str(bar._shields.text).is_equal("Shields 299")
-	assert_str(bar._pips.text).is_equal("Reactor pips 6")
+	assert_str(bar._pips.text).is_equal("Power 6")
 	assert_str(bar._timer.text).is_equal("02:05")
 	bar.show_state("Kestrel", {}, 0, [], 0.0)
 	assert_str(bar._hull.text).is_equal("Hull -")
@@ -117,7 +117,7 @@ func test_cells_the_station_cannot_see_are_hidden() -> void:
 # FT: FT-STN-001
 # w5: the phone timer's goal line ("2 foes") is never cut, beside the full-screen icon too.
 func test_phone_goal_line_fits_its_cell() -> void:
-	bar.set_phone(true)
+	bar.apply(LayoutMode.Form.PHONE_LANDSCAPE, false)
 	bar.fullscreen.visible = true
 	for lang: String in I18n.LANGUAGES:
 		I18n.apply(lang)
@@ -133,3 +133,36 @@ func test_phone_goal_line_fits_its_cell() -> void:
 			need
 		)
 	I18n.apply("en")
+
+
+# FT: FT-STN-001
+# R13-15: one apply() per layout; a phone turned back into a desktop bar gets its desktop
+# fonts and the station names again (the old setters skipped that when called in order).
+func test_apply_undoes_the_phone_bar() -> void:
+	bar.apply(LayoutMode.Form.PHONE_LANDSCAPE, false, 48.0)
+	assert_bool(bar.phone).is_true()
+	assert_bool(bar._name.has_theme_font_size_override("font_size")).is_true()
+	bar.apply(LayoutMode.Form.DESKTOP, true)
+	assert_bool(bar.phone).is_false()
+	assert_bool(bar._name.has_theme_font_size_override("font_size")).is_false()
+	assert_bool(bar._stations.visible).is_true()
+	assert_object(bar._hull.get_parent()).is_same(bar._row2)
+	bar.apply(LayoutMode.Form.DESKTOP, false)
+	assert_object(bar._hull.get_parent()).is_same(bar._row)
+
+
+# FT: FT-MIS-030
+# R24-18: after a handover the bar names the ship the player watches: in place of the ship
+# name on a desktop, beside the glance on a phone.
+func test_names_the_watched_ship() -> void:
+	bar.watching = "Heron"
+	bar.show_state("Heron", {"hull": 1.0}, 0, [], 0.0)
+	assert_str(bar._name.text).is_equal("Watching Heron")
+	assert_bool(bar._watch.visible).is_false()
+	bar.apply(LayoutMode.Form.PHONE_PORTRAIT, false, 48.0)
+	assert_bool(bar._watch.is_visible_in_tree()).is_true()
+	assert_str(bar._watch.text).is_equal("Watching Heron")
+	bar.watching = ""
+	assert_bool(bar._watch.visible).is_false()
+	bar.show_state("Kestrel", {"hull": 1.0}, 0, [], 0.0)
+	assert_str(bar._name.text).is_equal("Kestrel")

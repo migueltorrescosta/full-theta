@@ -160,12 +160,15 @@ static func target_chip(p: WeaponsPanel, it: Dictionary) -> String:
 
 
 ## The claim hint under the read-outs while this client doesn't hold the camera mount: how
-## to claim it when free, who holds it when not; "" when it is ours.
+## to claim it when free and another player sits at Weapons (alone, a free mount needs no
+## claim, C3), who holds it when not; "" when it is ours.
 static func hint(p: WeaponsPanel) -> String:
 	var holder: Dictionary = p.holder(p.mount)
 	if p.is_mine(p.mount):
 		return ""
 	if holder.is_empty():
+		if not p.shared():
+			return ""
 		if p.tablet() != null:
 			# Touch rails: the Claim button, not a key.
 			return p.tr("weapons.hint_claim_touch")

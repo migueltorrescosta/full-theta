@@ -254,6 +254,12 @@ func _draw() -> void:
 		return
 	_draw_reticle()
 	var all: Array[Dictionary] = markers()
+	var inset: Rect2 = _inset_rect().grow(10.0)
+	if inset.has_area():
+		# A tablet's radar inset (C14) shows what sits under it: no marker under the panel.
+		all = all.filter(
+			func(e: Dictionary) -> bool: return not (e["on_screen"] and inset.has_point(e["pos"]))
+		)
 	_placed.clear()
 	_labels.clear()
 	for e: Dictionary in all:
@@ -641,17 +647,27 @@ static func _marker_box(p: Vector2, r: float) -> Rect2:
 	return Rect2(p - Vector2(r, r) * 1.3, Vector2(r, r) * 2.6)
 
 
-## What marker labels keep clear of: the panel's shield ring (with its caption), the target
-## compass (with its chip) and the flight read-out.
+## What marker labels keep clear of: the panel's shield ring (with its caption), a tablet's
+## radar inset, the target compass (with its chip) and the flight read-out.
 func reserved() -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	if _ring_rect().has_area():
 		out.append(_ring_rect().grow(2.0))
+	if _inset_rect().has_area():
+		out.append(_inset_rect().grow(2.0))
 	out.append_array(compass_boxes())
 	# The flight read-out: mode, speed, active modes and the three bars.
 	out.append(readout_rect())
 	out.append(thrust_rect())
 	return out
+
+
+## A tablet's radar inset in this HUD's coordinates while it shows (C14), else empty.
+func _inset_rect() -> Rect2:
+	if panel == null or not panel.radar_inset_rect().has_area():
+		return Rect2()
+	var xf: Transform2D = get_global_transform().affine_inverse() * panel.get_global_transform()
+	return xf * panel.radar_inset_rect()
 
 
 ## The shield ring's box in this HUD's coordinates while it sits on the view, else empty.

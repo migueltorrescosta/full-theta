@@ -64,13 +64,14 @@ static func show_fire(p: WeaponsPanel, button: RailButton, i: int) -> void:
 		button.role = role
 
 
-## The Claim button's text for mount i: ticked while this client holds it, the holder's name
-## while another does; one button in one place, whatever the state.
+## The Claim button's text for mount i: Release while this client holds it (the button lit),
+## the holder's name while another does; one button in one place, whatever the state. It shows
+## only while 2+ players sit at Weapons (WeaponsPanel.shared, C3).
 static func claim_text(p: WeaponsPanel, i: int) -> String:
 	if p.is_mine(i):
-		return TouchText.of("weapons.touch_claim_held", "✓ Claim")
+		return TouchText.of("weapons.touch_claim_held", "Release mount")
 	if p.is_usable(i):
-		return TouchText.of("weapons.touch_claim", "Claim")
+		return TouchText.of("weapons.touch_claim", "Claim mount")
 	return p.holder_name(i)
 
 

@@ -394,7 +394,7 @@ func test_a_tap_on_the_radar_page_selects() -> void:
 	mb.button_index = MOUSE_BUTTON_LEFT
 	mb.pressed = true
 	mb.position = at
-	_ui()._on_radar_input(mb)
+	_ui().radar_box._on_radar_input(mb)
 	assert_bool(_ctx().crew.is_selected("contact", target["id"])).is_true()
 
 

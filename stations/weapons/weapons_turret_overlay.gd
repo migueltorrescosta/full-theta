@@ -47,6 +47,7 @@ func layout_targets() -> void:
 	var phone: bool = (
 		_p.tablet() != null or (_p.is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(_p)))
 	)
+	var inset: Rect2 = _inset()
 	for it: Dictionary in _p.ctx.picture().items:
 		if it["kind"] == "point":
 			continue
@@ -67,6 +68,13 @@ func layout_targets() -> void:
 		if phone and at.x + sz.x > size.x:
 			at.x = (p as Vector2).x - BRACKET - 6.0 - sz.x
 		at.x = maxf(at.x, 2.0)
+		if inset.has_area():
+			# A tablet's radar inset (C14) covers the brackets under it; a chip that would run
+			# under it goes to the bracket's left.
+			if inset.grow(BRACKET).has_point(p as Vector2):
+				continue
+			if Rect2(at, sz).intersects(inset):
+				at.x = maxf((p as Vector2).x - BRACKET - 6.0 - sz.x, 2.0)
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
 		targets.append(
 			{
@@ -175,7 +183,14 @@ func arc_warning_rect(font: Font, arc: String) -> Rect2:
 			get_global_transform().affine_inverse() * (_p.get_global_transform() * _p.view_rect())
 		)
 		r.position = Vector2(view.get_center().x - sz.x / 2.0, touch.read_top(self))
+	var inset: Rect2 = _inset()
+	if inset.has_area() and r.intersects(inset.grow(UiTheme.TOUCH_GAP)):
+		# Centred in the view left of a tablet's radar inset (C14).
+		var room: float = inset.position.x - UiTheme.TOUCH_GAP
+		r.position.x = maxf((room - sz.x) / 2.0, UiTheme.TOUCH_GAP)
 	var keep_clear: Array[Rect2] = []
+	if inset.has_area():
+		keep_clear.append(inset)
 	for t: Dictionary in targets:
 		keep_clear.append(t["rect"])
 	if touch != null and touch.target_label.text != "":
@@ -230,6 +245,11 @@ func _draw_turret(font: Font) -> void:
 			[base + turn * 12.0, base - turn * 4.0 + side * 9.0, base - turn * 4.0 - side * 9.0]
 		)
 		draw_colored_polygon(clear_of(arrow, _mount_list_rect()), Palette.color("warn"))
+
+
+## A tablet's radar inset in this overlay's coordinates while it shows (C14), else empty.
+func _inset() -> Rect2:
+	return _p.tablet().radar_rect_in(self) if _p.tablet() != null else Rect2()
 
 
 ## `arrow` moved down under `cover` when the cover would hide it (the phone's mount list,

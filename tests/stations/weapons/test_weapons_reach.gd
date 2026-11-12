@@ -52,6 +52,10 @@ func _screen(size: Vector2i, insets: Array) -> StationScreen:
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("weapons", SETTINGS)
+	# Two players at Weapons: Claim shows (C3).
+	ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+		{"name": "Ana", "seat": "weapons"}, {"name": "Bo", "seat": "weapons"}
+	]
 	ctx.crew.claims["mount:0"] = {"session": StationFixture.SESSION, "name": "Ana"}
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)

@@ -36,6 +36,9 @@ var share_slot: Container = null
 ## Off a phone, where a full_screen() panel alone (the radar column hidden) puts the screen's
 ## share buttons, or null (#35 A11, D217).
 var share_home: Container = null
+## The share buttons' width (px) in share_home, at the touch sizes (a tablet's rail, C14); 0
+## keeps the column's width and sizes.
+var share_home_width: float = 0.0
 ## Height (px) at the bottom of the panel that the screen's joint switch and Share opener
 ## cover on a phone on its side (#28); a hand-drawn view keeps its read-outs above it.
 var bottom_reserve: float = 0.0
@@ -94,10 +97,11 @@ func sync_tablet(dock: TabletDock, want: bool, drop: Callable, make: Callable) -
 	want = want and s != null
 	var portrait: bool = want and LayoutMode.portrait(s.size)
 	if dock != null and (not want or dock.portrait != portrait):
+		# (the rails go first: the screen's relayout then sees the panel without them)
+		drop.call()
 		if s != null and s.tablet_dock == dock:
 			s.set_tablet_dock(null)
 		dock.queue_free()
-		drop.call()
 		ctx.matcher.release_all()
 		dock = null
 	if want and dock == null:

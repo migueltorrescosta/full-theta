@@ -98,6 +98,21 @@ func _tap(b: Control) -> void:
 	_touch(b, b.size / 2.0, false)
 
 
+## A dockable site whose zone holds the ship: Dock shows (C3).
+func _near_dock() -> void:
+	_screen.ctx.snap.sites = [
+		{
+			"id": 0,
+			"name_key": "Yard",
+			"kind": &"station",
+			"dockable": true,
+			"radius": 3000.0,
+			"pos": StationFixture.OWN_POS + Vector3(0.0, 0.0, -1000.0)
+		}
+	]
+	_screen.ctx.interp.revision += 1
+
+
 func _key(name: String, pressed: bool = true) -> void:
 	var k: InputEventKey = InputEventKey.new()
 	k.physical_keycode = OS.find_keycode_from_string(name)
@@ -116,7 +131,8 @@ func _apart(a: Rect2, b: Rect2) -> bool:
 
 # FT: FT-STN-005
 # The dock: two opaque docked rails, no pages, no banner, no phone frame; the top bar, the
-# radar column, the shield ring and the HUD stay clear of them, in both orientations.
+# shield ring and the HUD stay clear of them, in both orientations. No radar column (C14):
+# the radar is an inset at the view's top right, the ring under it.
 func test_rails_dock_and_leave_the_screen_unobstructed() -> void:
 	for size: Vector2i in SIZES:
 		await _open(size)
@@ -134,9 +150,22 @@ func test_rails_dock_and_leave_the_screen_unobstructed() -> void:
 		for r: TouchRail in [dock.left, dock.right]:
 			var rect: Rect2 = r.get_global_rect()
 			assert_bool(_apart(rect, _screen.top_bar.get_global_rect())).is_true()
-			assert_bool(_apart(rect, _screen.radar.get_global_rect())).is_true()
 			assert_bool(_apart(rect, _panel.get_global_rect())).is_true()
-		assert_bool(_screen.radar.is_visible_in_tree()).is_true()
+		assert_bool(_screen.radar.is_visible_in_tree()).override_failure_message(what).is_false()
+		var inset: Rect2 = _ui().radar_box.get_global_rect()
+		var view: Rect2 = _panel.get_global_rect()
+		assert_bool(_ui().radar_box.is_visible_in_tree()).override_failure_message(what).is_true()
+		assert_bool(view.encloses(inset)).override_failure_message(what).is_true()
+		assert_float(view.end.x - inset.end.x).is_less_equal(UiTheme.TOUCH_GAP + 1.0)
+		(
+			assert_bool(_apart(inset, _panel.ring.get_global_rect()))
+			. override_failure_message(what)
+			. is_true()
+		)
+		# A view about 672 px wide on a 1024 px tablet (C14).
+		assert_float(view.size.x).is_equal_approx(
+			size.x - 2.0 * TabletDock.RAIL_W if size.x > size.y else size.x, 1.0
+		)
 		assert_bool(_panel.ring.is_visible_in_tree()).is_true()
 		assert_object(_panel.ring.get_parent()).is_same(_panel)
 		assert_bool(_panel.hud.visible).is_true()
@@ -179,8 +208,9 @@ func test_tap_audit_passes_in_both_orientations() -> void:
 		await _open(size)
 		_audit_ok(TapAudit.check(_screen.tablet_dock), "rails %s" % size)
 		var targets: int = TapAudit.targets(_screen.tablet_dock).size()
-		# Seven buttons, two sticks, the throttle, All stop and Approach.
-		assert_int(targets).is_equal(12)
+		# Five buttons (Dock and Jump hide: no dock near, no jump target, C3), two sticks, the
+		# throttle, All stop and Approach.
+		assert_int(targets).is_equal(10)
 		_audit_ok(TapAudit.check(_screen), "screen %s" % size)
 		_vp.queue_free()
 		_screen = null
@@ -190,9 +220,13 @@ func test_tap_audit_passes_in_both_orientations() -> void:
 func test_button_taps_send_what_their_keys_send() -> void:
 	for size: Vector2i in [SIZES[0], SIZES[1]]:
 		await _open(size)
-		_screen.ctx.crew.select("contact", StationFixture.H2)
-		await _frames(1)
+		_near_dock()
 		for id: String in KEYS:
+			# (Jump shows with a jump target selected, C3)
+			_screen.ctx.crew.select(
+				"site" if id == "jump" else "contact", 0 if id == "jump" else StationFixture.H2
+			)
+			await _frames(1)
 			StationFixture.sent(_screen.ctx).sent.clear()
 			var chase: bool = _panel.chase
 			_key(KEYS[id])
@@ -326,3 +360,64 @@ func test_hud_read_outs_keep_apart() -> void:
 				)
 		_vp.queue_free()
 		_screen = null
+
+
+# FT: FT-STN-005, FT-SPA-007
+# R05-10: the corner inset takes a finger like the phone's radar: lifted on a blip it selects
+# it; the mouse a finger emulates does not select a second time.
+func test_a_finger_on_the_corner_inset_selects() -> void:
+	await _open(Vector2i(1024, 768))
+	var inset: RadarInset = _ui().radar_box
+	assert_bool(inset.is_visible_in_tree()).is_true()
+	var radar: DiscRadar = inset.radar
+	_screen.ctx.crew.selection = {}
+	var at: Vector2 = Vector2(-1.0, -1.0)
+	for x: int in range(0, int(radar.size.x), 4):
+		for y: int in range(0, int(radar.size.y), 4):
+			var item: Dictionary = radar.item_at(Vector2(x, y))
+			if at.x < 0.0 and not item.is_empty() and item["kind"] == "contact":
+				at = Vector2(x, y)
+	assert_float(at.x).is_greater_equal(0.0)
+	var mb: InputEventMouseButton = InputEventMouseButton.new()
+	mb.button_index = MOUSE_BUTTON_LEFT
+	mb.pressed = true
+	mb.position = at
+	mb.device = InputEvent.DEVICE_ID_EMULATION
+	inset._on_radar_input(mb)
+	assert_bool(_screen.ctx.crew.selection.is_empty()).is_true()
+	var t: InputEventScreenTouch = InputEventScreenTouch.new()
+	t.position = at
+	t.pressed = false
+	inset._on_radar_input(t)
+	assert_bool(_screen.ctx.crew.selection.is_empty()).is_false()
+
+
+# FT: FT-HLM-013, FT-HLM-016
+# C3 (ux-07): Dock shows only near a dock (Leave dock while docked) and Jump only with a jump
+# target selected; the other buttons keep their order.
+func test_dock_and_jump_show_only_when_they_can_work() -> void:
+	await _open(SIZES[0])
+	_screen.ctx.crew.select("contact", StationFixture.H2)
+	await _frames(1)
+	assert_bool(_ui().buttons["dock"].visible).is_false()
+	assert_bool(_ui().buttons["jump"].visible).is_false()
+	_near_dock()
+	_screen.ctx.crew.select("site", 0)
+	await _frames(1)
+	assert_bool(_ui().buttons["dock"].visible).is_true()
+	assert_str(_ui().buttons["dock"].text).is_equal("Dock here")
+	assert_bool(_ui().buttons["jump"].visible).is_true()
+	# Dock here docks at the site whose zone holds the ship, selected or not.
+	_screen.ctx.crew.select("contact", StationFixture.H2)
+	StationFixture.sent(_screen.ctx).sent.clear()
+	_tap(_ui().buttons["dock"])
+	assert_int(_cmds("helm_dock").back()["site_id"]).is_equal(0)
+	_screen.ctx.snap.blocks[StationCatalogue.Section.HELM]["docked_site"] = 0
+	await _frames(1)
+	assert_str(_ui().buttons["dock"].text).is_equal("Leave dock")
+	var order: Array[String] = []
+	for b: Node in _ui().buttons["face"].get_parent().get_children():
+		order.append(String(b.name))
+	assert_array(order).is_equal(
+		["face", "align", "shield_track", "dock", "jump", "chase_camera", "decoupled"]
+	)

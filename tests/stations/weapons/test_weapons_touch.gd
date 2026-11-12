@@ -31,6 +31,10 @@ func _screen(size: Vector2i, insets: Array, mine: bool = true) -> StationScreen:
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("weapons", SETTINGS)
+	# Two players at Weapons: Claim shows (C3).
+	ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+		{"name": "Ana", "seat": "weapons"}, {"name": "Bo", "seat": "weapons"}
+	]
 	if mine:
 		ctx.crew.claims["mount:0"] = {"session": StationFixture.SESSION, "name": "Ana"}
 	ctx.crew.select("contact", StationFixture.U3)
@@ -162,7 +166,7 @@ func test_phone_landscape_one_right_rail() -> void:
 		assert_bool(rail.encloses(b.get_global_rect())).is_true()
 	assert_bool(t.mount_list.is_visible_in_tree()).is_false()
 	assert_str(t.mount_button.text).is_equal("1 bow · ready\nheat 15% cool\n380/400 rounds")
-	assert_str(t.claim_button.text).is_equal("✓ Claim")
+	assert_str(t.claim_button.text).is_equal("Release mount")
 	assert_str(t.ammo_button.text).is_equal("Mass driver ▸")
 	# No target line on a phone: the selection bar shows U3, read-outs under its row.
 	assert_bool(t.target_label.visible).is_false()
@@ -337,7 +341,7 @@ func test_mount_list_looks_and_claims() -> void:
 	var look: RailButton = t.rows[0][0]
 	var claim: RailButton = t.rows[0][1]
 	assert_str(look.text).is_equal("1 bow · ready\nheat 15% cool · 380/400 rounds")
-	assert_str(claim.text).is_equal("Claim")
+	assert_str(claim.text).is_equal("Claim mount")
 	_tap(look)
 	assert_array(heard).is_equal(["mount_1"])
 	_tap(claim)

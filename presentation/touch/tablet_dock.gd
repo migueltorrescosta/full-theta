@@ -46,6 +46,12 @@ func _init(is_portrait: bool = false, bar: float = 0.0) -> void:
 		add_child(r)
 
 
+## A side rail's width inside its padding (px; the DockedRail panel's 4 px each side): what a
+## control filling the rail gets.
+static func inner_width() -> float:
+	return RAIL_W - 8.0
+
+
 ## True when a window of `dp` device-independent px is big enough for a dock.
 static func fits(dp: Vector2) -> bool:
 	return minf(dp.x, dp.y) >= MIN_SIDE

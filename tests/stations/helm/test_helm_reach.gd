@@ -63,6 +63,18 @@ func _open(size: Vector2i, insets: Array) -> void:
 	_screen.setup(ctx)
 	_vp.add_child(_screen)
 	_panel = _screen.panels[0] as HelmPanel
+	# A dockable site whose zone holds the ship: Dock shows (C3).
+	ctx.snap.sites = [
+		{
+			"id": 0,
+			"name_key": "Yard",
+			"kind": &"station",
+			"dockable": true,
+			"radius": 3000.0,
+			"pos": StationFixture.OWN_POS + Vector3(0.0, 0.0, -1000.0)
+		}
+	]
+	ctx.interp.revision += 1
 	await _frames()
 	var sink: Callable = _ui().touch.sink
 	_ui().touch.sink = func(ev: Dictionary) -> void:
@@ -121,6 +133,9 @@ func _blip() -> Vector2:
 func _reach(row: Array) -> int:
 	_ui().pages.current = HelmTouch.PAGE_FLY
 	_screen.ctx.crew.select("contact", StationFixture.H2)
+	if row[2] == "jump":
+		# Jump shows with a jump target selected (C3).
+		_screen.ctx.crew.select("site", 0)
 	await _frames(1)
 	_fired.clear()
 	StationFixture.sent(_screen.ctx).sent.clear()

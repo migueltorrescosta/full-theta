@@ -29,6 +29,10 @@ func _screen(mine: bool, select: bool = true) -> StationScreen:
 	_vp.size = Vector2i(844, 390)
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("weapons", SETTINGS)
+	# Two players at Weapons: Claim shows (C3).
+	ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+		{"name": "Ana", "seat": "weapons"}, {"name": "Bo", "seat": "weapons"}
+	]
 	if mine:
 		ctx.crew.claims["mount:0"] = {"session": StationFixture.SESSION, "name": "Ana"}
 	if select:
@@ -115,11 +119,11 @@ func test_a_free_mount_still_fires_and_a_held_one_says_so() -> void:
 func test_claim_is_one_button_in_every_state() -> void:
 	var mine: StationScreen = await _screen(true)
 	var t: WeaponsTouch = _frame(mine)
-	assert_str(t.claim_button.text).is_equal("✓ Claim")
+	assert_str(t.claim_button.text).is_equal("Release mount")
 	assert_int(t.claim_button.role).is_equal(RailButton.Role.ACCENT)
 	var free: StationScreen = await _screen(false)
 	t = _frame(free)
-	assert_str(t.claim_button.text).is_equal("Claim")
+	assert_str(t.claim_button.text).is_equal("Claim mount")
 	assert_bool(t.claim_button.disabled).is_false()
 	var other: StationScreen = await _screen(false)
 	other.ctx.crew.claims["mount:0"] = {"session": StationFixture.SESSION + 1, "name": "Bo"}

@@ -96,9 +96,10 @@ func _mode_changed() -> void:
 	_apply_form()
 
 
-## Focused on a phone the panel draws its own radar inset and takes the whole screen (#28).
+## Focused on a phone the panel draws its own radar inset and takes the whole screen (#28);
+## on a tablet with its rails too (C14).
 func full_screen() -> bool:
-	return focused and mount_count() > 0 and phone_form() >= 0
+	return focused and mount_count() > 0 and (phone_form() >= 0 or _tablet != null)
 
 
 ## The view's free part: beside the rail on its side, the view above the controls upright.
@@ -166,10 +167,14 @@ func _apply_tablet() -> void:
 		func() -> void:
 			remove_child(_tablet)
 			_tablet.queue_free()
-			_tablet = null,
+			_tablet = null
+			share_home = null
+			share_home_width = 0.0,
 		func(portrait: bool) -> TabletDock:
 			_tablet = WeaponsTablet.new(self, portrait)
 			add_child(_tablet)
+			share_home = _tablet.share_home
+			share_home_width = TabletDock.inner_width()
 			return _tablet.dock
 	)
 	if dock != null:
@@ -179,6 +184,13 @@ func _apply_tablet() -> void:
 ## The tablet arrangement, or null (tests and shots).
 func tablet() -> WeaponsTablet:
 	return _tablet
+
+
+## The radar inset over the view (a phone's, or a tablet's corner one, C14), or null.
+func radar_inset() -> RadarInset:
+	if _touch != null:
+		return _touch.radar_box
+	return _tablet.radar_box if _tablet != null else null
 
 
 ## The phone arrangement, or null (tests and shots).
@@ -291,7 +303,8 @@ func item_at(screen_pos: Vector2) -> Dictionary:
 	if not focused:
 		return {}
 	var global: Vector2 = get_global_transform() * screen_pos
-	var radar: DiscRadar = _touch.radar if _touch != null else null
+	var inset: RadarInset = radar_inset()
+	var radar: DiscRadar = inset.radar if inset != null else null
 	if radar != null and radar.is_visible_in_tree() and radar.get_global_rect().has_point(global):
 		return radar.item_at(radar.get_global_transform().affine_inverse() * global)
 	var at: Vector2 = _overlay.get_global_transform().affine_inverse() * global
@@ -403,6 +416,17 @@ func mount_count() -> int:
 func mount_row(i: int) -> Dictionary:
 	var rows: Array = ctx.snap.blocks.get(StationCatalogue.Section.MOUNTS, {}).get("mounts", [])
 	return rows[i] if i < rows.size() else {}
+
+
+## Two or more players sit at Weapons on this ship (the seats of the lobby or fleet row whose
+## stations include Weapons): only then can a mount be someone else's, so Claim shows (C3;
+## a free mount fires without a claim, V29).
+func shared() -> bool:
+	var n: int = 0
+	for seat: Variant in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
+		if station in StationCatalogue.stations_of(str((seat as Dictionary).get("seat", ""))):
+			n += 1
+	return n >= 2
 
 
 func is_mine(i: int) -> bool:
