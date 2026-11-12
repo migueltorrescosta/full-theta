@@ -16,11 +16,10 @@ func _init(start: SimWorld) -> void:
 
 
 ## The M1 encounter on the shipped definitions, looked up by the ids a log records, at
-## its map period (the default when the log has none, D125). Logs recorded before D393 name
-## it "site_period".
+## its map period (the default when the log has none, D125).
 static func encounter(seed_value: int, setup: Dictionary, build: String) -> M1Encounter:
 	var lib: DefLibrary = DefLibrary.new()
-	var period: float = setup.get("map_period", setup.get("site_period", Kinematics.DEFAULT_PERIOD))
+	var period: float = setup.get("map_period", Kinematics.DEFAULT_PERIOD)
 	var enc: M1Encounter = M1Encounter.new(
 		seed_value, build, lib.ship(setup["player"]), lib.npc(setup["npc"]), period
 	)

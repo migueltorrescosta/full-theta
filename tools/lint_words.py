@@ -87,7 +87,6 @@ RULES: list[tuple[str, str, str, str, str]] = [
 ALLOW: list[tuple[str, str, str, str]] = [
     ("docs/protocol.md", "*", r"^Protocol version: ", "the version history names the wire names each version changed"),
     ("docs/spec/14-open-questions.md", "SessionRules", r"^- D350:", "tools/traceability.py copies D350's title, which docs/decisions.md keeps as history"),
-    ("tests/sim/replay/live_run.gd", "site_period", r"site_period", "reads replays recorded before D393, whose setup key was site_period"),
     # D396: a team is a lobby label; outside the sim a ship's team is still looked up by name.
     ("net/net_fleet.gd", "team_of", r"team_of", "the lobby's ship-to-team map, which the wire scoreboard and the winner's team use"),
     ("stations/crew_state.gd", "team_of", r"team_of", "the client's copy of the lobby's ship-to-team map"),
