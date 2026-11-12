@@ -51,6 +51,32 @@ sudo chown "$USER" ~/ft-tls/*.pem
 
 Players open `https://host.tailnet.ts.net:47800/` (the certificate's name, not the IP address). The certificate lasts 90 days; run `tailscale cert` again to renew it, then restart the server. A self-signed certificate works for tests, but each browser must accept it first.
 
+## Room hardware (OSC)
+
+**Send the ship's hits, jumps and alerts to the room's lights.** Start the server, or the client you host from, with `--osc` and the addresses of your QLC+, Node-RED or Arduino:
+
+```bash
+build/linux/full-theta.x86_64 -- --osc 192.168.1.30:7700,192.168.1.31:9000
+```
+
+The game sends OSC 1.0 over UDP to each address and never listens. It accepts only addresses on your own network (`10.x`, `172.16-31.x`, `192.168.x`, `169.254.x`, `127.x`), up to 8. Without `--osc` it sends nothing. `<id>` is the crewed ship's id: `0` in a one-ship game.
+
+| Address | Arguments | When |
+|---|---|---|
+| `/ft/ship/<id>/hit` | `1.0`, damage | the ship is hit; at most 10 a second |
+| `/ft/ship/<id>/jump` | `1.0` | the jump drive spools |
+| `/ft/ship/<id>/jump` | `0.0` | the ship arrives |
+| `/ft/ship/<id>/destroyed` | `1.0` | the ship is destroyed |
+| `/ft/ship/<id>/alert` | level / 2, level (int) | the crew changes the alert: 0 Normal, 1 Yellow, 2 Red |
+
+The first argument is always between 0 and 1, so QLC+ can map each address to a channel. Node-RED and Arduino sketches can read the rest. The rules are `OscEmitter` in `net/osc_emitter.gd` (D470, D471).
+
+> **Good to know:** a game hosted from the menu passes the client's `--osc` and `--packs` to its server, so start the client with the flags.
+
+## Content packs
+
+**Add ships and encounters from a JSON file.** Put pack files in a folder and start the server, or the client you host from, with `--packs` and that folder's absolute path. The format is in [packs.md](packs.md).
+
 ## Rejoin after a crash
 
 If the host's client dies, its server keeps running. On the next start the client asks about it (FT-NET-003): **Rejoin** reconnects as host to the same ship and pick, **End it** stops it, **Leave it running** keeps it. An abandoned server exits by itself after 10 minutes without players (`--idle-exit-min`). A joined player whose client dies presses **Rejoin last game** on the next start.

@@ -30,6 +30,12 @@ extends RefCounted
 ##   --no-beacon          don't broadcast on the LAN. A server bound to a loopback
 ##                        address never does: no other machine could join it.
 ##   --run-for S          quit after S seconds (smoke runs; 0 = run until killed).
+##   --osc LIST           send room hardware events as OSC over UDP to these LAN
+##                        addresses, IPv4:PORT[,IPv4:PORT...] (FT-NET-047, D470); off
+##                        without it. Outbound only: nothing listens.
+##   --packs DIR          load the data-only content packs (*.json) in DIR, an absolute
+##                        path (FT-DAT-015, D472); a bad pack stops the server with its
+##                        errors (FT-DAT-016). None without it.
 ##   --language LANG      the session's language, en, pt_PT or it [en]; the host picks it
 ##                        before launch and Welcome carries it (FT-AUD-013, D41).
 ##   --encounter NAME     what the world holds: run, the director's run (RunSetup on
@@ -111,6 +117,11 @@ var probe_warmup: float = 3.0
 var probe_window: float = 60.0
 var player_hull_scale: float = 1.0
 var encounter_name: String = "run"
+## --osc's targets and --packs' folder, or "" (off).
+var osc_targets: String = ""
+var packs_dir: String = ""
+## The packs loaded from packs_dir (make_server), or null.
+var packs: ContentPacks
 ## The station a joining host plays alone (--solo, D303), or "".
 var solo_station: String = ""
 ## Whether test flags (--m1-player-hull-scale, LOAD_FLAGS) are accepted: a debug build (the editor
@@ -192,8 +203,8 @@ func _set_value(flag: String, value: String) -> bool:
 			return false
 		encounter_name = value
 		return true
-	if flag == "--solo":
-		return _set_solo(value)
+	if flag in ["--solo", "--osc", "--packs"]:
+		return _set_extras(flag, value)
 	if flag == "--tls-cert" or flag == "--tls-key":
 		return _set_tls(flag, value)
 	return _set_flag(flag, value)
@@ -205,6 +216,20 @@ func _set_solo(value: String) -> bool:
 		return false
 	solo_station = value
 	encounter_name = "shakedown"
+	return true
+
+
+## --solo, --osc (checked now, built in make_server) and --packs (an absolute folder).
+func _set_extras(flag: String, value: String) -> bool:
+	if flag == "--solo":
+		return _set_solo(value)
+	if flag == "--osc":
+		osc_targets = value
+		return OscEmitter.from_list(value) != null
+	if not value.is_absolute_path():
+		push_error("--packs needs an absolute path")
+		return false
+	packs_dir = value
 	return true
 
 
@@ -301,6 +326,7 @@ func make_server() -> NetServer:
 	var enemy: NpcDef = defs.npc(&"m1_raider")
 	if player == null or enemy == null:
 		push_error("missing M1 definitions (m1_corvette, m1_raider)")
+	if player == null or enemy == null or not _load_packs(defs):
 		return null
 	if player_hull_scale != 1.0:
 		player = player.duplicate()
@@ -332,6 +358,8 @@ func make_server() -> NetServer:
 	server.training_setup = func() -> RunSetup: return run_setup(DefLibrary.new(), "shakedown")
 	server.training_driver = _training_factory
 	server.run_for = run_for
+	if osc_targets != "":
+		server.osc = OscEmitter.from_list(osc_targets)
 	if probe_out != "":
 		server.probe = LoadProbe.new(probe_out)
 		server.probe.expect_picks = probe_picks
@@ -366,6 +394,20 @@ func make_server() -> NetServer:
 	return server
 
 
+## Loads --packs' folder, if given, printing what loaded; false (each error pushed) when a
+## pack is refused (FT-DAT-016).
+func _load_packs(defs: DefLibrary) -> bool:
+	if packs_dir == "":
+		return true
+	packs = ContentPacks.load_dir(packs_dir, defs.npcs())
+	for e: String in packs.errors:
+		push_error("--packs: %s" % e)
+	if not packs.errors.is_empty():
+		return false
+	print("packs: %s" % (", ".join(packs.loaded) if not packs.loaded.is_empty() else "none"))
+	return true
+
+
 ## Server TLS options from a PEM certificate (chain) and key, or null (reported).
 static func load_tls(cert_path: String, key_path: String) -> TLSOptions:
 	var cert: X509Certificate = X509Certificate.new()
@@ -387,7 +429,13 @@ func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 	if run_def == null:
 		push_error("missing run definition for --encounter %s" % which)
 		return null
-	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.npcs())
+	var npcs: Dictionary[StringName, NpcDef] = defs.npcs()
+	if packs != null:
+		npcs.merge(packs.npcs)
+	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, npcs)
+	if packs != null:
+		for sc: Scenario in packs.scenarios:
+			setup.extra_scenarios.append(String(sc.meta().id))
 	setup.science = defs.science()
 	setup.conversations = ConversationLibrary.load_dir()
 	for path: String in DefLibrary.list_tres("res://content/modules"):
@@ -408,17 +456,26 @@ func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 
 
 ## Makes the director for a run when the first tick steps: the lobby's difficulty preset
-## picks its budget, the catalogue is the scenarios the run lists (E07, D81), and the
+## picks its budget, the catalogue is the scenarios the run lists (E07, D81) plus the
+## content packs' encounters (FT-DAT-015), and the
 ## session's mode keys it per faction (FleetDirector, #11, M4-Q1).
 func _director_factory(setup: RunSetup) -> Callable:
 	return func(difficulty: StringName) -> FleetDirector:
 		return FleetDirector.new(
 			setup.run_def.director,
 			difficulty,
-			ScenarioCatalogue.load_for(setup.run_def.scenarios),
+			catalogue(setup.run_def),
 			seed_value,
 			setup.rules.mode
 		)
+
+
+## The scenarios the director may pick: the ones the run lists, then the content packs'.
+func catalogue(run_def: RunDef) -> Array[Scenario]:
+	var out: Array[Scenario] = ScenarioCatalogue.load_for(run_def.scenarios)
+	if packs != null:
+		out.append_array(packs.scenarios)
+	return out
 
 
 ## The Shakedown's driver when the first tick steps (FT-MIS-039): its one scenario and the

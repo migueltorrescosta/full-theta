@@ -27,3 +27,5 @@ Scenario metadata (declared, not computed): id, tags, threat cost, duration esti
 - **FT-DAT-012** No EE code, scripts, text, data or assets shall enter the repository. (D2 note, D62)
 - **FT-DAT-013** All definitions shall use SI units. (v0.3 §3)
 - **FT-DAT-014** Ship definitions shall declare module slots, and each module definition shall declare its slot type and stat trade-offs. (D65, D86)
+- **FT-DAT-015** The host may load data-only content packs: JSON files that add NPC ships (a copy of a built-in NPC with changed numbers) and encounters (a wave of one NPC type), namespaced by pack id so they never replace built-in content; never `.pck`, `.tres` or scripts; read by the host only. (D472, D473, D474)
+- **FT-DAT-016** A pack shall be checked like the definitions (unknown keys, types, ranges and each NPC's validate()), and any error shall name the file and field and stop the server from starting. (D473)
