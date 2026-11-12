@@ -273,7 +273,7 @@ func _ask_text(crew: bool) -> String:
 	var left: float = 0.0
 	for w: Dictionary in ChipsReader.outgoing(screen.ctx.snap, [p.station]):
 		left = maxf(left, ChipsReader.left_s(screen.ctx.snap, w))
-	var text: String = tr("chip.ask")
+	var text: String = tr("chip.ask_button")
 	return "%s · %d s" % [text, ceili(left)] if left > 0.0 else text
 
 
