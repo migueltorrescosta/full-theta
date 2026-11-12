@@ -150,7 +150,7 @@ func test_command_items() -> void:
 		[pips, "pips:3", false],
 		[SetShieldCommand.new(), "shield", false],
 		[BoostCommand.new(), "boost", false],
-		[HelmSelectCommand.new(), "target", false],
+		[HelmSelectCommand.new(), "selection", false],
 	]
 	for row: Array in expect:
 		var item: String = StationBlocks.item_of(row[0])
@@ -161,16 +161,16 @@ func test_command_items() -> void:
 	assert_str(StationCatalogue.station_of_item("crew:1")).is_equal("engineering")
 	assert_str(StationCatalogue.station_of_item("flight")).is_equal("helm")
 	assert_str(StationCatalogue.station_of_item("pips:2")).is_equal("engineering")
-	assert_str(StationCatalogue.station_of_item("target")).is_equal("helm")
+	assert_str(StationCatalogue.station_of_item("selection")).is_equal("helm")
 	var data: Dictionary = {
 		"claims": {"flight": [1, "a"], "mount:0": [2, "b"], "crew:0": [3, "c"]},
-		"writers": {"pips:1": [3, "c"], "target": [1, "a"]},
+		"writers": {"pips:1": [3, "c"], "selection": [1, "a"]},
 	}
 	assert_dict(StationCatalogue.ownership_for("weapons", data)).is_equal(
 		{"claims": {"mount:0": [2, "b"]}, "writers": {}}
 	)
 	assert_dict(StationCatalogue.ownership_for("tactical", data)).is_equal(
-		{"claims": {"flight": [1, "a"], "mount:0": [2, "b"]}, "writers": {"target": [1, "a"]}}
+		{"claims": {"flight": [1, "a"], "mount:0": [2, "b"]}, "writers": {"selection": [1, "a"]}}
 	)
 	assert_dict(StationCatalogue.ownership_for("viewer", data)).is_equal(
 		{"claims": {}, "writers": {}}

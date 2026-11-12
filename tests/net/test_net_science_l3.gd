@@ -57,7 +57,7 @@ func _scanned(c: NetClient) -> bool:
 ## Seconds left of the faction's hack window on the enemy in the client's section.
 func _window_left(c: NetClient) -> float:
 	var rows: Array = _block(c).get("hacks", [])
-	return rows[0]["left"] if rows.size() == 1 and rows[0]["target"] == ENEMY else 0.0
+	return rows[0]["left"] if rows.size() == 1 and rows[0]["subject"] == ENEMY else 0.0
 
 
 # FT: FT-NET-022, FT-NET-023, FT-SCI-004

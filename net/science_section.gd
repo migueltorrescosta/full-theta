@@ -193,7 +193,7 @@ static func hacks(world: SimWorld, faction: int) -> Array:
 				rows
 				. append(
 					{
-						"target": h.subject_ship[r],
+						"subject": h.subject_ship[r],
 						"sub": h.subsystem[r],
 						"left": maxf(0.0, (h.until_tick[r] - world.tick) * SimWorld.DT),
 						"by": h.owner_ship[r],

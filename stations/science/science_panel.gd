@@ -380,7 +380,7 @@ func _blip_scale(b: Dictionary) -> Dictionary:
 
 func _hacks_on(contact: int) -> Array:
 	return block().get("hacks", []).filter(
-		func(h: Dictionary) -> bool: return int(h["target"]) == contact
+		func(h: Dictionary) -> bool: return int(h["subject"]) == contact
 	)
 
 

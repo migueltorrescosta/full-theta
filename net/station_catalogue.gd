@@ -314,7 +314,7 @@ const STATION_CLAIMS: Dictionary = {
 ## Station -> ship-wide controls: last writer wins, and snapshots name the last writer
 ## (FT-NET-044). A control is the name, or "name:index" (pips per subsystem kind).
 const STATION_CONTROLS: Dictionary = {
-	"helm": ["target"],
+	"helm": ["selection"],
 	"engineering": ["pips", "shield", "boost"],
 }
 ## Command kind -> [claim kind or control, the command field holding its index or ""].
@@ -335,7 +335,7 @@ const COMMAND_ITEMS: Dictionary = {
 	&"set_ammo_type": [CLAIM_MOUNT, "mount_index"],
 	&"dispatch_repair": [CLAIM_CREW, "crew"],
 	&"recall_repair": [CLAIM_CREW, "crew"],
-	&"helm_select": ["target", ""],
+	&"helm_select": ["selection", ""],
 	&"set_pips": ["pips", "subsystem_kind"],
 	&"set_shield": ["shield", ""],
 	&"boost": ["boost", ""],

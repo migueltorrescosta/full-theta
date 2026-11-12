@@ -8,7 +8,7 @@ extends RefCounted
 ## an open hack window (SCIENCE's hacks, FEEDS' windows).
 const RESIST_ROWS: Array = ["rows", [["type", "u32"], ["factor", "f32"]]]
 const HACK_ROWS: Array = [
-	"rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]
+	"rows", [["subject", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]
 ]
 ## Row kind of a hazard plane in a RELAY block's hazards (HazardRows builds them).
 const HAZARD_PLANE: int = 2
