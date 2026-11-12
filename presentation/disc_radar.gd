@@ -611,15 +611,15 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 		for o: Dictionary in entries:
 			if not is_same(o, e) and o.has("stem"):
 				others.append(o["stem"])
-		var pick: Rect2 = _first_clear(spots, v, [fixed, blips, others, chips_at])
+		var pick: Rect2 = _first_clear(spots, v, fixed + blips + others + chips_at)
 		if not pick.has_area() and _is_selected(e["item"]):
 			# The selection's chip always shows: kept inside the view, over as little as can be.
 			var inside: Array[Rect2] = []
 			for r: Rect2 in spots:
 				inside.append(Rect2(r.position.clamp(v.position, (v.end - sz).max(v.position)), sz))
-			pick = _first_clear(inside, v, [fixed, blips])
+			pick = _first_clear(inside, v, fixed + blips)
 			if not pick.has_area():
-				pick = _first_clear(inside, v, [fixed])
+				pick = _first_clear(inside, v, fixed)
 			if not pick.has_area():
 				pick = inside[0]
 		if pick.has_area():
@@ -630,20 +630,10 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 			e["callout_rect"] = Rect2(p, Vector2.ZERO)
 
 
-## The first of `spots` inside `v` that overlaps no box of `groups`, or an empty Rect2.
-static func _first_clear(spots: Array[Rect2], v: Rect2, groups: Array) -> Rect2:
+## The first of `spots` inside `v` that overlaps none of `taken`, or an empty Rect2.
+static func _first_clear(spots: Array[Rect2], v: Rect2, taken: Array) -> Rect2:
 	for r: Rect2 in spots:
-		if not v.encloses(r):
-			continue
-		var clear: bool = true
-		for group: Array[Rect2] in groups:
-			for o: Rect2 in group:
-				if o.intersects(r):
-					clear = false
-					break
-			if not clear:
-				break
-		if clear:
+		if v.encloses(r) and not taken.any(func(o: Rect2) -> bool: return o.intersects(r)):
 			return r
 	return Rect2()
 
