@@ -68,7 +68,9 @@ func add_file(path: String, builtin: Dictionary[StringName, NpcDef]) -> void:
 		return
 	var json: JSON = JSON.new()
 	if json.parse(FileAccess.get_file_as_string(path)) != OK:
-		errors.append("%s: line %d: %s" % [file, json.get_error_line() + 1, json.get_error_message()])
+		errors.append(
+			"%s: line %d: %s" % [file, json.get_error_line() + 1, json.get_error_message()]
+		)
 		return
 	add_pack(file, json.data, builtin)
 
