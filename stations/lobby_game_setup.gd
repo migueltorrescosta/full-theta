@@ -18,6 +18,10 @@ signal add_ship_requested
 const TEAM_LETTERS: Array[String] = ["A", "B"]
 ## A sheet narrower than this puts two mode buttons a row.
 const NARROW_SHEET: float = 600.0
+## A window shorter than this (a phone held sideways) puts the ships in two columns.
+const SHORT_SHEET: float = 500.0
+## The sheet's tabs, in order.
+const TAB_KEYS: Array[String] = ["lobby.mode_title", "lobby.ships", "lobby.difficulty_title"]
 
 ## The setup row: the Game setup button (host) and the summary line.
 var row: HBoxContainer
@@ -25,12 +29,12 @@ var setup_button: Button
 var summary: Label
 var _ctx: StationContext
 var _sheet: AcceptDialog
+var _tabs: TabContainer
 var _mode: ModePanel
 var _headings: Dictionary = {}
-var _ships: VBoxContainer
+var _ships: GridContainer
 var _add_ship: Button
 var _preset_buttons: Dictionary = {}
-var _preset_name: Label
 var _toggle_rows: VBoxContainer
 var _toggle_note: Label
 ## The host's saved set was sent to the server for this connection.
@@ -50,14 +54,6 @@ func _init(context: StationContext) -> void:
 	row.add_child(summary)
 
 
-## "Easy", or "Easy (custom)" for a set with a toggle changed (FT-PAIR-017, D92).
-static func preset_label(toggles: DataToggles) -> String:
-	var name: String = TranslationServer.translate("lobby.preset_" + toggles.preset)
-	if toggles.is_custom():
-		return TranslationServer.translate("lobby.preset_custom") % name
-	return name
-
-
 ## Whether a run has started on any ship: the toggles are locked from then on.
 func toggles_locked() -> bool:
 	for state: Dictionary in _ctx.crew.lobby.values():
@@ -71,14 +67,27 @@ func can_edit_toggles() -> bool:
 	return _ctx.crew.host and not toggles_locked()
 
 
-## The one-line summary everyone sees: the mode (with its win rule in TEAMS) and the
-## difficulty, "Co-op · Normal" (#37 C1).
+## The one-line summary everyone sees, in short words so it is never cut (#37 C1): the
+## mode's short name and the difficulty, with the number of toggles changed from its preset
+## ("Teams · Easy", "Co-op · Normal +2").
 func summary_text() -> String:
-	var mode: String = tr("mode." + _ctx.crew.mode())
-	if _ctx.crew.mode() == "teams":
-		var rule: String = tr("mode.win." + str(_ctx.crew.fleet.get("team_win", "")))
-		mode = tr("lobby.mode_rule") % [mode, rule]
-	return tr("lobby.summary") % [mode, preset_label(_ctx.crew.toggles)]
+	var mode: String = tr("lobby.short." + _ctx.crew.mode())
+	var toggles: DataToggles = _ctx.crew.toggles
+	var level: String = tr("lobby.preset_" + toggles.preset)
+	var changed: int = changed_count(toggles)
+	if changed > 0:
+		level = tr("lobby.preset_changed") % [level, changed]
+	return tr("lobby.summary") % [mode, level]
+
+
+## How many toggles differ from the set's preset.
+static func changed_count(toggles: DataToggles) -> int:
+	var base: DataToggles = DataToggles.of_preset(toggles.preset)
+	var n: int = 0
+	for id: StringName in DataToggles.ids():
+		if toggles.value(id) != base.value(id):
+			n += 1
+	return n
 
 
 static func _label(text: String, variation: String = "") -> Label:
@@ -104,60 +113,77 @@ func _heading(key: String, col: VBoxContainer) -> void:
 	col.add_child(l)
 
 
-## The Game setup sheet, added to `host`: mode, ships and teams, difficulty.
+## The Game setup sheet, added to `host`: three tabs, the mode, the ships and their teams
+## (shown only when there are teams or room for another ship), and the difficulty with its
+## data shortcuts. Each tab fits a phone held sideways; only the shortcut list scrolls.
 func add_dialogs(host: Node) -> void:
 	_sheet = AcceptDialog.new()
 	_sheet.name = "SetupDialog"
 	_sheet.title = tr("lobby.setup")
 	_sheet.ok_button_text = tr("lobby.done")
 	host.add_child(_sheet)
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.name = "SetupScroll"
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_sheet.add_child(scroll)
-	var col: VBoxContainer = VBoxContainer.new()
-	col.name = "SetupSheet"
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	scroll.add_child(col)
-	_heading("lobby.mode_title", col)
+	_tabs = TabContainer.new()
+	_tabs.name = "SetupTabs"
+	_sheet.add_child(_tabs)
+	var mode_tab: VBoxContainer = _tab("ModeTab")
 	_mode = ModePanel.new()
 	_mode.setup(_ctx)
-	col.add_child(_mode)
-	_heading("lobby.ships", col)
-	_ships = VBoxContainer.new()
+	mode_tab.add_child(_mode)
+	var ships_tab: VBoxContainer = _tab("ShipsTab")
+	_ships = GridContainer.new()
 	_ships.name = "SetupShips"
-	_ships.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	col.add_child(_ships)
+	_ships.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP * 3)
+	_ships.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
+	ships_tab.add_child(_ships)
 	_add_ship = _button("AddShip", tr("lobby.add_ship"), add_ship_requested.emit)
 	_add_ship.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	col.add_child(_add_ship)
-	_heading("lobby.data", col)
+	ships_tab.add_child(_add_ship)
+	var level_tab: VBoxContainer = _tab("DifficultyTab")
 	var presets: HBoxContainer = HBoxContainer.new()
 	presets.name = "Presets"
 	presets.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	col.add_child(presets)
+	level_tab.add_child(presets)
 	for preset: String in DataToggles.PRESETS:
 		var b: Button = _button("Preset_" + preset, "", _choose_preset.bind(preset))
 		b.toggle_mode = true
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_preset_buttons[preset] = b
 		presets.add_child(b)
-	_preset_name = _label("", "DimLabel")
-	_preset_name.name = "PresetName"
-	presets.add_child(_preset_name)
 	_toggle_note = _label("", "DimLabel")
 	_toggle_note.name = "ToggleNote"
-	col.add_child(_toggle_note)
+	level_tab.add_child(_toggle_note)
+	_heading("lobby.data", level_tab)
+	var scroll: ScrollContainer = ScrollContainer.new()
+	scroll.name = "ToggleScroll"
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	level_tab.add_child(scroll)
 	_toggle_rows = VBoxContainer.new()
 	_toggle_rows.name = "Toggles"
 	_toggle_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(_toggle_rows)
+	scroll.add_child(_toggle_rows)
 	for def: DataToggleDef in DataToggles.def().toggles:
 		_toggle_rows.add_child(_toggle_row(def))
+	_title_tabs()
+
+
+## A tab of the sheet: a column with the touch gap between its rows.
+func _tab(node_name: String) -> VBoxContainer:
+	var col: VBoxContainer = VBoxContainer.new()
+	col.name = node_name
+	col.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	_tabs.add_child(col)
+	return col
+
+
+func _title_tabs() -> void:
+	for i: int in TAB_KEYS.size():
+		_tabs.set_tab_title(i, tr(TAB_KEYS[i]))
 
 
 ## A language switch: the sheet's title and button (the rest follows the next refresh).
 func retranslate() -> void:
+	_title_tabs()
 	_sheet.title = tr("lobby.setup")
 	_sheet.ok_button_text = tr("lobby.done")
 	setup_button.text = tr("lobby.setup")
@@ -166,24 +192,32 @@ func retranslate() -> void:
 	_add_ship.text = tr("lobby.add_ship")
 
 
-## The summary shares a short screen's one row with the buttons (trimmed when it must) and
-## wraps elsewhere (a long mode name on a phone upright).
+## The summary is never cut (its words are short): on a short screen's one row it keeps its
+## whole width and the buttons share the rest; elsewhere it takes the row and wraps.
 func fit_summary(short: bool) -> void:
 	summary.autowrap_mode = TextServer.AUTOWRAP_OFF if short else TextServer.AUTOWRAP_WORD_SMART
-	summary.clip_text = short
-	summary.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	summary.size_flags_horizontal = (Control.SIZE_FILL if short else Control.SIZE_EXPAND_FILL)
 
 
-## Opens the sheet (the host's Game setup button), sized for the window.
+## Opens the sheet (the host's Game setup button): on a phone it fills the safe area, so
+## nothing of the lobby shows around it; elsewhere a centred card.
 func open() -> void:
 	var view: Vector2 = row.get_viewport_rect().size
 	var narrow: bool = view.x < NARROW_SHEET
+	var short: bool = view.y < SHORT_SHEET
 	_mode.fit(narrow)
+	_ships.columns = 2 if short and not narrow else 1
 	refresh_mode()
-	var scroll: ScrollContainer = _sheet.get_node("SetupScroll")
-	scroll.custom_minimum_size = Vector2(minf(view.x * 0.9 - 32.0, 520.0), view.y * 0.8 - 110.0)
-	_sheet.reset_size()
-	_sheet.popup_centered()
+	_tabs.current_tab = 0
+	if LayoutMode.kind_of(row) == LayoutMode.Kind.PHONE:
+		var m: Vector4 = SafeArea.margins(row)
+		var bottom: float = maxf(m.w, SafeArea.tap_band(row))
+		var title: int = _sheet.get_theme_constant("title_height", "Window")
+		var at: Vector2i = Vector2i(int(m.x), int(m.y) + title)
+		var size: Vector2i = Vector2i(int(view.x - m.x - m.z), int(view.y - m.y - bottom) - title)
+		_sheet.popup(Rect2i(at, size))
+	else:
+		_sheet.popup_centered(Vector2i(mini(int(view.x * 0.9), 600), mini(int(view.y * 0.85), 560)))
 
 
 ## One toggle: its name, its value and a one-line description naming both stations.
@@ -218,6 +252,7 @@ func refresh_mode() -> void:
 		return
 	_mode.refresh()
 	_refresh_ships()
+	_title_tabs()
 
 
 ## The sheet's ships: each with its Team A and B buttons in TEAMS and HOLDOUT, and Add a
@@ -233,6 +268,7 @@ func _refresh_ships() -> void:
 		var id: int = int(s["ship"])
 		var line: HBoxContainer = HBoxContainer.new()
 		line.name = "ShipRow_%d" % id
+		line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		line.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
 		var label: Label = _label(str(s.get("name", "")))
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -250,7 +286,7 @@ func _refresh_ships() -> void:
 		_ships.add_child(line)
 	_add_ship.visible = _ctx.crew.can_add_ship()
 	_add_ship.text = tr("lobby.add_ship")
-	(_headings["lobby.ships"] as Label).visible = teams or _add_ship.visible
+	_tabs.set_tab_hidden(1, not (teams or _add_ship.visible))
 
 
 ## Shows the session's set: the summary, the pressed preset, every toggle's text and value,
@@ -262,7 +298,6 @@ func refresh() -> void:
 	setup_button.text = tr("lobby.setup")
 	if _sheet == null:
 		return
-	_preset_name.text = preset_label(toggles)
 	for preset: String in _preset_buttons:
 		var b: Button = _preset_buttons[preset]
 		b.text = tr("lobby.preset_" + preset)
