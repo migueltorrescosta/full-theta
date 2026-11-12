@@ -54,5 +54,5 @@ touch "$out/sig.web_done"
 wait "${bots[@]}" 2>/dev/null
 kill "$server" 2>/dev/null
 wait "$server" 2>/dev/null
-uv run --quiet --project tools python tools/l4/web_check.py "$out/session.jsonl" || failed=1
+python3 tools/l4/web_check.py "$out/session.jsonl" || failed=1
 exit "$failed"
