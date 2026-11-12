@@ -62,3 +62,50 @@ func test_a_seated_guest_goes_back_to_watching() -> void:
 	back.pressed.emit()
 	var sent: Array = StationFixture.sent(b.ctx).of("pick")[-1][1]
 	assert_array(sent).is_equal([StationFixture.SHIP, StationCatalogue.VIEWER])
+
+
+## A station screen for `seat` after the player's ship 1 was handed over to ship 0.
+func _screen(seat: String) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat)
+	StationFixture.fleet(ctx, "coop", [StationFixture.SHIP_NAME, "Heron"], [], true)
+	ctx.crew.handle_event({"type": "handover", "payload": FleetMessages.handover(1, 0)}, 0)
+	var s: StationScreen = auto_free(StationScreen.new())
+	s.setup(ctx)
+	add_child(s)
+	return s
+
+
+# FT: FT-NET-049, FT-MIS-030
+# The top bar says "Watching Kestrel" while the handed-over player watches; seated at one of
+# its stations as a guest, the bar names the ship as their own.
+func test_a_seated_guest_is_not_watching() -> void:
+	assert_str(_screen(StationCatalogue.VIEWER).top_bar.watching).is_equal(StationFixture.SHIP_NAME)
+	assert_str(_screen("relay").top_bar.watching).is_empty()
+
+
+# FT: FT-NET-049
+# While the handover notice shows where the bar would go (a tablet), the bar sits under it,
+# and moves back up once the notice hides.
+func test_the_bar_keeps_clear_of_the_handover_notice() -> void:
+	LayoutMode.forced = LayoutMode.Kind.TOUCH
+	var host: Control = auto_free(Control.new())
+	host.size = Vector2(1024, 768)
+	add_child(host)
+	var notice: Control = Control.new()
+	notice.name = "HandoverNotice"
+	notice.position = Vector2(340, 64)
+	notice.size = Vector2(500, 84)
+	host.add_child(notice)
+	var ctx: StationContext = StationFixture.context(StationCatalogue.VIEWER)
+	ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+		{"seat": "viewer", "name": "Ana", "session": StationFixture.SESSION, "guest": true}
+	]
+	var b: GuestBar = GuestBar.new()
+	host.add_child(b)
+	b.setup(ctx)
+	await get_tree().process_frame
+	assert_float(b.position.y).is_greater_equal(notice.get_rect().end.y)
+	notice.visible = false
+	await get_tree().process_frame
+	assert_float(b.position.y).is_equal(GuestBar.DESK_TOP)
+	LayoutMode.forced = -1

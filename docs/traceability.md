@@ -318,7 +318,7 @@ Active ids per area: FT-GEN 14, FT-ARC 22, FT-NET 50, FT-SIM 37, FT-STN 17, FT-H
 | FT-MIS-027 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_pending_site.gd`, `tests/sim/run/test_encounter_fixes.gd`, `tests/sim/run/test_encounter_pacing.gd`, `tests/sim/run/test_seeded_run.gd`, `tests/stations/test_comms_board.gd` |
 | FT-MIS-028 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_picks.gd` |
 | FT-MIS-029 | tests | `tests/director/test_director_budget.gd`, `tests/director/test_director_picks.gd`, `tests/scenarios/test_enemy_wave.gd` |
-| FT-MIS-030 | tests | `tests/net/test_fleet_guests_l3.gd`, `tests/net/test_fleet_lobby_l3.gd`, `tests/net/test_fleet_pause_l3.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd` |
+| FT-MIS-030 | tests | `tests/net/test_fleet_guests_l3.gd`, `tests/net/test_fleet_lobby_l3.gd`, `tests/net/test_fleet_pause_l3.gd`, `tests/presentation/test_top_bar.gd`, `tests/stations/m4_phone/test_m4_phone_screens.gd`, `tests/stations/test_fleet_screens.gd`, `tests/stations/test_guest_bar.gd` |
 | FT-MIS-031 | tests | `tests/net/test_fleet_lobby_l3.gd`, `tests/stations/test_fleet_lobby.gd` |
 | FT-MIS-032 | tests | `tests/director/test_fleet_director.gd`, `tests/net/test_net_fleet_teams.gd`, `tests/sim/run/test_crew_factions.gd`, `tests/sim/run/test_game_modes.gd`, `tests/sim/run/test_game_ties.gd` |
 | FT-MIS-033 | tests | `tests/director/test_fleet_director.gd`, `tests/net/test_net_fleet_teams.gd`, `tests/sim/run/test_game_modes.gd`, `tests/sim/run/test_game_ties.gd`, `tests/stations/test_fleet_screens.gd` |

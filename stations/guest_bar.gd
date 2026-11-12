@@ -130,6 +130,19 @@ func _place() -> void:
 		return
 	var top: float = VotePrompt.phone_top(self) if phone else DESK_TOP
 	position = Vector2(area.x - size.x - EDGE, top)
+	# Under the handover notice while it shows, where they would meet (a tablet).
+	var notice: Control = _notice()
+	if notice != null and notice.visible and notice.get_rect().intersects(get_rect()):
+		position.y = notice.get_rect().end.y + EDGE
+
+
+## The shell's HandoverNotice beside this bar, followed so the bar moves back up when it
+## hides; null without one.
+func _notice() -> Control:
+	var notice: Control = get_parent().get_node_or_null("HandoverNotice") as Control
+	if notice != null and not notice.visibility_changed.is_connected(_place):
+		notice.visibility_changed.connect(_place)
+	return notice
 
 
 func _on_crew_changed(what: StringName) -> void:
