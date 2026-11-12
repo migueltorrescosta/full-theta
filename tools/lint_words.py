@@ -85,6 +85,7 @@ RULES: list[tuple[str, str, str, str, str]] = [
 
 # (path glob, rule name, line regex, reason)
 ALLOW: list[tuple[str, str, str, str]] = [
+    ("docs/protocol.md", "*", r"^Protocol version: ", "the version history names the wire names each version changed"),
     ("docs/spec/14-open-questions.md", "SessionRules", r"^- D350:", "tools/traceability.py copies D350's title, which docs/decisions.md keeps as history"),
     ("tests/sim/replay/live_run.gd", "site_period", r"site_period", "reads replays recorded before D393, whose setup key was site_period"),
     # D396: a team is a lobby label; outside the sim a ship's team is still looked up by name.
