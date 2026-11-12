@@ -34,6 +34,7 @@ func test_a_smoke_batch_gives_a_deterministic_report() -> void:
 	assert_str(report).contains("lost runs")
 	assert_str(report).contains("encounters per run")
 	assert_str(report).contains("survive 60 %")
+	assert_str(report).contains("## Run loss")
 	# The same seed gives the same run: replay the batch's first run instead of the whole batch
 	# (the report is a pure function of the runs).
 	var first: Dictionary = results[0]
@@ -84,6 +85,8 @@ func test_the_report_counts_losses_and_fled_encounters_apart() -> void:
 	}
 	var report: String = BotReport.markdown([run])
 	assert_str(report).contains("| 3 | 1 | 33.3 % | 1 | 33.3 % |")
+	# gp-18: the run-loss line, read against D31's 23 to 41 % band.
+	assert_str(report).contains("| easy / average | 1 | 1 | 100.0 % | no |")
 	assert_str(report).contains("| enemy_wave | 2 | 1 | 50.0 % | 0 | 0.0 % |")
 
 
