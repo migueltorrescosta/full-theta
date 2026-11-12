@@ -78,10 +78,10 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	run.title_key = &"comms.card.lane_run"
 	run.conversation_id = &"conv.lane_run"
 	run.reward_credits = FEE
-	run.expires_s = MAX_S
+	run.expiry = MAX_S
 	run.site = HOME
-	run.lane_open_s = LANE_OPEN_S
-	run.lane_s = LANE_S
+	run.lane_delay = LANE_OPEN_S
+	run.lane_length = LANE_S
 	run.rep_faction = Factions.CIVIL
 	run.faction_wide = true
 	_clearance = api.offer(lead, run)

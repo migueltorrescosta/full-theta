@@ -6,10 +6,10 @@ extends RefCounted
 ## there is nothing to do. Reads true state, as a crew with a radar lock would.
 
 
-## The nearest living hostile of the ship's faction that it detects within `range_m`
+## The nearest living hostile of the ship's faction that it detects within `reach`
 ## (any, or only armed ones), or -1.
 static func nearest_hostile(
-	world: SimWorld, ship: int, range_m: float, armed_only: bool = false
+	world: SimWorld, ship: int, reach: float, armed_only: bool = false
 ) -> int:
 	var faction: int = world.faction_of(ship)
 	var best: int = -1
@@ -26,7 +26,7 @@ static func nearest_hostile(
 		if armed_only and world.defs[id].mounts.is_empty():
 			continue
 		var d: float = world.kin.relative(ship, id).length()
-		if d <= range_m and d < best_d:
+		if d <= reach and d < best_d:
 			best = id
 			best_d = d
 	return best

@@ -286,7 +286,7 @@ func test_diagnosed_cause_shows_by_toggle() -> void:
 # exact for Relay and Engineering, then exact, banded or absent for the others by the
 # summaries toggle, and never on Comms.
 func test_fabrication_timer_is_a_summary() -> void:
-	world.defs[ME].probe_fab_s = 30.0
+	world.defs[ME].probe_fab_time = 30.0
 	world.relay.fab_left[ME] = 10.0
 	var left: Callable = func(seat: String, code: String) -> float:
 		return _view(seat, code).blocks[StationCatalogue.Section.RELAY]["fab_left"]

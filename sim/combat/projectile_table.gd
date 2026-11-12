@@ -34,15 +34,15 @@ func spawn(
 	faction: int,
 	at: PackedFloat64Array,
 	velocity: Vector3,
-	radius_m: float,
-	energy_j: float,
+	body_radius: float,
+	shot_energy: float,
 	ttl_ticks: int
 ) -> int:
 	add_key(shooter, faction)
 	CubePoint.append(pos_x, pos_y, pos_z, at)
 	vel.append(velocity)
-	radius.append(radius_m)
-	energy.append(energy_j)
+	radius.append(body_radius)
+	energy.append(shot_energy)
 	ttl.append(ttl_ticks)
 	damage_type.append(&"kinetic")
 	turn_rate.append(0.0)
@@ -51,13 +51,13 @@ func spawn(
 	return size() - 1
 
 
-## Gives projectile k its damage type and, when turn_rate_rad is positive, guidance at
+## Gives projectile k its damage type and, when guide_rate is positive, guidance at
 ## the contact (target >= 0).
 func set_payload(
-	k: int, type: StringName, turn_rate_rad: float = 0.0, target: int = -1, floor_share: float = 1.0
+	k: int, type: StringName, guide_rate: float = 0.0, target: int = -1, floor_share: float = 1.0
 ) -> void:
 	damage_type[k] = type
-	turn_rate[k] = turn_rate_rad
+	turn_rate[k] = guide_rate
 	guide_target[k] = target
 	track_floor[k] = floor_share
 

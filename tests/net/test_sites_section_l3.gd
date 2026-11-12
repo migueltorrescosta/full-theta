@@ -23,9 +23,9 @@ func _site(key: String, pos: Vector3, dockable: bool = false) -> SiteDef:
 	s.name_key = "site.%s" % key
 	s.kind = &"nav"
 	s.pos = pos
-	s.radius_m = 3000.0
+	s.radius = 3000.0
 	s.dockable = dockable
-	s.dock_range_m = 1500.0
+	s.dock_range = 1500.0
 	s.dock_max_speed = 10.0
 	return s
 

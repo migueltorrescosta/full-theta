@@ -13,9 +13,9 @@ static func short_run(mode: GameRules.Mode, n: int, encounters: int) -> FleetFix
 	var f: FleetFixture = FleetFixture.make(mode, n)
 	var run: RunDef = f.setup.run_def.duplicate()
 	var director: DirectorDef = run.director.duplicate()
-	director.gap_s = 1.0
-	director.arrival_timeout_s = 1.0
-	director.spawn_site_every_s = 0.0
+	director.gap = 1.0
+	director.arrival_timeout = 1.0
+	director.spawn_site_every = 0.0
 	run.director = director
 	run.min_encounters = encounters
 	run.max_encounters = encounters
@@ -148,11 +148,11 @@ func test_race_plays_one_list_at_own_copies() -> void:
 
 # FT: FT-MIS-033
 # Last ship standing (M4-Q7): no run, but a raider wave at every surviving ship each
-# raider_wave_every_s, growing by raider_wave_growth: one raider each at normal strength,
+# raider_wave_every, growing by raider_wave_growth: one raider each at normal strength,
 # then round(1.5) = 2; a ship out of play gets none.
 func test_last_standing_raider_waves() -> void:
 	var f: FleetFixture = FleetFixture.make(GameRules.Mode.LAST_STANDING, 3).with_director()
-	var every: int = ceili(f.setup.run_def.director.raider_wave_every_s * HZ)
+	var every: int = ceili(f.setup.run_def.director.raider_wave_every * HZ)
 	assert_int(every).is_greater(0)
 	assert_float(f.director.wave_strength(0)).is_equal(1.0)
 	assert_float(f.director.wave_strength(2)).is_equal(2.0)
@@ -208,7 +208,7 @@ func test_last_standing_waves_cap_the_raiders_alive() -> void:
 	var f: FleetFixture = FleetFixture.make(GameRules.Mode.LAST_STANDING, 2)
 	var run: RunDef = f.setup.run_def.duplicate()
 	var director: DirectorDef = run.director.duplicate()
-	director.raider_wave_every_s = 1.0
+	director.raider_wave_every = 1.0
 	run.director = director
 	f.setup.run_def = run
 	f.world.run_def = run

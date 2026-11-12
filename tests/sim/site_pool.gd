@@ -12,9 +12,9 @@ static func def(key: StringName, pos: Vector3, radius: float, kind: StringName =
 	d.name_key = "site.%s" % key
 	d.kind = kind
 	d.pos = pos
-	d.radius_m = radius
+	d.radius = radius
 	d.dockable = kind == &"station"
-	d.dock_range_m = 0.5 * radius
+	d.dock_range = 0.5 * radius
 	d.dock_max_speed = 10.0
 	return d
 

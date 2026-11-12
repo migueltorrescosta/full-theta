@@ -22,8 +22,8 @@ func _init(world: SimWorld, decisions: Array, coop: CoopEvents, first_use: First
 
 
 ## The record for one crewed ship:
-## {run_s, result "win|loss|abandoned|open", encounters: [{id, scenario, site, site_name_key,
-## result, lost, fled, s}], losses, fled, decisions, first_use, coop}.
+## {time, result "win|loss|abandoned|open", encounters: [{id, scenario, site, site_name_key,
+## result, lost, fled, time}], losses, fled, decisions, first_use, coop}.
 func for_ship(ship: int) -> Dictionary:
 	var rows: Array = []
 	var losses: int = 0
@@ -38,7 +38,7 @@ func for_ship(ship: int) -> Dictionary:
 		rows.append(row)
 	return {
 		"ship": ship,
-		"run_s": _world.tick * SimWorld.DT,
+		"time": _world.tick * SimWorld.DT,
 		"result": _result(ship),
 		"encounters": rows,
 		"losses": losses,
@@ -63,7 +63,7 @@ func _row(id: int, ship: int) -> Dictionary:
 		"result": EncounterTable.Result.keys()[t.result[id]].to_lower(),
 		"lost": EncounterTable.has_bit(t.losses_mask[id], ship),
 		"fled": EncounterTable.has_bit(t.fled_mask[id], ship),
-		"s": (end - start) * SimWorld.DT,
+		"time": (end - start) * SimWorld.DT,
 	}
 
 

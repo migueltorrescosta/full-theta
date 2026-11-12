@@ -188,7 +188,7 @@ func test_easy_prefills_the_diagnosed_cause() -> void:
 		var scan: ScienceSelfScanCommand = ScienceSelfScanCommand.new()
 		scan.ship_id = PLAYER
 		world.submit(scan)
-		for i: int in int(world.science_def.self_scan_s * 60.0) + 4:
+		for i: int in int(world.science_def.self_scan_time * 60.0) + 4:
 			world.step()
 			server.game.after_ticks(world.drain_events())
 		world.step()

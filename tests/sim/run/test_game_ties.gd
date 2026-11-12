@@ -98,10 +98,10 @@ func _holdout() -> FleetFixture:
 
 # FT: FT-MIS-014, FT-MIS-011
 # HOLDOUT is capped (D264, A11): while the finite side holds the session runs, and when
-# HOLDOUT_CAP_S have passed with a ship of it in play, it wins.
+# HOLDOUT_CAP have passed with a ship of it in play, it wins.
 func test_the_holdout_side_wins_when_the_timer_runs_out() -> void:
 	var f: FleetFixture = _holdout()
-	var cap: int = ceili(GameRules.HOLDOUT_CAP_S * SimWorld.HZ)
+	var cap: int = ceili(GameRules.HOLDOUT_CAP * SimWorld.HZ)
 	f.world.tick = cap - 3
 	f.step(1)
 	assert_bool(f.outcome().over()).is_false()
@@ -122,7 +122,7 @@ func test_a_holdout_side_with_no_ship_in_play_at_the_cap_has_not_held() -> void:
 	_destroy(f, 1, 0)
 	f.step(1)
 	assert_bool(f.outcome().over()).is_false()
-	f.world.tick = ceili(GameRules.HOLDOUT_CAP_S * SimWorld.HZ)
+	f.world.tick = ceili(GameRules.HOLDOUT_CAP * SimWorld.HZ)
 	var out: GameOutcome = f.outcome()
 	assert_int(out.reason).is_equal(GameOutcome.Reason.HOLDOUT_OVER)
 	assert_array(Array(out.winners)).is_empty()

@@ -56,9 +56,9 @@ static func dock(w: SimWorld, ship: int, site: int = SITE) -> void:
 		var d: SiteDef = SiteDef.new()
 		d.id = StringName("fx%d" % w.sites.size())
 		d.name_key = "site.kestrel_yard"
-		d.radius_m = 3000.0
+		d.radius = 3000.0
 		d.dockable = true
-		d.dock_range_m = 1500.0
+		d.dock_range = 1500.0
 		d.dock_max_speed = 10.0
 		w.add_site(d)
 	if SiteTable.offset_to(w, ship, site).length() > w.sites.dock_range[site]:

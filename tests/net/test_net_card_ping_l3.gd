@@ -20,7 +20,7 @@ func test_a_card_ping_reaches_the_main_screen() -> void:
 	var server: NetServer = h.server()
 	var posted: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION)
 	posted.reward_credits = 250
-	posted.expires_s = 90.0
+	posted.expiry = 90.0
 	CommsL3.post(server, posted)
 	var cap: NetClient = await h.joined(server, StationCatalogue.CAPTAIN, StationCatalogue.CAPTAIN)
 	var viewer: NetClient = await h.joined(server, "viewer", StationCatalogue.VIEWER)

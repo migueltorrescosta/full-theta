@@ -191,7 +191,7 @@ func _go(world: SimWorld, site: int, must_jump: bool) -> void:
 	var offset: Vector3 = SiteTable.offset_to(world, ship, site)
 	if world.helm.jump_left[ship] > 0 or world.tick - _jump_at < 120 or not offset.is_finite():
 		return
-	if world.kin.forward(ship).angle_to(offset) <= def.jump_face_tolerance_rad * JUMP_AIM:
+	if world.kin.forward(ship).angle_to(offset) <= def.jump_face_tolerance * JUMP_AIM:
 		_jump_at = world.tick
 		var jump: JumpCommand = JumpCommand.new()
 		jump.target_kind = HelmTable.JumpKind.SITE

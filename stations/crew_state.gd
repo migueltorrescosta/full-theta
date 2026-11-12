@@ -62,7 +62,7 @@ var host_paused: bool = false
 var votes: Dictionary = {}
 ## ship -> "vote" | "host".
 var abandoned: Dictionary = {}
-## ship -> `ship_outcome` payload {ship, outcome, time_s, hull} plus "voters", "sessions" and
+## ship -> `ship_outcome` payload {ship, outcome, time, hull} plus "voters", "sessions" and
 ## "needed" from `run_votes`, from the outcome until the reset (D178).
 var ship_outcome: Dictionary = {}
 ## ship -> its debrief record (RunDebrief.for_ship), sent right after `ship_outcome`.
@@ -461,8 +461,8 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 							{
 								"card": int(l["card"]),
 								"pos": Vector3(float(l["x"]), float(l["y"]), float(l["z"])),
-								"opens_ms": now_ms + roundi(float(l["open_s"]) * 1000.0),
-								"closes_ms": now_ms + roundi(float(l["close_s"]) * 1000.0),
+								"opens_ms": now_ms + roundi(float(l["opens_in"]) * 1000.0),
+								"closes_ms": now_ms + roundi(float(l["closes_in"]) * 1000.0),
 								"by": str(l.get("by", "")),
 							}
 						)

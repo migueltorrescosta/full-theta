@@ -60,7 +60,7 @@ func test_the_demand_needs_engine_damage_and_waits_after_a_refusal() -> void:
 	var w: SimWorld = _hailed(P9Scenario.ENGINES_LEFT)
 	assert_bool(_demand_enabled(w)).is_true()
 	var params: Dictionary = _surrender_params().duplicate()
-	assert_float(float(params["retry_s"])).is_equal(25.0)
+	assert_float(float(params["retry_delay"])).is_equal(25.0)
 	assert_float(float(params["refusal_factor"])).is_equal(0.5)
 	# A near-certain refusal, twice: the second chance is half the first.
 	params["base"] = 0.001

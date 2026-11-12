@@ -78,7 +78,7 @@ The runner builds the real `MainMenu` (settings, token and pid files in the run 
 | `ui_pick seat= [expect=]` | Presses the seat's button in the lobby; waits for the answer like `pick`. |
 | `ui_button name=N` | Waits for a visible, enabled button named N in the shell (`Start`, `Vote`, `RunAgain`) and presses it. |
 | `ui_press id=I`, `ui_hold id=I`, `ui_release id=I` | The intent's first KB/M binding pressed and released, pressed, or released, as input events into the viewport (through the screen's `InputMatcher` and routing). |
-| `ui_expect` + matchers | Waits until `L4Ui.state()` matches: `shown` (menu, lobby, station), `ship`, `seat`, `host`, `focused`, `selection`, `marks`, `claims`, `contacts`, `started`, `card` (outcome card visible), `ship_outcome` (outcome, time_s, hull, voters, needed). |
+| `ui_expect` + matchers | Waits until `L4Ui.state()` matches: `shown` (menu, lobby, station), `ship`, `seat`, `host`, `focused`, `selection`, `marks`, `claims`, `contacts`, `started`, `card` (outcome card visible), `ship_outcome` (outcome, time, hull, voters, needed). |
 
 ## Load gate (`l4load`, #11)
 

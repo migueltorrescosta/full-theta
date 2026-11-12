@@ -49,8 +49,8 @@ static func environment(w: SimWorld) -> void:
 		var c: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"", _yard)
 		c.title_key = "comms.card.clearance"
 		c.rep_faction = YARD_FACTION
-		c.lane_open_s = LANE_OPEN_S
-		c.lane_s = LANE_S
+		c.lane_delay = LANE_OPEN_S
+		c.lane_length = LANE_S
 		PairHarness.send(w, c)
 	if (
 		Story.docked_site(w, PLAYER) < 0

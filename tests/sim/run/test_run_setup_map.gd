@@ -9,7 +9,7 @@ func _site(key: StringName, pos: Vector3) -> SiteDef:
 	s.id = key
 	s.name_key = "site.%s" % key
 	s.pos = pos
-	s.radius_m = 3000.0
+	s.radius = 3000.0
 	return s
 
 

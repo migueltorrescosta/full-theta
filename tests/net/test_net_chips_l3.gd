@@ -63,7 +63,7 @@ func test_a_chip_is_sent_shown_and_answered() -> void:
 	assert_int(row["from"]).is_equal(StationCatalogue.CREW.find("helm"))
 	assert_int(row["to"]).is_equal(StationCatalogue.CREW.find("engineering"))
 	assert_int(row["arg"]).is_equal(-1)
-	assert_int(row["expires"] - row["sent"]).is_equal(int(ChipsReader.def().expiry_s * 60.0))
+	assert_int(row["expires"] - row["sent"]).is_equal(int(ChipsReader.def().expiry * 60.0))
 	assert_bool(await h.until(func() -> bool: return _chips(helm).size() == 1)).is_true()
 	await h.wait(300)
 	for other: String in ["weapons", "science", "relay", "comms"]:
@@ -256,7 +256,7 @@ func test_an_unanswered_chip_expires_silently() -> void:
 	helm.send_chip("boost")
 	assert_bool(await h.until(func() -> bool: return _chips(eng).size() == 1)).is_true()
 	var marks: Array = [h.mark(helm), h.mark(eng)]
-	var expiry_ticks: int = int(ChipsReader.def().expiry_s * 60.0)
+	var expiry_ticks: int = int(ChipsReader.def().expiry * 60.0)
 	for i: int in expiry_ticks - 120:
 		server.world.step()
 	server.world.drain_events()

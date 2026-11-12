@@ -289,7 +289,7 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 func _finished(run: ActiveRun, now: int) -> void:
 	_taken.erase(run.site)
 	_done[run.ship] = _done.get(run.ship, 0) + 1
-	_quiet_until[run.ship] = now + SimRate.ticks(_def.gap_s)
+	_quiet_until[run.ship] = now + SimRate.ticks(_def.gap)
 
 
 ## A rejected begin gives its cost back and the ship may be planned again.
@@ -298,7 +298,7 @@ func _refund(run: ActiveRun, now: int) -> void:
 	var cost: int = _cost_of(_index_of_id(run.scenario.meta().id))
 	var before: int = _left(run.ship)
 	_spent[run.ship] = _spent.get(run.ship, 0) - cost
-	_quiet_until[run.ship] = now + SimRate.ticks(_def.gap_s)
+	_quiet_until[run.ship] = now + SimRate.ticks(_def.gap)
 	_log(
 		now,
 		run.ship,
@@ -322,7 +322,7 @@ func _plan(api: ScenarioApi, now: int, ship: int) -> void:
 	if _done.get(ship, 0) >= limits.y:
 		_finish_ship(api, now, ship, "run_length")
 		return
-	if now >= _quiet_until.get(ship, SimRate.ticks(_def.gap_s)):
+	if now >= _quiet_until.get(ship, SimRate.ticks(_def.gap)):
 		_pick(api, now, ship, limits.x)
 
 
@@ -501,11 +501,11 @@ func _resolve_opens(now: int) -> void:
 	_opening = waiting
 
 
-## Opens a further site every spawn_site_every_s, up to max_open_sites (D80, FT-MIS-027).
+## Opens a further site every spawn_site_every, up to max_open_sites (D80, FT-MIS-027).
 func _maybe_open_site(api: ScenarioApi, now: int) -> void:
-	if _def.spawn_site_every_s <= 0.0 or _opened >= _def.max_open_sites or not _race.is_empty():
+	if _def.spawn_site_every <= 0.0 or _opened >= _def.max_open_sites or not _race.is_empty():
 		return
-	if now - _last_open_tick < SimRate.ticks(_def.spawn_site_every_s):
+	if now - _last_open_tick < SimRate.ticks(_def.spawn_site_every):
 		return
 	_open_one(api, now, -1, "periodic")
 
@@ -558,7 +558,7 @@ func _announce_site(api: ScenarioApi, ship: int, site: int) -> void:
 	card.kind = CardSpec.Kind.INFO
 	card.title_key = StringName(name_key)
 	card.detail_key = PENDING_DETAIL
-	card.expires_s = _def.arrival_timeout_s
+	card.expiry = _def.arrival_timeout
 	api.offer(ship, card)
 
 

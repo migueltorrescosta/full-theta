@@ -144,9 +144,9 @@ func test_every_effect_window_is_at_least_8_s() -> void:
 	assert_array(def.validate()).is_empty()
 	assert_int(def.effects.size()).is_equal(6)
 	for e: HackEffectDef in def.effects:
-		assert_float(e.window_s).is_greater_equal(8.0)
+		assert_float(e.window).is_greater_equal(8.0)
 	var bad: HackEffectDef = def.effects[0].duplicate()
-	bad.window_s = 7.9
+	bad.window = 7.9
 	assert_array(bad.validate()).is_not_empty()
 
 

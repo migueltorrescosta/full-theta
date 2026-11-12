@@ -17,7 +17,7 @@ static func map() -> MapDef:
 ## knowing them.
 static func world(known: int = SiteTable.ALL_FACTIONS) -> SimWorld:
 	var m: MapDef = map()
-	var w: SimWorld = SimWorld.new(1, "", m.period_m)
+	var w: SimWorld = SimWorld.new(1, "", m.period)
 	for site: SiteDef in m.sites:
 		w.add_site(site, known)
 	return w

@@ -203,7 +203,7 @@ func test_contract_conversation_accepts_and_declines() -> void:
 func test_cards_expire() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION, &"conv.escort_contract")
-	spec.expires_s = 1.0
+	spec.expiry = 1.0
 	var card: int = StoryFixture.post(w, 0, spec)
 	var open: AnswerHailCommand = AnswerHailCommand.new()
 	open.card = card

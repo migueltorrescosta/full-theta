@@ -104,8 +104,8 @@ func test_a_clearance_is_a_lane_helm_sees_after_the_press() -> void:
 	var site: int = w.sites.open(w, &"yard")
 	var clearance: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"", site)
 	clearance.source = SimCommand.Source.SERVER
-	clearance.lane_open_s = 10.0
-	clearance.lane_s = 30.0
+	clearance.lane_delay = 10.0
+	clearance.lane_length = 30.0
 	_do(server, clearance)
 	var accept: AcceptCardCommand = AcceptCardCommand.new()
 	accept.card = 0
@@ -116,8 +116,8 @@ func test_a_clearance_is_a_lane_helm_sees_after_the_press() -> void:
 	)
 	var lane: Dictionary = _lanes(crew["comms"])[0]
 	assert_float(lane["z"]).is_equal(YARD_AT.z)
-	assert_float(lane["open_s"]).is_between(9.0, 10.0)
-	assert_float(lane["close_s"]).is_between(39.0, 40.0)
+	assert_float(lane["opens_in"]).is_between(9.0, 10.0)
+	assert_float(lane["closes_in"]).is_between(39.0, 40.0)
 	await h.wait(150)
 	assert_array(_lanes(crew["helm"])).is_empty()
 	var approach: NetClient = await h.joined(server, "approach", "approach")

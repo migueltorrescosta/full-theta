@@ -9,7 +9,7 @@ extends M1Encounter
 ## itself stays for the golden, load and pair tests.
 
 ## Gap between the crewed ships at the start (m), so they do not overlap at the yard.
-const CREW_SPACING_M: float = 100.0
+const CREW_SPACING: float = 100.0
 
 ## The run: map, numbers and scenario list.
 var run_def: RunDef
@@ -46,7 +46,7 @@ func _init(
 		build,
 		run.player_ship,
 		null,
-		run.map.period_m if run.map != null else Kinematics.DEFAULT_PERIOD
+		run.map.period if run.map != null else Kinematics.DEFAULT_PERIOD
 	)
 	run_def = run
 	catalog = npcs
@@ -103,7 +103,7 @@ func build() -> SimWorld:
 		var faction: int = faction_of_slot(i)
 		var site: int = starts[i]
 		var at: PackedFloat64Array = world.sites.point(site) if site >= 0 else CubePoint.make()
-		at = CubePoint.plus(at, Vector3(i * CREW_SPACING_M, 0.0, 0.0))
+		at = CubePoint.plus(at, Vector3(i * CREW_SPACING, 0.0, 0.0))
 		var id: int = world.spawn_ship(run_def.player_ship, faction, at)
 		world.ship_starts[id] = at
 		world.ship_start_site[id] = site
@@ -125,7 +125,7 @@ func faction_of_slot(i: int) -> int:
 ## each faction at its own site, as far apart as the map allows: the yard for the first faction,
 ## then for each next faction the site farthest (by minimum image) from the ones taken; with
 ## more factions than sites, the sites are used again in the same order. The ships of a site
-## stand CREW_SPACING_M apart by slot index, so they never overlap.
+## stand CREW_SPACING apart by slot index, so they never overlap.
 func start_sites(world: SimWorld) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	var count: int = world.sites.size()

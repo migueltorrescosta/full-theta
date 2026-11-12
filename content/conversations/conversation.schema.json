@@ -46,7 +46,7 @@
             "min": {"type": "integer"},
             "docked": {"type": "boolean"},
             "engine_damage": {"description": "The card's contact has at least this share of its engines gone (P9).", "type": "number", "minimum": 0, "maximum": 1},
-            "surrender_ready": {"description": "No refused surrender ask of the contact within its retry_s (P9).", "const": true}
+            "surrender_ready": {"description": "No refused surrender ask of the contact within its retry_delay (P9).", "const": true}
           }
         },
         "effects": {"type": "array", "items": {"$ref": "#/$defs/effect"}},
@@ -64,7 +64,7 @@
         {"type": "object", "additionalProperties": false, "required": ["rep"], "properties": {"rep": {"description": "A RepDistDef id (content/economy/rep/).", "type": "string", "pattern": "^rep\\.[a-z0-9_.]+$"}}},
         {"type": "object", "additionalProperties": false, "required": ["say"], "properties": {"say": {"$ref": "#/$defs/line_id"}}},
         {"type": "object", "additionalProperties": false, "required": ["verify"], "properties": {"verify": {"type": "string", "minLength": 1}}},
-        {"type": "object", "additionalProperties": false, "required": ["surrender"], "properties": {"surrender": {"description": "Ask the card's contact to surrender (P9): chance = base + per_damage * its engine damage, at most cap, all in [0, 1], times refusal_factor for each earlier refusal; a refusal closes the ask for retry_s seconds.", "type": "object", "additionalProperties": false, "required": ["base", "per_damage", "cap"], "properties": {"base": {"type": "number", "minimum": 0, "maximum": 1}, "per_damage": {"type": "number", "minimum": 0, "maximum": 1}, "cap": {"type": "number", "minimum": 0, "maximum": 1}, "retry_s": {"type": "number", "minimum": 0}, "refusal_factor": {"type": "number", "minimum": 0, "maximum": 1}}}}}
+        {"type": "object", "additionalProperties": false, "required": ["surrender"], "properties": {"surrender": {"description": "Ask the card's contact to surrender (P9): chance = base + per_damage * its engine damage, at most cap, all in [0, 1], times refusal_factor for each earlier refusal; a refusal closes the ask for retry_delay seconds.", "type": "object", "additionalProperties": false, "required": ["base", "per_damage", "cap"], "properties": {"base": {"type": "number", "minimum": 0, "maximum": 1}, "per_damage": {"type": "number", "minimum": 0, "maximum": 1}, "cap": {"type": "number", "minimum": 0, "maximum": 1}, "retry_delay": {"type": "number", "minimum": 0}, "refusal_factor": {"type": "number", "minimum": 0, "maximum": 1}}}}}
       ]
     }
   }

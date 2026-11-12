@@ -339,7 +339,7 @@ func _jump() -> void:
 	var def: ShipDef = ctx.ship_def()
 	var local: Variant = ctx.selection_local()
 	if def != null and local is Vector3:
-		if (local as Vector3).angle_to(Vector3.FORWARD) > def.jump_face_tolerance_rad:
+		if (local as Vector3).angle_to(Vector3.FORWARD) > def.jump_face_tolerance:
 			ctx.crew.toast.emit("toast.jump_face", {})
 			return
 	ctx.intents.command(cmd)

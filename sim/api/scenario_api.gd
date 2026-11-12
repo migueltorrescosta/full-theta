@@ -147,7 +147,7 @@ func _site(id: int) -> SiteInfo:
 	v.name_key = t.name_key_of(id)
 	v.kind = t.kind_of(id)
 	v.pos = t.point(id)
-	v.radius_m = t.radius[id]
+	v.radius = t.radius[id]
 	v.dockable = t.dockable_of(id)
 	for f: int in 32:
 		if (t.known_mask[id] >> f) & 1 == 1:
@@ -273,14 +273,14 @@ func rand(stream: StringName) -> float:
 # --- writes (each one queued SERVER command) ---
 
 
-## Spawns an NPC `range_m` from ship `near`, at a ship-frame clock position (1 to 12, 12
+## Spawns an NPC `separation` metres from ship `near`, at a ship-frame clock position (1 to 12, 12
 ## the bow) and height (0 level, 1 high, -1 low, 2 overhead, -2 under), facing it.
 ## Returns a handle on the new ship's id.
 func spawn_at_range(
-	npc_key: StringName, faction: int, near: int, range_m: float, clock: int, height: int
+	npc_key: StringName, faction: int, near: int, separation: float, clock: int, height: int
 ) -> ApiHandle:
 	var world_dir: Vector3 = _world.kin.to_world(near, Callout.direction(clock, height))
-	var point: PackedFloat64Array = _world.kin.point_at(near, world_dir * range_m)
+	var point: PackedFloat64Array = _world.kin.point_at(near, world_dir * separation)
 	return _spawn(npc_key, faction, point, _facing(-world_dir))
 
 
@@ -292,9 +292,9 @@ func spawn_at_offset(npc_key: StringName, faction: int, near: int, offset: Vecto
 
 
 ## Spawns an NPC (debris) on the leg between two sites, a share `t` (0 to 1) of the way
-## and `lateral_m` off the line (D234). Returns a handle on the new ship's id.
+## and `lateral_offset` off the line (D234). Returns a handle on the new ship's id.
 func spawn_on_leg(
-	npc_key: StringName, faction: int, from_site: int, to_site: int, t: float, lateral_m: float
+	npc_key: StringName, faction: int, from_site: int, to_site: int, t: float, lateral_offset: float
 ) -> ApiHandle:
 	var a: PackedFloat64Array = _world.sites.point(from_site)
 	var b: PackedFloat64Array = _world.sites.point(to_site)
@@ -303,7 +303,7 @@ func spawn_on_leg(
 	var side: Vector3 = leg.cross(Vector3.UP)
 	if side.length_squared() < 1e-6:
 		side = leg.cross(Vector3.RIGHT)
-	var off: Vector3 = leg * t + side.normalized() * lateral_m
+	var off: Vector3 = leg * t + side.normalized() * lateral_offset
 	return _spawn(npc_key, faction, CubePoint.plus(a, off), Quaternion.IDENTITY)
 
 
@@ -360,13 +360,13 @@ func offer(ship_id: int, card: CardSpec) -> ApiHandle:
 	cmd.rep_interaction = card.rep_interaction
 	cmd.subject = card.subject
 	cmd.subject_flag = card.subject_flag
-	cmd.expires_s = card.expires_s
+	cmd.expiry = card.expiry
 	cmd.requires_docked = card.requires_docked
 	cmd.faction_wide = card.faction_wide
 	cmd.rep_faction = card.rep_faction
 	cmd.site = card.site
-	cmd.lane_open_s = card.lane_open_s
-	cmd.lane_s = card.lane_s
+	cmd.lane_delay = card.lane_delay
+	cmd.lane_length = card.lane_length
 	cmd.needs_subsystem = card.needs_subsystem
 	cmd.needs_pips = card.needs_pips
 	_world.submit(cmd)

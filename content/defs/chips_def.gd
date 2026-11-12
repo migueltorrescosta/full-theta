@@ -7,7 +7,7 @@ extends Resource
 @export var id: StringName = &"chips"
 @export var chips: Array[ChipDef] = []
 ## An unanswered chip goes away silently after this long (s of sim time).
-@export var expiry_s: float = 0.0
+@export var expiry: float = 0.0
 ## Most chips open on one ship at a time (count).
 @export var max_open: int = 0
 
@@ -15,7 +15,7 @@ extends Resource
 func validate() -> Array[String]:
 	var errors: Array[String] = []
 	DefCheck.id(errors, "id", id)
-	DefCheck.positive(errors, "expiry_s", expiry_s)
+	DefCheck.positive(errors, "expiry", expiry)
 	if max_open < 1 or max_open > 255:
 		errors.append("max_open: must be in 1..255, got %d" % max_open)
 	if chips.size() > 255:

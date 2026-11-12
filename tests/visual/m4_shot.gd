@@ -179,7 +179,7 @@ func _own_view() -> void:
 			var card: OutcomeCard = OutcomeCard.new()
 			_centred(card)
 			card.setup(_ctx)
-			_event("ship_outcome", {"ship": 0, "outcome": "win", "time_s": 412.0, "hull": 0.58})
+			_event("ship_outcome", {"ship": 0, "outcome": "win", "time": 412.0, "hull": 0.58})
 			_event("run_votes", {"ship": 0, "voters": ["Bo"], "needed": 2})
 			_event("debrief", debrief_record())
 			if view == "debrief":
@@ -204,12 +204,12 @@ static func debrief_record() -> Dictionary:
 	return {
 		"ship": 0,
 		"result": "win",
-		"run_s": 412.0,
+		"time": 412.0,
 		"encounters":
 		[
-			{"scenario": "enemy_wave", "s": 140.0, "result": "won"},
-			{"scenario": "rescue", "s": 300.0, "fled": true},
-			{"scenario": "debris_leg", "s": 410.0, "result": "won"},
+			{"scenario": "enemy_wave", "time": 140.0, "result": "won"},
+			{"scenario": "rescue", "time": 300.0, "fled": true},
+			{"scenario": "debris_leg", "time": 410.0, "result": "won"},
 		],
 		"losses": 0,
 		"fled": 1,

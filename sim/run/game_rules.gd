@@ -16,7 +16,7 @@ extends RefCounted
 ##   sends growing raider waves at every surviving ship (FT-MIS-033, M4-Q7).
 ## - TEAMS: two teams, one faction each; the host picks the win rule (FT-MIS-034, M4-Q6).
 ## - HOLDOUT: two teams; a small side relaunches without limit, the other has finite lives,
-##   scored by how long the finite side lasts (M4-Q2), up to HOLDOUT_CAP_S: when that runs
+##   scored by how long the finite side lasts (M4-Q2), up to HOLDOUT_CAP: when that runs
 ##   out, the finite side has held and wins.
 
 enum Mode { COOP, RACE, LAST_STANDING, TEAMS, HOLDOUT }
@@ -50,7 +50,7 @@ const HOLDOUT_FINITE_TEAM: int = 1
 const HOLDOUT_LIVES: int = 3
 ## HOLDOUT lasts this long (s): the finite side wins by lasting that long (D264, A11).
 ## PROVISIONAL (#13 tunes it).
-const HOLDOUT_CAP_S: float = 900.0
+const HOLDOUT_CAP: float = 900.0
 
 var mode: Mode = Mode.COOP
 ## Read in TEAMS only.

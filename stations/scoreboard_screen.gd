@@ -132,7 +132,7 @@ func title_text() -> String:
 	var text: String = tr("score.over")
 	match str(over.get("reason", "")):
 		"holdout_over":
-			text = tr("score.held") % clock(float(over.get("held_s", 0.0)))
+			text = tr("score.held") % clock(float(over.get("hold_time", 0.0)))
 		"all_lost":
 			text = tr("score.all_lost")
 		"objective":
@@ -155,7 +155,7 @@ func sub_text() -> String:
 			tr("score.your_ship_out") % [ctx.crew.ship_name(home), tr("out." + str(out["reason"]))]
 		)
 	if not ctx.crew.game_over.is_empty():
-		parts.append(tr("score.time") % clock(float(ctx.crew.game_over.get("time_s", 0.0))))
+		parts.append(tr("score.time") % clock(float(ctx.crew.game_over.get("time", 0.0))))
 	return " ".join(parts)
 
 
@@ -179,7 +179,7 @@ func row_cells(row: Dictionary) -> Array[String]:
 			"encounters":
 				out.append(str(int(row.get("encounters", 0))))
 			"time":
-				out.append(clock(float(row.get("time_s", 0.0))))
+				out.append(clock(float(row.get("time", 0.0))))
 			"kills":
 				out.append(str(int(row.get("kills", 0))))
 	return out

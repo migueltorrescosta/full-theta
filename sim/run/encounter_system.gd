@@ -178,7 +178,7 @@ static func _jumped_this_tick(world: SimWorld) -> Dictionary[int, bool]:
 static func _timeout_ticks(world: SimWorld) -> int:
 	if world.run_def == null:
 		return 0
-	return SimRate.ticks(world.run_def.director.arrival_timeout_s)
+	return SimRate.ticks(world.run_def.director.arrival_timeout)
 
 
 static func _scenario(world: SimWorld, id: int) -> StringName:

@@ -1,10 +1,10 @@
 class_name JumpCommand
 extends SimCommand
 ## Starts the jump drive's spool toward a named site or a free point of the cube
-## (FT-SIM-034, FT-HLM-016, D229). Rejected unless the ship can jump (ShipDef.jump_spool_s),
+## (FT-SIM-034, FT-HLM-016, D229). Rejected unless the ship can jump (ShipDef.jump_spool_time),
 ## is neither docked nor already jumping, has the propellant, the target exists (a site
 ## its faction knows, or a finite point) and Helm faces it within
-## ShipDef.jump_face_tolerance_rad. It takes the propellant at once and emits &"jump_spool"
+## ShipDef.jump_face_tolerance. It takes the propellant at once and emits &"jump_spool"
 ## (value: the target site id or -1, tag: the site the ship is at now or "-1"); JumpSystem
 ## moves the ship when the spool ends.
 
@@ -28,7 +28,7 @@ func apply(world: SimWorld) -> bool:
 	var def: ShipDef = world.defs[ship_id]
 	var helm: HelmTable = world.helm
 	var busy: bool = helm.jump_left[ship_id] > 0 or helm.docked_site[ship_id] >= 0
-	if def.jump_spool_s <= 0.0 or busy or world.kin.propellant[ship_id] < def.jump_propellant_kg:
+	if def.jump_spool_time <= 0.0 or busy or world.kin.propellant[ship_id] < def.jump_propellant:
 		return false
 	var at: PackedFloat64Array = _target_point(world)
 	if at.is_empty():
@@ -36,12 +36,12 @@ func apply(world: SimWorld) -> bool:
 	var offset: Vector3 = world.kin.relative_to_point(ship_id, at)
 	if offset.length() < 1.0:
 		return false
-	if world.kin.forward(ship_id).angle_to(offset) > def.jump_face_tolerance_rad:
+	if world.kin.forward(ship_id).angle_to(offset) > def.jump_face_tolerance:
 		return false
 	var site: int = target_id if target_kind == HelmTable.JumpKind.SITE else -1
-	world.kin.propellant[ship_id] -= def.jump_propellant_kg
-	world.kin.propellant_used[ship_id] += def.jump_propellant_kg
-	helm.jump_left[ship_id] = SimRate.ticks(def.jump_spool_s)
+	world.kin.propellant[ship_id] -= def.jump_propellant
+	world.kin.propellant_used[ship_id] += def.jump_propellant
+	helm.jump_left[ship_id] = SimRate.ticks(def.jump_spool_time)
 	helm.jump_kind[ship_id] = target_kind
 	helm.jump_target[ship_id] = site
 	CubePoint.write(helm.jump_x, helm.jump_y, helm.jump_z, ship_id, at)

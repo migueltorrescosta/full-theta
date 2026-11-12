@@ -159,7 +159,7 @@ func test_the_next_encounter_waits_a_quiet_gap_and_opens_a_site() -> void:
 	var out: Array = _run(&"hard", 1, 3)
 	var w: SimWorld = out[0]
 	var d: Director = out[1]
-	var gap_ticks: int = ceili(_def().director.gap_s * SimWorld.HZ)
+	var gap_ticks: int = ceili(_def().director.gap * SimWorld.HZ)
 	assert_int(w.encounters.size()).is_greater_equal(2)
 	for id: int in range(1, w.encounters.size()):
 		assert_int(w.encounters.open_tick[id] - w.encounters.end_tick[id - 1]).is_greater_equal(

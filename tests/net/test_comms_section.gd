@@ -55,7 +55,7 @@ func test_card_rows() -> void:
 	var seen: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION)
 	seen.reward_credits = 250
 	seen.rep_interaction = &"rep.complete_mission"
-	seen.expires_s = 90.0
+	seen.expiry = 90.0
 	var hidden: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT)
 	hidden.rep_interaction = &"rep.call_bluff"
 	var a: int = _post(w, seen)

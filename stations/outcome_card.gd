@@ -106,7 +106,7 @@ func refresh() -> void:
 	_place()
 	_title.text = tr("outcome.win" if card.get("outcome", "") == "win" else "outcome.loss")
 	_why.text = why_text(card)
-	var secs: int = int(card.get("time_s", 0.0))
+	var secs: int = int(card.get("time", 0.0))
 	var hull: int = roundi(float(card.get("hull", 0.0)) * 100.0)
 	_stats.text = tr("outcome.stats") % ["%d:%02d" % [secs / 60, secs % 60], hull]
 	var voters: Array = card.get("voters", [])

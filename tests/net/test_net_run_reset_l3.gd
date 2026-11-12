@@ -59,7 +59,7 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	_destroy(server, ENEMY)
 	var card: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_SHIP_OUTCOME, from)
 	assert_str(card["payload"]["outcome"]).is_equal("win")
-	assert_float(card["payload"]["time_s"]).is_greater(0.0)
+	assert_float(card["payload"]["time"]).is_greater(0.0)
 	assert_float(card["payload"]["hull"]).is_equal(1.0)
 	for i: int in crew.size():
 		var got: Dictionary = await h.next_event(

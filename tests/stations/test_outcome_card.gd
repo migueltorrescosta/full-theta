@@ -32,7 +32,7 @@ func _card(seat: String, host: bool = false) -> OutcomeCard:
 
 
 func _over(o: OutcomeCard, outcome: String) -> void:
-	var p: Dictionary = {"ship": 0, "outcome": outcome, "time_s": 222.5, "hull": 0.637}
+	var p: Dictionary = {"ship": 0, "outcome": outcome, "time": 222.5, "hull": 0.637}
 	o.ctx.crew.handle_event({"type": "ship_outcome", "payload": p}, 0)
 	var votes: Dictionary = {"ship": 0, "voters": [], "needed": 2}
 	o.ctx.crew.handle_event({"type": "run_votes", "payload": votes}, 0)
@@ -91,7 +91,7 @@ func test_the_card_says_why_you_won_or_lost() -> void:
 	var o: OutcomeCard = _card("tactical")
 	_over(o, "win")
 	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_win"))
-	var lost: Dictionary = {"ship": 0, "outcome": "loss", "time_s": 90.0, "hull": 0.0}
+	var lost: Dictionary = {"ship": 0, "outcome": "loss", "time": 90.0, "hull": 0.0}
 	o.ctx.crew.handle_event({"type": "ship_outcome", "payload": lost}, 0)
 	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_destroyed"))
 	lost["hull"] = 0.4  # a loss with hull left: the crew gave up

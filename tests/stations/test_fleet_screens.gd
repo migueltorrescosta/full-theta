@@ -73,7 +73,7 @@ func test_scoreboard_title_names_the_winner() -> void:
 	var ctx: StationContext = _ctx("race")
 	var s: ScoreboardScreen = _scoreboard(ctx)
 	var over: Dictionary = {
-		"reason": "first_to_finish", "winners": [1], "team": -1, "held_s": 0.0, "time_s": 600.0
+		"reason": "first_to_finish", "winners": [1], "team": -1, "hold_time": 0.0, "time": 600.0
 	}
 	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Heron wins!")
@@ -83,7 +83,7 @@ func test_scoreboard_title_names_the_winner() -> void:
 	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Team B wins!")
 	over["reason"] = "holdout_over"
-	over["held_s"] = 245.0
+	over["hold_time"] = 245.0
 	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Team B held for 4:05")
 
@@ -218,7 +218,7 @@ func test_who_sees_the_scoreboard() -> void:
 	assert_bool(crew.on_scoreboard()).is_true()
 	var pvp: CrewState = _ctx("race").crew
 	var over: Dictionary = {
-		"reason": "last_standing", "winners": [1], "team": -1, "held_s": 0.0, "time_s": 9.0
+		"reason": "last_standing", "winners": [1], "team": -1, "hold_time": 0.0, "time": 9.0
 	}
 	pvp.handle_event({"type": "game_over", "payload": over}, 0)
 	assert_bool(pvp.on_scoreboard()).is_true()
@@ -246,7 +246,7 @@ func test_debrief_names_a_raider_wave() -> void:
 # FT: FT-MIS-006
 # #35 A3: an encounter whose time ran out reads as such in the debrief, not as won.
 func test_debrief_says_an_encounter_ran_out_of_time() -> void:
-	var row: Dictionary = {"scenario": "enemy_wave", "result": "partial", "s": 240.0}
+	var row: Dictionary = {"scenario": "enemy_wave", "result": "partial", "time": 240.0}
 	assert_str(DebriefCard._encounter_line(1, row)).is_equal("1. Raider wave: out of time, 4:00")
 
 

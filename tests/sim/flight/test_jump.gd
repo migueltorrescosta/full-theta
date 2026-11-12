@@ -12,14 +12,14 @@ func _vesper(w: SimWorld) -> int:
 
 
 # FT: FT-SIM-034, FT-MIS-026
-# The jump spools for ShipDef.jump_spool_s (8 s, 480 ticks) and the ship stays where it
+# The jump spools for ShipDef.jump_spool_time (8 s, 480 ticks) and the ship stays where it
 # is until then; it arrives the 480th step, jump_left counts down in between.
 func test_spool_takes_the_data_defined_time() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = _vesper(w)
 	var ship: int = SiteFixture.corvette_facing(w, CubePoint.make(), w.sites.point(vesper))
 	SiteFixture.jump_to_site(w, ship, vesper)
-	var ticks: int = ceili(TestDefs.corvette().jump_spool_s * SimWorld.HZ)
+	var ticks: int = ceili(TestDefs.corvette().jump_spool_time * SimWorld.HZ)
 	assert_int(ticks).is_equal(480)
 	var at: int = SiteFixture.steps_until(w, &"jump_arrive", ship, 600)
 	assert_int(at).is_equal(ticks)
@@ -46,8 +46,8 @@ func test_spool_event_and_state() -> void:
 
 
 # FT: FT-SIM-034, FT-MIS-026
-# The ship arrives jump_standoff_m short of a site on the line from where it was, in the
-# same cube, at rest, and the jump took jump_propellant_kg.
+# The ship arrives jump_standoff short of a site on the line from where it was, in the
+# same cube, at rest, and the jump took jump_propellant.
 func test_arrives_at_the_standoff_from_a_site() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = _vesper(w)
@@ -59,14 +59,14 @@ func test_arrives_at_the_standoff_from_a_site() -> void:
 	var line: Vector3 = w.kin.delta(w.sites.point(vesper), CubePoint.make())
 	SiteFixture.steps_until(w, &"jump_arrive", ship, 600)
 	var left: Vector3 = SiteTable.offset_to(w, ship, vesper)
-	assert_float(left.length()).is_equal_approx(def.jump_standoff_m, 0.5)
+	assert_float(left.length()).is_equal_approx(def.jump_standoff, 0.5)
 	assert_float(left.normalized().dot(line.normalized())).is_greater(0.99999)
 	assert_float(w.kin.vel[ship].length()).is_equal(0.0)
 	# The jump's own propellant plus the little the assist burns holding the bow meanwhile.
 	assert_float(fuel - w.kin.propellant[ship]).is_between(
-		def.jump_propellant_kg, def.jump_propellant_kg + 5.0
+		def.jump_propellant, def.jump_propellant + 5.0
 	)
-	assert_float(w.kin.propellant_used[ship]).is_greater_equal(def.jump_propellant_kg)
+	assert_float(w.kin.propellant_used[ship]).is_greater_equal(def.jump_propellant)
 	assert_float(w.kin.period).is_equal(400000.0)
 	assert_float(absf(w.kin.pos_x[ship])).is_less(200000.0)
 	var arrive: Array[SimEvent] = SiteFixture.events_of(w, &"jump_arrive")
@@ -88,7 +88,7 @@ func test_arrives_at_the_standoff_from_a_mark() -> void:
 	SiteFixture.jump_to_mark(w, ship, mark)
 	SiteFixture.steps_until(w, &"jump_arrive", ship, 600)
 	var left: Vector3 = w.kin.relative_to_point(ship, mark)
-	assert_float(left.length()).is_equal_approx(TestDefs.corvette().jump_standoff_m, 0.5)
+	assert_float(left.length()).is_equal_approx(TestDefs.corvette().jump_standoff, 0.5)
 	var arrive: Array[SimEvent] = SiteFixture.events_of(w, &"jump_arrive")
 	assert_float(arrive[0].value).is_equal(-1.0)
 	assert_str(String(arrive[0].tag)).is_equal("-1")
@@ -106,7 +106,7 @@ func test_jump_across_the_seam() -> void:
 	SiteFixture.jump_to_mark(w, ship, mark)
 	SiteFixture.steps_until(w, &"jump_arrive", ship, 600)
 	var left: Vector3 = w.kin.relative_to_point(ship, mark)
-	assert_float(left.length()).is_equal_approx(TestDefs.corvette().jump_standoff_m, 0.5)
+	assert_float(left.length()).is_equal_approx(TestDefs.corvette().jump_standoff, 0.5)
 	assert_float(w.kin.pos_x[ship]).is_between(-200000.0, 200000.0)
 
 
@@ -124,7 +124,7 @@ func test_jump_to_a_nearby_target_does_not_back_off() -> void:
 
 
 # FT: FT-HLM-016, FT-SIM-034
-# Refused unless Helm faces the target within ShipDef.jump_face_tolerance_rad (0.1 rad): a
+# Refused unless Helm faces the target within ShipDef.jump_face_tolerance (0.1 rad): a
 # bow 20 degrees off is refused with no propellant taken and no spool; 3 degrees off goes.
 func test_refused_unless_faced() -> void:
 	var w: SimWorld = SiteFixture.world()

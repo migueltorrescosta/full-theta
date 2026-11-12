@@ -72,7 +72,7 @@ func test_range_aspect_and_health_in_the_world() -> void:
 
 
 # FT: FT-SCI-003
-# Active mode lowers the scan noise; a sensor sweep lowers it for sweep_duration_s, then
+# Active mode lowers the scan noise; a sensor sweep lowers it for sweep_duration, then
 # cools down before the next.
 func test_sensor_mode_and_sweep() -> void:
 	var w: SimWorld = ScienceFixture.world()
@@ -87,9 +87,9 @@ func test_sensor_mode_and_sweep() -> void:
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(active)
 	events = ScienceFixture.do(w, SensorSweepCommand.new())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("cooling")
-	SimFixture.run(w, int(w.science_def.sweep_duration_s * 60.0) + 2)
+	SimFixture.run(w, int(w.science_def.sweep_duration * 60.0) + 2)
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_equal(active)
-	SimFixture.run(w, int(w.science_def.sweep_cooldown_s * 60.0))
+	SimFixture.run(w, int(w.science_def.sweep_cooldown * 60.0))
 	events = ScienceFixture.do(w, SensorSweepCommand.new())
 	assert_array(SimFixture.of_kind(events, &"science_refused")).is_empty()
 	assert_float(w.science.sweep_left[ME]).is_greater(0.0)

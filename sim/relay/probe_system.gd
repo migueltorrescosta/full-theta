@@ -9,7 +9,7 @@ extends RefCounted
 ##   (coverage_at): Science's noise model reads it, so a contact inside a bubble is
 ##   scanned as if in own range (P13).
 ## - Fabrication takes ShipDef.probe_parts spare parts when it starts and adds a probe
-##   to the stock after probe_fab_s (&"probe_fabricated").
+##   to the stock after probe_fab_time (&"probe_fabricated").
 ## - With lane flagging on (FlagLanesCommand) a mount whose next shot would cross a
 ##   friendly or neutral ship raises &"lane_warning" once per crossing, before the shot
 ##   (other_id = that ship, value = mount index); firing still works (FT-SIM-016).
@@ -81,8 +81,8 @@ static func fabricate(world: SimWorld, ship: int) -> bool:
 		world.emit(&"probe_no_parts", ship)
 		return false
 	world.damage.spare_parts[hull] -= def.probe_parts
-	r.fab_left[ship] = def.probe_fab_s
-	world.emit(&"probe_fabricating", ship, -1, def.probe_fab_s)
+	r.fab_left[ship] = def.probe_fab_time
+	world.emit(&"probe_fabricating", ship, -1, def.probe_fab_time)
 	return true
 
 
@@ -109,15 +109,15 @@ static func _fly(world: SimWorld) -> void:
 			kin.wrap(t.dest_y[r] - t.pos_y[r]),
 			kin.wrap(t.dest_z[r] - t.pos_z[r])
 		)
-		var step_m: float = speed * SimWorld.DT
-		if d.length() <= step_m:
+		var stride: float = speed * SimWorld.DT
+		if d.length() <= stride:
 			t.pos_x[r] = t.dest_x[r]
 			t.pos_y[r] = t.dest_y[r]
 			t.pos_z[r] = t.dest_z[r]
 			t.deployed[r] = 1
 			world.emit(&"probe_deployed", t.owner_ship[r], -1, t.serial[r])
 			continue
-		var m: Vector3 = d.normalized() * step_m
+		var m: Vector3 = d.normalized() * stride
 		t.pos_x[r] = kin.wrap(t.pos_x[r] + m.x)
 		t.pos_y[r] = kin.wrap(t.pos_y[r] + m.y)
 		t.pos_z[r] = kin.wrap(t.pos_z[r] + m.z)

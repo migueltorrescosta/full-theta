@@ -28,7 +28,7 @@ static func rows(world: SimWorld, ship: int) -> Array:
 		if out.size() >= MAX_ROWS:
 			break
 		var row: Dictionary = {"id": i, "eta": HazardSystem.eta(world, ship, i)}
-		var since: float = maxf(0.0, t - h.start_s)
+		var since: float = maxf(0.0, t - h.start)
 		if h.is_front() and h.shape == HazardDef.Shape.PLANE:
 			var gap: float = HazardSystem.edge_distance(
 				h, HazardSystem.ship_offset(world, ship, h), t

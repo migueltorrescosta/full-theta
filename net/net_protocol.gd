@@ -119,7 +119,7 @@ const EVENT_ALERT: String = "alert"
 const EVENT_MARKS: String = "marks"
 const EVENT_PING: String = "ping"
 ## The run reset (D178, NetRunReset), to every session with a pick on the ship:
-## {ship, outcome ("win" | "loss"), time_s, hull} and {ship, voters, needed}.
+## {ship, outcome ("win" | "loss"), time, hull} and {ship, voters, needed}.
 const EVENT_SHIP_OUTCOME: String = "ship_outcome"
 const EVENT_RUN_VOTES: String = "run_votes"
 ## The end-of-run debrief (RunDebrief.for_ship, FT-MIS-006, FT-MIS-010, FT-MIS-038,
@@ -141,7 +141,7 @@ const EVENT_CHIP_ANSWER: String = "chip_answer"
 const EVENT_SHARES: String = "shares"
 ## The ship's approach lanes (P5, CrewRelay.lane_items), to Comms always and to the other
 ## stations while Comms shares them (the lanes toggle on and the press not expired) or their
-## view holds Comms: {ship, lanes: [{card, x, y, z, open_s, close_s, by}]}, the seconds being
+## view holds Comms: {ship, lanes: [{card, x, y, z, opens_in, closes_in, by}]}, the seconds being
 ## the time left at sending. Sent when a clearance is accepted or settled and when a share
 ## starts or ends.
 const EVENT_LANES: String = "lanes"

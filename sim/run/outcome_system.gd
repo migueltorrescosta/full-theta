@@ -182,7 +182,7 @@ static func _last_team(
 
 ## HOLDOUT_OVER once no ship of the finite side stands (no winner, held_ticks the latest tick
 ## one of its ships left play). With one still standing, the session ends at
-## GameRules.HOLDOUT_CAP_S: the finite side held if a ship of it is in play, and wins (faction
+## GameRules.HOLDOUT_CAP: the finite side held if a ship of it is in play, and wins (faction
 ## and winners named, held_ticks the cap); one that only waits to relaunch has not held (no
 ## winner, held_ticks as above).
 static func _holdout(
@@ -201,7 +201,7 @@ static func _holdout(
 		elif standing.has(id):
 			waiting = true
 	if in_play or waiting:
-		var cap: int = SimRate.ticks(GameRules.HOLDOUT_CAP_S)
+		var cap: int = SimRate.ticks(GameRules.HOLDOUT_CAP)
 		if world.tick < cap:
 			return
 		out.reason = GameOutcome.Reason.HOLDOUT_OVER

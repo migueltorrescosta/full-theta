@@ -24,13 +24,13 @@ const SURRENDER_KILL: StringName = &"rep.destroy_surrendered"
 # --- P5: approach lanes ---
 
 
-## Makes the card a clearance: after it is accepted, the lane opens `open_s` later and
-## stays open `length_s`.
-static func set_lane(world: SimWorld, card: int, open_s: float, length_s: float) -> void:
-	if not length_s > 0.0:
+## Makes the card a clearance: after it is accepted, the lane opens `delay` later and
+## stays open `length`.
+static func set_lane(world: SimWorld, card: int, delay: float, length: float) -> void:
+	if not length > 0.0:
 		return
-	world.story.lane_open[card] = maxi(0, SimRate.ticks(open_s))
-	world.story.lane_len[card] = SimRate.ticks(length_s)
+	world.story.lane_open[card] = maxi(0, SimRate.ticks(delay))
+	world.story.lane_len[card] = SimRate.ticks(length)
 
 
 static func is_lane(world: SimWorld, card: int) -> bool:
@@ -149,7 +149,7 @@ static func surrender_chance(world: SimWorld, contact: int, params: Dictionary) 
 ## Comms asked the card's contact to surrender (the conversation's surrender effect, #35 A4):
 ## rolls with the chance times `refusal_factor` (default 1) once for each earlier refusal of
 ## this contact to the card's faction; a refusal counts one more and closes the ask for
-## `retry_s` seconds (default 0; the option's surrender_ready requirement).
+## `retry_delay` seconds (default 0; the option's surrender_ready requirement).
 static func ask_surrender(world: SimWorld, ship: int, card: int, params: Dictionary) -> void:
 	var t: StoryTable = world.story
 	var k: KnowledgeTable = world.knowledge
@@ -158,11 +158,11 @@ static func ask_surrender(world: SimWorld, ship: int, card: int, params: Diction
 	if roll_surrender(world, ship, card, params, scale):
 		return
 	k.surrender_refusals[row] += 1
-	k.surrender_reopen[row] = world.tick + SimRate.ticks(float(params.get("retry_s", 0.0)))
+	k.surrender_reopen[row] = world.tick + SimRate.ticks(float(params.get("retry_delay", 0.0)))
 
 
 ## Whether the faction may ask the contact to surrender again: no refusal in the last
-## retry_s seconds.
+## retry_delay seconds.
 static func surrender_ready(world: SimWorld, faction: int, contact: int) -> bool:
 	var row: int = world.knowledge.row_for(faction, contact)
 	return row < 0 or world.tick >= world.knowledge.surrender_reopen[row]

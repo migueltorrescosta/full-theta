@@ -8,42 +8,42 @@ script = ExtResource("2_eff")
 id = &"jam_weapons"
 subsystem_kind = 2
 factor = 0.0
-window_s = 10.0
+window = 10.0
 
 [sub_resource type="Resource" id="Resource_engines"]
 script = ExtResource("2_eff")
 id = &"throttle_engines"
 subsystem_kind = 0
 factor = 0.25
-window_s = 12.0
+window = 12.0
 
 [sub_resource type="Resource" id="Resource_thrusters"]
 script = ExtResource("2_eff")
 id = &"seize_thrusters"
 subsystem_kind = 1
 factor = 0.25
-window_s = 10.0
+window = 10.0
 
 [sub_resource type="Resource" id="Resource_shields"]
 script = ExtResource("2_eff")
 id = &"drop_shields"
 subsystem_kind = 3
 factor = 0.0
-window_s = 8.0
+window = 8.0
 
 [sub_resource type="Resource" id="Resource_sensors"]
 script = ExtResource("2_eff")
 id = &"blind_sensors"
 subsystem_kind = 4
 factor = 0.0
-window_s = 10.0
+window = 10.0
 
 [sub_resource type="Resource" id="Resource_reactor"]
 script = ExtResource("2_eff")
 id = &"choke_reactor"
 subsystem_kind = 5
 factor = 0.5
-window_s = 8.0
+window = 8.0
 
 [resource]
 script = ExtResource("1_sci")
@@ -60,8 +60,8 @@ probe_factor = 0.6
 mark_factor = 0.6
 mark_radius = 600.0
 mark_distance = 3000.0
-sweep_duration_s = 8.0
-sweep_cooldown_s = 15.0
+sweep_duration = 8.0
+sweep_cooldown = 15.0
 scan_range_factor = 1.0
 nominal_noise = 0.33
 axes_noise_steps = PackedFloat64Array(0.25, 0.5)
@@ -75,8 +75,8 @@ lock_threshold = 0.85
 lock_bonus = 0.1
 noise_penalty = 0.25
 full_scan_conf = 0.9
-scan_cap_s = 60.0
-self_scan_s = 6.0
+scan_cap = 60.0
+self_scan_time = 6.0
 reveal_class = 0.15
 reveal_identity = 0.3
 reveal_intent = 0.45

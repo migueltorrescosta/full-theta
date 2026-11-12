@@ -146,7 +146,7 @@ func test_scan_at_the_mark_is_cleaner() -> void:
 		ScanPuzzle.confidence(def, 0.9, off_noise)
 	)
 	# The scan left open past the cap fails with a timeout, nothing recorded.
-	var events: Array[SimEvent] = SimFixture.run(off, int(def.scan_cap_s * 60.0) + 2)
+	var events: Array[SimEvent] = SimFixture.run(off, int(def.scan_cap * 60.0) + 2)
 	assert_str(SimFixture.of_kind(events, &"scan_failed")[0].tag).is_equal("timeout")
 	assert_float(ScienceKnowledge.confidence(off, 1, FOE)).is_equal(0.0)
 
@@ -185,7 +185,7 @@ func test_cancel_and_lost_contact() -> void:
 
 
 # FT: FT-SCI-009, FT-PAIR-003
-# P10: the own-ship scan takes self_scan_s, then marks the ship as self-scanned (the
+# P10: the own-ship scan takes self_scan_time, then marks the ship as self-scanned (the
 # seam that reveals fault causes); a second scan can't start meanwhile.
 func test_own_ship_scan() -> void:
 	var w: SimWorld = ScienceFixture.world()
@@ -194,7 +194,7 @@ func test_own_ship_scan() -> void:
 	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.SELF)
 	events = ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("busy")
-	events = SimFixture.run(w, int(w.science_def.self_scan_s * 60.0) + 2)
+	events = SimFixture.run(w, int(w.science_def.self_scan_time * 60.0) + 2)
 	assert_int(SimFixture.of_kind(events, &"self_scan_done").size()).is_equal(1)
 	assert_bool(w.science.self_scanned[ME] >= 0).is_true()
 	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.NONE)

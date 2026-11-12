@@ -263,7 +263,7 @@ func scoreboard_rows() -> Array:
 		var end: int = (
 			world.ships.finish_tick[id] if world.ships.finish_tick[id] >= 0 else world.tick
 		)
-		var time_s: float = float(end - start_tick) / SimWorld.HZ
+		var time: float = float(end - start_tick) / SimWorld.HZ
 		var state: String = FleetMessages.IN_PLAY
 		if eliminated.has(id) or world.ships.ship_outcome[id] == ShipStateTable.ShipOutcome.LOSS:
 			state = FleetMessages.DESTROYED
@@ -271,9 +271,7 @@ func scoreboard_rows() -> Array:
 			state = FleetMessages.FINISHED
 		var k: int = world.ships.kills[id] if rules.is_pvp() else 0
 		var done: int = world.ships.encounters_done[id]
-		rows.append(
-			FleetMessages.scoreboard_row(id, c["name"], team_of(id), state, done, time_s, k)
-		)
+		rows.append(FleetMessages.scoreboard_row(id, c["name"], team_of(id), state, done, time, k))
 	return rows
 
 
@@ -295,11 +293,11 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		var o: GameOutcome = OutcomeSystem.game_outcome(world)
 		if o.over():
 			outcome = o
-			var time_s: float = float(world.tick - start_tick) / SimWorld.HZ
-			var held_s: float = float(o.held_ticks) / SimRate.HZ
+			var time: float = float(world.tick - start_tick) / SimWorld.HZ
+			var hold_time: float = float(o.held_ticks) / SimRate.HZ
 			var reason: String = GameOutcome.REASON_NAMES[o.reason]
 			var payload: Dictionary = FleetMessages.game_over(
-				reason, Array(o.winners), team_of_faction(o.winner_faction), held_s, time_s
+				reason, Array(o.winners), team_of_faction(o.winner_faction), hold_time, time
 			)
 			game.broadcast(NetProtocol.EVENT_GAME_OVER, payload)
 	for ship: int in _handover_at.keys():
@@ -635,6 +633,6 @@ static func _untimed(rows: Array) -> Array:
 	var out: Array = []
 	for row: Dictionary in rows:
 		var r: Dictionary = row.duplicate()
-		r.erase("time_s")
+		r.erase("time")
 		out.append(r)
 	return out

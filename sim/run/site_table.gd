@@ -52,12 +52,12 @@ func add_site(
 	pos_x.append(PeriodRules.wrap(def.pos.x + shift[0], period))
 	pos_y.append(PeriodRules.wrap(def.pos.y + shift[1], period))
 	pos_z.append(PeriodRules.wrap(def.pos.z + shift[2], period))
-	radius.append(def.radius_m)
+	radius.append(def.radius)
 	known_mask.append(known)
 	opened_tick.append(tick)
 	kind_ix.append(maxi(0, SiteDef.KINDS.find(def.kind)))
 	dockable.append(1 if def.dockable else 0)
-	dock_range.append(def.dock_range_m)
+	dock_range.append(def.dock_range)
 	dock_max_speed.append(def.dock_max_speed)
 	return id
 

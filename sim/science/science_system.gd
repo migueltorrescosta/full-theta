@@ -129,7 +129,7 @@ static func set_mode(world: SimWorld, ship: int, is_active: bool) -> bool:
 	return true
 
 
-## Starts a sensor sweep: noise drops for sweep_duration_s (P key).
+## Starts a sensor sweep: noise drops for sweep_duration (P key).
 static func sweep(world: SimWorld, ship: int) -> bool:
 	var def: ScienceDef = world.science_def
 	if def == null:
@@ -137,8 +137,8 @@ static func sweep(world: SimWorld, ship: int) -> bool:
 	var t: ScienceTable = world.science
 	if t.sweep_cool[ship] > 0.0:
 		return _refuse(world, ship, -1, REASON_COOLING)
-	t.sweep_left[ship] = def.sweep_duration_s
-	t.sweep_cool[ship] = def.sweep_cooldown_s
+	t.sweep_left[ship] = def.sweep_duration
+	t.sweep_cool[ship] = def.sweep_cooldown
 	return true
 
 
@@ -291,7 +291,7 @@ static func cancel(world: SimWorld, ship: int) -> bool:
 	return true
 
 
-## Starts the own-ship scan (FT-SCI-009, P10): it ends after self_scan_s and then names
+## Starts the own-ship scan (FT-SCI-009, P10): it ends after self_scan_time and then names
 ## the ship's hidden fault causes.
 static func start_self_scan(world: SimWorld, ship: int) -> bool:
 	var def: ScienceDef = world.science_def
@@ -314,7 +314,7 @@ static func _step_minigame(world: SimWorld, def: ScienceDef, t: ScienceTable, sh
 		t.clear_minigame(ship)
 		return
 	if k == ScienceTable.Minigame.SELF:
-		if elapsed >= SimRate.ticks(def.self_scan_s):
+		if elapsed >= SimRate.ticks(def.self_scan_time):
 			_finish_self_scan(world, t, ship)
 		return
 	var fail_kind: StringName = (
@@ -328,7 +328,7 @@ static func _step_minigame(world: SimWorld, def: ScienceDef, t: ScienceTable, sh
 	if not world.kin.is_alive(contact) or not seen:
 		_fail(world, t, ship, fail_kind, &"lost")
 	elif k == ScienceTable.Minigame.SCAN:
-		if elapsed >= SimRate.ticks(def.scan_cap_s):
+		if elapsed >= SimRate.ticks(def.scan_cap):
 			_fail(world, t, ship, fail_kind, &"timeout")
 	else:
 		var speed: float = def.trace_rate * (1.0 + def.trace_noise_gain * t.noise[ship])
@@ -346,7 +346,7 @@ static func _finish_hack(world: SimWorld, def: ScienceDef, t: ScienceTable, ship
 	var effect: HackEffectDef = def.effect_for(sub.kind)
 	var window: float = 0.0
 	if effect != null:
-		window = effect.window_s
+		window = effect.window
 		var until: int = world.tick + SimRate.ticks(window)
 		world.hacks.open(contact, world.faction_of(ship), index, effect.factor, until, ship)
 	world.emit(&"hack_done", ship, contact, window, Vector3.ZERO, sub.id)

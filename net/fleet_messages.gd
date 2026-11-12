@@ -48,8 +48,8 @@ const PAYLOADS: Dictionary = {
 		"reason": TYPE_STRING,
 		"winners": TYPE_ARRAY,
 		"team": TYPE_INT,
-		"held_s": TYPE_FLOAT,
-		"time_s": TYPE_FLOAT,
+		"hold_time": TYPE_FLOAT,
+		"time": TYPE_FLOAT,
 	},
 }
 const FLEET_SHIP: Dictionary = {
@@ -68,7 +68,7 @@ const SCOREBOARD_ROW: Dictionary = {
 	"team": TYPE_INT,
 	"state": TYPE_STRING,
 	"encounters": TYPE_INT,
-	"time_s": TYPE_FLOAT,
+	"time": TYPE_FLOAT,
 	"kills": TYPE_INT,
 }
 
@@ -151,7 +151,7 @@ static func handover(ship: int, to_ship: int) -> Dictionary:
 
 
 static func scoreboard_row(
-	ship: int, name: String, team: int, state: String, encounters: int, time_s: float, kills: int
+	ship: int, name: String, team: int, state: String, encounters: int, time: float, kills: int
 ) -> Dictionary:
 	return {
 		"ship": ship,
@@ -159,7 +159,7 @@ static func scoreboard_row(
 		"team": team,
 		"state": state,
 		"encounters": encounters,
-		"time_s": time_s,
+		"time": time,
 		"kills": kills,
 	}
 
@@ -178,17 +178,17 @@ static func relaunched(ship: int, lives: int) -> Dictionary:
 
 
 ## The game's outcome (GameOutcome: its reason name, winners and the lobby team of its
-## winner_faction, NetFleet.team_of_faction); time_s: the session's length; held_s: HOLDOUT's
+## winner_faction, NetFleet.team_of_faction); time: the session's length; hold_time: HOLDOUT's
 ## score, how long the finite side lasted.
 static func game_over(
-	reason: String, winners: Array, team: int, held_s: float, time_s: float
+	reason: String, winners: Array, team: int, hold_time: float, time: float
 ) -> Dictionary:
 	return {
 		"reason": reason,
 		"winners": winners,
 		"team": team,
-		"held_s": held_s,
-		"time_s": time_s,
+		"hold_time": hold_time,
+		"time": time,
 	}
 
 

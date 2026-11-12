@@ -172,7 +172,7 @@ func apply(kind: int, values: Dictionary, def: ShipDef) -> void:
 			if mode == 0:
 				values["probes"] = []
 				values["lanes"] = false
-			values["fab_left"] = summarise(values["fab_left"], def.probe_fab_s, RELAY_ENG)
+			values["fab_left"] = summarise(values["fab_left"], def.probe_fab_time, RELAY_ENG)
 			# The hazards Relay knows reach another station through the countdown toggle.
 			if not hazards_visible():
 				values["hazards"] = []

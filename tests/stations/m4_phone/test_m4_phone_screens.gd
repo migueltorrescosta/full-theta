@@ -102,9 +102,7 @@ func test_outcome_card_fills_the_phone_with_two_tabs() -> void:
 			var card: OutcomeCard = OutcomeCard.new()
 			_centred(root, card)
 			card.setup(ctx)
-			_event(
-				ctx, "ship_outcome", {"ship": 0, "outcome": "win", "time_s": 412.0, "hull": 0.58}
-			)
+			_event(ctx, "ship_outcome", {"ship": 0, "outcome": "win", "time": 412.0, "hull": 0.58})
 			_event(ctx, "run_votes", {"ship": 0, "voters": ["Bo"], "needed": 2})
 			_event(ctx, "debrief", Shot.debrief_record())
 			await _frames()
@@ -144,7 +142,7 @@ func test_outcome_card_off_a_phone_keeps_the_button() -> void:
 	var card: OutcomeCard = OutcomeCard.new()
 	_centred(root, card)
 	card.setup(ctx)
-	_event(ctx, "ship_outcome", {"ship": 0, "outcome": "loss", "time_s": 60.0, "hull": 0.0})
+	_event(ctx, "ship_outcome", {"ship": 0, "outcome": "loss", "time": 60.0, "hull": 0.0})
 	_event(ctx, "debrief", Shot.debrief_record())
 	await _frames()
 	assert_object(card.tabs).is_null()

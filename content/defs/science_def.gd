@@ -36,9 +36,9 @@ extends Resource
 ## Where the scan-position mark sits from the contact (m), broadside.
 @export var mark_distance: float = 0.0
 ## Length of a sensor sweep's low-noise window (s).
-@export var sweep_duration_s: float = 0.0
+@export var sweep_duration: float = 0.0
 ## Time after a sweep starts before the next may start (s).
-@export var sweep_cooldown_s: float = 0.0
+@export var sweep_cooldown: float = 0.0
 ## A scan or hack reaches contacts within this share of the sensor range (dimensionless).
 @export var scan_range_factor: float = 0.0
 ## The noise of the scripted average player's nominal case, for tests and the UI
@@ -73,9 +73,9 @@ extends Resource
 ## FT-SCI-015).
 @export var full_scan_conf: float = 0.0
 ## Time the scan stays open before it fails (s).
-@export var scan_cap_s: float = 0.0
+@export var scan_cap: float = 0.0
 ## Time the own-ship scan takes (s, FT-SCI-009).
-@export var self_scan_s: float = 0.0
+@export var self_scan_time: float = 0.0
 
 @export_group("Reveals")
 ## Scan confidence that reveals the class (dimensionless, 0..1).
@@ -132,8 +132,8 @@ func validate() -> Array[String]:
 	DefCheck.in_range_open_low(errors, "mark_factor", mark_factor, 0.0, 1.0)
 	DefCheck.positive(errors, "mark_radius", mark_radius)
 	DefCheck.positive(errors, "mark_distance", mark_distance)
-	DefCheck.positive(errors, "sweep_duration_s", sweep_duration_s)
-	DefCheck.non_negative(errors, "sweep_cooldown_s", sweep_cooldown_s)
+	DefCheck.positive(errors, "sweep_duration", sweep_duration)
+	DefCheck.non_negative(errors, "sweep_cooldown", sweep_cooldown)
 	DefCheck.in_range_open_low(errors, "scan_range_factor", scan_range_factor, 0.0, 4.0)
 	DefCheck.in_range(errors, "nominal_noise", nominal_noise, 0.0, 1.0)
 	_validate_scan(errors)
@@ -164,8 +164,8 @@ func _validate_scan(errors: Array[String]) -> void:
 	DefCheck.in_range(errors, "lock_bonus", lock_bonus, 0.0, 1.0)
 	DefCheck.in_range(errors, "noise_penalty", noise_penalty, 0.0, 1.0)
 	DefCheck.in_range_open_low(errors, "full_scan_conf", full_scan_conf, 0.0, 1.0)
-	DefCheck.positive(errors, "scan_cap_s", scan_cap_s)
-	DefCheck.positive(errors, "self_scan_s", self_scan_s)
+	DefCheck.positive(errors, "scan_cap", scan_cap)
+	DefCheck.positive(errors, "self_scan_time", self_scan_time)
 
 
 func _validate_reveals(errors: Array[String]) -> void:

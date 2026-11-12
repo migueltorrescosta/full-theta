@@ -66,7 +66,7 @@ static func text(d: Dictionary) -> PackedStringArray:
 	out.append(
 		(
 			_t("debrief.run")
-			% [_t("debrief.result.%s" % d.get("result", "open")), clock(float(d.get("run_s", 0.0)))]
+			% [_t("debrief.result.%s" % d.get("result", "open")), clock(float(d.get("time", 0.0)))]
 		)
 	)
 	out.append("")
@@ -120,7 +120,7 @@ static func _encounter_line(n: int, row: Dictionary) -> String:
 			_t("debrief.scenario.%s" % row.get("scenario", "")),
 			where,
 			_t("debrief.res.%s" % how),
-			clock(float(row.get("s", 0.0))),
+			clock(float(row.get("time", 0.0))),
 		]
 	)
 

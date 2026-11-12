@@ -78,7 +78,7 @@ func send(s: NetSession, chip_id: String, arg: int) -> String:
 		"from": StationCatalogue.CREW.find(String(chip.from_station)),
 		"to": StationCatalogue.CREW.find(String(chip.to_station)),
 		"sent": tick,
-		"expires": tick + ceili(_def.expiry_s * SimWorld.HZ),
+		"expires": tick + ceili(_def.expiry * SimWorld.HZ),
 		"by": s.id,
 	}
 	_next_id = (_next_id + 1) & 0xffff

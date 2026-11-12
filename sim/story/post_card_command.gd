@@ -4,7 +4,7 @@ extends SimCommand
 ## FT-COM-008). The fields are CardSpec's, plus faction_wide (every ship of the faction
 ## sees the card, D82) and rep_faction (the faction reputation draws are with; -1: the
 ## subject's faction, if the card has a subject). `kind` is a StoryTable.Kind. The card
-## lapses expires_s after posting (0: never). Rejected for an unknown conversation.
+## lapses expiry after posting (0: never). Rejected for an unknown conversation.
 
 var card_kind: int = 0
 var npc_id: StringName = &""
@@ -16,14 +16,14 @@ var rep_interaction: StringName = &""
 var rep_faction: int = -1
 var subject: int = -1
 var subject_flag: int = 0
-var expires_s: float = 0.0
+var expiry: float = 0.0
 var requires_docked: bool = false
 var site: int = -1
 var faction_wide: bool = false
 ## A clearance (P5): the approach lane opens this long after the card is accepted (s) and
-## stays open lane_s (s); 0 for a card that isn't a clearance.
-var lane_open_s: float = 0.0
-var lane_s: float = 0.0
+## stays open lane_length (s); 0 for a card that isn't a clearance.
+var lane_delay: float = 0.0
+var lane_length: float = 0.0
 ## Terms the ship may not meet (P12): this subsystem must supply this many pips.
 var needs_subsystem: StringName = &""
 var needs_pips: int = 0
@@ -53,7 +53,7 @@ func apply(world: SimWorld) -> bool:
 	t.title[card] = String(title_key)
 	t.detail[card] = String(detail_key)
 	t.conversation[card] = conversation_id
-	t.expires_tick[card] = world.tick + SimRate.ticks(expires_s) if expires_s > 0.0 else -1
+	t.expires_tick[card] = world.tick + SimRate.ticks(expiry) if expiry > 0.0 else -1
 	t.reward[card] = reward_credits
 	t.rep_interaction[card] = rep_interaction
 	t.subject[card] = subject
@@ -63,7 +63,7 @@ func apply(world: SimWorld) -> bool:
 	t.subject_flag[card] = subject_flag
 	t.requires_docked[card] = 1 if requires_docked else 0
 	t.site[card] = site
-	StoryRules.set_lane(world, card, lane_open_s, lane_s)
+	StoryRules.set_lane(world, card, lane_delay, lane_length)
 	StoryRules.set_need(world, card, needs_subsystem, needs_pips)
 	world.emit(&"card_posted", ship_id, card, card_kind)
 	result_id = card

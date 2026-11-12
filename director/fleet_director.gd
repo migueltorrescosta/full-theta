@@ -140,10 +140,10 @@ static func _race_site_keys(api: ScenarioApi) -> PackedStringArray:
 	return out
 
 
-## LAST_STANDING (M4-Q7): every raider_wave_every_s a wave at each crewed ship in play,
+## LAST_STANDING (M4-Q7): every raider_wave_every a wave at each crewed ship in play,
 ## wave_strength(wave) times the preset's strength, from its own bearing, so hiding loses.
 func _maybe_wave(api: ScenarioApi) -> void:
-	var every: int = SimRate.ticks(_def.raider_wave_every_s)
+	var every: int = SimRate.ticks(_def.raider_wave_every)
 	var now: int = api.tick()
 	if every <= 0 or now < every * (_waves + 1):
 		return

@@ -124,7 +124,7 @@ func _offer_cards(api: ScenarioApi) -> void:
 	escort.rep_interaction = &"rep.complete_mission"
 	escort.subject = freighter
 	escort.subject_flag = 2
-	escort.expires_s = CARD_S
+	escort.expiry = CARD_S
 	escort.faction_wide = true
 	var to: int = Scenario.fleet(api, _ships)[0]
 	_escort = api.offer(to, escort)
@@ -136,7 +136,7 @@ func _offer_cards(api: ScenarioApi) -> void:
 	salvage.reward_credits = SALVAGE_REWARD
 	salvage.rep_interaction = &"rep.salvage_wreck"
 	salvage.subject = freighter
-	salvage.expires_s = CARD_S
+	salvage.expiry = CARD_S
 	salvage.faction_wide = true
 	_salvage = api.offer(to, salvage)
 

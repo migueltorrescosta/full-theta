@@ -52,7 +52,7 @@ func _init() -> void:
 							profile,
 							n,
 							r["outcome"],
-							r["run_s"],
+							r["time"],
 							(r["encounters"] as Array).size(),
 							(Time.get_ticks_msec() - started) / 1000
 						]

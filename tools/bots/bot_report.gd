@@ -73,7 +73,7 @@ static func _row(key: String, runs: Array) -> String:
 	var survived: int = 0
 	for r: Dictionary in runs:
 		counts[r["outcome"]] = int(counts.get(r["outcome"], 0)) + 1
-		var minutes: float = float(r["run_s"]) / 60.0
+		var minutes: float = float(r["time"]) / 60.0
 		all.append(minutes)
 		if r["outcome"] == "win":
 			won.append(minutes)

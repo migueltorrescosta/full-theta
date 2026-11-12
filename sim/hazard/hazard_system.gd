@@ -2,11 +2,11 @@ class_name HazardSystem
 extends RefCounted
 ## Plays the world's hazards (D208, FT-RLY-004, P4, P11). Once per tick, before the
 ## integrator, for every live ship in id order:
-## - a ZONE damages the ship inside it (damage_w J/s) and drags it (drag, the share of its
+## - a ZONE damages the ship inside it (damage_rate J/s) and drags it (drag, the share of its
 ##   velocity removed per second). The damage goes to the hull, or to the named subsystems
 ##   in chunks every DAMAGE_EVERY ticks, so the events stay few;
 ## - a FRONT, a plane or an expanding sphere shell, hits a ship the tick its surface
-##   reaches it, once (hit_j to the hull or to each named subsystem). A ship already behind
+##   reaches it, once (hit_energy to the hull or to each named subsystem). A ship already behind
 ##   the surface when the front sets off is not hit.
 ## Nothing here is random: the geometry is a function of the tick, so a replay agrees.
 ## A faction knows of a hazard when its sensors reach the hazard's surface (detect_range) or
@@ -41,7 +41,7 @@ static func step(world: SimWorld) -> void:
 ## hazard's surface at time t (s): positive ahead of a front or outside a zone, zero on the
 ## surface, negative inside the zone or behind the front.
 static func edge_distance(h: HazardDef, from_centre: Vector3, t: float) -> float:
-	var since: float = maxf(0.0, t - h.start_s)
+	var since: float = maxf(0.0, t - h.start)
 	if not h.is_front():
 		return from_centre.length() - h.radius
 	if h.shape == HazardDef.Shape.PLANE:
@@ -53,7 +53,7 @@ static func edge_distance(h: HazardDef, from_centre: Vector3, t: float) -> float
 static func is_live(h: HazardDef, t: float) -> bool:
 	if not h.is_front():
 		return true
-	return t >= h.start_s and (h.duration_s <= 0.0 or t <= h.start_s + h.duration_s)
+	return t >= h.start and (h.duration <= 0.0 or t <= h.start + h.duration)
 
 
 ## Offset (m) from the hazard's centre to the ship, by minimum image.
@@ -119,12 +119,12 @@ static func _zone(world: SimWorld, ship: int, h: HazardDef) -> void:
 		return
 	if h.drag > 0.0:
 		world.kin.vel[ship] *= 1.0 - h.drag * SimWorld.DT
-	if h.damage_w <= 0.0:
+	if h.damage_rate <= 0.0:
 		return
 	if h.subsystems.is_empty():
-		DamageSystem.damage_hull(world, ship, h.damage_w * SimWorld.DT)
+		DamageSystem.damage_hull(world, ship, h.damage_rate * SimWorld.DT)
 	elif world.tick % DAMAGE_EVERY == 0:
-		_damage_subsystems(world, ship, h.damage_w * SimWorld.DT * DAMAGE_EVERY, h)
+		_damage_subsystems(world, ship, h.damage_rate * SimWorld.DT * DAMAGE_EVERY, h)
 
 
 static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -> void:
@@ -132,7 +132,7 @@ static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -
 	var bit: int = 1 << i
 	if table.crossed[ship] & bit != 0:
 		return
-	# Before start_s the front does not exist yet; faded, it is gone (see is_live).
+	# Before start the front does not exist yet; faded, it is gone (see is_live).
 	if not is_live(h, t):
 		return
 	var d: float = edge_distance(h, ship_offset(world, ship, h), t)
@@ -145,11 +145,11 @@ static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -
 	# the ship is spawned or reset there) is crossed without a hit.
 	if first_look:
 		return
-	world.emit(&"hazard_hit", ship, -1, h.hit_j, Vector3.ZERO, h.id)
+	world.emit(&"hazard_hit", ship, -1, h.hit_energy, Vector3.ZERO, h.id)
 	if h.subsystems.is_empty():
-		DamageSystem.damage_hull(world, ship, h.hit_j)
+		DamageSystem.damage_hull(world, ship, h.hit_energy)
 	else:
-		_damage_subsystems(world, ship, h.hit_j, h)
+		_damage_subsystems(world, ship, h.hit_energy, h)
 
 
 static func _damage_subsystems(world: SimWorld, ship: int, energy: float, h: HazardDef) -> void:

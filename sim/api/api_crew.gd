@@ -28,10 +28,10 @@ func alive(ship: int) -> bool:
 	return ship >= 0 and _world.kin.is_alive(ship)
 
 
-## The nearest living hostile of the ship's faction that it detects within `range_m` (any, or
+## The nearest living hostile of the ship's faction that it detects within `reach` (any, or
 ## only armed ones), or -1.
-func nearest_hostile(ship: int, range_m: float, armed_only: bool = false) -> int:
-	return CrewMoves.nearest_hostile(_world, ship, range_m, armed_only)
+func nearest_hostile(ship: int, reach: float, armed_only: bool = false) -> int:
+	return CrewMoves.nearest_hostile(_world, ship, reach, armed_only)
 
 
 ## Whether the ship's Science has no scan session open.
@@ -163,9 +163,9 @@ func cancel_scan(ship: int) -> bool:
 # --- relay ---
 
 
-## Launches a probe `ahead_m` metres ahead of the ship.
-func launch_probe(ship: int, ahead_m: float) -> bool:
-	var at: PackedFloat64Array = _world.kin.point_at(ship, _world.kin.forward(ship) * ahead_m)
+## Launches a probe `distance` metres ahead of the ship.
+func launch_probe(ship: int, distance: float) -> bool:
+	var at: PackedFloat64Array = _world.kin.point_at(ship, _world.kin.forward(ship) * distance)
 	var probe: LaunchProbeCommand = LaunchProbeCommand.new()
 	probe.x = at[0]
 	probe.y = at[1]

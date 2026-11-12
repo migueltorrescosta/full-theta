@@ -15,14 +15,14 @@ func _site(key: StringName, pos: Vector3, radius: float = 3000.0) -> SiteDef:
 	s.id = key
 	s.name_key = "site.%s" % key
 	s.pos = pos
-	s.radius_m = radius
+	s.radius = radius
 	return s
 
 
 func _map(sites: Array[SiteDef], period: float = 400000.0) -> MapDef:
 	var m: MapDef = MapDef.new()
 	m.id = &"t"
-	m.period_m = period
+	m.period = period
 	m.sites = sites
 	return m
 
@@ -32,7 +32,7 @@ func _map(sites: Array[SiteDef], period: float = 400000.0) -> MapDef:
 # no errors against the M1 ships, every key unique.
 func test_the_m3_map_is_valid() -> void:
 	var m: MapDef = SiteFixture.map()
-	assert_float(m.period_m).is_equal(400000.0)
+	assert_float(m.period).is_equal(400000.0)
 	assert_array(m.errors(_ships())).is_empty()
 	assert_int(m.all_sites().size()).is_between(5, 8)
 	assert_str(String(m.sites[0].id)).is_equal("kestrel_yard")
@@ -110,7 +110,7 @@ func test_no_contact_bleed_at_the_minimum_spacing() -> void:
 		var b: Vector3 = Vector3(-177000.0, 0, 0) if seam else Vector3(46000.0, 0, 0)
 		var m: MapDef = _map([_site(&"a", a), _site(&"b", b)])
 		assert_array(m.errors(_ships())).is_empty()
-		var w: SimWorld = SimWorld.new(1, "", m.period_m)
+		var w: SimWorld = SimWorld.new(1, "", m.period)
 		w.add_site(m.sites[0])
 		w.add_site(m.sites[1])
 		var toward: Vector3 = Vector3.RIGHT

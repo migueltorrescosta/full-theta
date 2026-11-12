@@ -125,8 +125,8 @@ func test_early_dock_does_not_fail_a_later_clearance() -> void:
 	StoryFixture.dock(w, 0)
 	w.step()
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER, &"", SITE)
-	spec.lane_open_s = 1.0
-	spec.lane_s = 5.0
+	spec.lane_delay = 1.0
+	spec.lane_length = 5.0
 	spec.rep_faction = RED
 	var card: int = StoryFixture.post(w, 0, spec)
 	SimFixture.run(w, 5)
@@ -253,8 +253,8 @@ func test_an_info_card_cannot_be_accepted() -> void:
 func test_card_and_contact_state_set_no_flags() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER, &"", SITE)
-	spec.lane_open_s = 1.0
-	spec.lane_s = 5.0
+	spec.lane_delay = 1.0
+	spec.lane_length = 5.0
 	spec.needs_subsystem = &"engines"
 	spec.needs_pips = 2
 	var card: int = StoryFixture.post(w, 0, spec)

@@ -51,9 +51,9 @@ static func kestrel_yard() -> SiteDef:
 	site.id = &"kestrel_yard"
 	site.name_key = "site.kestrel_yard"
 	site.kind = &"station"
-	site.radius_m = 3000.0
+	site.radius = 3000.0
 	site.dockable = true
-	site.dock_range_m = 1500.0
+	site.dock_range = 1500.0
 	site.dock_max_speed = 10.0
 	return site
 

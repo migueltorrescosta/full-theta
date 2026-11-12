@@ -53,7 +53,7 @@ func after_ticks(events: Array[SimEvent]) -> void:
 		over[e.ship_id] = {
 			"ship": e.ship_id,
 			"outcome": String(e.tag),
-			"time_s": e.tick * SimWorld.DT,
+			"time": e.tick * SimWorld.DT,
 			"hull": clampf(hull, 0.0, 1.0),
 		}
 		votes[e.ship_id] = NetVote.new()

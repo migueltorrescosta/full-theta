@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## Docking (FT-HLM-013, D229): a dockable site docks a ship within dock_range_m of its
+## Docking (FT-HLM-013, D229): a dockable site docks a ship within dock_range of its
 ## point and at or under dock_max_speed; a docked ship is held at the point until it
 ## undocks. M3 map: Kestrel Yard (site 0, origin) and Anchorage Nine are stations, Vesper
 ## Beacon is not dockable.
