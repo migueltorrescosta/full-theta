@@ -421,3 +421,8 @@ def test_macos_signing_is_opt_in_and_unsigned_packaging_needs_no_tool(tmp_path, 
     names = zipfile.ZipFile(path).namelist()
     assert f"{package.APP}/Contents/Helpers/piper/piper" in names and "BUILD.json" in names
     assert package.common_files("v1.2.3", "abc", "o/r", sign)["BUILD.json"].count(b'"macos_signed": ' + (b"true" if sign else b"false")) == 1
+
+
+def test_languages_cli_prints_the_release_languages(capsys) -> None:
+    assert package.main(["--languages"]) == 0
+    assert capsys.readouterr().out.split() == package.release_languages()

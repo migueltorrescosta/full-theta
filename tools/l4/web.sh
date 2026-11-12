@@ -14,6 +14,10 @@ cd "$root" || exit 1
 source "$root/tools/lib.sh"
 cpus=$(ft_cpus L4_CPUS)
 out=$root/build/l4web
+# Nested timeouts: the server outlives the bots, which outlive the browser run.
+browser=150
+bots_s=$((browser + 50))
+server_s=$((browser + 90))
 godot=$(tools/get-godot.sh --with-templates) || exit 1
 [[ -d tools/l6/node_modules ]] || (cd tools/l6 && npm ci --silent) || exit 1
 rm -rf "$out"
@@ -22,7 +26,7 @@ echo "l4web: export"
 tools/release/export_web.sh "$out/site" "$out/export.log" || exit 1
 echo "l4web: serve and browse"
 taskset -c "$cpus" "$godot" --headless --path . -- --server --bind 127.0.0.1 --port 0 \
-  --http-root "$out/site" --dev-all-stations --no-beacon --grace-s 15 --run-for 240 \
+  --http-root "$out/site" --dev-all-stations --no-beacon --grace-s 15 --run-for "$server_s" \
   --server-log "$out/session.jsonl" >"$out/server.log" 2>&1 &
 server=$!
 bots=()
@@ -34,12 +38,12 @@ ft_wait_ready "$out/server.log" "$server" 60 || exit 1
 for bot in systems ops; do
   taskset -c "$cpus" "$godot" --headless --path . -s res://tools/l4/l4_client.gd -- \
     --url "$WS_URL" --name "$bot" --intent "tools/l4/web/$bot.intent" \
-    --run-dir "$out" --log "$out/$bot.jsonl" --max-s 200 >>"$out/bots.out" 2>&1 &
+    --run-dir "$out" --log "$out/$bot.jsonl" --max-s "$bots_s" >>"$out/bots.out" 2>&1 &
   bots+=($!)
 done
 both_picked() { [[ -e $out/sig.systems_picked && -e $out/sig.ops_picked ]]; }
 ft_wait_for "the Systems and Ops bots to pick their stations" 60 both_picked || exit 1
-taskset -c "$cpus" node tools/l4/web_station.mjs "http://ft-l4web.lan:${HTTP_URL##*:}/" "$out" 150 \
+taskset -c "$cpus" node tools/l4/web_station.mjs "http://ft-l4web.lan:${HTTP_URL##*:}/" "$out" "$browser" \
   | tee "$out/web.log" || failed=1
 # The server writes its snapshot-age line every 10 s: wait for the next one after the run.
 ages() { grep -c snapshot_age "$out/session.jsonl" 2>/dev/null; }
@@ -50,5 +54,5 @@ touch "$out/sig.web_done"
 wait "${bots[@]}" 2>/dev/null
 kill "$server" 2>/dev/null
 wait "$server" 2>/dev/null
-python3 tools/l4/web_check.py "$out/session.jsonl" || failed=1
+uv run --quiet --project tools python tools/l4/web_check.py "$out/session.jsonl" || failed=1
 exit "$failed"
