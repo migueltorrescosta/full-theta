@@ -74,6 +74,7 @@ func _table(p: SciencePanel) -> Array:
 		return func() -> BaseButton: return p.phone.actions[k]
 	var c: Callable = func(kind: String, id: String) -> Callable:
 		return func() -> BaseButton: return p.phone.crew.button(kind, id)
+	var chip: Callable = func() -> BaseButton: return p.screen().frame.selection_bar.name_button
 	return [
 		["Scan", 0, a.call("scan"), -1, 1, ["command", "science_scan"]],
 		["Hack (choose subsystem)", 0, a.call("hack"), 0, 2, ["command", "science_hack"]],
@@ -82,10 +83,9 @@ func _table(p: SciencePanel) -> Array:
 		["Passive / active", 0, a.call("mode"), -1, 1, ["command", "science_sensor_mode"]],
 		["Scan own ship", 0, a.call("self"), -1, 1, ["command", "science_self_scan"]],
 		["Claim scan/hack", 0, a.call("claim"), -1, 1, ["claim", ""]],
-		["Sensor power request", 2, c.call("chip", "sensor_power"), -1, 2, ["send_chip", ""]],
-		["To scan mark request", 2, c.call("chip", "scan_mark"), -1, 2, ["send_chip", ""]],
-		["Ping (Crew)", 2, c.call("ping", ""), -1, 2, ["ping", ""]],
-		["Mark (Crew)", 2, c.call("mark", ""), -1, 2, ["place_mark", ""]],
+		# Ping and Mark: the selection sheet (C4), from the target chip.
+		["Ping (selection)", 0, chip, 0, 2, ["ping", ""]],
+		["Mark (selection)", 0, chip, 1, 2, ["place_mark", ""]],
 		["Share", 2, c.call("share", ""), -1, 2, ["share", ""]],
 	]
 

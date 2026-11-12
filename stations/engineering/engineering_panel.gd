@@ -24,19 +24,21 @@ const S = StationCatalogue.Section
 ## Controller: cursor speed (px/s) and cutaway turn rate (rad/s) at full deflection.
 const CURSOR_SPEED: float = 450.0
 const TURN_RATE: float = 2.0
-## [intent id, string key, English] of the rail's buttons, in rows of two (design 2.3); each
-## sends its intent as a key or the pad does (Claim as the common claim).
+## [intent id, string key, English] of the rail's buttons, in their fixed order (design 2.3):
+## each label a verb and its object (C3), and each sends its intent as a key or the pad does
+## (Claim as the common claim). Cause, Probe and Claim hide while they can't matter
+## (EngineeringModel.shown).
 const TOUCH_ACTIONS: Array = [
-	["pip_add", "eng.touch.pip_add", "Power +"],
-	["pip_remove", "eng.touch.pip_remove", "Power -"],
-	["shield_tighter", "eng.touch.tighter", "Tighter"],
-	["shield_wider", "eng.touch.wider", "Wider"],
-	["boost", "eng.boost", "Boost"],
-	["harden", "eng.touch.harden", "Harden"],
-	["dispatch_nearest", "eng.touch.repair", "Repair"],
-	["cause_next", "eng.touch.cause", "Cause"],
-	["fabricate_probe", "eng.touch.probe", "Probe"],
-	["claim", "eng.touch.claim", "Claim"],
+	["pip_add", "eng.touch.pip_add", "Add power"],
+	["pip_remove", "eng.touch.pip_remove", "Cut power"],
+	["shield_tighter", "eng.touch.tighter", "Focus shields"],
+	["shield_wider", "eng.touch.wider", "Widen shields"],
+	["boost", "eng.touch.boost", "Boost engines"],
+	["harden", "eng.touch.harden", "Protect part"],
+	["dispatch_nearest", "eng.touch.repair", "Repair part"],
+	["cause_next", "eng.touch.cause", "Guess cause"],
+	["fabricate_probe", "eng.touch.probe", "Build probe"],
+	["claim", "eng.touch.claim", "Take crew"],
 ]
 
 ## The block readers and actions (EngineeringModel), shared with the board, cutaway and phone.
@@ -69,6 +71,9 @@ var _row: BoxContainer
 var _scroll_all: ScrollContainer
 var _left: VBoxContainer
 var _side: PanelContainer
+## The faults box's frame: no margin in the row, a TOUCH_GAP margin from the screen's edges
+## under the cutaway (narrow, 150 %), so the box never touches them.
+var _side_box: MarginContainer
 var _lists: VBoxContainer
 var _lists_text: String = ""
 var _lists_margin: MarginContainer
@@ -108,17 +113,18 @@ func _setup() -> void:
 	board.custom_minimum_size = Vector2(270, 0)
 	_row.add_child(board)
 	_side = PanelContainer.new()
-	var box: StyleBoxFlat = StyleBoxFlat.new()
-	box.bg_color = Palette.color("panel")
-	box.border_color = Palette.color("line_strong")
-	box.set_border_width_all(UiTheme.BORDER)
-	box.set_corner_radius_all(UiTheme.RADIUS)
-	box.set_content_margin_all(12)
-	_side.add_theme_stylebox_override("panel", box)
+	_side.add_theme_stylebox_override("panel", UiTheme.box("panel", "line_strong", 12, 12))
 	_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_side.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_side.custom_minimum_size = Vector2(210, 0)
-	_row.add_child(_side)
+	_side_box = MarginContainer.new()
+	_side_box.name = "SideBox"
+	_side_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_side_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for m: String in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		_side_box.add_theme_constant_override(m, 0)
+	_side_box.add_child(_side)
+	_row.add_child(_side_box)
 	resized.connect(phone.place_lists)
 	_lists = VBoxContainer.new()
 	# Scrolls when the lists don't fit (they sit under the cutaway when narrow).
@@ -154,6 +160,7 @@ func _ready() -> void:
 func _mode_changed() -> void:
 	cutaway.visible = not docked
 	_side.visible = not docked
+	_side_box.visible = not docked
 	board.compact = docked
 	phone.place_lists()
 	_apply_tablet.call_deferred()
@@ -216,36 +223,42 @@ func view_rect() -> Rect2:
 	return super()
 
 
-## The Claim button's text: the crew it takes or releases (FT-NET-023).
+## The Claim button's text: Take crew, or Free crew once this player holds the picked crew
+## (FT-NET-023); the rail names the crew's letter under it.
 func claim_text() -> String:
-	if model.crew_count() == 0:
-		return TouchText.of("eng.touch.claim", "Claim")
-	var letter: String = EngineeringModel.crew_letter(model.crew_pick)
-	var item: String = "%s:%d" % [StationCatalogue.CLAIM_CREW, model.crew_pick]
-	if int(ctx.crew.claims.get(item, {}).get("session", -1)) == ctx.crew.session:
-		return TouchText.of("eng.touch.release_crew", "Release %s") % letter
-	return TouchText.of("eng.touch.claim_crew", "Claim %s") % letter
+	var item: String = claim_item()
+	if item != "" and int(ctx.crew.claims.get(item, {}).get("session", -1)) == ctx.crew.session:
+		return TouchText.of("eng.touch.release_crew", "Free crew")
+	return TouchText.of("eng.touch.claim", "Take crew")
 
 
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:
 ## the rail (first page only), the view-top row and each page's view.
 static func touch_help() -> Array:
 	var rail: Array = []
+	# The rail's buttons two to a row in its 4 px padding; the view beside it, 8 px on.
+	var button_w: float = (EngineeringPhone.PHONE_RAIL_W - 8.0 - UiTheme.TOUCH_GAP) / 2.0
+	var view_x: float = 47.0 + EngineeringPhone.PHONE_RAIL_W + UiTheme.TOUCH_GAP
 	var what: Array = [
 		["pip_add", "One more pip on the picked part"],
 		["pip_remove", "One pip less"],
-		["tighter", "Focus the shields tighter"],
-		["wider", "Spread the shields wider"],
+		["tighter", "Focus the shields on a narrower arc"],
+		["wider", "Spread the shields over a wider arc"],
 		["boost", "Overcharge the engines for a while"],
-		["harden", "Harden the picked part (costs parts)"],
+		["harden", "Protect the picked part from hits (costs parts)"],
 		["repair", "Send the nearest crew to the picked part"],
-		["cause", "Pick the next cause of its fault"],
+		["cause", "Guess the cause of the picked part's fault"],
 		["probe", "Build a probe for Relay"],
 		["claim", "Take or free a crew"],
 	]
 	for i: int in TOUCH_ACTIONS.size():
 		var a: Array = TOUCH_ACTIONS[i]
-		var r: Rect2 = Rect2(51.0 + (i % 2) * 85.0, 76.0 + floori(i / 2.0) * 56.0, 76.0, 48.0)
+		var r: Rect2 = Rect2(
+			51.0 + (i % 2) * (button_w + UiTheme.TOUCH_GAP),
+			76.0 + floori(i / 2.0) * 56.0,
+			button_w,
+			48.0
+		)
 		(
 			rail
 			. append(
@@ -256,9 +269,9 @@ static func touch_help() -> Array:
 				]
 			)
 		)
-	var view: Rect2 = Rect2(223.0, 124.0, 386.0, 236.0)
+	var view: Rect2 = Rect2(view_x, 124.0, 609.0 - view_x, 236.0)
 	var chip: Array = [
-		Rect2(272.0, 64.0, 288.0, 48.0),
+		Rect2(view.get_center().x - 144.0, 64.0, 288.0, 48.0),
 		TouchText.of("help.chip", "Target"),
 		TouchText.of("help.chip_what", "‹ › change the target; tap it to ping or mark"),
 	]
@@ -285,7 +298,7 @@ static func touch_help() -> Array:
 					TouchText.of("eng.touch.ship", "Ship"),
 					TouchText.of(
 						"help.eng.cutaway",
-						"Drag a crew onto a part to fix it; drag elsewhere to turn"
+						"Drag a crew onto a part to fix it. Drag empty space to turn."
 					),
 				]
 			],
@@ -306,14 +319,9 @@ static func touch_help() -> Array:
 			"boxes":
 			[
 				[
-					Rect2(223.0, 124.0, 189.0, 48.0),
-					TranslationServer.translate("intent.ping"),
-					TouchText.of("help.ping", "Ping the target for the crew"),
-				],
-				[
-					Rect2(420.0, 124.0, 189.0, 48.0),
-					TranslationServer.translate("intent.mark"),
-					TouchText.of("help.mark", "Mark the target"),
+					Rect2(view.position.x, 124.0, view.size.x, 48.0),
+					TouchText.of("share.drawer", "Share"),
+					TouchText.of("help.crew_share", "Lend a crewmate your data for a while"),
 				],
 			],
 		},
@@ -515,6 +523,7 @@ func _poll_pad(delta: float) -> void:
 	var spin: Vector2 = Vector2(ctx.matcher.axis("cutaway_yaw"), ctx.matcher.axis("cutaway_pitch"))
 	if spin != Vector2.ZERO:
 		cutaway.rotate_by(spin * TURN_RATE * delta)
+		cutaway.learned()
 	if move != Vector2.ZERO and not docked:
 		var i: int = cutaway.move_cursor(move * CURSOR_SPEED * delta)
 		if i >= 0:

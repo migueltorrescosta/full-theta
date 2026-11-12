@@ -24,6 +24,8 @@ extends StationPanel
 
 ## Under this width (a phone, D195) the HUD stacks around the map.
 const NARROW_W: float = 560.0
+## The map's view starts this far (px) under the hint over it.
+const HINT_GAP: float = 8.0
 ## Under this height the HUD's bottom box is one row (a phone on its side).
 const SHORT_H: float = 480.0
 ## A press that moves less than this is a click (select), not a drag (px).
@@ -187,6 +189,18 @@ func _update_hint() -> void:
 	_hint.visible = not docked and (armed != "" or wide)
 
 
+## The map's view `r` (empty: all of it) starts under the hint when the hint shows over it,
+## so no contact, ping ring or label is drawn across the hint's text (w-dcc).
+func _below_hint(r: Rect2) -> Rect2:
+	if not _hint.visible or _hint.size.y <= 0.0:
+		return r
+	var view: Rect2 = r if r.has_area() else Rect2(Vector2.ZERO, map.size)
+	var top: float = _hint.position.y + _hint.size.y + HINT_GAP - map.position.y
+	if top <= view.position.y:
+		return r
+	return Rect2(view.position.x, top, view.size.x, maxf(view.end.y - top, 0.0))
+
+
 func _process(delta: float) -> void:
 	if focused:
 		_poll_pad(delta)
@@ -214,14 +228,14 @@ func refresh() -> void:
 	map.routes = ctx.crew.routes
 	# Narrow, the log and inbox box covers the map's bottom edge: the span caption sits above it.
 	map.caption_bottom = hud.bottom_top() if hud.visible and size.x < NARROW_W else -1.0
+	_hint.text = tr("relay.armed_" + armed) if armed != "" else tr("relay.hint")
+	_update_hint()
 	if phone == null:
-		map.view_rect = hud.free_rect()
+		map.view_rect = _below_hint(hud.free_rect())
 	map.queue_redraw()
 	hud.refresh()
 	if phone != null:
 		phone.update()
-	_hint.text = tr("relay.armed_" + armed) if armed != "" else tr("relay.hint")
-	_update_hint()
 
 
 func handle_intent(ev: Dictionary) -> bool:

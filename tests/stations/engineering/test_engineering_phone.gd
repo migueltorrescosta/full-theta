@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
 ## Engineering on a phone (#28 follow-up, design 2.3, D287): the persistent rail (a grid
 ## upright) with every board action and Claim, the pages Power, Ship, Faults and Crew, every
-## action within 2 taps of rest (rail actions at 1), the touch rules on every page both ways
-## up, and rail taps that send what the keys send.
+## action within 2 taps of rest (rail actions at 1; Ping and Mark on the selection sheet), the
+## touch rules on every page both ways up, and rail taps that send what the keys send.
 # FT: FT-STN-005
 
 const SETTINGS: String = "user://test_engineering_phone.cfg"
@@ -11,8 +11,9 @@ const PORTRAIT: Array = [0, 47, 0, 34]
 const FORMS: Array = [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]
 const P = EngineeringPanel.Page
 
-## The design's reachability table (2.3): [action, page, control, taps, the send it makes].
-## Rail actions are persistent, so 1 tap from rest; the page views are 1 tap.
+## The design's reachability table (2.3): [action, page, control, taps, the send it makes,
+## the selection sheet's option or -1]. Rail actions are persistent, so 1 tap from rest; the
+## page views are 1 tap; Ping and Mark are the selection sheet's (C4).
 const TABLE: Array = [
 	["pip add", P.POWER, "Touch_pip_add", 1, "set_pips"],
 	["pip remove", P.POWER, "Touch_pip_remove", 1, "set_pips"],
@@ -24,8 +25,8 @@ const TABLE: Array = [
 	["cause", P.POWER, "Touch_cause_next", 1, ""],
 	["probe", P.POWER, "Touch_fabricate_probe", 1, "fabricate_probe"],
 	["claim a crew", P.POWER, "Touch_claim", 1, "claim"],
-	["ping", P.CREW, "ping", 2, "ping"],
-	["mark", P.CREW, "mark", 2, "place_mark"],
+	["ping", P.POWER, "selection", 2, "ping", 0],
+	["mark", P.POWER, "selection", 2, "place_mark", 1],
 ]
 
 
@@ -58,6 +59,15 @@ func _frames(n: int) -> void:
 		await get_tree().process_frame
 
 
+## Every rare rail action shows (C3): a fault of unknown cause on the picked part (Guess cause
+## can act) and a second player at Engineering (Take crew).
+func _rare(s: StationScreen) -> void:
+	s.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"][0]["fault"] = true
+	s.ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
+		{"name": "Ana", "seat": "engineering"}, {"name": "Bo", "seat": "engineering"}
+	]
+
+
 func _drop(s: StationScreen) -> void:
 	s.get_parent().remove_child(s)
 	s.free()
@@ -80,16 +90,24 @@ func test_every_action_within_two_taps() -> void:
 	for f: Array in FORMS:
 		var s: StationScreen = await _screen(f[0], f[1])
 		s.ctx.crew.select("contact", StationFixture.H2)
-		# A fault of unknown cause on the picked part, so Cause can act (C4: greyed otherwise).
-		s.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"][0]["fault"] = true
+		_rare(s)
 		var e: EngineeringPanel = s.focused_panel()
 		assert_object(e.pages).is_not_null()
 		assert_array(e.pages.titles()).is_equal(["Power", "Ship", "Faults", "Crew"])
 		await _frames(2)
 		for row: Array in TABLE:
 			var from: int = StationFixture.sent(s.ctx).sent.size()
+			var control: Variant = row[2]
+			if control == "selection":
+				control = func() -> BaseButton: return s.frame.selection_bar.name_button
 			var r: Dictionary = PhoneReach.walk(
-				s, {"page": row[1], "control": row[2], "taps": row[3]}
+				s,
+				{
+					"page": row[1],
+					"control": control,
+					"taps": row[3],
+					"option": row[5] if row.size() > 5 else -1
+				}
 			)
 			var what: String = "%s %s" % [row[0], f[0]]
 			assert_str(r["error"]).override_failure_message(what + " " + str(r["error"])).is_empty()
@@ -150,11 +168,14 @@ func test_rail_taps_send_the_key_intents() -> void:
 		var id: String = a[0]
 		for f: Array in FORMS:
 			var touch: StationScreen = await _screen(f[0], f[1])
+			_rare(touch)
+			await _frames(1)
 			var b: BaseButton = PhoneReach.control(touch, "Touch_" + id)
 			assert_bool(b.is_visible_in_tree()).override_failure_message(id).is_true()
 			b.pressed.emit()
 			SafeArea.simulate([])
 			var keys: StationScreen = await _screen(Vector2i(1280, 720), [])
+			_rare(keys)
 			var target: String = "screen" if id == "claim" else "engineering"
 			keys.dispatch({"id": id, "pressed": true, "device": IntentTable.KBM, "target": target})
 			var by_touch: Array = StationFixture.sent(touch.ctx).sent
@@ -166,15 +187,17 @@ func test_rail_taps_send_the_key_intents() -> void:
 
 
 # FT: FT-STN-005, FT-NET-023
-# The Claim button names the crew it takes, and Release once this player holds it.
+# The Claim button takes the crew it names under it, and frees it once this player holds it.
 func test_claim_names_the_crew() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
+	_rare(s)
+	await _frames(1)
 	var e: EngineeringPanel = s.focused_panel()
 	var b: RailButton = e.touch_buttons["claim"]
-	assert_str(b.text).is_equal("Claim A")
+	assert_str(b.text).is_equal("Take crew\nA")
 	s.ctx.crew.claims["crew:0"] = {"session": StationFixture.SESSION, "name": "Ana"}
 	await _frames(1)
-	assert_str(b.text).is_equal("Release A")
+	assert_str(b.text).is_equal("Free crew\nA")
 	b.pressed.emit()
 	assert_array(StationFixture.sent(s.ctx).of("release_claim")).is_equal(
 		[["release_claim", ["crew:0"]]]

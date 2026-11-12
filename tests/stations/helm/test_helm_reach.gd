@@ -12,8 +12,8 @@ const PORTRAIT: Array = [0, 47, 0, 34]
 ## Persistent controls: no page.
 const KEEP: int = -1
 ## [action, page, control, taps]: the control is a Helm button id, "ring" (a cell of the
-## shield ring), "radar" (a blip on the radar), "range" (Range +), "chip" / "ping" / "mark"
-## (the Crew page's buttons) or "cycle" (the selection bar's ›).
+## shield ring), "radar" (a blip on the radar), "range" (Range +), "ping" / "mark" (the
+## selection sheet's, from the target chip: C4) or "cycle" (the selection bar's ›).
 const TABLE: Array = [
 	["All stop", KEEP, "all_stop", 1],
 	["Approach (hold)", KEEP, "approach", 1],
@@ -27,9 +27,8 @@ const TABLE: Array = [
 	["Decoupled", HelmTouch.PAGE_NAV, "decoupled", 2],
 	["Select on the radar", HelmTouch.PAGE_RADAR, "radar", 2],
 	["Radar range", HelmTouch.PAGE_RADAR, "range", 2],
-	["Boost request", HelmTouch.PAGE_CREW, "chip", 2],
-	["Ping", HelmTouch.PAGE_CREW, "ping", 2],
-	["Mark", HelmTouch.PAGE_CREW, "mark", 2],
+	["Ping", KEEP, "ping", 2],
+	["Mark", KEEP, "mark", 2],
 	["Cycle target", KEEP, "cycle", 1],
 ]
 
@@ -155,16 +154,12 @@ func _reach(row: Array) -> int:
 			var before_range: int = _ui().radar.range_index
 			_tap(_ui().page_buttons[page]["range_out"])
 			assert_int(_ui().radar.range_index).is_not_equal(before_range)
-		"chip", "ping", "mark":
-			var chips: Array[ChipDef] = _panel.request_chips()
-			var b: RailButton = (
-				_ui().crew.button("chip", String(chips[0].id))
-				if what == "chip"
-				else _ui().crew.button(what)
-			)
-			assert_object(b).override_failure_message(what).is_not_null()
-			_tap(b)
-			var method: String = {"chip": "send_chip", "ping": "ping", "mark": "place_mark"}[what]
+		"ping", "mark":
+			_tap(_screen.frame.selection_bar.name_button)
+			assert_bool(_screen.sheet.is_open()).override_failure_message(what).is_true()
+			_tap(_screen.sheet.option(0 if what == "ping" else 1))
+			taps += 1
+			var method: String = {"ping": "ping", "mark": "place_mark"}[what]
 			assert_int(_sent(method)).override_failure_message(what).is_greater(0)
 		"cycle":
 			_tap(_screen.frame.selection_bar.next_button)

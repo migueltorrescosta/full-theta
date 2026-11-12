@@ -106,6 +106,7 @@ func _table(s: StationScreen, p: RelayPanel) -> Array:
 					return child as BaseButton
 			return null
 	var centred: Callable = func() -> bool: return p._centred
+	var chip: Callable = func() -> BaseButton: return s.frame.selection_bar.name_button
 	var sel: Callable = func() -> String: return str(s.ctx.crew.selection)
 	var rows: Array = [
 		[
@@ -153,17 +154,10 @@ func _table(s: StationScreen, p: RelayPanel) -> Array:
 		["Pick a contact", 2, row_of.call("_contacts_box"), -1, 2, "none", sel],
 		["Route (Contacts)", 2, b.call("route_contact"), -1, 2, "contact", _count(s, "route_add")],
 		["Centre (Contacts)", 2, b.call("centre_contact"), -1, 2, "contact", centred],
-		[
-			"Fabricate probe request",
-			4,
-			c.call("chip", "fabricate_probe"),
-			-1,
-			2,
-			"contact",
-			_count(s, "send_chip")
-		],
-		["Ping (Crew)", 4, c.call("ping", ""), -1, 2, "contact", _count(s, "ping")],
-		["Mark (Crew)", 4, c.call("mark", ""), -1, 2, "contact", _count(s, "place_mark")],
+		# Ping and Mark: the selection sheet (C4), from the target chip.
+		["Ping (selection)", 0, chip, 0, 2, "contact", _count(s, "ping")],
+		["Mark (selection)", 0, chip, 1, 2, "contact", _count(s, "place_mark")],
+		["Share (Crew)", 4, c.call("share", ""), -1, 2, "contact", _count(s, "share")],
 	]
 	for i: int in MainScreen.NAMES.size():
 		rows.append(

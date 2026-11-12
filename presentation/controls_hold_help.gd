@@ -14,10 +14,13 @@ static var _table: Dictionary = {}
 static var _locale: String = ""
 
 
-## The one-line explanation of the button labelled `label` ("Cause", "Claim A"), or "" when no
-## station's help boxes name it. The longest box name the label equals or starts with
+## The one-line explanation of the button labelled `label` ("Guess cause", "Take crew\nA"), or ""
+## when no station's help boxes name it. The longest box name the label equals or starts with
 ## (followed by a space) wins.
 static func explain(label: String) -> String:
+	# A rail button's second line names its part or reason ("Repair part\nENG"): the label
+	# is its first line.
+	label = label.get_slice("\n", 0)
 	var t: Dictionary = table()
 	if t.has(label):
 		return t[label]

@@ -813,9 +813,7 @@ static func touch_help() -> Array:
 	]
 	var card: Array = [[Rect2(47, 64, 300, 280), t.call("page.card"), t.call("help.sci_card")]]
 	var crew: Array = [
-		[Rect2(47, 64, 80, 48), t.call("intent.request"), t.call("intent.request")],
-		[Rect2(135, 64, 80, 48), t.call("intent.ping"), t.call("intent.ping")],
-		[Rect2(47, 120, 168, 104), t.call("intent.mark"), t.call("help.shares")],
+		[Rect2(47, 64, 168, 48), t.call("share.drawer"), t.call("help.crew_share")],
 	]
 	return [
 		{"page": t.call("page.contacts"), "boxes": contacts},

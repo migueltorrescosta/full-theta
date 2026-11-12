@@ -461,9 +461,8 @@ func test_out_of_arc_warning_clears_the_chips() -> void:
 
 
 # FT: FT-STN-010, FT-PAIR-012, FT-SPA-016, FT-STN-005
-# The Crew page holds Weapons' requests (power from Engineering, bring the mount to bear
-# from Helm), Ping and Mark on the selection; each sends what the chip key and the common
-# keys send.
+# The Crew page holds Weapons' shares only (C4, ux-13): Ping and Mark are the selection
+# sheet's, each sending what the common keys send; requests sit at the top of the view.
 func test_crew_page_requests_ping_and_mark() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	var p: WeaponsPanel = _panel(s)
@@ -471,17 +470,15 @@ func test_crew_page_requests_ping_and_mark() -> void:
 	await _page(s, WeaponsTouch.Page.CREW)
 	t.crew.refresh()
 	await _frames(1)
-	for id: String in ["power", "bring_to_bear"]:
-		var b: RailButton = t.crew.button("chip", id)
-		assert_object(b).override_failure_message(id).is_not_null()
-		_tap(b)
-	var chips: Array = StationFixture.sent(s.ctx).of("send_chip")
-	assert_array(chips).is_equal(
-		[["send_chip", ["power", -1]], ["send_chip", ["bring_to_bear", 0]]]
-	)
-	_tap(t.crew.button("ping"))
+	for kind: String in ["chip", "ping", "mark"]:
+		assert_object(t.crew.button(kind)).override_failure_message(kind).is_null()
+	_tap(s.frame.selection_bar.name_button)
+	await _frames(1)
+	_tap(s.sheet.option(0))
 	assert_int(StationFixture.sent(s.ctx).of("ping").size()).is_equal(1)
-	_tap(t.crew.button("mark"))
+	_tap(s.frame.selection_bar.name_button)
+	await _frames(1)
+	_tap(s.sheet.option(1))
 	var marks: Array = StationFixture.sent(s.ctx).of("place_mark")
 	assert_int(marks.size()).is_equal(1)
 	assert_int(int(marks[0][1][2])).is_equal(StationFixture.U3)
