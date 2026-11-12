@@ -7,8 +7,9 @@ extends Control
 ## page zone at the top and FIRE (held: `fire`) at the thumb, which never pages away. Pages
 ## (PageHost, tabs in the top bar): Fire, the resting page, with the camera mount card (tap:
 ## `mount_next`), the ammunition (`ammo_next`), Guided (`fire_guided`), Fire all (held:
-## `fire_all`) and Claim (the screen's `claim`, which toggles); Mounts, a list of every mount
-## over the view (FT-WPN-004: tap a row to look through it, `mount_N`; its Claim claims it);
+## `fire_all`) and Claim (the screen's `claim`, which toggles); Mounts, every mount (cards
+## three across) over the view (FT-WPN-004: tap a row to look through it,
+## `mount_N`; its Claim claims it);
 ## Crew (CrewPage: request chips, Ping, Mark, shares). Over the view's left: the target line
 ## and the 160 px disc radar inset (FT-WPN-002) at the bottom; the panel draws the feeds
 ## under the target line.
@@ -33,9 +34,14 @@ const FONT_NUM: int = 14
 const FONT_LABEL: int = 13
 ## A mount list row and its Claim button (px).
 const ROW_H: float = 56.0
+## A mount card in the three-column list: four lines of 14 px text (a long mount name wraps).
+const CARD_H: float = 96.0
 const ROW_CLAIM_W: float = 88.0
 ## The mount list's widest (px).
 const LIST_W: float = 392.0
+## The mount list is this many columns of cards, so three mounts (gp-12) take one short row
+## and leave the view's lower part free (for a Shakedown step card), either way up.
+const LIST_COLUMNS: int = 3
 
 ## The LayoutMode.Form this arrangement is for.
 var form: LayoutMode.Form = LayoutMode.Form.PHONE_LANDSCAPE
@@ -70,7 +76,7 @@ var rows: Array[Array] = []
 var overlays: Control = Control.new()
 
 var _panel: WeaponsPanel
-var _list_box: VBoxContainer = VBoxContainer.new()
+var _list_box: GridContainer = GridContainer.new()
 var _scroll: ScrollContainer = ScrollContainer.new()
 
 
@@ -195,7 +201,7 @@ func _refresh_rows() -> void:
 		for i: int in p.mount_count():
 			var look: RailButton = RailButton.make("")
 			look.name = "Mount%d" % (i + 1)
-			look.custom_minimum_size.y = ROW_H
+			look.custom_minimum_size.y = CARD_H if _list_box.columns > 1 else ROW_H
 			look.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			look.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			look.clip_text = false
@@ -207,9 +213,14 @@ func _refresh_rows() -> void:
 			RailButton.wrap(claim)
 			claim.add_theme_font_size_override("font_size", FONT_LABEL)
 			claim.pressed.connect(_claim_row.bind(i))
-			var row: HBoxContainer = HBoxContainer.new()
+			# A card: the mount over its Claim (a row in a one-column list).
+			var row: BoxContainer = BoxContainer.new()
+			row.vertical = _list_box.columns > 1
+			row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
 			look.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			# The cards of a row grow alike, so the Claims line up.
+			look.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			row.add_child(look)
 			row.add_child(claim)
 			_list_box.add_child(row)
@@ -217,7 +228,7 @@ func _refresh_rows() -> void:
 	for i: int in rows.size():
 		var look: RailButton = rows[i][0]
 		var claim: RailButton = rows[i][1]
-		look.text = WeaponsStatus.mount_text(p, i, true)
+		look.text = WeaponsStatus.mount_text(p, i, _list_box.columns == 1)
 		_heat_colour(look, WeaponsStatus.heat_role(p, i))
 		look.role = RailButton.Role.ACCENT if i == p.mount else RailButton.Role.PLAIN
 		look.disabled = not p.is_usable(i)
@@ -299,7 +310,9 @@ func _make_overlays(with_radar: bool) -> void:
 		overlays.add_child(radar_box)
 	mount_list.name = "MountList"
 	mount_list.theme_type_variation = "OverlayRail"
-	_list_box.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
+	_list_box.columns = LIST_COLUMNS
+	_list_box.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
+	_list_box.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
 	ListLines.attach(_list_box)
 	_list_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -415,7 +428,7 @@ func _place() -> void:
 			list.size.x = area.end.x - gap - list.position.x
 		else:
 			list.size.y = r.position.y - gap - top
-	var need: float = maxf(ROW_H, rows.size() * (ROW_H + gap) - gap) + 2.0 * gap
+	var need: float = maxf(ROW_H, _list_box.get_combined_minimum_size().y) + 2.0 * gap
 	mount_list.position = list.position
 	mount_list.size = Vector2(minf(LIST_W, list.size.x), minf(list.size.y, need))
 
@@ -436,8 +449,8 @@ static func touch_help() -> Array:
 		[Rect2(565, 64, 48, 48), "requests"],
 	]
 	var mounts: Array = [
-		[Rect2(231, 128, 286, 56), "row"],
-		[Rect2(525, 128, 88, 56), "row_claim"],
+		[Rect2(231, 128, 122, 96), "row"],
+		[Rect2(231, 232, 122, 56), "row_claim"],
 		[Rect2(629, 278, 168, 88), "fire"],
 	]
 	var crew: Array = [
