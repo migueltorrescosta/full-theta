@@ -377,6 +377,13 @@ func test_claim_and_hack_hide_while_they_cannot_act() -> void:
 		if c[0] == SIDEWAYS:
 			# Alone in its row: the row goes too.
 			assert_bool(claim.get_parent().visible).is_false()
+		# A held claim always shows, as Release.
+		s.ctx.crew.claims[StationCatalogue.CLAIM_SCAN] = {
+			"session": StationFixture.SESSION, "name": s.ctx.settings.player_name
+		}
+		await _frames(2)
+		assert_bool(claim.is_visible_in_tree()).override_failure_message("%s held" % c[0]).is_true()
+		s.ctx.crew.claims.erase(StationCatalogue.CLAIM_SCAN)
 		s.ctx.crew.lobby[StationFixture.SHIP]["seats"] = [
 			{"name": "Ana", "seat": "science"}, {"name": "Bo", "seat": "science"}
 		]

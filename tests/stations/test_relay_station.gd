@@ -653,3 +653,25 @@ func test_probe_bubbles_are_selectable_and_pingable_zones() -> void:
 	s.ctx.crew.select("zone", 4)
 	_event(s, "zones", {"ship": SHIP, "zones": []})
 	assert_bool(s.ctx.crew.selection.is_empty()).is_true()
+
+
+# FT: FT-STN-005
+# A short HUD (150 %) says what waits even with no button row: "No marks waiting" under the
+# heading; with Accept and Decline showing, the heading carries the waiting mark.
+func test_a_short_inbox_still_reads() -> void:
+	var s: StationScreen = await _screen()
+	var p: RelayPanel = _relay(s)
+	p.hud.set_short(true)
+	p.refresh()
+	assert_bool(p.hud._mail.visible).is_true()
+	assert_str(p.hud._mail.text).is_equal("No marks waiting")
+	var item: Dictionary = {
+		"id": 7, "from_ship": ALLY, "from": "Wren", "name": "Rock", "x": 1.0, "y": 2.0, "z": 3.0
+	}
+	_event(s, "inbox", {"ship": SHIP, "items": [item]})
+	p.refresh()
+	assert_bool(p.hud.accept.visible).is_true()
+	assert_bool(p.hud._mail.visible).is_false()
+	assert_str(p.hud._inbox_heading.text).contains("Rock from Wren")
+	p.hud.set_short(false)
+	assert_bool(p.hud._mail.visible).is_true()

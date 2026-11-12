@@ -316,9 +316,10 @@ func _refresh_buttons() -> void:
 	var holder: String = ctx.crew.claimer(item) if item != "" else ""
 	var mine: bool = holder == ctx.settings.player_name
 	# Claim shows only while it can matter (C3, D412): a live conversation card with a second
-	# player at Comms, or the Shakedown's claim step naming it; never a dead button.
+	# player at Comms, or the Shakedown's claim step naming it; never a dead button. A claim
+	# this player holds always shows, as Release.
 	(_buttons["claim"] as Button).visible = (
-		(live and item != "" and players_here() >= 2) or lesson_wants("claim")
+		(item != "" and (mine or (live and players_here() >= 2))) or lesson_wants("claim")
 	)
 	(_buttons["claim"] as Button).text = (
 		tr("comms.release")

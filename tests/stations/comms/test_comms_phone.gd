@@ -413,4 +413,13 @@ func test_claim_shows_only_when_it_can_act() -> void:
 		s.ctx.training.erase("comms")
 		await _frames(2)
 		assert_bool(claim.visible).is_false()
+		# A claim this player holds always shows, as Release (round 3: never stuck).
+		var item: String = p.claim_item()
+		if item != "":
+			s.ctx.crew.claims[item] = {
+				"session": StationFixture.SESSION, "name": s.ctx.settings.player_name
+			}
+			await _frames(2)
+			assert_bool(claim.visible).override_failure_message("%s held" % c[0]).is_true()
+			assert_str(claim.text).is_equal(tr("comms.release"))
 		_drop(s)
