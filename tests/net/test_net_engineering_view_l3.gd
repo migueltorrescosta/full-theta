@@ -24,7 +24,7 @@ func test_engineering_gets_no_near_or_projectiles_and_only_radar_contacts() -> v
 	var helm: NetClient = await h.joined(server, "helm", "helm")
 	var weapons: NetClient = await h.joined(server, "weapons", "weapons")
 	var eng: NetClient = await h.joined(server, "engineering", "engineering")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	eng.keep_raw = true
 	weapons.fire()
 	# Helm sees the shot as a tracer: there is something Engineering could have seen.

@@ -43,7 +43,7 @@ enum Type {
 	MARK_SEND = 26,
 	MARK_ACCEPT = 27,
 	# 28 is unused: Science's puzzle rides the SCIENCE section and its commands.
-	# A client's snapshot-age report for the session log (D199).
+	# A client's snapshot-age report for the server log (D199).
 	CLIENT_STATS = 29,
 	# A source station shares a data shortcut with its partner (D210).
 	SHARE = 30,
@@ -54,9 +54,9 @@ enum Type {
 	# crew votes to relaunch (M4-Q2).
 	SHIP_ADD = 41,
 	SHIP_TEAM = 42,
-	SESSION_MODE = 43,
+	GAME_MODE = 43,
 	RELAUNCH = 44,
-	# A client's frame over 500 ms and what ran in it, for the session log (#28).
+	# A client's frame over 500 ms and what ran in it, for the server log (#28).
 	CLIENT_FRAME = 45,
 	# Solo training (D303): a client asks the server to run a station lesson for it, or the
 	# crew drill.
@@ -120,10 +120,10 @@ const EVENT_MARKS: String = "marks"
 const EVENT_PING: String = "ping"
 ## The run reset (D178, NetRunReset), to every session with a pick on the ship:
 ## {ship, outcome ("win" | "loss"), time_s, hull} and {ship, voters, needed}.
-const EVENT_RUN_OVER: String = "run_over"
+const EVENT_SHIP_OUTCOME: String = "ship_outcome"
 const EVENT_RUN_VOTES: String = "run_votes"
 ## The end-of-run debrief (RunDebrief.for_ship, FT-MIS-006, FT-MIS-010, FT-MIS-038,
-## FT-PAIR-013), right after `run_over` to every session with a pick on the ship.
+## FT-PAIR-013), right after `ship_outcome` to every session with a pick on the ship.
 const EVENT_DEBRIEF: String = "debrief"
 ## Relay (docs/protocol.md "Relay"): {ship, zones: [...]} (hazard zones and
 ## scan positions, every pick of the ship); {ship, routes: [[{x, y, z}]]} (Relay, and other
@@ -145,12 +145,12 @@ const EVENT_SHARES: String = "shares"
 ## the time left at sending. Sent when a clearance is accepted or settled and when a share
 ## starts or ends.
 const EVENT_LANES: String = "lanes"
-## Multi-ship sessions and PvP (#11, version 8); FleetMessages builds and checks each payload.
+## Multi-ship games and PvP (#11, version 8); FleetMessages builds and checks each payload.
 ## `fleet`: the multi-ship lobby, to every session. `takeover`: who took which station in a
 ## pause, to every session of the ship's side. `handover`: an eliminated session's new view.
 ## `scoreboard`: the live scoreboard rows, to the sessions on it. `eliminated`, `relaunch_votes`
 ## and `relaunched`: a ship left play, its crew's relaunch vote, and its relaunch.
-## `session_over`: who won and why, to every session.
+## `game_over`: who won and why, to every session.
 const EVENT_FLEET: String = "fleet"
 const EVENT_TAKEOVER: String = "takeover"
 const EVENT_HANDOVER: String = "handover"
@@ -158,14 +158,14 @@ const EVENT_SCOREBOARD: String = "scoreboard"
 const EVENT_ELIMINATED: String = "eliminated"
 const EVENT_RELAUNCH_VOTES: String = "relaunch_votes"
 const EVENT_RELAUNCHED: String = "relaunched"
-const EVENT_SESSION_OVER: String = "session_over"
+const EVENT_GAME_OVER: String = "game_over"
 ## A ship-computer or NPC line to play (VoiceService).
 const EVENT_VOICE_LINE: String = "voice_line"
 
 ## Every control message in one place: Type -> [flags, fields], fields being field name ->
 ## Variant type. SERVER: only the server sends it. SEND: a client may send it and the
 ## transport accepts it (any other type from a client is dropped). RATED: a SEND that also
-## takes a token from the session's rate limit in ServerSession (commands take theirs in
+## takes a token from the session's rate limit in NetGame (commands take theirs in
 ## CommandGate; Hello, Ack and Bye take none). NAMED: its `name` is a player's text, cleaned
 ## by clean_text in decode. from_client and rated_requests derive from this table.
 const SERVER: int = 0
@@ -276,7 +276,7 @@ const MESSAGES: Dictionary = {
 	[RATED, {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY}],
 	Type.SHIP_ADD: [RATED | NAMED, {"name": TYPE_STRING}],
 	Type.SHIP_TEAM: [RATED, {"ship": TYPE_INT, "team": TYPE_INT}],
-	Type.SESSION_MODE: [RATED, {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT}],
+	Type.GAME_MODE: [RATED, {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT}],
 	Type.RELAUNCH: [RATED, {"ship": TYPE_INT, "vote": TYPE_BOOL}],
 	Type.CLIENT_FRAME: [RATED, {"ms": TYPE_INT, "what": TYPE_STRING}],
 	Type.TRAINING: [RATED, {"station": TYPE_STRING}],
@@ -285,7 +285,7 @@ const MESSAGES: Dictionary = {
 
 ## Messages a client may send; the server drops any other type from a client.
 static var from_client: Array[int] = _types(SEND)
-## Client requests that take a token from the session's rate limit in ServerSession.
+## Client requests that take a token from the session's rate limit in NetGame.
 static var rated_requests: Array[int] = _types(RATED)
 
 

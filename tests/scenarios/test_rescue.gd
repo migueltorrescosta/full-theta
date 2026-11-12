@@ -115,7 +115,9 @@ func test_a_ship_arriving_at_speed_does_not_hit_the_freighter() -> void:
 	assert_int(f.ships_of(&"m3_stranded").size()).is_equal(1)
 	assert_float(nearest).is_greater(1500.0)
 	assert_float(DamageSystem.hull_fraction(f.world, 0)).is_equal(1.0)
-	assert_int(f.world.run.status[f.ships_of(&"m3_stranded")[0]]).is_equal(RunTable.Status.IN_PLAY)
+	assert_int(f.world.ships.status[f.ships_of(&"m3_stranded")[0]]).is_equal(
+		ShipStateTable.Status.IN_PLAY
+	)
 
 
 # FT: FT-MIS-004, FT-MIS-021

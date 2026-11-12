@@ -1,9 +1,9 @@
-class_name SessionRules
+class_name GameRules
 extends RefCounted
-## The rules of one multi-ship session (#11, E11, E12; owner M4-Q1 to M4-Q10, 2026-10-28):
+## The rules of one multi-ship game (#11, E11, E12; owner M4-Q1 to M4-Q10, 2026-10-28):
 ## the scenario mode the host picks in the lobby, the team win rule, each faction's relaunch
 ## policy and where eliminated crew go. RunSetup hands it to the world (SimWorld.rules);
-## OutcomeSystem.session_outcome reads it, the director keys on it and the server sends it
+## OutcomeSystem.game_outcome reads it, the director keys on it and the server sends it
 ## in the lobby. Pure value: no defs, no I/O. A single-ship run is COOP with one slot.
 ##
 ## Modes:
@@ -63,8 +63,8 @@ var default_relaunch: RelaunchPolicy = RelaunchPolicy.none()
 
 ## The rules a mode starts with; the host's options then change team_win (TEAMS) and the
 ## finite side's lives (HOLDOUT).
-static func of_mode(m: Mode) -> SessionRules:
-	var r: SessionRules = SessionRules.new()
+static func of_mode(m: Mode) -> GameRules:
+	var r: GameRules = GameRules.new()
 	r.mode = m
 	match m:
 		Mode.RACE, Mode.LAST_STANDING:

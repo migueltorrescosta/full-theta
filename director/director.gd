@@ -14,10 +14,10 @@ extends RunDriver
 ## encounter is open per ship; the next is picked a quiet gap after the last ended (D231).
 ## A ship goes through RunDef.min_encounters to max_encounters of them (Q4, owner
 ## 2026-10-26): each pick leaves the budget for the fewest still to play, and the director
-## closes the run (CloseRunCommand) when nothing fits any more or the most is reached.
+## closes the run (FinishShipCommand) when nothing fits any more or the most is reached.
 ## PROVISIONAL (Q4, Q14): the picking rules are placeholders for #13.
 ##
-## Multi-ship sessions (#11, FT-MIS-023, M4-Q1, M4-Q5): FleetDirector makes one Director per
+## Multi-ship games (#11, FT-MIS-023, M4-Q1, M4-Q5): FleetDirector makes one Director per
 ## crew faction. Such a Director plans for its faction's ships in play as one fleet: one
 ## budget, every encounter holding the whole fleet, its strength scaled to the fleet's size
 ## (fleet_multiplier), and one run closed for every ship at once. In a race it plays the
@@ -30,7 +30,7 @@ const LOW_HULL: float = 0.5
 const HOME_SITE: int = 0
 
 ## The event ScenarioApi.events() reports when RelaunchShipCommand puts a ship back in play
-## (SessionOutcome.EVENT_RELAUNCHED; the director names sim/api only).
+## (GameOutcome.EVENT_RELAUNCHED; the director names sim/api only).
 const RELAUNCHED: StringName = &"relaunched"
 
 ## The text of the Comms card that names a pending encounter's site (Q23).
@@ -124,7 +124,7 @@ func before_tick(api: ScenarioApi) -> void:
 
 
 ## A fleet ship relaunched (D259: a fresh ship with a fresh run state) must go through the
-## run's encounters itself, or CloseRunCommand would refuse it: the fleet's plan starts over,
+## run's encounters itself, or FinishShipCommand would refuse it: the fleet's plan starts over,
 ## its budget, count, quiet time and closed run forgotten.
 func _on_relaunches(api: ScenarioApi) -> void:
 	for e: ApiEvent in api.events():
@@ -320,7 +320,7 @@ func _plan(api: ScenarioApi, now: int, ship: int) -> void:
 		return
 	var limits: Vector2i = api.encounter_limits()
 	if _done.get(ship, 0) >= limits.y:
-		_close_run(api, now, ship, "run_length")
+		_finish_ship(api, now, ship, "run_length")
 		return
 	if now >= _quiet_until.get(ship, SimRate.ticks(_def.gap_s)):
 		_pick(api, now, ship, limits.x)
@@ -351,7 +351,7 @@ func _pick(api: ScenarioApi, now: int, ship: int, fewest: int) -> void:
 		# Nothing fits the budget: the run ends once the fewest encounters are played. An
 		# empty catalogue has nothing to play, which is logged once.
 		if _done.get(ship, 0) >= fewest:
-			_close_run(api, now, ship, "budget_spent")
+			_finish_ship(api, now, ship, "budget_spent")
 		else:
 			_skip(now, ship)
 		return
@@ -375,7 +375,7 @@ func _pick_race(api: ScenarioApi, now: int, unit: int) -> void:
 	var done: int = _done.get(unit, 0)
 	if done >= _race.size():
 		var reason: String = "run_length" if done >= api.encounter_limits().y else "budget_spent"
-		_close_run(api, now, unit, reason)
+		_finish_ship(api, now, unit, reason)
 		return
 	var entry: Dictionary = _race[done]
 	var index: int = _index_of_id(entry["scenario"])
@@ -409,11 +409,11 @@ func _busy(ship: int) -> bool:
 	return false
 
 
-## Closes the ship's run once (CloseRunCommand), for every ship of a fleet, and logs why.
-func _close_run(api: ScenarioApi, now: int, ship: int, reason: String) -> void:
+## Closes the ship's run once (FinishShipCommand), for every ship of a fleet, and logs why.
+func _finish_ship(api: ScenarioApi, now: int, ship: int, reason: String) -> void:
 	_ended_logged[ship] = true
 	for s: int in _ships(api):
-		api.close_run(s)
+		api.finish_ship(s)
 	_log(
 		now,
 		ship,

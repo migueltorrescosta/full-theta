@@ -6,7 +6,7 @@ extends RefCounted
 ## sim never loads, FT-ARC-020) so the run reset is build() again: a fresh world, with
 ## nothing carried over from the old one (FT-GEN-010, FT-MIS-017). The server calls
 ## build() to start the run and again to reset it. Space wraps with period
-## site_period (FT-SIM-035, D229), checked by validate(); build() refuses a bad one.
+## map_period (FT-SIM-035, D229), checked by validate(); build() refuses a bad one.
 
 const PLAYER_FACTION: int = Factions.CREW
 const ENEMY_FACTION: int = Factions.RAIDER
@@ -22,7 +22,7 @@ var build_id: String
 var player: ShipDef
 var enemy: EnemyDef
 ## Side of the wrapping cube (m, FT-SIM-035, D229).
-var site_period: float
+var map_period: float
 ## Science tuning for the built worlds (E01); null leaves the Science commands refused.
 var science: ScienceDef
 ## The hazards of the built worlds (D208, D220), already loaded; at most
@@ -41,7 +41,7 @@ func _init(
 	build_id = build
 	player = player_def
 	enemy = enemy_def
-	site_period = period
+	map_period = period
 
 
 ## Site 0, Kestrel Yard (D205, D229), the one named site of the M1 map: at the origin, where the
@@ -58,11 +58,11 @@ static func kestrel_yard() -> SiteDef:
 	return site
 
 
-## Why the setup can't be built, or [] (site_period against the ships' sensor ranges
+## Why the setup can't be built, or [] (map_period against the ships' sensor ranges
 ## and the broadphase cells, SimWorld.period_errors).
 func validate() -> Array[String]:
 	var ships: Array[ShipDef] = [player, enemy.ship]
-	var errors: Array[String] = SimWorld.period_errors(site_period, ships)
+	var errors: Array[String] = SimWorld.period_errors(map_period, ships)
 	if hazards.size() > HazardSystem.MAX_HAZARDS:
 		errors.append(
 			"%d hazards, at most %d are supported" % [hazards.size(), HazardSystem.MAX_HAZARDS]
@@ -75,7 +75,7 @@ func validate() -> Array[String]:
 func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
-	var world: SimWorld = SimWorld.new(world_seed, build_id, site_period)
+	var world: SimWorld = SimWorld.new(world_seed, build_id, map_period)
 	world.science_def = science
 	world.hazards = hazards.duplicate()
 	world.add_site(kestrel_yard())

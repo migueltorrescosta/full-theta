@@ -32,12 +32,12 @@ func test_a_computer_line_for_the_captain_reaches_the_captain_seat() -> void:
 	var server: NetServer = h.server()
 	var crew: Array[NetClient] = await h.crew3(server)
 	var captain: NetClient = await h.joined(server, "cap", "captain")
-	var audience: PackedInt32Array = server.session.computer_audience(
+	var audience: PackedInt32Array = server.game.computer_audience(
 		PLAYER, PackedStringArray(["captain"])
 	)
 	assert_array(Array(audience)).is_equal([captain.session_id])
 	# A crew station's line still reaches its own holders only.
-	audience = server.session.computer_audience(PLAYER, PackedStringArray(["helm"]))
+	audience = server.game.computer_audience(PLAYER, PackedStringArray(["helm"]))
 	assert_array(Array(audience)).is_equal([crew[0].session_id])
 
 

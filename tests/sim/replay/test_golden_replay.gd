@@ -19,15 +19,15 @@ const POSITION_TOLERANCE: float = 1.0
 const HULL_TOLERANCE: float = 0.01
 
 
-## The encounter outcome as a RunTable.Outcome, from the session outcome: WIN when the
+## The encounter outcome as a ShipStateTable.ShipOutcome, from the game outcome: WIN when the
 ## objective is complete, LOSS when every crewed ship is lost.
 static func _outcome(world: SimWorld) -> int:
-	match OutcomeSystem.session_outcome(world).reason:
-		SessionOutcome.Reason.OBJECTIVE:
-			return RunTable.Outcome.WIN
-		SessionOutcome.Reason.ALL_LOST:
-			return RunTable.Outcome.LOSS
-	return RunTable.Outcome.NONE
+	match OutcomeSystem.game_outcome(world).reason:
+		GameOutcome.Reason.OBJECTIVE:
+			return ShipStateTable.ShipOutcome.WIN
+		GameOutcome.Reason.ALL_LOST:
+			return ShipStateTable.ShipOutcome.LOSS
+	return ShipStateTable.ShipOutcome.NONE
 
 
 ## The readable final values: per ship position (m), hull fraction and alive, and the

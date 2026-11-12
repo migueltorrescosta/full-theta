@@ -5,7 +5,7 @@ extends RefCounted
 ## StationViews). A claimed item takes commands only from its claimer; an unclaimed one
 ## from anyone at its station. A player alone on a station holds all its claims
 ## (settle()); when a second player joins, the first keeps them (D130), and they free
-## up on release, station change or grace expiry. Pure: ServerSession supplies who
+## up on release, station change or grace expiry. Pure: NetGame supplies who
 ## covers which station.
 
 ## Ship -> {item: session id}.

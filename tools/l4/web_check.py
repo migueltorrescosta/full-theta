@@ -1,4 +1,4 @@
-"""Checks the session log the browser station run left (tools/l4/web.sh): the browser
+"""Checks the server log the browser station run left (tools/l4/web.sh): the browser
 joined and rejoined with its token, its commands reached the server, and its snapshot
 ages were logged (D199)."""
 

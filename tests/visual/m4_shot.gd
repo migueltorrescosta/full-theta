@@ -179,7 +179,7 @@ func _own_view() -> void:
 			var card: OutcomeCard = OutcomeCard.new()
 			_centred(card)
 			card.setup(_ctx)
-			_event("run_over", {"ship": 0, "outcome": "win", "time_s": 412.0, "hull": 0.58})
+			_event("ship_outcome", {"ship": 0, "outcome": "win", "time_s": 412.0, "hull": 0.58})
 			_event("run_votes", {"ship": 0, "voters": ["Bo"], "needed": 2})
 			_event("debrief", debrief_record())
 			if view == "debrief":

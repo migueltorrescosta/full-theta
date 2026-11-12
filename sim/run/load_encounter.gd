@@ -50,7 +50,7 @@ func validate() -> Array[String]:
 func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
-	var world: SimWorld = SimWorld.new(world_seed, build_id, site_period)
+	var world: SimWorld = SimWorld.new(world_seed, build_id, map_period)
 	world.science_def = science
 	world.hazards = hazards.duplicate()
 	world.set_relation(RAIDER_FACTIONS[0], RAIDER_FACTIONS[1], SimWorld.Relation.HOSTILE)

@@ -20,7 +20,7 @@ func world() -> SimWorld:
 
 
 func fleet_world() -> SimWorld:
-	return FleetFixture.make(SessionRules.Mode.HOLDOUT, 3).world
+	return FleetFixture.make(GameRules.Mode.HOLDOUT, 3).world
 
 
 ## [name, Callable() -> the world, Callable(world, point) -> the points it stored].
@@ -66,7 +66,7 @@ func _spawn_command(w: SimWorld, p: PackedFloat64Array) -> Array:
 func _ship_start(w: SimWorld, p: PackedFloat64Array) -> Array:
 	assert_array(Array(w.kin.point(0))).is_equal(Array(w.ship_starts[0]))
 	w.ship_starts[0] = p
-	w.run.status[0] = RunTable.Status.DESTROYED
+	w.ships.status[0] = ShipStateTable.Status.DESTROYED
 	var c: RelaunchShipCommand = RelaunchShipCommand.new()
 	c.ship = 0
 	assert_bool(c.apply(w)).is_true()

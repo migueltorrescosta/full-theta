@@ -39,7 +39,7 @@ func _verdict(server: NetServer, c: NetClient, cmd: Dictionary) -> String:
 			if e["type"] == NetProtocol.EVENT_COMMAND_REJECTED and e["payload"]["seq"] == seq:
 				reason.append(e["payload"]["reason"])
 				return true
-		return server.world.tick > tick + 6 and server.session._pending.is_empty()
+		return server.world.tick > tick + 6 and server.game._pending.is_empty()
 	await h.until(done)
 	await h.wait(100)
 	done.call()
@@ -66,8 +66,8 @@ func test_only_the_claimer_commands_a_claimed_item() -> void:
 		CommandGate.CLAIMED
 	)
 	assert_str(await _verdict(server, w2, aim)).is_equal(CommandGate.CLAIMED)
-	assert_bool(server.session.lobby.launched.is_empty()).is_true()
-	server.session.launch(PLAYER)
+	assert_bool(server.game.lobby.launched.is_empty()).is_true()
+	server.game.launch(PLAYER)
 	assert_str(await _verdict(server, w1, aim)).is_equal("")
 	# Bo (Tactical) held Helm alone until Cy joined: he keeps flight and shield facing.
 	assert_bool(await _holds(server, h2, "flight", w2)).is_true()
@@ -111,7 +111,7 @@ func test_alone_holds_all_and_ship_wide_controls_name_last_writer() -> void:
 	assert_bool(await _holds(server, e1, "crew:1", e1)).is_true()
 	var e2: NetClient = await h.joined(server, "eve", "systems")
 	var helm: NetClient = await h.joined(server, "fay", "helm")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	assert_str(e2.view.claimer("crew:1")).is_equal("dee")
 	assert_bool(await _holds(server, e2, "crew:0", e1)).is_true()
 	var pips: String = "pips:%d" % SubsystemDef.Kind.ENGINES
@@ -161,7 +161,7 @@ func test_claims_release_on_release_station_change_and_grace() -> void:
 	var session: NetSession = h.session_of(server, c)
 	var t0: int = Time.get_ticks_msec()
 	assert_bool(await h.drop(server, c)).is_true()
-	assert_int(server.session.claims.holder(PLAYER, "crew:1")).is_equal(session.id)
+	assert_int(server.game.claims.holder(PLAYER, "crew:1")).is_equal(session.id)
 	assert_bool(await h.lapsed(session)).is_true()
 	assert_int(Time.get_ticks_msec() - t0).is_greater_equal(1000)
 	# Released: b, now alone on Engineering, holds every crew again (FT-NET-044).

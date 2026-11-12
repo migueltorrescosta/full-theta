@@ -220,7 +220,7 @@ func _process(_delta: float) -> void:
 	if (
 		ctx.crew.paused.has(ctx.crew.ship)
 		or ctx.crew.host_paused
-		or ctx.crew.run_over.has(ctx.crew.ship)
+		or ctx.crew.ship_outcome.has(ctx.crew.ship)
 		or _overlay_open()
 	):
 		_captured = false

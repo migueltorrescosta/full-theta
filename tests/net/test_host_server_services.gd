@@ -70,7 +70,7 @@ func _active() -> bool:
 # expires, and removes the file when it shuts down cleanly.
 func test_pid_file_follows_the_session_and_goes_on_clean_exit() -> void:
 	var server: NetServer = _server()
-	server.session.sessions.grace_us = 200_000
+	server.game.sessions.grace_us = 200_000
 	var life: ServerLifecycle = ServerLifecycle.new(server, _pid_file, 0.0)
 	add_child(life)
 	var info: ServerPidFile = ServerPidFile.load_from(_pid_file)
@@ -177,7 +177,7 @@ func test_static_http_runs_beside_the_websocket_port() -> void:
 # player admits a newcomer.
 func test_connection_65_is_refused_as_session_full() -> void:
 	var server: NetServer = _server()
-	var cap: int = server.session.max_sessions
+	var cap: int = server.game.max_sessions
 	assert_int(cap).is_equal(64)
 	for i: int in cap:
 		_client(server)
@@ -190,7 +190,7 @@ func test_connection_65_is_refused_as_session_full() -> void:
 	assert_bool(await _until(refused)).is_true()
 	assert_str(late.reject_reason).is_equal(NetProtocol.REJECT_FULL)
 	assert_str(NetProtocol.REJECT_FULL).is_equal("session_full")
-	assert_int(server.session.by_id.size()).is_equal(cap)
+	assert_int(server.game.by_id.size()).is_equal(cap)
 	# One player says Bye: a newcomer gets in.
 	_clients[0].bye()
 	assert_bool(await _until(func() -> bool: return server.players() == cap - 1)).is_true()

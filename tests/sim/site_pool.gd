@@ -1,6 +1,6 @@
 class_name SitePool
 extends RefCounted
-## Puts sites in a test world's spawnable pool the way a scenario's map does: a MapDef whose
+## Puts sites in a test world's spawnable pool the way a map does: a MapDef whose
 ## `spawnable` holds them, loaded with SiteTable.load_map (D229). A test then opens them with
 ## SiteTable.open, as the director would.
 

@@ -7,13 +7,13 @@ const FOE: int = 1
 
 
 # FT: FT-SCI-004, FT-SCI-011
-# A scan opens a session whose pose only the server knows; the exact angles score 1,
+# A scan opens a minigame whose pose only the server knows; the exact angles score 1,
 # wrong angles score low, and the result lands in KNOW as the scan confidence.
 func test_server_verifies_the_submitted_pose() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	var events: Array[SimEvent] = ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	assert_int(SimFixture.of_kind(events, &"scan_started").size()).is_equal(1)
-	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.SCAN)
+	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.SCAN)
 	var truth: Vector3 = ScienceFixture.solution(w)
 	var wrong: Vector3 = ScienceFixture.solution(w) + Vector3(1.5, 1.5, 1.5)
 	var quality: float = ScanPuzzle.quality(
@@ -23,7 +23,7 @@ func test_server_verifies_the_submitted_pose() -> void:
 	events = ScienceFixture.do(w, ScienceFixture.submit_cmd(truth))
 	var done: SimEvent = SimFixture.of_kind(events, &"scan_done")[0]
 	assert_float(done.vector.x).is_equal_approx(1.0, 1e-6)
-	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.NONE)
+	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.NONE)
 	assert_float(ScienceKnowledge.confidence(w, 1, FOE)).is_equal_approx(done.value, 1e-9)
 	assert_float(done.value).is_greater(0.8)
 
@@ -33,7 +33,7 @@ func test_server_verifies_the_submitted_pose() -> void:
 func test_one_session_at_a_time_and_no_free_submit() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	var events: Array[SimEvent] = ScienceFixture.do(w, ScienceFixture.submit_cmd(Vector3.ZERO))
-	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("no_session")
+	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("no_minigame")
 	ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	events = ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("busy")
@@ -171,13 +171,13 @@ func test_scan_is_deterministic() -> void:
 
 
 # FT: FT-SCI-011
-# Cancel closes a session without a result; losing the contact fails it.
+# Cancel closes a minigame without a result; losing the contact fails it.
 func test_cancel_and_lost_contact() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	var events: Array[SimEvent] = ScienceFixture.do(w, ScienceCancelCommand.new())
 	assert_str(SimFixture.of_kind(events, &"scan_failed")[0].tag).is_equal("cancelled")
-	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.NONE)
+	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.NONE)
 	ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	w.kin.place(FOE, CubePoint.make(0.0, 0.0, -60000.0))
 	events = SimFixture.run(w, 2)
@@ -191,13 +191,13 @@ func test_own_ship_scan() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	assert_bool(w.science.self_scanned[ME] >= 0).is_false()
 	var events: Array[SimEvent] = ScienceFixture.do(w, ScienceSelfScanCommand.new())
-	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.SELF)
+	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.SELF)
 	events = ScienceFixture.do(w, ScienceFixture.scan_cmd())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("busy")
 	events = SimFixture.run(w, int(w.science_def.self_scan_s * 60.0) + 2)
 	assert_int(SimFixture.of_kind(events, &"self_scan_done").size()).is_equal(1)
 	assert_bool(w.science.self_scanned[ME] >= 0).is_true()
-	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.NONE)
+	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.NONE)
 
 
 func _open_axes(w: SimWorld) -> int:

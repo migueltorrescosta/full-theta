@@ -9,7 +9,7 @@ const HZ: int = SimWorld.HZ
 
 ## The fixture's world on a copy of m3_run with only enemy_wave, `encounters` encounters a
 ## run and short gaps and arrival timeouts, so a whole fleet run fits in a test.
-static func short_run(mode: SessionRules.Mode, n: int, encounters: int) -> FleetFixture:
+static func short_run(mode: GameRules.Mode, n: int, encounters: int) -> FleetFixture:
 	var f: FleetFixture = FleetFixture.make(mode, n)
 	var run: RunDef = f.setup.run_def.duplicate()
 	var director: DirectorDef = run.director.duplicate()
@@ -49,7 +49,7 @@ static func picks(d: Array[DirectorDecision]) -> Array[DirectorDecision]:
 # ship beyond the first: 4), and one final objective: the run closes for every ship at
 # once and the session is won with all three.
 func test_coop_fleet_run() -> void:
-	var f: FleetFixture = short_run(SessionRules.Mode.COOP, 3, 1)
+	var f: FleetFixture = short_run(GameRules.Mode.COOP, 3, 1)
 	assert_float(Director.fleet_multiplier(f.setup.run_def.director, 3)).is_equal(2.0)
 	assert_float(Director.fleet_multiplier(f.setup.run_def.director, 1)).is_equal(1.0)
 	var spawned: Array[int] = []
@@ -67,18 +67,18 @@ func test_coop_fleet_run() -> void:
 	assert_int(f.world.encounters.size()).is_equal(1)
 	assert_array(Array(f.api.encounter(0).ships)).is_equal([0, 1, 2])
 	assert_int(spawned.size()).is_equal(4)
-	var out: SessionOutcome = f.outcome()
-	assert_int(out.reason).is_equal(SessionOutcome.Reason.OBJECTIVE)
+	var out: GameOutcome = f.outcome()
+	assert_int(out.reason).is_equal(GameOutcome.Reason.OBJECTIVE)
 	assert_array(Array(out.winners)).is_equal([0, 1, 2])
 	for ship: int in 3:
-		assert_int(f.world.run.finish_tick[ship]).is_equal(f.world.run.finish_tick[0])
+		assert_int(f.world.ships.finish_tick[ship]).is_equal(f.world.ships.finish_tick[0])
 
 
 # FT: FT-MIS-023
 # PvP keys the director per faction: two teams get a Director each, and each team's
 # encounters hold only its own ships.
 func test_teams_get_a_director_each() -> void:
-	var f: FleetFixture = short_run(SessionRules.Mode.TEAMS, 4, 2)
+	var f: FleetFixture = short_run(GameRules.Mode.TEAMS, 4, 2)
 	play(f, 60 * HZ, func() -> bool: return f.world.encounters.size() >= 2)
 	var a: Director = f.director.director_for(f.world.faction_of(0))
 	var b: Director = f.director.director_for(f.world.faction_of(1))
@@ -99,7 +99,7 @@ func test_teams_get_a_director_each() -> void:
 # for every ship, each at its own copy of the plan's site (one site row per ship, same name,
 # same offset from the ship's start site), with no adaptation to a crew.
 func test_race_plays_one_list_at_own_copies() -> void:
-	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.RACE, 3).with_director()
+	var f: FleetFixture = FleetFixture.make(GameRules.Mode.RACE, 3).with_director()
 	var w: SimWorld = f.world
 	play(f, 400 * HZ, func() -> bool: return w.encounters.size() >= 3)
 	var plan: PackedStringArray = f.director.race_plan()
@@ -129,7 +129,7 @@ func test_race_plays_one_list_at_own_copies() -> void:
 		assert_int(w.encounters.cost[e]).is_equal(w.encounters.cost[0])
 	assert_int(sites.size()).is_equal(3)
 	# the same seed draws the same list
-	var again: FleetFixture = FleetFixture.make(SessionRules.Mode.RACE, 2).with_director()
+	var again: FleetFixture = FleetFixture.make(GameRules.Mode.RACE, 2).with_director()
 	again.step(1)
 	assert_array(Array(again.director.race_plan())).is_equal(Array(plan))
 	# Easy's budget fits fewer race encounters than a run needs: the plan still has enough.
@@ -151,7 +151,7 @@ func test_race_plays_one_list_at_own_copies() -> void:
 # raider_wave_every_s, growing by raider_wave_growth: one raider each at normal strength,
 # then round(1.5) = 2; a ship out of play gets none.
 func test_last_standing_raider_waves() -> void:
-	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.LAST_STANDING, 3).with_director()
+	var f: FleetFixture = FleetFixture.make(GameRules.Mode.LAST_STANDING, 3).with_director()
 	var every: int = ceili(f.setup.run_def.director.raider_wave_every_s * HZ)
 	assert_int(every).is_greater(0)
 	assert_float(f.director.wave_strength(0)).is_equal(1.0)
@@ -178,8 +178,8 @@ func test_last_standing_raider_waves() -> void:
 # A single-ship co-op run under FleetDirector plans exactly as M3's Director did: the same
 # decisions and the same world, tick for tick.
 func test_single_ship_coop_matches_m3() -> void:
-	var fleet: FleetFixture = FleetFixture.make(SessionRules.Mode.COOP, 1).with_director()
-	var m3: FleetFixture = FleetFixture.make(SessionRules.Mode.COOP, 1)
+	var fleet: FleetFixture = FleetFixture.make(GameRules.Mode.COOP, 1).with_director()
+	var m3: FleetFixture = FleetFixture.make(GameRules.Mode.COOP, 1)
 	var run: RunDef = m3.setup.run_def
 	var d: Director = Director.new(
 		run.director,
@@ -205,7 +205,7 @@ func test_single_ship_coop_matches_m3() -> void:
 # D264, A11: the waves fill each ship's raiders only up to MAX_ALIVE_PER_SHIP, however long the
 # game goes on. The raiders stay alive here (the ships are tough, nobody shoots).
 func test_last_standing_waves_cap_the_raiders_alive() -> void:
-	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.LAST_STANDING, 2)
+	var f: FleetFixture = FleetFixture.make(GameRules.Mode.LAST_STANDING, 2)
 	var run: RunDef = f.setup.run_def.duplicate()
 	var director: DirectorDef = run.director.duplicate()
 	director.raider_wave_every_s = 1.0
@@ -235,9 +235,9 @@ func test_last_standing_waves_cap_the_raiders_alive() -> void:
 # plan starts over: a run the director had already closed is played again, from its full
 # budget, with the relaunched ship in it.
 func test_a_relaunch_restarts_the_fleet_plan() -> void:
-	var f: FleetFixture = short_run(SessionRules.Mode.COOP, 2, 1)
+	var f: FleetFixture = short_run(GameRules.Mode.COOP, 2, 1)
 	f.rules.default_relaunch = RelaunchPolicy.unlimited()
-	play(f, 200 * HZ, func() -> bool: return f.world.run.closed[0] == 1)
+	play(f, 200 * HZ, func() -> bool: return f.world.ships.closed[0] == 1)
 	assert_int(picks(f.director.decisions()).size()).is_equal(1)
 	DamageSystem.damage_hull(f.world, 1, INF, -1)
 	f.step(2)

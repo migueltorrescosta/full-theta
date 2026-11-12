@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## SnapshotAgeStats and SessionLog (D199): percentiles, the clock offset, the log file.
+## SnapshotAgeStats and ServerLog (D199): percentiles, the clock offset, the log file.
 
 const MS: int = 1000
 
@@ -60,10 +60,10 @@ func test_unknown_stamps_are_counted_not_measured_and_pooling_spans_clients() ->
 
 
 # FT: FT-NET-046
-func test_session_log_appends_json_lines_and_a_summary_with_counters() -> void:
+func test_server_log_appends_json_lines_and_a_summary_with_counters() -> void:
 	var path: String = "user://logs_test/session.jsonl"
 	DirAccess.remove_absolute(path)
-	var log: SessionLog = SessionLog.open(path)
+	var log: ServerLog = ServerLog.open(path)
 	assert_object(log).is_not_null()
 	log.event("start", {"port": 47801})
 	log.count("chip", 2)

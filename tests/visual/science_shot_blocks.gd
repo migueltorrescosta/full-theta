@@ -56,10 +56,10 @@ static func _scan(truth: Vector3, axes: int) -> Dictionary:
 		wire.append({"p": v})
 		cloud.append({"p": pose * v})
 	return {
-		"session": 1,
-		"session_target": H2,
-		"session_start": 10,
-		"session_noise": 0.33,
+		"minigame": 1,
+		"minigame_target": H2,
+		"minigame_start": 10,
+		"minigame_noise": 0.33,
 		"axes": axes,
 		"wire": wire,
 		"cloud": cloud,
@@ -79,10 +79,10 @@ static func _hack(node: int, known: int) -> Dictionary:
 			mask = HackGame.DOWN
 		edges.append({"mask": mask if (known >> n) & 1 == 1 else 0})
 	return {
-		"session": 2,
-		"session_target": H2,
-		"session_start": 10,
-		"session_noise": 0.3,
+		"minigame": 2,
+		"minigame_target": H2,
+		"minigame_start": 10,
+		"minigame_noise": 0.3,
 		"hack_cols": 5,
 		"hack_rows": 3,
 		"hack_node": node,

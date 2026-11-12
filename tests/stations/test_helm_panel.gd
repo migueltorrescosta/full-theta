@@ -177,7 +177,7 @@ func test_held_thrust_and_mouse_steering_work_together() -> void:
 func test_the_end_of_the_run_frees_the_pointer() -> void:
 	_frame()
 	assert_bool(_panel.steering()).is_true()
-	_ctx().crew.run_over[StationFixture.SHIP] = {"ship": StationFixture.SHIP, "outcome": "win"}
+	_ctx().crew.ship_outcome[StationFixture.SHIP] = {"ship": StationFixture.SHIP, "outcome": "win"}
 	_frame()
 	assert_bool(_panel.steering()).is_false()
 

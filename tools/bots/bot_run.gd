@@ -46,13 +46,15 @@ static func play(
 		for e: SimEvent in world.drain_events():
 			jumps += 1 if e.kind == &"jump_arrive" else 0
 		top_speed = maxf(top_speed, world.kin.vel[0].length())
-		if world.run.outcome[0] != RunTable.Outcome.NONE:
+		if world.ships.ship_outcome[0] != ShipStateTable.ShipOutcome.NONE:
 			settle -= 1  # the encounter a ship is lost in closes a tick or two later
 	var record: Dictionary = (
 		RunDebrief.new(world, director.decisions(), CoopEvents.new(), FirstUse.new()).for_ship(0)
 	)
 	record["outcome"] = (
-		"stalled" if world.run.outcome[0] == RunTable.Outcome.NONE else record["result"]
+		"stalled"
+		if world.ships.ship_outcome[0] == ShipStateTable.ShipOutcome.NONE
+		else record["result"]
 	)
 	record["profile"] = profile_name
 	record["difficulty"] = difficulty

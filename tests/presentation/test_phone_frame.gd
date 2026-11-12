@@ -125,10 +125,10 @@ func test_pages_swap_only_their_parts() -> void:
 	assert_bool(b.visible).is_true()
 	assert_bool(keep.visible).is_true()
 	assert_array(seen).is_equal([1])
-	host.session_title = "Scan H2 · 12 s"
+	host.minigame_title = "Scan H2 · 12 s"
 	host.select(0)
 	assert_int(host.current).is_equal(1)
-	host.session_title = ""
+	host.minigame_title = ""
 	for i: int in 3:
 		host.add_page("P%d" % i, [])
 	assert_int(host.count()).is_equal(PageHost.MAX)
@@ -159,9 +159,9 @@ func test_tabs_follow_the_host() -> void:
 	var lead: RailButton = auto_free(RailButton.make("⇄ Weapons"))
 	tabs.set_lead(lead)
 	assert_int(lead.get_index()).is_equal(0)
-	host.session_title = "Hack H2"
+	host.minigame_title = "Hack H2"
 	assert_int(tabs.tab_count()).is_equal(0)
-	assert_str(tabs._session.text).is_equal("Hack H2")
+	assert_str(tabs._minigame.text).is_equal("Hack H2")
 
 
 # FT: FT-STN-005

@@ -103,10 +103,10 @@ func _scan_block(truth: Vector3, axes: int) -> Dictionary:
 		wire.append({"p": v})
 		cloud.append({"p": pose * v})
 	return {
-		"session": 1,
-		"session_target": H2,
-		"session_start": 10,
-		"session_noise": 0.33,
+		"minigame": 1,
+		"minigame_target": H2,
+		"minigame_start": 10,
+		"minigame_noise": 0.33,
 		"axes": axes,
 		"wire": wire,
 		"cloud": cloud,
@@ -126,10 +126,10 @@ func _hack_block(node: int, known: int) -> Dictionary:
 			mask = HackGame.DOWN
 		edges.append({"mask": mask if (known >> n) & 1 == 1 else 0})
 	return {
-		"session": 2,
-		"session_target": H2,
-		"session_start": 10,
-		"session_noise": 0.3,
+		"minigame": 2,
+		"minigame_target": H2,
+		"minigame_start": 10,
+		"minigame_noise": 0.3,
 		"hack_cols": 5,
 		"hack_rows": 3,
 		"hack_node": node,
@@ -227,7 +227,7 @@ func test_controls_send_science_commands() -> void:
 	s.dispatch(_ev("sci_sub_next", "pad", s))
 	s.dispatch(_ev("sci_hack", "pad", s))
 	assert_str(_cmds(s, "science_hack")[1][1][0]["subsystem_id"]).is_equal(str(p.subsystems()[1]))
-	# The subsystem button names it in the session language, never the raw id (#28).
+	# The subsystem button names it in the minigame language, never the raw id (#28).
 	p.refresh()
 	var sub: Button = p._buttons["sub"]
 	assert_str(sub.text).is_equal(tr("eng.name." + str(p.subsystems()[1])))

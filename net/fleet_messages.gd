@@ -1,7 +1,7 @@
 class_name FleetMessages
 extends RefCounted
 ## Payloads of the multi-ship and PvP events (#11, protocol version 8; docs/protocol.md
-## "Multi-ship sessions and PvP"): one builder per event and PAYLOADS, the field types each
+## "Multi-ship games and PvP"): one builder per event and PAYLOADS, the field types each
 ## must have, so the server (strand C) builds them and the client (strand D) reads them by
 ## the same names. check() is the receiving side's guard, as NetProtocol.check() is for
 ## control messages. Scoreboard rows carry status and progress only: no hull, no
@@ -43,7 +43,7 @@ const PAYLOADS: Dictionary = {
 	NetProtocol.EVENT_RELAUNCH_VOTES:
 	{"ship": TYPE_INT, "voters": TYPE_ARRAY, "sessions": TYPE_ARRAY, "needed": TYPE_INT},
 	NetProtocol.EVENT_RELAUNCHED: {"ship": TYPE_INT, "lives": TYPE_INT},
-	NetProtocol.EVENT_SESSION_OVER:
+	NetProtocol.EVENT_GAME_OVER:
 	{
 		"reason": TYPE_STRING,
 		"winners": TYPE_ARRAY,
@@ -117,7 +117,7 @@ static func fleet_ship(
 
 ## The multi-ship lobby: every ship, the host's mode and options, the crewed ships that have
 ## not pressed Start yet (waiting) and whether the universe has started (all together, M4-Q4).
-## `mode` and `team_win` are SessionRules' names; the server fills them, so this class names
+## `mode` and `team_win` are GameRules' names; the server fills them, so this class names
 ## no sim class and the clients may read it (F4).
 static func fleet(
 	ships: Array,
@@ -177,10 +177,10 @@ static func relaunched(ship: int, lives: int) -> Dictionary:
 	return {"ship": ship, "lives": lives}
 
 
-## The session's outcome (SessionOutcome: its reason name, winners and the lobby team of its
+## The game's outcome (GameOutcome: its reason name, winners and the lobby team of its
 ## winner_faction, NetFleet.team_of_faction); time_s: the session's length; held_s: HOLDOUT's
 ## score, how long the finite side lasted.
-static func session_over(
+static func game_over(
 	reason: String, winners: Array, team: int, held_s: float, time_s: float
 ) -> Dictionary:
 	return {

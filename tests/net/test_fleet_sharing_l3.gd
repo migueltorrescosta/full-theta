@@ -4,7 +4,7 @@ extends GdUnitTestSuite
 ## own marks (FT-ARC-018, FT-SPA-023, FT-MIS-042); in PvP each ship's pair mechanics see only
 ## its own faction's knowledge and its own marks (FT-PAIR-016).
 
-## An NPC faction clear of the crew factions (SessionRules.CREW_FACTIONS).
+## An NPC faction clear of the crew factions (GameRules.CREW_FACTIONS).
 const NPC_FACTION: int = 2
 const S = StationViews.Section
 
@@ -21,7 +21,7 @@ func after_test() -> void:
 
 ## A started session of two ships under `mode`: an "all" player on each (dev_all) and a
 ## Weapons player on each, ids [all-0, all-1, weapons-0, weapons-1].
-func _session(mode: SessionRules.Mode) -> Array[NetClient]:
+func _session(mode: GameRules.Mode) -> Array[NetClient]:
 	var server: NetServer = h.fleet_server(mode, 2, [], true)
 	var out: Array[NetClient] = []
 	for ship: int in 2:
@@ -108,7 +108,7 @@ func _slot_of(marks: Array, npc: int) -> int:
 # Allied ships share the faction's contacts and callsigns, but a mark stays on its ship; a
 # Relay may send it to the ally's inbox.
 func test_allies_share_contacts_and_callsigns_not_marks() -> void:
-	var crews: Array[NetClient] = await _session(SessionRules.Mode.COOP)
+	var crews: Array[NetClient] = await _session(GameRules.Mode.COOP)
 	var server: NetServer = _server()
 	var npc: int = await _npc(server)
 	var same: Callable = func() -> bool:
@@ -132,7 +132,7 @@ func test_allies_share_contacts_and_callsigns_not_marks() -> void:
 # Weapons sees it under the P9 toggle (and not without it); honouring it costs the faction no
 # reputation.
 func test_allied_weapons_see_the_contract_flag() -> void:
-	var crews: Array[NetClient] = await _session(SessionRules.Mode.COOP)
+	var crews: Array[NetClient] = await _session(GameRules.Mode.COOP)
 	var server: NetServer = _server()
 	var npc: int = await _npc(server)
 	var faction: int = server.world.faction_of(0)
@@ -153,7 +153,7 @@ func test_allied_weapons_see_the_contract_flag() -> void:
 # ship 0's contract flag reaches its own Weapons with P9 but not the rival's, the rival's
 # callsigns are its own faction's, ship 0's mark stays its own and can't be sent to the rival.
 func test_pvp_ships_use_only_their_own_knowledge_and_marks() -> void:
-	var crews: Array[NetClient] = await _session(SessionRules.Mode.RACE)
+	var crews: Array[NetClient] = await _session(GameRules.Mode.RACE)
 	var server: NetServer = _server()
 	var w: SimWorld = server.world
 	assert_int(w.faction_of(0)).is_not_equal(w.faction_of(1))

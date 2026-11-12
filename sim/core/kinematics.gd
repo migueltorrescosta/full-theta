@@ -16,7 +16,7 @@ extends SimTable
 ## the bow, +X starboard, +Y up; angular velocity is in the body frame (x pitch, y yaw,
 ## z roll). Limits are copied from the ShipDef at spawn (FT-ARC-020). Units are SI.
 
-## Default side of the scenario's wrapping cube (m, FT-SIM-035, D229).
+## Default side of the map's wrapping cube (m, FT-SIM-035, D229).
 const DEFAULT_PERIOD: float = 400000.0
 
 ## Side of the world's wrapping cube (m); SimWorld sets it.

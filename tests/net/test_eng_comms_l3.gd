@@ -42,7 +42,7 @@ func _run(code: String) -> void:
 	var eng: NetClient = await h.joined(server, "eng", "engineering")
 	var comms: NetClient = await h.joined(server, "comms", "comms")
 	var qm: NetClient = await h.joined(server, "qm", "quartermaster")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	var all: Array[NetClient] = [eng, comms, qm]
 	await _preset(server, all, code)
 	assert_bool(await h.until(func() -> bool: return CommsL3.block(comms).has("credits"))).is_true()

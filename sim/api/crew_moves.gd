@@ -17,7 +17,7 @@ static func nearest_hostile(
 	for id: int in world.ship_count():
 		if id == ship or not world.ai.is_enabled(id) or not world.kin.is_alive(id):
 			continue
-		if world.run.status[id] != RunTable.Status.IN_PLAY:
+		if world.ships.status[id] != ShipStateTable.Status.IN_PLAY:
 			continue
 		if world.relation(faction, world.faction_of(id)) != SimWorld.Relation.HOSTILE:
 			continue

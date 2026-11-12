@@ -6,7 +6,7 @@ extends Control
 ## scan. The left rail is the page zone: Contacts (the list), Card (the whole card, wider,
 ## no scroll; the radar re-centres beside it) and Crew (CrewPage). Hack opens the screen's
 ## choice sheet of the target's subsystems (SciencePanel.open_hack). While a scan or hack
-## runs the tabs show the session's title and the rails swap to the minigame's: the axis
+## runs the tabs show the minigame's title and the rails swap to the minigame's: the axis
 ## chips or the hint on the left, Cancel (and Submit) on the right.
 ## Upright (the reduced layout under the "turn sideways" banner): the radar or minigame on
 ## top, the page zone under it, then the actions; the screen's bottom tab bar holds the tabs.
@@ -53,7 +53,7 @@ var cancel: RailButton
 ## The status line over the bottom of the radar.
 var status: Label
 
-## The page zone (the list, the card, the Crew page), hidden during a session.
+## The page zone (the list, the card, the Crew page), hidden during a minigame.
 var _zone: Control
 var _action_box: Control
 var _scan_left: Control
@@ -106,7 +106,7 @@ func release() -> void:
 		panel._stage.resized.disconnect(_on_stage_resized)
 	if layout != null:
 		layout.content_rect_changed.disconnect(_place_view)
-	pages.session_title = ""
+	pages.minigame_title = ""
 	var top: BoxContainer = panel._top
 	panel._list.remove_theme_constant_override("v_separation")
 	panel._list.size_flags_vertical = Control.SIZE_FILL
@@ -154,7 +154,7 @@ func _make_controls() -> void:
 	submit.pressed.connect(panel.scan_game.submit)
 	cancel = RailButton.make(tr("sci.cancel"))
 	cancel.name = "Cancel"
-	cancel.pressed.connect(panel.cancel_session)
+	cancel.pressed.connect(panel.cancel_minigame)
 	_hack_hint = Label.new()
 	_hack_hint.text = TouchText.of("sci.hack_tap", "Tap a node next to the green one.")
 	_hack_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -299,9 +299,9 @@ func _place_view(_rect: Rect2 = Rect2()) -> void:
 	status.size = Vector2(maxf(r.end.x - x - 8.0, 1.0), 40.0)
 
 
-## Mirrors the panel's state each frame: texts, enabled states, the session's title and
-## what shows in a session.
-func update(session: int) -> void:
+## Mirrors the panel's state each frame: texts, enabled states, the minigame's title and
+## what shows in a minigame.
+func update(minigame: int) -> void:
 	if panel.top_reserve != _reserve:
 		_place_view()
 	if _top_pad != null:
@@ -313,13 +313,13 @@ func update(session: int) -> void:
 		actions[k].text = _short(k, src.text)
 		actions[k].disabled = src.disabled
 	actions["hack"].disabled = not panel.can_open_hack()
-	var playing: bool = session != SciencePanel.SESSION_NONE
-	var scan: bool = session == SciencePanel.SESSION_SCAN
-	pages.session_title = panel.session_title() if playing else ""
+	var playing: bool = minigame != SciencePanel.MINIGAME_NONE
+	var scan: bool = minigame == SciencePanel.MINIGAME_SCAN
+	pages.minigame_title = panel.minigame_title() if playing else ""
 	_zone.visible = not playing
 	_action_box.visible = not playing
 	_scan_left.visible = scan
-	_hack_hint.visible = session == SciencePanel.SESSION_HACK
+	_hack_hint.visible = minigame == SciencePanel.MINIGAME_HACK
 	_game_right.visible = playing
 	submit.visible = scan
 	status.text = panel._status.text

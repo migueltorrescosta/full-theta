@@ -75,16 +75,16 @@ func test_scoreboard_title_names_the_winner() -> void:
 	var over: Dictionary = {
 		"reason": "first_to_finish", "winners": [1], "team": -1, "held_s": 0.0, "time_s": 600.0
 	}
-	_event(ctx, NetProtocol.EVENT_SESSION_OVER, over)
+	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Heron wins!")
 	assert_str(_label(s, "Sub").text).is_equal("Game time 10:00.")
 	over["reason"] = "last_team_standing"
 	over["team"] = 1
-	_event(ctx, NetProtocol.EVENT_SESSION_OVER, over)
+	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Team B wins!")
 	over["reason"] = "holdout_over"
 	over["held_s"] = 245.0
-	_event(ctx, NetProtocol.EVENT_SESSION_OVER, over)
+	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Team B held for 4:05")
 
 
@@ -220,11 +220,11 @@ func test_who_sees_the_scoreboard() -> void:
 	var over: Dictionary = {
 		"reason": "last_standing", "winners": [1], "team": -1, "held_s": 0.0, "time_s": 9.0
 	}
-	pvp.handle_event({"type": "session_over", "payload": over}, 0)
+	pvp.handle_event({"type": "game_over", "payload": over}, 0)
 	assert_bool(pvp.on_scoreboard()).is_true()
 	var coop: CrewState = _ctx("coop").crew
 	over["reason"] = "objective"
-	coop.handle_event({"type": "session_over", "payload": over}, 0)
+	coop.handle_event({"type": "game_over", "payload": over}, 0)
 	assert_bool(coop.on_scoreboard()).is_false()
 
 

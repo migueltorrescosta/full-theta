@@ -47,7 +47,7 @@ func test_hack_needs_access_and_follows_edges() -> void:
 	assert_float(t.trace[ME]).is_greater_equal(def.trace_per_move)
 	events = _walk(w)
 	assert_int(SimFixture.of_kind(events, &"hack_done").size()).is_equal(1)
-	assert_int(t.kind[ME]).is_equal(ScienceTable.Session.NONE)
+	assert_int(t.kind[ME]).is_equal(ScienceTable.Minigame.NONE)
 
 
 # FT: FT-SCI-006
@@ -81,7 +81,7 @@ func test_trace_bar_fails_a_slow_hack() -> void:
 	)
 	var events: Array[SimEvent] = SimFixture.run(w, ticks + 5)
 	assert_int(SimFixture.of_kind(events, &"hack_traced").size()).is_equal(1)
-	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.NONE)
+	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.NONE)
 	assert_int(w.hacks.size()).is_equal(0)
 
 
@@ -110,7 +110,7 @@ func test_hidden_nodes_are_revealed_by_scans_and_probes() -> void:
 	var route: Array[int] = ScienceFixture.route(w)
 	for node: int in route:
 		ScienceFixture.do(w, ScienceFixture.move_cmd(node))
-		if w.science.kind[ME] != ScienceTable.Session.HACK:
+		if w.science.kind[ME] != ScienceTable.Minigame.HACK:
 			break
 		assert_int(w.science.known[ME] & (1 << node)).is_not_equal(0)
 

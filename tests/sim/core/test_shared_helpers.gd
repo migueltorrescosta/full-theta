@@ -36,7 +36,7 @@ func test_hostility_predicates() -> void:
 func test_crew_predicates() -> void:
 	var w: SimWorld = _world()
 	assert_bool(w.is_crew_in_play(0)).is_true()
-	w.run.status[0] = RunTable.Status.DESTROYED
+	w.ships.status[0] = ShipStateTable.Status.DESTROYED
 	assert_bool(w.is_crew(0)).is_true()
 	assert_bool(w.is_crew_in_play(0)).is_false()
 
@@ -59,7 +59,7 @@ func test_delta_is_minimum_image() -> void:
 
 
 func test_faction_table_keeps_crew_factions_clear_of_npcs() -> void:
-	for f: int in SessionRules.CREW_FACTIONS:
+	for f: int in GameRules.CREW_FACTIONS:
 		assert_bool(Factions.NPC.has(f)).is_false()
 
 

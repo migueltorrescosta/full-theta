@@ -77,8 +77,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.HOST_PAUSE: {"on": true},
 		NetProtocol.Type.SHIP_ADD: {"name": "Kestrel II"},
 		NetProtocol.Type.SHIP_TEAM: {"ship": 2, "team": 1},
-		NetProtocol.Type.SESSION_MODE:
-		{"mode": "teams", "team_win": "first_to_finish", "lives": -1},
+		NetProtocol.Type.GAME_MODE: {"mode": "teams", "team_win": "first_to_finish", "lives": -1},
 		NetProtocol.Type.RELAUNCH: {"ship": 1, "vote": true},
 		NetProtocol.Type.CLIENT_FRAME: {"ms": 812, "what": "build station:0:helm"},
 		NetProtocol.Type.TRAINING: {"station": "helm"},

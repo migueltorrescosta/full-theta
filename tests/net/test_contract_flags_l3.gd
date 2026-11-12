@@ -41,7 +41,7 @@ func test_flags_reach_weapons_only_with_p9_granted() -> void:
 	var server: NetServer = h.server()
 	var weapons: NetClient = await h.joined(server, "weapons", "weapons")
 	var parley: NetClient = await h.joined(server, "parley", "parley")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	var set_flag: SetContractFlagCommand = SetContractFlagCommand.new()
 	set_flag.ship_id = PLAYER
 	set_flag.source = SimCommand.Source.SERVER

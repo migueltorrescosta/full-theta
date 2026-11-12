@@ -34,9 +34,9 @@ func test_the_leg_has_debris_on_the_route_and_weapons_destroys_it() -> void:
 	for i: int in 1800:
 		crew.act(f.world)
 		f.tick()
-		if f.world.run.status[target] != RunTable.Status.IN_PLAY:
+		if f.world.ships.status[target] != ShipStateTable.Status.IN_PLAY:
 			break
-	assert_int(f.world.run.status[target]).is_not_equal(RunTable.Status.IN_PLAY)
+	assert_int(f.world.ships.status[target]).is_not_equal(ShipStateTable.Status.IN_PLAY)
 
 
 # FT: FT-MIS-041

@@ -41,7 +41,7 @@ func test_relaunch_within_grace_restores_everything() -> void:
 	var gunner: NetClient = await h.joined(server, "gunner", "weapons")
 	var other: NetClient = await h.joined(server, "other", "tactical")
 	var session: NetSession = h.session_of(server, gunner)
-	assert_int(server.session.claims.holder(PLAYER, "mount:0")).is_equal(session.id)
+	assert_int(server.game.claims.holder(PLAYER, "mount:0")).is_equal(session.id)
 	var again: NetClient = await _relaunch(server, gunner)
 	assert_bool(again.welcome["resumed"]).is_true()
 	assert_int(again.session_id).is_equal(session.id)
@@ -53,7 +53,7 @@ func test_relaunch_within_grace_restores_everything() -> void:
 		var claims: Dictionary = again.view.ownership.get("claims", {})
 		return claims.has("mount:0") and claims["mount:0"][0] == session.id
 	assert_bool(await h.until(mine)).is_true()
-	assert_int(server.session.claims.holder(PLAYER, "mount:0")).is_equal(session.id)
+	assert_int(server.game.claims.holder(PLAYER, "mount:0")).is_equal(session.id)
 	assert_bool(other.is_welcomed()).is_true()
 
 
@@ -68,7 +68,7 @@ func test_rejoin_after_grace_restores_only_what_is_free() -> void:
 	var cap: NetClient = await h.joined(server, "cap", "captain")
 	var g_session: NetSession = h.session_of(server, gunner)
 	var c_session: NetSession = h.session_of(server, cap)
-	assert_int(server.session.claims.holder(PLAYER, "mount:0")).is_equal(g_session.id)
+	assert_int(server.game.claims.holder(PLAYER, "mount:0")).is_equal(g_session.id)
 	var file: SessionTokenFile = SessionTokenFile.make(gunner.token, "127.0.0.1", server.port())
 	file.save(_token_path)
 	var cap_token: String = cap.token
@@ -78,7 +78,7 @@ func test_rejoin_after_grace_restores_only_what_is_free() -> void:
 	assert_bool(await h.lapsed(c_session)).is_true()
 	# second is now alone on Weapons: it holds the mount (FT-NET-044).
 	var s_id: int = h.session_of(server, second).id
-	assert_int(server.session.claims.holder(PLAYER, "mount:0")).is_equal(s_id)
+	assert_int(server.game.claims.holder(PLAYER, "mount:0")).is_equal(s_id)
 	var taker: NetClient = await h.joined(server, "taker", "captain")
 	assert_str(h.session_of(server, taker).entry).is_equal("captain")
 	var again: NetClient = await h.welcomed(
@@ -86,7 +86,7 @@ func test_rejoin_after_grace_restores_only_what_is_free() -> void:
 	)
 	assert_int(again.session_id).is_equal(g_session.id)
 	assert_str(again.welcome["entry"]).is_equal("weapons")
-	assert_int(server.session.claims.holder(PLAYER, "mount:0")).is_equal(s_id)
+	assert_int(server.game.claims.holder(PLAYER, "mount:0")).is_equal(s_id)
 	var cap_again: NetClient = await h.welcomed(server, "cap'", cap_token)
 	assert_int(cap_again.session_id).is_equal(c_session.id)
 	assert_int(cap_again.welcome["ship"]).is_equal(PLAYER)
@@ -107,15 +107,15 @@ func test_full_server_refuses_a_resume_within_grace() -> void:
 	var xs: NetSession = h.session_of(server, x)
 	assert_bool(await h.drop(server, x)).is_true()
 	await h.welcomed(server, "y")
-	server.session.max_sessions = 1
+	server.game.max_sessions = 1
 	var refused: NetClient = h.client(server, "x'", xs.token)
 	var rejected: Callable = func() -> bool: return refused.state == NetClient.State.REJECTED
 	assert_bool(await h.until(rejected)).is_true()
 	assert_str(refused.reject_reason).is_equal(NetProtocol.REJECT_FULL)
 	assert_bool(xs.connected()).is_false()
-	assert_bool(server.session.by_id.has(xs.id)).is_true()
+	assert_bool(server.game.by_id.has(xs.id)).is_true()
 	assert_str(xs.entry).is_equal("helm")
-	server.session.max_sessions = 2
+	server.game.max_sessions = 2
 	var again: NetClient = await h.welcomed(server, "x''", xs.token)
 	assert_bool(again.welcome["resumed"]).is_true()
 	assert_str(again.welcome["entry"]).is_equal("helm")
@@ -129,10 +129,10 @@ func test_refused_rejoin_after_grace_leaves_no_ghost() -> void:
 	var server: NetServer = h.server(false, 0.5)
 	var x: NetClient = await h.joined(server, "x", "helm")
 	var xs: NetSession = h.session_of(server, x)
-	assert_int(server.session.claims.holder(PLAYER, "flight")).is_equal(xs.id)
+	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(xs.id)
 	assert_bool(await h.drop(server, x)).is_true()
 	await h.welcomed(server, "y")
-	server.session.max_sessions = 1
+	server.game.max_sessions = 1
 	# The Hello arrives in the frame the grace runs out, before expire() saw it.
 	var hello: Dictionary = {
 		"t": NetProtocol.Type.HELLO,
@@ -142,15 +142,15 @@ func test_refused_rejoin_after_grace_leaves_no_ghost() -> void:
 		"kind": "bot",
 		"host_secret": "",
 	}
-	server.session._on_hello(999_999, hello, Time.get_ticks_usec() + 1_000_000)
+	server.game._on_hello(999_999, hello, Time.get_ticks_usec() + 1_000_000)
 	assert_bool(xs.lapsed).is_true()
-	assert_bool(server.session.by_id.has(xs.id)).is_false()
+	assert_bool(server.game.by_id.has(xs.id)).is_false()
 	assert_str(xs.entry).is_equal("")
-	assert_int(server.session.claims.holder(PLAYER, "flight")).is_equal(-1)
-	server.session.max_sessions = 2
+	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(-1)
+	server.game.max_sessions = 2
 	var again: NetClient = await h.welcomed(server, "x'", xs.token)
 	assert_str(again.welcome["entry"]).is_equal("helm")
-	assert_int(server.session.claims.holder(PLAYER, "flight")).is_equal(xs.id)
+	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(xs.id)
 
 
 # FT: FT-NET-027

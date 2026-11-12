@@ -2,7 +2,7 @@ class_name OwnershipSection
 extends SnapshotSection
 ## Who holds what on one ship (Section.OWNERSHIP): the claimer of each claimed item
 ## (FT-NET-023) and the last writer of each ship-wide control (FT-NET-044). The main
-## thread owns claims (ServerSession) and posts the ship's table to the net thread
+## thread owns claims (NetGame) and posts the ship's table to the net thread
 ## whenever it changes (NetTransport.post_ownership); each view key gets only its own
 ## stations' items (StationViews.ownership_for), so the section is filtered per entry,
 ## not shared whole like the other per-ship sections. Sent whole on change.

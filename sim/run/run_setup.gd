@@ -31,7 +31,7 @@ var hail_conversations: Dictionary[StringName, StringName] = {}
 var slots: Array[ShipSlot] = []
 ## The session's rules (mode, team win rule, relaunch policies); build() hands them to the
 ## world. Defaults to COOP.
-var rules: SessionRules = SessionRules.new()
+var rules: GameRules = GameRules.new()
 
 
 func _init(
@@ -70,7 +70,7 @@ func validate() -> Array[String]:
 	if run_def.map != null:
 		errors.append_array(run_def.map.errors(ships))  # period and the D229 site spacing
 	else:
-		errors.append_array(SimWorld.period_errors(site_period, ships))
+		errors.append_array(SimWorld.period_errors(map_period, ships))
 	if hazards.size() > HazardSystem.MAX_HAZARDS:
 		errors.append(
 			"%d hazards, at most %d are supported" % [hazards.size(), HazardSystem.MAX_HAZARDS]
@@ -82,7 +82,7 @@ func validate() -> Array[String]:
 func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
-	var world: SimWorld = SimWorld.new(world_seed, build_id, site_period)
+	var world: SimWorld = SimWorld.new(world_seed, build_id, map_period)
 	world.science_def = science
 	world.hazards = hazards.duplicate()
 	world.catalog = catalog

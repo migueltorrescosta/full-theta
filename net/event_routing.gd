@@ -2,7 +2,7 @@ class_name EventRouting
 extends RefCounted
 ## Which sessions a sim event reaches and with what value (F4, R13-8; FT-NET-009, D224): the
 ## server's event tables, apart from the station model (StationViews) the clients read.
-## ServerSession.event_audience and ServerVoice use them.
+## NetGame.event_audience and ServerVoice use them.
 
 ## Sim events that only some stations get (FT-NET-009): kind -> stations; a session
 ## gets one if its pick covers a listed station. Kinds not listed go to every session
@@ -82,7 +82,7 @@ const EVENT_SHORTCUTS: Dictionary = {
 
 
 ## Whether a sim event of this kind reaches a session holding entry (faction and ship
-## checks are ServerSession.event_audience()'s).
+## checks are NetGame.event_audience()'s).
 static func sees_event(
 	entry: String, kind: StringName, toggles: String = StationViews.DEFAULT_TOGGLES
 ) -> bool:

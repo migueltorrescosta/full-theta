@@ -968,7 +968,7 @@ func _do_ui_release(step: Dictionary) -> Result:
 
 
 ## ui_expect <matchers>: waits until L4Ui.state() matches (shown, focused, selection.id,
-## marks.contact, claims, contacts, started, card, run_over.outcome, ...).
+## marks.contact, claims, contacts, started, card, ship_outcome.outcome, ...).
 func _do_ui_expect(step: Dictionary) -> Result:
 	var why: String = _check(_ui.state(), _matchers(step))
 	return Result.DONE if why == "" else _wait(why)

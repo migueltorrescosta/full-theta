@@ -92,7 +92,7 @@ func test_each_write_is_one_server_command() -> void:
 			&"say"
 		],
 		[func(a: ScenarioApi) -> void: a.offer(0, CardSpec.new()), &"post_card"],
-		[func(a: ScenarioApi) -> void: a.close_run(0), &"close_run"],
+		[func(a: ScenarioApi) -> void: a.finish_ship(0), &"finish_ship"],
 	]
 	for pair: Array in writes:
 		_one(w, pair[0], pair[1])
@@ -169,7 +169,7 @@ func test_a_rejected_write_has_a_rejected_handle_and_shifts_no_other() -> void:
 # FT: FT-DAT-009
 func test_message_without_a_listener_queues_nothing() -> void:
 	var w: SimWorld = ApiFixture.world()
-	w.run.status[0] = RunTable.Status.ABANDONED
+	w.ships.status[0] = ShipStateTable.Status.ABANDONED
 	_api(w).message("npc.hello", {}, SayTarget.npc(&"rosa", -1))
 	assert_int(w.queued_commands().size()).is_equal(0)
 

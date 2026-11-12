@@ -1,4 +1,4 @@
-class_name SessionSound
+class_name ShellSound
 extends Node
 ## The client's sound beyond voice and alert tones (#12, FT-AUD-016, FT-AUD-023,
 ## FT-AUD-024): effects for firing, explosions, docking, the jump drive, button presses and
@@ -38,7 +38,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	music.volume = ctx.settings.music_volume
 	music.voice_active = voice_playing.is_valid() and bool(voice_playing.call())
-	music.set_playing(ctx.crew.is_started() and not ctx.crew.run_over.has(ctx.crew.ship))
+	music.set_playing(ctx.crew.is_started() and not ctx.crew.ship_outcome.has(ctx.crew.ship))
 
 
 ## A sim event: the effect its route names, when this screen hears it.

@@ -144,14 +144,14 @@ func test_snapshots_hold_only_their_station_fields() -> void:
 		var c: NetClient = await h.joined(server, id, id)
 		assert_bool(c.view.full_count >= 1).is_true()
 		clients[id] = c
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	var pilot: NetClient = clients["helm"]
 	var systems: NetClient = clients["systems"]
 	pilot.helm(1.0, Vector3(0.1, 0.0, 0.0))
 	systems.set_pips(SubsystemDef.Kind.ENGINES, 2)
 	(clients["weapons"] as NetClient).claim("mount:0")
 	var wrote: Callable = func() -> bool:
-		return server.session.writers.get(PLAYER, {}).has("pips:%d" % SubsystemDef.Kind.ENGINES)
+		return server.game.writers.get(PLAYER, {}).has("pips:%d" % SubsystemDef.Kind.ENGINES)
 	assert_bool(await h.until(wrote)).is_true()
 	for toggles: String in DataToggles.PRESETS:
 		var fulls: Dictionary = {}
@@ -242,7 +242,7 @@ func test_no_knowledge_of_another_faction() -> void:
 		_event(world, &"hit", ENEMY, &"b_hit"),
 		_event(world, &"ai_mode", ENEMY, &"ai"),
 	]
-	server.session.after_ticks(made)
+	server.game.after_ticks(made)
 	var expect: Array = [
 		[helm, ["a_hit"]], [eng, ["a_hit", "a_repair"]], [viewer, ["a_hit"]], [foe, ["b_hit"]]
 	]

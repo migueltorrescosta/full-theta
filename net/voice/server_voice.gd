@@ -1,6 +1,6 @@
 class_name ServerVoice
 extends RefCounted
-## ServerSession's seam to the host's VoiceService (E10): `voice` is null in net/ tests
+## NetGame's seam to the host's VoiceService (E10): `voice` is null in net/ tests
 ## and on a server without voice, and then nothing here does anything. The app sets it
 ## (ServerMain.make_voice).
 ## - start(): the run's first Start calls VoiceService.start_session() with the closed
@@ -24,7 +24,7 @@ const LINES: Dictionary = {
 }
 
 var voice: VoiceService
-## The session's toggle code (ServerSession sets it at every Start; the toggles are
+## The session's toggle code (NetGame sets it at every Start; the toggles are
 ## locked once a run launches): the summaries toggle decides what Helm hears of the shields.
 var toggles: String = StationViews.DEFAULT_TOGGLES
 var world: SimWorld

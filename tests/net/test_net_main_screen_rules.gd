@@ -39,10 +39,10 @@ func test_objectives_count_the_hostile_ships_in_play() -> void:
 	assert_int(rows.size()).is_equal(1)
 	assert_int(rows[0]["kind"]).is_equal(Objectives.Kind.DESTROY_HOSTILES)
 	assert_int(rows[0]["left"]).is_equal(1)
-	world.run.status[ENEMY] = RunTable.Status.DESTROYED
+	world.ships.status[ENEMY] = ShipStateTable.Status.DESTROYED
 	assert_int(Objectives.of_ship(world, PLAYER).size()).is_equal(0)
-	world.run.status[ENEMY] = RunTable.Status.IN_PLAY
-	world.run.outcome[PLAYER] = RunTable.Outcome.WIN
+	world.ships.status[ENEMY] = ShipStateTable.Status.IN_PLAY
+	world.ships.ship_outcome[PLAYER] = ShipStateTable.ShipOutcome.WIN
 	assert_int(Objectives.of_ship(world, PLAYER).size()).is_equal(0)
 
 

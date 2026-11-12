@@ -269,13 +269,13 @@ static func _selection(ctx: StationContext, sci: Dictionary, weak: bool) -> Stri
 	return _t("glance.weak", "Weak points %d") % 0
 
 
-## Science's session, else the selected contact's scan.
+## Science's minigame, else the selected contact's scan.
 static func _scan(ctx: StationContext, sci: Dictionary) -> String:
-	var session: int = int(sci.get("session", 0))
-	var target: String = ctx.view.callsign(int(sci.get("session_target", -1)))
-	if session == 1 or session == 3:
+	var minigame: int = int(sci.get("minigame", 0))
+	var target: String = ctx.view.callsign(int(sci.get("minigame_target", -1)))
+	if minigame == 1 or minigame == 3:
 		return _t("glance.scanning", "Scanning %s") % target
-	if session == 2:
+	if minigame == 2:
 		return _t("glance.hacking", "Hacking %s") % target
 	var sel: Dictionary = ctx.crew.selection
 	if sel.get("kind", "") != "contact":

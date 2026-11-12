@@ -38,7 +38,7 @@ const FRONT_ARROW_PX: float = 24.0
 
 ## The items (ContactPicture); its interpolator gives the own ship's orientation and
 ## position, to place the cube and turn map points into positions, and
-## the site period (no cube without one).
+## the map period (no cube without one).
 var picture: ContactPicture = ContactPicture.new()
 var selected: Dictionary = {}
 ## The item the map is centred on ({} = own ship).
@@ -111,7 +111,7 @@ func rotate_by(delta_px: Vector2) -> void:
 	queue_redraw()
 
 
-## Site period (m), 0 when unknown.
+## Map period (m), 0 when unknown.
 func period_m() -> float:
 	return float(picture.interp.p_units) / NetCodec.POS_Q
 

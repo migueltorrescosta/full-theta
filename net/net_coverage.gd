@@ -3,7 +3,7 @@ extends RefCounted
 ## The coverage check of one ship (FT-NET-019, FT-NET-020, FT-GEN-004, FT-GEN-005,
 ## D66, D67): at least min_crew crew players, and each of the six functional stations
 ## covered by at least one crew pick. Captain and Viewer picks don't count. Pure: the
-## caller passes the catalogue entries its crew hold (ServerSession counts the sessions
+## caller passes the catalogue entries its crew hold (NetGame counts the sessions
 ## connected or within their grace period).
 
 ## Crew players a ship needs (D66); --dev-all-stations lowers it to 1 (FT-NET-029).

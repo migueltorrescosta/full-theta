@@ -29,7 +29,7 @@ func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = 
 	m1.science = load("res://content/science/science.tres") as ScienceDef
 	if s.start(m1, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
-	s.session.sessions.grace_us = int(grace_s * 1_000_000.0)
+	s.game.sessions.grace_us = int(grace_s * 1_000_000.0)
 	# A served world trims its command log; tests read the history of the run.
 	s.world.keep_command_log = true
 	node.add_child(s)
@@ -41,7 +41,7 @@ func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = 
 ## `mode`, on `teams` (FleetFixture.slots_for), ship ids 0 .. n - 1, on the M3 run without a
 ## director; its NetFleet holds the same slots and rules. Not started: the lobby is open.
 func fleet_server(
-	mode: SessionRules.Mode,
+	mode: GameRules.Mode,
 	n: int,
 	teams: Array[int] = [],
 	dev_all: bool = false,
@@ -54,9 +54,9 @@ func fleet_server(
 	var s: NetServer = NetServer.new()
 	if s.start(f.setup, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
-	s.session.sessions.grace_us = int(grace_s * 1_000_000.0)
-	s.session.fleet.rules = f.rules
-	s.session.fleet.slots = f.setup.slots
+	s.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	s.game.fleet.rules = f.rules
+	s.game.fleet.slots = f.setup.slots
 	s.world.keep_command_log = true
 	node.add_child(s)
 	servers.append(s)
@@ -183,7 +183,7 @@ func mark(c: NetClient) -> int:
 
 ## The server-side session of a client.
 func session_of(s: NetServer, c: NetClient) -> NetSession:
-	return s.session.sessions.get_session(c.token)
+	return s.game.sessions.get_session(c.token)
 
 
 ## Drops a client (no Bye) and waits until the server noticed.

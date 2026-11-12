@@ -11,11 +11,11 @@ extends RefCounted
 ## an ApiHandle, which resolves to the real id once the command has applied (Q24); the API
 ## predicts no id.
 
-## The session modes a director plans differently for (session_mode() returns a
-## SessionRules.Mode; the director sees only sim/api, so it reads them from here).
-const MODE_RACE: int = SessionRules.Mode.RACE
-const MODE_LAST_STANDING: int = SessionRules.Mode.LAST_STANDING
-const MODE_HOLDOUT: int = SessionRules.Mode.HOLDOUT
+## The session modes a director plans differently for (game_mode() returns a
+## GameRules.Mode; the director sees only sim/api, so it reads them from here).
+const MODE_RACE: int = GameRules.Mode.RACE
+const MODE_LAST_STANDING: int = GameRules.Mode.LAST_STANDING
+const MODE_HOLDOUT: int = GameRules.Mode.HOLDOUT
 
 var _world: SimWorld
 var _crew: ApiCrew
@@ -85,15 +85,15 @@ func engaged(ships: PackedInt32Array) -> PackedInt32Array:
 	for id: int in ships:
 		if (
 			_world.has_ship(id)
-			and _world.run.status[id] == RunTable.Status.IN_PLAY
-			and _world.run.encounter[id] >= 0
+			and _world.ships.status[id] == ShipStateTable.Status.IN_PLAY
+			and _world.ships.encounter[id] >= 0
 		):
 			out.append(id)
 	return out
 
 
-## The session's mode, a SessionRules.Mode value (#11): the director keys on it.
-func session_mode() -> int:
+## The session's mode, a GameRules.Mode value (#11): the director keys on it.
+func game_mode() -> int:
 	return _world.rules.mode
 
 
@@ -122,9 +122,9 @@ func ship(id: int) -> ShipView:
 	v.nearest_site = SiteTable.nearest(_world, id)
 	v.at_site = SiteTable.within_radius(_world, id, v.nearest_site)
 	v.hull_frac = DamageSystem.hull_fraction(_world, id)
-	v.status = _world.run.status[id]
-	v.in_play = v.status == RunTable.Status.IN_PLAY
-	v.outcome = _world.run.outcome[id]
+	v.status = _world.ships.status[id]
+	v.in_play = v.status == ShipStateTable.Status.IN_PLAY
+	v.outcome = _world.ships.ship_outcome[id]
 	v.docked_site = _world.helm.docked_site[id]
 	v.jumping = _world.helm.jump_left[id] > 0.0
 	return v
@@ -484,8 +484,8 @@ func end_encounter(id: int, result: int) -> void:
 
 ## Closes the crewed ship's run (Q4): it wins once it is in no encounter. Rejected below
 ## RunDef.min_encounters.
-func close_run(ship_id: int) -> void:
-	var cmd: CloseRunCommand = CloseRunCommand.new()
+func finish_ship(ship_id: int) -> void:
+	var cmd: FinishShipCommand = FinishShipCommand.new()
 	cmd.ship = ship_id
 	_world.submit(cmd)
 

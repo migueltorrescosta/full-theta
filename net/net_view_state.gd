@@ -5,7 +5,7 @@ extends RefCounted
 ## this and never simulate (FT-ARC-005). Integer models stay as the codec left them so
 ## dead reckoning matches the server bit for bit; the helpers convert to metres.
 
-## Site period in position units (from Welcome.period), for wrap-aware decoding.
+## Map period in position units (from Welcome.period), for wrap-aware decoding.
 var p_units: int = 0
 var seq: int = -1
 var tick: int = 0

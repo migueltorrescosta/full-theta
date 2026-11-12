@@ -37,8 +37,8 @@ func test_commands_are_refused_while_the_sim_is_stopped() -> void:
 	var seq: int = eng.set_pips(SubsystemDef.Kind.ENGINES, 2)
 	assert_str(await _reason(eng, seq, from)).is_equal(CommandGate.PAUSED)
 	assert_array(server.world.accepted_commands()).is_empty()
-	server.session.launch(PLAYER)
-	assert_bool(server.session.sim_running()).is_true()
+	server.game.launch(PLAYER)
+	assert_bool(server.game.sim_running()).is_true()
 	from = h.mark(eng)
 	seq = eng.set_pips(SubsystemDef.Kind.ENGINES, 2)
 	(
@@ -49,19 +49,19 @@ func test_commands_are_refused_while_the_sim_is_stopped() -> void:
 	)
 	assert_str(await _reason(eng, seq, from)).is_empty()
 	# A host pause, then a coverage pause.
-	server.session.host_pause.paused = true
+	server.game.host_pause.paused = true
 	from = h.mark(eng)
 	seq = eng.set_pips(SubsystemDef.Kind.ENGINES, 1)
 	assert_str(await _reason(eng, seq, from)).is_equal(CommandGate.PAUSED)
 	var next: int = eng.command({"kind": "training_next", "station": "engineering"})
 	assert_str(await _reason(eng, next, from)).is_not_equal(CommandGate.PAUSED)
-	server.session.host_pause.paused = false
-	server.session.lobby.paused[PLAYER] = ["helm"]
+	server.game.host_pause.paused = false
+	server.game.lobby.paused[PLAYER] = ["helm"]
 	from = h.mark(eng)
 	seq = eng.set_pips(SubsystemDef.Kind.ENGINES, 1)
 	assert_str(await _reason(eng, seq, from)).is_equal(CommandGate.PAUSED)
-	server.session.lobby.paused.clear()
-	assert_int(server.session.rejections.get(CommandGate.PAUSED, 0)).is_equal(3)
+	server.game.lobby.paused.clear()
+	assert_int(server.game.rejections.get(CommandGate.PAUSED, 0)).is_equal(3)
 
 
 # FT: FT-NET-006, FT-NET-007
@@ -69,7 +69,7 @@ func test_commands_are_refused_while_the_sim_is_stopped() -> void:
 # naming another seat is refused too.
 func test_viewer_and_captain_cannot_use_station_commands() -> void:
 	var server: NetServer = h.server(true)
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
 	var captain: NetClient = await h.joined(server, "captain", "captain")
 	var expect: Dictionary = {}
@@ -91,7 +91,7 @@ func test_viewer_and_captain_cannot_use_station_commands() -> void:
 func test_a_command_to_a_destroyed_ship_is_reported() -> void:
 	var server: NetServer = h.server(true)
 	var eng: NetClient = await h.joined(server, "eng", "engineering")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	server.world.kin.alive[PLAYER] = 0
 	var from: int = h.mark(eng)
 	var seq: int = eng.set_pips(SubsystemDef.Kind.ENGINES, 2)
@@ -142,9 +142,9 @@ func test_a_token_takes_over_a_connected_session_cleanly() -> void:
 	assert_int(first.state).is_equal(NetClient.State.CLOSED)
 	await h.wait(300)
 	assert_bool(session.connected()).is_true()
-	assert_object(server.session.by_conn.get(session.conn)).is_same(session)
+	assert_object(server.game.by_conn.get(session.conn)).is_same(session)
 	assert_str(session.entry).is_equal("engineering")
-	assert_int(server.session.by_conn.size()).is_equal(1)
+	assert_int(server.game.by_conn.size()).is_equal(1)
 	assert_bool(await h.until(func() -> bool: return second.view.full_count >= 1)).is_true()
 
 

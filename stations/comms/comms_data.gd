@@ -11,7 +11,7 @@ const COLUMN_KEYS: Array[String] = ["comms.col_missions", "comms.col_contracts",
 ## One line per column and for the Rep page: what the page is for (R23-9, R26-7).
 const WHY_KEYS: Array[String] = ["comms.why.missions", "comms.why.contracts", "comms.why.offers"]
 const WHY_REP_KEY: String = "comms.why.rep"
-## Faction ids the scenarios use (sim/run/session_rules.gd CREW_FACTIONS, the NPC factions
+## Faction ids the scenarios use (sim/run/game_rules.gd CREW_FACTIONS, the NPC factions
 ## 2 to 4); any other shows as "Faction N".
 const FACTION_KEYS: Dictionary = {
 	1: "comms.faction.crew",

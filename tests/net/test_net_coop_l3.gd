@@ -28,8 +28,8 @@ func _crew(server: NetServer) -> Dictionary:
 func _run(server: NetServer, ticks: int = 1) -> void:
 	for i: int in ticks:
 		server.world.step()
-		server.session.after_ticks(server.world.drain_events())
-		server.session.coop.step()
+		server.game.after_ticks(server.world.drain_events())
+		server.game.coop.step()
 
 
 func _do(server: NetServer, c: SimCommand, ticks: int = 1) -> void:
@@ -78,13 +78,13 @@ func test_a_share_press_is_counted() -> void:
 	var crew: Dictionary = await _crew(server)
 	var science: NetClient = crew["science"]
 	var weapons: NetSession = h.session_of(server, crew["weapons"])
-	var coop: NetCoop = server.session.coop
+	var coop: NetCoop = server.game.coop
 	var shared: Callable = func(pair: String, n: int) -> bool:
 		return coop.count_of(pair, CoopEvents.SHORTCUT_SHARED) == n
 	# Before a press the toggle alone delivers nothing.
 	var from: int = h.mark(crew["weapons"])
 	server.world.emit(&"hack_done", PLAYER, ENEMY, 10.0, Vector3.ZERO, &"engines")
-	server.session.after_ticks(server.world.drain_events())
+	server.game.after_ticks(server.world.drain_events())
 	await h.wait(150)
 	assert_array(h.events_of(crew["weapons"], "hack_done").slice(from)).is_empty()
 	assert_dict(coop.counts()).is_empty()
@@ -97,7 +97,7 @@ func test_a_share_press_is_counted() -> void:
 		. is_true()
 	)
 	server.world.emit(&"hack_done", PLAYER, ENEMY, 10.0, Vector3.ZERO, &"engines")
-	server.session.after_ticks(server.world.drain_events())
+	server.game.after_ticks(server.world.drain_events())
 	var got: Dictionary = await h.next_event(crew["weapons"], "hack_done", from)
 	assert_dict(got).is_not_empty()
 	science.share("weak_points")
@@ -107,11 +107,11 @@ func test_a_share_press_is_counted() -> void:
 	assert_bool(CoopEvents.COOPERATIVE.has(CoopEvents.SHORTCUT_SHARED)).is_true()
 	# The share ends after share_seconds and the view loses the data again.
 	_run(server, ceili(DataToggles.share_seconds() * SimWorld.HZ) + 2)
-	server.session.shares.step()
+	server.game.shares.step()
 	assert_bool(await h.until(func() -> bool: return weapons.shares.is_empty())).is_true()
 	from = h.mark(crew["weapons"])
 	server.world.emit(&"hack_done", PLAYER, ENEMY, 10.0, Vector3.ZERO, &"engines")
-	server.session.after_ticks(server.world.drain_events())
+	server.game.after_ticks(server.world.drain_events())
 	await h.wait(150)
 	assert_array(h.events_of(crew["weapons"], "hack_done").slice(from)).is_empty()
 	# Refused: not the source, a joint view that holds both, and the toggle off.
@@ -130,7 +130,7 @@ func test_a_share_press_is_counted() -> void:
 	from = h.mark(targeting)
 	targeting.share("weak_points")
 	assert_str(await rejected.call(targeting, from)).is_equal(NetShares.SAME_SCREEN)
-	server.session.lobby.toggles = DataToggles.of_preset("normal")
+	server.game.lobby.toggles = DataToggles.of_preset("normal")
 	from = h.mark(science)
 	science.share("weak_points")
 	assert_str(await rejected.call(science, from)).is_equal(NetShares.OFF)
@@ -149,12 +149,10 @@ func test_a_route_shared_to_helm_is_counted() -> void:
 	var relay: NetClient = crew["relay"]
 	var from: int = h.mark(crew["helm"])
 	relay.route_add(0, Vector3(0.0, 0.0, -1000.0))
-	await h.until(
-		func() -> bool: return not server.session.crew.relay.routes_of(PLAYER)[0].is_empty()
-	)
+	await h.until(func() -> bool: return not server.game.crew.relay.routes_of(PLAYER)[0].is_empty())
 	await h.wait(150)
 	assert_array(h.events_of(crew["helm"], NetProtocol.EVENT_ROUTES).slice(from)).is_empty()
-	assert_dict(server.session.coop.counts()).is_empty()
+	assert_dict(server.game.coop.counts()).is_empty()
 	relay.share("routes")
 	var got: Dictionary = await h.next_event(
 		crew["helm"],
@@ -163,7 +161,7 @@ func test_a_route_shared_to_helm_is_counted() -> void:
 		func(e: Dictionary) -> bool: return not e["payload"]["routes"][0].is_empty()
 	)
 	assert_dict(got).is_not_empty()
-	assert_int(server.session.coop.count_of("p4", CoopEvents.SHORTCUT_SHARED)).is_equal(1)
+	assert_int(server.game.coop.count_of("p4", CoopEvents.SHORTCUT_SHARED)).is_equal(1)
 	# The share ends: Helm's routes are emptied.
 	from = h.mark(crew["helm"])
 	_run(server, ceili(DataToggles.share_seconds() * SimWorld.HZ) + 2)
@@ -175,12 +173,12 @@ func test_a_route_shared_to_helm_is_counted() -> void:
 	)
 	assert_dict(gone).is_not_empty()
 	# Hard: no press is possible.
-	server.session.lobby.toggles = DataToggles.of_preset("hard")
+	server.game.lobby.toggles = DataToggles.of_preset("hard")
 	from = h.mark(crew["helm"])
 	relay.share("routes")
 	await h.wait(200)
 	assert_array(h.events_of(crew["helm"], NetProtocol.EVENT_ROUTES).slice(from)).is_empty()
-	assert_int(server.session.coop.count_of("p4", CoopEvents.SHORTCUT_SHARED)).is_equal(1)
+	assert_int(server.game.coop.count_of("p4", CoopEvents.SHORTCUT_SHARED)).is_equal(1)
 
 
 # FT: FT-PAIR-013
@@ -193,12 +191,12 @@ func test_a_run_reset_clears_the_mark_use_table() -> void:
 	crew["relay"].place_mark(-1, "Rock", -1, Vector3(10.0, 0.0, 0.0))
 	await h.next_event(crew["weapons"], NetProtocol.EVENT_MARKS, from)
 	var user: NetSession = h.session_of(server, crew["weapons"])
-	server.session.coop.on_mark_pinged(user, 0)
-	server.session.coop.on_mark_pinged(user, 0)
-	assert_int(server.session.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(1)
-	server.session.coop.reset_ship(PLAYER)
-	server.session.coop.on_mark_pinged(user, 0)
-	assert_int(server.session.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(2)
+	server.game.coop.on_mark_pinged(user, 0)
+	server.game.coop.on_mark_pinged(user, 0)
+	assert_int(server.game.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(1)
+	server.game.coop.reset_ship(PLAYER)
+	server.game.coop.on_mark_pinged(user, 0)
+	assert_int(server.game.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(2)
 
 
 # FT: FT-PAIR-013
@@ -212,25 +210,25 @@ func test_a_mark_used_by_another_station_is_counted() -> void:
 	await h.next_event(crew["weapons"], NetProtocol.EVENT_MARKS, from)
 	crew["relay"].ping("mark", 0, Vector3.ZERO)
 	await h.wait(150)
-	assert_dict(server.session.coop.counts()).is_empty()
+	assert_dict(server.game.coop.counts()).is_empty()
 	crew["weapons"].ping("mark", 0, Vector3.ZERO)
 	(
 		assert_bool(
 			await h.until(
-				func() -> bool: return server.session.coop.count_of("p8", CoopEvents.MARK_USED) == 1
+				func() -> bool: return server.game.coop.count_of("p8", CoopEvents.MARK_USED) == 1
 			)
 		)
 		. is_true()
 	)
 	crew["weapons"].ping("mark", 0, Vector3.ZERO)
 	await h.wait(150)
-	assert_int(server.session.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(1)
+	assert_int(server.game.coop.count_of("p8", CoopEvents.MARK_USED)).is_equal(1)
 	# Another station using it counts on its own pair.
 	crew["helm"].ping("mark", 0, Vector3.ZERO)
 	(
 		assert_bool(
 			await h.until(
-				func() -> bool: return server.session.coop.count_of("p4", CoopEvents.MARK_USED) == 1
+				func() -> bool: return server.game.coop.count_of("p4", CoopEvents.MARK_USED) == 1
 			)
 		)
 		. is_true()
@@ -244,32 +242,30 @@ func test_reaching_the_scan_position_is_counted() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
 	var crew: Dictionary = await _crew(server)
 	# No await from here on: the launched sim would run in real time.
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	(
 		assert_str(
-			server.session.crew.add_scan_position(
+			server.game.crew.add_scan_position(
 				PLAYER, CubePoint.make(4000.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
 			)
 		)
 		. is_empty()
 	)
 	_run(server, 60)
-	assert_int(server.session.coop.count_of("p3", CoopEvents.MARK_USED)).is_equal(0)
-	server.session.crew.relay.delete_zone(
-		PLAYER, server.session.crew.relay.zones_of(PLAYER)[0]["id"]
-	)
+	assert_int(server.game.coop.count_of("p3", CoopEvents.MARK_USED)).is_equal(0)
+	server.game.crew.relay.delete_zone(PLAYER, server.game.crew.relay.zones_of(PLAYER)[0]["id"])
 	(
 		assert_str(
-			server.session.crew.add_scan_position(
+			server.game.crew.add_scan_position(
 				PLAYER, CubePoint.make(100.0, 0.0, 0.0), 500.0, NetCrewState.SCIENCE_BY
 			)
 		)
 		. is_empty()
 	)
 	_run(server, 60)
-	assert_int(server.session.coop.count_of("p3", CoopEvents.MARK_USED)).is_equal(1)
+	assert_int(server.game.coop.count_of("p3", CoopEvents.MARK_USED)).is_equal(1)
 	_run(server, 120)
-	assert_int(server.session.coop.count_of("p3", CoopEvents.MARK_USED)).is_equal(1)
+	assert_int(server.game.coop.count_of("p3", CoopEvents.MARK_USED)).is_equal(1)
 	assert_object(crew).is_not_null()
 
 
@@ -286,7 +282,7 @@ func test_a_probe_enabled_scan_is_counted() -> void:
 		host.set_toggles(code)
 		(
 			assert_bool(
-				await h.until(func() -> bool: return server.session.lobby.toggles.encode() == code)
+				await h.until(func() -> bool: return server.game.lobby.toggles.encode() == code)
 			)
 			. is_true()
 		)
@@ -296,15 +292,15 @@ func test_a_probe_enabled_scan_is_counted() -> void:
 		scan.contact = ENEMY
 		_do(server, scan)
 		_do(server, ScienceFixture.submit_cmd(ScienceFixture.solution(world)))
-		assert_int(server.session.coop.count_of("p13", CoopEvents.PROBE_SCAN)).is_equal(0)
+		assert_int(server.game.coop.count_of("p13", CoopEvents.PROBE_SCAN)).is_equal(0)
 		ScienceFixture.cover(world, ENEMY)
 		var again: ScienceScanCommand = ScienceScanCommand.new()
 		again.contact = ENEMY
 		_do(server, again)
 		_do(server, ScienceFixture.submit_cmd(ScienceFixture.solution(world)))
 		(
-			assert_int(server.session.coop.count_of("p13", CoopEvents.PROBE_SCAN))
+			assert_int(server.game.coop.count_of("p13", CoopEvents.PROBE_SCAN))
 			. override_failure_message(code)
 			. is_equal(1)
 		)
-		assert_int(server.session.coop.cooperative("p13")).is_equal(1)
+		assert_int(server.game.coop.cooperative("p13")).is_equal(1)

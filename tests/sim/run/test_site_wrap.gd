@@ -234,12 +234,12 @@ func test_fight_across_the_seam_is_deterministic_and_wrap_invariant() -> void:
 
 
 # FT: FT-SIM-035
-# The site period is checked at load: it must be finite and positive, a whole number of
+# The map period is checked at load: it must be finite and positive, a whole number of
 # both broadphase cells (250 m and 500 m, checked exactly: 1 mm over fails both, D125)
 # and at least 4x the longest sensor range (the
 # corvette's 20 km). A bad one is reported by validate() and build() returns null; the
 # default 400 km and exactly 80 km pass.
-func test_site_period_validation() -> void:
+func test_map_period_validation() -> void:
 	var cases: Array[Array] = [
 		[Kinematics.DEFAULT_PERIOD, 0],
 		[80000.0, 0],
@@ -267,7 +267,7 @@ func test_site_period_validation() -> void:
 # The period is also at most SimWorld.MAX_CELLS_PER_AXIS of either broadphase cell, so
 # the collision grid's cell keys can't overflow: 2^20 cells of 250 m pass, one 500 m
 # step more fails on the 250 m cell, and 1e12 m fails on both.
-func test_site_period_upper_bound() -> void:
+func test_map_period_upper_bound() -> void:
 	var limit: float = SimWorld.MAX_CELLS_PER_AXIS * CollisionSystem.CELL
 	var cases: Array[Array] = [[limit, 0], [limit + 500.0, 1], [1.0e12, 2]]
 	for c: Array in cases:

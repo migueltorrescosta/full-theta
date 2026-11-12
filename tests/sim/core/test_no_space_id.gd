@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## D229, D230: a scenario's map is one wrapping cube and positions are plain 64-bit
+## D229, D230: the map is one wrapping cube and positions are plain 64-bit
 ## offsets in it, with no space id.
 
 const CORVETTE_FACTION: int = 1

@@ -52,7 +52,7 @@ func test_exact_values_follow_the_summaries_toggle_and_never_reach_comms() -> vo
 			marks[c] = h.mark(c)
 		(
 			server
-			. session
+			. game
 			. after_ticks(
 				[
 					_event(server, &"shield_low", 0.4, &""),

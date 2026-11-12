@@ -2,7 +2,7 @@ class_name NetCoop
 extends CoopEvents
 ## Watches the server for the cooperative events of FT-PAIR-013 that are not chips (NetChips
 ## counts those, and NetShares the data shortcuts a source station shares): a mark one
-## station placed and another used, a probe-enabled scan. ServerSession calls the hooks;
+## station placed and another used, a probe-enabled scan. NetGame calls the hooks;
 ## the counts and the log lines are CoopEvents'. A joint view's own stations are no pair
 ## between players, so work inside one view counts nothing.
 
@@ -11,12 +11,12 @@ const REUSE_TICKS: int = 10 * SimRate.HZ
 ## Ticks between two looks at whether a ship reached a scan position (0.5 s).
 const SCAN_LOOK_TICKS: int = SimRate.HZ / 2
 
-## The owning session, held weakly (it owns this object).
-var session: ServerSession:
+## The owning game, held weakly (it owns this object).
+var game: NetGame:
 	get:
-		return _session.get_ref() as ServerSession
+		return _game.get_ref() as NetGame
 
-var _session: WeakRef
+var _game: WeakRef
 ## Ship -> whether its open scan or hack started inside a probe's bubble.
 var _probe_scans: Dictionary[int, bool] = {}
 ## "ship|slot|user session" -> tick of the last count.
@@ -27,8 +27,8 @@ var _looked_at: int = -SCAN_LOOK_TICKS
 var _reached: Dictionary[String, bool] = {}
 
 
-func _init(server_session: ServerSession) -> void:
-	_session = weakref(server_session)
+func _init(net_game: NetGame) -> void:
+	_game = weakref(net_game)
 
 
 ## A sim event of the tick.
@@ -36,8 +36,7 @@ func on_sim_event(e: SimEvent) -> void:
 	match e.kind:
 		&"scan_started", &"hack_started":
 			_probe_scans[e.ship_id] = (
-				e.ship_id < session.world.science.size()
-				and (session.world.science.probe[e.ship_id] == 1)
+				e.ship_id < game.world.science.size() and (game.world.science.probe[e.ship_id] == 1)
 			)
 		&"scan_done", &"hack_done":
 			var pair: String = pair_of("science", "relay")
@@ -58,15 +57,15 @@ func on_mark_pinged(user: NetSession, slot: int) -> void:
 
 ## An accepted command: a guided shot at a mark's contact uses that mark.
 func on_command(session_id: int, c: SimCommand) -> void:
-	var at: int = c.tick if c.tick >= 0 else session.world.tick
-	session.first_use.on_command(c.ship_id, c, at)
+	var at: int = c.tick if c.tick >= 0 else game.world.tick
+	game.first_use.on_command(c.ship_id, c, at)
 	if c.kind() != &"fire_guided":
 		return
-	var user: NetSession = session.by_id.get(session_id)
+	var user: NetSession = game.by_id.get(session_id)
 	if user == null:
 		return
 	var g: FireGuidedCommand = c as FireGuidedCommand
-	var marks: CrewMarks = session.crew.marks
+	var marks: CrewMarks = game.crew.marks
 	for m: Dictionary in marks.marks_of(c.ship_id):
 		if m["contact"] == g.target:
 			_mark_used(user, m["slot"])
@@ -74,14 +73,14 @@ func on_command(session_id: int, c: SimCommand) -> void:
 
 ## Once per frame: a ship reaching the scan position Science marked uses that mark (P3).
 func step() -> void:
-	var world: SimWorld = session.world
+	var world: SimWorld = game.world
 	if world.tick - _looked_at < SCAN_LOOK_TICKS and world.tick >= _looked_at:
 		return
 	_looked_at = world.tick
-	for ship: int in session.lobby.launched_ships():
-		if not session.lobby.in_play(ship):
+	for ship: int in game.lobby.launched_ships():
+		if not game.lobby.in_play(ship):
 			continue
-		for z: Dictionary in session.crew.relay.zones_of(ship):
+		for z: Dictionary in game.crew.relay.zones_of(ship):
 			var key: String = "%d|%d" % [ship, z["id"]]
 			if z["kind"] != CrewRelay.KIND_SCAN or z["by"] != NetCrewState.SCIENCE_BY:
 				continue
@@ -117,17 +116,17 @@ func _apart(ship: int, pair: String) -> bool:
 	var stations: Array = stations_of(pair)
 	if stations.size() != 2:
 		return false
-	for a: NetSession in session.by_id.values():
+	for a: NetSession in game.by_id.values():
 		if a.ship != ship or not StationViews.stations_of(a.entry).has(stations[0]):
 			continue
-		for b: NetSession in session.by_id.values():
+		for b: NetSession in game.by_id.values():
 			if b != a and b.ship == ship and StationViews.stations_of(b.entry).has(stations[1]):
 				return true
 	return false
 
 
 func _mark_used(user: NetSession, slot: int) -> void:
-	var placer: NetSession = session.by_id.get(session.crew.marks.placer_of(user.ship, slot))
+	var placer: NetSession = game.by_id.get(game.crew.marks.placer_of(user.ship, slot))
 	if placer == null or placer.id == user.id or placer.ship != user.ship:
 		return
 	var pair: String = _first_pair(
@@ -136,7 +135,7 @@ func _mark_used(user: NetSession, slot: int) -> void:
 	if pair == "":
 		return
 	var key: String = "%d|%d|%d" % [user.ship, slot, user.id]
-	var tick: int = session.world.tick
+	var tick: int = game.world.tick
 	if _used_at.has(key) and tick - _used_at[key] < REUSE_TICKS:
 		return
 	_used_at[key] = tick

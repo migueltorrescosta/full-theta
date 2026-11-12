@@ -30,7 +30,7 @@ func _server(
 	s.world.keep_command_log = true
 	# These tests exercise the transport, not the lobby: start the run directly.
 	if launch:
-		s.session.launch(PLAYER)
+		s.game.launch(PLAYER)
 	add_child(s)
 	_servers.append(s)
 	return s
@@ -121,7 +121,7 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	var moving: Callable = func() -> bool:
 		return c.view.blocks[StationViews.Section.HELM]["throttle_setpoint"] > 0.0
 	assert_bool(await _until(moving)).is_true()
-	assert_int(server.session.rejections.size()).is_equal(0)
+	assert_int(server.game.rejections.size()).is_equal(0)
 
 
 # FT: FT-NET-005
@@ -157,7 +157,7 @@ func test_version_mismatch_is_rejected_with_a_reason() -> void:
 		. is_true()
 	)
 	assert_str(bad.reject_reason).is_equal(NetProtocol.REJECT_BAD_HELLO)
-	assert_int(server.session.by_id.size()).is_equal(0)
+	assert_int(server.game.by_id.size()).is_equal(0)
 
 
 # FT: FT-NET-005
@@ -183,10 +183,10 @@ func test_well_formed_hello_of_another_version_is_rejected() -> void:
 	assert_bool(r1).is_true()
 	assert_str(old.reject_reason).is_equal(NetProtocol.REJECT_VERSION)
 	assert_bool(await _until(func() -> bool: return old._peer.get_ready_state() == 3)).is_true()
-	assert_int(server.session.by_id.size()).is_equal(0)
+	assert_int(server.game.by_id.size()).is_equal(0)
 	var cur: NetClient = _client(server, "cur")
 	assert_bool(await _until(cur.is_welcomed)).is_true()
-	assert_int(server.session.by_id.size()).is_equal(1)
+	assert_int(server.game.by_id.size()).is_equal(1)
 
 
 # FT: FT-NET-006, FT-NET-007, FT-NET-011
@@ -396,7 +396,7 @@ func test_resume_by_token_and_host_secret() -> void:
 	assert_bool(await _until(c.is_welcomed)).is_true()
 	c.pick(PLAYER, "engineering")
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] >= 1)).is_true()
-	var session: NetSession = server.session.by_id[c.session_id]
+	var session: NetSession = server.game.by_id[c.session_id]
 	assert_bool(session.is_host).is_true()
 	assert_bool(c.welcome["host"]).is_true()
 	c.set_pips(SubsystemDef.Kind.ENGINES, 99)
@@ -419,7 +419,7 @@ func test_resume_by_token_and_host_secret() -> void:
 	var guest: NetClient = _client(server, "guest")
 	guest.host_secret = "wrong"
 	assert_bool(await _until(guest.is_welcomed)).is_true()
-	assert_bool(server.session.by_id[guest.session_id].is_host).is_false()
+	assert_bool(server.game.by_id[guest.session_id].is_host).is_false()
 
 
 # FT: FT-NET-037
@@ -505,15 +505,15 @@ func test_lobby_requests_are_rate_limited() -> void:
 	var server: NetServer = _server()
 	var spam: NetClient = _client(server, "x".repeat(1000))
 	assert_bool(await _until(spam.is_welcomed)).is_true()
-	assert_str(server.session.by_id[spam.session_id].name).is_equal("x".repeat(32))
+	assert_str(server.game.by_id[spam.session_id].name).is_equal("x".repeat(32))
 	for i: int in 300:
 		spam.pick(PLAYER, "captain")
 		spam.release_pick()
 	var limited: Callable = func() -> int:
-		return server.session.rejections.get(CommandGate.RATE_LIMITED, 0)
+		return server.game.rejections.get(CommandGate.RATE_LIMITED, 0)
 	assert_bool(await _until(func() -> bool: return limited.call() > 300)).is_true()
 	await _wait(200)
-	assert_int(limited.call()).is_less(600 - int(ServerSession.DEFAULT_BURST) + 100)
+	assert_int(limited.call()).is_less(600 - int(NetGame.DEFAULT_BURST) + 100)
 
 
 # FT: FT-NET-037
@@ -526,7 +526,7 @@ func test_queue_overflow_closes_a_client_without_a_view() -> void:
 	var c: NetClient = _client(server, "lobby")
 	assert_bool(await _until(c.is_welcomed)).is_true()
 	c.paused = true
-	var session: NetSession = server.session.by_id[c.session_id]
+	var session: NetSession = server.game.by_id[c.session_id]
 	var blob: PackedByteArray = PackedByteArray()
 	blob.resize(64 * 1024)
 	var sent: Array[int] = [0]
@@ -536,12 +536,12 @@ func test_queue_overflow_closes_a_client_without_a_view() -> void:
 		if code.call() == NetTransport.CLOSE_QUEUE_FULL:
 			return true
 		if code.call() == 0 and sent[0] < 256:
-			server.session.notify(session, "test_blob", {"blob": blob})
+			server.game.notify(session, "test_blob", {"blob": blob})
 			sent[0] += 1
 		return false
 	assert_bool(await _until(closed_by_overflow)).is_true()
 	assert_bool(await _until(func() -> bool: return not session.connected(), 10_000)).is_true()
-	assert_bool(server.session.by_id.has(session.id)).is_true()
+	assert_bool(server.game.by_id.has(session.id)).is_true()
 
 
 # FT: FT-NET-037

@@ -409,7 +409,7 @@ static func _units(p: Vector3, p_units: int) -> Vector3i:
 	return NetCodec.quant_pos(CubePoint.of(p), p_units)
 
 
-## A multi-ship session (#11) on a fixture context: feeds the `fleet` event of `names` (lobby
+## A multi-ship game (#11) on a fixture context: feeds the `fleet` event of `names` (lobby
 ## ship ids 0..n-1, ship 0 the fixture's own) in `mode`, teams from `teams` (default 0),
 ## each ship with one Helm seat, none started. Returns the payload (FleetMessages shape).
 static func fleet(
@@ -436,7 +436,7 @@ static func fleet(
 		"started": started,
 	}
 	ctx.crew.handle_event({"type": "fleet", "payload": p}, NOW_MS)
-	# The server's Catalogue lists every crewed ship (ServerSession.crew_ships), so a pick
+	# The server's Catalogue lists every crewed ship (NetGame.crew_ships), so a pick
 	# of another ship still finds its definition (the top bar's percentages).
 	var ships: Array = []
 	for i: int in names.size():

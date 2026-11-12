@@ -1,5 +1,5 @@
 # gdlint: disable=max-public-methods
-class_name ServerSession
+class_name NetGame
 extends RefCounted
 ## Session logic on the server's main thread, fed with the decoded messages NetTransport
 ## takes off the sockets; it never touches a socket and answers through the transport's
@@ -73,12 +73,12 @@ var lobby: NetLobby
 var crew: NetCrewState
 ## The seam to the host's voice service (ServerVoice; its `voice` is null without one).
 var voice: ServerVoice
-## The session log (D199) once NetServer.start_session_log() opened it; counts commands.
-var session_log: SessionLog:
+## The server log (D199) once NetServer.start_server_log() opened it; counts commands.
+var server_log: ServerLog:
 	set(value):
-		session_log = value
+		server_log = value
 		if coop != null:
-			coop.session_log = value
+			coop.server_log = value
 
 ## Request chips (NetChips) and the cooperative events counted for the debrief (CoopEvents).
 var chips: NetChips
@@ -130,7 +130,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 ## registration is an error and is ignored (R13-4).
 func add_handler(type: int, handler: Callable) -> void:
 	if _handlers.has(type):
-		push_error("ServerSession: a handler for message type %d is already registered" % type)
+		push_error("NetGame: a handler for message type %d is already registered" % type)
 		return
 	_handlers[type] = handler
 
@@ -493,11 +493,11 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 	# The name may have changed (the lobby's captain).
 	lobby.mark_dirty()
 	transport.bind(conn, s.id, _welcome(s, resumed), s.view_key(), not resumed)
-	if session_log != null:
+	if server_log != null:
 		var fields: Dictionary = {
 			"session": s.id, "name": s.name, "client": s.client_kind, "resumed": resumed
 		}
-		session_log.event("join", fields)
+		server_log.event("join", fields)
 	transport.send(conn, catalogue())
 	# The current lobby, pause and vote state, so a (re)joining client starts in sync.
 	lobby.send_to(s)
@@ -568,8 +568,8 @@ func _on_command(s: NetSession, msg: Dictionary, now_us: int) -> void:
 		_reject(s.id, msg["seq"], CommandGate.PAUSED)
 		return
 	world.submit(result[0])
-	if session_log != null:
-		session_log.count("commands")
+	if server_log != null:
+		server_log.count("commands")
 	_pending.append([s.id, msg["seq"], result[0]])
 
 
@@ -582,22 +582,22 @@ func _on_bye(conn: int, _msg: Dictionary, _now_us: int) -> void:
 func _on_rename(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	if str(msg["name"]) == "" or msg["name"] == s.name:
 		return
-	if session_log != null:
-		session_log.event("rename", {"session": s.id, "from": s.name, "to": msg["name"]})
+	if server_log != null:
+		server_log.event("rename", {"session": s.id, "from": s.name, "to": msg["name"]})
 	s.name = msg["name"]
 	lobby.mark_dirty()
 	publish()
 
 
-## A client's long frame (#28) goes to the session log, with whose it was.
+## A client's long frame (#28) goes to the server log, with whose it was.
 func _on_client_frame(s: NetSession, msg: Dictionary, _now_us: int) -> void:
-	if session_log == null:
+	if server_log == null:
 		return
 	var what: String = NetProtocol.clip_utf8(msg["what"], NetProtocol.MAX_FRAME_WHAT_BYTES)
 	var fields: Dictionary = {
 		"session": s.id, "name": s.name, "client": s.client_kind, "ms": msg["ms"], "what": what
 	}
-	session_log.event("long_frame", fields)
+	server_log.event("long_frame", fields)
 
 
 ## A session's connection dropped: its pick and claims stay for the grace period

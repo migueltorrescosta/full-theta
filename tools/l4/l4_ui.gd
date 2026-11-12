@@ -136,7 +136,7 @@ static func pointer(screen: StationScreen) -> Vector2:
 
 ## What the player sees, for `ui_expect`: shown (menu, lobby, station), ship, entry,
 ## host, focused station, selection, marks, claims, contacts, started, card (the
-## outcome card is visible) and run_over (its outcome, time_s, hull, voters, needed).
+## outcome card is visible) and ship_outcome (its outcome, time_s, hull, voters, needed).
 func state() -> Dictionary:
 	var shell: ClientShell = menu.shell
 	if shell == null:
@@ -154,5 +154,5 @@ func state() -> Dictionary:
 		"contacts": Array(shell.ctx.interp.contact_ids()),
 		"started": crew.is_started(),
 		"card": shell.outcome_card.visible,
-		"run_over": crew.run_over.get(crew.ship, {}),
+		"ship_outcome": crew.ship_outcome.get(crew.ship, {}),
 	}

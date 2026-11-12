@@ -52,7 +52,7 @@ func test_events_are_tick_stamped_and_keyed() -> void:
 	var crew: ScriptedCrew = ScriptedCrew.new()
 	var seen: Dictionary[StringName, Array] = {}
 	var last_tick: int = -1
-	while not OutcomeSystem.session_outcome(world).over() and world.tick < 180 * HZ:
+	while not OutcomeSystem.game_outcome(world).over() and world.tick < 180 * HZ:
 		var tick: int = world.tick
 		if tick == 1 or tick == 1 + 8 * HZ:
 			_boost(world)
@@ -69,9 +69,7 @@ func test_events_are_tick_stamped_and_keyed() -> void:
 			if not seen.has(e.kind):
 				seen[e.kind] = []
 			seen[e.kind].append(e)
-	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(
-		SessionOutcome.Reason.OBJECTIVE
-	)
+	assert_int(OutcomeSystem.game_outcome(world).reason).is_equal(GameOutcome.Reason.OBJECTIVE)
 	for kind: StringName in KINDS:
 		assert_bool(seen.has(kind)).override_failure_message("no %s" % kind).is_true()
 	if is_failure():

@@ -4,7 +4,7 @@ extends RefCounted
 ## promoted from S4Sessions). The server issues a token at first join; presenting it
 ## returns the same NetSession: connected (a takeover: the old socket may not have
 ## closed yet), within the grace period after a drop (pick and claims kept), or after
-## it (the session lapsed: ServerSession released its pick and claims and restores
+## it (the session lapsed: NetGame released its pick and claims and restores
 ## what is still free). A lapsed session that held no pick or claim has nothing to restore
 ## and is forgotten EVICT_US after its drop (evict, R11-3); the others keep their token for
 ## the server's lifetime (provisional: see docs/protocol.md, Rates and limits).

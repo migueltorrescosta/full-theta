@@ -212,7 +212,7 @@ func takeover(ship: int, entry: String) -> void:
 	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "entry": entry})
 
 
-## Multi-ship lobby and PvP (#11, docs/protocol.md "Multi-ship sessions and PvP"): any player
+## Multi-ship lobby and PvP (#11, docs/protocol.md "Multi-ship games and PvP"): any player
 ## adds a ship (M4-Q3); a crew puts its ship on a team (M4-Q6); the host sets the mode, the
 ## team win rule and the holdout lives (-1: the mode's default); an eliminated crew votes to
 ## relaunch (M4-Q2). Answers arrive as `fleet`, `relaunch_votes` and `request_rejected` events.
@@ -239,7 +239,7 @@ func set_team(ship: int, team: int) -> void:
 
 
 func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
-	_send(NetProtocol.Type.SESSION_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
+	_send(NetProtocol.Type.GAME_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
 
 
 func vote_relaunch(ship: int, vote: bool) -> void:
@@ -360,7 +360,7 @@ func share(feature: String) -> void:
 	_send(NetProtocol.Type.SHARE, {"feature": feature})
 
 
-## Reports a long frame (`ms`) and what ran in it to the server's session log (#28).
+## Reports a long frame (`ms`) and what ran in it to the server log (#28).
 func report_frame(ms: int, what: String) -> void:
 	if state == State.WELCOMED:
 		var text: String = NetProtocol.clip_utf8(what, NetProtocol.MAX_FRAME_WHAT_BYTES)

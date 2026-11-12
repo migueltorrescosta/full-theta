@@ -1,9 +1,9 @@
-class_name SessionOutcome
+class_name GameOutcome
 extends RefCounted
-## Who won a multi-ship session and why (#11, FT-MIS-013, FT-MIS-014, FT-MIS-031 to
-## FT-MIS-034, owner M4-Q1, M4-Q2, M4-Q6, M4-Q7): a value OutcomeSystem.session_outcome()
+## Who won a multi-ship game and why (#11, FT-MIS-013, FT-MIS-014, FT-MIS-031 to
+## FT-MIS-034, owner M4-Q1, M4-Q2, M4-Q6, M4-Q7): a value OutcomeSystem.game_outcome()
 ## derives from the world each time it is asked, and the server reads it to end the session,
-## fill the scoreboard and send `session_over`. Pure value.
+## fill the scoreboard and send `game_over`. Pure value.
 
 ## Why the session ended. NONE: still running. OBJECTIVE: the co-op fleet run's final
 ## objective is complete (COOP). ALL_LOST: every crewed ship is out of play and none won.
@@ -19,10 +19,10 @@ const REASON_NAMES: Array[String] = [
 ## Sim events the M4 rules emit (SimEvent.kind). &"eliminated": a crewed ship left play
 ## (ship_id the ship, tag &"destroyed" | &"abandoned" | &"forfeit", value the relaunches left,
 ## -1 for unlimited). &"relaunched": RelaunchShipCommand put it back (value the relaunches
-## left). &"session_over": the first tick session_outcome() is over (value the Reason).
+## left). &"game_over": the first tick game_outcome() is over (value the Reason).
 const EVENT_ELIMINATED: StringName = &"eliminated"
 const EVENT_RELAUNCHED: StringName = &"relaunched"
-const EVENT_SESSION_OVER: StringName = &"session_over"
+const EVENT_GAME_OVER: StringName = &"game_over"
 
 var reason: Reason = Reason.NONE
 ## The winning ships, ascending; empty with no winner (ALL_LOST, and HOLDOUT, which scores

@@ -42,12 +42,10 @@ func test_reset_restores_definitions_and_state() -> void:
 	var encounter: M1Encounter = _encounter(5)
 	var world: SimWorld = encounter.build()
 	var crew: ScriptedCrew = ScriptedCrew.new()
-	while not OutcomeSystem.session_outcome(world).over() and world.tick < 120 * HZ:
+	while not OutcomeSystem.game_outcome(world).over() and world.tick < 120 * HZ:
 		crew.act(world)
 		world.step()
-	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(
-		SessionOutcome.Reason.OBJECTIVE
-	)
+	assert_int(OutcomeSystem.game_outcome(world).reason).is_equal(GameOutcome.Reason.OBJECTIVE)
 	assert_dict(TestDefs.hashes(defs)).is_equal(before)
 	var reset: SimWorld = encounter.build()
 	var fresh: SimWorld = _encounter(5).build()
@@ -57,8 +55,8 @@ func test_reset_restores_definitions_and_state() -> void:
 	assert_array(reset.events).is_empty()
 	assert_array(reset.command_log).is_empty()
 	for id: int in reset.ship_count():
-		assert_int(reset.run.status[id]).is_equal(RunTable.Status.IN_PLAY)
-		assert_int(reset.run.outcome[id]).is_equal(RunTable.Outcome.NONE)
+		assert_int(reset.ships.status[id]).is_equal(ShipStateTable.Status.IN_PLAY)
+		assert_int(reset.ships.ship_outcome[id]).is_equal(ShipStateTable.ShipOutcome.NONE)
 		assert_object(reset.defs[id]).is_same(world.defs[id])
 	var crew_a: ScriptedCrew = ScriptedCrew.new()
 	var crew_b: ScriptedCrew = ScriptedCrew.new()

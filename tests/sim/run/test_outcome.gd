@@ -17,13 +17,13 @@ func _world(world_seed: int) -> SimWorld:
 ## came within max_ticks. Returns every event.
 func _run_to_outcome(world: SimWorld, crew: ScriptedCrew, max_ticks: int) -> Array[SimEvent]:
 	var events: Array[SimEvent] = []
-	while not OutcomeSystem.session_outcome(world).over() and world.tick < max_ticks:
+	while not OutcomeSystem.game_outcome(world).over() and world.tick < max_ticks:
 		if crew != null:
 			crew.act(world)
 		world.step()
 		events.append_array(world.drain_events())
 	(
-		assert_bool(OutcomeSystem.session_outcome(world).over())
+		assert_bool(OutcomeSystem.game_outcome(world).over())
 		. override_failure_message("no outcome within %d ticks" % max_ticks)
 		. is_true()
 	)
@@ -56,16 +56,16 @@ func test_win_when_enemy_destroyed() -> void:
 	assert_int(outcomes[0].ship_id).is_equal(PLAYER)
 	assert_int(outcomes[0].faction).is_equal(M1Encounter.PLAYER_FACTION)
 	assert_str(String(outcomes[0].tag)).is_equal("win")
-	assert_int(int(outcomes[0].value)).is_equal(RunTable.Outcome.WIN)
+	assert_int(int(outcomes[0].value)).is_equal(ShipStateTable.ShipOutcome.WIN)
 	assert_int(outcomes[0].tick).is_equal(destroyed[0].tick)
-	var run: RunTable = world.run
-	assert_int(run.status[ENEMY]).is_equal(RunTable.Status.DESTROYED)
-	assert_int(run.status[PLAYER]).is_equal(RunTable.Status.IN_PLAY)
-	assert_int(run.outcome[PLAYER]).is_equal(RunTable.Outcome.WIN)
-	assert_int(run.outcome[ENEMY]).is_equal(RunTable.Outcome.NONE)
-	var before: int = run.columns().hash()
+	var ships: ShipStateTable = world.ships
+	assert_int(ships.status[ENEMY]).is_equal(ShipStateTable.Status.DESTROYED)
+	assert_int(ships.status[PLAYER]).is_equal(ShipStateTable.Status.IN_PLAY)
+	assert_int(ships.ship_outcome[PLAYER]).is_equal(ShipStateTable.ShipOutcome.WIN)
+	assert_int(ships.ship_outcome[ENEMY]).is_equal(ShipStateTable.ShipOutcome.NONE)
+	var before: int = ships.columns().hash()
 	assert_array(SimFixture.of_kind(SimFixture.run(world, 10 * HZ), &"outcome")).is_empty()
-	assert_int(run.columns().hash()).is_equal(before)
+	assert_int(ships.columns().hash()).is_equal(before)
 	print("win by destruction at tick %d (%.1f s)" % [outcomes[0].tick, outcomes[0].tick / 60.0])
 
 
@@ -93,7 +93,7 @@ func test_win_when_enemy_retreats() -> void:
 	)
 	assert_int(lost.size()).is_equal(1)
 	assert_int(lost[0].tick).is_equal(retreated[0].tick)
-	assert_int(world.run.status[ENEMY]).is_equal(RunTable.Status.RETREATED)
+	assert_int(world.ships.status[ENEMY]).is_equal(ShipStateTable.Status.RETREATED)
 	assert_int(world.ai.mode[ENEMY]).is_equal(AiTable.Mode.RETREAT)
 	assert_float(world.kin.relative(PLAYER, ENEMY).length()).is_greater(20000.0)
 	assert_array(SimFixture.of_kind(SimFixture.run(world, 5 * HZ), &"retreated")).is_empty()
@@ -107,7 +107,7 @@ func test_win_when_enemy_retreats() -> void:
 func test_loss_when_own_ship_destroyed() -> void:
 	var world: SimWorld = _world(11)
 	var events: Array[SimEvent] = SimFixture.run(world, 10 * HZ)
-	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(SessionOutcome.Reason.NONE)
+	assert_int(OutcomeSystem.game_outcome(world).reason).is_equal(GameOutcome.Reason.NONE)
 	assert_array(SimFixture.of_kind(events, &"outcome")).is_empty()
 	var tick: int = world.tick
 	_destroy(world, PLAYER, ENEMY)
@@ -119,11 +119,11 @@ func test_loss_when_own_ship_destroyed() -> void:
 	assert_int(outcomes[0].ship_id).is_equal(PLAYER)
 	assert_int(outcomes[0].tick).is_equal(tick)
 	assert_str(String(outcomes[0].tag)).is_equal("loss")
-	assert_int(int(outcomes[0].value)).is_equal(RunTable.Outcome.LOSS)
-	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(SessionOutcome.Reason.ALL_LOST)
-	assert_int(world.run.status[PLAYER]).is_equal(RunTable.Status.DESTROYED)
-	assert_int(world.run.status[ENEMY]).is_equal(RunTable.Status.IN_PLAY)
-	assert_int(world.run.outcome[ENEMY]).is_equal(RunTable.Outcome.NONE)
+	assert_int(int(outcomes[0].value)).is_equal(ShipStateTable.ShipOutcome.LOSS)
+	assert_int(OutcomeSystem.game_outcome(world).reason).is_equal(GameOutcome.Reason.ALL_LOST)
+	assert_int(world.ships.status[PLAYER]).is_equal(ShipStateTable.Status.DESTROYED)
+	assert_int(world.ships.status[ENEMY]).is_equal(ShipStateTable.Status.IN_PLAY)
+	assert_int(world.ships.ship_outcome[ENEMY]).is_equal(ShipStateTable.ShipOutcome.NONE)
 
 
 # FT: FT-M1-012
@@ -138,20 +138,18 @@ func test_per_ship_elimination_and_no_enemy() -> void:
 	)
 	_destroy(world, PLAYER, ENEMY)
 	SimFixture.run(world, 2)
-	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
-	assert_int(world.run.outcome[wing]).is_equal(RunTable.Outcome.NONE)
-	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(SessionOutcome.Reason.NONE)
+	assert_int(world.ships.ship_outcome[PLAYER]).is_equal(ShipStateTable.ShipOutcome.LOSS)
+	assert_int(world.ships.ship_outcome[wing]).is_equal(ShipStateTable.ShipOutcome.NONE)
+	assert_int(OutcomeSystem.game_outcome(world).reason).is_equal(GameOutcome.Reason.NONE)
 	_destroy(world, ENEMY, wing)
 	SimFixture.run(world, 1)
-	assert_int(world.run.outcome[wing]).is_equal(RunTable.Outcome.WIN)
-	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
-	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(
-		SessionOutcome.Reason.OBJECTIVE
-	)
+	assert_int(world.ships.ship_outcome[wing]).is_equal(ShipStateTable.ShipOutcome.WIN)
+	assert_int(world.ships.ship_outcome[PLAYER]).is_equal(ShipStateTable.ShipOutcome.LOSS)
+	assert_int(OutcomeSystem.game_outcome(world).reason).is_equal(GameOutcome.Reason.OBJECTIVE)
 	var alone: SimWorld = SimWorld.new(1)
 	alone.spawn_ship(TestDefs.corvette(), 1)
 	assert_array(SimFixture.of_kind(SimFixture.run(alone, 60), &"outcome")).is_empty()
-	assert_int(OutcomeSystem.session_outcome(alone).reason).is_equal(SessionOutcome.Reason.NONE)
+	assert_int(OutcomeSystem.game_outcome(alone).reason).is_equal(GameOutcome.Reason.NONE)
 
 
 # FT: FT-NET-041, FT-M1-012, FT-ARC-008
@@ -170,11 +168,11 @@ func test_abandon_ends_the_encounter_as_a_loss() -> void:
 	var outcomes: Array[SimEvent] = SimFixture.of_kind(world.drain_events(), &"outcome")
 	assert_bool(c.accepted).is_true()
 	assert_int(c.source).is_equal(SimCommand.Source.SERVER)
-	assert_int(world.run.status[PLAYER]).is_equal(RunTable.Status.ABANDONED)
-	assert_int(world.run.outcome[PLAYER]).is_equal(RunTable.Outcome.LOSS)
+	assert_int(world.ships.status[PLAYER]).is_equal(ShipStateTable.Status.ABANDONED)
+	assert_int(world.ships.ship_outcome[PLAYER]).is_equal(ShipStateTable.ShipOutcome.LOSS)
 	assert_int(outcomes.size()).is_equal(1)
 	assert_str(String(outcomes[0].tag)).is_equal("loss")
-	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(SessionOutcome.Reason.ALL_LOST)
+	assert_int(OutcomeSystem.game_outcome(world).reason).is_equal(GameOutcome.Reason.ALL_LOST)
 	var again: AbandonShipCommand = AbandonShipCommand.new()
 	again.ship_id = PLAYER
 	world.submit(again)

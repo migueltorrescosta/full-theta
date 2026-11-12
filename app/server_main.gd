@@ -22,9 +22,9 @@ extends RefCounted
 ##   --tls-cert PATH      with --tls-key: serve HTTPS and WSS instead of HTTP and ws://
 ##   --tls-key PATH       (D294; PEM certificate chain and key, absolute paths, e.g.
 ##                        from `tailscale cert`: docs/launch.md); plain by default.
-##   --session-log PATH   write the session log (JSON Lines: snapshot-age summaries every
+##   --server-log PATH   write the server log (JSON Lines: snapshot-age summaries every
 ##                        10 s and a final summary, D199) there; "off" writes none
-##                        [user://logs/session-<unix time>.jsonl].
+##                        [user://logs/server-<unix time>.jsonl].
 ##   --name NAME          server name in the LAN beacon ["Full Theta server"].
 ##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
 ##   --no-beacon          don't broadcast on the LAN. A server bound to a loopback
@@ -98,7 +98,7 @@ var run_for: float = 0.0
 var http_root: String = ""
 var tls_cert: String = ""
 var tls_key: String = ""
-var session_log_path: String = SessionLog.default_path()
+var server_log_path: String = ServerLog.default_path()
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
@@ -267,8 +267,8 @@ func _set_flag(flag: String, value: String) -> bool:
 			http_root = value
 		"--probe-out":
 			probe_out = value
-		"--session-log":
-			session_log_path = "" if value == "off" else value
+		"--server-log":
+			server_log_path = "" if value == "off" else value
 		"--name":
 			server_name = value
 		"--language":
@@ -342,10 +342,10 @@ func make_server() -> NetServer:
 		push_error("server failed to start on %s:%d: %s" % [bind_address, port, error_string(err)])
 		server.free()
 		return null
-	server.session.training.solo_on_join = solo_station
-	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
-	server.session.language = language
-	server.session.tls = tls != null
+	server.game.training.solo_on_join = solo_station
+	server.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	server.game.language = language
+	server.game.tls = tls != null
 	if http_root != "":
 		err = server.start_http(http_root)
 		if err != OK:
@@ -361,8 +361,8 @@ func make_server() -> NetServer:
 		server.http.tls = tls
 	if beacon and not is_loopback(bind_address):
 		server.start_beacon(server_name, discovery_port)
-	if session_log_path != "":
-		server.start_session_log(session_log_path)
+	if server_log_path != "":
+		server.start_server_log(server_log_path)
 	return server
 
 
@@ -435,14 +435,14 @@ func _training_factory(solo: StringName = &"") -> Callable:
 ## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,
 ## wired into the session: silent until the first Start calls start_session() with the
 ## session language and closed set; ship-computer lines go to the stations concerned
-## (ServerVoice, ServerSession.computer_audience, FT-AUD-006).
+## (ServerVoice, NetGame.computer_audience, FT-AUD-006).
 func make_voice(server: NetServer) -> VoiceService:
 	var voice: VoiceService = VoiceSetup.make_service(
 		server.transport, func() -> int: return server.world.tick
 	)
-	voice.computer_audience = server.session.computer_audience
-	voice.npc_audience = server.session.npc_audience
-	server.session.voice.voice = voice
+	voice.computer_audience = server.game.computer_audience
+	voice.npc_audience = server.game.npc_audience
+	server.game.voice.voice = voice
 	return voice
 
 

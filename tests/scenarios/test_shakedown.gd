@@ -48,7 +48,7 @@ func test_a_drone_without_weapons_is_the_target() -> void:
 	assert_array(rig.world.defs[1].mounts).is_empty()
 	# Destroyed, it is replaced.
 	rig.world.kin.alive[1] = 0
-	rig.world.run.status[1] = RunTable.Status.DESTROYED
+	rig.world.ships.status[1] = ShipStateTable.Status.DESTROYED
 	rig.tick(SimRate.HZ * 2)
 	assert_int(rig.world.ship_count()).is_equal(3)
 
@@ -61,15 +61,15 @@ func test_a_ship_at_hull_zero_is_reset_at_the_yard_not_eliminated() -> void:
 	assert_int(rig.world.kin.alive[0]).is_equal(0)
 	rig.tick(3)
 	assert_int(rig.world.kin.alive[0]).is_equal(1)
-	assert_int(rig.world.run.status[0]).is_equal(RunTable.Status.IN_PLAY)
-	assert_int(rig.world.run.outcome[0]).is_equal(RunTable.Outcome.NONE)
+	assert_int(rig.world.ships.status[0]).is_equal(ShipStateTable.Status.IN_PLAY)
+	assert_int(rig.world.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.NONE)
 	assert_float(DamageSystem.hull_fraction(rig.world, 0)).is_equal(1.0)
 	assert_float(rig.world.kin.point_at(0, Vector3.ZERO)[0]).is_less(1000.0)
 	# A run that is not training still eliminates (the rule is the training world's).
 	var w: SimWorld = ApiFixture.world()
 	DamageSystem.damage_hull(w, 0, 1.0e12)
 	w.step()
-	assert_int(w.run.status[0]).is_equal(RunTable.Status.DESTROYED)
+	assert_int(w.ships.status[0]).is_equal(ShipStateTable.Status.DESTROYED)
 
 
 # FT: FT-MIS-039

@@ -29,7 +29,7 @@ func _verdict(server: NetServer, c: NetClient, cmd: Dictionary) -> String:
 			if e["type"] == NetProtocol.EVENT_COMMAND_REJECTED and e["payload"]["seq"] == seq:
 				reason.append(e["payload"]["reason"])
 				return true
-		return server.world.tick > tick + 6 and server.session._pending.is_empty()
+		return server.world.tick > tick + 6 and server.game._pending.is_empty()
 	await h.until(done)
 	await h.wait(100)
 	done.call()
@@ -67,7 +67,7 @@ func test_the_scan_is_claimed_one_at_a_time() -> void:
 	var server: NetServer = h.server(false, 10.0)
 	var ana: NetClient = await h.joined(server, "ana", "science")
 	var bo: NetClient = await h.joined(server, "bo", "survey")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	var scan: Dictionary = {"kind": "science_scan", "contact": ENEMY}
 	# Ana was alone on Science first and holds the scan; Bo sees her name.
 	(
@@ -78,7 +78,7 @@ func test_the_scan_is_claimed_one_at_a_time() -> void:
 	)
 	assert_str(await _verdict(server, bo, scan)).is_equal(CommandGate.CLAIMED)
 	assert_str(await _verdict(server, ana, scan)).is_equal("")
-	assert_bool(await h.until(func() -> bool: return _block(ana).get("session", 0) == 1)).is_true()
+	assert_bool(await h.until(func() -> bool: return _block(ana).get("minigame", 0) == 1)).is_true()
 	# Bo can still use the free controls of the station (mode, ping, select).
 	assert_str(await _verdict(server, bo, {"kind": "science_ping"})).is_equal("")
 	# Release and claim: now Bo may open a scan, but the one in flight is Ana's: busy.
@@ -100,7 +100,7 @@ func test_the_scan_is_claimed_one_at_a_time() -> void:
 		CommandGate.CLAIMED
 	)
 	assert_str(await _verdict(server, bo, {"kind": "science_cancel"})).is_equal("")
-	assert_int(server.world.science.kind[PLAYER]).is_equal(ScienceTable.Session.NONE)
+	assert_int(server.world.science.kind[PLAYER]).is_equal(ScienceTable.Minigame.NONE)
 
 
 # FT: FT-NET-006
@@ -108,7 +108,7 @@ func test_the_scan_is_claimed_one_at_a_time() -> void:
 func test_helm_cannot_send_science_commands() -> void:
 	var server: NetServer = h.server(false, 10.0)
 	var helm: NetClient = await h.joined(server, "hal", "helm")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	assert_str(await _verdict(server, helm, {"kind": "science_ping"})).is_equal(
 		CommandGate.NOT_YOUR_STATION
 	)
@@ -121,10 +121,10 @@ func test_helm_cannot_send_science_commands() -> void:
 func test_scan_is_generated_and_verified_on_the_server() -> void:
 	var server: NetServer = h.server(false, 10.0)
 	var sci: NetClient = await h.joined(server, "ana", "science")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	assert_bool(await h.until(func() -> bool: return _card(sci).get("detect", 0.0) > 0.0)).is_true()
 	assert_str(await _verdict(server, sci, {"kind": "science_scan", "contact": ENEMY})).is_equal("")
-	assert_bool(await h.until(func() -> bool: return _block(sci).get("session", 0) == 1)).is_true()
+	assert_bool(await h.until(func() -> bool: return _block(sci).get("minigame", 0) == 1)).is_true()
 	var block: Dictionary = _block(sci)
 	assert_int((block["wire"] as Array).size()).is_equal(server.world.science_def.wire_vertices)
 	assert_int((block["cloud"] as Array).size()).is_greater_equal((block["wire"] as Array).size())
@@ -145,7 +145,7 @@ func test_scan_is_generated_and_verified_on_the_server() -> void:
 	assert_str(good["payload"]["tag"]).is_equal("locked")
 	assert_float(good["payload"]["value"]).is_greater(0.8)
 	assert_bool(await h.until(func() -> bool: return _scanned(sci))).is_true()
-	assert_int(_block(sci)["session"]).is_equal(0)
+	assert_int(_block(sci)["minigame"]).is_equal(0)
 
 
 # FT: FT-SCI-006, FT-SCI-008, FT-PAIR-023
@@ -156,7 +156,7 @@ func test_hack_window_reaches_the_snapshot() -> void:
 	var server: NetServer = h.server(false, 10.0)
 	var sci: NetClient = await h.joined(server, "ana", "science")
 	var wpn: NetClient = await h.joined(server, "wes", "weapons")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	var w: SimWorld = server.world
 	# Fixture: the crew has already scanned the raider.
 	await h.until(func() -> bool: return w.knowledge.row_for(1, ENEMY) >= 0)
@@ -169,7 +169,7 @@ func test_hack_window_reaches_the_snapshot() -> void:
 		)
 		. is_equal("")
 	)
-	assert_bool(await h.until(func() -> bool: return _block(sci).get("session", 0) == 2)).is_true()
+	assert_bool(await h.until(func() -> bool: return _block(sci).get("minigame", 0) == 2)).is_true()
 	var block: Dictionary = _block(sci)
 	assert_int(block["hack_cols"]).is_equal(w.science_def.hack_cols)
 	assert_int((block["edges"] as Array).size()).is_equal(block["hack_cols"] * block["hack_rows"])

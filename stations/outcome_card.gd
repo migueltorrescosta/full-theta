@@ -11,7 +11,7 @@ extends PanelContainer
 ## bottom right (thumb side). Tablets and desktops keep the centred card.
 
 ## The crew changes the card depends on.
-const KINDS: Array[StringName] = [&"run_over", &"reset", &"picked", &"catalogue", &"debrief"]
+const KINDS: Array[StringName] = [&"ship_outcome", &"reset", &"picked", &"catalogue", &"debrief"]
 ## The least width of Run again and Vote on a phone, px.
 const PHONE_BUTTON_W: float = 160.0
 
@@ -99,7 +99,7 @@ func _enter_tree() -> void:
 
 
 func refresh() -> void:
-	var card: Dictionary = ctx.crew.run_over.get(ctx.crew.ship, {})
+	var card: Dictionary = ctx.crew.ship_outcome.get(ctx.crew.ship, {})
 	visible = not card.is_empty() and ctx.crew.entry != ""
 	if not visible:
 		return
@@ -171,7 +171,7 @@ func waiting_names(card: Dictionary) -> PackedStringArray:
 ## nobody is left to wait for; else the first tap names who is still deciding and the second
 ## runs it anyway.
 func _host_run_again(button: Button) -> void:
-	var card: Dictionary = ctx.crew.run_over.get(ctx.crew.ship, {})
+	var card: Dictionary = ctx.crew.ship_outcome.get(ctx.crew.ship, {})
 	var waiting: PackedStringArray = waiting_names(card)
 	if waiting.is_empty() or _force:
 		_force = false

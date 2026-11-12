@@ -10,8 +10,8 @@ ui_expect shown=station focused=engineering timeout=30
 command id=pips kind=set_pips subsystem_kind=2 pips=4
 expect_accepted id=pips
 barrier name=started n=3 timeout=60
-expect_event type=run_over payload.outcome=win timeout=150
-ui_expect card=true run_over.outcome=win
+expect_event type=ship_outcome payload.outcome=win timeout=150
+ui_expect card=true ship_outcome.outcome=win
 barrier name=won n=3 timeout=30
 ui_button name=Vote
 ui_expect shown=lobby entry=systems card=false timeout=30
@@ -19,8 +19,8 @@ barrier name=lobby1 n=3 timeout=30
 expect_event type=started payload.ship=0 timeout=60
 ui_expect shown=station timeout=30
 barrier name=started2 n=3 timeout=60
-expect_event type=run_over payload.outcome=loss timeout=90
-ui_expect card=true run_over.outcome=loss
+expect_event type=ship_outcome payload.outcome=loss timeout=90
+ui_expect card=true ship_outcome.outcome=loss
 barrier name=lost n=3 timeout=30
 ui_expect shown=lobby card=false timeout=30
 barrier name=lobby2 n=3 timeout=30

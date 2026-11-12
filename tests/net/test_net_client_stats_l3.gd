@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## L3: a client's snapshot arrival report reaches the server's age statistics and the
-## session log (D199, FT-NET-046).
+## server log (D199, FT-NET-046).
 
 var h: NetHarness
 
@@ -14,11 +14,11 @@ func after_test() -> void:
 
 
 # FT: FT-NET-046
-func test_client_reports_reach_the_server_age_stats_and_the_session_log() -> void:
+func test_client_reports_reach_the_server_age_stats_and_the_server_log() -> void:
 	var path: String = "user://logs_test/l3.jsonl"
 	DirAccess.remove_absolute(path)
 	var server: NetServer = h.server()
-	assert_int(server.start_session_log(path)).is_equal(OK)
+	assert_int(server.start_server_log(path)).is_equal(OK)
 	var c: NetClient = await h.joined(server, "tab", "tactical")
 	c.user_agent = "TestAgent/1"
 	var got: Callable = func() -> bool:
@@ -35,7 +35,7 @@ func test_client_reports_reach_the_server_age_stats_and_the_session_log() -> voi
 	assert_int((total["pooled"] as Dictionary)["age_p99_ms"]).is_less(1000)
 	server._next_stats_us = 0
 	await h.wait(100)
-	server.session_log.close()
+	server.server_log.close()
 	var text: String = FileAccess.get_file_as_string(path)
 	assert_bool(text.contains('"kind":"snapshot_age"')).is_true()
 	DirAccess.remove_absolute(path)
@@ -46,7 +46,7 @@ func test_client_reports_reach_the_server_age_stats_and_the_session_log() -> voi
 # the report like the other requests (D199, D207).
 func test_stats_report_is_clipped_capped_and_rate_limited() -> void:
 	var server: NetServer = h.server()
-	assert_int(server.start_session_log("user://logs_test/l3_cap.jsonl")).is_equal(OK)
+	assert_int(server.start_server_log("user://logs_test/l3_cap.jsonl")).is_equal(OK)
 	var c: NetClient = await h.joined(server, "tab", "tactical")
 	var report: Callable = func(ua: String, n: int) -> void:
 		c._send(
@@ -70,25 +70,25 @@ func test_stats_report_is_clipped_capped_and_rate_limited() -> void:
 	for i: int in 300:
 		report.call("c", 0)
 	var limited: Callable = func() -> bool:
-		return server.session.rejections.get(CommandGate.RATE_LIMITED, 0) > 0
+		return server.game.rejections.get(CommandGate.RATE_LIMITED, 0) > 0
 	assert_bool(await h.until(limited, 3000)).is_true()
-	server.session_log.close()
+	server.server_log.close()
 	DirAccess.remove_absolute("user://logs_test/l3_cap.jsonl")
 
 
-# A client's long frame lands in the session log with whose it was; `what` is cut to
+# A client's long frame lands in the server log with whose it was; `what` is cut to
 # 120 bytes (#28, load fix 10).
-func test_long_frame_report_reaches_the_session_log() -> void:
+func test_long_frame_report_reaches_the_server_log() -> void:
 	var path: String = "user://logs_test/l3_frame.jsonl"
 	DirAccess.remove_absolute(path)
 	var server: NetServer = h.server()
-	assert_int(server.start_session_log(path)).is_equal(OK)
+	assert_int(server.start_server_log(path)).is_equal(OK)
 	var c: NetClient = await h.joined(server, "tab", "tactical")
 	c.report_frame(812, "build station:0:helm" + "x".repeat(300))
 	var logged: Callable = func() -> bool:
 		return FileAccess.get_file_as_string(path).contains('"kind":"long_frame"')
 	assert_bool(await h.until(logged, 3000)).is_true()
-	server.session_log.close()
+	server.server_log.close()
 	var line: Dictionary = {}
 	for row: String in FileAccess.get_file_as_string(path).split("\n", false):
 		var d: Dictionary = JSON.parse_string(row)

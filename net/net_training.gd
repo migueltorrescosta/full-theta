@@ -11,7 +11,7 @@ extends RefCounted
 const BUSY: String = "busy"
 const BAD_STATION: String = "bad_station"
 
-var session: ServerSession
+var game: NetGame
 ## The station played alone, or "" outside a solo lesson.
 var solo: String = ""
 ## Switches the server over for (session, station); set by NetServer.
@@ -20,9 +20,9 @@ var hook: Callable
 var solo_on_join: String = ""
 
 
-func _init(server_session: ServerSession) -> void:
-	session = server_session
-	session.add_handler(NetProtocol.Type.TRAINING, _on_training)
+func _init(net_game: NetGame) -> void:
+	game = net_game
+	game.add_handler(NetProtocol.Type.TRAINING, _on_training)
 
 
 ## The crew stations the bots hold in a solo lesson: all but the player's.
@@ -38,7 +38,7 @@ func bot_entries() -> Array:
 ## How many other sessions hold a pick: the crew a lesson must not disturb.
 func crew_besides(s: NetSession) -> int:
 	var n: int = 0
-	for o: NetSession in session.by_id.values():
+	for o: NetSession in game.by_id.values():
 		if o != s and o.has_pick():
 			n += 1
 	return n
@@ -55,8 +55,8 @@ func on_join(s: NetSession) -> void:
 ## Seats the session at `entry` of the ship and presses Start for it (the coverage check
 ## passes through the bots).
 func seat_and_start(s: NetSession, ship: int, entry: String) -> void:
-	session.lobby.move(s, ship, entry)
-	session.lobby.mark_ready(s)
+	game.lobby.move(s, ship, entry)
+	game.lobby.mark_ready(s)
 
 
 func _on_training(s: NetSession, msg: Dictionary, _now_us: int) -> void:
@@ -67,10 +67,10 @@ func _on_training(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 		reason = BAD_STATION
 		extra = {"station": station}
 	elif not hook.is_valid():
-		reason = ServerSession.NOT_IMPLEMENTED
+		reason = NetGame.NOT_IMPLEMENTED
 	elif crew_besides(s) > 0:
 		reason = BUSY
 		extra = {"players": crew_besides(s)}
-	if session.refuse(s, NetProtocol.Type.TRAINING, reason, extra):
+	if game.refuse(s, NetProtocol.Type.TRAINING, reason, extra):
 		return
 	hook.call(s, station)

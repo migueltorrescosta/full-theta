@@ -83,8 +83,8 @@ func fight(w: SimWorld) -> Array[SimEvent]:
 
 static func _both_in_play(w: SimWorld) -> bool:
 	return (
-		w.run.status[RED] == RunTable.Status.IN_PLAY
-		and w.run.status[BLUE] == RunTable.Status.IN_PLAY
+		w.ships.status[RED] == ShipStateTable.Status.IN_PLAY
+		and w.ships.status[BLUE] == ShipStateTable.Status.IN_PLAY
 	)
 
 
@@ -240,9 +240,9 @@ func reset_blue_and_check(w: SimWorld) -> void:
 	assert_str(w.state_hash()).is_not_equal(hash_before)
 	# BLUE is back in play, RED keeps its WIN and re-detects BLUE under the same callsign.
 	w.step()
-	assert_int(w.run.status[BLUE]).is_equal(RunTable.Status.IN_PLAY)
-	assert_int(w.run.outcome[BLUE]).is_equal(RunTable.Outcome.NONE)
-	assert_int(w.run.outcome[RED]).is_equal(RunTable.Outcome.WIN)
+	assert_int(w.ships.status[BLUE]).is_equal(ShipStateTable.Status.IN_PLAY)
+	assert_int(w.ships.ship_outcome[BLUE]).is_equal(ShipStateTable.ShipOutcome.NONE)
+	assert_int(w.ships.ship_outcome[RED]).is_equal(ShipStateTable.ShipOutcome.WIN)
 	assert_bool(KnowledgeSystem.is_detected(w, RED_FACTION, BLUE)).is_true()
 	assert_str(KnowledgeSystem.callsign(w, RED_FACTION, BLUE)).is_equal("H2")
 
@@ -251,13 +251,13 @@ func reset_blue_and_check(w: SimWorld) -> void:
 ## outcome (no faction is hostile to them); one &"outcome" event each for the corvettes.
 func check_outcomes(w: SimWorld, events: Array[SimEvent]) -> void:
 	assert_bool(w.kin.is_alive(RED)).is_true()
-	assert_int(w.run.status[BLUE]).is_equal(RunTable.Status.DESTROYED)
-	assert_int(w.run.outcome[BLUE]).is_equal(RunTable.Outcome.LOSS)
-	assert_int(w.run.status[RED]).is_equal(RunTable.Status.IN_PLAY)
-	assert_int(w.run.outcome[RED]).is_equal(RunTable.Outcome.WIN)
+	assert_int(w.ships.status[BLUE]).is_equal(ShipStateTable.Status.DESTROYED)
+	assert_int(w.ships.ship_outcome[BLUE]).is_equal(ShipStateTable.ShipOutcome.LOSS)
+	assert_int(w.ships.status[RED]).is_equal(ShipStateTable.Status.IN_PLAY)
+	assert_int(w.ships.ship_outcome[RED]).is_equal(ShipStateTable.ShipOutcome.WIN)
 	for n: int in [FAR, NEAR]:
-		assert_int(w.run.status[n]).is_equal(RunTable.Status.IN_PLAY)
-		assert_int(w.run.outcome[n]).is_equal(RunTable.Outcome.NONE)
+		assert_int(w.ships.status[n]).is_equal(ShipStateTable.Status.IN_PLAY)
+		assert_int(w.ships.ship_outcome[n]).is_equal(ShipStateTable.ShipOutcome.NONE)
 	var outcomes: Array = []
 	for e: SimEvent in events:
 		if e.kind == &"outcome":
@@ -320,7 +320,7 @@ func scenario(world_seed: int, hashes: PackedStringArray) -> Array:
 		events.append_array(w.drain_events())
 		if i == 0:
 			hashes.append(w.state_hash())
-			assert_int(w.run.status[BLUE]).is_equal(RunTable.Status.IN_PLAY)
+			assert_int(w.ships.status[BLUE]).is_equal(ShipStateTable.Status.IN_PLAY)
 	return [w, events]
 
 

@@ -16,7 +16,7 @@ const KINDS: Array[StringName] = [
 	&"eliminated",
 	&"relaunch",
 	&"handover",
-	&"session_over",
+	&"game_over",
 	&"fleet",
 	&"abandoned",
 	&"started",
@@ -131,7 +131,7 @@ func wanted() -> bool:
 		and not v.is_empty()
 		and not crew.paused.has(crew.ship)
 		and not crew.eliminated.has(crew.ship)
-		and crew.session_over.is_empty()
+		and crew.game_over.is_empty()
 		and crew.ship == crew.home_ship()
 	)
 

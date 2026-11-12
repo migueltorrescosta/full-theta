@@ -2,7 +2,7 @@ class_name NetServer
 extends Node
 ## The authoritative headless server loop (T041, FT-NET-002): owns the SimWorld built by
 ## an M1Encounter, steps it at 60 Hz from its own accumulator, feeds it the commands
-## ServerSession validated, routes its events, and every SNAPSHOT_TICKS ticks hands a
+## NetGame validated, routes its events, and every SNAPSHOT_TICKS ticks hands a
 ## SimCopy to the net thread (NetTransport), which encodes and sends the 30 Hz
 ## snapshots off the sim thread (FT-NET-040, D111). app/main.gd composes it from the
 ## command line (ServerMain); tests add it to their scene tree.
@@ -33,7 +33,7 @@ var host: ScenarioHost
 var driver: RunDriver
 var driver_factory: Callable
 var transport: NetTransport = NetTransport.new()
-var session: ServerSession
+var game: NetGame
 var run_reset: NetRunReset
 ## Seconds after which the server quits by itself (0: never); for smoke runs.
 var run_for: float = 0.0
@@ -52,9 +52,9 @@ var beacon_failure_logged: bool = false
 ## The load gate's probe (`--probe-out`, D161), or null; set before start().
 var probe: LoadProbe
 
-## The session log (D199), or null until start_session_log(); other systems add their
-## events and counters to it (SessionLog).
-var session_log: SessionLog
+## The server log (D199), or null until start_server_log(); other systems add their
+## events and counters to it (ServerLog).
+var server_log: ServerLog
 var age_stats: SnapshotAgeStats = SnapshotAgeStats.new()
 
 ## Solo training (D303), set by ServerMain: builds the Shakedown's RunSetup, and the driver
@@ -91,13 +91,13 @@ func start(
 		return ERR_INVALID_DATA
 	world.keep_command_log = false
 	host = ScenarioHost.new(world)
-	session = ServerSession.new(transport, world)
-	session.dev_all = dev_all
-	session.host_secret = host_secret
+	game = NetGame.new(transport, world)
+	game.dev_all = dev_all
+	game.host_secret = host_secret
 	transport.probe = probe != null
-	run_reset = NetRunReset.new(session, restart_run)
+	run_reset = NetRunReset.new(game, restart_run)
 	run_reset.decisions = _director_decisions
-	session.training.hook = begin_training
+	game.training.hook = begin_training
 	_wire_fleet()
 	var err: Error = transport.start(port, address)
 	if err != OK:
@@ -118,9 +118,9 @@ func _before_tick(api: ScenarioApi) -> void:
 func _wire_fleet() -> void:
 	var setup: RunSetup = encounter as RunSetup
 	if setup != null:  # the multi-ship lobby rebuilds a RunSetup's world (#11)
-		session.fleet.rules = setup.rules
-		session.fleet.slots = setup.slots if not setup.slots.is_empty() else _default_slots(setup)
-		session.fleet.rebuild = rebuild_fleet
+		game.fleet.rules = setup.rules
+		game.fleet.slots = setup.slots if not setup.slots.is_empty() else _default_slots(setup)
+		game.fleet.rebuild = rebuild_fleet
 
 
 ## A lesson for `s` (D303, NetTraining.hook; the caller checked that no other crew
@@ -130,7 +130,7 @@ func _wire_fleet() -> void:
 func begin_training(s: NetSession, station: String) -> void:
 	var setup: RunSetup = training_setup.call() as RunSetup if training_setup.is_valid() else null
 	if setup == null or not training_driver.is_valid():
-		session.request_rejected(s, NetProtocol.Type.TRAINING, ServerSession.NOT_IMPLEMENTED, {})
+		game.request_rejected(s, NetProtocol.Type.TRAINING, NetGame.NOT_IMPLEMENTED, {})
 		return
 	if not training_active:
 		_home_encounter = encounter
@@ -138,13 +138,13 @@ func begin_training(s: NetSession, station: String) -> void:
 		training_active = true
 	encounter = setup
 	driver_factory = training_driver.call(StringName(station))
-	session.training.solo = station
+	game.training.solo = station
 	_wire_fleet()
 	restart_run()
 	if station == "":
-		session.lobby.move(s, -1, "")
+		game.lobby.move(s, -1, "")
 		return
-	session.training.seat_and_start(s, session.crew_ships()[0]["id"], station)
+	game.training.seat_and_start(s, game.crew_ships()[0]["id"], station)
 
 
 ## Back to the server's own encounter after a lesson.
@@ -154,7 +154,7 @@ func end_training() -> void:
 	training_active = false
 	encounter = _home_encounter
 	driver_factory = _home_driver
-	session.training.solo = ""
+	game.training.solo = ""
 	_wire_fleet()
 	restart_run()
 
@@ -168,16 +168,16 @@ func http_local_port() -> int:
 	return http.local_port() if http != null else 0
 
 
-## Opens the session log at `path` (SessionLog.default_path() in a normal session): the
+## Opens the server log at `path` (ServerLog.default_path() in a normal session): the
 ## snapshot-age summary every STATS_PERIOD_US and a final summary on exit (D199). Call
 ## after start().
-func start_session_log(path: String) -> Error:
-	session_log = SessionLog.open(path)
-	if session_log == null:
+func start_server_log(path: String) -> Error:
+	server_log = ServerLog.open(path)
+	if server_log == null:
 		return ERR_CANT_CREATE
-	session.session_log = session_log
-	session.add_handler(NetProtocol.Type.CLIENT_STATS, _on_client_stats)
-	session_log.event(
+	game.server_log = server_log
+	game.add_handler(NetProtocol.Type.CLIENT_STATS, _on_client_stats)
+	server_log.event(
 		"start", {"port": port(), "bind": bind_address, "protocol": NetProtocol.PROTOCOL_VERSION}
 	)
 	_next_stats_us = Time.get_ticks_usec() + STATS_PERIOD_US
@@ -216,14 +216,14 @@ func restart_run() -> void:
 	driver = null
 	partners = TrainingPartners.new(world.seed_value)
 	transport.reset_snapshots()
-	session.restart(world)
+	game.restart(world)
 	_next_snapshot_tick = world.tick
 	_idle_state_posted = false
 
 
 ## The multi-ship lobby's rebuild (NetFleet.rebuild): the RunSetup's slots and rules, then
 ## the run reset's fresh world (#11, M4-Q3).
-func rebuild_fleet(slots: Array[ShipSlot], rules: SessionRules) -> void:
+func rebuild_fleet(slots: Array[ShipSlot], rules: GameRules) -> void:
 	var setup: RunSetup = encounter as RunSetup
 	setup.slots = slots.duplicate()
 	setup.rules = rules
@@ -266,7 +266,7 @@ func start_beacon(
 ) -> Error:
 	var http_port: int = http.local_port() if http != null else 0
 	beacon = LanBeacon.new(NetProtocol.PROTOCOL_VERSION, server_name, port(), http_port)
-	beacon.player_cap = session.max_sessions
+	beacon.player_cap = game.max_sessions
 	var err: Error = beacon.start(discovery_port, destinations)
 	if err != OK:
 		push_warning("LAN beacon failed to start: %s" % error_string(err))
@@ -289,7 +289,7 @@ func bound_connections() -> int:
 ## Sessions with a connected client.
 func players() -> int:
 	var n: int = 0
-	for s: NetSession in session.by_id.values():
+	for s: NetSession in game.by_id.values():
 		if s.connected():
 			n += 1
 	return n
@@ -301,26 +301,26 @@ func players() -> int:
 ## a server others are on; TECH-8) and the beacon's flag. A started run is not the
 ## test: a lobby with players must not be killed without asking either.
 func session_active() -> bool:
-	return not session.by_id.is_empty()
+	return not game.by_id.is_empty()
 
 
 ## The connected host's session id (D127), or -1.
 func host_session() -> int:
-	for s: NetSession in session.by_id.values():
+	for s: NetSession in game.by_id.values():
 		if s.is_host and s.connected():
 			return s.id
 	return -1
 
 
 func _process(delta: float) -> void:
-	if session == null:
+	if game == null:
 		return
 	var s0: PackedInt64Array = probe.sched() if probe != null else PackedInt64Array()
 	var now_us: int = Time.get_ticks_usec()
 	# Stamps for the probe: start, after process, after the sim, after after_ticks,
 	# after the capture.
 	var t: PackedInt64Array = PackedInt64Array([now_us, 0, 0, 0, 0])
-	session.process(now_us)
+	game.process(now_us)
 	run_reset.process()
 	if training_active and _picks() == 0 and players() == 0:
 		end_training()
@@ -330,7 +330,7 @@ func _process(delta: float) -> void:
 	# flowing at 30 Hz of wall clock meanwhile, so joining and rejoining clients get theirs.
 	# The world doesn't change then: it is captured once and re-encoded from that copy,
 	# and only while someone holds a pick (nobody else gets snapshots).
-	if not session.sim_running():
+	if not game.sim_running():
 		if now_us >= _next_idle_post_us and _picks() > 0:
 			if _idle_state_posted:
 				transport.repost_state()
@@ -343,7 +343,7 @@ func _process(delta: float) -> void:
 		if not host.holds(world):  # a test swapped the world
 			host = ScenarioHost.new(world)
 		if driver == null and driver_factory.is_valid():
-			driver = driver_factory.call(StringName(session.lobby.toggles.preset))
+			driver = driver_factory.call(StringName(game.lobby.toggles.preset))
 		ticks = host.advance(delta, _before_tick if driver != null else Callable())
 		t[2] = Time.get_ticks_usec()
 		t[3] = t[2]
@@ -351,7 +351,7 @@ func _process(delta: float) -> void:
 		if ticks > 0:
 			tick_us_max = maxi(tick_us_max, (t[2] - t[1]) / ticks)
 			var events: Array[SimEvent] = world.drain_events()
-			session.after_ticks(events)
+			game.after_ticks(events)
 			run_reset.after_ticks(events)
 			t[3] = Time.get_ticks_usec()
 			if world.tick >= _next_snapshot_tick:
@@ -365,21 +365,21 @@ func _process(delta: float) -> void:
 		var all_in: bool = (
 			probe.phase == LoadProbe.Phase.WAITING
 			and _picks() >= probe.expect_picks
-			and session.lobby.launched_ships().size() >= session.crew_ships().size()
+			and game.lobby.launched_ships().size() >= game.crew_ships().size()
 		)
-		if probe.update(all_in, session.lobby.launched_ships().size()):
+		if probe.update(all_in, game.lobby.launched_ships().size()):
 			get_tree().quit(0)
 	_poll_lan_services()
-	if session_log != null and now_us >= _next_stats_us:
+	if server_log != null and now_us >= _next_stats_us:
 		_next_stats_us = now_us + STATS_PERIOD_US
 		var window: Dictionary = age_stats.window_summary()
 		if (window["pooled"] as Dictionary)["n"] > 0:
 			_add_resyncs(window)
-			session_log.event("snapshot_age", window)
+			server_log.event("snapshot_age", window)
 		# Counters as they stand, so a server that is killed (no final summary) still has them.
-		if session_log.counters() != _logged_counters:
-			_logged_counters = session_log.counters()
-			session_log.event("counters", {"counters": _logged_counters})
+		if server_log.counters() != _logged_counters:
+			_logged_counters = server_log.counters()
+			server_log.event("counters", {"counters": _logged_counters})
 	if run_for > 0.0 and now_us - _started_us > run_for * 1_000_000.0:
 		get_tree().quit(0)
 
@@ -410,7 +410,7 @@ func _poll_lan_services() -> void:
 ## Sessions holding a pick (the probe waits for all of them).
 func _picks() -> int:
 	var n: int = 0
-	for s: NetSession in session.by_id.values():
+	for s: NetSession in game.by_id.values():
 		if s.has_pick():
 			n += 1
 	return n
@@ -425,11 +425,11 @@ func _notification(what: int) -> void:
 
 func _exit_tree() -> void:
 	transport.stop()
-	if session_log != null:
-		session_log.close({"snapshot_age": age_stats.total_summary(), "tick": world.tick})
+	if server_log != null:
+		server_log.close({"snapshot_age": age_stats.total_summary(), "tick": world.tick})
 	if probe != null:
 		var sessions: Dictionary = {}
-		for s: NetSession in session.by_id.values():
+		for s: NetSession in game.by_id.values():
 			sessions[s.id] = {"name": s.name, "ship": s.ship, "entry": s.entry}
 		probe.write(
 			transport.probe_dump(),

@@ -18,7 +18,7 @@ extends Control
 ## dialog on a short screen. A player with no name of their own (a phone that joined by QR code)
 ## gets a one-field name prompt at the top (#35 A5).
 ##
-## Multi-ship sessions (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
+## Multi-ship games (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
 ## (with their team in TEAMS and HOLDOUT) and a New ship button while there is room (any
 ## player, up to 6); a crew puts its ship on team A or B; the host's mode and options sit
 ## behind the Mode button (read-only for the others); Start is pressed per ship and then

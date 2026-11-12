@@ -5,7 +5,7 @@ extends PanelContainer
 ## with voters and votes needed); the host also gets Abandon (D127); the Captain and
 ## viewers of that ship may take over an uncovered station (FT-NET-042).
 ##
-## Multi-ship sessions (#11, M4-Q8, D265 proposed): players of an allied ship may take over a
+## Multi-ship games (#11, M4-Q8, D265 proposed): players of an allied ship may take over a
 ## paused ship's uncovered station too ("Take Science on Heron"); there is no accept prompt,
 ## the first claim wins, and the server refuses a takeover that would leave the taker's own
 ## ship uncovered. An enemy ship's pause offers nothing. In PvP the vote is the give-up

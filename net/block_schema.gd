@@ -194,12 +194,12 @@ const BLOCKS: Dictionary = {
 		["noise_health", "f32"],
 		["noise_flags", "u8"],
 		["self_scanned", "bool"],
-		# Session: 0 none, 1 scan, 2 hack, 3 own-ship scan.
-		["session", "u8"],
-		["session_target", "s16"],
-		["session_noise", "f32"],
-		["session_start", "u32"],
-		["session_probe", "bool"],
+		# Minigame: 0 none, 1 scan, 2 hack, 3 own-ship scan.
+		["minigame", "u8"],
+		["minigame_target", "s16"],
+		["minigame_noise", "f32"],
+		["minigame_start", "u32"],
+		["minigame_probe", "bool"],
 		# Scan: open axes mask (1 x, 2 y, 4 z), the wireframe and the cloud.
 		["axes", "u8"],
 		["wire", ["rows", [["p", "v3f"]]]],

@@ -13,7 +13,7 @@ var nearest_site: int = -1
 ## Site id whose radius holds the ship, or -1 outside every radius.
 var at_site: int = -1
 var hull_frac: float = 0.0
-## RunTable.Status and RunTable.Outcome values.
+## ShipStateTable.Status and ShipStateTable.ShipOutcome values.
 var status: int = 0
 ## Alive and still in the run (status IN_PLAY): a scenario's "is it still out there".
 var in_play: bool = false

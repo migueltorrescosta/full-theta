@@ -79,10 +79,10 @@ static func _observe(w: SimWorld, seen: Seen) -> void:
 		drive.throttle = want
 		w.submit(drive)
 	var t: ScienceTable = w.science
-	if t.kind[PLAYER] == ScienceTable.Session.SCAN and seen.scan_range == 0.0:
+	if t.kind[PLAYER] == ScienceTable.Minigame.SCAN and seen.scan_range == 0.0:
 		seen.scan_range = w.kin.relative(PLAYER, RAIDER).length()
 		seen.scan_on_probe = float(t.probe[PLAYER])
-	if t.kind[PLAYER] == ScienceTable.Session.HACK:
+	if t.kind[PLAYER] == ScienceTable.Minigame.HACK:
 		seen.trace_peak = maxf(seen.trace_peak, t.trace[PLAYER])
 
 

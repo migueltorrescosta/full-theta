@@ -3,7 +3,7 @@ extends RefCounted
 ## Science rules (E01): the sensor mode and active ping, scan noise, the silhouette-
 ## alignment scan, the node-route hack and its timed effect, the scan-position mark and
 ## the own-ship scan. The Science commands call the functions below; step() runs the
-## clocks (ping, session timeouts, trace bar, hack windows). Runs first in the tick, so
+## clocks (ping, minigame timeouts, trace bar, hack windows). Runs first in the tick, so
 ## a hack window opened by this tick's commands already applies this tick.
 ##
 ## Events, keyed to the scanning ship (other_id the contact):
@@ -26,7 +26,7 @@ const REASON_BAD_CONTACT: StringName = &"bad_contact"
 const REASON_NOT_DETECTED: StringName = &"not_detected"
 const REASON_OUT_OF_RANGE: StringName = &"out_of_range"
 const REASON_NO_ACCESS: StringName = &"no_access"
-const REASON_NO_SESSION: StringName = &"no_session"
+const REASON_NO_MINIGAME: StringName = &"no_minigame"
 const REASON_BAD_SUBSYSTEM: StringName = &"bad_subsystem"
 const REASON_NO_EDGE: StringName = &"no_edge"
 const REASON_COOLING: StringName = &"cooling"
@@ -41,8 +41,8 @@ static func step(world: SimWorld) -> void:
 				t.ping_left[ship] = maxf(0.0, t.ping_left[ship] - SimWorld.DT)
 			if t.ping_cool[ship] > 0.0:
 				t.ping_cool[ship] = maxf(0.0, t.ping_cool[ship] - SimWorld.DT)
-			if t.kind[ship] != ScienceTable.Session.NONE:
-				_step_session(world, def, t, ship)
+			if t.kind[ship] != ScienceTable.Minigame.NONE:
+				_step_minigame(world, def, t, ship)
 			var sel: int = t.selected[ship]
 			if sel >= 0 and world.kin.is_alive(ship):
 				t.preview[ship] = noise_parts(world, ship, sel)
@@ -184,8 +184,8 @@ static func start_scan(world: SimWorld, ship: int, contact: int) -> bool:
 	var puzzle_seed: int = _draw_seed(world)
 	mask = ScanPuzzle.axes_mask(puzzle_seed, ScienceNoise.axes_for(def, noise, pre))
 	var t: ScienceTable = world.science
-	t.clear_session(ship)
-	t.kind[ship] = ScienceTable.Session.SCAN
+	t.clear_minigame(ship)
+	t.kind[ship] = ScienceTable.Minigame.SCAN
 	t.target[ship] = contact
 	t.puzzle_seed[ship] = puzzle_seed
 	t.noise[ship] = noise
@@ -200,8 +200,8 @@ static func start_scan(world: SimWorld, ship: int, contact: int) -> bool:
 ## hidden pose and records the scan (FT-SCI-016).
 static func submit_scan(world: SimWorld, ship: int, angles: Vector3) -> bool:
 	var t: ScienceTable = world.science
-	if world.science_def == null or t.kind[ship] != ScienceTable.Session.SCAN:
-		return _refuse(world, ship, -1, REASON_NO_SESSION)
+	if world.science_def == null or t.kind[ship] != ScienceTable.Minigame.SCAN:
+		return _refuse(world, ship, -1, REASON_NO_MINIGAME)
 	var def: ScienceDef = world.science_def
 	var contact: int = t.target[ship]
 	var q: float = ScanPuzzle.quality(def, t.puzzle_seed[ship], t.axes[ship], angles)
@@ -210,7 +210,7 @@ static func submit_scan(world: SimWorld, ship: int, angles: Vector3) -> bool:
 	ScienceKnowledge.record(world, world.faction_of(ship), contact, conf)
 	var tag: StringName = &"locked" if q >= def.lock_threshold else &""
 	world.emit(&"scan_done", ship, contact, conf, Vector3(q, noise, 0.0), tag)
-	t.clear_session(ship)
+	t.clear_minigame(ship)
 	return true
 
 
@@ -233,8 +233,8 @@ static func start_hack(world: SimWorld, ship: int, contact: int, subsystem_id: S
 	var puzzle_seed: int = _draw_seed(world)
 	var goal: int = HackPuzzle.goal(def, index)
 	var t: ScienceTable = world.science
-	t.clear_session(ship)
-	t.kind[ship] = ScienceTable.Session.HACK
+	t.clear_minigame(ship)
+	t.kind[ship] = ScienceTable.Minigame.HACK
 	t.target[ship] = contact
 	t.puzzle_seed[ship] = puzzle_seed
 	t.noise[ship] = contact_noise(world, ship, contact)
@@ -259,8 +259,8 @@ static func start_hack(world: SimWorld, ship: int, contact: int, subsystem_id: S
 static func hack_move(world: SimWorld, ship: int, node: int) -> bool:
 	var t: ScienceTable = world.science
 	var def: ScienceDef = world.science_def
-	if def == null or t.kind[ship] != ScienceTable.Session.HACK:
-		return _refuse(world, ship, -1, REASON_NO_SESSION)
+	if def == null or t.kind[ship] != ScienceTable.Minigame.HACK:
+		return _refuse(world, ship, -1, REASON_NO_MINIGAME)
 	var contact: int = t.target[ship]
 	var goal: int = HackPuzzle.goal(def, t.subsystem[ship])
 	var edges: PackedByteArray = HackPuzzle.edges(def, t.puzzle_seed[ship], goal)
@@ -280,13 +280,13 @@ static func hack_move(world: SimWorld, ship: int, node: int) -> bool:
 	return true
 
 
-## Closes the ship's open session without a result.
+## Closes the ship's open minigame without a result.
 static func cancel(world: SimWorld, ship: int) -> bool:
 	var t: ScienceTable = world.science
 	var k: int = t.kind[ship]
-	if k == ScienceTable.Session.NONE:
-		return _refuse(world, ship, -1, REASON_NO_SESSION)
-	var kind: StringName = &"hack_failed" if k == ScienceTable.Session.HACK else &"scan_failed"
+	if k == ScienceTable.Minigame.NONE:
+		return _refuse(world, ship, -1, REASON_NO_MINIGAME)
+	var kind: StringName = &"hack_failed" if k == ScienceTable.Minigame.HACK else &"scan_failed"
 	_fail(world, t, ship, kind, &"cancelled")
 	return true
 
@@ -298,26 +298,28 @@ static func start_self_scan(world: SimWorld, ship: int) -> bool:
 	if def == null:
 		return _refuse(world, ship, -1, REASON_NO_SCIENCE)
 	var t: ScienceTable = world.science
-	if t.kind[ship] != ScienceTable.Session.NONE:
+	if t.kind[ship] != ScienceTable.Minigame.NONE:
 		return _refuse(world, ship, -1, REASON_BUSY)
-	t.clear_session(ship)
-	t.kind[ship] = ScienceTable.Session.SELF
+	t.clear_minigame(ship)
+	t.kind[ship] = ScienceTable.Minigame.SELF
 	t.target[ship] = ship
 	t.start_tick[ship] = world.tick
 	return true
 
 
-static func _step_session(world: SimWorld, def: ScienceDef, t: ScienceTable, ship: int) -> void:
+static func _step_minigame(world: SimWorld, def: ScienceDef, t: ScienceTable, ship: int) -> void:
 	var k: int = t.kind[ship]
 	var elapsed: int = world.tick - t.start_tick[ship]
 	if not world.kin.is_alive(ship):
-		t.clear_session(ship)
+		t.clear_minigame(ship)
 		return
-	if k == ScienceTable.Session.SELF:
+	if k == ScienceTable.Minigame.SELF:
 		if elapsed >= SimRate.ticks(def.self_scan_s):
 			_finish_self_scan(world, t, ship)
 		return
-	var fail_kind: StringName = &"hack_failed" if k == ScienceTable.Session.HACK else &"scan_failed"
+	var fail_kind: StringName = (
+		&"hack_failed" if k == ScienceTable.Minigame.HACK else &"scan_failed"
+	)
 	var contact: int = t.target[ship]
 	var faction: int = world.faction_of(ship)
 	var row: int = world.knowledge.row_for(faction, contact)
@@ -325,7 +327,7 @@ static func _step_session(world: SimWorld, def: ScienceDef, t: ScienceTable, shi
 	var seen: bool = row >= 0 and world.knowledge.detected[row] == 1
 	if not world.kin.is_alive(contact) or not seen:
 		_fail(world, t, ship, fail_kind, &"lost")
-	elif k == ScienceTable.Session.SCAN:
+	elif k == ScienceTable.Minigame.SCAN:
 		if elapsed >= SimRate.ticks(def.scan_cap_s):
 			_fail(world, t, ship, fail_kind, &"timeout")
 	else:
@@ -348,12 +350,12 @@ static func _finish_hack(world: SimWorld, def: ScienceDef, t: ScienceTable, ship
 		var until: int = world.tick + SimRate.ticks(window)
 		world.hacks.open(contact, world.faction_of(ship), index, effect.factor, until, ship)
 	world.emit(&"hack_done", ship, contact, window, Vector3.ZERO, sub.id)
-	t.clear_session(ship)
+	t.clear_minigame(ship)
 
 
 static func _finish_self_scan(world: SimWorld, t: ScienceTable, ship: int) -> void:
 	t.self_scanned[ship] = world.tick
-	t.clear_session(ship)
+	t.clear_minigame(ship)
 	world.emit(&"self_scan_done", ship, ship)
 	# P10 (FT-SIM-025): the scan names the cause of every unknown fault. Easy's diagnosed-cause
 	# shortcut (FT-ENG-006) is the net layer's (NetShares.prefill_cause).
@@ -365,7 +367,7 @@ static func _fail(
 	world: SimWorld, t: ScienceTable, ship: int, kind: StringName, reason: StringName
 ) -> void:
 	world.emit(kind, ship, t.target[ship], t.trace[ship], Vector3.ZERO, reason)
-	t.clear_session(ship)
+	t.clear_minigame(ship)
 
 
 ## Removes closed hack windows and writes the open ones' product into
@@ -388,13 +390,13 @@ static func _apply_hacks(world: SimWorld) -> void:
 
 
 ## Why the ship can't open a scan or hack on the contact, or &"". `need_free` also
-## requires no open session; `place_mark` reuses the checks without it.
+## requires no open minigame; `place_mark` reuses the checks without it.
 static func _check_target(world: SimWorld, ship: int, contact: int, need_free: bool) -> StringName:
 	var def: ScienceDef = world.science_def
 	if def == null:
 		return REASON_NO_SCIENCE
 	var t: ScienceTable = world.science
-	if need_free and t.kind[ship] != ScienceTable.Session.NONE:
+	if need_free and t.kind[ship] != ScienceTable.Minigame.NONE:
 		return REASON_BUSY
 	var kin: Kinematics = world.kin
 	if (

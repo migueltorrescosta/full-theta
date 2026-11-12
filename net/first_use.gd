@@ -4,7 +4,7 @@ extends RefCounted
 ## D232): the debrief lists, per station, the seconds from the run's start to that first
 ## use, or -1 for an action never used. The core actions are data, StationDef.core_actions
 ## ("action=source", see StationDef). Every one is either an accepted crew command, fed by
-## ServerSession through NetCoop.on_command, or a net-side crew op, Relay's mark placed and
+## NetGame through NetCoop.on_command, or a net-side crew op, Relay's mark placed and
 ## route added, fed by NetCrewState; so no client reports an intent (D235).
 
 ## Ship -> "station.action" -> tick of the first use.

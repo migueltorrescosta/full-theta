@@ -1,14 +1,14 @@
-class_name SessionLog
+class_name ServerLog
 extends RefCounted
-## The server's session log (D199, #9): a small append-only structured log, one JSON object
-## per line (JSON Lines), kept for the whole session. Each line is
+## The server log (D199, #9): a small append-only structured log, one JSON object
+## per line (JSON Lines), kept for the whole game. Each line is
 ## `{"t": seconds since the log opened, "kind": "...", ...fields}`. It also keeps named
 ## counters, written as one `summary` line when the log closes, so a system that happens
 ## often (a request chip, a minigame move) counts instead of logging every occurrence.
 ##
 ## API:
-## - `SessionLog.open(path)` returns a log, or null when the file can't be created;
-##   `SessionLog.default_path()` is `user://logs/session-<unix time>.jsonl`.
+## - `ServerLog.open(path)` returns a log, or null when the file can't be created;
+##   `ServerLog.default_path()` is `user://logs/server-<unix time>.jsonl`.
 ## - `event(kind, fields)` appends a line (`kind` is a short snake_case name; `fields`
 ##   must be JSON-friendly: numbers, strings, booleans, arrays, dictionaries).
 ## - `count(name, n = 1)` adds to a counter; `counters()` reads them.
@@ -23,7 +23,7 @@ var _counters: Dictionary = {}
 
 
 ## Opens (creating folders) `path` for appending; null on failure.
-static func open(log_path: String) -> SessionLog:
+static func open(log_path: String) -> ServerLog:
 	DirAccess.make_dir_recursive_absolute(log_path.get_base_dir())
 	var mode: FileAccess.ModeFlags = (
 		FileAccess.READ_WRITE if FileAccess.file_exists(log_path) else FileAccess.WRITE_READ
@@ -32,7 +32,7 @@ static func open(log_path: String) -> SessionLog:
 	if file == null:
 		return null
 	file.seek_end()
-	var log: SessionLog = SessionLog.new()
+	var log: ServerLog = ServerLog.new()
 	log.path = log_path
 	log._file = file
 	log._start_us = Time.get_ticks_usec()
@@ -40,7 +40,7 @@ static func open(log_path: String) -> SessionLog:
 
 
 static func default_path() -> String:
-	return "user://logs/session-%d.jsonl" % int(Time.get_unix_time_from_system())
+	return "user://logs/server-%d.jsonl" % int(Time.get_unix_time_from_system())
 
 
 func is_open() -> bool:

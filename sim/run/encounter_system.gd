@@ -2,7 +2,7 @@ class_name EncounterSystem
 extends RefCounted
 ## Encounter state over the run (E07, FT-MIS-015, FT-MIS-025, FT-MIS-027, D231, D233). Runs
 ## after the movement systems (so after a jump) and before OutcomeSystem, and writes only
-## EncounterTable, RunTable and events. In encounter id order:
+## EncounterTable, ShipStateTable and events. In encounter id order:
 ## 1. A PENDING encounter turns ACTIVE when one of its ships is at the site (inside the
 ##    site's radius), or when the arrival timeout has passed since it opened (D231).
 ##    &"encounter_start" is emitted (ship_id the first ship, value the id, tag the scenario).
@@ -15,7 +15,7 @@ extends RefCounted
 ## 3. A ship destroyed or abandoned leaves the encounter as a loss. When every ship has
 ##    left (lost or fled) the encounter ends LOST, or FLED when none was lost.
 ## A scenario ends an encounter itself with EndEncounterCommand (finish()). The run is won
-## once the director has closed it for a crewed ship (CloseRunCommand, after at least
+## once the director has closed it for a crewed ship (FinishShipCommand, after at least
 ## RunDef.min_encounters) and the ship is in no encounter (run_complete(), read by
 ## OutcomeSystem; Q4, owner 2026-10-26).
 
@@ -45,12 +45,15 @@ static func finish(world: SimWorld, id: int, result: EncounterTable.Result) -> v
 	# A ship destroyed or abandoned before the scenario ended the encounter (a ram that
 	# also took the last raider with it) is a loss of this encounter all the same.
 	for ship: int in _ships(table.ships_mask[id]):
-		if world.run.encounter[ship] == id and world.run.status[ship] != RunTable.Status.IN_PLAY:
+		if (
+			world.ships.encounter[ship] == id
+			and world.ships.status[ship] != ShipStateTable.Status.IN_PLAY
+		):
 			table.losses_mask[id] |= 1 << ship
 	table.result[id] = result
 	table.end_tick[id] = world.tick
 	for ship: int in _ships(table.ships_mask[id]):
-		if world.run.encounter[ship] == id:
+		if world.ships.encounter[ship] == id:
 			_leave(world, ship)
 	var first: int = table.owner_ship[id]
 	world.emit(&"encounter_end", first, id, result, Vector3.ZERO, _scenario(world, id))
@@ -58,7 +61,9 @@ static func finish(world: SimWorld, id: int, result: EncounterTable.Result) -> v
 
 ## Whether the director has closed the crewed ship's run and the ship is in no encounter.
 static func run_complete(world: SimWorld, ship: int) -> bool:
-	return world.run_def != null and world.run.encounter[ship] < 0 and world.run.closed[ship] == 1
+	return (
+		world.run_def != null and world.ships.encounter[ship] < 0 and world.ships.closed[ship] == 1
+	)
 
 
 ## Charges a fled ship the FleeCostDef (D233): credits (all it has, when it holds less) and
@@ -91,7 +96,7 @@ static func _arrived(world: SimWorld, id: int) -> bool:
 		return true
 	for ship: int in _ships(table.ships_mask[id]):
 		if (
-			world.run.status[ship] == RunTable.Status.IN_PLAY
+			world.ships.status[ship] == ShipStateTable.Status.IN_PLAY
 			and SiteTable.at_site(world, ship) == site
 		):
 			return true
@@ -104,7 +109,7 @@ static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, bool])
 	if site < 0 or jumped.is_empty():
 		return
 	for ship: int in _ships(table.ships_mask[id]):
-		if world.run.encounter[ship] != id or not jumped.has(ship):
+		if world.ships.encounter[ship] != id or not jumped.has(ship):
 			continue
 		if SiteTable.at_site(world, ship) == site:
 			continue
@@ -112,7 +117,7 @@ static func _check_flee(world: SimWorld, id: int, jumped: Dictionary[int, bool])
 		if seen_by < 0:
 			continue
 		table.fled_mask[id] |= 1 << ship
-		world.run.fled_count[ship] += 1
+		world.ships.fled_count[ship] += 1
 		_leave(world, ship)
 		world.emit(&"fled", ship, seen_by, id, Vector3.ZERO, _scenario(world, id))
 		_charge_flee(world, ship, seen_by)
@@ -124,12 +129,15 @@ static func _check_losses(world: SimWorld, id: int) -> void:
 	for ship: int in _ships(mask):
 		# A ship still in play and in this encounter stays; one reset out of it (FT-MIS-011)
 		# or destroyed has left as a loss.
-		if world.run.status[ship] == RunTable.Status.IN_PLAY and world.run.encounter[ship] == id:
+		if (
+			world.ships.status[ship] == ShipStateTable.Status.IN_PLAY
+			and world.ships.encounter[ship] == id
+		):
 			continue
 		if EncounterTable.has_bit(table.losses_mask[id] | table.fled_mask[id], ship):
 			continue
 		table.losses_mask[id] |= 1 << ship
-		if world.run.encounter[ship] == id:
+		if world.ships.encounter[ship] == id:
 			_leave(world, ship)
 	if (table.losses_mask[id] | table.fled_mask[id]) == mask:
 		var lost: bool = table.losses_mask[id] != 0
@@ -138,8 +146,8 @@ static func _check_losses(world: SimWorld, id: int) -> void:
 
 ## A ship leaves its encounter: one more done, no longer in one.
 static func _leave(world: SimWorld, ship: int) -> void:
-	world.run.encounter[ship] = -1
-	world.run.encounters_done[ship] += 1
+	world.ships.encounter[ship] = -1
+	world.ships.encounters_done[ship] += 1
 
 
 ## The id of a live ship of a faction hostile to the ship's that detects it, or -1.

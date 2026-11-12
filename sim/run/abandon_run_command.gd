@@ -17,7 +17,7 @@ func apply(world: SimWorld) -> bool:
 	for id: int in world.ship_count():
 		if not world.is_crew_in_play(id):
 			continue
-		world.run.status[id] = RunTable.Status.ABANDONED
+		world.ships.status[id] = ShipStateTable.Status.ABANDONED
 		any = true
 	if not any:
 		return false

@@ -1,4 +1,4 @@
-class_name RunTable
+class_name ShipStateTable
 extends SimTable
 ## Run state (T036, FT-MIS-017): one row per ship keyed by ship id and faction
 ## (FT-ARC-012), holding whether the ship is still in the encounter and, for crewed
@@ -12,25 +12,25 @@ extends SimTable
 enum Status { IN_PLAY, DESTROYED, RETREATED, ABANDONED }
 ## The encounter's outcome for a crewed ship (D30: per-ship elimination); AI ships
 ## stay NONE.
-enum Outcome { NONE, WIN, LOSS }
+enum ShipOutcome { NONE, WIN, LOSS }
 
-## Event tags for each Outcome, in Outcome order.
+## Event tags for each ShipOutcome, in ShipOutcome order.
 const OUTCOME_NAMES: Array[StringName] = [&"none", &"win", &"loss"]
 
 ## Status of the ship.
 var status: PackedByteArray = PackedByteArray()
-## Outcome for the ship's crew; set once, never changed after.
-var outcome: PackedByteArray = PackedByteArray()
+## The ship's outcome for its crew; set once, never changed after.
+var ship_outcome: PackedByteArray = PackedByteArray()
 ## Encounters the ship has been through (finished, fled or lost), and the id of the one
 ## it is in (PENDING or ACTIVE), or -1. Fled encounters are also counted in fled_count
 ## (E07, FT-MIS-010, FT-MIS-025).
 var encounters_done: PackedInt32Array = PackedInt32Array()
 var encounter: PackedInt32Array = PackedInt32Array()
 var fled_count: PackedInt32Array = PackedInt32Array()
-## 1 once the director has closed the ship's run (CloseRunCommand); it then wins when it is in
+## 1 once the director has closed the ship's run (FinishShipCommand); it then wins when it is in
 ## no encounter (EncounterSystem.run_complete, Q4).
 var closed: PackedByteArray = PackedByteArray()
-## Session counters of a multi-ship session (#11, M4-Q2, M4-Q9): times the ship has
+## Game counters of a multi-ship game (#11, M4-Q2, M4-Q9): times the ship has
 ## relaunched (RelaunchShipCommand) and crewed ships of another side it destroyed (PvP kills,
 ## OutcomeSystem). A ship reset keeps both.
 var relaunches: PackedInt32Array = PackedInt32Array()
@@ -43,7 +43,7 @@ var finish_tick: PackedInt32Array = PackedInt32Array()
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	add_key(ship_id, faction)
 	status.append(Status.IN_PLAY)
-	outcome.append(Outcome.NONE)
+	ship_outcome.append(ShipOutcome.NONE)
 	encounters_done.append(0)
 	encounter.append(-1)
 	fled_count.append(0)
@@ -54,7 +54,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 
 
 ## A ship reset (a relaunch or a training reset, FT-MIS-011, FT-MIS-017) restores the ship's
-## run progress but keeps its session counters, relaunches and kills.
+## run progress but keeps its game counters, relaunches and kills.
 func reset_ship(ship_id: int, def: ShipDef) -> void:
 	var row: int = row_of(ship_id)
 	if row < 0:

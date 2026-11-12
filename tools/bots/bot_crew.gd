@@ -45,7 +45,7 @@ func _init(crew_profile: BotProfiles.Profile, ship_id: int, seed_value: int) -> 
 
 ## Submits this tick's commands; call it right before the world steps.
 func act(world: SimWorld) -> void:
-	if not world.kin.is_alive(ship) or world.run.status[ship] != RunTable.Status.IN_PLAY:
+	if not world.kin.is_alive(ship) or world.ships.status[ship] != ShipStateTable.Status.IN_PLAY:
 		return
 	if world.tick % profile.think_ticks != 0:
 		return
@@ -138,7 +138,7 @@ func _repair(world: SimWorld) -> void:
 func _wants_flee(world: SimWorld) -> bool:
 	if DamageSystem.hull_fraction(world, ship) >= profile.flee_hull:
 		return false
-	var enc: int = world.run.encounter[ship]
+	var enc: int = world.ships.encounter[ship]
 	return enc >= 0 and world.encounters.result[enc] == EncounterTable.Result.ACTIVE
 
 
@@ -164,7 +164,7 @@ func _travel(world: SimWorld) -> void:
 ## The site the crew is bound for: its pending or active encounter's, or the yard on a
 ## debris leg; -1 for none.
 func _destination(world: SimWorld) -> int:
-	var enc: int = world.run.encounter[ship]
+	var enc: int = world.ships.encounter[ship]
 	if enc < 0:
 		return -1
 	var table: EncounterTable = world.encounters

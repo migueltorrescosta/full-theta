@@ -23,5 +23,5 @@ Ids verified by a review item, playtest or owner step rather than a test. An id 
 - FT-MIS-037 (owner-judged) https://github.com/migueltorrescosta/full-theta/issues/13 The owner judges the first-time Easy survival share (at least 3 encounters and 60 % of the run's) from the bot batch in #13 (D252).
 - FT-GEN-014 https://github.com/migueltorrescosta/full-theta/issues/2 `gh api repos/migueltorrescosta/full-theta` reports visibility public and licence GPL-3.0 (checked 2026-11-01).
 - FT-LIC-001 https://github.com/migueltorrescosta/full-theta/issues/2 `LICENSE` at the repository root is the GNU GPL version 3 text; GitHub detects it as GPL-3.0.
-- FT-ARC-004 https://github.com/migueltorrescosta/full-theta/issues/2 One `ServerSession` owns the one simulation a session steps (`net/server_session.gd`); every L3 and L4 session test runs several clients against that one server.
+- FT-ARC-004 https://github.com/migueltorrescosta/full-theta/issues/2 One `NetGame` owns the one simulation a session steps (`net/net_game.gd`); every L3 and L4 session test runs several clients against that one server.
 - FT-M1-021 https://github.com/migueltorrescosta/full-theta/issues/8 The playtest after M1 rotated every player through Tactical, Systems and Ops; the owner records it in the issue.

@@ -2,10 +2,10 @@ class_name ModeDialog
 extends AcceptDialog
 ## The host's mode dialog in the lobby (#11; M4-Q6, FT-MIS-031, FT-GEN-002): a button per
 ## session mode (co-op, the three PvP types and holdout), the mode's one-line description,
-## and in TEAMS the win rule. Each choice goes to the server (SessionMode); the dialog shows
+## and in TEAMS the win rule. Each choice goes to the server (GameMode); the dialog shows
 ## what the `fleet` event says. Read-only for the others and once the universe has started.
 
-## The session modes and team win rules, in SessionRules order (the wire names).
+## The session modes and team win rules, in GameRules order (the wire names).
 const MODES: Array[String] = ["coop", "race", "last_standing", "teams", "holdout"]
 const TEAM_WINS: Array[String] = ["last_team_standing", "first_to_finish"]
 const GAP: int = UiTheme.TOUCH_GAP
@@ -62,7 +62,7 @@ func choose(mode: String, team_win: String = "") -> void:
 	refresh()
 
 
-## Shows the session's mode and whether the host may still change it.
+## Shows the game's mode and whether the host may still change it.
 func refresh() -> void:
 	var can: bool = editable()
 	var mode: String = ctx.crew.mode()

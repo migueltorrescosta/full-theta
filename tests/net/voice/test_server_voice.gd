@@ -43,8 +43,8 @@ func after_test() -> void:
 ## and a Viewer on the player ship.
 func _crewed() -> Array:
 	var server: NetServer = h.server()
-	server.session.voice.voice = _spy
-	_spy.computer_audience = server.session.computer_audience
+	server.game.voice.voice = _spy
+	_spy.computer_audience = server.game.computer_audience
 	var crew: Array[NetClient] = await h.crew3(server)
 	crew.append(await h.joined(server, "viewer", "viewer"))
 	return [server, crew]
@@ -64,7 +64,7 @@ func test_start_session_once_at_the_first_start_with_the_closed_set() -> void:
 	var setup: Array = await _crewed()
 	var server: NetServer = setup[0]
 	var crew: Array[NetClient] = setup[1]
-	server.session.language = "it"
+	server.game.language = "it"
 	assert_array(_spy.starts).is_empty()
 	assert_bool(await h.start(server, crew[0])).is_true()
 	crew[1].set_ready(true)
@@ -96,7 +96,7 @@ func test_alert_lines_go_to_the_stations_concerned() -> void:
 		_event(server, &"hit", PLAYER, 10.0),
 		_event(server, &"shield_low", ENEMY, 0.1),
 	]
-	server.session.after_ticks(events)
+	server.game.after_ticks(events)
 	(
 		assert_array(_spy.said)
 		. is_equal(
@@ -113,13 +113,13 @@ func test_alert_lines_go_to_the_stations_concerned() -> void:
 	var hull: int = damage.hull_row(PLAYER)
 	damage.health[hull] = server.world.defs[PLAYER].hull_max * 0.2
 	_spy.said.clear()
-	server.session.after_ticks([_event(server, &"hit", PLAYER), _event(server, &"hit", PLAYER)])
+	server.game.after_ticks([_event(server, &"hit", PLAYER), _event(server, &"hit", PLAYER)])
 	assert_array(_spy.said).is_equal([["computer.hull_critical", {}, [tac, sys, ops]]])
 	# Re-armed once repaired above it.
 	damage.health[hull] = server.world.defs[PLAYER].hull_max
-	server.session.after_ticks([_event(server, &"hit", PLAYER)])
+	server.game.after_ticks([_event(server, &"hit", PLAYER)])
 	damage.health[hull] = server.world.defs[PLAYER].hull_max * 0.1
-	server.session.after_ticks([_event(server, &"hit", PLAYER)])
+	server.game.after_ticks([_event(server, &"hit", PLAYER)])
 	assert_int(_spy.said.size()).is_equal(2)
 
 
@@ -137,9 +137,9 @@ func test_shields_low_is_spoken_by_the_summaries_toggle() -> void:
 		["hard", ["computer.shields_low_plain", {}]],
 	]
 	for row: Array in rows:
-		server.session.voice.toggles = DataToggles.of_preset(row[0]).encode()
+		server.game.voice.toggles = DataToggles.of_preset(row[0]).encode()
 		_spy.said.clear()
-		server.session.after_ticks([_event(server, &"shield_low", PLAYER, 0.4)])
+		server.game.after_ticks([_event(server, &"shield_low", PLAYER, 0.4)])
 		# Engineering always hears the exact percentage; Helm what its toggle allows.
 		(
 			assert_array(_spy.said)
@@ -160,12 +160,12 @@ func test_run_reset_flushes_lines_and_rearms_the_hull_alert() -> void:
 	var server: NetServer = setup[0]
 	var damage: DamageTable = server.world.damage
 	damage.health[damage.hull_row(PLAYER)] = server.world.defs[PLAYER].hull_max * 0.2
-	server.session.after_ticks([_event(server, &"hit", PLAYER)])
+	server.game.after_ticks([_event(server, &"hit", PLAYER)])
 	server.restart_run()
-	assert_object(server.session.voice.world).is_same(server.world)
+	assert_object(server.game.voice.world).is_same(server.world)
 	assert_array(_spy.said.back()).is_equal(["flushed"])
 	damage = server.world.damage
 	damage.health[damage.hull_row(PLAYER)] = server.world.defs[PLAYER].hull_max * 0.2
-	server.session.after_ticks([_event(server, &"hit", PLAYER)])
+	server.game.after_ticks([_event(server, &"hit", PLAYER)])
 	assert_str(_spy.said.back()[0]).is_equal("computer.hull_critical")
 	assert_int(_spy.said.size()).is_equal(3)

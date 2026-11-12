@@ -2,7 +2,7 @@ class_name ShipSlot
 extends RefCounted
 ## One crewable ship of a session built from the multi-ship lobby (#11, FT-GEN-001, owner
 ## M4-Q3, 2026-10-28): its name and its lobby team. RunSetup.build() spawns one ship per
-## slot, in slot order, so the i-th slot is ship id i, of the faction SessionRules.faction_for
+## slot, in slot order, so the i-th slot is ship id i, of the faction GameRules.faction_for
 ## gives the slot: the one place a team becomes a faction (B5); past it the sim knows only
 ## factions. Allies share a faction (FT-ARC-018). The server drops the slots nobody picked
 ## before it builds (M4-Q3). Pure value.

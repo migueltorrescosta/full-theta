@@ -88,7 +88,7 @@ func test_the_clock_ends_it_as_partial_and_the_raiders_stay() -> void:
 	assert_int(raiders.size()).is_equal(2)
 	assert_int(f.world.relation(2, f.world.faction_of(0))).is_equal(Scenario.Relation.HOSTILE)
 	for id: int in raiders:
-		assert_int(f.world.run.status[id]).is_equal(RunTable.Status.IN_PLAY)
+		assert_int(f.world.ships.status[id]).is_equal(ShipStateTable.Status.IN_PLAY)
 		assert_int(f.world.ai.target[id]).is_equal(0)
 
 

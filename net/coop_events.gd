@@ -3,7 +3,7 @@ extends RefCounted
 ## The cooperative events of a session, counted per pair of stations (FT-PAIR-013, D35):
 ## a request chip sent and answered, a data shortcut shared, a mark one station placed and
 ## another used, a probe-enabled scan, and (with Comms, #10) a scan-unlocked dialogue
-## option. Each one is counted here and written to the session log (SessionLog counters
+## option. Each one is counted here and written to the server log (ServerLog counters
 ## `coop.<pair>.<kind>` and one `coop` line per event), which the debrief of #10 shows.
 ## Pairs are the ids of spec §7.3, p1 to p15, in the order of StationViews.ENTRIES' joint
 ## views. An unanswered chip that expired is counted as `chip_expired` and is no
@@ -29,8 +29,8 @@ const COOPERATIVE: Array[String] = [
 ## "a|b" (stations in StationViews.CREW order) -> pair id, built once from the catalogue.
 static var _pairs: Dictionary = _build_pairs()
 
-## The session log, or null (counted, not written).
-var session_log: SessionLog = null
+## The server log, or null (counted, not written).
+var server_log: ServerLog = null
 ## pair -> kind -> count.
 var _counts: Dictionary = {}
 
@@ -53,11 +53,11 @@ static func stations_of(pair: String) -> Array:
 func record(kind: String, pair: String, ship: int, fields: Dictionary = {}) -> void:
 	var by_kind: Dictionary = _counts.get_or_add(pair, {})
 	by_kind[kind] = int(by_kind.get(kind, 0)) + 1
-	if session_log != null:
-		session_log.count("coop.%s.%s" % [pair, kind])
+	if server_log != null:
+		server_log.count("coop.%s.%s" % [pair, kind])
 		var line: Dictionary = {"coop": kind, "pair": pair, "ship": ship}
 		line.merge(fields)
-		session_log.event("coop", line)
+		server_log.event("coop", line)
 
 
 ## The STORY events that are a pair's cooperative event or a debrief line (P5, P9, P14, P15):

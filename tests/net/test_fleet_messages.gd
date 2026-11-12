@@ -33,12 +33,12 @@ func _payloads() -> Dictionary:
 	var row: Dictionary = FleetMessages.fleet_ship(
 		1, "Kestrel II", 0, [{"name": "Ana", "entry": "tactical"}], 1, ["helm"], false, false
 	)
-	var reason: String = SessionOutcome.REASON_NAMES[SessionOutcome.Reason.LAST_STANDING]
-	var teams: String = SessionRules.MODE_NAMES[SessionRules.Mode.TEAMS]
-	var team_win: String = SessionRules.TEAM_WIN_NAMES[0]
+	var reason: String = GameOutcome.REASON_NAMES[GameOutcome.Reason.LAST_STANDING]
+	var teams: String = GameRules.MODE_NAMES[GameRules.Mode.TEAMS]
+	var team_win: String = GameRules.TEAM_WIN_NAMES[0]
 	return {
 		NetProtocol.EVENT_FLEET:
-		FleetMessages.fleet([row], teams, team_win, SessionRules.MAX_SHIPS, -1, [1], false),
+		FleetMessages.fleet([row], teams, team_win, GameRules.MAX_SHIPS, -1, [1], false),
 		NetProtocol.EVENT_TAKEOVER: FleetMessages.takeover(0, "helm", "Ana", 1),
 		NetProtocol.EVENT_HANDOVER: FleetMessages.handover(0, FleetMessages.TO_SCOREBOARD),
 		NetProtocol.EVENT_SCOREBOARD:
@@ -49,7 +49,7 @@ func _payloads() -> Dictionary:
 		NetProtocol.EVENT_RELAUNCH_VOTES:
 		{"ship": 0, "voters": ["Ana"], "sessions": [4], "needed": 2},
 		NetProtocol.EVENT_RELAUNCHED: FleetMessages.relaunched(0, -1),
-		NetProtocol.EVENT_SESSION_OVER: FleetMessages.session_over(reason, [2], -1, 0.0, 600.0),
+		NetProtocol.EVENT_GAME_OVER: FleetMessages.game_over(reason, [2], -1, 0.0, 600.0),
 	}
 
 

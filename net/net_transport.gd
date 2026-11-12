@@ -8,7 +8,7 @@ extends RefCounted
 ## mutex-protected queues: it posts operations (send, close, bind a connection to a
 ## session, set a session's view key, events, state copies, voice) and takes inbound
 ## decoded messages. Session logic (handshake decisions, lobby, claims, validation)
-## stays on the main thread (ServerSession). See net/README.md.
+## stays on the main thread (NetGame). See net/README.md.
 
 ## Inbound pseudo-type for a connection that closed (no wire message has type 0).
 const CLOSED: int = 0
@@ -251,7 +251,7 @@ func reset_snapshots() -> void:
 	_post(["reset"])
 
 
-## A ship's claims and last writers for the OWNERSHIP section (ServerSession).
+## A ship's claims and last writers for the OWNERSHIP section (NetGame).
 func post_ownership(ship: int, table: Dictionary) -> void:
 	_post(["ownership", ship, table.duplicate(true)])
 

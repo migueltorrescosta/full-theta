@@ -85,11 +85,11 @@ func test_catalogue_offers_m1_entries_with_load_tags() -> void:
 	assert_array(c.catalogue["load_tags"]).is_equal(["light", "busy", "intense"])
 	c.pick(PLAYER, StationViews.ALL)
 	var answer: Dictionary = await h.next_event(c, NetProtocol.EVENT_PICKED)
-	assert_str(answer["payload"]["reason"]).is_equal(ServerSession.BAD_PICK)
+	assert_str(answer["payload"]["reason"]).is_equal(NetGame.BAD_PICK)
 	var from: int = h.mark(c)
 	c.pick(PLAYER, "p2")
 	answer = await h.next_event(c, NetProtocol.EVENT_PICKED, from)
-	assert_str(answer["payload"]["reason"]).is_equal(ServerSession.BAD_PICK)
+	assert_str(answer["payload"]["reason"]).is_equal(NetGame.BAD_PICK)
 
 
 # FT: FT-NET-015, FT-NET-016
@@ -102,12 +102,12 @@ func test_one_pick_sharing_and_one_captain() -> void:
 	var b: NetClient = await h.joined(server, "b", "helm")
 	var c: NetClient = await h.joined(server, "c", "tactical")
 	var d: NetClient = await h.joined(server, "d", "tactical")
-	assert_array(server.session.entries_of(PLAYER)).contains_exactly_in_any_order(
+	assert_array(server.game.entries_of(PLAYER)).contains_exactly_in_any_order(
 		["helm", "helm", "tactical", "tactical"]
 	)
 	assert_bool(await h.pick(a, "systems")).is_true()
 	assert_str(h.session_of(server, a).entry).is_equal("systems")
-	assert_array(server.session.entries_of(PLAYER)).contains_exactly_in_any_order(
+	assert_array(server.game.entries_of(PLAYER)).contains_exactly_in_any_order(
 		["systems", "helm", "tactical", "tactical"]
 	)
 	assert_bool(a.view.blocks.has(StationViews.Section.ENGINEERING)).is_true()
@@ -116,7 +116,7 @@ func test_one_pick_sharing_and_one_captain() -> void:
 	var from: int = h.mark(c)
 	c.pick(PLAYER, "captain")
 	var refused: Dictionary = await h.next_event(c, NetProtocol.EVENT_PICKED, from)
-	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.CAPTAIN_TAKEN)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.CAPTAIN_TAKEN)
 	assert_str(h.session_of(server, c).entry).is_equal("tactical")
 	var lobby: Dictionary = h.last_event(d, NetProtocol.EVENT_LOBBY)
 	assert_str(lobby["payload"]["captain"]).is_equal("b")
@@ -157,15 +157,15 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 	var from: int = h.mark(tac)
 	tac.set_ready(true)
 	var refused: Dictionary = await h.next_event(tac, NetProtocol.EVENT_REQUEST_REJECTED, from)
-	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_COVERED)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_COVERED)
 	assert_array(refused["payload"]["uncovered"]).is_equal(["relay", "comms"])
 	from = h.mark(cap)
 	cap.set_ready(true)
 	refused = await h.next_event(cap, NetProtocol.EVENT_REQUEST_REJECTED, from)
-	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_CREW)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_CREW)
 	await h.wait(300)
 	assert_int(server.world.tick).is_equal(tick)
-	assert_bool(server.session.lobby.launched.is_empty()).is_true()
+	assert_bool(server.game.lobby.launched.is_empty()).is_true()
 	var ops: NetClient = await h.joined(server, "ops", "ops")
 	var ready_ok: Callable = func(e: Dictionary) -> bool: return e["payload"]["ready"]
 	lobby = await h.next_event(sys, NetProtocol.EVENT_LOBBY, 0, ready_ok)
@@ -176,7 +176,7 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 	assert_int(go["payload"]["ship"]).is_equal(PLAYER)
 	var started: Callable = func(e: Dictionary) -> bool: return e["payload"]["started"]
 	assert_dict(await h.next_event(view, NetProtocol.EVENT_LOBBY, 0, started)).is_not_empty()
-	assert_bool(server.session.sim_running()).is_true()
+	assert_bool(server.game.sim_running()).is_true()
 
 
 # FT: FT-NET-029, FT-M1-015
@@ -199,7 +199,7 @@ func test_dev_flag_lets_one_client_hold_all_stations() -> void:
 	# Alone on every station: every claim is its own (FT-NET-044).
 	var me: int = h.session_of(server, c).id
 	for item: String in ["flight", "shield_facing", "mount:0", "crew:0", "crew:1"]:
-		assert_int(server.session.claims.holder(PLAYER, item)).is_equal(me)
+		assert_int(server.game.claims.holder(PLAYER, item)).is_equal(me)
 	c.fire()
 	c.helm(1.0)
 	await h.wait(300)
@@ -230,7 +230,7 @@ func test_mid_run_change_must_keep_coverage() -> void:
 	var extra: NetClient = await h.joined(server, "weapons", "weapons")
 	assert_str(h.session_of(server, extra).entry).is_equal("weapons")
 	assert_bool(await h.pick(crew[0], "helm")).is_true()
-	assert_bool(server.session.sim_running()).is_true()
+	assert_bool(server.game.sim_running()).is_true()
 
 
 # FT: FT-NET-013, FT-NET-030
@@ -240,7 +240,7 @@ func test_welcome_says_whether_the_server_uses_tls() -> void:
 	var server: NetServer = h.server()
 	var plain: NetClient = await h.welcomed(server, "plain")
 	assert_bool(plain.welcome["tls"]).is_false()
-	server.session.tls = true
+	server.game.tls = true
 	var secure: NetClient = await h.welcomed(server, "secure")
 	assert_bool(secure.welcome["tls"]).is_true()
 

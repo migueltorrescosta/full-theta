@@ -40,7 +40,7 @@ var knowledge: KnowledgeTable = KnowledgeTable.new()
 ## Enemy AI state (T035); rows of ships spawned with spawn_enemy are enabled.
 var ai: AiTable = AiTable.new()
 ## Run state: each ship's status and the encounter outcome (T036, FT-MIS-017).
-var run: RunTable = RunTable.new()
+var ships: ShipStateTable = ShipStateTable.new()
 ## Science state and open hack windows (E01).
 var science: ScienceTable = ScienceTable.new()
 var hacks: HackTable = HackTable.new()
@@ -83,7 +83,7 @@ var scenario_ids: PackedStringArray = PackedStringArray()
 var run_def: RunDef
 ## The session's rules (#11, E11, E12): COOP with one slot unless RunSetup was given slots.
 ## Fixed for the run, like run_def, so not in a table or the state hash.
-var rules: SessionRules = SessionRules.new()
+var rules: GameRules = GameRules.new()
 ## Crewed ship id -> where it starts (a CubePoint, m) and the site it starts at
 ## (-1 with no map), filled by RunSetup: a relaunch puts the ship back there, and a race's
 ## site copies are placed relative to it (#11). Fixed for the run, like rules.
@@ -121,25 +121,25 @@ var _relations: Dictionary[int, int] = {}
 var _accumulator: float = 0.0
 
 
-## site_period is the side of the scenario's wrapping cube (m, FT-SIM-035, D229); check it
+## map_period is the side of the map's wrapping cube (m, FT-SIM-035, D229); check it
 ## with period_errors() when the ships are known (M1Encounter.validate does).
 func _init(
-	world_seed: int = 0, build: String = "", site_period: float = Kinematics.DEFAULT_PERIOD
+	world_seed: int = 0, build: String = "", map_period: float = Kinematics.DEFAULT_PERIOD
 ) -> void:
 	seed_value = world_seed
 	build_id = build
 	rng = SimRng.new(world_seed)
 	script_rng = SimRng.new(world_seed ^ 0x5CE7A210)
-	kin.period = site_period
+	kin.period = map_period
 
 
 ## Why a period (m) doesn't suit a scenario's ships, or [] if it does (PeriodRules.errors,
 ## FT-SIM-035, D124).
-static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[String]:
+static func period_errors(map_period: float, ship_defs: Array[ShipDef]) -> Array[String]:
 	var longest: float = 0.0
-	for def: ShipDef in ships:
+	for def: ShipDef in ship_defs:
 		longest = maxf(longest, def.sensor_range)
-	return PeriodRules.errors(site_period, longest)
+	return PeriodRules.errors(map_period, longest)
 
 
 ## Every state container, in hash order (FT-ARC-012: each is keyed by ship and faction).
@@ -154,7 +154,7 @@ func tables() -> Array[SimTable]:
 		damage,
 		knowledge,
 		ai,
-		run,
+		ships,
 		science,
 		hacks,
 		relay,
@@ -261,7 +261,7 @@ func is_crew(ship_id: int) -> bool:
 
 ## Whether the ship is crewed and still in the run.
 func is_crew_in_play(ship_id: int) -> bool:
-	return is_crew(ship_id) and run.status[ship_id] == RunTable.Status.IN_PLAY
+	return is_crew(ship_id) and ships.status[ship_id] == ShipStateTable.Status.IN_PLAY
 
 
 func set_relation(a: int, b: int, relation: Relation) -> void:

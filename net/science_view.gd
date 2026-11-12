@@ -5,18 +5,18 @@ extends RefCounted
 ## faction's knowledge. Pure reads; the field set is in StationViews.
 ##
 ## Client API for the minigames (the panels use it):
-## - Scan: when `session` is 1, `wire` is the wireframe the player turns, `cloud` the
+## - Scan: when `minigame` is 1, `wire` is the wireframe the player turns, `cloud` the
 ##   point cloud to match, `axes` the open rotation axes (bit 0 x, 1 y, 2 z). The player
 ##   sets an angle per open axis; the pose is Basis.from_euler(Vector3(ax, ay, az)) with
 ##   the closed axes at 0. The client sends `science_scan_submit` {ax, ay, az}; the
 ##   result arrives as the `scan_done` event (value confidence, vector.x match quality).
-## - Hack: when `session` is 2, nodes are numbered row * hack_cols + col; `known` is the
+## - Hack: when `minigame` is 2, nodes are numbered row * hack_cols + col; `known` is the
 ##   bit mask of visible nodes, `edges[n].mask` the edge bits of node n (RIGHT 1, DOWN 2,
 ##   LEFT 4, UP 8; 0 for a node not yet known); `hack_node` is where the route is,
 ##   `hack_goal` the chosen subsystem's node, `trace` the bar (0..1). The client sends
 ##   `science_hack_move` {node} for an adjacent node; `hack_done` or `hack_traced`
 ##   ends it. Unknown nodes can still be stepped onto along a known node's edge.
-## - The open session started on tick `session_start`; its age is the snapshot tick
+## - The open minigame started on tick `minigame_start`; its age is the snapshot tick
 ##   minus that.
 
 ## Most card rows (the wire format counts rows in a byte).
@@ -33,7 +33,7 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 	out["self_scanned"] = t.self_scanned[ship] >= 0
 	_preview(out, t.preview[ship])
 	if world.science_def != null:
-		_session(out, world, ship)
+		_minigame(out, world, ship)
 		out["cards"] = _cards(world, ship)
 		out["hacks"] = hacks(world, world.faction_of(ship))
 	return out
@@ -51,11 +51,11 @@ static func _empty() -> Dictionary:
 		"noise_health": 0.0,
 		"noise_flags": 0,
 		"self_scanned": false,
-		"session": 0,
-		"session_target": -1,
-		"session_noise": 0.0,
-		"session_start": 0,
-		"session_probe": false,
+		"minigame": 0,
+		"minigame_target": -1,
+		"minigame_noise": 0.0,
+		"minigame_start": 0,
+		"minigame_probe": false,
 		"axes": 0,
 		"wire": [],
 		"cloud": [],
@@ -87,24 +87,24 @@ static func _preview(out: Dictionary, parts: Dictionary) -> void:
 	)
 
 
-static func _session(out: Dictionary, world: SimWorld, ship: int) -> void:
+static func _minigame(out: Dictionary, world: SimWorld, ship: int) -> void:
 	var t: ScienceTable = world.science
 	var def: ScienceDef = world.science_def
 	var kind: int = t.kind[ship]
-	out["session"] = kind
-	if kind == ScienceTable.Session.NONE:
+	out["minigame"] = kind
+	if kind == ScienceTable.Minigame.NONE:
 		return
-	out["session_target"] = t.target[ship]
-	out["session_noise"] = t.noise[ship]
-	out["session_start"] = t.start_tick[ship]
-	out["session_probe"] = t.probe[ship] == 1
-	if kind == ScienceTable.Session.SCAN:
+	out["minigame_target"] = t.target[ship]
+	out["minigame_noise"] = t.noise[ship]
+	out["minigame_start"] = t.start_tick[ship]
+	out["minigame_probe"] = t.probe[ship] == 1
+	if kind == ScienceTable.Minigame.SCAN:
 		out["axes"] = t.axes[ship]
 		out["wire"] = _points(ScanPuzzle.wire(def, t.puzzle_seed[ship]))
 		out["cloud"] = _points(
 			ScanPuzzle.cloud(def, t.puzzle_seed[ship], t.noise[ship], t.axes[ship])
 		)
-	elif kind == ScienceTable.Session.HACK:
+	elif kind == ScienceTable.Minigame.HACK:
 		var goal: int = HackPuzzle.goal(def, t.subsystem[ship])
 		var edges: PackedByteArray = HackPuzzle.edges(def, t.puzzle_seed[ship], goal)
 		var known: int = t.known[ship]

@@ -29,8 +29,8 @@ func _crew(server: NetServer) -> Dictionary:
 func _run(server: NetServer, ticks: int = 1) -> void:
 	for i: int in ticks:
 		server.world.step()
-		server.session.after_ticks(server.world.drain_events())
-		server.session.coop.step()
+		server.game.after_ticks(server.world.drain_events())
+		server.game.coop.step()
 
 
 func _do(server: NetServer, c: SimCommand, ticks: int = 1) -> void:
@@ -60,7 +60,7 @@ func _lanes(c: NetClient) -> Array:
 func test_comms_shortcuts_are_shared_by_a_press() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
 	var crew: Dictionary = await _crew(server)
-	var coop: NetCoop = server.session.coop
+	var coop: NetCoop = server.game.coop
 	var shared: Callable = func(pair: String) -> bool:
 		return coop.count_of(pair, CoopEvents.SHORTCUT_SHARED) == 1
 	crew["comms"].share("lanes")
@@ -74,7 +74,7 @@ func test_comms_shortcuts_are_shared_by_a_press() -> void:
 	for feature: StringName in [
 		ViewFilter.LANES, ViewFilter.CONTRACT_FLAGS, ViewFilter.VERIFY_CHIP, ViewFilter.MISSION_ICON
 	]:
-		assert_bool(server.session.shares.active(PLAYER, feature)).is_true()
+		assert_bool(server.game.shares.active(PLAYER, feature)).is_true()
 	var from: int = h.mark(crew["helm"])
 	crew["helm"].share("lanes")
 	assert_str(await _rejection(crew["helm"], from)).is_equal(NetShares.NOT_SOURCE)
@@ -82,7 +82,7 @@ func test_comms_shortcuts_are_shared_by_a_press() -> void:
 	from = h.mark(approach)
 	approach.share("lanes")
 	assert_str(await _rejection(approach, from)).is_equal(NetShares.SAME_SCREEN)
-	server.session.lobby.toggles = DataToggles.of_preset("hard")
+	server.game.lobby.toggles = DataToggles.of_preset("hard")
 	from = h.mark(crew["comms"])
 	crew["comms"].share("lanes")
 	assert_str(await _rejection(crew["comms"], from)).is_equal(NetShares.OFF)
@@ -147,7 +147,7 @@ func test_a_relay_mark_on_a_missions_contact_marks_the_mission() -> void:
 	await h.next_event(crew["relay"], NetProtocol.EVENT_MARKS, from)
 	_run(server, 2)
 	assert_bool(StoryRules.is_marked(w, 0)).is_true()
-	assert_int(server.session.coop.count_of("p15", CoopEvents.MARK_USED)).is_equal(1)
+	assert_int(server.game.coop.count_of("p15", CoopEvents.MARK_USED)).is_equal(1)
 
 
 # FT: FT-PAIR-013
@@ -159,7 +159,7 @@ func test_comms_pair_events_are_counted() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
 	await _crew(server)
 	var w: SimWorld = StoryFixture.wire(server.world)
-	var coop: NetCoop = server.session.coop
+	var coop: NetCoop = server.game.coop
 	_run(server, 3)
 	var hail: HailCommand = HailCommand.new()
 	hail.target = ENEMY
@@ -174,7 +174,7 @@ func test_comms_pair_events_are_counted() -> void:
 	w.emit(&"dock_cleared", PLAYER, 0)
 	w.emit(&"mission_marked", PLAYER, 0)
 	w.emit(&"surrender_killed", PLAYER, ENEMY, -11.0, Vector3.ZERO, &"debrief.surrender_killed")
-	server.session.after_ticks(w.drain_events())
+	server.game.after_ticks(w.drain_events())
 	assert_int(coop.count_of("p5", CoopEvents.MARK_USED)).is_equal(1)
 	assert_int(coop.count_of("p15", CoopEvents.MARK_USED)).is_equal(1)
 	assert_int(coop.count_of("p9", CoopEvents.SURRENDER_KILLED)).is_equal(1)
@@ -187,16 +187,16 @@ func test_comms_pair_events_are_counted() -> void:
 func test_comms_pairs_need_two_players() -> void:
 	var server: NetServer = h.server(true, 10.0, SECRET)
 	var w: SimWorld = StoryFixture.wire(server.world)
-	var coop: NetCoop = server.session.coop
+	var coop: NetCoop = server.game.coop
 	await h.joined(server, "all", "all")
 	w.emit(&"mission_marked", PLAYER, 0)
 	w.emit(&"dock_cleared", PLAYER, 0)
-	server.session.after_ticks(w.drain_events())
+	server.game.after_ticks(w.drain_events())
 	assert_int(coop.count_of("p15", CoopEvents.MARK_USED)).is_equal(0)
 	assert_int(coop.count_of("p5", CoopEvents.MARK_USED)).is_equal(0)
 	await h.joined(server, "ops", "ops")
 	w.emit(&"mission_marked", PLAYER, 0)
 	w.emit(&"dock_cleared", PLAYER, 0)
-	server.session.after_ticks(w.drain_events())
+	server.game.after_ticks(w.drain_events())
 	assert_int(coop.count_of("p15", CoopEvents.MARK_USED)).is_equal(1)
 	assert_int(coop.count_of("p5", CoopEvents.MARK_USED)).is_equal(1)

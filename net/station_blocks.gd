@@ -78,8 +78,8 @@ static func _status(world: SimWorld, ship: int) -> Dictionary:
 		pips += world.damage.pips[r]
 	return {
 		"alive": world.kin.is_alive(ship),
-		"status": world.run.status[ship],
-		"outcome": world.run.outcome[ship],
+		"status": world.ships.status[ship],
+		"outcome": world.ships.ship_outcome[ship],
 		"hull": world.damage.health[hull_row],
 		"shields": world.shields.strength[ship],
 		"pips_used": pips,

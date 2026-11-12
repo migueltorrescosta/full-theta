@@ -9,12 +9,12 @@ extends RefCounted
 
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
-## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
+## &"ship_outcome" (the outcome card and its "Run again" votes, D178), and from Relay's events
 ## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view";
 ## &"toggles" when the session's data-shortcut set changed, &"shares" when a
 ## shortcut was shared or ran out, &"lanes" when the approach lanes changed (F); and from
 ## the multi-ship events (#11) &"fleet", &"scoreboard", &"eliminated", &"relaunch" (votes
-## or a relaunch), &"handover" and &"session_over".
+## or a relaunch), &"handover" and &"game_over".
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -62,10 +62,10 @@ var host_paused: bool = false
 var votes: Dictionary = {}
 ## ship -> "vote" | "host".
 var abandoned: Dictionary = {}
-## ship -> `run_over` payload {ship, outcome, time_s, hull} plus "voters", "sessions" and
+## ship -> `ship_outcome` payload {ship, outcome, time_s, hull} plus "voters", "sessions" and
 ## "needed" from `run_votes`, from the outcome until the reset (D178).
-var run_over: Dictionary = {}
-## ship -> its debrief record (RunDebrief.for_ship), sent right after `run_over`.
+var ship_outcome: Dictionary = {}
+## ship -> its debrief record (RunDebrief.for_ship), sent right after `ship_outcome`.
 var debrief: Dictionary = {}
 ## item -> {"session": int, "name": String} (claim events; free items erased).
 var claims: Dictionary = {}
@@ -106,7 +106,7 @@ var shares: Dictionary = {}
 ## station (Comms always, the others once Comms shared them).
 var lanes: Array[Dictionary] = []
 
-## Multi-ship sessions (#11, docs/protocol.md "Multi-ship sessions and PvP"). The `fleet`
+## Multi-ship games (#11, docs/protocol.md "Multi-ship games and PvP"). The `fleet`
 ## payload: the lobby's ships, the host's mode and options, the ships still to press Start;
 ## {} until the server sends one (then the catalogue's ships are the lobby).
 var fleet: Dictionary = {}
@@ -119,8 +119,8 @@ var relaunch_votes: Dictionary = {}
 ## This session's latest `handover` {ship (its eliminated ship), to_ship (-1 the
 ## scoreboard)}, {} when it was never handed over or its ship was relaunched.
 var handover: Dictionary = {}
-## The `session_over` payload, {} while the session goes on.
-var session_over: Dictionary = {}
+## The `game_over` payload, {} while the session goes on.
+var game_over: Dictionary = {}
 
 var _filter: ViewFilter = null
 var _filter_key: String = ""
@@ -242,9 +242,9 @@ func can_host_pause() -> bool:
 ## out of play, not crew), else the string key of its label. In PvP it is the give-up
 ## (forfeit) vote, by the same majority (M4-Q10).
 func abandon_control() -> String:
-	if not started.has(ship) or run_over.has(ship) or abandoned.has(ship):
+	if not started.has(ship) or ship_outcome.has(ship) or abandoned.has(ship):
 		return ""
-	if eliminated.has(ship) or not session_over.is_empty():
+	if eliminated.has(ship) or not game_over.is_empty():
 		return ""
 	var kind: String = "abandon" if is_coop() else "forfeit"
 	if host:
@@ -274,10 +274,10 @@ func is_started(id: int = ship) -> bool:
 	return started.has(id) or bool(lobby.get(id, {}).get("started", false))
 
 
-# --- Multi-ship sessions (#11). ---
+# --- Multi-ship games (#11). ---
 
 
-## The host's mode (SessionRules.MODE_NAMES): "coop" until `fleet` says otherwise, or
+## The host's mode (GameRules.MODE_NAMES): "coop" until `fleet` says otherwise, or
 ## "race" for a lobby of several crew factions with no `fleet`.
 func mode() -> String:
 	if fleet.is_empty():
@@ -318,7 +318,7 @@ func team_of(id: int) -> int:
 
 
 ## Whether two ships are on the same side: every ship in co-op, the same team in TEAMS and
-## HOLDOUT, only itself in RACE and LAST_STANDING (SessionRules.faction_for).
+## HOLDOUT, only itself in RACE and LAST_STANDING (GameRules.faction_for).
 func allied(a: int, b: int) -> bool:
 	if a == b or is_coop():
 		return true
@@ -370,7 +370,7 @@ func home_ship() -> int:
 func on_scoreboard() -> bool:
 	if not handover.is_empty() and int(handover.get("to_ship", 0)) == FleetMessages.TO_SCOREBOARD:
 		return true
-	return is_pvp() and not session_over.is_empty()
+	return is_pvp() and not game_over.is_empty()
 
 
 ## Relaunches left for the home ship's side after its elimination (-1 unlimited), 0 for
@@ -381,7 +381,7 @@ func lives_left() -> int:
 
 ## Whether this session may vote to relaunch its eliminated ship (M4-Q2).
 func can_relaunch() -> bool:
-	return eliminated.has(home_ship()) and lives_left() != 0 and session_over.is_empty()
+	return eliminated.has(home_ship()) and lives_left() != 0 and game_over.is_empty()
 
 
 ## Whether this session's relaunch vote for its home ship stands.
@@ -430,10 +430,10 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 		NetProtocol.EVENT_ABANDONED:
 			abandoned[int(p["ship"])] = str(p.get("by", ""))
 			changed.emit(&"abandoned")
-		NetProtocol.EVENT_RUN_OVER, NetProtocol.EVENT_RUN_VOTES:
-			var card: Dictionary = run_over.get_or_add(int(p["ship"]), {})
+		NetProtocol.EVENT_SHIP_OUTCOME, NetProtocol.EVENT_RUN_VOTES:
+			var card: Dictionary = ship_outcome.get_or_add(int(p["ship"]), {})
 			card.merge(p, true)
-			changed.emit(&"run_over")
+			changed.emit(&"ship_outcome")
 		NetProtocol.EVENT_DEBRIEF:
 			debrief[int(p["ship"])] = p
 			changed.emit(&"debrief")
@@ -478,9 +478,9 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_fleet_event(str(e["type"]), p)
 		NetProtocol.EVENT_RELAUNCH_VOTES, NetProtocol.EVENT_RELAUNCHED, NetProtocol.EVENT_HANDOVER:
 			_on_fleet_event(str(e["type"]), p)
-		NetProtocol.EVENT_SESSION_OVER:
-			session_over = p
-			changed.emit(&"session_over")
+		NetProtocol.EVENT_GAME_OVER:
+			game_over = p
+			changed.emit(&"game_over")
 		NetProtocol.EVENT_TAKEOVER:
 			_on_takeover(p)
 		NetProtocol.EVENT_REQUEST_REJECTED, NetProtocol.EVENT_COMMAND_REJECTED:
@@ -594,7 +594,7 @@ func reset_run() -> void:
 	alert_by = ""
 	started.erase(ship)
 	abandoned.erase(ship)
-	run_over.erase(ship)
+	ship_outcome.erase(ship)
 	debrief.erase(ship)
 	changed.emit(&"reset")
 

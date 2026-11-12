@@ -13,7 +13,7 @@ const NEUTRAL: int = 3
 # knowledge: ship 1 is refused on a contact only its rival knows. The mark is ship 0's own:
 # ship 1's mark stays empty.
 func test_rivals_use_only_their_own_knowledge_and_marks() -> void:
-	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.RACE, 2)
+	var f: FleetFixture = FleetFixture.make(GameRules.Mode.RACE, 2)
 	var w: SimWorld = f.world
 	var mine: int = w.faction_of(0)
 	var rival: int = w.faction_of(1)

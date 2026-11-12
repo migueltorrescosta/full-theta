@@ -3,13 +3,13 @@ extends SimTable
 ## Science state, one row per ship keyed by ship id and faction (E01, FT-SCI-003,
 ## FT-SCI-004 to FT-SCI-011): the sensor mode and active ping, the selected contact, the
 ## scan point (the sim's copy of the crew-state scan position, FT-SCI-010), the one open
-## minigame session and the own-ship scan. What each faction has learned of a contact is
-## in KnowledgeTable.scan_conf; hack windows on the target are in HackTable. A session
+## minigame and the own-ship scan. What each faction has learned of a contact is
+## in KnowledgeTable.scan_conf; hack windows on the target are in HackTable. A minigame
 ## stores only its puzzle_seed and numbers: the puzzle is regenerated from them (ScanPuzzle,
 ## HackPuzzle), so state stays small and replays reproduce it.
 
-## What the ship's open session is.
-enum Session { NONE, SCAN, HACK, SELF }
+## What the ship's open minigame is.
+enum Minigame { NONE, SCAN, HACK, SELF }
 
 ## scan_x while the ship has no scan point.
 const NO_POINT: float = INF
@@ -29,15 +29,15 @@ var selected: PackedInt32Array = PackedInt32Array()
 var scan_x: PackedFloat64Array = PackedFloat64Array()
 var scan_y: PackedFloat64Array = PackedFloat64Array()
 var scan_z: PackedFloat64Array = PackedFloat64Array()
-## Session kind (enum Session).
+## Minigame kind (enum Minigame).
 var kind: PackedByteArray = PackedByteArray()
-## Ship id of the session's contact (or -1).
+## Ship id of the minigame's contact (or -1).
 var target: PackedInt32Array = PackedInt32Array()
-## Seed the session's puzzle is generated from.
+## Seed the minigame's puzzle is generated from.
 var puzzle_seed: PackedInt64Array = PackedInt64Array()
-## Scan noise at the start of the session (0..1).
+## Scan noise at the start of the minigame (0..1).
 var noise: PackedFloat64Array = PackedFloat64Array()
-## Tick the session started on.
+## Tick the minigame started on.
 var start_tick: PackedInt32Array = PackedInt32Array()
 ## Hack: index of the chosen subsystem in the contact's ShipDef.subsystems.
 var subsystem: PackedInt32Array = PackedInt32Array()
@@ -68,7 +68,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	scan_x.append(NO_POINT)
 	scan_y.append(0.0)
 	scan_z.append(0.0)
-	kind.append(Session.NONE)
+	kind.append(Minigame.NONE)
 	target.append(-1)
 	puzzle_seed.append(0)
 	noise.append(0.0)
@@ -96,9 +96,9 @@ func set_scan_point(ship: int, at: PackedFloat64Array) -> void:
 	scan_z[ship] = 0.0 if none else at[2]
 
 
-## Closes the ship's session.
-func clear_session(ship: int) -> void:
-	kind[ship] = Session.NONE
+## Closes the ship's minigame.
+func clear_minigame(ship: int) -> void:
+	kind[ship] = Minigame.NONE
 	target[ship] = -1
 	subsystem[ship] = -1
 	axes[ship] = 0

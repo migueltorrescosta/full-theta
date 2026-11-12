@@ -49,7 +49,7 @@ Upgrades bought during a run create distinct ship builds (v0.3 §7). Upgrades ar
 - **FT-MIS-020** Comms shall show the range of a reputation change where the data marks it visible. (D34, D248)
 - **FT-MIS-021** Players shall earn credits, salvage, repairs and upgrades during a run. (v0.3 §7)
 - **FT-MIS-022** Upgrades shall create distinct ship builds. (v0.3 §7)
-- **FT-MIS-023** In multi-ship sessions, director, balance and run-reset rules shall be keyed per faction: one fleet director per crew faction in co-op, and per side in PvP. (D21, D258)
+- **FT-MIS-023** In multi-ship games, director, balance and run-reset rules shall be keyed per faction: one fleet director per crew faction in co-op, and per side in PvP. (D21, D258)
 - **FT-MIS-024** Each scenario shall take place on a single global open 3D map, with no per-encounter maps and no sector map. (D29, D77)
 - **FT-MIS-025** An encounter shall be a self-contained situation with its own triggers and outcome, placed or activated by the director at a site on the map; it starts when the ship arrives at the site or after a data-defined timeout, with one active encounter per ship. (D77, D231, D250, D393)
 - **FT-MIS-026** Ships shall move between named sites, points on the map, by impulse flight and by the jump drive (FT-SIM-034, FT-SIM-035, §6). (D29, D77, D229, D393)

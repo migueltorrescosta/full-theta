@@ -1,4 +1,4 @@
-class_name CloseRunCommand
+class_name FinishShipCommand
 extends ServerCommand
 ## The director closes a crewed ship's run (Q4, owner 2026-10-26): it has played enough
 ## encounters and nothing more fits its budget, or the most the run allows. The ship wins
@@ -12,7 +12,7 @@ var ship: int = -1
 
 
 func kind() -> StringName:
-	return &"close_run"
+	return &"finish_ship"
 
 
 func apply(world: SimWorld) -> bool:
@@ -20,10 +20,10 @@ func apply(world: SimWorld) -> bool:
 		return false
 	if not world.is_crew_in_play(ship):
 		return false
-	if world.run.closed[ship] == 1:
+	if world.ships.closed[ship] == 1:
 		return false
-	if world.run.encounters_done[ship] < world.run_def.min_encounters:
+	if world.ships.encounters_done[ship] < world.run_def.min_encounters:
 		return false
-	world.run.closed[ship] = 1
-	world.emit(&"run_closed", ship, -1, world.run.encounters_done[ship])
+	world.ships.closed[ship] = 1
+	world.emit(&"run_closed", ship, -1, world.ships.encounters_done[ship])
 	return true

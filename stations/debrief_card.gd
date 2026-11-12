@@ -4,10 +4,10 @@ extends PanelContainer
 ## from the OutcomeCard: the encounters with ship losses and fled encounters told apart, the
 ## director's decisions with their reasons, when each station first used each core action,
 ## and the cooperative events per pair. The record is RunDebrief.for_ship, sent with
-## `run_over`; text() turns it into the lines shown, in the session language.
+## `ship_outcome`; text() turns it into the lines shown, in the session language.
 
 const MIN_SIZE: Vector2 = Vector2(720.0, 420.0)
-## Director decisions shown at most; the session log holds all of them.
+## Director decisions shown at most; the server log holds all of them.
 const MAX_DECISIONS: int = 24
 ## The sim's ticks per second (SimRate, G8).
 const TICKS_PER_S: float = SimRate.HZ * 1.0

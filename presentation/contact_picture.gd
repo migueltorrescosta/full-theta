@@ -20,7 +20,7 @@ var site: Dictionary = {}
 ## "allegiance" "", "world", "local", "pulse"} plus "radius" and "dockable"): selectable
 ## like contacts (FT-SPA-015) but kept out of `items`, which the radars draw.
 var sites: Array[Dictionary] = []
-## The interpolator the picture was built from: own position and rotation, site period.
+## The interpolator the picture was built from: own position and rotation, map period.
 ## A fresh one (identity rotation, no wrap) for pictures built by hand.
 var interp: SnapshotInterpolator = SnapshotInterpolator.new()
 

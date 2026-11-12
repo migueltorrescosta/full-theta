@@ -144,7 +144,7 @@ func test_token_resumes_same_session_within_grace() -> void:
 
 # FT: FT-NET-033, FT-NET-026
 # The grace runs on the caller's wall clock: the session lapses once, when it ends, and
-# its token still resumes it afterwards (ServerSession then restores what is free).
+# its token still resumes it afterwards (NetGame then restores what is free).
 func test_session_lapses_after_grace_and_token_still_resumes() -> void:
 	var sessions: NetSessions = NetSessions.new(10_000_000)
 	var s: NetSession = _session()

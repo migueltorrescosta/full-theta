@@ -9,7 +9,7 @@ extends Control
 ## connection with its token
 ## (FT-NET-025) and goes back to the lobby when the server resets the run (FT-M1-012).
 ##
-## Multi-ship sessions (#11): a session handed over to the scoreboard (no friendly ship
+## Multi-ship games (#11): a session handed over to the scoreboard (no friendly ship
 ## left, D91) or in a PvP session that is over shows the ScoreboardScreen; a handover to a
 ## friendly ship's main screen shows the HandoverNotice over it; the give-up (forfeit) and
 ## relaunch votes show as VotePrompts; the menu confirms the host's abandon or give-up in
@@ -23,7 +23,7 @@ extends Control
 ## its first frame. A resume with the same pick keeps the
 ## screen. While the lobby shows, the pick's panel scripts load (one a frame), then the
 ## baked ships of the lobby's ships (ProceduralShip.scene). Frames over LONG_FRAME_US go
-## to the server's session log with what was running (NetClient.report_frame).
+## to the server log with what was running (NetClient.report_frame).
 
 ## The player left (Settings > Leave); the menu takes over again.
 signal left
@@ -37,7 +37,7 @@ const SCREEN_KINDS: Array[StringName] = [
 	&"catalogue",
 	&"fleet",
 	&"handover",
-	&"session_over",
+	&"game_over",
 	&"relaunch",
 ]
 ## Station screens kept at most; the dev seat's holds all six panels.
@@ -50,7 +50,7 @@ const TIPS_VIEW: String = "res://presentation/tips_view.gd"
 var ctx: StationContext = StationContext.new()
 var voice: VoicePlayer
 ## Effects, button taps and the ambient music (#12).
-var sound: SessionSound
+var sound: ShellSound
 var lobby: LobbyScreen
 var screen: StationScreen
 var pause_overlay: PauseOverlay
@@ -117,7 +117,7 @@ func setup(
 	add_child(voice)
 	voice.subtitle.connect(func(_entry: Dictionary) -> void: _show_subtitles())
 	voice.subtitle.connect(_note_training)
-	sound = SessionSound.new()
+	sound = ShellSound.new()
 	add_child(sound)
 	sound.setup(ctx)
 	sound.stations_of = func() -> Array: return screen.stations if screen != null else []

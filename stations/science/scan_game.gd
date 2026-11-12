@@ -49,9 +49,9 @@ var _start: int = -1
 var _view: Basis = Basis.from_euler(Vector3(VIEW_PITCH, VIEW_YAW, 0.0))
 
 
-## Loads a SCIENCE section block that has a scan open (session 1).
+## Loads a SCIENCE section block that has a scan open (minigame 1).
 func load_block(block: Dictionary) -> void:
-	var start: int = int(block.get("session_start", 0))
+	var start: int = int(block.get("minigame_start", 0))
 	var fresh: bool = start != _start
 	_start = start
 	wire = _points(block.get("wire", []))

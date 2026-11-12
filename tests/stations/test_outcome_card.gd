@@ -33,7 +33,7 @@ func _card(entry: String, host: bool = false) -> OutcomeCard:
 
 func _over(o: OutcomeCard, outcome: String) -> void:
 	var p: Dictionary = {"ship": 0, "outcome": outcome, "time_s": 222.5, "hull": 0.637}
-	o.ctx.crew.handle_event({"type": "run_over", "payload": p}, 0)
+	o.ctx.crew.handle_event({"type": "ship_outcome", "payload": p}, 0)
 	var votes: Dictionary = {"ship": 0, "voters": [], "needed": 2}
 	o.ctx.crew.handle_event({"type": "run_votes", "payload": votes}, 0)
 
@@ -92,10 +92,10 @@ func test_the_card_says_why_you_won_or_lost() -> void:
 	_over(o, "win")
 	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_win"))
 	var lost: Dictionary = {"ship": 0, "outcome": "loss", "time_s": 90.0, "hull": 0.0}
-	o.ctx.crew.handle_event({"type": "run_over", "payload": lost}, 0)
+	o.ctx.crew.handle_event({"type": "ship_outcome", "payload": lost}, 0)
 	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_destroyed"))
 	lost["hull"] = 0.4  # a loss with hull left: the crew gave up
-	o.ctx.crew.handle_event({"type": "run_over", "payload": lost}, 0)
+	o.ctx.crew.handle_event({"type": "ship_outcome", "payload": lost}, 0)
 	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_gave_up"))
 
 
@@ -162,7 +162,7 @@ func test_shell_runs_again_after_a_win() -> void:
 	var vote: Callable = func() -> bool:
 		return (
 			shell.outcome_card.find_child("Vote", true, false) != null
-			and str(crew.run_over.get(NetHarness.PLAYER, {}).get("needed", 0)) == "1"
+			and str(crew.ship_outcome.get(NetHarness.PLAYER, {}).get("needed", 0)) == "1"
 		)
 	assert_bool(await _until(vote)).is_true()
 	(shell.outcome_card.find_child("Vote", true, false) as Button).pressed.emit()

@@ -38,7 +38,7 @@ static func verdict(h: NetHarness, server: NetServer, c: NetClient, cmd: Diction
 			if e["type"] == NetProtocol.EVENT_COMMAND_REJECTED and e["payload"]["seq"] == seq:
 				reason.append(e["payload"]["reason"])
 				return true
-		return server.world.tick > tick + 6 and server.session._pending.is_empty()
+		return server.world.tick > tick + 6 and server.game._pending.is_empty()
 	await h.until(done)
 	await h.wait(100)
 	done.call()

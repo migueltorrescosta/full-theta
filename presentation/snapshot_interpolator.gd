@@ -32,7 +32,7 @@ var tick_hz: float = TICK_HZ
 var delay_ticks: float = DELAY_TICKS
 ## The tick being rendered (fractional).
 var render_tick: float = -1.0
-## Site period in position units (NetViewState.p_units).
+## Map period in position units (NetViewState.p_units).
 var p_units: int = 0
 ## Bumped whenever the interpolated state is re-evaluated (StationContext.picture()).
 var revision: int = 0
