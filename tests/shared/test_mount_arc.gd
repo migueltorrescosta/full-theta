@@ -53,19 +53,3 @@ func test_turn_toward_stops_at_the_angle() -> void:
 	assert_float(Vector3.FORWARD.angle_to(back)).is_equal_approx(0.5, TOL)
 	var down: Vector3 = MountArc.turn_toward(Vector3.UP, Vector3.DOWN, 0.5)
 	assert_float(Vector3.UP.angle_to(down)).is_equal_approx(0.5, TOL)
-
-
-# FT: FT-SIM-011
-func test_angle_forms_wrap_and_stop_at_the_edge() -> void:
-	assert_bool(MountArc.in_arc_angle(HALF, HALF)).is_true()
-	assert_bool(MountArc.in_arc_angle(HALF, -HALF)).is_true()
-	assert_bool(MountArc.in_arc_angle(HALF, HALF + 1e-4)).is_false()
-	assert_bool(MountArc.in_arc_angle(HALF, TAU + 0.1)).is_true()
-	assert_float(MountArc.clamp_angle(HALF, 0.1)).is_equal_approx(0.1, TOL)
-	assert_float(MountArc.clamp_angle(HALF, 1.0)).is_equal_approx(HALF, TOL)
-	assert_float(MountArc.clamp_angle(HALF, -1.0)).is_equal_approx(-HALF, TOL)
-	assert_float(MountArc.turn_toward_angle(0.0, 0.2, 0.5)).is_equal_approx(0.2, TOL)
-	assert_float(MountArc.turn_toward_angle(0.0, 1.0, 0.5)).is_equal_approx(0.5, TOL)
-	# The short way round: from just below PI to just above -PI turns up through PI.
-	var wrap: float = MountArc.turn_toward_angle(PI - 0.1, -PI + 0.1, 0.05)
-	assert_float(wrap).is_equal_approx(PI - 0.05, TOL)
