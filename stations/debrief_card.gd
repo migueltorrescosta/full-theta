@@ -1,9 +1,9 @@
 class_name DebriefCard
 extends PanelContainer
 ## The end-of-run debrief (FT-MIS-006, FT-MIS-010, FT-MIS-038, FT-PAIR-013, D35), the end
-## card's Details (OutcomeCard, ux-20): the encounters with ship losses and fled encounters told apart, the
-## director's decisions with their reasons, when each station first used each core action,
-## and the cooperative events per pair. The record is RunDebrief.for_ship, sent with
+## card's Details (OutcomeCard, ux-20): the encounters with ship losses and fled encounters
+## told apart, the director's decisions with their reasons, when each station first used each
+## core action, and the cooperative events per pair. The record is RunDebrief.for_ship, sent with
 ## `ship_outcome`; text() turns it into the lines shown, in the session language.
 
 const MIN_SIZE: Vector2 = Vector2(720.0, 420.0)
