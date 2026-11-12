@@ -6,8 +6,9 @@ extends RefCounted
 ## controls' words are WeaponsStatus's.
 
 
-## One line per mount (FT-WPN-004): number, id, state, heat, ammo, claimer; the camera
-## mount marked.
+## One line per mount (FT-WPN-004): number, id, state, heat, ammo, and who holds it (free,
+## or the holder's name); a mount this client holds ends there: the overlay draws a "You" chip
+## after it (mine_chip), and a highlight bar behind the camera mount's row (R22-16).
 static func mount_rows(p: WeaponsPanel) -> Array[String]:
 	var out: Array[String] = []
 	for i: int in p.mount_count():
@@ -16,29 +17,28 @@ static func mount_rows(p: WeaponsPanel) -> Array[String]:
 		var w: WeaponDef = p.weapon_of(i)
 		var ammo: int = int(row.get("ammo", w.ammo_capacity))
 		var ammo_text: String = "∞" if ammo < 0 else "%d/%d" % [ammo, w.ammo_capacity]
-		var who: String = p.tr("weapons.free")
-		if p.is_mine(i):
-			who = p.tr("weapons.you")
-		elif not p.holder(i).is_empty():
-			who = p.holder_name(i)
-		(
-			out
-			. append(
-				(
-					"%s%d %s · %s · %s · %s · %s"
-					% [
-						"> " if i == p.mount else "  ",
-						i + 1,
-						m.id,
-						p.tr("weapons." + mount_state(p, i)),
-						p.tr("weapons.heat") % roundi(WeaponsStatus.heat_share(p, i) * 100.0),
-						ammo_text,
-						who,
-					]
-				)
-			)
+		var line: String = (
+			"%d %s · %s · %s · %s"
+			% [
+				i + 1,
+				m.id,
+				p.tr("weapons." + mount_state(p, i)),
+				p.tr("weapons.heat") % roundi(WeaponsStatus.heat_share(p, i) * 100.0),
+				ammo_text,
+			]
 		)
+		if not p.is_mine(i):
+			var who: String = p.tr("weapons.free")
+			if not p.holder(i).is_empty():
+				who = p.holder_name(i)
+			line += " · " + who
+		out.append(line)
 	return out
+
+
+## The chip after a mount row this client holds: "You".
+static func mine_chip(p: WeaponsPanel) -> String:
+	return p.tr("weapons.you").capitalize()
 
 
 ## Mount i's state word key: no_data, empty, locked, hot, reloading or ready.

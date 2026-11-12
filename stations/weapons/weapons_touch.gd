@@ -152,6 +152,9 @@ func read_top(overlay: Control) -> float:
 ## Texts, states and places from the panel, once a frame.
 func refresh() -> void:
 	var p: WeaponsPanel = _panel
+	# Upright the mount card stays under the thumb except on Mounts, whose list has the same
+	# card (w-dcc).
+	mount_button.visible = layout != null or pages.current != Page.MOUNTS
 	mount_button.text = WeaponsStatus.mount_text(p, p.mount)
 	_heat_colour(mount_button, WeaponsStatus.heat_role(p, p.mount))
 	# Claim only while another player sits at Weapons too (C3).
@@ -255,6 +258,8 @@ func _make_buttons() -> void:
 	ammo_button.pressed.connect(_panel.touch_press.bind("ammo_next"))
 	guided_button = RailButton.make(TouchText.of("weapons.touch_guided", "Fire at mark"))
 	guided_button.name = "Guided"
+	guided_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	guided_button.clip_text = false
 	guided_button.pressed.connect(_panel.touch_press.bind("fire_guided"))
 	fire_all_button = RailButton.make(TouchText.of("weapons.touch_fire_all", "Fire all"))
 	fire_all_button.name = "FireAll"

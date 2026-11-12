@@ -165,40 +165,19 @@ func test_weapons_keeps_its_rail_radar_in_a_joint_view() -> void:
 		_drop(s)
 
 
-# FT: FT-STN-002, FT-SPA-007, FT-STN-005
-# The phone's 180 px disc and Weapons' rail radar keep every chip inside: a chip that would
-# cross the edge moves to the blip's other side, drops its range band and then its clock
-# until it fits beside the blip; only a callsign alone may slide over it.
-func test_small_radar_keeps_chips_inside() -> void:
-	var cases: Array = [
-		[Vector2i(844, 390), "engineering", LANDSCAPE],
-		[Vector2i(390, 844), "engineering", PORTRAIT],
-		[Vector2i(844, 390), "weapons", LANDSCAPE],
-	]
-	for c: Array in cases:
-		var s: StationScreen = await _screen(c[0], c[1], c[2])
-		var r: DiscRadar = s.radar
-		if c[1] == "weapons":
-			r = (s.focused_panel() as WeaponsPanel).touch().radar
-		assert_float(r.size.x).is_less_equal(StationScreen.PHONE_RADAR + 1.0)
-		var view: Rect2 = Rect2(Vector2.ZERO, r.size)
-		var chips: int = 0
-		for e: Dictionary in r._layout():
-			if e["callout"] == "":
-				continue
-			chips += 1
-			var box: Rect2 = e["callout_rect"]
-			var what: String = "%s %s at %s" % [c[1], e["callout"], box]
-			assert_bool(view.encloses(box)).override_failure_message(what).is_true()
-			if (e["callout"] as String).contains(CalloutText.SEP):
-				var x: float = (e["pos"] as Vector2).x
-				(
-					assert_bool(box.position.x > x or box.end.x < x)
-					. override_failure_message(what + " covers its blip")
-					. is_true()
-				)
-		assert_int(chips).override_failure_message(str(c)).is_greater(2)
-		_drop(s)
+# FT: FT-STN-002, FT-WPN-002
+# R08-7: the chip rules of a small radar (inside it, near and clear of its blip, of the clock
+# numbers and of each other) live in test_hud_rules, for every radar a layout shows; here only
+# that Weapons' phone inset still has room for its chips.
+func test_small_radar_keeps_its_chips() -> void:
+	var s: StationScreen = await _screen(Vector2i(844, 390), "weapons", LANDSCAPE)
+	var r: DiscRadar = (s.focused_panel() as WeaponsPanel).touch().radar
+	assert_bool(r.small()).is_true()
+	var chips: int = 0
+	for e: Dictionary in r._layout():
+		chips += 1 if e["callout"] != "" else 0
+	assert_int(chips).is_greater(2)
+	_drop(s)
 
 
 # FT: FT-ENG-002, FT-ENG-003, FT-STN-005

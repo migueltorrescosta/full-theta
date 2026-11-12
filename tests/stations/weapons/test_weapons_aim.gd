@@ -69,9 +69,7 @@ func test_aim_stops_at_the_arc_edge() -> void:
 func test_readout_mount_list_and_state() -> void:
 	var p: WeaponsPanel = _panel()
 	assert_str(WeaponsReadout.mount_state(p, 0)).is_equal("ready")
-	assert_array(WeaponsReadout.mount_rows(p)).is_equal(
-		["> 1 bow · ready · heat 15% · 380/400 · you"]
-	)
+	assert_array(WeaponsReadout.mount_rows(p)).is_equal(["1 bow · ready · heat 15% · 380/400"])
 	p.ctx.snap.blocks[StationCatalogue.Section.MOUNTS]["mounts"][0]["ammo"] = 0
 	assert_str(WeaponsReadout.mount_state(p, 0)).is_equal("empty")
 	var free: WeaponsPanel = _panel(false)

@@ -314,7 +314,12 @@ func build() -> void:
 	s.frame.build(s, s._main, rows)
 	s.top_bar.menu_pressed.connect(s._open_menu)
 	# After a handover the bar names the ship this player now watches (R24-18).
-	s.ctx.crew.changed.connect(func(_what: StringName) -> void: show_watching())
+	# (a method, not a lambda: a lambda would keep this layout alive with the crew state)
+	s.ctx.crew.changed.connect(_on_crew_changed)
+	show_watching()
+
+
+func _on_crew_changed(_what: StringName) -> void:
 	show_watching()
 
 

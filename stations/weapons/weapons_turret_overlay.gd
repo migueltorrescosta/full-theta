@@ -48,6 +48,9 @@ func layout_targets() -> void:
 		_p.tablet() != null or (_p.is_inside_tree() and LayoutMode.is_phone(LayoutMode.form_of(_p)))
 	)
 	var inset: Rect2 = _inset()
+	# A phone's view-top row (selection bar, partner glance) covers the view's top: a bracket
+	# under it is not drawn, so neither it nor its chip shows cut (D319(6), w-dcc).
+	var top: float = _p.touch().read_top(self) - UiTheme.TOUCH_GAP if _p.touch() != null else 0.0
 	for it: Dictionary in _p.ctx.picture().items:
 		if it["kind"] == "point":
 			continue
@@ -60,6 +63,8 @@ func layout_targets() -> void:
 			continue
 		# (a target whose centre is off the view has no bracket to hang a chip on)
 		if size.x > 0.0 and not Rect2(Vector2.ZERO, size).has_point(p as Vector2):
+			continue
+		if (p as Vector2).y - BRACKET < top:
 			continue
 		var chip: String = WeaponsReadout.target_chip(_p, it)
 		var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
@@ -135,24 +140,68 @@ func _draw() -> void:
 			col = Palette.color("warn")
 		var bg: Color = Palette.color("background")
 		var at: Vector2 = Vector2(12.0, y)
+		if k < rows.size() and k == _p.mount:
+			_draw_row_bar(font, at, lines[k], width, line_h)
 		draw_multiline_string_outline(
 			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, 4, bg
 		)
 		draw_multiline_string(
 			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, col
 		)
+		if k < rows.size() and _p.is_mine(k):
+			_draw_mine_chip(font, at, lines[k], width, line_h)
 		y += line_h * counts[k]
+
+
+## The camera mount's row (R22-16): a highlight bar behind its text, in place of a "> " cursor.
+func _draw_row_bar(font: Font, at: Vector2, text: String, width: float, line_h: float) -> void:
+	var para: TextParagraph = _para(font, text, width)
+	var w: float = 0.0
+	for i: int in para.get_line_count():
+		w = maxf(w, para.get_line_width(i))
+	var top: float = at.y - font.get_ascent(FONT_SIZE) - 3.0
+	var h: float = line_h * (para.get_line_count() - 1) + FONT_SIZE + 8.0
+	var bar: Rect2 = Rect2(at.x - 6.0, top, w + 12.0, h)
+	draw_rect(bar, Color(Palette.color("accent"), 0.3))
+	draw_rect(Rect2(bar.position, Vector2(3.0, bar.size.y)), Palette.color("accent"))
+
+
+## "You" as a chip after the row of a mount this client holds (R22-16), on its last line.
+func _draw_mine_chip(font: Font, at: Vector2, text: String, width: float, line_h: float) -> void:
+	var para: TextParagraph = _para(font, text, width)
+	var last: int = para.get_line_count() - 1
+	var chip: String = WeaponsReadout.mine_chip(_p)
+	var fs: int = FONT_SIZE - 2
+	var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var base: Vector2 = at + Vector2(para.get_line_width(last) + 12.0, line_h * last)
+	var box: Rect2 = Rect2(
+		base.x - 6.0, base.y - font.get_ascent(fs) - 2.0, sz.x + 12.0, font.get_height(fs) + 4.0
+	)
+	var sb: StyleBoxFlat = UiTheme.box("ok", "", 0, 0)
+	sb.set_corner_radius_all(int(box.size.y / 2.0))
+	draw_style_box(sb, box)
+	draw_string(font, base, chip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.color("background"))
+
+
+## `text` broken into lines of `width` px, as draw_multiline_string breaks it.
+static func _para(font: Font, text: String, width: float) -> TextParagraph:
+	var para: TextParagraph = TextParagraph.new()
+	para.add_string(text, font, FONT_SIZE)
+	para.width = width
+	para.break_flags = TextServer.BREAK_MANDATORY | TextServer.BREAK_WORD_BOUND
+	return para
 
 
 ## On a phone the rail and the overlays show the mounts, the ammunition, the claim and the
 ## target (WeaponsTouch); the overlay adds the out-of-arc warning and the feeds under the
 ## target line (not on the Mounts page, whose list covers them).
 func _draw_phone_lines(font: Font) -> void:
+	# The Mounts page's list covers the view's read-outs: the warning hides with them (D319(6)).
+	if not _p.touch().shows_feeds():
+		return
 	var arc: String = WeaponsReadout.out_of_arc_text(_p)
 	if arc != "":
 		_draw_arc_warning(font, arc)
-	if not _p.touch().shows_feeds():
-		return
 	var lines: Array[String] = WeaponsReadout.feed_lines(_p)
 	if lines.is_empty():
 		return
@@ -164,8 +213,11 @@ func _draw_phone_lines(font: Font) -> void:
 
 func _draw_arc_warning(font: Font, arc: String) -> void:
 	var r: Rect2 = arc_warning_rect(font, arc)
-	# On a dim backing: a star in the narrow space after the colon read as "arc:·turn".
-	draw_rect(r.grow(3.0), Color(Palette.color("background"), 0.8))
+	# On a solid backing (w-dcc: the dim one let the nebula through; a star in the narrow
+	# space after the colon read as "arc:·turn").
+	var back: StyleBoxFlat = UiTheme.box("background", "", 0, 0)
+	back.set_corner_radius_all(4)
+	draw_style_box(back, r.grow(4.0))
 	_text(font, r.position + Vector2(0, FONT_SIZE), arc, Palette.color("warn"))
 
 

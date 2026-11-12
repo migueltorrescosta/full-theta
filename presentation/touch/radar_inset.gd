@@ -1,6 +1,7 @@
 class_name RadarInset
-extends PanelContainer
-## A disc radar over a view in a translucent panel (the OverlayRail variation): Helm's Radar
+extends Control
+## A disc radar over a view on a translucent panel (the OverlayRail variation's box, which the
+## disc fills edge to edge: no padding shrinks it to fewer chips): Helm's Radar
 ## page and Weapons' inset on a phone (#28, FT-WPN-002), and on a tablet both stations'
 ## radar in a corner of the view, with no radar column (C14). A finger on it is the radar's,
 ## never the view's (TouchInput.GROUP): a finger lifted on a blip, or a mouse click on it,
@@ -29,9 +30,9 @@ var _ctx: StationContext
 func _init(ctx: StationContext) -> void:
 	_ctx = ctx
 	name = "RadarInset"
-	theme_type_variation = "OverlayRail"
 	add_to_group(TouchInput.GROUP)
 	radar.name = "Radar"
+	radar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	radar.gui_input.connect(_on_radar_input)
 	add_child(radar)
 
@@ -57,6 +58,10 @@ func place(box: Rect2) -> void:
 	if position != box.position or size != box.size:
 		position = box.position
 		size = box.size
+
+
+func _draw() -> void:
+	draw_style_box(get_theme_stylebox("panel", "OverlayRail"), Rect2(Vector2.ZERO, size))
 
 
 ## A finger lifted on a blip (or a mouse click; the mouse a finger emulates is left to the
