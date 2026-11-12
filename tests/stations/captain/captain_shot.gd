@@ -5,14 +5,14 @@ extends "res://tests/stations/wr/page_shot.gd"
 
 
 func _chip_row(_s: StationScreen) -> Dictionary:
-	var chips: Array[ChipDef] = ChipView.def().chips
+	var chips: Array[ChipDef] = ChipsReader.def().chips
 	var boost: int = chips.find_custom(func(c: ChipDef) -> bool: return c.id == &"boost")
 	return {
 		"id": 5,
 		"chip": boost,
 		"arg": -1,
-		"from": StationViews.CREW.find(String(chips[boost].from_station)),
-		"to": StationViews.CREW.find(String(chips[boost].to_station)),
+		"from": StationCatalogue.CREW.find(String(chips[boost].from_station)),
+		"to": StationCatalogue.CREW.find(String(chips[boost].to_station)),
 		"sent": StationFixture.TICK - 240,
 		"expires": StationFixture.TICK + 1080,
 	}

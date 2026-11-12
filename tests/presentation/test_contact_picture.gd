@@ -6,7 +6,7 @@ func _ctx() -> StationContext:
 	var ctx: StationContext = StationContext.new()
 	ctx.clock = func() -> int: return 1000
 	ctx.crew.ship = 0
-	var v: NetViewState = NetViewState.new(0)
+	var v: SnapshotState = SnapshotState.new(0)
 	v.tick = 100
 	# Own ship at the origin, yawed 90° to port: world -X is its bow.
 	v.kin = {"pos": Vector3i.ZERO, "rot": Quaternion(Vector3.UP, PI / 2.0)}
@@ -24,7 +24,7 @@ func _ctx() -> StationContext:
 			2: [SnapshotReader.FLAG_OWN, "Osprey"],
 		},
 	}
-	ctx.view = v
+	ctx.snap = v
 	ctx.interp.push(v, 0)
 	return ctx
 
@@ -91,7 +91,7 @@ func test_context_builds_the_picture_once_and_again_on_change() -> void:
 # bubble radius; a probe still flying does not.
 func test_deployed_probes_show_their_bubble() -> void:
 	var ctx: StationContext = _ctx()
-	ctx.view.blocks[StationViews.Section.RELAY] = {
+	ctx.snap.blocks[StationCatalogue.Section.RELAY] = {
 		"probes":
 		[
 			{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0},
@@ -166,8 +166,8 @@ func test_the_picture_cache_sees_a_mark_edited_in_place_but_copies_nothing() -> 
 # FT: FT-RLY-001
 func test_mark_label_names_the_contact_a_mark_is_attached_to() -> void:
 	var ctx: StationContext = _ctx()
-	assert_str(ChipText.mark_label({"name": "Alpha", "contact": -1}, ctx.view)).is_equal("Alpha")
-	assert_str(ChipText.mark_label({"name": "Alpha"}, ctx.view)).is_equal("Alpha")
-	assert_str(ChipText.mark_label({"name": "Bravo", "contact": 1}, ctx.view)).is_equal(
+	assert_str(ChipText.mark_label({"name": "Alpha", "contact": -1}, ctx.snap)).is_equal("Alpha")
+	assert_str(ChipText.mark_label({"name": "Alpha"}, ctx.snap)).is_equal("Alpha")
+	assert_str(ChipText.mark_label({"name": "Bravo", "contact": 1}, ctx.snap)).is_equal(
 		"Bravo · H1"
 	)

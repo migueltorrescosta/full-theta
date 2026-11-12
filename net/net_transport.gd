@@ -3,10 +3,10 @@ class_name NetTransport
 extends RefCounted
 ## The server's net thread (FT-NET-040, D111): it owns every socket (accept, poll,
 ## receive, decode), the per-connection send queues, stall detection (NetResync), the
-## per-session event outboxes and the snapshot encoder (SnapshotBuilder), so the sim
+## per-session event outboxes and the snapshot encoder (SnapshotWriter), so the sim
 ## tick on the main thread holds only the sim. The main thread talks to it through two
 ## mutex-protected queues: it posts operations (send, close, bind a connection to a
-## session, set a session's view key, events, state copies, voice) and takes inbound
+## session, set a session's stream key, events, state copies, voice) and takes inbound
 ## decoded messages. Session logic (handshake decisions, lobby, claims, validation)
 ## stays on the main thread (NetGame). See net/README.md.
 
@@ -82,7 +82,7 @@ class Conn:
 	var queue: NetSendQueue
 	var resync: NetResync
 	var session: int = -1
-	var view_key: String = ""
+	var stream_key: String = ""
 	## When the connection was accepted (us).
 	var opened_us: int = 0
 	var closing: bool = false
@@ -125,7 +125,7 @@ var _conns: Dictionary[int, Conn] = {}
 ## Session -> the connection bound to it.
 var _by_session: Dictionary[int, Conn] = {}
 var _outboxes: Dictionary[int, NetEventOutbox] = {}
-var _builder: SnapshotBuilder = SnapshotBuilder.new()
+var _builder: SnapshotWriter = SnapshotWriter.new()
 var _state: SimWorld
 ## The last state restored, for repost_state().
 var _last_state: SimWorld
@@ -144,7 +144,7 @@ var _totals: Dictionary = {
 var _state_stamp_us: int = 0
 var _restore_us: int = 0
 ## Probe records (net thread; probe_dump() after stop()): one row of SNAP_FIELDS per
-## snapshot, one row of SECOND_FIELDS and one {conn: [session, view_key, bytes,
+## snapshot, one row of SECOND_FIELDS and one {conn: [session, stream_key, bytes,
 ## ws_messages, fulls, deltas, stalls, skipped]} per second.
 var _probe_snaps: PackedInt64Array = PackedInt64Array()
 var _probe_seconds: PackedInt64Array = PackedInt64Array()
@@ -211,9 +211,9 @@ func close(conn: int, code: int, reason: String) -> void:
 ## the session's outbox). A session already bound to another connection is taken over:
 ## that connection is closed. new_session starts an empty outbox.
 func bind(
-	conn: int, session: int, welcome: Dictionary, view_key: String, new_session: bool
+	conn: int, session: int, welcome: Dictionary, stream_key: String, new_session: bool
 ) -> void:
-	_post(["bind", conn, session, welcome, view_key, new_session])
+	_post(["bind", conn, session, welcome, stream_key, new_session])
 
 
 ## Drops an evicted session's event outbox (NetSessions.evict): it has no connection.
@@ -221,9 +221,9 @@ func forget(session: int) -> void:
 	_post(["forget", session])
 
 
-## Sets the view key a session's snapshots use ("" for none); the next one is full.
-func set_view(session: int, view_key: String) -> void:
-	_post(["view", session, view_key])
+## Sets the stream key a session's snapshots use ("" for none); the next one is full.
+func set_stream_key(session: int, stream_key: String) -> void:
+	_post(["stream_key", session, stream_key])
 
 
 ## Adds an event to each listed session's reliable stream (FT-NET-011).
@@ -337,7 +337,7 @@ func _probe_loop(t: PackedInt64Array) -> void:
 	for c: Conn in _conns.values():
 		conns[c.id] = [
 			c.session,
-			c.view_key,
+			c.stream_key,
 			c.stats["bytes"],
 			c.stats["ws_messages"],
 			c.stats["fulls"],
@@ -375,10 +375,10 @@ func _apply(op: Array) -> void:
 		"forget":
 			if not _by_session.has(op[1]):
 				_outboxes.erase(op[1])
-		"view":
+		"stream_key":
 			var c: Conn = _by_session.get(op[1])
 			if c != null and not c.closing:
-				c.view_key = op[2]
+				c.stream_key = op[2]
 				c.resync.force_full()
 		"event":
 			_event(op[1], op[2], op[3], op[4])
@@ -401,7 +401,7 @@ func _apply(op: Array) -> void:
 		"chips":
 			_builder.set_chips(op[1], op[2])
 		"reset":
-			_builder = SnapshotBuilder.new()
+			_builder = SnapshotWriter.new()
 			_builder.chunk_size = chunk_size
 			_state = null
 			_last_state = null
@@ -410,7 +410,7 @@ func _apply(op: Array) -> void:
 
 
 func _bind(
-	conn: int, session: int, welcome: Dictionary, view_key: String, new_session: bool
+	conn: int, session: int, welcome: Dictionary, stream_key: String, new_session: bool
 ) -> void:
 	var c: Conn = _conns.get(conn)
 	if c == null:
@@ -425,7 +425,7 @@ func _bind(
 	var box: NetEventOutbox = _outboxes[session]
 	box.restart()
 	c.session = session
-	c.view_key = view_key
+	c.stream_key = stream_key
 	c.resync = NetResync.new(lag_limit)
 	welcome["ev_from"] = box.acked
 	c.queue.push(NetChunker.STREAM_CONTROL, NetProtocol.encode(NetProtocol.Type.WELCOME, welcome))
@@ -446,7 +446,7 @@ func _event(sessions: PackedInt32Array, tick: int, type: String, payload: Dictio
 ## Pushes the session's unpushed events unless the connection is waiting for a full
 ## snapshot, which then carries them (pushed right before it).
 func _push_events(c: Conn) -> void:
-	if c.closing or c.session < 0 or (c.view_key != "" and c.resync.holds_events()):
+	if c.closing or c.session < 0 or (c.stream_key != "" and c.resync.holds_events()):
 		return
 	for bytes: PackedByteArray in _outboxes[c.session].take_unpushed():
 		c.queue.push(NetChunker.STREAM_CONTROL, bytes)
@@ -506,7 +506,7 @@ func _poll() -> Array:
 			_close(c, CLOSE_PROTOCOL, "malformed messages")
 		elif c.session < 0 and now - c.opened_us > HELLO_TIMEOUT_US:
 			_close(c, CLOSE_PROTOCOL, "no hello")
-		elif c.view_key == "" and c.queue.high_bytes > NetResync.QUEUED_LIMIT:
+		elif c.stream_key == "" and c.queue.high_bytes > NetResync.QUEUED_LIMIT:
 			# No snapshots, so no stall policy: a client that doesn't read is closed and
 			# resumes with its token (its events wait in the outbox).
 			_close(c, CLOSE_QUEUE_FULL, "queue full")
@@ -557,8 +557,8 @@ func _snapshot() -> void:
 	_state = null
 	var keys: Dictionary = {}
 	for c: Conn in _conns.values():
-		if c.session >= 0 and c.view_key != "" and not c.closing:
-			keys[c.view_key] = true
+		if c.session >= 0 and c.stream_key != "" and not c.closing:
+			keys[c.stream_key] = true
 	if keys.is_empty():
 		return
 	_snap_seq += 1
@@ -569,7 +569,7 @@ func _snapshot() -> void:
 	var t1: int = Time.get_ticks_usec()
 	var sends: int = 0
 	for c: Conn in _conns.values():
-		if c.session < 0 or c.view_key == "" or c.closing:
+		if c.session < 0 or c.stream_key == "" or c.closing:
 			continue
 		var action: NetResync.Action = c.resync.decide(c.queue.high_bytes)
 		if action == NetResync.Action.NONE:
@@ -580,7 +580,7 @@ func _snapshot() -> void:
 		if is_full:
 			# Events held while the client lagged go right before the full snapshot.
 			_push_events(c)
-		c.queue.push_chunks(_builder.chunks(c.view_key, is_full))
+		c.queue.push_chunks(_builder.chunks(c.stream_key, is_full))
 		c.stats["fulls" if is_full else "deltas"] += 1
 		_totals["sends"] += 1
 		sends += 1
@@ -690,7 +690,7 @@ func _publish(inbound: Array) -> void:
 	for c: Conn in _conns.values():
 		var s: Dictionary = c.stats.duplicate()
 		s["session"] = c.session
-		s["view_key"] = c.view_key
+		s["stream_key"] = c.stream_key
 		s["high_bytes"] = c.queue.high_bytes
 		s["low_bytes"] = c.queue.low_bytes
 		s["stalled"] = c.resync.stalled

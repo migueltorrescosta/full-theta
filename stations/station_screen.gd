@@ -299,15 +299,15 @@ func _process(delta: float) -> void:
 	_dispatch_batch(ctx.matcher.update(ctx.now_ms(), delta))
 	var now: int = ctx.now_ms()
 	top_bar.can_set_alert = ctx.crew.is_crew()
-	var status: Dictionary = ctx.view.blocks.get(StationViews.Section.STATUS, {})
-	var captain: Dictionary = ctx.view.blocks.get(StationViews.Section.CAPTAIN, {})
+	var status: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {})
+	var captain: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.CAPTAIN, {})
 	top_bar.show_goal(StatusView.goal_text(captain, status), StatusView.goal_short(captain, status))
 	top_bar.show_state(
 		ctx.crew.ship_name(),
 		status,
 		ctx.crew.alert,
 		stations,
-		ctx.crew.mission_seconds(ctx.view.tick),
+		ctx.crew.mission_seconds(ctx.snap.tick),
 		focused_station(),
 		_maxes(),
 		ctx.crew.summaries(status, ctx.ship_def())
@@ -325,9 +325,9 @@ func _process(delta: float) -> void:
 		chip_strip.visible = false
 	else:
 		chip_strip.show_chips(
-			ChipView.incoming(ctx.view, stations),
-			ChipView.outgoing(ctx.view, stations),
-			ctx.view,
+			ChipsReader.incoming(ctx.snap, stations),
+			ChipsReader.outgoing(ctx.snap, stations),
+			ctx.snap,
 			ShareBar.incoming_lines(stations, left),
 			now
 		)

@@ -1,4 +1,4 @@
-class_name TipsView
+class_name TipsPanel
 extends Control
 ## Rotating tips (#28, P28-Tips, P28-LoadBar): a topic label (`HELM · NOVICE`), the tip
 ## in large text, `‹` and `›` at the sides and, while given a progress, a thin bar with a

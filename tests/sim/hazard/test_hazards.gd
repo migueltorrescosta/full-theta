@@ -63,7 +63,7 @@ func test_zone_damages_and_drags_ships_inside() -> void:
 # A zone's damage can go to named subsystems instead of the hull, in a few chunks a second.
 func test_zone_damage_goes_to_the_named_subsystems() -> void:
 	var h: HazardDef = _zone(Vector3.ZERO, 500.0)
-	h.targets = [&"sensors"]
+	h.subsystems = [&"sensors"]
 	var w: SimWorld = _world([h])
 	var full: float = _hull(w)
 	var events: Array[SimEvent] = SimFixture.run(w, SimWorld.HZ)
@@ -131,7 +131,7 @@ func test_ship_reset_behind_a_front_is_not_hit() -> void:
 # A front hits the named subsystems, and a hardened one takes less (FT-ENG-008).
 func test_front_hits_named_subsystems_and_hardening_applies() -> void:
 	var h: HazardDef = _plane(Vector3(0.0, 0.0, -100.0), 100.0)
-	h.targets = [&"sensors", &"shields"]
+	h.subsystems = [&"sensors", &"shields"]
 	var plain: SimWorld = _world([h])
 	SimFixture.run(plain, 2 * SimWorld.HZ)
 	var hard: SimWorld = _world([h])

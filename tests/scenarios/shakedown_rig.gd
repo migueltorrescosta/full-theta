@@ -66,7 +66,7 @@ func command_for(tag: StringName, ship: int = 0) -> SimCommand:
 	var cmd: SimCommand
 	if kind == "comms_hail":
 		var hail: HailCommand = HailCommand.new()
-		hail.target = 1  # the training drone
+		hail.contact = 1  # the training drone
 		cmd = hail
 	elif kind == "helm_input":
 		var h: HelmInputCommand = HelmInputCommand.new()

@@ -48,7 +48,7 @@ func begin(scenario_id: StringName, site_key: StringName) -> void:
 func tick() -> void:
 	world.step()
 	world.drain_events()
-	var view: EncounterView = api.encounter(encounter)
+	var view: EncounterInfo = api.encounter(encounter)
 	if view.result > Scenario.Result.ACTIVE and _started and not _ended:
 		_ended = true
 		scenario.end(api, view.result)

@@ -54,7 +54,7 @@ func test_earnings_from_cards() -> void:
 	StoryFixture.spawn(w, TestDefs.raider(), StoryFixture.RED, Vector3(0.0, 0.0, -5000.0))
 	var pay: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION)
 	pay.reward_credits = 400
-	pay.target = 1
+	pay.subject = 1
 	pay.rep_interaction = &"rep.complete_mission"
 	var won: int = StoryFixture.post(w, 0, pay)
 	var lost: int = StoryFixture.post(w, 0, pay)

@@ -49,7 +49,7 @@ func _initialize() -> void:
 ## The settings menu's Controls tab for the dev seat's six stations, the heavy child of
 ## the shell path (the menu opens on the first visit): build, then the keyboard diagram.
 func _controls_pane() -> void:
-	var six: Array[String] = StationViews.CREW.duplicate()
+	var six: Array[String] = StationCatalogue.CREW.duplicate()
 	var pane: ControlsPane = ControlsPane.new()
 	root.add_child(pane)
 	var t0: int = Time.get_ticks_usec()

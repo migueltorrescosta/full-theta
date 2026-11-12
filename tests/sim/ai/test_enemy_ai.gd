@@ -99,7 +99,7 @@ func test_closes_and_fires() -> void:
 	assert_int(fired).is_greater(0)
 	assert_array(tags).is_equal([&"attack", &"keep_range"])
 	assert_int(world.ai.target[1]).is_equal(0)
-	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.POINT)
+	assert_int(world.helm.sel_kind[1]).is_equal(HelmTable.Selection.POINT)
 
 
 # FT: FT-SIM-027, FT-M1-007
@@ -201,7 +201,7 @@ func test_retreat_point_stays_within_a_quarter_period() -> void:
 	var start: float = _distance(world)
 	_run_until_mode(world, AiTable.Mode.RETREAT, 2)
 	SimFixture.run(world, 2)
-	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.POINT)
+	assert_int(world.helm.sel_kind[1]).is_equal(HelmTable.Selection.POINT)
 	var to_point: Vector3 = AssistSystem.target_offset(world, 1)
 	var away: Vector3 = -world.kin.relative(1, 0).normalized()
 	assert_float(to_point.length()).is_equal_approx(10000.0, 50.0)
@@ -226,7 +226,7 @@ func test_undetected_target_is_ignored_until_detected() -> void:
 	assert_array(_mode_tags(events)).is_empty()
 	assert_int(world.ai.mode[1]).is_equal(AiTable.Mode.HOLD)
 	assert_int(world.ai.target[1]).is_equal(-1)
-	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.NONE)
+	assert_int(world.helm.sel_kind[1]).is_equal(HelmTable.Selection.NONE)
 	assert_array(world.submitted).is_empty()
 	# Moved into sensor range (a test placement, not physics).
 	world.kin.place(0, CubePoint.make(0.0, 0.0, -13000.0))
@@ -238,7 +238,7 @@ func test_undetected_target_is_ignored_until_detected() -> void:
 		n += 1
 	assert_int(fired).is_greater(0)
 	assert_int(world.ai.target[1]).is_equal(0)
-	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.POINT)
+	assert_int(world.helm.sel_kind[1]).is_equal(HelmTable.Selection.POINT)
 
 
 # FT: FT-SIM-027, FT-ARC-008
@@ -258,7 +258,7 @@ func test_ai_uses_the_player_commands() -> void:
 		assert_object(made).is_not_null()
 		assert_object(made.get_script()).is_same(c.get_script())
 		kinds[c.kind()] = kinds.get(c.kind(), 0) + 1
-	for k: StringName in [&"helm_input", &"helm_select_target", &"aim_mount", &"fire"]:
+	for k: StringName in [&"helm_input", &"helm_select", &"aim_mount", &"fire"]:
 		assert_bool(kinds.has(k)).override_failure_message("no %s" % k).is_true()
 	assert_array(world.command_log).is_empty()
 
@@ -279,7 +279,7 @@ func test_holds_position_without_target() -> void:
 		world.step()
 		n += 1
 	assert_float(world.kin.vel[1].length()).is_less(AssistSystem.STOP_SPEED)
-	assert_int(world.helm.target_kind[1]).is_equal(HelmTable.Target.NONE)
+	assert_int(world.helm.sel_kind[1]).is_equal(HelmTable.Selection.NONE)
 
 
 # FT: FT-SIM-027

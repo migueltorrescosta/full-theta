@@ -197,27 +197,27 @@ func test_select_a_site() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = SiteFixture.id_of(w, &"vesper_beacon")
 	var ship: int = w.spawn_ship(TestDefs.corvette(), 1)
-	var c: SelectTargetCommand = SelectTargetCommand.new()
+	var c: HelmSelectCommand = HelmSelectCommand.new()
 	c.ship_id = ship
 	c.site_id = vesper
 	w.submit(c)
 	w.step()
 	assert_bool(c.accepted).is_true()
-	assert_int(w.helm.target_kind[ship]).is_equal(HelmTable.Target.SITE)
-	assert_int(w.helm.target_site[ship]).is_equal(vesper)
+	assert_int(w.helm.sel_kind[ship]).is_equal(HelmTable.Selection.SITE)
+	assert_int(w.helm.sel_site[ship]).is_equal(vesper)
 	assert_bool(AssistSystem.has_target(w, ship)).is_true()
 	assert_vector(AssistSystem.target_offset(w, ship)).is_equal_approx(
 		CubePoint.to_vector3(w.sites.point(vesper)), Vector3.ONE * 0.01
 	)
-	var hidden: SelectTargetCommand = SelectTargetCommand.new()
+	var hidden: HelmSelectCommand = HelmSelectCommand.new()
 	hidden.ship_id = ship
 	hidden.site_id = 50
 	w.submit(hidden)
 	w.step()
 	assert_bool(hidden.accepted).is_false()
-	var none: SelectTargetCommand = SelectTargetCommand.new()
+	var none: HelmSelectCommand = HelmSelectCommand.new()
 	none.ship_id = ship
 	w.submit(none)
 	w.step()
-	assert_int(w.helm.target_kind[ship]).is_equal(HelmTable.Target.NONE)
-	assert_int(w.helm.target_site[ship]).is_equal(-1)
+	assert_int(w.helm.sel_kind[ship]).is_equal(HelmTable.Selection.NONE)
+	assert_int(w.helm.sel_site[ship]).is_equal(-1)

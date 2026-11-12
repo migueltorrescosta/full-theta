@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## The COMMS block (CommsView): what Comms' board carries for a ship, built from
+## The COMMS block (CommsSection): what Comms' board carries for a ship, built from
 ## STORY, the economy and the module table, and the same from the net thread's copy of the
 ## world (SimCopy). It never holds Engineering data beyond the hull band (FT-PAIR-010).
 
@@ -25,12 +25,14 @@ func _post(w: SimWorld, spec: PostCardCommand) -> int:
 # at any depth.
 func test_no_engineering_field() -> void:
 	var w: SimWorld = _docked()
-	var own: Array = CommsView.block(w, 0).keys()
+	var own: Array = CommsSection.block(w, 0).keys()
 	assert_array(own).is_equal(
-		StationViews.BLOCKS[StationViews.Section.COMMS].map(func(f: Array) -> String: return f[0])
+		StationCatalogue.BLOCKS[StationCatalogue.Section.COMMS].map(
+			func(f: Array) -> String: return f[0]
+		)
 	)
-	var names: Array[String] = _names(StationViews.BLOCKS[StationViews.Section.COMMS])
-	for field: Array in StationViews.BLOCKS[StationViews.Section.ENGINEERING]:
+	var names: Array[String] = _names(StationCatalogue.BLOCKS[StationCatalogue.Section.COMMS])
+	for field: Array in StationCatalogue.BLOCKS[StationCatalogue.Section.ENGINEERING]:
 		assert_array(names).not_contains([field[0]])
 	for banned: String in ["heat", "pips", "health", "spare_parts", "subsystems", "fault"]:
 		assert_array(names).not_contains([banned])
@@ -58,7 +60,7 @@ func test_card_rows() -> void:
 	hidden.rep_interaction = &"rep.call_bluff"
 	var a: int = _post(w, seen)
 	var b: int = _post(w, hidden)
-	var rows: Array = CommsView.block(w, 0)["cards"]
+	var rows: Array = CommsSection.block(w, 0)["cards"]
 	assert_int(rows.size()).is_equal(2)
 	assert_int(rows[a]["reward"]).is_equal(250)
 	assert_bool(rows[a]["rep_vis"]).is_true()
@@ -69,13 +71,13 @@ func test_card_rows() -> void:
 	assert_float(rows[b]["expires"]).is_equal(-1.0)
 	assert_str(rows[a]["title"]).is_equal("comms.card.offer")
 	assert_int(rows[b]["claimer"]).is_equal(-1)
-	var claimed: Array = CommsView.block(w, 0, null, {"npc:1": [7, "Ana"]})["cards"]
+	var claimed: Array = CommsSection.block(w, 0, null, {"npc:1": [7, "Ana"]})["cards"]
 	assert_int(claimed[1]["claimer"]).is_equal(7)
 	var decline: DeclineCardCommand = DeclineCardCommand.new()
 	decline.card = a
 	assert_bool(StoryFixture.run(w, 0, decline)).is_true()
-	assert_int(CommsView.block(w, 0)["cards"][a]["state"]).is_equal(StoryTable.State.DECLINED)
-	assert_int(CommsView.block(w, 1 if w.ship_count() > 1 else 0)["cards"].size()).is_equal(2)
+	assert_int(CommsSection.block(w, 0)["cards"][a]["state"]).is_equal(StoryTable.State.DECLINED)
+	assert_int(CommsSection.block(w, 1 if w.ship_count() > 1 else 0)["cards"].size()).is_equal(2)
 
 
 # FT: FT-COM-007, FT-COM-008
@@ -87,11 +89,11 @@ func test_open_node_and_verify_icon() -> void:
 	StoryFixture.spawn(w, TestDefs.raider(), StoryFixture.RED, Vector3(0.0, 0.0, -5000.0))
 	w.step()
 	var hail: HailCommand = HailCommand.new()
-	hail.target = 1
+	hail.contact = 1
 	assert_bool(StoryFixture.run(w, 0, hail)).is_true()
-	var easy: ViewFilter = ViewFilter.of("comms", "easy")
-	var hard: ViewFilter = ViewFilter.of("comms", "hard")
-	var nodes: Array = CommsView.block(w, 0, easy)["nodes"]
+	var easy: ShortcutFilter = ShortcutFilter.of("comms", "easy")
+	var hard: ShortcutFilter = ShortcutFilter.of("comms", "hard")
+	var nodes: Array = CommsSection.block(w, 0, easy)["nodes"]
 	assert_int(nodes.size()).is_equal(1)
 	assert_str(nodes[0]["line"]).is_equal("npc.hail_trader")
 	var options: Array = nodes[0]["options"]
@@ -100,11 +102,11 @@ func test_open_node_and_verify_icon() -> void:
 	assert_bool(options[2]["verify"]).is_false()
 	assert_bool(options[0]["enabled"]).is_true()
 	# Easy and the shortcut shared: Science's icon shows on the option that needs a fact.
-	var shared: ViewFilter = ViewFilter.of("comms", "easy#verify_chip")
-	assert_bool(CommsView.block(w, 0, shared)["nodes"][0]["options"][2]["verify"]).is_true()
-	assert_bool(CommsView.block(w, 0, hard)["nodes"][0]["options"][2]["verify"]).is_false()
+	var shared: ShortcutFilter = ShortcutFilter.of("comms", "easy#verify_chip")
+	assert_bool(CommsSection.block(w, 0, shared)["nodes"][0]["options"][2]["verify"]).is_true()
+	assert_bool(CommsSection.block(w, 0, hard)["nodes"][0]["options"][2]["verify"]).is_false()
 	Story.learn_fact(w, BLUE, 1, "cargo")
-	assert_bool(CommsView.block(w, 0, shared)["nodes"][0]["options"][2]["enabled"]).is_true()
+	assert_bool(CommsSection.block(w, 0, shared)["nodes"][0]["options"][2]["enabled"]).is_true()
 
 
 # FT: FT-COM-004, FT-COM-009, FT-MIS-036
@@ -114,7 +116,7 @@ func test_open_node_and_verify_icon() -> void:
 func test_offers_and_trade_in_lines() -> void:
 	var w: SimWorld = _docked()
 	_post(w, StoryFixture.card(StoryTable.Kind.OFFER, &"", SITE))
-	var block: Dictionary = CommsView.block(w, 0)
+	var block: Dictionary = CommsSection.block(w, 0)
 	assert_bool(block["docked"]).is_true()
 	assert_int(block["site"]).is_equal(SITE)
 	assert_int(block["credits"]).is_equal(2000)
@@ -142,7 +144,7 @@ func test_offers_and_trade_in_lines() -> void:
 	)
 	assert_int(engine[0]["trade_in"]).is_equal(0)
 	ModuleSystem.fit(w, 0, 0, load("res://content/modules/hx2_afterburner.tres") as ModuleDef)
-	block = CommsView.block(w, 0)
+	block = CommsSection.block(w, 0)
 	var swap: Dictionary = block["modules"][1]
 	assert_str(swap["module"]).is_equal("bx3_reactor")
 	assert_str(swap["old"]).is_equal("hx2_afterburner")
@@ -152,7 +154,7 @@ func test_offers_and_trade_in_lines() -> void:
 		. is_equal(["hx2_afterburner", ""])
 	)
 	StoryFixture.dock(w, 0, 9)
-	block = CommsView.block(w, 0)
+	block = CommsSection.block(w, 0)
 	assert_bool(block["docked"]).is_true()
 	assert_array(block["offers"]).is_empty()
 	assert_array(block["modules"]).is_empty()
@@ -169,10 +171,10 @@ func test_hull_band_and_the_copy_matches() -> void:
 	var max_hull: float = w.defs[0].hull_max
 	for pair: Array in [[1.0, 0], [0.6, 1], [0.4, 2], [0.1, 3]]:
 		w.damage.health[hull] = max_hull * pair[0]
-		assert_int(CommsView.block(w, 0)["hull_band"]).is_equal(pair[1])
+		assert_int(CommsSection.block(w, 0)["hull_band"]).is_equal(pair[1])
 	var copy: SimWorld = SimCopy.of(w)
-	assert_dict(CommsView.block(copy, 0)).is_equal(CommsView.block(w, 0))
-	var bytes: PackedByteArray = NetBlock.encode(BlockSchema.COMMS, CommsView.block(w, 0))
+	assert_dict(CommsSection.block(copy, 0)).is_equal(CommsSection.block(w, 0))
+	var bytes: PackedByteArray = NetBlock.encode(BlockSchema.COMMS, CommsSection.block(w, 0))
 	var back: Dictionary = NetBlock.decode(BlockSchema.COMMS, bytes)
 	assert_int(back["credits"]).is_equal(2000)
 	assert_str(back["offers"][1]["item"]).is_equal("parts")

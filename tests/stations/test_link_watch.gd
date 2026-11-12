@@ -82,7 +82,7 @@ func test_the_goal_chip_shows_the_objective_and_its_progress() -> void:
 	I18n.apply("en")
 	var open: Dictionary = {
 		"subsystems": [],
-		"objectives": [{"kind": StationViews.OBJECTIVE_DESTROY_HOSTILES, "left": 3}]
+		"objectives": [{"kind": StationCatalogue.OBJECTIVE_DESTROY_HOSTILES, "left": 3}]
 	}
 	assert_str(StatusView.goal_text(open, {})).is_equal("Goal: stop the hostiles (3 left)")
 	assert_str(StatusView.goal_short(open, {})).is_equal("3 foes")

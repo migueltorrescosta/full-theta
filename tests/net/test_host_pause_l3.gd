@@ -97,8 +97,8 @@ func test_dedicated_server_refuses() -> void:
 func test_pvp_refuses_the_host() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.RACE, 2, [], true, 10.0, SECRET)
 	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
-	await h.pick(host, StationViews.ALL, 0)
-	var rival: NetClient = await h.joined(server, "rival", StationViews.ALL, 1)
+	await h.pick(host, StationCatalogue.ALL, 0)
+	var rival: NetClient = await h.joined(server, "rival", StationCatalogue.ALL, 1)
 	host.set_ready(true)
 	rival.set_ready(true)
 	assert_bool(await _stepping(server)).is_true()

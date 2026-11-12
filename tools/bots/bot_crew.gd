@@ -95,8 +95,8 @@ func _fight(world: SimWorld, target: int) -> void:
 		_submit(world, pips)
 	if target != _target:
 		_target = target
-		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.target_ship = target
+		var select: HelmSelectCommand = HelmSelectCommand.new()
+		select.contact = target
 		_submit(world, select)
 		_helm(world, true, false)
 	var t: int = world.tick
@@ -117,7 +117,7 @@ func _stand_down(world: SimWorld) -> void:
 	if _target >= 0:
 		_target = -1
 		_helm(world, false, false)
-		_submit(world, SelectTargetCommand.new())
+		_submit(world, HelmSelectCommand.new())
 		_moving = false
 		_going = NONE
 
@@ -179,7 +179,7 @@ func _go(world: SimWorld, site: int, must_jump: bool) -> void:
 	if _going != site:
 		_going = site
 		_by_jump = must_jump or _rng.randf() < profile.jump_share
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.site_id = site
 		_submit(world, select)
 		_helm(world, true, not _by_jump)

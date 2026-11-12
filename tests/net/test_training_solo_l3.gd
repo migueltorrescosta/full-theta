@@ -139,7 +139,7 @@ func test_the_server_bots_submit_commands_for_their_own_stations_only() -> void:
 	hands.record = true
 	assert_bool(await h.until(func() -> bool: return not hands.sent.is_empty(), 12000)).is_true()
 	for row: Array in hands.sent:
-		assert_str(StationViews.station_of_command(row[1])).is_not_equal("helm")
+		assert_str(StationCatalogue.station_of_command(row[1])).is_not_equal("helm")
 
 
 # FT: FT-MIS-039

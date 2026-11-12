@@ -15,7 +15,7 @@ func _fleet(scenario: StringName, ships: int, strength: float = 1.0) -> Scenario
 
 
 func _card(f: ScenarioFixture, ship: int, title: String) -> int:
-	for c: CardView in f.api.cards_of(ship):
+	for c: CardInfo in f.api.cards_of(ship):
 		if c.title_key == title:
 			return c.id
 	return -1
@@ -36,7 +36,7 @@ func test_any_ship_can_demand_the_surrender() -> void:
 		var card: int = -1
 		for ship: int in n:
 			var hails: int = 0
-			for c: CardView in f.api.cards_of(ship):
+			for c: CardInfo in f.api.cards_of(ship):
 				hails += 1 if c.kind == CardSpec.Kind.HAIL else 0
 				card = c.id if c.kind == CardSpec.Kind.HAIL else card
 			assert_int(hails).is_equal(1)
@@ -66,7 +66,7 @@ func test_the_wave_goes_on_when_the_first_ship_is_lost() -> void:
 	f.kill(0)
 	f.run(3)
 	var hails: int = 0
-	for c: CardView in f.api.cards_of(2):
+	for c: CardInfo in f.api.cards_of(2):
 		hails += 1 if c.kind == CardSpec.Kind.HAIL else 0
 	assert_int(hails).is_equal(1)
 	f.run(60 * 46)
@@ -103,7 +103,7 @@ func test_accepting_one_card_withdraws_the_other() -> void:
 	var salvage: int = _card(f, 0, "comms.card.salvage")
 	_accept(f, 1, _card(f, 1, "comms.card.escort"))
 	f.run(3)
-	assert_int(f.card_state(salvage)).is_equal(CardView.State.DECLINED)
+	assert_int(f.card_state(salvage)).is_equal(CardInfo.State.DECLINED)
 
 
 # FT: FT-MIS-004, FT-MIS-021
@@ -155,7 +155,7 @@ func test_a_fled_leg_fails_its_clearance() -> void:
 	_accept(f, 1, card)
 	f.api.end_encounter(f.encounter, Scenario.Result.FLED)
 	f.run(3)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	f.run(60 * 40)
 	var credits: int = Economy.credits(f.world, 1)
 	f.world.kin.place(1, CubePoint.plus(f.world.sites.point(0), Vector3(500.0, 0.0, 0.0)))
@@ -180,7 +180,7 @@ func test_a_lost_rescue_fails_the_escort_and_clears_the_flag() -> void:
 	assert_int(f.world.knowledge.flag[row]).is_equal(KnowledgeTable.Flag.PROTECT)
 	f.api.end_encounter(f.encounter, Scenario.Result.LOST)
 	f.run(3)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	assert_int(f.world.knowledge.flag[row]).is_equal(KnowledgeTable.Flag.NONE)
 	assert_float(f.world.reputation.value_of(f.world.faction_of(0), 3)).is_less(0.0)
 

@@ -72,7 +72,7 @@ func meta() -> ScenarioMeta:
 func start(api: ScenarioApi, params: Dictionary) -> void:
 	_ships = params["ships"]
 	var lead: int = Scenario.fleet(api, _ships)[0]
-	var view: ShipView = api.ship(lead)
+	var view: ShipInfo = api.ship(lead)
 	_faction = view.faction
 	_started = api.tick()
 	_raider_count = raider_count(float(params.get("strength", 1.0)))
@@ -83,7 +83,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 		FREIGHTER, Factions.CIVIL, lead, _abeam(view.velocity) * FREIGHTER_RANGE_M
 	)
 	for ship: int in Scenario.fleet(api, _ships):
-		api.message("npc.distress", {"npc": NPC}, SayTarget.npc(NPC, ship))
+		api.message("npc.distress", {"npc": NPC}, LineAudience.npc(NPC, ship))
 
 
 ## The raiders of the encounter at `strength`: RAIDERS scaled, at least 1, at most MAX_RAIDERS.
@@ -122,8 +122,8 @@ func _offer_cards(api: ScenarioApi) -> void:
 	escort.needs_pips = ESCORT_NEED_PIPS
 	escort.reward_credits = ESCORT_REWARD
 	escort.rep_interaction = &"rep.complete_mission"
-	escort.target = freighter
-	escort.target_flag = 2
+	escort.subject = freighter
+	escort.subject_flag = 2
 	escort.expires_s = CARD_S
 	escort.faction_wide = true
 	var to: int = Scenario.fleet(api, _ships)[0]
@@ -135,7 +135,7 @@ func _offer_cards(api: ScenarioApi) -> void:
 	salvage.conversation_id = &"conv.rescue_salvage"
 	salvage.reward_credits = SALVAGE_REWARD
 	salvage.rep_interaction = &"rep.salvage_wreck"
-	salvage.target = freighter
+	salvage.subject = freighter
 	salvage.expires_s = CARD_S
 	salvage.faction_wide = true
 	_salvage = api.offer(to, salvage)
@@ -173,7 +173,7 @@ func step(api: ScenarioApi) -> void:
 		if elapsed_s >= MAX_S:
 			_settle(api, Result.PARTIAL)
 		return
-	var salvaging: bool = _state(api, _salvage) == CardView.State.ACCEPTED
+	var salvaging: bool = _state(api, _salvage) == CardInfo.State.ACCEPTED
 	if salvaging and _nearest_to_freighter(api) <= SALVAGE_RANGE_M:
 		_near_ticks += 1
 	if api.all_gone(_raiders):
@@ -193,9 +193,9 @@ func end(api: ScenarioApi, result: int) -> void:
 	_result = result if ended_by_other else _result
 	for card: ApiHandle in [_escort, _salvage]:
 		var state: int = _state(api, card)
-		if state == CardView.State.ACCEPTED and ended_by_other:
+		if state == CardInfo.State.ACCEPTED and ended_by_other:
 			api.settle_card(card.id(), false)
-		elif state == CardView.State.OPEN:
+		elif state == CardInfo.State.OPEN:
 			api.decline_card(card.id())
 
 
@@ -203,9 +203,9 @@ func end(api: ScenarioApi, result: int) -> void:
 func _one_card_only(api: ScenarioApi) -> void:
 	var escort: int = _state(api, _escort)
 	var salvage: int = _state(api, _salvage)
-	if escort == CardView.State.ACCEPTED and salvage == CardView.State.OPEN:
+	if escort == CardInfo.State.ACCEPTED and salvage == CardInfo.State.OPEN:
 		api.decline_card(_salvage.id())
-	elif salvage == CardView.State.ACCEPTED and escort == CardView.State.OPEN:
+	elif salvage == CardInfo.State.ACCEPTED and escort == CardInfo.State.OPEN:
 		api.decline_card(_escort.id())
 
 
@@ -221,14 +221,14 @@ func _nearest_to_freighter(api: ScenarioApi) -> float:
 ## cut short by the time (PARTIAL) pays its partial share.
 func _settle(api: ScenarioApi, result: int) -> void:
 	_result = result
-	if _state(api, _escort) == CardView.State.ACCEPTED:
+	if _state(api, _escort) == CardInfo.State.ACCEPTED:
 		# A freighter that survives still counts as lost if the engines could not keep pace.
 		var saved: bool = api.ship(_freighter.id()).in_play and api.needs_met(_escort.id())
 		api.settle_card(_escort.id(), saved, result == Result.PARTIAL)
 		if saved:
 			for ship: int in Scenario.fleet(api, _ships):
-				api.message("npc.rescue_thanks", {}, SayTarget.npc(NPC, ship))
-	if _state(api, _salvage) == CardView.State.ACCEPTED:
+				api.message("npc.rescue_thanks", {}, LineAudience.npc(NPC, ship))
+	if _state(api, _salvage) == CardInfo.State.ACCEPTED:
 		var done: bool = _near_ticks >= SimRate.ticks(SALVAGE_S)
 		api.settle_card(_salvage.id(), done, result == Result.PARTIAL)
 
@@ -236,8 +236,8 @@ func _settle(api: ScenarioApi, result: int) -> void:
 ## The state of the card a write posted, or EXPIRED while it isn't on the board.
 func _state(api: ScenarioApi, card: ApiHandle) -> int:
 	if card == null or card.id() < 0:
-		return CardView.State.EXPIRED
-	for c: CardView in api.cards_of(Scenario.fleet(api, _ships)[0]):
+		return CardInfo.State.EXPIRED
+	for c: CardInfo in api.cards_of(Scenario.fleet(api, _ships)[0]):
 		if c.id == card.id():
 			return c.state
-	return CardView.State.EXPIRED
+	return CardInfo.State.EXPIRED

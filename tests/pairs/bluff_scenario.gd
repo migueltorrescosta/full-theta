@@ -52,7 +52,7 @@ static func environment(w: SimWorld) -> void:
 	if w.tick == 0:
 		var c: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT)
 		c.title_key = "comms.card.contract"
-		c.target = TRADER
+		c.subject = TRADER
 		c.reward_credits = REWARD
 		c.rep_interaction = &"rep.complete_mission"
 		PairHarness.send(w, c)
@@ -102,7 +102,7 @@ static func crew(removed: int = -1) -> Callable:
 static func hear_claim(w: SimWorld) -> void:
 	if w.tick == HAIL_TICK:
 		var h: HailCommand = HailCommand.new()
-		h.target = TRADER
+		h.contact = TRADER
 		PairHarness.send(w, h)
 
 

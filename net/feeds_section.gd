@@ -1,8 +1,8 @@
-class_name FeedsView
+class_name FeedsSection
 extends RefCounted
 ## Section.FEEDS: what Weapons gets from other stations' work (P7 weak points and ammunition
 ## ratings, hack windows; P8 track feeds with a quality bar), built from KNOW and the hack
-## table when ViewFilter.grants() lets the view have it (FT-PAIR-007, FT-WPN-007). The
+## table when ShortcutFilter.grants() lets the view have it (FT-PAIR-007, FT-WPN-007). The
 ## weak points and resistances are the faction's scan knowledge (ScienceKnowledge): what
 ## Science revealed, no more. Tracks are the contacts the faction detects, with the track
 ## quality (GuidanceSystem.track_quality, D214: the bar) and whether a deployed probe covers
@@ -13,13 +13,13 @@ const MAX_ROWS: int = 255
 
 
 ## The FEEDS block of a ship with everything granted, or with only the lists `filter` grants:
-## the lists it would blank (ViewFilter.apply()) are not built at all.
-static func block(world: SimWorld, ship: int, filter: ViewFilter = null) -> Dictionary:
+## the lists it would blank (ShortcutFilter.apply()) are not built at all.
+static func block(world: SimWorld, ship: int, filter: ShortcutFilter = null) -> Dictionary:
 	var faction: int = world.faction_of(ship)
 	var out: Dictionary = {"weak": [], "windows": [], "tracks": [], "flags": []}
-	var want_weak: bool = filter == null or filter.grants(ViewFilter.WEAK_POINTS)
-	var want_tracks: bool = filter == null or filter.grants(ViewFilter.TRACK_FEEDS)
-	var want_flags: bool = filter == null or filter.grants(ViewFilter.CONTRACT_FLAGS)
+	var want_weak: bool = filter == null or filter.grants(ShortcutFilter.WEAK_POINTS)
+	var want_tracks: bool = filter == null or filter.grants(ShortcutFilter.TRACK_FEEDS)
+	var want_flags: bool = filter == null or filter.grants(ShortcutFilter.CONTRACT_FLAGS)
 	if not (want_weak or want_tracks or want_flags):
 		return out
 	var k: KnowledgeTable = world.knowledge
@@ -52,7 +52,7 @@ static func block(world: SimWorld, ship: int, filter: ViewFilter = null) -> Dict
 		if not card.is_empty():
 			(out["weak"] as Array).append(card)
 	if want_weak:
-		out["windows"] = ScienceView.hacks(world, faction)
+		out["windows"] = ScienceSection.hacks(world, faction)
 	return out
 
 
@@ -60,7 +60,7 @@ static func block(world: SimWorld, ship: int, filter: ViewFilter = null) -> Dict
 static func _weak_row(world: SimWorld, faction: int, contact: int) -> Dictionary:
 	if world.science_def == null:
 		return {}
-	var traits: Dictionary = ScienceView.revealed_traits(world, faction, contact)
+	var traits: Dictionary = ScienceSection.revealed_traits(world, faction, contact)
 	if traits["weak_mask"] == 0 and (traits["resist"] as Array).is_empty():
 		return {}
 	# The weak points name subsystems of the contact's class: that is known once they are.

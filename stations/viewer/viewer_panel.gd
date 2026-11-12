@@ -6,7 +6,7 @@ extends StationPanel
 ## refuses their pings, marks and commands).
 ##
 ## The forward camera sits at the bow and rolls with the deck plane, or, with comfort
-## on, keeps the selected target ship's deck or the player's cosmetic reference plane
+## on, keeps the selected contact's deck or the player's cosmetic reference plane
 ## level (FT-STN-017, D124). It switches to a chase camera while the ship is
 ## decoupled or rolls faster than CHASE_ROLL_DEG_S, and back once the roll has stayed
 ## under FORWARD_ROLL_DEG_S for FORWARD_AFTER_MS. The chase camera follows the bow but
@@ -14,14 +14,14 @@ extends StationPanel
 ##
 ## The Captain, or Relay with no Captain seated, switches the view (FT-MSC-002,
 ## FT-MSC-005): forward (with the auto-chase), chase (always), tactical (the radar fills
-## the screen), target (a camera on the selected contact, else the nearest) and status
+## the screen), close-up (a camera on the selected contact, else the nearest) and status
 ## (StatusView: hull, shields, subsystems, objectives, alert). `ctx.crew.main_view` holds
 ## it. A card the Captain pinged shows over every view for CARD_MS (FT-CPT-005).
 ##
 ## On a phone the Viewer stays out of the phone frame (`in_frame` false, #28 follow-up,
 ## design 2.8): it pings nothing (the server refuses a viewer's pings, FT-MSC-004), so it
 ## gets no view-top row and no long-press. The Captain's mirror keeps its top read-outs (the
-## target caption, the pinged card, the status sheet) under `top_reserve`, which the
+## close-up caption, the pinged card, the status sheet) under `top_reserve`, which the
 ## Captain sets to the part of the view-top row over it.
 
 ## Auto-chase thresholds (PROVISIONAL, approved by the owner in #7).
@@ -45,17 +45,17 @@ const RADAR_MIN_H: float = 180.0
 ## tall (#28).
 const SIDE_RADAR_ASPECT: float = 1.6
 const FONT_SIZE: int = 15
-## The target view's camera stands this far from the target, towards the own ship (m),
+## The close-up view's camera stands this far from its contact, towards the own ship (m),
 ## or at half the range when closer.
-const TARGET_STANDOFF_M: float = 150.0
-## Contact models in the target view are drawn at the ships' real size (Helm's scale), so
-## the target fills a good part of the view; elsewhere the main screen draws them small.
-const TARGET_SCALE: float = 9.0
-## The fill light: dim in the forward and chase views; in the target view brighter, turned
+const CLOSE_UP_STANDOFF_M: float = 150.0
+## Contact models in the close-up view are drawn at the ships' real size (Helm's scale), so
+## the contact fills a good part of the view; elsewhere the main screen draws them small.
+const CLOSE_UP_SCALE: float = 9.0
+## The fill light: dim in the forward and chase views; in the close-up view brighter, turned
 ## with the camera.
 const RIM_ENERGY: float = 0.9
 const RIM_ROTATION: Vector3 = Vector3(30.0, 210.0, 0.0)
-const TARGET_RIM_ENERGY: float = 2.0
+const CLOSE_UP_RIM_ENERGY: float = 2.0
 ## The baked ship's half length (m) at scale 1.
 const HULL_HALF_M: float = 2.7
 ## The pinged card's share of the screen width, and its font size.
@@ -89,14 +89,14 @@ var _view_box: SubViewportContainer
 var _card_layer: Control
 var _card_shown: int = -1
 ## The forward view; only contacts with a NEAR orientation (within 2 km) are drawn.
-var _space: SpaceView
+var _space: SpaceScene
 var _own: ProceduralShip
 var _overlay: Control
 var _rail: Control
 var _cols: HBoxContainer
 var _rows: VBoxContainer
 var _items: Array[Dictionary] = []
-## This frame's picture (update_view): the rail and the target read its contacts, sorted once.
+## This frame's picture (update_view): the rail and the close-up read its contacts, sorted once.
 var _picture: ContactPicture = ContactPicture.new()
 ## The opaque boxes over the overlay, read once per draw (SheetCover.over walks the tree).
 var _covers: Array[Rect2] = []
@@ -141,7 +141,7 @@ func _setup() -> void:
 	_viewport.msaa_3d = Viewport.MSAA_DISABLED
 	RenderQuality.track(_viewport)
 	view.add_child(_viewport)
-	_space = SpaceView.new()
+	_space = SpaceScene.new()
 	_space.near_only = true
 	_space.set_rim_energy(RIM_ENERGY)
 	_viewport.add_child(_space)
@@ -176,7 +176,7 @@ func _process(_delta: float) -> void:
 ## Camera mode, cameras, models, overlay, rail and radar for this frame (tests call it).
 func update_view(delta: float) -> void:
 	var now: int = ctx.now_ms()
-	var status: Dictionary = ctx.view.blocks.get(StationViews.Section.STATUS, {})
+	var status: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {})
 	_show_view(ctx.crew.main_view)
 	if view_id == MainScreen.View.CHASE:
 		chase = true
@@ -188,12 +188,12 @@ func update_view(delta: float) -> void:
 	var ship: Basis = Basis(ctx.interp.own_rotation())
 	if view_id == MainScreen.View.STATUS:
 		status_view.top = top_reserve
-		var captain: Dictionary = ctx.view.blocks.get(StationViews.Section.CAPTAIN, {})
+		var captain: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.CAPTAIN, {})
 		status_view.show_model(StatusView.model(status, captain, ctx.ship_def(), ctx.crew.alert))
 	elif view_id != MainScreen.View.TACTICAL:
 		_space.show_id = -1
 		_space.ship_scale = 1.0
-		if view_id != MainScreen.View.TARGET or not _place_target_camera():
+		if view_id != MainScreen.View.CLOSE_UP or not _place_close_up_camera():
 			_space.set_rim_energy(RIM_ENERGY)
 			_space.rim.rotation_degrees = RIM_ROTATION
 			_place_camera(ship, delta)
@@ -207,7 +207,7 @@ func update_view(delta: float) -> void:
 		_card_layer.queue_redraw()
 
 
-## Shows the view's parts: the 3D view for forward, chase and target, the status sheet
+## Shows the view's parts: the 3D view for forward, chase and close-up, the status sheet
 ## for status, only the radar and rail for tactical.
 func _show_view(id: int) -> void:
 	view_id = clampi(id, 0, MainScreen.NAMES.size() - 1)
@@ -248,26 +248,26 @@ func _place_radar() -> void:
 	)
 
 
-## The target view's camera (world axes centred on the own ship): TARGET_STANDOFF_M from
-## the target towards the ship, looking at it. The target is the selected contact, else
+## The close-up view's camera (world axes centred on the own ship): CLOSE_UP_STANDOFF_M from
+## the contact towards the ship, looking at it. The contact is the selected one, else
 ## the nearest one; false when there is none (the forward camera is used).
-func _place_target_camera() -> bool:
-	var target: Dictionary = _target_item()
-	if target.is_empty():
+func _place_close_up_camera() -> bool:
+	var focus: Dictionary = _close_up_item()
+	if focus.is_empty():
 		return false
-	_space.show_id = int(target["id"])
-	_space.ship_scale = TARGET_SCALE
-	var at: Vector3 = target["world"]
+	_space.show_id = int(focus["id"])
+	_space.ship_scale = CLOSE_UP_SCALE
+	var at: Vector3 = focus["world"]
 	var dist: float = at.length()
 	var back: Vector3 = -at.normalized() if dist > 0.001 else Vector3.BACK
-	var stand: float = minf(TARGET_STANDOFF_M, dist * 0.5)
+	var stand: float = minf(CLOSE_UP_STANDOFF_M, dist * 0.5)
 	var eye: Vector3 = at + back * stand
 	var up: Vector3 = Vector3.UP if absf(back.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
 	var look: Basis = Basis.looking_at((at - eye).normalized(), up)
 	_space.place_camera(Transform3D(look, eye), ComfortCamera.fov_deg(ctx.settings, FOV_DEG))
 	# The fill light follows the camera, from its upper left, so the face turned to the
 	# viewer is always the lit one (a fixed light left it dark for half the bearings).
-	_space.set_rim_energy(TARGET_RIM_ENERGY)
+	_space.set_rim_energy(CLOSE_UP_RIM_ENERGY)
 	_space.rim.transform = Transform3D(
 		look * Basis(Vector3.UP, deg_to_rad(-30.0)) * Basis(Vector3.RIGHT, deg_to_rad(-25.0)),
 		Vector3.ZERO
@@ -277,8 +277,8 @@ func _place_target_camera() -> bool:
 	return true
 
 
-## The contact the target view and its card are about: the selection, else the nearest.
-func _target_item() -> Dictionary:
+## The contact the close-up view and its card are about: the selection, else the nearest.
+func _close_up_item() -> Dictionary:
 	var sel: Dictionary = ctx.crew.selection
 	for it: Dictionary in _items:
 		if it["kind"] == "contact" and sel.get("kind", "") == "contact" and it["id"] == sel["id"]:
@@ -313,7 +313,7 @@ func item_at(pos: Vector2) -> Dictionary:
 
 ## The own ship's roll rate (degrees per second) from the KIN section (body frame).
 func roll_rate_deg_s() -> float:
-	var ang: Vector3 = NetCodec.ang_of(ctx.view.kin.get("ang", Vector3i.ZERO))
+	var ang: Vector3 = NetCodec.ang_of(ctx.snap.kin.get("ang", Vector3i.ZERO))
 	return absf(rad_to_deg(ang.z))
 
 
@@ -365,12 +365,12 @@ func _place_camera(ship: Basis, delta: float) -> void:
 func _draw_overlay() -> void:
 	var font: Font = get_theme_default_font()
 	_covers = SheetCover.over(_overlay)
-	# The target view's contact, found once for the whole overlay (R20-3).
-	var target: Dictionary = _target_item() if view_id == MainScreen.View.TARGET else {}
-	if view_id == MainScreen.View.TARGET:
-		var caption: String = TranslationServer.translate("view.no_target")
-		if not target.is_empty():
-			caption = ContactPicture.chip_of(target)
+	# The close-up view's contact, found once for the whole overlay (R20-3).
+	var focus: Dictionary = _close_up_item() if view_id == MainScreen.View.CLOSE_UP else {}
+	if view_id == MainScreen.View.CLOSE_UP:
+		var caption: String = TranslationServer.translate("view.no_contact")
+		if not focus.is_empty():
+			caption = ContactPicture.chip_of(focus)
 		_text(font, Vector2(16.0, 12.0 + top_reserve), caption, Palette.color("text"))
 	for it: Dictionary in _items:
 		var world: Vector3 = it["world"]
@@ -385,12 +385,12 @@ func _draw_overlay() -> void:
 			"contact":
 				_bracket(p, 14.0, col, ctx.crew.is_selected(it["kind"], it["id"]))
 				var chip: String = ContactPicture.chip_of(it)
-				if view_id == MainScreen.View.TARGET and it["id"] == target.get("id", -1):
-					# The target's hull fills the middle: its label sits under it.
+				if view_id == MainScreen.View.CLOSE_UP and it["id"] == focus.get("id", -1):
+					# The contact's hull fills the middle: its label sits under it.
 					var w: float = (
 						font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x
 					)
-					_text(font, p + Vector2(-w / 2.0, _hull_px(target) * 0.6 + 14.0), chip, col)
+					_text(font, p + Vector2(-w / 2.0, _hull_px(focus) * 0.6 + 14.0), chip, col)
 				else:
 					_label(font, p, chip, col)
 			"mark":
@@ -411,10 +411,10 @@ func _draw_card() -> void:
 	CardList.draw_card(_card_layer, rect, card, CARD_FONT)
 
 
-## The target hull's half length on screen (px): TARGET_SCALE times the model's half length.
-func _hull_px(target: Dictionary) -> float:
-	var at: Vector3 = target.get("world", Vector3.ZERO)
-	var side: Vector3 = camera.global_basis.x * (HULL_HALF_M * TARGET_SCALE)
+## The close-up contact's half length on screen (px): CLOSE_UP_SCALE times the model's.
+func _hull_px(focus: Dictionary) -> float:
+	var at: Vector3 = focus.get("world", Vector3.ZERO)
+	var side: Vector3 = camera.global_basis.x * (HULL_HALF_M * CLOSE_UP_SCALE)
 	return absf(camera.unproject_position(at + side).x - camera.unproject_position(at).x)
 
 

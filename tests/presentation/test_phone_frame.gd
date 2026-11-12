@@ -322,14 +322,14 @@ func test_selection_chip_and_sheet() -> void:
 # the pinged item.
 func test_request_chips_and_ping_toast() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
-	var at: int = ChipView.def().chips.find(
-		ChipView.def().chips.filter(func(c: ChipDef) -> bool: return c.to_station == &"helm")[0]
+	var at: int = ChipsReader.def().chips.find(
+		ChipsReader.def().chips.filter(func(c: ChipDef) -> bool: return c.to_station == &"helm")[0]
 	)
-	var from: int = StationViews.CREW.find(String(ChipView.def().chips[at].from_station))
+	var from: int = StationCatalogue.CREW.find(String(ChipsReader.def().chips[at].from_station))
 	var row: Dictionary = {
 		"id": 5, "chip": at, "arg": -1, "from": from, "to": 0, "sent": 3500, "expires": 4000
 	}
-	s.ctx.view.blocks[StationViews.Section.CHIPS] = {"chips": [row]}
+	s.ctx.snap.blocks[StationCatalogue.Section.CHIPS] = {"chips": [row]}
 	s._process(0.016)
 	await _frames(1)
 	assert_bool(s.frame.request_chips.is_visible_in_tree()).is_true()
@@ -402,7 +402,7 @@ func test_band_is_drawn_into_only_by_framed_panels() -> void:
 # The dev seat's station button opens a sheet of the six stations numbered 1 to 6 (D256);
 # a pick focuses that station, and the button names it.
 func test_dev_seat_station_sheet() -> void:
-	var s: StationScreen = await _screen(Vector2i(844, 390), StationViews.ALL, LANDSCAPE, false)
+	var s: StationScreen = await _screen(Vector2i(844, 390), StationCatalogue.ALL, LANDSCAPE, false)
 	assert_bool(s._tabs.visible).is_false()
 	assert_object(s.top_bar.tabs.lead).is_same(s.joint_switch)
 	assert_str(s.joint_switch.text).is_equal(tr("station.helm") + " ▾")
@@ -441,8 +441,8 @@ func test_partner_glance_in_tactical() -> void:
 func test_every_joint_view_has_both_glance_cards() -> void:
 	var ctx: StationContext = StationFixture.context("tactical", SETTINGS)
 	var joint: int = 0
-	for seat: String in StationViews.OTHER_SEATS:
-		var pair: Array = StationViews.OTHER_SEATS[seat][2]
+	for seat: String in StationCatalogue.OTHER_SEATS:
+		var pair: Array = StationCatalogue.OTHER_SEATS[seat][2]
 		if pair.size() != 2:
 			continue
 		joint += 1

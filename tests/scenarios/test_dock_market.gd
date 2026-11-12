@@ -16,8 +16,8 @@ func _docked() -> ScenarioFixture:
 
 
 func _market_card(f: ScenarioFixture, ship: int = 0) -> int:
-	for c: CardView in f.api.cards_of(ship):
-		if c.kind == CardSpec.Kind.OFFER and c.state == CardView.State.OPEN:
+	for c: CardInfo in f.api.cards_of(ship):
+		if c.kind == CardSpec.Kind.OFFER and c.state == CardInfo.State.OPEN:
 			return c.id
 	return -1
 
@@ -45,7 +45,7 @@ func test_the_offer_lapses_on_undocking_and_a_new_dock_posts_a_new_one() -> void
 	var first: int = _market_card(f)
 	assert_bool(f.send(UndockCommand.new())).is_true()
 	f.run(2)
-	assert_int(f.card_state(first)).is_equal(CardView.State.EXPIRED)
+	assert_int(f.card_state(first)).is_equal(CardInfo.State.EXPIRED)
 	assert_int(_market_card(f)).is_equal(-1)
 	var buy: TradeCommand = TradeCommand.new()
 	buy.card = first

@@ -239,7 +239,7 @@ func _post_event(audience: PackedInt32Array, e: SimEvent, payload: Dictionary) -
 		var s: NetSession = by_id.get(id)
 		if s == null:
 			continue
-		var v: float = EventRouting.event_value(s.seat, e.kind, e.value, s.view_code())
+		var v: float = EventRouting.event_value(s.seat, e.kind, e.value, s.stream_code())
 		var ids: PackedInt32Array = groups.get(v, PackedInt32Array())
 		ids.append(id)
 		groups[v] = ids
@@ -255,7 +255,7 @@ func _post_event(audience: PackedInt32Array, e: SimEvent, payload: Dictionary) -
 ## the cause at every difficulty; the toggle only decides whether the pick is made for
 ## Engineering (FT-PAIR-014).
 func _prefill_cause(e: SimEvent) -> void:
-	if shares.active(e.ship_id, ViewFilter.DIAGNOSED_CAUSES):
+	if shares.active(e.ship_id, ShortcutFilter.DIAGNOSED_CAUSES):
 		shares.prefill_cause(e.ship_id, e.tag)
 
 
@@ -273,7 +273,7 @@ func event_audience(e: SimEvent) -> PackedInt32Array:
 				s.has_pick()
 				and s.ship < world.ship_count()
 				and world.faction_of(s.ship) == e.faction
-				and EventRouting.sees_event(s.seat, e.kind, s.view_code())
+				and EventRouting.sees_event(s.seat, e.kind, s.stream_code())
 			)
 	)
 
@@ -287,9 +287,9 @@ func computer_audience(ship: int, stations: PackedStringArray) -> PackedInt32Arr
 			continue
 		# The Captain seat is its own seat with no crew station: its station name
 		# is "captain" (the Shakedown's Captain track, review 2, M1).
-		var names: Array[String] = StationViews.stations_of(s.seat)
-		if s.seat == StationViews.CAPTAIN:
-			names = [StationViews.CAPTAIN]
+		var names: Array[String] = StationCatalogue.stations_of(s.seat)
+		if s.seat == StationCatalogue.CAPTAIN:
+			names = [StationCatalogue.CAPTAIN]
 		for station: String in names:
 			if stations.has(station):
 				out.append(s.id)
@@ -394,8 +394,8 @@ func send_votes(
 func catalogue() -> PackedByteArray:
 	var body: Dictionary = {
 		"ships": crew_ships(),
-		"seats": StationViews.catalogue(dev_all),
-		"load_tags": StationViews.LOAD_TAGS.duplicate(),
+		"seats": StationCatalogue.catalogue(dev_all),
+		"load_tags": StationCatalogue.LOAD_TAGS.duplicate(),
 	}
 	return NetProtocol.encode(NetProtocol.Type.CATALOGUE, body)
 
@@ -434,7 +434,7 @@ func admit_rule() -> String:
 ## mount's).
 func claim_rule(s: NetSession, command: SimCommand) -> String:
 	var item: String = StationBlocks.item_of(command)
-	if item == "" or not StationViews.is_claimable(item):
+	if item == "" or not StationCatalogue.is_claimable(item):
 		return ""
 	var holder: int = claims.holder(s.ship, item)
 	return CommandGate.CLAIMED if holder >= 0 and holder != s.id else ""
@@ -492,7 +492,7 @@ func _on_hello(conn: int, msg: Dictionary, now_us: int) -> void:
 		_restore(s)
 	# The name may have changed (the lobby's captain).
 	lobby.mark_dirty()
-	transport.bind(conn, s.id, _welcome(s, resumed), s.view_key(), not resumed)
+	transport.bind(conn, s.id, _welcome(s, resumed), s.stream_key(), not resumed)
 	if server_log != null:
 		var fields: Dictionary = {
 			"session": s.id, "name": s.name, "client": s.client_kind, "resumed": resumed
@@ -540,7 +540,7 @@ func _on_claim(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var reason: String = ""
 	if not s.has_pick() or not _items_of(s.ship).has(item):
 		reason = BAD_ITEM
-	elif not StationViews.stations_of(s.seat).has(StationViews.station_of_item(item)):
+	elif not StationCatalogue.stations_of(s.seat).has(StationCatalogue.station_of_item(item)):
 		reason = CommandGate.NOT_YOUR_STATION
 	elif type == NetProtocol.Type.CLAIM:
 		if not claims.claim(s.ship, item, s.id):
@@ -632,7 +632,7 @@ func settle(ship: int) -> void:
 	for s: NetSession in by_id.values():
 		if s.ship != ship:
 			continue
-		for station: String in StationViews.stations_of(s.seat):
+		for station: String in StationCatalogue.stations_of(s.seat):
 			(covering.get_or_add(station, []) as Array).append(s.id)
 	for claimed: Array in claims.settle(ship, covering, StationBlocks.claim_items(world, ship)):
 		_claim_changed(ship, claimed[0])
@@ -708,9 +708,9 @@ func _restore(s: NetSession) -> void:
 	s.ship = s.last_ship
 	if s.last_seat != "" and lobby.pick_rule(s, s.last_ship, s.last_seat) == "":
 		lobby.set_pick(s, s.last_ship, s.last_seat)
-		var stations: Array[String] = StationViews.stations_of(s.seat)
+		var stations: Array[String] = StationCatalogue.stations_of(s.seat)
 		for item: String in s.last_claims:
-			if stations.has(StationViews.station_of_item(item)):
+			if stations.has(StationCatalogue.station_of_item(item)):
 				if claims.claim(s.ship, item, s.id):
 					_claim_changed(s.ship, item)
 	s.last_claims = []
@@ -733,9 +733,9 @@ func _claim_changed(ship: int, item: String) -> void:
 	var holder: int = claims.holder(ship, item)
 	var holder_name: String = by_id[holder].name if by_id.has(holder) else ""
 	var payload: Dictionary = {"ship": ship, "item": item, "session": holder, "name": holder_name}
-	var station: String = StationViews.station_of_item(item)
+	var station: String = StationCatalogue.station_of_item(item)
 	for s: NetSession in by_id.values():
-		if s.ship == ship and StationViews.stations_of(s.seat).has(station):
+		if s.ship == ship and StationCatalogue.stations_of(s.seat).has(station):
 			notify(s, NetProtocol.EVENT_CLAIM, payload)
 	_ownership_dirty[ship] = true
 
@@ -745,7 +745,7 @@ func _claim_changed(ship: int, item: String) -> void:
 func _wrote(session_id: int, c: SimCommand) -> void:
 	coop.on_command(session_id, c)
 	var item: String = StationBlocks.item_of(c)
-	if item == "" or StationViews.is_claimable(item):
+	if item == "" or StationCatalogue.is_claimable(item):
 		return
 	var who: NetSession = by_id.get(session_id)
 	var entry: Array = [session_id, who.name if who != null else ""]

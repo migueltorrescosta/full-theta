@@ -21,7 +21,7 @@ func after_test() -> void:
 
 func _crew(server: NetServer) -> Dictionary:
 	var out: Dictionary = {}
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		out[station] = await h.joined(server, station, station)
 	return out
 
@@ -72,7 +72,10 @@ func test_comms_shortcuts_are_shared_by_a_press() -> void:
 	crew["relay"].share("mission_icon")
 	assert_bool(await h.until(shared.bind("p15"))).is_true()
 	for feature: StringName in [
-		ViewFilter.LANES, ViewFilter.CONTRACT_FLAGS, ViewFilter.VERIFY_CHIP, ViewFilter.MISSION_ICON
+		ShortcutFilter.LANES,
+		ShortcutFilter.CONTRACT_FLAGS,
+		ShortcutFilter.VERIFY_CHIP,
+		ShortcutFilter.MISSION_ICON
 	]:
 		assert_bool(server.game.shares.active(PLAYER, feature)).is_true()
 	var from: int = h.mark(crew["helm"])
@@ -139,7 +142,7 @@ func test_a_relay_mark_on_a_missions_contact_marks_the_mission() -> void:
 	var w: SimWorld = StoryFixture.wire(server.world)
 	var mission: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION)
 	mission.source = SimCommand.Source.SERVER
-	mission.target = ENEMY
+	mission.subject = ENEMY
 	_do(server, mission, 3)
 	assert_bool(StoryRules.is_marked(w, 0)).is_false()
 	var from: int = h.mark(crew["relay"])
@@ -162,7 +165,7 @@ func test_comms_pair_events_are_counted() -> void:
 	var coop: NetCoop = server.game.coop
 	_run(server, 3)
 	var hail: HailCommand = HailCommand.new()
-	hail.target = ENEMY
+	hail.contact = ENEMY
 	_do(server, hail)
 	Story.learn_fact(w, w.faction_of(PLAYER), ENEMY, "cargo")
 	var reply: ReplyCommand = ReplyCommand.new()

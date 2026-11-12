@@ -107,7 +107,7 @@ func test_race_plays_one_list_at_own_copies() -> void:
 	assert_int(plan.size()).is_less_equal(f.setup.run_def.max_encounters)
 	var sites: Dictionary[int, bool] = {}
 	for e: int in 3:
-		var ev: EncounterView = f.api.encounter(e)
+		var ev: EncounterInfo = f.api.encounter(e)
 		assert_str(String(ev.scenario_id)).is_equal(plan[0])
 		var ship: int = ev.ships[0]
 		sites[ev.site] = true

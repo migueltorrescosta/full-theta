@@ -81,7 +81,7 @@ func test_every_action_within_two_taps() -> void:
 		var s: StationScreen = await _screen(f[0], f[1])
 		s.ctx.crew.select("contact", StationFixture.H2)
 		# A fault of unknown cause on the picked part, so Cause can act (C4: greyed otherwise).
-		s.ctx.view.blocks[StationViews.Section.ENGINEERING]["subsystems"][0]["fault"] = true
+		s.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"][0]["fault"] = true
 		var e: EngineeringPanel = s.focused_panel()
 		assert_object(e.pages).is_not_null()
 		assert_array(e.pages.titles()).is_equal(["Power", "Ship", "Faults", "Crew"])

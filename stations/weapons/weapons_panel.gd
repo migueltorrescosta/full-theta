@@ -2,7 +2,7 @@
 class_name WeaponsPanel
 extends StationPanel
 ## Weapons (§5.2, W-B turret camera, D49; T052). Focused, the panel is the turret camera
-## of one mount (FT-WPN-001): stars and contacts (SpaceView, D107) with brackets and
+## of one mount (FT-WPN-001): stars and contacts (SpaceScene, D107) with brackets and
 ## chips, the mount's arc edge, where the barrel points, the lead reticle on the selected
 ## contact (Lead, shared/, FT-SIM-014), an out-of-arc line with the clock and height to
 ## turn to (FT-WPN-005), and the mount list with state and claimer (FT-WPN-004). The
@@ -59,7 +59,7 @@ var _firing: bool = false
 var _firing_all: bool = false
 var _view: SubViewportContainer
 ## The turret camera's view, from the camera mount.
-var _space: SpaceView
+var _space: SpaceScene
 var _overlay: WeaponsTurretOverlay
 ## The phone arrangement while the form is a phone's and the panel is focused, else null.
 var _touch: WeaponsTouch = null
@@ -389,7 +389,7 @@ func chip_arg(chip: ChipDef) -> int:
 
 
 func claim_item() -> String:
-	return "%s:%d" % [StationViews.CLAIM_MOUNT, mount] if mount_count() > 0 else ""
+	return "%s:%d" % [StationCatalogue.CLAIM_MOUNT, mount] if mount_count() > 0 else ""
 
 
 # --- Mounts. ---
@@ -401,7 +401,7 @@ func mount_count() -> int:
 
 ## The MOUNTS block row of mount i ({} before data).
 func mount_row(i: int) -> Dictionary:
-	var rows: Array = ctx.view.blocks.get(StationViews.Section.MOUNTS, {}).get("mounts", [])
+	var rows: Array = ctx.snap.blocks.get(StationCatalogue.Section.MOUNTS, {}).get("mounts", [])
 	return rows[i] if i < rows.size() else {}
 
 
@@ -497,7 +497,7 @@ func holder_name(i: int) -> String:
 
 ## The claim on mount i ({"session", "name"}), {} while free.
 func holder(i: int) -> Dictionary:
-	return ctx.crew.claims.get("%s:%d" % [StationViews.CLAIM_MOUNT, i], {})
+	return ctx.crew.claims.get("%s:%d" % [StationCatalogue.CLAIM_MOUNT, i], {})
 
 
 func _first_mount() -> int:
@@ -580,6 +580,6 @@ func _build_view() -> void:
 	vp.own_world_3d = true
 	RenderQuality.track(vp)
 	_view.add_child(vp)
-	_space = SpaceView.new()
+	_space = SpaceScene.new()
 	_space.ship_scale = SHIP_SCALE
 	vp.add_child(_space)

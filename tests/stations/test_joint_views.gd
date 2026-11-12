@@ -16,7 +16,7 @@ func before() -> void:
 
 func _screen(seat: String) -> StationScreen:
 	var ctx: StationContext = StationFixture.context(seat, "user://test_joint_views.cfg")
-	for s: String in StationViews.CREW:
+	for s: String in StationCatalogue.CREW:
 		ctx.settings.mark_hint_seen(s)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
@@ -81,15 +81,15 @@ func _count(n: Node, type: Script) -> int:
 ## Moves contact `id` to a ship-frame offset (m), at rest.
 func _place(ctx: StationContext, id: int, local: Vector3) -> void:
 	var p: Vector3 = StationFixture.OWN_POS + StationFixture.own_rotation() * local
-	ctx.view.contacts["model"][id] = [
-		NetCodec.quant_pos(CubePoint.of(p), ctx.view.p_units),
+	ctx.snap.contacts["model"][id] = [
+		NetCodec.quant_pos(CubePoint.of(p), ctx.snap.p_units),
 		NetCodec.quant_vel(Vector3.ZERO),
 		StationFixture.TICK
 	]
 	ctx.interp = SnapshotInterpolator.new()
-	ctx.interp.p_units = ctx.view.p_units
-	ctx.interp.push(ctx.view, StationFixture.NOW_MS - 100)
-	ctx.interp.push(ctx.view, StationFixture.NOW_MS)
+	ctx.interp.p_units = ctx.snap.p_units
+	ctx.interp.push(ctx.snap, StationFixture.NOW_MS - 100)
+	ctx.interp.push(ctx.snap, StationFixture.NOW_MS)
 	ctx.interp.update(StationFixture.NOW_MS)
 
 
@@ -216,9 +216,9 @@ func test_tactical_cockpit_fires_claimed_mounts_and_turret_aims() -> void:
 # ShipIntents. A request between the view's own stations is a direct action, not a chip
 # (tests/stations/test_request_chips.gd sends them); the chips for other stations stay.
 func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
-	var def: SeatDef = StationViews.def("tactical")
-	assert_bool(StationViews.Section.HELM in def.sections).is_true()
-	assert_bool(StationViews.Section.MOUNTS in def.sections).is_true()
+	var def: SeatDef = StationCatalogue.def("tactical")
+	assert_bool(StationCatalogue.Section.HELM in def.sections).is_true()
+	assert_bool(StationCatalogue.Section.MOUNTS in def.sections).is_true()
 	var s: StationScreen = _screen("tactical")
 	var helm: HelmPanel = s.panels[0]
 	var weapons: WeaponsPanel = s.panels[1]
@@ -242,8 +242,8 @@ func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
 ## Every seat that is a joint view: the 15 pairs (FT-NET-032).
 func _views() -> Array[String]:
 	var out: Array[String] = []
-	for seat: String in StationViews.OTHER_SEATS:
-		if (StationViews.OTHER_SEATS[seat][2] as Array).size() == 2:
+	for seat: String in StationCatalogue.OTHER_SEATS:
+		if (StationCatalogue.OTHER_SEATS[seat][2] as Array).size() == 2:
 			out.append(seat)
 	return out
 
@@ -257,7 +257,7 @@ func test_all_fifteen_views_are_modal_two_panel_screens() -> void:
 	assert_int(views.size()).is_equal(15)
 	var pairs: Dictionary = {}
 	for seat: String in views:
-		var stations: Array = StationViews.stations_of(seat)
+		var stations: Array = StationCatalogue.stations_of(seat)
 		pairs[",".join(PackedStringArray(stations))] = true
 		var s: StationScreen = _screen(seat)
 		assert_array(s.stations).is_equal(stations)
@@ -275,7 +275,7 @@ func test_all_fifteen_views_are_modal_two_panel_screens() -> void:
 		_tap(s, "F1")
 		assert_str(s.focused_station()).is_equal(stations[0])
 		# The pair name is under the view name in the lobby (D186).
-		var def: SeatDef = StationViews.def(seat)
+		var def: SeatDef = StationCatalogue.def(seat)
 		assert_str(def.load_tag).is_not_empty()
 	assert_int(pairs.size()).is_equal(15)
 
@@ -295,8 +295,8 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 	}
 	var seen: Dictionary = {}
 	for seat: String in _views():
-		var stations: Array = StationViews.stations_of(seat)
-		for chip: ChipDef in ChipView.def().chips:
+		var stations: Array = StationCatalogue.stations_of(seat)
+		for chip: ChipDef in ChipsReader.def().chips:
 			var from: String = String(chip.from_station)
 			# Hold fire has no direct action: Parley's one player says so (next test).
 			if chip.id == &"hold_fire":
@@ -333,7 +333,7 @@ func test_hold_fire_in_parley_is_a_toast() -> void:
 	var s: StationScreen = _screen("parley")
 	var toasts: Array[String] = []
 	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
-	var chip: ChipDef = ChipView.def().chips[ChipView.index_of("hold_fire")]
+	var chip: ChipDef = ChipsReader.def().chips[ChipsReader.index_of("hold_fire")]
 	s.focus(s.stations.find("comms"))
 	s.ctx.crew.select("contact", StationFixture.H2)
 	s.focused_panel().send_chip(chip)
@@ -349,7 +349,7 @@ func test_direct_bring_to_bear_names_the_requested_mount() -> void:
 	var weapons: WeaponsPanel = s.panels[s.stations.find("weapons")] as WeaponsPanel
 	weapons.mount = weapons.mount_count() - 1
 	var chip: ChipDef
-	for c: ChipDef in ChipView.def().chips:
+	for c: ChipDef in ChipsReader.def().chips:
 		if c.id == &"bring_to_bear":
 			chip = c
 	s.focus(s.stations.find("weapons"))
@@ -369,10 +369,10 @@ func test_direct_power_respects_the_reactor_and_the_maximum() -> void:
 	var toasts: Array[String] = []
 	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
 	var power: ChipDef
-	for c: ChipDef in ChipView.def().chips:
+	for c: ChipDef in ChipsReader.def().chips:
 		if c.id == &"power":
 			power = c
-	var rows: Array = s.ctx.view.blocks[StationViews.Section.ENGINEERING]["subsystems"]
+	var rows: Array = s.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"]
 	var used: int = 0
 	for r: Dictionary in rows:
 		used += int(r["pips"])
@@ -424,7 +424,7 @@ static func _inputs(binding: String) -> Array:
 # the pointer's select and fire (D176) are checked by the whole-catalogue test.
 func test_no_key_is_used_by_both_panels_of_any_view() -> void:
 	for seat: String in _views():
-		var stations: Array = StationViews.stations_of(seat)
+		var stations: Array = StationCatalogue.stations_of(seat)
 		for focused: String in stations:
 			for device: String in IntentTable.DEVICES:
 				var owner_of: Dictionary = {}
@@ -444,7 +444,7 @@ func test_no_key_is_used_by_both_panels_of_any_view() -> void:
 # The dev seat (all six stations) shows a tab per station, numbered for Shift + digit, and a
 # one-line hint until the first switch; a tab click or Shift + digit moves the focus.
 func test_the_dev_seat_has_numbered_station_tabs_and_a_hint() -> void:
-	var s: StationScreen = _screen(StationViews.ALL)
+	var s: StationScreen = _screen(StationCatalogue.ALL)
 	assert_array(s.panels).has_size(6)
 	var tab: Button = s.find_child("Tab3", true, false) as Button
 	assert_str(tab.text).is_equal("3 Engineering")

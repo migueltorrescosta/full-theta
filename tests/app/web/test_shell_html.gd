@@ -107,7 +107,7 @@ func test_the_shells_tips_are_the_tips_file() -> void:
 	assert_int(start).is_greater(0)
 	var line: String = src.substr(start, src.find("\n", start) - start)
 	var copy: Dictionary = JSON.parse_string(line.trim_prefix("const FT_TIPS = ").trim_suffix(";"))
-	var data: Dictionary = TipsView.read()
+	var data: Dictionary = TipsPanel.read()
 	assert_int((copy["tips"] as Array).size()).is_equal((data["tips"] as Array).size())
 	for i: int in (data["tips"] as Array).size():
 		var tip: Dictionary = data["tips"][i]

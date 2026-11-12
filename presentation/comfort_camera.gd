@@ -32,9 +32,9 @@ static func plane_up(
 ## for marks, points or a contact without NEAR.
 static func target_rot(ctx: StationContext) -> Variant:
 	var sel: Dictionary = ctx.crew.selection
-	if sel.get("kind", "") != "contact" or not ctx.view.near.has(int(sel["id"])):
+	if sel.get("kind", "") != "contact" or not ctx.snap.near.has(int(sel["id"])):
 		return null
-	return NetCodec.unpack_quat(int(ctx.view.near[int(sel["id"])][0]))
+	return NetCodec.unpack_quat(int(ctx.snap.near[int(sel["id"])][0]))
 
 
 ## The field of view (degrees) for a camera whose normal one is `normal_deg`.

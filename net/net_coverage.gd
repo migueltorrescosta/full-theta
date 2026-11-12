@@ -10,14 +10,14 @@ extends RefCounted
 const MIN_CREW: int = 3
 
 
-## The functional stations no seat covers, in StationViews.CREW order.
+## The functional stations no seat covers, in StationCatalogue.CREW order.
 static func uncovered(seats: Array) -> Array[String]:
 	var covered: Dictionary = {}
 	for seat: String in seats:
-		for station: String in StationViews.stations_of(seat):
+		for station: String in StationCatalogue.stations_of(seat):
 			covered[station] = true
 	var out: Array[String] = []
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		if not covered.has(station):
 			out.append(station)
 	return out
@@ -27,7 +27,7 @@ static func uncovered(seats: Array) -> Array[String]:
 static func crew_count(seats: Array) -> int:
 	var n: int = 0
 	for seat: String in seats:
-		if StationViews.is_crew(seat):
+		if StationCatalogue.is_crew(seat):
 			n += 1
 	return n
 

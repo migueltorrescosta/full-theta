@@ -82,7 +82,7 @@ func test_what_engineering_says_saves_reputation() -> void:
 # part or fault field, only the hull as one of the health bands, whatever the ship's state.
 func test_comms_sees_the_hull_band_and_nothing_of_condition() -> void:
 	var w: SimWorld = _ready_world()
-	var block: Dictionary = CommsView.block(w, 0)
+	var block: Dictionary = CommsSection.block(w, 0)
 	var fields: Array[String] = []
 	for entry: Array in BlockSchema.COMMS:
 		fields.append(entry[0])
@@ -93,8 +93,8 @@ func test_comms_sees_the_hull_band_and_nothing_of_condition() -> void:
 	var damaged: SimWorld = _ready_world()
 	damaged.damage.health[damaged.damage.hull_row(0)] *= 0.5
 	damaged.damage.health[damaged.damage.find_subsystem(0, &"sensors")] = 0.0
-	assert_int(CommsView.block(damaged, 0)["hull_band"]).is_not_equal(band)
-	var seen: Dictionary = CommsView.block(damaged, 0)
+	assert_int(CommsSection.block(damaged, 0)["hull_band"]).is_not_equal(band)
+	var seen: Dictionary = CommsSection.block(damaged, 0)
 	seen.erase("hull_band")
 	var base: Dictionary = block.duplicate()
 	base.erase("hull_band")

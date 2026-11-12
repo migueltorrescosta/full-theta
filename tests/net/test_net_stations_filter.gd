@@ -7,10 +7,10 @@ extends GdUnitTestSuite
 const PLAYER: int = NetHarness.PLAYER
 const ENEMY: int = NetHarness.ENEMY
 
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 ## Sections each seat must and must not receive, by hand from docs/spec/05-stations.md
-## (not from StationViews): seat -> [required, forbidden].
+## (not from StationCatalogue): seat -> [required, forbidden].
 const SPEC_05: Dictionary = {
 	# Cockpit with HUD and shield ring, claims flight and shield facing (FT-HLM-001,
 	# FT-HLM-008, FT-NET-022); no mounts or Engineering's tables.
@@ -97,7 +97,7 @@ static func _sections(data: PackedByteArray) -> Array:
 ## Checks every kept snapshot of a client against its seat's SeatDef; returns the
 ## number checked.
 func _check_snapshots(c: NetClient, seat: String) -> int:
-	var d: SeatDef = StationViews.def(seat)
+	var d: SeatDef = StationCatalogue.def(seat)
 	var checked: int = 0
 	for seq: int in c.raw_snapshots:
 		var data: PackedByteArray = c.raw_snapshots[seq]
@@ -110,10 +110,10 @@ func _check_snapshots(c: NetClient, seat: String) -> int:
 				. override_failure_message("%s got section %d" % [seat, kind])
 				. contains([kind])
 			)
-			if StationViews.BLOCKS.has(kind):
-				var block: Dictionary = NetBlock.decode(StationViews.BLOCKS[kind], part[1])
+			if StationCatalogue.BLOCKS.has(kind):
+				var block: Dictionary = NetBlock.decode(StationCatalogue.BLOCKS[kind], part[1])
 				assert_array(block.keys()).is_equal(d.fields[kind])
-			if kind == StationViews.Section.OWNERSHIP:
+			if kind == StationCatalogue.Section.OWNERSHIP:
 				var table: Dictionary = SnapshotReader.read_ownership(part[1])
 				assert_dict(table).is_not_empty()
 				for group: String in ["claims", "writers"]:
@@ -121,7 +121,7 @@ func _check_snapshots(c: NetClient, seat: String) -> int:
 						(
 							assert_array(d.stations)
 							. override_failure_message("%s saw %s" % [seat, item])
-							. contains([StationViews.station_of_item(item)])
+							. contains([StationCatalogue.station_of_item(item)])
 						)
 		if SnapshotReader.peek(data)[1]:
 			assert_array(kinds).is_equal(d.sections)
@@ -135,14 +135,14 @@ func _check_snapshots(c: NetClient, seat: String) -> int:
 # the seat's sections, every delta a subset, each block exactly its field set, and the
 # OWNERSHIP section only the seat's own stations' items; at each of the three presets (the
 # toggles change values, never a block's field set; the values are tests/net/
-# test_view_filter.gd's).
+# test_shortcut_filter.gd's).
 func test_snapshots_hold_only_their_station_fields() -> void:
 	var server: NetServer = h.server(true)
-	var ids: Array[String] = StationViews.catalogue_ids(true)
+	var ids: Array[String] = StationCatalogue.catalogue_ids(true)
 	var clients: Dictionary = {}
 	for id: String in ids:
 		var c: NetClient = await h.joined(server, id, id)
-		assert_bool(c.view.full_count >= 1).is_true()
+		assert_bool(c.snap.full_count >= 1).is_true()
 		clients[id] = c
 	server.game.launch(PLAYER)
 	var pilot: NetClient = clients["helm"]
@@ -159,26 +159,26 @@ func test_snapshots_hold_only_their_station_fields() -> void:
 			var c: NetClient = clients[id]
 			c.keep_raw = true
 			c.raw_snapshots = {}
-			fulls[id] = c.view.full_count
+			fulls[id] = c.snap.full_count
 			var s: NetSession = h.session_of(server, c)
 			s.toggles = toggles
-			server.transport.set_view(s.id, s.view_key())
-			assert_str(s.view_key()).is_equal(StationViews.key(PLAYER, id, toggles))
+			server.transport.set_stream_key(s.id, s.stream_key())
+			assert_str(s.stream_key()).is_equal(StationCatalogue.key(PLAYER, id, toggles))
 		var all_full: Callable = func() -> bool:
-			return ids.all(func(id: String) -> bool: return clients[id].view.full_count > fulls[id])
+			return ids.all(func(id: String) -> bool: return clients[id].snap.full_count > fulls[id])
 		assert_bool(await h.until(all_full)).is_true()
 		(clients["weapons"] as NetClient).fire()
 		pilot.helm(0.5)
 		await h.wait(500)
 		for id: String in ids:
 			var c: NetClient = clients[id]
-			assert_int(c.view.rejected).is_equal(0)
+			assert_int(c.snap.rejected).is_equal(0)
 			assert_int(_check_snapshots(c, id)).is_greater(3)
-	# The checks above derive what to expect from the same StationViews tables that
+	# The checks above derive what to expect from the same StationCatalogue tables that
 	# build the snapshots, so a wrong table passes them. These are written by hand from
 	# docs/spec/05-stations.md instead.
 	for id: String in SPEC_05:
-		var kinds: Array[int] = clients[id].view.kinds
+		var kinds: Array[int] = clients[id].snap.kinds
 		var row: Array = SPEC_05[id]
 		assert_array(kinds).override_failure_message("%s lacks %s" % [id, row[0]]).contains(row[0])
 		(
@@ -187,20 +187,20 @@ func test_snapshots_hold_only_their_station_fields() -> void:
 			. not_contains(row[1])
 		)
 	for want: Array in SPEC_05_FIELDS:
-		var block: Dictionary = clients[want[0]].view.blocks[want[1]]
+		var block: Dictionary = clients[want[0]].snap.blocks[want[1]]
 		assert_array(block.keys()).contains(want[2])
 		if want.size() > 3:
 			var rows: Array = block[want[3]]
 			assert_array(rows).is_not_empty()
 			assert_array((rows[0] as Dictionary).keys()).contains(want[4])
-	assert_dict(clients["viewer"].view.ownership).is_empty()
+	assert_dict(clients["viewer"].snap.ownership).is_empty()
 	# Weapons sees the mount's claimer, Engineering the pips' last writer.
-	assert_array(clients["weapons"].view.ownership["claims"]["mount:0"]).is_equal(
+	assert_array(clients["weapons"].snap.ownership["claims"]["mount:0"]).is_equal(
 		[h.session_of(server, clients["weapons"]).id, "weapons"]
 	)
 	var pips: String = "pips:%d" % SubsystemDef.Kind.ENGINES
-	assert_str(clients["engineering"].view.ownership["writers"][pips][1]).is_equal("systems")
-	assert_bool(clients["weapons"].view.ownership["writers"].has(pips)).is_false()
+	assert_str(clients["engineering"].snap.ownership["writers"][pips][1]).is_equal("systems")
+	assert_bool(clients["weapons"].snap.ownership["writers"].has(pips)).is_false()
 
 
 # FT: FT-NET-010, FT-PAIR-005, FT-TST-010
@@ -221,18 +221,18 @@ func test_no_knowledge_of_another_faction() -> void:
 	var eng: NetClient = await h.joined(server, "a_eng", "engineering")
 	var viewer: NetClient = await h.joined(server, "a_viewer", "viewer")
 	var foe: NetClient = await h.joined(server, "b_helm", "helm", ENEMY)
-	assert_bool(foe.view.full_count >= 1).is_true()
+	assert_bool(foe.snap.full_count >= 1).is_true()
 	await h.wait(200)
 	for pair: Array in [[helm, PLAYER], [foe, ENEMY]]:
 		var c: NetClient = pair[0]
 		var faction: int = world.faction_of(pair[1])
 		var known: Array = Array(ContactsSection.known(world, faction))
-		var got: Array = (c.view.contacts["model"] as Dictionary).keys()
+		var got: Array = (c.snap.contacts["model"] as Dictionary).keys()
 		got.sort()
 		assert_array(got).is_equal(known)
 		for id: int in known:
-			assert_str(c.view.callsign(id)).is_equal(KnowledgeSystem.callsign(world, faction, id))
-			var own: bool = c.view.contacts["info"][id][0] & SnapshotReader.FLAG_OWN != 0
+			assert_str(c.snap.callsign(id)).is_equal(KnowledgeSystem.callsign(world, faction, id))
+			var own: bool = c.snap.contacts["info"][id][0] & SnapshotReader.FLAG_OWN != 0
 			assert_bool(own).is_equal(world.faction_of(id) == faction)
 	var marks: Array = [h.mark(helm), h.mark(eng), h.mark(viewer), h.mark(foe)]
 	var made: Array[SimEvent] = [

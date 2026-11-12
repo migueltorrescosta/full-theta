@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 
 const SETTINGS: String = "user://test_weapons_status.cfg"
 const LANDSCAPE: Array = [47, 0, 47, 21]
-const MOUNTS: StationViews.Section = StationViews.Section.MOUNTS
+const MOUNTS: StationCatalogue.Section = StationCatalogue.Section.MOUNTS
 
 var _vp: SubViewport
 
@@ -43,7 +43,7 @@ func _screen(mine: bool, select: bool = true) -> StationScreen:
 
 
 func _set_mount(s: StationScreen, key: String, value: Variant) -> void:
-	s.ctx.view.blocks[MOUNTS]["mounts"][0][key] = value
+	s.ctx.snap.blocks[MOUNTS]["mounts"][0][key] = value
 
 
 func _frame(s: StationScreen) -> WeaponsTouch:

@@ -34,14 +34,14 @@ static func input(
 
 
 static func select_ship(w: SimWorld, id: int, target: int) -> void:
-	var c: SelectTargetCommand = SelectTargetCommand.new()
+	var c: HelmSelectCommand = HelmSelectCommand.new()
 	c.ship_id = id
-	c.target_ship = target
+	c.contact = target
 	w.submit(c)
 
 
 static func select_point(w: SimWorld, id: int, p: Vector3) -> void:
-	var c: SelectTargetCommand = SelectTargetCommand.new()
+	var c: HelmSelectCommand = HelmSelectCommand.new()
 	c.ship_id = id
 	c.point = true
 	c.x = p.x

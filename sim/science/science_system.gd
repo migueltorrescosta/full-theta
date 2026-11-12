@@ -186,7 +186,7 @@ static func start_scan(world: SimWorld, ship: int, contact: int) -> bool:
 	var t: ScienceTable = world.science
 	t.clear_minigame(ship)
 	t.kind[ship] = ScienceTable.Minigame.SCAN
-	t.target[ship] = contact
+	t.contact[ship] = contact
 	t.puzzle_seed[ship] = puzzle_seed
 	t.noise[ship] = noise
 	t.start_tick[ship] = world.tick
@@ -203,7 +203,7 @@ static func submit_scan(world: SimWorld, ship: int, angles: Vector3) -> bool:
 	if world.science_def == null or t.kind[ship] != ScienceTable.Minigame.SCAN:
 		return _refuse(world, ship, -1, REASON_NO_MINIGAME)
 	var def: ScienceDef = world.science_def
-	var contact: int = t.target[ship]
+	var contact: int = t.contact[ship]
 	var q: float = ScanPuzzle.quality(def, t.puzzle_seed[ship], t.axes[ship], angles)
 	var noise: float = t.noise[ship]
 	var conf: float = ScanPuzzle.confidence(def, q, noise)
@@ -235,7 +235,7 @@ static func start_hack(world: SimWorld, ship: int, contact: int, subsystem_id: S
 	var t: ScienceTable = world.science
 	t.clear_minigame(ship)
 	t.kind[ship] = ScienceTable.Minigame.HACK
-	t.target[ship] = contact
+	t.contact[ship] = contact
 	t.puzzle_seed[ship] = puzzle_seed
 	t.noise[ship] = contact_noise(world, ship, contact)
 	t.start_tick[ship] = world.tick
@@ -261,7 +261,7 @@ static func hack_move(world: SimWorld, ship: int, node: int) -> bool:
 	var def: ScienceDef = world.science_def
 	if def == null or t.kind[ship] != ScienceTable.Minigame.HACK:
 		return _refuse(world, ship, -1, REASON_NO_MINIGAME)
-	var contact: int = t.target[ship]
+	var contact: int = t.contact[ship]
 	var goal: int = HackPuzzle.goal(def, t.subsystem[ship])
 	var edges: PackedByteArray = HackPuzzle.edges(def, t.puzzle_seed[ship], goal)
 	if node < 0 or node >= edges.size() or not HackPuzzle.connected(edges, def, t.node[ship], node):
@@ -302,7 +302,7 @@ static func start_self_scan(world: SimWorld, ship: int) -> bool:
 		return _refuse(world, ship, -1, REASON_BUSY)
 	t.clear_minigame(ship)
 	t.kind[ship] = ScienceTable.Minigame.SELF
-	t.target[ship] = ship
+	t.contact[ship] = ship
 	t.start_tick[ship] = world.tick
 	return true
 
@@ -320,7 +320,7 @@ static func _step_minigame(world: SimWorld, def: ScienceDef, t: ScienceTable, sh
 	var fail_kind: StringName = (
 		&"hack_failed" if k == ScienceTable.Minigame.HACK else &"scan_failed"
 	)
-	var contact: int = t.target[ship]
+	var contact: int = t.contact[ship]
 	var faction: int = world.faction_of(ship)
 	var row: int = world.knowledge.row_for(faction, contact)
 	# A probe's bubble makes a contact detected too (KnowledgeSystem), so this covers it.
@@ -340,7 +340,7 @@ static func _step_minigame(world: SimWorld, def: ScienceDef, t: ScienceTable, sh
 
 
 static func _finish_hack(world: SimWorld, def: ScienceDef, t: ScienceTable, ship: int) -> void:
-	var contact: int = t.target[ship]
+	var contact: int = t.contact[ship]
 	var index: int = t.subsystem[ship]
 	var sub: SubsystemDef = world.defs[contact].subsystems[index]
 	var effect: HackEffectDef = def.effect_for(sub.kind)
@@ -366,7 +366,7 @@ static func _finish_self_scan(world: SimWorld, t: ScienceTable, ship: int) -> vo
 static func _fail(
 	world: SimWorld, t: ScienceTable, ship: int, kind: StringName, reason: StringName
 ) -> void:
-	world.emit(kind, ship, t.target[ship], t.trace[ship], Vector3.ZERO, reason)
+	world.emit(kind, ship, t.contact[ship], t.trace[ship], Vector3.ZERO, reason)
 	t.clear_minigame(ship)
 
 

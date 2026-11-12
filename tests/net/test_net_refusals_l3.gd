@@ -145,7 +145,7 @@ func test_a_token_takes_over_a_connected_session_cleanly() -> void:
 	assert_object(server.game.by_conn.get(session.conn)).is_same(session)
 	assert_str(session.seat).is_equal("engineering")
 	assert_int(server.game.by_conn.size()).is_equal(1)
-	assert_bool(await h.until(func() -> bool: return second.view.full_count >= 1)).is_true()
+	assert_bool(await h.until(func() -> bool: return second.snap.full_count >= 1)).is_true()
 
 
 # FT: FT-NET-041

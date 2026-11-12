@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## D208 on the wire: the RELAY block lists the sim hazards the faction knows (HazardView),
+## D208 on the wire: the RELAY block lists the sim hazards the faction knows (HazardRows),
 ## to Relay always and to another station through the hazard-countdown toggle, with the
 ## forecast Engineering's countdown reads.
 
@@ -18,12 +18,12 @@ func before_test() -> void:
 
 
 func _hazards(seat: String, code: String) -> Array:
-	var b: SnapshotBuilder = SnapshotBuilder.new()
-	var key: String = StationViews.key(ME, seat, code)
+	var b: SnapshotWriter = SnapshotWriter.new()
+	var key: String = StationCatalogue.key(ME, seat, code)
 	b.build(SimCopy.of(world), 1, [key])
-	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
-	assert_bool(view.apply(b.message(key, true))).is_true()
-	return view.blocks[StationViews.Section.RELAY]["hazards"]
+	var snap: SnapshotState = SnapshotState.new(NetCodec.period_units(world.kin.period))
+	assert_bool(snap.apply(b.message(key, true))).is_true()
+	return snap.blocks[StationCatalogue.Section.RELAY]["hazards"]
 
 
 # FT: FT-RLY-001, FT-PAIR-015
@@ -33,7 +33,7 @@ func test_the_block_lists_known_hazards_with_their_geometry() -> void:
 	var rows: Array = _hazards("relay", "easy")
 	assert_int(rows.size()).is_equal(1)
 	assert_int(rows[0]["id"]).is_equal(1)
-	assert_int(rows[0]["shape"]).is_equal(HazardView.ZONE)
+	assert_int(rows[0]["shape"]).is_equal(HazardRows.ZONE)
 	assert_vector(rows[0]["pos"]).is_equal(Vector3(0.0, 0.0, -4000.0))
 	assert_float(rows[0]["radius"]).is_equal(2000.0)
 	# At rest, it is not coming.

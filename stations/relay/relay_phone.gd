@@ -315,7 +315,7 @@ func update() -> void:
 			_place_view()
 	buttons["launch"].disabled = hud.launch.disabled
 	buttons["lanes"].text = hud.lanes.text
-	var holder: String = crew_state.claimer(StationViews.CLAIM_PROBE)
+	var holder: String = crew_state.claimer(StationCatalogue.CLAIM_PROBE)
 	if holder != "" and holder != panel.ctx.settings.player_name:
 		buttons["launch"].text = tr("relay.launch") + " · " + holder
 	else:
@@ -414,7 +414,7 @@ func _fill_marks() -> void:
 		_marks_box.add_child(none)
 	for m: Dictionary in crew_state.marks:
 		var slot: int = m["slot"]
-		var b: RailButton = RailButton.make(ChipText.mark_label(m, panel.ctx.view))
+		var b: RailButton = RailButton.make(ChipText.mark_label(m, panel.ctx.snap))
 		b.pressed.connect(crew_state.select.bind("mark", slot))
 		b.toggle_mode = true
 		b.set_pressed_no_signal(crew_state.is_selected("mark", slot))

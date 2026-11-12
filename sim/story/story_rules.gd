@@ -153,7 +153,7 @@ static func surrender_chance(world: SimWorld, contact: int, params: Dictionary) 
 static func ask_surrender(world: SimWorld, ship: int, card: int, params: Dictionary) -> void:
 	var t: StoryTable = world.story
 	var k: KnowledgeTable = world.knowledge
-	var row: int = k.ensure_contact(t.owner_faction[card], t.target[card])
+	var row: int = k.ensure_contact(t.owner_faction[card], t.subject[card])
 	var scale: float = pow(float(params.get("refusal_factor", 1.0)), k.surrender_refusals[row])
 	if roll_surrender(world, ship, card, params, scale):
 		return
@@ -175,14 +175,14 @@ static func roll_surrender(
 	world: SimWorld, ship: int, card: int, params: Dictionary, scale: float = 1.0
 ) -> bool:
 	var t: StoryTable = world.story
-	var chance: float = surrender_chance(world, t.target[card], params) * scale
+	var chance: float = surrender_chance(world, t.subject[card], params) * scale
 	var yes: bool = world.rng.stream(&"surrender").randf() < chance
-	var row: int = world.knowledge.ensure_contact(t.owner_faction[card], t.target[card])
+	var row: int = world.knowledge.ensure_contact(t.owner_faction[card], t.subject[card])
 	world.knowledge.intent[row] = (
 		KnowledgeTable.Intent.SURRENDERING if yes else KnowledgeTable.Intent.HOSTILE
 	)
 	world.emit(
-		&"surrender_roll", ship, t.target[card], chance, Vector3.ZERO, &"yes" if yes else &"no"
+		&"surrender_roll", ship, t.subject[card], chance, Vector3.ZERO, &"yes" if yes else &"no"
 	)
 	return yes
 
@@ -210,8 +210,8 @@ static func on_destroyed(world: SimWorld, victim: int, source: int) -> void:
 	var t: StoryTable = world.story
 	for card: int in t.size():
 		if (
-			t.target[card] == victim
-			and t.target_flag[card] == KnowledgeTable.Flag.DISABLE
+			t.subject[card] == victim
+			and t.subject_flag[card] == KnowledgeTable.Flag.DISABLE
 			and t.state[card] == StoryTable.State.ACCEPTED
 		):
 			settle(world, Story.audience_ship(world, card), card, false)
@@ -283,7 +283,7 @@ static func mission_of_contact(world: SimWorld, ship: int, contact: int) -> int:
 	for card: int in world.story.size():
 		if (
 			world.story.kind[card] == StoryTable.Kind.MISSION
-			and world.story.target[card] == contact
+			and world.story.subject[card] == contact
 			and Story.visible_to(world, card, ship)
 			and Story.is_live(world, card)
 		):
@@ -311,7 +311,7 @@ static func on_discovery(world: SimWorld, ship: int, contact: int) -> void:
 	t.npc[card] = StringName(world.defs[contact].display_name)
 	t.title[card] = "comms.card.opportunity"
 	t.conversation[card] = conv
-	t.target[card] = contact
+	t.subject[card] = contact
 	t.rep_faction[card] = world.faction_of(contact)
 	world.emit(&"card_posted", ship, card, StoryTable.Kind.HAIL)
 

@@ -37,7 +37,7 @@ func push(stream: int, data: PackedByteArray) -> int:
 	return msg_id
 
 
-## Queues ready-made chunks of a message on the high lane, as built once per view key
+## Queues ready-made chunks of a message on the high lane, as built once per stream key
 ## and shared by every client holding that key (FT-NET-040). The receiver keeps one
 ## partial message per stream and the chunks stay contiguous, so a shared msg_id is
 ## safe.

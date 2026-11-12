@@ -26,7 +26,7 @@ func _screen(size: Vector2i, insets: Array) -> StationScreen:
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(StationViews.CAPTAIN, SETTINGS)
+	var ctx: StationContext = StationFixture.context(StationCatalogue.CAPTAIN, SETTINGS)
 	CommsFixture.install(ctx)
 	ctx.crew.select("contact", StationFixture.H2)
 	var s: StationScreen = StationScreen.new()

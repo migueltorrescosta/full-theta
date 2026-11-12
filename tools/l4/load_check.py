@@ -15,8 +15,8 @@ Markdown summary. Budgets and checks (S9, D104, D106, D109, D111, D161):
 - bandwidth: server payload to all clients <= 10 Mbit/s, also when scaled to 30
   snapshots a second (the loopback wire total, both directions with every header, is
   reported beside it);
-- one encode per view key: per snapshot, the delta and full messages assembled together
-  are at most the distinct view keys, shared by every client of a key;
+- one encode per stream key: per snapshot, the delta and full messages assembled together
+  are at most the distinct stream keys, shared by every client of a key;
 - the seat plan (6 of each station, 6 Captains, 22 viewers) all picked, no bad snapshot,
   and connection 65 refused with session_full.
 
@@ -185,8 +185,8 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
     say("| Part | mean / p50 / p99 / max ms |")
     say("|---|---|")
     say(f"| SimCopy.restore | {stats_ms([float(r['restore_us']) for r in snaps])} |")
-    say(f"| SnapshotBuilder.build (sections) | {stats_ms([float(r['build_us']) for r in snaps])} |")
-    say(f"| assemble view-key messages and queue sends | {stats_ms([float(r['send_us']) for r in snaps])} |")
+    say(f"| SnapshotWriter.build (sections) | {stats_ms([float(r['build_us']) for r in snaps])} |")
+    say(f"| assemble stream-key messages and queue sends | {stats_ms([float(r['send_us']) for r in snaps])} |")
     parts = [
         f for f in net["snap_fields"]
         if f.endswith("_us") and f not in ("unix_us", "stamp_us", "restore_us", "build_us", "send_us")
@@ -214,15 +214,15 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
         )
     say("")
 
-    # --- One encode per view key (FT-NET-040). ---
-    say("## Encodes per view key (FT-NET-040)")
+    # --- One encode per stream key (FT-NET-040). ---
+    say("## Encodes per stream key (FT-NET-040)")
     say("")
     sends = [r["sends"] for r in snaps]
     messages = [r["delta_messages"] + r["full_messages"] for r in snaps]
     over = [r for r in snaps if r["delta_messages"] + r["full_messages"] > r["keys"]]
     under = [r for r in snaps if r["delta_messages"] + r["full_messages"] < r["keys"]]
     say(
-        f"Per snapshot: {mean([r['keys'] for r in snaps]):.1f} distinct view keys, "
+        f"Per snapshot: {mean([r['keys'] for r in snaps]):.1f} distinct stream keys, "
         f"{mean(sends):.1f} sends, {mean(messages):.2f} messages assembled "
         f"({mean([r['full_messages'] for r in snaps]):.2f} full), "
         f"{mean([r['section_updates'] for r in snaps]):.1f} section updates. Snapshots with "
@@ -231,7 +231,7 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
     ok_keys = bool(snaps) and not over and mean(sends) > mean(messages)
     say(f"**{verdict(ok_keys)}**.")
     if not ok_keys:
-        problems.append(f"encodes per view key ({len(over)} snapshots over)")
+        problems.append(f"encodes per stream key ({len(over)} snapshots over)")
     say("")
 
     # --- Clients: receipts, gaps, age. ---

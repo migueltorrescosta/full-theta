@@ -1,6 +1,6 @@
-class_name NetViewState
+class_name SnapshotState
 extends RefCounted
-## Client-side state of one view, rebuilt from snapshot messages (SnapshotBuilder):
+## Client-side state of one view, rebuilt from snapshot messages (SnapshotWriter):
 ## full snapshots replace it, deltas must follow the previous snapshot. Clients render
 ## this and never simulate (FT-ARC-005). Integer models stay as the codec left them so
 ## dead reckoning matches the server bit for bit; the helpers convert to metres.
@@ -121,17 +121,17 @@ func _apply_section(
 	kind: int, buf: StreamPeerBuffer, part: PackedByteArray, is_full: bool, at: int
 ) -> bool:
 	match kind:
-		StationViews.Section.KIN:
+		StationCatalogue.Section.KIN:
 			kin = SnapshotReader.read_kin(buf)
-		StationViews.Section.CONTACTS:
+		StationCatalogue.Section.CONTACTS:
 			return SnapshotReader.apply_contacts(contacts, buf, is_full, at, p_units)
-		StationViews.Section.SITES:
+		StationCatalogue.Section.SITES:
 			sites = SnapshotReader.read_sites(buf)
-		StationViews.Section.NEAR:
+		StationCatalogue.Section.NEAR:
 			SnapshotReader.apply_near(near, buf, is_full, at)
-		StationViews.Section.PROJECTILES:
+		StationCatalogue.Section.PROJECTILES:
 			SnapshotReader.apply_projectiles(projectiles, buf, is_full, at)
-		StationViews.Section.OWNERSHIP:
+		StationCatalogue.Section.OWNERSHIP:
 			ownership = SnapshotReader.read_ownership(part)
 			return not ownership.is_empty()
 		_:

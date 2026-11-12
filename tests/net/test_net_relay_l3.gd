@@ -232,8 +232,8 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var helm: NetClient = await h.joined(server, "helm", "tactical")
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
-	assert_bool(await h.until(func() -> bool: return not viewer.view.sites.is_empty())).is_true()
-	assert_str(viewer.view.sites[0]["name_key"]).is_equal("site.kestrel_yard")
+	assert_bool(await h.until(func() -> bool: return not viewer.snap.sites.is_empty())).is_true()
+	assert_str(viewer.snap.sites[0]["name_key"]).is_equal("site.kestrel_yard")
 	# Eight marks, and zones beyond them.
 	for k: int in CrewMarks.SLOTS:
 		relay.place_mark(-1, "", -1, Vector3(5.0 * k, 0.0, 0.0))
@@ -386,16 +386,16 @@ func test_probe_launch_log_and_lane_warning_events() -> void:
 		. is_true()
 	)
 	var snap: Callable = func() -> bool:
-		var blk: Dictionary = relay.view.blocks.get(StationViews.Section.RELAY, {})
+		var blk: Dictionary = relay.snap.blocks.get(StationCatalogue.Section.RELAY, {})
 		return not blk.is_empty() and blk["stock"] == 2 and blk["probes"].size() == 1
 	assert_bool(await h.until(snap)).is_true()
 	# Ticks of flight: it deploys; Weapons never gets a Relay block (Engineering and
 	# Science do: fabrication seconds, probe bubbles), nor Relay's events.
 	var deployed: Callable = func() -> bool:
-		return relay.view.blocks[StationViews.Section.RELAY]["probes"][0]["deployed"]
+		return relay.snap.blocks[StationCatalogue.Section.RELAY]["probes"][0]["deployed"]
 	assert_bool(await h.until(deployed, 20000)).is_true()
-	assert_bool(tac.view.blocks.has(StationViews.Section.RELAY)).is_false()
-	assert_bool(sys.view.blocks.has(StationViews.Section.RELAY)).is_true()
+	assert_bool(tac.snap.blocks.has(StationCatalogue.Section.RELAY)).is_false()
+	assert_bool(sys.snap.blocks.has(StationCatalogue.Section.RELAY)).is_true()
 	assert_array(h.events_of(sys, "probe_launched")).is_empty()
 	# Lane flagging and its warning: a friendly in the bow mount's line.
 	var w: SimWorld = server.world
@@ -406,7 +406,7 @@ func test_probe_launch_log_and_lane_warning_events() -> void:
 	var tac_session: NetSession = h.session_of(server, tac)
 	(
 		assert_bool(
-			await h.until(func() -> bool: return tac_session.shares.has(ViewFilter.TRACK_FEEDS))
+			await h.until(func() -> bool: return tac_session.shares.has(ShortcutFilter.TRACK_FEEDS))
 		)
 		. is_true()
 	)
@@ -428,9 +428,9 @@ func test_two_relay_players_share_the_probe_launcher_by_claim() -> void:
 	var second: NetClient = await h.joined(server, "bo", "ops")
 	var id: int = h.session_of(server, first).id
 	var held: Callable = func() -> bool:
-		return second.view.ownership.get("claims", {}).get("probe", [-1])[0] == id
+		return second.snap.ownership.get("claims", {}).get("probe", [-1])[0] == id
 	assert_bool(await h.until(held)).is_true()
-	assert_str(second.view.claimer("probe")).is_equal("ana")
+	assert_str(second.snap.claimer("probe")).is_equal("ana")
 	server.game.launch(PLAYER)
 	var cmd: Dictionary = {"kind": "launch_probe", "x": 0.0, "y": 0.0, "z": -500.0}
 	var from: int = h.mark(second)

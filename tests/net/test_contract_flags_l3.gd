@@ -6,7 +6,7 @@ extends GdUnitTestSuite
 
 const PLAYER: int = CommsL3.PLAYER
 const ENEMY: int = CommsL3.ENEMY
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 var h: NetHarness
 
@@ -20,17 +20,17 @@ func after_test() -> void:
 
 
 func _flags(c: NetClient) -> Array:
-	return c.view.blocks.get(S.FEEDS, {}).get("flags", [])
+	return c.snap.blocks.get(S.FEEDS, {}).get("flags", [])
 
 
 ## Puts the session on a toggle code and shared shortcuts, and waits for its next full view.
 func _view(server: NetServer, c: NetClient, code: String, shares: Array[StringName]) -> bool:
 	var s: NetSession = h.session_of(server, c)
-	var fulls: int = c.view.full_count
+	var fulls: int = c.snap.full_count
 	s.toggles = code
 	s.shares = shares
-	server.transport.set_view(s.id, s.view_key())
-	return await h.until(func() -> bool: return c.view.full_count > fulls)
+	server.transport.set_stream_key(s.id, s.stream_key())
+	return await h.until(func() -> bool: return c.snap.full_count > fulls)
 
 
 # FT: FT-MIS-042
@@ -53,14 +53,14 @@ func test_flags_reach_weapons_only_with_p9_granted() -> void:
 	assert_bool(await h.until(func() -> bool: return _flags(parley) == row)).is_true()
 	# Easy, nothing shared: Weapons alone has the contact but not the flag.
 	await h.wait(300)
-	assert_bool(weapons.view.contacts.get("model", {}).has(ENEMY)).is_true()
+	assert_bool(weapons.snap.contacts.get("model", {}).has(ENEMY)).is_true()
 	assert_array(_flags(weapons)).is_empty()
 	# Shared on Easy: it arrives (Comms' press, F; here the session is set directly).
-	assert_bool(await _view(server, weapons, "easy", [ViewFilter.CONTRACT_FLAGS])).is_true()
+	assert_bool(await _view(server, weapons, "easy", [ShortcutFilter.CONTRACT_FLAGS])).is_true()
 	assert_array(_flags(weapons)).is_equal(row)
 	# Normal and Hard have the toggle off: sharing changes nothing.
 	for code: String in ["normal", "hard"]:
-		assert_bool(await _view(server, weapons, code, [ViewFilter.CONTRACT_FLAGS])).is_true()
+		assert_bool(await _view(server, weapons, code, [ShortcutFilter.CONTRACT_FLAGS])).is_true()
 		assert_array(_flags(weapons)).override_failure_message(code).is_empty()
 	assert_bool(await _view(server, weapons, "normal:1011000", [])).is_true()
 	assert_array(_flags(weapons)).is_empty()
@@ -70,7 +70,7 @@ func test_flags_reach_weapons_only_with_p9_granted() -> void:
 # The view filter decides per toggle code and shared set, with no server: the flag rows
 # survive only where the shortcut is granted, and the signatures differ so the sections
 # are encoded apart.
-func test_view_filter_grants_the_flags() -> void:
+func test_shortcut_filter_grants_the_flags() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	w.step()
 	w.knowledge.flag[w.knowledge.ensure_contact(StoryFixture.BLUE, 1)] = KnowledgeTable.Flag.PROTECT
@@ -87,9 +87,9 @@ func test_view_filter_grants_the_flags() -> void:
 	]
 	var signatures: Dictionary = {}
 	for c: Array in cases:
-		var f: ViewFilter = ViewFilter.of(c[0], c[1])
+		var f: ShortcutFilter = ShortcutFilter.of(c[0], c[1])
 		var bytes: PackedByteArray = StationBlocks.block_bytes(S.FEEDS, w, 0, f)
-		var got: Array = NetBlock.decode(StationViews.BLOCKS[S.FEEDS], bytes)["flags"]
+		var got: Array = NetBlock.decode(StationCatalogue.BLOCKS[S.FEEDS], bytes)["flags"]
 		if c[2]:
 			assert_array(got).override_failure_message(str(c)).is_equal(want)
 		else:

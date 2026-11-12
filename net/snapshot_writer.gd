@@ -1,9 +1,9 @@
-class_name SnapshotBuilder
+class_name SnapshotWriter
 extends RefCounted
 ## Builds the per-view snapshots (FT-NET-008, FT-NET-040; promoted from S9Builder) on
 ## the net thread, from a SimCopy. Once per snapshot it advances every section the
-## current view keys need (one per owner: a ship, or a faction for CONTACTS), then
-## assembles each view key's message on first request, chunks it once and shares the
+## current stream keys need (one per owner: a ship, or a faction for CONTACTS), then
+## assembles each stream key's message on first request, chunks it once and shares the
 ## chunks among the clients holding that key. Sections no key needs are dropped; a
 ## section created later starts from an empty model, and the clients that need it get
 ## a full snapshot anyway (join, pick change).
@@ -22,11 +22,11 @@ var pos_tol_m: float = 0.5
 var rot_tol_deg: float = 1.0
 var near_range_m: float = NearSection.DEFAULT_RANGE_M
 var proj_range_m: float = ProjectilesSection.DEFAULT_RANGE_M
-## Counters since the last take_counts(): snapshot builds, section updates, view-key
+## Counters since the last take_counts(): snapshot builds, section updates, stream-key
 ## messages assembled (delta and full).
 var counts: Dictionary = {}
 ## When true, build() adds its time per part to part_us (the load probe, D161): index 0
-## the near sets and orientation models, then one per StationViews.Section kind
+## the near sets and orientation models, then one per StationCatalogue.Section kind
 ## (NetTransport.SNAP_FIELDS names them).
 var time_parts: bool = false
 var part_us: PackedInt64Array = PackedInt64Array()
@@ -38,10 +38,10 @@ var _sections: Dictionary = {}
 var _orient: Dictionary = {}
 ## "kind:owner" -> delta bytes of this snapshot.
 var _deltas: Dictionary = {}
-## View key -> its chunks of this snapshot, delta and full.
+## Stream key -> its chunks of this snapshot, delta and full.
 var _cache_delta: Dictionary = {}
 var _cache_full: Dictionary = {}
-## View key -> [[kind, owner, skey]] of its sections, derived once per key (the strings
+## Stream key -> [[kind, owner, skey]] of its sections, derived once per key (the strings
 ## and filter signatures cost more than the sections' own work); dropped when the ship
 ## count changes.
 var _lists: Dictionary = {}
@@ -52,18 +52,18 @@ var _ownership: Dictionary = {}
 var _known: Dictionary = {}
 ## Ship -> the ship's open request chips posted by the main thread (ChipsSection).
 var _chips: Dictionary = {}
-## View key -> ViewFilter (its toggle code and seat fixed by the key).
+## Stream key -> ShortcutFilter (its toggle code and seat fixed by the key).
 var _filters: Dictionary = {}
 
 
 func _init() -> void:
 	take_counts()
-	part_us.resize(int(StationViews.Section.values().max()) + 1)
+	part_us.resize(int(StationCatalogue.Section.values().max()) + 1)
 
 
-## Advances every section the view keys need to the copied world's tick. Keys naming a
+## Advances every section the stream keys need to the copied world's tick. Keys naming a
 ## ship the world doesn't have are skipped.
-func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
+func build(world: SimWorld, snapshot_seq: int, stream_keys: Array) -> void:
 	_world = world
 	seq = snapshot_seq
 	tick = world.tick
@@ -76,15 +76,15 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 		_lists_ships = world.ship_count()
 	var needed: Dictionary = {}
 	var near_ships: Dictionary = {}
-	for view_key: String in view_keys:
-		var k: Array = StationViews.parse_key(view_key)
+	for stream_key: String in stream_keys:
+		var k: Array = StationCatalogue.parse_key(stream_key)
 		var ship: int = k[0]
 		if ship < 0 or ship >= world.ship_count():
 			continue
-		var filter: ViewFilter = _filter_of(view_key)
-		for item: Array in _list_of(view_key):
+		var filter: ShortcutFilter = _filter_of(stream_key)
+		for item: Array in _list_of(stream_key):
 			needed[item[2]] = [item[0], item[1], filter]
-			if item[0] == StationViews.Section.NEAR:
+			if item[0] == StationCatalogue.Section.NEAR:
 				near_ships[ship] = true
 	for skey: String in _sections.keys():
 		if not needed.has(skey):
@@ -98,7 +98,7 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 	var t0: int = Time.get_ticks_usec() if time_parts else 0
 	for ship: int in near_ships:
 		var f: int = world.faction_of(ship)
-		var section: NearSection = _sections[_skey(StationViews.Section.NEAR, ship)]
+		var section: NearSection = _sections[_skey(StationCatalogue.Section.NEAR, ship)]
 		near_sets[ship] = section.in_range(world, _known_of(f))
 		(unions.get_or_add(f, {}) as Dictionary).merge(near_sets[ship])
 	for f: int in unions:
@@ -129,22 +129,22 @@ func build(world: SimWorld, snapshot_seq: int, view_keys: Array) -> void:
 	counts["section_updates"] += _sections.size()
 
 
-## The chunks of a view key's message at the current snapshot, built once and shared.
-func chunks(view_key: String, is_full: bool) -> Array[PackedByteArray]:
+## The chunks of a stream key's message at the current snapshot, built once and shared.
+func chunks(stream_key: String, is_full: bool) -> Array[PackedByteArray]:
 	var cache: Dictionary = _cache_full if is_full else _cache_delta
-	if cache.has(view_key):
-		return cache[view_key]
+	if cache.has(stream_key):
+		return cache[stream_key]
 	var out: Array[PackedByteArray] = NetChunker.split(
-		NetChunker.STREAM_SNAPSHOT, seq, message(view_key, is_full), chunk_size
+		NetChunker.STREAM_SNAPSHOT, seq, message(stream_key, is_full), chunk_size
 	)
-	cache[view_key] = out
+	cache[stream_key] = out
 	counts["full_messages" if is_full else "delta_messages"] += 1
 	return out
 
 
-## A view key's message at the current snapshot (not cached; chunks() caches).
-func message(view_key: String, is_full: bool) -> PackedByteArray:
-	var k: Array = StationViews.parse_key(view_key)
+## A stream key's message at the current snapshot (not cached; chunks() caches).
+func message(stream_key: String, is_full: bool) -> PackedByteArray:
+	var k: Array = StationCatalogue.parse_key(stream_key)
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.put_u8(NetProtocol.Type.SNAPSHOT)
 	buf.put_u8(SnapshotReader.FLAG_FULL if is_full else 0)
@@ -152,7 +152,7 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 	buf.put_u32(tick)
 	buf.put_u8(0)
 	var n: int = 0
-	for item: Array in _list_of(view_key):
+	for item: Array in _list_of(stream_key):
 		var kind: int = item[0]
 		var skey: String = item[2]
 		if not _sections.has(skey):
@@ -160,7 +160,7 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 		var part: PackedByteArray = (
 			(_sections[skey] as SnapshotSection).full() if is_full else _deltas[skey]
 		)
-		if kind == StationViews.Section.OWNERSHIP and (is_full or not part.is_empty()):
+		if kind == StationCatalogue.Section.OWNERSHIP and (is_full or not part.is_empty()):
 			part = (_sections[skey] as OwnershipSection).for_seat(k[1])
 		if part.is_empty() and not is_full:
 			continue
@@ -180,7 +180,7 @@ func set_ownership(ship: int, table: Dictionary) -> void:
 
 ## Sets a ship's open request chips (net thread, from NetTransport): the rows of
 ## ChipsSection, {id, chip, arg, from, to, sent, expires} with from and to the station
-## indices of StationViews.CREW.
+## indices of StationCatalogue.CREW.
 func set_chips(ship: int, rows: Array) -> void:
 	_chips[ship] = rows
 
@@ -192,7 +192,7 @@ func take_counts() -> Dictionary:
 
 
 ## The section of a kind and owner, or null (tests). `signature` names the filtered
-## variant (ViewFilter.signature) of a section in StationViews.FILTERED.
+## variant (ShortcutFilter.signature) of a section in StationCatalogue.FILTERED.
 func section(kind: int, owner: int, signature: String = "") -> SnapshotSection:
 	return _sections.get(_skey(kind, owner, signature))
 
@@ -206,44 +206,44 @@ static func put_length(buf: StreamPeerBuffer, size: int) -> void:
 		buf.put_u32(size)
 
 
-## The sections of a view key as [kind, owner, section key], cached per key.
-func _list_of(view_key: String) -> Array:
-	if _lists.has(view_key):
-		return _lists[view_key]
-	var k: Array = StationViews.parse_key(view_key)
-	var filter: ViewFilter = _filter_of(view_key)
+## The sections of a stream key as [kind, owner, section key], cached per key.
+func _list_of(stream_key: String) -> Array:
+	if _lists.has(stream_key):
+		return _lists[stream_key]
+	var k: Array = StationCatalogue.parse_key(stream_key)
+	var filter: ShortcutFilter = _filter_of(stream_key)
 	var out: Array = []
-	for kind: int in StationViews.sections_of(k[1]):
+	for kind: int in StationCatalogue.sections_of(k[1]):
 		var owner: int = _owner(kind, k[0])
 		out.append([kind, owner, _skey(kind, owner, _signature(kind, filter))])
-	_lists[view_key] = out
+	_lists[stream_key] = out
 	return out
 
 
 func _owner(kind: int, ship: int) -> int:
-	if kind == StationViews.Section.SITES:
+	if kind == StationCatalogue.Section.SITES:
 		return _world.faction_of(ship)
-	return _world.faction_of(ship) if kind == StationViews.Section.CONTACTS else ship
+	return _world.faction_of(ship) if kind == StationCatalogue.Section.CONTACTS else ship
 
 
-func _make(kind: int, owner: int, filter: ViewFilter) -> SnapshotSection:
+func _make(kind: int, owner: int, filter: ShortcutFilter) -> SnapshotSection:
 	var section: SnapshotSection
 	match kind:
-		StationViews.Section.KIN:
+		StationCatalogue.Section.KIN:
 			section = KinSection.new(kind, owner)
-		StationViews.Section.CONTACTS:
+		StationCatalogue.Section.CONTACTS:
 			section = ContactsSection.new(owner, pos_tol_m)
-		StationViews.Section.NEAR:
+		StationCatalogue.Section.NEAR:
 			section = NearSection.new(owner, _orient_of(_world.faction_of(owner)), near_range_m)
-		StationViews.Section.PROJECTILES:
+		StationCatalogue.Section.PROJECTILES:
 			section = ProjectilesSection.new(owner, proj_range_m)
-		StationViews.Section.OWNERSHIP:
+		StationCatalogue.Section.OWNERSHIP:
 			section = OwnershipSection.new(kind, owner)
-		StationViews.Section.CHIPS:
+		StationCatalogue.Section.CHIPS:
 			section = ChipsSection.new(kind, owner, filter)
-		StationViews.Section.COMMS:
+		StationCatalogue.Section.COMMS:
 			section = CommsSection.new(kind, owner, filter)
-		StationViews.Section.SITES:
+		StationCatalogue.Section.SITES:
 			section = SitesSection.new(owner)
 		_:
 			section = BlockSection.new(kind, owner, filter)
@@ -262,17 +262,19 @@ func _orient_of(faction: int) -> OrientModel:
 	return _orient[faction]
 
 
-## The filter of a view key (an unreadable toggle code gets the default set).
-func _filter_of(view_key: String) -> ViewFilter:
-	if not _filters.has(view_key):
-		var k: Array = StationViews.parse_key(view_key)
-		var f: ViewFilter = ViewFilter.of(k[1], k[2])
-		_filters[view_key] = f if f != null else ViewFilter.of(k[1], StationViews.DEFAULT_TOGGLES)
-	return _filters[view_key]
+## The filter of a stream key (an unreadable toggle code gets the default set).
+func _filter_of(stream_key: String) -> ShortcutFilter:
+	if not _filters.has(stream_key):
+		var k: Array = StationCatalogue.parse_key(stream_key)
+		var f: ShortcutFilter = ShortcutFilter.of(k[1], k[2])
+		_filters[stream_key] = (
+			f if f != null else ShortcutFilter.of(k[1], StationCatalogue.DEFAULT_TOGGLES)
+		)
+	return _filters[stream_key]
 
 
-static func _signature(kind: int, filter: ViewFilter) -> String:
-	return filter.signature(kind) if StationViews.FILTERED.has(kind) else ""
+static func _signature(kind: int, filter: ShortcutFilter) -> String:
+	return filter.signature(kind) if StationCatalogue.FILTERED.has(kind) else ""
 
 
 static func _skey(kind: int, owner: int, signature: String = "") -> String:

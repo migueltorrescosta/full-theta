@@ -147,7 +147,7 @@ func test_shell_runs_again_after_a_win() -> void:
 	add_child(shell)
 	var crew: CrewState = shell.ctx.crew
 	assert_bool(await _until(func() -> bool: return not crew.catalogue.is_empty())).is_true()
-	shell.ctx.intents.pick(NetHarness.PLAYER, StationViews.ALL)
+	shell.ctx.intents.pick(NetHarness.PLAYER, StationCatalogue.ALL)
 	assert_bool(await _until(func() -> bool: return crew.lobby.has(NetHarness.PLAYER))).is_true()
 	shell.ctx.intents.start()
 	assert_bool(await _until(func() -> bool: return shell.screen != null)).is_true()

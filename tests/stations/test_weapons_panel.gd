@@ -47,9 +47,9 @@ func _commands(s: StationScreen, kind: String) -> Array:
 ## Moves contact `id` to a ship-frame offset, with a world velocity (m/s).
 func _place(ctx: StationContext, id: int, local: Vector3, vel: Vector3 = Vector3.ZERO) -> void:
 	var p: Vector3 = StationFixture.OWN_POS + StationFixture.own_rotation() * local
-	var model: Dictionary = ctx.view.contacts["model"]
+	var model: Dictionary = ctx.snap.contacts["model"]
 	model[id] = [
-		NetCodec.quant_pos(CubePoint.of(p), ctx.view.p_units),
+		NetCodec.quant_pos(CubePoint.of(p), ctx.snap.p_units),
 		NetCodec.quant_vel(vel),
 		StationFixture.TICK
 	]
@@ -58,15 +58,15 @@ func _place(ctx: StationContext, id: int, local: Vector3, vel: Vector3 = Vector3
 
 ## Sets the own ship's orientation in the snapshot and the interpolator.
 func _turn_ship(ctx: StationContext, rot: Quaternion) -> void:
-	ctx.view.kin["rot"] = rot
+	ctx.snap.kin["rot"] = rot
 	_repush(ctx)
 
 
 func _repush(ctx: StationContext) -> void:
 	ctx.interp = SnapshotInterpolator.new()
-	ctx.interp.p_units = ctx.view.p_units
-	ctx.interp.push(ctx.view, StationFixture.NOW_MS - 100)
-	ctx.interp.push(ctx.view, StationFixture.NOW_MS)
+	ctx.interp.p_units = ctx.snap.p_units
+	ctx.interp.push(ctx.snap, StationFixture.NOW_MS - 100)
+	ctx.interp.push(ctx.snap, StationFixture.NOW_MS)
 	ctx.interp.update(StationFixture.NOW_MS)
 
 
@@ -95,7 +95,7 @@ func test_turret_mount_list_lead_and_ammo() -> void:
 	assert_str(WeaponsReadout.mount_rows(p)[0]).ends_with("· Bo")
 	s.ctx.crew.claims.erase("mount:0")
 	assert_str(WeaponsReadout.mount_rows(p)[0]).ends_with("· free")
-	(s.ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0] as Dictionary)["heat"] = 40.0
+	(s.ctx.snap.blocks[StationCatalogue.Section.MOUNTS]["mounts"][0] as Dictionary)["heat"] = 40.0
 	assert_str(WeaponsReadout.mount_rows(p)[0]).contains("hot")
 	# Lead: a contact crossing at 200 m/s, 2 km ahead.
 	var vel: Vector3 = StationFixture.own_rotation() * Vector3(200.0, 0.0, 0.0)
@@ -258,7 +258,7 @@ func test_comfort_roll_lock_and_reduced_fov() -> void:
 	p.step(0.016)
 	assert_vector(p.cam_basis.y).is_equal_approx(rot * Vector3.UP, Vector3.ONE * 1e-4)
 	var target_rot: Quaternion = Quaternion(Vector3.FORWARD, deg_to_rad(40.0))
-	ctx.view.near[StationFixture.H2] = [
+	ctx.snap.near[StationFixture.H2] = [
 		NetCodec.pack_quat(target_rot), Vector3i.ZERO, StationFixture.TICK
 	]
 	p.step(0.016)

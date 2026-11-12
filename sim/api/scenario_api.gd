@@ -3,8 +3,8 @@ class_name ScenarioApi
 extends RefCounted
 ## The Scenario API (FT-ARC-016, FT-DAT-009, FT-DAT-007, D64, D103): the only part of
 ## sim/ that the director and scenarios may name. Every query returns an id, a number, a
-## string, a Vector3, a packed array or a value copy (ShipView, SiteView, EncounterView,
-## CardView, ApiEvent): never a table, the world or a resource. Every write builds one
+## string, a Vector3, a packed array or a value copy (ShipInfo, SiteInfo, EncounterInfo,
+## CardInfo, ApiEvent): never a table, the world or a resource. Every write builds one
 ## SimCommand with source SERVER and queues it with SimWorld.submit(), so it applies at
 ## the next tick and lands in the command log: a replay needs neither the director nor
 ## the scenarios (FT-ARC-008). A write that creates a ship, card, encounter or site returns
@@ -111,8 +111,8 @@ func at_site(id: int) -> int:
 	return SiteTable.at_site(_world, id)
 
 
-func ship(id: int) -> ShipView:
-	var v: ShipView = ShipView.new()
+func ship(id: int) -> ShipInfo:
+	var v: ShipInfo = ShipInfo.new()
 	if not _world.has_ship(id):
 		return v
 	v.id = id
@@ -130,15 +130,15 @@ func ship(id: int) -> ShipView:
 	return v
 
 
-func sites() -> Array[SiteView]:
-	var out: Array[SiteView] = []
+func sites() -> Array[SiteInfo]:
+	var out: Array[SiteInfo] = []
 	for id: int in _world.sites.size():
 		out.append(_site(id))
 	return out
 
 
-func _site(id: int) -> SiteView:
-	var v: SiteView = SiteView.new()
+func _site(id: int) -> SiteInfo:
+	var v: SiteInfo = SiteInfo.new()
 	var t: SiteTable = _world.sites
 	if id < 0 or id >= t.size():
 		return v
@@ -169,8 +169,8 @@ func spawnable_sites() -> PackedStringArray:
 	return out
 
 
-func encounter(id: int) -> EncounterView:
-	var v: EncounterView = EncounterView.new()
+func encounter(id: int) -> EncounterInfo:
+	var v: EncounterInfo = EncounterInfo.new()
 	var t: EncounterTable = _world.encounters
 	if id < 0 or id >= t.size():
 		return v
@@ -193,8 +193,8 @@ func encounter_limits() -> Vector2i:
 
 
 ## The cards on the ship's Comms board, including its faction's (D82).
-func cards_of(ship_id: int) -> Array[CardView]:
-	var out: Array[CardView] = []
+func cards_of(ship_id: int) -> Array[CardInfo]:
+	var out: Array[CardInfo] = []
 	var story: StoryTable = _world.story
 	if not _world.has_ship(ship_id):
 		return out
@@ -203,7 +203,7 @@ func cards_of(ship_id: int) -> Array[CardView]:
 		var owner: int = story.owner_ship[row]
 		if owner != ship_id and not (owner == -1 and story.owner_faction[row] == faction):
 			continue
-		var v: CardView = CardView.new()
+		var v: CardInfo = CardInfo.new()
 		v.id = row
 		v.kind = story.kind[row]
 		v.state = story.state[row]
@@ -211,7 +211,7 @@ func cards_of(ship_id: int) -> Array[CardView]:
 		v.title_key = story.title[row]
 		v.expires_tick = story.expires_tick[row]
 		v.reward = story.reward[row]
-		v.target = story.target[row]
+		v.subject = story.subject[row]
 		out.append(v)
 	return out
 
@@ -358,8 +358,8 @@ func offer(ship_id: int, card: CardSpec) -> ApiHandle:
 	cmd.conversation_id = card.conversation_id
 	cmd.reward_credits = card.reward_credits
 	cmd.rep_interaction = card.rep_interaction
-	cmd.target = card.target
-	cmd.target_flag = card.target_flag
+	cmd.subject = card.subject
+	cmd.subject_flag = card.subject_flag
 	cmd.expires_s = card.expires_s
 	cmd.requires_docked = card.requires_docked
 	cmd.faction_wide = card.faction_wide
@@ -412,7 +412,7 @@ func decline_card(card: int) -> void:
 
 ## Says a dialogue line to a ship (an NPC's, or the ship computer's for some stations).
 ## Nothing is queued when no ship can hear it.
-func message(line_id: String, args: Dictionary, to: SayTarget) -> void:
+func message(line_id: String, args: Dictionary, to: LineAudience) -> void:
 	var ship_id: int = to.ship
 	if ship_id < 0:
 		var crew: PackedInt32Array = crew_ships()

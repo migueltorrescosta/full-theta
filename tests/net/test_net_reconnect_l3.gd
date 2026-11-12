@@ -47,10 +47,10 @@ func test_relaunch_within_grace_restores_everything() -> void:
 	assert_int(again.session_id).is_equal(session.id)
 	assert_int(again.welcome["ship"]).is_equal(PLAYER)
 	assert_str(again.welcome["seat"]).is_equal("weapons")
-	assert_bool(await h.until(func() -> bool: return again.view.full_count >= 1)).is_true()
-	assert_bool(again.view.blocks.has(StationViews.Section.MOUNTS)).is_true()
+	assert_bool(await h.until(func() -> bool: return again.snap.full_count >= 1)).is_true()
+	assert_bool(again.snap.blocks.has(StationCatalogue.Section.MOUNTS)).is_true()
 	var mine: Callable = func() -> bool:
-		var claims: Dictionary = again.view.ownership.get("claims", {})
+		var claims: Dictionary = again.snap.ownership.get("claims", {})
 		return claims.has("mount:0") and claims["mount:0"][0] == session.id
 	assert_bool(await h.until(mine)).is_true()
 	assert_int(server.game.claims.holder(PLAYER, "mount:0")).is_equal(session.id)
@@ -94,7 +94,7 @@ func test_rejoin_after_grace_restores_only_what_is_free() -> void:
 	assert_bool(c_session.has_pick()).is_false()
 	assert_dict(await h.next_event(cap_again, NetProtocol.EVENT_LOBBY)).is_not_empty()
 	await h.wait(300)
-	assert_int(cap_again.view.full_count).is_equal(0)
+	assert_int(cap_again.snap.full_count).is_equal(0)
 
 
 # FT: FT-NET-014, FT-NET-033
@@ -160,7 +160,7 @@ func test_refused_rejoin_after_grace_leaves_no_ghost() -> void:
 # snapshot interval.
 func test_rejoined_client_converges_within_one_snapshot() -> void:
 	var server: NetServer = h.server(true)
-	var c: NetClient = await h.joined(server, "solo", StationViews.ALL)
+	var c: NetClient = await h.joined(server, "solo", StationCatalogue.ALL)
 	assert_bool(await h.start(server, c)).is_true()
 	c.helm(1.0, Vector3(0.2, 0.1, 0.0))
 	c.set_pips(SubsystemDef.Kind.ENGINES, 2)
@@ -184,27 +184,27 @@ func test_rejoined_client_converges_within_one_snapshot() -> void:
 			full_seq = seq
 			break
 	assert_int(full_seq).is_greater(0)
-	var view: NetViewState = NetViewState.new(NetCodec.period_units(c.welcome["period"]))
+	var snap: SnapshotState = SnapshotState.new(NetCodec.period_units(c.welcome["period"]))
 	for seq: int in [full_seq, full_seq + 1]:
 		assert_bool(c.raw_snapshots.has(seq)).is_true()
-		assert_bool(view.apply(c.raw_snapshots[seq])).is_true()
+		assert_bool(snap.apply(c.raw_snapshots[seq])).is_true()
 		(
-			assert_bool(models.has(view.tick))
-			. override_failure_message("no server model at tick %d" % view.tick)
+			assert_bool(models.has(snap.tick))
+			. override_failure_message("no server model at tick %d" % snap.tick)
 			. is_true()
 		)
-		_assert_converged(view, models[view.tick])
-	assert_int(view.tick).is_greater(0)
+		_assert_converged(snap, models[snap.tick])
+	assert_int(snap.tick).is_greater(0)
 
 
 ## The server's model of the player's ship at the current tick: KIN and block bytes as
 ## the snapshot builder would encode them, and contact positions.
 func _model(world: SimWorld) -> Dictionary:
-	var kin: KinSection = KinSection.new(StationViews.Section.KIN, PLAYER)
+	var kin: KinSection = KinSection.new(StationCatalogue.Section.KIN, PLAYER)
 	var blocks: Dictionary = {}
 	# The dev seat holds every station, not the Captain's or the main screen's block.
-	for kind: int in StationViews.BLOCKS:
-		if StationViews.sections_of(StationViews.ALL).has(kind):
+	for kind: int in StationCatalogue.BLOCKS:
+		if StationCatalogue.sections_of(StationCatalogue.ALL).has(kind):
 			blocks[kind] = StationBlocks.block_bytes(kind, world, PLAYER)
 	var contacts: Dictionary = {}
 	for id: int in ContactsSection.known(world, world.faction_of(PLAYER)):
@@ -213,18 +213,20 @@ func _model(world: SimWorld) -> Dictionary:
 	return {"kin": kin.update(world), "blocks": blocks, "contacts": contacts}
 
 
-func _assert_converged(view: NetViewState, model: Dictionary) -> void:
+func _assert_converged(snap: SnapshotState, model: Dictionary) -> void:
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.data_array = model["kin"]
-	assert_dict(view.kin).is_equal(SnapshotReader.read_kin(buf))
+	assert_dict(snap.kin).is_equal(SnapshotReader.read_kin(buf))
 	for kind: int in model["blocks"]:
-		var truth: Dictionary = NetBlock.decode(StationViews.BLOCKS[kind], model["blocks"][kind])
-		assert_dict(view.blocks[kind]).is_equal(truth)
-	var ids: Array = (view.contacts["model"] as Dictionary).keys()
+		var truth: Dictionary = NetBlock.decode(
+			StationCatalogue.BLOCKS[kind], model["blocks"][kind]
+		)
+		assert_dict(snap.blocks[kind]).is_equal(truth)
+	var ids: Array = (snap.contacts["model"] as Dictionary).keys()
 	ids.sort()
 	var want: Array = (model["contacts"] as Dictionary).keys()
 	want.sort()
 	assert_array(ids).is_equal(want)
 	for id: int in want:
-		var err: float = view.contact_position(id).distance_to(model["contacts"][id])
+		var err: float = snap.contact_position(id).distance_to(model["contacts"][id])
 		assert_float(err).is_less(0.5 * sqrt(3.0) + 0.1)

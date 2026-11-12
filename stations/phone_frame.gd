@@ -232,14 +232,14 @@ func process(now: int, left: Dictionary) -> void:
 		selection_chip.show_text(selection_text())
 	var rows: Array = []
 	if crew:
-		for c: Dictionary in ChipView.incoming(ctx.view, screen.stations):
+		for c: Dictionary in ChipsReader.incoming(ctx.snap, screen.stations):
 			(
 				rows
 				. append(
 					{
 						"id": c["id"],
 						"text": ChipStrip.asker(c),
-						"left": ChipView.left_s(ctx.view, c),
+						"left": ChipsReader.left_s(ctx.snap, c),
 						"effect": ChipLapse.effect(str(c["chip"])),
 					}
 				)
@@ -314,7 +314,7 @@ func selection_text() -> String:
 		return ""
 	var label: String = str(ctx.picture().find(sel).get("label", ""))
 	if label == "" and sel.get("kind", "") == "contact":
-		label = ctx.view.callsign(int(sel["id"]))
+		label = ctx.snap.callsign(int(sel["id"]))
 	var local: Variant = ctx.selection_local()
 	if local is Vector3:
 		return ChipText.chip(label, local)
@@ -397,7 +397,7 @@ func on_pinged(p: Dictionary) -> void:
 	var item: Dictionary = {"kind": p["kind"], "id": p["id"]}
 	var label: String = str(ctx.picture().find(item).get("label", ""))
 	if label == "" and item["kind"] == "contact":
-		label = ctx.view.callsign(int(item["id"]))
+		label = ctx.snap.callsign(int(item["id"]))
 	var text: String = TouchText.of("toast.pinged", "%s pinged %s") % [str(p.get("by", "")), label]
 	ping_toast.show_ping(text, ctx.now_ms())
 

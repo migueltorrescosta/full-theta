@@ -199,7 +199,7 @@ func test_draws_selection_strip_and_pulses() -> void:
 func test_centring_takes_the_minimum_image_on_a_rolled_ship() -> void:
 	# A 20 km cube; the ship yawed, pitched and rolled. Bravo sits 9.7 km to world -X, H2
 	# 9.6 km to world +X: through the seam H2 is 700 m to world -X of Bravo (D124).
-	var v: NetViewState = NetViewState.new(NetCodec.period_units(20000.0))
+	var v: SnapshotState = SnapshotState.new(NetCodec.period_units(20000.0))
 	v.tick = 10
 	var rot: Quaternion = Quaternion.from_euler(Vector3(0.2, 0.5, 0.4))
 	v.kin = {"pos": Vector3i.ZERO, "rot": rot}

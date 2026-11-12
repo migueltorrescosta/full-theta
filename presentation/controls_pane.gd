@@ -182,7 +182,7 @@ func _build_touch(stations: Array) -> void:
 			continue
 		var head: Label = Label.new()
 		head.theme_type_variation = "HeadingLabel"
-		head.text = tr(StationViews.name_key(st))
+		head.text = tr(StationCatalogue.name_key(st))
 		touch.add_child(head)
 		touch.add_child(pic)
 

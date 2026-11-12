@@ -106,7 +106,7 @@ func test_each_toggle_has_a_description_naming_both_stations() -> void:
 			assert_str(desc).override_failure_message("%s %s" % [lang, t.id]).is_not_empty()
 			assert_bool(desc.contains("\n")).is_false()
 			var named: int = 0
-			for station: String in StationViews.CREW:
+			for station: String in StationCatalogue.CREW:
 				if desc.contains(tr("station." + station)):
 					named += 1
 			(
@@ -116,7 +116,7 @@ func test_each_toggle_has_a_description_naming_both_stations() -> void:
 			)
 			if t.source != &"":
 				assert_str(desc).contains(tr("station." + String(t.source)))
-				assert_str(desc).contains(tr("station." + String(t.target)))
+				assert_str(desc).contains(tr("station." + String(t.receiver)))
 	I18n.apply("en")
 	for id: String in ["contract_flags", "verify_chip", "routes"]:
 		var named: String = (_row(l, id).get_node("Line/Name") as Label).text

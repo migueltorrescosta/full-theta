@@ -6,7 +6,7 @@ extends GdUnitTestSuite
 func _view(comfort: bool = false) -> Array:
 	var ctx: StationContext = StationFixture.context("helm")
 	ctx.settings.comfort = comfort
-	var view: HelmView = auto_free(HelmView.new())
+	var view: HelmScene = auto_free(HelmScene.new())
 	add_child(view)
 	view.show_state(ctx, true)
 	return [view, ctx]
@@ -23,7 +23,7 @@ func _event(ctx: StationContext, kind: StringName, ship: int, value: float = 0.0
 	)
 
 
-func _effects(view: SpaceView) -> Array[VfxEffect]:
+func _effects(view: SpaceScene) -> Array[VfxEffect]:
 	var out: Array[VfxEffect] = []
 	for n: Node in view.find_children("*", "VfxEffect", true, false):
 		out.append(n as VfxEffect)
@@ -34,7 +34,7 @@ func _effects(view: SpaceView) -> Array[VfxEffect]:
 # A hit that got through shows a spark on the hull, a hit the shields took shows the shell.
 func test_a_hit_sparks_or_shows_the_shield() -> void:
 	var a: Array = _view()
-	var view: HelmView = a[0]
+	var view: HelmScene = a[0]
 	var ctx: StationContext = a[1]
 	_event(ctx, &"hit", StationFixture.H2, 5.0)
 	_event(ctx, &"hit", StationFixture.H2, 0.0)
@@ -48,7 +48,7 @@ func test_a_hit_sparks_or_shows_the_shield() -> void:
 # Destruction, the jump spool and the arrival each spawn their effect on the ship.
 func test_explosion_and_jump_effects_spawn_on_their_events() -> void:
 	var a: Array = _view()
-	var view: HelmView = a[0]
+	var view: HelmScene = a[0]
 	var ctx: StationContext = a[1]
 	_event(ctx, &"destroyed", StationFixture.H2)
 	_event(ctx, &"jump_spool", StationFixture.SHIP)
@@ -88,7 +88,7 @@ func test_a_frozen_effect_holds_its_age() -> void:
 # Comfort takes the flash and the shake out: no core or spokes, a dimmer ring, no shake.
 func test_comfort_suppresses_flashes_and_shake() -> void:
 	var a: Array = _view(true)
-	var view: HelmView = a[0]
+	var view: HelmScene = a[0]
 	var ctx: StationContext = a[1]
 	_event(ctx, &"hit", StationFixture.SHIP, 5.0)
 	_event(ctx, &"destroyed", StationFixture.H2)
@@ -118,7 +118,7 @@ func test_comfort_suppresses_flashes_and_shake() -> void:
 # Without comfort a hit on the own ship shakes the camera, and the shake dies away.
 func test_a_hit_on_the_own_ship_shakes_the_camera_until_it_decays() -> void:
 	var a: Array = _view()
-	var view: HelmView = a[0]
+	var view: HelmScene = a[0]
 	var ctx: StationContext = a[1]
 	_event(ctx, &"hit", StationFixture.SHIP, 5.0)
 	assert_float(view.vfx.shake_level()).is_greater(0.5)
@@ -131,7 +131,7 @@ func test_a_hit_on_the_own_ship_shakes_the_camera_until_it_decays() -> void:
 # A volley never leaves more than MAX_LIVE effects.
 func test_effects_are_capped() -> void:
 	var a: Array = _view()
-	var view: HelmView = a[0]
+	var view: HelmScene = a[0]
 	var ctx: StationContext = a[1]
 	for i: int in VfxLayer.MAX_LIVE * 3:
 		_event(ctx, &"hit", StationFixture.H2, 5.0)

@@ -7,7 +7,7 @@ extends Resource
 ## contact (by ship id).
 enum Arg { NONE, MOUNT, CONTACT }
 
-## The six functional stations (content/ may not name StationViews).
+## The six functional stations (content/ may not name StationCatalogue).
 const STATIONS: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
 
 ## Unique among chips, in lower case (dimensionless id, e.g. boost). The text key is

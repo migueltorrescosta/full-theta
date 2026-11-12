@@ -1,13 +1,13 @@
 # gdlint: disable=max-public-methods
 class_name EngineeringModel
 extends RefCounted
-## Engineering's view-model (R13-6): reads the ENGINEERING block (ctx.view.blocks) against
+## Engineering's view-model (R13-6): reads the ENGINEERING block (ctx.snap.blocks) against
 ## the ship's ShipDef and sends the panel's commands, each checking what the sim would refuse
 ## and saying why. The panel, its board, cutaway and phone share one; it needs no scene.
 ## Hit marks come from `hit` events on the own ship (vector in the ship frame) and heat
 ## faults from `fault` events, through CrewState.sim_event (on_sim_event).
 
-const S = StationViews.Section
+const S = StationCatalogue.Section
 const KIND = SubsystemDef.Kind
 
 ## A sent pip or tightness value shows until the snapshot agrees, or for this long (ms).
@@ -46,7 +46,7 @@ func _init(context: StationContext, def: ShipDef) -> void:
 
 
 func block() -> Dictionary:
-	return ctx.view.blocks.get(S.ENGINEERING, {})
+	return ctx.snap.blocks.get(S.ENGINEERING, {})
 
 
 ## The block row of subsystem i ({} before the first snapshot).
@@ -116,7 +116,7 @@ func crew_job(c: int) -> int:
 
 ## Whether another player holds crew c's claim (FT-NET-023).
 func crew_taken(c: int) -> bool:
-	var holder: Variant = ctx.view.ownership.get("claims", {}).get("crew:%d" % c)
+	var holder: Variant = ctx.snap.ownership.get("claims", {}).get("crew:%d" % c)
 	return holder is Array and int(holder[0]) != ctx.crew.session
 
 
@@ -364,10 +364,10 @@ func cause_name(i: int, index_plus_one: int) -> String:
 ## view or none is coming (P11): the soonest forecast of the sim hazards the faction
 ## knows (the RELAY block, D208).
 func hazard_eta() -> float:
-	if not ctx.crew.filter().grants(ViewFilter.HAZARD_COUNTDOWNS):
+	if not ctx.crew.filter().grants(ShortcutFilter.HAZARD_COUNTDOWNS):
 		return -1.0
 	return HazardEta.forecast(
-		ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("hazards", [])
+		ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {}).get("hazards", [])
 	)
 
 
@@ -441,7 +441,7 @@ func queue_lines() -> Array:
 		var j: int = crew_job(c)
 		var text: String = tr("eng.crew") % crew_letter(c)
 		text += ": " + (short_name(j) if j >= 0 else tr("eng.idle"))
-		var holder: String = ctx.view.claimer("crew:%d" % c)
+		var holder: String = ctx.snap.claimer("crew:%d" % c)
 		if holder != "":
 			text += " (%s)" % holder
 		out.append([text, "text_dim"])

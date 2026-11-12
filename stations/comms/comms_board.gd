@@ -32,7 +32,7 @@ const SWIPE_PX: float = 60.0
 ## A card's height on a phone's pages (design 2.6).
 const PHONE_CARD_H: float = 72.0
 
-## The COMMS block (CommsView) the board draws.
+## The COMMS block (CommsSection) the board draws.
 var data: Dictionary = {}
 ## The selected card's id, or -1.
 var selected: int = -1

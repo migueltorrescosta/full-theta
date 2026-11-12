@@ -288,7 +288,7 @@ func radar_orbitable() -> bool:
 
 
 func claim_item() -> String:
-	return StationViews.CLAIM_SCAN
+	return StationCatalogue.CLAIM_SCAN
 
 
 func _process(delta: float) -> void:
@@ -305,7 +305,7 @@ func _process(delta: float) -> void:
 
 
 func block() -> Dictionary:
-	return ctx.view.blocks.get(StationViews.Section.SCIENCE, {})
+	return ctx.snap.blocks.get(StationCatalogue.Section.SCIENCE, {})
 
 
 ## The section's card row of a contact, or {}.
@@ -345,11 +345,11 @@ func refresh() -> void:
 	_stage.visible = own or minigame != MINIGAME_NONE
 	scan_game.visible = minigame == MINIGAME_SCAN
 	hack_game.visible = minigame == MINIGAME_HACK
-	var age: float = maxf(0.0, float(ctx.view.tick - int(b.get("minigame_start", 0))) / SimRate.HZ)
+	var age: float = maxf(0.0, float(ctx.snap.tick - int(b.get("minigame_start", 0))) / SimRate.HZ)
 	if minigame == MINIGAME_SCAN:
 		scan_game.load_block(b)
 		scan_game.title = (
-			tr("sci.scan_title") % ctx.view.callsign(int(b.get("minigame_target", -1)))
+			tr("sci.scan_title") % ctx.snap.callsign(int(b.get("minigame_contact", -1)))
 		)
 		scan_game.noise_text = (
 			"%s %d%%" % [tr("sci.noise"), roundi(float(b["minigame_noise"]) * 100.0)]
@@ -358,12 +358,12 @@ func refresh() -> void:
 	elif minigame == MINIGAME_HACK:
 		hack_game.load_block(b)
 		hack_game.title = (
-			tr("sci.hack_title") % ctx.view.callsign(int(b.get("minigame_target", -1)))
+			tr("sci.hack_title") % ctx.snap.callsign(int(b.get("minigame_contact", -1)))
 		)
 		hack_game.target_text = _goal_text(b)
 		hack_game.elapsed_s = age
 	var sel: int = selected_contact()
-	card_view.set_card(ctx.view.callsign(sel) if sel >= 0 else "", card_of(sel), _hacks_on(sel))
+	card_view.set_card(ctx.snap.callsign(sel) if sel >= 0 else "", card_of(sel), _hacks_on(sel))
 	_refresh_list()
 	_refresh_buttons(b, minigame)
 	if phone != null:
@@ -385,7 +385,7 @@ func _hacks_on(contact: int) -> Array:
 
 
 func _goal_text(b: Dictionary) -> String:
-	var target: int = int(b.get("minigame_target", -1))
+	var target: int = int(b.get("minigame_contact", -1))
 	var def: ShipDef = ScienceLookup.ship_class(int(card_of(target).get("class_id", 0)))
 	var i: int = int(b.get("hack_sub", -1))
 	if def != null and i >= 0 and i < def.subsystems.size():
@@ -446,7 +446,7 @@ func _list_text(it: Dictionary) -> String:
 
 func _refresh_buttons(b: Dictionary, minigame: int) -> void:
 	var open: bool = minigame != MINIGAME_NONE
-	var holder: String = ctx.crew.claimer(StationViews.CLAIM_SCAN)
+	var holder: String = ctx.crew.claimer(StationCatalogue.CLAIM_SCAN)
 	var mine: bool = holder == ctx.settings.player_name
 	(_buttons["mode"] as Button).text = tr(
 		"sci.mode_active" if b.get("active", false) else "sci.mode_passive"
@@ -540,11 +540,11 @@ func _self_scan() -> void:
 
 
 func _claim_scan() -> void:
-	var holder: Dictionary = ctx.crew.claims.get(StationViews.CLAIM_SCAN, {})
+	var holder: Dictionary = ctx.crew.claims.get(StationCatalogue.CLAIM_SCAN, {})
 	if int(holder.get("session", -1)) == ctx.crew.session:
-		ctx.intents.release_claim(StationViews.CLAIM_SCAN)
+		ctx.intents.release_claim(StationCatalogue.CLAIM_SCAN)
 	else:
-		ctx.intents.claim(StationViews.CLAIM_SCAN)
+		ctx.intents.claim(StationCatalogue.CLAIM_SCAN)
 
 
 ## A phone's Hack (P28-L1, D289): the screen's choice sheet of the target's subsystems plus
@@ -569,7 +569,7 @@ func open_hack() -> void:
 		names.append(_sub_label(subs, i))
 	sheet.side = SIDE_RIGHT
 	sheet.open(
-		TouchText.of("sci.hack_sheet", "Hack %s") % ctx.view.callsign(c),
+		TouchText.of("sci.hack_sheet", "Hack %s") % ctx.snap.callsign(c),
 		names,
 		func(i: int) -> void: _hack_sub(c, subs[i])
 	)
@@ -608,9 +608,9 @@ func minigame_title() -> String:
 	if minigame == MINIGAME_NONE:
 		return ""
 	var age: int = floori(
-		maxf(0.0, float(ctx.view.tick - int(b.get("minigame_start", 0))) / SimRate.HZ)
+		maxf(0.0, float(ctx.snap.tick - int(b.get("minigame_start", 0))) / SimRate.HZ)
 	)
-	var who: String = ctx.view.callsign(int(b.get("minigame_target", -1)))
+	var who: String = ctx.snap.callsign(int(b.get("minigame_contact", -1)))
 	if minigame == MINIGAME_SCAN:
 		return TouchText.of("sci.minigame_scan", "Scan %s · %d s") % [who, age]
 	return TouchText.of("sci.minigame_hack", "Hack %s · %d s") % [who, age]

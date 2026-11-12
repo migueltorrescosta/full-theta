@@ -1,14 +1,14 @@
 class_name SelectionChip
 extends HBoxContainer
 ## The selection chip of a phone's view-top row (#28 follow-up, P28-Common, design 1.3):
-## `‹ H2 · 4 high mid ›`. The arrows cycle the target (the common cycle_target), a tap on
+## `‹ H2 · 4 high mid ›`. The arrows cycle the contacts (the common cycle_target), a tap on
 ## the name opens the selection sheet (Ping, Mark here, Clear and the station's extras).
 ##
 ##     chip.cycled.connect(func(step: int) -> void: _cycle(step))
 ##     chip.opened.connect(_open_selection_sheet)
 ##     chip.show_text("H2 · 4 high mid")
 
-## An arrow was tapped: +1 the next target, -1 the previous one.
+## An arrow was tapped: +1 the next contact, -1 the previous one.
 signal cycled(step: int)
 ## The name was tapped.
 signal opened

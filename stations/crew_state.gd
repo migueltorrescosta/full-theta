@@ -96,7 +96,7 @@ var inbox: Array[Dictionary] = []
 var relay_log: Array[Dictionary] = []
 ## The session's data-shortcut toggles, from the `lobby` events (every ship shares them,
 ## FT-PAIR-017); Easy until the server says otherwise.
-var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
+var toggles: DataToggles = DataToggles.of_preset(StationCatalogue.DEFAULT_TOGGLES)
 
 ## The shortcuts shared to this ship (the `shares` event, D210): feature -> client clock (ms)
 ## at which the share ends.
@@ -122,18 +122,18 @@ var handover: Dictionary = {}
 ## The `game_over` payload, {} while the session goes on.
 var game_over: Dictionary = {}
 
-var _filter: ViewFilter = null
+var _filter: ShortcutFilter = null
 var _filter_key: String = ""
 
 
-## What this pick may see of other stations' data at the session's toggles (ViewFilter): the
+## What this pick may see of other stations' data at the session's toggles (ShortcutFilter): the
 ## clients draw an em dash for an absent summary, a band for a banded one.
-func filter() -> ViewFilter:
-	var code: String = ViewFilter.code_with(toggles.encode(), shares.keys())
+func filter() -> ShortcutFilter:
+	var code: String = ShortcutFilter.code_with(toggles.encode(), shares.keys())
 	var key: String = "%s|%s" % [seat, code]
 	if _filter == null or key != _filter_key:
 		_filter_key = key
-		_filter = ViewFilter.of(seat, code)
+		_filter = ShortcutFilter.of(seat, code)
 	return _filter
 
 
@@ -157,7 +157,7 @@ func shares_left(now_ms: int) -> Dictionary:
 ## for the keys that aren't exact numbers; the keys whose numbers show stay out. `def` is the
 ## own ship's definition (the bands are shares of its maxima), null without one.
 func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
-	var f: ViewFilter = filter()
+	var f: ShortcutFilter = filter()
 	var out: Dictionary = {}
 	if f == null or f.sees_all or def == null or status.is_empty():
 		return out
@@ -169,7 +169,7 @@ func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
 	for key: String in maxima:
 		# The hull is the ship's: exact unless the view holds Comms without Engineering,
 		# when it is the band at every difficulty (FT-PAIR-010).
-		var mode: int = f.summary_mode(ViewFilter.ENG)
+		var mode: int = f.summary_mode(ShortcutFilter.ENG)
 		if key == "hull":
 			mode = 1 if f.condition_hidden else 2
 		if mode == 1:
@@ -740,7 +740,7 @@ func _on_lobby(p: Dictionary) -> void:
 ## A request chip this client sent was answered: a toast naming who and what.
 func _on_chip_answer(p: Dictionary) -> void:
 	var chip: Dictionary = {"chip": str(p.get("chip", "")), "arg": int(p.get("arg", -1))}
-	var args: Dictionary = {"by": str(p.get("by", "")), "chip": ChipView.label(chip)}
+	var args: Dictionary = {"by": str(p.get("by", "")), "chip": ChipsReader.label(chip)}
 	toast.emit(
 		"toast.chip_answered" if bool(p.get("accept", false)) else "toast.chip_declined", args
 	)
@@ -777,7 +777,7 @@ func captain_seated(id: int = ship) -> bool:
 	if lobby.has(id):
 		return str(lobby[id].get("captain", "")) != ""
 	for seat: Variant in fleet_row(id).get("seats", []):
-		if str((seat as Dictionary).get("seat", "")) == StationViews.CAPTAIN:
+		if str((seat as Dictionary).get("seat", "")) == StationCatalogue.CAPTAIN:
 			return true
 	return false
 
@@ -785,7 +785,7 @@ func captain_seated(id: int = ship) -> bool:
 ## Whether this pick may switch the main screen now (FT-MSC-005): the Captain, or Relay
 ## while no Captain is seated. The server decides; this only hides dead buttons.
 func may_switch_main_view() -> bool:
-	if seat == StationViews.CAPTAIN:
+	if seat == StationCatalogue.CAPTAIN:
 		return true
 	return stations().has("relay") and not captain_seated()
 

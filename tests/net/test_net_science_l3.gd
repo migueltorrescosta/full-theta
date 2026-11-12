@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 
 const PLAYER: int = NetHarness.PLAYER
 const ENEMY: int = NetHarness.ENEMY
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 var h: NetHarness
 
@@ -37,7 +37,7 @@ func _verdict(server: NetServer, c: NetClient, cmd: Dictionary) -> String:
 
 
 func _block(c: NetClient) -> Dictionary:
-	return c.view.blocks.get(S.SCIENCE, {})
+	return c.snap.blocks.get(S.SCIENCE, {})
 
 
 ## The enemy's card in the client's SCIENCE section, or {}.
@@ -72,7 +72,9 @@ func test_the_scan_is_claimed_one_at_a_time() -> void:
 	# Ana was alone on Science first and holds the scan; Bo sees her name.
 	(
 		assert_bool(
-			await h.until(func() -> bool: return bo.view.claimer(StationViews.CLAIM_SCAN) == "ana")
+			await h.until(
+				func() -> bool: return bo.snap.claimer(StationCatalogue.CLAIM_SCAN) == "ana"
+			)
 		)
 		. is_true()
 	)
@@ -82,17 +84,19 @@ func test_the_scan_is_claimed_one_at_a_time() -> void:
 	# Bo can still use the free controls of the station (mode, ping, select).
 	assert_str(await _verdict(server, bo, {"kind": "science_ping"})).is_equal("")
 	# Release and claim: now Bo may open a scan, but the one in flight is Ana's: busy.
-	ana.release_claim(StationViews.CLAIM_SCAN)
+	ana.release_claim(StationCatalogue.CLAIM_SCAN)
 	(
 		assert_bool(
-			await h.until(func() -> bool: return bo.view.claimer(StationViews.CLAIM_SCAN) == "")
+			await h.until(func() -> bool: return bo.snap.claimer(StationCatalogue.CLAIM_SCAN) == "")
 		)
 		. is_true()
 	)
-	bo.claim(StationViews.CLAIM_SCAN)
+	bo.claim(StationCatalogue.CLAIM_SCAN)
 	(
 		assert_bool(
-			await h.until(func() -> bool: return bo.view.claimer(StationViews.CLAIM_SCAN) == "bo")
+			await h.until(
+				func() -> bool: return bo.snap.claimer(StationCatalogue.CLAIM_SCAN) == "bo"
+			)
 		)
 		. is_true()
 	)

@@ -27,10 +27,10 @@ const PARAMS: Array[String] = ["timeout", "type", "id", "for", "keep"]
 ## can't spare.
 const L4_UI: String = "res://tools/l4/l4_ui.gd"
 const SECTION_NAMES: Dictionary = {
-	StationViews.Section.STATUS: "status",
-	StationViews.Section.HELM: "helm",
-	StationViews.Section.ENGINEERING: "engineering",
-	StationViews.Section.MOUNTS: "mounts",
+	StationCatalogue.Section.STATUS: "status",
+	StationCatalogue.Section.HELM: "helm",
+	StationCatalogue.Section.ENGINEERING: "engineering",
+	StationCatalogue.Section.MOUNTS: "mounts",
 }
 
 var url: String = ""
@@ -298,8 +298,8 @@ func _observe() -> void:
 		_max_gap_us = maxi(_max_gap_us, gap)
 		_last_snap_us = now
 		_last_snaps = n
-		var kin: Dictionary = _client.view.kin
-		_line({"ev": "snap", "tick": _client.view.tick, "k": kin.hash(), "gap_ms": gap / 1000})
+		var kin: Dictionary = _client.snap.kin
+		_line({"ev": "snap", "tick": _client.snap.tick, "k": kin.hash(), "gap_ms": gap / 1000})
 
 
 func _on_event(e: Dictionary) -> void:
@@ -328,7 +328,7 @@ func _finish(code: int, why: String) -> void:
 				"steps_done": _i,
 				"steps": _steps.size(),
 				"stats": _client.stats,
-				"view_rejected": _client.view.rejected,
+				"snap_rejected": _client.snap.rejected,
 				"max_gap_ms": _max_gap_us / 1000,
 			}
 		)
@@ -467,13 +467,13 @@ static func _check(root: Variant, matchers: Array) -> String:
 	return ""
 
 
-## The client view as a plain dictionary: every NetViewState variable, blocks also by
+## The client view as a plain dictionary: every SnapshotState variable, blocks also by
 ## section name (blocks.helm.throttle_setpoint), and the client's stats.
 func _view_root() -> Dictionary:
 	var root: Dictionary = {}
-	for p: Dictionary in _client.view.get_property_list():
+	for p: Dictionary in _client.snap.get_property_list():
 		if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
-			root[p["name"]] = _client.view.get(p["name"])
+			root[p["name"]] = _client.snap.get(p["name"])
 	var blocks: Dictionary = (root.get("blocks", {}) as Dictionary).duplicate()
 	for kind: int in SECTION_NAMES:
 		if blocks.has(kind):
@@ -669,7 +669,7 @@ func _do_expect_catalogue(step: Dictionary) -> Result:
 
 
 ## expect_view <matchers>: waits until the snapshot view matches (kin.*, blocks.helm.*,
-## contacts, seq, tick, full_count, stats.fulls, state, any NetViewState variable).
+## contacts, seq, tick, full_count, stats.fulls, state, any SnapshotState variable).
 func _do_expect_view(step: Dictionary) -> Result:
 	var why: String = _check(_view_root(), _matchers(step))
 	return Result.DONE if why == "" else _wait(why)
@@ -739,10 +739,10 @@ func _do_expect_tick_still(step: Dictionary) -> Result:
 	if not _st.has("tick"):
 		# The pause event carries the tick the sim stopped at, and it may overtake the
 		# snapshot of that tick (events and snapshots are queued separately).
-		_st["tick"] = maxi(_client.view.tick, _matched_tick)
+		_st["tick"] = maxi(_client.snap.tick, _matched_tick)
 		_st["n0"] = _client.stats["snapshots"]
-	if _client.view.tick > int(_st["tick"]):
-		return _fail("tick moved from %d to %d" % [_st["tick"], _client.view.tick])
+	if _client.snap.tick > int(_st["tick"]):
+		return _fail("tick moved from %d to %d" % [_st["tick"], _client.snap.tick])
 	if _elapsed_s() < _num(step, "for", 1.0):
 		return Result.WAIT
 	if _client.stats["snapshots"] == int(_st["n0"]):
@@ -753,8 +753,8 @@ func _do_expect_tick_still(step: Dictionary) -> Result:
 ## expect_tick_moving [ticks=30]: the sim tick advances by at least that many ticks.
 func _do_expect_tick_moving(step: Dictionary) -> Result:
 	if not _st.has("tick"):
-		_st["tick"] = _client.view.tick
-	var moved: int = _client.view.tick - int(_st["tick"])
+		_st["tick"] = _client.snap.tick
+	var moved: int = _client.snap.tick - int(_st["tick"])
 	if moved >= int(_num(step, "ticks", 30.0)):
 		return Result.DONE
 	return _wait("tick moved %d" % moved)

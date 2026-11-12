@@ -1,5 +1,5 @@
 {
-  "_comment": "Loading and menu tips (#28, P28-Tips): every tip in each launch language. presentation/tips_view.gd shows them in the game; tools/tips_shell.py copies them into app/web/shell.html for the loading screen.",
+  "_comment": "Loading and menu tips (#28, P28-Tips): every tip in each launch language. presentation/tips_panel.gd shows them in the game; tools/tips_shell.py copies them into app/web/shell.html for the loading screen.",
   "topics": {
     "lobby": {"en": "Lobby", "pt_PT": "Sala de espera", "it": "Sala d'attesa"},
     "setup": {"en": "Setting up", "pt_PT": "Preparar o jogo", "it": "Preparare la partita"},

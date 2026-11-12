@@ -172,7 +172,7 @@ func test_cycle_select_pinged_claim_request_and_strip() -> void:
 # Snapshots list the own ship among the contacts; cycling never selects it.
 func test_cycle_target_skips_the_own_ship() -> void:
 	var s: StationScreen = _screen("helm")
-	var v: NetViewState = StationFixture.view()
+	var v: SnapshotState = StationFixture.snap()
 	v.contacts["model"][s.ctx.crew.ship] = [v.kin["pos"], Vector3i.ZERO, StationFixture.TICK]
 	v.contacts["info"][s.ctx.crew.ship] = [2, "Kestrel"]
 	s.ctx.interp = SnapshotInterpolator.new()

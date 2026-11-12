@@ -177,16 +177,16 @@ func test_snapshot_header() -> void:
 		M1Encounter.new(1, "test", TestDefs.corvette(), TestDefs.raider_enemy()).build()
 	)
 	world.step()
-	var b: SnapshotBuilder = SnapshotBuilder.new()
-	var key: String = StationViews.key(0, "helm")
+	var b: SnapshotWriter = SnapshotWriter.new()
+	var key: String = StationCatalogue.key(0, "helm")
 	b.build(SimCopy.of(world), 77, [key])
 	var bytes: PackedByteArray = b.message(key, true)
 	assert_int(NetProtocol.type_of(bytes)).is_equal(NetProtocol.Type.SNAPSHOT)
 	assert_array(SnapshotReader.peek(bytes)).is_equal([77, true, 1])
 	assert_dict(NetProtocol.decode(bytes)).is_empty()
-	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
-	assert_bool(view.apply(bytes)).is_true()
-	assert_array(view.kinds).is_equal(StationViews.sections_of("helm"))
+	var snap: SnapshotState = SnapshotState.new(NetCodec.period_units(world.kin.period))
+	assert_bool(snap.apply(bytes)).is_true()
+	assert_array(snap.kinds).is_equal(StationCatalogue.sections_of("helm"))
 
 
 # FT: FT-NET-004

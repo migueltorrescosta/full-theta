@@ -15,8 +15,8 @@ static func seat(i: int, ships: int = 6) -> Array:
 	if i < crew:
 		return [i / STATIONS.size(), STATIONS[i % STATIONS.size()]]
 	if i < crew + ships:
-		return [i - crew, StationViews.CAPTAIN]
-	return [(i - crew - ships) % ships, StationViews.VIEWER]
+		return [i - crew, StationCatalogue.CAPTAIN]
+	return [(i - crew - ships) % ships, StationCatalogue.VIEWER]
 
 
 ## True for the one seat per ship that presses Start (its Helm).

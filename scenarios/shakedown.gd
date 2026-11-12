@@ -40,7 +40,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 func step(api: ScenarioApi) -> void:
 	if _ship < 0 or api.tick() - _asked < SimRate.HZ:
 		return
-	var ship: ShipView = api.ship(_ship)
+	var ship: ShipInfo = api.ship(_ship)
 	# The handle names the real ship: a rejected spawn is gone (review 2 L5).
 	var gone: bool = _drone == null or _drone.rejected()
 	if not gone and not _drone.pending():

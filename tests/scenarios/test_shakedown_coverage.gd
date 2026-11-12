@@ -91,7 +91,7 @@ func test_command_steps_name_a_command_of_their_station() -> void:
 			continue
 		var kind: StringName = StringName(String(s.command).get_slice(":", 0))
 		assert_object(SimCommands.make(kind)).override_failure_message(String(kind)).is_not_null()
-		assert_str(StationViews.station_of_command(kind)).is_equal(String(s.station))
+		assert_str(StationCatalogue.station_of_command(kind)).is_equal(String(s.station))
 
 
 # FT: FT-MIS-039

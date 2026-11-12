@@ -3,15 +3,15 @@ extends SnapshotSection
 ## Who holds what on one ship (Section.OWNERSHIP): the claimer of each claimed item
 ## (FT-NET-023) and the last writer of each ship-wide control (FT-NET-044). The main
 ## thread owns claims (NetGame) and posts the ship's table to the net thread
-## whenever it changes (NetTransport.post_ownership); each view key gets only its own
-## stations' items (StationViews.ownership_for), so the section is filtered per seat,
+## whenever it changes (NetTransport.post_ownership); each stream key gets only its own
+## stations' items (StationCatalogue.ownership_for), so the section is filtered per seat,
 ## not shared whole like the other per-ship sections. Sent whole on change.
 ##
 ## Payload: var_to_bytes of {"claims": {item: [session id, name]}, "writers": {control:
 ## [session id, name]}} (rare, small; decoded with bytes_to_var, which builds no
 ## objects).
 
-## The ship's table as last posted (set by SnapshotBuilder before update()).
+## The ship's table as last posted (set by SnapshotWriter before update()).
 var data: Dictionary = {}
 var _sent: Dictionary = {}
 
@@ -20,10 +20,10 @@ func update(_world: SimWorld) -> PackedByteArray:
 	if data == _sent:
 		return PackedByteArray()
 	_sent = data.duplicate(true)
-	# A marker: SnapshotBuilder encodes the per-seat payload (for_seat).
+	# A marker: SnapshotWriter encodes the per-seat payload (for_seat).
 	return PackedByteArray([1])
 
 
 ## The section bytes a seat sees.
 func for_seat(seat: String) -> PackedByteArray:
-	return var_to_bytes(StationViews.ownership_for(seat, _sent))
+	return var_to_bytes(StationCatalogue.ownership_for(seat, _sent))

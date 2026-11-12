@@ -1,4 +1,4 @@
-class_name HazardView
+class_name HazardRows
 extends RefCounted
 ## The sim hazards a faction knows of, as the RELAY block lists them (D208, FT-RLY-001,
 ## P4, P11): where each is now and when it reaches the ship. Relay draws them on its map

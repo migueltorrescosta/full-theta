@@ -32,7 +32,7 @@ var scan_z: PackedFloat64Array = PackedFloat64Array()
 ## Minigame kind (enum Minigame).
 var kind: PackedByteArray = PackedByteArray()
 ## Ship id of the minigame's contact (or -1).
-var target: PackedInt32Array = PackedInt32Array()
+var contact: PackedInt32Array = PackedInt32Array()
 ## Seed the minigame's puzzle is generated from.
 var puzzle_seed: PackedInt64Array = PackedInt64Array()
 ## Scan noise at the start of the minigame (0..1).
@@ -69,7 +69,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	scan_y.append(0.0)
 	scan_z.append(0.0)
 	kind.append(Minigame.NONE)
-	target.append(-1)
+	contact.append(-1)
 	puzzle_seed.append(0)
 	noise.append(0.0)
 	start_tick.append(0)
@@ -99,7 +99,7 @@ func set_scan_point(ship: int, at: PackedFloat64Array) -> void:
 ## Closes the ship's minigame.
 func clear_minigame(ship: int) -> void:
 	kind[ship] = Minigame.NONE
-	target[ship] = -1
+	contact[ship] = -1
 	subsystem[ship] = -1
 	axes[ship] = 0
 	trace[ship] = 0.0

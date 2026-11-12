@@ -67,7 +67,7 @@ func _setup() -> void:
 	_left = left
 	mirror = ViewerPanel.new()
 	mirror.interactive = true
-	mirror.setup(ctx, StationViews.VIEWER)
+	mirror.setup(ctx, StationCatalogue.VIEWER)
 	mirror.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(mirror)
 	_row = HFlowContainer.new()
@@ -152,7 +152,7 @@ static func touch_help() -> Array:
 	var half: float = (CaptainPhone.RAIL_W - UiTheme.TOUCH_GAP) / 2.0
 	var rows: Array = [
 		["view_0", "view_1", "forward", "Forward", "chase", "Chase"],
-		["view_2", "view_3", "tactical", "Tactical", "target", "Target"],
+		["view_2", "view_3", "tactical", "Tactical", "close_up", "Close-up"],
 		["view_4", "", "status", "Status", "", ""],
 	]
 	var boxes: Array = []
@@ -239,8 +239,8 @@ func _process(_delta: float) -> void:
 		phone.show_view(view)
 		phone.place(top_reserve)
 		mirror.top_reserve = maxf(top_reserve - phone.stage_rect().position.y, 0.0)
-	chips.show_rows(ChipList.open_rows(ctx.view))
-	cards.setup(CardList.rows(ctx.view, [CardList.MISSION, CardList.CONTRACT]))
+	chips.show_rows(ChipList.open_rows(ctx.snap))
+	cards.setup(CardList.rows(ctx.snap, [CardList.MISSION, CardList.CONTRACT]))
 	cards.highlight = ctx.crew.shown_card(ctx.now_ms())
 	# The card the Captain pinged opens in the list, and stays open until another is pinged.
 	if cards.highlight >= 0:
@@ -248,7 +248,7 @@ func _process(_delta: float) -> void:
 	cards.own_name = ctx.settings.player_name
 	# Card id -> the holder of its conversation, for the open card's "claimed" line.
 	cards.claims = CommsData.claimers(
-		ctx.crew, CardList.rows(ctx.view, [CardList.MISSION, CardList.CONTRACT])
+		ctx.crew, CardList.rows(ctx.snap, [CardList.MISSION, CardList.CONTRACT])
 	)
 	cards.queue_redraw()
 

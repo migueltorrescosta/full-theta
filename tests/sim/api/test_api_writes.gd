@@ -88,7 +88,7 @@ func test_each_write_is_one_server_command() -> void:
 		[func(a: ScenarioApi) -> void: a.end_encounter(0, Scenario.Result.WON), &"end_encounter"],
 		[
 			func(a: ScenarioApi) -> void:
-				a.message("computer.hello", {"x": 1}, SayTarget.computer(0, helm)),
+				a.message("computer.hello", {"x": 1}, LineAudience.computer(0, helm)),
 			&"say"
 		],
 		[func(a: ScenarioApi) -> void: a.offer(0, CardSpec.new()), &"post_card"],
@@ -129,7 +129,7 @@ func test_an_offered_card_resolves_to_its_real_id_after_a_crew_hail_in_the_same_
 	var api: ScenarioApi = _api(w)
 	var hail: HailCommand = HailCommand.new()
 	hail.ship_id = 0
-	hail.target = raider
+	hail.contact = raider
 	w.submit(hail)
 	var card: CardSpec = CardSpec.new()
 	card.title_key = &"comms.card.test"
@@ -141,7 +141,7 @@ func test_an_offered_card_resolves_to_its_real_id_after_a_crew_hail_in_the_same_
 	assert_str(w.story.title[handle.id()]).is_equal("comms.card.test")
 	# The scenario finds its card by the handle's id, not by title.
 	var ids: Array[int] = []
-	for c: CardView in api.cards_of(0):
+	for c: CardInfo in api.cards_of(0):
 		ids.append(c.id)
 	assert_array(ids).contains([handle.id()])
 
@@ -170,7 +170,7 @@ func test_a_rejected_write_has_a_rejected_handle_and_shifts_no_other() -> void:
 func test_message_without_a_listener_queues_nothing() -> void:
 	var w: SimWorld = ApiFixture.world()
 	w.ships.status[0] = ShipStateTable.Status.ABANDONED
-	_api(w).message("npc.hello", {}, SayTarget.npc(&"rosa", -1))
+	_api(w).message("npc.hello", {}, LineAudience.npc(&"rosa", -1))
 	assert_int(w.queued_commands().size()).is_equal(0)
 
 

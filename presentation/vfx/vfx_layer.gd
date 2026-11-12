@@ -1,6 +1,6 @@
 class_name VfxLayer
 extends Node3D
-## The effects of one SpaceView (#12, E14), spawned from the sim events the client already
+## The effects of one SpaceScene (#12, E14), spawned from the sim events the client already
 ## receives (the ones the sound strand uses): a hit on a ship (a spark on the hull, or the
 ## shield's shell when the shields took all of it: the event's `value`, the energy that got
 ## through, is 0), an explosion, the jump drive spooling and arriving. The own ship's hits
@@ -17,15 +17,15 @@ const SHAKE_HZ: float = 38.0
 ## own ship is drawn.
 const COCKPIT_REACH: float = 8.0
 
-var space: SpaceView
-## Whether comfort is on; set by the SpaceView from the settings.
+var space: SpaceScene
+## Whether comfort is on; set by the SpaceScene from the settings.
 var comfort: bool = false
 var _shake: float = 0.0
 var _clock: float = 0.0
 var _count: int = 0
 
 
-func _init(p_space: SpaceView = null) -> void:
+func _init(p_space: SpaceScene = null) -> void:
 	space = p_space
 	name = "Vfx"
 

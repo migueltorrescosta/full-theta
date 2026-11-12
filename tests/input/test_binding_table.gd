@@ -33,8 +33,8 @@ static func _inputs(binding: String) -> Array:
 # (every control is reachable).
 func test_a_station_binds_the_same_in_every_view() -> void:
 	var seen: Dictionary = {}
-	for seat: String in StationViews.catalogue_ids(true):
-		var stations: Array = StationViews.def(seat).stations
+	for seat: String in StationCatalogue.catalogue_ids(true):
+		var stations: Array = StationCatalogue.def(seat).stations
 		for station: String in stations:
 			for focused: String in stations:
 				for device: String in IntentTable.DEVICES:

@@ -85,7 +85,7 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	assert_object(server.world).is_same(old_world)
 	# Two of three: the run resets.
 	var old_tick: int = old_world.tick
-	var fulls: int = crew[0].view.full_count
+	var fulls: int = crew[0].snap.full_count
 	from = h.mark(crew[0])
 	crew[0].run_again(PLAYER, true)
 	crew[1].run_again(PLAYER, true)
@@ -107,7 +107,7 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 		assert_str(h.session_of(server, crew[i]).seat).is_equal(["tactical", "systems", "ops"][i])
 	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(tac.id)
 	var fresh: Callable = func() -> bool:
-		return crew[0].view.full_count > fulls and crew[0].view.tick < old_tick
+		return crew[0].snap.full_count > fulls and crew[0].snap.tick < old_tick
 	assert_bool(await h.until(fresh)).is_true()
 	assert_bool(await h.start(server, crew[0])).is_true()
 	assert_bool(w.kin.is_alive(PLAYER)).is_true()

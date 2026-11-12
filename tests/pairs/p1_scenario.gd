@@ -78,7 +78,7 @@ static func coop(w: SimWorld) -> void:
 
 static func helm(w: SimWorld) -> void:
 	if w.tick == 0:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.point = true
 		select.x = POINT.x
 		select.y = POINT.y

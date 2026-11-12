@@ -1,8 +1,8 @@
 class_name BlockSchema
 extends RefCounted
 ## The wire schema of the block sections (F4, R13-8): NetBlock field sets the server's
-## builders (StationBlocks, ScienceView, FeedsView, CommsView) fill and the clients decode
-## (NetViewState). It names no sim class, so clients may read it (D103).
+## builders (StationBlocks, ScienceSection, FeedsSection, CommsSection) fill and the clients decode
+## (SnapshotState). It names no sim class, so clients may read it (D103).
 
 ## Row schemas more than one block carries (R06-8): a damage type's resistance factors, and
 ## an open hack window (SCIENCE's hacks, FEEDS' windows).
@@ -10,16 +10,16 @@ const RESIST_ROWS: Array = ["rows", [["type", "u32"], ["factor", "f32"]]]
 const HACK_ROWS: Array = [
 	"rows", [["target", "s16"], ["sub", "u8"], ["left", "f32"], ["by", "s16"]]
 ]
-## Row kind of a hazard plane in a RELAY block's hazards (HazardView builds them).
+## Row kind of a hazard plane in a RELAY block's hazards (HazardRows builds them).
 const HAZARD_PLANE: int = 2
 ## The SCIENCE card's `revealed` bits (u8), pinned: bit i is set once ScienceKnowledge
 ## reveals part i to the viewing faction (its own ships: every bit). The server sets them
-## (ScienceView); the client reads them and never re-derives a threshold (12r-23).
+## (ScienceSection); the client reads them and never re-derives a threshold (12r-23).
 const SCIENCE_REVEALED: Array[StringName] = [
 	&"class", &"identity", &"intent", &"weak_points", &"resistances", &"hack", &"cargo"
 ]
 
-## Section.COMMS (CommsView builds it): the ship's docked site
+## Section.COMMS (CommsSection builds it): the ship's docked site
 ## and credits, the hull band (Comms' only view of condition, FT-PAIR-010), reputation per
 ## faction, the cards (kind and state are StoryTable's; rep_lo/rep_hi only where rep_vis;
 ## claimer the session holding the conversation, -1 for none), the open conversation nodes
@@ -47,7 +47,7 @@ const COMMS: Array = [
 				["rep_vis", "bool"],
 				["rep_lo", "f32"],
 				["rep_hi", "f32"],
-				["target", "s16"],
+				["subject", "s16"],
 				["claimer", "s16"],
 				["conv", "bool"],
 				["open", "bool"],
@@ -108,7 +108,7 @@ const COMMS: Array = [
 ## Field sets of the block sections: Section -> NetBlock schema. A block is sent whole
 ## when any field changes, else omitted from the delta. Getters are StationBlocks'.
 const BLOCKS: Dictionary = {
-	StationViews.Section.STATUS:
+	StationCatalogue.Section.STATUS:
 	[
 		["alive", "bool"],
 		["status", "u8"],
@@ -122,7 +122,7 @@ const BLOCKS: Dictionary = {
 		# The main screen switches to chase while decoupled (FT-MSC-001).
 		["decoupled", "bool"],
 	],
-	StationViews.Section.HELM:
+	StationCatalogue.Section.HELM:
 	[
 		["decoupled", "bool"],
 		["throttle_setpoint", "f32"],
@@ -130,11 +130,11 @@ const BLOCKS: Dictionary = {
 		["approach", "bool"],
 		["all_stop", "bool"],
 		["align", "u8"],
-		["target_kind", "u8"],
-		["target_ship", "s16"],
-		# The selected named site (target_kind SITE), the jump spool left in ticks and its
+		["sel_kind", "u8"],
+		["sel_contact", "s16"],
+		# The selected named site (sel_kind SITE), the jump spool left in ticks and its
 		# target site (-1: a free mark), and the site the ship is docked at (-1: none).
-		["target_site", "s16"],
+		["sel_site", "s16"],
 		["jump_left", "u16"],
 		["jump_target", "s16"],
 		["docked_site", "s16"],
@@ -147,7 +147,7 @@ const BLOCKS: Dictionary = {
 		["thrust_scale", "f32"],
 		["torque_scale", "f32"],
 	],
-	StationViews.Section.ENGINEERING:
+	StationCatalogue.Section.ENGINEERING:
 	[
 		["boost_ticks", "u16"],
 		["weapon_energy", "f32"],
@@ -182,7 +182,7 @@ const BLOCKS: Dictionary = {
 	# scan-position mark, the open minigame session with its puzzle, the contact cards of
 	# the faction's knowledge (FT-SCI-001, FT-SCI-002) and the faction's open hack
 	# windows (P7). noise_flags: bit 0 active, 1 ping, 2 probe, 3 at the mark.
-	StationViews.Section.SCIENCE:
+	StationCatalogue.Section.SCIENCE:
 	[
 		["active", "bool"],
 		["ping_left", "f32"],
@@ -196,7 +196,7 @@ const BLOCKS: Dictionary = {
 		["self_scanned", "bool"],
 		# Minigame: 0 none, 1 scan, 2 hack, 3 own-ship scan.
 		["minigame", "u8"],
-		["minigame_target", "s16"],
+		["minigame_contact", "s16"],
 		["minigame_noise", "f32"],
 		["minigame_start", "u32"],
 		["minigame_probe", "bool"],
@@ -235,9 +235,9 @@ const BLOCKS: Dictionary = {
 	],
 	# Relay's probes: the stock, Engineering's build in progress, the lane switch and
 	# the ship's launched probes (position in m, bubble radius in m); then the
-	# sim hazards the faction knows (HazardView): zone, shell or plane, where now,
+	# sim hazards the faction knows (HazardRows): zone, shell or plane, where now,
 	# the radius now, a plane's direction and the forecast seconds to the ship (-1: none).
-	StationViews.Section.RELAY:
+	StationCatalogue.Section.RELAY:
 	[
 		["stock", "u16"],
 		["fab_left", "f32"],
@@ -273,12 +273,12 @@ const BLOCKS: Dictionary = {
 	# ShipDef.subsystems order and the ship's open objectives (Objectives.Kind, how many
 	# are left). The view itself and the open cards are crew state, not sim: the
 	# `main_view` event and the ping events.
-	StationViews.Section.CAPTAIN:
+	StationCatalogue.Section.CAPTAIN:
 	[
 		["subsystems", ["rows", [["health", "f32"]]]],
 		["objectives", ["rows", [["kind", "u8"], ["left", "u16"]]]],
 	],
-	StationViews.Section.MOUNTS:
+	StationCatalogue.Section.MOUNTS:
 	[
 		[
 			"mounts",
@@ -297,12 +297,12 @@ const BLOCKS: Dictionary = {
 			],
 		],
 	],
-	# What Weapons gets from other stations when a toggle lets it (FeedsView): the
+	# What Weapons gets from other stations when a toggle lets it (FeedsSection): the
 	# faction's scanned weak points (bit i: subsystem i of the contact) and resistances (P7),
 	# the open hack windows (P7) and the track quality of detected contacts (P8, quality is
 	# the track quality (GuidanceSystem.track_quality), probe whether a deployed probe covers
 	# the contact).
-	StationViews.Section.FEEDS:
+	StationCatalogue.Section.FEEDS:
 	[
 		# Contract target flags on detected contacts, KnowledgeTable.Flag (P9).
 		["flags", ["rows", [["contact", "s16"], ["flag", "u8"]]]],
@@ -325,14 +325,14 @@ const BLOCKS: Dictionary = {
 	# chip's index in content/chips/chips.tres, its argument (mount index or contact id, -1
 	# for none), the sending and receiving station (index in CREW) and the sim ticks it was
 	# sent and expires at. A crew view lists the chips it sends or receives.
-	# Comms' board (CommsView, CommsSection): the ship's docked site and credits,
+	# Comms' board (CommsSection): the ship's docked site and credits,
 	# the hull band (Comms' only view of condition, FT-PAIR-010), reputation per faction,
 	# the cards (kind and state are StoryTable's; rep_lo/rep_hi only where rep_vis; claimer
 	# the session holding the conversation, -1 for none), the open conversation nodes
 	# with their replies, what the docked market sells, the modules it offers per slot
 	# with the trade-in of the module now fitted, and the fitted modules.
-	StationViews.Section.COMMS: COMMS,
-	StationViews.Section.CHIPS:
+	StationCatalogue.Section.COMMS: COMMS,
+	StationCatalogue.Section.CHIPS:
 	[
 		[
 			"chips",
@@ -354,6 +354,6 @@ const BLOCKS: Dictionary = {
 
 
 ## The code a block carries for a definition id (a scan trait, a hack target): a hash of the
-## id, the same on server and client (ScienceView builds with it).
+## id, the same on server and client (ScienceSection builds with it).
 static func id_code(id: StringName) -> int:
 	return String(id).hash()

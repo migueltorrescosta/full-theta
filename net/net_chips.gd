@@ -23,7 +23,7 @@ const BAD_ARG: String = "chip_bad_arg"
 const BAD_ID: String = "chip_bad_id"
 
 ## The chip list, loaded once (read-only after).
-static var _def: ChipsDef = ChipView.def()
+static var _def: ChipsDef = ChipsReader.def()
 
 ## The owning game, held weakly (it owns this object).
 var game: NetGame:
@@ -32,7 +32,7 @@ var game: NetGame:
 
 var _game: WeakRef
 ## Ship -> open chips: {id, chip (index in ChipsDef.chips), arg, from, to (indices in
-## StationViews.CREW), sent, expires (sim ticks), by (session id)}.
+## StationCatalogue.CREW), sent, expires (sim ticks), by (session id)}.
 var _open: Dictionary[int, Array] = {}
 var _dirty: Dictionary[int, bool] = {}
 var _next_id: int = 1
@@ -59,7 +59,7 @@ func on_chip(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 ## Opens a chip from the session's station to the chip's receiver; the reason it can't, or "".
 func send(s: NetSession, chip_id: String, arg: int) -> String:
 	var why: String = _sender_rule(s)
-	var at: int = ChipView.index_of(chip_id)
+	var at: int = ChipsReader.index_of(chip_id)
 	if why == "" and at < 0:
 		why = BAD_CHIP
 	if why == "":
@@ -75,8 +75,8 @@ func send(s: NetSession, chip_id: String, arg: int) -> String:
 		"id": _next_id,
 		"chip": at,
 		"arg": arg_of(chip, arg),
-		"from": StationViews.CREW.find(String(chip.from_station)),
-		"to": StationViews.CREW.find(String(chip.to_station)),
+		"from": StationCatalogue.CREW.find(String(chip.from_station)),
+		"to": StationCatalogue.CREW.find(String(chip.to_station)),
 		"sent": tick,
 		"expires": tick + ceili(_def.expiry_s * SimWorld.HZ),
 		"by": s.id,
@@ -100,7 +100,7 @@ func answer(s: NetSession, id: int, accept: bool) -> String:
 		if row["id"] != id:
 			continue
 		var chip: ChipDef = _def.chips[row["chip"]]
-		if not StationViews.stations_of(s.seat).has(String(chip.to_station)):
+		if not StationCatalogue.stations_of(s.seat).has(String(chip.to_station)):
 			return NOT_YOURS
 		open.remove_at(i)
 		_dirty[s.ship] = true
@@ -162,7 +162,7 @@ func _sender_rule(s: NetSession) -> String:
 	var picked: DataToggles = DataToggles.parse(s.toggles)
 	if not s.is_crew():
 		why = NetGame.NOT_CREW
-	elif picked == null or not picked.on(ViewFilter.CHIPS):
+	elif picked == null or not picked.on(ShortcutFilter.CHIPS):
 		why = OFF
 	return why
 
@@ -171,7 +171,7 @@ func _sender_rule(s: NetSession) -> String:
 ## holds and not to one it holds too (a joint view runs it as a direct action), with a
 ## sensible argument and a player at the receiving station.
 func _chip_rule(s: NetSession, chip: ChipDef, arg: int) -> String:
-	var stations: Array[String] = StationViews.stations_of(s.seat)
+	var stations: Array[String] = StationCatalogue.stations_of(s.seat)
 	var why: String = ""
 	if stations.has(String(chip.to_station)):
 		why = SAME_SCREEN
@@ -212,7 +212,7 @@ func _arg_ok(ship: int, chip: ChipDef, arg: int) -> bool:
 ## Whether a connected crew session of the ship holds the station.
 func _someone_holds(ship: int, station: StringName) -> bool:
 	for s: NetSession in game.by_id.values():
-		if s.ship == ship and s.connected() and StationViews.stations_of(s.seat).has(station):
+		if s.ship == ship and s.connected() and StationCatalogue.stations_of(s.seat).has(station):
 			return true
 	return false
 

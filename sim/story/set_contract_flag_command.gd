@@ -1,6 +1,6 @@
 class_name SetContractFlagCommand
 extends SimCommand
-## Server: sets a contract target flag on a contact in a faction's KNOW (the Scenario API's
+## Server: sets a contract flag on a contact in a faction's KNOW (the Scenario API's
 ## set_contract_flag(); FT-MIS-042, D82). ship_id is any ship of the faction.
 
 var faction: int = -1

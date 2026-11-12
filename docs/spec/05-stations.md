@@ -13,7 +13,7 @@ Common actions have the same binding on every station (D95). Station-specific bi
 | Action | KB/M | Controller | Touch |
 |---|---|---|---|
 | Select under the cursor | click | A | tap |
-| Cycle target | T | RB | swipe the target chip |
+| Next contact | T | RB | swipe the selection chip |
 | Select the last pinged item | Y | hold RB | tap the ping toast |
 | Ping | middle-click or Shift+P | R3 | long-press |
 | Place a mark at the cursor, or on the selection | Shift+middle-click or Shift+M | hold R3 | long-press, then drag |
@@ -41,7 +41,7 @@ Every Alt shortcut also has a plain key: Shift+Tab alert, Shift+B share, Shift+N
 - **FT-STN-014** Every hold input shall be switchable to a toggle in the bindings. (plan review UX-8)
 - **FT-STN-015** The lobby catalogue shall show the load (intense, busy or light) of each station and joint view, read from its data definition (SeatDef), as the colour of the name on its pick button (dark red, yellow, green), with a one-line legend above the list and no tag words: Helm and Weapons intense, Engineering and Science busy, Relay and Comms light; Tactical intense, Systems busy, Ops light; Captain light; Viewer uncoloured. (D99, D126, D187, D198, D257)
 - **FT-STN-016** On first launch the lobby preset shall default to Easy, persisted per host; the toggles shall sit behind "Customise", each with a one-line description naming both stations. (plan review UX-9, D84)
-- **FT-STN-017** Each client shall have a comfort toggle (roll locked to the ship's deck plane, the selected target or the player's optional cosmetic reference plane; reduced field of view) for the Helm cockpit, the turret camera and the main screen; the cosmetic plane shall never be spoken or used by rules. (plan review NAV-6, NAV-9, D124, D172, D180)
+- **FT-STN-017** Each client shall have a comfort toggle (roll locked to the ship's deck plane, the selected contact or the player's optional cosmetic reference plane; reduced field of view) for the Helm cockpit, the turret camera and the main screen; the cosmetic plane shall never be spoken or used by rules. (plan review NAV-6, NAV-9, D124, D172, D180)
 
 ## 5.1 Helm (H-A cockpit, C toggles chase camera; D46)
 
@@ -66,8 +66,8 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 - **FT-HLM-001** Helm shall default to a cockpit forward view with HUD, target compass, disc radar and shield ring. (D46, D183, D255)
 - **FT-HLM-002** Helm shall toggle a chase camera with C (controller: the Helm radial) without changing the HUD. (D46, D95)
 - **FT-HLM-003** The target compass shall place a dot for the selected callsign, mark or site: filled when ahead, hollow when behind. (D47, D98)
-- **FT-HLM-004** The cockpit shall show off-screen arrows for the selected target and pinged items. (station-ui §1.6)
-- **FT-HLM-005** Holding F shall rotate the ship to face the selected target at the ship's real turn rate, through flight assist. (D47)
+- **FT-HLM-004** The cockpit shall show off-screen arrows for the selection and pinged items. (station-ui §1.6)
+- **FT-HLM-005** Holding F shall rotate the ship to face the selection at the ship's real turn rate, through flight assist. (D47)
 - **FT-HLM-006** Face assist shall work for contacts and marks, and in decoupled mode. (D47)
 - **FT-HLM-007** Align shall roll the ship about its bow axis until the selected item lies in the ship's pitch plane above the bow (12 o'clock); a second press, or a press with the roll already done, shall also face it; Align shall end within tolerance, on rotation input or when the target is lost; with nothing selected Align shall do nothing. (D97, D124, D125)
 - **FT-HLM-008** Helm shall snap shield focus to six faces (fore, aft, port, starboard, dorsal, ventral) with one input each. (D48)
@@ -79,7 +79,7 @@ Full-screen forward view; HUD with prograde/retrograde markers, target compass, 
 - **FT-HLM-014** All-stop shall bring the ship's velocity and rotation to zero through real thrust, from one input on every device. (D97, plan review NAV-2)
 - **FT-HLM-015** While hold-to-approach is held, flight assist shall face the selected item, fly to a data-defined stand-off and match its velocity, on every device. (D97, plan review NAV-2)
 - **FT-HLM-016** JUMP shall jump to the selected site or mark once Helm faces it; sites shall be selectable on Helm like marks (§6). (D98, plan review NAV-4)
-- **FT-HLM-017** Every Helm action, including cycle target, select pinged, Align, decoupled, all-stop and approach, shall have a controller binding. (FT-STN-005, plan review NAV-5, D124)
+- **FT-HLM-017** Every Helm action, including next contact, select pinged, Align, decoupled, all-stop and approach, shall have a controller binding. (FT-STN-005, plan review NAV-5, D124)
 
 ## 5.2 Weapons (W-B turret camera; D49)
 
@@ -287,13 +287,13 @@ The Captain's device mirrors the main screen, with view buttons, pings and read-
 |        H2[]                        | H>E boost   6s   |
 |                                    | MISSIONS + CONTR.|
 |  long-press ping  drag mark        | Rescue N4 9:30   |
-| [FWD] [CHASE] [TACT] [TARGET H2] [STATUS]             |
+| [FWD] [CHASE] [TACT] [CLOSE H2] [STATUS]              |
 +-------------------------------------------------------+
 ```
 
 - KB/M: 1–5 views; click, middle-click and Shift+middle-click select, ping and mark (§5.0). Controller: left stick cursor, d-pad cycle views, A, R3 and hold R3 (§5.0). Touch: long-press ping, long-press then drag mark, buttons for views.
 
-- **FT-CPT-001** The Captain seat shall mirror the main screen and switch its view among forward, chase, tactical, target and status. (D54, D60)
+- **FT-CPT-001** The Captain seat shall mirror the main screen and switch its view among forward, chase, tactical, close-up and status. (D54, D60)
 - **FT-CPT-002** The Captain shall place pings and marks. (D44, D54)
 - **FT-CPT-003** The Captain shall have no command that changes ship mechanics. (D15, D23)
 - **FT-CPT-004** The Captain shall see read-only lists of open request chips and of Comms' mission and contract cards. (D15, plan review COOP-10, STN-7)
@@ -315,7 +315,7 @@ Forward (or chase) view, wide disc radar along the bottom, and a callsign rail w
 ```
 
 - **FT-MSC-001** The main screen shall default to the forward view with a wide disc radar and a callsign rail showing clock and range; the forward camera shall be stabilised on the ship's deck plane or the selected target (or a per-client cosmetic reference plane, never spoken or used by rules) and switch to chase while the ship is decoupled or rolls faster than 45°/s, and back to forward after 1.5 s below 30°/s. (D60, plan review NAV-9, D124, D173)
-- **FT-MSC-002** The main screen shall offer forward, chase, tactical, target and status views. (D60)
+- **FT-MSC-002** The main screen shall offer forward, chase, tactical, close-up and status views. (D60)
 - **FT-MSC-003** The main screen shall draw pings and marks. (D60, D61)
 - **FT-MSC-004** Any number of viewers shall display the main screen read-only, within the 64-connection cap. (D10, D22)
 - **FT-MSC-005** The main-screen view shall be switched only by the Captain when one is seated, counting the Captain's reconnect grace as seated, and only by Relay otherwise. (D54, D88, plan review STN-7)

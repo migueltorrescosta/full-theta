@@ -1,4 +1,4 @@
-class_name StationViews
+class_name StationCatalogue
 extends RefCounted
 ## The one data-driven place for seats (FT-ARC-014, FT-NET-008, FT-NET-040):
 ## the tables below define every SeatDef (functional stations, the M1 joint views,
@@ -51,13 +51,13 @@ const BUSY: String = "busy"
 const INTENSE: String = "intense"
 const LOAD_TAGS: Array[String] = [LIGHT, BUSY, INTENSE]
 
-## The toggle part of the view key (D14, D69, D84): a DataToggles code, "easy", "normal",
+## The toggle part of the stream key (D14, D69, D84): a DataToggles code, "easy", "normal",
 ## "hard" or an edited set ("normal:1011000"). Every session of a server shares one, set
 ## in the lobby and locked at Start (FT-PAIR-017); a first launch is Easy (FT-STN-016).
-## The sections that depend on it are FILTERED and are encoded once per ViewFilter
+## The sections that depend on it are FILTERED and are encoded once per ShortcutFilter
 ## signature, not once per ship.
 const DEFAULT_TOGGLES: String = "easy"
-## The sections whose content a ViewFilter changes.
+## The sections whose content a ShortcutFilter changes.
 const FILTERED: Array[int] = [
 	Section.STATUS,
 	Section.HELM,
@@ -215,7 +215,7 @@ const STATION_COMMANDS: Dictionary = {
 		&"helm_decoupled",
 		&"helm_all_stop",
 		&"helm_align",
-		&"helm_select_target",
+		&"helm_select",
 		&"set_shield_focus",
 		&"helm_jump",
 		&"helm_dock",
@@ -335,7 +335,7 @@ const COMMAND_ITEMS: Dictionary = {
 	&"set_ammo_type": [CLAIM_MOUNT, "mount_index"],
 	&"dispatch_repair": [CLAIM_CREW, "crew"],
 	&"recall_repair": [CLAIM_CREW, "crew"],
-	&"helm_select_target": ["target", ""],
+	&"helm_select": ["target", ""],
 	&"set_pips": ["pips", "subsystem_kind"],
 	&"set_shield": ["shield", ""],
 	&"boost": ["boost", ""],
@@ -360,14 +360,14 @@ const BLOCKS: Dictionary = BlockSchema.BLOCKS
 static var _defs: Dictionary = _build_all()
 
 
-## A view key (FT-NET-040): ship, seat, difficulty-toggle set.
+## A stream key (FT-NET-040): ship, seat, difficulty-toggle set.
 static func key(ship: int, seat: String, toggles: String = DEFAULT_TOGGLES) -> String:
 	return "%d|%s|%s" % [ship, seat, toggles]
 
 
-## [ship, seat, toggles] of a view key.
-static func parse_key(view_key: String) -> Array:
-	var parts: PackedStringArray = view_key.split("|")
+## [ship, seat, toggles] of a stream key.
+static func parse_key(stream_key: String) -> Array:
+	var parts: PackedStringArray = stream_key.split("|")
 	return [parts[0].to_int(), parts[1], parts[2]]
 
 

@@ -33,11 +33,11 @@ func _view_follows(server: NetServer, c: NetClient, code: String) -> bool:
 
 
 func _has_status(c: NetClient) -> bool:
-	return c.view.blocks.has(StationViews.Section.STATUS)
+	return c.snap.blocks.has(StationCatalogue.Section.STATUS)
 
 
 func _has_shields(c: NetClient) -> bool:
-	return c.view.blocks.get(StationViews.Section.STATUS, {}).get("shields", 0.0) > 0.0
+	return c.snap.blocks.get(StationCatalogue.Section.STATUS, {}).get("shields", 0.0) > 0.0
 
 
 func _lobby_code(c: NetClient) -> String:
@@ -80,15 +80,15 @@ func test_toggles_lock_at_start_and_every_view_follows() -> void:
 	await h.pick(host, "captain")
 	var crew: Array[NetClient] = await h.crew3(server)
 	var helm: NetClient = crew[0]
-	var fulls: int = helm.view.full_count
+	var fulls: int = helm.snap.full_count
 	host.set_toggles("hard")
 	assert_bool(await _view_follows(server, helm, "hard")).is_true()
-	var key: String = h.session_of(server, helm).view_key()
-	assert_str(key).is_equal(StationViews.key(PLAYER, "tactical", "hard"))
-	assert_bool(await h.until(func() -> bool: return helm.view.full_count > fulls)).is_true()
+	var key: String = h.session_of(server, helm).stream_key()
+	assert_str(key).is_equal(StationCatalogue.key(PLAYER, "tactical", "hard"))
+	assert_bool(await h.until(func() -> bool: return helm.snap.full_count > fulls)).is_true()
 	# Hard: the Helm half of Tactical sees no shields in its top bar.
 	assert_bool(await h.until(_has_status.bind(helm))).is_true()
-	assert_float(helm.view.blocks[StationViews.Section.STATUS]["shields"]).is_equal(0.0)
+	assert_float(helm.snap.blocks[StationCatalogue.Section.STATUS]["shields"]).is_equal(0.0)
 	host.set_toggles("easy")
 	assert_bool(await _view_follows(server, helm, "easy")).is_true()
 	assert_bool(await h.until(_has_shields.bind(helm))).is_true()
@@ -163,7 +163,7 @@ func test_easy_prefills_the_diagnosed_cause() -> void:
 			science.share("diagnosed_causes")
 			var opened: Callable = func() -> bool:
 				return (
-					server.game.shares.active(PLAYER, ViewFilter.DIAGNOSED_CAUSES)
+					server.game.shares.active(PLAYER, ShortcutFilter.DIAGNOSED_CAUSES)
 					or not (
 						h
 						. events_of(science, NetProtocol.EVENT_REQUEST_REJECTED)

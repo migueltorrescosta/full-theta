@@ -1,8 +1,8 @@
-class_name ScienceView
+class_name ScienceSection
 extends RefCounted
-## The SCIENCE snapshot section (StationViews.BLOCKS[Section.SCIENCE], E01): what a
+## The SCIENCE snapshot section (StationCatalogue.BLOCKS[Section.SCIENCE], E01): what a
 ## Science client draws and plays, read from a (copied) world for the ship and its
-## faction's knowledge. Pure reads; the field set is in StationViews.
+## faction's knowledge. Pure reads; the field set is in StationCatalogue.
 ##
 ## Client API for the minigames (the panels use it):
 ## - Scan: when `minigame` is 1, `wire` is the wireframe the player turns, `cloud` the
@@ -52,7 +52,7 @@ static func _empty() -> Dictionary:
 		"noise_flags": 0,
 		"self_scanned": false,
 		"minigame": 0,
-		"minigame_target": -1,
+		"minigame_contact": -1,
 		"minigame_noise": 0.0,
 		"minigame_start": 0,
 		"minigame_probe": false,
@@ -94,7 +94,7 @@ static func _minigame(out: Dictionary, world: SimWorld, ship: int) -> void:
 	out["minigame"] = kind
 	if kind == ScienceTable.Minigame.NONE:
 		return
-	out["minigame_target"] = t.target[ship]
+	out["minigame_contact"] = t.contact[ship]
 	out["minigame_noise"] = t.noise[ship]
 	out["minigame_start"] = t.start_tick[ship]
 	out["minigame_probe"] = t.probe[ship] == 1

@@ -9,8 +9,8 @@ const P_UNITS: int = 16000
 ## A view at `tick` with the own ship at `own` (m) and contact 7 at `contact` (m).
 func _view(
 	tick: int, own: Vector3, contact: Vector3, rot: Quaternion = Quaternion.IDENTITY
-) -> NetViewState:
-	var v: NetViewState = NetViewState.new(P_UNITS)
+) -> SnapshotState:
+	var v: SnapshotState = SnapshotState.new(P_UNITS)
 	v.tick = tick
 	v.kin = {"pos": _units(own), "rot": rot}
 	v.contacts = {"model": {7: [_units(contact), Vector3i.ZERO, tick]}, "info": {7: [0, "H1"]}}
@@ -100,8 +100,8 @@ func test_rotation_slerps() -> void:
 # FT: FT-ARC-015
 func test_contacts_follow_the_older_sample() -> void:
 	var interp: SnapshotInterpolator = SnapshotInterpolator.new()
-	var a: NetViewState = _view(100, Vector3.ZERO, Vector3(10, 0, 0))
-	var b: NetViewState = _view(104, Vector3.ZERO, Vector3(10, 0, 0))
+	var a: SnapshotState = _view(100, Vector3.ZERO, Vector3(10, 0, 0))
+	var b: SnapshotState = _view(104, Vector3.ZERO, Vector3(10, 0, 0))
 	b.contacts["model"].erase(7)
 	b.contacts["model"][9] = [_units(Vector3(5, 0, 0)), Vector3i.ZERO, 104]
 	interp.push(a, 0)

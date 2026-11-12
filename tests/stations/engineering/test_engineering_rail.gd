@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 # FT: FT-STN-005, FT-ENG-002, FT-ENG-004, FT-ENG-008
 
 const SETTINGS: String = "user://test_engineering_rail.cfg"
-const ENG: StationViews.Section = StationViews.Section.ENGINEERING
+const ENG: StationCatalogue.Section = StationCatalogue.Section.ENGINEERING
 const INSETS: Array = [0, 0, 0, 24]
 
 var _vp: SubViewport
@@ -69,7 +69,7 @@ func test_buttons_on_the_picked_part_name_it() -> void:
 func test_a_button_that_cannot_act_says_why() -> void:
 	var s: StationScreen = await _open(Vector2i(844, 390))
 	var e: EngineeringPanel = _panel(s)
-	var blocks: Dictionary = s.ctx.view.blocks[ENG]
+	var blocks: Dictionary = s.ctx.snap.blocks[ENG]
 	# Engines have no fault: Cause is greyed with its reason.
 	e.model.select(0)
 	await _refresh(s)
@@ -104,7 +104,7 @@ func test_a_button_that_cannot_act_says_why() -> void:
 func test_the_actions_refuse_with_the_rails_reason() -> void:
 	var s: StationScreen = await _open(Vector2i(844, 390))
 	var e: EngineeringPanel = _panel(s)
-	var blocks: Dictionary = s.ctx.view.blocks[ENG]
+	var blocks: Dictionary = s.ctx.snap.blocks[ENG]
 	var toasts: Array[String] = []
 	s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
 	e.model.select(1)

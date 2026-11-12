@@ -2,8 +2,8 @@ class_name NetProtocol
 extends RefCounted
 ## The protocol's message set and its control-message codec (T040, FT-NET-004,
 ## FT-NET-005, FT-NET-011); docs/protocol.md is the reference. Every message starts
-## with a u8 type. Snapshots (Type.SNAPSHOT) are packed binary (SnapshotBuilder,
-## NetViewState). Every other message is the type byte followed by `var_to_bytes` of a
+## with a u8 type. Snapshots (Type.SNAPSHOT) are packed binary (SnapshotWriter,
+## SnapshotState). Every other message is the type byte followed by `var_to_bytes` of a
 ## Dictionary, decoded with `bytes_to_var` (which never builds objects) and checked
 ## against schemas: every field present with its type, no other field.
 ##
@@ -87,7 +87,7 @@ const CLOSE_REJECTED: int = 4000
 const CLOSE_TAKEN_OVER: int = 4001
 const CLOSE_SEND_FAILED: int = 4002
 const CLOSE_PROTOCOL: int = 4003
-## More than NetResync.QUEUED_LIMIT queued for a connection without a view key.
+## More than NetResync.QUEUED_LIMIT queued for a connection without a stream key.
 const CLOSE_QUEUE_FULL: int = 4004
 ## request_rejected and command_rejected reasons shared by several server parts and read by
 ## the client's rules (MainScreen, CrewMarks).

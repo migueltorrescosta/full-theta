@@ -54,7 +54,7 @@ func test_arriving_at_the_yard_ends_the_leg() -> void:
 func test_impulse_flight_reaches_the_next_site() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	var vesper: int = f.world.sites.open(f.world, &"vesper_beacon")
-	var select: SelectTargetCommand = SelectTargetCommand.new()
+	var select: HelmSelectCommand = HelmSelectCommand.new()
 	select.site_id = vesper
 	assert_bool(f.send(select)).is_true()
 	var helm: HelmInputCommand = HelmInputCommand.new()
@@ -118,7 +118,7 @@ func test_a_cleared_dock_at_the_yard_pays_the_fee() -> void:
 	var credits: int = Economy.credits(f.world, 0)
 	f.run(window[0] - f.world.tick + 1)
 	_dock_at_yard(f)
-	assert_int(f.card_state(card)).is_equal(CardView.State.DONE)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.DONE)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits + DebrisLeg.FEE)
 	assert_float(f.world.reputation.value_of(f.world.faction_of(0), Factions.CIVIL)).is_equal(0.0)
 
@@ -131,7 +131,7 @@ func test_an_uncleared_dock_at_the_yard_costs_standing() -> void:
 	var card: int = legs[1]
 	var credits: int = Economy.credits(f.world, 0)
 	_dock_at_yard(f)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
 	assert_float(f.world.reputation.value_of(f.world.faction_of(0), Factions.CIVIL)).is_less(0.0)
 
@@ -148,5 +148,5 @@ func test_running_out_of_time_ends_the_leg_as_partial_and_the_clearance_lapses()
 	var credits: int = Economy.credits(f.world, 0)
 	assert_int(f.run_until_end(60 * 610)).is_equal(Scenario.Result.PARTIAL)
 	f.run(3)
-	assert_int(f.card_state(card)).is_not_equal(CardView.State.DONE)
+	assert_int(f.card_state(card)).is_not_equal(CardInfo.State.DONE)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)

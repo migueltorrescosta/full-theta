@@ -53,8 +53,8 @@ func test_unknown_language_is_refused() -> void:
 # FT: FT-STN-012, FT-AUD-012
 func test_every_seat_has_a_role_summary_in_every_language() -> void:
 	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(I18n.STRINGS))
-	var ids: Array = StationViews.STATIONS.keys() + StationViews.OTHER_SEATS.keys()
-	ids.append(StationViews.ALL)
+	var ids: Array = StationCatalogue.STATIONS.keys() + StationCatalogue.OTHER_SEATS.keys()
+	ids.append(StationCatalogue.ALL)
 	for id: String in ids:
 		var entry: Dictionary = data["strings"].get("role." + id, {})
 		for lang: String in I18n.LANGUAGES:

@@ -34,7 +34,7 @@ func _screen(ammo_type: int = 0) -> StationScreen:
 	var mounts: Array[MountDef] = [mount]
 	def.mounts = mounts
 	p.ship_def = def
-	var row: Dictionary = ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0]
+	var row: Dictionary = ctx.snap.blocks[StationCatalogue.Section.MOUNTS]["mounts"][0]
 	row["ammo_type"] = ammo_type
 	return s
 
@@ -66,13 +66,13 @@ func _commands(s: StationScreen, kind: String) -> Array:
 ## Puts contact `id` at a ship-frame offset.
 func _place(ctx: StationContext, id: int, local: Vector3) -> void:
 	var p: Vector3 = StationFixture.OWN_POS + StationFixture.own_rotation() * local
-	ctx.view.contacts["model"][id] = [
-		NetCodec.quant_pos(CubePoint.of(p), ctx.view.p_units), Vector3i.ZERO, StationFixture.TICK
+	ctx.snap.contacts["model"][id] = [
+		NetCodec.quant_pos(CubePoint.of(p), ctx.snap.p_units), Vector3i.ZERO, StationFixture.TICK
 	]
 	ctx.interp = SnapshotInterpolator.new()
-	ctx.interp.p_units = ctx.view.p_units
-	ctx.interp.push(ctx.view, StationFixture.NOW_MS - 100)
-	ctx.interp.push(ctx.view, StationFixture.NOW_MS)
+	ctx.interp.p_units = ctx.snap.p_units
+	ctx.interp.push(ctx.snap, StationFixture.NOW_MS - 100)
+	ctx.interp.push(ctx.snap, StationFixture.NOW_MS)
 	ctx.interp.update(StationFixture.NOW_MS)
 
 
@@ -139,7 +139,7 @@ func test_guided_fire_at_a_mark_on_a_contact() -> void:
 	assert_array(_commands(s, "aim_mount")).is_not_empty()
 	var cmd: SimCommand = SimCommands.from_dict(fired[0])
 	assert_str(StationBlocks.item_of(cmd)).is_equal("mount:0")
-	assert_str(StationViews.station_of_command(cmd.kind())).is_equal("weapons")
+	assert_str(StationCatalogue.station_of_command(cmd.kind())).is_equal("weapons")
 	# The selected contact works without a mark; the cooldown holds a second press.
 	s.ctx.crew.select("contact", StationFixture.H2)
 	assert_dict(_panel(s).guided_goal()).is_equal({"target": StationFixture.H2})
@@ -189,6 +189,6 @@ func test_guided_fire_refusals_say_why() -> void:
 func test_locked_mount_shows_and_holds_fire() -> void:
 	var s: StationScreen = _screen()
 	var p: WeaponsPanel = _panel(s)
-	s.ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0]["locked"] = true
+	s.ctx.snap.blocks[StationCatalogue.Section.MOUNTS]["mounts"][0]["locked"] = true
 	assert_str(WeaponsReadout.mount_rows(p)[0]).contains("locked")
 	assert_bool(p._try_fire(0, s.ctx.now_ms())).is_false()

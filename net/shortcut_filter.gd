@@ -1,4 +1,4 @@
-class_name ViewFilter
+class_name ShortcutFilter
 extends RefCounted
 ## What one snapshot view may carry of other stations' data (FT-NET-009, FT-PAIR-005,
 ## FT-PAIR-007 to FT-PAIR-010, FT-PAIR-014, FT-PAIR-019, FT-JNT-005): the seat's stations
@@ -62,18 +62,18 @@ static func code_with(code: String, shared_features: Array) -> String:
 
 ## The filter of a seat at a toggle code (DataToggles code, optionally with the shared
 ## shortcuts after a "#", code_with()); null when the code is malformed.
-static func of(seat_id: String, code: String) -> ViewFilter:
+static func of(seat_id: String, code: String) -> ShortcutFilter:
 	var parts: PackedStringArray = code.split("#", true, 1)
 	var picked: DataToggles = DataToggles.parse(parts[0])
 	if picked == null:
 		return null
-	var f: ViewFilter = ViewFilter.new()
+	var f: ShortcutFilter = ShortcutFilter.new()
 	if parts.size() > 1:
 		for id: String in parts[1].split(",", false):
 			f.shared[StringName(id)] = true
 	f.seat = seat_id
 	f.toggles = picked
-	f.stations = StationViews.stations_of(seat_id)
+	f.stations = StationCatalogue.stations_of(seat_id)
 	f.sees_all = f.stations.is_empty()
 	f.condition_hidden = f.stations.has("comms") and not f.stations.has("engineering")
 	return f
@@ -140,7 +140,7 @@ func apply(kind: int, values: Dictionary, def: ShipDef) -> void:
 	if sees_all:
 		return
 	match kind:
-		StationViews.Section.STATUS:
+		StationCatalogue.Section.STATUS:
 			values["hull"] = hull(values["hull"], def.hull_max)
 			values["shields"] = summarise(values["shields"], def.shields.max_strength, ENG)
 			values["pips_used"] = summarise(values["pips_used"], def.power.reactor_pips, ENG)
@@ -150,14 +150,14 @@ func apply(kind: int, values: Dictionary, def: ShipDef) -> void:
 			values["propellant"] = summarise(
 				values["propellant"], def.propellant_capacity, HELM_ENG
 			)
-		StationViews.Section.HELM:
+		StationCatalogue.Section.HELM:
 			values["shield_tightness"] = summarise(
 				values["shield_tightness"], def.shields.tightness_max, ENG
 			)
 			values["shield_power"] = summarise(values["shield_power"], 1.0, ENG)
 			values["thrust_scale"] = summarise(values["thrust_scale"], 1.0, ENG, 1.0)
 			values["torque_scale"] = summarise(values["torque_scale"], 1.0, ENG, 1.0)
-		StationViews.Section.ENGINEERING:
+		StationCatalogue.Section.ENGINEERING:
 			# Helm's shield focus is a direction: shown, or not (a banded direction is
 			# no direction).
 			if summary_mode(HELM) == 0:
@@ -165,7 +165,7 @@ func apply(kind: int, values: Dictionary, def: ShipDef) -> void:
 			if not grants(DIAGNOSED_CAUSES):
 				for row: Dictionary in values["subsystems"]:
 					row["fault_cause"] = 0
-		StationViews.Section.RELAY:
+		StationCatalogue.Section.RELAY:
 			var mode: int = summary_mode(RELAY_OWNER)
 			if mode < 2:
 				values["stock"] = summarise(values["stock"], def.probes, RELAY_OWNER)
@@ -176,7 +176,7 @@ func apply(kind: int, values: Dictionary, def: ShipDef) -> void:
 			# The hazards Relay knows reach another station through the countdown toggle.
 			if not hazards_visible():
 				values["hazards"] = []
-		StationViews.Section.FEEDS:
+		StationCatalogue.Section.FEEDS:
 			if not grants(WEAK_POINTS):
 				values["weak"] = []
 				values["windows"] = []
@@ -187,20 +187,20 @@ func apply(kind: int, values: Dictionary, def: ShipDef) -> void:
 
 
 ## A short string naming what the filter does to one section kind: filters that do the same
-## to it share one encoded section (SnapshotBuilder).
+## to it share one encoded section (SnapshotWriter).
 func signature(kind: int) -> String:
 	var out: String = ""
 	match kind:
-		StationViews.Section.STATUS:
+		StationCatalogue.Section.STATUS:
 			out = (
 				"h%d.s%d.r%d"
 				% [1 if condition_hidden else 0, summary_mode(ENG), summary_mode(HELM_ENG)]
 			)
-		StationViews.Section.HELM:
+		StationCatalogue.Section.HELM:
 			out = "e%d" % summary_mode(ENG)
-		StationViews.Section.ENGINEERING:
+		StationCatalogue.Section.ENGINEERING:
 			out = "c%d.f%d" % [1 if grants(DIAGNOSED_CAUSES) else 0, summary_mode(HELM)]
-		StationViews.Section.RELAY:
+		StationCatalogue.Section.RELAY:
 			out = (
 				"p%dh%df%d"
 				% [
@@ -209,7 +209,7 @@ func signature(kind: int) -> String:
 					summary_mode(RELAY_ENG)
 				]
 			)
-		StationViews.Section.FEEDS:
+		StationCatalogue.Section.FEEDS:
 			out = (
 				"w%dt%df%d"
 				% [
@@ -218,8 +218,8 @@ func signature(kind: int) -> String:
 					1 if grants(CONTRACT_FLAGS) else 0,
 				]
 			)
-		StationViews.Section.CHIPS:
+		StationCatalogue.Section.CHIPS:
 			out = "*" if sees_all else ",".join(stations)
-		StationViews.Section.COMMS:  # the science icon on replies (P14)
+		StationCatalogue.Section.COMMS:  # the science icon on replies (P14)
 			out = "v%d.m%d" % [1 if grants(VERIFY_CHIP) else 0, 1 if grants(MISSION_ICON) else 0]  # F
 	return out

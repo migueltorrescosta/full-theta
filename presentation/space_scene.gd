@@ -1,4 +1,4 @@
-class_name SpaceView
+class_name SpaceScene
 extends Node3D
 ## The 3D space behind Helm's cockpit, the Weapons turret camera and the main screen:
 ## background, ambient and sun, one camera, a star backdrop and the other ships. Put it in a
@@ -24,7 +24,7 @@ const HAZE_SEGMENTS: int = 96
 const HAZE_ROWS: int = 8
 const HAZE_PEAK: float = 0.2  # haze brightness on the band's centre line
 
-## The one backdrop mesh every SpaceView shares (E4, R20-10), built on first use.
+## The one backdrop mesh every SpaceScene shares (E4, R20-10), built on first use.
 static var _star_cache: ArrayMesh
 
 ## Scale of every ship model (ProceduralShip is about 5 m long).
@@ -91,7 +91,7 @@ func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
 	_bind(ctx)
 	var seen: Dictionary = {}
 	for id: int in ctx.interp.contact_ids():
-		var near: bool = ctx.view.near.has(id)
+		var near: bool = ctx.snap.near.has(id)
 		if id == ctx.crew.ship or (near_only and not near and id != show_id):
 			continue
 		seen[id] = true
@@ -101,7 +101,7 @@ func sync_ships(ctx: StationContext, origin: Vector3 = Vector3.ZERO) -> void:
 		var node: ProceduralShip = ships[id]
 		refresh_ship(node, look)
 		if near:
-			var q: Quaternion = NetCodec.unpack_quat(int(ctx.view.near[id][0]))
+			var q: Quaternion = NetCodec.unpack_quat(int(ctx.snap.near[id][0]))
 			node.basis = Basis(q).scaled(Vector3.ONE * ship_scale)
 		node.scale = Vector3.ONE * ship_scale
 		node.position = ctx.interp.offset_to(ctx.interp.contact_position(id)) - origin

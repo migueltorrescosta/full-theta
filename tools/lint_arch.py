@@ -81,12 +81,12 @@ SIM_BACK_EDGES = {
     ("sim/story/story_rules.gd", "Economy"),
     ("sim/story/story_rules.gd", "Reputation"),
 }
-# The net/ files clients may name (F4, R14-1): the wire protocol and codec, view keys and
+# The net/ files clients may name (F4, R14-1): the wire protocol and codec, stream keys and
 # enums, and the readers of snapshots and events. They name only each other, shared/ and
 # content/; every other net/ file is the server's.
 NET_CLIENT_SAFE = {
     "net/block_schema.gd",
-    "net/chip_view.gd",
+    "net/chips_reader.gd",
     "net/crew_marks.gd",
     "net/data_toggles.gd",
     "net/fleet_messages.gd",
@@ -99,11 +99,11 @@ NET_CLIENT_SAFE = {
     "net/net_event_inbox.gd",
     "net/net_protocol.gd",
     "net/net_send_queue.gd",
-    "net/net_view_state.gd",
+    "net/snapshot_state.gd",
     "net/snapshot_reader.gd",
     "net/seat_def.gd",
-    "net/station_views.gd",
-    "net/view_filter.gd",
+    "net/station_catalogue.gd",
+    "net/shortcut_filter.gd",
     "net/voice/dialogue_lines.gd",
 }
 # Tokens that make a content/ file a loader rather than a definition (R14-5).

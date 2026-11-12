@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## QrCode against reference matrices (FT-NET-013). Generated once with Python qrcode 8.x
+## QrEncoder against reference matrices (FT-NET-013). Generated once with Python qrcode 8.x
 ## (`QRData(text, mode=MODE_8BIT_BYTE)`, level M, the mask forced with `mask_pattern`), so
 ## the codewords and modules come from an independent encoder. The AUTO mask is the one
 ## segno's ISO/IEC 18004:2015 penalty scoring (`segno.encoder.evaluate_mask`, format bits
@@ -286,7 +286,7 @@ func _rows(modules: Array) -> Array[String]:
 
 func _check(c: Dictionary, mask: int) -> void:
 	var expected: Array = c["rows"]
-	var got: Array[String] = _rows(QrCode.encode(str(c["text"]), mask))
+	var got: Array[String] = _rows(QrEncoder.encode(str(c["text"]), mask))
 	assert_int(got.size()).is_equal(17 + 4 * int(c["version"]))
 	for y: int in expected.size():
 		assert_str(got[y]).override_failure_message("%s: row %d differs" % [c["text"], y]).is_equal(
@@ -311,14 +311,14 @@ func test_matches_reference_with_each_forced_mask() -> void:
 # FT: FT-NET-013
 func test_format_bits_and_capacity() -> void:
 	# ISO/IEC 18004 Annex C: level M, mask 5 is 100000011001110.
-	assert_int(QrCode.format_bits(5)).is_equal(0b100000011001110)
-	assert_int(QrCode.encode("x".repeat(84)).size()).is_equal(37)
-	assert_array(QrCode.encode("x".repeat(85))).is_empty()
+	assert_int(QrEncoder.format_bits(5)).is_equal(0b100000011001110)
+	assert_int(QrEncoder.encode("x".repeat(84)).size()).is_equal(37)
+	assert_array(QrEncoder.encode("x".repeat(85))).is_empty()
 
 
 # FT: FT-NET-013
 func test_view_draws_a_quiet_zone() -> void:
-	var v: QrView = auto_free(QrView.new())
+	var v: QrCode = auto_free(QrCode.new())
 	v.set_text("http://192.168.1.20:47800/?join=1")
-	var n: int = 29 + 2 * QrView.QUIET
+	var n: int = 29 + 2 * QrCode.QUIET
 	assert_vector(v.custom_minimum_size).is_equal(Vector2(n, n) * v.module_px)

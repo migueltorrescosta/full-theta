@@ -226,7 +226,7 @@ func test_the_controls_tab_has_content_however_the_menu_opens() -> void:
 		{"type": "started", "payload": {"ship": 0, "tick": 10}}
 	)
 	var menu: SettingsScreen = s.settings_screen
-	for seat: String in ["helm", "engineering", "systems", StationViews.ALL]:
+	for seat: String in ["helm", "engineering", "systems", StationCatalogue.ALL]:
 		await _pick(s, seat)
 		s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
 		assert_bool(menu.visible).is_true()

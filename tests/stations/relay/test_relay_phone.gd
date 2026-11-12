@@ -36,11 +36,11 @@ func _screen(size: Vector2i, insets: Array) -> StationScreen:
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("relay", SETTINGS)
-	for s: String in StationViews.CREW:
+	for s: String in StationCatalogue.CREW:
 		ctx.settings.mark_hint_seen(s)
 	var ships: Array = ctx.crew.catalogue["ships"]
 	ships.append({"id": ALLY, "def": "m1_corvette", "name": "Wren", "faction": 0})
-	ctx.view.blocks[StationViews.Section.RELAY] = {
+	ctx.snap.blocks[StationCatalogue.Section.RELAY] = {
 		"stock": 2, "fab_left": 0.0, "lanes": false, "probes": []
 	}
 	var s: StationScreen = StationScreen.new()
@@ -306,7 +306,7 @@ func test_long_press_on_launch_claims_the_launcher() -> void:
 	t.pressed = false
 	launch._gui_input(t)
 	assert_array(StationFixture.sent(s.ctx).of("claim")).is_equal(
-		[["claim", [StationViews.CLAIM_PROBE]]]
+		[["claim", [StationCatalogue.CLAIM_PROBE]]]
 	)
 	assert_int(_count(s, "command", "launch_probe").call()).is_equal(0)
 	PhoneReach.tap(launch)

@@ -50,6 +50,7 @@ const GROUPS: Array[String] = [
 const INTENTS: Array[Dictionary] = [
 	# §5.0 common actions (D95): the same binding on every station.
 	{"id": "select", "group": COMMON, "kind": PRESS, "kbm": ["LMB"], "pad": ["A"]},
+	# cycle_target keeps its id, which saved bindings store; it reads "Next contact" (D397).
 	{"id": "cycle_target", "group": COMMON, "kind": PRESS, "kbm": ["T"], "pad": ["RB"]},
 	{"id": "select_pinged", "group": COMMON, "kind": PRESS, "kbm": ["Y"], "pad": ["long RB"]},
 	{

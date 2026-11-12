@@ -101,7 +101,7 @@ func on_main_view(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 ## Whether the ship has a Captain pick, connected or within reconnect grace.
 func captain_seated(ship: int) -> bool:
 	for o: NetSession in game.by_id.values():
-		if o.ship == ship and o.seat == StationViews.CAPTAIN:
+		if o.ship == ship and o.seat == StationCatalogue.CAPTAIN:
 			return true
 	return false
 
@@ -556,8 +556,8 @@ func sync_lanes(ship: int) -> bool:
 func _sees_lanes(s: NetSession) -> bool:
 	if not s.has_pick():
 		return false
-	var f: ViewFilter = ViewFilter.of(s.seat, s.view_code())
-	return f == null or f.grants(ViewFilter.LANES)
+	var f: ShortcutFilter = ShortcutFilter.of(s.seat, s.stream_code())
+	return f == null or f.grants(ShortcutFilter.LANES)
 
 
 func _lanes_payload(s: NetSession) -> Dictionary:
@@ -571,7 +571,7 @@ func _lanes_payload(s: NetSession) -> Dictionary:
 func sync_routes(ship: int) -> bool:
 	var any: bool = false
 	for t: NetSession in game.by_id.values():
-		if t.ship != ship or not t.has_pick() or StationViews.stations_of(t.seat).has("relay"):
+		if t.ship != ship or not t.has_pick() or StationCatalogue.stations_of(t.seat).has("relay"):
 			continue
 		var seen: bool = _sees_routes(t)
 		any = any or seen
@@ -589,8 +589,8 @@ func sync_routes(ship: int) -> bool:
 func _sees_routes(s: NetSession) -> bool:
 	if not s.has_pick():
 		return false
-	var f: ViewFilter = ViewFilter.of(s.seat, s.view_code())
-	return f == null or f.grants(ViewFilter.ROUTES)
+	var f: ShortcutFilter = ShortcutFilter.of(s.seat, s.stream_code())
+	return f == null or f.grants(ShortcutFilter.ROUTES)
 
 
 func _zones_payload(ship: int) -> Dictionary:

@@ -24,8 +24,8 @@ var paused: Dictionary[int, Array] = {}
 ## Ship -> its abandon vote, during a pause or a run (D128, D241).
 var votes: Dictionary[int, NetVote] = {}
 ## The data-shortcut toggle set of the session, one for every ship (FT-PAIR-017): the host
-## changes it in the lobby until a ship starts; sessions' view keys follow.
-var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
+## changes it in the lobby until a ship starts; sessions' stream keys follow.
+var toggles: DataToggles = DataToggles.of_preset(StationCatalogue.DEFAULT_TOGGLES)
 
 var game: NetGame:
 	get:
@@ -109,7 +109,7 @@ func lobby_state(ship: int) -> Dictionary:
 	for s: NetSession in game.by_id.values():
 		if s.ship == ship and s.seat != "":
 			holders.append({"name": s.name, "seat": s.seat})
-		if s.ship == ship and s.seat == StationViews.CAPTAIN:
+		if s.ship == ship and s.seat == StationCatalogue.CAPTAIN:
 			captain = s.name
 	return {
 		"ship": ship,
@@ -142,9 +142,9 @@ func pick_rule(s: NetSession, ship: int, seat: String) -> String:
 		and world.faction_of(home) != world.faction_of(ship)
 	):
 		return FleetMessages.ENEMY_SHIP
-	if seat == StationViews.CAPTAIN:
+	if seat == StationCatalogue.CAPTAIN:
 		for o: NetSession in game.by_id.values():
-			if o != s and o.ship == ship and o.seat == StationViews.CAPTAIN:
+			if o != s and o.ship == ship and o.seat == StationCatalogue.CAPTAIN:
 				return NetGame.CAPTAIN_TAKEN
 	if (
 		s.has_pick()
@@ -222,24 +222,24 @@ func mark_ready(s: NetSession) -> void:
 ## and pause are settled again.
 func set_pick(s: NetSession, ship: int, seat: String) -> void:
 	var old_ship: int = s.ship
-	var was_captain: bool = s.seat == StationViews.CAPTAIN
+	var was_captain: bool = s.seat == StationCatalogue.CAPTAIN
 	var keep: Array[String] = []
 	if ship == old_ship:
-		keep = StationViews.stations_of(seat)
+		keep = StationCatalogue.stations_of(seat)
 	game.release_claims(s, keep)
 	s.ship = ship
 	s.seat = seat
 	if ship >= 0:
 		s.home_ship = ship
 	s.shares = game.shares.active_of(ship)
-	game.transport.set_view(s.id, s.view_key())
+	game.transport.set_stream_key(s.id, s.stream_key())
 	if votes.has(old_ship):
 		votes[old_ship].keep_only(game.connected_crew(old_ship))
 		_send_votes(old_ship)
 	for each: int in [old_ship, ship]:
 		if game.crewable(each):
 			game.settle(each)
-			if was_captain or seat == StationViews.CAPTAIN:
+			if was_captain or seat == StationCatalogue.CAPTAIN:
 				_sync_captain_seat(each)
 	refresh_pause()
 
@@ -329,7 +329,7 @@ func _on_pick(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
 	var seat: String = msg["seat"]
 	var reason: String = ""
-	if not game.crewable(ship) or not StationViews.is_seat(seat, game.dev_all):
+	if not game.crewable(ship) or not StationCatalogue.is_seat(seat, game.dev_all):
 		reason = NetGame.BAD_PICK
 	else:
 		reason = pick_rule(s, ship, seat)
@@ -368,7 +368,7 @@ func _on_toggles(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	for each: NetSession in game.by_id.values():
 		each.toggles = code
 		if each.has_pick():
-			game.transport.set_view(each.id, each.view_key())
+			game.transport.set_stream_key(each.id, each.stream_key())
 	_dirty = true
 	game.publish()
 

@@ -30,7 +30,7 @@ func _state(c: NetClient, card: int) -> int:
 
 func _hail_card() -> PostCardCommand:
 	var card: PostCardCommand = StoryFixture.card(StoryTable.Kind.HAIL, &"conv.trader_bluff")
-	card.target = ENEMY
+	card.subject = ENEMY
 	return card
 
 
@@ -104,8 +104,8 @@ func test_claims_cover_conversations_not_decisions() -> void:
 	var contract: PostCardCommand = StoryFixture.card(
 		StoryTable.Kind.CONTRACT, &"conv.escort_contract"
 	)
-	contract.target = ENEMY
-	contract.target_flag = KnowledgeTable.Flag.PROTECT
+	contract.subject = ENEMY
+	contract.subject_flag = KnowledgeTable.Flag.PROTECT
 	CommsL3.post(server, contract)
 	CommsL3.post(server, StoryFixture.card(StoryTable.Kind.MISSION))
 	server.game.launch(PLAYER)

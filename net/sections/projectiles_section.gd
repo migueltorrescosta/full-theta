@@ -24,7 +24,7 @@ var _tick: int = 0
 
 
 func _init(ship: int, proj_range_m: float = DEFAULT_RANGE_M) -> void:
-	super(StationViews.Section.PROJECTILES, ship)
+	super(StationCatalogue.Section.PROJECTILES, ship)
 	range_m = proj_range_m
 
 

@@ -1,6 +1,6 @@
-class_name HelmView
-extends SpaceView
-## Helm's 3D view (§5.1, S5) on the shared SpaceView: cockpit camera at the origin
+class_name HelmScene
+extends SpaceScene
+## Helm's 3D view (§5.1, S5) on the shared SpaceScene: cockpit camera at the origin
 ## looking along the bow, or the chase camera behind and above with the own ship drawn
 ## (FT-HLM-002); comfort sets its roll and field of view (FT-STN-017). Dust specks within
 ## DUST_BOX give the sense of drift; the stars give attitude.

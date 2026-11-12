@@ -38,7 +38,7 @@ func _rejected(c: NetClient, type: int, from: int) -> String:
 func _crews(server: NetServer, ships: Array[int]) -> Array[NetClient]:
 	var out: Array[NetClient] = []
 	for ship: int in ships:
-		out.append(await h.joined(server, "crew-%d" % ship, StationViews.ALL, ship))
+		out.append(await h.joined(server, "crew-%d" % ship, StationCatalogue.ALL, ship))
 	return out
 
 
@@ -121,7 +121,7 @@ func test_unpicked_ship_vanishes_at_start() -> void:
 	crews[0].add_ship("Far")
 	var three: Callable = func() -> bool: return server.game.crew_ships().size() == 3
 	assert_bool(await h.until(three)).is_true()
-	crews.append(await h.joined(server, "far", StationViews.ALL, 2))
+	crews.append(await h.joined(server, "far", StationCatalogue.ALL, 2))
 	var from: int = h.mark(crews[1])
 	crews[0].set_ready(true)
 	crews[1].set_ready(true)
@@ -145,7 +145,7 @@ func test_unpicked_ship_vanishes_at_start() -> void:
 func test_host_sets_mode_and_teams() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 3, [], true, 10.0, SECRET)
 	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
-	await h.pick(host, StationViews.ALL, 0)
+	await h.pick(host, StationCatalogue.ALL, 0)
 	var crews: Array[NetClient] = await _crews(server, [1, 2])
 	var from: int = h.mark(crews[0])
 	crews[0].set_mode("teams", "first_to_finish")
@@ -188,7 +188,7 @@ func test_host_sets_mode_and_teams() -> void:
 func test_modes_offered_and_checked_at_start() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 1, [], true, 10.0, SECRET)
 	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
-	await h.pick(host, StationViews.ALL, 0)
+	await h.pick(host, StationCatalogue.ALL, 0)
 	var from: int = h.mark(host)
 	for mode: String in GameRules.MODE_NAMES:
 		host.set_mode(mode, "last_team_standing", 5)
@@ -252,7 +252,7 @@ func test_whole_fleet_flow_through_the_client() -> void:
 	var server: NetServer = h.fleet_server(GameRules.Mode.COOP, 1, [], true, 10.0, SECRET)
 	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
 	var watcher: NetClient = await h.welcomed(server, "watcher")
-	await h.pick(host, StationViews.ALL, 0)
+	await h.pick(host, StationCatalogue.ALL, 0)
 	host.add_ship("Wren")
 	host.add_ship("Lark")
 	var three: Callable = func() -> bool: return host.catalogue.get("ships", []).size() == 3
@@ -282,7 +282,7 @@ func test_whole_fleet_flow_through_the_client() -> void:
 	var after: int = (h.events[crews[1]] as Array).find(seen[-1])
 	var moved: Dictionary = await h.next_event(crews[1], NetProtocol.EVENT_PICKED, after)
 	assert_int(moved["payload"]["ship"]).is_equal(1)
-	assert_str(moved["payload"]["seat"]).is_equal(StationViews.VIEWER)
+	assert_str(moved["payload"]["seat"]).is_equal(StationCatalogue.VIEWER)
 	var board: Dictionary = await h.next_event(watcher, NetProtocol.EVENT_SCOREBOARD, 0)
 	assert_dict(board).is_not_empty()
 	var row: Callable = func(ev: Dictionary) -> bool:

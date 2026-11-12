@@ -50,11 +50,11 @@ var _alert: Dictionary[int, int] = {}
 
 ## The role of a seat for these rules.
 static func role_of(seat: String) -> Role:
-	if seat == StationViews.CAPTAIN:
+	if seat == StationCatalogue.CAPTAIN:
 		return Role.CAPTAIN
-	if not StationViews.is_crew(seat):
+	if not StationCatalogue.is_crew(seat):
 		return Role.NONE
-	return Role.RELAY if StationViews.stations_of(seat).has("relay") else Role.CREW
+	return Role.RELAY if StationCatalogue.stations_of(seat).has("relay") else Role.CREW
 
 
 func alert(ship: int) -> int:

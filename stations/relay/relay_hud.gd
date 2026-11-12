@@ -136,7 +136,7 @@ func setup(context: StationContext) -> void:
 func refresh() -> void:
 	if ctx == null:
 		return
-	var blk: Dictionary = ctx.view.blocks.get(StationViews.Section.RELAY, {})
+	var blk: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {})
 	var near: Array = _contact_rows()
 	var key: Array = [blk, near, ctx.crew.marks, ctx.crew.inbox, ctx.crew.relay_log]
 	key.append_array([ctx.crew.selection, ctx.crew.catalogue.get("ships", [])])
@@ -320,7 +320,7 @@ func _fill_marks() -> void:
 	for i: int in ctx.crew.marks.size():
 		var m: Dictionary = ctx.crew.marks[i]
 		var b: Button = _marks.get_child(i) as Button
-		b.text = ChipText.mark_label(m, ctx.view)
+		b.text = ChipText.mark_label(m, ctx.snap)
 		b.set_pressed_no_signal(ctx.crew.is_selected("mark", m["slot"]))
 
 

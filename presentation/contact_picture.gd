@@ -33,11 +33,11 @@ static func build(ctx: StationContext) -> ContactPicture:
 	var pic: ContactPicture = ContactPicture.new()
 	pic.interp = ctx.interp
 	var now: int = ctx.now_ms()
-	var info: Dictionary = ctx.view.contacts.get("info", {})
+	var info: Dictionary = ctx.snap.contacts.get("info", {})
 	for id: int in ctx.interp.contact_ids():
 		if id == ctx.crew.ship:
 			continue
-		var callsign: String = ctx.view.callsign(id)
+		var callsign: String = ctx.snap.callsign(id)
 		var letter: String = Palette.allegiance(callsign)
 		# Own-faction ships carry their ship name, no prefix: friendly.
 		if int(info.get(id, [0])[0]) & SnapshotReader.FLAG_OWN:
@@ -58,14 +58,14 @@ static func build(ctx: StationContext) -> ContactPicture:
 	# The sim's hazards the faction knows (D208): zones and shells as hazard bubbles, a plane
 	# front as a line across its travel (`dir`, ship frame).
 	var hazard_label: String = String(TranslationServer.translate("zone.hazard"))
-	for h: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("hazards", []):
+	for h: Dictionary in ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {}).get("hazards", []):
 		pic._add("zone", -1000 - int(h["id"]), hazard_label, "", h["pos"], 0.0)
 		pic.items[-1].merge({"zone": "hazard", "radius": h["radius"], "eta": h["eta"]})
 		if int(h["shape"]) == BlockSchema.HAZARD_PLANE:
 			pic.items[-1]["dir"] = pic.interp.local(h["dir"])
 	# Deployed probes with their bubbles (P13): Science and Relay see where coverage is.
 	var probe_label: String = String(TranslationServer.translate("zone.probe"))
-	for p: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("probes", []):
+	for p: Dictionary in ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {}).get("probes", []):
 		if p["deployed"]:
 			var id: int = int(p["serial"])
 			pic._add("zone", -1 - id, probe_label, "", p["pos"], 0.0)
@@ -146,7 +146,7 @@ func rel(world: Vector3, centre: Dictionary) -> Vector3:
 ## Fills `sites` from the SITES section and `site` with the one nearest the own ship.
 func _add_sites(ctx: StationContext, now: int) -> void:
 	var nearest: float = INF
-	for row: Dictionary in ctx.view.sites:
+	for row: Dictionary in ctx.snap.sites:
 		var id: int = row["id"]
 		var label: String = String(TranslationServer.translate(StringName(row["name_key"])))
 		var world: Vector3 = interp.offset_to(row["pos"])

@@ -110,13 +110,13 @@ def check_sources(root: Path = ROOT) -> list[str]:
 
 
 def station_ids(root: Path = ROOT) -> list[str]:
-    """The stations and joint views of net/station_views.gd (STATIONS and OTHER_SEATS keys)."""
-    text = (root / "net/station_views.gd").read_text(encoding="utf-8")
+    """The stations and joint views of net/station_catalogue.gd (STATIONS and OTHER_SEATS keys)."""
+    text = (root / "net/station_catalogue.gd").read_text(encoding="utf-8")
     ids = []
     for name in ("OTHER_SEATS", "STATIONS"):
         body = re.search(rf"^const {name}\b[^=]*=\s*\{{(.*?)^\}}", text, re.S | re.M)
         if not body:
-            raise ValueError(f"station_views: no const {name}")
+            raise ValueError(f"station_catalogue: no const {name}")
         ids += re.findall(r'^\t"(\w+)":', body.group(1), re.M)
     return sorted(set(ids))
 

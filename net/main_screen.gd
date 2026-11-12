@@ -5,10 +5,10 @@ extends RefCounted
 ## state itself (one view per ship) lives in NetCrewState, outside the sim like marks.
 
 ## The views, in the order of the Captain's buttons and keys 1 to 5 (Relay: Alt+1 to 5).
-enum View { FORWARD, CHASE, TACTICAL, TARGET, STATUS }
+enum View { FORWARD, CHASE, TACTICAL, CLOSE_UP, STATUS }
 
 ## Names for the i18n keys `view.<name>` and the `main_view` event.
-const NAMES: Array[String] = ["forward", "chase", "tactical", "target", "status"]
+const NAMES: Array[String] = ["forward", "chase", "tactical", "close_up", "status"]
 
 ## Refusals (request_rejected reason).
 const BAD_VIEW: String = "bad_view"

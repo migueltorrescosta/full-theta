@@ -28,12 +28,12 @@ func test_rivals_use_only_their_own_knowledge_and_marks() -> void:
 	assert_bool(KnowledgeSystem.is_detected(w, rival, contact)).is_false()
 	assert_str(KnowledgeSystem.callsign(w, mine, contact)).is_not_empty()
 	assert_str(KnowledgeSystem.callsign(w, rival, contact)).is_empty()
-	var picks: Array[SelectTargetCommand] = []
+	var picks: Array[HelmSelectCommand] = []
 	var marks: Array[ScienceMarkCommand] = []
 	for ship: int in 2:
-		var pick: SelectTargetCommand = SelectTargetCommand.new()
+		var pick: HelmSelectCommand = HelmSelectCommand.new()
 		pick.ship_id = ship
-		pick.target_ship = contact
+		pick.contact = contact
 		w.submit(pick)
 		picks.append(pick)
 		var mark: ScienceMarkCommand = ScienceMarkCommand.new()
@@ -48,4 +48,4 @@ func test_rivals_use_only_their_own_knowledge_and_marks() -> void:
 	assert_bool(marks[1].accepted).is_false()
 	assert_bool(w.science.has_scan_point(0)).is_true()
 	assert_bool(w.science.has_scan_point(1)).is_false()
-	assert_int(w.helm.target_ship[1]).is_equal(-1)
+	assert_int(w.helm.sel_contact[1]).is_equal(-1)

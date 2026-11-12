@@ -47,7 +47,7 @@ func entries() -> Array:
 	# Ping and Mark come first, so they sit in the same place on every station's page
 	# (R22-10); then the station's own requests, then the shares.
 	out.append(["ping", "", tr("intent.ping")])
-	if panel.ctx.crew.seat != StationViews.VIEWER:
+	if panel.ctx.crew.seat != StationCatalogue.VIEWER:
 		out.append(["mark", "", tr("intent.mark")])
 	for c: ChipDef in panel.request_chips():
 		out.append(["chip", String(c.id), panel.chip_label(c)])
@@ -151,9 +151,9 @@ func _left(e: Array) -> float:
 	var ctx: StationContext = panel.ctx
 	match e[0]:
 		"chip":
-			for c: Dictionary in ChipView.outgoing(ctx.view, [panel.station]):
+			for c: Dictionary in ChipsReader.outgoing(ctx.snap, [panel.station]):
 				if c["chip"] == e[1]:
-					return ChipView.left_s(ctx.view, c)
+					return ChipsReader.left_s(ctx.snap, c)
 		"share":
 			return ctx.crew.share_left(StringName(e[1]), ctx.now_ms())
 	return 0.0

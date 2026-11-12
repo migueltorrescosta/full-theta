@@ -66,7 +66,7 @@ const GROUPS: Dictionary = {
 	"radar": ["hostile", "unknown", "friendly", "neutral", "mark", "selected"],
 	"alert": ["alert_normal", "alert_yellow", "alert_red"],
 	"load": ["load_intense", "load_busy", "load_light"],
-	# Any two stations share a diagram in a joint view (net/station_views.gd OTHER_SEATS).
+	# Any two stations share a diagram in a joint view (net/station_catalogue.gd OTHER_SEATS).
 	"stations": ["st_helm", "st_weapons", "st_engineering", "st_science", "st_relay", "st_comms"],
 }
 ## [foreground, background] pairs that must keep a readable contrast ratio under each

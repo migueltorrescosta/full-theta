@@ -327,8 +327,8 @@ func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
 	var forms: Array = [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]
 	var bad: Array[String] = []
 	for f: Array in forms:
-		for seat: String in StationViews.OTHER_SEATS:
-			var n: int = maxi(1, (StationViews.OTHER_SEATS[seat][2] as Array).size())
+		for seat: String in StationCatalogue.OTHER_SEATS:
+			var n: int = maxi(1, (StationCatalogue.OTHER_SEATS[seat][2] as Array).size())
 			for focus: int in n:
 				var s: StationScreen = await _screen(f[0], seat, f[1], focus)
 				var report: Dictionary = TapAudit.check(s)

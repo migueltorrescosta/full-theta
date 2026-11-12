@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 ## answered with Enter or Backspace.
 
 const SETTINGS: String = "user://test_request_chips.cfg"
-const CHIPS: StationViews.Section = StationViews.Section.CHIPS
+const CHIPS: StationCatalogue.Section = StationCatalogue.Section.CHIPS
 
 
 func before() -> void:
@@ -129,22 +129,22 @@ func test_a_joint_view_runs_its_own_requests_directly() -> void:
 
 
 func _put_chip(s: StationScreen, id: int, chip: String, from: String, to: String) -> void:
-	var rows: Array = s.ctx.view.blocks.get(CHIPS, {}).get("chips", [])
+	var rows: Array = s.ctx.snap.blocks.get(CHIPS, {}).get("chips", [])
 	(
 		rows
 		. append(
 			{
 				"id": id,
-				"chip": ChipView.index_of(chip),
+				"chip": ChipsReader.index_of(chip),
 				"arg": -1,
-				"from": StationViews.CREW.find(from),
-				"to": StationViews.CREW.find(to),
-				"sent": s.ctx.view.tick - 360,
-				"expires": s.ctx.view.tick + 840,
+				"from": StationCatalogue.CREW.find(from),
+				"to": StationCatalogue.CREW.find(to),
+				"sent": s.ctx.snap.tick - 360,
+				"expires": s.ctx.snap.tick + 840,
 			}
 		)
 	)
-	s.ctx.view.blocks[CHIPS] = {"chips": rows}
+	s.ctx.snap.blocks[CHIPS] = {"chips": rows}
 
 
 # FT: FT-PAIR-013, FT-PAIR-021
@@ -191,7 +191,7 @@ func test_an_expired_chip_leaves_the_strip_without_a_word() -> void:
 	_put_chip(s, 5, "boost", "helm", "engineering")
 	s._process(0.016)
 	assert_bool(s.chip_strip.visible).is_true()
-	s.ctx.view.blocks[CHIPS] = {"chips": []}
+	s.ctx.snap.blocks[CHIPS] = {"chips": []}
 	s._process(0.016)
 	assert_bool(s.chip_strip.visible).is_false()
 	assert_int(s.chip_strip.get_child_count()).is_equal(0)

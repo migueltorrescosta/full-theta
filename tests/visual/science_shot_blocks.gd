@@ -10,7 +10,7 @@ const U3: int = StationFixture.U3
 
 ## The block for `kind`: "cards", "scan" or "hack".
 static func block(kind: String) -> Dictionary:
-	var b: Dictionary = ScienceView._empty()
+	var b: Dictionary = ScienceSection._empty()
 	b["cards"] = [
 		{
 			"contact": H2,
@@ -57,7 +57,7 @@ static func _scan(truth: Vector3, axes: int) -> Dictionary:
 		cloud.append({"p": pose * v})
 	return {
 		"minigame": 1,
-		"minigame_target": H2,
+		"minigame_contact": H2,
 		"minigame_start": 10,
 		"minigame_noise": 0.33,
 		"axes": axes,
@@ -80,7 +80,7 @@ static func _hack(node: int, known: int) -> Dictionary:
 		edges.append({"mask": mask if (known >> n) & 1 == 1 else 0})
 	return {
 		"minigame": 2,
-		"minigame_target": H2,
+		"minigame_contact": H2,
 		"minigame_start": 10,
 		"minigame_noise": 0.3,
 		"hack_cols": 5,

@@ -38,7 +38,7 @@ enum Shape { SPHERE, PLANE }
 ## A zone's drag: the share of the ship's velocity it removes per second (1/s).
 @export var drag: float = 0.0
 ## The subsystems the damage goes to, by id (it goes to the hull when empty).
-@export var targets: Array[StringName] = []
+@export var subsystems: Array[StringName] = []
 ## How close the own sensors must be to the hazard's surface to know of it (m); a probe's
 ## bubble (ShipDef.probe_range) shows it from further.
 @export var detect_range: float = 0.0

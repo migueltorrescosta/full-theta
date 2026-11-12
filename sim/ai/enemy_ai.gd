@@ -6,7 +6,7 @@ extends RefCounted
 ## KnowledgeSystem.contacts and fires only on contacts its faction has identified as
 ## hostile. It reads a detected contact's position and velocity, the same sensor track a
 ## crew's radar shows. It flies and fights only by submitting the command classes the
-## stations use (HelmInputCommand, SelectTargetCommand, AllStopCommand, AimMountCommand,
+## stations use (HelmInputCommand, HelmSelectCommand, AllStopCommand, AimMountCommand,
 ## FireCommand) with Source.AI, so they apply next tick through the same assist, power
 ## and weapon rules, and it never writes another table (FT-SIM-029). The AI is
 ## deterministic, so replays regenerate its commands and the log omits them (FT-ARC-008).
@@ -128,8 +128,8 @@ static func _think(world: SimWorld, id: int, candidates: PackedInt32Array) -> vo
 ## No target: drop the selection and the inputs, and all-stop if moving.
 static func _hold(world: SimWorld, id: int) -> void:
 	var helm: HelmTable = world.helm
-	if helm.target_kind[id] != HelmTable.Target.NONE:
-		_submit(world, id, SelectTargetCommand.new())
+	if helm.sel_kind[id] != HelmTable.Selection.NONE:
+		_submit(world, id, HelmSelectCommand.new())
 	_helm_input_raw(world, id, false, 0.0)
 	var kin: Kinematics = world.kin
 	var moving: bool = (
@@ -209,18 +209,18 @@ static func _engage(world: SimWorld, id: int, target: int, rel: Vector3) -> void
 static func _select_face_point(world: SimWorld, id: int, target: int, aim: Vector3) -> void:
 	var kin: Kinematics = world.kin
 	var helm: HelmTable = world.helm
-	var select: SelectTargetCommand = SelectTargetCommand.new()
+	var select: HelmSelectCommand = HelmSelectCommand.new()
 	if aim.is_finite():
 		if (
-			helm.target_kind[id] == HelmTable.Target.POINT
+			helm.sel_kind[id] == HelmTable.Selection.POINT
 			and not _off(kin.relative_to_column(id, helm.sel_x, helm.sel_y, helm.sel_z, id), aim)
 		):
 			return
 		_set_point(select, kin, id, aim)
-	elif helm.target_kind[id] == HelmTable.Target.SHIP and helm.target_ship[id] == target:
+	elif helm.sel_kind[id] == HelmTable.Selection.SHIP and helm.sel_contact[id] == target:
 		return
 	else:
-		select.target_ship = target
+		select.contact = target
 	_submit(world, id, select)
 
 
@@ -237,7 +237,7 @@ static func _off(latched: Vector3, wanted: Vector3) -> bool:
 static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 	var kin: Kinematics = world.kin
 	var helm: HelmTable = world.helm
-	var current: bool = helm.target_kind[id] == HelmTable.Target.POINT
+	var current: bool = helm.sel_kind[id] == HelmTable.Selection.POINT
 	var to_point: Vector3 = Vector3.ZERO
 	if current:
 		to_point = kin.relative_to_column(id, helm.sel_x, helm.sel_y, helm.sel_z, id)
@@ -258,7 +258,7 @@ static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 		current and to_point.length() > 0.5 * reach and to_point.angle_to(wanted) <= RETREAT_REAIM
 	)
 	if not keep:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		_set_point(select, kin, id, wanted)
 		_submit(world, id, select)
 	_helm_input_raw(world, id, true, 1.0)
@@ -267,7 +267,7 @@ static func _retreat(world: SimWorld, id: int, threat: int) -> void:
 ## Points a selection at the point `offset` (m, world frame) from the ship,
 ## wrapped onto the cube (FT-SIM-035).
 static func _set_point(
-	select: SelectTargetCommand, kin: Kinematics, id: int, offset: Vector3
+	select: HelmSelectCommand, kin: Kinematics, id: int, offset: Vector3
 ) -> void:
 	var p: PackedFloat64Array = kin.point_at(id, offset)
 	select.point = true

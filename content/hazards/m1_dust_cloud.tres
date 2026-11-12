@@ -10,5 +10,5 @@ center = Vector3(-900, 0, -2500)
 radius = 1200.0
 damage_w = 250000.0
 drag = 0.04
-targets = Array[StringName]([&"sensors"])
+subsystems = Array[StringName]([&"sensors"])
 detect_range = 4000.0

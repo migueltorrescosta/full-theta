@@ -103,8 +103,8 @@ static func coop_crew() -> Callable:
 ## Helm flying at the yard at `speed` (m/s): selects its point, holds Face, ramps the speed
 ## setpoint up to `speed` once the bow is on it, then leaves the throttle alone.
 static func helm(w: SimWorld, speed: float) -> void:
-	if w.helm.target_kind[PLAYER] != HelmTable.Target.POINT:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+	if w.helm.sel_kind[PLAYER] != HelmTable.Selection.POINT:
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.point = true
 		select.x = YARD_AT.x
 		select.y = YARD_AT.y

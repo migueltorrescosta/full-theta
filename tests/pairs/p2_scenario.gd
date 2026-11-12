@@ -64,9 +64,9 @@ static func coop(w: SimWorld) -> void:
 ## Helm: select the raider (a contact after the first tick's sweep) and hold Face.
 static func helm(w: SimWorld) -> void:
 	if w.tick == 1:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.ship_id = PLAYER
-		select.target_ship = RAIDER
+		select.contact = RAIDER
 		w.submit(select)
 		var input: HelmInputCommand = HelmInputCommand.new()
 		input.ship_id = PLAYER

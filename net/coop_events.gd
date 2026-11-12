@@ -5,7 +5,7 @@ extends RefCounted
 ## another used, a probe-enabled scan, and (with Comms, #10) a scan-unlocked dialogue
 ## option. Each one is counted here and written to the server log (ServerLog counters
 ## `coop.<pair>.<kind>` and one `coop` line per event), which the debrief of #10 shows.
-## Pairs are the ids of spec §7.3, p1 to p15, in the order of StationViews.OTHER_SEATS' joint
+## Pairs are the ids of spec §7.3, p1 to p15, in the order of StationCatalogue.OTHER_SEATS' joint
 ## views. An unanswered chip that expired is counted as `chip_expired` and is no
 ## cooperative event.
 
@@ -26,7 +26,7 @@ const COOPERATIVE: Array[String] = [
 	CHIP_ANSWERED, SHORTCUT_SHARED, MARK_USED, PROBE_SCAN, SCAN_OPTION
 ]
 
-## "a|b" (stations in StationViews.CREW order) -> pair id, built once from the catalogue.
+## "a|b" (stations in StationCatalogue.CREW order) -> pair id, built once from the catalogue.
 static var _pairs: Dictionary = _build_pairs()
 
 ## The server log, or null (counted, not written).
@@ -135,8 +135,8 @@ func reset() -> void:
 
 
 static func _pair_key(a: String, b: String) -> String:
-	var ia: int = StationViews.CREW.find(a)
-	var ib: int = StationViews.CREW.find(b)
+	var ia: int = StationCatalogue.CREW.find(a)
+	var ib: int = StationCatalogue.CREW.find(b)
 	if ia < 0 or ib < 0 or ia == ib:
 		return ""
 	return "%s|%s" % [a, b] if ia < ib else "%s|%s" % [b, a]
@@ -145,8 +145,8 @@ static func _pair_key(a: String, b: String) -> String:
 static func _build_pairs() -> Dictionary:
 	var out: Dictionary = {}
 	var n: int = 0
-	for id: String in StationViews.OTHER_SEATS:
-		var st: Array = StationViews.OTHER_SEATS[id][2]
+	for id: String in StationCatalogue.OTHER_SEATS:
+		var st: Array = StationCatalogue.OTHER_SEATS[id][2]
 		if st.size() == 2:
 			n += 1
 			out[_pair_key(st[0], st[1])] = "p%d" % n

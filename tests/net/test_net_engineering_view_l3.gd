@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 ## (CONTACTS) only; its ENGINEERING block holds no position.
 
 const PLAYER: int = NetHarness.PLAYER
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 var h: NetHarness
 
@@ -29,11 +29,11 @@ func test_engineering_gets_no_near_or_projectiles_and_only_radar_contacts() -> v
 	weapons.fire()
 	# Helm sees the shot as a tracer: there is something Engineering could have seen.
 	(
-		assert_bool(await h.until(func() -> bool: return not helm.view.projectiles.is_empty()))
+		assert_bool(await h.until(func() -> bool: return not helm.snap.projectiles.is_empty()))
 		. is_true()
 	)
 	await h.wait(300)
-	assert_int(eng.view.rejected).is_equal(0)
+	assert_int(eng.snap.rejected).is_equal(0)
 	assert_int(eng.raw_snapshots.size()).is_greater(3)
 	for seq: int in eng.raw_snapshots:
 		var data: PackedByteArray = eng.raw_snapshots[seq]
@@ -42,17 +42,17 @@ func test_engineering_gets_no_near_or_projectiles_and_only_radar_contacts() -> v
 		for i: int in n:
 			assert_array([S.NEAR, S.PROJECTILES]).not_contains([int(data[at])])
 			at += 3 + data.decode_u16(at + 1)
-	assert_array(eng.view.kinds).not_contains([S.NEAR, S.PROJECTILES])
-	assert_dict(eng.view.near).is_empty()
-	assert_dict(eng.view.projectiles).is_empty()
+	assert_array(eng.snap.kinds).not_contains([S.NEAR, S.PROJECTILES])
+	assert_dict(eng.snap.near).is_empty()
+	assert_dict(eng.snap.projectiles).is_empty()
 	# The contacts it holds are the radar's: the same section Helm's radar draws.
 	var ids: Callable = func(c: NetClient) -> Array:
-		var out: Array = c.view.contacts.get("model", {}).keys()
+		var out: Array = c.snap.contacts.get("model", {}).keys()
 		out.sort()
 		return out
 	assert_array(ids.call(eng)).is_equal(ids.call(helm))
 	# No ENGINEERING field is a position; the one vector is the own shield focus.
-	var block: Dictionary = eng.view.blocks[S.ENGINEERING]
+	var block: Dictionary = eng.snap.blocks[S.ENGINEERING]
 	for key: String in block:
 		if block[key] is Vector3:
 			assert_str(key).is_equal("shield_focus")

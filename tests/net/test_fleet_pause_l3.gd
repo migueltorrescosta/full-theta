@@ -36,7 +36,7 @@ func _server(mode: GameRules.Mode, n: int, teams: Array[int] = []) -> NetServer:
 func _alls(server: NetServer, ships: Array) -> Array[NetClient]:
 	var out: Array[NetClient] = []
 	for ship: int in ships:
-		out.append(await h.joined(server, "all-%d" % ship, StationViews.ALL, ship))
+		out.append(await h.joined(server, "all-%d" % ship, StationCatalogue.ALL, ship))
 	return out
 
 
@@ -82,7 +82,7 @@ func test_out_of_play_ship_never_holds_a_pause() -> void:
 	assert_bool(await _lapse(server, alls[1], 1)).is_true()
 	assert_array(server.game.lobby.paused.keys()).is_equal([1])
 	# The former crew of ship 0, now a viewer of ship 1, takes the uncovered stations over.
-	alls[0].takeover(1, StationViews.ALL)
+	alls[0].takeover(1, StationCatalogue.ALL)
 	assert_bool(await h.until(func() -> bool: return server.game.lobby.paused.is_empty())).is_true()
 	assert_bool(await _stepping(server)).is_true()
 	assert_bool(server.game.in_play(0)).is_false()
@@ -147,7 +147,7 @@ func test_enemy_never_takes_over() -> void:
 	assert_bool(await _start(server, alls)).is_true()
 	assert_bool(await _lapse(server, alls[0], 0)).is_true()
 	var from: int = h.mark(spare)
-	spare.takeover(0, StationViews.ALL)
+	spare.takeover(0, StationCatalogue.ALL)
 	assert_str(await _rejected(spare, NetProtocol.Type.TAKEOVER, from)).is_equal("enemy_ship")
 	assert_bool(server.game.lobby.paused.has(0)).is_true()
 
@@ -165,7 +165,7 @@ func test_eliminated_crew_view_a_friendly_ship() -> void:
 	assert_int(to["to_ship"]).is_equal(1)
 	var s: NetSession = h.session_of(server, alls[0])
 	assert_int(s.ship).is_equal(1)
-	assert_str(s.seat).is_equal(StationViews.VIEWER)
+	assert_str(s.seat).is_equal(StationCatalogue.VIEWER)
 	assert_bool(server.game.sim_running()).is_true()
 
 
@@ -229,7 +229,7 @@ func test_relaunch_by_vote() -> void:
 	assert_int(server.game.crew.marks.alert(1)).is_equal(CrewMarks.ALERT_NORMAL)
 	var s: NetSession = h.session_of(server, alls[1])
 	assert_int(s.ship).is_equal(1)
-	assert_str(s.seat).is_equal(StationViews.ALL)
+	assert_str(s.seat).is_equal(StationCatalogue.ALL)
 	assert_bool(server.game.in_play(1)).is_true()
 
 
@@ -267,23 +267,23 @@ func _pick_reason(c: NetClient, ship: int, seat: String) -> String:
 func test_a_mid_run_pick_stays_inside_the_faction() -> void:
 	var pvp: NetServer = _server(GameRules.Mode.LAST_STANDING, 2)
 	var alls: Array[NetClient] = await _alls(pvp, [0, 1])
-	var watcher: NetClient = await h.joined(pvp, "watcher", StationViews.VIEWER, 0)
+	var watcher: NetClient = await h.joined(pvp, "watcher", StationCatalogue.VIEWER, 0)
 	assert_bool(await _start(pvp, alls)).is_true()
 	assert_int(pvp.world.faction_of(0)).is_not_equal(pvp.world.faction_of(1))
-	assert_str(await _pick_reason(watcher, 1, StationViews.VIEWER)).is_equal(
+	assert_str(await _pick_reason(watcher, 1, StationCatalogue.VIEWER)).is_equal(
 		FleetMessages.ENEMY_SHIP
 	)
 	watcher.release_pick()
 	assert_bool(await h.until(func() -> bool: return h.session_of(pvp, watcher).ship < 0)).is_true()
-	assert_str(await _pick_reason(watcher, 1, StationViews.VIEWER)).is_equal(
+	assert_str(await _pick_reason(watcher, 1, StationCatalogue.VIEWER)).is_equal(
 		FleetMessages.ENEMY_SHIP
 	)
-	assert_str(await _pick_reason(watcher, 0, StationViews.VIEWER)).is_empty()
+	assert_str(await _pick_reason(watcher, 0, StationCatalogue.VIEWER)).is_empty()
 	var late: NetClient = await h.welcomed(pvp, "late")
-	assert_str(await _pick_reason(late, 1, StationViews.VIEWER)).is_empty()
+	assert_str(await _pick_reason(late, 1, StationCatalogue.VIEWER)).is_empty()
 	var coop: NetServer = _server(GameRules.Mode.COOP, 2)
 	var crews: Array[NetClient] = await _alls(coop, [0, 1])
-	var friend: NetClient = await h.joined(coop, "friend", StationViews.VIEWER, 0)
+	var friend: NetClient = await h.joined(coop, "friend", StationCatalogue.VIEWER, 0)
 	assert_bool(await _start(coop, crews)).is_true()
 	assert_int(coop.world.faction_of(0)).is_equal(coop.world.faction_of(1))
-	assert_str(await _pick_reason(friend, 1, StationViews.VIEWER)).is_empty()
+	assert_str(await _pick_reason(friend, 1, StationCatalogue.VIEWER)).is_empty()

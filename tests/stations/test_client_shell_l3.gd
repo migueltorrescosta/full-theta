@@ -46,8 +46,8 @@ func test_shell_runs_lobby_to_station_with_the_dev_seat() -> void:
 		. is_true()
 	)
 	assert_bool(shell.ctx.crew.dev_all).is_true()
-	shell.ctx.intents.pick(NetHarness.PLAYER, StationViews.ALL)
-	var picked: Callable = func() -> bool: return shell.ctx.crew.seat == StationViews.ALL
+	shell.ctx.intents.pick(NetHarness.PLAYER, StationCatalogue.ALL)
+	var picked: Callable = func() -> bool: return shell.ctx.crew.seat == StationCatalogue.ALL
 	assert_bool(await _until(picked)).is_true()
 	(
 		assert_bool(
@@ -59,8 +59,8 @@ func test_shell_runs_lobby_to_station_with_the_dev_seat() -> void:
 	assert_bool(await _until(func() -> bool: return shell.screen != null)).is_true()
 	assert_int(shell.screen.panels.size()).is_equal(6)
 	assert_bool(await _until(func() -> bool: return shell.ctx.interp.has_data())).is_true()
-	assert_bool(await _until(func() -> bool: return shell.ctx.view.tick > 0)).is_true()
-	assert_float(shell.ctx.interp.render_tick).is_less_equal(float(shell.ctx.view.tick))
+	assert_bool(await _until(func() -> bool: return shell.ctx.snap.tick > 0)).is_true()
+	assert_float(shell.ctx.interp.render_tick).is_less_equal(float(shell.ctx.snap.tick))
 
 
 func _welcomed(c: NetClient) -> bool:
@@ -88,7 +88,7 @@ func test_lobby_grid_follows_the_catalogue_load_tags_and_joint_views() -> void:
 	assert_int(shell.ctx.crew.catalogue["seats"].size()).is_equal(23)
 	for id: String in LobbySeatGrid.GRID_STATIONS:
 		var cell: Button = shell.lobby.find_child("Seat_" + id, true, false)
-		var tag: String = StationViews.def(id).load_tag
+		var tag: String = StationCatalogue.def(id).load_tag
 		assert_str(cell.theme_type_variation).is_equal("LoadCell_" + tag)
 	for id: String in ["captain", "viewer", "all"]:
 		assert_object(shell.lobby.find_child("Seat_" + id, true, false)).is_not_null()

@@ -39,7 +39,7 @@ static func environment(w: SimWorld) -> void:
 	if w.tick == 0:
 		var c: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION)
 		c.title_key = "comms.card.mission"
-		c.target = DERELICT
+		c.subject = DERELICT
 		PairHarness.send(w, c)
 
 

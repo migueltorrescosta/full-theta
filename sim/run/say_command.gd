@@ -11,7 +11,7 @@ extends SimCommand
 var line_id: String = ""
 ## The speaking NPC (CardSpec.npc_id), or "" for a ship-computer line.
 var npc_id: String = ""
-## The stations a computer line concerns (StationViews.CREW names).
+## The stations a computer line concerns (StationCatalogue.CREW names).
 var stations: Array = []
 var args: Dictionary = {}
 

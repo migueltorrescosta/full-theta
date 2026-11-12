@@ -18,7 +18,7 @@ enum Kind { SUMMARY, SHORTCUT }
 ## field) and the station that receives it. A joint view holding the source station sees
 ## the data as if the toggle were on (FT-JNT-005).
 @export var source: StringName = &""
-@export var target: StringName = &""
+@export var receiver: StringName = &""
 ## The value in the Easy preset (dimensionless, see Kind).
 @export var easy: int = 0
 ## The value in the Normal preset (dimensionless, see Kind).

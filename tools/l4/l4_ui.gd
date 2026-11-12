@@ -21,7 +21,7 @@ func _init(root: Window, run_dir: String, player: String, token_path: String) ->
 	menu.settings.player_name = player
 	# Scripted clients skip the first-visit help overlay (FT-STN-012), which would block
 	# their input; tests/stations/test_first_visit_help.gd covers it.
-	for station: Variant in StationViews.STATIONS:
+	for station: Variant in StationCatalogue.STATIONS:
 		menu.settings.mark_hint_seen(str(station))
 	menu.settings.save()
 	menu.token_path = token_path

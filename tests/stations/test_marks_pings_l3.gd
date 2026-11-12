@@ -141,7 +141,7 @@ func _shell(server: NetServer, seat: String) -> ClientShell:
 		return c.is_welcomed()
 	assert_bool(await _until(welcomed)).is_true()
 	var settings: ClientSettings = ClientSettings.new(_settings_path(seat))
-	for s: String in StationViews.CREW + ["viewer", "captain"]:
+	for s: String in StationCatalogue.CREW + ["viewer", "captain"]:
 		settings.mark_hint_seen(s)
 	var shell: ClientShell = ClientShell.new()
 	shell.setup(c, settings)

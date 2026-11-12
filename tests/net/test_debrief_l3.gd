@@ -19,9 +19,9 @@ func after_test() -> void:
 
 # FT: FT-MIS-038
 func test_core_actions_are_data_and_first_use_times_them() -> void:
-	var d: SeatDef = StationViews.def("helm")
+	var d: SeatDef = StationCatalogue.def("helm")
 	assert_array(d.core_actions).contains(["face=helm_input.face", "jump=helm_jump"])
-	assert_array(StationViews.def("tactical").core_actions).contains(["fire=fire|fire_guided"])
+	assert_array(StationCatalogue.def("tactical").core_actions).contains(["fire=fire|fire_guided"])
 	var f: FirstUse = FirstUse.new()
 	var still: HelmInputCommand = HelmInputCommand.new()
 	f.on_command(0, still, 120)

@@ -11,7 +11,7 @@ func _rescue() -> ScenarioFixture:
 
 
 func _card(f: ScenarioFixture, title: String) -> int:
-	for c: CardView in f.api.cards_of(0):
+	for c: CardInfo in f.api.cards_of(0):
 		if c.title_key == title:
 			return c.id
 	return -1
@@ -85,7 +85,7 @@ func test_a_lost_freighter_fails_the_escort() -> void:
 	assert_int(f.run_until_end(30)).is_equal(Scenario.Result.WON)
 	f.run(3)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	assert_float(_standing(f)).is_less(0.0)
 
 
@@ -147,7 +147,7 @@ func test_an_escort_with_the_engines_down_is_accepted_and_fails() -> void:
 	var f: ScenarioFixture = _rescue()
 	var credits: int = Economy.credits(f.world, 0)
 	var card: int = _card(f, "comms.card.escort")
-	var view: Dictionary = CommsView.block(f.world, 0)["cards"][0]
+	var view: Dictionary = CommsSection.block(f.world, 0)["cards"][0]
 	assert_str(view["detail"]).is_equal("comms.card.escort_terms")
 	var need: Dictionary = StoryRules.need_of(f.world, card)
 	assert_str(String(need["subsystem"])).is_equal("engines")
@@ -156,12 +156,12 @@ func test_an_escort_with_the_engines_down_is_accepted_and_fails() -> void:
 	f.world.damage.health[f.world.damage.find_subsystem(0, &"engines")] = 0.0
 	assert_bool(f.api.needs_met(card)).is_false()
 	_accept(f, card)
-	assert_int(f.card_state(card)).is_equal(CardView.State.ACCEPTED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.ACCEPTED)
 	for id: int in _raiders_arrive(f):
 		f.kill(id)
 	assert_int(f.run_until_end(30)).is_equal(Scenario.Result.WON)
 	f.run(3)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
 	assert_float(_standing(f)).is_less(0.0)
 
@@ -175,7 +175,7 @@ func test_hailing_the_freighter_opens_the_trader_conversation() -> void:
 	f.run(60)
 	assert_bool(KnowledgeSystem.is_detected(f.world, f.world.faction_of(0), freighter)).is_true()
 	var hail: HailCommand = HailCommand.new()
-	hail.target = freighter
+	hail.contact = freighter
 	assert_bool(f.send(hail)).is_true()
 	var hailed: int = f.world.story.size() - 1
 	assert_str(String(f.world.story.conversation[hailed])).is_equal("conv.trader_bluff")

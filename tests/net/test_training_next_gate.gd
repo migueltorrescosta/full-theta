@@ -19,7 +19,7 @@ func _check(seat: String, station: String) -> String:
 
 # FT: FT-MIS-039, FT-NET-006
 func test_a_station_presses_next_for_itself_only() -> void:
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		assert_str(_check(station, station)).is_empty()
 	assert_str(_check("helm", "weapons")).is_equal(CommandGate.NOT_YOUR_STATION)
 	assert_str(_check("helm", "")).is_equal(CommandGate.NOT_YOUR_STATION)

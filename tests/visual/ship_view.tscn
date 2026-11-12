@@ -2,5 +2,5 @@
 
 [ext_resource type="Script" path="res://tests/visual/ship_view.gd" id="1"]
 
-[node name="ShipView" type="Node3D"]
+[node name="ShipInfo" type="Node3D"]
 script = ExtResource("1")

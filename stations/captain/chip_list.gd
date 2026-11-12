@@ -2,7 +2,7 @@ class_name ChipList
 extends Control
 ## The Captain's read-only list of open request chips (FT-CPT-004): each row reads
 ## "Helm > Engineering  Boost", then "waiting, 6 s left" over a bar that runs out with it.
-## It reads the CHIPS block through ChipView (`open_rows`) and answers no input.
+## It reads the CHIPS block through ChipsReader (`open_rows`) and answers no input.
 ##
 ## A row: {"from": station id, "to": station id, "label": text, "left_s": seconds left}.
 
@@ -27,20 +27,20 @@ func _fit() -> void:
 
 ## Rows of the view's CHIPS block: all of the ship's open chips (the Captain sees them
 ## all), with the text in the session language and the seconds left.
-static func open_rows(view: NetViewState) -> Array[Dictionary]:
+static func open_rows(snap: SnapshotState) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for chip: Dictionary in ChipView.open_chips(view):
-		var callsign: String = view.callsign(int(chip["arg"])) if int(chip["arg"]) >= 0 else ""
+	for chip: Dictionary in ChipsReader.open_chips(snap):
+		var callsign: String = snap.callsign(int(chip["arg"])) if int(chip["arg"]) >= 0 else ""
 		(
 			out
 			. append(
 				{
 					"from": chip["from"],
 					"to": chip["to"],
-					"label": ChipView.label(chip, callsign),
-					"left_s": ChipView.left_s(view, chip),
+					"label": ChipsReader.label(chip, callsign),
+					"left_s": ChipsReader.left_s(snap, chip),
 					"total_s":
-					maxf(float(int(chip["expires"]) - int(chip["sent"])) / ChipView.HZ, 1.0),
+					maxf(float(int(chip["expires"]) - int(chip["sent"])) / ChipsReader.HZ, 1.0),
 				}
 			)
 		)

@@ -12,7 +12,7 @@ const ASIDE: int = 6
 func before_test() -> void:
 	await super.before_test()
 	var q: Quaternion = StationFixture.own_rotation()
-	_ctx().view.sites = [
+	_ctx().snap.sites = [
 		_site(0, "Kestrel Yard", StationFixture.OWN_POS + q * Vector3(0, 0, 10000.0), true),
 		_site(AHEAD, "Vesper", StationFixture.OWN_POS + q * Vector3(0, 0, -20000.0), true),
 		_site(ASIDE, "Cinder", StationFixture.OWN_POS + q * Vector3(20000.0, 0, 0), false),
@@ -40,7 +40,7 @@ func _toasts() -> Array:
 # FT: FT-HLM-016, FT-SPA-015
 # A site is selectable like a contact: the picture lists it with its offset, the compass
 # dot is filled for the site ahead and hollow behind, and selecting it sends
-# helm_select_target with the site id and no ship or point.
+# helm_select with the site id and no ship or point.
 func test_a_site_is_selectable_and_shows_on_the_compass() -> void:
 	var sites: Array[Dictionary] = _ctx().picture().sites
 	assert_int(sites.size()).is_equal(3)
@@ -51,9 +51,9 @@ func test_a_site_is_selectable_and_shows_on_the_compass() -> void:
 	assert_bool(HelmHud.compass_filled(local)).is_true()
 	assert_float(local.normalized().angle_to(Vector3.FORWARD)).is_less(0.001)
 	_frame()
-	var t: Dictionary = _cmds("helm_select_target").back()
+	var t: Dictionary = _cmds("helm_select").back()
 	assert_int(t["site_id"]).is_equal(AHEAD)
-	assert_int(t["target_ship"]).is_equal(-1)
+	assert_int(t["contact"]).is_equal(-1)
 	assert_bool(t["point"]).is_false()
 	_ctx().crew.select("site", ASIDE)
 	assert_bool(HelmHud.compass_filled(_ctx().selection_local())).is_true()
@@ -165,4 +165,4 @@ func test_spool_and_docked_state_reach_the_panel() -> void:
 
 
 func _helm_block() -> Dictionary:
-	return _ctx().view.blocks[StationViews.Section.HELM]
+	return _ctx().snap.blocks[StationCatalogue.Section.HELM]

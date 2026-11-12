@@ -77,19 +77,19 @@ static func audience_ship(world: SimWorld, card: int) -> int:
 	return world.kin.owner_faction.find(world.story.owner_faction[card])
 
 
-## The contract's flag on its target comes off the faction's KNOW once the card leaves
+## The contract's flag on its subject comes off the faction's KNOW once the card leaves
 ## ACCEPTED (done, failed or expired), if the flag is still the card's own.
 static func _clear_contract_flag(world: SimWorld, card: int) -> void:
 	var t: StoryTable = world.story
-	if t.target_flag[card] == 0 or t.target[card] < 0:
+	if t.subject_flag[card] == 0 or t.subject[card] < 0:
 		return
-	var row: int = world.knowledge.row_for(t.owner_faction[card], t.target[card])
-	if row >= 0 and world.knowledge.flag[row] == t.target_flag[card]:
+	var row: int = world.knowledge.row_for(t.owner_faction[card], t.subject[card])
+	if row >= 0 and world.knowledge.flag[row] == t.subject_flag[card]:
 		world.knowledge.flag[row] = KnowledgeTable.Flag.NONE
 
 
 ## Accepts a card for the ship (FT-COM-003): only an OPEN mission, contract or offer, not
-## before docking if it needs it. The contract's target flag goes into the faction's KNOW
+## before docking if it needs it. The contract's subject flag goes into the faction's KNOW
 ## (FT-MIS-042). Emits card_refused (tag the reason) when it can't.
 static func accept(world: SimWorld, ship: int, card: int) -> bool:
 	var t: StoryTable = world.story
@@ -100,9 +100,9 @@ static func accept(world: SimWorld, ship: int, card: int) -> bool:
 	set_state(world, ship, card, StoryTable.State.ACCEPTED)
 	t.claim[card] = ship + 1
 	StoryRules.on_accept(world, card)  # P5: a clearance starts its clock
-	if t.target_flag[card] != 0 and t.target[card] >= 0:
-		world.knowledge.flag[world.knowledge.ensure_contact(t.owner_faction[card], t.target[card])] = (
-			t.target_flag[card]
+	if t.subject_flag[card] != 0 and t.subject[card] >= 0:
+		world.knowledge.flag[world.knowledge.ensure_contact(t.owner_faction[card], t.subject[card])] = (
+			t.subject_flag[card]
 		)
 	return true
 
@@ -180,7 +180,7 @@ static func open_node(world: SimWorld, ship: int, card: int, node_id: String) ->
 ## card's conversation claimer, or as a subtitle to Comms while nobody holds it; G1).
 static func say(world: SimWorld, ship: int, card: int, line_id: String) -> void:
 	var e: SimEvent = world.emit(
-		&"say", ship, world.story.target[card], 0.0, Vector3.ZERO, StringName(line_id)
+		&"say", ship, world.story.subject[card], 0.0, Vector3.ZERO, StringName(line_id)
 	)
 	e.args = {"npc_id": String(world.story.npc[card]), "stations": [], "card": card}
 
@@ -226,7 +226,7 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: i
 	var t: StoryTable = world.story
 	if (
 		req.has("scan_fact")
-		and not knows_fact(world, t.owner_faction[card], t.target[card], req["scan_fact"])
+		and not knows_fact(world, t.owner_faction[card], t.subject[card], req["scan_fact"])
 	):
 		return false
 	if (
@@ -238,12 +238,12 @@ static func requirement_met(world: SimWorld, card: int, req: Dictionary, ship: i
 		return false
 	if (
 		req.has("engine_damage")
-		and StoryRules.engine_damage(world, t.target[card]) < float(req["engine_damage"])
+		and StoryRules.engine_damage(world, t.subject[card]) < float(req["engine_damage"])
 	):
 		return false
 	if (
 		req.has("surrender_ready")
-		and not StoryRules.surrender_ready(world, t.owner_faction[card], t.target[card])
+		and not StoryRules.surrender_ready(world, t.owner_faction[card], t.subject[card])
 	):
 		return false
 	return true
@@ -270,13 +270,13 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 			return false
 		if effect.has("decline") and not decline(world, ship, card):
 			return false
-		if effect.has("intent") and t.target[card] >= 0:
-			var row: int = world.knowledge.ensure_contact(t.owner_faction[card], t.target[card])
+		if effect.has("intent") and t.subject[card] >= 0:
+			var row: int = world.knowledge.ensure_contact(t.owner_faction[card], t.subject[card])
 			world.knowledge.intent[row] = INTENTS.get(
 				StringName(effect["intent"]), KnowledgeTable.Intent.UNKNOWN
 			)
-		if effect.has("contract_flag") and t.target[card] >= 0:
-			var frow: int = world.knowledge.ensure_contact(t.owner_faction[card], t.target[card])
+		if effect.has("contract_flag") and t.subject[card] >= 0:
+			var frow: int = world.knowledge.ensure_contact(t.owner_faction[card], t.subject[card])
 			world.knowledge.flag[frow] = FLAGS.get(StringName(effect["contract_flag"]), 0)
 		if effect.has("flag"):
 			world.story_flags.set_flag(StringName(effect["flag"]), int(effect.get("value", 1)))
@@ -293,7 +293,7 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 		if effect.has("verify"):
 			t.verify[card] = StringName(effect["verify"])
 		# (P9: ask the contact to surrender)
-		if effect.has("surrender") and t.target[card] >= 0:
+		if effect.has("surrender") and t.subject[card] >= 0:
 			StoryRules.ask_surrender(world, ship, card, effect["surrender"])
 	if not is_live(world, card):
 		return true
@@ -311,9 +311,9 @@ static func apply_option(world: SimWorld, ship: int, card: int, option: Dictiona
 ## contact, in the faction's knowledge of it), and marks it made.
 static func _first_draw(world: SimWorld, card: int, dist: String) -> bool:
 	var t: StoryTable = world.story
-	if t.kind[card] == StoryTable.Kind.HAIL and t.target[card] >= 0:
+	if t.kind[card] == StoryTable.Kind.HAIL and t.subject[card] >= 0:
 		var k: KnowledgeTable = world.knowledge
-		var row: int = k.ensure_contact(t.owner_faction[card], t.target[card])
+		var row: int = k.ensure_contact(t.owner_faction[card], t.subject[card])
 		if k.rep_drawn[row].has(dist):
 			return false
 		k.rep_drawn[row] = _with(k.rep_drawn[row], dist)

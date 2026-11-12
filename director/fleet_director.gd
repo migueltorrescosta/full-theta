@@ -131,7 +131,7 @@ func _add_directors(api: ScenarioApi) -> void:
 static func _race_site_keys(api: ScenarioApi) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	var home: StringName = &""
-	for s: SiteView in api.sites():
+	for s: SiteInfo in api.sites():
 		if s.id == Director.HOME_SITE:
 			home = s.key
 	for key: String in api.map_site_keys():

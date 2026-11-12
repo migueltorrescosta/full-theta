@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 ## ownership) and can't change anything.
 
 const PLAYER: int = NetHarness.PLAYER
-const S = StationViews.Section
+const S = StationCatalogue.Section
 const MAIN_SCREEN: Array[int] = [
 	S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES, S.CAPTAIN, S.SITES
 ]
@@ -27,27 +27,27 @@ func test_viewers_receive_only_main_screen_state_and_change_nothing() -> void:
 	var crew: Array[NetClient] = await h.crew3(server)
 	var viewers: Array[NetClient] = []
 	for k: int in 3:
-		viewers.append(await h.joined(server, "viewer%d" % k, StationViews.VIEWER))
+		viewers.append(await h.joined(server, "viewer%d" % k, StationCatalogue.VIEWER))
 	assert_bool(await h.start(server, crew[0])).is_true()
 	crew[0].command({"kind": &"helm_decoupled", "decoupled": true})
 	var decoupled: Callable = func() -> bool:
 		return viewers.all(
 			func(v: NetClient) -> bool:
-				return bool(v.view.blocks.get(S.STATUS, {}).get("decoupled", false))
+				return bool(v.snap.blocks.get(S.STATUS, {}).get("decoupled", false))
 		)
 	assert_bool(await h.until(decoupled)).is_true()
 	for v: NetClient in viewers:
 		v.keep_raw = true
 	await h.wait(400)
 	for v: NetClient in viewers:
-		assert_array(v.view.kinds).is_equal(MAIN_SCREEN)
+		assert_array(v.snap.kinds).is_equal(MAIN_SCREEN)
 		assert_int(v.raw_snapshots.size()).is_greater(3)
 		for data: PackedByteArray in v.raw_snapshots.values():
 			for kind: int in _kinds(data):
 				assert_array(MAIN_SCREEN).contains([kind])
-		assert_dict(v.view.ownership).is_empty()
-		assert_array(v.view.blocks.keys()).is_equal([S.STATUS, S.CAPTAIN])
-		assert_float(v.view.blocks[S.STATUS]["hull"]).is_greater(0.0)
+		assert_dict(v.snap.ownership).is_empty()
+		assert_array(v.snap.blocks.keys()).is_equal([S.STATUS, S.CAPTAIN])
+		assert_float(v.snap.blocks[S.STATUS]["hull"]).is_greater(0.0)
 	# Read-only: commands, alert, marks and pings are refused.
 	var viewer: NetClient = viewers[0]
 	var from: int = h.mark(viewer)

@@ -81,9 +81,9 @@ func test_catalogue_offers_m1_seats_with_load_tags() -> void:
 		]
 	)
 	for e: Dictionary in seats:
-		assert_dict(e).is_equal(StationViews.def(e["id"]).to_dict())
+		assert_dict(e).is_equal(StationCatalogue.def(e["id"]).to_dict())
 	assert_array(c.catalogue["load_tags"]).is_equal(["light", "busy", "intense"])
-	c.pick(PLAYER, StationViews.ALL)
+	c.pick(PLAYER, StationCatalogue.ALL)
 	var answer: Dictionary = await h.next_event(c, NetProtocol.EVENT_PICKED)
 	assert_str(answer["payload"]["reason"]).is_equal(NetGame.BAD_PICK)
 	var from: int = h.mark(c)
@@ -110,8 +110,8 @@ func test_one_pick_sharing_and_one_captain() -> void:
 	assert_array(server.game.seats_of(PLAYER)).contains_exactly_in_any_order(
 		["systems", "helm", "tactical", "tactical"]
 	)
-	assert_bool(a.view.blocks.has(StationViews.Section.ENGINEERING)).is_true()
-	assert_bool(a.view.blocks.has(StationViews.Section.HELM)).is_false()
+	assert_bool(a.snap.blocks.has(StationCatalogue.Section.ENGINEERING)).is_true()
+	assert_bool(a.snap.blocks.has(StationCatalogue.Section.HELM)).is_false()
 	assert_bool(await h.pick(b, "captain")).is_true()
 	var from: int = h.mark(c)
 	c.pick(PLAYER, "captain")
@@ -185,16 +185,18 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 # snapshots carry every station's sections.
 func test_dev_flag_lets_one_client_hold_all_stations() -> void:
 	var server: NetServer = h.server(true)
-	var c: NetClient = await h.joined(server, "solo", StationViews.ALL)
+	var c: NetClient = await h.joined(server, "solo", StationCatalogue.ALL)
 	assert_bool(c.welcome["dev_all"]).is_true()
 	var ids: Array = (c.catalogue["seats"] as Array).map(
 		func(e: Dictionary) -> String: return e["id"]
 	)
-	assert_array(ids).contains([StationViews.ALL])
+	assert_array(ids).contains([StationCatalogue.ALL])
 	for kind: int in [
-		StationViews.Section.HELM, StationViews.Section.ENGINEERING, StationViews.Section.MOUNTS
+		StationCatalogue.Section.HELM,
+		StationCatalogue.Section.ENGINEERING,
+		StationCatalogue.Section.MOUNTS
 	]:
-		assert_bool(c.view.blocks.has(kind)).is_true()
+		assert_bool(c.snap.blocks.has(kind)).is_true()
 	assert_bool(await h.start(server, c)).is_true()
 	# Alone on every station: every claim is its own (FT-NET-044).
 	var me: int = h.session_of(server, c).id

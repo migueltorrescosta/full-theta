@@ -58,7 +58,7 @@ func test_every_toggle_is_live_and_the_default_is_easy() -> void:
 	var ids: Array[StringName] = DataToggles.ids()
 	assert_bool(ids.has(&"contract_flags")).is_true()
 	assert_bool(ids.has(&"verify_chip")).is_true()
-	assert_str(StationViews.DEFAULT_TOGGLES).is_equal("easy")
+	assert_str(StationCatalogue.DEFAULT_TOGGLES).is_equal("easy")
 
 
 # FT: FT-PAIR-017

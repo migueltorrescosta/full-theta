@@ -54,7 +54,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	_ships = params["ships"]
 	var lead: int = Scenario.fleet(api, _ships)[0]
 	_started = api.tick()
-	var view: ShipView = api.ship(lead)
+	var view: ShipInfo = api.ship(lead)
 	var from: int = params.get("site", view.nearest_site)
 	api.set_relation(Factions.DEBRIS, view.faction, Relation.HOSTILE)
 	_destination = HOME
@@ -71,7 +71,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 			var lateral: float = (api.rand(&"debris_leg") * 2.0 - 1.0) * LATERAL_M
 			api.spawn_on_leg(leg["debris"], Factions.DEBRIS, from, _destination, t, lateral)
 	for ship: int in Scenario.fleet(api, _ships):
-		api.message("npc.lane_warning", {}, SayTarget.npc(NPC, ship))
+		api.message("npc.lane_warning", {}, LineAudience.npc(NPC, ship))
 	var run: CardSpec = CardSpec.new()
 	run.kind = CardSpec.Kind.CONTRACT
 	run.npc_id = NPC
@@ -110,13 +110,13 @@ func finished(_api: ScenarioApi) -> int:
 func end(api: ScenarioApi, result: int) -> void:
 	if _clearance == null or _clearance.id() < 0:
 		return
-	var state: int = CardView.State.EXPIRED
-	for c: CardView in api.cards_of(Scenario.fleet(api, _ships)[0]):
+	var state: int = CardInfo.State.EXPIRED
+	for c: CardInfo in api.cards_of(Scenario.fleet(api, _ships)[0]):
 		if c.id == _clearance.id():
 			state = c.state
-	if state == CardView.State.ACCEPTED and _result == Result.ACTIVE:
+	if state == CardInfo.State.ACCEPTED and _result == Result.ACTIVE:
 		api.settle_card(_clearance.id(), false)
-	elif state == CardView.State.OPEN:
+	elif state == CardInfo.State.OPEN:
 		api.decline_card(_clearance.id())
 	if _result == Result.ACTIVE:
 		_result = result

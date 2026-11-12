@@ -103,7 +103,7 @@ func _spawn(api: ScenarioApi) -> ApiHandle:
 ## A line from the raiders to every ship still in the fight.
 func _say(api: ScenarioApi, line: String, args: Dictionary) -> void:
 	for ship: int in Scenario.fleet(api, _ships):
-		api.message(line, args, SayTarget.npc(NPC, ship))
+		api.message(line, args, LineAudience.npc(NPC, ship))
 
 
 ## A clock position near the bow (11, 12 or 1).
@@ -124,6 +124,6 @@ func _offer_hail(api: ScenarioApi) -> void:
 	hail.npc_id = NPC
 	hail.title_key = &"comms.card.hail"
 	hail.conversation_id = &"conv.surrender_demand"
-	hail.target = _raiders[0].id()
+	hail.subject = _raiders[0].id()
 	hail.faction_wide = true
 	_hail = api.offer(Scenario.fleet(api, _ships)[0], hail)

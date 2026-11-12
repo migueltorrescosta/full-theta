@@ -22,7 +22,7 @@ func _holds(server: NetServer, viewer: NetClient, item: String, who: NetClient) 
 	var want: int = h.session_of(server, who).id if who != null else -1
 	return await h.until(
 		func() -> bool:
-			var claims: Dictionary = viewer.view.ownership.get("claims", {})
+			var claims: Dictionary = viewer.snap.ownership.get("claims", {})
 			return (claims[item][0] if claims.has(item) else -1) == want
 	)
 
@@ -59,7 +59,7 @@ func test_only_the_claimer_commands_a_claimed_item() -> void:
 	var h2: NetClient = await h.joined(server, "cy", "helm")
 	# Ana was alone on Weapons first, so she holds the mount; Bo sees her name.
 	assert_bool(await _holds(server, w2, "mount:0", w1)).is_true()
-	assert_str(w2.view.claimer("mount:0")).is_equal("ana")
+	assert_str(w2.snap.claimer("mount:0")).is_equal("ana")
 	# Claims hold in the lobby too, before Start: the gate refuses at once.
 	var aim: Dictionary = {"kind": "aim_mount", "mount_index": 0, "aim_z": -100.0}
 	assert_str(await _verdict(server, w2, {"kind": "fire", "mount_index": 0})).is_equal(
@@ -86,7 +86,7 @@ func test_only_the_claimer_commands_a_claimed_item() -> void:
 	assert_bool(await _holds(server, h2, "shield_facing", null)).is_true()
 	h2.claim("shield_facing")
 	assert_bool(await _holds(server, w2, "shield_facing", h2)).is_true()
-	assert_str(w2.view.ownership["claims"]["shield_facing"][1]).is_equal("cy")
+	assert_str(w2.snap.ownership["claims"]["shield_facing"][1]).is_equal("cy")
 	assert_str(await _verdict(server, h2, focus)).is_equal("")
 	assert_str(await _verdict(server, w2, focus)).is_equal(CommandGate.CLAIMED)
 	# A claim held by another is refused; an item of another station too.
@@ -112,11 +112,11 @@ func test_alone_holds_all_and_ship_wide_controls_name_last_writer() -> void:
 	var e2: NetClient = await h.joined(server, "eve", "systems")
 	var helm: NetClient = await h.joined(server, "fay", "helm")
 	server.game.launch(PLAYER)
-	assert_str(e2.view.claimer("crew:1")).is_equal("dee")
+	assert_str(e2.snap.claimer("crew:1")).is_equal("dee")
 	assert_bool(await _holds(server, e2, "crew:0", e1)).is_true()
 	var pips: String = "pips:%d" % SubsystemDef.Kind.ENGINES
 	var writer_is: Callable = func(c: NetClient, writer: String) -> bool:
-		var w: Dictionary = c.view.ownership.get("writers", {})
+		var w: Dictionary = c.snap.ownership.get("writers", {})
 		return w.has(pips) and w[pips][1] == writer
 	(
 		assert_str(await _verdict(server, e2, {"kind": "set_pips", "subsystem_kind": 4, "pips": 2}))
@@ -127,15 +127,15 @@ func test_alone_holds_all_and_ship_wide_controls_name_last_writer() -> void:
 	assert_bool(writer_is.call(e1, "dee")).is_true()
 	e2.set_pips(SubsystemDef.Kind.ENGINES, 3)
 	assert_bool(await h.until(func() -> bool: return writer_is.call(e1, "eve"))).is_true()
-	assert_str(e1.view.last_writer(pips)).is_equal("eve")
+	assert_str(e1.snap.last_writer(pips)).is_equal("eve")
 	e1.command({"kind": "set_shield", "power": 2})
 	var shield_by: Callable = func() -> bool:
-		var w: Dictionary = e2.view.ownership.get("writers", {})
+		var w: Dictionary = e2.snap.ownership.get("writers", {})
 		return w.has("shield") and w["shield"][1] == "dee"
 	assert_bool(await h.until(shield_by)).is_true()
 	# Helm sees no Engineering writers or claims.
-	assert_bool(helm.view.ownership["writers"].has(pips)).is_false()
-	assert_bool(helm.view.ownership["claims"].has("crew:0")).is_false()
+	assert_bool(helm.snap.ownership["writers"].has(pips)).is_false()
+	assert_bool(helm.snap.ownership["claims"].has("crew:0")).is_false()
 
 
 # FT: FT-NET-024
@@ -189,7 +189,7 @@ func test_claim_events_reach_only_that_station() -> void:
 	await h.wait(200)
 	var items: Callable = func(c: NetClient) -> Array:
 		return h.events_of(c, NetProtocol.EVENT_CLAIM).map(
-			func(ev: Dictionary) -> String: return StationViews.base_of(ev["payload"]["item"])
+			func(ev: Dictionary) -> String: return StationCatalogue.base_of(ev["payload"]["item"])
 		)
 	assert_array(items.call(w)).contains(["mount"])
 	assert_array(items.call(w)).not_contains(["crew"])

@@ -200,8 +200,8 @@ func _set_value(flag: String, value: String) -> bool:
 
 
 func _set_solo(value: String) -> bool:
-	if not StationViews.CREW.has(value) and value != StationViews.CAPTAIN:
-		push_error("--solo must be a station: %s or captain" % ", ".join(StationViews.CREW))
+	if not StationCatalogue.CREW.has(value) and value != StationCatalogue.CAPTAIN:
+		push_error("--solo must be a station: %s or captain" % ", ".join(StationCatalogue.CREW))
 		return false
 	solo_station = value
 	encounter_name = "shakedown"

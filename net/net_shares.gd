@@ -6,7 +6,7 @@ extends RefCounted
 ## the partner's view loses it again. A joint view holding both stations needs no press
 ## (FT-JNT-005). Each press is a cooperative event of the pair (CoopEvents.SHORTCUT_SHARED).
 ## Message: Share{feature}. The open set of a ship goes to the sessions' views as the
-## "#a,b" suffix of the toggle code (NetSession.view_code, ViewFilter) and to the clients as
+## "#a,b" suffix of the toggle code (NetSession.stream_code, ShortcutFilter) and to the clients as
 ## the `shares` event, so a client's own shortcuts (hazard countdowns) follow. Crew state
 ## outside the sim, like chips; a run reset clears it.
 
@@ -50,16 +50,16 @@ func share(s: NetSession, feature: String) -> String:
 	elif not game.lobby.toggles.on(id):
 		why = OFF
 	else:
-		var stations: Array[String] = StationViews.stations_of(s.seat)
+		var stations: Array[String] = StationCatalogue.stations_of(s.seat)
 		if not stations.has(String(def.source)):
 			why = NOT_SOURCE
-		elif stations.has(String(def.target)):
+		elif stations.has(String(def.receiver)):
 			why = SAME_SCREEN
 	if why != "":
 		return why
 	var ticks: int = ceili(DataToggles.share_seconds() * SimWorld.HZ)
 	(_until.get_or_add(s.ship, {}) as Dictionary)[id] = game.world.tick + ticks
-	var pair: String = CoopEvents.pair_of(String(def.source), String(def.target))
+	var pair: String = CoopEvents.pair_of(String(def.source), String(def.receiver))
 	game.coop.record(CoopEvents.SHORTCUT_SHARED, pair, s.ship, {"event": feature})
 	_apply(s.ship, true)
 	return ""
@@ -114,11 +114,11 @@ func _apply(ship: int, pressed: bool) -> void:
 		if s.ship != ship or not s.has_pick():
 			continue
 		s.shares = open
-		game.transport.set_view(s.id, s.view_key())
+		game.transport.set_stream_key(s.id, s.stream_key())
 		game.notify(s, NetProtocol.EVENT_SHARES, _payload(ship))
 	game.crew.sync_routes(ship)
 	game.crew.sync_lanes(ship)
-	if pressed and active(ship, ViewFilter.DIAGNOSED_CAUSES):
+	if pressed and active(ship, ShortcutFilter.DIAGNOSED_CAUSES):
 		prefill_causes(ship)
 
 

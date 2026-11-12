@@ -161,7 +161,7 @@ func waiting_names(card: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	for seat: Dictionary in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
 		var who: String = str(seat.get("name", ""))
-		if StationViews.is_crew(str(seat.get("seat", ""))) and who != ctx.settings.player_name:
+		if StationCatalogue.is_crew(str(seat.get("seat", ""))) and who != ctx.settings.player_name:
 			if not voters.has(who) and not out.has(who):
 				out.append(who)
 	return out

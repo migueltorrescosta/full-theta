@@ -4,7 +4,7 @@ extends GdUnitTestSuite
 ## chip from Comms to Weapons, player-initiated only, and the cooperative events counted per pair.
 
 const PLAYER: int = NetHarness.PLAYER
-const CHIPS: StationViews.Section = StationViews.Section.CHIPS
+const CHIPS: StationCatalogue.Section = StationCatalogue.Section.CHIPS
 const SECRET: String = "s3cret"
 
 var h: NetHarness
@@ -23,7 +23,7 @@ func _crew(server: NetServer) -> Dictionary:
 	var out: Dictionary = {}
 	out["host"] = await h.welcomed(server, "host", "", SECRET)
 	await h.pick(out["host"], "captain")
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		out[station] = await h.joined(server, station, station)
 	return out
 
@@ -39,7 +39,7 @@ func _rejected(c: NetClient, from: int, type: int = NetProtocol.Type.CHIP) -> St
 
 
 func _chips(c: NetClient) -> Array:
-	return c.view.blocks.get(CHIPS, {}).get("chips", [])
+	return c.snap.blocks.get(CHIPS, {}).get("chips", [])
 
 
 func _count(server: NetServer, pair: String, kind: String) -> int:
@@ -59,11 +59,11 @@ func test_a_chip_is_sent_shown_and_answered() -> void:
 	helm.send_chip("boost")
 	assert_bool(await h.until(func() -> bool: return _chips(eng).size() == 1)).is_true()
 	var row: Dictionary = _chips(eng)[0]
-	assert_int(row["chip"]).is_equal(ChipView.index_of("boost"))
-	assert_int(row["from"]).is_equal(StationViews.CREW.find("helm"))
-	assert_int(row["to"]).is_equal(StationViews.CREW.find("engineering"))
+	assert_int(row["chip"]).is_equal(ChipsReader.index_of("boost"))
+	assert_int(row["from"]).is_equal(StationCatalogue.CREW.find("helm"))
+	assert_int(row["to"]).is_equal(StationCatalogue.CREW.find("engineering"))
 	assert_int(row["arg"]).is_equal(-1)
-	assert_int(row["expires"] - row["sent"]).is_equal(int(ChipView.def().expiry_s * 60.0))
+	assert_int(row["expires"] - row["sent"]).is_equal(int(ChipsReader.def().expiry_s * 60.0))
 	assert_bool(await h.until(func() -> bool: return _chips(helm).size() == 1)).is_true()
 	await h.wait(300)
 	for other: String in ["weapons", "science", "relay", "comms"]:
@@ -102,7 +102,7 @@ func test_the_chip_list_is_the_spec_list() -> void:
 		"fabricate_probe": ["relay", "engineering", "p11"],
 		"hold_fire": ["comms", "weapons", "p9"],
 	}
-	var def: ChipsDef = ChipView.def()
+	var def: ChipsDef = ChipsReader.def()
 	assert_int(def.chips.size()).is_equal(7)
 	for chip: ChipDef in def.chips:
 		assert_array(want.keys()).contains([String(chip.id)])
@@ -176,10 +176,10 @@ func test_hold_fire_goes_from_comms_to_weapons() -> void:
 	comms.send_chip("hold_fire", NetHarness.ENEMY)
 	assert_bool(await h.until(func() -> bool: return _chips(crew["weapons"]).size() == 1)).is_true()
 	var row: Dictionary = _chips(crew["weapons"])[0]
-	assert_int(row["chip"]).is_equal(ChipView.index_of("hold_fire"))
+	assert_int(row["chip"]).is_equal(ChipsReader.index_of("hold_fire"))
 	assert_int(row["arg"]).is_equal(NetHarness.ENEMY)
-	assert_int(row["from"]).is_equal(StationViews.CREW.find("comms"))
-	assert_int(row["to"]).is_equal(StationViews.CREW.find("weapons"))
+	assert_int(row["from"]).is_equal(StationCatalogue.CREW.find("comms"))
+	assert_int(row["to"]).is_equal(StationCatalogue.CREW.find("weapons"))
 	from = h.mark(comms)
 	comms.send_chip("hold_fire", NetHarness.ENEMY)
 	assert_str(await _rejected(comms, from)).is_equal(NetChips.ALREADY_OPEN)
@@ -256,7 +256,7 @@ func test_an_unanswered_chip_expires_silently() -> void:
 	helm.send_chip("boost")
 	assert_bool(await h.until(func() -> bool: return _chips(eng).size() == 1)).is_true()
 	var marks: Array = [h.mark(helm), h.mark(eng)]
-	var expiry_ticks: int = int(ChipView.def().expiry_s * 60.0)
+	var expiry_ticks: int = int(ChipsReader.def().expiry_s * 60.0)
 	for i: int in expiry_ticks - 120:
 		server.world.step()
 	server.world.drain_events()
@@ -286,7 +286,7 @@ func test_chips_are_player_initiated_only() -> void:
 	var crew: Dictionary = await _crew(server)
 	assert_bool(await h.start(server, crew["helm"])).is_true()
 	await h.wait(1500)
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		assert_array(_chips(crew[station])).override_failure_message(station).is_empty()
 	assert_array(server.game.chips.open_of(PLAYER)).is_empty()
 	assert_dict(server.game.coop.counts()).is_empty()

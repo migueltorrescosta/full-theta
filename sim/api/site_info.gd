@@ -1,4 +1,4 @@
-class_name SiteView
+class_name SiteInfo
 extends RefCounted
 ## A value copy of one named site (FT-ARC-016, FT-DAT-009, FT-SPA-027).
 

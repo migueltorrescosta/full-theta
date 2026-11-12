@@ -58,17 +58,17 @@ static func check(
 	var command: SimCommand = SimCommands.make(kind)
 	if command == null:
 		return [null, UNKNOWN_KIND]
-	var station: String = StationViews.station_of_command(kind)
+	var station: String = StationCatalogue.station_of_command(kind)
 	if station == "":
 		return [null, NOT_ALLOWED]
 	# Next (Shakedown, D235) names the station that presses it: any crew
 	# station of the pick, or the Captain seat.
 	if kind == &"training_next":
 		var named: String = str(cmd.get("station", ""))
-		var seat: bool = named == StationViews.CAPTAIN and session.seat == named
-		if not (seat or StationViews.stations_of(session.seat).has(named)):
+		var seat: bool = named == StationCatalogue.CAPTAIN and session.seat == named
+		if not (seat or StationCatalogue.stations_of(session.seat).has(named)):
 			return [null, NOT_YOUR_STATION]
-	elif not StationViews.stations_of(session.seat).has(station):
+	elif not StationCatalogue.stations_of(session.seat).has(station):
 		return [null, NOT_YOUR_STATION]
 	if cmd.has("ship_id") and not (cmd["ship_id"] is int and cmd["ship_id"] == session.ship):
 		return [null, WRONG_SHIP]

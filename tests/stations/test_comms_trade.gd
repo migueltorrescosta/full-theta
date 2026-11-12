@@ -171,7 +171,7 @@ func test_tap_and_pad_do_the_lines() -> void:
 	var s: StationScreen = await _screen()
 	var panel: CommsPanel = s.panels[0] as CommsPanel
 	panel.overlay.size = Vector2(1000, 700)
-	panel.overlay.show_card(CommsData.block(s.ctx.view), CommsFixture.OFFER)
+	panel.overlay.show_card(CommsData.block(s.ctx.snap), CommsFixture.OFFER)
 	var at: int = _row(panel, "buy", "item", "parts")
 	for pressed: bool in [true, false]:
 		var e: InputEventMouseButton = InputEventMouseButton.new()

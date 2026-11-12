@@ -55,7 +55,7 @@ func test_target_destroyed_returns_to_hold_and_stops() -> void:
 	SimFixture.run(world, 3 * HZ)
 	assert_int(world.ai.mode[raider]).is_equal(AiTable.Mode.HOLD)
 	assert_int(world.ai.target[raider]).is_equal(-1)
-	assert_int(world.helm.target_kind[raider]).is_equal(HelmTable.Target.NONE)
+	assert_int(world.helm.sel_kind[raider]).is_equal(HelmTable.Selection.NONE)
 	SimFixture.run(world, 30 * HZ)
 	assert_float(world.kin.vel[raider].length()).is_less(0.5)
 
@@ -72,6 +72,6 @@ func test_ai_resends_face_point_and_aim_only_when_they_change() -> void:
 	SimFixture.run(world, 10 * HZ)
 	var sent: int = 0
 	for c: SimCommand in world.submitted:
-		if c.source == SimCommand.Source.AI and (c is SelectTargetCommand or c is AimMountCommand):
+		if c.source == SimCommand.Source.AI and (c is HelmSelectCommand or c is AimMountCommand):
 			sent += 1
 	assert_int(sent).override_failure_message("sent %d" % sent).is_less(60)

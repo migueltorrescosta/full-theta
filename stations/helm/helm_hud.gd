@@ -957,7 +957,7 @@ func _draw_radial(font: Font) -> void:
 
 ## Own velocity (m/s, world axes) from KIN.
 func velocity() -> Vector3:
-	var v: Vector3i = panel.ctx.view.kin.get("vel", Vector3i.ZERO)
+	var v: Vector3i = panel.ctx.snap.kin.get("vel", Vector3i.ZERO)
 	return Vector3(v) / NetCodec.VEL_Q
 
 
@@ -973,7 +973,7 @@ func selection_label() -> String:
 		return str(panel.ctx.crew.mark_in_slot(int(s["id"])).get("name", ""))
 	if s.get("kind", "") == "site":
 		return str(panel.ctx.picture().find(s).get("label", ""))
-	return panel.ctx.view.callsign(int(s.get("id", -1)))
+	return panel.ctx.snap.callsign(int(s.get("id", -1)))
 
 
 func _selected_item() -> Dictionary:
@@ -982,7 +982,7 @@ func _selected_item() -> Dictionary:
 		return {"kind": "mark", "allegiance": ""}
 	if s.get("kind", "") == "site":
 		return {"kind": "site", "allegiance": ""}
-	var info: Dictionary = panel.ctx.view.contacts.get("info", {})
+	var info: Dictionary = panel.ctx.snap.contacts.get("info", {})
 	var letter: String = Palette.allegiance(selection_label())
 	if int(info.get(int(s.get("id", -1)), [0])[0]) & SnapshotReader.FLAG_OWN:
 		letter = "F"

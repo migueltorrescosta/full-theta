@@ -29,7 +29,7 @@ func _init(net_game: NetGame) -> void:
 func bot_seats() -> Array:
 	var out: Array = []
 	if solo != "":
-		for station: String in StationViews.CREW:
+		for station: String in StationCatalogue.CREW:
 			if station != solo:
 				out.append(station)
 	return out
@@ -63,7 +63,11 @@ func _on_training(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var station: String = msg["station"]
 	var reason: String = ""
 	var extra: Dictionary = {}
-	if station != "" and not StationViews.CREW.has(station) and station != StationViews.CAPTAIN:
+	if (
+		station != ""
+		and not StationCatalogue.CREW.has(station)
+		and station != StationCatalogue.CAPTAIN
+	):
 		reason = BAD_STATION
 		extra = {"station": station}
 	elif not hook.is_valid():

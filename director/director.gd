@@ -256,7 +256,7 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 				_refund(run, now)
 				continue
 			run.encounter = run.handle.id()
-		var ev: EncounterView = api.encounter(run.encounter)
+		var ev: EncounterInfo = api.encounter(run.encounter)
 		if ev.result > Scenario.Result.ACTIVE:
 			if run.started:
 				run.scenario.end(api, ev.result)
@@ -458,7 +458,7 @@ func _skip(now: int, ship: int) -> void:
 ## An open site with no encounter of the session's directors, or -1 when none is free.
 func _free_site(api: ScenarioApi) -> int:
 	var free: Array[int] = []
-	for s: SiteView in api.sites():
+	for s: SiteInfo in api.sites():
 		if s.id != HOME_SITE and not _taken.has(s.id):
 			free.append(s.id)
 	return free[_rng.randi() % free.size()] if not free.is_empty() else -1
@@ -549,7 +549,7 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 ## and lapses when the arrival timeout starts the encounter anyway.
 func _announce_site(api: ScenarioApi, ship: int, site: int) -> void:
 	var name_key: String = ""
-	for s: SiteView in api.sites():
+	for s: SiteInfo in api.sites():
 		if s.id == site:
 			name_key = s.name_key
 	if name_key == "":

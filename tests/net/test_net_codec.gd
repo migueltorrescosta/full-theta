@@ -90,8 +90,8 @@ func test_residual_for_an_unknown_id_is_rejected() -> void:
 
 
 func test_block_round_trip() -> void:
-	for kind: int in StationViews.BLOCKS:
-		var schema: Array = StationViews.BLOCKS[kind]
+	for kind: int in StationCatalogue.BLOCKS:
+		var schema: Array = StationCatalogue.BLOCKS[kind]
 		var values: Dictionary = {}
 		for field: Array in schema:
 			values[field[0]] = _sample(field[1])

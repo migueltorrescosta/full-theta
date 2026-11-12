@@ -112,13 +112,13 @@ func welcomed(s: NetServer, name: String, token: String = "", secret: String = "
 ## Picks (ship, seat) and waits for the answer; true if accepted, and then for the
 ## full snapshot of the new view.
 func pick(c: NetClient, seat: String, ship: int = PLAYER) -> bool:
-	var fulls: int = c.view.full_count
+	var fulls: int = c.snap.full_count
 	var n: int = (events[c] as Array).size()
 	c.pick(ship, seat)
 	var answer: Dictionary = await next_event(c, NetProtocol.EVENT_PICKED, n)
 	if answer.is_empty() or answer["payload"]["reason"] != "":
 		return false
-	return await until(func() -> bool: return c.view.full_count > fulls)
+	return await until(func() -> bool: return c.snap.full_count > fulls)
 
 
 ## A welcomed client holding a pick, with its full snapshot applied.

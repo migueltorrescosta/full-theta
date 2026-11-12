@@ -32,10 +32,10 @@ static func relative(ref_name: String, from_ref: Vector3) -> String:
 
 ## A mark's label on the lists: its name, then ` · callsign` while it is attached to a
 ## contact (the same on the Relay HUD and the Relay phone).
-static func mark_label(m: Dictionary, view: NetViewState) -> String:
+static func mark_label(m: Dictionary, snap: SnapshotState) -> String:
 	var text: String = str(m["name"])
 	if int(m.get("contact", -1)) >= 0:
-		text += SEP + view.callsign(int(m["contact"]))
+		text += SEP + snap.callsign(int(m["contact"]))
 	return text
 
 

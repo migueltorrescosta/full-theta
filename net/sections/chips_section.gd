@@ -2,17 +2,17 @@ class_name ChipsSection
 extends SnapshotSection
 ## Section.CHIPS: the open request chips of one ship (NetChips on the server's main thread
 ## posts them, NetTransport.post_chips). A crew view lists the chips it sends or receives;
-## the Captain, the Viewer and the dev seat list all of them (ViewFilter). Sent whole when
+## the Captain, the Viewer and the dev seat list all of them (ShortcutFilter). Sent whole when
 ## the list changes, like a block.
 
-## The ship's open chips as last posted (set by SnapshotBuilder before update()).
+## The ship's open chips as last posted (set by SnapshotWriter before update()).
 var rows: Array = []
-var filter: ViewFilter = null
+var filter: ShortcutFilter = null
 
 
-func _init(section_kind: int, owner_id: int, view_filter: ViewFilter = null) -> void:
+func _init(section_kind: int, owner_id: int, shortcut_filter: ShortcutFilter = null) -> void:
 	super(section_kind, owner_id)
-	filter = view_filter
+	filter = shortcut_filter
 
 
 func update(_world: SimWorld) -> PackedByteArray:
@@ -21,13 +21,13 @@ func update(_world: SimWorld) -> PackedByteArray:
 		if filter == null or filter.sees_all or _involves(row):
 			mine.append(row)
 	var bytes: PackedByteArray = NetBlock.encode(
-		StationViews.BLOCKS[StationViews.Section.CHIPS], {"chips": mine}
+		StationCatalogue.BLOCKS[StationCatalogue.Section.CHIPS], {"chips": mine}
 	)
 	return _changed(bytes)
 
 
 func _involves(row: Dictionary) -> bool:
 	return (
-		filter.stations.has(StationViews.CREW[row["from"]])
-		or filter.stations.has(StationViews.CREW[row["to"]])
+		filter.stations.has(StationCatalogue.CREW[row["from"]])
+		or filter.stations.has(StationCatalogue.CREW[row["to"]])
 	)

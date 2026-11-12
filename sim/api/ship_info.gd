@@ -1,4 +1,4 @@
-class_name ShipView
+class_name ShipInfo
 extends RefCounted
 ## A value copy of one ship (FT-ARC-016, FT-DAT-009), built fresh on each ScenarioApi call.
 ## Holds only plain values, so a scenario cannot reach the world through it.

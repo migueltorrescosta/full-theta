@@ -63,7 +63,7 @@ func _rebuild() -> void:
 	common.append_array(IntentTable.ids_of(IntentTable.LIVE))
 	_section("overlay.common", common)
 	for s: Variant in _stations:
-		_section(StationViews.name_key(str(s)), IntentTable.ids_of(str(s)))
+		_section(StationCatalogue.name_key(str(s)), IntentTable.ids_of(str(s)))
 
 
 func _section(key: String, ids: Array[String]) -> void:

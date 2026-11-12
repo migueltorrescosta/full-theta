@@ -25,7 +25,7 @@ func after_test() -> void:
 func _screen(roll_deg_s: float = 0.0) -> StationScreen:
 	var ctx: StationContext = StationFixture.context("viewer", SETTINGS)
 	ctx.settings.mark_hint_seen("viewer")
-	ctx.view.kin["ang"] = NetCodec.quant_ang(Vector3(0.0, 0.0, deg_to_rad(roll_deg_s)))
+	ctx.snap.kin["ang"] = NetCodec.quant_ang(Vector3(0.0, 0.0, deg_to_rad(roll_deg_s)))
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -76,7 +76,7 @@ func test_forward_camera_rolls_with_the_deck_or_the_comfort_lock() -> void:
 	# Comfort, target lock: the selected target ship's deck stays level (its NEAR
 	# orientation), still looking out of the bow.
 	var h2_rot: Quaternion = Quaternion(Vector3.FORWARD, 0.5)
-	s.ctx.view.near[StationFixture.H2] = [NetCodec.pack_quat(h2_rot), Vector3i.ZERO, 0]
+	s.ctx.snap.near[StationFixture.H2] = [NetCodec.pack_quat(h2_rot), Vector3i.ZERO, 0]
 	s.ctx.settings.comfort = true
 	s.ctx.settings.roll_lock = "target"
 	s.ctx.settings.reduced_fov = true
@@ -110,17 +110,17 @@ func test_switches_to_chase_while_decoupled_or_rolling_fast() -> void:
 	var clock: StationFixture.Clock = StationFixture.clock(s.ctx)
 	var ship: Basis = Basis(s.ctx.interp.own_rotation())
 	# Rolling at 60°/s (body z) from the snapshot: chase, behind and above the ship.
-	s.ctx.view.kin["ang"] = NetCodec.quant_ang(Vector3(0.0, 0.0, deg_to_rad(60.0)))
+	s.ctx.snap.kin["ang"] = NetCodec.quant_ang(Vector3(0.0, 0.0, deg_to_rad(60.0)))
 	v.update_view(0.016)
 	assert_bool(v.chase).is_true()
 	assert_float(v.camera.position.dot(ship.z)).is_greater(5.0)
 	# 40°/s is not calm yet; under 30°/s for 1.5 s brings the forward view back.
-	s.ctx.view.kin["ang"] = NetCodec.quant_ang(Vector3(0.0, 0.0, deg_to_rad(40.0)))
+	s.ctx.snap.kin["ang"] = NetCodec.quant_ang(Vector3(0.0, 0.0, deg_to_rad(40.0)))
 	v.update_view(0.016)
 	clock.ms += 2000
 	v.update_view(0.016)
 	assert_bool(v.chase).is_true()
-	s.ctx.view.kin["ang"] = Vector3i.ZERO
+	s.ctx.snap.kin["ang"] = Vector3i.ZERO
 	v.update_view(0.016)
 	clock.ms += 1400
 	v.update_view(0.016)
@@ -129,12 +129,12 @@ func test_switches_to_chase_while_decoupled_or_rolling_fast() -> void:
 	v.update_view(0.016)
 	assert_bool(v.chase).is_false()
 	# Decoupled (STATUS): chase while it lasts, forward 1.5 s after.
-	s.ctx.view.blocks[StationViews.Section.STATUS]["decoupled"] = true
+	s.ctx.snap.blocks[StationCatalogue.Section.STATUS]["decoupled"] = true
 	v.update_view(0.016)
 	clock.ms += 5000
 	v.update_view(0.016)
 	assert_bool(v.chase).is_true()
-	s.ctx.view.blocks[StationViews.Section.STATUS]["decoupled"] = false
+	s.ctx.snap.blocks[StationCatalogue.Section.STATUS]["decoupled"] = false
 	v.update_view(0.016)
 	clock.ms += ViewerPanel.FORWARD_AFTER_MS
 	v.update_view(0.016)

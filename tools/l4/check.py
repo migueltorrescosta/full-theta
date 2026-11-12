@@ -73,7 +73,7 @@ def check(out: Path) -> list[str]:
                     problems.append(f"{who}: {end.get('why')}")
                 elif launch != last:
                     problems.append(f"{who}: ended by itself but was relaunched")
-                if st.get("bad_snapshots", 0) or end.get("view_rejected", 0):
+                if st.get("bad_snapshots", 0) or end.get("snap_rejected", 0):
                     problems.append(f"{who}: bad snapshots {st}")
             gap = max((s.get("gap_ms", 0) for s in snaps[1:]), default=0)
             rejoin = ""

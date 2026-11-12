@@ -1,4 +1,4 @@
-class_name CardView
+class_name CardInfo
 extends RefCounted
 ## A value copy of one card on a ship's Comms board (FT-ARC-016, FT-DAT-009, FT-COM-001).
 
@@ -14,5 +14,5 @@ var npc_id: StringName = &""
 var title_key: String = ""
 var expires_tick: int = -1
 var reward: int = 0
-## Contact ship the card is about, or -1.
-var target: int = -1
+## The card's subject, the contact ship it is about, or -1 (D397).
+var subject: int = -1

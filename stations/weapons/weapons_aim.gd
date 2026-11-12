@@ -68,9 +68,9 @@ func lead_dir(i: int, contact: int) -> Variant:
 		ctx.interp.offset_to(ctx.interp.contact_position(contact))
 		- rot * _p.ship_def.mounts[i].position
 	)
-	var model: Dictionary = ctx.view.contacts.get("model", {})
+	var model: Dictionary = ctx.snap.contacts.get("model", {})
 	var vel: Vector3i = model[contact][1] if model.has(contact) else Vector3i.ZERO
-	var own: Vector3i = ctx.view.kin.get("vel", Vector3i.ZERO)
+	var own: Vector3i = ctx.snap.kin.get("vel", Vector3i.ZERO)
 	var rel_vel: Vector3 = Vector3(vel - own) / NetCodec.VEL_Q
 	var speed: float = _p.weapon_of(i).projectile_speed
 	if speed <= 0.0:

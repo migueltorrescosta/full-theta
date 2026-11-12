@@ -88,13 +88,13 @@ func test_a_better_track_steers_harder() -> void:
 # covers the contact.
 func test_the_track_feed_shows_the_quality() -> void:
 	var w: SimWorld = _world(12000.0)
-	var feed: Dictionary = FeedsView.block(w, ME)
+	var feed: Dictionary = FeedsSection.block(w, ME)
 	assert_int(feed["tracks"].size()).is_equal(1)
 	assert_int(feed["tracks"][0]["contact"]).is_equal(FOE)
 	assert_float(feed["tracks"][0]["quality"]).is_equal(GuidanceSystem.track_quality(w, 1, FOE))
 	assert_bool(feed["tracks"][0]["probe"]).is_false()
 	var row: int = w.probes.launch(ME, 1, 0, CubePoint.make(0.0, 0.0, -11000.0), CubePoint.make())
 	w.probes.deployed[row] = 1
-	var probed: Dictionary = FeedsView.block(w, ME)["tracks"][0]
+	var probed: Dictionary = FeedsSection.block(w, ME)["tracks"][0]
 	assert_bool(probed["probe"]).is_true()
 	assert_float(probed["quality"]).is_greater(feed["tracks"][0]["quality"])

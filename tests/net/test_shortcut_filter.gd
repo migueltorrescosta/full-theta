@@ -1,13 +1,13 @@
 extends GdUnitTestSuite
-## What a snapshot carries of other stations' data, per toggle (ViewFilter, SnapshotBuilder,
-## FeedsView): exact, banded and absent summaries, the shortcuts of Weapons, Helm and
+## What a snapshot carries of other stations' data, per toggle (ShortcutFilter, SnapshotWriter,
+## FeedsSection): exact, banded and absent summaries, the shortcuts of Weapons, Helm and
 ## Engineering, Engineering's data never on Comms, Hard leaking nothing, a joint view getting
 ## the union of its stations' data.
 
 const ME: int = ScienceFixture.ME
 const FOE: int = ScienceFixture.FOE
 const CAUSES: Array[StringName] = [&"coolant_leak", &"short", &"software"]
-const S: StationViews.Section = StationViews.Section.STATUS
+const S: StationCatalogue.Section = StationCatalogue.Section.STATUS
 
 var world: SimWorld
 var max_shields: float
@@ -45,18 +45,18 @@ func before_test() -> void:
 
 
 ## The decoded view of one seat at a toggle code on the current world.
-func _view(seat: String, code: String) -> NetViewState:
-	var b: SnapshotBuilder = SnapshotBuilder.new()
-	var key: String = StationViews.key(ME, seat, code)
+func _view(seat: String, code: String) -> SnapshotState:
+	var b: SnapshotWriter = SnapshotWriter.new()
+	var key: String = StationCatalogue.key(ME, seat, code)
 	b.build(SimCopy.of(world), 1, [key])
-	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
-	assert_bool(view.apply(b.message(key, true))).is_true()
-	return view
+	var snap: SnapshotState = SnapshotState.new(NetCodec.period_units(world.kin.period))
+	assert_bool(snap.apply(b.message(key, true))).is_true()
+	return snap
 
 
-## A toggle code with shortcuts shared (the view key's "#a,b" suffix, D210).
+## A toggle code with shortcuts shared (the stream key's "#a,b" suffix, D210).
 func _shared(code: String, features: Array) -> String:
-	return ViewFilter.code_with(code, features)
+	return ShortcutFilter.code_with(code, features)
 
 
 func _status(seat: String, code: String) -> Dictionary:
@@ -121,11 +121,11 @@ func test_summaries_are_exact_banded_or_absent() -> void:
 # The thrust envelope and the shield ring Helm shows are Engineering's data: exact, banded
 # or neutral by the same toggle.
 func test_helm_envelope_follows_the_summaries_toggle() -> void:
-	var easy: Dictionary = _view("helm", "easy").blocks[StationViews.Section.HELM]
+	var easy: Dictionary = _view("helm", "easy").blocks[StationCatalogue.Section.HELM]
 	assert_float(easy["thrust_scale"]).is_equal_approx(0.3, 1e-6)
-	var normal: Dictionary = _view("helm", "normal").blocks[StationViews.Section.HELM]
+	var normal: Dictionary = _view("helm", "normal").blocks[StationCatalogue.Section.HELM]
 	assert_float(normal["thrust_scale"]).is_equal_approx(0.375, 1e-6)
-	var hard: Dictionary = _view("helm", "hard").blocks[StationViews.Section.HELM]
+	var hard: Dictionary = _view("helm", "hard").blocks[StationCatalogue.Section.HELM]
 	assert_float(hard["thrust_scale"]).is_equal(1.0)
 	assert_float(hard["torque_scale"]).is_equal(1.0)
 	assert_float(hard["shield_tightness"]).is_equal(0.0)
@@ -148,9 +148,9 @@ func test_engineering_data_never_reaches_comms() -> void:
 		bands.append(st["hull"])
 	assert_array(bands).is_equal([bands[0], bands[0], bands[0], bands[0], bands[0]])
 	# Not even a field of the Engineering block: Comms has no such section.
-	var kinds: Array[int] = StationViews.sections_of("comms")
-	assert_bool(kinds.has(StationViews.Section.ENGINEERING)).is_false()
-	assert_bool(kinds.has(StationViews.Section.FEEDS)).is_false()
+	var kinds: Array[int] = StationCatalogue.sections_of("comms")
+	assert_bool(kinds.has(StationCatalogue.Section.ENGINEERING)).is_false()
+	assert_bool(kinds.has(StationCatalogue.Section.FEEDS)).is_false()
 	# A view that joins Comms to another station is the same: Approach is Helm + Comms.
 	var approach: Dictionary = _status("approach", "easy")
 	assert_float(approach["shields"]).is_equal(0.0)
@@ -166,20 +166,22 @@ func test_engineering_data_never_reaches_comms() -> void:
 # shows as if its toggle were on: Drive (Engineering + Helm) sees the envelope exactly on
 # Hard; Weapons + Science sees weak points on Normal and Hard.
 func test_a_joint_view_gets_the_union_of_its_stations() -> void:
-	var drive: NetViewState = _view("drive", "hard")
+	var drive: SnapshotState = _view("drive", "hard")
 	assert_float(drive.blocks[S]["shields"]).is_equal_approx(0.4 * max_shields, 1e-3)
-	assert_float(drive.blocks[StationViews.Section.HELM]["thrust_scale"]).is_equal_approx(0.3, 1e-6)
-	assert_bool(drive.blocks.has(StationViews.Section.ENGINEERING)).is_true()
-	var tactical: NetViewState = _view("tactical", "hard")
-	assert_bool(tactical.blocks.has(StationViews.Section.HELM)).is_true()
-	assert_bool(tactical.blocks.has(StationViews.Section.MOUNTS)).is_true()
+	assert_float(drive.blocks[StationCatalogue.Section.HELM]["thrust_scale"]).is_equal_approx(
+		0.3, 1e-6
+	)
+	assert_bool(drive.blocks.has(StationCatalogue.Section.ENGINEERING)).is_true()
+	var tactical: SnapshotState = _view("tactical", "hard")
+	assert_bool(tactical.blocks.has(StationCatalogue.Section.HELM)).is_true()
+	assert_bool(tactical.blocks.has(StationCatalogue.Section.MOUNTS)).is_true()
 	# Tactical is Helm + Weapons: Engineering's summaries are still absent on Hard.
 	assert_float(tactical.blocks[S]["shields"]).is_equal(0.0)
 	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
 	# Direct: no press needed in a view holding both stations (FT-JNT-005, D210).
-	var targeting: NetViewState = _view("targeting", "hard")
-	assert_array(targeting.blocks[StationViews.Section.FEEDS]["weak"]).is_not_empty()
-	assert_array(_view("weapons", "hard").blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+	var targeting: SnapshotState = _view("targeting", "hard")
+	assert_array(targeting.blocks[StationCatalogue.Section.FEEDS]["weak"]).is_not_empty()
+	assert_array(_view("weapons", "hard").blocks[StationCatalogue.Section.FEEDS]["weak"]).is_empty()
 
 
 # FT: FT-WPN-007, FT-PAIR-007, FT-PAIR-020, FT-PAIR-017
@@ -188,12 +190,12 @@ func test_a_joint_view_gets_the_union_of_its_stations() -> void:
 # edited Normal with the toggle on yes after a share. The facts are what Science revealed,
 # no more.
 func test_weak_points_reach_weapons_by_toggle() -> void:
-	assert_array(_view("weapons", "easy").blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+	assert_array(_view("weapons", "easy").blocks[StationCatalogue.Section.FEEDS]["weak"]).is_empty()
 	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
 	# The toggle alone delivers nothing: Science has to share.
-	assert_array(_view("weapons", "easy").blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+	assert_array(_view("weapons", "easy").blocks[StationCatalogue.Section.FEEDS]["weak"]).is_empty()
 	var easy: Dictionary = _view("weapons", _shared("easy", [&"weak_points"])).blocks[
-		StationViews.Section.FEEDS
+		StationCatalogue.Section.FEEDS
 	]
 	assert_int(easy["weak"].size()).is_equal(1)
 	assert_int(easy["weak"][0]["contact"]).is_equal(FOE)
@@ -201,14 +203,19 @@ func test_weak_points_reach_weapons_by_toggle() -> void:
 	assert_float(easy["weak"][0]["resist"][0]["factor"]).is_equal_approx(0.5, 1e-6)
 	for code: String in ["normal", "hard"]:
 		var shared: String = _shared(code, [&"weak_points"])
-		assert_array(_view("weapons", shared).blocks[StationViews.Section.FEEDS]["weak"]).is_empty()
+		(
+			assert_array(_view("weapons", shared).blocks[StationCatalogue.Section.FEEDS]["weak"])
+			. is_empty()
+		)
 	var custom: DataToggles = DataToggles.of_preset("normal").with_value(&"weak_points", 1)
 	(
-		assert_array(_view("weapons", custom.encode()).blocks[StationViews.Section.FEEDS]["weak"])
+		assert_array(
+			_view("weapons", custom.encode()).blocks[StationCatalogue.Section.FEEDS]["weak"]
+		)
 		. is_empty()
 	)
 	var shown: Dictionary = _view("weapons", _shared(custom.encode(), [&"weak_points"])).blocks[
-		StationViews.Section.FEEDS
+		StationCatalogue.Section.FEEDS
 	]
 	assert_int(shown["weak"].size()).is_equal(1)
 	# The other toggles of the edited set stay as Normal has them.
@@ -219,10 +226,13 @@ func test_weak_points_reach_weapons_by_toggle() -> void:
 # Track feeds with their quality reach Weapons on Easy once Relay shared them; Hard and
 # Normal get none, shared or not.
 func test_track_feeds_reach_weapons_by_toggle() -> void:
-	assert_array(_view("weapons", "easy").blocks[StationViews.Section.FEEDS]["tracks"]).is_empty()
+	(
+		assert_array(_view("weapons", "easy").blocks[StationCatalogue.Section.FEEDS]["tracks"])
+		. is_empty()
+	)
 	var easy: Array = (
 		_view("weapons", _shared("easy", [&"track_feeds"]))
-		. blocks[StationViews.Section.FEEDS]["tracks"]
+		. blocks[StationCatalogue.Section.FEEDS]["tracks"]
 	)
 	assert_int(easy.size()).is_equal(1)
 	assert_int(easy[0]["contact"]).is_equal(FOE)
@@ -231,12 +241,12 @@ func test_track_feeds_reach_weapons_by_toggle() -> void:
 	for code: String in ["normal", "hard"]:
 		var shared: String = _shared(code, [&"track_feeds"])
 		(
-			assert_array(_view("weapons", shared).blocks[StationViews.Section.FEEDS]["tracks"])
+			assert_array(_view("weapons", shared).blocks[StationCatalogue.Section.FEEDS]["tracks"])
 			. is_empty()
 		)
 	var custom: DataToggles = DataToggles.of_preset("hard").with_value(&"track_feeds", 1)
 	var shown: Dictionary = _view("weapons", _shared(custom.encode(), [&"track_feeds"])).blocks[
-		StationViews.Section.FEEDS
+		StationCatalogue.Section.FEEDS
 	]
 	assert_int(shown["tracks"].size()).is_equal(1)
 	assert_array(shown["weak"]).is_empty()
@@ -250,7 +260,9 @@ func test_diagnosed_cause_shows_by_toggle() -> void:
 	DamageSystem.reveal_fault_cause(world, ME, &"engines")
 	var engines: int = 0
 	var cause: Callable = func(code: String, seat: String = "engineering") -> int:
-		var rows: Array = _view(seat, code).blocks[StationViews.Section.ENGINEERING]["subsystems"]
+		var rows: Array = (
+			_view(seat, code).blocks[StationCatalogue.Section.ENGINEERING]["subsystems"]
+		)
 		return rows[engines]["fault_cause"]
 	var shared: Callable = func(code: String) -> String: return _shared(code, [&"diagnosed_causes"])
 	assert_int(cause.call("easy")).is_equal(0)
@@ -264,7 +276,7 @@ func test_diagnosed_cause_shows_by_toggle() -> void:
 	assert_int(cause.call("hard", "systems")).is_equal(2)
 	# The fault itself is Engineering's own symptom and is always shown.
 	var rows: Array = (
-		_view("engineering", "hard").blocks[StationViews.Section.ENGINEERING]["subsystems"]
+		_view("engineering", "hard").blocks[StationCatalogue.Section.ENGINEERING]["subsystems"]
 	)
 	assert_bool(rows[engines]["fault"]).is_true()
 
@@ -277,7 +289,7 @@ func test_fabrication_timer_is_a_summary() -> void:
 	world.defs[ME].probe_fab_s = 30.0
 	world.relay.fab_left[ME] = 10.0
 	var left: Callable = func(seat: String, code: String) -> float:
-		return _view(seat, code).blocks[StationViews.Section.RELAY]["fab_left"]
+		return _view(seat, code).blocks[StationCatalogue.Section.RELAY]["fab_left"]
 	for code: String in ["easy", "normal", "hard"]:
 		assert_float(left.call("relay", code)).is_equal_approx(10.0, 0.01)
 		assert_float(left.call("engineering", code)).is_equal_approx(10.0, 0.01)
@@ -296,24 +308,24 @@ func test_hard_leaks_only_marks_and_pings() -> void:
 	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
 	DamageSystem.inflict_fault(world, ME, &"engines", &"short", 1e6)
 	DamageSystem.reveal_fault_cause(world, ME, &"engines")
-	for seat: String in StationViews.CREW:
-		var view: NetViewState = _view(seat, "hard")
-		var st: Dictionary = view.blocks[S]
+	for seat: String in StationCatalogue.CREW:
+		var snap: SnapshotState = _view(seat, "hard")
+		var st: Dictionary = snap.blocks[S]
 		if seat == "engineering":
 			assert_float(st["shields"]).is_greater(0.0)
 		else:
 			assert_float(st["shields"]).override_failure_message(seat).is_equal(0.0)
-		if view.blocks.has(StationViews.Section.FEEDS):
-			var feeds: Dictionary = view.blocks[StationViews.Section.FEEDS]
+		if snap.blocks.has(StationCatalogue.Section.FEEDS):
+			var feeds: Dictionary = snap.blocks[StationCatalogue.Section.FEEDS]
 			assert_array(feeds["weak"]).is_empty()
 			assert_array(feeds["tracks"]).is_empty()
 			assert_array(feeds["windows"]).is_empty()
-		if view.blocks.has(StationViews.Section.ENGINEERING):
-			for row: Dictionary in view.blocks[StationViews.Section.ENGINEERING]["subsystems"]:
+		if snap.blocks.has(StationCatalogue.Section.ENGINEERING):
+			for row: Dictionary in snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"]:
 				assert_int(row["fault_cause"]).is_equal(0)
-		if view.blocks.has(StationViews.Section.RELAY) and seat != "relay":
-			assert_array(view.blocks[StationViews.Section.RELAY]["probes"]).is_empty()
-			assert_int(view.blocks[StationViews.Section.RELAY]["stock"]).is_equal(0)
+		if snap.blocks.has(StationCatalogue.Section.RELAY) and seat != "relay":
+			assert_array(snap.blocks[StationCatalogue.Section.RELAY]["probes"]).is_empty()
+			assert_int(snap.blocks[StationCatalogue.Section.RELAY]["stock"]).is_equal(0)
 	# Events: Science's work reaches Weapons and Engineering only through a toggle; scan
 	# positions are MARK items and reach Helm at every difficulty.
 	for code: String in ["normal", "hard"]:
@@ -340,23 +352,23 @@ func test_hard_leaks_only_marks_and_pings() -> void:
 # FT: FT-NET-009, FT-PAIR-005
 # Two toggle sets that filter alike share one encoded section; unlike ones don't.
 func test_equal_filters_share_a_section() -> void:
-	var b: SnapshotBuilder = SnapshotBuilder.new()
+	var b: SnapshotWriter = SnapshotWriter.new()
 	var keys: Array = [
-		StationViews.key(ME, "weapons", "easy"),
-		StationViews.key(ME, "weapons", "normal"),
-		StationViews.key(ME, "weapons", "hard"),
-		StationViews.key(ME, "helm", "easy"),
-		StationViews.key(ME, "science", "easy"),
+		StationCatalogue.key(ME, "weapons", "easy"),
+		StationCatalogue.key(ME, "weapons", "normal"),
+		StationCatalogue.key(ME, "weapons", "hard"),
+		StationCatalogue.key(ME, "helm", "easy"),
+		StationCatalogue.key(ME, "science", "easy"),
 	]
 	b.build(SimCopy.of(world), 1, keys)
-	assert_object(b.section(S, ME, ViewFilter.of("helm", "easy").signature(S))).is_same(
-		b.section(S, ME, ViewFilter.of("science", "easy").signature(S))
+	assert_object(b.section(S, ME, ShortcutFilter.of("helm", "easy").signature(S))).is_same(
+		b.section(S, ME, ShortcutFilter.of("science", "easy").signature(S))
 	)
-	assert_object(b.section(S, ME, ViewFilter.of("weapons", "hard").signature(S))).is_not_same(
-		b.section(S, ME, ViewFilter.of("weapons", "easy").signature(S))
+	assert_object(b.section(S, ME, ShortcutFilter.of("weapons", "hard").signature(S))).is_not_same(
+		b.section(S, ME, ShortcutFilter.of("weapons", "easy").signature(S))
 	)
 	# A malformed code in a key reads as the default set, never a crash.
-	var bad: String = StationViews.key(ME, "weapons", "extreme")
+	var bad: String = StationCatalogue.key(ME, "weapons", "extreme")
 	b.build(SimCopy.of(world), 2, [bad])
 	assert_bool(b.message(bad, true).size() > SnapshotReader.HEADER_BYTES).is_true()
 
@@ -367,24 +379,26 @@ func test_equal_filters_share_a_section() -> void:
 # own views and joint views holding it need no share, and a share without the toggle
 # delivers nothing.
 func test_a_shortcut_needs_its_toggle_and_a_share() -> void:
-	var code: String = ViewFilter.code_with("easy", [&"weak_points", &"routes"])
+	var code: String = ShortcutFilter.code_with("easy", [&"weak_points", &"routes"])
 	assert_str(code).is_equal("easy#routes,weak_points")
-	assert_str(ViewFilter.code_with("hard", [])).is_equal("hard")
-	var shared: ViewFilter = ViewFilter.of("weapons", code)
-	assert_bool(shared.grants(ViewFilter.WEAK_POINTS)).is_true()
-	assert_bool(shared.grants(ViewFilter.TRACK_FEEDS)).is_false()
-	assert_bool(ViewFilter.of("weapons", "easy").grants(ViewFilter.WEAK_POINTS)).is_false()
+	assert_str(ShortcutFilter.code_with("hard", [])).is_equal("hard")
+	var shared: ShortcutFilter = ShortcutFilter.of("weapons", code)
+	assert_bool(shared.grants(ShortcutFilter.WEAK_POINTS)).is_true()
+	assert_bool(shared.grants(ShortcutFilter.TRACK_FEEDS)).is_false()
+	assert_bool(ShortcutFilter.of("weapons", "easy").grants(ShortcutFilter.WEAK_POINTS)).is_false()
 	(
-		assert_bool(ViewFilter.of("weapons", "hard#weak_points").grants(ViewFilter.WEAK_POINTS))
+		assert_bool(
+			ShortcutFilter.of("weapons", "hard#weak_points").grants(ShortcutFilter.WEAK_POINTS)
+		)
 		. is_false()
 	)
-	assert_bool(ViewFilter.of("targeting", "hard").grants(ViewFilter.WEAK_POINTS)).is_true()
-	assert_bool(ViewFilter.of("science", "hard").grants(ViewFilter.WEAK_POINTS)).is_true()
-	assert_bool(ViewFilter.of("captain", "hard").grants(ViewFilter.TRACK_FEEDS)).is_true()
-	assert_object(ViewFilter.of("weapons", "nonsense#routes")).is_null()
+	assert_bool(ShortcutFilter.of("targeting", "hard").grants(ShortcutFilter.WEAK_POINTS)).is_true()
+	assert_bool(ShortcutFilter.of("science", "hard").grants(ShortcutFilter.WEAK_POINTS)).is_true()
+	assert_bool(ShortcutFilter.of("captain", "hard").grants(ShortcutFilter.TRACK_FEEDS)).is_true()
+	assert_object(ShortcutFilter.of("weapons", "nonsense#routes")).is_null()
 	# The shared set splits the encoded sections.
-	assert_str(shared.signature(StationViews.Section.FEEDS)).is_not_equal(
-		ViewFilter.of("weapons", "easy").signature(StationViews.Section.FEEDS)
+	assert_str(shared.signature(StationCatalogue.Section.FEEDS)).is_not_equal(
+		ShortcutFilter.of("weapons", "easy").signature(StationCatalogue.Section.FEEDS)
 	)
 
 
@@ -394,7 +408,7 @@ func test_a_shortcut_needs_its_toggle_and_a_share() -> void:
 func test_skipping_blanked_lists_changes_no_bytes() -> void:
 	KnowledgeSystem.step(world)
 	var features: Array = [
-		ViewFilter.WEAK_POINTS, ViewFilter.TRACK_FEEDS, ViewFilter.HAZARD_COUNTDOWNS
+		ShortcutFilter.WEAK_POINTS, ShortcutFilter.TRACK_FEEDS, ShortcutFilter.HAZARD_COUNTDOWNS
 	]
 	var codes: Array[String] = ["easy", "normal", "hard"]
 	for shared: Array in [[], features]:
@@ -402,13 +416,17 @@ func test_skipping_blanked_lists_changes_no_bytes() -> void:
 			for seat: String in [
 				"helm", "weapons", "tactical", "ops", "relay", "viewer", "captain"
 			]:
-				var filter: ViewFilter = ViewFilter.of(seat, ViewFilter.code_with(code, shared))
+				var filter: ShortcutFilter = ShortcutFilter.of(
+					seat, ShortcutFilter.code_with(code, shared)
+				)
 				if filter == null:
 					continue
-				for kind: int in [StationViews.Section.FEEDS, StationViews.Section.RELAY]:
+				for kind: int in [StationCatalogue.Section.FEEDS, StationCatalogue.Section.RELAY]:
 					var values: Dictionary = StationBlocks._block_values(kind, world, ME)
 					filter.apply(kind, values, world.defs[ME])
-					var want: PackedByteArray = NetBlock.encode(StationViews.BLOCKS[kind], values)
+					var want: PackedByteArray = NetBlock.encode(
+						StationCatalogue.BLOCKS[kind], values
+					)
 					(
 						assert_array(StationBlocks.block_bytes(kind, world, ME, filter))
 						. override_failure_message("%s %s %s %d" % [seat, code, shared, kind])

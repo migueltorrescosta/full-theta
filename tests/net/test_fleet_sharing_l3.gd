@@ -6,7 +6,7 @@ extends GdUnitTestSuite
 
 ## An NPC faction clear of the crew factions (GameRules.CREW_FACTIONS).
 const NPC_FACTION: int = 2
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 var h: NetHarness
 
@@ -25,7 +25,7 @@ func _session(mode: GameRules.Mode) -> Array[NetClient]:
 	var server: NetServer = h.fleet_server(mode, 2, [], true)
 	var out: Array[NetClient] = []
 	for ship: int in 2:
-		out.append(await h.joined(server, "all-%d" % ship, StationViews.ALL, ship))
+		out.append(await h.joined(server, "all-%d" % ship, StationCatalogue.ALL, ship))
 	for ship: int in 2:
 		out.append(await h.joined(server, "weapons-%d" % ship, "weapons", ship))
 	out[0].set_ready(true)
@@ -71,18 +71,18 @@ func _flag(server: NetServer, faction: int, npc: int) -> void:
 
 
 func _flags(c: NetClient) -> Array:
-	return c.view.blocks.get(S.FEEDS, {}).get("flags", [])
+	return c.snap.blocks.get(S.FEEDS, {}).get("flags", [])
 
 
 ## Puts the session on Easy with P9 (contract flags) shared, as Comms' press does, and waits for
 ## its next full view (test_contract_flags_l3.gd).
 func _granted(server: NetServer, c: NetClient) -> bool:
 	var s: NetSession = h.session_of(server, c)
-	var fulls: int = c.view.full_count
+	var fulls: int = c.snap.full_count
 	s.toggles = "easy"
-	s.shares = [ViewFilter.CONTRACT_FLAGS]
-	server.transport.set_view(s.id, s.view_key())
-	return await h.until(func() -> bool: return c.view.full_count > fulls)
+	s.shares = [ShortcutFilter.CONTRACT_FLAGS]
+	server.transport.set_stream_key(s.id, s.stream_key())
+	return await h.until(func() -> bool: return c.snap.full_count > fulls)
 
 
 ## Places a mark on the NPC from ship 0 and returns ship 0's marks event.
@@ -112,11 +112,11 @@ func test_allies_share_contacts_and_callsigns_not_marks() -> void:
 	var server: NetServer = _server()
 	var npc: int = await _npc(server)
 	var same: Callable = func() -> bool:
-		return crews[0].view.callsign(npc) != "" and crews[1].view.callsign(npc) != ""
+		return crews[0].snap.callsign(npc) != "" and crews[1].snap.callsign(npc) != ""
 	assert_bool(await h.until(same)).is_true()
-	assert_str(crews[1].view.callsign(npc)).is_equal(crews[0].view.callsign(npc))
+	assert_str(crews[1].snap.callsign(npc)).is_equal(crews[0].snap.callsign(npc))
 	var callsign: String = KnowledgeSystem.callsign(server.world, server.world.faction_of(0), npc)
-	assert_str(crews[0].view.callsign(npc)).is_equal(callsign)
+	assert_str(crews[0].snap.callsign(npc)).is_equal(callsign)
 	var from: int = h.mark(crews[1])
 	var slot: int = _slot_of(await _mark(crews[0], npc), npc)
 	assert_int(slot).is_greater_equal(0)
@@ -167,12 +167,12 @@ func test_pvp_ships_use_only_their_own_knowledge_and_marks() -> void:
 		assert_bool(await _granted(server, c)).is_true()
 	var row: Array = [{"contact": npc, "flag": KnowledgeTable.Flag.DISABLE}]
 	assert_bool(await h.until(func() -> bool: return _flags(crews[2]) == row)).is_true()
-	var known: Callable = func() -> bool: return crews[3].view.callsign(far) != ""
+	var known: Callable = func() -> bool: return crews[3].snap.callsign(far) != ""
 	assert_bool(await h.until(known)).is_true()
 	await h.wait(300)
 	assert_array(_flags(crews[3])).is_empty()
 	var want: String = KnowledgeSystem.callsign(w, w.faction_of(1), far)
-	assert_str(crews[3].view.callsign(far)).is_equal(want)
+	assert_str(crews[3].snap.callsign(far)).is_equal(want)
 	var from: int = h.mark(crews[0])
 	var slot: int = _slot_of(await _mark(crews[0], npc), npc)
 	assert_int(slot).is_greater_equal(0)

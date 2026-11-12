@@ -7,7 +7,7 @@ extends RefCounted
 ## the command log records them and a lesson replays. Every verb returns whether it sent
 ## anything. The station of a verb is fixed by the verb, which is how a bot can never send
 ## a command of another station. With `record` on, each command is also kept in `sent` as
-## [tick, kind] (StationViews.station_of_command(kind) gives its station).
+## [tick, kind] (StationCatalogue.station_of_command(kind) gives its station).
 
 ## Whether verbs keep a record: [tick, kind] per command.
 var record: bool = false
@@ -62,8 +62,8 @@ func helm_speed(ship: int, throttle: float) -> bool:
 ## Selects `target` (when 0 or more) and holds the ship facing it, or approaching it.
 func helm_face(ship: int, target: int, approach: bool) -> bool:
 	if target >= 0:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.target_ship = target
+		var select: HelmSelectCommand = HelmSelectCommand.new()
+		select.contact = target
 		_send(ship, select)
 	var f: HelmInputCommand = HelmInputCommand.new()
 	f.face = true

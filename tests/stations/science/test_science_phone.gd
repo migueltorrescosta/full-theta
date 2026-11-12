@@ -36,9 +36,9 @@ func _screen(size: Vector2i, insets: Array, kind: String = "cards") -> StationSc
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("science", SETTINGS)
-	for s: String in StationViews.CREW:
+	for s: String in StationCatalogue.CREW:
 		ctx.settings.mark_hint_seen(s)
-	ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(kind)
+	ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block(kind)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	_vp.add_child(s)
@@ -214,7 +214,7 @@ func test_scan_minigame_title_and_buttons() -> void:
 	PhoneReach.tap(p.phone.cancel)
 	assert_int(_cmds(s, "science_cancel").size()).is_equal(1)
 	# The minigame ends: the tabs come back on the page it started on.
-	s.ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block("cards")
+	s.ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block("cards")
 	await _frames(2)
 	assert_str(p.pages.minigame_title).is_empty()
 	assert_bool(p._list.is_visible_in_tree()).is_true()

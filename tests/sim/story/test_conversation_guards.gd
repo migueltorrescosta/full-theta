@@ -24,7 +24,7 @@ func _answer(w: SimWorld, ship: int, card: int) -> bool:
 
 func _contract(w: SimWorld, requires_docked: bool = false) -> int:
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"conv.escort_contract")
-	spec.target = 1
+	spec.subject = 1
 	spec.requires_docked = requires_docked
 	spec.site = SITE if requires_docked else -1
 	return StoryFixture.post(w, 0, spec)
@@ -67,7 +67,7 @@ func test_repeated_hails_draw_the_bluff_call_once() -> void:
 	var last: float = 0.0
 	for round: int in 3:
 		var hail: HailCommand = HailCommand.new()
-		hail.target = 1
+		hail.contact = 1
 		assert_bool(StoryFixture.run(w, 0, hail)).is_true()
 		Story.learn_fact(w, BLUE, 1, "cargo")
 		assert_bool(_reply(w, 0, round, &"o3")).is_true()
@@ -88,17 +88,17 @@ func test_repeated_hails_draw_the_bluff_call_once() -> void:
 func test_declining_closes_an_answered_hail() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	var hail: HailCommand = HailCommand.new()
-	hail.target = 1
+	hail.contact = 1
 	assert_bool(StoryFixture.run(w, 0, hail)).is_true()
 	var again: HailCommand = HailCommand.new()
-	again.target = 1
+	again.contact = 1
 	assert_bool(StoryFixture.run(w, 0, again)).is_false()
 	var close: DeclineCardCommand = DeclineCardCommand.new()
 	close.card = 0
 	assert_bool(StoryFixture.run(w, 0, close)).is_true()
 	assert_int(w.story.state[0]).is_equal(StoryTable.State.DONE)
 	var third: HailCommand = HailCommand.new()
-	third.target = 1
+	third.contact = 1
 	assert_bool(StoryFixture.run(w, 0, third)).is_true()
 
 
@@ -139,7 +139,7 @@ func test_early_dock_does_not_fail_a_later_clearance() -> void:
 func test_malformed_cards_are_rejected() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	var flag: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER)
-	flag.target_flag = 9
+	flag.subject_flag = 9
 	assert_bool(StoryFixture.run(w, 0, flag)).is_false()
 	var pips: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER)
 	pips.needs_pips = 2
@@ -218,7 +218,7 @@ func test_a_refused_accept_applies_no_earlier_effect() -> void:
 		}
 	}
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"conv.effects_first")
-	spec.target = 1
+	spec.subject = 1
 	spec.requires_docked = true
 	spec.site = SITE
 	var card: int = StoryFixture.post(w, 0, spec)

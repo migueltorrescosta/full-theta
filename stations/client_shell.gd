@@ -45,7 +45,7 @@ const MAX_SCREENS: int = 4
 ## A frame longer than this (µs) is reported to the server.
 const LONG_FRAME_US: int = 500_000
 ## Strand T's tips (shown on the loading overlay when the file exists).
-const TIPS_VIEW: String = "res://presentation/tips_view.gd"
+const TIPS_PANEL: String = "res://presentation/tips_panel.gd"
 
 var ctx: StationContext = StationContext.new()
 var voice: VoicePlayer
@@ -163,10 +163,10 @@ func _process(_delta: float) -> void:
 	for e: Dictionary in client.take_events():
 		if not voice.handle_event(e):
 			ctx.crew.handle_event(e, now)
-	ctx.view = client.view
-	if ctx.view.seq != _last_seq and ctx.view.seq >= 0:
-		_last_seq = ctx.view.seq
-		ctx.interp.push(ctx.view, now)
+	ctx.snap = client.snap
+	if ctx.snap.seq != _last_seq and ctx.snap.seq >= 0:
+		_last_seq = ctx.snap.seq
+		ctx.interp.push(ctx.snap, now)
 	ctx.interp.update(now)
 	_show_subtitles()
 	if _loading.visible and _pending == "":
@@ -452,8 +452,8 @@ func _build_loading() -> void:
 	_loading_name.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_loading_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_loading.add_child(_loading_name)
-	if ResourceLoader.exists(TIPS_VIEW):
-		var tips: Control = (load(TIPS_VIEW) as GDScript).new() as Control
+	if ResourceLoader.exists(TIPS_PANEL):
+		var tips: Control = (load(TIPS_PANEL) as GDScript).new() as Control
 		if tips != null:
 			tips.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			_loading.add_child(tips)

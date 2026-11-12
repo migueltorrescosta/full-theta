@@ -231,7 +231,7 @@ func _dot(station: String) -> Label:
 	var d: Label = Label.new()
 	d.name = "Dot"
 	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	d.text = tr(StationViews.name_key(station)).left(1)
+	d.text = tr(StationCatalogue.name_key(station)).left(1)
 	d.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	d.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	d.custom_minimum_size = Vector2(26, 26)
@@ -245,8 +245,8 @@ func _dot(station: String) -> Label:
 
 func _fill(card_button: Button, station: String, done: bool) -> void:
 	var col: Control = card_button.get_node("Pad").get_child(0)
-	(col.get_node("Head/Dot") as Label).text = tr(StationViews.name_key(station)).left(1)
-	(col.get_node("Head/Name") as Label).text = tr(StationViews.name_key(station))
+	(col.get_node("Head/Dot") as Label).text = tr(StationCatalogue.name_key(station)).left(1)
+	(col.get_node("Head/Name") as Label).text = tr(StationCatalogue.name_key(station))
 	(col.get_node("Head/Tick") as Label).text = "✓" if done else ""
 	(col.get_node("Blurb") as Label).text = tr("train.blurb." + station)
 	(col.get_node("Size") as Label).text = tr("train.picker.steps") % steps.get(station, 0)

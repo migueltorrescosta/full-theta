@@ -1,7 +1,7 @@
 extends HelmSuite
 ## Helm actions on KB/M and controller (T051): chase camera, face, Align, all-stop,
 ## approach, decoupled, shield faces and track, the radial, and when helm_input and
-## helm_select_target are sent.
+## helm_select are sent.
 
 
 # FT: FT-HLM-002
@@ -44,7 +44,7 @@ func test_align_needs_a_selection_then_sends_the_target_and_align() -> void:
 	assert_array(toasts).contains(["toast.select_first"])
 	_ctx().crew.select("contact", StationFixture.H2)
 	_tap_key("L")
-	assert_int(_cmds("helm_select_target").back()["target_ship"]).is_equal(StationFixture.H2)
+	assert_int(_cmds("helm_select").back()["contact"]).is_equal(StationFixture.H2)
 	assert_int(_cmds("helm_align").size()).is_equal(1)
 	# A second press also faces it (the sim's stage); controller through the radial.
 	_radial("align")
@@ -68,7 +68,7 @@ func test_hold_to_approach_on_x_and_pad_b() -> void:
 	_key("X")
 	_frame()
 	assert_bool(_cmds("helm_input").back()["approach"]).is_true()
-	assert_bool(_cmds("helm_select_target").back()["point"]).is_true()
+	assert_bool(_cmds("helm_select").back()["point"]).is_true()
 	_key("X", false)
 	_frame()
 	assert_bool(_cmds("helm_input").back()["approach"]).is_false()
@@ -84,7 +84,7 @@ func test_hold_to_approach_on_x_and_pad_b() -> void:
 func test_decoupled_from_tab_and_the_radial_sends_the_new_state() -> void:
 	_tap_key("Tab")
 	assert_bool(_cmds("helm_decoupled").back()["decoupled"]).is_true()
-	_ctx().view.blocks[StationViews.Section.HELM]["decoupled"] = true
+	_ctx().snap.blocks[StationCatalogue.Section.HELM]["decoupled"] = true
 	_radial("decoupled")
 	assert_bool(_cmds("helm_decoupled").back()["decoupled"]).is_false()
 
@@ -110,7 +110,7 @@ func test_six_face_snap_on_numpad_and_d_pad() -> void:
 
 # FT: FT-HLM-010
 func test_shield_track_follows_the_selected_contact_and_toggles_off() -> void:
-	var h: Dictionary = _ctx().view.blocks[StationViews.Section.HELM]
+	var h: Dictionary = _ctx().snap.blocks[StationCatalogue.Section.HELM]
 	# Tracking H2 already: G stops tracking and keeps the direction.
 	_tap_key("G")
 	var off: Dictionary = _cmds("set_shield_focus").back()
@@ -155,17 +155,17 @@ func test_selection_changes_send_helm_select_target_once() -> void:
 	ctx.crew.select("contact", StationFixture.U3)
 	_frame()
 	_frame()
-	assert_int(_cmds("helm_select_target").size()).is_equal(1)
+	assert_int(_cmds("helm_select").size()).is_equal(1)
 	ctx.crew.select("mark", StationFixture.BRAVO_SLOT)
 	_frame()
-	var t: Dictionary = _cmds("helm_select_target").back()
+	var t: Dictionary = _cmds("helm_select").back()
 	var pos: Vector3 = ctx.crew.mark_in_slot(StationFixture.BRAVO_SLOT)["pos"]
-	assert_int(t["target_ship"]).is_equal(-1)
+	assert_int(t["contact"]).is_equal(-1)
 	assert_vector(Vector3(t["x"], t["y"], t["z"])).is_equal(pos)
 	ctx.crew.select("", -1)
 	_frame()
-	assert_bool(_cmds("helm_select_target").back()["point"]).is_false()
-	assert_int(_cmds("helm_select_target").size()).is_equal(3)
+	assert_bool(_cmds("helm_select").back()["point"]).is_false()
+	assert_int(_cmds("helm_select").size()).is_equal(3)
 
 
 # FT: FT-HLM-013, FT-HLM-017

@@ -2,15 +2,15 @@ class_name StationContext
 extends RefCounted
 ## Everything a station screen and its panels read and send through, built once per
 ## connection by ClientShell (or by tests/stations/station_fixture.gd with no server):
-## the snapshot view and its interpolation, the CrewState model, the send seam, the
+## the snapshot state and its interpolation, the CrewState model, the send seam, the
 ## player's settings and bindings, the input matcher and a clock.
 
 ## The connected client, or null in fixtures. Panels send through `intents`, not this.
 var client: NetClient = null
 var intents: ShipIntents = ShipIntents.new()
 var crew: CrewState = CrewState.new()
-## Snapshot state (NetClient.view, or a fixture's).
-var view: NetViewState = NetViewState.new()
+## Snapshot state (NetClient.snap, or a fixture's).
+var snap: SnapshotState = SnapshotState.new()
 var interp: SnapshotInterpolator = SnapshotInterpolator.new()
 var settings: ClientSettings = ClientSettings.new()
 ## The host's own server: the address it listens on and its WebSocket port, for the
@@ -49,7 +49,7 @@ func picture() -> ContactPicture:
 		crew.marks.hash(),
 		crew.pings.hash(),
 		crew.zones.hash(),
-		view.sites.hash(),
+		snap.sites.hash(),
 	]
 	if _picture == null or _picture.interp != interp or key != _picture_key:
 		_picture = ContactPicture.build(self)
@@ -59,7 +59,7 @@ func picture() -> ContactPicture:
 
 ## The translated name of a named site the faction knows, "" when it doesn't (FT-SPA-027).
 func site_name(site: int) -> String:
-	for row: Dictionary in view.sites:
+	for row: Dictionary in snap.sites:
 		if row["id"] == site:
 			return String(TranslationServer.translate(StringName(row["name_key"])))
 	return ""
@@ -81,7 +81,7 @@ func ship_def() -> ShipDef:
 ## Pips the reactor can feed now: the STATUS block's pip_cap (lower while the reactor is
 ## damaged), else the ship's nominal reactor_pips before the first snapshot; 0 without a ship.
 func pip_cap() -> int:
-	var status: Dictionary = view.blocks.get(StationViews.Section.STATUS, {})
+	var status: Dictionary = snap.blocks.get(StationCatalogue.Section.STATUS, {})
 	if status.has("pip_cap"):
 		return int(status["pip_cap"])
 	var def: ShipDef = ship_def()
@@ -151,7 +151,7 @@ func zone_position(id: int) -> Variant:
 	if id >= 0:
 		var z: Dictionary = crew.zone_by_id(id)
 		return null if z.is_empty() else z["pos"]
-	var relay: Dictionary = view.blocks.get(StationViews.Section.RELAY, {})
+	var relay: Dictionary = snap.blocks.get(StationCatalogue.Section.RELAY, {})
 	if id <= -1000:
 		for h: Dictionary in relay.get("hazards", []):
 			if -1000 - int(h["id"]) == id:

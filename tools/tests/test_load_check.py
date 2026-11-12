@@ -148,7 +148,7 @@ def test_stalls_fail(tmp_path: Path) -> None:
     assert _fails(tmp_path, "probe.json", _stall)
 
 
-def test_more_messages_than_view_keys_fail(tmp_path: Path) -> None:
+def test_more_messages_than_stream_keys_fail(tmp_path: Path) -> None:
     assert _fails(tmp_path, "probe.json", _two_messages_per_key)
 
 

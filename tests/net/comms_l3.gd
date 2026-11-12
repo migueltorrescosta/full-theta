@@ -5,7 +5,7 @@ extends RefCounted
 
 const PLAYER: int = NetHarness.PLAYER
 const ENEMY: int = NetHarness.ENEMY
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 
 ## Wires the server's world (conversations, markets, modules), gives the ship credits, docks
@@ -47,7 +47,7 @@ static func verdict(h: NetHarness, server: NetServer, c: NetClient, cmd: Diction
 
 ## The client's COMMS block, or {}.
 static func block(c: NetClient) -> Dictionary:
-	return c.view.blocks.get(S.COMMS, {})
+	return c.snap.blocks.get(S.COMMS, {})
 
 
 ## The card row with that id in the client's COMMS block, or {}.

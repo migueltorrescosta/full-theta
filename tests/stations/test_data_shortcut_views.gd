@@ -106,7 +106,7 @@ func test_weapons_lists_the_feeds_of_the_selected_target() -> void:
 	assert_array(WeaponsReadout.feed_lines(panel)).is_empty()
 	var raider: ShipDef = TestDefs.raider()
 	var kind: StringName = panel.weapon_of(panel.mount).damage_type
-	ctx.view.blocks[StationViews.Section.FEEDS] = {
+	ctx.snap.blocks[StationCatalogue.Section.FEEDS] = {
 		"weak":
 		[
 			{
@@ -196,7 +196,7 @@ func test_engineering_countdown_uses_the_sim_hazard_forecast() -> void:
 	var etas: Dictionary = {}
 	for code: String in ["easy", "hard"]:
 		var ctx: StationContext = _ctx("engineering", code)
-		ctx.view.blocks[StationViews.Section.RELAY] = {
+		ctx.snap.blocks[StationCatalogue.Section.RELAY] = {
 			"hazards": [{"eta": 31.0}, {"eta": 7.5}, {"eta": -1.0}]
 		}
 		var s: StationScreen = auto_free(StationScreen.new())

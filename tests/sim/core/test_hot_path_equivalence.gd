@@ -50,8 +50,8 @@ func test_targeted_offset_equals_has_target_and_target_offset() -> void:
 		KnowledgeSystem.step(w)
 		for row: int in n:
 			var kind: int = rng.randi_range(0, 2)
-			w.helm.target_kind[row] = kind
-			w.helm.target_ship[row] = rng.randi_range(-1, n) if kind == 1 else -1
+			w.helm.sel_kind[row] = kind
+			w.helm.sel_contact[row] = rng.randi_range(-1, n) if kind == 1 else -1
 			w.helm.sel_x[row] = rng.randf_range(-99000, 99000)
 			w.helm.sel_y[row] = rng.randf_range(-99000, 99000)
 			w.helm.sel_z[row] = rng.randf_range(-99000, 99000)

@@ -84,11 +84,11 @@ static func helm(w: SimWorld, points: Array[Vector3]) -> void:
 		leg += 1
 	var p: Vector3 = points[leg]
 	if (
-		w.helm.target_kind[PLAYER] != HelmTable.Target.POINT
+		w.helm.sel_kind[PLAYER] != HelmTable.Selection.POINT
 		or w.helm.sel_z[PLAYER] != p.z
 		or w.helm.sel_x[PLAYER] != p.x
 	):
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.point = true
 		select.x = p.x
 		select.y = p.y

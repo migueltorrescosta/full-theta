@@ -111,7 +111,7 @@ func _ready() -> void:
 	if device != "":
 		_ctx.matcher.device = device
 	if science != "":
-		_ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(science)
+		_ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block(science)
 	if comms != "off":
 		CommsFixture.install(_ctx)
 	if tooltip:
@@ -153,7 +153,7 @@ func _ready() -> void:
 				{"seat": "weapons", "name": "Bo"},
 				{"seat": "systems", "name": "Cy"},
 			]
-			if entry == StationViews.ALL:
+			if entry == StationCatalogue.ALL:
 				# The dev seat covers every station and needs no other crew (FT-NET-029).
 				_ctx.crew.lobby[0]["uncovered"] = []
 				_ctx.crew.lobby[0]["ready"] = true

@@ -20,7 +20,7 @@ func after_test() -> void:
 
 func _crew(server: NetServer) -> Dictionary:
 	var out: Dictionary = {}
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		out[station] = await h.joined(server, station, station)
 	return out
 
@@ -92,7 +92,7 @@ func test_a_share_press_is_counted() -> void:
 	assert_bool(await h.until(shared.bind("p7", 1))).is_true()
 	(
 		assert_bool(
-			await h.until(func() -> bool: return weapons.shares.has(ViewFilter.WEAK_POINTS))
+			await h.until(func() -> bool: return weapons.shares.has(ShortcutFilter.WEAK_POINTS))
 		)
 		. is_true()
 	)

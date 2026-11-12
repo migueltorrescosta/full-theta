@@ -32,10 +32,10 @@ var reward: PackedInt32Array = PackedInt32Array()
 var rep_interaction: Array[StringName] = []
 ## The faction the reputation draws are with (-1: none).
 var rep_faction: PackedInt32Array = PackedInt32Array()
-## The contact ship the card is about (-1: none).
-var target: PackedInt32Array = PackedInt32Array()
-## KnowledgeTable.Flag the card puts on its target when accepted (0: none).
-var target_flag: PackedByteArray = PackedByteArray()
+## The card's subject, the contact ship it is about (-1: none; D397).
+var subject: PackedInt32Array = PackedInt32Array()
+## KnowledgeTable.Flag the card puts on its subject when accepted (0: none).
+var subject_flag: PackedByteArray = PackedByteArray()
 ## 1 if the card can be accepted only while docked (FT-MIS-036).
 var requires_docked: PackedByteArray = PackedByteArray()
 ## The site the card is tied to, for a market (-1: none).
@@ -78,8 +78,8 @@ func add_card(ship: int, faction: int, card_kind: Kind) -> int:
 	reward.append(0)
 	rep_interaction.append(NO_TEXT)
 	rep_faction.append(-1)
-	target.append(-1)
-	target_flag.append(0)
+	subject.append(-1)
+	subject_flag.append(0)
 	requires_docked.append(0)
 	site.append(-1)
 	verify.append(NO_TEXT)

@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_science_panel.cfg"
 const H2: int = StationFixture.H2
 const U3: int = StationFixture.U3
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 
 func before() -> void:
@@ -23,9 +23,9 @@ func after_test() -> void:
 ## class, intent, weak points, resistances and hack access revealed) and U3 barely seen.
 func _screen(block: Dictionary = {}, seat: String = "science") -> StationScreen:
 	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
-	for s: String in StationViews.CREW:
+	for s: String in StationCatalogue.CREW:
 		ctx.settings.mark_hint_seen(s)
-	ctx.view.blocks[S.SCIENCE] = _block(block)
+	ctx.snap.blocks[S.SCIENCE] = _block(block)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -37,7 +37,7 @@ func _screen(block: Dictionary = {}, seat: String = "science") -> StationScreen:
 
 
 func _block(over: Dictionary) -> Dictionary:
-	var b: Dictionary = ScienceView._empty()
+	var b: Dictionary = ScienceSection._empty()
 	b["cards"] = [
 		{
 			"contact": H2,
@@ -104,7 +104,7 @@ func _scan_block(truth: Vector3, axes: int) -> Dictionary:
 		cloud.append({"p": pose * v})
 	return {
 		"minigame": 1,
-		"minigame_target": H2,
+		"minigame_contact": H2,
 		"minigame_start": 10,
 		"minigame_noise": 0.33,
 		"axes": axes,
@@ -127,7 +127,7 @@ func _hack_block(node: int, known: int) -> Dictionary:
 		edges.append({"mask": mask if (known >> n) & 1 == 1 else 0})
 	return {
 		"minigame": 2,
-		"minigame_target": H2,
+		"minigame_contact": H2,
 		"minigame_start": 10,
 		"minigame_noise": 0.3,
 		"hack_cols": 5,
@@ -203,7 +203,7 @@ func test_list_selects_and_card_shows_parts_by_confidence() -> void:
 func test_controls_send_science_commands() -> void:
 	var s: StationScreen = await _screen()
 	var p: SciencePanel = _sci(s)
-	assert_str(p.claim_item()).is_equal(StationViews.CLAIM_SCAN)
+	assert_str(p.claim_item()).is_equal(StationCatalogue.CLAIM_SCAN)
 	s.ctx.crew.select("contact", H2)
 	assert_int(_cmds(s, "science_select").size()).is_equal(1)
 	assert_int(_cmds(s, "science_select")[0][1][0]["contact"]).is_equal(H2)
@@ -394,7 +394,7 @@ func _tap(c: Control, at: Vector2) -> void:
 func test_panel_start_sends_the_current_selection() -> void:
 	var ctx: StationContext = StationFixture.context("science", SETTINGS)
 	ctx.settings.mark_hint_seen("science")
-	ctx.view.blocks[S.SCIENCE] = _block({})
+	ctx.snap.blocks[S.SCIENCE] = _block({})
 	ctx.crew.select("contact", H2)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)

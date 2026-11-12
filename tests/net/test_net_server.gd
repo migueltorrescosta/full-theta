@@ -103,8 +103,8 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_int((c.catalogue["ships"] as Array).size()).is_equal(1)
 	var picked: Array[Dictionary] = _events_of(c.take_events(), NetProtocol.EVENT_PICKED)
 	assert_str(picked[0]["payload"]["reason"]).is_equal("")
-	assert_bool(c.view.blocks.has(StationViews.Section.HELM)).is_true()
-	assert_bool(c.view.blocks.has(StationViews.Section.ENGINEERING)).is_false()
+	assert_bool(c.snap.blocks.has(StationCatalogue.Section.HELM)).is_true()
+	assert_bool(c.snap.blocks.has(StationCatalogue.Section.ENGINEERING)).is_false()
 	# About 30 snapshots a second (wide band: 2 loaded cores).
 	var n0: int = c.stats["snapshots"]
 	var tick0: int = server.world.tick
@@ -115,11 +115,11 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_float(rate).is_between(20.0, 34.0)
 	assert_float(tick_rate).is_between(45.0, 66.0)
 	assert_float(rate / tick_rate).is_between(0.4, 0.6)
-	assert_int(c.view.rejected).is_equal(0)
+	assert_int(c.snap.rejected).is_equal(0)
 	# Commands up, state down.
 	c.helm(1.0)
 	var moving: Callable = func() -> bool:
-		return c.view.blocks[StationViews.Section.HELM]["throttle_setpoint"] > 0.0
+		return c.snap.blocks[StationCatalogue.Section.HELM]["throttle_setpoint"] > 0.0
 	assert_bool(await _until(moving)).is_true()
 	assert_int(server.game.rejections.size()).is_equal(0)
 
@@ -311,7 +311,7 @@ func test_stalled_reader_gets_one_full_snapshot_and_every_event() -> void:
 	assert_bool(await _until(func() -> bool: return slow.stats["fulls"] > fulls_before)).is_true()
 	await _wait(500)
 	assert_int(slow.stats["fulls"]).is_equal(fulls_before + 1)
-	assert_int(slow.view.rejected).is_equal(0)
+	assert_int(slow.snap.rejected).is_equal(0)
 	var got: Array[Dictionary] = slow.take_events()
 	assert_int(_events_of(got, &"fired").size()).is_equal(fired)
 	for i: int in range(1, got.size()):
@@ -344,21 +344,21 @@ func test_oversize_snapshot_and_voice_in_chunks_behind_snapshots() -> void:
 	var session: int = c.welcome["session"]
 	var voice: Dictionary = {"clip": 7, "rate": 22050, "pcm": pcm, "part": 0, "last": true}
 	server.transport.post_voice(session, NetProtocol.encode(NetProtocol.Type.VOICE, voice))
-	server.transport.set_view(session, StationViews.key(PLAYER, "viewer"))
+	server.transport.set_stream_key(session, StationCatalogue.key(PLAYER, "viewer"))
 	assert_bool(await _until(func() -> bool: return c.stats["voice"] == 1)).is_true()
 	assert_bool(c.voice_clips[0]["pcm"] == pcm).is_true()
 	var order: PackedByteArray = c.arrivals.slice(arrived_before)
 	var voice_at: int = order.find(NetChunker.STREAM_VOICE)
 	assert_int(order.slice(0, voice_at).count(NetChunker.STREAM_SNAPSHOT)).is_greater_equal(2)
 	assert_int(c.stats["fulls"]).is_equal(2)
-	assert_int(c.view.rejected).is_equal(0)
+	assert_int(c.snap.rejected).is_equal(0)
 	var mine: Dictionary = _conn_of(server.transport.stats(), session)
 	assert_int(mine["ws_messages"]).is_greater(0)
 	assert_int(c._chunker.errors).is_equal(0)
 
 
 # FT: FT-NET-040
-# Each snapshot is encoded once per distinct view key, not once per client, and every
+# Each snapshot is encoded once per distinct stream key, not once per client, and every
 # client of a key gets the same bytes; different keys get different messages.
 func test_encode_once_per_view_key() -> void:
 	var server: NetServer = _server()
@@ -415,7 +415,7 @@ func test_resume_by_token_and_host_secret() -> void:
 	assert_str(c.token).is_equal(token)
 	assert_int(c.session_id).is_equal(first)
 	assert_str(c.welcome["seat"]).is_equal("engineering")
-	assert_bool(c.view.blocks.has(StationViews.Section.ENGINEERING)).is_true()
+	assert_bool(c.snap.blocks.has(StationCatalogue.Section.ENGINEERING)).is_true()
 	var guest: NetClient = _client(server, "guest")
 	guest.host_secret = "wrong"
 	assert_bool(await _until(guest.is_welcomed)).is_true()
@@ -430,14 +430,14 @@ func test_unappliable_snapshot_gets_one_full_snapshot() -> void:
 	var c: NetClient = await _joined(server, "c", "helm")
 	await _wait(300)
 	var fulls: int = c.stats["fulls"]
-	c.view.seq -= 3
+	c.snap.seq -= 3
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] > fulls)).is_true()
 	var deltas: int = c.stats["snapshots"]
 	await _wait(500)
 	assert_int(c.stats["fulls"]).is_equal(fulls + 1)
 	assert_int(c.stats["snapshots"]).is_greater(deltas + 5)
-	assert_bool(c.view.need_full).is_false()
-	assert_int(c.view.rejected).is_greater_equal(1)
+	assert_bool(c.snap.need_full).is_false()
+	assert_int(c.snap.rejected).is_greater_equal(1)
 	assert_int(_conn_of(server.transport.stats(), c.session_id)["stalls"]).is_equal(0)
 
 
@@ -517,7 +517,7 @@ func test_lobby_requests_are_rate_limited() -> void:
 
 
 # FT: FT-NET-037
-# A client without a view key gets no snapshots, so no stall policy: when more than
+# A client without a stream key gets no snapshots, so no stall policy: when more than
 # QUEUED_LIMIT piles up for it, the server closes it at once (code 4004); its session
 # waits for a rejoin. The loopback sockets absorb a varying amount first (#27: 6 blobs
 # once stayed under the limit), so the test keeps queueing until the close, up to 16 MB.
@@ -602,5 +602,5 @@ func test_idle_server_snapshots_only_with_a_pick() -> void:
 	var n0: int = c.stats["snapshots"]
 	await _wait(1000)
 	assert_int(c.stats["snapshots"] - n0).is_between(15, 34)
-	assert_int(c.view.tick).is_equal(server.world.tick)
-	assert_int(c.view.rejected).is_equal(0)
+	assert_int(c.snap.tick).is_equal(server.world.tick)
+	assert_int(c.snap.rejected).is_equal(0)

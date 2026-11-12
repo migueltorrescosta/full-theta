@@ -292,7 +292,7 @@ func show_state(
 	var names: PackedStringArray = []
 	for s: Variant in stations:
 		var star: bool = stations.size() > 1 and str(s) == focused
-		names.append(tr(StationViews.name_key(str(s))) + ("*" if star else ""))
+		names.append(tr(StationCatalogue.name_key(str(s))) + ("*" if star else ""))
 	_stations.text = " + ".join(names)
 	var secs: int = int(mission_s)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]

@@ -10,7 +10,7 @@ extends RefCounted
 ##   the surface when the front sets off is not hit.
 ## Nothing here is random: the geometry is a function of the tick, so a replay agrees.
 ## A faction knows of a hazard when its sensors reach the hazard's surface (detect_range) or
-## a deployed probe's bubble does (known_to); HazardView shows those to Relay and
+## a deployed probe's bubble does (known_to); HazardRows shows those to Relay and
 ## Engineering. Events: &"hazard_hit" (ship; value = energy, tag = hazard id).
 
 ## Subsystem damage of a zone is applied every this many ticks.
@@ -121,10 +121,10 @@ static func _zone(world: SimWorld, ship: int, h: HazardDef) -> void:
 		world.kin.vel[ship] *= 1.0 - h.drag * SimWorld.DT
 	if h.damage_w <= 0.0:
 		return
-	if h.targets.is_empty():
+	if h.subsystems.is_empty():
 		DamageSystem.damage_hull(world, ship, h.damage_w * SimWorld.DT)
 	elif world.tick % DAMAGE_EVERY == 0:
-		_damage_targets(world, ship, h.damage_w * SimWorld.DT * DAMAGE_EVERY, h)
+		_damage_subsystems(world, ship, h.damage_w * SimWorld.DT * DAMAGE_EVERY, h)
 
 
 static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -> void:
@@ -146,15 +146,15 @@ static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -
 	if first_look:
 		return
 	world.emit(&"hazard_hit", ship, -1, h.hit_j, Vector3.ZERO, h.id)
-	if h.targets.is_empty():
+	if h.subsystems.is_empty():
 		DamageSystem.damage_hull(world, ship, h.hit_j)
 	else:
-		_damage_targets(world, ship, h.hit_j, h)
+		_damage_subsystems(world, ship, h.hit_j, h)
 
 
-static func _damage_targets(world: SimWorld, ship: int, energy: float, h: HazardDef) -> void:
+static func _damage_subsystems(world: SimWorld, ship: int, energy: float, h: HazardDef) -> void:
 	var subs: Array[SubsystemDef] = world.defs[ship].subsystems
-	for id: StringName in h.targets:
+	for id: StringName in h.subsystems:
 		for k: int in subs.size():
 			if subs[k].id == id:
 				DamageSystem.damage_subsystem(world, ship, k, energy)

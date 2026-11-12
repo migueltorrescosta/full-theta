@@ -252,7 +252,7 @@ func test_fire_says_why_it_cannot_shoot() -> void:
 	_panel().step(0.016)
 	assert_str(fire.text).is_equal("FIRE")
 	assert_int(fire.role).is_equal(RailButton.Role.DANGER)
-	var mount: Dictionary = _screen.ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0]
+	var mount: Dictionary = _screen.ctx.snap.blocks[StationCatalogue.Section.MOUNTS]["mounts"][0]
 	mount["heat"] = 40.0
 	_panel().step(0.016)
 	assert_str(fire.text).is_equal("FIRE\nhot")

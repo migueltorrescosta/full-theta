@@ -87,7 +87,7 @@ static func helm(w: SimWorld) -> void:
 		return
 	var inside: bool = at_mark(w)
 	if w.tick == 2:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.ship_id = PLAYER
 		select.point = true
 		select.x = t.scan_x[PLAYER]

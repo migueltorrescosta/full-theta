@@ -1,4 +1,4 @@
-class_name SayTarget
+class_name LineAudience
 extends RefCounted
 ## Who hears a ScenarioApi.message line (FT-AUD-005, FT-AUD-006): an NPC's line to a
 ## ship, or the ship computer's line to some stations of a ship. Plain values.
@@ -12,16 +12,16 @@ var stations: PackedStringArray = PackedStringArray()
 
 
 ## An NPC's line, heard on `ship`.
-static func npc(npc_name: StringName, to_ship: int) -> SayTarget:
-	var t: SayTarget = SayTarget.new()
+static func npc(npc_name: StringName, to_ship: int) -> LineAudience:
+	var t: LineAudience = LineAudience.new()
 	t.npc_id = npc_name
 	t.ship = to_ship
 	return t
 
 
 ## The ship computer's line on `ship` for the given stations.
-static func computer(to_ship: int, to_stations: PackedStringArray) -> SayTarget:
-	var t: SayTarget = SayTarget.new()
+static func computer(to_ship: int, to_stations: PackedStringArray) -> LineAudience:
+	var t: LineAudience = LineAudience.new()
 	t.ship = to_ship
 	t.stations = to_stations
 	return t

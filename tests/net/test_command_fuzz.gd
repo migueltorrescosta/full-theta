@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## A fuzz of every station command field through the command gate and the sim (#45 B2,
 ## R11-5): extreme and wrongly typed values for each field of each kind in
-## StationViews.STATION_COMMANDS are either refused with a known reason or applied without
+## StationCatalogue.STATION_COMMANDS are either refused with a known reason or applied without
 ## breaking the world.
 
 const PLAYER: int = NetHarness.PLAYER
@@ -70,10 +70,10 @@ func test_every_station_command_field_survives_extreme_values() -> void:
 	var tried: int = 0
 	var accepted: int = 0
 	var problems: Array[String] = []
-	for station: String in StationViews.STATION_COMMANDS:
+	for station: String in StationCatalogue.STATION_COMMANDS:
 		var seat: String = station
 		var session: NetSession = _session(seat)
-		for kind: StringName in StationViews.STATION_COMMANDS[station]:
+		for kind: StringName in StationCatalogue.STATION_COMMANDS[station]:
 			var template: Dictionary = SimCommands.make(kind).to_dict()
 			# Next names the seat that presses it.
 			var base: Dictionary = {"kind": kind}

@@ -14,7 +14,7 @@ const MAX_ROWS: int = 32
 
 
 func _init(faction: int) -> void:
-	super(StationViews.Section.SITES, faction)
+	super(StationCatalogue.Section.SITES, faction)
 
 
 func update(world: SimWorld) -> PackedByteArray:

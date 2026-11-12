@@ -14,11 +14,11 @@ var client_kind: String = ""
 var conn: int = -1
 ## Wall-clock time of the last disconnect (us), outside sim/ (FT-NET-033).
 var dropped_us: int = 0
-## Picked ship and seat (StationViews), or -1 / "" on the pick screen.
+## Picked ship and seat (StationCatalogue), or -1 / "" on the pick screen.
 var ship: int = -1
 var seat: String = ""
-## Difficulty-toggle set of the view key (D14, D69); one set for M1.
-var toggles: String = StationViews.DEFAULT_TOGGLES
+## Difficulty-toggle set of the stream key (D14, D69); one set for M1.
+var toggles: String = StationCatalogue.DEFAULT_TOGGLES
 ## The shortcuts shared to the session's ship that haven't expired (NetShares, D210).
 var shares: Array[StringName] = []
 ## The grace period ended: pick and claims were released; last_* remember them for a
@@ -51,7 +51,7 @@ func has_pick() -> bool:
 
 ## Holds a crew pick: a station, not the Captain seat or a viewer (R06-11).
 func is_crew() -> bool:
-	return has_pick() and StationViews.is_crew(seat)
+	return has_pick() and StationCatalogue.is_crew(seat)
 
 
 ## Holds the Relay seat (alone or with other stations).
@@ -69,12 +69,12 @@ func is_live_crew() -> bool:
 	return connected() and is_crew()
 
 
-## The view key the snapshot builder encodes for this session, or "" without a pick.
-func view_key() -> String:
-	return StationViews.key(ship, seat, view_code()) if has_pick() else ""
+## The stream key the snapshot builder encodes for this session, or "" without a pick.
+func stream_key() -> String:
+	return StationCatalogue.key(ship, seat, stream_code()) if has_pick() else ""
 
 
 ## The toggle code the view filters by: the toggles and the shortcuts shared so far
-## (ViewFilter.of).
-func view_code() -> String:
-	return ViewFilter.code_with(toggles, shares)
+## (ShortcutFilter.of).
+func stream_code() -> String:
+	return ShortcutFilter.code_with(toggles, shares)

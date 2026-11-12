@@ -1,17 +1,17 @@
 class_name BlockSection
 extends SnapshotSection
 ## A per-ship block of fields (Section.STATUS, HELM, ENGINEERING, MOUNTS) whose field
-## set is StationViews.BLOCKS[kind]. Sent whole when any field's encoding changed, else
+## set is StationCatalogue.BLOCKS[kind]. Sent whole when any field's encoding changed, else
 ## omitted from the delta.
 
 ## What the section's view may carry of other stations' data, or null for everything
-## (ViewFilter; sections of a filtered kind exist once per filter signature).
-var filter: ViewFilter = null
+## (ShortcutFilter; sections of a filtered kind exist once per filter signature).
+var filter: ShortcutFilter = null
 
 
-func _init(section_kind: int, owner_id: int, view_filter: ViewFilter = null) -> void:
+func _init(section_kind: int, owner_id: int, shortcut_filter: ShortcutFilter = null) -> void:
 	super(section_kind, owner_id)
-	filter = view_filter
+	filter = shortcut_filter
 
 
 func update(world: SimWorld) -> PackedByteArray:

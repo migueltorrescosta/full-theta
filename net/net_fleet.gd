@@ -195,17 +195,17 @@ func press_start(s: NetSession) -> Array[int]:
 ## would fail coverage (BREAKS_COVERAGE).
 func takeover_rule(s: NetSession, ship: int, seat: String, uncovered: Array) -> String:
 	var world: SimWorld = game.world
-	if not StationViews.is_seat(seat, game.dev_all) or not StationViews.is_crew(seat):
+	if not StationCatalogue.is_seat(seat, game.dev_all) or not StationCatalogue.is_crew(seat):
 		return NetGame.BAD_PICK
 	if s.ship == ship:
-		if s.seat != StationViews.CAPTAIN and s.seat != StationViews.VIEWER:
+		if s.seat != StationCatalogue.CAPTAIN and s.seat != StationCatalogue.VIEWER:
 			return CommandGate.NOT_ALLOWED
 	elif not s.has_pick():
 		return CommandGate.NOT_ALLOWED
 	elif world.faction_of(s.ship) != world.faction_of(ship):
 		return FleetMessages.ENEMY_SHIP
 	var covers: bool = false
-	for station: String in StationViews.stations_of(seat):
+	for station: String in StationCatalogue.stations_of(seat):
 		covers = covers or uncovered.has(station)
 	if not covers:
 		return FleetMessages.TAKEN
@@ -215,7 +215,7 @@ func takeover_rule(s: NetSession, ship: int, seat: String, uncovered: Array) -> 
 ## BREAKS_COVERAGE when a crew player leaving their own ship in play for `ship` would make it
 ## fail the coverage check it passes now (FT-NET-042), else "".
 func _leave_rule(s: NetSession, ship: int) -> String:
-	if s.ship == ship or not StationViews.is_crew(s.seat) or not game.lobby.in_play(s.ship):
+	if s.ship == ship or not StationCatalogue.is_crew(s.seat) or not game.lobby.in_play(s.ship):
 		return ""
 	var seats: Array = game.lobby.seats_of(s.ship)
 	if NetCoverage.breaks(seats, game.lobby.min_crew(), s.seat):
@@ -536,7 +536,7 @@ func _hand_over(ship: int) -> void:
 			continue
 		# `handover` first, then the `picked` of the move (the client keys its view by ship).
 		game.notify(s, NetProtocol.EVENT_HANDOVER, FleetMessages.handover(ship, to))
-		game.lobby.move(s, to, StationViews.VIEWER if to >= 0 else "")
+		game.lobby.move(s, to, StationCatalogue.VIEWER if to >= 0 else "")
 	_board_sent = []
 	_board_tick = -SCOREBOARD_EVERY_TICKS
 
@@ -579,7 +579,7 @@ func _voters(ship: int) -> Array[int]:
 	var out: Array[int] = []
 	for pair: Array in _crews.get(ship, []):
 		var s: NetSession = game.by_id.get(pair[0])
-		if s != null and s.connected() and StationViews.is_crew(pair[1]):
+		if s != null and s.connected() and StationCatalogue.is_crew(pair[1]):
 			out.append(s.id)
 	return out
 

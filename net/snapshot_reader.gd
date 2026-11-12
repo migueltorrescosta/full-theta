@@ -1,10 +1,10 @@
 class_name SnapshotReader
 extends RefCounted
 ## The client's side of the snapshot format (F4, R14-1): the message header and the decoders
-## of the sections that are not NetBlock blocks. SnapshotBuilder and the sections in
+## of the sections that are not NetBlock blocks. SnapshotWriter and the sections in
 ## net/sections/ write what this reads; they are the server's, and the clients name only this
 ## class, so a client never compiles the server's builders or the sim (D103). The format is
-## SnapshotBuilder's: u8 type, u8 flags (bit 0 full), u32 seq, u32 tick, u8 n, then n sections
+## SnapshotWriter's: u8 type, u8 flags (bit 0 full), u32 seq, u32 tick, u8 n, then n sections
 ## of u8 kind, length (u16, or LONG_SECTION then a u32), payload.
 
 const HEADER_BYTES: int = 11
@@ -16,7 +16,7 @@ const FLAG_IDENTIFIED: int = 1
 const FLAG_OWN: int = 2
 
 
-## Reads a section length written by SnapshotBuilder.put_length().
+## Reads a section length written by SnapshotWriter.put_length().
 static func get_length(buf: StreamPeerBuffer) -> int:
 	var size: int = buf.get_u16()
 	return buf.get_u32() if size == LONG_SECTION else size

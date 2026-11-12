@@ -31,8 +31,8 @@ func act(world: SimWorld) -> void:
 		pips.subsystem_kind = SubsystemDef.Kind.WEAPONS
 		pips.pips = world.defs[ship].power.max_pips_per_subsystem
 		_submit(world, pips)
-		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.target_ship = target
+		var select: HelmSelectCommand = HelmSelectCommand.new()
+		select.contact = target
 		_submit(world, select)
 		var helm: HelmInputCommand = HelmInputCommand.new()
 		helm.face = true

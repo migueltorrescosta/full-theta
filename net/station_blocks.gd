@@ -2,7 +2,7 @@ class_name StationBlocks
 extends RefCounted
 ## The server's side of the station views (F4, R13-8): the block builders that read a
 ## (copied) world, the claimable items of a ship and the item a command acts on. The clients
-## never name it; StationViews is the station model and BlockSchema the wire schema.
+## never name it; StationCatalogue is the station model and BlockSchema the wire schema.
 
 
 ## The claimable items of a ship by station: flight and shield facing (Helm), one per
@@ -11,25 +11,25 @@ static func claim_items(world: SimWorld, ship: int) -> Dictionary:
 	var ship_def: ShipDef = world.defs[ship]
 	var mounts: Array[String] = []
 	for i: int in ship_def.mounts.size():
-		mounts.append("%s:%d" % [StationViews.CLAIM_MOUNT, i])
+		mounts.append("%s:%d" % [StationCatalogue.CLAIM_MOUNT, i])
 	var crews: Array[String] = []
 	for i: int in ship_def.repair_crews:
-		crews.append("%s:%d" % [StationViews.CLAIM_CREW, i])
-	var helm: Array[String] = [StationViews.CLAIM_FLIGHT, StationViews.CLAIM_SHIELD_FACING]
+		crews.append("%s:%d" % [StationCatalogue.CLAIM_CREW, i])
+	var helm: Array[String] = [StationCatalogue.CLAIM_FLIGHT, StationCatalogue.CLAIM_SHIELD_FACING]
 	return {
-		"comms": CommsView.npc_items(world, ship),
+		"comms": CommsSection.npc_items(world, ship),
 		"helm": helm,
 		"weapons": mounts,
 		"engineering": crews,
-		"science": [StationViews.CLAIM_SCAN],
-		"relay": [StationViews.CLAIM_PROBE],
+		"science": [StationCatalogue.CLAIM_SCAN],
+		"relay": [StationCatalogue.CLAIM_PROBE],
 	}
 
 
 ## The claim item or ship-wide control a command acts on ("mount:1", "flight",
 ## "pips:2"), or "" for a command with neither.
 static func item_of(command: SimCommand) -> String:
-	var spec: Array = StationViews.COMMAND_ITEMS.get(command.kind(), [])
+	var spec: Array = StationCatalogue.COMMAND_ITEMS.get(command.kind(), [])
 	if spec.is_empty():
 		return ""
 	if spec[1] == "":
@@ -39,7 +39,7 @@ static func item_of(command: SimCommand) -> String:
 
 ## The block section's fields for a ship, read from a (copied) world, encoded.
 static func block_bytes(
-	kind: int, world: SimWorld, ship: int, filter: ViewFilter = null
+	kind: int, world: SimWorld, ship: int, filter: ShortcutFilter = null
 ) -> PackedByteArray:
 	var values: Dictionary = _block_values(kind, world, ship, filter)
 	if filter != null:
@@ -47,27 +47,27 @@ static func block_bytes(
 	return NetBlock.encode(BlockSchema.BLOCKS[kind], values)
 
 
-## `filter` lets a block skip the lists it would blank (ViewFilter.apply fixes the rest).
+## `filter` lets a block skip the lists it would blank (ShortcutFilter.apply fixes the rest).
 static func _block_values(
-	kind: int, world: SimWorld, ship: int, filter: ViewFilter = null
+	kind: int, world: SimWorld, ship: int, filter: ShortcutFilter = null
 ) -> Dictionary:
 	match kind:
-		StationViews.Section.STATUS:
+		StationCatalogue.Section.STATUS:
 			return _status(world, ship)
-		StationViews.Section.HELM:
+		StationCatalogue.Section.HELM:
 			return _helm(world, ship)
-		StationViews.Section.ENGINEERING:
+		StationCatalogue.Section.ENGINEERING:
 			return _engineering(world, ship)
-		StationViews.Section.SCIENCE:
-			return ScienceView.block(world, ship)
-		StationViews.Section.RELAY:
+		StationCatalogue.Section.SCIENCE:
+			return ScienceSection.block(world, ship)
+		StationCatalogue.Section.RELAY:
 			return _relay(world, ship, filter)
-		StationViews.Section.CAPTAIN:
+		StationCatalogue.Section.CAPTAIN:
 			return _captain(world, ship)
-		StationViews.Section.FEEDS:
-			return FeedsView.block(world, ship, filter)
-		StationViews.Section.COMMS:
-			return CommsView.block(world, ship)  # (the builder adds claims, filter)
+		StationCatalogue.Section.FEEDS:
+			return FeedsSection.block(world, ship, filter)
+		StationCatalogue.Section.COMMS:
+			return CommsSection.block(world, ship)  # (the builder adds claims, filter)
 	return _mounts(world, ship)
 
 
@@ -98,9 +98,9 @@ static func _helm(world: SimWorld, ship: int) -> Dictionary:
 		"approach": h.approach_held[ship] == 1,
 		"all_stop": h.all_stop[ship] == 1,
 		"align": h.align[ship],
-		"target_kind": h.target_kind[ship],
-		"target_ship": h.target_ship[ship],
-		"target_site": h.target_site[ship],
+		"sel_kind": h.sel_kind[ship],
+		"sel_contact": h.sel_contact[ship],
+		"sel_site": h.sel_site[ship],
 		"jump_left": mini(h.jump_left[ship], 65535),
 		"jump_target": h.jump_target[ship],
 		"docked_site": h.docked_site[ship],
@@ -149,12 +149,12 @@ static func _engineering(world: SimWorld, ship: int) -> Dictionary:
 
 
 ## Relay's block: at most the newest RELAY_PROBE_ROWS probes (a row count is one byte).
-static func _relay(world: SimWorld, ship: int, filter: ViewFilter = null) -> Dictionary:
+static func _relay(world: SimWorld, ship: int, filter: ShortcutFilter = null) -> Dictionary:
 	var r: RelayTable = world.relay
 	var t: ProbeTable = world.probes
 	var rows: PackedInt32Array = t.rows_of(ship)
 	var probes: Array = []
-	for i: int in range(maxi(0, rows.size() - StationViews.RELAY_PROBE_ROWS), rows.size()):
+	for i: int in range(maxi(0, rows.size() - StationCatalogue.RELAY_PROBE_ROWS), rows.size()):
 		var p: int = rows[i]
 		(
 			probes
@@ -173,7 +173,7 @@ static func _relay(world: SimWorld, ship: int, filter: ViewFilter = null) -> Dic
 		"lanes": r.lanes_flagged[ship] == 1,
 		"probes": probes,
 		"hazards":
-		HazardView.rows(world, ship) if filter == null or filter.hazards_visible() else [],
+		HazardRows.rows(world, ship) if filter == null or filter.hazards_visible() else [],
 	}
 
 

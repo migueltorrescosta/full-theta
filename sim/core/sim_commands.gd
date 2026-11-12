@@ -10,7 +10,7 @@ static var _classes: Dictionary[StringName, GDScript] = _by_kind(
 		DecoupledCommand,
 		AllStopCommand,
 		AlignCommand,
-		SelectTargetCommand,
+		HelmSelectCommand,
 		DispatchRepairCommand,
 		RecallRepairCommand,
 		PickFaultCauseCommand,

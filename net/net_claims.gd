@@ -2,7 +2,7 @@ class_name NetClaims
 extends RefCounted
 ## Claims on shared stations (FT-NET-022 to FT-NET-024, FT-NET-044, D18): per ship,
 ## item -> the session holding it ("flight", "shield_facing", "mount:1", "crew:0";
-## StationViews). A claimed item takes commands only from its claimer; an unclaimed one
+## StationCatalogue). A claimed item takes commands only from its claimer; an unclaimed one
 ## from anyone at its station. A player alone on a station holds all its claims
 ## (settle()); when a second player joins, the first keeps them (D130), and they free
 ## up on release, station change or grace expiry. Pure: NetGame supplies who
@@ -53,7 +53,7 @@ func release_session(session: int, keep: Array[String] = []) -> Array:
 	for ship: int in _held:
 		var held: Dictionary = _held[ship]
 		for item: String in held.keys():
-			if held[item] == session and not keep.has(StationViews.station_of_item(item)):
+			if held[item] == session and not keep.has(StationCatalogue.station_of_item(item)):
 				held.erase(item)
 				out.append([ship, item])
 	return out

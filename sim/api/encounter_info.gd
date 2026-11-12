@@ -1,4 +1,4 @@
-class_name EncounterView
+class_name EncounterInfo
 extends RefCounted
 ## A value copy of one encounter (FT-ARC-016, FT-DAT-009, FT-MIS-025).
 

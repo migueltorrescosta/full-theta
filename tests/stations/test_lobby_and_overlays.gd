@@ -186,7 +186,9 @@ func test_every_pair_maps_to_its_joint_view() -> void:
 				assert_str(seat).is_not_empty()
 				assert_bool(seen.has(seat)).is_false()
 				seen[seat] = true
-				assert_array(StationViews.stations_of(seat)).contains_exactly_in_any_order([a, b])
+				assert_array(StationCatalogue.stations_of(seat)).contains_exactly_in_any_order(
+					[a, b]
+				)
 	assert_int(seen.size()).is_equal(15)
 
 

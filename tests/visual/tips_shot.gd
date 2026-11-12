@@ -1,4 +1,4 @@
-## TipsView for the L5 harness (#28, P28-Tips): the tips of one `topic` first, in `lang`,
+## TipsPanel for the L5 harness (#28, P28-Tips): the tips of one `topic` first, in `lang`,
 ## with the load bar at `progress` (negative: no bar), inside simulated `insets`
 ## [left, top, right, bottom] (SafeArea.simulate). The shuffle seed is fixed.
 extends Control
@@ -14,7 +14,7 @@ func _ready() -> void:
 	I18n.apply(lang)
 	LayoutMode.apply(get_tree().root)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var v: TipsView = TipsView.new()
+	var v: TipsPanel = TipsPanel.new()
 	v.shuffle_seed = 7
 	v.autoplay = false
 	v.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

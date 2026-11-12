@@ -193,35 +193,35 @@ static func has_target(world: SimWorld, row: int) -> bool:
 static func _targeted_offset(
 	world: SimWorld, kin: Kinematics, helm: HelmTable, row: int
 ) -> Vector3:
-	var kind: int = helm.target_kind[row]
-	if kind == HelmTable.Target.SHIP:
-		var other: int = helm.target_ship[row]
+	var kind: int = helm.sel_kind[row]
+	if kind == HelmTable.Selection.SHIP:
+		var other: int = helm.sel_contact[row]
 		if (
 			kin.can_reach(row, other)
 			and KnowledgeSystem.is_detected(world, kin.owner_faction[row], other)
 		):
 			return kin.relative(row, other)
-	elif kind == HelmTable.Target.POINT:
+	elif kind == HelmTable.Selection.POINT:
 		return kin.relative_to_column(row, helm.sel_x, helm.sel_y, helm.sel_z, row)
-	elif kind == HelmTable.Target.SITE:
-		return SiteTable.offset_to(world, row, helm.target_site[row])
+	elif kind == HelmTable.Selection.SITE:
+		return SiteTable.offset_to(world, row, helm.sel_site[row])
 	return Vector3.INF
 
 
 ## Offset of the selected target from the ship (m, world frame), computed in 64-bit.
 static func target_offset(world: SimWorld, row: int) -> Vector3:
 	var helm: HelmTable = world.helm
-	if helm.target_kind[row] == HelmTable.Target.SHIP:
-		return world.kin.relative(row, helm.target_ship[row])
-	if helm.target_kind[row] == HelmTable.Target.SITE:
-		return SiteTable.offset_to(world, row, helm.target_site[row])
+	if helm.sel_kind[row] == HelmTable.Selection.SHIP:
+		return world.kin.relative(row, helm.sel_contact[row])
+	if helm.sel_kind[row] == HelmTable.Selection.SITE:
+		return SiteTable.offset_to(world, row, helm.sel_site[row])
 	return world.kin.relative_to_column(row, helm.sel_x, helm.sel_y, helm.sel_z, row)
 
 
 ## Velocity of the selected target in the world frame (m/s); points are at rest.
 static func target_velocity(world: SimWorld, row: int) -> Vector3:
-	if world.helm.target_kind[row] == HelmTable.Target.SHIP:
-		return world.kin.vel[world.helm.target_ship[row]]
+	if world.helm.sel_kind[row] == HelmTable.Selection.SHIP:
+		return world.kin.vel[world.helm.sel_contact[row]]
 	return Vector3.ZERO
 
 

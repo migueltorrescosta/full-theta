@@ -56,7 +56,7 @@ static func goal_text(captain: Dictionary, status: Dictionary) -> String:
 	if captain.is_empty() or int(status.get("outcome", 0)) != 0:
 		return ""
 	for o: Dictionary in captain.get("objectives", []):
-		if int(o["kind"]) == StationViews.OBJECTIVE_DESTROY_HOSTILES:
+		if int(o["kind"]) == StationCatalogue.OBJECTIVE_DESTROY_HOSTILES:
 			return TranslationServer.translate("goal.hostiles") % int(o["left"])
 	return TranslationServer.translate("goal.survive")
 
@@ -67,15 +67,15 @@ static func goal_short(captain: Dictionary, status: Dictionary) -> String:
 	if int(status.get("outcome", 0)) != 0:
 		return ""
 	for o: Dictionary in captain.get("objectives", []):
-		if int(o["kind"]) == StationViews.OBJECTIVE_DESTROY_HOSTILES:
+		if int(o["kind"]) == StationCatalogue.OBJECTIVE_DESTROY_HOSTILES:
 			return TranslationServer.translate("goal.short_hostiles") % int(o["left"])
 	return ""
 
 
-## The line for an objective of the CAPTAIN block (StationViews.OBJECTIVE_*), `left` to do.
+## The line for an objective of the CAPTAIN block (StationCatalogue.OBJECTIVE_*), `left` to do.
 static func objective_text(kind: int, left: int) -> String:
 	match kind:
-		StationViews.OBJECTIVE_DESTROY_HOSTILES:
+		StationCatalogue.OBJECTIVE_DESTROY_HOSTILES:
 			return TranslationServer.translate("status.obj_hostiles") % left
 	return TranslationServer.translate("status.obj_unknown")
 
