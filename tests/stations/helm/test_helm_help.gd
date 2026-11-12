@@ -20,3 +20,34 @@ func test_help_names_every_page_and_control() -> void:
 				assert_bool(text.begins_with("intent.") or text.begins_with("touch.")).is_false()
 	# The Fly page numbers the persistent controls too.
 	assert_int(help[0]["boxes"].size()).is_greater(help[1]["boxes"].size() + 4)
+
+
+# FT: FT-STN-012
+# C3 (ux-08): Helm's and Weapons' rail labels are a verb and its object, at most 14 characters
+# in every language; none is a raw key.
+func test_rail_labels_are_short_in_every_language() -> void:
+	var keys: Array[String] = [
+		"touch.helm.face",
+		"touch.helm.align",
+		"touch.helm.shield_track",
+		"touch.helm.dock",
+		"touch.helm.undock",
+		"touch.helm.jump",
+		"weapons.touch_guided",
+		"weapons.touch_claim",
+		"weapons.touch_claim_held",
+		"touch.weapons.mount",
+	]
+	for lang: String in I18n.LANGUAGES:
+		I18n.apply(lang)
+		for key: String in keys:
+			var text: String = tr(key)
+			if "%d" in text:
+				text = text % 1
+			assert_str(text).override_failure_message("%s %s" % [lang, key]).is_not_equal(key)
+			(
+				assert_int(text.length())
+				. override_failure_message("%s %s: %s" % [lang, key, text])
+				. is_less_equal(14)
+			)
+	I18n.apply("en")

@@ -204,6 +204,7 @@ func _refresh_rows() -> void:
 			var claim: RailButton = RailButton.make("")
 			claim.name = "Claim%d" % (i + 1)
 			claim.custom_minimum_size = Vector2(ROW_CLAIM_W, ROW_H)
+			RailButton.wrap(claim)
 			claim.add_theme_font_size_override("font_size", FONT_LABEL)
 			claim.pressed.connect(_claim_row.bind(i))
 			var row: HBoxContainer = HBoxContainer.new()
@@ -250,6 +251,8 @@ func _make_buttons() -> void:
 	mount_button.pressed.connect(_panel.touch_press.bind("mount_next"))
 	claim_button = RailButton.make("")
 	claim_button.name = "Claim"
+	# ("Claim mount", "Release mount": a verb and its object on two lines, C3)
+	RailButton.wrap(claim_button)
 	claim_button.pressed.connect(_panel.touch_claim)
 	ammo_button = RailButton.make("")
 	ammo_button.name = "Ammo"
