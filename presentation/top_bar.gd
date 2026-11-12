@@ -286,22 +286,12 @@ func show_state(
 	]
 	if raw == _raw:
 		return
-	_raw = [
-		ship_name,
-		status.duplicate(true),
-		alert,
-		stations.duplicate(),
-		int(mission_s),
-		focused,
-		maxes.duplicate(),
-		summaries.duplicate(true),
-		_goal_short
-	]
+	_raw = raw.duplicate(true)
 	var hull: String = _text(status, "hull", summaries, float(maxes.get("hull", 0.0)))
 	var shields: String = _text(status, "shields", summaries, float(maxes.get("shields", 0.0)))
 	var pips: String = _text(status, "pips_used", summaries)
 	# Then what shows: a hull that moved less than the bar's rounding changes no label.
-	var state: Array = [ship_name, hull, shields, pips, alert, raw[3], raw[7], raw[4], focused]
+	var state: Array = [ship_name, hull, shields, pips, alert, _raw[3], _raw[7], _raw[4], focused]
 	state.append(_goal_short)
 	if state == _shown:
 		return
