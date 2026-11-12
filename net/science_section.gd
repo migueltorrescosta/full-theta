@@ -27,8 +27,8 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 	var t: ScienceTable = world.science
 	var out: Dictionary = _empty()
 	out["active"] = t.active[ship] == 1
-	out["ping_left"] = t.ping_left[ship]
-	out["ping_cool"] = t.ping_cool[ship]
+	out["sweep_left"] = t.sweep_left[ship]
+	out["sweep_cool"] = t.sweep_cool[ship]
 	out["selected"] = t.selected[ship]
 	out["self_scanned"] = t.self_scanned[ship] >= 0
 	_preview(out, t.preview[ship])
@@ -42,8 +42,8 @@ static func block(world: SimWorld, ship: int) -> Dictionary:
 static func _empty() -> Dictionary:
 	return {
 		"active": false,
-		"ping_left": 0.0,
-		"ping_cool": 0.0,
+		"sweep_left": 0.0,
+		"sweep_cool": 0.0,
 		"selected": -1,
 		"noise": 0.0,
 		"noise_range": 0.0,
@@ -81,7 +81,7 @@ static func _preview(out: Dictionary, parts: Dictionary) -> void:
 	out["noise_health"] = parts["health"]
 	out["noise_flags"] = (
 		(1 if parts["active"] else 0)
-		| (2 if parts["ping"] else 0)
+		| (2 if parts["sweep"] else 0)
 		| (4 if parts["probe"] else 0)
 		| (8 if parts["mark"] else 0)
 	)

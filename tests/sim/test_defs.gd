@@ -11,8 +11,8 @@ static func raider() -> ShipDef:
 	return load("res://content/ships/m1_raider.tres") as ShipDef
 
 
-static func raider_enemy() -> EnemyDef:
-	return load("res://content/enemies/m1_raider.tres") as EnemyDef
+static func raider_enemy() -> NpcDef:
+	return load("res://content/npcs/m1_raider.tres") as NpcDef
 
 
 ## Every definition file under content/, loaded, by path. Hold the result while a test

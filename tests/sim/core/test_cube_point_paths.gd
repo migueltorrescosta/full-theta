@@ -27,7 +27,7 @@ func fleet_world() -> SimWorld:
 func cases() -> Array:
 	return [
 		["spawn_ship", world, _spawn_ship],
-		["spawn_enemy", world, _spawn_enemy],
+		["spawn_npc", world, _spawn_npc],
 		["reset_ship", world, _reset_ship],
 		["SpawnShipCommand", world, _spawn_command],
 		["RunSetup ship_starts", fleet_world, _ship_start],
@@ -41,8 +41,8 @@ func _spawn_ship(w: SimWorld, p: PackedFloat64Array) -> Array:
 	return [w.kin.point(w.spawn_ship(TestDefs.corvette(), 1, p))]
 
 
-func _spawn_enemy(w: SimWorld, p: PackedFloat64Array) -> Array:
-	return [w.kin.point(w.spawn_enemy(TestDefs.raider_enemy(), 2, p))]
+func _spawn_npc(w: SimWorld, p: PackedFloat64Array) -> Array:
+	return [w.kin.point(w.spawn_npc(TestDefs.raider_enemy(), 2, p))]
 
 
 func _reset_ship(w: SimWorld, p: PackedFloat64Array) -> Array:
@@ -53,7 +53,7 @@ func _reset_ship(w: SimWorld, p: PackedFloat64Array) -> Array:
 func _spawn_command(w: SimWorld, p: PackedFloat64Array) -> Array:
 	w.catalog[&"raider"] = TestDefs.raider_enemy()
 	var c: SpawnShipCommand = SpawnShipCommand.new()
-	c.enemy_key = &"raider"
+	c.npc_key = &"raider"
 	c.faction = 2
 	c.x = p[0]
 	c.y = p[1]

@@ -146,7 +146,7 @@ func test_lead_intercept_across_the_seam() -> void:
 		)
 		var t: int = w.spawn_ship(TestDefs.raider(), RAIDER_FACTION, CubePoint.of(to))
 		w.kin.vel[t] = Vector3(0, 50, 0)
-		aims.append(EnemyAi.lead_aim(w, s, 0, t, 0))
+		aims.append(NpcAi.lead_aim(w, s, 0, t, 0))
 	assert_bool(aims[0].is_finite()).is_true()
 	assert_vector(aims[1]).is_equal_approx(aims[0], Vector3.ONE * 1e-3)
 

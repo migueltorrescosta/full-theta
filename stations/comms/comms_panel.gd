@@ -231,7 +231,7 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	refresh()
-	ControlsChip.show_radar_legend(self, ctx.settings)
+	ControlsHint.show_radar_legend(self, ctx.settings)
 	phone.place()
 
 

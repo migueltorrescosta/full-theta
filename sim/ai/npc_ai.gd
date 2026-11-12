@@ -1,6 +1,6 @@
-class_name EnemyAi
+class_name NpcAi
 extends RefCounted
-## M1 enemy AI (T035, FT-SIM-027, FT-M1-007): attack, keep range and retreat at low hull.
+## M1 NPC AI (T035, FT-SIM-027, FT-M1-007): attack, keep range and retreat at low hull.
 ## Runs each tick right after KnowledgeSystem, for every AI ship in id order, and acts
 ## only on its faction's knowledge (FT-SIM-028): it picks targets from
 ## KnowledgeSystem.contacts and fires only on contacts its faction has identified as
@@ -11,7 +11,7 @@ extends RefCounted
 ## and weapon rules, and it never writes another table (FT-SIM-029). The AI is
 ## deterministic, so replays regenerate its commands and the log omits them (FT-ARC-008).
 ##
-## Behaviour, from the EnemyDef numbers in AiTable:
+## Behaviour, from the NpcDef numbers in AiTable:
 ## - HOLD: no hostile or unknown contact detected: all-stop, then nothing.
 ## - ATTACK / KEEP_RANGE: face the first mount's lead intercept point (selected as a
 ##   point each tick, so crossing targets stay inside fire_cone; the target ship when

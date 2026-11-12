@@ -25,7 +25,7 @@ const TABLE: Array = [
 	["Bring to bear request", ["send_chip:bring_to_bear"], "Crew page", 2],
 	["Ping", ["ping"], "Crew page or selection sheet", 2],
 	["Mark at the selection", ["place_mark"], "Crew page or selection sheet", 2],
-	["Cycle target", ["select"], "selection chip ‹ ›", 1],
+	["Cycle target", ["select"], "selection bar ‹ ›", 1],
 	["Alert level", ["set_alert"], "alert chip, sheet", 2],
 	["Menu (Controls, Settings, Leave)", ["menu"], "☰", 1],
 ]

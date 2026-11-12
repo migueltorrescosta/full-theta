@@ -386,7 +386,7 @@ func _fill_contacts() -> void:
 	_clear(_contacts_box)
 	for r: Array in rows:
 		var id: int = r[0]
-		var b: RailButton = RailButton.make(ChipText.chip(r[1], r[2]))
+		var b: RailButton = RailButton.make(CalloutText.callout(r[1], r[2]))
 		b.pressed.connect(crew_state.select.bind("contact", id))
 		b.add_theme_color_override(
 			"font_color", Palette.allegiance_color(Palette.allegiance(str(r[1])))
@@ -414,7 +414,7 @@ func _fill_marks() -> void:
 		_marks_box.add_child(none)
 	for m: Dictionary in crew_state.marks:
 		var slot: int = m["slot"]
-		var b: RailButton = RailButton.make(ChipText.mark_label(m, panel.ctx.snap))
+		var b: RailButton = RailButton.make(CalloutText.mark_label(m, panel.ctx.snap))
 		b.pressed.connect(crew_state.select.bind("mark", slot))
 		b.toggle_mode = true
 		b.set_pressed_no_signal(crew_state.is_selected("mark", slot))

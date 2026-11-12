@@ -1,12 +1,12 @@
-class_name SelectionChip
+class_name SelectionBar
 extends HBoxContainer
-## The selection chip of a phone's view-top row (#28 follow-up, P28-Common, design 1.3):
+## The selection bar of a phone's view-top row (#28 follow-up, P28-Common, design 1.3):
 ## `‹ H2 · 4 high mid ›`. The arrows cycle the contacts (the common cycle_target), a tap on
 ## the name opens the selection sheet (Ping, Mark here, Clear and the station's extras).
 ##
-##     chip.cycled.connect(func(step: int) -> void: _cycle(step))
-##     chip.opened.connect(_open_selection_sheet)
-##     chip.show_text("H2 · 4 high mid")
+##     bar.cycled.connect(func(step: int) -> void: _cycle(step))
+##     bar.opened.connect(_open_selection_sheet)
+##     bar.show_text("H2 · 4 high mid")
 
 ## An arrow was tapped: +1 the next contact, -1 the previous one.
 signal cycled(step: int)
@@ -40,7 +40,7 @@ func _init() -> void:
 	show_text("")
 
 
-## Narrows the name so the chip fits `width` px (down to NAME_MIN_W).
+## Narrows the name so the bar fits `width` px (down to NAME_MIN_W).
 func fit(width: float) -> void:
 	var arrows: float = 2.0 * (UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP)
 	var w: float = clampf(width - arrows, NAME_MIN_W, NAME_W)

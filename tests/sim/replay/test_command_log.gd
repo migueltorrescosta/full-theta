@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## T037: CommandLog records each crew or server command of a world (for example a ship
 ## reset, accepted or not) and round-trips them through text exactly (FT-ARC-008).
 
-const SETUP: Dictionary = {"player": &"m1_corvette", "enemy": &"m1_raider"}
+const SETUP: Dictionary = {"player": &"m1_corvette", "npc": &"m1_raider"}
 ## Floats that a decimal round trip tends to lose: -0.0, non-terminating binary
 ## fractions, a subnormal, the largest double below 200 km (the command keeps it even
 ## though the aim point wraps onto the site's cube, FT-SIM-035) and full-mantissa values.

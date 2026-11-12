@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## T036: the event stream (FT-SIM-030, FT-SIM-031). A scripted M1
 ## encounter: the scripted crew on the corvette (ship 0) fights the raider (ship 1,
-## with retreat switched off in a test copy of its EnemyDef so the fight ends in a
+## with retreat switched off in a test copy of its NpcDef so the fight ends in a
 ## destruction), and Engineering boosts twice back to back (a heat fault). A crewed
 ## wingman (ship 2, faction 1) coasts toward the corvette from 400 m ahead, 20 m
 ## off its line of fire: it crosses the corvette's shots (friendly-fire warning, hits)
@@ -19,8 +19,8 @@ const KINDS: Array[StringName] = [
 ]
 
 
-func _enemy() -> EnemyDef:
-	var enemy: EnemyDef = TestDefs.raider_enemy().duplicate()
+func _enemy() -> NpcDef:
+	var enemy: NpcDef = TestDefs.raider_enemy().duplicate()
 	enemy.retreat_hull_fraction = 0.0
 	return enemy
 

@@ -184,13 +184,13 @@ func test_small_radar_keeps_chips_inside() -> void:
 		var view: Rect2 = Rect2(Vector2.ZERO, r.size)
 		var chips: int = 0
 		for e: Dictionary in r._layout():
-			if e["chip"] == "":
+			if e["callout"] == "":
 				continue
 			chips += 1
-			var box: Rect2 = e["chip_rect"]
-			var what: String = "%s %s at %s" % [c[1], e["chip"], box]
+			var box: Rect2 = e["callout_rect"]
+			var what: String = "%s %s at %s" % [c[1], e["callout"], box]
 			assert_bool(view.encloses(box)).override_failure_message(what).is_true()
-			if (e["chip"] as String).contains(ChipText.SEP):
+			if (e["callout"] as String).contains(CalloutText.SEP):
 				var x: float = (e["pos"] as Vector2).x
 				(
 					assert_bool(box.position.x > x or box.end.x < x)
@@ -434,8 +434,8 @@ func test_relay_map_chips_do_not_overlap() -> void:
 		var entries: Array[Dictionary] = (s.panels[0] as RelayPanel).map._layout()
 		var rects: Array[Rect2] = []
 		for e: Dictionary in entries:
-			if (e["chip"] as String) != "":
-				rects.append(e["chip_rect"])
+			if (e["callout"] as String) != "":
+				rects.append(e["callout_rect"])
 		assert_int(rects.size()).is_greater(1)
 		for i: int in rects.size():
 			for j: int in range(i + 1, rects.size()):

@@ -1,4 +1,4 @@
-class_name ChipText
+class_name CalloutText
 extends RefCounted
 ## Chip and hover text (spec §6.1, D45, D114): `H2 · 4 high · mid`, composed from
 ## Callout.clock_height and Callout.range_band (shared/, FT-ARC-021): the range band
@@ -10,7 +10,7 @@ const SEP: String = " · "
 
 
 ## "H2 · 4 high · mid" for an item at `local` (ship frame, m).
-static func chip(label: String, local: Vector3) -> String:
+static func callout(label: String, local: Vector3) -> String:
 	var band: String = _tr("callout." + Callout.range_band(local.length()))
 	return SEP.join([label, clock_words(local), band])
 

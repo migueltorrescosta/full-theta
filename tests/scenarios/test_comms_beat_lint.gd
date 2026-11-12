@@ -41,7 +41,7 @@ func test_every_listed_scenario_is_clean_and_every_hostile_one_has_a_beat() -> v
 
 
 # FT: FT-MIS-041
-# The travel scenario's hazard is the key of a destructible, unarmed debris EnemyDef that
+# The travel scenario's hazard is the key of a destructible, unarmed debris NpcDef that
 # the map's legs name.
 func test_the_travel_hazard_is_map_debris_that_weapons_can_destroy() -> void:
 	var run: RunDef = _run()
@@ -50,9 +50,9 @@ func test_the_travel_hazard_is_map_debris_that_weapons_can_destroy() -> void:
 		if s.meta().tags.has("travel"):
 			travel = s.meta()
 	assert_object(travel).is_not_null()
-	var enemies: Dictionary[StringName, EnemyDef] = DefLibrary.new().enemies()
+	var enemies: Dictionary[StringName, NpcDef] = DefLibrary.new().npcs()
 	assert_bool(enemies.has(travel.travel_hazard)).is_true()
-	var debris: EnemyDef = enemies[travel.travel_hazard]
+	var debris: NpcDef = enemies[travel.travel_hazard]
 	assert_array(debris.ship.mounts).is_empty()
 	assert_float(debris.ship.hull_max).is_less(5.0e6)
 	var named: int = 0

@@ -27,10 +27,10 @@
       }
     },
     {
-      "id": "computer.enemies_remaining", "role": "computer", "priority": 1, "max_age_ms": 5000,
-      "coalesce": "enemies", "resume": false,
+      "id": "computer.hostiles_remaining", "role": "computer", "priority": 1, "max_age_ms": 5000,
+      "coalesce": "hostiles", "resume": false,
       "slots": {"count": {"kind": "number", "feminine": ["pt_PT", "it"]}},
-      "text": {"en": "{count} enemy ships remaining.", "pt_PT": "Restam {count} naves inimigas.", "it": "Restano {count} navi nemiche."}
+      "text": {"en": "{count} hostile ships remaining.", "pt_PT": "Restam {count} naves hostis.", "it": "Restano {count} navi ostili."}
     },
     {
       "id": "computer.subsystem_fault", "role": "computer", "priority": 1, "max_age_ms": 4000,

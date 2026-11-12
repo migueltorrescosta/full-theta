@@ -170,10 +170,10 @@ func test_jump_rejects_an_unknown_target_kind() -> void:
 # A command for a ship spawned earlier in the same tick's batch is applied and logged.
 func test_command_for_a_ship_spawned_this_tick_applies() -> void:
 	var w: SimWorld = StoryFixture.duel()
-	var enemy: EnemyDef = TestDefs.raider_enemy()
+	var enemy: NpcDef = TestDefs.raider_enemy()
 	w.catalog = {&"raider": enemy}
 	var spawn: SpawnShipCommand = SpawnShipCommand.new()
-	spawn.enemy_key = &"raider"
+	spawn.npc_key = &"raider"
 	spawn.faction = RED
 	var id: int = w.ship_count()
 	w.submit(spawn)

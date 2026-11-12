@@ -292,7 +292,7 @@ const INTENTS: Array[Dictionary] = [
 	# hack's route. Drags on the radar and the minigames are their own pointer handling.
 	{"id": "sci_scan", "group": "science", "kind": PRESS, "kbm": ["E"], "pad": ["RT"]},
 	{"id": "sci_hack", "group": "science", "kind": PRESS, "kbm": ["H"], "pad": ["LT"]},
-	{"id": "sci_ping", "group": "science", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
+	{"id": "sci_sweep", "group": "science", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
 	{"id": "sci_scan_mark", "group": "science", "kind": PRESS, "kbm": ["M"], "pad": ["Down"]},
 	{"id": "sci_mode", "group": "science", "kind": PRESS, "kbm": ["Q"], "pad": ["LB"]},
 	{"id": "sci_self_scan", "group": "science", "kind": PRESS, "kbm": ["Home"], "pad": ["LB+Down"]},

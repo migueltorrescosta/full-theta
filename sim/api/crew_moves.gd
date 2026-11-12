@@ -69,7 +69,7 @@ static func aim(
 	rng: RandomNumberGenerator = null
 ) -> AimMountCommand:
 	var kin: Kinematics = world.kin
-	var lead: Vector3 = EnemyAi.lead_aim(world, ship, 0, target, 0)
+	var lead: Vector3 = NpcAi.lead_aim(world, ship, 0, target, 0)
 	if not lead.is_finite():
 		lead = kin.relative(ship, target)
 	if aim_error > 0.0 and rng != null:

@@ -970,11 +970,11 @@ example = "train.ex.sci_hack"
 [sub_resource type="Resource" id="Resource_s117"]
 script = ExtResource("2_step")
 station = &"science"
-intent = &"sci_ping"
+intent = &"sci_sweep"
 kind = 0
-command = &"science_ping"
-line = "shakedown.science.sci_ping"
-example = "train.ex.sci_ping"
+command = &"sensor_sweep"
+line = "shakedown.science.sci_sweep"
+example = "train.ex.sci_sweep"
 
 [sub_resource type="Resource" id="Resource_s118"]
 script = ExtResource("2_step")

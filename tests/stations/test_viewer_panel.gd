@@ -55,7 +55,7 @@ func test_forward_view_wide_radar_and_callsign_rail() -> void:
 	# The rail lists contacts nearest first, with clock and range band.
 	var rail: Array = v.rail_items().map(func(it: Dictionary) -> String: return it["label"])
 	assert_array(rail).is_equal(["F4", "H2", "U3"])
-	assert_str(ChipText.chip("H2", v.rail_items()[1]["local"])).is_equal("H2 · 4 high · mid")
+	assert_str(CalloutText.callout("H2", v.rail_items()[1]["local"])).is_equal("H2 · 4 high · mid")
 	# Pings and marks reach the main screen too (FT-MSC-003).
 	var marks: Array = v.radar.picture.items.filter(
 		func(it: Dictionary) -> bool: return it["kind"] == "mark"

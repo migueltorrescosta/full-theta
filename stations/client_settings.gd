@@ -39,7 +39,7 @@ var render_3d: String = "auto"
 var fps_cap: bool = false
 ## Low Graphics tier (E2): ships drawn without the plating and normal maps.
 var low_graphics: bool = false
-## Hint key -> true once its first-visit hint showed: a station's Controls chip (D292), the
+## Hint key -> true once its first-visit hint showed: a station's Controls hint (D292), the
 ## tab hint, the turn-sideways banner. Saved under the old key "tooltips_seen".
 var hints_seen: Dictionary = {}
 ## Not saved: the browser test hooks (?pick=) set it so the first-visit Controls menu never

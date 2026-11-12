@@ -1,9 +1,10 @@
-class_name EnemyDef
+class_name NpcDef
 extends Resource
-## An enemy: a ship plus M1 AI behaviour (attack, keep range, retreat; FT-SIM-027).
+## An NPC (a raider, debris, a stranded freighter): a ship plus M1 AI behaviour (attack,
+## keep range, retreat; FT-SIM-027).
 ## Units are SI (FT-SIM-033, FT-DAT-013).
 
-## Unique among enemies (dimensionless id).
+## Unique among NPCs (dimensionless id).
 @export var id: StringName = &""
 ## Name shown to players.
 @export var display_name: String = ""

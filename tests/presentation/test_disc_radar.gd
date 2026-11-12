@@ -80,7 +80,7 @@ func test_chips_of_close_blips_do_not_overlap() -> void:
 	radar.set_picture(_pic(items), {})
 	var rects: Array[Rect2] = []
 	for e: Dictionary in radar._layout():
-		rects.append(e["chip_rect"])
+		rects.append(e["callout_rect"])
 	assert_int(rects.size()).is_equal(3)
 	for i: int in rects.size():
 		for j: int in range(i + 1, rects.size()):
@@ -285,16 +285,16 @@ func test_small_radar_chips_are_callsigns_clear_of_everything() -> void:
 	var placed: Array[Rect2] = []
 	var selected_chip: String = ""
 	for e: Dictionary in radar._layout():
-		if e["chip"] == "":
+		if e["callout"] == "":
 			continue
-		assert_str(e["chip"]).is_equal(e["item"]["label"])
-		var r: Rect2 = e["chip_rect"]
+		assert_str(e["callout"]).is_equal(e["item"]["label"])
+		var r: Rect2 = e["callout_rect"]
 		assert_bool(Rect2(Vector2.ZERO, radar.size).encloses(r)).is_true()
 		for o: Rect2 in blocked + placed:
 			assert_bool(o.intersects(r)).is_false()
 		placed.append(r)
 		if e["item"]["id"] == 2 and e["item"]["kind"] == "contact":
-			selected_chip = e["chip"]
+			selected_chip = e["callout"]
 	assert_str(selected_chip).is_equal("H2")
 
 
@@ -303,7 +303,7 @@ func test_small_radar_chips_are_callsigns_clear_of_everything() -> void:
 func test_large_radar_keeps_full_chips() -> void:
 	radar.set_picture(_pic([_it("contact", 2, "H2", "H", Vector3(1500, 300, -1500))]), {})
 	assert_bool(radar.small()).is_false()
-	assert_str(radar._layout()[0]["chip"]).contains(ChipText.SEP)
+	assert_str(radar._layout()[0]["callout"]).contains(CalloutText.SEP)
 
 
 # FT: FT-STN-002
@@ -312,20 +312,20 @@ func test_a_chip_moves_off_a_clock_number() -> void:
 	var number: Rect2 = Rect2(Vector2(100, 20), Vector2(14, 14))
 	var entries: Array[Dictionary] = [
 		{
-			"chip": "U3",
-			"chip_rect": Rect2(Vector2(104, 18), Vector2(60, 16)),
+			"callout": "U3",
+			"callout_rect": Rect2(Vector2(104, 18), Vector2(60, 16)),
 			"pos": Vector2(94, 26),
 		}
 	]
-	ChipLayout.declutter(entries, [number], Rect2(0, 0, 300, 200))
-	var moved: Rect2 = entries[0]["chip_rect"]
+	CalloutLayout.declutter(entries, [number], Rect2(0, 0, 300, 200))
+	var moved: Rect2 = entries[0]["callout_rect"]
 	assert_bool(moved.intersects(number)).is_false()
 	# Still beside the blip, not a line away.
 	assert_float(moved.get_center().distance_to(Vector2(94, 26))).is_less(80.0)
 	# Without a blip or a free spot it drops below the number.
-	entries = [{"chip": "U3", "chip_rect": Rect2(Vector2(104, 18), Vector2(60, 16))}]
-	ChipLayout.declutter(entries, [number])
-	assert_float((entries[0]["chip_rect"] as Rect2).position.y).is_equal(number.end.y)
+	entries = [{"callout": "U3", "callout_rect": Rect2(Vector2(104, 18), Vector2(60, 16))}]
+	CalloutLayout.declutter(entries, [number])
+	assert_float((entries[0]["callout_rect"] as Rect2).position.y).is_equal(number.end.y)
 
 
 # FT: FT-STN-003
@@ -346,15 +346,15 @@ func test_chips_sit_next_to_their_blip_inside_the_disc() -> void:
 	var ry: float = rim * sin(deg_to_rad(radar.tilt_deg))
 	var layout: Array[Dictionary] = radar._layout()
 	for e: Dictionary in layout:
-		var r: Rect2 = e["chip_rect"]
-		assert_float(ChipLayout.gap_to(r, e["pos"])).is_less_equal(48.0)
+		var r: Rect2 = e["callout_rect"]
+		assert_float(CalloutLayout.gap_to(r, e["pos"])).is_less_equal(48.0)
 		assert_bool(r.intersects(radar._own_box())).is_false()
 		for o: Dictionary in layout:
 			var box: Rect2 = Rect2((o["pos"] as Vector2) - Vector2(6, 6), Vector2(12, 12))
 			assert_bool(box.intersects(r)).is_false()
 		# (U3 floats above the disc, so its chip does too.)
 		if e["item"]["label"] != "U3":
-			var inside: bool = ChipLayout.in_ellipse(
+			var inside: bool = CalloutLayout.in_ellipse(
 				Rect2(c - Vector2(rim, ry), Vector2(rim, ry) * 2.0), r
 			)
 			assert_bool(inside).is_true()

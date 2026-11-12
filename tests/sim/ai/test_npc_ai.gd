@@ -2,7 +2,7 @@
 extends GdUnitTestSuite
 ## T035: enemy AI scenarios (FT-SIM-027, FT-SIM-028, FT-M1-007). One M1 corvette
 ## (faction 1, at the origin, no helm input) and the M1 raider enemy (faction 2) a few
-## km away. The raider's EnemyDef keeps 800..3000 m, retreats below 25 % hull and fires
+## km away. The raider's NpcDef keeps 800..3000 m, retreats below 25 % hull and fires
 ## within 0.05 rad of the bow; its cannon reaches 6 km and its sensors 15 km.
 ## Every wait loop is bounded by a tick limit and asserts it was not reached.
 
@@ -42,7 +42,7 @@ func _scenario(world: SimWorld, distance: float, corvette_velocity: Vector3 = Ve
 		drift.ship_id = 0
 		world.submit(drift)
 		world.kin.vel[0] = corvette_velocity
-	world.spawn_enemy(TestDefs.raider_enemy(), RAIDER_FACTION, CubePoint.make(0, 0, -distance))
+	world.spawn_npc(TestDefs.raider_enemy(), RAIDER_FACTION, CubePoint.make(0, 0, -distance))
 
 
 func _distance(world: SimWorld) -> float:
@@ -283,7 +283,7 @@ func test_holds_position_without_target() -> void:
 
 
 # FT: FT-SIM-027
-# The run reset keeps the ship under AI control with its EnemyDef numbers and clears
+# The run reset keeps the ship under AI control with its NpcDef numbers and clears
 # its mode and target; ships spawned with spawn_ship have a disabled row.
 func test_reset_keeps_ai_and_clears_mode() -> void:
 	var world: SimWorld = SimWorld.new(3)
@@ -312,7 +312,7 @@ func test_retreat_crosses_the_seam_and_escapes() -> void:
 	var half: float = 0.5 * world.kin.period
 	world.spawn_ship(_tough_corvette(), CORVETTE_FACTION, CubePoint.make(half - 10000.0, 0, 0))
 	var bow_out: Quaternion = Quaternion(Vector3.UP, -PI / 2.0)
-	world.spawn_enemy(
+	world.spawn_npc(
 		TestDefs.raider_enemy(), RAIDER_FACTION, CubePoint.make(half - 5000.0, 0, 0), bow_out
 	)
 	world.damage.health[world.damage.hull_row(1)] = 0.2 * world.defs[1].hull_max

@@ -164,11 +164,11 @@ func test_phone_landscape_one_right_rail() -> void:
 	assert_str(t.mount_button.text).is_equal("1 bow · ready\nheat 15% cool\n380/400 rounds")
 	assert_str(t.claim_button.text).is_equal("✓ Claim")
 	assert_str(t.ammo_button.text).is_equal("Mass driver ▸")
-	# No target line on a phone: the selection chip shows U3, read-outs under its row.
+	# No target line on a phone: the selection bar shows U3, read-outs under its row.
 	assert_bool(t.target_label.visible).is_false()
 	assert_float(p.top_reserve).is_greater(0.0)
 	var top: float = (p.get_global_transform() * view.position).y + p.top_reserve
-	assert_float(s.frame.selection_chip.get_global_rect().end.y).is_less_equal(top)
+	assert_float(s.frame.selection_bar.get_global_rect().end.y).is_less_equal(top)
 	# The shares are on the Crew page: no Share opener on the screen.
 	assert_bool(p.shows_shares).is_true()
 	assert_bool(s.share_opener.is_visible_in_tree()).is_false()
@@ -454,7 +454,7 @@ func test_out_of_arc_warning_clears_the_chips() -> void:
 			assert_bool((target["rect"] as Rect2).intersects(r)).is_false()
 		var g: Rect2 = p._overlay.get_global_transform() * r
 		assert_bool(g.intersects(p.touch().target_label.get_global_rect())).is_false()
-		assert_bool(g.intersects(s.frame.selection_chip.get_global_rect())).is_false()
+		assert_bool(g.intersects(s.frame.selection_bar.get_global_rect())).is_false()
 		var view: Rect2 = p.get_global_transform() * p.view_rect()
 		assert_bool(view.encloses(g)).override_failure_message(str(c[0])).is_true()
 		assert_float(r.end.y).is_less(p._overlay.size.y / 2.0)

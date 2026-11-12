@@ -27,7 +27,7 @@ func _init(
 	seed_value: int,
 	build: String,
 	player_def: ShipDef,
-	enemy_def: EnemyDef,
+	enemy_def: NpcDef,
 	crew: int = 6,
 	total: int = 12,
 	hostile: bool = true,
@@ -65,7 +65,7 @@ func build() -> SimWorld:
 		)
 	for i: int in world_ships - crew_ships:
 		var f: int = RAIDER_FACTIONS[i % RAIDER_FACTIONS.size()]
-		world.spawn_enemy(enemy, f, CubePoint.of(_point(rng, ARENA * 0.5)), _rotation(rng))
+		world.spawn_npc(enemy, f, CubePoint.of(_point(rng, ARENA * 0.5)), _rotation(rng))
 	return world
 
 

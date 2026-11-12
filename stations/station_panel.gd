@@ -14,7 +14,7 @@ extends Control
 ##
 ## On a phone (#28 follow-up, design "Shared frame") a panel may set `pages` (PageHost): the
 ## screen shows its tabs in the top bar or the bottom tab bar. A panel that sets `in_frame`
-## gets the view-top row (selection chip, request chips, partner glance, ping toast) over
+## gets the view-top row (selection bar, request chips, partner glance, ping toast) over
 ## `top_reserve` px at the top of `view_rect()`; `sheet` is the screen's ChoiceSheet for
 ## one-level choices.
 

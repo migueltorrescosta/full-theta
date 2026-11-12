@@ -24,7 +24,7 @@ const KINDS: Array[StringName] = [
 
 ## Distance from the top bar or the bottom edge, px.
 const EDGE_GAP: float = 72.0
-## The phone frame's view-top row under the top bar (selection chip, request chips), px.
+## The phone frame's view-top row under the top bar (selection bar, request chips), px.
 const VIEW_TOP_ROW: float = 44.0
 
 var ctx: StationContext

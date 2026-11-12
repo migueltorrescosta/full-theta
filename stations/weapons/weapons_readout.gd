@@ -72,7 +72,7 @@ static func out_of_arc_text(p: WeaponsPanel) -> String:
 		return ""
 	var swing: Vector3 = Quaternion(m.forward, local.normalized()) * Vector3.FORWARD
 	return p.tr("weapons.out_of_arc").format(
-		{"target": p.ctx.snap.callsign(id), "dir": ChipText.clock_words(swing)}
+		{"target": p.ctx.snap.callsign(id), "dir": CalloutText.clock_words(swing)}
 	)
 
 
@@ -84,7 +84,7 @@ static func target_text(p: WeaponsPanel) -> String:
 	var local: Vector3 = p.ctx.interp.local(
 		p.ctx.interp.offset_to(p.ctx.interp.contact_position(id))
 	)
-	return p.tr("weapons.target") % ChipText.chip(p.ctx.snap.callsign(id), local)
+	return p.tr("weapons.target") % CalloutText.callout(p.ctx.snap.callsign(id), local)
 
 
 ## The camera mount's selected ammunition by name ("standard" for a mount with one).

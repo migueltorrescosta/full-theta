@@ -185,7 +185,7 @@
       "id": "shakedown.helm.share", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "share"}},
-      "text": {"en": "Share your data. {binding}", "pt_PT": "Partilha os teus dados. {binding}", "it": "Condividi i tuoi dati. {binding}"}
+      "text": {"en": "Share with your partner. {binding}", "pt_PT": "Partilha com o teu parceiro. {binding}", "it": "Condividi con il tuo partner. {binding}"}
     },
     {
       "id": "shakedown.helm.radar_strip", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -382,7 +382,7 @@
       "id": "shakedown.weapons.share", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "share"}},
-      "text": {"en": "Share your data. {binding}", "pt_PT": "Partilha os teus dados. {binding}", "it": "Condividi i tuoi dati. {binding}"}
+      "text": {"en": "Share with your partner. {binding}", "pt_PT": "Partilha com o teu parceiro. {binding}", "it": "Condividi con il tuo partner. {binding}"}
     },
     {
       "id": "shakedown.weapons.radar_strip", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -465,7 +465,7 @@
       "id": "shakedown.engineering.dispatch_nearest", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "dispatch_nearest"}},
-      "text": {"en": "Send the nearest repair crew. {binding}", "pt_PT": "Manda a equipa de reparação mais próxima. {binding}", "it": "Manda la squadra di riparazione più vicina. {binding}"}
+      "text": {"en": "Send the nearest repair crew. {binding}", "pt_PT": "Manda a brigada de reparação mais próxima. {binding}", "it": "Manda la squadra di riparazione più vicina. {binding}"}
     },
     {
       "id": "shakedown.engineering.boost", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -627,7 +627,7 @@
       "id": "shakedown.engineering.share", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "share"}},
-      "text": {"en": "Share your data. {binding}", "pt_PT": "Partilha os teus dados. {binding}", "it": "Condividi i tuoi dati. {binding}"}
+      "text": {"en": "Share with your partner. {binding}", "pt_PT": "Partilha com o teu parceiro. {binding}", "it": "Condividi con il tuo partner. {binding}"}
     },
     {
       "id": "shakedown.engineering.radar_strip", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -713,10 +713,10 @@
       "text": {"en": "Hack the drone. {binding}", "pt_PT": "Pirateia o drone. {binding}", "it": "Hackera il drone. {binding}"}
     },
     {
-      "id": "shakedown.science.sci_ping", "role": "computer", "priority": 1, "max_age_ms": 15000,
+      "id": "shakedown.science.sci_sweep", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
-      "slots": {"binding": {"kind": "binding", "intent": "sci_ping"}},
-      "text": {"en": "Send a sensor ping. {binding}", "pt_PT": "Envia um pulso de sensores. {binding}", "it": "Manda un impulso dei sensori. {binding}"}
+      "slots": {"binding": {"kind": "binding", "intent": "sci_sweep"}},
+      "text": {"en": "Run a sensor sweep. {binding}", "pt_PT": "Faz um varrimento de sensores. {binding}", "it": "Fai una spazzata dei sensori. {binding}"}
     },
     {
       "id": "shakedown.science.sci_scan_mark", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -842,7 +842,7 @@
       "id": "shakedown.science.share", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "share"}},
-      "text": {"en": "Share your data. {binding}", "pt_PT": "Partilha os teus dados. {binding}", "it": "Condividi i tuoi dati. {binding}"}
+      "text": {"en": "Share with your partner. {binding}", "pt_PT": "Partilha com o teu parceiro. {binding}", "it": "Condividi con il tuo partner. {binding}"}
     },
     {
       "id": "shakedown.science.radar_strip", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1087,7 +1087,7 @@
       "id": "shakedown.relay.share", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "share"}},
-      "text": {"en": "Share your data. {binding}", "pt_PT": "Partilha os teus dados. {binding}", "it": "Condividi i tuoi dati. {binding}"}
+      "text": {"en": "Share with your partner. {binding}", "pt_PT": "Partilha com o teu parceiro. {binding}", "it": "Condividi con il tuo partner. {binding}"}
     },
     {
       "id": "shakedown.relay.radar_strip", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1302,7 +1302,7 @@
       "id": "shakedown.comms.share", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "share"}},
-      "text": {"en": "Share your data. {binding}", "pt_PT": "Partilha os teus dados. {binding}", "it": "Condividi i tuoi dati. {binding}"}
+      "text": {"en": "Share with your partner. {binding}", "pt_PT": "Partilha com o teu parceiro. {binding}", "it": "Condividi con il tuo partner. {binding}"}
     },
     {
       "id": "shakedown.comms.radar_strip", "role": "computer", "priority": 1, "max_age_ms": 15000,
@@ -1463,7 +1463,7 @@
       "id": "shakedown.captain.share", "role": "computer", "priority": 1, "max_age_ms": 15000,
       "coalesce": "shakedown", "resume": false,
       "slots": {"binding": {"kind": "binding", "intent": "share"}},
-      "text": {"en": "Share your data. {binding}", "pt_PT": "Partilha os teus dados. {binding}", "it": "Condividi i tuoi dati. {binding}"}
+      "text": {"en": "Share with your partner. {binding}", "pt_PT": "Partilha com o teu parceiro. {binding}", "it": "Condividi con il tuo partner. {binding}"}
     },
     {
       "id": "shakedown.captain.radar_strip", "role": "computer", "priority": 1, "max_age_ms": 15000,

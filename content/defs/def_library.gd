@@ -53,15 +53,15 @@ func weapon(id: StringName) -> WeaponDef:
 	return get_def(&"WeaponDef", id) as WeaponDef
 
 
-func enemy(id: StringName) -> EnemyDef:
-	return get_def(&"EnemyDef", id) as EnemyDef
+func npc(id: StringName) -> NpcDef:
+	return get_def(&"NpcDef", id) as NpcDef
 
 
-## Every EnemyDef by id, for SimWorld.catalog (E07).
-func enemies() -> Dictionary[StringName, EnemyDef]:
-	var out: Dictionary[StringName, EnemyDef] = {}
-	for id: StringName in _by_class.get(&"EnemyDef", {}):
-		out[id] = _by_class[&"EnemyDef"][id]
+## Every NpcDef by id, for SimWorld.catalog (E07).
+func npcs() -> Dictionary[StringName, NpcDef]:
+	var out: Dictionary[StringName, NpcDef] = {}
+	for id: StringName in _by_class.get(&"NpcDef", {}):
+		out[id] = _by_class[&"NpcDef"][id]
 	return out
 
 

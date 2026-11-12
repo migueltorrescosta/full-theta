@@ -210,7 +210,7 @@ func test_controls_send_science_commands() -> void:
 	p.refresh()
 	for pair: Array in [
 		["sci_mode", "science_sensor_mode"],
-		["sci_ping", "science_ping"],
+		["sci_sweep", "sensor_sweep"],
 		["sci_scan_mark", "science_scan_mark"],
 		["sci_self_scan", "science_self_scan"],
 		["sci_scan", "science_scan"],
@@ -233,8 +233,8 @@ func test_controls_send_science_commands() -> void:
 	assert_str(sub.text).is_equal(tr("eng.name." + str(p.subsystems()[1])))
 	assert_str(sub.text).is_not_equal(str(p.subsystems()[1]))
 	# The buttons reach them too, and a hack on a contact without access sends nothing.
-	(p._buttons["ping"] as Button).pressed.emit()
-	assert_int(_cmds(s, "science_ping").size()).is_equal(2)
+	(p._buttons["sweep"] as Button).pressed.emit()
+	assert_int(_cmds(s, "sensor_sweep").size()).is_equal(2)
 	s.ctx.crew.select("contact", U3)
 	p.refresh()
 	assert_bool((p._buttons["hack"] as Button).disabled).is_true()
@@ -334,8 +334,8 @@ func test_hack_minigame_moves_along_known_edges() -> void:
 	assert_bool(s.dispatch(_ev("sci_down", "kbm", s))).is_true()
 	assert_int(_cmds(s, "science_hack_move").size()).is_equal(1)
 	# The d-pad: up is the ping outside a hack and a step up inside one.
-	assert_bool(s.dispatch(_ev("sci_ping", "pad", s))).is_true()
-	assert_int(_cmds(s, "science_ping").size()).is_equal(0)
+	assert_bool(s.dispatch(_ev("sci_sweep", "pad", s))).is_true()
+	assert_int(_cmds(s, "sensor_sweep").size()).is_equal(0)
 	assert_int(_cmds(s, "science_hack_move")[1][1][0]["node"]).is_equal(2)
 	# A tap on the hidden node 9, the goal, from node 8 once the route stands there.
 	p.hack_game.node = 8

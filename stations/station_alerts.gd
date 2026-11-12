@@ -112,7 +112,7 @@ func _text(kind: StringName, p: Dictionary) -> String:
 	match kind:
 		&"hit":
 			var v: Vector3 = p.get("vector", Vector3.ZERO)
-			return tr("alerts.hit").format({"dir": ChipText.clock_words(v)})
+			return tr("alerts.hit").format({"dir": CalloutText.clock_words(v)})
 		&"shield_low":
 			# An absent summary (Hard) arrives as 0: the alert without a number (D224).
 			var pct: int = roundi(float(p.get("value", 0)) * 100.0)

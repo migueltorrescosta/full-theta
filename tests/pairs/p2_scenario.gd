@@ -78,7 +78,7 @@ static func helm(w: SimWorld) -> void:
 static func weapons(w: SimWorld) -> void:
 	if w.tick < 2:
 		return
-	var aim: Vector3 = EnemyAi.lead_aim(w, PLAYER, 0, RAIDER, 0)
+	var aim: Vector3 = NpcAi.lead_aim(w, PLAYER, 0, RAIDER, 0)
 	if not aim.is_finite():
 		return
 	var at: Vector3 = Vector3(w.kin.pos_x[PLAYER], w.kin.pos_y[PLAYER], w.kin.pos_z[PLAYER])

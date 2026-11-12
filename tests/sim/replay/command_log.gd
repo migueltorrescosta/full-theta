@@ -2,7 +2,7 @@ class_name CommandLog
 extends RefCounted
 ## A replayable record of a run (FT-ARC-008, FT-TST-009): the seed, the build id, the
 ## setup parameters that rebuild the starting world (for M1: the player ShipDef id, the
-## EnemyDef id and the map period) and every crew or server command (for example a ship
+## NpcDef id and the map period) and every crew or server command (for example a ship
 ## reset) with the tick
 ## it was applied on and whether it was accepted, in application order. A fresh world
 ## built from the same setup, with each command submitted right before the step of its
@@ -22,7 +22,7 @@ const FORMAT: int = 2
 var seed_value: int = 0
 var build_id: String = ""
 ## Inputs that rebuild the starting world, e.g. {"player": &"m1_corvette",
-## "enemy": &"m1_raider", "map_period": 400000.0}; values must survive var_to_bytes()
+## "npc": &"m1_raider", "map_period": 400000.0}; values must survive var_to_bytes()
 ## (no objects). "map_period" is the world's map period (m, D125); a log without it
 ## means Kinematics.DEFAULT_PERIOD.
 var setup: Dictionary = {}

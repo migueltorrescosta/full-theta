@@ -298,7 +298,7 @@ func _set_hull_scale(value: String) -> bool:
 func make_server() -> NetServer:
 	var defs: DefLibrary = DefLibrary.new()
 	var player: ShipDef = defs.ship(&"m1_corvette")
-	var enemy: EnemyDef = defs.enemy(&"m1_raider")
+	var enemy: NpcDef = defs.npc(&"m1_raider")
 	if player == null or enemy == null:
 		push_error("missing M1 definitions (m1_corvette, m1_raider)")
 		return null
@@ -387,7 +387,7 @@ func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 	if run_def == null:
 		push_error("missing run definition for --encounter %s" % which)
 		return null
-	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.enemies())
+	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.npcs())
 	setup.science = defs.science()
 	setup.conversations = ConversationLibrary.load_dir()
 	for path: String in DefLibrary.list_tres("res://content/modules"):

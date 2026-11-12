@@ -243,7 +243,7 @@ const STATION_COMMANDS: Dictionary = {
 		&"science_cancel",
 		&"science_self_scan",
 		&"science_sensor_mode",
-		&"science_ping",
+		&"sensor_sweep",
 		&"science_scan_mark",
 		&"science_select",
 	],

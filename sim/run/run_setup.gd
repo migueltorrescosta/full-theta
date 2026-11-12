@@ -13,8 +13,8 @@ const CREW_SPACING_M: float = 100.0
 
 ## The run: map, numbers and scenario list.
 var run_def: RunDef
-## Enemies SpawnShipCommand may spawn, by key (app/ fills it from DefLibrary).
-var catalog: Dictionary[StringName, EnemyDef] = {}
+## NPCs SpawnShipCommand may spawn, by key (app/ fills it from DefLibrary).
+var catalog: Dictionary[StringName, NpcDef] = {}
 ## Crewable ships to spawn.
 var crew_ships: int = 1
 ## Read-only scenario data the world carries like defs (SimWorld): parsed conversations,
@@ -38,7 +38,7 @@ func _init(
 	seed_value: int,
 	build: String,
 	run: RunDef,
-	enemies: Dictionary[StringName, EnemyDef] = {},
+	npcs: Dictionary[StringName, NpcDef] = {},
 	crew: int = 1
 ) -> void:
 	super(
@@ -49,7 +49,7 @@ func _init(
 		run.map.period_m if run.map != null else Kinematics.DEFAULT_PERIOD
 	)
 	run_def = run
-	catalog = enemies
+	catalog = npcs
 	crew_ships = crew
 
 

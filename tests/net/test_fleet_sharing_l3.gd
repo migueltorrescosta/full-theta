@@ -42,7 +42,7 @@ func _server() -> NetServer:
 func _npc(server: NetServer, near: int = 0, seers: Array[int] = [0, 1]) -> int:
 	var c: SpawnShipCommand = SpawnShipCommand.new()
 	var at: PackedFloat64Array = server.world.ship_starts.get(near, CubePoint.make())
-	c.enemy_key = server.world.catalog.keys()[0]
+	c.npc_key = server.world.catalog.keys()[0]
 	c.faction = NPC_FACTION
 	c.x = at[0] + 3000.0
 	c.y = at[1]

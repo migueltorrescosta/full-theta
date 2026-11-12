@@ -1,7 +1,7 @@
 class_name ScienceTable
 extends SimTable
 ## Science state, one row per ship keyed by ship id and faction (E01, FT-SCI-003,
-## FT-SCI-004 to FT-SCI-011): the sensor mode and active ping, the selected contact, the
+## FT-SCI-004 to FT-SCI-011): the sensor mode and sensor sweep, the selected contact, the
 ## scan point (the sim's copy of the crew-state scan position, FT-SCI-010), the one open
 ## minigame and the own-ship scan. What each faction has learned of a contact is
 ## in KnowledgeTable.scan_conf; hack windows on the target are in HackTable. A minigame
@@ -16,10 +16,10 @@ const NO_POINT: float = INF
 
 ## 1 while the sensors are in active mode (FT-SCI-003).
 var active: PackedByteArray = PackedByteArray()
-## Seconds left of the active ping's low-noise window.
-var ping_left: PackedFloat64Array = PackedFloat64Array()
-## Seconds until the next ping may start.
-var ping_cool: PackedFloat64Array = PackedFloat64Array()
+## Seconds left of the sensor sweep's low-noise window.
+var sweep_left: PackedFloat64Array = PackedFloat64Array()
+## Seconds until the next sweep may start.
+var sweep_cool: PackedFloat64Array = PackedFloat64Array()
 ## Contact the Science panel has selected (noise preview), or -1.
 var selected: PackedInt32Array = PackedInt32Array()
 ## The scan point (m, 64-bit like Kinematics; scan_x NO_POINT for none): where the ship's
@@ -62,8 +62,8 @@ var preview: Array[Dictionary] = []
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	add_key(ship_id, faction)
 	active.append(0)
-	ping_left.append(0.0)
-	ping_cool.append(0.0)
+	sweep_left.append(0.0)
+	sweep_cool.append(0.0)
 	selected.append(-1)
 	scan_x.append(NO_POINT)
 	scan_y.append(0.0)

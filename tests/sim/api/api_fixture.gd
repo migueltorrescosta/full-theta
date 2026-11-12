@@ -43,7 +43,7 @@ static func run_def(
 
 static func world(crew: int = 1, def: RunDef = null) -> SimWorld:
 	var run: RunDef = def if def != null else run_def()
-	var catalog: Dictionary[StringName, EnemyDef] = {RAIDER: TestDefs.raider_enemy()}
+	var catalog: Dictionary[StringName, NpcDef] = {RAIDER: TestDefs.raider_enemy()}
 	var setup: RunSetup = RunSetup.new(7, "test", run, catalog, crew)
 	var w: SimWorld = setup.build()
 	var dist: RepDistDef = RepDistDef.new()

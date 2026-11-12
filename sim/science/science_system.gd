@@ -1,9 +1,9 @@
 class_name ScienceSystem
 extends RefCounted
-## Science rules (E01): the sensor mode and active ping, scan noise, the silhouette-
+## Science rules (E01): the sensor mode and sensor sweep, scan noise, the silhouette-
 ## alignment scan, the node-route hack and its timed effect, the scan-position mark and
 ## the own-ship scan. The Science commands call the functions below; step() runs the
-## clocks (ping, minigame timeouts, trace bar, hack windows). Runs first in the tick, so
+## clocks (sweep, minigame timeouts, trace bar, hack windows). Runs first in the tick, so
 ## a hack window opened by this tick's commands already applies this tick.
 ##
 ## Events, keyed to the scanning ship (other_id the contact):
@@ -17,7 +17,7 @@ extends RefCounted
 ## - &"hack_done": value window (s), tag the subsystem id.
 ## - &"scan_mark": the scan-position mark was placed, vector its offset from the contact.
 ## - &"self_scan_done".
-## scan_started and hack_started stay on the server (NetCoop's probe-scan stat); a ping,
+## scan_started and hack_started stay on the server (NetCoop's probe-scan stat); a sweep,
 ## an own-ship scan's start and a hack window's end emit nothing (R02-7: no reader).
 
 const REASON_NO_SCIENCE: StringName = &"no_science"
@@ -37,10 +37,10 @@ static func step(world: SimWorld) -> void:
 	if def != null:
 		var t: ScienceTable = world.science
 		for ship: int in world.ship_count():
-			if t.ping_left[ship] > 0.0:
-				t.ping_left[ship] = maxf(0.0, t.ping_left[ship] - SimWorld.DT)
-			if t.ping_cool[ship] > 0.0:
-				t.ping_cool[ship] = maxf(0.0, t.ping_cool[ship] - SimWorld.DT)
+			if t.sweep_left[ship] > 0.0:
+				t.sweep_left[ship] = maxf(0.0, t.sweep_left[ship] - SimWorld.DT)
+			if t.sweep_cool[ship] > 0.0:
+				t.sweep_cool[ship] = maxf(0.0, t.sweep_cool[ship] - SimWorld.DT)
 			if t.kind[ship] != ScienceTable.Minigame.NONE:
 				_step_minigame(world, def, t, ship)
 			var sel: int = t.selected[ship]
@@ -52,7 +52,7 @@ static func step(world: SimWorld) -> void:
 
 
 ## The noise a scan of the contact would have now, with its terms: {noise, range,
-## aspect, health, active, ping, probe, mark}. range, aspect and health are the 0..1
+## aspect, health, active, sweep, probe, mark}. range, aspect and health are the 0..1
 ## terms before their weights; the rest flags and the final noise.
 static func noise_parts(world: SimWorld, ship: int, contact: int) -> Dictionary:
 	var def: ScienceDef = world.science_def
@@ -73,11 +73,11 @@ static func noise_parts(world: SimWorld, ship: int, contact: int) -> Dictionary:
 		pips = world.damage.pips[r]
 		nominal = DamageSystem.sub_def(world, ship, r).nominal_pips
 	var is_active: bool = t.active[ship] == 1
-	var pinging: bool = t.ping_left[ship] > 0.0
+	var sweeping: bool = t.sweep_left[ship] > 0.0
 	var probe: bool = probe_covered(world, ship, contact)
 	var at_mark: bool = at_scan_point(world, ship)
 	var total: float = ScienceNoise.compute(
-		def, dist, aspect, eff, pips, nominal, is_active, pinging, probe, at_mark
+		def, dist, aspect, eff, pips, nominal, is_active, sweeping, probe, at_mark
 	)
 	return {
 		"noise": total,
@@ -85,7 +85,7 @@ static func noise_parts(world: SimWorld, ship: int, contact: int) -> Dictionary:
 		"aspect": aspect,
 		"health": 1.0 - eff,
 		"active": is_active,
-		"ping": pinging,
+		"sweep": sweeping,
 		"probe": probe,
 		"mark": at_mark,
 	}
@@ -129,16 +129,16 @@ static func set_mode(world: SimWorld, ship: int, is_active: bool) -> bool:
 	return true
 
 
-## Starts an active ping: noise drops for ping_duration_s (P key).
-static func ping(world: SimWorld, ship: int) -> bool:
+## Starts a sensor sweep: noise drops for sweep_duration_s (P key).
+static func sweep(world: SimWorld, ship: int) -> bool:
 	var def: ScienceDef = world.science_def
 	if def == null:
 		return _refuse(world, ship, -1, REASON_NO_SCIENCE)
 	var t: ScienceTable = world.science
-	if t.ping_cool[ship] > 0.0:
+	if t.sweep_cool[ship] > 0.0:
 		return _refuse(world, ship, -1, REASON_COOLING)
-	t.ping_left[ship] = def.ping_duration_s
-	t.ping_cool[ship] = def.ping_cooldown_s
+	t.sweep_left[ship] = def.sweep_duration_s
+	t.sweep_cool[ship] = def.sweep_cooldown_s
 	return true
 
 

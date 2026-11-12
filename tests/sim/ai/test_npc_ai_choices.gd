@@ -32,13 +32,13 @@ func test_picks_the_nearest_hostile_and_ties_go_to_the_lower_id() -> void:
 	var world: SimWorld = SimWorld.new(3)
 	world.spawn_ship(_tough(), 1, CubePoint.make(3000.0, 0.0, 0.0))
 	world.spawn_ship(_tough(), 1, CubePoint.make(0.0, 0.0, -2000.0))
-	var raider: int = world.spawn_enemy(TestDefs.raider_enemy(), 2)
+	var raider: int = world.spawn_npc(TestDefs.raider_enemy(), 2)
 	SimFixture.run(world, 5)
 	assert_int(world.ai.target[raider]).is_equal(1)
 	var tie: SimWorld = SimWorld.new(3)
 	tie.spawn_ship(_tough(), 1, CubePoint.make(0.0, 0.0, -2500.0))
 	tie.spawn_ship(_tough(), 1, CubePoint.make(0.0, 0.0, 2500.0))
-	var other: int = tie.spawn_enemy(TestDefs.raider_enemy(), 2)
+	var other: int = tie.spawn_npc(TestDefs.raider_enemy(), 2)
 	SimFixture.run(tie, 5)
 	assert_int(tie.ai.target[other]).is_equal(0)
 
@@ -48,7 +48,7 @@ func test_picks_the_nearest_hostile_and_ties_go_to_the_lower_id() -> void:
 func test_target_destroyed_returns_to_hold_and_stops() -> void:
 	var world: SimWorld = SimWorld.new(5)
 	world.spawn_ship(_tough(), 1, CubePoint.make(0.0, 0.0, 4000.0))
-	var raider: int = world.spawn_enemy(TestDefs.raider_enemy(), 2)
+	var raider: int = world.spawn_npc(TestDefs.raider_enemy(), 2)
 	SimFixture.run(world, 20 * HZ)
 	assert_int(world.ai.mode[raider]).is_not_equal(AiTable.Mode.HOLD)
 	DamageSystem.damage_hull(world, 0, 1e13)
@@ -66,7 +66,7 @@ func test_target_destroyed_returns_to_hold_and_stops() -> void:
 func test_ai_resends_face_point_and_aim_only_when_they_change() -> void:
 	var world: RecordingWorld = RecordingWorld.new(11)
 	world.spawn_ship(_tough(), 1, CubePoint.make(0.0, 0.0, -5000.0))
-	world.spawn_enemy(TestDefs.raider_enemy(), 2)
+	world.spawn_npc(TestDefs.raider_enemy(), 2)
 	SimFixture.run(world, 60 * HZ)
 	world.submitted.clear()
 	SimFixture.run(world, 10 * HZ)

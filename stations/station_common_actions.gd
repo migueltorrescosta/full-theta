@@ -43,8 +43,8 @@ func run(ev: Dictionary) -> bool:
 			for feature: StringName in shareable():
 				s.ctx.intents.share(String(feature))
 		"overlay":
-			# The Controls chip says this key opens the page, so it has done its job (D4).
-			var chip: Node = s.find_child("ControlsChip", false, false)
+			# The Controls hint says this key opens the page, so it has done its job (D4).
+			var chip: Node = s.find_child("ControlsHint", false, false)
 			if chip != null:
 				chip.queue_free()
 			s.help_requested.emit()

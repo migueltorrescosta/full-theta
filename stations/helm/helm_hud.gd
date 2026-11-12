@@ -538,7 +538,7 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 func _covers_something(box: Rect2) -> bool:
 	var avoid: Array[Rect2] = reserved()
 	avoid.append_array(_placed)
-	return ChipLayout.hits(box, avoid)
+	return CalloutLayout.hits(box, avoid)
 
 
 ## Where a marker's label goes (HUD coordinates): right of the marker, else the nearest spot
@@ -554,7 +554,7 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 	var avoid: Array[Rect2] = reserved()
 	avoid.append_array(_placed)
 	var inside: Rect2 = area()
-	if not ChipLayout.hits(right, avoid) and inside.encloses(right):
+	if not CalloutLayout.hits(right, avoid) and inside.encloses(right):
 		return right
 	# (a marker outside the view's clear area, under the view-top row, has no near spot)
 	if not inside.has_point(p):
@@ -611,10 +611,10 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 		if (
 			t.intersects(marker)
 			or not inside.encloses(t)
-			or not ChipLayout.leader_clear(p, t, avoid)
+			or not CalloutLayout.leader_clear(p, t, avoid)
 		):
 			continue
-		if ChipLayout.gap_to(t, p) > reach:
+		if CalloutLayout.gap_to(t, p) > reach:
 			continue
 		var cover: float = 0.0
 		for a: Rect2 in avoid:
@@ -820,7 +820,7 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 			draw_circle(p, 5.0, col)
 		else:
 			draw_arc(p, 5.0, 0.0, TAU, 16, col, 2.0)
-		label = ChipText.chip(selection_label(), local)
+		label = CalloutText.callout(selection_label(), local)
 	var w: float = 4.0 * COMPASS_R
 	var chip_dy: float = -COMPASS_R - 8.0 if _chip_above() else COMPASS_R + 18.0
 	Palette.draw_outlined(

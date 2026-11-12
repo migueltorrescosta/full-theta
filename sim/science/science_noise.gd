@@ -5,12 +5,12 @@ extends RefCounted
 ##
 ## noise = (base + range_weight * range_term + aspect_weight * aspect_term
 ##          + health_weight * (1 - sensor_effectiveness))
-##         * pip_factor * mode_factor * ping_factor * probe_factor * mark_factor,
+##         * pip_factor * mode_factor * sweep_factor * probe_factor * mark_factor,
 ## clamped to 0..1. The range term is distance / range_ref (clamped); the aspect term
 ## is |cos| of the angle between the contact's bow and the line of sight (0 broadside,
 ## 1 bow-on or stern-on); pip_factor is 1 - pip_gain * (pips - nominal), clamped to
 ## 0.5..2 (more sensor pips, less noise; P10); mode_factor is active_factor in active
-## mode; the ping, probe (P13) and mark (P3) factors apply while their condition holds.
+## mode; the sweep, probe (P13) and mark (P3) factors apply while their condition holds.
 ## Occlusion by hazards is a probe/Relay concern and not modelled here.
 
 
@@ -24,7 +24,7 @@ static func compute(
 	pips: int,
 	nominal_pips: int,
 	is_active: bool,
-	pinging: bool,
+	sweeping: bool,
 	probe_covered: bool,
 	at_mark: bool
 ) -> float:
@@ -37,8 +37,8 @@ static func compute(
 	raw *= pip_factor(def, pips, nominal_pips)
 	if is_active:
 		raw *= def.active_factor
-	if pinging:
-		raw *= def.ping_factor
+	if sweeping:
+		raw *= def.sweep_factor
 	if probe_covered:
 		raw *= def.probe_factor
 	if at_mark:

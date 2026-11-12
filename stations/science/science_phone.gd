@@ -2,7 +2,7 @@ class_name SciencePhone
 extends Control
 ## Science on a phone (#28 follow-up, design 2.4, owner picks P28-Tabs, P28-Common, P28-L1;
 ## D287-D289). Landscape: the radar fills the panel under two translucent rails. The right
-## rail is the persistent zone: Scan / Hack, Ping / Mark, Passive / Own ship and Take the
+## rail is the persistent zone: Scan / Hack, Sweep / Mark, Passive / Own ship and Take the
 ## scan. The left rail is the page zone: Contacts (the list), Card (the whole card, wider,
 ## no scroll; the radar re-centres beside it) and Crew (CrewPage). Hack opens the screen's
 ## choice sheet of the target's subsystems (SciencePanel.open_hack). While a scan or hack
@@ -31,8 +31,8 @@ const ROW_SEPARATION: int = 25
 ## The radar's range label is a TOUCH_PRIMARY tap.
 const RANGE_MIN: float = 48.0
 ## The persistent actions in rows: landscape (right rail) and upright.
-const ROWS_SIDE: Array = [["scan", "hack"], ["ping", "mark"], ["mode", "self"], ["claim"]]
-const ROWS_UP: Array = [["scan", "hack", "ping", "mark"], ["mode", "self", "claim"]]
+const ROWS_SIDE: Array = [["scan", "hack"], ["sweep", "mark"], ["mode", "self"], ["claim"]]
+const ROWS_UP: Array = [["scan", "hack", "sweep", "mark"], ["mode", "self", "claim"]]
 const PAGE_CONTACTS: int = 0
 const PAGE_CARD: int = 1
 const PAGE_CREW: int = 2

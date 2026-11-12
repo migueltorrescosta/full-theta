@@ -37,7 +37,7 @@ var mounts: MountTable = MountTable.new()
 var projectiles: ProjectileTable = ProjectileTable.new()
 var damage: DamageTable = DamageTable.new()
 var knowledge: KnowledgeTable = KnowledgeTable.new()
-## Enemy AI state (T035); rows of ships spawned with spawn_enemy are enabled.
+## NPC AI state (T035); rows of ships spawned with spawn_npc are enabled.
 var ai: AiTable = AiTable.new()
 ## Run state: each ship's status and the encounter outcome (T036, FT-MIS-017).
 var ships: ShipStateTable = ShipStateTable.new()
@@ -75,10 +75,10 @@ var module_defs: Array[ModuleDef] = []
 var rep_dists: Dictionary[StringName, RepDistDef] = {}
 ## The run's encounters and story flags (E07, FT-MIS-025).
 var encounters: EncounterTable = EncounterTable.new()
-## Read-only run data like defs (FT-ARC-020), filled by RunSetup: the enemies SpawnShipCommand
+## Read-only run data like defs (FT-ARC-020), filled by RunSetup: the NPCs SpawnShipCommand
 ## can spawn by key, the scenario ids an encounter's scenario_ix indexes, and the run's
 ## numbers. null run_def: not a director run (the M1 encounter, tests).
-var catalog: Dictionary[StringName, EnemyDef] = {}
+var catalog: Dictionary[StringName, NpcDef] = {}
 var scenario_ids: PackedStringArray = PackedStringArray()
 var run_def: RunDef
 ## The session's rules (#11, E11, E12): COOP with one slot unless RunSetup was given slots.
@@ -191,17 +191,17 @@ func spawn_ship(
 	return id
 
 
-## Spawns an enemy's ship like spawn_ship and hands it to the enemy AI with the
-## EnemyDef's behaviour numbers (T035, FT-SIM-027).
-func spawn_enemy(
-	enemy: EnemyDef,
+## Spawns an NPC's ship like spawn_ship and hands it to the NPC AI with the
+## NpcDef's behaviour numbers (T035, FT-SIM-027).
+func spawn_npc(
+	npc: NpcDef,
 	faction: int,
 	at: PackedFloat64Array = CubePoint.make(),
 	rotation: Quaternion = Quaternion.IDENTITY,
 	velocity: Vector3 = Vector3.ZERO
 ) -> int:
-	var id: int = spawn_ship(enemy.ship, faction, at, rotation, velocity)
-	ai.enable(id, enemy)
+	var id: int = spawn_ship(npc.ship, faction, at, rotation, velocity)
+	ai.enable(id, npc)
 	return id
 
 
@@ -254,7 +254,7 @@ func is_hostile(faction: int, other: int) -> bool:
 	return relation(faction, other) == Relation.HOSTILE
 
 
-## Whether the ship is flown by a crew (not by the enemy AI).
+## Whether the ship is flown by a crew (not by the NPC AI).
 func is_crew(ship_id: int) -> bool:
 	return not ai.is_enabled(ship_id)
 
@@ -314,7 +314,7 @@ func step() -> void:
 	ScienceSystem.step(self)
 	KnowledgeSystem.step(self)
 	# The AI decides on this tick's knowledge; its commands apply next tick (FT-SIM-028).
-	EnemyAi.step(self)
+	NpcAi.step(self)
 	PowerSystem.step(self)
 	AssistSystem.step(self)
 	JumpSystem.step(self)

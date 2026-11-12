@@ -4,18 +4,18 @@ extends StationPanel
 ## 3D disc radar with icons sized by detection confidence (FT-SCI-001), the contact list
 ## (nearest hostile first), the contact card with a confidence bar per part (ScienceCard,
 ## FT-SCI-002), and the controls: passive or active sensors (FT-SCI-003), Scan and Hack
-## on the selected contact, the active ping, the scan-position mark for Helm
+## on the selected contact, the sensor sweep, the scan-position mark for Helm
 ## (FT-SCI-010), the own-ship scan (FT-SCI-009) and the claim of the one active scan or
 ## hack (FT-NET-022). An open scan or hack replaces the radar with its minigame
 ## (ScanGame, HackGame; FT-SCI-004, FT-SCI-006); the server generates and checks both
 ## (FT-SCI-011).
 ##
 ## KB/M: click a contact or the list, right-drag orbits the radar, wheel zooms, E scan,
-## H hack, [ ] choose the hack's subsystem, P active ping, Q passive / active, M drop the
+## H hack, [ ] choose the hack's subsystem, P sensor sweep, Q passive / active, M drop the
 ## scan-position mark, I scan the own ship. In a scan: drag (or arrows, - and =) turns
 ## the wireframe, Enter submits, Backspace cancels. In a hack: arrows or a tap on an
 ## adjacent node. Controller: left stick cursor with snap to contact, right stick
-## orbit, RT scan, LT hack, d-pad up ping, down scan-position mark, left / right
+## orbit, RT scan, LT hack, d-pad up sweep, down scan-position mark, left / right
 ## subsystem, LB sensors mode, LB + d-pad down own-ship scan; in a scan the sticks turn
 ## the open axes, X submits, Y cancels; in a hack the stick or d-pad moves the route.
 ## Touch: the buttons and the minigames' tap and drag, two fingers orbit the radar. On a
@@ -165,7 +165,7 @@ func actions() -> Array[Array]:
 		["scan", "sci.scan", _scan],
 		["hack", "sci.hack", _hack],
 		["sub", "", _cycle_subsystem.bind(1)],
-		["ping", "sci.ping", _ping],
+		["sweep", "sci.sweep", _sweep],
 		["mark", "sci.scan_mark", _scan_mark],
 		["self", "sci.self_scan", _self_scan],
 		["claim", "sci.claim", _claim_scan],
@@ -298,7 +298,7 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	refresh()
-	ControlsChip.show_radar_legend(self, ctx.settings)
+	ControlsHint.show_radar_legend(self, ctx.settings)
 
 
 # --- Reading. ---
@@ -524,8 +524,8 @@ func _cycle_subsystem(step: int) -> void:
 		_sub_picked = true
 
 
-func _ping() -> void:
-	ctx.intents.command({"kind": "science_ping"})
+func _sweep() -> void:
+	ctx.intents.command({"kind": "sensor_sweep"})
 
 
 ## FT-SCI-010: the scan-position mark for the selected contact (Helm sees where to fly).
@@ -705,8 +705,8 @@ func handle_intent(ev: Dictionary) -> bool:
 			_scan()
 		"sci_hack":
 			_hack()
-		"sci_ping":
-			_ping()
+		"sci_sweep":
+			_sweep()
 		"sci_mode":
 			_toggle_mode()
 		"sci_scan_mark":
@@ -723,7 +723,7 @@ func handle_intent(ev: Dictionary) -> bool:
 
 
 ## The hack direction a press means: the arrows, and on the controller the d-pad
-## intents that are ping, scan-position mark and subsystem cycling outside a hack.
+## intents that are sweep, scan-position mark and subsystem cycling outside a hack.
 func _hack_dir(id: String) -> int:
 	match id:
 		"sci_right", "sci_sub_next":
@@ -732,7 +732,7 @@ func _hack_dir(id: String) -> int:
 			return HackGame.LEFT
 		"sci_down", "sci_scan_mark":
 			return HackGame.DOWN
-		"sci_up", "sci_ping":
+		"sci_up", "sci_sweep":
 			return HackGame.UP
 	return 0
 
@@ -805,7 +805,7 @@ static func touch_help() -> Array:
 		[Rect2(47, 64, 168, 230), t.call("page.contacts"), t.call("intent.select")],
 		[r.call(0, 0), t.call("sci.scan"), t.call("intent.sci_scan")],
 		[r.call(1, 0), t.call("sci.hack"), t.call("help.sci_hack")],
-		[r.call(0, 1), t.call("sci.ping"), t.call("intent.sci_ping")],
+		[r.call(0, 1), t.call("sci.sweep"), t.call("intent.sci_sweep")],
 		[r.call(1, 1), t.call("sci.short_mark"), t.call("intent.sci_scan_mark")],
 		[r.call(0, 2), t.call("sci.short_passive"), t.call("intent.sci_mode")],
 		[r.call(1, 2), t.call("sci.short_self"), t.call("intent.sci_self_scan")],

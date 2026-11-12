@@ -191,7 +191,7 @@ static func context(
 	):
 		ctx.settings.mark_hint_seen(station)
 	# The radar legend (C11) is first-visit too; the tests that look for it unmark it.
-	ctx.settings.mark_hint_seen(ControlsChip.RADAR_KEY)
+	ctx.settings.mark_hint_seen(ControlsHint.RADAR_KEY)
 	ctx.matcher = InputMatcher.new(ctx.settings.bindings)
 	var crew: CrewState = ctx.crew
 	crew.welcome(

@@ -8,7 +8,7 @@ extends GdUnitTestSuite
 const LOG_PATH: String = "res://tests/golden/m1_encounter.cmdlog"
 const EXPECTED_PATH: String = "res://tests/golden/m1_encounter.expected.cfg"
 const SEED: int = 9
-const SETUP: Dictionary = {"player": &"m1_corvette", "enemy": &"m1_raider"}
+const SETUP: Dictionary = {"player": &"m1_corvette", "npc": &"m1_raider"}
 ## The recording stops at the encounter's outcome or after 120 s.
 const MAX_TICKS: int = 120 * SimWorld.HZ
 ## Diagnostic tolerances for the readable values when the state hash differs, or the

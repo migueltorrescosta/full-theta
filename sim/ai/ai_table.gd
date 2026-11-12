@@ -1,9 +1,9 @@
 class_name AiTable
 extends SimTable
 ## Enemy AI state (T035, FT-SIM-027), one row per ship keyed by ship id and faction
-## (FT-ARC-012). Rows start disabled; SimWorld.spawn_enemy enables a row and copies the
-## EnemyDef's behaviour numbers into it (FT-ARC-020: copies, never the definition).
-## EnemyAi reads the parameters and writes mode and target; nothing else writes here.
+## (FT-ARC-012). Rows start disabled; SimWorld.spawn_npc enables a row and copies the
+## NpcDef's behaviour numbers into it (FT-ARC-020: copies, never the definition).
+## NpcAi reads the parameters and writes mode and target; nothing else writes here.
 
 ## What the AI is doing: HOLD (no hostile contact), ATTACK (closing on a contact beyond
 ## the engage band), KEEP_RANGE (inside the band or too close: holds the band) and
@@ -15,13 +15,13 @@ const MODE_NAMES: Array[StringName] = [&"hold", &"attack", &"keep_range", &"retr
 
 ## 1 when the AI flies this ship.
 var enabled: PackedByteArray = PackedByteArray()
-## EnemyDef.engage_range_min (m).
+## NpcDef.engage_range_min (m).
 var engage_range_min: PackedFloat64Array = PackedFloat64Array()
-## EnemyDef.engage_range_max (m).
+## NpcDef.engage_range_max (m).
 var engage_range_max: PackedFloat64Array = PackedFloat64Array()
-## EnemyDef.retreat_hull_fraction (dimensionless).
+## NpcDef.retreat_hull_fraction (dimensionless).
 var retreat_hull_fraction: PackedFloat64Array = PackedFloat64Array()
-## EnemyDef.fire_cone (rad).
+## NpcDef.fire_cone (rad).
 var fire_cone: PackedFloat64Array = PackedFloat64Array()
 ## Current Mode.
 var mode: PackedByteArray = PackedByteArray()
@@ -40,13 +40,13 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	target.append(-1)
 
 
-## Hands the ship to the AI with the enemy's behaviour numbers.
-func enable(ship_id: int, enemy: EnemyDef) -> void:
+## Hands the ship to the AI with the NPC's behaviour numbers.
+func enable(ship_id: int, npc: NpcDef) -> void:
 	enabled[ship_id] = 1
-	engage_range_min[ship_id] = enemy.engage_range_min
-	engage_range_max[ship_id] = enemy.engage_range_max
-	retreat_hull_fraction[ship_id] = enemy.retreat_hull_fraction
-	fire_cone[ship_id] = enemy.fire_cone
+	engage_range_min[ship_id] = npc.engage_range_min
+	engage_range_max[ship_id] = npc.engage_range_max
+	retreat_hull_fraction[ship_id] = npc.retreat_hull_fraction
+	fire_cone[ship_id] = npc.fire_cone
 
 
 func is_enabled(ship_id: int) -> bool:
@@ -54,7 +54,7 @@ func is_enabled(ship_id: int) -> bool:
 
 
 ## The run reset (FT-MIS-017) keeps the ship under AI control with its behaviour
-## numbers, which came from the EnemyDef rather than the ShipDef, and clears the rest.
+## numbers, which came from the NpcDef rather than the ShipDef, and clears the rest.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	mode[ship_id] = Mode.HOLD
 	target[ship_id] = -1

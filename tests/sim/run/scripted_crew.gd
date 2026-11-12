@@ -63,7 +63,7 @@ func _repair_weapons(world: SimWorld) -> void:
 
 func _aim(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
-	var aim: Vector3 = EnemyAi.lead_aim(world, ship, 0, target, 0)
+	var aim: Vector3 = NpcAi.lead_aim(world, ship, 0, target, 0)
 	if not aim.is_finite():
 		aim = kin.relative(ship, target)
 	var c: AimMountCommand = AimMountCommand.new()

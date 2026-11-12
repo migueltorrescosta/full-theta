@@ -6,7 +6,7 @@ extends Control
 ## range ring through the selected item's stem foot, an optional elevation side strip,
 ## fixed range steps with beyond-scale arrows on the rim, the selected stem drawn on
 ## top, marks as diamonds with stems, hazard zones and scan positions as octagons, the
-## site's name as a banner (SiteBanner, FT-SPA-027), contact chips (ChipText) and ping
+## site's name as a banner (SiteBanner, FT-SPA-027), contact chips (CalloutText) and ping
 ## pulses. Ship
 ## frame always; optionally centred on a selected mark, site or contact while keeping
 ## the ship's axes (no world-fixed up, D124). Drawn in 2D with a fixed or orbitable
@@ -182,7 +182,7 @@ func item_at(local_pos: Vector2, reach: float = HIT_PX) -> Dictionary:
 	if not best.is_empty():
 		return ItemGlyph.ref(best)
 	for e: Dictionary in layout:
-		if (e["chip_rect"] as Rect2).has_point(local_pos):
+		if (e["callout_rect"] as Rect2).has_point(local_pos):
 			return ItemGlyph.ref(e["item"])
 	return {}
 
@@ -190,7 +190,7 @@ func item_at(local_pos: Vector2, reach: float = HIT_PX) -> Dictionary:
 ## Bearing and mark of the item under local_pos, for hover only (FT-SPA-005); "" if none.
 func hover_text(local_pos: Vector2) -> String:
 	var it: Dictionary = picture.find(item_at(local_pos))
-	return ChipText.precise(it["local"]) if not it.is_empty() else ""
+	return CalloutText.precise(it["local"]) if not it.is_empty() else ""
 
 
 ## Screen position (px, this control's coordinates) of an item at `local` (ship frame
@@ -305,10 +305,10 @@ func _draw() -> void:
 		draw_polyline(_ring(ring), Palette.color("selected") * Color(1, 1, 1, 0.6), 1.0, true)
 		_draw_item(sel, true)
 	for e: Dictionary in layout:
-		if e["chip"] != "" and e != sel:
-			_draw_text(font, e["chip_rect"], e["chip"], Palette.item_color(e["item"]))
-	if not sel.is_empty() and sel["chip"] != "":
-		_draw_text(font, sel["chip_rect"], sel["chip"], Palette.color("selected"))
+		if e["callout"] != "" and e != sel:
+			_draw_text(font, e["callout_rect"], e["callout"], Palette.item_color(e["item"]))
+	if not sel.is_empty() and sel["callout"] != "":
+		_draw_text(font, sel["callout_rect"], sel["callout"], Palette.color("selected"))
 	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			_draw_pulse(_screen(_rel_item(it)), float(it.get("pulse", 0.0)))
@@ -451,7 +451,7 @@ func _draw_text(font: Font, rect: Rect2, text: String, col: Color) -> void:
 
 
 ## Per item (points last): {"item", "rel" (from the centre), "pos", "foot", "beyond",
-## "chip" (text or ""), "chip_rect"}.
+## "callout" (text or ""), "callout_rect"}.
 func _layout() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var font: Font = get_theme_default_font()
@@ -481,13 +481,13 @@ func _layout() -> Array[Dictionary]:
 		if chip != "" and not small():
 			# A small radar (a phone's 180 px column) drops the range band, then the clock,
 			# until the chip fits beside its blip; the callsign alone may slide over it.
-			var parts: PackedStringArray = chip.split(ChipText.SEP)
+			var parts: PackedStringArray = chip.split(CalloutText.SEP)
 			for n: int in range(parts.size(), 0, -1):
-				chip = ChipText.SEP.join(parts.slice(0, n))
+				chip = CalloutText.SEP.join(parts.slice(0, n))
 				rect = _chip_rect(font, chip, pos, beyond and pos.x > c.x)
 				if rect.position.x > pos.x + blip_r() or rect.end.x < pos.x - blip_r():
 					break
-			var forms: Array = ChipLayout.chip_forms(font, chip, FONT_SIZE)
+			var forms: Array = CalloutLayout.callout_forms(font, chip, FONT_SIZE)
 			variants.assign(forms[0])
 			sizes.assign(forms[1])
 		(
@@ -499,8 +499,8 @@ func _layout() -> Array[Dictionary]:
 					"pos": pos,
 					"foot": foot,
 					"beyond": beyond,
-					"chip": chip,
-					"chip_rect": rect,
+					"callout": chip,
+					"callout_rect": rect,
 					"variants": variants,
 					"sizes": sizes,
 					"selected": _is_selected(it),
@@ -514,7 +514,7 @@ func _layout() -> Array[Dictionary]:
 		var tilt: float = sin(deg_to_rad(tilt_deg))
 		var fixed: Array = _numerals(font, c, r).values()
 		fixed.append_array([_range_rect(), _site_rect(), _own_box()])
-		ChipLayout.declutter(
+		CalloutLayout.declutter(
 			out,
 			fixed,
 			_view().grow(-CHIP_MARGIN),
@@ -530,8 +530,8 @@ static func hide_covered(layout: Array[Dictionary], covers: Array[Rect2]) -> voi
 	if covers.is_empty():
 		return
 	for e: Dictionary in layout:
-		if e["chip"] != "" and SheetCover.touches(e["chip_rect"], covers):
-			e["chip"] = ""
+		if e["callout"] != "" and SheetCover.touches(e["callout_rect"], covers):
+			e["callout"] = ""
 
 
 ## True when the disc is under SMALL_R in radius.
@@ -546,8 +546,8 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 	if v.size.x <= 0.0 or v.size.y <= 0.0:
 		# (not laid out yet: no room for a chip)
 		for e: Dictionary in entries:
-			e["chip"] = ""
-			e["chip_rect"] = Rect2(e["pos"], Vector2.ZERO)
+			e["callout"] = ""
+			e["callout_rect"] = Rect2(e["pos"], Vector2.ZERO)
 		return
 	var c: Vector2 = disc_centre()
 	var taken: Array[Rect2] = []
@@ -564,9 +564,9 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 			return _is_selected(a["item"]) and not _is_selected(b["item"])
 	)
 	for e: Dictionary in order:
-		if e["chip"] == "":
+		if e["callout"] == "":
 			continue
-		var sz: Vector2 = ChipLayout.text_size(font, e["chip"], FONT_SIZE)
+		var sz: Vector2 = CalloutLayout.text_size(font, e["callout"], FONT_SIZE)
 		var p: Vector2 = e["pos"]
 		var spots: Array[Vector2] = [
 			Vector2(p.x + half.x + 1.0, p.y - sz.y / 2.0),
@@ -594,10 +594,10 @@ func _place_small(entries: Array[Dictionary], font: Font) -> void:
 					break
 		if pick.has_area():
 			taken.append(pick)
-			e["chip_rect"] = pick
+			e["callout_rect"] = pick
 		else:
-			e["chip"] = ""
-			e["chip_rect"] = Rect2(p, Vector2.ZERO)
+			e["callout"] = ""
+			e["callout_rect"] = Rect2(p, Vector2.ZERO)
 
 
 ## The own ship's box (px), which no chip covers.
@@ -609,7 +609,7 @@ func _own_box() -> Rect2:
 ## rim) or when only that side fits, then shifted to stay inside the view: a small radar
 ## never clips a chip at its edge (#28).
 func _chip_rect(font: Font, chip: String, pos: Vector2, left: bool) -> Rect2:
-	var sz: Vector2 = ChipLayout.text_size(font, chip, FONT_SIZE)
+	var sz: Vector2 = CalloutLayout.text_size(font, chip, FONT_SIZE)
 	var v: Rect2 = _view().grow(-CHIP_MARGIN)
 	var right_x: float = pos.x + 10.0
 	var left_x: float = pos.x - 10.0 - sz.x
@@ -720,7 +720,9 @@ func _range_text() -> String:
 
 
 func _hits(e: Dictionary, p: Vector2) -> bool:
-	return (e["pos"] as Vector2).distance_to(p) <= HIT_PX or (e["chip_rect"] as Rect2).has_point(p)
+	return (
+		(e["pos"] as Vector2).distance_to(p) <= HIT_PX or (e["callout_rect"] as Rect2).has_point(p)
+	)
 
 
 func _is_selected(it: Dictionary) -> bool:

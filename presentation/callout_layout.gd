@@ -1,23 +1,23 @@
-class_name ChipLayout
+class_name CalloutLayout
 extends RefCounted
-## Where a chip or label goes (R13-9, G3): the placement the disc radar, the Relay map and
-## the Helm HUD share. `declutter` puts each chip beside its own blip, clear of the clock
-## numbers, the blips, the stems and the other chips (D319); `gap_to`, `hits` and
+## Where a callout or label goes (R13-9, G3): the placement the disc radar, the Relay map and
+## the Helm HUD share. `declutter` puts each callout beside its own blip, clear of the clock
+## numbers, the blips, the stems and the other callouts (D319); `gap_to`, `hits` and
 ## `leader_clear` are the box tests the Helm HUD's marker labels use too.
 
-## A chip stays within this distance (px) of its own blip: when no spot is free that near,
-## the chip is shortened before it is moved farther (D319).
-const CHIP_REACH: float = 48.0
-## The nearer reach tried first (px): a shorter chip close to its blip reads better than
-## the full chip a line away.
-const CHIP_NEAR: float = 24.0
+## A callout stays within this distance (px) of its own blip: when no spot is free that near,
+## the callout is shortened before it is moved farther (D319).
+const CALLOUT_REACH: float = 48.0
+## The nearer reach tried first (px): a shorter callout close to its blip reads better than
+## the full callout a line away.
+const CALLOUT_NEAR: float = 24.0
 const CACHE_MAX: int = 2048
 
 static var _sizes: Dictionary = {}
 
 
 ## The size (px) of `text` in `font` at `font_size`: its width and the line height. Measured
-## once per font, size and text (shaping a string is the dearest part of laying out chips
+## once per font, size and text (shaping a string is the dearest part of laying out callouts
 ## every frame, R20-3); the cache is dropped when it grows past CACHE_MAX.
 static func text_size(font: Font, text: String, font_size: int) -> Vector2:
 	var key: String = "%d|%d|%s" % [font.get_instance_id(), font_size, text]
@@ -31,29 +31,29 @@ static func text_size(font: Font, text: String, font_size: int) -> Vector2:
 	return _sizes[key]
 
 
-## A chip's shorter forms, longest first ("H2 · 4 high · mid", "H2 · 4 high", "H2"), with
+## A callout's shorter forms, longest first ("H2 · 4 high · mid", "H2 · 4 high", "H2"), with
 ## their sizes (px): [Array[String], Array[Vector2]]. The placement falls back on them when
 ## no spot near the blip is free (D319).
-static func chip_forms(font: Font, chip: String, font_size: int = 13) -> Array:
+static func callout_forms(font: Font, callout: String, font_size: int = 13) -> Array:
 	var variants: Array[String] = []
 	var sizes: Array[Vector2] = []
-	var all: PackedStringArray = chip.split(ChipText.SEP)
+	var all: PackedStringArray = callout.split(CalloutText.SEP)
 	for n: int in range(all.size(), 0, -1):
-		var form: String = ChipText.SEP.join(all.slice(0, n))
+		var form: String = CalloutText.SEP.join(all.slice(0, n))
 		variants.append(form)
 		sizes.append(text_size(font, form, font_size))
 	return [variants, sizes]
 
 
-## Places each chip next to its own blip, then moves it by the least that clears what it
+## Places each callout next to its own blip, then moves it by the least that clears what it
 ## must not cover (spots tried: beside the default, right, left, above, below, a line off).
 ## Hard obstacles: the clock numbers and other boxes in `fixed`, every blip's box (entries
-## with a "pos"), the chips already placed and the other items' stems; a spot also has to
-## keep inside `limit` and within CHIP_REACH of its own blip. When no spot is free, the
-## chip is shortened (its "variants", longest first, with their "sizes"), then may cross
+## with a "pos"), the callouts already placed and the other items' stems; a spot also has to
+## keep inside `limit` and within CALLOUT_REACH of its own blip. When no spot is free, the
+## callout is shortened (its "variants", longest first, with their "sizes"), then may cross
 ## other stems (soft, as is leaving `disc`'s ellipse, charged as a cost), then takes the
-## free spot nearest its blip with the callsign alone. Selected chips are placed first,
-## then top to bottom. Without a blip a chip with no free spot drops below what it overlaps.
+## free spot nearest its blip with the callsign alone. Selected callouts are placed first,
+## then top to bottom. Without a blip a callout with no free spot drops below what it overlaps.
 static func declutter(
 	entries: Array[Dictionary],
 	fixed: Array = [],
@@ -83,30 +83,33 @@ static func declutter(
 				)
 			)
 	var order: Array[Dictionary] = entries.filter(
-		func(e: Dictionary) -> bool: return e["chip"] != ""
+		func(e: Dictionary) -> bool: return e["callout"] != ""
 	)
 	order.sort_custom(
 		func(a: Dictionary, b: Dictionary) -> bool:
 			if a.get("selected", false) != b.get("selected", false):
 				return a.get("selected", false)
-			return (a["chip_rect"] as Rect2).position.y < (b["chip_rect"] as Rect2).position.y
+			return (a["callout_rect"] as Rect2).position.y < (b["callout_rect"] as Rect2).position.y
 	)
 	blocked.append_array(boxes)
 	var placed: Array[Rect2] = []
 	for e: Dictionary in order:
-		var home: Rect2 = e["chip_rect"]
+		var home: Rect2 = e["callout_rect"]
 		var variants: Array = e.get("variants", [])
 		var sizes: Array = e.get("sizes", [])
 		var n: int = maxi(variants.size(), 1)
 		var pick: Rect2 = Rect2()
-		var text: String = e["chip"]
-		# (near, then up to CHIP_REACH, with the other stems hard, then soft: every form, the
+		var text: String = e["callout"]
+		# (near, then up to CALLOUT_REACH, with the other stems hard, then soft: every form, the
 		# longest first, at each step)
 		# (the spots no box covers do not depend on the step: found once per form)
 		var homes: Dictionary = {}
 		var frees: Dictionary = {}
 		for step: Array in [
-			[CHIP_NEAR, true], [CHIP_REACH, true], [CHIP_NEAR, false], [CHIP_REACH, false]
+			[CALLOUT_NEAR, true],
+			[CALLOUT_REACH, true],
+			[CALLOUT_NEAR, false],
+			[CALLOUT_REACH, false]
 		]:
 			for k: int in n:
 				if not homes.has(k):
@@ -119,12 +122,12 @@ static func declutter(
 			if pick.has_area():
 				break
 		if pick.has_area():
-			e["chip"] = text
+			e["callout"] = text
 		else:
 			# No free spot near the blip: the callsign alone, nearest to it that is free of
 			# the hard boxes, else stepped down below what it overlaps.
 			if n > 1:
-				e["chip"] = variants[n - 1]
+				e["callout"] = variants[n - 1]
 				home = _home_for(home, e["pos"], sizes[n - 1])
 			pick = home
 			for _pass: int in order.size() + boxes.size():
@@ -136,7 +139,7 @@ static func declutter(
 							hit = true
 				if not hit:
 					break
-		e["chip_rect"] = pick
+		e["callout_rect"] = pick
 		placed.append(pick)
 
 
@@ -153,7 +156,7 @@ static func gap_to(r: Rect2, p: Vector2) -> float:
 	return Vector2(dx, dy).length()
 
 
-## The candidate boxes for a chip whose default box is `home` (the home first, then the
+## The candidate boxes for a callout whose default box is `home` (the home first, then the
 ## spots round its blip) that keep inside `limit` and cover none of `blocked` and `placed`.
 static func _free_spots(
 	e: Dictionary,
@@ -199,7 +202,7 @@ static func _free_spots(
 	return out
 
 
-## The cheapest of the free `spots` for a chip whose default box is `home`, or an empty
+## The cheapest of the free `spots` for a callout whose default box is `home`, or an empty
 ## Rect2. With a blip, a spot is within `reach` of it; `hard_stems` makes the other items'
 ## stems obstacles too.
 static func _best_spot(
@@ -209,7 +212,7 @@ static func _best_spot(
 	stems: Array[Dictionary],
 	disc: Rect2,
 	hard_stems: bool,
-	reach: float = CHIP_REACH
+	reach: float = CALLOUT_REACH
 ) -> Rect2:
 	var best: Rect2 = Rect2()
 	var best_cost: float = INF

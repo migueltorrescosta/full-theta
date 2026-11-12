@@ -11,7 +11,7 @@ extends Scenario
 const DRONE_RANGE_M: float = 1500.0
 const DRONE_CLOCK: int = 12
 const DRONE_HEIGHT: int = 1
-## The enemy key of the drone (content/enemies/drone.tres).
+## The NPC key of the drone (content/npcs/drone.tres).
 const DRONE_KEY: StringName = &"drone"
 
 var _ship: int = -1

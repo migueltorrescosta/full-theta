@@ -1,19 +1,19 @@
-class_name ControlsChip
+class_name ControlsHint
 extends Button
-## The first-visit chips (P28-Help, D2, C11; amend FT-STN-012 and D185): a chip at the top of
+## The first-visit hints (P28-Help, D2, C11; amend FT-STN-012 and D185): a hint at the top of
 ## the view, once per client and hint key, for a few seconds, then it goes; a tap acts and
 ## closes it. The menu's "Show first-visit hints again" (ClientSettings.reset_hints) brings
 ## them back. Three use it, stacked top down under the "turn sideways" banner:
-## - the Controls chip (show_once): "Controls: ☰ › Controls" on a station's first visit, 6 s;
+## - the Controls hint (show_once): "Controls: ☰ › Controls" on a station's first visit, 6 s;
 ##   help never opens by itself any more, a tap opens it;
 ## - the callout legend (show_legend, D369): a sample callout decoded, on the first visit to
 ##   any station, 10 s; a tap opens the callout card;
 ## - the radar legend (show_radar_legend, C11): what Drift, the Zone box and a mark are, the
 ##   first time a radar station shows, 12 s.
 ##
-##     var chip: ControlsChip = ControlsChip.show_once(self, ctx.settings, station)
-##     if chip != null:
-##         chip.pressed.connect(func() -> void: help_requested.emit())
+##     var hint: ControlsHint = ControlsHint.show_once(self, ctx.settings, station)
+##     if hint != null:
+##         hint.pressed.connect(func() -> void: help_requested.emit())
 
 const SHOW_S: float = 6.0
 const LEGEND_KEY: String = "callout_legend"
@@ -24,7 +24,7 @@ const RADAR_S: float = 12.0
 const WIDE: float = 420.0
 ## Below the top bar.
 const TOP: float = 64.0
-## The first-visit chips and the "turn sideways" banner: each chip sits under the members of a
+## The first-visit hints and the "turn sideways" banner: each hint sits under the members of a
 ## lower rank that show, never over them (w5).
 const STACK: StringName = &"first_visit_stack"
 const RANK: StringName = &"stack_rank"
@@ -33,14 +33,14 @@ const RANK: StringName = &"stack_rank"
 var left_s: float = SHOW_S
 ## The binding that opens the page on this device ("?", "View"), or "" for the ☰ route.
 var key_text: String = ""
-## The strings key of a legend's words; "" for the Controls chip's own.
+## The strings key of a legend's words; "" for the Controls hint's own.
 var text_key: String = ""
 
 
-## Adds the Controls chip to `parent` on `station`'s first visit and records the visit; null
+## Adds the Controls hint to `parent` on `station`'s first visit and records the visit; null
 ## when the visit was seen (or the browser test hooks skip it).
 ##
-## `device` (IntentTable.KBM or PAD) names the overlay intent's binding in the chip; "" or a
+## `device` (IntentTable.KBM or PAD) names the overlay intent's binding in the hint; "" or a
 ## `touch` layout says the ☰ route.
 static func show_once(
 	parent: Control,
@@ -48,7 +48,7 @@ static func show_once(
 	station: String,
 	device: String = "",
 	touch: bool = false
-) -> ControlsChip:
+) -> ControlsHint:
 	if station == "":
 		return null
 	var key: String = ""
@@ -59,22 +59,22 @@ static func show_once(
 
 ## Adds the callout legend (D2, D369) to `parent` on this client's first visit to any station;
 ## null once seen.
-static func show_legend(parent: Control, settings: ClientSettings) -> ControlsChip:
-	return _first(parent, settings, LEGEND_KEY, 2, LEGEND_S, "controls.legend_chip")
+static func show_legend(parent: Control, settings: ClientSettings) -> ControlsHint:
+	return _first(parent, settings, LEGEND_KEY, 2, LEGEND_S, "controls.legend_hint")
 
 
 ## Adds the radar legend (R26-6, C11) the first time `parent` shows on this client; null when
 ## it was seen already, or the parent is not on screen. Each frame is fine: a lookup once seen.
-static func show_radar_legend(parent: Control, settings: ClientSettings) -> ControlsChip:
+static func show_radar_legend(parent: Control, settings: ClientSettings) -> ControlsHint:
 	if not parent.is_visible_in_tree():
 		return null
-	var chip: ControlsChip = _first(parent, settings, RADAR_KEY, 3, RADAR_S, "radar.legend")
-	if chip != null:
-		chip.custom_minimum_size.y = UiTheme.TOUCH_MIN * 1.5
-	return chip
+	var hint: ControlsHint = _first(parent, settings, RADAR_KEY, 3, RADAR_S, "radar.legend")
+	if hint != null:
+		hint.custom_minimum_size.y = UiTheme.TOUCH_MIN * 1.5
+	return hint
 
 
-## The chip of hint `key` at stack `rank`, `seconds` on screen, added to `parent` and the hint
+## The hint of hint `key` at stack `rank`, `seconds` on screen, added to `parent` and the hint
 ## recorded as seen; null when it was seen. A legend has its `text_key`.
 static func _first(
 	parent: Control,
@@ -84,28 +84,28 @@ static func _first(
 	seconds: float,
 	words: String,
 	binding: String = ""
-) -> ControlsChip:
+) -> ControlsHint:
 	if settings.hint_seen(key):
 		return null
 	settings.mark_hint_seen(key)
 	settings.save()
-	var chip: ControlsChip = ControlsChip.new()
-	join_stack(chip, rank)
-	chip.left_s = seconds
-	chip.key_text = binding
-	chip.text_key = words
+	var hint: ControlsHint = ControlsHint.new()
+	join_stack(hint, rank)
+	hint.left_s = seconds
+	hint.key_text = binding
+	hint.text_key = words
 	if words != "":
-		chip.name = "RadarLegend" if key == RADAR_KEY else "ControlsLegendChip"
-		chip.theme_type_variation = "RailButton"
-		chip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		chip.custom_minimum_size.x = WIDE
-	chip.text = chip._label()
-	parent.add_child(chip)
-	return chip
+		hint.name = "RadarLegend" if key == RADAR_KEY else "ControlsLegendHint"
+		hint.theme_type_variation = "RailButton"
+		hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hint.custom_minimum_size.x = WIDE
+	hint.text = hint._label()
+	parent.add_child(hint)
+	return hint
 
 
 func _init() -> void:
-	name = "ControlsChip"
+	name = "ControlsHint"
 	join_stack(self, 1)
 	focus_mode = Control.FOCUS_NONE
 	custom_minimum_size = Vector2(0.0, UiTheme.TOUCH_MIN)
@@ -137,8 +137,8 @@ func _notification(what: int) -> void:
 		text = _label()
 
 
-## Under the top bar: the Controls chip at TOP, the legends a chip's height lower; under the
-## shown chips of a lower rank wherever they went (STACK).
+## Under the top bar: the Controls hint at TOP, the legends a hint's height lower; under the
+## shown hints of a lower rank wherever they went (STACK).
 func _place() -> void:
 	var top: float = TOP + SafeArea.margins(self).y
 	if int(get_meta(RANK, 1)) > 1:
@@ -146,16 +146,16 @@ func _place() -> void:
 	place_in_stack(self, top)
 
 
-## The chip's words.
+## The hint's words.
 func _label() -> String:
 	if text_key != "":
 		return tr(text_key)
 	if key_text != "":
-		return tr("controls.chip_key") % key_text
-	return tr("controls.chip")
+		return tr("controls.hint_key") % key_text
+	return tr("controls.hint")
 
 
-## Puts `c` in the first-visit stack at `rank` (the banner 0, then the chips top down).
+## Puts `c` in the first-visit stack at `rank` (the banner 0, then the hints top down).
 static func join_stack(c: Control, rank: int) -> void:
 	c.set_meta(RANK, rank)
 	c.add_to_group(STACK)

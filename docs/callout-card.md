@@ -38,7 +38,7 @@ Name things, don't point. Away from your ship, say it from a mark: `Bravo, 12 hi
 
 ## Pairs
 
-Any shortcut you don't have is done by voice. A request chip is a shortcut for a call. Press Share (Alt+S) to show your data to your partner for 30 s.
+Any shortcut you don't have is done by voice. A request chip is a shortcut for a call. Press Share (Alt+S) to share with your partner for 30 s.
 
 | Pair | Say |
 |---|---|

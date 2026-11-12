@@ -3,7 +3,7 @@ extends RefCounted
 ## The shared phone frame of a StationScreen (#28 follow-up, design "Shared frame", owner
 ## picks P28-Tabs, P28-Band, P28-Common, P28-Joint, P28-Dev): the station chip and the page
 ## tabs (the top bar on its side, the bottom tab bar upright), and for a panel in the frame
-## (StationPanel.in_frame) the view-top row (selection chip, incoming request chips with ✓
+## (StationPanel.in_frame) the view-top row (selection bar, incoming request chips with ✓
 ## ✕, the partner glance of a joint view, the ping toast that selects) and long-press ping
 ## and mark. The bottom band guard takes every tap in the gesture band. Built for every
 ## screen, shown only on phones, so tablets and desktops keep their layout.
@@ -17,7 +17,7 @@ const DEV_ARROW: String = "▾"
 const CHIP_W: float = 72.0
 
 var screen: StationScreen
-var selection_chip: SelectionChip = SelectionChip.new()
+var selection_bar: SelectionBar = SelectionBar.new()
 var request_chips: RequestChips = RequestChips.new()
 var glance: PartnerGlance = PartnerGlance.new()
 var ping_toast: PingToast = PingToast.new()
@@ -95,8 +95,8 @@ func build(owner_screen: StationScreen, main: Control, rows: VBoxContainer) -> v
 	view_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view_top.visible = false
 	main.add_child(view_top)
-	selection_chip.cycled.connect(cycle_target)
-	selection_chip.opened.connect(open_selection_sheet)
+	selection_bar.cycled.connect(cycle_target)
+	selection_bar.opened.connect(open_selection_sheet)
 	request_chips.answered.connect(
 		func(id: int, accept: bool) -> void: screen.ctx.intents.answer_chip(id, accept)
 	)
@@ -104,7 +104,7 @@ func build(owner_screen: StationScreen, main: Control, rows: VBoxContainer) -> v
 	glance.action_pressed.connect(_partner_intent)
 	ping_toast.name = "PingToast"
 	ping_toast.tapped.connect(func() -> void: screen.ctx.crew.select_pinged(screen.ctx.now_ms()))
-	for c: Control in [selection_chip, request_chips, glance, ping_toast]:
+	for c: Control in [selection_bar, request_chips, glance, ping_toast]:
 		c.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		view_top.add_child(c)
 	# The bottom tab bar keeps UiTheme.TOUCH_GAP from the panel's targets above it.
@@ -227,9 +227,9 @@ func process(now: int, left: Dictionary) -> void:
 	ping_toast.update(now)
 	var ctx: StationContext = screen.ctx
 	var crew: bool = ctx.crew.is_crew()
-	selection_chip.visible = crew
+	selection_bar.visible = crew
 	if crew:
-		selection_chip.show_text(selection_text())
+		selection_bar.show_text(selection_text())
 	var rows: Array = []
 	if crew:
 		for c: Dictionary in ChipsReader.incoming(ctx.snap, screen.stations):
@@ -269,10 +269,10 @@ func _place_view_top() -> void:
 	# Upright, the row keeps 8 px under the "Turn sideways" banner's × (a tap target).
 	var banner: Control = screen.rotate_banner
 	if banner != null and banner.is_visible_in_tree():
-		var origin: float = (selection_chip.get_parent() as Control).get_global_rect().position.y
+		var origin: float = (selection_bar.get_parent() as Control).get_global_rect().position.y
 		y = maxf(y, banner.get_global_rect().end.y - origin + gap)
-	selection_chip.fit(x1 - x0)
-	var chip_w: float = selection_chip.get_combined_minimum_size().x
+	selection_bar.fit(x1 - x0)
+	var chip_w: float = selection_bar.get_combined_minimum_size().x
 	var col: Array[Control] = []
 	var col_w: float = 0.0
 	for c: Control in [request_chips, glance, ping_toast]:
@@ -281,12 +281,12 @@ func _place_view_top() -> void:
 			col_w = maxf(col_w, c.get_combined_minimum_size().x)
 	var side_by_side: bool = col.is_empty() or x1 - x0 >= chip_w + gap + col_w
 	var row_h: float = 0.0
-	if selection_chip.visible:
+	if selection_bar.visible:
 		var right: float = x1 - (col_w + gap if side_by_side and not col.is_empty() else 0.0)
 		var cx: float = maxf(x0, (x0 + right - chip_w) / 2.0)
-		selection_chip.position = Vector2(roundf(cx), y)
-		selection_chip.size = selection_chip.get_combined_minimum_size()
-		row_h = selection_chip.size.y + gap
+		selection_bar.position = Vector2(roundf(cx), y)
+		selection_bar.size = selection_bar.get_combined_minimum_size()
+		row_h = selection_bar.size.y + gap
 	var cy: float = y if side_by_side else y + row_h
 	if not side_by_side:
 		# Under the chip the column takes the view's width: a chip's effect line wraps less
@@ -317,11 +317,11 @@ func selection_text() -> String:
 		label = ctx.snap.callsign(int(sel["id"]))
 	var local: Variant = ctx.selection_local()
 	if local is Vector3:
-		return ChipText.chip(label, local)
+		return CalloutText.callout(label, local)
 	return label
 
 
-## The selection chip's arrows: the next (+1) or previous (-1) contact by range.
+## The selection bar's arrows: the next (+1) or previous (-1) contact by range.
 func cycle_target(step: int) -> void:
 	var ids: Array = screen.common.contacts_by_range()
 	if step < 0:

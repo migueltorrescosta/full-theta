@@ -82,7 +82,7 @@ func test_the_scan_is_claimed_one_at_a_time() -> void:
 	assert_str(await _verdict(server, ana, scan)).is_equal("")
 	assert_bool(await h.until(func() -> bool: return _block(ana).get("minigame", 0) == 1)).is_true()
 	# Bo can still use the free controls of the station (mode, ping, select).
-	assert_str(await _verdict(server, bo, {"kind": "science_ping"})).is_equal("")
+	assert_str(await _verdict(server, bo, {"kind": "sensor_sweep"})).is_equal("")
 	# Release and claim: now Bo may open a scan, but the one in flight is Ana's: busy.
 	ana.release_claim(StationCatalogue.CLAIM_SCAN)
 	(
@@ -113,7 +113,7 @@ func test_helm_cannot_send_science_commands() -> void:
 	var server: NetServer = h.server(false, 10.0)
 	var helm: NetClient = await h.joined(server, "hal", "helm")
 	server.game.launch(PLAYER)
-	assert_str(await _verdict(server, helm, {"kind": "science_ping"})).is_equal(
+	assert_str(await _verdict(server, helm, {"kind": "sensor_sweep"})).is_equal(
 		CommandGate.NOT_YOUR_STATION
 	)
 

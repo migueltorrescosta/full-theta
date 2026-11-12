@@ -22,7 +22,7 @@ static func encounter(seed_value: int, setup: Dictionary, build: String) -> M1En
 	var lib: DefLibrary = DefLibrary.new()
 	var period: float = setup.get("map_period", setup.get("site_period", Kinematics.DEFAULT_PERIOD))
 	var enc: M1Encounter = M1Encounter.new(
-		seed_value, build, lib.ship(setup["player"]), lib.enemy(setup["enemy"]), period
+		seed_value, build, lib.ship(setup["player"]), lib.npc(setup["npc"]), period
 	)
 	enc.hazards = lib.m1_hazards()
 	return enc

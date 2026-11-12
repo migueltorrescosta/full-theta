@@ -134,14 +134,14 @@ func test_chip_of_is_composed_once_and_follows_a_moved_item() -> void:
 	var pic: ContactPicture = ContactPicture.build(_ctx())
 	var it: Dictionary = pic.items[0]
 	var chip: String = ContactPicture.chip_of(it)
-	assert_str(chip).is_equal(ChipText.chip(it["label"], it["local"]))
-	assert_str(it["chip_text"]).is_equal(chip)
+	assert_str(chip).is_equal(CalloutText.callout(it["label"], it["local"]))
+	assert_str(it["callout_text"]).is_equal(chip)
 	# Planted text is what the cache answers while the item is unchanged ...
-	it["chip_text"] = "cached"
+	it["callout_text"] = "cached"
 	assert_str(ContactPicture.chip_of(it)).is_equal("cached")
 	# ... and a new offset or label composes it again.
 	it["local"] = Vector3(0, 0, -9000)
-	assert_str(ContactPicture.chip_of(it)).is_equal(ChipText.chip(it["label"], it["local"]))
+	assert_str(ContactPicture.chip_of(it)).is_equal(CalloutText.callout(it["label"], it["local"]))
 
 
 # FT: FT-STN-002
@@ -166,8 +166,8 @@ func test_the_picture_cache_sees_a_mark_edited_in_place_but_copies_nothing() -> 
 # FT: FT-RLY-001
 func test_mark_label_names_the_contact_a_mark_is_attached_to() -> void:
 	var ctx: StationContext = _ctx()
-	assert_str(ChipText.mark_label({"name": "Alpha", "contact": -1}, ctx.snap)).is_equal("Alpha")
-	assert_str(ChipText.mark_label({"name": "Alpha"}, ctx.snap)).is_equal("Alpha")
-	assert_str(ChipText.mark_label({"name": "Bravo", "contact": 1}, ctx.snap)).is_equal(
+	assert_str(CalloutText.mark_label({"name": "Alpha", "contact": -1}, ctx.snap)).is_equal("Alpha")
+	assert_str(CalloutText.mark_label({"name": "Alpha"}, ctx.snap)).is_equal("Alpha")
+	assert_str(CalloutText.mark_label({"name": "Bravo", "contact": 1}, ctx.snap)).is_equal(
 		"Bravo · H1"
 	)

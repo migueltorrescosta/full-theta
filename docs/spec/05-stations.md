@@ -13,7 +13,7 @@ Common actions have the same binding on every station (D95). Station-specific bi
 | Action | KB/M | Controller | Touch |
 |---|---|---|---|
 | Select under the cursor | click | A | tap |
-| Next contact | T | RB | swipe the selection chip |
+| Next contact | T | RB | swipe the selection bar |
 | Select the last pinged item | Y | hold RB | tap the ping toast |
 | Ping | middle-click or Shift+P | R3 | long-press |
 | Place a mark at the cursor, or on the selection | Shift+middle-click or Shift+M | hold R3 | long-press, then drag |
@@ -157,11 +157,11 @@ Centre: orbitable 3D disc radar with confidence-sized icons and probe bubbles. L
 +-------------------------------------------------------+
 ```
 
-- KB/M: click contacts, drag orbit, scroll zoom, E scan, H hack, P active ping, M drop scan-position mark, 1–3 share (toggle on), B sensor power request, B then 2 to-scan-mark request.
-- Controller: left stick cursor with snap-to-contact, RT scan, LT hack, d-pad up active ping, d-pad down scan-position mark, right stick orbit; A, RB and hold RB select contacts (§5.0).
+- KB/M: click contacts, drag orbit, scroll zoom, E scan, H hack, P sensor sweep, M drop scan-position mark, 1–3 share (toggle on), B sensor power request, B then 2 to-scan-mark request.
+- Controller: left stick cursor with snap-to-contact, RT scan, LT hack, d-pad up sensor sweep, d-pad down scan-position mark, right stick orbit; A, RB and hold RB select contacts (§5.0).
 - Touch: tap contacts, two-finger orbit, SCAN and HACK buttons.
 
-Scan minigame (Scan-B silhouette alignment, D58): rotate a wireframe until it matches a sparse point cloud; cloud noise rises with range and sensor damage and falls with active ping, sensor power and Helm at the scan-position mark.
+Scan minigame (Scan-B silhouette alignment, D58): rotate a wireframe until it matches a sparse point cloud; cloud noise rises with range and sensor damage and falls with a sensor sweep, sensor power and Helm at the scan-position mark.
 
 ```
 +-[SCAN U3 alignment]-----------------------------------+
@@ -188,7 +188,7 @@ Hack minigame (Hack-A node route, D59): find a path from entry to the chosen sub
 - **FT-SCI-002** Science shall show a contact card with class, identity, intent, weak points and resistances, each with a confidence value. (D28, D51, D249)
 - **FT-SCI-003** Science shall switch sensors between passive and active. (D51)
 - **FT-SCI-004** Every scan shall require the silhouette-alignment minigame. (D17, D58)
-- **FT-SCI-005** Scan point-cloud noise shall be computed on the server from range, aspect, sensor health, sensor power, active ping and probe coverage. (D58, P3, P10, P13)
+- **FT-SCI-005** Scan point-cloud noise shall be computed on the server from range, aspect, sensor health, sensor power, sensor sweep and probe coverage. (D58, P3, P10, P13)
 - **FT-SCI-006** Every hack shall require the node-route minigame against a trace bar. (D17, D59)
 - **FT-SCI-007** Hidden hack nodes shall be revealed by prior scans and probe coverage. (D59, D56)
 - **FT-SCI-008** A successful hack shall apply its data-defined effect to the chosen subsystem for a limited window. (D51, P7)

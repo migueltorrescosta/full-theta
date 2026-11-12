@@ -244,7 +244,7 @@ func distance(a: int, b: int) -> float:
 
 
 ## The map's travel legs that debris may sit on (MapDef.legs), as value copies: {from, to}
-## site ids, {debris} the enemy key and {count}; legs with an end not open yet are left out.
+## site ids, {debris} the NPC key and {count}; legs with an end not open yet are left out.
 func legs() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if _world.run_def == null or _world.run_def.map == null:
@@ -273,28 +273,28 @@ func rand(stream: StringName) -> float:
 # --- writes (each one queued SERVER command) ---
 
 
-## Spawns an enemy `range_m` from ship `near`, at a ship-frame clock position (1 to 12, 12
+## Spawns an NPC `range_m` from ship `near`, at a ship-frame clock position (1 to 12, 12
 ## the bow) and height (0 level, 1 high, -1 low, 2 overhead, -2 under), facing it.
 ## Returns a handle on the new ship's id.
 func spawn_at_range(
-	enemy_key: StringName, faction: int, near: int, range_m: float, clock: int, height: int
+	npc_key: StringName, faction: int, near: int, range_m: float, clock: int, height: int
 ) -> ApiHandle:
 	var world_dir: Vector3 = _world.kin.to_world(near, Callout.direction(clock, height))
 	var point: PackedFloat64Array = _world.kin.point_at(near, world_dir * range_m)
-	return _spawn(enemy_key, faction, point, _facing(-world_dir))
+	return _spawn(npc_key, faction, point, _facing(-world_dir))
 
 
-## Spawns an enemy `offset` (world axes, m) from ship `near`, at rest and unrotated: for a
+## Spawns an NPC `offset` (world axes, m) from ship `near`, at rest and unrotated: for a
 ## scenario that places a ship by the course of another, such as off an arriving ship's track.
 ## Returns a handle on the new ship's id.
-func spawn_at_offset(enemy_key: StringName, faction: int, near: int, offset: Vector3) -> ApiHandle:
-	return _spawn(enemy_key, faction, _world.kin.point_at(near, offset), Quaternion.IDENTITY)
+func spawn_at_offset(npc_key: StringName, faction: int, near: int, offset: Vector3) -> ApiHandle:
+	return _spawn(npc_key, faction, _world.kin.point_at(near, offset), Quaternion.IDENTITY)
 
 
-## Spawns an enemy (debris) on the leg between two sites, a share `t` (0 to 1) of the way
+## Spawns an NPC (debris) on the leg between two sites, a share `t` (0 to 1) of the way
 ## and `lateral_m` off the line (D234). Returns a handle on the new ship's id.
 func spawn_on_leg(
-	enemy_key: StringName, faction: int, from_site: int, to_site: int, t: float, lateral_m: float
+	npc_key: StringName, faction: int, from_site: int, to_site: int, t: float, lateral_m: float
 ) -> ApiHandle:
 	var a: PackedFloat64Array = _world.sites.point(from_site)
 	var b: PackedFloat64Array = _world.sites.point(to_site)
@@ -304,7 +304,7 @@ func spawn_on_leg(
 	if side.length_squared() < 1e-6:
 		side = leg.cross(Vector3.RIGHT)
 	var off: Vector3 = leg * t + side.normalized() * lateral_m
-	return _spawn(enemy_key, faction, CubePoint.plus(a, off), Quaternion.IDENTITY)
+	return _spawn(npc_key, faction, CubePoint.plus(a, off), Quaternion.IDENTITY)
 
 
 ## Opens a site of the map's pool; returns a handle on its site id (resolved at once to the
@@ -516,10 +516,10 @@ static func _details(c: SimCommand) -> PackedStringArray:
 
 
 func _spawn(
-	enemy_key: StringName, faction: int, point: PackedFloat64Array, rot: Quaternion
+	npc_key: StringName, faction: int, point: PackedFloat64Array, rot: Quaternion
 ) -> ApiHandle:
 	var cmd: SpawnShipCommand = SpawnShipCommand.new()
-	cmd.enemy_key = enemy_key
+	cmd.npc_key = npc_key
 	cmd.faction = faction
 	cmd.x = point[0]
 	cmd.y = point[1]

@@ -20,7 +20,7 @@ const SEPARATION: float = 5000.0
 var world_seed: int
 var build_id: String
 var player: ShipDef
-var enemy: EnemyDef
+var enemy: NpcDef
 ## Side of the wrapping cube (m, FT-SIM-035, D229).
 var map_period: float
 ## Science tuning for the built worlds (E01); null leaves the Science commands refused.
@@ -34,7 +34,7 @@ func _init(
 	seed_value: int,
 	build: String,
 	player_def: ShipDef,
-	enemy_def: EnemyDef,
+	enemy_def: NpcDef,
 	period: float = Kinematics.DEFAULT_PERIOD
 ) -> void:
 	world_seed = seed_value
@@ -82,5 +82,5 @@ func build() -> SimWorld:
 	world.set_relation(PLAYER_FACTION, ENEMY_FACTION, SimWorld.Relation.HOSTILE)
 	world.spawn_ship(player, PLAYER_FACTION)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)
-	world.spawn_enemy(enemy, ENEMY_FACTION, CubePoint.make(0.0, 0.0, -SEPARATION), facing_player)
+	world.spawn_npc(enemy, ENEMY_FACTION, CubePoint.make(0.0, 0.0, -SEPARATION), facing_player)
 	return world

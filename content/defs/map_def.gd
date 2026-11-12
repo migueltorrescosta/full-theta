@@ -14,7 +14,7 @@ extends Resource
 ## The pool the director opens sites from (OpenSiteCommand).
 @export var spawnable: Array[SiteDef] = []
 ## Travel legs the director may put debris on (D234): [{from, to, debris, count}], with
-## from and to site keys and debris the key of a destructible debris EnemyDef (content/enemies)
+## from and to site keys and debris the key of a destructible debris NpcDef (content/npcs)
 ## that the debris_leg scenario places on the route with spawn_on_leg (D234), count pieces.
 @export var legs: Array[Dictionary] = []
 

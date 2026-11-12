@@ -77,7 +77,7 @@ func _table(p: SciencePanel) -> Array:
 	return [
 		["Scan", 0, a.call("scan"), -1, 1, ["command", "science_scan"]],
 		["Hack (choose subsystem)", 0, a.call("hack"), 0, 2, ["command", "science_hack"]],
-		["Active ping", 0, a.call("ping"), -1, 1, ["command", "science_ping"]],
+		["Sensor sweep", 0, a.call("sweep"), -1, 1, ["command", "sensor_sweep"]],
 		["Scan-position mark", 0, a.call("mark"), -1, 1, ["command", "science_scan_mark"]],
 		["Passive / active", 0, a.call("mode"), -1, 1, ["command", "science_sensor_mode"]],
 		["Scan own ship", 0, a.call("self"), -1, 1, ["command", "science_self_scan"]],

@@ -11,12 +11,12 @@ func _noise(
 	eff: float = 1.0,
 	pips: int = 2,
 	is_active: bool = false,
-	pinging: bool = false,
+	sweeping: bool = false,
 	probe: bool = false,
 	mark: bool = false
 ) -> float:
 	return ScienceNoise.compute(
-		ScienceFixture.science(), dist, aspect, eff, pips, 2, is_active, pinging, probe, mark
+		ScienceFixture.science(), dist, aspect, eff, pips, 2, is_active, sweeping, probe, mark
 	)
 
 
@@ -72,9 +72,9 @@ func test_range_aspect_and_health_in_the_world() -> void:
 
 
 # FT: FT-SCI-003
-# Active mode lowers the scan noise; an active ping lowers it for ping_duration_s, then
+# Active mode lowers the scan noise; a sensor sweep lowers it for sweep_duration_s, then
 # cools down before the next.
-func test_sensor_mode_and_ping() -> void:
+func test_sensor_mode_and_sweep() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	var passive: float = ScienceSystem.contact_noise(w, ME, FOE)
 	var mode: ScienceSensorModeCommand = ScienceSensorModeCommand.new()
@@ -82,17 +82,17 @@ func test_sensor_mode_and_ping() -> void:
 	ScienceFixture.do(w, mode)
 	var active: float = ScienceSystem.contact_noise(w, ME, FOE)
 	assert_float(active).is_less(passive)
-	var events: Array[SimEvent] = ScienceFixture.do(w, SciencePingCommand.new())
+	var events: Array[SimEvent] = ScienceFixture.do(w, SensorSweepCommand.new())
 	assert_array(SimFixture.of_kind(events, &"science_refused")).is_empty()
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(active)
-	events = ScienceFixture.do(w, SciencePingCommand.new())
+	events = ScienceFixture.do(w, SensorSweepCommand.new())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("cooling")
-	SimFixture.run(w, int(w.science_def.ping_duration_s * 60.0) + 2)
+	SimFixture.run(w, int(w.science_def.sweep_duration_s * 60.0) + 2)
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_equal(active)
-	SimFixture.run(w, int(w.science_def.ping_cooldown_s * 60.0))
-	events = ScienceFixture.do(w, SciencePingCommand.new())
+	SimFixture.run(w, int(w.science_def.sweep_cooldown_s * 60.0))
+	events = ScienceFixture.do(w, SensorSweepCommand.new())
 	assert_array(SimFixture.of_kind(events, &"science_refused")).is_empty()
-	assert_float(w.science.ping_left[ME]).is_greater(0.0)
+	assert_float(w.science.sweep_left[ME]).is_greater(0.0)
 
 
 # FT: FT-SCI-010, FT-PAIR-003

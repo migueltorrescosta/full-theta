@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## The shared phone frame (#28 follow-up, design "Shared frame", owner picks P28-Tabs,
 ## P28-Band, P28-Common, P28-Joint, P28-Dev, P28-L1): pages and their tabs, the compact top
-## bar, choice sheets, the view-top row (selection chip, request chips, ping toast, partner
+## bar, choice sheets, the view-top row (selection bar, request chips, ping toast, partner
 ## glance), long-press ping and mark, the bottom band, the Crew page; tablets and desktops
 ## keep their layout.
 # FT: FT-STN-005
@@ -263,15 +263,15 @@ func test_upright_tabs_and_larger_screens_unchanged() -> void:
 
 
 # FT: FT-STN-009, FT-SPA-016
-# The selection chip says direction and range in the session language, like every other
-# callout (ChipText): in pt_PT "H2 · 4 alto · médio", never the English words.
-func test_selection_chip_is_translated() -> void:
+# The selection bar says direction and range in the session language, like every other
+# callout (CalloutText): in pt_PT "H2 · 4 alto · médio", never the English words.
+func test_selection_bar_is_translated() -> void:
 	I18n.apply("pt_PT")
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
 	s.ctx.crew.select("contact", StationFixture.H2)
 	s._process(0.016)
 	var local: Vector3 = s.ctx.selection_local()
-	var text: String = s.frame.selection_chip.name_button.text
+	var text: String = s.frame.selection_bar.name_button.text
 	var band: String = Callout.range_band(local.length())
 	var band_pt: String = tr("callout." + band)
 	var english: String = "H2 · %s · %s" % [Callout.clock_height(local), band]
@@ -283,32 +283,32 @@ func test_selection_chip_is_translated() -> void:
 
 
 # FT: FT-STN-009, FT-SPA-016, FT-STN-005
-# The selection chip: arrows cycle the target, its name opens the selection sheet (Ping,
+# The selection bar: arrows cycle the target, its name opens the selection sheet (Ping,
 # Mark here, Clear and the station's extras).
-func test_selection_chip_and_sheet() -> void:
+func test_selection_bar_and_sheet() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
 	s.ctx.crew.select("contact", StationFixture.H2)
 	s._process(0.016)
-	assert_bool(s.frame.selection_chip.is_visible_in_tree()).is_true()
-	assert_str(s.frame.selection_chip.name_button.text).starts_with("H2 · ")
+	assert_bool(s.frame.selection_bar.is_visible_in_tree()).is_true()
+	assert_str(s.frame.selection_bar.name_button.text).starts_with("H2 · ")
 	var order: Array = s.common.contacts_by_range()
-	s.frame.selection_chip.next_button.pressed.emit()
+	s.frame.selection_bar.next_button.pressed.emit()
 	assert_int(int(s.ctx.crew.selection["id"])).is_equal(
 		int(order[(order.find(StationFixture.H2) + 1) % order.size()])
 	)
-	s.frame.selection_chip.prev_button.pressed.emit()
+	s.frame.selection_bar.prev_button.pressed.emit()
 	assert_int(int(s.ctx.crew.selection["id"])).is_equal(StationFixture.H2)
-	s.frame.selection_chip.name_button.pressed.emit()
+	s.frame.selection_bar.name_button.pressed.emit()
 	assert_int(s.sheet.option_count()).is_equal(4)
 	s.sheet.option(0).pressed.emit()
 	assert_array(_sent(s, "ping")[0][1].slice(0, 2)).is_equal(["contact", StationFixture.H2])
-	s.frame.selection_chip.name_button.pressed.emit()
+	s.frame.selection_bar.name_button.pressed.emit()
 	s.sheet.option(1).pressed.emit()
 	assert_int(_sent(s, "place_mark").size()).is_equal(1)
-	s.frame.selection_chip.name_button.pressed.emit()
+	s.frame.selection_bar.name_button.pressed.emit()
 	s.sheet.option(3).pressed.emit()
 	assert_bool(s.focused_panel().has_meta(&"extra")).is_true()
-	s.frame.selection_chip.name_button.pressed.emit()
+	s.frame.selection_bar.name_button.pressed.emit()
 	s.sheet.option(2).pressed.emit()
 	assert_bool(s.ctx.crew.selection.is_empty()).is_true()
 	s._process(0.016)
@@ -334,10 +334,10 @@ func test_request_chips_and_ping_toast() -> void:
 	await _frames(1)
 	assert_bool(s.frame.request_chips.is_visible_in_tree()).is_true()
 	assert_bool(s.chip_strip.visible).is_false()
-	# w5: under the selection chip, the chip column takes the view's width (its effect line
+	# w5: under the selection bar, the chip column takes the view's width (its effect line
 	# wraps less and pushes the panel down less).
 	var chips: RequestChips = s.frame.request_chips
-	var sel: Control = s.frame.selection_chip
+	var sel: Control = s.frame.selection_bar
 	if chips.position.y >= sel.position.y + sel.size.y:
 		var view_w: float = s.focused_panel().view_rect().size.x - 2.0 * UiTheme.TOUCH_GAP
 		assert_float(chips.size.x).is_equal_approx(view_w, 1.0)

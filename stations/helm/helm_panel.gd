@@ -523,7 +523,7 @@ func full_screen() -> bool:
 func hud_area(control: Control) -> Rect2:
 	var r: Rect2 = Rect2(Vector2.ZERO, control.size)
 	if touch_ui != null and touch_ui.is_inside_tree():
-		# Under the screen's view-top row too (selection chip, request chips).
+		# Under the screen's view-top row too (selection bar, request chips).
 		r = touch_ui.clear_view_in(control).intersection(r)
 	# Above the screen's joint switch (a joint view on a phone on its side).
 	r.size.y = maxf(r.size.y - bottom_reserve, 0.0)

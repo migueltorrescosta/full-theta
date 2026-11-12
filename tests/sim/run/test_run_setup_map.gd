@@ -19,7 +19,7 @@ func _setup(second: Vector3) -> RunSetup:
 	m.id = &"t"
 	m.sites = [_site(&"a", Vector3.ZERO), _site(&"b", second)]
 	run.map = m
-	var catalog: Dictionary[StringName, EnemyDef] = {&"raider": TestDefs.raider_enemy()}
+	var catalog: Dictionary[StringName, NpcDef] = {&"raider": TestDefs.raider_enemy()}
 	return RunSetup.new(7, "test", run, catalog)
 
 

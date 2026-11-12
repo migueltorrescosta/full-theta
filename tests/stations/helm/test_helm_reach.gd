@@ -13,7 +13,7 @@ const PORTRAIT: Array = [0, 47, 0, 34]
 const KEEP: int = -1
 ## [action, page, control, taps]: the control is a Helm button id, "ring" (a cell of the
 ## shield ring), "radar" (a blip on the radar), "range" (Range +), "chip" / "ping" / "mark"
-## (the Crew page's buttons) or "cycle" (the selection chip's ›).
+## (the Crew page's buttons) or "cycle" (the selection bar's ›).
 const TABLE: Array = [
 	["All stop", KEEP, "all_stop", 1],
 	["Approach (hold)", KEEP, "approach", 1],
@@ -167,7 +167,7 @@ func _reach(row: Array) -> int:
 			var method: String = {"chip": "send_chip", "ping": "ping", "mark": "place_mark"}[what]
 			assert_int(_sent(method)).override_failure_message(what).is_greater(0)
 		"cycle":
-			_tap(_screen.frame.selection_chip.next_button)
+			_tap(_screen.frame.selection_bar.next_button)
 			assert_bool(_screen.ctx.crew.is_selected("contact", StationFixture.H2)).is_false()
 		_:
 			var b: RailButton = (

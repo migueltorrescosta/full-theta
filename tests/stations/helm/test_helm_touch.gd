@@ -406,7 +406,7 @@ func test_hud_keeps_its_read_outs_and_arrows_clear_of_the_rails() -> void:
 	var free: Rect2 = hud.area()
 	var left: Rect2 = _ui().layout.left.get_global_rect()
 	var right: Rect2 = _ui().layout.right.get_global_rect()
-	var row: Rect2 = _screen.frame.selection_chip.get_global_rect()
+	var row: Rect2 = _screen.frame.selection_bar.get_global_rect()
 	var to_global: Transform2D = hud.get_global_transform()
 	for r: Rect2 in [hud.readout_rect(), hud.thrust_rect()] + hud.compass_boxes():
 		var g: Rect2 = to_global * r

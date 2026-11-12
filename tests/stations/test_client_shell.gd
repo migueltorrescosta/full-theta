@@ -188,13 +188,13 @@ func test_help_key_opens_the_controls_tab() -> void:
 
 
 # FT: FT-STN-012
-# The first visit shows the Controls chip, not the menu; tapping it opens Controls headed
+# The first visit shows the Controls hint, not the menu; tapping it opens Controls headed
 # by the seat's role.
-func test_first_visit_shows_the_controls_chip() -> void:
+func test_first_visit_shows_the_controls_hint() -> void:
 	var s: ClientShell = await _on_station(true)
 	var menu: SettingsScreen = s.settings_screen
 	assert_bool(menu.visible).is_false()
-	var chip: ControlsChip = s.screen.find_child("ControlsChip", true, false)
+	var chip: ControlsHint = s.screen.find_child("ControlsHint", true, false)
 	assert_object(chip).is_not_null()
 	chip.pressed.emit()
 	assert_bool(menu.visible).is_true()
@@ -205,9 +205,9 @@ func test_first_visit_shows_the_controls_chip() -> void:
 
 # FT: FT-STN-012
 # D369: a tap on the first visit's callout legend opens Controls on the callout card.
-func test_the_legend_chip_opens_the_callout_card() -> void:
+func test_the_legend_hint_opens_the_callout_card() -> void:
 	var s: ClientShell = await _on_station(true)
-	var legend: ControlsChip = s.screen.find_child("ControlsLegendChip", true, false)
+	var legend: ControlsHint = s.screen.find_child("ControlsLegendHint", true, false)
 	assert_object(legend).is_not_null()
 	legend.pressed.emit()
 	var menu: SettingsScreen = s.settings_screen

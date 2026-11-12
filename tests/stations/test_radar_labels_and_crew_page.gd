@@ -53,20 +53,20 @@ func test_radar_legend_shows_once_and_a_tap_closes_it() -> void:
 	var host: Control = auto_free(Control.new())
 	add_child(host)
 	var settings: ClientSettings = ClientSettings.new(SETTINGS)
-	var legend: ControlsChip = ControlsChip.show_radar_legend(host, settings)
+	var legend: ControlsHint = ControlsHint.show_radar_legend(host, settings)
 	assert_object(legend).is_not_null()
 	assert_str(legend.text).contains("Drift").contains("Zone").contains("mark")
-	assert_object(ControlsChip.show_radar_legend(host, settings)).is_null()
+	assert_object(ControlsHint.show_radar_legend(host, settings)).is_null()
 	legend.pressed.emit()
 	await get_tree().process_frame
 	assert_bool(is_instance_valid(legend)).is_false()
 	settings.reset_hints()
-	assert_object(ControlsChip.show_radar_legend(host, settings)).is_not_null()
+	assert_object(ControlsHint.show_radar_legend(host, settings)).is_not_null()
 	# A parent that is not on screen shows nothing and keeps the legend for later.
 	host.visible = false
 	settings.reset_hints()
-	assert_object(ControlsChip.show_radar_legend(host, settings)).is_null()
-	assert_bool(settings.hint_seen(ControlsChip.RADAR_KEY)).is_false()
+	assert_object(ControlsHint.show_radar_legend(host, settings)).is_null()
+	assert_bool(settings.hint_seen(ControlsHint.RADAR_KEY)).is_false()
 
 
 # FT: FT-STN-012
@@ -84,7 +84,7 @@ func test_first_visit_chips_stack_without_overlap() -> void:
 		for i: int in 4:
 			await get_tree().process_frame
 		var chips: Array[Control] = []
-		for n: String in ["ControlsChip", "ControlsLegendChip", "RadarLegend"]:
+		for n: String in ["ControlsHint", "ControlsLegendHint", "RadarLegend"]:
 			var c: Control = s.find_child(n, true, false)
 			assert_object(c).override_failure_message("%s %s" % [seat, n]).is_not_null()
 			chips.append(c)

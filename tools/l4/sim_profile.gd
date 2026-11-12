@@ -50,7 +50,7 @@ func _initialize() -> void:
 		_opt["seed"],
 		"profile",
 		defs.ship(&"m1_corvette"),
-		defs.enemy(&"m1_raider"),
+		defs.npc(&"m1_raider"),
 		_opt["crew"],
 		_opt["world"],
 		not _opt["neutral"]
@@ -78,7 +78,7 @@ func _initialize() -> void:
 		t.append(Time.get_ticks_usec())
 		KnowledgeSystem.step(w)
 		t.append(Time.get_ticks_usec())
-		EnemyAi.step(w)
+		NpcAi.step(w)
 		t.append(Time.get_ticks_usec())
 		PowerSystem.step(w)
 		t.append(Time.get_ticks_usec())

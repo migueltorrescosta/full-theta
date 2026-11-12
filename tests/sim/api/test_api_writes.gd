@@ -123,7 +123,7 @@ func test_writes_take_effect_on_the_next_step() -> void:
 # next row a prediction would have named.
 func test_an_offered_card_resolves_to_its_real_id_after_a_crew_hail_in_the_same_tick() -> void:
 	var w: SimWorld = StoryFixture.wire(ApiFixture.world())
-	var raider: int = w.spawn_enemy(TestDefs.raider_enemy(), 2, CubePoint.make(0.0, 0.0, -5000.0))
+	var raider: int = w.spawn_npc(TestDefs.raider_enemy(), 2, CubePoint.make(0.0, 0.0, -5000.0))
 	w.hail_conversations[w.defs[raider].id] = &"conv.trader_bluff"
 	w.step()
 	var api: ScenarioApi = _api(w)

@@ -24,7 +24,7 @@ func _world() -> SimWorld:
 
 
 func _enemy_near(w: SimWorld, offset: Vector3) -> int:
-	var id: int = w.spawn_enemy(TestDefs.raider_enemy(), 2, CubePoint.of(AT_ALPHA + offset))
+	var id: int = w.spawn_npc(TestDefs.raider_enemy(), 2, CubePoint.of(AT_ALPHA + offset))
 	# Hold fire: the test is about knowledge, not combat.
 	w.ai.enabled[id] = 1
 	return id

@@ -107,7 +107,7 @@ func contacts_by_range(limit: int = -1) -> Array[Dictionary]:
 	return _by_range.slice(0, limit)
 
 
-## The chip text of a contact item ("H2 · 4 high · mid", ChipText.chip), composed once per
+## The chip text of a contact item ("H2 · 4 high · mid", CalloutText.chip), composed once per
 ## item and shared by every radar, rail and overlay that draws this picture (R20-3). It is
 ## cached on the item and recomputed when the item's label or offset changed.
 static func chip_of(it: Dictionary) -> String:
@@ -116,8 +116,8 @@ static func chip_of(it: Dictionary) -> String:
 	if it.get("chip_label", null) != label or it.get("chip_local", null) != local:
 		it["chip_label"] = label
 		it["chip_local"] = local
-		it["chip_text"] = ChipText.chip(label, local)
-	return it["chip_text"]
+		it["callout_text"] = CalloutText.callout(label, local)
+	return it["callout_text"]
 
 
 ## The item with `ref`'s kind and id, or {}.

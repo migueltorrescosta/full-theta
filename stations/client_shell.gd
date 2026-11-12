@@ -501,7 +501,7 @@ func _toggle_help() -> void:
 	open_menu(SettingsScreen.TAB_CONTROLS)
 
 
-## The callout legend chip's tap (D369): the menu on Controls, showing the callout card.
+## The callout legend hint's tap (D369): the menu on Controls, showing the callout card.
 func open_card() -> void:
 	open_menu(SettingsScreen.TAB_CONTROLS)
 	if settings_screen.controls_pane != null:

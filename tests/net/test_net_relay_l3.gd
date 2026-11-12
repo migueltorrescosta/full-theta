@@ -168,7 +168,7 @@ func test_lost_contact_mark_cannot_be_sent() -> void:
 	var server: NetServer = a[0]
 	var sender: NetClient = a[1]
 	var w: SimWorld = server.world
-	var foe: int = w.spawn_enemy(TestDefs.raider_enemy(), 7, CubePoint.make(500.0, 0.0, 0.0))
+	var foe: int = w.spawn_npc(TestDefs.raider_enemy(), 7, CubePoint.make(500.0, 0.0, 0.0))
 	KnowledgeSystem.step(w)
 	var faction: int = w.faction_of(PLAYER)
 	assert_bool(KnowledgeSystem.is_detected(w, faction, foe)).is_true()
