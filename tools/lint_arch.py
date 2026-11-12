@@ -258,8 +258,9 @@ def lint(root: Path) -> list[str]:
                 word in POSITION_COLUMNS and dotted and rel not in POSITION_OWNERS
                 and receiver(code, j) in POSITION_RECEIVERS
             ):
-                report(pos, f".{word}: use Kinematics.relative, relative_to_point, point_at, "
-                       "wrap, place or translate, not raw position columns (FT-SIM-035, D124)")
+                report(pos, f".{word}: use Kinematics.relative, relative_to_point, relative_to_column, "
+                       "point, point_at, wrap, place or translate, not raw position columns "
+                       "(FT-SIM-035, D124, D401)")
             if word in PRIVATE_API and dotted and module != "sim/api":
                 report(pos, f".{word}: the Scenario API's world is private; GDScript can't hide it, "
                        "so only sim/api/ may reach it (FT-ARC-016)")
