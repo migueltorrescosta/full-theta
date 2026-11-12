@@ -42,8 +42,8 @@ func _crew() -> Array:
 	_spy.computer_audience = server.game.computer_audience
 	_spy.npc_audience = server.game.npc_audience
 	var crew: Array[NetClient] = []
-	for entry: String in ["ops", "parley", "systems"]:
-		crew.append(await h.joined(server, entry, entry))
+	for seat: String in ["ops", "parley", "systems"]:
+		crew.append(await h.joined(server, seat, seat))
 	# One open conversation of the NPC (card 0) on the player ship's board.
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER, &"conv.escort_contract")
 	spec.npc_id = StringName(NPC)

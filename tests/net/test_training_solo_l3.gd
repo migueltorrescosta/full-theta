@@ -43,15 +43,15 @@ func test_a_lone_client_gets_a_started_lesson_at_its_station() -> void:
 	var started: Dictionary = await h.next_event(c, NetProtocol.EVENT_STARTED, n)
 	assert_bool(started.is_empty()).is_false()
 	var picked: Dictionary = await h.next_event(c, NetProtocol.EVENT_PICKED, n)
-	assert_str(picked["payload"]["entry"]).is_equal("weapons")
+	assert_str(picked["payload"]["seat"]).is_equal("weapons")
 	assert_str(picked["payload"]["reason"]).is_empty()
 	assert_bool(server.training_active).is_true()
 	assert_str(server.game.training.solo).is_equal("weapons")
 	assert_bool(server.world.run_def.training).is_true()
 	# Bots hold the other five stations, so the ship is crewed.
-	var entries: Array = server.game.entries_of(picked["payload"]["ship"])
-	assert_array(NetCoverage.uncovered(entries)).is_empty()
-	assert_int(NetCoverage.crew_count(entries)).is_equal(6)
+	var seats: Array = server.game.seats_of(picked["payload"]["ship"])
+	assert_array(NetCoverage.uncovered(seats)).is_empty()
+	assert_int(NetCoverage.crew_count(seats)).is_equal(6)
 	# The driver is the solo one, and steps once the sim runs.
 	assert_bool(await h.until(func() -> bool: return server.driver is TrainingDriver)).is_true()
 	assert_str(String((server.driver as TrainingDriver).solo_station())).is_equal("weapons")
@@ -109,7 +109,7 @@ func test_the_crew_drill_request_gives_a_fresh_shakedown_without_bots() -> void:
 	c.start_training("")
 	assert_bool(await h.until(func() -> bool: return server.training_active)).is_true()
 	assert_str(server.game.training.solo).is_empty()
-	assert_array(server.game.training.bot_entries()).is_empty()
+	assert_array(server.game.training.bot_seats()).is_empty()
 	assert_bool(server.world.run_def.training).is_true()
 
 
@@ -123,7 +123,7 @@ func test_the_hosts_solo_flag_starts_a_lesson_on_join() -> void:
 		assert_bool(await h.until(func() -> bool: return server.game.lobby.launched.size() == 1))
 		. is_true()
 	)
-	assert_str(h.session_of(server, c).entry).is_equal("relay")
+	assert_str(h.session_of(server, c).seat).is_equal("relay")
 	assert_str(server.game.training.solo).is_equal("relay")
 
 

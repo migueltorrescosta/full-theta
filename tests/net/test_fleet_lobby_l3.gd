@@ -282,7 +282,7 @@ func test_whole_fleet_flow_through_the_client() -> void:
 	var after: int = (h.events[crews[1]] as Array).find(seen[-1])
 	var moved: Dictionary = await h.next_event(crews[1], NetProtocol.EVENT_PICKED, after)
 	assert_int(moved["payload"]["ship"]).is_equal(1)
-	assert_str(moved["payload"]["entry"]).is_equal(StationViews.VIEWER)
+	assert_str(moved["payload"]["seat"]).is_equal(StationViews.VIEWER)
 	var board: Dictionary = await h.next_event(watcher, NetProtocol.EVENT_SCOREBOARD, 0)
 	assert_dict(board).is_not_empty()
 	var row: Callable = func(ev: Dictionary) -> bool:

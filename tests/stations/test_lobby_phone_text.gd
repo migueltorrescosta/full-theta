@@ -43,7 +43,7 @@ func test_role_summaries_fit_their_lines_and_start_stays_on_screen() -> void:
 				await get_tree().process_frame
 			var lines: int = LobbySeatGrid.ROLE_LINES
 			for id: String in LobbySeatGrid.GRID_STATIONS:
-				var cell: Node = l.find_child("Entry_" + id, true, false)
+				var cell: Node = l.find_child("Seat_" + id, true, false)
 				var role: Label = cell.find_child("Role", true, false) as Label
 				if role.max_lines_visible != lines or role.get_line_count() > lines:
 					failures.append("%s %s %s: %d lines" % [lang, size, id, role.get_line_count()])

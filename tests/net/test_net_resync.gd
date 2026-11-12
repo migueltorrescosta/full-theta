@@ -219,7 +219,7 @@ func test_default_grace_is_fifteen_seconds() -> void:
 func test_lapsed_sessions_without_a_pick_are_evicted() -> void:
 	var sessions: NetSessions = NetSessions.new(1_000_000)
 	var kept: NetSession = _session()
-	kept.last_entry = "helm"
+	kept.last_seat = "helm"
 	for i: int in 1000:
 		var s: NetSession = NetSession.new(i + 10, 60.0, 120.0)
 		sessions.issue(s)

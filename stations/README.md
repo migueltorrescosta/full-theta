@@ -52,6 +52,6 @@ The layout is fixed: top bar; the focused panel in the main area on the left; th
 
 ## Tests and fixture
 
-`tests/stations/station_fixture.gd` (`StationFixture`): `context(entry)` builds a full `StationContext` with no server: ship 0 "Kestrel" started, a hostile H2 at 4 high 2.3 km, an unknown U3 at 11 high 8 km, an own-faction F4 at 7 level 600 m, mark Bravo at 8 low 1.2 km, a pinned clock (`StationFixture.clock(ctx).ms`) and a `RecordingClient` (`StationFixture.sent(ctx).of("ping")`). Scene tests set `StationScreen.panel_factory` to inject test panels.
+`tests/stations/station_fixture.gd` (`StationFixture`): `context(seat)` builds a full `StationContext` with no server: ship 0 "Kestrel" started, a hostile H2 at 4 high 2.3 km, an unknown U3 at 11 high 8 km, an own-faction F4 at 7 level 600 m, mark Bravo at 8 low 1.2 km, a pinned clock (`StationFixture.clock(ctx).ms`) and a `RecordingClient` (`StationFixture.sent(ctx).of("ping")`). Scene tests set `StationScreen.panel_factory` to inject test panels.
 
 L5: `tests/visual/station_shot.tscn` shows the fixture (properties in `station_shot.gd`). Add a shot as a `tests/visual/shots.json` row with `"scene": "res://tests/visual/station_shot.tscn"`, `"size": [1280, 720]` and its `"set"` properties (`view`, `entry`, `selected`, `ping`, `overlay`, `tooltip`, `strip`, `ui_scale`), run `tools/gate.sh l5 --update-baselines`, and check the PNG by eye.

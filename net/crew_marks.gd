@@ -48,13 +48,13 @@ var _marks: Dictionary[int, Array] = {}
 var _alert: Dictionary[int, int] = {}
 
 
-## The seat role of a catalogue entry for these rules.
-static func role_of(entry: String) -> Role:
-	if entry == StationViews.CAPTAIN:
+## The role of a seat for these rules.
+static func role_of(seat: String) -> Role:
+	if seat == StationViews.CAPTAIN:
 		return Role.CAPTAIN
-	if not StationViews.is_crew(entry):
+	if not StationViews.is_crew(seat):
 		return Role.NONE
-	return Role.RELAY if StationViews.stations_of(entry).has("relay") else Role.CREW
+	return Role.RELAY if StationViews.stations_of(seat).has("relay") else Role.CREW
 
 
 func alert(ship: int) -> int:

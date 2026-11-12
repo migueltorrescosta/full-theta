@@ -82,7 +82,7 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "alert_red", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Up"]},
 	{"id": "alert_yellow", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Right"]},
 	{"id": "alert_normal", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Down"]},
-	# Panel 1 / 2; with more panels (the dev entry) previous / next.
+	# Panel 1 / 2; with more panels (the dev seat) previous / next.
 	{"id": "focus_1", "group": LIVE, "kind": PRESS, "kbm": ["F1"], "pad": ["View+LB"]},
 	{"id": "focus_2", "group": LIVE, "kind": PRESS, "kbm": ["F2"], "pad": ["View+RB"]},
 	# The Shakedown's Next button (FT-MIS-039, D235): live on every station, ignored outside training.

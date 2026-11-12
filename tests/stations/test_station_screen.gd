@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## StationScreen: panels per entry, focus, intent routing and the common actions on the
+## StationScreen: panels per seat, focus, intent routing and the common actions on the
 ## shared selection, marks, pings, alert and claims.
 
 
@@ -29,8 +29,8 @@ class RecordingPanel:
 		return "flight" if station == "helm" else ""
 
 
-func _screen(entry: String) -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry)
+func _screen(seat: String) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.panel_factory = func(_st: String) -> StationPanel: return RecordingPanel.new()
 	s.setup(ctx)

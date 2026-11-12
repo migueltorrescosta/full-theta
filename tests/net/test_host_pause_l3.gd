@@ -22,8 +22,8 @@ func _running(server: NetServer) -> Array[NetClient]:
 	var host: NetClient = await h.welcomed(server, "tactical", "", SECRET)
 	await h.pick(host, "tactical", PLAYER)
 	crew.append(host)
-	for entry: String in ["systems", "ops"]:
-		crew.append(await h.joined(server, entry, entry))
+	for seat: String in ["systems", "ops"]:
+		crew.append(await h.joined(server, seat, seat))
 	assert_bool(await h.start(server, host)).is_true()
 	return crew
 

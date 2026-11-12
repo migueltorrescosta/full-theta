@@ -104,7 +104,7 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	var normal: Callable = func(e: Dictionary) -> bool: return e["payload"]["level"] == 0
 	assert_dict(await h.next_event(crew[0], NetProtocol.EVENT_ALERT, from, normal)).is_not_empty()
 	for i: int in crew.size():
-		assert_str(h.session_of(server, crew[i]).entry).is_equal(["tactical", "systems", "ops"][i])
+		assert_str(h.session_of(server, crew[i]).seat).is_equal(["tactical", "systems", "ops"][i])
 	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(tac.id)
 	var fresh: Callable = func() -> bool:
 		return crew[0].view.full_count > fulls and crew[0].view.tick < old_tick

@@ -16,11 +16,11 @@ func after_test() -> void:
 	await h.free_all()
 
 
-## A started ship with Tactical, Systems and Ops, plus any extra entries.
+## A started ship with Tactical, Systems and Ops, plus any extra seats.
 func _running(server: NetServer, extra: Array[String] = []) -> Array[NetClient]:
 	var crew: Array[NetClient] = await h.crew3(server)
-	for entry: String in extra:
-		crew.append(await h.joined(server, entry, entry))
+	for seat: String in extra:
+		crew.append(await h.joined(server, seat, seat))
 	assert_bool(await h.start(server, crew[0])).is_true()
 	return crew
 
@@ -63,7 +63,7 @@ func test_grace_then_universe_pause() -> void:
 	var t0: int = Time.get_ticks_msec()
 	await h.drop(server, crew[0])
 	# Within the grace: pick and claims kept, no pause.
-	assert_str(tac.entry).is_equal("tactical")
+	assert_str(tac.seat).is_equal("tactical")
 	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(tac.id)
 	assert_bool(server.game.sim_running()).is_true()
 	assert_bool(await h.lapsed(tac)).is_true()
@@ -102,7 +102,7 @@ func test_rejoin_ends_the_pause() -> void:
 	assert_bool(await _frozen(server, crew[0], 300)).is_true()
 	var from: int = h.mark(crew[0])
 	var again: NetClient = await h.welcomed(server, "ops'", token)
-	assert_str(again.welcome["entry"]).is_equal("ops")
+	assert_str(again.welcome["seat"]).is_equal("ops")
 	assert_dict(await h.next_event(crew[0], NetProtocol.EVENT_RESUME, from)).is_not_empty()
 	assert_bool(await _running_again(server)).is_true()
 
@@ -293,18 +293,18 @@ func test_viewer_or_captain_takes_over() -> void:
 	var picked: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_PICKED, from)
 	assert_str(picked["payload"]["reason"]).is_equal("")
 	assert_dict(await h.next_event(viewer, NetProtocol.EVENT_RESUME, from)).is_not_empty()
-	assert_str(h.session_of(server, viewer).entry).is_equal("ops")
+	assert_str(h.session_of(server, viewer).seat).is_equal("ops")
 	assert_bool(await _running_again(server)).is_true()
 	await _lose(server, crew[1], crew[0])
 	from = h.mark(cap)
 	cap.takeover(PLAYER, "systems")
 	assert_dict(await h.next_event(cap, NetProtocol.EVENT_RESUME, from)).is_not_empty()
-	assert_str(h.session_of(server, cap).entry).is_equal("systems")
+	assert_str(h.session_of(server, cap).seat).is_equal("systems")
 	assert_bool(await _running_again(server)).is_true()
 
 
 # FT: FT-NET-033, FT-NET-035
-# Grace expiry frees the pick: a new player (no token) takes the uncovered entry and
+# Grace expiry frees the pick: a new player (no token) takes the uncovered seat and
 # the universe resumes.
 func test_new_player_takes_a_freed_pick() -> void:
 	var server: NetServer = h.server(false, GRACE_S)
@@ -312,6 +312,6 @@ func test_new_player_takes_a_freed_pick() -> void:
 	await _lose(server, crew[1], crew[0])
 	var from: int = h.mark(crew[0])
 	var fresh: NetClient = await h.joined(server, "newcomer", "systems")
-	assert_str(h.session_of(server, fresh).entry).is_equal("systems")
+	assert_str(h.session_of(server, fresh).seat).is_equal("systems")
 	assert_dict(await h.next_event(crew[0], NetProtocol.EVENT_RESUME, from)).is_not_empty()
 	assert_bool(await _running_again(server)).is_true()

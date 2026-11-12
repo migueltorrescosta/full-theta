@@ -1,7 +1,7 @@
 class_name ViewFilter
 extends RefCounted
 ## What one snapshot view may carry of other stations' data (FT-NET-009, FT-PAIR-005,
-## FT-PAIR-007 to FT-PAIR-010, FT-PAIR-014, FT-PAIR-019, FT-JNT-005): the entry's stations
+## FT-PAIR-007 to FT-PAIR-010, FT-PAIR-014, FT-PAIR-019, FT-JNT-005): the seat's stations
 ## against the session's DataToggles. A field of another station's data reaches the view
 ## only through a toggle:
 ## - a summary (the top bar's shields and reactor, Helm's thrust envelope and shield ring,
@@ -38,7 +38,7 @@ const RELAY_OWNER: Array = ["relay"]
 ## The fabrication timer is Engineering's build shown on Relay's screen.
 const RELAY_ENG: Array = ["relay", "engineering"]
 
-var entry: String = ""
+var seat: String = ""
 var toggles: DataToggles
 var stations: Array[String] = []
 ## The shortcuts the source stations shared and that haven't expired (feature -> true).
@@ -60,9 +60,9 @@ static func code_with(code: String, shared_features: Array) -> String:
 	return code + "#" + ",".join(names)
 
 
-## The filter of an entry at a toggle code (DataToggles code, optionally with the shared
+## The filter of a seat at a toggle code (DataToggles code, optionally with the shared
 ## shortcuts after a "#", code_with()); null when the code is malformed.
-static func of(entry_id: String, code: String) -> ViewFilter:
+static func of(seat_id: String, code: String) -> ViewFilter:
 	var parts: PackedStringArray = code.split("#", true, 1)
 	var picked: DataToggles = DataToggles.parse(parts[0])
 	if picked == null:
@@ -71,9 +71,9 @@ static func of(entry_id: String, code: String) -> ViewFilter:
 	if parts.size() > 1:
 		for id: String in parts[1].split(",", false):
 			f.shared[StringName(id)] = true
-	f.entry = entry_id
+	f.seat = seat_id
 	f.toggles = picked
-	f.stations = StationViews.stations_of(entry_id)
+	f.stations = StationViews.stations_of(seat_id)
 	f.sees_all = f.stations.is_empty()
 	f.condition_hidden = f.stations.has("comms") and not f.stations.has("engineering")
 	return f

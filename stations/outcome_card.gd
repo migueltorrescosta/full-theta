@@ -100,7 +100,7 @@ func _enter_tree() -> void:
 
 func refresh() -> void:
 	var card: Dictionary = ctx.crew.ship_outcome.get(ctx.crew.ship, {})
-	visible = not card.is_empty() and ctx.crew.entry != ""
+	visible = not card.is_empty() and ctx.crew.seat != ""
 	if not visible:
 		return
 	_place()
@@ -161,7 +161,7 @@ func waiting_names(card: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	for seat: Dictionary in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
 		var who: String = str(seat.get("name", ""))
-		if StationViews.is_crew(str(seat.get("entry", ""))) and who != ctx.settings.player_name:
+		if StationViews.is_crew(str(seat.get("seat", ""))) and who != ctx.settings.player_name:
 			if not voters.has(who) and not out.has(who):
 				out.append(who)
 	return out

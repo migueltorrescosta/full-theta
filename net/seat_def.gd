@@ -1,8 +1,8 @@
-class_name StationDef
+class_name SeatDef
 extends RefCounted
-## The data definition of one catalogue entry (FT-ARC-014, FT-STN-015): a functional
-## station, a joint view, the Captain seat, the main screen (Viewer) or the dev entry.
-## StationViews builds every StationDef from its tables; a joint view is the union of
+## The data definition of one seat (FT-ARC-014, FT-STN-015): a functional
+## station, a joint view, the Captain seat, the main screen (Viewer) or the dev seat.
+## StationViews builds every SeatDef from its tables; a joint view is the union of
 ## its stations (D20, FT-JNT-005). The Catalogue message carries to_dict() of each.
 
 var id: String = ""
@@ -10,7 +10,7 @@ var display_name: String = ""
 ## StationViews.LIGHT, BUSY or INTENSE; "" for the Viewer (D126).
 var load_tag: String = ""
 ## The functional stations it covers: one, two for a joint view, all six for the dev
-## entry, none for Captain and Viewer (they never count for coverage, FT-NET-020).
+## seat, none for Captain and Viewer (they never count for coverage, FT-NET-020).
 var stations: Array[String] = []
 ## Snapshot sections it receives, ascending (StationViews.Section).
 var sections: Array[int] = []
@@ -30,7 +30,7 @@ var controls: Array[String] = []
 var core_actions: Array[String] = []
 
 
-## A crew entry: it covers at least one functional station.
+## A crew seat: it covers at least one functional station.
 func is_crew() -> bool:
 	return not stations.is_empty()
 

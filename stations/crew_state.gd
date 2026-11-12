@@ -43,11 +43,11 @@ const TICK_HZ: float = SimRate.HZ * 1.0
 
 var session: int = -1
 var ship: int = -1
-var entry: String = ""
+var seat: String = ""
 var host: bool = false
 var dev_all: bool = false
 var lang: String = "en"
-## Catalogue message fields: ships [{id, def, name, faction}], entries [StationDef
+## Catalogue message fields: ships [{id, def, name, faction}], seats [SeatDef
 ## dicts], load_tags.
 var catalogue: Dictionary = {}
 ## ship -> `lobby` payload.
@@ -130,10 +130,10 @@ var _filter_key: String = ""
 ## clients draw an em dash for an absent summary, a band for a banded one.
 func filter() -> ViewFilter:
 	var code: String = ViewFilter.code_with(toggles.encode(), shares.keys())
-	var key: String = "%s|%s" % [entry, code]
+	var key: String = "%s|%s" % [seat, code]
 	if _filter == null or key != _filter_key:
 		_filter_key = key
-		_filter = ViewFilter.of(entry, code)
+		_filter = ViewFilter.of(seat, code)
 	return _filter
 
 
@@ -186,7 +186,7 @@ func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
 func welcome(w: Dictionary) -> void:
 	session = int(w.get("session", -1))
 	ship = int(w.get("ship", -1))
-	entry = str(w.get("entry", ""))
+	seat = str(w.get("seat", ""))
 	host = bool(w.get("host", false))
 	dev_all = bool(w.get("dev_all", false))
 	lang = str(w.get("lang", "en"))
@@ -198,27 +198,27 @@ func set_catalogue(c: Dictionary) -> void:
 	changed.emit(&"catalogue")
 
 
-## The StationDef dict of the current pick, or {}.
-func entry_def() -> Dictionary:
-	return def_of(entry)
+## The SeatDef dict of the current pick, or {}.
+func seat_def() -> Dictionary:
+	return def_of(seat)
 
 
 func def_of(id: String) -> Dictionary:
-	for d: Dictionary in catalogue.get("entries", []):
+	for d: Dictionary in catalogue.get("seats", []):
 		if d.get("id", "") == id:
 			return d
 	return {}
 
 
-## Functional stations of the pick (one, two for a joint view, six for the dev entry).
+## Functional stations of the pick (one, two for a joint view, six for the dev seat).
 func stations() -> Array:
-	return entry_def().get("stations", [])
+	return seat_def().get("stations", [])
 
 
 ## Crew picks set the alert level and place marks; Captain and viewers can't set the
 ## alert (FT-STN-008).
 func is_crew() -> bool:
-	return bool(entry_def().get("crew", false))
+	return bool(seat_def().get("crew", false))
 
 
 ## Co-op: the host's mode once the server sends `fleet`; before that, every crew ship
@@ -626,12 +626,12 @@ func _on_fleet_event(type: String, p: Dictionary) -> void:
 			changed.emit(&"handover")
 
 
-## A station of an allied ship was taken over in its pause (M4-Q8): a toast naming who took
+## A seat of an allied ship was taken over in its pause (M4-Q8): a toast naming who took
 ## what; the ship's side sees it.
 func _on_takeover(p: Dictionary) -> void:
 	var args: Dictionary = {
 		"by": str(p.get("by", "")),
-		"station": TranslationServer.translate("station." + str(p.get("entry", ""))),
+		"seat": TranslationServer.translate("seat." + str(p.get("seat", ""))),
 		"ship": ship_name(int(p.get("ship", -1))),
 	}
 	toast.emit("toast.takeover", args)
@@ -716,7 +716,7 @@ func _on_picked(p: Dictionary) -> bool:
 		toast.emit("toast." + reason, p)
 		return true
 	ship = int(p.get("ship", -1))
-	entry = str(p.get("entry", ""))
+	seat = str(p.get("seat", ""))
 	claims.clear()
 	changed.emit(&"picked")
 	return true
@@ -777,7 +777,7 @@ func captain_seated(id: int = ship) -> bool:
 	if lobby.has(id):
 		return str(lobby[id].get("captain", "")) != ""
 	for seat: Variant in fleet_row(id).get("seats", []):
-		if str((seat as Dictionary).get("entry", "")) == StationViews.CAPTAIN:
+		if str((seat as Dictionary).get("seat", "")) == StationViews.CAPTAIN:
 			return true
 	return false
 
@@ -785,7 +785,7 @@ func captain_seated(id: int = ship) -> bool:
 ## Whether this pick may switch the main screen now (FT-MSC-005): the Captain, or Relay
 ## while no Captain is seated. The server decides; this only hides dead buttons.
 func may_switch_main_view() -> bool:
-	if entry == StationViews.CAPTAIN:
+	if seat == StationViews.CAPTAIN:
 		return true
 	return stations().has("relay") and not captain_seated()
 

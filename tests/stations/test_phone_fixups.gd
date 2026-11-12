@@ -22,12 +22,12 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(size: Vector2i, entry: String, insets: Array, focus: int = 0) -> StationScreen:
+func _screen(size: Vector2i, seat: String, insets: Array, focus: int = 0) -> StationScreen:
 	SafeArea.simulate(insets)
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	CommsFixture.install(ctx)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
@@ -327,13 +327,13 @@ func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
 	var forms: Array = [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]
 	var bad: Array[String] = []
 	for f: Array in forms:
-		for entry: String in StationViews.ENTRIES:
-			var n: int = maxi(1, (StationViews.ENTRIES[entry][2] as Array).size())
+		for seat: String in StationViews.OTHER_SEATS:
+			var n: int = maxi(1, (StationViews.OTHER_SEATS[seat][2] as Array).size())
 			for focus: int in n:
-				var s: StationScreen = await _screen(f[0], entry, f[1], focus)
+				var s: StationScreen = await _screen(f[0], seat, f[1], focus)
 				var report: Dictionary = TapAudit.check(s)
 				bad.append_array(
-					StationFixture.rule_breaks(report, "%s %s/%d" % [f[0], entry, focus], AUDIT)
+					StationFixture.rule_breaks(report, "%s %s/%d" % [f[0], seat, focus], AUDIT)
 				)
 				_drop(s)
 	assert_array(bad).override_failure_message("\n".join(bad)).is_empty()

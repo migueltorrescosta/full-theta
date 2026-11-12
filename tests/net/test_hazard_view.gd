@@ -17,9 +17,9 @@ func before_test() -> void:
 	world.step()
 
 
-func _hazards(entry: String, code: String) -> Array:
+func _hazards(seat: String, code: String) -> Array:
 	var b: SnapshotBuilder = SnapshotBuilder.new()
-	var key: String = StationViews.key(ME, entry, code)
+	var key: String = StationViews.key(ME, seat, code)
 	b.build(SimCopy.of(world), 1, [key])
 	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
 	assert_bool(view.apply(b.message(key, true))).is_true()

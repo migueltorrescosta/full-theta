@@ -11,8 +11,8 @@ func before_test() -> void:
 	AlertTones.sounds_dir = MainMenu.ALERT_SOUNDS
 
 
-func _screen(entry: String) -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry)
+func _screen(seat: String) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.panel_factory = func(_st: String) -> StationPanel: return StationPanel.new()
 	s.setup(ctx)
@@ -42,8 +42,8 @@ func _flashing(s: StationScreen) -> bool:
 
 # FT: FT-STN-004, FT-SIM-032, FT-M1-011
 func test_a_hit_shows_and_sounds_on_every_station_with_its_direction() -> void:
-	for entry: String in ["helm", "weapons", "engineering", "relay", "captain", "viewer"]:
-		var s: StationScreen = _screen(entry)
+	for seat: String in ["helm", "weapons", "engineering", "relay", "captain", "viewer"]:
+		var s: StationScreen = _screen(seat)
 		# Starboard, level: 3 o'clock (ship frame, -Z is the bow).
 		_event(s, "hit", {"vector": Vector3(20.0, 0.0, 0.0)})
 		assert_array(_played(s)).is_equal([&"hit"])
@@ -66,14 +66,14 @@ func test_a_burst_of_hits_keeps_one_toast_and_spaces_the_thumps() -> void:
 
 # FT: FT-STN-004, FT-SIM-032
 func test_low_shields_reach_helm_and_engineering_only() -> void:
-	for entry: String in ["helm", "engineering", "tactical"]:
-		var s: StationScreen = _screen(entry)
+	for seat: String in ["helm", "engineering", "tactical"]:
+		var s: StationScreen = _screen(seat)
 		_event(s, "shield_low", {"value": 0.38})
 		assert_array(_played(s)).is_equal([&"shield_low"])
 		assert_array(s.toasts.texts()).is_equal(["Shields 38 %"])
 		assert_object(s.flash.color).is_equal(Palette.color("warn"))
-	for entry: String in ["weapons", "relay", "viewer"]:
-		var s: StationScreen = _screen(entry)
+	for seat: String in ["weapons", "relay", "viewer"]:
+		var s: StationScreen = _screen(seat)
 		_event(s, "shield_low", {"value": 0.38})
 		assert_array(_played(s)).is_empty()
 		assert_array(s.toasts.texts()).is_empty()

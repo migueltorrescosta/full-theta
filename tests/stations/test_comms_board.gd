@@ -17,8 +17,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String = "comms", code: String = "easy") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(seat: String = "comms", code: String = "easy") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	ctx.crew.toggles = DataToggles.parse(code)
 	CommsFixture.install(ctx)
 	# A desktop-sized viewport: a headless window is phone-sized, and a phone shows one

@@ -22,8 +22,8 @@ func before_test() -> void:
 	_toasts = []
 
 
-func _screen(entry: String = "engineering") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry)
+func _screen(seat: String = "engineering") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat)
 	ctx.crew.toast.connect(func(key: String, _a: Dictionary) -> void: _toasts.append(key))
 	var host: Control = auto_free(Control.new())
 	host.size = Vector2(1280, 720)

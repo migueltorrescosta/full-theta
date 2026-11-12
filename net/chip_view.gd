@@ -32,7 +32,7 @@ static func arg_kind(chip_id: String) -> ChipDef.Arg:
 ## Every chip the view lists, oldest first: {id: int, chip: String (chips.tres id), arg: int
 ## (mount index or contact id, -1 for none), from: String, to: String (station ids), sent:
 ## int, expires: int (sim ticks)}. A crew view lists the chips its stations send or receive,
-## the Captain, the Viewer and the dev entry all of the ship's.
+## the Captain, the Viewer and the dev seat all of the ship's.
 static func open_chips(view: NetViewState) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var def: ChipsDef = _def

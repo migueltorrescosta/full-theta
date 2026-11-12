@@ -17,8 +17,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String = "relay") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(seat: String = "relay") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	for s: String in StationViews.CREW:
 		ctx.settings.mark_hint_seen(s)
 	# One allied ship to send to, and the RELAY block with 2 probes in stock.
@@ -342,8 +342,8 @@ func _sites(s: StationScreen) -> void:
 # The scenario's site name is a callout layer on every station: a banner on the radar,
 # selectable by click. Relay's map draws none: the radar beside it is always shown.
 func test_site_names_show_on_every_station() -> void:
-	for entry: String in ["relay", "helm", "weapons", "viewer"]:
-		var s: StationScreen = await _screen(entry)
+	for seat: String in ["relay", "helm", "weapons", "viewer"]:
+		var s: StationScreen = await _screen(seat)
 		_sites(s)
 		assert_str(s.ctx.picture().site["label"]).is_equal("Kestrel Yard")
 		var box: Rect2 = SiteBanner.rect(s.radar.get_theme_default_font(), s.ctx.picture().site)
@@ -417,8 +417,8 @@ func test_weapons_is_warned_before_a_shot_along_a_flagged_lane() -> void:
 	s.ctx.crew.handle_event({"type": "lane_warning", "payload": payload}, s.ctx.now_ms())
 	assert_array(s.toasts.texts()).is_equal(["Friendly in the line of fire"])
 	assert_array(s.alerts.tones.played).is_equal([&"proximity"])
-	for entry: String in ["relay", "helm"]:
-		var other: StationScreen = await _screen(entry)
+	for seat: String in ["relay", "helm"]:
+		var other: StationScreen = await _screen(seat)
 		other.ctx.crew.handle_event(
 			{"type": "lane_warning", "payload": payload}, other.ctx.now_ms()
 		)
@@ -441,8 +441,8 @@ class ForwardPanel:
 # A mark placed on a forward view attaches to the tapped contact; a tap that hits no
 # contact (empty space, a map point, a mark) places no mark.
 func test_forward_view_marks_attach_to_the_tapped_contact_or_none() -> void:
-	for entry: String in ["helm", "weapons"]:
-		var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	for seat: String in ["helm", "weapons"]:
+		var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 		var s: StationScreen = auto_free(StationScreen.new())
 		s.panel_factory = func(_st: String) -> StationPanel: return ForwardPanel.new()
 		s.setup(ctx)

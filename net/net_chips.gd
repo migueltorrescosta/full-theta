@@ -100,7 +100,7 @@ func answer(s: NetSession, id: int, accept: bool) -> String:
 		if row["id"] != id:
 			continue
 		var chip: ChipDef = _def.chips[row["chip"]]
-		if not StationViews.stations_of(s.entry).has(String(chip.to_station)):
+		if not StationViews.stations_of(s.seat).has(String(chip.to_station)):
 			return NOT_YOURS
 		open.remove_at(i)
 		_dirty[s.ship] = true
@@ -171,7 +171,7 @@ func _sender_rule(s: NetSession) -> String:
 ## holds and not to one it holds too (a joint view runs it as a direct action), with a
 ## sensible argument and a player at the receiving station.
 func _chip_rule(s: NetSession, chip: ChipDef, arg: int) -> String:
-	var stations: Array[String] = StationViews.stations_of(s.entry)
+	var stations: Array[String] = StationViews.stations_of(s.seat)
 	var why: String = ""
 	if stations.has(String(chip.to_station)):
 		why = SAME_SCREEN
@@ -212,7 +212,7 @@ func _arg_ok(ship: int, chip: ChipDef, arg: int) -> bool:
 ## Whether a connected crew session of the ship holds the station.
 func _someone_holds(ship: int, station: StringName) -> bool:
 	for s: NetSession in game.by_id.values():
-		if s.ship == ship and s.connected() and StationViews.stations_of(s.entry).has(station):
+		if s.ship == ship and s.connected() and StationViews.stations_of(s.seat).has(station):
 			return true
 	return false
 

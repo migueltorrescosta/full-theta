@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## StationDef and the StationViews tables (T042): one definition per catalogue entry,
+## SeatDef and the StationViews tables (T042): one definition per seat,
 ## with load tags, sections, fields, commands, claims and controls; joint views are the
 ## union of their stations.
 
@@ -8,9 +8,9 @@ const SIX: Array[String] = ["helm", "weapons", "engineering", "science", "relay"
 
 # FT: FT-ARC-014, FT-STN-015, FT-M1-018
 # Every station, the M1 joint views, Captain and the main screen (Viewer) have a
-# StationDef with an id, visible sections and fields and accepted commands; each has
+# SeatDef with an id, visible sections and fields and accepted commands; each has
 # the load tag D126 gives it, and the Viewer none.
-func test_every_entry_has_a_station_def_with_its_load_tag() -> void:
+func test_every_seat_has_a_seat_def_with_its_load_tag() -> void:
 	var tags: Dictionary = {
 		"helm": "intense",
 		"weapons": "intense",
@@ -38,7 +38,7 @@ func test_every_entry_has_a_station_def_with_its_load_tag() -> void:
 	}
 	assert_array(StationViews.catalogue_ids(false)).is_equal(tags.keys())
 	for id: String in tags:
-		var d: StationDef = StationViews.def(id)
+		var d: SeatDef = StationViews.def(id)
 		assert_object(d).is_not_null()
 		assert_str(d.id).is_equal(id)
 		assert_str(d.display_name).is_not_empty()
@@ -72,7 +72,7 @@ func test_every_entry_has_a_station_def_with_its_load_tag() -> void:
 # FT: FT-ARC-014, FT-NET-018, FT-NET-017, FT-JNT-005
 # A joint view is the union of its two stations: sections, fields, commands, claims and
 # controls; every pair is offered, plus the dev
-# entry holding all six only with the flag.
+# seat holding all six only with the flag.
 func test_joint_views_are_unions_of_their_stations() -> void:
 	var pairs: Dictionary = {
 		"drive": ["engineering", "helm"],
@@ -92,13 +92,13 @@ func test_joint_views_are_unions_of_their_stations() -> void:
 		"ops": ["relay", "comms"]
 	}
 	for id: String in pairs:
-		var d: StationDef = StationViews.def(id)
+		var d: SeatDef = StationViews.def(id)
 		assert_array(d.stations).is_equal(pairs[id])
 		var sections: Dictionary = {}
 		var commands: Array[StringName] = []
 		var claims: Array[String] = []
 		for s: String in pairs[id]:
-			var sd: StationDef = StationViews.def(s)
+			var sd: SeatDef = StationViews.def(s)
 			for k: int in sd.sections:
 				sections[k] = true
 			commands.append_array(sd.commands)
@@ -115,7 +115,7 @@ func test_joint_views_are_unions_of_their_stations() -> void:
 	assert_array(StationViews.def(StationViews.ALL).stations).is_equal(SIX)
 	assert_bool(StationViews.catalogue_ids(false).has(StationViews.ALL)).is_false()
 	assert_bool(StationViews.catalogue_ids(true).has(StationViews.ALL)).is_true()
-	# Every entry the catalogue offers covers at most 2 stations, except the dev entry.
+	# Every seat the catalogue offers covers at most 2 stations, except the dev seat.
 	for id: String in StationViews.catalogue_ids(false):
 		assert_int(StationViews.def(id).stations.size()).is_less_equal(2)
 

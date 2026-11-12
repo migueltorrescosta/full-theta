@@ -18,7 +18,7 @@ const LAYOUTS: Array = [
 	[Vector2i(844, 390), 1.0, false, LANDSCAPE],
 	[Vector2i(390, 844), 1.0, false, PORTRAIT],
 ]
-const ENTRIES: Array = [
+const SEATS: Array = [
 	"helm",
 	"weapons",
 	"engineering",
@@ -59,10 +59,10 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(layout: Array, entry: String) -> StationScreen:
+func _screen(layout: Array, seat: String) -> StationScreen:
 	LayoutMode.forced = LayoutMode.Kind.TOUCH if layout[2] else -1
 	SafeArea.simulate(layout[3])
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	if float(layout[1]) == 1.0:
@@ -96,9 +96,9 @@ func _drop(s: StationScreen) -> void:
 # FT: FT-STN-004
 func test_a_toast_sits_inside_the_top_bar_and_covers_no_control() -> void:
 	for layout: Array in LAYOUTS:
-		for entry: String in ["helm", "engineering", "science", "captain"]:
-			var s: StationScreen = await _screen(layout, entry)
-			var where: String = "%s %s" % [layout[0], entry]
+		for seat: String in ["helm", "engineering", "science", "captain"]:
+			var s: StationScreen = await _screen(layout, seat)
+			var where: String = "%s %s" % [layout[0], seat]
 			for i: int in 3:
 				s.toasts.push("Weapons fault %d" % i, "warn", s.ctx.now_ms())
 			await get_tree().process_frame
@@ -128,9 +128,9 @@ func test_a_toast_sits_inside_the_top_bar_and_covers_no_control() -> void:
 # FT: FT-STN-002
 func test_radar_chips_stay_near_their_blip_and_clear_of_each_other() -> void:
 	for layout: Array in LAYOUTS:
-		for entry: String in ENTRIES:
-			var s: StationScreen = await _screen(layout, entry)
-			var where: String = "%s %s" % [layout[0], entry]
+		for seat: String in SEATS:
+			var s: StationScreen = await _screen(layout, seat)
+			var where: String = "%s %s" % [layout[0], seat]
 			_check_chips(s.radar, where)
 			_drop(s)
 
@@ -185,20 +185,20 @@ func test_the_ship_cutaway_stays_readable_on_small_layouts() -> void:
 	var small: Array = [LAYOUTS[1], LAYOUTS[2], LAYOUTS[5], LAYOUTS[6]]
 	var checked: int = 0
 	for layout: Array in small:
-		for entry: String in ["engineering", "systems"]:
-			var s: StationScreen = await _screen(layout, entry)
+		for seat: String in ["engineering", "systems"]:
+			var s: StationScreen = await _screen(layout, seat)
 			var phone: bool = LayoutMode.is_phone(s.form)
 			var pages: Array = [-1]
-			if phone and entry == "engineering":
+			if phone and seat == "engineering":
 				pages = [1]
 			for page: int in pages:
 				if page >= 0:
 					s.focused_panel().pages.current = page
 					for i: int in 3:
 						await get_tree().process_frame
-				var where: String = "%s %s page %d" % [layout[0], entry, page]
+				var where: String = "%s %s page %d" % [layout[0], seat, page]
 				var panel: EngineeringPanel = (
-					(s.focused_panel() if entry == "engineering" else s.panels[0])
+					(s.focused_panel() if seat == "engineering" else s.panels[0])
 					as EngineeringPanel
 				)
 				if panel == null:
@@ -412,8 +412,8 @@ func test_a_toast_leaves_the_bars_divider() -> void:
 func test_the_faults_scrollbar_shows_only_when_the_list_overflows() -> void:
 	var overflowed: int = 0
 	for layout: Array in [LAYOUTS[0], LAYOUTS[1], LAYOUTS[2]]:
-		for entry: String in ["engineering", "systems", "logistics"]:
-			var s: StationScreen = await _screen(layout, entry)
+		for seat: String in ["engineering", "systems", "logistics"]:
+			var s: StationScreen = await _screen(layout, seat)
 			var panel: EngineeringPanel = s.panels[0] as EngineeringPanel
 			var scroll: ScrollContainer = panel._lists_scroll
 			var over: bool = panel._lists.get_combined_minimum_size().y > scroll.size.y
@@ -423,7 +423,7 @@ func test_the_faults_scrollbar_shows_only_when_the_list_overflows() -> void:
 				. override_failure_message(
 					(
 						"%s %s: scrollbar %s with overflow %s"
-						% [layout[0], entry, scroll.get_v_scroll_bar().visible, over]
+						% [layout[0], seat, scroll.get_v_scroll_bar().visible, over]
 					)
 				)
 				. is_equal(over)

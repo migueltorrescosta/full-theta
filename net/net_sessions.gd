@@ -77,7 +77,7 @@ func evict(now_us: int) -> Array[NetSession]:
 	for session: NetSession in _by_token.values():
 		if (
 			session.lapsed
-			and session.last_entry == ""
+			and session.last_seat == ""
 			and session.last_claims.is_empty()
 			and now_us - session.dropped_us > EVICT_US
 		):

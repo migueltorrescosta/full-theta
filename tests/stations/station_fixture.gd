@@ -2,7 +2,7 @@
 class_name StationFixture
 extends RefCounted
 ## A deterministic station context with no server (#7): ship 0 "Kestrel" picked at the
-## given entry, Started; a snapshot view with the own ship at a fixed spot with a fixed
+## given seat, Started; a snapshot view with the own ship at a fixed spot with a fixed
 ## orientation, yawed, pitched and rolled so the ship frame and world axes differ on
 ## every axis (D124; its KIN velocity says 80 m/s along the bow; the position doesn't
 ## move), a hostile H2 at 4 high, 2.3 km, an unknown U3 at 11 high, 8 km and an
@@ -11,7 +11,7 @@ extends RefCounted
 ## RecordingClient. Station scene tests and L5 shots build on it:
 ## `var ctx := StationFixture.context("helm")`.
 ##
-## The seam variant (`context(entry, path, true)`) adds items about half a period away,
+## The seam variant (`context(seat, path, true)`) adds items about half a period away,
 ## across the cube's seam from each other (minimum image, D124): hostiles H5 and H6 and
 ## a free mark Echo, with H5 0.7 km from Echo through the seam and H6 2.7 km from it the
 ## other way.
@@ -79,8 +79,8 @@ class RecordingClient:
 	func release_claim(item: String) -> void:
 		sent.append(["release_claim", [item]])
 
-	func pick(ship: int, entry: String) -> void:
-		sent.append(["pick", [ship, entry]])
+	func pick(ship: int, seat: String) -> void:
+		sent.append(["pick", [ship, seat]])
 
 	func release_pick() -> void:
 		sent.append(["release_pick", []])
@@ -97,8 +97,8 @@ class RecordingClient:
 	func host_pause(on: bool) -> void:
 		sent.append(["host_pause", [on]])
 
-	func takeover(ship: int, entry: String) -> void:
-		sent.append(["takeover", [ship, entry]])
+	func takeover(ship: int, seat: String) -> void:
+		sent.append(["takeover", [ship, seat]])
 
 	func run_again(ship: int, vote: bool) -> void:
 		sent.append(["run_again", [ship, vote]])
@@ -170,9 +170,9 @@ class Clock:
 		return ms
 
 
-## The context for `entry` (a catalogue id). settings_path: a test-local file.
+## The context for `seat` (a catalogue id). settings_path: a test-local file.
 static func context(
-	entry: String = "helm",
+	seat: String = "helm",
 	settings_path: String = "user://test_station_fixture.cfg",
 	seam: bool = false
 ) -> StationContext:
@@ -196,9 +196,9 @@ static func context(
 		{
 			"session": SESSION,
 			"ship": SHIP,
-			"entry": entry,
+			"seat": seat,
 			"host": false,
-			"dev_all": entry == StationViews.ALL,
+			"dev_all": seat == StationViews.ALL,
 			"lang": "en"
 		}
 	)
@@ -249,15 +249,15 @@ static func sent(ctx: StationContext) -> RecordingClient:
 
 ## The Catalogue message as the server sends it (StationViews), with ship 0.
 static func catalogue(dev_all: bool = false) -> Dictionary:
-	var entries: Array = []
-	var ids: Array = StationViews.CREW + StationViews.ENTRIES.keys()
+	var seats: Array = []
+	var ids: Array = StationViews.CREW + StationViews.OTHER_SEATS.keys()
 	if dev_all:
 		ids.append(StationViews.ALL)
 	for id: String in ids:
-		entries.append(StationViews.def(id).to_dict())
+		seats.append(StationViews.def(id).to_dict())
 	return {
 		"ships": [{"id": SHIP, "def": "m1_corvette", "name": SHIP_NAME, "faction": 0}],
-		"entries": entries,
+		"seats": seats,
 		"load_tags": StationViews.LOAD_TAGS,
 	}
 
@@ -422,7 +422,7 @@ static func fleet(
 	var rows: Array = []
 	for i: int in names.size():
 		var team: int = int(teams[i]) if i < teams.size() else 0
-		var seats: Array = [{"name": "P%d" % i, "entry": "helm"}]
+		var seats: Array = [{"name": "P%d" % i, "seat": "helm"}]
 		rows.append(
 			FleetMessages.fleet_ship(i, names[i], team, seats, 1, ["weapons"], false, started)
 		)

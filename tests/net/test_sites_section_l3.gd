@@ -34,8 +34,8 @@ func _site(key: String, pos: Vector3, dockable: bool = false) -> SiteDef:
 # Every station and view gets the SITES section, and a joined client holds Kestrel Yard
 # (site 0, the origin, dockable) as the M1 world names it.
 func test_every_view_lists_the_sites_section() -> void:
-	for entry: String in StationViews.catalogue_ids(true):
-		assert_array(StationViews.def(entry).sections).contains([StationViews.Section.SITES])
+	for seat: String in StationViews.catalogue_ids(true):
+		assert_array(StationViews.def(seat).sections).contains([StationViews.Section.SITES])
 	var server: NetServer = h.server()
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
 	assert_bool(await h.until(func() -> bool: return not viewer.view.sites.is_empty())).is_true()

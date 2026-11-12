@@ -2,8 +2,8 @@ class_name FirstUse
 extends RefCounted
 ## The first time each station used each of its core actions in a run (FT-MIS-038, D35,
 ## D232): the debrief lists, per station, the seconds from the run's start to that first
-## use, or -1 for an action never used. The core actions are data, StationDef.core_actions
-## ("action=source", see StationDef). Every one is either an accepted crew command, fed by
+## use, or -1 for an action never used. The core actions are data, SeatDef.core_actions
+## ("action=source", see SeatDef). Every one is either an accepted crew command, fed by
 ## NetGame through NetCoop.on_command, or a net-side crew op, Relay's mark placed and
 ## route added, fed by NetCrewState; so no client reports an intent (D235).
 
@@ -16,7 +16,7 @@ var _table: Dictionary = {}
 func _init() -> void:
 	for station: String in StationViews.CREW:
 		var rows: Array[Dictionary] = []
-		var d: StationDef = StationViews.def(station)
+		var d: SeatDef = StationViews.def(station)
 		for entry: String in d.core_actions:
 			rows.append(_parse(entry))
 		_table[station] = rows

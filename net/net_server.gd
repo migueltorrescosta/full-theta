@@ -430,7 +430,7 @@ func _exit_tree() -> void:
 	if probe != null:
 		var sessions: Dictionary = {}
 		for s: NetSession in game.by_id.values():
-			sessions[s.id] = {"name": s.name, "ship": s.ship, "entry": s.entry}
+			sessions[s.id] = {"name": s.name, "ship": s.ship, "entry": s.seat}
 		probe.write(
 			transport.probe_dump(),
 			sessions,

@@ -79,14 +79,14 @@ func test_views_track_server_model() -> void:
 		assert_dict(st.contacts["model"]).is_equal(contacts.model)
 		assert_dict(st.contacts["info"]).is_equal(contacts.info)
 		assert_str(st.callsign(ENEMY)).is_not_empty()
-		var entry: String = StationViews.parse_key(keys[i])[1]
-		for kind: int in StationViews.sections_of(entry):
+		var seat: String = StationViews.parse_key(keys[i])[1]
+		for kind: int in StationViews.sections_of(seat):
 			if StationViews.BLOCKS.has(kind):
 				var truth: Dictionary = NetBlock.decode(
 					StationViews.BLOCKS[kind], StationBlocks.block_bytes(kind, copy, PLAYER)
 				)
 				assert_dict(st.blocks[kind]).is_equal(truth)
-		if StationViews.sections_of(entry).has(StationViews.Section.NEAR):
+		if StationViews.sections_of(seat).has(StationViews.Section.NEAR):
 			var near: NearSection = b.section(StationViews.Section.NEAR, PLAYER)
 			assert_dict(st.near).is_equal(near.client_model())
 		for id: int in st.contacts["model"]:
@@ -128,8 +128,8 @@ func test_message_shared_per_view_key() -> void:
 
 # FT: FT-NET-008
 # Joint views see the union of their stations' sections; Captain and Viewer hold no
-# crew commands; the dev entry holds every station.
-func test_station_views_map_entries() -> void:
+# crew commands; the dev seat holds every station.
+func test_station_views_map_seats() -> void:
 	var tactical: Array[int] = StationViews.sections_of("tactical")
 	for kind: int in StationViews.sections_of("helm") + StationViews.sections_of("weapons"):
 		assert_bool(tactical.has(kind)).is_true()
@@ -138,8 +138,8 @@ func test_station_views_map_entries() -> void:
 	assert_array(StationViews.stations_of(StationViews.ALL)).is_equal(StationViews.CREW)
 	assert_str(StationViews.station_of_command(&"fire")).is_equal("weapons")
 	assert_str(StationViews.station_of_command(&"reset_ship")).is_equal("")
-	assert_bool(StationViews.is_entry(StationViews.ALL)).is_false()
-	assert_bool(StationViews.is_entry(StationViews.ALL, true)).is_true()
+	assert_bool(StationViews.is_seat(StationViews.ALL)).is_false()
+	assert_bool(StationViews.is_seat(StationViews.ALL, true)).is_true()
 	assert_int(StationViews.catalogue(false).size()).is_equal(6 + 15 + 2)
 
 

@@ -9,8 +9,8 @@ func before() -> void:
 	I18n.apply("en")
 
 
-func _ctx(mode: String = "race", entry: String = "helm") -> StationContext:
-	var ctx: StationContext = StationFixture.context(entry)
+func _ctx(mode: String = "race", seat: String = "helm") -> StationContext:
+	var ctx: StationContext = StationFixture.context(seat)
 	StationFixture.fleet(ctx, mode, [StationFixture.SHIP_NAME, "Heron", "Osprey"], [0, 1, 1], true)
 	return ctx
 
@@ -185,7 +185,7 @@ func test_relaunch_prompt_offers_the_vote_while_lives_last() -> void:
 # it as a toast.
 func test_allied_players_take_over_a_paused_ship() -> void:
 	var ctx: StationContext = _ctx("teams")
-	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 1, "entry": "helm"}}, 0)
+	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 1, "seat": "helm"}}, 0)
 	var o: PauseOverlay = auto_free(PauseOverlay.new())
 	o.setup(ctx)
 	add_child(o)
@@ -297,7 +297,7 @@ func test_the_scoreboard_asks_the_host_before_ending_the_game() -> void:
 # that ship's definition, not raw amounts ("Hull 920", #28).
 func test_top_bar_shows_percentages_on_a_picked_fleet_ship() -> void:
 	var ctx: StationContext = _ctx("teams")
-	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 2, "entry": "helm"}}, 0)
+	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 2, "seat": "helm"}}, 0)
 	assert_int(ctx.crew.ship).is_equal(2)
 	assert_object(ctx.ship_def()).is_not_null()
 	var s: StationScreen = auto_free(StationScreen.new())

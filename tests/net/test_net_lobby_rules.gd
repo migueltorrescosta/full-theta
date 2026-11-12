@@ -37,13 +37,13 @@ func test_dev_minimum_is_one() -> void:
 # No station can be left off or to automation: with any one of the six stations
 # uncovered, even with five crew on the other five (and a Captain and a Viewer), the
 # check fails and names exactly that station, so Start is refused and a run pauses.
-# The dev entry's lower minimum doesn't change that.
+# The dev seat's lower minimum doesn't change that.
 func test_no_station_may_be_left_off() -> void:
 	for missing: String in StationViews.CREW:
-		var entries: Array = ["captain", "viewer"]
+		var seats: Array = ["captain", "viewer"]
 		for station: String in StationViews.CREW:
 			if station != missing:
-				entries.append(station)
-		assert_bool(NetCoverage.passes(entries)).is_false()
-		assert_bool(NetCoverage.passes(entries, 1)).is_false()
-		assert_array(NetCoverage.uncovered(entries)).is_equal([missing])
+				seats.append(station)
+		assert_bool(NetCoverage.passes(seats)).is_false()
+		assert_bool(NetCoverage.passes(seats, 1)).is_false()
+		assert_array(NetCoverage.uncovered(seats)).is_equal([missing])

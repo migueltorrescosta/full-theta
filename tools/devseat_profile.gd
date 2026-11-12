@@ -13,10 +13,10 @@ const FIXTURE: String = "res://tests/stations/station_fixture.gd"
 
 func _initialize() -> void:
 	var fixture: GDScript = load(FIXTURE)
-	var entry: String = OS.get_environment("DEVSEAT_ENTRY")
-	if entry.is_empty():
-		entry = "all"
-	var ctx: StationContext = fixture.context(entry)
+	var seat: String = OS.get_environment("DEVSEAT_ENTRY")
+	if seat.is_empty():
+		seat = "all"
+	var ctx: StationContext = fixture.context(seat)
 	var times: Dictionary = {}
 	var screen: StationScreen = StationScreen.new()
 	screen.panel_factory = func(st: String) -> StationPanel:

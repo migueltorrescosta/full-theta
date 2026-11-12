@@ -19,10 +19,10 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-## The screen on the science entry, with a SCIENCE block that has H2 well scanned (its
+## The screen on the science seat, with a SCIENCE block that has H2 well scanned (its
 ## class, intent, weak points, resistances and hack access revealed) and U3 barely seen.
-func _screen(block: Dictionary = {}, entry: String = "science") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(block: Dictionary = {}, seat: String = "science") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	for s: String in StationViews.CREW:
 		ctx.settings.mark_hint_seen(s)
 	ctx.view.blocks[S.SCIENCE] = _block(block)

@@ -1,7 +1,7 @@
 # c1 relaunched after SIGKILL, within the grace: same ship, pick, settings and claims
 # (FT-NET-026); KIN converges with the others (check.py, FT-NET-027).
 connect
-expect_welcome resumed=true ship=0 entry=tactical
+expect_welcome resumed=true ship=0 seat=tactical
 expect_view stats.fulls>=1 blocks.helm.decoupled=true ownership.claims.flight.1=c1
 command id=go kind=helm_input throttle=0.5 rotation=Vector3(0, -0.2, 0)
 expect_accepted id=go

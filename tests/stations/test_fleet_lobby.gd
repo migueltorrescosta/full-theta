@@ -41,10 +41,10 @@ func test_lobby_lists_the_fleet_ships_with_their_own_picks() -> void:
 	_button(l, "Ship_1").pressed.emit()
 	assert_int(l.ship).is_equal(1)
 	assert_str((l.find_child("Coverage", true, false) as Label).text).contains("Weapons")
-	assert_str((_button(l, "Entry_helm").find_child("Crew", true, false) as Label).text).is_equal(
+	assert_str((_button(l, "Seat_helm").find_child("Crew", true, false) as Label).text).is_equal(
 		"P1"
 	)
-	_button(l, "Entry_science").pressed.emit()
+	_button(l, "Seat_science").pressed.emit()
 	assert_array(_sent(l, "pick")[-1][1]).is_equal([1, "science"])
 
 

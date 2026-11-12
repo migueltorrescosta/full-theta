@@ -64,11 +64,11 @@ func fleet_server(
 
 
 ## Three crew clients covering the six stations of `ship` (crew3 for any ship); their names
-## are "<entry>-<ship>".
+## are "<seat>-<ship>".
 func crew_of(s: NetServer, ship: int) -> Array[NetClient]:
 	var out: Array[NetClient] = []
-	for entry: String in ["tactical", "systems", "ops"]:
-		out.append(await joined(s, "%s-%d" % [entry, ship], entry, ship))
+	for seat: String in ["tactical", "systems", "ops"]:
+		out.append(await joined(s, "%s-%d" % [seat, ship], seat, ship))
 	return out
 
 
@@ -109,12 +109,12 @@ func welcomed(s: NetServer, name: String, token: String = "", secret: String = "
 	return c
 
 
-## Picks (ship, entry) and waits for the answer; true if accepted, and then for the
+## Picks (ship, seat) and waits for the answer; true if accepted, and then for the
 ## full snapshot of the new view.
-func pick(c: NetClient, entry: String, ship: int = PLAYER) -> bool:
+func pick(c: NetClient, seat: String, ship: int = PLAYER) -> bool:
 	var fulls: int = c.view.full_count
 	var n: int = (events[c] as Array).size()
-	c.pick(ship, entry)
+	c.pick(ship, seat)
 	var answer: Dictionary = await next_event(c, NetProtocol.EVENT_PICKED, n)
 	if answer.is_empty() or answer["payload"]["reason"] != "":
 		return false
@@ -122,17 +122,17 @@ func pick(c: NetClient, entry: String, ship: int = PLAYER) -> bool:
 
 
 ## A welcomed client holding a pick, with its full snapshot applied.
-func joined(s: NetServer, name: String, entry: String, ship: int = PLAYER) -> NetClient:
+func joined(s: NetServer, name: String, seat: String, ship: int = PLAYER) -> NetClient:
 	var c: NetClient = await welcomed(s, name)
-	await pick(c, entry, ship)
+	await pick(c, seat, ship)
 	return c
 
 
 ## Three crew clients covering the six stations (Tactical, Systems, Ops).
 func crew3(s: NetServer) -> Array[NetClient]:
 	var out: Array[NetClient] = []
-	for entry: String in ["tactical", "systems", "ops"]:
-		out.append(await joined(s, entry, entry))
+	for seat: String in ["tactical", "systems", "ops"]:
+		out.append(await joined(s, seat, seat))
 	return out
 
 
@@ -196,7 +196,7 @@ func drop(s: NetServer, c: NetClient) -> bool:
 
 ## Waits until a session's grace ran out and the server lapsed it.
 func lapsed(session: NetSession) -> bool:
-	return await until(func() -> bool: return session.lapsed and session.entry == "")
+	return await until(func() -> bool: return session.lapsed and session.seat == "")
 
 
 ## Drops every client and frees the servers (after_test).

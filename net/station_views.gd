@@ -1,8 +1,8 @@
 class_name StationViews
 extends RefCounted
-## The one data-driven place for catalogue entries (FT-ARC-014, FT-NET-008, FT-NET-040):
-## the tables below define every StationDef (functional stations, the M1 joint views,
-## Captain, Viewer and the dev entry), what each sees (snapshot sections and the field
+## The one data-driven place for seats (FT-ARC-014, FT-NET-008, FT-NET-040):
+## the tables below define every SeatDef (functional stations, the M1 joint views,
+## Captain, Viewer and the dev seat), what each sees (snapshot sections and the field
 ## sets of the block sections), which crew commands it sends, its claimable items and
 ## ship-wide controls (FT-NET-022, FT-NET-044), and which sim events reach it. Joint
 ## views are the union of their stations (D20, FT-JNT-005). Field sets follow
@@ -71,17 +71,17 @@ const FILTERED: Array[int] = [
 const CREW: Array[String] = ["helm", "weapons", "engineering", "science", "relay", "comms"]
 const CAPTAIN: String = "captain"
 const VIEWER: String = "viewer"
-## Development entry holding every station (FT-NET-029, D72), offered with
+## Development seat holding every station (FT-NET-029, D72), offered with
 ## --dev-all-stations only.
 const ALL: String = "all"
 ## stations_of() of an unknown id.
 const NO_STATIONS: Array[String] = []
 
-## Catalogue entries other than the six stations, in catalogue order: id -> [name,
+## Seats other than the six stations, in catalogue order: id -> [name,
 ## load tag, covered stations]. One joint view per pair of functional stations, in
 ## §7.3 pair order (FT-JNT-004, FT-NET-032, spec §3.3); a joint view takes the busier
 ## of its stations' load tags (D198).
-const ENTRIES: Dictionary = {
+const OTHER_SEATS: Dictionary = {
 	"drive": ["Drive", INTENSE, ["engineering", "helm"]],
 	"tactical": ["Tactical", INTENSE, ["helm", "weapons"]],
 	"survey": ["Survey", INTENSE, ["helm", "science"]],
@@ -265,7 +265,7 @@ const STATION_COMMANDS: Dictionary = {
 	"captain": [&"training_next"],
 }
 
-## Core actions per station (D232, FT-MIS-038), in StationDef.core_actions' "action=source"
+## Core actions per station (D232, FT-MIS-038), in SeatDef.core_actions' "action=source"
 ## form. Relay's mark and route are net-side crew ops (NetCrewState), the rest commands.
 const STATION_CORE_ACTIONS: Dictionary = {
 	"helm":
@@ -355,30 +355,36 @@ const COMMAND_ITEMS: Dictionary = {
 ## Field sets of the block sections (BlockSchema, the wire schema; kept here for callers).
 const BLOCKS: Dictionary = BlockSchema.BLOCKS
 
-## Entry id -> StationDef, built once when the class loads (read-only after, so both
+## Seat id -> SeatDef, built once when the class loads (read-only after, so both
 ## threads may read it).
 static var _defs: Dictionary = _build_all()
 
 
-## A view key (FT-NET-040): ship, catalogue entry, difficulty-toggle set.
-static func key(ship: int, entry: String, toggles: String = DEFAULT_TOGGLES) -> String:
-	return "%d|%s|%s" % [ship, entry, toggles]
+## A view key (FT-NET-040): ship, seat, difficulty-toggle set.
+static func key(ship: int, seat: String, toggles: String = DEFAULT_TOGGLES) -> String:
+	return "%d|%s|%s" % [ship, seat, toggles]
 
 
-## [ship, entry, toggles] of a view key.
+## [ship, seat, toggles] of a view key.
 static func parse_key(view_key: String) -> Array:
 	var parts: PackedStringArray = view_key.split("|")
 	return [parts[0].to_int(), parts[1], parts[2]]
 
 
-## Whether entry names a catalogue entry; ALL only with dev_all.
-static func is_entry(entry: String, dev_all: bool = false) -> bool:
-	return STATIONS.has(entry) or ENTRIES.has(entry) or (dev_all and entry == ALL)
+## The UI string key of a station or seat id: `station.<id>` for the six stations, else
+## `seat.<id>` (the 24 seats all have `seat.<id>`; D395).
+static func name_key(id: String) -> String:
+	return ("station." if STATIONS.has(id) else "seat.") + id
 
 
-## The StationDef of an entry, or null for an unknown id.
-static func def(entry: String) -> StationDef:
-	return _defs.get(entry)
+## Whether `seat` names a seat; ALL only with dev_all.
+static func is_seat(seat: String, dev_all: bool = false) -> bool:
+	return STATIONS.has(seat) or OTHER_SEATS.has(seat) or (dev_all and seat == ALL)
+
+
+## The SeatDef of a seat, or null for an unknown id.
+static func def(seat: String) -> SeatDef:
+	return _defs.get(seat)
 
 
 ## The catalogue in order: the six stations, the joint views, Captain, Viewer, and ALL
@@ -386,14 +392,14 @@ static func def(entry: String) -> StationDef:
 static func catalogue_ids(dev_all: bool) -> Array[String]:
 	var out: Array[String] = []
 	out.assign(CREW)
-	for id: String in ENTRIES:
+	for id: String in OTHER_SEATS:
 		out.append(id)
 	if dev_all:
 		out.append(ALL)
 	return out
 
 
-## The catalogue as sent in Catalogue.entries: StationDef.to_dict() of each entry.
+## The catalogue as sent in Catalogue.seats: SeatDef.to_dict() of each seat.
 static func catalogue(dev_all: bool) -> Array:
 	var out: Array = []
 	for id: String in catalogue_ids(dev_all):
@@ -401,22 +407,22 @@ static func catalogue(dev_all: bool) -> Array:
 	return out
 
 
-## The stations an entry covers (none for Captain, Viewer or an unknown id): the
-## StationDef's own array, read-only for callers.
-static func stations_of(entry: String) -> Array[String]:
-	var d: StationDef = def(entry)
+## The stations a seat covers (none for Captain, Viewer or an unknown id): the
+## SeatDef's own array, read-only for callers.
+static func stations_of(seat: String) -> Array[String]:
+	var d: SeatDef = def(seat)
 	return d.stations if d != null else NO_STATIONS
 
 
-## Whether an entry is a crew entry: it covers a functional station (FT-NET-020).
-static func is_crew(entry: String) -> bool:
-	var d: StationDef = def(entry)
+## Whether a seat is a crew seat: it covers a functional station (FT-NET-020).
+static func is_crew(seat: String) -> bool:
+	var d: SeatDef = def(seat)
 	return d != null and d.is_crew()
 
 
-## The sections an entry sees, ascending (none for an unknown id).
-static func sections_of(entry: String) -> Array[int]:
-	var d: StationDef = def(entry)
+## The sections a seat sees, ascending (none for an unknown id).
+static func sections_of(seat: String) -> Array[int]:
+	var d: SeatDef = def(seat)
 	var out: Array[int] = []
 	if d != null:
 		out.assign(d.sections)
@@ -457,10 +463,10 @@ static func station_of_item(item: String) -> String:
 	return ""
 
 
-## The OWNERSHIP section content an entry sees: the claims and last writers of its own
+## The OWNERSHIP section content a seat sees: the claims and last writers of its own
 ## stations' items (FT-NET-023: "to others at that station").
-static func ownership_for(entry: String, data: Dictionary) -> Dictionary:
-	var stations: Array[String] = stations_of(entry)
+static func ownership_for(seat: String, data: Dictionary) -> Dictionary:
+	var stations: Array[String] = stations_of(seat)
 	var out: Dictionary = {"claims": {}, "writers": {}}
 	for part: String in out:
 		var src: Dictionary = data.get(part, {})
@@ -477,26 +483,26 @@ static func _build_all() -> Dictionary:
 	return out
 
 
-static func _build(entry: String) -> StationDef:
-	var d: StationDef = StationDef.new()
-	d.id = entry
-	var seats: Array[String] = []
-	if STATIONS.has(entry):
-		d.display_name = STATIONS[entry][0]
-		d.load_tag = STATIONS[entry][1]
-		d.stations.append(entry)
-	elif entry == ALL:
+static func _build(seat: String) -> SeatDef:
+	var d: SeatDef = SeatDef.new()
+	d.id = seat
+	var roles: Array[String] = []
+	if STATIONS.has(seat):
+		d.display_name = STATIONS[seat][0]
+		d.load_tag = STATIONS[seat][1]
+		d.stations.append(seat)
+	elif seat == ALL:
 		d.display_name = "All stations (dev)"
 		d.load_tag = INTENSE
 		d.stations.assign(CREW)
 	else:
-		d.display_name = ENTRIES[entry][0]
-		d.load_tag = ENTRIES[entry][1]
-		d.stations.assign(ENTRIES[entry][2])
+		d.display_name = OTHER_SEATS[seat][0]
+		d.load_tag = OTHER_SEATS[seat][1]
+		d.stations.assign(OTHER_SEATS[seat][2])
 		if d.stations.is_empty():
-			seats.append(entry)
+			roles.append(seat)
 	var seen: Dictionary = {}
-	for s: String in d.stations + seats:
+	for s: String in d.stations + roles:
 		for kind: int in STATION_SECTIONS[s]:
 			seen[kind] = true
 		if STATION_COMMANDS.has(s):

@@ -2,7 +2,7 @@ class_name ChipsSection
 extends SnapshotSection
 ## Section.CHIPS: the open request chips of one ship (NetChips on the server's main thread
 ## posts them, NetTransport.post_chips). A crew view lists the chips it sends or receives;
-## the Captain, the Viewer and the dev entry list all of them (ViewFilter). Sent whole when
+## the Captain, the Viewer and the dev seat list all of them (ViewFilter). Sent whole when
 ## the list changes, like a block.
 
 ## The ship's open chips as last posted (set by SnapshotBuilder before update()).

@@ -50,7 +50,7 @@ func share(s: NetSession, feature: String) -> String:
 	elif not game.lobby.toggles.on(id):
 		why = OFF
 	else:
-		var stations: Array[String] = StationViews.stations_of(s.entry)
+		var stations: Array[String] = StationViews.stations_of(s.seat)
 		if not stations.has(String(def.source)):
 			why = NOT_SOURCE
 		elif stations.has(String(def.target)):

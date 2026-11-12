@@ -52,7 +52,7 @@ var _ownership: Dictionary = {}
 var _known: Dictionary = {}
 ## Ship -> the ship's open request chips posted by the main thread (ChipsSection).
 var _chips: Dictionary = {}
-## View key -> ViewFilter (its toggle code and entry fixed by the key).
+## View key -> ViewFilter (its toggle code and seat fixed by the key).
 var _filters: Dictionary = {}
 
 
@@ -161,7 +161,7 @@ func message(view_key: String, is_full: bool) -> PackedByteArray:
 			(_sections[skey] as SnapshotSection).full() if is_full else _deltas[skey]
 		)
 		if kind == StationViews.Section.OWNERSHIP and (is_full or not part.is_empty()):
-			part = (_sections[skey] as OwnershipSection).for_entry(k[1])
+			part = (_sections[skey] as OwnershipSection).for_seat(k[1])
 		if part.is_empty() and not is_full:
 			continue
 		buf.put_u8(kind)

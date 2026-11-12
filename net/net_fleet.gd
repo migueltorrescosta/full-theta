@@ -71,7 +71,7 @@ var _dirty: bool = true
 ## A lobby change not yet checked (publish).
 var _pending: bool = false
 var _fleet_tick: int = -FLEET_EVERY_TICKS
-## Eliminated ship -> [[session id, entry], ...]: who was on it, for the handover and a relaunch.
+## Eliminated ship -> [[session id, seat], ...]: who was on it, for the handover and a relaunch.
 var _crews: Dictionary[int, Array] = {}
 ## Eliminated ship -> the tick of its handover.
 var _handover_at: Dictionary[int, int] = {}
@@ -156,7 +156,7 @@ func waiting() -> Array[int]:
 		return out
 	for id: int in _crewed():
 		if not (
-			pressed.has(id) and NetCoverage.passes(game.lobby.entries_of(id), game.lobby.min_crew())
+			pressed.has(id) and NetCoverage.passes(game.lobby.seats_of(id), game.lobby.min_crew())
 		):
 			out.append(id)
 	return out
@@ -188,24 +188,24 @@ func press_start(s: NetSession) -> Array[int]:
 	return _crewed()
 
 
-## Why `s` may not take over `entry` on the paused `ship`, whose open stations are `uncovered`,
+## Why `s` may not take over `seat` on the paused `ship`, whose open stations are `uncovered`,
 ## or "" (M4-Q8, FT-NET-042): the ship's own Captain and viewers, and players of allied ships
-## (same faction); enemies never (ENEMY_SHIP); the entry must cover a station still uncovered
+## (same faction); enemies never (ENEMY_SHIP); the seat must cover a station still uncovered
 ## (TAKEN: someone claimed it first); a crew player may not leave if their own ship in play
 ## would fail coverage (BREAKS_COVERAGE).
-func takeover_rule(s: NetSession, ship: int, entry: String, uncovered: Array) -> String:
+func takeover_rule(s: NetSession, ship: int, seat: String, uncovered: Array) -> String:
 	var world: SimWorld = game.world
-	if not StationViews.is_entry(entry, game.dev_all) or not StationViews.is_crew(entry):
+	if not StationViews.is_seat(seat, game.dev_all) or not StationViews.is_crew(seat):
 		return NetGame.BAD_PICK
 	if s.ship == ship:
-		if s.entry != StationViews.CAPTAIN and s.entry != StationViews.VIEWER:
+		if s.seat != StationViews.CAPTAIN and s.seat != StationViews.VIEWER:
 			return CommandGate.NOT_ALLOWED
 	elif not s.has_pick():
 		return CommandGate.NOT_ALLOWED
 	elif world.faction_of(s.ship) != world.faction_of(ship):
 		return FleetMessages.ENEMY_SHIP
 	var covers: bool = false
-	for station: String in StationViews.stations_of(entry):
+	for station: String in StationViews.stations_of(seat):
 		covers = covers or uncovered.has(station)
 	if not covers:
 		return FleetMessages.TAKEN
@@ -215,22 +215,22 @@ func takeover_rule(s: NetSession, ship: int, entry: String, uncovered: Array) ->
 ## BREAKS_COVERAGE when a crew player leaving their own ship in play for `ship` would make it
 ## fail the coverage check it passes now (FT-NET-042), else "".
 func _leave_rule(s: NetSession, ship: int) -> String:
-	if s.ship == ship or not StationViews.is_crew(s.entry) or not game.lobby.in_play(s.ship):
+	if s.ship == ship or not StationViews.is_crew(s.seat) or not game.lobby.in_play(s.ship):
 		return ""
-	var entries: Array = game.lobby.entries_of(s.ship)
-	if NetCoverage.breaks(entries, game.lobby.min_crew(), s.entry):
+	var seats: Array = game.lobby.seats_of(s.ship)
+	if NetCoverage.breaks(seats, game.lobby.min_crew(), s.seat):
 		return CommandGate.BREAKS_COVERAGE
 	return ""
 
 
 ## A takeover was applied: every session of the ship's side hears who took what (M4-Q8).
-func took_over(s: NetSession, ship: int, entry: String, from_ship: int) -> void:
+func took_over(s: NetSession, ship: int, seat: String, from_ship: int) -> void:
 	var world: SimWorld = game.world
 	var ids: PackedInt32Array = game.audience(
 		func(o: NetSession) -> bool:
 			return o.ship >= 0 and world.faction_of(o.ship) == world.faction_of(ship)
 	)
-	var payload: Dictionary = FleetMessages.takeover(ship, entry, s.name, from_ship)
+	var payload: Dictionary = FleetMessages.takeover(ship, seat, s.name, from_ship)
 	game.transport.post_event(ids, world.tick, NetProtocol.EVENT_TAKEOVER, payload)
 
 
@@ -462,9 +462,9 @@ func _rebuild_for_start(kept: Array[int]) -> void:
 	var moves: Array = []
 	for s: NetSession in game.by_id.values():
 		if s.ship >= 0:
-			moves.append([s, kept.find(s.ship), s.entry])
+			moves.append([s, kept.find(s.ship), s.seat])
 			s.ship = -1
-			s.entry = ""
+			s.seat = ""
 	for s: NetSession in game.sessions.all():
 		if s.lapsed:
 			s.last_ship = kept.find(s.last_ship)
@@ -485,7 +485,7 @@ func _rebuild_for_start(kept: Array[int]) -> void:
 func _kept() -> Array[int]:
 	var out: Array[int] = []
 	for i: int in slots.size():
-		if NetCoverage.crew_count(game.lobby.entries_of(i)) > 0:
+		if NetCoverage.crew_count(game.lobby.seats_of(i)) > 0:
 			out.append(i)
 	return out
 
@@ -494,7 +494,7 @@ func _kept() -> Array[int]:
 func _crewed() -> Array[int]:
 	var out: Array[int] = []
 	for c: Dictionary in game.crew_ships():
-		if NetCoverage.crew_count(game.lobby.entries_of(c["id"])) > 0:
+		if NetCoverage.crew_count(game.lobby.seats_of(c["id"])) > 0:
 			out.append(c["id"])
 	return out
 
@@ -521,7 +521,7 @@ func _eliminate(ship: int, reason: String, lives: int) -> void:
 	var crew: Array = []
 	for s: NetSession in game.by_id.values():
 		if s.on_ship(ship):
-			crew.append([s.id, s.entry])
+			crew.append([s.id, s.seat])
 	_crews[ship] = crew
 	_handover_at[ship] = game.world.tick + HANDOVER_DELAY_TICKS
 	_dirty = true

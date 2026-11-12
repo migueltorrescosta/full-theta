@@ -165,7 +165,7 @@ func test_eliminated_crew_view_a_friendly_ship() -> void:
 	assert_int(to["to_ship"]).is_equal(1)
 	var s: NetSession = h.session_of(server, alls[0])
 	assert_int(s.ship).is_equal(1)
-	assert_str(s.entry).is_equal(StationViews.VIEWER)
+	assert_str(s.seat).is_equal(StationViews.VIEWER)
 	assert_bool(server.game.sim_running()).is_true()
 
 
@@ -229,7 +229,7 @@ func test_relaunch_by_vote() -> void:
 	assert_int(server.game.crew.marks.alert(1)).is_equal(CrewMarks.ALERT_NORMAL)
 	var s: NetSession = h.session_of(server, alls[1])
 	assert_int(s.ship).is_equal(1)
-	assert_str(s.entry).is_equal(StationViews.ALL)
+	assert_str(s.seat).is_equal(StationViews.ALL)
 	assert_bool(server.game.in_play(1)).is_true()
 
 
@@ -246,10 +246,10 @@ func test_coop_has_no_relaunch() -> void:
 	assert_str(await _rejected(alls[0], NetProtocol.Type.RELAUNCH, from)).is_equal("no_relaunch")
 
 
-## The `picked` answer to `c` picking (ship, entry): its reason, "" when it was taken.
-func _pick_reason(c: NetClient, ship: int, entry: String) -> String:
+## The `picked` answer to `c` picking (ship, seat): its reason, "" when it was taken.
+func _pick_reason(c: NetClient, ship: int, seat: String) -> String:
 	var from: int = h.mark(c)
-	c.pick(ship, entry)
+	c.pick(ship, seat)
 	var e: Dictionary = await h.next_event(
 		c,
 		NetProtocol.EVENT_PICKED,

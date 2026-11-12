@@ -8,7 +8,7 @@ extends GdUnitTestSuite
 
 const PLAYER: int = NetHarness.PLAYER
 const ENEMY: int = NetHarness.ENEMY
-const ENTRIES: Array[String] = [
+const SEATS: Array[String] = [
 	"helm", "weapons", "engineering", "science", "relay", "comms", "viewer", "captain"
 ]
 
@@ -27,9 +27,9 @@ func before_test() -> void:
 
 
 func after_test() -> void:
-	for entry: String in _shells:
-		(_shells[entry] as ClientShell).queue_free()
-		var path: String = _settings_path(entry)
+	for seat: String in _shells:
+		(_shells[seat] as ClientShell).queue_free()
+		var path: String = _settings_path(seat)
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	_shells.clear()
@@ -40,8 +40,8 @@ func after_test() -> void:
 # FT: FT-SPA-022, FT-SPA-031, FT-RLY-003, FT-M1-017, FT-M1-005
 func test_marks_and_pings_reach_every_station() -> void:
 	var server: NetServer = _h.server()
-	for entry: String in ENTRIES:
-		_shells[entry] = await _shell(server, entry)
+	for seat: String in SEATS:
+		_shells[seat] = await _shell(server, seat)
 	_shell_of("helm").ctx.intents.start()
 	# A first visit's screen draws once its own frame ran (the top bar holds the name).
 	var shown: Callable = func(s: ClientShell) -> bool:
@@ -51,11 +51,11 @@ func test_marks_and_pings_reach_every_station() -> void:
 	assert_bool(await _all(seen)).is_true()
 	# Science and Comms have their panels, with the top bar (FT-M1-005).
 	assert_object(_shell_of("science").screen.panels[0]).is_instanceof(SciencePanel)
-	for entry: String in ["science", "comms"]:
-		var screen: StationScreen = _shell_of(entry).screen
-		if entry == "comms":
+	for seat: String in ["science", "comms"]:
+		var screen: StationScreen = _shell_of(seat).screen
+		if seat == "comms":
 			assert_object(screen.panels[0]).is_instanceof(CommsPanel)
-		assert_str(screen.top_bar._name.text).is_equal(_shell_of(entry).ctx.crew.ship_name())
+		assert_str(screen.top_bar._name.text).is_equal(_shell_of(seat).ctx.crew.ship_name())
 	# Science marks its selected contact with the common action (hold R3).
 	var science: ClientShell = _shell_of("science")
 	science.ctx.crew.select("contact", ENEMY)
@@ -73,17 +73,17 @@ func test_marks_and_pings_reach_every_station() -> void:
 	var two: Callable = func(s: ClientShell) -> bool:
 		return s.ctx.crew.marks.size() == 2 and s.ctx.crew.marks[1]["contact"] == -1
 	assert_bool(await _all(two)).is_true()
-	for entry: String in ENTRIES:
-		var ctx: StationContext = _shell_of(entry).ctx
+	for seat: String in SEATS:
+		var ctx: StationContext = _shell_of(seat).ctx
 		assert_str(ctx.crew.marks[1]["name"]).is_equal("Bravo")
 		assert_str(ctx.crew.marks[1]["by"]).is_equal("relay")
 		# Every station draws both marks and can select them (FT-SPA-015).
 		var marks: Array = ctx.picture().items.filter(
 			func(it: Dictionary) -> bool: return it["kind"] == "mark"
 		)
-		assert_int(marks.size()).override_failure_message(entry).is_equal(2)
+		assert_int(marks.size()).override_failure_message(seat).is_equal(2)
 		ctx.crew.select("mark", 0)
-		assert_bool(ctx.selection_local() is Vector3).override_failure_message(entry).is_true()
+		assert_bool(ctx.selection_local() is Vector3).override_failure_message(seat).is_true()
 	# Comms pings mark Alpha: it pulses everywhere with one chime; Engineering's ping on
 	# the same mark is a silent copy naming Engineering (FT-SPA-031).
 	var comms: ClientShell = _shell_of("comms")
@@ -97,9 +97,9 @@ func test_marks_and_pings_reach_every_station() -> void:
 		var live: Array[Dictionary] = s.ctx.crew.live_pings(s.ctx.now_ms())
 		return not live.is_empty() and "engineering" in live[0]["copies"]
 	assert_bool(await _all(copied)).is_true()
-	for entry: String in ENTRIES:
-		assert_int(_chimes[entry]).override_failure_message(entry).is_equal(1)
-		var c: StationContext = _shell_of(entry).ctx
+	for seat: String in SEATS:
+		assert_int(_chimes[seat]).override_failure_message(seat).is_equal(1)
+		var c: StationContext = _shell_of(seat).ctx
 		assert_float(c.crew.pulse("mark", 0, c.now_ms() + CrewState.PING_MS)).is_equal(0.0)
 	# A point ping from Relay's map shows on every radar picture.
 	relay.ctx.crew.select("", -1)
@@ -131,40 +131,40 @@ func test_marks_and_pings_reach_every_station() -> void:
 	assert_bool(await _all(replaced)).is_true()
 
 
-func _shell(server: NetServer, entry: String) -> ClientShell:
+func _shell(server: NetServer, seat: String) -> ClientShell:
 	var c: NetClient = NetClient.new()
-	c.name = entry
+	c.name = seat
 	c.client_kind = "desktop"
 	c.connect_to("ws://127.0.0.1:%d" % server.port())
 	var welcomed: Callable = func() -> bool:
 		c.poll()
 		return c.is_welcomed()
 	assert_bool(await _until(welcomed)).is_true()
-	var settings: ClientSettings = ClientSettings.new(_settings_path(entry))
+	var settings: ClientSettings = ClientSettings.new(_settings_path(seat))
 	for s: String in StationViews.CREW + ["viewer", "captain"]:
 		settings.mark_hint_seen(s)
 	var shell: ClientShell = ClientShell.new()
 	shell.setup(c, settings)
 	add_child(shell)
-	_chimes[entry] = 0
-	_toasts[entry] = []
-	shell.ctx.crew.pinged.connect(func(_p: Dictionary) -> void: _chimes[entry] += 1)
+	_chimes[seat] = 0
+	_toasts[seat] = []
+	shell.ctx.crew.pinged.connect(func(_p: Dictionary) -> void: _chimes[seat] += 1)
 	shell.ctx.crew.toast.connect(
-		func(key: String, _a: Dictionary) -> void: (_toasts[entry] as Array).append(key)
+		func(key: String, _a: Dictionary) -> void: (_toasts[seat] as Array).append(key)
 	)
 	var listed: Callable = func() -> bool: return not shell.ctx.crew.catalogue.is_empty()
 	assert_bool(await _until(listed)).is_true()
-	shell.ctx.intents.pick(PLAYER, entry)
-	assert_bool(await _until(func() -> bool: return shell.ctx.crew.entry == entry)).is_true()
+	shell.ctx.intents.pick(PLAYER, seat)
+	assert_bool(await _until(func() -> bool: return shell.ctx.crew.seat == seat)).is_true()
 	return shell
 
 
-func _shell_of(entry: String) -> ClientShell:
-	return _shells[entry]
+func _shell_of(seat: String) -> ClientShell:
+	return _shells[seat]
 
 
-func _settings_path(entry: String) -> String:
-	return "user://test_marks_pings_l3_%s.cfg" % entry
+func _settings_path(seat: String) -> String:
+	return "user://test_marks_pings_l3_%s.cfg" % seat
 
 
 ## The controller's common actions act under the reticle or the selection.

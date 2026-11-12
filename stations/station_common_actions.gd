@@ -170,7 +170,7 @@ func ping_at(at: Vector2) -> void:
 ## toast when the ship has 8 marks, unless the focused panel replaces one (Relay). On a
 ## forward view only a contact takes a mark (FT-SPA-030).
 func mark(device: String) -> void:
-	if s.ctx.crew.entry == StationViews.VIEWER:
+	if s.ctx.crew.seat == StationViews.VIEWER:
 		return
 	var item: Dictionary = item_under_cursor(device)
 	if item.is_empty():
@@ -185,7 +185,7 @@ func mark_at(at: Vector2) -> void:
 
 ## Marks `item` ({} does nothing): the rules of the common mark.
 func mark_item(item: Dictionary) -> void:
-	if s.ctx.crew.entry == StationViews.VIEWER or item.is_empty():
+	if s.ctx.crew.seat == StationViews.VIEWER or item.is_empty():
 		return
 	# A forward view marks only a contact (FT-SPA-030).
 	if s.focused_panel().marks_attach_only() and item.get("kind", "") != "contact":

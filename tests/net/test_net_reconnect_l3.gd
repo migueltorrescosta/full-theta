@@ -46,7 +46,7 @@ func test_relaunch_within_grace_restores_everything() -> void:
 	assert_bool(again.welcome["resumed"]).is_true()
 	assert_int(again.session_id).is_equal(session.id)
 	assert_int(again.welcome["ship"]).is_equal(PLAYER)
-	assert_str(again.welcome["entry"]).is_equal("weapons")
+	assert_str(again.welcome["seat"]).is_equal("weapons")
 	assert_bool(await h.until(func() -> bool: return again.view.full_count >= 1)).is_true()
 	assert_bool(again.view.blocks.has(StationViews.Section.MOUNTS)).is_true()
 	var mine: Callable = func() -> bool:
@@ -60,7 +60,7 @@ func test_relaunch_within_grace_restores_everything() -> void:
 # FT: FT-NET-026, FT-M1-013
 # After the grace ran out: a Weapons player whose mount was claimed meanwhile gets
 # Weapons back without the mount; a Captain whose seat was taken meanwhile is returned
-# to that ship's pick screen (ship set, no entry, no snapshots).
+# to that ship's pick screen (ship set, no seat, no snapshots).
 func test_rejoin_after_grace_restores_only_what_is_free() -> void:
 	var server: NetServer = h.server(false, 0.5)
 	var gunner: NetClient = await h.joined(server, "gunner", "weapons")
@@ -80,17 +80,17 @@ func test_rejoin_after_grace_restores_only_what_is_free() -> void:
 	var s_id: int = h.session_of(server, second).id
 	assert_int(server.game.claims.holder(PLAYER, "mount:0")).is_equal(s_id)
 	var taker: NetClient = await h.joined(server, "taker", "captain")
-	assert_str(h.session_of(server, taker).entry).is_equal("captain")
+	assert_str(h.session_of(server, taker).seat).is_equal("captain")
 	var again: NetClient = await h.welcomed(
 		server, "gunner'", SessionTokenFile.load_from(_token_path).token
 	)
 	assert_int(again.session_id).is_equal(g_session.id)
-	assert_str(again.welcome["entry"]).is_equal("weapons")
+	assert_str(again.welcome["seat"]).is_equal("weapons")
 	assert_int(server.game.claims.holder(PLAYER, "mount:0")).is_equal(s_id)
 	var cap_again: NetClient = await h.welcomed(server, "cap'", cap_token)
 	assert_int(cap_again.session_id).is_equal(c_session.id)
 	assert_int(cap_again.welcome["ship"]).is_equal(PLAYER)
-	assert_str(cap_again.welcome["entry"]).is_equal("")
+	assert_str(cap_again.welcome["seat"]).is_equal("")
 	assert_bool(c_session.has_pick()).is_false()
 	assert_dict(await h.next_event(cap_again, NetProtocol.EVENT_LOBBY)).is_not_empty()
 	await h.wait(300)
@@ -114,11 +114,11 @@ func test_full_server_refuses_a_resume_within_grace() -> void:
 	assert_str(refused.reject_reason).is_equal(NetProtocol.REJECT_FULL)
 	assert_bool(xs.connected()).is_false()
 	assert_bool(server.game.by_id.has(xs.id)).is_true()
-	assert_str(xs.entry).is_equal("helm")
+	assert_str(xs.seat).is_equal("helm")
 	server.game.max_sessions = 2
 	var again: NetClient = await h.welcomed(server, "x''", xs.token)
 	assert_bool(again.welcome["resumed"]).is_true()
-	assert_str(again.welcome["entry"]).is_equal("helm")
+	assert_str(again.welcome["seat"]).is_equal("helm")
 
 
 # FT: FT-NET-014, FT-NET-026
@@ -145,11 +145,11 @@ func test_refused_rejoin_after_grace_leaves_no_ghost() -> void:
 	server.game._on_hello(999_999, hello, Time.get_ticks_usec() + 1_000_000)
 	assert_bool(xs.lapsed).is_true()
 	assert_bool(server.game.by_id.has(xs.id)).is_false()
-	assert_str(xs.entry).is_equal("")
+	assert_str(xs.seat).is_equal("")
 	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(-1)
 	server.game.max_sessions = 2
 	var again: NetClient = await h.welcomed(server, "x'", xs.token)
-	assert_str(again.welcome["entry"]).is_equal("helm")
+	assert_str(again.welcome["seat"]).is_equal("helm")
 	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(xs.id)
 
 
@@ -202,7 +202,7 @@ func test_rejoined_client_converges_within_one_snapshot() -> void:
 func _model(world: SimWorld) -> Dictionary:
 	var kin: KinSection = KinSection.new(StationViews.Section.KIN, PLAYER)
 	var blocks: Dictionary = {}
-	# The dev entry holds every station, not the Captain's or the main screen's block.
+	# The dev seat holds every station, not the Captain's or the main screen's block.
 	for kind: int in StationViews.BLOCKS:
 		if StationViews.sections_of(StationViews.ALL).has(kind):
 			blocks[kind] = StationBlocks.block_bytes(kind, world, PLAYER)

@@ -42,14 +42,14 @@ The log has one JSON object per line, each with `ms` since the start and `ev`: `
 
 One step per line: `verb key=value ...`; `#` starts a comment. `$RUN` is the run folder, `$NAME` the client name, and `--set K=V` defines `$K` (`run.sh` sets `$GRACE` and `$PORT`). Values are ints, floats (`1.0`: commands need the decimal point), `true`/`false`/`null`, `"quoted strings"`, JSON arrays and objects, `Vector3(x, y, z)`, or bare strings.
 
-Matchers are `path<op>value` on a dictionary. A path is dotted keys, array indices and `size`; a name applied to an array of dictionaries maps over it (`entries.id` is every entry's id). Operators: `=` (numbers compare as numbers), `!=`, `~=` contains (array element, dictionary key, substring), `!~` does not contain, `>`, `>=`, `<`, `<=`. Every waiting step takes `timeout=S`.
+Matchers are `path<op>value` on a dictionary. A path is dotted keys, array indices and `size`; a name applied to an array of dictionaries maps over it (`seats.id` is every seat's id). Operators: `=` (numbers compare as numbers), `!=`, `~=` contains (array element, dictionary key, substring), `!~` does not contain, `>`, `>=`, `<`, `<=`. Every waiting step takes `timeout=S`.
 
 | Step | Does |
 |---|---|
 | `connect [url=] [resume=false] [expect=rejected]` | Hello with the stored token and host secret (unless `resume=false`); waits for Welcome. |
 | `reconnect`, `drop`, `bye`, `forget_token` | `NetClient.resume()`, drop without Bye, Bye, remove the token file. |
-| `pick ship= entry= [expect=ok\|REASON\|none]`, `release [expect=]` | Sends and waits for the answer: `picked`, `command_rejected` or `request_rejected`, compared by reason. |
-| `ready [value=true]`, `claim item=`, `release_claim item=`, `abandon ship=`, `vote_abandon ship= vote=`, `takeover ship= entry=` | Sends the message; check the outcome with `expect_event`. |
+| `pick ship= seat= [expect=ok\|REASON\|none]`, `release [expect=]` | Sends and waits for the answer: `picked`, `command_rejected` or `request_rejected`, compared by reason. |
+| `ready [value=true]`, `claim item=`, `release_claim item=`, `abandon ship=`, `vote_abandon ship= vote=`, `takeover ship= seat=` | Sends the message; check the outcome with `expect_event`. |
 | `command id=NAME kind=K field=value ...` | Sends a crew command; `id` names its seq for the next two. |
 | `expect_rejected id= [reason=]`, `expect_accepted id= [for=1]` | Its CommandRejected arrives (with that reason); none arrives within `for` seconds. |
 | `expect_welcome`, `expect_catalogue`, `expect_view` + matchers | Waits until the Welcome, Catalogue or snapshot view matches. The view has every `NetViewState` variable (`kin`, `blocks`, `contacts`, `tick`, ...), blocks also by name (`blocks.helm.decoupled`, `blocks.mounts.mounts.0.aim_set`), `stats` and `state`. |
@@ -75,10 +75,10 @@ The runner builds the real `MainMenu` (settings, token and pid files in the run 
 | Step | Does |
 |---|---|
 | `ui_join [url=]` | Types the address into the menu and presses Join; waits for the shell. |
-| `ui_pick entry= [expect=]` | Presses the entry's button in the lobby; waits for the answer like `pick`. |
+| `ui_pick seat= [expect=]` | Presses the seat's button in the lobby; waits for the answer like `pick`. |
 | `ui_button name=N` | Waits for a visible, enabled button named N in the shell (`Start`, `Vote`, `RunAgain`) and presses it. |
 | `ui_press id=I`, `ui_hold id=I`, `ui_release id=I` | The intent's first KB/M binding pressed and released, pressed, or released, as input events into the viewport (through the screen's `InputMatcher` and routing). |
-| `ui_expect` + matchers | Waits until `L4Ui.state()` matches: `shown` (menu, lobby, station), `ship`, `entry`, `host`, `focused`, `selection`, `marks`, `claims`, `contacts`, `started`, `card` (outcome card visible), `ship_outcome` (outcome, time_s, hull, voters, needed). |
+| `ui_expect` + matchers | Waits until `L4Ui.state()` matches: `shown` (menu, lobby, station), `ship`, `seat`, `host`, `focused`, `selection`, `marks`, `claims`, `contacts`, `started`, `card` (outcome card visible), `ship_outcome` (outcome, time_s, hull, voters, needed). |
 
 ## Load gate (`l4load`, #11)
 

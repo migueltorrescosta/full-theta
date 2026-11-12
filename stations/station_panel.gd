@@ -2,7 +2,7 @@
 class_name StationPanel
 extends Control
 ## Base of every station panel (FT-JNT-001). A StationScreen holds one panel for a
-## single station, two for a joint view (six for the dev entry); one is focused at a
+## single station, two for a joint view (six for the dev seat); one is focused at a
 ## time and only it receives its station's intents, apart from the intents live on the
 ## device (IntentTable.target). The focused panel shows its main view (cockpit, turret,
 ## cutaway, map) in the screen's main area; the others show their compact docked view.
@@ -68,7 +68,7 @@ func screen() -> StationScreen:
 
 
 ## How many panels the screen holding this panel has (1 when none): the dev seat's
-## catalogue entry names no stations, so the screen is the one to ask.
+## seat names no stations, so the screen is the one to ask.
 func screen_panels() -> int:
 	var s: StationScreen = screen()
 	return s.panels.size() if s != null else 1

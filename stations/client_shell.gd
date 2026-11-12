@@ -76,7 +76,7 @@ var _last_seq: int = -1
 var _shown: String = ""
 ## The Welcome dictionary last applied (NetClient makes a new one per Welcome).
 var _welcome: Dictionary = {}
-## Built station screens by pick key ("station:<ship>:<entry>"), least recently shown first.
+## Built station screens by pick key ("station:<ship>:<seat>"), least recently shown first.
 var _screens: Dictionary = {}
 ## A hidden screen -> its StationAlerts' crew connections ([signal, callable] pairs).
 var _detached: Dictionary = {}
@@ -264,8 +264,8 @@ func _on_crew_changed(what: StringName) -> void:
 		return
 	var want: String = (
 		"lobby"
-		if ctx.crew.entry == "" or not ctx.crew.is_started() or ctx.crew.catalogue.is_empty()
-		else "station:%d:%s" % [ctx.crew.ship, ctx.crew.entry]
+		if ctx.crew.seat == "" or not ctx.crew.is_started() or ctx.crew.catalogue.is_empty()
+		else "station:%d:%s" % [ctx.crew.ship, ctx.crew.seat]
 	)
 	if ctx.crew.on_scoreboard():
 		want = "scoreboard"
@@ -300,7 +300,7 @@ func _on_crew_changed(what: StringName) -> void:
 		# The overlay draws this frame; the screen builds on the next.
 		_pending = want
 		_pending_frame = Engine.get_process_frames()
-		_loading_name.text = tr("station." + ctx.crew.entry)
+		_loading_name.text = tr("seat." + ctx.crew.seat)
 		_loading.visible = true
 
 
@@ -379,8 +379,8 @@ func _drop_screens() -> void:
 ## a lobby ship shows (load fix 7, #28, D308).
 func _warm_step() -> void:
 	var stations: Array = ctx.crew.stations()
-	if stations.is_empty() and ctx.crew.entry != "":
-		stations = [ctx.crew.entry]
+	if stations.is_empty() and ctx.crew.seat != "":
+		stations = [ctx.crew.seat]
 	for station: Variant in stations:
 		var path: String = StationRegistry.PANELS.get(str(station), "")
 		if path != "" and not _scripts.has(path):
@@ -514,7 +514,7 @@ func open_card() -> void:
 func open_menu(tab: String = "") -> void:
 	if screen != null:
 		settings_screen.set_controls(
-			ctx.settings.bindings, screen.stations, ctx.matcher.device, ctx.crew.entry
+			ctx.settings.bindings, screen.stations, ctx.matcher.device, ctx.crew.seat
 		)
 	settings_screen.open(tab)
 

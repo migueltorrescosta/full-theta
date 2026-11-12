@@ -51,14 +51,14 @@ func test_connection_65_is_refused_in_a_six_ship_session() -> void:
 				return not h.events_of(c, NetProtocol.EVENT_PICKED).is_empty()
 		)
 	assert_bool(await h.until(picked, 30_000)).is_true()
-	var entries: Dictionary = {}
+	var seats: Dictionary = {}
 	for c: NetClient in all:
 		var answer: Dictionary = h.events_of(c, NetProtocol.EVENT_PICKED)[-1]
 		assert_str(answer["payload"]["reason"]).is_equal("")
-		var key: String = answer["payload"]["entry"]
-		entries[key] = int(entries.get(key, 0)) + 1
+		var key: String = answer["payload"]["seat"]
+		seats[key] = int(seats.get(key, 0)) + 1
 	(
-		assert_dict(entries)
+		assert_dict(seats)
 		. is_equal(
 			{
 				"helm": 6,

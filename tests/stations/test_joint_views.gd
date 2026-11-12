@@ -14,8 +14,8 @@ func before() -> void:
 	I18n.apply("en")
 
 
-func _screen(entry: String) -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, "user://test_joint_views.cfg")
+func _screen(seat: String) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, "user://test_joint_views.cfg")
 	for s: String in StationViews.CREW:
 		ctx.settings.mark_hint_seen(s)
 	var s: StationScreen = auto_free(StationScreen.new())
@@ -98,31 +98,31 @@ func _place(ctx: StationContext, id: int, local: Vector3) -> void:
 # panel focused in the main area and the other docked; F1/F2, View + LB/RB and a tap on
 # the docked panel move the focus, and the focused panel takes its station's bindings.
 func test_tactical_systems_and_ops_are_one_screen_with_a_docked_panel() -> void:
-	for entry: String in JOINT:
-		var s: StationScreen = _screen(entry)
-		assert_array(s.stations).is_equal(JOINT[entry])
+	for seat: String in JOINT:
+		var s: StationScreen = _screen(seat)
+		assert_array(s.stations).is_equal(JOINT[seat])
 		assert_int(_count(s, TopBar)).is_equal(1)
 		assert_int(_count(s, DiscRadar)).is_equal(1)
 		assert_object(s.panels[0].get_parent()).is_same(s._main)
 		assert_object(s.panels[1].get_parent()).is_same(s._dock)
 		assert_bool(s.panels[1].docked).is_true()
 		_tap(s, "F2")
-		assert_str(s.focused_station()).is_equal(JOINT[entry][1])
+		assert_str(s.focused_station()).is_equal(JOINT[seat][1])
 		assert_object(s.panels[1].get_parent()).is_same(s._main)
 		_pad(s, JOY_BUTTON_BACK)
 		_pad(s, JOY_BUTTON_LEFT_SHOULDER)
 		_pad(s, JOY_BUTTON_LEFT_SHOULDER, false)
 		_pad(s, JOY_BUTTON_BACK, false)
-		assert_str(s.focused_station()).is_equal(JOINT[entry][0])
+		assert_str(s.focused_station()).is_equal(JOINT[seat][0])
 		var tap: InputEventMouseButton = InputEventMouseButton.new()
 		tap.button_index = MOUSE_BUTTON_LEFT
 		tap.pressed = true
 		s._on_panel_input(tap, s.panels[1])
-		assert_str(s.focused_station()).is_equal(JOINT[entry][1])
+		assert_str(s.focused_station()).is_equal(JOINT[seat][1])
 		# The top bar names both stations and stars the focused one.
 		s._process(0.0)
 		assert_str(s.top_bar._stations.text).is_equal(
-			"%s + %s*" % [tr("station." + JOINT[entry][0]), tr("station." + JOINT[entry][1])]
+			"%s + %s*" % [tr("station." + JOINT[seat][0]), tr("station." + JOINT[seat][1])]
 		)
 
 
@@ -146,8 +146,8 @@ func test_the_always_live_set_works_whatever_has_focus() -> void:
 	s.ctx.crew.select("contact", StationFixture.H2)
 	_tap(s, "L")
 	assert_array(_commands(s, "helm_align")).is_empty()
-	for entry: String in JOINT:
-		var j: StationScreen = _screen(entry)
+	for seat: String in JOINT:
+		var j: StationScreen = _screen(seat)
 		for focus: int in 2:
 			j.focus(focus)
 			_key(j, "Alt", true, true)
@@ -216,7 +216,7 @@ func test_tactical_cockpit_fires_claimed_mounts_and_turret_aims() -> void:
 # ShipIntents. A request between the view's own stations is a direct action, not a chip
 # (tests/stations/test_request_chips.gd sends them); the chips for other stations stay.
 func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
-	var def: StationDef = StationViews.def("tactical")
+	var def: SeatDef = StationViews.def("tactical")
 	assert_bool(StationViews.Section.HELM in def.sections).is_true()
 	assert_bool(StationViews.Section.MOUNTS in def.sections).is_true()
 	var s: StationScreen = _screen("tactical")
@@ -239,12 +239,12 @@ func test_a_joint_view_gets_the_union_of_its_stations_data() -> void:
 	assert_str(String(to_helm[0].to_station)).is_equal("helm")
 
 
-## Every catalogue entry that is a joint view: the 15 pairs (FT-NET-032).
+## Every seat that is a joint view: the 15 pairs (FT-NET-032).
 func _views() -> Array[String]:
 	var out: Array[String] = []
-	for entry: String in StationViews.ENTRIES:
-		if (StationViews.ENTRIES[entry][2] as Array).size() == 2:
-			out.append(entry)
+	for seat: String in StationViews.OTHER_SEATS:
+		if (StationViews.OTHER_SEATS[seat][2] as Array).size() == 2:
+			out.append(seat)
 	return out
 
 
@@ -256,10 +256,10 @@ func test_all_fifteen_views_are_modal_two_panel_screens() -> void:
 	var views: Array[String] = _views()
 	assert_int(views.size()).is_equal(15)
 	var pairs: Dictionary = {}
-	for entry: String in views:
-		var stations: Array = StationViews.stations_of(entry)
+	for seat: String in views:
+		var stations: Array = StationViews.stations_of(seat)
 		pairs[",".join(PackedStringArray(stations))] = true
-		var s: StationScreen = _screen(entry)
+		var s: StationScreen = _screen(seat)
 		assert_array(s.stations).is_equal(stations)
 		assert_int(s.panels.size()).is_equal(2)
 		assert_int(_count(s, TopBar)).is_equal(1)
@@ -275,7 +275,7 @@ func test_all_fifteen_views_are_modal_two_panel_screens() -> void:
 		_tap(s, "F1")
 		assert_str(s.focused_station()).is_equal(stations[0])
 		# The pair name is under the view name in the lobby (D186).
-		var def: StationDef = StationViews.def(entry)
+		var def: SeatDef = StationViews.def(seat)
 		assert_str(def.load_tag).is_not_empty()
 	assert_int(pairs.size()).is_equal(15)
 
@@ -294,8 +294,8 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 		"fabricate_probe": "fabricate_probe",
 	}
 	var seen: Dictionary = {}
-	for entry: String in _views():
-		var stations: Array = StationViews.stations_of(entry)
+	for seat: String in _views():
+		var stations: Array = StationViews.stations_of(seat)
 		for chip: ChipDef in ChipView.def().chips:
 			var from: String = String(chip.from_station)
 			# Hold fire has no direct action: Parley's one player says so (next test).
@@ -303,7 +303,7 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 				continue
 			if not (from in stations and String(chip.to_station) in stations):
 				continue
-			var s: StationScreen = _screen(entry)
+			var s: StationScreen = _screen(seat)
 			var toasts: Array[String] = []
 			s.ctx.crew.toast.connect(func(k: String, _a: Dictionary) -> void: toasts.append(k))
 			s.focus(stations.find(from))
@@ -312,13 +312,13 @@ func test_every_chip_between_a_views_stations_is_a_direct_action() -> void:
 			var id: String = String(chip.id)
 			(
 				assert_array(StationFixture.sent(s.ctx).of("send_chip"))
-				. override_failure_message(entry + " " + id)
+				. override_failure_message(seat + " " + id)
 				. is_empty()
 			)
-			assert_array(toasts).override_failure_message(entry + " " + id).is_empty()
+			assert_array(toasts).override_failure_message(seat + " " + id).is_empty()
 			(
 				assert_int(_commands(s, expect[id]).size())
-				. override_failure_message(entry + " " + id)
+				. override_failure_message(seat + " " + id)
 				. is_equal(1)
 			)
 			seen[id] = true
@@ -396,8 +396,8 @@ func test_direct_power_respects_the_reactor_and_the_maximum() -> void:
 # The four views with Comms (and Ops) show the ship's live cards as the Comms half, the real
 # rows of the COMMS block; a view without Comms shows none.
 func test_the_views_with_comms_show_the_real_cards() -> void:
-	for entry: String in _views():
-		var s: StationScreen = _screen(entry)
+	for seat: String in _views():
+		var s: StationScreen = _screen(seat)
 		var has_comms: bool = "comms" in s.stations
 		assert_int(_count(s, CardList)).is_equal(1 if has_comms else 0)
 		if has_comms:
@@ -423,8 +423,8 @@ static func _inputs(binding: String) -> Array:
 # station an input may serve two modes (Science's dial and arrows); the common set and
 # the pointer's select and fire (D176) are checked by the whole-catalogue test.
 func test_no_key_is_used_by_both_panels_of_any_view() -> void:
-	for entry: String in _views():
-		var stations: Array = StationViews.stations_of(entry)
+	for seat: String in _views():
+		var stations: Array = StationViews.stations_of(seat)
 		for focused: String in stations:
 			for device: String in IntentTable.DEVICES:
 				var owner_of: Dictionary = {}
@@ -435,7 +435,7 @@ func test_no_key_is_used_by_both_panels_of_any_view() -> void:
 					for b: String in IntentTable.defaults(r["id"], device):
 						for i: String in _inputs(b):
 							var first: String = owner_of.get(i, target)
-							var msg: String = "%s %s %s: %s" % [entry, focused, device, i]
+							var msg: String = "%s %s %s: %s" % [seat, focused, device, i]
 							assert_str(target).override_failure_message(msg).is_equal(first)
 							owner_of[i] = target
 

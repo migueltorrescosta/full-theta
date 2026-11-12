@@ -80,7 +80,7 @@ func reset(ship: int) -> void:
 ## Alert{level}: any crew pick sets its ship's alert level (FT-STN-008, D89).
 func on_alert(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var level: int = msg["level"]
-	var why: String = marks.set_alert(s.ship, CrewMarks.role_of(s.entry), level)
+	var why: String = marks.set_alert(s.ship, CrewMarks.role_of(s.seat), level)
 	if game.refuse(s, NetProtocol.Type.ALERT, why, {"level": level}):
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, s.name))
@@ -90,7 +90,7 @@ func on_alert(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 ## (a Captain within reconnect grace is seated) Relay does (FT-MSC-005, FT-RLY-010, D88).
 func on_main_view(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var view: int = msg["view"]
-	var role: CrewMarks.Role = CrewMarks.role_of(s.entry) if s.has_pick() else CrewMarks.Role.NONE
+	var role: CrewMarks.Role = CrewMarks.role_of(s.seat) if s.has_pick() else CrewMarks.Role.NONE
 	var why: String = MainScreen.rule(role, view, captain_seated(s.ship))
 	if game.refuse(s, NetProtocol.Type.MAIN_VIEW, why, {"view": view}):
 		return
@@ -101,14 +101,14 @@ func on_main_view(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 ## Whether the ship has a Captain pick, connected or within reconnect grace.
 func captain_seated(ship: int) -> bool:
 	for o: NetSession in game.by_id.values():
-		if o.ship == ship and o.entry == StationViews.CAPTAIN:
+		if o.ship == ship and o.seat == StationViews.CAPTAIN:
 			return true
 	return false
 
 
 ## Mark{op, ...}: place, move, rename or delete one of the ship's marks (CrewMarks).
 func on_mark(s: NetSession, msg: Dictionary, _now_us: int) -> void:
-	var role: CrewMarks.Role = CrewMarks.role_of(s.entry)
+	var role: CrewMarks.Role = CrewMarks.role_of(s.seat)
 	var slot: int = msg["slot"]
 	var why: String = ""
 	if not s.has_pick():
@@ -235,7 +235,7 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 	var payload: Dictionary = {"ship": s.ship, "kind": kind, "id": -1}
 	payload.merge({"x": 0.0, "y": 0.0, "z": 0.0})
 	var why: String = ""
-	if not s.has_pick() or CrewMarks.role_of(s.entry) == CrewMarks.Role.NONE:
+	if not s.has_pick() or CrewMarks.role_of(s.seat) == CrewMarks.Role.NONE:
 		why = NetGame.NOT_CREW
 	elif not pings.take(s.id, now_us):
 		why = CommandGate.RATE_LIMITED
@@ -257,7 +257,7 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 				# no Comms section) can draw it.
 				payload["id"] = msg["id"]
 				var card: Dictionary = _board_card(s.ship, msg["id"])
-				if CrewMarks.role_of(s.entry) != CrewMarks.Role.CAPTAIN or card.is_empty():
+				if CrewMarks.role_of(s.seat) != CrewMarks.Role.CAPTAIN or card.is_empty():
 					why = CrewPings.BAD_PING
 				else:
 					payload["card"] = card
@@ -556,7 +556,7 @@ func sync_lanes(ship: int) -> bool:
 func _sees_lanes(s: NetSession) -> bool:
 	if not s.has_pick():
 		return false
-	var f: ViewFilter = ViewFilter.of(s.entry, s.view_code())
+	var f: ViewFilter = ViewFilter.of(s.seat, s.view_code())
 	return f == null or f.grants(ViewFilter.LANES)
 
 
@@ -571,7 +571,7 @@ func _lanes_payload(s: NetSession) -> Dictionary:
 func sync_routes(ship: int) -> bool:
 	var any: bool = false
 	for t: NetSession in game.by_id.values():
-		if t.ship != ship or not t.has_pick() or StationViews.stations_of(t.entry).has("relay"):
+		if t.ship != ship or not t.has_pick() or StationViews.stations_of(t.seat).has("relay"):
 			continue
 		var seen: bool = _sees_routes(t)
 		any = any or seen
@@ -589,7 +589,7 @@ func sync_routes(ship: int) -> bool:
 func _sees_routes(s: NetSession) -> bool:
 	if not s.has_pick():
 		return false
-	var f: ViewFilter = ViewFilter.of(s.entry, s.view_code())
+	var f: ViewFilter = ViewFilter.of(s.seat, s.view_code())
 	return f == null or f.grants(ViewFilter.ROUTES)
 
 

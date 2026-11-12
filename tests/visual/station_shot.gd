@@ -149,9 +149,9 @@ func _ready() -> void:
 			_ctx.crew.lobby[0]["crew"] = 2
 			_ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
 			_ctx.crew.lobby[0]["seats"] = [
-				{"entry": "helm", "name": "Ana"},
-				{"entry": "weapons", "name": "Bo"},
-				{"entry": "systems", "name": "Cy"},
+				{"seat": "helm", "name": "Ana"},
+				{"seat": "weapons", "name": "Bo"},
+				{"seat": "systems", "name": "Cy"},
 			]
 			if entry == StationViews.ALL:
 				# The dev seat covers every station and needs no other crew (FT-NET-029).
@@ -185,7 +185,7 @@ func _ready() -> void:
 			s.help_requested.connect(
 				func() -> void:
 					menu.set_controls(
-						_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.entry
+						_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.seat
 					)
 					menu.open(SettingsScreen.TAB_CONTROLS)
 			)
@@ -210,7 +210,7 @@ func _ready() -> void:
 			if menu_tab != "":
 				# As ClientShell.open_menu: the Controls tab is set for the screen's seat.
 				menu.set_controls(
-					_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.entry
+					_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.seat
 				)
 				menu.open(menu_tab)
 			for e: Dictionary in events:

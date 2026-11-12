@@ -40,8 +40,8 @@ func _root(case: Array) -> Control:
 
 
 ## A four-ship fleet (Kestrel, Heron, Osprey, Merlin on teams A, B, A, B).
-func _ctx(entry: String, mode: String) -> StationContext:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _ctx(seat: String, mode: String) -> StationContext:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	StationFixture.fleet(ctx, mode, Shot.NAMES.slice(0, 4), [0, 1, 0, 1], true)
 	return ctx
 
@@ -170,7 +170,7 @@ func test_floating_votes_sit_under_the_view_top_row() -> void:
 					{"ship": 0, "voters": ["Bo"], "sessions": [9], "needed": 2}
 				)
 			else:
-				_event(ctx, "picked", {"ship": 1, "entry": "viewer"})
+				_event(ctx, "picked", {"ship": 1, "seat": "viewer"})
 				_event(ctx, "eliminated", FleetMessages.eliminated(0, "destroyed", 2))
 				_event(ctx, "handover", FleetMessages.handover(0, 1))
 			var s: StationScreen = _station(root, ctx)
@@ -195,7 +195,7 @@ func test_handover_notice_sits_under_the_row_with_ok_at_the_right() -> void:
 	for case: Array in CASES:
 		var root: Control = _root(case)
 		var ctx: StationContext = _ctx("viewer", "teams")
-		_event(ctx, "picked", {"ship": 1, "entry": "viewer"})
+		_event(ctx, "picked", {"ship": 1, "seat": "viewer"})
 		_event(ctx, "eliminated", FleetMessages.eliminated(0, "destroyed", 0))
 		_event(ctx, "handover", FleetMessages.handover(0, 1))
 		var s: StationScreen = _station(root, ctx)
@@ -227,7 +227,7 @@ func test_pause_and_takeover_sheet_keeps_buttons_bottom_right() -> void:
 			var root: Control = _root(case)
 			var ctx: StationContext = _ctx("helm", "teams")
 			if takeover:
-				_event(ctx, "picked", {"ship": 2, "entry": "helm"})
+				_event(ctx, "picked", {"ship": 2, "seat": "helm"})
 			else:
 				ctx.crew.host = true
 				_event(ctx, "pause", {"host": true})

@@ -121,7 +121,7 @@ func paused_ship() -> int:
 func may_take_over(id: int) -> bool:
 	if id == ctx.crew.ship:
 		return not ctx.crew.is_crew()
-	return ctx.crew.entry != "" and ctx.crew.allied(id, ctx.crew.ship)
+	return ctx.crew.seat != "" and ctx.crew.allied(id, ctx.crew.ship)
 
 
 func refresh() -> void:

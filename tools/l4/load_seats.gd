@@ -9,7 +9,7 @@ const STATIONS: Array[String] = ["helm", "weapons", "engineering", "science", "r
 const CONNECTIONS: int = 64
 
 
-## [ship, entry] of seat i (0 .. 63) with `ships` crewable ships.
+## [ship, seat] of seat i (0 .. 63) with `ships` crewable ships.
 static func seat(i: int, ships: int = 6) -> Array:
 	var crew: int = ships * STATIONS.size()
 	if i < crew:

@@ -48,14 +48,14 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(size: Vector2i, entry: String, insets: Array, framed: bool = true) -> StationScreen:
+func _screen(size: Vector2i, seat: String, insets: Array, framed: bool = true) -> StationScreen:
 	SafeArea.simulate(insets)
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = StationScreen.new()
-	if framed and entry in ["helm", "science"]:
+	if framed and seat in ["helm", "science"]:
 		s.panel_factory = func(_id: String) -> StationPanel: return FramePanel.new()
 	s.setup(ctx)
 	# Wave 2's stations join the frame themselves; `framed` false keeps one out of it.
@@ -441,14 +441,14 @@ func test_partner_glance_in_tactical() -> void:
 func test_every_joint_view_has_both_glance_cards() -> void:
 	var ctx: StationContext = StationFixture.context("tactical", SETTINGS)
 	var joint: int = 0
-	for entry: String in StationViews.ENTRIES:
-		var pair: Array = StationViews.ENTRIES[entry][2]
+	for seat: String in StationViews.OTHER_SEATS:
+		var pair: Array = StationViews.OTHER_SEATS[seat][2]
 		if pair.size() != 2:
 			continue
 		joint += 1
 		for i: int in 2:
 			var card: Array = PartnerGlance.card_of(pair[i], pair[1 - i])
-			assert_array(card).override_failure_message(entry).has_size(2)
+			assert_array(card).override_failure_message(seat).has_size(2)
 			for id: String in card[0]:
 				(
 					assert_str(PartnerGlance.readout(ctx, id))

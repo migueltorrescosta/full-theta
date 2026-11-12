@@ -196,7 +196,7 @@ const MESSAGES: Dictionary = {
 			"period": TYPE_FLOAT,
 			"ev_from": TYPE_INT,
 			"ship": TYPE_INT,
-			"entry": TYPE_STRING,
+			"seat": TYPE_STRING,
 			"dev_all": TYPE_BOOL,
 			"host": TYPE_BOOL,
 			"lang": TYPE_STRING,
@@ -204,8 +204,8 @@ const MESSAGES: Dictionary = {
 		}
 	],
 	Type.HELLO_REJECTED: [SERVER, {"v": TYPE_INT, "reason": TYPE_STRING}],
-	Type.CATALOGUE: [SERVER, {"ships": TYPE_ARRAY, "entries": TYPE_ARRAY, "load_tags": TYPE_ARRAY}],
-	Type.PICK: [RATED, {"ship": TYPE_INT, "entry": TYPE_STRING}],
+	Type.CATALOGUE: [SERVER, {"ships": TYPE_ARRAY, "seats": TYPE_ARRAY, "load_tags": TYPE_ARRAY}],
+	Type.PICK: [RATED, {"ship": TYPE_INT, "seat": TYPE_STRING}],
 	Type.RELEASE: [RATED, {}],
 	Type.READY: [RATED, {"ready": TYPE_BOOL}],
 	Type.CLAIM: [RATED, {"item": TYPE_STRING}],
@@ -216,7 +216,7 @@ const MESSAGES: Dictionary = {
 	[SERVER, {"seq": TYPE_INT, "tick": TYPE_INT, "type": TYPE_STRING, "payload": TYPE_DICTIONARY}],
 	Type.ABANDON: [RATED, {"ship": TYPE_INT}],
 	Type.HOST_PAUSE: [RATED, {"on": TYPE_BOOL}],
-	Type.TAKEOVER: [RATED, {"ship": TYPE_INT, "entry": TYPE_STRING}],
+	Type.TAKEOVER: [RATED, {"ship": TYPE_INT, "seat": TYPE_STRING}],
 	Type.BYE: [SEND, {"reason": TYPE_STRING}],
 	Type.VOICE:
 	[

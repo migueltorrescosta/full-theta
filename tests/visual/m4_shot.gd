@@ -35,10 +35,10 @@ func _ready() -> void:
 	I18n.apply(lang)
 	LayoutMode.apply(get_tree().root)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var entry: String = {"handover": "viewer", "lobby": "systems", "mode": "systems"}.get(
+	var seat: String = {"handover": "viewer", "lobby": "systems", "mode": "systems"}.get(
 		view, "helm"
 	)
-	_ctx = StationFixture.context(entry, "user://l5_m4_shot.cfg")
+	_ctx = StationFixture.context(seat, "user://l5_m4_shot.cfg")
 	CommsFixture.install(_ctx)
 	match view:
 		"lobby", "mode":
@@ -47,7 +47,7 @@ func _ready() -> void:
 			_scoreboard()
 		"handover":
 			_fleet("teams", true)
-			_event("picked", {"ship": 1, "entry": "viewer"})
+			_event("picked", {"ship": 1, "seat": "viewer"})
 			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 0))
 			_event("handover", FleetMessages.handover(0, 1))
 			_station()
@@ -66,7 +66,7 @@ func _ready() -> void:
 			p.setup(_ctx, VotePrompt.Kind.FORFEIT)
 		"takeover":
 			_fleet("teams", true)
-			_event("picked", {"ship": 2, "entry": "helm"})
+			_event("picked", {"ship": 2, "seat": "helm"})
 			_event("pause", {"ship": 0, "uncovered": ["science", "comms"]})
 			_station()
 			var o: PauseOverlay = PauseOverlay.new()
@@ -106,9 +106,9 @@ func _lobby() -> void:
 	_ctx.crew.lobby[0]["crew"] = 2
 	_ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
 	_ctx.crew.lobby[0]["seats"] = [
-		{"entry": "helm", "name": "Ana"},
-		{"entry": "weapons", "name": "Bo"},
-		{"entry": "systems", "name": "Cy"},
+		{"seat": "helm", "name": "Ana"},
+		{"seat": "weapons", "name": "Bo"},
+		{"seat": "systems", "name": "Cy"},
 	]
 	_fleet("teams", false)
 	var l: LobbyScreen = LobbyScreen.new()

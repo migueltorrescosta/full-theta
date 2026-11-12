@@ -101,7 +101,7 @@ NET_CLIENT_SAFE = {
     "net/net_send_queue.gd",
     "net/net_view_state.gd",
     "net/snapshot_reader.gd",
-    "net/station_def.gd",
+    "net/seat_def.gd",
     "net/station_views.gd",
     "net/view_filter.gd",
     "net/voice/dialogue_lines.gd",

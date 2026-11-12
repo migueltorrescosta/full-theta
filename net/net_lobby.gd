@@ -91,48 +91,48 @@ func min_crew() -> int:
 	return 1 if game.dev_all else NetCoverage.MIN_CREW
 
 
-## The entries held on a ship by its live sessions (connected or within grace), and a solo
+## The seats held on a ship by its live sessions (connected or within grace), and a solo
 ## lesson's bots.
-func entries_of(ship: int) -> Array:
-	var out: Array = game.training.bot_entries() if game.crewable(ship) else []
+func seats_of(ship: int) -> Array:
+	var out: Array = game.training.bot_seats() if game.crewable(ship) else []
 	for s: NetSession in game.by_id.values():
-		if s.ship == ship and s.entry != "":
-			out.append(s.entry)
+		if s.ship == ship and s.seat != "":
+			out.append(s.seat)
 	return out
 
 
 ## The lobby state of a ship, as sent in `lobby` events (FT-NET-021).
 func lobby_state(ship: int) -> Dictionary:
-	var entries: Array = entries_of(ship)
+	var held: Array = seats_of(ship)
 	var captain: String = ""
-	var seats: Array = []
+	var holders: Array = []
 	for s: NetSession in game.by_id.values():
-		if s.ship == ship and s.entry != "":
-			seats.append({"name": s.name, "entry": s.entry})
-		if s.ship == ship and s.entry == StationViews.CAPTAIN:
+		if s.ship == ship and s.seat != "":
+			holders.append({"name": s.name, "seat": s.seat})
+		if s.ship == ship and s.seat == StationViews.CAPTAIN:
 			captain = s.name
 	return {
 		"ship": ship,
-		"crew": NetCoverage.crew_count(entries),
+		"crew": NetCoverage.crew_count(held),
 		"min_crew": min_crew(),
-		"uncovered": NetCoverage.uncovered(entries),
-		"ready": NetCoverage.passes(entries, min_crew()),
+		"uncovered": NetCoverage.uncovered(held),
+		"ready": NetCoverage.passes(held, min_crew()),
 		"started": launched.has(ship),
 		"in_play": _in_run(ship),
 		"captain": captain,
-		"seats": seats,
+		"seats": holders,
 		"toggles": toggles.encode(),
 	}
 
 
-## Why a session may not move to (ship, entry), or "" ("" entry: back to the pick
+## Why a session may not move to (ship, seat), or "" ("" seat: back to the pick
 ## screen). One Captain per ship (FT-NET-016, CLASH-10, counting one within grace);
 ## on a ship in play that passes coverage and isn't paused, no change that would make
 ## it fail (FT-NET-043). During a pause the paused ship's crew may rearrange freely
 ## (FT-NET-035). Once a run is going, a session that has held a ship picks only ships of
 ## that ship's faction (ENEMY_SHIP, #35 A10): in PvP nobody, eliminated crews included,
 ## takes a rival's station; a co-op fleet is one faction.
-func pick_rule(s: NetSession, ship: int, entry: String) -> String:
+func pick_rule(s: NetSession, ship: int, seat: String) -> String:
 	var world: SimWorld = game.world
 	var home: int = s.ship if s.ship >= 0 else s.home_ship
 	if (
@@ -142,17 +142,15 @@ func pick_rule(s: NetSession, ship: int, entry: String) -> String:
 		and world.faction_of(home) != world.faction_of(ship)
 	):
 		return FleetMessages.ENEMY_SHIP
-	if entry == StationViews.CAPTAIN:
+	if seat == StationViews.CAPTAIN:
 		for o: NetSession in game.by_id.values():
-			if o != s and o.ship == ship and o.entry == StationViews.CAPTAIN:
+			if o != s and o.ship == ship and o.seat == StationViews.CAPTAIN:
 				return NetGame.CAPTAIN_TAKEN
 	if (
 		s.has_pick()
 		and in_play(s.ship)
 		and not paused.has(s.ship)
-		and NetCoverage.breaks(
-			entries_of(s.ship), min_crew(), s.entry, entry if ship == s.ship else ""
-		)
+		and NetCoverage.breaks(seats_of(s.ship), min_crew(), s.seat, seat if ship == s.ship else "")
 	):
 		return CommandGate.BREAKS_COVERAGE
 	return ""
@@ -187,10 +185,10 @@ func reset() -> void:
 		_sync_captain_seat(ship["id"])
 
 
-## Moves a session to (ship, entry) without the pick rules, as the server decides it (NetFleet:
+## Moves a session to (ship, seat) without the pick rules, as the server decides it (NetFleet:
 ## a ship's new id at Start, a handover, a relaunch), with its `picked` event.
-func move(s: NetSession, ship: int, entry: String) -> void:
-	_answer_pick(s, ship, entry, "")
+func move(s: NetSession, ship: int, seat: String) -> void:
+	_answer_pick(s, ship, seat, "")
 
 
 ## Start for `s` (FT-NET-019), as Ready{true} would press it: refused (request_rejected) from
@@ -203,9 +201,9 @@ func mark_ready(s: NetSession) -> void:
 		reason = NetGame.NOT_CREW
 	elif launched.has(s.ship):
 		reason = NetGame.STARTED
-	elif not NetCoverage.passes(entries_of(s.ship), min_crew()):
+	elif not NetCoverage.passes(seats_of(s.ship), min_crew()):
 		reason = NetGame.NOT_COVERED
-		extra = {"uncovered": NetCoverage.uncovered(entries_of(s.ship))}
+		extra = {"uncovered": NetCoverage.uncovered(seats_of(s.ship))}
 	if game.refuse(s, NetProtocol.Type.READY, reason, extra):
 		return
 	var ships: Array[int] = game.fleet.press_start(s)  # all together (M4-Q4)
@@ -219,18 +217,18 @@ func mark_ready(s: NetSession) -> void:
 	game.publish()
 
 
-## Moves a session to (ship, entry): claims of stations it no longer covers are
+## Moves a session to (ship, seat): claims of stations it no longer covers are
 ## released (FT-NET-024: station change), the snapshot view follows, and the claims
 ## and pause are settled again.
-func set_pick(s: NetSession, ship: int, entry: String) -> void:
+func set_pick(s: NetSession, ship: int, seat: String) -> void:
 	var old_ship: int = s.ship
-	var was_captain: bool = s.entry == StationViews.CAPTAIN
+	var was_captain: bool = s.seat == StationViews.CAPTAIN
 	var keep: Array[String] = []
 	if ship == old_ship:
-		keep = StationViews.stations_of(entry)
+		keep = StationViews.stations_of(seat)
 	game.release_claims(s, keep)
 	s.ship = ship
-	s.entry = entry
+	s.seat = seat
 	if ship >= 0:
 		s.home_ship = ship
 	s.shares = game.shares.active_of(ship)
@@ -241,7 +239,7 @@ func set_pick(s: NetSession, ship: int, entry: String) -> void:
 	for each: int in [old_ship, ship]:
 		if game.crewable(each):
 			game.settle(each)
-			if was_captain or entry == StationViews.CAPTAIN:
+			if was_captain or seat == StationViews.CAPTAIN:
 				_sync_captain_seat(each)
 	refresh_pause()
 
@@ -270,9 +268,9 @@ func refresh_pause(may_pause: bool = false) -> void:
 	var now: Dictionary[int, Array] = {}
 	for ship: int in launched:
 		if in_play(ship) and (may_pause or paused.has(ship)):
-			var entries: Array = entries_of(ship)
-			if not NetCoverage.passes(entries, min_crew()):
-				now[ship] = NetCoverage.uncovered(entries)
+			var seats: Array = seats_of(ship)
+			if not NetCoverage.passes(seats, min_crew()):
+				now[ship] = NetCoverage.uncovered(seats)
 	var was_paused: bool = not paused.is_empty()
 	var changed: Array[int] = []
 	for ship: int in now:
@@ -329,13 +327,13 @@ func publish() -> bool:
 
 func _on_pick(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
-	var entry: String = msg["entry"]
+	var seat: String = msg["seat"]
 	var reason: String = ""
-	if not game.crewable(ship) or not StationViews.is_entry(entry, game.dev_all):
+	if not game.crewable(ship) or not StationViews.is_seat(seat, game.dev_all):
 		reason = NetGame.BAD_PICK
 	else:
-		reason = pick_rule(s, ship, entry)
-	_answer_pick(s, ship, entry, reason)
+		reason = pick_rule(s, ship, seat)
+	_answer_pick(s, ship, seat, reason)
 
 
 func _on_release(s: NetSession, _msg: Dictionary, _now_us: int) -> void:
@@ -420,17 +418,17 @@ func _on_abandon_vote(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 ## the ship changes its pick with Pick.
 func _on_takeover(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var ship: int = msg["ship"]
-	var entry: String = msg["entry"]
+	var seat: String = msg["seat"]
 	var reason: String = (
-		game.fleet.takeover_rule(s, ship, entry, paused[ship])
+		game.fleet.takeover_rule(s, ship, seat, paused[ship])
 		if paused.has(ship)
 		else NetGame.NOT_PAUSED
 	)
-	if game.refuse(s, NetProtocol.Type.TAKEOVER, reason, {"ship": ship, "entry": entry}):
+	if game.refuse(s, NetProtocol.Type.TAKEOVER, reason, {"ship": ship, "seat": seat}):
 		return
 	var from_ship: int = s.ship
-	_answer_pick(s, ship, entry, "")
-	game.fleet.took_over(s, ship, entry, from_ship)
+	_answer_pick(s, ship, seat, "")
+	game.fleet.took_over(s, ship, seat, from_ship)
 
 
 # --- Internals. ---
@@ -438,12 +436,12 @@ func _on_takeover(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 
 ## Applies an accepted pick, or reports why not: a `picked` event, plus CommandRejected
 ## (seq -1) for a change refused because it breaks coverage (FT-NET-043).
-func _answer_pick(s: NetSession, ship: int, entry: String, reason: String) -> void:
+func _answer_pick(s: NetSession, ship: int, seat: String, reason: String) -> void:
 	if reason == "":
-		set_pick(s, ship, entry)
+		set_pick(s, ship, seat)
 	elif reason == CommandGate.BREAKS_COVERAGE:
 		game.reject_command(s.id, -1, reason)
-	game.notify(s, NetProtocol.EVENT_PICKED, {"ship": ship, "entry": entry, "reason": reason})
+	game.notify(s, NetProtocol.EVENT_PICKED, {"ship": ship, "seat": seat, "reason": reason})
 	if reason == "" and s.has_pick():
 		game.crew.send_to(s)
 	game.publish()
@@ -481,7 +479,7 @@ func _abandon(ship: int, by: String) -> void:
 
 
 func _pause_of(ship: int) -> Dictionary:
-	var crew: int = NetCoverage.crew_count(entries_of(ship))
+	var crew: int = NetCoverage.crew_count(seats_of(ship))
 	return FleetMessages.pause(ship, paused.get(ship, []), crew, min_crew(), false)
 
 

@@ -31,8 +31,8 @@ func _screen(ctx: StationContext, asked: Array[bool]) -> StationScreen:
 	return s
 
 
-func _fresh(entry: String) -> StationContext:
-	var ctx: StationContext = StationFixture.context(entry, CFG)
+func _fresh(seat: String) -> StationContext:
+	var ctx: StationContext = StationFixture.context(seat, CFG)
 	ctx.settings.reset_hints()
 	return ctx
 

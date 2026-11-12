@@ -19,7 +19,7 @@ func _samples() -> Dictionary:
 			"period": 200000.0,
 			"ev_from": 0,
 			"ship": -1,
-			"entry": "",
+			"seat": "",
 			"dev_all": false,
 			"host": false,
 			"lang": "en",
@@ -29,10 +29,10 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.CATALOGUE:
 		{
 			"ships": [{"id": 0, "def": "m1_corvette", "name": "Corvette", "faction": 1}],
-			"entries": [{"id": "helm", "name": "Helm", "stations": ["helm"]}],
+			"seats": [{"id": "helm", "name": "Helm", "stations": ["helm"]}],
 			"load_tags": [],
 		},
-		NetProtocol.Type.PICK: {"ship": 0, "entry": "tactical"},
+		NetProtocol.Type.PICK: {"ship": 0, "seat": "tactical"},
 		NetProtocol.Type.RELEASE: {},
 		NetProtocol.Type.READY: {"ready": true},
 		NetProtocol.Type.CLAIM: {"item": "mount:0"},
@@ -41,7 +41,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.ACK: {"snap": 40, "ev": 12},
 		NetProtocol.Type.EVENT: {"seq": 4, "tick": 361, "type": "hit", "payload": {"ship": 0}},
 		NetProtocol.Type.ABANDON: {"ship": 0},
-		NetProtocol.Type.TAKEOVER: {"ship": 0, "entry": "helm"},
+		NetProtocol.Type.TAKEOVER: {"ship": 0, "seat": "helm"},
 		NetProtocol.Type.BYE: {"reason": "quit"},
 		NetProtocol.Type.VOICE:
 		{

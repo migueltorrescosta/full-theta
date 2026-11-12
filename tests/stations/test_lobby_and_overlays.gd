@@ -6,8 +6,8 @@ func before() -> void:
 	I18n.apply("en")
 
 
-func _lobby(entry: String) -> LobbyScreen:
-	var ctx: StationContext = StationFixture.context(entry)
+func _lobby(seat: String) -> LobbyScreen:
+	var ctx: StationContext = StationFixture.context(seat)
 	ctx.crew.lobby[0]["started"] = false
 	var l: LobbyScreen = auto_free(LobbyScreen.new())
 	l.setup(ctx)
@@ -16,11 +16,11 @@ func _lobby(entry: String) -> LobbyScreen:
 
 
 func _cell(l: LobbyScreen, id: String) -> Button:
-	return l.find_child("Entry_" + id, true, false)
+	return l.find_child("Seat_" + id, true, false)
 
 
-func _picked(l: LobbyScreen, entry: String) -> void:
-	l.ctx.crew.handle_event({"type": "picked", "payload": {"ship": 0, "entry": entry}}, 0)
+func _picked(l: LobbyScreen, seat: String) -> void:
+	l.ctx.crew.handle_event({"type": "picked", "payload": {"ship": 0, "seat": seat}}, 0)
 
 
 func _sent_picks(l: LobbyScreen) -> Array:
@@ -35,7 +35,7 @@ func test_grid_cells_show_name_role_and_load_border() -> void:
 	var grid: GridContainer = l.find_child("Grid", true, false)
 	var ids: Array[String] = []
 	for c: Node in grid.get_children():
-		ids.append(c.name.trim_prefix("Entry_"))
+		ids.append(c.name.trim_prefix("Seat_"))
 	assert_array(ids).is_equal(LobbySeatGrid.GRID_STATIONS)
 	var tags: Dictionary = {
 		"helm": "intense",
@@ -69,7 +69,7 @@ func test_grid_cells_show_name_role_and_load_border() -> void:
 # cell's fills.
 func test_cell_tap_takes_and_leaves_a_seat_in_a_compact_cell() -> void:
 	var l: LobbyScreen = _lobby("viewer")
-	l.ctx.crew.lobby[0]["seats"] = [{"entry": "relay", "name": "Ana"}]
+	l.ctx.crew.lobby[0]["seats"] = [{"seat": "relay", "name": "Ana"}]
 	l.refresh()
 	var cell: Button = _cell(l, "science")
 	await get_tree().process_frame
@@ -175,18 +175,18 @@ func test_a_quick_second_tap_adds_to_the_first() -> void:
 
 
 # FT: FT-NET-032
-# Every pair of stations maps to its joint view entry.
+# Every pair of stations maps to its joint view seat.
 func test_every_pair_maps_to_its_joint_view() -> void:
 	var l: LobbyScreen = _lobby("viewer")
 	var seen: Dictionary = {}
 	for a: String in LobbySeatGrid.GRID_STATIONS:
 		for b: String in LobbySeatGrid.GRID_STATIONS:
 			if a < b:
-				var entry: String = l.entry_for([a, b] as Array[String])
-				assert_str(entry).is_not_empty()
-				assert_bool(seen.has(entry)).is_false()
-				seen[entry] = true
-				assert_array(StationViews.stations_of(entry)).contains_exactly_in_any_order([a, b])
+				var seat: String = l.seat_for([a, b] as Array[String])
+				assert_str(seat).is_not_empty()
+				assert_bool(seen.has(seat)).is_false()
+				seen[seat] = true
+				assert_array(StationViews.stations_of(seat)).contains_exactly_in_any_order([a, b])
 	assert_int(seen.size()).is_equal(15)
 
 
@@ -195,9 +195,9 @@ func test_every_pair_maps_to_its_joint_view() -> void:
 func test_cells_name_the_crewmates_from_the_seats() -> void:
 	var l: LobbyScreen = _lobby("viewer")
 	l.ctx.crew.lobby[0]["seats"] = [
-		{"name": "Ana", "entry": "tactical"},
-		{"name": "Bo", "entry": "helm"},
-		{"name": "Cy", "entry": "captain"},
+		{"name": "Ana", "seat": "tactical"},
+		{"name": "Bo", "seat": "helm"},
+		{"name": "Cy", "seat": "captain"},
 	]
 	l.refresh()
 	assert_str((_cell(l, "helm").find_child("Crew", true, false) as Label).text).is_equal("Ana, Bo")
@@ -249,7 +249,7 @@ func test_grid_fits_every_reference_size_without_scrolling() -> void:
 		add_child(holder)
 		var ctx: StationContext = StationFixture.context("viewer")
 		ctx.crew.lobby[0]["started"] = false
-		ctx.crew.lobby[0]["seats"] = [{"name": "Ana", "entry": "helm"}]
+		ctx.crew.lobby[0]["seats"] = [{"name": "Ana", "seat": "helm"}]
 		var l: LobbyScreen = auto_free(LobbyScreen.new())
 		l.setup(ctx)
 		holder.add_child(l)
@@ -314,7 +314,7 @@ func test_refresh_keeps_the_cell_buttons() -> void:
 	var l: LobbyScreen = _lobby("viewer")
 	var helm: Button = _cell(l, "helm")
 	var ship_button: Button = l._ships.get_child(0)
-	l.ctx.crew.lobby[0]["seats"] = [{"name": "Ana", "entry": "helm"}]
+	l.ctx.crew.lobby[0]["seats"] = [{"name": "Ana", "seat": "helm"}]
 	l.refresh()
 	assert_object(_cell(l, "helm")).is_same(helm)
 	assert_object(l._ships.get_child(0)).is_same(ship_button)

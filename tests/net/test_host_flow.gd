@@ -181,7 +181,7 @@ func test_relaunched_host_rejoins_its_orphan_on_the_same_pick() -> void:
 	assert_bool(again.client.welcome["resumed"]).is_true()
 	assert_int(again.client.session_id).is_equal(session_id)
 	assert_int(again.client.welcome["ship"]).is_equal(PLAYER)
-	assert_str(again.client.welcome["entry"]).is_equal("helm")
+	assert_str(again.client.welcome["seat"]).is_equal("helm")
 	# Host again by the stored secret (D127), from Welcome. Not from the child's "host
 	# is session" log line: when the drop and the rejoin land in one server frame,
 	# the host never reads as gone and the line isn't printed twice.

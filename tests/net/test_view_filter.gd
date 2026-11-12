@@ -44,10 +44,10 @@ func before_test() -> void:
 	world.kin.torque_scale[ME] = 0.3
 
 
-## The decoded view of one entry at a toggle code on the current world.
-func _view(entry: String, code: String) -> NetViewState:
+## The decoded view of one seat at a toggle code on the current world.
+func _view(seat: String, code: String) -> NetViewState:
 	var b: SnapshotBuilder = SnapshotBuilder.new()
-	var key: String = StationViews.key(ME, entry, code)
+	var key: String = StationViews.key(ME, seat, code)
 	b.build(SimCopy.of(world), 1, [key])
 	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
 	assert_bool(view.apply(b.message(key, true))).is_true()
@@ -59,8 +59,8 @@ func _shared(code: String, features: Array) -> String:
 	return ViewFilter.code_with(code, features)
 
 
-func _status(entry: String, code: String) -> Dictionary:
-	return _view(entry, code).blocks[S]
+func _status(seat: String, code: String) -> Dictionary:
+	return _view(seat, code).blocks[S]
 
 
 ## Banded values the way D193 gives them: the middle of the band of the share.
@@ -91,16 +91,16 @@ func test_status_carries_the_damaged_reactor_pip_cap() -> void:
 func test_summaries_are_exact_banded_or_absent() -> void:
 	var pips: int = int(_status("engineering", "easy")["pips_used"])
 	assert_int(pips).is_greater(0)
-	for entry: String in ["helm", "weapons", "science", "relay"]:
-		var easy: Dictionary = _status(entry, "easy")
+	for seat: String in ["helm", "weapons", "science", "relay"]:
+		var easy: Dictionary = _status(seat, "easy")
 		assert_float(easy["shields"]).is_equal_approx(0.4 * max_shields, 1e-3)
 		assert_int(easy["pips_used"]).is_equal(pips)
-		var normal: Dictionary = _status(entry, "normal")
+		var normal: Dictionary = _status(seat, "normal")
 		assert_float(normal["shields"]).is_equal_approx(
 			_banded(0.4 * max_shields, max_shields), 1e-3
 		)
 		assert_float(normal["shields"]).is_not_equal(easy["shields"])
-		var hard: Dictionary = _status(entry, "hard")
+		var hard: Dictionary = _status(seat, "hard")
 		assert_float(hard["shields"]).is_equal(0.0)
 		assert_int(hard["pips_used"]).is_equal(0)
 	# Engineering owns shields and the reactor: exact at every difficulty.
@@ -249,8 +249,8 @@ func test_diagnosed_cause_shows_by_toggle() -> void:
 	assert_bool(DamageSystem.inflict_fault(world, ME, &"engines", &"short", 1e6)).is_true()
 	DamageSystem.reveal_fault_cause(world, ME, &"engines")
 	var engines: int = 0
-	var cause: Callable = func(code: String, entry: String = "engineering") -> int:
-		var rows: Array = _view(entry, code).blocks[StationViews.Section.ENGINEERING]["subsystems"]
+	var cause: Callable = func(code: String, seat: String = "engineering") -> int:
+		var rows: Array = _view(seat, code).blocks[StationViews.Section.ENGINEERING]["subsystems"]
 		return rows[engines]["fault_cause"]
 	var shared: Callable = func(code: String) -> String: return _shared(code, [&"diagnosed_causes"])
 	assert_int(cause.call("easy")).is_equal(0)
@@ -276,8 +276,8 @@ func test_diagnosed_cause_shows_by_toggle() -> void:
 func test_fabrication_timer_is_a_summary() -> void:
 	world.defs[ME].probe_fab_s = 30.0
 	world.relay.fab_left[ME] = 10.0
-	var left: Callable = func(entry: String, code: String) -> float:
-		return _view(entry, code).blocks[StationViews.Section.RELAY]["fab_left"]
+	var left: Callable = func(seat: String, code: String) -> float:
+		return _view(seat, code).blocks[StationViews.Section.RELAY]["fab_left"]
 	for code: String in ["easy", "normal", "hard"]:
 		assert_float(left.call("relay", code)).is_equal_approx(10.0, 0.01)
 		assert_float(left.call("engineering", code)).is_equal_approx(10.0, 0.01)
@@ -296,13 +296,13 @@ func test_hard_leaks_only_marks_and_pings() -> void:
 	ScienceKnowledge.record(world, ScienceFixture.BLUE, FOE, 1.0)
 	DamageSystem.inflict_fault(world, ME, &"engines", &"short", 1e6)
 	DamageSystem.reveal_fault_cause(world, ME, &"engines")
-	for entry: String in StationViews.CREW:
-		var view: NetViewState = _view(entry, "hard")
+	for seat: String in StationViews.CREW:
+		var view: NetViewState = _view(seat, "hard")
 		var st: Dictionary = view.blocks[S]
-		if entry == "engineering":
+		if seat == "engineering":
 			assert_float(st["shields"]).is_greater(0.0)
 		else:
-			assert_float(st["shields"]).override_failure_message(entry).is_equal(0.0)
+			assert_float(st["shields"]).override_failure_message(seat).is_equal(0.0)
 		if view.blocks.has(StationViews.Section.FEEDS):
 			var feeds: Dictionary = view.blocks[StationViews.Section.FEEDS]
 			assert_array(feeds["weak"]).is_empty()
@@ -311,7 +311,7 @@ func test_hard_leaks_only_marks_and_pings() -> void:
 		if view.blocks.has(StationViews.Section.ENGINEERING):
 			for row: Dictionary in view.blocks[StationViews.Section.ENGINEERING]["subsystems"]:
 				assert_int(row["fault_cause"]).is_equal(0)
-		if view.blocks.has(StationViews.Section.RELAY) and entry != "relay":
+		if view.blocks.has(StationViews.Section.RELAY) and seat != "relay":
 			assert_array(view.blocks[StationViews.Section.RELAY]["probes"]).is_empty()
 			assert_int(view.blocks[StationViews.Section.RELAY]["stock"]).is_equal(0)
 	# Events: Science's work reaches Weapons and Engineering only through a toggle; scan
@@ -390,7 +390,7 @@ func test_a_shortcut_needs_its_toggle_and_a_share() -> void:
 
 # FT: FT-PAIR-007
 # E7: FEEDS and RELAY skip building the lists the filter blanks, with the same bytes as
-# building everything and blanking after: every entry, difficulty and shared shortcut.
+# building everything and blanking after: every seat, difficulty and shared shortcut.
 func test_skipping_blanked_lists_changes_no_bytes() -> void:
 	KnowledgeSystem.step(world)
 	var features: Array = [
@@ -399,10 +399,10 @@ func test_skipping_blanked_lists_changes_no_bytes() -> void:
 	var codes: Array[String] = ["easy", "normal", "hard"]
 	for shared: Array in [[], features]:
 		for code: String in codes:
-			for entry: String in [
+			for seat: String in [
 				"helm", "weapons", "tactical", "ops", "relay", "viewer", "captain"
 			]:
-				var filter: ViewFilter = ViewFilter.of(entry, ViewFilter.code_with(code, shared))
+				var filter: ViewFilter = ViewFilter.of(seat, ViewFilter.code_with(code, shared))
 				if filter == null:
 					continue
 				for kind: int in [StationViews.Section.FEEDS, StationViews.Section.RELAY]:
@@ -411,6 +411,6 @@ func test_skipping_blanked_lists_changes_no_bytes() -> void:
 					var want: PackedByteArray = NetBlock.encode(StationViews.BLOCKS[kind], values)
 					(
 						assert_array(StationBlocks.block_bytes(kind, world, ME, filter))
-						. override_failure_message("%s %s %s %d" % [entry, code, shared, kind])
+						. override_failure_message("%s %s %s %d" % [seat, code, shared, kind])
 						. is_equal(want)
 					)

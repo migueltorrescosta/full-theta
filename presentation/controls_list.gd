@@ -22,7 +22,7 @@ func _init() -> void:
 
 
 ## Regenerates the rows for `stations` on `device` under the role summary of seat `role`
-## (an ENTRIES or STATIONS id; none when empty); follows later rebinds.
+## (an OTHER_SEATS or STATIONS id; none when empty); follows later rebinds.
 func build(bindings: Bindings, stations: Array, device: String, role: String = "") -> void:
 	if _bindings != null and _bindings.changed.is_connected(_rebuild):
 		_bindings.changed.disconnect(_rebuild)
@@ -63,7 +63,7 @@ func _rebuild() -> void:
 	common.append_array(IntentTable.ids_of(IntentTable.LIVE))
 	_section("overlay.common", common)
 	for s: Variant in _stations:
-		_section("station." + str(s), IntentTable.ids_of(str(s)))
+		_section(StationViews.name_key(str(s)), IntentTable.ids_of(str(s)))
 
 
 func _section(key: String, ids: Array[String]) -> void:

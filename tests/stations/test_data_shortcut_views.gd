@@ -18,8 +18,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _ctx(entry: String, code: String) -> StationContext:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _ctx(seat: String, code: String) -> StationContext:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	ctx.crew.toggles = DataToggles.parse(code)
 	return ctx
 

@@ -22,8 +22,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String = StationViews.VIEWER) -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(seat: String = StationViews.VIEWER) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)

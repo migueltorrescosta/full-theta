@@ -17,7 +17,7 @@ const WIDTH: float = 200.0
 const FONT: int = 13
 
 ## "partner|focused" -> [[read-out, read-out], action intent or ""]. Every joint view
-## (StationViews.ENTRIES) has both directions.
+## (StationViews.OTHER_SEATS) has both directions.
 const CARDS: Dictionary = {
 	# Drive
 	"helm|engineering": [["helm.speed", "helm.mode"], "all_stop"],

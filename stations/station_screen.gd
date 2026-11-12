@@ -2,7 +2,7 @@ class_name StationScreen
 extends Control
 ## A station screen (§5.0, §5.9, FT-JNT-001, FT-JNT-007): the top bar, one disc radar and
 ## one or more StationPanels, one focused. A single station is a screen with one panel;
-## a joint view is the same screen with two (the dev entry six). The focused panel
+## a joint view is the same screen with two (the dev seat six). The focused panel
 ## fills the main area; the others sit docked, compact, under the radar. F1/F2, hold
 ## View + LB/RB, or a click on a docked panel moves the focus.
 ##
@@ -135,18 +135,18 @@ var _band_h: float = 0.0
 var _side_band: Control
 
 
-## Builds the screen for the current pick (ctx.crew.entry_def()). Entries without
+## Builds the screen for the current pick (ctx.crew.seat_def()). Seats without
 ## functional stations (Captain, Viewer) get one panel of their own id.
 func setup(context: StationContext) -> void:
 	ctx = context
 	# The matcher outlives screens: a screen freed while blocked (the outcome card before a
 	# run reset) left it restricted.
 	ctx.matcher.restrict([])
-	var def: Dictionary = ctx.crew.entry_def()
+	var def: Dictionary = ctx.crew.seat_def()
 	for s: Variant in def.get("stations", []):
 		stations.append(str(s))
 	if stations.is_empty():
-		stations.append(ctx.crew.entry)
+		stations.append(ctx.crew.seat)
 	layout.build()
 	layout.relayout()
 	for s: String in stations:

@@ -47,7 +47,7 @@ func entries() -> Array:
 	# Ping and Mark come first, so they sit in the same place on every station's page
 	# (R22-10); then the station's own requests, then the shares.
 	out.append(["ping", "", tr("intent.ping")])
-	if panel.ctx.crew.entry != StationViews.VIEWER:
+	if panel.ctx.crew.seat != StationViews.VIEWER:
 		out.append(["mark", "", tr("intent.mark")])
 	for c: ChipDef in panel.request_chips():
 		out.append(["chip", String(c.id), panel.chip_label(c)])

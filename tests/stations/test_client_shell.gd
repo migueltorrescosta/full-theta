@@ -33,7 +33,7 @@ func after_test() -> void:
 func _shell(lang: String, dev_all: bool = false) -> ClientShell:
 	var c: FakeClient = FakeClient.new()
 	c.state = NetClient.State.WELCOMED
-	c.welcome = {"session": 7, "ship": 0, "entry": "", "host": false, "dev_all": dev_all}
+	c.welcome = {"session": 7, "ship": 0, "seat": "", "host": false, "dev_all": dev_all}
 	c.welcome["lang"] = lang
 	c.catalogue = StationFixture.catalogue(dev_all)
 	var s: ClientShell = auto_free(ClientShell.new())
@@ -48,7 +48,7 @@ func test_welcome_tls_reaches_the_context() -> void:
 	assert_bool(_shell("en").ctx.host_tls).is_false()
 	var c: FakeClient = FakeClient.new()
 	c.state = NetClient.State.WELCOMED
-	c.welcome = {"session": 7, "ship": 0, "entry": "", "host": true, "lang": "en", "tls": true}
+	c.welcome = {"session": 7, "ship": 0, "seat": "", "host": true, "lang": "en", "tls": true}
 	c.catalogue = StationFixture.catalogue()
 	var s: ClientShell = auto_free(ClientShell.new())
 	s.setup(c, ClientSettings.new("user://test_client_shell_unit.cfg"))
@@ -91,7 +91,7 @@ func test_lobby_until_started_then_the_station_screen() -> void:
 	var s: ClientShell = _shell("en")
 	assert_object(s.lobby).is_not_null()
 	var c: FakeClient = s.ctx.client as FakeClient
-	c.queued.append({"type": "picked", "payload": {"ship": 0, "entry": "systems", "reason": ""}})
+	c.queued.append({"type": "picked", "payload": {"ship": 0, "seat": "systems", "reason": ""}})
 	await get_tree().process_frame
 	assert_object(s.lobby).is_not_null()
 	c.queued.append({"type": "started", "payload": {"ship": 0, "tick": 10}})
@@ -121,7 +121,7 @@ func _on_station(fresh: bool) -> ClientShell:
 		s.ctx.settings.mark_hint_seen("engineering")
 		s.ctx.settings.mark_hint_seen("science")
 	var c: FakeClient = s.ctx.client as FakeClient
-	c.queued.append({"type": "picked", "payload": {"ship": 0, "entry": "systems", "reason": ""}})
+	c.queued.append({"type": "picked", "payload": {"ship": 0, "seat": "systems", "reason": ""}})
 	c.queued.append({"type": "started", "payload": {"ship": 0, "tick": 10}})
 	await _until(func() -> bool: return s.screen != null)
 	return s
@@ -137,14 +137,14 @@ func _until(cond: Callable) -> bool:
 	return true
 
 
-## Picks `entry` on ship 0 (started) and waits for its screen; "" goes to the lobby.
-func _pick(s: ClientShell, entry: String) -> void:
+## Picks `seat` on ship 0 (started) and waits for its screen; "" goes to the lobby.
+func _pick(s: ClientShell, seat: String) -> void:
 	var c: FakeClient = s.ctx.client as FakeClient
-	c.queued.append({"type": "picked", "payload": {"ship": 0, "entry": entry, "reason": ""}})
-	if entry == "":
+	c.queued.append({"type": "picked", "payload": {"ship": 0, "seat": seat, "reason": ""}})
+	if seat == "":
 		await _until(func() -> bool: return s.lobby != null)
 	else:
-		await _until(func() -> bool: return s.screen != null and s.ctx.crew.entry == entry)
+		await _until(func() -> bool: return s.screen != null and s.ctx.crew.seat == seat)
 
 
 func _labels(menu: SettingsScreen) -> Array[String]:
@@ -226,8 +226,8 @@ func test_the_controls_tab_has_content_however_the_menu_opens() -> void:
 		{"type": "started", "payload": {"ship": 0, "tick": 10}}
 	)
 	var menu: SettingsScreen = s.settings_screen
-	for entry: String in ["helm", "engineering", "systems", StationViews.ALL]:
-		await _pick(s, entry)
+	for seat: String in ["helm", "engineering", "systems", StationViews.ALL]:
+		await _pick(s, seat)
 		s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
 		assert_bool(menu.visible).is_true()
 		menu.tabs.current_tab = menu.tabs.get_node(SettingsScreen.TAB_CONTROLS).get_index()
@@ -235,10 +235,10 @@ func test_the_controls_tab_has_content_however_the_menu_opens() -> void:
 			func(r: Dictionary) -> String: return r["section"]
 		)
 		for st: String in s.screen.stations:
-			assert_array(sections).override_failure_message(entry + " " + st).contains(
+			assert_array(sections).override_failure_message(seat + " " + st).contains(
 				["station." + st]
 			)
-		assert_array(_labels(menu)).contains([tr("role." + entry)])
+		assert_array(_labels(menu)).contains([tr("role." + seat)])
 		menu.close()
 
 
@@ -264,7 +264,7 @@ func test_language_switch_retranslates_the_open_menu() -> void:
 func test_visited_screens_are_kept_and_shown_again() -> void:
 	var s: ClientShell = _shell("en")
 	var c: FakeClient = s.ctx.client as FakeClient
-	c.queued.append({"type": "picked", "payload": {"ship": 0, "entry": "helm", "reason": ""}})
+	c.queued.append({"type": "picked", "payload": {"ship": 0, "seat": "helm", "reason": ""}})
 	c.queued.append({"type": "started", "payload": {"ship": 0, "tick": 10}})
 	assert_bool(await _until(func() -> bool: return s._loading.visible)).is_true()
 	assert_object(s.screen).is_null()
@@ -292,9 +292,9 @@ func test_kept_screens_are_bounded_and_go_on_reset() -> void:
 	var c: FakeClient = s.ctx.client as FakeClient
 	c.queued.append({"type": "started", "payload": {"ship": 0, "tick": 10}})
 	var first: StationScreen = null
-	for entry: String in ["helm", "weapons", "relay", "comms", "science"]:
-		await _pick(s, entry)
-		if entry == "helm":
+	for seat: String in ["helm", "weapons", "relay", "comms", "science"]:
+		await _pick(s, seat)
+		if seat == "helm":
 			first = s.screen
 	assert_int(s._screens.size()).is_equal(ClientShell.MAX_SCREENS)
 	await get_tree().process_frame
@@ -311,7 +311,7 @@ func test_resume_with_the_same_pick_keeps_the_screen() -> void:
 	var kept: StationScreen = s.screen
 	var c: FakeClient = s.ctx.client as FakeClient
 	var w: Dictionary = c.welcome.duplicate()
-	w["entry"] = "systems"
+	w["seat"] = "systems"
 	w["resumed"] = true
 	c.welcome = w
 	await get_tree().process_frame
@@ -348,7 +348,7 @@ func test_hidden_screen_sounds_no_tone() -> void:
 func test_lobby_preloads_the_pick_and_long_frames_are_reported() -> void:
 	var s: ClientShell = _shell("en")
 	var c: FakeClient = s.ctx.client as FakeClient
-	c.queued.append({"type": "picked", "payload": {"ship": 0, "entry": "tactical", "reason": ""}})
+	c.queued.append({"type": "picked", "payload": {"ship": 0, "seat": "tactical", "reason": ""}})
 	var loaded: Callable = func() -> bool: return s._scripts.has(StationRegistry.PANELS["weapons"])
 	assert_bool(await _until(loaded)).is_true()
 	assert_bool(s._scripts.has(StationRegistry.PANELS["helm"])).is_true()

@@ -22,12 +22,12 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(size: Vector2i, entry: String, insets: Array) -> StationScreen:
+func _screen(size: Vector2i, seat: String, insets: Array) -> StationScreen:
 	SafeArea.simulate(insets)
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	CommsFixture.install(ctx)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
@@ -55,15 +55,15 @@ func _drop(s: StationScreen) -> void:
 # FT: FT-STN-005
 # Rotating back to a desktop-sized window restores the desktop arrangement.
 func test_engineering_and_comms_return_to_the_desktop_arrangement() -> void:
-	for entry: String in ["engineering", "comms"]:
-		var s: StationScreen = await _screen(Vector2i(844, 390), entry, LANDSCAPE)
+	for seat: String in ["engineering", "comms"]:
+		var s: StationScreen = await _screen(Vector2i(844, 390), seat, LANDSCAPE)
 		var p: StationPanel = s.focused_panel()
 		var layout: RailLayout = p.get("touch_layout")
 		assert_bool(layout.visible).is_true()
 		SafeArea.simulate([])
 		(s.get_parent() as SubViewport).size = Vector2i(1280, 720)
 		await _frames(4)
-		assert_bool(layout.visible).override_failure_message(entry).is_false()
+		assert_bool(layout.visible).override_failure_message(seat).is_false()
 		for b: Node in p.find_children("*", "Button", true, false):
 			assert_bool(layout.is_ancestor_of(b) and b.is_visible_in_tree()).is_false()
 		_drop(s)

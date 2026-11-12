@@ -46,7 +46,7 @@ func test_back_to_ships_releases_the_seat_and_returns_to_ship_selection() -> voi
 	assert_bool(_button(l, "Start").visible).is_false()
 	assert_int(l.ship).is_equal(-1)
 	# The server's answer must not bring the old ship back.
-	l.ctx.crew.handle_event({"type": "picked", "payload": {"ship": -1, "entry": ""}}, 0)
+	l.ctx.crew.handle_event({"type": "picked", "payload": {"ship": -1, "seat": ""}}, 0)
 	assert_bool(entries.visible).is_false()
 	assert_int(l.ship).is_equal(-1)
 	# Choosing a ship shows its seats again.

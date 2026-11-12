@@ -19,8 +19,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String, code: String = "easy") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(seat: String, code: String = "easy") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	ctx.crew.toggles = DataToggles.parse(code)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)

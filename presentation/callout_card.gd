@@ -31,7 +31,7 @@ const PARTS: Array[Array] = [
 	["row", "station.relay", "card.say_relay"],
 	["row", "station.engineering", "card.say_engineering"],
 	["row", "station.comms", "card.say_comms"],
-	["row", "station.captain", "card.say_captain"],
+	["row", "seat.captain", "card.say_captain"],
 	["h", "card.pairs"],
 	["p", "card.pairs_tip"],
 	["pair", "engineering", "helm", "card.pair_1"],

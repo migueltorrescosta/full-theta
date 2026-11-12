@@ -113,8 +113,8 @@ func release_claim(item: String) -> void:
 	_call(&"release_claim", [item])
 
 
-func pick(ship: int, entry: String) -> void:
-	_call(&"pick", [ship, entry])
+func pick(ship: int, seat: String) -> void:
+	_call(&"pick", [ship, seat])
 
 
 ## Renames the player for the session (#35 A5).
@@ -149,8 +149,8 @@ func run_again(ship: int, vote: bool) -> void:
 	_call(&"run_again", [ship, vote])
 
 
-func takeover(ship: int, entry: String) -> void:
-	_call(&"takeover", [ship, entry])
+func takeover(ship: int, seat: String) -> void:
+	_call(&"takeover", [ship, seat])
 
 
 ## Multi-ship lobby and PvP (#11): any player adds a ship (M4-Q3); a crew puts its ship on

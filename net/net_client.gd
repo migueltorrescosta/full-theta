@@ -169,8 +169,8 @@ func take_events() -> Array[Dictionary]:
 # --- Intents. ---
 
 
-func pick(ship: int, entry: String) -> void:
-	_send(NetProtocol.Type.PICK, {"ship": ship, "entry": entry})
+func pick(ship: int, seat: String) -> void:
+	_send(NetProtocol.Type.PICK, {"ship": ship, "seat": seat})
 
 
 func release_pick() -> void:
@@ -208,8 +208,8 @@ func run_again(ship: int, vote: bool) -> void:
 	_send(NetProtocol.Type.RUN_AGAIN, {"ship": ship, "vote": vote})
 
 
-func takeover(ship: int, entry: String) -> void:
-	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "entry": entry})
+func takeover(ship: int, seat: String) -> void:
+	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "seat": seat})
 
 
 ## Multi-ship lobby and PvP (#11, docs/protocol.md "Multi-ship games and PvP"): any player

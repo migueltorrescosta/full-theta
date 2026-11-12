@@ -5,7 +5,7 @@ extends RefCounted
 ## another used, a probe-enabled scan, and (with Comms, #10) a scan-unlocked dialogue
 ## option. Each one is counted here and written to the server log (ServerLog counters
 ## `coop.<pair>.<kind>` and one `coop` line per event), which the debrief of #10 shows.
-## Pairs are the ids of spec §7.3, p1 to p15, in the order of StationViews.ENTRIES' joint
+## Pairs are the ids of spec §7.3, p1 to p15, in the order of StationViews.OTHER_SEATS' joint
 ## views. An unanswered chip that expired is counted as `chip_expired` and is no
 ## cooperative event.
 
@@ -145,8 +145,8 @@ static func _pair_key(a: String, b: String) -> String:
 static func _build_pairs() -> Dictionary:
 	var out: Dictionary = {}
 	var n: int = 0
-	for id: String in StationViews.ENTRIES:
-		var st: Array = StationViews.ENTRIES[id][2]
+	for id: String in StationViews.OTHER_SEATS:
+		var st: Array = StationViews.OTHER_SEATS[id][2]
 		if st.size() == 2:
 			n += 1
 			out[_pair_key(st[0], st[1])] = "p%d" % n

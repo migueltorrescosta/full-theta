@@ -1,7 +1,7 @@
 # h: the host (HostSession; the server child loses fights fast) plays Tactical.
 host_spawn pid_file=$RUN/server.pid.json grace=$GRACE publish=url args=["--encounter","m1","--m1-player-hull-scale","0.2"] timeout=60
 expect_welcome host=true
-ui_pick entry=tactical
+ui_pick seat=tactical
 barrier name=picked n=3 timeout=90
 ui_button name=Start timeout=30
 expect_event type=started payload.ship=0 timeout=30
@@ -29,7 +29,7 @@ ui_release id=face
 ui_expect card=true ship_outcome.outcome=win
 barrier name=won n=3 timeout=30
 # The crew votes; the reset brings everyone back to the lobby with their picks.
-ui_expect shown=lobby entry=tactical card=false started=false timeout=30
+ui_expect shown=lobby seat=tactical card=false started=false timeout=30
 barrier name=lobby1 n=3 timeout=30
 ui_button name=Start timeout=30
 expect_event type=started payload.ship=0 timeout=30
@@ -50,7 +50,7 @@ barrier name=lost n=3 timeout=30
 # The host runs it again alone (D178): the first tap names who is still deciding, the second runs it.
 ui_button name=RunAgain
 ui_button name=RunAgain
-ui_expect shown=lobby entry=tactical card=false timeout=30
+ui_expect shown=lobby seat=tactical card=false timeout=30
 barrier name=lobby2 n=3 timeout=30
 barrier name=left n=3 timeout=30
 host_stop

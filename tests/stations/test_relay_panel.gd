@@ -16,8 +16,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String = "relay", seam: bool = false) -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS, seam)
+func _screen(seat: String = "relay", seam: bool = false) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS, seam)
 	for s: String in StationViews.CREW:
 		ctx.settings.mark_hint_seen(s)
 	var s: StationScreen = auto_free(StationScreen.new())

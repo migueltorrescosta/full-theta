@@ -81,43 +81,43 @@ const EVENT_SHORTCUTS: Dictionary = {
 }
 
 
-## Whether a sim event of this kind reaches a session holding entry (faction and ship
+## Whether a sim event of this kind reaches a session holding seat (faction and ship
 ## checks are NetGame.event_audience()'s).
 static func sees_event(
-	entry: String, kind: StringName, toggles: String = StationViews.DEFAULT_TOGGLES
+	seat: String, kind: StringName, toggles: String = StationViews.DEFAULT_TOGGLES
 ) -> bool:
 	if EXACT_EVENTS.has(kind):
-		var seen: ViewFilter = ViewFilter.of(entry, toggles)
+		var seen: ViewFilter = ViewFilter.of(seat, toggles)
 		if seen != null and seen.condition_hidden:
 			return false
 	if CommsView.EVENTS.has(kind):  # Comms' own events
-		return StationViews.stations_of(entry).has("comms")
+		return StationViews.stations_of(seat).has("comms")
 	if not EVENT_STATIONS.has(kind):
 		return true
 	var shortcut: Array = EVENT_SHORTCUTS.get(kind, [])
 	var filter: ViewFilter = null
-	for station: String in StationViews.stations_of(entry):
+	for station: String in StationViews.stations_of(seat):
 		if not (EVENT_STATIONS[kind] as Array).has(station):
 			continue
 		if shortcut.is_empty() or station == shortcut[1]:
 			return true
 		if filter == null:
-			filter = ViewFilter.of(entry, toggles)
+			filter = ViewFilter.of(seat, toggles)
 		if filter != null and filter.grants(shortcut[0]):
 			return true
 	return false
 
 
-## The `value` of a sim event as an entry's view may carry it: an EXACT_EVENTS value as the
+## The `value` of a sim event as a seat's view may carry it: an EXACT_EVENTS value as the
 ## summaries toggle says (exact for Engineering and at the exact setting, the middle of its
 ## D193 band, else 0; a fault's heat is Engineering's alone); any other event's value as it
 ## is (D224).
 static func event_value(
-	entry: String, kind: StringName, value: float, toggles: String = StationViews.DEFAULT_TOGGLES
+	seat: String, kind: StringName, value: float, toggles: String = StationViews.DEFAULT_TOGGLES
 ) -> float:
 	if not EXACT_EVENTS.has(kind):
 		return value
-	var filter: ViewFilter = ViewFilter.of(entry, toggles)
+	var filter: ViewFilter = ViewFilter.of(seat, toggles)
 	if filter == null:
 		return 0.0
 	# A fault's heat is no summary at any setting: Engineering's alone.

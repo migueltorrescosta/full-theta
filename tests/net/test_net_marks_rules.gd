@@ -116,7 +116,7 @@ func test_alert_from_crew_only_and_reset() -> void:
 	assert_array(m.marks_of(SHIP)).is_empty()
 
 
-func test_roles_of_entries() -> void:
+func test_roles_of_seats() -> void:
 	assert_int(CrewMarks.role_of("ops")).is_equal(RELAY)
 	assert_int(CrewMarks.role_of("relay")).is_equal(RELAY)
 	assert_int(CrewMarks.role_of("tactical")).is_equal(CREW)

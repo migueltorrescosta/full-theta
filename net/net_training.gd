@@ -4,8 +4,8 @@ extends RefCounted
 ## that crew the other stations of a lesson. A client asks for a lesson at a station, or the
 ## crew drill ("" = the Shakedown with a crew); a server with no other crew switches to a
 ## fresh Shakedown and seats and starts the sender, otherwise it answers `busy` and nothing
-## changes for the players already on it. The bots take no session: they are entries that
-## count for coverage (NetLobby.entries_of) and press Next for their half of a pair
+## changes for the players already on it. The bots take no session: they are seats that
+## count for coverage (NetLobby.seats_of) and press Next for their half of a pair
 ## step (TrainingPartners). docs/protocol.md, "Solo training".
 
 const BUSY: String = "busy"
@@ -26,7 +26,7 @@ func _init(net_game: NetGame) -> void:
 
 
 ## The crew stations the bots hold in a solo lesson: all but the player's.
-func bot_entries() -> Array:
+func bot_seats() -> Array:
 	var out: Array = []
 	if solo != "":
 		for station: String in StationViews.CREW:
@@ -52,10 +52,10 @@ func on_join(s: NetSession) -> void:
 		hook.call(s, station)
 
 
-## Seats the session at `entry` of the ship and presses Start for it (the coverage check
+## Seats the session at `seat` of the ship and presses Start for it (the coverage check
 ## passes through the bots).
-func seat_and_start(s: NetSession, ship: int, entry: String) -> void:
-	game.lobby.move(s, ship, entry)
+func seat_and_start(s: NetSession, ship: int, seat: String) -> void:
+	game.lobby.move(s, ship, seat)
 	game.lobby.mark_ready(s)
 
 

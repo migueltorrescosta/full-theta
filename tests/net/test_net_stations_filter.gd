@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## L3 schema tests of the per-station snapshot filter (T042): real snapshots from a
 ## server over loopback, decoded section by section, hold nothing outside the
-## receiver's StationDef, at every difficulty-toggle set, and nothing of another
+## receiver's SeatDef, at every difficulty-toggle set, and nothing of another
 ## faction's knowledge.
 
 const PLAYER: int = NetHarness.PLAYER
@@ -9,8 +9,8 @@ const ENEMY: int = NetHarness.ENEMY
 
 const S = StationViews.Section
 
-## Sections each entry must and must not receive, by hand from docs/spec/05-stations.md
-## (not from StationViews): entry -> [required, forbidden].
+## Sections each seat must and must not receive, by hand from docs/spec/05-stations.md
+## (not from StationViews): seat -> [required, forbidden].
 const SPEC_05: Dictionary = {
 	# Cockpit with HUD and shield ring, claims flight and shield facing (FT-HLM-001,
 	# FT-HLM-008, FT-NET-022); no mounts or Engineering's tables.
@@ -49,7 +49,7 @@ const SPEC_05: Dictionary = {
 	"viewer":
 	[[S.KIN, S.STATUS, S.CONTACTS, S.NEAR, S.PROJECTILES], [S.HELM, S.MOUNTS, S.OWNERSHIP]],
 }
-## Fields the spec names: [entry, block, fields, rows field, row fields].
+## Fields the spec names: [seat, block, fields, rows field, row fields].
 const SPEC_05_FIELDS: Array = [
 	# Top bar: hull and shields (5.0).
 	["comms", S.STATUS, ["hull", "shields"]],
@@ -94,10 +94,10 @@ static func _sections(data: PackedByteArray) -> Array:
 	return out
 
 
-## Checks every kept snapshot of a client against its entry's StationDef; returns the
+## Checks every kept snapshot of a client against its seat's SeatDef; returns the
 ## number checked.
-func _check_snapshots(c: NetClient, entry: String) -> int:
-	var d: StationDef = StationViews.def(entry)
+func _check_snapshots(c: NetClient, seat: String) -> int:
+	var d: SeatDef = StationViews.def(seat)
 	var checked: int = 0
 	for seq: int in c.raw_snapshots:
 		var data: PackedByteArray = c.raw_snapshots[seq]
@@ -107,7 +107,7 @@ func _check_snapshots(c: NetClient, entry: String) -> int:
 			kinds.append(kind)
 			(
 				assert_array(d.sections)
-				. override_failure_message("%s got section %d" % [entry, kind])
+				. override_failure_message("%s got section %d" % [seat, kind])
 				. contains([kind])
 			)
 			if StationViews.BLOCKS.has(kind):
@@ -120,7 +120,7 @@ func _check_snapshots(c: NetClient, entry: String) -> int:
 					for item: String in table[group]:
 						(
 							assert_array(d.stations)
-							. override_failure_message("%s saw %s" % [entry, item])
+							. override_failure_message("%s saw %s" % [seat, item])
 							. contains([StationViews.station_of_item(item)])
 						)
 		if SnapshotReader.peek(data)[1]:
@@ -130,10 +130,10 @@ func _check_snapshots(c: NetClient, entry: String) -> int:
 
 
 # FT: FT-NET-009, FT-PAIR-005, FT-TST-010, FT-NET-008, FT-ARC-014
-# One client per catalogue entry (the dev entry included) on a running ship with
+# One client per seat (the dev seat included) on a running ship with
 # claims, last writers, shots and helm input in play: every full snapshot holds exactly
-# the entry's sections, every delta a subset, each block exactly its field set, and the
-# OWNERSHIP section only the entry's own stations' items; at each of the three presets (the
+# the seat's sections, every delta a subset, each block exactly its field set, and the
+# OWNERSHIP section only the seat's own stations' items; at each of the three presets (the
 # toggles change values, never a block's field set; the values are tests/net/
 # test_view_filter.gd's).
 func test_snapshots_hold_only_their_station_fields() -> void:

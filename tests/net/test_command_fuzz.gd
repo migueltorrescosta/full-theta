@@ -44,10 +44,10 @@ func _extremes(want: int) -> Array:
 	return table.get(want, [])
 
 
-func _session(entry: String) -> NetSession:
+func _session(seat: String) -> NetSession:
 	var s: NetSession = NetSession.new(1, 1.0e9, 1.0e9)
 	s.ship = PLAYER
-	s.entry = entry
+	s.seat = seat
 	return s
 
 
@@ -71,8 +71,8 @@ func test_every_station_command_field_survives_extreme_values() -> void:
 	var accepted: int = 0
 	var problems: Array[String] = []
 	for station: String in StationViews.STATION_COMMANDS:
-		var entry: String = station
-		var session: NetSession = _session(entry)
+		var seat: String = station
+		var session: NetSession = _session(seat)
 		for kind: StringName in StationViews.STATION_COMMANDS[station]:
 			var template: Dictionary = SimCommands.make(kind).to_dict()
 			# Next names the seat that presses it.

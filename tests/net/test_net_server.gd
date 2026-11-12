@@ -77,10 +77,10 @@ func _wait(ms: int) -> void:
 
 
 ## A welcomed client holding a pick, with its first full snapshot applied.
-func _joined(server: NetServer, name: String, entry: String) -> NetClient:
+func _joined(server: NetServer, name: String, seat: String) -> NetClient:
 	var c: NetClient = _client(server, name)
 	assert_bool(await _until(c.is_welcomed)).is_true()
-	c.pick(PLAYER, entry)
+	c.pick(PLAYER, seat)
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] >= 1)).is_true()
 	return c
 
@@ -99,7 +99,7 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_int(c.welcome["v"]).is_equal(NetProtocol.PROTOCOL_VERSION)
 	assert_str(c.token).has_length(32)
 	assert_float(c.welcome["period"]).is_equal(server.world.kin.period)
-	assert_int((c.catalogue["entries"] as Array).size()).is_equal(6 + 15 + 2 + 1)
+	assert_int((c.catalogue["seats"] as Array).size()).is_equal(6 + 15 + 2 + 1)
 	assert_int((c.catalogue["ships"] as Array).size()).is_equal(1)
 	var picked: Array[Dictionary] = _events_of(c.take_events(), NetProtocol.EVENT_PICKED)
 	assert_str(picked[0]["payload"]["reason"]).is_equal("")
@@ -362,10 +362,10 @@ func test_oversize_snapshot_and_voice_in_chunks_behind_snapshots() -> void:
 # client of a key gets the same bytes; different keys get different messages.
 func test_encode_once_per_view_key() -> void:
 	var server: NetServer = _server()
-	var entries: Array[String] = ["helm", "helm", "helm", "engineering", "engineering"]
+	var seats: Array[String] = ["helm", "helm", "helm", "engineering", "engineering"]
 	var clients: Array[NetClient] = []
-	for i: int in entries.size():
-		var c: NetClient = await _joined(server, "c%d" % i, entries[i])
+	for i: int in seats.size():
+		var c: NetClient = await _joined(server, "c%d" % i, seats[i])
 		c.keep_raw = true
 		clients.append(c)
 	await _wait(200)
@@ -414,7 +414,7 @@ func test_resume_by_token_and_host_secret() -> void:
 	assert_bool(c.welcome["resumed"]).is_true()
 	assert_str(c.token).is_equal(token)
 	assert_int(c.session_id).is_equal(first)
-	assert_str(c.welcome["entry"]).is_equal("engineering")
+	assert_str(c.welcome["seat"]).is_equal("engineering")
 	assert_bool(c.view.blocks.has(StationViews.Section.ENGINEERING)).is_true()
 	var guest: NetClient = _client(server, "guest")
 	guest.host_secret = "wrong"

@@ -31,7 +31,7 @@ func test_client_intents_decode() -> void:
 ## One payload per FleetMessages event.
 func _payloads() -> Dictionary:
 	var row: Dictionary = FleetMessages.fleet_ship(
-		1, "Kestrel II", 0, [{"name": "Ana", "entry": "tactical"}], 1, ["helm"], false, false
+		1, "Kestrel II", 0, [{"name": "Ana", "seat": "tactical"}], 1, ["helm"], false, false
 	)
 	var reason: String = GameOutcome.REASON_NAMES[GameOutcome.Reason.LAST_STANDING]
 	var teams: String = GameRules.MODE_NAMES[GameRules.Mode.TEAMS]

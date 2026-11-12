@@ -386,7 +386,7 @@ func _wait(why: String) -> Result:
 
 
 ## Follows a dotted path: dictionary keys (ints too), array indices, `size`; a name on
-## an array of dictionaries maps over it (entries.id is every entry's id).
+## an array of dictionaries maps over it (seats.id is every seat's id).
 static func _get_path(root: Variant, path: String) -> Variant:
 	var cur: Variant = root
 	for seg: String in path.split("."):
@@ -576,12 +576,12 @@ func _do_forget_token(_step: Dictionary) -> Result:
 # --- Steps: lobby, claims, commands, pause requests. ---
 
 
-## pick ship=S entry=E [expect=ok|REASON|none]: waits for the answer: a `picked` event
+## pick ship=S seat=E [expect=ok|REASON|none]: waits for the answer: a `picked` event
 ## (reason "" is ok) or a rejection naming a reason.
 func _do_pick(step: Dictionary) -> Result:
 	if not _st.has("from"):
 		_st["from"] = _events.size()
-		_client.pick(int(_arg(step, "ship", 0)), str(_arg(step, "entry", "")))
+		_client.pick(int(_arg(step, "ship", 0)), str(_arg(step, "seat", "")))
 	return _await_answer(step)
 
 
@@ -647,7 +647,7 @@ func _do_vote_abandon(step: Dictionary) -> Result:
 
 
 func _do_takeover(step: Dictionary) -> Result:
-	_client.takeover(int(_arg(step, "ship", 0)), str(_arg(step, "entry", "")))
+	_client.takeover(int(_arg(step, "ship", 0)), str(_arg(step, "seat", "")))
 	return Result.DONE
 
 
@@ -932,11 +932,11 @@ func _do_ui_join(step: Dictionary) -> Result:
 	return _wait("not joined: %s" % _ui.status())
 
 
-## ui_pick entry=E [expect=ok|REASON|none]: presses the entry's pick button in the lobby
+## ui_pick seat=E [expect=ok|REASON|none]: presses the seat's pick button in the lobby
 ## (of the ship shown) and waits for the answer, like `pick`.
 func _do_ui_pick(step: Dictionary) -> Result:
 	if not _st.has("from"):
-		var why: String = _ui.pick(str(_arg(step, "entry", "")))
+		var why: String = _ui.pick(str(_arg(step, "seat", "")))
 		if why != "":
 			return _wait(why)
 		_st["from"] = _events.size()

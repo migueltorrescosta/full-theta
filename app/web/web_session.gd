@@ -33,7 +33,7 @@ static func attach(shell_node: ClientShell) -> void:
 		var a: WebAutoplay = WebAutoplay.new()
 		a.client = shell_node.ctx.client
 		a.crew = shell_node.ctx.crew
-		a.entry = cfg.pick
+		a.seat = cfg.pick
 		a.press_ready = cfg.ready
 		s.add_child(a)
 
@@ -55,7 +55,7 @@ func _process(_delta: float) -> void:
 			client.resume()
 	var panel: String = "lobby"
 	if shell.screen != null:
-		panel = shell.ctx.crew.entry
+		panel = shell.ctx.crew.seat
 	if panel != _panel:
 		_panel = panel
 		WebPage.set_panel(panel)

@@ -8,7 +8,7 @@ extends RefCounted
 ##                        N - 1 (D108). 0 picks a free port (tests, smoke runs).
 ##   --bind ADDR          address to listen on, required: the chosen LAN address, not
 ##                        every interface (S3); 127.0.0.1 for a local host.
-##   --dev-all-stations   offer the dev entry holding every station (FT-NET-029, D72).
+##   --dev-all-stations   offer the dev seat holding every station (FT-NET-029, D72).
 ##   --seed N             world seed [1].
 ##   --host-secret-env    read the host secret from the FT_HOST_SECRET environment
 ##                        variable (what HostLauncher passes; D127); the host client

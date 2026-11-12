@@ -31,9 +31,9 @@ func _lobby(ships: int) -> LobbyScreen:
 	ctx.crew.lobby[0]["crew"] = 2
 	ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
 	ctx.crew.lobby[0]["seats"] = [
-		{"entry": "helm", "name": "Ana"},
-		{"entry": "weapons", "name": "Bo"},
-		{"entry": "systems", "name": "Cy"},
+		{"seat": "helm", "name": "Ana"},
+		{"seat": "weapons", "name": "Bo"},
+		{"seat": "systems", "name": "Cy"},
 	]
 	var teams: Array = [0, 1, 0, 1, 0, 1].slice(0, ships)
 	StationFixture.fleet(ctx, "teams", NAMES.slice(0, ships), teams)
@@ -81,7 +81,7 @@ func test_start_stays_visible_with_many_ships() -> void:
 					if not (report[key] as Array).is_empty():
 						failures.append("%s %s: %s" % [at, key, report[key]])
 				for id: String in LobbySeatGrid.GRID_STATIONS:
-					var role: Label = l.find_child("Entry_" + id, true, false).find_child(
+					var role: Label = l.find_child("Seat_" + id, true, false).find_child(
 						"Role", true, false
 					)
 					if role.get_line_count() > LobbySeatGrid.ROLE_LINES:

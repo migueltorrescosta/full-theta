@@ -36,7 +36,7 @@ const PAYLOADS: Dictionary = {
 		"started": TYPE_BOOL,
 	},
 	NetProtocol.EVENT_TAKEOVER:
-	{"ship": TYPE_INT, "entry": TYPE_STRING, "by": TYPE_STRING, "from_ship": TYPE_INT},
+	{"ship": TYPE_INT, "seat": TYPE_STRING, "by": TYPE_STRING, "from_ship": TYPE_INT},
 	NetProtocol.EVENT_HANDOVER: {"ship": TYPE_INT, "to_ship": TYPE_INT},
 	NetProtocol.EVENT_SCOREBOARD: {"rows": TYPE_ARRAY},
 	NetProtocol.EVENT_ELIMINATED: {"ship": TYPE_INT, "reason": TYPE_STRING, "lives": TYPE_INT},
@@ -90,7 +90,7 @@ static func resume(tick: int, host: bool) -> Dictionary:
 	return {"tick": tick, "host": host}
 
 
-## One ship of the multi-ship lobby (M4-Q3, M4-Q4): seats [{name, entry}] as in `lobby`,
+## One ship of the multi-ship lobby (M4-Q3, M4-Q4): seats [{name, seat}] as in `lobby`,
 ## crew and uncovered from NetCoverage, ready when it passes coverage, started when its crew
 ## pressed Start.
 static func fleet_ship(
@@ -139,10 +139,10 @@ static func fleet(
 	}
 
 
-## A session took over `entry` on `ship` during its pause (M4-Q8): `by` its name, from_ship
+## A session took over `seat` on `ship` during its pause (M4-Q8): `by` its name, from_ship
 ## the ship it came from (the same ship for its Captain or a viewer).
-static func takeover(ship: int, entry: String, by: String, from_ship: int) -> Dictionary:
-	return {"ship": ship, "entry": entry, "by": by, "from_ship": from_ship}
+static func takeover(ship: int, seat: String, by: String, from_ship: int) -> Dictionary:
+	return {"ship": ship, "seat": seat, "by": by, "from_ship": from_ship}
 
 
 ## An eliminated session now views to_ship's main screen, or TO_SCOREBOARD (FT-MIS-030, D91).

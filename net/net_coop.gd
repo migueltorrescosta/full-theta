@@ -117,10 +117,10 @@ func _apart(ship: int, pair: String) -> bool:
 	if stations.size() != 2:
 		return false
 	for a: NetSession in game.by_id.values():
-		if a.ship != ship or not StationViews.stations_of(a.entry).has(stations[0]):
+		if a.ship != ship or not StationViews.stations_of(a.seat).has(stations[0]):
 			continue
 		for b: NetSession in game.by_id.values():
-			if b != a and b.ship == ship and StationViews.stations_of(b.entry).has(stations[1]):
+			if b != a and b.ship == ship and StationViews.stations_of(b.seat).has(stations[1]):
 				return true
 	return false
 
@@ -130,7 +130,7 @@ func _mark_used(user: NetSession, slot: int) -> void:
 	if placer == null or placer.id == user.id or placer.ship != user.ship:
 		return
 	var pair: String = _first_pair(
-		StationViews.stations_of(placer.entry), StationViews.stations_of(user.entry)
+		StationViews.stations_of(placer.seat), StationViews.stations_of(user.seat)
 	)
 	if pair == "":
 		return

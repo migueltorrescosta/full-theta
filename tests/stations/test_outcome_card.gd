@@ -22,8 +22,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _card(entry: String, host: bool = false) -> OutcomeCard:
-	var ctx: StationContext = StationFixture.context(entry)
+func _card(seat: String, host: bool = false) -> OutcomeCard:
+	var ctx: StationContext = StationFixture.context(seat)
 	ctx.crew.host = host
 	var o: OutcomeCard = auto_free(OutcomeCard.new())
 	o.setup(ctx)
@@ -116,9 +116,9 @@ func test_a_viewer_is_told_who_runs_it_again() -> void:
 func test_the_hosts_run_again_waits_for_the_crew_with_one_confirm() -> void:
 	var h: OutcomeCard = _card("viewer", true)
 	h.ctx.crew.lobby[0]["seats"] = [
-		{"name": h.ctx.settings.player_name, "entry": "viewer"},
-		{"name": "Bo", "entry": "tactical"},
-		{"name": "Cy", "entry": "tactical"},
+		{"name": h.ctx.settings.player_name, "seat": "viewer"},
+		{"name": "Bo", "seat": "tactical"},
+		{"name": "Cy", "seat": "tactical"},
 	]
 	_over(h, "win")
 	var rec: StationFixture.RecordingClient = StationFixture.sent(h.ctx)
@@ -135,7 +135,7 @@ func test_the_hosts_run_again_waits_for_the_crew_with_one_confirm() -> void:
 
 
 # FT: FT-M1-012
-# Through the shell: the dev entry starts, the enemy is destroyed, the card shows
+# Through the shell: the dev seat starts, the enemy is destroyed, the card shows
 # Victory, its Run again button (1 of 1 crew) resets the run, the shell is back in the
 # lobby, and Start brings the station screen up on the new world.
 func test_shell_runs_again_after_a_win() -> void:
