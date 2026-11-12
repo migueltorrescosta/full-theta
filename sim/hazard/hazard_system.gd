@@ -19,6 +19,9 @@ const DAMAGE_EVERY: int = 6
 const EDGE_EPS: float = 0.01
 ## Most hazards a world holds (one bit each in HazardTable.crossed).
 const MAX_HAZARDS: int = 30
+## A signed front distance below -SEAM_JUMP * map period is a minimum-image wrap artefact,
+## not a real step of the front (R16-11).
+const SEAM_JUMP: float = 0.25
 
 
 static func step(world: SimWorld) -> void:
@@ -141,6 +144,10 @@ static func _front(world: SimWorld, ship: int, i: int, h: HazardDef, t: float) -
 	if d > EDGE_EPS:
 		return
 	table.crossed[ship] |= bit
+	# R16-11: a plane front's offset flips from +P/2 to -P/2 where the ship crosses the
+	# antipodal plane; that is no real crossing, so no hit.
+	if d < -SEAM_JUMP * world.kin.period:
+		return
 	# A ship already behind the surface at the first look (the front sets off behind it, or
 	# the ship is spawned or reset there) is crossed without a hit.
 	if first_look:
