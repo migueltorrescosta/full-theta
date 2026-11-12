@@ -100,6 +100,7 @@ func build(owner_screen: StationScreen, main: Control, rows: VBoxContainer) -> v
 	request_chips.answered.connect(
 		func(id: int, accept: bool) -> void: screen.ctx.intents.answer_chip(id, accept)
 	)
+	request_chips.sent.connect(_send_request)
 	glance.visible = false
 	glance.action_pressed.connect(_partner_intent)
 	ping_toast.name = "PingToast"
@@ -246,12 +247,36 @@ func process(now: int) -> void:
 				)
 			)
 	request_chips.show_chips(rows)
+	request_chips.show_sends(_sends(crew))
 	if screen.panels.size() == 2:
 		var other: String = screen.stations[1 - screen.focus_index]
 		glance.show_for(ctx, other, screen.focused_station())
 	else:
 		glance.visible = false
 	_place_view_top()
+
+
+## The focused panel's own requests for the view-top row (ux-13): [{text, left}].
+func _sends(crew: bool) -> Array:
+	var out: Array = []
+	var p: StationPanel = screen.focused_panel()
+	if not crew or p == null:
+		return out
+	var waiting: Array[Dictionary] = ChipsReader.outgoing(screen.ctx.snap, [p.station])
+	for c: ChipDef in p.request_chips():
+		var left: float = 0.0
+		for w: Dictionary in waiting:
+			if w["chip"] == String(c.id):
+				left = ChipsReader.left_s(screen.ctx.snap, w)
+		out.append({"text": p.chip_label(c), "left": left})
+	return out
+
+
+func _send_request(index: int) -> void:
+	var p: StationPanel = screen.focused_panel()
+	var chips: Array[ChipDef] = p.request_chips() if p != null else []
+	if index >= 0 and index < chips.size():
+		p.send_chip(chips[index])
 
 
 ## The view-top row (design 1.3) at the top of the focused panel's view: the selection

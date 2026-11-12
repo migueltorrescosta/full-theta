@@ -1,6 +1,6 @@
 class_name RequestChips
 extends VBoxContainer
-## Incoming request chips on a phone's view-top row (#28 follow-up, P28-Common, design 1.3,
+## Request chips on a phone's view-top row: the station's own requests to send, then the incoming ones (#28 follow-up, P28-Common, design 1.3,
 ## FT-PAIR-013): one row per chip another station sent here, "Helm: Boost · 18 s", with ✓
 ## (accept) and ✕ (decline), and under it what accepting does (`effect`, C5). On a phone this
 ## top-of-view strip is the only place chips show (the Crew page has none, ux-13); a chip that
@@ -12,6 +12,8 @@ extends VBoxContainer
 
 ## ✓ or ✕ on chip `id`.
 signal answered(id: int, accept: bool)
+## The player tapped the station's own request `index` (show_sends order) to send it.
+signal sent(index: int)
 
 const TEXT_W: float = 150.0
 const FONT: int = 13
@@ -19,12 +21,58 @@ const FONT: int = 13
 var _keys: Array = []
 var _ids: Array[int] = []
 var _labels: Array[Label] = []
+## The station's own requests, one button each, first in the column (ux-13: on a phone the
+## top of the view is the one place for chips, sent and received). A sent one waiting for an
+## answer shows its seconds left.
+var _sends: HFlowContainer = HFlowContainer.new()
+var _send_texts: Array = []
 
 
 func _init() -> void:
 	add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
+	_sends.name = "Sends"
+	_sends.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
+	_sends.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
+	_sends.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sends.visible = false
+	add_child(_sends)
+
+
+## `sends`: [{text, left (seconds, 0 when not waiting)}], the requests this station can send
+## now; empty hides the row (no chips toggle, or none from this station).
+func show_sends(sends: Array) -> void:
+	var texts: Array = sends.map(func(c: Dictionary) -> String: return str(c["text"]))
+	if texts != _send_texts:
+		_send_texts = texts
+		for b: Node in _sends.get_children():
+			_sends.remove_child(b)
+			b.queue_free()
+		for i: int in texts.size():
+			var b: RailButton = RailButton.make(str(texts[i]))
+			b.name = "Send_%d" % i
+			b.add_theme_font_size_override("font_size", FONT)
+			b.pressed.connect(func() -> void: sent.emit(i))
+			_sends.add_child(b)
+	for i: int in sends.size():
+		var left: float = float(sends[i].get("left", 0.0))
+		var b: RailButton = _sends.get_child(i) as RailButton
+		var text: String = str(texts[i])
+		if left > 0.0:
+			text = "%s · %d s" % [text, ceili(left)]
+		if b.text != text:
+			b.text = text
+	_sends.visible = not texts.is_empty()
+	visible = _sends.visible or not _keys.is_empty()
+
+
+## The send buttons, in show_sends order (tests).
+func send_buttons() -> Array[RailButton]:
+	var out: Array[RailButton] = []
+	for b: Node in _sends.get_children():
+		out.append(b as RailButton)
+	return out
 
 
 ## `chips`: [{id, text, left (seconds), effect (optional)}], oldest first.
@@ -42,15 +90,15 @@ func show_chips(chips: Array) -> void:
 		var text: String = "%s · %d s" % [chips[i]["text"], ceili(float(chips[i]["left"]))]
 		if _labels[i].text != text:
 			_labels[i].text = text
-	visible = not keys.is_empty()
+	visible = _sends.visible or not keys.is_empty()
 
 
-## The ✓ and ✕ buttons of row `i` (tests).
+## The ✓ and ✕ buttons of incoming row `i` (tests).
 func buttons(i: int) -> Array[RailButton]:
 	var out: Array[RailButton] = []
-	if i < 0 or i >= get_child_count():
+	if i < 0 or i + 1 >= get_child_count():
 		return out
-	for c: Node in get_child(i).get_child(0).get_children():
+	for c: Node in get_child(i + 1).get_child(0).get_children():
 		if c is RailButton:
 			out.append(c)
 	return out
@@ -58,6 +106,8 @@ func buttons(i: int) -> Array[RailButton]:
 
 func _rebuild(chips: Array) -> void:
 	for c: Node in get_children():
+		if c == _sends:
+			continue
 		remove_child(c)
 		c.queue_free()
 	_labels.clear()
