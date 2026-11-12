@@ -31,6 +31,9 @@ const BUTTON_COST: float = 8.0
 const SETTLE_FRAMES: int = 4
 ## A radar under this share of the window is a picture the card keeps clear of.
 const INSET_SHARE: float = 0.2
+## Tablet stations whose docked rails carry every action under its phone label, so a lesson
+## step reads in touch words there too (a step that names a phone page reads its own line).
+const TABLET_WORDS: Array[String] = ["engineering"]
 ## The widths a touch card tries, widest first, and the least.
 const WIDTHS: Array[float] = [400.0, 360.0, 320.0, 280.0]
 const MIN_WIDTH: float = 240.0
@@ -115,6 +118,11 @@ func setup(context: StationContext) -> void:
 
 func _process(_delta: float) -> void:
 	refresh()
+	# A wrapped text can settle a frame after the card was placed: the card grows to hold it.
+	if visible and _moved:
+		var want: float = get_combined_minimum_size().y
+		if size.y + 0.5 < want:
+			size.y = want
 
 
 ## Docked, the card sits at the top of a desktop screen's side column, in the layout, so it
@@ -150,6 +158,9 @@ func refresh() -> void:
 	var example: String = ""
 	if words:
 		example = touch_text(station, intent)
+		if example != "" and not LayoutMode.is_phone(LayoutMode.form_of(self)):
+			if names_page(station, intent):
+				example = strip_markers(drop_unbound(text, ctx.settings.bindings, device))
 	if example == "":
 		var key: String = str(entry.get("example", ""))
 		if key != "":
@@ -199,13 +210,33 @@ func touch_layout() -> bool:
 
 
 ## True when the step reads in touch words: a phone, whose stations have the rails, sticks and
-## tabs the words name (a tablet shows the desktop panels), unless a pad is in use.
+## tabs the words name, or a tablet station whose docked rails name every action (TABLET_WORDS;
+## the other tablets show the desktop panels), unless a pad is in use.
 func touch_wording() -> bool:
-	if not is_inside_tree() or not LayoutMode.is_phone(LayoutMode.form_of(self)):
+	if not is_inside_tree():
+		return false
+	var form: LayoutMode.Form = LayoutMode.form_of(self)
+	if not (
+		LayoutMode.is_phone(form) or (form == LayoutMode.Form.TABLET and station in TABLET_WORDS)
+	):
 		return false
 	return not (
 		ctx.matcher.device == IntentTable.PAD and not Input.get_connected_joypads().is_empty()
 	)
+
+
+## True when the touch words of the step name a phone page ("Open Ship", "on the Power
+## page"), which a tablet doesn't have.
+static func names_page(for_station: String, intent: String) -> bool:
+	for key: String in ["train.touch.%s.%s" % [for_station, intent], "train.touch.%s" % intent]:
+		var t: String = TranslationServer.translate(key)
+		if t != key:
+			return (
+				t.contains("{t:page.")
+				or t.contains("{t:eng.touch.ship}")
+				or t.contains("{t:eng.power}")
+			)
+	return false
 
 
 ## `text` without its `{binding:...}` markers (a touch layout has no binding to show).
@@ -287,18 +318,39 @@ func _set_touch_layout(touch: bool) -> void:
 		_text.clip_text = false
 		var beside: float = UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP
 		if is_folded():
-			beside += _next.get_combined_minimum_size().x + UiTheme.TOUCH_GAP
-		_text.custom_minimum_size.x = maxf(width - 24.0 - beside, 96.0)
-		# Folded, its wrapped height at that width (a Label sizes a wrapped text for the width it
-		# has, which the one-line row doesn't give it yet).
+			# Next's width from its words (its combined size may not have caught up yet), so the
+			# text's width below is the one it gets.
+			var next_w: float = (
+				(
+					_next
+					. get_theme_font("font")
+					. get_string_size(
+						_next.text,
+						HORIZONTAL_ALIGNMENT_LEFT,
+						-1,
+						_next.get_theme_font_size("font_size")
+					)
+					. x
+				)
+				+ _next.get_theme_stylebox("normal").get_minimum_size().x
+				+ 2.0
+			)
+			_next.custom_minimum_size.x = ceilf(next_w)
+			beside += ceilf(next_w) + UiTheme.TOUCH_GAP
+		var pad: float = get_theme_stylebox("panel").get_minimum_size().x
+		_text.custom_minimum_size.x = maxf(width - pad - beside, 96.0)
+		# Folded, its wrapped height at the narrowest card's width (a Label sizes a wrapped text
+		# for the width it has, which the one-line row doesn't give it yet; and a later look may
+		# place the card narrower), so the step is never cut whatever width it ends at.
 		if is_folded():
 			var font: Font = _text.get_theme_font("font")
 			var fs: int = _text.get_theme_font_size("font_size")
+			var narrowest: float = maxf(
+				minf(width, WIDTHS[-1]) - pad - beside, minf(_text.custom_minimum_size.x, 96.0)
+			)
 			var h: float = (
 				font
-				. get_multiline_string_size(
-					_text.text, HORIZONTAL_ALIGNMENT_LEFT, _text.custom_minimum_size.x, fs, 3
-				)
+				. get_multiline_string_size(_text.text, HORIZONTAL_ALIGNMENT_LEFT, narrowest, fs, 3)
 				. y
 			)
 			_text.custom_minimum_size.y = h
@@ -389,7 +441,13 @@ func _add_pickers(node: Node, taken: Array[Rect2]) -> void:
 		return
 	# A docked rail (a tablet's) is an opaque column drawn over the view: the card would hide
 	# under it.
-	if c is ShieldRing or (c is DiscRadar and _is_inset(c)) or (c is TouchRail and c.docked):
+	# Engineering's cutaway is a picture the finger works on (crews dragged, the hull turned).
+	if (
+		c is ShieldRing
+		or c is EngineeringCutaway
+		or (c is DiscRadar and _is_inset(c))
+		or (c is TouchRail and c.docked)
+	):
 		taken.append(c.get_global_rect().grow(UiTheme.TOUCH_GAP))
 		return
 	for ch: Node in node.get_children():
@@ -422,7 +480,13 @@ func _layout_key() -> Array:
 func _arrange() -> Vector2:
 	_set_touch_layout(true)
 	reset_size()
-	return Vector2(card_width(), maxf(get_combined_minimum_size().y, 1.0))
+	var h: float = get_combined_minimum_size().y
+	if is_folded():
+		# One row: the text (its wrapped height, set just now) beside Next and the fold
+		# button. The containers' cached sizes catch up a frame later.
+		var row: float = maxf(_text.custom_minimum_size.y, UiTheme.TOUCH_PRIMARY)
+		h = maxf(h, row + get_theme_stylebox("panel").get_minimum_size().y)
+	return Vector2(card_width(), maxf(h, 1.0))
 
 
 ## The highest spot of `size_now` inside `room` clear of `taken` (the current one while it
