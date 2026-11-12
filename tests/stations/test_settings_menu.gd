@@ -335,8 +335,8 @@ func test_the_game_tab_renames_the_player() -> void:
 
 
 # FT: FT-STN-011
-# #28: on a touch layout the check boxes and the Advanced toggle are 44 px tall; on a
-# desktop they keep their own height.
+# #28: on a touch layout the check boxes and the Advanced toggle are 44 px tall with a
+# bigger box, and the tabs are 44 px tall; on a desktop they keep the theme's sizes.
 func test_touch_layouts_get_44_px_check_boxes() -> void:
 	var m: SettingsScreen = _menu()
 	LayoutMode.forced = LayoutMode.Kind.TOUCH
@@ -346,6 +346,17 @@ func test_touch_layouts_get_44_px_check_boxes() -> void:
 		assert_float(c.custom_minimum_size.y).override_failure_message(n).is_equal(
 			float(UiTheme.TOUCH_MIN)
 		)
+	var comfort: CheckBox = m.find_child("Comfort", true, false)
+	assert_int(comfort.get_theme_icon("unchecked").get_height()).is_equal(UiTheme.CHECK_ICON_TOUCH)
+	var tab: StyleBox = m.tabs.get_theme_stylebox("tab_selected")
+	var line: float = m.tabs.get_theme_font("font").get_height(
+		m.tabs.get_theme_font_size("font_size")
+	)
+	assert_float(line + tab.content_margin_top + tab.content_margin_bottom).is_greater_equal(
+		float(UiTheme.TOUCH_MIN)
+	)
 	LayoutMode.forced = LayoutMode.Kind.DESKTOP
 	m._fit_safe_area()
-	assert_float((m.find_child("Comfort", true, false) as Control).custom_minimum_size.y).is_zero()
+	assert_float(comfort.custom_minimum_size.y).is_zero()
+	assert_bool(comfort.has_theme_icon_override("unchecked")).is_false()
+	assert_bool(m.tabs.has_theme_stylebox_override("tab_selected")).is_false()
