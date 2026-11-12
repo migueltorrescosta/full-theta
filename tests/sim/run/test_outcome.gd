@@ -70,14 +70,14 @@ func test_win_when_enemy_destroyed() -> void:
 
 
 # FT: FT-M1-012, FT-SIM-030
-# The raider's hull set to 20 % at the start (below its 25 %): it retreats at full
-# throttle and, once past the corvette's 20 km sensors, is RETREATED with one
-# &"retreated" and the corvette wins on that tick (measured: tick 3661, 61.0 s; bound
-# 120 s). Before that tick the corvette still detected it.
+# gp-17 (D9, amending D120): the raider's hull set to 20 % at the start (below its 25 %), it
+# retreats at full throttle from 5 km; with a test copy whose gone factor is 2 (6 km, so the
+# start is inside it) it is RETREATED on the first tick past 6 km, with one &"retreated", and
+# the corvette wins on that tick; no kill is counted and nothing is destroyed.
 func test_win_when_enemy_retreats() -> void:
-	var world: SimWorld = _world(7)
+	var world: SimWorld = _world_with(_raider(2.0, 45.0), 7)
 	world.damage.health[world.damage.hull_row(ENEMY)] = 0.2 * world.defs[ENEMY].hull_max
-	var events: Array[SimEvent] = _run_to_outcome(world, null, 120 * HZ)
+	var events: Array[SimEvent] = _run_to_outcome(world, null, 60 * HZ)
 	var retreated: Array[SimEvent] = SimFixture.of_kind(events, &"retreated")
 	var outcomes: Array[SimEvent] = SimFixture.of_kind(events, &"outcome")
 	assert_int(retreated.size()).is_equal(1)
@@ -88,16 +88,80 @@ func test_win_when_enemy_retreats() -> void:
 	assert_str(String(outcomes[0].tag)).is_equal("win")
 	assert_int(outcomes[0].tick).is_equal(retreated[0].tick)
 	assert_array(SimFixture.of_kind(events, &"destroyed")).is_empty()
-	var lost: Array[SimEvent] = SimFixture.of_kind(events, &"contact_lost").filter(
-		func(e: SimEvent) -> bool: return e.other_id == ENEMY
-	)
-	assert_int(lost.size()).is_equal(1)
-	assert_int(lost[0].tick).is_equal(retreated[0].tick)
+	assert_int(world.ships.kills[PLAYER]).is_equal(0)
 	assert_int(world.ships.status[ENEMY]).is_equal(ShipStateTable.Status.RETREATED)
 	assert_int(world.ai.mode[ENEMY]).is_equal(AiTable.Mode.RETREAT)
-	assert_float(world.kin.relative(PLAYER, ENEMY).length()).is_greater(20000.0)
+	assert_float(world.kin.relative(PLAYER, ENEMY).length()).is_between(6000.0, 6100.0)
+	# The corvette still detects it: its sensors are not the rule any more.
+	assert_bool(KnowledgeSystem.is_detected(world, M1Encounter.PLAYER_FACTION, ENEMY)).is_true()
 	assert_array(SimFixture.of_kind(SimFixture.run(world, 5 * HZ), &"retreated")).is_empty()
 	print("win by retreat at tick %d (%.1f s)" % [outcomes[0].tick, outcomes[0].tick / 60.0])
+
+
+# FT: FT-M1-012, FT-SIM-030
+# gp-17, R10-13: a blinded crew (sensors at 0) does not let a retreating raider go at once:
+# with a gone factor far beyond reach, it jumps out exactly retreat_jump_after (45 s) after
+# its retreat began, and not before; no kill is counted.
+func test_a_retreat_jumps_out_after_its_time_even_unseen() -> void:
+	var world: SimWorld = _world_with(_raider(100.0, 45.0), 7)
+	world.damage.health[world.damage.find_subsystem(PLAYER, KnowledgeSystem.SENSORS)] = 0.0
+	world.damage.health[world.damage.hull_row(ENEMY)] = 0.2 * world.defs[ENEMY].hull_max
+	var events: Array[SimEvent] = SimFixture.run(world, 2)
+	assert_int(world.ai.mode[ENEMY]).is_equal(AiTable.Mode.RETREAT)
+	var began: int = world.ai.retreat_tick[ENEMY]
+	assert_int(began).is_greater_equal(0)
+	assert_bool(KnowledgeSystem.is_detected(world, M1Encounter.PLAYER_FACTION, ENEMY)).is_false()
+	while world.tick < began + SimRate.ticks(45.0) - 1:
+		events.append_array(SimFixture.run(world, 1))
+	assert_int(world.ships.status[ENEMY]).is_equal(ShipStateTable.Status.IN_PLAY)
+	events.append_array(SimFixture.run(world, 2))
+	var retreated: Array[SimEvent] = SimFixture.of_kind(events, &"retreated")
+	assert_int(retreated.size()).is_equal(1)
+	assert_int(retreated[0].tick).is_equal(began + SimRate.ticks(45.0))
+	assert_int(world.ships.status[ENEMY]).is_equal(ShipStateTable.Status.RETREATED)
+	assert_array(SimFixture.of_kind(events, &"destroyed")).is_empty()
+	assert_int(world.ships.kills[PLAYER]).is_equal(0)
+
+
+# FT: FT-M1-012, FT-SIM-030
+# gp-17, R10-13: with the real raider (1.5 x 3 km) and blinded sensors, a raider retreating
+# from 2 km stays in play while the corvette is within 4.5 km, and is gone on the first tick
+# beyond it, well before 45 s.
+func test_a_retreat_is_gone_past_its_range_even_unseen() -> void:
+	var world: SimWorld = _world_with(TestDefs.raider_enemy(), 7)
+	var p: PackedFloat64Array = world.kin.point_at(PLAYER, Vector3(0.0, 0.0, -2000.0))
+	world.kin.place(ENEMY, p)
+	world.damage.health[world.damage.find_subsystem(PLAYER, KnowledgeSystem.SENSORS)] = 0.0
+	world.damage.health[world.damage.hull_row(ENEMY)] = 0.2 * world.defs[ENEMY].hull_max
+	var reach: float = 1.5 * TestDefs.raider_enemy().engage_range_max
+	var gone_at: float = -1.0
+	var n: int = 0
+	while gone_at < 0.0 and n < 45 * HZ:
+		var d: float = world.kin.relative(PLAYER, ENEMY).length()
+		SimFixture.run(world, 1)
+		n += 1
+		if world.ships.status[ENEMY] == ShipStateTable.Status.RETREATED:
+			gone_at = world.kin.relative(PLAYER, ENEMY).length()
+		else:
+			assert_float(d).override_failure_message("still in play at %s m" % d).is_less_equal(
+				reach + 50.0
+			)
+	assert_float(gone_at).is_greater(reach)
+	assert_int(n).is_less(45 * HZ)
+	assert_int(world.ships.kills[PLAYER]).is_equal(0)
+
+
+## The M1 encounter with `enemy` as the raider.
+func _world_with(enemy: NpcDef, world_seed: int) -> SimWorld:
+	return M1Encounter.new(world_seed, "test", TestDefs.corvette(), enemy).build()
+
+
+## A test copy of the raider with other retreat numbers (the loaded one stays untouched).
+func _raider(gone_factor: float, jump_after: float) -> NpcDef:
+	var def: NpcDef = TestDefs.raider_enemy().duplicate()
+	def.retreat_gone_factor = gone_factor
+	def.retreat_jump_after = jump_after
+	return def
 
 
 # FT: FT-M1-012, FT-SIM-030

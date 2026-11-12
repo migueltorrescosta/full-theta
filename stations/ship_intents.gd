@@ -149,6 +149,11 @@ func host_pause(on: bool) -> void:
 	_call(&"host_pause", [on])
 
 
+## Ready (or not) to skip the quiet gap before the next encounter (gp-07).
+func skip_gap(ready: bool) -> void:
+	_call(&"skip_gap", [ready])
+
+
 ## "Run again" after the outcome (D178); the host's vote resets at once.
 func run_again(ship: int, vote: bool) -> void:
 	_call(&"run_again", [ship, vote])

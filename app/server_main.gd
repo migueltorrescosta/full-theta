@@ -80,6 +80,7 @@ const DEV_ENV: String = "FT_DEV"
 ## The Shakedown's drone answers a training hail so Comms can do that step (review 2, H2).
 const HAIL_CONVERSATIONS: Dictionary[StringName, StringName] = {
 	&"m1_raider": &"conv.surrender_demand",
+	&"heavy_raider": &"conv.surrender_demand",
 	&"drone": &"conv.training_hail",
 	&"m3_stranded": &"conv.trader_bluff"
 }

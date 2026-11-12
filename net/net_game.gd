@@ -92,6 +92,7 @@ var host_pause: NetHostPause
 ## The multi-ship lobby and PvP rules (#11).
 var fleet: NetFleet
 var training: NetTraining  # solo lessons (D303)
+var skip_gap: NetSkipGap  # gp-07
 
 var _next_id: int = 1
 ## Submitted commands awaiting the sim's verdict: [session id, seq, SimCommand, tick].
@@ -125,6 +126,7 @@ func _init(net: NetTransport, sim_world: SimWorld) -> void:
 	host_pause = NetHostPause.new(self)
 	fleet = NetFleet.new(self)
 	training = NetTraining.new(self)
+	skip_gap = NetSkipGap.new(self)
 
 
 ## Registers the handler of a message type: Callable(NetSession, msg, now_us), or
@@ -168,6 +170,7 @@ func process(now_us: int) -> void:
 	chips.step()
 	shares.step()
 	coop.step()
+	skip_gap.step()
 	publish()
 
 

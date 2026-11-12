@@ -451,6 +451,14 @@ func commands_this_tick(ship_id: int) -> Array[ApiEvent]:
 	return out
 
 
+## Sets a story flag (SetFlagCommand): the director's quiet-gap flags (Director.gap_flag).
+func set_flag(name: StringName, value: int) -> void:
+	var cmd: SetFlagCommand = SetFlagCommand.new()
+	cmd.flag_name = name
+	cmd.value = value
+	_world.submit(cmd)
+
+
 ## Sets the relation between two factions (a SimWorld.Relation value).
 func set_relation(a: int, b: int, relation_value: int) -> void:
 	var cmd: SetRelationCommand = SetRelationCommand.new()

@@ -204,6 +204,11 @@ func host_pause(on: bool) -> void:
 	_send(NetProtocol.Type.HOST_PAUSE, {"on": on})
 
 
+## Ready (or not) to skip the quiet gap (gp-07).
+func skip_gap(ready: bool) -> void:
+	_send(NetProtocol.Type.SKIP_GAP, {"ready": ready})
+
+
 func vote_abandon(ship: int, vote: bool) -> void:
 	_send(NetProtocol.Type.ABANDON_VOTE, {"ship": ship, "vote": vote})
 

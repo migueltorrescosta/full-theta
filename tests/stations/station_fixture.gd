@@ -100,6 +100,9 @@ class RecordingClient:
 	func host_pause(on: bool) -> void:
 		sent.append(["host_pause", [on]])
 
+	func skip_gap(ready: bool) -> void:
+		sent.append(["skip_gap", [ready]])
+
 	func takeover(ship: int, seat: String) -> void:
 		sent.append(["takeover", [ship, seat]])
 
