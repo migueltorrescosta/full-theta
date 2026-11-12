@@ -93,6 +93,12 @@ One meaning per term; code, wire, docs and player text use these words (D392 to 
 | Step | One item of a lesson or the crew drill. |
 | Tip | One short line of advice on the loading screen and in the Tips menu (`content/tips/tips.json`; D291). |
 | Give up | The player text for ending a run early by vote; in code `abandon` (co-op) or `forfeit` (PvP) (D267, D367, D407). |
+| Ready | A crew player's lobby toggle saying they are set; a seat or ship change clears it (`Ready{ready}`; D408). |
+| Start | The host's one button that starts every crewed ship together, once all are covered and every crew player is Ready; with no host connected, any Ready crew player's (`Start` request; D408). |
+| Game setup | The host's lobby sheet with the mode, difficulty, data shortcuts, ships and teams; the others see its one-line summary (D409). |
+| Critical alert | Hull under 25 %, a fault, a shield down or a missile lock: voice, banner and edge flash; everything else is a toast (D414). |
+| First-seat card | The dismissible card of a station's first three lesson steps on a player's first seat there (D415). |
+| Callouts quiz | Training's client-only quiz on reading a callout (D416). |
 | Units | SI quantities have no suffix in defs, `.tres` keys, the wire and the sim; only non-SI units keep one: `_ticks`, `_ms`, `_us`, `_km`, `_deg`, `_px`, `_db`, `_min` (D403). |
 | Slot module | An upgrade fitted to a ship slot, with a trade-off; bought while docked via Comms (D86). |
 | EE | EmptyEpsilon, the reference game (GPL-2.0-only; ideas only). |
