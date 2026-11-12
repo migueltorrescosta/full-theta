@@ -38,8 +38,9 @@ while (($#)); do
     *) echo "l4load: unknown argument $1" >&2; exit 2 ;;
   esac
 done
-per=$((64 / procs))
-((per * procs == 64)) || { echo "l4load: L4_LOAD_PROCS must divide 64" >&2; exit 2; }
+seats=$(sed -n 's/^const CONNECTIONS: int = \([0-9]*\).*/\1/p' tools/l4/load_seats.gd)
+per=$((seats / procs))
+((per * procs == seats)) || { echo "l4load: L4_LOAD_PROCS must divide $seats" >&2; exit 2; }
 godot=$(tools/get-godot.sh) || exit 1
 out=$(mkdir -p "$out" && cd "$out" && pwd)
 # Joining 64 clients on a loaded host takes a while; then warmup and window.

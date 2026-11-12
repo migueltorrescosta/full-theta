@@ -36,6 +36,7 @@ fi
 expected="build: $version $commit"
 [[ -d tools/l6/node_modules ]] || (cd tools/l6 && npm ci --silent) || exit 1
 
+web_s=90 # the web export must answer and load within this; the server outlives it
 run=$out/run
 rm -rf "$run"
 mkdir -p "$run"
@@ -68,14 +69,14 @@ check() { # kind, port, path prefix for the game's own paths, launcher...; 1 on 
 
   echo "l6: $kind: serve and load the web export"
   "$@" --headless -- --server --bind 127.0.0.1 --port "$port" --http-root "$dir/web" \
-    --no-beacon --run-for 120 >"$log/server.log" 2>&1 &
+    --no-beacon --run-for $((web_s + 30)) >"$log/server.log" 2>&1 &
   local pid=$!
   # Fixed ports, unlike the other tiers: a release build's stdout is block-buffered into a
   # file, so the server's "ready" line (tools/lib.sh) is not there until exit; the web
   # port answering is the signal instead.
   web_up() { (: </dev/tcp/127.0.0.1/$((port - 1))) 2>/dev/null; }
-  if ft_wait_for "$kind web server on port $((port - 1))" 90 web_up; then
-    if ! node tools/l6/web_load.mjs "http://ft-l6.lan:$((port - 1))/" "$expected" 90 \
+  if ft_wait_for "$kind web server on port $((port - 1))" "$web_s" web_up; then
+    if ! node tools/l6/web_load.mjs "http://ft-l6.lan:$((port - 1))/" "$expected" "$web_s" \
       | tee "$log/web.log" | sed "s/^/l6: $kind: /"; then
       failed=1
     fi
