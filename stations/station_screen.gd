@@ -326,11 +326,14 @@ func _process(delta: float) -> void:
 	critical.update(now)
 	var card: FirstSeatCard = first_seat_card()
 	if card != null:
-		# Over the focused panel's view, clear of its rails and the rest of the HUD columns.
+		# Over the focused panel's view, clear of its rails and the rest of the HUD columns,
+		# and on a phone under the frame's view-top row (the selection chip, Ask).
 		var p: StationPanel = focused_panel()
-		card.bounds = Rect2(
-			p.global_position - global_position + p.view_rect().position, p.view_rect().size
-		)
+		var view: Rect2 = p.view_rect()
+		view.position += p.global_position - global_position
+		if frame.framed():
+			view = view.grow_side(SIDE_TOP, -p.top_reserve)
+		card.bounds = view
 	var spot: Rect2 = _notice_rect()
 	toasts.place(spot)
 	if critical.visible:
