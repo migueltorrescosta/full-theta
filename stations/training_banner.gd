@@ -308,10 +308,10 @@ func _set_touch_layout(touch: bool) -> void:
 				_head.move_child(_next, _fold.get_index())
 			else:
 				_col.move_child(_next, _col.get_child_count() - 1)
-		# Folded, the step still reads whole: it wraps onto up to three lines beside Next (a
-		# one-line cut "pick a subsyste" hid the step itself).
+		# Folded, the step wraps onto two lines beside Next; a step that needs more never folds
+		# by itself (place: _folded_fits), so it is never cut.
 		_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_text.max_lines_visible = 3 if is_folded() else -1
+		_text.max_lines_visible = 2 if is_folded() else -1
 		_text.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		_text.clip_text = false
 		var beside: float = UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP
@@ -337,23 +337,9 @@ func _set_touch_layout(touch: bool) -> void:
 			beside += ceilf(next_w) + UiTheme.TOUCH_GAP
 		var pad: float = get_theme_stylebox("panel").get_minimum_size().x
 		_text.custom_minimum_size.x = maxf(width - pad - beside, 96.0)
-		# Folded, its wrapped height at the narrowest card's width (a Label sizes a wrapped text
-		# for the width it has, which the one-line row doesn't give it yet; and a later look may
-		# place the card narrower), so the step is never cut whatever width it ends at.
-		if is_folded():
-			var font: Font = _text.get_theme_font("font")
-			var fs: int = _text.get_theme_font_size("font_size")
-			var narrowest: float = maxf(
-				minf(width, WIDTHS[-1]) - pad - beside, minf(_text.custom_minimum_size.x, 96.0)
-			)
-			var h: float = (
-				font
-				. get_multiline_string_size(_text.text, HORIZONTAL_ALIGNMENT_LEFT, narrowest, fs, 3)
-				. y
-			)
-			_text.custom_minimum_size.y = h
-		else:
-			_text.custom_minimum_size.y = 0.0
+		# The text's wrapped height from its words at that width: the Label's own size catches
+		# up a frame later, and a card placed with a stale height cut its last line.
+		_text.custom_minimum_size.y = _text_height()
 	else:
 		if _moved:
 			_moved = false
@@ -416,17 +402,67 @@ func place() -> Rect2:
 		_squeezed = squeeze
 		for w: float in WIDTHS:
 			_width = w
+			if squeeze and not _folded_fits():
+				continue
 			size_now = _arrange()
 			spot = _free_spot(room, taken, size_now)
 			if spot != null:
 				break
 		if spot != null:
 			break
+	if spot == null:
+		# Nowhere free: the widest one-line card that holds the whole step, else the whole
+		# card at its narrowest, where it covers the least.
+		_squeezed = false
+		_width = WIDTHS[-1]
+		for w: float in WIDTHS:
+			_width = w
+			_squeezed = true
+			if _folded_fits():
+				break
+			_squeezed = false
+		if not _squeezed:
+			_width = WIDTHS[-1]
+		size_now = _arrange()
 	var at: Vector2 = spot if spot != null else _least_covered(room, taken, buttons, size_now)
 	_moved = true
 	size = size_now
 	global_position = at
 	return Rect2(at, size_now)
+
+
+## Whether the step's text fits the folded card's one row (two lines beside Next and the
+## fold button) at the card width being tried, measured from its words (the containers'
+## sizes catch up a frame later, so they can't tell yet).
+func _folded_fits() -> bool:
+	var next_font: Font = _next.get_theme_font("font")
+	var next_w: float = (
+		(
+			next_font
+			. get_string_size(
+				_next.text, HORIZONTAL_ALIGNMENT_LEFT, -1, _next.get_theme_font_size("font_size")
+			)
+			. x
+		)
+		+ _next.get_theme_stylebox("normal").get_minimum_size().x
+		+ 2.0
+	)
+	var room: float = (
+		card_width()
+		- get_theme_stylebox("panel").get_minimum_size().x
+		- UiTheme.TOUCH_PRIMARY
+		- ceilf(next_w)
+		- 2.0 * UiTheme.TOUCH_GAP
+	)
+	var font: Font = _text.get_theme_font("font")
+	var h: float = (
+		font
+		. get_multiline_string_size(
+			_text.text, HORIZONTAL_ALIGNMENT_LEFT, room, _text.get_theme_font_size("font_size"), 3
+		)
+		. y
+	)
+	return h <= UiTheme.TOUCH_PRIMARY
 
 
 ## Adds the rectangles of the pictures a finger taps (the radar, the shield ring), which are
@@ -478,13 +514,36 @@ func _layout_key() -> Array:
 func _arrange() -> Vector2:
 	_set_touch_layout(true)
 	reset_size()
-	var h: float = get_combined_minimum_size().y
-	if is_folded():
-		# One row: the text (its wrapped height, set just now) beside Next and the fold
-		# button. The containers' cached sizes catch up a frame later.
-		var row: float = maxf(_text.custom_minimum_size.y, UiTheme.TOUCH_PRIMARY)
-		h = maxf(h, row + get_theme_stylebox("panel").get_minimum_size().y)
+	# Measured from the parts' own sizes, not the containers' cached ones (a frame behind): the
+	# text row (beside the fold button, and Next when folded), then Next under it.
+	var row: float = maxf(_text.custom_minimum_size.y, UiTheme.TOUCH_PRIMARY)
+	if not is_folded():
+		row += UiTheme.TOUCH_GAP + UiTheme.TOUCH_PRIMARY
+	var h: float = maxf(
+		get_combined_minimum_size().y, row + get_theme_stylebox("panel").get_minimum_size().y
+	)
 	return Vector2(card_width(), maxf(h, 1.0))
+
+
+## The step text's height at its width: its wrapped lines (two at most when folded), each a
+## font line and the Label's line spacing.
+func _text_height() -> float:
+	var font: Font = _text.get_theme_font("font")
+	var fs: int = _text.get_theme_font_size("font_size")
+	var line: float = font.get_height(fs)
+	var h: float = (
+		font
+		. get_multiline_string_size(
+			_text.text,
+			HORIZONTAL_ALIGNMENT_LEFT,
+			_text.custom_minimum_size.x,
+			fs,
+			2 if is_folded() else -1
+		)
+		. y
+	)
+	var lines: int = maxi(roundi(h / line), 1)
+	return lines * line + (lines - 1) * _text.get_theme_constant("line_spacing")
 
 
 ## The highest spot of `size_now` inside `room` clear of `taken` (the current one while it
