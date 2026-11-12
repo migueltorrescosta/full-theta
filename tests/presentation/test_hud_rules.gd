@@ -116,7 +116,9 @@ func test_a_toast_sits_inside_the_top_bar_and_covers_no_control() -> void:
 				s.top_bar.chip, s.top_bar.sound, s.top_bar.menu_button, s.top_bar.tabs
 			]
 			for c: Control in controls:
-				if c.is_visible_in_tree():
+				# (an upright phone's empty tab strip is only room, which a toast may take)
+				var empty: bool = c == s.top_bar.tabs and not s.top_bar.tabs.has_content()
+				if c.is_visible_in_tree() and not empty:
 					(
 						assert_bool(c.get_global_rect().intersects(box))
 						. override_failure_message("%s: toast over %s" % [where, c.name])

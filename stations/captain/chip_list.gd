@@ -11,7 +11,9 @@ extends Control
 ## and "until" (ms).
 
 const DONE_MS: int = 3000
-const ROW_HEIGHT: float = 46.0
+const ROW_HEIGHT: float = 50.0
+## The rows keep this much clear of the list's right edge.
+const MARGIN: float = 8.0
 const TIME_FONT_SIZE: int = 13
 const HEADER_HEIGHT: float = 26.0
 const FONT_SIZE: int = 15
@@ -134,14 +136,13 @@ func _draw() -> void:
 	for i: int in mini(all.size(), MAX_ROWS):
 		var row: Dictionary = all[i]
 		var gone: bool = row.has("state")
-		var r: Rect2 = Rect2(0.0, HEADER_HEIGHT + i * ROW_HEIGHT, size.x, ROW_HEIGHT - 3.0)
+		var w: float = size.x - MARGIN
+		var r: Rect2 = Rect2(0.0, HEADER_HEIGHT + i * ROW_HEIGHT, w, ROW_HEIGHT - 3.0)
 		if i > 0:
-			ListLines.between(
-				self, Rect2(0.0, r.position.y - ROW_HEIGHT, size.x, ROW_HEIGHT - 3.0), r
-			)
+			ListLines.between(self, Rect2(0.0, r.position.y - ROW_HEIGHT, w, ROW_HEIGHT - 3.0), r)
 		draw_rect(r, Palette.color("panel"))
 		var base: Vector2 = Vector2(8.0, r.position.y + 3.0 + font.get_ascent(FONT_SIZE))
-		var width: float = size.x - 16.0
+		var width: float = w - 16.0
 		var head: Color = Palette.color("text_dim" if gone else "text")
 		draw_string(font, base, head_text(row), 0, width, FONT_SIZE, head)
 		base.y += font.get_descent(FONT_SIZE) + font.get_ascent(TIME_FONT_SIZE)

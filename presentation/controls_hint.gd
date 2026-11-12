@@ -28,14 +28,24 @@ var text_key: String = ""
 
 
 ## Adds the radar legend (R26-6, C11) the first time `parent` shows on this client; null when
-## it was seen already, or the parent is not on screen. Each frame is fine: a lookup once seen.
+## it was seen already, the parent is not on screen or a first-seat card is open. Each frame
+## is fine: a lookup once seen.
 static func show_radar_legend(parent: Control, settings: ClientSettings) -> ControlsHint:
-	if not parent.is_visible_in_tree():
+	if not parent.is_visible_in_tree() or _card_open(parent):
 		return null
 	var hint: ControlsHint = _first(parent, settings, RADAR_KEY, 3, RADAR_S, "radar.legend")
 	if hint != null:
 		hint.custom_minimum_size.y = UiTheme.TOUCH_MIN * 1.5
 	return hint
+
+
+## Whether a first-seat card (FirstSeatCard) is open: the radar legend waits until it is
+## closed, so the two never open together.
+static func _card_open(node: Node) -> bool:
+	for n: Node in node.get_tree().get_nodes_in_group(STACK):
+		if n is FirstSeatCard and not n.is_queued_for_deletion():
+			return true
+	return false
 
 
 ## The hint of hint `key` at stack `rank`, `seconds` on screen with the words of `words`,

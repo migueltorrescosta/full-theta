@@ -99,8 +99,8 @@ func test_radar_legend_shows_once_and_a_tap_closes_it() -> void:
 
 
 # FT: FT-STN-012
-# w5: on a first visit the first-seat card and the radar legend stack top down, one under
-# the other, for Science, Relay and Comms.
+# On a first visit the first-seat card shows alone; the radar legend waits until it is closed,
+# so the two never open together, for Science, Relay and Comms.
 func test_first_visit_chips_stack_without_overlap() -> void:
 	for seat: String in ["science", "relay", "comms"]:
 		var ctx: StationContext = StationFixture.context(seat, SETTINGS)
@@ -112,21 +112,14 @@ func test_first_visit_chips_stack_without_overlap() -> void:
 		s.size = Vector2(1280, 720)
 		for i: int in 4:
 			await get_tree().process_frame
-		var chips: Array[Control] = []
-		for n: String in ["FirstSeatCard", "RadarLegend"]:
-			var c: Control = s.find_child(n, true, false)
-			assert_object(c).override_failure_message("%s %s" % [seat, n]).is_not_null()
-			chips.append(c)
-		for i: int in 1:
-			var upper: Rect2 = chips[i].get_global_rect()
-			var lower: Rect2 = chips[i + 1].get_global_rect()
-			(
-				assert_float(lower.position.y)
-				. override_failure_message(
-					"%s: %s under %s" % [seat, chips[i + 1].name, chips[i].name]
-				)
-				. is_greater_equal(upper.end.y)
-			)
+		assert_object(s.first_seat_card()).override_failure_message(seat).is_not_null()
+		assert_object(s.find_child("RadarLegend", true, false)).is_null()
+		assert_bool(ctx.settings.hint_seen(ControlsHint.RADAR_KEY)).is_false()
+		s.first_seat_card().dismiss()
+		for i: int in 3:
+			await get_tree().process_frame
+		var legend: Control = s.find_child("RadarLegend", true, false)
+		assert_object(legend).override_failure_message(seat).is_not_null()
 		s.queue_free()
 		await get_tree().process_frame
 		if FileAccess.file_exists(SETTINGS):

@@ -26,6 +26,9 @@ const STEPS: String = "res://content/training/steps.tres"
 var station: String = ""
 ## The action lines shown (tests).
 var lines: Array[String] = []
+## Where the card may sit, in its parent's coordinates (the screen sets the focused panel's
+## view, clear of its rails); empty: the whole parent.
+var bounds: Rect2 = Rect2()
 
 var _close: Button = Button.new()
 var _controls: Button = Button.new()
@@ -96,8 +99,7 @@ func _init() -> void:
 	theme_type_variation = "Banner"
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	ControlsHint.join_stack(self, 1)
-	set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	grow_horizontal = Control.GROW_DIRECTION_BOTH
+	set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 
 
 func _build(bindings: Bindings, device: String, touch: bool) -> void:
@@ -171,15 +173,20 @@ func _process(_delta: float) -> void:
 	_place()
 
 
-## Under the top bar, under the "turn sideways" banner when it shows; never wider than WIDE.
+## Under the top bar, under the "turn sideways" banner when it shows, centred in `bounds`;
+## never wider than WIDE.
 func _place() -> void:
 	var parent: Control = get_parent() as Control
 	if parent == null:
 		return
-	var w: float = minf(WIDE, parent.size.x - 16.0)
+	var area: Rect2 = bounds if bounds.has_area() else Rect2(Vector2.ZERO, parent.size)
+	var w: float = minf(WIDE, area.size.x - 16.0)
 	if custom_minimum_size.x != w:
 		custom_minimum_size.x = w
-	ControlsHint.place_in_stack(self, ControlsHint.TOP + SafeArea.margins(self).y)
+	offset_left = roundf(area.position.x + (area.size.x - w) / 2.0)
+	offset_right = offset_left + w
+	var top: float = maxf(ControlsHint.TOP + SafeArea.margins(self).y, area.position.y + 8.0)
+	ControlsHint.place_in_stack(self, top)
 	# As tall as its text: wrapped lines settle after the first frames.
 	var h: float = get_combined_minimum_size().y
 	if offset_bottom - offset_top != h:
