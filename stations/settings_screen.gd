@@ -31,6 +31,10 @@ signal reference_plane_requested
 ## session (#35 A5).
 signal name_changed(new_name: String)
 
+## A check box's icons that a touch layout swaps for bigger ones (`_touch_icons`).
+const _TOUCH_ICONS: Array[String] = [
+	"checked", "unchecked", "checked_disabled", "unchecked_disabled"
+]
 ## The width of a Change keys binding column: room for "LB+Left stick left/right".
 const KEY_COLUMN_W: float = 210.0
 ## The common and always-live actions Change keys lists without "Show all stations" (ux-18):
@@ -51,6 +55,9 @@ const FINAL_ABANDON: Array[String] = ["settings.abandon", "settings.forfeit"]
 const TAB_GAME: String = "Game"
 const TAB_CONTROLS: String = "Controls"
 const TAB_SETTINGS: String = "Settings"
+
+## The touch icons of _TOUCH_ICONS, built once: state -> texture.
+static var _touch_icons: Dictionary = {}
 
 var settings: ClientSettings
 ## Waiting for an input to bind: [intent id, device], or [].
@@ -247,6 +254,7 @@ func _fit_safe_area() -> void:
 	if tabs == null:
 		return
 	_fit_targets(_root, LayoutMode.is_touch(kind))
+	_fit_tabs(LayoutMode.is_touch(kind))
 	# A window that became a phone hides Change keys (and, outside a session, the Controls
 	# tab, which is there for them); one that stopped being one gets them.
 	var phone: bool = kind == LayoutMode.Kind.PHONE
@@ -938,8 +946,38 @@ func _touch() -> bool:
 
 ## A check box or the Advanced toggle: 44 px tall on a touch layout (#28: nothing tappable
 ## under 44 px), its own height elsewhere.
+## A check box also shows a CHECK_ICON_TOUCH box there, big enough to see as a target.
 static func _fit_target(c: Control, touch: bool) -> void:
 	c.custom_minimum_size.y = UiTheme.TOUCH_MIN if touch else 0.0
+	if not c is CheckBox:
+		return
+	for state: String in _TOUCH_ICONS:
+		if touch:
+			if not _touch_icons.has(state):
+				_touch_icons[state] = UiTheme.check_icon(
+					state.begins_with("checked"),
+					"line" if state.ends_with("disabled") else "text",
+					UiTheme.CHECK_ICON_TOUCH
+				)
+			c.add_theme_icon_override(state, _touch_icons[state])
+		else:
+			c.remove_theme_icon_override(state)
+
+
+## The menu's tabs: TOUCH_MIN px tall on a touch layout (their theme's padding grows by the
+## missing height), the theme's own elsewhere.
+func _fit_tabs(touch: bool) -> void:
+	for state: String in ["tab_selected", "tab_unselected", "tab_hovered", "tab_focus"]:
+		tabs.remove_theme_stylebox_override(state)
+		if not touch:
+			continue
+		var sb: StyleBox = tabs.get_theme_stylebox(state).duplicate()
+		var font: Font = tabs.get_theme_font("font")
+		var line: float = font.get_height(tabs.get_theme_font_size("font_size"))
+		var pad: float = maxf(0.0, (UiTheme.TOUCH_MIN - line) / 2.0)
+		sb.content_margin_top = maxf(sb.content_margin_top, pad)
+		sb.content_margin_bottom = maxf(sb.content_margin_bottom, pad)
+		tabs.add_theme_stylebox_override(state, sb)
 
 
 ## Every check box and the Advanced toggle under `node`, for the layout (`_fit_target`).

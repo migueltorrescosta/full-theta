@@ -41,8 +41,9 @@ const SPACING: int = 8
 ## An embedded dialog's title bar and the frame around the rest of it (px).
 const WINDOW_TITLE_H: float = 36.0
 const WINDOW_MARGIN: float = 8.0
-## A CheckBox's box (px).
+## A CheckBox's box (px), and its size where a finger taps it (the menu on a touch layout).
 const CHECK_ICON: int = 18
+const CHECK_ICON_TOUCH: int = 28
 ## Vertical content margin of a touch control: with the font's line height it reaches
 ## TOUCH_MIN.
 const TOUCH_PAD: int = 12
@@ -188,10 +189,9 @@ static func _check(t: Theme, type: String, variation: String, pad_y: int) -> voi
 	t.set_icon("checked_disabled", name, check_icon(true, "line"))
 
 
-## A CheckBox icon: a CHECK_ICON px box with a 2 px border in `edge`; `on` fills it with
-## the accent and draws a tick in the background colour.
-static func check_icon(on: bool, edge: String) -> ImageTexture:
-	var n: int = CHECK_ICON
+## A CheckBox icon: an `n` px box (CHECK_ICON by default) with a 2 px border in `edge`;
+## `on` fills it with the accent and draws a tick in the background colour.
+static func check_icon(on: bool, edge: String, n: int = CHECK_ICON) -> ImageTexture:
 	var img: Image = Image.create_empty(n, n, false, Image.FORMAT_RGBA8)
 	var tick: Array[Vector2] = [Vector2(0.25, 0.52), Vector2(0.43, 0.7), Vector2(0.76, 0.32)]
 	for y: int in n:
