@@ -23,6 +23,8 @@ extends StationPanel
 ## (SciencePhone, #28) and joins the phone frame; its Hack opens the screen's choice sheet
 ## of the target's subsystems (P28-L1, D289).
 
+## The bar's hint line's least width (px).
+const STATUS_MIN_W: float = 120.0
 ## Scan dial rate with a key or stick at full deflection (rad/s).
 const DIAL_RATE: float = 1.6
 ## Controller cursor speed (px/s) and the snap distance to a contact (px).
@@ -154,7 +156,7 @@ func _build_bar(rows: VBoxContainer) -> void:
 	_status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_status.add_theme_color_override("font_color", Palette.color("text_dim"))
 	_status.clip_text = true
-	_status.custom_minimum_size = Vector2(120, 0)
+	_status.custom_minimum_size = Vector2(STATUS_MIN_W, 0)
 	_bar.add_child(_status)
 
 
@@ -366,8 +368,20 @@ func refresh() -> void:
 	card_view.set_card(ctx.snap.callsign(sel) if sel >= 0 else "", card_of(sel), _hacks_on(sel))
 	_refresh_list()
 	_refresh_buttons(b, minigame)
+	_fit_status()
 	if phone != null:
 		phone.update(minigame)
+
+
+## The bar's hint line asks for its whole text's width (at most the bar's), so the bar
+## wraps it to a row of its own instead of cutting it at the edge.
+func _fit_status() -> void:
+	var font: Font = _status.get_theme_font("font")
+	var px: int = _status.get_theme_font_size("font_size")
+	var w: float = font.get_string_size(_status.text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+	w = clampf(ceilf(w) + 2.0, STATUS_MIN_W, maxf(_bar.size.x, STATUS_MIN_W))
+	if _status.custom_minimum_size.x != w:
+		_status.custom_minimum_size.x = w
 
 
 func _blip_scale(b: Dictionary) -> Dictionary:
@@ -462,8 +476,9 @@ func _refresh_buttons(b: Dictionary, minigame: int) -> void:
 	(_buttons["sub"] as Button).text = _sub_text()
 	(_buttons["sub"] as Button).visible = hack and not subsystems().is_empty()
 	(_buttons["self"] as Button).visible = not open
-	# Take the scan matters only with a second player at Science (C3, D412).
-	(_buttons["claim"] as Button).visible = players_here() >= 2 or lesson_wants("claim")
+	# Take the scan matters only with a second player at Science (C3, D412); a held claim
+	# always shows, as Release.
+	(_buttons["claim"] as Button).visible = (mine or players_here() >= 2 or lesson_wants("claim"))
 	(_buttons["claim"] as Button).text = (
 		tr("sci.release")
 		if mine

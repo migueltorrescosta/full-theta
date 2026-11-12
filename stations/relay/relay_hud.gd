@@ -341,15 +341,16 @@ func _fill_log() -> void:
 		_log.add_child(_wrapped(log_text(e)))
 
 
-## A short box has no room for a line under its heading: the heading carries the waiting
-## mark ("INBOX  Name from Ship +1"), and says nothing more when none waits.
+## A short box has room for one line under its heading: the inbox line when no button row
+## shows, else the buttons, the heading then carrying the line ("INBOX  Name from Ship +1",
+## "INBOX  No marks waiting").
 func _show_mail() -> void:
-	_mail.visible = not _short
+	_mail.visible = not _short or (_mail_buttons != null and not _mail_buttons.visible)
 
 
 func _fill_inbox_heading() -> void:
 	var text: String = tr("relay.inbox").to_upper()
-	if _short and ctx != null and not ctx.crew.inbox.is_empty():
+	if not _mail.visible:
 		text += "  " + _mail.text
 	_inbox_heading.text = text
 
@@ -361,8 +362,6 @@ func _fill_inbox() -> void:
 	else:
 		var more: String = " +%d" % (ctx.crew.inbox.size() - 1) if ctx.crew.inbox.size() > 1 else ""
 		_mail.text = tr("relay.inbox_item") % [item["name"], item["from"]] + more
-	_show_mail()
-	_fill_inbox_heading()
 	# Accept and Decline show only with a mark waiting (the line says "No marks waiting").
 	accept.visible = not item.is_empty() or wants.call("accept")
 	decline.visible = not item.is_empty() or wants.call("decline")
@@ -381,6 +380,8 @@ func _fill_inbox() -> void:
 	send.visible = can_send() or wants.call("mark_send")
 	send_to.visible = send.visible and send_to.item_count > 0
 	_mail_buttons.visible = accept.visible or decline.visible or send.visible
+	_show_mail()
+	_fill_inbox_heading()
 
 
 ## True when a mark is selected and an allied ship can take it.
