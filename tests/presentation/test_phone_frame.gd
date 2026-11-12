@@ -386,7 +386,7 @@ func test_long_press_pings_and_marks() -> void:
 
 # FT: FT-STN-005
 # A panel in the frame draws into the bottom band on its side; one not yet in the frame
-# stops above it, and keeps the chip strip.
+# stops above it; its request chips show only at the top of the view (ux-13).
 func test_band_is_drawn_into_only_by_framed_panels() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
 	assert_float(s._main.get_global_rect().end.y).is_equal(390.0)

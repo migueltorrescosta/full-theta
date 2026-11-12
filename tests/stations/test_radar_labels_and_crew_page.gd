@@ -70,8 +70,8 @@ func test_radar_legend_shows_once_and_a_tap_closes_it() -> void:
 
 
 # FT: FT-STN-012
-# w5: on a first visit the controls chip, the contact-label legend and the radar legend
-# stack top down, none over another, for Science, Relay and Comms.
+# w5: on a first visit the first-seat card and the radar legend stack top down, one under
+# the other, for Science, Relay and Comms.
 func test_first_visit_chips_stack_without_overlap() -> void:
 	for seat: String in ["science", "relay", "comms"]:
 		var ctx: StationContext = StationFixture.context(seat, SETTINGS)
@@ -84,11 +84,11 @@ func test_first_visit_chips_stack_without_overlap() -> void:
 		for i: int in 4:
 			await get_tree().process_frame
 		var chips: Array[Control] = []
-		for n: String in ["ControlsHint", "ControlsLegendHint", "RadarLegend"]:
+		for n: String in ["FirstSeatCard", "RadarLegend"]:
 			var c: Control = s.find_child(n, true, false)
 			assert_object(c).override_failure_message("%s %s" % [seat, n]).is_not_null()
 			chips.append(c)
-		for i: int in 2:
+		for i: int in 1:
 			var upper: Rect2 = chips[i].get_global_rect()
 			var lower: Rect2 = chips[i + 1].get_global_rect()
 			(

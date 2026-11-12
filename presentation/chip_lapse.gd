@@ -1,36 +1,36 @@
 class_name ChipLapse
 extends RefCounted
 ## Remembers request chips nobody answered (C5): a chip that vanishes with almost no time
-## left has lapsed, and its row stays a few seconds as a "Helm: Boost lapsed" note in the
-## chip's own place, so the requester's silence is not mistaken for a glitch. A chip that
-## vanishes with time left was answered and leaves no note.
+## left has lapsed, and the screen says so once, as a "Helm: Boost lapsed" note in its toast
+## queue, so the requester's silence is not mistaken for a glitch. A chip that vanishes with
+## time left was answered and leaves no note. The Captain's request list reads the same rule
+## (ChipList).
 
-## How long a lapsed note stays (ms).
-const SHOW_MS: int = 4000
 ## A chip gone with at most this many seconds left lapsed.
 const LAPSE_S: float = 1.5
 
 var _seen: Dictionary = {}
-var _notes: Array[Dictionary] = []
 
 
-## Feeds the open chips ({id, text, left (seconds)}) at `now_ms`; returns the lapsed notes
-## still to show, oldest first.
-func update(chips: Array, now_ms: int) -> Array[String]:
+## Feeds the open chips ({id, text, left (seconds)}); returns the notes of the chips that
+## lapsed since the last call, oldest first.
+func update(chips: Array) -> Array[String]:
 	var open: Dictionary = {}
 	for c: Dictionary in chips:
 		open[int(c["id"])] = true
+	var out: Array[String] = []
 	for id: int in _seen:
-		if not open.has(id) and float(_seen[id]["left"]) <= LAPSE_S:
-			_notes.append({"text": _seen[id]["text"], "until": now_ms + SHOW_MS})
+		if not open.has(id) and lapsed(float(_seen[id]["left"])):
+			out.append(TranslationServer.translate("chip.lapsed") % _seen[id]["text"])
 	_seen.clear()
 	for c: Dictionary in chips:
 		_seen[int(c["id"])] = {"text": str(c["text"]), "left": float(c["left"])}
-	_notes = _notes.filter(func(n: Dictionary) -> bool: return int(n["until"]) > now_ms)
-	var out: Array[String] = []
-	for n: Dictionary in _notes:
-		out.append(TranslationServer.translate("chip.lapsed") % n["text"])
 	return out
+
+
+## Whether a chip last seen with `left_s` seconds left, now gone, lapsed (else it was answered).
+static func lapsed(left_s: float) -> bool:
+	return left_s <= LAPSE_S
 
 
 ## What a chip does for whoever accepts it ("" when the chip has no effect text): the

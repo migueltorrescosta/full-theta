@@ -58,11 +58,12 @@ static func features(stations: Array[String], toggles: DataToggles) -> Array[Str
 	return out
 
 
-## The banner lines of the receiving side (C5): data another station of this ship shared
-## here and that is still live, "Routes on Helm from Relay · 12 s". `left` is feature ->
+## The lines of the receiving side (C5), feature -> line: data another station of this ship
+## shared here and that is still live, "Routes on Helm from Relay · 12 s". `left` is feature ->
 ## seconds left (ClientState shares); a joint view holding the source sees the data anyway.
-static func incoming_lines(stations: Array[String], left: Dictionary) -> Array[String]:
-	var out: Array[String] = []
+## The station screen shows each as a note in its toast queue.
+static func incoming(stations: Array[String], left: Dictionary) -> Dictionary[StringName, String]:
+	var out: Dictionary[StringName, String] = {}
 	for id: StringName in left:
 		var seconds: int = ceili(float(left[id]))
 		var def: DataToggleDef = DataToggles.toggle_def(id)
@@ -71,7 +72,14 @@ static func incoming_lines(stations: Array[String], left: Dictionary) -> Array[S
 		if stations.has(String(def.receiver)) and not stations.has(String(def.source)):
 			var what: String = TranslationServer.translate("lobby.toggle." + String(id))
 			var from: String = TranslationServer.translate("station." + String(def.source))
-			out.append(TranslationServer.translate("share.incoming") % [what, from, seconds])
+			out[id] = TranslationServer.translate("share.incoming") % [what, from, seconds]
+	return out
+
+
+## incoming()'s lines, in `left`'s order.
+static func incoming_lines(stations: Array[String], left: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	out.assign(incoming(stations, left).values())
 	return out
 
 

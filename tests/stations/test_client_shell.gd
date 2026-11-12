@@ -188,33 +188,19 @@ func test_help_key_opens_the_controls_tab() -> void:
 
 
 # FT: FT-STN-012
-# The first visit shows the Controls hint, not the menu; tapping it opens Controls headed
-# by the seat's role.
-func test_first_visit_shows_the_controls_hint() -> void:
+# The first seat shows the first-seat card, not the menu; its Controls button opens Controls
+# headed by the seat's role (C7).
+func test_first_visit_shows_the_first_seat_card() -> void:
 	var s: ClientShell = await _on_station(true)
 	var menu: SettingsScreen = s.settings_screen
 	assert_bool(menu.visible).is_false()
-	var chip: ControlsHint = s.screen.find_child("ControlsHint", true, false)
-	assert_object(chip).is_not_null()
-	chip.pressed.emit()
+	var card: FirstSeatCard = s.screen.first_seat_card()
+	assert_object(card).is_not_null()
+	card.controls().pressed.emit()
 	assert_bool(menu.visible).is_true()
 	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
 	assert_array(_labels(menu)).contains([tr("role.systems")])
 	assert_bool(s.screen.blocked()).is_true()
-
-
-# FT: FT-STN-012
-# D369: a tap on the first visit's callout legend opens Controls on the callout card.
-func test_the_legend_hint_opens_the_callout_card() -> void:
-	var s: ClientShell = await _on_station(true)
-	var legend: ControlsHint = s.screen.find_child("ControlsLegendHint", true, false)
-	assert_object(legend).is_not_null()
-	legend.pressed.emit()
-	var menu: SettingsScreen = s.settings_screen
-	assert_bool(menu.visible).is_true()
-	assert_str(menu.current_tab_name()).is_equal(SettingsScreen.TAB_CONTROLS)
-	assert_str(menu.controls_pane.view).is_equal(ControlsPane.VIEW_CARD)
-	assert_bool(menu.controls_pane.card.is_visible_in_tree()).is_true()
 
 
 # FT: FT-STN-011, FT-STN-012
@@ -228,6 +214,9 @@ func test_the_controls_tab_has_content_however_the_menu_opens() -> void:
 	var menu: SettingsScreen = s.settings_screen
 	for seat: String in ["helm", "engineering", "systems", StationCatalogue.ALL]:
 		await _pick(s, seat)
+		# Esc first closes the first seat's card (C7), then opens the menu.
+		if s.screen.first_seat_card() != null:
+			s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
 		s.screen.dispatch({"id": "menu", "target": "screen", "pressed": true})
 		assert_bool(menu.visible).is_true()
 		menu.tabs.current_tab = menu.tabs.get_node(SettingsScreen.TAB_CONTROLS).get_index()

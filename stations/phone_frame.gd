@@ -211,9 +211,10 @@ func _over_view(pos: Vector2) -> bool:
 	return not (hovered is BaseButton)
 
 
-## Each frame on a phone: the view-top row's contents and places (framed only); `left` is
-## every share's seconds left (CrewState.shares_left).
-func process(now: int, left: Dictionary) -> void:
+## Each frame on a phone: the view-top row's contents and places (framed only). Its request
+## chips are the only ones a phone shows (ux-13): Comms, the Captain and the Viewer, outside
+## the frame, receive none.
+func process(now: int) -> void:
 	view_top.visible = framed()
 	if not view_top.visible:
 		armed_ring.hide_ring()
@@ -244,7 +245,7 @@ func process(now: int, left: Dictionary) -> void:
 					}
 				)
 			)
-	request_chips.show_chips(rows, ShareBar.incoming_lines(screen.stations, left), now)
+	request_chips.show_chips(rows)
 	if screen.panels.size() == 2:
 		var other: String = screen.stations[1 - screen.focus_index]
 		glance.show_for(ctx, other, screen.focused_station())

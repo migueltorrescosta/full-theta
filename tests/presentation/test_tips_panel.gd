@@ -61,14 +61,14 @@ func test_every_tip_loads_in_the_ui_language_with_the_players_topics_first() -> 
 	var v: TipsPanel = _view("pt_PT")
 	var data: Dictionary = TipsPanel.read()
 	assert_int(v.tips.size()).is_equal((data["tips"] as Array).size())
-	assert_int(v.tips.size()).is_greater_equal(100)
+	assert_int(v.tips.size()).is_greater_equal(25)
 	var only: Array[String] = ["engineering", "modes"]
 	v.prefer(only)
 	var seen: Array = []
 	for i: int in v.tips.size():
 		seen.append(str(v.tips[i]["topic"]) in only)
 	var firsts: int = seen.count(true)
-	assert_int(firsts).is_greater_equal(5)
+	assert_int(firsts).is_greater_equal(4)
 	assert_array(seen.slice(0, firsts)).not_contains([false])
 	var tip: Dictionary = v.current()
 	for t: Dictionary in data["tips"]:

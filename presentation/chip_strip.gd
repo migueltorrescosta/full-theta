@@ -2,10 +2,10 @@ class_name ChipStrip
 extends VBoxContainer
 ## The request chips of the station screen (§7.4, FT-PAIR-013): the ones other stations
 ## sent to this screen's stations, with their time left and how to answer them, and the ones
-## this screen sent, waiting. An unanswered chip simply disappears when its time is up.
+## this screen sent, waiting. An unanswered chip disappears when its time is up (the screen's
+## toast queue says it lapsed, C5). Desktops and tablets; a phone has RequestChips.
 
 var _shown: Array = []
-var _lapse: ChipLapse = ChipLapse.new()
 
 
 func _init() -> void:
@@ -22,20 +22,13 @@ static func asker(c: Dictionary) -> String:
 
 ## Shows the chips (ChipsReader rows) at the view's tick; does nothing when nothing shown
 ## changed (seconds count down once a second). An incoming chip is followed by what accepting
-## does, a chip that lapsed unanswered stays a few seconds as a note, and `notes` (data a
-## partner shared, still live) come last (C5). `now_ms` is the lapsed notes' clock.
+## does (C5).
 func show_chips(
-	incoming: Array[Dictionary],
-	outgoing: Array[Dictionary],
-	snap: SnapshotState,
-	notes: Array[String] = [],
-	now_ms: int = -1
+	incoming: Array[Dictionary], outgoing: Array[Dictionary], snap: SnapshotState
 ) -> void:
 	var lines: Array[String] = []
 	var dim: Array[bool] = []
-	var open: Array = []
 	for c: Dictionary in incoming:
-		open.append({"id": c["id"], "text": asker(c), "left": ChipsReader.left_s(snap, c)})
 		lines.append(
 			(
 				(
@@ -63,10 +56,6 @@ func show_chips(
 				+ " · %d s" % ceili(ChipsReader.left_s(snap, c))
 			)
 		)
-		dim.append(true)
-	var now: int = Time.get_ticks_msec() if now_ms < 0 else now_ms
-	for n: String in _lapse.update(open, now) + notes:
-		lines.append(n)
 		dim.append(true)
 	if lines == _shown:
 		return
