@@ -373,8 +373,8 @@ func test_the_shakedown_ship_has_the_four_mounts_its_steps_pick() -> void:
 		ids.append(m.id)
 		assert_array(m.validate()).is_empty()
 	assert_array(ids).contains_exactly_in_any_order([&"bow", &"port", &"starboard", &"dorsal"])
-	# The M3 run keeps its one-mount corvette.
-	assert_int(lib.run(&"m3_run").player_ship.mounts.size()).is_equal(1)
+	# The run's corvette has bow, port and starboard (gp-12).
+	assert_int(lib.run(&"m3_run").player_ship.mounts.size()).is_equal(3)
 	assert_array(run.player_ship.validate()).is_empty()
 
 
