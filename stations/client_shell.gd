@@ -70,6 +70,8 @@ var _take_back_button: Button
 var _try_again_button: Button
 ## What the shell does about its connection (retry, give up, rejected, taken over).
 var _link: LinkWatch = LinkWatch.new()
+## The LinkWatch.Status the banner shows (-1 none yet): set only on a change (R20-13).
+var _shown_status: int = -1
 var _subtitles: Label
 var _subtitle_panel: PanelContainer
 var _last_seq: int = -1
@@ -180,9 +182,12 @@ func _process(_delta: float) -> void:
 
 ## The connection banner (R24-3, R11-2): "Reconnecting..." while the shell retries; after
 ## LinkWatch.GIVE_UP_MS, a rejection or a takeover it says why and offers Leave (and Take back
-## after a takeover, Try again after giving up).
+## after a takeover, Try again after giving up). Set only when the status changes (R20-13).
 func _show_link() -> void:
 	var status: LinkWatch.Status = _link.status
+	if status == _shown_status:
+		return
+	_shown_status = status
 	_link_box.visible = status != LinkWatch.Status.OK
 	match status:
 		LinkWatch.Status.GAVE_UP:
@@ -198,7 +203,7 @@ func _show_link() -> void:
 	_take_back_button.visible = status == LinkWatch.Status.TAKEN_OVER
 	_try_again_button.visible = status == LinkWatch.Status.GAVE_UP
 	if stuck:
-		# (the session language arrives after the banner is built)
+		# (a language switch shows the banner again: _shown_status)
 		_leave_button.text = tr("settings.leave")
 		_take_back_button.text = tr("shell.take_back")
 		_try_again_button.text = tr("shell.try_again")
@@ -252,6 +257,7 @@ func _notification(what: int) -> void:
 	if TranslationServer.get_locale() == _locale:
 		return
 	_locale = TranslationServer.get_locale()
+	_shown_status = -1
 	_drop_screens()
 	_shown = ""
 	_on_crew_changed(&"picked")
@@ -585,6 +591,7 @@ func _build_overlays() -> void:
 	pause_overlay.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(pause_overlay)
 	pause_overlay.setup(ctx)
+	pause_overlay.end_requested.connect(leave)
 	outcome_card = OutcomeCard.new()
 	outcome_card.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	outcome_card.grow_horizontal = Control.GROW_DIRECTION_BOTH

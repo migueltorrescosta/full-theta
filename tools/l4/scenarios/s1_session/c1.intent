@@ -8,9 +8,12 @@ expect_view ownership.claims.mount:0.1=c1 ownership.claims.flight.1=c1
 signal name=c1_tactical
 barrier name=picked n=3
 # Coverage (FT-NET-019, FT-NET-021): Tactical, Tactical, Systems leave Relay and Comms.
-expect_event type=lobby payload.ship=0 payload.uncovered~=relay payload.uncovered~=comms payload.uncovered!~helm payload.ready=false keep=true
+expect_event type=lobby payload.ship=0 payload.uncovered~=relay payload.uncovered~=comms payload.uncovered!~helm payload.covered=false keep=true
+# Ready and Start (#37 C1): no host here, so a Ready crew player may Start, but only once
+# every station is covered.
 ready
-expect_event type=request_rejected payload.request=7 payload.reason=coverage
+start
+expect_event type=request_rejected payload.request=48 payload.reason=coverage
 barrier name=rejected n=3
 # Claims (FT-NET-022 to FT-NET-024): c1 releases mount 0 and c2 claims it.
 release_claim item=mount:0
@@ -22,10 +25,11 @@ expect_view ownership.claims.mount:0.1=c2
 command id=aim kind=aim_mount mount_index=0 aim_x=100.0 aim_y=0.0 aim_z=0.0
 expect_rejected id=aim reason=claimed
 barrier name=checked n=3
-# c2 moved to Ops: covered; Ready starts the run (the sim steps from Start).
+# c2 moved to Ops: covered; once everyone is Ready, Start starts the run (the sim steps from Start).
 barrier name=covered n=3
-expect_event type=lobby payload.ship=0 payload.uncovered.size=0 payload.ready=true keep=true
-ready
+expect_event type=lobby payload.ship=0 payload.uncovered.size=0 payload.covered=true keep=true
+expect_event type=fleet payload.waiting.size=0 keep=true
+start
 expect_event type=started payload.ship=0
 expect_tick_moving
 barrier name=started n=3

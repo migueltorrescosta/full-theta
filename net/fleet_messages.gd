@@ -34,6 +34,7 @@ const PAYLOADS: Dictionary = {
 		"max_ships": TYPE_INT,
 		"waiting": TYPE_ARRAY,
 		"started": TYPE_BOOL,
+		"host": TYPE_BOOL,
 	},
 	NetProtocol.EVENT_TAKEOVER:
 	{"ship": TYPE_INT, "seat": TYPE_STRING, "by": TYPE_STRING, "from_ship": TYPE_INT},
@@ -59,7 +60,7 @@ const FLEET_SHIP: Dictionary = {
 	"seats": TYPE_ARRAY,
 	"crew": TYPE_INT,
 	"uncovered": TYPE_ARRAY,
-	"ready": TYPE_BOOL,
+	"covered": TYPE_BOOL,
 	"started": TYPE_BOOL,
 }
 const SCOREBOARD_ROW: Dictionary = {
@@ -90,9 +91,9 @@ static func resume(tick: int, host: bool) -> Dictionary:
 	return {"tick": tick, "host": host}
 
 
-## One ship of the multi-ship lobby (M4-Q3, M4-Q4): seats [{name, seat}] as in `lobby`,
-## crew and uncovered from NetCoverage, ready when it passes coverage, started when its crew
-## pressed Start.
+## One ship of the multi-ship lobby (M4-Q3, M4-Q4): seats [{name, seat, ready}] as in
+## `lobby`, crew and uncovered from NetCoverage, covered when it passes coverage, started once
+## the universe started with it.
 static func fleet_ship(
 	ship: int,
 	name: String,
@@ -100,7 +101,7 @@ static func fleet_ship(
 	seats: Array,
 	crew: int,
 	uncovered: Array,
-	ready: bool,
+	covered: bool,
 	started: bool
 ) -> Dictionary:
 	return {
@@ -110,13 +111,15 @@ static func fleet_ship(
 		"seats": seats,
 		"crew": crew,
 		"uncovered": uncovered,
-		"ready": ready,
+		"covered": covered,
 		"started": started,
 	}
 
 
-## The multi-ship lobby: every ship, the host's mode and options, the crewed ships that have
-## not pressed Start yet (waiting) and whether the universe has started (all together, M4-Q4).
+## The multi-ship lobby: every ship, the host's mode and options, the crewed ships not yet
+## ready to start (waiting: coverage fails or a crew player isn't Ready, #37 C1), whether the
+## universe has started (all together, M4-Q4) and whether a host is connected (`host`: without
+## one any Ready crew player may Start).
 ## `mode` and `team_win` are GameRules' names; the server fills them, so this class names
 ## no sim class and the clients may read it (F4).
 static func fleet(
@@ -126,7 +129,8 @@ static func fleet(
 	max_ships: int,
 	lives: int,
 	waiting: Array,
-	started: bool
+	started: bool,
+	host: bool
 ) -> Dictionary:
 	return {
 		"ships": ships,
@@ -136,6 +140,7 @@ static func fleet(
 		"max_ships": max_ships,
 		"waiting": waiting,
 		"started": started,
+		"host": host,
 	}
 
 

@@ -73,7 +73,7 @@ func test_connection_65_is_refused_in_a_six_ship_session() -> void:
 		)
 	)
 	for ship: int in SHIPS:
-		assert_bool(server.game.lobby_state(ship)["ready"]).is_true()
+		assert_bool(server.game.lobby_state(ship)["covered"]).is_true()
 	var late: NetClient = h.client(server, "load64")
 	var refused: Callable = func() -> bool: return late.state == NetClient.State.REJECTED
 	assert_bool(await h.until(refused)).is_true()

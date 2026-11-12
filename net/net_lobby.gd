@@ -1,17 +1,19 @@
+# gdlint: disable=max-public-methods
 class_name NetLobby
 extends RefCounted
 ## The lobby and the coverage pause on the server (T043, T045; F2, R13-3): NetGame owns
 ## one and keeps the handshake, the session maps, claims and event routing. It holds:
 ## - picks (pick_rule: one Captain per ship, FT-NET-016; no mid-run change that breaks
-##   coverage, FT-NET-043), the coverage check (NetCoverage), Start (FT-NET-019) and the
-##   session's data toggles (FT-PAIR-017), sent to clients as `lobby` events;
+##   coverage, FT-NET-043), the coverage check (NetCoverage), each player's Ready, Start
+##   (FT-NET-019, #37 C1) and the session's data toggles (FT-PAIR-017), sent to clients as
+##   `lobby` events;
 ## - the ships that started, the ships abandoned during a pause (D96) and the coverage pause
 ##   (FT-NET-034, FT-NET-035): NetServer steps the sim only while NetGame.sim_running();
 ## - the abandon vote (D128, D241) and the takeover of an uncovered station (FT-NET-041,
 ##   FT-NET-042).
-## Messages: Pick, Release, Ready, Toggles, Abandon, AbandonVote, Takeover.
+## Messages: Pick, Release, Ready, Start, Toggles, Abandon, AbandonVote, Takeover.
 
-## Ships whose crew pressed Start (FT-NET-019). Read it through is_launched, launched_ships
+## Ships that started (FT-NET-019). Read it through is_launched, launched_ships
 ## and any_launched; launch() adds one.
 var launched: Dictionary[int, bool] = {}
 ## Ships abandoned during a pause: out of play from then on, until the sim's
@@ -43,6 +45,7 @@ func _init(net_game: NetGame) -> void:
 	net_game.add_handler(NetProtocol.Type.PICK, _on_pick)
 	net_game.add_handler(NetProtocol.Type.RELEASE, _on_release)
 	net_game.add_handler(NetProtocol.Type.READY, _on_ready)
+	net_game.add_handler(NetProtocol.Type.START, _on_start)
 	net_game.add_handler(NetProtocol.Type.TOGGLES, _on_toggles)
 	net_game.add_handler(NetProtocol.Type.ABANDON, _on_abandon)
 	net_game.add_handler(NetProtocol.Type.ABANDON_VOTE, _on_abandon_vote)
@@ -101,14 +104,44 @@ func seats_of(ship: int) -> Array:
 	return out
 
 
-## The lobby state of a ship, as sent in `lobby` events (FT-NET-021).
+## Whether the ship's seats pass the coverage check (FT-NET-019).
+func covered(ship: int) -> bool:
+	return NetCoverage.passes(seats_of(ship), min_crew())
+
+
+## Whether a host client is connected (D127). Without one (a dedicated server, or the host
+## dropped) any Ready crew player may Start (#37 C1).
+func host_here() -> bool:
+	for s: NetSession in game.by_id.values():
+		if s.is_host and s.connected():
+			return true
+	return false
+
+
+## Whether a session counts as Ready: a crew player whose Ready toggle is on, or the host,
+## whose Start is its Ready (#37 C1). Captain and viewers are never asked.
+static func is_ready(s: NetSession) -> bool:
+	return s.is_crew() and (s.ready or s.is_host)
+
+
+## The names of the ship's crew players who are not Ready yet.
+func unready(ship: int) -> Array[String]:
+	var out: Array[String] = []
+	for s: NetSession in game.by_id.values():
+		if s.ship == ship and s.is_crew() and not is_ready(s):
+			out.append(s.name)
+	return out
+
+
+## The lobby state of a ship, as sent in `lobby` events (FT-NET-021): `covered` when its
+## seats pass the coverage check; each seat holder's session id and Ready (#37 C1).
 func lobby_state(ship: int) -> Dictionary:
 	var held: Array = seats_of(ship)
 	var captain: String = ""
 	var holders: Array = []
 	for s: NetSession in game.by_id.values():
 		if s.ship == ship and s.seat != "":
-			holders.append({"name": s.name, "seat": s.seat})
+			holders.append({"name": s.name, "seat": s.seat, "session": s.id, "ready": is_ready(s)})
 		if s.ship == ship and s.seat == StationCatalogue.CAPTAIN:
 			captain = s.name
 	return {
@@ -116,7 +149,7 @@ func lobby_state(ship: int) -> Dictionary:
 		"crew": NetCoverage.crew_count(held),
 		"min_crew": min_crew(),
 		"uncovered": NetCoverage.uncovered(held),
-		"ready": NetCoverage.passes(held, min_crew()),
+		"covered": NetCoverage.passes(held, min_crew()),
 		"started": launched.has(ship),
 		"in_play": _in_run(ship),
 		"captain": captain,
@@ -176,8 +209,10 @@ func clear_abandoned(ship: int) -> void:
 	_dirty = true
 
 
-## The run reset (NetGame.restart): every ship back in the lobby, picks kept.
+## The run reset (NetGame.restart): every ship back in the lobby, picks kept, nobody Ready.
 func reset() -> void:
+	for s: NetSession in game.by_id.values():
+		s.ready = false
 	launched.clear()
 	abandoned.clear()
 	refresh_pause()
@@ -191,22 +226,58 @@ func move(s: NetSession, ship: int, seat: String) -> void:
 	_answer_pick(s, ship, seat, "")
 
 
-## Start for `s` (FT-NET-019), as Ready{true} would press it: refused (request_rejected) from
-## a session that is not crew, a started ship or one failing coverage; the universe starts
-## once every crewed ship has pressed it (NetFleet.press_start, M4-Q4).
-func mark_ready(s: NetSession) -> void:
-	var reason: String = ""
-	var extra: Dictionary = {}
+## Why `s` may not start the game, or "" (FT-NET-019, #37 C1), with the refusal's extra
+## fields. The host starts it; with no host connected, any Ready crew player does. Every
+## crewed ship must pass coverage (`coverage`, with the ship and its uncovered stations) and
+## every crew player be Ready (`not_ready`, with the names). On a fixed world whose universe
+## already runs, a crew player starts their own late ship alone, under the same checks.
+## `by_server` skips who may press it.
+func start_refusal(s: NetSession, by_server: bool = false) -> Array:
+	var ships: Array[int] = game.fleet.crewed()
+	var who: String = ""
+	if any_launched():
+		who = NetGame.NOT_CREW if not s.is_crew() else ""
+		if who == "" and launched.has(s.ship):
+			who = NetGame.STARTED
+		ships = [s.ship]
+	elif not by_server and not s.is_host:
+		who = _presser_refusal(s)
+	if who != "":
+		return [who, {}]
+	if ships.is_empty():
+		return [NetGame.NOT_COVERED, {"ship": -1, "uncovered": StationCatalogue.CREW.duplicate()}]
+	var names: Array[String] = []
+	for ship: int in ships:
+		if not covered(ship):
+			var open: Array = NetCoverage.uncovered(seats_of(ship))
+			return [NetGame.NOT_COVERED, {"ship": ship, "uncovered": open}]
+		names.append_array(unready(ship))
+	if not names.is_empty():
+		return [NetGame.NOT_READY, {"waiting": Array(names)}]
+	return ["", {}]
+
+
+## Why a session other than the host may not press Start before the game: a host is
+## connected (`not_host`), or it is not a Ready crew player (`not_crew`, `not_ready`).
+func _presser_refusal(s: NetSession) -> String:
+	if host_here():
+		return NetGame.NOT_HOST
 	if not s.is_crew():
-		reason = NetGame.NOT_CREW
-	elif launched.has(s.ship):
-		reason = NetGame.STARTED
-	elif not NetCoverage.passes(seats_of(s.ship), min_crew()):
-		reason = NetGame.NOT_COVERED
-		extra = {"uncovered": NetCoverage.uncovered(seats_of(s.ship))}
-	if game.refuse(s, NetProtocol.Type.READY, reason, extra):
+		return NetGame.NOT_CREW
+	return "" if is_ready(s) else NetGame.NOT_READY
+
+
+## Start from `s` (FT-NET-019, #37 C1): refused (request_rejected) as start_refusal says;
+## otherwise every crewed ship starts together (NetFleet.start_ships, M4-Q4), or the late
+## ship alone. `by_server` skips the checks of who may press it (a solo lesson's start,
+## NetTraining.seat_and_start).
+func start(s: NetSession, by_server: bool = false) -> void:
+	if by_server:
+		s.ready = true
+	var why: Array = start_refusal(s, by_server)
+	if game.refuse(s, NetProtocol.Type.START, why[0], why[1]):
 		return
-	var ships: Array[int] = game.fleet.press_start(s)  # all together (M4-Q4)
+	var ships: Array[int] = game.fleet.start_ships(s)
 	for ship: int in ships:
 		launch(ship)
 		game.broadcast(NetProtocol.EVENT_STARTED, {"ship": ship, "tick": game.world.tick})
@@ -223,6 +294,8 @@ func mark_ready(s: NetSession) -> void:
 func set_pick(s: NetSession, ship: int, seat: String) -> void:
 	var old_ship: int = s.ship
 	var was_captain: bool = s.seat == StationCatalogue.CAPTAIN
+	if ship != s.ship or seat != s.seat:
+		s.ready = false  # a new seat asks again (#37 C1)
 	var keep: Array[String] = []
 	if ship == old_ship:
 		keep = StationCatalogue.stations_of(seat)
@@ -340,11 +413,26 @@ func _on_release(s: NetSession, _msg: Dictionary, _now_us: int) -> void:
 	_answer_pick(s, -1, "", pick_rule(s, -1, ""))
 
 
-## Ready{true} presses Start (mark_ready); Ready{false} does nothing (a started run isn't
-## stopped from the lobby).
+## Ready{ready} (#37 C1): a crew player says they are ready, or no longer; refused from a
+## session that is not crew and once its ship has started. The `lobby` and `fleet` events
+## show it.
 func _on_ready(s: NetSession, msg: Dictionary, _now_us: int) -> void:
-	if msg["ready"]:
-		mark_ready(s)
+	var reason: String = ""
+	if not s.is_crew():
+		reason = NetGame.NOT_CREW
+	elif launched.has(s.ship):
+		reason = NetGame.STARTED
+	if game.refuse(s, NetProtocol.Type.READY, reason, {}):
+		return
+	if s.ready != bool(msg["ready"]):
+		s.ready = msg["ready"]
+		_dirty = true
+	game.publish()
+
+
+## Start{} (#37 C1): start().
+func _on_start(s: NetSession, _msg: Dictionary, _now_us: int) -> void:
+	start(s)
 
 
 ## Toggles{set} (FT-PAIR-017): the host sets the session's data-shortcut toggles from the

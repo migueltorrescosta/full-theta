@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## The lobby's data-shortcut section (LobbyScreen, FT-STN-016, FT-PAIR-017): Easy on a first
-## launch and persisted per host, the toggles behind "Customise" with a one-line description
-## naming both stations, the "<Preset> (custom)" name, and the lock at Start.
+## launch and persisted per host, the toggles in the host's Game setup sheet with a one-line
+## description naming both stations, the "<Preset> (custom)" name, and the lock at Start.
 
 const PATH: String = "user://test_lobby_toggles.cfg"
 
@@ -51,9 +51,7 @@ func test_the_lobby_defaults_to_easy_and_remembers_the_host() -> void:
 	assert_str(fresh.host_toggles).is_equal("easy")
 	var l: LobbyScreen = _lobby()
 	assert_str((l.find_child("PresetName", true, false) as Label).text).is_equal("Easy")
-	assert_str((l.find_child("DifficultyLine", true, false) as Label).text).is_equal(
-		"Difficulty: Easy"
-	)
+	assert_str((l.find_child("SetupSummary", true, false) as Label).text).is_equal("Co-op · Easy")
 	(l.find_child("Preset_hard", true, false) as Button).pressed.emit()
 	assert_array(_sent(l)[-1][1]).is_equal(["hard"])
 	var reloaded: ClientSettings = ClientSettings.new(PATH)
@@ -88,14 +86,14 @@ func test_the_host_lobby_pushes_its_saved_set_once() -> void:
 
 
 # FT: FT-STN-016, FT-PAIR-017
-# The toggles sit behind "Customise", each with a one-line description that names both
-# stations, in every language; none says it arrives later.
+# The toggles sit in the host's Game setup sheet (#37 C1), each with a one-line description
+# that names both stations, in every language; none says it arrives later.
 func test_each_toggle_has_a_description_naming_both_stations() -> void:
 	var l: LobbyScreen = _lobby()
 	var rows: Control = l.find_child("Toggles", true, false)
-	var dialog: Window = l.find_child("DifficultyDialog", true, false)
+	var dialog: Window = l.find_child("SetupDialog", true, false)
 	assert_bool(dialog.visible).is_false()
-	(l.find_child("Customise", true, false) as Button).pressed.emit()
+	(l.find_child("GameSetup", true, false) as Button).pressed.emit()
 	assert_bool(dialog.visible).is_true()
 	dialog.hide()
 	assert_int(rows.get_child_count()).is_equal(DataToggles.def().toggles.size())
@@ -154,7 +152,8 @@ func test_an_edited_set_is_named_custom() -> void:
 
 
 # FT: FT-PAIR-017
-# Summaries are exact, banded or hidden; a guest sees the set read-only; Start locks it.
+# Summaries are exact, banded or hidden; a guest has no Game setup and can't change the set
+# (#37 C1); Start locks it.
 func test_values_read_only_for_a_guest_and_locked_at_start() -> void:
 	var l: LobbyScreen = _lobby()
 	_lobby_event(l, "easy")
@@ -165,14 +164,11 @@ func test_values_read_only_for_a_guest_and_locked_at_start() -> void:
 	assert_int((_row(l, "chips").get_node("Line/Value") as OptionButton).item_count).is_equal(2)
 	var guest: LobbyScreen = _lobby(false)
 	_lobby_event(guest, "normal")
-	(
-		assert_bool((_row(guest, "summaries").get_node("Line/Value") as OptionButton).disabled)
-		. is_true()
+	assert_bool((guest.find_child("GameSetup", true, false) as Button).visible).is_false()
+	assert_str((guest.find_child("SetupSummary", true, false) as Label).text).is_equal(
+		"Co-op · Normal"
 	)
 	assert_bool((guest.find_child("Preset_easy", true, false) as Button).disabled).is_true()
-	assert_str((guest.find_child("ToggleNote", true, false) as Label).text).is_equal(
-		"Only the host changes these."
-	)
 	(guest.find_child("Preset_easy", true, false) as Button).pressed.emit()
 	assert_array(_sent(guest)).is_empty()
 	_lobby_event(l, "easy", true)

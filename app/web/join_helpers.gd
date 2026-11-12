@@ -15,7 +15,8 @@ class WebJoinConfig:
 	var address: String = ""
 	## True unless the query string has join=0.
 	var auto_join: bool = false
-	## Test hooks (?pick=ENTRY, ?ready=1): the station to take and whether to press Ready.
+	## Test hooks (?pick=ENTRY, ?ready=1): the station to take and whether to say Ready and
+	## then Start (WebAutoplay).
 	var pick: String = ""
 	var ready: bool = false
 

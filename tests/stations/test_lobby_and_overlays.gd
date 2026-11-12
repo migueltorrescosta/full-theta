@@ -104,16 +104,22 @@ static func _luminance(c: Color) -> float:
 
 
 # FT: FT-STN-015
-func test_legend_names_each_load_in_its_colour_and_follows_the_language() -> void:
+# #37 C9 (reverses D316's colour-only legend): each cell names its load as a word in its
+# load colour, in the session's language; there is no legend row.
+func test_each_cell_names_its_load_in_its_colour_and_follows_the_language() -> void:
 	var l: LobbyScreen = _lobby("helm")
-	var legend: Control = l.find_child("Legend", true, false)
-	for tag: String in ["intense", "busy", "light"]:
-		var item: Label = legend.get_node("Legend_" + tag)
-		assert_str(item.text).is_equal(tr("lobby.legend_" + tag))
-		assert_object(item.get_theme_color("font_color")).is_equal(Palette.color("load_" + tag))
-	assert_str((legend.get_node("Legend_intense") as Label).text).is_equal("Red: intense")
+	assert_object(l.find_child("Legend", true, false)).is_null()
+	for id: String in LobbySeatGrid.GRID_STATIONS:
+		var tag: String = str(l.ctx.crew.def_of(id).get("load_tag", ""))
+		var word: Label = _cell(l, id).find_child("Load", true, false)
+		assert_str(word.text).override_failure_message(id).is_equal(tr("lobby.load_" + tag))
+		assert_object(word.get_theme_color("font_color")).is_equal(Palette.color("load_" + tag))
 	I18n.apply("pt_PT")
-	assert_str((legend.get_node("Legend_light") as Label).text).is_equal("Verde: leve")
+	var l2: LobbyScreen = _lobby("helm")
+	var tag2: String = str(l2.ctx.crew.def_of("helm").get("load_tag", ""))
+	var helm: Label = _cell(l2, "helm").find_child("Load", true, false)
+	assert_str(helm.text).is_equal(TranslationServer.translate("lobby.load_" + tag2))
+	assert_str(helm.text).is_not_equal("lobby.load_" + tag2)
 	I18n.apply("en")
 
 
@@ -295,18 +301,29 @@ func test_touch_variations_are_at_least_44_px() -> void:
 
 
 # FT: FT-NET-019
-func test_start_is_for_crew_of_a_covered_ship() -> void:
+# #37 C1: a crew player gets Ready, never Start, while the host is here; the host's Start
+# lights on a covered ship and greys with what it waits for; a viewer has neither.
+func test_ready_for_crew_and_start_for_the_host() -> void:
 	var l: LobbyScreen = _lobby("ops")
-	var start: Button = l.find_child("Start", true, false)
+	assert_bool((l.find_child("Ready", true, false) as Button).visible).is_true()
+	assert_bool((l.find_child("Start", true, false) as Button).visible).is_false()
+	var host: LobbyScreen = _lobby("ops")
+	host.ctx.crew.host = true
+	host.refresh()
+	var start: Button = host.find_child("Start", true, false)
+	assert_bool((host.find_child("Ready", true, false) as Button).visible).is_false()
 	assert_bool(start.disabled).is_false()
 	start.pressed.emit()
-	assert_array(StationFixture.sent(l.ctx).of("set_ready")[0][1]).is_equal([true])
-	l.ctx.crew.lobby[0]["ready"] = false
-	l.ctx.crew.lobby[0]["uncovered"] = ["comms"]
-	l.refresh()
+	assert_array(StationFixture.sent(host.ctx).of("start")).is_equal([["start", []]])
+	host.ctx.crew.lobby[0]["covered"] = false
+	host.ctx.crew.lobby[0]["uncovered"] = ["comms"]
+	host.refresh()
 	assert_bool(start.disabled).is_true()
-	assert_str((l.find_child("Coverage", true, false) as Label).text).contains("Comms")
-	assert_bool((_lobby("viewer").find_child("Start", true, false) as Button).disabled).is_true()
+	assert_str(start.text).is_equal("Need Comms")
+	assert_str((host.find_child("Coverage", true, false) as Label).text).contains("Comms")
+	var viewer: LobbyScreen = _lobby("viewer")
+	assert_bool((viewer.find_child("Ready", true, false) as Button).visible).is_false()
+	assert_bool((viewer.find_child("Start", true, false) as Button).visible).is_false()
 
 
 # FT: FT-NET-015

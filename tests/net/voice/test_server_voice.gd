@@ -67,7 +67,7 @@ func test_start_session_once_at_the_first_start_with_the_closed_set() -> void:
 	server.game.language = "it"
 	assert_array(_spy.starts).is_empty()
 	assert_bool(await h.start(server, crew[0])).is_true()
-	crew[1].set_ready(true)
+	crew[1].start()
 	await h.wait(200)
 	assert_int(_spy.starts.size()).is_equal(1)
 	assert_str(_spy.starts[0][0]).is_equal("it")

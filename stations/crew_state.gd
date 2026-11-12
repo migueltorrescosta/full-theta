@@ -343,20 +343,63 @@ func can_add_ship() -> bool:
 	)
 
 
-## Whether this ship's crew pressed Start and waits for the others (M4-Q4).
-func waiting_for_others(id: int = ship) -> bool:
-	return (
-		not fleet.is_empty()
-		and not bool(fleet.get("started", false))
-		and bool(fleet_row(id).get("started", false))
-	)
+## Whether a host client is connected (the `fleet` event's `host`): without one any Ready crew
+## player may Start (#37 C1).
+func host_here() -> bool:
+	return bool(fleet.get("host", true))
 
 
-## The names of the crewed ships that haven't pressed Start yet.
-func waiting_names() -> PackedStringArray:
+## Whether the universe has started (the `fleet` event), or without one this ship's lobby
+## state says its run has.
+func game_started() -> bool:
+	if not fleet.is_empty():
+		return bool(fleet.get("started", false))
+	return bool(ship_state(ship).get("started", false))
+
+
+## This session's Ready, from its seat row on its ship (#37 C1).
+func is_ready() -> bool:
+	for row: Variant in ship_state(ship).get("seats", []):
+		if int((row as Dictionary).get("session", -1)) == session:
+			return bool((row as Dictionary).get("ready", false))
+	return false
+
+
+## Whether the lobby offers this player Ready: a crew player other than the host (the host's
+## Start is its Ready), before the game starts (#37 C1).
+func offers_ready() -> bool:
+	return is_crew() and not host and not game_started()
+
+
+## Whether the lobby offers this player Start: the host, or with no host connected a Ready
+## crew player, before the game starts (#37 C1, the no-host rule).
+func offers_start() -> bool:
+	if game_started():
+		return false
+	return host or (not host_here() and is_crew() and is_ready())
+
+
+## The lobby's crewed ships (a crew pick on them), in lobby order.
+func crewed_ships() -> Array[int]:
+	var out: Array[int] = []
+	for row: Dictionary in fleet_ships():
+		var id: int = int(row["ship"])
+		if int(ship_state(id).get("crew", 0)) > 0:
+			out.append(id)
+	return out
+
+
+## The names of the crew players not Ready yet, on every crewed ship (#37 C1).
+func unready_names() -> PackedStringArray:
 	var names: PackedStringArray = []
-	for id: Variant in fleet.get("waiting", []):
-		names.append(ship_name(int(id)))
+	for id: int in crewed_ships():
+		for row: Variant in ship_state(id).get("seats", []):
+			var r: Dictionary = row
+			if (
+				bool(def_of(str(r.get("seat", ""))).get("crew", false))
+				and not r.get("ready", false)
+			):
+				names.append(str(r.get("name", "")))
 	return names
 
 
