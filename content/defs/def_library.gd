@@ -65,6 +65,16 @@ func npcs() -> Dictionary[StringName, NpcDef]:
 	return out
 
 
+## Every RunModifierDef, sorted by id (gp-11: the lobby rolls one of them).
+func run_modifiers() -> Array[RunModifierDef]:
+	var out: Array[RunModifierDef] = []
+	var ids: Array = _by_class.get(&"RunModifierDef", {}).keys()
+	ids.sort()
+	for id: StringName in ids:
+		out.append(_by_class[&"RunModifierDef"][id])
+	return out
+
+
 func run(id: StringName) -> RunDef:
 	return get_def(&"RunDef", id) as RunDef
 
