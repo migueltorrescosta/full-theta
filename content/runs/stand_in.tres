@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="StandInDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/stand_in_def.gd" id="1_stand_in"]
+
+[resource]
+script = ExtResource("1_stand_in")
+id = &"stand_in"
+look_s = 2.0
+reaction_s = 8.0
+aim_every_s = 0.2
+fire_every_s = 0.6
+aim_error = 0.001
+fire_skip = 0.1
+sight_m = 12000.0
+shoot_m = 5800.0
+cruise_ms = 120.0
+jump_aim_share = 0.8
+fill_min_players = 2

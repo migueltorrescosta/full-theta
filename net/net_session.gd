@@ -30,6 +30,9 @@ var last_seat: String = ""
 ## also after Back to ships (#35 A10, NetGame.pick_rule).
 var home_ship: int = -1
 var last_claims: Array[String] = []
+## The eliminated ship of a guest (#40 D10, gp-04): its crew, handed over to a friendly ship in
+## co-op or TEAMS, may take that ship's free light stations; -1 for anyone else.
+var guest_from: int = -1
 ## The player's Ready toggle in the lobby (Ready, #37 C1): cleared whenever the session's
 ## ship or seat changes (NetLobby.set_pick) and at a run reset.
 var ready: bool = false

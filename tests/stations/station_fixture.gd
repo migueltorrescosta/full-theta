@@ -147,8 +147,13 @@ class RecordingClient:
 	func set_team(ship: int, team: int) -> void:
 		sent.append(["set_team", [ship, team]])
 
-	func set_mode(mode: String, team_win: String, lives: int) -> void:
-		sent.append(["set_mode", [mode, team_win, lives]])
+	func set_mode(
+		mode: String, team_win: String, lives: int, drop_pause: bool, fill_bots: bool
+	) -> void:
+		sent.append(["set_mode", [mode, team_win, lives, drop_pause, fill_bots]])
+
+	func reroll_modifier() -> void:
+		sent.append(["reroll_modifier", []])
 
 	func vote_relaunch(ship: int, vote: bool) -> void:
 		sent.append(["vote_relaunch", [ship, vote]])
@@ -441,6 +446,9 @@ static func fleet(
 		"waiting": [],
 		"started": started,
 		"host": host_here,
+		"modifier": "",
+		"drop_pause": false,
+		"fill_bots": false,
 	}
 	ctx.crew.handle_event({"type": "fleet", "payload": p}, NOW_MS)
 	# The server's Catalogue lists every crewed ship (NetGame.crew_ships), so a pick

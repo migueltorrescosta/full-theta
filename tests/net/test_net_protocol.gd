@@ -77,12 +77,22 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.HOST_PAUSE: {"on": true},
 		NetProtocol.Type.SHIP_ADD: {"name": "Kestrel II"},
 		NetProtocol.Type.SHIP_TEAM: {"ship": 2, "team": 1},
-		NetProtocol.Type.GAME_MODE: {"mode": "teams", "team_win": "first_to_finish", "lives": -1},
+		NetProtocol.Type.GAME_MODE:
+		{
+			"mode": "teams",
+			"team_win": "first_to_finish",
+			"lives": -1,
+			"drop_pause": true,
+			"fill_bots": false,
+		},
 		NetProtocol.Type.RELAUNCH: {"ship": 1, "vote": true},
 		NetProtocol.Type.CLIENT_FRAME: {"ms": 812, "what": "build station:0:helm"},
 		NetProtocol.Type.TRAINING: {"station": "helm"},
 		NetProtocol.Type.RENAME: {"name": "Ana"},
 		NetProtocol.Type.START: {},
+		NetProtocol.Type.REROLL_MODIFIER: {},
+		NetProtocol.Type.PRIORITY_TARGET: {"contact": 3},
+		NetProtocol.Type.SKIP_GAP: {"ready": true},
 	}
 
 

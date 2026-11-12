@@ -10,7 +10,11 @@
 ## - "outcome", "debrief": Helm with the end card of a won run, its summary with three
 ##   highlights, or its Details (the full debrief, ux-20);
 ## - "pause": the host's own ship paused under a host pause (`host` false: a crew player's);
-## - "menu_web": the web main menu.
+## - "menu_web": the web main menu;
+## - "bots": Helm with stand-in and fill bots on the ship, named in the top bar (#40 D1).
+## `gp` (lobby, mode) adds the gameplay options (#40 D1, D2, D10, gp-11): the host's two
+## options on and a run modifier in the sheet, a stand-in bot, a fill bot and a guest in the
+## cells.
 ## `insets` simulates a phone's safe-area insets [left, top, right, bottom] in device-
 ## independent px (#28), drawn in translucent red; `lang` the language (I18n.LANGUAGES),
 ## `ships` the fleet's size (up to 6), `fullscreen` FullscreenButton.forced (-1 as found),
@@ -26,6 +30,7 @@ var lang: String = "en"
 var ships: int = 4
 var fullscreen: int = -1
 var host: bool = true
+var gp: bool = false
 
 var _ctx: StationContext
 
@@ -78,6 +83,14 @@ func _ready() -> void:
 			o.setup(_ctx)
 		"outcome", "debrief", "pause", "menu_web":
 			_own_view()
+		"bots":
+			_fleet("coop", true)
+			_ctx.crew.lobby[0]["bots"] = [
+				{"seat": "weapons", "for": "Ana"},
+				{"seat": "relay", "for": ""},
+				{"seat": "comms", "for": ""},
+			]
+			_station()
 	if not insets.is_empty():
 		var shade: Control = StationShot.InsetShade.new()
 		shade.set("insets", insets)
@@ -115,11 +128,32 @@ func _lobby() -> void:
 		{"seat": "systems", "name": "Cy", "session": StationFixture.SESSION, "ready": true},
 	]
 	_fleet("teams", false)
+	if gp:
+		_gameplay_options()
 	var l: LobbyScreen = LobbyScreen.new()
 	l.setup(_ctx)
 	add_child(l)
 	if view == "mode":
 		l.find_child("GameSetup", true, false).pressed.emit()
+
+
+## The gameplay options of the `gp` shots: Ana dropped (a bot holds Helm for her), a fill bot
+## on Comms, Di a guest on Relay; the host's options on and a run modifier rolled.
+func _gameplay_options() -> void:
+	var state: Dictionary = _ctx.crew.lobby[0]
+	state["seats"] = (state["seats"] as Array).slice(1)
+	state["seats"].append(
+		{"seat": "relay", "name": "Di", "session": 9, "ready": true, "guest": true}
+	)
+	state["bots"] = [{"seat": "helm", "for": "Ana"}, {"seat": "comms", "for": ""}]
+	for id: String in ["ion_storm", "calm_lanes"]:
+		var def: RunModifierDef = RunModifierDef.new()
+		def.id = StringName(id)
+		def.name_key = StringName(id.capitalize())
+		def.detail_key = &"Sensors see half as far; shields recharge faster."
+		ModePanel.modifier_defs[id] = def
+	_ctx.crew.fleet.merge({"drop_pause": true, "fill_bots": true, "modifier": "ion_storm"}, true)
+	_ctx.crew.changed.emit(&"fleet")
 
 
 func _scoreboard() -> void:

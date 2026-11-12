@@ -57,6 +57,13 @@ var watching: String = "":
 		_raw = []
 		_shown = []
 
+## The bots on this ship, after the station names (#40 D1: "Weapons: Bot (for Ana)"), or "".
+var bots: String = "":
+	set(value):
+		bots = value
+		_raw = []
+		_shown = []
+
 var _row: HBoxContainer
 ## The rows' box: 8 px in from each edge; a phone's row starts at the top edge, so its
 ## 48 px targets keep UiTheme.TOUCH_GAP above the content under the bar.
@@ -318,7 +325,7 @@ func show_state(
 	for s: Variant in stations:
 		var star: bool = stations.size() > 1 and str(s) == focused
 		names.append(tr(StationCatalogue.name_key(str(s))) + ("*" if star else ""))
-	_stations.text = " + ".join(names)
+	_stations.text = " + ".join(names) + ("   ·   " + bots if bots != "" else "")
 	var secs: int = int(mission_s)
 	_timer.text = "%02d:%02d" % [secs / 60, secs % 60]
 	var second: String = _second_line()

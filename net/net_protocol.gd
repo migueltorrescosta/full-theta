@@ -285,7 +285,17 @@ const MESSAGES: Dictionary = {
 	[RATED, {"sent_us": TYPE_INT, "ua": TYPE_STRING, "pairs": TYPE_PACKED_INT64_ARRAY}],
 	Type.SHIP_ADD: [RATED | NAMED, {"name": TYPE_STRING}],
 	Type.SHIP_TEAM: [RATED, {"ship": TYPE_INT, "team": TYPE_INT}],
-	Type.GAME_MODE: [RATED, {"mode": TYPE_STRING, "team_win": TYPE_STRING, "lives": TYPE_INT}],
+	Type.GAME_MODE:
+	[
+		RATED,
+		{
+			"mode": TYPE_STRING,
+			"team_win": TYPE_STRING,
+			"lives": TYPE_INT,
+			"drop_pause": TYPE_BOOL,
+			"fill_bots": TYPE_BOOL,
+		}
+	],
 	Type.RELAUNCH: [RATED, {"ship": TYPE_INT, "vote": TYPE_BOOL}],
 	Type.CLIENT_FRAME: [RATED, {"ms": TYPE_INT, "what": TYPE_STRING}],
 	Type.TRAINING: [RATED, {"station": TYPE_STRING}],

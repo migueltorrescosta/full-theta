@@ -70,7 +70,8 @@ func can_edit_toggles() -> bool:
 
 ## The one-line summary everyone sees, in short words so it is never cut (#37 C1): the
 ## mode's short name and the difficulty, with the number of toggles changed from its preset
-## ("Teams · Easy", "Co-op · Normal +2").
+## ("Teams · Easy", "Co-op · Normal +2"), then the host's options that are on (#40 D1, D2)
+## and the run modifier (gp-11): "Co-op · Easy · Bots fill · Ion storm".
 func summary_text() -> String:
 	var mode: String = tr("lobby.short." + _ctx.crew.mode())
 	var toggles: DataToggles = _ctx.crew.toggles
@@ -78,7 +79,14 @@ func summary_text() -> String:
 	var changed: int = changed_count(toggles)
 	if changed > 0:
 		level = tr("lobby.preset_changed") % [level, changed]
-	return tr("lobby.summary") % [mode, level]
+	var parts: PackedStringArray = [tr("lobby.summary") % [mode, level]]
+	for id: String in ["drop_pause", "fill_bots"]:
+		if bool(_ctx.crew.fleet.get(id, false)):
+			parts.append(tr("lobby.short." + id))
+	var modifier: RunModifierDef = ModePanel.modifier_def(str(_ctx.crew.fleet.get("modifier", "")))
+	if modifier != null:
+		parts.append(tr(modifier.name_key))
+	return " · ".join(parts)
 
 
 ## How many toggles differ from the set's preset.
@@ -109,7 +117,8 @@ func _button(node_name: String, text: String, handler: Callable) -> Button:
 
 ## The Game setup sheet, added to `host`: three tabs, the mode, the ships and their teams
 ## (shown only when there are teams or room for another ship), and the difficulty with its
-## data shortcuts. Each tab fits a phone held sideways; only the shortcut list scrolls.
+## data shortcuts. Each tab fits a phone held sideways; the shortcut list and the mode tab
+## (with the host's options and the run modifier) scroll.
 func add_dialogs(host: Node) -> void:
 	_sheet = AcceptDialog.new()
 	_sheet.name = "SetupDialog"
@@ -128,9 +137,16 @@ func add_dialogs(host: Node) -> void:
 		_tabs.add_theme_stylebox_override(style, sb)
 	_sheet.add_child(_tabs)
 	var mode_tab: VBoxContainer = _tab("ModeTab")
+	# The mode, the host's options and the run modifier scroll on a phone held sideways.
+	var mode_scroll: ScrollContainer = ScrollContainer.new()
+	mode_scroll.name = "ModeScroll"
+	mode_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	mode_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mode_tab.add_child(mode_scroll)
 	_mode = ModePanel.new()
 	_mode.setup(_ctx)
-	mode_tab.add_child(_mode)
+	_mode.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_scroll.add_child(_mode)
 	var ships_tab: VBoxContainer = _tab("ShipsTab")
 	_ships = GridContainer.new()
 	_ships.name = "SetupShips"

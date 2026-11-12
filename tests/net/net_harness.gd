@@ -31,6 +31,9 @@ func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = 
 	if s.start(m1, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
 	s.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	# The suites of the coverage pause predate the stand-in bots (#40 D1): their servers keep
+	# the host's "Pause when someone drops" on; the stand-in tests turn it off.
+	s.game.lobby.drop_pause = true
 	# A served world trims its command log; tests read the history of the run.
 	s.world.keep_command_log = true
 	node.add_child(s)
@@ -56,6 +59,7 @@ func fleet_server(
 	if s.start(f.setup, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
 	s.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	s.game.lobby.drop_pause = true  # as in server()
 	s.game.fleet.rules = f.rules
 	s.game.fleet.slots = f.setup.slots
 	s.world.keep_command_log = true

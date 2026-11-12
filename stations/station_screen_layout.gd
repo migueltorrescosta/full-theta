@@ -333,6 +333,7 @@ func show_watching() -> void:
 	var h: Dictionary = s.ctx.crew.handover
 	var to: int = int(h.get("to_ship", FleetMessages.TO_SCOREBOARD))
 	s.top_bar.watching = "" if to == FleetMessages.TO_SCOREBOARD else s.ctx.crew.ship_name(to)
+	s.top_bar.bots = LobbySeatGrid.bots_line(s.ctx)  # the ship's bots (#40 D1)
 
 
 ## P28-Band: on a phone on its side a panel in the frame (StationPanel.in_frame) draws into
