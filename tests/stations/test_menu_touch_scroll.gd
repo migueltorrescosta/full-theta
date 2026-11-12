@@ -10,7 +10,7 @@ func after() -> void:
 
 
 ## A phone-sized viewport holding the menu with the touch pictures of two stations.
-func _menu() -> Array:
+func _menu(comfort: bool = false) -> Array:
 	LayoutMode.forced = LayoutMode.Kind.PHONE
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = Vector2i(844, 390)
@@ -18,7 +18,11 @@ func _menu() -> Array:
 	add_child(vp)
 	var m: SettingsScreen = SettingsScreen.new()
 	vp.add_child(m)
-	m.setup(ClientSettings.new("user://test_menu_touch_scroll.cfg"), true)
+	var settings: ClientSettings = ClientSettings.new("user://test_menu_touch_scroll.cfg")
+	settings.comfort = comfort
+	m.setup(settings, true)
+	if comfort:
+		(m.find_child("Advanced", true, false) as Button).button_pressed = true
 	m.set_controls(Bindings.new(), ["engineering", "weapons"], IntentTable.KBM, "engineering")
 	return [vp, m]
 
@@ -43,8 +47,8 @@ func _drag(vp: SubViewport, index: int, from: Vector2, to: Vector2) -> void:
 
 
 ## The scroll position after a finger swipe up from `start` on the tab named `tab`.
-func _swipe(tab: String, start: Vector2) -> int:
-	var made: Array = _menu()
+func _swipe(tab: String, start: Vector2, comfort: bool = false) -> int:
+	var made: Array = _menu(comfort)
 	var vp: SubViewport = made[0]
 	var m: SettingsScreen = made[1]
 	m.open_tab(tab)
@@ -66,6 +70,6 @@ func test_a_touch_drag_scrolls_the_controls_tab() -> void:
 
 # FT: FT-STN-011
 func test_a_drag_that_starts_on_a_button_scrolls_the_settings_tab() -> void:
-	# (the Game tab fits a landscape phone's menu; the finger starts on the full-width
-	# Reset tips button)
-	assert_int(await _swipe(SettingsScreen.TAB_SETTINGS, Vector2(400, 190))).is_greater(0)
+	# (the Game tab fits a landscape phone's menu, and the Display tab does until comfort's
+	# Advanced group opens; the finger starts on the full-width Reset tips button)
+	assert_int(await _swipe(SettingsScreen.TAB_SETTINGS, Vector2(400, 190), true)).is_greater(0)

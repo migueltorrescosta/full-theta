@@ -51,6 +51,8 @@ func _ready() -> void:
 			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 0))
 			_event("handover", FleetMessages.handover(0, 1))
 			_station()
+			# Each shot shows it, whichever shots this process rendered before.
+			HandoverNotice.seen.clear()
 			var n: HandoverNotice = HandoverNotice.new()
 			n.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 			n.grow_horizontal = Control.GROW_DIRECTION_BOTH

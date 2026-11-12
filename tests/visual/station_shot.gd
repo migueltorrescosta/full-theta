@@ -21,6 +21,8 @@
 ## The lobby's `host_bind` makes it the host's (its join strip and dialog, #35 A6), and
 ## `player` sets the player's saved name ("" shows the name prompt, #35 A5).
 ## `render_3d` sets the 3D resolution setting (a RenderQuality mode, default "full").
+## `comfort` turns the comfort switch on, `advanced` opens its Advanced group, `menu_scroll`
+## scrolls the menu's tab to a node (e.g. "ChangeKeys").
 ## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
@@ -80,6 +82,11 @@ var lesson_intent: String = ""
 ## follow it, D1, D4).
 var device: String = ""
 var render_3d: String = "full"
+## The menu's comfort switch is on; `advanced` also opens its Advanced group (ux-17).
+var comfort: bool = false
+var advanced: bool = false
+## A node of the open menu tab to scroll into view, e.g. "ChangeKeys" (ux-18); "" none.
+var menu_scroll: String = ""
 
 var _ctx: StationContext
 
@@ -195,6 +202,7 @@ func _ready() -> void:
 					menu.controls_pane.show_view(ControlsPane.VIEW_CARD)
 			)
 			add_child(menu)
+			_ctx.settings.comfort = comfort
 			menu.setup(_ctx.settings, true)
 			add_child(s)
 			move_child(menu, -1)
@@ -213,6 +221,10 @@ func _ready() -> void:
 					_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.seat
 				)
 				menu.open(menu_tab)
+				if advanced:
+					(menu.find_child("Advanced", true, false) as Button).button_pressed = true
+				if menu_scroll != "":
+					_scroll_menu.call_deferred(menu)
 			for e: Dictionary in events:
 				var p: Dictionary = e.get("payload", {})
 				if p.get("vector") is Array:
@@ -225,6 +237,16 @@ func _ready() -> void:
 		add_child(shade)
 	if audit != "":
 		_write_audit.call_deferred()
+
+
+## Scrolls the menu's open tab so `menu_scroll` is at its top.
+func _scroll_menu(menu: SettingsScreen) -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var tab: ScrollContainer = menu.tabs.get_current_tab_control() as ScrollContainer
+	var target: Control = menu.find_child(menu_scroll, true, false) as Control
+	if tab != null and target != null:
+		tab.scroll_vertical = int(target.global_position.y - tab.global_position.y)
 
 
 ## The touch widgets in the three rail patterns' parts (#28): a radar as the view, a

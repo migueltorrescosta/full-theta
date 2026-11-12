@@ -9,7 +9,12 @@ extends VBoxContainer
 ## the list and never builds a diagram; others open on the diagram of the device in use. A
 ## diagram is built the first time it shows, and ControlsDiagram keeps finished layouts, so
 ## the menu opens fast (load fix 1). Under a diagram, the screen's intents that are not bound
-## on that device and the bindings it can't draw.
+## on that device and the bindings it can't draw; under the controller, which button each
+## letter is (R25-13: Godot names them by place, so a PlayStation or Switch pad's own glyphs
+## differ).
+
+## The filter changed (set_all_stations): Change keys follows it (ux-18).
+signal stations_filtered(on: bool)
 
 const VIEW_KBM: String = "Keyboard"
 const VIEW_PAD: String = "Gamepad"
@@ -189,9 +194,12 @@ func _build_touch(stations: Array) -> void:
 
 ## The filter: every station's controls, or only the screen's.
 func set_all_stations(on: bool) -> void:
+	if on == all_stations:
+		return
 	all_stations = on
 	_filter.set_pressed_no_signal(on)
 	show_view(view)
+	stations_filtered.emit(on)
 
 
 func _notification(what: int) -> void:
@@ -207,6 +215,18 @@ func _retext() -> void:
 	(_buttons.get_node(VIEW_LIST) as Button).text = tr("controls.view_list")
 	_filter.text = tr("controls.all_stations")
 	(_buttons.get_node(VIEW_CARD) as Button).text = tr("controls.view_card")
+
+
+## Weapons shown with select and fire on one key or button (D176, R25-9): the note says a
+## click selects over an item and fires elsewhere.
+static func lmb_split(bindings: Bindings, stations: Array) -> bool:
+	if not stations.has("weapons"):
+		return false
+	var fire: PackedStringArray = bindings.bindings("fire", IntentTable.KBM)
+	for b: String in bindings.bindings("select", IntentTable.KBM):
+		if b in fire:
+			return true
+	return false
 
 
 ## Helm on a Linux desktop: the touchpad may pause while a key is held (libinput's "disable
@@ -250,6 +270,10 @@ func _refresh_notes() -> void:
 			off.append("%s %s" % [e["label"], e["keys"]])
 		if not off.is_empty():
 			parts.append(tr("controls.off_diagram") % ", ".join(off))
+		if v == VIEW_KBM and lmb_split(_bindings, shown_stations()):
+			parts.append(tr("controls.lmb_split"))
+		if v == VIEW_PAD:
+			parts.append(tr("controls.pad_buttons"))
 		if v == VIEW_KBM and touchpad_hint(shown_stations()):
 			parts.append(tr("controls.touchpad_hint"))
 		(_notes[v] as Label).text = "\n".join(parts)

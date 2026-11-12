@@ -245,7 +245,6 @@ func test_comfort_roll_lock_and_reduced_fov() -> void:
 	ctx.settings.comfort = true
 	ctx.settings.roll_lock = "reference"
 	ctx.settings.reference_plane = Quaternion(Vector3.BACK, deg_to_rad(90.0))
-	ctx.settings.reduced_fov = true
 	p.step(0.016)
 	var fwd: Vector3 = -p.cam_basis.z
 	var ref_up: Vector3 = Vector3.LEFT

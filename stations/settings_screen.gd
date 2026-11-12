@@ -4,11 +4,13 @@ extends PanelContainer
 ## with tabs. In a session: Game (the ship's name, Sound, Full screen where offered, the
 ## host's Pause, Abandon or Give up, Leave; the final ones ask to confirm in place), Controls
 ## (the live bindings under the seat's role summary, ControlsPane; FT-STN-012; then, off a
-## phone, Change keys: every intent per device with rebind, hold/toggle and reset, the
-## seat's stations first, FT-STN-007, FT-STN-014; owner A14) and Settings (UI scale 75-150 %
-## FT-STN-013, invert pitch, first-visit hints again, and comfort FT-STN-017: on/off, roll
-## lock deck / target / reference plane, "set reference plane to my current deck", reduced
-## field of view; the station cameras apply them). Outside a session: Settings, then
+## phone, Change keys: the seat's stations and the common actions per device with rebind,
+## hold/toggle and reset, every intent with "Show all stations", FT-STN-007, FT-STN-014;
+## owner A14, ux-18) and Display (node TAB_SETTINGS, R24-17: UI scale 75-150 % FT-STN-013,
+## invert pitch, first-visit hints again, and comfort FT-STN-017: one switch for the roll
+## lock and the narrower view, then a collapsed Advanced group with the roll lock deck /
+## target / reference plane and "set reference plane to my current deck", ux-17; the station
+## cameras apply them). Outside a session: Display, then
 ## Controls for every station (not on a phone, which has no keys). The Controls tab is
 ## filled when it shows, for the seat set_controls named, else every station (owner A13).
 ## Esc opens it on the tab last used (Game at first in a session, Settings outside one),
@@ -30,6 +32,10 @@ signal reference_plane_requested
 signal name_changed(new_name: String)
 
 ## Intents that can't be left unbound: the way back to Settings, and the way to say no.
+## The common and always-live actions Change keys lists without "Show all stations" (ux-18):
+## menu, ping, mark, the alert, share and next contact.
+## "alert_cycle" stands for the alert's whole family (the pad sets the levels one by one).
+const COMMON_KEYS: Array[String] = ["menu", "ping", "mark", "alert_cycle", "share", "cycle_target"]
 const ALWAYS_BOUND: Array[String] = ["menu", "decline"]
 const MODIFIER_KEYS: Array[Key] = [KEY_SHIFT, KEY_ALT, KEY_CTRL]
 ## A trigger or stick past this deflection is captured.
@@ -78,6 +84,8 @@ var _built_args: Array = []
 ## The Change keys section under the pane (null on a phone outside a session).
 var _keys: VBoxContainer
 var _rows: VBoxContainer
+## Change keys' "Show all stations" toggle, the Controls pane's filter (in a session only).
+var _show_all: CheckBox
 ## The stations the Change keys rows put first.
 var _rows_for: Array = []
 var _scale_label: Label
@@ -100,11 +108,7 @@ func setup(p_settings: ClientSettings, in_session: bool) -> void:
 	_in_session = in_session
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	# Opaque: the station behind must not show through (D185).
-	var box: StyleBoxFlat = StyleBoxFlat.new()
-	box.bg_color = Palette.color("panel")
-	box.border_color = Palette.color("line_strong")
-	box.set_border_width_all(UiTheme.BORDER)
-	box.set_content_margin_all(16)
+	var box: StyleBoxFlat = UiTheme.box("panel", "line_strong", 16, 16)
 	add_theme_stylebox_override("panel", box)
 	_box = box
 	_root = VBoxContainer.new()
@@ -281,6 +285,7 @@ func _build() -> void:
 	controls_pane = null
 	_keys = null
 	_rows = null
+	_show_all = null
 	_built_args = []
 	if _in_session:
 		var game: VBoxContainer = VBoxContainer.new()
@@ -288,7 +293,8 @@ func _build() -> void:
 		_build_game(game)
 		_build_controls()
 	var general: VBoxContainer = VBoxContainer.new()
-	_tab(TAB_SETTINGS, tr("menu.settings"), general)
+	# Its own name, not the menu's (R24-17): the screen is already Settings.
+	_tab(TAB_SETTINGS, tr("menu.tab_display"), general)
 	_build_general(general)
 	_build_comfort(general)
 	# Outside a session the Controls tab is for changing keys, which a phone hasn't; a
@@ -320,11 +326,15 @@ func _build_controls() -> void:
 	warning = _label("")
 	warning.name = "Warning"
 	warning.add_theme_color_override("font_color", Palette.color("warn"))
-	var reset: Button = _add_button(
-		_keys, "ResetBindings", tr("settings.reset_bindings"), _reset_bindings
-	)
-	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	warning.visible = false
+	var bar: HBoxContainer = HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 16)
+	_keys.add_child(bar)
+	_add_button(bar, "ResetBindings", tr("settings.reset_bindings"), _reset_bindings)
+	_show_all = _check(bar, "ShowAll", tr("settings.show_all"), false)
 	_keys.add_child(warning)
+	_show_all.toggled.connect(func(on: bool) -> void: controls_pane.set_all_stations(on))
+	controls_pane.stations_filtered.connect(func(_on: bool) -> void: _build_bindings())
 	_rows = VBoxContainer.new()
 	_keys.add_child(_rows)
 	_keys.visible = not _phone()
@@ -477,11 +487,17 @@ func open_tab(tab: String) -> void:
 		tabs.current_tab = tabs.get_tab_idx_from_control(node as Control)
 
 
+## Shows `text` as Change keys' warning; an empty one takes no room.
+func _warn(text: String) -> void:
+	warning.text = text
+	warning.visible = text != ""
+
+
 ## Starts capturing the next input as the binding of `id` on `device`.
 func start_capture(id: String, device: String) -> void:
 	capturing = [id, device]
 	_held.clear()
-	warning.text = ""
+	_warn("")
 
 
 ## Esc (or the pad's Menu) closes Settings. While capturing: a key, mouse button, pad
@@ -595,19 +611,19 @@ func _bind(list: Array[String]) -> void:
 	var id: String = capturing[0]
 	var device: String = capturing[1]
 	if list.is_empty() and id in ALWAYS_BOUND:
-		warning.text = tr("settings.must_bind")
+		_warn(tr("settings.must_bind"))
 		return
 	for b: String in list:
 		var other: String = collision(settings.bindings, id, device, b)
 		if other != "":
-			warning.text = tr("settings.taken").format({"intent": tr(IntentTable.label_key(other))})
+			_warn(tr("settings.taken").format({"intent": tr(IntentTable.label_key(other))}))
 			_held.clear()
 			return
 	for b: String in list:
 		var twin: String = same_station(settings.bindings, id, device, b)
 		if twin != "" and _dup_warned != [id, device, b]:
 			_dup_warned = [id, device, b]
-			warning.text = tr("settings.same_station") % tr(IntentTable.label_key(twin))
+			_warn(tr("settings.same_station") % tr(IntentTable.label_key(twin)))
 			_held.clear()
 			return
 	_dup_warned = []
@@ -749,48 +765,81 @@ func _build_graphics(col: VBoxContainer) -> void:
 	)
 
 
+## Comfort (FT-STN-017, ux-17): one switch that locks the roll and narrows the view. With it
+## on, a collapsed Advanced group holds the roll lock and, in a session with the reference
+## plane lock, "Set reference plane"; with it off neither does anything, so neither shows.
 func _build_comfort(col: VBoxContainer) -> void:
-	col.add_child(_label(tr("settings.comfort"), 22))
-	_check(col, "Comfort", tr("settings.comfort_on"), settings.comfort).toggled.connect(
-		func(on: bool) -> void: settings.comfort = on
-	)
+	var head: Label = _label(tr("settings.comfort"))
+	head.theme_type_variation = "HeadingLabel"
+	col.add_child(head)
+	var on: CheckBox = _check(col, "Comfort", tr("settings.comfort_on"), settings.comfort)
+	var hint: Label = _label(tr("settings.comfort_hint"))
+	hint.add_theme_color_override("font_color", Palette.color("text_dim"))
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(hint)
+	var more: Button = _add_button(col, "Advanced", "", func() -> void: pass)
+	more.toggle_mode = true
+	more.flat = true
+	more.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var group: VBoxContainer = VBoxContainer.new()
+	group.name = "AdvancedGroup"
+	group.add_theme_constant_override("separation", 8)
+	col.add_child(group)
 	var lock: OptionButton = OptionButton.new()
 	lock.name = "RollLock"
 	for l: String in ClientSettings.ROLL_LOCKS:
 		lock.add_item(tr("settings.roll_" + l))
 	lock.selected = ClientSettings.ROLL_LOCKS.find(settings.roll_lock)
-	lock.item_selected.connect(
-		func(i: int) -> void: settings.roll_lock = ClientSettings.ROLL_LOCKS[i]
-	)
-	col.add_child(lock)
-	_add_button(
-		col,
+	lock.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	group.add_child(lock)
+	var reference: Button = _add_button(
+		group,
 		"SetReference",
 		tr("settings.set_reference"),
 		func() -> void: reference_plane_requested.emit()
 	)
-	_check(col, "ReducedFov", tr("settings.reduced_fov"), settings.reduced_fov).toggled.connect(
-		func(on: bool) -> void: settings.reduced_fov = on
+	reference.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var show: Callable = func() -> void:
+		more.visible = settings.comfort
+		more.text = tr("settings.advanced_open" if more.button_pressed else "settings.advanced")
+		group.visible = settings.comfort and more.button_pressed
+		reference.visible = _in_session and settings.roll_lock == "reference"
+	on.toggled.connect(
+		func(v: bool) -> void:
+			settings.comfort = v
+			show.call()
 	)
+	more.toggled.connect(func(_v: bool) -> void: show.call())
+	lock.item_selected.connect(
+		func(i: int) -> void:
+			settings.roll_lock = ClientSettings.ROLL_LOCKS[i]
+			show.call()
+	)
+	show.call()
 
 
 ## Change keys: one row per intent (label, KB/M binding, controller binding, hold/toggle),
-## under a heading per group; the Controls tab's stations first, then the common and
-## always-live ones, then the other stations.
+## under a heading per group (ux-18). In a session: the Controls tab's stations, then the
+## common actions a player rebinds (COMMON_KEYS); "Show all stations" (the Controls pane's
+## filter) adds every intent of every group. Outside a session every intent shows.
 func _build_bindings() -> void:
 	if _rows == null:
 		return
 	for c: Node in _rows.get_children():
 		_rows.remove_child(c)
 		c.queue_free()
-	var mine: Array = _controls_args[1] if not _controls_args.is_empty() else []
-	_rows_for = mine
+	var mine: Array = controls_args()[1]
+	_rows_for = _controls_args[1] if not _controls_args.is_empty() else []
+	var all: bool = not _in_session or (controls_pane != null and controls_pane.all_stations)
+	if _show_all != null:
+		_show_all.visible = _in_session
+		_show_all.set_pressed_no_signal(all)
 	var order: Array[String] = []
 	for g: String in mine:
 		if g in IntentTable.GROUPS and g not in order:
 			order.append(g)
 	for g: String in IntentTable.GROUPS:
-		if g not in order:
+		if g not in order and (all or g == IntentTable.COMMON):
 			order.append(g)
 	var head: HBoxContainer = HBoxContainer.new()
 	head.name = "Devices"
@@ -805,12 +854,27 @@ func _build_bindings() -> void:
 		l.add_theme_color_override("font_color", Palette.color("text_dim"))
 		head.add_child(l)
 	for group: String in order:
-		var ids: Array[String] = IntentTable.ids_of(group)
+		var ids: Array[String] = binding_ids(group, all)
 		if ids.is_empty():
 			continue
 		_rows.add_child(_label(tr("settings.group_" + group), 18))
 		for id: String in ids:
 			_binding_row(id)
+
+
+## The Change keys rows of `group`: every intent with `all`, else for the common and
+## always-live groups only COMMON_KEYS (shown under the common heading).
+static func binding_ids(group: String, all: bool) -> Array[String]:
+	if all:
+		return IntentTable.ids_of(group)
+	if group == IntentTable.LIVE:
+		return []
+	if group != IntentTable.COMMON:
+		return IntentTable.ids_of(group)
+	var out: Array[String] = []
+	for id: String in COMMON_KEYS:
+		out.append_array(ControlsModel.family(id) if id == "alert_cycle" else [id])
+	return out
 
 
 func _binding_row(id: String) -> void:

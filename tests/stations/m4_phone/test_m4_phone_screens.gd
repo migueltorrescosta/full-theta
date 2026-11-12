@@ -188,9 +188,10 @@ func test_floating_votes_sit_under_the_view_top_row() -> void:
 
 
 # FT: FT-MIS-030
-# The handover notice sits under the view-top row with OK at its right; OK hides it.
-func test_handover_notice_sits_under_the_row_with_ok_at_the_right() -> void:
+# The handover notice sits under the view-top row and hides by itself (R24-18).
+func test_handover_notice_sits_under_the_row_and_hides_by_itself() -> void:
 	for case: Array in CASES:
+		HandoverNotice.seen.clear()
 		var root: Control = _root(case)
 		var ctx: StationContext = _ctx("viewer", "teams")
 		_event(ctx, "picked", {"ship": 1, "seat": "viewer"})
@@ -208,10 +209,11 @@ func test_handover_notice_sits_under_the_row_with_ok_at_the_right() -> void:
 		var r: Rect2 = n.get_global_rect()
 		assert_float(r.position.y).is_greater_equal(_under_row(s))
 		assert_bool(SafeArea.tap_rect(n).encloses(r)).is_true()
-		var ok: Button = n.find_child("Ok", true, false)
-		assert_float(ok.get_global_rect().get_center().x).is_greater(r.get_center().x)
-		_clean(n, "%s handover" % case[0])
-		ok.pressed.emit()
+		# No tap targets of its own: clicks go through to the HUD.
+		var report: Dictionary = TapAudit.check(n)
+		assert_array(report["targets"]).is_empty()
+		assert_array(StationFixture.rule_breaks(report, "%s handover" % case[0])).is_empty()
+		n.tick(HandoverNotice.SHOW_S)
 		assert_bool(n.visible).is_false()
 		_drop(root)
 

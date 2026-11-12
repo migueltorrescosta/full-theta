@@ -79,7 +79,6 @@ func test_forward_camera_rolls_with_the_deck_or_the_comfort_lock() -> void:
 	s.ctx.snap.near[StationFixture.H2] = [NetCodec.pack_quat(h2_rot), Vector3i.ZERO, 0]
 	s.ctx.settings.comfort = true
 	s.ctx.settings.roll_lock = "target"
-	s.ctx.settings.reduced_fov = true
 	s.ctx.crew.select("contact", StationFixture.H2)
 	v.update_view(0.016)
 	var h2_up: Vector3 = NetCodec.unpack_quat(NetCodec.pack_quat(h2_rot)) * Vector3.UP

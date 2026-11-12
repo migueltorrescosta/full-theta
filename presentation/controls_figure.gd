@@ -7,7 +7,8 @@ extends RefCounted
 ##
 ## A part is {"id", "shape" ("rect", "round" or "circle"), "rect", "caption"}. Its `id`
 ## is the binding token that lands on it ("W", "Kp 1", "LMB", "LB", "Up"); "" for
-## decorative parts. Several parts may share an id (the two Shift keys): the first is
+## decorative parts. "?" (typed, on any layout) is a chip under
+## the keyboard. Several parts may share an id (the two Shift keys): the first is
 ## the callout anchor. `body` is the outline drawn behind the parts.
 
 ## The hardware zone's width and the keyboard's key pitch.
@@ -95,7 +96,7 @@ static func _kbm(dy: float) -> Dictionary:
 	_letters(parts, "ZXCVBNM", 2.25, 4.5)
 	parts.append(_key("Comma", 9.25, 4.5, 1, ","))
 	parts.append(_key("Period", 10.25, 4.5, 1, "."))
-	parts.append(_key("?", 11.25, 4.5))
+	parts.append(_key("Slash", 11.25, 4.5, 1, "/"))
 	parts.append(_key("Shift", 12.25, 4.5, 2.75))
 	# Space row.
 	parts.append(_key("Ctrl", 0, 5.5, 1.25))
@@ -145,6 +146,10 @@ static func _kbm(dy: float) -> Dictionary:
 	parts.append(_part("MMB", Rect2(mx + 50, my + 28, 10, 20), BLANK, "round"))
 	parts.append(_part("WheelDown", Rect2(mx + 50, my + 50, 10, 16), BLANK, "round"))
 	parts.append(_part("Mouse", Rect2(mx + 16, my + 92, 78, 66), BLANK, "round"))
+	# "?" is whichever key types it on the player's layout (input/README.md), not one place
+	# on the drawing: a chip under the numpad, off the keyboard, labelled in its column
+	# (R25-14).
+	parts.append(_part("?", Rect2((pad + 1.0) * U, kb_h + 24.0, 2 * KEY, KEY), "?", "round"))
 	return {"parts": parts, "body": body, "size": Vector2(kb_w, my + 180.0)}
 
 

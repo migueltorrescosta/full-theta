@@ -35,13 +35,13 @@ Every Alt shortcut also has a plain key: Shift+Tab alert, Shift+B share, Shift+N
 - **FT-STN-008** Any crew station shall set the ship's alert level, Normal, Yellow or Red, from the top bar (KB/M: click the alert chip for a three-button picker, or Alt+A or Shift+Tab to cycle; controller: hold View and press d-pad up for Red, right for Yellow, down for Normal; touch: tap the alert chip); the Captain and viewers shall not. (D15, D89, D170, D370)
 - **FT-STN-009** Every station shall bind the common actions of §5.0 identically, and no station-specific binding shall reuse a common or always-live key. (D95, plan review UX-5, D176, D181)
 - **FT-STN-010** Every crew station shall place a mark at its selection or cursor and send the request chips its pairs define, with one binding per device. (D44, §7.4, plan review STN-6)
-- **FT-STN-011** Settings and the controls shall be one opaque menu with tabs (Game, Controls, Settings); Change keys sits under Controls off a phone. Escape shall open it on the tab last used; `?`, View or `i` shall open it on Controls. The Controls tab shall be generated from the live input map and translated, and the menu shall retranslate at once when the language changes. (D100, D185, D333, plan review UX-1)
+- **FT-STN-011** Settings and the controls shall be one opaque menu with tabs (Game, Controls, Display); Change keys sits under Controls off a phone and lists the common actions (menu, ping, mark, alert, share, next contact) and the seat's stations, with "Show all stations" for the rest. Escape shall open it on the tab last used; `?`, View or `i` shall open it on Controls. The Controls tab shall be generated from the live input map and translated, and the menu shall retranslate at once when the language changes. (D100, D185, D333, plan review UX-1)
 - **FT-STN-012** The controls help shall never open by itself; a seat's first visit shall show a 6 s hint naming the Controls key of the device in use, and a 10 s hint reading a sample callout, once per client and station, and a setting shall re-enable the hints. The help shall show a picture of the player's device, filtered to their own stations by default with a toggle for all. The Controls tab shall be headed by the seat's role summary (a short text of what the seat controls and what the crew expects, also shown on the seat's lobby entry), explain controls only and never tell a player to talk to another station. There is no separate first-run tooltip. The Controls page shows the callout card in the game, and a tap on the sample-callout hint opens it. (D100, D185, D292, FT-PAIR-012, D369, D371, D399)
 - **FT-STN-013** Each client shall set a UI scale from 75 % to 150 %, persisted like bindings. (plan review UX-8)
 - **FT-STN-014** Every hold input shall be switchable to a toggle in the bindings. (plan review UX-8)
 - **FT-STN-015** The lobby catalogue shall show the load (intense, busy or light) of each station and joint view, read from its data definition (SeatDef), as the colour of the name on its pick button (dark red, yellow, green), with a one-line legend above the list and no tag words: Helm and Weapons intense, Engineering and Science busy, Relay and Comms light; Tactical intense, Systems busy, Ops light; Captain light; Viewer uncoloured. (D99, D126, D187, D198, D257)
 - **FT-STN-016** On first launch the lobby preset shall default to Easy, persisted per host; the toggles shall sit behind "Customise", each with a one-line description naming both stations. (plan review UX-9, D84)
-- **FT-STN-017** Each client shall have a comfort toggle (roll locked to the ship's deck plane, the selected contact or the player's optional cosmetic reference plane; reduced field of view) for the Helm cockpit, the turret camera and the main screen; the cosmetic plane shall never be spoken or used by rules. (plan review NAV-6, NAV-9, D124, D172, D180)
+- **FT-STN-017** Each client shall have one comfort switch (roll locked and a reduced field of view) for the Helm cockpit, the turret camera and the main screen; a collapsed Advanced group under it picks the roll lock (the ship's deck plane, the selected contact or the player's optional cosmetic reference plane) and sets the reference plane; the cosmetic plane shall never be spoken or used by rules. (plan review NAV-6, NAV-9, D124, D172, D180)
 
 ## 5.1 Helm (H-A cockpit, C toggles chase camera; D46)
 
@@ -97,7 +97,7 @@ Full-screen view from one claimed mount with lead reticle, arc edge and radar in
 +------------------------------------------'--6-'--------+
 ```
 
-- KB/M: mouse aims, LMB fire, RMB fire all claimed mounts in arc, 1–4 swap to claimed mount, Q ammo type, G fire guided ordnance at the selected attached mark, B power request, B then 2 bring mount to bear; K claim, T/Y select (§5.0).
+- KB/M: mouse aims, LMB fire, RMB fire all claimed mounts in arc, 1–4 swap to claimed mount, Q ammo type, G fire guided ordnance at the selected attached mark, B request (a numbered list: power or bring mount to bear, §5.0); K claim, T/Y select (§5.0).
 - Controller: right stick aim (light assist), RT fire, LT fire all claimed mounts in arc, d-pad left/right swap mount, d-pad up/down ammo type, LB fire guided; View+X claim, RB and hold RB select (§5.0).
 - Touch: drag to aim (stronger assist), fire and GUIDED buttons, tap mount list to claim or swap, tap target to select. Tablet: docked left rail (Mount 1-4, Aim stick at the lower corner) and right rail (Ammo, Guided, Fire all, Claim, held FIRE at the lower corner), dragging the view still aims (D324).
 
@@ -157,7 +157,7 @@ Centre: orbitable 3D disc radar with confidence-sized icons and probe bubbles. L
 +-------------------------------------------------------+
 ```
 
-- KB/M: click contacts, drag orbit, scroll zoom, E scan, H hack, P sensor sweep, M drop scan-position mark, 1–3 share (toggle on), B sensor power request, B then 2 to-scan-mark request.
+- KB/M: click contacts, drag orbit, scroll zoom, E scan, H hack, P sensor sweep, M drop scan-position mark, B request (a numbered list: sensor power or to-scan-mark, §5.0).
 - Controller: left stick cursor with snap-to-contact, RT scan, LT hack, d-pad up sensor sweep, d-pad down scan-position mark, right stick orbit; A, RB and hold RB select contacts (§5.0).
 - Touch: tap contacts, two-finger orbit, SCAN and HACK buttons.
 

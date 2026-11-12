@@ -50,6 +50,27 @@ func test_settings_round_trip_through_the_file() -> void:
 	assert_bool(b.hint_seen("helm")).is_false()
 
 
+# FT: FT-STN-017
+# ux-17: comfort is one switch that also narrows the view. A file saved before it may hold
+# "reduced_fov": it is ignored either way, so comfort on means the narrower view, and the
+# key is no longer written.
+func test_an_old_reduced_fov_key_follows_the_comfort_switch() -> void:
+	for old: Array in [[true, false], [true, true], [false, true], [false, false]]:
+		var cfg: ConfigFile = ConfigFile.new()
+		cfg.set_value("comfort", "on", old[0])
+		cfg.set_value("comfort", "reduced_fov", old[1])
+		cfg.save(PATH)
+		var s: ClientSettings = ClientSettings.new(PATH)
+		assert_int(s.load_file()).is_equal(OK)
+		assert_bool(s.comfort).is_equal(old[0])
+		var want: float = 60.0 * ComfortCamera.REDUCED_FOV if old[0] else 60.0
+		assert_float(ComfortCamera.fov_deg(s, 60.0)).is_equal_approx(want, 1e-4)
+		s.save()
+		var saved: ConfigFile = ConfigFile.new()
+		saved.load(PATH)
+		assert_bool(saved.has_section_key("comfort", "reduced_fov")).is_false()
+
+
 # FT: FT-AUD-024
 func test_music_volume_defaults_to_half_and_a_broken_value_falls_back() -> void:
 	assert_float(ClientSettings.new(PATH).music_volume).is_equal(0.5)
