@@ -46,22 +46,11 @@ func launch(
 	return row
 
 
+## Whether row r covers a bubble: a deployed probe, not a decoy.
+func covers(r: int) -> bool:
+	return deployed[r] == 1 and decoy_left[r] <= 0.0
+
+
 ## Rows of the ship's probes keep their order, so the serials stay ascending.
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
-	var keep: PackedInt32Array = PackedInt32Array()
-	for r: int in size():
-		if owner_ship[r] != ship_id:
-			keep.append(r)
-	keep_rows(keep)
-
-
-## Keeps only the rows `keep` (ascending), in that order.
-func keep_rows(keep: PackedInt32Array) -> void:
-	for col: Array in columns():
-		var name: String = col[0]
-		var old: Variant = get(name)
-		var fresh: Variant = old.duplicate()
-		fresh.resize(keep.size())
-		for i: int in keep.size():
-			fresh[i] = old[keep[i]]
-		set(name, fresh)
+	remove_rows(rows_of(ship_id))

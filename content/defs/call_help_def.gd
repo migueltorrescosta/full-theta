@@ -18,6 +18,8 @@ extends Resource
 @export var delay: float = 60.0
 ## How far from the calling ship the patrol arrives (m).
 @export var distance: float = 1500.0
+## How far apart patrol ships arrive, in a line out from the first (m).
+@export var spacing: float = 100.0
 ## RepDistDef id of the reputation draw with the patrol's faction (FT-MIS-019).
 @export var rep_dist: StringName = &""
 
@@ -32,4 +34,5 @@ func validate() -> Array[String]:
 		errors.append("count must be at least 1, got %d" % count)
 	DefCheck.positive(errors, "delay", delay)
 	DefCheck.positive(errors, "distance", distance)
+	DefCheck.positive(errors, "spacing", spacing)
 	return errors

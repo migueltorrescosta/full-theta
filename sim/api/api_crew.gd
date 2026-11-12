@@ -32,7 +32,7 @@ func alive(ship: int) -> bool:
 ## The nearest living hostile of the ship's faction that it detects within `reach` (any, or
 ## only armed ones), or -1.
 func nearest_hostile(ship: int, reach: float, armed_only: bool = false) -> int:
-	return CrewMoves.nearest_hostile(_world, ship, reach, armed_only)
+	return KnowledgeSystem.nearest_hostile(_world, ship, reach, armed_only)
 
 
 ## Whether the ship's Science has no minigame open.
@@ -117,15 +117,24 @@ func speed(ship: int) -> float:
 # --- weapons ---
 
 
-## Aims mount 0 at the target's lead point, off by `error` rad in a direction drawn from `rng`
-## (a stand-in's loose aim, StandInCrew); 0 is a perfect lead.
-func aim_at(ship: int, target: int, error: float = 0.0, rng: RandomNumberGenerator = null) -> bool:
-	return _send(ship, CrewMoves.aim(_world, ship, target, error, rng))
+## Aims the mount (0, the bow, by default) at the target's lead point, off by `error` rad in
+## a direction drawn from `rng` (a stand-in's loose aim, StandInCrew); 0 is a perfect lead.
+func aim_at(
+	ship: int, target: int, error: float = 0.0, rng: RandomNumberGenerator = null, mount: int = 0
+) -> bool:
+	return _send(ship, CrewMoves.aim(_world, ship, target, error, rng, mount))
 
 
-## Asks mount 0 for one shot (WeaponSystem fires it or says why not).
-func fire(ship: int) -> bool:
-	return _send(ship, FireCommand.new())
+## The first mount whose arc holds the target, else 0 (CrewMoves.mount_for, gp-12).
+func mount_for(ship: int, target: int) -> int:
+	return CrewMoves.mount_for(_world, ship, target)
+
+
+## Asks the mount (0 by default) for one shot (WeaponSystem fires it or says why not).
+func fire(ship: int, mount: int = 0) -> bool:
+	var c: FireCommand = FireCommand.new()
+	c.mount_index = mount
+	return _send(ship, c)
 
 
 ## The distance from the ship to another (m).

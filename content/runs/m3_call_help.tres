@@ -11,4 +11,5 @@ faction = 3
 count = 1
 delay = 60.0
 distance = 1500.0
+spacing = 100.0
 rep_dist = &"rep.call_help"

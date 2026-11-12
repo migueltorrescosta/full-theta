@@ -81,10 +81,10 @@ func act(world: SimWorld) -> void:
 
 ## The nearest hostile worth shooting that the crew's faction detects, or -1.
 func _pick_target(world: SimWorld) -> int:
-	var armed: int = CrewMoves.nearest_hostile(world, ship, ENGAGE_M, true)
+	var armed: int = KnowledgeSystem.nearest_hostile(world, ship, ENGAGE_M, true)
 	if not profile.shoots_debris:
 		return armed
-	var any: int = CrewMoves.nearest_hostile(world, ship, DEBRIS_M)
+	var any: int = KnowledgeSystem.nearest_hostile(world, ship, DEBRIS_M)
 	if armed < 0:
 		return any
 	if any < 0:

@@ -74,14 +74,16 @@ func _weapons(hands: ApiCrew, t: int) -> void:
 		_seen_at = t
 	if target < 0:
 		return
-	hands.aim_at(_ship, target, _def.aim_error, _rng)
+	# One gunner: the mount whose arc holds the target (gp-12).
+	var mount: int = hands.mount_for(_ship, target)
+	hands.aim_at(_ship, target, _def.aim_error, _rng, mount)
 	if t - _seen_at < _react_ticks or t < _next_fire:
 		return
 	if hands.range_to(_ship, target) > _def.shoot_m:
 		return
 	_next_fire = t + _fire_ticks
 	if _rng.randf() >= _def.fire_skip:
-		hands.fire(_ship)
+		hands.fire(_ship, mount)
 
 
 func _helm(hands: ApiCrew) -> void:

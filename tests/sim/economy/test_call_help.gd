@@ -36,10 +36,10 @@ func _raider(w: SimWorld) -> int:
 		TestDefs.raider_enemy(), 2, CubePoint.of(AT_ALPHA + Vector3(0, 0, -3000))
 	)
 	for i: int in HZ:
-		if ProbeSystem.nearest_hostile(w, 0) >= 0:
+		if ProbeSystem.hostile_in_play(w, 0) >= 0:
 			break
 		w.step()
-	assert_int(ProbeSystem.nearest_hostile(w, 0)).is_equal(id)
+	assert_int(ProbeSystem.hostile_in_play(w, 0)).is_equal(id)
 	return id
 
 
