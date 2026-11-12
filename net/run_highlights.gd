@@ -5,14 +5,14 @@ extends RefCounted
 ## - closest call: the lowest hull fraction a crewed ship reached while in play, and when (s);
 ##   left out when its hull never dropped, or when the ship was destroyed (the result says so);
 ## - top kill: the most valuable ship of another faction this ship destroyed (the largest
-##   ShipDef.hull_max; the first one on a tie): its class name and when;
+##   ShipDef.hull_max; the first one on a tie): its name and when;
 ## - best pair moment: the pair with the most cooperative events (CoopEvents.debrief; the
 ##   first in pair order on a tie), left out with none.
 ## A highlight with no data is left out of the record, not sent empty.
 
 ## Ship -> its lowest hull fraction so far and the run time it was reached (s).
 var _low: Dictionary[int, Vector2] = {}
-## Ship -> its top kill: {name, class, time, value}.
+## Ship -> its top kill: {name, time, value}.
 var _kill: Dictionary[int, Dictionary] = {}
 
 
@@ -30,7 +30,6 @@ func sample(world: SimWorld, events: Array[SimEvent], over: Dictionary) -> void:
 		if def.hull_max > float(_kill.get(e.other_id, {}).get("value", -1.0)):
 			_kill[e.other_id] = {
 				"name": def.display_name,
-				"class": String(def.id),
 				"time": e.tick * SimWorld.DT,
 				"value": def.hull_max,
 			}
@@ -43,7 +42,7 @@ func sample(world: SimWorld, events: Array[SimEvent], over: Dictionary) -> void:
 			_low[ship] = Vector2(hull, now)
 
 
-## The ship's highlights: {closest_call: {hull, time}, top_kill: {name, class, time},
+## The ship's highlights: {closest_call: {hull, time}, top_kill: {name, time},
 ## best_pair: {pair, stations, events}}, each only when it has data. `coop` is
 ## CoopEvents.debrief(); `destroyed` whether the ship ended at hull 0.
 func for_ship(ship: int, coop: Array, destroyed: bool) -> Dictionary:
@@ -53,7 +52,7 @@ func for_ship(ship: int, coop: Array, destroyed: bool) -> Dictionary:
 		out["closest_call"] = {"hull": low.x, "time": low.y}
 	if _kill.has(ship):
 		var k: Dictionary = _kill[ship]
-		out["top_kill"] = {"name": k["name"], "class": k["class"], "time": k["time"]}
+		out["top_kill"] = {"name": k["name"], "time": k["time"]}
 	var best: Dictionary = {}
 	for row: Dictionary in coop:
 		if int(row.get("events", 0)) > int(best.get("events", 0)):

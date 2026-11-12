@@ -149,7 +149,7 @@ func test_the_card_shows_the_highlights_and_details_opens_the_debrief() -> void:
 		"result": "win",
 		"highlights":
 		{
-			"top_kill": {"name": "Raider", "class": "m1_raider", "time": 302.0},
+			"top_kill": {"name": "Raider", "time": 302.0},
 			"closest_call": {"hull": 0.12, "time": 271.0},
 			"best_pair": {"pair": "p2", "stations": ["helm", "weapons"], "events": 4},
 		},

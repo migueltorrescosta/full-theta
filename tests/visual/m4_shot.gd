@@ -224,6 +224,6 @@ static func debrief_record() -> Dictionary:
 		{
 			"best_pair": {"pair": "p2", "stations": ["helm", "weapons"], "events": 4},
 			"closest_call": {"hull": 0.12, "time": 271.0},
-			"top_kill": {"name": "Raider", "class": "m1_raider", "time": 302.0},
+			"top_kill": {"name": "Raider", "time": 302.0},
 		},
 	}
