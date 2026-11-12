@@ -15,11 +15,6 @@ func _init(world: SimWorld) -> void:
 	_api = ScenarioApi.new(world)
 
 
-## Whether this host steps that world.
-func holds(world: SimWorld) -> bool:
-	return world == _world
-
-
 func api() -> ScenarioApi:
 	return _api
 
