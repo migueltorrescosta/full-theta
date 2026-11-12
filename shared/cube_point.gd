@@ -71,21 +71,6 @@ static func plus(p: PackedFloat64Array, offset: Vector3) -> PackedFloat64Array:
 	return PackedFloat64Array([p[0] + offset.x, p[1] + offset.y, p[2] + offset.z])
 
 
-## p wrapped into the cube of side period (each coordinate in [-period / 2, period / 2));
-## empty when p is not a point (FT-SIM-035: off-cube points wrap, NaN and infinity are
-## rejected). In-cube coordinates come back unchanged (D104).
-static func wrap(p: PackedFloat64Array, period: float) -> PackedFloat64Array:
-	if not is_valid(p):
-		return PackedFloat64Array()
-	return PackedFloat64Array(
-		[
-			PeriodRules.wrap(p[0], period),
-			PeriodRules.wrap(p[1], period),
-			PeriodRules.wrap(p[2], period)
-		]
-	)
-
-
 ## The minimum-image offset from b to a (m) in a cube of side period, computed in 64-bit.
 static func delta(a: PackedFloat64Array, b: PackedFloat64Array, period: float) -> Vector3:
 	return Vector3(
@@ -93,8 +78,3 @@ static func delta(a: PackedFloat64Array, b: PackedFloat64Array, period: float) -
 		PeriodRules.wrap(a[1] - b[1], period),
 		PeriodRules.wrap(a[2] - b[2], period)
 	)
-
-
-## The minimum-image distance between a and b (m).
-static func distance(a: PackedFloat64Array, b: PackedFloat64Array, period: float) -> float:
-	return delta(a, b, period).length()
