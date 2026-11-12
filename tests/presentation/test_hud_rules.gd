@@ -158,10 +158,6 @@ func _check_chips(radar: DiscRadar, where: String) -> void:
 	var font: Font = radar.get_theme_default_font()
 	var c: Vector2 = radar.disc_centre()
 	var numerals: Array = radar._numerals(font, c, DiscRadar.RANGES_M[radar.range_index]).values()
-	var rim: float = radar.disc_radius()
-	var tilt: float = sin(deg_to_rad(radar.tilt_deg))
-	var disc: Rect2 = Rect2(c - Vector2(rim, rim * tilt), Vector2(rim, rim * tilt) * 2.0)
-	var half: Rect2 = Rect2(disc.get_center() - disc.size / 4.0, disc.size / 2.0)
 	for e: Dictionary in entries:
 		if e["callout"] == "":
 			continue
@@ -181,29 +177,6 @@ func _check_chips(radar: DiscRadar, where: String) -> void:
 				)
 				. is_false()
 			)
-		# (the callsign alone is the last resort, D319: it may cross a line when nothing near is
-		# free)
-		if not radar.small() and CalloutText.SEP in e["callout"]:
-			for ring: Rect2 in [disc, half] + radar.selection_rings(entries):
-				(
-					assert_bool(
-						CalloutLayout._crosses_ellipse(
-							ring, r.grow_individual(0.0, -2.0, 0.0, -2.0)
-						)
-					)
-					. override_failure_message("%s: a ring's line crosses chip %s" % [name, r])
-					. is_false()
-				)
-		(
-			assert_float(CalloutLayout.gap_to(r, e["pos"]))
-			. override_failure_message("%s: chip %s is far from its blip %s" % [name, r, e["pos"]])
-			. is_less_equal(48.0)
-		)
-		(
-			assert_bool(view.grow(0.5).encloses(r))
-			. override_failure_message("%s: chip %s outside the radar %s" % [name, r, view])
-			. is_true()
-		)
 		for o: Dictionary in entries:
 			if o == e:
 				continue

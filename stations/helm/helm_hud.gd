@@ -254,12 +254,6 @@ func _draw() -> void:
 		return
 	_draw_reticle()
 	var all: Array[Dictionary] = markers()
-	var inset: Rect2 = _inset_rect().grow(10.0)
-	if inset.has_area():
-		# A tablet's radar inset (C14) shows what sits under it: no marker under the panel.
-		all = all.filter(
-			func(e: Dictionary) -> bool: return not (e["on_screen"] and inset.has_point(e["pos"]))
-		)
 	_placed.clear()
 	_labels.clear()
 	for e: Dictionary in all:

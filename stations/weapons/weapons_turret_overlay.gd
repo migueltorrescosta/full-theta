@@ -124,10 +124,18 @@ func _draw() -> void:
 	# screen's edge (D319).
 	var width: float = maxf(size.x - 24.0, 40.0)
 	var counts: Array[int] = []
+	var widths: Array[float] = []
 	var total: int = 0
-	for text: String in lines:
+	# (a held mount's row wraps short of its "You" chip, so the chip never runs off the edge)
+	var chip_w: float = _mine_chip_w(font)
+	for k: int in lines.size():
+		var text: String = lines[k]
+		var w_k: float = width
+		if k < rows.size() and _p.is_mine(k):
+			w_k = maxf(width - chip_w, 40.0)
+		widths.append(w_k)
 		var wrapped: float = (
-			font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE).y
+			font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, w_k, FONT_SIZE).y
 		)
 		var rows_n: int = maxi(roundi(wrapped / font.get_height(FONT_SIZE)), 1)
 		counts.append(rows_n)
@@ -140,16 +148,17 @@ func _draw() -> void:
 			col = Palette.color("warn")
 		var bg: Color = Palette.color("background")
 		var at: Vector2 = Vector2(12.0, y)
+		var w_k: float = widths[k]
 		if k < rows.size() and k == _p.mount:
-			_draw_row_bar(font, at, lines[k], width, line_h)
+			_draw_row_bar(font, at, lines[k], w_k, line_h)
 		draw_multiline_string_outline(
-			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, 4, bg
+			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, w_k, FONT_SIZE, -1, 4, bg
 		)
 		draw_multiline_string(
-			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, width, FONT_SIZE, -1, col
+			font, at, lines[k], HORIZONTAL_ALIGNMENT_LEFT, w_k, FONT_SIZE, -1, col
 		)
 		if k < rows.size() and _p.is_mine(k):
-			_draw_mine_chip(font, at, lines[k], width, line_h)
+			_draw_mine_chip(font, at, lines[k], w_k, line_h)
 		y += line_h * counts[k]
 
 
@@ -181,6 +190,12 @@ func _draw_mine_chip(font: Font, at: Vector2, text: String, width: float, line_h
 	sb.set_corner_radius_all(int(box.size.y / 2.0))
 	draw_style_box(sb, box)
 	draw_string(font, base, chip, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.color("background"))
+
+
+## The room (px) a "You" chip takes after its row: the gap, the chip and its padding.
+func _mine_chip_w(font: Font) -> float:
+	var chip: String = WeaponsReadout.mine_chip(_p)
+	return font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE - 2).x + 24.0
 
 
 ## `text` broken into lines of `width` px, as draw_multiline_string breaks it.

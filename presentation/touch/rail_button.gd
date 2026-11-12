@@ -59,6 +59,8 @@ static func _widest(font: Font, parts: PackedStringArray, fs: int) -> float:
 static func wrap(b: Button) -> void:
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	b.clip_text = false
+	# (the two lines sit close, so a wrapped button stays about a target's height)
+	b.add_theme_constant_override("line_spacing", -6)
 
 
 ## A rail button with `text` and `role`.

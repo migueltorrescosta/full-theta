@@ -94,14 +94,12 @@ func test_declutter_is_repeatable_on_a_crowd() -> void:
 
 
 # FT: FT-STN-002
-# w-dcc (D319(2)): a callout keeps off the lines of the disc's rim and half-range ring and of
-# the selection's range ring; it moves within reach, else it is shortened, and only the
-# callsign alone may cross a line.
-func test_a_callout_keeps_off_the_rings_lines() -> void:
+# D319(2): a ring's line only costs: a callout near the rim keeps its full text beside its
+# blip (it never shortens or moves away for a line), and takes a spot clear of the line when
+# one is as near.
+func test_a_ring_line_never_shortens_a_callout() -> void:
 	var font: Font = ThemeDB.fallback_font
 	var disc: Rect2 = Rect2(0, 0, 300, 120)
-	var ring: Rect2 = Rect2(40, 16, 220, 88)
-	# A blip just inside the rim at the right: the callout's home crosses the rim.
 	var pos: Vector2 = Vector2(270, 60)
 	var forms: Array = CalloutLayout.callout_forms(font, "H2 · 4 high · mid")
 	var variants: Array[String] = []
@@ -116,13 +114,8 @@ func test_a_callout_keeps_off_the_rings_lines() -> void:
 		"sizes": sizes,
 	}
 	var entries: Array[Dictionary] = [e]
-	CalloutLayout.declutter(entries, [], Rect2(0, 0, 400, 200), disc, 9.0, [ring])
-	var r: Rect2 = (e["callout_rect"] as Rect2).grow_individual(0.0, -2.0, 0.0, -2.0)
-	var half: Rect2 = Rect2(disc.get_center() - disc.size / 4.0, disc.size / 2.0)
-	for line: Rect2 in [disc, half, ring]:
-		(
-			assert_bool(CalloutLayout._crosses_ellipse(line, r))
-			. override_failure_message("%s crosses %s" % [e["callout_rect"], line])
-			. is_false()
-		)
-	assert_float(CalloutLayout.gap_to(e["callout_rect"], pos)).is_less_equal(48.0)
+	CalloutLayout.declutter(entries, [], Rect2(0, 0, 400, 200), disc, 9.0)
+	assert_str(e["callout"]).is_equal(variants[0])
+	assert_float(CalloutLayout.gap_to(e["callout_rect"], pos)).is_less_equal(
+		CalloutLayout.CALLOUT_NEAR
+	)
