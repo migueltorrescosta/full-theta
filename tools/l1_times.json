@@ -125,7 +125,7 @@
  "res://tests/presentation/test_callout_layout.gd": 0.0,
  "res://tests/presentation/test_callout_text.gd": 0.1,
  "res://tests/presentation/test_contact_picture.gd": 0.1,
- "res://tests/presentation/test_controls_hint.gd": 0.5,
+ "res://tests/presentation/test_first_seat_card.gd": 0.5,
  "res://tests/presentation/test_controls_diagram.gd": 25.7,
  "res://tests/presentation/test_controls_hold_help.gd": 0.1,
  "res://tests/presentation/test_controls_list.gd": 0.1,

@@ -1,14 +1,19 @@
 class_name Toasts
 extends Control
-## Toasts (§5.0, D319): short lines that expire after SHOW_MS. They replace the top bar's
-## status text for their duration, so a toast never covers a panel, a radar or a control:
-## the newest shows (with "+N" for the queued ones behind it), at most MAX are kept (the
-## oldest goes first). The station screen puts the box over TopBar.status_rect().
+## Toasts (§5.0, D319): the screen's one queue of short lines (C5), each expiring after
+## SHOW_MS. They replace the top bar's status text for their duration, so a toast never covers
+## a panel, a radar or a control: the newest of the highest priority shows (with "+N" for the
+## queued ones behind it), at most MAX are kept (the oldest of the lowest priority goes first).
+## Info toasts rank under the notes (a partner's shared data, a request that lapsed), which
+## rank under warnings. A keyed toast is one line that updates in place (a share's seconds).
+## The station screen puts the box over TopBar.status_rect().
 
 const SHOW_MS: int = 4000
 const MAX: int = 4
+## Kind -> priority (higher shows first).
+const PRIORITY: Dictionary = {"info": 0, "note": 1, "warn": 2, "danger": 2}
 
-## {text, kind, until}, newest first.
+## {text, kind, until, key}, newest first.
 var _items: Array[Dictionary] = []
 var _label: Label = Label.new()
 
@@ -48,12 +53,25 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Palette.color("panel"))
 
 
-## kind: "info", "warn" or "danger" (palette roles; info is the accent).
-func push(text: String, kind: String, now_ms: int) -> void:
-	_items.push_front({"text": text, "kind": kind, "until": now_ms + SHOW_MS})
+## kind: "info", "note", "warn" or "danger" (info is the accent, a note the text colour).
+## With a `key`, a toast of that key still queued only takes the new text (its time runs on).
+func push(text: String, kind: String, now_ms: int, key: String = "") -> void:
+	if key != "":
+		for i: Dictionary in _items:
+			if i["key"] == key:
+				if i["text"] != text:
+					i["text"] = text
+					_show()
+				return
+	_items.push_front({"text": text, "kind": kind, "until": now_ms + SHOW_MS, "key": key})
 	while _items.size() > MAX:
-		_items.pop_back()
+		_items.remove_at(_last())
 	_show()
+
+
+## Whether a toast of `key` is queued.
+func has_key(key: String) -> bool:
+	return _items.any(func(i: Dictionary) -> bool: return i["key"] == key)
 
 
 func update(now_ms: int) -> void:
@@ -63,12 +81,34 @@ func update(now_ms: int) -> void:
 		_show()
 
 
-## The texts shown, newest first (tests).
+## The texts queued, newest first (tests).
 func texts() -> Array[String]:
 	var out: Array[String] = []
 	for i: Dictionary in _items:
 		out.append(str(i["text"]))
 	return out
+
+
+## The index of the toast on view: the newest of the highest priority.
+func _first() -> int:
+	var best: int = 0
+	for i: int in _items.size():
+		if _rank(i) > _rank(best):
+			best = i
+	return best
+
+
+## The index of the toast to drop: the oldest of the lowest priority.
+func _last() -> int:
+	var worst: int = _items.size() - 1
+	for i: int in range(_items.size() - 1, -1, -1):
+		if _rank(i) < _rank(worst):
+			worst = i
+	return worst
+
+
+func _rank(i: int) -> int:
+	return int(PRIORITY.get(str(_items[i]["kind"]), 0))
 
 
 ## The line on view: the newest text (tests), or "" with none.
@@ -80,10 +120,8 @@ func _show() -> void:
 	visible = not _items.is_empty()
 	if _items.is_empty():
 		return
-	var top: Dictionary = _items[0]
+	var top: Dictionary = _items[_first()]
 	var kind: String = str(top["kind"])
 	_label.text = str(top["text"]) + (" +%d" % (_items.size() - 1) if _items.size() > 1 else "")
-	_label.add_theme_color_override(
-		"font_color",
-		Palette.color("accent" if kind == "info" else "danger_text" if kind == "danger" else kind)
-	)
+	var role: String = {"info": "accent", "note": "text", "danger": "danger_text"}.get(kind, kind)
+	_label.add_theme_color_override("font_color", Palette.color(role))

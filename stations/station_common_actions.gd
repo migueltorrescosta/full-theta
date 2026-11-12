@@ -43,23 +43,32 @@ func run(ev: Dictionary) -> bool:
 			for feature: StringName in shareable():
 				s.ctx.intents.share(String(feature))
 		"overlay":
-			# The Controls hint says this key opens the page, so it has done its job (D4).
-			var chip: Node = s.find_child("ControlsHint", false, false)
-			if chip != null:
-				chip.queue_free()
+			# The first-seat card names this key for the Controls page: it has done its job (D4).
+			_close_card()
 			s.help_requested.emit()
 			s._update_block()
 		"menu":
-			# Esc first closes an open choice sheet, then what the focused panel has open on
-			# top (Comms' overlay).
+			# Esc first closes an open choice sheet, then the first-seat card ("Got it (Esc)"),
+			# then what the focused panel has open on top (Comms' overlay).
 			if s.sheet.is_open():
 				s.sheet.cancel()
+			elif _close_card():
+				pass
 			elif not s.focused_panel().close_overlay():
 				s.menu_requested.emit()
 				s._update_block()
 		_:
 			handled = _live(id)
 	return handled
+
+
+## Closes the first-seat card (FirstSeatCard); false when none is open.
+func _close_card() -> bool:
+	var card: FirstSeatCard = s.first_seat_card()
+	if card == null:
+		return false
+	card.dismiss()
+	return true
 
 
 ## The data shortcuts this screen's stations may share with their partners (D210).

@@ -96,6 +96,36 @@ func test_mirror_buttons_chips_and_cards() -> void:
 	)
 
 
+# FT: FT-CPT-004
+# R23-12: a request that goes shows "Answered", or "Expired" when it ran out, for a few
+# seconds, then its row goes.
+func test_a_gone_request_shows_answered_or_expired_then_goes() -> void:
+	var list: ChipList = auto_free(ChipList.new())
+	var row: Callable = func(id: int, left: float) -> Dictionary:
+		return {
+			"id": id,
+			"from": "helm",
+			"to": "engineering",
+			"label": "Boost",
+			"left_s": left,
+			"total_s": 20.0
+		}
+	var both: Array[Dictionary] = [row.call(1, 12.0), row.call(2, 1.0)]
+	list.show_rows(both, 0)
+	var none: Array[Dictionary] = []
+	list.show_rows(none, 100)
+	assert_int(list.rows.size()).is_equal(0)
+	var shown: Array[Dictionary] = list.shown()
+	assert_int(shown.size()).is_equal(2)
+	assert_str(ChipList.time_text(shown[0])).is_equal("Answered")
+	assert_str(ChipList.time_text(shown[1])).is_equal("Expired, nobody answered")
+	assert_float(list.custom_minimum_size.y).is_equal(
+		ChipList.HEADER_HEIGHT + 2 * ChipList.ROW_HEIGHT
+	)
+	list.show_rows(none, 100 + ChipList.DONE_MS)
+	assert_array(list.shown()).is_empty()
+
+
 # FT: FT-CPT-001
 func test_buttons_and_keys_send_the_main_view() -> void:
 	var s: StationScreen = await _screen()

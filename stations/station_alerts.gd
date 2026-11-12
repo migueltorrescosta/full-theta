@@ -1,25 +1,32 @@
 class_name StationAlerts
 extends Node
-## Event notifications on a station screen (T056, FT-STN-004, FT-SIM-032, FT-M1-011): the
-## own ship's hits, subsystem faults, low shields and collision warnings show as a toast
-## and a screen-edge flash, and sound a tone (AlertTones, its own bus, FT-AUD-009), on the
-## stations they affect. The tone audiences match the ship computer's spoken lines
-## (ServerVoice.LINES, owner-approved in #7); a fault also shows, without a tone, on the
-## station that depends on the failed subsystem (FT-SIM-032). Pings chime (FT-SPA-016)
-## and an alert-level change sounds its level's tone and flashes its colour, on every
-## screen of the ship.
+## Event notifications on a station screen (T056, FT-STN-004, FT-SIM-032, FT-M1-011) in two
+## tiers (C5, ux-12). The critical tier, a hull at or under 25 %, a subsystem fault, shields
+## down and a missile lock, shows as the CriticalBanner with a screen-edge flash, and the ship
+## computer says it (ServerVoice); nothing else flashes. The rest (hits, collision and lane
+## warnings, alert-level changes) is a toast. Each sounds a tone (AlertTones, its own bus,
+## FT-AUD-009) on the stations it affects. The tone audiences match the ship computer's
+## spoken lines (ServerVoice.LINES, owner-approved in #7); a fault also shows, without a tone,
+## on the station that depends on the failed subsystem (FT-SIM-032). Pings chime
+## (FT-SPA-016) and an alert-level change sounds its level's tone, on every screen of the
+## ship. "Shields down" is the sim's low-shield alert: the shield is one lobe, with no face
+## of its own to fail. The server derives hull_critical and missile_lock (ServerVoice).
 
-## Sim event kind -> [stations that see and hear it ([] for every screen), toast and
+## Sim event kind -> [stations that see and hear it ([] for every screen), toast, banner and
 ## flash palette role, optionally the tone to play].
 const ROUTES: Dictionary = {
 	&"hit": [[], "danger"],
-	&"shield_low": [["helm", "engineering"], "warn"],
-	&"fault": [["engineering"], "warn"],
 	&"proximity": [["helm"], "danger"],
 	# Weapons is warned before a shot along a lane Relay flagged (FT-RLY-011), with the
 	# proximity tone (the third entry is the tone, when it isn't the event's own).
 	&"lane_warning": [["weapons"], "danger", &"proximity"],
+	&"hull_critical": [[], "danger", &"alert_red"],
+	&"missile_lock": [[], "danger", &"alert_red"],
+	&"shield_low": [["helm", "engineering"], "danger"],
+	&"fault": [["engineering"], "danger"],
 }
+## The critical tier: banner and edge flash (ux-12).
+const CRITICAL: Array[StringName] = [&"hull_critical", &"missile_lock", &"shield_low", &"fault"]
 ## Fault tag (the subsystem id, content/ships/) -> stations that depend on it and see
 ## its fault (FT-SIM-032). PROVISIONAL.
 const DEPENDS: Dictionary = {
@@ -41,6 +48,7 @@ var ctx: StationContext
 var stations: Array[String] = []
 var toasts: Toasts
 var flash: AlertFlash
+var banner: CriticalBanner
 var tones: AlertTones
 
 var _level: int = CrewState.ALERT_NORMAL
@@ -48,12 +56,17 @@ var _toast_ms: Dictionary = {}
 
 
 func setup(
-	context: StationContext, station_ids: Array[String], toast_box: Toasts, edge: AlertFlash
+	context: StationContext,
+	station_ids: Array[String],
+	toast_box: Toasts,
+	edge: AlertFlash,
+	critical: CriticalBanner
 ) -> void:
 	ctx = context
 	stations = station_ids
 	toasts = toast_box
 	flash = edge
+	banner = critical
 	_level = ctx.crew.alert
 	tones = AlertTones.new()
 	add_child(tones)
@@ -76,8 +89,10 @@ func on_sim_event(kind: StringName, p: Dictionary) -> void:
 		return
 	var now: int = ctx.now_ms()
 	var role: String = route[1]
-	flash.flash(Palette.color(role), now)
-	if now - int(_toast_ms.get(kind, -TOAST_GAP_MS)) >= TOAST_GAP_MS:
+	if CRITICAL.has(kind):
+		flash.flash(Palette.color(role), now)
+		banner.show_text(_text(kind, p), now)
+	elif now - int(_toast_ms.get(kind, -TOAST_GAP_MS)) >= TOAST_GAP_MS:
 		_toast_ms[kind] = now
 		toasts.push(_text(kind, p), role, now)
 	if audible:
@@ -94,7 +109,7 @@ func _on_crew_changed(what: StringName) -> void:
 	if ctx.crew.alert_by == "":
 		return
 	var style: Dictionary = Palette.alert(_level)
-	flash.flash(Palette.color(style["role"]), ctx.now_ms())
+	toasts.push("%s · %s" % [tr(style["key"]), ctx.crew.alert_by], "info", ctx.now_ms())
 	tones.play(StringName(style["role"]), ctx.now_ms())
 
 

@@ -25,3 +25,22 @@ func test_the_newest_shows_with_a_count() -> void:
 	assert_str(toasts.shown()).is_equal("second")
 	toasts.update(Toasts.SHOW_MS + 20)
 	assert_bool(toasts.visible).is_false()
+
+
+# C5, ux-14: one queue; a note (a share, a lapsed request) shows above info toasts and under
+# warnings, a keyed toast updates in place, and the cap drops the oldest of the lowest rank.
+func test_priorities_and_keyed_toasts() -> void:
+	var toasts: Toasts = auto_free(Toasts.new())
+	toasts.push("note", "note", 0, "share:routes")
+	toasts.push("info", "info", 10)
+	assert_str(toasts.shown()).is_equal("note +1")
+	toasts.push("warn", "warn", 20)
+	assert_str(toasts.shown()).is_equal("warn +2")
+	toasts.push("note again", "note", 30, "share:routes")
+	assert_array(toasts.texts()).is_equal(["warn", "info", "note again"])
+	assert_bool(toasts.has_key("share:routes")).is_true()
+	toasts.push("info 2", "info", 40)
+	toasts.push("info 3", "info", 50)
+	assert_array(toasts.texts()).is_equal(["info 3", "info 2", "warn", "note again"])
+	toasts.update(Toasts.SHOW_MS + 5)
+	assert_bool(toasts.has_key("share:routes")).is_false()

@@ -190,7 +190,8 @@ func after_ticks(events: Array[SimEvent]) -> void:
 			still.append(p)
 	_pending = still
 	var left_play: bool = false
-	for e: SimEvent in events:
+	# (with the critical alerts the server derives, C5: hull critical, missile lock)
+	for e: SimEvent in events + voice.critical_events(events):
 		var payload: Dictionary = {
 			"ship": e.ship_id,
 			"faction": e.faction,

@@ -75,6 +75,8 @@ var radar: DiscRadar
 var toasts: Toasts
 var alerts: StationAlerts
 var flash: AlertFlash
+## The critical tier's banner (C5): hull critical, a fault, shields down, a missile lock.
+var critical: CriticalBanner
 var chip_strip: ChipStrip
 var share_bar: ShareBar
 var training: TrainingBanner
@@ -133,6 +135,9 @@ var _hint: Label
 ## draws into the band (0 elsewhere); the side column keeps its controls above it.
 var _band_h: float = 0.0
 var _side_band: Control
+## Seconds left of each share seen last frame (_push_notes), and the request chips' lapse rule.
+var _share_left: Dictionary = {}
+var _lapse: ChipLapse = ChipLapse.new()
 
 
 ## Builds the screen for the current pick (ctx.crew.seat_def()). Seats without
@@ -162,9 +167,11 @@ func setup(context: StationContext) -> void:
 		panels.append(p)
 	ctx.crew.toast.connect(_on_toast)
 	ctx.crew.pinged.connect(frame.on_pinged)
+	critical = CriticalBanner.new()
+	add_child(critical)
 	alerts = StationAlerts.new()
 	add_child(alerts)
-	alerts.setup(ctx, stations, toasts, flash)
+	alerts.setup(ctx, stations, toasts, flash, critical)
 	# the Shakedown's step banner and Next (FT-MIS-039).
 	training = TrainingBanner.new()
 	training.station = stations[0]
@@ -318,24 +325,52 @@ func _process(delta: float) -> void:
 	var spot: Rect2 = top_bar.status_rect().intersection(get_global_rect())
 	toasts.place(Rect2(spot.position - get_global_rect().position, spot.size))
 	flash.update(now)
+	critical.update(now)
+	if critical.visible:
+		var area: Rect2 = _main.get_global_rect()
+		critical.place(Rect2(area.position - get_global_rect().position, area.size))
 	var left: Dictionary = ctx.crew.shares_left(now)
+	# A phone shows request chips only at the top of the view (ux-13); elsewhere, the strip.
 	if phone:
-		frame.process(now, left)
-	if frame.framed():
+		frame.process(now)
 		chip_strip.visible = false
 	else:
+		frame.view_top.visible = false
 		chip_strip.show_chips(
 			ChipsReader.incoming(ctx.snap, stations),
 			ChipsReader.outgoing(ctx.snap, stations),
-			ctx.snap,
-			ShareBar.incoming_lines(stations, left),
-			now
+			ctx.snap
 		)
+	_push_notes(now, left)
 	# A phone panel with its shares on its Crew page shows no second set beside the radar.
 	var none: Array[StringName] = []
 	var own: bool = phone and focused_panel().shows_shares
 	share_bar.show_features(none if own else common.shareable(), left)
 	layout.sync_share()
+
+
+## The notes of the toast queue (C5, ux-14): a partner's shared data when its share starts or
+## is renewed (the seconds count down while the toast shows), and a request chip that lapsed
+## unanswered.
+func _push_notes(now: int, left: Dictionary) -> void:
+	var lines: Dictionary[StringName, String] = ShareBar.incoming(stations, left)
+	var seen: Dictionary = {}
+	for id: StringName in lines:
+		var key: String = "share:" + String(id)
+		var seconds: float = float(left[id])
+		if seconds > float(_share_left.get(id, 0.0)) + 0.5 or toasts.has_key(key):
+			toasts.push(lines[id], "note", now, key)
+		seen[id] = seconds
+	_share_left = seen
+	if not ctx.crew.is_crew():
+		return
+	var open: Array = []
+	for c: Dictionary in ChipsReader.incoming(ctx.snap, stations):
+		open.append(
+			{"id": c["id"], "text": ChipStrip.asker(c), "left": ChipsReader.left_s(ctx.snap, c)}
+		)
+	for note: String in _lapse.update(open):
+		toasts.push(note, "note", now)
 
 
 ## The own ship's hull and shield maxima (J), for the top bar's percentages.
@@ -411,23 +446,40 @@ func _open_menu() -> void:
 	_update_block()
 
 
-## The first visit to a station shows the Controls hint for a few seconds, once per client
-## and station (P28-Help, amends FT-STN-012 and D185); help never opens by itself, a tap on
-## the chip opens the menu's Controls tab. With it, once per client, the callout legend, whose
-## tap opens the callout card (D369). Settings re-enables them. The first station waits
-## for the screen to enter the tree, so the shell has connected `help_requested` by then.
+## A player's first seat at a station shows its first-seat card (FirstSeatCard, C7): the
+## station's three core lesson actions in the device's words and a pointer to Training ›
+## Callouts, until the player closes it; once per client and station (amends FT-STN-012,
+## D185, D369). Help never opens by itself: the card's Controls button opens the menu's
+## Controls tab. Settings re-enables it. A joint view's other station gets its own card on its
+## first focus, in place of the first one. The first station waits for the screen to enter
+## the tree, so the shell has connected `help_requested` by then.
 func _open_first_visit_help() -> void:
 	if not is_inside_tree():
 		return
 	var touch: bool = LayoutMode.is_touch(LayoutMode.kind_of(self))
-	var chip: ControlsHint = ControlsHint.show_once(
+	if not ctx.settings.hint_seen(focused_station()):
+		var old: FirstSeatCard = first_seat_card()
+		if old != null:
+			remove_child(old)
+			old.queue_free()
+	var card: FirstSeatCard = FirstSeatCard.show_once(
 		self, ctx.settings, focused_station(), ctx.matcher.device, touch
 	)
-	if chip != null:
-		chip.pressed.connect(func() -> void: help_requested.emit())
-		var legend: ControlsHint = ControlsHint.show_legend(self, ctx.settings)
-		if legend != null:
-			legend.pressed.connect(func() -> void: card_requested.emit())
+	if card == null:
+		return
+	card.controls_requested.connect(
+		func() -> void:
+			card.dismiss()
+			help_requested.emit()
+	)
+
+
+## The open first-seat card, or null.
+func first_seat_card() -> FirstSeatCard:
+	for c: Node in get_children():
+		if c is FirstSeatCard and not c.is_queued_for_deletion():
+			return c
+	return null
 
 
 func _on_toast(key: String, args: Dictionary) -> void:

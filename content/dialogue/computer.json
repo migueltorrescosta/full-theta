@@ -6,6 +6,11 @@
       "text": {"en": "Hull critical.", "pt_PT": "Casco em estado crítico.", "it": "Scafo in condizioni critiche."}
     },
     {
+      "id": "computer.missile_lock", "role": "computer", "priority": 0, "max_age_ms": 3000,
+      "coalesce": "missile", "resume": false,
+      "text": {"en": "Missile lock.", "pt_PT": "Míssil a seguir-nos.", "it": "Missile agganciato."}
+    },
+    {
       "id": "computer.collision_warning", "role": "computer", "priority": 0, "max_age_ms": 2000,
       "coalesce": "collision", "resume": false,
       "text": {"en": "Collision warning.", "pt_PT": "Alerta de colisão.", "it": "Allarme collisione."}
