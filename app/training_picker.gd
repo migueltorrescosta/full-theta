@@ -39,7 +39,7 @@ var _title: Label
 var _count: Label
 var _note: Label
 var _drill: Button
-var _callouts: Button
+## The cards by id: each station lesson, then CALLOUTS.
 var _cards: Dictionary[String, Button] = {}
 var _box: StyleBoxFlat
 var _back: Button
@@ -99,13 +99,10 @@ func setup(p_settings: ClientSettings, step_list: TrainingStepsDef) -> void:
 	_grid.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
 	_grid.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
 	body.add_child(_grid)
-	for station: String in LESSONS:
-		var card_button: Button = _card(station)
-		_cards[station] = card_button
-		_grid.add_child(card_button)
 	# The Callouts quiz is the eighth card, so the grid is two rows of four on a wide window.
-	_callouts = _card(CALLOUTS)
-	_grid.add_child(_callouts)
+	for station: String in LESSONS + [CALLOUTS]:
+		_cards[station] = _card(station)
+		_grid.add_child(_cards[station])
 	refresh()
 	fit()
 
@@ -117,13 +114,13 @@ func refresh() -> void:
 	(find_child("GroupHeading", true, false) as Label).text = tr("train.picker.group")
 	(find_child("SoloHeading", true, false) as Label).text = tr("train.picker.solo")
 	var done: int = 0
-	for station: String in LESSONS + [CALLOUTS]:
+	for station: String in _cards:
 		var is_done: bool = settings.lesson_done(station)
 		done += 1 if is_done else 0
-		_fill(_callouts if station == CALLOUTS else _cards[station], station, is_done)
-	_count.text = tr("train.picker.done_count") % [done, LESSONS.size() + 1]
+		_fill(_cards[station], station, is_done)
+	_count.text = tr("train.picker.done_count") % [done, _cards.size()]
 	(_drill.find_child("Name", true, false) as Label).text = tr("train.picker.drill")
-	(_drill.find_child("Dot", true, false) as Label).text = DRILL_BADGE
+	(_drill.find_child("Dot", true, false) as Label).text = badge("drill")
 	(_drill.find_child("Blurb", true, false) as Label).text = (
 		"%s · %s" % [tr("train.picker.drill_hint"), tr("train.picker.drill_size")]
 	)
@@ -151,7 +148,7 @@ func fit() -> void:
 	(_drill.find_child("Name", true, false) as Label).theme_type_variation = (
 		&"" if phone else &"HeadingLabel"
 	)
-	for card: Button in _cards.values() + [_callouts]:
+	for card: Button in _cards.values():
 		card.custom_minimum_size = Vector2(
 			0 if upright else CARD_W, COMPACT_H if compact else CARD_H
 		)
@@ -186,13 +183,13 @@ func show_busy(players: int) -> void:
 
 ## While a lesson is starting the cards ignore taps.
 func set_busy(on: bool) -> void:
-	for card_button: Button in _cards.values() + [_callouts, _drill]:
+	for card_button: Button in _cards.values() + [_drill]:
 		card_button.disabled = on
 
 
 ## The card of a station's lesson, or of CALLOUTS; null for another id.
 func card(station: String) -> Button:
-	return _callouts if station == CALLOUTS else _cards.get(station)
+	return _cards.get(station)
 
 
 ## The Crew drill card (it emits `chosen` with "").
