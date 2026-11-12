@@ -83,6 +83,9 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.TRAINING: {"station": "helm"},
 		NetProtocol.Type.RENAME: {"name": "Ana"},
 		NetProtocol.Type.START: {},
+		NetProtocol.Type.REROLL_MODIFIER: {},
+		NetProtocol.Type.PRIORITY_TARGET: {"contact": 3},
+		NetProtocol.Type.SKIP_GAP: {"ready": true},
 	}
 
 
