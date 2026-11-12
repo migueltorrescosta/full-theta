@@ -404,6 +404,8 @@ func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 		if sites[i].market != &"":
 			setup.site_markets[i] = sites[i].market
 	setup.hail_conversations = HAIL_CONVERSATIONS
+	for modifier: RunModifierDef in defs.run_modifiers():
+		setup.modifiers[modifier.id] = modifier
 	return setup
 
 

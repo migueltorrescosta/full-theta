@@ -1,7 +1,8 @@
 class_name OutcomeCard
 extends PanelContainer
 ## The end-of-run card (FT-M1-012, D178, ux-20): on every station of a ship whose run ended,
-## one card: the result (Victory or Ship lost, why, the run time and hull left), up to three
+## one card: the result (Victory or Ship lost, why, the run time and hull left), the encounters
+## that ended partial (limped home, out of time; gp-09), up to three
 ## highlights (the best pair moment, the closest call, the top kill; RunHighlights' fixed
 ## rules, a highlight with no data left out), and Run again. Crew cast or withdraw a "Run
 ## again" vote (voters and votes needed shown, like the give-up vote); the host runs it again
@@ -25,6 +26,7 @@ var _spacer: Control
 var _title: Label
 var _why: Label
 var _stats: Label
+var _partial: Label
 var _highlights: VBoxContainer
 var _votes: Label
 var _note: Label
@@ -62,6 +64,11 @@ func setup(context: StationContext) -> void:
 	_stats.name = "Stats"
 	_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info.add_child(_stats)
+	_partial = Label.new()
+	_partial.name = "Partial"
+	_partial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_partial.add_theme_color_override("font_color", Palette.color("warn"))
+	_info.add_child(_partial)
 	_highlights = VBoxContainer.new()
 	_highlights.name = "Highlights"
 	_highlights.add_theme_constant_override("separation", 2)
@@ -124,6 +131,8 @@ func refresh() -> void:
 		c.queue_free()
 	var ship: int = ctx.crew.ship
 	_fill_highlights(ctx.crew.debrief.get(ship, {}).get("highlights", {}))
+	_partial.text = partial_line(ctx.crew.debrief.get(ship, {}))
+	_partial.visible = _partial.text != ""
 	if not _debrief.available():
 		_details = false
 	else:
@@ -183,6 +192,26 @@ static func highlight_lines(h: Dictionary) -> PackedStringArray:
 		var at: String = DebriefCard.clock(float(k.get("time", 0.0)))
 		out.append(_t("outcome.hl_kill").format({"name": str(k.get("name", "")), "time": at}))
 	return out
+
+
+## The encounters that ended partial, on half pay (gp-09, D419: the one card shows them): how
+## many limped home and how many ran out of time, each only when there is one; "" for none.
+static func partial_line(debrief: Dictionary) -> String:
+	var limped: int = 0
+	var late: int = 0
+	for row: Dictionary in debrief.get("encounters", []):
+		if row.get("lost", false) or row.get("fled", false):
+			continue
+		if row.get("limped", false):
+			limped += 1
+		elif str(row.get("result", "")) == "partial":
+			late += 1
+	var parts: PackedStringArray = PackedStringArray()
+	if limped > 0:
+		parts.append(_t("outcome.limped") % limped)
+	if late > 0:
+		parts.append(_t("outcome.out_of_time") % late)
+	return " · ".join(parts)
 
 
 ## Why the run ended, in one line: the win rule, or how the ship was lost.

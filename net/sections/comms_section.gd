@@ -208,7 +208,7 @@ static func _offer_rows(world: SimWorld, ship: int, card: int, out: Dictionary) 
 				)
 			)
 	var modules: Array = out["modules"]
-	for key: StringName in m.modules:
+	for key: StringName in Trade.modules_on_offer(world, card, m):
 		var ix: int = ModuleSystem.index_of(world, key)
 		if ix < 0:
 			continue

@@ -1,9 +1,10 @@
 class_name RunDebrief
 extends RefCounted
 ## The end-of-run record of a ship (FT-MIS-006, FT-MIS-010, FT-MIS-038, FT-PAIR-013, D31,
-## D35, D232): what the director decided and why, how each encounter ended with ship losses
-## and fled encounters told apart, when each station first used each core action, and the
-## cooperative events per pair, and the card's three highlights (RunHighlights, ux-20). Built
+## D35, D232): what the director decided and why, how each encounter ended with ship losses,
+## fled encounters and a crippled ship's limp home (gp-09) told apart, when each station
+## first used each core action, and the cooperative events per pair, and the card's three
+## highlights (RunHighlights, ux-20). Built
 ## on the server from the world and the sessions' own
 ## counters; sent as the `debrief` notify with `ship_outcome`, written to the server log and
 ## read by the bot batch.
@@ -27,7 +28,7 @@ func _init(world: SimWorld, decisions: Array, coop: CoopEvents, first_use: First
 
 ## The record for one crewed ship:
 ## {time, result "win|loss|abandoned|open", encounters: [{id, scenario, site, site_name_key,
-## result, lost, fled, time}], losses, fled, decisions, first_use, coop, highlights}
+## result, lost, fled, limped, time}], losses, fled, decisions, first_use, coop, highlights}
 ## (highlights: RunHighlights.for_ship, {} without them).
 func for_ship(ship: int) -> Dictionary:
 	var rows: Array = []
@@ -71,6 +72,7 @@ func _row(id: int, ship: int) -> Dictionary:
 		"result": EncounterTable.Result.keys()[t.result[id]].to_lower(),
 		"lost": EncounterTable.has_bit(t.losses_mask[id], ship),
 		"fled": EncounterTable.has_bit(t.fled_mask[id], ship),
+		"limped": EncounterTable.has_bit(t.limped_mask[id], ship),
 		"time": (end - start) * SimWorld.DT,
 	}
 

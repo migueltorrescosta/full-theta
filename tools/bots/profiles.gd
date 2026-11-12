@@ -24,6 +24,9 @@ class Profile:
 	var fire_skip: float = 0.0
 	## Hull fraction below which the crew jumps away from a fight.
 	var flee_hull: float = 0.25
+	## Whether a crippled crew limps home (gp-09): jumps to the nearest dock and docks there
+	## within the limp-home time, rather than fleeing.
+	var limps_home: bool = true
 	## Share of trips made with the jump drive; the rest are flown by impulse (approach).
 	var jump_share: float = 1.0
 	## Whether Engineering puts the spare pips on the weapons.
@@ -64,6 +67,7 @@ static func novice() -> Profile:
 	p.aim_error = 0.001
 	p.fire_skip = 0.1
 	p.flee_hull = 0.2
+	p.limps_home = false
 	p.jump_share = 0.5
 	p.repair_every = 180
 	p.shoots_debris = false

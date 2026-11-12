@@ -239,6 +239,8 @@ func test_a_relaunch_restarts_the_fleet_plan() -> void:
 	f.rules.default_relaunch = RelaunchPolicy.unlimited()
 	play(f, 200 * HZ, func() -> bool: return f.world.ships.closed[0] == 1)
 	assert_int(picks(f.director.decisions()).size()).is_equal(1)
+	# (a co-op relaunch is paid, gp-10)
+	Economy.add_credits(f.world, 1, f.world.run_def.relaunch_cost)
 	DamageSystem.damage_hull(f.world, 1, INF, -1)
 	f.step(2)
 	var back: RelaunchShipCommand = RelaunchShipCommand.new()

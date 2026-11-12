@@ -9,6 +9,9 @@
 ## - "takeover": Helm of Osprey over its ally Kestrel's pause, offering Kestrel's stations.
 ## - "outcome", "debrief": Helm with the end card of a won run, its summary with three
 ##   highlights, or its Details (the full debrief, ux-20);
+## - "outcome_partial": the end card with encounters that limped home or ran out of time
+##   (gp-09); "relaunch_paid": a co-op ship's paid relaunch prompt over a friendly ship's main
+##   screen (gp-10); "crippled": Helm with the crippled countdown banner (gp-09);
 ## - "pause": the host's own ship paused under a host pause (`host` false: a crew player's);
 ## - "menu_web": the web main menu.
 ## `insets` simulates a phone's safe-area insets [left, top, right, bottom] in device-
@@ -76,8 +79,23 @@ func _ready() -> void:
 			var o: PauseOverlay = PauseOverlay.new()
 			_centred(o)
 			o.setup(_ctx)
-		"outcome", "debrief", "pause", "menu_web":
+		"outcome", "debrief", "outcome_partial", "pause", "menu_web":
 			_own_view()
+		"relaunch_paid":
+			_fleet("coop", true)
+			_event("picked", {"ship": 1, "seat": "viewer"})
+			_event("eliminated", FleetMessages.eliminated(0, "destroyed", 1, 800))
+			_event("handover", FleetMessages.handover(0, 1))
+			_event("relaunch_votes", {"ship": 0, "voters": ["Bo"], "sessions": [], "needed": 2})
+			_station()
+			var p: VotePrompt = VotePrompt.new()
+			add_child(p)
+			p.setup(_ctx, VotePrompt.Kind.RELAUNCH)
+		"crippled":
+			_station()
+			var e: Dictionary = {"ship": 0, "faction": 0, "other": 0, "value": 120.0}
+			e.merge({"vector": Vector3.ZERO, "tag": "rescue"})
+			_event("crippled", e)
 	if not insets.is_empty():
 		var shade: Control = StationShot.InsetShade.new()
 		shade.set("insets", insets)
@@ -185,7 +203,14 @@ func _own_view() -> void:
 			card.setup(_ctx)
 			_event("ship_outcome", {"ship": 0, "outcome": "win", "time": 412.0, "hull": 0.58})
 			_event("run_votes", {"ship": 0, "voters": ["Bo"], "needed": 2})
-			_event("debrief", debrief_record())
+			var record: Dictionary = debrief_record()
+			if view == "outcome_partial":
+				record["encounters"] = [
+					{"scenario": "enemy_wave", "time": 140.0, "result": "won"},
+					{"scenario": "rescue", "time": 95.0, "result": "partial", "limped": true},
+					{"scenario": "enemy_wave", "time": 240.0, "result": "partial"},
+				]
+			_event("debrief", record)
 			if view == "debrief":
 				card.show_details(true)
 

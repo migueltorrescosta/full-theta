@@ -58,6 +58,8 @@ var marked: PackedByteArray = PackedByteArray()
 ## The RepDistDef ids already drawn for the card (Story._first_draw; a hail draws per
 ## contact, in KnowledgeTable.rep_drawn). Replaced whole, never changed in place.
 var rep_drawn: Array[PackedStringArray] = []
+## A dock OFFER card's modules on offer (gp-11): bit i for MarketDef.modules[i]; -1 all.
+var module_mask: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
@@ -91,6 +93,7 @@ func add_card(ship: int, faction: int, card_kind: Kind) -> int:
 	need_pips.append(0)
 	marked.append(0)
 	rep_drawn.append(PackedStringArray())
+	module_mask.append(-1)
 	return row
 
 

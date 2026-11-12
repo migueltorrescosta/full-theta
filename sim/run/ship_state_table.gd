@@ -38,6 +38,9 @@ var kills: PackedInt32Array = PackedInt32Array()
 ## Tick the crewed ship's outcome was set: its run complete (WIN) or it left play (LOSS); -1
 ## while it plays. The scoreboard's finish time, a race's first finisher and a holdout's score.
 var finish_tick: PackedInt32Array = PackedInt32Array()
+## Tick the ship was crippled in its current encounter (gp-09: RunDef.crippled_hull or
+## crippled_subsystems), or -1; cleared when it leaves the encounter (EncounterSystem).
+var crippled_tick: PackedInt32Array = PackedInt32Array()
 
 
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
@@ -51,6 +54,7 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	relaunches.append(0)
 	kills.append(0)
 	finish_tick.append(-1)
+	crippled_tick.append(-1)
 
 
 ## A ship reset (a relaunch or a training reset, FT-MIS-011, FT-MIS-017) restores the ship's

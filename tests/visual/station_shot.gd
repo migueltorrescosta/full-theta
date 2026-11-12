@@ -15,7 +15,8 @@
 ## `science` (a Science block with the cards, a scan or a hack open) and `touch` (the touch
 ## layout whatever the pointer; a viewport under 600 px is a phone anyway, D195) and `comms`
 ## (CommsFixture's COMMS block is on every shot; "trade" also opens Kappa's offer card,
-## "conversation" the hail, "off" leaves the block out). Phones (#28): `insets` simulates a
+## "conversation" the hail, "dock2" Kappa's offer with two modules (gp-11), "off" leaves the
+## block out). Phones (#28): `insets` simulates a
 ## device's safe-area insets [left, top, right, bottom] in px (SafeArea.simulate; the
 ## mockups' iPhone: [47, 0, 47, 21] in landscape, [0, 47, 0, 34] upright) and draws them
 ## with the gesture band in translucent red; `fullscreen` forces the fullscreen button
@@ -133,7 +134,9 @@ func _ready() -> void:
 		_ctx.matcher.device = device
 	if science != "":
 		_ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block(science)
-	if comms != "off":
+	if comms == "dock2":
+		CommsFixture.install(_ctx, CommsFixture.block_two_modules())
+	elif comms != "off":
 		CommsFixture.install(_ctx)
 	if tooltip:
 		_ctx.settings.reset_hints()
@@ -239,7 +242,7 @@ func _ready() -> void:
 			add_child(s)
 			move_child(menu, -1)
 			s.focus(focus)
-			if comms in ["trade", "conversation"]:
+			if comms in ["trade", "conversation", "dock2"]:
 				var panel: CommsPanel = s.panels[s.stations.find("comms")] as CommsPanel
 				panel.open_card(CommsFixture.OFFER if comms == "trade" else CommsFixture.HAIL)
 			s.radar.side_strip = strip

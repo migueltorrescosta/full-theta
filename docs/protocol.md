@@ -300,3 +300,9 @@ Every provisional value, once. Code comments that call a value provisional point
 - RerollModifier (49, host only, lobby): `{}`.
 - PriorityTarget (50, Captain only): `{contact}` (-1 clears).
 - SkipGap (51, crew only, between encounters): `{ready}`.
+- Fail-forward and the economy (strand E, gp-09 to gp-11): new sim events, each the usual event payload `{ship, faction, other, value, vector, tag}` to every session of the ship's faction:
+  - `crippled`: the ship is crippled in its encounter; `value` the seconds it has to dock and limp home (RunDef.limp_home_time), `other` the encounter, `tag` the scenario. Helm and the Captain show it as a counting-down critical banner.
+  - `limped_home`: it docked in time; `other` the encounter (which ends `partial`), `value` the site.
+  - `bounty`: `ship` the killer, `other` the raider, `value` the credits. `salvage`: `ship` the collector, `other` the wrecked ship, `value` the credits. Comms and the Captain toast them.
+  - `eliminated` gains `cost` (int): the credits a relaunch takes from the ship's purse (co-op, RunDef.relaunch_cost; 0 elsewhere). Its `lives` is 0 when the purse can't pay, so no relaunch is offered.
+  - The `debrief` encounter rows gain `limped` (bool): the ship limped home from it.
