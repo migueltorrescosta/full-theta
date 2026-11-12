@@ -15,10 +15,10 @@ func _world(with_raider: bool = true) -> SimWorld:
 		w.spawn_npc(TestDefs.raider_enemy(), 2, CubePoint.make(0, 0, -2500))
 		# Until the corvette has identified the raider (an H contact).
 		for i: int in HZ:
-			if ProbeSystem.nearest_hostile(w, 0) >= 0:
+			if ProbeSystem.hostile_in_play(w, 0) >= 0:
 				break
 			w.step()
-		assert_int(ProbeSystem.nearest_hostile(w, 0)).is_equal(1)
+		assert_int(ProbeSystem.hostile_in_play(w, 0)).is_equal(1)
 	return w
 
 
@@ -50,8 +50,11 @@ func test_decoy_draws_the_raider_for_its_time_then_reverts() -> void:
 	assert_int(SimFixture.of_kind(events, &"decoy_launched").size()).is_equal(1)
 	assert_int(w.probes.size()).is_equal(1)
 	assert_float(w.probes.decoy_left[0]).is_equal_approx(def.decoy_time - SimWorld.DT, 1e-6)
-	# 3 km at 500 m/s: on station after 6 s, abeam of the raider's line.
-	SimFixture.run(w, 7 * HZ)
+	# 3 km at 500 m/s: on station after 6 s, abeam of the raider's line; a decoy on station
+	# is no probe on station (it covers nothing).
+	events = SimFixture.run(w, 7 * HZ)
+	assert_int(SimFixture.of_kind(events, &"probe_deployed").size()).is_equal(0)
+	assert_bool(w.probes.covers(0)).is_false()
 	var at: Vector3 = Vector3(w.probes.pos_x[0], w.probes.pos_y[0], w.probes.pos_z[0])
 	assert_float(at.length()).is_equal_approx(def.decoy_offset, 1.0)
 	assert_float(absf(at.z)).is_less(1.0)
@@ -91,3 +94,16 @@ func test_decoy_refused_without_a_probe_or_a_hostile() -> void:
 	SimFixture.run(calm, 1)
 	assert_bool(d.accepted).is_false()
 	assert_int(calm.relay.stock[0]).is_equal(calm.defs[0].probes)
+
+
+# FT: FT-RLY-013
+# Debris is hostile in a debris leg but unarmed: no decoy against rocks.
+func test_no_decoy_against_debris() -> void:
+	var w: SimWorld = _world(false)
+	var rock: int = w.spawn_npc(
+		load("res://content/npcs/debris.tres") as NpcDef, 4, CubePoint.make(0, 0, -2500)
+	)
+	SimFixture.run(w, HZ)
+	assert_bool(KnowledgeSystem.is_identified(w, 1, rock)).is_true()
+	assert_int(ProbeSystem.hostile_in_play(w, 0)).is_equal(-1)
+	assert_bool(ProbeSystem.can_decoy(w, 0)).is_false()

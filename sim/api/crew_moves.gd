@@ -21,32 +21,6 @@ static func mount_for(world: SimWorld, ship: int, target: int) -> int:
 	return 0
 
 
-## The nearest living hostile of the ship's faction that it detects within `reach`
-## (any, or only armed ones), or -1.
-static func nearest_hostile(
-	world: SimWorld, ship: int, reach: float, armed_only: bool = false
-) -> int:
-	var faction: int = world.faction_of(ship)
-	var best: int = -1
-	var best_d: float = INF
-	for id: int in world.ship_count():
-		if id == ship or not world.ai.is_enabled(id) or not world.kin.is_alive(id):
-			continue
-		if world.ships.status[id] != ShipStateTable.Status.IN_PLAY:
-			continue
-		if world.relation(faction, world.faction_of(id)) != SimWorld.Relation.HOSTILE:
-			continue
-		if not KnowledgeSystem.is_detected(world, faction, id):
-			continue
-		if armed_only and world.defs[id].mounts.is_empty():
-			continue
-		var d: float = world.kin.relative(ship, id).length()
-		if d <= reach and d < best_d:
-			best = id
-			best_d = d
-	return best
-
-
 ## Engineering: sends the first idle repair crew to the most damaged subsystem no crew is
 ## working on (below 80 % health), or null.
 static func repair(world: SimWorld, ship: int) -> DispatchRepairCommand:

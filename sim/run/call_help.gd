@@ -1,7 +1,7 @@
 class_name CallHelp
 extends RefCounted
 ## Comms' call for help (gp-14, RunDef.call_help): once per encounter, while the ship is in
-## an ACTIVE encounter with a hostile in play (an H contact, ProbeSystem.nearest_hostile),
+## an ACTIVE encounter with a hostile in play (an H contact, ProbeSystem.hostile_in_play),
 ## Comms calls a civil patrol. The call costs the CallHelpDef's reputation draw with the
 ## patrol's faction and makes that faction friendly to the caller's. After `delay` the
 ## patrol arrives `distance` off the ship's starboard side (&"help_arrived", other_id the
@@ -31,7 +31,7 @@ static func can_call(world: SimWorld, ship: int) -> bool:
 		and world.is_crew_in_play(ship)
 		and _active(world, e)
 		and world.help.called[ship] != e
-		and ProbeSystem.nearest_hostile(world, ship) >= 0
+		and ProbeSystem.hostile_in_play(world, ship) >= 0
 	)
 
 
@@ -62,7 +62,7 @@ static func _count_down(world: SimWorld, ship: int) -> void:
 	var q: Quaternion = kin.rot[ship]
 	var first: int = -1
 	for i: int in def.count:
-		var offset: Vector3 = q * Vector3(def.distance + 100.0 * i, 0.0, 0.0)
+		var offset: Vector3 = q * Vector3(def.distance + def.spacing * i, 0.0, 0.0)
 		var id: int = world.spawn_npc(def.npc, def.faction, kin.point_at(ship, offset), q)
 		world.help.patrol_for[id] = e
 		if first < 0:

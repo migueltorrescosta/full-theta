@@ -38,7 +38,7 @@ static func best_closeness(world: SimWorld, faction: int, at: PackedFloat64Array
 	var kin: Kinematics = world.kin
 	var best: float = -INF
 	for r: int in t.size():
-		if t.owner_faction[r] != faction or t.deployed[r] == 0 or t.decoy_left[r] > 0.0:
+		if t.owner_faction[r] != faction or not t.covers(r):
 			continue
 		var d: Vector3 = kin.delta_column(t.pos_x, t.pos_y, t.pos_z, r, at)
 		best = maxf(best, 1.0 - d.length() / world.defs[t.owner_ship[r]].probe_range)
@@ -80,7 +80,7 @@ static func launch(world: SimWorld, ship: int, at: PackedFloat64Array) -> bool:
 ## ship, no such hostile, or (with &"probe_no_stock") no probe left.
 static func launch_decoy(world: SimWorld, ship: int) -> bool:
 	var def: ShipDef = world.defs[ship]
-	var hostile: int = nearest_hostile(world, ship)
+	var hostile: int = hostile_in_play(world, ship)
 	if def.decoy_time <= 0.0 or hostile < 0:
 		return false
 	var r: RelayTable = world.relay
@@ -103,19 +103,10 @@ static func launch_decoy(world: SimWorld, ship: int) -> bool:
 	return true
 
 
-## The nearest live ship the ship's faction detects and has identified as hostile (an H
-## contact), or -1: what the decoy and the call for help need in play.
-static func nearest_hostile(world: SimWorld, ship: int) -> int:
-	var faction: int = world.faction_of(ship)
-	var found: PackedInt32Array = PackedInt32Array()
-	for c: int in KnowledgeSystem.contacts(world, faction):
-		if (
-			world.kin.is_alive(c)
-			and KnowledgeSystem.is_identified(world, faction, c)
-			and world.is_hostile(faction, world.faction_of(c))
-		):
-			found.append(c)
-	return world.kin.nearest(ship, found)
+## The nearest armed hostile NPC the ship's faction has identified (an H contact, never
+## debris), or -1: what the decoy and the call for help need in play.
+static func hostile_in_play(world: SimWorld, ship: int) -> int:
+	return KnowledgeSystem.nearest_hostile(world, ship, INF, true, true)
 
 
 ## Whether the ship could launch a decoy now (what Relay's button shows on).
@@ -123,7 +114,7 @@ static func can_decoy(world: SimWorld, ship: int) -> bool:
 	return (
 		world.defs[ship].decoy_time > 0.0
 		and world.relay.stock[ship] > 0
-		and nearest_hostile(world, ship) >= 0
+		and hostile_in_play(world, ship) >= 0
 	)
 
 
@@ -206,7 +197,8 @@ static func _fly(world: SimWorld) -> void:
 			t.pos_y[r] = t.dest_y[r]
 			t.pos_z[r] = t.dest_z[r]
 			t.deployed[r] = 1
-			world.emit(&"probe_deployed", t.owner_ship[r], -1, t.serial[r])
+			if t.covers(r):
+				world.emit(&"probe_deployed", t.owner_ship[r], -1, t.serial[r])
 			continue
 		var m: Vector3 = d.normalized() * stride
 		t.pos_x[r] = kin.wrap(t.pos_x[r] + m.x)
@@ -217,18 +209,14 @@ static func _fly(world: SimWorld) -> void:
 ## Counts the decoys down and drops the spent ones.
 static func _burn_decoys(world: SimWorld) -> void:
 	var t: ProbeTable = world.probes
-	var keep: PackedInt32Array = PackedInt32Array()
-	var spent: bool = false
+	var spent: PackedInt32Array = PackedInt32Array()
 	for r: int in t.size():
 		if t.decoy_left[r] > 0.0:
 			t.decoy_left[r] = maxf(0.0, t.decoy_left[r] - SimWorld.DT)
 			if t.decoy_left[r] == 0.0:
-				spent = true
+				spent.append(r)
 				world.emit(&"decoy_spent", t.owner_ship[r], -1, t.serial[r])
-				continue
-		keep.append(r)
-	if spent:
-		t.keep_rows(keep)
+	t.remove_rows(spent)
 
 
 static func _warn_lanes(world: SimWorld) -> void:
