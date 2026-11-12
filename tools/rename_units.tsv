@@ -1,6 +1,8 @@
 # old	new	scope	note  (tools/rename_units.py; D403, w-483)
 AIM_SEND_M	AIM_SEND_DISTANCE	*	bare AIM_SEND reads as an action
 ATTACK_S	ATTACK_TIME	*	bare ATTACK is an envelope stage, not a duration
+BAND_HIGH_HZ	BAND_HIGH_FREQUENCY	*	as SHAKE_HZ
+BAND_LOW_HZ	BAND_LOW_FREQUENCY	*	as SHAKE_HZ
 BAR_W	BAR_WIDTH	*	width in px
 BLIND_S	BLIND_DURATION	*	bare adjective
 BUFFER_S	BUFFER_DURATION	*	BUFFER alone reads as the audio buffer
@@ -43,6 +45,7 @@ HAZARD_RADIUS_M	HAZARD_RADIUS	*	noun
 HOLD_S	HOLD_TIME	*	HOLD is a verb
 HULL_HALF_M	HULL_HALF_LENGTH	*	bare HULL_HALF is half of what
 HULL_J	HULL_ENERGY	*	as FAULT_J
+KEY_COLUMN_W	KEY_COLUMN_WIDTH	*	pixel width (PR 2)
 LANE_OPEN_S	LANE_OPEN_TIME	*	bare adjective
 LANE_S	LANE_DURATION	*	bare LANE is a place
 LAPSE_S	LAPSE_TIME	*	LAPSE is a verb
@@ -61,6 +64,7 @@ NAME_MIN_W	NAME_MIN_WIDTH	*	width in px
 NAME_W	NAME_WIDTH	*	width in px
 NARROW_W	NARROW_WIDTH	*	width in px
 NEXT_EVERY_S	NEXT_EVERY	*	noun phrase
+NOTICE_MIN_W	NOTICE_MIN_WIDTH	*	pixel width (PR 2)
 OPENER_W	OPENER_WIDTH	*	width in px
 PCT_W	PCT_WIDTH	*	width in px
 PERIOD_M	PERIOD	*	noun
@@ -87,6 +91,7 @@ SCAN_READ_S	SCAN_READ_TIME	*	as HACK_READ_S
 SCROLL_BAR_W	SCROLL_BAR_WIDTH	*	width in px
 SECOND_AFTER_S	SECOND_AFTER	*	noun phrase
 SETTLE_S	SETTLE_TIME	*	verb
+SHAKE_HZ	SHAKE_FREQUENCY	*	hertz are a frequency
 SHAKE_RAD	SHAKE_ANGLE	*	radians are an angle
 SHIELD_J	SHIELD_ENERGY	*	as FAULT_J
 SHOOT_M	SHOOT_REACH	*	a range, as range_m (also keeps bot_crew.gd:7 under 100 columns)
@@ -96,11 +101,13 @@ SIGHT_M	SIGHT_REACH	*	a range, as range_m (also keeps bot_crew.gd:7 under 100 co
 SMALL_RADAR_W	SMALL_RADAR_WIDTH	*	width in px
 SPAN_DEFAULT_M	SPAN_DEFAULT	*	noun
 SPAN_MIN_M	SPAN_MIN	*	noun
+STATUS_MIN_W	STATUS_MIN_WIDTH	*	pixel width (PR 2)
 STRIP_W	STRIP_WIDTH	*	width in px
 TAB_W	TAB_WIDTH	*	width in px
 TAUNT_AFTER_S	TAUNT_AFTER	*	noun phrase
 TEXT_W	TEXT_WIDTH	*	width in px
 TICKS_PER_S	TICK_RATE	*	ticks per second is a rate (check: not with TICK_HZ in one file)
+TICK_HZ	TICK_RATE	*	brief: frequency names become *_RATE
 TIGHT_BAR_W	TIGHT_BAR_WIDTH	*	width in px
 TIMEOUT_S	TIMEOUT	*	the brief's example
 TIMER_W	TIMER_WIDTH	*	width in px
@@ -109,9 +116,12 @@ WEB_POLL_S	WEB_POLL_INTERVAL	*	POLL is a verb
 ZONE_W	ZONE_WIDTH	*	width in px
 _bar_w	_bar_width	*	width in px
 _elapsed_s	_elapsed	*	as elapsed_s
+_mine_chip_w	_mine_chip_width	*	pixel width (PR 2)
 _quiet_s	_quiet_time	*	bare adjective
 _text_w	_text_width	*	width in px
 age_s	age	*	noun
+ask_w	ask_width	*	pixel width (PR 2)
+button_w	button_width	*	pixel width (PR 2)
 cap_s	cap_time	*	as CAP_S
 caption_w	caption_width	*	width in px
 chip_w	chip_width	*	width in px
@@ -135,6 +145,7 @@ middle_s	middle_time	*	bare adjective
 mission_s	mission_time	*	bare mission is the mission
 name_w	name_width	*	width in px
 near_range_m	near_reach	*	as range_m
+next_w	next_width	*	pixel width (PR 2)
 now_s	now	*	IdleExitTimer.now() is the monotonic clock
 period_m	period	*	noun; matches kin.period in sim/
 pos_tol_m	pos_tol	*	tolerance
@@ -150,14 +161,10 @@ span_m	map_span	*	tests keep a local `span` beside the member
 test_every_effect_window_is_at_least_8_s	test_every_effect_window_is_at_least_8_seconds	*	a number with its unit spelled out
 test_throttle_ramps_the_setpoint_like_w	test_throttle_ramps_the_setpoint_like_the_w_key	*	w is the W key here, not a unit
 text_w	text_width	*	width in px
+tick_hz	tick_rate	*	as TICK_HZ
 time_s	time_left	*	clock() argument; a local `time` is in the same file
 timeout_s	timeout	*	noun
 total_s	total_time	*	bare total is a number of anything
 view_w	view_width	*	width in px
 warmup_s	warmup	*	noun
 window_s	window	*	noun
-TICK_HZ	TICK_RATE	*	brief: frequency names become *_RATE
-tick_hz	tick_rate	*	as TICK_HZ
-SHAKE_HZ	SHAKE_FREQUENCY	*	hertz are a frequency
-BAND_LOW_HZ	BAND_LOW_FREQUENCY	*	as SHAKE_HZ
-BAND_HIGH_HZ	BAND_HIGH_FREQUENCY	*	as SHAKE_HZ
