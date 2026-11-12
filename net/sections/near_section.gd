@@ -19,7 +19,7 @@ var _tick: int = 0
 
 
 func _init(ship: int, model: OrientModel, near_range_m: float = DEFAULT_RANGE_M) -> void:
-	super(StationViews.Section.NEAR, ship)
+	super(StationCatalogue.Section.NEAR, ship)
 	orient = model
 	range_m = near_range_m
 

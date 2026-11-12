@@ -14,10 +14,10 @@ extends RunDriver
 ## encounter is open per ship; the next is picked a quiet gap after the last ended (D231).
 ## A ship goes through RunDef.min_encounters to max_encounters of them (Q4, owner
 ## 2026-10-26): each pick leaves the budget for the fewest still to play, and the director
-## closes the run (CloseRunCommand) when nothing fits any more or the most is reached.
+## closes the run (FinishShipCommand) when nothing fits any more or the most is reached.
 ## PROVISIONAL (Q4, Q14): the picking rules are placeholders for #13.
 ##
-## Multi-ship sessions (#11, FT-MIS-023, M4-Q1, M4-Q5): FleetDirector makes one Director per
+## Multi-ship games (#11, FT-MIS-023, M4-Q1, M4-Q5): FleetDirector makes one Director per
 ## crew faction. Such a Director plans for its faction's ships in play as one fleet: one
 ## budget, every encounter holding the whole fleet, its strength scaled to the fleet's size
 ## (fleet_multiplier), and one run closed for every ship at once. In a race it plays the
@@ -30,7 +30,7 @@ const LOW_HULL: float = 0.5
 const HOME_SITE: int = 0
 
 ## The event ScenarioApi.events() reports when RelaunchShipCommand puts a ship back in play
-## (SessionOutcome.EVENT_RELAUNCHED; the director names sim/api only).
+## (GameOutcome.EVENT_RELAUNCHED; the director names sim/api only).
 const RELAUNCHED: StringName = &"relaunched"
 
 ## The text of the Comms card that names a pending encounter's site (Q23).
@@ -124,7 +124,7 @@ func before_tick(api: ScenarioApi) -> void:
 
 
 ## A fleet ship relaunched (D259: a fresh ship with a fresh run state) must go through the
-## run's encounters itself, or CloseRunCommand would refuse it: the fleet's plan starts over,
+## run's encounters itself, or FinishShipCommand would refuse it: the fleet's plan starts over,
 ## its budget, count, quiet time and closed run forgotten.
 func _on_relaunches(api: ScenarioApi) -> void:
 	for e: ApiEvent in api.events():
@@ -256,7 +256,7 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 				_refund(run, now)
 				continue
 			run.encounter = run.handle.id()
-		var ev: EncounterView = api.encounter(run.encounter)
+		var ev: EncounterInfo = api.encounter(run.encounter)
 		if ev.result > Scenario.Result.ACTIVE:
 			if run.started:
 				run.scenario.end(api, ev.result)
@@ -289,7 +289,7 @@ func _step_runs(api: ScenarioApi, now: int) -> void:
 func _finished(run: ActiveRun, now: int) -> void:
 	_taken.erase(run.site)
 	_done[run.ship] = _done.get(run.ship, 0) + 1
-	_quiet_until[run.ship] = now + SimRate.ticks(_def.gap_s)
+	_quiet_until[run.ship] = now + SimRate.ticks(_def.gap)
 
 
 ## A rejected begin gives its cost back and the ship may be planned again.
@@ -298,7 +298,7 @@ func _refund(run: ActiveRun, now: int) -> void:
 	var cost: int = _cost_of(_index_of_id(run.scenario.meta().id))
 	var before: int = _left(run.ship)
 	_spent[run.ship] = _spent.get(run.ship, 0) - cost
-	_quiet_until[run.ship] = now + SimRate.ticks(_def.gap_s)
+	_quiet_until[run.ship] = now + SimRate.ticks(_def.gap)
 	_log(
 		now,
 		run.ship,
@@ -320,9 +320,9 @@ func _plan(api: ScenarioApi, now: int, ship: int) -> void:
 		return
 	var limits: Vector2i = api.encounter_limits()
 	if _done.get(ship, 0) >= limits.y:
-		_close_run(api, now, ship, "run_length")
+		_finish_ship(api, now, ship, "run_length")
 		return
-	if now >= _quiet_until.get(ship, SimRate.ticks(_def.gap_s)):
+	if now >= _quiet_until.get(ship, SimRate.ticks(_def.gap)):
 		_pick(api, now, ship, limits.x)
 
 
@@ -351,7 +351,7 @@ func _pick(api: ScenarioApi, now: int, ship: int, fewest: int) -> void:
 		# Nothing fits the budget: the run ends once the fewest encounters are played. An
 		# empty catalogue has nothing to play, which is logged once.
 		if _done.get(ship, 0) >= fewest:
-			_close_run(api, now, ship, "budget_spent")
+			_finish_ship(api, now, ship, "budget_spent")
 		else:
 			_skip(now, ship)
 		return
@@ -375,7 +375,7 @@ func _pick_race(api: ScenarioApi, now: int, unit: int) -> void:
 	var done: int = _done.get(unit, 0)
 	if done >= _race.size():
 		var reason: String = "run_length" if done >= api.encounter_limits().y else "budget_spent"
-		_close_run(api, now, unit, reason)
+		_finish_ship(api, now, unit, reason)
 		return
 	var entry: Dictionary = _race[done]
 	var index: int = _index_of_id(entry["scenario"])
@@ -409,11 +409,11 @@ func _busy(ship: int) -> bool:
 	return false
 
 
-## Closes the ship's run once (CloseRunCommand), for every ship of a fleet, and logs why.
-func _close_run(api: ScenarioApi, now: int, ship: int, reason: String) -> void:
+## Closes the ship's run once (FinishShipCommand), for every ship of a fleet, and logs why.
+func _finish_ship(api: ScenarioApi, now: int, ship: int, reason: String) -> void:
 	_ended_logged[ship] = true
 	for s: int in _ships(api):
-		api.close_run(s)
+		api.finish_ship(s)
 	_log(
 		now,
 		ship,
@@ -458,7 +458,7 @@ func _skip(now: int, ship: int) -> void:
 ## An open site with no encounter of the session's directors, or -1 when none is free.
 func _free_site(api: ScenarioApi) -> int:
 	var free: Array[int] = []
-	for s: SiteView in api.sites():
+	for s: SiteInfo in api.sites():
 		if s.id != HOME_SITE and not _taken.has(s.id):
 			free.append(s.id)
 	return free[_rng.randi() % free.size()] if not free.is_empty() else -1
@@ -501,11 +501,11 @@ func _resolve_opens(now: int) -> void:
 	_opening = waiting
 
 
-## Opens a further site every spawn_site_every_s, up to max_open_sites (D80, FT-MIS-027).
+## Opens a further site every spawn_site_every, up to max_open_sites (D80, FT-MIS-027).
 func _maybe_open_site(api: ScenarioApi, now: int) -> void:
-	if _def.spawn_site_every_s <= 0.0 or _opened >= _def.max_open_sites or not _race.is_empty():
+	if _def.spawn_site_every <= 0.0 or _opened >= _def.max_open_sites or not _race.is_empty():
 		return
-	if now - _last_open_tick < SimRate.ticks(_def.spawn_site_every_s):
+	if now - _last_open_tick < SimRate.ticks(_def.spawn_site_every):
 		return
 	_open_one(api, now, -1, "periodic")
 
@@ -549,7 +549,7 @@ func _begin(api: ScenarioApi, now: int, ship: int, index: int, site: int, reason
 ## and lapses when the arrival timeout starts the encounter anyway.
 func _announce_site(api: ScenarioApi, ship: int, site: int) -> void:
 	var name_key: String = ""
-	for s: SiteView in api.sites():
+	for s: SiteInfo in api.sites():
 		if s.id == site:
 			name_key = s.name_key
 	if name_key == "":
@@ -558,7 +558,7 @@ func _announce_site(api: ScenarioApi, ship: int, site: int) -> void:
 	card.kind = CardSpec.Kind.INFO
 	card.title_key = StringName(name_key)
 	card.detail_key = PENDING_DETAIL
-	card.expires_s = _def.arrival_timeout_s
+	card.expiry = _def.arrival_timeout
 	api.offer(ship, card)
 
 

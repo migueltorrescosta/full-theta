@@ -4,18 +4,18 @@ extends StationPanel
 ## 3D disc radar with icons sized by detection confidence (FT-SCI-001), the contact list
 ## (nearest hostile first), the contact card with a confidence bar per part (ScienceCard,
 ## FT-SCI-002), and the controls: passive or active sensors (FT-SCI-003), Scan and Hack
-## on the selected contact, the active ping, the scan-position mark for Helm
+## on the selected contact, the sensor sweep, the scan-position mark for Helm
 ## (FT-SCI-010), the own-ship scan (FT-SCI-009) and the claim of the one active scan or
 ## hack (FT-NET-022). An open scan or hack replaces the radar with its minigame
 ## (ScanGame, HackGame; FT-SCI-004, FT-SCI-006); the server generates and checks both
 ## (FT-SCI-011).
 ##
 ## KB/M: click a contact or the list, right-drag orbits the radar, wheel zooms, E scan,
-## H hack, [ ] choose the hack's subsystem, P active ping, Q passive / active, M drop the
+## H hack, [ ] choose the hack's subsystem, P sensor sweep, Q passive / active, M drop the
 ## scan-position mark, I scan the own ship. In a scan: drag (or arrows, - and =) turns
 ## the wireframe, Enter submits, Backspace cancels. In a hack: arrows or a tap on an
 ## adjacent node. Controller: left stick cursor with snap to contact, right stick
-## orbit, RT scan, LT hack, d-pad up ping, down scan-position mark, left / right
+## orbit, RT scan, LT hack, d-pad up sweep, down scan-position mark, left / right
 ## subsystem, LB sensors mode, LB + d-pad down own-ship scan; in a scan the sticks turn
 ## the open axes, X submits, Y cancels; in a hack the stick or d-pad moves the route.
 ## Touch: the buttons and the minigames' tap and drag, two fingers orbit the radar. On a
@@ -47,9 +47,9 @@ const STACK_CARD_H: float = 200.0
 ## Detection confidence 0..1 -> blip size factor.
 const BLIP_MIN: float = 0.6
 const BLIP_MAX: float = 1.7
-const SESSION_NONE: int = 0
-const SESSION_SCAN: int = 1
-const SESSION_HACK: int = 2
+const MINIGAME_NONE: int = 0
+const MINIGAME_SCAN: int = 1
+const MINIGAME_HACK: int = 2
 
 ## The panel's own radar: made when the panel is alone, or the first time it takes the
 ## phone arrangement in a joint view; it shows while own_radar() (#28), else null.
@@ -110,13 +110,13 @@ func _setup() -> void:
 	scan_game.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	scan_game.visible = false
 	scan_game.submitted.connect(_on_scan_submitted)
-	scan_game.cancelled.connect(cancel_session)
+	scan_game.cancelled.connect(cancel_minigame)
 	_stage.add_child(scan_game)
 	hack_game = HackGame.new()
 	hack_game.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hack_game.visible = false
 	hack_game.moved.connect(_on_hack_move)
-	hack_game.cancelled.connect(cancel_session)
+	hack_game.cancelled.connect(cancel_minigame)
 	_stage.add_child(hack_game)
 	card_view = ScienceCard.new()
 	card_view.custom_minimum_size = Vector2(CARD_W, 0)
@@ -165,7 +165,7 @@ func actions() -> Array[Array]:
 		["scan", "sci.scan", _scan],
 		["hack", "sci.hack", _hack],
 		["sub", "", _cycle_subsystem.bind(1)],
-		["ping", "sci.ping", _ping],
+		["sweep", "sci.sweep", _sweep],
 		["mark", "sci.scan_mark", _scan_mark],
 		["self", "sci.self_scan", _self_scan],
 		["claim", "sci.claim", _claim_scan],
@@ -213,7 +213,7 @@ func _arrange() -> void:
 func _show_parts() -> void:
 	if phone != null:
 		return
-	var playing: bool = int(block().get("session", SESSION_NONE)) != SESSION_NONE
+	var playing: bool = int(block().get("minigame", MINIGAME_NONE)) != MINIGAME_NONE
 	var show: bool = not docked and not (playing and size.x < NARROW_W)
 	_list.visible = show
 	card_view.visible = show
@@ -288,7 +288,7 @@ func radar_orbitable() -> bool:
 
 
 func claim_item() -> String:
-	return StationViews.CLAIM_SCAN
+	return StationCatalogue.CLAIM_SCAN
 
 
 func _process(delta: float) -> void:
@@ -298,14 +298,14 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	refresh()
-	ControlsChip.show_radar_legend(self, ctx.settings)
+	ControlsHint.show_radar_legend(self, ctx.settings)
 
 
 # --- Reading. ---
 
 
 func block() -> Dictionary:
-	return ctx.view.blocks.get(StationViews.Section.SCIENCE, {})
+	return ctx.snap.blocks.get(StationCatalogue.Section.SCIENCE, {})
 
 
 ## The section's card row of a contact, or {}.
@@ -335,35 +335,39 @@ func subsystems() -> Array[StringName]:
 ## Pushes the current section into the widgets (every frame; tests call it directly).
 func refresh() -> void:
 	var b: Dictionary = block()
-	var session: int = int(b.get("session", SESSION_NONE))
+	var minigame: int = int(b.get("minigame", MINIGAME_NONE))
 	var own: bool = own_radar()
 	if radar != null:
 		radar.set_picture(ctx.picture(), ctx.crew.selection, ctx)
 		radar.blip_scale = _blip_scale(b)
-		radar.visible = own and session == SESSION_NONE
+		radar.visible = own and minigame == MINIGAME_NONE
 	_show_parts()
-	_stage.visible = own or session != SESSION_NONE
-	scan_game.visible = session == SESSION_SCAN
-	hack_game.visible = session == SESSION_HACK
-	var age: float = maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / SimRate.HZ)
-	if session == SESSION_SCAN:
+	_stage.visible = own or minigame != MINIGAME_NONE
+	scan_game.visible = minigame == MINIGAME_SCAN
+	hack_game.visible = minigame == MINIGAME_HACK
+	var age: float = maxf(0.0, float(ctx.snap.tick - int(b.get("minigame_start", 0))) / SimRate.HZ)
+	if minigame == MINIGAME_SCAN:
 		scan_game.load_block(b)
-		scan_game.title = tr("sci.scan_title") % ctx.view.callsign(int(b.get("session_target", -1)))
+		scan_game.title = (
+			tr("sci.scan_title") % ctx.snap.callsign(int(b.get("minigame_contact", -1)))
+		)
 		scan_game.noise_text = (
-			"%s %d%%" % [tr("sci.noise"), roundi(float(b["session_noise"]) * 100.0)]
+			"%s %d%%" % [tr("sci.noise"), roundi(float(b["minigame_noise"]) * 100.0)]
 		)
 		scan_game.elapsed_s = age
-	elif session == SESSION_HACK:
+	elif minigame == MINIGAME_HACK:
 		hack_game.load_block(b)
-		hack_game.title = tr("sci.hack_title") % ctx.view.callsign(int(b.get("session_target", -1)))
+		hack_game.title = (
+			tr("sci.hack_title") % ctx.snap.callsign(int(b.get("minigame_contact", -1)))
+		)
 		hack_game.target_text = _goal_text(b)
 		hack_game.elapsed_s = age
 	var sel: int = selected_contact()
-	card_view.set_card(ctx.view.callsign(sel) if sel >= 0 else "", card_of(sel), _hacks_on(sel))
+	card_view.set_card(ctx.snap.callsign(sel) if sel >= 0 else "", card_of(sel), _hacks_on(sel))
 	_refresh_list()
-	_refresh_buttons(b, session)
+	_refresh_buttons(b, minigame)
 	if phone != null:
-		phone.update(session)
+		phone.update(minigame)
 
 
 func _blip_scale(b: Dictionary) -> Dictionary:
@@ -376,12 +380,12 @@ func _blip_scale(b: Dictionary) -> Dictionary:
 
 func _hacks_on(contact: int) -> Array:
 	return block().get("hacks", []).filter(
-		func(h: Dictionary) -> bool: return int(h["target"]) == contact
+		func(h: Dictionary) -> bool: return int(h["subject"]) == contact
 	)
 
 
 func _goal_text(b: Dictionary) -> String:
-	var target: int = int(b.get("session_target", -1))
+	var target: int = int(b.get("minigame_contact", -1))
 	var def: ShipDef = ScienceLookup.ship_class(int(card_of(target).get("class_id", 0)))
 	var i: int = int(b.get("hack_sub", -1))
 	if def != null and i >= 0 and i < def.subsystems.size():
@@ -440,9 +444,9 @@ func _list_text(it: Dictionary) -> String:
 	return "%s %s %.1f km" % [it["label"], klass, (it["local"] as Vector3).length() / 1000.0]
 
 
-func _refresh_buttons(b: Dictionary, session: int) -> void:
-	var open: bool = session != SESSION_NONE
-	var holder: String = ctx.crew.claimer(StationViews.CLAIM_SCAN)
+func _refresh_buttons(b: Dictionary, minigame: int) -> void:
+	var open: bool = minigame != MINIGAME_NONE
+	var holder: String = ctx.crew.claimer(StationCatalogue.CLAIM_SCAN)
 	var mine: bool = holder == ctx.settings.player_name
 	(_buttons["mode"] as Button).text = tr(
 		"sci.mode_active" if b.get("active", false) else "sci.mode_passive"
@@ -462,7 +466,7 @@ func _refresh_buttons(b: Dictionary, session: int) -> void:
 
 
 func _can_hack() -> bool:
-	return selected_contact() >= 0 and bool(card_of(selected_contact()).get("hack", false))
+	return selected_contact() >= 0 and ScienceCard.is_revealed(card_of(selected_contact()), &"hack")
 
 
 ## The subsystem button beside Hack: the target's name ("Engines"), or "No subsystem"
@@ -493,7 +497,7 @@ func _toggle_mode() -> void:
 
 func _scan() -> void:
 	var c: int = selected_contact()
-	if c >= 0 and block().get("session", 0) == SESSION_NONE:
+	if c >= 0 and block().get("minigame", 0) == MINIGAME_NONE:
 		_status.text = ""
 		ctx.intents.command({"kind": "science_scan", "contact": c})
 
@@ -501,7 +505,7 @@ func _scan() -> void:
 func _hack() -> void:
 	var subs: Array[StringName] = subsystems()
 	var c: int = selected_contact()
-	if c < 0 or subs.is_empty() or block().get("session", 0) != SESSION_NONE:
+	if c < 0 or subs.is_empty() or block().get("minigame", 0) != MINIGAME_NONE:
 		return
 	_status.text = ""
 	ctx.intents.command(
@@ -520,8 +524,8 @@ func _cycle_subsystem(step: int) -> void:
 		_sub_picked = true
 
 
-func _ping() -> void:
-	ctx.intents.command({"kind": "science_ping"})
+func _sweep() -> void:
+	ctx.intents.command({"kind": "sensor_sweep"})
 
 
 ## FT-SCI-010: the scan-position mark for the selected contact (Helm sees where to fly).
@@ -536,11 +540,11 @@ func _self_scan() -> void:
 
 
 func _claim_scan() -> void:
-	var holder: Dictionary = ctx.crew.claims.get(StationViews.CLAIM_SCAN, {})
+	var holder: Dictionary = ctx.crew.claims.get(StationCatalogue.CLAIM_SCAN, {})
 	if int(holder.get("session", -1)) == ctx.crew.session:
-		ctx.intents.release_claim(StationViews.CLAIM_SCAN)
+		ctx.intents.release_claim(StationCatalogue.CLAIM_SCAN)
 	else:
-		ctx.intents.claim(StationViews.CLAIM_SCAN)
+		ctx.intents.claim(StationCatalogue.CLAIM_SCAN)
 
 
 ## A phone's Hack (P28-L1, D289): the screen's choice sheet of the target's subsystems plus
@@ -548,7 +552,7 @@ func _claim_scan() -> void:
 ## selected the nearest one is selected first. With the subsystem already picked by key or
 ## controller (`_sub_picked`), or without a sheet, the hack starts at once.
 func open_hack() -> void:
-	if int(block().get("session", SESSION_NONE)) != SESSION_NONE:
+	if int(block().get("minigame", MINIGAME_NONE)) != MINIGAME_NONE:
 		return
 	if not _can_hack():
 		var near: int = _nearest_hackable()
@@ -565,15 +569,15 @@ func open_hack() -> void:
 		names.append(_sub_label(subs, i))
 	sheet.side = SIDE_RIGHT
 	sheet.open(
-		TouchText.of("sci.hack_sheet", "Hack %s") % ctx.view.callsign(c),
+		TouchText.of("sci.hack_sheet", "Hack %s") % ctx.snap.callsign(c),
 		names,
 		func(i: int) -> void: _hack_sub(c, subs[i])
 	)
 
 
-## True when a phone's Hack has something to open: no session and a hackable contact.
+## True when a phone's Hack has something to open: no minigame and a hackable contact.
 func can_open_hack() -> bool:
-	return int(block().get("session", SESSION_NONE)) == SESSION_NONE and _nearest_hackable() >= 0
+	return int(block().get("minigame", MINIGAME_NONE)) == MINIGAME_NONE and _nearest_hackable() >= 0
 
 
 ## The hackable contact (its card says so) nearest the ship, or -1.
@@ -581,7 +585,7 @@ func _nearest_hackable() -> int:
 	var best: int = -1
 	var best_d: float = INF
 	for it: Dictionary in ctx.picture().items:
-		if it["kind"] != "contact" or not bool(card_of(int(it["id"])).get("hack", false)):
+		if it["kind"] != "contact" or not ScienceCard.is_revealed(card_of(int(it["id"])), &"hack"):
 			continue
 		var d: float = (it["local"] as Vector3).length()
 		if d < best_d:
@@ -591,25 +595,25 @@ func _nearest_hackable() -> int:
 
 
 func _hack_sub(contact: int, sub: StringName) -> void:
-	if block().get("session", 0) != SESSION_NONE:
+	if block().get("minigame", 0) != MINIGAME_NONE:
 		return
 	_status.text = ""
 	ctx.intents.command({"kind": "science_hack", "contact": contact, "subsystem_id": String(sub)})
 
 
-## The tab strip's title during a session (design 2.4): "Scan H2 · 12 s".
-func session_title() -> String:
+## The tab strip's title during a minigame (design 2.4): "Scan H2 · 12 s".
+func minigame_title() -> String:
 	var b: Dictionary = block()
-	var session: int = int(b.get("session", SESSION_NONE))
-	if session == SESSION_NONE:
+	var minigame: int = int(b.get("minigame", MINIGAME_NONE))
+	if minigame == MINIGAME_NONE:
 		return ""
 	var age: int = floori(
-		maxf(0.0, float(ctx.view.tick - int(b.get("session_start", 0))) / SimRate.HZ)
+		maxf(0.0, float(ctx.snap.tick - int(b.get("minigame_start", 0))) / SimRate.HZ)
 	)
-	var who: String = ctx.view.callsign(int(b.get("session_target", -1)))
-	if session == SESSION_SCAN:
-		return TouchText.of("sci.session_scan", "Scan %s · %d s") % [who, age]
-	return TouchText.of("sci.session_hack", "Hack %s · %d s") % [who, age]
+	var who: String = ctx.snap.callsign(int(b.get("minigame_contact", -1)))
+	if minigame == MINIGAME_SCAN:
+		return TouchText.of("sci.minigame_scan", "Scan %s · %d s") % [who, age]
+	return TouchText.of("sci.minigame_hack", "Hack %s · %d s") % [who, age]
 
 
 ## A phone upright has no rails: the view is the stage (the radar or a minigame).
@@ -622,8 +626,8 @@ func view_rect() -> Rect2:
 	return super()
 
 
-func cancel_session() -> void:
-	if block().get("session", 0) != SESSION_NONE:
+func cancel_minigame() -> void:
+	if block().get("minigame", 0) != MINIGAME_NONE:
 		ctx.intents.command({"kind": "science_cancel"})
 
 
@@ -683,15 +687,15 @@ func _on_sim_event(kind: StringName, p: Dictionary) -> void:
 func handle_intent(ev: Dictionary) -> bool:
 	if not bool(ev.get("pressed", true)):
 		return false
-	var session: int = int(block().get("session", SESSION_NONE))
+	var minigame: int = int(block().get("minigame", MINIGAME_NONE))
 	var id: String = str(ev["id"])
-	if session == SESSION_SCAN and id == "accept":
+	if minigame == MINIGAME_SCAN and id == "accept":
 		scan_game.submit()
 		return true
-	if session != SESSION_NONE and id == "decline":
-		cancel_session()
+	if minigame != MINIGAME_NONE and id == "decline":
+		cancel_minigame()
 		return true
-	if session == SESSION_HACK:
+	if minigame == MINIGAME_HACK:
 		var dir: int = _hack_dir(id)
 		if dir != 0:
 			hack_game.step(dir)
@@ -701,8 +705,8 @@ func handle_intent(ev: Dictionary) -> bool:
 			_scan()
 		"sci_hack":
 			_hack()
-		"sci_ping":
-			_ping()
+		"sci_sweep":
+			_sweep()
 		"sci_mode":
 			_toggle_mode()
 		"sci_scan_mark":
@@ -719,7 +723,7 @@ func handle_intent(ev: Dictionary) -> bool:
 
 
 ## The hack direction a press means: the arrows, and on the controller the d-pad
-## intents that are ping, scan-position mark and subsystem cycling outside a hack.
+## intents that are sweep, scan-position mark and subsystem cycling outside a hack.
 func _hack_dir(id: String) -> int:
 	match id:
 		"sci_right", "sci_sub_next":
@@ -728,7 +732,7 @@ func _hack_dir(id: String) -> int:
 			return HackGame.LEFT
 		"sci_down", "sci_scan_mark":
 			return HackGame.DOWN
-		"sci_up", "sci_ping":
+		"sci_up", "sci_sweep":
 			return HackGame.UP
 	return 0
 
@@ -756,12 +760,12 @@ func _poll_axes(delta: float) -> void:
 	var lx: float = m.axis("sci_dial_1")
 	var ly: float = m.axis("sci_dial_2")
 	var rx: float = m.axis("sci_dial_3")
-	var session: int = int(block().get("session", SESSION_NONE))
-	if session == SESSION_SCAN:
+	var minigame: int = int(block().get("minigame", MINIGAME_NONE))
+	if minigame == MINIGAME_SCAN:
 		scan_game.turn(0, lx * DIAL_RATE * delta)
 		scan_game.turn(1, ly * DIAL_RATE * delta)
 		scan_game.turn(2, rx * DIAL_RATE * delta)
-	elif session == SESSION_HACK:
+	elif minigame == MINIGAME_HACK:
 		if m.device == IntentTable.PAD:
 			_stick_move(lx, ly)
 	elif m.device == IntentTable.PAD and own_radar() and radar != null:
@@ -801,7 +805,7 @@ static func touch_help() -> Array:
 		[Rect2(47, 64, 168, 230), t.call("page.contacts"), t.call("intent.select")],
 		[r.call(0, 0), t.call("sci.scan"), t.call("intent.sci_scan")],
 		[r.call(1, 0), t.call("sci.hack"), t.call("help.sci_hack")],
-		[r.call(0, 1), t.call("sci.ping"), t.call("intent.sci_ping")],
+		[r.call(0, 1), t.call("sci.sweep"), t.call("intent.sci_sweep")],
 		[r.call(1, 1), t.call("sci.short_mark"), t.call("intent.sci_scan_mark")],
 		[r.call(0, 2), t.call("sci.short_passive"), t.call("intent.sci_mode")],
 		[r.call(1, 2), t.call("sci.short_self"), t.call("intent.sci_self_scan")],

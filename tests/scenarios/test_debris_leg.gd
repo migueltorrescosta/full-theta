@@ -11,19 +11,21 @@ func test_the_leg_has_debris_on_the_route_and_weapons_destroys_it() -> void:
 	f.run(3)
 	var pieces: Array[int] = f.ships_of(&"m3_debris")
 	assert_int(pieces.size()).is_equal(6)
-	var from: Vector3 = f.world.sites.point3(f.site)
-	var yard: Vector3 = f.world.sites.point3(0)
+	var from: PackedFloat64Array = f.world.sites.point(f.site)
+	var line: Vector3 = f.world.kin.delta(f.world.sites.point(0), from)
 	for id: int in pieces:
 		# On the route: within the lateral spread of the line between the sites.
-		var rel: Vector3 = f.world.kin.relative_to_point(id, from.x, from.y, from.z)
-		var line: Vector3 = yard - from
+		var rel: Vector3 = f.world.kin.relative_to_point(id, from)
 		var along: float = -rel.dot(line.normalized())
 		assert_float(along).is_between(0.0, line.length())
 		assert_float((-rel - line.normalized() * along).length()).is_less(200.0)
 	# Weapons shoots the nearest piece: the ship waits 3 km short of it with the bow on it.
 	var target: int = pieces[0]
 	f.world.kin.place(
-		0, f.world.kin.px[target] - 3000.0, f.world.kin.py[target], f.world.kin.pz[target]
+		0,
+		CubePoint.make(
+			f.world.kin.pos_x[target] - 3000.0, f.world.kin.pos_y[target], f.world.kin.pos_z[target]
+		)
 	)
 	f.world.kin.rot[0] = Quaternion(Basis.looking_at(Vector3(1, 0, 0), Vector3.UP))
 	f.run(2)
@@ -32,9 +34,9 @@ func test_the_leg_has_debris_on_the_route_and_weapons_destroys_it() -> void:
 	for i: int in 1800:
 		crew.act(f.world)
 		f.tick()
-		if f.world.run.status[target] != RunTable.Status.IN_PLAY:
+		if f.world.ships.status[target] != ShipStateTable.Status.IN_PLAY:
 			break
-	assert_int(f.world.run.status[target]).is_not_equal(RunTable.Status.IN_PLAY)
+	assert_int(f.world.ships.status[target]).is_not_equal(ShipStateTable.Status.IN_PLAY)
 
 
 # FT: FT-MIS-041
@@ -42,8 +44,8 @@ func test_arriving_at_the_yard_ends_the_leg() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"debris_leg", &"vesper_beacon")
 	f.run(3)
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	var yard: PackedFloat64Array = f.world.sites.point(0)
+	f.world.kin.place(0, yard)
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
 
 
@@ -52,7 +54,7 @@ func test_arriving_at_the_yard_ends_the_leg() -> void:
 func test_impulse_flight_reaches_the_next_site() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	var vesper: int = f.world.sites.open(f.world, &"vesper_beacon")
-	var select: SelectTargetCommand = SelectTargetCommand.new()
+	var select: HelmSelectCommand = HelmSelectCommand.new()
 	select.site_id = vesper
 	assert_bool(f.send(select)).is_true()
 	var helm: HelmInputCommand = HelmInputCommand.new()
@@ -64,7 +66,7 @@ func test_impulse_flight_reaches_the_next_site() -> void:
 		if SiteTable.at_site(f.world, 0) == vesper:
 			break
 	assert_int(SiteTable.at_site(f.world, 0)).is_equal(vesper)
-	assert_float(absf(f.world.kin.px[0])).is_less(f.world.kin.period / 2.0)
+	assert_float(absf(f.world.kin.pos_x[0])).is_less(f.world.kin.period / 2.0)
 
 
 # FT: FT-MIS-041
@@ -73,15 +75,14 @@ func test_impulse_flight_reaches_the_next_site() -> void:
 func test_a_ship_at_the_yard_has_not_crossed_the_leg() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"debris_leg", &"vesper_beacon")
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	var yard: PackedFloat64Array = f.world.sites.point(0)
+	f.world.kin.place(0, yard)
 	f.run(60 * 5)
 	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.ACTIVE)
 	assert_int(f.ships_of(&"m3_debris").size()).is_equal(6)
-	var away: Vector3 = f.world.sites.point3(f.site)
-	f.world.kin.place(0, away.x, away.y, away.z)
+	f.world.kin.place(0, f.world.sites.point(f.site))
 	f.run(5)
-	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	f.world.kin.place(0, yard)
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
 
 
@@ -97,8 +98,8 @@ func _accepted_leg() -> Array:
 
 
 func _dock_at_yard(f: ScenarioFixture) -> void:
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	var yard: PackedFloat64Array = f.world.sites.point(0)
+	f.world.kin.place(0, yard)
 	f.world.kin.vel[0] = Vector3.ZERO
 	var dock: DockCommand = DockCommand.new()
 	dock.site_id = 0
@@ -117,7 +118,7 @@ func test_a_cleared_dock_at_the_yard_pays_the_fee() -> void:
 	var credits: int = Economy.credits(f.world, 0)
 	f.run(window[0] - f.world.tick + 1)
 	_dock_at_yard(f)
-	assert_int(f.card_state(card)).is_equal(CardView.State.DONE)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.DONE)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits + DebrisLeg.FEE)
 	assert_float(f.world.reputation.value_of(f.world.faction_of(0), Factions.CIVIL)).is_equal(0.0)
 
@@ -130,7 +131,7 @@ func test_an_uncleared_dock_at_the_yard_costs_standing() -> void:
 	var card: int = legs[1]
 	var credits: int = Economy.credits(f.world, 0)
 	_dock_at_yard(f)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
 	assert_float(f.world.reputation.value_of(f.world.faction_of(0), Factions.CIVIL)).is_less(0.0)
 
@@ -147,5 +148,5 @@ func test_running_out_of_time_ends_the_leg_as_partial_and_the_clearance_lapses()
 	var credits: int = Economy.credits(f.world, 0)
 	assert_int(f.run_until_end(60 * 610)).is_equal(Scenario.Result.PARTIAL)
 	f.run(3)
-	assert_int(f.card_state(card)).is_not_equal(CardView.State.DONE)
+	assert_int(f.card_state(card)).is_not_equal(CardInfo.State.DONE)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)

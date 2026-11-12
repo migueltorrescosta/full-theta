@@ -16,7 +16,7 @@ func _reply(w: SimWorld, card: int, option: StringName) -> bool:
 
 func _hail(w: SimWorld, target: int = 1) -> bool:
 	var c: HailCommand = HailCommand.new()
-	c.target = target
+	c.contact = target
 	return StoryFixture.run(w, 0, c)
 
 
@@ -80,7 +80,7 @@ func test_hail_refusals() -> void:
 func test_answer_an_incoming_hail() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.HAIL, &"conv.trader_bluff")
-	spec.target = 1
+	spec.subject = 1
 	var card: int = StoryFixture.post(w, 0, spec)
 	assert_int(w.story.state[card]).is_equal(StoryTable.State.OPEN)
 	assert_str(w.story.node[card]).is_equal("")
@@ -137,8 +137,8 @@ func test_reply_moves_between_nodes() -> void:
 func test_accept_and_decline_alone() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT)
-	spec.target = 1
-	spec.target_flag = KnowledgeTable.Flag.DISABLE
+	spec.subject = 1
+	spec.subject_flag = KnowledgeTable.Flag.DISABLE
 	spec.reward_credits = 400
 	var one: int = StoryFixture.post(w, 0, spec)
 	var two: int = StoryFixture.post(w, 0, StoryFixture.card(StoryTable.Kind.MISSION))
@@ -181,7 +181,7 @@ func test_card_requiring_docked() -> void:
 func test_contract_conversation_accepts_and_declines() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"conv.escort_contract")
-	spec.target = 1
+	spec.subject = 1
 	var yes: int = StoryFixture.post(w, 0, spec)
 	var no: int = StoryFixture.post(w, 0, spec)
 	for card: int in [yes, no]:
@@ -203,7 +203,7 @@ func test_contract_conversation_accepts_and_declines() -> void:
 func test_cards_expire() -> void:
 	var w: SimWorld = StoryFixture.duel()
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION, &"conv.escort_contract")
-	spec.expires_s = 1.0
+	spec.expiry = 1.0
 	var card: int = StoryFixture.post(w, 0, spec)
 	var open: AnswerHailCommand = AnswerHailCommand.new()
 	open.card = card
@@ -225,7 +225,7 @@ func test_faction_wide_cards() -> void:
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION)
 	spec.faction_wide = true
 	var card: int = StoryFixture.post(w, 0, spec)
-	assert_int(w.story.ship_ids[card]).is_equal(-1)
+	assert_int(w.story.owner_ship[card]).is_equal(-1)
 	assert_bool(Story.visible_to(w, card, 0)).is_true()
 	assert_bool(Story.visible_to(w, card, mate)).is_true()
 	assert_bool(Story.visible_to(w, card, 1)).is_false()

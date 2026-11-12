@@ -21,7 +21,7 @@ func _init(root: Window, run_dir: String, player: String, token_path: String) ->
 	menu.settings.player_name = player
 	# Scripted clients skip the first-visit help overlay (FT-STN-012), which would block
 	# their input; tests/stations/test_first_visit_help.gd covers it.
-	for station: Variant in StationViews.STATIONS:
+	for station: Variant in StationCatalogue.STATIONS:
 		menu.settings.mark_hint_seen(str(station))
 	menu.settings.save()
 	menu.token_path = token_path
@@ -51,20 +51,20 @@ func status() -> String:
 	return label.text
 
 
-## Taps the lobby's cells (or seat button) of an entry; "" or why not (yet).
-func pick(entry: String) -> String:
+## Taps the lobby's cells (or seat button) of a seat; "" or why not (yet).
+func pick(seat: String) -> String:
 	if menu.shell == null or menu.shell.lobby == null:
 		return "no lobby"
 	var lobby: LobbyScreen = menu.shell.lobby
 	if (
-		lobby.find_child("Entry_" + entry, true, false) == null
-		and lobby.ctx.crew.def_of(entry).is_empty()
+		lobby.find_child("Seat_" + seat, true, false) == null
+		and lobby.ctx.crew.def_of(seat).is_empty()
 	):
-		return "no entry %s in the lobby" % entry
+		return "no seat %s in the lobby" % seat
 	# The grid has the six stations; a joint view is a tap on each of its two.
-	var stations: Array = lobby.ctx.crew.def_of(entry).get("stations", [])
-	if stations.is_empty() or entry == LobbySeatGrid.DEV_ALL:
-		lobby.tap_seat(entry)
+	var stations: Array = lobby.ctx.crew.def_of(seat).get("stations", [])
+	if stations.is_empty() or seat == LobbySeatGrid.DEV_ALL:
+		lobby.tap_seat(seat)
 	else:
 		for st: Variant in stations:
 			lobby.tap_station(str(st))
@@ -134,9 +134,9 @@ static func pointer(screen: StationScreen) -> Vector2:
 	return Vector2(r.end.x - 2.0, r.position.y + 2.0)
 
 
-## What the player sees, for `ui_expect`: shown (menu, lobby, station), ship, entry,
+## What the player sees, for `ui_expect`: shown (menu, lobby, station), ship, seat,
 ## host, focused station, selection, marks, claims, contacts, started, card (the
-## outcome card is visible) and run_over (its outcome, time_s, hull, voters, needed).
+## outcome card is visible) and ship_outcome (its outcome, time, hull, voters, needed).
 func state() -> Dictionary:
 	var shell: ClientShell = menu.shell
 	if shell == null:
@@ -145,7 +145,7 @@ func state() -> Dictionary:
 	return {
 		"shown": "station" if shell.screen != null else "lobby",
 		"ship": crew.ship,
-		"entry": crew.entry,
+		"seat": crew.seat,
 		"host": crew.host,
 		"focused": shell.screen.focused_station() if shell.screen != null else "",
 		"selection": crew.selection,
@@ -154,5 +154,5 @@ func state() -> Dictionary:
 		"contacts": Array(shell.ctx.interp.contact_ids()),
 		"started": crew.is_started(),
 		"card": shell.outcome_card.visible,
-		"run_over": crew.run_over.get(crew.ship, {}),
+		"ship_outcome": crew.ship_outcome.get(crew.ship, {}),
 	}

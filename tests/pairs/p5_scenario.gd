@@ -49,12 +49,12 @@ static func environment(w: SimWorld) -> void:
 		var c: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT, &"", _yard)
 		c.title_key = "comms.card.clearance"
 		c.rep_faction = YARD_FACTION
-		c.lane_open_s = LANE_OPEN_S
-		c.lane_s = LANE_S
+		c.lane_delay = LANE_OPEN_S
+		c.lane_length = LANE_S
 		PairHarness.send(w, c)
 	if (
 		Story.docked_site(w, PLAYER) < 0
-		and w.kin.relative_to_point(PLAYER, YARD_AT.x, YARD_AT.y, YARD_AT.z).length() < DOCK_R
+		and ((w.kin.relative_to_point(PLAYER, CubePoint.of(YARD_AT)).length()) < DOCK_R)
 	):
 		StoryFixture.dock(w, PLAYER, _yard)
 
@@ -95,9 +95,7 @@ static func coop_crew() -> Callable:
 			return
 		if speed[0] == 0.0:
 			var middle_s: float = (window[0] + window[1]) / 2.0 * SimWorld.DT
-			var to_yard: float = (
-				w.kin.relative_to_point(PLAYER, YARD_AT.x, YARD_AT.y, YARD_AT.z).length()
-			)
+			var to_yard: float = w.kin.relative_to_point(PLAYER, CubePoint.of(YARD_AT)).length()
 			speed[0] = (to_yard - DOCK_R) / (middle_s - w.tick * SimWorld.DT)
 		helm(w, speed[0])
 
@@ -105,14 +103,14 @@ static func coop_crew() -> Callable:
 ## Helm flying at the yard at `speed` (m/s): selects its point, holds Face, ramps the speed
 ## setpoint up to `speed` once the bow is on it, then leaves the throttle alone.
 static func helm(w: SimWorld, speed: float) -> void:
-	if w.helm.target_kind[PLAYER] != HelmTable.Target.POINT:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+	if w.helm.sel_kind[PLAYER] != HelmTable.Selection.POINT:
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.point = true
 		select.x = YARD_AT.x
 		select.y = YARD_AT.y
 		select.z = YARD_AT.z
 		PairHarness.send(w, select)
-	var to_yard: Vector3 = w.kin.relative_to_point(PLAYER, YARD_AT.x, YARD_AT.y, YARD_AT.z)
+	var to_yard: Vector3 = w.kin.relative_to_point(PLAYER, CubePoint.of(YARD_AT))
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_yard) < ON_POINT
 	var throttle: float = 1.0 if w.helm.throttle_setpoint[PLAYER] < speed and on_point else 0.0
 	if w.tick == 0 or throttle != w.helm.input_translation[PLAYER].z:

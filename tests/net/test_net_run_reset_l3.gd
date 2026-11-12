@@ -47,8 +47,8 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	crew[0].set_alert(2)
 	var marked: Callable = func() -> bool:
 		return (
-			server.session.crew.marks.marks_of(PLAYER).size() == 1
-			and server.session.crew.marks.alert(PLAYER) == 2
+			server.game.crew.marks.marks_of(PLAYER).size() == 1
+			and server.game.crew.marks.alert(PLAYER) == 2
 		)
 	assert_bool(await h.until(marked)).is_true()
 	var old_world: SimWorld = server.world
@@ -57,12 +57,14 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	for c: NetClient in crew:
 		crew_from.append(h.mark(c))
 	_destroy(server, ENEMY)
-	var card: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_RUN_OVER, from)
+	var card: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_SHIP_OUTCOME, from)
 	assert_str(card["payload"]["outcome"]).is_equal("win")
-	assert_float(card["payload"]["time_s"]).is_greater(0.0)
+	assert_float(card["payload"]["time"]).is_greater(0.0)
 	assert_float(card["payload"]["hull"]).is_equal(1.0)
 	for i: int in crew.size():
-		var got: Dictionary = await h.next_event(crew[i], NetProtocol.EVENT_RUN_OVER, crew_from[i])
+		var got: Dictionary = await h.next_event(
+			crew[i], NetProtocol.EVENT_SHIP_OUTCOME, crew_from[i]
+		)
 		assert_dict(got["payload"]).is_equal(card["payload"])
 	var votes: Dictionary = await h.next_event(crew[0], NetProtocol.EVENT_RUN_VOTES, crew_from[0])
 	assert_int(votes["payload"]["needed"]).is_equal(2)
@@ -75,7 +77,7 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	var vfrom: int = h.mark(viewer)
 	viewer.run_again(PLAYER, true)
 	var refused: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_REQUEST_REJECTED, vfrom)
-	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_CREW)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_CREW)
 	from = h.mark(crew[1])
 	crew[0].run_again(PLAYER, false)
 	var none: Callable = func(e: Dictionary) -> bool: return _voters(e).is_empty()
@@ -83,18 +85,18 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	assert_object(server.world).is_same(old_world)
 	# Two of three: the run resets.
 	var old_tick: int = old_world.tick
-	var fulls: int = crew[0].view.full_count
+	var fulls: int = crew[0].snap.full_count
 	from = h.mark(crew[0])
 	crew[0].run_again(PLAYER, true)
 	crew[1].run_again(PLAYER, true)
 	assert_bool(await h.until(func() -> bool: return server.world != old_world)).is_true()
 	var w: SimWorld = server.world
-	assert_object(server.session.world).is_same(w)
+	assert_object(server.game.world).is_same(w)
 	assert_int(w.tick).is_equal(0)
 	assert_array(w.command_log).is_empty()
 	assert_bool(w.kin.is_alive(ENEMY)).is_true()
-	assert_int(w.run.outcome[PLAYER]).is_equal(RunTable.Outcome.NONE)
-	assert_bool(server.session.sim_running()).is_false()
+	assert_int(w.ships.ship_outcome[PLAYER]).is_equal(ShipStateTable.ShipOutcome.NONE)
+	assert_bool(server.game.sim_running()).is_false()
 	var lobby: Callable = func(e: Dictionary) -> bool: return not e["payload"]["started"]
 	assert_dict(await h.next_event(crew[0], NetProtocol.EVENT_LOBBY, from, lobby)).is_not_empty()
 	var cleared: Callable = func(e: Dictionary) -> bool: return e["payload"]["marks"].is_empty()
@@ -102,10 +104,10 @@ func test_win_then_crew_vote_resets_the_run() -> void:
 	var normal: Callable = func(e: Dictionary) -> bool: return e["payload"]["level"] == 0
 	assert_dict(await h.next_event(crew[0], NetProtocol.EVENT_ALERT, from, normal)).is_not_empty()
 	for i: int in crew.size():
-		assert_str(h.session_of(server, crew[i]).entry).is_equal(["tactical", "systems", "ops"][i])
-	assert_int(server.session.claims.holder(PLAYER, "flight")).is_equal(tac.id)
+		assert_str(h.session_of(server, crew[i]).seat).is_equal(["tactical", "systems", "ops"][i])
+	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(tac.id)
 	var fresh: Callable = func() -> bool:
-		return crew[0].view.full_count > fulls and crew[0].view.tick < old_tick
+		return crew[0].snap.full_count > fulls and crew[0].snap.tick < old_tick
 	assert_bool(await h.until(fresh)).is_true()
 	assert_bool(await h.start(server, crew[0])).is_true()
 	assert_bool(w.kin.is_alive(PLAYER)).is_true()
@@ -125,7 +127,7 @@ func test_loss_then_host_resets_alone() -> void:
 	var early: Dictionary = await h.next_event(crew[0], NetProtocol.EVENT_REQUEST_REJECTED, from)
 	assert_str(early["payload"]["reason"]).is_equal(NetRunReset.NOT_OVER)
 	_destroy(server, PLAYER)
-	var card: Dictionary = await h.next_event(crew[0], NetProtocol.EVENT_RUN_OVER, from)
+	var card: Dictionary = await h.next_event(crew[0], NetProtocol.EVENT_SHIP_OUTCOME, from)
 	assert_str(card["payload"]["outcome"]).is_equal("loss")
 	assert_float(card["payload"]["hull"]).is_equal(0.0)
 	# A voter who drops loses the vote; the votes needed follow the connected crew.
@@ -140,7 +142,7 @@ func test_loss_then_host_resets_alone() -> void:
 	assert_int(after["payload"]["needed"]).is_equal(2)
 	# A late pick gets the card.
 	var late: NetClient = await h.joined(server, "late", "captain")
-	var late_card: Dictionary = await h.next_event(late, NetProtocol.EVENT_RUN_OVER)
+	var late_card: Dictionary = await h.next_event(late, NetProtocol.EVENT_SHIP_OUTCOME)
 	assert_dict(late_card["payload"]).is_equal(card["payload"])
 	assert_dict(await h.next_event(late, NetProtocol.EVENT_RUN_VOTES)).is_not_empty()
 	# The host alone.
@@ -183,7 +185,7 @@ func test_session_and_reset_leave_definitions_unchanged() -> void:
 	await h.wait(1000)
 	var from: int = h.mark(crew[0])
 	_destroy(server, PLAYER)
-	assert_dict(await h.next_event(crew[0], NetProtocol.EVENT_RUN_OVER, from)).is_not_empty()
+	assert_dict(await h.next_event(crew[0], NetProtocol.EVENT_SHIP_OUTCOME, from)).is_not_empty()
 	var old_world: SimWorld = server.world
 	for c: NetClient in crew:
 		c.run_again(PLAYER, true)

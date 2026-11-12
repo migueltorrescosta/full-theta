@@ -41,7 +41,7 @@ func test_pips_send_show_pending_and_respect_the_limits() -> void:
 	# The reactor takes none, with its toast; over the cap the request goes to the server,
 	# whose refusal is the toast (F5, R12-7).
 	assert_bool(m.set_pips(5, 1)).is_false()
-	m.ctx.view.blocks[StationViews.Section.STATUS]["pip_cap"] = 10
+	m.ctx.snap.blocks[StationCatalogue.Section.STATUS]["pip_cap"] = 10
 	assert_bool(m.set_pips(2, 3)).is_true()
 	assert_array(_toasts).is_equal(["toast.eng_reactor"])
 	assert_int(_commands(m).size()).is_equal(2)

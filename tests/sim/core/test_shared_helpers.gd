@@ -5,8 +5,8 @@ extends GdUnitTestSuite
 
 func _world() -> SimWorld:
 	var w: SimWorld = SimWorld.new(7, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3(0, 0, 0))
-	w.spawn_ship(TestDefs.corvette(), 2, Vector3(500, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(0, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), 2, CubePoint.make(500, 0, 0))
 	return w
 
 
@@ -36,7 +36,7 @@ func test_hostility_predicates() -> void:
 func test_crew_predicates() -> void:
 	var w: SimWorld = _world()
 	assert_bool(w.is_crew_in_play(0)).is_true()
-	w.run.status[0] = RunTable.Status.DESTROYED
+	w.ships.status[0] = ShipStateTable.Status.DESTROYED
 	assert_bool(w.is_crew(0)).is_true()
 	assert_bool(w.is_crew_in_play(0)).is_false()
 
@@ -52,12 +52,14 @@ func test_sensor_reach_zero_for_dead_ship() -> void:
 func test_delta_is_minimum_image() -> void:
 	var w: SimWorld = _world()
 	var p: float = w.kin.period
-	var d: Vector3 = w.kin.delta(0.9 * p / 2.0, 0.0, 0.0, -0.9 * p / 2.0, 0.0, 0.0)
+	var d: Vector3 = w.kin.delta(
+		CubePoint.make(0.9 * p / 2.0, 0.0, 0.0), CubePoint.make(-0.9 * p / 2.0, 0.0, 0.0)
+	)
 	assert_float(d.x).is_equal_approx(-0.2 * p / 2.0, 1e-6)
 
 
 func test_faction_table_keeps_crew_factions_clear_of_npcs() -> void:
-	for f: int in SessionRules.CREW_FACTIONS:
+	for f: int in GameRules.CREW_FACTIONS:
 		assert_bool(Factions.NPC.has(f)).is_false()
 
 

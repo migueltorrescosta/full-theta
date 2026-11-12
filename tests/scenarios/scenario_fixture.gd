@@ -1,7 +1,7 @@
 class_name ScenarioFixture
 extends RefCounted
 ## Worlds for the real scenarios (E07): the server's own RunSetup on m3_run (the
-## M3 map, the enemy catalogue, conversations and reputation), one crewed ship at the yard,
+## M3 map, the NPC catalogue, conversations and reputation), one crewed ship at the yard,
 ## and a small driver that plays one scenario the way the Director does.
 
 static var _defs: DefLibrary = DefLibrary.new()
@@ -36,9 +36,9 @@ static func make(seed_value: int = 1, crew: int = 1) -> ScenarioFixture:
 func begin(scenario_id: StringName, site_key: StringName) -> void:
 	scenario = ScenarioCatalogue.load_for(PackedStringArray([String(scenario_id)]))[0].fresh()
 	site = world.sites.open(world, site_key)
-	var p: Vector3 = world.sites.point3(site)
+	var p: PackedFloat64Array = world.sites.point(site)
 	for ship: int in ships:
-		world.kin.place(ship, p.x + 100.0 * ship, p.y, p.z)
+		world.kin.place(ship, CubePoint.plus(p, Vector3(100.0 * ship, 0.0, 0.0)))
 	_begin = api.begin_encounter(scenario_id, site, ships, 0)
 	world.step()
 	encounter = _begin.id()
@@ -48,7 +48,7 @@ func begin(scenario_id: StringName, site_key: StringName) -> void:
 func tick() -> void:
 	world.step()
 	world.drain_events()
-	var view: EncounterView = api.encounter(encounter)
+	var view: EncounterInfo = api.encounter(encounter)
 	if view.result > Scenario.Result.ACTIVE and _started and not _ended:
 		_ended = true
 		scenario.end(api, view.result)
@@ -77,7 +77,7 @@ func run(n: int) -> void:
 		tick()
 
 
-## Ships of a faction other than the crewed ship's, by enemy key (a def's id).
+## Ships of a faction other than the crewed ship's, by NPC key (a def's id).
 func ships_of(def_id: StringName) -> Array[int]:
 	var out: Array[int] = []
 	for id: int in world.ship_count():

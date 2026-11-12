@@ -41,9 +41,11 @@ static func period_units(period: float) -> int:
 	return roundi(period * POS_Q)
 
 
-## A 64-bit offset (m) quantised and wrapped into [-P_u / 2, P_u / 2).
-static func quant_pos(x: float, y: float, z: float, p_units: int) -> Vector3i:
-	return wrap_units(Vector3i(roundi(x * POS_Q), roundi(y * POS_Q), roundi(z * POS_Q)), p_units)
+## A point (m, a 64-bit CubePoint) quantised and wrapped into [-P_u / 2, P_u / 2).
+static func quant_pos(p: PackedFloat64Array, p_units: int) -> Vector3i:
+	return wrap_units(
+		Vector3i(roundi(p[0] * POS_Q), roundi(p[1] * POS_Q), roundi(p[2] * POS_Q)), p_units
+	)
 
 
 static func quant_vel(v: Vector3) -> Vector3i:

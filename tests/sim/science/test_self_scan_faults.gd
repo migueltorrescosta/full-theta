@@ -29,7 +29,7 @@ func test_own_ship_scan_reveals_fault_causes() -> void:
 	assert_str(DamageSystem.known_fault_cause(w, 0, &"engines")).is_equal("")
 	ScienceFixture.do(w, ScienceSelfScanCommand.new())
 	assert_str(DamageSystem.known_fault_cause(w, 0, &"engines")).is_equal("")
-	var events: Array[SimEvent] = SimFixture.run(w, int(w.science_def.self_scan_s * 60.0) + 2)
+	var events: Array[SimEvent] = SimFixture.run(w, int(w.science_def.self_scan_time * 60.0) + 2)
 	assert_int(SimFixture.of_kind(events, &"fault_cause_revealed").size()).is_equal(1)
 	assert_str(DamageSystem.known_fault_cause(w, 0, &"engines")).is_equal("short")
 	var r: int = w.damage.find_subsystem(0, &"engines")

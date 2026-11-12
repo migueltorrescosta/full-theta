@@ -15,7 +15,7 @@ SNAP_FIELDS = ["unix_us", "seq", "stamp_us", "restore_us", "build_us", "send_us"
                "delta_messages", "full_messages", "section_updates", "near_sets_us", "kin_us"]
 FRAME_FIELDS = ["unix_us", "total_us", "process_us", "sim_us", "after_us", "capture_us", "ticks",
                 "oncpu_us", "preempt_us"]
-ENTRIES = ["helm", "weapons", "engineering", "science", "relay", "comms"]
+STATIONS = ["helm", "weapons", "engineering", "science", "relay", "comms"]
 
 
 def make_run(tmp: Path, tick_us: int = 3000, age_us: int = 20_000, bytes_per_s: int = 6000,
@@ -43,11 +43,11 @@ def make_run(tmp: Path, tick_us: int = 3000, age_us: int = 20_000, bytes_per_s: 
     (tmp / "probe.json").write_text(json.dumps(probe))
     clients = []
     for c in range(64):
-        entry = ENTRIES[c % 6] if c < 36 else ("captain" if c < 42 else "viewer")
+        seat = STATIONS[c % 6] if c < 36 else ("captain" if c < 42 else "viewer")
         log = []
         for k in range(300):
             log += [k + 1, W0 + k * SPAN // 300 + age_us]
-        clients.append({"seat": c, "name": f"load{c:02d}", "ship": c % 6, "entry": entry,
+        clients.append({"index": c, "name": f"load{c:02d}", "ship": c % 6, "seat": seat,
                         "session": c, "picked": "ok", "rejects": {},
                         "stats": {"bad_snapshots": 0}, "snaps": log})
     (tmp / "p0.json").write_text(json.dumps({"ok": True, "clients": clients}))
@@ -148,7 +148,7 @@ def test_stalls_fail(tmp_path: Path) -> None:
     assert _fails(tmp_path, "probe.json", _stall)
 
 
-def test_more_messages_than_view_keys_fail(tmp_path: Path) -> None:
+def test_more_messages_than_stream_keys_fail(tmp_path: Path) -> None:
     assert _fails(tmp_path, "probe.json", _two_messages_per_key)
 
 
@@ -165,7 +165,7 @@ def test_clients_missing_half_the_snapshots_fail(tmp_path: Path) -> None:
 
 
 def test_a_wrong_seat_plan_fails(tmp_path: Path) -> None:
-    assert _fails(tmp_path, "p0.json", lambda p: p["clients"][0].update(entry="viewer"))
+    assert _fails(tmp_path, "p0.json", lambda p: p["clients"][0].update(seat="viewer"))
 
 
 def test_few_snapshots_scaled_to_30_hz_fail(tmp_path: Path) -> None:

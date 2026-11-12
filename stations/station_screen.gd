@@ -2,7 +2,7 @@ class_name StationScreen
 extends Control
 ## A station screen (§5.0, §5.9, FT-JNT-001, FT-JNT-007): the top bar, one disc radar and
 ## one or more StationPanels, one focused. A single station is a screen with one panel;
-## a joint view is the same screen with two (the dev entry six). The focused panel
+## a joint view is the same screen with two (the dev seat six). The focused panel
 ## fills the main area; the others sit docked, compact, under the radar. F1/F2, hold
 ## View + LB/RB, or a click on a docked panel moves the focus.
 ##
@@ -20,7 +20,7 @@ signal menu_requested
 signal form_changed(form: LayoutMode.Form)
 ## `?` / View, or the first visit to a station: the shell opens the menu on Controls.
 signal help_requested
-## The callout legend chip's tap (D369): the shell opens the callout card on Controls.
+## The callout legend hint's tap (D369): the shell opens the callout card on Controls.
 signal card_requested
 
 ## Intents that still reach the screen while it is blocked: they close what blocks it.
@@ -135,18 +135,18 @@ var _band_h: float = 0.0
 var _side_band: Control
 
 
-## Builds the screen for the current pick (ctx.crew.entry_def()). Entries without
+## Builds the screen for the current pick (ctx.crew.seat_def()). Seats without
 ## functional stations (Captain, Viewer) get one panel of their own id.
 func setup(context: StationContext) -> void:
 	ctx = context
 	# The matcher outlives screens: a screen freed while blocked (the outcome card before a
 	# run reset) left it restricted.
 	ctx.matcher.restrict([])
-	var def: Dictionary = ctx.crew.entry_def()
+	var def: Dictionary = ctx.crew.seat_def()
 	for s: Variant in def.get("stations", []):
 		stations.append(str(s))
 	if stations.is_empty():
-		stations.append(ctx.crew.entry)
+		stations.append(ctx.crew.seat)
 	layout.build()
 	layout.relayout()
 	for s: String in stations:
@@ -299,15 +299,15 @@ func _process(delta: float) -> void:
 	_dispatch_batch(ctx.matcher.update(ctx.now_ms(), delta))
 	var now: int = ctx.now_ms()
 	top_bar.can_set_alert = ctx.crew.is_crew()
-	var status: Dictionary = ctx.view.blocks.get(StationViews.Section.STATUS, {})
-	var captain: Dictionary = ctx.view.blocks.get(StationViews.Section.CAPTAIN, {})
+	var status: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {})
+	var captain: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.CAPTAIN, {})
 	top_bar.show_goal(StatusView.goal_text(captain, status), StatusView.goal_short(captain, status))
 	top_bar.show_state(
 		ctx.crew.ship_name(),
 		status,
 		ctx.crew.alert,
 		stations,
-		ctx.crew.mission_seconds(ctx.view.tick),
+		ctx.crew.mission_seconds(ctx.snap.tick),
 		focused_station(),
 		_maxes(),
 		ctx.crew.summaries(status, ctx.ship_def())
@@ -325,9 +325,9 @@ func _process(delta: float) -> void:
 		chip_strip.visible = false
 	else:
 		chip_strip.show_chips(
-			ChipView.incoming(ctx.view, stations),
-			ChipView.outgoing(ctx.view, stations),
-			ctx.view,
+			ChipsReader.incoming(ctx.snap, stations),
+			ChipsReader.outgoing(ctx.snap, stations),
+			ctx.snap,
 			ShareBar.incoming_lines(stations, left),
 			now
 		)
@@ -411,7 +411,7 @@ func _open_menu() -> void:
 	_update_block()
 
 
-## The first visit to a station shows the Controls chip for a few seconds, once per client
+## The first visit to a station shows the Controls hint for a few seconds, once per client
 ## and station (P28-Help, amends FT-STN-012 and D185); help never opens by itself, a tap on
 ## the chip opens the menu's Controls tab. With it, once per client, the callout legend, whose
 ## tap opens the callout card (D369). Settings re-enables them. The first station waits
@@ -420,12 +420,12 @@ func _open_first_visit_help() -> void:
 	if not is_inside_tree():
 		return
 	var touch: bool = LayoutMode.is_touch(LayoutMode.kind_of(self))
-	var chip: ControlsChip = ControlsChip.show_once(
+	var chip: ControlsHint = ControlsHint.show_once(
 		self, ctx.settings, focused_station(), ctx.matcher.device, touch
 	)
 	if chip != null:
 		chip.pressed.connect(func() -> void: help_requested.emit())
-		var legend: ControlsChip = ControlsChip.show_legend(self, ctx.settings)
+		var legend: ControlsHint = ControlsHint.show_legend(self, ctx.settings)
 		if legend != null:
 			legend.pressed.connect(func() -> void: card_requested.emit())
 

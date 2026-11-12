@@ -54,14 +54,14 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	_ships = params["ships"]
 	var lead: int = Scenario.fleet(api, _ships)[0]
 	_started = api.tick()
-	var view: ShipView = api.ship(lead)
+	var view: ShipInfo = api.ship(lead)
 	var from: int = params.get("site", view.nearest_site)
 	api.set_relation(Factions.DEBRIS, view.faction, Relation.HOSTILE)
 	_destination = HOME
 	if from == HOME:
 		_result = Result.WON
 		return
-	# The map names the leg's debris (MapDef.legs): an enemy key and how many pieces.
+	# The map names the leg's debris (MapDef.legs): an NPC key and how many pieces.
 	for leg: Dictionary in api.legs():
 		if leg["from"] != from or leg["to"] != _destination:
 			continue
@@ -71,17 +71,17 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 			var lateral: float = (api.rand(&"debris_leg") * 2.0 - 1.0) * LATERAL_M
 			api.spawn_on_leg(leg["debris"], Factions.DEBRIS, from, _destination, t, lateral)
 	for ship: int in Scenario.fleet(api, _ships):
-		api.message("npc.lane_warning", {}, SayTarget.npc(NPC, ship))
+		api.message("npc.lane_warning", {}, LineAudience.npc(NPC, ship))
 	var run: CardSpec = CardSpec.new()
 	run.kind = CardSpec.Kind.CONTRACT
 	run.npc_id = NPC
 	run.title_key = &"comms.card.lane_run"
 	run.conversation_id = &"conv.lane_run"
 	run.reward_credits = FEE
-	run.expires_s = MAX_S
+	run.expiry = MAX_S
 	run.site = HOME
-	run.lane_open_s = LANE_OPEN_S
-	run.lane_s = LANE_S
+	run.lane_delay = LANE_OPEN_S
+	run.lane_length = LANE_S
 	run.rep_faction = Factions.CIVIL
 	run.faction_wide = true
 	_clearance = api.offer(lead, run)
@@ -110,13 +110,13 @@ func finished(_api: ScenarioApi) -> int:
 func end(api: ScenarioApi, result: int) -> void:
 	if _clearance == null or _clearance.id() < 0:
 		return
-	var state: int = CardView.State.EXPIRED
-	for c: CardView in api.cards_of(Scenario.fleet(api, _ships)[0]):
+	var state: int = CardInfo.State.EXPIRED
+	for c: CardInfo in api.cards_of(Scenario.fleet(api, _ships)[0]):
 		if c.id == _clearance.id():
 			state = c.state
-	if state == CardView.State.ACCEPTED and _result == Result.ACTIVE:
+	if state == CardInfo.State.ACCEPTED and _result == Result.ACTIVE:
 		api.settle_card(_clearance.id(), false)
-	elif state == CardView.State.OPEN:
+	elif state == CardInfo.State.OPEN:
 		api.decline_card(_clearance.id())
 	if _result == Result.ACTIVE:
 		_result = result

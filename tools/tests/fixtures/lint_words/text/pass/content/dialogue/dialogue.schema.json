@@ -1,0 +1,6 @@
+{
+  "$schema": "../dialogue.schema.json",
+  "lines": [
+    {"id": "npc.hail", "text": {"en": "Watch that enemy ship, it is dangerous.", "pt_PT": "Cuidado com esse navio inimigo."}}
+  ]
+}

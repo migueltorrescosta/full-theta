@@ -67,9 +67,9 @@ static func clock_slot(slot: int) -> int:
 	return posmod(slot, 12) + 1
 
 
-## Whether `max_s` seconds have passed since tick `since`.
-static func timed_out(api: ScenarioApi, since: int, max_s: float) -> bool:
-	return seconds_since(api, since) >= max_s
+## Whether `limit` seconds have passed since tick `since`.
+static func timed_out(api: ScenarioApi, since: int, limit: float) -> bool:
+	return seconds_since(api, since) >= limit
 
 
 ## Seconds since tick `since`.

@@ -31,8 +31,8 @@ func act(world: SimWorld) -> void:
 		pips.subsystem_kind = SubsystemDef.Kind.WEAPONS
 		pips.pips = world.defs[ship].power.max_pips_per_subsystem
 		_submit(world, pips)
-		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.target_ship = target
+		var select: HelmSelectCommand = HelmSelectCommand.new()
+		select.contact = target
 		_submit(world, select)
 		var helm: HelmInputCommand = HelmInputCommand.new()
 		helm.face = true
@@ -63,13 +63,13 @@ func _repair_weapons(world: SimWorld) -> void:
 
 func _aim(world: SimWorld) -> void:
 	var kin: Kinematics = world.kin
-	var aim: Vector3 = EnemyAi.lead_aim(world, ship, 0, target, 0)
+	var aim: Vector3 = NpcAi.lead_aim(world, ship, 0, target, 0)
 	if not aim.is_finite():
 		aim = kin.relative(ship, target)
 	var c: AimMountCommand = AimMountCommand.new()
-	c.aim_x = kin.px[ship] + aim.x
-	c.aim_y = kin.py[ship] + aim.y
-	c.aim_z = kin.pz[ship] + aim.z
+	c.aim_x = kin.pos_x[ship] + aim.x
+	c.aim_y = kin.pos_y[ship] + aim.y
+	c.aim_z = kin.pos_z[ship] + aim.z
 	_submit(world, c)
 
 

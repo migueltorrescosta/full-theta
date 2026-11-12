@@ -33,19 +33,19 @@ static func wrap(v: float, period: float) -> float:
 static func errors(period: float, longest: float) -> Array[String]:
 	var out: Array[String] = []
 	if not (is_finite(period) and period > 0.0):
-		out.append("site period must be finite and positive, got %s" % period)
+		out.append("map period must be finite and positive, got %s" % period)
 		return out
 	for cell: float in [CELL, PAIR_CELL]:
 		if fposmod(period, cell) != 0.0:
-			out.append("site period %.1f m is not a multiple of %.1f m" % [period, cell])
+			out.append("map period %.1f m is not a multiple of %.1f m" % [period, cell])
 		if period / cell > MAX_CELLS_PER_AXIS:
 			out.append(
-				"site period %.1f m is over %d cells of %.1f m" % [period, MAX_CELLS_PER_AXIS, cell]
+				"map period %.1f m is over %d cells of %.1f m" % [period, MAX_CELLS_PER_AXIS, cell]
 			)
 	if period < PERIOD_PER_SENSOR_RANGE * longest:
 		out.append(
 			(
-				"site period %.1f m is under %d x the longest sensor range %.1f m"
+				"map period %.1f m is under %d x the longest sensor range %.1f m"
 				% [period, PERIOD_PER_SENSOR_RANGE, longest]
 			)
 		)

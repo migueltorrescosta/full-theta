@@ -9,7 +9,7 @@ func _site(key: StringName, pos: Vector3) -> SiteDef:
 	s.id = key
 	s.name_key = "site.%s" % key
 	s.pos = pos
-	s.radius_m = 3000.0
+	s.radius = 3000.0
 	return s
 
 
@@ -19,7 +19,7 @@ func _setup(second: Vector3) -> RunSetup:
 	m.id = &"t"
 	m.sites = [_site(&"a", Vector3.ZERO), _site(&"b", second)]
 	run.map = m
-	var catalog: Dictionary[StringName, EnemyDef] = {&"raider": TestDefs.raider_enemy()}
+	var catalog: Dictionary[StringName, NpcDef] = {&"raider": TestDefs.raider_enemy()}
 	return RunSetup.new(7, "test", run, catalog)
 
 

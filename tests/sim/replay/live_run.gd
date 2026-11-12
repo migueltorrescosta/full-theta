@@ -16,12 +16,12 @@ func _init(start: SimWorld) -> void:
 
 
 ## The M1 encounter on the shipped definitions, looked up by the ids a log records, at
-## its site period (the default when the log has none, D125).
+## its map period (the default when the log has none, D125).
 static func encounter(seed_value: int, setup: Dictionary, build: String) -> M1Encounter:
 	var lib: DefLibrary = DefLibrary.new()
-	var period: float = setup.get("site_period", Kinematics.DEFAULT_PERIOD)
+	var period: float = setup.get("map_period", Kinematics.DEFAULT_PERIOD)
 	var enc: M1Encounter = M1Encounter.new(
-		seed_value, build, lib.ship(setup["player"]), lib.enemy(setup["enemy"]), period
+		seed_value, build, lib.ship(setup["player"]), lib.npc(setup["npc"]), period
 	)
 	enc.hazards = lib.m1_hazards()
 	return enc
@@ -40,7 +40,7 @@ func run_frames(frame_seed: int, min_delta: float, max_delta: float, end_tick: i
 
 ## Fixed steps until the encounter has an outcome or the world reaches end_tick.
 func run_steps(end_tick: int) -> void:
-	while world.tick < end_tick and not OutcomeSystem.session_outcome(world).over():
+	while world.tick < end_tick and not OutcomeSystem.game_outcome(world).over():
 		_act()
 		world.step()
 		events.append_array(world.drain_events())

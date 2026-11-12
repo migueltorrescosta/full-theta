@@ -172,11 +172,11 @@ func open_send() -> void:
 ## Takes the probe launcher, or lets it go when this seat holds it (K; a long press on a
 ## phone's Launch probe).
 func toggle_probe_claim() -> void:
-	var holder: Dictionary = ctx.crew.claims.get(StationViews.CLAIM_PROBE, {})
+	var holder: Dictionary = ctx.crew.claims.get(StationCatalogue.CLAIM_PROBE, {})
 	if int(holder.get("session", -1)) == ctx.crew.session:
-		ctx.intents.release_claim(StationViews.CLAIM_PROBE)
+		ctx.intents.release_claim(StationCatalogue.CLAIM_PROBE)
 	else:
-		ctx.intents.claim(StationViews.CLAIM_PROBE)
+		ctx.intents.claim(StationCatalogue.CLAIM_PROBE)
 
 
 ## The hint sits top right over the map; a phone-wide HUD covers that corner, so there it
@@ -194,7 +194,7 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	refresh()
-	ControlsChip.show_radar_legend(self, ctx.settings)
+	ControlsHint.show_radar_legend(self, ctx.settings)
 
 
 ## Pushes the current picture into the map (every frame; tests call it directly).
@@ -208,7 +208,7 @@ func refresh() -> void:
 	if _cursor.x < 0.0 and size.x > 0.0:
 		_cursor = size / 2.0
 	map.cursor = _cursor
-	var blk: Dictionary = ctx.view.blocks.get(StationViews.Section.RELAY, {})
+	var blk: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {})
 	map.probes = blk.get("probes", [])
 	map.lanes_on = bool(blk.get("lanes", false))
 	map.routes = ctx.crew.routes
@@ -312,7 +312,7 @@ func replace_mark(item: Dictionary) -> bool:
 
 ## The claim K takes or releases: the probe launcher (a second Relay seat waits for it).
 func claim_item() -> String:
-	return StationViews.CLAIM_PROBE
+	return StationCatalogue.CLAIM_PROBE
 
 
 ## P and H: with something selected the probe or hazard goes to it; else the next click on
@@ -334,7 +334,7 @@ func _arm(what: String) -> void:
 ## Sends a probe or a hazard zone to a point (m).
 func _place(what: String, at: Vector3) -> void:
 	if what == "probe":
-		var blk: Dictionary = ctx.view.blocks.get(StationViews.Section.RELAY, {})
+		var blk: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {})
 		if int(blk.get("stock", 1)) <= 0:
 			ctx.crew.toast.emit("toast.relay_no_probes", {})
 			return
@@ -354,7 +354,7 @@ func _route_to_selection() -> bool:
 
 
 func _toggle_lanes() -> void:
-	var blk: Dictionary = ctx.view.blocks.get(StationViews.Section.RELAY, {})
+	var blk: Dictionary = ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {})
 	ctx.intents.command({"kind": "flag_lanes", "on": not bool(blk.get("lanes", false))})
 
 

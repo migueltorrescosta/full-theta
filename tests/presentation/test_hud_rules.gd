@@ -18,7 +18,7 @@ const LAYOUTS: Array = [
 	[Vector2i(844, 390), 1.0, false, LANDSCAPE],
 	[Vector2i(390, 844), 1.0, false, PORTRAIT],
 ]
-const ENTRIES: Array = [
+const SEATS: Array = [
 	"helm",
 	"weapons",
 	"engineering",
@@ -59,10 +59,10 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(layout: Array, entry: String) -> StationScreen:
+func _screen(layout: Array, seat: String) -> StationScreen:
 	LayoutMode.forced = LayoutMode.Kind.TOUCH if layout[2] else -1
 	SafeArea.simulate(layout[3])
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	if float(layout[1]) == 1.0:
@@ -96,9 +96,9 @@ func _drop(s: StationScreen) -> void:
 # FT: FT-STN-004
 func test_a_toast_sits_inside_the_top_bar_and_covers_no_control() -> void:
 	for layout: Array in LAYOUTS:
-		for entry: String in ["helm", "engineering", "science", "captain"]:
-			var s: StationScreen = await _screen(layout, entry)
-			var where: String = "%s %s" % [layout[0], entry]
+		for seat: String in ["helm", "engineering", "science", "captain"]:
+			var s: StationScreen = await _screen(layout, seat)
+			var where: String = "%s %s" % [layout[0], seat]
 			for i: int in 3:
 				s.toasts.push("Weapons fault %d" % i, "warn", s.ctx.now_ms())
 			await get_tree().process_frame
@@ -128,9 +128,9 @@ func test_a_toast_sits_inside_the_top_bar_and_covers_no_control() -> void:
 # FT: FT-STN-002
 func test_radar_chips_stay_near_their_blip_and_clear_of_each_other() -> void:
 	for layout: Array in LAYOUTS:
-		for entry: String in ENTRIES:
-			var s: StationScreen = await _screen(layout, entry)
-			var where: String = "%s %s" % [layout[0], entry]
+		for seat: String in SEATS:
+			var s: StationScreen = await _screen(layout, seat)
+			var where: String = "%s %s" % [layout[0], seat]
 			_check_chips(s.radar, where)
 			_drop(s)
 
@@ -139,12 +139,12 @@ func _check_chips(radar: DiscRadar, where: String) -> void:
 	var entries: Array[Dictionary] = radar._layout()
 	var view: Rect2 = radar._view()
 	for e: Dictionary in entries:
-		if e["chip"] == "":
+		if e["callout"] == "":
 			continue
-		var r: Rect2 = e["chip_rect"]
+		var r: Rect2 = e["callout_rect"]
 		var name: String = "%s %s" % [where, e["item"]["label"]]
 		(
-			assert_float(ChipLayout.gap_to(r, e["pos"]))
+			assert_float(CalloutLayout.gap_to(r, e["pos"]))
 			. override_failure_message("%s: chip %s is far from its blip %s" % [name, r, e["pos"]])
 			. is_less_equal(48.0)
 		)
@@ -156,9 +156,9 @@ func _check_chips(radar: DiscRadar, where: String) -> void:
 		for o: Dictionary in entries:
 			if o == e:
 				continue
-			if o["chip"] != "":
+			if o["callout"] != "":
 				(
-					assert_bool((o["chip_rect"] as Rect2).intersects(r))
+					assert_bool((o["callout_rect"] as Rect2).intersects(r))
 					. override_failure_message(
 						"%s: chip over %s's chip" % [name, o["item"]["label"]]
 					)
@@ -185,20 +185,20 @@ func test_the_ship_cutaway_stays_readable_on_small_layouts() -> void:
 	var small: Array = [LAYOUTS[1], LAYOUTS[2], LAYOUTS[5], LAYOUTS[6]]
 	var checked: int = 0
 	for layout: Array in small:
-		for entry: String in ["engineering", "systems"]:
-			var s: StationScreen = await _screen(layout, entry)
+		for seat: String in ["engineering", "systems"]:
+			var s: StationScreen = await _screen(layout, seat)
 			var phone: bool = LayoutMode.is_phone(s.form)
 			var pages: Array = [-1]
-			if phone and entry == "engineering":
+			if phone and seat == "engineering":
 				pages = [1]
 			for page: int in pages:
 				if page >= 0:
 					s.focused_panel().pages.current = page
 					for i: int in 3:
 						await get_tree().process_frame
-				var where: String = "%s %s page %d" % [layout[0], entry, page]
+				var where: String = "%s %s page %d" % [layout[0], seat, page]
 				var panel: EngineeringPanel = (
-					(s.focused_panel() if entry == "engineering" else s.panels[0])
+					(s.focused_panel() if seat == "engineering" else s.panels[0])
 					as EngineeringPanel
 				)
 				if panel == null:
@@ -262,19 +262,19 @@ func test_relay_map_chips_sit_next_to_their_blip_inside_the_free_part_of_the_map
 				)
 				. is_true()
 			)
-			if e["chip"] == "":
+			if e["callout"] == "":
 				continue
-			var r: Rect2 = e["chip_rect"]
+			var r: Rect2 = e["callout_rect"]
 			(
-				assert_float(ChipLayout.gap_to(r, e["pos"]))
+				assert_float(CalloutLayout.gap_to(r, e["pos"]))
 				. override_failure_message(name)
 				. is_less_equal(48.0)
 			)
 			assert_bool(free.grow(2.5).encloses(r)).override_failure_message(name).is_true()
 			for o: Dictionary in entries:
-				if o != e and o["chip"] != "":
+				if o != e and o["callout"] != "":
 					(
-						assert_bool((o["chip_rect"] as Rect2).intersects(r))
+						assert_bool((o["callout_rect"] as Rect2).intersects(r))
 						. override_failure_message(name)
 						. is_false()
 					)
@@ -294,14 +294,14 @@ func test_a_chip_a_sheet_would_cut_is_hidden() -> void:
 	var covers: Array[Rect2] = SheetCover.over(radar)
 	assert_int(covers.size()).is_equal(1)
 	var layout: Array[Dictionary] = [
-		{"chip": "H2", "chip_rect": Rect2(20, 100, 30, 18)},
-		{"chip": "U3", "chip_rect": Rect2(20, 142, 30, 18)},
-		{"chip": "F4", "chip_rect": Rect2(20, 200, 30, 18)},
+		{"callout": "H2", "callout_rect": Rect2(20, 100, 30, 18)},
+		{"callout": "U3", "callout_rect": Rect2(20, 142, 30, 18)},
+		{"callout": "F4", "callout_rect": Rect2(20, 200, 30, 18)},
 	]
 	DiscRadar.hide_covered(layout, covers)
-	assert_str(layout[0]["chip"]).is_equal("H2")
-	assert_str(layout[1]["chip"]).is_equal("")
-	assert_str(layout[2]["chip"]).is_equal("")
+	assert_str(layout[0]["callout"]).is_equal("H2")
+	assert_str(layout[1]["callout"]).is_equal("")
+	assert_str(layout[2]["callout"]).is_equal("")
 	box.visible = false
 	assert_array(SheetCover.over(radar)).is_empty()
 
@@ -412,8 +412,8 @@ func test_a_toast_leaves_the_bars_divider() -> void:
 func test_the_faults_scrollbar_shows_only_when_the_list_overflows() -> void:
 	var overflowed: int = 0
 	for layout: Array in [LAYOUTS[0], LAYOUTS[1], LAYOUTS[2]]:
-		for entry: String in ["engineering", "systems", "logistics"]:
-			var s: StationScreen = await _screen(layout, entry)
+		for seat: String in ["engineering", "systems", "logistics"]:
+			var s: StationScreen = await _screen(layout, seat)
 			var panel: EngineeringPanel = s.panels[0] as EngineeringPanel
 			var scroll: ScrollContainer = panel._lists_scroll
 			var over: bool = panel._lists.get_combined_minimum_size().y > scroll.size.y
@@ -423,7 +423,7 @@ func test_the_faults_scrollbar_shows_only_when_the_list_overflows() -> void:
 				. override_failure_message(
 					(
 						"%s %s: scrollbar %s with overflow %s"
-						% [layout[0], entry, scroll.get_v_scroll_bar().visible, over]
+						% [layout[0], seat, scroll.get_v_scroll_bar().visible, over]
 					)
 				)
 				. is_equal(over)
@@ -480,7 +480,7 @@ func test_the_helm_site_label_and_the_phone_compass_chip_stay_near_their_marker(
 			var at: Vector2 = hud.size * Vector2(fx, fy)
 			var box: Rect2 = hud.label_rect(font, "Kappa 4.7 km", at, 10.0)
 			if inside.encloses(box):
-				assert_float(ChipLayout.gap_to(box, at)).is_less_equal(32.0 + 0.5)
+				assert_float(CalloutLayout.gap_to(box, at)).is_less_equal(32.0 + 0.5)
 	_drop(s)
 	var p: StationScreen = await _screen(LAYOUTS[6], "helm")
 	var phud: HelmHud = (p.focused_panel() as HelmPanel).hud
@@ -498,7 +498,7 @@ func test_the_helm_site_label_and_the_phone_compass_chip_stay_near_their_marker(
 		)
 		var chip: Rect2 = phud.compass_boxes()[1]
 		(
-			assert_float(ChipLayout.gap_to(chip, dot))
+			assert_float(CalloutLayout.gap_to(chip, dot))
 			. override_failure_message(
 				"contact %d: compass chip %s far from its dot %s" % [id, chip, dot]
 			)

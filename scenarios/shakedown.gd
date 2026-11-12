@@ -11,7 +11,7 @@ extends Scenario
 const DRONE_RANGE_M: float = 1500.0
 const DRONE_CLOCK: int = 12
 const DRONE_HEIGHT: int = 1
-## The enemy key of the drone (content/enemies/drone.tres).
+## The NPC key of the drone (content/npcs/drone.tres).
 const DRONE_KEY: StringName = &"drone"
 
 var _ship: int = -1
@@ -40,7 +40,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 func step(api: ScenarioApi) -> void:
 	if _ship < 0 or api.tick() - _asked < SimRate.HZ:
 		return
-	var ship: ShipView = api.ship(_ship)
+	var ship: ShipInfo = api.ship(_ship)
 	# The handle names the real ship: a rejected spawn is gone (review 2 L5).
 	var gone: bool = _drone == null or _drone.rejected()
 	if not gone and not _drone.pending():

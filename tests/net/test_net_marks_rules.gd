@@ -61,7 +61,7 @@ func test_an_occupied_slot_is_taken_for_non_relay() -> void:
 	assert_str(m.place(SHIP, CAPTAIN, 9, "Cap", 2, "", _free(6.0))).is_equal(CrewMarks.SLOT_TAKEN)
 	assert_str(m.place(SHIP, CAPTAIN, 9, "Cap", -1, "", _free(6.0))).is_empty()
 	assert_str(m.marks_of(SHIP)[0]["by"]).is_equal("Cap")
-	assert_str(m.place(SHIP, NONE, 7, "Vic", -1, "", _free(6.0))).is_equal(ServerSession.NOT_CREW)
+	assert_str(m.place(SHIP, NONE, 7, "Vic", -1, "", _free(6.0))).is_equal(NetGame.NOT_CREW)
 
 
 # FT: FT-SPA-013, FT-RLY-003
@@ -106,8 +106,8 @@ func test_free_marks_keep_64_bits_and_refuse_bad_places() -> void:
 func test_alert_from_crew_only_and_reset() -> void:
 	assert_int(m.alert(SHIP)).is_equal(CrewMarks.ALERT_NORMAL)
 	assert_str(m.set_alert(SHIP, CREW, CrewMarks.ALERT_RED)).is_empty()
-	assert_str(m.set_alert(SHIP, CAPTAIN, 1)).is_equal(ServerSession.NOT_CREW)
-	assert_str(m.set_alert(SHIP, NONE, 1)).is_equal(ServerSession.NOT_CREW)
+	assert_str(m.set_alert(SHIP, CAPTAIN, 1)).is_equal(NetGame.NOT_CREW)
+	assert_str(m.set_alert(SHIP, NONE, 1)).is_equal(NetGame.NOT_CREW)
 	assert_str(m.set_alert(SHIP, RELAY, 3)).is_equal(CrewMarks.BAD_LEVEL)
 	assert_int(m.alert(SHIP)).is_equal(CrewMarks.ALERT_RED)
 	_fill()
@@ -116,7 +116,7 @@ func test_alert_from_crew_only_and_reset() -> void:
 	assert_array(m.marks_of(SHIP)).is_empty()
 
 
-func test_roles_of_entries() -> void:
+func test_roles_of_seats() -> void:
 	assert_int(CrewMarks.role_of("ops")).is_equal(RELAY)
 	assert_int(CrewMarks.role_of("relay")).is_equal(RELAY)
 	assert_int(CrewMarks.role_of("tactical")).is_equal(CREW)

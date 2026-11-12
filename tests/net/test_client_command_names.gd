@@ -38,8 +38,8 @@ func test_every_intent_names_a_net_client_method() -> void:
 # FT: FT-NET-006
 func test_every_command_kind_a_station_sends_is_a_station_command() -> void:
 	var known: Dictionary = {}
-	for station: String in StationViews.STATION_COMMANDS:
-		for kind: StringName in StationViews.STATION_COMMANDS[station]:
+	for station: String in StationCatalogue.STATION_COMMANDS:
+		for kind: StringName in StationCatalogue.STATION_COMMANDS[station]:
 			known[String(kind)] = true
 	var sources: Dictionary = {}
 	for dir: String in CLIENT_DIRS:

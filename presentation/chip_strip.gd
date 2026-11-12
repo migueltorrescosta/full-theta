@@ -15,17 +15,19 @@ func _init() -> void:
 
 ## An incoming chip as "Helm: Boost": the asking station and the chip.
 static func asker(c: Dictionary) -> String:
-	return "%s: %s" % [TranslationServer.translate("station." + str(c["from"])), ChipView.label(c)]
+	return (
+		"%s: %s" % [TranslationServer.translate("station." + str(c["from"])), ChipsReader.label(c)]
+	)
 
 
-## Shows the chips (ChipView rows) at the view's tick; does nothing when nothing shown
+## Shows the chips (ChipsReader rows) at the view's tick; does nothing when nothing shown
 ## changed (seconds count down once a second). An incoming chip is followed by what accepting
 ## does, a chip that lapsed unanswered stays a few seconds as a note, and `notes` (data a
 ## partner shared, still live) come last (C5). `now_ms` is the lapsed notes' clock.
 func show_chips(
 	incoming: Array[Dictionary],
 	outgoing: Array[Dictionary],
-	view: NetViewState,
+	snap: SnapshotState,
 	notes: Array[String] = [],
 	now_ms: int = -1
 ) -> void:
@@ -33,11 +35,14 @@ func show_chips(
 	var dim: Array[bool] = []
 	var open: Array = []
 	for c: Dictionary in incoming:
-		open.append({"id": c["id"], "text": asker(c), "left": ChipView.left_s(view, c)})
+		open.append({"id": c["id"], "text": asker(c), "left": ChipsReader.left_s(snap, c)})
 		lines.append(
 			(
-				tr("chip.ask") % [tr("station." + str(c["from"])), ChipView.label(c)]
-				+ " · %d s" % ceili(ChipView.left_s(view, c))
+				(
+					tr("chip.ask")
+					% [tr(StationCatalogue.name_key(str(c["from"]))), ChipsReader.label(c)]
+				)
+				+ " · %d s" % ceili(ChipsReader.left_s(snap, c))
 			)
 		)
 		dim.append(false)
@@ -51,8 +56,11 @@ func show_chips(
 	for c: Dictionary in outgoing:
 		lines.append(
 			(
-				tr("chip.sent") % [tr("station." + str(c["to"])), ChipView.label(c)]
-				+ " · %d s" % ceili(ChipView.left_s(view, c))
+				(
+					tr("chip.sent")
+					% [tr(StationCatalogue.name_key(str(c["to"]))), ChipsReader.label(c)]
+				)
+				+ " · %d s" % ceili(ChipsReader.left_s(snap, c))
 			)
 		)
 		dim.append(true)

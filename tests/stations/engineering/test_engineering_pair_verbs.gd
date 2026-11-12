@@ -70,7 +70,7 @@ func _commands(s: StationScreen, kind: String) -> Array:
 
 
 func _engines(s: StationScreen) -> Dictionary:
-	return s.ctx.view.blocks[StationViews.Section.ENGINEERING]["subsystems"][0]
+	return s.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"][0]
 
 
 # FT: FT-ENG-008, FT-STN-010
@@ -86,17 +86,22 @@ func test_harden_and_fabricate_probe() -> void:
 	_press(s, "harden")
 	assert_array(_toasts).is_equal(["toast.eng_hardened"])
 	_engines(s)["hardened"] = 0
-	s.ctx.view.blocks[StationViews.Section.ENGINEERING]["spare_parts"] = 0
+	s.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["spare_parts"] = 0
 	_press(s, "harden")
 	assert_array(_toasts).is_equal(["toast.eng_hardened", "toast.eng_no_parts"])
 	assert_int(_commands(s, "harden").size()).is_equal(1)
 	# Both commands belong to Engineering, and harden acts on no claim.
-	assert_str(StationViews.station_of_command(&"harden")).is_equal("engineering")
-	assert_str(StationViews.station_of_command(&"fabricate_probe")).is_equal("engineering")
+	assert_str(StationCatalogue.station_of_command(&"harden")).is_equal("engineering")
+	assert_str(StationCatalogue.station_of_command(&"fabricate_probe")).is_equal("engineering")
 	# The command class exists, and Engineering gets the fabrication seconds left.
 	assert_object(SimCommands.make(&"fabricate_probe")).is_instanceof(FabricateProbeCommand)
-	assert_bool(StationViews.def("engineering").sections.has(StationViews.Section.RELAY)).is_true()
-	assert_str(StationViews.station_of_command(&"pick_fault_cause")).is_equal("engineering")
+	(
+		assert_bool(
+			StationCatalogue.def("engineering").sections.has(StationCatalogue.Section.RELAY)
+		)
+		. is_true()
+	)
+	assert_str(StationCatalogue.station_of_command(&"pick_fault_cause")).is_equal("engineering")
 	assert_str(StationBlocks.item_of(HardenCommand.new())).is_equal("")
 
 

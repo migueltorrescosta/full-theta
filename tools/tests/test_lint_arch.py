@@ -35,14 +35,15 @@ FAILS = {
         "stations/helm.gd:4",
     ],
     "shared_deps": ["shared/lead.gd:3", "shared/lead.gd:4", "shared/lead.gd:5"],
-    # Raw .px/.py/.pz reads and writes outside kinematics.gd and projectile_table.gd
-    # (FT-SIM-035, D124); tests/ may read positions.
+    # Raw kin.pos_x/.pos_y/.pos_z (and the projectiles') reads and writes outside
+    # kinematics.gd and projectile_table.gd (FT-SIM-035, D124, D401); tests/ may read them.
     "positions": [
         "shared/lead.gd:4",
         "sim/combat/hits.gd:4",
         "sim/combat/hits.gd:4",
         "sim/combat/hits.gd:7",
         "sim/combat/hits.gd:8",
+        "sim/combat/hits.gd:12",
     ],
     # Clients name only NET_CLIENT_SAFE, which names no sim/ or server net/ class (F4, R14-1).
     "net_client": ["net/net_protocol.gd:4", "net/net_protocol.gd:5", "stations/hud.gd:4"],

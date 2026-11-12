@@ -45,7 +45,7 @@ func _init(crew_profile: BotProfiles.Profile, ship_id: int, seed_value: int) -> 
 
 ## Submits this tick's commands; call it right before the world steps.
 func act(world: SimWorld) -> void:
-	if not world.kin.is_alive(ship) or world.run.status[ship] != RunTable.Status.IN_PLAY:
+	if not world.kin.is_alive(ship) or world.ships.status[ship] != ShipStateTable.Status.IN_PLAY:
 		return
 	if world.tick % profile.think_ticks != 0:
 		return
@@ -95,8 +95,8 @@ func _fight(world: SimWorld, target: int) -> void:
 		_submit(world, pips)
 	if target != _target:
 		_target = target
-		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.target_ship = target
+		var select: HelmSelectCommand = HelmSelectCommand.new()
+		select.contact = target
 		_submit(world, select)
 		_helm(world, true, false)
 	var t: int = world.tick
@@ -117,7 +117,7 @@ func _stand_down(world: SimWorld) -> void:
 	if _target >= 0:
 		_target = -1
 		_helm(world, false, false)
-		_submit(world, SelectTargetCommand.new())
+		_submit(world, HelmSelectCommand.new())
 		_moving = false
 		_going = NONE
 
@@ -138,7 +138,7 @@ func _repair(world: SimWorld) -> void:
 func _wants_flee(world: SimWorld) -> bool:
 	if DamageSystem.hull_fraction(world, ship) >= profile.flee_hull:
 		return false
-	var enc: int = world.run.encounter[ship]
+	var enc: int = world.ships.encounter[ship]
 	return enc >= 0 and world.encounters.result[enc] == EncounterTable.Result.ACTIVE
 
 
@@ -164,7 +164,7 @@ func _travel(world: SimWorld) -> void:
 ## The site the crew is bound for: its pending or active encounter's, or the yard on a
 ## debris leg; -1 for none.
 func _destination(world: SimWorld) -> int:
-	var enc: int = world.run.encounter[ship]
+	var enc: int = world.ships.encounter[ship]
 	if enc < 0:
 		return -1
 	var table: EncounterTable = world.encounters
@@ -179,7 +179,7 @@ func _go(world: SimWorld, site: int, must_jump: bool) -> void:
 	if _going != site:
 		_going = site
 		_by_jump = must_jump or _rng.randf() < profile.jump_share
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.site_id = site
 		_submit(world, select)
 		_helm(world, true, not _by_jump)
@@ -191,7 +191,7 @@ func _go(world: SimWorld, site: int, must_jump: bool) -> void:
 	var offset: Vector3 = SiteTable.offset_to(world, ship, site)
 	if world.helm.jump_left[ship] > 0 or world.tick - _jump_at < 120 or not offset.is_finite():
 		return
-	if world.kin.forward(ship).angle_to(offset) <= def.jump_face_tolerance_rad * JUMP_AIM:
+	if world.kin.forward(ship).angle_to(offset) <= def.jump_face_tolerance * JUMP_AIM:
 		_jump_at = world.tick
 		var jump: JumpCommand = JumpCommand.new()
 		jump.target_kind = HelmTable.JumpKind.SITE

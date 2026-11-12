@@ -204,7 +204,7 @@ static func inflict_fault(
 
 
 ## Science's own-ship scan names the fault's cause (FT-SIM-025, P10); the shortcut that
-## makes it Engineering's pick is the server's (ServerSession._prefill_cause, FT-ENG-006).
+## makes it Engineering's pick is the server's (NetGame._prefill_cause, FT-ENG-006).
 ## False when the subsystem has no fault.
 static func reveal_fault_cause(world: SimWorld, ship_id: int, subsystem_id: StringName) -> bool:
 	var t: DamageTable = world.damage

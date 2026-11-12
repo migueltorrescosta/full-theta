@@ -52,7 +52,7 @@ static func features(stations: Array[String], toggles: DataToggles) -> Array[Str
 		if (
 			toggles.on(id)
 			and stations.has(String(def.source))
-			and not stations.has(String(def.target))
+			and not stations.has(String(def.receiver))
 		):
 			out.append(id)
 	return out
@@ -68,7 +68,7 @@ static func incoming_lines(stations: Array[String], left: Dictionary) -> Array[S
 		var def: DataToggleDef = DataToggles.toggle_def(id)
 		if seconds <= 0 or def == null:
 			continue
-		if stations.has(String(def.target)) and not stations.has(String(def.source)):
+		if stations.has(String(def.receiver)) and not stations.has(String(def.source)):
 			var what: String = TranslationServer.translate("lobby.toggle." + String(id))
 			var from: String = TranslationServer.translate("station." + String(def.source))
 			out.append(TranslationServer.translate("share.incoming") % [what, from, seconds])

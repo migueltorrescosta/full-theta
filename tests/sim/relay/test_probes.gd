@@ -7,7 +7,7 @@ const RAIDER_AT: float = -6000.0
 
 func _world() -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3.ZERO)
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make())
 	return w
 
 
@@ -38,16 +38,16 @@ func test_launch_flight_deploy_and_coverage() -> void:
 	assert_int(SimFixture.of_kind(events, &"probe_launched").size()).is_equal(1)
 	assert_int(w.probes.size()).is_equal(1)
 	# Flying: no bubble yet.
-	assert_bool(ProbeSystem.coverage_at(w, 1, Vector3(0, 0, -5000))).is_false()
+	assert_bool(ProbeSystem.coverage_at(w, 1, CubePoint.make(0, 0, -5000))).is_false()
 	# 5 km at 500 m/s is 10 s.
 	events = _steps(w, 60 * 10 + 2)
 	assert_int(w.probes.deployed[0]).is_equal(1)
 	assert_int(SimFixture.of_kind(events, &"probe_deployed").size()).is_equal(1)
-	assert_float(w.probes.at_z[0]).is_equal_approx(-5000.0, 0.01)
-	assert_bool(ProbeSystem.coverage_at(w, 1, Vector3(0, 0, -5000 - 7900))).is_true()
-	assert_bool(ProbeSystem.coverage_at(w, 1, Vector3(0, 0, -5000 - 8100))).is_false()
+	assert_float(w.probes.pos_z[0]).is_equal_approx(-5000.0, 0.01)
+	assert_bool(ProbeSystem.coverage_at(w, 1, CubePoint.make(0, 0, -5000 - 7900))).is_true()
+	assert_bool(ProbeSystem.coverage_at(w, 1, CubePoint.make(0, 0, -5000 - 8100))).is_false()
 	# Per faction: the other side has no coverage.
-	assert_bool(ProbeSystem.coverage_at(w, 2, Vector3(0, 0, -5000))).is_false()
+	assert_bool(ProbeSystem.coverage_at(w, 2, CubePoint.make(0, 0, -5000))).is_false()
 	# Three launches, then the stock is empty and the fourth is refused.
 	_launch(w, Vector3(100, 0, 0))
 	_launch(w, Vector3(200, 0, 0))
@@ -69,8 +69,8 @@ func test_coverage_wraps_across_the_seam() -> void:
 	_steps(w, 60 * 410)
 	assert_int(w.probes.deployed[0]).is_equal(1)
 	# 3 km past the seam is 4 km from the probe.
-	assert_bool(ProbeSystem.coverage_at(w, 1, Vector3(0, 0, -half + 3000.0))).is_true()
-	assert_bool(ProbeSystem.coverage_at(w, 1, Vector3(0, 0, -half + 12000.0))).is_false()
+	assert_bool(ProbeSystem.coverage_at(w, 1, CubePoint.make(0, 0, -half + 3000.0))).is_true()
+	assert_bool(ProbeSystem.coverage_at(w, 1, CubePoint.make(0, 0, -half + 12000.0))).is_false()
 
 
 # FT: FT-RLY-004
@@ -123,10 +123,10 @@ func test_fabrication_takes_parts_and_adds_one_probe() -> void:
 
 func _lane_world(flag: bool) -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3.ZERO)
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make())
 	# A friendly dead ahead on the bow mount's line, and the hostile beyond it.
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3(0, 0, RAIDER_AT / 3.0))
-	w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, RAIDER_AT))
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(0, 0, RAIDER_AT / 3.0))
+	w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, RAIDER_AT))
 	if flag:
 		var f: FlagLanesCommand = FlagLanesCommand.new()
 		f.ship_id = 0
@@ -147,10 +147,10 @@ func test_flagged_lane_warns_before_the_shot_once() -> void:
 	assert_int(SimFixture.of_kind(events, &"fired").size()).is_equal(0)
 	# Still crossing: no second warning. The lane clears and re-crosses: a new one.
 	assert_int(SimFixture.of_kind(_steps(w, 30), &"lane_warning").size()).is_equal(0)
-	w.kin.place(1, 8000.0, 0.0, 0.0)
+	w.kin.place(1, CubePoint.make(8000.0, 0.0, 0.0))
 	_steps(w, 2)
 	assert_int(w.relay.lane_warned[0]).is_equal(-1)
-	w.kin.place(1, 0.0, 0.0, RAIDER_AT / 3.0)
+	w.kin.place(1, CubePoint.make(0.0, 0.0, RAIDER_AT / 3.0))
 	assert_int(SimFixture.of_kind(_steps(w, 2), &"lane_warning").size()).is_equal(1)
 	var off: SimWorld = _lane_world(false)
 	assert_int(SimFixture.of_kind(_steps(off, 30), &"lane_warning").size()).is_equal(0)

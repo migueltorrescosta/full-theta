@@ -31,7 +31,7 @@ func test_integer_prediction_rounds_half_up() -> void:
 
 func test_positions_wrap_into_the_cube() -> void:
 	var half: float = 0.5 * P_UNITS / 16.0
-	assert_that(NetCodec.quant_pos(half - 0.01, 0.0, -half, P_UNITS)).is_equal(
+	assert_that(NetCodec.quant_pos(CubePoint.make(half - 0.01, 0.0, -half), P_UNITS)).is_equal(
 		Vector3i(-P_UNITS / 2, 0, -P_UNITS / 2)
 	)
 	(
@@ -90,8 +90,8 @@ func test_residual_for_an_unknown_id_is_rejected() -> void:
 
 
 func test_block_round_trip() -> void:
-	for kind: int in StationViews.BLOCKS:
-		var schema: Array = StationViews.BLOCKS[kind]
+	for kind: int in StationCatalogue.BLOCKS:
+		var schema: Array = StationCatalogue.BLOCKS[kind]
 		var values: Dictionary = {}
 		for field: Array in schema:
 			values[field[0]] = _sample(field[1])

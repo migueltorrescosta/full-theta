@@ -17,10 +17,10 @@ const KINDS: Array[StringName] = [&"station", &"nav", &"field", &"derelict"]
 ## Point in the cube (m); stored 64-bit in the SiteTable.
 @export var pos: Vector3 = Vector3.ZERO
 ## Radius around the point that counts as "at the site" (m).
-@export var radius_m: float = 0.0
+@export var radius: float = 0.0
 @export var dockable: bool = false
 ## A dockable site docks a ship within this distance of its point (m) ...
-@export var dock_range_m: float = 0.0
+@export var dock_range: float = 0.0
 ## ... and at or under this speed (m/s).
 @export var dock_max_speed: float = 0.0
 ## MarketDef id, or &"" for none.
@@ -37,9 +37,9 @@ func validate() -> Array[String]:
 		errors.append("kind: must be one of %s, got %s" % [KINDS, kind])
 	if not (is_finite(pos.x) and is_finite(pos.y) and is_finite(pos.z)):
 		errors.append("pos: must be finite, got %s" % pos)
-	DefCheck.positive(errors, "radius_m", radius_m)
+	DefCheck.positive(errors, "radius", radius)
 	DefCheck.in_range(errors, "faction", faction, 0, 30)
 	if dockable:
-		DefCheck.positive(errors, "dock_range_m", dock_range_m)
+		DefCheck.positive(errors, "dock_range", dock_range)
 		DefCheck.positive(errors, "dock_max_speed", dock_max_speed)
 	return errors

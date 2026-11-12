@@ -1,7 +1,7 @@
 ## Science and Relay phone pages for the L5 harness (#28 follow-up, design 2.4 and 2.5): the
 ## station shot (station_shot.gd, every extra of it) with the focused panel on page `page`
 ## and `sheet` open: "hack" (Science's Hack sheet), "send" (Relay's Send sheet),
-## "selection" (the selection chip's sheet), or "" for none. `mark_sel` selects Relay's
+## "selection" (the selection bar's sheet), or "" for none. `mark_sel` selects Relay's
 ## mark in that slot instead of a contact (-1: keep `selected`). `relay_demo` adds an
 ## allied ship (Wren), a mark waiting in the inbox and a few log lines.
 extends "res://tests/visual/station_shot.gd"

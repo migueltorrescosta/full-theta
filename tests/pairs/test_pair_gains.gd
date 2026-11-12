@@ -14,7 +14,7 @@ func test_fifteen_pairs_of_crew_stations() -> void:
 		var pair: Array = CoopEvents.stations_of(id)
 		assert_array(pair).override_failure_message("%s has no stations" % id).has_size(2)
 		for st: String in pair:
-			assert_bool(StationViews.CREW.has(st)).override_failure_message(id + st).is_true()
+			assert_bool(StationCatalogue.CREW.has(st)).override_failure_message(id + st).is_true()
 			assert_str(st).is_not_equal("captain")
 		pair.sort()
 		var key: String = ",".join(pair)
@@ -82,7 +82,7 @@ func _extras(id: String, row: Dictionary, runs: Dictionary[String, PairHarness.R
 			assert_float(runs.coop.metrics.confidence).is_greater_equal(
 				runs.solo.metrics.confidence
 			)
-			var cap: float = ScienceFixture.science().scan_cap_s
+			var cap: float = ScienceFixture.science().scan_cap
 			assert_float(runs.solo.metrics.scan_s).is_less(cap)
 		"p7":
 			# Only co-op lands weak-point hits.

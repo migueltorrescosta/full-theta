@@ -3,8 +3,8 @@ extends RefCounted
 ## The data-shortcut toggle set of a session (spec §7.2, FT-PAIR-017 to FT-PAIR-020, D84,
 ## D90, D92): one value per toggle of content/toggles/toggles.tres, taken from a preset and
 ## changed one toggle at a time in the lobby. The set is locked once a run starts and
-## applies to every ship of the session; it is the view key's toggle part
-## (StationViews.key), so it travels as a short string, its code:
+## applies to every ship of the session; it is the stream key's toggle part
+## (StationCatalogue.key), so it travels as a short string, its code:
 ##   "easy" | "normal" | "hard"      an unedited preset
 ##   "normal:1011000"                the preset the host started from, then one digit per
 ##                                   toggle in file order (summaries 0 absent, 1 banded, 2
@@ -65,7 +65,7 @@ static func toggle_def(id: StringName) -> DataToggleDef:
 ## An unedited preset; an unknown name gives the default preset.
 static func of_preset(name: String) -> DataToggles:
 	var out: DataToggles = DataToggles.new()
-	out.preset = name if PRESETS.has(name) else StationViews.DEFAULT_TOGGLES
+	out.preset = name if PRESETS.has(name) else StationCatalogue.DEFAULT_TOGGLES
 	for t: DataToggleDef in _def.toggles:
 		out.values.append(t.value_of(StringName(out.preset)))
 	return out

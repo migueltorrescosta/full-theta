@@ -2,7 +2,7 @@
 class_name NetClient
 extends RefCounted
 ## Reusable headless client of the protocol (T041): connect, handshake (with a token to
-## resume), apply snapshots into a NetViewState, acknowledge, send commands, deliver
+## resume), apply snapshots into a SnapshotState, acknowledge, send commands, deliver
 ## events in order (NetEventInbox), and resume by token after a drop. Poll-driven, no
 ## thread: call poll() every frame. Tests, the L4 bots and the #7 client shell use it.
 ## It never names sim/ (FT-ARC-005): commands are plain dictionaries
@@ -37,7 +37,7 @@ var close_code: int = -1
 ## Welcome fields of the current connection.
 var welcome: Dictionary = {}
 var catalogue: Dictionary = {}
-var view: NetViewState = NetViewState.new()
+var snap: SnapshotState = SnapshotState.new()
 var inbox: NetEventInbox = NetEventInbox.new()
 ## Test hook: while true, poll() does nothing: no reads, no acks (a stalled reader).
 var paused: bool = false
@@ -169,8 +169,8 @@ func take_events() -> Array[Dictionary]:
 # --- Intents. ---
 
 
-func pick(ship: int, entry: String) -> void:
-	_send(NetProtocol.Type.PICK, {"ship": ship, "entry": entry})
+func pick(ship: int, seat: String) -> void:
+	_send(NetProtocol.Type.PICK, {"ship": ship, "seat": seat})
 
 
 func release_pick() -> void:
@@ -208,11 +208,11 @@ func run_again(ship: int, vote: bool) -> void:
 	_send(NetProtocol.Type.RUN_AGAIN, {"ship": ship, "vote": vote})
 
 
-func takeover(ship: int, entry: String) -> void:
-	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "entry": entry})
+func takeover(ship: int, seat: String) -> void:
+	_send(NetProtocol.Type.TAKEOVER, {"ship": ship, "seat": seat})
 
 
-## Multi-ship lobby and PvP (#11, docs/protocol.md "Multi-ship sessions and PvP"): any player
+## Multi-ship lobby and PvP (#11, docs/protocol.md "Multi-ship games and PvP"): any player
 ## adds a ship (M4-Q3); a crew puts its ship on a team (M4-Q6); the host sets the mode, the
 ## team win rule and the holdout lives (-1: the mode's default); an eliminated crew votes to
 ## relaunch (M4-Q2). Answers arrive as `fleet`, `relaunch_votes` and `request_rejected` events.
@@ -239,7 +239,7 @@ func set_team(ship: int, team: int) -> void:
 
 
 func set_mode(mode: String, team_win: String, lives: int = -1) -> void:
-	_send(NetProtocol.Type.SESSION_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
+	_send(NetProtocol.Type.GAME_MODE, {"mode": mode, "team_win": team_win, "lives": lives})
 
 
 func vote_relaunch(ship: int, vote: bool) -> void:
@@ -360,7 +360,7 @@ func share(feature: String) -> void:
 	_send(NetProtocol.Type.SHARE, {"feature": feature})
 
 
-## Reports a long frame (`ms`) and what ran in it to the server's session log (#28).
+## Reports a long frame (`ms`) and what ran in it to the server log (#28).
 func report_frame(ms: int, what: String) -> void:
 	if state == State.WELCOMED:
 		var text: String = NetProtocol.clip_utf8(what, NetProtocol.MAX_FRAME_WHAT_BYTES)
@@ -405,17 +405,17 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 		if keep_raw:
 			raw_snapshots[SnapshotReader.peek(data)[0]] = data
 		var got_us: int = LoadProbe.unix_us() if (log_snapshots or report_stats) else 0
-		if view.apply(data):
+		if snap.apply(data):
 			stats["snapshots"] += 1
 			if report_stats:
-				_arrivals.append(view.seq)
+				_arrivals.append(snap.seq)
 				_arrivals.append(got_us)
 				if _arrivals.size() > 2 * NetProtocol.MAX_STATS_PAIRS * 4:
 					_arrivals = _arrivals.slice(
 						_arrivals.size() - 2 * NetProtocol.MAX_STATS_PAIRS * 4
 					)
 			if log_snapshots:
-				snapshot_log.append(view.seq)
+				snapshot_log.append(snap.seq)
 				snapshot_log.append(got_us)
 			if SnapshotReader.peek(data)[1]:
 				stats["fulls"] += 1
@@ -431,7 +431,7 @@ func _on_message(stream: int, data: PackedByteArray) -> void:
 			token = msg["token"]
 			session_id = msg["session"]
 			state = State.WELCOMED
-			view = NetViewState.new(NetCodec.period_units(msg["period"]))
+			snap = SnapshotState.new(NetCodec.period_units(msg["period"]))
 			# A fresh session, or a relaunched client behind the server's cursor, starts
 			# after ev_from; a reconnect within the process keeps its inbox (it dedups).
 			if not msg["resumed"] or inbox.last_seq < msg["ev_from"]:
@@ -475,21 +475,21 @@ func _maybe_report() -> void:
 	)
 
 
-## Acks the newest snapshot applied (0 before the first) and event delivered; a view
-## that needs a full snapshot sends snap -1 once, then 0 until the full one arrives.
+## Acks the newest snapshot applied (0 before the first) and event delivered; a
+## snapshot state that needs a full one sends snap -1 once, then 0 until the full one arrives.
 func _maybe_ack() -> void:
 	if state != State.WELCOMED:
 		return
-	var snap: int = maxi(view.seq, 0)
-	if view.need_full:
-		snap = 0 if _full_asked else -1
+	var ack_snap: int = maxi(snap.seq, 0)
+	if snap.need_full:
+		ack_snap = 0 if _full_asked else -1
 	else:
 		_full_asked = false
-	var now: Vector2i = Vector2i(snap, inbox.last_seq)
+	var now: Vector2i = Vector2i(ack_snap, inbox.last_seq)
 	var due: bool = Time.get_ticks_usec() - _last_ack_us >= ACK_INTERVAL_US
 	if now != _acked and (due or _force_ack):
 		_queue.push(NetChunker.STREAM_CONTROL, NetProtocol.ack(now.x, now.y))
 		_acked = now
-		_full_asked = _full_asked or snap < 0
+		_full_asked = _full_asked or ack_snap < 0
 		_last_ack_us = Time.get_ticks_usec()
 		_force_ack = false

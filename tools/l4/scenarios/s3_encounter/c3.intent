@@ -2,7 +2,7 @@
 # votes "Run again" after the win.
 ui_join timeout=60
 expect_welcome host=false
-ui_pick entry=ops
+ui_pick seat=ops
 barrier name=picked n=3 timeout=90
 expect_event type=started payload.ship=0 timeout=60
 ui_expect shown=station focused=relay timeout=30
@@ -15,11 +15,11 @@ ui_press id=mark
 ui_expect marks.size=1 marks.contact~=1
 await name=ready1 timeout=60
 ui_press id=ping
-expect_event type=run_over payload.outcome=win timeout=150
-ui_expect card=true run_over.outcome=win
+expect_event type=ship_outcome payload.outcome=win timeout=150
+ui_expect card=true ship_outcome.outcome=win
 barrier name=won n=3 timeout=30
 ui_button name=Vote
-ui_expect shown=lobby entry=ops card=false timeout=30
+ui_expect shown=lobby seat=ops card=false timeout=30
 barrier name=lobby1 n=3 timeout=30
 expect_event type=started payload.ship=0 timeout=60
 ui_expect shown=station focused=relay marks.size=0 timeout=30
@@ -32,8 +32,8 @@ ui_press id=mark
 ui_expect marks.size=1 marks.contact~=1
 await name=ready2 timeout=60
 ui_press id=ping
-expect_event type=run_over payload.outcome=loss timeout=90
-ui_expect card=true run_over.outcome=loss
+expect_event type=ship_outcome payload.outcome=loss timeout=90
+ui_expect card=true ship_outcome.outcome=loss
 barrier name=lost n=3 timeout=30
 ui_expect shown=lobby card=false timeout=30
 barrier name=lobby2 n=3 timeout=30

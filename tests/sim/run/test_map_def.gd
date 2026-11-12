@@ -15,14 +15,14 @@ func _site(key: StringName, pos: Vector3, radius: float = 3000.0) -> SiteDef:
 	s.id = key
 	s.name_key = "site.%s" % key
 	s.pos = pos
-	s.radius_m = radius
+	s.radius = radius
 	return s
 
 
 func _map(sites: Array[SiteDef], period: float = 400000.0) -> MapDef:
 	var m: MapDef = MapDef.new()
 	m.id = &"t"
-	m.period_m = period
+	m.period = period
 	m.sites = sites
 	return m
 
@@ -32,7 +32,7 @@ func _map(sites: Array[SiteDef], period: float = 400000.0) -> MapDef:
 # no errors against the M1 ships, every key unique.
 func test_the_m3_map_is_valid() -> void:
 	var m: MapDef = SiteFixture.map()
-	assert_float(m.period_m).is_equal(400000.0)
+	assert_float(m.period).is_equal(400000.0)
 	assert_array(m.errors(_ships())).is_empty()
 	assert_int(m.all_sites().size()).is_between(5, 8)
 	assert_str(String(m.sites[0].id)).is_equal("kestrel_yard")
@@ -110,13 +110,13 @@ func test_no_contact_bleed_at_the_minimum_spacing() -> void:
 		var b: Vector3 = Vector3(-177000.0, 0, 0) if seam else Vector3(46000.0, 0, 0)
 		var m: MapDef = _map([_site(&"a", a), _site(&"b", b)])
 		assert_array(m.errors(_ships())).is_empty()
-		var w: SimWorld = SimWorld.new(1, "", m.period_m)
+		var w: SimWorld = SimWorld.new(1, "", m.period)
 		w.add_site(m.sites[0])
 		w.add_site(m.sites[1])
 		var toward: Vector3 = Vector3.RIGHT
-		var blue: int = w.spawn_ship(TestDefs.corvette(), 1, a + toward * 3000.0)
-		var red: int = w.spawn_ship(TestDefs.raider(), 2, b - toward * 3000.0)
-		var near_other: int = w.spawn_ship(TestDefs.raider(), 3, a + toward * 8000.0)
+		var blue: int = w.spawn_ship(TestDefs.corvette(), 1, CubePoint.of(a + toward * 3000.0))
+		var red: int = w.spawn_ship(TestDefs.raider(), 2, CubePoint.of(b - toward * 3000.0))
+		var near_other: int = w.spawn_ship(TestDefs.raider(), 3, CubePoint.of(a + toward * 8000.0))
 		w.step()
 		assert_float(w.kin.relative(blue, red).length()).is_equal_approx(40000.0, 1e-3)
 		assert_bool(KnowledgeSystem.is_detected(w, 1, red)).is_false()
@@ -133,17 +133,17 @@ func test_site_table_lookups() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var m: MapDef = SiteFixture.map()
 	assert_int(w.sites.size()).is_equal(m.sites.size())
-	var yard: int = w.spawn_ship(TestDefs.corvette(), 1, Vector3(2900.0, 0, 0))
+	var yard: int = w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(2900.0, 0, 0))
 	assert_int(SiteTable.nearest(w, yard)).is_equal(0)
 	assert_int(SiteTable.at_site(w, yard)).is_equal(0)
-	w.kin.place(yard, 3100.0, 0.0, 0.0)
+	w.kin.place(yard, CubePoint.make(3100.0, 0.0, 0.0))
 	assert_int(SiteTable.nearest(w, yard)).is_equal(0)
 	assert_int(SiteTable.at_site(w, yard)).is_equal(-1)
 	assert_float(SiteTable.offset_to(w, yard, 0).x).is_equal(-3100.0)
 	# Near Hollow Gate's far side of the seam: x = +150 km, so a ship at -200 km + 40 km
 	# is closest to... Vesper (120, 40, -60) is 134 km from the origin; place a ship by it.
 	var vesper: int = SiteFixture.id_of(w, &"vesper_beacon")
-	w.kin.place(yard, 121000.0, 40000.0, -60000.0)
+	w.kin.place(yard, CubePoint.make(121000.0, 40000.0, -60000.0))
 	assert_int(SiteTable.nearest(w, yard)).is_equal(vesper)
 	assert_int(SiteTable.at_site(w, yard)).is_equal(vesper)
 	assert_bool(SiteTable.offset_to(w, yard, 99).is_finite()).is_false()
@@ -197,27 +197,27 @@ func test_select_a_site() -> void:
 	var w: SimWorld = SiteFixture.world()
 	var vesper: int = SiteFixture.id_of(w, &"vesper_beacon")
 	var ship: int = w.spawn_ship(TestDefs.corvette(), 1)
-	var c: SelectTargetCommand = SelectTargetCommand.new()
+	var c: HelmSelectCommand = HelmSelectCommand.new()
 	c.ship_id = ship
 	c.site_id = vesper
 	w.submit(c)
 	w.step()
 	assert_bool(c.accepted).is_true()
-	assert_int(w.helm.target_kind[ship]).is_equal(HelmTable.Target.SITE)
-	assert_int(w.helm.target_site[ship]).is_equal(vesper)
+	assert_int(w.helm.sel_kind[ship]).is_equal(HelmTable.Selection.SITE)
+	assert_int(w.helm.sel_site[ship]).is_equal(vesper)
 	assert_bool(AssistSystem.has_target(w, ship)).is_true()
 	assert_vector(AssistSystem.target_offset(w, ship)).is_equal_approx(
-		w.sites.point3(vesper), Vector3.ONE * 0.01
+		CubePoint.to_vector3(w.sites.point(vesper)), Vector3.ONE * 0.01
 	)
-	var hidden: SelectTargetCommand = SelectTargetCommand.new()
+	var hidden: HelmSelectCommand = HelmSelectCommand.new()
 	hidden.ship_id = ship
 	hidden.site_id = 50
 	w.submit(hidden)
 	w.step()
 	assert_bool(hidden.accepted).is_false()
-	var none: SelectTargetCommand = SelectTargetCommand.new()
+	var none: HelmSelectCommand = HelmSelectCommand.new()
 	none.ship_id = ship
 	w.submit(none)
 	w.step()
-	assert_int(w.helm.target_kind[ship]).is_equal(HelmTable.Target.NONE)
-	assert_int(w.helm.target_site[ship]).is_equal(-1)
+	assert_int(w.helm.sel_kind[ship]).is_equal(HelmTable.Selection.NONE)
+	assert_int(w.helm.sel_site[ship]).is_equal(-1)

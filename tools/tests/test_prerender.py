@@ -114,12 +114,12 @@ def test_segment_indices_follow_the_split_rule(tmp_path):
     assert sorted(k for k in computer if k.startswith("seg:computer.contact:")) == [
         f"seg:computer.contact:{k}" for k in range(4)
     ]
-    # "{count} enemy ships remaining.": piece 0 is empty.
-    assert [k for k in computer if k.startswith("seg:computer.enemies_remaining:")] == [
-        "seg:computer.enemies_remaining:1"
+    # "{count} hostile ships remaining.": piece 0 is empty.
+    assert [k for k in computer if k.startswith("seg:computer.hostiles_remaining:")] == [
+        "seg:computer.hostiles_remaining:1"
     ]
     texts = {text for _, text, _ in spy.calls}
-    assert {"Contact", ", bearing", ", range", "kilometres.", "enemy ships remaining."} <= texts
+    assert {"Contact", ", bearing", ", range", "kilometres.", "hostile ships remaining."} <= texts
 
 
 # FT: FT-AUD-001, FT-AUD-002

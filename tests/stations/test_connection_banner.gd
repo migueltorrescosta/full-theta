@@ -31,7 +31,7 @@ func after_test() -> void:
 func _shell() -> ClientShell:
 	var c: FakeClient = FakeClient.new()
 	c.state = NetClient.State.WELCOMED
-	c.welcome = {"session": 7, "ship": 0, "entry": "", "host": false, "lang": "en"}
+	c.welcome = {"session": 7, "ship": 0, "seat": "", "host": false, "lang": "en"}
 	c.catalogue = StationFixture.catalogue()
 	c.url = "ws://192.168.1.20:47801"
 	var s: ClientShell = auto_free(ClientShell.new())

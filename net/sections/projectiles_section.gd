@@ -24,7 +24,7 @@ var _tick: int = 0
 
 
 func _init(ship: int, proj_range_m: float = DEFAULT_RANGE_M) -> void:
-	super(StationViews.Section.PROJECTILES, ship)
+	super(StationCatalogue.Section.PROJECTILES, ship)
 	range_m = proj_range_m
 
 
@@ -33,8 +33,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	var p_units: int = NetCodec.period_units(world.kin.period)
 	var kin: Kinematics = world.kin
 	var proj: ProjectileTable = world.projectiles
-	var at: PackedFloat64Array = kin.point_at(owner, Vector3.ZERO)
-	var own: Vector3i = NetCodec.quant_pos(at[0], at[1], at[2], p_units)
+	var own: Vector3i = NetCodec.quant_pos(kin.point(owner), p_units)
 	var r2: float = range_m * range_m
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.put_u16(0)
@@ -42,7 +41,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	var seen: Dictionary = {}
 	var ordinal: Dictionary = {}
 	for k: int in proj.size():
-		var pair: int = _key(proj.ship_ids[k], _tick + proj.ttl[k], 0)
+		var pair: int = _key(proj.owner_ship[k], _tick + proj.ttl[k], 0)
 		var nth: int = ordinal.get(pair, 0)
 		ordinal[pair] = nth + 1
 		var rel: Vector3 = proj.relative_start(k, kin, owner, 0.0)

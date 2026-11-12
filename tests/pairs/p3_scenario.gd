@@ -34,7 +34,7 @@ static func build() -> SimWorld:
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(TestDefs.corvette(), 1)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)
-	w.spawn_ship(TestDefs.raider(), 2, RAIDER_AT, facing_player)
+	w.spawn_ship(TestDefs.raider(), 2, CubePoint.of(RAIDER_AT), facing_player)
 	return w
 
 
@@ -83,20 +83,20 @@ static func science_mark(w: SimWorld) -> void:
 ## Helm (co-op): flies to the mark once there is one, and lets go of the throttle in it.
 static func helm(w: SimWorld) -> void:
 	var t: ScienceTable = w.science
-	if t.mark_contact[PLAYER] < 0:
+	if not t.has_scan_point(PLAYER):
 		return
 	var inside: bool = at_mark(w)
 	if w.tick == 2:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.ship_id = PLAYER
 		select.point = true
-		select.x = t.mark_x[PLAYER]
-		select.y = t.mark_y[PLAYER]
-		select.z = t.mark_z[PLAYER]
+		select.x = t.scan_x[PLAYER]
+		select.y = t.scan_y[PLAYER]
+		select.z = t.scan_z[PLAYER]
 		w.submit(select)
 		w.submit(PairHarness.helm_input(0.0))
 	var to_mark: Vector3 = w.kin.relative_to_point(
-		PLAYER, t.mark_x[PLAYER], t.mark_y[PLAYER], t.mark_z[PLAYER]
+		PLAYER, CubePoint.make(t.scan_x[PLAYER], t.scan_y[PLAYER], t.scan_z[PLAYER])
 	)
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_mark) < ON_POINT
 	var throttle: float = 1.0 if (on_point and not inside) else 0.0
@@ -105,4 +105,4 @@ static func helm(w: SimWorld) -> void:
 
 
 static func at_mark(w: SimWorld) -> bool:
-	return ScienceSystem.at_scan_mark(w, PLAYER, RAIDER)
+	return ScienceSystem.at_scan_point(w, PLAYER)

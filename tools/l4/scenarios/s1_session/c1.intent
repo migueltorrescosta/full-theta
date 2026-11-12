@@ -1,8 +1,8 @@
 # c1: Tactical (Helm + Weapons), first on it, so it holds every Tactical item.
 connect
 expect_welcome resumed=false ship=-1 host=false
-expect_catalogue ships.size=1 entries.id~=tactical entries.id~=systems entries.id~=ops
-pick ship=0 entry=tactical
+expect_catalogue ships.size=1 seats.id~=tactical seats.id~=systems seats.id~=ops
+pick ship=0 seat=tactical
 # Alone on a station: holds its items (FT-NET-044); the name is in the snapshot.
 expect_view ownership.claims.mount:0.1=c1 ownership.claims.flight.1=c1
 signal name=c1_tactical

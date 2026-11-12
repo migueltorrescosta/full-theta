@@ -4,7 +4,7 @@ extends HelmSuite
 ## no lane (the lanes toggle is off or Comms hasn't shared it, FT-PAIR-008).
 
 
-func _lane(open_s: float, close_s: float, at: Vector3) -> void:
+func _lane(opens_in: float, closes_in: float, at: Vector3) -> void:
 	(
 		_ctx()
 		. crew
@@ -21,8 +21,8 @@ func _lane(open_s: float, close_s: float, at: Vector3) -> void:
 							"x": at.x,
 							"y": at.y,
 							"z": at.z,
-							"open_s": open_s,
-							"close_s": close_s,
+							"opens_in": opens_in,
+							"closes_in": closes_in,
 							"by": "comms",
 						}
 					],

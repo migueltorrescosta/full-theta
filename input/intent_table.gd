@@ -50,6 +50,7 @@ const GROUPS: Array[String] = [
 const INTENTS: Array[Dictionary] = [
 	# §5.0 common actions (D95): the same binding on every station.
 	{"id": "select", "group": COMMON, "kind": PRESS, "kbm": ["LMB"], "pad": ["A"]},
+	# cycle_target keeps its id, which saved bindings store; it reads "Next contact" (D397).
 	{"id": "cycle_target", "group": COMMON, "kind": PRESS, "kbm": ["T"], "pad": ["RB"]},
 	{"id": "select_pinged", "group": COMMON, "kind": PRESS, "kbm": ["Y"], "pad": ["long RB"]},
 	{
@@ -82,7 +83,7 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "alert_red", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Up"]},
 	{"id": "alert_yellow", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Right"]},
 	{"id": "alert_normal", "group": LIVE, "kind": PRESS, "kbm": [], "pad": ["View+Down"]},
-	# Panel 1 / 2; with more panels (the dev entry) previous / next.
+	# Panel 1 / 2; with more panels (the dev seat) previous / next.
 	{"id": "focus_1", "group": LIVE, "kind": PRESS, "kbm": ["F1"], "pad": ["View+LB"]},
 	{"id": "focus_2", "group": LIVE, "kind": PRESS, "kbm": ["F2"], "pad": ["View+RB"]},
 	# The Shakedown's Next button (FT-MIS-039, D235): live on every station, ignored outside training.
@@ -291,7 +292,7 @@ const INTENTS: Array[Dictionary] = [
 	# hack's route. Drags on the radar and the minigames are their own pointer handling.
 	{"id": "sci_scan", "group": "science", "kind": PRESS, "kbm": ["E"], "pad": ["RT"]},
 	{"id": "sci_hack", "group": "science", "kind": PRESS, "kbm": ["H"], "pad": ["LT"]},
-	{"id": "sci_ping", "group": "science", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
+	{"id": "sci_sweep", "group": "science", "kind": PRESS, "kbm": ["P"], "pad": ["Up"]},
 	{"id": "sci_scan_mark", "group": "science", "kind": PRESS, "kbm": ["M"], "pad": ["Down"]},
 	{"id": "sci_mode", "group": "science", "kind": PRESS, "kbm": ["Q"], "pad": ["LB"]},
 	{"id": "sci_self_scan", "group": "science", "kind": PRESS, "kbm": ["Home"], "pad": ["LB+Down"]},

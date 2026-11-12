@@ -2,19 +2,19 @@
 class_name StationPanel
 extends Control
 ## Base of every station panel (FT-JNT-001). A StationScreen holds one panel for a
-## single station, two for a joint view (six for the dev entry); one is focused at a
+## single station, two for a joint view (six for the dev seat); one is focused at a
 ## time and only it receives its station's intents, apart from the intents live on the
 ## device (IntentTable.target). The focused panel shows its main view (cockpit, turret,
 ## cutaway, map) in the screen's main area; the others show their compact docked view.
 ##
 ## Subclass it in stations/<station>/, register the script in StationRegistry, and
-## override the virtuals below. Read state through `ctx` (StationContext): ctx.view and
+## override the virtuals below. Read state through `ctx` (StationContext): ctx.snap and
 ## ctx.interp for the snapshot, ctx.crew for selection, marks, pings, claims; send with
 ## ctx.intents. Never name sim/ (FT-ARC-011).
 ##
 ## On a phone (#28 follow-up, design "Shared frame") a panel may set `pages` (PageHost): the
 ## screen shows its tabs in the top bar or the bottom tab bar. A panel that sets `in_frame`
-## gets the view-top row (selection chip, request chips, partner glance, ping toast) over
+## gets the view-top row (selection bar, request chips, partner glance, ping toast) over
 ## `top_reserve` px at the top of `view_rect()`; `sheet` is the screen's ChoiceSheet for
 ## one-level choices.
 
@@ -68,7 +68,7 @@ func screen() -> StationScreen:
 
 
 ## How many panels the screen holding this panel has (1 when none): the dev seat's
-## catalogue entry names no stations, so the screen is the one to ask.
+## seat names no stations, so the screen is the one to ask.
 func screen_panels() -> int:
 	var s: StationScreen = screen()
 	return s.panels.size() if s != null else 1
@@ -248,10 +248,10 @@ func request_chips() -> Array[ChipDef]:
 	var out: Array[ChipDef] = []
 	if ctx == null:
 		return out
-	for c: ChipDef in ChipView.def().chips:
+	for c: ChipDef in ChipsReader.def().chips:
 		if String(c.from_station) != station:
 			continue
-		if _on_screen(c) or ctx.crew.toggles.on(ViewFilter.CHIPS):
+		if _on_screen(c) or ctx.crew.toggles.on(ShortcutFilter.CHIPS):
 			out.append(c)
 	return out
 
@@ -264,7 +264,7 @@ func chip_arg(_chip: ChipDef) -> int:
 
 ## The chip's text for this panel's menu.
 func chip_label(chip: ChipDef) -> String:
-	return ChipView.label({"chip": String(chip.id), "arg": chip_arg(chip)})
+	return ChipsReader.label({"chip": String(chip.id), "arg": chip_arg(chip)})
 
 
 ## Sends a chip, or runs it as a direct action when the receiving station is on this screen.
@@ -346,7 +346,7 @@ func _direct(chip: ChipDef) -> void:
 ## view (a joint view with Engineering has it).
 func _more_pips(kind: SubsystemDef.Kind) -> void:
 	var def: ShipDef = ctx.ship_def()
-	var rows: Array = ctx.view.blocks.get(StationViews.Section.ENGINEERING, {}).get(
+	var rows: Array = ctx.snap.blocks.get(StationCatalogue.Section.ENGINEERING, {}).get(
 		"subsystems", []
 	)
 	if def == null or def.power == null or rows.size() != def.subsystems.size():
@@ -375,8 +375,8 @@ func _bring_to_bear(mount_index: int) -> void:
 		return
 	ctx.intents.command(
 		{
-			"kind": "helm_select_target",
-			"target_ship": int(sel["id"]),
+			"kind": "helm_select",
+			"contact": int(sel["id"]),
 			"point": false,
 			"x": 0.0,
 			"y": 0.0,

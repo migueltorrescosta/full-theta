@@ -15,8 +15,8 @@ Markdown summary. Budgets and checks (S9, D104, D106, D109, D111, D161):
 - bandwidth: server payload to all clients <= 10 Mbit/s, also when scaled to 30
   snapshots a second (the loopback wire total, both directions with every header, is
   reported beside it);
-- one encode per view key: per snapshot, the delta and full messages assembled together
-  are at most the distinct view keys, shared by every client of a key;
+- one encode per stream key: per snapshot, the delta and full messages assembled together
+  are at most the distinct stream keys, shared by every client of a key;
 - the seat plan (6 of each station, 6 Captains, 22 viewers) all picked, no bad snapshot,
   and connection 65 refused with session_full.
 
@@ -185,8 +185,8 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
     say("| Part | mean / p50 / p99 / max ms |")
     say("|---|---|")
     say(f"| SimCopy.restore | {stats_ms([float(r['restore_us']) for r in snaps])} |")
-    say(f"| SnapshotBuilder.build (sections) | {stats_ms([float(r['build_us']) for r in snaps])} |")
-    say(f"| assemble view-key messages and queue sends | {stats_ms([float(r['send_us']) for r in snaps])} |")
+    say(f"| SnapshotWriter.build (sections) | {stats_ms([float(r['build_us']) for r in snaps])} |")
+    say(f"| assemble stream-key messages and queue sends | {stats_ms([float(r['send_us']) for r in snaps])} |")
     parts = [
         f for f in net["snap_fields"]
         if f.endswith("_us") and f not in ("unix_us", "stamp_us", "restore_us", "build_us", "send_us")
@@ -214,15 +214,15 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
         )
     say("")
 
-    # --- One encode per view key (FT-NET-040). ---
-    say("## Encodes per view key (FT-NET-040)")
+    # --- One encode per stream key (FT-NET-040). ---
+    say("## Encodes per stream key (FT-NET-040)")
     say("")
     sends = [r["sends"] for r in snaps]
     messages = [r["delta_messages"] + r["full_messages"] for r in snaps]
     over = [r for r in snaps if r["delta_messages"] + r["full_messages"] > r["keys"]]
     under = [r for r in snaps if r["delta_messages"] + r["full_messages"] < r["keys"]]
     say(
-        f"Per snapshot: {mean([r['keys'] for r in snaps]):.1f} distinct view keys, "
+        f"Per snapshot: {mean([r['keys'] for r in snaps]):.1f} distinct stream keys, "
         f"{mean(sends):.1f} sends, {mean(messages):.2f} messages assembled "
         f"({mean([r['full_messages'] for r in snaps]):.2f} full), "
         f"{mean([r['section_updates'] for r in snaps]):.1f} section updates. Snapshots with "
@@ -231,7 +231,7 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
     ok_keys = bool(snaps) and not over and mean(sends) > mean(messages)
     say(f"**{verdict(ok_keys)}**.")
     if not ok_keys:
-        problems.append(f"encodes per view key ({len(over)} snapshots over)")
+        problems.append(f"encodes per stream key ({len(over)} snapshots over)")
     say("")
 
     # --- Clients: receipts, gaps, age. ---
@@ -256,7 +256,7 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
     for c in clients:
         bad += int(c["stats"].get("bad_snapshots", 0))
         if c["picked"] != "ok":
-            picks_failed.append(f"{c['name']} {c['entry']}: {c['picked']}")
+            picks_failed.append(f"{c['name']} {c['seat']}: {c['picked']}")
         for k, v in c["rejects"].items():
             rejects[k] += v
         flat = c["snaps"]
@@ -312,7 +312,7 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
         problems.append("bandwidth: no byte samples spanning the window")
         return False
     session_seat = {str(c["session"]): c for c in clients}
-    per_entry: dict[str, list[float]] = defaultdict(list)
+    per_seat: dict[str, list[float]] = defaultdict(list)
     total_bps = 0.0
     stalls = 0
     skipped: list[int] = []
@@ -328,13 +328,13 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
         bps = (row[2] - before[2]) / dt
         total_bps += bps
         seat = session_seat.get(str(row[0]))
-        per_entry[seat["entry"] if seat else "?"].append(bps)
-    say("| Entry | Clients | B/s per client mean | min | max |")
+        per_seat[seat["seat"] if seat else "?"].append(bps)
+    say("| Seat | Clients | B/s per client mean | min | max |")
     say("|---|---|---|---|---|")
-    for entry in sorted(per_entry):
-        v = per_entry[entry]
-        say(f"| {entry} | {len(v)} | {mean(v):,.0f} | {min(v):,.0f} | {max(v):,.0f} |")
-    all_v = [x for v in per_entry.values() for x in v]
+    for name in sorted(per_seat):
+        v = per_seat[name]
+        say(f"| {name} | {len(v)} | {mean(v):,.0f} | {min(v):,.0f} | {max(v):,.0f} |")
+    all_v = [x for v in per_seat.values() for x in v]
     say(
         f"| all | {len(all_v)} | {mean(all_v):,.0f} | {min(all_v, default=0):,.0f} | "
         f"{max(all_v, default=0):,.0f} |"
@@ -387,12 +387,12 @@ def _check(out: Path, say: Callable[[str], None], problems: list[str]) -> bool: 
     )
     if not full.get("ok"):
         problems.append(f"connection 65: {full.get('reason')}")
-    by_entry: dict[str, int] = defaultdict(int)
+    by_seat: dict[str, int] = defaultdict(int)
     for c in clients:
-        by_entry[c["entry"]] += 1
-    seats_ok = dict(by_entry) == SEATS
+        by_seat[c["seat"]] += 1
+    seats_ok = dict(by_seat) == SEATS
     say(
-        f"Seats: {dict(sorted(by_entry.items()))} ({verdict(seats_ok)}); picks refused: "
+        f"Seats: {dict(sorted(by_seat.items()))} ({verdict(seats_ok)}); picks refused: "
         f"{picks_failed or 'none'}; bad snapshots: {bad}; stalls: {stalls}; snapshots skipped "
         f"in the window: {sum(skipped) if skipped else 'not recorded'} (max per connection "
         f"{max(skipped, default=0)}); command and request rejections: {dict(rejects) or 'none'}; "

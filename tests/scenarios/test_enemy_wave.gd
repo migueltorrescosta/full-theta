@@ -27,7 +27,7 @@ func test_the_wave_hails_and_posts_a_hail_card() -> void:
 	assert_int(f.ships_of(&"m1_raider").size()).is_equal(2)
 	assert_bool(_says(f, "npc.hail_raider")).is_true()
 	var hails: int = 0
-	for c: CardView in f.api.cards_of(0):
+	for c: CardInfo in f.api.cards_of(0):
 		hails += 1 if c.kind == CardSpec.Kind.HAIL else 0
 	assert_int(hails).is_equal(1)
 	f.run(60 * 26)
@@ -51,7 +51,7 @@ func test_a_surrender_the_crew_asked_for_ends_it() -> void:
 	var raider: int = f.ships_of(&"m1_raider")[0]
 	f.world.damage.health[f.world.damage.find_subsystem(raider, &"engines")] = 0.0
 	var card: int = -1
-	for c: CardView in f.api.cards_of(0):
+	for c: CardInfo in f.api.cards_of(0):
 		card = c.id
 	var answer: AnswerHailCommand = AnswerHailCommand.new()
 	answer.card = card
@@ -88,7 +88,7 @@ func test_the_clock_ends_it_as_partial_and_the_raiders_stay() -> void:
 	assert_int(raiders.size()).is_equal(2)
 	assert_int(f.world.relation(2, f.world.faction_of(0))).is_equal(Scenario.Relation.HOSTILE)
 	for id: int in raiders:
-		assert_int(f.world.run.status[id]).is_equal(RunTable.Status.IN_PLAY)
+		assert_int(f.world.ships.status[id]).is_equal(ShipStateTable.Status.IN_PLAY)
 		assert_int(f.world.ai.target[id]).is_equal(0)
 
 
@@ -97,7 +97,7 @@ func test_relation_enum_matches_the_sim() -> void:
 	assert_int(Scenario.Relation.FRIENDLY).is_equal(SimWorld.Relation.FRIENDLY)
 	assert_int(Scenario.Relation.NEUTRAL).is_equal(SimWorld.Relation.NEUTRAL)
 	assert_int(Scenario.Relation.HOSTILE).is_equal(SimWorld.Relation.HOSTILE)
-	assert_int(CardView.State.EXPIRED).is_equal(StoryTable.State.EXPIRED)
+	assert_int(CardInfo.State.EXPIRED).is_equal(StoryTable.State.EXPIRED)
 	assert_array(Scenario.Result.keys()).is_equal(EncounterTable.Result.keys())
 
 

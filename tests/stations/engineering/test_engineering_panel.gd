@@ -22,8 +22,8 @@ func before_test() -> void:
 	_toasts = []
 
 
-func _screen(entry: String = "engineering") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry)
+func _screen(seat: String = "engineering") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat)
 	ctx.crew.toast.connect(func(key: String, _a: Dictionary) -> void: _toasts.append(key))
 	var host: Control = auto_free(Control.new())
 	host.size = Vector2(1280, 720)
@@ -130,7 +130,7 @@ func test_damaged_reactor_lowers_the_pip_cap_shown_and_enforced() -> void:
 	var s: StationScreen = await _screen()
 	var e: EngineeringPanel = _panel(s)
 	assert_int(s.ctx.pip_cap()).is_equal(12)
-	s.ctx.view.blocks[StationViews.Section.STATUS]["pip_cap"] = 10
+	s.ctx.snap.blocks[StationCatalogue.Section.STATUS]["pip_cap"] = 10
 	assert_int(s.ctx.pip_cap()).is_equal(10)
 	assert_int(e.model.pips_used()).is_equal(10)
 	_press(s, "subsystem_2")
@@ -192,7 +192,7 @@ func test_pips_through_intents_within_cap_and_max_with_overcharge() -> void:
 	# Boost (O / LB+RT), once at a time.
 	_press(s, "boost")
 	assert_dict(_commands(s)[-1]).is_equal({"kind": "boost"})
-	s.ctx.view.blocks[StationViews.Section.ENGINEERING]["boost_ticks"] = 300
+	s.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["boost_ticks"] = 300
 	assert_bool(e.model.is_boosted(0) and not e.model.is_boosted(2)).is_true()
 	_press(s, "boost", "pad")
 	assert_dict(_commands(s)[-1]).is_equal({"kind": "boost"})
@@ -260,7 +260,7 @@ func test_drag_a_crew_to_a_subsystem_and_back_and_controller_dispatch() -> void:
 	cut.cursor = target + Vector2(20, 0)
 	assert_int(cut.move_cursor(Vector2(-18, 0))).is_equal(0)
 	# Crews another player holds are skipped; with none free, a toast.
-	s.ctx.view.ownership = {"claims": {"crew:1": [99, "Bo"]}, "writers": {}}
+	s.ctx.snap.ownership = {"claims": {"crew:1": [99, "Bo"]}, "writers": {}}
 	assert_bool(e.model.crew_taken(1)).is_true()
 	_press(s, "subsystem_3", "pad")
 	_press(s, "dispatch_nearest", "pad")
@@ -268,7 +268,7 @@ func test_drag_a_crew_to_a_subsystem_and_back_and_controller_dispatch() -> void:
 		{"kind": "dispatch_repair", "crew": 0, "subsystem_id": "weapons"}
 	)
 	# No parts, no repair (D115).
-	s.ctx.view.blocks[StationViews.Section.ENGINEERING]["spare_parts"] = 0
+	s.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["spare_parts"] = 0
 	n = _commands(s).size()
 	_drag(cut, cut.token_pos(0), cut.subsystem_pos(2))
 	assert_int(_commands(s).size()).is_equal(n)

@@ -15,14 +15,14 @@ func test_a_marked_mission_gains_its_icon_under_the_toggle() -> void:
 	w.step()
 	assert_bool(StoryRules.is_marked(w, 0)).is_false()
 	var shown: Dictionary[String, bool] = {}
-	var cases: Dictionary[String, ViewFilter] = {
-		"easy shared": ViewFilter.of("comms", "easy#mission_icon"),
-		"easy unshared": ViewFilter.of("comms", "easy"),
-		"hard shared": ViewFilter.of("comms", "hard#mission_icon"),
-		"ops": ViewFilter.of("ops", "easy"),
+	var cases: Dictionary[String, ShortcutFilter] = {
+		"easy shared": ShortcutFilter.of("comms", "easy#mission_icon"),
+		"easy unshared": ShortcutFilter.of("comms", "easy"),
+		"hard shared": ShortcutFilter.of("comms", "hard#mission_icon"),
+		"ops": ShortcutFilter.of("ops", "easy"),
 	}
 	for name: String in cases:
-		shown[name] = CommsView.block(w, 0, cases[name])["cards"][0]["marked"]
+		shown[name] = CommsSection.block(w, 0, cases[name])["cards"][0]["marked"]
 	assert_dict(shown).is_equal(
 		{"easy shared": false, "easy unshared": false, "hard shared": false, "ops": false}
 	)
@@ -31,7 +31,7 @@ func test_a_marked_mission_gains_its_icon_under_the_toggle() -> void:
 	assert_bool(StoryFixture.run(w, 0, mark)).is_true()
 	assert_bool(StoryRules.is_marked(w, 0)).is_true()
 	for name: String in cases:
-		shown[name] = CommsView.block(w, 0, cases[name])["cards"][0]["marked"]
+		shown[name] = CommsSection.block(w, 0, cases[name])["cards"][0]["marked"]
 	assert_dict(shown).is_equal(
 		{"easy shared": true, "easy unshared": false, "hard shared": false, "ops": true}
 	)
@@ -51,7 +51,7 @@ func test_a_probe_discovery_opens_an_opportunity() -> void:
 	var card: int = posted[0].other_id
 	assert_int(w.story.kind[card]).is_equal(StoryTable.Kind.HAIL)
 	assert_int(w.story.state[card]).is_equal(StoryTable.State.OPEN)
-	assert_int(w.story.target[card]).is_equal(P15Scenario.DERELICT)
+	assert_int(w.story.subject[card]).is_equal(P15Scenario.DERELICT)
 	assert_str(w.story.title[card]).is_equal("comms.card.opportunity")
 	assert_float(w.kin.relative(P15Scenario.PLAYER, P15Scenario.DERELICT).length()).is_greater(
 		w.defs[P15Scenario.PLAYER].sensor_range

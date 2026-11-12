@@ -32,7 +32,7 @@ var tick_hz: float = TICK_HZ
 var delay_ticks: float = DELAY_TICKS
 ## The tick being rendered (fractional).
 var render_tick: float = -1.0
-## Site period in position units (NetViewState.p_units).
+## Map period in position units (SnapshotState.p_units).
 var p_units: int = 0
 ## Bumped whenever the interpolated state is re-evaluated (StationContext.picture()).
 var revision: int = 0
@@ -49,28 +49,28 @@ var _contacts: Dictionary = {}
 
 ## Records the view's current snapshot (call after NetClient.poll() when view.seq
 ## changed). A jump back in ticks restarts the buffer.
-func push(view: NetViewState, now_ms: int) -> void:
-	if view.kin.is_empty():
+func push(snap: SnapshotState, now_ms: int) -> void:
+	if snap.kin.is_empty():
 		return
-	p_units = view.p_units
+	p_units = snap.p_units
 	if not _samples.is_empty():
 		var last: Dictionary = _samples.back()
-		if view.tick < int(last["tick"]):
+		if snap.tick < int(last["tick"]):
 			_samples.clear()
-		elif view.tick == int(last["tick"]):
+		elif snap.tick == int(last["tick"]):
 			_samples.pop_back()
 	var contacts: Dictionary = {}
-	var model: Dictionary = view.contacts.get("model", {})
+	var model: Dictionary = snap.contacts.get("model", {})
 	for id: int in model:
 		var e: Array = model[id]
-		contacts[id] = NetCodec.predict(e[0], e[1], view.tick - int(e[2]), p_units)
+		contacts[id] = NetCodec.predict(e[0], e[1], snap.tick - int(e[2]), p_units)
 	(
 		_samples
 		. append(
 			{
-				"tick": view.tick,
-				"pos": view.kin["pos"],
-				"rot": view.kin.get("rot", Quaternion.IDENTITY),
+				"tick": snap.tick,
+				"pos": snap.kin["pos"],
+				"rot": snap.kin.get("rot", Quaternion.IDENTITY),
 				"contacts": contacts,
 			}
 		)
@@ -78,7 +78,7 @@ func push(view: NetViewState, now_ms: int) -> void:
 	if _samples.size() > KEEP:
 		_samples.pop_front()
 	if _samples.size() == 1:
-		render_tick = float(view.tick)
+		render_tick = float(snap.tick)
 		_last_ms = now_ms
 	_evaluate()
 

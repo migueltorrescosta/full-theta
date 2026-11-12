@@ -10,7 +10,7 @@ const RETICLE_R: float = 18.0
 const BRACKET: float = 10.0
 
 ## Brackets in view this frame (layout_targets), for drawing and item_at: {"item"
-## (ContactPicture's), "pos", "chip", "chip_at" (its top left), "rect" (bracket and chip)}.
+## (ContactPicture's), "pos", "callout", "callout_at" (its top left), "rect" (bracket and chip)}.
 var targets: Array[Dictionary] = []
 var _p: WeaponsPanel
 
@@ -69,7 +69,13 @@ func layout_targets() -> void:
 		at.x = maxf(at.x, 2.0)
 		var r: Rect2 = Rect2((p as Vector2) - Vector2.ONE * BRACKET, Vector2.ONE * BRACKET * 2.0)
 		targets.append(
-			{"item": it, "pos": p, "chip": chip, "chip_at": at, "rect": r.merge(Rect2(at, sz))}
+			{
+				"item": it,
+				"pos": p,
+				"callout": chip,
+				"callout_at": at,
+				"rect": r.merge(Rect2(at, sz))
+			}
 		)
 
 
@@ -263,7 +269,7 @@ func _draw_item(font: Font, t: Dictionary) -> void:
 		draw_polyline(Palette.shape_points("diamond", p, BRACKET), col, 1.5, true)
 	else:
 		TargetBracket.draw(self, p, BRACKET, 5.0, col, 2.0 if sel else 1.5)
-	_text(font, (t["chip_at"] as Vector2) + Vector2(0.0, FONT_SIZE), t["chip"], col)
+	_text(font, (t["callout_at"] as Vector2) + Vector2(0.0, FONT_SIZE), t["callout"], col)
 	var pulse: float = float(it.get("pulse", 0.0))
 	if pulse > 0.0:
 		ItemGlyph.ping_ring(

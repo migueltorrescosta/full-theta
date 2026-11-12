@@ -234,4 +234,4 @@ func test_coasting_consumes_no_propellant() -> void:
 	SimFixture.run(w, 600)
 	for id: int in [rest, cruise, drift]:
 		assert_float(w.kin.propellant_used[id]).override_failure_message(str(id)).is_equal(0.0)
-	assert_float(w.kin.pz[cruise]).is_equal_approx(4000.0, 1e-6)
+	assert_float(w.kin.pos_z[cruise]).is_equal_approx(4000.0, 1e-6)

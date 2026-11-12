@@ -30,7 +30,7 @@ func _server(
 	s.world.keep_command_log = true
 	# These tests exercise the transport, not the lobby: start the run directly.
 	if launch:
-		s.session.launch(PLAYER)
+		s.game.launch(PLAYER)
 	add_child(s)
 	_servers.append(s)
 	return s
@@ -77,10 +77,10 @@ func _wait(ms: int) -> void:
 
 
 ## A welcomed client holding a pick, with its first full snapshot applied.
-func _joined(server: NetServer, name: String, entry: String) -> NetClient:
+func _joined(server: NetServer, name: String, seat: String) -> NetClient:
 	var c: NetClient = _client(server, name)
 	assert_bool(await _until(c.is_welcomed)).is_true()
-	c.pick(PLAYER, entry)
+	c.pick(PLAYER, seat)
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] >= 1)).is_true()
 	return c
 
@@ -99,12 +99,12 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_int(c.welcome["v"]).is_equal(NetProtocol.PROTOCOL_VERSION)
 	assert_str(c.token).has_length(32)
 	assert_float(c.welcome["period"]).is_equal(server.world.kin.period)
-	assert_int((c.catalogue["entries"] as Array).size()).is_equal(6 + 15 + 2 + 1)
+	assert_int((c.catalogue["seats"] as Array).size()).is_equal(6 + 15 + 2 + 1)
 	assert_int((c.catalogue["ships"] as Array).size()).is_equal(1)
 	var picked: Array[Dictionary] = _events_of(c.take_events(), NetProtocol.EVENT_PICKED)
 	assert_str(picked[0]["payload"]["reason"]).is_equal("")
-	assert_bool(c.view.blocks.has(StationViews.Section.HELM)).is_true()
-	assert_bool(c.view.blocks.has(StationViews.Section.ENGINEERING)).is_false()
+	assert_bool(c.snap.blocks.has(StationCatalogue.Section.HELM)).is_true()
+	assert_bool(c.snap.blocks.has(StationCatalogue.Section.ENGINEERING)).is_false()
 	# About 30 snapshots a second (wide band: 2 loaded cores).
 	var n0: int = c.stats["snapshots"]
 	var tick0: int = server.world.tick
@@ -115,13 +115,13 @@ func test_server_runs_sim_and_sends_snapshots_at_30_hz() -> void:
 	assert_float(rate).is_between(20.0, 34.0)
 	assert_float(tick_rate).is_between(45.0, 66.0)
 	assert_float(rate / tick_rate).is_between(0.4, 0.6)
-	assert_int(c.view.rejected).is_equal(0)
+	assert_int(c.snap.rejected).is_equal(0)
 	# Commands up, state down.
 	c.helm(1.0)
 	var moving: Callable = func() -> bool:
-		return c.view.blocks[StationViews.Section.HELM]["throttle_setpoint"] > 0.0
+		return c.snap.blocks[StationCatalogue.Section.HELM]["throttle_setpoint"] > 0.0
 	assert_bool(await _until(moving)).is_true()
-	assert_int(server.session.rejections.size()).is_equal(0)
+	assert_int(server.game.rejections.size()).is_equal(0)
 
 
 # FT: FT-NET-005
@@ -157,7 +157,36 @@ func test_version_mismatch_is_rejected_with_a_reason() -> void:
 		. is_true()
 	)
 	assert_str(bad.reject_reason).is_equal(NetProtocol.REJECT_BAD_HELLO)
-	assert_int(server.session.by_id.size()).is_equal(0)
+	assert_int(server.game.by_id.size()).is_equal(0)
+
+
+# FT: FT-NET-005
+# A well-formed Hello of another protocol version is rejected with version_mismatch.
+func test_well_formed_hello_of_another_version_is_rejected() -> void:
+	var server: NetServer = _server()
+	var old: NetClient = _client(server, "old")
+	old._hello_sent = true
+	assert_bool(await _until(func() -> bool: return old._peer.get_ready_state() == 1)).is_true()
+	old.send_raw(
+		NetProtocol.encode(
+			NetProtocol.Type.HELLO,
+			{
+				"v": NetProtocol.PROTOCOL_VERSION - 1,
+				"token": "",
+				"name": "old",
+				"kind": "bot",
+				"host_secret": ""
+			}
+		)
+	)
+	var r1: bool = await _until(func() -> bool: return old.state == NetClient.State.REJECTED)
+	assert_bool(r1).is_true()
+	assert_str(old.reject_reason).is_equal(NetProtocol.REJECT_VERSION)
+	assert_bool(await _until(func() -> bool: return old._peer.get_ready_state() == 3)).is_true()
+	assert_int(server.game.by_id.size()).is_equal(0)
+	var cur: NetClient = _client(server, "cur")
+	assert_bool(await _until(cur.is_welcomed)).is_true()
+	assert_int(server.game.by_id.size()).is_equal(1)
 
 
 # FT: FT-NET-006, FT-NET-007, FT-NET-011
@@ -282,7 +311,7 @@ func test_stalled_reader_gets_one_full_snapshot_and_every_event() -> void:
 	assert_bool(await _until(func() -> bool: return slow.stats["fulls"] > fulls_before)).is_true()
 	await _wait(500)
 	assert_int(slow.stats["fulls"]).is_equal(fulls_before + 1)
-	assert_int(slow.view.rejected).is_equal(0)
+	assert_int(slow.snap.rejected).is_equal(0)
 	var got: Array[Dictionary] = slow.take_events()
 	assert_int(_events_of(got, &"fired").size()).is_equal(fired)
 	for i: int in range(1, got.size()):
@@ -315,28 +344,28 @@ func test_oversize_snapshot_and_voice_in_chunks_behind_snapshots() -> void:
 	var session: int = c.welcome["session"]
 	var voice: Dictionary = {"clip": 7, "rate": 22050, "pcm": pcm, "part": 0, "last": true}
 	server.transport.post_voice(session, NetProtocol.encode(NetProtocol.Type.VOICE, voice))
-	server.transport.set_view(session, StationViews.key(PLAYER, "viewer"))
+	server.transport.set_stream_key(session, StationCatalogue.key(PLAYER, "viewer"))
 	assert_bool(await _until(func() -> bool: return c.stats["voice"] == 1)).is_true()
 	assert_bool(c.voice_clips[0]["pcm"] == pcm).is_true()
 	var order: PackedByteArray = c.arrivals.slice(arrived_before)
 	var voice_at: int = order.find(NetChunker.STREAM_VOICE)
 	assert_int(order.slice(0, voice_at).count(NetChunker.STREAM_SNAPSHOT)).is_greater_equal(2)
 	assert_int(c.stats["fulls"]).is_equal(2)
-	assert_int(c.view.rejected).is_equal(0)
+	assert_int(c.snap.rejected).is_equal(0)
 	var mine: Dictionary = _conn_of(server.transport.stats(), session)
 	assert_int(mine["ws_messages"]).is_greater(0)
 	assert_int(c._chunker.errors).is_equal(0)
 
 
 # FT: FT-NET-040
-# Each snapshot is encoded once per distinct view key, not once per client, and every
+# Each snapshot is encoded once per distinct stream key, not once per client, and every
 # client of a key gets the same bytes; different keys get different messages.
 func test_encode_once_per_view_key() -> void:
 	var server: NetServer = _server()
-	var entries: Array[String] = ["helm", "helm", "helm", "engineering", "engineering"]
+	var seats: Array[String] = ["helm", "helm", "helm", "engineering", "engineering"]
 	var clients: Array[NetClient] = []
-	for i: int in entries.size():
-		var c: NetClient = await _joined(server, "c%d" % i, entries[i])
+	for i: int in seats.size():
+		var c: NetClient = await _joined(server, "c%d" % i, seats[i])
 		c.keep_raw = true
 		clients.append(c)
 	await _wait(200)
@@ -367,7 +396,7 @@ func test_resume_by_token_and_host_secret() -> void:
 	assert_bool(await _until(c.is_welcomed)).is_true()
 	c.pick(PLAYER, "engineering")
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] >= 1)).is_true()
-	var session: NetSession = server.session.by_id[c.session_id]
+	var session: NetSession = server.game.by_id[c.session_id]
 	assert_bool(session.is_host).is_true()
 	assert_bool(c.welcome["host"]).is_true()
 	c.set_pips(SubsystemDef.Kind.ENGINES, 99)
@@ -385,12 +414,12 @@ func test_resume_by_token_and_host_secret() -> void:
 	assert_bool(c.welcome["resumed"]).is_true()
 	assert_str(c.token).is_equal(token)
 	assert_int(c.session_id).is_equal(first)
-	assert_str(c.welcome["entry"]).is_equal("engineering")
-	assert_bool(c.view.blocks.has(StationViews.Section.ENGINEERING)).is_true()
+	assert_str(c.welcome["seat"]).is_equal("engineering")
+	assert_bool(c.snap.blocks.has(StationCatalogue.Section.ENGINEERING)).is_true()
 	var guest: NetClient = _client(server, "guest")
 	guest.host_secret = "wrong"
 	assert_bool(await _until(guest.is_welcomed)).is_true()
-	assert_bool(server.session.by_id[guest.session_id].is_host).is_false()
+	assert_bool(server.game.by_id[guest.session_id].is_host).is_false()
 
 
 # FT: FT-NET-037
@@ -401,14 +430,14 @@ func test_unappliable_snapshot_gets_one_full_snapshot() -> void:
 	var c: NetClient = await _joined(server, "c", "helm")
 	await _wait(300)
 	var fulls: int = c.stats["fulls"]
-	c.view.seq -= 3
+	c.snap.seq -= 3
 	assert_bool(await _until(func() -> bool: return c.stats["fulls"] > fulls)).is_true()
 	var deltas: int = c.stats["snapshots"]
 	await _wait(500)
 	assert_int(c.stats["fulls"]).is_equal(fulls + 1)
 	assert_int(c.stats["snapshots"]).is_greater(deltas + 5)
-	assert_bool(c.view.need_full).is_false()
-	assert_int(c.view.rejected).is_greater_equal(1)
+	assert_bool(c.snap.need_full).is_false()
+	assert_int(c.snap.rejected).is_greater_equal(1)
 	assert_int(_conn_of(server.transport.stats(), c.session_id)["stalls"]).is_equal(0)
 
 
@@ -476,19 +505,19 @@ func test_lobby_requests_are_rate_limited() -> void:
 	var server: NetServer = _server()
 	var spam: NetClient = _client(server, "x".repeat(1000))
 	assert_bool(await _until(spam.is_welcomed)).is_true()
-	assert_str(server.session.by_id[spam.session_id].name).is_equal("x".repeat(32))
+	assert_str(server.game.by_id[spam.session_id].name).is_equal("x".repeat(32))
 	for i: int in 300:
 		spam.pick(PLAYER, "captain")
 		spam.release_pick()
 	var limited: Callable = func() -> int:
-		return server.session.rejections.get(CommandGate.RATE_LIMITED, 0)
+		return server.game.rejections.get(CommandGate.RATE_LIMITED, 0)
 	assert_bool(await _until(func() -> bool: return limited.call() > 300)).is_true()
 	await _wait(200)
-	assert_int(limited.call()).is_less(600 - int(ServerSession.DEFAULT_BURST) + 100)
+	assert_int(limited.call()).is_less(600 - int(NetGame.DEFAULT_BURST) + 100)
 
 
 # FT: FT-NET-037
-# A client without a view key gets no snapshots, so no stall policy: when more than
+# A client without a stream key gets no snapshots, so no stall policy: when more than
 # QUEUED_LIMIT piles up for it, the server closes it at once (code 4004); its session
 # waits for a rejoin. The loopback sockets absorb a varying amount first (#27: 6 blobs
 # once stayed under the limit), so the test keeps queueing until the close, up to 16 MB.
@@ -497,7 +526,7 @@ func test_queue_overflow_closes_a_client_without_a_view() -> void:
 	var c: NetClient = _client(server, "lobby")
 	assert_bool(await _until(c.is_welcomed)).is_true()
 	c.paused = true
-	var session: NetSession = server.session.by_id[c.session_id]
+	var session: NetSession = server.game.by_id[c.session_id]
 	var blob: PackedByteArray = PackedByteArray()
 	blob.resize(64 * 1024)
 	var sent: Array[int] = [0]
@@ -507,12 +536,12 @@ func test_queue_overflow_closes_a_client_without_a_view() -> void:
 		if code.call() == NetTransport.CLOSE_QUEUE_FULL:
 			return true
 		if code.call() == 0 and sent[0] < 256:
-			server.session.notify(session, "test_blob", {"blob": blob})
+			server.game.notify(session, "test_blob", {"blob": blob})
 			sent[0] += 1
 		return false
 	assert_bool(await _until(closed_by_overflow)).is_true()
 	assert_bool(await _until(func() -> bool: return not session.connected(), 10_000)).is_true()
-	assert_bool(server.session.by_id.has(session.id)).is_true()
+	assert_bool(server.game.by_id.has(session.id)).is_true()
 
 
 # FT: FT-NET-037
@@ -573,5 +602,5 @@ func test_idle_server_snapshots_only_with_a_pick() -> void:
 	var n0: int = c.stats["snapshots"]
 	await _wait(1000)
 	assert_int(c.stats["snapshots"] - n0).is_between(15, 34)
-	assert_int(c.view.tick).is_equal(server.world.tick)
-	assert_int(c.view.rejected).is_equal(0)
+	assert_int(c.snap.tick).is_equal(server.world.tick)
+	assert_int(c.snap.rejected).is_equal(0)

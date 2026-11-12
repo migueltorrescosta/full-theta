@@ -14,8 +14,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String) -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(seat: String) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -38,11 +38,11 @@ func test_radar_boxes_are_labelled() -> void:
 # Ping and Mark are the first two buttons of every station's Crew page; a station's own
 # requests follow them.
 func test_crew_pages_start_with_ping_and_mark() -> void:
-	for entry: String in ["science", "comms", "relay"]:
-		var s: StationScreen = await _screen(entry)
+	for seat: String in ["science", "comms", "relay"]:
+		var s: StationScreen = await _screen(seat)
 		var page: CrewPage = CrewPage.new(s.focused_panel())
 		var kinds: Array = page.entries().map(func(e: Array) -> String: return str(e[0]))
-		assert_array(kinds.slice(0, 2)).override_failure_message(entry).is_equal(["ping", "mark"])
+		assert_array(kinds.slice(0, 2)).override_failure_message(seat).is_equal(["ping", "mark"])
 		page.free()
 
 
@@ -53,28 +53,28 @@ func test_radar_legend_shows_once_and_a_tap_closes_it() -> void:
 	var host: Control = auto_free(Control.new())
 	add_child(host)
 	var settings: ClientSettings = ClientSettings.new(SETTINGS)
-	var legend: ControlsChip = ControlsChip.show_radar_legend(host, settings)
+	var legend: ControlsHint = ControlsHint.show_radar_legend(host, settings)
 	assert_object(legend).is_not_null()
 	assert_str(legend.text).contains("Drift").contains("Zone").contains("mark")
-	assert_object(ControlsChip.show_radar_legend(host, settings)).is_null()
+	assert_object(ControlsHint.show_radar_legend(host, settings)).is_null()
 	legend.pressed.emit()
 	await get_tree().process_frame
 	assert_bool(is_instance_valid(legend)).is_false()
 	settings.reset_hints()
-	assert_object(ControlsChip.show_radar_legend(host, settings)).is_not_null()
+	assert_object(ControlsHint.show_radar_legend(host, settings)).is_not_null()
 	# A parent that is not on screen shows nothing and keeps the legend for later.
 	host.visible = false
 	settings.reset_hints()
-	assert_object(ControlsChip.show_radar_legend(host, settings)).is_null()
-	assert_bool(settings.hint_seen(ControlsChip.RADAR_KEY)).is_false()
+	assert_object(ControlsHint.show_radar_legend(host, settings)).is_null()
+	assert_bool(settings.hint_seen(ControlsHint.RADAR_KEY)).is_false()
 
 
 # FT: FT-STN-012
 # w5: on a first visit the controls chip, the contact-label legend and the radar legend
 # stack top down, none over another, for Science, Relay and Comms.
 func test_first_visit_chips_stack_without_overlap() -> void:
-	for entry: String in ["science", "relay", "comms"]:
-		var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	for seat: String in ["science", "relay", "comms"]:
+		var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 		ctx.settings.reset_hints()
 		var s: StationScreen = auto_free(StationScreen.new())
 		s.setup(ctx)
@@ -84,9 +84,9 @@ func test_first_visit_chips_stack_without_overlap() -> void:
 		for i: int in 4:
 			await get_tree().process_frame
 		var chips: Array[Control] = []
-		for n: String in ["ControlsChip", "ControlsLegendChip", "RadarLegend"]:
+		for n: String in ["ControlsHint", "ControlsLegendHint", "RadarLegend"]:
 			var c: Control = s.find_child(n, true, false)
-			assert_object(c).override_failure_message("%s %s" % [entry, n]).is_not_null()
+			assert_object(c).override_failure_message("%s %s" % [seat, n]).is_not_null()
 			chips.append(c)
 		for i: int in 2:
 			var upper: Rect2 = chips[i].get_global_rect()
@@ -94,7 +94,7 @@ func test_first_visit_chips_stack_without_overlap() -> void:
 			(
 				assert_float(lower.position.y)
 				. override_failure_message(
-					"%s: %s under %s" % [entry, chips[i + 1].name, chips[i].name]
+					"%s: %s under %s" % [seat, chips[i + 1].name, chips[i].name]
 				)
 				. is_greater_equal(upper.end.y)
 			)

@@ -51,5 +51,5 @@ arg = 2
 script = ExtResource("1_chips")
 id = &"chips"
 chips = Array[ExtResource("2_chip")]([SubResource("Resource_boost"), SubResource("Resource_power"), SubResource("Resource_bring_to_bear"), SubResource("Resource_sensor_power"), SubResource("Resource_scan_mark"), SubResource("Resource_fabricate_probe"), SubResource("Resource_hold_fire")])
-expiry_s = 20.0
+expiry = 20.0
 max_open = 8

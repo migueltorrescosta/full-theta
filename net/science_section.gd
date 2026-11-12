@@ -1,0 +1,203 @@
+class_name ScienceSection
+extends RefCounted
+## The SCIENCE snapshot section (StationCatalogue.BLOCKS[Section.SCIENCE], E01): what a
+## Science client draws and plays, read from a (copied) world for the ship and its
+## faction's knowledge. Pure reads; the field set is in StationCatalogue.
+##
+## Client API for the minigames (the panels use it):
+## - Scan: when `minigame` is 1, `wire` is the wireframe the player turns, `cloud` the
+##   point cloud to match, `axes` the open rotation axes (bit 0 x, 1 y, 2 z). The player
+##   sets an angle per open axis; the pose is Basis.from_euler(Vector3(ax, ay, az)) with
+##   the closed axes at 0. The client sends `science_scan_submit` {ax, ay, az}; the
+##   result arrives as the `scan_done` event (value confidence, vector.x match quality).
+## - Hack: when `minigame` is 2, nodes are numbered row * hack_cols + col; `known` is the
+##   bit mask of visible nodes, `edges[n].mask` the edge bits of node n (RIGHT 1, DOWN 2,
+##   LEFT 4, UP 8; 0 for a node not yet known); `hack_node` is where the route is,
+##   `hack_goal` the chosen subsystem's node, `trace` the bar (0..1). The client sends
+##   `science_hack_move` {node} for an adjacent node; `hack_done` or `hack_traced`
+##   ends it. Unknown nodes can still be stepped onto along a known node's edge.
+## - The open minigame started on tick `minigame_start`; its age is the snapshot tick
+##   minus that.
+
+## Most card rows (the wire format counts rows in a byte).
+const MAX_CARDS: int = 255
+
+
+static func block(world: SimWorld, ship: int) -> Dictionary:
+	var t: ScienceTable = world.science
+	var out: Dictionary = _empty()
+	out["active"] = t.active[ship] == 1
+	out["sweep_left"] = t.sweep_left[ship]
+	out["sweep_cool"] = t.sweep_cool[ship]
+	out["selected"] = t.selected[ship]
+	out["self_scanned"] = t.self_scanned[ship] >= 0
+	_preview(out, t.preview[ship])
+	if world.science_def != null:
+		_minigame(out, world, ship)
+		out["cards"] = _cards(world, ship)
+		out["hacks"] = hacks(world, world.faction_of(ship))
+	return out
+
+
+static func _empty() -> Dictionary:
+	return {
+		"active": false,
+		"sweep_left": 0.0,
+		"sweep_cool": 0.0,
+		"selected": -1,
+		"noise": 0.0,
+		"noise_range": 0.0,
+		"noise_aspect": 0.0,
+		"noise_health": 0.0,
+		"noise_flags": 0,
+		"self_scanned": false,
+		"minigame": 0,
+		"minigame_contact": -1,
+		"minigame_noise": 0.0,
+		"minigame_start": 0,
+		"minigame_probe": false,
+		"axes": 0,
+		"wire": [],
+		"cloud": [],
+		"hack_cols": 0,
+		"hack_rows": 0,
+		"hack_node": -1,
+		"hack_goal": -1,
+		"hack_sub": -1,
+		"trace": 0.0,
+		"known": 0,
+		"edges": [],
+		"cards": [],
+		"hacks": [],
+	}
+
+
+static func _preview(out: Dictionary, parts: Dictionary) -> void:
+	if parts.is_empty():
+		return
+	out["noise"] = parts["noise"]
+	out["noise_range"] = parts["range"]
+	out["noise_aspect"] = parts["aspect"]
+	out["noise_health"] = parts["health"]
+	out["noise_flags"] = (
+		(1 if parts["active"] else 0)
+		| (2 if parts["sweep"] else 0)
+		| (4 if parts["probe"] else 0)
+		| (8 if parts["mark"] else 0)
+	)
+
+
+static func _minigame(out: Dictionary, world: SimWorld, ship: int) -> void:
+	var t: ScienceTable = world.science
+	var def: ScienceDef = world.science_def
+	var kind: int = t.kind[ship]
+	out["minigame"] = kind
+	if kind == ScienceTable.Minigame.NONE:
+		return
+	out["minigame_contact"] = t.contact[ship]
+	out["minigame_noise"] = t.noise[ship]
+	out["minigame_start"] = t.start_tick[ship]
+	out["minigame_probe"] = t.probe[ship] == 1
+	if kind == ScienceTable.Minigame.SCAN:
+		out["axes"] = t.axes[ship]
+		out["wire"] = _points(ScanPuzzle.wire(def, t.puzzle_seed[ship]))
+		out["cloud"] = _points(
+			ScanPuzzle.cloud(def, t.puzzle_seed[ship], t.noise[ship], t.axes[ship])
+		)
+	elif kind == ScienceTable.Minigame.HACK:
+		var goal: int = HackPuzzle.goal(def, t.subsystem[ship])
+		var edges: PackedByteArray = HackPuzzle.edges(def, t.puzzle_seed[ship], goal)
+		var known: int = t.known[ship]
+		var rows: Array = []
+		for n: int in edges.size():
+			rows.append({"mask": edges[n] if (known >> n) & 1 == 1 else 0})
+		out["hack_cols"] = def.hack_cols
+		out["hack_rows"] = def.hack_rows
+		out["hack_node"] = t.node[ship]
+		out["hack_goal"] = goal
+		out["hack_sub"] = t.subsystem[ship]
+		out["trace"] = t.trace[ship]
+		out["known"] = known
+		out["edges"] = rows
+
+
+static func _points(points: PackedVector3Array) -> Array:
+	return Array(points).map(func(p: Vector3) -> Dictionary: return {"p": p})
+
+
+## One card per contact the faction detects or has scanned (FT-SCI-001, FT-SCI-002):
+## detection confidence for the icon size, the scan confidence, the revealed-parts mask
+## (BlockSchema.SCIENCE_REVEALED) and each part's value only once revealed (class id,
+## intent as AI mode + 1, weak-point subsystem mask, resistances), 0 or empty before.
+static func _cards(world: SimWorld, ship: int) -> Array:
+	var faction: int = world.faction_of(ship)
+	var k: KnowledgeTable = world.knowledge
+	var rows: Array = []
+	for r: int in k.size():
+		if k.owner_faction[r] != faction or not (k.detected[r] == 1 or k.scan_conf[r] > 0.0):
+			continue
+		if rows.size() >= MAX_CARDS:
+			break
+		var contact: int = k.subject_ship[r]
+		var card: Dictionary = {
+			"contact": contact,
+			"detect": ScienceKnowledge.detection_confidence(world, faction, contact),
+			"scan": k.scan_conf[r],
+			"revealed": revealed_mask(world, faction, contact),
+			"class_id": 0,
+			"intent": 0,
+			"weak_mask": 0,
+			"resist": [],
+		}
+		if ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.CLASS):
+			card["class_id"] = BlockSchema.id_code(world.defs[contact].id)
+		if ScienceKnowledge.revealed(world, faction, contact, ScienceKnowledge.INTENT):
+			card["intent"] = 1 + world.ai.mode[contact] if world.ai.enabled[contact] == 1 else 1
+		card.merge(revealed_traits(world, faction, contact), true)
+		rows.append(card)
+	return rows
+
+
+## The parts of the contact revealed to the faction: bit i for
+## BlockSchema.SCIENCE_REVEALED[i] (ScienceKnowledge.revealed, own ships included).
+static func revealed_mask(world: SimWorld, faction: int, contact: int) -> int:
+	var mask: int = 0
+	for i: int in BlockSchema.SCIENCE_REVEALED.size():
+		if ScienceKnowledge.revealed(world, faction, contact, BlockSchema.SCIENCE_REVEALED[i]):
+			mask |= 1 << i
+	return mask
+
+
+## The contact's weak-point subsystem mask and resistances (`weak_mask`, `resist`: rows of
+## {type, factor}) as far as the faction's scans revealed them; 0 and [] before.
+static func revealed_traits(world: SimWorld, faction: int, contact: int) -> Dictionary:
+	var mask: int = 0
+	for i: int in ScienceKnowledge.weak_points(world, faction, contact):
+		mask |= 1 << i
+	var resist: Array = []
+	var factors: Dictionary[StringName, float] = ScienceKnowledge.resistances(
+		world, faction, contact
+	)
+	for type: StringName in factors:
+		resist.append({"type": BlockSchema.id_code(type), "factor": factors[type]})
+	return {"weak_mask": mask, "resist": resist}
+
+
+## The faction's open hack windows (P7: the hack-window timer Weapons sees).
+static func hacks(world: SimWorld, faction: int) -> Array:
+	var h: HackTable = world.hacks
+	var rows: Array = []
+	for r: int in h.size():
+		if h.owner_faction[r] == faction and rows.size() < MAX_CARDS:
+			(
+				rows
+				. append(
+					{
+						"subject": h.subject_ship[r],
+						"sub": h.subsystem[r],
+						"left": maxf(0.0, (h.until_tick[r] - world.tick) * SimWorld.DT),
+						"by": h.owner_ship[r],
+					}
+				)
+			)
+	return rows

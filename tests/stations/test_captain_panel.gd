@@ -23,7 +23,7 @@ func after_test() -> void:
 
 
 func _screen() -> StationScreen:
-	var ctx: StationContext = StationFixture.context(StationViews.CAPTAIN, SETTINGS)
+	var ctx: StationContext = StationFixture.context(StationCatalogue.CAPTAIN, SETTINGS)
 	CommsFixture.install(ctx)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
@@ -49,32 +49,32 @@ func test_mirror_buttons_chips_and_cards() -> void:
 	assert_int(cap.buttons.size()).is_equal(5)
 	(
 		assert_array(cap.buttons.map(func(b: Button) -> String: return b.text))
-		. is_equal(["Forward", "Chase", "Tactical", "Target", "Status"])
+		. is_equal(["Forward", "Chase", "Tactical", "Close-up", "Status"])
 	)
 	assert_bool(cap.buttons[0].button_pressed).is_true()
 	# Read-only lists: no chip before the CHIPS block, and the mission and the contract of the
 	# COMMS block (the offer and the hail are Comms' own).
 	assert_int(cap.chips.rows.size()).is_equal(0)
-	assert_int(CardList.rows(s.ctx.view, [CardList.MISSION, CardList.CONTRACT]).size()).is_equal(2)
+	assert_int(CardList.rows(s.ctx.snap, [CardList.MISSION, CardList.CONTRACT]).size()).is_equal(2)
 	assert_int(cap.cards.card_at(Vector2(10.0, CardList.HEADER_HEIGHT + 5.0))).is_equal(0)
 	assert_int(cap.cards.card_at(Vector2(10.0, 2.0))).is_equal(-1)
 	# The ship's CHIPS block fills the list: the Captain sees every open chip, read-only.
-	s.ctx.view.blocks[StationViews.Section.CHIPS] = {}
+	s.ctx.snap.blocks[StationCatalogue.Section.CHIPS] = {}
 	await get_tree().process_frame
 	assert_int(cap.chips.rows.size()).is_equal(0)
-	var boost: int = ChipView.def().chips.find_custom(
+	var boost: int = ChipsReader.def().chips.find_custom(
 		func(c: ChipDef) -> bool: return c.id == &"boost"
 	)
-	var tick: int = s.ctx.view.tick
-	s.ctx.view.blocks[StationViews.Section.CHIPS] = {
+	var tick: int = s.ctx.snap.tick
+	s.ctx.snap.blocks[StationCatalogue.Section.CHIPS] = {
 		"chips":
 		[
 			{
 				"id": 1,
 				"chip": boost,
 				"arg": -1,
-				"from": StationViews.CREW.find("helm"),
-				"to": StationViews.CREW.find("engineering"),
+				"from": StationCatalogue.CREW.find("helm"),
+				"to": StationCatalogue.CREW.find("engineering"),
 				"sent": tick,
 				"expires": tick + 8 * SimWorld.HZ,
 			}
@@ -91,7 +91,9 @@ func test_mirror_buttons_chips_and_cards() -> void:
 	assert_float(cap.chips.custom_minimum_size.y).is_equal(
 		ChipList.HEADER_HEIGHT + ChipList.ROW_HEIGHT
 	)
-	assert_array(StationViews.STATION_SECTIONS["captain"]).contains([StationViews.Section.CHIPS])
+	assert_array(StationCatalogue.STATION_SECTIONS["captain"]).contains(
+		[StationCatalogue.Section.CHIPS]
+	)
 
 
 # FT: FT-CPT-001
@@ -114,7 +116,7 @@ func test_buttons_and_keys_send_the_main_view() -> void:
 	s.dispatch({"id": "captain_view_next", "target": "captain", "pressed": true})
 	assert_array(rec.of("set_main_view")[2][1]).is_equal([MainScreen.View.FORWARD])
 	s.dispatch({"id": "captain_view_prev", "target": "captain", "pressed": true})
-	assert_array(rec.of("set_main_view")[3][1]).is_equal([MainScreen.View.TARGET])
+	assert_array(rec.of("set_main_view")[3][1]).is_equal([MainScreen.View.CLOSE_UP])
 	await get_tree().process_frame
 	assert_bool(cap.buttons[4].button_pressed).is_true()
 

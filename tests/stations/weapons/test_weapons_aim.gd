@@ -32,17 +32,6 @@ func _aims_sent(p: WeaponsPanel) -> Array:
 	return out
 
 
-func test_turn_toward_stops_at_the_angle() -> void:
-	var to: Vector3 = Vector3(1, 0, -1).normalized()
-	assert_vector(WeaponsAim.turn_toward(Vector3.FORWARD, to, 1.0)).is_equal(to)
-	var part: Vector3 = WeaponsAim.turn_toward(Vector3.FORWARD, Vector3.RIGHT, 0.25)
-	assert_float(Vector3.FORWARD.angle_to(part)).is_equal_approx(0.25, 1e-5)
-	assert_float(part.x).is_greater(0.0)
-	# Opposite directions still turn (about an axis off `from`).
-	var back: Vector3 = WeaponsAim.turn_toward(Vector3.FORWARD, Vector3.BACK, 0.5)
-	assert_float(Vector3.FORWARD.angle_to(back)).is_equal_approx(0.5, 1e-5)
-
-
 # FT: FT-WPN-009
 func test_aim_points_send_once_when_moved() -> void:
 	var p: WeaponsPanel = _panel()
@@ -83,7 +72,7 @@ func test_readout_mount_list_and_state() -> void:
 	assert_array(WeaponsReadout.mount_rows(p)).is_equal(
 		["> 1 bow · ready · heat 15% · 380/400 · you"]
 	)
-	p.ctx.view.blocks[StationViews.Section.MOUNTS]["mounts"][0]["ammo"] = 0
+	p.ctx.snap.blocks[StationCatalogue.Section.MOUNTS]["mounts"][0]["ammo"] = 0
 	assert_str(WeaponsReadout.mount_state(p, 0)).is_equal("empty")
 	var free: WeaponsPanel = _panel(false)
 	assert_str(WeaponsReadout.mount_rows(free)[0]).ends_with("· free")

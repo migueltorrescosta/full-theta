@@ -17,7 +17,7 @@ const WIDTH: float = 200.0
 const FONT: int = 13
 
 ## "partner|focused" -> [[read-out, read-out], action intent or ""]. Every joint view
-## (StationViews.ENTRIES) has both directions.
+## (StationCatalogue.OTHER_SEATS) has both directions.
 const CARDS: Dictionary = {
 	# Drive
 	"helm|engineering": [["helm.speed", "helm.mode"], "all_stop"],
@@ -117,7 +117,7 @@ func show_for(ctx: StationContext, partner_id: String, focused: String) -> void:
 	var parts: PackedStringArray = PackedStringArray()
 	for id: String in card[0]:
 		parts.append(readout(ctx, id))
-	var t: String = "%s  %s\n%s" % [tr("station." + partner_id), parts[0], parts[1]]
+	var t: String = "%s  %s\n%s" % [tr(StationCatalogue.name_key(partner_id)), parts[0], parts[1]]
 	if text.text != t:
 		text.text = t
 	action.visible = intent != ""
@@ -127,15 +127,15 @@ func show_for(ctx: StationContext, partner_id: String, focused: String) -> void:
 
 ## One read-out's text from the view (a dash while its block hasn't come).
 static func readout(ctx: StationContext, id: String) -> String:
-	var view: NetViewState = ctx.view
-	var helm: Dictionary = view.blocks.get(StationViews.Section.HELM, {})
-	var eng: Dictionary = view.blocks.get(StationViews.Section.ENGINEERING, {})
-	var sci: Dictionary = view.blocks.get(StationViews.Section.SCIENCE, {})
-	var relay: Dictionary = view.blocks.get(StationViews.Section.RELAY, {})
-	var comms: Dictionary = view.blocks.get(StationViews.Section.COMMS, {})
+	var snap: SnapshotState = ctx.snap
+	var helm: Dictionary = snap.blocks.get(StationCatalogue.Section.HELM, {})
+	var eng: Dictionary = snap.blocks.get(StationCatalogue.Section.ENGINEERING, {})
+	var sci: Dictionary = snap.blocks.get(StationCatalogue.Section.SCIENCE, {})
+	var relay: Dictionary = snap.blocks.get(StationCatalogue.Section.RELAY, {})
+	var comms: Dictionary = snap.blocks.get(StationCatalogue.Section.COMMS, {})
 	match id:
 		"helm.speed":
-			var v: Vector3i = view.kin.get("vel", Vector3i.ZERO)
+			var v: Vector3i = snap.kin.get("vel", Vector3i.ZERO)
 			return "%d m/s" % roundi((Vector3(v) / NetCodec.VEL_Q).length())
 		"helm.mode":
 			return _helm_mode(ctx, helm)
@@ -153,7 +153,7 @@ static func readout(ctx: StationContext, id: String) -> String:
 		"eng.boost":
 			var ticks: int = int(eng.get("boost_ticks", 0))
 			if ticks > 0:
-				return _t("glance.boost_on", "Boost %d s") % ceili(float(ticks) / ChipView.HZ)
+				return _t("glance.boost_on", "Boost %d s") % ceili(float(ticks) / ChipsReader.HZ)
 			return _t("glance.boost_ready", "Boost ready")
 		"eng.faults":
 			var n: int = 0
@@ -168,7 +168,7 @@ static func readout(ctx: StationContext, id: String) -> String:
 				return _t("glance.probe_build", "Probe in %d s") % ceili(left)
 			return _t("glance.probe_idle", "No probe building")
 		"weapons.ready", "weapons.heat":
-			return _mounts(view, id == "weapons.heat")
+			return _mounts(snap, id == "weapons.heat")
 		"weapons.target", "science.weak":
 			return _selection(ctx, sci, id == "science.weak")
 		"science.scan":
@@ -207,13 +207,13 @@ static func _t(key: String, fallback: String) -> String:
 
 
 static func _helm_mode(ctx: StationContext, helm: Dictionary) -> String:
-	var target: String = ctx.view.callsign(int(helm.get("target_ship", -1)))
+	var target: String = ctx.snap.callsign(int(helm.get("sel_contact", -1)))
 	if bool(helm.get("all_stop", false)):
 		return _t("glance.all_stop", "All stop")
 	if int(helm.get("docked_site", -1)) >= 0:
 		return _t("glance.docked", "Docked: %s") % ctx.site_name(int(helm["docked_site"]))
 	if int(helm.get("jump_left", 0)) > 0:
-		return _t("glance.jump", "Jump in %d s") % ceili(float(helm["jump_left"]) / ChipView.HZ)
+		return _t("glance.jump", "Jump in %d s") % ceili(float(helm["jump_left"]) / ChipsReader.HZ)
 	if bool(helm.get("approach", false)):
 		return _t("glance.approach", "Approach %s") % target
 	if bool(helm.get("face", false)):
@@ -236,8 +236,8 @@ static func _pips(
 
 
 ## Mounts ready to fire ("2/3 ready"), or the hottest mount's heat.
-static func _mounts(view: NetViewState, heat: bool) -> String:
-	var rows: Array = view.blocks.get(StationViews.Section.MOUNTS, {}).get("mounts", [])
+static func _mounts(snap: SnapshotState, heat: bool) -> String:
+	var rows: Array = snap.blocks.get(StationCatalogue.Section.MOUNTS, {}).get("mounts", [])
 	var ready: int = 0
 	var hottest: float = 0.0
 	for m: Dictionary in rows:
@@ -257,7 +257,7 @@ static func _selection(ctx: StationContext, sci: Dictionary, weak: bool) -> Stri
 		return tr_none()
 	var id: int = int(sel["id"])
 	if not weak:
-		return _t("glance.target", "Target %s") % ctx.view.callsign(id)
+		return _t("glance.target", "Target %s") % ctx.snap.callsign(id)
 	for c: Dictionary in sci.get("cards", []):
 		if int(c["contact"]) == id:
 			var mask: int = int(c.get("weak_mask", 0))
@@ -269,13 +269,13 @@ static func _selection(ctx: StationContext, sci: Dictionary, weak: bool) -> Stri
 	return _t("glance.weak", "Weak points %d") % 0
 
 
-## Science's session, else the selected contact's scan.
+## Science's minigame, else the selected contact's scan.
 static func _scan(ctx: StationContext, sci: Dictionary) -> String:
-	var session: int = int(sci.get("session", 0))
-	var target: String = ctx.view.callsign(int(sci.get("session_target", -1)))
-	if session == 1 or session == 3:
+	var minigame: int = int(sci.get("minigame", 0))
+	var target: String = ctx.snap.callsign(int(sci.get("minigame_contact", -1)))
+	if minigame == 1 or minigame == 3:
 		return _t("glance.scanning", "Scanning %s") % target
-	if session == 2:
+	if minigame == 2:
 		return _t("glance.hacking", "Hacking %s") % target
 	var sel: Dictionary = ctx.crew.selection
 	if sel.get("kind", "") != "contact":
@@ -284,9 +284,9 @@ static func _scan(ctx: StationContext, sci: Dictionary) -> String:
 		if int(c["contact"]) == int(sel["id"]):
 			return (
 				_t("glance.scan", "Scan %s %d %%")
-				% [ctx.view.callsign(int(sel["id"])), roundi(100.0 * float(c.get("scan", 0.0)))]
+				% [ctx.snap.callsign(int(sel["id"])), roundi(100.0 * float(c.get("scan", 0.0)))]
 			)
-	return _t("glance.scan", "Scan %s %d %%") % [ctx.view.callsign(int(sel["id"])), 0]
+	return _t("glance.scan", "Scan %s %d %%") % [ctx.snap.callsign(int(sel["id"])), 0]
 
 
 static func tr_none() -> String:

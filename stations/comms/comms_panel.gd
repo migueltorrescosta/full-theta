@@ -231,13 +231,13 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	refresh()
-	ControlsChip.show_radar_legend(self, ctx.settings)
+	ControlsHint.show_radar_legend(self, ctx.settings)
 	phone.place()
 
 
 ## Pushes the COMMS block into the widgets: every frame when it changed (tests call it).
 func refresh(force: bool = false) -> void:
-	var blk: Dictionary = CommsData.block(ctx.view)
+	var blk: Dictionary = CommsData.block(ctx.snap)
 	var names: Dictionary = CommsData.claimers(ctx.crew, blk.get("cards", []))
 	var changed: bool = force or not is_same(blk, _block_ref) or names != board.claim_names
 	_block_ref = blk
@@ -252,7 +252,7 @@ func refresh(force: bool = false) -> void:
 			else:
 				_show_overlay(overlay.card_id)
 	list.set_heading(tr("station.comms"))
-	list.setup(CardList.rows(ctx.view))
+	list.setup(CardList.rows(ctx.snap))
 	if docked and not is_equal_approx(_list_h, list.custom_minimum_size.y):
 		_list_h = list.custom_minimum_size.y
 		update_minimum_size()
@@ -296,7 +296,7 @@ func _refresh_rep(blk: Dictionary) -> void:
 
 
 func _show_overlay(id: int) -> void:
-	overlay.holder = ctx.crew.claimer("%s:%d" % [StationViews.CLAIM_NPC, id])
+	overlay.holder = ctx.crew.claimer("%s:%d" % [StationCatalogue.CLAIM_NPC, id])
 	overlay.own_name = ctx.settings.player_name
 	overlay.ship_name = ctx.crew.ship_name()
 	overlay.show_card(block(), id)
@@ -306,7 +306,7 @@ func _refresh_buttons() -> void:
 	var card: Dictionary = current_card()
 	var live: bool = not card.is_empty() and CardList.is_live(card)
 	var open_state: bool = not card.is_empty() and int(card["state"]) == CardList.STATE_OPEN
-	(_buttons["hail"] as Button).disabled = hail_target() < 0
+	(_buttons["hail"] as Button).disabled = hail_contact() < 0
 	# An information card has nothing to accept (Q23): its Accept button is hidden.
 	var info: bool = not card.is_empty() and int(card["kind"]) == CardList.INFO
 	(_buttons["accept"] as Button).visible = not info
@@ -412,33 +412,33 @@ func current_card() -> Dictionary:
 
 
 func block() -> Dictionary:
-	return CommsData.block(ctx.view)
+	return CommsData.block(ctx.snap)
 
 
 ## The contact H hails and hold fire names: the shared selection if it is a contact, else
-## the target of the card the keys act on, else -1.
-func hail_target() -> int:
+## the subject of the card the keys act on, else -1.
+func hail_contact() -> int:
 	var s: Dictionary = ctx.crew.selection
 	if s.get("kind", "") == "contact":
 		return int(s["id"])
-	var t: int = int(current_card().get("target", -1))
+	var t: int = int(current_card().get("subject", -1))
 	return t if t in ctx.interp.contact_ids() else -1
 
 
 func chip_arg(_chip: ChipDef) -> int:
-	return hail_target()
+	return hail_contact()
 
 
 ## "Hold fire on H2": the chip names the contact it is about.
 func chip_label(chip: ChipDef) -> String:
-	var t: int = hail_target()
-	var who: String = ctx.view.callsign(t) if t >= 0 else ""
-	return ChipView.label({"chip": String(chip.id), "arg": t}, who)
+	var t: int = hail_contact()
+	var who: String = ctx.snap.callsign(t) if t >= 0 else ""
+	return ChipsReader.label({"chip": String(chip.id), "arg": t}, who)
 
 
 ## Hold fire needs a contact to name.
 func send_chip(chip: ChipDef) -> void:
-	if hail_target() < 0:
+	if hail_contact() < 0:
 		ctx.crew.toast.emit("toast.select_first", {})
 		return
 	super(chip)
@@ -448,7 +448,7 @@ func claim_item() -> String:
 	var card: Dictionary = current_card()
 	if card.is_empty() or not bool(card.get("conv", false)):
 		return ""
-	return "%s:%d" % [StationViews.CLAIM_NPC, int(card["id"])]
+	return "%s:%d" % [StationCatalogue.CLAIM_NPC, int(card["id"])]
 
 
 # --- Doing. ---
@@ -476,11 +476,11 @@ func close_overlay() -> bool:
 
 
 func _hail() -> void:
-	var t: int = hail_target()
+	var t: int = hail_contact()
 	if t < 0:
 		ctx.crew.toast.emit("toast.select_first", {})
 		return
-	ctx.intents.command({"kind": "comms_hail", "target": t})
+	ctx.intents.command({"kind": "comms_hail", "contact": t})
 
 
 ## Accepts or declines the card the keys act on; an unanswered hail is answered instead of
@@ -711,7 +711,7 @@ func item_at(screen_pos: Vector2) -> Dictionary:
 		card = CommsData.card(
 			block(), board.card_at(screen_pos - (board.global_position - global_position))
 		)
-	var t: int = int(card.get("target", -1))
+	var t: int = int(card.get("subject", -1))
 	if t < 0 or t not in ctx.interp.contact_ids():
 		return {}
 	return {"kind": "contact", "id": t}

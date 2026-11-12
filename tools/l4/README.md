@@ -42,17 +42,17 @@ The log has one JSON object per line, each with `ms` since the start and `ev`: `
 
 One step per line: `verb key=value ...`; `#` starts a comment. `$RUN` is the run folder, `$NAME` the client name, and `--set K=V` defines `$K` (`run.sh` sets `$GRACE` and `$PORT`). Values are ints, floats (`1.0`: commands need the decimal point), `true`/`false`/`null`, `"quoted strings"`, JSON arrays and objects, `Vector3(x, y, z)`, or bare strings.
 
-Matchers are `path<op>value` on a dictionary. A path is dotted keys, array indices and `size`; a name applied to an array of dictionaries maps over it (`entries.id` is every entry's id). Operators: `=` (numbers compare as numbers), `!=`, `~=` contains (array element, dictionary key, substring), `!~` does not contain, `>`, `>=`, `<`, `<=`. Every waiting step takes `timeout=S`.
+Matchers are `path<op>value` on a dictionary. A path is dotted keys, array indices and `size`; a name applied to an array of dictionaries maps over it (`seats.id` is every seat's id). Operators: `=` (numbers compare as numbers), `!=`, `~=` contains (array element, dictionary key, substring), `!~` does not contain, `>`, `>=`, `<`, `<=`. Every waiting step takes `timeout=S`.
 
 | Step | Does |
 |---|---|
 | `connect [url=] [resume=false] [expect=rejected]` | Hello with the stored token and host secret (unless `resume=false`); waits for Welcome. |
 | `reconnect`, `drop`, `bye`, `forget_token` | `NetClient.resume()`, drop without Bye, Bye, remove the token file. |
-| `pick ship= entry= [expect=ok\|REASON\|none]`, `release [expect=]` | Sends and waits for the answer: `picked`, `command_rejected` or `request_rejected`, compared by reason. |
-| `ready [value=true]`, `claim item=`, `release_claim item=`, `abandon ship=`, `vote_abandon ship= vote=`, `takeover ship= entry=` | Sends the message; check the outcome with `expect_event`. |
+| `pick ship= seat= [expect=ok\|REASON\|none]`, `release [expect=]` | Sends and waits for the answer: `picked`, `command_rejected` or `request_rejected`, compared by reason. |
+| `ready [value=true]`, `claim item=`, `release_claim item=`, `abandon ship=`, `vote_abandon ship= vote=`, `takeover ship= seat=` | Sends the message; check the outcome with `expect_event`. |
 | `command id=NAME kind=K field=value ...` | Sends a crew command; `id` names its seq for the next two. |
 | `expect_rejected id= [reason=]`, `expect_accepted id= [for=1]` | Its CommandRejected arrives (with that reason); none arrives within `for` seconds. |
-| `expect_welcome`, `expect_catalogue`, `expect_view` + matchers | Waits until the Welcome, Catalogue or snapshot view matches. The view has every `NetViewState` variable (`kin`, `blocks`, `contacts`, `tick`, ...), blocks also by name (`blocks.helm.decoupled`, `blocks.mounts.mounts.0.aim_set`), `stats` and `state`. |
+| `expect_welcome`, `expect_catalogue`, `expect_view` + matchers | Waits until the Welcome, Catalogue or snapshot view matches. The view has every `SnapshotState` variable (`kin`, `blocks`, `contacts`, `tick`, ...), blocks also by name (`blocks.helm.decoupled`, `blocks.mounts.mounts.0.aim_set`), `stats` and `state`. |
 | `expect_event type=T [keep=true]` + matchers on `{seq, tick, type, payload}` | Waits for a matching event after the cursor and moves the cursor past it. |
 | `expect_no_event type=T for=S` + matchers | No matching event after the cursor for S seconds. |
 | `expect_flowing [max_gap_ms=1000] [min_snapshots=1]` | Snapshots came since `mark`, none more than `max_gap_ms` apart. |
@@ -75,10 +75,10 @@ The runner builds the real `MainMenu` (settings, token and pid files in the run 
 | Step | Does |
 |---|---|
 | `ui_join [url=]` | Types the address into the menu and presses Join; waits for the shell. |
-| `ui_pick entry= [expect=]` | Presses the entry's button in the lobby; waits for the answer like `pick`. |
+| `ui_pick seat= [expect=]` | Presses the seat's button in the lobby; waits for the answer like `pick`. |
 | `ui_button name=N` | Waits for a visible, enabled button named N in the shell (`Start`, `Vote`, `RunAgain`) and presses it. |
 | `ui_press id=I`, `ui_hold id=I`, `ui_release id=I` | The intent's first KB/M binding pressed and released, pressed, or released, as input events into the viewport (through the screen's `InputMatcher` and routing). |
-| `ui_expect` + matchers | Waits until `L4Ui.state()` matches: `shown` (menu, lobby, station), `ship`, `entry`, `host`, `focused`, `selection`, `marks`, `claims`, `contacts`, `started`, `card` (outcome card visible), `run_over` (outcome, time_s, hull, voters, needed). |
+| `ui_expect` + matchers | Waits until `L4Ui.state()` matches: `shown` (menu, lobby, station), `ship`, `seat`, `host`, `focused`, `selection`, `marks`, `claims`, `contacts`, `started`, `card` (outcome card visible), `ship_outcome` (outcome, time, hull, voters, needed). |
 
 ## Load gate (`l4load`, #11)
 
@@ -95,7 +95,7 @@ taskset -c 0,1 godot --headless --path . -s res://tools/l4/sim_profile.gd -- --w
 | `load.sh` | Starts the server (`--load-ships 6 --load-world N --probe-out`) on `L4_CPUS` (0,1), 8 `load_client.gd` processes of 8 connections on `L4_LOAD_CLIENT_CPUS` (4,5,12,13), and once every seat has picked and every ship has started, a 65th connection. Samples load average, the server cores' `scaling_cur_freq` and loopback counters each second (`host.tsv`), and profiles the sim alone on the same cores first (`sim_profile.txt`). Logs and `summary.md` in `build/l4load/<run>/`. |
 | `load_client.gd` | One process, several `NetClient`s, seats from `LoadSeats`; each ship's Helm presses Start until a `started` event names its ship; once its ship has started, Helm steers every 0.5 s and Weapons fires every second; every snapshot's seq and arrival time is logged. `--full-probe`: one connection that must get `session_full`. |
 | `load_seats.gd` | The seat plan: 36 crew, 6 Captains, 22 viewers. |
-| `load_check.py` | Reads the server probe and client logs: tick (mean, p99, per tick, per part, schedstat; real time and all 6 ships started), net-thread costs per snapshot and section, encodes per view key, snapshot age and receipt gaps (every client fed, no negative age), bytes per client and entry, stalls, the seat plan, connection 65. Exits 1 on a missed budget or check unless `--report-only`. |
+| `load_check.py` | Reads the server probe and client logs: tick (mean, p99, per tick, per part, schedstat; real time and all 6 ships started), net-thread costs per snapshot and section, encodes per stream key, snapshot age and receipt gaps (every client fed, no negative age), bytes per client and seat, stalls, the seat plan, connection 65. Exits 1 on a missed budget or check unless `--report-only`. |
 | `sim_profile.gd` | `SimWorld.step`'s phases and the capture on the same world, without sockets. |
 
 Server side (refused in a release build unless `FT_DEV` is set): `net/load_probe.gd` (`LoadProbe`: window, frame timings) and `NetTransport.probe` (per-snapshot costs, capture stamps, bytes per connection each second); `NetClient.log_snapshots`.

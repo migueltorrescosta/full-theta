@@ -19,7 +19,7 @@ func _set_page() -> void:
 	for n: Node in find_children("*", "StationScreen", true, false):
 		var s: StationScreen = n
 		if chip:
-			s.ctx.view.blocks[StationViews.Section.CHIPS] = {"chips": [_chip_row(s)]}
+			s.ctx.snap.blocks[StationCatalogue.Section.CHIPS] = {"chips": [_chip_row(s)]}
 		var p: StationPanel = s.focused_panel()
 		if p.pages != null:
 			p.pages.current = page
@@ -32,7 +32,7 @@ func _set_page() -> void:
 
 ## An open request chip from another station to the focused one.
 func _chip_row(s: StationScreen) -> Dictionary:
-	var chips: Array[ChipDef] = ChipView.def().chips
+	var chips: Array[ChipDef] = ChipsReader.def().chips
 	var to: String = s.focused_station()
 	for i: int in chips.size():
 		if String(chips[i].to_station) == to:
@@ -40,8 +40,8 @@ func _chip_row(s: StationScreen) -> Dictionary:
 				"id": 5,
 				"chip": i,
 				"arg": -1,
-				"from": StationViews.CREW.find(String(chips[i].from_station)),
-				"to": StationViews.CREW.find(to),
+				"from": StationCatalogue.CREW.find(String(chips[i].from_station)),
+				"to": StationCatalogue.CREW.find(to),
 				"sent": StationFixture.TICK - 240,
 				"expires": StationFixture.TICK + 1080,
 			}

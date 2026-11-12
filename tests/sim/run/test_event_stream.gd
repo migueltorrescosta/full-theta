@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## T036: the event stream (FT-SIM-030, FT-SIM-031). A scripted M1
 ## encounter: the scripted crew on the corvette (ship 0) fights the raider (ship 1,
-## with retreat switched off in a test copy of its EnemyDef so the fight ends in a
+## with retreat switched off in a test copy of its NpcDef so the fight ends in a
 ## destruction), and Engineering boosts twice back to back (a heat fault). A crewed
 ## wingman (ship 2, faction 1) coasts toward the corvette from 400 m ahead, 20 m
 ## off its line of fire: it crosses the corvette's shots (friendly-fire warning, hits)
@@ -19,8 +19,8 @@ const KINDS: Array[StringName] = [
 ]
 
 
-func _enemy() -> EnemyDef:
-	var enemy: EnemyDef = TestDefs.raider_enemy().duplicate()
+func _enemy() -> NpcDef:
+	var enemy: NpcDef = TestDefs.raider_enemy().duplicate()
 	enemy.retreat_hull_fraction = 0.0
 	return enemy
 
@@ -42,7 +42,7 @@ func test_events_are_tick_stamped_and_keyed() -> void:
 	var wing: int = world.spawn_ship(
 		TestDefs.corvette(),
 		M1Encounter.PLAYER_FACTION,
-		Vector3(20, 0, -400),
+		CubePoint.make(20, 0, -400),
 		Quaternion.IDENTITY,
 		Vector3(0, 0, 20)
 	)
@@ -52,7 +52,7 @@ func test_events_are_tick_stamped_and_keyed() -> void:
 	var crew: ScriptedCrew = ScriptedCrew.new()
 	var seen: Dictionary[StringName, Array] = {}
 	var last_tick: int = -1
-	while not OutcomeSystem.session_outcome(world).over() and world.tick < 180 * HZ:
+	while not OutcomeSystem.game_outcome(world).over() and world.tick < 180 * HZ:
 		var tick: int = world.tick
 		if tick == 1 or tick == 1 + 8 * HZ:
 			_boost(world)
@@ -69,9 +69,7 @@ func test_events_are_tick_stamped_and_keyed() -> void:
 			if not seen.has(e.kind):
 				seen[e.kind] = []
 			seen[e.kind].append(e)
-	assert_int(OutcomeSystem.session_outcome(world).reason).is_equal(
-		SessionOutcome.Reason.OBJECTIVE
-	)
+	assert_int(OutcomeSystem.game_outcome(world).reason).is_equal(GameOutcome.Reason.OBJECTIVE)
 	for kind: StringName in KINDS:
 		assert_bool(seen.has(kind)).override_failure_message("no %s" % kind).is_true()
 	if is_failure():

@@ -39,7 +39,7 @@ var render_3d: String = "auto"
 var fps_cap: bool = false
 ## Low Graphics tier (E2): ships drawn without the plating and normal maps.
 var low_graphics: bool = false
-## Hint key -> true once its first-visit hint showed: a station's Controls chip (D292), the
+## Hint key -> true once its first-visit hint showed: a station's Controls hint (D292), the
 ## tab hint, the turn-sideways banner. Saved under the old key "tooltips_seen".
 var hints_seen: Dictionary = {}
 ## Not saved: the browser test hooks (?pick=) set it so the first-visit Controls menu never
@@ -56,7 +56,7 @@ var bindings: Bindings = Bindings.new()
 ## The station lessons completed on this device (D303, TrainingPicker): station ids.
 var lessons_done: Dictionary = {}
 ## Easy on a first launch, then whatever the host last chose.
-var host_toggles: String = StationViews.DEFAULT_TOGGLES
+var host_toggles: String = StationCatalogue.DEFAULT_TOGGLES
 
 
 func _init(file_path: String = PATH) -> void:
@@ -98,8 +98,8 @@ func load_file() -> Error:
 	lessons_done.clear()
 	for l: Variant in _value(cfg, "training", "lessons_done", []):
 		lessons_done[str(l)] = true
-	var toggles: String = _value(cfg, "lobby", "toggles", StationViews.DEFAULT_TOGGLES)
-	host_toggles = toggles if DataToggles.is_valid(toggles) else StationViews.DEFAULT_TOGGLES
+	var toggles: String = _value(cfg, "lobby", "toggles", StationCatalogue.DEFAULT_TOGGLES)
+	host_toggles = toggles if DataToggles.is_valid(toggles) else StationCatalogue.DEFAULT_TOGGLES
 	return OK
 
 

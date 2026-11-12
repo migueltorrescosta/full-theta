@@ -22,7 +22,7 @@ func _allies() -> Array:
 	var server: NetServer = h.server()
 	var w: SimWorld = server.world
 	w.ai.enabled[ALLY] = 0
-	w.kin.factions[ALLY] = w.faction_of(PLAYER)
+	w.kin.owner_faction[ALLY] = w.faction_of(PLAYER)
 	var sender: NetClient = await h.joined(server, "sender", "ops", PLAYER)
 	var receiver: NetClient = await h.joined(server, "receiver", "ops", ALLY)
 	var bystander: NetClient = await h.joined(server, "bystander", "tactical", ALLY)
@@ -78,7 +78,7 @@ func test_sent_mark_waits_in_the_receiving_relay_inbox() -> void:
 		)
 	assert_array(h.events_of(bystander, NetProtocol.EVENT_MARKS).slice(by_from)).is_empty()
 	assert_array(h.events_of(receiver, NetProtocol.EVENT_MARKS).slice(from)).is_empty()
-	assert_int(a[0].session.crew.marks.marks_of(ALLY).size()).is_equal(0)
+	assert_int(a[0].game.crew.marks.marks_of(ALLY).size()).is_equal(0)
 	# Only a Relay accepts.
 	var why_from: int = h.mark(bystander)
 	bystander.accept_mark(item["id"])
@@ -90,8 +90,8 @@ func test_sent_mark_waits_in_the_receiving_relay_inbox() -> void:
 	var marks: Dictionary = await h.next_event(bystander, NetProtocol.EVENT_MARKS, by_from)
 	assert_str(marks["payload"]["marks"][0]["name"]).is_equal("Rock")
 	assert_float(marks["payload"]["marks"][0]["z"]).is_equal(3.0)
-	assert_int(a[0].session.crew.marks.marks_of(PLAYER).size()).is_equal(1)
-	assert_array(a[0].session.crew.relay.inbox_of(ALLY)).is_empty()
+	assert_int(a[0].game.crew.marks.marks_of(PLAYER).size()).is_equal(1)
+	assert_array(a[0].game.crew.relay.inbox_of(ALLY)).is_empty()
 	# Declined: discarded.
 	from = h.mark(receiver)
 	sender.send_mark(0, ALLY)
@@ -102,8 +102,8 @@ func test_sent_mark_waits_in_the_receiving_relay_inbox() -> void:
 		func(e: Dictionary) -> bool: return not e["payload"]["items"].is_empty()
 	)
 	receiver.decline_mark(inbox["payload"]["items"][0]["id"])
-	await h.until(func() -> bool: return a[0].session.crew.relay.inbox_of(ALLY).is_empty())
-	assert_int(a[0].session.crew.marks.marks_of(ALLY).size()).is_equal(1)
+	await h.until(func() -> bool: return a[0].game.crew.relay.inbox_of(ALLY).is_empty())
+	assert_int(a[0].game.crew.marks.marks_of(ALLY).size()).is_equal(1)
 
 
 # FT: FT-RLY-008, FT-RLY-009, FT-SPA-022
@@ -117,10 +117,10 @@ func test_accepting_at_eight_marks_replaces_and_send_rules() -> void:
 	var own: NetClient = a[4]
 	for k: int in CrewMarks.SLOTS:
 		receiver.place_mark(-1, "", -1, Vector3(10.0 * k, 0.0, 0.0))
-	await h.until(func() -> bool: return server.session.crew.marks.marks_of(ALLY).size() == 8)
+	await h.until(func() -> bool: return server.game.crew.marks.marks_of(ALLY).size() == 8)
 	var from: int = h.mark(receiver)
 	sender.place_mark(-1, "Rock", -1, Vector3(9.0, 0.0, 0.0))
-	await h.until(func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 1)
+	await h.until(func() -> bool: return server.game.crew.marks.marks_of(PLAYER).size() == 1)
 	sender.send_mark(0, ALLY)
 	var inbox: Dictionary = await h.next_event(
 		receiver,
@@ -133,10 +133,10 @@ func test_accepting_at_eight_marks_replaces_and_send_rules() -> void:
 	receiver.accept_mark(id, -1)
 	var why: Dictionary = await _rejected(receiver, NetProtocol.Type.MARK_ACCEPT, from)
 	assert_str(why.get("reason", "")).is_equal(CrewMarks.MARKS_FULL)
-	assert_int(server.session.crew.relay.inbox_of(ALLY).size()).is_equal(1)
+	assert_int(server.game.crew.relay.inbox_of(ALLY).size()).is_equal(1)
 	receiver.accept_mark(id, 4)
-	await h.until(func() -> bool: return server.session.crew.relay.inbox_of(ALLY).is_empty())
-	var marks: Array = server.session.crew.marks.marks_of(ALLY)
+	await h.until(func() -> bool: return server.game.crew.relay.inbox_of(ALLY).is_empty())
+	var marks: Array = server.game.crew.marks.marks_of(ALLY)
 	assert_int(marks.size()).is_equal(8)
 	assert_str(marks[4]["name"]).is_equal("Rock")
 	# Not a Relay; not allied; no such mark.
@@ -148,12 +148,12 @@ func test_accepting_at_eight_marks_replaces_and_send_rules() -> void:
 	sender.send_mark(0, PLAYER)
 	why = await _rejected(sender, NetProtocol.Type.MARK_SEND, from)
 	assert_str(why.get("reason", "")).is_equal(CrewRelay.BAD_TARGET)
-	server.world.kin.factions[ALLY] = 9
+	server.world.kin.owner_faction[ALLY] = 9
 	from = h.mark(sender)
 	sender.send_mark(0, ALLY)
 	why = await _rejected(sender, NetProtocol.Type.MARK_SEND, from)
 	assert_str(why.get("reason", "")).is_equal(CrewRelay.BAD_TARGET)
-	server.world.kin.factions[ALLY] = server.world.faction_of(PLAYER)
+	server.world.kin.owner_faction[ALLY] = server.world.faction_of(PLAYER)
 	from = h.mark(sender)
 	sender.send_mark(5, ALLY)
 	why = await _rejected(sender, NetProtocol.Type.MARK_SEND, from)
@@ -168,21 +168,21 @@ func test_lost_contact_mark_cannot_be_sent() -> void:
 	var server: NetServer = a[0]
 	var sender: NetClient = a[1]
 	var w: SimWorld = server.world
-	var foe: int = w.spawn_enemy(TestDefs.raider_enemy(), 7, Vector3(500.0, 0.0, 0.0))
+	var foe: int = w.spawn_npc(TestDefs.raider_enemy(), 7, CubePoint.make(500.0, 0.0, 0.0))
 	KnowledgeSystem.step(w)
 	var faction: int = w.faction_of(PLAYER)
 	assert_bool(KnowledgeSystem.is_detected(w, faction, foe)).is_true()
 	var from: int = h.mark(sender)
 	sender.place_mark(-1, "Foe", foe, Vector3.ZERO)
-	await h.until(func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 1)
+	await h.until(func() -> bool: return server.game.crew.marks.marks_of(PLAYER).size() == 1)
 	sender.send_mark(0, ALLY)
-	await h.until(func() -> bool: return server.session.crew.relay.inbox_of(ALLY).size() == 1)
+	await h.until(func() -> bool: return server.game.crew.relay.inbox_of(ALLY).size() == 1)
 	w.knowledge.detected[w.knowledge.row_for(faction, foe)] = 0
 	from = h.mark(sender)
 	sender.send_mark(0, ALLY)
 	var why: Dictionary = await _rejected(sender, NetProtocol.Type.MARK_SEND, from)
 	assert_str(why.get("reason", "")).is_equal(CrewRelay.LOST_CONTACT)
-	assert_int(server.session.crew.relay.inbox_of(ALLY).size()).is_equal(1)
+	assert_int(server.game.crew.relay.inbox_of(ALLY).size()).is_equal(1)
 
 
 # FT: FT-SPA-028, FT-SPA-016
@@ -193,10 +193,12 @@ func test_zones_and_probe_bubbles_can_be_pinged() -> void:
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var helm: NetClient = await h.joined(server, "helm", "tactical")
 	var w: SimWorld = server.world
-	w.probes.launch(PLAYER, w.faction_of(PLAYER), 3, Vector3.ZERO, Vector3(0.0, 0.0, -100.0))
+	w.probes.launch(
+		PLAYER, w.faction_of(PLAYER), 3, CubePoint.make(), CubePoint.make(0.0, 0.0, -100.0)
+	)
 	relay.hazard_add(2000.0, Vector3(1000.0, 0.0, -3000.0))
-	await h.until(func() -> bool: return server.session.crew.relay.zones_of(PLAYER).size() == 1)
-	var zone: int = server.session.crew.relay.zones_of(PLAYER)[0]["id"]
+	await h.until(func() -> bool: return server.game.crew.relay.zones_of(PLAYER).size() == 1)
+	var zone: int = server.game.crew.relay.zones_of(PLAYER)[0]["id"]
 	var from: int = h.mark(relay)
 	helm.ping("zone", zone, Vector3.ZERO)
 	var e: Dictionary = await h.next_event(
@@ -230,13 +232,13 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var helm: NetClient = await h.joined(server, "helm", "tactical")
 	var viewer: NetClient = await h.joined(server, "viewer", "viewer")
-	assert_bool(await h.until(func() -> bool: return not viewer.view.sites.is_empty())).is_true()
-	assert_str(viewer.view.sites[0]["name_key"]).is_equal("site.kestrel_yard")
+	assert_bool(await h.until(func() -> bool: return not viewer.snap.sites.is_empty())).is_true()
+	assert_str(viewer.snap.sites[0]["name_key"]).is_equal("site.kestrel_yard")
 	# Eight marks, and zones beyond them.
 	for k: int in CrewMarks.SLOTS:
 		relay.place_mark(-1, "", -1, Vector3(5.0 * k, 0.0, 0.0))
 	relay.hazard_add(2000.0, Vector3(1000.0, 0.0, -3000.0))
-	server.session.crew.add_scan_position(PLAYER, Vector3(5.0, 6.0, 7.0), 500.0, "science")
+	server.game.crew.add_scan_position(PLAYER, CubePoint.make(5.0, 6.0, 7.0), 500.0, "science")
 	var two: Callable = func() -> bool:
 		var z: Dictionary = h.last_event(viewer, NetProtocol.EVENT_ZONES)
 		return not z.is_empty() and z["payload"]["zones"].size() == 2
@@ -246,7 +248,7 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	assert_str(zones[0]["kind"]).is_equal("hazard")
 	assert_float(zones[0]["radius"]).is_equal(2000.0)
 	assert_str(zones[1]["kind"]).is_equal("scan")
-	assert_int(server.session.crew.marks.marks_of(PLAYER).size()).is_equal(8)
+	assert_int(server.game.crew.marks.marks_of(PLAYER).size()).is_equal(8)
 	# Only Relay changes zones and routes.
 	var from: int = h.mark(helm)
 	helm.hazard_add(1000.0, Vector3.ZERO)
@@ -266,7 +268,7 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	assert_dict(hard_zones).is_not_empty()
 	var drop: int = hard_zones["payload"]["zones"][-1]["id"]
 	relay.hazard_delete(drop)
-	await h.until(func() -> bool: return server.session.crew.relay.zones_of(PLAYER).size() == 2)
+	await h.until(func() -> bool: return server.game.crew.relay.zones_of(PLAYER).size() == 2)
 	from = h.mark(helm)
 	var relay_from: int = h.mark(relay)
 	relay.route_add(0, Vector3(0.0, 0.0, -2000.0))
@@ -294,11 +296,31 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	relay.route_add(1, Vector3(1.0, 1.0, 1.0))
 	routes = await h.next_event(helm, NetProtocol.EVENT_ROUTES, from)
 	assert_int(routes["payload"]["routes"][1].size()).is_equal(1)
-	assert_int(server.session.crew.relay.zones_of(PLAYER).size()).is_equal(2)
+	assert_int(server.game.crew.relay.zones_of(PLAYER).size()).is_equal(2)
 	relay.hazard_delete(zones[0]["id"])
-	await h.until(func() -> bool: return server.session.crew.relay.zones_of(PLAYER).size() == 1)
+	await h.until(func() -> bool: return server.game.crew.relay.zones_of(PLAYER).size() == 1)
 	relay.route_clear(0)
-	await h.until(func() -> bool: return server.session.crew.relay.routes_of(PLAYER)[0].is_empty())
+	await h.until(func() -> bool: return server.game.crew.relay.routes_of(PLAYER)[0].is_empty())
+
+
+# FT: FT-SPA-028, FT-SCI-010
+# D378 (12r-27): when a Relay op removes Science's scan position, the server clears the
+# sim's scan point with one ScienceScanPointCommand.
+func test_removing_the_scan_position_clears_the_sim_point() -> void:
+	var server: NetServer = h.server()
+	var relay: NetClient = await h.joined(server, "relay", "ops")
+	server.world.science_def = ScienceFixture.science()
+	KnowledgeSystem.step(server.world)
+	var crew: NetCrewState = server.game.crew
+	assert_bool(ScienceSystem.place_mark(server.world, PLAYER, NetHarness.ENEMY)).is_true()
+	for e: SimEvent in server.world.drain_events():
+		crew.on_sim_event(e)
+	var zones: Array = crew.relay.zones_of(PLAYER)
+	assert_int(zones.size()).is_equal(1)
+	assert_bool(server.world.science.has_scan_point(PLAYER)).is_true()
+	relay.hazard_delete(zones[0]["id"])
+	await h.until(func() -> bool: return not server.world.science.has_scan_point(PLAYER))
+	assert_int(crew.relay.zones_of(PLAYER).size()).is_equal(0)
 
 
 # FT: FT-SPA-014
@@ -332,8 +354,8 @@ func test_mark_on_a_revealed_subsystem_only() -> void:
 	why = await _rejected(relay, NetProtocol.Type.MARK, from)
 	assert_str(why.get("reason", "")).is_equal(CrewMarks.BAD_MARK)
 	relay.place_mark(-1, "Plain", enemy, Vector3.ZERO)
-	await h.until(func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 2)
-	assert_int(server.session.crew.marks.marks_of(PLAYER)[1]["sub"]).is_equal(-1)
+	await h.until(func() -> bool: return server.game.crew.marks.marks_of(PLAYER).size() == 2)
+	assert_int(server.game.crew.marks.marks_of(PLAYER)[1]["sub"]).is_equal(-1)
 
 
 # FT: FT-RLY-004, FT-RLY-006, FT-RLY-007, FT-RLY-011
@@ -364,27 +386,27 @@ func test_probe_launch_log_and_lane_warning_events() -> void:
 		. is_true()
 	)
 	var snap: Callable = func() -> bool:
-		var blk: Dictionary = relay.view.blocks.get(StationViews.Section.RELAY, {})
+		var blk: Dictionary = relay.snap.blocks.get(StationCatalogue.Section.RELAY, {})
 		return not blk.is_empty() and blk["stock"] == 2 and blk["probes"].size() == 1
 	assert_bool(await h.until(snap)).is_true()
 	# Ticks of flight: it deploys; Weapons never gets a Relay block (Engineering and
 	# Science do: fabrication seconds, probe bubbles), nor Relay's events.
 	var deployed: Callable = func() -> bool:
-		return relay.view.blocks[StationViews.Section.RELAY]["probes"][0]["deployed"]
+		return relay.snap.blocks[StationCatalogue.Section.RELAY]["probes"][0]["deployed"]
 	assert_bool(await h.until(deployed, 20000)).is_true()
-	assert_bool(tac.view.blocks.has(StationViews.Section.RELAY)).is_false()
-	assert_bool(sys.view.blocks.has(StationViews.Section.RELAY)).is_true()
+	assert_bool(tac.snap.blocks.has(StationCatalogue.Section.RELAY)).is_false()
+	assert_bool(sys.snap.blocks.has(StationCatalogue.Section.RELAY)).is_true()
 	assert_array(h.events_of(sys, "probe_launched")).is_empty()
 	# Lane flagging and its warning: a friendly in the bow mount's line.
 	var w: SimWorld = server.world
 	w.ai.enabled[NetHarness.ENEMY] = 0
-	w.kin.factions[NetHarness.ENEMY] = w.faction_of(PLAYER)
+	w.kin.owner_faction[NetHarness.ENEMY] = w.faction_of(PLAYER)
 	# The warning is a track-feed shortcut: it reaches Weapons once Relay shares (D210).
 	relay.share("track_feeds")
 	var tac_session: NetSession = h.session_of(server, tac)
 	(
 		assert_bool(
-			await h.until(func() -> bool: return tac_session.shares.has(ViewFilter.TRACK_FEEDS))
+			await h.until(func() -> bool: return tac_session.shares.has(ShortcutFilter.TRACK_FEEDS))
 		)
 		. is_true()
 	)
@@ -406,10 +428,10 @@ func test_two_relay_players_share_the_probe_launcher_by_claim() -> void:
 	var second: NetClient = await h.joined(server, "bo", "ops")
 	var id: int = h.session_of(server, first).id
 	var held: Callable = func() -> bool:
-		return second.view.ownership.get("claims", {}).get("probe", [-1])[0] == id
+		return second.snap.ownership.get("claims", {}).get("probe", [-1])[0] == id
 	assert_bool(await h.until(held)).is_true()
-	assert_str(second.view.claimer("probe")).is_equal("ana")
-	server.session.launch(PLAYER)
+	assert_str(second.snap.claimer("probe")).is_equal("ana")
+	server.game.launch(PLAYER)
 	var cmd: Dictionary = {"kind": "launch_probe", "x": 0.0, "y": 0.0, "z": -500.0}
 	var from: int = h.mark(second)
 	var seq: int = second.command(cmd)
@@ -454,7 +476,7 @@ func test_science_scan_mark_makes_a_scan_position() -> void:
 	var enemy: int = NetHarness.ENEMY
 	server.world.science_def = ScienceFixture.science()
 	KnowledgeSystem.step(server.world)
-	var crew: NetCrewState = server.session.crew
+	var crew: NetCrewState = server.game.crew
 	assert_bool(ScienceSystem.place_mark(server.world, PLAYER, enemy)).is_true()
 	for e: SimEvent in server.world.drain_events():
 		crew.on_sim_event(e)
@@ -462,10 +484,23 @@ func test_science_scan_mark_makes_a_scan_position() -> void:
 	assert_int(zones.size()).is_equal(1)
 	assert_str(zones[0]["kind"]).is_equal("scan")
 	assert_float(zones[0]["radius"]).is_equal(server.world.science_def.mark_radius)
-	assert_float(zones[0]["x"]).is_equal_approx(server.world.science.mark_x[PLAYER], 0.001)
+	assert_float(zones[0]["x"]).is_equal_approx(server.world.science.scan_x[PLAYER], 0.001)
 	assert_int(crew.marks.marks_of(PLAYER).size()).is_equal(0)
 	var again: SimEvent = SimEvent.new()
 	again.kind = &"scan_mark"
 	again.ship_id = PLAYER
 	crew.on_sim_event(again)
 	assert_int(crew.relay.zones_of(PLAYER).size()).is_equal(1)
+
+
+# FT: FT-SPA-028, FT-SIM-035
+# A scan position keeps its point 64-bit (D104, D401): one float32 cannot hold, near the
+# seam on each axis, is stored exactly.
+func test_scan_position_keeps_the_point_64_bit() -> void:
+	var server: NetServer = h.server()
+	var crew: NetCrewState = server.game.crew
+	var a: float = 0.5 * server.world.kin.period - 1000.123
+	for p: PackedFloat64Array in [CubePoint.make(a, -a, a), CubePoint.make(-a, a, -a)]:
+		assert_str(crew.add_scan_position(PLAYER, p, 500.0, "science")).is_empty()
+		var z: Dictionary = crew.relay.zones_of(PLAYER).back()
+		assert_array([z["x"], z["y"], z["z"]]).is_equal(Array(p))

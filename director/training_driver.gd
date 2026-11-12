@@ -224,7 +224,7 @@ func _say(api: ScenarioApi, line: String, stations: Array[StringName]) -> void:
 	var names: PackedStringArray = PackedStringArray()
 	for station: StringName in stations:
 		names.append(String(station))
-	api.message(line, {}, SayTarget.computer(_ship, names))
+	api.message(line, {}, LineAudience.computer(_ship, names))
 
 
 ## The station played alone, or &"" in the crew drill.

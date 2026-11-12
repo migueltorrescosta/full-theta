@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## Science on a phone (#28 follow-up, design 2.4, D287-D289): the radar between overlay
 ## rails, the persistent actions on the right, the pages Contacts, Card (the whole card, no
 ## scroll) and Crew on the left; Hack opens the screen's sheet of the target's subsystems;
-## a scan or hack replaces the tabs with the session's title and the rails with the
+## a scan or hack replaces the tabs with the minigame's title and the rails with the
 ## minigame's buttons. Every action is within 2 taps of rest (the reachability table, both
 ## ways up), every page keeps the touch rules both ways up, and a tap sends what the key
 ## sends.
@@ -36,9 +36,9 @@ func _screen(size: Vector2i, insets: Array, kind: String = "cards") -> StationSc
 	_vp.size = size
 	add_child(_vp)
 	var ctx: StationContext = StationFixture.context("science", SETTINGS)
-	for s: String in StationViews.CREW:
+	for s: String in StationCatalogue.CREW:
 		ctx.settings.mark_hint_seen(s)
-	ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(kind)
+	ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block(kind)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	_vp.add_child(s)
@@ -77,7 +77,7 @@ func _table(p: SciencePanel) -> Array:
 	return [
 		["Scan", 0, a.call("scan"), -1, 1, ["command", "science_scan"]],
 		["Hack (choose subsystem)", 0, a.call("hack"), 0, 2, ["command", "science_hack"]],
-		["Active ping", 0, a.call("ping"), -1, 1, ["command", "science_ping"]],
+		["Sensor sweep", 0, a.call("sweep"), -1, 1, ["command", "sensor_sweep"]],
 		["Scan-position mark", 0, a.call("mark"), -1, 1, ["command", "science_scan_mark"]],
 		["Passive / active", 0, a.call("mode"), -1, 1, ["command", "science_sensor_mode"]],
 		["Scan own ship", 0, a.call("self"), -1, 1, ["command", "science_self_scan"]],
@@ -186,13 +186,13 @@ func test_hack_opens_a_sheet_of_the_targets_subsystems() -> void:
 
 
 # FT: FT-STN-005, FT-SCI-004, FT-SCI-012
-# A scan replaces the tabs with "Scan H2 · n s" (pages don't change mid-session), the axis
+# A scan replaces the tabs with "Scan H2 · n s" (pages don't change mid-minigame), the axis
 # chips go left and Cancel and Submit right; taps send what Enter and Backspace send.
-func test_scan_session_title_and_buttons() -> void:
+func test_scan_minigame_title_and_buttons() -> void:
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE, "scan")
 	var p: SciencePanel = _sci(s)
-	assert_str(p.pages.session_title).starts_with("Scan H2 · ")
-	assert_bool(s.top_bar.tabs._session.is_visible_in_tree()).is_true()
+	assert_str(p.pages.minigame_title).starts_with("Scan H2 · ")
+	assert_bool(s.top_bar.tabs._minigame.is_visible_in_tree()).is_true()
 	p.pages.current = SciencePhone.PAGE_CREW
 	assert_int(p.pages.current).is_equal(SciencePhone.PAGE_CONTACTS)
 	assert_bool(p.scan_game.footer).is_false()
@@ -213,19 +213,19 @@ func test_scan_session_title_and_buttons() -> void:
 	assert_int(_cmds(s, "science_scan_submit").size()).is_equal(2)
 	PhoneReach.tap(p.phone.cancel)
 	assert_int(_cmds(s, "science_cancel").size()).is_equal(1)
-	# The session ends: the tabs come back on the page it started on.
-	s.ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block("cards")
+	# The minigame ends: the tabs come back on the page it started on.
+	s.ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block("cards")
 	await _frames(2)
-	assert_str(p.pages.session_title).is_empty()
+	assert_str(p.pages.minigame_title).is_empty()
 	assert_bool(p._list.is_visible_in_tree()).is_true()
 
 
 # FT: FT-STN-005, FT-SCI-006
-func test_hack_session_nodes_are_tap_sized_and_apart() -> void:
+func test_hack_minigame_nodes_are_tap_sized_and_apart() -> void:
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE, "hack")
 	var p: SciencePanel = _sci(s)
 	var g: HackGame = p.hack_game
-	assert_str(p.pages.session_title).starts_with("Hack H2 · ")
+	assert_str(p.pages.minigame_title).starts_with("Hack H2 · ")
 	assert_bool(p.phone.cancel.is_visible_in_tree()).is_true()
 	assert_bool(p.phone.submit.is_visible_in_tree()).is_false()
 	assert_float(g.node_centre(g.cols).y - g.node_centre(0).y).is_greater_equal(

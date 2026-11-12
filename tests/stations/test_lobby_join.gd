@@ -46,7 +46,7 @@ func test_back_to_ships_releases_the_seat_and_returns_to_ship_selection() -> voi
 	assert_bool(_button(l, "Start").visible).is_false()
 	assert_int(l.ship).is_equal(-1)
 	# The server's answer must not bring the old ship back.
-	l.ctx.crew.handle_event({"type": "picked", "payload": {"ship": -1, "entry": ""}}, 0)
+	l.ctx.crew.handle_event({"type": "picked", "payload": {"ship": -1, "seat": ""}}, 0)
 	assert_bool(entries.visible).is_false()
 	assert_int(l.ship).is_equal(-1)
 	# Choosing a ship shows its seats again.
@@ -75,8 +75,8 @@ func test_host_lobby_shows_url_address_and_qr() -> void:
 	var l: LobbyScreen = _lobby("192.168.1.20")
 	assert_str((l.find_child("JoinUrl", true, false) as Label).text).contains(URL)
 	assert_str((l.find_child("JoinDesktop", true, false) as Label).text).contains("192.168.1.20")
-	var qr: QrView = l.find_child("JoinQr", true, false)
-	assert_array(qr.modules).is_equal(QrCode.encode(URL))
+	var qr: QrCode = l.find_child("JoinQr", true, false)
+	assert_array(qr.modules).is_equal(QrEncoder.encode(URL))
 	assert_object(l.find_child("JoinLocal", true, false)).is_null()
 
 
@@ -117,8 +117,8 @@ func test_join_url_says_https_when_the_server_uses_tls() -> void:
 	add_child(l)
 	var https: String = URL.replace("http://", "https://")
 	assert_str((l.find_child("JoinUrl", true, false) as Label).text).contains(https)
-	var qr: QrView = l.find_child("JoinQr", true, false)
-	assert_array(qr.modules).is_equal(QrCode.encode(https))
+	var qr: QrCode = l.find_child("JoinQr", true, false)
+	assert_array(qr.modules).is_equal(QrEncoder.encode(https))
 
 
 # FT: FT-NET-013
@@ -133,8 +133,8 @@ func test_host_lobby_shows_the_qr_and_address_while_seats_are_open() -> void:
 	await get_tree().process_frame
 	var strip: Control = l.find_child("JoinStrip", true, false)
 	assert_bool(strip.visible).is_true()
-	var qr: QrView = l.find_child("JoinStripQr", true, false)
-	assert_array(qr.modules).is_equal(QrCode.encode(URL))
+	var qr: QrCode = l.find_child("JoinStripQr", true, false)
+	assert_array(qr.modules).is_equal(QrEncoder.encode(URL))
 	var address: Label = l.find_child("JoinStripAddress", true, false)
 	assert_str(address.text).is_equal("192.168.1.20")
 	assert_int(address.get_theme_font_size("font_size")).is_greater_equal(

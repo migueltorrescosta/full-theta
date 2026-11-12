@@ -36,7 +36,7 @@ func test_pending_until_the_ship_arrives_at_the_site() -> void:
 	var w: SimWorld = _world()
 	assert_bool(_begin(w, 1).accepted).is_true()
 	assert_int(_result(w, 0)).is_equal(EncounterTable.Result.PENDING)
-	assert_int(w.run.encounter[0]).is_equal(0)
+	assert_int(w.ships.encounter[0]).is_equal(0)
 	ApiFixture.step(w, 30)
 	assert_int(_result(w, 0)).is_equal(EncounterTable.Result.PENDING)
 	assert_int(w.encounters.start_tick[0]).is_equal(-1)
@@ -90,7 +90,7 @@ func test_one_open_encounter_per_ship() -> void:
 	assert_bool(_begin(w, 1, PackedInt32Array([0])).accepted).is_false()
 	assert_bool(_begin(w, 1, PackedInt32Array([1, 0])).accepted).is_false()
 	assert_int(w.encounters.size()).is_equal(1)
-	assert_int(w.run.encounter[1]).is_equal(-1)
+	assert_int(w.ships.encounter[1]).is_equal(-1)
 	assert_bool(_begin(w, 1, PackedInt32Array([1])).accepted).is_true()
 	assert_int(w.encounters.size()).is_equal(2)
 	# Ending the first frees ship 0 for the next.
@@ -100,8 +100,8 @@ func test_one_open_encounter_per_ship() -> void:
 	w.submit(end)
 	w.step()
 	assert_bool(end.accepted).is_true()
-	assert_int(w.run.encounter[0]).is_equal(-1)
-	assert_int(w.run.encounters_done[0]).is_equal(1)
+	assert_int(w.ships.encounter[0]).is_equal(-1)
+	assert_int(w.ships.encounters_done[0]).is_equal(1)
 	assert_bool(_begin(w, 1, PackedInt32Array([0])).accepted).is_true()
 
 
@@ -151,19 +151,19 @@ func test_a_destroyed_ship_loses_its_encounter() -> void:
 	ApiFixture.step(w, 2)
 	assert_int(_result(w, 0)).is_equal(EncounterTable.Result.LOST)
 	assert_int(w.encounters.losses_mask[0]).is_equal(1)
-	assert_int(w.run.encounter[0]).is_equal(-1)
+	assert_int(w.ships.encounter[0]).is_equal(-1)
 
 
 # FT: FT-MIS-001, FT-MIS-025
-# Q4, owner 2026-10-26: the run is won when the director closes it (CloseRunCommand), which
+# Q4, owner 2026-10-26: the run is won when the director closes it (FinishShipCommand), which
 # the sim accepts only after RunDef.min_encounters and which wins once the ship is in none.
 func test_the_run_is_won_when_the_director_closes_it_after_the_fewest_encounters() -> void:
 	var run: RunDef = ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), TIMEOUT_S, 1.0, 2, 3)
 	var w: SimWorld = ApiFixture.world(1, run)
 	for n: int in 2:
-		assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.NONE)
+		assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.NONE)
 		_begin(w, -1)
-		var close: CloseRunCommand = CloseRunCommand.new()
+		var close: FinishShipCommand = FinishShipCommand.new()
 		close.ship = 0
 		w.submit(close)
 		w.step()
@@ -175,17 +175,17 @@ func test_the_run_is_won_when_the_director_closes_it_after_the_fewest_encounters
 		w.submit(end)
 		w.step()
 	w.step()
-	assert_int(w.run.encounters_done[0]).is_equal(2)
-	assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.NONE)
-	var closing: CloseRunCommand = CloseRunCommand.new()
+	assert_int(w.ships.encounters_done[0]).is_equal(2)
+	assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.NONE)
+	var closing: FinishShipCommand = FinishShipCommand.new()
 	closing.ship = 0
 	w.submit(closing)
 	w.step()
 	w.step()
 	assert_bool(closing.accepted).is_true()
-	assert_int(w.run.closed[0]).is_equal(1)
-	assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.WIN)
-	var again: CloseRunCommand = CloseRunCommand.new()
+	assert_int(w.ships.closed[0]).is_equal(1)
+	assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.WIN)
+	var again: FinishShipCommand = FinishShipCommand.new()
 	again.ship = 0
 	w.submit(again)
 	w.step()
@@ -196,7 +196,7 @@ func test_the_run_is_won_when_the_director_closes_it_after_the_fewest_encounters
 func test_no_clear_sky_win_in_a_director_run() -> void:
 	# The M1 rule (every hostile gone wins) is off while a run is in progress.
 	var w: SimWorld = _world()
-	var enemy: int = w.spawn_enemy(TestDefs.raider_enemy(), 2, Vector3(0.0, 0.0, -5000.0))
+	var enemy: int = w.spawn_npc(TestDefs.raider_enemy(), 2, CubePoint.make(0.0, 0.0, -5000.0))
 	w.kin.alive[enemy] = 0
 	ApiFixture.step(w, 3)
-	assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.NONE)
+	assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.NONE)

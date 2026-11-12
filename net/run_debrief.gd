@@ -4,7 +4,7 @@ extends RefCounted
 ## D35, D232): what the director decided and why, how each encounter ended with ship losses
 ## and fled encounters told apart, when each station first used each core action, and the
 ## cooperative events per pair. Built on the server from the world and the sessions' own
-## counters; sent as the `debrief` notify with `run_over`, written to the session log and
+## counters; sent as the `debrief` notify with `ship_outcome`, written to the server log and
 ## read by the bot batch.
 
 var _world: SimWorld
@@ -22,8 +22,8 @@ func _init(world: SimWorld, decisions: Array, coop: CoopEvents, first_use: First
 
 
 ## The record for one crewed ship:
-## {run_s, result "win|loss|abandoned|open", encounters: [{id, scenario, site, site_name_key,
-## result, lost, fled, s}], losses, fled, decisions, first_use, coop}.
+## {time, result "win|loss|abandoned|open", encounters: [{id, scenario, site, site_name_key,
+## result, lost, fled, time}], losses, fled, decisions, first_use, coop}.
 func for_ship(ship: int) -> Dictionary:
 	var rows: Array = []
 	var losses: int = 0
@@ -38,7 +38,7 @@ func for_ship(ship: int) -> Dictionary:
 		rows.append(row)
 	return {
 		"ship": ship,
-		"run_s": _world.tick * SimWorld.DT,
+		"time": _world.tick * SimWorld.DT,
 		"result": _result(ship),
 		"encounters": rows,
 		"losses": losses,
@@ -63,7 +63,7 @@ func _row(id: int, ship: int) -> Dictionary:
 		"result": EncounterTable.Result.keys()[t.result[id]].to_lower(),
 		"lost": EncounterTable.has_bit(t.losses_mask[id], ship),
 		"fled": EncounterTable.has_bit(t.fled_mask[id], ship),
-		"s": (end - start) * SimWorld.DT,
+		"time": (end - start) * SimWorld.DT,
 	}
 
 
@@ -78,9 +78,13 @@ func _decisions_of(ship: int) -> Array:
 
 
 func _result(ship: int) -> String:
-	match _world.run.outcome[ship]:
-		RunTable.Outcome.WIN:
+	match _world.ships.ship_outcome[ship]:
+		ShipStateTable.ShipOutcome.WIN:
 			return "win"
-		RunTable.Outcome.LOSS:
-			return "abandoned" if _world.run.status[ship] == RunTable.Status.ABANDONED else "loss"
+		ShipStateTable.ShipOutcome.LOSS:
+			return (
+				"abandoned"
+				if _world.ships.status[ship] == ShipStateTable.Status.ABANDONED
+				else "loss"
+			)
 	return "open"

@@ -25,20 +25,20 @@ var host: PageHost = null
 ## The lead button, or null.
 var lead: Button = null
 
-var _session: Label = Label.new()
+var _minigame: Label = Label.new()
 var _buttons: Array[RailButton] = []
 
 
 func _init() -> void:
 	add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
-	_session.add_theme_font_size_override("font_size", FONT + 1)
-	_session.add_theme_color_override("font_color", Palette.color("text"))
-	_session.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_session.clip_text = true
-	_session.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_session.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_session.visible = false
-	add_child(_session)
+	_minigame.add_theme_font_size_override("font_size", FONT + 1)
+	_minigame.add_theme_color_override("font_color", Palette.color("text"))
+	_minigame.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_minigame.clip_text = true
+	_minigame.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_minigame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_minigame.visible = false
+	add_child(_minigame)
 
 
 ## Shows `pages` (null for none); follows its changes.
@@ -89,10 +89,10 @@ func _rebuild() -> void:
 		remove_child(b)
 		b.queue_free()
 	_buttons.clear()
-	var session: bool = host != null and host.session_title != ""
-	_session.visible = session
-	_session.text = host.session_title if session else ""
-	if host != null and not session:
+	var minigame: bool = host != null and host.minigame_title != ""
+	_minigame.visible = minigame
+	_minigame.text = host.minigame_title if minigame else ""
+	if host != null and not minigame:
 		var w: float = TAB_W_TIGHT if lead != null else TAB_W
 		for i: int in host.count():
 			var b: RailButton = RailButton.make(host.title(i) + (" •" if host.badge(i) else ""))

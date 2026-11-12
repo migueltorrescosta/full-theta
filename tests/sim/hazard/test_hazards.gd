@@ -13,7 +13,7 @@ func _def(cls: String = "zone") -> HazardDef:
 
 func _world(hazards: Array[HazardDef], at: Vector3 = Vector3.ZERO) -> SimWorld:
 	var w: SimWorld = SimWorld.new(1, "hazard")
-	w.spawn_ship(TestDefs.corvette(), 1, at)
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.of(at))
 	w.hazards = hazards
 	return w
 
@@ -22,7 +22,7 @@ func _zone(centre: Vector3, radius: float) -> HazardDef:
 	var h: HazardDef = _def()
 	h.center = centre
 	h.radius = radius
-	h.damage_w = 1e6
+	h.damage_rate = 1e6
 	h.drag = 0.1
 	return h
 
@@ -34,7 +34,7 @@ func _plane(start: Vector3, speed: float) -> HazardDef:
 	h.center = start
 	h.direction = Vector3(0.0, 0.0, 1.0)
 	h.speed = speed
-	h.hit_j = 5e6
+	h.hit_energy = 5e6
 	return h
 
 
@@ -43,7 +43,7 @@ func _hull(w: SimWorld) -> float:
 
 
 # FT: FT-RLY-001, FT-PAIR-015
-# A ship inside a zone loses hull at damage_w and speed at drag; outside it loses neither.
+# A ship inside a zone loses hull at damage_rate and speed at drag; outside it loses neither.
 func test_zone_damages_and_drags_ships_inside() -> void:
 	var w: SimWorld = _world([_zone(Vector3.ZERO, 500.0)])
 	w.kin.vel[0] = Vector3(0.0, 0.0, -100.0)
@@ -63,7 +63,7 @@ func test_zone_damages_and_drags_ships_inside() -> void:
 # A zone's damage can go to named subsystems instead of the hull, in a few chunks a second.
 func test_zone_damage_goes_to_the_named_subsystems() -> void:
 	var h: HazardDef = _zone(Vector3.ZERO, 500.0)
-	h.targets = [&"sensors"]
+	h.subsystems = [&"sensors"]
 	var w: SimWorld = _world([h])
 	var full: float = _hull(w)
 	var events: Array[SimEvent] = SimFixture.run(w, SimWorld.HZ)
@@ -116,13 +116,13 @@ func test_sphere_shell_and_ships_already_behind_are_not_hit() -> void:
 func test_ship_reset_behind_a_front_is_not_hit() -> void:
 	var w: SimWorld = _world([_plane(Vector3(0.0, 0.0, -600.0), 100.0)])
 	SimFixture.run(w, 60)
-	w.reset_ship(0, 0.0, 0.0, -2000.0)
+	w.reset_ship(0, CubePoint.make(0.0, 0.0, -2000.0))
 	var events: Array[SimEvent] = SimFixture.run(w, 10 * SimWorld.HZ)
 	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(0)
 	assert_int(w.hazard_state.crossed[0]).is_equal(1)
 	var ahead: SimWorld = _world([_plane(Vector3(0.0, 0.0, -600.0), 100.0)])
 	SimFixture.run(ahead, 60)
-	ahead.reset_ship(0, 0.0, 0.0, 300.0)
+	ahead.reset_ship(0, CubePoint.make(0.0, 0.0, 300.0))
 	events = SimFixture.run(ahead, 10 * SimWorld.HZ)
 	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(1)
 
@@ -131,7 +131,7 @@ func test_ship_reset_behind_a_front_is_not_hit() -> void:
 # A front hits the named subsystems, and a hardened one takes less (FT-ENG-008).
 func test_front_hits_named_subsystems_and_hardening_applies() -> void:
 	var h: HazardDef = _plane(Vector3(0.0, 0.0, -100.0), 100.0)
-	h.targets = [&"sensors", &"shields"]
+	h.subsystems = [&"sensors", &"shields"]
 	var plain: SimWorld = _world([h])
 	SimFixture.run(plain, 2 * SimWorld.HZ)
 	var hard: SimWorld = _world([h])
@@ -169,16 +169,16 @@ func test_knowledge_by_sensors_and_probes() -> void:
 	assert_bool(HazardSystem.known_to(near, 1, 0)).is_true()
 	var late: HazardDef = _plane(Vector3(0.0, 0.0, -100.0), 10.0)
 	late.detect_range = 5000.0
-	late.start_s = 5.0
+	late.start = 5.0
 	assert_bool(HazardSystem.known_to(_world([late]), 1, 0)).is_false()
 
 
 # FT: FT-RLY-001
-# A front fades after duration_s: a ship it has not reached by then is never hit, and the
+# A front fades after duration: a ship it has not reached by then is never hit, and the
 # front is no longer live, known or coming; a ship reached before the fade is hit once.
 func test_front_fades_after_its_duration() -> void:
 	var slow: HazardDef = _plane(Vector3(0.0, 0.0, -600.0), 50.0)
-	slow.duration_s = 10.0
+	slow.duration = 10.0
 	slow.detect_range = 5000.0
 	var w: SimWorld = _world([slow])
 	assert_bool(HazardSystem.known_to(w, 1, 0)).is_true()
@@ -188,17 +188,17 @@ func test_front_fades_after_its_duration() -> void:
 	assert_bool(HazardSystem.known_to(w, 1, 0)).is_false()
 	assert_float(HazardSystem.eta(w, 0, 0)).is_equal(-1.0)
 	var quick: HazardDef = _plane(Vector3(0.0, 0.0, -600.0), 600.0 / 9.0)
-	quick.duration_s = 10.0
+	quick.duration = 10.0
 	var hit: Array[SimEvent] = SimFixture.run(_world([quick]), 12 * SimWorld.HZ)
 	assert_int(SimFixture.of_kind(hit, &"hazard_hit").size()).is_equal(1)
 
 
 # FT: FT-RLY-001
-# Before start_s the front does not exist: a ship that flies through its start plane early
+# Before start the front does not exist: a ship that flies through its start plane early
 # is not hit, then or later; once it has set off it is not live-yet-unknown either.
 func test_front_does_not_hit_before_it_starts() -> void:
 	var h: HazardDef = _plane(Vector3(0.0, 0.0, -100.0), 10.0)
-	h.start_s = 5.0
+	h.start = 5.0
 	var w: SimWorld = _world([h], Vector3(0.0, 0.0, 100.0))
 	var coast: DecoupledCommand = DecoupledCommand.new()
 	coast.ship_id = 0
@@ -207,7 +207,7 @@ func test_front_does_not_hit_before_it_starts() -> void:
 	w.kin.vel[0] = Vector3(0.0, 0.0, -100.0)
 	var events: Array[SimEvent] = SimFixture.run(w, 10 * SimWorld.HZ)
 	# The ship crossed the start plane (z = -100) at about 3 s and is far behind it now.
-	assert_float(w.kin.relative_to_point(0, 0.0, 0.0, -100.0).z).is_greater(0.0)
+	assert_float(w.kin.relative_to_point(0, CubePoint.make(0.0, 0.0, -100.0)).z).is_greater(0.0)
 	assert_int(SimFixture.of_kind(events, &"hazard_hit").size()).is_equal(0)
 	assert_int(w.hazard_state.seen[0]).is_equal(1)
 
@@ -233,7 +233,7 @@ func test_two_fronts_hit_once_each() -> void:
 	var a: HazardDef = _plane(Vector3(0.0, 0.0, -600.0), 100.0)
 	var b: HazardDef = _plane(Vector3(0.0, 0.0, -300.0), 100.0)
 	b.id = &"plane_b"
-	b.hit_j = 2e6
+	b.hit_energy = 2e6
 	var w: SimWorld = _world([a, b])
 	var hits: Array[SimEvent] = SimFixture.of_kind(
 		SimFixture.run(w, 8 * SimWorld.HZ), &"hazard_hit"

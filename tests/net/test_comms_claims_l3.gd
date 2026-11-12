@@ -30,7 +30,7 @@ func _state(c: NetClient, card: int) -> int:
 
 func _hail_card() -> PostCardCommand:
 	var card: PostCardCommand = StoryFixture.card(StoryTable.Kind.HAIL, &"conv.trader_bluff")
-	card.target = ENEMY
+	card.subject = ENEMY
 	return card
 
 
@@ -45,7 +45,7 @@ func test_only_the_claimer_replies() -> void:
 	var bo: NetClient = await h.joined(server, "bo", "comms")
 	CommsL3.post(server, _hail_card())
 	CommsL3.post(server, StoryFixture.card(StoryTable.Kind.CONTRACT))
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	(
 		assert_bool(await h.until(func() -> bool: return not CommsL3.card_row(bo, 1).is_empty()))
 		. is_true()
@@ -70,7 +70,7 @@ func test_only_the_claimer_replies() -> void:
 	)
 	assert_int(CommsL3.card_row(ana, 0)["claimer"]).is_equal(ana_id)
 	# The NPC is heard by its claimer alone (G1 routes by this).
-	assert_array(Array(server.session.npc_audience(ServerVoice.card_key(0)))).is_equal([ana_id])
+	assert_array(Array(server.game.npc_audience(ServerVoice.card_key(0)))).is_equal([ana_id])
 	var reply: Dictionary = {"kind": "comms_reply", "card": 0, "option": "o2"}
 	assert_str(await CommsL3.verdict(h, server, bo, reply)).is_equal(CommandGate.CLAIMED)
 	assert_str(await CommsL3.verdict(h, server, ana, reply)).is_equal("")
@@ -104,11 +104,11 @@ func test_claims_cover_conversations_not_decisions() -> void:
 	var contract: PostCardCommand = StoryFixture.card(
 		StoryTable.Kind.CONTRACT, &"conv.escort_contract"
 	)
-	contract.target = ENEMY
-	contract.target_flag = KnowledgeTable.Flag.PROTECT
+	contract.subject = ENEMY
+	contract.subject_flag = KnowledgeTable.Flag.PROTECT
 	CommsL3.post(server, contract)
 	CommsL3.post(server, StoryFixture.card(StoryTable.Kind.MISSION))
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	(
 		assert_bool(await h.until(func() -> bool: return not CommsL3.card_row(bo, 1).is_empty()))
 		. is_true()
@@ -119,7 +119,7 @@ func test_claims_cover_conversations_not_decisions() -> void:
 		assert_str(
 			(await h.next_event(ana, NetProtocol.EVENT_REQUEST_REJECTED, from))["payload"]["reason"]
 		)
-		. is_equal(ServerSession.BAD_ITEM)
+		. is_equal(NetGame.BAD_ITEM)
 	)
 	ana.claim("npc:0")
 	var ana_id: int = h.session_of(server, ana).id
@@ -142,4 +142,4 @@ func test_claims_cover_conversations_not_decisions() -> void:
 
 ## Whether nobody holds the claim on the card's NPC.
 func _unheard(server: NetServer, card: int) -> bool:
-	return server.session.npc_audience(ServerVoice.card_key(card)).is_empty()
+	return server.game.npc_audience(ServerVoice.card_key(card)).is_empty()

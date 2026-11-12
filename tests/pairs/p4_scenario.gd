@@ -41,7 +41,7 @@ static func build() -> SimWorld:
 
 
 static func done(w: SimWorld) -> bool:
-	return w.kin.relative_to_point(PLAYER, POINT.x, POINT.y, POINT.z).length() < CAPTURE
+	return w.kin.relative_to_point(PLAYER, CubePoint.of(POINT)).length() < CAPTURE
 
 
 static func measure(w: SimWorld) -> Dictionary:
@@ -77,32 +77,24 @@ static func helm(w: SimWorld, points: Array[Vector3]) -> void:
 	while (
 		leg < points.size() - 1
 		and (
-			(
-				(
-					w
-					. kin
-					. relative_to_point(PLAYER, points[leg].x, points[leg].y, points[leg].z)
-					. length()
-				)
-				< WAYPOINT_R
-			)
+			((w.kin.relative_to_point(PLAYER, CubePoint.of(points[leg])).length()) < WAYPOINT_R)
 			or _passed(w, points, leg)
 		)
 	):
 		leg += 1
 	var p: Vector3 = points[leg]
 	if (
-		w.helm.target_kind[PLAYER] != HelmTable.Target.POINT
-		or w.helm.target_z[PLAYER] != p.z
-		or w.helm.target_x[PLAYER] != p.x
+		w.helm.sel_kind[PLAYER] != HelmTable.Selection.POINT
+		or w.helm.sel_z[PLAYER] != p.z
+		or w.helm.sel_x[PLAYER] != p.x
 	):
-		var select: SelectTargetCommand = SelectTargetCommand.new()
+		var select: HelmSelectCommand = HelmSelectCommand.new()
 		select.point = true
 		select.x = p.x
 		select.y = p.y
 		select.z = p.z
 		PairHarness.send(w, select)
-	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, p.x, p.y, p.z)
+	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, CubePoint.of(p))
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_point) < ON_POINT
 	var throttle: float = 1.0 if w.helm.throttle_setpoint[PLAYER] < CRUISE and on_point else 0.0
 	if w.tick == 0 or throttle != w.helm.input_translation[PLAYER].z:
@@ -112,5 +104,5 @@ static func helm(w: SimWorld, points: Array[Vector3]) -> void:
 ## Whether the ship is moving away from the point after closing on it.
 static func _passed(w: SimWorld, points: Array[Vector3], leg: int) -> bool:
 	var p: Vector3 = points[leg]
-	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, p.x, p.y, p.z)
+	var to_point: Vector3 = w.kin.relative_to_point(PLAYER, CubePoint.of(p))
 	return w.tick > 0 and w.kin.vel[PLAYER].dot(to_point) < 0.0

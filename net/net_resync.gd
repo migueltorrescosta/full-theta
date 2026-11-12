@@ -16,7 +16,7 @@ enum Action { NONE, DELTA, FULL }
 ## Stalled at more than this many unacknowledged snapshots (≈ 533 ms at 30 Hz).
 const LAG_LIMIT: int = 15
 ## High-lane queued bytes that mark the client as stalled (NetTransport closes a
-## connection without a view key past it).
+## connection without a stream key past it).
 const QUEUED_LIMIT: int = 256 * 1024
 
 var lag_limit: int = LAG_LIMIT
@@ -51,7 +51,7 @@ func on_send_error() -> void:
 	_mark_stalled()
 
 
-## Forces the next decision to be a full snapshot (a new view key).
+## Forces the next decision to be a full snapshot (a new stream key).
 func force_full() -> void:
 	need_full = true
 

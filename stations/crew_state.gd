@@ -9,12 +9,12 @@ extends RefCounted
 
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
-## &"run_over" (the outcome card and its "Run again" votes, D178), and from Relay's events
+## &"ship_outcome" (the outcome card and its "Run again" votes, D178), and from Relay's events
 ## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view";
 ## &"toggles" when the session's data-shortcut set changed, &"shares" when a
 ## shortcut was shared or ran out, &"lanes" when the approach lanes changed (F); and from
 ## the multi-ship events (#11) &"fleet", &"scoreboard", &"eliminated", &"relaunch" (votes
-## or a relaunch), &"handover" and &"session_over".
+## or a relaunch), &"handover" and &"game_over".
 signal changed(what: StringName)
 ## A toast to show: translation key and format arguments (I18n strings).
 signal toast(key: String, args: Dictionary)
@@ -43,11 +43,11 @@ const TICK_HZ: float = SimRate.HZ * 1.0
 
 var session: int = -1
 var ship: int = -1
-var entry: String = ""
+var seat: String = ""
 var host: bool = false
 var dev_all: bool = false
 var lang: String = "en"
-## Catalogue message fields: ships [{id, def, name, faction}], entries [StationDef
+## Catalogue message fields: ships [{id, def, name, faction}], seats [SeatDef
 ## dicts], load_tags.
 var catalogue: Dictionary = {}
 ## ship -> `lobby` payload.
@@ -62,10 +62,10 @@ var host_paused: bool = false
 var votes: Dictionary = {}
 ## ship -> "vote" | "host".
 var abandoned: Dictionary = {}
-## ship -> `run_over` payload {ship, outcome, time_s, hull} plus "voters", "sessions" and
+## ship -> `ship_outcome` payload {ship, outcome, time, hull} plus "voters", "sessions" and
 ## "needed" from `run_votes`, from the outcome until the reset (D178).
-var run_over: Dictionary = {}
-## ship -> its debrief record (RunDebrief.for_ship), sent right after `run_over`.
+var ship_outcome: Dictionary = {}
+## ship -> its debrief record (RunDebrief.for_ship), sent right after `ship_outcome`.
 var debrief: Dictionary = {}
 ## item -> {"session": int, "name": String} (claim events; free items erased).
 var claims: Dictionary = {}
@@ -73,7 +73,7 @@ var alert: int = ALERT_NORMAL
 var alert_by: String = ""
 ## Sorted by slot: {"slot", "name", "contact", "pos" (Vector3, m), "by"}.
 var marks: Array[Dictionary] = []
-## Active pings, oldest first: {"kind", "id", "pos", "by", "at_ms", "copies"}.
+## Pings still showing, oldest first: {"kind", "id", "pos", "by", "at_ms", "copies"}.
 var pings: Array[Dictionary] = []
 ## The main screen's view (MainScreen.View), set by the Captain or by Relay.
 var main_view: int = MainScreen.View.FORWARD
@@ -96,7 +96,7 @@ var inbox: Array[Dictionary] = []
 var relay_log: Array[Dictionary] = []
 ## The session's data-shortcut toggles, from the `lobby` events (every ship shares them,
 ## FT-PAIR-017); Easy until the server says otherwise.
-var toggles: DataToggles = DataToggles.of_preset(StationViews.DEFAULT_TOGGLES)
+var toggles: DataToggles = DataToggles.of_preset(StationCatalogue.DEFAULT_TOGGLES)
 
 ## The shortcuts shared to this ship (the `shares` event, D210): feature -> client clock (ms)
 ## at which the share ends.
@@ -106,7 +106,7 @@ var shares: Dictionary = {}
 ## station (Comms always, the others once Comms shared them).
 var lanes: Array[Dictionary] = []
 
-## Multi-ship sessions (#11, docs/protocol.md "Multi-ship sessions and PvP"). The `fleet`
+## Multi-ship games (#11, docs/protocol.md "Multi-ship games and PvP"). The `fleet`
 ## payload: the lobby's ships, the host's mode and options, the ships still to press Start;
 ## {} until the server sends one (then the catalogue's ships are the lobby).
 var fleet: Dictionary = {}
@@ -119,21 +119,21 @@ var relaunch_votes: Dictionary = {}
 ## This session's latest `handover` {ship (its eliminated ship), to_ship (-1 the
 ## scoreboard)}, {} when it was never handed over or its ship was relaunched.
 var handover: Dictionary = {}
-## The `session_over` payload, {} while the session goes on.
-var session_over: Dictionary = {}
+## The `game_over` payload, {} while the session goes on.
+var game_over: Dictionary = {}
 
-var _filter: ViewFilter = null
+var _filter: ShortcutFilter = null
 var _filter_key: String = ""
 
 
-## What this pick may see of other stations' data at the session's toggles (ViewFilter): the
+## What this pick may see of other stations' data at the session's toggles (ShortcutFilter): the
 ## clients draw an em dash for an absent summary, a band for a banded one.
-func filter() -> ViewFilter:
-	var code: String = ViewFilter.code_with(toggles.encode(), shares.keys())
-	var key: String = "%s|%s" % [entry, code]
+func filter() -> ShortcutFilter:
+	var code: String = ShortcutFilter.code_with(toggles.encode(), shares.keys())
+	var key: String = "%s|%s" % [seat, code]
 	if _filter == null or key != _filter_key:
 		_filter_key = key
-		_filter = ViewFilter.of(entry, code)
+		_filter = ShortcutFilter.of(seat, code)
 	return _filter
 
 
@@ -157,7 +157,7 @@ func shares_left(now_ms: int) -> Dictionary:
 ## for the keys that aren't exact numbers; the keys whose numbers show stay out. `def` is the
 ## own ship's definition (the bands are shares of its maxima), null without one.
 func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
-	var f: ViewFilter = filter()
+	var f: ShortcutFilter = filter()
 	var out: Dictionary = {}
 	if f == null or f.sees_all or def == null or status.is_empty():
 		return out
@@ -169,7 +169,7 @@ func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
 	for key: String in maxima:
 		# The hull is the ship's: exact unless the view holds Comms without Engineering,
 		# when it is the band at every difficulty (FT-PAIR-010).
-		var mode: int = f.summary_mode(ViewFilter.ENG)
+		var mode: int = f.summary_mode(ShortcutFilter.ENG)
 		if key == "hull":
 			mode = 1 if f.condition_hidden else 2
 		if mode == 1:
@@ -186,7 +186,7 @@ func summaries(status: Dictionary, def: ShipDef) -> Dictionary:
 func welcome(w: Dictionary) -> void:
 	session = int(w.get("session", -1))
 	ship = int(w.get("ship", -1))
-	entry = str(w.get("entry", ""))
+	seat = str(w.get("seat", ""))
 	host = bool(w.get("host", false))
 	dev_all = bool(w.get("dev_all", false))
 	lang = str(w.get("lang", "en"))
@@ -198,27 +198,27 @@ func set_catalogue(c: Dictionary) -> void:
 	changed.emit(&"catalogue")
 
 
-## The StationDef dict of the current pick, or {}.
-func entry_def() -> Dictionary:
-	return def_of(entry)
+## The SeatDef dict of the current pick, or {}.
+func seat_def() -> Dictionary:
+	return def_of(seat)
 
 
 func def_of(id: String) -> Dictionary:
-	for d: Dictionary in catalogue.get("entries", []):
+	for d: Dictionary in catalogue.get("seats", []):
 		if d.get("id", "") == id:
 			return d
 	return {}
 
 
-## Functional stations of the pick (one, two for a joint view, six for the dev entry).
+## Functional stations of the pick (one, two for a joint view, six for the dev seat).
 func stations() -> Array:
-	return entry_def().get("stations", [])
+	return seat_def().get("stations", [])
 
 
 ## Crew picks set the alert level and place marks; Captain and viewers can't set the
 ## alert (FT-STN-008).
 func is_crew() -> bool:
-	return bool(entry_def().get("crew", false))
+	return bool(seat_def().get("crew", false))
 
 
 ## Co-op: the host's mode once the server sends `fleet`; before that, every crew ship
@@ -242,9 +242,9 @@ func can_host_pause() -> bool:
 ## out of play, not crew), else the string key of its label. In PvP it is the give-up
 ## (forfeit) vote, by the same majority (M4-Q10).
 func abandon_control() -> String:
-	if not started.has(ship) or run_over.has(ship) or abandoned.has(ship):
+	if not started.has(ship) or ship_outcome.has(ship) or abandoned.has(ship):
 		return ""
-	if eliminated.has(ship) or not session_over.is_empty():
+	if eliminated.has(ship) or not game_over.is_empty():
 		return ""
 	var kind: String = "abandon" if is_coop() else "forfeit"
 	if host:
@@ -274,10 +274,10 @@ func is_started(id: int = ship) -> bool:
 	return started.has(id) or bool(lobby.get(id, {}).get("started", false))
 
 
-# --- Multi-ship sessions (#11). ---
+# --- Multi-ship games (#11). ---
 
 
-## The host's mode (SessionRules.MODE_NAMES): "coop" until `fleet` says otherwise, or
+## The host's mode (GameRules.MODE_NAMES): "coop" until `fleet` says otherwise, or
 ## "race" for a lobby of several crew factions with no `fleet`.
 func mode() -> String:
 	if fleet.is_empty():
@@ -318,7 +318,7 @@ func team_of(id: int) -> int:
 
 
 ## Whether two ships are on the same side: every ship in co-op, the same team in TEAMS and
-## HOLDOUT, only itself in RACE and LAST_STANDING (SessionRules.faction_for).
+## HOLDOUT, only itself in RACE and LAST_STANDING (GameRules.faction_for).
 func allied(a: int, b: int) -> bool:
 	if a == b or is_coop():
 		return true
@@ -370,7 +370,7 @@ func home_ship() -> int:
 func on_scoreboard() -> bool:
 	if not handover.is_empty() and int(handover.get("to_ship", 0)) == FleetMessages.TO_SCOREBOARD:
 		return true
-	return is_pvp() and not session_over.is_empty()
+	return is_pvp() and not game_over.is_empty()
 
 
 ## Relaunches left for the home ship's side after its elimination (-1 unlimited), 0 for
@@ -381,7 +381,7 @@ func lives_left() -> int:
 
 ## Whether this session may vote to relaunch its eliminated ship (M4-Q2).
 func can_relaunch() -> bool:
-	return eliminated.has(home_ship()) and lives_left() != 0 and session_over.is_empty()
+	return eliminated.has(home_ship()) and lives_left() != 0 and game_over.is_empty()
 
 
 ## Whether this session's relaunch vote for its home ship stands.
@@ -430,10 +430,10 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 		NetProtocol.EVENT_ABANDONED:
 			abandoned[int(p["ship"])] = str(p.get("by", ""))
 			changed.emit(&"abandoned")
-		NetProtocol.EVENT_RUN_OVER, NetProtocol.EVENT_RUN_VOTES:
-			var card: Dictionary = run_over.get_or_add(int(p["ship"]), {})
+		NetProtocol.EVENT_SHIP_OUTCOME, NetProtocol.EVENT_RUN_VOTES:
+			var card: Dictionary = ship_outcome.get_or_add(int(p["ship"]), {})
 			card.merge(p, true)
-			changed.emit(&"run_over")
+			changed.emit(&"ship_outcome")
 		NetProtocol.EVENT_DEBRIEF:
 			debrief[int(p["ship"])] = p
 			changed.emit(&"debrief")
@@ -461,8 +461,8 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 							{
 								"card": int(l["card"]),
 								"pos": Vector3(float(l["x"]), float(l["y"]), float(l["z"])),
-								"opens_ms": now_ms + roundi(float(l["open_s"]) * 1000.0),
-								"closes_ms": now_ms + roundi(float(l["close_s"]) * 1000.0),
+								"opens_ms": now_ms + roundi(float(l["opens_in"]) * 1000.0),
+								"closes_ms": now_ms + roundi(float(l["closes_in"]) * 1000.0),
 								"by": str(l.get("by", "")),
 							}
 						)
@@ -478,9 +478,9 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_fleet_event(str(e["type"]), p)
 		NetProtocol.EVENT_RELAUNCH_VOTES, NetProtocol.EVENT_RELAUNCHED, NetProtocol.EVENT_HANDOVER:
 			_on_fleet_event(str(e["type"]), p)
-		NetProtocol.EVENT_SESSION_OVER:
-			session_over = p
-			changed.emit(&"session_over")
+		NetProtocol.EVENT_GAME_OVER:
+			game_over = p
+			changed.emit(&"game_over")
 		NetProtocol.EVENT_TAKEOVER:
 			_on_takeover(p)
 		NetProtocol.EVENT_REQUEST_REJECTED, NetProtocol.EVENT_COMMAND_REJECTED:
@@ -594,7 +594,7 @@ func reset_run() -> void:
 	alert_by = ""
 	started.erase(ship)
 	abandoned.erase(ship)
-	run_over.erase(ship)
+	ship_outcome.erase(ship)
 	debrief.erase(ship)
 	changed.emit(&"reset")
 
@@ -626,12 +626,12 @@ func _on_fleet_event(type: String, p: Dictionary) -> void:
 			changed.emit(&"handover")
 
 
-## A station of an allied ship was taken over in its pause (M4-Q8): a toast naming who took
+## A seat of an allied ship was taken over in its pause (M4-Q8): a toast naming who took
 ## what; the ship's side sees it.
 func _on_takeover(p: Dictionary) -> void:
 	var args: Dictionary = {
 		"by": str(p.get("by", "")),
-		"station": TranslationServer.translate("station." + str(p.get("entry", ""))),
+		"seat": TranslationServer.translate("seat." + str(p.get("seat", ""))),
 		"ship": ship_name(int(p.get("ship", -1))),
 	}
 	toast.emit("toast.takeover", args)
@@ -716,7 +716,7 @@ func _on_picked(p: Dictionary) -> bool:
 		toast.emit("toast." + reason, p)
 		return true
 	ship = int(p.get("ship", -1))
-	entry = str(p.get("entry", ""))
+	seat = str(p.get("seat", ""))
 	claims.clear()
 	changed.emit(&"picked")
 	return true
@@ -740,7 +740,7 @@ func _on_lobby(p: Dictionary) -> void:
 ## A request chip this client sent was answered: a toast naming who and what.
 func _on_chip_answer(p: Dictionary) -> void:
 	var chip: Dictionary = {"chip": str(p.get("chip", "")), "arg": int(p.get("arg", -1))}
-	var args: Dictionary = {"by": str(p.get("by", "")), "chip": ChipView.label(chip)}
+	var args: Dictionary = {"by": str(p.get("by", "")), "chip": ChipsReader.label(chip)}
 	toast.emit(
 		"toast.chip_answered" if bool(p.get("accept", false)) else "toast.chip_declined", args
 	)
@@ -777,7 +777,7 @@ func captain_seated(id: int = ship) -> bool:
 	if lobby.has(id):
 		return str(lobby[id].get("captain", "")) != ""
 	for seat: Variant in fleet_row(id).get("seats", []):
-		if str((seat as Dictionary).get("entry", "")) == StationViews.CAPTAIN:
+		if str((seat as Dictionary).get("seat", "")) == StationCatalogue.CAPTAIN:
 			return true
 	return false
 
@@ -785,7 +785,7 @@ func captain_seated(id: int = ship) -> bool:
 ## Whether this pick may switch the main screen now (FT-MSC-005): the Captain, or Relay
 ## while no Captain is seated. The server decides; this only hides dead buttons.
 func may_switch_main_view() -> bool:
-	if entry == StationViews.CAPTAIN:
+	if seat == StationCatalogue.CAPTAIN:
 		return true
 	return stations().has("relay") and not captain_seated()
 

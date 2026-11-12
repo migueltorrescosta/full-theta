@@ -1,0 +1,6 @@
+{
+  "_comment": "Tips (fixture).",
+  "tips": [
+    {"id": "science.1", "topic": "science", "en": "Active ping finds hosts.", "pt_PT": "Ping ativo encontra alvos."}
+  ]
+}

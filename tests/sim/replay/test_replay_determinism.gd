@@ -8,7 +8,7 @@ const HZ: int = SimWorld.HZ
 const DT: float = SimWorld.DT
 const SEED: int = 9
 const BUILD: String = "test"
-const SETUP: Dictionary = {"player": &"m1_corvette", "enemy": &"m1_raider"}
+const SETUP: Dictionary = {"player": &"m1_corvette", "npc": &"m1_raider"}
 ## 40 s of the fight: the crew fires from tick 60 every 30 ticks and hits land.
 const END_TICK: int = 40 * HZ
 

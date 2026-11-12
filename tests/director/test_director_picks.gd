@@ -53,7 +53,7 @@ func test_the_run_closes_at_the_most_encounters() -> void:
 	var ends: Array[DirectorDecision] = _of_kind(d, DirectorDecision.Kind.END_RUN)
 	assert_int(ends.size()).is_equal(1)
 	assert_str(ends[0].reason_key).is_equal("director.reason.run_length")
-	assert_int((out[0] as SimWorld).run.outcome[0]).is_equal(RunTable.Outcome.WIN)
+	assert_int((out[0] as SimWorld).ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.WIN)
 
 
 # FT: FT-MIS-029
@@ -75,7 +75,7 @@ func test_a_preset_without_a_budget_still_finishes_the_run() -> void:
 	var picks: Array[DirectorDecision] = _of_kind(d, DirectorDecision.Kind.PICK_ENCOUNTER)
 	assert_int(picks.size()).is_equal(1)
 	assert_str(String(picks[0].scenario_id)).is_equal("s_b")
-	assert_int((out[0] as SimWorld).run.outcome[0]).is_equal(RunTable.Outcome.WIN)
+	assert_int((out[0] as SimWorld).ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.WIN)
 
 
 # FT: FT-MIS-029

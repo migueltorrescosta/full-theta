@@ -399,7 +399,7 @@ func _on_lesson_event(e: Dictionary) -> void:
 ## after LESSON_WAIT_MS.
 func _reveal_lesson_if_started() -> void:
 	var crew: CrewState = shell.ctx.crew
-	var seated: bool = _lesson != "" and crew.entry == _lesson and crew.is_started()
+	var seated: bool = _lesson != "" and crew.seat == _lesson and crew.is_started()
 	if seated or Time.get_ticks_msec() > _lesson_deadline:
 		_reveal_lesson()
 

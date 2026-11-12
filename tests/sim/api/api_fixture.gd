@@ -15,16 +15,16 @@ const BETA: Vector3 = Vector3(0.0, 60000.0, 0.0)
 static func run_def(
 	scenario_ids: PackedStringArray = PackedStringArray(["s_a", "s_b"]),
 	timeout_s: float = 10.0,
-	gap_s: float = 1.0,
+	gap: float = 1.0,
 	min_encounters: int = 1,
 	max_encounters: int = 2
 ) -> RunDef:
 	var d: DirectorDef = DirectorDef.new()
 	d.id = &"test_director"
 	d.budget_per_ship = {&"easy": 6, &"normal": 9, &"hard": 12}
-	d.gap_s = gap_s
-	d.arrival_timeout_s = timeout_s
-	d.spawn_site_every_s = 0.0
+	d.gap = gap
+	d.arrival_timeout = timeout_s
+	d.spawn_site_every = 0.0
 	var f: FleeCostDef = FleeCostDef.new()
 	f.id = &"test_flee"
 	f.credits = 150
@@ -43,7 +43,7 @@ static func run_def(
 
 static func world(crew: int = 1, def: RunDef = null) -> SimWorld:
 	var run: RunDef = def if def != null else run_def()
-	var catalog: Dictionary[StringName, EnemyDef] = {RAIDER: TestDefs.raider_enemy()}
+	var catalog: Dictionary[StringName, NpcDef] = {RAIDER: TestDefs.raider_enemy()}
 	var setup: RunSetup = RunSetup.new(7, "test", run, catalog, crew)
 	var w: SimWorld = setup.build()
 	var dist: RepDistDef = RepDistDef.new()
@@ -88,4 +88,4 @@ static func tables_hash(w: SimWorld) -> String:
 
 ## Moves a ship to a point (m) in the cube.
 static func place(w: SimWorld, ship: int, p: Vector3) -> void:
-	w.kin.place(ship, p.x, p.y, p.z)
+	w.kin.place(ship, CubePoint.of(p))

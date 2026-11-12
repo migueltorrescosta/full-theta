@@ -49,7 +49,7 @@ extends Resource
 ## Spare parts one fabricated probe takes (count).
 @export var probe_parts: int = 0
 ## Time to fabricate one probe (s).
-@export var probe_fab_s: float = 0.0
+@export var probe_fab_time: float = 0.0
 ## Share of a hit's energy past the shields that the subsystem nearest the impact takes;
 ## the hull takes the rest (dimensionless, 0..1, FT-SIM-020).
 @export var subsystem_damage_share: float = 0.0
@@ -82,13 +82,13 @@ extends Resource
 ## each. Fitted modules change a copy of this definition (ModuleSystem.refit).
 @export var slots: Array[SlotDef] = []
 ## Jump drive spool time (s; 0 means the ship can't jump, FT-SIM-034).
-@export var jump_spool_s: float = 0.0
+@export var jump_spool_time: float = 0.0
 ## How far short of the target a jump arrives (m).
-@export var jump_standoff_m: float = 0.0
+@export var jump_standoff: float = 0.0
 ## Propellant a jump takes (kg).
-@export var jump_propellant_kg: float = 0.0
+@export var jump_propellant: float = 0.0
 ## How closely Helm must face the target to start a jump (rad, FT-HLM-016).
-@export var jump_face_tolerance_rad: float = 0.0
+@export var jump_face_tolerance: float = 0.0
 
 
 func validate() -> Array[String]:
@@ -113,13 +113,13 @@ func validate() -> Array[String]:
 	DefCheck.in_range(errors, "fault_hit_chance", fault_hit_chance, 0.0, 1.0)
 	DefCheck.positive(errors, "sensor_range", sensor_range)
 	DefCheck.in_range(errors, "identify_range", identify_range, 0.0, maxf(sensor_range, 0.0))
-	DefCheck.non_negative(errors, "jump_spool_s", jump_spool_s)
-	DefCheck.non_negative(errors, "jump_standoff_m", jump_standoff_m)
-	DefCheck.non_negative(errors, "jump_propellant_kg", jump_propellant_kg)
-	DefCheck.in_range(errors, "jump_face_tolerance_rad", jump_face_tolerance_rad, 0.0, PI)
-	if jump_spool_s > 0.0:
-		DefCheck.positive(errors, "jump_propellant_kg", jump_propellant_kg)
-		DefCheck.positive(errors, "jump_face_tolerance_rad", jump_face_tolerance_rad)
+	DefCheck.non_negative(errors, "jump_spool_time", jump_spool_time)
+	DefCheck.non_negative(errors, "jump_standoff", jump_standoff)
+	DefCheck.non_negative(errors, "jump_propellant", jump_propellant)
+	DefCheck.in_range(errors, "jump_face_tolerance", jump_face_tolerance, 0.0, PI)
+	if jump_spool_time > 0.0:
+		DefCheck.positive(errors, "jump_propellant", jump_propellant)
+		DefCheck.positive(errors, "jump_face_tolerance", jump_face_tolerance)
 	DefCheck.required(errors, "assist", assist)
 	DefCheck.required(errors, "shields", shields)
 	if DefCheck.required(errors, "power", power):
@@ -149,7 +149,7 @@ func _validate_probes(errors: Array[String]) -> void:
 	DefCheck.non_negative(errors, "probe_speed", probe_speed)
 	DefCheck.non_negative(errors, "probe_range", probe_range)
 	DefCheck.non_negative(errors, "probe_parts", probe_parts)
-	DefCheck.non_negative(errors, "probe_fab_s", probe_fab_s)
+	DefCheck.non_negative(errors, "probe_fab_time", probe_fab_time)
 	if probes > 0 or probe_parts > 0:
 		DefCheck.positive(errors, "probe_speed", probe_speed)
 		DefCheck.positive(errors, "probe_range", probe_range)

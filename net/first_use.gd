@@ -2,9 +2,9 @@ class_name FirstUse
 extends RefCounted
 ## The first time each station used each of its core actions in a run (FT-MIS-038, D35,
 ## D232): the debrief lists, per station, the seconds from the run's start to that first
-## use, or -1 for an action never used. The core actions are data, StationDef.core_actions
-## ("action=source", see StationDef). Every one is either an accepted crew command, fed by
-## ServerSession through NetCoop.on_command, or a net-side crew op, Relay's mark placed and
+## use, or -1 for an action never used. The core actions are data, SeatDef.core_actions
+## ("action=source", see SeatDef). Every one is either an accepted crew command, fed by
+## NetGame through NetCoop.on_command, or a net-side crew op, Relay's mark placed and
 ## route added, fed by NetCrewState; so no client reports an intent (D235).
 
 ## Ship -> "station.action" -> tick of the first use.
@@ -14,9 +14,9 @@ var _table: Dictionary = {}
 
 
 func _init() -> void:
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		var rows: Array[Dictionary] = []
-		var d: StationDef = StationViews.def(station)
+		var d: SeatDef = StationCatalogue.def(station)
 		for entry: String in d.core_actions:
 			rows.append(_parse(entry))
 		_table[station] = rows
@@ -25,7 +25,7 @@ func _init() -> void:
 ## An accepted crew command of `ship` at `tick`. The station is the one the command kind
 ## belongs to; a command no core action names counts nothing.
 func on_command(ship: int, c: SimCommand, tick: int) -> void:
-	var station: String = StationViews.station_of_command(c.kind())
+	var station: String = StationCatalogue.station_of_command(c.kind())
 	for row: Dictionary in _table.get(station, []):
 		if row["op"] == "" and (row["kinds"] as PackedStringArray).has(String(c.kind())):
 			var field: String = row["field"]
@@ -45,7 +45,7 @@ func on_crew_op(ship: int, station: String, op: String, tick: int) -> void:
 func for_ship(ship: int) -> Dictionary:
 	var out: Dictionary = {}
 	var seen: Dictionary = _first.get(ship, {})
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		var actions: Dictionary = {}
 		for row: Dictionary in _table[station]:
 			var key: String = "%s.%s" % [station, row["action"]]

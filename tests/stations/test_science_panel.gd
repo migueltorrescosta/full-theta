@@ -7,7 +7,7 @@ extends GdUnitTestSuite
 const SETTINGS: String = "user://test_science_panel.cfg"
 const H2: int = StationFixture.H2
 const U3: int = StationFixture.U3
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 
 func before() -> void:
@@ -19,13 +19,13 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-## The screen on the science entry, with a SCIENCE block that has H2 well scanned (its
+## The screen on the science seat, with a SCIENCE block that has H2 well scanned (its
 ## class, intent, weak points, resistances and hack access revealed) and U3 barely seen.
-func _screen(block: Dictionary = {}, entry: String = "science") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
-	for s: String in StationViews.CREW:
+func _screen(block: Dictionary = {}, seat: String = "science") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
+	for s: String in StationCatalogue.CREW:
 		ctx.settings.mark_hint_seen(s)
-	ctx.view.blocks[S.SCIENCE] = _block(block)
+	ctx.snap.blocks[S.SCIENCE] = _block(block)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -37,27 +37,27 @@ func _screen(block: Dictionary = {}, entry: String = "science") -> StationScreen
 
 
 func _block(over: Dictionary) -> Dictionary:
-	var b: Dictionary = ScienceView._empty()
+	var b: Dictionary = ScienceSection._empty()
 	b["cards"] = [
 		{
 			"contact": H2,
 			"detect": 0.9,
 			"scan": 0.9,
+			"revealed": 0x7F,
 			"class_id": BlockSchema.id_code(&"m1_raider"),
 			"intent": 3,
 			"weak_mask": 1,
 			"resist": [{"type": BlockSchema.id_code(&"kinetic"), "factor": 0.5}],
-			"hack": true,
 		},
 		{
 			"contact": U3,
 			"detect": 0.2,
 			"scan": 0.0,
+			"revealed": 0,
 			"class_id": 0,
 			"intent": 0,
 			"weak_mask": 0,
 			"resist": [],
-			"hack": false,
 		},
 	]
 	b.merge(over, true)
@@ -103,10 +103,10 @@ func _scan_block(truth: Vector3, axes: int) -> Dictionary:
 		wire.append({"p": v})
 		cloud.append({"p": pose * v})
 	return {
-		"session": 1,
-		"session_target": H2,
-		"session_start": 10,
-		"session_noise": 0.33,
+		"minigame": 1,
+		"minigame_contact": H2,
+		"minigame_start": 10,
+		"minigame_noise": 0.33,
 		"axes": axes,
 		"wire": wire,
 		"cloud": cloud,
@@ -126,10 +126,10 @@ func _hack_block(node: int, known: int) -> Dictionary:
 			mask = HackGame.DOWN
 		edges.append({"mask": mask if (known >> n) & 1 == 1 else 0})
 	return {
-		"session": 2,
-		"session_target": H2,
-		"session_start": 10,
-		"session_noise": 0.3,
+		"minigame": 2,
+		"minigame_contact": H2,
+		"minigame_start": 10,
+		"minigame_noise": 0.3,
 		"hack_cols": 5,
 		"hack_rows": 3,
 		"hack_node": node,
@@ -193,7 +193,7 @@ func test_list_selects_and_card_shows_parts_by_confidence() -> void:
 	s.ctx.crew.select("contact", U3)
 	p.refresh()
 	assert_float(float(p.card_view.card["scan"])).is_equal(0.0)
-	assert_bool(bool(p.card_view.card["hack"])).is_false()
+	assert_bool(ScienceCard.is_revealed(p.card_view.card, &"hack")).is_false()
 	assert_array(p.subsystems()).is_empty()
 
 
@@ -203,14 +203,14 @@ func test_list_selects_and_card_shows_parts_by_confidence() -> void:
 func test_controls_send_science_commands() -> void:
 	var s: StationScreen = await _screen()
 	var p: SciencePanel = _sci(s)
-	assert_str(p.claim_item()).is_equal(StationViews.CLAIM_SCAN)
+	assert_str(p.claim_item()).is_equal(StationCatalogue.CLAIM_SCAN)
 	s.ctx.crew.select("contact", H2)
 	assert_int(_cmds(s, "science_select").size()).is_equal(1)
 	assert_int(_cmds(s, "science_select")[0][1][0]["contact"]).is_equal(H2)
 	p.refresh()
 	for pair: Array in [
 		["sci_mode", "science_sensor_mode"],
-		["sci_ping", "science_ping"],
+		["sci_sweep", "sensor_sweep"],
 		["sci_scan_mark", "science_scan_mark"],
 		["sci_self_scan", "science_self_scan"],
 		["sci_scan", "science_scan"],
@@ -227,14 +227,14 @@ func test_controls_send_science_commands() -> void:
 	s.dispatch(_ev("sci_sub_next", "pad", s))
 	s.dispatch(_ev("sci_hack", "pad", s))
 	assert_str(_cmds(s, "science_hack")[1][1][0]["subsystem_id"]).is_equal(str(p.subsystems()[1]))
-	# The subsystem button names it in the session language, never the raw id (#28).
+	# The subsystem button names it in the minigame language, never the raw id (#28).
 	p.refresh()
 	var sub: Button = p._buttons["sub"]
 	assert_str(sub.text).is_equal(tr("eng.name." + str(p.subsystems()[1])))
 	assert_str(sub.text).is_not_equal(str(p.subsystems()[1]))
 	# The buttons reach them too, and a hack on a contact without access sends nothing.
-	(p._buttons["ping"] as Button).pressed.emit()
-	assert_int(_cmds(s, "science_ping").size()).is_equal(2)
+	(p._buttons["sweep"] as Button).pressed.emit()
+	assert_int(_cmds(s, "sensor_sweep").size()).is_equal(2)
 	s.ctx.crew.select("contact", U3)
 	p.refresh()
 	assert_bool((p._buttons["hack"] as Button).disabled).is_true()
@@ -334,8 +334,8 @@ func test_hack_minigame_moves_along_known_edges() -> void:
 	assert_bool(s.dispatch(_ev("sci_down", "kbm", s))).is_true()
 	assert_int(_cmds(s, "science_hack_move").size()).is_equal(1)
 	# The d-pad: up is the ping outside a hack and a step up inside one.
-	assert_bool(s.dispatch(_ev("sci_ping", "pad", s))).is_true()
-	assert_int(_cmds(s, "science_ping").size()).is_equal(0)
+	assert_bool(s.dispatch(_ev("sci_sweep", "pad", s))).is_true()
+	assert_int(_cmds(s, "sensor_sweep").size()).is_equal(0)
 	assert_int(_cmds(s, "science_hack_move")[1][1][0]["node"]).is_equal(2)
 	# A tap on the hidden node 9, the goal, from node 8 once the route stands there.
 	p.hack_game.node = 8
@@ -394,7 +394,7 @@ func _tap(c: Control, at: Vector2) -> void:
 func test_panel_start_sends_the_current_selection() -> void:
 	var ctx: StationContext = StationFixture.context("science", SETTINGS)
 	ctx.settings.mark_hint_seen("science")
-	ctx.view.blocks[S.SCIENCE] = _block({})
+	ctx.snap.blocks[S.SCIENCE] = _block({})
 	ctx.crew.select("contact", H2)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)

@@ -52,12 +52,12 @@ func test_margins_floor_on_phones_only() -> void:
 	assert_float(SafeArea._band(0.0, LayoutMode.Form.TABLET, 1.0, 1.0)).is_equal(0.0)
 
 
-func _screen(size: Vector2i, entry: String, insets: Array) -> StationScreen:
+func _screen(size: Vector2i, seat: String, insets: Array) -> StationScreen:
 	SafeArea.simulate(insets)
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	vp.add_child(s)
@@ -67,19 +67,19 @@ func _screen(size: Vector2i, entry: String, insets: Array) -> StationScreen:
 
 
 func test_phone_landscape_screen_keeps_taps_in_the_safe_area() -> void:
-	for entry: String in ["engineering", "relay", "comms", "captain"]:
-		var s: StationScreen = await _screen(Vector2i(844, 390), entry, LANDSCAPE)
+	for seat: String in ["engineering", "relay", "comms", "captain"]:
+		var s: StationScreen = await _screen(Vector2i(844, 390), seat, LANDSCAPE)
 		assert_int(s.form).is_equal(LayoutMode.Form.PHONE_LANDSCAPE)
 		var report: Dictionary = TapAudit.check(s)
 		assert_array(report["targets"]).is_not_empty()
 		(
 			assert_array(report["outside_safe"])
-			. override_failure_message("%s: %s under an inset" % [entry, report["outside_safe"]])
+			. override_failure_message("%s: %s under an inset" % [seat, report["outside_safe"]])
 			. is_empty()
 		)
 		(
 			assert_array(report["in_band"])
-			. override_failure_message("%s: %s in the gesture band" % [entry, report["in_band"]])
+			. override_failure_message("%s: %s in the gesture band" % [seat, report["in_band"]])
 			. is_empty()
 		)
 		assert_float(s.top_bar.custom_minimum_size.y).is_equal(StationScreen.PHONE_BAR_HEIGHT)

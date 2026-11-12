@@ -11,7 +11,7 @@ extends PanelContainer
 ## bottom right (thumb side). Tablets and desktops keep the centred card.
 
 ## The crew changes the card depends on.
-const KINDS: Array[StringName] = [&"run_over", &"reset", &"picked", &"catalogue", &"debrief"]
+const KINDS: Array[StringName] = [&"ship_outcome", &"reset", &"picked", &"catalogue", &"debrief"]
 ## The least width of Run again and Vote on a phone, px.
 const PHONE_BUTTON_W: float = 160.0
 
@@ -99,14 +99,14 @@ func _enter_tree() -> void:
 
 
 func refresh() -> void:
-	var card: Dictionary = ctx.crew.run_over.get(ctx.crew.ship, {})
-	visible = not card.is_empty() and ctx.crew.entry != ""
+	var card: Dictionary = ctx.crew.ship_outcome.get(ctx.crew.ship, {})
+	visible = not card.is_empty() and ctx.crew.seat != ""
 	if not visible:
 		return
 	_place()
 	_title.text = tr("outcome.win" if card.get("outcome", "") == "win" else "outcome.loss")
 	_why.text = why_text(card)
-	var secs: int = int(card.get("time_s", 0.0))
+	var secs: int = int(card.get("time", 0.0))
 	var hull: int = roundi(float(card.get("hull", 0.0)) * 100.0)
 	_stats.text = tr("outcome.stats") % ["%d:%02d" % [secs / 60, secs % 60], hull]
 	var voters: Array = card.get("voters", [])
@@ -161,7 +161,7 @@ func waiting_names(card: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	for seat: Dictionary in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
 		var who: String = str(seat.get("name", ""))
-		if StationViews.is_crew(str(seat.get("entry", ""))) and who != ctx.settings.player_name:
+		if StationCatalogue.is_crew(str(seat.get("seat", ""))) and who != ctx.settings.player_name:
 			if not voters.has(who) and not out.has(who):
 				out.append(who)
 	return out
@@ -171,7 +171,7 @@ func waiting_names(card: Dictionary) -> PackedStringArray:
 ## nobody is left to wait for; else the first tap names who is still deciding and the second
 ## runs it anyway.
 func _host_run_again(button: Button) -> void:
-	var card: Dictionary = ctx.crew.run_over.get(ctx.crew.ship, {})
+	var card: Dictionary = ctx.crew.ship_outcome.get(ctx.crew.ship, {})
 	var waiting: PackedStringArray = waiting_names(card)
 	if waiting.is_empty() or _force:
 		_force = false

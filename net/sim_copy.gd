@@ -6,7 +6,8 @@ extends RefCounted
 ## a SimWorld from it, which the encoder reads through the usual table API (Kinematics
 ## helpers, KnowledgeSystem.callsign) while the sim moves on.
 ##
-## capture() duplicates every script variable of every table: the columns() state and
+## capture() duplicates every script variable of every table, as its column registry
+## lists them (SimTable.variables()): the columns() state, the not_columns() data and
 ## the derived indexes and caches (DamageTable._first, _eff_health and _eff;
 ## PowerTable._env_in and _env), so the capture shares nothing mutable with the live
 ## world. Packed arrays copy on write, so duplicating them costs no element
@@ -19,11 +20,6 @@ extends RefCounted
 
 ## Leading entries of a capture, before the tables.
 enum { SEED, BUILD, TICK, DEFS, RNG, RELATIONS, SCIENCE_DEF, HAZARDS, STORY_DATA, HEADER }
-
-## Table script -> Array[StringName] of its script variables but KnowledgeTable._rows
-## (get_property_list is slow, so each class is listed once). Main thread only; each
-## capture carries the lists restore() needs.
-static var _vars: Dictionary = {}
 
 
 ## A copy of the world's state on its own (capture() then restore()).
@@ -55,7 +51,10 @@ static func capture(world: SimWorld) -> Array:
 		],
 	]
 	for table: SimTable in world.tables():
-		var names: Array[StringName] = _vars_of(table)
+		var names: Array[StringName] = table.variables()
+		if table is KnowledgeTable:
+			names = names.duplicate()
+			names.erase(&"_rows")
 		out.append(names)
 		for name: StringName in names:
 			var value: Variant = table.get(name)
@@ -100,18 +99,5 @@ static func restore(state: Array) -> SimWorld:
 static func _index_knowledge(table: KnowledgeTable) -> void:
 	var rows: Dictionary[int, int] = {}
 	for r: int in table.size():
-		rows[table.factions[r] * 65536 + table.ship_ids[r]] = r
+		rows[table.owner_faction[r] * 65536 + table.subject_ship[r]] = r
 	table.set("_rows", rows)
-
-
-static func _vars_of(table: SimTable) -> Array[StringName]:
-	var script: Script = table.get_script()
-	if not _vars.has(script):
-		var names: Array[StringName] = []
-		for p: Dictionary in table.get_property_list():
-			if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
-				names.append(StringName(p["name"]))
-		if table is KnowledgeTable:
-			names.erase(&"_rows")
-		_vars[script] = names
-	return _vars[script]

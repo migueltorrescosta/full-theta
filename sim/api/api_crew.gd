@@ -7,7 +7,7 @@ extends RefCounted
 ## the command log records them and a lesson replays. Every verb returns whether it sent
 ## anything. The station of a verb is fixed by the verb, which is how a bot can never send
 ## a command of another station. With `record` on, each command is also kept in `sent` as
-## [tick, kind] (StationViews.station_of_command(kind) gives its station).
+## [tick, kind] (StationCatalogue.station_of_command(kind) gives its station).
 
 ## Whether verbs keep a record: [tick, kind] per command.
 var record: bool = false
@@ -28,15 +28,15 @@ func alive(ship: int) -> bool:
 	return ship >= 0 and _world.kin.is_alive(ship)
 
 
-## The nearest living hostile of the ship's faction that it detects within `range_m` (any, or
+## The nearest living hostile of the ship's faction that it detects within `reach` (any, or
 ## only armed ones), or -1.
-func nearest_hostile(ship: int, range_m: float, armed_only: bool = false) -> int:
-	return CrewMoves.nearest_hostile(_world, ship, range_m, armed_only)
+func nearest_hostile(ship: int, reach: float, armed_only: bool = false) -> int:
+	return CrewMoves.nearest_hostile(_world, ship, reach, armed_only)
 
 
-## Whether the ship's Science has no scan session open.
+## Whether the ship's Science has no minigame open.
 func science_idle(ship: int) -> bool:
-	return _world.science.kind[ship] == ScienceTable.Session.NONE
+	return _world.science.kind[ship] == ScienceTable.Minigame.NONE
 
 
 # --- helm ---
@@ -62,8 +62,8 @@ func helm_speed(ship: int, throttle: float) -> bool:
 ## Selects `target` (when 0 or more) and holds the ship facing it, or approaching it.
 func helm_face(ship: int, target: int, approach: bool) -> bool:
 	if target >= 0:
-		var select: SelectTargetCommand = SelectTargetCommand.new()
-		select.target_ship = target
+		var select: HelmSelectCommand = HelmSelectCommand.new()
+		select.contact = target
 		_send(ship, select)
 	var f: HelmInputCommand = HelmInputCommand.new()
 	f.face = true
@@ -163,9 +163,9 @@ func cancel_scan(ship: int) -> bool:
 # --- relay ---
 
 
-## Launches a probe `ahead_m` metres ahead of the ship.
-func launch_probe(ship: int, ahead_m: float) -> bool:
-	var at: PackedFloat64Array = _world.kin.point_at(ship, _world.kin.forward(ship) * ahead_m)
+## Launches a probe `distance` metres ahead of the ship.
+func launch_probe(ship: int, distance: float) -> bool:
+	var at: PackedFloat64Array = _world.kin.point_at(ship, _world.kin.forward(ship) * distance)
 	var probe: LaunchProbeCommand = LaunchProbeCommand.new()
 	probe.x = at[0]
 	probe.y = at[1]

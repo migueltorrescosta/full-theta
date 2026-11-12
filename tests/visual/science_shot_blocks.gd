@@ -10,27 +10,27 @@ const U3: int = StationFixture.U3
 
 ## The block for `kind`: "cards", "scan" or "hack".
 static func block(kind: String) -> Dictionary:
-	var b: Dictionary = ScienceView._empty()
+	var b: Dictionary = ScienceSection._empty()
 	b["cards"] = [
 		{
 			"contact": H2,
 			"detect": 0.9,
 			"scan": 0.9,
+			"revealed": 0x7F,
 			"class_id": BlockSchema.id_code(&"m1_raider"),
 			"intent": 3,
 			"weak_mask": 1,
 			"resist": [{"type": BlockSchema.id_code(&"kinetic"), "factor": 0.5}],
-			"hack": true,
 		},
 		{
 			"contact": U3,
 			"detect": 0.2,
 			"scan": 0.0,
+			"revealed": 0,
 			"class_id": 0,
 			"intent": 0,
 			"weak_mask": 0,
 			"resist": [],
-			"hack": false,
 		},
 	]
 	if kind == "scan":
@@ -56,10 +56,10 @@ static func _scan(truth: Vector3, axes: int) -> Dictionary:
 		wire.append({"p": v})
 		cloud.append({"p": pose * v})
 	return {
-		"session": 1,
-		"session_target": H2,
-		"session_start": 10,
-		"session_noise": 0.33,
+		"minigame": 1,
+		"minigame_contact": H2,
+		"minigame_start": 10,
+		"minigame_noise": 0.33,
 		"axes": axes,
 		"wire": wire,
 		"cloud": cloud,
@@ -79,10 +79,10 @@ static func _hack(node: int, known: int) -> Dictionary:
 			mask = HackGame.DOWN
 		edges.append({"mask": mask if (known >> n) & 1 == 1 else 0})
 	return {
-		"session": 2,
-		"session_target": H2,
-		"session_start": 10,
-		"session_noise": 0.3,
+		"minigame": 2,
+		"minigame_contact": H2,
+		"minigame_start": 10,
+		"minigame_noise": 0.3,
 		"hack_cols": 5,
 		"hack_rows": 3,
 		"hack_node": node,

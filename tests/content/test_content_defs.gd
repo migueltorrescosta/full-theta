@@ -25,7 +25,7 @@ func test_m1_ship_weapon_and_enemy_exist() -> void:
 	var weapon: WeaponDef = lib.weapon(&"m1_cannon")
 	assert_object(weapon).is_not_null()
 	assert_object(ship.mounts[0].weapon).is_same(weapon)
-	var enemy: EnemyDef = lib.enemy(&"m1_raider")
+	var enemy: NpcDef = lib.npc(&"m1_raider")
 	assert_object(enemy).is_not_null()
 	assert_object(enemy.ship).is_same(lib.ship(&"m1_raider"))
 

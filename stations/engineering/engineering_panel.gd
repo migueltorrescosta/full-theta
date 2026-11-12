@@ -6,7 +6,7 @@ extends StationPanel
 ## tightness with a mirror of Helm's shield ring (FT-ENG-002, FT-ENG-003); faults, the
 ## repair queue and spare parts (FT-ENG-005). Docked, only the pip board shows.
 ##
-## Reads the ENGINEERING block (ctx.view.blocks) against the ship's ShipDef from
+## Reads the ENGINEERING block (ctx.snap.blocks) against the ship's ShipDef from
 ## content/ (subsystem order, positions, limits). Hit marks come from `hit` events on the
 ## own ship (vector in the ship frame), through CrewState.sim_event. Sends set_pips,
 ## set_shield, boost, dispatch_repair and recall_repair; harden (pre-harden the selected
@@ -19,7 +19,7 @@ extends StationPanel
 ## The phone's pages, in tab order.
 enum Page { POWER, SHIP, FAULTS, CREW }
 
-const S = StationViews.Section
+const S = StationCatalogue.Section
 
 ## Controller: cursor speed (px/s) and cutaway turn rate (rad/s) at full deflection.
 const CURSOR_SPEED: float = 450.0
@@ -221,7 +221,7 @@ func claim_text() -> String:
 	if model.crew_count() == 0:
 		return TouchText.of("eng.touch.claim", "Claim")
 	var letter: String = EngineeringModel.crew_letter(model.crew_pick)
-	var item: String = "%s:%d" % [StationViews.CLAIM_CREW, model.crew_pick]
+	var item: String = "%s:%d" % [StationCatalogue.CLAIM_CREW, model.crew_pick]
 	if int(ctx.crew.claims.get(item, {}).get("session", -1)) == ctx.crew.session:
 		return TouchText.of("eng.touch.release_crew", "Release %s") % letter
 	return TouchText.of("eng.touch.claim_crew", "Claim %s") % letter
@@ -416,7 +416,9 @@ func handle_intent(ev: Dictionary) -> bool:
 
 
 func claim_item() -> String:
-	return "%s:%d" % [StationViews.CLAIM_CREW, model.crew_pick] if model.crew_count() > 0 else ""
+	return (
+		"%s:%d" % [StationCatalogue.CLAIM_CREW, model.crew_pick] if model.crew_count() > 0 else ""
+	)
 
 
 func _refresh_lists() -> void:
@@ -460,7 +462,7 @@ func _refresh_lists() -> void:
 		]
 	)
 	# Relay's probe in the making, from the RELAY block (FT-ENG-008).
-	var fab: float = float(ctx.view.blocks.get(S.RELAY, {}).get("fab_left", 0.0))
+	var fab: float = float(ctx.snap.blocks.get(S.RELAY, {}).get("fab_left", 0.0))
 	if fab > 0.0:
 		lines.append([tr("relay.fab") % ceili(fab), "accent"])
 	var text: String = str(lines)

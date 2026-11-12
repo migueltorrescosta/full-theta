@@ -8,7 +8,7 @@ extends GdUnitTestSuite
 const LOG_PATH: String = "res://tests/golden/m1_encounter.cmdlog"
 const EXPECTED_PATH: String = "res://tests/golden/m1_encounter.expected.cfg"
 const SEED: int = 9
-const SETUP: Dictionary = {"player": &"m1_corvette", "enemy": &"m1_raider"}
+const SETUP: Dictionary = {"player": &"m1_corvette", "npc": &"m1_raider"}
 ## The recording stops at the encounter's outcome or after 120 s.
 const MAX_TICKS: int = 120 * SimWorld.HZ
 ## Diagnostic tolerances for the readable values when the state hash differs, or the
@@ -19,15 +19,15 @@ const POSITION_TOLERANCE: float = 1.0
 const HULL_TOLERANCE: float = 0.01
 
 
-## The encounter outcome as a RunTable.Outcome, from the session outcome: WIN when the
+## The encounter outcome as a ShipStateTable.ShipOutcome, from the game outcome: WIN when the
 ## objective is complete, LOSS when every crewed ship is lost.
 static func _outcome(world: SimWorld) -> int:
-	match OutcomeSystem.session_outcome(world).reason:
-		SessionOutcome.Reason.OBJECTIVE:
-			return RunTable.Outcome.WIN
-		SessionOutcome.Reason.ALL_LOST:
-			return RunTable.Outcome.LOSS
-	return RunTable.Outcome.NONE
+	match OutcomeSystem.game_outcome(world).reason:
+		GameOutcome.Reason.OBJECTIVE:
+			return ShipStateTable.ShipOutcome.WIN
+		GameOutcome.Reason.ALL_LOST:
+			return ShipStateTable.ShipOutcome.LOSS
+	return ShipStateTable.ShipOutcome.NONE
 
 
 ## The readable final values: per ship position (m), hull fraction and alive, and the
@@ -35,7 +35,9 @@ static func _outcome(world: SimWorld) -> int:
 static func readable(world: SimWorld) -> Dictionary:
 	var out: Dictionary = {"outcome": _outcome(world)}
 	for id: int in world.ship_count():
-		out["ship%d_position" % id] = [world.kin.px[id], world.kin.py[id], world.kin.pz[id]]
+		out["ship%d_position" % id] = [
+			world.kin.pos_x[id], world.kin.pos_y[id], world.kin.pos_z[id]
+		]
 		out["ship%d_hull" % id] = DamageSystem.hull_fraction(world, id)
 		out["ship%d_alive" % id] = world.kin.is_alive(id)
 	return out

@@ -2,7 +2,7 @@ class_name NetCrewState
 extends RefCounted
 ## Each ship's marks, alert level and pings (D171): crew state outside the sim, the
 ## command log and the state hash. It holds the rules (CrewMarks, CrewPings) and answers
-## the Alert, Mark and Ping messages for ServerSession, which registers these handlers;
+## the Alert, Mark and Ping messages for NetGame, which registers these handlers;
 ## events go to every pick on the sender's ship only (FT-SPA-016, FT-SPA-020).
 ## A contact a mark or ping names must be one of the sender's faction or one it detects,
 ## and a named site one the world has; unknown and undetected ids get the same refusal, so a
@@ -21,11 +21,11 @@ const LOG_EVENTS: Dictionary = {
 	&"lane_warning": "lane_warning",
 }
 
-## The owning session, held weakly: it owns this object, and a strong reference back
+## The owning game, held weakly: it owns this object, and a strong reference back
 ## would leak both (and the world they hold) when the server goes.
-var session: ServerSession:
+var game: NetGame:
 	get:
-		return _session.get_ref() as ServerSession
+		return _game.get_ref() as NetGame
 var marks: CrewMarks = CrewMarks.new()
 var pings: CrewPings = CrewPings.new()
 ## Relay's zones, routes, mark inbox and log (E02).
@@ -33,32 +33,32 @@ var relay: CrewRelay = CrewRelay.new()
 ## Ship -> the main screen's view (MainScreen.View; missing: forward).
 var main_views: Dictionary[int, int] = {}
 
-var _session: WeakRef
+var _game: WeakRef
 
 
-func _init(server_session: ServerSession) -> void:
-	_session = weakref(server_session)
-	server_session.add_handler(NetProtocol.Type.ALERT, on_alert)
-	server_session.add_handler(NetProtocol.Type.MARK, on_mark)
-	server_session.add_handler(NetProtocol.Type.PING, on_ping)
-	server_session.add_handler(NetProtocol.Type.MAIN_VIEW, on_main_view)
-	server_session.add_handler(NetProtocol.Type.MARK_SEND, on_mark_send)
-	server_session.add_handler(NetProtocol.Type.MARK_ACCEPT, on_mark_accept)
+func _init(net_game: NetGame) -> void:
+	_game = weakref(net_game)
+	net_game.add_handler(NetProtocol.Type.ALERT, on_alert)
+	net_game.add_handler(NetProtocol.Type.MARK, on_mark)
+	net_game.add_handler(NetProtocol.Type.PING, on_ping)
+	net_game.add_handler(NetProtocol.Type.MAIN_VIEW, on_main_view)
+	net_game.add_handler(NetProtocol.Type.MARK_SEND, on_mark_send)
+	net_game.add_handler(NetProtocol.Type.MARK_ACCEPT, on_mark_accept)
 
 
 ## The current alert and marks of the session's ship, after a (re)join or a pick.
 func send_to(s: NetSession) -> void:
-	session.notify(s, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, ""))
-	session.notify(s, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
-	session.notify(s, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, ""))
-	session.notify(s, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
-	session.shares.send_to(s)
-	session.notify(s, NetProtocol.EVENT_LANES, _lanes_payload(s))
+	game.notify(s, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, ""))
+	game.notify(s, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
+	game.notify(s, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, ""))
+	game.notify(s, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
+	game.shares.send_to(s)
+	game.notify(s, NetProtocol.EVENT_LANES, _lanes_payload(s))
 	if _sees_routes(s):
-		session.notify(s, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
+		game.notify(s, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
 	if s.is_relay():
-		session.notify(s, NetProtocol.EVENT_INBOX, _inbox_payload(s.ship))
-		session.notify(s, NetProtocol.EVENT_RELAY_LOG, _log_payload(s.ship, true))
+		game.notify(s, NetProtocol.EVENT_INBOX, _inbox_payload(s.ship))
+		game.notify(s, NetProtocol.EVENT_RELAY_LOG, _log_payload(s.ship, true))
 
 
 ## A run reset: the ship's marks and pings cleared and its alert back to Normal, told to
@@ -80,8 +80,8 @@ func reset(ship: int) -> void:
 ## Alert{level}: any crew pick sets its ship's alert level (FT-STN-008, D89).
 func on_alert(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var level: int = msg["level"]
-	var why: String = marks.set_alert(s.ship, CrewMarks.role_of(s.entry), level)
-	if session.refuse(s, NetProtocol.Type.ALERT, why, {"level": level}):
+	var why: String = marks.set_alert(s.ship, CrewMarks.role_of(s.seat), level)
+	if game.refuse(s, NetProtocol.Type.ALERT, why, {"level": level}):
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_ALERT, _alert_payload(s.ship, s.name))
 
@@ -90,9 +90,9 @@ func on_alert(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 ## (a Captain within reconnect grace is seated) Relay does (FT-MSC-005, FT-RLY-010, D88).
 func on_main_view(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	var view: int = msg["view"]
-	var role: CrewMarks.Role = CrewMarks.role_of(s.entry) if s.has_pick() else CrewMarks.Role.NONE
+	var role: CrewMarks.Role = CrewMarks.role_of(s.seat) if s.has_pick() else CrewMarks.Role.NONE
 	var why: String = MainScreen.rule(role, view, captain_seated(s.ship))
-	if session.refuse(s, NetProtocol.Type.MAIN_VIEW, why, {"view": view}):
+	if game.refuse(s, NetProtocol.Type.MAIN_VIEW, why, {"view": view}):
 		return
 	main_views[s.ship] = view
 	_to_ship(s.ship, NetProtocol.EVENT_MAIN_VIEW, _main_view_payload(s.ship, s.name))
@@ -100,19 +100,19 @@ func on_main_view(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 
 ## Whether the ship has a Captain pick, connected or within reconnect grace.
 func captain_seated(ship: int) -> bool:
-	for o: NetSession in session.by_id.values():
-		if o.ship == ship and o.entry == StationViews.CAPTAIN:
+	for o: NetSession in game.by_id.values():
+		if o.ship == ship and o.seat == StationCatalogue.CAPTAIN:
 			return true
 	return false
 
 
 ## Mark{op, ...}: place, move, rename or delete one of the ship's marks (CrewMarks).
 func on_mark(s: NetSession, msg: Dictionary, _now_us: int) -> void:
-	var role: CrewMarks.Role = CrewMarks.role_of(s.entry)
+	var role: CrewMarks.Role = CrewMarks.role_of(s.seat)
 	var slot: int = msg["slot"]
 	var why: String = ""
 	if not s.has_pick():
-		why = ServerSession.NOT_CREW
+		why = NetGame.NOT_CREW
 	else:
 		match msg["op"]:
 			"place":
@@ -129,12 +129,12 @@ func on_mark(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 					return
 			_:
 				why = CrewMarks.BAD_MARK
-	if session.refuse(s, NetProtocol.Type.MARK, why, {"op": msg["op"], "slot": slot}):
+	if game.refuse(s, NetProtocol.Type.MARK, why, {"op": msg["op"], "slot": slot}):
 		return
 	_to_ship(s.ship, NetProtocol.EVENT_MARKS, _marks_payload(s.ship))
 	# (FT-MIS-038: Relay's first mark)
 	if msg["op"] == "place" and role == CrewMarks.Role.RELAY:
-		session.first_use.on_crew_op(s.ship, "relay", "mark_place", session.world.tick)
+		game.first_use.on_crew_op(s.ship, "relay", "mark_place", game.world.tick)
 	# (P15: Relay's mark on a mission's contact locates the mission)
 	if msg["op"] == "place" and role == CrewMarks.Role.RELAY:
 		_mark_mission(s, _spot(s, msg))
@@ -161,7 +161,7 @@ func on_mark_send(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 			why = CrewMarks.BAD_MARK
 		else:
 			why = relay.send(to, s.ship, _ship_name(s.ship), mark)
-	if session.refuse(s, NetProtocol.Type.MARK_SEND, why, {"slot": msg["slot"]}):
+	if game.refuse(s, NetProtocol.Type.MARK_SEND, why, {"slot": msg["slot"]}):
 		return
 	_to_relay(to, NetProtocol.EVENT_INBOX, _inbox_payload(to))
 	_log(s.ship, "mark_sent", {"name": _resolved(s.ship, msg["slot"])["name"]})
@@ -192,7 +192,7 @@ func on_mark_accept(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 		why = marks.place(
 			s.ship, CrewMarks.Role.RELAY, s.id, s.name, msg["slot"], pending["name"], spot
 		)
-	if session.refuse(s, NetProtocol.Type.MARK_ACCEPT, why, {"id": msg["id"]}):
+	if game.refuse(s, NetProtocol.Type.MARK_ACCEPT, why, {"id": msg["id"]}):
 		return
 	relay.take(s.ship, msg["id"])
 	_to_relay(s.ship, NetProtocol.EVENT_INBOX, _inbox_payload(s.ship))
@@ -235,8 +235,8 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 	var payload: Dictionary = {"ship": s.ship, "kind": kind, "id": -1}
 	payload.merge({"x": 0.0, "y": 0.0, "z": 0.0})
 	var why: String = ""
-	if not s.has_pick() or CrewMarks.role_of(s.entry) == CrewMarks.Role.NONE:
-		why = ServerSession.NOT_CREW
+	if not s.has_pick() or CrewMarks.role_of(s.seat) == CrewMarks.Role.NONE:
+		why = NetGame.NOT_CREW
 	elif not pings.take(s.id, now_us):
 		why = CommandGate.RATE_LIMITED
 	else:
@@ -250,14 +250,14 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 				if not marks.has_mark(s.ship, msg["id"]):
 					why = CrewPings.BAD_PING
 				else:
-					session.coop.on_mark_pinged(s, msg["id"])
+					game.coop.on_mark_pinged(s, msg["id"])
 			"card":
 				# A card of the ship's Comms board (FT-CPT-005, D215): the Captain pings it,
 				# and the ping carries the card's text, so the main screen (a viewer, which has
 				# no Comms section) can draw it.
 				payload["id"] = msg["id"]
 				var card: Dictionary = _board_card(s.ship, msg["id"])
-				if CrewMarks.role_of(s.entry) != CrewMarks.Role.CAPTAIN or card.is_empty():
+				if CrewMarks.role_of(s.seat) != CrewMarks.Role.CAPTAIN or card.is_empty():
 					why = CrewPings.BAD_PING
 				else:
 					payload["card"] = card
@@ -269,19 +269,17 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 			"site":
 				# A named site the ship's faction knows: its id is `id` (SiteTable row).
 				payload["id"] = msg["id"]
-				if not session.world.sites.is_known(msg["id"], session.world.faction_of(s.ship)):
+				if not game.world.sites.is_known(msg["id"], game.world.faction_of(s.ship)):
 					why = CrewPings.BAD_PING
 			"point":
-				var at: PackedFloat64Array = session.world.kin.wrap_point(
-					msg["x"], msg["y"], msg["z"]
-				)
+				var at: PackedFloat64Array = _msg_point(msg)
 				if at.is_empty():
 					why = CrewPings.BAD_PING
 				else:
 					payload.merge({"x": at[0], "y": at[1], "z": at[2]}, true)
 			_:
 				why = CrewPings.BAD_PING
-	if session.refuse(s, NetProtocol.Type.PING, why, {"kind": kind}):
+	if game.refuse(s, NetProtocol.Type.PING, why, {"kind": kind}):
 		return
 	payload["by"] = s.name
 	payload["copy"] = pings.copy_of(s.ship, kind, payload["id"], s.id, s.name, now_us)
@@ -291,7 +289,7 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 ## A card of the ship's board as the ping shows it: kind (StoryTable.Kind), the title and
 ## detail text keys and the seconds left (-1: none); {} for an id the ship has no card with.
 func _board_card(ship: int, id: int) -> Dictionary:
-	var w: SimWorld = session.world
+	var w: SimWorld = game.world
 	if id < 0 or id >= w.story.size() or not Story.visible_to(w, id, ship):
 		return {}
 	var left: float = -1.0
@@ -311,7 +309,7 @@ func _board_card(ship: int, id: int) -> Dictionary:
 func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> String:
 	if role != CrewMarks.Role.RELAY:
 		return CrewRelay.NOT_RELAY
-	var at: PackedFloat64Array = session.world.kin.wrap_point(msg["x"], msg["y"], msg["z"])
+	var at: PackedFloat64Array = _msg_point(msg)
 	var op: String = msg["op"]
 	var slot: int = msg["slot"]
 	var why: String = ""
@@ -319,34 +317,35 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 		"route_add":
 			if at.is_empty():
 				return CrewRelay.BAD_ROUTE
-			why = relay.route_add(s.ship, slot, Vector3(at[0], at[1], at[2]))
+			why = relay.route_add(s.ship, slot, at)
 		"route_clear":
 			why = relay.route_clear(s.ship, slot)
 		"hazard_add":
 			if at.is_empty():
 				return CrewRelay.BAD_ZONE
-			var centre: Vector3 = Vector3(at[0], at[1], at[2])
 			var radius: float = slot * 100.0
-			why = relay.add_zone(s.ship, CrewRelay.KIND_HAZARD, centre, radius, s.name)
+			why = relay.add_zone(s.ship, CrewRelay.KIND_HAZARD, at, radius, s.name)
 		_:
 			why = relay.delete_zone(s.ship, slot)
 	if why != "":
 		return why
 	if op == "route_add":  # FT-MIS-038, Relay's first route
-		session.first_use.on_crew_op(s.ship, "relay", "route_add", session.world.tick)
+		game.first_use.on_crew_op(s.ship, "relay", "route_add", game.world.tick)
 	if op.begins_with("route"):
-		for t: NetSession in session.by_id.values():
+		for t: NetSession in game.by_id.values():
 			if t.ship == s.ship and t.has_pick() and _sees_routes(t):
-				session.notify(t, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
+				game.notify(t, NetProtocol.EVENT_ROUTES, _routes_payload(s.ship))
 		_log(s.ship, "route_" + op.trim_prefix("route_"), {"route": slot + 1})
 	else:
 		_to_ship(s.ship, NetProtocol.EVENT_ZONES, _zones_payload(s.ship))
 		_log(s.ship, "hazard_" + op.trim_prefix("hazard_"))
+		_sync_scan_point(s.ship)
 	return ""
 
 
-## Adds a scan position (Science's, FT-SPA-028) as a zone of the ship and tells its picks.
-func add_scan_position(ship: int, at: Vector3, radius: float, by: String) -> String:
+## Adds a scan position (Science's, FT-SPA-028) at a point as a zone of the ship and tells
+## its picks.
+func add_scan_position(ship: int, at: PackedFloat64Array, radius: float, by: String) -> String:
 	var why: String = relay.add_zone(ship, CrewRelay.KIND_SCAN, at, radius, by)
 	if why == "":
 		_to_ship(ship, NetProtocol.EVENT_ZONES, _zones_payload(ship))
@@ -355,7 +354,7 @@ func add_scan_position(ship: int, at: Vector3, radius: float, by: String) -> Str
 
 ## Whether the sender's faction may name this ship: its own, or one it detects now.
 func _known(s: NetSession, contact: int) -> bool:
-	var world: SimWorld = session.world
+	var world: SimWorld = game.world
 	return (
 		contact >= 0
 		and contact < world.ship_count()
@@ -366,7 +365,7 @@ func _known(s: NetSession, contact: int) -> bool:
 ## Whether `id` names a zone the ship's faction can ping (CrewPings.HAZARD_ZONE_BASE): a
 ## marked zone, one of its launched probes (-1 - serial) or a known sim hazard.
 func _is_zone(ship: int, id: int) -> bool:
-	var world: SimWorld = session.world
+	var world: SimWorld = game.world
 	if id <= CrewPings.HAZARD_ZONE_BASE:
 		var h: int = CrewPings.HAZARD_ZONE_BASE - id
 		return h < world.hazards.size() and HazardSystem.known_to(world, world.faction_of(ship), h)
@@ -382,6 +381,16 @@ func _is_zone(ship: int, id: int) -> bool:
 	return false
 
 
+## A message's point (fields x, y, z, m) wrapped onto the cube; empty when not finite.
+func _msg_point(msg: Dictionary) -> PackedFloat64Array:
+	return game.world.kin.wrap_point(CubePoint.make(msg["x"], msg["y"], msg["z"]))
+
+
+## A zone's point (its x, y, z fields).
+static func _zone_point(zone: Dictionary) -> PackedFloat64Array:
+	return CubePoint.make(zone["x"], zone["y"], zone["z"])
+
+
 ## A Mark message's place as CrewMarks takes it: a contact the sender can't name becomes
 ## -2, and a free point is wrapped onto the cube
 ## (NaN when not finite), so CrewMarks refuses them all alike (BAD_MARK).
@@ -389,15 +398,15 @@ func _spot(s: NetSession, msg: Dictionary) -> Dictionary:
 	var contact: int = msg["contact"]
 	if contact >= 0 and not _known(s, contact):
 		contact = -2
-	var at: PackedFloat64Array = session.world.kin.wrap_point(msg["x"], msg["y"], msg["z"])
+	var at: PackedFloat64Array = _msg_point(msg)
 	if at.is_empty():
-		at = PackedFloat64Array([NAN, NAN, NAN])
+		at = CubePoint.make(NAN, NAN, NAN)
 	var spot: Dictionary = {"contact": contact, "x": at[0], "y": at[1], "z": at[2]}
 	# An attached mark's x names a scanned subsystem as index + 1 (FT-SPA-014, D202); one
 	# whose weak point no scan revealed isn't placed.
 	if contact >= 0 and msg["x"] >= 1.0:
 		var sub: int = int(msg["x"]) - 1
-		var def: ShipDef = session.world.defs[contact]
+		var def: ShipDef = game.world.defs[contact]
 		if sub >= def.subsystems.size() or not _revealed(s, contact, sub):
 			spot["contact"] = -2
 		else:
@@ -409,7 +418,7 @@ func _spot(s: NetSession, msg: Dictionary) -> Dictionary:
 ## Whether the sender's faction has revealed that subsystem's weak point (D202), from
 ## Science's scan knowledge (FT-SIM-023).
 func _revealed(s: NetSession, contact: int, sub: int) -> bool:
-	var world: SimWorld = session.world
+	var world: SimWorld = game.world
 	var faction: int = world.faction_of(s.ship)
 	return sub in ScienceKnowledge.weak_points(world, faction, contact)
 
@@ -419,32 +428,66 @@ func _revealed(s: NetSession, contact: int, sub: int) -> bool:
 ## nothing. The zone is the one owner of the scan position (F5, R12-1; D171 extended): every
 ## reader (NetCoop's P3 check, the clients through `zones`) reads it, and the run reset and a
 ## relaunch clear it with the ship's crew state. ScienceMarkCommand validates the contact and
-## computes the point; its ScienceTable columns are read here only, at the `scan_mark` event.
+## sets the sim's scan point (ScienceTable.scan_x), read here at the `scan_mark` event.
 func _science_scan_position(ship: int) -> void:
-	var world: SimWorld = session.world
+	var world: SimWorld = game.world
 	var def: ScienceDef = world.science_def
 	if def == null or ship < 0 or ship >= world.science.size():
 		return
 	var t: ScienceTable = world.science
-	var at: Vector3 = Vector3(t.mark_x[ship], t.mark_y[ship], t.mark_z[ship])
-	for z: Dictionary in relay.zones_of(ship):
-		if z["kind"] != CrewRelay.KIND_SCAN or z["by"] != SCIENCE_BY:
-			continue
-		if Vector3(z["x"], z["y"], z["z"]) == at:
+	if not t.has_scan_point(ship):
+		return
+	var at: PackedFloat64Array = CubePoint.read(t.scan_x, t.scan_y, t.scan_z, ship)
+	var zone: Dictionary = _science_zone(ship)
+	if not zone.is_empty():
+		if _zone_point(zone) == at:
 			return
-		relay.delete_zone(ship, z["id"])
+		relay.delete_zone(ship, zone["id"])
 	add_scan_position(ship, at, def.mark_radius, SCIENCE_BY)
 
 
+## The ship's scan position Science placed, or {}.
+func _science_zone(ship: int) -> Dictionary:
+	for z: Dictionary in relay.zones_of(ship):
+		if z["kind"] == CrewRelay.KIND_SCAN and z["by"] == SCIENCE_BY:
+			return z
+	return {}
+
+
+## Keeps the sim's scan point on the crew-state scan position (D378, 12r-27): after a Relay
+## zone op that moved or removed it, one ScienceScanPointCommand (once per op, never per
+## drag frame), so the sim's noise step never reads crew state (D171).
+func _sync_scan_point(ship: int) -> void:
+	var world: SimWorld = game.world
+	if ship < 0 or ship >= world.science.size():
+		return
+	var t: ScienceTable = world.science
+	var zone: Dictionary = _science_zone(ship)
+	var c: ScienceScanPointCommand = ScienceScanPointCommand.new()
+	c.ship_id = ship
+	if zone.is_empty():
+		if not t.has_scan_point(ship):
+			return
+		c.clear = true
+	else:
+		var at: PackedFloat64Array = _zone_point(zone)
+		c.scan_x = at[0]
+		c.scan_y = at[1]
+		c.scan_z = at[2]
+		if t.has_scan_point(ship) and at == CubePoint.read(t.scan_x, t.scan_y, t.scan_z, ship):
+			return
+	world.submit(c)
+
+
 func _ship_name(ship: int) -> String:
-	var world: SimWorld = session.world
+	var world: SimWorld = game.world
 	if ship < 0 or ship >= world.ship_count():
 		return ""
-	return session.fleet.name_of(ship, world.defs[ship].display_name)  # the lobby's name (#11)
+	return game.fleet.name_of(ship, world.defs[ship].display_name)  # the lobby's name (#11)
 
 
 func _allied(a: int, b: int) -> bool:
-	var world: SimWorld = session.world
+	var world: SimWorld = game.world
 	return (
 		b >= 0
 		and b < world.ship_count()
@@ -472,10 +515,9 @@ func _resolved(ship: int, slot: int) -> Dictionary:
 		out.merge({"x": m["x"], "y": m["y"], "z": m["z"]})
 		var c: int = m["contact"]
 		if c >= 0:
-			var kin: Kinematics = session.world.kin
+			var kin: Kinematics = game.world.kin
 			var here: PackedFloat64Array = kin.point_at(c, Vector3(m["x"], m["y"], m["z"]))
-			var at: Vector3 = Vector3(here[0], here[1], here[2])
-			out.merge({"x": at.x, "y": at.y, "z": at.z}, true)
+			out.merge({"x": here[0], "y": here[1], "z": here[2]}, true)
 		return out
 	return {}
 
@@ -487,12 +529,12 @@ func _mark_mission(s: NetSession, spot: Dictionary) -> void:
 	var contact: int = int(spot.get("contact", -1))
 	if contact < 0:
 		return
-	var card: int = StoryRules.mission_of_contact(session.world, s.ship, contact)
-	if card >= 0 and not StoryRules.is_marked(session.world, card):
+	var card: int = StoryRules.mission_of_contact(game.world, s.ship, contact)
+	if card >= 0 and not StoryRules.is_marked(game.world, card):
 		var c: MarkMissionCommand = MarkMissionCommand.new()
 		c.ship_id = s.ship
 		c.card = card
-		session.world.submit(c)
+		game.world.submit(c)
 
 
 ## The ship's picks get its approach lanes (CrewRelay.lane_items) when their view sees them
@@ -500,12 +542,12 @@ func _mark_mission(s: NetSession, spot: Dictionary) -> void:
 ## starts or ends (NetShares). Returns whether any pick got lanes.
 func sync_lanes(ship: int) -> bool:
 	var any: bool = false
-	for t: NetSession in session.by_id.values():
+	for t: NetSession in game.by_id.values():
 		if t.ship != ship or not t.has_pick():
 			continue
 		var payload: Dictionary = _lanes_payload(t)
 		any = any or not (payload["lanes"] as Array).is_empty()
-		session.notify(t, NetProtocol.EVENT_LANES, payload)
+		game.notify(t, NetProtocol.EVENT_LANES, payload)
 	return any
 
 
@@ -514,12 +556,12 @@ func sync_lanes(ship: int) -> bool:
 func _sees_lanes(s: NetSession) -> bool:
 	if not s.has_pick():
 		return false
-	var f: ViewFilter = ViewFilter.of(s.entry, s.view_code())
-	return f == null or f.grants(ViewFilter.LANES)
+	var f: ShortcutFilter = ShortcutFilter.of(s.seat, s.stream_code())
+	return f == null or f.grants(ShortcutFilter.LANES)
 
 
 func _lanes_payload(s: NetSession) -> Dictionary:
-	var items: Array = CrewRelay.lane_items(session.world, s.ship) if _sees_lanes(s) else []
+	var items: Array = CrewRelay.lane_items(game.world, s.ship) if _sees_lanes(s) else []
 	return {"ship": s.ship, "lanes": items}
 
 
@@ -528,12 +570,12 @@ func _lanes_payload(s: NetSession) -> Dictionary:
 ## routes (a press that shared them).
 func sync_routes(ship: int) -> bool:
 	var any: bool = false
-	for t: NetSession in session.by_id.values():
-		if t.ship != ship or not t.has_pick() or StationViews.stations_of(t.entry).has("relay"):
+	for t: NetSession in game.by_id.values():
+		if t.ship != ship or not t.has_pick() or StationCatalogue.stations_of(t.seat).has("relay"):
 			continue
 		var seen: bool = _sees_routes(t)
 		any = any or seen
-		session.notify(
+		game.notify(
 			t,
 			NetProtocol.EVENT_ROUTES,
 			_routes_payload(ship) if seen else {"ship": ship, "routes": []}
@@ -547,8 +589,8 @@ func sync_routes(ship: int) -> bool:
 func _sees_routes(s: NetSession) -> bool:
 	if not s.has_pick():
 		return false
-	var f: ViewFilter = ViewFilter.of(s.entry, s.view_code())
-	return f == null or f.grants(ViewFilter.ROUTES)
+	var f: ShortcutFilter = ShortcutFilter.of(s.seat, s.stream_code())
+	return f == null or f.grants(ShortcutFilter.ROUTES)
 
 
 func _zones_payload(ship: int) -> Dictionary:
@@ -570,9 +612,7 @@ func _log_payload(ship: int, replace: bool, fresh: Array = []) -> Dictionary:
 
 ## Appends a log entry and tells the ship's Relay picks.
 func _log(ship: int, key: String, args: Dictionary = {}, tick: int = -1) -> void:
-	var entry: Dictionary = relay.log_entry(
-		ship, tick if tick >= 0 else session.world.tick, key, args
-	)
+	var entry: Dictionary = relay.log_entry(ship, tick if tick >= 0 else game.world.tick, key, args)
 	_to_relay(ship, NetProtocol.EVENT_RELAY_LOG, _log_payload(ship, false, [entry]))
 
 
@@ -590,16 +630,14 @@ func _marks_payload(ship: int) -> Dictionary:
 
 ## An event to the ship's Relay picks only (the inbox and the log).
 func _to_relay(ship: int, type: String, payload: Dictionary) -> void:
-	var ids: PackedInt32Array = session.audience(
+	var ids: PackedInt32Array = game.audience(
 		func(s: NetSession) -> bool: return s.on_ship(ship) and s.is_relay()
 	)
-	session.transport.post_event(ids, session.world.tick, type, payload)
+	game.transport.post_event(ids, game.world.tick, type, payload)
 
 
 ## An event to every session with a pick on the ship, and no other ship (FT-SPA-016,
 ## FT-SPA-020).
 func _to_ship(ship: int, type: String, payload: Dictionary) -> void:
-	var ids: PackedInt32Array = session.audience(
-		func(s: NetSession) -> bool: return s.on_ship(ship)
-	)
-	session.transport.post_event(ids, session.world.tick, type, payload)
+	var ids: PackedInt32Array = game.audience(func(s: NetSession) -> bool: return s.on_ship(ship))
+	game.transport.post_event(ids, game.world.tick, type, payload)

@@ -1,0 +1,6 @@
+{
+  "_comment": "Tips (fixture).",
+  "tips": [
+    {"id": "science.1", "topic": "science", "en": "Sensor sweep finds hosts.", "pt_PT": "Varredura de sensores encontra alvos."}
+  ]
+}

@@ -2,9 +2,10 @@ class_name ScienceCard
 extends Control
 ## The contact card (§5.4, FT-SCI-002, D28, D51): class, identity, intent, weak points,
 ## resistances and hack access of the selected contact, each with a confidence bar. The
-## bar is the scan confidence; its tick is the confidence at which the server reveals the
-## part (ScienceDef). Below the tick the value reads "??" (never shown, never sent: the
-## section carries a part only once it is revealed). The own ship shows its self-scan.
+## bar is the scan confidence. The server says which parts it revealed (the card's
+## `revealed` bits, BlockSchema.SCIENCE_REVEALED, 12r-23); until then the value reads "??"
+## (never sent: the section carries a part only once it is revealed). The own ship shows
+## its self-scan.
 
 const FONT_SIZE: int = 14
 const ROW_H: float = 46.0
@@ -74,10 +75,10 @@ func _draw() -> void:
 			font.get_string_size(callsign, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE + 3).x
 		)
 		_text(font, Vector2(22.0 + cw, y), conf, Palette.color("text_dim"), FONT_SIZE - 2)
-		_bar(Vector2(10, y + 8.0), size.x - 20.0, scan, -1.0)
+		_bar(Vector2(10, y + 8.0), size.x - 20.0, scan, true)
 		y = COMPACT_HEAD_H
 	else:
-		_bar(Vector2(10, y + 8.0), size.x - 20.0, scan, -1.0)
+		_bar(Vector2(10, y + 8.0), size.x - 20.0, scan, true)
 		_text(font, Vector2(10, y + 32.0), conf, Palette.color("text_dim"), FONT_SIZE - 2)
 		y += 60.0
 	for part: String in ["class", "identity", "intent", "weak_points", "resistances", "hack"]:
@@ -92,9 +93,14 @@ static func confidence_word(scan: float) -> String:
 	return TranslationServer.translate("sci.conf_likely" if scan >= 0.5 else "sci.conf_guess")
 
 
+## Whether the server revealed the card's part (BlockSchema.SCIENCE_REVEALED's names).
+static func is_revealed(row: Dictionary, part: StringName) -> bool:
+	var bit: int = BlockSchema.SCIENCE_REVEALED.find(part)
+	return bit >= 0 and (int(row.get("revealed", 0)) >> bit) & 1 == 1
+
+
 func _row(font: Font, part: String, y: float, scan: float) -> void:
-	var need: float = ScienceLookup.threshold(StringName(part))
-	var shown: bool = scan >= need and scan > 0.0
+	var shown: bool = is_revealed(card, StringName(part))
 	# Compact: label, value and bar 13, 30 and 33 px down a 40 px row.
 	var label_y: float = y + (13.0 if compact else 0.0)
 	_text(
@@ -108,7 +114,7 @@ func _row(font: Font, part: String, y: float, scan: float) -> void:
 		Palette.color("text") if shown else Palette.color("text_dim"),
 		FONT_SIZE
 	)
-	_bar(Vector2(10, y + (33.0 if compact else 26.0)), size.x - 20.0, scan, need)
+	_bar(Vector2(10, y + (33.0 if compact else 26.0)), size.x - 20.0, scan, shown)
 
 
 func _value(part: String) -> String:
@@ -155,25 +161,18 @@ func _resistances() -> String:
 
 
 func _hack() -> String:
-	if not bool(card.get("hack", false)):
-		return "??"
 	for h: Dictionary in hacks:
 		return tr("sci.hack_window") % roundf(float(h["left"]))
 	return tr("sci.hack_ready")
 
 
-## A confidence bar from x, with a tick at `need` (negative: none).
-func _bar(at: Vector2, width: float, value: float, need: float) -> void:
+## A confidence bar from x: "ok" once its part is revealed, else "warn".
+func _bar(at: Vector2, width: float, value: float, revealed: bool) -> void:
 	draw_rect(Rect2(at, Vector2(width, BAR_H)), Palette.color("background"))
 	draw_rect(
 		Rect2(at, Vector2(width * clampf(value, 0.0, 1.0), BAR_H)),
-		Palette.color("ok") if need < 0.0 or value >= need else Palette.color("warn")
+		Palette.color("ok") if revealed else Palette.color("warn")
 	)
-	if need >= 0.0 and need <= 1.0:
-		var x: float = at.x + width * need
-		draw_line(
-			Vector2(x, at.y - 2.0), Vector2(x, at.y + BAR_H + 2.0), Palette.color("text"), 1.0
-		)
 
 
 func _text(font: Font, at: Vector2, text: String, col: Color, fs: int = FONT_SIZE) -> void:

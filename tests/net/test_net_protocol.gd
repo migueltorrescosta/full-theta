@@ -19,7 +19,7 @@ func _samples() -> Dictionary:
 			"period": 200000.0,
 			"ev_from": 0,
 			"ship": -1,
-			"entry": "",
+			"seat": "",
 			"dev_all": false,
 			"host": false,
 			"lang": "en",
@@ -29,10 +29,10 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.CATALOGUE:
 		{
 			"ships": [{"id": 0, "def": "m1_corvette", "name": "Corvette", "faction": 1}],
-			"entries": [{"id": "helm", "name": "Helm", "stations": ["helm"]}],
+			"seats": [{"id": "helm", "name": "Helm", "stations": ["helm"]}],
 			"load_tags": [],
 		},
-		NetProtocol.Type.PICK: {"ship": 0, "entry": "tactical"},
+		NetProtocol.Type.PICK: {"ship": 0, "seat": "tactical"},
 		NetProtocol.Type.RELEASE: {},
 		NetProtocol.Type.READY: {"ready": true},
 		NetProtocol.Type.CLAIM: {"item": "mount:0"},
@@ -41,7 +41,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.ACK: {"snap": 40, "ev": 12},
 		NetProtocol.Type.EVENT: {"seq": 4, "tick": 361, "type": "hit", "payload": {"ship": 0}},
 		NetProtocol.Type.ABANDON: {"ship": 0},
-		NetProtocol.Type.TAKEOVER: {"ship": 0, "entry": "helm"},
+		NetProtocol.Type.TAKEOVER: {"ship": 0, "seat": "helm"},
 		NetProtocol.Type.BYE: {"reason": "quit"},
 		NetProtocol.Type.VOICE:
 		{
@@ -77,8 +77,7 @@ func _samples() -> Dictionary:
 		NetProtocol.Type.HOST_PAUSE: {"on": true},
 		NetProtocol.Type.SHIP_ADD: {"name": "Kestrel II"},
 		NetProtocol.Type.SHIP_TEAM: {"ship": 2, "team": 1},
-		NetProtocol.Type.SESSION_MODE:
-		{"mode": "teams", "team_win": "first_to_finish", "lives": -1},
+		NetProtocol.Type.GAME_MODE: {"mode": "teams", "team_win": "first_to_finish", "lives": -1},
 		NetProtocol.Type.RELAUNCH: {"ship": 1, "vote": true},
 		NetProtocol.Type.CLIENT_FRAME: {"ms": 812, "what": "build station:0:helm"},
 		NetProtocol.Type.TRAINING: {"station": "helm"},
@@ -178,16 +177,16 @@ func test_snapshot_header() -> void:
 		M1Encounter.new(1, "test", TestDefs.corvette(), TestDefs.raider_enemy()).build()
 	)
 	world.step()
-	var b: SnapshotBuilder = SnapshotBuilder.new()
-	var key: String = StationViews.key(0, "helm")
+	var b: SnapshotWriter = SnapshotWriter.new()
+	var key: String = StationCatalogue.key(0, "helm")
 	b.build(SimCopy.of(world), 77, [key])
 	var bytes: PackedByteArray = b.message(key, true)
 	assert_int(NetProtocol.type_of(bytes)).is_equal(NetProtocol.Type.SNAPSHOT)
 	assert_array(SnapshotReader.peek(bytes)).is_equal([77, true, 1])
 	assert_dict(NetProtocol.decode(bytes)).is_empty()
-	var view: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
-	assert_bool(view.apply(bytes)).is_true()
-	assert_array(view.kinds).is_equal(StationViews.sections_of("helm"))
+	var snap: SnapshotState = SnapshotState.new(NetCodec.period_units(world.kin.period))
+	assert_bool(snap.apply(bytes)).is_true()
+	assert_array(snap.kinds).is_equal(StationCatalogue.sections_of("helm"))
 
 
 # FT: FT-NET-004

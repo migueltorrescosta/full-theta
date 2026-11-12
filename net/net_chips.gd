@@ -23,24 +23,24 @@ const BAD_ARG: String = "chip_bad_arg"
 const BAD_ID: String = "chip_bad_id"
 
 ## The chip list, loaded once (read-only after).
-static var _def: ChipsDef = ChipView.def()
+static var _def: ChipsDef = ChipsReader.def()
 
-## The owning session, held weakly (it owns this object).
-var session: ServerSession:
+## The owning game, held weakly (it owns this object).
+var game: NetGame:
 	get:
-		return _session.get_ref() as ServerSession
+		return _game.get_ref() as NetGame
 
-var _session: WeakRef
+var _game: WeakRef
 ## Ship -> open chips: {id, chip (index in ChipsDef.chips), arg, from, to (indices in
-## StationViews.CREW), sent, expires (sim ticks), by (session id)}.
+## StationCatalogue.CREW), sent, expires (sim ticks), by (session id)}.
 var _open: Dictionary[int, Array] = {}
 var _dirty: Dictionary[int, bool] = {}
 var _next_id: int = 1
 
 
-func _init(server_session: ServerSession) -> void:
-	_session = weakref(server_session)
-	server_session.add_handler(NetProtocol.Type.CHIP, on_chip)
+func _init(net_game: NetGame) -> void:
+	_game = weakref(net_game)
+	net_game.add_handler(NetProtocol.Type.CHIP, on_chip)
 
 
 ## Chip{op, ...}.
@@ -53,15 +53,13 @@ func on_chip(s: NetSession, msg: Dictionary, _now_us: int) -> void:
 	else:
 		why = BAD_CHIP
 	if why != "":
-		session.request_rejected(
-			s, NetProtocol.Type.CHIP, why, {"op": msg["op"], "chip": msg["chip"]}
-		)
+		game.request_rejected(s, NetProtocol.Type.CHIP, why, {"op": msg["op"], "chip": msg["chip"]})
 
 
 ## Opens a chip from the session's station to the chip's receiver; the reason it can't, or "".
 func send(s: NetSession, chip_id: String, arg: int) -> String:
 	var why: String = _sender_rule(s)
-	var at: int = ChipView.index_of(chip_id)
+	var at: int = ChipsReader.index_of(chip_id)
 	if why == "" and at < 0:
 		why = BAD_CHIP
 	if why == "":
@@ -72,21 +70,21 @@ func send(s: NetSession, chip_id: String, arg: int) -> String:
 		why = _open_rule(open, at, arg_of(chip, arg))
 	if why != "":
 		return why
-	var tick: int = session.world.tick
+	var tick: int = game.world.tick
 	var row: Dictionary = {
 		"id": _next_id,
 		"chip": at,
 		"arg": arg_of(chip, arg),
-		"from": StationViews.CREW.find(String(chip.from_station)),
-		"to": StationViews.CREW.find(String(chip.to_station)),
+		"from": StationCatalogue.CREW.find(String(chip.from_station)),
+		"to": StationCatalogue.CREW.find(String(chip.to_station)),
 		"sent": tick,
-		"expires": tick + ceili(_def.expiry_s * SimWorld.HZ),
+		"expires": tick + ceili(_def.expiry * SimWorld.HZ),
 		"by": s.id,
 	}
 	_next_id = (_next_id + 1) & 0xffff
 	open.append(row)
 	_dirty[s.ship] = true
-	session.coop.record(CoopEvents.CHIP_SENT, _pair(chip), s.ship, {"chip": String(chip.id)})
+	game.coop.record(CoopEvents.CHIP_SENT, _pair(chip), s.ship, {"chip": String(chip.id)})
 	return ""
 
 
@@ -95,19 +93,19 @@ func send(s: NetSession, chip_id: String, arg: int) -> String:
 ## event, declining does not.
 func answer(s: NetSession, id: int, accept: bool) -> String:
 	if not s.is_crew():
-		return ServerSession.NOT_CREW
+		return NetGame.NOT_CREW
 	var open: Array = _open.get(s.ship, [])
 	for i: int in open.size():
 		var row: Dictionary = open[i]
 		if row["id"] != id:
 			continue
 		var chip: ChipDef = _def.chips[row["chip"]]
-		if not StationViews.stations_of(s.entry).has(String(chip.to_station)):
+		if not StationCatalogue.stations_of(s.seat).has(String(chip.to_station)):
 			return NOT_YOURS
 		open.remove_at(i)
 		_dirty[s.ship] = true
 		var kind: String = CoopEvents.CHIP_ANSWERED if accept else CoopEvents.CHIP_DECLINED
-		session.coop.record(kind, _pair(chip), s.ship, {"chip": String(chip.id)})
+		game.coop.record(kind, _pair(chip), s.ship, {"chip": String(chip.id)})
 		_tell_sender(s.ship, row, accept, s.name)
 		return ""
 	return BAD_ID
@@ -116,19 +114,19 @@ func answer(s: NetSession, id: int, accept: bool) -> String:
 ## Drops the chips whose time ran out, silently: no event reaches a player, the count goes
 ## to the debrief (FT-PAIR-013). Posts the lists that changed. Call once per frame.
 func step() -> void:
-	var tick: int = session.world.tick
+	var tick: int = game.world.tick
 	for ship: int in _open:
 		var open: Array = _open[ship]
 		for i: int in range(open.size() - 1, -1, -1):
 			if tick >= int(open[i]["expires"]):
 				var chip: ChipDef = _def.chips[open[i]["chip"]]
-				session.coop.record(
+				game.coop.record(
 					CoopEvents.CHIP_EXPIRED, _pair(chip), ship, {"chip": String(chip.id)}
 				)
 				open.remove_at(i)
 				_dirty[ship] = true
 	for ship: int in _dirty:
-		session.transport.post_chips(ship, rows_of(ship))
+		game.transport.post_chips(ship, rows_of(ship))
 	_dirty.clear()
 
 
@@ -163,8 +161,8 @@ func _sender_rule(s: NetSession) -> String:
 	var why: String = ""
 	var picked: DataToggles = DataToggles.parse(s.toggles)
 	if not s.is_crew():
-		why = ServerSession.NOT_CREW
-	elif picked == null or not picked.on(ViewFilter.CHIPS):
+		why = NetGame.NOT_CREW
+	elif picked == null or not picked.on(ShortcutFilter.CHIPS):
 		why = OFF
 	return why
 
@@ -173,7 +171,7 @@ func _sender_rule(s: NetSession) -> String:
 ## holds and not to one it holds too (a joint view runs it as a direct action), with a
 ## sensible argument and a player at the receiving station.
 func _chip_rule(s: NetSession, chip: ChipDef, arg: int) -> String:
-	var stations: Array[String] = StationViews.stations_of(s.entry)
+	var stations: Array[String] = StationCatalogue.stations_of(s.seat)
 	var why: String = ""
 	if stations.has(String(chip.to_station)):
 		why = SAME_SCREEN
@@ -197,7 +195,7 @@ func _open_rule(open: Array, at: int, arg: int) -> String:
 
 
 func _arg_ok(ship: int, chip: ChipDef, arg: int) -> bool:
-	var world: SimWorld = session.world
+	var world: SimWorld = game.world
 	match chip.arg:
 		ChipDef.Arg.MOUNT:
 			return arg >= 0 and arg < world.defs[ship].mounts.size()
@@ -213,16 +211,16 @@ func _arg_ok(ship: int, chip: ChipDef, arg: int) -> bool:
 
 ## Whether a connected crew session of the ship holds the station.
 func _someone_holds(ship: int, station: StringName) -> bool:
-	for s: NetSession in session.by_id.values():
-		if s.ship == ship and s.connected() and StationViews.stations_of(s.entry).has(station):
+	for s: NetSession in game.by_id.values():
+		if s.ship == ship and s.connected() and StationCatalogue.stations_of(s.seat).has(station):
 			return true
 	return false
 
 
 func _tell_sender(ship: int, row: Dictionary, accept: bool, by: String) -> void:
-	var sender: NetSession = session.by_id.get(row["by"])
+	var sender: NetSession = game.by_id.get(row["by"])
 	if sender != null and sender.ship == ship:
-		session.notify(
+		game.notify(
 			sender,
 			NetProtocol.EVENT_CHIP_ANSWER,
 			{

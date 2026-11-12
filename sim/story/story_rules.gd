@@ -1,8 +1,10 @@
 class_name StoryRules
 extends RefCounted
 ## The cooperation rules of Comms with other stations (#10): what STORY does
-## when the rest of the crew acts. The flags are Story's named integers (StoryFlagTable),
-## so these rules add no column to a table. All of them apply at every difficulty
+## when the rest of the crew acts. Their state is typed columns: a card's on StoryTable,
+## a ship's dock watch on StoryShipTable and a faction's about a contact on
+## KnowledgeTable; scenario flags (StoryFlagTable) are not theirs. All of them apply at
+## every difficulty
 ## (FT-PAIR-014); the toggles only decide what a screen shows.
 ## - P5 approach lanes (FT-PAIR-001): a clearance card carries a window; docking at its
 ##   site inside the window is cleared, docking without one loses reputation.
@@ -19,47 +21,42 @@ extends RefCounted
 const UNCLEARED: StringName = &"rep.uncleared_approach"
 const SURRENDER_KILL: StringName = &"rep.destroy_surrendered"
 
-const _LANE_OPEN: String = "lane.open.%d"
-const _LANE_LEN: String = "lane.len.%d"
-const _LANE_T0: String = "lane.t0.%d"
-const _NEED: String = "need.%d."
-const _DOCKED: String = "docked.%d"
-const _DOCK_OFFER: String = "dockoffer.%d"
-const _OPPORTUNITY: String = "opp.%d.%d"
-const _MARKED: String = "marked.%d"
-
 # --- P5: approach lanes ---
 
 
-## Makes the card a clearance: after it is accepted, the lane opens `open_s` later and
-## stays open `length_s`.
-static func set_lane(world: SimWorld, card: int, open_s: float, length_s: float) -> void:
-	if not length_s > 0.0:
+## Makes the card a clearance: after it is accepted, the lane opens `delay` later and
+## stays open `length`.
+static func set_lane(world: SimWorld, card: int, delay: float, length: float) -> void:
+	if not length > 0.0:
 		return
-	var f: StoryFlagTable = world.story_flags
-	f.set_flag(StringName(_LANE_OPEN % card), maxi(0, SimRate.ticks(open_s)))
-	f.set_flag(StringName(_LANE_LEN % card), SimRate.ticks(length_s))
+	world.story.lane_open[card] = maxi(0, SimRate.ticks(delay))
+	world.story.lane_len[card] = SimRate.ticks(length)
 
 
 static func is_lane(world: SimWorld, card: int) -> bool:
-	return world.story_flags.get_flag(StringName(_LANE_LEN % card)) > 0
+	return _is_card(world, card) and world.story.lane_len[card] > 0
+
+
+## Whether the card id names a posted card (the readers below take any id).
+static func _is_card(world: SimWorld, card: int) -> bool:
+	return card >= 0 and card < world.story.size()
 
 
 ## The accepted clearance's window as [first tick, last tick], or [] while the card isn't
 ## an accepted clearance.
 static func lane_window(world: SimWorld, card: int) -> Array[int]:
 	var out: Array[int] = []
-	var t0: int = world.story_flags.get_flag(StringName(_LANE_T0 % card))
-	if t0 > 0 and is_lane(world, card):
-		var first: int = t0 - 1 + world.story_flags.get_flag(StringName(_LANE_OPEN % card))
-		out.assign([first, first + world.story_flags.get_flag(StringName(_LANE_LEN % card))])
+	var t: StoryTable = world.story
+	if is_lane(world, card) and t.lane_t0[card] > 0:
+		var first: int = t.lane_t0[card] - 1 + t.lane_open[card]
+		out.assign([first, first + t.lane_len[card]])
 	return out
 
 
 ## Called when a card is accepted: a clearance starts its clock.
 static func on_accept(world: SimWorld, card: int) -> void:
 	if is_lane(world, card):
-		world.story_flags.set_flag(StringName(_LANE_T0 % card), world.tick + 1)
+		world.story.lane_t0[card] = world.tick + 1
 
 
 ## The ship's clearance card for the site: the newest, or -1.
@@ -98,7 +95,7 @@ static func on_dock(world: SimWorld, ship: int, site: int) -> void:
 	var delta: float = 0.0
 	if world.story.rep_faction[card] >= 0:
 		delta = Reputation.change(
-			world, ship, world.story.factions[card], world.story.rep_faction[card], UNCLEARED
+			world, ship, world.story.owner_faction[card], world.story.rep_faction[card], UNCLEARED
 		)
 	world.emit(&"dock_uncleared", ship, card, delta)
 
@@ -127,7 +124,7 @@ static func settle(
 	elif dist != &"":
 		dist = StringName(String(dist) + ".fail")
 	if dist != &"" and t.rep_faction[card] >= 0:
-		Reputation.change(world, ship, t.factions[card], t.rep_faction[card], dist)
+		Reputation.change(world, ship, t.owner_faction[card], t.rep_faction[card], dist)
 
 
 # --- P9: surrender ---
@@ -152,27 +149,23 @@ static func surrender_chance(world: SimWorld, contact: int, params: Dictionary) 
 ## Comms asked the card's contact to surrender (the conversation's surrender effect, #35 A4):
 ## rolls with the chance times `refusal_factor` (default 1) once for each earlier refusal of
 ## this contact to the card's faction; a refusal counts one more and closes the ask for
-## `retry_s` seconds (default 0; the option's surrender_ready requirement).
+## `retry_delay` seconds (default 0; the option's surrender_ready requirement).
 static func ask_surrender(world: SimWorld, ship: int, card: int, params: Dictionary) -> void:
 	var t: StoryTable = world.story
-	var refused_flag: StringName = _surrender_flag("refused", t.factions[card], t.target[card])
-	var refused: int = world.story_flags.get_flag(refused_flag)
-	var scale: float = pow(float(params.get("refusal_factor", 1.0)), refused)
+	var k: KnowledgeTable = world.knowledge
+	var row: int = k.ensure_contact(t.owner_faction[card], t.subject[card])
+	var scale: float = pow(float(params.get("refusal_factor", 1.0)), k.surrender_refusals[row])
 	if roll_surrender(world, ship, card, params, scale):
 		return
-	world.story_flags.set_flag(refused_flag, refused + 1)
-	var reopen: int = world.tick + SimRate.ticks(float(params.get("retry_s", 0.0)))
-	world.story_flags.set_flag(_surrender_flag("reopen", t.factions[card], t.target[card]), reopen)
+	k.surrender_refusals[row] += 1
+	k.surrender_reopen[row] = world.tick + SimRate.ticks(float(params.get("retry_delay", 0.0)))
 
 
 ## Whether the faction may ask the contact to surrender again: no refusal in the last
-## retry_s seconds.
+## retry_delay seconds.
 static func surrender_ready(world: SimWorld, faction: int, contact: int) -> bool:
-	return world.tick >= world.story_flags.get_flag(_surrender_flag("reopen", faction, contact))
-
-
-static func _surrender_flag(what: String, faction: int, contact: int) -> StringName:
-	return StringName("surrender.%s.%d.%d" % [what, faction, contact])
+	var row: int = world.knowledge.row_for(faction, contact)
+	return row < 0 or world.tick >= world.knowledge.surrender_reopen[row]
 
 
 ## Draws from the "surrender" stream with the chance (times `scale`) and sets the faction's
@@ -182,14 +175,14 @@ static func roll_surrender(
 	world: SimWorld, ship: int, card: int, params: Dictionary, scale: float = 1.0
 ) -> bool:
 	var t: StoryTable = world.story
-	var chance: float = surrender_chance(world, t.target[card], params) * scale
+	var chance: float = surrender_chance(world, t.subject[card], params) * scale
 	var yes: bool = world.rng.stream(&"surrender").randf() < chance
-	var row: int = world.knowledge.ensure_contact(t.factions[card], t.target[card])
+	var row: int = world.knowledge.ensure_contact(t.owner_faction[card], t.subject[card])
 	world.knowledge.intent[row] = (
 		KnowledgeTable.Intent.SURRENDERING if yes else KnowledgeTable.Intent.HOSTILE
 	)
 	world.emit(
-		&"surrender_roll", ship, t.target[card], chance, Vector3.ZERO, &"yes" if yes else &"no"
+		&"surrender_roll", ship, t.subject[card], chance, Vector3.ZERO, &"yes" if yes else &"no"
 	)
 	return yes
 
@@ -217,8 +210,8 @@ static func on_destroyed(world: SimWorld, victim: int, source: int) -> void:
 	var t: StoryTable = world.story
 	for card: int in t.size():
 		if (
-			t.target[card] == victim
-			and t.target_flag[card] == KnowledgeTable.Flag.DISABLE
+			t.subject[card] == victim
+			and t.subject_flag[card] == KnowledgeTable.Flag.DISABLE
 			and t.state[card] == StoryTable.State.ACCEPTED
 		):
 			settle(world, Story.audience_ship(world, card), card, false)
@@ -231,19 +224,16 @@ static func on_destroyed(world: SimWorld, victim: int, source: int) -> void:
 ## not the ship's condition).
 static func set_need(world: SimWorld, card: int, subsystem: StringName, pips: int) -> void:
 	if subsystem != &"" and pips > 0:
-		world.story_flags.set_flag(StringName((_NEED % card) + String(subsystem)), pips)
+		world.story.need_subsystem[card] = subsystem
+		world.story.need_pips[card] = pips
 
 
 ## The card's need as {subsystem, pips}, or {}.
 static func need_of(world: SimWorld, card: int) -> Dictionary:
-	var prefix: String = _NEED % card
-	var f: StoryFlagTable = world.story_flags
-	for i: int in f.names.size():
-		if String(f.names[i]).begins_with(prefix):
-			return {
-				"subsystem": StringName(String(f.names[i]).trim_prefix(prefix)), "pips": f.values[i]
-			}
-	return {}
+	var t: StoryTable = world.story
+	if not _is_card(world, card) or t.need_pips[card] <= 0:
+		return {}
+	return {"subsystem": t.need_subsystem[card], "pips": t.need_pips[card]}
 
 
 ## Whether the ship can meet the card's need now: the subsystem's effectiveness times the
@@ -265,7 +255,10 @@ static func needs_met(world: SimWorld, ship: int, card: int) -> bool:
 ## The scan facts of a contact the faction's best scan confidence `conf` has reached, as
 ## ScienceDef gives them: each is learned once (Story.learn_fact).
 static func learn_scan_facts(world: SimWorld, faction: int, contact: int, conf: float) -> void:
-	if world.science_def != null and conf >= world.science_def.reveal_cargo:
+	if (
+		world.science_def != null
+		and (conf >= ScienceKnowledge.threshold(world.science_def, ScienceKnowledge.CARGO))
+	):
 		Story.learn_fact(world, faction, contact, "cargo")
 
 
@@ -276,13 +269,13 @@ static func learn_scan_facts(world: SimWorld, faction: int, contact: int, conf: 
 static func mark_mission(world: SimWorld, ship: int, card: int) -> bool:
 	if not Story.visible_to(world, card, ship) or not Story.is_live(world, card):
 		return false
-	world.story_flags.set_flag(StringName(_MARKED % card), 1)
+	world.story.marked[card] = 1
 	world.emit(&"mission_marked", ship, card)
 	return true
 
 
 static func is_marked(world: SimWorld, card: int) -> bool:
-	return world.story_flags.get_flag(StringName(_MARKED % card)) == 1
+	return _is_card(world, card) and world.story.marked[card] == 1
 
 
 ## The mission card whose contact is `contact`, live and visible to the ship, or -1.
@@ -290,7 +283,7 @@ static func mission_of_contact(world: SimWorld, ship: int, contact: int) -> int:
 	for card: int in world.story.size():
 		if (
 			world.story.kind[card] == StoryTable.Kind.MISSION
-			and world.story.target[card] == contact
+			and world.story.subject[card] == contact
 			and Story.visible_to(world, card, ship)
 			and Story.is_live(world, card)
 		):
@@ -304,20 +297,21 @@ static func mission_of_contact(world: SimWorld, ship: int, contact: int) -> int:
 static func on_discovery(world: SimWorld, ship: int, contact: int) -> void:
 	var faction: int = world.faction_of(ship)
 	var conv: StringName = world.hail_conversations.get(world.defs[contact].id, &"")
-	var flag: StringName = StringName(_OPPORTUNITY % [faction, contact])
+	var k: KnowledgeTable = world.knowledge
+	var row: int = k.row_for(faction, contact)
 	if (
 		not world.conversations.has(conv)
-		or world.story_flags.get_flag(flag) == 1
+		or (row >= 0 and k.hail_opened[row] == 1)
 		or _senses(world, faction, contact)
 	):
 		return
-	world.story_flags.set_flag(flag, 1)
+	k.hail_opened[k.ensure_contact(faction, contact)] = 1
 	var t: StoryTable = world.story
 	var card: int = t.add_card(ship, faction, StoryTable.Kind.HAIL)
 	t.npc[card] = StringName(world.defs[contact].display_name)
 	t.title[card] = "comms.card.opportunity"
 	t.conversation[card] = conv
-	t.target[card] = contact
+	t.subject[card] = contact
 	t.rep_faction[card] = world.faction_of(contact)
 	world.emit(&"card_posted", ship, card, StoryTable.Kind.HAIL)
 
@@ -360,9 +354,7 @@ static func step(world: SimWorld) -> void:
 static func sync_docks(world: SimWorld) -> void:
 	for ship: int in world.ship_count():
 		if not world.ai.is_enabled(ship):
-			world.story_flags.set_flag(
-				StringName(_DOCKED % ship), Story.docked_site(world, ship) + 1
-			)
+			world.story_ships.seen_dock[ship] = Story.docked_site(world, ship)
 
 
 ## Remembers where each crewed ship is docked and calls on_dock when it arrives.
@@ -372,11 +364,10 @@ static func _watch_docks(world: SimWorld) -> void:
 	for ship: int in world.ship_count():
 		if world.ai.is_enabled(ship):
 			continue
-		var flag: StringName = StringName(_DOCKED % ship)
 		var site: int = Story.docked_site(world, ship)
-		var before: int = world.story_flags.get_flag(flag) - 1
+		var before: int = world.story_ships.seen_dock[ship]
 		if site != before:
-			world.story_flags.set_flag(flag, site + 1)
+			world.story_ships.seen_dock[ship] = site
 			if before >= 0:
 				_close_dock_offer(world, ship)
 			if site >= 0:
@@ -394,16 +385,15 @@ static func _offer_market(world: SimWorld, ship: int, site: int) -> void:
 	t.title[card] = "comms.card.offer"
 	t.site[card] = site
 	t.requires_docked[card] = 1
-	world.story_flags.set_flag(StringName(_DOCK_OFFER % ship), card + 1)
+	world.story_ships.dock_offer[ship] = card
 	world.emit(&"card_posted", ship, card, StoryTable.Kind.OFFER)
 
 
 ## The ship undocked: its market card lapses.
 static func _close_dock_offer(world: SimWorld, ship: int) -> void:
-	var flag: StringName = StringName(_DOCK_OFFER % ship)
-	var card: int = world.story_flags.get_flag(flag) - 1
+	var card: int = world.story_ships.dock_offer[ship]
 	if card < 0:
 		return
-	world.story_flags.set_flag(flag, 0)
+	world.story_ships.dock_offer[ship] = -1
 	if Story.is_live(world, card):
 		Story.set_state(world, ship, card, StoryTable.State.EXPIRED)

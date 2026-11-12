@@ -56,23 +56,30 @@ func test_the_report_counts_losses_and_fled_encounters_apart() -> void:
 			"result": "won",
 			"lost": false,
 			"fled": false,
-			"s": 60.0
+			"time": 60.0
 		},
-		{"id": 1, "scenario": "rescue", "result": "fled", "lost": false, "fled": true, "s": 30.0},
+		{
+			"id": 1,
+			"scenario": "rescue",
+			"result": "fled",
+			"lost": false,
+			"fled": true,
+			"time": 30.0
+		},
 		{
 			"id": 2,
 			"scenario": "enemy_wave",
 			"result": "lost",
 			"lost": true,
 			"fled": false,
-			"s": 20.0
+			"time": 20.0
 		},
 	]
 	var run: Dictionary = {
 		"profile": "average",
 		"difficulty": "easy",
 		"outcome": "loss",
-		"run_s": 300.0,
+		"time": 300.0,
 		"encounters": rows
 	}
 	var report: String = BotReport.markdown([run])
@@ -91,21 +98,21 @@ func test_the_report_averages_run_length_over_all_runs_and_counts_encounters() -
 			"profile": "average",
 			"difficulty": "easy",
 			"outcome": "win",
-			"run_s": 1200.0,
+			"time": 1200.0,
 			"encounters": [enc, enc, enc, enc]
 		},
 		{
 			"profile": "average",
 			"difficulty": "easy",
 			"outcome": "win",
-			"run_s": 2400.0,
+			"time": 2400.0,
 			"encounters": [enc, enc, enc, enc, enc, enc]
 		},
 		{
 			"profile": "average",
 			"difficulty": "easy",
 			"outcome": "loss",
-			"run_s": 600.0,
+			"time": 600.0,
 			"encounters": [enc, lost_enc]
 		},
 	]

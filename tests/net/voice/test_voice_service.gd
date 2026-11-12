@@ -227,17 +227,17 @@ func test_stitched_numbers_follow_the_slot_gender() -> void:
 	assert_str(_net.events[0][3]["text"]).is_equal(
 		"Posso ceder-lhe 2 peças sobresselentes por 200 créditos."
 	)
-	_svc.say("computer.enemies_remaining", {"count": 1}, PackedInt32Array([1]))
+	_svc.say("computer.hostiles_remaining", {"count": 1}, PackedInt32Array([1]))
 	pcm = _net.voice[1][1]["pcm"]
 	assert_array(Array(_fx.decode("pt_PT", "computer", pcm))).is_equal(
-		["seg:computer.enemies_remaining:0", "num:f1", "seg:computer.enemies_remaining:1"]
+		["seg:computer.hostiles_remaining:0", "num:f1", "seg:computer.hostiles_remaining:1"]
 	)
 	_svc.stop()
 	_start("it")
-	_svc.say("computer.enemies_remaining", {"count": 1}, PackedInt32Array([1]))
+	_svc.say("computer.hostiles_remaining", {"count": 1}, PackedInt32Array([1]))
 	pcm = _net.voice[2][1]["pcm"]
 	assert_array(Array(_fx.decode("it", "computer", pcm))).is_equal(
-		["seg:computer.enemies_remaining:0", "num:f1", "seg:computer.enemies_remaining:1"]
+		["seg:computer.hostiles_remaining:0", "num:f1", "seg:computer.hostiles_remaining:1"]
 	)
 	_svc.say("npc.hail_patrol", {"ship": "Valiant", "npc": "Mara Quill"}, PackedInt32Array([1]))
 	pcm = _net.voice[3][1]["pcm"]

@@ -12,7 +12,7 @@ Ports: WebSocket 47801 (TCP), the web-station HTTP server on 47800 (TCP, only wi
 
 Start the client, type a name, pick where to serve (one of this machine's LAN addresses so others can join, the first one by default, or **This computer only**), pick the session language and press **Host**. The client starts a headless server as a child process (`HostSession`, `app/host_session.gd`), joins it as the host and shows the lobby. When the host leaves or quits, the server stops.
 
-**Dev: one client holds all stations** adds a lobby entry holding every station, so one person can play alone (FT-NET-029). The checkbox and the lobby's **All (dev)** seat show only in a client started with `--dev` (after `--`, e.g. `godot --path . -- --dev`). A dedicated server gets the entry with `--dev-all-stations`.
+**Dev: one client holds all stations** adds a lobby seat holding every station, so one person can play alone (FT-NET-029). The checkbox and the lobby's **All (dev)** seat show only in a client started with `--dev` (after `--`, e.g. `godot --path . -- --dev`). A dedicated server gets the seat with `--dev-all-stations`.
 
 ## Join a game
 

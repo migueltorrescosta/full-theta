@@ -5,13 +5,13 @@ extends SimCommand
 ## moves on. Accepted only while the world's run is a training run, so no other run sees
 ## it. It sets the story flag train.<station>.next to the number of presses, which the
 ## training driver reads through the Scenario API; being a crew command it is logged, so
-## a run replays. Every crew station and the Captain seat may send it (StationViews).
+## a run replays. Every crew station and the Captain seat may send it (StationCatalogue).
 ##
 ## With `skip` set (the banner's Skip button, D1) the press is counted in train.<station>.skip
 ## instead: the driver moves the station past a step it cannot finish (a command with no
 ## binding on the player's device) without the command.
 
-## The station pressing Next (a StationViews crew id or captain).
+## The station pressing Next (a StationCatalogue crew id or captain).
 var station: StringName = &""
 ## The player skips the step instead of finishing it.
 var skip: bool = false

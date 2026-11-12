@@ -1,6 +1,6 @@
 class_name ServerVoice
 extends RefCounted
-## ServerSession's seam to the host's VoiceService (E10): `voice` is null in net/ tests
+## NetGame's seam to the host's VoiceService (E10): `voice` is null in net/ tests
 ## and on a server without voice, and then nothing here does anything. The app sets it
 ## (ServerMain.make_voice).
 ## - start(): the run's first Start calls VoiceService.start_session() with the closed
@@ -24,9 +24,9 @@ const LINES: Dictionary = {
 }
 
 var voice: VoiceService
-## The session's toggle code (ServerSession sets it at every Start; the toggles are
+## The session's toggle code (NetGame sets it at every Start; the toggles are
 ## locked once a run launches): the summaries toggle decides what Helm hears of the shields.
-var toggles: String = StationViews.DEFAULT_TOGGLES
+var toggles: String = StationCatalogue.DEFAULT_TOGGLES
 var world: SimWorld
 ## NPC display names that join the closed set at Start (FT-AUD-018), filled from the story's NPCs.
 var npc_names: Array[String] = []
@@ -76,7 +76,7 @@ func on_event(e: SimEvent) -> void:
 		var critical: bool = DamageSystem.hull_fraction(world, e.ship_id) <= HULL_CRITICAL
 		if critical and not _hull_warned.has(e.ship_id):
 			_hull_warned[e.ship_id] = true
-			var all: PackedStringArray = PackedStringArray(StationViews.CREW)
+			var all: PackedStringArray = PackedStringArray(StationCatalogue.CREW)
 			voice.say_computer(e.ship_id, all, "computer.hull_critical")
 		elif not critical:
 			_hull_warned.erase(e.ship_id)

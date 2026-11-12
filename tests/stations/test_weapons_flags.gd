@@ -17,7 +17,7 @@ func after_test() -> void:
 
 func _screen(flags: Array) -> StationScreen:
 	var ctx: StationContext = StationFixture.context("weapons", SETTINGS)
-	ctx.view.blocks[StationViews.Section.FEEDS] = {
+	ctx.snap.blocks[StationCatalogue.Section.FEEDS] = {
 		"weak": [], "windows": [], "tracks": [], "flags": flags
 	}
 	var s: StationScreen = auto_free(StationScreen.new())

@@ -27,7 +27,7 @@ func _init(
 	seed_value: int,
 	build: String,
 	player_def: ShipDef,
-	enemy_def: EnemyDef,
+	enemy_def: NpcDef,
 	crew: int = 6,
 	total: int = 12,
 	hostile: bool = true,
@@ -50,7 +50,7 @@ func validate() -> Array[String]:
 func build() -> SimWorld:
 	if not validate().is_empty():
 		return null
-	var world: SimWorld = SimWorld.new(world_seed, build_id, site_period)
+	var world: SimWorld = SimWorld.new(world_seed, build_id, map_period)
 	world.science_def = science
 	world.hazards = hazards.duplicate()
 	world.set_relation(RAIDER_FACTIONS[0], RAIDER_FACTIONS[1], SimWorld.Relation.HOSTILE)
@@ -60,10 +60,12 @@ func build() -> SimWorld:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = world_seed
 	for i: int in crew_ships:
-		world.spawn_ship(player, Factions.CREW, _point(rng, CREW_SPREAD), _rotation(rng))
+		world.spawn_ship(
+			player, Factions.CREW, CubePoint.of(_point(rng, CREW_SPREAD)), _rotation(rng)
+		)
 	for i: int in world_ships - crew_ships:
 		var f: int = RAIDER_FACTIONS[i % RAIDER_FACTIONS.size()]
-		world.spawn_enemy(enemy, f, _point(rng, ARENA * 0.5), _rotation(rng))
+		world.spawn_npc(enemy, f, CubePoint.of(_point(rng, ARENA * 0.5)), _rotation(rng))
 	return world
 
 

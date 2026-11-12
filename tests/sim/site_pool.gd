@@ -1,6 +1,6 @@
 class_name SitePool
 extends RefCounted
-## Puts sites in a test world's spawnable pool the way a scenario's map does: a MapDef whose
+## Puts sites in a test world's spawnable pool the way a map does: a MapDef whose
 ## `spawnable` holds them, loaded with SiteTable.load_map (D229). A test then opens them with
 ## SiteTable.open, as the director would.
 
@@ -12,9 +12,9 @@ static func def(key: StringName, pos: Vector3, radius: float, kind: StringName =
 	d.name_key = "site.%s" % key
 	d.kind = kind
 	d.pos = pos
-	d.radius_m = radius
+	d.radius = radius
 	d.dockable = kind == &"station"
-	d.dock_range_m = 0.5 * radius
+	d.dock_range = 0.5 * radius
 	d.dock_max_speed = 10.0
 	return d
 

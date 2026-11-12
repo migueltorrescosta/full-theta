@@ -11,7 +11,7 @@ func _rescue() -> ScenarioFixture:
 
 
 func _card(f: ScenarioFixture, title: String) -> int:
-	for c: CardView in f.api.cards_of(0):
+	for c: CardInfo in f.api.cards_of(0):
 		if c.title_key == title:
 			return c.id
 	return -1
@@ -56,7 +56,12 @@ func test_salvage_pays_more_and_costs_standing() -> void:
 	var freighter: int = f.ships_of(&"m3_stranded")[0]
 	var at: Vector3 = f.world.kin.relative(0, freighter)
 	f.world.kin.place(
-		0, f.world.kin.px[0] + at.x, f.world.kin.py[0] + at.y, f.world.kin.pz[0] + at.z - 300.0
+		0,
+		CubePoint.make(
+			f.world.kin.pos_x[0] + at.x,
+			f.world.kin.pos_y[0] + at.y,
+			f.world.kin.pos_z[0] + at.z - 300.0
+		)
 	)
 	f.run(60 * 9)
 	for id: int in raiders:
@@ -80,7 +85,7 @@ func test_a_lost_freighter_fails_the_escort() -> void:
 	assert_int(f.run_until_end(30)).is_equal(Scenario.Result.WON)
 	f.run(3)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	assert_float(_standing(f)).is_less(0.0)
 
 
@@ -100,8 +105,7 @@ func test_ignoring_the_call_pays_nothing() -> void:
 func test_a_ship_arriving_at_speed_does_not_hit_the_freighter() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"rescue", &"vesper_beacon")
-	var at: Vector3 = f.world.sites.point3(f.site)
-	f.world.kin.place(0, at.x + 3000.0, at.y, at.z)
+	f.world.kin.place(0, CubePoint.plus(f.world.sites.point(f.site), Vector3(3000.0, 0.0, 0.0)))
 	f.world.kin.vel[0] = Vector3(-300.0, 0.0, 0.0)
 	var nearest: float = INF
 	for i: int in 60 * 18:
@@ -111,7 +115,9 @@ func test_a_ship_arriving_at_speed_does_not_hit_the_freighter() -> void:
 	assert_int(f.ships_of(&"m3_stranded").size()).is_equal(1)
 	assert_float(nearest).is_greater(1500.0)
 	assert_float(DamageSystem.hull_fraction(f.world, 0)).is_equal(1.0)
-	assert_int(f.world.run.status[f.ships_of(&"m3_stranded")[0]]).is_equal(RunTable.Status.IN_PLAY)
+	assert_int(f.world.ships.status[f.ships_of(&"m3_stranded")[0]]).is_equal(
+		ShipStateTable.Status.IN_PLAY
+	)
 
 
 # FT: FT-MIS-004, FT-MIS-021
@@ -141,7 +147,7 @@ func test_an_escort_with_the_engines_down_is_accepted_and_fails() -> void:
 	var f: ScenarioFixture = _rescue()
 	var credits: int = Economy.credits(f.world, 0)
 	var card: int = _card(f, "comms.card.escort")
-	var view: Dictionary = CommsView.block(f.world, 0)["cards"][0]
+	var view: Dictionary = CommsSection.block(f.world, 0)["cards"][0]
 	assert_str(view["detail"]).is_equal("comms.card.escort_terms")
 	var need: Dictionary = StoryRules.need_of(f.world, card)
 	assert_str(String(need["subsystem"])).is_equal("engines")
@@ -150,12 +156,12 @@ func test_an_escort_with_the_engines_down_is_accepted_and_fails() -> void:
 	f.world.damage.health[f.world.damage.find_subsystem(0, &"engines")] = 0.0
 	assert_bool(f.api.needs_met(card)).is_false()
 	_accept(f, card)
-	assert_int(f.card_state(card)).is_equal(CardView.State.ACCEPTED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.ACCEPTED)
 	for id: int in _raiders_arrive(f):
 		f.kill(id)
 	assert_int(f.run_until_end(30)).is_equal(Scenario.Result.WON)
 	f.run(3)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	assert_int(Economy.credits(f.world, 0)).is_equal(credits)
 	assert_float(_standing(f)).is_less(0.0)
 
@@ -169,7 +175,7 @@ func test_hailing_the_freighter_opens_the_trader_conversation() -> void:
 	f.run(60)
 	assert_bool(KnowledgeSystem.is_detected(f.world, f.world.faction_of(0), freighter)).is_true()
 	var hail: HailCommand = HailCommand.new()
-	hail.target = freighter
+	hail.contact = freighter
 	assert_bool(f.send(hail)).is_true()
 	var hailed: int = f.world.story.size() - 1
 	assert_str(String(f.world.story.conversation[hailed])).is_equal("conv.trader_bluff")

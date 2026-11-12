@@ -13,4 +13,4 @@ func kind() -> StringName:
 
 
 func apply(world: SimWorld) -> bool:
-	return ProbeSystem.launch(world, ship_id, x, y, z)
+	return ProbeSystem.launch(world, ship_id, CubePoint.make(x, y, z))

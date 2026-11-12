@@ -538,7 +538,7 @@ func _draw_marker(font: Font, e: Dictionary, selected: bool) -> void:
 func _covers_something(box: Rect2) -> bool:
 	var avoid: Array[Rect2] = reserved()
 	avoid.append_array(_placed)
-	return ChipLayout.hits(box, avoid)
+	return CalloutLayout.hits(box, avoid)
 
 
 ## Where a marker's label goes (HUD coordinates): right of the marker, else the nearest spot
@@ -554,7 +554,7 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 	var avoid: Array[Rect2] = reserved()
 	avoid.append_array(_placed)
 	var inside: Rect2 = area()
-	if not ChipLayout.hits(right, avoid) and inside.encloses(right):
+	if not CalloutLayout.hits(right, avoid) and inside.encloses(right):
 		return right
 	# (a marker outside the view's clear area, under the view-top row, has no near spot)
 	if not inside.has_point(p):
@@ -611,10 +611,10 @@ func label_rect(font: Font, text: String, p: Vector2, r: float, reach: float = -
 		if (
 			t.intersects(marker)
 			or not inside.encloses(t)
-			or not ChipLayout.leader_clear(p, t, avoid)
+			or not CalloutLayout.leader_clear(p, t, avoid)
 		):
 			continue
-		if ChipLayout.gap_to(t, p) > reach:
+		if CalloutLayout.gap_to(t, p) > reach:
 			continue
 		var cover: float = 0.0
 		for a: Rect2 in avoid:
@@ -820,7 +820,7 @@ func _draw_compass(font: Font, c: Vector2) -> void:
 			draw_circle(p, 5.0, col)
 		else:
 			draw_arc(p, 5.0, 0.0, TAU, 16, col, 2.0)
-		label = ChipText.chip(selection_label(), local)
+		label = CalloutText.callout(selection_label(), local)
 	var w: float = 4.0 * COMPASS_R
 	var chip_dy: float = -COMPASS_R - 8.0 if _chip_above() else COMPASS_R + 18.0
 	Palette.draw_outlined(
@@ -957,7 +957,7 @@ func _draw_radial(font: Font) -> void:
 
 ## Own velocity (m/s, world axes) from KIN.
 func velocity() -> Vector3:
-	var v: Vector3i = panel.ctx.view.kin.get("vel", Vector3i.ZERO)
+	var v: Vector3i = panel.ctx.snap.kin.get("vel", Vector3i.ZERO)
 	return Vector3(v) / NetCodec.VEL_Q
 
 
@@ -973,7 +973,7 @@ func selection_label() -> String:
 		return str(panel.ctx.crew.mark_in_slot(int(s["id"])).get("name", ""))
 	if s.get("kind", "") == "site":
 		return str(panel.ctx.picture().find(s).get("label", ""))
-	return panel.ctx.view.callsign(int(s.get("id", -1)))
+	return panel.ctx.snap.callsign(int(s.get("id", -1)))
 
 
 func _selected_item() -> Dictionary:
@@ -982,7 +982,7 @@ func _selected_item() -> Dictionary:
 		return {"kind": "mark", "allegiance": ""}
 	if s.get("kind", "") == "site":
 		return {"kind": "site", "allegiance": ""}
-	var info: Dictionary = panel.ctx.view.contacts.get("info", {})
+	var info: Dictionary = panel.ctx.snap.contacts.get("info", {})
 	var letter: String = Palette.allegiance(selection_label())
 	if int(info.get(int(s.get("id", -1)), [0])[0]) & SnapshotReader.FLAG_OWN:
 		letter = "F"

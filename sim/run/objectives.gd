@@ -17,14 +17,14 @@ const MAX_ROWS: int = 8
 ## things still to do (hostile ships in play). Empty once the ship has an outcome.
 static func of_ship(world: SimWorld, ship: int) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	if world.run.outcome[ship] != RunTable.Outcome.NONE:
+	if world.ships.ship_outcome[ship] != ShipStateTable.ShipOutcome.NONE:
 		return out
 	var faction: int = world.faction_of(ship)
 	var left: int = 0
 	for o: int in world.ship_count():
-		if world.run.status[o] != RunTable.Status.IN_PLAY:
+		if world.ships.status[o] != ShipStateTable.Status.IN_PLAY:
 			continue
-		if world.is_hostile(faction, world.kin.factions[o]):
+		if world.is_hostile(faction, world.kin.owner_faction[o]):
 			left += 1
 	if left > 0:
 		out.append({"kind": Kind.DESTROY_HOSTILES, "left": mini(left, 65535)})

@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## StationScreen: panels per entry, focus, intent routing and the common actions on the
+## StationScreen: panels per seat, focus, intent routing and the common actions on the
 ## shared selection, marks, pings, alert and claims.
 
 
@@ -29,8 +29,8 @@ class RecordingPanel:
 		return "flight" if station == "helm" else ""
 
 
-func _screen(entry: String) -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry)
+func _screen(seat: String) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.panel_factory = func(_st: String) -> StationPanel: return RecordingPanel.new()
 	s.setup(ctx)
@@ -172,7 +172,7 @@ func test_cycle_select_pinged_claim_request_and_strip() -> void:
 # Snapshots list the own ship among the contacts; cycling never selects it.
 func test_cycle_target_skips_the_own_ship() -> void:
 	var s: StationScreen = _screen("helm")
-	var v: NetViewState = StationFixture.view()
+	var v: SnapshotState = StationFixture.snap()
 	v.contacts["model"][s.ctx.crew.ship] = [v.kin["pos"], Vector3i.ZERO, StationFixture.TICK]
 	v.contacts["info"][s.ctx.crew.ship] = [2, "Kestrel"]
 	s.ctx.interp = SnapshotInterpolator.new()

@@ -17,14 +17,14 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String = "relay") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
-	for s: String in StationViews.CREW:
+func _screen(seat: String = "relay") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
+	for s: String in StationCatalogue.CREW:
 		ctx.settings.mark_hint_seen(s)
 	# One allied ship to send to, and the RELAY block with 2 probes in stock.
 	var ships: Array = ctx.crew.catalogue["ships"]
 	ships.append({"id": ALLY, "def": "m1_corvette", "name": "Wren", "faction": 0})
-	ctx.view.blocks[StationViews.Section.RELAY] = _block(2, false)
+	ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(2, false)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -88,7 +88,7 @@ func test_launch_arms_the_next_click_and_the_stock_is_finite() -> void:
 	var s: StationScreen = await _screen()
 	var p: RelayPanel = _relay(s)
 	var out: Array = [{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0}]
-	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(2, false, out)
+	s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(2, false, out)
 	p.refresh()
 	assert_str(p.hud._probes.text).is_equal("Probes: 2 left, 1 out")
 	assert_bool(p.hud.launch.disabled).is_false()
@@ -102,7 +102,7 @@ func test_launch_arms_the_next_click_and_the_stock_is_finite() -> void:
 	assert_bool(is_finite(float(cmds[0][0]["z"]))).is_true()
 	assert_str(p.armed).is_equal("")
 	# Out of stock: the button is off, the key toasts.
-	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(0, false, out)
+	s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(0, false, out)
 	p.refresh()
 	assert_bool(p.hud.launch.disabled).is_true()
 	var toasts: Array = []
@@ -220,7 +220,7 @@ func test_lanes_crossing_friendlies_are_flagged() -> void:
 	var p: RelayPanel = _relay(s)
 	p.handle_intent(_ev("flag_lanes", s))
 	assert_dict(_sent(s, "command")[0][0]).is_equal({"kind": "flag_lanes", "on": true})
-	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(2, true)
+	s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(2, true)
 	p.refresh()
 	assert_bool(p.map.lanes_on).is_true()
 	assert_str(p.hud.lanes.text).is_equal("Lanes flagged")
@@ -326,7 +326,7 @@ func test_ship_log_lines() -> void:
 
 ## The SITES section as the client decodes it: Kestrel Yard, site 0, at the origin.
 func _sites(s: StationScreen) -> void:
-	s.ctx.view.sites = [
+	s.ctx.snap.sites = [
 		{
 			"id": 0,
 			"name_key": "Kestrel Yard",
@@ -342,8 +342,8 @@ func _sites(s: StationScreen) -> void:
 # The scenario's site name is a callout layer on every station: a banner on the radar,
 # selectable by click. Relay's map draws none: the radar beside it is always shown.
 func test_site_names_show_on_every_station() -> void:
-	for entry: String in ["relay", "helm", "weapons", "viewer"]:
-		var s: StationScreen = await _screen(entry)
+	for seat: String in ["relay", "helm", "weapons", "viewer"]:
+		var s: StationScreen = await _screen(seat)
 		_sites(s)
 		assert_str(s.ctx.picture().site["label"]).is_equal("Kestrel Yard")
 		var box: Rect2 = SiteBanner.rect(s.radar.get_theme_default_font(), s.ctx.picture().site)
@@ -417,8 +417,8 @@ func test_weapons_is_warned_before_a_shot_along_a_flagged_lane() -> void:
 	s.ctx.crew.handle_event({"type": "lane_warning", "payload": payload}, s.ctx.now_ms())
 	assert_array(s.toasts.texts()).is_equal(["Friendly in the line of fire"])
 	assert_array(s.alerts.tones.played).is_equal([&"proximity"])
-	for entry: String in ["relay", "helm"]:
-		var other: StationScreen = await _screen(entry)
+	for seat: String in ["relay", "helm"]:
+		var other: StationScreen = await _screen(seat)
 		other.ctx.crew.handle_event(
 			{"type": "lane_warning", "payload": payload}, other.ctx.now_ms()
 		)
@@ -441,8 +441,8 @@ class ForwardPanel:
 # A mark placed on a forward view attaches to the tapped contact; a tap that hits no
 # contact (empty space, a map point, a mark) places no mark.
 func test_forward_view_marks_attach_to_the_tapped_contact_or_none() -> void:
-	for entry: String in ["helm", "weapons"]:
-		var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	for seat: String in ["helm", "weapons"]:
+		var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 		var s: StationScreen = auto_free(StationScreen.new())
 		s.panel_factory = func(_st: String) -> StationPanel: return ForwardPanel.new()
 		s.setup(ctx)
@@ -511,7 +511,7 @@ func test_map_draws_everything_and_probes_are_listed() -> void:
 		{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0},
 		{"serial": 1, "deployed": false, "pos": Vector3(500, 200, -1000), "range": 8000.0},
 	]
-	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(1, true, probes)
+	s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(1, true, probes)
 	_event(
 		s, "routes", {"ship": SHIP, "routes": [[{"x": 0.0, "y": 0.0, "z": -4000.0}], [], [], []]}
 	)
@@ -562,7 +562,7 @@ func test_map_shows_the_sim_hazards() -> void:
 	block["hazards"] = [
 		{
 			"id": 0,
-			"shape": HazardView.ZONE,
+			"shape": HazardRows.ZONE,
 			"pos": Vector3(0, 0, -4000),
 			"radius": 2000.0,
 			"dir": Vector3.ZERO,
@@ -577,7 +577,7 @@ func test_map_shows_the_sim_hazards() -> void:
 			"eta": 12.0,
 		},
 	]
-	s.ctx.view.blocks[StationViews.Section.RELAY] = block
+	s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = block
 	p.refresh()
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -632,7 +632,7 @@ func test_probe_bubbles_are_selectable_and_pingable_zones() -> void:
 	var probes: Array = [
 		{"serial": 0, "deployed": true, "pos": Vector3(0, 0, -3000), "range": 8000.0}
 	]
-	s.ctx.view.blocks[StationViews.Section.RELAY] = _block(1, false, probes)
+	s.ctx.snap.blocks[StationCatalogue.Section.RELAY] = _block(1, false, probes)
 	assert_dict(s.ctx.picture().find({"kind": "zone", "id": -1})).is_not_empty()
 	s.ctx.crew.select("zone", -1)
 	_event(s, "zones", {"ship": SHIP, "zones": []})

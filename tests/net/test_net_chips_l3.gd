@@ -4,7 +4,7 @@ extends GdUnitTestSuite
 ## chip from Comms to Weapons, player-initiated only, and the cooperative events counted per pair.
 
 const PLAYER: int = NetHarness.PLAYER
-const CHIPS: StationViews.Section = StationViews.Section.CHIPS
+const CHIPS: StationCatalogue.Section = StationCatalogue.Section.CHIPS
 const SECRET: String = "s3cret"
 
 var h: NetHarness
@@ -23,7 +23,7 @@ func _crew(server: NetServer) -> Dictionary:
 	var out: Dictionary = {}
 	out["host"] = await h.welcomed(server, "host", "", SECRET)
 	await h.pick(out["host"], "captain")
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		out[station] = await h.joined(server, station, station)
 	return out
 
@@ -39,11 +39,11 @@ func _rejected(c: NetClient, from: int, type: int = NetProtocol.Type.CHIP) -> St
 
 
 func _chips(c: NetClient) -> Array:
-	return c.view.blocks.get(CHIPS, {}).get("chips", [])
+	return c.snap.blocks.get(CHIPS, {}).get("chips", [])
 
 
 func _count(server: NetServer, pair: String, kind: String) -> int:
-	return server.session.coop.count_of(pair, kind)
+	return server.game.coop.count_of(pair, kind)
 
 
 # FT: FT-PAIR-021, FT-PAIR-013, FT-STN-010
@@ -59,11 +59,11 @@ func test_a_chip_is_sent_shown_and_answered() -> void:
 	helm.send_chip("boost")
 	assert_bool(await h.until(func() -> bool: return _chips(eng).size() == 1)).is_true()
 	var row: Dictionary = _chips(eng)[0]
-	assert_int(row["chip"]).is_equal(ChipView.index_of("boost"))
-	assert_int(row["from"]).is_equal(StationViews.CREW.find("helm"))
-	assert_int(row["to"]).is_equal(StationViews.CREW.find("engineering"))
+	assert_int(row["chip"]).is_equal(ChipsReader.index_of("boost"))
+	assert_int(row["from"]).is_equal(StationCatalogue.CREW.find("helm"))
+	assert_int(row["to"]).is_equal(StationCatalogue.CREW.find("engineering"))
 	assert_int(row["arg"]).is_equal(-1)
-	assert_int(row["expires"] - row["sent"]).is_equal(int(ChipView.def().expiry_s * 60.0))
+	assert_int(row["expires"] - row["sent"]).is_equal(int(ChipsReader.def().expiry * 60.0))
 	assert_bool(await h.until(func() -> bool: return _chips(helm).size() == 1)).is_true()
 	await h.wait(300)
 	for other: String in ["weapons", "science", "relay", "comms"]:
@@ -80,14 +80,14 @@ func test_a_chip_is_sent_shown_and_answered() -> void:
 	assert_str(heard["payload"]["chip"]).is_equal("boost")
 	assert_bool(heard["payload"]["accept"]).is_true()
 	assert_int(_count(server, "p1", CoopEvents.CHIP_ANSWERED)).is_equal(1)
-	assert_int(server.session.coop.cooperative("p1")).is_equal(1)
+	assert_int(server.game.coop.cooperative("p1")).is_equal(1)
 	# A declined chip is no cooperative event.
 	helm.send_chip("boost")
 	assert_bool(await h.until(func() -> bool: return _chips(eng).size() == 1)).is_true()
 	eng.answer_chip(_chips(eng)[0]["id"], false)
 	assert_bool(await h.until(func() -> bool: return _chips(eng).is_empty())).is_true()
 	assert_int(_count(server, "p1", CoopEvents.CHIP_DECLINED)).is_equal(1)
-	assert_int(server.session.coop.cooperative("p1")).is_equal(1)
+	assert_int(server.game.coop.cooperative("p1")).is_equal(1)
 
 
 # FT: FT-PAIR-021, FT-STN-010
@@ -102,7 +102,7 @@ func test_the_chip_list_is_the_spec_list() -> void:
 		"fabricate_probe": ["relay", "engineering", "p11"],
 		"hold_fire": ["comms", "weapons", "p9"],
 	}
-	var def: ChipsDef = ChipView.def()
+	var def: ChipsDef = ChipsReader.def()
 	assert_int(def.chips.size()).is_equal(7)
 	for chip: ChipDef in def.chips:
 		assert_array(want.keys()).contains([String(chip.id)])
@@ -151,7 +151,7 @@ func test_chip_rules() -> void:
 	# The Captain sends none.
 	from = h.mark(crew["host"])
 	crew["host"].send_chip("boost")
-	assert_str(await _rejected(crew["host"], from)).is_equal(ServerSession.NOT_CREW)
+	assert_str(await _rejected(crew["host"], from)).is_equal(NetGame.NOT_CREW)
 	# Nobody plays Engineering: the chip has no one to reach.
 	var other: NetServer = h.server(false, 10.0, SECRET)
 	var helm: NetClient = await h.joined(other, "solo", "helm")
@@ -176,10 +176,10 @@ func test_hold_fire_goes_from_comms_to_weapons() -> void:
 	comms.send_chip("hold_fire", NetHarness.ENEMY)
 	assert_bool(await h.until(func() -> bool: return _chips(crew["weapons"]).size() == 1)).is_true()
 	var row: Dictionary = _chips(crew["weapons"])[0]
-	assert_int(row["chip"]).is_equal(ChipView.index_of("hold_fire"))
+	assert_int(row["chip"]).is_equal(ChipsReader.index_of("hold_fire"))
 	assert_int(row["arg"]).is_equal(NetHarness.ENEMY)
-	assert_int(row["from"]).is_equal(StationViews.CREW.find("comms"))
-	assert_int(row["to"]).is_equal(StationViews.CREW.find("weapons"))
+	assert_int(row["from"]).is_equal(StationCatalogue.CREW.find("comms"))
+	assert_int(row["to"]).is_equal(StationCatalogue.CREW.find("weapons"))
 	from = h.mark(comms)
 	comms.send_chip("hold_fire", NetHarness.ENEMY)
 	assert_str(await _rejected(comms, from)).is_equal(NetChips.ALREADY_OPEN)
@@ -203,7 +203,7 @@ func test_hard_switches_chips_off() -> void:
 	host.set_toggles("hard")
 	(
 		assert_bool(
-			await h.until(func() -> bool: return server.session.lobby.toggles.encode() == "hard")
+			await h.until(func() -> bool: return server.game.lobby.toggles.encode() == "hard")
 		)
 		. is_true()
 	)
@@ -242,7 +242,7 @@ func test_hard_switches_chips_off() -> void:
 	from = h.mark(crew["weapons"])
 	crew["weapons"].send_chip("power")
 	assert_str(await _rejected(crew["weapons"], from)).is_equal(NetChips.OFF)
-	assert_int(server.session.chips.open_of(PLAYER).size()).is_equal(1)
+	assert_int(server.game.chips.open_of(PLAYER).size()).is_equal(1)
 
 
 # FT: FT-PAIR-013
@@ -256,7 +256,7 @@ func test_an_unanswered_chip_expires_silently() -> void:
 	helm.send_chip("boost")
 	assert_bool(await h.until(func() -> bool: return _chips(eng).size() == 1)).is_true()
 	var marks: Array = [h.mark(helm), h.mark(eng)]
-	var expiry_ticks: int = int(ChipView.def().expiry_s * 60.0)
+	var expiry_ticks: int = int(ChipsReader.def().expiry * 60.0)
 	for i: int in expiry_ticks - 120:
 		server.world.step()
 	server.world.drain_events()
@@ -269,7 +269,7 @@ func test_an_unanswered_chip_expires_silently() -> void:
 	assert_bool(await h.until(func() -> bool: return _chips(helm).is_empty())).is_true()
 	assert_int(_count(server, "p1", CoopEvents.CHIP_EXPIRED)).is_equal(1)
 	assert_int(_count(server, "p1", CoopEvents.CHIP_ANSWERED)).is_equal(0)
-	assert_int(server.session.coop.cooperative("p1")).is_equal(0)
+	assert_int(server.game.coop.cooperative("p1")).is_equal(0)
 	# Silent: neither station got an event of any kind about it.
 	for c: NetClient in [helm, eng]:
 		var seen: Array = (h.events[c] as Array).slice(marks[0] if c == helm else marks[1])
@@ -286,19 +286,19 @@ func test_chips_are_player_initiated_only() -> void:
 	var crew: Dictionary = await _crew(server)
 	assert_bool(await h.start(server, crew["helm"])).is_true()
 	await h.wait(1500)
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		assert_array(_chips(crew[station])).override_failure_message(station).is_empty()
-	assert_array(server.session.chips.open_of(PLAYER)).is_empty()
-	assert_dict(server.session.coop.counts()).is_empty()
+	assert_array(server.game.chips.open_of(PLAYER)).is_empty()
+	assert_dict(server.game.coop.counts()).is_empty()
 
 
 # FT: FT-PAIR-013
-# The cooperative events are written to the session log: one `coop` line per event and
+# The cooperative events are written to the server log: one `coop` line per event and
 # counters per pair and kind, which the debrief of #10 reads.
-func test_cooperative_events_are_written_to_the_session_log() -> void:
+func test_cooperative_events_are_written_to_the_server_log() -> void:
 	var server: NetServer = h.server(false, 10.0, SECRET)
 	var path: String = "user://test-coop-%d.jsonl" % Time.get_ticks_usec()
-	assert_int(server.start_session_log(path)).is_equal(OK)
+	assert_int(server.start_server_log(path)).is_equal(OK)
 	var crew: Dictionary = await _crew(server)
 	crew["science"].send_chip("scan_mark")
 	assert_bool(await h.until(func() -> bool: return _chips(crew["helm"]).size() == 1)).is_true()
@@ -311,7 +311,7 @@ func test_cooperative_events_are_written_to_the_session_log() -> void:
 		)
 		. is_true()
 	)
-	var counters: Dictionary = server.session_log.counters()
+	var counters: Dictionary = server.server_log.counters()
 	assert_int(counters["coop.p3.chip_sent"]).is_equal(1)
 	assert_int(counters["coop.p3.chip_answered"]).is_equal(1)
 	var lines: Array = []
@@ -322,9 +322,9 @@ func test_cooperative_events_are_written_to_the_session_log() -> void:
 	assert_int(lines.size()).is_equal(2)
 	assert_str(lines[0]["coop"]).is_equal("chip_sent")
 	assert_str(lines[1]["pair"]).is_equal("p3")
-	var debrief: Array = server.session.coop.debrief()
+	var debrief: Array = server.game.coop.debrief()
 	assert_int(debrief.size()).is_equal(1)
 	assert_int(debrief[0]["events"]).is_equal(1)
 	assert_array(debrief[0]["stations"]).is_equal(["helm", "science"])
-	server.session_log.close()
+	server.server_log.close()
 	DirAccess.remove_absolute(path)

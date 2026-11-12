@@ -35,7 +35,7 @@ func _server() -> NetServer:
 # is refused with "session full" without taking a session.
 func test_connection_65_is_refused_in_a_six_ship_session() -> void:
 	var server: NetServer = _server()
-	assert_int(server.session.crew_ships().size()).is_equal(SHIPS)
+	assert_int(server.game.crew_ships().size()).is_equal(SHIPS)
 	var all: Array[NetClient] = []
 	for i: int in LoadSeats.CONNECTIONS:
 		all.append(h.client(server, "load%02d" % i))
@@ -51,14 +51,14 @@ func test_connection_65_is_refused_in_a_six_ship_session() -> void:
 				return not h.events_of(c, NetProtocol.EVENT_PICKED).is_empty()
 		)
 	assert_bool(await h.until(picked, 30_000)).is_true()
-	var entries: Dictionary = {}
+	var seats: Dictionary = {}
 	for c: NetClient in all:
 		var answer: Dictionary = h.events_of(c, NetProtocol.EVENT_PICKED)[-1]
 		assert_str(answer["payload"]["reason"]).is_equal("")
-		var key: String = answer["payload"]["entry"]
-		entries[key] = int(entries.get(key, 0)) + 1
+		var key: String = answer["payload"]["seat"]
+		seats[key] = int(seats.get(key, 0)) + 1
 	(
-		assert_dict(entries)
+		assert_dict(seats)
 		. is_equal(
 			{
 				"helm": 6,
@@ -73,9 +73,9 @@ func test_connection_65_is_refused_in_a_six_ship_session() -> void:
 		)
 	)
 	for ship: int in SHIPS:
-		assert_bool(server.session.lobby_state(ship)["ready"]).is_true()
+		assert_bool(server.game.lobby_state(ship)["ready"]).is_true()
 	var late: NetClient = h.client(server, "load64")
 	var refused: Callable = func() -> bool: return late.state == NetClient.State.REJECTED
 	assert_bool(await h.until(refused)).is_true()
 	assert_str(late.reject_reason).is_equal(NetProtocol.REJECT_FULL)
-	assert_int(server.session.by_id.size()).is_equal(LoadSeats.CONNECTIONS)
+	assert_int(server.game.by_id.size()).is_equal(LoadSeats.CONNECTIONS)

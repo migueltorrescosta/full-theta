@@ -29,7 +29,12 @@ static func others(w: SimWorld, ship: int) -> Array:
 		for col: Array in t.columns():
 			var values: Array = []
 			for r: int in t.size():
-				if t.ship_ids[r] != ship:
+				var about: int = (
+					(t as KnowledgeTable).subject_ship[r]
+					if t is KnowledgeTable
+					else t.owner_ship[r]
+				)
+				if about != ship:
 					values.append(col[1][r])
 			out.append([col[0], values])
 	return out
@@ -43,35 +48,35 @@ static func others(w: SimWorld, ship: int) -> Array:
 func test_relaunch_resets_only_that_ship() -> void:
 	var twins: Array[FleetFixture] = []
 	for k: int in 2:
-		var f: FleetFixture = FleetFixture.make(SessionRules.Mode.HOLDOUT, 3)
+		var f: FleetFixture = FleetFixture.make(GameRules.Mode.HOLDOUT, 3)
 		var w: SimWorld = f.world
-		var start: Vector3 = w.ship_starts[1]
+		var start: PackedFloat64Array = w.ship_starts[1]
 		f.step(5)
 		Economy.add_credits(w, 1, 900)
 		Economy.add_credits(w, 0, 300)
-		w.run.encounters_done[1] = 2
-		w.run.kills[1] = 1
-		w.kin.place(1, start.x + 5000.0, start.y, start.z)
+		w.ships.encounters_done[1] = 2
+		w.ships.kills[1] = 1
+		w.kin.place(1, CubePoint.plus(start, Vector3(5000.0, 0.0, 0.0)))
 		destroy(f, 1)
-		var gone: Array[SimEvent] = of_kind(f.step(1), SessionOutcome.EVENT_ELIMINATED)
-		assert_int(int(gone[0].value)).is_equal(SessionRules.HOLDOUT_LIVES)
+		var gone: Array[SimEvent] = of_kind(f.step(1), GameOutcome.EVENT_ELIMINATED)
+		assert_int(int(gone[0].value)).is_equal(GameRules.HOLDOUT_LIVES)
 		twins.append(f)
 	var f: FleetFixture = twins[0]
 	var w: SimWorld = f.world
-	var start: Vector3 = w.ship_starts[1]
+	var start: PackedFloat64Array = w.ship_starts[1]
 	relaunch(f, 1)
-	var back: Array[SimEvent] = of_kind(f.step(1), SessionOutcome.EVENT_RELAUNCHED)
+	var back: Array[SimEvent] = of_kind(f.step(1), GameOutcome.EVENT_RELAUNCHED)
 	twins[1].step(1)
 	assert_int(back.size()).is_equal(1)
-	assert_int(int(back[0].value)).is_equal(SessionRules.HOLDOUT_LIVES - 1)
-	assert_int(w.run.status[1]).is_equal(RunTable.Status.IN_PLAY)
-	assert_int(w.run.outcome[1]).is_equal(RunTable.Outcome.NONE)
-	assert_int(w.run.encounters_done[1]).is_equal(0)
-	assert_int(w.run.relaunches[1]).is_equal(1)
-	assert_int(w.run.kills[1]).is_equal(1)
+	assert_int(int(back[0].value)).is_equal(GameRules.HOLDOUT_LIVES - 1)
+	assert_int(w.ships.status[1]).is_equal(ShipStateTable.Status.IN_PLAY)
+	assert_int(w.ships.ship_outcome[1]).is_equal(ShipStateTable.ShipOutcome.NONE)
+	assert_int(w.ships.encounters_done[1]).is_equal(0)
+	assert_int(w.ships.relaunches[1]).is_equal(1)
+	assert_int(w.ships.kills[1]).is_equal(1)
 	assert_int(Economy.credits(w, 1)).is_equal(f.setup.run_def.start_credits)
 	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal(1.0)
-	assert_float(w.kin.relative_to_point(1, start.x, start.y, start.z).length()).is_less(50.0)
+	assert_float(w.kin.relative_to_point(1, start).length()).is_less(50.0)
 	assert_array(others(w, 1)).is_equal(others(twins[1].world, 1))
 	assert_int(Economy.credits(w, 0)).is_equal(f.setup.run_def.start_credits + 300)
 
@@ -80,7 +85,7 @@ func test_relaunch_resets_only_that_ship() -> void:
 # RelaunchShipCommand refuses a ship in play, an AI ship, and a ship whose side has no
 # relaunch: co-op's default policy is none (D91).
 func test_relaunch_refusals() -> void:
-	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.COOP, 2)
+	var f: FleetFixture = FleetFixture.make(GameRules.Mode.COOP, 2)
 	var in_play: RelaunchShipCommand = relaunch(f, 0)
 	destroy(f, 1)
 	f.step(2)
@@ -90,7 +95,7 @@ func test_relaunch_refusals() -> void:
 	assert_bool(in_play.accepted).is_false()
 	assert_bool(no_policy.accepted).is_false()
 	assert_bool(no_ship.accepted).is_false()
-	assert_int(f.world.run.status[1]).is_equal(RunTable.Status.DESTROYED)
+	assert_int(f.world.ships.status[1]).is_equal(ShipStateTable.Status.DESTROYED)
 
 
 # FT: FT-MIS-011, FT-MIS-014
@@ -98,34 +103,34 @@ func test_relaunch_refusals() -> void:
 # HOLDOUT_LIVES relaunches. The session ends when the finite side has no ship and no life
 # left, scored by the tick its last ship left play; the small side's losses never end it.
 func test_holdout_is_asymmetric_and_scored_by_time() -> void:
-	var f: FleetFixture = FleetFixture.make(SessionRules.Mode.HOLDOUT, 2)
+	var f: FleetFixture = FleetFixture.make(GameRules.Mode.HOLDOUT, 2)
 	var w: SimWorld = f.world
-	assert_int(w.team_of(0)).is_equal(SessionRules.HOLDOUT_SMALL_TEAM)
-	assert_int(w.team_of(1)).is_equal(SessionRules.HOLDOUT_FINITE_TEAM)
+	assert_int(w.faction_of(0)).is_equal(f.rules.faction_for(0, GameRules.HOLDOUT_SMALL_TEAM))
+	assert_int(w.faction_of(1)).is_equal(f.rules.holdout_finite_faction())
 	for i: int in 5:
 		destroy(f, 0)
-		var gone: Array[SimEvent] = of_kind(f.step(1), SessionOutcome.EVENT_ELIMINATED)
+		var gone: Array[SimEvent] = of_kind(f.step(1), GameOutcome.EVENT_ELIMINATED)
 		assert_int(int(gone[0].value)).is_equal(-1)
 		relaunch(f, 0)
 		f.step(1)
-	assert_int(w.run.relaunches[0]).is_equal(5)
+	assert_int(w.ships.relaunches[0]).is_equal(5)
 	var events: Array[SimEvent] = []
-	for life: int in SessionRules.HOLDOUT_LIVES + 1:
+	for life: int in GameRules.HOLDOUT_LIVES + 1:
 		f.step(30)
 		destroy(f, 1)
 		events = f.step(1)
-		var gone: Array[SimEvent] = of_kind(events, SessionOutcome.EVENT_ELIMINATED)
-		assert_int(int(gone[0].value)).is_equal(SessionRules.HOLDOUT_LIVES - life)
-		if life < SessionRules.HOLDOUT_LIVES:
+		var gone: Array[SimEvent] = of_kind(events, GameOutcome.EVENT_ELIMINATED)
+		assert_int(int(gone[0].value)).is_equal(GameRules.HOLDOUT_LIVES - life)
+		if life < GameRules.HOLDOUT_LIVES:
 			assert_bool(f.outcome().over()).is_false()
 			relaunch(f, 1)
 			f.step(1)
-			assert_int(w.run.status[1]).is_equal(RunTable.Status.IN_PLAY)
-	var out: SessionOutcome = f.outcome()
-	assert_int(out.reason).is_equal(SessionOutcome.Reason.HOLDOUT_OVER)
+			assert_int(w.ships.status[1]).is_equal(ShipStateTable.Status.IN_PLAY)
+	var out: GameOutcome = f.outcome()
+	assert_int(out.reason).is_equal(GameOutcome.Reason.HOLDOUT_OVER)
 	assert_int(out.held_ticks).is_equal(w.tick - 1)
 	assert_array(Array(out.winners)).is_empty()
-	assert_int(of_kind(events, SessionOutcome.EVENT_SESSION_OVER).size()).is_equal(1)
+	assert_int(of_kind(events, GameOutcome.EVENT_GAME_OVER).size()).is_equal(1)
 	var spent: RelaunchShipCommand = relaunch(f, 1)
 	f.step(1)
 	assert_bool(spent.accepted).is_false()
@@ -137,11 +142,11 @@ func test_holdout_is_asymmetric_and_scored_by_time() -> void:
 # first at the yard; a team's ships share a site, apart from the other team's. Each ship's
 # faction knows its start site.
 func test_start_sites() -> void:
-	var coop: FleetFixture = FleetFixture.make(SessionRules.Mode.COOP, 3)
+	var coop: FleetFixture = FleetFixture.make(GameRules.Mode.COOP, 3)
 	for id: int in 3:
 		assert_int(coop.world.ship_start_site[id]).is_equal(0)
-		assert_vector(coop.world.ship_starts[id]).is_equal(Vector3(id * 100.0, 0.0, 0.0))
-	var lss: FleetFixture = FleetFixture.make(SessionRules.Mode.LAST_STANDING, 6)
+		assert_array(coop.world.ship_starts[id]).is_equal(CubePoint.make(id * 100.0, 0.0, 0.0))
+	var lss: FleetFixture = FleetFixture.make(GameRules.Mode.LAST_STANDING, 6)
 	var seen: Dictionary[int, bool] = {}
 	for id: int in 6:
 		var site: int = lss.world.ship_start_site[id]
@@ -151,7 +156,7 @@ func test_start_sites() -> void:
 	assert_int(seen.size()).is_equal(6)
 	assert_int(lss.world.ship_start_site[0]).is_equal(0)
 	var teams: Array[int] = [0, 1, 1, 0]
-	var t: FleetFixture = FleetFixture.make(SessionRules.Mode.TEAMS, 4, teams)
+	var t: FleetFixture = FleetFixture.make(GameRules.Mode.TEAMS, 4, teams)
 	var starts: Dictionary[int, int] = t.world.ship_start_site
 	assert_int(starts[0]).is_equal(starts[3])
 	assert_int(starts[1]).is_equal(starts[2])

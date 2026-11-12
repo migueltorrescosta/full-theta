@@ -6,10 +6,10 @@ extends RefCounted
 ## there is nothing to do. Reads true state, as a crew with a radar lock would.
 
 
-## The nearest living hostile of the ship's faction that it detects within `range_m`
+## The nearest living hostile of the ship's faction that it detects within `reach`
 ## (any, or only armed ones), or -1.
 static func nearest_hostile(
-	world: SimWorld, ship: int, range_m: float, armed_only: bool = false
+	world: SimWorld, ship: int, reach: float, armed_only: bool = false
 ) -> int:
 	var faction: int = world.faction_of(ship)
 	var best: int = -1
@@ -17,7 +17,7 @@ static func nearest_hostile(
 	for id: int in world.ship_count():
 		if id == ship or not world.ai.is_enabled(id) or not world.kin.is_alive(id):
 			continue
-		if world.run.status[id] != RunTable.Status.IN_PLAY:
+		if world.ships.status[id] != ShipStateTable.Status.IN_PLAY:
 			continue
 		if world.relation(faction, world.faction_of(id)) != SimWorld.Relation.HOSTILE:
 			continue
@@ -26,7 +26,7 @@ static func nearest_hostile(
 		if armed_only and world.defs[id].mounts.is_empty():
 			continue
 		var d: float = world.kin.relative(ship, id).length()
-		if d <= range_m and d < best_d:
+		if d <= reach and d < best_d:
 			best = id
 			best_d = d
 	return best
@@ -69,7 +69,7 @@ static func aim(
 	rng: RandomNumberGenerator = null
 ) -> AimMountCommand:
 	var kin: Kinematics = world.kin
-	var lead: Vector3 = EnemyAi.lead_aim(world, ship, 0, target, 0)
+	var lead: Vector3 = NpcAi.lead_aim(world, ship, 0, target, 0)
 	if not lead.is_finite():
 		lead = kin.relative(ship, target)
 	if aim_error > 0.0 and rng != null:

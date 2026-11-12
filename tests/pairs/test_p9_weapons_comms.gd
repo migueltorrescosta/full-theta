@@ -13,7 +13,7 @@ func _yes_of_hundred(left: float) -> int:
 	P9Scenario.damage_engines(w, left / P9Scenario.ENGINES_LEFT)
 	w.step()
 	var hail: HailCommand = HailCommand.new()
-	hail.target = P9Scenario.RAIDER
+	hail.contact = P9Scenario.RAIDER
 	StoryFixture.run(w, 0, hail)
 	var yes: int = 0
 	for i: int in 100:
@@ -43,7 +43,7 @@ func _hailed(left: float) -> SimWorld:
 	P9Scenario.damage_engines(w, left / P9Scenario.ENGINES_LEFT)
 	w.step()
 	var hail: HailCommand = HailCommand.new()
-	hail.target = P9Scenario.RAIDER
+	hail.contact = P9Scenario.RAIDER
 	StoryFixture.run(w, 0, hail)
 	return w
 
@@ -60,7 +60,7 @@ func test_the_demand_needs_engine_damage_and_waits_after_a_refusal() -> void:
 	var w: SimWorld = _hailed(P9Scenario.ENGINES_LEFT)
 	assert_bool(_demand_enabled(w)).is_true()
 	var params: Dictionary = _surrender_params().duplicate()
-	assert_float(float(params["retry_s"])).is_equal(25.0)
+	assert_float(float(params["retry_delay"])).is_equal(25.0)
 	assert_float(float(params["refusal_factor"])).is_equal(0.5)
 	# A near-certain refusal, twice: the second chance is half the first.
 	params["base"] = 0.001
@@ -130,8 +130,8 @@ func test_flags_reach_weapons_under_the_toggle() -> void:
 	assert_int(w.knowledge.flag[row]).is_equal(KnowledgeTable.Flag.DISABLE)
 	var seen: Dictionary[String, int] = {}
 	for code: String in ["easy#contract_flags", "easy", "hard#contract_flags", "normal"]:
-		var values: Dictionary = FeedsView.block(w, 0)
-		ViewFilter.of("weapons", code).apply(StationViews.Section.FEEDS, values, w.defs[0])
+		var values: Dictionary = FeedsSection.block(w, 0)
+		ShortcutFilter.of("weapons", code).apply(StationCatalogue.Section.FEEDS, values, w.defs[0])
 		seen[code] = (values["flags"] as Array).size()
 	assert_dict(seen).is_equal(
 		{"easy#contract_flags": 1, "easy": 0, "hard#contract_flags": 0, "normal": 0}

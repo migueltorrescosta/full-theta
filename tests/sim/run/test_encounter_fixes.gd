@@ -42,10 +42,10 @@ func test_a_scenario_ending_an_encounter_after_the_ship_died_records_the_loss() 
 	_begin(f, 1)
 	f.world.step()
 	f.world.encounters.result[0] = EncounterTable.Result.ACTIVE
-	f.world.run.status[0] = RunTable.Status.DESTROYED
+	f.world.ships.status[0] = ShipStateTable.Status.DESTROYED
 	EncounterSystem.finish(f.world, 0, EncounterTable.Result.WON)
 	assert_bool(EncounterTable.has_bit(f.world.encounters.losses_mask[0], 0)).is_true()
-	assert_int(f.world.run.encounter[0]).is_equal(-1)
+	assert_int(f.world.ships.encounter[0]).is_equal(-1)
 
 
 # FT: FT-MIS-027

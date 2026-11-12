@@ -17,14 +17,14 @@ func after_test() -> void:
 
 # FT: FT-NET-015, FT-NET-017, FT-STN-015, FT-M1-018, FT-M1-006
 # The catalogue offers the six stations, the 15 joint views, Captain and Viewer, in
-# that order, each with its StationDef and load tag, and nothing else without the dev
+# that order, each with its SeatDef and load tag, and nothing else without the dev
 # flag.
-func test_catalogue_offers_m1_entries_with_load_tags() -> void:
+func test_catalogue_offers_m1_seats_with_load_tags() -> void:
 	var server: NetServer = h.server()
 	var c: NetClient = await h.welcomed(server, "a")
 	assert_bool(await h.until(func() -> bool: return not c.catalogue.is_empty())).is_true()
-	var entries: Array = c.catalogue["entries"]
-	var ids: Array = entries.map(func(e: Dictionary) -> String: return e["id"])
+	var seats: Array = c.catalogue["seats"]
+	var ids: Array = seats.map(func(e: Dictionary) -> String: return e["id"])
 	assert_array(ids).is_equal(
 		[
 			"helm",
@@ -52,7 +52,7 @@ func test_catalogue_offers_m1_entries_with_load_tags() -> void:
 			"viewer"
 		]
 	)
-	var tags: Array = entries.map(func(e: Dictionary) -> String: return e["load_tag"])
+	var tags: Array = seats.map(func(e: Dictionary) -> String: return e["load_tag"])
 	assert_array(tags).is_equal(
 		[
 			"intense",
@@ -80,20 +80,20 @@ func test_catalogue_offers_m1_entries_with_load_tags() -> void:
 			""
 		]
 	)
-	for e: Dictionary in entries:
-		assert_dict(e).is_equal(StationViews.def(e["id"]).to_dict())
+	for e: Dictionary in seats:
+		assert_dict(e).is_equal(StationCatalogue.def(e["id"]).to_dict())
 	assert_array(c.catalogue["load_tags"]).is_equal(["light", "busy", "intense"])
-	c.pick(PLAYER, StationViews.ALL)
+	c.pick(PLAYER, StationCatalogue.ALL)
 	var answer: Dictionary = await h.next_event(c, NetProtocol.EVENT_PICKED)
-	assert_str(answer["payload"]["reason"]).is_equal(ServerSession.BAD_PICK)
+	assert_str(answer["payload"]["reason"]).is_equal(NetGame.BAD_PICK)
 	var from: int = h.mark(c)
 	c.pick(PLAYER, "p2")
 	answer = await h.next_event(c, NetProtocol.EVENT_PICKED, from)
-	assert_str(answer["payload"]["reason"]).is_equal(ServerSession.BAD_PICK)
+	assert_str(answer["payload"]["reason"]).is_equal(NetGame.BAD_PICK)
 
 
 # FT: FT-NET-015, FT-NET-016
-# A player holds exactly one entry (a new pick replaces the old); any number may share
+# A player holds exactly one seat (a new pick replaces the old); any number may share
 # a station or a joint view; a second Captain on the same ship is refused until the
 # seat is free again.
 func test_one_pick_sharing_and_one_captain() -> void:
@@ -102,22 +102,22 @@ func test_one_pick_sharing_and_one_captain() -> void:
 	var b: NetClient = await h.joined(server, "b", "helm")
 	var c: NetClient = await h.joined(server, "c", "tactical")
 	var d: NetClient = await h.joined(server, "d", "tactical")
-	assert_array(server.session.entries_of(PLAYER)).contains_exactly_in_any_order(
+	assert_array(server.game.seats_of(PLAYER)).contains_exactly_in_any_order(
 		["helm", "helm", "tactical", "tactical"]
 	)
 	assert_bool(await h.pick(a, "systems")).is_true()
-	assert_str(h.session_of(server, a).entry).is_equal("systems")
-	assert_array(server.session.entries_of(PLAYER)).contains_exactly_in_any_order(
+	assert_str(h.session_of(server, a).seat).is_equal("systems")
+	assert_array(server.game.seats_of(PLAYER)).contains_exactly_in_any_order(
 		["systems", "helm", "tactical", "tactical"]
 	)
-	assert_bool(a.view.blocks.has(StationViews.Section.ENGINEERING)).is_true()
-	assert_bool(a.view.blocks.has(StationViews.Section.HELM)).is_false()
+	assert_bool(a.snap.blocks.has(StationCatalogue.Section.ENGINEERING)).is_true()
+	assert_bool(a.snap.blocks.has(StationCatalogue.Section.HELM)).is_false()
 	assert_bool(await h.pick(b, "captain")).is_true()
 	var from: int = h.mark(c)
 	c.pick(PLAYER, "captain")
 	var refused: Dictionary = await h.next_event(c, NetProtocol.EVENT_PICKED, from)
-	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.CAPTAIN_TAKEN)
-	assert_str(h.session_of(server, c).entry).is_equal("tactical")
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.CAPTAIN_TAKEN)
+	assert_str(h.session_of(server, c).seat).is_equal("tactical")
 	var lobby: Dictionary = h.last_event(d, NetProtocol.EVENT_LOBBY)
 	assert_str(lobby["payload"]["captain"]).is_equal("b")
 	# The station grid names who sits where (D216).
@@ -125,15 +125,15 @@ func test_one_pick_sharing_and_one_captain() -> void:
 		assert_array(lobby["payload"]["seats"])
 		. contains_exactly_in_any_order(
 			[
-				{"name": "a", "entry": "systems"},
-				{"name": "b", "entry": "captain"},
-				{"name": "c", "entry": "tactical"},
-				{"name": "d", "entry": "tactical"},
+				{"name": "a", "seat": "systems"},
+				{"name": "b", "seat": "captain"},
+				{"name": "c", "seat": "tactical"},
+				{"name": "d", "seat": "tactical"},
 			]
 		)
 	)
 	b.release_pick()
-	assert_bool(await h.until(func() -> bool: return h.session_of(server, b).entry == "")).is_true()
+	assert_bool(await h.until(func() -> bool: return h.session_of(server, b).seat == "")).is_true()
 	assert_bool(await h.pick(c, "captain")).is_true()
 
 
@@ -157,15 +157,15 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 	var from: int = h.mark(tac)
 	tac.set_ready(true)
 	var refused: Dictionary = await h.next_event(tac, NetProtocol.EVENT_REQUEST_REJECTED, from)
-	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_COVERED)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_COVERED)
 	assert_array(refused["payload"]["uncovered"]).is_equal(["relay", "comms"])
 	from = h.mark(cap)
 	cap.set_ready(true)
 	refused = await h.next_event(cap, NetProtocol.EVENT_REQUEST_REJECTED, from)
-	assert_str(refused["payload"]["reason"]).is_equal(ServerSession.NOT_CREW)
+	assert_str(refused["payload"]["reason"]).is_equal(NetGame.NOT_CREW)
 	await h.wait(300)
 	assert_int(server.world.tick).is_equal(tick)
-	assert_bool(server.session.lobby.launched.is_empty()).is_true()
+	assert_bool(server.game.lobby.launched.is_empty()).is_true()
 	var ops: NetClient = await h.joined(server, "ops", "ops")
 	var ready_ok: Callable = func(e: Dictionary) -> bool: return e["payload"]["ready"]
 	lobby = await h.next_event(sys, NetProtocol.EVENT_LOBBY, 0, ready_ok)
@@ -176,30 +176,32 @@ func test_start_needs_three_crew_covering_six_stations() -> void:
 	assert_int(go["payload"]["ship"]).is_equal(PLAYER)
 	var started: Callable = func(e: Dictionary) -> bool: return e["payload"]["started"]
 	assert_dict(await h.next_event(view, NetProtocol.EVENT_LOBBY, 0, started)).is_not_empty()
-	assert_bool(server.session.sim_running()).is_true()
+	assert_bool(server.game.sim_running()).is_true()
 
 
 # FT: FT-NET-029, FT-M1-015
-# With --dev-all-stations the catalogue offers the dev entry, one client holds every
+# With --dev-all-stations the catalogue offers the dev seat, one client holds every
 # station with it, and it can start alone (the 3-player minimum is bypassed); its
 # snapshots carry every station's sections.
 func test_dev_flag_lets_one_client_hold_all_stations() -> void:
 	var server: NetServer = h.server(true)
-	var c: NetClient = await h.joined(server, "solo", StationViews.ALL)
+	var c: NetClient = await h.joined(server, "solo", StationCatalogue.ALL)
 	assert_bool(c.welcome["dev_all"]).is_true()
-	var ids: Array = (c.catalogue["entries"] as Array).map(
+	var ids: Array = (c.catalogue["seats"] as Array).map(
 		func(e: Dictionary) -> String: return e["id"]
 	)
-	assert_array(ids).contains([StationViews.ALL])
+	assert_array(ids).contains([StationCatalogue.ALL])
 	for kind: int in [
-		StationViews.Section.HELM, StationViews.Section.ENGINEERING, StationViews.Section.MOUNTS
+		StationCatalogue.Section.HELM,
+		StationCatalogue.Section.ENGINEERING,
+		StationCatalogue.Section.MOUNTS
 	]:
-		assert_bool(c.view.blocks.has(kind)).is_true()
+		assert_bool(c.snap.blocks.has(kind)).is_true()
 	assert_bool(await h.start(server, c)).is_true()
 	# Alone on every station: every claim is its own (FT-NET-044).
 	var me: int = h.session_of(server, c).id
 	for item: String in ["flight", "shield_facing", "mount:0", "crew:0", "crew:1"]:
-		assert_int(server.session.claims.holder(PLAYER, item)).is_equal(me)
+		assert_int(server.game.claims.holder(PLAYER, item)).is_equal(me)
 	c.fire()
 	c.helm(1.0)
 	await h.wait(300)
@@ -221,16 +223,16 @@ func test_mid_run_change_must_keep_coverage() -> void:
 	assert_str(rejected["payload"]["reason"]).is_equal(CommandGate.BREAKS_COVERAGE)
 	var picked: Dictionary = await h.next_event(crew[0], NetProtocol.EVENT_PICKED, from)
 	assert_str(picked["payload"]["reason"]).is_equal(CommandGate.BREAKS_COVERAGE)
-	assert_str(h.session_of(server, crew[0]).entry).is_equal("tactical")
+	assert_str(h.session_of(server, crew[0]).seat).is_equal("tactical")
 	from = h.mark(crew[2])
 	crew[2].release_pick()
 	rejected = await h.next_event(crew[2], NetProtocol.EVENT_COMMAND_REJECTED, from)
 	assert_str(rejected["payload"]["reason"]).is_equal(CommandGate.BREAKS_COVERAGE)
 	# A fourth player takes Weapons; now Tactical may move to Helm.
 	var extra: NetClient = await h.joined(server, "weapons", "weapons")
-	assert_str(h.session_of(server, extra).entry).is_equal("weapons")
+	assert_str(h.session_of(server, extra).seat).is_equal("weapons")
 	assert_bool(await h.pick(crew[0], "helm")).is_true()
-	assert_bool(server.session.sim_running()).is_true()
+	assert_bool(server.game.sim_running()).is_true()
 
 
 # FT: FT-NET-013, FT-NET-030
@@ -240,7 +242,7 @@ func test_welcome_says_whether_the_server_uses_tls() -> void:
 	var server: NetServer = h.server()
 	var plain: NetClient = await h.welcomed(server, "plain")
 	assert_bool(plain.welcome["tls"]).is_false()
-	server.session.tls = true
+	server.game.tls = true
 	var secure: NetClient = await h.welcomed(server, "secure")
 	assert_bool(secure.welcome["tls"]).is_true()
 

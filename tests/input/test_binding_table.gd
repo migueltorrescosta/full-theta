@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## The binding-table check (T055): one table (IntentTable.INTENTS) for every station and
-## view, checked over every catalogue entry rather than per view.
+## view, checked over every seat rather than per view.
 
 ## D176: in the cockpit and the turret a left click selects over a chip, mark or radar
 ## item and fires elsewhere, so Weapons' fire may share LMB with the common select.
@@ -33,8 +33,8 @@ static func _inputs(binding: String) -> Array:
 # (every control is reachable).
 func test_a_station_binds_the_same_in_every_view() -> void:
 	var seen: Dictionary = {}
-	for entry: String in StationViews.catalogue_ids(true):
-		var stations: Array = StationViews.def(entry).stations
+	for seat: String in StationCatalogue.catalogue_ids(true):
+		var stations: Array = StationCatalogue.def(seat).stations
 		for station: String in stations:
 			for focused: String in stations:
 				for device: String in IntentTable.DEVICES:

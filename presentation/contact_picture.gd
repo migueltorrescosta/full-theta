@@ -20,7 +20,7 @@ var site: Dictionary = {}
 ## "allegiance" "", "world", "local", "pulse"} plus "radius" and "dockable"): selectable
 ## like contacts (FT-SPA-015) but kept out of `items`, which the radars draw.
 var sites: Array[Dictionary] = []
-## The interpolator the picture was built from: own position and rotation, site period.
+## The interpolator the picture was built from: own position and rotation, map period.
 ## A fresh one (identity rotation, no wrap) for pictures built by hand.
 var interp: SnapshotInterpolator = SnapshotInterpolator.new()
 
@@ -33,11 +33,11 @@ static func build(ctx: StationContext) -> ContactPicture:
 	var pic: ContactPicture = ContactPicture.new()
 	pic.interp = ctx.interp
 	var now: int = ctx.now_ms()
-	var info: Dictionary = ctx.view.contacts.get("info", {})
+	var info: Dictionary = ctx.snap.contacts.get("info", {})
 	for id: int in ctx.interp.contact_ids():
 		if id == ctx.crew.ship:
 			continue
-		var callsign: String = ctx.view.callsign(id)
+		var callsign: String = ctx.snap.callsign(id)
 		var letter: String = Palette.allegiance(callsign)
 		# Own-faction ships carry their ship name, no prefix: friendly.
 		if int(info.get(id, [0])[0]) & SnapshotReader.FLAG_OWN:
@@ -58,14 +58,14 @@ static func build(ctx: StationContext) -> ContactPicture:
 	# The sim's hazards the faction knows (D208): zones and shells as hazard bubbles, a plane
 	# front as a line across its travel (`dir`, ship frame).
 	var hazard_label: String = String(TranslationServer.translate("zone.hazard"))
-	for h: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("hazards", []):
+	for h: Dictionary in ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {}).get("hazards", []):
 		pic._add("zone", -1000 - int(h["id"]), hazard_label, "", h["pos"], 0.0)
 		pic.items[-1].merge({"zone": "hazard", "radius": h["radius"], "eta": h["eta"]})
 		if int(h["shape"]) == BlockSchema.HAZARD_PLANE:
 			pic.items[-1]["dir"] = pic.interp.local(h["dir"])
 	# Deployed probes with their bubbles (P13): Science and Relay see where coverage is.
 	var probe_label: String = String(TranslationServer.translate("zone.probe"))
-	for p: Dictionary in ctx.view.blocks.get(StationViews.Section.RELAY, {}).get("probes", []):
+	for p: Dictionary in ctx.snap.blocks.get(StationCatalogue.Section.RELAY, {}).get("probes", []):
 		if p["deployed"]:
 			var id: int = int(p["serial"])
 			pic._add("zone", -1 - id, probe_label, "", p["pos"], 0.0)
@@ -107,7 +107,7 @@ func contacts_by_range(limit: int = -1) -> Array[Dictionary]:
 	return _by_range.slice(0, limit)
 
 
-## The chip text of a contact item ("H2 · 4 high · mid", ChipText.chip), composed once per
+## The chip text of a contact item ("H2 · 4 high · mid", CalloutText.chip), composed once per
 ## item and shared by every radar, rail and overlay that draws this picture (R20-3). It is
 ## cached on the item and recomputed when the item's label or offset changed.
 static func chip_of(it: Dictionary) -> String:
@@ -116,8 +116,8 @@ static func chip_of(it: Dictionary) -> String:
 	if it.get("chip_label", null) != label or it.get("chip_local", null) != local:
 		it["chip_label"] = label
 		it["chip_local"] = local
-		it["chip_text"] = ChipText.chip(label, local)
-	return it["chip_text"]
+		it["callout_text"] = CalloutText.callout(label, local)
+	return it["callout_text"]
 
 
 ## The item with `ref`'s kind and id, or {}.
@@ -146,7 +146,7 @@ func rel(world: Vector3, centre: Dictionary) -> Vector3:
 ## Fills `sites` from the SITES section and `site` with the one nearest the own ship.
 func _add_sites(ctx: StationContext, now: int) -> void:
 	var nearest: float = INF
-	for row: Dictionary in ctx.view.sites:
+	for row: Dictionary in ctx.snap.sites:
 		var id: int = row["id"]
 		var label: String = String(TranslationServer.translate(StringName(row["name_key"])))
 		var world: Vector3 = interp.offset_to(row["pos"])

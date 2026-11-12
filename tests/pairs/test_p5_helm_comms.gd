@@ -25,7 +25,7 @@ func test_cleared_keeps_reputation_and_uncleared_loses_within_range() -> void:
 
 # FT: FT-PAIR-001
 # The lane is a window that exists only once the clearance is accepted, opens
-# lane_open_s later and lasts lane_s; a late dock loses reputation too.
+# lane_delay later and lasts lane_length; a late dock loses reputation too.
 func test_the_window_and_a_late_dock() -> void:
 	var w: SimWorld = P5Scenario.build()
 	P5Scenario.environment(w)

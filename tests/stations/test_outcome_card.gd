@@ -22,8 +22,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _card(entry: String, host: bool = false) -> OutcomeCard:
-	var ctx: StationContext = StationFixture.context(entry)
+func _card(seat: String, host: bool = false) -> OutcomeCard:
+	var ctx: StationContext = StationFixture.context(seat)
 	ctx.crew.host = host
 	var o: OutcomeCard = auto_free(OutcomeCard.new())
 	o.setup(ctx)
@@ -32,8 +32,8 @@ func _card(entry: String, host: bool = false) -> OutcomeCard:
 
 
 func _over(o: OutcomeCard, outcome: String) -> void:
-	var p: Dictionary = {"ship": 0, "outcome": outcome, "time_s": 222.5, "hull": 0.637}
-	o.ctx.crew.handle_event({"type": "run_over", "payload": p}, 0)
+	var p: Dictionary = {"ship": 0, "outcome": outcome, "time": 222.5, "hull": 0.637}
+	o.ctx.crew.handle_event({"type": "ship_outcome", "payload": p}, 0)
 	var votes: Dictionary = {"ship": 0, "voters": [], "needed": 2}
 	o.ctx.crew.handle_event({"type": "run_votes", "payload": votes}, 0)
 
@@ -91,11 +91,11 @@ func test_the_card_says_why_you_won_or_lost() -> void:
 	var o: OutcomeCard = _card("tactical")
 	_over(o, "win")
 	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_win"))
-	var lost: Dictionary = {"ship": 0, "outcome": "loss", "time_s": 90.0, "hull": 0.0}
-	o.ctx.crew.handle_event({"type": "run_over", "payload": lost}, 0)
+	var lost: Dictionary = {"ship": 0, "outcome": "loss", "time": 90.0, "hull": 0.0}
+	o.ctx.crew.handle_event({"type": "ship_outcome", "payload": lost}, 0)
 	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_destroyed"))
 	lost["hull"] = 0.4  # a loss with hull left: the crew gave up
-	o.ctx.crew.handle_event({"type": "run_over", "payload": lost}, 0)
+	o.ctx.crew.handle_event({"type": "ship_outcome", "payload": lost}, 0)
 	assert_str(_text(o, "Why")).is_equal(tr("outcome.why_gave_up"))
 
 
@@ -116,9 +116,9 @@ func test_a_viewer_is_told_who_runs_it_again() -> void:
 func test_the_hosts_run_again_waits_for_the_crew_with_one_confirm() -> void:
 	var h: OutcomeCard = _card("viewer", true)
 	h.ctx.crew.lobby[0]["seats"] = [
-		{"name": h.ctx.settings.player_name, "entry": "viewer"},
-		{"name": "Bo", "entry": "tactical"},
-		{"name": "Cy", "entry": "tactical"},
+		{"name": h.ctx.settings.player_name, "seat": "viewer"},
+		{"name": "Bo", "seat": "tactical"},
+		{"name": "Cy", "seat": "tactical"},
 	]
 	_over(h, "win")
 	var rec: StationFixture.RecordingClient = StationFixture.sent(h.ctx)
@@ -135,7 +135,7 @@ func test_the_hosts_run_again_waits_for_the_crew_with_one_confirm() -> void:
 
 
 # FT: FT-M1-012
-# Through the shell: the dev entry starts, the enemy is destroyed, the card shows
+# Through the shell: the dev seat starts, the enemy is destroyed, the card shows
 # Victory, its Run again button (1 of 1 crew) resets the run, the shell is back in the
 # lobby, and Start brings the station screen up on the new world.
 func test_shell_runs_again_after_a_win() -> void:
@@ -147,7 +147,7 @@ func test_shell_runs_again_after_a_win() -> void:
 	add_child(shell)
 	var crew: CrewState = shell.ctx.crew
 	assert_bool(await _until(func() -> bool: return not crew.catalogue.is_empty())).is_true()
-	shell.ctx.intents.pick(NetHarness.PLAYER, StationViews.ALL)
+	shell.ctx.intents.pick(NetHarness.PLAYER, StationCatalogue.ALL)
 	assert_bool(await _until(func() -> bool: return crew.lobby.has(NetHarness.PLAYER))).is_true()
 	shell.ctx.intents.start()
 	assert_bool(await _until(func() -> bool: return shell.screen != null)).is_true()
@@ -162,7 +162,7 @@ func test_shell_runs_again_after_a_win() -> void:
 	var vote: Callable = func() -> bool:
 		return (
 			shell.outcome_card.find_child("Vote", true, false) != null
-			and str(crew.run_over.get(NetHarness.PLAYER, {}).get("needed", 0)) == "1"
+			and str(crew.ship_outcome.get(NetHarness.PLAYER, {}).get("needed", 0)) == "1"
 		)
 	assert_bool(await _until(vote)).is_true()
 	(shell.outcome_card.find_child("Vote", true, false) as Button).pressed.emit()

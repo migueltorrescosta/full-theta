@@ -32,7 +32,7 @@ func _duel(weapon: WeaponDef, range_m: float, vel: Vector3 = Vector3.ZERO) -> Ar
 	var world: SimWorld = SimWorld.new(7)
 	var shooter: int = world.spawn_ship(_shooter(weapon), 1)
 	var target: int = world.spawn_ship(
-		TestDefs.raider(), 2, Vector3(0, 0, -range_m), Quaternion.IDENTITY, vel
+		TestDefs.raider(), 2, CubePoint.make(0, 0, -range_m), Quaternion.IDENTITY, vel
 	)
 	world.step()
 	world.drain_events()
@@ -96,7 +96,7 @@ func test_beam_hits_only_the_nearest_ship() -> void:
 	var beam: WeaponDef = _weapon(BEAM)
 	var d: Array = _duel(beam, 2000.0)
 	var world: SimWorld = d[0]
-	var behind: int = world.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -3000))
+	var behind: int = world.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, -3000))
 	world.shields.strength[behind] = 0.0
 	var far_hull: float = _hull(world, behind)
 	_fire(world, d[1])
@@ -183,7 +183,7 @@ func test_ammo_switch_releases_an_overheat_lock() -> void:
 	var world: SimWorld = SimWorld.new(7)
 	var alts: Array[WeaponDef] = [_weapon(MISSILE)]
 	var shooter: int = world.spawn_ship(_shooter(_weapon(BEAM), alts), 1)
-	world.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -2000))
+	world.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, -2000))
 	world.step()
 	world.drain_events()
 	world.mounts.locked[0] = 1
@@ -246,7 +246,7 @@ func test_probe_coverage_counts_as_tracked() -> void:
 	var before: FireGuidedCommand = _fire_guided(world, d[1], d[2])
 	world.step()
 	assert_bool(before.accepted).is_false()
-	assert_bool(ProbeSystem.launch(world, d[1], 0.0, 0.0, -29000.0)).is_true()
+	assert_bool(ProbeSystem.launch(world, d[1], CubePoint.make(0.0, 0.0, -29000.0))).is_true()
 	# 29 km at 500 m/s is 58 s.
 	SimFixture.run(world, 60 * 59)
 	assert_int(world.probes.deployed[0]).is_equal(1)

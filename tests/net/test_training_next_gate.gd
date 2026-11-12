@@ -3,23 +3,23 @@ extends GdUnitTestSuite
 ## for itself, the Captain seat for the Captain, nobody for another station; viewers cannot.
 
 
-func _session(entry: String) -> NetSession:
+func _session(seat: String) -> NetSession:
 	var s: NetSession = NetSession.new(1, 1000.0, 1000.0)
 	s.ship = 0
-	s.entry = entry
+	s.seat = seat
 	return s
 
 
-func _check(entry: String, station: String) -> String:
+func _check(seat: String, station: String) -> String:
 	var out: Array = CommandGate.check(
-		_session(entry), {"kind": "training_next", "station": station}, 0
+		_session(seat), {"kind": "training_next", "station": station}, 0
 	)
 	return out[1]
 
 
 # FT: FT-MIS-039, FT-NET-006
 func test_a_station_presses_next_for_itself_only() -> void:
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		assert_str(_check(station, station)).is_empty()
 	assert_str(_check("helm", "weapons")).is_equal(CommandGate.NOT_YOUR_STATION)
 	assert_str(_check("helm", "")).is_equal(CommandGate.NOT_YOUR_STATION)

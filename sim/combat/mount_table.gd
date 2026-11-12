@@ -65,28 +65,6 @@ func row_for(ship_id: int, index: int) -> int:
 	if first < 0 or index < 0:
 		return -1
 	var r: int = first + index
-	if r >= size() or ship_ids[r] != ship_id:
+	if r >= size() or owner_ship[r] != ship_id:
 		return -1
 	return r
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["mount_index", mount_index],
-			["barrel", barrel],
-			["aim_set", aim_set],
-			["aim_x", aim_x],
-			["aim_y", aim_y],
-			["aim_z", aim_z],
-			["cooldown", cooldown],
-			["ammo", ammo],
-			["heat", heat],
-			["fire_requested", fire_requested],
-			["ammo_type", ammo_type],
-			["type_ammo", type_ammo],
-			["locked", locked],
-			["guide_target", guide_target],
-		]
-	)

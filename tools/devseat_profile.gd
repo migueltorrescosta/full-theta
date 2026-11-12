@@ -13,10 +13,10 @@ const FIXTURE: String = "res://tests/stations/station_fixture.gd"
 
 func _initialize() -> void:
 	var fixture: GDScript = load(FIXTURE)
-	var entry: String = OS.get_environment("DEVSEAT_ENTRY")
-	if entry.is_empty():
-		entry = "all"
-	var ctx: StationContext = fixture.context(entry)
+	var seat: String = OS.get_environment("DEVSEAT_ENTRY")
+	if seat.is_empty():
+		seat = "all"
+	var ctx: StationContext = fixture.context(seat)
 	var times: Dictionary = {}
 	var screen: StationScreen = StationScreen.new()
 	screen.panel_factory = func(st: String) -> StationPanel:
@@ -49,7 +49,7 @@ func _initialize() -> void:
 ## The settings menu's Controls tab for the dev seat's six stations, the heavy child of
 ## the shell path (the menu opens on the first visit): build, then the keyboard diagram.
 func _controls_pane() -> void:
-	var six: Array[String] = StationViews.CREW.duplicate()
+	var six: Array[String] = StationCatalogue.CREW.duplicate()
 	var pane: ControlsPane = ControlsPane.new()
 	root.add_child(pane)
 	var t0: int = Time.get_ticks_usec()

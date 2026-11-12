@@ -67,7 +67,7 @@ func test_labels_are_laid_out_again_only_when_their_inputs_change() -> void:
 	assert_dict(first).is_not_empty()
 	assert_dict(cut.label_rects()).is_same(first)
 	# A health change rewrites a label's percentage: the layout is redone.
-	var rows: Array = cut.model.ctx.view.blocks[StationViews.Section.ENGINEERING]["subsystems"]
+	var rows: Array = cut.model.ctx.snap.blocks[StationCatalogue.Section.ENGINEERING]["subsystems"]
 	rows[2] = (rows[2] as Dictionary).duplicate()
 	rows[2]["health"] = 0.0
 	var second: Dictionary = cut.label_rects()

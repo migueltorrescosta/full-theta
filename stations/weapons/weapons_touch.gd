@@ -161,7 +161,7 @@ func refresh() -> void:
 	claim_button.role = RailButton.Role.ACCENT if p.is_mine(p.mount) else RailButton.Role.PLAIN
 	WeaponsStatus.show_fire(p, fire_button, p.mount)
 	ammo_button.text = WeaponsReadout.ammo_name(p) + " ▸"
-	# (no target line on a phone: the frame's selection chip names the target)
+	# (no target line on a phone: the frame's selection bar names the target)
 	target_label.text = ""
 	if radar != null:
 		radar.set_picture(p.ctx.picture(), p.ctx.crew.selection, p.ctx)

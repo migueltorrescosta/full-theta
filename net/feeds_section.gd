@@ -1,0 +1,73 @@
+class_name FeedsSection
+extends RefCounted
+## Section.FEEDS: what Weapons gets from other stations' work (P7 weak points and ammunition
+## ratings, hack windows; P8 track feeds with a quality bar), built from KNOW and the hack
+## table when ShortcutFilter.grants() lets the view have it (FT-PAIR-007, FT-WPN-007). The
+## weak points and resistances are the faction's scan knowledge (ScienceKnowledge): what
+## Science revealed, no more. Tracks are the contacts the faction detects, with the track
+## quality (GuidanceSystem.track_quality, D214: the bar) and whether a deployed probe covers
+## them.
+
+## Rows a list may hold (a row count is one byte).
+const MAX_ROWS: int = 255
+
+
+## The FEEDS block of a ship with everything granted, or with only the lists `filter` grants:
+## the lists it would blank (ShortcutFilter.apply()) are not built at all.
+static func block(world: SimWorld, ship: int, filter: ShortcutFilter = null) -> Dictionary:
+	var faction: int = world.faction_of(ship)
+	var out: Dictionary = {"weak": [], "windows": [], "tracks": [], "flags": []}
+	var want_weak: bool = filter == null or filter.grants(ShortcutFilter.WEAK_POINTS)
+	var want_tracks: bool = filter == null or filter.grants(ShortcutFilter.TRACK_FEEDS)
+	var want_flags: bool = filter == null or filter.grants(ShortcutFilter.CONTRACT_FLAGS)
+	if not (want_weak or want_tracks or want_flags):
+		return out
+	var k: KnowledgeTable = world.knowledge
+	for r: int in k.size():
+		if k.owner_faction[r] != faction:
+			continue
+		var contact: int = k.subject_ship[r]
+		if want_tracks and k.detected[r] == 1 and (out["tracks"] as Array).size() < MAX_ROWS:
+			(
+				(out["tracks"] as Array)
+				. append(
+					{
+						"contact": contact,
+						"quality": GuidanceSystem.track_quality(world, faction, contact),
+						"probe": ProbeSystem.covers_contact(world, ship, contact),
+					}
+				)
+			)
+		# Contract target flags held in the faction's KNOW (FT-MIS-042, P9).
+		if (
+			want_flags
+			and k.detected[r] == 1
+			and k.flag[r] != KnowledgeTable.Flag.NONE
+			and (out["flags"] as Array).size() < MAX_ROWS
+		):
+			(out["flags"] as Array).append({"contact": contact, "flag": k.flag[r]})
+		if not want_weak or (out["weak"] as Array).size() >= MAX_ROWS:
+			continue
+		var card: Dictionary = _weak_row(world, faction, contact)
+		if not card.is_empty():
+			(out["weak"] as Array).append(card)
+	if want_weak:
+		out["windows"] = ScienceSection.hacks(world, faction)
+	return out
+
+
+## The contact's revealed weak points and resistances, or {} when the scan revealed neither.
+static func _weak_row(world: SimWorld, faction: int, contact: int) -> Dictionary:
+	if world.science_def == null:
+		return {}
+	var traits: Dictionary = ScienceSection.revealed_traits(world, faction, contact)
+	if traits["weak_mask"] == 0 and (traits["resist"] as Array).is_empty():
+		return {}
+	# The weak points name subsystems of the contact's class: that is known once they are.
+	var class_id: int = BlockSchema.id_code(world.defs[contact].id)
+	return {
+		"contact": contact,
+		"class_id": class_id,
+		"weak_mask": traits["weak_mask"],
+		"resist": traits["resist"]
+	}

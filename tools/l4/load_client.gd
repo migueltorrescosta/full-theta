@@ -1,7 +1,7 @@
 extends SceneTree
 ## Load-gate client process (#11, FT-GEN-003, FT-NET-040, D160, D161): one Godot process
 ## holding several NetClients, each standing in for a remote device. Seat i of the
-## 64-seat plan (LoadSeats) picks its ship and entry; each ship's Helm presses Start until
+## 64-seat plan (LoadSeats) picks its ship and seat; each ship's Helm presses Start until
 ## a `started` event names that ship (every ship is started, D129); once its own ship has
 ## started, a Helm crew steers (helm input every 0.5 s) and a Weapons crew fires mount 0
 ## every second, so the command path carries load too. Every
@@ -30,7 +30,7 @@ var commands: bool = true
 var full_probe: bool = false
 
 var _clients: Array[NetClient] = []
-## Per client: {seat, ship, entry, picked, pick_sent, next_us, rejects, welcomed}.
+## Per client: {index, ship, seat, picked, pick_sent, next_us, rejects, welcomed}.
 var _seats: Array[Dictionary] = []
 var _start_us: int = 0
 ## Ships a `started` event named (broadcast to every client): ship -> true.
@@ -59,9 +59,9 @@ func _initialize() -> void:
 			_seats
 			. append(
 				{
-					"seat": first + k,
+					"index": first + k,
 					"ship": seat[0],
-					"entry": seat[1],
+					"seat": seat[1],
 					"picked": "",
 					"pick_sent": false,
 					"next_us": 0,
@@ -100,7 +100,7 @@ func _process(_delta: float) -> bool:
 
 func _drive(c: NetClient, s: Dictionary, k: int, now: int) -> void:
 	if not s["pick_sent"]:
-		c.pick(s["ship"], s["entry"])
+		c.pick(s["ship"], s["seat"])
 		s["pick_sent"] = true
 		s["next_us"] = now + _rng.randi_range(0, HELM_EVERY_US)
 		return
@@ -113,7 +113,7 @@ func _drive(c: NetClient, s: Dictionary, k: int, now: int) -> void:
 		return
 	if not commands:
 		return
-	match s["entry"]:
+	match s["seat"]:
 		"helm":
 			var rot: Vector3 = Vector3(
 				_rng.randf_range(-0.3, 0.3),
@@ -170,10 +170,10 @@ func _finish(why: String) -> void:
 			out
 			. append(
 				{
-					"seat": s["seat"],
+					"index": s["index"],
 					"name": c.name,
 					"ship": s["ship"],
-					"entry": s["entry"],
+					"seat": s["seat"],
 					"session": c.session_id,
 					"picked": s["picked"],
 					"rejects": s["rejects"],

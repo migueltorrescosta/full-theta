@@ -11,12 +11,12 @@ func _noise(
 	eff: float = 1.0,
 	pips: int = 2,
 	is_active: bool = false,
-	pinging: bool = false,
+	sweeping: bool = false,
 	probe: bool = false,
 	mark: bool = false
 ) -> float:
 	return ScienceNoise.compute(
-		ScienceFixture.science(), dist, aspect, eff, pips, 2, is_active, pinging, probe, mark
+		ScienceFixture.science(), dist, aspect, eff, pips, 2, is_active, sweeping, probe, mark
 	)
 
 
@@ -72,9 +72,9 @@ func test_range_aspect_and_health_in_the_world() -> void:
 
 
 # FT: FT-SCI-003
-# Active mode lowers the scan noise; an active ping lowers it for ping_duration_s, then
+# Active mode lowers the scan noise; a sensor sweep lowers it for sweep_duration, then
 # cools down before the next.
-func test_sensor_mode_and_ping() -> void:
+func test_sensor_mode_and_sweep() -> void:
 	var w: SimWorld = ScienceFixture.world()
 	var passive: float = ScienceSystem.contact_noise(w, ME, FOE)
 	var mode: ScienceSensorModeCommand = ScienceSensorModeCommand.new()
@@ -82,16 +82,17 @@ func test_sensor_mode_and_ping() -> void:
 	ScienceFixture.do(w, mode)
 	var active: float = ScienceSystem.contact_noise(w, ME, FOE)
 	assert_float(active).is_less(passive)
-	var events: Array[SimEvent] = ScienceFixture.do(w, SciencePingCommand.new())
-	assert_int(SimFixture.of_kind(events, &"active_ping").size()).is_equal(1)
+	var events: Array[SimEvent] = ScienceFixture.do(w, SensorSweepCommand.new())
+	assert_array(SimFixture.of_kind(events, &"science_refused")).is_empty()
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(active)
-	events = ScienceFixture.do(w, SciencePingCommand.new())
+	events = ScienceFixture.do(w, SensorSweepCommand.new())
 	assert_str(SimFixture.of_kind(events, &"science_refused")[0].tag).is_equal("cooling")
-	SimFixture.run(w, int(w.science_def.ping_duration_s * 60.0) + 2)
+	SimFixture.run(w, int(w.science_def.sweep_duration * 60.0) + 2)
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_equal(active)
-	SimFixture.run(w, int(w.science_def.ping_cooldown_s * 60.0))
-	events = ScienceFixture.do(w, SciencePingCommand.new())
-	assert_int(SimFixture.of_kind(events, &"active_ping").size()).is_equal(1)
+	SimFixture.run(w, int(w.science_def.sweep_cooldown * 60.0))
+	events = ScienceFixture.do(w, SensorSweepCommand.new())
+	assert_array(SimFixture.of_kind(events, &"science_refused")).is_empty()
+	assert_float(w.science.sweep_left[ME]).is_greater(0.0)
 
 
 # FT: FT-SCI-010, FT-PAIR-003
@@ -103,10 +104,41 @@ func test_scan_position_mark_lowers_noise() -> void:
 	mark.contact = FOE
 	var events: Array[SimEvent] = ScienceFixture.do(w, mark)
 	assert_int(SimFixture.of_kind(events, &"scan_mark").size()).is_equal(1)
-	assert_bool(ScienceSystem.at_scan_mark(w, ME, FOE)).is_false()
+	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_false()
 	var t: ScienceTable = w.science
-	assert_int(t.mark_contact[ME]).is_equal(FOE)
+	assert_bool(t.has_scan_point(ME)).is_true()
 	# Fly there: the mark is broadside to the raider, which faces the corvette.
-	w.kin.place(ME, t.mark_x[ME], t.mark_y[ME], t.mark_z[ME])
-	assert_bool(ScienceSystem.at_scan_mark(w, ME, FOE)).is_true()
+	w.kin.place(ME, CubePoint.make(t.scan_x[ME], t.scan_y[ME], t.scan_z[ME]))
+	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_true()
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(before)
+
+
+# FT: FT-SCI-010
+# D378 (12r-27): the server moves or clears the sim's scan point with
+# ScienceScanPointCommand when the crew-state scan position changes; the noise follows.
+func test_scan_point_command_moves_and_clears_it() -> void:
+	var w: SimWorld = ScienceFixture.world(6000.0, false)
+	var t: ScienceTable = w.science
+	assert_bool(t.has_scan_point(ME)).is_false()
+	var move: ScienceScanPointCommand = ScienceScanPointCommand.new()
+	var here: PackedFloat64Array = w.kin.point_at(ME, Vector3.ZERO)
+	move.scan_x = here[0]
+	move.scan_y = here[1]
+	move.scan_z = here[2]
+	ScienceFixture.do(w, move)
+	assert_bool(move.accepted).is_true()
+	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_true()
+	assert_bool(ScienceSystem.noise_parts(w, ME, FOE)["mark"]).is_true()
+	var clear: ScienceScanPointCommand = ScienceScanPointCommand.new()
+	clear.clear = true
+	ScienceFixture.do(w, clear)
+	assert_bool(t.has_scan_point(ME)).is_false()
+	assert_bool(ScienceSystem.at_scan_point(w, ME)).is_false()
+	var bad: ScienceScanPointCommand = ScienceScanPointCommand.new()
+	bad.scan_x = NAN
+	ScienceFixture.do(w, bad)
+	assert_bool(bad.accepted).is_false()
+	# The command log round-trips it (FT-ARC-008).
+	var back: SimCommand = SimCommands.from_dict(move.to_dict())
+	assert_bool(back is ScienceScanPointCommand).is_true()
+	assert_float((back as ScienceScanPointCommand).scan_x).is_equal(here[0])

@@ -18,8 +18,7 @@ static func is_tracked(world: SimWorld, faction: int, ship_id: int) -> bool:
 		return false
 	if KnowledgeSystem.is_detected(world, faction, ship_id):
 		return true
-	var p: PackedFloat64Array = world.kin.point_at(ship_id, Vector3.ZERO)
-	return ProbeSystem.coverage_at(world, faction, Vector3(p[0], p[1], p[2]))
+	return ProbeSystem.coverage_at(world, faction, world.kin.point(ship_id))
 
 
 ## How good the faction's track of the ship is, 0..1 (D214, FT-WPN-007, P8): 0 when it is
@@ -35,7 +34,7 @@ static func track_quality(world: SimWorld, faction: int, ship_id: int) -> float:
 	var kin: Kinematics = world.kin
 	var best: float = 0.0
 	for o: int in world.ship_count():
-		if kin.factions[o] != faction or not kin.is_alive(o) or not kin.can_reach(o, ship_id):
+		if kin.owner_faction[o] != faction or not kin.is_alive(o) or not kin.can_reach(o, ship_id):
 			continue
 		var reach: float = KnowledgeSystem.sensor_reach(world, o)
 		if reach <= 0.0:
@@ -45,8 +44,7 @@ static func track_quality(world: SimWorld, faction: int, ship_id: int) -> float:
 		if world.science_def != null:
 			noise = ScienceSystem.contact_noise(world, o, ship_id)
 		best = maxf(best, close * (1.0 - noise))
-	var p: PackedFloat64Array = kin.point_at(ship_id, Vector3.ZERO)
-	best = maxf(best, ProbeSystem.best_closeness(world, faction, Vector3(p[0], p[1], p[2])))
+	best = maxf(best, ProbeSystem.best_closeness(world, faction, kin.point(ship_id)))
 	return clampf(best, MIN_QUALITY, 1.0)
 
 
@@ -62,14 +60,14 @@ static func step(world: SimWorld) -> void:
 		var rate: float = proj.turn_rate[k]
 		var target: int = proj.guide_target[k]
 		if target >= 0:
-			if is_tracked(world, proj.factions[k], target):
+			if is_tracked(world, proj.owner_faction[k], target):
 				want = proj.offset_to_ship(k, kin, target)
-				var key: int = SimTable.row_key(proj.factions[k], target)
+				var key: int = SimTable.row_key(proj.owner_faction[k], target)
 				if not quality.has(key):
-					quality[key] = track_quality(world, proj.factions[k], target)
+					quality[key] = track_quality(world, proj.owner_faction[k], target)
 				rate *= lerpf(proj.track_floor[k], 1.0, quality[key])
 			else:
-				world.emit(&"guidance_lost", proj.ship_ids[k], target)
+				world.emit(&"guidance_lost", proj.owner_ship[k], target)
 				proj.guide_target[k] = -1
 		if want == null:
 			continue
@@ -78,6 +76,4 @@ static func step(world: SimWorld) -> void:
 		var speed: float = v.length()
 		if to.length_squared() < 1e-12 or speed < 1e-9:
 			continue
-		proj.vel[k] = (
-			WeaponSystem.turn_toward(v / speed, to.normalized(), rate * SimWorld.DT) * speed
-		)
+		proj.vel[k] = (MountArc.turn_toward(v / speed, to.normalized(), rate * SimWorld.DT) * speed)

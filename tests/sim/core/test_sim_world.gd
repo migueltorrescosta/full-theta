@@ -23,9 +23,9 @@ class KickCommand:
 
 func _world(world_seed: int) -> SimWorld:
 	var w: SimWorld = SimWorld.new(world_seed, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3(0, 0, 0))
-	w.spawn_ship(TestDefs.corvette(), 2, Vector3(500, 20, -3000))
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3(-800, 0, 100))
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(0, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), 2, CubePoint.make(500, 20, -3000))
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(-800, 0, 100))
 	return w
 
 
@@ -86,18 +86,19 @@ func test_rng_streams_independent() -> void:
 func test_iteration_order_by_id() -> void:
 	var w: SimWorld = _world(1)
 	for t: SimTable in w.tables():
-		var ids: PackedInt32Array = t.ship_ids
+		var ids: PackedInt32Array = t.owner_ship
 		for r: int in range(1, ids.size()):
 			assert_bool(ids[r] >= ids[r - 1]).is_true()
-	assert_array(Array(w.kin.ship_ids)).is_equal([0, 1, 2])
+	assert_array(Array(w.kin.owner_ship)).is_equal([0, 1, 2])
 
 
 # FT: FT-ARC-012, FT-M1-014
 # Enumerates every state container: each is a SimTable whose rows carry a ship id and
 # faction, and whose columns all have one entry per row. Mid-fight (ships 0 and 1, of
 # hostile factions, firing at each other with shots in flight) every container holds
-# rows of both, each keyed by the ship's own faction, except knowledge rows: keyed by
-# the contact's id and the observing faction, so each side's row about the other exists.
+# rows of both, each keyed by the ship's own faction, except knowledge rows: owned by the
+# observing faction (owner_ship -1) and about the contact (subject_ship), so each side's
+# row about the other exists (D404).
 func test_every_container_keyed_by_ship_and_faction() -> void:
 	var w: SimWorld = _world(3)
 	var crews: Array[ScriptedCrew] = [ScriptedCrew.new(0, 1), ScriptedCrew.new(1, 0)]
@@ -114,8 +115,8 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 	for t: SimTable in w.tables():
 		var name: String = t.get_script().get_global_name()
 		var cols: Array = t.columns()
-		assert_str(cols[0][0]).is_equal("ship_ids")
-		assert_str(cols[1][0]).is_equal("factions")
+		assert_str(cols[0][0]).is_equal("owner_ship")
+		assert_str(cols[1][0]).is_equal("owner_faction")
 		for col: Array in cols:
 			(
 				assert_int((col[1] as Variant).size())
@@ -132,15 +133,19 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 			# Named sites are rows of the map, keyed by no ship.
 			continue
 		if t == w.hacks:
-			# Hack windows come and go: keyed by the hacked ship and the HACKER's faction.
+			# Hack windows come and go: owned by the hacker, about the hacked ship.
+			continue
+		if t == w.knowledge:
+			for r: int in t.size():
+				assert_int(t.owner_ship[r]).is_equal(-1)
+				var contact: int = w.knowledge.subject_ship[r]
+				assert_int(contact).is_between(0, w.ship_count() - 1)
+				assert_int(t.owner_faction[r]).is_not_equal(w.faction_of(contact))
 			continue
 		for r: int in t.size():
-			assert_int(t.ship_ids[r]).is_between(0, w.ship_count() - 1)
-			var own: int = w.faction_of(t.ship_ids[r])
-			if t == w.knowledge:
-				assert_int(t.factions[r]).is_not_equal(own)
-			else:
-				assert_int(t.factions[r]).override_failure_message(name).is_equal(own)
+			assert_int(t.owner_ship[r]).is_between(0, w.ship_count() - 1)
+			var own: int = w.faction_of(t.owner_ship[r])
+			assert_int(t.owner_faction[r]).override_failure_message(name).is_equal(own)
 		# Probes are rows added by launching: none before Relay launches one.
 		if t == w.probes:
 			continue
@@ -149,9 +154,41 @@ func test_every_container_keyed_by_ship_and_faction() -> void:
 			continue
 		for ship: int in [0, 1]:
 			assert_int(t.rows_of(ship).size()).override_failure_message(name).is_greater(0)
-	assert_array(Array(w.kin.factions)).is_equal([1, 2, 1])
+	assert_array(Array(w.kin.owner_faction)).is_equal([1, 2, 1])
 	assert_int(w.knowledge.row_for(1, 1)).is_greater_equal(0)
 	assert_int(w.knowledge.row_for(2, 0)).is_greater_equal(0)
+
+
+# FT: FT-ARC-008, FT-ARC-012
+# R04-14: each table's column registry is the one list of its state. Every array the
+# table holds is a registered column unless it is derived (`_` name) or listed in
+# not_columns(); every not_columns() name is a variable the table declares; the key
+# columns come first; and variables(), what SimCopy copies, is every script variable.
+func test_registry_covers_every_column_array() -> void:
+	var w: SimWorld = _world(3)
+	for i: int in 5:
+		w.step()
+	for t: SimTable in w.tables():
+		var name: String = t.get_script().get_global_name()
+		var cols: Array = t.columns().map(func(c: Array) -> String: return c[0])
+		var declared: Array[StringName] = []
+		for p: Dictionary in t.get_property_list():
+			if p["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				declared.append(StringName(p["name"]))
+		assert_array(t.variables()).override_failure_message(name).contains_exactly_in_any_order(
+			declared
+		)
+		assert_array(cols.slice(0, 2)).is_equal(["owner_ship", "owner_faction"])
+		for skip: StringName in t.not_columns():
+			assert_array(declared).override_failure_message(name).contains([skip])
+		for v: StringName in declared:
+			var value: Variant = t.get(v)
+			var is_array: bool = (
+				typeof(value) == TYPE_ARRAY or typeof(value) >= TYPE_PACKED_BYTE_ARRAY
+			)
+			if not is_array or String(v).begins_with("_") or t.not_columns().has(v):
+				continue
+			assert_array(cols).override_failure_message("%s.%s" % [name, v]).contains([String(v)])
 
 
 # FT: FT-ARC-006
@@ -173,14 +210,14 @@ func test_64_bit_offsets() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	var near: float = 0.5 * w.kin.period - 1000.0
-	w.kin.place(id, near, -near, 0.25)
+	w.kin.place(id, CubePoint.make(near, -near, 0.25))
 	w.kin.vel[id] = Vector3(0.1, 0.0, 0.0)
 	w.helm.decoupled[id] = 1  # coast: assist would hold the drift at zero (FT-SIM-004)
 	for i: int in 600:
 		w.step()
-	assert_float(w.kin.px[id]).is_equal_approx(near + 1.0, 1e-5)
-	assert_float(w.kin.py[id]).is_equal(-near)
-	assert_float(w.kin.pz[id]).is_equal(0.25)
+	assert_float(w.kin.pos_x[id]).is_equal_approx(near + 1.0, 1e-5)
+	assert_float(w.kin.pos_y[id]).is_equal(-near)
+	assert_float(w.kin.pos_z[id]).is_equal(0.25)
 
 
 # FT: FT-SIM-035
@@ -192,29 +229,27 @@ func test_offsets_wrap_onto_the_cube() -> void:
 	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	var p: float = w.kin.period
 	var half: float = 0.5 * p
-	w.kin.place(id, half, half + 0.5, 1.5 * p)
-	assert_float(w.kin.px[id]).is_equal(-half)
-	assert_float(w.kin.py[id]).is_equal(-half + 0.5)
-	assert_float(w.kin.pz[id]).is_equal(-half)
-	w.kin.place(id, half - 1.0, 0.0, 0.0)
+	w.kin.place(id, CubePoint.make(half, half + 0.5, 1.5 * p))
+	assert_float(w.kin.pos_x[id]).is_equal(-half)
+	assert_float(w.kin.pos_y[id]).is_equal(-half + 0.5)
+	assert_float(w.kin.pos_z[id]).is_equal(-half)
+	w.kin.place(id, CubePoint.make(half - 1.0, 0.0, 0.0))
 	w.kin.vel[id] = Vector3(60.0, 0.0, 0.0)
 	w.helm.decoupled[id] = 1
 	for i: int in 2 * SimWorld.HZ:
 		w.step()
-		assert_bool(w.kin.px[id] >= -half and w.kin.px[id] < half).is_true()
-	assert_float(w.kin.px[id]).is_equal_approx(-half + 119.0, 1e-6)
+		assert_bool(w.kin.pos_x[id] >= -half and w.kin.pos_x[id] < half).is_true()
+	assert_float(w.kin.pos_x[id]).is_equal_approx(-half + 119.0, 1e-6)
 
 
 # FT: FT-SIM-035
-# A non-finite offset fails an assertion (wrapping can't place it).
+# A non-finite point fails an assertion (wrapping can't place it).
 func test_non_finite_offset_fails_assertion() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	await (
-		assert_error(func() -> void: w.kin.place(id, 0.0, NAN, 0.0))
-		. is_runtime_error(
-			"Assertion failed: non-finite offset for ship 0: (0.000000, nan, 0.000000)"
-		)
+		assert_error(func() -> void: w.kin.place(id, CubePoint.make(0.0, NAN, 0.0)))
+		. is_runtime_error("Assertion failed: non-finite point for ship 0: [0.0, nan, 0.0]")
 	)
 
 
@@ -225,19 +260,19 @@ func test_reset_ship_restores_only_that_ship() -> void:
 	var w: SimWorld = _world(11)
 	_run(w, 200)
 	var other_vel: Vector3 = w.kin.vel[1]
-	var other_px: float = w.kin.px[1]
+	var other_px: float = w.kin.pos_x[1]
 	w.kin.propellant[0] = 1.0
 	for id: int in [0, 1]:
 		var k: KickCommand = KickCommand.new()
 		k.ship_id = id
 		w.submit(k)
 	var logged: int = w.command_log.size()
-	w.reset_ship(0, 5.0)
+	w.reset_ship(0, CubePoint.make(5.0, 0.0, 0.0))
 	assert_vector(w.kin.vel[0]).is_equal(Vector3.ZERO)
-	assert_float(w.kin.px[0]).is_equal(5.0)
+	assert_float(w.kin.pos_x[0]).is_equal(5.0)
 	assert_float(w.kin.propellant[0]).is_equal(w.defs[0].propellant_capacity)
 	assert_vector(w.kin.vel[1]).is_equal(other_vel)
-	assert_float(w.kin.px[1]).is_equal(other_px)
+	assert_float(w.kin.pos_x[1]).is_equal(other_px)
 	w.step()
 	assert_int(w.command_log.size()).is_equal(logged + 1)
 	assert_int(w.command_log[-1].ship_id).is_equal(1)

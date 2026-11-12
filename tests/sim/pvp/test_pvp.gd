@@ -42,9 +42,9 @@ static func build(world_seed: int = SEED) -> SimWorld:
 	w.set_relation(RED_FACTION, NEUTRAL_FACTION, SimWorld.Relation.NEUTRAL)
 	w.set_relation(BLUE_FACTION, NEUTRAL_FACTION, SimWorld.Relation.NEUTRAL)
 	w.spawn_ship(TestDefs.corvette(), RED_FACTION)
-	w.spawn_ship(TestDefs.raider(), NEUTRAL_FACTION, Vector3(0.0, 0.0, 17000.0))
-	w.spawn_ship(TestDefs.corvette(), BLUE_FACTION, BLUE_OFFSET, _facing_red())
-	w.spawn_ship(TestDefs.raider(), NEUTRAL_FACTION, Vector3(7000.0, 0.0, 2000.0))
+	w.spawn_ship(TestDefs.raider(), NEUTRAL_FACTION, CubePoint.make(0.0, 0.0, 17000.0))
+	w.spawn_ship(TestDefs.corvette(), BLUE_FACTION, CubePoint.of(BLUE_OFFSET), _facing_red())
+	w.spawn_ship(TestDefs.raider(), NEUTRAL_FACTION, CubePoint.make(7000.0, 0.0, 2000.0))
 	return w
 
 
@@ -83,8 +83,8 @@ func fight(w: SimWorld) -> Array[SimEvent]:
 
 static func _both_in_play(w: SimWorld) -> bool:
 	return (
-		w.run.status[RED] == RunTable.Status.IN_PLAY
-		and w.run.status[BLUE] == RunTable.Status.IN_PLAY
+		w.ships.status[RED] == ShipStateTable.Status.IN_PLAY
+		and w.ships.status[BLUE] == ShipStateTable.Status.IN_PLAY
 	)
 
 
@@ -100,21 +100,26 @@ static func rows(t: SimTable, keep: Callable) -> Array:
 	return out
 
 
+## The ship a row is about: its owner, but a knowledge row's subject (the contact).
+static func ship_of(t: SimTable, r: int) -> int:
+	return (t as KnowledgeTable).subject_ship[r] if t is KnowledgeTable else t.owner_ship[r]
+
+
 ## Every table's rows that are not BLUE's own run state: all rows of other ships, all
 ## knowledge rows except other factions' rows about BLUE as a contact.
 static func not_blue(w: SimWorld) -> Array:
 	var out: Array = []
 	for t: SimTable in w.tables():
-		out.append(rows(t, func(tt: SimTable, r: int) -> bool: return tt.ship_ids[r] != BLUE))
+		out.append(rows(t, func(tt: SimTable, r: int) -> bool: return ship_of(tt, r) != BLUE))
 	return out
 
 
-## BLUE's rows in every table but knowledge (whose ship_ids are contacts).
+## BLUE's rows in every table but knowledge (whose rows are its faction's).
 static func blue_rows(w: SimWorld) -> Array:
 	var out: Array = []
 	for t: SimTable in w.tables():
 		if t != w.knowledge:
-			out.append(rows(t, func(tt: SimTable, r: int) -> bool: return tt.ship_ids[r] == BLUE))
+			out.append(rows(t, func(tt: SimTable, r: int) -> bool: return tt.owner_ship[r] == BLUE))
 	return out
 
 
@@ -127,7 +132,7 @@ static func relations_of(w: SimWorld) -> Array:
 
 
 static func numbers_of(w: SimWorld, faction: int) -> Array:
-	var keep: Callable = func(t: SimTable, r: int) -> bool: return t.factions[r] == faction
+	var keep: Callable = func(t: SimTable, r: int) -> bool: return t.owner_faction[r] == faction
 	return rows(w.knowledge, keep)
 
 
@@ -151,7 +156,7 @@ func test_knowledge_stays_separate_per_faction() -> void:
 	# Rows: (observer, contact) pairs; a faction never has rows for its own ships.
 	var pairs: Array = []
 	for r: int in w.knowledge.size():
-		pairs.append([w.knowledge.factions[r], w.knowledge.ship_ids[r]])
+		pairs.append([w.knowledge.owner_faction[r], w.knowledge.subject_ship[r]])
 	pairs.sort()
 	(
 		assert_array(pairs)
@@ -190,15 +195,15 @@ func test_callsigns_independent_per_faction() -> void:
 	assert_str(KnowledgeSystem.callsign(w, BLUE_FACTION, NEAR)).is_equal("U2")
 	var red_before: Array = numbers_of(w, RED_FACTION)
 	# 17 km behind BLUE: in BLUE's range, 22 km from RED.
-	w.kin.place(FAR, 0.0, 0.0, -22000.0)
+	w.kin.place(FAR, CubePoint.make(0.0, 0.0, -22000.0))
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE_FACTION, FAR)).is_true()
 	assert_bool(KnowledgeSystem.is_detected(w, RED_FACTION, FAR)).is_false()
 	assert_str(KnowledgeSystem.callsign(w, BLUE_FACTION, FAR)).is_equal("U3")
 	assert_str(KnowledgeSystem.callsign(w, RED_FACTION, FAR)).is_equal("U1")
 	var red_after: Array = numbers_of(w, RED_FACTION)
-	# Only RED's "detected" flag for FAR changed (column 2: detected).
-	var detected_before: Array = red_before[2][1]
+	# Only RED's "detected" flag for FAR changed (column 3: detected).
+	var detected_before: Array = red_before[3][1]
 	detected_before[0] = 0
 	assert_array(red_after).is_equal(red_before)
 
@@ -215,7 +220,7 @@ func test_callsigns_independent_per_faction() -> void:
 ## - Everything else is unchanged: every row of RED and the neutrals, RED's projectiles
 ##   in flight, RED's WIN, the tick, the RNG states and the relations.
 func reset_blue_and_check(w: SimWorld) -> void:
-	var is_blue: Callable = func(t: SimTable, r: int) -> bool: return t.ship_ids[r] == BLUE
+	var is_blue: Callable = func(t: SimTable, r: int) -> bool: return ship_of(t, r) == BLUE
 	var others: Array = not_blue(w)
 	var about_blue: Array = rows(w.knowledge, is_blue)
 	var tick: int = w.tick
@@ -226,8 +231,8 @@ func reset_blue_and_check(w: SimWorld) -> void:
 	assert_array(blue_rows(w)).is_equal(blue_rows(build()))
 	assert_int(w.projectiles.rows_of(BLUE).size()).is_equal(0)
 	assert_array(not_blue(w)).is_equal(others)
-	# Knowledge about BLUE: [ship_ids, factions, detected, identified, numbers].
-	(about_blue[2][1] as Array).fill(0)
+	# Knowledge about BLUE: [owner_ship, owner_faction, subject_ship, detected, ...].
+	(about_blue[3][1] as Array).fill(0)
 	assert_array(rows(w.knowledge, is_blue)).is_equal(about_blue)
 	assert_int(w.tick).is_equal(tick)
 	assert_array(w.rng.states()).is_equal(rng_states)
@@ -235,9 +240,9 @@ func reset_blue_and_check(w: SimWorld) -> void:
 	assert_str(w.state_hash()).is_not_equal(hash_before)
 	# BLUE is back in play, RED keeps its WIN and re-detects BLUE under the same callsign.
 	w.step()
-	assert_int(w.run.status[BLUE]).is_equal(RunTable.Status.IN_PLAY)
-	assert_int(w.run.outcome[BLUE]).is_equal(RunTable.Outcome.NONE)
-	assert_int(w.run.outcome[RED]).is_equal(RunTable.Outcome.WIN)
+	assert_int(w.ships.status[BLUE]).is_equal(ShipStateTable.Status.IN_PLAY)
+	assert_int(w.ships.ship_outcome[BLUE]).is_equal(ShipStateTable.ShipOutcome.NONE)
+	assert_int(w.ships.ship_outcome[RED]).is_equal(ShipStateTable.ShipOutcome.WIN)
 	assert_bool(KnowledgeSystem.is_detected(w, RED_FACTION, BLUE)).is_true()
 	assert_str(KnowledgeSystem.callsign(w, RED_FACTION, BLUE)).is_equal("H2")
 
@@ -246,13 +251,13 @@ func reset_blue_and_check(w: SimWorld) -> void:
 ## outcome (no faction is hostile to them); one &"outcome" event each for the corvettes.
 func check_outcomes(w: SimWorld, events: Array[SimEvent]) -> void:
 	assert_bool(w.kin.is_alive(RED)).is_true()
-	assert_int(w.run.status[BLUE]).is_equal(RunTable.Status.DESTROYED)
-	assert_int(w.run.outcome[BLUE]).is_equal(RunTable.Outcome.LOSS)
-	assert_int(w.run.status[RED]).is_equal(RunTable.Status.IN_PLAY)
-	assert_int(w.run.outcome[RED]).is_equal(RunTable.Outcome.WIN)
+	assert_int(w.ships.status[BLUE]).is_equal(ShipStateTable.Status.DESTROYED)
+	assert_int(w.ships.ship_outcome[BLUE]).is_equal(ShipStateTable.ShipOutcome.LOSS)
+	assert_int(w.ships.status[RED]).is_equal(ShipStateTable.Status.IN_PLAY)
+	assert_int(w.ships.ship_outcome[RED]).is_equal(ShipStateTable.ShipOutcome.WIN)
 	for n: int in [FAR, NEAR]:
-		assert_int(w.run.status[n]).is_equal(RunTable.Status.IN_PLAY)
-		assert_int(w.run.outcome[n]).is_equal(RunTable.Outcome.NONE)
+		assert_int(w.ships.status[n]).is_equal(ShipStateTable.Status.IN_PLAY)
+		assert_int(w.ships.ship_outcome[n]).is_equal(ShipStateTable.ShipOutcome.NONE)
 	var outcomes: Array = []
 	for e: SimEvent in events:
 		if e.kind == &"outcome":
@@ -315,7 +320,7 @@ func scenario(world_seed: int, hashes: PackedStringArray) -> Array:
 		events.append_array(w.drain_events())
 		if i == 0:
 			hashes.append(w.state_hash())
-			assert_int(w.run.status[BLUE]).is_equal(RunTable.Status.IN_PLAY)
+			assert_int(w.ships.status[BLUE]).is_equal(ShipStateTable.Status.IN_PLAY)
 	return [w, events]
 
 

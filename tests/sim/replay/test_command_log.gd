@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## T037: CommandLog records each crew or server command of a world (for example a ship
 ## reset, accepted or not) and round-trips them through text exactly (FT-ARC-008).
 
-const SETUP: Dictionary = {"player": &"m1_corvette", "enemy": &"m1_raider"}
+const SETUP: Dictionary = {"player": &"m1_corvette", "npc": &"m1_raider"}
 ## Floats that a decimal round trip tends to lose: -0.0, non-terminating binary
 ## fractions, a subnormal, the largest double below 200 km (the command keeps it even
 ## though the aim point wraps onto the site's cube, FT-SIM-035) and full-mantissa values.
@@ -48,7 +48,7 @@ func test_from_world_records_commands_with_ticks() -> void:
 	assert_int(record.seed_value).is_equal(7)
 	assert_str(record.build_id).is_equal("test")
 	var setup: Dictionary = SETUP.duplicate()
-	setup["site_period"] = Kinematics.DEFAULT_PERIOD
+	setup["map_period"] = Kinematics.DEFAULT_PERIOD
 	assert_dict(record.setup).is_equal(setup)
 	assert_int(record.entries.size()).is_equal(2 * AWKWARD.size() + 1)
 	for i: int in 2 * AWKWARD.size():
@@ -61,17 +61,17 @@ func test_from_world_records_commands_with_ticks() -> void:
 
 
 # FT: FT-ARC-008, FT-SIM-035
-# The setup records the world's site period (D125), and a world rebuilt from the log
+# The setup records the world's map period (D125), and a world rebuilt from the log
 # gets it back; a log without one means the default. The period is in the state hash.
-func test_setup_records_the_site_period() -> void:
+func test_setup_records_the_map_period() -> void:
 	var enc: M1Encounter = M1Encounter.new(
 		7, "test", TestDefs.corvette(), TestDefs.raider_enemy(), 100000.0
 	)
 	var record: CommandLog = CommandLog.from_world(enc.build(), SETUP)
-	assert_float(record.setup["site_period"]).is_equal(100000.0)
+	assert_float(record.setup["map_period"]).is_equal(100000.0)
 	var back: CommandLog = CommandLog.from_text(record.to_text())
-	assert_float(LiveRun.encounter(7, back.setup, "test").site_period).is_equal(100000.0)
-	var default_period: float = LiveRun.encounter(7, SETUP, "test").site_period
+	assert_float(LiveRun.encounter(7, back.setup, "test").map_period).is_equal(100000.0)
+	var default_period: float = LiveRun.encounter(7, SETUP, "test").map_period
 	assert_float(default_period).is_equal(Kinematics.DEFAULT_PERIOD)
 	var other: M1Encounter = M1Encounter.new(
 		7, "test", TestDefs.corvette(), TestDefs.raider_enemy()

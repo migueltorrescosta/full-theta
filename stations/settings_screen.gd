@@ -12,7 +12,7 @@ extends PanelContainer
 ## Controls for every station (not on a phone, which has no keys). The Controls tab is
 ## filled when it shows, for the seat set_controls named, else every station (owner A13).
 ## Esc opens it on the tab last used (Game at first in a session, Settings outside one),
-## `?` on Controls; help never opens by itself (P28-Help, ControlsChip). Saved on close; a
+## `?` on Controls; help never opens by itself (P28-Help, ControlsHint). Saved on close; a
 ## language switch retranslates it at once. A change of the Pause or Abandon control
 ## updates its button in place, never the whole menu (load fix 2).
 

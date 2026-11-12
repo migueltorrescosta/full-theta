@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## A fuzz of every station command field through the command gate and the sim (#45 B2,
 ## R11-5): extreme and wrongly typed values for each field of each kind in
-## StationViews.STATION_COMMANDS are either refused with a known reason or applied without
+## StationCatalogue.STATION_COMMANDS are either refused with a known reason or applied without
 ## breaking the world.
 
 const PLAYER: int = NetHarness.PLAYER
@@ -44,17 +44,17 @@ func _extremes(want: int) -> Array:
 	return table.get(want, [])
 
 
-func _session(entry: String) -> NetSession:
+func _session(seat: String) -> NetSession:
 	var s: NetSession = NetSession.new(1, 1.0e9, 1.0e9)
 	s.ship = PLAYER
-	s.entry = entry
+	s.seat = seat
 	return s
 
 
 func _alive_and_finite(world: SimWorld) -> bool:
 	for id: int in world.ship_count():
 		var k: Kinematics = world.kin
-		if not (is_finite(k.px[id]) and is_finite(k.py[id]) and is_finite(k.pz[id])):
+		if not (is_finite(k.pos_x[id]) and is_finite(k.pos_y[id]) and is_finite(k.pos_z[id])):
 			return false
 		if not (k.vel[id].is_finite() and k.ang_vel[id].is_finite()):
 			return false
@@ -70,10 +70,10 @@ func test_every_station_command_field_survives_extreme_values() -> void:
 	var tried: int = 0
 	var accepted: int = 0
 	var problems: Array[String] = []
-	for station: String in StationViews.STATION_COMMANDS:
-		var entry: String = station
-		var session: NetSession = _session(entry)
-		for kind: StringName in StationViews.STATION_COMMANDS[station]:
+	for station: String in StationCatalogue.STATION_COMMANDS:
+		var seat: String = station
+		var session: NetSession = _session(seat)
+		for kind: StringName in StationCatalogue.STATION_COMMANDS[station]:
 			var template: Dictionary = SimCommands.make(kind).to_dict()
 			# Next names the seat that presses it.
 			var base: Dictionary = {"kind": kind}

@@ -103,7 +103,7 @@ func test_marks_cap_relay_replace_and_relay_only_edits() -> void:
 # FT: FT-SPA-016, FT-SPA-020, FT-SPA-017, FT-SPA-031
 func test_pings_reach_every_pick_of_the_ship_only() -> void:
 	var server: NetServer = h.server()
-	# The enemy ship without its AI: another crewable ship, to check isolation.
+	# The hostile ship without its AI: another crewable ship, to check isolation.
 	server.world.ai.enabled[ENEMY] = 0
 	_detect(server)
 	var crew: Array[NetClient] = await h.crew3(server)
@@ -133,7 +133,7 @@ func test_pings_reach_every_pick_of_the_ship_only() -> void:
 	from = h.mark(viewer)
 	viewer.ping("contact", ENEMY, Vector3.ZERO)
 	var why: Dictionary = await _rejected(viewer, NetProtocol.Type.PING, from)
-	assert_str(why.get("reason", "")).is_equal(ServerSession.NOT_CREW)
+	assert_str(why.get("reason", "")).is_equal(NetGame.NOT_CREW)
 	# Rate limit: burst 3, then refused.
 	from = h.mark(crew[2])
 	for i: int in 5:
@@ -164,13 +164,13 @@ func test_alert_from_crew_and_the_state_a_joining_client_gets() -> void:
 		from = h.mark(c)
 		c.set_alert(CrewMarks.ALERT_YELLOW)
 		var why: Dictionary = await _rejected(c, NetProtocol.Type.ALERT, from)
-		assert_str(why.get("reason", "")).is_equal(ServerSession.NOT_CREW)
-	assert_int(server.session.crew.marks.alert(PLAYER)).is_equal(CrewMarks.ALERT_RED)
+		assert_str(why.get("reason", "")).is_equal(NetGame.NOT_CREW)
+	assert_int(server.game.crew.marks.alert(PLAYER)).is_equal(CrewMarks.ALERT_RED)
 	crew[0].place_mark(-1, "Rock", -1, Vector3(1.0, 2.0, 3.0))
 	(
 		assert_bool(
 			await h.until(
-				func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 1
+				func() -> bool: return server.game.crew.marks.marks_of(PLAYER).size() == 1
 			)
 		)
 		. is_true()
@@ -187,7 +187,7 @@ func test_alert_from_crew_and_the_state_a_joining_client_gets() -> void:
 	assert_int(h.last_event(back, NetProtocol.EVENT_ALERT)["payload"]["level"]).is_equal(2)
 	# A run reset clears them, with events.
 	from = h.mark(viewer)
-	server.session.crew.reset(PLAYER)
+	server.game.crew.reset(PLAYER)
 	alert = await h.next_event(viewer, NetProtocol.EVENT_ALERT, from)
 	assert_dict(alert.get("payload", {})).contains_key_value("level", CrewMarks.ALERT_NORMAL)
 	assert_array(await _marks(viewer, from)).is_empty()

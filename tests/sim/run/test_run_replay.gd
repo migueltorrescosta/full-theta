@@ -22,7 +22,7 @@ func _drive(w: SimWorld) -> Director:
 
 func _fresh() -> SimWorld:
 	var def: RunDef = ApiFixture.run_def(PackedStringArray(["s_a", "s_b"]), 2.0, 1.0)
-	def.director.spawn_site_every_s = 5.0
+	def.director.spawn_site_every = 5.0
 	def.director.max_open_sites = 1
 	return ApiFixture.world(1, def)
 

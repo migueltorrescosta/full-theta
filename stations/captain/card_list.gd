@@ -2,11 +2,11 @@ class_name CardList
 extends Control
 ## The list of Comms' cards, read-only (FT-CPT-004, D190): the Captain's list of missions and
 ## contracts, and the Comms half of Approach, Parley, Quartermaster and Intel. Rows are the
-## live card rows of the COMMS block (CommsView; `rows` lists them from a view). One row per
+## live card rows of the COMMS block (CommsSection; `rows` lists them from a view). One row per
 ## card; `card_at(pos)` names the row under a point so the panel's ping (FT-CPT-005) can
 ## address it. `draw_card` draws one card large, for the main screen.
 
-## CommsView's card kinds (StoryTable.Kind) and the two live states, as numbers: stations
+## CommsSection's card kinds (StoryTable.Kind) and the two live states, as numbers: stations
 ## never name sim/ (FT-ARC-011).
 const MISSION: int = 0
 const CONTRACT: int = 1
@@ -47,9 +47,9 @@ var _cards: Array[Dictionary] = []
 
 
 ## The live card rows of the view's COMMS block of the given kinds (all when empty).
-static func rows(view: NetViewState, kinds: Array[int] = []) -> Array[Dictionary]:
+static func rows(snap: SnapshotState, kinds: Array[int] = []) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for c: Dictionary in view.blocks.get(StationViews.Section.COMMS, {}).get("cards", []):
+	for c: Dictionary in snap.blocks.get(StationCatalogue.Section.COMMS, {}).get("cards", []):
 		if is_live(c) and (kinds.is_empty() or int(c["kind"]) in kinds):
 			out.append(c)
 	return out

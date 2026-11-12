@@ -39,7 +39,7 @@ func test_targeted_offset_equals_has_target_and_target_offset() -> void:
 			w.spawn_ship(
 				TestDefs.corvette(),
 				rng.randi_range(1, 3),
-				Vector3(
+				CubePoint.make(
 					rng.randf_range(-99000, 99000),
 					rng.randf_range(-99000, 99000),
 					rng.randf_range(-99000, 99000)
@@ -50,11 +50,11 @@ func test_targeted_offset_equals_has_target_and_target_offset() -> void:
 		KnowledgeSystem.step(w)
 		for row: int in n:
 			var kind: int = rng.randi_range(0, 2)
-			w.helm.target_kind[row] = kind
-			w.helm.target_ship[row] = rng.randi_range(-1, n) if kind == 1 else -1
-			w.helm.target_x[row] = rng.randf_range(-99000, 99000)
-			w.helm.target_y[row] = rng.randf_range(-99000, 99000)
-			w.helm.target_z[row] = rng.randf_range(-99000, 99000)
+			w.helm.sel_kind[row] = kind
+			w.helm.sel_contact[row] = rng.randi_range(-1, n) if kind == 1 else -1
+			w.helm.sel_x[row] = rng.randf_range(-99000, 99000)
+			w.helm.sel_y[row] = rng.randf_range(-99000, 99000)
+			w.helm.sel_z[row] = rng.randf_range(-99000, 99000)
 			var got: Vector3 = AssistSystem._targeted_offset(w, w.kin, w.helm, row)
 			var msg: String = "case %d row %d" % [c, row]
 			if AssistSystem.has_target(w, row):
@@ -75,9 +75,11 @@ func _random_table(rng: RandomNumberGenerator, c: int) -> Kinematics:
 		kin.add_ship(i, 1, TestDefs.corvette() if i % 2 == 0 else TestDefs.raider())
 		kin.place(
 			i,
-			rng.randf_range(-100000, 100000),
-			rng.randf_range(-100000, 100000),
-			rng.randf_range(-100000, 100000)
+			CubePoint.make(
+				rng.randf_range(-100000, 100000),
+				rng.randf_range(-100000, 100000),
+				rng.randf_range(-100000, 100000)
+			)
 		)
 		kin.rot[i] = Quaternion(_unit(rng), rng.randf_range(-PI, PI))
 		kin.vel[i] = _unit(rng) * rng.randf_range(0.0, 300.0)

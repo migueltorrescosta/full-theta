@@ -3,19 +3,19 @@ class_name ScenarioApi
 extends RefCounted
 ## The Scenario API (FT-ARC-016, FT-DAT-009, FT-DAT-007, D64, D103): the only part of
 ## sim/ that the director and scenarios may name. Every query returns an id, a number, a
-## string, a Vector3, a packed array or a value copy (ShipView, SiteView, EncounterView,
-## CardView, ApiEvent): never a table, the world or a resource. Every write builds one
+## string, a Vector3, a packed array or a value copy (ShipInfo, SiteInfo, EncounterInfo,
+## CardInfo, ApiEvent): never a table, the world or a resource. Every write builds one
 ## SimCommand with source SERVER and queues it with SimWorld.submit(), so it applies at
 ## the next tick and lands in the command log: a replay needs neither the director nor
 ## the scenarios (FT-ARC-008). A write that creates a ship, card, encounter or site returns
 ## an ApiHandle, which resolves to the real id once the command has applied (Q24); the API
 ## predicts no id.
 
-## The session modes a director plans differently for (session_mode() returns a
-## SessionRules.Mode; the director sees only sim/api, so it reads them from here).
-const MODE_RACE: int = SessionRules.Mode.RACE
-const MODE_LAST_STANDING: int = SessionRules.Mode.LAST_STANDING
-const MODE_HOLDOUT: int = SessionRules.Mode.HOLDOUT
+## The session modes a director plans differently for (game_mode() returns a
+## GameRules.Mode; the director sees only sim/api, so it reads them from here).
+const MODE_RACE: int = GameRules.Mode.RACE
+const MODE_LAST_STANDING: int = GameRules.Mode.LAST_STANDING
+const MODE_HOLDOUT: int = GameRules.Mode.HOLDOUT
 
 var _world: SimWorld
 var _crew: ApiCrew
@@ -85,23 +85,16 @@ func engaged(ships: PackedInt32Array) -> PackedInt32Array:
 	for id: int in ships:
 		if (
 			_world.has_ship(id)
-			and _world.run.status[id] == RunTable.Status.IN_PLAY
-			and _world.run.encounter[id] >= 0
+			and _world.ships.status[id] == ShipStateTable.Status.IN_PLAY
+			and _world.ships.encounter[id] >= 0
 		):
 			out.append(id)
 	return out
 
 
-## The session's mode, a SessionRules.Mode value (#11): the director keys on it.
-func session_mode() -> int:
+## The session's mode, a GameRules.Mode value (#11): the director keys on it.
+func game_mode() -> int:
 	return _world.rules.mode
-
-
-## A ship's side (SimWorld.team_of, #11).
-func team_of(id: int) -> int:
-	if not _world.has_ship(id):
-		return -1
-	return _world.team_of(id)
 
 
 ## A ship's faction, -1 for an id that is no ship (cheaper than ship(id).faction).
@@ -118,34 +111,34 @@ func at_site(id: int) -> int:
 	return SiteTable.at_site(_world, id)
 
 
-func ship(id: int) -> ShipView:
-	var v: ShipView = ShipView.new()
+func ship(id: int) -> ShipInfo:
+	var v: ShipInfo = ShipInfo.new()
 	if not _world.has_ship(id):
 		return v
 	v.id = id
 	v.faction = _world.faction_of(id)
-	v.pos = _world.kin.point_at(id, Vector3.ZERO)
+	v.pos = _world.kin.point(id)
 	v.velocity = _world.kin.vel[id]
 	v.nearest_site = SiteTable.nearest(_world, id)
 	v.at_site = SiteTable.within_radius(_world, id, v.nearest_site)
 	v.hull_frac = DamageSystem.hull_fraction(_world, id)
-	v.status = _world.run.status[id]
-	v.in_play = v.status == RunTable.Status.IN_PLAY
-	v.outcome = _world.run.outcome[id]
+	v.status = _world.ships.status[id]
+	v.in_play = v.status == ShipStateTable.Status.IN_PLAY
+	v.outcome = _world.ships.ship_outcome[id]
 	v.docked_site = _world.helm.docked_site[id]
 	v.jumping = _world.helm.jump_left[id] > 0.0
 	return v
 
 
-func sites() -> Array[SiteView]:
-	var out: Array[SiteView] = []
+func sites() -> Array[SiteInfo]:
+	var out: Array[SiteInfo] = []
 	for id: int in _world.sites.size():
 		out.append(_site(id))
 	return out
 
 
-func _site(id: int) -> SiteView:
-	var v: SiteView = SiteView.new()
+func _site(id: int) -> SiteInfo:
+	var v: SiteInfo = SiteInfo.new()
 	var t: SiteTable = _world.sites
 	if id < 0 or id >= t.size():
 		return v
@@ -154,7 +147,7 @@ func _site(id: int) -> SiteView:
 	v.name_key = t.name_key_of(id)
 	v.kind = t.kind_of(id)
 	v.pos = t.point(id)
-	v.radius_m = t.radius[id]
+	v.radius = t.radius[id]
 	v.dockable = t.dockable_of(id)
 	for f: int in 32:
 		if (t.known_mask[id] >> f) & 1 == 1:
@@ -176,8 +169,8 @@ func spawnable_sites() -> PackedStringArray:
 	return out
 
 
-func encounter(id: int) -> EncounterView:
-	var v: EncounterView = EncounterView.new()
+func encounter(id: int) -> EncounterInfo:
+	var v: EncounterInfo = EncounterInfo.new()
 	var t: EncounterTable = _world.encounters
 	if id < 0 or id >= t.size():
 		return v
@@ -200,17 +193,17 @@ func encounter_limits() -> Vector2i:
 
 
 ## The cards on the ship's Comms board, including its faction's (D82).
-func cards_of(ship_id: int) -> Array[CardView]:
-	var out: Array[CardView] = []
+func cards_of(ship_id: int) -> Array[CardInfo]:
+	var out: Array[CardInfo] = []
 	var story: StoryTable = _world.story
 	if not _world.has_ship(ship_id):
 		return out
 	var faction: int = _world.faction_of(ship_id)
 	for row: int in story.size():
-		var owner: int = story.ship_ids[row]
-		if owner != ship_id and not (owner == -1 and story.factions[row] == faction):
+		var owner: int = story.owner_ship[row]
+		if owner != ship_id and not (owner == -1 and story.owner_faction[row] == faction):
 			continue
-		var v: CardView = CardView.new()
+		var v: CardInfo = CardInfo.new()
 		v.id = row
 		v.kind = story.kind[row]
 		v.state = story.state[row]
@@ -218,7 +211,7 @@ func cards_of(ship_id: int) -> Array[CardView]:
 		v.title_key = story.title[row]
 		v.expires_tick = story.expires_tick[row]
 		v.reward = story.reward[row]
-		v.target = story.target[row]
+		v.subject = story.subject[row]
 		out.append(v)
 	return out
 
@@ -251,7 +244,7 @@ func distance(a: int, b: int) -> float:
 
 
 ## The map's travel legs that debris may sit on (MapDef.legs), as value copies: {from, to}
-## site ids, {debris} the enemy key and {count}; legs with an end not open yet are left out.
+## site ids, {debris} the NPC key and {count}; legs with an end not open yet are left out.
 func legs() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if _world.run_def == null or _world.run_def.map == null:
@@ -280,43 +273,38 @@ func rand(stream: StringName) -> float:
 # --- writes (each one queued SERVER command) ---
 
 
-## Spawns an enemy `range_m` from ship `near`, at a ship-frame clock position (1 to 12, 12
+## Spawns an NPC `separation` metres from ship `near`, at a ship-frame clock position (1 to 12, 12
 ## the bow) and height (0 level, 1 high, -1 low, 2 overhead, -2 under), facing it.
 ## Returns a handle on the new ship's id.
 func spawn_at_range(
-	enemy_key: StringName, faction: int, near: int, range_m: float, clock: int, height: int
+	npc_key: StringName, faction: int, near: int, separation: float, clock: int, height: int
 ) -> ApiHandle:
 	var world_dir: Vector3 = _world.kin.to_world(near, Callout.direction(clock, height))
-	var point: PackedFloat64Array = _world.kin.point_at(near, world_dir * range_m)
-	return _spawn(enemy_key, faction, point, _facing(-world_dir))
+	var point: PackedFloat64Array = _world.kin.point_at(near, world_dir * separation)
+	return _spawn(npc_key, faction, point, _facing(-world_dir))
 
 
-## Spawns an enemy `offset` (world axes, m) from ship `near`, at rest and unrotated: for a
+## Spawns an NPC `offset` (world axes, m) from ship `near`, at rest and unrotated: for a
 ## scenario that places a ship by the course of another, such as off an arriving ship's track.
 ## Returns a handle on the new ship's id.
-func spawn_at_offset(enemy_key: StringName, faction: int, near: int, offset: Vector3) -> ApiHandle:
-	return _spawn(enemy_key, faction, _world.kin.point_at(near, offset), Quaternion.IDENTITY)
+func spawn_at_offset(npc_key: StringName, faction: int, near: int, offset: Vector3) -> ApiHandle:
+	return _spawn(npc_key, faction, _world.kin.point_at(near, offset), Quaternion.IDENTITY)
 
 
-## Spawns an enemy (debris) on the leg between two sites, a share `t` (0 to 1) of the way
-## and `lateral_m` off the line (D234). Returns a handle on the new ship's id.
+## Spawns an NPC (debris) on the leg between two sites, a share `t` (0 to 1) of the way
+## and `lateral_offset` off the line (D234). Returns a handle on the new ship's id.
 func spawn_on_leg(
-	enemy_key: StringName, faction: int, from_site: int, to_site: int, t: float, lateral_m: float
+	npc_key: StringName, faction: int, from_site: int, to_site: int, t: float, lateral_offset: float
 ) -> ApiHandle:
 	var a: PackedFloat64Array = _world.sites.point(from_site)
 	var b: PackedFloat64Array = _world.sites.point(to_site)
 	var kin: Kinematics = _world.kin
-	var leg: Vector3 = kin.delta(b[0], b[1], b[2], a[0], a[1], a[2])
+	var leg: Vector3 = kin.delta(b, a)
 	var side: Vector3 = leg.cross(Vector3.UP)
 	if side.length_squared() < 1e-6:
 		side = leg.cross(Vector3.RIGHT)
-	var off: Vector3 = leg * t + side.normalized() * lateral_m
-	return _spawn(
-		enemy_key,
-		faction,
-		PackedFloat64Array([a[0] + off.x, a[1] + off.y, a[2] + off.z]),
-		Quaternion.IDENTITY
-	)
+	var off: Vector3 = leg * t + side.normalized() * lateral_offset
+	return _spawn(npc_key, faction, CubePoint.plus(a, off), Quaternion.IDENTITY)
 
 
 ## Opens a site of the map's pool; returns a handle on its site id (resolved at once to the
@@ -370,15 +358,15 @@ func offer(ship_id: int, card: CardSpec) -> ApiHandle:
 	cmd.conversation_id = card.conversation_id
 	cmd.reward_credits = card.reward_credits
 	cmd.rep_interaction = card.rep_interaction
-	cmd.target = card.target
-	cmd.target_flag = card.target_flag
-	cmd.expires_s = card.expires_s
+	cmd.subject = card.subject
+	cmd.subject_flag = card.subject_flag
+	cmd.expiry = card.expiry
 	cmd.requires_docked = card.requires_docked
 	cmd.faction_wide = card.faction_wide
 	cmd.rep_faction = card.rep_faction
 	cmd.site = card.site
-	cmd.lane_open_s = card.lane_open_s
-	cmd.lane_s = card.lane_s
+	cmd.lane_delay = card.lane_delay
+	cmd.lane_length = card.lane_length
 	cmd.needs_subsystem = card.needs_subsystem
 	cmd.needs_pips = card.needs_pips
 	_world.submit(cmd)
@@ -424,7 +412,7 @@ func decline_card(card: int) -> void:
 
 ## Says a dialogue line to a ship (an NPC's, or the ship computer's for some stations).
 ## Nothing is queued when no ship can hear it.
-func message(line_id: String, args: Dictionary, to: SayTarget) -> void:
+func message(line_id: String, args: Dictionary, to: LineAudience) -> void:
 	var ship_id: int = to.ship
 	if ship_id < 0:
 		var crew: PackedInt32Array = crew_ships()
@@ -496,8 +484,8 @@ func end_encounter(id: int, result: int) -> void:
 
 ## Closes the crewed ship's run (Q4): it wins once it is in no encounter. Rejected below
 ## RunDef.min_encounters.
-func close_run(ship_id: int) -> void:
-	var cmd: CloseRunCommand = CloseRunCommand.new()
+func finish_ship(ship_id: int) -> void:
+	var cmd: FinishShipCommand = FinishShipCommand.new()
 	cmd.ship = ship_id
 	_world.submit(cmd)
 
@@ -528,10 +516,10 @@ static func _details(c: SimCommand) -> PackedStringArray:
 
 
 func _spawn(
-	enemy_key: StringName, faction: int, point: PackedFloat64Array, rot: Quaternion
+	npc_key: StringName, faction: int, point: PackedFloat64Array, rot: Quaternion
 ) -> ApiHandle:
 	var cmd: SpawnShipCommand = SpawnShipCommand.new()
-	cmd.enemy_key = enemy_key
+	cmd.npc_key = npc_key
 	cmd.faction = faction
 	cmd.x = point[0]
 	cmd.y = point[1]

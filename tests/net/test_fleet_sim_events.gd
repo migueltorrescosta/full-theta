@@ -14,7 +14,7 @@ func _world() -> SimWorld:
 func _eliminated(events: Array[SimEvent]) -> Array[SimEvent]:
 	var out: Array[SimEvent] = []
 	for e: SimEvent in events:
-		if e.kind == SessionOutcome.EVENT_ELIMINATED:
+		if e.kind == GameOutcome.EVENT_ELIMINATED:
 			out.append(e)
 	return out
 

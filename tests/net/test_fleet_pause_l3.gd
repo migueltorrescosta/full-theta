@@ -28,7 +28,7 @@ func _rejected(c: NetClient, type: int, from: int) -> String:
 
 
 ## A fleet server with --dev-all-stations (one crew player covers a ship) and a short grace.
-func _server(mode: SessionRules.Mode, n: int, teams: Array[int] = []) -> NetServer:
+func _server(mode: GameRules.Mode, n: int, teams: Array[int] = []) -> NetServer:
 	return h.fleet_server(mode, n, teams, true, GRACE_S)
 
 
@@ -36,7 +36,7 @@ func _server(mode: SessionRules.Mode, n: int, teams: Array[int] = []) -> NetServ
 func _alls(server: NetServer, ships: Array) -> Array[NetClient]:
 	var out: Array[NetClient] = []
 	for ship: int in ships:
-		out.append(await h.joined(server, "all-%d" % ship, StationViews.ALL, ship))
+		out.append(await h.joined(server, "all-%d" % ship, StationCatalogue.ALL, ship))
 	return out
 
 
@@ -44,9 +44,7 @@ func _alls(server: NetServer, ships: Array) -> Array[NetClient]:
 func _start(server: NetServer, clients: Array[NetClient]) -> bool:
 	for c: NetClient in clients:
 		c.set_ready(true)
-	return await h.until(
-		func() -> bool: return server.session.sim_running() and server.world.tick > 2
-	)
+	return await h.until(func() -> bool: return server.game.sim_running() and server.world.tick > 2)
 
 
 func _stepping(server: NetServer) -> bool:
@@ -59,7 +57,7 @@ func _lapse(server: NetServer, c: NetClient, ship: int) -> bool:
 	var gone: NetSession = h.session_of(server, c)
 	await h.drop(server, c)
 	await h.lapsed(gone)
-	return await h.until(func() -> bool: return server.session.lobby.paused.has(ship))
+	return await h.until(func() -> bool: return server.game.lobby.paused.has(ship))
 
 
 func _event(c: NetClient, type: String, from: int, ship: int) -> Dictionary:
@@ -73,7 +71,7 @@ func _event(c: NetClient, type: String, from: int, ship: int) -> Dictionary:
 # A destroyed ship leaves play (CLASH-1 b): a later pause on another ship holds only that
 # ship, and resumes once it passes coverage though the destroyed ship never will.
 func test_out_of_play_ship_never_holds_a_pause() -> void:
-	var server: NetServer = _server(SessionRules.Mode.COOP, 2)
+	var server: NetServer = _server(GameRules.Mode.COOP, 2)
 	var alls: Array[NetClient] = await _alls(server, [0, 1])
 	assert_bool(await _start(server, alls)).is_true()
 	var from: int = h.mark(alls[0])
@@ -82,22 +80,19 @@ func test_out_of_play_ship_never_holds_a_pause() -> void:
 	assert_str(gone.get("reason", "")).is_equal("destroyed")
 	assert_dict(await _event(alls[0], NetProtocol.EVENT_HANDOVER, from, 0)).is_not_empty()
 	assert_bool(await _lapse(server, alls[1], 1)).is_true()
-	assert_array(server.session.lobby.paused.keys()).is_equal([1])
+	assert_array(server.game.lobby.paused.keys()).is_equal([1])
 	# The former crew of ship 0, now a viewer of ship 1, takes the uncovered stations over.
-	alls[0].takeover(1, StationViews.ALL)
-	(
-		assert_bool(await h.until(func() -> bool: return server.session.lobby.paused.is_empty()))
-		. is_true()
-	)
+	alls[0].takeover(1, StationCatalogue.ALL)
+	assert_bool(await h.until(func() -> bool: return server.game.lobby.paused.is_empty())).is_true()
 	assert_bool(await _stepping(server)).is_true()
-	assert_bool(server.session.in_play(0)).is_false()
+	assert_bool(server.game.in_play(0)).is_false()
 
 
 # FT: FT-NET-041
 # During a pause the paused ship's remaining crew abandon it by majority: it is eliminated
 # (`eliminated` abandoned), its crew view the surviving friendly ship, and the rest resumes.
 func test_abandon_in_a_pause_eliminates_and_the_rest_resumes() -> void:
-	var server: NetServer = _server(SessionRules.Mode.COOP, 2)
+	var server: NetServer = _server(GameRules.Mode.COOP, 2)
 	var crew: Array[NetClient] = await h.crew_of(server, 0)
 	var other: Array[NetClient] = await _alls(server, [1])
 	assert_bool(await _start(server, [crew[0], other[0]])).is_true()
@@ -107,9 +102,9 @@ func test_abandon_in_a_pause_eliminates_and_the_rest_resumes() -> void:
 	crew[1].vote_abandon(0, true)
 	var gone: Dictionary = await _event(crew[0], NetProtocol.EVENT_ELIMINATED, from, 0)
 	assert_str(gone.get("reason", "")).is_equal("abandoned")
-	assert_bool(server.session.lobby.paused.is_empty()).is_true()
+	assert_bool(server.game.lobby.paused.is_empty()).is_true()
 	assert_bool(await _stepping(server)).is_true()
-	assert_bool(server.session.in_play(1)).is_true()
+	assert_bool(server.game.in_play(1)).is_true()
 	var to: Dictionary = await _event(crew[0], NetProtocol.EVENT_HANDOVER, from, 0)
 	assert_int(to.get("to_ship", -2)).is_equal(1)
 
@@ -119,7 +114,7 @@ func test_abandon_in_a_pause_eliminates_and_the_rest_resumes() -> void:
 # hears `takeover`; a station already covered is refused `taken`, and a crew player whose own
 # ship would fail coverage is refused `breaks_coverage`.
 func test_ally_takes_over_an_uncovered_station() -> void:
-	var server: NetServer = _server(SessionRules.Mode.COOP, 2)
+	var server: NetServer = _server(GameRules.Mode.COOP, 2)
 	var crew: Array[NetClient] = await h.crew_of(server, 0)
 	var ally: NetClient = (await _alls(server, [1]))[0]
 	var spare: NetClient = await h.joined(server, "spare", "helm", 1)
@@ -138,10 +133,7 @@ func test_ally_takes_over_an_uncovered_station() -> void:
 	assert_str(FleetMessages.check(NetProtocol.EVENT_TAKEOVER, took)).is_empty()
 	assert_dict(took).contains_key_value("by", "spare").contains_key_value("from_ship", 1)
 	assert_dict(await _event(ally, NetProtocol.EVENT_TAKEOVER, from_ally, 0)).is_not_empty()
-	(
-		assert_bool(await h.until(func() -> bool: return server.session.lobby.paused.is_empty()))
-		. is_true()
-	)
+	assert_bool(await h.until(func() -> bool: return server.game.lobby.paused.is_empty())).is_true()
 	assert_int(h.session_of(server, spare).ship).is_equal(0)
 	assert_bool(await _stepping(server)).is_true()
 
@@ -149,21 +141,21 @@ func test_ally_takes_over_an_uncovered_station() -> void:
 # FT: FT-NET-042
 # Enemies never take over (M4-Q8): a race rival's spare player is refused `enemy_ship`.
 func test_enemy_never_takes_over() -> void:
-	var server: NetServer = _server(SessionRules.Mode.RACE, 2)
+	var server: NetServer = _server(GameRules.Mode.RACE, 2)
 	var alls: Array[NetClient] = await _alls(server, [0, 1])
 	var spare: NetClient = await h.joined(server, "spare", "helm", 1)
 	assert_bool(await _start(server, alls)).is_true()
 	assert_bool(await _lapse(server, alls[0], 0)).is_true()
 	var from: int = h.mark(spare)
-	spare.takeover(0, StationViews.ALL)
+	spare.takeover(0, StationCatalogue.ALL)
 	assert_str(await _rejected(spare, NetProtocol.Type.TAKEOVER, from)).is_equal("enemy_ship")
-	assert_bool(server.session.lobby.paused.has(0)).is_true()
+	assert_bool(server.game.lobby.paused.has(0)).is_true()
 
 
 # FT: FT-MIS-030
 # By default an eliminated crew views a surviving friendly ship's main screen (D91).
 func test_eliminated_crew_view_a_friendly_ship() -> void:
-	var server: NetServer = _server(SessionRules.Mode.COOP, 2)
+	var server: NetServer = _server(GameRules.Mode.COOP, 2)
 	var alls: Array[NetClient] = await _alls(server, [0, 1])
 	assert_bool(await _start(server, alls)).is_true()
 	var from: int = h.mark(alls[0])
@@ -173,15 +165,15 @@ func test_eliminated_crew_view_a_friendly_ship() -> void:
 	assert_int(to["to_ship"]).is_equal(1)
 	var s: NetSession = h.session_of(server, alls[0])
 	assert_int(s.ship).is_equal(1)
-	assert_str(s.entry).is_equal(StationViews.VIEWER)
-	assert_bool(server.session.sim_running()).is_true()
+	assert_str(s.seat).is_equal(StationCatalogue.VIEWER)
+	assert_bool(server.game.sim_running()).is_true()
 
 
 # FT: FT-MIS-030, FT-NET-010
 # A mode that sends eliminated crews to the lobby (last ship standing, D91): the crew gets
 # `handover` to -1 and the live scoreboard, status and progress only (M4-Q9).
 func test_eliminated_crew_go_to_the_scoreboard() -> void:
-	var server: NetServer = _server(SessionRules.Mode.LAST_STANDING, 3)
+	var server: NetServer = _server(GameRules.Mode.LAST_STANDING, 3)
 	var alls: Array[NetClient] = await _alls(server, [0, 1, 2])
 	assert_bool(await _start(server, alls)).is_true()
 	var from: int = h.mark(alls[2])
@@ -198,7 +190,7 @@ func test_eliminated_crew_go_to_the_scoreboard() -> void:
 	assert_str(rows[2]["state"]).is_equal(FleetMessages.DESTROYED)
 	assert_str(rows[0]["state"]).is_equal(FleetMessages.IN_PLAY)
 	assert_str(rows[1]["name"]).is_equal("Ship 2")
-	assert_bool(server.session.fleet.is_over()).is_false()
+	assert_bool(server.game.fleet.is_over()).is_false()
 	assert_bool(await _stepping(server)).is_true()
 
 
@@ -207,14 +199,14 @@ func test_eliminated_crew_go_to_the_scoreboard() -> void:
 # side is eliminated with its lives left, votes, and the server sends RelaunchShipCommand;
 # the sim accepts it and the crew is back on its stations (`relaunched`).
 func test_relaunch_by_vote() -> void:
-	var server: NetServer = _server(SessionRules.Mode.HOLDOUT, 2, [0, 1])
+	var server: NetServer = _server(GameRules.Mode.HOLDOUT, 2, [0, 1])
 	var alls: Array[NetClient] = await _alls(server, [0, 1])
 	assert_bool(await _start(server, alls)).is_true()
 	var from: int = h.mark(alls[1])
-	server.session.crew.marks.set_alert(1, CrewMarks.Role.CREW, CrewMarks.ALERT_RED)
+	server.game.crew.marks.set_alert(1, CrewMarks.Role.CREW, CrewMarks.ALERT_RED)
 	server.world.kin.alive[1] = 0
 	var gone: Dictionary = await _event(alls[1], NetProtocol.EVENT_ELIMINATED, from, 1)
-	assert_int(gone.get("lives", -2)).is_equal(SessionRules.HOLDOUT_LIVES)
+	assert_int(gone.get("lives", -2)).is_equal(GameRules.HOLDOUT_LIVES)
 	assert_dict(await _event(alls[1], NetProtocol.EVENT_HANDOVER, from, 1)).is_not_empty()
 	var from_rival: int = h.mark(alls[0])
 	alls[0].vote_relaunch(1, true)
@@ -232,19 +224,19 @@ func test_relaunch_by_vote() -> void:
 	assert_bool(await h.until(sent)).is_true()
 	var back: Dictionary = await _event(alls[1], NetProtocol.EVENT_RELAUNCHED, from, 1)
 	assert_str(FleetMessages.check(NetProtocol.EVENT_RELAUNCHED, back)).is_empty()
-	assert_int(back.get("lives", -2)).is_equal(SessionRules.HOLDOUT_LIVES - 1)
+	assert_int(back.get("lives", -2)).is_equal(GameRules.HOLDOUT_LIVES - 1)
 	# R17-4: the relaunched ship's crew state is fresh (its red alert went with its old life).
-	assert_int(server.session.crew.marks.alert(1)).is_equal(CrewMarks.ALERT_NORMAL)
+	assert_int(server.game.crew.marks.alert(1)).is_equal(CrewMarks.ALERT_NORMAL)
 	var s: NetSession = h.session_of(server, alls[1])
 	assert_int(s.ship).is_equal(1)
-	assert_str(s.entry).is_equal(StationViews.ALL)
-	assert_bool(server.session.in_play(1)).is_true()
+	assert_str(s.seat).is_equal(StationCatalogue.ALL)
+	assert_bool(server.game.in_play(1)).is_true()
 
 
 # FT: FT-MIS-030
 # Co-op has no relaunch: the vote is refused `no_relaunch`.
 func test_coop_has_no_relaunch() -> void:
-	var server: NetServer = _server(SessionRules.Mode.COOP, 2)
+	var server: NetServer = _server(GameRules.Mode.COOP, 2)
 	var alls: Array[NetClient] = await _alls(server, [0, 1])
 	assert_bool(await _start(server, alls)).is_true()
 	var from: int = h.mark(alls[0])
@@ -254,10 +246,10 @@ func test_coop_has_no_relaunch() -> void:
 	assert_str(await _rejected(alls[0], NetProtocol.Type.RELAUNCH, from)).is_equal("no_relaunch")
 
 
-## The `picked` answer to `c` picking (ship, entry): its reason, "" when it was taken.
-func _pick_reason(c: NetClient, ship: int, entry: String) -> String:
+## The `picked` answer to `c` picking (ship, seat): its reason, "" when it was taken.
+func _pick_reason(c: NetClient, ship: int, seat: String) -> String:
 	var from: int = h.mark(c)
-	c.pick(ship, entry)
+	c.pick(ship, seat)
 	var e: Dictionary = await h.next_event(
 		c,
 		NetProtocol.EVENT_PICKED,
@@ -273,25 +265,25 @@ func _pick_reason(c: NetClient, ship: int, entry: String) -> String:
 # that never held a ship has only the lobby rules. A co-op fleet is one faction: the same move
 # is allowed.
 func test_a_mid_run_pick_stays_inside_the_faction() -> void:
-	var pvp: NetServer = _server(SessionRules.Mode.LAST_STANDING, 2)
+	var pvp: NetServer = _server(GameRules.Mode.LAST_STANDING, 2)
 	var alls: Array[NetClient] = await _alls(pvp, [0, 1])
-	var watcher: NetClient = await h.joined(pvp, "watcher", StationViews.VIEWER, 0)
+	var watcher: NetClient = await h.joined(pvp, "watcher", StationCatalogue.VIEWER, 0)
 	assert_bool(await _start(pvp, alls)).is_true()
 	assert_int(pvp.world.faction_of(0)).is_not_equal(pvp.world.faction_of(1))
-	assert_str(await _pick_reason(watcher, 1, StationViews.VIEWER)).is_equal(
+	assert_str(await _pick_reason(watcher, 1, StationCatalogue.VIEWER)).is_equal(
 		FleetMessages.ENEMY_SHIP
 	)
 	watcher.release_pick()
 	assert_bool(await h.until(func() -> bool: return h.session_of(pvp, watcher).ship < 0)).is_true()
-	assert_str(await _pick_reason(watcher, 1, StationViews.VIEWER)).is_equal(
+	assert_str(await _pick_reason(watcher, 1, StationCatalogue.VIEWER)).is_equal(
 		FleetMessages.ENEMY_SHIP
 	)
-	assert_str(await _pick_reason(watcher, 0, StationViews.VIEWER)).is_empty()
+	assert_str(await _pick_reason(watcher, 0, StationCatalogue.VIEWER)).is_empty()
 	var late: NetClient = await h.welcomed(pvp, "late")
-	assert_str(await _pick_reason(late, 1, StationViews.VIEWER)).is_empty()
-	var coop: NetServer = _server(SessionRules.Mode.COOP, 2)
+	assert_str(await _pick_reason(late, 1, StationCatalogue.VIEWER)).is_empty()
+	var coop: NetServer = _server(GameRules.Mode.COOP, 2)
 	var crews: Array[NetClient] = await _alls(coop, [0, 1])
-	var friend: NetClient = await h.joined(coop, "friend", StationViews.VIEWER, 0)
+	var friend: NetClient = await h.joined(coop, "friend", StationCatalogue.VIEWER, 0)
 	assert_bool(await _start(coop, crews)).is_true()
 	assert_int(coop.world.faction_of(0)).is_equal(coop.world.faction_of(1))
-	assert_str(await _pick_reason(friend, 1, StationViews.VIEWER)).is_empty()
+	assert_str(await _pick_reason(friend, 1, StationCatalogue.VIEWER)).is_empty()

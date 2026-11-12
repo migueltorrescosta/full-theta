@@ -10,7 +10,7 @@ static func spawn(
 	rotation: Quaternion = Quaternion.IDENTITY,
 	velocity: Vector3 = Vector3.ZERO
 ) -> int:
-	return w.spawn_ship(TestDefs.corvette(), 1, offset, rotation, velocity)
+	return w.spawn_ship(TestDefs.corvette(), 1, CubePoint.of(offset), rotation, velocity)
 
 
 ## Latches Helm input: rotation (pitch, yaw, roll), move (strafe, lift, throttle).
@@ -34,14 +34,14 @@ static func input(
 
 
 static func select_ship(w: SimWorld, id: int, target: int) -> void:
-	var c: SelectTargetCommand = SelectTargetCommand.new()
+	var c: HelmSelectCommand = HelmSelectCommand.new()
 	c.ship_id = id
-	c.target_ship = target
+	c.contact = target
 	w.submit(c)
 
 
 static func select_point(w: SimWorld, id: int, p: Vector3) -> void:
-	var c: SelectTargetCommand = SelectTargetCommand.new()
+	var c: HelmSelectCommand = HelmSelectCommand.new()
 	c.ship_id = id
 	c.point = true
 	c.x = p.x

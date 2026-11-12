@@ -1,8 +1,8 @@
 class_name FleetDirector
 extends RunDriver
-## The director of a multi-ship session (#11, FT-MIS-023, FT-MIS-013, owner M4-Q1, M4-Q5,
+## The director of a multi-ship game (#11, FT-MIS-023, FT-MIS-013, owner M4-Q1, M4-Q5,
 ## M4-Q7, 2026-10-28): one Director per crew faction, so allies share one fleet run and
-## rivals each get their own, keyed by the session's mode (ScenarioApi.session_mode()):
+## rivals each get their own, keyed by the game's mode (ScenarioApi.game_mode()):
 ## - COOP and TEAMS: one Director per faction; its budget is the fleet's, its encounters are
 ##   scaled to the faction's ship count (Director.fleet_multiplier), and the fleet run has one final
 ##   objective (M4-Q1).
@@ -22,8 +22,8 @@ const RAIDERS_PER_WAVE: int = 1
 ## (D264, A11), so the sim carries a bounded number of AI ships however long the game lasts.
 const MAX_ALIVE_PER_SHIP: int = 6
 
-## The session's mode, a SessionRules.Mode value (the director names sim/api only, so an int;
-## ScenarioApi.session_mode() gives the same).
+## The session's mode, a GameRules.Mode value (the director names sim/api only, so an int;
+## ScenarioApi.game_mode() gives the same).
 var _mode: int = 0
 var _def: DirectorDef
 var _difficulty: StringName
@@ -131,7 +131,7 @@ func _add_directors(api: ScenarioApi) -> void:
 static func _race_site_keys(api: ScenarioApi) -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	var home: StringName = &""
-	for s: SiteView in api.sites():
+	for s: SiteInfo in api.sites():
 		if s.id == Director.HOME_SITE:
 			home = s.key
 	for key: String in api.map_site_keys():
@@ -140,10 +140,10 @@ static func _race_site_keys(api: ScenarioApi) -> PackedStringArray:
 	return out
 
 
-## LAST_STANDING (M4-Q7): every raider_wave_every_s a wave at each crewed ship in play,
+## LAST_STANDING (M4-Q7): every raider_wave_every a wave at each crewed ship in play,
 ## wave_strength(wave) times the preset's strength, from its own bearing, so hiding loses.
 func _maybe_wave(api: ScenarioApi) -> void:
-	var every: int = SimRate.ticks(_def.raider_wave_every_s)
+	var every: int = SimRate.ticks(_def.raider_wave_every)
 	var now: int = api.tick()
 	if every <= 0 or now < every * (_waves + 1):
 		return

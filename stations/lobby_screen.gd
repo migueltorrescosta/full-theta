@@ -18,7 +18,7 @@ extends Control
 ## dialog on a short screen. A player with no name of their own (a phone that joined by QR code)
 ## gets a one-field name prompt at the top (#35 A5).
 ##
-## Multi-ship sessions (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
+## Multi-ship games (#11, M4-Q3, M4-Q4, M4-Q6): the ship row lists the `fleet` ships
 ## (with their team in TEAMS and HOLDOUT) and a New ship button while there is room (any
 ## player, up to 6); a crew puts its ship on team A or B; the host's mode and options sit
 ## behind the Mode button (read-only for the others); Start is pressed per ship and then
@@ -224,7 +224,7 @@ func start_blocker(state: Dictionary) -> String:
 	if not uncovered.is_empty():
 		var names: PackedStringArray = []
 		for st: Variant in uncovered:
-			names.append(tr("station." + str(st)))
+			names.append(tr(StationCatalogue.name_key(str(st))))
 		return tr("lobby.need_stations") % ", ".join(names)
 	var missing: int = maxi(1, int(state.get("min_crew", 3)) - int(state.get("crew", 0)))
 	if missing == 1:
@@ -288,9 +288,9 @@ static func columns_for(size: Vector2) -> int:
 	return PORTRAIT_COLUMNS if size.x < size.y else LANDSCAPE_COLUMNS
 
 
-## The catalogue entry covering exactly these stations (LobbySeatGrid.entry_for).
-func entry_for(stations: Array[String]) -> String:
-	return _seats.entry_for(stations)
+## The seat covering exactly these stations (LobbySeatGrid.seat_for).
+func seat_for(stations: Array[String]) -> String:
+	return _seats.seat_for(stations)
 
 
 ## A tap on a station cell (LobbySeatGrid.tap_station).
@@ -298,7 +298,7 @@ func tap_station(id: String) -> void:
 	_seats.tap_station(id)
 
 
-## A tap on Captain, Viewer or the dev entry (LobbySeatGrid.tap_seat).
+## A tap on Captain, Viewer or the dev seat (LobbySeatGrid.tap_seat).
 func tap_seat(id: String) -> void:
 	_seats.tap_seat(id)
 
@@ -346,7 +346,7 @@ func _apply_targets(phone: bool) -> void:
 		var button: BaseButton = b as BaseButton
 		if button is FullscreenToggle:
 			continue
-		if not str(button.name).begins_with("Entry_") or button.get_parent() == _seats.seat_row:
+		if not str(button.name).begins_with("Seat_") or button.get_parent() == _seats.seat_row:
 			button.custom_minimum_size = Vector2.ONE * (PHONE_TARGET if phone else 0.0)
 	_seats.grid.set_meta(&"phone", phone)
 	_name_field.custom_minimum_size.y = PHONE_TARGET if phone else 0.0

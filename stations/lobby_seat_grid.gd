@@ -23,7 +23,7 @@ const GRID_GAP: int = 4
 const ROLE_LINES: int = 2
 const CAPTAIN: String = "captain"
 const VIEWER: String = "viewer"
-## The dev entry holding every station, offered by --dev-all-stations only, and shown only in a
+## The dev seat holding every station, offered by --dev-all-stations only, and shown only in a
 ## game started with --dev (ClientSettings.dev_flag).
 const DEV_ALL: String = "all"
 
@@ -89,7 +89,7 @@ func coverage_text(state: Dictionary) -> String:
 		return "%s · %s" % [crew, tr("lobby.covered")]
 	var names: PackedStringArray = []
 	for s: Variant in uncovered:
-		names.append(tr("station." + str(s)))
+		names.append(tr(StationCatalogue.name_key(str(s))))
 	return "%s · %s" % [crew, tr("lobby.uncovered") % ", ".join(names)]
 
 
@@ -114,23 +114,23 @@ static func load_color(tag: String) -> Color:
 
 
 ## The stations the player has picked on the shown ship (none for Captain, Viewer and
-## the dev entry).
+## the dev seat).
 func selected_stations() -> Array[String]:
 	var out: Array[String] = []
 	if _tapped:
 		out.assign(_local)
 		return out
-	if _ctx.crew.ship != ship or _ctx.crew.entry in [DEV_ALL, ""]:
+	if _ctx.crew.ship != ship or _ctx.crew.seat in [DEV_ALL, ""]:
 		return out
 	for st: Variant in _ctx.crew.stations():
 		out.append(str(st))
 	return out
 
 
-## The catalogue entry covering exactly these stations: the station itself for one, the
+## The seat covering exactly these stations: the station itself for one, the
 ## joint view of the pair for two; "" when there is none.
-func entry_for(stations: Array[String]) -> String:
-	for def: Dictionary in _ctx.crew.catalogue.get("entries", []):
+func seat_for(stations: Array[String]) -> String:
+	for def: Dictionary in _ctx.crew.catalogue.get("seats", []):
 		var st: Array = def.get("stations", [])
 		if st.size() != stations.size() or stations.is_empty():
 			continue
@@ -147,7 +147,7 @@ func entry_for(stations: Array[String]) -> String:
 func crew_at(station: String) -> PackedStringArray:
 	var names: PackedStringArray = []
 	for seat: Variant in _ctx.crew.ship_state(ship).get("seats", []):
-		var covered: Array = _ctx.crew.def_of(str(seat["entry"])).get("stations", [])
+		var covered: Array = _ctx.crew.def_of(str(seat["seat"])).get("stations", [])
 		if station in covered:
 			names.append(str(seat["name"]))
 	return names
@@ -167,22 +167,22 @@ func tap_station(id: String) -> void:
 	if picks.is_empty():
 		_ctx.intents.release_pick()
 	else:
-		var entry: String = entry_for(picks)
-		if entry == "":
+		var seat: String = seat_for(picks)
+		if seat == "":
 			changed.emit()
 			return
-		_ctx.intents.pick(ship, entry)
+		_ctx.intents.pick(ship, seat)
 	_local = picks
 	_tapped = true
 	changed.emit()
 
 
-## A tap on Captain, Viewer or the dev entry: picks it, or gives it up when it is the
+## A tap on Captain, Viewer or the dev seat: picks it, or gives it up when it is the
 ## pick.
 func tap_seat(id: String) -> void:
 	_tapped = true
 	_local = []
-	if _ctx.crew.ship == ship and _ctx.crew.entry == id:
+	if _ctx.crew.ship == ship and _ctx.crew.seat == id:
 		_ctx.intents.release_pick()
 	else:
 		_ctx.intents.pick(ship, id)
@@ -192,14 +192,14 @@ func tap_seat(id: String) -> void:
 ## The title and summary under the grid for the current pick: a station's name and
 ## role, or a joint view's name, its pair and its role.
 func selection_text() -> Array[String]:
-	var entry: String = _ctx.crew.entry if _ctx.crew.ship == ship else ""
-	if entry == "":
+	var seat: String = _ctx.crew.seat if _ctx.crew.ship == ship else ""
+	if seat == "":
 		return [tr("lobby.no_pick"), ""]
-	var name: String = tr("station." + entry)
-	var pair: String = joint_hint(_ctx.crew.def_of(entry))
+	var name: String = tr("seat." + seat)
+	var pair: String = joint_hint(_ctx.crew.def_of(seat))
 	if pair != "":
 		name += " (%s)" % pair
-	return [name, tr("role." + entry)]
+	return [name, tr("role." + seat)]
 
 
 ## The one-line legend under the grid: "Red: intense · Yellow: busy · Green: light", each
@@ -231,9 +231,9 @@ static func _label(text: String, variation: String = "") -> Label:
 func _refresh_grid() -> void:
 	var picks: Array[String] = selected_stations()
 	var full: bool = picks.size() >= MAX_STATIONS
-	# The dev entry holds every station: all six cells show as selected and locked; a tap
+	# The dev seat holds every station: all six cells show as selected and locked; a tap
 	# on one leaves it for that station alone.
-	var dev: bool = _ctx.crew.ship == ship and _ctx.crew.entry == DEV_ALL
+	var dev: bool = _ctx.crew.ship == ship and _ctx.crew.seat == DEV_ALL
 	var listed: Array[String] = []
 	for id: String in GRID_STATIONS:
 		if not _ctx.crew.def_of(id).is_empty():
@@ -245,7 +245,7 @@ func _refresh_grid() -> void:
 			grid.add_child(_cell(id, str(_ctx.crew.def_of(id).get("load_tag", ""))))
 	for cell: Node in grid.get_children():
 		var b: Button = cell as Button
-		var id: String = str(b.name).trim_prefix("Entry_")
+		var id: String = str(b.name).trim_prefix("Seat_")
 		b.set_pressed_no_signal(dev or id in picks)
 		b.disabled = full and not id in picks
 		# Fade the text but not the seat holders' names (they keep their contrast).
@@ -261,7 +261,7 @@ func _refresh_grid() -> void:
 ## the text, at least TOUCH_MIN.
 func _cell(id: String, tag: String) -> Button:
 	var b: Button = Button.new()
-	b.name = "Entry_" + id
+	b.name = "Seat_" + id
 	b.toggle_mode = true
 	b.theme_type_variation = "LoadCell_" + (tag if tag in LOAD_TAGS else "none")
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -281,7 +281,7 @@ func _cell(id: String, tag: String) -> Button:
 	top.name = "Top"
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(top)
-	var name_label: Label = _cell_label("Name", tr("station." + id), "HeadingLabel")
+	var name_label: Label = _cell_label("Name", tr(StationCatalogue.name_key(id)), "HeadingLabel")
 	name_label.add_theme_font_size_override("font_size", 15)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
@@ -340,11 +340,11 @@ static func _fit_cell(cell_node: Variant, box_node: Variant) -> void:
 ## The Captain, Viewer and dev buttons: the pick's one is pressed; Captain is greyed out
 ## while another player holds it.
 func refresh_seats(phone: bool) -> void:
-	var mine: String = _ctx.crew.entry if _ctx.crew.ship == ship else ""
+	var mine: String = _ctx.crew.seat if _ctx.crew.ship == ship else ""
 	for pair: Array in [[_captain, CAPTAIN], [_viewer, VIEWER], [_dev_all, DEV_ALL]]:
 		var b: Button = pair[0]
 		b.set_pressed_no_signal(mine == pair[1])
-		b.text = tr("station." + pair[1])
+		b.text = tr(StationCatalogue.name_key(pair[1]))
 	if phone:
 		_dev_all.text = TouchText.of("lobby.dev_short", "All (dev)")
 	_captain.disabled = _ctx.crew.captain_seated(ship) and mine != CAPTAIN
@@ -391,7 +391,7 @@ func _build_seats() -> void:
 
 func _seat_button(id: String) -> Button:
 	var b: Button = Button.new()
-	b.name = "Entry_" + id
+	b.name = "Seat_" + id
 	b.text = ""
 	b.pressed.connect(tap_seat.bind(id))
 	b.toggle_mode = true

@@ -722,7 +722,7 @@ func _draw_legend() -> void:
 	for s: Variant in _stations:
 		chips.append(
 			{
-				"text": tr("station." + str(s)),
+				"text": tr(StationCatalogue.name_key(str(s))),
 				"col": group_color(str(s)),
 				"ring": false,
 				"tick": false

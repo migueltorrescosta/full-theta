@@ -14,7 +14,7 @@ func test_invalid_commands_rejected() -> void:
 	FlightFixture.select_point(w, id, Vector3(0.0, NAN, 0.0))
 	FlightFixture.input(w, id, Vector3(NAN, 0.0, 0.0))
 	w.step()
-	assert_int(w.helm.target_kind[id]).is_equal(HelmTable.Target.NONE)
+	assert_int(w.helm.sel_kind[id]).is_equal(HelmTable.Selection.NONE)
 	assert_vector(w.helm.input_rotation[id]).is_equal(Vector3.ZERO)
 	assert_int(w.accepted_commands().size()).is_equal(0)
 	FlightFixture.input(w, id, Vector3(3.0, -2.0, 0.0), Vector3(0.0, 0.0, 9.0))
@@ -35,10 +35,10 @@ func test_reset_ship_restores_helm() -> void:
 	w.step()
 	w.reset_ship(id)
 	assert_bool(w.helm.is_decoupled(id)).is_false()
-	assert_int(w.helm.target_kind[id]).is_equal(HelmTable.Target.NONE)
+	assert_int(w.helm.sel_kind[id]).is_equal(HelmTable.Selection.NONE)
 	assert_vector(w.helm.input_rotation[id]).is_equal(Vector3.ZERO)
 	assert_int(w.helm.approach_held[id]).is_equal(0)
-	assert_int(w.helm.target_ship[other]).is_equal(id)
+	assert_int(w.helm.sel_contact[other]).is_equal(id)
 
 
 # FT: FT-ARC-013
@@ -46,12 +46,12 @@ func test_reset_ship_restores_helm() -> void:
 func test_select_requires_detection() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
-	var far: int = w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -50000))
-	var near: int = w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -5000))
+	var far: int = w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, -50000))
+	var near: int = w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, -5000))
 	w.step()
 	FlightFixture.select_ship(w, id, far)
 	w.step()
-	assert_int(w.helm.target_ship[id]).is_equal(-1)
+	assert_int(w.helm.sel_contact[id]).is_equal(-1)
 	FlightFixture.select_ship(w, id, near)
 	w.step()
-	assert_int(w.helm.target_ship[id]).is_equal(near)
+	assert_int(w.helm.sel_contact[id]).is_equal(near)

@@ -37,10 +37,10 @@ var mounts: MountTable = MountTable.new()
 var projectiles: ProjectileTable = ProjectileTable.new()
 var damage: DamageTable = DamageTable.new()
 var knowledge: KnowledgeTable = KnowledgeTable.new()
-## Enemy AI state (T035); rows of ships spawned with spawn_enemy are enabled.
+## NPC AI state (T035); rows of ships spawned with spawn_npc are enabled.
 var ai: AiTable = AiTable.new()
 ## Run state: each ship's status and the encounter outcome (T036, FT-MIS-017).
-var run: RunTable = RunTable.new()
+var ships: ShipStateTable = ShipStateTable.new()
 ## Science state and open hack windows (E01).
 var science: ScienceTable = ScienceTable.new()
 var hacks: HackTable = HackTable.new()
@@ -56,6 +56,7 @@ var hazards: Array[HazardDef] = []
 var hazard_state: HazardTable = HazardTable.new()
 ## STORY and the economy (#10, FT-COM-001 to FT-COM-009, FT-MIS-018 to FT-MIS-022).
 var story: StoryTable = StoryTable.new()
+var story_ships: StoryShipTable = StoryShipTable.new()
 var story_flags: StoryFlagTable = StoryFlagTable.new()
 var economy: EconomyTable = EconomyTable.new()
 var reputation: ReputationTable = ReputationTable.new()
@@ -74,22 +75,19 @@ var module_defs: Array[ModuleDef] = []
 var rep_dists: Dictionary[StringName, RepDistDef] = {}
 ## The run's encounters and story flags (E07, FT-MIS-025).
 var encounters: EncounterTable = EncounterTable.new()
-## Read-only run data like defs (FT-ARC-020), filled by RunSetup: the enemies SpawnShipCommand
+## Read-only run data like defs (FT-ARC-020), filled by RunSetup: the NPCs SpawnShipCommand
 ## can spawn by key, the scenario ids an encounter's scenario_ix indexes, and the run's
 ## numbers. null run_def: not a director run (the M1 encounter, tests).
-var catalog: Dictionary[StringName, EnemyDef] = {}
+var catalog: Dictionary[StringName, NpcDef] = {}
 var scenario_ids: PackedStringArray = PackedStringArray()
 var run_def: RunDef
 ## The session's rules (#11, E11, E12): COOP with one slot unless RunSetup was given slots.
 ## Fixed for the run, like run_def, so not in a table or the state hash.
-var rules: SessionRules = SessionRules.new()
-## Crewed ship id -> its team (ShipSlot.team), filled by RunSetup from its slots; read through
-## team_of().
-var ship_teams: Dictionary[int, int] = {}
-## Crewed ship id -> where it starts (an offset in the cube, m) and the site it starts at
+var rules: GameRules = GameRules.new()
+## Crewed ship id -> where it starts (a CubePoint, m) and the site it starts at
 ## (-1 with no map), filled by RunSetup: a relaunch puts the ship back there, and a race's
-## site copies are placed relative to it (#11). Fixed for the run, like ship_teams.
-var ship_starts: Dictionary[int, Vector3] = {}
+## site copies are placed relative to it (#11). Fixed for the run, like rules.
+var ship_starts: Dictionary[int, PackedFloat64Array] = {}
 var ship_start_site: Dictionary[int, int] = {}
 ## The events and the first command-log entry of the latest step(), kept for the Scenario
 ## API (events(), commands_this_tick()) whichever way the caller drains the world.
@@ -123,25 +121,25 @@ var _relations: Dictionary[int, int] = {}
 var _accumulator: float = 0.0
 
 
-## site_period is the side of the scenario's wrapping cube (m, FT-SIM-035, D229); check it
+## map_period is the side of the map's wrapping cube (m, FT-SIM-035, D229); check it
 ## with period_errors() when the ships are known (M1Encounter.validate does).
 func _init(
-	world_seed: int = 0, build: String = "", site_period: float = Kinematics.DEFAULT_PERIOD
+	world_seed: int = 0, build: String = "", map_period: float = Kinematics.DEFAULT_PERIOD
 ) -> void:
 	seed_value = world_seed
 	build_id = build
 	rng = SimRng.new(world_seed)
 	script_rng = SimRng.new(world_seed ^ 0x5CE7A210)
-	kin.period = site_period
+	kin.period = map_period
 
 
 ## Why a period (m) doesn't suit a scenario's ships, or [] if it does (PeriodRules.errors,
 ## FT-SIM-035, D124).
-static func period_errors(site_period: float, ships: Array[ShipDef]) -> Array[String]:
+static func period_errors(map_period: float, ship_defs: Array[ShipDef]) -> Array[String]:
 	var longest: float = 0.0
-	for def: ShipDef in ships:
+	for def: ShipDef in ship_defs:
 		longest = maxf(longest, def.sensor_range)
-	return PeriodRules.errors(site_period, longest)
+	return PeriodRules.errors(map_period, longest)
 
 
 ## Every state container, in hash order (FT-ARC-012: each is keyed by ship and faction).
@@ -156,13 +154,14 @@ func tables() -> Array[SimTable]:
 		damage,
 		knowledge,
 		ai,
-		run,
+		ships,
 		science,
 		hacks,
 		relay,
 		probes,
 		hazard_state,
 		story,
+		story_ships,
 		story_flags,
 		economy,
 		reputation,
@@ -172,12 +171,12 @@ func tables() -> Array[SimTable]:
 	]
 
 
-## Adds a ship from its definition at an offset in the cube (wrapped onto it) and returns
-## its id.
+## Adds a ship from its definition at a point in the cube (wrapped onto it; the origin by
+## default) and returns its id.
 func spawn_ship(
 	def: ShipDef,
 	faction: int,
-	offset: Vector3 = Vector3.ZERO,
+	at: PackedFloat64Array = CubePoint.make(),
 	rotation: Quaternion = Quaternion.IDENTITY,
 	velocity: Vector3 = Vector3.ZERO
 ) -> int:
@@ -186,37 +185,35 @@ func spawn_ship(
 	base_defs.append(def)
 	for t: SimTable in tables():
 		t.add_ship(id, faction, def)
-	kin.place(id, offset.x, offset.y, offset.z)
+	kin.place(id, at)
 	kin.rot[id] = rotation.normalized()
 	kin.vel[id] = velocity
 	return id
 
 
-## Spawns an enemy's ship like spawn_ship and hands it to the enemy AI with the
-## EnemyDef's behaviour numbers (T035, FT-SIM-027).
-func spawn_enemy(
-	enemy: EnemyDef,
+## Spawns an NPC's ship like spawn_ship and hands it to the NPC AI with the
+## NpcDef's behaviour numbers (T035, FT-SIM-027).
+func spawn_npc(
+	npc: NpcDef,
 	faction: int,
-	offset: Vector3 = Vector3.ZERO,
+	at: PackedFloat64Array = CubePoint.make(),
 	rotation: Quaternion = Quaternion.IDENTITY,
 	velocity: Vector3 = Vector3.ZERO
 ) -> int:
-	var id: int = spawn_ship(enemy.ship, faction, offset, rotation, velocity)
-	ai.enable(id, enemy)
+	var id: int = spawn_ship(npc.ship, faction, at, rotation, velocity)
+	ai.enable(id, npc)
 	return id
 
 
-## Restores one ship's state from its definition and places it at an offset
-## (m, 64-bit, D104, wrapped onto the cube), dropping its queued commands; other
+## Restores one ship's state from its definition and places it at a point (m, a CubePoint,
+## D401, wrapped onto the cube; the origin by default), dropping its queued commands; other
 ## ships are untouched (FT-MIS-017: a destroyed ship's run state resets on its own). Runs
 ## submit a ResetShipCommand instead, which calls this at tick start and is logged for
 ## replay (FT-ARC-008); a direct call is not logged. Commands for the ship later in the
 ## same tick's batch are rejected (_apply_commands), so none lands on the fresh ship.
 func reset_ship(
 	ship_id: int,
-	x: float = 0.0,
-	y: float = 0.0,
-	z: float = 0.0,
+	at: PackedFloat64Array = CubePoint.make(),
 	rotation: Quaternion = Quaternion.IDENTITY
 ) -> void:
 	# The commands dropped here are reported as rejected, for the API handles waiting on them.
@@ -229,7 +226,7 @@ func reset_ship(
 	defs[ship_id] = base_defs[ship_id]  # fitted modules are run progress (FT-MIS-011)
 	for t: SimTable in tables():
 		t.reset_ship(ship_id, defs[ship_id])
-	kin.place(ship_id, x, y, z)
+	kin.place(ship_id, at)
 	kin.rot[ship_id] = rotation.normalized()
 
 
@@ -244,7 +241,7 @@ func ship_count() -> int:
 
 
 func faction_of(ship_id: int) -> int:
-	return kin.factions[ship_id]
+	return kin.owner_faction[ship_id]
 
 
 ## Whether `ship_id` is a ship of this world.
@@ -257,20 +254,14 @@ func is_hostile(faction: int, other: int) -> bool:
 	return relation(faction, other) == Relation.HOSTILE
 
 
-## Whether the ship is flown by a crew (not by the enemy AI).
+## Whether the ship is flown by a crew (not by the NPC AI).
 func is_crew(ship_id: int) -> bool:
 	return not ai.is_enabled(ship_id)
 
 
 ## Whether the ship is crewed and still in the run.
 func is_crew_in_play(ship_id: int) -> bool:
-	return is_crew(ship_id) and run.status[ship_id] == RunTable.Status.IN_PLAY
-
-
-## The ship's side (#11): its slot's team for a crewed ship of a lobby-built session, else
-## its faction (an NPC, or a world built without slots).
-func team_of(ship_id: int) -> int:
-	return ship_teams.get(ship_id, faction_of(ship_id))
+	return is_crew(ship_id) and ships.status[ship_id] == ShipStateTable.Status.IN_PLAY
 
 
 func set_relation(a: int, b: int, relation: Relation) -> void:
@@ -323,7 +314,7 @@ func step() -> void:
 	ScienceSystem.step(self)
 	KnowledgeSystem.step(self)
 	# The AI decides on this tick's knowledge; its commands apply next tick (FT-SIM-028).
-	EnemyAi.step(self)
+	NpcAi.step(self)
 	PowerSystem.step(self)
 	AssistSystem.step(self)
 	JumpSystem.step(self)

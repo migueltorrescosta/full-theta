@@ -106,7 +106,7 @@ func test_refusals_become_toasts_and_mission_time_counts_from_start() -> void:
 	crew.toast.connect(func(key: String, _a: Dictionary) -> void: toasts.append(key))
 	var r: Dictionary = {"request": 0, "reason": "marks_full"}
 	crew.handle_event(_ev("request_rejected", r), NOW)
-	crew.handle_event(_ev("picked", {"ship": 0, "entry": "helm", "reason": "breaks_coverage"}), NOW)
+	crew.handle_event(_ev("picked", {"ship": 0, "seat": "helm", "reason": "breaks_coverage"}), NOW)
 	assert_array(toasts).is_equal(["toast.marks_full", "toast.breaks_coverage"])
-	assert_str(crew.entry).is_equal("tactical")
+	assert_str(crew.seat).is_equal("tactical")
 	assert_float(crew.mission_seconds(StationFixture.START_TICK + 120)).is_equal(2.0)

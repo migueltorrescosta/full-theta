@@ -63,7 +63,7 @@ static func solo(w: SimWorld) -> void:
 static func _comms(w: SimWorld, can_call: bool) -> void:
 	if w.tick == BluffScenario.HAIL_TICK:
 		var h: HailCommand = HailCommand.new()
-		h.target = TRADER
+		h.contact = TRADER
 		PairHarness.send(w, h)
 	elif w.tick > BluffScenario.HAIL_TICK:
 		var r: ReplyCommand = ReplyCommand.new()

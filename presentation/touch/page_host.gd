@@ -27,12 +27,12 @@ var current: int:
 		return _current
 	set(value):
 		select(value)
-## While not empty the tab strip shows this instead of tabs (a Science scan or hack session,
-## "Scan H2 · 12 s"): pages don't change during a session.
-var session_title: String = "":
+## While not empty the tab strip shows this instead of tabs (a Science scan or hack minigame,
+## "Scan H2 · 12 s"): pages don't change during a minigame.
+var minigame_title: String = "":
 	set(value):
-		if value != session_title:
-			session_title = value
+		if value != minigame_title:
+			minigame_title = value
 			tabs_changed.emit()
 
 var _current: int = -1
@@ -104,7 +104,7 @@ func badge(index: int) -> bool:
 
 ## Shows page `index`; nothing for an unknown index, the current one, or during a session.
 func select(index: int) -> void:
-	if index < 0 or index >= _titles.size() or index == _current or session_title != "":
+	if index < 0 or index >= _titles.size() or index == _current or minigame_title != "":
 		return
 	_current = index
 	_show()

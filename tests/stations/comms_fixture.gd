@@ -1,6 +1,6 @@
 class_name CommsFixture
 extends RefCounted
-## A COMMS block (CommsView's schema) for the station tests, and a screen showing it: a
+## A COMMS block (CommsSection's schema) for the station tests, and a screen showing it: a
 ## rescue mission about H2, an escort contract, Kappa's trade offer (docked at site 0, the
 ## session in conversation, a module swap on offer), and an unanswered hail from U3.
 
@@ -24,7 +24,7 @@ static func card(id: int, kind: int, title: String, extra: Dictionary = {}) -> D
 		"rep_vis": false,
 		"rep_lo": 0.0,
 		"rep_hi": 0.0,
-		"target": -1,
+		"subject": -1,
 		"claimer": -1,
 		"conv": false,
 		"open": false,
@@ -55,7 +55,7 @@ static func block() -> Dictionary:
 					"rep_vis": true,
 					"rep_lo": 4.0,
 					"rep_hi": 12.0,
-					"target": StationFixture.H2,
+					"subject": StationFixture.H2,
 				}
 			),
 			card(CONTRACT, CONTRACT, "card.escort.title", {"reward": 400}),
@@ -69,7 +69,7 @@ static func block() -> Dictionary:
 				HAIL,
 				HAIL,
 				"comms.card.hail",
-				{"npc": "Trader", "conv": true, "target": StationFixture.U3}
+				{"npc": "Trader", "conv": true, "subject": StationFixture.U3}
 			),
 		],
 		"nodes":
@@ -113,8 +113,8 @@ static func block() -> Dictionary:
 
 ## Puts the block, site 0's name and the context's claim of the hail on `ctx`.
 static func install(ctx: StationContext, blk: Dictionary = block()) -> void:
-	ctx.view.blocks[StationViews.Section.COMMS] = blk
-	ctx.view.sites = [
+	ctx.snap.blocks[StationCatalogue.Section.COMMS] = blk
+	ctx.snap.sites = [
 		{
 			"id": SITE,
 			"name_key": "Kappa",

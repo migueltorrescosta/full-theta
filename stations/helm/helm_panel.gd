@@ -4,9 +4,9 @@ extends StationPanel
 ## target compass, off-screen arrows, shield ring, thrust envelope and propellant;
 ## docked, a compact read-out with the compass and the ring (FT-HLM-001).
 ##
-## Sends (net/StationViews.STATION_COMMANDS["helm"]): `helm_input` only when the polled
+## Sends (net/StationCatalogue.STATION_COMMANDS["helm"]): `helm_input` only when the polled
 ## sticks, throttle, face or approach change (HelmInputCommand latches, at most every
-## INPUT_MS while the sticks move), `helm_select_target` when the shared selection
+## INPUT_MS while the sticks move), `helm_select` when the shared selection
 ## changes (a contact, a mark or a named site), `helm_align`, `helm_all_stop`,
 ## `helm_decoupled`, `set_shield_focus`, and `helm_jump`, `helm_dock` and `helm_undock`
 ## for the selected site or mark (FT-HLM-013, FT-HLM-016).
@@ -47,7 +47,7 @@ const RADIAL_DEFLECT: float = 0.5
 var chase: bool = false
 ## Index in RADIAL of the highlighted radial item, -1 for none.
 var radial_pick: int = -1
-var view3d: HelmView
+var view3d: HelmScene
 var hud: HelmHud
 var ring: ShieldRing
 ## The phone layout (HelmTouch) while the focused panel is on a phone, else null.
@@ -64,7 +64,7 @@ var _viewport: SubViewport
 var _captured: bool = true
 var _sent_input: Dictionary = _neutral()
 var _sent_input_ms: int = -INPUT_MS
-var _sent_target: Dictionary = {}
+var _sent_select: Dictionary = {}
 
 
 func _setup() -> void:
@@ -78,7 +78,7 @@ func _setup() -> void:
 	_viewport.own_world_3d = true
 	RenderQuality.track(_viewport)
 	_container.add_child(_viewport)
-	view3d = HelmView.new()
+	view3d = HelmScene.new()
 	_viewport.add_child(view3d)
 	hud = HelmHud.new()
 	hud.panel = self
@@ -220,12 +220,12 @@ func _process(_delta: float) -> void:
 	if (
 		ctx.crew.paused.has(ctx.crew.ship)
 		or ctx.crew.host_paused
-		or ctx.crew.run_over.has(ctx.crew.ship)
+		or ctx.crew.ship_outcome.has(ctx.crew.ship)
 		or _overlay_open()
 	):
 		_captured = false
 	_apply_mouse_mode()
-	sync_target()
+	sync_selection()
 	_send_input()
 	if ctx.matcher.is_held("helm_radial"):
 		var v: Vector2 = ctx.matcher.stick("RS")
@@ -299,7 +299,7 @@ func run(id: String) -> bool:
 			if ctx.crew.selection.is_empty():
 				ctx.crew.toast.emit("toast.select_first", {})
 			else:
-				sync_target()
+				sync_selection()
 				ctx.intents.command({"kind": "helm_align"})
 		"chase_camera":
 			chase = not chase
@@ -339,7 +339,7 @@ func _jump() -> void:
 	var def: ShipDef = ctx.ship_def()
 	var local: Variant = ctx.selection_local()
 	if def != null and local is Vector3:
-		if (local as Vector3).angle_to(Vector3.FORWARD) > def.jump_face_tolerance_rad:
+		if (local as Vector3).angle_to(Vector3.FORWARD) > def.jump_face_tolerance:
 			ctx.crew.toast.emit("toast.jump_face", {})
 			return
 	ctx.intents.command(cmd)
@@ -358,25 +358,25 @@ func _dock() -> void:
 	ctx.intents.command({"kind": "helm_dock", "site_id": int(s["id"])})
 
 
-## Sends helm_select_target when the shared selection (or the selected free mark's
+## Sends helm_select when the shared selection (or the selected free mark's
 ## place) differs from what was last sent.
-func sync_target() -> void:
-	var t: Dictionary = target_command()
-	if t == _sent_target:
+func sync_selection() -> void:
+	var t: Dictionary = select_command()
+	if t == _sent_select:
 		return
-	_sent_target = t
+	_sent_select = t
 	if not t.is_empty():
 		ctx.intents.command(t)
 
 
-## The helm_select_target command for the current selection: a contact, a named site, a
+## The helm_select command for the current selection: a contact, a named site, a
 ## mark's contact when attached, else the mark's point; {} with nothing selected yet, and a
-## "none" target once something was selected and the selection was cleared.
-func target_command() -> Dictionary:
+## "none" selection once something was selected and the selection was cleared.
+func select_command() -> Dictionary:
 	var s: Dictionary = ctx.crew.selection
 	var cmd: Dictionary = {
-		"kind": "helm_select_target",
-		"target_ship": -1,
+		"kind": "helm_select",
+		"contact": -1,
 		"site_id": -1,
 		"point": false,
 		"x": 0.0,
@@ -385,15 +385,15 @@ func target_command() -> Dictionary:
 	}
 	match s.get("kind", ""):
 		"contact":
-			cmd["target_ship"] = int(s["id"])
+			cmd["contact"] = int(s["id"])
 		"site":
 			cmd["site_id"] = int(s["id"])
 		"mark":
 			var m: Dictionary = ctx.crew.mark_in_slot(int(s["id"]))
 			if m.is_empty():
-				return cmd if not _sent_target.is_empty() else {}
+				return cmd if not _sent_select.is_empty() else {}
 			if int(m.get("contact", -1)) >= 0:
-				cmd["target_ship"] = int(m["contact"])
+				cmd["contact"] = int(m["contact"])
 			else:
 				var p: Vector3 = m["pos"]
 				cmd["point"] = true
@@ -401,7 +401,7 @@ func target_command() -> Dictionary:
 				cmd["y"] = p.y
 				cmd["z"] = p.z
 		_:
-			return cmd if not _sent_target.is_empty() else {}
+			return cmd if not _sent_select.is_empty() else {}
 	return cmd
 
 
@@ -523,7 +523,7 @@ func full_screen() -> bool:
 func hud_area(control: Control) -> Rect2:
 	var r: Rect2 = Rect2(Vector2.ZERO, control.size)
 	if touch_ui != null and touch_ui.is_inside_tree():
-		# Under the screen's view-top row too (selection chip, request chips).
+		# Under the screen's view-top row too (selection bar, request chips).
 		r = touch_ui.clear_view_in(control).intersection(r)
 	# Above the screen's joint switch (a joint view on a phone on its side).
 	r.size.y = maxf(r.size.y - bottom_reserve, 0.0)
@@ -539,7 +539,7 @@ func view_rect() -> Rect2:
 
 
 func claim_item() -> String:
-	return StationViews.CLAIM_FLIGHT
+	return StationCatalogue.CLAIM_FLIGHT
 
 
 func mouse_steers() -> bool:
@@ -553,7 +553,7 @@ func steering() -> bool:
 
 ## The HELM block, or {} before the first snapshot.
 func helm_block() -> Dictionary:
-	return ctx.view.blocks.get(StationViews.Section.HELM, {})
+	return ctx.snap.blocks.get(StationCatalogue.Section.HELM, {})
 
 
 ## Propellant left as a share of the ship's capacity (ShipDef in content/), or -1 when
@@ -561,7 +561,7 @@ func helm_block() -> Dictionary:
 func propellant_share() -> float:
 	var def: ShipDef = ctx.ship_def()
 	var left: float = float(
-		ctx.view.blocks.get(StationViews.Section.STATUS, {}).get("propellant", 0.0)
+		ctx.snap.blocks.get(StationCatalogue.Section.STATUS, {}).get("propellant", 0.0)
 	)
 	if def == null or def.propellant_capacity <= 0.0:
 		return -1.0

@@ -33,13 +33,13 @@ func test_bots_submit_only_commands_of_their_own_station() -> void:
 	for solo: StringName in STATIONS:
 		var rig: ShakedownRig = ShakedownLessons.lesson(solo)["rig"]
 		for row: Array in rig.host.api().crew().sent:
-			var station: String = StationViews.station_of_command(row[1])
+			var station: String = StationCatalogue.station_of_command(row[1])
 			total += 1
 			stations_seen[StringName(station)] = true
 			assert_str(station).override_failure_message(String(solo)).is_not_equal(String(solo))
 	assert_int(total).is_greater(20)
 	# Every crew station but Comms acts in a plain lesson (nobody hails it).
-	for station: String in StationViews.CREW:
+	for station: String in StationCatalogue.CREW:
 		if station != "comms":
 			(
 				assert_bool(stations_seen.has(StringName(station)))
@@ -77,7 +77,7 @@ func test_a_half_never_acts_at_the_players_station() -> void:
 	assert_array(api.crew().sent).is_empty()
 	partners.crew.half(api, 0, &"engineering", &"eng_boost")
 	assert_array(api.crew().sent).has_size(1)
-	assert_str(StationViews.station_of_command(api.crew().sent[0][1])).is_equal("engineering")
+	assert_str(StationCatalogue.station_of_command(api.crew().sent[0][1])).is_equal("engineering")
 
 
 # FT: FT-MIS-039
@@ -113,15 +113,15 @@ func _pair(steps: TrainingStepsDef, intent: StringName) -> TrainingStepDef:
 ## The client's view of the world, as the server sends it: the blocks the glance cards read.
 func _read(rig: ShakedownRig, readout: String) -> String:
 	for kind: int in [
-		StationViews.Section.HELM,
-		StationViews.Section.ENGINEERING,
-		StationViews.Section.SCIENCE,
-		StationViews.Section.RELAY,
-		StationViews.Section.MOUNTS,
-		StationViews.Section.COMMS
+		StationCatalogue.Section.HELM,
+		StationCatalogue.Section.ENGINEERING,
+		StationCatalogue.Section.SCIENCE,
+		StationCatalogue.Section.RELAY,
+		StationCatalogue.Section.MOUNTS,
+		StationCatalogue.Section.COMMS
 	]:
-		_ctx.view.blocks[kind] = NetBlock.decode(
-			StationViews.BLOCKS[kind], StationBlocks.block_bytes(kind, rig.world, 0)
+		_ctx.snap.blocks[kind] = NetBlock.decode(
+			StationCatalogue.BLOCKS[kind], StationBlocks.block_bytes(kind, rig.world, 0)
 		)
 	return PartnerGlance.readout(_ctx, readout)
 

@@ -1,4 +1,4 @@
-## One frame of an effect (#12, E14) for the L5 harness: a SpaceView with one generic ship
+## One frame of an effect (#12, E14) for the L5 harness: a SpaceScene with one generic ship
 ## 12 m ahead of the camera and the effect named in `effect` ("hit", "shield", "explosion",
 ## "jump_spool" or "jump_arrive") frozen at `age` (0..1 of its duration). `comfort` draws it
 ## the way the comfort setting does.
@@ -12,7 +12,7 @@ var eye: Vector3 = Vector3(5.0, 3.0, 10.0)
 
 
 func _ready() -> void:
-	var space: SpaceView = SpaceView.new()
+	var space: SpaceScene = SpaceScene.new()
 	add_child(space)
 	var ship: ProceduralShip = space.copy_ship()
 	ship.basis = Basis.from_euler(Vector3(0.0, deg_to_rad(-25.0), 0.0))

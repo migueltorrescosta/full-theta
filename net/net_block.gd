@@ -1,7 +1,7 @@
 class_name NetBlock
 extends RefCounted
 ## Schema-driven encoding of a block of named fields (station field sets,
-## StationViews.BLOCKS). A schema is an Array of [name, type] pairs written in order;
+## StationCatalogue.BLOCKS). A schema is an Array of [name, type] pairs written in order;
 ## a type is one of the strings below, or ["rows", schema] for a list of rows (u8
 ## count of at most 255, then each row in the sub-schema). Values come as a Dictionary (rows as an
 ## Array of Dictionaries) and decode the same way, with floats where the type is one.

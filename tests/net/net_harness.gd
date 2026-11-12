@@ -29,7 +29,7 @@ func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = 
 	m1.science = load("res://content/science/science.tres") as ScienceDef
 	if s.start(m1, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
-	s.session.sessions.grace_us = int(grace_s * 1_000_000.0)
+	s.game.sessions.grace_us = int(grace_s * 1_000_000.0)
 	# A served world trims its command log; tests read the history of the run.
 	s.world.keep_command_log = true
 	node.add_child(s)
@@ -41,7 +41,7 @@ func server(dev_all: bool = false, grace_s: float = 10.0, host_secret: String = 
 ## `mode`, on `teams` (FleetFixture.slots_for), ship ids 0 .. n - 1, on the M3 run without a
 ## director; its NetFleet holds the same slots and rules. Not started: the lobby is open.
 func fleet_server(
-	mode: SessionRules.Mode,
+	mode: GameRules.Mode,
 	n: int,
 	teams: Array[int] = [],
 	dev_all: bool = false,
@@ -54,9 +54,9 @@ func fleet_server(
 	var s: NetServer = NetServer.new()
 	if s.start(f.setup, 0, "127.0.0.1", dev_all, host_secret) != OK:
 		return null
-	s.session.sessions.grace_us = int(grace_s * 1_000_000.0)
-	s.session.fleet.rules = f.rules
-	s.session.fleet.slots = f.setup.slots
+	s.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	s.game.fleet.rules = f.rules
+	s.game.fleet.slots = f.setup.slots
 	s.world.keep_command_log = true
 	node.add_child(s)
 	servers.append(s)
@@ -64,11 +64,11 @@ func fleet_server(
 
 
 ## Three crew clients covering the six stations of `ship` (crew3 for any ship); their names
-## are "<entry>-<ship>".
+## are "<seat>-<ship>".
 func crew_of(s: NetServer, ship: int) -> Array[NetClient]:
 	var out: Array[NetClient] = []
-	for entry: String in ["tactical", "systems", "ops"]:
-		out.append(await joined(s, "%s-%d" % [entry, ship], entry, ship))
+	for seat: String in ["tactical", "systems", "ops"]:
+		out.append(await joined(s, "%s-%d" % [seat, ship], seat, ship))
 	return out
 
 
@@ -109,30 +109,30 @@ func welcomed(s: NetServer, name: String, token: String = "", secret: String = "
 	return c
 
 
-## Picks (ship, entry) and waits for the answer; true if accepted, and then for the
+## Picks (ship, seat) and waits for the answer; true if accepted, and then for the
 ## full snapshot of the new view.
-func pick(c: NetClient, entry: String, ship: int = PLAYER) -> bool:
-	var fulls: int = c.view.full_count
+func pick(c: NetClient, seat: String, ship: int = PLAYER) -> bool:
+	var fulls: int = c.snap.full_count
 	var n: int = (events[c] as Array).size()
-	c.pick(ship, entry)
+	c.pick(ship, seat)
 	var answer: Dictionary = await next_event(c, NetProtocol.EVENT_PICKED, n)
 	if answer.is_empty() or answer["payload"]["reason"] != "":
 		return false
-	return await until(func() -> bool: return c.view.full_count > fulls)
+	return await until(func() -> bool: return c.snap.full_count > fulls)
 
 
 ## A welcomed client holding a pick, with its full snapshot applied.
-func joined(s: NetServer, name: String, entry: String, ship: int = PLAYER) -> NetClient:
+func joined(s: NetServer, name: String, seat: String, ship: int = PLAYER) -> NetClient:
 	var c: NetClient = await welcomed(s, name)
-	await pick(c, entry, ship)
+	await pick(c, seat, ship)
 	return c
 
 
 ## Three crew clients covering the six stations (Tactical, Systems, Ops).
 func crew3(s: NetServer) -> Array[NetClient]:
 	var out: Array[NetClient] = []
-	for entry: String in ["tactical", "systems", "ops"]:
-		out.append(await joined(s, entry, entry))
+	for seat: String in ["tactical", "systems", "ops"]:
+		out.append(await joined(s, seat, seat))
 	return out
 
 
@@ -183,7 +183,7 @@ func mark(c: NetClient) -> int:
 
 ## The server-side session of a client.
 func session_of(s: NetServer, c: NetClient) -> NetSession:
-	return s.session.sessions.get_session(c.token)
+	return s.game.sessions.get_session(c.token)
 
 
 ## Drops a client (no Bye) and waits until the server noticed.
@@ -196,7 +196,7 @@ func drop(s: NetServer, c: NetClient) -> bool:
 
 ## Waits until a session's grace ran out and the server lapsed it.
 func lapsed(session: NetSession) -> bool:
-	return await until(func() -> bool: return session.lapsed and session.entry == "")
+	return await until(func() -> bool: return session.lapsed and session.seat == "")
 
 
 ## Drops every client and frees the servers (after_test).

@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## L3 tests of the lobby's data-shortcut toggles over loopback (Toggles message, ServerSession):
+## L3 tests of the lobby's data-shortcut toggles over loopback (Toggles message, NetGame):
 ## only the host sets them, they lock at Start, every view follows, and difficulty never
 ## changes the sim's hidden stats.
 
@@ -33,11 +33,11 @@ func _view_follows(server: NetServer, c: NetClient, code: String) -> bool:
 
 
 func _has_status(c: NetClient) -> bool:
-	return c.view.blocks.has(StationViews.Section.STATUS)
+	return c.snap.blocks.has(StationCatalogue.Section.STATUS)
 
 
 func _has_shields(c: NetClient) -> bool:
-	return c.view.blocks.get(StationViews.Section.STATUS, {}).get("shields", 0.0) > 0.0
+	return c.snap.blocks.get(StationCatalogue.Section.STATUS, {}).get("shields", 0.0) > 0.0
 
 
 func _lobby_code(c: NetClient) -> String:
@@ -52,14 +52,14 @@ func test_only_the_host_sets_the_toggles() -> void:
 	var host: NetClient = await h.welcomed(server, "host", "", SECRET)
 	var guest: NetClient = await h.welcomed(server, "guest")
 	assert_bool(await h.until(func() -> bool: return _lobby_code(guest) == "easy")).is_true()
-	assert_str(server.session.lobby.toggles.encode()).is_equal("easy")
+	assert_str(server.game.lobby.toggles.encode()).is_equal("easy")
 	var from: int = h.mark(guest)
 	guest.set_toggles("hard")
-	assert_str(await _rejected(guest, from)).is_equal(ServerSession.NOT_HOST)
+	assert_str(await _rejected(guest, from)).is_equal(NetGame.NOT_HOST)
 	from = h.mark(host)
 	host.set_toggles("extreme")
-	assert_str(await _rejected(host, from)).is_equal(ServerSession.BAD_TOGGLES)
-	assert_str(server.session.lobby.toggles.encode()).is_equal("easy")
+	assert_str(await _rejected(host, from)).is_equal(NetGame.BAD_TOGGLES)
+	assert_str(server.game.lobby.toggles.encode()).is_equal("easy")
 	var custom: String = DataToggles.of_preset("normal").with_value(&"routes", 0).encode()
 	host.set_toggles(custom)
 	assert_bool(await h.until(func() -> bool: return _lobby_code(guest) == custom)).is_true()
@@ -80,23 +80,23 @@ func test_toggles_lock_at_start_and_every_view_follows() -> void:
 	await h.pick(host, "captain")
 	var crew: Array[NetClient] = await h.crew3(server)
 	var helm: NetClient = crew[0]
-	var fulls: int = helm.view.full_count
+	var fulls: int = helm.snap.full_count
 	host.set_toggles("hard")
 	assert_bool(await _view_follows(server, helm, "hard")).is_true()
-	var key: String = h.session_of(server, helm).view_key()
-	assert_str(key).is_equal(StationViews.key(PLAYER, "tactical", "hard"))
-	assert_bool(await h.until(func() -> bool: return helm.view.full_count > fulls)).is_true()
+	var key: String = h.session_of(server, helm).stream_key()
+	assert_str(key).is_equal(StationCatalogue.key(PLAYER, "tactical", "hard"))
+	assert_bool(await h.until(func() -> bool: return helm.snap.full_count > fulls)).is_true()
 	# Hard: the Helm half of Tactical sees no shields in its top bar.
 	assert_bool(await h.until(_has_status.bind(helm))).is_true()
-	assert_float(helm.view.blocks[StationViews.Section.STATUS]["shields"]).is_equal(0.0)
+	assert_float(helm.snap.blocks[StationCatalogue.Section.STATUS]["shields"]).is_equal(0.0)
 	host.set_toggles("easy")
 	assert_bool(await _view_follows(server, helm, "easy")).is_true()
 	assert_bool(await h.until(_has_shields.bind(helm))).is_true()
 	assert_bool(await h.start(server, helm)).is_true()
 	var from: int = h.mark(host)
 	host.set_toggles("hard")
-	assert_str(await _rejected(host, from)).is_equal(ServerSession.TOGGLES_LOCKED)
-	assert_str(server.session.lobby.toggles.encode()).is_equal("easy")
+	assert_str(await _rejected(host, from)).is_equal(NetGame.TOGGLES_LOCKED)
+	assert_str(server.game.lobby.toggles.encode()).is_equal("easy")
 
 
 # FT: FT-MIS-008
@@ -112,7 +112,7 @@ func test_difficulty_never_changes_hidden_stats() -> void:
 		host.set_toggles(code)
 		(
 			assert_bool(
-				await h.until(func() -> bool: return server.session.lobby.toggles.encode() == code)
+				await h.until(func() -> bool: return server.game.lobby.toggles.encode() == code)
 			)
 			. is_true()
 		)
@@ -125,7 +125,7 @@ func test_difficulty_never_changes_hidden_stats() -> void:
 		for i: int in 600:
 			world.step()
 			if i % 60 == 59:
-				server.session.after_ticks(world.drain_events())
+				server.game.after_ticks(world.drain_events())
 		hashes[code] = world.state_hash()
 		defs[code] = [
 			TestDefs.def_hash(world.defs[PLAYER]),
@@ -154,7 +154,7 @@ func test_easy_prefills_the_diagnosed_cause() -> void:
 		host.set_toggles(code)
 		(
 			assert_bool(
-				await h.until(func() -> bool: return server.session.lobby.toggles.encode() == code)
+				await h.until(func() -> bool: return server.game.lobby.toggles.encode() == code)
 			)
 			. is_true()
 		)
@@ -163,7 +163,7 @@ func test_easy_prefills_the_diagnosed_cause() -> void:
 			science.share("diagnosed_causes")
 			var opened: Callable = func() -> bool:
 				return (
-					server.session.shares.active(PLAYER, ViewFilter.DIAGNOSED_CAUSES)
+					server.game.shares.active(PLAYER, ShortcutFilter.DIAGNOSED_CAUSES)
 					or not (
 						h
 						. events_of(science, NetProtocol.EVENT_REQUEST_REJECTED)
@@ -188,9 +188,9 @@ func test_easy_prefills_the_diagnosed_cause() -> void:
 		var scan: ScienceSelfScanCommand = ScienceSelfScanCommand.new()
 		scan.ship_id = PLAYER
 		world.submit(scan)
-		for i: int in int(world.science_def.self_scan_s * 60.0) + 4:
+		for i: int in int(world.science_def.self_scan_time * 60.0) + 4:
 			world.step()
-			server.session.after_ticks(world.drain_events())
+			server.game.after_ticks(world.drain_events())
 		world.step()
 		if when == "late":
 			await share.call()

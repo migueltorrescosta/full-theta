@@ -1,5 +1,5 @@
 ## The shared phone frame for the L5 harness (#28 follow-up, design "Shared frame"): a
-## StationScreen of `entry` whose panels join the frame (StationPanel.in_frame), with a demo
+## StationScreen of `seat` whose panels join the frame (StationPanel.in_frame), with a demo
 ## panel for a single station that has three pages over overlay rails and a Crew page
 ## (FrameDemo; the real stations get theirs in wave 2). Extras from shots.json: `insets`
 ## (SafeArea.simulate, drawn in translucent red with the band), `page` (the demo's page),
@@ -8,7 +8,7 @@
 ## open).
 extends Control
 
-var entry: String = "engineering"
+var seat: String = "engineering"
 var insets: Array = []
 var page: int = 0
 var chip: bool = false
@@ -101,10 +101,10 @@ func _ready() -> void:
 	I18n.apply("en")
 	LayoutMode.apply(get_tree().root)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_ctx = StationFixture.context(entry, "user://l5_frame_shot.cfg")
+	_ctx = StationFixture.context(seat, "user://l5_frame_shot.cfg")
 	_ctx.crew.select("contact", StationFixture.H2)
 	var s: StationScreen = StationScreen.new()
-	if StationViews.CREW.has(entry):
+	if StationCatalogue.CREW.has(seat):
 		s.panel_factory = func(_id: String) -> StationPanel: return _demo()
 	s.setup(_ctx)
 	for p: StationPanel in s.panels:
@@ -114,7 +114,7 @@ func _ready() -> void:
 	if s.focused_panel().pages != null:
 		s.focused_panel().pages.current = page
 	if chip:
-		_ctx.view.blocks[StationViews.Section.CHIPS] = {"chips": [_chip_row()]}
+		_ctx.snap.blocks[StationCatalogue.Section.CHIPS] = {"chips": [_chip_row()]}
 	if ping >= 0:
 		var p: Dictionary = {"ship": 0, "kind": "contact", "id": ping, "by": "Bo"}
 		_ctx.crew.handle_event({"type": "ping", "payload": p}, StationFixture.NOW_MS - 500)
@@ -139,7 +139,7 @@ func _demo() -> FrameDemo:
 
 ## An open Boost request from Helm to Engineering, or the first chip to the focused station.
 func _chip_row() -> Dictionary:
-	var chips: Array[ChipDef] = ChipView.def().chips
+	var chips: Array[ChipDef] = ChipsReader.def().chips
 	var to: String = _ctx.crew.stations()[focus] if not _ctx.crew.stations().is_empty() else "helm"
 	for i: int in chips.size():
 		if String(chips[i].to_station) == to:
@@ -147,8 +147,8 @@ func _chip_row() -> Dictionary:
 				"id": 5,
 				"chip": i,
 				"arg": -1,
-				"from": StationViews.CREW.find(String(chips[i].from_station)),
-				"to": StationViews.CREW.find(to),
+				"from": StationCatalogue.CREW.find(String(chips[i].from_station)),
+				"to": StationCatalogue.CREW.find(to),
 				"sent": StationFixture.TICK - 240,
 				"expires": StationFixture.TICK + 1080,
 			}

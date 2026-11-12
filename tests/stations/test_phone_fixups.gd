@@ -22,12 +22,12 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(size: Vector2i, entry: String, insets: Array, focus: int = 0) -> StationScreen:
+func _screen(size: Vector2i, seat: String, insets: Array, focus: int = 0) -> StationScreen:
 	SafeArea.simulate(insets)
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	CommsFixture.install(ctx)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
@@ -184,13 +184,13 @@ func test_small_radar_keeps_chips_inside() -> void:
 		var view: Rect2 = Rect2(Vector2.ZERO, r.size)
 		var chips: int = 0
 		for e: Dictionary in r._layout():
-			if e["chip"] == "":
+			if e["callout"] == "":
 				continue
 			chips += 1
-			var box: Rect2 = e["chip_rect"]
-			var what: String = "%s %s at %s" % [c[1], e["chip"], box]
+			var box: Rect2 = e["callout_rect"]
+			var what: String = "%s %s at %s" % [c[1], e["callout"], box]
 			assert_bool(view.encloses(box)).override_failure_message(what).is_true()
-			if (e["chip"] as String).contains(ChipText.SEP):
+			if (e["callout"] as String).contains(CalloutText.SEP):
 				var x: float = (e["pos"] as Vector2).x
 				(
 					assert_bool(box.position.x > x or box.end.x < x)
@@ -327,13 +327,13 @@ func test_every_view_keeps_the_touch_rules_on_a_phone() -> void:
 	var forms: Array = [[Vector2i(844, 390), LANDSCAPE], [Vector2i(390, 844), PORTRAIT]]
 	var bad: Array[String] = []
 	for f: Array in forms:
-		for entry: String in StationViews.ENTRIES:
-			var n: int = maxi(1, (StationViews.ENTRIES[entry][2] as Array).size())
+		for seat: String in StationCatalogue.OTHER_SEATS:
+			var n: int = maxi(1, (StationCatalogue.OTHER_SEATS[seat][2] as Array).size())
 			for focus: int in n:
-				var s: StationScreen = await _screen(f[0], entry, f[1], focus)
+				var s: StationScreen = await _screen(f[0], seat, f[1], focus)
 				var report: Dictionary = TapAudit.check(s)
 				bad.append_array(
-					StationFixture.rule_breaks(report, "%s %s/%d" % [f[0], entry, focus], AUDIT)
+					StationFixture.rule_breaks(report, "%s %s/%d" % [f[0], seat, focus], AUDIT)
 				)
 				_drop(s)
 	assert_array(bad).override_failure_message("\n".join(bad)).is_empty()
@@ -434,8 +434,8 @@ func test_relay_map_chips_do_not_overlap() -> void:
 		var entries: Array[Dictionary] = (s.panels[0] as RelayPanel).map._layout()
 		var rects: Array[Rect2] = []
 		for e: Dictionary in entries:
-			if (e["chip"] as String) != "":
-				rects.append(e["chip_rect"])
+			if (e["callout"] as String) != "":
+				rects.append(e["callout_rect"])
 		assert_int(rects.size()).is_greater(1)
 		for i: int in rects.size():
 			for j: int in range(i + 1, rects.size()):

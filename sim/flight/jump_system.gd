@@ -1,7 +1,7 @@
 class_name JumpSystem
 extends RefCounted
 ## The jump drive and docking holds (FT-SIM-034, FT-HLM-013, D229). Runs after AssistSystem.
-## A spooling ship counts its ticks down; at zero it moves to ShipDef.jump_standoff_m short
+## A spooling ship counts its ticks down; at zero it moves to ShipDef.jump_standoff short
 ## of the target point along the line from where it is (minimum image; it stays put when
 ## already closer), at rest relative to the target, in the same cube. It emits
 ## &"jump_arrive" (value: the target site id or -1, tag: the site it left, or "-1"). A
@@ -26,11 +26,9 @@ static func _arrive(world: SimWorld, row: int) -> void:
 	var helm: HelmTable = world.helm
 	var kin: Kinematics = world.kin
 	var origin: int = SiteTable.at_site(world, row)
-	var offset: Vector3 = kin.relative_to_point(
-		row, helm.jump_x[row], helm.jump_y[row], helm.jump_z[row]
-	)
+	var offset: Vector3 = kin.relative_to_column(row, helm.jump_x, helm.jump_y, helm.jump_z, row)
 	var dist: float = offset.length()
-	var standoff: float = world.defs[row].jump_standoff_m
+	var standoff: float = world.defs[row].jump_standoff
 	if dist > standoff:
 		var move: Vector3 = offset * (1.0 - standoff / dist)
 		kin.translate(row, move.x, move.y, move.z)
@@ -47,7 +45,7 @@ static func _hold(world: SimWorld, row: int) -> void:
 	var kin: Kinematics = world.kin
 	var site: int = world.helm.docked_site[row]
 	var sites: SiteTable = world.sites
-	kin.place(row, sites.pos_x[site], sites.pos_y[site], sites.pos_z[site])
+	kin.place_column(row, sites.pos_x, sites.pos_y, sites.pos_z, site)
 	kin.vel[row] = Vector3.ZERO
 	kin.force_cmd[row] = Vector3.ZERO
 	kin.torque_cmd[row] = Vector3.ZERO

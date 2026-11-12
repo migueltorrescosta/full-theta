@@ -1,0 +1,7 @@
+{
+  "_comment": "UI strings (fixture).",
+  "strings": {
+    "sci.sweep": {"en": "The game is over.", "pt_PT": "O jogo acabou."},
+    "ship.hostile": {"en": "That's a hostile ship.", "pt_PT": "Esse \u00e9 um navio hostil."}
+  }
+}

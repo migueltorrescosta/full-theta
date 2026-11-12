@@ -17,8 +17,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String = "comms", code: String = "easy") -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(seat: String = "comms", code: String = "easy") -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	ctx.crew.toggles = DataToggles.parse(code)
 	CommsFixture.install(ctx)
 	# A desktop-sized viewport: a headless window is phone-sized, and a phone shows one
@@ -100,9 +100,9 @@ func test_header_footer_and_card_texts() -> void:
 	assert_str(board.header_text()).is_equal("Comms   docked: Kappa")
 	assert_str(board.status_text()).is_equal("hull ok   1200 credits")
 	assert_str(board.rep_text()).is_equal("Reputation  Your fleet +12   Raiders -2")
-	var mission: Dictionary = CommsData.card(CommsData.block(s.ctx.view), CommsFixture.MISSION)
+	var mission: Dictionary = CommsData.card(CommsData.block(s.ctx.snap), CommsFixture.MISSION)
 	assert_str(CommsData.range_text(mission)).is_equal("rep +4 to +12")
-	assert_str(CommsData.range_text(CommsData.card(CommsData.block(s.ctx.view), 1))).is_empty()
+	assert_str(CommsData.range_text(CommsData.card(CommsData.block(s.ctx.snap), 1))).is_empty()
 	var blk: Dictionary = CommsFixture.block()
 	blk["docked"] = false
 	blk["credits"] = 30
@@ -271,11 +271,11 @@ func test_hold_fire_request_and_hail_name_the_selected_contact() -> void:
 		["hold_fire", StationFixture.H2]
 	)
 	s.dispatch(_ev("comms_hail", s))
-	assert_int(_commands(s, "comms_hail")[0]["target"]).is_equal(StationFixture.H2)
+	assert_int(_commands(s, "comms_hail")[0]["contact"]).is_equal(StationFixture.H2)
 	# With nothing selected the card's own contact is the target.
 	s.ctx.crew.select("", -1)
 	panel.board.select(CommsFixture.MISSION)
-	assert_int(panel.hail_target()).is_equal(StationFixture.H2)
+	assert_int(panel.hail_contact()).is_equal(StationFixture.H2)
 
 
 # FT: FT-STN-003, FT-STN-010
@@ -369,7 +369,7 @@ func test_touch_swipes() -> void:
 # contracts for the Captain, every live card in a Comms view's docked list; a settled card is
 # gone from both.
 func test_the_lists_show_the_real_cards() -> void:
-	var cap: StationScreen = await _screen(StationViews.CAPTAIN)
+	var cap: StationScreen = await _screen(StationCatalogue.CAPTAIN)
 	var captain: CaptainPanel = cap.panels[0] as CaptainPanel
 	await get_tree().process_frame
 	assert_int(captain.cards.card_at(Vector2(10.0, CardList.HEADER_HEIGHT + 5.0))).is_equal(0)
@@ -392,13 +392,13 @@ func test_the_lists_show_the_real_cards() -> void:
 	var panel: CommsPanel = _comms(parley)
 	panel.refresh(true)
 	assert_bool(panel.list.visible).is_true()
-	assert_int(CardList.rows(parley.ctx.view).size()).is_equal(4)
+	assert_int(CardList.rows(parley.ctx.snap).size()).is_equal(4)
 	var blk: Dictionary = CommsFixture.block()
 	blk["cards"][CommsFixture.MISSION]["state"] = 3
 	CommsFixture.install(parley.ctx, blk)
-	assert_int(CardList.rows(parley.ctx.view).size()).is_equal(3)
+	assert_int(CardList.rows(parley.ctx.snap).size()).is_equal(3)
 	(
-		assert_int(CardList.rows(parley.ctx.view, [CardList.MISSION, CardList.CONTRACT]).size())
+		assert_int(CardList.rows(parley.ctx.snap, [CardList.MISSION, CardList.CONTRACT]).size())
 		. is_equal(1)
 	)
 

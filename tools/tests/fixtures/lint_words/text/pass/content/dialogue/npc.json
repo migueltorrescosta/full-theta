@@ -1,0 +1,5 @@
+{
+  "lines": [
+    {"id": "npc.hail", "role": "npc", "text": {"en": "{count} hostile ships remaining.", "pt_PT": "{count} navios hostis restantes."}}
+  ]
+}

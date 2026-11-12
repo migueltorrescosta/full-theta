@@ -40,7 +40,7 @@ static func build() -> SimWorld:
 	w.hail_conversations = {&"m1_raider": &"conv.surrender_demand"}
 	w.set_relation(BLUE, RED, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(TestDefs.corvette(), BLUE)
-	w.spawn_ship(raider_def(), RED, RAIDER_AT)
+	w.spawn_ship(raider_def(), RED, CubePoint.of(RAIDER_AT))
 	damage_engines(w, ENGINES_LEFT)
 	return w
 
@@ -63,8 +63,8 @@ static func environment(w: SimWorld) -> void:
 	if w.tick == 0:
 		var c: PostCardCommand = StoryFixture.card(StoryTable.Kind.CONTRACT)
 		c.title_key = "comms.card.contract"
-		c.target = RAIDER
-		c.target_flag = KnowledgeTable.Flag.DISABLE
+		c.subject = RAIDER
+		c.subject_flag = KnowledgeTable.Flag.DISABLE
 		c.reward_credits = REWARD
 		c.rep_interaction = &"rep.complete_mission"
 		PairHarness.send(w, c)
@@ -100,7 +100,7 @@ static func comms(w: SimWorld) -> void:
 		PairHarness.send(w, a)
 	elif w.tick == HAIL_TICK:
 		var h: HailCommand = HailCommand.new()
-		h.target = RAIDER
+		h.contact = RAIDER
 		PairHarness.send(w, h)
 	elif w.tick > HAIL_TICK and w.story.size() > 1 and not surrendering(w):
 		if Story.is_live(w, 1) and w.story.node[1] != StoryTable.NO_TEXT:

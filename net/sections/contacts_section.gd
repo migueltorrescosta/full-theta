@@ -18,7 +18,7 @@ var tol_units: int = 8
 var model: Dictionary = {}
 ## id -> [int flags, String callsign].
 var info: Dictionary = {}
-## The ship ids the faction knows at this snapshot (known(); SnapshotBuilder sets them
+## The ship ids the faction knows at this snapshot (known(); SnapshotWriter sets them
 ## before update(), once per faction).
 var ids: PackedInt32Array = PackedInt32Array()
 var _tick: int = 0
@@ -26,7 +26,7 @@ var _p_units: int = 0
 
 
 func _init(faction: int, pos_tol_m: float = 0.5) -> void:
-	super(StationViews.Section.CONTACTS, faction)
+	super(StationCatalogue.Section.CONTACTS, faction)
 	tol_units = maxi(1, roundi(pos_tol_m * NetCodec.POS_Q))
 
 
@@ -51,8 +51,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	var seen: Dictionary = {}
 	for id: int in ids:
 		seen[id] = true
-		var at: PackedFloat64Array = kin.point_at(id, Vector3.ZERO)
-		var p: Vector3i = NetCodec.quant_pos(at[0], at[1], at[2], _p_units)
+		var p: Vector3i = NetCodec.quant_pos(kin.point(id), _p_units)
 		var v: Vector3i = NetCodec.quant_vel(kin.vel[id])
 		var entry: Array = model.get(id, [])
 		if entry.is_empty():

@@ -1,7 +1,7 @@
 class_name ScienceLookup
 extends RefCounted
 ## What the Science card needs from content/ to read the section's hashed ids
-## (BlockSchema.id_code): ship classes, damage types, the ScienceDef thresholds. Loaded once.
+## (BlockSchema.id_code): ship classes, damage types, the ScienceDef tuning. Loaded once.
 
 const SHIPS_DIR: String = "res://content/ships/"
 const WEAPONS_DIR: String = "res://content/weapons/"
@@ -33,32 +33,11 @@ static func damage_name(code: int) -> String:
 	return _damage.get(code, "?")
 
 
-## The science tuning (reveal thresholds, lock threshold), or null.
+## The science tuning (the scan lock threshold), or null.
 static func science_def() -> ScienceDef:
 	if _def == null and ResourceLoader.exists(DEF_PATH):
 		_def = load(DEF_PATH) as ScienceDef
 	return _def
-
-
-## The reveal threshold of a card part (ScienceKnowledge's names), 2.0 when unknown.
-static func threshold(part: StringName) -> float:
-	var d: ScienceDef = science_def()
-	if d == null:
-		return 2.0
-	match part:
-		&"class":
-			return d.reveal_class
-		&"identity":
-			return d.reveal_identity
-		&"intent":
-			return d.reveal_intent
-		&"weak_points":
-			return d.reveal_weak_points
-		&"resistances":
-			return d.reveal_resistances
-		&"hack":
-			return d.reveal_hack
-	return 2.0
 
 
 static func _load_all(dir: String, type: Variant) -> Array:

@@ -43,15 +43,15 @@ func test_a_lone_client_gets_a_started_lesson_at_its_station() -> void:
 	var started: Dictionary = await h.next_event(c, NetProtocol.EVENT_STARTED, n)
 	assert_bool(started.is_empty()).is_false()
 	var picked: Dictionary = await h.next_event(c, NetProtocol.EVENT_PICKED, n)
-	assert_str(picked["payload"]["entry"]).is_equal("weapons")
+	assert_str(picked["payload"]["seat"]).is_equal("weapons")
 	assert_str(picked["payload"]["reason"]).is_empty()
 	assert_bool(server.training_active).is_true()
-	assert_str(server.session.training.solo).is_equal("weapons")
+	assert_str(server.game.training.solo).is_equal("weapons")
 	assert_bool(server.world.run_def.training).is_true()
 	# Bots hold the other five stations, so the ship is crewed.
-	var entries: Array = server.session.entries_of(picked["payload"]["ship"])
-	assert_array(NetCoverage.uncovered(entries)).is_empty()
-	assert_int(NetCoverage.crew_count(entries)).is_equal(6)
+	var seats: Array = server.game.seats_of(picked["payload"]["ship"])
+	assert_array(NetCoverage.uncovered(seats)).is_empty()
+	assert_int(NetCoverage.crew_count(seats)).is_equal(6)
 	# The driver is the solo one, and steps once the sim runs.
 	assert_bool(await h.until(func() -> bool: return server.driver is TrainingDriver)).is_true()
 	assert_str(String((server.driver as TrainingDriver).solo_station())).is_equal("weapons")
@@ -69,7 +69,7 @@ func test_a_server_with_crew_says_busy_and_keeps_its_run() -> void:
 	assert_int(refused["payload"]["players"]).is_equal(3)
 	assert_int(refused["payload"]["request"]).is_equal(NetProtocol.Type.TRAINING)
 	assert_bool(server.training_active).is_false()
-	assert_str(server.session.training.solo).is_empty()
+	assert_str(server.game.training.solo).is_empty()
 	assert_array(_since(c, n, NetProtocol.EVENT_STARTED)).is_empty()
 
 
@@ -96,7 +96,7 @@ func test_the_server_goes_back_when_the_player_leaves() -> void:
 	await h.lapsed(session)
 	assert_bool(await h.until(func() -> bool: return not server.training_active)).is_true()
 	assert_object(server.encounter).is_same(home)
-	assert_str(server.session.training.solo).is_empty()
+	assert_str(server.game.training.solo).is_empty()
 	# A crew can now take the run as before.
 	var crew: Array[NetClient] = await h.crew3(server)
 	assert_bool(await h.start(server, crew[0])).is_true()
@@ -108,23 +108,23 @@ func test_the_crew_drill_request_gives_a_fresh_shakedown_without_bots() -> void:
 	var c: NetClient = await h.welcomed(server, "ana")
 	c.start_training("")
 	assert_bool(await h.until(func() -> bool: return server.training_active)).is_true()
-	assert_str(server.session.training.solo).is_empty()
-	assert_array(server.session.training.bot_entries()).is_empty()
+	assert_str(server.game.training.solo).is_empty()
+	assert_array(server.game.training.bot_seats()).is_empty()
 	assert_bool(server.world.run_def.training).is_true()
 
 
 # FT: FT-MIS-039
 func test_the_hosts_solo_flag_starts_a_lesson_on_join() -> void:
 	var server: NetServer = _teaching_server()
-	server.session.host_secret = "s3cret"
-	server.session.training.solo_on_join = "relay"
+	server.game.host_secret = "s3cret"
+	server.game.training.solo_on_join = "relay"
 	var c: NetClient = await h.welcomed(server, "host", "", "s3cret")
 	(
-		assert_bool(await h.until(func() -> bool: return server.session.lobby.launched.size() == 1))
+		assert_bool(await h.until(func() -> bool: return server.game.lobby.launched.size() == 1))
 		. is_true()
 	)
-	assert_str(h.session_of(server, c).entry).is_equal("relay")
-	assert_str(server.session.training.solo).is_equal("relay")
+	assert_str(h.session_of(server, c).seat).is_equal("relay")
+	assert_str(server.game.training.solo).is_equal("relay")
 
 
 # FT: FT-MIS-039
@@ -139,7 +139,7 @@ func test_the_server_bots_submit_commands_for_their_own_stations_only() -> void:
 	hands.record = true
 	assert_bool(await h.until(func() -> bool: return not hands.sent.is_empty(), 12000)).is_true()
 	for row: Array in hands.sent:
-		assert_str(StationViews.station_of_command(row[1])).is_not_equal("helm")
+		assert_str(StationCatalogue.station_of_command(row[1])).is_not_equal("helm")
 
 
 # FT: FT-MIS-039

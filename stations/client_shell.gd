@@ -9,7 +9,7 @@ extends Control
 ## connection with its token
 ## (FT-NET-025) and goes back to the lobby when the server resets the run (FT-M1-012).
 ##
-## Multi-ship sessions (#11): a session handed over to the scoreboard (no friendly ship
+## Multi-ship games (#11): a session handed over to the scoreboard (no friendly ship
 ## left, D91) or in a PvP session that is over shows the ScoreboardScreen; a handover to a
 ## friendly ship's main screen shows the HandoverNotice over it; the give-up (forfeit) and
 ## relaunch votes show as VotePrompts; the menu confirms the host's abandon or give-up in
@@ -23,7 +23,7 @@ extends Control
 ## its first frame. A resume with the same pick keeps the
 ## screen. While the lobby shows, the pick's panel scripts load (one a frame), then the
 ## baked ships of the lobby's ships (ProceduralShip.scene). Frames over LONG_FRAME_US go
-## to the server's session log with what was running (NetClient.report_frame).
+## to the server log with what was running (NetClient.report_frame).
 
 ## The player left (Settings > Leave); the menu takes over again.
 signal left
@@ -37,7 +37,7 @@ const SCREEN_KINDS: Array[StringName] = [
 	&"catalogue",
 	&"fleet",
 	&"handover",
-	&"session_over",
+	&"game_over",
 	&"relaunch",
 ]
 ## Station screens kept at most; the dev seat's holds all six panels.
@@ -45,12 +45,12 @@ const MAX_SCREENS: int = 4
 ## A frame longer than this (µs) is reported to the server.
 const LONG_FRAME_US: int = 500_000
 ## Strand T's tips (shown on the loading overlay when the file exists).
-const TIPS_VIEW: String = "res://presentation/tips_view.gd"
+const TIPS_PANEL: String = "res://presentation/tips_panel.gd"
 
 var ctx: StationContext = StationContext.new()
 var voice: VoicePlayer
 ## Effects, button taps and the ambient music (#12).
-var sound: SessionSound
+var sound: ShellSound
 var lobby: LobbyScreen
 var screen: StationScreen
 var pause_overlay: PauseOverlay
@@ -76,7 +76,7 @@ var _last_seq: int = -1
 var _shown: String = ""
 ## The Welcome dictionary last applied (NetClient makes a new one per Welcome).
 var _welcome: Dictionary = {}
-## Built station screens by pick key ("station:<ship>:<entry>"), least recently shown first.
+## Built station screens by pick key ("station:<ship>:<seat>"), least recently shown first.
 var _screens: Dictionary = {}
 ## A hidden screen -> its StationAlerts' crew connections ([signal, callable] pairs).
 var _detached: Dictionary = {}
@@ -117,7 +117,7 @@ func setup(
 	add_child(voice)
 	voice.subtitle.connect(func(_entry: Dictionary) -> void: _show_subtitles())
 	voice.subtitle.connect(_note_training)
-	sound = SessionSound.new()
+	sound = ShellSound.new()
 	add_child(sound)
 	sound.setup(ctx)
 	sound.stations_of = func() -> Array: return screen.stations if screen != null else []
@@ -163,10 +163,10 @@ func _process(_delta: float) -> void:
 	for e: Dictionary in client.take_events():
 		if not voice.handle_event(e):
 			ctx.crew.handle_event(e, now)
-	ctx.view = client.view
-	if ctx.view.seq != _last_seq and ctx.view.seq >= 0:
-		_last_seq = ctx.view.seq
-		ctx.interp.push(ctx.view, now)
+	ctx.snap = client.snap
+	if ctx.snap.seq != _last_seq and ctx.snap.seq >= 0:
+		_last_seq = ctx.snap.seq
+		ctx.interp.push(ctx.snap, now)
 	ctx.interp.update(now)
 	_show_subtitles()
 	if _loading.visible and _pending == "":
@@ -264,8 +264,8 @@ func _on_crew_changed(what: StringName) -> void:
 		return
 	var want: String = (
 		"lobby"
-		if ctx.crew.entry == "" or not ctx.crew.is_started() or ctx.crew.catalogue.is_empty()
-		else "station:%d:%s" % [ctx.crew.ship, ctx.crew.entry]
+		if ctx.crew.seat == "" or not ctx.crew.is_started() or ctx.crew.catalogue.is_empty()
+		else "station:%d:%s" % [ctx.crew.ship, ctx.crew.seat]
 	)
 	if ctx.crew.on_scoreboard():
 		want = "scoreboard"
@@ -300,7 +300,7 @@ func _on_crew_changed(what: StringName) -> void:
 		# The overlay draws this frame; the screen builds on the next.
 		_pending = want
 		_pending_frame = Engine.get_process_frames()
-		_loading_name.text = tr("station." + ctx.crew.entry)
+		_loading_name.text = tr("seat." + ctx.crew.seat)
 		_loading.visible = true
 
 
@@ -379,8 +379,8 @@ func _drop_screens() -> void:
 ## a lobby ship shows (load fix 7, #28, D308).
 func _warm_step() -> void:
 	var stations: Array = ctx.crew.stations()
-	if stations.is_empty() and ctx.crew.entry != "":
-		stations = [ctx.crew.entry]
+	if stations.is_empty() and ctx.crew.seat != "":
+		stations = [ctx.crew.seat]
 	for station: Variant in stations:
 		var path: String = StationRegistry.PANELS.get(str(station), "")
 		if path != "" and not _scripts.has(path):
@@ -452,8 +452,8 @@ func _build_loading() -> void:
 	_loading_name.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_loading_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_loading.add_child(_loading_name)
-	if ResourceLoader.exists(TIPS_VIEW):
-		var tips: Control = (load(TIPS_VIEW) as GDScript).new() as Control
+	if ResourceLoader.exists(TIPS_PANEL):
+		var tips: Control = (load(TIPS_PANEL) as GDScript).new() as Control
 		if tips != null:
 			tips.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			_loading.add_child(tips)
@@ -501,7 +501,7 @@ func _toggle_help() -> void:
 	open_menu(SettingsScreen.TAB_CONTROLS)
 
 
-## The callout legend chip's tap (D369): the menu on Controls, showing the callout card.
+## The callout legend hint's tap (D369): the menu on Controls, showing the callout card.
 func open_card() -> void:
 	open_menu(SettingsScreen.TAB_CONTROLS)
 	if settings_screen.controls_pane != null:
@@ -514,7 +514,7 @@ func open_card() -> void:
 func open_menu(tab: String = "") -> void:
 	if screen != null:
 		settings_screen.set_controls(
-			ctx.settings.bindings, screen.stations, ctx.matcher.device, ctx.crew.entry
+			ctx.settings.bindings, screen.stations, ctx.matcher.device, ctx.crew.seat
 		)
 	settings_screen.open(tab)
 

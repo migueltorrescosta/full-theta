@@ -1,28 +1,28 @@
 # gdlint: disable=max-public-methods
-# Only this class reads the position columns (tools/lint_arch.py): position helpers live here.
+# Only this class reads the ship position columns (tools/lint_arch.py): position helpers live here.
 class_name Kinematics
 extends SimTable
 ## Rigid-body state of every ship, one row per ship in id order (packed layout, S6).
-## Positions are plain offsets in the scenario's one cube: three 64-bit floats, no space
-## id (D229, D230). The cube wraps as a 3-torus of side `period`
-## (FT-SIM-035): offsets are kept in [-period / 2, period / 2) per axis and every
-## position difference is the minimum image. Only this class reads or writes the
-## position columns (tools/lint_arch.py): use relative(), relative_to_point(),
-## point_at(), wrap_point(), wrap(), place() and translate(). A difference of exactly
-## P/2 on an axis wraps to -P/2 either way, so relative(a, b) is not exactly
-## -relative(b, a) there; harmless, as P is at least 4x the longest sensor range (D125).
+## Positions are plain offsets in the map's one cube: three 64-bit float columns
+## pos_x, pos_y, pos_z, no space id (D229, D230), and one CubePoint at every API (D401).
+## The cube wraps as a 3-torus of side `period` (FT-SIM-035): offsets are kept in
+## [-period / 2, period / 2) per axis and every position difference is the minimum image.
+## Only this class reads or writes the position columns (tools/lint_arch.py): use its
+## position helpers. A difference of exactly P/2 on an axis
+## wraps to -P/2 either way, so relative(a, b) is not exactly -relative(b, a) there;
+## harmless, as P is at least 4x the longest sensor range (D125).
 ## Velocities and rotation stay float32 Vector3 (D104). Local axes follow Godot: -Z is
 ## the bow, +X starboard, +Y up; angular velocity is in the body frame (x pitch, y yaw,
 ## z roll). Limits are copied from the ShipDef at spawn (FT-ARC-020). Units are SI.
 
-## Default side of the scenario's wrapping cube (m, FT-SIM-035, D229).
+## Default side of the map's wrapping cube (m, FT-SIM-035, D229).
 const DEFAULT_PERIOD: float = 400000.0
 
 ## Side of the world's wrapping cube (m); SimWorld sets it.
 var period: float = DEFAULT_PERIOD
-var px: PackedFloat64Array = PackedFloat64Array()
-var py: PackedFloat64Array = PackedFloat64Array()
-var pz: PackedFloat64Array = PackedFloat64Array()
+var pos_x: PackedFloat64Array = PackedFloat64Array()
+var pos_y: PackedFloat64Array = PackedFloat64Array()
+var pos_z: PackedFloat64Array = PackedFloat64Array()
 ## Velocity in the world frame (m/s).
 var vel: PackedVector3Array = PackedVector3Array()
 var rot: Array[Quaternion] = []
@@ -58,9 +58,9 @@ var half_length: PackedFloat64Array = PackedFloat64Array()
 
 func add_ship(ship_id: int, faction: int, def: ShipDef) -> void:
 	add_key(ship_id, faction)
-	px.append(0.0)
-	py.append(0.0)
-	pz.append(0.0)
+	pos_x.append(0.0)
+	pos_y.append(0.0)
+	pos_z.append(0.0)
 	vel.append(Vector3.ZERO)
 	rot.append(Quaternion.IDENTITY)
 	ang_mom.append(Vector3.ZERO)
@@ -90,43 +90,44 @@ func set_angular_velocity(row: int, w_body: Vector3) -> void:
 	ang_mom[row] = rot[row] * (inertia[row] * w_body)
 
 
-## Places a ship at an offset in the cube (m), wrapped onto it
-## (FT-SIM-035). Fails an assertion on a non-finite offset.
-func place(row: int, x: float, y: float, z: float) -> void:
-	var p: PackedFloat64Array = wrap_point(x, y, z)
-	if p.is_empty():
-		var msg: String = "non-finite offset for ship %d: (%f, %f, %f)" % [ship_ids[row], x, y, z]
+## Places a ship at a point (m), wrapped onto the cube (FT-SIM-035). Fails an
+## assertion on a non-finite point.
+func place(row: int, p: PackedFloat64Array) -> void:
+	var at: PackedFloat64Array = wrap_point(p)
+	if at.is_empty():
+		var msg: String = "non-finite point for ship %d: %s" % [owner_ship[row], p]
 		push_error(msg)
 		assert(false, msg)
 		return
-	px[row] = p[0]
-	py[row] = p[1]
-	pz[row] = p[2]
+	pos_x[row] = at[0]
+	pos_y[row] = at[1]
+	pos_z[row] = at[2]
+
+
+## Places a ship at the point at row r of the columns xs, ys, zs (m), which the caller
+## keeps wrapped onto this cube (a site's point): no point is made, for per-tick holds (D401).
+func place_column(
+	row: int, xs: PackedFloat64Array, ys: PackedFloat64Array, zs: PackedFloat64Array, r: int
+) -> void:
+	pos_x[row] = xs[r]
+	pos_y[row] = ys[r]
+	pos_z[row] = zs[r]
 
 
 ## Moves a ship by a displacement given per axis in 64-bit (m), wrapping across the
 ## cube's faces (FT-SIM-035): the integrator and contact separation move ships this way.
 func translate(row: int, dx: float, dy: float, dz: float) -> void:
-	px[row] = PeriodRules.wrap(px[row] + dx, period)
-	py[row] = PeriodRules.wrap(py[row] + dy, period)
-	pz[row] = PeriodRules.wrap(pz[row] + dz, period)
+	pos_x[row] = PeriodRules.wrap(pos_x[row] + dx, period)
+	pos_y[row] = PeriodRules.wrap(pos_y[row] + dy, period)
+	pos_z[row] = PeriodRules.wrap(pos_z[row] + dz, period)
 
 
-## A point (m) wrapped onto the cube, as [x, y, z] in 64-bit; empty
-## when any coordinate is not finite (FT-SIM-035: off-cube points wrap, NaN and
-## infinity are rejected).
-func wrap_point(x: float, y: float, z: float) -> PackedFloat64Array:
-	if not (is_finite(x) and is_finite(y) and is_finite(z)):
+## A point (m) wrapped onto the cube, as a new point; empty when p is not three finite
+## coordinates (FT-SIM-035: off-cube points wrap, NaN and infinity are rejected).
+func wrap_point(p: PackedFloat64Array) -> PackedFloat64Array:
+	if not CubePoint.is_valid(p):
 		return PackedFloat64Array()
-	# PeriodRules.wrap inlined for in-cube coordinates, the common case (hot path).
-	var half: float = 0.5 * period
-	if not (x >= -half and x < half):
-		x = PeriodRules.wrap(x, period)
-	if not (y >= -half and y < half):
-		y = PeriodRules.wrap(y, period)
-	if not (z >= -half and z < half):
-		z = PeriodRules.wrap(z, period)
-	return PackedFloat64Array([x, y, z])
+	return _wrapped(p[0], p[1], p[2])
 
 
 ## One coordinate (m) wrapped into [-period / 2, period / 2); the caller
@@ -138,7 +139,17 @@ func wrap(v: float) -> float:
 ## The point (m, [x, y, z], wrapped) at a world-frame offset from row's centre:
 ## aim, target and retreat points (FT-SIM-035). Empty if the offset is not finite.
 func point_at(row: int, offset: Vector3) -> PackedFloat64Array:
-	return wrap_point(px[row] + offset.x, py[row] + offset.y, pz[row] + offset.z)
+	var x: float = pos_x[row] + offset.x
+	var y: float = pos_y[row] + offset.y
+	var z: float = pos_z[row] + offset.z
+	if not (is_finite(x) and is_finite(y) and is_finite(z)):
+		return PackedFloat64Array()
+	return _wrapped(x, y, z)
+
+
+## The ship's point (m, a new CubePoint).
+func point(row: int) -> PackedFloat64Array:
+	return CubePoint.read(pos_x, pos_y, pos_z, row)
 
 
 ## Unwrapped broadphase cells overlapped by row's centre padded by pad (m) on every
@@ -146,21 +157,21 @@ func point_at(row: int, offset: Vector3) -> PackedFloat64Array:
 ## (floor((x -/+ pad) / cell)). With pad 0 both are the centre's cell, in [-n / 2, n / 2)
 ## for n = period / cell. Callers wrap the indexes modulo n. out must hold 6 ints.
 func cell_range(row: int, cell: float, pad: float, out: PackedInt32Array) -> void:
-	out[0] = floori((px[row] - pad) / cell)
-	out[1] = floori((py[row] - pad) / cell)
-	out[2] = floori((pz[row] - pad) / cell)
-	out[3] = floori((px[row] + pad) / cell)
-	out[4] = floori((py[row] + pad) / cell)
-	out[5] = floori((pz[row] + pad) / cell)
+	out[0] = floori((pos_x[row] - pad) / cell)
+	out[1] = floori((pos_y[row] - pad) / cell)
+	out[2] = floori((pos_z[row] - pad) / cell)
+	out[3] = floori((pos_x[row] + pad) / cell)
+	out[4] = floori((pos_y[row] + pad) / cell)
+	out[5] = floori((pos_z[row] + pad) / cell)
 
 
 ## Every row's broadphase cell for a cell size (m), unwrapped, as cell_range() with
 ## pad 0 gives it: out[3 * row .. 3 * row + 2] = x, y, z (out is resized to 3 rows).
 ## One call for a whole grid build.
 func cell_coords(cell: float, out: PackedInt32Array) -> void:
-	var xs: PackedFloat64Array = px
-	var ys: PackedFloat64Array = py
-	var zs: PackedFloat64Array = pz
+	var xs: PackedFloat64Array = pos_x
+	var ys: PackedFloat64Array = pos_y
+	var zs: PackedFloat64Array = pos_z
 	out.resize(3 * xs.size())
 	for row: int in xs.size():
 		out[3 * row] = floori(xs[row] / cell)
@@ -178,9 +189,9 @@ func can_reach(a: int, b: int) -> bool:
 func relative(a: int, b: int) -> Vector3:
 	# PeriodRules.wrap inlined for in-cube differences, the common case (hot path).
 	var half: float = 0.5 * period
-	var dx: float = px[b] - px[a]
-	var dy: float = py[b] - py[a]
-	var dz: float = pz[b] - pz[a]
+	var dx: float = pos_x[b] - pos_x[a]
+	var dy: float = pos_y[b] - pos_y[a]
+	var dz: float = pos_z[b] - pos_z[a]
 	if not (dx >= -half and dx < half):
 		dx = PeriodRules.wrap(dx, period)
 	if not (dy >= -half and dy < half):
@@ -194,9 +205,9 @@ func relative(a: int, b: int) -> Vector3:
 ## float32), or -1; the earlier one in ids wins a tie. One loop for target scans.
 func nearest(a: int, ids: PackedInt32Array) -> int:
 	var half: float = 0.5 * period
-	var xs: PackedFloat64Array = px
-	var ys: PackedFloat64Array = py
-	var zs: PackedFloat64Array = pz
+	var xs: PackedFloat64Array = pos_x
+	var ys: PackedFloat64Array = pos_y
+	var zs: PackedFloat64Array = pos_z
 	var ax: float = xs[a]
 	var ay: float = ys[a]
 	var az: float = zs[a]
@@ -221,28 +232,43 @@ func nearest(a: int, ids: PackedInt32Array) -> int:
 
 ## The minimum-image vector from point b to point a (m): each coordinate difference wrapped
 ## into [-period / 2, period / 2). The one hand-written form of the wrapped delta (R04-2).
-func delta(ax: float, ay: float, az: float, bx: float, by: float, bz: float) -> Vector3:
+func delta(a: PackedFloat64Array, b: PackedFloat64Array) -> Vector3:
 	return Vector3(
-		PeriodRules.wrap(ax - bx, period),
-		PeriodRules.wrap(ay - by, period),
-		PeriodRules.wrap(az - bz, period)
+		PeriodRules.wrap(a[0] - b[0], period),
+		PeriodRules.wrap(a[1] - b[1], period),
+		PeriodRules.wrap(a[2] - b[2], period)
+	)
+
+
+## The minimum-image vector from point b to the point at row r of the columns xs, ys, zs
+## (m): hot loops over a table's points use it, so no point is made per row (D401).
+func delta_column(
+	xs: PackedFloat64Array,
+	ys: PackedFloat64Array,
+	zs: PackedFloat64Array,
+	r: int,
+	b: PackedFloat64Array
+) -> Vector3:
+	return Vector3(
+		PeriodRules.wrap(xs[r] - b[0], period),
+		PeriodRules.wrap(ys[r] - b[1], period),
+		PeriodRules.wrap(zs[r] - b[2], period)
 	)
 
 
 ## Offset of a point from row a (m, float32) by minimum image, computed in
 ## 64-bit; the point need not be wrapped (FT-SIM-035).
-func relative_to_point(a: int, x: float, y: float, z: float) -> Vector3:
-	var half: float = 0.5 * period
-	var dx: float = x - px[a]
-	var dy: float = y - py[a]
-	var dz: float = z - pz[a]
-	if not (dx >= -half and dx < half):
-		dx = PeriodRules.wrap(dx, period)
-	if not (dy >= -half and dy < half):
-		dy = PeriodRules.wrap(dy, period)
-	if not (dz >= -half and dz < half):
-		dz = PeriodRules.wrap(dz, period)
-	return Vector3(dx, dy, dz)
+func relative_to_point(a: int, p: PackedFloat64Array) -> Vector3:
+	return _relative_to(a, p[0], p[1], p[2])
+
+
+## Offset from row a to the point at row r of the columns xs, ys, zs (m, float32), as
+## relative_to_point(): hot loops over a table's points (aim points, Helm's selected
+## point, sites) read the columns this way instead of making a point per row (D401).
+func relative_to_column(
+	a: int, xs: PackedFloat64Array, ys: PackedFloat64Array, zs: PackedFloat64Array, r: int
+) -> Vector3:
+	return _relative_to(a, xs[r], ys[r], zs[r])
 
 
 func is_alive(row: int) -> bool:
@@ -280,32 +306,33 @@ func clamp_torque(row: int, torque: Vector3) -> Vector3:
 	return torque.clamp(-torque_limit(row), torque_limit(row))
 
 
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["px", px],
-			["py", py],
-			["pz", pz],
-			["vel", vel],
-			["rot", rot],
-			["ang_mom", ang_mom],
-			["ang_vel", ang_vel],
-			["force_cmd", force_cmd],
-			["torque_cmd", torque_cmd],
-			["thrust_scale", thrust_scale],
-			["torque_scale", torque_scale],
-			["propellant", propellant],
-			["propellant_used", propellant_used],
-			["alive", alive],
-			["mass", mass],
-			["inertia", inertia],
-			["max_thrust_pos", max_thrust_pos],
-			["max_thrust_neg", max_thrust_neg],
-			["max_torque", max_torque],
-			["exhaust_velocity", exhaust_velocity],
-			["lever_arm", lever_arm],
-			["radius", radius],
-			["half_length", half_length],
-		]
-	)
+## period is one value, not a row column: state_hash() hashes it on its own.
+func not_columns() -> Array[StringName]:
+	return [&"period"]
+
+
+func _relative_to(a: int, x: float, y: float, z: float) -> Vector3:
+	var half: float = 0.5 * period
+	var dx: float = x - pos_x[a]
+	var dy: float = y - pos_y[a]
+	var dz: float = z - pos_z[a]
+	if not (dx >= -half and dx < half):
+		dx = PeriodRules.wrap(dx, period)
+	if not (dy >= -half and dy < half):
+		dy = PeriodRules.wrap(dy, period)
+	if not (dz >= -half and dz < half):
+		dz = PeriodRules.wrap(dz, period)
+	return Vector3(dx, dy, dz)
+
+
+# Three finite coordinates wrapped onto the cube, as a new point. PeriodRules.wrap is
+# inlined for in-cube coordinates, the common case (hot path).
+func _wrapped(x: float, y: float, z: float) -> PackedFloat64Array:
+	var half: float = 0.5 * period
+	if not (x >= -half and x < half):
+		x = PeriodRules.wrap(x, period)
+	if not (y >= -half and y < half):
+		y = PeriodRules.wrap(y, period)
+	if not (z >= -half and z < half):
+		z = PeriodRules.wrap(z, period)
+	return PackedFloat64Array([x, y, z])

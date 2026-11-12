@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # L0 static checks (FT-TST-001): formatting and lint, architecture lint,
-# definitions, traceability, dialogue and translations, licences, and the tools' own fixture tests.
+# definitions, traceability, retired words, dialogue and translations, licences, and the tools'
+# own fixture tests.
 # The checks run in parallel (L0_JOBS processes, default the CPUs this shell may use); each
 # one's output goes to build/l0/<check>.log and is printed when it fails.
 set -euo pipefail
@@ -22,8 +23,8 @@ bin=$(run python -c 'import os, sys; print(os.path.dirname(sys.executable))')
 # gdtoolkit over the scripts in $jobs chunks at once.
 chunked() { printf '%s\0' "${scripts[@]}" | xargs -0 -P "$jobs" -n $(((${#scripts[@]} + jobs - 1) / jobs)) "$@"; }
 
-checks=(tool-tests gdlint gdformat check-only definitions scenarios architecture traceability spec-cites dialogue
-  palette colourblind licences ships)
+checks=(tool-tests gdlint gdformat check-only definitions scenarios architecture traceability spec-cites words
+  dialogue palette colourblind licences ships)
 check() {
   case $1 in
     gdlint) chunked "$bin/gdlint" ;;
@@ -36,6 +37,8 @@ check() {
     traceability) run python tools/traceability.py --check ;;
     # A spec line cites the decisions that name its FT id (D-number citation lint).
     spec-cites) run python tools/lint_spec_cites.py ;;
+    # No retired synonym of the glossary in code, player text or the spec (D392 to D407).
+    words) run python tools/lint_words.py ;;
     dialogue) run python tools/check_dialogue.py ;; # FT-DAT-003, FT-DAT-004, FT-DAT-011
     palette) run python tools/check_palette.py ;; # FT-STN-006
     colourblind) run python tools/check_colourblind.py ;; # FT-STN-006: letters, shapes

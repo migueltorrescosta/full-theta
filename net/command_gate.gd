@@ -3,9 +3,9 @@ extends RefCounted
 ## Validates a client's Command{seq, cmd} before it reaches the sim (FT-NET-006): the
 ## sender has a pick, is within its rate limit, names a crew command kind whose station
 ## its pick covers (station holding), for its own ship, with known fields of the right
-## types and finite values; then the claims hook (ServerSession.claim_rule). Game rules
+## types and finite values; then the claims hook (NetGame.claim_rule). Game rules
 ## are the sim's: a command the sim rejects on apply becomes CommandRejected{reason:
-## sim_rejected} (ServerSession.after_ticks). Every rejection is a CommandRejected event to the
+## sim_rejected} (NetGame.after_ticks). Every rejection is a CommandRejected event to the
 ## sender only (FT-NET-007).
 
 const NO_PICK: String = "no_pick"
@@ -43,7 +43,7 @@ const SERVER_FIELDS: Array[String] = ["kind", "ship_id", "tick", "accepted"]
 
 
 ## Returns [SimCommand, ""] for a valid command (ship and source set), or [null,
-## reason]. claims is Callable(session, command) -> reason or "" (ServerSession).
+## reason]. claims is Callable(session, command) -> reason or "" (NetGame).
 static func check(
 	session: NetSession, cmd: Dictionary, now_us: int, claims: Callable = Callable()
 ) -> Array:
@@ -58,17 +58,17 @@ static func check(
 	var command: SimCommand = SimCommands.make(kind)
 	if command == null:
 		return [null, UNKNOWN_KIND]
-	var station: String = StationViews.station_of_command(kind)
+	var station: String = StationCatalogue.station_of_command(kind)
 	if station == "":
 		return [null, NOT_ALLOWED]
 	# Next (Shakedown, D235) names the station that presses it: any crew
 	# station of the pick, or the Captain seat.
 	if kind == &"training_next":
 		var named: String = str(cmd.get("station", ""))
-		var seat: bool = named == StationViews.CAPTAIN and session.entry == named
-		if not (seat or StationViews.stations_of(session.entry).has(named)):
+		var seat: bool = named == StationCatalogue.CAPTAIN and session.seat == named
+		if not (seat or StationCatalogue.stations_of(session.seat).has(named)):
 			return [null, NOT_YOUR_STATION]
-	elif not StationViews.stations_of(session.entry).has(station):
+	elif not StationCatalogue.stations_of(session.seat).has(station):
 		return [null, NOT_YOUR_STATION]
 	if cmd.has("ship_id") and not (cmd["ship_id"] is int and cmd["ship_id"] == session.ship):
 		return [null, WRONG_SHIP]

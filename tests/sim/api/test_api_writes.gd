@@ -61,8 +61,11 @@ func test_spawn_at_offset_and_on_leg_land_where_asked() -> void:
 	var b: ApiHandle = api.spawn_on_leg(ApiFixture.RAIDER, 2, 0, 1, 0.5, 200.0)
 	w.step()
 	assert_int(b.id()).is_equal(a.id() + 1)
-	assert_float(w.kin.relative_to_point(a.id(), 0.0, 500.0, 2000.0).length()).is_less(1.0)
-	var mid: Vector3 = w.kin.relative_to_point(b.id(), 15000.0, 0.0, 0.0)
+	(
+		assert_float(w.kin.relative_to_point(a.id(), CubePoint.make(0.0, 500.0, 2000.0)).length())
+		. is_less(1.0)
+	)
+	var mid: Vector3 = w.kin.relative_to_point(b.id(), CubePoint.make(15000.0, 0.0, 0.0))
 	assert_float(mid.length()).is_equal_approx(200.0, 1.0)
 
 
@@ -85,11 +88,11 @@ func test_each_write_is_one_server_command() -> void:
 		[func(a: ScenarioApi) -> void: a.end_encounter(0, Scenario.Result.WON), &"end_encounter"],
 		[
 			func(a: ScenarioApi) -> void:
-				a.message("computer.hello", {"x": 1}, SayTarget.computer(0, helm)),
+				a.message("computer.hello", {"x": 1}, LineAudience.computer(0, helm)),
 			&"say"
 		],
 		[func(a: ScenarioApi) -> void: a.offer(0, CardSpec.new()), &"post_card"],
-		[func(a: ScenarioApi) -> void: a.close_run(0), &"close_run"],
+		[func(a: ScenarioApi) -> void: a.finish_ship(0), &"finish_ship"],
 	]
 	for pair: Array in writes:
 		_one(w, pair[0], pair[1])
@@ -120,13 +123,13 @@ func test_writes_take_effect_on_the_next_step() -> void:
 # next row a prediction would have named.
 func test_an_offered_card_resolves_to_its_real_id_after_a_crew_hail_in_the_same_tick() -> void:
 	var w: SimWorld = StoryFixture.wire(ApiFixture.world())
-	var raider: int = w.spawn_enemy(TestDefs.raider_enemy(), 2, Vector3(0.0, 0.0, -5000.0))
+	var raider: int = w.spawn_npc(TestDefs.raider_enemy(), 2, CubePoint.make(0.0, 0.0, -5000.0))
 	w.hail_conversations[w.defs[raider].id] = &"conv.trader_bluff"
 	w.step()
 	var api: ScenarioApi = _api(w)
 	var hail: HailCommand = HailCommand.new()
 	hail.ship_id = 0
-	hail.target = raider
+	hail.contact = raider
 	w.submit(hail)
 	var card: CardSpec = CardSpec.new()
 	card.title_key = &"comms.card.test"
@@ -138,7 +141,7 @@ func test_an_offered_card_resolves_to_its_real_id_after_a_crew_hail_in_the_same_
 	assert_str(w.story.title[handle.id()]).is_equal("comms.card.test")
 	# The scenario finds its card by the handle's id, not by title.
 	var ids: Array[int] = []
-	for c: CardView in api.cards_of(0):
+	for c: CardInfo in api.cards_of(0):
 		ids.append(c.id)
 	assert_array(ids).contains([handle.id()])
 
@@ -166,8 +169,8 @@ func test_a_rejected_write_has_a_rejected_handle_and_shifts_no_other() -> void:
 # FT: FT-DAT-009
 func test_message_without_a_listener_queues_nothing() -> void:
 	var w: SimWorld = ApiFixture.world()
-	w.run.status[0] = RunTable.Status.ABANDONED
-	_api(w).message("npc.hello", {}, SayTarget.npc(&"rosa", -1))
+	w.ships.status[0] = ShipStateTable.Status.ABANDONED
+	_api(w).message("npc.hello", {}, LineAudience.npc(&"rosa", -1))
 	assert_int(w.queued_commands().size()).is_equal(0)
 
 

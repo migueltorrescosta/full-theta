@@ -67,7 +67,7 @@ func _wait(w: SimWorld) -> void:
 		return
 	if not KnowledgeSystem.is_detected(w, w.faction_of(_ship), _contact):
 		return
-	if w.science.kind[_ship] != ScienceTable.Session.NONE:
+	if w.science.kind[_ship] != ScienceTable.Minigame.NONE:
 		return
 	if start_gate.is_valid() and not bool(start_gate.call(w)):
 		return
@@ -99,7 +99,7 @@ func _wants_scan(w: SimWorld) -> bool:
 
 func _scan(w: SimWorld) -> void:
 	var t: ScienceTable = w.science
-	if t.kind[_ship] != ScienceTable.Session.SCAN:
+	if t.kind[_ship] != ScienceTable.Minigame.SCAN:
 		# Submitted, the result is in KNOW; else the command was refused, ask again.
 		if _submitted:
 			_phase = Phase.WAIT if hack_subsystem != &"" else Phase.DONE
@@ -127,7 +127,7 @@ func _scan(w: SimWorld) -> void:
 
 func _hack(w: SimWorld) -> void:
 	var t: ScienceTable = w.science
-	if t.kind[_ship] != ScienceTable.Session.HACK:
+	if t.kind[_ship] != ScienceTable.Minigame.HACK:
 		# The last move opened the window; otherwise the hack was refused or traced: retry.
 		_phase = Phase.DONE if _submitted else Phase.WAIT
 		return

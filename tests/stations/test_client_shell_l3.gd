@@ -30,7 +30,7 @@ func _until(cond: Callable, timeout_ms: int = NetHarness.TIMEOUT_MS) -> bool:
 
 
 # FT: FT-M1-015, FT-NET-029
-func test_shell_runs_lobby_to_station_with_the_dev_entry() -> void:
+func test_shell_runs_lobby_to_station_with_the_dev_seat() -> void:
 	var s: NetServer = _h.server(true)
 	var c: NetClient = NetClient.new()
 	c.name = "Ana"
@@ -46,8 +46,8 @@ func test_shell_runs_lobby_to_station_with_the_dev_entry() -> void:
 		. is_true()
 	)
 	assert_bool(shell.ctx.crew.dev_all).is_true()
-	shell.ctx.intents.pick(NetHarness.PLAYER, StationViews.ALL)
-	var picked: Callable = func() -> bool: return shell.ctx.crew.entry == StationViews.ALL
+	shell.ctx.intents.pick(NetHarness.PLAYER, StationCatalogue.ALL)
+	var picked: Callable = func() -> bool: return shell.ctx.crew.seat == StationCatalogue.ALL
 	assert_bool(await _until(picked)).is_true()
 	(
 		assert_bool(
@@ -59,8 +59,8 @@ func test_shell_runs_lobby_to_station_with_the_dev_entry() -> void:
 	assert_bool(await _until(func() -> bool: return shell.screen != null)).is_true()
 	assert_int(shell.screen.panels.size()).is_equal(6)
 	assert_bool(await _until(func() -> bool: return shell.ctx.interp.has_data())).is_true()
-	assert_bool(await _until(func() -> bool: return shell.ctx.view.tick > 0)).is_true()
-	assert_float(shell.ctx.interp.render_tick).is_less_equal(float(shell.ctx.view.tick))
+	assert_bool(await _until(func() -> bool: return shell.ctx.snap.tick > 0)).is_true()
+	assert_float(shell.ctx.interp.render_tick).is_less_equal(float(shell.ctx.snap.tick))
 
 
 func _welcomed(c: NetClient) -> bool:
@@ -70,7 +70,7 @@ func _welcomed(c: NetClient) -> bool:
 
 # FT: FT-STN-015, FT-JNT-006, FT-M1-018
 # Over a real connection the lobby shows the six stations as grid cells bordered by their
-# StationDef load tag in the Catalogue, Captain and Viewer below, and maps each pair of
+# SeatDef load tag in the Catalogue, Captain and Viewer below, and maps each pair of
 # stations to its joint view in the Catalogue (D216).
 func test_lobby_grid_follows_the_catalogue_load_tags_and_joint_views() -> void:
 	var s: NetServer = _h.server()
@@ -83,14 +83,14 @@ func test_lobby_grid_follows_the_catalogue_load_tags_and_joint_views() -> void:
 	shell.setup(c, ClientSettings.new(SETTINGS))
 	add_child(shell)
 	var cells: Callable = func() -> bool:
-		return shell.lobby != null and shell.lobby.find_child("Entry_comms", true, false) != null
+		return shell.lobby != null and shell.lobby.find_child("Seat_comms", true, false) != null
 	assert_bool(await _until(cells)).is_true()
-	assert_int(shell.ctx.crew.catalogue["entries"].size()).is_equal(23)
+	assert_int(shell.ctx.crew.catalogue["seats"].size()).is_equal(23)
 	for id: String in LobbySeatGrid.GRID_STATIONS:
-		var cell: Button = shell.lobby.find_child("Entry_" + id, true, false)
-		var tag: String = StationViews.def(id).load_tag
+		var cell: Button = shell.lobby.find_child("Seat_" + id, true, false)
+		var tag: String = StationCatalogue.def(id).load_tag
 		assert_str(cell.theme_type_variation).is_equal("LoadCell_" + tag)
 	for id: String in ["captain", "viewer", "all"]:
-		assert_object(shell.lobby.find_child("Entry_" + id, true, false)).is_not_null()
-	assert_str(shell.lobby.entry_for(["helm", "weapons"] as Array[String])).is_equal("tactical")
-	assert_str(shell.lobby.entry_for(["relay", "comms"] as Array[String])).is_equal("ops")
+		assert_object(shell.lobby.find_child("Seat_" + id, true, false)).is_not_null()
+	assert_str(shell.lobby.seat_for(["helm", "weapons"] as Array[String])).is_equal("tactical")
+	assert_str(shell.lobby.seat_for(["relay", "comms"] as Array[String])).is_equal("ops")

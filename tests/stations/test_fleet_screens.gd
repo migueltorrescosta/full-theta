@@ -9,8 +9,8 @@ func before() -> void:
 	I18n.apply("en")
 
 
-func _ctx(mode: String = "race", entry: String = "helm") -> StationContext:
-	var ctx: StationContext = StationFixture.context(entry)
+func _ctx(mode: String = "race", seat: String = "helm") -> StationContext:
+	var ctx: StationContext = StationFixture.context(seat)
 	StationFixture.fleet(ctx, mode, [StationFixture.SHIP_NAME, "Heron", "Osprey"], [0, 1, 1], true)
 	return ctx
 
@@ -73,18 +73,18 @@ func test_scoreboard_title_names_the_winner() -> void:
 	var ctx: StationContext = _ctx("race")
 	var s: ScoreboardScreen = _scoreboard(ctx)
 	var over: Dictionary = {
-		"reason": "first_to_finish", "winners": [1], "team": -1, "held_s": 0.0, "time_s": 600.0
+		"reason": "first_to_finish", "winners": [1], "team": -1, "hold_time": 0.0, "time": 600.0
 	}
-	_event(ctx, NetProtocol.EVENT_SESSION_OVER, over)
+	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Heron wins!")
 	assert_str(_label(s, "Sub").text).is_equal("Game time 10:00.")
 	over["reason"] = "last_team_standing"
 	over["team"] = 1
-	_event(ctx, NetProtocol.EVENT_SESSION_OVER, over)
+	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Team B wins!")
 	over["reason"] = "holdout_over"
-	over["held_s"] = 245.0
-	_event(ctx, NetProtocol.EVENT_SESSION_OVER, over)
+	over["hold_time"] = 245.0
+	_event(ctx, NetProtocol.EVENT_GAME_OVER, over)
 	assert_str(_label(s, "Title").text).is_equal("Team B held for 4:05")
 
 
@@ -181,11 +181,11 @@ func test_relaunch_prompt_offers_the_vote_while_lives_last() -> void:
 
 # FT: FT-NET-042
 # Takeover in a pause (M4-Q8): an allied ship's player sees the paused ship's uncovered
-# stations and takes one; an enemy ship's pause offers nothing. The ship's side sees who took
+# stations and takes one; a hostile ship's pause offers nothing. The ship's side sees who took
 # it as a toast.
 func test_allied_players_take_over_a_paused_ship() -> void:
 	var ctx: StationContext = _ctx("teams")
-	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 1, "entry": "helm"}}, 0)
+	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 1, "seat": "helm"}}, 0)
 	var o: PauseOverlay = auto_free(PauseOverlay.new())
 	o.setup(ctx)
 	add_child(o)
@@ -218,13 +218,13 @@ func test_who_sees_the_scoreboard() -> void:
 	assert_bool(crew.on_scoreboard()).is_true()
 	var pvp: CrewState = _ctx("race").crew
 	var over: Dictionary = {
-		"reason": "last_standing", "winners": [1], "team": -1, "held_s": 0.0, "time_s": 9.0
+		"reason": "last_standing", "winners": [1], "team": -1, "hold_time": 0.0, "time": 9.0
 	}
-	pvp.handle_event({"type": "session_over", "payload": over}, 0)
+	pvp.handle_event({"type": "game_over", "payload": over}, 0)
 	assert_bool(pvp.on_scoreboard()).is_true()
 	var coop: CrewState = _ctx("coop").crew
 	over["reason"] = "objective"
-	coop.handle_event({"type": "session_over", "payload": over}, 0)
+	coop.handle_event({"type": "game_over", "payload": over}, 0)
 	assert_bool(coop.on_scoreboard()).is_false()
 
 
@@ -246,7 +246,7 @@ func test_debrief_names_a_raider_wave() -> void:
 # FT: FT-MIS-006
 # #35 A3: an encounter whose time ran out reads as such in the debrief, not as won.
 func test_debrief_says_an_encounter_ran_out_of_time() -> void:
-	var row: Dictionary = {"scenario": "enemy_wave", "result": "partial", "s": 240.0}
+	var row: Dictionary = {"scenario": "enemy_wave", "result": "partial", "time": 240.0}
 	assert_str(DebriefCard._encounter_line(1, row)).is_equal("1. Raider wave: out of time, 4:00")
 
 
@@ -297,7 +297,7 @@ func test_the_scoreboard_asks_the_host_before_ending_the_game() -> void:
 # that ship's definition, not raw amounts ("Hull 920", #28).
 func test_top_bar_shows_percentages_on_a_picked_fleet_ship() -> void:
 	var ctx: StationContext = _ctx("teams")
-	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 2, "entry": "helm"}}, 0)
+	ctx.crew.handle_event({"type": "picked", "payload": {"ship": 2, "seat": "helm"}}, 0)
 	assert_int(ctx.crew.ship).is_equal(2)
 	assert_object(ctx.ship_def()).is_not_null()
 	var s: StationScreen = auto_free(StationScreen.new())

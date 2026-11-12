@@ -201,7 +201,7 @@ func test_a_name_takes_its_own_look_or_the_generic_one() -> void:
 # FT: FT-AUD-016, FT-AUD-021
 # Ships of one look share their meshes and materials; set_look swaps the model.
 func test_ships_of_a_look_share_resources_and_set_look_swaps() -> void:
-	var view: SpaceView = auto_free(SpaceView.new())
+	var view: SpaceScene = auto_free(SpaceScene.new())
 	add_child(view)
 	var a: ProceduralShip = view.copy_ship("kestrel")
 	var b: ProceduralShip = view.copy_ship("kestrel")
@@ -245,7 +245,7 @@ func test_low_graphics_ships_have_flat_materials() -> void:
 # FT: FT-AUD-016
 # E2: a ship built before the Low Graphics setting changed is rebuilt by the view.
 func test_a_view_rebuilds_ships_when_low_graphics_changes() -> void:
-	var view: SpaceView = auto_free(SpaceView.new())
+	var view: SpaceScene = auto_free(SpaceScene.new())
 	add_child(view)
 	var ship: ProceduralShip = view.copy_ship("kestrel")
 	assert_bool(ship.is_stale()).is_false()

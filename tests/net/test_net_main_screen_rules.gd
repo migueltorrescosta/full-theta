@@ -34,15 +34,17 @@ func test_only_the_captain_and_then_relay_switch() -> void:
 # is gone once the ship has its outcome.
 func test_objectives_count_the_hostile_ships_in_play() -> void:
 	var world: SimWorld = _world()
-	assert_int(StationViews.OBJECTIVE_DESTROY_HOSTILES).is_equal(Objectives.Kind.DESTROY_HOSTILES)
+	assert_int(StationCatalogue.OBJECTIVE_DESTROY_HOSTILES).is_equal(
+		Objectives.Kind.DESTROY_HOSTILES
+	)
 	var rows: Array[Dictionary] = Objectives.of_ship(world, PLAYER)
 	assert_int(rows.size()).is_equal(1)
 	assert_int(rows[0]["kind"]).is_equal(Objectives.Kind.DESTROY_HOSTILES)
 	assert_int(rows[0]["left"]).is_equal(1)
-	world.run.status[ENEMY] = RunTable.Status.DESTROYED
+	world.ships.status[ENEMY] = ShipStateTable.Status.DESTROYED
 	assert_int(Objectives.of_ship(world, PLAYER).size()).is_equal(0)
-	world.run.status[ENEMY] = RunTable.Status.IN_PLAY
-	world.run.outcome[PLAYER] = RunTable.Outcome.WIN
+	world.ships.status[ENEMY] = ShipStateTable.Status.IN_PLAY
+	world.ships.ship_outcome[PLAYER] = ShipStateTable.ShipOutcome.WIN
 	assert_int(Objectives.of_ship(world, PLAYER).size()).is_equal(0)
 
 
@@ -51,8 +53,8 @@ func test_objectives_count_the_hostile_ships_in_play() -> void:
 # buffers), and that message, status block included, stays small.
 func test_sixty_viewers_share_one_small_message() -> void:
 	var world: SimWorld = _world()
-	var b: SnapshotBuilder = SnapshotBuilder.new()
-	var key: String = StationViews.key(PLAYER, StationViews.VIEWER)
+	var b: SnapshotWriter = SnapshotWriter.new()
+	var key: String = StationCatalogue.key(PLAYER, StationCatalogue.VIEWER)
 	world.step()
 	world.step()
 	world.drain_events()
@@ -67,9 +69,9 @@ func test_sixty_viewers_share_one_small_message() -> void:
 		bytes += c.size()
 	assert_int(bytes).is_less(2048)
 	# The status block is in it: the viewer's view holds subsystem rows and an objective.
-	var state: NetViewState = NetViewState.new(NetCodec.period_units(world.kin.period))
+	var state: SnapshotState = SnapshotState.new(NetCodec.period_units(world.kin.period))
 	var msg: PackedByteArray = b.message(key, true)
 	assert_bool(state.apply(msg)).is_true()
-	var block: Dictionary = state.blocks[StationViews.Section.CAPTAIN]
+	var block: Dictionary = state.blocks[StationCatalogue.Section.CAPTAIN]
 	assert_int((block["subsystems"] as Array).size()).is_greater(0)
 	assert_int((block["objectives"] as Array).size()).is_equal(1)

@@ -38,12 +38,12 @@ func after_test() -> void:
 ## Two Comms players (Ops and Parley) and an Engineering player (Systems) on the player ship.
 func _crew() -> Array:
 	var server: NetServer = h.server()
-	server.session.voice.voice = _spy
-	_spy.computer_audience = server.session.computer_audience
-	_spy.npc_audience = server.session.npc_audience
+	server.game.voice.voice = _spy
+	_spy.computer_audience = server.game.computer_audience
+	_spy.npc_audience = server.game.npc_audience
 	var crew: Array[NetClient] = []
-	for entry: String in ["ops", "parley", "systems"]:
-		crew.append(await h.joined(server, entry, entry))
+	for seat: String in ["ops", "parley", "systems"]:
+		crew.append(await h.joined(server, seat, seat))
 	# One open conversation of the NPC (card 0) on the player ship's board.
 	var spec: PostCardCommand = StoryFixture.card(StoryTable.Kind.OFFER, &"conv.escort_contract")
 	spec.npc_id = StringName(NPC)
@@ -73,7 +73,7 @@ func _say(server: NetServer, line_id: String, args: Dictionary) -> void:
 	var fresh: Array[SimEvent] = []
 	fresh.assign(server.world.events.filter(func(e: SimEvent) -> bool: return e.kind == &"say"))
 	server.world.events.clear()
-	server.session.after_ticks(fresh)
+	server.game.after_ticks(fresh)
 
 
 # FT: FT-AUD-005, FT-COM-006, FT-AUD-010
@@ -92,12 +92,12 @@ func test_npc_line_goes_to_the_claimer_only_and_unclaimed_to_every_comms_holder(
 	assert_dict(_spy.said[0][2]).is_equal({"npc": "Rosa"})
 	# The second player claims the NPC's card: only they get the clip.
 	_spy.said.clear()
-	assert_bool(server.session.claims.claim(PLAYER, "npc:0", second)).is_true()
+	assert_bool(server.game.claims.claim(PLAYER, "npc:0", second)).is_true()
 	_say(server, "npc.hail_trader", args)
 	assert_array(_spy.said).is_equal([["clip", "npc.hail_trader", {"npc": "Rosa"}, [second]]])
 	# Released again: both hear it, and the Engineering player never does.
 	_spy.said.clear()
-	server.session.claims.release(PLAYER, "npc:0", second)
+	server.game.claims.release(PLAYER, "npc:0", second)
 	_say(server, "npc.hail_trader", args)
 	assert_array(_spy.said[0][3]).contains_exactly_in_any_order([first, second])
 
@@ -124,8 +124,8 @@ func test_computer_line_goes_to_the_stations_concerned_only() -> void:
 # FT: FT-AUD-018
 func test_npc_names_join_the_closed_set() -> void:
 	var server: NetServer = h.server()
-	server.session.voice.npc_names = ["Rosa", "Captain Voss"]
-	var closed: Dictionary = server.session.voice.closed_set([server.world.faction_of(PLAYER)])
+	server.game.voice.npc_names = ["Rosa", "Captain Voss"]
+	var closed: Dictionary = server.game.voice.closed_set([server.world.faction_of(PLAYER)])
 	assert_array(closed["npc_names"]).is_equal(["Rosa", "Captain Voss"])
 
 
@@ -147,18 +147,18 @@ func test_same_named_npcs_route_by_card() -> void:
 	server.world.step()
 	Story.open_node(server.world, PLAYER, 1, "n0")
 	server.world.events.clear()
-	assert_bool(server.session.claims.claim(PLAYER, "npc:0", first)).is_true()
-	assert_bool(server.session.claims.claim(PLAYER, "npc:1", second)).is_true()
+	assert_bool(server.game.claims.claim(PLAYER, "npc:0", first)).is_true()
+	assert_bool(server.game.claims.claim(PLAYER, "npc:1", second)).is_true()
 	Story.say(server.world, PLAYER, 1, "npc.hail_trader")
 	var fresh: Array[SimEvent] = []
 	fresh.assign(server.world.events.filter(func(e: SimEvent) -> bool: return e.kind == &"say"))
-	assert_array(Array(server.session.event_audience(fresh[0]))).is_empty()
-	server.session.after_ticks(fresh)
+	assert_array(Array(server.game.event_audience(fresh[0]))).is_empty()
+	server.game.after_ticks(fresh)
 	assert_array(_spy.said).has_size(1)
 	assert_array(_spy.said[0][3]).is_equal([second])
 	_spy.said.clear()
 	server.world.events.clear()
 	Story.say(server.world, PLAYER, 0, "npc.hail_trader")
 	fresh.assign(server.world.events.filter(func(e: SimEvent) -> bool: return e.kind == &"say"))
-	server.session.after_ticks(fresh)
+	server.game.after_ticks(fresh)
 	assert_array(_spy.said[0][3]).is_equal([first])

@@ -20,11 +20,11 @@ func test_a_card_ping_reaches_the_main_screen() -> void:
 	var server: NetServer = h.server()
 	var posted: PostCardCommand = StoryFixture.card(StoryTable.Kind.MISSION)
 	posted.reward_credits = 250
-	posted.expires_s = 90.0
+	posted.expiry = 90.0
 	CommsL3.post(server, posted)
-	var cap: NetClient = await h.joined(server, StationViews.CAPTAIN, StationViews.CAPTAIN)
-	var viewer: NetClient = await h.joined(server, "viewer", StationViews.VIEWER)
-	server.session.launch(PLAYER)
+	var cap: NetClient = await h.joined(server, StationCatalogue.CAPTAIN, StationCatalogue.CAPTAIN)
+	var viewer: NetClient = await h.joined(server, "viewer", StationCatalogue.VIEWER)
+	server.game.launch(PLAYER)
 	assert_bool(await h.until(func() -> bool: return server.world.story.size() == 1)).is_true()
 	var from: int = h.mark(viewer)
 	cap.ping("card", 0, Vector3.ZERO)
@@ -35,7 +35,7 @@ func test_a_card_ping_reaches_the_main_screen() -> void:
 		func(ev: Dictionary) -> bool: return ev["payload"]["kind"] == "card"
 	)
 	assert_int(e["payload"]["id"]).is_equal(0)
-	assert_str(e["payload"]["by"]).is_equal(StationViews.CAPTAIN)
+	assert_str(e["payload"]["by"]).is_equal(StationCatalogue.CAPTAIN)
 	# The ping carries the card's text: a viewer has no Comms section to look it up in.
 	var card: Dictionary = e["payload"]["card"]
 	assert_int(card["kind"]).is_equal(StoryTable.Kind.MISSION)
@@ -54,7 +54,7 @@ func test_a_crew_station_cannot_ping_a_card() -> void:
 	var server: NetServer = h.server()
 	CommsL3.post(server, StoryFixture.card(StoryTable.Kind.MISSION))
 	var helm: NetClient = await h.joined(server, "helm", "helm")
-	server.session.launch(PLAYER)
+	server.game.launch(PLAYER)
 	assert_bool(await h.until(func() -> bool: return server.world.story.size() == 1)).is_true()
 	var from: int = h.mark(helm)
 	helm.ping("card", 0, Vector3.ZERO)
@@ -67,7 +67,7 @@ func test_a_crew_station_cannot_ping_a_card() -> void:
 func test_the_captain_fills_empty_slots_only() -> void:
 	var server: NetServer = h.server()
 	var helm: NetClient = await h.joined(server, "helm", "helm")
-	var cap: NetClient = await h.joined(server, StationViews.CAPTAIN, StationViews.CAPTAIN)
+	var cap: NetClient = await h.joined(server, StationCatalogue.CAPTAIN, StationCatalogue.CAPTAIN)
 	helm.place_mark(0, "", -1, Vector3(5.0, 0.0, 0.0))
 	await h.until(
 		func() -> bool:

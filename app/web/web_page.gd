@@ -28,9 +28,9 @@ static func on_wake(on_wake_fn: Callable) -> JavaScriptObject:
 
 ## Tells the page which panel the player is on, for the browser smoke test
 ## (tools/l4/web.sh reads window.ftPanel). No effect off the web.
-static func set_panel(entry: String) -> void:
+static func set_panel(seat: String) -> void:
 	if OS.has_feature("web"):
-		JavaScriptBridge.eval("window.ftPanel = %s" % JSON.stringify(entry), true)
+		JavaScriptBridge.eval("window.ftPanel = %s" % JSON.stringify(seat), true)
 
 
 ## Tells the page which layout the client chose ("desktop", "touch" or "phone",

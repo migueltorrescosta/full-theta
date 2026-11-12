@@ -22,8 +22,8 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(entry: String = StationViews.VIEWER) -> StationScreen:
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+func _screen(seat: String = StationCatalogue.VIEWER) -> StationScreen:
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = auto_free(StationScreen.new())
 	s.setup(ctx)
 	add_child(s)
@@ -65,18 +65,18 @@ func test_each_view_shows_its_parts() -> void:
 	await _show(s, MainScreen.View.STATUS)
 	assert_bool(v._view_box.visible).is_false()
 	assert_bool(v.status_view.visible).is_true()
-	# Target: the 3D view again, on the selected contact.
+	# Close-up: the 3D view again, on the selected contact.
 	s.ctx.crew.select("contact", StationFixture.U3)
-	await _show(s, MainScreen.View.TARGET)
+	await _show(s, MainScreen.View.CLOSE_UP)
 	assert_bool(v._view_box.visible).is_true()
-	assert_int(v.view_id).is_equal(MainScreen.View.TARGET)
-	assert_str(v._target_item()["label"]).is_equal("U3")
-	var to_target: Vector3 = (v._target_item()["world"] as Vector3) - v.camera.position
-	assert_float((-v.camera.basis.z).dot(to_target.normalized())).is_greater(0.999)
-	# With nothing selected the nearest contact is the target (F4 is 600 m out).
+	assert_int(v.view_id).is_equal(MainScreen.View.CLOSE_UP)
+	assert_str(v._close_up_item()["label"]).is_equal("U3")
+	var to_contact: Vector3 = (v._close_up_item()["world"] as Vector3) - v.camera.position
+	assert_float((-v.camera.basis.z).dot(to_contact.normalized())).is_greater(0.999)
+	# With nothing selected the close-up shows the nearest contact (F4 is 600 m out).
 	s.ctx.crew.select("", -1)
-	await _show(s, MainScreen.View.TARGET)
-	assert_str(v._target_item()["label"]).is_equal("F4")
+	await _show(s, MainScreen.View.CLOSE_UP)
+	assert_str(v._close_up_item()["label"]).is_equal("F4")
 
 
 # FT: FT-MSC-004
@@ -94,15 +94,15 @@ func test_status_view_shows_hull_shields_subsystems_objectives_and_alert() -> vo
 	var def: ShipDef = s.ctx.ship_def()
 	assert_object(def).is_not_null()
 	var status: Dictionary = (
-		(s.ctx.view.blocks[StationViews.Section.STATUS] as Dictionary).duplicate()
+		(s.ctx.snap.blocks[StationCatalogue.Section.STATUS] as Dictionary).duplicate()
 	)
 	status["hull"] = def.hull_max * 0.92
 	status["shields"] = def.shields.max_strength * 0.7
-	s.ctx.view.blocks[StationViews.Section.STATUS] = status
+	s.ctx.snap.blocks[StationCatalogue.Section.STATUS] = status
 	var rows: Array = []
 	for i: int in def.subsystems.size():
 		rows.append({"health": def.subsystems[i].health_max * (0.5 if i == 0 else 1.0)})
-	s.ctx.view.blocks[StationViews.Section.CAPTAIN] = {
+	s.ctx.snap.blocks[StationCatalogue.Section.CAPTAIN] = {
 		"subsystems": rows,
 		"objectives": [{"kind": Objectives.Kind.DESTROY_HOSTILES, "left": 2}],
 	}
@@ -126,7 +126,7 @@ func test_status_view_shows_hull_shields_subsystems_objectives_and_alert() -> vo
 # The client only offers the switch to the Captain, and to Relay while no Captain is
 # seated (the lobby event names the Captain); the server decides.
 func test_who_may_switch_on_the_client() -> void:
-	var cap: StationContext = StationFixture.context(StationViews.CAPTAIN, SETTINGS)
+	var cap: StationContext = StationFixture.context(StationCatalogue.CAPTAIN, SETTINGS)
 	assert_bool(cap.crew.may_switch_main_view()).is_true()
 	var relay: StationContext = StationFixture.context("relay", SETTINGS)
 	assert_bool(relay.crew.may_switch_main_view()).is_true()
@@ -153,27 +153,27 @@ func test_top_bar_shows_hull_as_a_percentage_of_the_ships_maximum() -> void:
 	var s: StationScreen = await _screen("helm")
 	var def: ShipDef = s.ctx.ship_def()
 	var status: Dictionary = (
-		(s.ctx.view.blocks[StationViews.Section.STATUS] as Dictionary).duplicate()
+		(s.ctx.snap.blocks[StationCatalogue.Section.STATUS] as Dictionary).duplicate()
 	)
 	status["hull"] = def.hull_max
 	status["shields"] = def.shields.max_strength * 0.5
-	s.ctx.view.blocks[StationViews.Section.STATUS] = status
+	s.ctx.snap.blocks[StationCatalogue.Section.STATUS] = status
 	s._process(0.016)
 	assert_str(s.top_bar._hull.text).is_equal("Hull 100%")
 	assert_str(s.top_bar._shields.text).is_equal("Shields 50%")
 
 
 # FT: FT-MSC-002
-# The target view draws its target even beyond NEAR's range (H2 is 2.3 km out, NEAR sees
+# The close-up view draws its selection even beyond NEAR's range (H2 is 2.3 km out, NEAR sees
 # 2 km): before, the view showed an empty sky with the label and bracket only. Other
 # views still draw only contacts with a NEAR orientation.
 func test_target_view_draws_a_target_beyond_near_range() -> void:
 	var s: StationScreen = await _screen()
-	assert_bool(s.ctx.view.near.has(StationFixture.H2)).is_false()
+	assert_bool(s.ctx.snap.near.has(StationFixture.H2)).is_false()
 	s.ctx.crew.select("contact", StationFixture.H2)
 	var v: ViewerPanel = await _show(s, MainScreen.View.FORWARD)
 	assert_bool(v._space.ships.has(StationFixture.H2)).is_false()
-	await _show(s, MainScreen.View.TARGET)
+	await _show(s, MainScreen.View.CLOSE_UP)
 	assert_bool(v._space.ships.has(StationFixture.H2)).is_true()
 	await _show(s, MainScreen.View.FORWARD)
 	assert_bool(v._space.ships.has(StationFixture.H2)).is_false()

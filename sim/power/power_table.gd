@@ -37,13 +37,3 @@ func envelope_of(
 		_env_in[i + 2] = heat_ratio
 		_env[2 * row + k] = PowerSystem.envelope(power, pip_ratio, effectiveness, heat_ratio)
 	return _env[2 * row + k]
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["boost_ticks", boost_ticks],
-			["weapon_energy", weapon_energy],
-		]
-	)

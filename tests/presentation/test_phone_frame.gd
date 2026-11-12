@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## The shared phone frame (#28 follow-up, design "Shared frame", owner picks P28-Tabs,
 ## P28-Band, P28-Common, P28-Joint, P28-Dev, P28-L1): pages and their tabs, the compact top
-## bar, choice sheets, the view-top row (selection chip, request chips, ping toast, partner
+## bar, choice sheets, the view-top row (selection bar, request chips, ping toast, partner
 ## glance), long-press ping and mark, the bottom band, the Crew page; tablets and desktops
 ## keep their layout.
 # FT: FT-STN-005
@@ -48,14 +48,14 @@ func after_test() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SETTINGS))
 
 
-func _screen(size: Vector2i, entry: String, insets: Array, framed: bool = true) -> StationScreen:
+func _screen(size: Vector2i, seat: String, insets: Array, framed: bool = true) -> StationScreen:
 	SafeArea.simulate(insets)
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = StationScreen.new()
-	if framed and entry in ["helm", "science"]:
+	if framed and seat in ["helm", "science"]:
 		s.panel_factory = func(_id: String) -> StationPanel: return FramePanel.new()
 	s.setup(ctx)
 	# Wave 2's stations join the frame themselves; `framed` false keeps one out of it.
@@ -125,10 +125,10 @@ func test_pages_swap_only_their_parts() -> void:
 	assert_bool(b.visible).is_true()
 	assert_bool(keep.visible).is_true()
 	assert_array(seen).is_equal([1])
-	host.session_title = "Scan H2 · 12 s"
+	host.minigame_title = "Scan H2 · 12 s"
 	host.select(0)
 	assert_int(host.current).is_equal(1)
-	host.session_title = ""
+	host.minigame_title = ""
 	for i: int in 3:
 		host.add_page("P%d" % i, [])
 	assert_int(host.count()).is_equal(PageHost.MAX)
@@ -159,9 +159,9 @@ func test_tabs_follow_the_host() -> void:
 	var lead: RailButton = auto_free(RailButton.make("⇄ Weapons"))
 	tabs.set_lead(lead)
 	assert_int(lead.get_index()).is_equal(0)
-	host.session_title = "Hack H2"
+	host.minigame_title = "Hack H2"
 	assert_int(tabs.tab_count()).is_equal(0)
-	assert_str(tabs._session.text).is_equal("Hack H2")
+	assert_str(tabs._minigame.text).is_equal("Hack H2")
 
 
 # FT: FT-STN-005
@@ -263,15 +263,15 @@ func test_upright_tabs_and_larger_screens_unchanged() -> void:
 
 
 # FT: FT-STN-009, FT-SPA-016
-# The selection chip says direction and range in the session language, like every other
-# callout (ChipText): in pt_PT "H2 · 4 alto · médio", never the English words.
-func test_selection_chip_is_translated() -> void:
+# The selection bar says direction and range in the session language, like every other
+# callout (CalloutText): in pt_PT "H2 · 4 alto · médio", never the English words.
+func test_selection_bar_is_translated() -> void:
 	I18n.apply("pt_PT")
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
 	s.ctx.crew.select("contact", StationFixture.H2)
 	s._process(0.016)
 	var local: Vector3 = s.ctx.selection_local()
-	var text: String = s.frame.selection_chip.name_button.text
+	var text: String = s.frame.selection_bar.name_button.text
 	var band: String = Callout.range_band(local.length())
 	var band_pt: String = tr("callout." + band)
 	var english: String = "H2 · %s · %s" % [Callout.clock_height(local), band]
@@ -283,32 +283,32 @@ func test_selection_chip_is_translated() -> void:
 
 
 # FT: FT-STN-009, FT-SPA-016, FT-STN-005
-# The selection chip: arrows cycle the target, its name opens the selection sheet (Ping,
+# The selection bar: arrows cycle the target, its name opens the selection sheet (Ping,
 # Mark here, Clear and the station's extras).
-func test_selection_chip_and_sheet() -> void:
+func test_selection_bar_and_sheet() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
 	s.ctx.crew.select("contact", StationFixture.H2)
 	s._process(0.016)
-	assert_bool(s.frame.selection_chip.is_visible_in_tree()).is_true()
-	assert_str(s.frame.selection_chip.name_button.text).starts_with("H2 · ")
+	assert_bool(s.frame.selection_bar.is_visible_in_tree()).is_true()
+	assert_str(s.frame.selection_bar.name_button.text).starts_with("H2 · ")
 	var order: Array = s.common.contacts_by_range()
-	s.frame.selection_chip.next_button.pressed.emit()
+	s.frame.selection_bar.next_button.pressed.emit()
 	assert_int(int(s.ctx.crew.selection["id"])).is_equal(
 		int(order[(order.find(StationFixture.H2) + 1) % order.size()])
 	)
-	s.frame.selection_chip.prev_button.pressed.emit()
+	s.frame.selection_bar.prev_button.pressed.emit()
 	assert_int(int(s.ctx.crew.selection["id"])).is_equal(StationFixture.H2)
-	s.frame.selection_chip.name_button.pressed.emit()
+	s.frame.selection_bar.name_button.pressed.emit()
 	assert_int(s.sheet.option_count()).is_equal(4)
 	s.sheet.option(0).pressed.emit()
 	assert_array(_sent(s, "ping")[0][1].slice(0, 2)).is_equal(["contact", StationFixture.H2])
-	s.frame.selection_chip.name_button.pressed.emit()
+	s.frame.selection_bar.name_button.pressed.emit()
 	s.sheet.option(1).pressed.emit()
 	assert_int(_sent(s, "place_mark").size()).is_equal(1)
-	s.frame.selection_chip.name_button.pressed.emit()
+	s.frame.selection_bar.name_button.pressed.emit()
 	s.sheet.option(3).pressed.emit()
 	assert_bool(s.focused_panel().has_meta(&"extra")).is_true()
-	s.frame.selection_chip.name_button.pressed.emit()
+	s.frame.selection_bar.name_button.pressed.emit()
 	s.sheet.option(2).pressed.emit()
 	assert_bool(s.ctx.crew.selection.is_empty()).is_true()
 	s._process(0.016)
@@ -322,22 +322,22 @@ func test_selection_chip_and_sheet() -> void:
 # the pinged item.
 func test_request_chips_and_ping_toast() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), "helm", LANDSCAPE)
-	var at: int = ChipView.def().chips.find(
-		ChipView.def().chips.filter(func(c: ChipDef) -> bool: return c.to_station == &"helm")[0]
+	var at: int = ChipsReader.def().chips.find(
+		ChipsReader.def().chips.filter(func(c: ChipDef) -> bool: return c.to_station == &"helm")[0]
 	)
-	var from: int = StationViews.CREW.find(String(ChipView.def().chips[at].from_station))
+	var from: int = StationCatalogue.CREW.find(String(ChipsReader.def().chips[at].from_station))
 	var row: Dictionary = {
 		"id": 5, "chip": at, "arg": -1, "from": from, "to": 0, "sent": 3500, "expires": 4000
 	}
-	s.ctx.view.blocks[StationViews.Section.CHIPS] = {"chips": [row]}
+	s.ctx.snap.blocks[StationCatalogue.Section.CHIPS] = {"chips": [row]}
 	s._process(0.016)
 	await _frames(1)
 	assert_bool(s.frame.request_chips.is_visible_in_tree()).is_true()
 	assert_bool(s.chip_strip.visible).is_false()
-	# w5: under the selection chip, the chip column takes the view's width (its effect line
+	# w5: under the selection bar, the chip column takes the view's width (its effect line
 	# wraps less and pushes the panel down less).
 	var chips: RequestChips = s.frame.request_chips
-	var sel: Control = s.frame.selection_chip
+	var sel: Control = s.frame.selection_bar
 	if chips.position.y >= sel.position.y + sel.size.y:
 		var view_w: float = s.focused_panel().view_rect().size.x - 2.0 * UiTheme.TOUCH_GAP
 		assert_float(chips.size.x).is_equal_approx(view_w, 1.0)
@@ -402,7 +402,7 @@ func test_band_is_drawn_into_only_by_framed_panels() -> void:
 # The dev seat's station button opens a sheet of the six stations numbered 1 to 6 (D256);
 # a pick focuses that station, and the button names it.
 func test_dev_seat_station_sheet() -> void:
-	var s: StationScreen = await _screen(Vector2i(844, 390), StationViews.ALL, LANDSCAPE, false)
+	var s: StationScreen = await _screen(Vector2i(844, 390), StationCatalogue.ALL, LANDSCAPE, false)
 	assert_bool(s._tabs.visible).is_false()
 	assert_object(s.top_bar.tabs.lead).is_same(s.joint_switch)
 	assert_str(s.joint_switch.text).is_equal(tr("station.helm") + " ▾")
@@ -441,14 +441,14 @@ func test_partner_glance_in_tactical() -> void:
 func test_every_joint_view_has_both_glance_cards() -> void:
 	var ctx: StationContext = StationFixture.context("tactical", SETTINGS)
 	var joint: int = 0
-	for entry: String in StationViews.ENTRIES:
-		var pair: Array = StationViews.ENTRIES[entry][2]
+	for seat: String in StationCatalogue.OTHER_SEATS:
+		var pair: Array = StationCatalogue.OTHER_SEATS[seat][2]
 		if pair.size() != 2:
 			continue
 		joint += 1
 		for i: int in 2:
 			var card: Array = PartnerGlance.card_of(pair[i], pair[1 - i])
-			assert_array(card).override_failure_message(entry).has_size(2)
+			assert_array(card).override_failure_message(seat).has_size(2)
 			for id: String in card[0]:
 				(
 					assert_str(PartnerGlance.readout(ctx, id))

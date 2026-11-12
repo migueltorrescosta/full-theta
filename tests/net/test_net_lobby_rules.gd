@@ -19,9 +19,9 @@ func test_coverage_needs_three_crew_and_six_stations() -> void:
 	# Single stations work as well as joint views; shared stations are fine.
 	var singles: Array = ["helm", "weapons", "engineering", "science", "relay", "comms", "helm"]
 	assert_bool(NetCoverage.passes(singles)).is_true()
-	assert_array(NetCoverage.uncovered([])).is_equal(StationViews.CREW)
+	assert_array(NetCoverage.uncovered([])).is_equal(StationCatalogue.CREW)
 	# Captain alone: nothing covered (the seat is never required, FT-GEN-006).
-	assert_array(NetCoverage.uncovered(["captain"])).is_equal(StationViews.CREW)
+	assert_array(NetCoverage.uncovered(["captain"])).is_equal(StationCatalogue.CREW)
 
 
 # FT: FT-NET-029, FT-M1-015
@@ -37,13 +37,13 @@ func test_dev_minimum_is_one() -> void:
 # No station can be left off or to automation: with any one of the six stations
 # uncovered, even with five crew on the other five (and a Captain and a Viewer), the
 # check fails and names exactly that station, so Start is refused and a run pauses.
-# The dev entry's lower minimum doesn't change that.
+# The dev seat's lower minimum doesn't change that.
 func test_no_station_may_be_left_off() -> void:
-	for missing: String in StationViews.CREW:
-		var entries: Array = ["captain", "viewer"]
-		for station: String in StationViews.CREW:
+	for missing: String in StationCatalogue.CREW:
+		var seats: Array = ["captain", "viewer"]
+		for station: String in StationCatalogue.CREW:
 			if station != missing:
-				entries.append(station)
-		assert_bool(NetCoverage.passes(entries)).is_false()
-		assert_bool(NetCoverage.passes(entries, 1)).is_false()
-		assert_array(NetCoverage.uncovered(entries)).is_equal([missing])
+				seats.append(station)
+		assert_bool(NetCoverage.passes(seats)).is_false()
+		assert_bool(NetCoverage.passes(seats, 1)).is_false()
+		assert_array(NetCoverage.uncovered(seats)).is_equal([missing])

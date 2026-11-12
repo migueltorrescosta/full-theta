@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 ## SimTable or a Resource through the API.
 
 const VALUE_CLASSES: Array[StringName] = [
-	&"ShipView", &"SiteView", &"EncounterView", &"CardView", &"ApiEvent"
+	&"ShipInfo", &"SiteInfo", &"EncounterInfo", &"CardInfo", &"ApiEvent"
 ]
 
 
@@ -79,14 +79,14 @@ func test_every_query_returns_only_values() -> void:
 func test_views_are_fresh_copies() -> void:
 	var w: SimWorld = _populated()
 	var api: ScenarioApi = ScenarioApi.new(w)
-	var a: ShipView = api.ship(0)
-	var b: ShipView = api.ship(0)
+	var a: ShipInfo = api.ship(0)
+	var b: ShipInfo = api.ship(0)
 	assert_object(a).is_not_same(b)
 	a.hull_frac = 0.01
 	a.pos[0] = 123456.0
 	assert_float(api.ship(0).hull_frac).is_equal(1.0)
-	assert_float(w.kin.px[0]).is_not_equal(123456.0)
-	var s: SiteView = api.sites()[1]
+	assert_float(w.kin.pos_x[0]).is_not_equal(123456.0)
+	var s: SiteInfo = api.sites()[1]
 	s.pos[0] = -1.0
 	assert_float(api.sites()[1].pos[0]).is_equal(ApiFixture.ALPHA.x)
 	var packed: PackedInt32Array = api.crew_ships()
@@ -95,10 +95,10 @@ func test_views_are_fresh_copies() -> void:
 
 
 # FT: FT-ARC-016
-func test_ship_view_reports_position_site_and_hull() -> void:
+func test_ship_info_reports_position_site_and_hull() -> void:
 	var w: SimWorld = ApiFixture.world()
 	ApiFixture.place(w, 0, ApiFixture.ALPHA + Vector3(500.0, 0.0, 0.0))
-	var v: ShipView = ScenarioApi.new(w).ship(0)
+	var v: ShipInfo = ScenarioApi.new(w).ship(0)
 	assert_int(v.at_site).is_equal(1)
 	assert_int(v.nearest_site).is_equal(1)
 	assert_float(v.pos[0]).is_equal_approx(ApiFixture.ALPHA.x + 500.0, 0.01)

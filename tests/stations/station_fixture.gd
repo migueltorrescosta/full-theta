@@ -2,7 +2,7 @@
 class_name StationFixture
 extends RefCounted
 ## A deterministic station context with no server (#7): ship 0 "Kestrel" picked at the
-## given entry, Started; a snapshot view with the own ship at a fixed spot with a fixed
+## given seat, Started; a snapshot state with the own ship at a fixed spot with a fixed
 ## orientation, yawed, pitched and rolled so the ship frame and world axes differ on
 ## every axis (D124; its KIN velocity says 80 m/s along the bow; the position doesn't
 ## move), a hostile H2 at 4 high, 2.3 km, an unknown U3 at 11 high, 8 km and an
@@ -11,7 +11,7 @@ extends RefCounted
 ## RecordingClient. Station scene tests and L5 shots build on it:
 ## `var ctx := StationFixture.context("helm")`.
 ##
-## The seam variant (`context(entry, path, true)`) adds items about half a period away,
+## The seam variant (`context(seat, path, true)`) adds items about half a period away,
 ## across the cube's seam from each other (minimum image, D124): hostiles H5 and H6 and
 ## a free mark Echo, with H5 0.7 km from Echo through the seam and H6 2.7 km from it the
 ## other way.
@@ -79,8 +79,8 @@ class RecordingClient:
 	func release_claim(item: String) -> void:
 		sent.append(["release_claim", [item]])
 
-	func pick(ship: int, entry: String) -> void:
-		sent.append(["pick", [ship, entry]])
+	func pick(ship: int, seat: String) -> void:
+		sent.append(["pick", [ship, seat]])
 
 	func release_pick() -> void:
 		sent.append(["release_pick", []])
@@ -97,8 +97,8 @@ class RecordingClient:
 	func host_pause(on: bool) -> void:
 		sent.append(["host_pause", [on]])
 
-	func takeover(ship: int, entry: String) -> void:
-		sent.append(["takeover", [ship, entry]])
+	func takeover(ship: int, seat: String) -> void:
+		sent.append(["takeover", [ship, seat]])
 
 	func run_again(ship: int, vote: bool) -> void:
 		sent.append(["run_again", [ship, vote]])
@@ -170,9 +170,9 @@ class Clock:
 		return ms
 
 
-## The context for `entry` (a catalogue id). settings_path: a test-local file.
+## The context for `seat` (a catalogue id). settings_path: a test-local file.
 static func context(
-	entry: String = "helm",
+	seat: String = "helm",
 	settings_path: String = "user://test_station_fixture.cfg",
 	seam: bool = false
 ) -> StationContext:
@@ -186,19 +186,21 @@ static func context(
 	ctx.settings = ClientSettings.new(settings_path)
 	ctx.settings.player_name = rec.name
 	# The first-visit help (FT-STN-012) would open the menu and block input.
-	for station: String in StationViews.CREW + [StationViews.VIEWER, StationViews.CAPTAIN]:
+	for station: String in (
+		StationCatalogue.CREW + [StationCatalogue.VIEWER, StationCatalogue.CAPTAIN]
+	):
 		ctx.settings.mark_hint_seen(station)
 	# The radar legend (C11) is first-visit too; the tests that look for it unmark it.
-	ctx.settings.mark_hint_seen(ControlsChip.RADAR_KEY)
+	ctx.settings.mark_hint_seen(ControlsHint.RADAR_KEY)
 	ctx.matcher = InputMatcher.new(ctx.settings.bindings)
 	var crew: CrewState = ctx.crew
 	crew.welcome(
 		{
 			"session": SESSION,
 			"ship": SHIP,
-			"entry": entry,
+			"seat": seat,
 			"host": false,
-			"dev_all": entry == StationViews.ALL,
+			"dev_all": seat == StationCatalogue.ALL,
 			"lang": "en"
 		}
 	)
@@ -218,9 +220,9 @@ static func context(
 	if seam:
 		marks.append(_mark(ECHO_SLOT, "Echo", _site_pos(OWN_POS + SEAM_ECHO)))
 	crew.handle_event({"type": "marks", "payload": {"ship": SHIP, "marks": marks}}, NOW_MS)
-	ctx.view = view(seam)
-	ctx.interp.push(ctx.view, NOW_MS - 100)
-	ctx.interp.push(ctx.view, NOW_MS)
+	ctx.snap = snap(seam)
+	ctx.interp.push(ctx.snap, NOW_MS - 100)
+	ctx.interp.push(ctx.snap, NOW_MS)
 	ctx.interp.update(NOW_MS)
 	return ctx
 
@@ -247,26 +249,26 @@ static func sent(ctx: StationContext) -> RecordingClient:
 	return ctx.intents.client as RecordingClient
 
 
-## The Catalogue message as the server sends it (StationViews), with ship 0.
+## The Catalogue message as the server sends it (StationCatalogue), with ship 0.
 static func catalogue(dev_all: bool = false) -> Dictionary:
-	var entries: Array = []
-	var ids: Array = StationViews.CREW + StationViews.ENTRIES.keys()
+	var seats: Array = []
+	var ids: Array = StationCatalogue.CREW + StationCatalogue.OTHER_SEATS.keys()
 	if dev_all:
-		ids.append(StationViews.ALL)
+		ids.append(StationCatalogue.ALL)
 	for id: String in ids:
-		entries.append(StationViews.def(id).to_dict())
+		seats.append(StationCatalogue.def(id).to_dict())
 	return {
 		"ships": [{"id": SHIP, "def": "m1_corvette", "name": SHIP_NAME, "faction": 0}],
-		"entries": entries,
-		"load_tags": StationViews.LOAD_TAGS,
+		"seats": seats,
+		"load_tags": StationCatalogue.LOAD_TAGS,
 	}
 
 
-## The snapshot view: own ship, STATUS and MOUNTS blocks, contacts H2, U3, F4 (and H5,
+## The snapshot state: own ship, STATUS and MOUNTS blocks, contacts H2, U3, F4 (and H5,
 ## H6 with `seam`).
-static func view(seam: bool = false) -> NetViewState:
+static func snap(seam: bool = false) -> SnapshotState:
 	var p_units: int = NetCodec.period_units(PERIOD_M)
-	var v: NetViewState = NetViewState.new(p_units)
+	var v: SnapshotState = SnapshotState.new(p_units)
 	v.seq = 10
 	v.tick = TICK
 	v.kin = {
@@ -275,7 +277,7 @@ static func view(seam: bool = false) -> NetViewState:
 		"rot": own_rotation(),
 		"ang": Vector3i.ZERO,
 	}
-	v.blocks[StationViews.Section.STATUS] = {
+	v.blocks[StationCatalogue.Section.STATUS] = {
 		"alive": true,
 		"status": 0,
 		"outcome": 0,
@@ -287,20 +289,20 @@ static func view(seam: bool = false) -> NetViewState:
 		"decoupled": false,
 	}
 	# The goal chip's objective (C2): two hostile ships still in play.
-	v.blocks[StationViews.Section.CAPTAIN] = {
+	v.blocks[StationCatalogue.Section.CAPTAIN] = {
 		"subsystems": [],
-		"objectives": [{"kind": StationViews.OBJECTIVE_DESTROY_HOSTILES, "left": 2}],
+		"objectives": [{"kind": StationCatalogue.OBJECTIVE_DESTROY_HOSTILES, "left": 2}],
 	}
 	# Helm (#7 A): assist on at 80 m/s, H2 selected and shields tracking it.
-	v.blocks[StationViews.Section.HELM] = {
+	v.blocks[StationCatalogue.Section.HELM] = {
 		"decoupled": false,
 		"throttle_setpoint": 80.0,
 		"face": false,
 		"approach": false,
 		"all_stop": false,
 		"align": 0,
-		"target_kind": 1,
-		"target_ship": H2,
+		"sel_kind": 1,
+		"sel_contact": H2,
 		"shield_focus": _at(4, 30.0, 1.0).normalized(),
 		"shield_track": H2,
 		"shield_tightness": 2.0,
@@ -309,7 +311,7 @@ static func view(seam: bool = false) -> NetViewState:
 		"torque_scale": 0.8,
 	}
 	# The corvette's bow mount at rest, loaded and cool.
-	v.blocks[StationViews.Section.MOUNTS] = {
+	v.blocks[StationCatalogue.Section.MOUNTS] = {
 		"mounts":
 		[{"barrel": Vector3.FORWARD, "cooldown": 0.0, "ammo": 380, "heat": 6.0, "aim_set": false}]
 	}
@@ -325,7 +327,7 @@ static func view(seam: bool = false) -> NetViewState:
 			model[c[0]] = [_units(OWN_POS + c[2], p_units), Vector3i.ZERO, TICK]
 			info[c[0]] = [0, c[1]]
 	v.contacts = {"model": model, "info": info}
-	v.blocks[StationViews.Section.ENGINEERING] = engineering_block()
+	v.blocks[StationCatalogue.Section.ENGINEERING] = engineering_block()
 	return v
 
 
@@ -406,10 +408,10 @@ static func _mark(slot: int, mark_name: String, pos: Vector3) -> Dictionary:
 
 
 static func _units(p: Vector3, p_units: int) -> Vector3i:
-	return NetCodec.quant_pos(p.x, p.y, p.z, p_units)
+	return NetCodec.quant_pos(CubePoint.of(p), p_units)
 
 
-## A multi-ship session (#11) on a fixture context: feeds the `fleet` event of `names` (lobby
+## A multi-ship game (#11) on a fixture context: feeds the `fleet` event of `names` (lobby
 ## ship ids 0..n-1, ship 0 the fixture's own) in `mode`, teams from `teams` (default 0),
 ## each ship with one Helm seat, none started. Returns the payload (FleetMessages shape).
 static func fleet(
@@ -422,7 +424,7 @@ static func fleet(
 	var rows: Array = []
 	for i: int in names.size():
 		var team: int = int(teams[i]) if i < teams.size() else 0
-		var seats: Array = [{"name": "P%d" % i, "entry": "helm"}]
+		var seats: Array = [{"name": "P%d" % i, "seat": "helm"}]
 		rows.append(
 			FleetMessages.fleet_ship(i, names[i], team, seats, 1, ["weapons"], false, started)
 		)
@@ -436,7 +438,7 @@ static func fleet(
 		"started": started,
 	}
 	ctx.crew.handle_event({"type": "fleet", "payload": p}, NOW_MS)
-	# The server's Catalogue lists every crewed ship (ServerSession.crew_ships), so a pick
+	# The server's Catalogue lists every crewed ship (NetGame.crew_ships), so a pick
 	# of another ship still finds its definition (the top bar's percentages).
 	var ships: Array = []
 	for i: int in names.size():

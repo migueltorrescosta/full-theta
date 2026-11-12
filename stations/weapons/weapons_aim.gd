@@ -68,9 +68,9 @@ func lead_dir(i: int, contact: int) -> Variant:
 		ctx.interp.offset_to(ctx.interp.contact_position(contact))
 		- rot * _p.ship_def.mounts[i].position
 	)
-	var model: Dictionary = ctx.view.contacts.get("model", {})
+	var model: Dictionary = ctx.snap.contacts.get("model", {})
 	var vel: Vector3i = model[contact][1] if model.has(contact) else Vector3i.ZERO
-	var own: Vector3i = ctx.view.kin.get("vel", Vector3i.ZERO)
+	var own: Vector3i = ctx.snap.kin.get("vel", Vector3i.ZERO)
 	var rel_vel: Vector3 = Vector3(vel - own) / NetCodec.VEL_Q
 	var speed: float = _p.weapon_of(i).projectile_speed
 	if speed <= 0.0:
@@ -86,7 +86,8 @@ func lead_dir(i: int, contact: int) -> Variant:
 ## True when a world direction from mount i lies in its arc (FT-SIM-011).
 func in_arc(i: int, dir: Vector3) -> bool:
 	var m: MountDef = _p.ship_def.mounts[i]
-	return m.forward.angle_to(_p.ctx.interp.own_rotation().inverse() * dir) <= m.arc_half_angle
+	var local: Vector3 = _p.ctx.interp.own_rotation().inverse() * dir
+	return MountArc.in_arc(m.forward, m.arc_half_angle, local)
 
 
 ## Aims mount i along `dir` (world), stopped at the arc edge: input stops there; a held aim
@@ -95,8 +96,8 @@ func aim_within_arc(i: int, dir: Vector3) -> void:
 	var m: MountDef = _p.ship_def.mounts[i]
 	var rot: Quaternion = _p.ctx.interp.own_rotation()
 	var local: Vector3 = rot.inverse() * dir
-	if m.forward.angle_to(local) > m.arc_half_angle:
-		dir = rot * turn_toward(m.forward, local, m.arc_half_angle)
+	if not MountArc.in_arc(m.forward, m.arc_half_angle, local):
+		dir = rot * MountArc.turn_toward(m.forward, local, m.arc_half_angle)
 	set_aim_dir(i, dir.normalized())
 
 
@@ -112,14 +113,3 @@ func flush(now: int, force: bool) -> void:
 		sent[i] = p
 	dirty.clear()
 	_next_aim_ms = now + AIM_SEND_MS
-
-
-## `from` turned toward `to` by at most `max_angle` (rad); `to` itself when nearer.
-static func turn_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3:
-	var angle: float = from.angle_to(to)
-	if angle <= max_angle:
-		return to
-	var axis: Vector3 = from.cross(to)
-	if axis.length_squared() < 1e-12:
-		axis = from.cross(Vector3.UP if absf(from.y) < 0.9 else Vector3.RIGHT)
-	return from.rotated(axis.normalized(), max_angle).normalized()

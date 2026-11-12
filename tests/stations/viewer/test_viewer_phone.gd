@@ -27,7 +27,7 @@ func _screen(size: Vector2i, insets: Array) -> StationScreen:
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(StationViews.VIEWER, SETTINGS)
+	var ctx: StationContext = StationFixture.context(StationCatalogue.VIEWER, SETTINGS)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	vp.add_child(s)

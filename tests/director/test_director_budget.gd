@@ -109,8 +109,8 @@ func test_a_spent_budget_closes_the_run_once() -> void:
 	)
 	assert_int(ends.size()).is_equal(1)
 	assert_str(ends[0].reason_key).is_equal("director.reason.budget_spent")
-	assert_int(w.run.closed[0]).is_equal(1)
-	assert_int(w.run.outcome[0]).is_equal(RunTable.Outcome.WIN)
+	assert_int(w.ships.closed[0]).is_equal(1)
+	assert_int(w.ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.WIN)
 
 
 # FT: FT-MIS-029, FT-MIS-001
@@ -123,8 +123,8 @@ func test_picks_leave_budget_for_the_fewest_encounters() -> void:
 	assert_int(picks.size()).is_equal(2)
 	for p: DirectorDecision in picks:
 		assert_str(String(p.scenario_id)).is_equal("s_b")
-	assert_int((out[0] as SimWorld).run.encounters_done[0]).is_equal(2)
-	assert_int((out[0] as SimWorld).run.outcome[0]).is_equal(RunTable.Outcome.WIN)
+	assert_int((out[0] as SimWorld).ships.encounters_done[0]).is_equal(2)
+	assert_int((out[0] as SimWorld).ships.ship_outcome[0]).is_equal(ShipStateTable.ShipOutcome.WIN)
 
 
 # FT: FT-MIS-029, FT-MIS-028
@@ -159,7 +159,7 @@ func test_the_next_encounter_waits_a_quiet_gap_and_opens_a_site() -> void:
 	var out: Array = _run(&"hard", 1, 3)
 	var w: SimWorld = out[0]
 	var d: Director = out[1]
-	var gap_ticks: int = ceili(_def().director.gap_s * SimWorld.HZ)
+	var gap_ticks: int = ceili(_def().director.gap * SimWorld.HZ)
 	assert_int(w.encounters.size()).is_greater_equal(2)
 	for id: int in range(1, w.encounters.size()):
 		assert_int(w.encounters.open_tick[id] - w.encounters.end_tick[id - 1]).is_greater_equal(
@@ -177,7 +177,7 @@ func test_the_next_encounter_waits_a_quiet_gap_and_opens_a_site() -> void:
 		func(x: DirectorDecision) -> bool: return x.kind == DirectorDecision.Kind.END_RUN
 	)
 	assert_int(ends.size()).is_equal(1)
-	assert_int(w.run.encounters_done[0]).is_equal(3)
+	assert_int(w.ships.encounters_done[0]).is_equal(3)
 
 
 # FT: FT-MIS-029
@@ -217,5 +217,5 @@ func test_a_rejected_begin_does_not_block_the_ship_for_the_run() -> void:
 	for i: int in 800:
 		host.advance(SimWorld.DT * 1.001, d.before_tick)
 	assert_int(w.encounters.size()).is_greater_equal(2)
-	assert_int(w.run.encounters_done[0]).is_greater_equal(2)
+	assert_int(w.ships.encounters_done[0]).is_greater_equal(2)
 	assert_array(refunds).is_not_empty()

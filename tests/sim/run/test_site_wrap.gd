@@ -29,10 +29,20 @@ func _hits_on(events: Array[SimEvent], target: int, kind: StringName) -> Array[S
 func test_projectile_hits_across_the_seam() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var half: float = _half(w)
-	var shooter: int = w.spawn_ship(TestDefs.corvette(), CORVETTE_FACTION, Vector3(0, 0, 9000))
-	var target: int = w.spawn_ship(TestDefs.raider(), RAIDER_FACTION, Vector3(-half + 300, 0, 0))
+	var shooter: int = w.spawn_ship(
+		TestDefs.corvette(), CORVETTE_FACTION, CubePoint.make(0, 0, 9000)
+	)
+	var target: int = w.spawn_ship(
+		TestDefs.raider(), RAIDER_FACTION, CubePoint.make(-half + 300, 0, 0)
+	)
 	w.projectiles.spawn(
-		shooter, CORVETTE_FACTION, half - 100.0, 0.0, 0.0, Vector3(1500, 0, 0), 0.5, 1e5, 60
+		shooter,
+		CORVETTE_FACTION,
+		CubePoint.make(half - 100.0, 0.0, 0.0),
+		Vector3(1500, 0, 0),
+		0.5,
+		1e5,
+		60
 	)
 	var events: Array[SimEvent] = []
 	var crossed: bool = false
@@ -40,7 +50,7 @@ func test_projectile_hits_across_the_seam() -> void:
 		w.step()
 		events.append_array(w.drain_events())
 		if w.projectiles.size() > 0:
-			var x: float = w.projectiles.px[0]
+			var x: float = w.projectiles.pos_x[0]
 			assert_bool(x >= -half and x < half).override_failure_message(str(x)).is_true()
 			crossed = crossed or x < 0.0
 	assert_bool(crossed).is_true()
@@ -56,10 +66,20 @@ func test_projectile_hits_across_the_seam() -> void:
 func test_projectile_hits_a_ship_straddling_the_seam() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var half: float = _half(w)
-	var shooter: int = w.spawn_ship(TestDefs.corvette(), CORVETTE_FACTION, Vector3(0, 0, 9000))
-	var target: int = w.spawn_ship(TestDefs.raider(), RAIDER_FACTION, Vector3(-half + 5, 0, 0))
+	var shooter: int = w.spawn_ship(
+		TestDefs.corvette(), CORVETTE_FACTION, CubePoint.make(0, 0, 9000)
+	)
+	var target: int = w.spawn_ship(
+		TestDefs.raider(), RAIDER_FACTION, CubePoint.make(-half + 5, 0, 0)
+	)
 	w.projectiles.spawn(
-		shooter, CORVETTE_FACTION, half - 110.0, 0.0, 0.0, Vector3(1500, 0, 0), 0.5, 1e5, 60
+		shooter,
+		CORVETTE_FACTION,
+		CubePoint.make(half - 110.0, 0.0, 0.0),
+		Vector3(1500, 0, 0),
+		0.5,
+		1e5,
+		60
 	)
 	var hits: Array[SimEvent] = _hits_on(SimFixture.run(w, 10), target, &"projectile")
 	assert_int(hits.size()).is_equal(1)
@@ -74,10 +94,10 @@ func test_collision_and_warning_across_the_seam() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var half: float = _half(w)
 	var a: int = w.spawn_ship(
-		TestDefs.corvette(), CORVETTE_FACTION, Vector3(half - 30, 0, 0), BOW_PLUS_X
+		TestDefs.corvette(), CORVETTE_FACTION, CubePoint.make(half - 30, 0, 0), BOW_PLUS_X
 	)
 	var b: int = w.spawn_ship(
-		TestDefs.corvette(), CORVETTE_FACTION, Vector3(-half + 30, 0, 0), BOW_PLUS_X
+		TestDefs.corvette(), CORVETTE_FACTION, CubePoint.make(-half + 30, 0, 0), BOW_PLUS_X
 	)
 	w.kin.vel[a] = Vector3(5, 0, 0)
 	w.kin.vel[b] = Vector3(-5, 0, 0)
@@ -100,9 +120,11 @@ func test_collision_and_warning_across_the_seam() -> void:
 func test_sensors_across_the_seam() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var half: float = _half(w)
-	w.spawn_ship(TestDefs.corvette(), CORVETTE_FACTION, Vector3(half - 1000, 0, 0))
-	var near: int = w.spawn_ship(TestDefs.raider(), RAIDER_FACTION, Vector3(-half + 2000, 0, 0))
-	var far: int = w.spawn_ship(TestDefs.raider(), RAIDER_FACTION, Vector3.ZERO)
+	w.spawn_ship(TestDefs.corvette(), CORVETTE_FACTION, CubePoint.make(half - 1000, 0, 0))
+	var near: int = w.spawn_ship(
+		TestDefs.raider(), RAIDER_FACTION, CubePoint.make(-half + 2000, 0, 0)
+	)
+	var far: int = w.spawn_ship(TestDefs.raider(), RAIDER_FACTION, CubePoint.make())
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, CORVETTE_FACTION, near)).is_true()
 	assert_bool(KnowledgeSystem.is_identified(w, CORVETTE_FACTION, near)).is_true()
@@ -119,10 +141,12 @@ func test_lead_intercept_across_the_seam() -> void:
 		var half: float = _half(w)
 		var at: Vector3 = Vector3(half - 1000, 0, 0) if across else Vector3.ZERO
 		var to: Vector3 = Vector3(-half + 1000, 0, 0) if across else Vector3(2000, 0, 0)
-		var s: int = w.spawn_ship(TestDefs.corvette(), CORVETTE_FACTION, at, BOW_PLUS_X)
-		var t: int = w.spawn_ship(TestDefs.raider(), RAIDER_FACTION, to)
+		var s: int = w.spawn_ship(
+			TestDefs.corvette(), CORVETTE_FACTION, CubePoint.of(at), BOW_PLUS_X
+		)
+		var t: int = w.spawn_ship(TestDefs.raider(), RAIDER_FACTION, CubePoint.of(to))
 		w.kin.vel[t] = Vector3(0, 50, 0)
-		aims.append(EnemyAi.lead_aim(w, s, 0, t, 0))
+		aims.append(NpcAi.lead_aim(w, s, 0, t, 0))
 	assert_bool(aims[0].is_finite()).is_true()
 	assert_vector(aims[1]).is_equal_approx(aims[0], Vector3.ONE * 1e-3)
 
@@ -139,14 +163,14 @@ func test_face_and_approach_across_the_seam() -> void:
 	FlightFixture.select_point(w, id, Vector3(half + 2500, 0, 0))
 	FlightFixture.input(w, id, Vector3.ZERO, Vector3.ZERO, true)
 	w.step()
-	assert_float(w.helm.target_x[id]).is_equal(-half + 2500)
+	assert_float(w.helm.sel_x[id]).is_equal(-half + 2500)
 	SimFixture.run(w, 6 * SimWorld.HZ)
 	var to_point: Vector3 = AssistSystem.target_offset(w, id)
 	assert_float(FlightFixture.bow_error_deg(w, id, to_point)).is_less(0.5)
 	FlightFixture.input(w, id, Vector3.ZERO, Vector3.ZERO, false, true)
 	SimFixture.run(w, 60 * SimWorld.HZ)
 	assert_float(AssistSystem.target_offset(w, id).length()).is_equal_approx(500.0, 0.5)
-	assert_float(w.kin.px[id]).is_between(-half, 0.0)
+	assert_float(w.kin.pos_x[id]).is_between(-half, 0.0)
 
 
 ## The M1 encounter with every ship moved by `shift` (m, site frame); placing wraps.
@@ -154,7 +178,12 @@ func _shifted_encounter(shift: Vector3) -> SimWorld:
 	var enc: M1Encounter = M1Encounter.new(21, "test", TestDefs.corvette(), TestDefs.raider_enemy())
 	var w: SimWorld = enc.build()
 	for id: int in w.ship_count():
-		w.kin.place(id, w.kin.px[id] + shift.x, w.kin.py[id] + shift.y, w.kin.pz[id] + shift.z)
+		w.kin.place(
+			id,
+			CubePoint.make(
+				w.kin.pos_x[id] + shift.x, w.kin.pos_y[id] + shift.y, w.kin.pos_z[id] + shift.z
+			)
+		)
 	return w
 
 
@@ -200,17 +229,17 @@ func test_fight_across_the_seam_is_deterministic_and_wrap_invariant() -> void:
 		)
 		assert_vector(w.kin.vel[id]).is_equal_approx(base.kin.vel[id], Vector3.ONE * 1e-3)
 	assert_vector(w.kin.relative(p, e)).is_equal_approx(base.kin.relative(p, e), Vector3.ONE * 1e-3)
-	var dz: float = absf(w.kin.pz[p] - base.kin.pz[p])
+	var dz: float = absf(w.kin.pos_z[p] - base.kin.pos_z[p])
 	assert_float(dz).is_equal_approx(half, 1e-3)
 
 
 # FT: FT-SIM-035
-# The site period is checked at load: it must be finite and positive, a whole number of
+# The map period is checked at load: it must be finite and positive, a whole number of
 # both broadphase cells (250 m and 500 m, checked exactly: 1 mm over fails both, D125)
 # and at least 4x the longest sensor range (the
 # corvette's 20 km). A bad one is reported by validate() and build() returns null; the
 # default 400 km and exactly 80 km pass.
-func test_site_period_validation() -> void:
+func test_map_period_validation() -> void:
 	var cases: Array[Array] = [
 		[Kinematics.DEFAULT_PERIOD, 0],
 		[80000.0, 0],
@@ -238,7 +267,7 @@ func test_site_period_validation() -> void:
 # The period is also at most SimWorld.MAX_CELLS_PER_AXIS of either broadphase cell, so
 # the collision grid's cell keys can't overflow: 2^20 cells of 250 m pass, one 500 m
 # step more fails on the 250 m cell, and 1e12 m fails on both.
-func test_site_period_upper_bound() -> void:
+func test_map_period_upper_bound() -> void:
 	var limit: float = SimWorld.MAX_CELLS_PER_AXIS * CollisionSystem.CELL
 	var cases: Array[Array] = [[limit, 0], [limit + 500.0, 1], [1.0e12, 2]]
 	for c: Array in cases:

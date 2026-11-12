@@ -57,11 +57,11 @@ func test_touch_theme_makes_every_button_tap_sized() -> void:
 	assert_float(heights[LayoutMode.Kind.DESKTOP]).is_less(float(UiTheme.TOUCH_MIN))
 
 
-func _screen(size: Vector2i, entry: String) -> StationScreen:
+func _screen(size: Vector2i, seat: String) -> StationScreen:
 	var vp: SubViewport = auto_free(SubViewport.new())
 	vp.size = size
 	add_child(vp)
-	var ctx: StationContext = StationFixture.context(entry, SETTINGS)
+	var ctx: StationContext = StationFixture.context(seat, SETTINGS)
 	var s: StationScreen = StationScreen.new()
 	s.setup(ctx)
 	vp.add_child(s)

@@ -51,14 +51,14 @@ static func lost(w: SimWorld, ship: int) -> float:
 ## Site-local position of a point of the ship given in its own frame (m).
 static func site_point(w: SimWorld, ship: int, local: Vector3) -> Vector3:
 	var at: Vector3 = w.kin.to_world(ship, local)
-	return Vector3(w.kin.px[ship] + at.x, w.kin.py[ship] + at.y, w.kin.pz[ship] + at.z)
+	return Vector3(w.kin.pos_x[ship] + at.x, w.kin.pos_y[ship] + at.y, w.kin.pos_z[ship] + at.z)
 
 
 ## The gunner's tick: aims every mount at `point` (a position, m; the lead
 ## point for a moving target) every AIM_EVERY ticks and fires each mount that is ready,
 ## has the aim inside its arc and the barrel on it, and has the energy for a shot.
 static func gun(w: SimWorld, ship: int, point: Vector3) -> void:
-	var rel: Vector3 = w.kin.relative_to_point(ship, point.x, point.y, point.z)
+	var rel: Vector3 = w.kin.relative_to_point(ship, CubePoint.of(point))
 	var mounts: MountTable = w.mounts
 	var def: ShipDef = w.defs[ship]
 	for m: int in def.mounts.size():

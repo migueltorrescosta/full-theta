@@ -2,7 +2,7 @@ class_name ScienceKnowledge
 extends RefCounted
 ## What a faction has learned of a contact by Science scans, in KnowledgeTable.scan_conf
 ## (E01, FT-SCI-002, D28): class, identity, intent, weak points, resistances and hack
-## access, each revealed once the scan confidence reaches its ScienceDef threshold. A
+## access and cargo, each revealed once the scan confidence reaches its ScienceDef threshold. A
 ## faction always knows its own ships. Weapons aiming at a weak point and damage with
 ## resistances call weak_points_known and resistances_known; the Science card is built
 ## from card().
@@ -13,6 +13,7 @@ const INTENT: StringName = &"intent"
 const WEAK_POINTS: StringName = &"weak_points"
 const RESISTANCES: StringName = &"resistances"
 const HACK: StringName = &"hack"
+const CARGO: StringName = &"cargo"
 
 
 ## The faction's best scan confidence of the contact, 0..1 (1 for its own ships).
@@ -38,6 +39,8 @@ static func threshold(def: ScienceDef, part: StringName) -> float:
 			return def.reveal_resistances
 		HACK:
 			return def.reveal_hack
+		CARGO:
+			return def.reveal_cargo
 	return 2.0
 
 
@@ -92,8 +95,8 @@ static func class_fully_scanned(world: SimWorld, faction: int, contact: int) -> 
 	var id: StringName = world.defs[contact].id
 	var k: KnowledgeTable = world.knowledge
 	for r: int in k.size():
-		if k.factions[r] == faction and k.scan_conf[r] >= world.science_def.full_scan_conf:
-			if world.defs[k.ship_ids[r]].id == id:
+		if k.owner_faction[r] == faction and k.scan_conf[r] >= world.science_def.full_scan_conf:
+			if world.defs[k.subject_ship[r]].id == id:
 				return true
 	return false
 
@@ -109,7 +112,7 @@ static func detection_confidence(world: SimWorld, faction: int, contact: int) ->
 	var best: float = 0.0
 	var kin: Kinematics = world.kin
 	for o: int in world.ship_count():
-		if kin.factions[o] != faction or not kin.can_reach(o, contact) or not kin.is_alive(o):
+		if kin.owner_faction[o] != faction or not kin.can_reach(o, contact) or not kin.is_alive(o):
 			continue
 		var reach: float = KnowledgeSystem.sensor_reach(world, o)
 		if reach > 0.0:

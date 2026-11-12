@@ -8,7 +8,7 @@ extends RefCounted
 ##                        N - 1 (D108). 0 picks a free port (tests, smoke runs).
 ##   --bind ADDR          address to listen on, required: the chosen LAN address, not
 ##                        every interface (S3); 127.0.0.1 for a local host.
-##   --dev-all-stations   offer the dev entry holding every station (FT-NET-029, D72).
+##   --dev-all-stations   offer the dev seat holding every station (FT-NET-029, D72).
 ##   --seed N             world seed [1].
 ##   --host-secret-env    read the host secret from the FT_HOST_SECRET environment
 ##                        variable (what HostLauncher passes; D127); the host client
@@ -22,9 +22,9 @@ extends RefCounted
 ##   --tls-cert PATH      with --tls-key: serve HTTPS and WSS instead of HTTP and ws://
 ##   --tls-key PATH       (D294; PEM certificate chain and key, absolute paths, e.g.
 ##                        from `tailscale cert`: docs/launch.md); plain by default.
-##   --session-log PATH   write the session log (JSON Lines: snapshot-age summaries every
+##   --server-log PATH   write the server log (JSON Lines: snapshot-age summaries every
 ##                        10 s and a final summary, D199) there; "off" writes none
-##                        [user://logs/session-<unix time>.jsonl].
+##                        [user://logs/server-<unix time>.jsonl].
 ##   --name NAME          server name in the LAN beacon ["Full Theta server"].
 ##   --discovery-port N   UDP port the beacon broadcasts to [47790] (FT-NET-012).
 ##   --no-beacon          don't broadcast on the LAN. A server bound to a loopback
@@ -98,7 +98,7 @@ var run_for: float = 0.0
 var http_root: String = ""
 var tls_cert: String = ""
 var tls_key: String = ""
-var session_log_path: String = SessionLog.default_path()
+var server_log_path: String = ServerLog.default_path()
 var server_name: String = DEFAULT_NAME
 var discovery_port: int = LanBeacon.DISCOVERY_PORT
 var beacon: bool = true
@@ -200,8 +200,8 @@ func _set_value(flag: String, value: String) -> bool:
 
 
 func _set_solo(value: String) -> bool:
-	if not StationViews.CREW.has(value) and value != StationViews.CAPTAIN:
-		push_error("--solo must be a station: %s or captain" % ", ".join(StationViews.CREW))
+	if not StationCatalogue.CREW.has(value) and value != StationCatalogue.CAPTAIN:
+		push_error("--solo must be a station: %s or captain" % ", ".join(StationCatalogue.CREW))
 		return false
 	solo_station = value
 	encounter_name = "shakedown"
@@ -267,8 +267,8 @@ func _set_flag(flag: String, value: String) -> bool:
 			http_root = value
 		"--probe-out":
 			probe_out = value
-		"--session-log":
-			session_log_path = "" if value == "off" else value
+		"--server-log":
+			server_log_path = "" if value == "off" else value
 		"--name":
 			server_name = value
 		"--language":
@@ -298,7 +298,7 @@ func _set_hull_scale(value: String) -> bool:
 func make_server() -> NetServer:
 	var defs: DefLibrary = DefLibrary.new()
 	var player: ShipDef = defs.ship(&"m1_corvette")
-	var enemy: EnemyDef = defs.enemy(&"m1_raider")
+	var enemy: NpcDef = defs.npc(&"m1_raider")
 	if player == null or enemy == null:
 		push_error("missing M1 definitions (m1_corvette, m1_raider)")
 		return null
@@ -342,10 +342,10 @@ func make_server() -> NetServer:
 		push_error("server failed to start on %s:%d: %s" % [bind_address, port, error_string(err)])
 		server.free()
 		return null
-	server.session.training.solo_on_join = solo_station
-	server.session.sessions.grace_us = int(grace_s * 1_000_000.0)
-	server.session.language = language
-	server.session.tls = tls != null
+	server.game.training.solo_on_join = solo_station
+	server.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	server.game.language = language
+	server.game.tls = tls != null
 	if http_root != "":
 		err = server.start_http(http_root)
 		if err != OK:
@@ -361,8 +361,8 @@ func make_server() -> NetServer:
 		server.http.tls = tls
 	if beacon and not is_loopback(bind_address):
 		server.start_beacon(server_name, discovery_port)
-	if session_log_path != "":
-		server.start_session_log(session_log_path)
+	if server_log_path != "":
+		server.start_server_log(server_log_path)
 	return server
 
 
@@ -381,13 +381,13 @@ static func load_tls(cert_path: String, key_path: String) -> TLSOptions:
 	return TLSOptions.server(key, cert)
 
 
-## The run on content/runs/m3_run.tres with the enemy catalogue, or null (reported).
+## The run on content/runs/m3_run.tres with the NPC catalogue, or null (reported).
 func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 	var run_def: RunDef = defs.run(&"shakedown" if which == "shakedown" else &"m3_run")
 	if run_def == null:
 		push_error("missing run definition for --encounter %s" % which)
 		return null
-	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.enemies())
+	var setup: RunSetup = RunSetup.new(seed_value, "server", run_def, defs.npcs())
 	setup.science = defs.science()
 	setup.conversations = ConversationLibrary.load_dir()
 	for path: String in DefLibrary.list_tres("res://content/modules"):
@@ -398,7 +398,7 @@ func run_setup(defs: DefLibrary, which: String = encounter_name) -> RunSetup:
 	for path: String in DefLibrary.list_tres("res://content/economy/markets"):
 		var market: MarketDef = load(path) as MarketDef
 		setup.markets[market.id] = market
-	# (the site ids are the map's load order; hails by enemy key)
+	# (the site ids are the map's load order; hails by NPC key)
 	var sites: Array[SiteDef] = run_def.map.sites if run_def.map != null else []
 	for i: int in sites.size():
 		if sites[i].market != &"":
@@ -435,14 +435,14 @@ func _training_factory(solo: StringName = &"") -> Callable:
 ## The host's voice service next to `server` (E10, VoiceSetup), events at the sim tick,
 ## wired into the session: silent until the first Start calls start_session() with the
 ## session language and closed set; ship-computer lines go to the stations concerned
-## (ServerVoice, ServerSession.computer_audience, FT-AUD-006).
+## (ServerVoice, NetGame.computer_audience, FT-AUD-006).
 func make_voice(server: NetServer) -> VoiceService:
 	var voice: VoiceService = VoiceSetup.make_service(
 		server.transport, func() -> int: return server.world.tick
 	)
-	voice.computer_audience = server.session.computer_audience
-	voice.npc_audience = server.session.npc_audience
-	server.session.voice.voice = voice
+	voice.computer_audience = server.game.computer_audience
+	voice.npc_audience = server.game.npc_audience
+	server.game.voice.voice = voice
 	return voice
 
 

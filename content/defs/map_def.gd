@@ -6,7 +6,7 @@ extends Resource
 ## Unique among maps (dimensionless id).
 @export var id: StringName = &""
 ## Side of the cube (m); the default is D229's.
-@export var period_m: float = 400000.0
+@export var period: float = 400000.0
 ## The sites present from the start, in site id order (site 0 first, Kestrel Yard, D205).
 @export var sites: Array[SiteDef] = []
 ## Site ids (SiteDef.id) every crew faction knows at the start (FT-MIS-027).
@@ -14,7 +14,7 @@ extends Resource
 ## The pool the director opens sites from (OpenSiteCommand).
 @export var spawnable: Array[SiteDef] = []
 ## Travel legs the director may put debris on (D234): [{from, to, debris, count}], with
-## from and to site keys and debris the key of a destructible debris EnemyDef (content/enemies)
+## from and to site keys and debris the key of a destructible debris NpcDef (content/npcs)
 ## that the debris_leg scenario places on the route with spawn_on_leg (D234), count pieces.
 @export var legs: Array[Dictionary] = []
 
@@ -57,7 +57,7 @@ func validate() -> Array[String]:
 func errors(ships: Array[ShipDef]) -> Array[String]:
 	var out: Array[String] = validate()
 	out.append_array(period_errors(ships))
-	if not (is_finite(period_m) and period_m > 0.0):
+	if not (is_finite(period) and period > 0.0):
 		return out
 	var longest: float = 0.0
 	for def: ShipDef in ships:
@@ -68,7 +68,7 @@ func errors(ships: Array[ShipDef]) -> Array[String]:
 			if all[a] == null or all[b] == null:
 				continue
 			var gap: float = _distance(all[a].pos, all[b].pos)
-			var least: float = 2.0 * longest + all[a].radius_m + all[b].radius_m
+			var least: float = 2.0 * longest + all[a].radius + all[b].radius
 			if gap < least:
 				(
 					out
@@ -95,7 +95,7 @@ func period_errors(ships: Array[ShipDef]) -> Array[String]:
 	var longest: float = 0.0
 	for def: ShipDef in ships:
 		longest = maxf(longest, def.sensor_range)
-	return PeriodRules.errors(period_m, longest)
+	return PeriodRules.errors(period, longest)
 
 
 ## Minimum-image distance (m) between two points of the cube.
@@ -103,9 +103,9 @@ func _distance(a: Vector3, b: Vector3) -> float:
 	var d: Vector3 = b - a
 	return (
 		Vector3(
-			PeriodRules.wrap(d.x, period_m),
-			PeriodRules.wrap(d.y, period_m),
-			PeriodRules.wrap(d.z, period_m)
+			PeriodRules.wrap(d.x, period),
+			PeriodRules.wrap(d.y, period),
+			PeriodRules.wrap(d.z, period)
 		)
 		. length()
 	)

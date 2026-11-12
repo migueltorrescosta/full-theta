@@ -68,11 +68,11 @@ static func out_of_arc_text(p: WeaponsPanel) -> String:
 	var local: Vector3 = (
 		p.ctx.interp.local(p.ctx.interp.offset_to(p.ctx.interp.contact_position(id))) - m.position
 	)
-	if local.length_squared() < 1e-6 or m.forward.angle_to(local) <= m.arc_half_angle:
+	if local.length_squared() < 1e-6 or MountArc.in_arc(m.forward, m.arc_half_angle, local):
 		return ""
 	var swing: Vector3 = Quaternion(m.forward, local.normalized()) * Vector3.FORWARD
 	return p.tr("weapons.out_of_arc").format(
-		{"target": p.ctx.view.callsign(id), "dir": ChipText.clock_words(swing)}
+		{"target": p.ctx.snap.callsign(id), "dir": CalloutText.clock_words(swing)}
 	)
 
 
@@ -84,7 +84,7 @@ static func target_text(p: WeaponsPanel) -> String:
 	var local: Vector3 = p.ctx.interp.local(
 		p.ctx.interp.offset_to(p.ctx.interp.contact_position(id))
 	)
-	return p.tr("weapons.target") % ChipText.chip(p.ctx.view.callsign(id), local)
+	return p.tr("weapons.target") % CalloutText.callout(p.ctx.snap.callsign(id), local)
 
 
 ## The camera mount's selected ammunition by name ("standard" for a mount with one).
@@ -106,7 +106,7 @@ static func ammo_text(p: WeaponsPanel) -> String:
 static func feed_lines(p: WeaponsPanel) -> Array[String]:
 	var out: Array[String] = []
 	var id: int = p.selected_contact()
-	var feeds: Dictionary = p.ctx.view.blocks.get(StationViews.Section.FEEDS, {})
+	var feeds: Dictionary = p.ctx.snap.blocks.get(StationCatalogue.Section.FEEDS, {})
 	if id < 0 or feeds.is_empty():
 		return out
 	var flag: int = contract_flag(p, id)
@@ -142,7 +142,7 @@ static func feed_lines(p: WeaponsPanel) -> Array[String]:
 ## protect, 0 none. The FEEDS block holds the rows only while the contract flags are shared
 ## with this view (the P9 toggle, or Comms on this screen).
 static func contract_flag(p: WeaponsPanel, contact: int) -> int:
-	var feeds: Dictionary = p.ctx.view.blocks.get(StationViews.Section.FEEDS, {})
+	var feeds: Dictionary = p.ctx.snap.blocks.get(StationCatalogue.Section.FEEDS, {})
 	for row: Dictionary in feeds.get("flags", []):
 		if int(row["contact"]) == contact:
 			return int(row["flag"])

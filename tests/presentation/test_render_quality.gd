@@ -65,18 +65,18 @@ func test_graphics_settings_round_trip() -> void:
 
 
 # FT: FT-AUD-022
-# E4: every SpaceView shares the one star mesh.
+# E4: every SpaceScene shares the one star mesh.
 func test_every_view_shares_the_star_mesh() -> void:
-	var a: SpaceView = auto_free(SpaceView.new())
-	var b: SpaceView = auto_free(SpaceView.new())
+	var a: SpaceScene = auto_free(SpaceScene.new())
+	var b: SpaceScene = auto_free(SpaceScene.new())
 	assert_object(a._stars.mesh).is_same(b._stars.mesh)
-	assert_object(SpaceView.star_mesh()).is_same(a._stars.mesh)
+	assert_object(SpaceScene.star_mesh()).is_same(a._stars.mesh)
 
 
 # FT: FT-AUD-016
 # E4: the rim light is off while its energy is 0 and on when a view raises it.
 func test_the_rim_light_is_off_at_zero_energy() -> void:
-	var view: SpaceView = auto_free(SpaceView.new())
+	var view: SpaceScene = auto_free(SpaceScene.new())
 	assert_bool(view.rim.visible).is_false()
 	view.set_rim_energy(0.9)
 	assert_bool(view.rim.visible).is_true()
@@ -89,7 +89,7 @@ func test_the_rim_light_is_off_at_zero_energy() -> void:
 # E4: the dust moves in its vertex shader: a frame sets one uniform (the ship's place
 # within one tile) and leaves the instance transforms alone.
 func test_the_dust_wraps_in_the_shader() -> void:
-	var view: HelmView = auto_free(HelmView.new())
+	var view: HelmScene = auto_free(HelmScene.new())
 	add_child(view)
 	var dust: MultiMeshInstance3D = view.find_children("*", "MultiMeshInstance3D", true, false)[0]
 	var first: Transform3D = dust.multimesh.get_instance_transform(0)
@@ -101,7 +101,7 @@ func test_the_dust_wraps_in_the_shader() -> void:
 	assert_float(at.y).is_equal_approx(470.0, 0.001)
 	assert_float(at.z).is_equal_approx(10.5, 0.001)
 	assert_bool(dust.multimesh.get_instance_transform(0) == first).is_true()
-	assert_int(dust.multimesh.instance_count).is_equal(HelmView.DUST_COUNT)
+	assert_int(dust.multimesh.instance_count).is_equal(HelmScene.DUST_COUNT)
 
 
 # FT: FT-AUD-016

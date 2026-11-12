@@ -15,7 +15,7 @@ func _fleet(scenario: StringName, ships: int, strength: float = 1.0) -> Scenario
 
 
 func _card(f: ScenarioFixture, ship: int, title: String) -> int:
-	for c: CardView in f.api.cards_of(ship):
+	for c: CardInfo in f.api.cards_of(ship):
 		if c.title_key == title:
 			return c.id
 	return -1
@@ -36,7 +36,7 @@ func test_any_ship_can_demand_the_surrender() -> void:
 		var card: int = -1
 		for ship: int in n:
 			var hails: int = 0
-			for c: CardView in f.api.cards_of(ship):
+			for c: CardInfo in f.api.cards_of(ship):
 				hails += 1 if c.kind == CardSpec.Kind.HAIL else 0
 				card = c.id if c.kind == CardSpec.Kind.HAIL else card
 			assert_int(hails).is_equal(1)
@@ -66,7 +66,7 @@ func test_the_wave_goes_on_when_the_first_ship_is_lost() -> void:
 	f.kill(0)
 	f.run(3)
 	var hails: int = 0
-	for c: CardView in f.api.cards_of(2):
+	for c: CardInfo in f.api.cards_of(2):
 		hails += 1 if c.kind == CardSpec.Kind.HAIL else 0
 	assert_int(hails).is_equal(1)
 	f.run(60 * 46)
@@ -103,7 +103,7 @@ func test_accepting_one_card_withdraws_the_other() -> void:
 	var salvage: int = _card(f, 0, "comms.card.salvage")
 	_accept(f, 1, _card(f, 1, "comms.card.escort"))
 	f.run(3)
-	assert_int(f.card_state(salvage)).is_equal(CardView.State.DECLINED)
+	assert_int(f.card_state(salvage)).is_equal(CardInfo.State.DECLINED)
 
 
 # FT: FT-MIS-004, FT-MIS-021
@@ -117,7 +117,12 @@ func test_a_timed_out_salvage_pays_in_part() -> void:
 	var freighter: int = f.ships_of(&"m3_stranded")[0]
 	var at: Vector3 = f.world.kin.relative(1, freighter)
 	f.world.kin.place(
-		1, f.world.kin.px[1] + at.x, f.world.kin.py[1] + at.y, f.world.kin.pz[1] + at.z - 300.0
+		1,
+		CubePoint.make(
+			f.world.kin.pos_x[1] + at.x,
+			f.world.kin.pos_y[1] + at.y,
+			f.world.kin.pos_z[1] + at.z - 300.0
+		)
 	)
 	for ship: int in 2:
 		f.world.damage.health[f.world.damage.hull_row(ship)] = 1.0e15
@@ -135,8 +140,7 @@ func test_a_timed_out_salvage_pays_in_part() -> void:
 # the lane is paid.
 func test_a_later_ship_reaching_the_yard_wins_the_leg() -> void:
 	var f: ScenarioFixture = _fleet(&"debris_leg", 3)
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(1, yard.x, yard.y, yard.z)
+	f.world.kin.place(1, f.world.sites.point(0))
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
 
 
@@ -151,11 +155,10 @@ func test_a_fled_leg_fails_its_clearance() -> void:
 	_accept(f, 1, card)
 	f.api.end_encounter(f.encounter, Scenario.Result.FLED)
 	f.run(3)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	f.run(60 * 40)
 	var credits: int = Economy.credits(f.world, 1)
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(1, yard.x + 500.0, yard.y, yard.z)
+	f.world.kin.place(1, CubePoint.plus(f.world.sites.point(0), Vector3(500.0, 0.0, 0.0)))
 	f.world.kin.vel[1] = Vector3.ZERO
 	var dock: DockCommand = DockCommand.new()
 	dock.site_id = 0
@@ -177,7 +180,7 @@ func test_a_lost_rescue_fails_the_escort_and_clears_the_flag() -> void:
 	assert_int(f.world.knowledge.flag[row]).is_equal(KnowledgeTable.Flag.PROTECT)
 	f.api.end_encounter(f.encounter, Scenario.Result.LOST)
 	f.run(3)
-	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
+	assert_int(f.card_state(card)).is_equal(CardInfo.State.FAILED)
 	assert_int(f.world.knowledge.flag[row]).is_equal(KnowledgeTable.Flag.NONE)
 	assert_float(f.world.reputation.value_of(f.world.faction_of(0), 3)).is_less(0.0)
 

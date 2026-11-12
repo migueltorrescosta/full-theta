@@ -1,6 +1,6 @@
 """Copies the tips into the web shell's loading screen, or checks the copy (#28, P28-Tips).
 
-content/tips/tips.json is the source: the game reads it (presentation/tips_view.gd), and
+content/tips/tips.json is the source: the game reads it (presentation/tips_panel.gd), and
 the web page shows the same tips before the engine has loaded, so app/web/shell.html
 holds a copy on one line between BEGIN and END. Run after editing the tips:
 

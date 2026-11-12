@@ -9,13 +9,13 @@ extends SimTable
 ## Launch serial within the ship, from 0 (what the Relay panel lists).
 var serial: PackedInt32Array = PackedInt32Array()
 ## Position in the cube (m, 64-bit, D104).
-var at_x: PackedFloat64Array = PackedFloat64Array()
-var at_y: PackedFloat64Array = PackedFloat64Array()
-var at_z: PackedFloat64Array = PackedFloat64Array()
-## Target point (m, wrapped).
-var to_x: PackedFloat64Array = PackedFloat64Array()
-var to_y: PackedFloat64Array = PackedFloat64Array()
-var to_z: PackedFloat64Array = PackedFloat64Array()
+var pos_x: PackedFloat64Array = PackedFloat64Array()
+var pos_y: PackedFloat64Array = PackedFloat64Array()
+var pos_z: PackedFloat64Array = PackedFloat64Array()
+## Destination point (m, wrapped).
+var dest_x: PackedFloat64Array = PackedFloat64Array()
+var dest_y: PackedFloat64Array = PackedFloat64Array()
+var dest_z: PackedFloat64Array = PackedFloat64Array()
 ## 1 once the probe reached its target.
 var deployed: PackedByteArray = PackedByteArray()
 
@@ -24,16 +24,14 @@ func add_ship(_ship_id: int, _faction: int, _def: ShipDef) -> void:
 	pass
 
 
-## Adds a probe at (x, y, z) heading for (tx, ty, tz); returns its row.
-func launch(ship_id: int, faction: int, serial_no: int, from: Vector3, to: Vector3) -> int:
+## Adds a probe at point `from` heading for point `to` (m); returns its row.
+func launch(
+	ship_id: int, faction: int, serial_no: int, from: PackedFloat64Array, to: PackedFloat64Array
+) -> int:
 	var row: int = add_key(ship_id, faction)
 	serial.append(serial_no)
-	at_x.append(from.x)
-	at_y.append(from.y)
-	at_z.append(from.z)
-	to_x.append(to.x)
-	to_y.append(to.y)
-	to_z.append(to.z)
+	CubePoint.append(pos_x, pos_y, pos_z, from)
+	CubePoint.append(dest_x, dest_y, dest_z, to)
 	deployed.append(0)
 	return row
 
@@ -42,7 +40,7 @@ func launch(ship_id: int, faction: int, serial_no: int, from: Vector3, to: Vecto
 func reset_ship(ship_id: int, _def: ShipDef) -> void:
 	var keep: PackedInt32Array = PackedInt32Array()
 	for r: int in size():
-		if ship_ids[r] != ship_id:
+		if owner_ship[r] != ship_id:
 			keep.append(r)
 	for col: Array in columns():
 		var name: String = col[0]
@@ -52,19 +50,3 @@ func reset_ship(ship_id: int, _def: ShipDef) -> void:
 		for i: int in keep.size():
 			fresh[i] = old[keep[i]]
 		set(name, fresh)
-
-
-func columns() -> Array:
-	return (
-		super()
-		+ [
-			["serial", serial],
-			["at_x", at_x],
-			["at_y", at_y],
-			["at_z", at_z],
-			["to_x", to_x],
-			["to_y", to_y],
-			["to_z", to_z],
-			["deployed", deployed],
-		]
-	)

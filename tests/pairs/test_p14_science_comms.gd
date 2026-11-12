@@ -9,7 +9,7 @@ extends GdUnitTestSuite
 func test_the_option_exists_only_after_a_cargo_scan() -> void:
 	var w: SimWorld = P14Scenario.build()
 	var crew: Callable = P14Scenario.coop_crew()
-	var share: ViewFilter = ViewFilter.of("comms", "easy#verify_chip")
+	var share: ShortcutFilter = ShortcutFilter.of("comms", "easy#verify_chip")
 	var unlocked_at: int = -1
 	var locked_icon: bool = false
 	while w.tick < P14Scenario.TICK_LIMIT and not P14Scenario.done(w):
@@ -21,10 +21,10 @@ func test_the_option_exists_only_after_a_cargo_scan() -> void:
 		if not o["enabled"]:
 			assert_int(unlocked_at).is_equal(-1)
 			assert_bool(o["verify"]).is_true()
-			var row: Dictionary = CommsView.block(w, 0, share)["nodes"][0]["options"][2]
+			var row: Dictionary = CommsSection.block(w, 0, share)["nodes"][0]["options"][2]
 			assert_bool(row["verify"]).override_failure_message("icon").is_true()
 			assert_bool(row["enabled"]).is_false()
-			var hidden: Dictionary = CommsView.block(w, 0, ViewFilter.of("comms", "easy"))
+			var hidden: Dictionary = CommsSection.block(w, 0, ShortcutFilter.of("comms", "easy"))
 			assert_bool(hidden["nodes"][0]["options"][2]["verify"]).is_false()
 			locked_icon = true
 		elif unlocked_at < 0:
@@ -47,7 +47,7 @@ func test_calling_the_bluff_draws_from_its_distribution() -> void:
 	for seed_value: int in 60:
 		var w: SimWorld = StoryFixture.duel(seed_value)
 		var hail: HailCommand = HailCommand.new()
-		hail.target = 1
+		hail.contact = 1
 		assert_bool(StoryFixture.run(w, 0, hail)).is_true()
 		Story.learn_fact(w, StoryFixture.BLUE, 1, "cargo")
 		var reply: ReplyCommand = ReplyCommand.new()

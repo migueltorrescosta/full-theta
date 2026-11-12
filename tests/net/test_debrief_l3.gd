@@ -19,9 +19,9 @@ func after_test() -> void:
 
 # FT: FT-MIS-038
 func test_core_actions_are_data_and_first_use_times_them() -> void:
-	var d: StationDef = StationViews.def("helm")
+	var d: SeatDef = StationCatalogue.def("helm")
 	assert_array(d.core_actions).contains(["face=helm_input.face", "jump=helm_jump"])
-	assert_array(StationViews.def("tactical").core_actions).contains(["fire=fire|fire_guided"])
+	assert_array(StationCatalogue.def("tactical").core_actions).contains(["fire=fire|fire_guided"])
 	var f: FirstUse = FirstUse.new()
 	var still: HelmInputCommand = HelmInputCommand.new()
 	f.on_command(0, still, 120)
@@ -86,7 +86,7 @@ func test_debrief_record_of_a_finished_run() -> void:
 
 
 # FT: FT-MIS-038, FT-PAIR-013
-# The server sends `debrief` right after `run_over`, with a Relay mark timed and a pair event
+# The server sends `debrief` right after `ship_outcome`, with a Relay mark timed and a pair event
 # counted.
 func test_the_debrief_follows_the_outcome_card() -> void:
 	var server: NetServer = h.server()
@@ -96,12 +96,12 @@ func test_the_debrief_follows_the_outcome_card() -> void:
 	(
 		assert_bool(
 			await h.until(
-				func() -> bool: return server.session.crew.marks.marks_of(PLAYER).size() == 1
+				func() -> bool: return server.game.crew.marks.marks_of(PLAYER).size() == 1
 			)
 		)
 		. is_true()
 	)
-	server.session.coop.record(CoopEvents.SHORTCUT_SHARED, "p1", PLAYER)
+	server.game.coop.record(CoopEvents.SHORTCUT_SHARED, "p1", PLAYER)
 	var from: int = h.mark(crew[0])
 	var hit: SimHit = SimHit.new()
 	hit.target_id = ENEMY

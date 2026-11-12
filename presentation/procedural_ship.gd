@@ -41,7 +41,7 @@ static var _flat: Dictionary[StandardMaterial3D, StandardMaterial3D] = {}
 ## The baked look to show (a name from `look_for`); set before the ship enters the tree, or
 ## change it with `set_look`.
 var look: String = GENERIC
-## The factor of the model's scale, so the detail range follows it (SpaceView.ship_scale).
+## The factor of the model's scale, so the detail range follows it (SpaceScene.ship_scale).
 var detail_scale: float = 1.0
 var _built_low: bool = false
 var _model: Node3D = null

@@ -5,10 +5,10 @@ extends PanelContainer
 ## with voters and votes needed); the host also gets Abandon (D127); the Captain and
 ## viewers of that ship may take over an uncovered station (FT-NET-042).
 ##
-## Multi-ship sessions (#11, M4-Q8, D265 proposed): players of an allied ship may take over a
+## Multi-ship games (#11, M4-Q8, D265 proposed): players of an allied ship may take over a
 ## paused ship's uncovered station too ("Take Science on Heron"); there is no accept prompt,
 ## the first claim wins, and the server refuses a takeover that would leave the taker's own
-## ship uncovered. An enemy ship's pause offers nothing. In PvP the vote is the give-up
+## ship uncovered. A hostile ship's pause offers nothing. In PvP the vote is the give-up
 ## (forfeit) vote (M4-Q10).
 ##
 ## On a phone (#28 follow-up, design 2.13) the overlay is an opaque sheet over the safe area
@@ -121,7 +121,7 @@ func paused_ship() -> int:
 func may_take_over(id: int) -> bool:
 	if id == ctx.crew.ship:
 		return not ctx.crew.is_crew()
-	return ctx.crew.entry != "" and ctx.crew.allied(id, ctx.crew.ship)
+	return ctx.crew.seat != "" and ctx.crew.allied(id, ctx.crew.ship)
 
 
 func refresh() -> void:
@@ -141,7 +141,7 @@ func refresh() -> void:
 	var p: Dictionary = ctx.crew.paused[id]
 	var names: PackedStringArray = []
 	for s: Variant in p.get("uncovered", []):
-		names.append(tr("station." + str(s)))
+		names.append(tr(StationCatalogue.name_key(str(s))))
 	var own: bool = id == ctx.crew.ship
 	if own:
 		_text.text = tr("pause.waiting") % ", ".join(names)
@@ -166,9 +166,12 @@ func refresh() -> void:
 	elif may_take_over(id):
 		for s: Variant in p.get("uncovered", []):
 			var st: String = str(s)
-			var text: String = tr("pause.take") % tr("station." + st)
+			var text: String = tr("pause.take") % tr(StationCatalogue.name_key(st))
 			if not own:
-				text = tr("pause.take_on") % [tr("station." + st), ctx.crew.ship_name(id)]
+				text = (
+					tr("pause.take_on")
+					% [tr(StationCatalogue.name_key(st)), ctx.crew.ship_name(id)]
+				)
 			_button("Takeover_" + st, text).pressed.connect(
 				func() -> void: ctx.intents.takeover(id, st)
 			)

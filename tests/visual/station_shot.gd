@@ -1,6 +1,6 @@
 ## Station widgets for the L5 harness (#7): builds tests/stations/station_fixture.gd's
 ## context and shows one view of it, set from shots.json: "screen" (the StationScreen
-## of `entry`), "lobby", "menu" or "menu_web" (the main menu, with or without the Host
+## of `seat`), "lobby", "menu" or "menu_web" (the main menu, with or without the Host
 ## section), or "radar" (the disc radar alone, large). Extras: `selected`
 ## (a contact id, -1 none), `ping` (a contact id pinged a second ago, -1 none),
 ## `overlay` (the menu on its Controls tab; `controls_view` picks its view, a ControlsPane.VIEW_),
@@ -37,7 +37,7 @@ const LESSON_STEPS: Dictionary = {
 }
 
 var view: String = "screen"
-var entry: String = "science"
+var seat: String = "science"
 var selected: int = StationFixture.H2
 var ping: int = -1
 var overlay: bool = false
@@ -94,15 +94,15 @@ func _ready() -> void:
 	LayoutMode.apply(get_tree().root)
 	get_tree().root.content_scale_factor = ui_scale
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_ctx = StationFixture.context(entry, "user://l5_station_shot.cfg")
+	_ctx = StationFixture.context(seat, "user://l5_station_shot.cfg")
 	_ctx.settings.render_3d = render_3d
 	RenderQuality.apply(_ctx.settings, LayoutMode.is_touch(LayoutMode.kind_of(self)), get_tree())
 	if lesson:
-		var step: Array = LESSON_STEPS.get(entry, ["face", "Face the drone."])
+		var step: Array = LESSON_STEPS.get(seat, ["face", "Face the drone."])
 		if lesson_intent != "":
 			step = [lesson_intent, "Align a mount to the target."]
-		_ctx.training[entry] = {
-			"line": "shakedown.%s.%s" % [entry, step[0]],
+		_ctx.training[seat] = {
+			"line": "shakedown.%s.%s" % [seat, step[0]],
 			"intent": step[0],
 			"text": "%s {binding:%s}" % [step[1], step[0]],
 			"example": "train.ex." + step[0],
@@ -111,7 +111,7 @@ func _ready() -> void:
 	if device != "":
 		_ctx.matcher.device = device
 	if science != "":
-		_ctx.view.blocks[StationViews.Section.SCIENCE] = ScienceShotBlocks.block(science)
+		_ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block(science)
 	if comms != "off":
 		CommsFixture.install(_ctx)
 	if tooltip:
@@ -149,11 +149,11 @@ func _ready() -> void:
 			_ctx.crew.lobby[0]["crew"] = 2
 			_ctx.crew.lobby[0]["uncovered"] = ["relay", "comms"]
 			_ctx.crew.lobby[0]["seats"] = [
-				{"entry": "helm", "name": "Ana"},
-				{"entry": "weapons", "name": "Bo"},
-				{"entry": "systems", "name": "Cy"},
+				{"seat": "helm", "name": "Ana"},
+				{"seat": "weapons", "name": "Bo"},
+				{"seat": "systems", "name": "Cy"},
 			]
-			if entry == StationViews.ALL:
+			if seat == StationCatalogue.ALL:
 				# The dev seat covers every station and needs no other crew (FT-NET-029).
 				_ctx.crew.lobby[0]["uncovered"] = []
 				_ctx.crew.lobby[0]["ready"] = true
@@ -185,7 +185,7 @@ func _ready() -> void:
 			s.help_requested.connect(
 				func() -> void:
 					menu.set_controls(
-						_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.entry
+						_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.seat
 					)
 					menu.open(SettingsScreen.TAB_CONTROLS)
 			)
@@ -210,7 +210,7 @@ func _ready() -> void:
 			if menu_tab != "":
 				# As ClientShell.open_menu: the Controls tab is set for the screen's seat.
 				menu.set_controls(
-					_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.entry
+					_ctx.settings.bindings, s.stations, _ctx.matcher.device, _ctx.crew.seat
 				)
 				menu.open(menu_tab)
 			for e: Dictionary in events:

@@ -1,7 +1,7 @@
 class_name FleetMessages
 extends RefCounted
 ## Payloads of the multi-ship and PvP events (#11, protocol version 8; docs/protocol.md
-## "Multi-ship sessions and PvP"): one builder per event and PAYLOADS, the field types each
+## "Multi-ship games and PvP"): one builder per event and PAYLOADS, the field types each
 ## must have, so the server (strand C) builds them and the client (strand D) reads them by
 ## the same names. check() is the receiving side's guard, as NetProtocol.check() is for
 ## control messages. Scoreboard rows carry status and progress only: no hull, no
@@ -36,20 +36,20 @@ const PAYLOADS: Dictionary = {
 		"started": TYPE_BOOL,
 	},
 	NetProtocol.EVENT_TAKEOVER:
-	{"ship": TYPE_INT, "entry": TYPE_STRING, "by": TYPE_STRING, "from_ship": TYPE_INT},
+	{"ship": TYPE_INT, "seat": TYPE_STRING, "by": TYPE_STRING, "from_ship": TYPE_INT},
 	NetProtocol.EVENT_HANDOVER: {"ship": TYPE_INT, "to_ship": TYPE_INT},
 	NetProtocol.EVENT_SCOREBOARD: {"rows": TYPE_ARRAY},
 	NetProtocol.EVENT_ELIMINATED: {"ship": TYPE_INT, "reason": TYPE_STRING, "lives": TYPE_INT},
 	NetProtocol.EVENT_RELAUNCH_VOTES:
 	{"ship": TYPE_INT, "voters": TYPE_ARRAY, "sessions": TYPE_ARRAY, "needed": TYPE_INT},
 	NetProtocol.EVENT_RELAUNCHED: {"ship": TYPE_INT, "lives": TYPE_INT},
-	NetProtocol.EVENT_SESSION_OVER:
+	NetProtocol.EVENT_GAME_OVER:
 	{
 		"reason": TYPE_STRING,
 		"winners": TYPE_ARRAY,
 		"team": TYPE_INT,
-		"held_s": TYPE_FLOAT,
-		"time_s": TYPE_FLOAT,
+		"hold_time": TYPE_FLOAT,
+		"time": TYPE_FLOAT,
 	},
 }
 const FLEET_SHIP: Dictionary = {
@@ -68,7 +68,7 @@ const SCOREBOARD_ROW: Dictionary = {
 	"team": TYPE_INT,
 	"state": TYPE_STRING,
 	"encounters": TYPE_INT,
-	"time_s": TYPE_FLOAT,
+	"time": TYPE_FLOAT,
 	"kills": TYPE_INT,
 }
 
@@ -90,7 +90,7 @@ static func resume(tick: int, host: bool) -> Dictionary:
 	return {"tick": tick, "host": host}
 
 
-## One ship of the multi-ship lobby (M4-Q3, M4-Q4): seats [{name, entry}] as in `lobby`,
+## One ship of the multi-ship lobby (M4-Q3, M4-Q4): seats [{name, seat}] as in `lobby`,
 ## crew and uncovered from NetCoverage, ready when it passes coverage, started when its crew
 ## pressed Start.
 static func fleet_ship(
@@ -117,7 +117,7 @@ static func fleet_ship(
 
 ## The multi-ship lobby: every ship, the host's mode and options, the crewed ships that have
 ## not pressed Start yet (waiting) and whether the universe has started (all together, M4-Q4).
-## `mode` and `team_win` are SessionRules' names; the server fills them, so this class names
+## `mode` and `team_win` are GameRules' names; the server fills them, so this class names
 ## no sim class and the clients may read it (F4).
 static func fleet(
 	ships: Array,
@@ -139,10 +139,10 @@ static func fleet(
 	}
 
 
-## A session took over `entry` on `ship` during its pause (M4-Q8): `by` its name, from_ship
+## A session took over `seat` on `ship` during its pause (M4-Q8): `by` its name, from_ship
 ## the ship it came from (the same ship for its Captain or a viewer).
-static func takeover(ship: int, entry: String, by: String, from_ship: int) -> Dictionary:
-	return {"ship": ship, "entry": entry, "by": by, "from_ship": from_ship}
+static func takeover(ship: int, seat: String, by: String, from_ship: int) -> Dictionary:
+	return {"ship": ship, "seat": seat, "by": by, "from_ship": from_ship}
 
 
 ## An eliminated session now views to_ship's main screen, or TO_SCOREBOARD (FT-MIS-030, D91).
@@ -151,7 +151,7 @@ static func handover(ship: int, to_ship: int) -> Dictionary:
 
 
 static func scoreboard_row(
-	ship: int, name: String, team: int, state: String, encounters: int, time_s: float, kills: int
+	ship: int, name: String, team: int, state: String, encounters: int, time: float, kills: int
 ) -> Dictionary:
 	return {
 		"ship": ship,
@@ -159,7 +159,7 @@ static func scoreboard_row(
 		"team": team,
 		"state": state,
 		"encounters": encounters,
-		"time_s": time_s,
+		"time": time,
 		"kills": kills,
 	}
 
@@ -177,17 +177,18 @@ static func relaunched(ship: int, lives: int) -> Dictionary:
 	return {"ship": ship, "lives": lives}
 
 
-## The session's outcome (SessionOutcome: its reason name, winners and team); time_s: the
-## session's length; held_s: HOLDOUT's score, how long the finite side lasted.
-static func session_over(
-	reason: String, winners: Array, team: int, held_s: float, time_s: float
+## The game's outcome (GameOutcome: its reason name, winners and the lobby team of its
+## winner_faction, NetFleet.team_of_faction); time: the session's length; hold_time: HOLDOUT's
+## score, how long the finite side lasted.
+static func game_over(
+	reason: String, winners: Array, team: int, hold_time: float, time: float
 ) -> Dictionary:
 	return {
 		"reason": reason,
 		"winners": winners,
 		"team": team,
-		"held_s": held_s,
-		"time_s": time_s,
+		"hold_time": hold_time,
+		"time": time,
 	}
 
 

@@ -38,7 +38,7 @@ const FRONT_ARROW_PX: float = 24.0
 
 ## The items (ContactPicture); its interpolator gives the own ship's orientation and
 ## position, to place the cube and turn map points into positions, and
-## the site period (no cube without one).
+## the map period (no cube without one).
 var picture: ContactPicture = ContactPicture.new()
 var selected: Dictionary = {}
 ## The item the map is centred on ({} = own ship).
@@ -111,7 +111,7 @@ func rotate_by(delta_px: Vector2) -> void:
 	queue_redraw()
 
 
-## Site period (m), 0 when unknown.
+## Map period (m), 0 when unknown.
 func period_m() -> float:
 	return float(picture.interp.p_units) / NetCodec.POS_Q
 
@@ -168,7 +168,7 @@ func item_at(pos: Vector2) -> Dictionary:
 	if not best.is_empty():
 		return ItemGlyph.ref(best)
 	for e: Dictionary in layout:
-		if (e["chip_rect"] as Rect2).has_point(pos):
+		if (e["callout_rect"] as Rect2).has_point(pos):
 			return ItemGlyph.ref(e["item"])
 	return {}
 
@@ -219,11 +219,11 @@ func _draw() -> void:
 		_draw_item(sel, true)
 	var covers: Array[Rect2] = SheetCover.over(self)
 	for e: Dictionary in layout:
-		if e["chip"] != "" and not SheetCover.touches(e["chip_rect"], covers):
+		if e["callout"] != "" and not SheetCover.touches(e["callout_rect"], covers):
 			var col: Color = (
 				Palette.color("selected") if e == sel else Palette.item_color(e["item"])
 			)
-			_draw_text(font, e["chip_rect"].position, e["chip"], col)
+			_draw_text(font, e["callout_rect"].position, e["callout"], col)
 	for it: Dictionary in picture.items:
 		if it["kind"] == "point":
 			_draw_pulse(project(rel_of(it)), float(it.get("pulse", 0.0)))
@@ -407,7 +407,7 @@ func say_point(label: String, rel: Vector3) -> String:
 	var interp: SnapshotInterpolator = picture.interp
 	var local: Vector3 = from_own(rel)
 	if local.length() <= Callout.FAR_M:
-		return ChipText.chip(label, local)
+		return CalloutText.callout(label, local)
 	var at: Vector3 = centre_world() + interp.own_rotation() * rel
 	var refs: Array[Dictionary] = []
 	for it: Dictionary in picture.items:
@@ -425,8 +425,8 @@ func say_point(label: String, rel: Vector3) -> String:
 			best = off
 			best_name = r["name"]
 	if best_name == "":
-		return ChipText.chip(label, local)
-	return "%s: %s" % [label, ChipText.relative(best_name, interp.local(best))]
+		return CalloutText.callout(label, local)
+	return "%s: %s" % [label, CalloutText.relative(best_name, interp.local(best))]
 
 
 func _draw_text(font: Font, at: Vector2, text: String, col: Color) -> void:
@@ -434,7 +434,7 @@ func _draw_text(font: Font, at: Vector2, text: String, col: Color) -> void:
 	Palette.draw_outlined(self, font, base, text, FONT_SIZE, col)
 
 
-## Per item (point pings left out): {"item", "rel", "pos", "foot", "chip", "chip_rect"}.
+## Per item (point pings left out): {"item", "rel", "pos", "foot", "callout", "callout_rect"}.
 func _layout() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var font: Font = get_theme_default_font()
@@ -451,7 +451,7 @@ func _layout() -> Array[Dictionary]:
 			var sz: Vector2 = font.get_string_size(chip, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE)
 			sz.y = font.get_height(FONT_SIZE)
 			rect = Rect2(Vector2(pos.x + 10.0, pos.y - sz.y / 2.0), sz)
-			var forms: Array = ChipLayout.chip_forms(font, chip, FONT_SIZE)
+			var forms: Array = CalloutLayout.callout_forms(font, chip, FONT_SIZE)
 			variants.assign(forms[0])
 			sizes.assign(forms[1])
 		(
@@ -462,8 +462,8 @@ func _layout() -> Array[Dictionary]:
 					"rel": rel,
 					"pos": pos,
 					"foot": project(Vector3(rel.x, 0.0, rel.z)),
-					"chip": chip,
-					"chip_rect": rect,
+					"callout": chip,
+					"callout_rect": rect,
 					"variants": variants,
 					"sizes": sizes,
 					"selected": _is_selected(it),
@@ -482,7 +482,7 @@ func _layout() -> Array[Dictionary]:
 		Rect2(own - Vector2(9, 9), Vector2(18, 18)),
 		Rect2(Vector2(v.position.x + 8.0, base - font.get_height(FONT_SIZE)), caption),
 	]
-	ChipLayout.declutter(out, fixed, v.grow(-2.0), Rect2(), blip_r() + 3.0)
+	CalloutLayout.declutter(out, fixed, v.grow(-2.0), Rect2(), blip_r() + 3.0)
 	return out
 
 

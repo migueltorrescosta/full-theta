@@ -47,7 +47,7 @@ func test_hack_needs_access_and_follows_edges() -> void:
 	assert_float(t.trace[ME]).is_greater_equal(def.trace_per_move)
 	events = _walk(w)
 	assert_int(SimFixture.of_kind(events, &"hack_done").size()).is_equal(1)
-	assert_int(t.kind[ME]).is_equal(ScienceTable.Session.NONE)
+	assert_int(t.kind[ME]).is_equal(ScienceTable.Minigame.NONE)
 
 
 # FT: FT-SCI-006
@@ -81,7 +81,7 @@ func test_trace_bar_fails_a_slow_hack() -> void:
 	)
 	var events: Array[SimEvent] = SimFixture.run(w, ticks + 5)
 	assert_int(SimFixture.of_kind(events, &"hack_traced").size()).is_equal(1)
-	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Session.NONE)
+	assert_int(w.science.kind[ME]).is_equal(ScienceTable.Minigame.NONE)
 	assert_int(w.hacks.size()).is_equal(0)
 
 
@@ -110,7 +110,7 @@ func test_hidden_nodes_are_revealed_by_scans_and_probes() -> void:
 	var route: Array[int] = ScienceFixture.route(w)
 	for node: int in route:
 		ScienceFixture.do(w, ScienceFixture.move_cmd(node))
-		if w.science.kind[ME] != ScienceTable.Session.HACK:
+		if w.science.kind[ME] != ScienceTable.Minigame.HACK:
 			break
 		assert_int(w.science.known[ME] & (1 << node)).is_not_equal(0)
 
@@ -132,8 +132,7 @@ func test_hack_window_applies_and_ends() -> void:
 	var ticks: int = ceili(window_s * 60.0)
 	SimFixture.run(w, ticks - 2)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"weapons")).is_equal(0.0)
-	events = SimFixture.run(w, 4)
-	assert_int(SimFixture.of_kind(events, &"hack_window_end").size()).is_equal(1)
+	SimFixture.run(w, 4)
 	assert_float(DamageSystem.effectiveness(w, FOE, &"weapons")).is_equal(1.0)
 	assert_int(w.hacks.size()).is_equal(0)
 
@@ -145,9 +144,9 @@ func test_every_effect_window_is_at_least_8_s() -> void:
 	assert_array(def.validate()).is_empty()
 	assert_int(def.effects.size()).is_equal(6)
 	for e: HackEffectDef in def.effects:
-		assert_float(e.window_s).is_greater_equal(8.0)
+		assert_float(e.window).is_greater_equal(8.0)
 	var bad: HackEffectDef = def.effects[0].duplicate()
-	bad.window_s = 7.9
+	bad.window = 7.9
 	assert_array(bad.validate()).is_not_empty()
 
 

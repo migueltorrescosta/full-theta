@@ -1,7 +1,7 @@
 class_name RunDriver
 extends RefCounted
 ## What drives a run between the server's ticks (F10, R12-15, R14-6): the encounter Director,
-## the FleetDirector of a multi-ship session and the Shakedown's TrainingDriver. NetServer holds
+## the FleetDirector of a multi-ship game and the Shakedown's TrainingDriver. NetServer holds
 ## one and calls it through this interface only, through the Scenario API (FT-ARC-016).
 
 

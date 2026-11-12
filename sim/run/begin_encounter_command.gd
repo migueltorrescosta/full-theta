@@ -31,14 +31,14 @@ func apply(world: SimWorld) -> bool:
 			return false
 		if world.ai.is_enabled(s) or not world.kin.is_alive(s):
 			return false
-		if world.run.status[s] != RunTable.Status.IN_PLAY or world.run.encounter[s] >= 0:
+		if world.ships.status[s] != ShipStateTable.Status.IN_PLAY or world.ships.encounter[s] >= 0:
 			return false
 		mask |= 1 << s
 	var id: int = world.encounters.add_encounter(
 		ships[0], world.faction_of(ships[0]), scenario, site, mask, cost, world.tick
 	)
 	for s: int in ships:
-		world.run.encounter[s] = id
+		world.ships.encounter[s] = id
 		# The crew must be able to see, select and jump to the site it is sent to.
 		world.sites.reveal(site, world.faction_of(s))
 	world.emit(&"encounter_open", ships[0], -1, id, Vector3.ZERO, scenario_id)

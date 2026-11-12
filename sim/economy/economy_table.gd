@@ -11,7 +11,3 @@ var credits: PackedInt32Array = PackedInt32Array()
 func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	add_key(ship_id, faction)
 	credits.append(0)
-
-
-func columns() -> Array:
-	return super() + [["credits", credits]]

@@ -89,7 +89,7 @@ func test_a_click_on_a_ring_sector_sets_focus_to_that_clock_and_height() -> void
 # FT: FT-HLM-011
 func test_ring_shows_helm_focus_with_engineering_tightness_and_power() -> void:
 	var ring: ShieldRing = _panel.ring
-	var h: Dictionary = _ctx().view.blocks[StationViews.Section.HELM]
+	var h: Dictionary = _ctx().snap.blocks[StationCatalogue.Section.HELM]
 	assert_vector(ring.focus).is_equal(h["shield_focus"])
 	assert_float(ring.tightness).is_equal(2.0)
 	assert_float(ring.power).is_equal(1.0)
@@ -106,7 +106,7 @@ func test_ring_shows_helm_focus_with_engineering_tightness_and_power() -> void:
 
 # FT: FT-HLM-012
 func test_thrust_envelope_and_propellant_come_from_the_snapshot() -> void:
-	var fields: Array = StationViews.def("helm").fields[StationViews.Section.HELM]
+	var fields: Array = StationCatalogue.def("helm").fields[StationCatalogue.Section.HELM]
 	assert_array(fields).contains(["thrust_scale", "torque_scale", "shield_power"])
 	assert_float(float(_panel.helm_block()["torque_scale"])).is_equal(0.8)
 	# 8000 kg of the corvette's 10 t.
@@ -177,7 +177,7 @@ func test_held_thrust_and_mouse_steering_work_together() -> void:
 func test_the_end_of_the_run_frees_the_pointer() -> void:
 	_frame()
 	assert_bool(_panel.steering()).is_true()
-	_ctx().crew.run_over[StationFixture.SHIP] = {"ship": StationFixture.SHIP, "outcome": "win"}
+	_ctx().crew.ship_outcome[StationFixture.SHIP] = {"ship": StationFixture.SHIP, "outcome": "win"}
 	_frame()
 	assert_bool(_panel.steering()).is_false()
 
@@ -227,7 +227,7 @@ func _click_view() -> void:
 
 ## Sets the own velocity from ship-frame metres per second (x starboard, y up, -z ahead).
 func _drift(local: Vector3) -> void:
-	_ctx().view.kin["vel"] = NetCodec.quant_vel(_ctx().interp.own_rotation() * local)
+	_ctx().snap.kin["vel"] = NetCodec.quant_vel(_ctx().interp.own_rotation() * local)
 	_frame()
 
 
@@ -317,18 +317,18 @@ func test_comfort_locks_the_cockpit_roll_and_narrows_the_view() -> void:
 	var cam: Camera3D = _panel.view3d.camera
 	var own: Quaternion = _ctx().interp.own_rotation()
 	assert_bool(cam.quaternion.is_equal_approx(own)).is_true()
-	assert_float(cam.fov).is_equal(HelmView.FOV_DEG)
+	assert_float(cam.fov).is_equal(HelmScene.FOV_DEG)
 	s.comfort = true
 	s.roll_lock = "target"
 	s.reduced_fov = true
 	_ctx().crew.select("contact", StationFixture.H2)
 	_frame()
-	assert_float(cam.fov).is_equal_approx(HelmView.FOV_DEG * ComfortCamera.REDUCED_FOV, 1e-4)
+	assert_float(cam.fov).is_equal_approx(HelmScene.FOV_DEG * ComfortCamera.REDUCED_FOV, 1e-4)
 	# No orientation known for H2: our deck.
 	assert_bool(cam.quaternion.is_equal_approx(own)).is_true()
 	# H2 rolled 0.6 rad: the view rolls with H2's deck; the bow stays the view axis.
 	var h2_rot: Quaternion = Quaternion(Vector3.FORWARD, 0.6)
-	_ctx().view.near[StationFixture.H2] = [NetCodec.pack_quat(h2_rot), Vector3i.ZERO, 0]
+	_ctx().snap.near[StationFixture.H2] = [NetCodec.pack_quat(h2_rot), Vector3i.ZERO, 0]
 	_frame()
 	assert_vector(cam.basis.z).is_equal_approx(own * Vector3.BACK, Vector3.ONE * 1e-4)
 	var sent: Quaternion = NetCodec.unpack_quat(NetCodec.pack_quat(h2_rot))
@@ -364,7 +364,7 @@ func test_marker_labels_stay_clear_of_the_shield_ring() -> void:
 				if inside.encloses(box):
 					# The label stays within 48 px of its marker (D319), and clear of the
 					# reserved boxes unless the marker itself sits in one.
-					assert_float(ChipLayout.gap_to(box, p)).is_less_equal(48.0)
+					assert_float(CalloutLayout.gap_to(box, p)).is_less_equal(48.0)
 					if not reserved.any(func(area: Rect2) -> bool: return area.has_point(p)):
 						for area: Rect2 in reserved:
 							assert_bool(box.intersects(area)).is_false()

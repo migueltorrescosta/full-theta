@@ -29,7 +29,7 @@ func test_wrong_types_name_file_and_field() -> void:
 	_expect(
 		"bad_type",
 		[
-			"enemy_wrong_class.tres: ship: expected ShipDef, got WeaponDef",
+			"npc_wrong_class.tres: ship: expected ShipDef, got WeaponDef",
 			"ship_mixed_types.tres: inertia: expected Vector3, got float 2000000.0",
 			"ship_mixed_types.tres: mounts: element expected MountDef, got SubsystemDef",
 			'ship_mixed_types.tres: sub_engines.health_max: expected float, got String "20 MJ"',
@@ -44,10 +44,10 @@ func test_out_of_range_values_name_file_and_field() -> void:
 		"bad_range",
 		[
 			(
-				"enemy_out_of_range.tres: engage_range_max: must be > engage_range_min (800.0), "
+				"npc_out_of_range.tres: engage_range_max: must be > engage_range_min (800.0), "
 				+ "got 500.0"
 			),
-			"enemy_out_of_range.tres: retreat_hull_fraction: must be in (0, 1), got 1.0",
+			"npc_out_of_range.tres: retreat_hull_fraction: must be in (0, 1), got 1.0",
 			"ship_out_of_range.tres: mass: must be > 0, got -1.0",
 			(
 				"ship_out_of_range.tres: mounts[0].subsystem_id: no subsystem with id "
@@ -67,10 +67,10 @@ func test_missing_references_name_file_and_field() -> void:
 		"missing_ref",
 		[
 			(
-				"enemy_missing_file.tres: ship: missing reference "
+				"npc_missing_file.tres: ship: missing reference "
 				+ "res://tests/content/fixtures/missing_ref/no_such_ship.tres"
 			),
-			"enemy_null_ship.tres: ship: required reference is missing",
+			"npc_null_ship.tres: ship: required reference is missing",
 			"ship_without_assist.tres: assist: required reference is missing",
 		]
 	)

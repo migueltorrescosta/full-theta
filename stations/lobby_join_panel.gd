@@ -16,7 +16,7 @@ func _init(ctx: StationContext) -> void:
 	var url: String = join_url(ctx.host_bind, ctx.host_port, ctx.host_tls)
 	_line("JoinUrl", tr("lobby.join_browser") % url)
 	_line("JoinDesktop", tr("lobby.join_desktop") % ctx.host_bind)
-	var qr: QrView = QrView.new()
+	var qr: QrCode = QrCode.new()
 	qr.name = "JoinQr"
 	qr.set_text(url)
 	add_child(qr)
@@ -54,7 +54,7 @@ class Strip:
 	const ADDRESS_SIZE_PHONE: int = 22
 
 	var _ctx: StationContext
-	var _qr: QrView
+	var _qr: QrCode
 	var _address: Label
 
 	func _init(ctx: StationContext) -> void:
@@ -62,7 +62,7 @@ class Strip:
 		name = "JoinStrip"
 		alignment = BoxContainer.ALIGNMENT_CENTER
 		add_theme_constant_override("separation", 12)
-		_qr = QrView.new()
+		_qr = QrCode.new()
 		_qr.name = "JoinStripQr"
 		_qr.module_px = QR_PX
 		_qr.set_text(LobbyJoinPanel.join_url(ctx.host_bind, ctx.host_port, ctx.host_tls))

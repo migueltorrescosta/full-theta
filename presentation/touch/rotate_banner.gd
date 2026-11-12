@@ -26,8 +26,8 @@ var close_button: RailButton = RailButton.make("×")
 
 
 func _init() -> void:
-	# The first-visit chips keep under the banner (w5).
-	ControlsChip.join_stack(self, 0)
+	# The first-visit hints keep under the banner (w5).
+	ControlsHint.join_stack(self, 0)
 	theme_type_variation = "Banner"
 	visible = false
 	var row: HBoxContainer = HBoxContainer.new()

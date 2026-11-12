@@ -20,7 +20,7 @@ static func step(world: SimWorld) -> void:
 	var mounts: MountTable = world.mounts
 	var kin: Kinematics = world.kin
 	var dt: float = SimWorld.DT
-	var ship_ids: PackedInt32Array = mounts.ship_ids
+	var owner_ship: PackedInt32Array = mounts.owner_ship
 	var mount_index: PackedInt32Array = mounts.mount_index
 	var alive: PackedByteArray = kin.alive
 	var fire_requested: PackedByteArray = mounts.fire_requested
@@ -29,8 +29,8 @@ static func step(world: SimWorld) -> void:
 	var barrel: PackedVector3Array = mounts.barrel
 	var aim_set: PackedByteArray = mounts.aim_set
 	var defs: Array[ShipDef] = world.defs
-	for row: int in ship_ids.size():
-		var ship: int = ship_ids[row]
+	for row: int in owner_ship.size():
+		var ship: int = owner_ship[row]
 		if alive[ship] != 1:
 			fire_requested[row] = 0
 			continue
@@ -47,13 +47,13 @@ static func step(world: SimWorld) -> void:
 		# aim_direction(), inlined.
 		var aim: Vector3 = def.forward
 		if aim_set[row] != 0:
-			var to_aim: Vector3 = kin.relative_to_point(
-				ship, mounts.aim_x[row], mounts.aim_y[row], mounts.aim_z[row]
+			var to_aim: Vector3 = kin.relative_to_column(
+				ship, mounts.aim_x, mounts.aim_y, mounts.aim_z, row
 			)
 			var local: Vector3 = kin.rot[ship].inverse() * to_aim - def.position
 			aim = barrel[row] if local.length_squared() < 1e-12 else local.normalized()
 		var target: Vector3 = clamp_to_arc(def, aim)
-		barrel[row] = turn_toward(
+		barrel[row] = MountArc.turn_toward(
 			barrel[row], target, def.traverse_rate * clampf(eff, 0.0, 1.0) * dt
 		)
 		if fire_requested[row] == 1:
@@ -71,7 +71,7 @@ static func weapon_of(world: SimWorld, row: int) -> WeaponDef:
 
 ## The read-only definition of a mount row.
 static func mount_def(world: SimWorld, row: int) -> MountDef:
-	return world.defs[world.mounts.ship_ids[row]].mounts[world.mounts.mount_index[row]]
+	return world.defs[world.mounts.owner_ship[row]].mounts[world.mounts.mount_index[row]]
 
 
 ## Direction from the mount to its aim point in the ship frame (unit); the rest
@@ -81,10 +81,10 @@ static func aim_direction(world: SimWorld, row: int) -> Vector3:
 	var def: MountDef = mount_def(world, row)
 	if mounts.aim_set[row] == 0:
 		return def.forward
-	var ship: int = mounts.ship_ids[row]
+	var ship: int = mounts.owner_ship[row]
 	var kin: Kinematics = world.kin
-	var to_aim: Vector3 = kin.relative_to_point(
-		ship, mounts.aim_x[row], mounts.aim_y[row], mounts.aim_z[row]
+	var to_aim: Vector3 = kin.relative_to_column(
+		ship, mounts.aim_x, mounts.aim_y, mounts.aim_z, row
 	)
 	var local: Vector3 = kin.to_local(ship, to_aim) - def.position
 	if local.length_squared() < 1e-12:
@@ -93,27 +93,14 @@ static func aim_direction(world: SimWorld, row: int) -> Vector3:
 
 
 ## FT-SIM-011: a direction (ship frame) is inside the arc when its angle to the rest
-## direction is at most arc_half_angle.
+## direction is at most arc_half_angle (MountArc, shared with the Weapons station).
 static func in_arc(def: MountDef, dir: Vector3) -> bool:
-	return def.forward.angle_to(dir) <= def.arc_half_angle
+	return MountArc.in_arc(def.forward, def.arc_half_angle, dir)
 
 
 ## The direction itself when inside the arc, else the nearest direction on its edge.
 static func clamp_to_arc(def: MountDef, dir: Vector3) -> Vector3:
-	if in_arc(def, dir):
-		return dir
-	return turn_toward(def.forward, dir, def.arc_half_angle)
-
-
-## Turns from toward to by at most max_angle (rad); both unit vectors.
-static func turn_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3:
-	var angle: float = from.angle_to(to)
-	if angle <= max_angle:
-		return to
-	var axis: Vector3 = from.cross(to)
-	if axis.length_squared() < 1e-12:
-		axis = from.cross(Vector3.UP if absf(from.y) < 0.9 else Vector3.RIGHT)
-	return from.rotated(axis.normalized(), max_angle).normalized()
+	return MountArc.clamp_to_arc(def.forward, def.arc_half_angle, dir)
 
 
 ## FT-SIM-016: the first friendly or neutral ship (world.relation not HOSTILE) the
@@ -121,7 +108,7 @@ static func turn_toward(from: Vector3, to: Vector3, max_angle: float) -> Vector3
 ## its velocity, or -1. Only ships the shooter's faction detects count (FT-ARC-013; its
 ## own ships always do). A warning only: friendly fire still happens.
 static func path_crosses(world: SimWorld, row: int) -> int:
-	var ship_id: int = world.mounts.ship_ids[row]
+	var ship_id: int = world.mounts.owner_ship[row]
 	var kin: Kinematics = world.kin
 	var def: MountDef = mount_def(world, row)
 	var weapon: WeaponDef = weapon_of(world, row)
@@ -180,7 +167,7 @@ static func block_reason(world: SimWorld, row: int, eff: float, aim: Vector3) ->
 
 
 static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float, aim: Vector3) -> void:
-	var ship: int = world.mounts.ship_ids[row]
+	var ship: int = world.mounts.owner_ship[row]
 	var index: int = world.mounts.mount_index[row]
 	var reason: StringName = block_reason(world, row, eff, aim)
 	var weapon: WeaponDef = weapon_of(world, row)
@@ -203,7 +190,7 @@ static func _try_fire(world: SimWorld, row: int, def: MountDef, eff: float, aim:
 static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -> void:
 	var mounts: MountTable = world.mounts
 	var kin: Kinematics = world.kin
-	var ship: int = mounts.ship_ids[row]
+	var ship: int = mounts.owner_ship[row]
 	if mounts.ammo[row] > 0:
 		mounts.ammo[row] -= 1
 	mounts.cooldown[row] = weapon.cooldown
@@ -218,9 +205,7 @@ static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -
 		var k: int = world.projectiles.spawn(
 			ship,
 			world.faction_of(ship),
-			start[0],
-			start[1],
-			start[2],
+			start,
 			vs + dir * weapon.projectile_speed,
 			weapon.projectile_radius,
 			weapon.damage,
@@ -246,7 +231,7 @@ static func _beam_hit(
 	world: SimWorld, row: int, def: MountDef, weapon: WeaponDef, dir: Vector3
 ) -> void:
 	var kin: Kinematics = world.kin
-	var shooter: int = world.mounts.ship_ids[row]
+	var shooter: int = world.mounts.owner_ship[row]
 	var muzzle: Vector3 = kin.to_world(shooter, def.position)
 	var reach: Vector3 = dir * weapon.max_range
 	var best: int = -1

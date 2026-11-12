@@ -16,7 +16,3 @@ func add_ship(ship_id: int, faction: int, _def: ShipDef) -> void:
 	add_key(ship_id, faction)
 	crossed.append(0)
 	seen.append(0)
-
-
-func columns() -> Array:
-	return super() + [["crossed", crossed], ["seen", seen]]

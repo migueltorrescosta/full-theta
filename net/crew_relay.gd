@@ -51,7 +51,7 @@ func zones_of(ship: int) -> Array:
 
 
 ## Adds a zone (kind KIND_HAZARD or KIND_SCAN) at a point in the cube; returns "" or why not.
-func add_zone(ship: int, kind: String, at: Vector3, radius: float, by: String) -> String:
+func add_zone(ship: int, kind: String, at: PackedFloat64Array, radius: float, by: String) -> String:
 	if kind != KIND_HAZARD and kind != KIND_SCAN:
 		return BAD_ZONE
 	if not (is_finite(radius) and radius > 0.0 and radius <= MAX_RADIUS):
@@ -65,9 +65,9 @@ func add_zone(ship: int, kind: String, at: Vector3, radius: float, by: String) -
 			{
 				"id": _next_id,
 				"kind": kind,
-				"x": at.x,
-				"y": at.y,
-				"z": at.z,
+				"x": at[0],
+				"y": at[1],
+				"z": at[2],
 				"radius": radius,
 				"by": by,
 			}
@@ -91,16 +91,14 @@ func routes_of(ship: int) -> Array:
 	return (_route_slots(ship) as Array).duplicate(true)
 
 
-## Appends a waypoint to route `route`.
-func route_add(ship: int, route: int, at: Vector3) -> String:
-	if route < 0 or route >= MAX_ROUTES or not (is_finite(at.x) and is_finite(at.y)):
-		return BAD_ROUTE
-	if not is_finite(at.z):
+## Appends a waypoint (a point in the cube) to route `route`.
+func route_add(ship: int, route: int, at: PackedFloat64Array) -> String:
+	if route < 0 or route >= MAX_ROUTES or not CubePoint.is_valid(at):
 		return BAD_ROUTE
 	var points: Array = _route_slots(ship)[route]
 	if points.size() >= MAX_WAYPOINTS:
 		return ROUTE_FULL
-	points.append({"x": at.x, "y": at.y, "z": at.z})
+	points.append({"x": at[0], "y": at[1], "z": at[2]})
 	return ""
 
 
@@ -171,7 +169,7 @@ func _route_slots(ship: int) -> Array:
 
 ## The ship's approach lanes (P5): one MARK item per accepted clearance card of its board, at
 ## the card's site (SiteTable.point), with the seconds
-## until the window opens and closes (negative once past), {card, x, y, z, open_s, close_s,
+## until the window opens and closes (negative once past), {card, x, y, z, opens_in, closes_in,
 ## by}. A lane exists while its card is ACCEPTED: docking, expiry or a decline remove it.
 static func lane_items(world: SimWorld, ship: int) -> Array:
 	var out: Array = []
@@ -194,8 +192,8 @@ static func lane_items(world: SimWorld, ship: int) -> Array:
 					"x": at[0],
 					"y": at[1],
 					"z": at[2],
-					"open_s": (window[0] - world.tick) * SimWorld.DT,
-					"close_s": (window[1] - world.tick) * SimWorld.DT,
+					"opens_in": (window[0] - world.tick) * SimWorld.DT,
+					"closes_in": (window[1] - world.tick) * SimWorld.DT,
 					"by": "comms",
 				}
 			)
