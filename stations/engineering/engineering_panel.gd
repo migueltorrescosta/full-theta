@@ -134,8 +134,6 @@ func _setup() -> void:
 	_side_box.name = "SideBox"
 	_side_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_side_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	for m: String in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		_side_box.add_theme_constant_override(m, 0)
 	_side_box.add_child(_side)
 	_row.add_child(_side_box)
 	resized.connect(phone.place_lists)
