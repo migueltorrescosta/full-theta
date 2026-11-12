@@ -16,6 +16,8 @@ extends RefCounted
 const STATION: String = "station"
 const COMMON: String = "common"
 const OTHER: String = "other"
+## The binding the matcher accepts from any key that types it (input/README.md).
+const TYPED: String = "?"
 
 ## Stick and click tokens that sit on one drawn stick, and spelled-out key names.
 const ALIASES: Dictionary = {
@@ -99,7 +101,15 @@ func on_part(id: String) -> Array[Dictionary]:
 
 ## Entries with no part on the drawing.
 func unmapped() -> Array[Dictionary]:
-	return entries.filter(func(e: Dictionary) -> bool: return e["parts"].is_empty())
+	return entries.filter(
+		func(e: Dictionary) -> bool: return e["parts"].is_empty() and e["binding"] != TYPED
+	)
+
+
+## Entries bound to the typed "?" (R25-14): any key that types it on the player's layout,
+## so the drawing has no place for it and the note names it instead.
+func typed() -> Array[Dictionary]:
+	return entries.filter(func(e: Dictionary) -> bool: return e["binding"] == TYPED)
 
 
 ## Ids of the screen's stations' and the common intents that have no binding here and no

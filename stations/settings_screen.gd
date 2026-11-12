@@ -31,11 +31,13 @@ signal reference_plane_requested
 ## session (#35 A5).
 signal name_changed(new_name: String)
 
-## Intents that can't be left unbound: the way back to Settings, and the way to say no.
+## The width of a Change keys binding column: room for "LB+Left stick left/right".
+const KEY_COLUMN_W: float = 210.0
 ## The common and always-live actions Change keys lists without "Show all stations" (ux-18):
 ## menu, ping, mark, the alert, share and next contact.
 ## "alert_cycle" stands for the alert's whole family (the pad sets the levels one by one).
 const COMMON_KEYS: Array[String] = ["menu", "ping", "mark", "alert_cycle", "share", "cycle_target"]
+## Intents that can't be left unbound: the way back to Settings, and the way to say no.
 const ALWAYS_BOUND: Array[String] = ["menu", "decline"]
 const MODIFIER_KEYS: Array[Key] = [KEY_SHIFT, KEY_ALT, KEY_CTRL]
 ## A trigger or stick past this deflection is captured.
@@ -244,6 +246,7 @@ func _fit_safe_area() -> void:
 		_scale_slider.set_block_signals(false)
 	if tabs == null:
 		return
+	_fit_targets(_root, LayoutMode.is_touch(kind))
 	# A window that became a phone hides Change keys (and, outside a session, the Controls
 	# tab, which is there for them); one that stopped being one gets them.
 	var phone: bool = kind == LayoutMode.Kind.PHONE
@@ -779,7 +782,7 @@ func _build_comfort(col: VBoxContainer) -> void:
 	col.add_child(hint)
 	var more: Button = _add_button(col, "Advanced", "", func() -> void: pass)
 	more.toggle_mode = true
-	more.flat = true
+	_fit_target(more, _touch())
 	more.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	var group: VBoxContainer = VBoxContainer.new()
 	group.name = "AdvancedGroup"
@@ -849,7 +852,7 @@ func _build_bindings() -> void:
 	head.add_child(gap)
 	for key: String in ["controls.view_kbm", "controls.view_pad"]:
 		var l: Label = _label(tr(key))
-		l.custom_minimum_size = Vector2(170, 0)
+		l.custom_minimum_size = Vector2(KEY_COLUMN_W, 0)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_color_override("font_color", Palette.color("text_dim"))
 		head.add_child(l)
@@ -890,7 +893,7 @@ func _binding_row(id: String) -> void:
 		var b: Button = _add_button(
 			row, device, text if text != "" else "-", start_capture.bind(id, device)
 		)
-		b.custom_minimum_size = Vector2(170, 0)
+		b.custom_minimum_size = Vector2(KEY_COLUMN_W, 0)
 	if r["kind"] == IntentTable.HOLD:
 		_check(row, "Toggle", tr("settings.toggle"), settings.bindings.is_toggle(id)).toggled.connect(
 			func(on: bool) -> void: settings.bindings.set_toggle(id, on)
@@ -925,4 +928,23 @@ func _check(parent: Node, node_name: String, text: String, on: bool) -> CheckBox
 	c.text = text
 	c.button_pressed = on
 	parent.add_child(c)
+	_fit_target(c, _touch())
 	return c
+
+
+func _touch() -> bool:
+	return is_inside_tree() and LayoutMode.is_touch(LayoutMode.kind_of(self))
+
+
+## A check box or the Advanced toggle: 44 px tall on a touch layout (#28: nothing tappable
+## under 44 px), its own height elsewhere.
+static func _fit_target(c: Control, touch: bool) -> void:
+	c.custom_minimum_size.y = UiTheme.TOUCH_MIN if touch else 0.0
+
+
+## Every check box and the Advanced toggle under `node`, for the layout (`_fit_target`).
+static func _fit_targets(node: Node, touch: bool) -> void:
+	for c: Node in node.get_children():
+		if c is CheckBox or c.name == "Advanced":
+			_fit_target(c as Control, touch)
+		_fit_targets(c, touch)

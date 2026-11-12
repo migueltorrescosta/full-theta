@@ -260,8 +260,7 @@ func _zone_of(l: Dictionary) -> String:
 	var mouse: bool = true
 	for id: String in l["parts"]:
 		top = top and ControlsFigure.part(_device, id, _dy)["rect"].position.y < 1.0
-		# The typed "?" chip sits under the numpad and shares its column (R25-14).
-		numpad = numpad and (id.begins_with("Kp ") or id == "?")
+		numpad = numpad and id.begins_with("Kp ")
 		mouse = mouse and MOUSE_IDS.has(id)
 	if top:
 		return ZONE_TOP

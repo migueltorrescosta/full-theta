@@ -270,6 +270,8 @@ func _refresh_notes() -> void:
 			off.append("%s %s" % [e["label"], e["keys"]])
 		if not off.is_empty():
 			parts.append(tr("controls.off_diagram") % ", ".join(off))
+		for e: Dictionary in d.model.typed():
+			parts.append(tr("controls.typed") % e["label"])
 		if v == VIEW_KBM and lmb_split(_bindings, shown_stations()):
 			parts.append(tr("controls.lmb_split"))
 		if v == VIEW_PAD:
