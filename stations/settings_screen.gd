@@ -790,7 +790,6 @@ func _build_comfort(col: VBoxContainer) -> void:
 	col.add_child(hint)
 	var more: Button = _add_button(col, "Advanced", "", func() -> void: pass)
 	more.toggle_mode = true
-	_fit_target(more, _touch())
 	more.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	var group: VBoxContainer = VBoxContainer.new()
 	group.name = "AdvancedGroup"
