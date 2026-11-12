@@ -19,6 +19,8 @@ const LOG_EVENTS: Dictionary = {
 	&"probe_no_stock": "probe_no_stock",
 	&"probe_fabricated": "probe_fabricated",
 	&"lane_warning": "lane_warning",
+	&"decoy_launched": "decoy_launched",
+	&"decoy_spent": "decoy_spent",
 }
 
 ## The owning game, held weakly: it owns this object, and a strong reference back
@@ -263,7 +265,7 @@ func on_sim_event(e: SimEvent) -> void:
 	match e.kind:
 		&"contact_detected", &"contact_lost":
 			args = {"callsign": String(e.tag)}
-		&"probe_launched", &"probe_deployed":
+		&"probe_launched", &"probe_deployed", &"decoy_launched", &"decoy_spent":
 			args = {"n": int(e.value) + 1}
 		&"lane_warning":
 			args = {"callsign": _ship_name(e.other_id)}

@@ -1,13 +1,15 @@
 class_name RelayHud
 extends Control
 ## The panels around Relay's map (§5.5, FT-RLY-004, FT-RLY-006, FT-RLY-008, FT-RLY-009):
-## left, the probes (stock, LAUNCH), the lane and hazard switches, the contacts and the
+## left, the probes (stock, LAUNCH, the decoy while a hostile is in play), the lane and
+## hazard switches, the contacts and the
 ## marks; below, the ship's log and the inbox of marks other ships sent, each waiting for
 ## Accept or Decline, with SEND for the selected mark. It reads the model and only emits
 ## signals; RelayPanel does the sending. No NPC text anywhere (FT-RLY-007): the log is
 ## keyed lines with numbers and callsigns.
 
 signal launch_pressed
+signal decoy_pressed
 signal hazard_pressed
 signal lanes_pressed
 signal accept_pressed(id: int)
@@ -24,6 +26,7 @@ const LOG_MIN_W: float = 60.0
 
 var ctx: StationContext
 var launch: Button
+var decoy: Button
 var lanes: Button
 var hazard: Button
 var accept: Button
@@ -86,6 +89,7 @@ func setup(context: StationContext) -> void:
 	_fab = Label.new()
 	col.add_child(_fab)
 	launch = _button(col, "Launch", "relay.launch", launch_pressed.emit)
+	decoy = _button(col, "Decoy", "relay.decoy", decoy_pressed.emit)
 	hazard = _button(col, "Hazard", "relay.hazard", hazard_pressed.emit)
 	lanes = _button(col, "Lanes", "relay.lanes_off", lanes_pressed.emit)
 	col.add_child(_heading("relay.contacts"))
@@ -155,20 +159,22 @@ func refresh() -> void:
 	_clear(_probe_rows)
 	for pr: Dictionary in blk.get("probes", []):
 		var flying: bool = not bool(pr["deployed"])
-		_probe_rows.add_child(
-			_dim(
-				(
-					tr("relay.probe_flying" if flying else "relay.probe_ready")
-					% (int(pr["serial"]) + 1)
-				)
-			)
+		var n: int = int(pr["serial"]) + 1
+		var left: float = float(pr.get("decoy", 0.0))
+		var line: String = (
+			tr("relay.decoy_row") % [n, ceili(left)]
+			if left > 0.0
+			else tr("relay.probe_flying" if flying else "relay.probe_ready") % n
 		)
+		_probe_rows.add_child(_dim(line))
 	var fab: float = float(blk.get("fab_left", 0.0))
 	_fab.text = tr("relay.fab") % ceili(fab) if fab > 0.0 else ""
 	_fab.visible = fab > 0.0
 	# Launch shows only with a probe in stock (C3: no dead button; the line above says
 	# "0 left"), or while the Shakedown's probe or claim step names it.
 	launch.visible = stock > 0 or wants.call("probe_launch") or wants.call("claim")
+	# The decoy shows only while it can go: a probe in stock and a hostile in play (gp-13).
+	decoy.visible = bool(blk.get("decoy", false)) or wants.call("decoy_launch")
 	lanes.text = tr("relay.lanes_on" if bool(blk.get("lanes", false)) else "relay.lanes_off")
 	_fill_contacts(near)
 	_fill_marks()
@@ -392,7 +398,7 @@ func can_send() -> bool:
 ## What the lesson steps ask that changes which buttons show.
 func _lesson_key() -> Array:
 	var out: Array = []
-	for id: String in ["probe_launch", "claim", "accept", "decline", "mark_send"]:
+	for id: String in ["probe_launch", "decoy_launch", "claim", "accept", "decline", "mark_send"]:
 		out.append(wants.call(id))
 	return out
 

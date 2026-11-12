@@ -41,7 +41,8 @@ func test_of_ship_reads_every_resource() -> void:
 	assert_float(e["propellant"]).is_equal(w.defs[0].propellant_capacity)
 	assert_int(e["parts"]).is_equal(20)
 	assert_int(e["probes"]).is_equal(3)
-	assert_dict(e["ammo"]).is_equal({&"m1_cannon": 400, &"m2_missile": 8, &"m2_torpedo": 3})
+	# Three mounts (gp-12), each with its own store.
+	assert_dict(e["ammo"]).is_equal({&"m1_cannon": 1200, &"m2_missile": 24, &"m2_torpedo": 9})
 	assert_dict(e["reputation"]).is_equal({StoryFixture.RED: 12.5})
 
 

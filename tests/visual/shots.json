@@ -347,6 +347,18 @@
     {"name": "l5_gp_relay_pending", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "relay", "pending_site": true}},
     {"name": "l5_gp_phl_relay_pending", "scene": "res://tests/visual/science_relay_shot.tscn", "size": [844, 390], "set": {"seat": "relay", "insets": [47, 0, 47, 21], "page": 0, "pending_site": true}},
     {"name": "l5_gp_viewer_ping", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "viewer", "events": [{"type": "ping", "payload": {"ship": 0, "kind": "contact", "id": 2, "by": "Bo", "viewer": true, "copy": ""}}]}},
-    {"name": "l5_gp_phl_helm_viewer_ping", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"seat": "helm", "insets": [47, 0, 47, 21], "events": [{"type": "ping", "payload": {"ship": 0, "kind": "contact", "id": 2, "by": "Bo", "viewer": true, "copy": ""}}]}}
+    {"name": "l5_gp_phl_helm_viewer_ping", "scene": "res://tests/stations/helm/helm_shot.tscn", "size": [844, 390], "set": {"seat": "helm", "insets": [47, 0, 47, 21], "events": [{"type": "ping", "payload": {"ship": 0, "kind": "contact", "id": 2, "by": "Bo", "viewer": true, "copy": ""}}]}},
+    {"name": "station_relay_decoy", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "relay", "decoy": true}},
+    {"name": "l5_tl_relay_decoy", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "relay", "touch": true, "decoy": true}},
+    {"name": "l5_phl_relay_decoy", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"seat": "relay", "decoy": true, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_relay_decoy", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "relay", "decoy": true, "insets": [0, 47, 0, 34]}},
+    {"name": "station_comms_help", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "comms", "help": 1}},
+    {"name": "station_comms_help_coming", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "comms", "help": 2, "help_eta": 42.0}},
+    {"name": "l5_tl_comms_help", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "comms", "touch": true, "help": 1}},
+    {"name": "l5_phl_comms_help", "scene": "res://tests/visual/station_shot.tscn", "size": [844, 390], "set": {"seat": "comms", "help": 1, "insets": [47, 0, 47, 21]}},
+    {"name": "l5_php_comms_help_coming", "scene": "res://tests/visual/station_shot.tscn", "size": [390, 844], "set": {"seat": "comms", "help": 2, "help_eta": 42.0, "insets": [0, 47, 0, 34]}},
+    {"name": "station_weapons_three_mounts", "scene": "res://tests/visual/station_shot.tscn", "size": [1280, 720], "set": {"seat": "weapons", "selected": 3, "claim": "mount:1"}},
+    {"name": "l5_tl_weapons_three_mounts", "scene": "res://tests/visual/station_shot.tscn", "size": [1024, 768], "set": {"seat": "weapons", "touch": true, "claim": "mount:1"}},
+    {"name": "l5_phl_weapons_three_mounts", "scene": "res://tests/stations/weapons/weapons_shot.tscn", "size": [844, 390], "set": {"seat": "weapons", "selected": 3, "claim": "mount:1", "page": 1, "insets": [47, 0, 47, 21]}}
   ]
 }

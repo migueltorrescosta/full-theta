@@ -65,7 +65,9 @@ func _build_left() -> void:
 		b.pressed.connect(_panel.touch_press.bind("mount_%d" % (i + 1)))
 		mount_buttons.append(b)
 		mounts.append(b)
-	dock.left.add(_group(mounts))
+	# Upright the corvette's three mounts (gp-12) share one row, so the Aim stick stays clear
+	# of the gesture band.
+	dock.left.add(_group(mounts, 3))
 	# Ammo and Fire at mark under the left thumb's buttons (a ship with one mount has no Mount
 	# buttons, so the left rail isn't bare, C3); Fire all and Claim stay by FIRE.
 	ammo_button = _button("Ammo", "")
@@ -112,10 +114,10 @@ func _button(button_name: String, label: String) -> RailButton:
 	return b
 
 
-## The buttons in a column (landscape) or a two-column grid (upright, where a rail is wide).
-func _group(buttons: Array) -> Control:
+## The buttons in a column (landscape) or a grid of `columns` (upright, where a rail is wide).
+func _group(buttons: Array, columns: int = 2) -> Control:
 	var grid: GridContainer = GridContainer.new()
-	grid.columns = 2 if portrait else 1
+	grid.columns = columns if portrait else 1
 	grid.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
 	grid.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
 	for b: Control in buttons:

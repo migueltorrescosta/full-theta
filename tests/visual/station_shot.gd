@@ -27,6 +27,9 @@
 ## scrolls the menu's tab to a node (e.g. "ChangeKeys").
 ## `eng_rare` shows Engineering's rare rail actions (C3): a fault of unknown cause on the
 ## engines and a second player at Engineering, so Guess cause and Take crew show.
+## `decoy` gives Relay a RELAY block in a fight (2 probes, a decoy out, Launch decoy shown,
+## gp-13); `help` sets the COMMS block's call for help (BlockSchema.HELP_*, gp-14) with
+## `help_eta` its countdown.
 ## The "touch_kit" view shows the shared touch widgets (presentation/touch/) on a radar:
 ## overlay rails with a throttle, sticks, tabs and an open drawer; `docked` docks them.
 extends Control
@@ -74,6 +77,11 @@ var audit: String = ""
 var docked: bool = false
 ## Engineering's rare rail actions show (a fault of unknown cause, two players there).
 var eng_rare: bool = false
+## Relay in a fight with a decoy out (gp-13).
+var decoy: bool = false
+## The COMMS block's call for help (BlockSchema.HELP_*) and its seconds left (gp-14).
+var help: int = 0
+var help_eta: float = 0.0
 
 ## The game was started with --dev (ClientSettings.dev_flag): the menu's Dev checkbox and the
 ## lobby's dev seat show (#35 A7).
@@ -139,6 +147,29 @@ func _ready() -> void:
 		_ctx.snap.blocks[StationCatalogue.Section.SCIENCE] = ScienceShotBlocks.block(science)
 	if comms != "off":
 		CommsFixture.install(_ctx)
+		_ctx.snap.blocks[StationCatalogue.Section.COMMS].merge(
+			{"help": help, "help_eta": help_eta}, true
+		)
+	if decoy:
+		var rows: Array = [
+			{
+				"serial": 0,
+				"deployed": true,
+				"pos": Vector3(0, 0, -3000),
+				"range": 8000.0,
+				"decoy": 0.0
+			},
+			{
+				"serial": 1,
+				"deployed": true,
+				"pos": Vector3(3000, 0, 0),
+				"range": 0.0,
+				"decoy": 14.0
+			},
+		]
+		_ctx.snap.blocks[StationCatalogue.Section.RELAY] = {
+			"stock": 1, "fab_left": 0.0, "lanes": false, "decoy": true, "probes": rows
+		}
 	if tooltip:
 		_ctx.settings.reset_hints()
 	if claim != "":

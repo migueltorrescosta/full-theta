@@ -49,6 +49,8 @@ const EVENT_STATIONS: Dictionary = {
 	&"probe_fabricated": ["relay", "engineering"],
 	&"probe_no_parts": ["engineering"],
 	&"lane_warning": ["weapons", "relay"],
+	&"decoy_launched": ["relay"],
+	&"decoy_spent": ["relay"],
 	# Comms' pairs: a lane's dock, a surrender, a scan-unlocked reply, a
 	# marked mission. None carries Engineering's data (FT-PAIR-010).
 	&"dock_cleared": ["helm", "comms"],

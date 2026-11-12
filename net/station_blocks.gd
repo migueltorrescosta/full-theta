@@ -163,7 +163,9 @@ static func _relay(world: SimWorld, ship: int, filter: ShortcutFilter = null) ->
 					"serial": t.serial[p],
 					"deployed": t.deployed[p] == 1,
 					"pos": Vector3(t.pos_x[p], t.pos_y[p], t.pos_z[p]),
-					"range": world.defs[ship].probe_range,
+					# A decoy covers nothing: no bubble (gp-13).
+					"range": world.defs[ship].probe_range if t.decoy_left[p] <= 0.0 else 0.0,
+					"decoy": ceilf(t.decoy_left[p]),
 				}
 			)
 		)
@@ -171,6 +173,7 @@ static func _relay(world: SimWorld, ship: int, filter: ShortcutFilter = null) ->
 		"stock": r.stock[ship],
 		"fab_left": r.fab_left[ship],
 		"lanes": r.lanes_flagged[ship] == 1,
+		"decoy": ProbeSystem.can_decoy(world, ship),
 		"probes": probes,
 		"hazards":
 		HazardRows.rows(world, ship) if filter == null or filter.hazards_visible() else [],

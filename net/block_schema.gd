@@ -24,7 +24,9 @@ const SCIENCE_REVEALED: Array[StringName] = [
 ## faction, the cards (kind and state are StoryTable's; rep_lo/rep_hi only where rep_vis;
 ## claimer the session holding the conversation, -1 for none), the open conversation nodes
 ## with their replies, what the docked market sells, the modules it offers per slot with
-## the trade-in of the module now fitted, and the fitted modules.
+## the trade-in of the module now fitted, and the fitted modules; then the call for help
+## (gp-14): `help` HELP_NONE, HELP_READY (Comms may call) or HELP_COMING, with `help_eta`
+## the seconds until the patrol arrives.
 const COMMS: Array = [
 	["docked", "bool"],
 	["site", "s16"],
@@ -103,7 +105,13 @@ const COMMS: Array = [
 		],
 	],
 	["fitted", ["rows", [["slot", "u8"], ["type", "str"], ["module", "str"]]]],
+	["help", "u8"],
+	["help_eta", "f32"],
 ]
+## COMMS `help` values.
+const HELP_NONE: int = 0
+const HELP_READY: int = 1
+const HELP_COMING: int = 2
 
 ## Field sets of the block sections: Section -> NetBlock schema. A block is sent whole
 ## when any field changes, else omitted from the delta. Getters are StationBlocks'.
@@ -233,8 +241,9 @@ const BLOCKS: Dictionary = {
 		],
 		["hacks", HACK_ROWS],
 	],
-	# Relay's probes: the stock, Engineering's build in progress, the lane switch and
-	# the ship's launched probes (position in m, bubble radius in m); then the
+	# Relay's probes: the stock, Engineering's build in progress, the lane switch, whether
+	# a decoy can go now (gp-13) and the ship's launched probes (position in m, bubble
+	# radius in m, a decoy's seconds left, 0 for a plain probe); then the
 	# sim hazards the faction knows (HazardRows): zone, shell or plane, where now,
 	# the radius now, a plane's direction and the forecast seconds to the ship (-1: none).
 	StationCatalogue.Section.RELAY:
@@ -242,6 +251,7 @@ const BLOCKS: Dictionary = {
 		["stock", "u16"],
 		["fab_left", "f32"],
 		["lanes", "bool"],
+		["decoy", "bool"],
 		[
 			"probes",
 			[
@@ -251,6 +261,7 @@ const BLOCKS: Dictionary = {
 					["deployed", "bool"],
 					["pos", "v3f"],
 					["range", "f32"],
+					["decoy", "f32"],
 				],
 			],
 		],

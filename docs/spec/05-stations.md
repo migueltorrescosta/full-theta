@@ -110,6 +110,7 @@ Full-screen view from one claimed mount with lead reticle, arc edge and radar in
 - **FT-WPN-007** On Easy, shared weak points and ammunition effectiveness shall appear in the turret view. (D69, P7, D214)
 - **FT-WPN-008** Weapons shall fire guided ordnance at a mark attached to a tracked contact. (P8, D209)
 - **FT-WPN-009** A mount shall hold its aim point in world space while the ship rotates, slewing at its traverse rate, and the turret camera shall roll with the ship's deck plane, keeping the ship's up at the top of the view. (plan review NAV-6, D124)
+- **FT-WPN-010** The run's corvette shall carry three mounts, bow, port and starboard, each claimable on its own; the side arcs shall overlap the bow arc a little. (gp-12)
 
 ## 5.3 Engineering (E-A cutaway + pips; D50)
 
@@ -234,6 +235,7 @@ Centre: the world map, a freely rotatable 3D map of the wrapping cube, centred o
 - **FT-RLY-010** With no Captain seated, Relay shall switch the main-screen view. (D88)
 - **FT-RLY-011** Relay shall flag lanes crossing friendlies, and Weapons shall get a warning before a shot along a flagged lane. (P8, D37)
 - **FT-RLY-012** Relay's map shall show the site of an encounter waiting for the ship as a dashed "?" marker from 30 s (`RelayMapDef.site_marker_delay`) after the encounter opened until it starts or ends; Helm's view is unchanged and Comms' INFO card still names the site first. (D250, gp-16)
+- **FT-RLY-013** While a hostile is in play, Relay shall launch a decoy that uses one probe from stock and, for a while, draws the hostile NPCs near it to target the decoy instead of the ship. (gp-13)
 
 ## 5.6 Comms (new station; D53)
 
@@ -277,6 +279,7 @@ Comms holds all NPC text and replies, contracts, priorities, missions, opportuni
 - **FT-COM-007** Dialogue replies shall be structured choices; free text input shall not be required. (v0.3 §8)
 - **FT-COM-008** Comms shall show missions, contracts, offers and hails as cards on a board, and shall open a card's conversation as an overlay above the board. (D87)
 - **FT-COM-009** While the ship is docked, Comms shall buy and sell slot modules among the station's offers; docking at a site with a market puts that market's offer card on the ship's own board until it undocks. (D86, D339)
+- **FT-COM-010** Once per encounter, while the encounter is active and a hostile is in play, Comms shall call for help: a civil patrol arrives after a delay near the ship, fights its hostiles and leaves when the encounter ends, at a reputation cost with the patrol's faction. (gp-14)
 
 ## 5.7 Captain (C-B main-screen director; D54)
 

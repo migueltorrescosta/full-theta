@@ -6,7 +6,9 @@ extends RefCounted
 ## is deterministic for a seed. What it does, in order of priority:
 ## - fights: the nearest armed hostile within ENGAGE_M (unarmed debris within DEBRIS_M when
 ##   the profile shoots it), with the pips on the weapons, Face held, the lead aimed and shots
-##   at the profile's cadence;
+##   at the profile's cadence, from the mount whose arc holds the target (one Weapons player);
+## - Relay: a decoy when a hostile targets the ship and the hull is under the profile's
+##   decoy_hull; Comms: a call for help once the profile's help_hostiles are in play;
 ## - flees: below the profile's hull fraction, in an active encounter with a hostile in
 ##   sight, it faces Kestrel Yard and jumps (the sim then counts the encounter as fled);
 ## - travels: to the site of its pending encounter (the yard on a debris leg) by jump or by
@@ -35,6 +37,8 @@ var _decided: Dictionary[int, bool] = {}
 var _hail_stage: Dictionary[int, int] = {}
 var _hail_at: Dictionary[int, int] = {}
 var _moving: bool = false
+## The mount the last aim went to; the shots follow it.
+var _mount: int = 0
 
 
 func _init(crew_profile: BotProfiles.Profile, ship_id: int, seed_value: int) -> void:
@@ -62,6 +66,9 @@ func act(world: SimWorld) -> void:
 		_stand_down(world)
 		_travel(world)
 	_comms(world)
+	if target >= 0:
+		_decoy(world)
+		_call_help(world)
 
 
 # --- fighting ---
@@ -105,11 +112,53 @@ func _fight(world: SimWorld, target: int) -> void:
 	if t % profile.fire_every < profile.think_ticks:
 		var d: float = world.kin.relative(ship, target).length()
 		if d <= SHOOT_M and _rng.randf() >= profile.fire_skip:
-			_submit(world, FireCommand.new())
+			var fire: FireCommand = FireCommand.new()
+			fire.mount_index = _mount
+			_submit(world, fire)
 
 
+## Aims the mount whose arc holds the target; the shots follow it.
 func _aim(world: SimWorld, target: int) -> void:
-	_submit(world, CrewMoves.aim(world, ship, target, profile.aim_error, _rng))
+	_mount = CrewMoves.mount_for(world, ship, target)
+	_submit(world, CrewMoves.aim(world, ship, target, profile.aim_error, _rng, _mount))
+
+
+## Relay's decoy: a hostile AI targets the ship, the hull is low and no decoy of the ship
+## is out.
+func _decoy(world: SimWorld) -> void:
+	if DamageSystem.hull_fraction(world, ship) >= profile.decoy_hull:
+		return
+	if not ProbeSystem.can_decoy(world, ship) or _decoy_out(world):
+		return
+	for id: int in world.ship_count():
+		if world.ai.is_enabled(id) and world.kin.is_alive(id) and world.ai.target[id] == ship:
+			_submit(world, LaunchDecoyCommand.new())
+			return
+
+
+func _decoy_out(world: SimWorld) -> bool:
+	var t: ProbeTable = world.probes
+	for r: int in t.rows_of(ship):
+		if t.decoy_left[r] > 0.0:
+			return true
+	return false
+
+
+## Comms calls for help once enough hostiles are in play (CallHelp refuses a second call).
+func _call_help(world: SimWorld) -> void:
+	if profile.help_hostiles <= 0 or not CallHelp.can_call(world, ship):
+		return
+	var faction: int = world.faction_of(ship)
+	var hostiles: int = 0
+	for id: int in KnowledgeSystem.contacts(world, faction):
+		if (
+			world.kin.is_alive(id)
+			and world.ai.is_enabled(id)
+			and world.is_hostile(faction, world.faction_of(id))
+		):
+			hostiles += 1
+	if hostiles >= profile.help_hostiles:
+		_submit(world, CallHelpCommand.new())
 
 
 ## Lets go of the target: Face off, and stop if the crew has nothing else to fly to.

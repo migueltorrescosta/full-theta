@@ -321,11 +321,15 @@ static func snap(seam: bool = false) -> SnapshotState:
 		"thrust_scale": 1.0,
 		"torque_scale": 0.8,
 	}
-	# The corvette's bow mount at rest, loaded and cool.
-	v.blocks[StationCatalogue.Section.MOUNTS] = {
-		"mounts":
-		[{"barrel": Vector3.FORWARD, "cooldown": 0.0, "ammo": 380, "heat": 6.0, "aim_set": false}]
-	}
+	# The corvette's bow, port and starboard mounts (gp-12) at rest, loaded and cool.
+	var mounts: Array = []
+	for barrel: Vector3 in [
+		Vector3.FORWARD, Vector3(-1, 0, -1).normalized(), Vector3(1, 0, -1).normalized()
+	]:
+		mounts.append(
+			{"barrel": barrel, "cooldown": 0.0, "ammo": 380, "heat": 6.0, "aim_set": false}
+		)
+	v.blocks[StationCatalogue.Section.MOUNTS] = {"mounts": mounts}
 	var model: Dictionary = {}
 	var info: Dictionary = {}
 	for c: Array in [[H2, "H2", _at(4, 30.0, 2300.0)], [U3, "U3", _at(11, 20.0, 8000.0)]]:

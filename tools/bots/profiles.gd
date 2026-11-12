@@ -40,6 +40,11 @@ class Profile:
 	var accept_chance: float = 0.5
 	## Whether Comms demands the surrender of a hailing raider.
 	var demands_surrender: bool = true
+	## Relay launches a decoy (gp-13) when a hostile targets the ship and the hull fraction is
+	## under this; 0 never.
+	var decoy_hull: float = 0.6
+	## Comms calls for help (gp-14) once this many hostiles are in play; 0 never.
+	var help_hostiles: int = 2
 
 
 static func named(profile_name: String) -> Profile:
@@ -70,4 +75,5 @@ static func novice() -> Profile:
 	p.comms_s = 25.0
 	p.accept = "random"
 	p.demands_surrender = false
+	p.decoy_hull = 0.0
 	return p

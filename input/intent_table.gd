@@ -327,6 +327,8 @@ const INTENTS: Array[Dictionary] = [
 	# the map places them.
 	{"id": "probe_launch", "group": "relay", "kind": PRESS, "kbm": ["P"], "pad": ["Right"]},
 	{"id": "hazard_add", "group": "relay", "kind": PRESS, "kbm": ["H"], "pad": ["LB+Right"]},
+	# A decoy (gp-13, Shift+L: a lure): one probe that draws the hostiles near it for a while.
+	{"id": "decoy_launch", "group": "relay", "kind": PRESS, "kbm": ["Shift+L"], "pad": []},
 	{"id": "mark_delete", "group": "relay", "kind": PRESS, "kbm": ["Delete"], "pad": ["long Down"]},
 	{"id": "mark_rename", "group": "relay", "kind": PRESS, "kbm": ["N"], "pad": []},
 	# Attach the selected mark to the nearest contact, or free it where it is.
@@ -373,6 +375,8 @@ const INTENTS: Array[Dictionary] = [
 	{"id": "comms_right", "group": "comms", "kind": PRESS, "kbm": ["Right"], "pad": ["Right"]},
 	{"id": "comms_next_column", "group": "comms", "kind": PRESS, "kbm": ["Tab"], "pad": []},
 	{"id": "comms_hail", "group": "comms", "kind": PRESS, "kbm": ["H"], "pad": ["LB"]},
+	# Call for help (gp-14): once per encounter, a civil patrol comes.
+	{"id": "comms_call_help", "group": "comms", "kind": PRESS, "kbm": ["Shift+H"], "pad": []},
 	{"id": "comms_reply_1", "group": "comms", "kind": PRESS, "kbm": ["1"], "pad": []},
 	{"id": "comms_reply_2", "group": "comms", "kind": PRESS, "kbm": ["2"], "pad": []},
 	{"id": "comms_reply_3", "group": "comms", "kind": PRESS, "kbm": ["3"], "pad": []},

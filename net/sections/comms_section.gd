@@ -65,7 +65,14 @@ static func block(
 		"offers": [],
 		"modules": [],
 		"fitted": [],
+		"help": BlockSchema.HELP_NONE,
+		# Whole seconds, so the block changes once a second, not every tick.
+		"help_eta": ceilf(world.help.left[ship]),
 	}
+	if world.help.left[ship] > 0.0:
+		out["help"] = BlockSchema.HELP_COMING
+	elif CallHelp.can_call(world, ship):
+		out["help"] = BlockSchema.HELP_READY
 	var site: int = Story.docked_site(world, ship)
 	out["docked"] = site >= 0
 	out["site"] = site
