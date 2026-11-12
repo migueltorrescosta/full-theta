@@ -22,6 +22,12 @@ const CALLOUTS: String = "callouts"
 const FIRST: String = "helm"
 const CARD_W: float = 160.0
 const CARD_H: float = 120.0
+## A phone on its side shows the cards without their blurb and the drill without its heading,
+## so both rows fit above the fold.
+const COMPACT_H: float = 76.0
+## The crew drill's and the quiz's badges (a station's is its name's first letter).
+const DRILL_BADGE: String = "+"
+const CALLOUTS_BADGE: String = "?"
 
 var settings: ClientSettings
 ## Steps of each station's whole track, shown on its card ("46 steps").
@@ -117,7 +123,7 @@ func refresh() -> void:
 		_fill(_callouts if station == CALLOUTS else _cards[station], station, is_done)
 	_count.text = tr("train.picker.done_count") % [done, LESSONS.size() + 1]
 	(_drill.find_child("Name", true, false) as Label).text = tr("train.picker.drill")
-	(_drill.find_child("Dot", true, false) as Label).text = tr("train.picker.drill").left(1)
+	(_drill.find_child("Dot", true, false) as Label).text = DRILL_BADGE
 	(_drill.find_child("Blurb", true, false) as Label).text = (
 		"%s · %s" % [tr("train.picker.drill_hint"), tr("train.picker.drill_size")]
 	)
@@ -137,14 +143,23 @@ func fit() -> void:
 	var upright: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_PORTRAIT
 	_grid.columns = 2 if upright else 4
 	var phone: bool = LayoutMode.kind_of(self) == LayoutMode.Kind.PHONE
+	var compact: bool = LayoutMode.form_of(self) == LayoutMode.Form.PHONE_LANDSCAPE
+	# (the drill's card names itself: on its side a phone drops the heading above it)
+	(find_child("GroupHeading", true, false) as Label).visible = not compact
 	# One line on a wide window; upright, its words wrap to a second line.
 	_drill.custom_minimum_size = Vector2(0, 76 if upright else UiTheme.TOUCH_PRIMARY + 4)
 	(_drill.find_child("Name", true, false) as Label).theme_type_variation = (
 		&"" if phone else &"HeadingLabel"
 	)
 	for card: Button in _cards.values() + [_callouts]:
-		card.custom_minimum_size = Vector2(0 if upright else CARD_W, CARD_H)
+		card.custom_minimum_size = Vector2(
+			0 if upright else CARD_W, COMPACT_H if compact else CARD_H
+		)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_blurb_of(card).visible = not compact
+		var pad: MarginContainer = card.get_node("Pad")
+		for side: String in ["top", "bottom"]:
+			pad.add_theme_constant_override("margin_" + side, 6 if compact else 10)
 		# Names and blurbs are 16 px on a phone, where two cards share the width.
 		for label: Label in [_name_of(card), _blurb_of(card)]:
 			label.theme_type_variation = &"" if phone else &"HeadingLabel"
@@ -302,6 +317,27 @@ func _dot(station: String) -> Label:
 	return d
 
 
+## A card's badge, distinct on the picker in the current language: "+" the crew drill, "?" the
+## Callouts quiz, a station its name's first letter; where another station's name starts with
+## the same letter, that letter and the first one where the two names differ (Captain and
+## Comms: "Ca", "Co"; Comandante and Comunicazioni: "Ca", "Cu").
+static func badge(station: String) -> String:
+	if station == "drill":
+		return DRILL_BADGE
+	if station == CALLOUTS:
+		return CALLOUTS_BADGE
+	var name: String = TranslationServer.translate(StationCatalogue.name_key(station))
+	for other: String in LESSONS:
+		var o: String = TranslationServer.translate(StationCatalogue.name_key(other))
+		if other == station or o.left(1) != name.left(1):
+			continue
+		var i: int = 1
+		while i < name.length() and i < o.length() and name[i] == o[i]:
+			i += 1
+		return name.left(1) + (name[i] if i < name.length() else "")
+	return name.left(1)
+
+
 ## The card's name, blurb and size line keys.
 static func _words(station: String) -> PackedStringArray:
 	if station == CALLOUTS:
@@ -313,7 +349,7 @@ func _fill(card_button: Button, station: String, done: bool) -> void:
 	var col: Control = card_button.get_node("Pad").get_child(0)
 	var words: PackedStringArray = _words(station)
 	var title: String = tr(words[0])
-	(col.get_node("Head/Dot") as Label).text = title.left(1)
+	(col.get_node("Head/Dot") as Label).text = badge(station)
 	(col.get_node("Head/Name") as Label).text = title
 	(col.get_node("Head/Tick") as Label).text = "✓" if done else ""
 	(col.get_node("Blurb") as Label).text = tr(words[1])

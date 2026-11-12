@@ -264,3 +264,22 @@ func test_the_callouts_quiz_runs_on_the_client_and_ticks_the_lesson() -> void:
 	(quiz.find_child("Back", true, false) as Button).pressed.emit()
 	assert_bool(quiz.visible).is_false()
 	assert_bool(m._picker.visible).is_true()
+
+
+# FT: FT-MIS-039
+# Every card's badge is distinct in every language (Captain and Comms share a letter in en).
+func test_every_card_has_a_distinct_badge() -> void:
+	for lang: String in I18n.LANGUAGES:
+		I18n.apply(lang)
+		var seen: Dictionary = {}
+		for id: String in TrainingPicker.LESSONS + ["drill", TrainingPicker.CALLOUTS]:
+			var b: String = TrainingPicker.badge(id)
+			(
+				assert_bool(seen.has(b))
+				. override_failure_message("%s %s: %s" % [lang, id, b])
+				. is_false()
+			)
+			seen[b] = true
+	I18n.apply("en")
+	assert_str(TrainingPicker.badge("captain")).is_equal("Ca")
+	assert_str(TrainingPicker.badge("comms")).is_equal("Co")

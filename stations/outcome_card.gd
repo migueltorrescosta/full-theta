@@ -205,10 +205,10 @@ func _fill_highlights(h: Dictionary) -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_color_override("font_color", Palette.color("accent"))
 		# (a phone's card has the screen's width: a long line ends in "…", as Votes does)
-		# (a trimmed label has no least width: only on a phone, whose card has a set width)
+		# A phone's card has the screen's width, so a long line wraps there; off a phone the
+		# lines set the centred card's width (a wrapping label has no least width).
 		if _phone:
-			l.clip_text = true
-			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_highlights.add_child(l)
 	_highlights.visible = not lines.is_empty()
 
@@ -250,7 +250,9 @@ func _button(node_name: String, text: String) -> Button:
 	b.name = node_name
 	b.text = text
 	if _phone:
+		# The row spans the card's content, from edge to edge, on a phone.
 		b.custom_minimum_size = Vector2(PHONE_BUTTON_W, UiTheme.TOUCH_PRIMARY)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_buttons.add_child(b)
 	return b
 
