@@ -66,9 +66,15 @@ enum Type {
 	# The host starts the game once every crewed ship is covered and every crew player is
 	# Ready; with no host connected, any Ready crew player (#37 C1, version 11).
 	START = 48,
+	# Gameplay (#38, version 12): the host rerolls the run modifier in the Game setup sheet
+	# (gp-11); the Captain sets or clears the priority target (gp-15); a crew member taps
+	# Ready to skip the quiet gap between encounters (gp-07). Schemas: the owning strand.
+	REROLL_MODIFIER = 49,
+	PRIORITY_TARGET = 50,
+	SKIP_GAP = 51,
 }
 
-const PROTOCOL_VERSION: int = 11
+const PROTOCOL_VERSION: int = 12
 ## Default WebSocket port; the HTTP port for web stations is this minus one (D108).
 const DEFAULT_WS_PORT: int = 47801
 
@@ -285,6 +291,9 @@ const MESSAGES: Dictionary = {
 	Type.TRAINING: [RATED, {"station": TYPE_STRING}],
 	Type.RENAME: [RATED | NAMED, {"name": TYPE_STRING}],
 	Type.START: [RATED, {}],
+	Type.REROLL_MODIFIER: [RATED, {}],
+	Type.PRIORITY_TARGET: [RATED, {"contact": TYPE_INT}],
+	Type.SKIP_GAP: [RATED, {"ready": TYPE_BOOL}],
 }
 
 ## Messages a client may send; the server drops any other type from a client.

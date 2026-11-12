@@ -58,6 +58,9 @@ var team_win: TeamWin = TeamWin.LAST_TEAM_STANDING
 var eliminated_to: Destination = Destination.FRIENDLY_VIEWER
 ## Faction -> its relaunch policy; a faction missing here uses default_relaunch.
 var relaunch: Dictionary[int, RelaunchPolicy] = {}
+## The run modifier the host rolled in the lobby (gp-11, #38 D7): a RunModifierDef id, or
+## empty for none. The lobby sets it; the run setup applies the def.
+var modifier_id: StringName = &""
 var default_relaunch: RelaunchPolicy = RelaunchPolicy.none()
 
 
