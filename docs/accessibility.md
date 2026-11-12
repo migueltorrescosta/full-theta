@@ -28,7 +28,7 @@ Gaps:
 
 | # | Gap | Proposed fix | Effort |
 |---|---|---|---|
-| C1 | The seat load of the lobby (intense, busy, light) is red, yellow or green on the name and border only. FT-STN-006 does not require a second code for it, but WCAG 1.4.1 does. The three colours are 12.7 or more apart under every simulation, so the colour itself is safe. | Add a pip count (3, 2 or 1 filled pips) beside the seat name in `lobby_screen.gd` and the legend. Owner choice Q1. | S, baselines |
+| C1 | Closed (#37 C9): each lobby cell now names its seat load as a word (light, busy, intense) in its colour, beside the name (under it on a phone upright), and the legend row is gone, so the load no longer rests on colour alone (WCAG 1.4.1). The three colours are 12.7 or more apart under every simulation. | Done in `lobby_seat_grid.gd` (`_cell`, `place_load`). | done |
 | C2 | Blips are 6 px in radius at 100 %, so 4.5 px at 75 % UI scale: triangle, square and circle are hard to tell apart. | Draw blips at least 6 physical px (divide by the window's `content_scale_factor`) in `disc_radar.gd` and `relay_map.gd` (`BLIP_R`). | S, baselines |
 | C3 | Information only: `st_captain` vs `st_helm` is 3.9 under protanopia, `st_relay` vs `st_viewer` 1.7 under deuteranopia. These tints appear only in the controls diagram, which always names the station. | None proposed; the checker does not put Captain and Viewer in the `stations` group because they are never in a joint view. | none |
 

@@ -13,7 +13,7 @@ Commands go up, each with a client sequence number. Down: per-station filtered s
 1. A player joins a ship, or adds one in the lobby; any player may add a ship, up to 6, and a ship nobody picked vanishes at Start (D260).
 2. The player picks one seat from the catalogue: a single functional station, a joint view, the Captain seat, or Viewer (D10, D67).
 3. Several players may pick the same station or joint view; they share it through claims (§3.4).
-4. The ship's Ready/Start control becomes clickable only when the coverage check passes: at least 3 crew players, and every one of Helm, Weapons, Engineering, Science, Relay and Comms covered by at least one crew player's pick (D66, D67). Any crew player of the ship may then press Start; the universe starts once every crewed ship has pressed Start, each passing its coverage check, and the world is built from the picked ships in lobby order (D129, D260, D261).
+4. Each crew player says Ready (a toggle a seat change clears). The host's Start becomes clickable only when every crewed ship passes the coverage check, at least 3 crew players and every one of Helm, Weapons, Engineering, Science, Relay and Comms covered by at least one crew player's pick (D66, D67), and every crew player is Ready; until then it says what it waits for. With no host connected, any Ready crew player gets Start. The universe starts all together, and the world is built from the picked ships in lobby order (D129, D260, D261).
 
 Joint-view catalogue (D67, D76): every 2-station pair, 15 layouts, all offered in the lobby. Names are working titles; each view is named after the pair it serves (§7.3).
 
@@ -69,7 +69,7 @@ Coverage counts only ships still in play; a destroyed or abandoned ship leaves p
 - **FT-NET-016** The lobby shall let any number of players pick the same station or joint view, and at most one player per ship pick Captain. (D10, plan review CLASH-10)
 - **FT-NET-017** The lobby shall offer the joint views in the catalogue and no other station combinations. (D13, D67, D216)
 - **FT-NET-018** A joint view shall keep every control of each station it contains. (D20)
-- **FT-NET-019** The Ready/Start control shall become clickable only when the coverage check passes for that ship, and the universe shall start once every crewed ship has pressed Start. (D19, D66, D67, D129, D261)
+- **FT-NET-019** The host's Start shall become clickable only when every crewed ship passes the coverage check and every crew player has said Ready, and one Start shall start the universe for every crewed ship together; with no host connected, any Ready crew player may press Start. (D19, D66, D67, D129, D261)
 - **FT-NET-020** The coverage check shall ignore Captain and Viewer picks. (D19, D23)
 - **FT-NET-021** The lobby shall show which functional stations are still uncovered. (D67)
 - **FT-NET-022** Weapon mounts, repair crews, the active scan or hack, probes, NPC conversations, Helm flight control and Helm shield facing shall be claimable. (D18, plan review STN-3)
