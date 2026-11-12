@@ -198,10 +198,7 @@ func refresh() -> void:
 	_sub.text = sub_text()
 	_sub.visible = _sub.text != ""
 	_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
-	_end_dialog.title = tr("lobby.end_title")
-	_end_dialog.dialog_text = tr("lobby.end_text")
-	_end_dialog.ok_button_text = tr("lobby.end_game")
-	_end_dialog.cancel_button_text = tr("lobby.end_keep")
+	LobbyScreen.word_end_dialog(_end_dialog)
 	for c: Node in _table.get_children():
 		_table.remove_child(c)
 		c.queue_free()

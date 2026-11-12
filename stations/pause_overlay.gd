@@ -201,10 +201,7 @@ func _end_button() -> void:
 
 ## Asks the host "End the game?" (the lobby's End game dialog, D353).
 func open_end_dialog() -> void:
-	_end_dialog.title = tr("lobby.end_title")
-	_end_dialog.dialog_text = tr("lobby.end_text")
-	_end_dialog.ok_button_text = tr("lobby.end_game")
-	_end_dialog.cancel_button_text = tr("lobby.end_keep")
+	LobbyScreen.word_end_dialog(_end_dialog)
 	_end_dialog.popup_centered()
 
 

@@ -634,15 +634,21 @@ func _button(node_name: String, text: String, handler: Callable) -> Button:
 	return b
 
 
+## Words the host's "End the game?" dialog (D353), shared by the lobby, the scoreboard and
+## the pause card.
+static func word_end_dialog(d: ConfirmationDialog) -> void:
+	d.title = d.tr("lobby.end_title")
+	d.dialog_text = d.tr("lobby.end_text")
+	d.ok_button_text = d.tr("lobby.end_game")
+	d.cancel_button_text = d.tr("lobby.end_keep")
+
+
 ## The dialogs: the Game setup sheet, the end of the game and, on the host, how to join.
 func _build_dialogs() -> void:
 	_game_setup.add_dialogs(self)
 	_end_dialog = ConfirmationDialog.new()
 	_end_dialog.name = "EndDialog"
-	_end_dialog.title = tr("lobby.end_title")
-	_end_dialog.dialog_text = tr("lobby.end_text")
-	_end_dialog.ok_button_text = tr("lobby.end_game")
-	_end_dialog.cancel_button_text = tr("lobby.end_keep")
+	LobbyScreen.word_end_dialog(_end_dialog)
 	_end_dialog.confirmed.connect(menu_requested.emit)
 	add_child(_end_dialog)
 	_join_dialog = AcceptDialog.new()
@@ -684,10 +690,7 @@ func _notification(what: int) -> void:
 		_start.text = tr("lobby.start")
 		_ready.text = tr("lobby.ready")
 		_menu.text = tr("lobby.end_game" if ctx.crew.host else "lobby.menu")
-		_end_dialog.title = tr("lobby.end_title")
-		_end_dialog.dialog_text = tr("lobby.end_text")
-		_end_dialog.ok_button_text = tr("lobby.end_game")
-		_end_dialog.cancel_button_text = tr("lobby.end_keep")
+		LobbyScreen.word_end_dialog(_end_dialog)
 		_leave.text = tr("lobby.leave_pick")
 		_join_button.text = tr("lobby.join_title")
 		_name_field.placeholder_text = tr("menu.name")
