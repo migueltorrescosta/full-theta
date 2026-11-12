@@ -3,13 +3,12 @@
 class_name Kinematics
 extends SimTable
 ## Rigid-body state of every ship, one row per ship in id order (packed layout, S6).
-## Positions are plain offsets in the scenario's one cube: three 64-bit float columns
+## Positions are plain offsets in the map's one cube: three 64-bit float columns
 ## pos_x, pos_y, pos_z, no space id (D229, D230), and one CubePoint at every API (D401).
 ## The cube wraps as a 3-torus of side `period` (FT-SIM-035): offsets are kept in
 ## [-period / 2, period / 2) per axis and every position difference is the minimum image.
-## Only this class reads or writes the position columns (tools/lint_arch.py): use
-## relative(), relative_to_point(), relative_to_column(), point(), point_at(),
-## wrap_point(), wrap(), place() and translate(). A difference of exactly P/2 on an axis
+## Only this class reads or writes the position columns (tools/lint_arch.py): use its
+## position helpers. A difference of exactly P/2 on an axis
 ## wraps to -P/2 either way, so relative(a, b) is not exactly -relative(b, a) there;
 ## harmless, as P is at least 4x the longest sensor range (D125).
 ## Velocities and rotation stay float32 Vector3 (D104). Local axes follow Godot: -Z is
@@ -234,7 +233,11 @@ func nearest(a: int, ids: PackedInt32Array) -> int:
 ## The minimum-image vector from point b to point a (m): each coordinate difference wrapped
 ## into [-period / 2, period / 2). The one hand-written form of the wrapped delta (R04-2).
 func delta(a: PackedFloat64Array, b: PackedFloat64Array) -> Vector3:
-	return CubePoint.delta(a, b, period)
+	return Vector3(
+		PeriodRules.wrap(a[0] - b[0], period),
+		PeriodRules.wrap(a[1] - b[1], period),
+		PeriodRules.wrap(a[2] - b[2], period)
+	)
 
 
 ## The minimum-image vector from point b to the point at row r of the columns xs, ys, zs

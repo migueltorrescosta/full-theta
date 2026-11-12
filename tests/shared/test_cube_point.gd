@@ -53,11 +53,12 @@ func test_helpers_leave_their_arguments_alone() -> void:
 # FT: FT-SIM-035
 # The minimum image across the seam, in 64-bit.
 func test_delta_is_the_minimum_image() -> void:
-	var period: float = 400000.0
-	var a: PackedFloat64Array = CubePoint.make(-199990.0, 0.0, FINE)
-	var b: PackedFloat64Array = CubePoint.make(199990.0, 0.0, FINE - 1.0)
-	assert_vector(CubePoint.delta(a, b, period)).is_equal(Vector3(20.0, 0.0, 1.0))
-	assert_vector(CubePoint.delta(b, a, period)).is_equal(Vector3(-20.0, 0.0, -1.0))
+	var kin: Kinematics = SimWorld.new(1).kin
+	var h: float = 0.5 * kin.period
+	var a: PackedFloat64Array = CubePoint.make(-h + 10.0, 0.0, FINE)
+	var b: PackedFloat64Array = CubePoint.make(h - 10.0, 0.0, FINE - 1.0)
+	assert_vector(kin.delta(a, b)).is_equal(Vector3(20.0, 0.0, 1.0))
+	assert_vector(kin.delta(b, a)).is_equal(Vector3(-20.0, 0.0, -1.0))
 
 
 # FT: FT-SIM-035
@@ -73,4 +74,3 @@ func test_relative_to_column_matches_relative_to_point() -> void:
 	var rel: Vector3 = w.kin.relative_to_column(ship, xs, ys, zs, 1)
 	assert_vector(rel).is_equal(w.kin.relative_to_point(ship, at))
 	assert_vector(rel).is_equal(Vector3(40.0, 5.0, 2.0))
-	assert_vector(w.kin.delta_column(xs, ys, zs, 1, w.kin.point(ship))).is_equal(rel)

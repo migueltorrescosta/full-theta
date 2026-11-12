@@ -12,7 +12,6 @@ extends RefCounted
 ## their arguments. Content definitions (SiteDef.pos, HazardDef.center) are authored as
 ## Vector3 in whole metres, exact in float32; of() turns one into a point.
 
-## Number of coordinates in a point.
 const SIZE: int = 3
 
 
@@ -69,12 +68,3 @@ static func append(
 ## p moved by an offset (m), not wrapped.
 static func plus(p: PackedFloat64Array, offset: Vector3) -> PackedFloat64Array:
 	return PackedFloat64Array([p[0] + offset.x, p[1] + offset.y, p[2] + offset.z])
-
-
-## The minimum-image offset from b to a (m) in a cube of side period, computed in 64-bit.
-static func delta(a: PackedFloat64Array, b: PackedFloat64Array, period: float) -> Vector3:
-	return Vector3(
-		PeriodRules.wrap(a[0] - b[0], period),
-		PeriodRules.wrap(a[1] - b[1], period),
-		PeriodRules.wrap(a[2] - b[2], period)
-	)
