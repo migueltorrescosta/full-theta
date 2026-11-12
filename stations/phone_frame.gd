@@ -323,9 +323,13 @@ func _place_view_top() -> void:
 		c.size = Vector2(col_w, sz.y)
 		c.position = Vector2(roundf(x1 - col_w), cy)
 		cy += sz.y + gap
-	var reserve: float = row_h if side_by_side else maxf(row_h, cy - y)
+	# The panel's content starts under the row; beside the selection chip the column's
+	# request buttons are tap targets too, so the content starts under them as well.
+	var reserve: float = row_h
+	if not side_by_side or request_chips.visible:
+		reserve = maxf(row_h, cy - y)
 	if reserve > 0.0:
-		reserve += y - (r.position.y + VIEW_TOP_Y)
+		reserve = roundf(reserve + y - (r.position.y + VIEW_TOP_Y))
 	if p.top_reserve != reserve:
 		p.top_reserve = reserve
 		p.queue_redraw()

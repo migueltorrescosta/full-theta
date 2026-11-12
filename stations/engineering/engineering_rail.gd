@@ -33,7 +33,9 @@ static func update(p: EngineeringPanel) -> void:
 			if p.ship_def == null:
 				b.disabled = true
 				continue
-			var show: bool = p.model.shown(id)
+			# A rare action also shows while its own lesson step asks for it, so the lesson
+			# never names a hidden button (StationPanel.lesson_wants).
+			var show: bool = p.model.shown(id) or p.lesson_wants(id)
 			if b.visible != show:
 				b.visible = show
 			if not show:

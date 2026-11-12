@@ -36,12 +36,11 @@ const NOT_BUTTONS: Array[String] = [
 	# The selection sheet's options: the sheet opens from the target's name (C4).
 	"intent.ping",
 	"sheet.mark_here",
-	# Rail actions shown only while they matter (C3): the lesson makes them matter.
-	"eng.touch.cause",
-	"eng.touch.claim",
 	# Shown only while they can work or their own step is on (C3, StationPanel.lesson_wants;
 	# tests/stations/helm/test_helm_tablet.gd checks that the step shows them).
 	"touch.helm.dock",
+	"eng.touch.cause",
+	"eng.touch.claim",
 	"touch.helm.jump",
 	"weapons.touch_claim",
 ]
