@@ -845,6 +845,19 @@ func _arrow(e: Dictionary) -> Array[Vector2]:
 	var tip: Vector2 = _edge_point(dir)
 	if touch_layout() or size.x < PHONE_W:
 		tip = arrow_tip(tip)
+	# Never on a tablet's radar inset (C14): an arrow there slides along its edge to just
+	# below the inset or left of it, its label with it.
+	var inset: Rect2 = _inset_rect()
+	if inset.has_area():
+		# (then off the shield ring under it, the same way)
+		for box: Rect2 in [inset, _ring_rect()]:
+			var keep: Rect2 = box.grow(30.0 + 16.0)
+			if box.has_area() and keep.has_point(tip):
+				# (whichever way is shorter)
+				if keep.end.y - tip.y < tip.x - keep.position.x:
+					tip.y = keep.end.y
+				else:
+					tip.x = keep.position.x
 	return [dir, tip]
 
 
