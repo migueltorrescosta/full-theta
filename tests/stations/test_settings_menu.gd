@@ -332,3 +332,20 @@ func test_the_game_tab_renames_the_player() -> void:
 	assert_str(m.settings.player_name).is_equal("Bea")
 	if FileAccess.file_exists(CFG):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(CFG))
+
+
+# FT: FT-STN-011
+# #28: on a touch layout the check boxes and the Advanced toggle are 44 px tall; on a
+# desktop they keep their own height.
+func test_touch_layouts_get_44_px_check_boxes() -> void:
+	var m: SettingsScreen = _menu()
+	LayoutMode.forced = LayoutMode.Kind.TOUCH
+	m._fit_safe_area()
+	for n: String in ["Comfort", "Advanced", "ShowAll", "InvertPitch"]:
+		var c: Control = m.find_child(n, true, false)
+		assert_float(c.custom_minimum_size.y).override_failure_message(n).is_equal(
+			float(UiTheme.TOUCH_MIN)
+		)
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	m._fit_safe_area()
+	assert_float((m.find_child("Comfort", true, false) as Control).custom_minimum_size.y).is_zero()

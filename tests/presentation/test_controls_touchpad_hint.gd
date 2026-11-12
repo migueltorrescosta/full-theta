@@ -61,14 +61,20 @@ func test_the_pad_and_left_click_notes() -> void:
 
 
 # FT: FT-STN-011
-# R25-14: "?" is a chip off the keyboard (any key that types it), and the US slash key is
-# the physical Slash.
-func test_the_question_mark_is_a_chip_off_the_keyboard() -> void:
-	var q: Dictionary = ControlsFigure.part(IntentTable.KBM, "?")
-	var slash: Dictionary = ControlsFigure.part(IntentTable.KBM, "Slash")
-	var space: Dictionary = ControlsFigure.part(IntentTable.KBM, "Space")
-	assert_str(slash["caption"]).is_equal("/")
-	assert_float((q["rect"] as Rect2).position.y).is_greater((space["rect"] as Rect2).end.y)
+# R25-14: "?" is whichever key types it, so it has no place on the drawing; the note under
+# the keyboard names it. The US slash key is the physical Slash.
+func test_the_question_mark_is_named_not_drawn() -> void:
+	I18n.apply("en")
+	LayoutMode.forced = LayoutMode.Kind.DESKTOP
+	assert_dict(ControlsFigure.part(IntentTable.KBM, "?")).is_empty()
+	assert_str(ControlsFigure.part(IntentTable.KBM, "Slash")["caption"]).is_equal("/")
 	var known: Dictionary = ControlsFigure.ids(IntentTable.KBM)
-	assert_array(ControlsModel.parts_of("?", known)).is_equal(["?"])
 	assert_array(ControlsModel.parts_of("Slash", known)).is_equal(["Slash"])
+	var pane: ControlsPane = auto_free(ControlsPane.new())
+	add_child(pane)
+	pane.build(Bindings.new(), ["comms"], IntentTable.KBM)
+	pane.show_view(ControlsPane.VIEW_KBM)
+	var note: Label = pane.get_node(ControlsPane.VIEW_KBM + "View").get_child(1)
+	assert_str(note.text).contains("Show controls: type ?")
+	assert_str(note.text).not_contains("Not on the picture")
+	LayoutMode.forced = -1

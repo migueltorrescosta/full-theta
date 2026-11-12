@@ -419,6 +419,7 @@
     "controls.off_diagram": {"en": "Not on the picture: %s", "pt_PT": "Fora da imagem: %s", "it": "Fuori dallo schema: %s"},
     "controls.pad_buttons": {"en": "Buttons by place: A bottom, B right, X left, Y top.", "pt_PT": "Botões pela posição: A em baixo, B à direita, X à esquerda, Y em cima.", "it": "Tasti per posizione: A in basso, B a destra, X a sinistra, Y in alto."},
     "controls.lmb_split": {"en": "Left click selects over a contact, mark or chip, and fires anywhere else.", "pt_PT": "O clique esquerdo seleciona sobre um contacto, marcador ou chip, e dispara no resto.", "it": "Il clic sinistro seleziona su un contatto, segnalino o chip, e spara altrove."},
+    "controls.typed": {"en": "%s: type ?, wherever it is on your keyboard", "pt_PT": "%s: escreve ?, onde estiver no teu teclado", "it": "%s: digita ?, ovunque sia sulla tua tastiera"},
     "overlay.common": {"en": "Everywhere", "pt_PT": "Em todo o lado", "it": "Ovunque"},
     "overlay.title": {"en": "Controls", "pt_PT": "Controlos", "it": "Comandi"},
     "overlay.toggle": {"en": "(toggle)", "pt_PT": "(alternar)", "it": "(alterna)"},
