@@ -346,6 +346,12 @@ func _apply_safe_area() -> void:
 ## elsewhere the theme's sizes and the compact gaps (D257).
 func _apply_targets(phone: bool) -> void:
 	var gap: int = PHONE_GAP if phone else LobbySeatGrid.GRID_GAP
+	# A phone keeps Ready and Start at the bottom, for the thumb; elsewhere they follow the
+	# seats, so no empty band opens between them. Only a phone's short layout drops the top
+	# margin (its safe area keeps a floor already).
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL if phone else Control.SIZE_FILL
+	if _short:
+		_margin.add_theme_constant_override("margin_top", SHORT_TOP if phone else 6)
 	for box: Control in [_seats.grid, _ships, _ship_tools]:
 		box.add_theme_constant_override("h_separation", gap)
 		box.add_theme_constant_override("v_separation", gap)
@@ -494,10 +500,14 @@ func _use_strip(phone: bool) -> void:
 	_show_ship_row()
 
 
-## The grid takes the spare height of the body (a hidden ship row, a tall window), up to
-## LobbySeatGrid.MAX_GROW a row; what is left centres the body (#37 C1 review).
+## On a phone the grid takes the spare height (the room a hidden ship row leaves), up to
+## LobbySeatGrid.MAX_GROW a row, so no band opens above Ready and Start at the bottom; off a
+## phone the rows keep their size and Start follows the seats (#37 C1 review).
 func _grow_cells() -> void:
 	if size.y <= 0.0 or not _body.visible:
+		return
+	if not _phone:
+		_seats.grow(-INF)
 		return
 	# The room inside the margins, read from this screen's own size (the containers sort
 	# later), less what the rows need now.
@@ -580,7 +590,6 @@ func _build() -> void:
 	_seats.changed.connect(refresh)
 	_body = VBoxContainer.new()
 	_body.name = "Body"
-	_body.alignment = BoxContainer.ALIGNMENT_CENTER
 	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	outer.add_child(_body)
 	_body.add_child(_seats.coverage)
