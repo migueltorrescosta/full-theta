@@ -321,7 +321,8 @@ func _refresh_buttons() -> void:
 		if mine
 		else (tr("comms.claimed_by") % holder if holder != "" else tr("comms.claim"))
 	)
-	(_buttons["hold_fire"] as Button).disabled = request_chips().is_empty()
+	# Hidden, not greyed, while no chip can go (the chips toggle off): no dead button.
+	(_buttons["hold_fire"] as Button).visible = not request_chips().is_empty()
 
 
 ## Controls help on touch (P28-Help): per page, the boxes of its controls in the 844x390
@@ -385,8 +386,8 @@ static func touch_help() -> Array:
 			[
 				[
 					Rect2(191, 132, 207, 48),
-					TranslationServer.translate("comms.hold_fire"),
-					TouchText.of("help.comms.hold_fire", "Ask Weapons to hold fire on the contact"),
+					TranslationServer.translate("share.drawer"),
+					TranslationServer.translate("help.crew_share"),
 				],
 			],
 		},

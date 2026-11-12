@@ -31,7 +31,7 @@
     "controls.all_stations": {"en": "All stations", "pt_PT": "Todos os postos", "it": "Tutte le postazioni"},
     "controls.hint": {"en": "Controls: ☰ › Controls", "pt_PT": "Controlos: ☰ › Controlos", "it": "Comandi: ☰ › Comandi"},
     "firstseat.title": {"en": "%s: start here", "pt_PT": "%s: começa aqui", "it": "%s: inizia da qui"},
-    "firstseat.callouts": {"en": "Learn to read callouts in Training › Callouts.", "pt_PT": "Aprende a ler avisos em Treino › Avisos.", "it": "Impara a leggere le chiamate in Addestramento › Chiamate."},
+    "firstseat.callouts": {"en": "Learn to read callouts in Training › Callouts.", "pt_PT": "Aprende a ler as chamadas em Treino › Chamadas.", "it": "Impara a leggere le chiamate in Addestramento › Chiamate."},
     "firstseat.got_it": {"en": "Got it", "pt_PT": "Percebi", "it": "Capito"},
     "firstseat.touch.face": {"en": "Select a contact, then hold {t:touch.helm.face} on the {t:touch.helm.fly} page.", "pt_PT": "Seleciona um contacto e mantém premido {t:touch.helm.face} na página {t:touch.helm.fly}.", "it": "Seleziona un contatto e tieni premuto {t:touch.helm.face} nella pagina {t:touch.helm.fly}."},
     "firstseat.touch.approach": {"en": "Select a contact, then hold {t:touch.helm.approach} in the left rail.", "pt_PT": "Seleciona um contacto e mantém premido {t:touch.helm.approach} na barra da esquerda.", "it": "Seleziona un contatto e tieni premuto {t:touch.helm.approach} nella barra a sinistra."},
