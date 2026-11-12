@@ -85,7 +85,7 @@ func test_views_are_fresh_copies() -> void:
 	a.hull_frac = 0.01
 	a.pos[0] = 123456.0
 	assert_float(api.ship(0).hull_frac).is_equal(1.0)
-	assert_float(w.kin.px[0]).is_not_equal(123456.0)
+	assert_float(w.kin.pos_x[0]).is_not_equal(123456.0)
 	var s: SiteView = api.sites()[1]
 	s.pos[0] = -1.0
 	assert_float(api.sites()[1].pos[0]).is_equal(ApiFixture.ALPHA.x)

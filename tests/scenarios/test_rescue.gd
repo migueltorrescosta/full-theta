@@ -56,7 +56,12 @@ func test_salvage_pays_more_and_costs_standing() -> void:
 	var freighter: int = f.ships_of(&"m3_stranded")[0]
 	var at: Vector3 = f.world.kin.relative(0, freighter)
 	f.world.kin.place(
-		0, f.world.kin.px[0] + at.x, f.world.kin.py[0] + at.y, f.world.kin.pz[0] + at.z - 300.0
+		0,
+		CubePoint.make(
+			f.world.kin.pos_x[0] + at.x,
+			f.world.kin.pos_y[0] + at.y,
+			f.world.kin.pos_z[0] + at.z - 300.0
+		)
 	)
 	f.run(60 * 9)
 	for id: int in raiders:
@@ -100,8 +105,8 @@ func test_ignoring_the_call_pays_nothing() -> void:
 func test_a_ship_arriving_at_speed_does_not_hit_the_freighter() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"rescue", &"vesper_beacon")
-	var at: Vector3 = f.world.sites.point3(f.site)
-	f.world.kin.place(0, at.x + 3000.0, at.y, at.z)
+	var at: Vector3 = CubePoint.to_vector3(f.world.sites.point(f.site))
+	f.world.kin.place(0, CubePoint.make(at.x + 3000.0, at.y, at.z))
 	f.world.kin.vel[0] = Vector3(-300.0, 0.0, 0.0)
 	var nearest: float = INF
 	for i: int in 60 * 18:

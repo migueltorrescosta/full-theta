@@ -33,7 +33,9 @@ func test_slow_drift_near_offset_limit() -> void:
 	for shift: float in [0.0, SHIFT]:
 		var w: SimWorld = _encounter().build()
 		for id: int in w.ship_count():
-			w.kin.place(id, w.kin.px[id] + shift, w.kin.py[id], w.kin.pz[id])
+			w.kin.place(
+				id, CubePoint.make(w.kin.pos_x[id] + shift, w.kin.pos_y[id], w.kin.pos_z[id])
+			)
 		var coast: DecoupledCommand = DecoupledCommand.new()
 		coast.ship_id = M1Encounter.PLAYER_SHIP
 		w.submit(coast)
@@ -43,13 +45,13 @@ func test_slow_drift_near_offset_limit() -> void:
 	var at_origin: SimWorld = worlds[0]
 	var far: SimWorld = worlds[1]
 	var player: int = M1Encounter.PLAYER_SHIP
-	assert_float(far.kin.px[player] - SHIFT).is_equal_approx(2.0, 1e-3)
-	assert_float(far.kin.px[player] - SHIFT).is_equal_approx(at_origin.kin.px[player], 1e-3)
+	assert_float(far.kin.pos_x[player] - SHIFT).is_equal_approx(2.0, 1e-3)
+	assert_float(far.kin.pos_x[player] - SHIFT).is_equal_approx(at_origin.kin.pos_x[player], 1e-3)
 	for id: int in far.ship_count():
 		var moved: Vector3 = Vector3(
-			far.kin.px[id] - SHIFT - at_origin.kin.px[id],
-			far.kin.py[id] - at_origin.kin.py[id],
-			far.kin.pz[id] - at_origin.kin.pz[id]
+			far.kin.pos_x[id] - SHIFT - at_origin.kin.pos_x[id],
+			far.kin.pos_y[id] - at_origin.kin.pos_y[id],
+			far.kin.pos_z[id] - at_origin.kin.pos_z[id]
 		)
 		assert_float(moved.length()).is_less(1e-3)
 	var rel_far: Vector3 = far.kin.relative(player, M1Encounter.ENEMY_SHIP)

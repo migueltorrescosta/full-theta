@@ -117,7 +117,12 @@ func test_a_timed_out_salvage_pays_in_part() -> void:
 	var freighter: int = f.ships_of(&"m3_stranded")[0]
 	var at: Vector3 = f.world.kin.relative(1, freighter)
 	f.world.kin.place(
-		1, f.world.kin.px[1] + at.x, f.world.kin.py[1] + at.y, f.world.kin.pz[1] + at.z - 300.0
+		1,
+		CubePoint.make(
+			f.world.kin.pos_x[1] + at.x,
+			f.world.kin.pos_y[1] + at.y,
+			f.world.kin.pos_z[1] + at.z - 300.0
+		)
 	)
 	for ship: int in 2:
 		f.world.damage.health[f.world.damage.hull_row(ship)] = 1.0e15
@@ -135,8 +140,8 @@ func test_a_timed_out_salvage_pays_in_part() -> void:
 # the lane is paid.
 func test_a_later_ship_reaching_the_yard_wins_the_leg() -> void:
 	var f: ScenarioFixture = _fleet(&"debris_leg", 3)
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(1, yard.x, yard.y, yard.z)
+	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
+	f.world.kin.place(1, CubePoint.of(yard))
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
 
 
@@ -154,8 +159,8 @@ func test_a_fled_leg_fails_its_clearance() -> void:
 	assert_int(f.card_state(card)).is_equal(CardView.State.FAILED)
 	f.run(60 * 40)
 	var credits: int = Economy.credits(f.world, 1)
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(1, yard.x + 500.0, yard.y, yard.z)
+	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
+	f.world.kin.place(1, CubePoint.make(yard.x + 500.0, yard.y, yard.z))
 	f.world.kin.vel[1] = Vector3.ZERO
 	var dock: DockCommand = DockCommand.new()
 	dock.site_id = 0

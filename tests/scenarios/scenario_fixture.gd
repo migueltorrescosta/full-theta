@@ -36,9 +36,9 @@ static func make(seed_value: int = 1, crew: int = 1) -> ScenarioFixture:
 func begin(scenario_id: StringName, site_key: StringName) -> void:
 	scenario = ScenarioCatalogue.load_for(PackedStringArray([String(scenario_id)]))[0].fresh()
 	site = world.sites.open(world, site_key)
-	var p: Vector3 = world.sites.point3(site)
+	var p: Vector3 = CubePoint.to_vector3(world.sites.point(site))
 	for ship: int in ships:
-		world.kin.place(ship, p.x + 100.0 * ship, p.y, p.z)
+		world.kin.place(ship, CubePoint.make(p.x + 100.0 * ship, p.y, p.z))
 	_begin = api.begin_encounter(scenario_id, site, ships, 0)
 	world.step()
 	encounter = _begin.id()

@@ -33,8 +33,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	var p_units: int = NetCodec.period_units(world.kin.period)
 	var kin: Kinematics = world.kin
 	var proj: ProjectileTable = world.projectiles
-	var at: PackedFloat64Array = kin.point_at(owner, Vector3.ZERO)
-	var own: Vector3i = NetCodec.quant_pos(at[0], at[1], at[2], p_units)
+	var own: Vector3i = NetCodec.quant_pos(kin.point(owner), p_units)
 	var r2: float = range_m * range_m
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.put_u16(0)

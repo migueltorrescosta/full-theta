@@ -14,7 +14,7 @@ func _world() -> SimWorld:
 	var w: SimWorld = SimWorld.new(3)
 	w.science_def = ScienceFixture.science()
 	w.spawn_ship(TestDefs.corvette(), BLUE)
-	w.spawn_ship(TestDefs.raider(), RED, Vector3(0, 0, -22000))
+	w.spawn_ship(TestDefs.raider(), RED, CubePoint.make(0, 0, -22000))
 	return w
 
 
@@ -38,4 +38,4 @@ func test_probe_bubble_detects_and_lowers_noise() -> void:
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE, FOE)).is_true()
 	assert_float(ScienceSystem.contact_noise(w, ME, FOE)).is_less(far_noise)
 	# The other side's probes, and none at all, cover nothing.
-	assert_bool(ProbeSystem.coverage_at(w, RED, Vector3(0, 0, -22000))).is_false()
+	assert_bool(ProbeSystem.coverage_at(w, RED, CubePoint.make(0, 0, -22000))).is_false()

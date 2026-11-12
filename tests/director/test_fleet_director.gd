@@ -112,10 +112,15 @@ func test_race_plays_one_list_at_own_copies() -> void:
 		var ship: int = ev.ships[0]
 		sites[ev.site] = true
 		var start: int = w.ship_start_site[ship]
-		var gap: Vector3 = w.sites.point3(ev.site) - w.sites.point3(start)
+		var gap: Vector3 = (
+			CubePoint.to_vector3(w.sites.point(ev.site))
+			- CubePoint.to_vector3(w.sites.point(start))
+		)
 		var first: int = w.sites.id_of(StringName(f.director.race_sites()[0]))
 		var expected: Vector3 = (
-			w.sites.point3(first) - w.sites.point3(0) if first >= 0 else Vector3.INF
+			CubePoint.to_vector3(w.sites.point(first)) - CubePoint.to_vector3(w.sites.point(0))
+			if first >= 0
+			else Vector3.INF
 		)
 		if first >= 0:
 			for axis: int in 3:

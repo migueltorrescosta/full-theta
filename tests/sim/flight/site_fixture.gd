@@ -30,13 +30,13 @@ static func id_of(w: SimWorld, key: StringName) -> int:
 
 ## A corvette at `at` with its bow on the point `toward` (by minimum image).
 static func corvette_facing(w: SimWorld, at: Vector3, toward: Vector3) -> int:
-	var id: int = w.spawn_ship(TestDefs.corvette(), SHIP_FACTION, at)
+	var id: int = w.spawn_ship(TestDefs.corvette(), SHIP_FACTION, CubePoint.of(at))
 	face(w, id, toward)
 	return id
 
 
 static func face(w: SimWorld, id: int, toward: Vector3) -> void:
-	var offset: Vector3 = w.kin.relative_to_point(id, toward.x, toward.y, toward.z)
+	var offset: Vector3 = w.kin.relative_to_point(id, CubePoint.of(toward))
 	w.kin.rot[id] = Quaternion(Basis.looking_at(offset.normalized(), Vector3.UP))
 
 

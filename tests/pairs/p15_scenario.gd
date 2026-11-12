@@ -30,7 +30,7 @@ static func harness() -> PairHarness:
 static func build() -> SimWorld:
 	var w: SimWorld = StoryFixture.world(SEED)
 	w.spawn_ship(TestDefs.corvette(), BLUE)
-	w.spawn_ship(TestDefs.raider(), RED, TRUTH)
+	w.spawn_ship(TestDefs.raider(), RED, CubePoint.of(TRUTH))
 	return w
 
 
@@ -44,7 +44,7 @@ static func environment(w: SimWorld) -> void:
 
 
 static func done(w: SimWorld) -> bool:
-	return w.kin.relative_to_point(PLAYER, TRUTH.x, TRUTH.y, TRUTH.z).length() < CAPTURE
+	return w.kin.relative_to_point(PLAYER, CubePoint.of(TRUTH)).length() < CAPTURE
 
 
 static func measure(w: SimWorld) -> Dictionary:
@@ -73,7 +73,7 @@ static func solo(w: SimWorld) -> void:
 static func discovery_world() -> SimWorld:
 	var w: SimWorld = StoryFixture.world(SEED)
 	w.spawn_ship(TestDefs.corvette(), BLUE)
-	w.spawn_ship(TestDefs.raider(), RED, Vector3(0.0, 0.0, -30000.0))
+	w.spawn_ship(TestDefs.raider(), RED, CubePoint.make(0.0, 0.0, -30000.0))
 	return w
 
 

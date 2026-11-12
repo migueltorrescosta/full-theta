@@ -15,8 +15,12 @@ enum Shape { SPHERE, PLANE }
 @export var id: StringName = &""
 @export var kind: Kind = Kind.ZONE
 @export var shape: Shape = Shape.SPHERE
-## Point (m): a zone's or sphere's centre, a plane front's point at the start.
-@export var center: Vector3 = Vector3.ZERO
+## Point (m): a zone's or sphere's centre, a plane front's point at the start. Authored
+## as a Vector3 in whole metres (exact in float32); the sim reads center_point.
+@export var center: Vector3 = Vector3.ZERO:
+	set(value):
+		center = value
+		center_point = CubePoint.of(value)
 ## A zone's radius, a sphere front's radius at the start (m).
 @export var radius: float = 0.0
 ## A plane front's direction of travel (dimensionless unit vector).
@@ -38,6 +42,8 @@ enum Shape { SPHERE, PLANE }
 ## How close the own sensors must be to the hazard's surface to know of it (m); a probe's
 ## bubble (ShipDef.probe_range) shows it from further.
 @export var detect_range: float = 0.0
+## The centre as a cube point (D401), kept with `center`; read-only (it is shared).
+var center_point: PackedFloat64Array = CubePoint.make()
 
 
 func validate() -> Array[String]:

@@ -23,11 +23,12 @@ func apply(world: SimWorld) -> bool:
 	var enemy: EnemyDef = world.catalog.get(enemy_key)
 	if enemy == null or faction < 0:
 		return false
-	if world.kin.wrap_point(x, y, z).is_empty():
+	var at: PackedFloat64Array = world.kin.wrap_point(CubePoint.make(x, y, z))
+	if at.is_empty():
 		return false
 	if not rot.is_finite() or rot.length_squared() < 1e-12:
 		return false
-	var id: int = world.spawn_enemy(enemy, faction, Vector3(x, y, z), rot)
+	var id: int = world.spawn_enemy(enemy, faction, at, rot)
 	world.emit(&"ship_spawned", id, -1, 0.0, Vector3.ZERO, enemy_key)
 	result_id = id
 	return true

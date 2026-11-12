@@ -5,8 +5,8 @@ extends GdUnitTestSuite
 
 func _world() -> SimWorld:
 	var w: SimWorld = SimWorld.new(7, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3(0, 0, 0))
-	w.spawn_ship(TestDefs.corvette(), 2, Vector3(500, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(0, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), 2, CubePoint.make(500, 0, 0))
 	return w
 
 
@@ -52,7 +52,9 @@ func test_sensor_reach_zero_for_dead_ship() -> void:
 func test_delta_is_minimum_image() -> void:
 	var w: SimWorld = _world()
 	var p: float = w.kin.period
-	var d: Vector3 = w.kin.delta(0.9 * p / 2.0, 0.0, 0.0, -0.9 * p / 2.0, 0.0, 0.0)
+	var d: Vector3 = w.kin.delta(
+		CubePoint.make(0.9 * p / 2.0, 0.0, 0.0), CubePoint.make(-0.9 * p / 2.0, 0.0, 0.0)
+	)
 	assert_float(d.x).is_equal_approx(-0.2 * p / 2.0, 1e-6)
 
 

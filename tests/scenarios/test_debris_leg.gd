@@ -11,11 +11,11 @@ func test_the_leg_has_debris_on_the_route_and_weapons_destroys_it() -> void:
 	f.run(3)
 	var pieces: Array[int] = f.ships_of(&"m3_debris")
 	assert_int(pieces.size()).is_equal(6)
-	var from: Vector3 = f.world.sites.point3(f.site)
-	var yard: Vector3 = f.world.sites.point3(0)
+	var from: Vector3 = CubePoint.to_vector3(f.world.sites.point(f.site))
+	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
 	for id: int in pieces:
 		# On the route: within the lateral spread of the line between the sites.
-		var rel: Vector3 = f.world.kin.relative_to_point(id, from.x, from.y, from.z)
+		var rel: Vector3 = f.world.kin.relative_to_point(id, CubePoint.of(from))
 		var line: Vector3 = yard - from
 		var along: float = -rel.dot(line.normalized())
 		assert_float(along).is_between(0.0, line.length())
@@ -23,7 +23,10 @@ func test_the_leg_has_debris_on_the_route_and_weapons_destroys_it() -> void:
 	# Weapons shoots the nearest piece: the ship waits 3 km short of it with the bow on it.
 	var target: int = pieces[0]
 	f.world.kin.place(
-		0, f.world.kin.px[target] - 3000.0, f.world.kin.py[target], f.world.kin.pz[target]
+		0,
+		CubePoint.make(
+			f.world.kin.pos_x[target] - 3000.0, f.world.kin.pos_y[target], f.world.kin.pos_z[target]
+		)
 	)
 	f.world.kin.rot[0] = Quaternion(Basis.looking_at(Vector3(1, 0, 0), Vector3.UP))
 	f.run(2)
@@ -42,8 +45,8 @@ func test_arriving_at_the_yard_ends_the_leg() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"debris_leg", &"vesper_beacon")
 	f.run(3)
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
+	f.world.kin.place(0, CubePoint.of(yard))
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
 
 
@@ -64,7 +67,7 @@ func test_impulse_flight_reaches_the_next_site() -> void:
 		if SiteTable.at_site(f.world, 0) == vesper:
 			break
 	assert_int(SiteTable.at_site(f.world, 0)).is_equal(vesper)
-	assert_float(absf(f.world.kin.px[0])).is_less(f.world.kin.period / 2.0)
+	assert_float(absf(f.world.kin.pos_x[0])).is_less(f.world.kin.period / 2.0)
 
 
 # FT: FT-MIS-041
@@ -73,15 +76,15 @@ func test_impulse_flight_reaches_the_next_site() -> void:
 func test_a_ship_at_the_yard_has_not_crossed_the_leg() -> void:
 	var f: ScenarioFixture = ScenarioFixture.make()
 	f.begin(&"debris_leg", &"vesper_beacon")
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
+	f.world.kin.place(0, CubePoint.of(yard))
 	f.run(60 * 5)
 	assert_int(f.api.encounter(f.encounter).result).is_equal(Scenario.Result.ACTIVE)
 	assert_int(f.ships_of(&"m3_debris").size()).is_equal(6)
-	var away: Vector3 = f.world.sites.point3(f.site)
-	f.world.kin.place(0, away.x, away.y, away.z)
+	var away: Vector3 = CubePoint.to_vector3(f.world.sites.point(f.site))
+	f.world.kin.place(0, CubePoint.of(away))
 	f.run(5)
-	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	f.world.kin.place(0, CubePoint.of(yard))
 	assert_int(f.run_until_end(10)).is_equal(Scenario.Result.WON)
 
 
@@ -97,8 +100,8 @@ func _accepted_leg() -> Array:
 
 
 func _dock_at_yard(f: ScenarioFixture) -> void:
-	var yard: Vector3 = f.world.sites.point3(0)
-	f.world.kin.place(0, yard.x, yard.y, yard.z)
+	var yard: Vector3 = CubePoint.to_vector3(f.world.sites.point(0))
+	f.world.kin.place(0, CubePoint.of(yard))
 	f.world.kin.vel[0] = Vector3.ZERO
 	var dock: DockCommand = DockCommand.new()
 	dock.site_id = 0

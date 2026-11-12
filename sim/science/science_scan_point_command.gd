@@ -22,5 +22,5 @@ func kind() -> StringName:
 func apply(world: SimWorld) -> bool:
 	var at: PackedFloat64Array = PackedFloat64Array()
 	if not clear:
-		at = PackedFloat64Array([scan_x, scan_y, scan_z])
+		at = CubePoint.make(scan_x, scan_y, scan_z)
 	return ScienceSystem.set_scan_point(world, ship_id, at)

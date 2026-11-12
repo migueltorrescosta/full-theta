@@ -108,9 +108,7 @@ static func at_scan_point(world: SimWorld, ship: int) -> bool:
 	var t: ScienceTable = world.science
 	if not t.has_scan_point(ship):
 		return false
-	var off: Vector3 = world.kin.relative_to_point(
-		ship, t.scan_x[ship], t.scan_y[ship], t.scan_z[ship]
-	)
+	var off: Vector3 = world.kin.relative_to_column(ship, t.scan_x, t.scan_y, t.scan_z, ship)
 	return off.length() <= world.science_def.mark_radius
 
 
@@ -118,7 +116,7 @@ static func at_scan_point(world: SimWorld, ship: int) -> bool:
 ## point follows. A non-finite point is refused; others wrap into the cube.
 static func set_scan_point(world: SimWorld, ship: int, at: PackedFloat64Array) -> bool:
 	if at.size() == 3:
-		at = world.kin.wrap_point(at[0], at[1], at[2])
+		at = world.kin.wrap_point(at)
 		if at.is_empty():
 			return false
 	world.science.set_scan_point(ship, at)

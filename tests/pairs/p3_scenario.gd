@@ -34,7 +34,7 @@ static func build() -> SimWorld:
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(TestDefs.corvette(), 1)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)
-	w.spawn_ship(TestDefs.raider(), 2, RAIDER_AT, facing_player)
+	w.spawn_ship(TestDefs.raider(), 2, CubePoint.of(RAIDER_AT), facing_player)
 	return w
 
 
@@ -96,7 +96,7 @@ static func helm(w: SimWorld) -> void:
 		w.submit(select)
 		w.submit(PairHarness.helm_input(0.0))
 	var to_mark: Vector3 = w.kin.relative_to_point(
-		PLAYER, t.scan_x[PLAYER], t.scan_y[PLAYER], t.scan_z[PLAYER]
+		PLAYER, CubePoint.make(t.scan_x[PLAYER], t.scan_y[PLAYER], t.scan_z[PLAYER])
 	)
 	var on_point: bool = w.kin.forward(PLAYER).angle_to(to_mark) < ON_POINT
 	var throttle: float = 1.0 if (on_point and not inside) else 0.0

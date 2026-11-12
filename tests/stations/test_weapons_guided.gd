@@ -67,7 +67,7 @@ func _commands(s: StationScreen, kind: String) -> Array:
 func _place(ctx: StationContext, id: int, local: Vector3) -> void:
 	var p: Vector3 = StationFixture.OWN_POS + StationFixture.own_rotation() * local
 	ctx.view.contacts["model"][id] = [
-		NetCodec.quant_pos(p.x, p.y, p.z, ctx.view.p_units), Vector3i.ZERO, StationFixture.TICK
+		NetCodec.quant_pos(CubePoint.of(p), ctx.view.p_units), Vector3i.ZERO, StationFixture.TICK
 	]
 	ctx.interp = SnapshotInterpolator.new()
 	ctx.interp.p_units = ctx.view.p_units

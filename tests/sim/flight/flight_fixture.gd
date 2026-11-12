@@ -10,7 +10,7 @@ static func spawn(
 	rotation: Quaternion = Quaternion.IDENTITY,
 	velocity: Vector3 = Vector3.ZERO
 ) -> int:
-	return w.spawn_ship(TestDefs.corvette(), 1, offset, rotation, velocity)
+	return w.spawn_ship(TestDefs.corvette(), 1, CubePoint.of(offset), rotation, velocity)
 
 
 ## Latches Helm input: rotation (pitch, yaw, roll), move (strafe, lift, throttle).

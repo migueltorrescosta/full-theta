@@ -30,7 +30,7 @@ static func build() -> SimWorld:
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(TestDefs.corvette(), 1)
 	var raider: int = w.spawn_ship(
-		Gunnery.raider_with_shields(0.0), 2, START, Quaternion.IDENTITY, VELOCITY
+		Gunnery.raider_with_shields(0.0), 2, CubePoint.of(START), Quaternion.IDENTITY, VELOCITY
 	)
 	w.shields.strength[raider] = 0.0
 	return w
@@ -81,5 +81,5 @@ static func weapons(w: SimWorld) -> void:
 	var aim: Vector3 = EnemyAi.lead_aim(w, PLAYER, 0, RAIDER, 0)
 	if not aim.is_finite():
 		return
-	var at: Vector3 = Vector3(w.kin.px[PLAYER], w.kin.py[PLAYER], w.kin.pz[PLAYER])
+	var at: Vector3 = Vector3(w.kin.pos_x[PLAYER], w.kin.pos_y[PLAYER], w.kin.pos_z[PLAYER])
 	Gunnery.gun(w, PLAYER, at + aim)

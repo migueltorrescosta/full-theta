@@ -88,4 +88,4 @@ static func tables_hash(w: SimWorld) -> String:
 
 ## Moves a ship to a point (m) in the cube.
 static func place(w: SimWorld, ship: int, p: Vector3) -> void:
-	w.kin.place(ship, p.x, p.y, p.z)
+	w.kin.place(ship, CubePoint.of(p))

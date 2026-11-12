@@ -82,5 +82,5 @@ func build() -> SimWorld:
 	world.set_relation(PLAYER_FACTION, ENEMY_FACTION, SimWorld.Relation.HOSTILE)
 	world.spawn_ship(player, PLAYER_FACTION)
 	var facing_player: Quaternion = Quaternion(Vector3.UP, PI)
-	world.spawn_enemy(enemy, ENEMY_FACTION, Vector3(0.0, 0.0, -SEPARATION), facing_player)
+	world.spawn_enemy(enemy, ENEMY_FACTION, CubePoint.make(0.0, 0.0, -SEPARATION), facing_player)
 	return world

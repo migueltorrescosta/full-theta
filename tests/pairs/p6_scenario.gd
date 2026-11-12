@@ -35,7 +35,7 @@ static func build() -> SimWorld:
 	var w: SimWorld = SimWorld.new(SEED, "p6")
 	w.set_relation(1, 2, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(TestDefs.corvette(), 1)
-	var raider: int = w.spawn_ship(_target(), 2, RAIDER_AT)
+	var raider: int = w.spawn_ship(_target(), 2, CubePoint.of(RAIDER_AT))
 	w.shields.strength[raider] = 0.0
 	return w
 

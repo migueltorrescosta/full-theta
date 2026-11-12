@@ -26,9 +26,7 @@ static func _arrive(world: SimWorld, row: int) -> void:
 	var helm: HelmTable = world.helm
 	var kin: Kinematics = world.kin
 	var origin: int = SiteTable.at_site(world, row)
-	var offset: Vector3 = kin.relative_to_point(
-		row, helm.jump_x[row], helm.jump_y[row], helm.jump_z[row]
-	)
+	var offset: Vector3 = kin.relative_to_column(row, helm.jump_x, helm.jump_y, helm.jump_z, row)
 	var dist: float = offset.length()
 	var standoff: float = world.defs[row].jump_standoff_m
 	if dist > standoff:
@@ -47,7 +45,7 @@ static func _hold(world: SimWorld, row: int) -> void:
 	var kin: Kinematics = world.kin
 	var site: int = world.helm.docked_site[row]
 	var sites: SiteTable = world.sites
-	kin.place(row, sites.pos_x[site], sites.pos_y[site], sites.pos_z[site])
+	kin.place(row, sites.point(site))
 	kin.vel[row] = Vector3.ZERO
 	kin.force_cmd[row] = Vector3.ZERO
 	kin.torque_cmd[row] = Vector3.ZERO

@@ -37,21 +37,21 @@ var dock_max_speed: PackedFloat64Array = PackedFloat64Array()
 
 
 ## Adds a site (its point wrapped onto the cube of `period`) and returns its site id. A copy
-## (open_copy) passes its own key and the offset from the def's point.
+## (open_copy) passes its own key and the 64-bit shift [dx, dy, dz] (m) from the def's point.
 func add_site(
 	def: SiteDef,
 	period: float,
 	known: int,
 	tick: int = 0,
 	key: StringName = &"",
-	offset: Vector3 = Vector3.ZERO
+	shift: PackedFloat64Array = CubePoint.make()
 ) -> int:
 	var id: int = add_key(-1, def.faction)
 	keys.append(key if key != &"" else def.id)
 	name_keys.append(def.name_key)
-	pos_x.append(PeriodRules.wrap(def.pos.x + offset.x, period))
-	pos_y.append(PeriodRules.wrap(def.pos.y + offset.y, period))
-	pos_z.append(PeriodRules.wrap(def.pos.z + offset.z, period))
+	pos_x.append(PeriodRules.wrap(def.pos.x + shift[0], period))
+	pos_y.append(PeriodRules.wrap(def.pos.y + shift[1], period))
+	pos_z.append(PeriodRules.wrap(def.pos.z + shift[2], period))
 	radius.append(def.radius_m)
 	known_mask.append(known)
 	opened_tick.append(tick)
@@ -109,26 +109,28 @@ func open_copy(world: SimWorld, key: StringName, ship: int) -> int:
 	for def: SiteDef in map_sites + pool:
 		if def.id == key:
 			var known: int = 1 << world.faction_of(ship)
-			return add_site(
-				def, world.kin.period, known, world.tick, copy, copy_offset(world, ship)
-			)
+			return add_site(def, world.kin.period, known, world.tick, copy, copy_shift(world, ship))
 	return -1
 
 
 ## The key of the ship's copy of a site: "<key>@<faction>", or the key itself when the ship
 ## starts at site 0.
 static func copy_key(world: SimWorld, key: StringName, ship: int) -> StringName:
-	if copy_offset(world, ship) == Vector3.ZERO:
+	if copy_shift(world, ship) == CubePoint.make():
 		return key
 	return StringName("%s@%d" % [key, world.faction_of(ship)])
 
 
-## The offset of the ship's start site from site 0 (m), zero for a ship starting there.
-static func copy_offset(world: SimWorld, ship: int) -> Vector3:
+## The shift of the ship's start site from site 0 (m, 64-bit [dx, dy, dz], not wrapped),
+## zero for a ship starting there.
+static func copy_shift(world: SimWorld, ship: int) -> PackedFloat64Array:
 	var start: int = world.ship_start_site.get(ship, -1)
-	if start <= 0 or start >= world.sites.size():
-		return Vector3.ZERO
-	return world.sites.point3(start) - world.sites.point3(0)
+	var s: SiteTable = world.sites
+	if start <= 0 or start >= s.size():
+		return CubePoint.make()
+	return CubePoint.make(
+		s.pos_x[start] - s.pos_x[0], s.pos_y[start] - s.pos_y[0], s.pos_z[start] - s.pos_z[0]
+	)
 
 
 func key_of(site: int) -> StringName:
@@ -168,14 +170,9 @@ func reveal(site: int, faction: int) -> void:
 		known_mask[site] |= 1 << faction
 
 
-## The site's point in the cube (m, 64-bit [x, y, z]).
+## The site's point in the cube (m, a new CubePoint).
 func point(site: int) -> PackedFloat64Array:
-	return PackedFloat64Array([pos_x[site], pos_y[site], pos_z[site]])
-
-
-## The same as a Vector3 (float32).
-func point3(site: int) -> Vector3:
-	return Vector3(pos_x[site], pos_y[site], pos_z[site])
+	return CubePoint.read(pos_x, pos_y, pos_z, site)
 
 
 ## The nearest site to a ship by minimum image (lowest id on a tie), or -1 with no sites.
@@ -185,10 +182,7 @@ static func nearest(world: SimWorld, ship: int) -> int:
 	var best_d: float = INF
 	for s: int in sites.size():
 		var d: float = (
-			world
-			. kin
-			. relative_to_point(ship, sites.pos_x[s], sites.pos_y[s], sites.pos_z[s])
-			. length()
+			world.kin.relative_to_column(ship, sites.pos_x, sites.pos_y, sites.pos_z, s).length()
 		)
 		if d < best_d:
 			best_d = d
@@ -207,7 +201,7 @@ static func within_radius(world: SimWorld, ship: int, s: int) -> int:
 		return -1
 	var sites: SiteTable = world.sites
 	var d: float = (
-		world.kin.relative_to_point(ship, sites.pos_x[s], sites.pos_y[s], sites.pos_z[s]).length()
+		world.kin.relative_to_column(ship, sites.pos_x, sites.pos_y, sites.pos_z, s).length()
 	)
 	return s if d <= sites.radius[s] else -1
 
@@ -218,9 +212,7 @@ static func offset_to(world: SimWorld, ship: int, site: int) -> Vector3:
 	var sites: SiteTable = world.sites
 	if site < 0 or site >= sites.size():
 		return Vector3.INF
-	return world.kin.relative_to_point(
-		ship, sites.pos_x[site], sites.pos_y[site], sites.pos_z[site]
-	)
+	return world.kin.relative_to_column(ship, sites.pos_x, sites.pos_y, sites.pos_z, site)
 
 
 ## Site data (keys, name_keys, pool, map_sites): read-only like defs, not hashed.

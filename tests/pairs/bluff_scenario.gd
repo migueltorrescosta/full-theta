@@ -42,7 +42,7 @@ static func build() -> SimWorld:
 	w.spawn_ship(Gunnery.gunship(1), BLUE)
 	var def: ShipDef = Gunnery.raider_with_shields(SHIELD_J)
 	def.hull_max = HULL_J
-	w.spawn_ship(def, RED, TRADER_AT)
+	w.spawn_ship(def, RED, CubePoint.of(TRADER_AT))
 	return w
 
 

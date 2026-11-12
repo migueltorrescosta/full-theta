@@ -1,9 +1,10 @@
 class_name ProjectileTable
 extends RefCounted
 
-var px := PackedFloat64Array()
-var pz := PackedFloat64Array()
+var pos_x := PackedFloat64Array()
+var pos_z := PackedFloat64Array()
+
 
 func clear(k: int) -> void:
-	self.pz[k] = 0.0
-	px[k] = 0.0
+	self.pos_z[k] = 0.0
+	pos_x[k] = 0.0

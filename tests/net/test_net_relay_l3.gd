@@ -168,7 +168,7 @@ func test_lost_contact_mark_cannot_be_sent() -> void:
 	var server: NetServer = a[0]
 	var sender: NetClient = a[1]
 	var w: SimWorld = server.world
-	var foe: int = w.spawn_enemy(TestDefs.raider_enemy(), 7, Vector3(500.0, 0.0, 0.0))
+	var foe: int = w.spawn_enemy(TestDefs.raider_enemy(), 7, CubePoint.make(500.0, 0.0, 0.0))
 	KnowledgeSystem.step(w)
 	var faction: int = w.faction_of(PLAYER)
 	assert_bool(KnowledgeSystem.is_detected(w, faction, foe)).is_true()
@@ -193,7 +193,9 @@ func test_zones_and_probe_bubbles_can_be_pinged() -> void:
 	var relay: NetClient = await h.joined(server, "relay", "ops")
 	var helm: NetClient = await h.joined(server, "helm", "tactical")
 	var w: SimWorld = server.world
-	w.probes.launch(PLAYER, w.faction_of(PLAYER), 3, Vector3.ZERO, Vector3(0.0, 0.0, -100.0))
+	w.probes.launch(
+		PLAYER, w.faction_of(PLAYER), 3, CubePoint.make(), CubePoint.make(0.0, 0.0, -100.0)
+	)
 	relay.hazard_add(2000.0, Vector3(1000.0, 0.0, -3000.0))
 	await h.until(func() -> bool: return server.session.crew.relay.zones_of(PLAYER).size() == 1)
 	var zone: int = server.session.crew.relay.zones_of(PLAYER)[0]["id"]
@@ -236,7 +238,7 @@ func test_sites_zones_and_routes_reach_who_they_should() -> void:
 	for k: int in CrewMarks.SLOTS:
 		relay.place_mark(-1, "", -1, Vector3(5.0 * k, 0.0, 0.0))
 	relay.hazard_add(2000.0, Vector3(1000.0, 0.0, -3000.0))
-	server.session.crew.add_scan_position(PLAYER, Vector3(5.0, 6.0, 7.0), 500.0, "science")
+	server.session.crew.add_scan_position(PLAYER, CubePoint.make(5.0, 6.0, 7.0), 500.0, "science")
 	var two: Callable = func() -> bool:
 		var z: Dictionary = h.last_event(viewer, NetProtocol.EVENT_ZONES)
 		return not z.is_empty() and z["payload"]["zones"].size() == 2

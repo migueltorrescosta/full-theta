@@ -79,7 +79,7 @@ func test_arc_table_with_edge_cases() -> void:
 		var world: SimWorld = SimWorld.new(1)
 		var rot: Quaternion = c[1]
 		var def: ShipDef = _def_with({}, {"arc_half_angle": c[5]})
-		var ship: int = world.spawn_ship(def, 1, Vector3.ZERO, rot)
+		var ship: int = world.spawn_ship(def, 1, CubePoint.make(), rot)
 		var local: Vector3 = Vector3.FORWARD.rotated(c[2], c[3])
 		_aim(world, ship, rot * (Vector3(0, 0, -22) + local * FAR))
 		assert_str(_shot(world, ship)).override_failure_message(c[0]).is_equal(c[4])
@@ -176,7 +176,9 @@ func test_cooldown_ammo_heat_sequences() -> void:
 func test_shot_spawns_projectile_from_mount() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var vs: Vector3 = Vector3(0, 0, -100)
-	var ship: int = world.spawn_ship(TestDefs.corvette(), 1, Vector3.ZERO, Quaternion.IDENTITY, vs)
+	var ship: int = world.spawn_ship(
+		TestDefs.corvette(), 1, CubePoint.make(), Quaternion.IDENTITY, vs
+	)
 	var weapon: WeaponDef = TestDefs.corvette().mounts[0].weapon
 	# Decoupled with the stick centred, so assist doesn't brake the ship this tick.
 	var coast: DecoupledCommand = DecoupledCommand.new()
@@ -194,7 +196,7 @@ func test_shot_spawns_projectile_from_mount() -> void:
 	assert_int(p.owner_faction[0]).is_equal(1)
 	assert_vector(p.vel[0]).is_equal(Vector3(0, 0, -100 - weapon.projectile_speed))
 	# Left the muzzle (-22 m) at the start of the tick, then flew one tick.
-	assert_float(p.pz[0]).is_equal_approx(-22.0 - (100.0 + weapon.projectile_speed) / 60.0, 1e-3)
+	assert_float(p.pos_z[0]).is_equal_approx(-22.0 - (100.0 + weapon.projectile_speed) / 60.0, 1e-3)
 	assert_float(p.energy[0]).is_equal(weapon.damage)
 	assert_int(p.ttl[0]).is_equal(ceili(weapon.max_range / weapon.projectile_speed * 60.0) - 1)
 	assert_int(world.mounts.ammo[0]).is_equal(weapon.ammo_capacity - 1)
@@ -249,7 +251,7 @@ func test_friendly_fire_warning_and_hit() -> void:
 	for c: Array in cases:
 		var world: SimWorld = SimWorld.new(1)
 		var shooter: int = world.spawn_ship(TestDefs.corvette(), 1)
-		var other: int = world.spawn_ship(TestDefs.corvette(), c[1], Vector3(0, 0, -c[3]))
+		var other: int = world.spawn_ship(TestDefs.corvette(), c[1], CubePoint.make(0, 0, -c[3]))
 		if c[1] != 1:
 			world.set_relation(1, c[1], c[2])
 		if c[1] == 3:
@@ -285,7 +287,11 @@ func test_lead_aimed_shot_hits_crossing_target() -> void:
 	var world: SimWorld = SimWorld.new(1)
 	var shooter: int = world.spawn_ship(TestDefs.corvette(), 1)
 	var target: int = world.spawn_ship(
-		TestDefs.corvette(), 2, Vector3(-150, 40, -2500), Quaternion.IDENTITY, Vector3(120, 0, 0)
+		TestDefs.corvette(),
+		2,
+		CubePoint.make(-150, 40, -2500),
+		Quaternion.IDENTITY,
+		Vector3(120, 0, 0)
 	)
 	var speed: float = TestDefs.corvette().mounts[0].weapon.projectile_speed
 	var muzzle: Vector3 = TestDefs.corvette().mounts[0].position

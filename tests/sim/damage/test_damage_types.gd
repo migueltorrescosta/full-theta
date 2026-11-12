@@ -32,7 +32,7 @@ func _target_def(
 func _world(target_def: ShipDef) -> Array:
 	var world: SimWorld = SimWorld.new(5)
 	var shooter: int = world.spawn_ship(TestDefs.corvette(), 1)
-	var target: int = world.spawn_ship(target_def, 2, Vector3(0, 0, -2000))
+	var target: int = world.spawn_ship(target_def, 2, CubePoint.make(0, 0, -2000))
 	world.step()
 	world.drain_events()
 	world.shields.strength[target] = 0.0

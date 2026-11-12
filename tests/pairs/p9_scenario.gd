@@ -40,7 +40,7 @@ static func build() -> SimWorld:
 	w.hail_conversations = {&"m1_raider": &"conv.surrender_demand"}
 	w.set_relation(BLUE, RED, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(TestDefs.corvette(), BLUE)
-	w.spawn_ship(raider_def(), RED, RAIDER_AT)
+	w.spawn_ship(raider_def(), RED, CubePoint.of(RAIDER_AT))
 	damage_engines(w, ENGINES_LEFT)
 	return w
 

@@ -72,7 +72,7 @@ func test_dead_engines_and_thrusters_scale_thrust_and_turn() -> void:
 # Facing and approaching with dead thrusters and engines produce finite commands.
 func test_assist_with_zero_authority_stays_finite() -> void:
 	var w: SimWorld = _world()
-	w.spawn_ship(TestDefs.raider(), 2, Vector3(0.0, 0.0, -3000.0))
+	w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0.0, 0.0, -3000.0))
 	w.damage.health[_row(w, &"engines")] = 0.0
 	w.damage.health[_row(w, &"thrusters")] = 0.0
 	FlightFixture.input(w, 0, Vector3.ZERO, Vector3(0.0, 0.0, 1.0), true, true)

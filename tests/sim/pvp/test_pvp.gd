@@ -42,9 +42,9 @@ static func build(world_seed: int = SEED) -> SimWorld:
 	w.set_relation(RED_FACTION, NEUTRAL_FACTION, SimWorld.Relation.NEUTRAL)
 	w.set_relation(BLUE_FACTION, NEUTRAL_FACTION, SimWorld.Relation.NEUTRAL)
 	w.spawn_ship(TestDefs.corvette(), RED_FACTION)
-	w.spawn_ship(TestDefs.raider(), NEUTRAL_FACTION, Vector3(0.0, 0.0, 17000.0))
-	w.spawn_ship(TestDefs.corvette(), BLUE_FACTION, BLUE_OFFSET, _facing_red())
-	w.spawn_ship(TestDefs.raider(), NEUTRAL_FACTION, Vector3(7000.0, 0.0, 2000.0))
+	w.spawn_ship(TestDefs.raider(), NEUTRAL_FACTION, CubePoint.make(0.0, 0.0, 17000.0))
+	w.spawn_ship(TestDefs.corvette(), BLUE_FACTION, CubePoint.of(BLUE_OFFSET), _facing_red())
+	w.spawn_ship(TestDefs.raider(), NEUTRAL_FACTION, CubePoint.make(7000.0, 0.0, 2000.0))
 	return w
 
 
@@ -195,7 +195,7 @@ func test_callsigns_independent_per_faction() -> void:
 	assert_str(KnowledgeSystem.callsign(w, BLUE_FACTION, NEAR)).is_equal("U2")
 	var red_before: Array = numbers_of(w, RED_FACTION)
 	# 17 km behind BLUE: in BLUE's range, 22 km from RED.
-	w.kin.place(FAR, 0.0, 0.0, -22000.0)
+	w.kin.place(FAR, CubePoint.make(0.0, 0.0, -22000.0))
 	w.step()
 	assert_bool(KnowledgeSystem.is_detected(w, BLUE_FACTION, FAR)).is_true()
 	assert_bool(KnowledgeSystem.is_detected(w, RED_FACTION, FAR)).is_false()

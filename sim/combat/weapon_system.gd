@@ -47,8 +47,8 @@ static func step(world: SimWorld) -> void:
 		# aim_direction(), inlined.
 		var aim: Vector3 = def.forward
 		if aim_set[row] != 0:
-			var to_aim: Vector3 = kin.relative_to_point(
-				ship, mounts.aim_x[row], mounts.aim_y[row], mounts.aim_z[row]
+			var to_aim: Vector3 = kin.relative_to_column(
+				ship, mounts.aim_x, mounts.aim_y, mounts.aim_z, row
 			)
 			var local: Vector3 = kin.rot[ship].inverse() * to_aim - def.position
 			aim = barrel[row] if local.length_squared() < 1e-12 else local.normalized()
@@ -83,8 +83,8 @@ static func aim_direction(world: SimWorld, row: int) -> Vector3:
 		return def.forward
 	var ship: int = mounts.owner_ship[row]
 	var kin: Kinematics = world.kin
-	var to_aim: Vector3 = kin.relative_to_point(
-		ship, mounts.aim_x[row], mounts.aim_y[row], mounts.aim_z[row]
+	var to_aim: Vector3 = kin.relative_to_column(
+		ship, mounts.aim_x, mounts.aim_y, mounts.aim_z, row
 	)
 	var local: Vector3 = kin.to_local(ship, to_aim) - def.position
 	if local.length_squared() < 1e-12:
@@ -205,9 +205,7 @@ static func _fire(world: SimWorld, row: int, def: MountDef, weapon: WeaponDef) -
 		var k: int = world.projectiles.spawn(
 			ship,
 			world.faction_of(ship),
-			start[0],
-			start[1],
-			start[2],
+			start,
 			vs + dir * weapon.projectile_speed,
 			weapon.projectile_radius,
 			weapon.damage,

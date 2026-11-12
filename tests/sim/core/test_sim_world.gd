@@ -23,9 +23,9 @@ class KickCommand:
 
 func _world(world_seed: int) -> SimWorld:
 	var w: SimWorld = SimWorld.new(world_seed, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3(0, 0, 0))
-	w.spawn_ship(TestDefs.corvette(), 2, Vector3(500, 20, -3000))
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3(-800, 0, 100))
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(0, 0, 0))
+	w.spawn_ship(TestDefs.corvette(), 2, CubePoint.make(500, 20, -3000))
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make(-800, 0, 100))
 	return w
 
 
@@ -210,14 +210,14 @@ func test_64_bit_offsets() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	var near: float = 0.5 * w.kin.period - 1000.0
-	w.kin.place(id, near, -near, 0.25)
+	w.kin.place(id, CubePoint.make(near, -near, 0.25))
 	w.kin.vel[id] = Vector3(0.1, 0.0, 0.0)
 	w.helm.decoupled[id] = 1  # coast: assist would hold the drift at zero (FT-SIM-004)
 	for i: int in 600:
 		w.step()
-	assert_float(w.kin.px[id]).is_equal_approx(near + 1.0, 1e-5)
-	assert_float(w.kin.py[id]).is_equal(-near)
-	assert_float(w.kin.pz[id]).is_equal(0.25)
+	assert_float(w.kin.pos_x[id]).is_equal_approx(near + 1.0, 1e-5)
+	assert_float(w.kin.pos_y[id]).is_equal(-near)
+	assert_float(w.kin.pos_z[id]).is_equal(0.25)
 
 
 # FT: FT-SIM-035
@@ -229,29 +229,27 @@ func test_offsets_wrap_onto_the_cube() -> void:
 	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	var p: float = w.kin.period
 	var half: float = 0.5 * p
-	w.kin.place(id, half, half + 0.5, 1.5 * p)
-	assert_float(w.kin.px[id]).is_equal(-half)
-	assert_float(w.kin.py[id]).is_equal(-half + 0.5)
-	assert_float(w.kin.pz[id]).is_equal(-half)
-	w.kin.place(id, half - 1.0, 0.0, 0.0)
+	w.kin.place(id, CubePoint.make(half, half + 0.5, 1.5 * p))
+	assert_float(w.kin.pos_x[id]).is_equal(-half)
+	assert_float(w.kin.pos_y[id]).is_equal(-half + 0.5)
+	assert_float(w.kin.pos_z[id]).is_equal(-half)
+	w.kin.place(id, CubePoint.make(half - 1.0, 0.0, 0.0))
 	w.kin.vel[id] = Vector3(60.0, 0.0, 0.0)
 	w.helm.decoupled[id] = 1
 	for i: int in 2 * SimWorld.HZ:
 		w.step()
-		assert_bool(w.kin.px[id] >= -half and w.kin.px[id] < half).is_true()
-	assert_float(w.kin.px[id]).is_equal_approx(-half + 119.0, 1e-6)
+		assert_bool(w.kin.pos_x[id] >= -half and w.kin.pos_x[id] < half).is_true()
+	assert_float(w.kin.pos_x[id]).is_equal_approx(-half + 119.0, 1e-6)
 
 
 # FT: FT-SIM-035
-# A non-finite offset fails an assertion (wrapping can't place it).
+# A non-finite point fails an assertion (wrapping can't place it).
 func test_non_finite_offset_fails_assertion() -> void:
 	var w: SimWorld = SimWorld.new(1)
 	var id: int = w.spawn_ship(TestDefs.corvette(), 1)
 	await (
-		assert_error(func() -> void: w.kin.place(id, 0.0, NAN, 0.0))
-		. is_runtime_error(
-			"Assertion failed: non-finite offset for ship 0: (0.000000, nan, 0.000000)"
-		)
+		assert_error(func() -> void: w.kin.place(id, CubePoint.make(0.0, NAN, 0.0)))
+		. is_runtime_error("Assertion failed: non-finite point for ship 0: [0.0, nan, 0.0]")
 	)
 
 
@@ -262,19 +260,19 @@ func test_reset_ship_restores_only_that_ship() -> void:
 	var w: SimWorld = _world(11)
 	_run(w, 200)
 	var other_vel: Vector3 = w.kin.vel[1]
-	var other_px: float = w.kin.px[1]
+	var other_px: float = w.kin.pos_x[1]
 	w.kin.propellant[0] = 1.0
 	for id: int in [0, 1]:
 		var k: KickCommand = KickCommand.new()
 		k.ship_id = id
 		w.submit(k)
 	var logged: int = w.command_log.size()
-	w.reset_ship(0, 5.0)
+	w.reset_ship(0, CubePoint.make(5.0, 0.0, 0.0))
 	assert_vector(w.kin.vel[0]).is_equal(Vector3.ZERO)
-	assert_float(w.kin.px[0]).is_equal(5.0)
+	assert_float(w.kin.pos_x[0]).is_equal(5.0)
 	assert_float(w.kin.propellant[0]).is_equal(w.defs[0].propellant_capacity)
 	assert_vector(w.kin.vel[1]).is_equal(other_vel)
-	assert_float(w.kin.px[1]).is_equal(other_px)
+	assert_float(w.kin.pos_x[1]).is_equal(other_px)
 	w.step()
 	assert_int(w.command_log.size()).is_equal(logged + 1)
 	assert_int(w.command_log[-1].ship_id).is_equal(1)

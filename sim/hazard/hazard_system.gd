@@ -58,7 +58,7 @@ static func is_live(h: HazardDef, t: float) -> bool:
 
 ## Offset (m) from the hazard's centre to the ship, by minimum image.
 static func ship_offset(world: SimWorld, ship: int, h: HazardDef) -> Vector3:
-	return -world.kin.relative_to_point(ship, h.center.x, h.center.y, h.center.z)
+	return -world.kin.relative_to_point(ship, h.center_point)
 
 
 ## Whether the faction knows of the hazard i now: it is live, and one of the faction's live
@@ -82,8 +82,8 @@ static func known_to(world: SimWorld, faction: int, i: int) -> bool:
 	for p: int in probes.size():
 		if probes.owner_faction[p] != faction or probes.deployed[p] == 0:
 			continue
-		var at: Vector3 = kin.delta(
-			probes.at_x[p], probes.at_y[p], probes.at_z[p], h.center.x, h.center.y, h.center.z
+		var at: Vector3 = kin.delta_column(
+			probes.pos_x, probes.pos_y, probes.pos_z, p, h.center_point
 		)
 		if _gap(h, at, t) <= world.defs[probes.owner_ship[p]].probe_range:
 			return true

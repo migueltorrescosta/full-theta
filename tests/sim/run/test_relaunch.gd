@@ -50,20 +50,20 @@ func test_relaunch_resets_only_that_ship() -> void:
 	for k: int in 2:
 		var f: FleetFixture = FleetFixture.make(SessionRules.Mode.HOLDOUT, 3)
 		var w: SimWorld = f.world
-		var start: Vector3 = w.ship_starts[1]
+		var start: Vector3 = CubePoint.to_vector3(w.ship_starts[1])
 		f.step(5)
 		Economy.add_credits(w, 1, 900)
 		Economy.add_credits(w, 0, 300)
 		w.run.encounters_done[1] = 2
 		w.run.kills[1] = 1
-		w.kin.place(1, start.x + 5000.0, start.y, start.z)
+		w.kin.place(1, CubePoint.make(start.x + 5000.0, start.y, start.z))
 		destroy(f, 1)
 		var gone: Array[SimEvent] = of_kind(f.step(1), SessionOutcome.EVENT_ELIMINATED)
 		assert_int(int(gone[0].value)).is_equal(SessionRules.HOLDOUT_LIVES)
 		twins.append(f)
 	var f: FleetFixture = twins[0]
 	var w: SimWorld = f.world
-	var start: Vector3 = w.ship_starts[1]
+	var start: PackedFloat64Array = w.ship_starts[1]
 	relaunch(f, 1)
 	var back: Array[SimEvent] = of_kind(f.step(1), SessionOutcome.EVENT_RELAUNCHED)
 	twins[1].step(1)
@@ -76,7 +76,7 @@ func test_relaunch_resets_only_that_ship() -> void:
 	assert_int(w.run.kills[1]).is_equal(1)
 	assert_int(Economy.credits(w, 1)).is_equal(f.setup.run_def.start_credits)
 	assert_float(DamageSystem.hull_fraction(w, 1)).is_equal(1.0)
-	assert_float(w.kin.relative_to_point(1, start.x, start.y, start.z).length()).is_less(50.0)
+	assert_float(w.kin.relative_to_point(1, start).length()).is_less(50.0)
 	assert_array(others(w, 1)).is_equal(others(twins[1].world, 1))
 	assert_int(Economy.credits(w, 0)).is_equal(f.setup.run_def.start_credits + 300)
 
@@ -145,7 +145,7 @@ func test_start_sites() -> void:
 	var coop: FleetFixture = FleetFixture.make(SessionRules.Mode.COOP, 3)
 	for id: int in 3:
 		assert_int(coop.world.ship_start_site[id]).is_equal(0)
-		assert_vector(coop.world.ship_starts[id]).is_equal(Vector3(id * 100.0, 0.0, 0.0))
+		assert_array(coop.world.ship_starts[id]).is_equal(CubePoint.make(id * 100.0, 0.0, 0.0))
 	var lss: FleetFixture = FleetFixture.make(SessionRules.Mode.LAST_STANDING, 6)
 	var seen: Dictionary[int, bool] = {}
 	for id: int in 6:

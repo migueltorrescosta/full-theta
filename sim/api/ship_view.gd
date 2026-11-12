@@ -6,7 +6,7 @@ extends RefCounted
 var id: int = -1
 var faction: int = -1
 ## Cube offset (m, 64-bit values: x, y, z).
-var pos: PackedFloat64Array = PackedFloat64Array([0.0, 0.0, 0.0])
+var pos: PackedFloat64Array = CubePoint.make()
 var velocity: Vector3 = Vector3.ZERO
 ## Site id nearest the ship, or -1 with no site.
 var nearest_site: int = -1

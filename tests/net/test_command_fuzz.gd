@@ -54,7 +54,7 @@ func _session(entry: String) -> NetSession:
 func _alive_and_finite(world: SimWorld) -> bool:
 	for id: int in world.ship_count():
 		var k: Kinematics = world.kin
-		if not (is_finite(k.px[id]) and is_finite(k.py[id]) and is_finite(k.pz[id])):
+		if not (is_finite(k.pos_x[id]) and is_finite(k.pos_y[id]) and is_finite(k.pos_z[id])):
 			return false
 		if not (k.vel[id].is_finite() and k.ang_vel[id].is_finite()):
 			return false

@@ -134,7 +134,7 @@ func test_loss_when_own_ship_destroyed() -> void:
 func test_per_ship_elimination_and_no_enemy() -> void:
 	var world: SimWorld = _world(13)
 	var wing: int = world.spawn_ship(
-		TestDefs.corvette(), M1Encounter.PLAYER_FACTION, Vector3(500, 0, 0)
+		TestDefs.corvette(), M1Encounter.PLAYER_FACTION, CubePoint.make(500, 0, 0)
 	)
 	_destroy(world, PLAYER, ENEMY)
 	SimFixture.run(world, 2)

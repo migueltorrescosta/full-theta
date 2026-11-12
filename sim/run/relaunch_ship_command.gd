@@ -27,8 +27,7 @@ func apply(world: SimWorld) -> bool:
 	var used: int = world.run.relaunches[ship]
 	if not policy.allows(used):
 		return false
-	var at: Vector3 = world.ship_starts.get(ship, Vector3.ZERO)
-	world.reset_ship(ship, at.x, at.y, at.z)
+	world.reset_ship(ship, world.ship_starts.get(ship, CubePoint.make()))
 	world.run.relaunches[ship] = used + 1
 	if world.run_def != null:
 		Economy.add_credits(world, ship, world.run_def.start_credits)

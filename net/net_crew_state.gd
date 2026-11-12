@@ -272,9 +272,7 @@ func on_ping(s: NetSession, msg: Dictionary, now_us: int) -> void:
 				if not session.world.sites.is_known(msg["id"], session.world.faction_of(s.ship)):
 					why = CrewPings.BAD_PING
 			"point":
-				var at: PackedFloat64Array = session.world.kin.wrap_point(
-					msg["x"], msg["y"], msg["z"]
-				)
+				var at: PackedFloat64Array = _msg_point(msg)
 				if at.is_empty():
 					why = CrewPings.BAD_PING
 				else:
@@ -311,7 +309,7 @@ func _board_card(ship: int, id: int) -> Dictionary:
 func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> String:
 	if role != CrewMarks.Role.RELAY:
 		return CrewRelay.NOT_RELAY
-	var at: PackedFloat64Array = session.world.kin.wrap_point(msg["x"], msg["y"], msg["z"])
+	var at: PackedFloat64Array = _msg_point(msg)
 	var op: String = msg["op"]
 	var slot: int = msg["slot"]
 	var why: String = ""
@@ -319,15 +317,14 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 		"route_add":
 			if at.is_empty():
 				return CrewRelay.BAD_ROUTE
-			why = relay.route_add(s.ship, slot, Vector3(at[0], at[1], at[2]))
+			why = relay.route_add(s.ship, slot, at)
 		"route_clear":
 			why = relay.route_clear(s.ship, slot)
 		"hazard_add":
 			if at.is_empty():
 				return CrewRelay.BAD_ZONE
-			var centre: Vector3 = Vector3(at[0], at[1], at[2])
 			var radius: float = slot * 100.0
-			why = relay.add_zone(s.ship, CrewRelay.KIND_HAZARD, centre, radius, s.name)
+			why = relay.add_zone(s.ship, CrewRelay.KIND_HAZARD, at, radius, s.name)
 		_:
 			why = relay.delete_zone(s.ship, slot)
 	if why != "":
@@ -346,8 +343,9 @@ func _on_relay_item(s: NetSession, role: CrewMarks.Role, msg: Dictionary) -> Str
 	return ""
 
 
-## Adds a scan position (Science's, FT-SPA-028) as a zone of the ship and tells its picks.
-func add_scan_position(ship: int, at: Vector3, radius: float, by: String) -> String:
+## Adds a scan position (Science's, FT-SPA-028) at a point as a zone of the ship and tells
+## its picks.
+func add_scan_position(ship: int, at: PackedFloat64Array, radius: float, by: String) -> String:
 	var why: String = relay.add_zone(ship, CrewRelay.KIND_SCAN, at, radius, by)
 	if why == "":
 		_to_ship(ship, NetProtocol.EVENT_ZONES, _zones_payload(ship))
@@ -383,6 +381,16 @@ func _is_zone(ship: int, id: int) -> bool:
 	return false
 
 
+## A message's point (fields x, y, z, m) wrapped onto the cube; empty when not finite.
+func _msg_point(msg: Dictionary) -> PackedFloat64Array:
+	return session.world.kin.wrap_point(CubePoint.make(msg["x"], msg["y"], msg["z"]))
+
+
+## A zone's point (its x, y, z fields).
+static func _zone_point(zone: Dictionary) -> PackedFloat64Array:
+	return CubePoint.make(zone["x"], zone["y"], zone["z"])
+
+
 ## A Mark message's place as CrewMarks takes it: a contact the sender can't name becomes
 ## -2, and a free point is wrapped onto the cube
 ## (NaN when not finite), so CrewMarks refuses them all alike (BAD_MARK).
@@ -390,9 +398,9 @@ func _spot(s: NetSession, msg: Dictionary) -> Dictionary:
 	var contact: int = msg["contact"]
 	if contact >= 0 and not _known(s, contact):
 		contact = -2
-	var at: PackedFloat64Array = session.world.kin.wrap_point(msg["x"], msg["y"], msg["z"])
+	var at: PackedFloat64Array = _msg_point(msg)
 	if at.is_empty():
-		at = PackedFloat64Array([NAN, NAN, NAN])
+		at = CubePoint.make(NAN, NAN, NAN)
 	var spot: Dictionary = {"contact": contact, "x": at[0], "y": at[1], "z": at[2]}
 	# An attached mark's x names a scanned subsystem as index + 1 (FT-SPA-014, D202); one
 	# whose weak point no scan revealed isn't placed.
@@ -429,10 +437,10 @@ func _science_scan_position(ship: int) -> void:
 	var t: ScienceTable = world.science
 	if not t.has_scan_point(ship):
 		return
-	var at: Vector3 = Vector3(t.scan_x[ship], t.scan_y[ship], t.scan_z[ship])
+	var at: PackedFloat64Array = CubePoint.read(t.scan_x, t.scan_y, t.scan_z, ship)
 	var zone: Dictionary = _science_zone(ship)
 	if not zone.is_empty():
-		if Vector3(zone["x"], zone["y"], zone["z"]) == at:
+		if _zone_point(zone) == at:
 			return
 		relay.delete_zone(ship, zone["id"])
 	add_scan_position(ship, at, def.mark_radius, SCIENCE_BY)
@@ -462,16 +470,11 @@ func _sync_scan_point(ship: int) -> void:
 			return
 		c.clear = true
 	else:
-		c.scan_x = zone["x"]
-		c.scan_y = zone["y"]
-		c.scan_z = zone["z"]
-		if (
-			t.has_scan_point(ship)
-			and (
-				Vector3(c.scan_x, c.scan_y, c.scan_z)
-				== Vector3(t.scan_x[ship], t.scan_y[ship], t.scan_z[ship])
-			)
-		):
+		var at: PackedFloat64Array = _zone_point(zone)
+		c.scan_x = at[0]
+		c.scan_y = at[1]
+		c.scan_z = at[2]
+		if t.has_scan_point(ship) and at == CubePoint.read(t.scan_x, t.scan_y, t.scan_z, ship):
 			return
 	world.submit(c)
 
@@ -514,8 +517,7 @@ func _resolved(ship: int, slot: int) -> Dictionary:
 		if c >= 0:
 			var kin: Kinematics = session.world.kin
 			var here: PackedFloat64Array = kin.point_at(c, Vector3(m["x"], m["y"], m["z"]))
-			var at: Vector3 = Vector3(here[0], here[1], here[2])
-			out.merge({"x": at.x, "y": at.y, "z": at.z}, true)
+			out.merge({"x": here[0], "y": here[1], "z": here[2]}, true)
 		return out
 	return {}
 

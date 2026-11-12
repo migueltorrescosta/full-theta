@@ -26,7 +26,7 @@ func kind() -> StringName:
 func apply(world: SimWorld) -> bool:
 	var helm: HelmTable = world.helm
 	var kind_value: int = HelmTable.Target.NONE
-	var p: PackedFloat64Array = world.kin.wrap_point(x, y, z)
+	var p: PackedFloat64Array = world.kin.wrap_point(CubePoint.make(x, y, z))
 	if target_ship >= 0:
 		if target_ship == ship_id or target_ship >= world.ship_count():
 			return false
@@ -45,7 +45,7 @@ func apply(world: SimWorld) -> bool:
 	helm.target_kind[ship_id] = kind_value
 	helm.target_ship[ship_id] = target_ship if kind_value == HelmTable.Target.SHIP else -1
 	helm.target_site[ship_id] = site_id if kind_value == HelmTable.Target.SITE else -1
-	helm.target_x[ship_id] = p[0] if is_point else 0.0
-	helm.target_y[ship_id] = p[1] if is_point else 0.0
-	helm.target_z[ship_id] = p[2] if is_point else 0.0
+	helm.sel_x[ship_id] = p[0] if is_point else 0.0
+	helm.sel_y[ship_id] = p[1] if is_point else 0.0
+	helm.sel_z[ship_id] = p[2] if is_point else 0.0
 	return true

@@ -8,8 +8,8 @@ extends GdUnitTestSuite
 
 func _world(world_seed: int = 1) -> SimWorld:
 	var w: SimWorld = SimWorld.new(world_seed, "test")
-	w.spawn_ship(TestDefs.corvette(), 1, Vector3.ZERO)
-	w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -2000))
+	w.spawn_ship(TestDefs.corvette(), 1, CubePoint.make())
+	w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, -2000))
 	return w
 
 

@@ -41,12 +41,12 @@ func _server() -> NetServer:
 ## Spawns an NPC 3 km from `near`'s start and waits until the factions of `seers` detect it.
 func _npc(server: NetServer, near: int = 0, seers: Array[int] = [0, 1]) -> int:
 	var c: SpawnShipCommand = SpawnShipCommand.new()
-	var at: Vector3 = server.world.ship_starts.get(near, Vector3.ZERO)
+	var at: PackedFloat64Array = server.world.ship_starts.get(near, CubePoint.make())
 	c.enemy_key = server.world.catalog.keys()[0]
 	c.faction = NPC_FACTION
-	c.x = at.x + 3000.0
-	c.y = at.y
-	c.z = at.z
+	c.x = at[0] + 3000.0
+	c.y = at[1]
+	c.z = at[2]
 	server.world.submit(c)
 	assert_bool(await h.until(func() -> bool: return c.tick >= 0 and c.accepted)).is_true()
 	var w: SimWorld = server.world

@@ -46,8 +46,8 @@ func test_reset_ship_restores_helm() -> void:
 func test_select_requires_detection() -> void:
 	var w: SimWorld = SimWorld.new(1, "test")
 	var id: int = FlightFixture.spawn(w)
-	var far: int = w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -50000))
-	var near: int = w.spawn_ship(TestDefs.raider(), 2, Vector3(0, 0, -5000))
+	var far: int = w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, -50000))
+	var near: int = w.spawn_ship(TestDefs.raider(), 2, CubePoint.make(0, 0, -5000))
 	w.step()
 	FlightFixture.select_ship(w, id, far)
 	w.step()

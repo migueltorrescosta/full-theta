@@ -51,8 +51,7 @@ func update(world: SimWorld) -> PackedByteArray:
 	var seen: Dictionary = {}
 	for id: int in ids:
 		seen[id] = true
-		var at: PackedFloat64Array = kin.point_at(id, Vector3.ZERO)
-		var p: Vector3i = NetCodec.quant_pos(at[0], at[1], at[2], _p_units)
+		var p: Vector3i = NetCodec.quant_pos(kin.point(id), _p_units)
 		var v: Vector3i = NetCodec.quant_vel(kin.vel[id])
 		var entry: Array = model.get(id, [])
 		if entry.is_empty():

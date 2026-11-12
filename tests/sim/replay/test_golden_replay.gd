@@ -35,7 +35,9 @@ static func _outcome(world: SimWorld) -> int:
 static func readable(world: SimWorld) -> Dictionary:
 	var out: Dictionary = {"outcome": _outcome(world)}
 	for id: int in world.ship_count():
-		out["ship%d_position" % id] = [world.kin.px[id], world.kin.py[id], world.kin.pz[id]]
+		out["ship%d_position" % id] = [
+			world.kin.pos_x[id], world.kin.pos_y[id], world.kin.pos_z[id]
+		]
 		out["ship%d_hull" % id] = DamageSystem.hull_fraction(world, id)
 		out["ship%d_alive" % id] = world.kin.is_alive(id)
 	return out
