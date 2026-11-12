@@ -20,8 +20,9 @@ var _ctx: StationContext
 
 
 ## A single station's demo panel (Engineering-like): a radar view, a persistent column
-## (Boost, Harden), the page zone (Power, Ship, Crew). On its side the view is between
-## overlay rails; upright the view is on top and the controls block under it.
+## (Boost engines, Protect part), the page zone (Power, Ship, Crew), with Engineering's rail
+## labels. On its side the view is between overlay rails; upright the view is on top and the
+## controls block under it.
 class FrameDemo:
 	extends StationPanel
 
@@ -31,23 +32,36 @@ class FrameDemo:
 	## stations (on its side 390 px cannot hold the chip, the card and the toast).
 	var _body: Control
 
+	## A verb and its object on two lines when the demo's half-width button is narrow.
+	static func _wrap(b: RailButton) -> void:
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD
+		b.clip_text = false
+		b.add_theme_font_size_override("font_size", 13)
+
 	func _setup() -> void:
 		in_frame = true
 		radar.set_picture(ctx.picture(), ctx.crew.selection)
 		var keep: Array[RailButton] = [
-			RailButton.make("Boost", RailButton.Role.ACCENT), RailButton.make("Harden")
+			RailButton.make(EngineeringRail.text("boost"), RailButton.Role.ACCENT),
+			RailButton.make(EngineeringRail.text("harden"))
 		]
+		for b: RailButton in keep:
+			_wrap(b)
 		var zone: VBoxContainer = VBoxContainer.new()
 		zone.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
 		zone.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		pages = PageHost.new()
-		for t: Array in [["Power +", "Power −", "Tighter", "Wider"], ["Send crew", "Probe"]]:
+		for t: Array in [
+			["pip_add", "pip_remove", "shield_tighter", "shield_wider"],
+			["dispatch_nearest", "fabricate_probe"]
+		]:
 			var grid: GridContainer = GridContainer.new()
 			grid.columns = 2
 			grid.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
 			grid.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
-			for label: String in t:
-				var b: RailButton = RailButton.make(label)
+			for id: String in t:
+				var b: RailButton = RailButton.make(EngineeringRail.text(id))
+				_wrap(b)
 				b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				grid.add_child(b)
 			zone.add_child(grid)
