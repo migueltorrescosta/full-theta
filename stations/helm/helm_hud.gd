@@ -15,7 +15,7 @@ const SMALL: int = 12
 ## The least font size (sp) of a phone's read-outs (C7): the desktop sizes are too small there.
 const PHONE_FONT: int = 16
 ## The envelope bars' percentage text and the gap before the bar need this much room (px).
-const PCT_W: float = 42.0
+const PCT_WIDTH: float = 42.0
 const LABEL_GAP: float = 6.0
 ## Off-screen arrows sit this far inside the view's edge.
 const EDGE: float = 36.0
@@ -36,18 +36,18 @@ const THRUST_LIT: float = 0.05
 const CROSS_ARM: float = 24.0
 const CROSS_ARROW: float = 9.0
 ## Narrower views move the thrust cross above the flight read-out.
-const NARROW_W: float = 640.0
+const NARROW_WIDTH: float = 640.0
 ## A phone (portrait) keeps it top left.
-const PHONE_W: float = 420.0
+const PHONE_WIDTH: float = 420.0
 ## A tablet view under this height takes the phone layout.
 const TABLET_SHORT_H: float = 400.0
 ## The flight read-out's top edge, from the view's bottom.
 const READOUT_H: float = 168.0
 ## Envelope bar length, and on a phone (narrower, so the compass fits beside the read-out).
-const BAR_W: float = 140.0
-const PHONE_BAR_W: float = 100.0
+const BAR_WIDTH: float = 140.0
+const PHONE_BAR_WIDTH: float = 100.0
 ## The shortest bars on a phone, so the read-out ends left of the reticle.
-const TIGHT_BAR_W: float = 60.0
+const TIGHT_BAR_WIDTH: float = 60.0
 ## A label with no clear spot may cover up to this share of its area of something else.
 const SLIGHT: float = 0.1
 ## A marker's label sits within this distance (px on screen) of the marker (D319).
@@ -82,7 +82,7 @@ func touch_layout() -> bool:
 		return true
 	# A tablet's view between its rails is as small as a phone's on the classic iPad sizes
 	# (332 px wide on 1024x768, 366 px tall on 768x1024): it takes the phone's layout then.
-	return panel.tablet_ui != null and (size.x < PHONE_W or size.y < TABLET_SHORT_H)
+	return panel.tablet_ui != null and (size.x < PHONE_WIDTH or size.y < TABLET_SHORT_H)
 
 
 ## The font size (sp) of the read-outs: a phone's floor, else the desktop size.
@@ -109,27 +109,27 @@ func _bar_extra() -> float:
 	for key: String in ["helm.max_thrust", "helm.max_turn", "helm.propellant"]:
 		var name: String = tr(_bar_key(key))
 		w = maxf(w, font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, _small()).x)
-	return ceilf(w) + LABEL_GAP + PCT_W
+	return ceilf(w) + LABEL_GAP + PCT_WIDTH
 
 
 ## Envelope bar length: on a phone short enough that the read-out ends left of the reticle
-## (when they share rows), down to TIGHT_BAR_W.
-func _bar_w() -> float:
+## (when they share rows), down to TIGHT_BAR_WIDTH.
+func _bar_width() -> float:
 	if not touch_layout():
 		# The read-out shares its rows with the compass: its percentages end clear of it (w5).
 		var room_x: float = _compass_centre().x - COMPASS_R - COMPASS_GAP - 14.0 - _bar_extra()
-		return clampf(room_x, TIGHT_BAR_W, BAR_W)
+		return clampf(room_x, TIGHT_BAR_WIDTH, BAR_WIDTH)
 	var a: Rect2 = area()
 	var top: float = a.end.y - READOUT_H
 	var ret: Rect2 = reticle_rect()
 	if ret.end.y < top or ret.position.y > top + 130.0:
 		if panel.tablet_ui == null:
-			return PHONE_BAR_W
+			return PHONE_BAR_WIDTH
 		# A tablet's narrow view: the bars end left of the compass at the bottom right.
 		var left: float = a.end.x - 3.0 * COMPASS_R - 4.0 - COMPASS_GAP
-		return clampf(left - (a.position.x + 14.0) - _bar_extra(), TIGHT_BAR_W, PHONE_BAR_W)
+		return clampf(left - (a.position.x + 14.0) - _bar_extra(), TIGHT_BAR_WIDTH, PHONE_BAR_WIDTH)
 	var room: float = ret.position.x - 8.0 - (a.position.x + 14.0) - _bar_extra()
-	return clampf(room, TIGHT_BAR_W, PHONE_BAR_W)
+	return clampf(room, TIGHT_BAR_WIDTH, PHONE_BAR_WIDTH)
 
 
 ## The items on the view: ContactPicture's contacts, marks and named sites with their screen
@@ -205,7 +205,7 @@ func _draw_routes(font: Font) -> void:
 
 ## Comms' approach lanes on this view, in screen pixels (P5, FT-PAIR-001): {"pos" (Vector2),
 ## "state" ("wait" amber until the window opens, "open" green inside it, "late" red after),
-## "left_s" (s until the window opens, or closes while open)}, only for lanes in front of the
+## "time_left" (s until the window opens, or closes while open)}, only for lanes in front of the
 ## camera. They exist only while the lanes toggle lets them reach Helm (Comms shared them, or
 ## the view holds Comms; the server withholds them on Hard).
 func lane_marks() -> Array[Dictionary]:
@@ -226,7 +226,7 @@ func lane_marks() -> Array[Dictionary]:
 		elif now >= int(lane["opens_ms"]):
 			state = "open"
 			left = (int(lane["closes_ms"]) - now) / 1000.0
-		out.append({"pos": cam.unproject_position(world), "state": state, "left_s": left})
+		out.append({"pos": cam.unproject_position(world), "state": state, "time_left": left})
 	return out
 
 
@@ -240,7 +240,7 @@ func _draw_lanes(font: Font) -> void:
 		draw_arc(at, 18.0, 0.0, TAU, 28, col, 2.5)
 		var text: String = tr("helm.lane." + String(lane["state"]))
 		if lane["state"] != "late":
-			text += " %d s" % ceili(float(lane["left_s"]))
+			text += " %d s" % ceili(float(lane["time_left"]))
 		_text(font, at + Vector2(24.0, -4.0), text, col, SMALL)
 
 
@@ -379,10 +379,10 @@ func thrust_centre() -> Vector2:
 			)
 			return Vector2(a.end.x - reach.x - 4.0, a.position.y + CROSS_ARM + 20.0)
 		return a.position + Vector2(CROSS_ARM + 22.0, 52.0)
-	if size.x < PHONE_W:
+	if size.x < PHONE_WIDTH:
 		# A phone has no room beside the compass: top left, under the mode captions.
 		return Vector2(CROSS_ARM + 22.0, 92.0)
-	if size.x < NARROW_W:
+	if size.x < NARROW_WIDTH:
 		# No room beside the compass: a fixed panel on the left, just above the read-out,
 		# where no contact marker or the ring sits.
 		return Vector2(CROSS_ARM + 22.0, size.y - READOUT_H - CROSS_ARM - 20.0)
@@ -465,7 +465,7 @@ func _cross_right() -> bool:
 ## `p` moved just outside the flight read-out when it falls on it (a phone: a marker there
 ## would hide the bars); elsewhere unchanged.
 func clear_of_readout(p: Vector2) -> Vector2:
-	if not (touch_layout() or size.x < PHONE_W):
+	if not (touch_layout() or size.x < PHONE_WIDTH):
 		return p
 	var r: Rect2 = readout_rect().grow(ARROW_CLEAR)
 	if not r.has_point(p):
@@ -721,7 +721,8 @@ func _readout_lines() -> Array[Rect2]:
 func readout_rect() -> Rect2:
 	var a: Rect2 = area()
 	return Rect2(
-		Vector2(a.position.x + 14.0, a.end.y - READOUT_H), Vector2(_bar_w() + _bar_extra(), 130.0)
+		Vector2(a.position.x + 14.0, a.end.y - READOUT_H),
+		Vector2(_bar_width() + _bar_extra(), 130.0)
 	)
 
 
@@ -842,7 +843,7 @@ func _arrow(e: Dictionary) -> Array[Vector2]:
 	var dir: Vector2 = Vector2(d.x, -d.y)
 	dir = dir.normalized() if dir.length() >= 1e-3 else Vector2.DOWN
 	var tip: Vector2 = _edge_point(dir)
-	if touch_layout() or size.x < PHONE_W:
+	if touch_layout() or size.x < PHONE_WIDTH:
 		tip = arrow_tip(tip)
 	# Never on a tablet's radar inset (C14): an arrow there slides along its edge to just
 	# below the inset or left of it, its label with it.
@@ -958,7 +959,7 @@ func _draw_readout(font: Font, at: Vector2, full: bool) -> void:
 	if int(h.get("align", 0)) != 0:
 		modes.append(tr("helm.align"))
 	if int(h.get("jump_left", 0)) > 0:
-		modes.append(tr("helm.jump_spool") % (float(h["jump_left"]) / NetCodec.TICK_HZ))
+		modes.append(tr("helm.jump_spool") % (float(h["jump_left"]) / NetCodec.TICK_RATE))
 	if int(h.get("docked_site", -1)) >= 0:
 		modes.append(tr("helm.docked"))
 	if not modes.is_empty():
@@ -993,9 +994,9 @@ func _bar(font: Font, at: Vector2, label: String, value: float, envelope: bool) 
 	if value < 0.0:
 		return
 	var fs: int = _small()
-	var label_w: float = _bar_extra() - PCT_W
+	var label_width: float = _bar_extra() - PCT_WIDTH
 	_text(font, at + Vector2(0.0, 10.0 + (fs - SMALL) / 2.0), label, Palette.color("text_dim"), fs)
-	var bar: Rect2 = Rect2(at + Vector2(label_w, 0.0), Vector2(_bar_w(), 10.0))
+	var bar: Rect2 = Rect2(at + Vector2(label_width, 0.0), Vector2(_bar_width(), 10.0))
 	var top: float = BAR_MAX if envelope else 1.0
 	draw_rect(bar, Color(Palette.color("background"), 0.6))
 	var fill: Rect2 = Rect2(bar.position, Vector2(bar.size.x * clampf(value / top, 0.0, 1.0), 10.0))

@@ -14,7 +14,7 @@ const VIEW_TOP_Y: float = 0.0
 ## The station chip's arrow in a joint view, and the dev seat's (P28-Dev).
 const JOINT_ARROW: String = "⇄"
 const DEV_ARROW: String = "▾"
-const CHIP_W: float = 72.0
+const CHIP_WIDTH: float = 72.0
 
 var screen: StationScreen
 var selection_bar: SelectionBar = SelectionBar.new()
@@ -150,7 +150,7 @@ func show_tabs(form_now: LayoutMode.Form, alone: bool) -> void:
 		s.joint_switch = RailButton.make("")
 		s.joint_switch.name = "JointSwitch"
 		s.joint_switch.add_theme_font_size_override("font_size", PageTabs.FONT)
-		# At least CHIP_W, wider for a longer name ("⇄ Weapons"): never cut.
+		# At least CHIP_WIDTH, wider for a longer name ("⇄ Weapons"): never cut.
 		s.joint_switch.clip_text = false
 		s.joint_switch.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		s.joint_switch.pressed.connect(_on_station_chip)
@@ -159,7 +159,7 @@ func show_tabs(form_now: LayoutMode.Form, alone: bool) -> void:
 	var chip: RailButton = s.joint_switch
 	if chip != null:
 		chip.visible = alone
-		chip.custom_minimum_size = Vector2(CHIP_W, UiTheme.TOUCH_PRIMARY)
+		chip.custom_minimum_size = Vector2(CHIP_WIDTH, UiTheme.TOUCH_PRIMARY)
 		if s.panels.size() == 2:
 			var other: String = tr("station." + s.stations[1 - s.focus_index])
 			chip.text = "%s %s" % [JOINT_ARROW, other]
@@ -253,7 +253,7 @@ func process(now: int) -> void:
 					{
 						"id": c["id"],
 						"text": ChipStrip.asker(c),
-						"left": ChipsReader.left_s(ctx.snap, c),
+						"left": ChipsReader.time_left(ctx.snap, c),
 						"effect": ChipLapse.effect(str(c["chip"])),
 					}
 				)
@@ -279,7 +279,7 @@ func _ask_text(crew: bool) -> String:
 		return ""
 	var left: float = 0.0
 	for w: Dictionary in ChipsReader.outgoing(screen.ctx.snap, [p.station]):
-		left = maxf(left, ChipsReader.left_s(screen.ctx.snap, w))
+		left = maxf(left, ChipsReader.time_left(screen.ctx.snap, w))
 	var text: String = tr("chip.ask_button")
 	return "%s · %d s" % [text, ceili(left)] if left > 0.0 else text
 
@@ -315,40 +315,40 @@ func _place_view_top() -> void:
 		y = maxf(y, banner.get_global_rect().end.y - origin + gap)
 	# Ask shares the selection chip's row, the chip giving up its width (ux-13); where the
 	# chip can't shrink that far, Ask heads the column instead.
-	var ask_w: float = ask.get_combined_minimum_size().x + gap if ask.visible else 0.0
-	selection_bar.fit(x1 - x0 - ask_w)
-	var chip_w: float = selection_bar.get_combined_minimum_size().x
-	var in_row: bool = ask.visible and chip_w + ask_w <= x1 - x0
+	var ask_width: float = ask.get_combined_minimum_size().x + gap if ask.visible else 0.0
+	selection_bar.fit(x1 - x0 - ask_width)
+	var chip_width: float = selection_bar.get_combined_minimum_size().x
+	var in_row: bool = ask.visible and chip_width + ask_width <= x1 - x0
 	if not in_row:
-		ask_w = 0.0
+		ask_width = 0.0
 	var col: Array[Control] = []
-	var col_w: float = 0.0
+	var col_width: float = 0.0
 	for c: Control in [ask, request_chips, glance, ping_toast]:
 		if c.visible and not (c == ask and in_row):
 			col.append(c)
-			col_w = maxf(col_w, c.get_combined_minimum_size().x)
-	var side_by_side: bool = col.is_empty() or x1 - x0 >= chip_w + ask_w + gap + col_w
+			col_width = maxf(col_width, c.get_combined_minimum_size().x)
+	var side_by_side: bool = col.is_empty() or x1 - x0 >= chip_width + ask_width + gap + col_width
 	if ask.visible and not in_row and not side_by_side:
 		# No room beside the chip or the column (a joint view's collapsed view): Ask would
 		# take the panel's height, so it waits for a page with room.
 		ask.visible = false
 		col.erase(ask)
-		col_w = 0.0
+		col_width = 0.0
 		for c: Control in col:
-			col_w = maxf(col_w, c.get_combined_minimum_size().x)
-		side_by_side = col.is_empty() or x1 - x0 >= chip_w + gap + col_w
+			col_width = maxf(col_width, c.get_combined_minimum_size().x)
+		side_by_side = col.is_empty() or x1 - x0 >= chip_width + gap + col_width
 	var row_h: float = 0.0
-	var right: float = x1 - (col_w + gap if side_by_side and not col.is_empty() else 0.0)
+	var right: float = x1 - (col_width + gap if side_by_side and not col.is_empty() else 0.0)
 	if not in_row:
 		# Ask left the row (it heads the column, or waits): the chip takes the row's width back.
 		selection_bar.fit(right - x0)
-		chip_w = selection_bar.get_combined_minimum_size().x
+		chip_width = selection_bar.get_combined_minimum_size().x
 	if in_row:
 		ask.size = ask.get_combined_minimum_size()
 		ask.position = Vector2(roundf(right - ask.size.x), y)
 		row_h = ask.size.y + gap
 	if selection_bar.visible:
-		var cx: float = maxf(x0, (x0 + right - ask_w - chip_w) / 2.0)
+		var cx: float = maxf(x0, (x0 + right - ask_width - chip_width) / 2.0)
 		selection_bar.position = Vector2(roundf(cx), y)
 		selection_bar.size = selection_bar.get_combined_minimum_size()
 		row_h = maxf(row_h, selection_bar.size.y + gap)
@@ -356,10 +356,10 @@ func _place_view_top() -> void:
 	if not side_by_side:
 		# Under the chip the column takes the view's width: a chip's effect line wraps less
 		# and pushes the panel down less (w5).
-		col_w = x1 - x0
+		col_width = x1 - x0
 	for c: Control in col:
 		var sz: Vector2 = c.get_combined_minimum_size()
-		c.size = Vector2(sz.x if c == ask else col_w, sz.y)
+		c.size = Vector2(sz.x if c == ask else col_width, sz.y)
 		c.position = Vector2(roundf(x1 - c.size.x), cy)
 		cy += sz.y + gap
 	var reserve: float = row_h if side_by_side else maxf(row_h, cy - y)

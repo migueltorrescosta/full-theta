@@ -13,9 +13,9 @@ signal cycled(step: int)
 ## The name was tapped.
 signal opened
 
-const NAME_W: float = 172.0
+const NAME_WIDTH: float = 172.0
 ## The name's least width when the view is narrow (fit).
-const NAME_MIN_W: float = 96.0
+const NAME_MIN_WIDTH: float = 96.0
 const FONT: int = 14
 
 var prev_button: RailButton = RailButton.make("‹")
@@ -29,7 +29,7 @@ func _init() -> void:
 	prev_button.name = "Prev"
 	next_button.name = "Next"
 	name_button.name = "Selection"
-	name_button.custom_minimum_size.x = NAME_W
+	name_button.custom_minimum_size.x = NAME_WIDTH
 	name_button.add_theme_font_size_override("font_size", FONT)
 	prev_button.pressed.connect(func() -> void: cycled.emit(-1))
 	next_button.pressed.connect(func() -> void: cycled.emit(1))
@@ -40,10 +40,10 @@ func _init() -> void:
 	show_text("")
 
 
-## Narrows the name so the bar fits `width` px (down to NAME_MIN_W).
+## Narrows the name so the bar fits `width` px (down to NAME_MIN_WIDTH).
 func fit(width: float) -> void:
 	var arrows: float = 2.0 * (UiTheme.TOUCH_PRIMARY + UiTheme.TOUCH_GAP)
-	var w: float = clampf(width - arrows, NAME_MIN_W, NAME_W)
+	var w: float = clampf(width - arrows, NAME_MIN_WIDTH, NAME_WIDTH)
 	if name_button.custom_minimum_size.x != w:
 		name_button.custom_minimum_size.x = w
 

@@ -22,10 +22,10 @@ const RAD_PER_PX: float = 0.012
 const VIEW_YAW: float = 0.5
 const VIEW_PITCH: float = 0.35
 const FONT_SIZE: int = 15
-const CHIP_W: float = 64.0
+const CHIP_WIDTH: float = 64.0
 ## Tap-sized (44 px, FT-STN-005).
 const CHIP_H: float = 44.0
-const BUTTON_W: float = 110.0
+const BUTTON_WIDTH: float = 110.0
 
 var wire: Array[Vector3] = []
 var cloud: Array[Vector3] = []
@@ -37,7 +37,7 @@ var angles: Vector3 = Vector3.ZERO
 var selected: int = 0
 var title: String = ""
 var noise_text: String = ""
-var elapsed_s: float = 0.0
+var elapsed: float = 0.0
 ## Draw the axis chips and the Submit and Cancel buttons (off on a phone, #28).
 var footer: bool = true:
 	set(value):
@@ -160,20 +160,20 @@ func _press(at: Vector2) -> bool:
 func _rows() -> int:
 	if not footer:
 		return 0
-	var chips: float = 12.0 + open_axes().size() * (CHIP_W + 6.0)
-	return 1 if size.x >= chips + 2.0 * (BUTTON_W + 6.0) + 12.0 else 2
+	var chips: float = 12.0 + open_axes().size() * (CHIP_WIDTH + 6.0)
+	return 1 if size.x >= chips + 2.0 * (BUTTON_WIDTH + 6.0) + 12.0 else 2
 
 
 func _chip_rect(i: int) -> Rect2:
 	return Rect2(
-		Vector2(12.0 + i * (CHIP_W + 6.0), size.y - CHIP_H - 10.0), Vector2(CHIP_W, CHIP_H)
+		Vector2(12.0 + i * (CHIP_WIDTH + 6.0), size.y - CHIP_H - 10.0), Vector2(CHIP_WIDTH, CHIP_H)
 	)
 
 
 func _button_rect(i: int) -> Rect2:
-	var x: float = size.x - 12.0 - (i + 1) * (BUTTON_W + 6.0) + 6.0
+	var x: float = size.x - 12.0 - (i + 1) * (BUTTON_WIDTH + 6.0) + 6.0
 	var y: float = size.y - CHIP_H - 10.0 - (0.0 if _rows() == 1 else CHIP_H + 6.0)
-	return Rect2(Vector2(x, y), Vector2(BUTTON_W, CHIP_H))
+	return Rect2(Vector2(x, y), Vector2(BUTTON_WIDTH, CHIP_H))
 
 
 func _draw() -> void:
@@ -220,7 +220,7 @@ func _draw_footer(font: Font) -> void:
 			% [
 				tr("sci.match_goal") % [roundi(q * 100.0), roundi(lock * 100.0)],
 				noise_text,
-				tr("sci.so_far") % roundi(elapsed_s)
+				tr("sci.so_far") % roundi(elapsed)
 			]
 		),
 		HORIZONTAL_ALIGNMENT_LEFT,

@@ -23,7 +23,7 @@ extends RunDriver
 
 ## A step is said again to a station that has not finished it after this long (s), so a
 ## player who joined late, or looked away, hears it.
-const REMIND_S: float = 45.0
+const REMIND_INTERVAL: float = 45.0
 ## Dialogue lines for a finished track (per station) and a finished Shakedown.
 const LINE_TRACK_DONE: String = "shakedown.%s.track_done"
 const LINE_ALL_DONE: String = "shakedown.all_done"
@@ -160,7 +160,7 @@ func _step_station(
 	if done:
 		_index[station] += 1
 		_announce(api, now, station)
-	elif now - _said[station] >= SimRate.ticks(REMIND_S):
+	elif now - _said[station] >= SimRate.ticks(REMIND_INTERVAL):
 		_announce(api, now, station)
 
 
@@ -186,7 +186,7 @@ func _step_pairs(api: ScenarioApi, now: int) -> void:
 					_pair_state[i] = 2
 					_in_pair[step.station] = -1
 					_in_pair[step.partner] = -1
-				elif now - _said[step.station] >= SimRate.ticks(REMIND_S):
+				elif now - _said[step.station] >= SimRate.ticks(REMIND_INTERVAL):
 					_say(api, step.line, [step.station, step.partner] as Array[StringName])
 					_said[step.station] = now
 					_said[step.partner] = now

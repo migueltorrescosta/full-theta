@@ -23,8 +23,8 @@ const BLUE: int = 1
 const RED: int = 2
 const TRADER_AT: Vector3 = Vector3(0.0, 0.0, -3000.0)
 const REWARD: int = 400
-const SHIELD_J: float = 1.0e5
-const HULL_J: float = 6.0e6
+const SHIELD_ENERGY: float = 1.0e5
+const HULL_ENERGY: float = 6.0e6
 const HAIL_TICK: int = 3
 const SCAN_AT: int = 2
 ## Weapons fires from this tick on, once the intent is BLUFFING.
@@ -40,8 +40,8 @@ static func build() -> SimWorld:
 	w.science_def = ScienceFixture.science()
 	w.set_relation(BLUE, RED, SimWorld.Relation.HOSTILE)
 	w.spawn_ship(Gunnery.gunship(1), BLUE)
-	var def: ShipDef = Gunnery.raider_with_shields(SHIELD_J)
-	def.hull_max = HULL_J
+	var def: ShipDef = Gunnery.raider_with_shields(SHIELD_ENERGY)
+	def.hull_max = HULL_ENERGY
 	w.spawn_ship(def, RED, CubePoint.of(TRADER_AT))
 	return w
 

@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 ## crew (so a 2e6 J fault takes 10 s at full rate); brute force is a quarter of that.
 
 const CAUSES: Array[StringName] = [&"coolant_leak", &"short", &"software"]
-const FAULT_J: float = 2e6
+const FAULT_ENERGY: float = 2e6
 const TICKS_FULL: int = 600
 
 
@@ -59,13 +59,13 @@ func _repair_ticks(world: SimWorld) -> int:
 # and no energy are refused.
 func test_inflicted_fault_hides_its_cause() -> void:
 	var world: SimWorld = _world()
-	assert_bool(DamageSystem.inflict_fault(world, 0, &"engines", &"magic", FAULT_J)).is_false()
+	assert_bool(DamageSystem.inflict_fault(world, 0, &"engines", &"magic", FAULT_ENERGY)).is_false()
 	assert_bool(DamageSystem.inflict_fault(world, 0, &"engines", &"short", 0.0)).is_false()
-	assert_bool(DamageSystem.inflict_fault(world, 0, &"sensors", &"short", FAULT_J)).is_false()
-	assert_bool(DamageSystem.inflict_fault(world, 0, &"nope", &"short", FAULT_J)).is_false()
+	assert_bool(DamageSystem.inflict_fault(world, 0, &"sensors", &"short", FAULT_ENERGY)).is_false()
+	assert_bool(DamageSystem.inflict_fault(world, 0, &"nope", &"short", FAULT_ENERGY)).is_false()
 	assert_float(_health(world)).is_equal(2e7)
-	assert_bool(DamageSystem.inflict_fault(world, 0, &"engines", &"short", FAULT_J)).is_true()
-	assert_float(_health(world)).is_equal_approx(2e7 - FAULT_J, 1e-6)
+	assert_bool(DamageSystem.inflict_fault(world, 0, &"engines", &"short", FAULT_ENERGY)).is_true()
+	assert_float(_health(world)).is_equal_approx(2e7 - FAULT_ENERGY, 1e-6)
 	var events: Array[SimEvent] = world.drain_events()
 	var raised: Array[SimEvent] = SimFixture.of_kind(events, &"fault_inflicted")
 	assert_int(raised.size()).is_equal(1)
@@ -81,7 +81,7 @@ func test_correct_cause_repairs_fast_and_brute_force_slow() -> void:
 	var times: Dictionary[String, int] = {}
 	for mode: String in ["correct", "wrong", "none"]:
 		var world: SimWorld = _world()
-		DamageSystem.inflict_fault(world, 0, &"engines", &"short", FAULT_J)
+		DamageSystem.inflict_fault(world, 0, &"engines", &"short", FAULT_ENERGY)
 		if mode != "none":
 			var pick: PickFaultCauseCommand = PickFaultCauseCommand.new()
 			pick.ship_id = 0
@@ -103,7 +103,7 @@ func test_correct_cause_repairs_fast_and_brute_force_slow() -> void:
 # The brute-force speed is the subsystem's own data value.
 func test_brute_force_factor_is_data() -> void:
 	var world: SimWorld = _world({"fault_brute_force_factor": 0.5})
-	DamageSystem.inflict_fault(world, 0, &"engines", &"short", FAULT_J)
+	DamageSystem.inflict_fault(world, 0, &"engines", &"short", FAULT_ENERGY)
 	assert_int(_repair_ticks(world)).is_between(2 * TICKS_FULL - 10, 2 * TICKS_FULL + 10)
 
 
@@ -113,7 +113,7 @@ func test_brute_force_factor_is_data() -> void:
 func test_revealed_cause() -> void:
 	var world: SimWorld = _world()
 	assert_bool(DamageSystem.reveal_fault_cause(world, 0, &"engines")).is_false()
-	DamageSystem.inflict_fault(world, 0, &"engines", &"software", FAULT_J)
+	DamageSystem.inflict_fault(world, 0, &"engines", &"software", FAULT_ENERGY)
 	world.drain_events()
 	assert_bool(DamageSystem.reveal_fault_cause(world, 0, &"engines")).is_true()
 	assert_str(String(DamageSystem.known_fault_cause(world, 0, &"engines"))).is_equal("software")
@@ -131,7 +131,7 @@ func test_revealed_cause() -> void:
 func test_picking_a_cause() -> void:
 	var world: SimWorld = _world()
 	assert_bool(DamageSystem.pick_fault_cause(world, 0, &"engines", &"short")).is_false()
-	DamageSystem.inflict_fault(world, 0, &"engines", &"short", FAULT_J)
+	DamageSystem.inflict_fault(world, 0, &"engines", &"short", FAULT_ENERGY)
 	assert_bool(DamageSystem.pick_fault_cause(world, 0, &"engines", &"magic")).is_false()
 	assert_bool(DamageSystem.pick_fault_cause(world, 0, &"engines", &"software")).is_true()
 	assert_bool(DamageSystem.pick_fault_cause(world, 0, &"engines", &"short")).is_true()
@@ -148,7 +148,7 @@ func test_picking_a_cause() -> void:
 # slow the repair.
 func test_ordinary_damage_repairs_at_full_rate() -> void:
 	var world: SimWorld = _world()
-	DamageSystem.damage_subsystem(world, 0, 0, FAULT_J)
+	DamageSystem.damage_subsystem(world, 0, 0, FAULT_ENERGY)
 	_dispatch(world)
 	var ticks: int = 0
 	while _health(world) < 2e7 and ticks < 2000:

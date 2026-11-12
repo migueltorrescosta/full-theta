@@ -36,7 +36,7 @@ const _TOUCH_ICONS: Array[String] = [
 	"checked", "unchecked", "checked_disabled", "unchecked_disabled"
 ]
 ## The width of a Change keys binding column: room for "LB+Left stick left/right".
-const KEY_COLUMN_W: float = 210.0
+const KEY_COLUMN_WIDTH: float = 210.0
 ## The common and always-live actions Change keys lists without "Show all stations" (ux-18):
 ## menu, ping, mark, the alert, share and next contact.
 ## "alert_cycle" stands for the alert's whole family (the pad sets the levels one by one).
@@ -859,7 +859,7 @@ func _build_bindings() -> void:
 	head.add_child(gap)
 	for key: String in ["controls.view_kbm", "controls.view_pad"]:
 		var l: Label = _label(tr(key))
-		l.custom_minimum_size = Vector2(KEY_COLUMN_W, 0)
+		l.custom_minimum_size = Vector2(KEY_COLUMN_WIDTH, 0)
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_color_override("font_color", Palette.color("text_dim"))
 		head.add_child(l)
@@ -900,7 +900,7 @@ func _binding_row(id: String) -> void:
 		var b: Button = _add_button(
 			row, device, text if text != "" else "-", start_capture.bind(id, device)
 		)
-		b.custom_minimum_size = Vector2(KEY_COLUMN_W, 0)
+		b.custom_minimum_size = Vector2(KEY_COLUMN_WIDTH, 0)
 	if r["kind"] == IntentTable.HOLD:
 		_check(row, "Toggle", tr("settings.toggle"), settings.bindings.is_toggle(id)).toggled.connect(
 			func(on: bool) -> void: settings.bindings.set_toggle(id, on)

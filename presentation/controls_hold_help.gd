@@ -7,8 +7,8 @@ extends RefCounted
 ## in the stations' help boxes, whose names are those labels ("Cause", "Probe", "Claim").
 
 ## Seconds a finger holds before the line shows, and how long the line stays.
-const HOLD_S: float = 0.5
-const SHOW_S: float = 3.0
+const HOLD_TIME: float = 0.5
+const SHOW_TIME: float = 3.0
 
 static var _table: Dictionary = {}
 static var _locale: String = ""
@@ -48,7 +48,7 @@ static func table() -> Dictionary:
 	return _table
 
 
-## Shows `text` as a bubble above `button` for SHOW_S seconds (drawn over its neighbours,
+## Shows `text` as a bubble above `button` for SHOW_TIME seconds (drawn over its neighbours,
 ## kept inside the viewport).
 static func bubble(button: Control, text: String) -> void:
 	var old: Node = button.get_node_or_null("HoldHelp")
@@ -73,7 +73,7 @@ static func bubble(button: Control, text: String) -> void:
 	if y < room.position.y:
 		y = button.global_position.y + button.size.y + 4.0
 	panel.global_position = Vector2(x, y)
-	button.get_tree().create_timer(SHOW_S).timeout.connect(
+	button.get_tree().create_timer(SHOW_TIME).timeout.connect(
 		func() -> void:
 			if is_instance_valid(panel):
 				panel.queue_free()

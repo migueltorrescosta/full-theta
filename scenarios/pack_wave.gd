@@ -83,7 +83,7 @@ func _spawn(api: ScenarioApi) -> ApiHandle:
 	var lead: int = Scenario.fleet(api, _ships)[0]
 	var clock: int = Scenario.clock_slot(10 + floori(api.rand(&"pack_wave") * 3.0))
 	return api.spawn_at_range(
-		StringName(spec["ship"]), Factions.RAIDER, lead, Factions.RAIDER_RANGE_M, clock, 0
+		StringName(spec["ship"]), Factions.RAIDER, lead, Factions.RAIDER_REACH, clock, 0
 	)
 
 

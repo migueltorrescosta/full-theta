@@ -6,8 +6,8 @@ extends Control
 ## (ChipLapse's rule), then its row goes. It reads the CHIPS block through ChipsReader
 ## (`open_rows`) and answers no input.
 ##
-## A row: {"id": chip id, "from": station id, "to": station id, "label": text, "left_s":
-## seconds left, "total_s": its whole time}; a gone one also has "state" (answered, expired)
+## A row: {"id": chip id, "from": station id, "to": station id, "label": text, "time_left":
+## seconds left, "total_time": its whole time}; a gone one also has "state" (answered, expired)
 ## and "until" (ms).
 
 const DONE_MS: int = 3000
@@ -49,8 +49,8 @@ static func open_rows(snap: SnapshotState) -> Array[Dictionary]:
 					"from": chip["from"],
 					"to": chip["to"],
 					"label": ChipsReader.label(chip, callsign),
-					"left_s": ChipsReader.left_s(snap, chip),
-					"total_s":
+					"time_left": ChipsReader.time_left(snap, chip),
+					"total_time":
 					maxf(float(int(chip["expires"]) - int(chip["sent"])) / ChipsReader.HZ, 1.0),
 				}
 			)
@@ -81,7 +81,7 @@ static func head_text(row: Dictionary) -> String:
 static func time_text(row: Dictionary) -> String:
 	if row.has("state"):
 		return TranslationServer.translate("captain.chip_" + str(row["state"]))
-	var left: float = float(row.get("left_s", 0.0))
+	var left: float = float(row.get("time_left", 0.0))
 	if left <= 0.0:
 		return ""
 	return TranslationServer.translate("captain.waiting") % ceili(left)
@@ -98,7 +98,7 @@ func show_rows(new_rows: Array[Dictionary], now_ms: int = -1) -> void:
 	for r: Dictionary in rows:
 		if not open.has(r.get("id", -1)):
 			var gone: Dictionary = r.duplicate()
-			var lapsed: bool = ChipLapse.lapsed(float(r.get("left_s", 0.0)))
+			var lapsed: bool = ChipLapse.lapsed(float(r.get("time_left", 0.0)))
 			gone["state"] = "expired" if lapsed else "answered"
 			gone["until"] = now + DONE_MS
 			kept.append(gone)
@@ -154,6 +154,6 @@ func _draw() -> void:
 			continue
 		# The time left as a thin bar under both lines: it runs out as the request lapses.
 		var share: float = clampf(
-			float(row.get("left_s", 0.0)) / float(row.get("total_s", 1.0)), 0.0, 1.0
+			float(row.get("time_left", 0.0)) / float(row.get("total_time", 1.0)), 0.0, 1.0
 		)
 		draw_rect(Rect2(r.position.x, r.end.y - 3.0, r.size.x * share, 3.0), Palette.color("warn"))

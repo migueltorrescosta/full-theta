@@ -25,9 +25,9 @@ var _tick: int = 0
 var _p_units: int = 0
 
 
-func _init(faction: int, pos_tol_m: float = 0.5) -> void:
+func _init(faction: int, pos_tol: float = 0.5) -> void:
 	super(StationCatalogue.Section.CONTACTS, faction)
-	tol_units = maxi(1, roundi(pos_tol_m * NetCodec.POS_Q))
+	tol_units = maxi(1, roundi(pos_tol * NetCodec.POS_Q))
 
 
 ## The ship ids the faction sees, ascending: detected contacts and its own live ships.

@@ -4,7 +4,7 @@ extends GdUnitTestSuite
 ## resumes; allies take over a paused ship's uncovered station, enemies never; eliminated
 ## crews view a friendly ship or go to the scoreboard; an eliminated side relaunches by vote.
 
-const GRACE_S: float = 0.3
+const GRACE: float = 0.3
 
 var h: NetHarness
 
@@ -29,7 +29,7 @@ func _rejected(c: NetClient, type: int, from: int) -> String:
 
 ## A fleet server with --dev-all-stations (one crew player covers a ship) and a short grace.
 func _server(mode: GameRules.Mode, n: int, teams: Array[int] = []) -> NetServer:
-	return h.fleet_server(mode, n, teams, true, GRACE_S)
+	return h.fleet_server(mode, n, teams, true, GRACE)
 
 
 ## One "all" player per ship.

@@ -63,7 +63,7 @@ extends RefCounted
 ##   --probe-window S     length of the measured window [60].
 
 const DEFAULT_PORT: int = NetProtocol.DEFAULT_WS_PORT
-const DEFAULT_GRACE_S: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
+const DEFAULT_GRACE: float = NetSessions.DEFAULT_GRACE_US / 1_000_000.0
 ## Headless frame pacing (S3 "Server loop"): Godot otherwise sleeps 6.9 ms a frame in
 ## headless mode, capping it near 145 frames/s; 2 ms keeps the 60 Hz tick within about
 ## 2 ms of due without spinning. Provisional: see docs/protocol.md, Rates and limits.
@@ -97,7 +97,7 @@ var bind_address: String = ""
 var dev_all_stations: bool = false
 var seed_value: int = 1
 var host_secret: String = ""
-var grace_s: float = DEFAULT_GRACE_S
+var grace: float = DEFAULT_GRACE
 var idle_exit_min: float = 0.0
 var pid_file: String = ""
 var run_for: float = 0.0
@@ -271,7 +271,7 @@ func _set_flag(flag: String, value: String) -> bool:
 			var x: float = value.to_float()
 			match flag:
 				"--grace-s":
-					grace_s = x
+					grace = x
 				"--idle-exit-min":
 					idle_exit_min = x
 				"--run-for":
@@ -363,15 +363,15 @@ func make_server() -> NetServer:
 	if probe_out != "":
 		server.probe = LoadProbe.new(probe_out)
 		server.probe.expect_picks = probe_picks
-		server.probe.warmup_s = probe_warmup
-		server.probe.window_s = probe_window
+		server.probe.warmup = probe_warmup
+		server.probe.window = probe_window
 	var err: Error = server.start(encounter, port, bind_address, dev_all_stations, host_secret)
 	if err != OK:
 		push_error("server failed to start on %s:%d: %s" % [bind_address, port, error_string(err)])
 		server.free()
 		return null
 	server.game.training.solo_on_join = solo_station
-	server.game.sessions.grace_us = int(grace_s * 1_000_000.0)
+	server.game.sessions.grace_us = int(grace * 1_000_000.0)
 	server.game.language = language
 	server.game.tls = tls != null
 	if http_root != "":

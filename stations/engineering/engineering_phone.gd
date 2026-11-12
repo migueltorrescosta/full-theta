@@ -11,12 +11,12 @@ extends RefCounted
 ## their own (150 % UI scale, FT-STN-013).
 const NARROW: float = 760.0
 ## Under this width (a phone, D195) the cutaway, the board and the lists stack and scroll.
-const PHONE_W: float = 560.0
+const PHONE_WIDTH: float = 560.0
 ## Narrow and under this height (px, a desktop at 150 %), the faults list is compact.
 const SHORT_H: float = 520.0
 ## The docked thumb rail's width at the screen's left edge (the screen's radar column stays,
 ## P28-E2): two buttons to a row, wide enough for a verb and its object (C3).
-const PHONE_RAIL_W: float = 224.0
+const PHONE_RAIL_WIDTH: float = 224.0
 ## Upright, the rail's buttons in a grid of this many columns.
 const GRID_COLUMNS: int = 3
 
@@ -93,7 +93,7 @@ func _build_rails() -> void:
 	touch_layout.offset_top = UiTheme.TOUCH_GAP
 	panel.add_child(touch_layout)
 	var rail: TouchRail = touch_layout.rail(SIDE_LEFT)
-	rail.custom_minimum_size.x = PHONE_RAIL_W
+	rail.custom_minimum_size.x = PHONE_RAIL_WIDTH
 	var pairs: GridContainer = GridContainer.new()
 	pairs.name = "RailGrid"
 	pairs.columns = 2
@@ -212,7 +212,7 @@ func _from_phone() -> void:
 		side.visible = not panel.docked
 		box.visible = not panel.docked
 	var narrow: bool = panel.size.x < NARROW
-	var phone: bool = panel.size.x < PHONE_W
+	var phone: bool = panel.size.x < PHONE_WIDTH
 	row.vertical = phone
 	cutaway.custom_minimum_size.y = 260.0 if phone else 0.0
 	board.fit(0.0 if phone or panel.docked else panel.size.y)

@@ -26,13 +26,13 @@ func _shooter(weapon: WeaponDef, alts: Array[WeaponDef] = []) -> ShipDef:
 	return ship
 
 
-## [world, shooter id, target id]: the target dead ahead at `range_m` moving at `vel`;
+## [world, shooter id, target id]: the target dead ahead at `reach` moving at `vel`;
 ## one step first, so the shooter's faction has detected it.
-func _duel(weapon: WeaponDef, range_m: float, vel: Vector3 = Vector3.ZERO) -> Array:
+func _duel(weapon: WeaponDef, reach: float, vel: Vector3 = Vector3.ZERO) -> Array:
 	var world: SimWorld = SimWorld.new(7)
 	var shooter: int = world.spawn_ship(_shooter(weapon), 1)
 	var target: int = world.spawn_ship(
-		TestDefs.raider(), 2, CubePoint.make(0, 0, -range_m), Quaternion.IDENTITY, vel
+		TestDefs.raider(), 2, CubePoint.make(0, 0, -reach), Quaternion.IDENTITY, vel
 	)
 	world.step()
 	world.drain_events()

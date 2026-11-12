@@ -13,7 +13,7 @@ extends Control
 ## grids. The panel keeps its own target line and mount line; the radar is an inset (C14).
 
 ## FIRE's least size in the bottom bar, px.
-const FIRE_W: float = 200.0
+const FIRE_WIDTH: float = 200.0
 const FIRE_H: float = 104.0
 
 var portrait: bool = false
@@ -100,7 +100,7 @@ func _build_right() -> void:
 	fire_button.held.connect(_panel.touch_hold.bind("fire"))
 	dock.right.add(fire_button)
 	if portrait:
-		fire_button.custom_minimum_size.x = FIRE_W
+		fire_button.custom_minimum_size.x = FIRE_WIDTH
 		fire_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 
 

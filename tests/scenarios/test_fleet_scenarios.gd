@@ -197,10 +197,10 @@ func test_the_raiders_always_fit_the_time_limit() -> void:
 			)
 			var count: int = Rescue.raider_count(strength)
 			assert_int(count).is_between(1, Rescue.MAX_RAIDERS)
-			assert_float(Rescue.last_raider_s(count)).is_less(Rescue.MAX_S - 100.0)
+			assert_float(Rescue.last_raider_time(count)).is_less(Rescue.MAX_TIME - 100.0)
 			var wave: int = Scenario.count_for(EnemyWave.COUNT, strength)
-			var last: float = EnemyWave.SECOND_AFTER_S + EnemyWave.NEXT_EVERY_S * maxi(wave - 2, 0)
-			assert_float(last).is_less(EnemyWave.MAX_S - 40.0)
+			var last: float = EnemyWave.SECOND_AFTER + EnemyWave.NEXT_EVERY * maxi(wave - 2, 0)
+			assert_float(last).is_less(EnemyWave.MAX_TIME - 40.0)
 
 
 # FT: FT-MIS-004, FT-MIS-023

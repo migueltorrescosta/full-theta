@@ -20,8 +20,8 @@ const UP: int = 8
 const FONT_SIZE: int = 15
 const NODE_R: float = 18.0
 ## Width of the target's name drawn below its node.
-const GOAL_LABEL_W: float = 120.0
-const BUTTON_W: float = 110.0
+const GOAL_LABEL_WIDTH: float = 120.0
+const BUTTON_WIDTH: float = 110.0
 const BUTTON_H: float = 44.0
 
 var cols: int = 0
@@ -33,7 +33,7 @@ var trace: float = 0.0
 var edges: Array = []
 var title: String = ""
 var target_text: String = ""
-var elapsed_s: float = 0.0
+var elapsed: float = 0.0
 var entry: int = -1
 ## Draw the Cancel button (off on a phone, #28).
 var footer: bool = true:
@@ -143,7 +143,8 @@ func _title_lines_h() -> float:
 
 func _button_rect() -> Rect2:
 	return Rect2(
-		Vector2(size.x - 12.0 - BUTTON_W, size.y - BUTTON_H - 10.0), Vector2(BUTTON_W, BUTTON_H)
+		Vector2(size.x - 12.0 - BUTTON_WIDTH, size.y - BUTTON_H - 10.0),
+		Vector2(BUTTON_WIDTH, BUTTON_H)
 	)
 
 
@@ -211,10 +212,10 @@ func _draw_node(font: Font, n: int, reach: Array[int]) -> void:
 		# Below the node and as wide as the text needs: inside it "weapons" was clipped.
 		draw_string(
 			font,
-			c + Vector2(-GOAL_LABEL_W / 2.0, NODE_R + 16.0),
+			c + Vector2(-GOAL_LABEL_WIDTH / 2.0, NODE_R + 16.0),
 			target_text,
 			HORIZONTAL_ALIGNMENT_CENTER,
-			GOAL_LABEL_W,
+			GOAL_LABEL_WIDTH,
 			FONT_SIZE - 2,
 			col
 		)

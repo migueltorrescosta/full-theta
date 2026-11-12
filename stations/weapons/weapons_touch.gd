@@ -21,9 +21,9 @@ extends Control
 enum Page { FIRE, MOUNTS, CREW }
 
 ## Rail width (px): 152 px of controls inside the rail's padding.
-const RAIL_W: float = 168.0
+const RAIL_WIDTH: float = 168.0
 ## The radar inset (px): as wide as the rail, so its chips fit beside their blips.
-const RADAR_W: float = 168.0
+const RADAR_WIDTH: float = 168.0
 const RADAR_H: float = 124.0
 ## The mount card shows three lines (state, heat, rounds).
 const MOUNT_H: float = 80.0
@@ -33,9 +33,9 @@ const FONT_NUM: int = 14
 const FONT_LABEL: int = 13
 ## A mount list row and its Claim button (px).
 const ROW_H: float = 56.0
-const ROW_CLAIM_W: float = 88.0
+const ROW_CLAIM_WIDTH: float = 88.0
 ## The mount list's widest (px).
-const LIST_W: float = 392.0
+const LIST_WIDTH: float = 392.0
 
 ## The LayoutMode.Form this arrangement is for.
 var form: LayoutMode.Form = LayoutMode.Form.PHONE_LANDSCAPE
@@ -201,7 +201,7 @@ func _refresh_rows() -> void:
 			look.pressed.connect(_look.bind(i))
 			var claim: RailButton = RailButton.make("")
 			claim.name = "Claim%d" % (i + 1)
-			claim.custom_minimum_size = Vector2(ROW_CLAIM_W, ROW_H)
+			claim.custom_minimum_size = Vector2(ROW_CLAIM_WIDTH, ROW_H)
 			RailButton.wrap(claim)
 			claim.add_theme_font_size_override("font_size", FONT_LABEL)
 			claim.pressed.connect(_claim_row.bind(i))
@@ -311,7 +311,7 @@ func _landscape() -> void:
 	layout.set_content(stage)
 	layout.content_rect_changed.connect(func(_r: Rect2) -> void: _place())
 	var right: TouchRail = layout.rail(SIDE_RIGHT)
-	right.custom_minimum_size.x = RAIL_W
+	right.custom_minimum_size.x = RAIL_WIDTH
 	var zone: VBoxContainer = VBoxContainer.new()
 	zone.add_theme_constant_override("separation", UiTheme.TOUCH_GAP)
 	zone.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -392,28 +392,28 @@ func _place() -> void:
 	var x: float = area.position.x + gap
 	var top: float = _top()
 	# As wide as its text, wrapping past half the view (at least the radar's width).
-	var w: float = maxf(RADAR_W, minf(area.size.x / 2.0, 260.0))
+	var w: float = maxf(RADAR_WIDTH, minf(area.size.x / 2.0, 260.0))
 	var font: Font = target_label.get_theme_font("font")
-	var text_w: float = (
+	var text_width: float = (
 		font.get_string_size(target_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_NUM).x
 	)
-	w = minf(w, ceilf(text_w) + 2.0)
+	w = minf(w, ceilf(text_width) + 2.0)
 	target_label.position = Vector2(x, top)
 	target_label.size = Vector2(w, 0.0)
 	target_label.size = Vector2(w, target_label.get_combined_minimum_size().y)
 	var list: Rect2 = Rect2(x, top, area.end.x - gap - x, area.end.y - gap - top)
-	var r: Rect2 = Rect2(x, area.end.y - gap - RADAR_H, RADAR_W, RADAR_H)
+	var r: Rect2 = Rect2(x, area.end.y - gap - RADAR_H, RADAR_WIDTH, RADAR_H)
 	if radar_box.position != r.position or radar_box.size != r.size:
 		radar_box.position = r.position
 		radar_box.size = r.size
-	if area.end.x - gap - (r.end.x + gap) >= LIST_W * 0.75:
+	if area.end.x - gap - (r.end.x + gap) >= LIST_WIDTH * 0.75:
 		list.position.x = r.end.x + gap
 		list.size.x = area.end.x - gap - list.position.x
 	else:
 		list.size.y = r.position.y - gap - top
 	var need: float = maxf(ROW_H, rows.size() * (ROW_H + gap) - gap) + 2.0 * gap
 	mount_list.position = list.position
-	mount_list.size = Vector2(minf(LIST_W, list.size.x), minf(list.size.y, need))
+	mount_list.size = Vector2(minf(LIST_WIDTH, list.size.x), minf(list.size.y, need))
 
 
 ## The touch picture of the phone pages (P28-Help, TouchHelpPicture), in the 844x390 frame:

@@ -101,7 +101,7 @@ func test_projection_is_ship_frame() -> void:
 	assert_float(radar.project(Vector3(1000, 0, 0)).x).is_greater(c.x)
 	assert_float(radar.project(Vector3(0, 500, 0)).y).is_less(c.y)
 	# Clock 3 sits on the rim at range.
-	var rim: Vector2 = radar.project(Vector3(DiscRadar.RANGES_M[radar.range_index], 0, 0))
+	var rim: Vector2 = radar.project(Vector3(DiscRadar.RANGES[radar.range_index], 0, 0))
 	assert_float(rim.x - c.x).is_equal_approx(radar.disc_radius(), 0.01)
 
 
@@ -125,7 +125,7 @@ func test_beyond_range_is_clamped_to_the_rim() -> void:
 	var rim: Vector2 = radar.disc_centre() + Vector2(radar.disc_radius(), 0)
 	assert_dict(radar.item_at(rim)).is_equal({"kind": "contact", "id": 9})
 	radar.zoom(1)
-	assert_float(DiscRadar.RANGES_M[radar.range_index]).is_equal(50000.0)
+	assert_float(DiscRadar.RANGES[radar.range_index]).is_equal(50000.0)
 	assert_bool(radar.is_beyond(far)).is_false()
 	radar.zoom(1)
 	assert_int(radar.range_index).is_equal(2)
@@ -196,7 +196,7 @@ func test_draws_selection_strip_and_pulses() -> void:
 	radar.set_picture(_pic(items), {"kind": "contact", "id": 1})
 	await await_idle_frame()
 	# The strip narrows the disc; the point ping is never picked.
-	assert_float(radar.disc_centre().x).is_equal_approx((600.0 - DiscRadar.STRIP_W) / 2.0, 0.01)
+	assert_float(radar.disc_centre().x).is_equal_approx((600.0 - DiscRadar.STRIP_WIDTH) / 2.0, 0.01)
 	assert_dict(radar.item_at(radar.project(items[2]["local"]))).is_empty()
 
 
@@ -231,7 +231,7 @@ func test_centring_takes_the_minimum_image_on_a_rolled_ship() -> void:
 # the scale is an arrow on the rim at its bearing, whichever step; the selected stem is
 # drawn last, on top.
 func test_range_steps_rim_arrows_and_the_selected_stem_on_top() -> void:
-	assert_array(DiscRadar.RANGES_M).is_equal([2000.0, 10000.0, 50000.0])
+	assert_array(DiscRadar.RANGES).is_equal([2000.0, 10000.0, 50000.0])
 	var items: Array[Dictionary] = [
 		_it("contact", 1, "H1", "H", Vector3(3000, 0, 0)),
 		_it("contact", 2, "H2", "H", Vector3(0, 0, -30000)),

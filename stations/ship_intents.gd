@@ -68,7 +68,7 @@ func decline_mark(id: int) -> void:
 
 
 ## Routes and hazard zones (FT-RLY-005, FT-SPA-028): a waypoint on route `route`, clear
-## it, a hazard of `radius_m` at a point, delete the zone `id`.
+## it, a hazard of `radius` at a point, delete the zone `id`.
 func route_add(route: int, pos: Vector3) -> void:
 	_call(&"route_add", [route, pos])
 
@@ -77,8 +77,8 @@ func route_clear(route: int) -> void:
 	_call(&"route_clear", [route])
 
 
-func hazard_add(radius_m: float, pos: Vector3) -> void:
-	_call(&"hazard_add", [radius_m, pos])
+func hazard_add(radius: float, pos: Vector3) -> void:
+	_call(&"hazard_add", [radius, pos])
 
 
 func hazard_delete(id: int) -> void:

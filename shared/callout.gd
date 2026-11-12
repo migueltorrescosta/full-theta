@@ -12,9 +12,9 @@ extends RefCounted
 const LEVEL_DEG: float = 15.0
 ## Above this elevation only overhead/under, without a clock (FT-SPA-003, NAV-7).
 const POLE_DEG: float = 60.0
-## Range bands (m): close below CLOSE_M, far above FAR_M, mid in between (FT-SPA-003).
-const CLOSE_M: float = 1000.0
-const FAR_M: float = 10000.0
+## Range bands (m): close below CLOSE_DISTANCE, far above FAR_DISTANCE, mid in between (FT-SPA-003).
+const CLOSE_DISTANCE: float = 1000.0
+const FAR_DISTANCE: float = 10000.0
 
 ## Elevations (degrees) of the heights -2 (under), -1 (low), 0 (level), 1 (high), 2 (overhead):
 ## each inside its band of height_word, so clock_height(direction(c, h)) names c and h.
@@ -72,9 +72,9 @@ static func clock_height(local: Vector3) -> String:
 
 ## close < 1 km, mid 1-10 km, far > 10 km (FT-SPA-003): 1 km and 10 km are mid.
 static func range_band(dist: float) -> String:
-	if dist < CLOSE_M:
+	if dist < CLOSE_DISTANCE:
 		return "close"
-	if dist <= FAR_M:
+	if dist <= FAR_DISTANCE:
 		return "mid"
 	return "far"
 
@@ -90,9 +90,9 @@ static func relative(ref_name: String, from_ref: Vector3) -> String:
 ## A distance for speech: whole metres to the nearest 100 under 1 km, one decimal of a
 ## kilometre to 10 km (dropped when it is whole), whole kilometres beyond.
 static func distance_text(dist: float) -> String:
-	if dist < CLOSE_M:
+	if dist < CLOSE_DISTANCE:
 		return "%d m" % (roundi(dist / 100.0) * 100)
-	if dist < FAR_M:
+	if dist < FAR_DISTANCE:
 		var km: float = snappedf(dist / 1000.0, 0.1)
 		return "%d km" % int(km) if is_equal_approx(km, floorf(km)) else "%.1f km" % km
 	return "%d km" % roundi(dist / 1000.0)

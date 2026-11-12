@@ -17,9 +17,9 @@ func test_cleared_keeps_reputation_and_uncleared_loses_within_range() -> void:
 	assert_float(runs.solo.metrics.cleared).is_equal(0.0)
 	assert_float(runs.solo.metrics.rep_lost).is_between(-dist.hi, -dist.lo)
 	# The solo run docked before the window opened, the co-op run inside it.
-	assert_float(runs.solo.metrics.seconds).is_less(P5Scenario.LANE_OPEN_S)
+	assert_float(runs.solo.metrics.seconds).is_less(P5Scenario.LANE_OPEN_TIME)
 	assert_float(runs.coop.metrics.seconds).is_between(
-		P5Scenario.LANE_OPEN_S, P5Scenario.LANE_OPEN_S + P5Scenario.LANE_S
+		P5Scenario.LANE_OPEN_TIME, P5Scenario.LANE_OPEN_TIME + P5Scenario.LANE_DURATION
 	)
 
 
@@ -35,8 +35,8 @@ func test_the_window_and_a_late_dock() -> void:
 	accept.card = 0
 	assert_bool(StoryFixture.run(w, 0, accept)).is_true()
 	var window: Array[int] = StoryRules.lane_window(w, 0)
-	assert_int(window[1] - window[0]).is_equal(roundi(P5Scenario.LANE_S * SimWorld.HZ))
-	assert_int(window[0] - w.tick + 1).is_equal(roundi(P5Scenario.LANE_OPEN_S * SimWorld.HZ))
+	assert_int(window[1] - window[0]).is_equal(roundi(P5Scenario.LANE_DURATION * SimWorld.HZ))
+	assert_int(window[0] - w.tick + 1).is_equal(roundi(P5Scenario.LANE_OPEN_TIME * SimWorld.HZ))
 	while w.tick <= window[1]:
 		w.step()
 	StoryFixture.dock(w, 0, w.story.site[0])

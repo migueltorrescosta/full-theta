@@ -25,7 +25,7 @@ const CARD_H: float = 66.0
 const GAP: float = 6.0
 const FONT_SIZE: int = 15
 ## Under this width one column is shown at a time.
-const NARROW_W: float = 640.0
+const NARROW_WIDTH: float = 640.0
 ## A press that moves less than this is a tap (px); a sideways move of SWIPE_PX is a swipe.
 const TAP_PX: float = 12.0
 const SWIPE_PX: float = 60.0
@@ -104,7 +104,7 @@ func show_column(col: int) -> void:
 
 
 func narrow() -> bool:
-	return size.x < NARROW_W
+	return size.x < NARROW_WIDTH
 
 
 ## The column shown in a narrow board or on a phone's page.

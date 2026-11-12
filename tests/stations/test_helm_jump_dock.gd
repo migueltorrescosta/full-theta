@@ -159,7 +159,7 @@ func test_spool_and_docked_state_reach_the_panel() -> void:
 	_helm_block()["docked_site"] = AHEAD
 	_frame()
 	assert_int(_panel.helm_block()["jump_left"]).is_equal(150)
-	assert_float(float(_panel.helm_block()["jump_left"]) / NetCodec.TICK_HZ).is_equal(2.5)
+	assert_float(float(_panel.helm_block()["jump_left"]) / NetCodec.TICK_RATE).is_equal(2.5)
 	assert_str(tr("helm.jump_spool") % 2.5).is_equal("JUMP in 2.5 s")
 	assert_array(HelmPanel.RADIAL).contains(["dock", "jump"])
 

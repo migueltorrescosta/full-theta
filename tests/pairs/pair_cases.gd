@@ -33,7 +33,7 @@ static func of(id: String) -> Dictionary:
 				P3Scenario.harness(),
 				P3Scenario.coop_crew(),
 				P3Scenario.solo_crew(),
-				{"noise": LOWER, "scan_s": LOWER}
+				{"noise": LOWER, "scan_time": LOWER}
 			)
 		"p4":
 			return _row(
@@ -61,7 +61,7 @@ static func of(id: String) -> Dictionary:
 				StrikeScenario.harness(),
 				StrikeScenario.crew(true, false, true, coop_shots),
 				StrikeScenario.crew(false, false, true, solo_shots),
-				{"time": LOWER, "first_hit_s": LOWER}
+				{"time": LOWER, "first_hit_time": LOWER}
 			)
 			row["coop_shots"] = coop_shots
 			row["solo_shots"] = solo_shots

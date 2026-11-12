@@ -21,16 +21,16 @@ const HOME: int = 0
 ## Debris lies between this share of the leg and that one, within this much of the line (m).
 const FIRST_T: float = 0.15
 const LAST_T: float = 0.85
-const LATERAL_M: float = 150.0
+const LATERAL_OFFSET: float = 150.0
 const FEE: int = 150
 ## The clearance's lane opens this long after the card is accepted and stays open this long
-## (s); the card lapses at MAX_S.
-const LANE_OPEN_S: float = 30.0
-const LANE_S: float = 540.0
+## (s); the card lapses at MAX_TIME.
+const LANE_OPEN_TIME: float = 30.0
+const LANE_DURATION: float = 540.0
 ## The civil faction whose standing an uncleared approach costs (rescue's freighters, too).
-const MAX_S: float = 600.0
+const MAX_TIME: float = 600.0
 ## The fee card outlasts the encounter, so a timeout can still settle it.
-const CARD_S: float = MAX_S + 30.0
+const CARD_DURATION: float = MAX_TIME + 30.0
 
 var _ships: PackedInt32Array = PackedInt32Array()
 var _destination: int = -1
@@ -68,7 +68,7 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 		var count: int = leg["count"]
 		for i: int in count:
 			var t: float = lerpf(FIRST_T, LAST_T, float(i) / maxi(count - 1, 1))
-			var lateral: float = (api.rand(&"debris_leg") * 2.0 - 1.0) * LATERAL_M
+			var lateral: float = (api.rand(&"debris_leg") * 2.0 - 1.0) * LATERAL_OFFSET
 			api.spawn_on_leg(leg["debris"], Factions.DEBRIS, from, _destination, t, lateral)
 	for ship: int in Scenario.fleet(api, _ships):
 		api.message("npc.lane_warning", {}, LineAudience.npc(NPC, ship))
@@ -78,10 +78,10 @@ func start(api: ScenarioApi, params: Dictionary) -> void:
 	run.title_key = &"comms.card.lane_run"
 	run.conversation_id = &"conv.lane_run"
 	run.reward_credits = FEE
-	run.expiry = MAX_S
+	run.expiry = MAX_TIME
 	run.site = HOME
-	run.lane_delay = LANE_OPEN_S
-	run.lane_length = LANE_S
+	run.lane_delay = LANE_OPEN_TIME
+	run.lane_length = LANE_DURATION
 	run.rep_faction = Factions.CIVIL
 	run.faction_wide = true
 	_clearance = api.offer(lead, run)
@@ -97,7 +97,7 @@ func step(api: ScenarioApi) -> void:
 		elif _left.has(ship):
 			_result = Result.WON
 			return
-	if Scenario.timed_out(api, _started, MAX_S):
+	if Scenario.timed_out(api, _started, MAX_TIME):
 		_result = Result.PARTIAL
 
 

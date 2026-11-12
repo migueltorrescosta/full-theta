@@ -46,7 +46,7 @@ func update(world: SimWorld, ids: Dictionary) -> void:
 		_pred[id] = [
 			NetCodec.unpack_quat(bits),
 			wf / r if moving else Vector3.UP,
-			r / NetCodec.TICK_HZ if moving else 0.0,
+			r / NetCodec.TICK_RATE if moving else 0.0,
 			tick
 		]
 		refreshed[id] = true

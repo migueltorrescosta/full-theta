@@ -4,7 +4,7 @@ extends RefCounted
 ## that re-centres with a 0.12 s half-life, so the turn rate follows mouse speed and
 ## the nose stops when the mouse stops. x right, y down, each -1..1.
 
-const HALF_LIFE_S: float = 0.12
+const HALF_LIFE: float = 0.12
 ## Stick deflection per pixel of motion (S5's sensitivity).
 const SENSITIVITY: float = 0.006
 
@@ -16,4 +16,4 @@ func move(relative: Vector2) -> void:
 
 
 func decay(delta: float) -> void:
-	value *= pow(0.5, delta / HALF_LIFE_S)
+	value *= pow(0.5, delta / HALF_LIFE)

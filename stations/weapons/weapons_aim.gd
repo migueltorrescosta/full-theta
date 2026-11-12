@@ -6,9 +6,9 @@ extends RefCounted
 ## stops at the arc edge (FT-SIM-011); the lead direction comes from Lead (FT-SIM-014).
 ## Reads the panel's ship, view and mount rows; draws nothing.
 
-## Aim points go out at most this often (ms), when they moved more than AIM_SEND_M (m).
+## Aim points go out at most this often (ms), when they moved more than AIM_SEND_DISTANCE (m).
 const AIM_SEND_MS: int = 50
-const AIM_SEND_M: float = 1.0
+const AIM_SEND_DISTANCE: float = 1.0
 
 ## Mount index -> aim point (m); a mount without one rests on its barrel.
 var aims: Dictionary = {}
@@ -53,7 +53,7 @@ func barrel(i: int) -> Vector3:
 func set_aim_dir(i: int, dir: Vector3) -> void:
 	var p: Vector3 = mount_position(i) + dir * _p.weapon_of(i).max_range
 	aims[i] = p
-	if not sent.has(i) or (sent[i] as Vector3).distance_to(p) > AIM_SEND_M:
+	if not sent.has(i) or (sent[i] as Vector3).distance_to(p) > AIM_SEND_DISTANCE:
 		dirty[i] = true
 
 

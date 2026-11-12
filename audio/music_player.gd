@@ -3,8 +3,8 @@ extends Node
 ## Low ambient music while a run is on (owner M5-Q4, D312, FT-AUD-024): CC0 tracks
 ## (assets/music/, content/provenance.json) play one after the other on the `Music` bus,
 ## sent to Master. The bus ducks under voice: while a voice line or callout plays
-## (`voice_active`) the music falls by DUCK_DB over ATTACK_S, and rises back over
-## RELEASE_S once the voice has been quiet for HOLD_S, so the gaps between callouts don't
+## (`voice_active`) the music falls by DUCK_DB over ATTACK_TIME, and rises back over
+## RELEASE_TIME once the voice has been quiet for HOLD_TIME, so the gaps between callouts don't
 ## pump. A scripted volume (not a sidechain compressor), so it behaves the same in the
 ## browser and can be tested without audio output: `bus_db()` is a pure function of
 ## the player's own state and `advance()` moves it.
@@ -20,9 +20,9 @@ const FULL_DB: float = -6.0
 ## How far a voice line pulls the music down (dB), how fast down and up (s), and how long
 ## the voice must be quiet before the music rises (s). PROVISIONAL.
 const DUCK_DB: float = -14.0
-const ATTACK_S: float = 0.2
-const RELEASE_S: float = 1.2
-const HOLD_S: float = 0.6
+const ATTACK_TIME: float = 0.2
+const RELEASE_TIME: float = 1.2
+const HOLD_TIME: float = 0.6
 ## Below this volume the bus is muted rather than set to a very low dB.
 const SILENT_DB: float = -80.0
 
@@ -36,7 +36,7 @@ var voice_active: bool = false
 ## 0 (full) .. 1 (fully ducked).
 var duck: float = 0.0
 
-var _quiet_s: float = 0.0
+var _quiet_time: float = 0.0
 var _player: AudioStreamPlayer
 var _index: int = 0
 var _on: bool = false
@@ -76,12 +76,12 @@ func _process(delta: float) -> void:
 ## Moves the duck by `delta` seconds toward its target and sets the bus level.
 func advance(delta: float) -> void:
 	if voice_active:
-		_quiet_s = 0.0
-		duck = minf(1.0, duck + delta / ATTACK_S)
+		_quiet_time = 0.0
+		duck = minf(1.0, duck + delta / ATTACK_TIME)
 	else:
-		_quiet_s += delta
-		if _quiet_s >= HOLD_S:
-			duck = maxf(0.0, duck - delta / RELEASE_S)
+		_quiet_time += delta
+		if _quiet_time >= HOLD_TIME:
+			duck = maxf(0.0, duck - delta / RELEASE_TIME)
 	_apply()
 
 

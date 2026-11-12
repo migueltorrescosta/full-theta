@@ -7,7 +7,7 @@ extends RefCounted
 ## (ChipList).
 
 ## A chip gone with at most this many seconds left lapsed.
-const LAPSE_S: float = 1.5
+const LAPSE_TIME: float = 1.5
 
 var _seen: Dictionary = {}
 
@@ -28,9 +28,9 @@ func update(chips: Array) -> Array[String]:
 	return out
 
 
-## Whether a chip last seen with `left_s` seconds left, now gone, lapsed (else it was answered).
-static func lapsed(left_s: float) -> bool:
-	return left_s <= LAPSE_S
+## Whether a chip last seen with `time_left` seconds left, now gone, lapsed (else it was answered).
+static func lapsed(time_left: float) -> bool:
+	return time_left <= LAPSE_TIME
 
 
 ## What a chip does for whoever accepts it ("" when the chip has no effect text): the

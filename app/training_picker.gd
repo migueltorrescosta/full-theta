@@ -20,7 +20,7 @@ const LESSONS: Array[String] = [
 const CALLOUTS: String = "callouts"
 ## The lesson a new player should take first (R26-12).
 const FIRST: String = "helm"
-const CARD_W: float = 160.0
+const CARD_WIDTH: float = 160.0
 const CARD_H: float = 120.0
 ## A phone on its side shows the cards without their blurb and the drill without its heading,
 ## so both rows fit above the fold.
@@ -150,7 +150,7 @@ func fit() -> void:
 	)
 	for card: Button in _cards.values():
 		card.custom_minimum_size = Vector2(
-			0 if upright else CARD_W, COMPACT_H if compact else CARD_H
+			0 if upright else CARD_WIDTH, COMPACT_H if compact else CARD_H
 		)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_blurb_of(card).visible = not compact

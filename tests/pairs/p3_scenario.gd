@@ -51,9 +51,9 @@ static func measure(w: SimWorld) -> Dictionary:
 	var finished: SimEvent = ends[0]
 	return {
 		"noise": started.value,
-		"scan_s": (finished.tick - started.tick) * SimWorld.DT,
+		"scan_time": (finished.tick - started.tick) * SimWorld.DT,
 		"confidence": finished.value,
-		"total_s": w.tick * SimWorld.DT,
+		"total_time": w.tick * SimWorld.DT,
 	}
 
 

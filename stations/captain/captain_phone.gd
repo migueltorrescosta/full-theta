@@ -13,9 +13,9 @@ extends Control
 ## list panels) and takes them back when the phone becomes a tablet or a desktop.
 
 ## The docked rail's width on its side (design 1: 168 px, two 80 px half buttons).
-const RAIL_W: float = 168.0
+const RAIL_WIDTH: float = 168.0
 ## The lists' panel over the mirror on its side (design 1.4: x 489-797).
-const LISTS_W: float = 308.0
+const LISTS_WIDTH: float = 308.0
 ## The buttons' text size (px).
 const FONT: int = 14
 ## Upright: view and common buttons per grid row.
@@ -103,14 +103,14 @@ func stage_rect() -> Rect2:
 
 ## Places the list panels over the mirror: under the view-top row (`reserve`, px from the
 ## panel's top), above the bottom band, inside the safe area; on its side the right
-## LISTS_W px, upright the whole mirror.
+## LISTS_WIDTH px, upright the whole mirror.
 func place(reserve: float) -> void:
 	var at: Rect2 = Rect2(Vector2.ZERO, stage.size)
 	var tap: Rect2 = SafeArea.to_local(stage, SafeArea.tap_rect(stage)).intersection(at)
 	var top: float = maxf(reserve - stage_rect().position.y, 0.0)
 	var r: Rect2 = Rect2(tap.position.x, top, tap.size.x, tap.end.y - top)
 	if not upright:
-		var w: float = minf(LISTS_W, tap.end.x)
+		var w: float = minf(LISTS_WIDTH, tap.end.x)
 		r = Rect2(tap.end.x - w, top, w, tap.end.y - top)
 	for box: PanelContainer in [requests, card_box]:
 		if box.position != r.position or box.size != r.size:
@@ -159,7 +159,7 @@ func _build_side(views: Array[RailButton], ping: RailButton, mark: RailButton) -
 	layout.offset_top = UiTheme.TOUCH_GAP
 	add_child(layout)
 	var rail: TouchRail = layout.rail(SIDE_LEFT)
-	rail.custom_minimum_size.x = RAIL_W
+	rail.custom_minimum_size.x = RAIL_WIDTH
 	var empty: Control = Control.new()
 	empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for row: Array in [[views[0], views[1]], [views[2], views[3]], [views[4], empty], [ping, mark]]:

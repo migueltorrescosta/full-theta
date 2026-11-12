@@ -1,7 +1,7 @@
 class_name PageTabs
 extends HBoxContainer
 ## The tabs of a PageHost (#28 follow-up, P28-Tabs): in the phone's top bar on its side
-## (at least TAB_W wide and as wide as the 13 px label) or as the bottom tab bar upright
+## (at least TAB_WIDTH wide and as wide as the 13 px label) or as the bottom tab bar upright
 ## (equal widths). The current tab is the accent button. A `lead` button (a joint view's
 ## station chip, the dev seat's station button) goes first; while the host has a session
 ## title, a label replaces the tabs.
@@ -11,7 +11,7 @@ extends HBoxContainer
 ##     tabs.set_lead(station_chip)
 
 ## A tab's width on a phone on its side, and with a lead button beside the tabs.
-const TAB_W: float = 64.0
+const TAB_WIDTH: float = 64.0
 const TAB_W_TIGHT: float = 56.0
 const FONT: int = 13
 
@@ -93,7 +93,7 @@ func _rebuild() -> void:
 	_minigame.visible = minigame
 	_minigame.text = host.minigame_title if minigame else ""
 	if host != null and not minigame:
-		var w: float = TAB_W_TIGHT if lead != null else TAB_W
+		var w: float = TAB_W_TIGHT if lead != null else TAB_WIDTH
 		for i: int in host.count():
 			var b: RailButton = RailButton.make(host.title(i) + (" •" if host.badge(i) else ""))
 			b.name = "Tab%d" % (i + 1)
@@ -111,14 +111,14 @@ func _rebuild() -> void:
 			# A page with nothing to show has no tab (PageHost.set_shown).
 			b.visible = host.shown(i)
 			add_child(b)
-			var label_w: float = (
+			var label_width: float = (
 				b
 				. get_theme_font("font")
 				. get_string_size(b.text, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT)
 				. x
 			)
 			b.size_flags_stretch_ratio = (
-				label_w + b.get_theme_stylebox("normal").get_minimum_size().x
+				label_width + b.get_theme_stylebox("normal").get_minimum_size().x
 			)
 			_buttons.append(b)
 	if lead != null:

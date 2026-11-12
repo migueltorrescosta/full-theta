@@ -46,8 +46,8 @@ func _process(_delta: float) -> void:
 	if host != _host:
 		_host = host
 		print("server: host %s" % ("left" if host < 0 else "is session %d" % host))
-	if idle.update(server.bound_connections(), IdleExitTimer.now_s()):
-		print("server: no connected players for %.2f min, exiting" % (idle.limit_s / 60.0))
+	if idle.update(server.bound_connections(), IdleExitTimer.now()):
+		print("server: no connected players for %.2f min, exiting" % (idle.limit / 60.0))
 		idle = IdleExitTimer.new(0.0)
 		on_idle_exit.call()
 

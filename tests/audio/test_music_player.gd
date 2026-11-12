@@ -17,7 +17,7 @@ func test_the_music_bus_ducks_while_a_voice_plays_and_recovers_after() -> void:
 	var full: float = p.bus_db()
 	assert_float(full).is_equal_approx(MusicPlayer.FULL_DB, 0.001)
 	p.voice_active = true
-	p.advance(MusicPlayer.ATTACK_S)
+	p.advance(MusicPlayer.ATTACK_TIME)
 	assert_float(p.bus_db()).is_equal_approx(full + MusicPlayer.DUCK_DB, 0.001)
 	var index: int = AudioServer.get_bus_index(MusicPlayer.BUS)
 	assert_float(AudioServer.get_bus_volume_db(index)).is_equal_approx(
@@ -25,12 +25,12 @@ func test_the_music_bus_ducks_while_a_voice_plays_and_recovers_after() -> void:
 	)
 	# It stays down through the hold, then rises over the release time.
 	p.voice_active = false
-	p.advance(MusicPlayer.HOLD_S * 0.5)
+	p.advance(MusicPlayer.HOLD_TIME * 0.5)
 	assert_float(p.bus_db()).is_equal_approx(full + MusicPlayer.DUCK_DB, 0.001)
-	p.advance(MusicPlayer.HOLD_S * 0.5)
+	p.advance(MusicPlayer.HOLD_TIME * 0.5)
 	assert_float(p.bus_db()).is_greater(full + MusicPlayer.DUCK_DB)
 	assert_float(p.bus_db()).is_less(full)
-	p.advance(MusicPlayer.RELEASE_S)
+	p.advance(MusicPlayer.RELEASE_TIME)
 	assert_float(p.bus_db()).is_equal_approx(full, 0.001)
 
 
@@ -41,7 +41,7 @@ func test_a_gap_between_two_voice_lines_does_not_let_the_music_back_up() -> void
 	p.voice_active = true
 	p.advance(1.0)
 	p.voice_active = false
-	p.advance(MusicPlayer.HOLD_S * 0.8)
+	p.advance(MusicPlayer.HOLD_TIME * 0.8)
 	p.voice_active = true
 	p.advance(0.1)
 	assert_float(p.duck).is_equal(1.0)

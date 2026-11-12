@@ -2,8 +2,8 @@ class_name LoadProbe
 extends RefCounted
 ## The load gate's server-side probe (#11, FT-GEN-003, FT-NET-040, D161), set by
 ## `--probe-out` (dev and test only). It waits until `expect_picks` sessions hold a pick
-## and every crewable ship has started, lets `warmup_s` pass, then records every main-thread frame
-## that stepped the sim for `window_s` seconds: its wall time split into session.process
+## and every crewable ship has started, lets `warmup` pass, then records every main-thread frame
+## that stepped the sim for `window` seconds: its wall time split into session.process
 ## (inbound messages), the sim step, after_ticks (rejections and event routing) and the
 ## SimCopy capture, and the thread's on-CPU and run-queue time from
 ## /proc/thread-self/schedstat. When the window ends, NetServer quits and write() puts
@@ -26,8 +26,8 @@ const FRAME_FIELDS: Array[String] = [
 
 var out_path: String
 var expect_picks: int = 64
-var warmup_s: float = 3.0
-var window_s: float = 60.0
+var warmup: float = 3.0
+var window: float = 60.0
 var phase: Phase = Phase.WAITING
 var marks: Dictionary = {}
 var frames: PackedInt64Array = PackedInt64Array()
@@ -65,14 +65,14 @@ func update(all_in: bool, launched: int) -> bool:
 				print(
 					(
 						"probe: %d picks and %d ships started; warmup %.0f s"
-						% [expect_picks, launched, warmup_s]
+						% [expect_picks, launched, warmup]
 					)
 				)
 		Phase.WARMUP:
-			if now - int(marks["all_in_unix_us"]) >= int(warmup_s * 1e6):
+			if now - int(marks["all_in_unix_us"]) >= int(warmup * 1e6):
 				marks["window_start_unix_us"] = now
 				marks["launched_at_start"] = launched
-				_window_end_us = now + int(window_s * 1e6)
+				_window_end_us = now + int(window * 1e6)
 				phase = Phase.WINDOW
 				print("probe: window start")
 		Phase.WINDOW:

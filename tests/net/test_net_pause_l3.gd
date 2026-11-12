@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## abandon by vote or by the host, and takeover by the Captain or a Viewer.
 
 const PLAYER: int = NetHarness.PLAYER
-const GRACE_S: float = 0.6
+const GRACE: float = 0.6
 
 var h: NetHarness
 
@@ -55,7 +55,7 @@ func _running_again(server: NetServer) -> bool:
 # step, snapshots keep flowing) and every client is told the ship and the uncovered
 # stations. The grace timer of a second drop runs while paused.
 func test_grace_then_universe_pause() -> void:
-	var server: NetServer = h.server(false, GRACE_S)
+	var server: NetServer = h.server(false, GRACE)
 	var crew: Array[NetClient] = await _running(server, ["viewer"])
 	var tac: NetSession = h.session_of(server, crew[0])
 	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(tac.id)
@@ -67,7 +67,7 @@ func test_grace_then_universe_pause() -> void:
 	assert_int(server.game.claims.holder(PLAYER, "flight")).is_equal(tac.id)
 	assert_bool(server.game.sim_running()).is_true()
 	assert_bool(await h.lapsed(tac)).is_true()
-	assert_int(Time.get_ticks_msec() - t0).is_greater_equal(int(GRACE_S * 1000))
+	assert_int(Time.get_ticks_msec() - t0).is_greater_equal(int(GRACE * 1000))
 	var pause: Dictionary = await h.next_event(crew[3], NetProtocol.EVENT_PAUSE, from)
 	assert_int(pause["payload"]["ship"]).is_equal(PLAYER)
 	assert_array(pause["payload"]["uncovered"]).is_equal(["helm", "weapons"])
@@ -82,7 +82,7 @@ func test_grace_then_universe_pause() -> void:
 	t0 = Time.get_ticks_msec()
 	await h.drop(server, crew[1])
 	assert_bool(await h.lapsed(sys)).is_true()
-	assert_int(Time.get_ticks_msec() - t0).is_greater_equal(int(GRACE_S * 1000))
+	assert_int(Time.get_ticks_msec() - t0).is_greater_equal(int(GRACE * 1000))
 	assert_int(server.world.tick).is_equal(tick)
 	var more: Dictionary = await h.next_event(crew[3], NetProtocol.EVENT_PAUSE, from)
 	assert_array(more["payload"]["uncovered"]).is_equal(
@@ -94,7 +94,7 @@ func test_grace_then_universe_pause() -> void:
 # The dropped player relaunches after its grace: its pick comes back, coverage passes
 # and the universe resumes.
 func test_rejoin_ends_the_pause() -> void:
-	var server: NetServer = h.server(false, GRACE_S)
+	var server: NetServer = h.server(false, GRACE)
 	var crew: Array[NetClient] = await _running(server)
 	var token: String = crew[2].token
 	var pause: Dictionary = await _lose(server, crew[2], crew[0])
@@ -110,7 +110,7 @@ func test_rejoin_ends_the_pause() -> void:
 # FT: FT-NET-036
 # Captain and Viewer drops never pause, even after their grace ends.
 func test_captain_and_viewer_drops_never_pause() -> void:
-	var server: NetServer = h.server(false, GRACE_S)
+	var server: NetServer = h.server(false, GRACE)
 	var crew: Array[NetClient] = await _running(server, ["captain", "viewer"])
 	var cap: NetSession = h.session_of(server, crew[3])
 	var view: NetSession = h.session_of(server, crew[4])
@@ -130,7 +130,7 @@ func test_captain_and_viewer_drops_never_pause() -> void:
 # Viewer may not vote; 2 of 2 abandon the ship, which leaves play, ends the pause and
 # ends the encounter as a loss through the sim's outcome path.
 func test_remaining_crew_abandon_by_vote() -> void:
-	var server: NetServer = h.server(false, GRACE_S)
+	var server: NetServer = h.server(false, GRACE)
 	var crew: Array[NetClient] = await _running(server, ["viewer"])
 	var tac: NetClient = crew[0]
 	var sys: NetClient = crew[1]
@@ -197,7 +197,7 @@ func test_remaining_crew_abandon_by_vote() -> void:
 # in the next), and a voter who drops loses its vote at once (only connected crew vote),
 # while its grace still runs.
 func test_votes_clear_on_resume_and_a_dropped_voter_loses_its_vote() -> void:
-	var server: NetServer = h.server(false, GRACE_S)
+	var server: NetServer = h.server(false, GRACE)
 	var crew: Array[NetClient] = await _running(server, ["viewer"])
 	var tac: NetClient = crew[0]
 	var sys: NetClient = crew[1]
@@ -243,7 +243,7 @@ func test_votes_clear_on_resume_and_a_dropped_voter_loses_its_vote() -> void:
 # The host (the client presenting the host secret, D127) abandons a paused ship alone;
 # another crew player can't.
 func test_host_abandons_alone() -> void:
-	var server: NetServer = h.server(false, GRACE_S, "f00d")
+	var server: NetServer = h.server(false, GRACE, "f00d")
 	var host: NetClient = await h.welcomed(server, "host", "", "f00d")
 	assert_bool(await h.pick(host, "tactical")).is_true()
 	var sys: NetClient = await h.joined(server, "systems", "systems")
@@ -273,7 +273,7 @@ func test_host_abandons_alone() -> void:
 # ends; later the Captain does the same. Outside a pause, or from a crew player, a
 # takeover is refused. (The requirement's other half, players of other ships, is #11.)
 func test_viewer_or_captain_takes_over() -> void:
-	var server: NetServer = h.server(false, GRACE_S)
+	var server: NetServer = h.server(false, GRACE)
 	var crew: Array[NetClient] = await _running(server, ["viewer", "captain"])
 	var viewer: NetClient = crew[3]
 	var cap: NetClient = crew[4]
@@ -307,7 +307,7 @@ func test_viewer_or_captain_takes_over() -> void:
 # Grace expiry frees the pick: a new player (no token) takes the uncovered seat and
 # the universe resumes.
 func test_new_player_takes_a_freed_pick() -> void:
-	var server: NetServer = h.server(false, GRACE_S)
+	var server: NetServer = h.server(false, GRACE)
 	var crew: Array[NetClient] = await _running(server)
 	await _lose(server, crew[1], crew[0])
 	var from: int = h.mark(crew[0])

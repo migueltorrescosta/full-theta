@@ -67,7 +67,7 @@ static func server_args(
 				"--pid-file",
 				pid_file_path,
 				"--grace-s",
-				str(options.grace_s),
+				str(options.grace),
 				"--idle-exit-min",
 				str(options.idle_exit_min),
 				"--host-secret-env",

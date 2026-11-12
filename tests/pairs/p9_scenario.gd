@@ -3,7 +3,7 @@ extends RefCounted
 ## P9 Weapons + Comms pair scenario (spec §7.4, FT-PAIR-015): the M1 corvette at the origin,
 ## a raider 2 km ahead, at rest, with its engines already shot up. Comms has accepted a
 ## contract on the raider, "disable, do not destroy" (DISABLE in KNOW, FT-MIS-042), worth
-## REWARD credits and the contract reputation draw; at DEADLINE_S the contract is settled
+## REWARD credits and the contract reputation draw; at DEADLINE the contract is settled
 ## as won if the raider is alive and surrendering, else as lost (the raider's destruction
 ## already failed it, StoryRules.on_destroyed).
 ## - Comms (both variants): hails the raider and demands its surrender until it yields
@@ -20,12 +20,12 @@ const BLUE: int = 1
 const RED: int = 2
 const RAIDER_AT: Vector3 = Vector3(0.0, 0.0, -2000.0)
 const REWARD: int = 500
-const SHIELD_J: float = 1.0e5
-const HULL_J: float = 6.0e6
+const SHIELD_ENERGY: float = 1.0e5
+const HULL_ENERGY: float = 6.0e6
 const ACCEPT_TICK: int = 2
 const HAIL_TICK: int = 3
 const FIRE_TICK: int = 5
-const DEADLINE_S: float = 30.0
+const DEADLINE: float = 30.0
 ## The raider's engines have this share of their health left.
 const ENGINES_LEFT: float = 0.2
 const TICK_LIMIT: int = 60 * SimWorld.HZ
@@ -47,8 +47,8 @@ static func build() -> SimWorld:
 
 ## A raider with a thin hull and little shield: three or four hits destroy it.
 static func raider_def() -> ShipDef:
-	var def: ShipDef = Gunnery.raider_with_shields(SHIELD_J)
-	def.hull_max = HULL_J
+	var def: ShipDef = Gunnery.raider_with_shields(SHIELD_ENERGY)
+	def.hull_max = HULL_ENERGY
 	return def
 
 
@@ -68,7 +68,7 @@ static func environment(w: SimWorld) -> void:
 		c.reward_credits = REWARD
 		c.rep_interaction = &"rep.complete_mission"
 		PairHarness.send(w, c)
-	elif w.tick == roundi(DEADLINE_S * SimWorld.HZ) and Story.is_live(w, 0):
+	elif w.tick == roundi(DEADLINE * SimWorld.HZ) and Story.is_live(w, 0):
 		var r: CardResultCommand = CardResultCommand.new()
 		r.card = 0
 		r.success = surrendering(w) and w.kin.is_alive(RAIDER)

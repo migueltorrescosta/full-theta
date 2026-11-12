@@ -14,10 +14,10 @@ extends Control
 ## moved in by `build` and back by `release`; the buttons call the panel's commands, so a
 ## tap does what the key, the controller and the desktop button do.
 
-const LEFT_W: float = 168.0
-const RIGHT_W: float = 168.0
+const LEFT_WIDTH: float = 168.0
+const RIGHT_WIDTH: float = 168.0
 ## The left rail on the Card page (design 2.4: 300 px).
-const CARD_W: float = 300.0
+const CARD_WIDTH: float = 300.0
 ## Upright: the least height of the radar or minigame, and the page zone's height (the Card
 ## page's is the whole card's).
 const STAGE_MIN_H: float = 160.0
@@ -175,7 +175,7 @@ func _build_landscape() -> void:
 	add_child(layout)
 	layout.set_content(panel._stage)
 	var left: TouchRail = layout.rail(SIDE_LEFT)
-	left.custom_minimum_size.x = LEFT_W
+	left.custom_minimum_size.x = LEFT_WIDTH
 	var zone: VBoxContainer = PhoneFrame.column()
 	zone.name = "PageZone"
 	zone.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -189,7 +189,7 @@ func _build_landscape() -> void:
 	_scan_left = left.add(axes)
 	left.add(_hack_hint)
 	var right: TouchRail = layout.rail(SIDE_RIGHT)
-	right.custom_minimum_size.x = RIGHT_W
+	right.custom_minimum_size.x = RIGHT_WIDTH
 	var acts: VBoxContainer = PhoneFrame.column()
 	for row: Array in ROWS_SIDE:
 		acts.add_child(PhoneFrame.row(row.map(func(k: String) -> RailButton: return actions[k])))
@@ -246,7 +246,7 @@ func _on_page(index: int) -> void:
 	if layout == null:
 		_zone.custom_minimum_size.y = ScienceCard.content_height(true) if card else ZONE_UP_H
 		return
-	layout.left.custom_minimum_size.x = CARD_W if card else LEFT_W
+	layout.left.custom_minimum_size.x = CARD_WIDTH if card else LEFT_WIDTH
 	layout.queue_sort()
 
 
