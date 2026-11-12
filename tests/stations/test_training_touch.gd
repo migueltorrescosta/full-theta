@@ -39,6 +39,12 @@ const NOT_BUTTONS: Array[String] = [
 	# Shown only while they can work or their own step is on (C3, StationPanel.lesson_wants;
 	# tests/stations/helm/test_helm_tablet.gd checks that the step shows them).
 	"touch.helm.dock",
+	# Requests are picked in the sheet Ask opens (ux-13, PhoneFrame.open_request_sheet).
+	"chip.boost",
+	"chip.power",
+	"chip.sensor_power",
+	"chip.fabricate_probe",
+	"comms.hold_fire",
 	"eng.touch.cause",
 	"eng.touch.claim",
 	"touch.helm.jump",

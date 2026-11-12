@@ -483,7 +483,8 @@ func test_portrait_labels_do_not_collide() -> void:
 				)
 		for r: Rect2 in hud.reserved():
 			var cover: float = label.intersection(r).get_area()
-			assert_float(cover).is_less_equal(HelmHud.SLIGHT * label.get_area())
+			# (+0.01: a label placed at exactly the SLIGHT share reads 1e-5 over in floats)
+			assert_float(cover).is_less_equal(HelmHud.SLIGHT * label.get_area() + 0.01)
 
 
 # FT: FT-HLM-012

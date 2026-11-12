@@ -33,8 +33,6 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 	_sends.name = "Sends"
-	# Side by side under the selection chip (upright), one under the other in the narrow
-	# column beside it (landscape).
 	_sends.add_theme_constant_override("h_separation", UiTheme.TOUCH_GAP)
 	_sends.add_theme_constant_override("v_separation", UiTheme.TOUCH_GAP)
 	_sends.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -55,10 +53,6 @@ func show_sends(sends: Array) -> void:
 			var b: RailButton = RailButton.make(str(texts[i]))
 			b.name = "Send_%d" % i
 			b.add_theme_font_size_override("font_size", FONT)
-			# The whole request reads ("Bring mount 1 to bear"): the column takes its width.
-			b.clip_text = false
-			b.autowrap_mode = TextServer.AUTOWRAP_OFF
-			b.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 			b.pressed.connect(func() -> void: sent.emit(i))
 			_sends.add_child(b)
 	for i: int in sends.size():

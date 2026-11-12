@@ -432,12 +432,12 @@ static func touch_help() -> Array:
 		[Rect2(629, 278, 168, 88), "fire"],
 		[Rect2(240, 150, 360, 150), "view"],
 		[Rect2(55, 234, 168, 124), "radar"],
-		[Rect2(113, 64, 341, 48), "chip"],
-		[Rect2(462, 64, 150, 104), "requests"],
+		[Rect2(165, 64, 283, 48), "chip"],
+		[Rect2(565, 64, 48, 48), "requests"],
 	]
 	var mounts: Array = [
-		[Rect2(231, 184, 286, 56), "row"],
-		[Rect2(525, 184, 88, 56), "row_claim"],
+		[Rect2(231, 128, 286, 56), "row"],
+		[Rect2(525, 128, 88, 56), "row_claim"],
 		[Rect2(629, 278, 168, 88), "fire"],
 	]
 	var crew: Array = [
