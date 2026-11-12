@@ -204,7 +204,6 @@ func _fill_highlights(h: Dictionary) -> void:
 		l.text = line
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_color_override("font_color", Palette.color("accent"))
-		# (a phone's card has the screen's width: a long line ends in "…", as Votes does)
 		# A phone's card has the screen's width, so a long line wraps there; off a phone the
 		# lines set the centred card's width (a wrapping label has no least width).
 		if _phone:
