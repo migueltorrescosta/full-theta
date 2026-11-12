@@ -237,11 +237,18 @@ func test_controls_send_science_commands() -> void:
 	assert_int(_cmds(s, "sensor_sweep").size()).is_equal(2)
 	s.ctx.crew.select("contact", U3)
 	p.refresh()
-	assert_bool((p._buttons["hack"] as Button).disabled).is_true()
+	# No hack access: Hack and its subsystem hide, never greyed (C3).
+	assert_bool((p._buttons["hack"] as Button).visible).is_false()
 	assert_int(_cmds(s, "science_select").size()).is_equal(2)
-	# U3's class is unknown: no subsystem to pick, a plain disabled label.
-	assert_bool(sub.disabled).is_true()
+	# U3's class is unknown: no subsystem to pick either.
+	assert_bool(sub.visible).is_false()
 	assert_str(sub.text).is_equal(tr("sci.hack_sub_none"))
+	# The Shakedown's hack step names Hack: it shows then.
+	s.ctx.training["science"] = {"line": "", "intent": "sci_hack", "text": "", "done": false}
+	p.refresh()
+	assert_bool((p._buttons["hack"] as Button).visible).is_true()
+	assert_bool(sub.visible).is_false()
+	s.ctx.training.erase("science")
 
 
 # FT: FT-SCI-004, FT-SCI-013, FT-SCI-014

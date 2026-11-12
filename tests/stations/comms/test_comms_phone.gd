@@ -122,6 +122,9 @@ func _walk_table(size: Vector2i, insets: Array) -> void:
 	var p: CommsPanel = s.focused_panel()
 	var log: StationFixture.RecordingClient = StationFixture.sent(s.ctx)
 	var what: String = "%s" % size
+	# Two players at Comms, so Claim shows (C3, D412).
+	s.ctx.crew.lobby[StationFixture.SHIP]["seats"] = _two_at_comms()
+	await _frames(2)
 	# The rail: 1 tap each from rest, the mission card and H2 (a contact) selected.
 	var rail: Array = [
 		["Comms_hail", "command", "comms_hail"],
@@ -213,13 +216,17 @@ func test_every_page_keeps_the_touch_rules() -> void:
 	for c: Array in [[SIDEWAYS, LANDSCAPE], [UPRIGHT, PORTRAIT]]:
 		var s: StationScreen = await _screen(c[0], c[1])
 		var p: CommsPanel = s.focused_panel()
+		s.ctx.crew.lobby[StationFixture.SHIP]["seats"] = _two_at_comms()
 		assert_int(p.pages.count()).is_equal(5)
 		for i: int in p.pages.count():
 			p.pages.current = i
 			await _frames(3)
 			var what: String = "%s page %d" % [c[0], i]
 			_assert_clean(s, what)
+			# (a button hidden while it can't act, C3, stays hidden; the others always show)
 			for b: Button in p._buttons.values():
+				if b == p._buttons["claim"] and p.claim_item() == "":
+					continue
 				assert_bool(b.is_visible_in_tree()).override_failure_message(what).is_true()
 				assert_float(b.size.y).is_greater_equal(UiTheme.TOUCH_PRIMARY)
 		_drop(s)
@@ -253,10 +260,14 @@ func test_overlay_keeps_the_touch_rules() -> void:
 			assert_int(_commands(s, "comms_hail").size()).is_equal(1)
 			assert_int(o.card_id).is_equal(CommsFixture.OFFER)
 		if o.next_button.is_visible_in_tree():
-			assert_bool(o.prev_button.disabled).is_true()
+			# No dead arrow: ‹ shows only with a page above, › only with one below (C3).
+			assert_bool(o.prev_button.visible).is_false()
+			var at: Vector2 = o.next_button.position
 			o.next_button.pressed.emit()
 			await _frames(2)
-			assert_bool(o.prev_button.disabled).is_false()
+			assert_bool(o.prev_button.is_visible_in_tree()).is_true()
+			assert_bool(o.next_button.visible).is_equal(o.more_below())
+			assert_vector(o.next_button.position).is_equal(at)
 			_assert_clean(p, "%s trade, next page" % c[0])
 		p.open_card(CommsFixture.HAIL)
 		await _frames(3)
@@ -357,6 +368,9 @@ func test_touch_help_matches_the_pages() -> void:
 		assert_array(help[i]["boxes"]).is_not_empty()
 	var s: StationScreen = await _screen(SIDEWAYS, LANDSCAPE)
 	var p: CommsPanel = s.focused_panel()
+	# (two players at Comms: the help shows the whole rail, Claim included)
+	s.ctx.crew.lobby[StationFixture.SHIP]["seats"] = _two_at_comms()
+	await _frames(3)
 	var ids: Array[String] = ["hail", "accept", "decline", "claim", "hold_fire"]
 	for i: int in ids.size():
 		var box: Rect2 = help[0]["boxes"][i][0]
@@ -371,3 +385,32 @@ func test_touch_help_matches_the_pages() -> void:
 		for b: Array in e["boxes"]:
 			assert_bool((b[0] as Rect2).intersects(Rect2(47, 64, 136, 300))).is_false()
 	_drop(s)
+
+
+func _two_at_comms() -> Array:
+	return [{"name": "Ana", "seat": "comms"}, {"name": "Bo", "seat": "comms"}]
+
+
+# FT: FT-STN-005
+# C3, D412: Claim shows only with a second player at Comms and a live conversation card (or
+# while the Shakedown's claim step names it), on a phone either way up: never greyed.
+func test_claim_shows_only_when_it_can_act() -> void:
+	for c: Array in [[SIDEWAYS, LANDSCAPE], [UPRIGHT, PORTRAIT]]:
+		var s: StationScreen = await _screen(c[0], c[1])
+		var p: CommsPanel = s.focused_panel()
+		var claim: Button = p._buttons["claim"]
+		p.refresh(true)
+		assert_bool(claim.visible).override_failure_message("%s alone" % c[0]).is_false()
+		s.ctx.crew.lobby[StationFixture.SHIP]["seats"] = _two_at_comms()
+		await _frames(2)
+		assert_bool(claim.visible).override_failure_message("%s two" % c[0]).is_equal(
+			p.claim_item() != ""
+		)
+		s.ctx.crew.lobby[StationFixture.SHIP].erase("seats")
+		s.ctx.training["comms"] = {"line": "", "intent": "claim", "text": "", "done": false}
+		await _frames(2)
+		assert_bool(claim.visible).override_failure_message("%s lesson" % c[0]).is_true()
+		s.ctx.training.erase("comms")
+		await _frames(2)
+		assert_bool(claim.visible).is_false()
+		_drop(s)

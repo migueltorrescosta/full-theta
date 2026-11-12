@@ -313,21 +313,23 @@ func update() -> void:
 		mail.size_flags_stretch_ratio = 1.0 - probes.size_flags_stretch_ratio
 		if probes.get_parent() == self:
 			_place_view()
-	buttons["launch"].disabled = hud.launch.disabled
+	# Launch, Accept, Decline and Send show as the HUD's do (C3: hidden while they can't
+	# act, the probe and inbox lines saying why); a row left empty upright goes too.
+	buttons["launch"].visible = hud.launch.visible
 	buttons["lanes"].text = hud.lanes.text
 	var holder: String = crew_state.claimer(StationCatalogue.CLAIM_PROBE)
 	if holder != "" and holder != panel.ctx.settings.player_name:
 		buttons["launch"].text = tr("relay.launch") + " · " + holder
 	else:
 		buttons["launch"].text = tr("relay.launch")
-	var mail_none: bool = crew_state.inbox.is_empty()
-	buttons["accept"].disabled = mail_none
-	buttons["decline"].disabled = mail_none
+	buttons["accept"].visible = hud.accept.visible
+	buttons["decline"].visible = hud.decline.visible
 	var mark: bool = panel._selected_mark() >= 0
 	var zone: bool = crew_state.selection.get("kind", "") == "zone"
 	var none: bool = crew_state.selection.is_empty()
 	for k: String in ["send", "send_mark"]:
-		buttons[k].disabled = not mark or hud.allies().is_empty()
+		buttons[k].visible = hud.can_send() or panel.lesson_wants("mark_send")
+	PhoneFrame.hide_empty_rows(buttons.values())
 	for k: String in ["rename", "attach"]:
 		buttons[k].disabled = not mark
 	buttons["delete"].disabled = not (mark or zone)

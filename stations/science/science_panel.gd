@@ -451,11 +451,19 @@ func _refresh_buttons(b: Dictionary, minigame: int) -> void:
 	(_buttons["mode"] as Button).text = tr(
 		"sci.mode_active" if b.get("active", false) else "sci.mode_passive"
 	)
-	(_buttons["scan"] as Button).disabled = open or selected_contact() < 0
-	(_buttons["hack"] as Button).disabled = open or not _can_hack()
+	# While a scan or hack runs the actions that start one hide (its own Cancel and Submit
+	# show instead), as the phone hides its whole action box.
+	(_buttons["scan"] as Button).visible = not open
+	(_buttons["scan"] as Button).disabled = selected_contact() < 0
+	# Hack and its subsystem show only while a hack can start (C3: no dead button), or while
+	# the Shakedown's hack step names Hack; the card's Hack line says whether it is ready.
+	var hack: bool = (not open and _can_hack()) or lesson_wants("sci_hack")
+	(_buttons["hack"] as Button).visible = hack
 	(_buttons["sub"] as Button).text = _sub_text()
-	(_buttons["sub"] as Button).disabled = open or subsystems().is_empty()
-	(_buttons["self"] as Button).disabled = open
+	(_buttons["sub"] as Button).visible = hack and not subsystems().is_empty()
+	(_buttons["self"] as Button).visible = not open
+	# Take the scan matters only with a second player at Science (C3, D412).
+	(_buttons["claim"] as Button).visible = players_here() >= 2 or lesson_wants("claim")
 	(_buttons["claim"] as Button).text = (
 		tr("sci.release")
 		if mine
@@ -469,8 +477,8 @@ func _can_hack() -> bool:
 	return selected_contact() >= 0 and ScienceCard.is_revealed(card_of(selected_contact()), &"hack")
 
 
-## The subsystem button beside Hack: the target's name ("Engines"), or "No subsystem"
-## (disabled) with none to pick.
+## The subsystem button beside Hack: the target's name ("Engines"); "No subsystem" with none
+## to pick (the button hides then).
 func _sub_text() -> String:
 	var subs: Array[StringName] = subsystems()
 	if subs.is_empty():

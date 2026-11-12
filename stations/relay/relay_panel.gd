@@ -82,6 +82,7 @@ func _setup() -> void:
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_hint)
 	hud = RelayHud.new()
+	hud.wants = lesson_wants
 	add_child(hud)
 	hud.setup(ctx)
 	resized.connect(

@@ -204,6 +204,16 @@ func lesson_wants(intent: String) -> bool:
 	return ctx != null and str(ctx.training.get(station, {}).get("intent", "")) == intent
 
 
+## The players seated at this station on this ship (a joint seat holding it counts), from
+## the lobby's seats: a claim matters only with two or more (C3, D412).
+func players_here() -> int:
+	var n: int = 0
+	for seat: Variant in ctx.crew.ship_state(ctx.crew.ship).get("seats", []):
+		if station in StationCatalogue.stations_of(str((seat as Dictionary).get("seat", ""))):
+			n += 1
+	return n
+
+
 ## True when the docked panel shows something of its own: a visible control that is no bare
 ## container. A docked panel with nothing to show (Science in a joint view: the screen's radar
 ## is its radar) keeps no least height in the side column, so the column doesn't scroll to a
