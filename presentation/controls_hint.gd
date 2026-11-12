@@ -23,19 +23,18 @@ const RANK: StringName = &"stack_rank"
 
 ## Seconds left on screen.
 var left_s: float = RADAR_S
-## The strings key of the hint's words.
-var text_key: String = ""
 
 
 ## Adds the radar legend (R26-6, C11) the first time `parent` shows on this client; null when
 ## it was seen already, the parent is not on screen or a first-seat card is open. Each frame
 ## is fine: a lookup once seen.
 static func show_radar_legend(parent: Control, settings: ClientSettings) -> ControlsHint:
-	if not parent.is_visible_in_tree() or _card_open(parent):
+	if not parent.is_visible_in_tree() or _card_open(parent) or settings.hint_seen(RADAR_KEY):
 		return null
-	var hint: ControlsHint = _first(parent, settings, RADAR_KEY, 3, RADAR_S, "radar.legend")
-	if hint != null:
-		hint.custom_minimum_size.y = UiTheme.TOUCH_MIN * 1.5
+	settings.mark_hint_seen(RADAR_KEY)
+	settings.save()
+	var hint: ControlsHint = ControlsHint.new()
+	parent.add_child(hint)
 	return hint
 
 
@@ -48,34 +47,14 @@ static func _card_open(node: Node) -> bool:
 	return false
 
 
-## The hint of hint `key` at stack `rank`, `seconds` on screen with the words of `words`,
-## added to `parent` and recorded as seen; null when it was seen.
-static func _first(
-	parent: Control, settings: ClientSettings, key: String, rank: int, seconds: float, words: String
-) -> ControlsHint:
-	if settings.hint_seen(key):
-		return null
-	settings.mark_hint_seen(key)
-	settings.save()
-	var hint: ControlsHint = ControlsHint.new()
-	join_stack(hint, rank)
-	hint.left_s = seconds
-	hint.text_key = words
-	hint.name = "RadarLegend"
-	hint.theme_type_variation = "RailButton"
-	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	hint.custom_minimum_size.x = WIDE
-	hint.text = hint._label()
-	parent.add_child(hint)
-	return hint
-
-
 func _init() -> void:
-	name = "ControlsHint"
+	name = "RadarLegend"
 	join_stack(self, 3)
 	focus_mode = Control.FOCUS_NONE
-	custom_minimum_size = Vector2(0.0, UiTheme.TOUCH_MIN)
-	theme_type_variation = "RailAccentButton"
+	custom_minimum_size = Vector2(WIDE, UiTheme.TOUCH_MIN * 1.5)
+	theme_type_variation = "RailButton"
+	autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text = tr("radar.legend")
 	set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	pressed.connect(queue_free)
@@ -99,17 +78,12 @@ func _process(delta: float) -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED:
-		text = _label()
+		text = tr("radar.legend")
 
 
 ## Under the top bar, under the shown members of the stack of a lower rank (STACK).
 func _place() -> void:
 	place_in_stack(self, TOP + SafeArea.margins(self).y)
-
-
-## The hint's words.
-func _label() -> String:
-	return tr(text_key)
 
 
 ## Puts `c` in the first-visit stack at `rank` (the banner 0, then the hints top down).
