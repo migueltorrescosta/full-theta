@@ -273,13 +273,15 @@ func _place_ring(compact: bool) -> void:
 		var x: float = size.x - ring.size.x - 12.0
 		# Where it would meet the target compass (a narrow view, 150 %: w-dcc) the ring takes
 		# its small size, centred, then moves up as little as it must; never over the inset.
-		if _meets_compass(Rect2(x, y, ring.size.x, ring.size.y)):
+		# (docked, the HUD draws its compact compass and read-out instead: nothing to clear)
+		var open_view: bool = focused
+		if open_view and _meets_compass(Rect2(x, y, ring.size.x, ring.size.y)):
 			ring.size = Vector2(190.0, 110.0 + 2.0 * ShieldRing.FONT_SIZE)
 			x = size.x - ring.size.x - 12.0
 			y = (size.y - ring.size.y) / 2.0
 			if inset.has_area():
 				y = maxf(y, inset.end.y + UiTheme.TOUCH_GAP)
-		for box: Rect2 in hud.compass_boxes():
+		for box: Rect2 in hud.compass_boxes() if open_view else []:
 			if Rect2(x, y, ring.size.x, ring.size.y).intersects(box.grow(UiTheme.TOUCH_GAP)):
 				y = box.position.y - UiTheme.TOUCH_GAP - ring.size.y
 		if inset.has_area():
