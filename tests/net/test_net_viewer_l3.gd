@@ -48,7 +48,7 @@ func test_viewers_receive_only_main_screen_state_and_change_nothing() -> void:
 		assert_dict(v.snap.ownership).is_empty()
 		assert_array(v.snap.blocks.keys()).is_equal([S.STATUS, S.CAPTAIN])
 		assert_float(v.snap.blocks[S.STATUS]["hull"]).is_greater(0.0)
-	# Read-only: commands, alert, marks and pings are refused.
+	# Read-only but for contact pings (gp-15): commands, alert, marks and other pings are refused.
 	var viewer: NetClient = viewers[0]
 	var from: int = h.mark(viewer)
 	viewer.command({"kind": &"helm_decoupled", "decoupled": false})
@@ -57,12 +57,15 @@ func test_viewers_receive_only_main_screen_state_and_change_nothing() -> void:
 	for send: Callable in [
 		func() -> void: viewer.set_alert(2),
 		func() -> void: viewer.place_mark(-1, "", -1, Vector3.ZERO),
-		func() -> void: viewer.ping("point", -1, Vector3.ZERO),
 	]:
 		from = h.mark(viewer)
 		send.call()
 		var e: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_REQUEST_REJECTED, from)
 		assert_str(e.get("payload", {}).get("reason", "")).is_equal(NetGame.NOT_CREW)
+	from = h.mark(viewer)
+	viewer.ping("point", -1, Vector3.ZERO)
+	var bad: Dictionary = await h.next_event(viewer, NetProtocol.EVENT_REQUEST_REJECTED, from)
+	assert_str(bad.get("payload", {}).get("reason", "")).is_equal(CrewPings.BAD_PING)
 
 
 ## Section kinds of a snapshot message.

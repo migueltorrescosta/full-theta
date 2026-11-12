@@ -520,7 +520,7 @@ func _on_toast(key: String, args: Dictionary) -> void:
 	var text: String = tr(key)
 	if text == key:
 		text = tr("toast.rejected") % key.trim_prefix("toast.")
-	var kind: String = "warn" if key != "toast.rate_limited" else "info"
+	var kind: String = "info" if key in ["toast.rate_limited", "toast.priority"] else "warn"
 	toasts.push(text.format(args), kind, ctx.now_ms())
 
 

@@ -132,6 +132,9 @@ class RecordingClient:
 	func set_main_view(view: int) -> void:
 		sent.append(["set_main_view", [view]])
 
+	func set_priority(contact: int) -> void:
+		sent.append(["set_priority", [contact]])
+
 	func set_toggles(code: String) -> void:
 		sent.append(["set_toggles", [code]])
 

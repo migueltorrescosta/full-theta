@@ -73,7 +73,7 @@ func test_one_page_menu_only_both_ways_up() -> void:
 
 
 # FT: FT-MSC-004
-# A long press on the Viewer's view sends nothing (the server would refuse a viewer's ping).
+# A long press on the Viewer's view sends nothing: its one action is a tap on a contact.
 func test_long_press_sends_nothing() -> void:
 	var s: StationScreen = await _screen(Vector2i(844, 390), LANDSCAPE)
 	var t: InputEventScreenTouch = InputEventScreenTouch.new()

@@ -13,6 +13,8 @@ const PING_GAP: float = 4.0
 const PING_SPAN: float = 22.0
 ## "+ Bo, Cy" sits this far below the ping and 8 px left of it (px).
 const COPIES_DY: float = 26.0
+## The priority ring sits this far outside the blip or bracket (px).
+const PRIORITY_GAP: float = 5.0
 
 
 ## {"kind", "id"} of an item: what the selection and `item_at` compare.
@@ -102,3 +104,15 @@ static func draw_pulse(
 		col.a = pulse
 		var text: String = "+ " + ", ".join(PackedStringArray(copies))
 		Palette.draw_outlined(canvas, font, pos + Vector2(-8.0, COPIES_DY), text, font_size, col)
+
+
+## The Captain's priority target (gp-15): a steady ring in the Captain's colour round the
+## blip or bracket of radius `r` at `pos`, with four short ticks outward, so it reads apart
+## from a ping's fading ring.
+static func draw_priority(canvas: CanvasItem, pos: Vector2, r: float) -> void:
+	var col: Color = Palette.color("st_captain")
+	var ring: float = r + PRIORITY_GAP
+	canvas.draw_arc(pos, ring, 0.0, TAU, 32, col, 2.0, true)
+	for i: int in 4:
+		var d: Vector2 = Vector2.from_angle(TAU * (float(i) + 0.5) / 4.0)
+		canvas.draw_line(pos + d * ring, pos + d * (ring + PRIORITY_GAP), col, 2.0, true)

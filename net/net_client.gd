@@ -311,6 +311,11 @@ func set_main_view(view: int) -> void:
 	_send(NetProtocol.Type.MAIN_VIEW, {"view": view})
 
 
+## The Captain sets the ship's priority target, -1 clears it (gp-15).
+func set_priority(contact: int) -> void:
+	_send(NetProtocol.Type.PRIORITY_TARGET, {"contact": contact})
+
+
 ## Relay. Sends one of the ship's marks to an allied ship's Relay inbox
 ## (FT-RLY-008); accepts the inbox item `id` as a mark, replacing `slot` when all 8 are in
 ## use (slot -1 takes a free one), or declines it (FT-RLY-009, FT-SPA-022).

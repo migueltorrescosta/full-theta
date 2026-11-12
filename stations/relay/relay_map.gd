@@ -12,8 +12,10 @@ extends Control
 ##
 ## Probes (a ring and dot with the coverage bubble as a circle of its radius), hazard zones
 ## (the same, amber), routes (dashed lines with an arrow), flagged lanes that cross a
-## friendly (red lines, FT-RLY-011) and the site's name as a banner (FT-SPA-027) are drawn
-## here from what the panel hands in.
+## friendly (red lines, FT-RLY-011), the site's name as a banner (FT-SPA-027) and the site
+## of an encounter waiting for the ship as a dashed "?" (gp-16, amends D250: shown
+## RelayMapDef.site_marker_delay after it opened, until it starts) are drawn here from what
+## the panel hands in.
 ##
 ## The panel (RelayPanel) owns input; this control only draws and maps between screen
 ## points and ship-frame offsets: project() and unproject() at a depth along the view
@@ -35,6 +37,9 @@ const LANE_R: float = 200.0
 ## A plane hazard front's bar is this long each way, its arrow this long (px).
 const FRONT_HALF_PX: float = 60.0
 const FRONT_ARROW_PX: float = 24.0
+## The pending site's dashed ring: radius and dash count.
+const PENDING_R: float = 14.0
+const PENDING_DASHES: int = 12
 
 ## The items (ContactPicture); its interpolator gives the own ship's orientation and
 ## position, to place the cube and turn map points into positions, and
@@ -206,6 +211,7 @@ func _draw() -> void:
 	var layout: Array[Dictionary] = _layout()
 	_draw_routes()
 	_draw_bubbles(layout)
+	_draw_pending_sites(font)
 	if lanes_on:
 		_draw_lanes(layout, font)
 	var sel: Dictionary = {}
@@ -284,6 +290,21 @@ func _draw_probes(font: Font) -> void:
 		draw_arc(p, blip_r(), 0.0, TAU, 20, col, 2.0, true)
 		draw_circle(p, 2.0, col if pr["deployed"] else Palette.color("background"))
 		_draw_text(font, p + Vector2(10.0, -8.0), "P%d" % (int(pr["serial"]) + 1), col)
+
+
+## The sites the SITES section marks pending (gp-16): a dashed ring with "?" in it.
+func _draw_pending_sites(font: Font) -> void:
+	var col: Color = Palette.color("accent")
+	for it: Dictionary in picture.sites:
+		if not it.get("pending", false):
+			continue
+		var p: Vector2 = project(picture.rel(it["world"], centre))
+		var step: float = TAU / PENDING_DASHES
+		for i: int in PENDING_DASHES:
+			draw_arc(p, PENDING_R, i * step, (i + 0.5) * step, 4, col, 2.0, true)
+		var w: float = font.get_string_size("?", HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE + 4).x
+		var base: Vector2 = p + Vector2(-w / 2.0, font.get_ascent(FONT_SIZE + 4) / 2.0 - 1.0)
+		Palette.draw_outlined(self, font, base, "?", FONT_SIZE + 4, col)
 
 
 ## Routes: dashed lines from the ship through each waypoint, an arrowhead at the end.

@@ -129,11 +129,11 @@ func test_pings_reach_every_pick_of_the_ship_only() -> void:
 	crew[1].ping("point", -1, Vector3(250_000.0, 0.0, 0.0))
 	ping = await h.next_event(viewer, NetProtocol.EVENT_PING, from)
 	assert_float(ping.get("payload", {}).get("x", 0.0)).is_equal(-150_000.0)
-	# Viewers don't ping.
+	# A viewer pings contacts only (gp-15).
 	from = h.mark(viewer)
-	viewer.ping("contact", ENEMY, Vector3.ZERO)
+	viewer.ping("point", -1, Vector3.ZERO)
 	var why: Dictionary = await _rejected(viewer, NetProtocol.Type.PING, from)
-	assert_str(why.get("reason", "")).is_equal(NetGame.NOT_CREW)
+	assert_str(why.get("reason", "")).is_equal(CrewPings.BAD_PING)
 	# Rate limit: burst 3, then refused.
 	from = h.mark(crew[2])
 	for i: int in 5:
@@ -143,6 +143,39 @@ func test_pings_reach_every_pick_of_the_ship_only() -> void:
 	await h.wait(200)
 	# The other ship heard none of it.
 	assert_array(h.events_of(other, NetProtocol.EVENT_PING)).is_empty()
+
+
+# FT: FT-MSC-004, FT-SPA-017
+# A viewer pings a contact for the whole ship, named as a viewer (gp-15), on its own slower
+# limit: burst 2, then refused while the crew still pings; marks, sites and points refused.
+func test_a_viewer_pings_contacts_on_its_own_limit() -> void:
+	var server: NetServer = h.server()
+	_detect(server)
+	var helm: NetClient = await h.joined(server, "helm", "helm")
+	var viewer: NetClient = await h.joined(server, "viewer", StationCatalogue.VIEWER)
+	var from: int = h.mark(helm)
+	viewer.ping("contact", ENEMY, Vector3.ZERO)
+	var ping: Dictionary = (await h.next_event(helm, NetProtocol.EVENT_PING, from)).get(
+		"payload", {}
+	)
+	assert_dict(ping).contains_key_value("by", "viewer")
+	assert_dict(ping).contains_key_value("viewer", true)
+	assert_dict(ping).contains_key_value("id", ENEMY)
+	for kind: String in ["site", "mark"]:
+		from = h.mark(viewer)
+		viewer.ping(kind, 0, Vector3.ZERO)
+		var r: Dictionary = await _rejected(viewer, NetProtocol.Type.PING, from)
+		assert_str(r.get("reason", "")).is_equal(CrewPings.BAD_PING)
+	# The second contact ping takes the burst's last token; the third is refused.
+	from = h.mark(viewer)
+	viewer.ping("contact", ENEMY, Vector3.ZERO)
+	viewer.ping("contact", ENEMY, Vector3.ZERO)
+	var why: Dictionary = await _rejected(viewer, NetProtocol.Type.PING, from)
+	assert_str(why.get("reason", "")).is_equal(CommandGate.RATE_LIMITED)
+	assert_int(h.events_of(helm, NetProtocol.EVENT_PING).size()).is_equal(2)
+	from = h.mark(helm)
+	helm.ping("contact", ENEMY, Vector3.ZERO)
+	assert_dict(await h.next_event(helm, NetProtocol.EVENT_PING, from)).is_not_empty()
 
 
 # FT: FT-STN-008, FT-SPA-012

@@ -100,8 +100,15 @@ func select(device: String) -> bool:
 	var item: Dictionary = item_under_cursor(device)
 	if item.is_empty() or item["kind"] == "point" or item["kind"] == "card":
 		return false
-	s.ctx.crew.select(item["kind"], item["id"])
+	select_item(item)
 	return true
+
+
+## Selects `item`; a Viewer's one job (gp-15): its click on a contact also pings it.
+func select_item(item: Dictionary) -> void:
+	s.ctx.crew.select(item["kind"], item["id"])
+	if s.ctx.crew.seat == StationCatalogue.VIEWER:
+		s.ctx.ping_item(item)
 
 
 func _live(id: String) -> bool:

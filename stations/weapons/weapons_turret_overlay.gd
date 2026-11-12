@@ -357,6 +357,8 @@ func _draw_item(font: Font, t: Dictionary) -> void:
 	else:
 		TargetBracket.draw(self, p, BRACKET, 5.0, col, 2.0 if sel else 1.5)
 	_text(font, (t["callout_at"] as Vector2) + Vector2(0.0, FONT_SIZE), t["callout"], col)
+	if it.get("priority", false):
+		ItemGlyph.draw_priority(self, p, BRACKET)
 	var pulse: float = float(it.get("pulse", 0.0))
 	if pulse > 0.0:
 		ItemGlyph.ping_ring(

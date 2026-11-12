@@ -10,7 +10,7 @@ extends RefCounted
 ## What changed: &"picked", &"catalogue", &"lobby", &"started", &"claims", &"pause",
 ## &"votes", &"abandoned", &"alert", &"marks", &"pings", &"selection", &"reset",
 ## &"ship_outcome" (the outcome card and its "Run again" votes, D178), and from Relay's events
-## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view";
+## &"zones", &"routes", &"inbox", &"relay_log"; &"main_view"; &"priority";
 ## &"toggles" when the session's data-shortcut set changed, &"shares" when a
 ## shortcut was shared or ran out, &"lanes" when the approach lanes changed (F); and from
 ## the multi-ship events (#11) &"fleet", &"scoreboard", &"eliminated", &"relaunch" (votes
@@ -78,6 +78,8 @@ var pings: Array[Dictionary] = []
 ## The main screen's view (MainScreen.View), set by the Captain or by Relay.
 var main_view: int = MainScreen.View.FORWARD
 var main_view_by: String = ""
+## The Captain's priority target (gp-15): a contact id, -1 for none.
+var priority: int = -1
 ## The Comms card the latest ping named: {"id", "by", "at_ms", "card" (the ping's copy of
 ## its kind, title, detail and expires, for the main screen)}, or {} when a later ping
 ## named something else. Not in `pings`: it pulses nothing on the radar.
@@ -484,6 +486,8 @@ func handle_event(e: Dictionary, now_ms: int) -> bool:
 			_on_alert(p)
 		NetProtocol.EVENT_MAIN_VIEW:
 			_on_main_view(p)
+		NetProtocol.EVENT_PRIORITY:
+			_on_priority(p)
 		NetProtocol.EVENT_MARKS:
 			_on_marks(p)
 		NetProtocol.EVENT_PING:
@@ -633,6 +637,7 @@ func reset_run() -> void:
 	card_ping = {}
 	main_view = MainScreen.View.FORWARD
 	main_view_by = ""
+	priority = -1
 	alert = ALERT_NORMAL
 	alert_by = ""
 	started.erase(ship)
@@ -815,6 +820,21 @@ func _on_main_view(p: Dictionary) -> void:
 	changed.emit(&"main_view")
 
 
+## A new priority target shows as a toast on Helm and Weapons, where its ring is drawn;
+## a clear (-1) or an unchanged one says nothing.
+func _on_priority(p: Dictionary) -> void:
+	if not _mine(p):
+		return
+	var contact: int = int(p.get("contact", -1))
+	if contact == priority:
+		return
+	priority = contact
+	changed.emit(&"priority")
+	if contact >= 0 and str(p.get("by", "")) != "":
+		if stations().has("helm") or stations().has("weapons"):
+			toast.emit("toast.priority", {"callsign": str(p.get("callsign", ""))})
+
+
 ## Whether this ship has a Captain pick (connected or in grace), from the lobby event.
 func captain_seated(id: int = ship) -> bool:
 	if lobby.has(id):
@@ -876,6 +896,10 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	var id: int = int(p.get("id", -1))
 	# `copy` is the first pinger's name, "" for an original (docs/protocol.md).
 	var copy: bool = str(p.get("copy", "")) != ""
+	# A Viewer's ping names its pinger as one (gp-15): "Viewer Ana".
+	var by: String = str(p.get("by", ""))
+	if bool(p.get("viewer", false)):
+		by = TranslationServer.translate("ping.by_viewer").format({"name": by})
 	if kind == "card":
 		card_ping = {
 			"id": int(p.get("id", -1)),
@@ -893,14 +917,14 @@ func _on_ping(p: Dictionary, now_ms: int) -> void:
 	if copy:
 		for old: Dictionary in pings:
 			if old["kind"] == kind and old["id"] == id:
-				(old["copies"] as Array).append(str(p.get("by", "")))
+				(old["copies"] as Array).append(by)
 				changed.emit(&"pings")
 				return
 	var ping: Dictionary = {
 		"kind": kind,
 		"id": id,
 		"pos": Vector3(float(p.get("x", 0)), float(p.get("y", 0)), float(p.get("z", 0))),
-		"by": str(p.get("by", "")),
+		"by": by,
 		"at_ms": now_ms,
 		"copies": [],
 	}
