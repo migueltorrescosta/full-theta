@@ -72,8 +72,7 @@ static func _count_down(world: SimWorld, ship: int) -> void:
 
 static func _leave(world: SimWorld, ship: int) -> void:
 	world.help.patrol_for[ship] = -1
-	world.ships.status[ship] = ShipStateTable.Status.RETREATED
-	world.kin.alive[ship] = 0
+	OutcomeSystem.leave_world(world, ship)
 	world.emit(&"patrol_left", ship)
 
 

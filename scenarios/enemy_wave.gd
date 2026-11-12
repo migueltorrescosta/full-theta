@@ -27,6 +27,8 @@ var _ships: PackedInt32Array = PackedInt32Array()
 var _faction: int = -1
 var _raiders: Array[ApiHandle] = []
 var _count: int = COUNT
+## The time limit (s); a subclass (Finale) sets its own.
+var _limit: float = MAX_S
 var _hail_offered: bool = false
 var _hail: ApiHandle
 var _started: int = 0
@@ -77,7 +79,7 @@ func step(api: ScenarioApi) -> void:
 				_say(api, "npc.surrender_refused", {})
 	if _surrendered or (_raiders.size() == _count and api.all_gone(_raiders)):
 		_result = Result.WON
-	elif elapsed_s >= MAX_S:
+	elif elapsed_s >= _limit:
 		# The raiders are left as they are: hostile, in the run, still after the ship.
 		_result = Result.PARTIAL
 

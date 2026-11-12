@@ -111,3 +111,29 @@ func test_a_missing_player_keeps_the_gap_and_viewers_are_refused() -> void:
 		func(ev: Dictionary) -> bool: return ev["payload"]["ends_at"] == 0
 	)
 	assert_bool(over.is_empty()).is_false()
+
+
+# FT: FT-MIS-025
+# A run reset (NetGame.restart) forgets the old world's gap: a gap ending on the same tick in
+# the new world is skipped again once the crew are Ready (nothing left over from before).
+func test_a_restart_forgets_the_old_gap() -> void:
+	var server: NetServer = h.server()
+	var all: Array[NetClient] = await _in_gap(server)
+	var ends_at: int = 0
+	await h.until(
+		func() -> bool: return server.world.story_flags.get_flag(Director.gap_flag(FACTION)) > 0
+	)
+	ends_at = server.world.story_flags.get_flag(Director.gap_flag(FACTION))
+	for i: int in 3:
+		all[i].skip_gap(true)
+	assert_bool(await h.until(func() -> bool: return _skip(server) > 0)).is_true()
+	server.restart_run()
+	assert_bool(await h.start(server, all[0])).is_true()
+	var gap: SetFlagCommand = SetFlagCommand.new()
+	gap.flag_name = Director.gap_flag(FACTION)
+	gap.value = ends_at
+	server.world.submit(gap)
+	await h.until(func() -> bool: return server.world.story_flags.get_flag(gap.flag_name) > 0)
+	for i: int in 3:
+		all[i].skip_gap(true)
+	assert_bool(await h.until(func() -> bool: return _skip(server) > 0)).is_true()

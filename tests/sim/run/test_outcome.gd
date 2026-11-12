@@ -92,9 +92,14 @@ func test_win_when_enemy_retreats() -> void:
 	assert_int(world.ships.status[ENEMY]).is_equal(ShipStateTable.Status.RETREATED)
 	assert_int(world.ai.mode[ENEMY]).is_equal(AiTable.Mode.RETREAT)
 	assert_float(world.kin.relative(PLAYER, ENEMY).length()).is_between(6000.0, 6100.0)
-	# The corvette still detects it: its sensors are not the rule any more.
-	assert_bool(KnowledgeSystem.is_detected(world, M1Encounter.PLAYER_FACTION, ENEMY)).is_true()
-	assert_array(SimFixture.of_kind(SimFixture.run(world, 5 * HZ), &"retreated")).is_empty()
+	# Gone means out of the world (Bug C): no longer alive, so no AI steers it, the corvette
+	# loses it, and nothing more happens to it.
+	assert_int(world.kin.alive[ENEMY]).is_equal(0)
+	var later: Array[SimEvent] = SimFixture.run(world, 5 * HZ)
+	assert_array(SimFixture.of_kind(later, &"retreated")).is_empty()
+	assert_array(SimFixture.of_kind(later, &"destroyed")).is_empty()
+	assert_bool(KnowledgeSystem.is_detected(world, M1Encounter.PLAYER_FACTION, ENEMY)).is_false()
+	assert_int(world.ships.status[ENEMY]).is_equal(ShipStateTable.Status.RETREATED)
 	print("win by retreat at tick %d (%.1f s)" % [outcomes[0].tick, outcomes[0].tick / 60.0])
 
 

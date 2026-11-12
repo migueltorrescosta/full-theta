@@ -349,6 +349,7 @@ func restart(sim_world: SimWorld) -> void:
 		_ownership_dirty[ship["id"]] = true
 	coop.reset()
 	first_use.reset()
+	skip_gap.reset()
 	publish()
 
 
