@@ -493,7 +493,7 @@ static func _reparent(node: Control, parent: Node, index: int) -> void:
 ## under the strip upright, the flow off a phone.
 func _use_strip(phone: bool) -> void:
 	if _strip.on != phone:
-		_strip.use(phone, _ships, null)
+		_strip.use(phone, _ships)
 		if not _short:
 			_reparent(_leave, _ship_tools if phone else _ships, -1)
 		_fit_strip.call_deferred()
