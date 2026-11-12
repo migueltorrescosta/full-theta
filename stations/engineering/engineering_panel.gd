@@ -67,6 +67,19 @@ var board: EngineeringBoard
 ## The tablet's docked rails (C4), or null (EngineeringTablet).
 var tablet_ui: EngineeringTablet = null
 
+## Short and narrow (150 % UI scale on a desktop), the faults list uses small text and no gaps
+## between rows, so it shows its lines and not only its heading (EngineeringPhone).
+var compact_lists: bool = false:
+	set(value):
+		if value != compact_lists:
+			compact_lists = value
+			_lists_text = ""
+			if value:
+				_lists.add_theme_constant_override("separation", 0)
+			else:
+				_lists.remove_theme_constant_override("separation")
+			_refresh_lists()
+
 var _row: BoxContainer
 var _scroll_all: ScrollContainer
 var _left: VBoxContainer
@@ -314,17 +327,6 @@ static func touch_help() -> Array:
 				]
 			],
 		},
-		{
-			"page": TouchText.of("page.crew", "Crew"),
-			"boxes":
-			[
-				[
-					Rect2(view.position.x, 124.0, view.size.x, 48.0),
-					TouchText.of("share.drawer", "Share"),
-					TouchText.of("help.crew_share", "Lend a crewmate your data for a while"),
-				],
-			],
-		},
 	]
 
 
@@ -473,7 +475,7 @@ func _refresh_lists() -> void:
 	var fab: float = float(ctx.snap.blocks.get(S.RELAY, {}).get("fab_left", 0.0))
 	if fab > 0.0:
 		lines.append([tr("relay.fab") % ceili(fab), "accent"])
-	var text: String = str(lines)
+	var text: String = str(lines) + str(compact_lists)
 	if text == _lists_text:
 		return
 	_lists_text = text
@@ -485,6 +487,8 @@ func _refresh_lists() -> void:
 		l.text = line[0]
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.add_theme_color_override("font_color", Palette.color(line[1]))
+		if compact_lists:
+			l.add_theme_font_size_override("font_size", UiTheme.SMALL_SIZE + 1)
 		_lists.add_child(l)
 	_snap_lists.call_deferred()
 

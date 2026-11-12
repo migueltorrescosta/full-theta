@@ -12,6 +12,8 @@ extends RefCounted
 const NARROW: float = 760.0
 ## Under this width (a phone, D195) the cutaway, the board and the lists stack and scroll.
 const PHONE_W: float = 560.0
+## Narrow and under this height (px, a desktop at 150 %), the faults list is compact.
+const SHORT_H: float = 520.0
 ## The docked thumb rail's width at the screen's left edge (the screen's radar column stays,
 ## P28-E2): two buttons to a row, wide enough for a verb and its object (C3).
 const PHONE_RAIL_W: float = 224.0
@@ -217,7 +219,10 @@ func _from_phone() -> void:
 	board.custom_minimum_size = (Vector2(0, 460) if phone else Vector2(270, board.content_height()))
 	side.custom_minimum_size = Vector2(0, 220) if phone else Vector2(210, 0)
 	var parent: Control = left if narrow else row
-	box.size_flags_stretch_ratio = 1.0 if narrow else 2.2
+	# Under the cutaway (narrow) the faults share the column's height evenly with it, so
+	# they show more than their first line at 150 %.
+	box.size_flags_stretch_ratio = cutaway.size_flags_stretch_ratio if narrow else 2.2
+	panel.compact_lists = narrow and not phone and panel.size.y < SHORT_H
 	# Under the cutaway the box sits at the screen's left and bottom edges: keep it off them.
 	var gap: int = UiTheme.TOUCH_GAP if narrow else 0
 	for m: String in ["margin_left", "margin_right", "margin_bottom"]:

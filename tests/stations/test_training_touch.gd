@@ -244,13 +244,15 @@ func test_the_card_folds_to_one_line_and_back() -> void:
 	var tall: float = card.size.y
 	card._fold.pressed.emit()
 	await _frames(6)
-	assert_bool(card._text.clip_text).is_true()
+	# Folded, the step still reads whole beside Next: up to three wrapped lines, never cut.
+	assert_int(card._text.max_lines_visible).is_equal(3)
+	assert_int(card._text.get_line_count()).is_less_equal(3)
 	assert_float(card.size.y).is_less(tall)
 	assert_bool(card._next.visible).is_true()
 	assert_bool(card._next.is_visible_in_tree()).is_true()
 	card._fold.pressed.emit()
 	await _frames(6)
-	assert_bool(card._text.clip_text).is_false()
+	assert_int(card._text.max_lines_visible).is_equal(-1)
 
 
 # --- the card covers nothing -----------------------------------------------------------
